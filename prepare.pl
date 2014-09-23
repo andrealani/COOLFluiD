@@ -1039,24 +1039,24 @@ sub mods_svnupdate ()
    else { print "User selected revision $rev\n" }
 
    # if there is a version, find out which in which revision was modified
-   if (!($cf_version eq ''))
-   {
-       my $versout = run_command("svn info $svnserver/../tags/$cf_version");
-       $versout    =~ m/Last Changed Rev\:\s*(\d+)/;
-       $rev = $1;
-       print "User selected version $cf_version which has revision $rev\n";
-   }
+   #if (!($cf_version eq ''))
+   #{
+   #    my $versout = run_command("svn info $svnserver/../tags/$cf_version");
+   #    $versout    =~ m/Last Changed Rev\:\s*(\d+)/;
+   #    $rev = $1;
+   #    print "User selected version $cf_version which has revision $rev\n";
+   #}
    print "\n";
 
   # run on the main directory
   my $args;
   # add specific revision if specified
-  if (!($cf_version eq ''))
-  	{ $args = "svn switch -r$rev $svnserver/../tags/$cf_version"  }
-  else
-   	{
+  #if (!($cf_version eq ''))
+  #	{ $args = "svn switch -r$rev $svnserver/../tags/$cf_version"  }
+  #else
+  # 	{
           $args = " svn switch -r$rev $svnserver";
-        }
+  #      }
   my $output = run_command($args);
   unless ($output eq '') { print "$output\n"; }
 
@@ -1132,8 +1132,8 @@ sub mods_svnupdate ()
            $ddir = "$plugins_dir/$mod";
 	         if ($cf_version eq '')
 		         { $args = "svn update -r$rev" }
-           else
-		         { $args = "svn switch -r$rev $svnserver/../tags/$cf_version/$svn_plugins_dir/$mod " }
+#           else
+#		         { $args = "svn switch -r$rev $svnserver/../tags/$cf_version/$svn_plugins_dir/$mod " }
        }
        else # check it out
        {
@@ -1141,8 +1141,8 @@ sub mods_svnupdate ()
           $ddir = "$coolfluid_dir";
           if ( $cf_version  eq '' )
           { $args = "svn co -r$rev $svnserver/$svn_plugins_dir/$mod $plugins_dir/$mod"; }
-          else
-          { $args = "svn co -r$rev $svnserver/../tags/$cf_version/$svn_plugins_dir/$mod $plugins_dir/$mod"; }
+#          else
+#          { $args = "svn co -r$rev $svnserver/../tags/$cf_version/$svn_plugins_dir/$mod $plugins_dir/$mod"; }
        }
 
        # run the command
