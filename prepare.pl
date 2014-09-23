@@ -19,8 +19,8 @@ my $preparepl  = "prepare.pl";
 my $cmakelist  = "CMakeLists.txt";
 
 # svn server structure
-my $svn_kernel_dir = "Sources/Kernel";
-my $svn_plugins_dir = "Sources/Plugins";
+my $svn_kernel_dir  = "src";
+my $svn_plugins_dir = "plugins";
 
 # dependency libraries
 my @libraries = ( "mpi",
@@ -69,7 +69,7 @@ my %default_options = (
     'search_dirs'  => "src plugins",
     'install_api'  => "",
     'extra_search_dirs'  => "",
-    'svnserver'    => "https://coolfluidsrv.vki.ac.be/svn/coolfluid",
+    'svnserver'    => "https://github.com/andrealani/COOLFluiD/trunk",
     'config_file'  => "coolfluid.conf",
     'build'        => "RelWithDebInfo",
     'buildtype'    => "",
@@ -1029,7 +1029,7 @@ sub mods_svnupdate ()
    my $rev = get_option('mods-revision');
 
    # find last revision
-   my $revout = run_command("svn info $svnserver/$svn_kernel_dir/trunk");
+   my $revout = run_command("svn info $svnserver");
    $revout    =~ m/Revision\:\s*(\d+)/;
    my $last_rev = $1;
    print "Last revision is $last_rev\n";
@@ -1041,24 +1041,24 @@ sub mods_svnupdate ()
    # if there is a version, find out which in which revision was modified
    if (!($cf_version eq ''))
    {
-       my $versout = run_command("svn info $svnserver/$svn_kernel_dir/tags/$cf_version");
+       my $versout = run_command("svn info $svnserver/../tags/$cf_version");
        $versout    =~ m/Last Changed Rev\:\s*(\d+)/;
        $rev = $1;
        print "User selected version $cf_version which has revision $rev\n";
    }
    print "\n";
 
-   # run on the main directory
-   my $args;
-   # add specific revision if specified
-   if (!($cf_version eq ''))
-   	{ $args = "svn switch -r$rev $svnserver/$svn_kernel_dir/tags/$cf_version"  }
-   else
+  # run on the main directory
+  my $args;
+  # add specific revision if specified
+  if (!($cf_version eq ''))
+  	{ $args = "svn switch -r$rev $svnserver/../tags/$cf_version"  }
+  else
    	{
-          $args = " svn switch -r$rev $svnserver/$svn_kernel_dir/trunk";
+          $args = " svn switch -r$rev $svnserver";
         }
-   my $output = run_command($args);
-   unless ($output eq '') { print "$output\n"; }
+  my $output = run_command($args);
+  unless ($output eq '') { print "$output\n"; }
 
    # gets the modules list
    my $args = "svn list $svnserver/$svn_plugins_dir";
@@ -1123,26 +1123,26 @@ sub mods_svnupdate ()
        my $output;
        my $ddir;
 
-       # if exists the just update it
+       # if exists then just update it
        if ( -e "$plugins_dir/$mod" )
        {
-           die "$plugins_dir/$mod exists but is not a directory " unless ( -d "$plugins_dir/$mod" );
+           #  die "$plugins_dir/$mod exists but is not a directory " unless ( -d "$plugins_dir/$mod" );
            # if is a directory update it
            print "updating ";
            $ddir = "$plugins_dir/$mod";
 	         if ($cf_version eq '')
 		         { $args = "svn update -r$rev" }
            else
-		         { $args = "svn switch -r$rev $svnserver/$svn_plugins_dir/$mod/tags/$cf_version " }
+		         { $args = "svn switch -r$rev $svnserver/../tags/$cf_version/$svn_plugins_dir/$mod " }
        }
        else # check it out
        {
           print "checking out ";
           $ddir = "$coolfluid_dir";
           if ( $cf_version  eq '' )
-          { $args = "svn co -r$rev $svnserver/$svn_plugins_dir/$mod/trunk $plugins_dir/$mod"; }
+          { $args = "svn co -r$rev $svnserver/$svn_plugins_dir/$mod $plugins_dir/$mod"; }
           else
-          { $args = "svn co -r$rev $svnserver/$svn_plugins_dir/$mod/tags/$cf_version $plugins_dir/$mod"; }
+          { $args = "svn co -r$rev $svnserver/../tags/$cf_version/$svn_plugins_dir/$mod $plugins_dir/$mod"; }
        }
 
        # run the command
