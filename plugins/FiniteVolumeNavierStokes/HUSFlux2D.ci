@@ -1,0 +1,658 @@
+#include "Framework/VolumeIntegrator.hh"
+#include "Framework/MethodStrategyProvider.hh"
+#include "Framework/EquationSetData.hh"
+
+//////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+HUSFlux2D<UPDATEVAR>::HUSFlux2D(const std::string& name) :
+  OsherFlux2D<UPDATEVAR>(name)
+{
+}
+      
+//////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+HUSFlux2D<UPDATEVAR>::~HUSFlux2D()
+{
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HUSFlux2D<UPDATEVAR>::setup()
+{ 
+  OsherFlux2D<UPDATEVAR>::setup();
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HUSFlux2D<UPDATEVAR>::CNEQ(RealVector& result) 
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  const vector<RealVector>& pdata = this->getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
+  const RealVector& leftData = pdata[LEFT];
+  const RealVector& rightData = pdata[RIGHT];
+  
+  // The flow at the freestream is assumed to be one-dimensional
+  const CFreal nx = this->getMethodData().getUnitNormal()[XX];
+  const CFreal ny = this->getMethodData().getUnitNormal()[YY];
+  
+  // calculation of the primitive variables at the left and right
+  // states
+  const CFreal rhoL = leftData[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR = rightData[UPDATEVAR::PTERM::RHO];
+  const CFreal uL = leftData[UPDATEVAR::PTERM::VX];
+  const CFreal vL = leftData[UPDATEVAR::PTERM::VY];
+  const CFreal uR = rightData[UPDATEVAR::PTERM::VX];
+  const CFreal vR = rightData[UPDATEVAR::PTERM::VY];
+  const CFreal pL = leftData[UPDATEVAR::PTERM::P];
+  const CFreal pR = rightData[UPDATEVAR::PTERM::P];
+  const CFreal hL = leftData[UPDATEVAR::PTERM::H];
+  const CFreal hR = rightData[UPDATEVAR::PTERM::H];
+  const CFreal aL = leftData[UPDATEVAR::PTERM::A];
+  const CFreal aR = rightData[UPDATEVAR::PTERM::A];
+  const CFreal gammaL = leftData[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaR = rightData[UPDATEVAR::PTERM::GAMMA];
+  
+  // calculation of the normal component of velocity for
+  // the left and right states
+  const CFreal unL = uL*nx + vL*ny;
+  const CFreal unR = uR*nx + vR*ny;
+  
+  // calculation of the normal Mach numbers for the sides
+  const CFreal mnL = unL / aL;
+  const CFreal mnR = unR / aR;
+  
+  const CFuint nbSpecies = this->_updateVarSet->getModel()->getNbScalarVars(0);
+  const CFuint first = this->_updateVarSet->getModel()->getFirstScalarVar(0);
+  
+  
+  //calculation of flux vector according to Van Leer part of HUS
+  
+  // left side
+    // supersonic case
+  if (mnL >= 1.0) { // flow out of cell
+    this->_vfluxL[0] = rhoL*unL;
+    this->_vfluxL[1] = this->_vfluxL[0]*uL + pL*nx;
+    this->_vfluxL[2] = this->_vfluxL[0]*vL + pL*ny;
+    this->_vfluxL[3] = this->_vfluxL[0]*hL;
+    
+    for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+      this->_vfluxL[4 + ie] = this->_vfluxL[0]*leftData[first + ie];
+    }
+  }
+  
+  else {
+    if (mnL <= -1.0) { // flow into cell
+      this->_vfluxL = 0.0;
+    }
+    else { // subsonic case
+      // calculation of mass fluxes through the face according to
+      // Van Leer (m is for mass, L: plus, R: minus)
+      const CFreal mfluxL =  0.25*rhoL*aL * pow(mnL + 1.0, 2.0);
+      
+      // calculating the rest of the fluxes according to
+      // Van Leer (v is for vector, L: plus, R: minus)
+      
+      this->_vfluxL[0] = mfluxL;
+      this->_vfluxL[1] = mfluxL * ( (-unL + 2.0*aL) * nx/gammaL + uL );
+      this->_vfluxL[2] = mfluxL * ( (-unL + 2.0*aL) * ny/gammaL + vL );
+      this->_vfluxL[3] = mfluxL * ( hL - pow(unL - aL,2.0)/(gammaL + 1.) );
+      
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+	this->_vfluxL[4 + ie] = mfluxL * leftData[first + ie];      
+      }
+    }
+  }
+  
+  // right side
+  // supersonic case
+  if (mnR <= -1.0) { // flow out of cell
+    this->_vfluxR[0] = rhoR*unR;
+    this->_vfluxR[1] = this->_vfluxR[0]*uR + pR*nx;
+    this->_vfluxR[2] = this->_vfluxR[0]*vR + pR*ny;
+    this->_vfluxR[3] = this->_vfluxR[0]*hR;
+    
+    for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+      this->_vfluxR[4 + ie] = this->_vfluxR[0]*rightData[first + ie];
+    }
+  }
+  else {
+    if (mnR >= 1.0) { // flow into cell
+      this->_vfluxR = 0.0;
+    }
+    else { // subsonic case
+      // calculation of mass fluxes through the face according to
+      // Van Leer (m is for mass, L: plus, R: minus)
+      const CFreal mfluxR = -0.25*rhoR*aR * pow(mnR - 1.0, 2.0);
+      
+      // calculating the rest of the fluxes according to
+      // Van Leer (v is for vector, L: plus, R: minus)
+      
+      this->_vfluxR[0] = mfluxR;
+      this->_vfluxR[1] = mfluxR * ( (-unR - 2.0*aR) * nx/gammaR + uR );
+      this->_vfluxR[2] = mfluxR * ( (-unR - 2.0*aR) * ny/gammaR + vR );
+      this->_vfluxR[3] = mfluxR * ( hR - pow(unR + aR,2.0)/(gammaR + 1.) );
+      
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+	this->_vfluxR[4 + ie] = mfluxR * rightData[first + ie];
+      }
+    }
+  }
+  
+  result =  this->_vfluxL + this->_vfluxR;
+  
+  // end of flux vector calculation for the Van Leer part of HUS
+  
+  // compute intermediate pressure (pS) with Newton method
+  
+  // variables to decrease computation time
+  const CFreal KLS = aL / (gammaL-1);
+  const CFreal KRS = aR / (gammaR-1);
+  const CFreal expLS = 0.5 * (gammaL-1) / gammaL;
+  const CFreal expRS = 0.5 * (gammaR-1) / gammaR;
+  const CFreal KS = 0.5*this->_beta*(unL-unR) + KLS + KRS;
+  const CFreal ALS = KLS / pow(pL, expLS);
+  const CFreal ARS = KRS / pow(pR, expRS);
+
+  // Newton iteration variables
+  const CFuint iMax = 6;
+  const CFreal epsP = 1.0e-6;
+  CFreal pS = 0.5 * (pL + pR); // initial guess
+  CFreal pSprev = pS;
+  const CFreal deltaPS = pS * epsP;
+
+  for (CFuint i = 0; i < iMax; ++i) {
+    CFreal BLS = ALS * pow(pS, expLS);
+    CFreal BRS = ARS * pow(pS, expRS);
+    pS = pS * ( 1 - (BLS + BRS - KS) / (expLS*BLS + expRS*BRS) );
+    if ( std::abs(pS-pSprev) <= deltaPS ) break;
+    pSprev = pS;
+//    if ( i == iMax - 1) cout << "HUSFlux: Newton convergence was not reached!" << endl;
+  }
+
+  // computing variables for intermediate state (S)
+
+  const CFreal eL =  leftData[UPDATEVAR::PTERM::E];
+  const CFreal eR = rightData[UPDATEVAR::PTERM::E];
+  const CFreal u2L = uL*uL + vL*vL;
+  const CFreal u2R = uR*uR + vR*vR;
+  const CFreal gamma2L = 1 + pL/(rhoL*(eL-0.5*u2L));
+  const CFreal gamma2R = 1 + pR/(rhoR*(eR-0.5*u2R));
+
+
+  const CFreal rhoLS = rhoL * pow(pS/pL, 1/gammaL);
+  const CFreal rhoRS = rhoR * pow(pS/pR, 1/gammaR);
+  RealVector YsLS(nbSpecies);
+  RealVector YsRS(nbSpecies);
+  for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+    YsLS[ie] =  leftData[first + ie];
+    YsRS[ie] = rightData[first + ie];
+  }
+  const CFreal aLS = aL * pow(pS/pL, expLS);
+  const CFreal aRS = aR * pow(pS/pR, expRS);
+  const CFreal unS = unL + this->_beta * 2 / (gammaL-1) * (aL - aLS);
+  const CFreal utLS = -ny*uL + nx*vL;
+  const CFreal utRS = -ny*uR + nx*vR;
+  const CFreal uLS = nx*unS - ny*utLS;
+  const CFreal vLS = ny*unS + nx*utLS;
+  const CFreal uRS = nx*unS - ny*utRS;
+  const CFreal vRS = ny*unS + nx*utRS;
+  const CFreal u2LS = uLS*uLS + vLS*vLS;
+  const CFreal u2RS = uRS*uRS + vRS*vRS;
+  const CFreal eLS = (eL-0.5*u2L) * pow(rhoLS/rhoL, gamma2L-1) + 0.5 * u2LS;
+  const CFreal eRS = (eR-0.5*u2R) * pow(rhoRS/rhoR, gamma2R-1) + 0.5 * u2RS;
+  const CFreal hLS = eLS + pS / rhoLS;
+  const CFreal hRS = eRS + pS / rhoRS;
+  const CFreal mnLS = unS / aLS;
+  const CFreal mnRS = unS / aRS;
+
+  // computing the anti-diffusive terms of the HUS flux
+
+  if (unS > 0.0) {
+
+    // left state (minus)
+    if (mnLS < 1.0) {
+      const CFreal mfluxLS = -0.25*rhoLS*aLS * pow(mnLS - 1.0, 2.0);
+ 
+      this->_vfluxL[0] = mfluxLS;
+      this->_vfluxL[1] = mfluxLS * ( (-unS - 2.0*aLS) * nx/gammaL + uLS );
+      this->_vfluxL[2] = mfluxLS * ( (-unS - 2.0*aLS) * ny/gammaL + vLS );
+      this->_vfluxL[3] = mfluxLS * ( hLS - pow(unS + aLS,2.0)/(gammaL + 1.) );
+
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+        this->_vfluxL[4 + ie] = mfluxLS * YsLS[ie];
+      }
+    }
+    else {
+      this->_vfluxL = 0.0;
+    }
+
+    // right state (minus)
+    if (mnRS < 1.0) {
+      const CFreal mfluxRS = -0.25*rhoRS*aRS * pow(mnRS - 1.0, 2.0);
+
+      this->_vfluxR[0] = mfluxRS;
+      this->_vfluxR[1] = mfluxRS * ( (-unS - 2.0*aRS) * nx/gammaR + uRS );
+      this->_vfluxR[2] = mfluxRS * ( (-unS - 2.0*aRS) * ny/gammaR + vRS );
+      this->_vfluxR[3] = mfluxRS * ( hRS - pow(unS + aRS,2.0)/(gammaR + 1.) );
+
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+        this->_vfluxR[4 + ie] = mfluxRS * YsRS[ie];
+      }
+    }
+    else {
+      this->_vfluxR = 0.0;
+    }
+
+    // species contribution for ensuring positivity
+//    const CFreal result0 = result[0] + this->_vfluxL[0] - this->_vfluxR[0];
+//    if (result0 >= 0.0) {
+//      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+//        this->_vfluxL[4 + ie] = result0 * leftData[first + ie];
+//      }
+//    }
+//    else {
+//      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+//        this->_vfluxR[4 + ie] = result0 * rightData[first + ie];
+//      }   
+//    }
+
+    // assembling the final flux
+    result += this->_vfluxL - this->_vfluxR;
+  }
+  else {
+
+    // left state (plus)
+    if (mnLS > -1.0) {
+      const CFreal mfluxLS = 0.25*rhoLS*aLS * pow(mnLS + 1.0, 2.0);
+ 
+      this->_vfluxL[0] = mfluxLS;
+      this->_vfluxL[1] = mfluxLS * ( (-unS + 2.0*aLS) * nx/gammaL + uLS );
+      this->_vfluxL[2] = mfluxLS * ( (-unS + 2.0*aLS) * ny/gammaL + vLS );
+      this->_vfluxL[3] = mfluxLS * ( hLS - pow(unS - aLS,2.0)/(gammaL + 1.) );
+
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+        this->_vfluxL[4 + ie] = mfluxLS * YsLS[ie];
+      }
+    }
+    else {
+      this->_vfluxL = 0.0;
+    }
+
+    // right state (plus)
+    if (mnRS > -1.0) {
+      const CFreal mfluxRS = 0.25*rhoRS*aRS * pow(mnRS + 1.0, 2.0);
+
+      this->_vfluxR[0] = mfluxRS;
+      this->_vfluxR[1] = mfluxRS * ( (-unS + 2.0*aRS) * nx/gammaR + uRS );
+      this->_vfluxR[2] = mfluxRS * ( (-unS + 2.0*aRS) * ny/gammaR + vRS );
+      this->_vfluxR[3] = mfluxRS * ( hRS - pow(unS - aRS,2.0)/(gammaR + 1.) );
+
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+        this->_vfluxR[4 + ie] = mfluxRS * YsRS[ie];
+      }
+    }
+    else {
+      this->_vfluxR = 0.0;
+    }
+
+    // species contribution for ensuring positivity
+//    const CFreal result0 = result[0] + this->_vfluxR[0] - this->_vfluxL[0];
+//    if (result0 >= 0.0) {
+//      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+//        this->_vfluxL[4 + ie] = result0 * leftData[first + ie];
+//      }
+//    }
+//    else {
+//      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+//        this->_vfluxR[4 + ie] = result0 * rightData[first + ie];
+//      }   
+//    }
+
+    // assembling the final flux
+    result += this->_vfluxR - this->_vfluxL;
+  }
+} 
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HUSFlux2D<UPDATEVAR>::TCNEQ(RealVector& result) 
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  const vector<RealVector>& pdata = this->getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
+  const RealVector& leftData = pdata[LEFT];
+  const RealVector& rightData = pdata[RIGHT];
+  
+  // The flow at the freestream is assumed to be one-dimensional
+  const CFreal nx = this->getMethodData().getUnitNormal()[XX];
+  const CFreal ny = this->getMethodData().getUnitNormal()[YY];
+  
+  // calculation of the primitive variables at the left and right
+  // states
+  const CFreal rhoL = leftData[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR = rightData[UPDATEVAR::PTERM::RHO];
+  const CFreal uL = leftData[UPDATEVAR::PTERM::VX];
+  const CFreal vL = leftData[UPDATEVAR::PTERM::VY];
+  const CFreal uR = rightData[UPDATEVAR::PTERM::VX];
+  const CFreal vR = rightData[UPDATEVAR::PTERM::VY];
+  const CFreal pL = leftData[UPDATEVAR::PTERM::P];
+  const CFreal pR = rightData[UPDATEVAR::PTERM::P];
+  const CFreal hL = leftData[UPDATEVAR::PTERM::H];
+  const CFreal hR = rightData[UPDATEVAR::PTERM::H];
+  const CFreal aL = leftData[UPDATEVAR::PTERM::A];
+  const CFreal aR = rightData[UPDATEVAR::PTERM::A];
+  const CFreal gammaL = leftData[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaR = rightData[UPDATEVAR::PTERM::GAMMA];
+  
+  // calculation of the normal component of velocity for
+  // the left and right states
+  const CFreal unL = uL*nx + vL*ny;
+  const CFreal unR = uR*nx + vR*ny;
+  
+  // calculation of the normal Mach numbers for the sides
+  const CFreal mnL = unL / aL;
+  const CFreal mnR = unR / aR;
+    
+  CFreal mfluxL = 0.0;
+  CFreal mfluxR = 0.0;
+  
+  const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
+  const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
+  const vector<EquationSetData>& eqsData = UPDATEVAR::getEqSetData();
+  
+  const CFuint nbSpecies = this->_updateVarSet->getModel()->getNbScalarVars(0);
+  const CFuint firstSpec = this->_updateVarSet->getModel()->getFirstScalarVar(0);
+  const vector<CFuint>& specIDs = eqsData[0].getEqSetVarIDs();
+  
+  const CFuint nbVib = this->_updateVarSet->getModel()->getNbScalarVars(1);
+  const CFuint firstVib = this->_updateVarSet->getModel()->getFirstScalarVar(1);
+  const vector<CFuint>& vibIDs = eqsData[1].getEqSetVarIDs();
+  
+  //calculation of the flux vector according to Van Leer part of HUS
+  
+  // left side
+  // supersonic case
+  if(mnL >= 1.0) { // flow out of cell
+    
+    mfluxL = rhoL*unL;
+    
+    // update species
+    for (CFuint j = 0; j < nbSpecies; ++j) {
+      this->_vfluxL[specIDs[j]] = mfluxL*leftData[firstSpec + j];
+    }
+    
+    // update euler variables
+    this->_vfluxL[eulerVarIDs[0]] = mfluxL*uL + pL*nx;
+    this->_vfluxL[eulerVarIDs[1]] = mfluxL*vL + pL*ny;
+    this->_vfluxL[eulerVarIDs[2]] = mfluxL*hL;
+    
+    // update vibrational temperatures
+    for(CFuint k = 0; k < nbVib; ++k) {
+      this->_vfluxL[vibIDs[k]] = mfluxL*leftData[firstVib + k];
+    } 
+  }
+  
+  else {
+    if (mnL <= -1.0) { // flow into cell
+      this->_vfluxL = 0.0;
+    }
+    
+    else { // subsonic case
+      //calculation of mass fluxes according to Van Leer equations
+      // m = mass, L = plus, R = minus
+            
+      mfluxL = 0.25*rhoL*aL * pow(mnL + 1.0, 2.0);
+      
+      // update species
+      for (CFuint j = 0; j < nbSpecies; ++j) {
+	this->_vfluxL[specIDs[j]] = mfluxL * leftData[firstSpec + j];
+      }
+      
+      this->_vfluxL[eulerVarIDs[0]] = mfluxL * ( (-unL + 2.0*aL) * nx/gammaL + uL );
+      this->_vfluxL[eulerVarIDs[1]] = mfluxL * ( (-unL + 2.0*aL) * ny/gammaL + vL );
+      this->_vfluxL[eulerVarIDs[2]] = mfluxL * ( hL - pow(unL - aL,2.0)/(gammaL + 1.) );
+      
+      for (CFuint k = 0; k < nbVib; ++k) {
+	this->_vfluxL[vibIDs[k]] = mfluxL * leftData[firstVib + k];
+      }
+    }
+  }
+  
+  // right side
+  // supersonic case
+  if(mnR <= -1.0) { // flow out of cell
+    
+    mfluxR = rhoR*unR;
+    
+    // update species
+    for (CFuint j = 0; j < nbSpecies; ++j) {
+      this->_vfluxR[specIDs[j]] = mfluxR*rightData[firstSpec + j];
+    }
+    
+    // update euler variables
+    this->_vfluxR[eulerVarIDs[0]] = mfluxR*uR + pR*nx;
+    this->_vfluxR[eulerVarIDs[1]] = mfluxR*vR + pR*ny;
+    this->_vfluxR[eulerVarIDs[2]] = mfluxR*hR;
+    
+    // update vibrational temperatures
+    for(CFuint k = 0; k < nbVib; ++k) {
+      this->_vfluxR[vibIDs[k]] = mfluxR * rightData[firstVib + k];
+    }
+  }
+  
+  else {
+    if (mnR >= 1.0) { // flow into cell
+      this->_vfluxR = 0.0;
+    }
+    else { // subsonic case
+      //calculation of mass fluxes according to Van Leer equations
+      // m = mass, L = plus, R = minus
+      mfluxR = -0.25*rhoR*aR * pow(mnR - 1.0, 2.0);
+      
+      // update species
+      for (CFuint j = 0; j < nbSpecies; ++j) {
+	this->_vfluxR[specIDs[j]] = mfluxR * rightData[firstSpec + j];
+      }
+      
+      this->_vfluxR[eulerVarIDs[0]] = mfluxR * ( (-unR - 2.0*aR) * nx/gammaR + uR );
+      this->_vfluxR[eulerVarIDs[1]] = mfluxR * ( (-unR - 2.0*aR) * ny/gammaR + vR );
+      this->_vfluxR[eulerVarIDs[2]] = mfluxR * ( hR - pow(unR + aR,2.0)/(gammaR + 1.) );
+      
+      for (CFuint k = 0; k < nbVib; ++k) {
+	this->_vfluxR[vibIDs[k]] = mfluxR * rightData[firstVib + k];
+      }
+    }
+  }
+  
+  result = this->_vfluxL + this->_vfluxR;
+  
+  // end of flux vector calculation for the Van Leer part of HUS
+  
+  // compute intermediate pressure (pS) using Newton method
+  
+  // variables to decrease computation time:
+  
+  const CFreal KLS = aL / (gammaL-1);
+  const CFreal KRS = aR / (gammaR-1);
+  const CFreal expLS = 0.5 * (gammaL-1) / gammaL;
+  const CFreal expRS = 0.5 * (gammaR-1) / gammaR;
+  const CFreal KS = 0.5*this->_beta*(unL-unR) + KLS + KRS;
+  const CFreal ALS = KLS / pow(pL, expLS);
+  const CFreal ARS = KRS / pow(pR, expRS);
+  
+  // Newton iteration variables
+  const CFuint iMax = 6;
+  const CFreal epsP = 1.0e-6;
+  CFreal pS = 0.5 * (pL + pR); // initial guess
+  CFreal pSprev = pS;
+  const CFreal deltaPS = pS * epsP;
+  
+  for (CFuint i = 0; i < iMax; ++i) {
+    CFreal BLS = ALS * pow(pS, expLS);
+    CFreal BRS = ARS * pow(pS, expRS);
+    pS = pS * ( 1 - (BLS + BRS - KS) / (expLS*BLS + expRS*BRS) );
+    if ( std::abs(pS-pSprev) <= deltaPS ) break;
+    pSprev = pS;
+    //    if ( i == iMax - 1) cout << "HUSFlux: Newton convergence was not reached!" << endl;
+  }
+  
+  // variables at intermediate state (S)
+  const CFreal eL = leftData[UPDATEVAR::PTERM::E];
+  const CFreal eR = rightData[UPDATEVAR::PTERM::E];
+  const CFreal u2L = uL*uL + vL*vL;
+  const CFreal u2R = uR*uR + vR*vR;
+  const CFreal gamma2L = 1 + pL/(rhoL*(eL-0.5*u2L));
+  const CFreal gamma2R = 1 + pR/(rhoR*(eR-0.5*u2R));
+  const CFreal rhoLS = rhoL * pow(pS/pL, 1/gammaL);
+  const CFreal rhoRS = rhoR * pow(pS/pR, 1/gammaR);
+  
+  for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+    this->_YsLS[ie] =  leftData[firstSpec + ie];
+    this->_YsRS[ie] = rightData[firstSpec + ie];
+  }
+  for (CFuint ie = 0; ie < nbVib; ++ie) {
+    this->_evLS[ie] =  leftData[firstVib + ie];
+    this->_evRS[ie] = rightData[firstVib + ie];
+  }
+  const CFreal aLS = aL * pow(pS/pL, expLS);
+  const CFreal aRS = aR * pow(pS/pR, expRS);
+  const CFreal unS = unL + this->_beta * 2 / (gammaL-1) * (aL - aLS);
+  const CFreal utLS = -ny*uL + nx*vL;
+  const CFreal utRS = -ny*uR + nx*vR;
+  const CFreal uLS = nx*unS - ny*utLS;
+  const CFreal vLS = ny*unS + nx*utLS;
+  const CFreal uRS = nx*unS - ny*utRS;
+  const CFreal vRS = ny*unS + nx*utRS;
+  const CFreal u2LS = uLS*uLS + vLS*vLS;
+  const CFreal u2RS = uRS*uRS + vRS*vRS;
+  const CFreal eLS = (eL-0.5*u2L) * pow(rhoLS/rhoL, gamma2L-1) + 0.5 * u2LS;
+  const CFreal eRS = (eR-0.5*u2R) * pow(rhoRS/rhoR, gamma2R-1) + 0.5 * u2RS;
+  const CFreal hLS = eLS + pS / rhoLS;
+  const CFreal hRS = eRS + pS / rhoRS;
+  const CFreal mnLS = unS / aLS;
+  const CFreal mnRS = unS / aRS;
+  
+  // computing the anti-diffusive terms of the HUS flux
+  
+  if (unS > 0.0) {
+
+    // left state (minus)
+    if (mnLS < 1.0) {
+      
+      const CFreal mfluxLS = -0.25*rhoLS*aLS * pow(mnLS - 1.0, 2.0);
+      
+      for (CFuint jl = 0; jl < nbSpecies; ++jl) {
+        this->_vfluxL[specIDs[jl]] = mfluxLS * this->_YsLS[jl];
+      }
+ 
+      this->_vfluxL[eulerVarIDs[0]] = mfluxLS * ( (-unS - 2.0*aLS) * nx/gammaL + uLS );
+      this->_vfluxL[eulerVarIDs[1]] = mfluxLS * ( (-unS - 2.0*aLS) * ny/gammaL + vLS );
+      this->_vfluxL[eulerVarIDs[2]] = mfluxLS * ( hLS - pow(unS + aLS,2.0)/(gammaL + 1.) );
+
+      for (CFuint kl = 0; kl < nbVib; ++kl) {
+        this->_vfluxL[vibIDs[kl]] = mfluxLS * this->_evLS[kl];
+      }
+    }
+
+    else {
+      this->_vfluxL = 0.0;
+    }
+
+    // right state (minus)
+    if (mnRS < 1.0) {
+      const CFreal mfluxRS = -0.25*rhoRS*aRS * pow(mnRS - 1.0, 2.0);
+
+      for (CFuint jr = 0; jr < nbSpecies; ++jr) {
+        this->_vfluxR[specIDs[jr]] = mfluxRS * this->_YsRS[jr];
+      }
+      
+      this->_vfluxR[eulerVarIDs[0]] = mfluxRS * ( (-unS - 2.0*aRS) * nx/gammaR + uRS );
+      this->_vfluxR[eulerVarIDs[1]] = mfluxRS * ( (-unS - 2.0*aRS) * ny/gammaR + vRS );
+      this->_vfluxR[eulerVarIDs[2]] = mfluxRS * ( hRS - pow(unS + aRS,2.0)/(gammaR + 1.) );
+
+      for (CFuint kr = 0; kr < nbVib; ++kr) {
+        this->_vfluxR[vibIDs[kr]] = mfluxRS *this->_evRS[kr];
+      }
+    }
+    else {
+      this->_vfluxR = 0.0;
+    }
+
+    //assembling final flux
+    result += this->_vfluxL - this->_vfluxR;
+  }
+
+  else {
+	//left state (plus)
+    if (mnLS > -1.0) {
+
+      const CFreal mfluxLS = 0.25*rhoLS*aLS * pow(mnLS + 1.0, 2.0);
+
+      for (CFuint jl = 0; jl < nbSpecies; ++jl) {
+        this->_vfluxL[specIDs[jl]] = mfluxLS * this->_YsLS[jl];
+      }
+
+      this->_vfluxL[eulerVarIDs[0]] = mfluxLS * ( (-unS + 2.0*aLS) * nx/gammaL + uLS );
+      this->_vfluxL[eulerVarIDs[1]] = mfluxLS * ( (-unS + 2.0*aLS) * ny/gammaL + vLS );
+      this->_vfluxL[eulerVarIDs[2]] = mfluxLS * ( hLS - pow(unS - aLS,2.0)/(gammaL + 1.) );
+
+      for (CFuint kl = 0; kl < nbVib; ++kl) {
+        this->_vfluxL[vibIDs[kl]] = mfluxLS * this->_evLS[kl];
+      }
+    }
+    
+    else {
+       this->_vfluxL = 0.0;
+    }
+	
+	// right state (plus)
+    if (mnRS > -1.0) {
+      const CFreal mfluxRS = 0.25*rhoRS*aRS * pow(mnRS + 1.0, 2.0);
+
+      for (CFuint jr = 0; jr < nbSpecies; ++jr) {
+        this->_vfluxR[specIDs[jr]] = mfluxRS * this->_YsRS[jr];
+      }
+      
+      this->_vfluxR[eulerVarIDs[0]] = mfluxRS * ( (-unS + 2.0*aRS) * nx/gammaR + uRS );
+      this->_vfluxR[eulerVarIDs[1]] = mfluxRS * ( (-unS + 2.0*aRS) * ny/gammaR + vRS );
+      this->_vfluxR[eulerVarIDs[2]] = mfluxRS * ( hRS - pow(unS - aRS,2.0)/(gammaR + 1.) );
+      
+      for (CFuint kr = 0; kr < nbVib; ++kr) {
+        this->_vfluxR[vibIDs[kr]] = mfluxRS * this->_evRS[kr];
+      }
+    }
+    else {
+      this->_vfluxR = 0.0;
+    }
+    
+    //assembling final flux
+    result += this->_vfluxR - this->_vfluxL;
+  }
+}
+
+
+//////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////

@@ -1,0 +1,44 @@
+/O
+/Constitutive atoms: 
+1
+/Molar mass (g):
+15.9994
+/Formation enthalpy (J/kg):
+1.5574334e7
+/ tetha_vs:
+0.0
+/ Tets:
+0.0
+/ AsMu1:
+0.77461166
+/ BsMu1:
+92.41827
+/ CsMu1:
+-62500.795
+/ DsMu1:
+0.83317089
+/ AsMu2 (not used):
+0.0
+/ BsMu2 (not used):
+0.0
+/ CsMu2 (not used):
+0.0
+/ DsMu2 (not used):
+0.0
+/ AsK1:
+0.77466803
+/ BsK1:
+92.729443
+/ CsK1:
+-62674.343
+/ DsK1:
+1.4998498
+/ AsK2 (not used):
+0.0
+/ BsK2 (not used):
+0.0
+/ CsK2 (not used):
+0.0
+/ DsK2 (not used):
+0.0
+stop

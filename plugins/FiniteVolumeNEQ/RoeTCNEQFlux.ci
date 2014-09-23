@@ -1,0 +1,194 @@
+#include "Framework/GeometricEntity.hh"
+#include "Framework/PhysicalChemicalLibrary.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class UPDATEVAR> 
+RoeTCNEQFlux<BASE, UPDATEVAR>::RoeTCNEQFlux(const std::string& name) :
+  BASE(name),
+  _upVar(CFNULL),
+  _lData(),
+  _rData(),
+  _mmasses(),
+  _fcoeff(),
+  _dRhoiOvMM()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class UPDATEVAR>
+RoeTCNEQFlux<BASE, UPDATEVAR>::~RoeTCNEQFlux()
+{ 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class UPDATEVAR>
+void RoeTCNEQFlux<BASE, UPDATEVAR>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  BASE::setup();
+  _upVar = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+  _upVar->getModel()->resizePhysicalData(_lData);
+  _upVar->getModel()->resizePhysicalData(_rData);
+  
+  SafePtr<PhysicalChemicalLibrary> library =
+    PhysicalModelStack::getActive()->getImplementor()->template 
+    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  
+  const CFuint nbSpecies = library->getNbSpecies();
+  _mmasses.resize(nbSpecies);
+  library->getMolarMasses(_mmasses);
+  
+  this->_fcoeff.resize(nbSpecies);
+  
+  vector<CFuint> moleculeIDs;
+  library->setMoleculesIDs(moleculeIDs);
+  vector<bool> flag(nbSpecies, false);
+  
+  for (CFuint i = 0; i < moleculeIDs.size(); ++i) {
+    flag[moleculeIDs[i]] = true;
+  }
+  
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    this->_fcoeff[i] = (flag[i]) ? 2.5 : 1.5;
+  }
+  
+  _dRhoiOvMM.resize(nbSpecies); 
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class UPDATEVAR>
+void RoeTCNEQFlux<BASE, UPDATEVAR>::linearize()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  // here a special linearization is done, inspired by Prabhu's 
+  // NASA Technical Report
+  RealVector& linData = _upVar->getModel()->getPhysicalData();
+  SafePtr<PhysicalChemicalLibrary> library =
+    PhysicalModelStack::getActive()->getImplementor()->template 
+    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  SafePtr<PhysicalChemicalLibrary::ExtraData> eData = library->getExtraData();
+  
+  _upVar->setExtraData(true);
+  _upVar->computePhysicalData(*this->_statesLR[0], _lData);
+  _upVar->computePhysicalData(*this->_statesLR[1], _rData);
+  _upVar->setExtraData(false);
+  
+  typedef typename UPDATEVAR::PTERM UPTERM;
+  
+  const CFreal rhoL = _lData[UPTERM::RHO];
+  const CFreal rhoR = _rData[UPTERM::RHO];
+  cf_assert (rhoL > 0.0);
+  cf_assert (rhoR > 0.0);
+
+  const CFreal sqRhoL  = std::sqrt(rhoL);
+  const CFreal sqRhoR  = std::sqrt(rhoR);
+  const CFreal sqRhoLR = sqRhoL + sqRhoR;
+  const CFreal a =  sqRhoL/sqRhoLR;
+  const CFreal b =  sqRhoR/sqRhoLR;
+  
+  //  const CFreal sqRho = 0.5*sqRhoLR;
+  // linData[UPTERM::RHO] = sqRho*sqRho;
+  
+  const CFuint nbSpecies = _upVar->getModel()->getNbScalarVars(0);
+  const CFuint firstVarY = _upVar->getModel()->getFirstScalarVar(0);
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    const CFuint yID = firstVarY + i;
+    linData[yID] = max(0.0, a*_lData[yID] + b*_rData[yID]);
+    
+    // _dRhoiOvMM[i] = (rhoR*_rData[yID] - rhoL*_lData[yID])/_mmasses[i];
+  }
+  
+  linData[UPTERM::VX] = a*_lData[UPTERM::VX] + b*_rData[UPTERM::VX]; 
+  linData[UPTERM::VY] = a*_lData[UPTERM::VY] + b*_rData[UPTERM::VY]; 
+  linData[UPTERM::VZ] = a*_lData[UPTERM::VZ] + b*_rData[UPTERM::VZ]; 
+  
+  CFreal V2 = linData[UPTERM::VX]*linData[UPTERM::VX]+ 
+    linData[UPTERM::VY]*linData[UPTERM::VY];
+  if (PhysicalModelStack::getActive()->getDim() == DIM_3D) {
+    V2 += linData[UPTERM::VZ]*linData[UPTERM::VZ];
+  }
+  
+  linData[UPTERM::V] = std::sqrt(V2);
+  linData[UPTERM::H] = a*_lData[UPTERM::H] + b*_rData[UPTERM::H]; 
+  // const CFuint nbTvs = _upVar->getModel()->getNbScalarVars(1);
+  const CFuint evID = _upVar->getModel()->getFirstScalarVar(1);
+  linData[evID] = a*_lData[evID] + b*_rData[evID];
+  
+  CFreal numBeta = 0.;
+  CFreal denBeta = 0.;
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    const CFreal sigmai = linData[firstVarY + i]/_mmasses[i];
+    numBeta += sigmai;
+    denBeta += sigmai*this->_fcoeff[i];
+  }
+  
+  const CFreal beta = numBeta/denBeta;
+  const CFreal Rgas = library->getRgas();
+  
+  // const CFreal dP = _rData[UPTERM::P] - _lData[UPTERM::P];
+  // const CFreal dRhoEtr = rhoR*eTrR - rhoL*eTrL;
+  
+  //  CFreal sumHform = 0.;
+  //  CFreal sumRf = 0.;
+  // for (CFuint i = 0; i < nbSpecies; ++i) {
+  //  sumHform += eData->enthalpyForm[i]*_dRhoiOvMM[i]*_mmasses[i];
+  // sumRf += Rgas*(1. - this->_fcoeff[i]*beta)*_dRhoiOvMM[i];
+  // }
+  // linData[UPTERM::T] = (dP - beta*dRhoEtr + beta*sumHform)/sumRf;
+  
+  linData[UPTERM::T] = a*_lData[UPTERM::T] + b*_rData[UPTERM::T];
+  if (linData[UPTERM::T] < 10.) { 
+    cout << "linData = " << linData << endl;
+    cout << "a = " << a << endl;
+    cout << "b = " << b << endl;
+    cout << "rhoL = " << rhoL << ", rhoR = " << rhoR <<  endl;
+  }
+  
+  // this is not consistent
+  //linData[UPTERM::P] = linData[UPTERM::RHO]*(a*_lData[UPTERM::P]/rhoL +
+  //				     b*_rData[UPTERM::P]/rhoR);
+  
+  const CFreal RT = Rgas*linData[UPTERM::T];
+  CFreal aiyi = 0.0;
+  for (CFuint i = 0; i < nbSpecies; ++i) { 
+    const CFuint yID = firstVarY + i;
+    // here energyTr is computed and overwritten
+    eData->energyTr[i] = this->_fcoeff[i]*RT/_mmasses[i] + eData->enthalpyForm[i];
+    aiyi += linData[yID]*(RT/_mmasses[i] - beta*eData->energyTr[i]);
+  }
+  
+  const CFreal a2 = aiyi + beta*(linData[UPTERM::H] - 0.5*V2 - linData[evID]);
+  assert(a2 > 0.);
+  linData[UPTERM::A] = std::sqrt(a2);
+  
+  // this is not consistent
+  // linData[UPTERM::E] = linData[UPTERM::H] - linData[UPTERM::P]/linData[UPTERM::RHO];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

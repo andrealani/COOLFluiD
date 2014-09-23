@@ -1,0 +1,128 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace ICP {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+ICPLTEPhysicalModel<DIM>::ICPLTEPhysicalModel(const std::string& name)
+  : Framework::ConvectionDiffusionReactionPM
+<Framework::MultiScalarTerm<NavierStokes::EulerTerm>,
+ NavierStokes::NSTerm, ICPReactionTerm<Framework::BaseTerm> >(name)
+{
+}	
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+ICPLTEPhysicalModel<DIM>::~ICPLTEPhysicalModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint ICPLTEPhysicalModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint ICPLTEPhysicalModel<DIM>::getNbEquations() const
+{
+  // set the number of induction equations
+  std::valarray<CFuint> v(1);
+  v[0] = 2;
+  getConvTerm()->setNbScalarVars(v);
+
+  return DIM+2+2; //two induction equations are included
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string ICPLTEPhysicalModel<DIM>::getConvectiveName() const
+{
+  return "ICPLTE" + Common::StringOps::to_str(DIM) + "D";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void ICPLTEPhysicalModel<DIM>::setReferenceValues()
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  SafePtr<MultiScalarTerm<EulerTerm> > convTerm = getConvTerm();
+  SafePtr<NSTerm> diffTerm = getDiffTerm();
+  SafePtr<ICPReactionTerm<BaseTerm> > srcTerm = getSrcTerm();
+
+  // reference values for the convective part
+  RealVector& refDataConv = convTerm->getReferencePhysicalData();
+  // reference values for the diffusive part
+  RealVector& refDataDiff = diffTerm->getReferencePhysicalData();
+  // reference values for the reaction (source) part
+  RealVector& refDataSrc = srcTerm->getReferencePhysicalData();
+
+  // override the reference values for Euler data starting from
+  CFout << "WATCH OUT: Equations will be solved dimensionally." << "\n";
+
+  refDataConv = 1.0;
+  refDataDiff = 1.0;
+  refDataSrc  = 1.0;
+
+  // the constant of real gas, density, thermodynamic pressure and Cv
+  // set to infinite dimensional values
+  convTerm->setRRef(convTerm->getRdim());
+
+  // reference values set to 1.0
+  convTerm->setTempRef(1.0);
+  convTerm->setPressRef(1.0);
+
+  // scaling coefficient for the momentum equations
+  diffTerm->setCoeffTau(1.0);
+
+  // scaling coefficient for the energy equation
+  diffTerm->setCoeffQ(1.0);
+
+  _isAdimensional = false;
+
+  CFLog(NOTICE, "dynViscosityRef     = " << refDataDiff[NSTerm::MU]     << "\n");
+  CFLog(NOTICE, "thermConductivity   = " << refDataDiff[NSTerm::LAMBDA] << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void ICPLTEPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionDiffusionReactionPM
+    <Framework::MultiScalarTerm<NavierStokes::EulerTerm>,
+    NavierStokes::NSTerm,
+    ICPReactionTerm<Framework::BaseTerm> >::configure(args);
+    			      
+  cf_assert(getDimension() > 0);
+  cf_assert(getNbEquations() > 0);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(DIM);
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace ICP
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

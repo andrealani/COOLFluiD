@@ -1,0 +1,156 @@
+#include "Framework/MeshData.hh"
+#include "Framework/PhysicalChemicalLibrary.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+NoSlipWallIsothermalNSrvt<MODEL>::
+NoSlipWallIsothermalNSrvt(const std::string& name) :
+  NoSlipWallIsothermalNSvt<MODEL>(name),
+  m_library(CFNULL),
+  m_nbSpecies(0),
+  m_nbTv(0),
+  m_ghostTTvib(),
+  m_innerTTvib()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+NoSlipWallIsothermalNSrvt<MODEL>::~NoSlipWallIsothermalNSrvt()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSrvt<MODEL>::setup()
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  NoSlipWallIsothermalNSvt<MODEL>::setup();
+
+  SafePtr<MODEL> modelTerm = PhysicalModelStack::getActive()->
+    getImplementor()->getConvectiveTerm().template d_castTo<MODEL>();
+  
+  m_library = PhysicalModelStack::getActive()->getImplementor()->template
+    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  
+  m_nbSpecies = modelTerm->getNbScalarVars(0);
+  m_nbTv = modelTerm->getNbScalarVars(1) - m_library->getNbTe();
+  m_ghostTTvib.resize(m_nbTv + 1); // roto-translational + vibrational temperatures
+  m_innerTTvib.resize(m_nbTv + 1); // roto-translational + vibrational temperatures
+
+  cf_assert(m_ghostTTvib.size() > 0);
+  cf_assert(m_innerTTvib.size() > 0);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSrvt<MODEL>::setGhostStateImpl
+(const Framework::State& innerState,
+ Framework::State& ghostState)
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  if (this->m_adiabatic || this->getMethodData().getNodalStatesExtrapolator()->runAdiabatic()) {
+    this->imposeAdiabatic(innerState, ghostState);
+  }
+  else {
+    // here a fix is needed in order to have always m_ghostT > 0
+    // dynamic relocation of the ghost state: the position of the
+    // ghost state is locally changed, and the BC is imposed
+    // using a weighted average of ghost state (in the new location)
+    // and inner state
+
+    CFuint iTemp = this->m_tempID;
+    for (CFuint i = 0; i < m_innerTTvib.size(); ++i, ++iTemp) {
+      m_innerTTvib[i] = innerState[iTemp];
+      m_ghostTTvib[i] = ghostState[iTemp];
+    }
+    
+    CFLog(DEBUG_MED, "NoSlipWallIsothermalNSrvt::setGhostStateImpl() => [Tw Ti Tg] = [" << this->m_wallTemp 
+	  << " " << innerState[this->m_tempID] << " " << 2.*this->m_wallTemp-innerState[this->m_tempID] << "]\n");
+    
+    this->repositionNode(m_innerTTvib, m_ghostTTvib, this->m_wallTemp, this->m_ghostTempMin);
+    
+    CFLog(DEBUG_MED, "NoSlipWallIsothermalNSrvt::setGhostStateImpl() => final Tg = [" << m_ghostTTvib << "]\n");
+    
+    // reset the ghost node with the new position
+    ghostState.getCoordinates() = this->m_tempGhostNode;
+    
+    const CFreal ratioT = innerState[this->m_tempID]/m_ghostTTvib[0];
+    const CFuint sizeState = innerState.size();
+    cf_assert(this->m_isVelocityComp.size() == sizeState);
+    const CFuint nbTe = m_library->getNbTe();
+        
+    for (CFuint i = 0; i < sizeState; ++i) {
+      if (this->m_computeVars[i]) {
+	if (this->m_isVelocityComp[i]) {  
+	  this->linearInterpolate(innerState[i], 0.0, ghostState[i]); 
+	}
+	else {
+	  if (i < this->m_nbSpecies) { 
+	    // rho_i_ghost = rho_i_in * T_in / T_ghost
+	    // @TODO AL: check if the m_factor is needed here !!!
+	    // if there is Te, adiabatic condition is set on it
+	    if (nbTe == 1 && i == 0) {
+	      ghostState[0] = innerState[0];
+	    }
+	    else {
+	      ghostState[i] = innerState[i]*ratioT;
+	    }
+	  }
+	  
+	  if (i < this->m_tempID && i >= this->m_nbSpecies) {
+	    cf_assert(false);
+	    // constant extrapolation by default
+	    ghostState[i] = innerState[i];
+	  }
+	  
+	  cf_assert(i < innerState.size());
+	  cf_assert(i < ghostState.size());
+	  
+	  if (i >= this->m_tempID) {
+	    if (i < sizeState - nbTe) {
+	      // this fix is needed for ICP but could fail in other cases (RANS?)
+	      const CFuint TvID = i - this->m_tempID;
+	      if (TvID < m_ghostTTvib.size()) {
+		ghostState[i] = m_ghostTTvib[TvID];
+	      }
+	      else {
+		ghostState[i] = innerState[i];
+	      }
+	    }
+	    else {
+	      // adiabatic condition for the free electrons temperature
+	      ghostState[i] = innerState[i];
+	    }
+	  }
+	}
+      }
+    }
+  }
+  
+  CFLog(DEBUG_MAX, "NoSlipWallIsothermalNSrvt::setGhostState() => rho_i u v T Tv ER EI = " << ghostState << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

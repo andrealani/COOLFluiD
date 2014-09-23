@@ -1,0 +1,31 @@
+      INTEGER VAMES, VCAP, LEV, JM, EX
+      PARAMETER (VAMES = 61, VCAP = 68, LEV = 9390, JM = 281, EX = 1830)
+      INTEGER NS, NT, GN, VMAX 
+      INTEGER JMAX(1:VAMES), G(1:LEV), IND(1:VAMES,1:JM)
+      DOUBLE PRECISION UKB, UNA, URG, UE, UH, UPI, HFORN, HFN, EDN2, 
+     &                 THETAV, THETAR, TPOST, TPRE, STEP, TMAX, TMIN, 
+     &                 YTOL
+      DOUBLE PRECISION ENE(1:LEV), E(1:LEV,1:3), AD(1:VAMES), 
+     &                 BD(1:VAMES), CD(1:VAMES), AE(1:VAMES,1:VAMES), 
+     &                 BE(1:VAMES,1:VAMES), CE(1:VAMES,1:VAMES), 
+     &                 MM(1:VCAP+1), AP(1:3), MWA(1:2), MWB(1:2),
+     &                 YQRV(1:VAMES,5991), Y2QRV(1:VAMES,1:5991), 
+     &                 YERV(1:VAMES,1:5991), Y2ERV(1:VAMES,1:5991), 
+     &                 YCPV(1:VAMES,1:5991), Y2CPV(1:VAMES,1:5991), 
+     &                 TEMP(1:5991), EVIBR(1:VCAP+1),  EVIBRUM(1:VCAP+1)
+      DOUBLE PRECISION D1(1:VCAP), D2(1:VCAP), D3(1:VCAP), D4(1:VCAP), 
+     &                 D5(1:VCAP), A1(1:VCAP,1:VCAP), A2(1:VCAP,1:VCAP), 
+     &                 A3(1:VCAP,1:VCAP), A4(1:VCAP,1:VCAP), 
+     &                 A5(1:VCAP,1:VCAP)  
+      CHARACTER(10)    FLAGVIBCR
+C-----------------------------------------------------------------------
+      COMMON / memory1 / NS, NT, GN, VMAX
+      COMMON / memory2 / JMAX, G, IND
+      COMMON / memory3 / UKB, UNA, URG, UE, UH, UPI, HFORN, HFN, EDN2, 
+     &                   THETAV, THETAR, TPOST, TPRE, STEP, TMAX, TMIN, 
+     &                   YTOL
+      COMMON / memory4 / ENE, E, AD, BD, CD, AE, BE, CE, MM, AP, MWA, 
+     &                   MWB, YQRV, Y2QRV, YERV, Y2ERV, YCPV, Y2CPV,
+     &                   TEMP, EVIBR,  EVIBRUM
+      COMMON / memory5 / D1, D2, D3, D4, D5, A1, A2, A3, A4, A5  
+      COMMON / memory6 / FLAGVIBCR

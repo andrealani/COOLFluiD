@@ -1,0 +1,134 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = 0.71910308
+
+#
+
+CFEnv.TraceActive = true
+
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPetscI libTecplotWriter libCFmeshFileWriter libCFmeshFileReader libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libNewtonMethod libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Naca0012/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
+Simulator.SubSystem.Euler2D.refValues = 1. 256.8982996572 256.8982996572 239745.993183375
+Simulator.SubSystem.Euler2D.refLength = 1.0
+
+Simulator.SubSystem.ConvergenceFile     = convergence_euler.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = naca_FVM_eulerM0755.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = naca_FVM_eulerM0755.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 10
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerFaces Airfoil FarField
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = naca0012.CFmesh
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 5.
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = min(100000000.,5.0*10^i)
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<10,10.0,if(i<20,100.,if(i<30,1000.,if(i<40,10000.,if(i<50,100000.,1000000.)))))
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 20.
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.AbsNorm = -5.0
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+#Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = StdTimeRhs
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.Output = false
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
+
+#Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Puvt
+#Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.6
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.freezeLimiter = true
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 0.1
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState \
+          MirrorEuler2DFVMCC \
+          FarFieldEuler2DFVMCC
+
+Simulator.SubSystem.CellCenterFVM.InitNames = InField \
+          InMirror \
+          InFar
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 1. \
+          256.8982996572 \
+          0.0 \
+          239745.993183375
+
+Simulator.SubSystem.CellCenterFVM.InMirror.applyTRS = Airfoil
+
+Simulator.SubSystem.CellCenterFVM.InFar.applyTRS = FarField
+Simulator.SubSystem.CellCenterFVM.InFar.Tinf = 288.15
+Simulator.SubSystem.CellCenterFVM.InFar.Pinf = 82699.05
+Simulator.SubSystem.CellCenterFVM.InFar.Uinf = 256.8982996572
+Simulator.SubSystem.CellCenterFVM.InFar.Vinf = 0.0
+
+Simulator.SubSystem.CellCenterFVM.BcComds = MirrorEuler2DFVMCC \
+          FarFieldEuler2DFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = Wall \
+        Infarfld
+
+Simulator.SubSystem.CellCenterFVM.Wall.applyTRS = Airfoil
+
+Simulator.SubSystem.CellCenterFVM.Infarfld.applyTRS = FarField
+Simulator.SubSystem.CellCenterFVM.Infarfld.Tinf = 288.15
+Simulator.SubSystem.CellCenterFVM.Infarfld.Pinf = 82699.05
+Simulator.SubSystem.CellCenterFVM.Infarfld.Uinf = 256.8982996572
+Simulator.SubSystem.CellCenterFVM.Infarfld.Vinf = 0.0
+

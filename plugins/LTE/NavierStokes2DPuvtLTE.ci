@@ -1,0 +1,219 @@
+#include "Framework/PhysicalChemicalLibrary.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace LTE {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename CTERM>
+NavierStokes2DPuvtLTE<CTERM>::NavierStokes2DPuvtLTE
+(const std::string& name,
+ Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  NavierStokes::NavierStokes2DVarSet(name, model),
+  _library(CFNULL),
+  _eulerModel(model->getConvectiveTerm().template d_castTo<CTERM>()),
+  _tempX()
+{
+  std::vector<std::string> names(4);
+  names[0] = (!_eulerModel->isIncompressible()) ? "p" : "dp";
+  names[1] = "u";
+  names[2] = "v";
+  names[3] = "T";
+  setVarNames(names);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename CTERM>
+NavierStokes2DPuvtLTE<CTERM>::~NavierStokes2DPuvtLTE()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename CTERM>
+void NavierStokes2DPuvtLTE<CTERM>::setGradientVars
+(const std::vector<RealVector*>& states,
+ RealMatrix& values,
+ const CFuint stateSize)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  const CFuint nbValues = values.nbRows();
+  for (CFuint i = 0; i < nbValues; ++i) {
+    for (CFuint j = 0; j < stateSize; ++j) {
+      values(i,j) = (*states[j])[i];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename CTERM>
+void NavierStokes2DPuvtLTE<CTERM>::setGradientVarGradients(const std::vector<RealVector*>& states,
+                                                           const std::vector< std::vector<RealVector*> >& stateGradients,
+                                                           std::vector< std::vector<RealVector*> >& gradVarGradients,
+                                                           const CFuint stateSize)
+{
+  cf_assert(stateGradients.size() > 0);
+  const CFuint nbValues = stateGradients[0].size();
+  for (CFuint i = 0; i < nbValues; ++i)
+  {
+    for (CFuint j = 0; j < stateSize; ++j)
+    {
+      *gradVarGradients[j][i] = *stateGradients[j][i];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename CTERM>
+void NavierStokes2DPuvtLTE<CTERM>::setStateGradients(const std::vector<RealVector*>& states,
+                                                     const std::vector< std::vector<RealVector*> >& gradVarGradients,
+                                                     std::vector< std::vector<RealVector*> >& stateGradients,
+                                                     const CFuint stateSize)
+{
+  cf_assert(stateGradients.size() > 0);
+  const CFuint nbValues = stateGradients[0].size();
+  for (CFuint i = 0; i < nbValues; ++i)
+  {
+    for (CFuint j = 0; j < stateSize; ++j)
+    {
+      *stateGradients[j][i] = *gradVarGradients[j][i];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename CTERM>
+CFreal NavierStokes2DPuvtLTE<CTERM>::
+getDynViscosity(const RealVector& state, const std::vector<RealVector*>& gradients)
+{
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  CFreal Tdim   = _eulerModel->getTempRef()*state[3];
+  CFreal pdim   = _eulerModel->getPressureFromState(state[0])*
+    (_eulerModel->getReferencePhysicalData())[CTERM::P];
+  return _library->eta(Tdim, pdim, CFNULL) /
+    (getModel().getReferencePhysicalData())[NSTerm::MU];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename CTERM>
+CFreal NavierStokes2DPuvtLTE<CTERM>::getDensity(const RealVector& state)
+{
+  using namespace COOLFluiD::Framework;
+  
+  CFreal Tdim   = _eulerModel->getTempRef()*state[3];
+  CFreal pdim   =  _eulerModel->getPressureFromState(state[0])*
+    (_eulerModel->getReferencePhysicalData())[CTERM::P];
+  const CFreal rhoRef = (_eulerModel->getReferencePhysicalData())[CTERM::RHO];
+  return _library->density(Tdim,pdim)/rhoRef;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename CTERM>
+CFreal NavierStokes2DPuvtLTE<CTERM>::
+getThermConductivity(const RealVector& state,
+				     const CFreal& dynViscosity)
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  CFreal Tdim   = _eulerModel->getTempRef()*state[3];
+  CFreal pdim   =  _eulerModel->getPressureFromState(state[0])*
+    (_eulerModel->getReferencePhysicalData())[CTERM::P];
+  // lambdaD for incompressible
+  return _library->lambdaEQ(Tdim,pdim) /
+    (getModel().getReferencePhysicalData())[NSTerm::LAMBDA];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename CTERM>
+void NavierStokes2DPuvtLTE<CTERM>::setup()
+{
+  using namespace COOLFluiD::Framework;
+
+  NavierStokes2DVarSet::setup();
+
+  _library = PhysicalModelStack::getActive()->getImplementor()->
+    template getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  cf_assert(_library.isNotNull());
+
+  _tempX.resize(_library->getNbSpecies());
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename CTERM>
+void NavierStokes2DPuvtLTE<CTERM>::setComposition
+(const RealVector& state,
+ const bool isPerturb,
+ const CFuint iVar)
+{
+  using namespace COOLFluiD::Framework;
+
+  CFLog(VERBOSE, "NavierStokes2DPuvtLTE::setComposition() => START\n");
+	
+  // this is to avoid useless expensive re-computations
+  useBackUpValues(false);
+  setBackUpValues(false);
+
+  if (isPerturb && (iVar == 1 || iVar == 2)) {
+    useBackUpValues(true);
+  }
+  else if (isPerturb && (iVar == 0 || iVar == 3)) {
+    /// @todo test if it is possible to use it like this
+    //      	_library->resetComposition(_tempX);
+    
+    CFreal Tdim   = _eulerModel->getTempRef()*state[3];
+    CFreal pdim   =  _eulerModel->getPressureFromState(state[0])*
+      (_eulerModel->getReferencePhysicalData())[CTERM::P];
+    CFLog(DEBUG_MAX, "NavierStokes2DPuvtLTE::setComposition() => before isPerturb setComposition()\n");
+    _library->setComposition(Tdim,pdim);
+    CFLog(DEBUG_MAX, "NavierStokes2DPuvtLTE::setComposition() => after isPerturb setComposition()\n");
+  }
+  else if (!isPerturb) {
+    CFreal Tdim   = _eulerModel->getTempRef()*state[3];
+    CFreal pdim   =  _eulerModel->getPressureFromState(state[0])*
+      (_eulerModel->getReferencePhysicalData())[CTERM::P];
+    
+    CFLog(DEBUG_MAX, "NavierStokes2DPuvtLTE::setComposition() => before setComposition()\n");
+    _library->setComposition(Tdim,pdim,&_tempX);  
+    CFLog(DEBUG_MAX, "NavierStokes2DPuvtLTE::setComposition() => after setComposition()\n");
+    // set and store the back up values only if an unperturbed flux
+    // is computed
+    setBackUpValues(true); 
+  }
+  CFLog(DEBUG_MAX, "NavierStokes2DPuvtLTE::setComposition() => END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename CTERM>
+void NavierStokes2DPuvtLTE<CTERM>::setGradientState(const RealVector& state)
+{
+  cf_assert(_gradState.size() == state.size());
+  _gradState = state;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace LTE
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

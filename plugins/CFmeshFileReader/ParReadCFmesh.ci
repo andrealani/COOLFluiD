@@ -1,0 +1,239 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#include <set>
+
+#include "Common/PE.hh"
+#include "Common/Table.hh"
+#include "Common/Stopwatch.hh"
+#include "Common/ProcessInfo.hh"
+#include "Common/OSystem.hh"
+#include "Common/BadValueException.hh"
+#include "MathTools/RCM.h"
+#include "Environment/DirPaths.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/MeshDataBuilder.hh"
+#include "Framework/SpaceMethod.hh"
+#include "Framework/MethodData.hh"
+#include "Framework/MeshPartitioner.hh"
+#include "Framework/VarSetTransformer.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+    namespace CFmeshFileReader {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename READER>
+void ParReadCFmesh<READER>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< bool >("Renumber", "Should we renumber the state ids to reduce the Jacobian matrix bandwith");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename READER>
+ParReadCFmesh<READER>::ParReadCFmesh(const std::string& name) :
+  ReadBase(name),
+  m_reader()
+{
+  this->addConfigOptionsTo(this);
+
+  m_renumber = false;
+  this->setParameter("Renumber",&m_renumber);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename READER>
+ParReadCFmesh<READER>::~ParReadCFmesh()
+{
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+template <typename READER>
+void ParReadCFmesh<READER>::configure ( Config::ConfigArgs& args )
+{
+  ReadBase::configure(args);
+
+  CFLog ( NOTICE, " Renumber : " << m_renumber << "\n" );
+
+  this->configureNested(&m_reader, args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename READER>
+void ParReadCFmesh<READER>::execute()
+{
+  CFAUTOTRACE;
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  m_data->setDataSockets(socket_states, socket_nodes, &m_sockets);
+  m_data->setPastDataStorageFlags(this->getMethodData().readPastNodes(),
+                                  this->getMethodData().readPastStates() );
+  m_data->setInterDataStorageFlags(this->getMethodData().readInterNodes(),
+                                   this->getMethodData().readInterStates() );
+
+  m_data->setExtraVarNamesAndTags(this->getMethodData().getExtraNVarSocketNamesAndTags(),
+                                  this->getMethodData().getExtraSVarSocketNamesAndTags(),
+                                  this->getMethodData().getExtraVarSocketNamesAndTags());
+  SafePtr<CFmeshReaderSource> ptr = m_data.get();
+  cf_assert(ptr.isNotNull());
+  
+  m_reader.setReadData(ptr);
+  m_reader.setStateInitValues(this->getMethodData().getUseInitValues(),
+			      this->getMethodData().getInitValues(),
+			      this->getMethodData().getInitValuesIDs());
+  
+  m_reader.setup();
+  
+  Stopwatch<WallTime> stp;
+  stp.start();
+
+  boost::filesystem::path filename = Environment::DirPaths::getInstance().getWorkingDir() / this->getMethodData().getFileName();
+  m_reader.readFromFile( filename );
+
+  CFLog(INFO,"Reading data from " << this->getMethodData().getFileName().string() << " took " << stp.read() << "s\n");
+  CFLog(NOTICE, "Memory Usage after mesh reading: " << Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n");
+
+  if (m_data->getDimension() != PhysicalModelStack::getActive()->getDim())
+    throw BadValueException (FromHere(),"Mesh has wrong dimensionality.");
+
+  // if the file contained states that do not match the physical
+  // model then we need to correct their size
+  correctStates();
+
+  //  RCM renumbering
+  if (m_renumber) {
+    CFLog(INFO, " +++ Applying Reverse CuthillMcKee algorithm to renumber states\n" );
+    
+    std::valarray <CFuint> new_state_ids;
+    std::vector<TRGeoConn>& MyGeoConn = *(m_data->getGeoConn());
+    
+    // isoparametric FEM case if the default
+    const bool useMedianDual = (socket_nodes.getDataHandle().size() != socket_states.getDataHandle().size());
+    if (!useMedianDual) {
+      RCM::print_table( "INPUT_mesh_TEC.dat",*(m_data->getElementStateTable()), *(m_data->getElementNodeTable()), useMedianDual);
+    }
+    else {
+      RCM::print_table( "INPUT_mesh_TEC.dat",*(m_data->getElementStateTable()), *(m_data->getElementNodeTable()), useMedianDual);
+    }
+        
+    RCM::renumber ( *(m_data->getElementStateTable()), *(m_data->getElementNodeTable()), new_state_ids, useMedianDual);
+    
+    if (!useMedianDual) {
+      RCM::print_table( "OUTPUT_mesh_TEC.dat",*(m_data->getElementStateTable()), *(m_data->getElementNodeTable()), useMedianDual);
+    }
+    else {
+      RCM::print_table( "OUTPUT_mesh_TEC.dat",*(m_data->getElementStateTable()), *(m_data->getElementNodeTable()), useMedianDual);
+    }
+    
+    // cycle on all the states in the TRS
+    for(CFuint iTRS = 0; iTRS < MyGeoConn.size(); ++iTRS) {
+      TRGeoConn& TRcon = MyGeoConn[iTRS];
+      const CFuint nbTR = TRcon.size();
+      for (CFuint iTR = 0; iTR < nbTR; ++iTR) {
+	GeoConn& TRGeos = TRcon[iTR];
+	const CFuint nbGeos = TRGeos.size();
+	for(CFuint iGeo = 0; iGeo < nbGeos; ++iGeo) {
+	  GeoConnElement& local_geo = TRGeos[iGeo];
+	  //          valarray<CFuint>& nodeIds = local_geo.first;
+	  valarray<CFuint>& StatesIds = local_geo.second;
+	  const CFuint nbstates = StatesIds.size();
+	  if (!useMedianDual) {
+	    for(CFuint si = 0; si < nbstates; ++si) {
+	      StatesIds[si] = new_state_ids[  StatesIds[si]   ];
+	    }
+	  }
+	  else {
+	    // only one boundary state (neighbor cell ID) for FVM
+	    // since the cell IDs have changed, the neighbor ID must be updated
+	    StatesIds[0] = new_state_ids[ StatesIds[0] ];
+	  }
+	}
+      }
+    }
+    
+    if (useMedianDual) {
+      // cell-state connectivity is left unchanged for simplicity
+      // I can still say that cell 0 has state 0, but is defined by different nodes
+      // what will have to change is the actual content (solution vector) of the state
+      
+      DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
+      const CFuint nbEqs = states[0]->size();
+      // backup the states
+      vector<CFreal> bkp(states.size()*nbEqs);
+      for (CFuint i = 0; i < states.size(); ++i) {
+       	const CFuint start = i*nbEqs;
+	for (CFuint e = 0; e < nbEqs; ++e) {
+	  bkp[start+e] = (*states[i])[e];
+	}
+      }
+      
+      vector<bool> flag(states.size(), false);
+      // example
+      // before: state[i] = SA
+      // after : state[new_state_ids[i]] = SA
+      for (CFuint i = 0; i < states.size(); ++i) {
+	const CFuint newID = new_state_ids[i];
+	flag[newID] = true;
+	const CFuint start = i*nbEqs;
+	for (CFuint e = 0; e < nbEqs; ++e) {
+	  (*states[newID])[e] = bkp[start+e];
+	}
+      }
+      
+      for (CFuint i = 0; i < states.size(); ++i) {
+	if (!flag[i]) {
+	  CFLog(ERROR, "ERROR: ParReadCFmesh::execute() =>  state [ " << i << " ] has not been processed after RCM!\n"); 
+	}
+      }
+    }    
+    
+    CFLog(INFO, " +++ Finished renumbering !\n" );
+  }
+  
+
+  // builder of the basic data in MeshData
+  // dont forget to release memory in the end
+  Common::SelfRegistPtr<MeshDataBuilder> meshDataBuilder =
+    this->getMethodData().template getCollaborator<SpaceMethod>()->createMeshBuilder();
+
+  meshDataBuilder->setCFmeshData(m_data.get());
+
+  applyScalings();
+  applyTranslation();
+
+  // mesh data builder creates data that are IO-dependent
+  meshDataBuilder->computeGeoTypeInfo();
+  meshDataBuilder->createTopologicalRegionSets();
+
+  CFLog(VERBOSE,"Memory Usage after TRS: " << Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n");
+
+  //set some global mesh values useful in many places
+  meshDataBuilder->setMaxGlobalInfo();
+
+  CFLog(INFO,"Building MeshData from " << filename.string() << " took " << stp.read() <<"s\n");
+
+  // deallocate the unnecessary memory
+  m_data->releaseMemory();
+  meshDataBuilder->releaseMemory();
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace CFmeshFileReader
+
+} // namespace COOLFluiD

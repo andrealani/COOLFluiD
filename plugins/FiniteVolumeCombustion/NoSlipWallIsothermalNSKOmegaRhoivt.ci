@@ -1,0 +1,562 @@
+#include "NavierStokes/NSTurbTerm.hh"
+#include "Framework/MeshData.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+	namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class CVARSET, class DVARSET>
+void NoSlipWallIsothermalNSKOmegaRhoivt<CVARSET,DVARSET>::defineConfigOptions(Config::OptionList& options)
+{
+   options.template addConfigOption< CFreal >("xWallVelocity","X-component of a velocity vector of the wall.");
+   options.template addConfigOption< CFreal >("yWallVelocity","Y-component of a velocity vector of the wall.");
+   options.template addConfigOption< CFreal >("zWallVelocity","Z-component of a velocity vector of the wall.");
+   options.template addConfigOption< CFreal >("KWall","Wall value for turbulent intensity");
+   options.template addConfigOption< CFreal >("TWall","Wall value for the temperature");
+   options.template addConfigOption< CFreal >("KGhostMin","Minumum turb. intensity in the ghost state");
+   options.template addConfigOption< bool >("Adiabatic","Flag to run adiabatic");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class CVARSET, class DVARSET>
+NoSlipWallIsothermalNSKOmegaRhoivt<CVARSET, DVARSET>::NoSlipWallIsothermalNSKOmegaRhoivt(const std::string& name) :
+  FVMCC_BC(name),
+  m_library(CFNULL),
+  _varSetTurb(CFNULL),
+  _diffVarTurb(CFNULL),
+  _xWallVelocity(0.),
+  _yWallVelocity(0.),
+  _zWallVelocity(0.),
+  m_kID(0),
+  m_ghostK(0.),
+  m_ysIn(),
+  m_mmasses(),
+  m_massTtmS_In(),
+  m_massTtmS_G(),
+  m_ysW(),
+  m_ysG()
+{
+  this->addConfigOptionsTo(this);
+
+  this->setParameter("xWallVelocity",&_xWallVelocity);
+  this->setParameter("yWallVelocity",&_yWallVelocity);
+  this->setParameter("zWallVelocity",&_zWallVelocity);
+  
+  m_wallK = 0.;
+  this->setParameter("KWall",&m_wallK);
+
+  m_wallT = 0.;
+  this->setParameter("TWall",&m_wallT);
+  
+  m_ghostKMin = 0.0;
+  this->setParameter("KGhostMin",&m_ghostKMin);
+  
+  m_adiabatic = false;
+  this->setParameter("Adiabatic",&m_adiabatic);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class CVARSET, class DVARSET>
+NoSlipWallIsothermalNSKOmegaRhoivt<CVARSET, DVARSET>::~NoSlipWallIsothermalNSKOmegaRhoivt()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class CVARSET, class DVARSET>
+void NoSlipWallIsothermalNSKOmegaRhoivt<CVARSET, DVARSET>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+
+  CFAUTOTRACE;
+  
+  FVMCC_BC::setup();
+  
+  _varSetTurb = getMethodData().getUpdateVar().template d_castTo<CVARSET>();
+  _diffVarTurb = getMethodData().getDiffusiveVar().template d_castTo<DVARSET>();
+ 
+  m_library = PhysicalModelStack::getActive()->getImplementor()->template
+			  getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  
+  _xWallVelocity /= _varSetTurb->getModel()->getVelRef();
+  _yWallVelocity /= _varSetTurb->getModel()->getVelRef();
+  _zWallVelocity /= _varSetTurb->getModel()->getVelRef();
+  
+  
+  
+  //CFout << "m_wallT before " << m_wallT << "\n"; 
+  m_wallT /= _varSetTurb->getModel()->getTempRef();
+  //CFout << "m_wallT after " << m_wallT << "\n";
+  
+  const CFuint dim = Framework::PhysicalModelStack::getActive()->getDim();
+  
+  
+  m_tempNode.resize(dim);
+  m_midNode.resize(dim);
+  m_tempGhostNode.resize(dim);
+  m_faceNormal.resize(dim);
+
+  cf_assert(m_wallK >= 0.0);
+
+  // the ID of the k variable
+  const CFuint nbSpecies = m_library->getNbSpecies();
+  //(nbSpecies - 1) = ID of species
+  // dim = 2 or 3 for 2D or 3D (u,v,w velocity components)
+  // + 2 = accounting for temperature ID
+  m_kID = (nbSpecies - 1) + dim + 2;
+  
+  
+  m_ysIn.resize(m_library->getNbSpecies());
+  cf_assert(m_ysIn.size() > 0);
+  
+  m_ysG.resize(m_library->getNbSpecies());
+  cf_assert(m_ysG.size() > 0);
+  
+  m_mmasses.resize(m_library->getNbSpecies());
+  
+  m_massTtmS_In.resize(m_library->getNbSpecies());
+  m_massTtmS_G.resize(m_library->getNbSpecies());
+  
+  m_ysW.resize(m_library->getNbSpecies());
+  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class CVARSET, class DVARSET>
+void NoSlipWallIsothermalNSKOmegaRhoivt<CVARSET, DVARSET>::setGhostState(Framework::GeometricEntity *const face)
+{
+ using namespace std;
+ using namespace COOLFluiD::Framework;
+ using namespace COOLFluiD::Common;
+ using namespace COOLFluiD::MathTools;
+
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint faceID = face->getID();
+  const CFuint startID = faceID*dim;
+
+  DataHandle<CFreal> normals = socket_normals.getDataHandle();
+
+  // set the current normal
+  for (CFuint i = 0; i < dim; ++i) {
+    m_faceNormal[i] = normals[startID + i];
+  }
+
+  // compute the original position of the ghost state @see ComputeDummyState
+  const Node& firstNode = *face->getNode(0);
+  const CFreal k = - MathFunctions::innerProd(m_faceNormal, firstNode);
+  const CFreal n2 = MathFunctions::innerProd(m_faceNormal, m_faceNormal);
+  cf_assert(std::abs(n2) > 0.0);
+  State *const innerState = face->getState(0);
+  m_innerNode = &innerState->getCoordinates();
+  m_t = (MathFunctions::innerProd(m_faceNormal,*m_innerNode) + k)/n2;
+  m_tempGhostNode = (*m_innerNode) - 2.*m_t*m_faceNormal;
+
+  // this middle node is by construction on the boundary face
+  m_midNode = 0.5*(*m_innerNode + m_tempGhostNode);
+
+  // first calculate the "unmodified distances" inner-wall, inner-ghost
+  m_drXiXw = MathTools::MathFunctions::getDistance(*m_innerNode,m_midNode);
+  m_drXiXg = MathTools::MathFunctions::getDistance(*m_innerNode, m_tempGhostNode);
+
+  //CFout << "m_drXiXw setGhostState " << m_drXiXw << "\n";
+  //CFout << "m_drXiXg setGhostState " << m_drXiXg << "\n";
+  
+  
+  setGhostStateImpl(*innerState, *face->getState(1));
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class CVARSET, class DVARSET>
+void NoSlipWallIsothermalNSKOmegaRhoivt<CVARSET, DVARSET>::setGhostStateImpl
+(const Framework::State& innerState, Framework::State& ghostState)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+
+  // here a fix is needed in order to have always m_ghostK > 0
+  // dynamic relocation of the ghost state: the position of the
+  // ghost state is locally changed, and the BC is imposed
+  // using a weighted average of ghost state (in the new location)
+  // and inner state
+  const CFreal innerK = innerState[m_kID];
+  //if(m_adiabatic==false) {
+  repositionNode(innerK, m_ghostK); 
+  
+  //CFout << "innerK " << innerK << "\n";
+  //CFout << "m_ghostK " << m_ghostK << "\n";
+
+  
+  const CFuint TID = m_kID - 1;
+  const CFuint omegaID = m_kID + 1;
+  const CFreal innerT = innerState[TID];
+  
+  // reset the ghost node with the new position
+  ghostState.getCoordinates() = m_tempGhostNode;
+  //}
+  //else {
+	//  m_ghostK = 2.*m_wallK - innerK;
+	//  
+	//  // CHECK THIS!
+	//  if (m_ghostK < 0.) {
+	//    m_ghostK = m_wallK;
+	//  }
+  //}
+  
+  // interpolate the wall temperature if adiabatic flag is false
+  if(m_adiabatic == false) {
+	  //CFout << "interpolate T" << "\n";
+	  linearInterpolate(innerState[TID], m_wallT, ghostState[TID]);
+  }
+  //
+  else {
+	  const CFreal innerT = innerState[TID];
+	  CFreal m_wallT = innerT;
+	  ghostState[TID] = m_wallT;
+  }
+  cf_assert(innerT > 0.);
+  
+  //CFout << "innerT" << innerT << "\n";
+  
+  CFuint nbSpecies = m_library->getNbSpecies();
+  
+  //CFout << "nbSpecies" << nbSpecies << "\n";
+  
+  //Ghost values for partial densities with constant interpolation
+  
+  m_ysIn = 0.;
+  m_ysW = 0.;
+  m_ysG = 0.;
+  CFreal tempDensity = 0.;
+  
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+
+	  m_ysIn[i] = innerState[i]; 	  // not "real" mass fractions, but partial densities
+	  //  formerly ghostState[i] = innerState[i]; was here
+	  tempDensity += innerState[i];   //density as sum of partial densities
+  }
+  
+  const CFreal innerDensity = tempDensity;
+
+  m_ysIn /= innerDensity; // Y_i = rho_i / rho
+  //CFout << "m_ysIn " << m_ysIn << "\n";
+  
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+	m_ysW[i] = m_ysIn[i];	    // wall Yi  = inner Yi
+	m_ysG[i] = m_ysW[i];	    // ghost Yi = wall Yi
+  }
+  
+   //Get universal gas constant from m_library
+  const CFreal _Rgas = m_library->getRgas();
+  
+  //CFout << "_Rgas " << _Rgas << "\n";
+  
+  // Setting to zero
+  m_mmasses = 0.;
+  m_massTtmS_In = 0.;
+  m_massTtmTt_In = 0.;
+  m_RoverMtot_In = 0.;
+  m_library->getMolarMasses(m_mmasses);
+  //CFout << "m_mmasses[i] " << m_mmasses << "\n";
+  
+  for ( CFuint i = 0; i < nbSpecies; ++i) {
+	  
+	  m_massTtmS_In[i] = m_ysIn[i]/m_mmasses[i];
+	  m_massTtmTt_In += m_massTtmS_In[i];
+	  
+  }
+  //CFout << "m_massTtmSi[i] " << m_massTtmS << "\n";
+  //CFout << "m_massTtmTt " << m_massTtmTt << "\n";
+  m_RoverMtot_In = _Rgas * m_massTtmTt_In;
+  
+  const CFreal innerP = innerDensity * m_RoverMtot_In * innerT;
+  cf_assert(innerP > 0.);
+  
+  //CFout << "innerP " << innerP << "\n";
+  
+  
+  CFreal wallP = innerP;
+  CFreal ghostP = wallP;
+ 
+  //Calculation of ghostState[i] per i < nbSpecies with ideal gas law
+  
+  m_massTtmS_G = 0.;
+  m_massTtmTt_G = 0.;
+  m_RoverMtot_G = 0.;
+  
+  for ( CFuint i = 0; i < nbSpecies; ++i) {
+	  m_massTtmS_G[i] = m_ysG[i]/m_mmasses[i];
+	  m_massTtmTt_G += m_massTtmS_G[i];
+  }
+  
+  m_RoverMtot_G = _Rgas * m_massTtmTt_G;
+  
+  CFreal ghostRho = ghostP / (m_RoverMtot_G * ghostState[TID]);
+  
+  //CFout << "ghostRho " << ghostRho << "\n";
+  
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+	  ghostState[i] = m_ysG[i] * ghostRho;
+	  //CFout << "ghost densities" << ghostState[i] << "\n";
+  }
+    
+  
+  
+ // Old version for partial densities' calculation
+ //CFreal tempDensity = 0.0;
+ // //Ghost values for partial densities with constant interpolation
+ // for (CFuint is = 0; is < nbSpecies; ++is) {
+	//  ghostState[is] = innerState[is];
+	//  
+	//  //Inner density calculation as sum of partial densities
+	//  tempDensity += innerState[is];
+ // }
+ 
+      
+  //Check on mass fractions
+  //If Y_i < 0, mass fraction is set 0
+  //If Y_i > 1, mass fraction is set 1
+  //for  (CFuint i = 0; i < nbSpecies; ++i) {
+	//  if (m_ysIn[i] < 0.) {
+	//  m_ysIn[i] = 0.; 
+	//  }
+	//  else if (m_ysIn[i] > 1.) {
+	//	   m_ysIn[i] = 1.;
+	//  }
+  //}
+				 
+  //CFout << "m_ysIn " << m_ysIn << "\n";
+   
+  // Is this needed??? (from NoSlipWallIsothermalNSrvtCat.ci
+  // first set the species fractions
+  //m_library->setSpeciesFractions(m_ysIn);
+  
+  //const CFreal innerDensity = tempDensity;
+  
+  //CFout << "innerDensity " << innerDensity << "\n";
+  
+  //CFout << "ghostState " << ghostState << "\n";
+  
+  
+  //R seems to be RoverMixtureMolarMass -- CHECK!!!!
+  
+  
+  //Old version
+  //const CFreal innerP = innerDensity * (_varSetTurb->getModel()->getR()) * innerT;
+  
+  //CFout << "R from getR " << (_varSetTurb->getModel()->getR()) << "\n";
+  //CFout << "innerP A " << innerP << "\n";
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+
+  //CFreal wallPressure = innerP;
+
+
+  // reset the ghost node with the new position
+  //ghostState.getCoordinates() = m_tempGhostNode;
+
+  //ghostState[0] = wallPressure;
+  
+  //Linear interpolation for velocity components
+  if(m_adiabatic==false) {
+	  //CFout << "Interpolate Velocity" << "\n";
+	  linearInterpolate(innerState[nbSpecies], _xWallVelocity, ghostState[nbSpecies]);
+	  linearInterpolate(innerState[nbSpecies + 1], _yWallVelocity, ghostState[nbSpecies + 1]);
+		if (dim == DIM_3D) {
+			linearInterpolate(innerState[nbSpecies + 2], _zWallVelocity, ghostState[nbSpecies + 2]);
+		}
+	}
+	else {
+		//Not consistent (?) but works!
+        ghostState[nbSpecies] = 2.*_xWallVelocity- innerState[nbSpecies];
+        ghostState[nbSpecies+1] = 2.*_yWallVelocity- innerState[nbSpecies+1];
+         if (dim == DIM_3D) {
+	     ghostState[nbSpecies+2] = 2.*_zWallVelocity- innerState[nbSpecies+2];
+		 }
+	}
+  
+  //CFout << "m_drXiXw " << m_drXiXw << "\n";
+  //CFout << "m_drXiXg " << m_drXiXg << "\n";
+  //CFout << "inner velocity x " << innerState[nbSpecies] << "\n";
+  //CFout << "wall velocity x " << _xWallVelocity << "\n";
+  //CFout << "ghost velocity x " << ghostState[nbSpecies] << "\n";
+  
+  //CFout << "inner velocity y " << innerState[nbSpecies+1] << "\n";
+  //CFout << "wall velocity y " << _yWallVelocity << "\n";
+  //CFout << "ghost velocity y " << ghostState[nbSpecies+1] << "\n";
+  
+  //CFout << "inner velocity z " << innerState[nbSpecies+2] << "\n";
+  //CFout << "wall velocity z " << _zWallVelocity << "\n";
+  //CFout << "ghost velocity z " << ghostState[nbSpecies+2] << "\n";
+  
+  
+
+  //CFout << "ghostState_T " << ghostState[TID] << "\n";
+  //CFout << "inner_T " << innerState[TID] << "\n";
+  
+  ghostState[m_kID] = m_ghostK;
+  //CFout << "ghostState_K " << ghostState[m_kID] << "\n";
+  //CFout << "inner_K " << innerK << "\n";
+  
+  const CFuint nbTurbVars = _varSetTurb->getModel()->getNbScalarVars(2); 
+  //0 --> gives 5
+  //1 --> gives 0
+  //2 --> gives 2
+  //3 --> gives 0
+  
+  
+  //CFout << "nbTurbVars " << nbTurbVars << "\n";
+  
+  if(nbTurbVars == 2){
+
+    //Compute distance to innerstate
+      CFreal y0 = m_drXiXw;
+
+      //avoid too small distances
+      y0 = std::max(y0, 10.e-10); //why 10-10? Different choices?
+      
+      //pdim and Tdim calculated at wall because are used for omegaWall calculation
+	  const CFreal pdim =  wallP * _varSetTurb->getModel()->getPressRef();
+      const CFreal Tdim =  m_wallT * _varSetTurb->getModel()->getTempRef();	  
+	  //It was:
+	  //const CFreal pdim =  innerP * _varSetTurb->getModel()->getPressRef();
+      //const CFreal Tdim =  innerState[TID] * _varSetTurb->getModel()->getTempRef();	  
+	  
+	  
+	  //CFout << " innerP B " << innerP << "\n";
+	  //CFout << "_varSetTurb->getModel()->getPressRef() " <<  _varSetTurb->getModel()->getPressRef() << "\n";
+	  
+	  const CFreal mu = _diffVarTurb->getModel().getDynViscosityDim(pdim, Tdim)/
+	(_diffVarTurb->getModel().getReferencePhysicalData())[Physics::NavierStokes::NSTurbTerm::MU];
+
+
+      CFreal wallDensity = 0.;
+	  
+	  wallDensity = wallP / (m_RoverMtot_G * m_wallT); //Change RoverMtot_G with calculation of RoverMtot_W
+
+      CFreal nu = mu / wallDensity;
+	  //It was:
+	  //CFreal nu = mu / innerDensity;
+	  
+	  //CFout << "mu " << mu << "\n";
+	  //CFout << "nu " << nu << "\n";
+	  //CFout << "innerDensity " << innerDensity << "\n";
+
+      //this is not the best, but it avoids having to code another BC! because I
+      //would have to dynamic cast to the KOmega varset to get the beta1
+      const CFreal beta1 = 0.075;
+
+      ///@todo here should this be adimensionalized (by the distance)???
+      //Menter's definition
+      const CFreal omegaWall = (10. * 6. * nu) / (beta1 * y0 * y0);
+	  //CFout << "OmegaWall " << omegaWall << "\n";
+	  //CFout << "m_wallK " << m_wallK << "\n";
+	  
+	  
+	  //Wilcox's definition
+	  //const CFreal beta0 = 0.0708;
+      //CFreal omegaWall = (1. * 6. * nu) / (beta0 * y0 * y0);
+	  
+	  //CFout << "ghostState_Omega " << ghostState[omegaID] << "\n";
+	  //CFout << "innerState_Omega " << innerState[omegaID] << "\n";
+	  //CFout << "wall_Omega " << omegaWall << "\n";
+	  //if(m_adiabatic==false){
+		  linearInterpolate(innerState[omegaID], omegaWall, ghostState[omegaID]);
+	  //}
+	  //else {
+		//  ghostState[omegaID] = 2. * omegaWall - innerState[omegaID];
+		  //ghostState[omegaID] = innerState[omegaID];
+	  //}
+		  
+	  
+      if(ghostState[omegaID] < 0.) {
+      CFout << "ghostState omega is negative!" << "\n";
+      ghostState[omegaID] = innerState[omegaID];
+      }
+	  ////limiter to omega
+	  //else if (ghostState[omegaID] > 1.e4) {
+		//	   ghostState[omegaID] = 1.e4;
+	  //}
+   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class CVARSET, class DVARSET>
+void NoSlipWallIsothermalNSKOmegaRhoivt<CVARSET,DVARSET>::repositionNode
+(const CFreal& innerValue, CFreal& ghostValue)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+
+  ghostValue = 2.*m_wallK - innerValue;
+  
+  //// CHECK THIS!--> Goes here or below?
+  //if (ghostValue < 0.) {
+  //  ghostValue = m_wallK;
+  //}
+
+  m_factor = 1.0;
+
+  while (!(ghostValue >= m_ghostKMin)) {
+    // cout << "in " << ghostValue << endl;
+    m_factor *= m_coeff;
+
+    // new position of the ghost node
+    m_tempNode = ((m_factor - 1.)*m_midNode  + m_tempGhostNode)/m_factor;
+
+    m_drXiXg = MathTools::MathFunctions::getDistance(*m_innerNode, m_tempNode);
+
+    // new turbulent kinetic energy K in the ghost state
+    linearInterpolate(innerValue, m_wallK, ghostValue);
+
+    // cout << "innerValue  = " << innerValue << endl;
+    // cout << "ghostValue  = " << ghostValue << endl;
+    // cout << "m_drXiXg = " << m_drXiXg << endl;
+    // cout << "m_drXiXw = " << m_drXiXw << endl;
+
+    // move the ghost to the new position
+    m_tempGhostNode = m_tempNode;
+  }
+
+  // cout << "out ghost = " << ghostValue << endl << endl;
+  // cout << "out inner = " << innerValue << endl << endl;
+
+  if (ghostValue < 0.0) cout << "ghostValue < 0 => " << ghostValue << endl;
+  
+  //// CHECK THIS!--> Goes here or above?
+  //if (ghostValue < 0.) {
+	//  ghostValue = m_wallK;
+  //}
+  
+  cf_assert(ghostValue >= 0.);
+  
+  //CFout << "K_ghost" << ghostValue << "\n";
+  //CFout << "K_inner" << innerValue << "\n";
+  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

@@ -1,0 +1,60 @@
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+SubOutletMS<BASE>::SubOutletMS(const std::string& name) :
+  BASE(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+SubOutletMS<BASE>::~SubOutletMS()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void SubOutletMS<BASE>::setGhostState(Framework::GeometricEntity *const face)
+{
+  using namespace COOLFluiD::Framework;
+  
+  BASE::setGhostState(face);
+  
+  State *const innerState = face->getState(0);
+  State *const ghostState = face->getState(1);
+  
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint start = BASE::EULERSET::getEqSetData()[0].getEqSetVarIDs().size();
+  const CFuint nbScalarEqs = nbEqs - start;
+  
+  for (CFuint i = 0; i < nbScalarEqs; ++i) {
+    (*ghostState)[start + i] = (*innerState)[start + i];
+  }
+ 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void SubOutletMS<BASE>::setup()
+{
+  using namespace COOLFluiD::Framework;
+
+  BASE::setup();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

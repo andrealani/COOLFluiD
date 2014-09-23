@@ -1,0 +1,6 @@
+Simulator.SubSystem.NewtonIterator.Data.CFL.SER.coeffCFL = 1.
+Simulator.SubSystem.NewtonIterator.Data.CFL.SER.maxCFL = 10.0
+Simulator.SubSystem.NewtonIterator.Data.CFL.SER.power = 0.4 
+Simulator.SubSystem.NewtonIterator.Data.CFL.SER.resetCFL = 0.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0

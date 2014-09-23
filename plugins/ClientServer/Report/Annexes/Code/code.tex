@@ -1,0 +1,48 @@
+\documentclass[a4paper, 12pt]{report}
+
+\usepackage[T1]{fontenc}
+\usepackage{graphicx,color, caption  }
+
+\usepackage{indentfirst}
+
+\usepackage{epsfig}
+\usepackage{fancyhdr}
+% \usepackage{fancyvrb}
+\usepackage{textcomp}
+%\usepackage{times}
+\usepackage{calc}
+\usepackage{listings}
+\usepackage{amssymb}
+\usepackage{lastpage}
+\pagestyle{fancy}
+
+
+\input{../../QtCpp}
+\input{../../Macros}
+
+% Title page
+\title{User Interface Development for \cf\\
+	\large Annex volume 3 : Source code}
+\author{GASPER \textsc{Quentin}}
+
+\begin{document}
+\maketitle
+
+\lhead{Annex volume 3 : Source code}
+\rhead{\nouppercase{\leftmark}} % current chapter title
+\cfoot{} % obligatoire !
+\rfoot{\thepage/\pageref{LastPage}}
+
+\fancyheadoffset[LO,RO]{\marginparsep}
+\fancyfootoffset[LO,RO]{\marginparsep}
+
+\setcounter{tocdepth}{1}
+
+\tableofcontents
+
+\include{client}
+\include{server}
+\include{network}
+\include{treeview}
+
+\end{document}

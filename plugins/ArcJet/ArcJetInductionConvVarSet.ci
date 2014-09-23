@@ -1,0 +1,393 @@
+#include "Framework/State.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Common/CFPrintContainer.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace ArcJet {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+ArcJetInductionConvVarSet<BASEVS>::ArcJetInductionConvVarSet
+(Common::SafePtr<Framework::BaseTerm> term) :
+  BASEVS(term),
+  _arcJetModel(term.template d_castTo<PTERM>()),
+  _rmatEv(),
+  _lmatEv(),
+  _eValP(),
+  _eValM() 
+{
+  this->addVarName("Bx");
+  this->addVarName("By");
+  this->addVarName("Bz");
+  this->addVarName("Phi");
+  
+  CFLog(DEBUG_MAX, "ArcJetInductionConvVarSet::ArcJetInductionConvVarSet()\n");
+  CFLog(DEBUG_MAX, Common::CFPrintContainer<const std::vector<std::string> >("varnames = ", &this->getVarNames()));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+ArcJetInductionConvVarSet<BASEVS>::~ArcJetInductionConvVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetInductionConvVarSet<BASEVS>::setup()
+{
+  BASEVS::setup();
+ 
+  _rmatEv.resize(4,4);
+  _lmatEv.resize(4,4);
+  _eValP.resize(4);
+  _eValM.resize(4);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetInductionConvVarSet<BASEVS>::splitJacobian(RealMatrix& jacobPlus,
+			     RealMatrix& jacobMin,
+			     RealVector& eValues,
+			     const RealVector& normal)
+{
+  const RealVector& linearData = getModel()->getPhysicalData();
+  const CFuint dim = Framework::PhysicalModelStack::getActive()->getDim(); 
+
+  const CFreal Vref = getModel()->getRefSpeed();
+  const CFreal Vref2  = Vref*Vref;
+  const CFreal nx = normal[XX];
+  const CFreal ny = normal[YY];
+  const CFreal nz = (dim < DIM_3D) ? 0. : normal[ZZ];
+  const CFreal ux = linearData[NavierStokes::EulerTerm::VX];
+  const CFreal uy = linearData[NavierStokes::EulerTerm::VY];
+  const CFreal uz = (dim < DIM_3D) ? 0. : linearData[NavierStokes::EulerTerm::VZ];
+ 
+  const CFreal um = ux*nx + uy*ny + uz*nz;
+  const CFreal a  = um - Vref;
+  const CFreal b  = um + Vref;
+  const CFreal d  = Vref2 - um*um;
+  const CFreal EPS = 1E-14;
+
+  // AL: create new local matrices to avoid to use wrong sized ones
+  _rmatEv(0,0) = -ny/(nx+EPS);
+  _rmatEv(0,1) = -nz/(nx+EPS);
+  _rmatEv(0,2) = -(Vref*nx - ux)/(Vref*a + EPS);
+  _rmatEv(0,3) = -(Vref*nx + ux)/(Vref*b + EPS);
+  _rmatEv(1,0) = 1.0;
+  _rmatEv(1,1) = 0.;
+  _rmatEv(1,2) = -(Vref*ny - uy)/(Vref*a + EPS);
+  _rmatEv(1,3) = -(Vref*ny + uy)/(Vref*b + EPS);
+  _rmatEv(2,0) = 0.;
+  _rmatEv(2,1) = 1.0;
+  _rmatEv(2,2) = -(Vref*nz - uz)/(Vref*a + EPS);
+  _rmatEv(2,3) = -(Vref*nz + uz)/(Vref*b + EPS);
+  _rmatEv(3,0) = 0.0;
+  _rmatEv(3,1) = 0.0;
+  _rmatEv(3,2) = 1.0;
+  _rmatEv(3,3) = 1.0;
+
+  _lmatEv(0,0) = (nx*(uy*um - Vref2*ny))/(d+EPS);
+  _lmatEv(0,1) = (Vref2*(nx*nx +nz*nz) - um*(ux*nx + uz*nz) )/(d+EPS);
+  _lmatEv(0,2) = (nz*(uy*um - Vref2*ny))/(d+EPS);
+  _lmatEv(0,3) = (uy*nx*nx - ny*ux*nx + uy*nz*nz - ny*uz*nz)/(d+EPS);
+  _lmatEv(1,0) = (nx*(uz*um - Vref2*nz))/(d+EPS);
+  _lmatEv(1,1) = (ny*(uz*um - Vref2*nz))/(d+EPS);
+  _lmatEv(1,2) = (Vref2*(nx*nx + ny*ny) -  um*(ux*nx + uy*ny))/(d+EPS);
+  _lmatEv(1,3) = (uz*(nx*nx + ny*ny) - nz*(ux*nx + uy*ny) )/(d+EPS);
+  _lmatEv(2,0) = (Vref*nx)/2.0;
+  _lmatEv(2,1) = (Vref*ny)/2.0;
+  _lmatEv(2,2) = (Vref*nz)/2.0;
+  _lmatEv(2,3) = 1.0/2.0;
+  _lmatEv(3,0) = -(Vref*nx)/2.0;
+  _lmatEv(3,1) = -(Vref*ny)/2.0;
+  _lmatEv(3,2) = -(Vref*nz)/2.0;
+  _lmatEv(3,3) = 1.0/2.0;
+
+  eValues[0] = um;
+  eValues[1] = um;
+  eValues[2] = Vref;
+  eValues[3] = -Vref;
+
+   for (CFuint iEq = 0; iEq < 4; iEq++) {
+      _eValP[iEq] = (eValues[iEq] > 0) ? eValues[iEq] : 0.0;
+      _eValM[iEq] = (eValues[iEq] < 0) ? eValues[iEq] : 0.0;
+      
+      }
+      
+  // compute jacobian + and -
+  jacobPlus = _rmatEv*(_eValP*_lmatEv);
+  jacobMin  = _rmatEv*(_eValM*_lmatEv);
+
+  //degugging infos
+  CFLogDebugMax( "RightEigenvectors @ArcJetInductionConvVarSet::splitJacobian" << "\n"
+  << _rmatEv << "\n");
+  CFLogDebugMax( "LeftEigenvectors @ArcJetInductionConvVarSet::splitJacobian" << "\n"
+  << _lmatEv << "\n");
+  CFLogDebugMax( "EigenValues @ArcJetInductionConvVarSet::splitJacobian" << "\n"
+  << eValues << "\n" << "\n");
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+CFreal ArcJetInductionConvVarSet<BASEVS>::getMaxEigenValue
+(const RealVector& pdata, const RealVector& normal)
+{
+  // AL: select here max eigenvalue in the whole system
+  const CFreal baseEv = BASEVS::getMaxEigenValue(pdata, normal);
+  
+  const RealVector& linearData = getModel()->getPhysicalData();
+  const CFreal Vref = getModel()->getRefSpeed();
+  const CFuint dim = Framework::PhysicalModelStack::getActive()->getDim(); 
+
+  const CFreal nx  = normal[XX];
+  const CFreal ny  = normal[YY];
+  const CFreal nz = (dim < DIM_3D) ? 0. : normal[ZZ];
+  const CFreal ux = linearData[NavierStokes::EulerTerm::VX];
+  const CFreal uy = linearData[NavierStokes::EulerTerm::VY];
+  const CFreal uz = (dim < DIM_3D) ? 0. : linearData[NavierStokes::EulerTerm::VZ];
+  const CFreal un  = ux*nx + uy*ny + uz*nz;
+  const CFreal localEvmax = (un <= fabs(Vref)) ? fabs(Vref) : un;
+  const CFreal maxEv = (localEvmax <= baseEv) ? baseEv : localEvmax;
+   
+   //degugging infos
+   CFLogDebugMax( " Maximum EigenValues @ArcJetInductionConvVarSet::getMaxEigenValue" << "\n"
+   <<  maxEv << "\n" << "\n");
+   
+  return maxEv;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+CFreal ArcJetInductionConvVarSet<BASEVS>::getMaxAbsEigenValue
+(const RealVector& pdata, const RealVector& normal)
+{
+  // AL: select here max eigenvalue in the whole system
+  const CFreal baseEv = BASEVS::getMaxAbsEigenValue(pdata, normal);
+  
+  const RealVector& linearData = getModel()->getPhysicalData();
+  const CFreal Vref = getModel()->getRefSpeed();
+  const CFuint dim = Framework::PhysicalModelStack::getActive()->getDim(); 
+
+  const CFreal nx  = normal[XX];
+  const CFreal ny  = normal[YY];
+  const CFreal nz = (dim < DIM_3D) ? 0. : normal[ZZ];
+  const CFreal ux = linearData[NavierStokes::EulerTerm::VX];
+  const CFreal uy = linearData[NavierStokes::EulerTerm::VY];
+  const CFreal uz = (dim < DIM_3D) ? 0. : linearData[NavierStokes::EulerTerm::VZ];
+  const CFreal un  = ux*nx + uy*ny + uz*nz;
+  const CFreal localEvmax = (fabs(un) <= fabs(Vref)) ? fabs(Vref) : fabs(un);
+  const CFreal maxAbsEv = (localEvmax <= baseEv) ? baseEv : localEvmax;
+
+   //degugging infos
+   CFLogDebugMax( " Maximum Absolute EigenValues @ArcJetInductionConvVarSet::getMaxAbsEigenValue" << "\n"
+   <<  maxAbsEv << "\n" << "\n");
+   
+  return maxAbsEv;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetInductionConvVarSet<BASEVS>::computeEigenValues	
+(const RealVector& pdata, const RealVector& normal, RealVector& eValues)
+{
+  using namespace COOLFluiD::Framework;
+
+  // first call the parent class
+  BASEVS::computeEigenValues(pdata,normal,eValues);
+
+  const RealVector& linearData = getModel()->getPhysicalData();
+  const CFreal Vref = getModel()->getRefSpeed();
+  const CFuint dim = Framework::PhysicalModelStack::getActive()->getDim(); 
+
+  const CFreal nx  = normal[XX];
+  const CFreal ny  = normal[YY];
+  const CFreal nz = (dim < DIM_3D) ? 0. : normal[ZZ];
+  const CFreal ux = linearData[NavierStokes::EulerTerm::VX];
+  const CFreal uy = linearData[NavierStokes::EulerTerm::VY];
+  const CFreal uz = (dim < DIM_3D) ? 0. : linearData[NavierStokes::EulerTerm::VZ];
+  const CFreal un  = ux*nx + uy*ny + uz*nz;
+
+   eValues[0] = un;
+   eValues[1] = un;
+   eValues[2] = Vref;
+   eValues[3] = -Vref;
+  
+   //degugging infos
+   CFLogDebugMax( "EigenValues @ArcJetInductionConvVarSet::computeEigenValues" << "\n"
+   << eValues << "\n" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetInductionConvVarSet<BASEVS>::computeFlux
+(const RealVector& pdata, const RealVector& normal)
+{  
+  const CFuint dim = Framework::PhysicalModelStack::getActive()->getDim(); 
+  const CFreal Vref = getModel()->getRefSpeed();
+  const CFreal nx = normal[XX];
+  const CFreal ny = normal[YY];
+  const CFreal nz = (dim < DIM_3D) ? 0. : normal[ZZ];
+  
+  typedef ArcJetInductionTerm<NavierStokes::EulerTerm> PTERM;
+  const CFreal ux = pdata[PTERM::VX];
+  const CFreal uy = pdata[PTERM::VY];
+  const CFreal uz = (dim < DIM_3D) ? 0. : pdata[PTERM::VZ];
+  
+  const CFreal Bx = pdata[PTERM::BX];
+  const CFreal By = pdata[PTERM::BY];
+  const CFreal Bz = pdata[PTERM::BZ];  
+  const CFreal phi = pdata[PTERM::PHI];
+  
+  const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq(); 
+  this->_fluxArray[nbEqs-4] = phi*nx + (Bx*uy -ux*By)*ny + (Bx*uz - ux*Bz)*nz;
+  this->_fluxArray[nbEqs-3] = (By*ux - uy*Bx)*nx + phi*ny + (By*uz - uy*Bz)*nz;
+  this->_fluxArray[nbEqs-2] = (Bz*ux - uz*Bx)*nx + (Bz*uy - uz*By)*ny + phi*nz;
+  this->_fluxArray[nbEqs-1] = Vref*Vref*(Bx*nx + By*ny + Bz*nz);
+  
+  CFLog(DEBUG_MIN, "ArcJetInductionConvVarSet<BASEVS>::computeFlux() => fluxArray = " <<    
+        this->_fluxArray.slice(nbEqs-4,4) << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetInductionConvVarSet<BASEVS>::computeFlux
+(const Framework::State& vars, const RealVector& normal)
+{
+  using namespace COOLFluiD::Framework;
+
+  // AL: NOT NEEDED
+ throw Common::NotImplementedException
+    (FromHere(), "ArcJetInductionConvVarSet::computeFlux()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetInductionConvVarSet<BASEVS>::computeFlux
+(const Framework::State& vars)
+{
+  // AL: NOT NEEDED
+  throw Common::NotImplementedException
+    (FromHere(), "ArcJetInductionConvVarSet::computeFlux()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetInductionConvVarSet<BASEVS>::computePhysicalData
+(const Framework::State& state, RealVector& data)
+{
+  CFLog(DEBUG_MIN, "ArcJetInductionConvVarSet::computePhysicalData() START\n");
+  
+  BASEVS::computePhysicalData(state,data);
+  
+  CFuint nbBaseEqs = state.size() - 4;
+  CFuint firstScalarVar = _arcJetModel->getDataSize()-4;
+  for (CFuint i = 0; i < 4; ++i, ++firstScalarVar, ++nbBaseEqs) {
+    data[firstScalarVar] = state[nbBaseEqs];
+  }
+  
+  CFLog(DEBUG_MIN, "ArcJetInductionConvVarSet::computePhysicalData() END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetInductionConvVarSet<BASEVS>::computeStateFromPhysicalData
+(const RealVector& data,Framework::State& state)
+{
+// AL: NOT NEEDED
+  throw Common::NotImplementedException
+    (FromHere(), "ArcJetInductionConvVarSet::computeStateFromPhysicalData()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+CFuint ArcJetInductionConvVarSet<BASEVS>::getBlockSeparator() const
+{
+  return Framework::PhysicalModelStack::getActive()->getNbEq();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetInductionConvVarSet<BASEVS>::setDimensionalValues
+(const Framework::State& state,
+ RealVector& result)
+{
+  using namespace COOLFluiD::Framework;
+
+  BASEVS::setDimensionalValues(state, result);
+
+  // we assume here that Bx,By,Bz,Phi variables are the last 4 in the state
+  const RealVector& refData = _arcJetModel->getReferencePhysicalData();
+  CFuint nbBaseEqs = state.size() - 4;
+  CFuint firstScalarVar = _arcJetModel->getDataSize()-4;
+  for (CFuint i = 0; i < 4; ++i, ++firstScalarVar, ++nbBaseEqs) {
+    result[nbBaseEqs] = state[nbBaseEqs]*refData[firstScalarVar];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetInductionConvVarSet<BASEVS>::setAdimensionalValues
+(const Framework::State& state,
+ RealVector& result)
+{
+  BASEVS::setAdimensionalValues(state, result);
+  
+  // we assume here that Bx,By,Bz,Phi variables are the last 4 in the state
+  const RealVector& refData = _arcJetModel->getReferencePhysicalData();
+  CFuint nbBaseEqs = state.size() - 4;
+  CFuint firstScalarVar = _arcJetModel->getDataSize()-4;
+  for (CFuint i = 0; i < 4; ++i, ++firstScalarVar, ++nbBaseEqs) {
+    result[nbBaseEqs] = state[nbBaseEqs]/refData[firstScalarVar];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetInductionConvVarSet<BASEVS>::setDimensionalValuesPlusExtraValues
+(const Framework::State& state, RealVector& result, RealVector& extra)
+{
+  CFLog(DEBUG_MIN, "ArcJetInductionConvVarSet<BASEVS>::setDimensionalValuesPlusExtraValues() START\n");
+  BASEVS::setDimensionalValuesPlusExtraValues(state, result, extra);
+  
+  // we assume here that Bx,By,Bz,Phi variables are the last 4 in the state
+  const RealVector& refData = _arcJetModel->getReferencePhysicalData();
+  CFuint nbBaseEqs = state.size() - 4;
+  CFuint firstScalarVar = _arcJetModel->getDataSize()-4;
+  for (CFuint i = 0; i < 4; ++i, ++firstScalarVar, ++nbBaseEqs) {
+    result[nbBaseEqs] = state[nbBaseEqs]/refData[firstScalarVar];
+  }
+  
+  CFLog(DEBUG_MIN, "ArcJetInductionConvVarSet<BASEVS>::setDimensionalValuesPlusExtraValues() END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace ArcJet
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

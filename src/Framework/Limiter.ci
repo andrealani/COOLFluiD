@@ -1,0 +1,61 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Framework_Limiter_ci
+#define COOLFluiD_Framework_Limiter_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA >
+void Limiter<METHODDATA>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFreal >("alpha","Coefficient <=1 to tune the limiter.");
+  options.template addConfigOption< bool >("useFullStencil",
+	"Flag telling if to use the full stencil compute the local extrema."); 
+   options.template addConfigOption< bool >("useNodalExtrapolationStencil",
+	"Flag telling if to use the stencil used for the nodal extrapolation to compute the local extrema.");
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA >
+Limiter<METHODDATA>::Limiter(const std::string& name) :
+  Framework::MethodStrategy<METHODDATA>(name)
+{
+   this->addConfigOptionsTo(this);
+   
+   m_alpha = 1.0;  
+   Config::ConfigObject::setParameter("alpha",&m_alpha);
+   
+   m_useFullStencil = true;
+   Config::ConfigObject::setParameter("useFullStencil",&m_useFullStencil); 
+   
+   m_useNodalExtrapolationStencil = true;
+   Config::ConfigObject::setParameter("useNodalExtrapolationStencil",&m_useNodalExtrapolationStencil);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA >
+Limiter<METHODDATA>::~Limiter()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Framework_Limiter_ci

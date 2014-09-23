@@ -1,0 +1,134 @@
+# COOLFluiD solver Startfile
+# Comments begin with "#"
+#
+### Residual = -0.83516
+
+# adjusting matrix column is not parallel
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileReader libTecplotWriter libFiniteElement libStructMech libNewtonMethod libFiniteElementStructMech libSAMGLSS
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/Heat/testcases/Elsyca/Cube/
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = StructMech3D
+
+# Some kind of steel
+Simulator.SubSystem.StructMech3D.Young = 200E9
+Simulator.SubSystem.StructMech3D.Poisson = 0.29
+Simulator.SubSystem.StructMech3D.Lambda = 1.0
+Simulator.SubSystem.StructMech3D.mu = 1.0
+Simulator.SubSystem.StructMech3D.Density = 1.0
+
+
+
+Simulator.SubSystem.ConvergenceFile = convergence.plt
+Simulator.SubSystem.onlyIsoparamElements = true
+
+
+Simulator.SubSystem.OutputFormat        = Tecplot
+Simulator.SubSystem.Tecplot.FileName    = stressed3D.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Disp
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+#Simulator.SubSystem.StopCondition  = Norm
+#Simulator.SubSystem.Norm.valueNorm = -8
+
+Simulator.SubSystem.Default.listTRS = InnerCells Side1 Side2 Side3 Side4 Side5 Side6
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cube-008kn.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = FiniteElement
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+
+#Simulator.SubSystem.MeshCreator = FileMeshReaderModule
+#Simulator.SubSystem.FileMeshReaderModule.Data.FileName = cube-008kn.CFmesh
+#Simulator.SubSystem.FileMeshReaderModule.Data.builderName = RDS
+#Simulator.SubSystem.FileMeshReaderModule.Data.PolyTypeName = Lagrange
+#Simulator.SubSystem.FileMeshReaderModule.StdReadMesh.Partitioner = ParMetis
+#Simulator.SubSystem.FileMeshReaderModule.StdReadMesh.Optimize = true
+
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+
+
+Simulator.SubSystem.LinearSystemSolver = SAMGLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 2000
+
+
+#Simulator.SubSystem.LinearSystemSolver = PETSC
+#Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+##Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCLU
+#Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+#Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+#Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-10
+#Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 2000
+
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1.0
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+#Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
+Simulator.SubSystem.NewtonIterator.UpdateSol = StdUpdateSol
+Simulator.SubSystem.NewtonIterator.InitCom = ResetSystem
+
+Simulator.SubSystem.SpaceMethod = FiniteElementMethod
+
+Simulator.SubSystem.FiniteElementMethod.Data.UpdateVar = Disp
+Simulator.SubSystem.FiniteElementMethod.Data.DiffusiveVar = Disp
+
+Simulator.SubSystem.FiniteElementMethod.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.FiniteElementMethod.Data.ResidualStrategy = StdElementComputer
+
+
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorOrder = P1
+
+Simulator.SubSystem.FiniteElementMethod.ComputeSpaceResidual = ImplicitComputeSpaceResCom
+Simulator.SubSystem.FiniteElementMethod.ImplicitComputeSpaceResCom.applyTRS = InnerCells
+#Simulator.SubSystem.FiniteElementMethod.ComputeSpaceResidual = ExplicitComputeSpaceResCom
+#Simulator.SubSystem.FiniteElementMethod.ExplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSystem.FiniteElementMethod.InitComds = InitState    InitState InitState
+Simulator.SubSystem.FiniteElementMethod.InitNames = InitialField InitSide1 InitSide3
+
+Simulator.SubSystem.FiniteElementMethod.InitialField.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.InitialField.Vars = x y z
+Simulator.SubSystem.FiniteElementMethod.InitialField.Def = 0 0 0
+
+Simulator.SubSystem.FiniteElementMethod.InitSide1.applyTRS = Side1
+Simulator.SubSystem.FiniteElementMethod.InitSide1.Vars = x y z
+Simulator.SubSystem.FiniteElementMethod.InitSide1.Def = -3E-3 0 0
+
+Simulator.SubSystem.FiniteElementMethod.InitSide3.applyTRS = Side3
+Simulator.SubSystem.FiniteElementMethod.InitSide3.Vars = x y z
+Simulator.SubSystem.FiniteElementMethod.InitSide3.Def = 3E-3 0 0
+
+Simulator.SubSystem.FiniteElementMethod.BcComds = DirichletBC DirichletBC
+Simulator.SubSystem.FiniteElementMethod.BcNames = BOUND1 BOUND2
+
+Simulator.SubSystem.FiniteElementMethod.BOUND1.applyTRS = Side1
+Simulator.SubSystem.FiniteElementMethod.BOUND1.Implicit = true
+Simulator.SubSystem.FiniteElementMethod.BOUND1.Vars = x y z t u v w
+Simulator.SubSystem.FiniteElementMethod.BOUND1.Def = -3E-3 0 0
+Simulator.SubSystem.FiniteElementMethod.BOUND1.Symmetry = AdjustColumn
+
+Simulator.SubSystem.FiniteElementMethod.BOUND2.applyTRS = Side3
+Simulator.SubSystem.FiniteElementMethod.BOUND2.Implicit = true
+Simulator.SubSystem.FiniteElementMethod.BOUND2.Vars = x y z t u v w
+Simulator.SubSystem.FiniteElementMethod.BOUND2.Def = 3E-3 0 0
+Simulator.SubSystem.FiniteElementMethod.BOUND2.Symmetry = AdjustColumn
+
+##DataProcessing
+#Simulator.SubSystem.DataPostProcessing = DataProcessing
+#Simulator.SubSystem.DataPostProcessingNames = DataPost
+#Simulator.SubSystem.DataPost.Comds = StructMechComputeStress
+#Simulator.SubSystem.DataPost.Names = Plate
+#
+#Simulator.SubSystem.DataPost.Plate.applyTRS = InnerCells
+

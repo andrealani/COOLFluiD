@@ -1,0 +1,174 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Framework_NamespaceStack_ci
+#define COOLFluiD_Framework_NamespaceStack_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TYPE >
+NamespaceStack<TYPE>::NamespaceStack():
+m_isEnabled(false)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TYPE >
+NamespaceStack<TYPE>::~NamespaceStack()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TYPE >
+void NamespaceStack<TYPE>::deleteAllEntries()
+{
+  // clear the stack
+  while (!m_stack.empty()) {
+    m_stack.pop();
+  }
+
+  m_storage.deleteAllEntries();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TYPE >
+std::vector<Common::SafePtr<TYPE> >
+NamespaceStack<TYPE>::getAllEntries()
+{
+  std::vector<Common::SafePtr<TYPE> > ret;
+  ret.reserve(m_storage.size());
+  std::transform(m_storage.begin(),
+                 m_storage.end(),
+                 back_inserter(ret),
+                 Common::GeneralStorage<TYPE>::extract);
+  return ret;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TYPE >
+Common::SafePtr<TYPE>
+NamespaceStack<TYPE>::createUnique(const std::string& name)
+{
+  TYPE * ptr;
+  if(m_storage.checkEntry(name)) {
+    ptr = m_storage.getEntry(name);
+  }
+  else {
+    ptr = createObject(name);
+    m_storage.addEntry(name,ptr);
+  }
+  return ptr;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TYPE >
+Common::SafePtr<TYPE>
+NamespaceStack<TYPE>::getEntry(const std::string& name)
+{
+#ifdef CF_HAVE_CUDA
+  return m_storage.getEntry(name);
+#else
+  TYPE * ptr;
+  try {
+    ptr = m_storage.getEntry(name);
+  }
+  catch (Common::NoSuchStorageException& e) {
+    CFLog(DEBUG_MIN, e.what() << "\n");
+    throw; // rethrow
+  }
+  return ptr;
+#endif
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TYPE >
+Common::SafePtr<TYPE>
+NamespaceStack<TYPE>::getEntryByNamespace(const Common::SafePtr<Namespace>& nsp)
+{
+#ifdef CF_HAVE_CUDA
+  return m_storage.getEntry(getObjectName(nsp));
+#else
+  TYPE * ptr;
+  try {
+    ptr = m_storage.getEntry(getObjectName(nsp));
+  }
+  catch (Common::NoSuchStorageException& e) {
+    CFLog (VERBOSE, e.what());
+    throw; // rethrow
+  }
+  return ptr;
+#endif
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TYPE >
+void NamespaceStack<TYPE>::push(const Common::SafePtr<Namespace>& nsp)
+{
+  cf_assert(isEnabled());
+  TYPE * ptr = m_storage.getEntry(getObjectName(nsp));
+  m_stack.push(ptr);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TYPE >
+Common::SafePtr<TYPE> NamespaceStack<TYPE>::pop()
+{
+  cf_assert(isEnabled());
+  cf_assert(!m_stack.empty());
+  TYPE * ptr = m_stack.top();
+  m_stack.pop();
+  return ptr;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TYPE >
+Common::SafePtr<TYPE> NamespaceStack<TYPE>::top()
+{
+  cf_assert(isEnabled());
+  cf_assert(!m_stack.empty());
+  return m_stack.top();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TYPE >
+bool NamespaceStack<TYPE>::isEnabled()
+{
+  return m_isEnabled;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TYPE >
+void NamespaceStack<TYPE>::setEnabled(bool isEnabled)
+{
+  m_isEnabled = isEnabled;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace COOLFluiD
+
+} // namespace Framework
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Framework_NamespaceStack_ci

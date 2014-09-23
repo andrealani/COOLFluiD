@@ -1,0 +1,146 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#include "MathTools/LUInverterT.hh"
+#include "MathTools/MathChecks.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace MathTools {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < unsigned int SIZE >
+LUInverterT<SIZE>::LUInverterT() :
+  m_indx(SIZE),
+  m_tmp_col(SIZE),
+  m_vv(SIZE),
+  m_a(SIZE,SIZE,0.0)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < unsigned int SIZE >
+void LUInverterT<SIZE>::invert(const RealMatrix& a, RealMatrix& x)
+{
+  m_a = a;
+  factorizeLU();
+
+  for (CFuint j = 0;  j < SIZE; ++j) {
+    m_tmp_col = 0.0;
+    m_tmp_col[j] = 1.0;
+    solveForwBack();
+    for (CFuint i = 0; i < SIZE; ++i) {
+      x(i,j) = m_tmp_col[i];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < unsigned int SIZE >
+void LUInverterT<SIZE>::factorizeLU()
+{
+  CFuint imax = 0;
+  CFreal big = 0.0;
+  CFreal dum = 0.0;
+  CFreal sum = 0.0;
+  CFreal temp = 0.0;
+  CFreal d = 1.0;  // no row permutation yet
+
+  for (CFuint i = 0; i < SIZE; ++i) {
+    big = 0.0;
+    for (CFuint j = 0; j < SIZE; ++j) {
+      if ((temp = std::abs(m_a(i,j))) > big) {
+	big = temp;
+      }
+    }
+    cf_assert(std::abs(big) > MathTools::MathConsts::CFrealEps());
+    m_vv[i] = 1.0/big;
+  }
+  for (CFuint j = 0; j < SIZE; ++j) {
+    for (CFuint i = 0; i < j; ++i) {
+      sum = m_a(i,j);
+      for (CFuint k = 0; k < i; ++k) {
+	sum -= m_a(i,k)*m_a(k,j);
+      }
+      m_a(i,j) = sum;
+    }
+    big = 0.0;
+
+    for (CFuint i = j; i < SIZE; ++i) {
+      sum = m_a(i,j);
+      for (CFuint k = 0; k < j; ++k) {
+	sum -= m_a(i,k)*m_a(k,j);
+      }
+      m_a(i,j) = sum;
+      if ((dum = m_vv[i]*std::abs(sum)) >= big) {
+	big = dum;
+	imax = i;
+      }
+    }
+    if (j != imax) {
+      for (CFuint k = 0; k < SIZE; ++k) {
+	dum = m_a(imax,k);
+	m_a(imax,k) = m_a(j,k);
+	m_a(j,k) = dum;
+      }
+      d = -d;
+      m_vv[imax] = m_vv[j];
+    }
+    m_indx[j] = imax;
+    cf_assert(MathChecks::isNotZero(m_a(j,j)));
+    if (j != SIZE) {
+      dum = 1.0 / m_a(j,j);
+      for (CFuint i = j+1; i < SIZE; ++i) {
+	m_a(i,j) *= dum;
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < unsigned int SIZE >
+void LUInverterT<SIZE>::solveForwBack()
+{
+  CFint ip = 0;
+  CFint ii = -1;
+  CFreal sum = 0.0;
+
+  for (CFuint i = 0; i < SIZE; ++i) {
+    ip = m_indx[i];
+    sum = m_tmp_col[ip];
+    m_tmp_col[ip] = m_tmp_col[i];
+    if (ii >= 0) {
+      for (CFuint j = ii; j <= i-1; ++j) {
+	sum -= m_a(i,j)*m_tmp_col[j];
+      }
+    }
+    else if (sum) {
+      ii = i;
+    }
+    m_tmp_col[i] = sum;
+  }
+  for (CFint i = SIZE-1; i >= 0; --i) {
+    sum = m_tmp_col[i];
+    for (CFuint j = i+1; j < SIZE; ++j) {
+      sum -= m_a(i,j)*m_tmp_col[j];
+    }
+    m_tmp_col[i] = sum/m_a(i,i);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace MathTools
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,47 @@
+#include "NullPreVariableTransformer.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Framework/MethodStrategyProvider.hh"
+#include "SubSystemCoupler/SubSystemCoupler.hh"
+#include "SubSysCouplerData.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::MathTools;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace SubSystemCoupler {
+
+//////////////////////////////////////////////////////////////////////////////
+
+MethodStrategyProvider<NullPreVariableTransformer,SubSysCouplerData,PreVariableTransformer,SubSystemCouplerModule>
+nullPreVariableTransformerProvider("Null");
+
+//////////////////////////////////////////////////////////////////////////////
+
+NullPreVariableTransformer::NullPreVariableTransformer(const std::string& name) :
+  PreVariableTransformer(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+NullPreVariableTransformer::~NullPreVariableTransformer()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace SubSystemCoupler
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

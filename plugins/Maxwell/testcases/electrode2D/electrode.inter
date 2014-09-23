@@ -1,0 +1,5 @@
+#Simulator.SubSystem.Maxwell2DProjection.ConvTerm.divBCleaningConst = 1e9 #2.9979e8 
+#Simulator.SubSystem.Maxwell2DProjection.ConvTerm.divECleaningConst = 0.0
+#Simulator.SubSystem.Maxwell2DProjection.ConvTerm.divBAdimCleaningConst = 0.0
+#3.33e-12
+Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 0.01

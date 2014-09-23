@@ -1,0 +1,89 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+namespace COOLFluiD {
+
+  namespace Physics {
+namespace LinearAdvSys {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+AdvectionDiffusionSysPhysicalModel<DIM>::AdvectionDiffusionSysPhysicalModel(const std::string& name)
+  : Framework::ConvectionDiffusionPM<LinearAdvSysTerm, ADSysTerm>(name)
+{
+
+   
+
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+AdvectionDiffusionSysPhysicalModel<DIM>::~AdvectionDiffusionSysPhysicalModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint AdvectionDiffusionSysPhysicalModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint AdvectionDiffusionSysPhysicalModel<DIM>::getNbEquations() const
+{
+  return 4;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string AdvectionDiffusionSysPhysicalModel<DIM>::getConvectiveName() const
+{
+  if (DIM == 2) return "LinearAdvSys2D";
+  cf_assert (DIM == 3);
+  return "LinearAdvSys3D";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string AdvectionDiffusionSysPhysicalModel<DIM>::getDiffusiveName() const
+{
+  return getTypeName();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void AdvectionDiffusionSysPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionDiffusionPM<LinearAdvSysTerm, ADSysTerm>::configure(args);
+
+  cf_assert (getDimension() > 0);
+  cf_assert (getNbEquations() > 0);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(DIM);
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace LinearAdv
+}
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

@@ -1,0 +1,63 @@
+#include "RemeshMeandr/RemeshMeandr.hh"
+
+#include "RMeshMeData.hh"
+#include "Framework/MethodCommandProvider.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace RemeshMeandros {
+
+//////////////////////////////////////////////////////////////////////////////
+
+MethodCommandProvider<NullMethodCommand<RMeshMeData>, RMeshMeData, RemeshMeandrModule> nullRMeshMeComProvider("Null");
+
+//////////////////////////////////////////////////////////////////////////////
+
+void RMeshMeData::defineConfigOptions(Config::OptionList& options)
+{
+   options.addConfigOption< std::string >("MeandrosDir","Directory where grid are generated");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+RMeshMeData::RMeshMeData(Common::SafePtr<Framework::Method> owner)
+ : MeshAdapterData(owner)
+{
+   addConfigOptionsTo(this);
+
+  _meandrosDirName = "";
+  setParameter("MeandrosDir",&_meandrosDirName);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+RMeshMeData::~RMeshMeData()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void RMeshMeData::configure ( Config::ConfigArgs& args )
+{
+  MeshAdapterData::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace RemeshMeandros
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

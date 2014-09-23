@@ -1,0 +1,84 @@
+#include "FluctSplit/NSchemeSysT.hh"
+#include "FluctSplit/FluctSplitSystem.hh"
+
+#include "MathTools/MatrixInverter.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+    namespace FluctSplit {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <CFuint N>
+NSchemeSysT<N>::NSchemeSysT(const std::string& name) :
+  RDS_SplitterSys(name),
+  _sumKminU(),
+  _uInflow(),
+  _uDiff(),
+  _temp(),
+  _tempMat(),
+  _sumKplus(),
+  _betaLDA(),
+  _sumKmin(),
+  _invK()  
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <CFuint N>
+NSchemeSysT<N>::~NSchemeSysT()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <CFuint N>
+void NSchemeSysT<N>::setup()
+{
+  RDS_SplitterSys::setup();
+  
+  _sumKmin.resize(_nbEquations,_nbEquations);
+  _invK.resize(_nbEquations,_nbEquations);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <CFuint N>
+void NSchemeSysT<N>::distribute(std::vector<RealVector>& residual)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  
+  // for efficiency reason iState = 0 is treated out of the loop
+  // this allows to avoid resetting _sumKminU and _sumKmin to 0.0
+  // after every loop. That operation would be done
+  // nbTimeSteps*nbStatesPerCell*nbCells times!!
+  const vector<State*>& tStates = *getMethodData().getDistributionData().tStates;
+  
+  _sumKminU = (*_kMin[0]).template slice<N,N>(0,0)* (*tStates[0]).slice<N>(0);
+  _sumKmin  = (*_kMin[0]);
+  const CFuint nbStatesInCell = _nbStatesInCell;
+  for (CFuint iState = 1; iState < nbStatesInCell; ++iState) {
+    _sumKminU += (*_kMin[iState]).template slice<N,N>(0,0)* (*tStates[iState]).slice<N>(0);
+    _sumKmin  += (*_kMin[iState]);
+  }
+  
+  _inverter->invert(_sumKmin, _invK);
+  _uInflow = _invK.slice<N,N>(0,0) * _sumKminU;
+  
+  for (CFuint iState = 0; iState < nbStatesInCell; ++iState) {
+    residual[iState] = (*_kPlus[iState]).template slice<N,N>(0,0)* ((*tStates[iState]).slice<N>(0) - _uInflow);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FluctSplit
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

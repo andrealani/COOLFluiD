@@ -1,0 +1,203 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace KOmega {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+NavierStokesKOmegaPhysicalModel<DIM>::NavierStokesKOmegaPhysicalModel(const std::string& name)
+  : Framework::ConvectionDiffusionReactionPM
+<Framework::MultiScalarTerm<NavierStokes::EulerTerm>,
+ NavierStokes::NSTurbTerm, KOmegaReactionTerm<Framework::BaseTerm> >(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+NavierStokesKOmegaPhysicalModel<DIM>::~NavierStokesKOmegaPhysicalModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint NavierStokesKOmegaPhysicalModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint NavierStokesKOmegaPhysicalModel<DIM>::getNbEquations() const
+{
+  // set the number of scalar variables (K and Omega in this case)
+  // in the convective term
+  std::valarray<CFuint> v(1);
+  v[0] = 2;
+  getConvTerm()->setNbScalarVars(v);
+
+  return DIM+2+2;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string NavierStokesKOmegaPhysicalModel<DIM>::getConvectiveName() const
+{
+  if (DIM == 2) return "Euler2DKOmega";
+  cf_assert (DIM == 3);
+  return "Euler3DKOmega";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void NavierStokesKOmegaPhysicalModel<DIM>::setReferenceValues()
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  typedef MultiScalarTerm<EulerTerm> EulerKOmegaTerm;
+
+  SafePtr<EulerKOmegaTerm> convTerm = getConvTerm();
+  SafePtr<NSTurbTerm> diffTerm = getDiffTerm();
+
+  const CFreal tempRef = convTerm->getTempRef();
+  CFreal pRef    = convTerm->getPressRef();
+  const CFreal MachInf = convTerm->getMachInf();
+
+  // reference viscosity is computed using Sutherland formula
+  const CFreal dynViscosityRef = getDiffTerm()->getDynViscosityDim(pRef, tempRef);
+  const CFreal gamma = convTerm->getGamma();
+  const CFreal cp = convTerm->getRdim()*gamma/(gamma - 1.);
+  const CFreal Re = diffTerm->getReynolds();
+
+  // reference values for the diffusive part
+  RealVector& refDataDiff = diffTerm->getReferencePhysicalData();
+  // reference values for the convective part
+  RealVector& refDataConv = convTerm->getReferencePhysicalData();
+
+  // set the reference values
+  refDataDiff[NSTurbTerm::MU]     = dynViscosityRef;
+  refDataDiff[NSTurbTerm::LAMBDA] = dynViscosityRef*cp/diffTerm->getPrandtl();
+  refDataDiff[NSTurbTerm::RE]     = Re;
+  refDataDiff[NSTurbTerm::MUT]    = dynViscosityRef;
+
+  // override the reference values for Euler data starting from
+  // machInf, tempRef, RRref, Lref, ReynoldsRef
+  if ((tempRef > 0.) && (MachInf > 0.) && (Re > 0.)) {
+    const CFreal refSpeed = std::sqrt(convTerm->getRdim()*tempRef);
+    const CFreal Lref = getRefLength();
+    const CFreal Uinf = MachInf*std::sqrt(convTerm->getGamma()*
+				     convTerm->getRdim()*tempRef);
+
+    refDataConv[EulerKOmegaTerm::V]  = refSpeed;
+    refDataConv[EulerKOmegaTerm::VX] = refSpeed;
+    refDataConv[EulerKOmegaTerm::VY] = refSpeed;
+    refDataConv[EulerKOmegaTerm::VZ] = refSpeed;
+
+    // rhoref = rho at infinity
+    refDataConv[EulerKOmegaTerm::RHO] = Re*dynViscosityRef/(Uinf*Lref);
+
+    // pref = p at infinity
+    pRef = refDataConv[EulerKOmegaTerm::RHO]*convTerm->getRdim()*tempRef;
+    refDataConv[EulerKOmegaTerm::P] = pRef;
+    refDataConv[EulerKOmegaTerm::H] = refSpeed*refSpeed;
+    refDataConv[EulerKOmegaTerm::E] = refSpeed*refSpeed;
+    refDataConv[EulerKOmegaTerm::A] = refSpeed;
+    refDataConv[EulerKOmegaTerm::T] = tempRef;
+
+    const CFuint iK = convTerm->getFirstScalarVar(0);
+
+    //k_Ref = UInf * Uref / Re
+    refDataConv[iK] = (Uinf*refSpeed)/Re;
+    //Omega_Ref = U_ref / L_ref
+    refDataConv[iK+1] = refSpeed/Lref;
+
+    convTerm->setTempRef(tempRef);
+    convTerm->setPressRef(refDataConv[EulerKOmegaTerm::P]);
+    convTerm->setRRef(1.0);
+
+    const CFreal invReynolds = 1./Re;
+    const CFreal coeffTau = std::sqrt(gamma)*MachInf*invReynolds;
+    // scaling coefficient for the momentum equations
+    diffTerm->setCoeffTau(coeffTau);
+    // scaling coefficient for the energy equation
+    diffTerm->setCoeffQ(coeffTau*gamma/(gamma-1.)*diffTerm->getPrandtl());
+
+    _isAdimensional = true;
+  }
+  else {
+    CFout << "WATCH OUT: tempRef or machInf or Re missing" << "\n";
+    CFout << "Equations will be solved dimensionally" << "\n";
+
+    // if the pressure and temperature reference values
+    // have not been specified set all the ref values to 1.
+    refDataConv = 1.0;
+    refDataDiff = 1.0;
+    convTerm->setRRef(convTerm->getRdim());
+    convTerm->setTempRef(1.0);
+    convTerm->setPressRef(1.0);
+    // scaling coefficient for the momentum equations
+    diffTerm->setCoeffTau(1.0);
+    // scaling coefficient for the energy equation
+    diffTerm->setCoeffQ(1.0);
+
+    _isAdimensional = false;
+  }
+
+  // set the cp over prandtl
+  const CFreal cpOverPrandtl = gamma/(gamma - 1.)*
+    convTerm->getRdim()/diffTerm->getPrandtl();
+
+  diffTerm->setCpOverPrandtl(cpOverPrandtl);
+
+  if(_isAdimensional){
+    const CFuint iK = convTerm->getFirstScalarVar(0);
+
+    CFLog(NOTICE, "tempRef = "   << convTerm->getTempRef() << "\n");
+    CFLog(NOTICE, "pRef   = "    << convTerm->getPressRef() << "\n");
+    CFLog(NOTICE, "machInf   = " << MachInf << "\n");
+    CFLog(NOTICE, "dynViscosityRef   = " << refDataDiff[NSTurbTerm::MU]     << "\n");
+    CFLog(NOTICE, "turbDynViscosityRef   = " << refDataDiff[NSTurbTerm::MUT]     << "\n");
+    CFLog(NOTICE, "kRef   = " << refDataConv[iK] << "\n");
+    CFLog(NOTICE, "OmegaRef   = " << refDataConv[iK+1] << "\n");
+    CFLog(NOTICE, "thermConductivity = " << refDataDiff[NSTurbTerm::LAMBDA] << "\n");
+    CFLog(NOTICE, "ReynoldsRef       = " << Re << "\n");
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void NavierStokesKOmegaPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionDiffusionReactionPM
+    <Framework::MultiScalarTerm<NavierStokes::EulerTerm>,
+    NavierStokes::NSTurbTerm, KOmegaReactionTerm<Framework::BaseTerm> >::configure(args);
+
+  cf_assert(getDimension() > 0);
+  cf_assert(getNbEquations() > 0);
+  
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(DIM);
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace KOmega
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

@@ -1,0 +1,31 @@
+
+LIST ( APPEND FiniteVolumeGReKO_files
+FiniteVolumeGReKO.hh
+DistanceBasedExtrapolatorGMoveGReKO.ci
+DistanceBasedExtrapolatorGMoveGReKO.cxx
+DistanceBasedExtrapolatorGMoveGReKO.hh
+DistanceBasedExtrapolatorGMoveGReKO2D.cxx
+DistanceBasedExtrapolatorGMoveGReKO2D.hh
+#NavierStokesGReKO2DSourceTerm.cxx
+#NavierStokesGReKO2DSourceTerm_NL.cxx
+NavierStokesGReKO2DSourceTerm_Lang.cxx
+#NavierStokesGReKO2DSourceTerm_ZH.cxx
+#NavierStokesGReKO2DSourceTerm.hh
+#NavierStokesGReKO2DSourceTerm_NL.hh
+NavierStokesGReKO2DSourceTerm_Lang.hh
+#NavierStokesGReKO2DSourceTerm_ZH.hh
+NoSlipWallIsothermalNSGReKOPvt.hh
+NoSlipWallIsothermalNSGReKOPvt.ci
+NoSlipWallIsothermalNSGReKOPvt.cxx
+WNavierStokesGReKO2DSourceTerm_Lang.cxx
+WNavierStokesGReKO2DSourceTerm_Lang.hh
+#SubInletNSGReKO2DTtPtAlpha.cxx
+#SubInletNSGReKO2DTtPtAlpha.hh
+)
+
+#LIST ( APPEND FiniteVolumeGReKO_cflibs FiniteVolume FiniteVolumeNavierStokes FiniteVolumeKOmega )
+LIST ( APPEND FiniteVolumeGReKO_cflibs NavierStokes GReKO FiniteVolume FiniteVolumeNavierStokes FiniteVolumeKOmega )
+LIST ( APPEND FiniteVolumeGReKO_requires_mods NavierStokes GReKO FiniteVolume FiniteVolumeNavierStokes FiniteVolumeKOmega )
+
+CF_ADD_PLUGIN_LIBRARY ( FiniteVolumeGReKO )
+CF_WARN_ORPHAN_FILES()

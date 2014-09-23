@@ -1,0 +1,290 @@
+\chapter{From client to server}
+
+\section{Get tree}
+\label{getTree}
+
+\subsection{Description}
+
+This frame is used by the client to request the XML tree.
+
+\subsection{Structure}
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <getTree/>
+</ClientServerXML>
+\end{lstlisting}
+
+%-------------------------------------------------------------
+%-------------------------------------------------------------
+
+\section{Add node}
+\label{addNode}
+
+\subsection{Description}
+
+This frame is used by the client to add a node. 
+
+\subsection{Structure}
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <addNode path="/path/to/parent" name="nodeName" type="concreteType" 
+     abstype="abstractType" />
+</ClientServerXML>
+\end{lstlisting}
+
+\subsection{Arguments}
+\descrXMLAttr{path}{Path from the root to the parent node of the new node.
+Node names are separated by a \textit{slash} ('/').\\}
+\descrXMLAttr{name}{Name of the new node.\\}
+\descrXMLAttr{type}{Concrete type of the new node.\\}
+\descrXMLAttr{absType}{Abstract type of the new node.}
+
+\subsection{Server answer on success}
+
+The server answers by sending the updated tree \seeAlso{tree}{tree} to all
+clients.
+
+\subsection{Possible errors}
+
+\begin{itemize}
+ \item The path is not valid.
+ \item The name contains a space.
+ \item A child node with this name already exists for this parent.
+ \item The abstract type does not exist.
+ \item The concrete does not exist or does not inherit from the given abstract
+type.
+\end{itemize}
+
+%-------------------------------------------------------------
+%-------------------------------------------------------------
+
+\section{Rename node}
+\label{renameNode}
+
+\subsection{Description}
+
+This frame is used by the client to rename a node. It is not considered as an
+error if the new name is equal to the current node name.
+
+\subsection{Structure}
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <renameNode path="/path/to/node" name="newName" />
+</ClientServerXML>
+\end{lstlisting}
+
+\subsection{Arguments}
+\descrXMLAttr{path}{Path from the root to the node to rename.
+Node names are separated by a \textit{slash} ('/').\\}
+\descrXMLAttr{name}{New name for the node.}
+
+\subsection{Server answer on success}
+
+The server answers by sending the updated tree \seeAlso{tree}{tree} to all
+clients.
+
+\subsection{Possible errors}
+
+\begin{itemize}
+ \item The path is not valid.
+ \item The name contains a space.
+ \item A child node with this name already exists for this parent.
+\end{itemize}
+
+%-------------------------------------------------------------
+%-------------------------------------------------------------
+
+\section{Delete node}
+\label{deleteNode}
+
+\subsection{Description}
+
+This frame is used by the client to delete a node.
+
+\subsection{Structure}
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <deleteNode path="/path/to/node" />
+</ClientServerXML>
+\end{lstlisting}
+
+\subsection{Arguments}
+\descrXMLAttr{path}{Path from the root to the node to delete.
+Node names are separated by a \textit{slash} ('/').\\}
+
+\subsection{Server answer on success}
+
+The server answers by sending the updated tree \seeAlso{tree}{tree} to all
+clients.
+
+\subsection{Possible errors}
+
+\begin{itemize}
+ \item The path is not valid.
+\end{itemize}
+
+%-------------------------------------------------------------
+%-------------------------------------------------------------
+
+\section{Modify node}
+\label{modifyNode}
+
+\subsection{Description}
+
+This frame is used by the client to modify a node, which means add or modify
+options of a node.
+
+\subsection{Structure}
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <modifyNode>
+    <modOptions path="/path/to/node">
+      (modified options)
+    </modOptions>
+    <addOptions path="/path/to/node">
+      (new options)
+    </addOptions>
+  </modifyNode>
+</ClientServerXML>
+\end{lstlisting}
+
+\subsection{Arguments}
+\descrXMLAttr{path}{Path from the root to the node to modify.
+Node names are separated by a \textit{slash} ('/').\\}
+
+\subsection{Data structure}
+
+Data structure is composed of two distinct sections. The first section
+(\texttt{modOptions}) contains all existing options to modify. The second
+section (\texttt{addOptions}) contains all new options to add. Both sections
+are facultative and \texttt{addOptions} can be set before \texttt{modOptions}.
+The protocol allows to have several \texttt{addOptions} and
+\texttt{modeOptions} sections so that it is possible to modify more than one
+node at a time.
+
+\subsection{Server answer on success}
+
+The server answers by sending the updated tree \seeAlso{tree}{tree} to all
+clients.
+
+\subsection{Possible errors}
+
+\begin{itemize}
+ \item The path is not valid.
+ \item An option in \texttt{modOptions} section does not exist.
+ \item An option in \texttt{addOptions} section already exists.
+\end{itemize}
+
+%-------------------------------------------------------------
+%-------------------------------------------------------------
+
+\section{Get abstract types}
+\label{getAbstractType}
+
+\subsection{Description}
+
+This frame is used by the client to request abstract types list for a specified
+type.
+
+\subsection{Structure}
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <getAbstractTypes typeName="typeName" />
+</ClientServerXML>
+\end{lstlisting}
+
+\subsection{Arguments}
+\descrXMLAttr{typeName}{Type name.\\}
+
+\subsection{Server answer on success}
+
+The server answers by sending the list of the requested abstract types
+\seeAlso{abstractTypes}{abstractTypes}.
+
+\subsection{Possible errors}
+
+\begin{itemize}
+ \item The not is not valid.
+\end{itemize}
+
+%-------------------------------------------------------------
+%-------------------------------------------------------------
+
+\section{Get concrete types}
+\label{getConcreteType}
+
+This frame is used by the client to request concrete types list for a specified
+abstract type.
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <getConcreteTypes typeName="abstractTypeName" />
+</ClientServerXML>
+\end{lstlisting}
+
+\subsection{Arguments}
+\descrXMLAttr{typeName}{Abstract type name.\\}
+
+\subsection{Server answer on success}
+
+The server answers by sending the list of the requested concrete types
+\seeAlso{concreteTypes}{concreteTypes}.
+
+\subsection{Possible errors}
+
+\begin{itemize}
+ \item The not is not valid.
+\end{itemize}
+
+%-------------------------------------------------------------
+%-------------------------------------------------------------
+
+\section{Open directory}
+\label{openDir}
+
+Action : open a directory on the server, read it and send its contents
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <openDir path="/path/to/dir"/>
+</ClientServerXML>
+\end{lstlisting}
+
+\section{Open file}
+\label{openFile}
+
+Action : Open a case file
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <openFile filename="filename" />
+</ClientServerXML>
+\end{lstlisting}
+
+\section{Shutdown server}
+\label{shutdownServer}
+
+Action : shutdown the server
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <shutdownServer />
+</ClientServerXML>
+\end{lstlisting}
+
+\section{Run simulation}
+\label{runSimulation}
+
+Action : launch the simulation
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <runSimulation />
+</ClientServerXML>
+\end{lstlisting}

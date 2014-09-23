@@ -1,0 +1,202 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+#
+
+# Simulation Modules
+Simulator.Modules.Libs = libPetscI libPLaS libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeNavierStokes libForwardEuler libGambit2CFmesh
+
+# Simulation Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Incompressible/Cavity/
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = IncompNavierStokes2D
+Simulator.SubSystem.IncompNavierStokes2D.refValues = 1. 1. 1. 298.15
+Simulator.SubSystem.IncompNavierStokes2D.refLength = 1.0
+
+Simulator.SubSystem.IncompNavierStokes2D.ConvTerm.rhoInf = 1.
+Simulator.SubSystem.IncompNavierStokes2D.ConvTerm.uInf = 1.
+Simulator.SubSystem.IncompNavierStokes2D.ConvTerm.tempRef = 298.15
+Simulator.SubSystem.IncompNavierStokes2D.ConvTerm.p0Inf = 0.
+Simulator.SubSystem.IncompNavierStokes2D.ConvTerm.cvInf = 4186.
+
+Simulator.SubSystem.IncompNavierStokes2D.DiffTerm.ViscosityLaw = Constant
+Simulator.SubSystem.IncompNavierStokes2D.DiffTerm.Constant.Value = 0.001
+Simulator.SubSystem.IncompNavierStokes2D.DiffTerm.ThermConductivity = 0.606
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = cavityTrian.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = cavityTrian.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = dPuvt
+Simulator.SubSystem.Tecplot.SaveRate = 200
+Simulator.SubSystem.CFmesh.SaveRate = 200
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1000
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -15.0
+
+Simulator.SubSystem.Default.listTRS = InnerFaces WallDown WallLeft WallUp WallRight
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cavityTrian.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = FVMCC
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.Value = 10000000000000000.
+#Simulator.SubSystem.NewtonIterator.Data.ComputeCFL = Function
+#Simulator.SubSystem.NewtonIterator.Data.Function.Def = if(i<15,10.,if(i<300,100.,if(i<600,1000.,if(i<1001,10000.,if(i<1500,100000.,1000000.)))))
+#Simulator.SubSystem.NewtonIterator.Data.Function.Def = if(i<15,10.,if(i<20,100.,min(1e6,10.^(i-18))))
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = RhieChow2D
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = dPuvt
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = dPuvt
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+#Simulator.SubSystem.CellCenterFVM.Data.NavierStokes.postProcessData = true
+#Simulator.SubSystem.CellCenterFVM.Data.NavierStokes.NodalExtrapolation = HolmesConnell
+
+ 
+#comment
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -0.2
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Limiter = BarthJesp2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Limiter = Venktn2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Venktn2D.coeffEps = 1.0
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState \
+                                              NoSlipWallAdiabaticIncompNS2DdPuvtFVMCC \
+                                              NoSlipWallAdiabaticIncompNS2DdPuvtFVMCC \
+                                              NoSlipWallAdiabaticIncompNS2DdPuvtFVMCC \
+                                              NoSlipWallAdiabaticIncompNS2DdPuvtFVMCC
+
+Simulator.SubSystem.CellCenterFVM.InitNames = InField \
+                                              InWallDown \
+                                              InWallRight \
+                                              InWallUp \
+                                              InWallLeft
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 0. 0. 0. 298.15
+
+Simulator.SubSystem.CellCenterFVM.InWallDown.applyTRS = WallDown
+
+Simulator.SubSystem.CellCenterFVM.InWallRight.applyTRS = WallRight
+
+Simulator.SubSystem.CellCenterFVM.InWallUp.applyTRS = WallUp
+Simulator.SubSystem.CellCenterFVM.InWallUp.xWallVelocity = 1.
+
+Simulator.SubSystem.CellCenterFVM.InWallLeft.applyTRS = WallLeft
+
+
+Simulator.SubSystem.CellCenterFVM.BcComds = NoSlipWallAdiabaticIncompNS2DdPuvtFVMCC \
+                                            NoSlipWallAdiabaticIncompNS2DdPuvtFVMCC \
+                                            NoSlipWallAdiabaticIncompNS2DdPuvtFVMCC \
+                                            NoSlipWallAdiabaticIncompNS2DdPuvtFVMCC
+
+Simulator.SubSystem.CellCenterFVM.BcNames = BcWallDown \
+                                            BcWallRight \
+                                            BcWallUp \
+                                            BcWallLeft
+
+Simulator.SubSystem.CellCenterFVM.BcWallDown.applyTRS = WallDown
+
+Simulator.SubSystem.CellCenterFVM.BcWallRight.applyTRS = WallRight
+
+Simulator.SubSystem.CellCenterFVM.BcWallUp.applyTRS = WallUp
+Simulator.SubSystem.CellCenterFVM.BcWallUp.xWallVelocity = 1.
+
+Simulator.SubSystem.CellCenterFVM.BcWallLeft.applyTRS = WallLeft
+
+##############################################################################
+
+Simulator.SubSystem.DataPostProcessing = PLaSTracking
+
+Simulator.SubSystem.PLaSTracking.ProcessRate  = 1
+
+
+Simulator.SubSystem.PLaSTracking.SetupCom = StdSetup
+Simulator.SubSystem.PLaSTracking.StdSetup.bndWallFlag = 1 1 1 1
+Simulator.SubSystem.PLaSTracking.StdSetup.perBndFlag= 0 0 0 0
+Simulator.SubSystem.PLaSTracking.StdSetup.perBndOffset= 0.0   0.0   0.0   0.0 
+#Maximum number of dispersed entities per process:
+#Simulator.SubSystem.PLaSTracking.StdSetup.numMaxEnt=5000
+#Simulator.SubSystem.PLaSTracking.StdSetup.numMaxEnt=-1
+#Number of initially distributed dispersed entities:
+Simulator.SubSystem.PLaSTracking.StdSetup.numIniEnt=1000
+#Diameter of dispersed entities ([0] = constant, [1] = normal, [2] = log-normal):
+Simulator.SubSystem.PLaSTracking.StdSetup.iniDiamType= 0
+Simulator.SubSystem.PLaSTracking.StdSetup.iniDiam= 0.00001
+Simulator.SubSystem.PLaSTracking.StdSetup.iniDiamStdDev= 0.0
+#Density of dispersed flow:
+Simulator.SubSystem.PLaSTracking.StdSetup.rhoDisp= 80000
+#Restart from given initial distribution ([0] = no, [1] = yes):
+Simulator.SubSystem.PLaSTracking.StdSetup.restart= 0
+#Flow type ([1] = Particulate, [2] = Bubbly):
+Simulator.SubSystem.PLaSTracking.StdSetup.flowType=1
+#Momentum back-coupling ([0] = no, [1] = yes):
+Simulator.SubSystem.PLaSTracking.StdSetup.momCoupl=0
+#Mass back-coupling ([0] = no, [1] = yes):
+Simulator.SubSystem.PLaSTracking.StdSetup.massCoupl=0
+#Include collision model ([0] = no, [1] = yes);
+Simulator.SubSystem.PLaSTracking.StdSetup.includeColl=0
+#Include slip-shear lift force ([0] = no, [1] = yes):
+Simulator.SubSystem.PLaSTracking.StdSetup.includeLift=0
+#Coupling force distribution method ([1] = PIC, [2] = Projection):
+Simulator.SubSystem.PLaSTracking.StdSetup.forceDistr=1
+#Production factor (dispersed entities per second):
+Simulator.SubSystem.PLaSTracking.StdSetup.prodFactor=10.0
+#Periodic boundaries are dispersed outlets ([0] = no, [1] = yes):
+Simulator.SubSystem.PLaSTracking.StdSetup.dispOutlets=0
+#Dispersed phase production domains ([0]= none, [1] = line, [2] = rectangle, [3] = ellipse):
+Simulator.SubSystem.PLaSTracking.StdSetup.prodDoms=0
+#Simulator.SubSystem.PLaSTracking.StdSetup.prodDoms=2 0.1 0.1 0.1 0.2 0.2 0.2
+
+#Simulator.SubSystem.PLaSTracking.StdSetup.Test = false
+#Simulator.SubSystem.PLaSTracking.StdSetup.Test1 = 20.
+
+
+Simulator.SubSystem.PLaSTracking.ProcessComds = UpdateParticles
+Simulator.SubSystem.PLaSTracking.ProcessNames = Updater
+
+Simulator.SubSystem.PLaSTracking.Data.Viscosity = 0.001
+Simulator.SubSystem.PLaSTracking.Data.Gravity = 9.81
+Simulator.SubSystem.PLaSTracking.Data.GravityVector = 0.1 -0.3
+
+

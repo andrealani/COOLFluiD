@@ -1,0 +1,41 @@
+\documentclass[a4paper, 12pt, evenpage]{report}
+
+\usepackage[T1]{fontenc}
+\usepackage{graphicx,color, caption  }
+
+\usepackage{indentfirst}
+
+\usepackage{epsfig}
+\usepackage{fancyhdr}
+% \usepackage{fancyvrb}
+\usepackage{textcomp}
+%\usepackage{times}
+\usepackage{calc}
+\usepackage{listings}
+\usepackage{amssymb}
+\usepackage{lastpage}
+\pagestyle{fancy}
+
+
+\input{../../QtCpp}
+\input{../../Macros}
+
+
+\title{User Interface Development for \cf\\
+Annexes volume 3 - Network XML frames format}
+\author{GASPER \textsc{Quentin}}
+
+\begin{document}
+
+\maketitle
+
+\lhead{Annexes volume 3 : Network XML frames format}
+\rhead{\nouppercase{\leftmark}} % current chapter title
+\cfoot{} % obligatoire !
+\rfoot{\thepage/\pageref{LastPage}}
+
+\fancyheadoffset[LO,RO]{\marginparsep}
+
+\tableofcontents
+
+\end{document}

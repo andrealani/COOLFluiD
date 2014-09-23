@@ -1,0 +1,88 @@
+#include "Framework/GeometricEntity.hh"
+#include "Framework/MethodStrategyProvider.hh"
+
+#include "NullDerivativeComputer.hh"
+#include "FiniteVolume/FiniteVolume.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::MathTools;
+using namespace COOLFluiD::Common;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+MethodStrategyProvider<NullDerivativeComputer,
+                       CellCenterFVMData,
+		       DerivativeComputer,
+                       FiniteVolumeModule>
+nullDerivativeComputerProv("Null");
+
+//////////////////////////////////////////////////////////////////////////////
+
+NullDerivativeComputer::NullDerivativeComputer(const std::string& name) :
+  DerivativeComputer(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+NullDerivativeComputer::~NullDerivativeComputer()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NullDerivativeComputer::setup()
+{
+ 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NullDerivativeComputer::computeGradients(const RealMatrix& values,
+						 vector<RealVector*>& gradients)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NullDerivativeComputer::computeControlVolume
+(vector<RealVector*>& states, GeometricEntity *const geo)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NullDerivativeComputer::computeAverageValues
+(GeometricEntity *const geo,
+ const vector<RealVector*>& values,
+ RealVector& avValues)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+SafePtr<vector<RealVector> > NullDerivativeComputer::getGradientsJacob()
+{
+  return &_gradientsJacob;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace FiniteVolume
+
+} // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

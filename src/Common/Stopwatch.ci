@@ -1,0 +1,146 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Common_Stopwatch_ci
+#define COOLFluiD_Common_Stopwatch_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Common {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename TIMEPOLICY>
+Stopwatch<TIMEPOLICY>::Stopwatch() : m_running(false)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename TIMEPOLICY>
+Stopwatch<TIMEPOLICY>::~Stopwatch()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename TIMEPOLICY>
+void Stopwatch<TIMEPOLICY>::restart()
+{
+  start();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename TIMEPOLICY>
+void Stopwatch<TIMEPOLICY>::reset()
+{
+  stop();
+  m_total = 0.;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename TIMEPOLICY>
+void Stopwatch<TIMEPOLICY>::start()
+{
+  reset();
+  resume();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename TIMEPOLICY>
+void Stopwatch<TIMEPOLICY>::stop()
+{
+  if (isRunning()) {
+    takeStopTime();
+    accumulateTime();
+    m_running = false;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename TIMEPOLICY>
+void Stopwatch<TIMEPOLICY>::resume()
+{
+  if (isNotRunning()) {
+    initStartTime();
+    m_running = true;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename TIMEPOLICY>
+CFreal Stopwatch<TIMEPOLICY>::read() const
+{
+  if (isNotRunning())
+    return m_total;
+
+  return impl.getDelta() + m_total;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename TIMEPOLICY>
+HourMinSec Stopwatch<TIMEPOLICY>::readTimeHMS()
+{
+  return HourMinSec(read());
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename TIMEPOLICY>
+bool Stopwatch<TIMEPOLICY>::isRunning() const
+{
+  return m_running;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename TIMEPOLICY>
+bool Stopwatch<TIMEPOLICY>::isNotRunning() const
+{
+  return !isRunning();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename TIMEPOLICY>
+void Stopwatch<TIMEPOLICY>::initStartTime()
+{
+  impl.initStartTime();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename TIMEPOLICY>
+void Stopwatch<TIMEPOLICY>::accumulateTime()
+{
+  impl.accumulateTime(m_total);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename TIMEPOLICY>
+void Stopwatch<TIMEPOLICY>::takeStopTime()
+{
+  impl.takeStopTime();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Common
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Common_Stopwatch_ci

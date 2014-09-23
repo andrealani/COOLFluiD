@@ -1,0 +1,137 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+#CFEnv.ErrorOnUnusedConfig = true
+
+# Simulator Modules
+Simulator.Modules.Libs = libPetsc libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libMHD libFiniteVolume libFiniteVolumeMHD libNewtonMethod libNewtonMethodMHD libGambit2CFmesh
+
+# Simulator Parameters
+Simulator.Paths.WorkingDir = plugins/MHD/testcases/CoronalExpansion/
+Simulator.Paths.ResultsDir = plugins/MHD/testcases/CoronalExpansion/results/
+
+Simulator.SubSystem.Default.PhysicalModelType       = MHD3DProjection
+Simulator.SubSystem.MHD3DProjection.ConvTerm.gamma = 1.666666667
+
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.potentialBType = Dipole
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.mX = 0.0
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.mY = 0.0
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.mZ = -10.0
+
+Simulator.SubSystem.MHD3DProjection.ConvTerm.potentialBType = PFSS
+Simulator.SubSystem.MHD3DProjection.ConvTerm.BeginPFSSCoeffFileName = /data/leuven/302/vsc30237/workspace_06032013/COOLFluiD/plugins/MHD/testcases/CoronalExpansion/PFSSCoeffFile_20120717_000400
+Simulator.SubSystem.MHD3DProjection.ConvTerm.EndPFSSCoeffFileName = /data/leuven/302/vsc30237/workspace_06032013/COOLFluiD/plugins/MHD/testcases/CoronalExpansion/PFSSCoeffFile_20120717_060400
+Simulator.SubSystem.MHD3DProjection.ConvTerm.nbLModes = 20
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.mass = 5.97219e24
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.lRef =
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.nRef =
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.TRef = 
+
+Simulator.SubSystem.MHD3DProjection.ConvTerm.refSpeed = 1.0 
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.dissipCoeff = 1.0 
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.correctionType = Mixed
+
+#Simulator.SubSystem.InteractiveParamReader.readRate = 15
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MHD/testcases/CoronalExpansion/coronalExpansion.inter
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+#Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CFmesh.FileName     = coronalExpansionInitFVMMHDProjHeatingImpl.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = coronalExpansionInitFVMMHDProjHeatingImpl.plt
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot.Data.outputVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 200
+Simulator.SubSystem.CFmesh.SaveRate = 200
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarNames = limiter
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarStrides = 9
+
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 0 
+
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -6.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells Photosphere SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+#Simulator.SubSystem.CFmeshFileReader.Data.FileName = CORONALEXPANSION_Hexa250k.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = CORONALEXPANSION_Tetra323k.CFmesh #CoronalExpansion33k.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+# only activate if you are restarting from a 2nd order solution #########
+#Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarNames = InitLimiter
+#Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarTags = limiter
+#Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarStrides = 9
+#Simulator.SubSystem.CellCenterFVM.Setup1.InitLimiterSocket = InitLimiter
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 0.5
+Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergence_coronalExpansionInitFVMMHDProjHeatingImpl.plt
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.NewtonIterator.UpdateSol = UpdateSolMHD
+#Simulator.SubSystem.NewtonIterator.UpdateSolMHD.pressureCorrectionValue = 0.000000000001
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobMHD
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+Simulator.SubSystem.CellCenterFVM.NumJacobMHD.SaveRate = 200
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = MHD3DProjectionConsLaxFriedTanaka
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Prim
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Cons
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = MHDConsACAST MHD3DProjectionGravityST MHD3DProjectionCoriolisCentrifugalForcesST MHD3DProjectionHeatingST
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS3D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.limitRes = -1.2
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.gradientFactor = 0.
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp3D
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn3D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn3D.coeffEps = 1.0
+
+Simulator.SubSystem.CellCenterFVM.InitComds = MHD3DProjectionInitStatePFSS
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.InputVar = Cons 
+#Simulator.SubSystem.CellCenterFVM.InField.mass =
+#Simulator.SubSystem.CellCenterFVM.InField.epsilon =
+#Simulator.SubSystem.CellCenterFVM.InField.rMin =
+#Simulator.SubSystem.CellCenterFVM.InField.rMax =
+
+Simulator.SubSystem.CellCenterFVM.BcComds = \
+	MirrorMHD3DProjectionPhotosphereFVMCC \
+        SuperOutletMHD3DProjectionHeatingFVMCC
+
+Simulator.SubSystem.CellCenterFVM.BcNames = Wall Outlet
+
+Simulator.SubSystem.CellCenterFVM.Wall.applyTRS = Photosphere 
+#Simulator.SubSystem.CellCenterFVM.Wall.rhoFixed = 
+
+Simulator.SubSystem.CellCenterFVM.Outlet.applyTRS = SuperOutlet
+Simulator.SubSystem.CellCenterFVM.Outlet.refPhi = 0.0
+
+CFEnv.DoAssertion = true
+CFEnv.AssertionDumps = true
+CFEnv.ExceptionOutputs = true
+CFEnv.AssertionThrows = true
+CFEnv.RegistSignalHandlers = false

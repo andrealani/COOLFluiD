@@ -1,0 +1,32 @@
+LIST( APPEND SpectralFDLinEuler_files
+BCFarField1DCharLinEuler2D.cxx
+BCFarField1DCharLinEuler2D.hh
+BCMirrorLinEuler2D.cxx
+BCMirrorLinEuler2D.hh
+BCMirrorLinEuler3D.cxx
+BCMirrorLinEuler3D.hh
+BCSubInletLinEulerRhoV2D.cxx
+BCSubInletLinEulerRhoV2D.hh
+BCSubInletLinEulerRhoV3D.cxx
+BCSubInletLinEulerRhoV3D.hh
+Dipole2DSourceTerm.cxx
+Dipole2DSourceTerm.hh
+Dipole3DSourceTerm.cxx
+Dipole3DSourceTerm.hh
+Monopole2DSourceTerm.cxx
+Monopole2DSourceTerm.hh
+LinEulerMeanFlowSourceTermRHSSpectralFD.cxx
+LinEulerMeanFlowSourceTermRHSSpectralFD.hh
+LEEInitState2D.cxx
+LEEInitState2D.hh
+LEEInitState3D.cxx
+LEEInitState3D.hh
+Quadrupole2DSourceTerm.cxx
+Quadrupole2DSourceTerm.hh
+SpectralFDLinEuler.hh
+)
+
+LIST ( APPEND SpectralFDLinEuler_cflibs SpectralFD LinEuler Framework )
+CF_ADD_PLUGIN_LIBRARY ( SpectralFDLinEuler )
+
+CF_WARN_ORPHAN_FILES()

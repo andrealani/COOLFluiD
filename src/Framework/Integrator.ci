@@ -1,0 +1,313 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Framework_Integrator_ci
+#define COOLFluiD_Framework_Integrator_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+
+#include "Common/CFLog.hh"
+#include "Environment/ConcreteProvider.hh"
+
+#include "Framework/InterpolatorRegister.hh"
+#include "Framework/IntegratorRegister.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename INTEGRATORIMPL>
+Integrator<INTEGRATORIMPL>::Integrator() :
+  _setup(false),
+  m_pool(),
+  m_activeIntegrators(),
+  m_integType()
+{
+  // set default integration for all shapes
+  setIntegrationForAllGeo(CFQuadrature::GAUSSLEGENDRE,CFPolyOrder::ORDER1);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename INTEGRATORIMPL>
+Integrator<INTEGRATORIMPL>::~Integrator()
+{
+  unsetup();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename INTEGRATORIMPL>
+void Integrator<INTEGRATORIMPL>::unsetup()
+{
+  CFAUTOTRACE;
+
+  using namespace std;
+
+  /// @todo check this use of clear() (it's dangerous !!)
+  if(_setup) {
+    PoolDataType().swap(m_pool);
+    cf_assert(m_pool.size() == 0);
+
+    ActiveDataType().swap(m_activeIntegrators);
+    cf_assert(m_activeIntegrators.size() == 0);
+
+    _setup = false;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename INTEGRATORIMPL>
+void Integrator<INTEGRATORIMPL>::setup()
+{
+  CFAUTOTRACE;
+
+  using namespace std;
+
+  // always unsetup first to guarantee that it would work repeated times
+  unsetup();
+
+  InterpolatorRegister& interpolRegister = InterpolatorRegister::getInstance();
+
+  IntegratorRegister<INTEGRATORIMPL>& integRegister =
+    IntegratorRegister<INTEGRATORIMPL>::getInstance();
+
+  if(!_setup)
+  {
+    // typedef Environment::ConcreteProvider<INTEGRATORIMPL> IntegratorImplProviderT;
+
+    m_pool.resize(interpolRegister.getNbInterpolators());
+
+    for (CFuint id = 0; id < interpolRegister.getNbInterpolators(); ++id) {
+
+      // get the properties of the integrator in question
+      InterpolatorProperties interpolProp = interpolRegister.getInterpolatorProperties(id);
+
+      CFLogDebugMin("Integrator::setup() : Interpolator " << interpolProp.Name << "\n");
+
+      typedef vector<std::string> NameList;
+      NameList integratorsName;
+
+      // get the integrator names that match the properties of the interpolator
+      // if it fails we setup a Null integrator
+      if ( integRegister.getIntegratorDB().exists (interpolProp.Shape, interpolProp.Type, interpolProp.Order) )
+      {
+        integratorsName =
+          integRegister.getIntegratorsMatching(interpolProp.Shape,
+                                               interpolProp.Type,
+                                               interpolProp.Order);
+      }
+      else
+      {
+        CFLog(WARN, "WARNING: No " << INTEGRATORIMPL::getClassName() << " found for the Interpolator: " << interpolProp.Name  << " - Using NullIntegrator.\n");
+        integratorsName.clear();
+        integratorsName.push_back("Null");
+      }
+
+      m_pool[id].reserve(integratorsName.size());
+
+      // Create and initialize the integrators that can work with the specific interpolator
+      NameList::iterator itr = integratorsName.begin();
+      for(;itr != integratorsName.end(); ++itr)
+      {
+
+        CFLogDebugMin("Creating IntegratorImpl: " << *itr << "\n");
+        Common::SelfRegistPtr<INTEGRATORIMPL> ptr =
+          Environment::Factory<INTEGRATORIMPL>::getInstance().getProvider(*itr)->create();
+
+        // if not a Null intergrator we can do some checks
+        if (ptr->isNotNull()) {
+          IntegratorProperties integratProp = ptr->getIntegratorProperties();
+
+          cf_assert(integratProp.Shape == interpolProp.Shape);
+          cf_assert(integratProp.InterpolType == interpolProp.Type);
+        }
+
+        m_pool[id].push_back(ptr);
+        ptr->setup();
+      }
+
+      // all names should have been created and added to the pool
+      cf_assert(m_pool[id].size() == integratorsName.size());
+
+    } // end for all interpolators
+
+    _setup = true;
+
+  } // end if setup
+
+  activateIntegrators();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename INTEGRATORIMPL>
+IntegratorPattern
+Integrator<INTEGRATORIMPL>::getMaxIntegratorPattern() const
+{
+  CFAUTOTRACE;
+
+  using namespace std;
+
+  IntegratorPattern pattern;
+
+  typename PoolDataType::const_iterator itrOut = m_pool.begin();
+  for(;itrOut != m_pool.end(); ++itrOut){
+    typename InnerDataType::const_iterator itrIn = itrOut->begin();
+    for (; itrIn != itrOut->end(); ++itrIn) {
+
+      IntegratorPattern localPattern = (*itrIn)->getIntegratorPattern();
+
+      if (localPattern.getNbShapeFunctions() > pattern.getNbShapeFunctions()) {
+        pattern.setNbShapeFunctions(localPattern.getNbShapeFunctions());
+      }
+
+      if (localPattern.size() > pattern.size()) {
+        pattern.resize(localPattern.size());
+      }
+
+      for(CFuint i = 0; i < localPattern.size(); ++i){
+        if(localPattern[i] > pattern[i]) {
+          pattern[i] = localPattern[i];
+        }
+      }
+    }
+  }
+  return pattern;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename INTEGRATORIMPL>
+void Integrator<INTEGRATORIMPL>::activateIntegrators()
+{
+  CFAUTOTRACE;
+
+  cf_assert(_setup == true);
+
+  using namespace std;
+  typedef typename InnerDataType::const_iterator CstItrDT;
+
+  m_activeIntegrators.clear();
+
+  CFuint interpID = 0;
+  typename PoolDataType::const_iterator itrOut = m_pool.begin();
+  for(; itrOut != m_pool.end(); ++itrOut, ++interpID) {
+
+    InterpolatorProperties interpolProp =
+      InterpolatorRegister::getInstance().getInterpolatorProperties(interpID);
+
+    CFGeoShape::Type  shape = interpolProp.Shape;
+    // unused // CFPolyOrder::Type order = interpolProp.Order;
+
+    std::vector< CstItrDT > found;
+    CstItrDT itrIn = itrOut->begin();
+
+    for (; itrIn != itrOut->end(); ++itrIn)
+    {
+      const IntegratorProperties prop = (*itrIn)->getIntegratorProperties();
+
+      // add the integrator if it satisfies the minimum requirement for integration order
+      CFLog(VERBOSE, "prop.QuadType  = " << prop.QuadType << "\n");
+      CFLog(VERBOSE, "m_integType[shape].first  = " << m_integType[shape].first << "\n");
+      CFLog(VERBOSE, "m_integType[shape].second  = " << m_integType[shape].second << "\n");
+      CFLog(VERBOSE, "shape  = " << shape << "\n");
+
+      if(prop.QuadType == m_integType[shape].first &&
+         prop.InterpolOrder >= m_integType[shape].second)
+      {
+        found.push_back(itrIn);
+      }
+
+      // add the integrator if it is a null integrator
+      if ((*itrIn)->isNull())
+      {
+        found.push_back(itrIn);
+      }
+    }
+
+    // add the integrators to the activation list
+    if(!found.empty())
+    {
+      // choose the integrator with minimum order
+      CFPolyOrder::Type selected_order = CFPolyOrder::MAXORDER;
+      CstItrDT selected = found.front();
+
+      typename std::vector< CstItrDT >::iterator selectItr = found.begin();
+      for (; selectItr != found.end(); ++selectItr)
+      {
+        CFPolyOrder::Type this_order = (*(*selectItr))->getIntegratorProperties().InterpolOrder;
+        if (this_order <= selected_order)
+        {
+          selected = *selectItr;
+          selected_order = this_order;
+        }
+      }
+
+      CFLog(VERBOSE,"Activating Integrator " << (*selected)->getIntegratorProperties() << "\n");
+      m_activeIntegrators.push_back(*selected);
+    }
+    else
+    {
+      // AL: no exception must be thrown here, because there are cases where
+      // you don't have or need a VolumeIntegrator (CRD) and in which
+      // throwing an exception causes a segmentation fault !!
+      CFout << "No Integrator satisfies Quadrature: " << m_integType[shape].first
+            << " Order: " << m_integType[shape].second
+            << " for interpolator " <<  interpolProp.Name << "\n";
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename INTEGRATORIMPL>
+void Integrator<INTEGRATORIMPL>::setIntegrationForAllGeo(const CFQuadrature::Type& quadType,
+                                                         const CFPolyOrder::Type& order)
+{
+  CFAUTOTRACE;
+
+  setIntegrationForShape(CFGeoShape::POINT,quadType,order);
+  setIntegrationForShape(CFGeoShape::LINE,quadType,order);
+
+  setIntegrationForShape(CFGeoShape::TRIAG,quadType,order);
+  setIntegrationForShape(CFGeoShape::QUAD,quadType,order);
+
+  setIntegrationForShape(CFGeoShape::TETRA,quadType,order);
+  setIntegrationForShape(CFGeoShape::PYRAM,quadType,order);
+  setIntegrationForShape(CFGeoShape::PRISM,quadType,order);
+  setIntegrationForShape(CFGeoShape::HEXA,quadType,order);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename INTEGRATORIMPL>
+void Integrator<INTEGRATORIMPL>::setIntegrationForShape(const CFGeoShape::Type shape,
+                                                        const CFQuadrature::Type& quadType,
+                                                        const CFPolyOrder::Type& order)
+{
+  CFAUTOTRACE;
+
+  m_integType[shape]  = std::pair<CFQuadrature::Type,CFPolyOrder::Type>(quadType,order);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Framework_Integrator_ci
+

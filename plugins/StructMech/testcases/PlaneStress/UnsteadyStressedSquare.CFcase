@@ -1,0 +1,132 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -6.9660068
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libFiniteElement libStructMech libNewtonMethod libPetscI  libFiniteElementStructMech
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/StructMech/testcases/PlaneStress/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = StructMech2D
+
+# Some kind of steel
+Simulator.SubSystem.StructMech2D.MaterialNames = Custom
+Simulator.SubSystem.StructMech2D.Custom.YoungModulus = 205E9
+Simulator.SubSystem.StructMech2D.Custom.Poisson = 0.3
+Simulator.SubSystem.StructMech2D.Custom.Density = 200000.0
+
+
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.001
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = MaxDT
+#Simulator.SubSystem.SubSystemStatus.MaxDT.DT_Ratio = 0.9
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = FunctionDT
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Vars = i
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = 1.0
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = square-plane-stress.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = square-plane-stress.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Disp
+Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.CFmesh.SaveRate = 1
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+Simulator.SubSystem.CFmesh.AppendIter = true
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 6.28
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells North East West South
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = square-qd.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = FiniteElement
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCLU
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 100
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1.0
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+Simulator.SubSystem.NewtonIterator.Data.SaveSystemToFile = true
+
+Simulator.SubSystem.NewtonIterator.SetupCom = NewmarkSetup
+Simulator.SubSystem.NewtonIterator.UnSetupCom = NewmarkUnSetup
+Simulator.SubSystem.NewtonIterator.UpdateSol = NewmarkExplicitUpdateSol
+#Simulator.SubSystem.NewtonIterator.NewmarkExplicitUpdateSol.Alpha = 0.5
+#Simulator.SubSystem.NewtonIterator.NewmarkExplicitUpdateSol.Gamma = 0.5
+Simulator.SubSystem.NewtonIterator.InitCom = ResetSystem
+
+Simulator.SubSystem.SpaceMethod = FiniteElementMethod
+
+Simulator.SubSystem.FiniteElementMethod.Data.UpdateVar = Disp
+Simulator.SubSystem.FiniteElementMethod.Data.InertiaVar = StructMech2DInertiaDisp
+Simulator.SubSystem.FiniteElementMethod.Data.SourceVar = StructMech2DSourceDisp
+Simulator.SubSystem.FiniteElementMethod.Data.DiffusiveVar = Disp
+#Simulator.SubSystem.FiniteElementMethod.Data.StructMech2DDiffusiveDisp.PlaneStress = false
+
+Simulator.SubSystem.FiniteElementMethod.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.FiniteElementMethod.Data.ResidualStrategy = StdElementComputer
+
+# Vars are [ x y rho u v]
+#Simulator.SubSystem.FiniteElementMethod.Data.StructMech2DSourceDisp.IndepDef = 0. -9.81*rho
+
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorOrder = P1
+
+Simulator.SubSystem.FiniteElementMethod.ComputeSpaceResidual = ExplicitComputeSpaceResCom
+Simulator.SubSystem.FiniteElementMethod.ExplicitComputeSpaceResCom.applyTRS = InnerCells
+
+Simulator.SubSystem.FiniteElementMethod.ComputeTimeResidual = NewmarkComputeTimeResCom
+Simulator.SubSystem.FiniteElementMethod.NewmarkComputeTimeResCom.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.NewmarkComputeTimeResCom.Alpha = 0.5
+Simulator.SubSystem.FiniteElementMethod.NewmarkComputeTimeResCom.Gamma = 0.5
+
+Simulator.SubSystem.FiniteElementMethod.InitComds = InitState
+Simulator.SubSystem.FiniteElementMethod.InitNames = InitialField
+
+Simulator.SubSystem.FiniteElementMethod.InitialField.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.InitialField.Vars = x y
+Simulator.SubSystem.FiniteElementMethod.InitialField.Def = 0 0
+
+Simulator.SubSystem.FiniteElementMethod.BcComds = NeumannBC DirichletBC
+Simulator.SubSystem.FiniteElementMethod.BcNames = BOUND2 BOUND1
+
+Simulator.SubSystem.FiniteElementMethod.BOUND1.applyTRS = West
+Simulator.SubSystem.FiniteElementMethod.BOUND1.Implicit = false
+Simulator.SubSystem.FiniteElementMethod.BOUND1.Vars = x y t u v
+Simulator.SubSystem.FiniteElementMethod.BOUND1.Def = 0 0
+
+Simulator.SubSystem.FiniteElementMethod.BOUND2.applyTRS = East
+Simulator.SubSystem.FiniteElementMethod.BOUND2.Vars = x y t u v nx ny
+#Simulator.SubSystem.FiniteElementMethod.BOUND2.Def = 100. 0
+Simulator.SubSystem.FiniteElementMethod.BOUND2.Def = if(t<0.01,100000*t,0) 0
+

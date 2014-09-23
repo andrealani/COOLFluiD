@@ -1,0 +1,5 @@
+cf_add_case( MPI 1       PCASE LinAdvSys_3DSTKT.CFcase )
+cf_add_case( MPI 1       PCASE LinAdvSys.CFcase )
+cf_add_case( MPI 1       PCASE LinAdvSys_STKS.CFcase )
+cf_add_case( MPI 1       PCASE LinAdvSys_STKT.CFcase )
+cf_add_case( MPI 1       PCASE linadvSys_STM_HOCRD.CFcase )

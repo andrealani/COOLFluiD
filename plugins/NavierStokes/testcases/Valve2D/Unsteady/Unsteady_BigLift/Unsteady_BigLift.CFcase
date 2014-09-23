@@ -1,0 +1,475 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+Simulator.Maestro = SimpleMaestro
+Simulator.SubSystems = SubSystem
+
+Simulator.SimpleMaestro.GlobalStopCondition = GlobalMaxNumberSteps
+Simulator.SimpleMaestro.GlobalMaxNumberSteps.nbSteps = 1
+
+# SubSystem Modules
+CFEnv.ExceptionLogLevel = 200
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libTHOR2CFmesh libFiniteVolume libFiniteVolumeNavierStokes libPetscI libNewtonMethod libMeshFEMMove libFiniteElement libStructMech libFiniteElementStructMech libGambit2CFmesh libMeshTools libKOmega  libMeshToolsFVM libDpl2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Valve2D/
+#Simulator.Paths.WorkingDir       = ./
+Simulator.Paths.ResultsDir       = ./
+
+#
+#Define the 2 meshdata's
+#
+Simulator.SubSystem.Namespaces = FlowNamespace MeshNamespace
+
+#
+#Define the meshdata for the flow solver
+#
+Simulator.SubSystem.FlowNamespace.MeshData = FlowMeshData
+Simulator.SubSystem.FlowNamespace.SubSystemStatus = FlowSubSystemStatus
+Simulator.SubSystem.FlowNamespace.PhysicalModelType = NavierStokes2DKOmega
+Simulator.SubSystem.FlowNamespace.PhysicalModelName = FlowPM
+Simulator.SubSystem.FlowPM.refValues  = 350000. 20. 20. 298.15 4.0e-06 20.
+Simulator.SubSystem.FlowPM.refLength  = 1.0
+Simulator.SubSystem.FlowPM.ConvTerm.machInf = 0.1
+
+#
+#Define the meshdata for the mesh movement
+#
+Simulator.SubSystem.MeshNamespace.MeshData = MeshMeshData
+Simulator.SubSystem.MeshNamespace.SubSystemStatus = MeshSubSystemStatus
+Simulator.SubSystem.MeshNamespace.PhysicalModelName = MeshPM
+Simulator.SubSystem.MeshNamespace.PhysicalModelType = StructMech2D
+Simulator.SubSystem.MeshPM.StructMech2D.Young = 205E9
+Simulator.SubSystem.MeshPM.StructMech2D.Poisson = 1.0
+Simulator.SubSystem.MeshPM.StructMech2D.Lambda = 1.0
+Simulator.SubSystem.MeshPM.StructMech2D.mu = 1.0
+Simulator.SubSystem.MeshPM.StructMech2D.Density = 7850.0
+
+#
+#Define the meshdata details for the flow
+#
+Simulator.SubSystem.FlowMeshData.listTRS = InnerFaces Inlet Sym_axis Valve Outlet Cylinder
+Simulator.SubSystem.FlowMeshData.Namespaces = FlowNamespace
+
+#
+#Define the meshdata details for the mesh movement
+#
+Simulator.SubSystem.MeshMeshData.listTRS = InnerCells Inlet Sym_axis Valve Outlet Cylinder
+Simulator.SubSystem.MeshMeshData.Namespaces = MeshNamespace
+
+#
+#Define the collaborators for the ErrorEstimator (even if null)
+#
+Simulator.SubSystem.ErrorEstimatorMethod = Null Null
+Simulator.SubSystem.ErrorEstimatorNames = NullErrorEstimator1 NullErrorEstimator2
+Simulator.SubSystem.NullErrorEstimator1.Data.CollaboratorNames = Flow
+Simulator.SubSystem.NullErrorEstimator1.Namespace = FlowNamespace
+Simulator.SubSystem.NullErrorEstimator2.Data.CollaboratorNames = Mesh
+Simulator.SubSystem.NullErrorEstimator2.Namespace = MeshNamespace
+
+#
+#Define the mesh adapter method
+#
+Simulator.SubSystem.MeshAdapterMethod = FEMMove
+Simulator.SubSystem.FEMMove.Namespace = MeshNamespace
+Simulator.SubSystem.FEMMove.Data.CollaboratorNames = NewtonIterator Mesh CFmesh2 CFmeshFileReader2
+
+Simulator.SubSystem.FEMMove.AdaptRate = 1
+Simulator.SubSystem.FEMMove.Data.OtherNamespace        = FlowNamespace
+Simulator.SubSystem.FEMMove.UpdateMeshCom              = UpdateMesh
+Simulator.SubSystem.FEMMove.UpdateMesh.ConvRate        = 1
+Simulator.SubSystem.FEMMove.UpdateMesh.ShowRate        = 1
+Simulator.SubSystem.FEMMove.UpdateMesh.StopCondition   = MaxNumberSteps
+Simulator.SubSystem.FEMMove.UpdateMesh.MaxNumberSteps.nbSteps  = 1
+Simulator.SubSystem.FEMMove.UpdateMesh.ConvergenceFile = convergenceFEMCycle.plt
+
+Simulator.SubSystem.FEMMove.PrepareComds = ValveCyclePrepare2
+Simulator.SubSystem.FEMMove.PrepareNames = ValveMovement
+Simulator.SubSystem.FEMMove.ValveMovement.EngineRPM = 20000.
+Simulator.SubSystem.FEMMove.ValveMovement.MaxOpening = 0.011
+Simulator.SubSystem.FEMMove.ValveMovement.MinOpening = 0.002
+Simulator.SubSystem.FEMMove.ValveMovement.MinimumXCoord = 0.
+Simulator.SubSystem.FEMMove.ValveMovement.MaximumXCoord = 0.1475
+Simulator.SubSystem.FEMMove.ValveMovement.MinimumXCoord_Yconst = 0.115
+Simulator.SubSystem.FEMMove.ValveMovement.TRSNameSymmetry = Sym_axis
+Simulator.SubSystem.FEMMove.ValveMovement.TRSNameValve = Valve
+
+#
+#Define the CFL (it is not used in this case)
+#
+Simulator.SubSystem.CFL.Value = 1
+#Simulator.SubSystem.CFL.ComputeCFL = Function
+#Simulator.SubSystem.CFL.Function.Def = min(0.5+(i*0.01),1.0)
+
+#Simulator.SubSystem.CFL.ComputeCFL = SER
+#Simulator.SubSystem.CFL.SER.coeffCFL = 1.5
+#Simulator.SubSystem.CFL.SER.maxCFL = 1.0
+#Simulator.SubSystem.CFL.SER.power = 1.0
+
+#
+#Define the timestep
+#
+Simulator.SubSystem.FlowSubSystemStatus.TimeStep = 0.000001
+Simulator.SubSystem.MeshSubSystemStatus.TimeStep = 0.000001
+
+
+# Compute the Wall distance
+Simulator.SubSystem.DataPreProcessing = DataProcessing DataProcessing
+Simulator.SubSystem.DataPreProcessingNames = DataProcessingFlow DataProcessingMesh
+
+Simulator.SubSystem.DataProcessingFlow.Namespace = FlowNamespace
+Simulator.SubSystem.DataProcessingFlow.Data.CollaboratorNames = Flow BDF2
+Simulator.SubSystem.DataProcessingFlow.Comds = ComputeWallDistanceFVMCC
+#Simulator.SubSystem.DataProcessingFlow.Comds = ComputeWallDistanceNewtonCC
+Simulator.SubSystem.DataProcessingFlow.Names = WallDistance
+Simulator.SubSystem.DataProcessingFlow.WallDistance.BoundaryTRS = Cylinder Valve
+Simulator.SubSystem.DataProcessingFlow.WallDistance.OutputFile = distancesValveFVM.dat
+
+Simulator.SubSystem.DataProcessingMesh.Namespace = MeshNamespace
+Simulator.SubSystem.DataProcessingMesh.Data.CollaboratorNames = Mesh NewtonIterator
+Simulator.SubSystem.DataProcessingMesh.Comds = ComputeWallDistance
+#Simulator.SubSystem.DataProcessingMesh.Comds = ComputeWallDistanceNewtonCC
+Simulator.SubSystem.DataProcessingMesh.Names = WallDistance
+Simulator.SubSystem.DataProcessingMesh.WallDistance.BoundaryTRS = Cylinder Valve
+Simulator.SubSystem.DataProcessingMesh.WallDistance.OutputFile = distancesValveFEM.dat
+
+#
+#Define the output formatters
+#
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh CFmesh Tecplot
+Simulator.SubSystem.OutputFormatNames   = Tecplot1 CFmesh1 CFmesh2 Tecplot2
+
+Simulator.SubSystem.CFmesh1.Namespace = FlowNamespace
+Simulator.SubSystem.CFmesh1.FileName = valveFVM_FEM_ALECycle_flowBDF.CFmesh
+Simulator.SubSystem.CFmesh1.Data.CollaboratorNames = Flow
+Simulator.SubSystem.CFmesh1.SaveRate = 100
+Simulator.SubSystem.CFmesh1.AppendTime = true
+Simulator.SubSystem.CFmesh1.AppendIter = true
+
+Simulator.SubSystem.Tecplot1.Namespace = FlowNamespace
+Simulator.SubSystem.Tecplot1.FileName = valveFVM_FEM_ALECycle_flowBDF.plt
+Simulator.SubSystem.Tecplot1.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot1.Data.CollaboratorNames = Flow
+Simulator.SubSystem.Tecplot1.SaveRate = 5
+Simulator.SubSystem.Tecplot1.AppendTime = true
+Simulator.SubSystem.Tecplot1.AppendIter = true
+#Simulator.SubSystem.Tecplot1.WriteSolution.FileFormat = BINARY
+
+Simulator.SubSystem.CFmesh2.Namespace = MeshNamespace
+Simulator.SubSystem.CFmesh2.FileName = valveFVM_FEM_ALECycle_meshBDF.CFmesh
+Simulator.SubSystem.CFmesh2.Data.CollaboratorNames = Mesh
+Simulator.SubSystem.CFmesh2.SaveRate = 100
+Simulator.SubSystem.CFmesh2.AppendTime = true
+Simulator.SubSystem.CFmesh2.AppendIter = true
+
+Simulator.SubSystem.Tecplot2.Namespace = MeshNamespace
+Simulator.SubSystem.Tecplot2.FileName = valveFVM_FEM_ALECycle_meshBDF.plt
+Simulator.SubSystem.Tecplot2.Data.updateVar = Disp
+Simulator.SubSystem.Tecplot2.Data.CollaboratorNames = Mesh
+Simulator.SubSystem.Tecplot2.SaveRate = 1000
+Simulator.SubSystem.Tecplot2.AppendTime = true
+Simulator.SubSystem.Tecplot2.AppendIter = true
+#Simulator.SubSystem.Tecplot2.WriteSolution.FileFormat = BINARY
+
+#
+#Define the general subsystem info
+#
+#
+Simulator.SubSystem.ConvergenceFile     = convergenceCycleBDF.plt
+Simulator.SubSystem.ShowRate            = 1
+#Simulator.SubSystem.InitialTime         = 0.
+#Simulator.SubSystem.InitialIter         = 0
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 100
+
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 20.
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+#
+#Define the mesh creators
+#
+Simulator.SubSystem.MeshCreator = CFmeshFileReader CFmeshFileReader
+Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader1 CFmeshFileReader2
+
+Simulator.SubSystem.CFmeshFileReader1.Namespace = FlowNamespace
+Simulator.SubSystem.CFmeshFileReader1.Data.FileName = solution.CFmesh
+#Simulator.SubSystem.CFmeshFileReader1.Data.FileName = valve_11mm_NewBC.CFmesh
+Simulator.SubSystem.CFmeshFileReader1.Data.CollaboratorNames = Flow
+#Simulator.SubSystem.CFmeshFileReader1.Data.ScalingFactor = 1000.
+#Simulator.SubSystem.CFmeshFileReader1.convertFrom = Gambit2CFmesh
+#Simulator.SubSystem.CFmeshFileReader1.Gambit2CFmesh.Discontinuous = true
+#Simulator.SubSystem.CFmeshFileReader1.Gambit2CFmesh.SolutionOrder = P0
+
+
+Simulator.SubSystem.CFmeshFileReader2.Namespace = MeshNamespace
+Simulator.SubSystem.CFmeshFileReader2.Data.FileName = valve_11mm.CFmesh
+Simulator.SubSystem.CFmeshFileReader2.Data.CollaboratorNames = Mesh
+Simulator.SubSystem.CFmeshFileReader2.Data.ScalingFactor = 1000.
+Simulator.SubSystem.CFmeshFileReader2.convertFrom = Dpl2CFmesh
+
+#
+#Define the convergence methods
+#
+
+Simulator.SubSystem.ConvergenceMethod = BDF2 NewtonIterator
+Simulator.SubSystem.ConvergenceMethodNames = BDF2 NewtonIterator
+
+Simulator.SubSystem.BDF2.Namespace = FlowNamespace
+Simulator.SubSystem.BDF2.Data.CollaboratorNames = Flow NavierStokesLSS KLSS OmegaLSS
+Simulator.SubSystem.BDF2.ALEUpdateCom = ALE_FVMGeometricAverage
+Simulator.SubSystem.BDF2.UpdateSol = StdUpdateSol
+Simulator.SubSystem.BDF2.StdUpdateSol.Relaxation = 1.
+Simulator.SubSystem.BDF2.Data.MaxSteps = 10
+#Simulator.SubSystem.BDF2.Data.Norm = -6.0
+Simulator.SubSystem.BDF2.Data.PrintHistory = true
+Simulator.SubSystem.BDF2.Data.VarID = 0
+Simulator.SubSystem.BDF2.Data.L2.MonitoredVarID = 0
+Simulator.SubSystem.BDF2.Data.L2.ComputedVarID = 0 1 2 3 4 5
+
+
+Simulator.SubSystem.NewtonIterator.Namespace = MeshNamespace
+Simulator.SubSystem.NewtonIterator.Data.CollaboratorNames = Mesh NewtonIteratorLSS
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.AbsNorm = -5.0
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = false
+Simulator.SubSystem.NewtonIterator.UpdateSol = TurbUpdateSol
+Simulator.SubSystem.NewtonIterator.InitCom = ResetSystem
+
+#
+#Define the LinearSystemSolver
+#
+Simulator.SubSystem.LinearSystemSolver = PETSC PETSC PETSC PETSC
+Simulator.SubSystem.LSSNames = NavierStokesLSS KLSS OmegaLSS NewtonIteratorLSS
+
+Simulator.SubSystem.NavierStokesLSS.Namespace = FlowNamespace
+Simulator.SubSystem.NavierStokesLSS.Data.CollaboratorNames = Flow
+Simulator.SubSystem.NavierStokesLSS.Data.PCType = PCILU
+Simulator.SubSystem.NavierStokesLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NavierStokesLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NavierStokesLSS.MaskEquationIDs = 0 1 2 3
+Simulator.SubSystem.NavierStokesLSS.Data.SaveSystemToFile = false
+Simulator.SubSystem.NavierStokesLSS.Data.Output= false
+Simulator.SubSystem.NavierStokesLSS.Data.MaxIter = 100
+
+Simulator.SubSystem.KLSS.Namespace = FlowNamespace
+Simulator.SubSystem.KLSS.Data.CollaboratorNames = Flow
+Simulator.SubSystem.KLSS.Data.PCType = PCILU
+Simulator.SubSystem.KLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.KLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.KLSS.MaskEquationIDs = 4
+Simulator.SubSystem.KLSS.Data.SaveSystemToFile = false
+Simulator.SubSystem.KLSS.Data.Output= false
+Simulator.SubSystem.KLSS.Data.MaxIter = 100
+
+Simulator.SubSystem.OmegaLSS.Namespace = FlowNamespace
+Simulator.SubSystem.OmegaLSS.Data.CollaboratorNames = Flow
+Simulator.SubSystem.OmegaLSS.Data.PCType = PCILU
+Simulator.SubSystem.OmegaLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.OmegaLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.OmegaLSS.MaskEquationIDs = 5
+Simulator.SubSystem.OmegaLSS.Data.SaveSystemToFile = false
+Simulator.SubSystem.OmegaLSS.Data.Output= false
+Simulator.SubSystem.OmegaLSS.Data.MaxIter = 100
+
+Simulator.SubSystem.NewtonIteratorLSS.Namespace = MeshNamespace
+Simulator.SubSystem.NewtonIteratorLSS.Data.CollaboratorNames = Mesh
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCILU
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
+
+#
+#Define the Space Method
+#
+Simulator.SubSystem.SpaceMethod = CellCenterFVM FiniteElementMethod
+Simulator.SubSystem.SpaceMethodNames = Flow Mesh
+
+#
+# Space Method for solving the flow + BCs
+#
+
+Simulator.SubSystem.Flow.Namespace = FlowNamespace
+Simulator.SubSystem.Flow.Data.CollaboratorNames = BDF2 NavierStokesLSS KLSS OmegaLSS
+
+Simulator.SubSystem.Flow.Restart = true
+Simulator.SubSystem.Flow.ComputeRHS = NumJacobCoupling
+Simulator.SubSystem.Flow.ComputeTimeRHS = ALEBDF2TimeRhsCoupling
+Simulator.SubSystem.Flow.ALEBDF2TimeRhsCoupling.useGlobalDT = false
+Simulator.SubSystem.Flow.ALEBDF2TimeRhsCoupling.useAnalyticalMatrix = false
+
+Simulator.SubSystem.Flow.SetupCom = LeastSquareP1Setup BDF2ALESetup
+#Simulator.SubSystem.Flow.SetupCom = StdSetup BDF2ALESetup
+Simulator.SubSystem.Flow.SetupNames = Setup1 Setup2
+#Simulator.SubSystem.Flow.Setup1.stencil = FaceVertex
+Simulator.SubSystem.Flow.UnSetupCom = LeastSquareP1UnSetup BDF2ALEUnSetup
+#Simulator.SubSystem.Flow.UnSetupCom = StdUnSetup BDF2ALEUnSetup
+Simulator.SubSystem.Flow.UnSetupNames = UnSetup1 UnSetup2
+Simulator.SubSystem.Flow.BeforeMeshUpdateCom = BDF2ALEPrepare
+Simulator.SubSystem.Flow.AfterMeshUpdateCom = BDF2ALEUpdate
+
+Simulator.SubSystem.Flow.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.Flow.Data.IntegratorOrder = P1
+#Simulator.SubSystem.Flow.Data.FluxSplitter = RoeALE
+#Simulator.SubSystem.Flow.Data.RoeALE.Flux = StdALE
+#Simulator.SubSystem.Flow.Data.RoeALE.StdALE.entropyFixID = 1
+
+Simulator.SubSystem.Flow.Data.FluxSplitter = AUSMPlusUpTurb2DALE
+
+Simulator.SubSystem.Flow.Data.UpdateVar   = Puvt
+Simulator.SubSystem.Flow.Data.SolutionVar = Cons
+Simulator.SubSystem.Flow.Data.LinearVar   = Roe
+Simulator.SubSystem.Flow.Data.DiffusiveVar = BSLPuvt
+Simulator.SubSystem.Flow.Data.DiffusiveFlux = NavierStokes
+Simulator.SubSystem.Flow.Data.NavierStokes.Flux = StdNSCoupling
+
+Simulator.SubSystem.Flow.Data.PolyRec = Constant
+#Simulator.SubSystem.Flow.Data.PolyRec = LinearLS2D
+#Simulator.SubSystem.Flow.Data.LinearLS2D.limitRes = -1.7
+#Simulator.SubSystem.Flow.Data.Limiter = Venktn2D
+#Simulator.SubSystem.Flow.Data.Limiter = BarthJesp2D
+#Simulator.SubSystem.Flow.Data.Venktn2D.coeffEps = 1.0
+
+Simulator.SubSystem.Flow.Data.hasSourceTerm = true
+Simulator.SubSystem.Flow.Data.SourceTerm = NavierStokesKOmega2DSourceTerm
+
+
+#
+#Initialization
+#
+Simulator.SubSystem.Flow.InitComds = InitState \
+                                              UnsteadyNoSlipWallAdiabaticNSTurb2DFVMCC \
+                                              UnsteadyNoSlipWallAdiabaticNSTurb2DFVMCC \
+                                              UnsteadySlipWallEuler2DFVMCC \
+                                              FarFieldEuler2DTurbFVMCC \
+                                              TransOutletNSTurb2DFVMCC
+
+Simulator.SubSystem.Flow.InitNames = InField \
+                                              InCylinder \
+                                              InValve \
+                                              InMirror \
+                                              InInlet \
+                                              InOutlet
+
+Simulator.SubSystem.Flow.InField.applyTRS = InnerFaces
+Simulator.SubSystem.Flow.InField.Vars = x y
+#Simulator.SubSystem.Flow.InField.Def = 350000. 0. 0.0 298.15 0.0 0.
+Simulator.SubSystem.Flow.InField.Def = 350000. 41.85 0.0 298.15 3.67447e-06 41.85
+
+Simulator.SubSystem.Flow.InCylinder.applyTRS = Cylinder
+Simulator.SubSystem.Flow.InValve.applyTRS = Valve
+
+Simulator.SubSystem.Flow.InMirror.applyTRS = Sym_axis
+
+Simulator.SubSystem.Flow.InInlet.applyTRS = Inlet
+Simulator.SubSystem.Flow.InInlet.Pinf = 350000
+Simulator.SubSystem.Flow.InInlet.Uinf = 41.85
+Simulator.SubSystem.Flow.InInlet.Vinf = 0.0
+Simulator.SubSystem.Flow.InInlet.Tinf = 298.15
+
+#Simulator.SubSystem.Flow.InInlet.applyTRS = Inlet
+#Simulator.SubSystem.Flow.InInlet.Vx = 41.85.
+#Simulator.SubSystem.Flow.InInlet.Vy = 0.0
+#Simulator.SubSystem.Flow.InInlet.T = 298.15
+#Simulator.SubSystem.Flow.InInlet.TurbVars = 0.0000002 41.85
+
+Simulator.SubSystem.Flow.InOutlet.applyTRS = Outlet
+Simulator.SubSystem.Flow.InOutlet.P = 10000.
+
+#
+#Boundary Conditions
+#
+Simulator.SubSystem.Flow.BcComds = UnsteadyNoSlipWallAdiabaticNSTurb2DFVMCC \
+                                            UnsteadyNoSlipWallAdiabaticNSTurb2DFVMCC \
+                                            UnsteadySlipWallEuler2DFVMCC \
+                                            FarFieldEuler2DTurbFVMCC \
+                                            TransOutletNSTurb2DFVMCC
+
+
+Simulator.SubSystem.Flow.BcNames = BCCylinder \
+                                            BCValve \
+                                            BCMirror \
+                                            BCInlet \
+                                            BCOutlet
+
+Simulator.SubSystem.Flow.BCValve.applyTRS = Valve
+Simulator.SubSystem.Flow.BCCylinder.applyTRS = Cylinder
+Simulator.SubSystem.Flow.BCMirror.applyTRS = Sym_axis
+
+Simulator.SubSystem.Flow.BCInlet.applyTRS = Inlet
+Simulator.SubSystem.Flow.BCInlet.Pinf = 350000
+Simulator.SubSystem.Flow.BCInlet.Uinf = 41.85
+Simulator.SubSystem.Flow.BCInlet.Vinf = 0.0
+Simulator.SubSystem.Flow.BCInlet.Tinf = 298.15
+
+Simulator.SubSystem.Flow.BCOutlet.applyTRS = Outlet
+Simulator.SubSystem.Flow.BCOutlet.P = 10000.
+
+
+#
+# Space Method for solving the mesh movement
+#
+Simulator.SubSystem.Mesh.Restart = false
+Simulator.SubSystem.Mesh.Namespace = MeshNamespace
+Simulator.SubSystem.Mesh.Data.CollaboratorNames = NewtonIterator NewtonIteratorLSS
+Simulator.SubSystem.Mesh.Data.UpdateVar = Disp
+Simulator.SubSystem.Mesh.Data.DiffusiveVar = Disp
+Simulator.SubSystem.Mesh.Data.StructMech2DDiffusiveDisp.PlaneStress = false
+Simulator.SubSystem.Mesh.Data.StructMech2DDiffusiveDisp.NonLinear = false
+Simulator.SubSystem.Mesh.Data.StructMech2DDiffusiveDisp.MeshMovement = true
+Simulator.SubSystem.Mesh.Data.StructMech2DDiffusiveDisp.MeshMovementMethod = DistanceBased
+#Simulator.SubSystem.Mesh.Data.StructMech2DDiffusiveDisp.MeshMovementMethod = VolumeBased
+
+#Simulator.SubSystem.Mesh.Data.SourceVar = StructMech2DSourceDisp
+
+Simulator.SubSystem.Mesh.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.Mesh.Data.ResidualStrategy = StdElementComputer
+
+# Vars are [ x y rho u v]
+#Simulator.SubSystem.Mesh.Data.StructMech2DSourceDisp.IndepDef = 0. -9.81*rho
+
+Simulator.SubSystem.Mesh.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.Mesh.Data.IntegratorOrder = P1
+
+Simulator.SubSystem.Mesh.ComputeSpaceResidual = ImplicitComputeSpaceResCom
+Simulator.SubSystem.Mesh.ImplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSystem.Mesh.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSystem.Mesh.InitComds = InitState
+Simulator.SubSystem.Mesh.InitNames = InitialField
+
+Simulator.SubSystem.Mesh.InitialField.applyTRS = InnerCells
+Simulator.SubSystem.Mesh.InitialField.Vars = x y
+Simulator.SubSystem.Mesh.InitialField.Def = 0 0
+
+Simulator.SubSystem.Mesh.BcComds = DirichletBC DirichletBC MeshMovementDirichletBC MeshMovementDirichletBC DirichletBC
+Simulator.SubSystem.Mesh.BcNames = .minlet FEMOutlet FEMSymmetry FEMValve FEMCylinder
+
+# Moving boundaries
+# Vars are [x y t u v]
+Simulator.SubSystem.Mesh.FEMSymmetry.applyTRS = Sym_axis
+Simulator.SubSystem.Mesh.FEMSymmetry.Implicit = true
+
+Simulator.SubSystem.Mesh.FEMValve.applyTRS = Valve
+Simulator.SubSystem.Mesh.FEMValve.Implicit = true
+
+# Fixed boundaries
+# Vars are [x y t u v]
+Simulator.SubSystem.Mesh..minlet.applyTRS = Inlet
+Simulator.SubSystem.Mesh..minlet.Implicit = true
+Simulator.SubSystem.Mesh..minlet.Vars = x y t u v
+Simulator.SubSystem.Mesh..minlet.Def = 0 0
+
+Simulator.SubSystem.Mesh.FEMOutlet.applyTRS = Outlet
+Simulator.SubSystem.Mesh.FEMOutlet.Implicit = true
+Simulator.SubSystem.Mesh.FEMOutlet.Vars = x y t u v
+Simulator.SubSystem.Mesh.FEMOutlet.Def = 0 0
+
+Simulator.SubSystem.Mesh.FEMCylinder.applyTRS = Cylinder
+Simulator.SubSystem.Mesh.FEMCylinder.Implicit = true
+Simulator.SubSystem.Mesh.FEMCylinder.Vars = x y t u v
+Simulator.SubSystem.Mesh.FEMCylinder.Def = 0 0
+

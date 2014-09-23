@@ -1,0 +1,51 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#include "ComputeCFL.hh"
+#include "NullComputeCFL.hh"
+#include "Environment/ObjectProvider.hh"
+#include "Framework/Framework.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+Environment::ObjectProvider<NullComputeCFL,
+	       ComputeCFL,
+               FrameworkLib,
+	       1>
+nullComputeCFLProvider("Null");
+
+//////////////////////////////////////////////////////////////////////////////
+
+NullComputeCFL::NullComputeCFL(const std::string& name) :
+  ComputeCFL(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+NullComputeCFL::~NullComputeCFL()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NullComputeCFL::operator() (const ConvergenceStatus& m_cstatus)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

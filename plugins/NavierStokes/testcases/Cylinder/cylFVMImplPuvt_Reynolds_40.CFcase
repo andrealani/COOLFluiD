@@ -1,0 +1,142 @@
+# COOLFluiD Startfile
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -0.893723
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libGambit2CFmesh libAeroCoefFVM
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Cylinder/
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType     = NavierStokes2D
+Simulator.SubSystem.NavierStokes2D.refValues = 1. 0.2369 0.2369 1.0
+Simulator.SubSystem.NavierStokes2D.refLength = 1.0
+
+Simulator.SubSystem.NavierStokes2D.DiffTerm.Reynolds = 40.0
+Simulator.SubSystem.NavierStokes2D.ConvTerm.tempRef = 288.15
+Simulator.SubSystem.NavierStokes2D.ConvTerm.machInf = 0.2
+
+
+#Simulator.SubSystem.SubSystemStatus.TimeStep = 0.5
+#Simulator.SubSystem.SubSystemStatus.TimeStep = 0.02
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = cyl_viscous_Re40.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = cyl_viscous_Re40.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Puvt
+Simulator.SubSystem.Tecplot.SaveRate = 5
+Simulator.SubSystem.CFmesh.SaveRate = 5
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+#Simulator.SubSystem.InitialTime         = 0.
+#Simulator.SubSystem.InitialIter         = 0
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 5
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 4.
+
+Simulator.SubSystem.Default.listTRS = InnerFaces Cylinder Farfield
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = full_cylinder_farfield.CFmesh
+#cylinder_2D_triag.CFmesh
+#full_cylinder_farfield.CFmesh
+Simulator.SubSystem.CFmeshFileReader.ReadCFmesh = ParReadCFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = FVMCC
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 2000.
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.SetupCom = New
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+#Simulator.SubSystem.ConvergenceMethod = CrankNicholson
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1e+20
+#Simulator.SubSystem.CrankNicholson.Data.MaxSteps = 20
+#Simulator.SubSystem.CrankNicholson.Data.Norm = -5.
+#Simulator.SubSystem.CrankNicholson.Data.PrintHistory = true
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Restart = false
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Puvt
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Puvt
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 0.869869 68.058 0.0 288.15
+
+Simulator.SubSystem.CellCenterFVM.BcComds = FarFieldEulerChar2DFVMCC \
+                                            NoSlipWallAdiabaticNS2DPuvtFVMCC
+
+Simulator.SubSystem.CellCenterFVM.BcNames = BCFarfield \
+                                            BCWall
+
+Simulator.SubSystem.CellCenterFVM.BCFarfield.applyTRS = Farfield
+Simulator.SubSystem.CellCenterFVM.BCFarfield.Uinf = 68.058
+Simulator.SubSystem.CellCenterFVM.BCFarfield.Vinf = 0.
+Simulator.SubSystem.CellCenterFVM.BCFarfield.Pinf = 0.869869
+Simulator.SubSystem.CellCenterFVM.BCFarfield.Tinf = 288.15
+
+Simulator.SubSystem.CellCenterFVM.BCWall.applyTRS = Cylinder
+
+#DataProcessing
+
+Simulator.SubSystem.DataPostProcessing = DataProcessing
+Simulator.SubSystem.DataProcessing.Data.updateVar = Puvt
+Simulator.SubSystem.DataProcessing.Comds = NavierStokesSkinFrictionHeatFluxCC
+Simulator.SubSystem.DataProcessing.Names = AeroCoef
+
+Simulator.SubSystem.DataProcessing.AeroCoef.applyTRS = Cylinder
+Simulator.SubSystem.DataProcessing.AeroCoef.OutputFile = aeroCyl.plt
+Simulator.SubSystem.DataProcessing.AeroCoef.SaveRate = 1
+Simulator.SubSystem.DataProcessing.AeroCoef.Alpha = 0.
+##Only useful if running dimensional
+Simulator.SubSystem.DataProcessing.AeroCoef.uInf = 68.058
+Simulator.SubSystem.DataProcessing.AeroCoef.rhoInf = 1.05168e-05
+Simulator.SubSystem.DataProcessing.AeroCoef.pInf = 0.869869

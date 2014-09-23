@@ -1,0 +1,99 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libFiniteElement libHeat libNewtonMethod libGambit2CFmesh libFiniteElementHeat
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/Heat/testcases/TwoPlates/
+Simulator.Paths.ResultsDir  =  ./
+
+Simulator.SubSystem.Default.PhysicalModelType = Heat3D
+Simulator.SubSystem.Heat3D.Conductivity = 1.0
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = twoPlates.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate     = 1
+Simulator.SubSystem.CFmesh.AppendTime   = false
+Simulator.SubSystem.CFmesh.AppendIter   = true
+Simulator.SubSystem.CFmesh.WriteSol     = WriteSolution
+
+Simulator.SubSystem.Tecplot.FileName       = twoPlates.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate       = 1
+Simulator.SubSystem.Tecplot.AppendTime     = false
+Simulator.SubSystem.Tecplot.AppendIter     = true
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSystem.Default.listTRS = InnerCells Left Right Top Bottom Front Back
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+#Simulator.SubSystem.CFmeshFileReader.Data.FileName = smallCube.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = smallCubeTetra.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = FiniteElement
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 100
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1.0
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
+
+Simulator.SubSystem.SpaceMethod = FiniteElementMethod
+Simulator.SubSystem.FiniteElementMethod.Builder = FiniteElementHO
+Simulator.SubSystem.FiniteElementMethod.Data.UpdateVar = Prim
+Simulator.SubSystem.FiniteElementMethod.Data.DiffusiveVar = Prim
+#Simulator.SubSystem.FiniteElementMethod.Data.SourceVar = Heat3DSourceTConst
+
+#Simulator.SubSystem.FiniteElementMethod.Data.Heat3DSourceTConst.IndepCoef = 100.
+#Simulator.SubSystem.FiniteElementMethod.Data.Heat3DSourceTConst.LinearCoef = 0.
+
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorOrder = P2
+
+Simulator.SubSystem.FiniteElementMethod.ExplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSystem.FiniteElementMethod.InitComds = InitState
+Simulator.SubSystem.FiniteElementMethod.InitNames = InitialField
+
+# Vars are [x y z]
+Simulator.SubSystem.FiniteElementMethod.InitialField.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.InitialField.Vars = x y z
+Simulator.SubSystem.FiniteElementMethod.InitialField.Def = 200*x
+
+Simulator.SubSystem.FiniteElementMethod.BcComds = DirichletBC   DirichletBC
+Simulator.SubSystem.FiniteElementMethod.BcNames = HeatedPlate T1000K
+
+# Vars are [x y z t T]
+Simulator.SubSystem.FiniteElementMethod.T1000K.applyTRS = Back
+Simulator.SubSystem.FiniteElementMethod.T1000K.Implicit = false
+Simulator.SubSystem.FiniteElementMethod.T1000K.Vars = x y z t T
+Simulator.SubSystem.FiniteElementMethod.T1000K.Def = 1000
+
+# Vars are [x y z t T]
+Simulator.SubSystem.FiniteElementMethod.HeatedPlate.applyTRS = Front
+Simulator.SubSystem.FiniteElementMethod.HeatedPlate.Vars = x y z t T
+Simulator.SubSystem.FiniteElementMethod.HeatedPlate.Def = 500
+
+

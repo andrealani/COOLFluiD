@@ -1,0 +1,171 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+# Simulation Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes libMutation libMutationI libLTE libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeNavierStokes libGambit2CFmesh
+
+# Simulation Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Incompressible/MiniTorch/
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = IncompNavierStokes2D
+#Simulator.SubSystem.IncompNavierStokes2D.refValues = 1000. 155. 155. 1000.
+Simulator.SubSystem.IncompNavierStokes2D.refLength = 1.0
+
+Simulator.SubSystem.IncompNavierStokes2D.ConvTerm.uInf = 50. #155.
+Simulator.SubSystem.IncompNavierStokes2D.ConvTerm.p0Inf = 10000.
+
+Simulator.SubSystem.IncompNavierStokes2D.PropertyLibrary = Mutation
+Simulator.SubSystem.IncompNavierStokes2D.Mutation.mixtureName = air11
+
+Simulator.SubSystem.InteractiveParamReader.FileName = torch.inter
+Simulator.SubSystem.InteractiveParamReader.readRate = 5
+
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = minitorch.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = minitorch.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = dPuvtLTE
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+#Simulator.SubSystem.Tecplot.Data.SurfaceTRS = WallInlet Obstacle
+Simulator.SubSystem.Tecplot.SaveRate = 2
+Simulator.SubSystem.CFmesh.SaveRate = 2
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -3.0
+
+Simulator.SubSystem.Default.listTRS = \
+	InnerFaces WallDown WallInlet TorchInlet Obstacle Outlet WallUp
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = minitorch.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = FVMCC
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+#Simulator.SubSystem.FileMeshReaderModule.Data.FileName = minitorch.hdf5
+#Simulator.SubSystem.FileMeshReaderModule.Data.builderName = FVMCC
+#Simulator.SubSystem.FileMeshReaderModule.Data.PolyTypeName = Lagrange
+#Simulator.SubSystem.FileMeshReaderModule.StdReadMesh.Partitioner = ParMetis
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1.
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobFast
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+#Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+#Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+#Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+#Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+#Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = RhieChow2D
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = dPuvtLTE
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = dPuvtLTE
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMove
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TRSName = WallInlet Obstacle
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.ValuesIdx = 1 2 3
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.Values = 0. 0. 350.
+
+Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = NavierStokesIncomp2DAxiST
+
+ 
+#comment
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+
+Simulator.SubSystem.CellCenterFVM.InitComds = \
+	InitStateTorch \
+	NoSlipWallIsothermalNSPvtFVMCC \
+	NoSlipWallIsothermalNSPvtFVMCC \
+	MirrorVelocityFVMCC \
+	SubInletIncompEuler2DdPuvtUVTInterpFVMCC \
+	SubOutletIncompEuler2DdPuvtFVMCC \
+	SuperOutletFVMCC
+
+#SubOutletIncompEuler2DdPuvtFVMCC
+
+Simulator.SubSystem.CellCenterFVM.InitNames = \
+	InField	InObstacle InWallInlet InWallDown InTorchInlet InWallUp InOutlet
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 0. 10. 0. 350.
+Simulator.SubSystem.CellCenterFVM.InField.Datafile = inlet_torch.dat
+
+Simulator.SubSystem.CellCenterFVM.InTorchInlet.applyTRS = TorchInlet
+Simulator.SubSystem.CellCenterFVM.InTorchInlet.Datafile = inlet_torch.dat
+
+Simulator.SubSystem.CellCenterFVM.InWallInlet.applyTRS = WallInlet
+Simulator.SubSystem.CellCenterFVM.InWallInlet.TWall = 350.
+
+Simulator.SubSystem.CellCenterFVM.InWallDown.applyTRS = WallDown
+
+Simulator.SubSystem.CellCenterFVM.InOutlet.applyTRS = Outlet
+#Simulator.SubSystem.CellCenterFVM.InOutlet.P = 0.
+
+Simulator.SubSystem.CellCenterFVM.InWallUp.applyTRS = WallUp
+Simulator.SubSystem.CellCenterFVM.InWallUp.P = 0.
+
+Simulator.SubSystem.CellCenterFVM.InObstacle.applyTRS = Obstacle
+Simulator.SubSystem.CellCenterFVM.InObstacle.TWall = 350.
+
+Simulator.SubSystem.CellCenterFVM.BcComds = \
+	NoSlipWallIsothermalNSPvtFVMCC \
+	NoSlipWallIsothermalNSPvtFVMCC \
+	MirrorVelocityFVMCC \
+	SubInletIncompEuler2DdPuvtUVTInterpFVMCC \
+	SubOutletIncompEuler2DdPuvtFVMCC \
+	SuperOutletFVMCC
+
+#SubOutletIncompEuler2DdPuvtFVMCC
+
+Simulator.SubSystem.CellCenterFVM.BcNames = \
+	BcObstacle BcWallInlet BcWallDown BcTorchInlet BcWallUp BcOutlet
+
+Simulator.SubSystem.CellCenterFVM.BcTorchInlet.applyTRS = TorchInlet
+Simulator.SubSystem.CellCenterFVM.BcTorchInlet.Datafile = inlet_torch.dat
+
+Simulator.SubSystem.CellCenterFVM.BcWallInlet.applyTRS = WallInlet
+Simulator.SubSystem.CellCenterFVM.BcWallInlet.TWall = 350.
+
+Simulator.SubSystem.CellCenterFVM.BcWallDown.applyTRS = WallDown
+
+Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS = Outlet
+#Simulator.SubSystem.CellCenterFVM.BcOutlet.P = 0.
+
+Simulator.SubSystem.CellCenterFVM.BcWallUp.applyTRS = WallUp
+Simulator.SubSystem.CellCenterFVM.BcWallUp.P = 0.
+
+Simulator.SubSystem.CellCenterFVM.BcObstacle.applyTRS = Obstacle
+Simulator.SubSystem.CellCenterFVM.BcObstacle.TWall = 350.
+

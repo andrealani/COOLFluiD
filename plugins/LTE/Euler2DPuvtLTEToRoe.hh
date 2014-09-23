@@ -1,0 +1,73 @@
+#ifndef COOLFluiD_Physics_LTE_Euler2DPuvtLTEToRoe_hh
+#define COOLFluiD_Physics_LTE_Euler2DPuvtLTEToRoe_hh
+
+//////////////////////////////////////////////////////////////////////////////
+
+#include "Framework/VarSetTransformer.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace NavierStokes {
+      class EulerTerm;
+    }
+    
+    namespace LTE {
+      
+//////////////////////////////////////////////////////////////////////////////
+
+/**
+ * This class represents a transformer of variables from {p u v T}
+ * to Roe variables
+ *
+ * @author Andrea Lani
+ *
+ */
+class Euler2DPuvtLTEToRoe : public Framework::VarSetTransformer {
+public:
+
+  /**
+   * Default constructor without arguments
+   */
+  Euler2DPuvtLTEToRoe(Common::SafePtr<Framework::PhysicalModelImpl> model);
+
+  /**
+   * Default destructor
+   */
+  ~Euler2DPuvtLTEToRoe();
+  
+  /**
+   * Transform a state into another one
+   */
+  void transform(const Framework::State& state, Framework::State& result);
+  
+  /**
+   * Transform a state into another one from reference precomputed
+   * values (physical data)associated to the given state
+   */
+  void transformFromRef(const RealVector& data, Framework::State& result);
+  
+private:
+
+  /// acquaintance of the PhysicalModel
+  Common::SafePtr<NavierStokes::EulerTerm> _model;
+  
+  /// array to store density, enthalpy and energy
+  RealVector _dhe;
+    
+}; // end of class Euler2DPuvtLTEToRoe
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace LTE
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Physics_LTE_Euler2DPuvtLTEToRoe_hh

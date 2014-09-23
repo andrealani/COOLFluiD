@@ -1,0 +1,207 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace LESvki {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+SmagorinskyPhysicalModel<DIM>::SmagorinskyPhysicalModel(const std::string& name)
+  : Framework::ConvectionDiffusionPM<NavierStokes::EulerTerm, NavierStokes::NSTurbTerm>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+SmagorinskyPhysicalModel<DIM>::~SmagorinskyPhysicalModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint SmagorinskyPhysicalModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint SmagorinskyPhysicalModel<DIM>::getNbEquations() const
+{
+  return DIM+2;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string SmagorinskyPhysicalModel<DIM>::getConvectiveName() const
+{
+  if (DIM == 1) return "Euler1D";
+  if (DIM == 2) return "Euler2D";
+  cf_assert (DIM == 3);
+  return "Euler3D";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string SmagorinskyPhysicalModel<DIM>::getDiffusiveName() const
+{
+  return getTypeName();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void SmagorinskyPhysicalModel<DIM>::setReferenceValues()
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+
+  SafePtr<EulerTerm> convTerm = getConvTerm();
+  SafePtr<NSTurbTerm> diffTerm = getDiffTerm();
+
+  const CFreal tempRef = convTerm->getTempRef();
+  CFreal pRef    = convTerm->getPressRef();
+  const CFreal MachInf = convTerm->getMachInf();
+  const CFreal Uinf = MachInf*std::sqrt(convTerm->getGamma()*
+				     convTerm->getRdim()*tempRef);
+  const CFreal refSpeed = std::sqrt(convTerm->getRdim()*tempRef);
+
+  if (pRef <= 0.)
+  {
+    CFLog (WARN, "WATCH OUT: pRef is not defined. Computing reference viscosity with zero pressure.\n");
+    CFLog (WARN, "      ---> OK, for Sutherland law and fixed dynamic viscosity\n");
+    CFLog (WARN, "      ---> pRef should be defined for fixed kinematic viscosity\n");
+  }
+
+  const CFreal dynViscosityRef = getDiffTerm()->getDynViscosityDim(pRef, tempRef);
+  const CFreal gamma = convTerm->getGamma();
+  const CFreal cp = convTerm->getRdim()*gamma/(gamma - 1.);
+  const CFreal Re = diffTerm->getReynolds();
+
+  // reference values for the diffusive part
+  RealVector& refDataDiff = diffTerm->getReferencePhysicalData();
+  // reference values for the convective part
+  RealVector& refDataConv = convTerm->getReferencePhysicalData();
+
+  // set the reference values
+  refDataDiff[NSTurbTerm::MU]     = dynViscosityRef;
+  refDataDiff[NSTurbTerm::LAMBDA] = dynViscosityRef*cp/diffTerm->getPrandtl();
+  refDataDiff[NSTurbTerm::RE]     = Re;
+
+  // override the reference values for Euler data starting from
+  // machInf, tempRef, RRref, Lref, ReynoldsRef
+  if ((tempRef > 0.) && (MachInf > 0.) && (Re > 0.)) {
+    const CFreal Lref = getRefLength();
+
+    refDataConv[EulerTerm::V]  = refSpeed;
+    refDataConv[EulerTerm::VX] = refSpeed;
+    refDataConv[EulerTerm::VY] = refSpeed;
+    refDataConv[EulerTerm::VZ] = refSpeed;
+
+    // rhoref = rho at infinity
+    refDataConv[EulerTerm::RHO] = Re*dynViscosityRef/(Uinf*Lref);
+
+    // pref = p at infinity
+    pRef = refDataConv[EulerTerm::RHO]*convTerm->getRdim()*tempRef;
+    refDataConv[EulerTerm::P] = pRef;
+    refDataConv[EulerTerm::H] = refSpeed*refSpeed;
+    refDataConv[EulerTerm::E] = refSpeed*refSpeed;
+    refDataConv[EulerTerm::A] = refSpeed;
+    refDataConv[EulerTerm::T] = tempRef;
+
+    convTerm->setTempRef(tempRef);
+    convTerm->setPressRef(refDataConv[EulerTerm::P]);
+    convTerm->setRRef(1.0);
+
+    const CFreal invReynolds = 1./Re;
+    const CFreal coeffTau = std::sqrt(gamma)*MachInf*invReynolds;
+    // scaling coefficient for the momentum equations
+    diffTerm->setCoeffTau(coeffTau);
+    // scaling coefficient for the energy equation
+    diffTerm->setCoeffQ(coeffTau*gamma/((gamma-1.)*diffTerm->getPrandtl()));
+
+    _isAdimensional = true;
+  }
+  else {
+    CFout << "WATCH OUT: tempRef or machInf or Re missing" << "\n";
+    CFout << "Equations will be solved dimensionally" << "\n";
+
+    // if the pressure and temperature reference values
+    // have not been specified set all the ref values to 1.
+    refDataConv = 1.0;
+    refDataDiff = 1.0;
+    convTerm->setRRef(convTerm->getRdim());
+    convTerm->setTempRef(1.0);
+    convTerm->setPressRef(1.0);
+    // scaling coefficient for the momentum equations
+    diffTerm->setCoeffTau(1.0);
+    // scaling coefficient for the energy equation
+    diffTerm->setCoeffQ(1.0);
+
+    _isAdimensional = false;
+  }
+
+  // set the cp over prandtl
+  const CFreal cpOverPrandtl = gamma/(gamma - 1.)*
+    convTerm->getRdim()/diffTerm->getPrandtl();
+
+  diffTerm->setCpOverPrandtl(cpOverPrandtl);
+
+  CFLog(NOTICE, "tempRef = "   << convTerm->getTempRef() << "\n");
+  CFLog(NOTICE, "pRef    = "    << convTerm->getPressRef() << "\n");
+  CFLog(NOTICE, "rhoRef  = "  << refDataConv[EulerTerm::RHO] << "\n");
+  CFLog(NOTICE, "machInf = " << MachInf << "\n");
+  CFLog(NOTICE, "Uinf    = " << Uinf << "\n");
+  CFLog(NOTICE, "dynViscosityRef   = " << refDataDiff[NSTerm::MU]     << "\n");
+  CFLog(NOTICE, "thermConductivity = " << refDataDiff[NSTerm::LAMBDA] << "\n");
+  CFLog(NOTICE, "ReynoldsRef       = " << Re << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+    void SmagorinskyPhysicalModel<DIM>::setReferenceTime()
+{
+   using namespace COOLFluiD::Physics::NavierStokes;
+
+  RealVector& refDataConv = getConvTerm()->getReferencePhysicalData();
+  _refTime = getRefLength()/refDataConv[EulerTerm::V];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void SmagorinskyPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+   using namespace COOLFluiD::Physics::NavierStokes;
+
+  Framework::ConvectionDiffusionPM<EulerTerm, NSTurbTerm>::configure(args);
+
+  cf_assert(getDimension() > 0);
+  cf_assert(getNbEquations() > 0);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(DIM);
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace LESvki
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

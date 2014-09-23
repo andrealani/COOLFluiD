@@ -1,0 +1,226 @@
+#include "Framework/State.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Common/CFPrintContainer.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace ICP {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+ICPInductionConvVarSet<BASEVS>::ICPInductionConvVarSet
+(Common::SafePtr<Framework::BaseTerm> term) :
+  BASEVS(term),
+  _icpModel(term.template d_castTo<PTERM>())
+{
+  this->addVarName("EpR");
+  this->addVarName("EpI");
+  
+  CFLog(DEBUG_MAX, "ICPInductionConvVarSet::ICPInductionConvVarSet()\n");
+  CFLog(DEBUG_MAX, Common::CFPrintContainer<const std::vector<std::string> >("varnames = ", &this->getVarNames()));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+ICPInductionConvVarSet<BASEVS>::~ICPInductionConvVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+CFreal ICPInductionConvVarSet<BASEVS>::getMaxEigenValue
+  (const RealVector& pdata, const RealVector& normal)
+{
+  return BASEVS::getMaxEigenValue(pdata, normal);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+CFreal ICPInductionConvVarSet<BASEVS>::getMaxAbsEigenValue
+(const RealVector& pdata, const RealVector& normal)
+{
+  return BASEVS::getMaxAbsEigenValue(pdata, normal);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+template <class BASEVS>
+void ICPInductionConvVarSet<BASEVS>:: computeEigenValues	
+(const RealVector& pdata, const RealVector& normal, RealVector& eValues)
+{
+  using namespace COOLFluiD::Framework;
+
+  // first call the parent class
+  BASEVS::computeEigenValues(pdata,normal,eValues);
+
+  const CFuint nbBaseEqs = eValues.size() - 2;
+  eValues[nbBaseEqs] = 0.0;
+  eValues[nbBaseEqs + 1] = 0.0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ICPInductionConvVarSet<BASEVS>::computeFlux
+(const Framework::State& vars, const RealVector& normals)
+{
+  using namespace COOLFluiD::Framework;
+
+  // first call the parent class
+  BASEVS::computeFlux(vars,normals);
+  
+  const CFuint nbBaseEqs = vars.size() - 2;
+  this->_fluxArray[nbBaseEqs] = 0.0;
+  this->_fluxArray[nbBaseEqs + 1] = 0.0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ICPInductionConvVarSet<BASEVS>::computeFlux
+(const Framework::State& vars)
+{
+  throw Common::NotImplementedException
+    (FromHere(), "ICPInductionConvVarSet::computeFlux()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ICPInductionConvVarSet<BASEVS>::computePhysicalData
+(const Framework::State& state, RealVector& data)
+{
+  CFLog(DEBUG_MIN, "ICPInductionConvVarSet::computePhysicalData() START\n");
+  
+  BASEVS::computePhysicalData(state,data);
+  
+  const CFuint nbBaseEqs = state.size() - 2;
+  const CFuint firstScalarVar = _icpModel->getDataSize()-2;
+  data[firstScalarVar]   = state[nbBaseEqs];
+  data[firstScalarVar+1] = state[nbBaseEqs+1];
+  
+  CFLog(DEBUG_MIN, "ICPInductionConvVarSet::computePhysicalData() END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ICPInductionConvVarSet<BASEVS>::computeStateFromPhysicalData
+(const RealVector& data,Framework::State& state)
+{
+  throw Common::NotImplementedException
+    (FromHere(), "ICPInductionConvVarSet::computeStateFromPhysicalData()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+CFuint ICPInductionConvVarSet<BASEVS>::getBlockSeparator() const
+{
+  return Framework::PhysicalModelStack::getActive()->getNbEq();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ICPInductionConvVarSet<BASEVS>::setDimensionalValues
+(const Framework::State& state,
+ RealVector& result)
+{
+  using namespace COOLFluiD::Framework;
+
+  BASEVS::setDimensionalValues(state, result);
+
+  // we assume here that the E variables are the last two in the state
+  const RealVector& refData = _icpModel->getReferencePhysicalData();
+  const CFuint nbBaseEqs = state.size() - 2;
+  const CFuint EpR = nbBaseEqs;
+  const CFuint EpI = nbBaseEqs + 1;
+  const CFuint firstScalarVar = _icpModel->getDataSize()-2;
+  cf_assert(refData[firstScalarVar] > 0.);
+  cf_assert(refData[firstScalarVar+1] > 0.);
+  
+  result[EpR] = state[EpR]*refData[firstScalarVar];
+  result[EpI] = state[EpI]*refData[firstScalarVar + 1];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ICPInductionConvVarSet<BASEVS>::setAdimensionalValues
+(const Framework::State& state,
+ RealVector& result)
+{
+  BASEVS::setAdimensionalValues(state, result);
+  
+  // we assume here that the E variables are the last two in the state
+  const RealVector& refData = _icpModel->getReferencePhysicalData();
+  const CFuint nbBaseEqs = state.size() - 2;
+  const CFuint EpR = nbBaseEqs;
+  const CFuint EpI = nbBaseEqs + 1;
+  const CFuint firstScalarVar = _icpModel->getDataSize()-2;
+  cf_assert(refData[firstScalarVar] > 0.);
+  cf_assert(refData[firstScalarVar+1] > 0.);
+  
+  result[EpR] = state[EpR]/refData[firstScalarVar];
+  result[EpI] = state[EpI]/refData[firstScalarVar + 1];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ICPInductionConvVarSet<BASEVS>::setDimensionalValuesPlusExtraValues
+(const Framework::State& state, RealVector& result, RealVector& extra)
+{
+  CFLog(DEBUG_MIN, "ICPInductionConvVarSet<BASEVS>::setDimensionalValuesPlusExtraValues() START\n");
+  BASEVS::setDimensionalValuesPlusExtraValues(state, result, extra);
+  
+  // we assume here that the E variables are the last two in the state
+  const RealVector& refData = _icpModel->getReferencePhysicalData();
+  const CFuint nbBaseEqs = state.size() - 2;
+  const CFuint EpR = nbBaseEqs;
+  const CFuint EpI = nbBaseEqs + 1;
+  const CFuint firstScalarVar = _icpModel->getDataSize()-2;
+  cf_assert(refData[firstScalarVar] > 0.);
+  cf_assert(refData[firstScalarVar+1] > 0.);
+  
+  result[EpR] = state[EpR]*refData[firstScalarVar];
+  result[EpI] = state[EpI]*refData[firstScalarVar + 1];
+  
+  // std::cout << "state  => " << state[EpR] << " ####################### " << state[EpI] << std::endl;
+  // std::cout << "result => "<< result[EpR]   << " ####################### " << result[EpI] << std::endl;
+  
+  CFLog(DEBUG_MIN, "ICPInductionConvVarSet<BASEVS>::setDimensionalValuesPlusExtraValues() END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ICPInductionConvVarSet<BASEVS>::setup()
+{
+  BASEVS::setup();
+	
+  const CFuint EpR = Framework::PhysicalModelStack::getActive()->getNbEq()-2;
+  const CFuint EpI = EpR+1;
+  // inactivate variables
+  this->_maskArray[EpR] = this->_maskArray[EpI] = false; 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace ICP
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

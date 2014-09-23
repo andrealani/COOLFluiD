@@ -1,0 +1,615 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Framework_CFmeshFileWriterFluctSplitP1P2_ci
+#define COOLFluiD_Framework_CFmeshFileWriterFluctSplitP1P2_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+#include "Environment/CFEnv.hh"
+
+#include "Framework/CFmeshFileWriter.hh"
+#include "Framework/ElementTypeData.hh"
+#include "Framework/BadFormatException.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Framework/BaseCFMeshFileSource.hh"
+#include "Framework/State.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+CFmeshFileWriterFluctSplitP1P2<DATA>::CFmeshFileWriterFluctSplitP1P2() :
+  m_writeData()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+CFmeshFileWriterFluctSplitP1P2<DATA>::~CFmeshFileWriterFluctSplitP1P2()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeToFileStream(std::ofstream& fout)
+{
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeFile() called" << "\n");
+
+  writeVersionStamp(fout);
+  writeDimension(fout);
+  writeNbEquations(fout);
+  writeNbNodes(fout);
+  writeNbStates(fout);
+  writeNbElements(fout);
+  writeExtraVarsInfo(fout);
+
+  writeNbElementTypes(fout);
+  writeGeometricPolyOrder(fout);
+  writeSolutionPolyOrder(fout);
+  writeElementTypes(fout);
+  writeNbElementsPerType(fout);
+  writeNbNodesPerType(fout);
+  writeNbStatesPerType(fout);
+  writeElementList(fout);
+
+  writeNbTRSs(fout);
+  writeTrsData(fout);
+  writeNodeList(fout);
+  writeStateList(fout);
+
+  fout << "!END" << "\n";
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeFile() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeVersionStamp(std::ofstream& fout)
+{
+  using namespace std;
+
+ CFLogDebugMin( "CFmeshFileWriter<DATA>::writeVersionStamp() called" << "\n");
+
+  fout << "!COOLFLUID_VERSION " << Environment::CFEnv::getInstance().getCFVersion() << "\n";
+  fout << "!COOLFLUID_SVNVERSION " << Environment::CFEnv::getInstance().getSvnVersion() << "\n";
+  fout << "!CFMESH_FORMAT_VERSION 1.3\n";
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeVersionStamp() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeDimension(std::ofstream& fout)
+{
+  using namespace std;
+
+ CFLogDebugMin( "CFmeshFileWriter<DATA>::writeDimension() called" << "\n");
+
+  fout << "!NB_DIM "
+       << getWriteData().getDimension()
+       << "\n";
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeDimension() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeExtraVarsInfo(std::ofstream& fout)
+{
+  using namespace std;
+
+ CFLogDebugMin( "CFmeshFileWriter<DATA>::writeExtraVarsInfo() called" << "\n");
+
+  if(getWriteData().getNbExtraNodalVars() > 0)
+  {
+    fout << "!NB_EXTRA_NVARS "
+        << getWriteData().getNbExtraNodalVars()
+        << "\n";
+    fout << "!EXTRA_NVARS_NAMES ";
+
+    for(CFuint iVar = 0; iVar < getWriteData().getNbExtraNodalVars(); iVar++)
+    {
+      fout << (*(getWriteData().getExtraNodalVarNames()))[iVar] << " ";
+    }
+    fout << "\n";
+  }
+
+  if(getWriteData().getNbExtraStateVars() > 0)
+  {
+    fout << "!NB_EXTRA_SVARS "
+        << getWriteData().getNbExtraStateVars()
+        << "\n";
+    fout << "!EXTRA_SVARS_NAMES ";
+
+    for(CFuint iVar = 0; iVar < getWriteData().getNbExtraStateVars(); iVar++)
+    {
+      fout << (*(getWriteData().getExtraStateVarNames()))[iVar] << " ";
+    }
+    fout << "\n";
+  }
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeExtraVarsInfo() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeNbEquations(std::ofstream& fout)
+{
+  using namespace std;
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNbEquations() called" << "\n");
+
+  fout << "!NB_EQ "
+       << getWriteData().getNbEquations()
+       << "\n";
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNbEquations() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeNbNodes(std::ofstream& fout)
+{
+  using namespace std;
+
+ CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNbNodes() called" << "\n");
+
+  fout << "!NB_NODES "
+       << getWriteData().getNbUpdatableStates()
+       << " "
+       << getWriteData().getNbNonUpdatableStates()
+       << "\n";
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNbNodes() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeNbStates(std::ofstream& fout)
+{
+ using namespace std;
+
+ CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNbStates() called" << "\n");
+
+  fout << "!NB_STATES "
+       << getWriteData().getNbUpdatableStates()
+       << " "
+       << getWriteData().getNbNonUpdatableStates()
+       << "\n";
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNbStates() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeNbElements(std::ofstream& fout)
+{
+ using namespace std;
+
+ CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNbElements() called" << "\n");
+
+  fout << "!NB_ELEM "
+       << 4*(getWriteData().getNbElements())
+       << "\n";
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNbElements() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeNbElementTypes(std::ofstream& fout)
+{
+  using namespace std;
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNbElementTypes() called"
+        << "\n");
+
+  fout << "!NB_ELEM_TYPES "
+       << getWriteData().getNbElementTypes()
+       << "\n";
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNbElementTypes() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeGeometricPolyOrder(std::ofstream& fout)
+{
+  using namespace std;
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeGeometricPolyOrder() called"
+        << "\n");
+
+  CFuint order = 0;
+  order = static_cast<CFuint>(getWriteData().getGeometricPolyOrder());
+
+  fout << "!GEOM_POLYORDER " << order << "\n";
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeGeometricPolyOrder() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeSolutionPolyOrder(std::ofstream& fout)
+{
+  using namespace std;
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeSolutionPolyOrder() called" << "\n");
+
+  CFuint order = 0;
+  order = static_cast<CFuint>(getWriteData().getSolutionPolyOrder());
+  if (order != 2)
+    throw Common::ShouldNotBeHereException (FromHere(),"SolutionPolyOrder should be 2");
+
+
+  order = 1;
+
+  fout << "!SOL_POLYORDER "  << order << "\n";
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeSolutionPolyOrder() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeElementTypes(std::ofstream& fout)
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+
+ CFLogDebugMin( "CFmeshFileWriter<DATA>::writeElementTypes() called" << "\n");
+
+  fout << "!ELEM_TYPES ";
+
+  SafePtr< vector<ElementTypeData> > elementType =
+    getWriteData().getElementTypeData();
+
+  const CFuint nbElementTypes = getWriteData().getNbElementTypes();
+  cf_assert(nbElementTypes == elementType->size());
+
+  for (CFuint i = 0; i < nbElementTypes; ++i) {
+    fout << (*elementType)[i].getShape() << " ";
+    if ((*elementType)[i].getShape() != CFGeoShape::Convert::to_str(CFGeoShape::TRIAG))
+        throw Common::ShouldNotBeHereException (FromHere(),"Cell shape should be a triangle");
+
+  }
+  fout << "\n";
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeElementTypes() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeNbElementsPerType(std::ofstream& fout)
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeElementTypes() called" << "\n");
+
+  fout << "!NB_ELEM_PER_TYPE";
+
+  SafePtr< vector<ElementTypeData> > elementType =
+    getWriteData().getElementTypeData();
+
+  const CFuint nbElementTypes = getWriteData().getNbElementTypes();
+
+  for (CFuint i = 0; i < nbElementTypes; ++i) {
+    fout << " " << 4*((*elementType)[i].getNbElems());
+  }
+  fout << "\n";
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeElementTypes() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeNbNodesPerType(std::ofstream& fout)
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNbNodesPerType() called" << "\n");
+
+  fout << "!NB_NODES_PER_TYPE";
+
+  const CFuint nbElementTypes = getWriteData().getNbElementTypes();
+
+  SafePtr< vector<ElementTypeData> > elementType =
+    getWriteData().getElementTypeData();
+
+  for (CFuint i = 0; i < nbElementTypes; ++i) {
+    fout << " " << (*elementType)[i].getNbNodes();
+  }
+  fout << "\n";
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNbNodesPerType() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeNbStatesPerType(std::ofstream& fout)
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNbStatesPerType() called"
+        << "\n");
+
+  fout << "!NB_STATES_PER_TYPE";
+
+  const CFuint nbElementTypes = getWriteData().getNbElementTypes();
+
+  SafePtr< vector<ElementTypeData> > elementType =
+    getWriteData().getElementTypeData();
+
+  for (CFuint i = 0; i < nbElementTypes; ++i) {
+    fout << " " << (*elementType)[i].getNbNodes();
+  }
+  fout << "\n";
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNbStatesPerType() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeNodeList(std::ofstream& fout)
+{
+  using namespace std;
+
+  getWriteData().prepareNodalExtraVars();
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNodeList() called" << "\n");
+
+  fout << "!LIST_NODE " << "\n";
+
+  const CFuint nbStates = getWriteData().getTotalNbStates();
+  const CFuint nbExtraNodalVars = getWriteData().getNbExtraNodalVars();
+  const CFreal refL = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
+
+  for (CFuint n = 0; n < nbStates; ++n) {
+
+ const State& state = *getWriteData().getCoordState(n);
+
+RealVector node = state.getCoordinates();
+    for (CFuint iDim = 0; iDim < node.size(); ++iDim) {
+      fout.precision(12);
+      fout << node[iDim]*refL << " ";
+    }
+
+    const RealVector& extraNodalValues = getWriteData().getExtraNodalValues(n);
+    for (CFuint iVar = 0; iVar < nbExtraNodalVars; ++iVar) {
+      fout.precision(12);
+      fout << extraNodalValues[iVar] << " ";
+    }
+    fout << "\n";
+  }
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNodeList() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeStateList(std::ofstream& fout)
+{
+  using namespace std;
+
+  getWriteData().prepareStateExtraVars();
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeStateList() called" << "\n");
+
+  fout << "!LIST_STATE "
+       << getWriteData().isWithSolution()
+       << "\n";
+
+  if (getWriteData().isWithSolution()){
+    const CFuint nbExtraStateVars = getWriteData().getNbExtraStateVars();
+    const CFuint nbStates = getWriteData().getTotalNbStates();
+    for (CFuint n = 0; n < nbStates; ++n) {
+      fout.precision(12);
+      fout << *getWriteData().getState(n) << "\n";
+
+      const RealVector& extraStateValues = getWriteData().getExtraStateValues(n);
+      for (CFuint iVar = 0; iVar < nbExtraStateVars; ++iVar) {
+        fout.precision(12);
+        fout << extraStateValues[iVar] << " ";
+      }
+    }
+  }
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeStateList() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeElementList(std::ofstream& fout)
+{
+  using namespace std;
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeElementList() called" << "\n");
+
+  fout << "!LIST_ELEM " << "\n";
+
+  const CFuint nbElements = getWriteData().getNbElements();
+
+  for (CFuint e = 0; e < nbElements; ++e) {
+
+    CFLogDebugMin( "Triangle 0" << "\n");
+
+      fout << getWriteData().getElementState(e,0) << " ";
+      fout << getWriteData().getElementState(e,3) << " ";
+      fout << getWriteData().getElementState(e,5) << " ";
+
+      fout << getWriteData().getElementState(e,0) << " ";
+      fout << getWriteData().getElementState(e,3) << " ";
+      fout << getWriteData().getElementState(e,5) << " ";
+fout << "\n";
+ CFLogDebugMin( "Triangle 1" << "\n");
+
+      fout << getWriteData().getElementState(e,3) << " ";
+      fout << getWriteData().getElementState(e,1) << " ";
+      fout << getWriteData().getElementState(e,4) << " ";
+
+      fout << getWriteData().getElementState(e,3) << " ";
+      fout << getWriteData().getElementState(e,1) << " ";
+      fout << getWriteData().getElementState(e,4) << " ";
+fout << "\n";
+CFLogDebugMin( "Triangle 2" << "\n");
+
+      fout << getWriteData().getElementState(e,5) << " ";
+      fout << getWriteData().getElementState(e,4) << " ";
+      fout << getWriteData().getElementState(e,2) << " ";
+
+      fout << getWriteData().getElementState(e,5) << " ";
+      fout << getWriteData().getElementState(e,4) << " ";
+      fout << getWriteData().getElementState(e,2) << " ";
+fout << "\n";
+CFLogDebugMin( "Triangle 4" << "\n");
+
+      fout << getWriteData().getElementState(e,4) << " ";
+      fout << getWriteData().getElementState(e,5) << " ";
+      fout << getWriteData().getElementState(e,3) << " ";
+
+      fout << getWriteData().getElementState(e,4) << " ";
+      fout << getWriteData().getElementState(e,5) << " ";
+      fout << getWriteData().getElementState(e,3) << " ";
+
+    fout << "\n";
+  }
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeElementList() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeNbTRSs(std::ofstream& fout)
+{
+  using namespace std;
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNbTRSs() called" << "\n");
+
+  fout << "!NB_TRSs "
+       << getWriteData().getNbTRSs()
+       << "\n";
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeNbTRSs() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class DATA>
+void CFmeshFileWriterFluctSplitP1P2<DATA>::writeTrsData(std::ofstream& fout)
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+
+  // make this work without allocating all this useless
+  // additional memory!!!!!
+
+  CFLogDebugMin( "CFmeshFileWriter<DATA>::writeTrsData() called" << "\n");
+
+  SafePtr< vector<std::string> > nameTRS = getWriteData().getNameTRS();
+
+  SafePtr< vector<vector<CFuint> > > nbGeomEntsPerTR =
+    getWriteData().getNbGeomEntsPerTR();
+
+  SafePtr< vector<CFGeoEnt::Type> > geomType =
+    getWriteData().getGeomType();
+
+  SafePtr< vector<CFuint> > nbTRs =
+    getWriteData().getNbTRs();
+
+  const CFuint nbTRSs = getWriteData().getNbTRSs();
+  for(CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
+
+    fout << "!TRS_NAME " << (*nameTRS)[iTRS] << "\n";
+
+    const CFuint nbTRsInTRS = (*nbTRs)[iTRS];
+    fout << "!NB_TRs "   << nbTRsInTRS << "\n";
+
+    fout << "!NB_GEOM_ENTS";
+    for(CFuint tr = 0; tr < nbTRsInTRS; ++tr) {
+      fout << " " << 2*(*nbGeomEntsPerTR)[iTRS][tr];
+    }
+    fout << "\n";
+
+    fout << "!GEOM_TYPE " << (*geomType)[iTRS] << "\n";
+
+    fout << "!LIST_GEOM_ENT" << "\n";
+
+    for (CFuint iTR = 0; iTR < nbTRsInTRS; ++iTR) {
+      const CFuint nbGeomEnts = (*nbGeomEntsPerTR)[iTRS][iTR];
+      for (CFuint iGeo = 0; iGeo < nbGeomEnts; ++iGeo){
+
+        const std::valarray<CFuint> *const nodesInGeo = getWriteData().getGeoNodes(iTRS, iTR, iGeo);
+        const std::valarray<CFuint> *const statesInGeo = getWriteData().getGeoStates(iTRS, iTR, iGeo);
+        const CFuint nbNodes  =  nodesInGeo->size();
+// unused //        const CFuint nbStates = statesInGeo->size();
+        fout << nbNodes << " ";
+        fout << nbNodes << " ";
+
+        /*First sub-face*/
+
+          fout << (*statesInGeo)[0] << " ";
+          fout << (*statesInGeo)[2] << " ";
+
+          fout << (*statesInGeo)[0] << " ";
+          fout << (*statesInGeo)[2] << " ";
+
+          fout << "\n";
+
+          /*Second sub-face*/
+         fout << nbNodes << " ";
+         fout << nbNodes << " ";
+
+          fout << (*statesInGeo)[2] << " ";
+          fout << (*statesInGeo)[1] << " ";
+
+          fout << (*statesInGeo)[2] << " ";
+          fout << (*statesInGeo)[1] << " ";
+
+          fout << "\n";
+      }
+    }
+  }
+
+  CFLogDebugMin( "CFmeshFileWriterFluctSplitP1P2<DATA>::writeTrsData() end" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Framework_CFmeshFileWriter_ci

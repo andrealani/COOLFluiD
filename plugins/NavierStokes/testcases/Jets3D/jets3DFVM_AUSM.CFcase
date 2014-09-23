@@ -1,0 +1,111 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -0.943147
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libFiniteVolume libForwardEuler libFiniteVolumeNavierStokes libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets3D/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = Euler3D
+Simulator.SubSystem.Euler3D.refValues = 1. 2.83972 2.83972 2.83972 6.532
+Simulator.SubSystem.Euler3D.refLength = 1.0
+
+Simulator.SubSystem.Euler3D.velRef = 2.83972
+Simulator.SubSystem.Euler3D.pRef = 1.0
+Simulator.SubSystem.Euler3D.rhoRef = 1.0
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = jets3DFVM.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = jets3DFVM.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 10
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 30
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerFaces SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets3Dcoarse.CFmesh
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 1.0
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUp3D
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp3D.machInf = 4.
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS3D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.limitRes = -1.7
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp3D
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn3D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn3D.coeffEps = 1.0
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState SuperInletFVMCC SuperOutletFVMCC
+Simulator.SubSystem.CellCenterFVM.InitNames = InField InitInlet InitOutlet
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.InField.Def = if(y>0.5,0.5,1.) \
+          if(y>0.5,1.67332,2.83972) \
+          0.0 \
+          0.0 \
+          if(y>0.5,3.425,6.532)
+
+Simulator.SubSystem.CellCenterFVM.InitInlet.applyTRS = SuperInlet
+Simulator.SubSystem.CellCenterFVM.InitInlet.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.InitInlet.Def = if(y>0.5,0.5,1.) \
+          if(y>0.5,1.67332,2.83972) \
+          0.0 \
+          0.0 \
+          if(y>0.5,3.425,6.532)
+
+Simulator.SubSystem.CellCenterFVM.InitOutlet.applyTRS = SuperOutlet
+
+Simulator.SubSystem.CellCenterFVM.BcComds = SuperInletFVMCC SuperOutletFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = Jet1        Jet2
+
+Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = SuperInlet
+Simulator.SubSystem.CellCenterFVM.Jet1.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.Jet1.Def =  if(y>0.5,0.5,1.) \
+          if(y>0.5,1.67332,2.83972) \
+          0.0 \
+          0.0 \
+          if(y>0.5,3.425,6.532)
+
+Simulator.SubSystem.CellCenterFVM.Jet2.applyTRS = SuperOutlet
+
+
+

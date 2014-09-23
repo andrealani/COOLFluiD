@@ -1,0 +1,488 @@
+#include "Framework/MeshData.hh"
+#include "Framework/MapGeoToTrsAndIdx.hh"
+#include "Framework/PhysicalConsts.hh"
+#include "NavierStokes/NavierStokesVarSet.hh"
+#include "FiniteVolume/FVMCC_PolyRec.hh"
+
+#include <cmath>
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSvt<MODEL>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< std::vector<CFreal> >
+    ("uWall","Wall velocity (=0 by default)");
+  options.template addConfigOption< CFreal >("TWall","Wall temperature");
+  options.template addConfigOption< CFreal >
+    ("TGhostMin", "Mininimum temperature in the ghost state");
+  options.template addConfigOption< bool >
+    ("RadEquilibrium" ,"Flag to activate the radiative equilibrium");
+  options.template addConfigOption< bool >
+    ("FixTWallInGhost" ,"Flag to fix the temperature directly on the ghost cell");
+  options.template addConfigOption< CFreal >("Emissivity","Wall emissivity");
+  options.template addConfigOption< CFreal >
+    ("MaxRadEqDTwall","Max variation of wall temperature between two time steps");
+  options.template addConfigOption< CFreal >
+    ("DistantBodyTemp","Distant body temperature");
+  options.template addConfigOption<bool >
+    ("Adiabatic", "Flag telling if to run adiabatic");
+  options.template addConfigOption<std::string>
+    ("FileNameTw", "Name of the file with the temperature distribution"); 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+NoSlipWallIsothermalNSvt<MODEL>::NoSlipWallIsothermalNSvt(const std::string& name) :
+  MirrorVelocity(name),
+  m_mapGeoToTrs(CFNULL),
+  m_diffVar(CFNULL),
+  m_mapTrs2Twall(),
+  m_gradients(),
+  m_avValues(),
+  m_wallTempIn(0.0),
+  m_tempID(0),
+  m_ghostT(0.),
+  m_gradStates(),
+  m_gradValues()
+{
+  addConfigOptionsTo(this);
+
+  m_wallTemp = 0.0;
+  setParameter("TWall",&m_wallTemp);
+  
+  m_wallVelocity = std::vector<CFreal>();
+  setParameter("uWall",&m_wallVelocity);
+  
+  m_ghostTempMin = 40.0;
+  setParameter("TGhostMin",&m_ghostTempMin);
+
+  m_radiativeEq = false;
+  setParameter("RadEquilibrium",&m_radiativeEq);
+  
+  m_fixTWallInGhost = false;
+  setParameter("FixTWallInGhost",&m_fixTWallInGhost);
+
+  m_emissivity = 0.8;
+  setParameter("Emissivity",&m_emissivity);
+
+  m_maxRadEqDT = 100.;
+  setParameter("MaxRadEqDTwall",&m_maxRadEqDT);
+
+  m_dbTemp = 0.;
+  setParameter("DistantBodyTemp",&m_dbTemp);
+
+  m_adiabatic = false;
+  setParameter("Adiabatic",&m_adiabatic);
+
+  m_fileNameTw = "";
+  setParameter("FileNameTw",&m_fileNameTw);
+  
+  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+NoSlipWallIsothermalNSvt<MODEL>::~NoSlipWallIsothermalNSvt()
+{
+  for (CFuint i = 0; i< m_gradients.size(); ++i) {
+    deletePtr(m_gradients[i]);
+  }
+
+  // this is needs to deallocate all the actual memory taken
+  // by the values (RealVector*) of this map
+  for (CFuint i = 0; i < m_mapTrs2Twall.size(); ++i) {
+    deletePtr(m_mapTrs2Twall[i]);
+  }
+ }
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSvt<MODEL>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+    
+  MirrorVelocity::setup();
+
+  m_mapGeoToTrs =
+    MeshDataStack::getActive()->getMapGeoToTrs("MapFacesToTrs");
+
+  m_diffVar = getMethodData().getDiffusiveVar().
+    template d_castTo<Physics::NavierStokes::NavierStokesVarSet>();
+
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint dim = PhysicalModelStack::getActive()->getDim(); 
+  
+  m_gradients.resize(nbEqs);
+  for (CFuint i = 0; i< nbEqs; ++i) {
+    m_gradients[i] = new RealVector(dim);
+    *m_gradients[i] = 0.0;
+  }
+  
+  m_avValues.resize(nbEqs);
+  
+  Common::SafePtr<MODEL> modelTerm = PhysicalModelStack::getActive()->
+    getImplementor()->getConvectiveTerm().template d_castTo<MODEL>();
+  
+  if (!m_adiabatic && m_wallTemp <= 0.) {
+    CFLog(WARN, "NoSlipWallIsothermalNSvt<MODEL>::setup() => TWall must be > 0!\n");
+    abort();
+  }
+  
+  if (m_wallVelocity.size() != dim) {
+    m_wallVelocity.resize(dim, 0.);
+  }
+  
+  if (modelTerm->getTempRef() > 0.0) {
+    m_wallTemp /= modelTerm->getTempRef();
+    m_ghostTempMin /= modelTerm->getTempRef();
+  }
+  else {
+     CFLog(WARN, "NoSlipWallIsothermalNSvt<MODEL>::setup() => modelTerm->getTempRef() <= 0\n");
+  } 
+
+  // the temperature ID is equal to the maximum velocity ID + 1
+  m_tempID = 0;
+  for (CFuint i = 0; i < m_velocityIDs.size(); ++i) {
+    m_tempID = std::max(m_tempID, m_velocityIDs[i]);
+  }
+  m_tempID += 1;
+  
+  // backup the initial wall temperature
+  m_wallTempIn = m_wallTemp;
+  
+  // build the m_mapTrs2Twall storage
+  vector< SafePtr<TopologicalRegionSet> >& trsList = this->getTrsList();
+  
+  for (CFuint iTrs = 0; iTrs < trsList.size(); ++iTrs) {
+    SafePtr<TopologicalRegionSet> trs = trsList[iTrs];
+    const CFuint nbTrsFaces = trs->getLocalNbGeoEnts();
+    RealVector* tWall = new RealVector(0.0,nbTrsFaces);
+    m_mapTrs2Twall.insert(&*trs, tWall);
+  }
+  m_mapTrs2Twall.sortKeys();
+  
+  m_gradStates.resize(2);
+  m_gradValues.resize(nbEqs, 2);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSvt<MODEL>::setGhostState
+(Framework::GeometricEntity *const face)
+{
+  CFLog(DEBUG_MIN, "NoSlipWallIsothermalNSvt<MODEL>::setGhostState() => START\n");
+  
+  if (!getMethodData().getNodalStatesExtrapolator()->runAdiabatic()) {
+    this->computeGhostPosition(face);
+    setWallTemperature(face);
+  }
+  setGhostStateImpl(*face->getState(0), *face->getState(1));
+  
+  CFLog(DEBUG_MIN, "NoSlipWallIsothermalNSvt<MODEL>::setGhostState() => END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSvt<MODEL>::setGhostStateImpl
+(const Framework::State& innerState,
+ Framework::State& ghostState)
+{
+  CFLog(DEBUG_MIN, "NoSlipWallIsothermalNSvt<MODEL>::setGhostStateImpl() => START\n");
+ 
+ if (m_adiabatic || getMethodData().getNodalStatesExtrapolator()->runAdiabatic()) {
+    imposeAdiabatic(innerState, ghostState);
+  }
+  else {
+    // here a fix is needed in order to have always m_ghostT > 0
+    // dynamic relocation of the ghost state: the position of the
+    // ghost state is locally changed, and the BC is imposed
+    // using a weighted average of ghost state (in the new location)
+    // and inner state
+    if (!m_fixTWallInGhost) {
+      const CFreal innerT = innerState[m_tempID];
+      this->repositionNode(innerT, m_ghostT, m_wallTemp, m_ghostTempMin);
+      
+      // reset the ghost node with the new position
+      ghostState.getCoordinates() = m_tempGhostNode;
+    }
+    else {
+      m_ghostT = m_wallTemp;
+    }
+    
+    CFuint ix = 0;
+    for (CFuint i = 0; i < m_isVelocityComp.size(); ++i) {
+      if (m_isVelocityComp[i]) {
+	linearInterpolate(innerState[i], m_wallVelocity[ix++], ghostState[i]);
+      }
+      else {
+	if (i != m_tempID) {
+	  // constant extrapolation by default
+	  ghostState[i] = innerState[i];
+	}
+	else {
+	  cf_assert (i == m_tempID);
+	  ghostState[i] = m_ghostT;
+	}
+      }
+    }
+  } 
+ 
+ CFLog(DEBUG_MIN, "NoSlipWallIsothermalNSvt<MODEL>::setGhostStateImpl() => END\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSvt<MODEL>::setWallTemperature
+(Framework::GeometricEntity *const face)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  
+  if (m_radiativeEq) {
+    computeTwallFromRadEq(face);
+  }
+  
+  if (this->getMethodData().getNodalStatesExtrapolator()->getMapTrs2NodalValues()->size() > 0) {
+    computeTwallFromFile(face);
+  }
+  
+  // by default the wall temperature remains the one specified by the user
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSvt<MODEL>::computeTwallFromFile
+(Framework::GeometricEntity *const face)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+ 
+  CFLog(DEBUG_MIN, "NoSlipWallIsothermalNSvt<MODEL>::computeTwallFromFile() => START\n");
+ 
+  vector<Node*>& nodesInFace = *face->getNodes();
+  const CFuint nbNodesInFace = nodesInFace.size();
+  SafePtr<TopologicalRegionSet> trs = m_mapGeoToTrs->getTrs(face->getID());
+
+  // build the mapTrs2NodalValues storage
+  SafePtr<NodalStatesExtrapolator<CellCenterFVMData> > nse = this->getMethodData().getNodalStatesExtrapolator();
+  SafePtr<vector<NodalStatesExtrapolator<CellCenterFVMData>::MapTrs2NodalValues*> > mapTrs2NodalValues =
+    nse->getMapTrs2NodalValues();
+
+  RealVector& tWallArray = *(*mapTrs2NodalValues)[m_tempID]->find(&*trs);
+  CFMap<CFuint,CFuint>* mapNodeIDs = nse->getMapTrs2NodeIDs()->find(&*trs);
+
+  // compute the temperature in the face centroid as the average of the nodal values
+  m_wallTemp = 0.0;
+  for (CFuint iNode = 0; iNode < nbNodesInFace; ++iNode) {
+    const CFuint localNodeID = nodesInFace[iNode]->getLocalID();
+    m_wallTemp += tWallArray[mapNodeIDs->find(localNodeID)];
+  }
+  m_wallTemp /= nbNodesInFace; 
+  
+  CFLog(DEBUG_MIN, "NoSlipWallIsothermalNSvt<MODEL>::computeTwallFromFile() => END\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSvt<MODEL>::computeTwallFromRadEq
+(Framework::GeometricEntity *const face)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+ 
+  CFLog(DEBUG_MIN, "NoSlipWallIsothermalNSvt<MODEL>::computeTwallFromRadEq() => START\n");
+ 
+  CFreal oldTwall = m_wallTempIn;
+  State& innerState = *face->getState(LEFT);
+  State& ghostState = *face->getState(RIGHT);
+
+  m_gradStates[0] = &innerState;
+  m_gradStates[1] = &ghostState;
+
+  const CFuint faceID = face->getID();
+  SafePtr<TopologicalRegionSet> trs = m_mapGeoToTrs->getTrs(faceID);
+  const CFuint faceTrsLocalID = m_mapGeoToTrs->getIdxInTrs(faceID);
+  RealVector& tWallArray = *m_mapTrs2Twall.find(&*trs);
+
+  // if we are not initializing the solution, take the
+  // previously computed face value as initial guess
+  if (!getMethodData().isInitializationPhase() && tWallArray[faceTrsLocalID] > 0.) {
+    oldTwall = tWallArray[faceTrsLocalID];
+  }
+  else {
+    oldTwall = std::max(m_wallTempIn, innerState[m_tempID]);
+    // oldTwall = std::max(m_wallTempIn, 2000.);
+  }
+
+  const CFreal sem = PhysicalConsts::StephanBolzmann()*m_emissivity;
+  CFreal deltaT = 1e10;
+  CFreal Twall = oldTwall;
+  
+  // back up the initial position of the ghost node
+  // before repositioning it
+  this->m_tempGhostNodeBkp = this->m_tempGhostNode;
+  
+  CFuint counter = 0;
+  while(std::abs(deltaT) > 0.01) {
+    CFLog(DEBUG_MED, "Radiative Twall iter = " << ++counter << "\n");
+    const CFreal qrad = sem*(std::pow(Twall,4.0) - std::pow(m_dbTemp,4.0));
+    const CFreal dQradDTw = 4.0*sem*std::pow(Twall,3.0);
+    const CFreal dTw = Twall*0.0001;
+    
+    const CFreal q  = -convectiveHeatFlux(innerState, ghostState, Twall);
+    this->m_tempGhostNode = this->m_tempGhostNodeBkp;
+    
+    const CFreal qp = -convectiveHeatFlux(innerState, ghostState, Twall+dTw);
+    deltaT = - (qrad - q)/(dQradDTw - (qp-q)/dTw);
+    
+    Twall += deltaT;
+    this->m_tempGhostNode = this->m_tempGhostNodeBkp;
+    
+    // AL: fix for avoiding Twall < 0 (experiment...)
+    // cf_assert(Twall > 0.0);
+    if (Twall < 0.01) { 
+     Twall = m_ghostTempMin;
+     break; 
+    }
+  }
+
+  // limit the maximum variation of Twall between two time steps
+  // but not during the initialization phase
+  if (!getMethodData().isInitializationPhase()) {
+    const CFreal dTWall = Twall - oldTwall;
+    if (std::abs(dTWall) > m_maxRadEqDT) {
+      Twall = oldTwall + MathFunctions::sign(dTWall)*m_maxRadEqDT;
+    }
+  }
+
+  m_wallTemp = Twall;
+  tWallArray[faceTrsLocalID] = Twall;
+
+  // cout << "m_wallTemp = " << Twall << endl;
+
+  if (m_wallTemp < 0.) {
+    cout << "Twall = " << Twall<< endl;
+    abort();
+  }
+  cf_assert(m_wallTemp > 0.0);
+  
+  CFLog(DEBUG_MIN, "NoSlipWallIsothermalNSvt<MODEL>::computeTwallFromRadEq() => END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> >
+NoSlipWallIsothermalNSvt<MODEL>::needsSockets()
+{
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result =
+    MirrorVelocity::needsSockets();
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+CFreal NoSlipWallIsothermalNSvt<MODEL>::convectiveHeatFlux
+(const Framework::State& innerState,
+ Framework::State& ghostState,
+ const CFreal Twall)
+{
+  CFLog(DEBUG_MIN, "NoSlipWallIsothermalNSvt<MODEL>::convectiveHeatFlux() => START\n");
+  
+  const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+
+  // compute ghoststate
+  m_wallTemp = Twall;
+  setGhostStateImpl(innerState, ghostState);
+
+  const CFreal dr = MathTools::MathFunctions::getDistance
+    (innerState.getCoordinates(), ghostState.getCoordinates());
+
+  m_diffVar->setGradientVars(m_gradStates,m_gradValues,2);
+
+  // unidimensional gradient in the normal direction
+  // since there is no catalycity I assume dY = 0
+  for (CFuint i = m_tempID; i < nbEqs; ++i) {
+    m_gradients[i][XX] = (m_gradValues(i,0) - m_gradValues(i,1))/dr;
+    //m_gradients[i][XX] = (innerState[i] - ghostState[i])/dr;
+  }
+
+  for (CFuint i = 0; i < nbEqs; ++i) {
+    if (this->m_isVelocityComp[i]) {
+      // face velocities
+      m_avValues[i] = 0.0;
+    }
+    else if (i >= m_tempID) {
+      // face temperatures
+      m_avValues[i] = Twall;
+    }
+    else {
+      // mass fractions, pressure
+      const CFreal drXgXw = m_drXiXg - m_drXiXw;
+      cf_assert (drXgXw > 0.);
+      const CFreal invDr = 1./m_drXiXg;
+      m_avValues[i] = (drXgXw*innerState[i] + m_drXiXw*ghostState[i])*invDr;
+    }
+  }
+  
+  m_diffVar->setComposition(m_avValues, false, 0);
+  m_faceNormal = 0.0;
+  m_faceNormal[XX] = 1.0;
+  
+  CFLog(DEBUG_MIN, "NoSlipWallIsothermalNSvt<MODEL>::convectiveHeatFlux()\n");
+  const CFreal hflux = m_diffVar->getHeatFlux(m_avValues, m_gradients, m_faceNormal);
+  CFLog(DEBUG_MIN, "NoSlipWallIsothermalNSvt<MODEL>::convectiveHeatFlux() => END\n");
+  
+  return hflux;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSvt<MODEL>::imposeAdiabatic
+(const Framework::State& innerState, Framework::State& ghostState)
+{
+  CFuint ix = 0;
+  for (CFuint i = 0; i < m_isVelocityComp.size(); ++i) {
+    if (m_isVelocityComp[i]) {
+      ghostState[i] = 2.*m_wallVelocity[ix++]- innerState[i];
+    }
+    else {
+      // constant extrapolation
+      ghostState[i] = innerState[i];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

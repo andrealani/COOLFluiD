@@ -1,0 +1,272 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+CFEnv.VerboseEvents = false
+Simulator.Maestro = LoopMaestro
+Simulator.SubSystems = SubSysA SubSysB
+Simulator.SubSystemTypes = StandardSubSystem StandardSubSystem
+
+Simulator.LoopMaestro.GlobalStopCriteria = GlobalMaxNumberSteps
+Simulator.LoopMaestro.GlobalMaxNumberSteps.nbSteps = 2
+Simulator.LoopMaestro.AppendIter = true
+Simulator.LoopMaestro.RestartFromPreviousSolution = true
+Simulator.LoopMaestro.InitialFiles = CouplingStartFiles/Heat/*
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libFiniteElement libHeat libLoopMaestro libNewtonMethod libSubSystemCoupler libSubSystemCouplerHeat  libFiniteElementHeat
+
+Simulator.Paths.WorkingDir = plugins/SubSystemCoupler/testcases/FSI/
+Simulator.Paths.ResultsDir       = ./
+
+### SubSystem A Coupler Method Parameters #######################################################
+
+Simulator.SubSysA.CouplerMethod = SubSystemCoupler
+
+Simulator.SubSysA.SubSystemCoupler.SetupComs = StdSetup
+Simulator.SubSysA.SubSystemCoupler.SetupNames = Setup1
+
+Simulator.SubSysA.SubSystemCoupler.UnSetupComs = StdUnSetup
+Simulator.SubSysA.SubSystemCoupler.UnSetupNames = UnSetup1
+
+Simulator.SubSysA.SubSystemCoupler.PreProcessReadComs = StdPreProcessRead
+Simulator.SubSysA.SubSystemCoupler.PreProcessReadNames = PreProcessRead1
+
+Simulator.SubSysA.SubSystemCoupler.PreProcessWriteComs = StdPreProcessWrite
+Simulator.SubSysA.SubSystemCoupler.PreProcessWriteNames = PreProcessWrite1
+
+Simulator.SubSysA.SubSystemCoupler.MeshMatchingReadComs = StdMeshMatcherRead
+Simulator.SubSysA.SubSystemCoupler.MeshMatchingReadNames = MeshMatcherRead1
+
+Simulator.SubSysA.SubSystemCoupler.MeshMatchingWriteComs = StdMeshMatcherWrite
+Simulator.SubSysA.SubSystemCoupler.MeshMatchingWriteNames = MeshMatcherWrite1
+
+Simulator.SubSysA.SubSystemCoupler.PostProcessComs = StdPostProcess
+Simulator.SubSysA.SubSystemCoupler.PostProcessNames = PostProcess1
+
+Simulator.SubSysA.SubSystemCoupler.InterfacesReadComs = StdReadDataTransfer
+Simulator.SubSysA.SubSystemCoupler.InterfacesReadNames = ReadData1
+Simulator.SubSysA.SubSystemCoupler.InterfacesWriteComs = StdWriteDataTransfer
+Simulator.SubSysA.SubSystemCoupler.InterfacesWriteNames = WriteData1
+
+Simulator.SubSysA.SubSystemCoupler.InterfacesNames = Interface1
+Simulator.SubSysA.SubSystemCoupler.CoupledSubSystems = SubSysB
+
+Simulator.SubSysA.SubSystemCoupler.Data.PreVariableTransformers = Null
+Simulator.SubSysA.SubSystemCoupler.Data.PostVariableTransformers = Temp2Flux
+Simulator.SubSysA.SubSystemCoupler.Data.CoordType = Gauss
+
+Simulator.SubSysA.SubSystemCoupler.CommandGroups = Interaction1
+Simulator.SubSysA.SubSystemCoupler.Interaction1.groupedTRS = FaceWest
+Simulator.SubSysA.SubSystemCoupler.Interaction1.groupedComs  = Setup1 UnSetup1 PreProcessRead1 PreProcessWrite1 MeshMatcherRead1 MeshMatcherWrite1 ReadData1 WriteData1 PostProcess1
+
+### SubSystem A  Parameters #######################################################
+
+Simulator.SubSysA.Default.PhysicalModelType = Heat2D
+Simulator.SubSysA.Heat2D.Conductivity = 1.0
+
+
+Simulator.SubSysA.ConvergenceFile     = convergence.plt
+
+
+Simulator.SubSysA.OutputFormat        = Tecplot CFmesh
+Simulator.SubSysA.CFmesh.FileName     = twoPlates2D_1.CFmesh
+Simulator.SubSysA.Tecplot.FileName    = twoPlates2D_1.plt
+Simulator.SubSysA.Tecplot.Data.updateVar = Prim
+Simulator.SubSysA.Tecplot.SaveRate = 1
+Simulator.SubSysA.CFmesh.SaveRate = 1
+Simulator.SubSysA.Tecplot.AppendTime = false
+Simulator.SubSysA.CFmesh.AppendTime = false
+Simulator.SubSysA.Tecplot.AppendIter = false
+Simulator.SubSysA.CFmesh.AppendIter = false
+
+Simulator.SubSysA.ConvRate            = 1
+Simulator.SubSysA.ShowRate            = 1
+
+Simulator.SubSysA.StopCondition       = MaxNumberSteps
+Simulator.SubSysA.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSysA.Default.listTRS = InnerCells FaceSouth FaceWest FaceNorth SuperInlet
+
+Simulator.SubSysA.MeshCreator = CFmeshFileReader
+Simulator.SubSysA.CFmeshFileReader.Data.FileName = square-fine.CFmesh
+Simulator.SubSysA.CFmeshFileReader.Data.builderName = FiniteElement
+Simulator.SubSysA.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSysA.CFmeshFileReader.Data.TranslateMesh = true
+Simulator.SubSysA.CFmeshFileReader.Data.TranslationVector = -1. 0.
+
+Simulator.SubSysA.LinearSystemSolver = PETSC
+Simulator.SubSysA.LSSNames = NewtonIteratorLSS
+Simulator.SubSysA.NewtonIteratorLSS.Data.PCType = PCLU
+Simulator.SubSysA.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSysA.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSysA.NewtonIteratorLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSysA.NewtonIteratorLSS.Data.MaxIter = 100
+
+Simulator.SubSysA.ConvergenceMethod = NewtonIterator
+Simulator.SubSysA.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSysA.NewtonIterator.UpdateSol = CopySol
+
+Simulator.SubSysA.SpaceMethod = FiniteElementMethod
+
+Simulator.SubSysA.FiniteElementMethod.Data.UpdateVar = Prim
+Simulator.SubSysA.FiniteElementMethod.Data.DiffusiveVar = Prim
+#Simulator.SubSysA.FiniteElementMethod.Data.SourceVar = Heat2DSourceTConst
+
+#Simulator.SubSysA.FiniteElementMethod.Data.Heat2DSourceTConst.IndepCoef = 100.
+#Simulator.SubSysA.FiniteElementMethod.Data.Heat2DSourceTConst.LinearCoef = 0.
+
+Simulator.SubSysA.FiniteElementMethod.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSysA.FiniteElementMethod.Data.IntegratorOrder = P1
+
+Simulator.SubSysA.FiniteElementMethod.ExplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSysA.FiniteElementMethod.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSysA.FiniteElementMethod.InitComds = InitState
+Simulator.SubSysA.FiniteElementMethod.InitNames = InitialField
+
+# Vars are [x y]
+Simulator.SubSysA.FiniteElementMethod.InitialField.applyTRS = InnerCells
+Simulator.SubSysA.FiniteElementMethod.InitialField.Vars = x y
+Simulator.SubSysA.FiniteElementMethod.InitialField.Def = 1000
+
+Simulator.SubSysA.FiniteElementMethod.BcComds = CoupledNeumannBC DirichletBC
+Simulator.SubSysA.FiniteElementMethod.BcNames = HeatedPlate      T1000K
+
+# Vars are [x y t T]
+Simulator.SubSysA.FiniteElementMethod.T1000K.applyTRS = SuperInlet
+Simulator.SubSysA.FiniteElementMethod.T1000K.Implicit = false
+Simulator.SubSysA.FiniteElementMethod.T1000K.Vars = x y t T
+Simulator.SubSysA.FiniteElementMethod.T1000K.Def = 1000
+
+# Vars are [x y t T nx ny]
+Simulator.SubSysA.FiniteElementMethod.HeatedPlate.applyTRS = FaceWest
+Simulator.SubSysA.FiniteElementMethod.HeatedPlate.Interface = Interaction1
+Simulator.SubSysA.FiniteElementMethod.HeatedPlate.Vars = x y t T nx ny
+Simulator.SubSysA.FiniteElementMethod.HeatedPlate.Def = 0
+
+
+### SubSystem B  Parameters #######################################################
+### SubSystem B Coupler Method Parameters #######################################################
+
+Simulator.SubSysB.CouplerMethod = SubSystemCoupler
+
+Simulator.SubSysB.SubSystemCoupler.SetupComs = StdSetup
+Simulator.SubSysB.SubSystemCoupler.SetupNames = Setup1
+
+Simulator.SubSysB.SubSystemCoupler.UnSetupComs = StdUnSetup
+Simulator.SubSysB.SubSystemCoupler.UnSetupNames = UnSetup1
+
+Simulator.SubSysB.SubSystemCoupler.PreProcessReadComs = StdPreProcessRead
+Simulator.SubSysB.SubSystemCoupler.PreProcessReadNames = PreProcessRead1
+Simulator.SubSysB.SubSystemCoupler.PreProcessWriteComs = StdPreProcessWrite
+Simulator.SubSysB.SubSystemCoupler.PreProcessWriteNames = PreProcessWrite1
+
+Simulator.SubSysB.SubSystemCoupler.MeshMatchingReadComs = StdMeshMatcherRead
+Simulator.SubSysB.SubSystemCoupler.MeshMatchingReadNames = MeshMatcherRead1
+Simulator.SubSysB.SubSystemCoupler.MeshMatchingWriteComs = StdMeshMatcherWrite
+Simulator.SubSysB.SubSystemCoupler.MeshMatchingWriteNames = MeshMatcherWrite1
+
+Simulator.SubSysB.SubSystemCoupler.PostProcessComs = StdPostProcess
+Simulator.SubSysB.SubSystemCoupler.PostProcessNames = PostProcess1
+
+Simulator.SubSysB.SubSystemCoupler.InterfacesReadComs = StdReadDataTransfer
+Simulator.SubSysB.SubSystemCoupler.InterfacesReadNames = ReadData1
+Simulator.SubSysB.SubSystemCoupler.InterfacesWriteComs = StdWriteDataTransfer
+Simulator.SubSysB.SubSystemCoupler.InterfacesWriteNames = WriteData1
+
+Simulator.SubSysB.SubSystemCoupler.InterfacesNames = Interface1
+Simulator.SubSysB.SubSystemCoupler.CoupledSubSystems = SubSysA
+
+Simulator.SubSysB.SubSystemCoupler.Data.PreVariableTransformers = Null
+Simulator.SubSysB.SubSystemCoupler.Data.PostVariableTransformers = Temp2Flux
+Simulator.SubSysB.SubSystemCoupler.Data.CoordType = Gauss
+
+Simulator.SubSysB.SubSystemCoupler.CommandGroups = Interaction1
+Simulator.SubSysB.SubSystemCoupler.Interaction1.groupedTRS = SuperInlet
+Simulator.SubSysB.SubSystemCoupler.Interaction1.groupedComs  = Setup1 UnSetup1 PreProcessRead1 PreProcessWrite1 MeshMatcherRead1 MeshMatcherWrite1 ReadData1 WriteData1 PostProcess1
+
+### SubSystem B  Parameters #######################################################
+# SubSystem B Parameters
+
+Simulator.SubSysB.Default.PhysicalModelType = Heat2D
+Simulator.SubSysB.Heat2D.Conductivity = 1.0
+
+
+Simulator.SubSysB.ConvergenceFile     = convergence.plt
+
+
+Simulator.SubSysB.OutputFormat        = Tecplot CFmesh
+Simulator.SubSysB.CFmesh.FileName     = twoPlates2D_2.CFmesh
+Simulator.SubSysB.Tecplot.FileName    = twoPlates2D_2.plt
+Simulator.SubSysB.Tecplot.Data.updateVar = Prim
+Simulator.SubSysB.Tecplot.SaveRate = 1
+Simulator.SubSysB.CFmesh.SaveRate = 1
+Simulator.SubSysB.Tecplot.AppendTime = false
+Simulator.SubSysB.CFmesh.AppendTime = false
+Simulator.SubSysB.Tecplot.AppendIter = false
+Simulator.SubSysB.CFmesh.AppendIter = false
+
+Simulator.SubSysB.ConvRate            = 1
+Simulator.SubSysB.ShowRate            = 1
+
+Simulator.SubSysB.StopCondition       = MaxNumberSteps
+Simulator.SubSysB.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSysB.Default.listTRS = InnerCells FaceSouth FaceWest FaceNorth SuperInlet
+
+Simulator.SubSysB.MeshCreator = CFmeshFileReader
+Simulator.SubSysB.CFmeshFileReader.Data.FileName = square-fine.CFmesh
+Simulator.SubSysB.CFmeshFileReader.Data.builderName = FiniteElement
+Simulator.SubSysB.CFmeshFileReader.Data.polyTypeName = Lagrange
+
+Simulator.SubSysB.LinearSystemSolver = PETSC
+Simulator.SubSysB.LSSNames = NewtonIteratorLSS
+Simulator.SubSysB.NewtonIteratorLSS.Data.PCType = PCLU
+Simulator.SubSysB.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSysB.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSysB.NewtonIteratorLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSysB.NewtonIteratorLSS.Data.MaxIter = 100
+
+Simulator.SubSysB.ConvergenceMethod = NewtonIterator
+Simulator.SubSysA.NewtonIterator.Data.CFL.Value = 1.0
+Simulator.SubSysB.NewtonIterator.Data.CFL.Value = 1.0
+Simulator.SubSysB.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSysB.NewtonIterator.UpdateSol = CopySol
+
+Simulator.SubSysB.SpaceMethod = FiniteElementMethod
+
+Simulator.SubSysB.FiniteElementMethod.Data.UpdateVar = Prim
+Simulator.SubSysB.FiniteElementMethod.Data.DiffusiveVar = Prim
+#Simulator.SubSysB.FiniteElementMethod.Data.SourceVar = Heat2DSourceTConst
+
+#Simulator.SubSysB.FiniteElementMethod.Data.Heat2DSourceTConst.IndepCoef = 100.
+#Simulator.SubSysB.FiniteElementMethod.Data.Heat2DSourceTConst.LinearCoef = 0.
+
+Simulator.SubSysB.FiniteElementMethod.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSysB.FiniteElementMethod.Data.IntegratorOrder = P1
+
+Simulator.SubSysB.FiniteElementMethod.ExplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSysB.FiniteElementMethod.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSysB.FiniteElementMethod.InitComds = InitState
+Simulator.SubSysB.FiniteElementMethod.InitNames = InitialField
+
+# Vars are [x y z]
+Simulator.SubSysB.FiniteElementMethod.InitialField.applyTRS = InnerCells
+Simulator.SubSysB.FiniteElementMethod.InitialField.Vars = x y
+Simulator.SubSysB.FiniteElementMethod.InitialField.Def = 200
+
+Simulator.SubSysB.FiniteElementMethod.BcComds = CoupledNeumannBC DirichletBC
+Simulator.SubSysB.FiniteElementMethod.BcNames = Coupled          Plate
+
+# Vars are [x y z t]
+Simulator.SubSysB.FiniteElementMethod.Coupled.applyTRS = SuperInlet
+Simulator.SubSysB.FiniteElementMethod.Coupled.Implicit = false
+Simulator.SubSysB.FiniteElementMethod.Coupled.Interface = Interaction1
+
+# Vars are [x y z t T]
+Simulator.SubSysB.FiniteElementMethod.Plate.applyTRS = FaceWest
+Simulator.SubSysB.FiniteElementMethod.Plate.Implicit = false
+Simulator.SubSysB.FiniteElementMethod.Plate.Vars = x y t T
+Simulator.SubSysB.FiniteElementMethod.Plate.Def = 200
+

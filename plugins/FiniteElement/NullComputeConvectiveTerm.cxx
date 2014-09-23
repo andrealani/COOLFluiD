@@ -1,0 +1,49 @@
+#include "NullComputeConvectiveTerm.hh"
+#include "Framework/MethodStrategyProvider.hh"
+#include "FiniteElement/FiniteElement.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteElement {
+
+//////////////////////////////////////////////////////////////////////////////
+
+MethodStrategyProvider<NullComputeConvectiveTerm,
+                       FiniteElementMethodData,
+                       ComputeConvectiveTerm,
+                       FiniteElementModule>
+nullConvectiveTermStrategyProvider("NullConvectiveTerm");
+
+//////////////////////////////////////////////////////////////////////////////
+
+NullComputeConvectiveTerm::NullComputeConvectiveTerm(const std::string& name) :
+  ComputeConvectiveTerm(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+NullComputeConvectiveTerm::~NullComputeConvectiveTerm()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteElement
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

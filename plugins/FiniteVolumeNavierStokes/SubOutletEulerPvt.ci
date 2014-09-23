@@ -1,0 +1,69 @@
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class VARSET>
+void SubOutletEulerPvt<VARSET>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption<CFreal>("P","the pressure for compressible flows or pressure variation for incompressible flows");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class VARSET>
+SubOutletEulerPvt<VARSET>::SubOutletEulerPvt(const std::string& name) :
+  FVMCC_BC(name)
+{
+  addConfigOptionsTo(this);
+  m_pressure = 0.0;
+  setParameter("P",&m_pressure);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class VARSET>
+SubOutletEulerPvt<VARSET>::~SubOutletEulerPvt()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class VARSET>
+void SubOutletEulerPvt<VARSET>::setGhostState(Framework::GeometricEntity *const face)
+{
+  using namespace COOLFluiD::Framework;
+
+  State *const innerState = face->getState(0);
+  State *const ghostState = face->getState(1);
+
+  (*ghostState)[0] = 2.*m_pressure  - (*innerState)[0];
+  (*ghostState)[1] = (*innerState)[1];
+  (*ghostState)[2] = (*innerState)[2];
+  (*ghostState)[3] = (*innerState)[3];
+
+  if (PhysicalModelStack::getActive()->getDim() == DIM_3D) {
+    (*ghostState)[4] = (*innerState)[4];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class VARSET>
+void SubOutletEulerPvt<VARSET>::setup()
+{
+  FVMCC_BC::setup();
+
+  m_pressure /= (getMethodData().getUpdateVar().template d_castTo<VARSET>())->getModel()->getPressRef();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

@@ -1,0 +1,57 @@
+#include "NullComputeSourceTerm.hh"
+#include "Framework/MethodStrategyProvider.hh"
+#include "FiniteVolume/CellCenterFVMData.hh"
+#include "FiniteVolume/FiniteVolume.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace COOLFluiD::Framework;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+MethodStrategyProvider<NullComputeSourceTerm, 
+		       CellCenterFVMData, 
+		       ComputeSourceTerm<CellCenterFVMData>,
+		       FiniteVolumeModule> 
+nullComputeSTFVMCCProv("Null");
+
+//////////////////////////////////////////////////////////////////////////////
+
+NullComputeSourceTerm::NullComputeSourceTerm(const std::string& name) :
+  ComputeSourceTermFVMCC(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+NullComputeSourceTerm::~NullComputeSourceTerm()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NullComputeSourceTerm::computeSource(GeometricEntity *const element,
+					  RealVector& source,
+					  RealMatrix& jacobian)
+{
+  CFLog(VERBOSE, "Calling NullComputeSourceTerm::computeSource()" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

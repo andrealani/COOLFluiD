@@ -1,0 +1,112 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -0.474089
+# CFEnv.TraceToStdOut = true
+
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFluctSplit libFluctSplitSystem libFluctSplit libFluctSplitNavierStokes libFluctSplitHO libForwardEuler libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets2D/
+Simulator.Paths.ResultsDir       = ./
+
+
+CFEnv.DoAssertions         = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+CFEnv.ExceptionAborts      = true
+CFEnv.ExceptionDumps       = true
+CFEnv.ExceptionOutputs     = true
+CFEnv.RegistSignalHandlers = false
+
+Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
+#Simulator.SubSystem.Euler2D.pRef = 101325.
+#Simulator.SubSystem.Euler2D.tempRef = 293.
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName = jets2d.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.WriteSol     = WriteSolution
+
+Simulator.SubSystem.Tecplot.FileName = jets2d_LDA.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.Tecplot.WriteSol   = WriteSolution
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells FaceSouth FaceWest FaceNorth SuperInlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2DFluctSplitHO.CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.ConvRate = 1
+Simulator.SubSystem.FwdEuler.ShowRate = 1
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.6
+# Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function
+# Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = min(0.5+(i*0.01),1.0)
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = HOCRD
+
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysBC
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar    = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar   = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar    = Cons
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField   MachStep
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells FaceWest FaceNorth FaceSouth
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 0.5 \
+          1.67332 \
+                                        0.0 \
+                                        3.425
+
+Simulator.SubSystem.FluctuationSplit.MachStep.applyTRS = SuperInlet
+Simulator.SubSystem.FluctuationSplit.MachStep.Vars = x y
+Simulator.SubSystem.FluctuationSplit.MachStep.Def = if(y>0.5,0.5,1.) \
+                                                    if(y>0.5,1.67332,2.83972) \
+                                                    0.0 \
+                                                    if(y>0.5,3.425,6.532)
+
+
+
+
+
+Simulator.SubSystem.FluctuationSplit.BcComds = SuperInlet SuperOutlet
+Simulator.SubSystem.FluctuationSplit.BcNames = Jet1        Jet2
+
+Simulator.SubSystem.FluctuationSplit.Jet1.applyTRS = SuperInlet
+Simulator.SubSystem.FluctuationSplit.Jet1.Vars = x y
+Simulator.SubSystem.FluctuationSplit.Jet1.Def =  if(y>0.5,0.5,1.) \
+                                        if(y>0.5,1.67332,2.83972) \
+                                        0.0 \
+                                        if(y>0.5,3.425,6.532)
+
+
+
+Simulator.SubSystem.FluctuationSplit.Jet2.applyTRS = FaceWest FaceNorth FaceSouth
+
+
+

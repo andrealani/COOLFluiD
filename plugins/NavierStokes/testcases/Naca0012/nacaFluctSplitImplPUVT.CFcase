@@ -1,0 +1,109 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -6.1167919 -8.4814405 -8.9602541 -9.1407536 
+### Parallel = on
+#
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFluctSplitNavierStokes libNewtonMethod libTHOR2CFmesh libForwardEuler libPetscI libAeroCoefFS 
+
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Naca0012/
+Simulator.Paths.ResultsDir       = ./RESULTS/
+
+Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
+Simulator.SubSystem.Euler2D.refValues = 101325. 260. 260. 293.
+Simulator.SubSystem.Euler2D.refLength = 1.0
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = nacatg-sol.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = nacatg-sol.plt
+Simulator.SubSystem.Tecplot.SaveRate    = 50
+Simulator.SubSystem.CFmesh.SaveRate     = 50
+Simulator.SubSystem.Tecplot.AppendTime  = false
+Simulator.SubSystem.CFmesh.AppendTime   = false
+Simulator.SubSystem.Tecplot.AppendIter  = false
+Simulator.SubSystem.CFmesh.AppendIter   = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 3
+
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -6.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells Airfoil FarField
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = naca0012.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+#---------------------------------------------------------------------#
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS                                                                                                              
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM                                                                                                     
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES                                                                                                 
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM 
+
+#---------------------------------------------------------------------#
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator                                                                                                        
+                                                                                                                                                              
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 4.                                                                                                        
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1  
+
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i>10,min(4000000.,4.*10.^(i-10)),4.)
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 0 
+Simulator.SubSystem.NewtonIterator.Data.FilterState       = Max              
+Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs       = 1 0 0 1          
+Simulator.SubSystem.NewtonIterator.Data.Max.minValues     = 1.e-8 0. 0. 1.e-8
+#---------------------------------------------------------------------#
+
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.ComputeRHS = RhsJacob
+Simulator.SubSystem.FluctuationSplit.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
+
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysN
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar   = Puvt
+# Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar   = Roe
+
+#Solution initialization
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.InputVar = RhoMachAlphaP
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 1.204524948 \
+                                        0.755 \
+                                        0.016 \
+                                        101325.
+
+#Boundary conditions
+Simulator.SubSystem.FluctuationSplit.BcComds = WeakSlipWallEuler2DImpl WeakFarField2DImpl
+Simulator.SubSystem.FluctuationSplit.BcNames = WeakSlipWall FField
+
+Simulator.SubSystem.FluctuationSplit.WeakSlipWall.applyTRS = Airfoil
+
+Simulator.SubSystem.FluctuationSplit.FField.applyTRS = FarField
+Simulator.SubSystem.FluctuationSplit.FField.InputVar = RhoMachAlphaP
+Simulator.SubSystem.FluctuationSplit.FField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.FField.Def = 1.204524948 \
+                                        0.755 \
+                                        0.016 \
+                                        101325.

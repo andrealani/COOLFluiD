@@ -1,0 +1,103 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -0.66765
+
+
+# CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libNavierStokes libSpectralFV libSpectralFVNavierStokes libBackwardEuler libTHOR2CFmesh libPetscI
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Naca0012/
+Simulator.Paths.ResultsDir = ./
+
+#Simulator.SubSystem.Default.PhysicalModelType = Euler2D
+
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2D
+#Simulator.SubSystem.NavierStokes2D.refValues = 1.2 171.6 171.6 270068
+#Simulator.SubSystem.NavierStokes2D.refLength = 1.0
+#Simulator.SubSystem.NavierStokes2D.ConvTerm.pRef    = 100960
+#Simulator.SubSystem.NavierStokes2D.DiffTerm.Reynolds = 5000.0
+#Simulator.SubSystem.NavierStokes2D.ConvTerm.tempRef = 293.15
+#Simulator.SubSystem.NavierStokes2D.ConvTerm.machInf = 0.5
+Simulator.SubSystem.NavierStokes2D.DiffTerm.ViscosityLaw = FixedKinematicViscosity
+Simulator.SubSystem.NavierStokes2D.DiffTerm.FixedKinematicViscosity.KinVisc = 0.03432
+
+Simulator.SubSystem.OutputFormat = ParaView CFmesh
+
+Simulator.SubSystem.CFmesh.FileName = naca0012Visc-sfvm-par-sol.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 500
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+
+Simulator.SubSystem.ParaView.FileName    = naca0012Visc-sfvm-par-sol.vtu
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.SaveRate = 10
+Simulator.SubSystem.ParaView.AppendTime = false
+Simulator.SubSystem.ParaView.AppendIter = false
+
+Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 5
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
+
+Simulator.SubSystem.ConvergenceMethod = BwdEuler
+Simulator.SubSystem.BwdEuler.Data.CFL.Value = 0.5
+Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(1e16,0.5*10.0^max(i-5,0))
+Simulator.SubSystem.BwdEuler.ConvergenceFile = convergenceImpl.plt
+Simulator.SubSystem.BwdEuler.ShowRate        = 1
+Simulator.SubSystem.BwdEuler.ConvRate        = 1
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = BwdEulerLSS
+Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 1000
+Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
+Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
+#Simulator.SubSystem.BwdEulerLSS.Data.Output = true
+
+Simulator.SubSystem.SpaceMethod = SpectralFVMethod
+
+Simulator.SubSystem.Default.listTRS = InnerCells InnerFaces Wall Farfield
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = naca0012ViscSFVM.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = SpectralFVMethod
+
+# choose which builder we use
+Simulator.SubSystem.SpectralFVMethod.Builder = StdBuilder
+Simulator.SubSystem.SpectralFVMethod.SpaceRHSJacobCom = RHSJacob
+Simulator.SubSystem.SpectralFVMethod.TimeRHSJacobCom  = StdTimeRHSJacob
+
+Simulator.SubSystem.SpectralFVMethod.Data.UpdateVar   = Cons
+Simulator.SubSystem.SpectralFVMethod.Data.SolutionVar = Cons
+Simulator.SubSystem.SpectralFVMethod.Data.LinearVar   = Roe
+Simulator.SubSystem.SpectralFVMethod.Data.DiffusiveVar= Cons
+Simulator.SubSystem.SpectralFVMethod.Data.VolTermComputer     = NSStdVolTermComputer
+Simulator.SubSystem.SpectralFVMethod.Data.FaceTermComputer    = NSStdFaceTermComputer
+Simulator.SubSystem.SpectralFVMethod.Data.BndFaceTermComputer = NSStdBndFaceTermComputer
+Simulator.SubSystem.SpectralFVMethod.Data.RiemannFlux = LaxFriedrichsFlux
+Simulator.SubSystem.SpectralFVMethod.Data.FaceDiffFlux = NSLocalApproach
+Simulator.SubSystem.SpectralFVMethod.Data.NSLocalApproach.Alpha = 1.0
+
+Simulator.SubSystem.SpectralFVMethod.InitComds = StdInitState
+Simulator.SubSystem.SpectralFVMethod.InitNames = InField
+
+Simulator.SubSystem.SpectralFVMethod.InField.applyTRS = InnerCells
+Simulator.SubSystem.SpectralFVMethod.InField.Vars = x y
+Simulator.SubSystem.SpectralFVMethod.InField.Def = 1.2 171.6 0.0 270068
+
+Simulator.SubSystem.SpectralFVMethod.BcNames = Airfoil  FarField
+Simulator.SubSystem.SpectralFVMethod.Airfoil.applyTRS = Wall
+Simulator.SubSystem.SpectralFVMethod.FarField.applyTRS = Farfield
+
+Simulator.SubSystem.SpectralFVMethod.Data.BcTypes = NoSlipWallHeatFluxNS2D  Dirichlet
+Simulator.SubSystem.SpectralFVMethod.Data.BcNames = Airfoil                 FarField
+
+Simulator.SubSystem.SpectralFVMethod.Data.FarField.Vars = x y
+Simulator.SubSystem.SpectralFVMethod.Data.FarField.Def = 1.2 171.6 0.0 270068

@@ -1,0 +1,5 @@
+!COORDTYPE 1
+Nodal
+!DATASIZE 1
+!NBTRS 1
+SuperInlet

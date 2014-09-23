@@ -1,0 +1,171 @@
+#include "LocalElementData.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteElement {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class FUNCTOR, class RETURN>
+void FEM_VolumeIntegrator::integrateFastGeneralFEMEntityOnGeoEnt(FUNCTOR& functor,
+                                                             RETURN& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  cf_assert(_setup);
+
+  LocalElementData& data = functor.getMethodData().getLocalElementData();
+  GeometricEntity* geo = data.cell;
+
+  cf_assert(_lastPrecomputedCellID == geo->getID());
+
+  _intgSol = getSolutionIntegrator(geo);
+
+  cf_assert(_intgSol.isNotNull());
+
+  const std::valarray<CFreal>& coeff  = _intgSol->getCoeff();
+  const std::vector<RealVector>& shapeF = _intgSol->getShapeFunctionsAtQuadraturePoints();
+
+  cf_assert(_solValues.size() >= coeff.size());
+  cf_assert(_gradValues.size() >= coeff.size());
+  cf_assert(_detJacobian.size() >= coeff.size());
+
+  cf_assert(functor.size() == result.size());
+
+  data.solValues = &_solValues;
+  data.solShapeF = &shapeF;
+  data.coord = &_coord;
+  data.gradValues = &_gradValues;
+
+  result = 0.0;
+  for(CFuint iPoint = 0; iPoint < coeff.size(); ++iPoint) {
+    data.quadPointID = iPoint;
+    result += functor()
+           *= coeff[iPoint] * _detJacobian[iPoint];
+
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class FUNCTOR, class RETURN>
+void FEM_VolumeIntegrator::integrateGeneralFEMEntityOnGeoEnt(FUNCTOR& functor,
+                                                             RETURN& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  cf_assert(_setup);
+
+  LocalElementData& data = functor.getMethodData().getLocalElementData();
+  GeometricEntity* geo = data.cell;
+
+  _intgSol = getSolutionIntegrator(geo);
+  _intgGeo = getGeometryIntegrator(geo);
+
+  cf_assert(_intgSol.isNotNull());
+  cf_assert(_intgGeo.isNotNull());
+
+  std::vector<Node*>& nodes   = *geo->getNodes();
+  std::vector<State*>& states = *geo->getStates();
+
+  _intgGeo->computeCoordinatesAtQuadraturePoints(nodes, _coord);
+  const std::vector<RealVector>& mapCoord = _intgSol->getQuadraturePointsCoordinates();
+
+  _intgGeo->computeJacobianAtQuadraturePoints(nodes, mapCoord, _jacob);
+
+  _intgSol->computeSolutionAtQuadraturePoints(states, _solValues);
+
+  _intgSol->computeGradSolutionShapeFAtQuadraturePoints(_jacob,mapCoord,_gradValues);
+
+  _intgGeo->computeJacobianDetAtQuadraturePoints(nodes, _detJacobian);
+
+  const std::valarray<CFreal>& coeff  = _intgSol->getCoeff();
+  const std::vector<RealVector>& shapeF = _intgSol->getShapeFunctionsAtQuadraturePoints();
+
+  cf_assert(_solValues.size() >= coeff.size());
+  cf_assert(_gradValues.size() >= coeff.size());
+  cf_assert(_detJacobian.size() >= coeff.size());
+
+  cf_assert(functor.size() == result.size());
+
+  data.solValues = &_solValues;
+  data.solShapeF = &shapeF;
+  data.coord = &_coord;
+  data.gradValues = &_gradValues;
+
+  result = 0.0;
+  for(CFuint iPoint = 0; iPoint < coeff.size(); ++iPoint) {
+    data.quadPointID = iPoint;
+    result += functor()
+           *= coeff[iPoint] * _detJacobian[iPoint];
+
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class FUNCTOR, class RETURN>
+void FEM_VolumeIntegrator::integrateFaceFEMEntityOnGeoEnt(FUNCTOR& functor,
+                                                             RETURN& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  cf_assert(_setup);
+
+  LocalElementData& data = functor.getMethodData().getLocalElementData();
+  GeometricEntity* geo = data.cell;
+
+  _intgSol = getSolutionIntegrator(geo);
+  _intgGeo = getGeometryIntegrator(geo);
+
+  cf_assert(_intgSol.isNotNull());
+  cf_assert(_intgGeo.isNotNull());
+
+  std::vector<Node*>& nodes   = *geo->getNodes();
+  std::vector<State*>& states = *geo->getStates();
+
+  _intgGeo->computeCoordinatesAtQuadraturePoints(nodes, _coord);
+  const std::vector<RealVector>& mapCoord = _intgSol->getQuadraturePointsCoordinates();
+
+  _intgGeo->computeJacobianAtQuadraturePoints(nodes, mapCoord, _jacob);
+
+  _intgSol->computeSolutionAtQuadraturePoints(states, _solValues);
+
+  _intgGeo->computeJacobianDetAtQuadraturePoints(nodes, _detJacobian);
+
+  const std::valarray<CFreal>& coeff  = _intgSol->getCoeff();
+  const std::vector<RealVector>& shapeF = _intgSol->getShapeFunctionsAtQuadraturePoints();
+
+  cf_assert(_solValues.size() >= coeff.size());
+  cf_assert(_gradValues.size() >= coeff.size());
+  cf_assert(_detJacobian.size() >= coeff.size());
+
+  cf_assert(functor.size() == result.size());
+
+  data.solValues = &_solValues;
+  data.solShapeF = &shapeF;
+  data.coord = &_coord;
+
+  result = 0.0;
+  for(CFuint iPoint = 0; iPoint < coeff.size(); ++iPoint) {
+    data.quadPointID = iPoint;
+    result += functor()
+           *= coeff[iPoint] * _detJacobian[iPoint];
+
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace FiniteElement
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

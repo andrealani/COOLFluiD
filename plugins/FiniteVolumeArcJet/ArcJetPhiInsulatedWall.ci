@@ -1,0 +1,69 @@
+#include "Framework/MeshData.hh"  
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolumeArcJet {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+ArcJetPhiInsulatedWall<BASE>::
+ArcJetPhiInsulatedWall(const std::string& name) :
+  BASE(name)
+{
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+ArcJetPhiInsulatedWall<BASE>::~ArcJetPhiInsulatedWall()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void ArcJetPhiInsulatedWall<BASE>::setup()
+{
+  BASE::setup();
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void ArcJetPhiInsulatedWall<BASE>::setGhostState
+(Framework::GeometricEntity *const face)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint lastEq = totalNbEqs - 1;
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
+  const CFuint eqSSID = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getEqSS();
+  
+  if (nbEqs != 1 || (nbEqs == 1 && eqSSID == 0) || nbEqs == totalNbEqs) {
+    BASE::setGhostState(face);
+  }
+  
+  // here it is assumed that the ArcJet induction equations are the last ones 
+  if ((nbEqs == 1 && eqSSID == 1) || nbEqs == totalNbEqs) {
+    State *const innerState = face->getState(0);
+    State *const ghostState = face->getState(1);
+    (*ghostState)[lastEq] = (*innerState)[lastEq];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

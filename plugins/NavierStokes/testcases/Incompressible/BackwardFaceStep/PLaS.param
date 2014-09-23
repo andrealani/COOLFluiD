@@ -1,0 +1,30 @@
+Maximum number of dispersed entities per process:
+5000
+Number of initially distributed dispersed entities:
+1000
+Diameter of dispersed entities ([0] = constant, [1] = normal, [2] = log-normal):
+0 .00001 0.0
+Density of dispersed flow:
+80000
+Restart from given initial distribution ([0] = no, [1] = yes):
+0
+Flow type ([1] = Particulate, [2] = Bubbly):
+1
+Momentum back-coupling ([0] = no, [1] = yes):
+0
+Mass back-coupling ([0] = no, [1] = yes):
+0
+Include collision model ([0] = no, [1] = yes);
+0
+Include slip-shear lift force ([0] = no, [1] = yes):
+0
+Coupling force distribution method ([1] = PIC, [2] = Projection):
+1
+Dispersed phase production domains ([0]= none, [1] = line, [2] = rectangle, [3] = ellipse):
+0
+2 0.1 0.1 0.1 0.2 0.2 0.2
+Production factor (dispersed entities per second):
+10.0
+Periodic boundaries are dispersed outlets ([0] = no, [1] = yes):
+0
+

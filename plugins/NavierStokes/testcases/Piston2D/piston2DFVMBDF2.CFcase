@@ -1,0 +1,145 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -13.9113
+
+#
+
+
+CFEnv.DoAssertions = true
+CFEnv.AssertionDumps = true
+CFEnv.AssertionThrows = false
+CFEnv.ExceptionOutputs = true
+CFEnv.ExceptionDumps = true
+CFEnv.ExceptionAborts=true
+#CFEnv.OnlyCPU0Writes=true
+CFEnv.RegistSignalHandlers=true
+CFEnv.VerboseEvents=true
+#CFEnv.ErrorOnUnusedConfig=true
+CFEnv.TraceToStdOut=true
+CFEnv.TraceActive=true
+#  CFEnv.MainLoggerFileName=true
+CFEnv.ExceptionLogLevel=1000
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libTHOR2CFmesh libMeshRigidMove
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Piston2D/
+#Simulator.Paths.WorkingDir = ./
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
+#Simulator.SubSystem.Euler2D.pRef = 101325.
+#Simulator.SubSystem.Euler2D.tempRef = 293.
+
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.1
+
+Simulator.SubSystem.OutputFormat        = CFmesh Tecplot
+Simulator.SubSystem.CFmesh.FileName     = piston2DFVMBDF2ALE.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = piston2DFVMBDF2ALE.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.CFmesh.SaveRate = 1
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+Simulator.SubSystem.CFmesh.AppendIter = true
+
+Simulator.SubSystem.InitialTime         = 0.
+Simulator.SubSystem.InitialIter         = 0
+
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 4.
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 4
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerFaces FaceNorth FaceEast FaceSouth FaceWest
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = channel.CFmesh
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = BDF2
+Simulator.SubSystem.BDF2.Data.CFL.Value = 10.0
+Simulator.SubSystem.BDF2.ALEUpdateCom = ALE_FVMGeometricAverage
+Simulator.SubSystem.BDF2.UpdateSol = StdUpdateSol
+Simulator.SubSystem.BDF2.StdUpdateSol.Relaxation = 1.
+Simulator.SubSystem.BDF2.Data.MaxSteps = 10
+#Simulator.SubSystem.BDF2.Data.Norm = -8.0
+Simulator.SubSystem.BDF2.Data.PrintHistory = true
+
+Simulator.SubSystem.MeshAdapterMethod = RigidMove
+Simulator.SubSystem.RigidMove.Data.CollaboratorNames = BDF2 CFmesh CFmeshFileReader CellCenterFVM
+Simulator.SubSystem.RigidMove.PrepareComds = StdPrepare
+Simulator.SubSystem.RigidMove.PrepareNames = Prepare1
+#Simulator.SubSystem.RigidMove.Data.VX = 0.2
+#Simulator.SubSystem.RigidMove.Data.ExpansionRatioX = 0.99
+Simulator.SubSystem.RigidMove.UpdateMeshCom = Piston
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = BDF2LSS
+#Simulator.SubSystem.BDF2LSS.Data.PCType = PCASM
+Simulator.SubSystem.BDF2LSS.Data.PCType = PCILU
+Simulator.SubSystem.BDF2LSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.BDF2LSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = ALEBDF2TimeRhs
+Simulator.SubSystem.CellCenterFVM.ALEBDF2TimeRhs.useGlobalDT = false
+Simulator.SubSystem.CellCenterFVM.ALEBDF2TimeRhs.useAnalyticalMatrix = false
+
+#Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup BDF2ALESetup
+Simulator.SubSystem.CellCenterFVM.SetupCom = StdSetup BDF2ALESetup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1 Setup2
+#Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+#Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup BDF2ALEUnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = StdUnSetup BDF2ALEUnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1 UnSetup2
+Simulator.SubSystem.CellCenterFVM.BeforeMeshUpdateCom = BDF2ALEPrepare
+Simulator.SubSystem.CellCenterFVM.AfterMeshUpdateCom = BDF2ALEUpdate
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = RoeFluxALEBDF2
+Simulator.SubSystem.CellCenterFVM.Data.RoeFluxALEBDF2.UseShapeFunctions = false
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar   = Cons
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.7
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 1.4 0.0 0.0 2.5
+
+Simulator.SubSystem.CellCenterFVM.BcComds = UnsteadySlipWallEuler2DFVMCC \
+                                            UnsteadySlipWallEuler2DFVMCC \
+                                            UnsteadySlipWallEuler2DFVMCC \
+                                            UnsteadySlipWallEuler2DFVMCC
+
+Simulator.SubSystem.CellCenterFVM.BcNames = Outlet \
+                                            Top \
+                                            Bottom \
+                                            Inlet
+
+Simulator.SubSystem.CellCenterFVM.Bottom.applyTRS = FaceSouth
+Simulator.SubSystem.CellCenterFVM.Top.applyTRS = FaceNorth
+Simulator.SubSystem.CellCenterFVM.Outlet.applyTRS = FaceEast
+Simulator.SubSystem.CellCenterFVM.Inlet.applyTRS = FaceWest
+

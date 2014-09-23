@@ -1,0 +1,7 @@
+cf_add_case( MPI default PCASE burgersFS.CFcase )
+cf_add_case( MPI default PCASE burgersFSCRD.CFcase )
+cf_add_case( MPI default PCASE burgersFSHOCRD_BT.CFcase )
+cf_add_case( MPI default PCASE burgersFSQDPert.CFcase )
+cf_add_case( MPI 1       PCASE burgersFS_SpaceTime.CFcase )
+cf_add_case( MPI 1       PCASE burgersFVM.CFcase )
+cf_add_case( MPI default PCASE burgersFVMQDPert.CFcase )

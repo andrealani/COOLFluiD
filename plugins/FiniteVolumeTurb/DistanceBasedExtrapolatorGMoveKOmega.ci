@@ -1,0 +1,204 @@
+#include "Framework/MeshData.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Framework/State.hh"
+#include "NavierStokes/NSTurbTerm.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class CVARSET, class DVARSET>
+DistanceBasedExtrapolatorGMoveKOmega<CVARSET, DVARSET>::DistanceBasedExtrapolatorGMoveKOmega
+(const std::string& name) :
+  DistanceBasedExtrapolatorGMove(name),
+  socket_wallDistance("wallDistance"),
+  _varSetTurb(CFNULL),
+  _diffVarTurb(CFNULL)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class CVARSET, class DVARSET>
+DistanceBasedExtrapolatorGMoveKOmega<CVARSET, DVARSET>::~DistanceBasedExtrapolatorGMoveKOmega()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class CVARSET, class DVARSET>
+void DistanceBasedExtrapolatorGMoveKOmega<CVARSET, DVARSET>::setup()
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+
+  DistanceBasedExtrapolatorGMove::setup();
+
+  _varSetTurb = getMethodData().getUpdateVar().template d_castTo<CVARSET>();
+  _diffVarTurb = getMethodData().getDiffusiveVar().template d_castTo<DVARSET>();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class CVARSET, class DVARSET>
+void DistanceBasedExtrapolatorGMoveKOmega<CVARSET, DVARSET>::extrapolateInAllNodes()
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  DataHandle<RealVector> nodalStates = socket_nstates.getDataHandle();
+  DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
+  DataHandle<CFreal> wallDistance = socket_wallDistance.getDataHandle();
+
+  const CFuint nbNodes = nodes.size();
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbEqs =  PhysicalModelStack::getActive()->getNbEq();
+  cf_assert (nbEqs == dim + 4);
+  const CFuint OmegaID = dim + 3;
+
+  for (CFuint iNode = 0; iNode < nbNodes; ++iNode) {
+    const CFuint nbNeighborStates = _neighborStates[iNode].size();
+
+    // reset to 0 the nodal states
+    nodalStates[iNode] = 0.;
+    CFreal sumInnerWeight = 0.;
+    CFreal y0 = 0.;
+
+    for (CFuint iState = 0; iState < nbNeighborStates; ++iState) {
+      const CFreal weight = static_cast<CFreal>(_weights[iNode][iState]);
+      const State *const neighState = _neighborStates[iNode][iState];
+      nodalStates[iNode] += (*neighState)*weight;
+
+     if ((_isNodeToPrescribe[iNode]) && (!neighState->isGhost())) {
+        sumInnerWeight += static_cast<CFreal>(weight);
+
+        //Compute distance to innerstate (fix to avoid too small distances)
+        const CFreal dy = std::max(wallDistance[neighState->getLocalID()], 10.e-10);
+        y0 += dy*weight;
+      }
+    }
+
+    // override user specified values (velocity, temperature and k)
+    if (_isNodeToPrescribe[iNode]) {
+      for (CFuint i = 0; i < _wValuesIdx.size(); ++i) {
+        nodalStates[iNode][_wValuesIdx[i]] = _wValues[i];
+      }
+
+      //compute the value for Omega from the wall pressure and temperature
+      nodalStates[iNode][OmegaID] = 0.;
+      const CFreal pWall = nodalStates[iNode][0];
+      const CFreal TWall = nodalStates[iNode][dim+1];
+      const CFreal pdim =  pWall*_varSetTurb->getModel()->getPressRef();
+      const CFreal Tdim =  TWall* _varSetTurb->getModel()->getTempRef();
+      y0 /= sumInnerWeight;
+
+      const CFreal mu = _diffVarTurb->getModel().getDynViscosityDim(pdim, Tdim)/
+	    _diffVarTurb->getModel().getReferencePhysicalData()[NSTurbTerm::MU];
+
+      const CFreal density = pWall/(_varSetTurb->getModel()->getR() * TWall);
+      const CFreal nu = mu / density;
+
+      //this is not the best, but it avoids having to code another BC! because I
+      //would have to dynamic cast to the KOmega varset to get the beta1
+      const CFreal beta1 = 0.075;
+
+      ///@todo here should this be adimensionalized (by the distance)???
+      //Menter's definition
+      nodalStates[iNode][OmegaID] = (10. * 6. * nu) / (beta1 * y0 * y0);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class CVARSET, class DVARSET>
+void DistanceBasedExtrapolatorGMoveKOmega<CVARSET, DVARSET>::extrapolateInNodes
+(const std::vector<Framework::Node*>& nodes)
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  DataHandle<RealVector> nodalStates = socket_nstates.getDataHandle();
+  DataHandle<CFreal> wallDistance = socket_wallDistance.getDataHandle();
+
+  const CFuint nbNodes = nodes.size();
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbEqs =  PhysicalModelStack::getActive()->getNbEq();
+  cf_assert (nbEqs == dim + 4);
+
+  const CFuint OmegaID = dim + 3;
+
+  for (CFuint iNode = 0; iNode < nbNodes; ++iNode) {
+    const CFuint nodeID = nodes[iNode]->getLocalID();
+    const CFuint nbNeighborStates = _neighborStates[nodeID].size();
+
+    // reset to 0 the nodal states
+    nodalStates[nodeID] = 0.;
+    CFreal sumInnerWeight = 0.;
+    CFreal y0 = 0.;
+
+    for (CFuint iState = 0; iState < nbNeighborStates; ++iState) {
+      const CFreal weight = static_cast<CFreal>(_weights[nodeID][iState]);
+      const State *const neighState = _neighborStates[nodeID][iState];
+      nodalStates[nodeID] += (*neighState)*weight;
+
+      if ((_isNodeToPrescribe[nodeID]) && (!neighState->isGhost())) {
+        sumInnerWeight += static_cast<CFreal>(weight);
+
+        //Compute distance to innerstate (fix to avoid too small distances)
+        const CFreal dy = std::max(wallDistance[neighState->getLocalID()], 10.e-10);
+        y0 += dy*weight;
+      }
+    }
+
+    if (_isNodeToPrescribe[nodeID]) {
+      for (CFuint i = 0; i < _wValuesIdx.size(); ++i) {
+        nodalStates[nodeID][_wValuesIdx[i]] = _wValues[i];
+      }
+
+      //compute the value for Omega from the wall pressure and temperature
+      nodalStates[iNode][OmegaID] = 0.;
+      const CFreal pWall = nodalStates[iNode][0];
+      const CFreal TWall = nodalStates[iNode][dim+1];
+      const CFreal pdim =  pWall*_varSetTurb->getModel()->getPressRef();
+      const CFreal Tdim =  TWall* _varSetTurb->getModel()->getTempRef();
+      y0 /= sumInnerWeight;
+
+      const CFreal mu = _diffVarTurb->getModel().getDynViscosityDim(pdim, Tdim)/
+	_diffVarTurb->getModel().getReferencePhysicalData()[NSTurbTerm::MU];
+
+      const CFreal density = pWall/(_varSetTurb->getModel()->getR() * TWall);
+      const CFreal nu = mu / density;
+
+      //this is not the best, but it avoids having to code another BC! because I
+      //would have to dynamic cast to the KOmega varset to get the beta1
+      const CFreal beta1 = 0.075;
+
+      ///@todo here should this be adimensionalized (by the distance)???
+      //Menter's definition
+      nodalStates[nodeID][OmegaID] = (10. * 6. * nu) / (beta1 * y0 * y0);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

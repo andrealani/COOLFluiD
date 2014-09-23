@@ -1,0 +1,89 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Environment_FileHandlerInputConcrete_ci
+#define COOLFluiD_Environment_FileHandlerInputConcrete_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+#include "Common/FilesystemException.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+    namespace Environment {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TRAIT_OPEN >
+FileHandlerInputConcrete<TRAIT_OPEN>::FileHandlerInputConcrete()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TRAIT_OPEN >
+FileHandlerInputConcrete<TRAIT_OPEN>::~FileHandlerInputConcrete()
+{
+   if (m_isopen) fin.close();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TRAIT_OPEN >
+std::ifstream& FileHandlerInputConcrete<TRAIT_OPEN>::open(const boost::filesystem::path& filepath,
+                                                          std::ios_base::openmode mode)
+{
+  try {
+    TRAIT_OPEN::open(fin,filepath,mode);
+    m_isopen = true;
+    return fin;
+  }
+  // convert boost exception to COOLFluiD exception
+  catch (boost::filesystem::filesystem_error& e)
+    {
+      throw Common::FilesystemException (FromHere(),e.what());
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TRAIT_OPEN >
+std::fstream& FileHandlerInputConcrete<TRAIT_OPEN>::openBinary(const boost::filesystem::path& filepath,
+							       std::ios_base::openmode mode)
+{
+  try {
+    TRAIT_OPEN::open(finBin,filepath,mode);
+    m_isopen = true;
+    return finBin;
+  }
+  // convert boost exception to COOLFluiD exception
+  catch (boost::filesystem::filesystem_error& e)
+  {
+    throw Common::FilesystemException (FromHere(),e.what());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TRAIT_OPEN >
+inline
+void FileHandlerInputConcrete<TRAIT_OPEN>::close()
+{
+   fin.close();
+   m_isopen = false;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace Environment
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Environment_FileHandlerInputConcrete_ci

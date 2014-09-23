@@ -1,0 +1,152 @@
+#include "Framework/NamespaceSwitcher.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Framework/State.hh"
+#include "Framework/MultiScalarTerm.hh"
+#include "NavierStokes/EulerTerm.hh"
+#include "FiniteVolume/CellCenterFVMData.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>      
+void DistanceBasedExtrapolatorGMoveInterp<BASE>::defineConfigOptions
+(Config::OptionList& options)
+{
+  options.addConfigOption<std::vector<std::string> >
+    ("SubInletTRSNames", "Name of the subsonic inlet TRSs on which nodal values should be interpolated.");
+  options.addConfigOption< std::string >("InputVar","Input variables.");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>      
+DistanceBasedExtrapolatorGMoveInterp<BASE>::DistanceBasedExtrapolatorGMoveInterp
+(const std::string& name) : 
+  BASE(name), 
+  m_inputToUpdateVar(),
+  m_tstate(CFNULL), 
+  m_bstate(CFNULL),
+  m_subInletTrsIDs()  
+{
+  this->addConfigOptionsTo(this);
+  
+  m_subInletTRSNames = std::vector<std::string>();
+  this->setParameter("SubInletTRSNames",&m_subInletTRSNames);
+  
+  m_inputVarStr = "Null";
+  this->setParameter("InputVar",&m_inputVarStr);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+DistanceBasedExtrapolatorGMoveInterp<BASE>::~DistanceBasedExtrapolatorGMoveInterp()
+{
+  deletePtr(m_tstate);
+  deletePtr(m_bstate);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void DistanceBasedExtrapolatorGMoveInterp<BASE>::applyBC()
+{  
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  CFuint trsID = -1;
+  if (isMatchingSubInletTrsID(this->socket_trsID.getDataHandle()[this->_currNodeID], trsID)) {
+    DataHandle<RealVector> nodalStates = this->socket_nstates.getDataHandle();
+    DataHandle < Framework::Node*, Framework::GLOBAL > nodes = this->socket_nodes.getDataHandle();
+    const CFuint nbNeighborStates = this->_neighborStates[this->_currNodeID].size();
+    
+    const Node& currNode = *nodes[this->_currNodeID];
+    this->updateWeights(this->_currNodeID, currNode);
+    
+    this->_nodalPressure = 0.0;
+    for (CFuint iState = 0; iState < nbNeighborStates; ++iState) {
+      const CFreal weight = static_cast<CFreal>(this->_weights[this->_currNodeID][iState]);
+      const State *const neighState = this->_neighborStates[this->_currNodeID][iState];
+      // this transformation is only used to compute the nodal pressure
+      this->transform(*neighState, this->_tmpState);
+      this->_nodalPressure += this->_pressure*weight;
+    }
+    
+    // get the interpolating table data
+    SafePtr<std::vector<Common::LookUpTable<CFreal,CFreal>*> > lookupState = this->m_trsID2LookupState.find(trsID);
+    RealVector& nstate = nodalStates[this->_currNodeID];
+    for (CFuint i = 0; i < nstate.size(); ++i) {
+      (*m_tstate)[i] = (*lookupState)[i]->get((*nodes[this->_currNodeID])[YY]); // AL: gory assumption here (lookup for YY)
+    }
+    *m_bstate = *m_inputToUpdateVar->transform(m_tstate);
+    nstate = (*m_bstate);
+    
+    BASE::setSpeciesVariables(nstate);
+  }
+  else {
+    BASE::applyBC();
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void DistanceBasedExtrapolatorGMoveInterp<BASE>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  BASE::setup();
+  
+  const std::string name = this->getMethodData().getNamespace();
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
+  // create the transformer from input to update variables
+  if (m_inputVarStr == "Null") {
+    m_inputVarStr = this->getMethodData().getUpdateVarStr();
+  }
+  
+  const std::string provider = VarSetTransformer::getProviderName
+    (physModel->getConvectiveName(), m_inputVarStr, this->getMethodData().getUpdateVarStr());
+  m_inputToUpdateVar = 
+    Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider)->
+    create(physModel->getImplementor());
+  assert(m_inputToUpdateVar.isNotNull());
+  const CFuint maxNbStatesInCell = MeshDataStack::getActive()->Statistics().getMaxNbStatesInCell();
+  m_inputToUpdateVar->setup(maxNbStatesInCell);
+  
+  m_tstate = new State();
+  m_bstate = new State();
+  
+  // careful here: it can happen that, in a parallel run, the local partition doesn't have the required TRS
+  // that's why a check of existence is added
+  m_subInletTrsIDs.resize(m_subInletTRSNames.size());
+  for (CFuint i = 0; i < m_subInletTRSNames.size(); ++i) {
+    if (this->_mapTrsNameToID.exists(m_subInletTRSNames[i])) {
+      m_subInletTrsIDs[i] = this->_mapTrsNameToID.find(m_subInletTRSNames[i]);
+    }
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,93 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -1.53995
+
+### Architecture = 32bit
+#
+
+CFEnv.RegistSignalHandlers = false
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libRungeKutta2 libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFluctSplitNavierStokes libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/SinusBump
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
+
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = bump-fine.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = bump-fine.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 10
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 50
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -8.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SubInlet SubOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = bump-fine.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = RK2
+#Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.RK2.Data.CFL.Value = 0.2
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+#Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = CRD
+
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysLDA
+#Simulator.SubSystem.FluctuationSplit.Data.ScalarSplitter = ScalarPSI
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Char
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Roe
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 1.204751547 \
+          206.7002847 \
+                                        0.0 \
+                                        271044.375
+
+Simulator.SubSystem.FluctuationSplit.BcComds = WeakSlipWallEuler2D \
+                    StrongSubInletEuler2DCons \
+              StrongSubOutletEuler2DCons
+Simulator.SubSystem.FluctuationSplit.BcNames = StrongSlipWall \
+              Inlet \
+              Outlet
+
+Simulator.SubSystem.FluctuationSplit.StrongSlipWall.applyTRS = SlipWall
+
+Simulator.SubSystem.FluctuationSplit.Inlet.applyTRS = SubInlet
+
+Simulator.SubSystem.FluctuationSplit.Outlet.applyTRS = SubOutlet
+Simulator.SubSystem.FluctuationSplit.Outlet.P = 101325.0
+

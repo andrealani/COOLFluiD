@@ -1,0 +1,908 @@
+#include "FluctSplit/DiffTermCarbuncleFixEuler.hh"
+#include "FluctSplit/InwardNormalsData.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Framework/MeshData.hh"
+#include "NavierStokes/EulerTerm.hh"
+#include "FluctSplit/FluctSplitNavierStokes.hh"
+#include "FluctSplit/InwardNormalsData.hh"
+
+#include <cmath>
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+    namespace FluctSplit {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+CFuint DiffTermCarbuncleFixEuler<UPDATEVAR>::_present_iter = 0;
+
+template <typename UPDATEVAR>
+CFuint DiffTermCarbuncleFixEuler<UPDATEVAR>::_last_accessed_at_iter = 0;
+
+template <typename UPDATEVAR>
+CFuint DiffTermCarbuncleFixEuler<UPDATEVAR>::_last_accessed_at_iter__OUTER = 0;
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+void DiffTermCarbuncleFixEuler<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFreal >
+    ("DissipEps", "Coefficient to control the dissipation.");
+  
+  options.template addConfigOption< CFuint, Config::DynamicOption<> >
+    ("ActivateFix", "Activates the fix");       
+
+  options.template addConfigOption< CFuint >
+    ("Variant", "Selects a particular implementation of the Carbuncle Fix");
+
+  options.template addConfigOption< CFuint, Config::DynamicOption<> >
+    ("IncludeTemperatureGradient", "If gradients of temperature are to be included in the fix.");
+
+  options.template addConfigOption< CFuint, Config::DynamicOption<> >
+    ("FreezeArtificialViscosityCoeff", "The artificial viscous coefficient mu_s is not recomputed anymore");
+  
+  options.template addConfigOption< bool >
+    ("StoreFixActiveCells", "Stores those cells where the carbuncle fix is active");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+DiffTermCarbuncleFixEuler<UPDATEVAR>::DiffTermCarbuncleFixEuler(const std::string& name) :
+  ComputeDiffusiveTerm(name), 
+  _normal0(2),
+  _normal1(2),
+  _normal2(2), 
+  _gradientM2(2),
+  _nodalM2(3),
+  _gradientT(2),
+  _nodalT(3),
+  _gradientP(2),
+  _nodalP(3),
+  _unitGradientM2(2),
+  _uCsiAtNodes(3),
+  _uEtaAtNodes(3),
+  _nEtaAtNodes(3),
+  _dim(),
+  _updateVar(CFNULL),
+  socket_ArtViscCoeff("ArtViscCoeff"),
+  socket_ViscCoeff("ViscCoeff"),
+  socket_fix_active("fix_active"),
+  socket_uCsi("uCsi"),
+  socket_uEta("uEta"),
+  socket_duCsidCsi("duCsidCsi"),
+  socket_duEtadCsi("duEtadCsi"),
+  socket_duCsidEta("duCsidEta"),
+  socket_duEtadEta("duEtadEta"),
+  socket_dpdCsi("dpdCsi"),
+  socket_dpdEta("dpdEta"),
+  _speed(), 
+  _pdata(),
+  _cell_avg_speed(),
+  _compression_through_sonicCell(false),
+  _hsize(0.0),
+  _cellID()
+{
+  addConfigOptionsTo(this);
+  
+  _dissipEps = 0.1;
+  this->setParameter("DissipEps", &_dissipEps);
+
+  _activateFix = 0;
+  this->setParameter("ActivateFix", &_activateFix);
+
+  _variantChosen = 0;
+  this->setParameter("Variant", &_variantChosen);
+
+  _includeTemperatureGradient = 0;
+  this->setParameter("IncludeTemperatureGradient", &_includeTemperatureGradient);
+  
+  _freeze_mu_s = 0;    
+  this->setParameter("FreezeArtificialViscosityCoeff", &_freeze_mu_s);
+  
+  _store_fix_active_cells = false;
+  this->setParameter("StoreFixActiveCells", &_store_fix_active_cells);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+DiffTermCarbuncleFixEuler<UPDATEVAR>::~DiffTermCarbuncleFixEuler()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+void DiffTermCarbuncleFixEuler<UPDATEVAR>::setUpdateVarSet(Common::SafePtr<Framework::ConvectiveVarSet> updateVar)
+{
+  _updateVar = updateVar.template d_castTo<UPDATEVAR>();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+void DiffTermCarbuncleFixEuler<UPDATEVAR>::computeDiffusiveTerm
+(Framework::GeometricEntity *const geo, 
+ std::vector<RealVector>& result, bool updateCoeffFlag)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  const uint N0 = 0;
+  const uint N1 = 1;
+  const uint N2 = 2;
+
+  _present_iter = SubSystemStatusStack::getActive()->getNbIter();
+
+  if (_activateFix == 1) {
+    DataHandle< InwardNormalsData*> normals = this->socket_normals.getDataHandle();
+    DataHandle< CFreal> updateCoeff = this->socket_updateCoeff.getDataHandle();
+    vector<State*> *const cellStates = geo->getStates();
+    
+    const CFuint nbCellStates = cellStates->size();
+    const CFreal cellVolume = geo->computeVolume();
+    const CFreal dimCoeff = 1./_dim;
+    const CFreal coeffGrad = dimCoeff/cellVolume;
+    
+    // gradient and average values computation
+    _cellID = geo->getID();	
+    
+    const RealVector& edata = this->_updateVar->getModel()->getPhysicalData();
+    const CFreal avRho = edata[EulerTerm::RHO];
+    if(avRho < 0.0) {
+      cout << "negative avRho = " << avRho << " in cell "<< geo->getID() << endl;
+      cout << "edata = " << edata << endl;
+      abort();
+    }
+
+//     //# Information on flow gradients
+/// JGM: This block > rev 14049
+//     const CFreal cosAlpha = edata[EulerTerm::VX]/edata[EulerTerm::V];
+//     const CFreal sinAlpha = edata[EulerTerm::VY]/edata[EulerTerm::V];
+// 
+//     CFreal uCsi_avg       = 0.;
+//     CFreal uEta_avg       = 0.;
+//     
+//     CFreal dVelCsidCsi    = 0.;
+//     CFreal dVelEtadCsi    = 0.;
+//     
+//     CFreal dVelCsidEta    = 0.;
+//     CFreal dVelEtadEta    = 0.;
+//     
+//     CFreal dabsVelCsidEta = 0.;
+// 	
+// 	CFreal dpdCsi         = 0.;
+// 	CFreal dpdEta         = 0.;    
+// 
+//     for (CFuint is = 0; is < nbCellStates; ++is) {
+//       const CFreal nx = normals[_cellID]->getNodalNormComp(is,XX);
+//       const CFreal ny = normals[_cellID]->getNodalNormComp(is,YY);
+// 
+//       const CFreal nCsi = nx*cosAlpha + ny*sinAlpha;
+//       const CFreal nEta = -nx*sinAlpha + ny*cosAlpha;
+// 
+//       const CFreal uCsi = _speed[XX][is]*cosAlpha + _speed[YY][is]*sinAlpha;
+//       const CFreal uEta = -_speed[XX][is]*sinAlpha + _speed[YY][is]*cosAlpha;
+// 
+//       uCsi_avg       += uCsi;
+//       uEta_avg       += uEta;
+// 
+//       dVelCsidCsi    += uCsi*nCsi;
+//       dVelEtadCsi    += uEta*nCsi;
+//       
+//       dVelCsidEta    += uCsi*nEta;
+//       dVelEtadEta    += uEta*nEta;
+//       
+//       dabsVelCsidEta += std::abs(uCsi)*nEta;
+// 	  
+// 	  this->_updateVar->computePhysicalData(*(*cellStates)[is], _pdata);
+// 	  const CFreal pressure = _pdata[EulerTerm::P];
+// 
+// 	  dpdCsi         += pressure*nCsi;
+// 	  dpdEta         += pressure*nEta;   
+//     }             
+// 
+//     uCsi_avg       /= 3.;
+//     uEta_avg       /= 3.;
+// 
+//     dVelCsidCsi    *= coeffGrad;
+//     dVelEtadCsi    *= coeffGrad;
+// 
+//     dVelCsidEta    *= coeffGrad;
+//     dVelEtadEta    *= coeffGrad;
+// 	
+// 	dpdCsi         *= coeffGrad;
+// 	dpdEta         *= coeffGrad;
+// 
+// //     store_ExtraInfo(uCsi_avg, uEta_avg, dVelCsidCsi, dVelEtadCsi, dVelCsidEta, dVelEtadEta, dpdCsi, dpdEta);
+    //# end - info...   
+    
+    // Reset to zero the temporal residual
+    for (CFuint i = 0; i < nbCellStates; ++i) {
+      result[i] = 0.;
+    }
+    
+    _compression_through_sonicCell = false;    
+    
+    // check if the flow changes from supersonic to subsonic within the cell
+    // do this only if you are not perturbing    
+    vector<CFuint> bigger1;
+    vector<CFuint> smaller1;
+    for (CFuint is = 0; is < nbCellStates; ++is) {
+      this->_updateVar->computePhysicalData(*(*cellStates)[is], _pdata);
+	  
+	  // data needed to detect compression cell:
+	  _nodalM2[is] = _pdata[EulerTerm::V]*_pdata[EulerTerm::V]/(_pdata[EulerTerm::A]*_pdata[EulerTerm::A]);
+      _nodalT[is]  = _pdata[EulerTerm::T];
+	  _nodalP[is]  = _pdata[EulerTerm::P];
+	  
+      for (CFuint d = 0; d < _dim; ++d) {
+        _speed[d][is] = _pdata[EulerTerm::VX + d];
+      }
+      
+      const CFreal mach = _pdata[EulerTerm::V]/_pdata[EulerTerm::A];
+      (mach < 1.0)  ? smaller1.push_back(is) : bigger1.push_back(is);
+      
+      //  CFreal nodal_speed_projected = _pdata[EulerTerm::VX]*cosD +_pdata[EulerTerm::VY]*sinD;//Doubt: rhoU or just U???
+      //  CFreal nodal_speed_projected = VX[is]*cosD +VY[is]*sinD;
+      
+      //lambdaMax = max(lambdaMax, nodal_speed_projected + _pdata[EulerTerm::A]);//max(lambdaMax, _pdata[EulerTerm::V] + _pdata[EulerTerm::A]);
+    }
+    
+    const CFreal lambdaMax = edata[EulerTerm::V] + edata[EulerTerm::A];
+    const bool sonicCell = (bigger1.size() > 0 && smaller1.size() > 0) ? true : false;
+    
+    // Determine whether the flow is compressed in this cell:
+    _cell_avg_speed[0] = edata[EulerTerm::VX];
+    _cell_avg_speed[1] = edata[EulerTerm::VY];
+    
+    //Cell gradients computation:
+    _normal0[XX] = normals[_cellID]->getNodalNormComp(N0,XX);
+    _normal0[YY] = normals[_cellID]->getNodalNormComp(N0,YY);
+    
+    _normal1[XX] = normals[_cellID]->getNodalNormComp(N1,XX);
+    _normal1[YY] = normals[_cellID]->getNodalNormComp(N1,YY);
+    
+    _normal2[XX] = normals[_cellID]->getNodalNormComp(N2,XX);
+    _normal2[YY] = normals[_cellID]->getNodalNormComp(N2,YY);
+    
+//     for (CFuint is = 0; is < nbCellStates; ++is) {
+//       this->_updateVar->computePhysicalData(*(*cellStates)[is], _pdata);
+//       _nodalM2[is] = _pdata[EulerTerm::V]*_pdata[EulerTerm::V]/(_pdata[EulerTerm::A]*_pdata[EulerTerm::A]);
+//       _nodalT[is] = _pdata[EulerTerm::T];
+// 	  _nodalP[is] = _pdata[EulerTerm::P];
+//     }
+    
+    _gradientM2 =  _normal0*_nodalM2[N0] + _normal1*_nodalM2[N1] + _normal2*_nodalM2[N2];
+    _gradientT  =  _normal0*_nodalT[N0]  + _normal1*_nodalT[N1]  + _normal2*_nodalT[N2];
+    
+    _gradientM2 /= 2.*cellVolume;
+    _gradientT  /= 2.*cellVolume;
+    //end -- cell gradients
+    
+    _unitGradientM2 = _gradientM2 / std::sqrt(_gradientM2[XX]*_gradientM2[XX] + _gradientM2[YY]*_gradientM2[YY]);
+    const CFreal detector = MathFunctions::innerProd(_gradientM2, _cell_avg_speed);
+    
+    const bool isCompression = (detector < 0.) ? true : false;
+	// end - determine whether the flow is compressed in this cell
+
+	// cell wise shock detector:
+	CFreal theta = 0.;
+	
+	CFreal p_min = _nodalP[0];
+	CFreal p_Max = _nodalP[0];
+	
+	for (CFuint i = 1; i < nbCellStates; ++i) {            
+		  p_min = std::min(_nodalP[i], p_min);
+		  p_Max = std::max(_nodalP[i], p_Max);
+	}
+
+	CFreal phi = p_Max/p_min;
+
+	const CFreal phi_min = 2.;
+	const CFreal phi_Max = 3.;
+	
+	const CFreal z = (phi_Max - phi)/(phi_Max - phi_min);
+	const CFreal Z = std::min(1., std::max(0., z));
+	const CFreal arg = Z*MathTools::MathConsts::CFrealPi();
+
+	theta = 1 - 0.5*(1. - std::cos(arg) );
+	theta = std::max(0.,theta);
+	// end - cell wise shock detector
+    
+    
+	_compression_through_sonicCell = (sonicCell && isCompression && (theta > 0.8) );// _compression_through_sonicCell = (sonicCell && isCompression);
+
+    _hsize = 2. * std::sqrt( cellVolume/MathConsts::CFrealPi() );
+    
+    if (_compression_through_sonicCell){
+// 	  std::cout << "Iter: " << _present_iter << " PreviousIter: " << _last_accessed_at_iter << " cellID: " << _cellID << "\n";
+
+	  const CFreal mu0 = 1.827*1e-5;
+	  const CFreal T0  = 291.15;
+	  const CFreal C   = 120.;
+	  const CFreal T   = edata[EulerTerm::T];
+	  
+	  const CFreal mu_sutherland = mu0 * std::pow(T/T0, 1.5) * (T0 + C)/(T + C);
+	  socket_ViscCoeff.getDataHandle()[_cellID] = mu_sutherland;
+	  
+      CFreal mu_s  = _dissipEps  * edata[EulerTerm::RHO] * lambdaMax * _hsize;
+	  
+      // When _freeze_mu_s is set to 1, mu_s is not saved anymore:
+      if( _freeze_mu_s == 0 ) {
+        if (_last_accessed_at_iter != _present_iter ){//SubSystemStatusStack::getActive()->getNbIter()
+// 		  std::cout << "Resetting ... viscosities sockets\n";
+          socket_ArtViscCoeff.getDataHandle() = 0.;
+		  socket_ViscCoeff.getDataHandle()    = 0.;
+        }
+	
+        socket_ArtViscCoeff.getDataHandle()[_cellID] = mu_s;
+		socket_ViscCoeff.getDataHandle()[_cellID]    = mu_sutherland;
+      }
+      else {
+// 		std::cout << "Using pre-saved ArtViscCoeff\n";
+        mu_s          = socket_ArtViscCoeff.getDataHandle()[_cellID];
+      }
+      
+      const CFreal nu_s = mu_s/edata[EulerTerm::RHO];
+      
+      // Cell Peclet number:
+      const CFreal U = edata[EulerTerm::V];
+      const CFreal cell_Peclet = _hsize*U/nu_s;
+      //     const CFreal cell_Peclet = min (1.,temp_Peclet);
+      //2010/11/22cout << "cell_Peclet: " << cell_Peclet << endl;//2010/11/22
+      
+//       if (this->_store_Pe_cell) {
+//         store_PeCell( cell_Peclet );
+//       }
+      
+      if (_store_fix_active_cells == 1) {
+        store_FixActiveCells();
+      }
+      // Needed to detect when the next timestep has just  been achieved:
+	  //_last_accessed_at_iter = SubSystemStatusStack::getActive()->getNbIter();
+
+      // angles defining the frame of reference aligned with the cell average velocity
+      const CFreal cosD = edata[EulerTerm::VX]/edata[EulerTerm::V];
+      const CFreal sinD = edata[EulerTerm::VY]/edata[EulerTerm::V];
+
+      // angles defining the frame of reference aligned with the numerical shock layer
+      //       const CFreal cosD = unit_gradientP[0];
+      //       const CFreal sinD = unit_gradientP[1];
+      cf_assert(_dim == DIM_2D);
+      
+      // this has to be adapted for 3D
+      const CFuint startVelID = (_updateVar->getModel()->getNbScalarVars(0) == 0) ? 1 : _updateVar->getModel()->getNbScalarVars(0);
+
+      const CFuint uID = startVelID;
+      const CFuint vID = startVelID + 1; 
+      const CFuint eID = startVelID + 2;
+      cf_assert(_speed.size() == 2);
+      
+      const RealVector& vx = _speed[XX];
+      const RealVector& vy = _speed[YY];
+
+	  //Local SoR
+      // Nodal averages
+      CFreal uCsi_bar = 0.0;
+      CFreal uEta_bar = 0.0;
+
+      // Gradients
+      CFreal duCsidCsi = 0.0;
+      CFreal duCsidEta = 0.0;
+      CFreal duEtadCsi = 0.0;
+      CFreal duEtadEta = 0.0;
+	  
+	  CFreal dpdCsi = 0.0;
+      CFreal dpdEta = 0.0;
+	  
+      CFreal dTdCsi = 0.0;
+      CFreal dTdEta = 0.0;
+
+//       CFreal dabs_uCsidEta = 0.0;
+//       CFreal dudEta = 0.0;
+
+      //Needed for axisymmetric simulations:
+      CFreal avgRadius = 0.0;
+	  // end - local SoR
+
+	  // Global SoR
+	  // Nodal averages
+	  CFreal uX_bar = 0.0;
+      CFreal uY_bar = 0.0;
+	  
+	  //Gradients
+      CFreal duXdX = 0.0;
+      CFreal duXdY = 0.0;
+      CFreal duYdX = 0.0;
+      CFreal duYdY = 0.0;
+
+      CFreal dTdX = 0.0;
+      CFreal dTdY = 0.0;      
+      // end - global SoR      
+
+	  for (CFuint is = 0; is < nbCellStates; ++is) {
+	    const CFreal nx = normals[_cellID]->getNodalNormComp(is,XX);
+	    const CFreal ny = normals[_cellID]->getNodalNormComp(is,YY);
+
+	    const CFreal nCsi = nx*cosD + ny*sinD;
+	    const CFreal nEta = -nx*sinD + ny*cosD;
+
+	    const CFreal uCsi = vx[is]*cosD + vy[is]*sinD;
+	    const CFreal uEta = -vx[is]*sinD + vy[is]*cosD;
+		
+		//
+		_uCsiAtNodes[is] = uCsi;
+		_uEtaAtNodes[is] = uEta;
+
+		_nEtaAtNodes[is] = nEta;
+		//
+		
+		uCsi_bar += uCsi;
+        uEta_bar += uEta;
+
+	    duCsidCsi += uCsi*nCsi;
+	    duCsidEta += uCsi*nEta;	    
+
+	    duEtadCsi += uEta*nCsi;
+	    duEtadEta += uEta*nEta;
+		
+		dpdCsi         += _nodalP[is]*nCsi;
+		dpdEta         += _nodalP[is]*nEta;   
+		
+		dTdCsi += _nodalT[is]*nCsi;
+		dTdEta += _nodalT[is]*nEta;
+		
+// 		dabs_uCsidEta += std::abs(uCsi)*nEta;
+// 	    dudEta += std::sqrt(vx[is]*vx[is]+vy[is]*vy[is]);
+
+	    for (CFuint iState = 0; iState < nbCellStates; ++iState) {
+	      avgRadius += (*cellStates)[iState]->getCoordinates()[YY];
+	    }
+	    avgRadius /= nbCellStates;
+				
+		// Global SoR
+		duXdX += vx[is] * nx;
+		duXdY += vx[is] * ny;
+		duYdX += vy[is] * nx;
+		duYdY += vy[is] * ny;
+
+		dTdX += _nodalT[is] * nx;
+		dTdY += _nodalT[is] * ny;
+
+		uX_bar += vx[is];
+		uY_bar += vy[is];
+		// end - global SoR
+	  }
+
+      // Local SoR
+      uCsi_bar /= 3.0;
+      uEta_bar /= 3.0;
+
+      duCsidCsi *= coeffGrad;
+      duCsidEta *= coeffGrad;
+
+      duEtadCsi *= coeffGrad;
+      duEtadEta *= coeffGrad;
+        
+	  dpdCsi *= coeffGrad;
+	  dpdEta *= coeffGrad;
+	  
+      dTdCsi *= coeffGrad;
+      dTdEta *= coeffGrad;
+	  
+	  //**//
+      CFreal duCsiSqdEta = 0.0;
+
+      CFreal  uCsi_j = _uCsiAtNodes[N0];
+      CFreal  uCsi_k = _uCsiAtNodes[N1];
+      CFreal  uCsi_l = _uCsiAtNodes[N2];
+
+      CFreal  nEta_j = _nEtaAtNodes[N0];
+      CFreal  nEta_k = _nEtaAtNodes[N1];
+      CFreal  nEta_l = _nEtaAtNodes[N2];
+
+      duCsiSqdEta = uCsi_j * uCsi_j * nEta_j + uCsi_k * uCsi_k * nEta_k + uCsi_l * uCsi_l * nEta_l
+      + uCsi_j * uCsi_k * (nEta_j + nEta_k) + uCsi_k * uCsi_l * (nEta_k + nEta_l) + uCsi_l * uCsi_j * (nEta_l + nEta_j);
+
+      CFreal duCsiSqdEta_v2 = uCsi_j * uCsi_j * nEta_j + uCsi_k * uCsi_k * nEta_k + uCsi_l * uCsi_l * nEta_l;
+
+      duCsiSqdEta *= coeffGrad;
+      duCsiSqdEta_v2 *= coeffGrad;
+      //**//
+      
+//       dabs_uCsidEta *= coeffGrad;
+//       dudEta *= coeffGrad;
+	  // end - local SoR      
+	  
+      // Global SoR
+      uX_bar /= 3.0;
+      uY_bar /= 3.0;
+
+      duXdX *= coeffGrad;
+      duXdY *= coeffGrad;
+      duYdX *= coeffGrad;
+      duYdY *= coeffGrad;
+
+      dTdX *= coeffGrad;
+      dTdY *= coeffGrad;
+      // end - global SoR
+
+      // Extra Information
+      store_ExtraInfo(uCsi_bar, uEta_bar, duCsidCsi, duEtadCsi, duCsidEta, duEtadEta, dpdCsi, dpdEta);
+
+//2013/02/08       // Needed to detect when the next timestep has just  been achieved:
+//       _last_accessed_at_iter = SubSystemStatusStack::getActive()->getNbIter();
+
+      const CFreal ovDimCoeff2 = 1./(dimCoeff*dimCoeff);
+
+      for (CFuint i = 0; i < nbCellStates; ++i){// distributing for loop
+
+        const CFreal nx = normals[_cellID]->getNodalNormComp(i,XX);
+        const CFreal ny = normals[_cellID]->getNodalNormComp(i,YY);
+
+        const CFreal nCsi = nx*cosD + ny*sinD;
+        const CFreal nEta = -nx*sinD + ny*cosD;
+
+        const CFreal uCsi_cell =  _cell_avg_speed[XX] * cosD + _cell_avg_speed[YY] * sinD;
+        const CFreal uEta_cell = -_cell_avg_speed[XX] * sinD + _cell_avg_speed[YY] * cosD;
+
+        CFuint option = _variantChosen;
+
+        switch (option){
+          //Anisotropic, no energy dissipation (Sermeus's standard fix)
+          case 0:{
+
+            const CFreal dCoeff = (-dimCoeff) * mu_s * duCsidEta;
+            result[i][uID] = nEta * dCoeff * cosD;
+            result[i][vID] = nEta * dCoeff * sinD;
+
+            break;
+          }// end - case 0
+
+          //Anisotropic, energy dissipation, incomplete matrix B_EtaEta
+          case 10:{
+           // The -dimCoeff is applied later ...           
+            const CFreal dCoeff_cross      = mu_s * duCsidEta;
+
+            result[i][uID] =  dCoeff_cross * nEta * cosD;
+            result[i][vID] =  dCoeff_cross * nEta * sinD;
+
+            CFreal energyDissipation_cross  =  nEta * uCsi_bar * dCoeff_cross;
+
+            result[i][eID] = energyDissipation_cross;
+
+            //****//
+            if ( _includeTemperatureGradient == 1){
+            CFreal kappa_s = 5. * (_updateVar -> getModel()->getR() ) * mu_s;//getR() gives back R/Mair!
+            CFreal conductive_effects = kappa_s * dTdEta * nEta;
+
+            result[i][eID] += conductive_effects;
+            }
+            //****//
+
+            result[i] *= (-dimCoeff);
+
+            break;
+          }// end - case 10
+
+          //Anisotropic, energy dissipation, complete matrix B_EtaEta
+          case 11:{
+           // The -dimCoeff is applied later ...           
+            CFreal lambda = -(2./3.) * mu_s;
+            CFreal twiceMu_sPlusLambda = 2.* mu_s + lambda;
+
+           
+            const CFreal dCsi      = mu_s * duCsidEta;
+            const CFreal dEta      = twiceMu_sPlusLambda * duEtadEta;
+
+            result[i][uID] =  (dCsi * cosD - dEta * sinD) * nEta ;
+            result[i][vID] =  (dCsi * sinD + dEta * cosD) * nEta ;
+
+            CFreal energyDissipationTerm  = (uCsi_bar * dCsi + uEta_bar * dEta) * nEta  ;
+
+            result[i][eID] = energyDissipationTerm;
+
+            //****//
+            if ( _includeTemperatureGradient == 1){
+              std::cout << "_includeTemperatureGradient branch not yet implemented.\n"; abort();
+//             CFreal kappa_s = 5. * (_updateVar -> getModel()->getR() ) * mu_s;//getR() gives back R/Mair!
+//             CFreal conductive_effects = kappa_s * dTdEta * nEta;
+// 
+//             result[i][eID] += conductive_effects;
+            }
+            //****//
+
+            result[i] *= (-dimCoeff);
+
+            break;
+          }// end - case 11
+
+          //Anisotropic, energy dissipation, incomplete matrices B_CsiEta and B_EtaEta
+          case 12:{
+           // The -dimCoeff is applied later ...
+            CFreal lambda = -(2./3.) * mu_s;
+            CFreal twiceMu_sPlusLambda = 2.* mu_s + lambda;
+
+
+            const CFreal dCsi      = mu_s * duCsidEta;
+            const CFreal dEta      = lambda * duEtadEta;
+
+            result[i][uID] = dEta * cosD * nCsi + dCsi * cosD * nEta ;
+            result[i][vID] = dEta * sinD * nCsi + dCsi * sinD * nEta ;
+
+            CFreal energyDissipationTerm  = (uCsi_bar * dEta + uCsi_bar * dCsi) * nEta  ;
+
+            result[i][eID] = energyDissipationTerm;
+
+            //****//
+            if ( _includeTemperatureGradient == 1){
+              std::cout << "_includeTemperatureGradient branch not yet implemented.\n"; abort();
+//             CFreal kappa_s = 5. * (_updateVar -> getModel()->getR() ) * mu_s;//getR() gives back R/Mair!
+//             CFreal conductive_effects = kappa_s * dTdEta * nEta;
+//
+//             result[i][eID] += conductive_effects;
+            }
+            //****//
+
+            result[i] *= (-dimCoeff);
+
+            break;
+          }// end - case 12
+
+          //Anisotropic, energy dissipation, simplified matrices B_CsiEta and B_EtaEta, only with effects from duCsidEta
+          case 13:{
+            // The -dimCoeff is applied later ...
+
+            const CFreal f1      = mu_s * duCsidEta * nEta;
+            const CFreal f2      = mu_s * duCsidEta * nCsi;
+
+            result[i][uID] =  f1 * cosD - f2 * sinD;
+            result[i][vID] =  f1 * sinD + f2 * cosD;
+
+            CFreal energyDissipationTerm  = (uCsi_bar * nEta + uEta_bar *  nCsi) * mu_s * duCsidEta  ;
+
+            result[i][eID] = energyDissipationTerm;
+
+            //****//
+            if ( _includeTemperatureGradient == 1)
+			  std::cout << "_includeTemperatureGradient branch not yet implemented.\n"; abort();            
+            //****//
+
+            result[i] *= (-dimCoeff);
+
+            break;
+          }// end - case 13
+          
+          case 303:{
+           // The -dimCoeff is applied later ...
+           // Implemented in cartesian coordinates
+           
+            const CFreal aX      = mu_s * duXdX;
+            const CFreal aY      = mu_s * duYdX;
+
+			const CFreal bX      = mu_s * duXdY;
+            const CFreal bY      = mu_s * duYdY;
+
+            const CFreal energyDissipationTerm  = (uX_bar*aX + uY_bar*aY) * nx + (uX_bar*bX + uY_bar*bY) * ny;
+
+            result[i][uID] =  aX * nx + bX*ny ;
+            result[i][vID] =  aY * nx + bY*ny ;
+            result[i][eID] = energyDissipationTerm;
+
+            //****//
+            if ( _includeTemperatureGradient == 1){
+              std::cout << "_includeTemperatureGradient branch not yet implemented.\n"; abort();
+//             CFreal kappa_s = 5. * (_updateVar -> getModel()->getR() ) * mu_s;//getR() gives back R/Mair!
+//             CFreal conductive_effects = kappa_s * dTdEta * nEta;
+// 
+//             result[i][eID] += conductive_effects;
+            }
+            //****//
+
+            result[i] *= (-dimCoeff);
+
+            break;
+          }// end - case 303
+
+
+        }//switch
+	
+		if (this->getMethodData().isAxisymmetric()) {
+		  std::cout << "avgRadius = " << avgRadius << endl;
+		  std::cout << "axisymmetric fix not yet implemented.\n"; abort();
+  //         result[i][uID] += -mu_s * (nEta * uCsi_bar + nCsi * uEta_bar ) * cosD / (6. * avgRadius);
+  //         result[i][vID] += -mu_s * (nEta * uCsi_bar + nCsi * uEta_bar ) * sinD / (6. * avgRadius);
+		}
+
+		if (updateCoeffFlag) {
+		  // maybe the update coefficient should be modified in case the fix is applied
+		  const CFreal faceArea = normals[_cellID]->getAreaNode(i);
+		  updateCoeff[geo->getState(i)->getLocalID()] += nu_s * faceArea*faceArea/(cellVolume*ovDimCoeff2);
+		}
+      }//distributing for loop
+	_last_accessed_at_iter = SubSystemStatusStack::getActive()->getNbIter();
+    }//end - if (_compression_through_sonicCell)
+  } //if (_activateFix)  
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+void DiffTermCarbuncleFixEuler<UPDATEVAR>::setup()
+{
+  using namespace COOLFluiD::Framework;
+    
+  ComputeDiffusiveTerm::setup();
+  
+  _dim = PhysicalModelStack::getActive()->getDim();
+  _speed.resize(_dim);
+  for (CFuint i = 0; i < _dim; ++i) {
+    _speed[i].resize(MeshDataStack::getActive()->Statistics().getMaxNbStatesInCell());
+  }
+  
+  _cell_avg_speed.resize(_dim);
+  
+  PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm()->
+    resizePhysicalData(_pdata);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+void DiffTermCarbuncleFixEuler<UPDATEVAR>::configure ( Config::ConfigArgs& args )
+{
+  ComputeDiffusiveTerm::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+void DiffTermCarbuncleFixEuler<UPDATEVAR>::store_PeCell(CFreal thePecletNb)
+{
+  using namespace COOLFluiD::Framework;
+    
+  
+  cf_assert(this->_store_Pe_cell);
+  
+  DistributionData& distdata = getMethodData().getDistributionData();
+  
+  if (distdata.isPerturb) return; // skip if is being perturbed
+  
+  DataHandle< CFreal > Pe_cell = socket_Pe_cell.getDataHandle();
+  Pe_cell[ _cellID] = thePecletNb;//
+  
+  if(  (_last_accessed_at_iter != _present_iter) ){
+    Pe_cell = 0.;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+void DiffTermCarbuncleFixEuler<UPDATEVAR>::store_FixActiveCells()
+{
+  using namespace COOLFluiD::Framework;
+  
+  cf_assert(_store_fix_active_cells);
+  DistributionData& distdata = getMethodData().getDistributionData();
+  
+  if (distdata.isPerturb) return; // skip if is being perturbed
+  DataHandle< CFreal > fix_active = socket_fix_active.getDataHandle();
+  fix_active[_cellID] = _compression_through_sonicCell ? 1. : 0.;
+  
+  //Reset the socket for the next iteration:
+  if( _last_accessed_at_iter != _present_iter ){//   if( _last_accessed_at_iter__OUTER != _present_iter ){
+	fix_active = 0.;
+  }
+}
+
+// //////////////////////////////////////////////////////////////////////////////
+// 
+// template <typename UPDATEVAR>
+// void DiffTermCarbuncleFixEuler<UPDATEVAR>::store_ExtraInfo(const CFreal uCsi, const CFreal uEta, const CFreal duCsidCsi, const CFreal duEtadCsi, const CFreal duCsidEta, const CFreal duEtadEta, const CFreal dpdCsi, const CFreal dpdEta)
+// {
+//   using namespace COOLFluiD::Framework;
+//   
+//   DistributionData& distdata = getMethodData().getDistributionData();
+// 
+//   if (distdata.isPerturb) return; // skip if is being perturbed
+// 
+//   DataHandle< CFreal > handle_uCsi      = socket_uCsi.getDataHandle();
+//   DataHandle< CFreal > handle_uEta      = socket_uEta.getDataHandle();
+//   DataHandle< CFreal > handle_duCsidCsi = socket_duCsidCsi.getDataHandle();
+//   DataHandle< CFreal > handle_duEtadCsi = socket_duEtadCsi.getDataHandle();
+//   DataHandle< CFreal > handle_duCsidEta = socket_duCsidEta.getDataHandle();
+//   DataHandle< CFreal > handle_duEtadEta = socket_duEtadEta.getDataHandle();
+//   
+//   DataHandle< CFreal > handle_dpdCsi = socket_dpdCsi.getDataHandle();
+//   DataHandle< CFreal > handle_dpdEta = socket_dpdEta.getDataHandle();
+//   
+//   handle_uCsi[_cellID]      = uCsi;
+//   handle_uEta[_cellID]      = uEta;
+//   handle_duCsidCsi[_cellID] = duCsidCsi;
+//   handle_duEtadCsi[_cellID] = duEtadCsi;
+//   handle_duCsidEta[_cellID] = duCsidEta;
+//   handle_duEtadEta[_cellID] = duEtadEta;
+//   
+//   handle_dpdCsi[_cellID]    = dpdCsi;
+//   handle_dpdEta[_cellID]    = dpdEta;
+//   
+// 
+//   //Reset the socket for the next iteration:
+//   if( _last_accessed_at_iter__OUTER != _present_iter ){
+//     handle_uCsi      = 0.;
+//     handle_uEta      = 0.;
+//     handle_duCsidCsi = 0.;
+//     handle_duEtadCsi = 0.;
+//     handle_duCsidEta = 0.;
+//     handle_duEtadEta = 0.;
+// 	
+// 	handle_dpdCsi    = 0.;
+// 	handle_dpdEta    = 0.;
+//   }   
+// }
+
+//////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+// Version 2: stores only information at the normal shock subregion
+template <typename UPDATEVAR>
+void DiffTermCarbuncleFixEuler<UPDATEVAR>::store_ExtraInfo(const CFreal uCsi, const CFreal uEta, const CFreal duCsidCsi, const CFreal duEtadCsi, const CFreal duCsidEta, const CFreal duEtadEta, const CFreal dpdCsi, const CFreal dpdEta)
+{
+  using namespace COOLFluiD::Framework;
+  
+  DistributionData& distdata = getMethodData().getDistributionData();
+
+  if (distdata.isPerturb) return; // skip if is being perturbed
+
+  DataHandle< CFreal > handle_uCsi      = socket_uCsi.getDataHandle();
+  DataHandle< CFreal > handle_uEta      = socket_uEta.getDataHandle();
+  DataHandle< CFreal > handle_duCsidCsi = socket_duCsidCsi.getDataHandle();
+  DataHandle< CFreal > handle_duEtadCsi = socket_duEtadCsi.getDataHandle();
+  DataHandle< CFreal > handle_duCsidEta = socket_duCsidEta.getDataHandle();
+  DataHandle< CFreal > handle_duEtadEta = socket_duEtadEta.getDataHandle();
+  
+  DataHandle< CFreal > handle_dpdCsi = socket_dpdCsi.getDataHandle();
+  DataHandle< CFreal > handle_dpdEta = socket_dpdEta.getDataHandle();
+  
+  handle_uCsi[_cellID]      = uCsi;
+  handle_uEta[_cellID]      = uEta;
+  handle_duCsidCsi[_cellID] = duCsidCsi;
+  handle_duEtadCsi[_cellID] = duEtadCsi;
+  handle_duCsidEta[_cellID] = duCsidEta;
+  handle_duEtadEta[_cellID] = duEtadEta;
+  
+  handle_dpdCsi[_cellID]    = dpdCsi;
+  handle_dpdEta[_cellID]    = dpdEta;
+  
+
+  //Reset the socket for the next iteration:
+  if( _last_accessed_at_iter != _present_iter ){
+// 	std::cout << "Resetting ... extra_info sockets\n";
+    handle_uCsi      = 0.;
+    handle_uEta      = 0.;
+    handle_duCsidCsi = 0.;
+    handle_duEtadCsi = 0.;
+    handle_duCsidEta = 0.;
+    handle_duEtadEta = 0.;
+	
+	handle_dpdCsi    = 0.;
+	handle_dpdEta    = 0.;
+  }   
+}
+
+//////////////////////////////////////////////////////////////////////////////
+  } // namespace FluctSplit
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

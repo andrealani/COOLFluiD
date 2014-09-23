@@ -1,0 +1,850 @@
+#include "Common/PE.hh"
+#include "Environment/SingleBehaviorFactory.hh"
+#include "Environment/FileHandlerOutput.hh"
+#include "Environment/DirPaths.hh"
+#include "Framework/SubSystemStatus.hh"
+#include "Framework/MethodCommandProvider.hh"
+#include "Common/BadValueException.hh"
+#include "Framework/PathAppender.hh"
+#include "FluctSplit/FluctuationSplit.hh"
+#include "FluctSplit/InwardNormalsData.hh"
+#include "FluctSplit/ComputeDiffusiveTerm.hh"
+#include "NavierStokes/NavierStokesVarSet.hh"
+#include "NavierStokes/Euler2DVarSet.hh"
+#include "AeroCoef/AeroCoefFS.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+    namespace AeroCoef {
+
+using namespace COOLFluiD;
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::defineConfigOptions
+(Config::OptionList& options)
+{ 
+  options.template addConfigOption< bool >
+    ("AppendTime","Append the time to the files names.");
+  options.template addConfigOption< bool >
+    ("AppendIter","Append the iteration number to the files names.");
+  options.template addConfigOption< CFuint, Config::DynamicOption<> >
+    ("SaveRate","Rate for saving the output file with aerodynamic coefficients.");
+  options.template addConfigOption< std::string >
+    ("OutputFileConv","Name of convergence file for surface quantities.");
+  options.template addConfigOption< std::string >
+    ("OutputFile","Name of Output File to write the results.");
+  options.template addConfigOption< std::string >
+    ("OutputFileAero","Name of Output File to write the aerodynamic coefficients.");
+  options.template addConfigOption< CFreal >
+    ("pInf","Value of the fresstream pressure (in the dimensional case)");
+  options.template addConfigOption< CFreal >
+    ("uInf","Value of the fresstream velocity (in the dimensional case)");
+  options.template addConfigOption< CFreal >
+    ("TInf","Value of the fresstream temperature (in the dimensional case)");
+  options.template addConfigOption< CFuint >
+    ("TID","Position of T in the state vector");
+  options.template addConfigOption< CFuint >
+    ("UID","Position of u in the state vector");
+  options.template addConfigOption< CFuint >
+    ("VID","Position of v in the state vector");
+  options.template addConfigOption< CFuint >
+    ("WID","Position of w in the state vector");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::NavierStokesSkinFrictionHeatFluxFS
+(const std::string& name) :
+  Framework::DataProcessingCom(name),
+  socket_nodes("nodes"),
+  socket_states("states"),
+  socket_normals("normals"),
+  socket_faceNeighCell("faceNeighCell"),
+  _fsData(CFNULL),
+  _diffVar(CFNULL),
+  _updateVar(CFNULL),
+  _mapTrsFaceToID(),
+  _valuesMatL2(),  
+  _l2Norm(),
+  _valuesMat(),
+  _valuesMatRes(), 
+  _states(),
+  _values(),
+  _avValues(),
+  _avBFaceValues(CFNULL),
+  _unitNormal(),
+  _unitTangent(),
+  _tempVib(),
+  _coord(),
+  _pData(),
+  _rhoWall(),
+  _muWall(),
+  _tau(),
+  _skinFriction(),
+  _frictionDrag(1),
+  _lift(),
+  _drag()
+{
+  this->addConfigOptionsTo(this);
+
+  _appendTime = false;
+  setParameter("AppendTime",&_appendTime);
+  
+  _appendIter = false;
+  setParameter("AppendIter",&_appendIter);
+  
+  _saveRate = 1;
+  setParameter("SaveRate",&_saveRate);
+
+  _outputFileConv = "convergence-surf.plt";
+  setParameter("OutputFileConv",&_outputFileConv);
+
+  _outputFile = "heatSkin.plt";
+  setParameter("OutputFile",&_outputFile);
+
+  _outputFileAero = "aeroCoef.plt";
+  setParameter("OutputFileAero",&_outputFileAero);
+
+  _pInf = 0.;
+  setParameter("pInf",&_pInf);
+
+  _uInf = 0.;
+  setParameter("uInf",&_uInf);
+
+  _TInf = 0.;
+  setParameter("TInf",&_TInf);
+
+  _TID = 0;
+  setParameter("TID",&_TID);
+
+  _UID = 0;
+  setParameter("UID",&_UID);
+
+  _VID = 0;
+  setParameter("VID",&_VID);
+
+  _WID = 0;
+  setParameter("WID",&_WID);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::~NavierStokesSkinFrictionHeatFluxFS()
+{
+  deletePtr(_avBFaceValues);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> >
+NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::needsSockets()
+{
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result;
+
+  result.push_back(&socket_nodes);
+  result.push_back(&socket_states);
+  result.push_back(&socket_normals);
+  result.push_back(&socket_faceNeighCell);
+
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Environment;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::FluctSplit;
+  using namespace COOLFluiD::Common;
+
+  CFAUTOTRACE;
+  
+  if (Common::PE::GetPE().IsParallel()) {
+	_outputFileAero = _outputFileAero; // + "-P" + Common::StringOps::to_str(PE::GetPE().GetRank());
+	_outputFile = _outputFile; // + "-P" + Common::StringOps::to_str(PE::GetPE().GetRank());
+  }
+  
+  // suppose that just one space method is available
+  SafePtr<SpaceMethod> spaceMethod = getMethodData().template getCollaborator<SpaceMethod>();
+  SafePtr<FluctuationSplit> fs = spaceMethod.d_castTo<FluctuationSplit>();
+  cf_assert(fs.isNotNull());
+
+  _fsData = fs->getData();
+
+  _diffVar = _fsData->getDiffusiveVar().template d_castTo<NavierStokesVarSet>();
+  _updateVar = _fsData->getUpdateVar().template d_castTo<UPDATEVAR>();
+  cf_assert(_diffVar.isNotNull());
+  cf_assert(_updateVar.isNotNull());
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint nbNodesInControlVolume =
+	MeshDataStack::getActive()->Statistics().getMaxNbStatesInCell();
+  _states.resize(nbNodesInControlVolume);
+  _values.resize(nbEqs, nbNodesInControlVolume);
+  _avValues.resize(nbEqs);
+  _avBFaceValues = new State();
+  _unitNormal.resize(PhysicalModelStack::getActive()->getDim());
+  _unitTangent.resize(PhysicalModelStack::getActive()->getDim());
+  _coord.resize(PhysicalModelStack::getActive()->getDim());
+  _updateVar->getModel()->resizePhysicalData(_pData);
+
+  prepareOutputFileAero();
+  
+  const CFuint nbVariables = 10; // hardcoded here!!!!!
+  _valuesMatL2.resize(nbVariables);
+  _l2Norm.resize(nbVariables);
+  
+  if (_mapTrsFaceToID.size() == 0) {
+	vector< SafePtr<TopologicalRegionSet> >& trsList = getTrsList();
+	
+	// empty loop just to count faces
+	CFuint totalNbFaces = 0;
+	for (CFuint iTRS = 0; iTRS < trsList.size(); ++iTRS) {
+  	  totalNbFaces += trsList[iTRS]->getLocalNbGeoEnts();
+	}
+	
+	if (totalNbFaces > 0) {
+  	  _mapTrsFaceToID.reserve(totalNbFaces);
+  	  _valuesMat.resize(nbVariables, totalNbFaces);
+  	  _valuesMatRes.resize(nbVariables, totalNbFaces);
+  	  
+  	  CFuint index = 0;  
+  	  for (CFuint iTRS = 0; iTRS < trsList.size(); ++iTRS) {
+	SafePtr<TopologicalRegionSet> trs = trsList[iTRS];
+	const CFuint nbTrsFaces = trs->getLocalNbGeoEnts();
+	for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace) {
+  	  _mapTrsFaceToID.insert(trs->getLocalGeoID(iFace), index++);
+	}
+  	  }
+  	  assert(index == totalNbFaces);
+  	  
+  	  _mapTrsFaceToID.sortKeys();
+	}
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::executeOnTrs()
+{
+  CFAUTOTRACE;
+  
+  CFLog(VERBOSE, "NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::executeOnTrs() START\n");
+  
+  // Execute and save file if needed...
+  computeValues();
+  
+  const CFuint iter = Framework::SubSystemStatusStack::getActive()->getNbIter();
+  if (iter%_saveRate == 0) {
+	writeSurfaceFiles();
+	updateOutputFileAero();
+  }
+  
+  CFLog(VERBOSE, "NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::executeOnTrs() END\n");
+}
+  	  
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::computeValues()
+{
+  using namespace std;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Environment;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::FluctSplit;
+  using namespace COOLFluiD::Common;
+  
+  CFAUTOTRACE;
+  
+  CFLog(VERBOSE, "NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::computeValues() START\n");
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  
+  // cf_assert(dim == DIM_2D);
+  
+  DataHandle<Node*,GLOBAL> nodes = socket_nodes.getDataHandle();
+  DataHandle<InwardNormalsData*> normals = socket_normals.getDataHandle();
+  DataHandle<Trio<CFuint, CFuint, SafePtr<TopologicalRegionSet> > > faceNeighCell =
+	socket_faceNeighCell.getDataHandle();
+
+  SafePtr<GeometricEntityPool<StdTrsGeoBuilder> > cellBuilder =
+	_fsData->getStdTrsGeoBuilder();
+  StdTrsGeoBuilder::GeoData& cellData = cellBuilder->getDataGE();
+  cellData.trs = MeshDataStack::getActive()->getTrs("InnerCells");
+
+  SafePtr<GeometricEntityPool<StdTrsGeoBuilder> >
+	faceBuilder = getMethodData().getStdTrsGeoBuilder();
+
+  StdTrsGeoBuilder::GeoData& faceData = faceBuilder->getDataGE();
+  faceData.trs = getCurrentTRS();
+  
+  DistributionData& dd = _fsData->getDistributionData();
+  State tmpState;
+  RealVector& pdata = _updateVar->getModel()->getPhysicalData();
+
+  const CFuint nbTrsFaces = getCurrentTRS()->getLocalNbGeoEnts();
+  for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace) {
+	CFLogDebugMed("iFace = " << iFace << "\n");
+
+	// build the GeometricEntity
+	faceData.idx = iFace;
+	GeometricEntity *const currFace = faceBuilder->buildGE();
+
+	// build neighbor cell
+	const CFuint faceID = currFace->getID();
+	const CFuint cellTrsID = faceNeighCell[faceID].first;
+	const CFuint iFaceLocal = faceNeighCell[faceID].second;
+	SafePtr<TopologicalRegionSet> cellTrs = faceNeighCell[faceID].third;
+	const CFuint cellLocalID = cellTrs->getLocalGeoID(cellTrsID);
+
+	for (CFuint iDim = 0; iDim < dim; ++iDim) {
+  	  // external normal is already inward for ghost state
+  	  _unitNormal[iDim] = -normals[cellLocalID]
+    	->getFaceUnitNormComp(iFaceLocal,iDim);
+  	  _unitTangent[iDim] = 0.; 
+	}
+
+  const vector<Node*>& faceNodes = *currFace->getNodes();
+
+  if( dim == DIM_3D){
+
+    const CFreal x01 = (*faceNodes[1])[XX] - (*faceNodes[0])[XX];
+    const CFreal y01 = (*faceNodes[1])[YY] - (*faceNodes[0])[YY];
+    const CFreal z01 = (*faceNodes[1])[ZZ] - (*faceNodes[0])[ZZ];
+    
+    const CFreal x02 = (*faceNodes[2])[XX] - (*faceNodes[0])[XX];
+    const CFreal y02 = (*faceNodes[2])[YY] - (*faceNodes[0])[YY];
+    const CFreal z02 = (*faceNodes[2])[ZZ] - (*faceNodes[0])[ZZ];
+
+    CFreal xFace = 0.5 * (x01 + x02);
+    CFreal yFace = 0.5 * (y01 + y02);
+    CFreal zFace = 0.5 * (z01 + z02);
+
+	const CFreal mod = std::sqrt( xFace*xFace + yFace*yFace + zFace*zFace  ); 
+
+    xFace /= mod;
+    yFace /= mod;
+    zFace /= mod; 
+
+    _unitTangent[XX] = xFace; 
+    _unitTangent[YY] = yFace;
+    _unitTangent[ZZ] = zFace;
+
+  }                               
+
+
+    cellData.idx = cellTrsID;
+    GeometricEntity *const cell = cellBuilder->buildGE();
+    vector<State*>& ss = *cell->getStates();
+
+    // compute the average state and the corresponding data
+    tmpState = 0.0;
+    const CFuint nbCellStates = ss.size();
+    for (CFuint is = 0; is < nbCellStates; ++is) {
+      const RealVector& state = *ss[is];
+      for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+		tmpState[iEq] += state[iEq];
+      }
+    }
+    tmpState /= nbCellStates;
+    
+    _updateVar->computePhysicalData(tmpState, pdata);
+// Check wether this object handles also Conservative as update variables
+// std::cout << tmpState << std::endl;
+// std::cout << pdata << std::endl;
+    _fsData->getDiffusiveTermComputer()->computeCellGradientsAndAverageState(cell,pdata);
+    
+    for (CFuint is = 0; is < nbCellStates; ++is) {
+      const RealVector& state = *ss[is];
+      for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+        tmpState[iEq] += state[iEq];
+      }
+    }
+    
+    _avValues = dd.avState;
+    
+    const vector<State*>& faceStates = *currFace->getStates();
+    const CFuint nbFaceStates = faceStates.size();
+    // cf_assert(nbFaceStates == 2);
+
+    // average state on the face
+    *_avBFaceValues = 0.0;
+    for (CFuint iState = 0; iState < nbFaceStates; ++iState) {
+      *_avBFaceValues += *faceStates[iState];
+    }
+    *_avBFaceValues /= nbFaceStates;
+
+    // AL: note that the transport properties are computed on the cell
+    // average (not at the wall)
+    _muWall = _diffVar->getDynViscosity(_avValues, dd.gradients);
+
+    // surface thermodynamic quantities are computed on the wall itself
+    _rhoWall = _diffVar->getDensity(*_avBFaceValues)*
+      (_updateVar->getModel()->getReferencePhysicalData())[EulerTerm::RHO];
+
+    ///Compute the friction at the wall
+    computeTauWall(currFace);
+
+    //Write the output to file
+    prepareOutputFile(currFace);
+    
+    // Do some extra computation on the face if needed
+    computeExtraValues(currFace);
+
+    // release the cell
+    cellBuilder->releaseGE();
+    
+    // release the face entity
+    faceBuilder->releaseGE();
+  }
+  
+  computeSurfaceResiduals(); 
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::writeSurfaceFiles()
+{
+  using namespace std;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Environment;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  const string fileTRS = _outputFile + "-" + getCurrentTRS()->getName();
+  
+  if (PE::GetPE().GetRank() == 0) {  
+    cout << "NavierStokesSkinFrictionHeatFluxFS::writeSurfaceFiles() for " << getCurrentTRS()->getName() << "\n";
+    // preparation of the output
+    boost::filesystem::path file = Environment::DirPaths::getInstance().getResultsDir() /
+      boost::filesystem::path(fileTRS);
+    file = PathAppender::getInstance().appendAllInfo( file, _appendIter, _appendTime, false );
+    
+    SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
+      Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
+    ofstream& fout = fhandle->open(file);
+    fout << "TITLE = HeatFlux SkinFriction" << "\n";
+//     fout << "VARIABLES = x y z P T rho Cp heatF skinF Stanton" << "\n";
+    fout << "VARIABLES = x0 x1 x2 P T rho Cp heatF skinF Stanton" << "\n";
+    
+    //closing the file
+    fhandle->close();
+  }
+  
+  PE::GetPE().setBarrier();
+  
+  SafePtr<GeometricEntityPool<StdTrsGeoBuilder> >
+    faceBuilder = getMethodData().getStdTrsGeoBuilder();
+  
+  StdTrsGeoBuilder::GeoData& faceData = faceBuilder->getDataGE();
+  faceData.trs = getCurrentTRS();
+  
+  const CFuint nbTrsFaces = getCurrentTRS()->getLocalNbGeoEnts();
+  
+  // all processors will write their own data one after the other 
+  for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
+    if (i == PE::GetPE().GetRank ()) {
+      if (nbTrsFaces > 0) {
+	// preparation of the output
+	boost::filesystem::path file = Environment::DirPaths::getInstance().getResultsDir() /
+	  boost::filesystem::path(fileTRS);
+	file = PathAppender::getInstance().appendAllInfo( file, _appendIter, _appendTime, false );
+	
+	SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
+	  Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
+	ofstream& fout = fhandle->open(file, ios::app);
+	
+	// write output data
+	for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace) {
+	  // build the GeometricEntity
+	  faceData.idx = iFace;
+	  GeometricEntity *const currFace = faceBuilder->buildGE();
+	  
+	  const CFuint index = _mapTrsFaceToID.find(currFace->getID()); 
+	  for (CFuint iVar = 0; iVar < _valuesMat.nbRows(); ++iVar) {
+	    fout << _valuesMat(iVar, index) << " ";
+	  }
+	  fout << endl;
+	  
+	  // release the face entity
+	  faceBuilder->releaseGE();
+	}
+      }
+    }
+    
+    PE::GetPE().setBarrier();
+  }  
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::computeSurfaceResiduals()
+{
+  using namespace std;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Environment;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  // compute the L2 norm of some quantities of interest
+  SafePtr<TopologicalRegionSet> currTrs = getCurrentTRS();
+  const CFuint nbTrsFaces = currTrs->getLocalNbGeoEnts();
+  
+  if (currTrs->getName() == getTrsList().front()->getName()) {
+    for (CFuint varID = 3; varID < _valuesMatL2.size(); ++varID) {
+      _valuesMatL2[varID] = 0.;
+    } 
+  }
+  
+  for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace) {
+    const CFuint index = _mapTrsFaceToID.find(currTrs->getLocalGeoID(iFace));
+    for (CFuint varID = 3; varID < _valuesMatL2.size(); ++varID) {
+      _valuesMatL2[varID] += _valuesMatRes(varID, index)*_valuesMatRes(varID, index);
+    }
+  }
+  
+  cf_assert(_valuesMatL2.size() > 0);
+  
+  bool writeFile = false;
+  if (currTrs->getName() == getTrsList().back()->getName()) {
+#ifdef CF_HAVE_MPI
+    _l2Norm = 0.0;
+    const CFuint count = _l2Norm.size() - 3;
+    MPI_Comm comm = PE::GetPE().GetCommunicator();
+    MPI_Allreduce(&_valuesMatL2[3], &_l2Norm[3], count, MPI_DOUBLE, MPI_SUM, comm);
+    _valuesMatL2 = _l2Norm;
+#endif
+    for (CFuint varID = 3; varID < _valuesMatL2.size(); ++varID) {
+      _valuesMatL2[varID] = (std::abs(_valuesMatL2[varID]) > 1e-16) ? std::log(std::sqrt(_valuesMatL2[varID])) : 1e-16;
+    }
+    writeFile = true;
+  }
+  
+  if (PE::GetPE().GetRank() == 0 && writeFile) {  
+    // // preparation of the output
+    boost::filesystem::path file = Environment::DirPaths::getInstance().getResultsDir() /
+      boost::filesystem::path(_outputFileConv);
+    file = PathAppender::getInstance().appendAllInfo( file, false, false, false );
+    
+    SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
+      Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
+    
+    if (SubSystemStatusStack::getActive()->getNbIter() == 1) {
+      ofstream& fout = fhandle->open(file);
+      fout << "TITLE = Convergence file for surface quantities\n";
+      fout << "VARIABLES = iter Res[P] Res[T] Res[rho] Res[Cp] Res[heatF] Res[skinF] Res[Stanton] \n";
+      //closing the file
+      fhandle->close();
+    } 
+    
+    cout << "Res[P]   Res[T]   Res[rho]   Res[Cp]   Res[heatF]   Res[skinF]   Res[Stanton]\n"; 
+    for (CFuint varID = 3; varID < _valuesMatL2.size(); ++varID) {
+      cout.precision(8); cout << _valuesMatL2[varID] << " ";
+    }
+    cout << endl << endl;
+    
+    ofstream& fout = fhandle->open(file, ios::app);
+    fout << SubSystemStatusStack::getActive()->getNbIter() << " ";
+    for (CFuint varID = 3; varID < _valuesMatL2.size(); ++varID) {
+      fout.precision(8); fout.width(3 + 8); fout << _valuesMatL2[varID] << " ";
+    }
+    fout << endl;
+    
+    //closing the file
+    fhandle->close();
+  } 
+  
+  PE::GetPE().setBarrier();
+}
+  
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::computeTauWall
+(Framework::GeometricEntity* currFace)
+{
+  using namespace std;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Environment;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::FluctSplit;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Common;
+
+  const CFreal Uref = _updateVar->getModel()->getVelRef();
+  const CFreal refLength = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
+  const CFreal mu_ref = _diffVar->getModel().getDynViscosityDim
+    (_updateVar->getModel()->getPressRef(), _updateVar->getModel()->getTempRef());
+  const CFreal tauRef = mu_ref*Uref/refLength;
+  const CFreal gamma = _updateVar->getModel()->getGamma();
+  const bool adim = Framework::PhysicalModelStack::getActive()->getImplementor()->isAdimensional();
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+
+  vector<RealVector*>& gradients = _fsData->getDistributionData().gradients;
+
+  _tau = 0.0;
+  _skinFriction = 0.0;
+  if (dim == DIM_2D) {
+    // \tau = \mu \vec{\nabla} Vt \cdot \vec{\n}
+    _tau = _muWall*
+      (_unitNormal[YY]*MathFunctions::innerProd(*gradients[_UID],_unitNormal) -
+       _unitNormal[XX]*MathFunctions::innerProd(*gradients[_VID],_unitNormal));
+    
+    // Previous expression comes from the following
+    //                     ( grad(v_{x}) \cdot (nx, ny) )                                 ( v_{x}))   
+    // _mu (ny, -nx) \cdot (                            ) = _mu tang \cdot \pd{}{normal}  (       ) = _mu \pd{}{normal} v_tangential 
+    //                     ( grad(v_{y}) \cdot (nx, ny) )                                 ( v_{y} ) 
+
+    if(adim){
+      const CFreal mInf = _updateVar->getModel()->getMachInf();
+      const CFreal Re = _diffVar->getModel().getReynolds();
+
+      _skinFriction = _tau / (0.5*mInf*std::sqrt(gamma)*Re);
+    }
+    else{
+      CFreal rhoInf = _pInf / (_updateVar->getModel()->getR() * _TInf);
+      _skinFriction = _tau / (0.5*rhoInf*_uInf*_uInf);
+    }
+
+    ///@todo here we should multiply by the length of the face
+      //should this be _frictionDrag[XX] and _frictionDrag[YY]
+      _frictionDrag += _tau * tauRef ;
+  }
+  else if (dim == DIM_3D) {
+    cf_assert(dim == DIM_3D);  
+
+    // \tau = \mu \vec{\nabla} Vt \cdot \vec{\n}
+    _tau = _muWall*
+      (_unitTangent[XX] * MathFunctions::innerProd(*gradients[_UID],_unitNormal) +
+       _unitTangent[YY] * MathFunctions::innerProd(*gradients[_VID],_unitNormal) + 
+       _unitTangent[ZZ] * MathFunctions::innerProd(*gradients[_WID],_unitNormal) ) ;
+
+    if(adim){
+      const CFreal mInf = _updateVar->getModel()->getMachInf();
+      const CFreal Re = _diffVar->getModel().getReynolds();
+
+      _skinFriction = _tau / (0.5*mInf*std::sqrt(gamma)*Re);
+    }
+    else{
+      CFreal rhoInf = _pInf / (_updateVar->getModel()->getR() * _TInf);
+      _skinFriction = _tau / (0.5*rhoInf*_uInf*_uInf);
+    }
+    
+    ///@todo here we should multiply by the length of the face
+    //should this be _frictionDrag[XX] and _frictionDrag[YY]
+    _frictionDrag += _tau * tauRef ;
+
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::prepareOutputFile
+(Framework::GeometricEntity* currFace)
+{
+
+  using namespace std;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Environment;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::FluctSplit;
+  using namespace COOLFluiD::Common;
+
+  const vector<Node*>& faceNodes = *currFace->getNodes();
+  const CFuint nbFaceNodes = faceNodes.size();
+
+  // compute the cell center of the face
+  _coord = 0.0;
+  for (CFuint iNode = 0; iNode < nbFaceNodes; ++iNode) {
+    _coord += *faceNodes[iNode];
+  }
+  _coord /= nbFaceNodes;
+
+  vector<RealVector*>& gradients = _fsData->getDistributionData().gradients;
+
+  const CFreal heatFlux = _diffVar->getHeatFlux( _avValues, gradients, _unitNormal);
+  //  const CFreal refLength = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
+  //   const CFreal heatFluxRef = _updateVar->getModel()->getTempRef()/refLength;
+
+  // unused // const CFreal gamma = _updateVar->getModel()->getGamma();
+  // const CFreal SpecificHeatCp = _updateVar->getModel()->getCp();
+
+  // output the data
+  //   const CFuint PID = 0;
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+
+  CFreal TWall = 0.0;
+  CFreal pWall = 0.0;
+  getWallTemperaturePressure(TWall,pWall);
+
+  const CFreal rhoInf = _pInf / (_updateVar->getModel()->getRdim() * _TInf);
+
+  // JGM: We modified the following:
+//   const CFreal stantonNumber = heatFlux /
+//     ((SpecificHeatCp*(_TInf - TWall) + 0.5* _uInf*_uInf )*rhoInf*_uInf);
+
+  //to make it equal to the default for FVMCC
+  const CFreal stantonNumber = heatFlux /(rhoInf*_uInf*_uInf*_uInf);
+
+  //cout<<"SpecificHeatCp"<<"\t"<<SpecificHeatCp<<"\t"<<endl;
+  //cout<<"rhoInf\t"<<rhoInf<<"_uInf\t"<<_uInf<<endl;
+  //CFreal heatFluxDim = heatFlux * heatFluxRef;
+
+  CFreal Cp = (pWall - _pInf);
+  Cp /= (0.5*rhoInf*_uInf*_uInf);
+  
+  const CFuint index = _mapTrsFaceToID.find(currFace->getID());
+  
+  if(dim == DIM_2D){
+    updateValuesMatAndResidual(0, index, _coord[XX]);    
+    updateValuesMatAndResidual(1, index, _coord[YY]);    
+    updateValuesMatAndResidual(2, index, 0.);
+    updateValuesMatAndResidual(3, index, pWall);    
+    updateValuesMatAndResidual(4, index, TWall);    
+    updateValuesMatAndResidual(5, index, _rhoWall);
+    updateValuesMatAndResidual(6, index, Cp);
+    updateValuesMatAndResidual(7, index, -heatFlux);
+    updateValuesMatAndResidual(8, index, _skinFriction);
+    updateValuesMatAndResidual(9, index, -stantonNumber);
+  }
+  else{
+
+    //throw Common::NotImplementedException (FromHere(),"3D implementation is not finished yet");
+	updateValuesMatAndResidual(0, index, _coord[XX]);    
+    updateValuesMatAndResidual(1, index, _coord[YY]);    
+    updateValuesMatAndResidual(2, index, _coord[ZZ]);
+    updateValuesMatAndResidual(3, index, pWall);    
+    updateValuesMatAndResidual(4, index, TWall);    
+    updateValuesMatAndResidual(5, index, _rhoWall);
+    updateValuesMatAndResidual(6, index, Cp);
+    updateValuesMatAndResidual(7, index, -heatFlux);
+    updateValuesMatAndResidual(8, index, _skinFriction);
+    updateValuesMatAndResidual(9, index, -stantonNumber);
+  
+  }
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::prepareOutputFileAero()
+{
+  using namespace std;
+  using namespace COOLFluiD::Environment;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Common;
+
+  CFAUTOTRACE;
+  
+  //Writing the title
+  if (PE::GetPE().GetRank() == 0) {  
+    // preparation of the output
+    boost::filesystem::path file = DirPaths::getInstance().getResultsDir() /
+      boost::filesystem::path(_outputFileAero);
+    
+    SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
+      SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
+    ofstream& fout = fhandle->open(file);
+    
+    fout << "TITLE = Aerodynamics Coefficients" << "\n";
+    if(PhysicalModelStack::getActive()->getDim() == DIM_2D)
+      fout << "VARIABLES = Iter Time CL CD CDf Fx Fy Fx_f Fy_f";
+    else fout << "VARIABLES = Iter Time CL CD CDf Fx Fy Fz Fx_f Fy_f Fz_f";
+    
+    //closing the file
+    fhandle->close();
+  }
+  
+  PE::GetPE().setBarrier();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::updateOutputFileAero()
+{
+  using namespace std;
+  using namespace COOLFluiD::Environment;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Common;
+
+  CFAUTOTRACE;
+  
+  //Writing the title
+  if (PE::GetPE().GetRank() == 0) {  
+    // preparation of the output
+    boost::filesystem::path file = DirPaths::getInstance().getResultsDir() / boost::filesystem::path(_outputFileAero);
+    SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
+      SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
+    ofstream& fout = fhandle->open(file, ios::app);
+    
+    //Writing the integrated output values
+    fout << SubSystemStatusStack::getActive()->getNbIter();
+    fout << " ";
+    fout << SubSystemStatusStack::getActive()->getCurrentTime();
+    fout << " ";
+    fout << _lift;
+    fout << " ";
+    fout << _drag;
+    fout << " ";
+    fout << _frictionDrag;
+    fout << " ";
+    /*  fout << _force;
+	fout << " ";
+	fout << _frictionForce;*/
+    fout << endl;
+    
+    //closing the file
+    fhandle->close();
+  }
+  
+  PE::GetPE().setBarrier();
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::getWallTemperaturePressure
+(CFreal& TWall, CFreal& pWall)
+{
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  _updateVar->computePhysicalData(*_avBFaceValues, _pData);
+  TWall = _pData[EulerTerm::T] * (_updateVar->getModel()->getTempRef());
+  pWall = _pData[EulerTerm::P] * (_updateVar->getModel()->getPressRef());
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace AeroCoef
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+

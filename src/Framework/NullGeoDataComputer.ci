@@ -1,0 +1,66 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+NullGeoDataComputer<METHODDATA>::NullGeoDataComputer(const std::string& name) :
+  GeoDataComputer<METHODDATA>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+NullGeoDataComputer<METHODDATA>::~NullGeoDataComputer()
+{
+}
+  
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+void NullGeoDataComputer<METHODDATA>::setup()
+{
+  CFLog(VERBOSE, "NullGeoDataComputer<METHODDATA>::setup()\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+void NullGeoDataComputer<METHODDATA>::compute()
+{
+  CFLog(VERBOSE, "NullGeoDataComputer<METHODDATA>::compute()\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+    
+template < typename METHODDATA>
+void NullGeoDataComputer<METHODDATA>::unsetup()
+{
+  CFLog(VERBOSE, "NullGeoDataComputer<METHODDATA>::unsetup()\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+void NullGeoDataComputer<METHODDATA>::modifyOffMeshNodes()
+{
+  CFLog(VERBOSE, "NullGeoDataComputer<METHODDATA>::modifyOffMeshNodes()\n");
+}\
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,200 @@
+#include "MathTools/MathConsts.hh"
+#include "MathTools/MathFunctions.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace KOmega {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+NavierStokesKOmegaVarSet<BASE, SGROUP>::NavierStokesKOmegaVarSet
+(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  NavierStokes::NavierStokesTurbVarSet<BASE, SGROUP>(name, model),
+  _eulerModel(model->getConvectiveTerm().d_castTo<EulerKOmegaTerm>())
+{
+  setModelCoefficients();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+NavierStokesKOmegaVarSet<BASE, SGROUP>::~NavierStokesKOmegaVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+void NavierStokesKOmegaVarSet<BASE, SGROUP>::setModelCoefficients()
+{
+  //Pure k-omega coeficients
+  _sigmaK1 = 0.85;
+   // 0.5;
+  _sigmaOmega1 = 0.5;
+  _beta1 = 0.075;
+  _betaStar = 0.09;
+  _kappa = 0.41;
+  _gamma1 = (_beta1/_betaStar) - (_sigmaOmega1 * _kappa * _kappa/(sqrt(_betaStar)));
+
+  //Pure k-epsilon coeficients
+  _sigmaK2 = 1.0;
+   // 0.5;
+  _sigmaOmega2 = 0.856;
+   // 0.5;
+  _beta2 = 0.0828; 
+   // 0.075;
+  _gamma2 = (_beta2/_betaStar) - (_sigmaOmega2 * _kappa * _kappa/(sqrt(_betaStar)));
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+void NavierStokesKOmegaVarSet<BASE, SGROUP>::computeBlendingCoefFromGradientVars
+(const RealVector& state, const RealVector& gradK, const RealVector& gradOmega)
+{
+  _blendingCoef1 = 1.;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+CFreal NavierStokesKOmegaVarSet<BASE, SGROUP>::getDynViscosity(const RealVector& state, 
+							       const std::vector<RealVector*>& gradients)
+{
+  // AL: be sure to call getDynViscosity() in NEQ cases
+  const CFreal mu  = this->getLaminarDynViscosityFromGradientVars(state);
+  const CFreal mut = this->getTurbDynViscosityFromGradientVars(state,gradients);
+  return (mu + mut);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+CFreal NavierStokesKOmegaVarSet<BASE, SGROUP>::getTurbDynViscosityFromGradientVars
+(const RealVector& state, const std::vector<RealVector*>& gradients)
+{
+  const CFreal rho = this->getDensity(state);
+  const CFreal K = std::max(0.,state[this->_kID]);
+  const CFreal Omega = std::max(0.,state[this->_kID+1]);
+  
+  if (Omega == 0.0)
+    return 0.0;
+  else
+    return (rho * K) / Omega;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+template <typename BASE, int SGROUP>
+void NavierStokesKOmegaVarSet<BASE, SGROUP>::setup()
+{
+  // call  the parent setup()
+  NavierStokes::NavierStokesTurbVarSet<BASE, SGROUP>::setup();
+  
+  this->getModel().setPrandtlTurb( 0.9 ); 
+  
+  // this is a reasonable estimation for _kID but each derived class can override
+  // and correct this value if needed 
+  const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq(); 
+  this->_kID = nbEqs - _eulerModel->getNbScalarVars(SGROUP);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+RealVector& NavierStokesKOmegaVarSet<BASE, SGROUP>::getFlux(const RealVector& values,
+							    const std::vector<RealVector*>& gradients,
+							    const RealVector& normal,
+							    const CFreal& radius)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  // compute the flux in the base class
+  RealVector& flux = BASE::getFlux(values, gradients, normal, radius);
+  
+  const CFuint kID = this->_kID;
+  const CFuint oID = kID+1;
+  assert(kID < gradients.size());
+  assert(oID < gradients.size());
+  const RealVector& gradK     = *gradients[kID];
+  const RealVector& gradOmega = *gradients[oID];
+  
+  //diff flux corresponding to K
+  computeBlendingCoefFromGradientVars(values,gradK, gradOmega);
+  
+  RealVector& nsData = this->getModel().getPhysicalData();
+  const CFreal coeffTauMu1 = this->getModel().getCoeffTau()*nsData[NSTurbTerm::MU];
+  const CFreal coeffTauMu2 = this->getModel().getCoeffTau()*nsData[NSTurbTerm::MUT]*getSigmaK();
+  const CFreal coeffTauMu3 = this->getModel().getCoeffTau()*nsData[NSTurbTerm::MUT]*getSigmaOmega();
+  
+  flux[kID] = (coeffTauMu1 + coeffTauMu2)*MathFunctions::innerProd(gradK, normal);
+  flux[oID] = (coeffTauMu1 + coeffTauMu3)*MathFunctions::innerProd(gradOmega, normal);
+  
+  // jacobian contribution
+  if(_isPerturb) {
+    if(_iPerturbVar != kID) {
+      flux[kID] = _unperturbedFluxK;
+    }
+    if(_iPerturbVar != oID) {
+      flux[oID] = _unperturbedFluxOmega;
+    }
+  }
+  else {
+    // AL: why can't you move everything above here and avoid useless computation???
+    _unperturbedFluxK = flux[kID];
+    _unperturbedFluxOmega = flux[oID];
+  }
+  
+  return flux;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+RealMatrix& NavierStokesKOmegaVarSet<BASE, SGROUP>::getFlux(const RealVector& values,
+							    const std::vector<RealVector*>& gradients,
+							    const CFreal& radius)
+{
+  std::cout << "RealMatrix IN NavierStokesKOmegaVarSet<BASE, SGROUP>::getFlux "<<  std::endl;
+  throw Common::NotImplementedException (FromHere(),"RealMatrix& NavierStokesKOmegaVarSet<BASE, SGROUP>::getFlux() not implemented...");
+ 
+ return this->_fluxVec;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+CFreal NavierStokesKOmegaVarSet<BASE, SGROUP>::getHeatFlux(const RealVector& state,
+							   const std::vector<RealVector*>& gradients,
+							   const RealVector& normal)
+{
+  // AL: carefull here!! needs to be overridden for NEQ 
+  const RealVector& gradT = *gradients[this->_TID];
+  // adimensional dynamical viscosity
+  const CFreal muLam = this->getLaminarDynViscosityFromGradientVars(state);
+  // adimensional turbulent dynamical viscosity
+  const CFreal muTurb = this->getTurbDynViscosityFromGradientVars(state, gradients);
+  // adimensional thermal conductivity
+  const CFreal lambda = this->getThermConductivity(state, muLam + muTurb);
+  return -this->getModel().getCoeffQ()*lambda*MathTools::MathFunctions::innerProd(gradT, normal);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace KOmega
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

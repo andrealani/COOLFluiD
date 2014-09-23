@@ -1,0 +1,403 @@
+#include "Common/CFLog.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Framework/MeshData.hh"
+#include "FiniteVolumeTurb/FiniteVolumeKOmega.hh"
+#include "Framework/SubSystemStatus.hh"
+#include "FiniteVolume/DerivativeComputer.hh"
+#include "NavierStokes/EulerVarSet.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVARSET>
+NavierStokesKOmega2DSourceTerm<DIFFVARSET>::NavierStokesKOmega2DSourceTerm(const std::string& name) :
+  ComputeSourceTermFVMCC(name),
+  _varSet(CFNULL),
+  _diffVarSet(CFNULL),
+  _temp(),
+  _physicalData(),
+  _nstates(CFNULL),
+  _wallDistance(CFNULL),
+  _values(),
+  _states(),
+  _unperturbedPositivePart(),
+  _unperturbedNegativePart(),
+  _gradients(),
+  _prodTerm_k(0.),
+  _prodTerm_Omega(0.),
+  _destructionTerm_Omega(0.),
+  _destructionTerm_k(0.),
+  _Radius(1.),
+  _volumes_elemID(),
+  _vOverRadius(0.),
+  _avDist(0.),
+  _isAxisymmetric(false)
+{
+  this->addConfigOptionsTo(this);
+  
+  _limitProdTerms = true;
+  this->setParameter("LimitProductionTerms",&_limitProdTerms);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVARSET>
+NavierStokesKOmega2DSourceTerm<DIFFVARSET>::~NavierStokesKOmega2DSourceTerm()
+{
+  for(CFuint iGrad = 0; iGrad < _gradients.size(); iGrad++) 
+  {
+    deletePtr(_gradients[iGrad]);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVARSET>
+void NavierStokesKOmega2DSourceTerm<DIFFVARSET>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< bool >
+    ("LimitProductionTerms", "Flag forcing limit the production terms as in Euphoria");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVARSET>
+void NavierStokesKOmega2DSourceTerm<DIFFVARSET>::SetDiffVarset()
+{
+  _diffVarSet = getMethodData().getDiffusiveVar().template d_castTo<DIFFVARSET>();
+  assert(_diffVarSet.isNotNull());
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVARSET>
+void NavierStokesKOmega2DSourceTerm<DIFFVARSET>::setup()
+{
+  CFAUTOTRACE;
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  ComputeSourceTermFVMCC::setup();
+  
+  _varSet = getMethodData().getUpdateVar().template d_castTo<EulerVarSet>();
+  SetDiffVarset(); 
+    
+  _temp.resize(PhysicalModelStack::getActive()->getNbEq());
+  
+  cf_assert(_varSet.isNotNull());
+  _varSet->getModel()->resizePhysicalData(_physicalData);
+
+  _nstates = _sockets.getSocketSink<RealVector>("nstates")->getDataHandle();
+  _wallDistance = _sockets.getSocketSink<CFreal>("wallDistance")->getDataHandle();
+  
+  SafePtr<DerivativeComputer> derComput =
+    this->getMethodData().getDerivativeComputer();
+  const CFuint nbNodesInControlVolume = derComput->getMaxNbVerticesInControlVolume();
+  _values.resize(PhysicalModelStack::getActive()->getNbEq(), nbNodesInControlVolume);
+ 
+  const CFuint maxNbNodesIn2DCV = 4;
+  _states.reserve(maxNbNodesIn2DCV);
+  
+  const CFuint nbScalarVars = _varSet->getModel()->getNbScalarVars(0);
+  _unperturbedPositivePart.resize(nbScalarVars);
+  _unperturbedNegativePart.resize(nbScalarVars);
+  
+  _gradients.resize(PhysicalModelStack::getActive()->getNbEq());
+  for(CFuint iGrad = 0; iGrad < _gradients.size(); iGrad++)
+  {
+    _gradients[iGrad] = new RealVector(DIM_2D);
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVARSET>
+void NavierStokesKOmega2DSourceTerm<DIFFVARSET>::computeProductionTerm(const Framework::State& avState, 
+								       const CFreal& CoFactor, 
+								       const CFreal& MUT,
+								       CFreal& KProdTerm,  
+								       CFreal& OmegaProdTerm)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  const CFuint uID = getStateVelocityIDs()[XX];
+  const CFuint vID = getStateVelocityIDs()[YY];
+  const CFreal ux = (*(_gradients[uID]))[XX]; 
+  const CFreal uy = (*(_gradients[uID]))[YY]; 
+  const CFreal vx = (*(_gradients[vID]))[XX]; 
+  const CFreal vy = (*(_gradients[vID]))[YY]; 
+  
+  const CFuint nbScalarEqsSets = _varSet->getModel()->getNbScalarVarSets();
+  const CFuint iK = _varSet->getModel()->getFirstScalarVar(nbScalarEqsSets-1);
+  const CFreal rho = _diffVarSet->getDensity(avState);
+  const CFreal avK = _physicalData[iK];
+  const CFreal coeffTauMu = _diffVarSet->getModel().getCoeffTau();
+  const CFreal twoThirdRhoK = (2./3.)*(avK * rho);
+  
+  KProdTerm = coeffTauMu*(MUT*((4./3.)*((ux-vy)*(ux-vy)+(ux*vy)
+			      -(ux+vy-_vOverRadius)*_vOverRadius)
+			       +(uy+vx)*(uy+vx)))
+                             -twoThirdRhoK*(ux+vy+_vOverRadius);
+  
+  ///Production term: Omega
+  const CFreal avOmega = _physicalData[iK+1];
+  const CFreal blendingCoefF1 = _diffVarSet->getBlendingCoefficientF1();
+  const CFreal sigmaOmega2 = _diffVarSet->getSigmaOmega2();
+  OmegaProdTerm  = (_diffVarSet->getGammaCoef()*rho/MUT) * KProdTerm;
+  
+  const CFuint kID = avState.size() - 2;
+  const CFuint omegaID = avState.size() - 1;
+  
+  ///This is used in (BSL,SST), not for normal kOmega
+  const CFreal overOmega = 1./avOmega;
+  OmegaProdTerm += (1. - blendingCoefF1) * 2. * rho * overOmega * sigmaOmega2*
+    MathFunctions::innerProd(*_gradients[kID], *_gradients[omegaID]);
+  OmegaProdTerm *= _Radius; 
+  KProdTerm *=CoFactor;
+  
+  //Make sure negative values dont propagate...
+  KProdTerm            = std::max(0., KProdTerm);
+  OmegaProdTerm        = std::max(0., OmegaProdTerm);
+}
+      
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVARSET>
+void NavierStokesKOmega2DSourceTerm<DIFFVARSET>::computeDestructionTerm(const Framework::State& avState, 
+									const CFreal& DcoFactor,
+									CFreal& K_desterm, 
+									CFreal& Omega_desterm)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  // check the average state
+  const CFuint nbScalarEqsSets = _varSet->getModel()->getNbScalarVarSets();
+  const CFuint iK = _varSet->getModel()->getFirstScalarVar(nbScalarEqsSets-1);
+  const CFreal avK     = _physicalData[iK];
+  const CFreal avOmega = _physicalData[iK+1];
+  const CFreal rho = _diffVarSet->getDensity(avState);
+  
+  // Destruction term: k
+  K_desterm = _Radius*(-1.) * rho * avOmega * avK * _diffVarSet->getBetaStar(avState);
+  K_desterm *= DcoFactor; 
+  
+  // Destruction term: Omega
+  Omega_desterm = _Radius*(-1.) * rho * avOmega * avOmega * _diffVarSet->getBeta(avState);
+  // Make sure negative values dont propagate...
+  K_desterm     = std::min(0., K_desterm );
+  Omega_desterm = std::min(0., Omega_desterm);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVARSET>
+CFreal NavierStokesKOmega2DSourceTerm<DIFFVARSET>::GetNSSourceTerm()  
+{ 
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+    
+  const CFuint uID = getStateVelocityIDs()[XX];
+  const CFuint vID = getStateVelocityIDs()[YY];
+  const CFreal coeffTauMu = _diffVarSet->getModel().getCoeffTau();
+  const CFreal Tau_tt = (-2./3.)*coeffTauMu*((*(_gradients[uID]))[XX] + (*(_gradients[vID]))[YY] - 2*_vOverRadius);
+  const CFreal Source3 = _physicalData[EulerTerm::P] - Tau_tt;
+  return Source3;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVARSET>
+void NavierStokesKOmega2DSourceTerm<DIFFVARSET>::PreparecomputeSource(Framework::GeometricEntity *const element)
+{  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  DataHandle<CFreal> normals  = this->socket_normals.getDataHandle();
+  DataHandle<CFint> isOutward =  this->socket_isOutward.getDataHandle();
+  DataHandle<CFreal> volumes  = socket_volumes.getDataHandle();
+  
+  cf_assert(_varSet.isNotNull());
+  
+  // Set the physical data for the cell considered
+  State *const currState = element->getState(0);
+  _varSet->computePhysicalData(*currState, _physicalData);
+  
+  // Get the wall distance
+  _avDist = _wallDistance[currState->getLocalID()];
+  
+  // fill in the nodal states
+  const vector<Node*>* const nodes = element->getNodes();
+  const CFuint nbNodesInElem = nodes->size();
+  _states.clear();
+  for (CFuint i = 0; i < nbNodesInElem; ++i) {
+    _states.push_back(&_nstates[(*nodes)[i]->getLocalID()]);
+  }
+   //From now on, we will use the gradient vars
+  _diffVarSet->setGradientVars(_states, _values, _states.size());
+  
+  const vector<GeometricEntity*>& faces = *element->getNeighborGeos();
+  cf_assert(faces.size() == nbNodesInElem);
+  const CFuint elemID = element->getID();
+  
+  // compute the gradients by applying Green Gauss in the cell
+  for(CFuint iGrad = 0; iGrad < _gradients.size(); ++iGrad) {
+    *(_gradients[iGrad]) = 0.;
+  }
+  
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  
+  for (CFuint i = 0; i < nbNodesInElem; ++i) {
+    // get the face normal
+    const CFuint faceID = faces[i]->getID();
+    const CFuint startID = faceID*PhysicalModelStack::getActive()->getDim();
+    CFreal nx = normals[startID];
+    CFreal ny = normals[startID + 1];
+    if (static_cast<CFuint>( isOutward[faceID]) != elemID) {
+      nx *= -1.;
+      ny *= -1.;
+    }
+
+    if (i < (nbNodesInElem - 1)) 
+    {
+      for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+	(*(_gradients[iEq]))[XX] += nx*(_values(iEq,i) + _values(iEq,i+1));
+	(*(_gradients[iEq]))[YY] += ny*(_values(iEq,i) + _values(iEq,i+1));
+      }
+    }
+    else {
+      for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+	(*(_gradients[iEq]))[XX] += nx*(_values(iEq,i) + _values(iEq,0));
+	(*(_gradients[iEq]))[YY] += ny*(_values(iEq,i) + _values(iEq,0));
+      }
+    }
+  }
+  _volumes_elemID = volumes[elemID]; 
+  const CFreal coeff = 0.5/volumes[elemID];
+  for  (CFuint iEq = 0; iEq < nbEqs; ++iEq){
+    *(_gradients[iEq]) *= coeff;
+  }
+  assert((nbEqs-1) < _gradients.size());
+  
+  _isAxisymmetric =  this->getMethodData().isAxisymmetric();
+  
+  _Radius = (_isAxisymmetric) ? (currState->getCoordinates())[YY] : 1.; 
+  if((_Radius > MathTools::MathConsts::CFrealEps()) && (_isAxisymmetric)) {
+    _vOverRadius = _physicalData[EulerTerm::VX]/_Radius;
+  }
+}
+      
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVARSET>
+void NavierStokesKOmega2DSourceTerm<DIFFVARSET>::computeSource(Framework::GeometricEntity *const element,
+							       RealVector& source,
+							       RealMatrix& jacobian)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  PreparecomputeSource(element); 
+  // compute PUVTKOmega by averaging the nodes
+  // NO!!! If we do it like that we nearly certainly
+  // get negative values!!!
+  // So we just take the state value
+  const State& avState = *element->getState(0);
+  const CFuint kID = avState.size() - 2;
+  const CFuint omegaID = avState.size() - 1;
+  
+  // Set the wall distance before computing the turbulent viscosity
+  _diffVarSet->setWallDistance(_avDist);
+  const CFreal mut = _diffVarSet->getTurbDynViscosityFromGradientVars(avState, _gradients);
+  _diffVarSet->computeBlendingCoefFromGradientVars(avState, *(_gradients[kID]), *(_gradients[omegaID]));
+  
+  //Compute Reynolds stress tensor 
+  computeProductionTerm(avState, 1.,mut, _prodTerm_k,_prodTerm_Omega);
+  computeDestructionTerm(avState, 1.,_destructionTerm_k, _destructionTerm_Omega);
+  
+  //Computation of the source term
+  const CFuint vID = getStateVelocityIDs()[YY];
+  source[vID] = (_isAxisymmetric) ? GetNSSourceTerm() : 0.0 ;
+  
+  //What we do with the source term depends if
+  //we are computing the jacobian or not
+  const bool isPerturb = this->getMethodData().isPerturb();
+  const CFuint iPerturbVar = this->getMethodData().iPerturbVar();
+  if(isPerturb)
+  {
+    /// Compute the jacobian contribution
+    // only perturb the negative part of the source term
+    if(iPerturbVar == kID)
+    {
+      source[kID] = _destructionTerm_k;
+      source[kID] += _unperturbedPositivePart[0];
+    }
+    else
+    {
+      source[kID] = _unperturbedNegativePart[0];
+      source[kID] += _unperturbedPositivePart[0];
+    }
+
+    if(iPerturbVar == omegaID)
+    {
+      source[omegaID] = _destructionTerm_Omega;
+      source[omegaID] += _unperturbedPositivePart[1];
+    }
+    else
+    {
+      source[omegaID] = _unperturbedNegativePart[1];
+      source[omegaID] += _unperturbedPositivePart[1];
+    }
+  }
+  else
+  {
+    /// Compute the rhs contribution
+    // and Store the unperturbed source terms
+    source[kID] = _prodTerm_k;
+    source[kID] += _destructionTerm_k;
+    _unperturbedPositivePart[0] = _prodTerm_k;
+    _unperturbedNegativePart[0] = _destructionTerm_k;
+
+    source[omegaID] = _prodTerm_Omega;
+    source[omegaID] += _destructionTerm_Omega;
+    _unperturbedPositivePart[1] = _prodTerm_Omega;
+    _unperturbedNegativePart[1] = _destructionTerm_Omega;
+  }
+  
+  // Finally multiply by the cell volume
+  source *= _volumes_elemID;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

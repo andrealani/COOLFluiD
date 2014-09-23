@@ -1,0 +1,75 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -0.044415548
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libForwardEuler libTHOR2CFmesh  libFiniteVolume libLinearAdv
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir       = plugins/LinearAdv/testcases/AdvectSinusWave/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType  = LinearAdv2D
+Simulator.SubSystem.LinearAdv2D.VX = 0.0
+Simulator.SubSystem.LinearAdv2D.VY = 1.0
+
+Simulator.SubSystem.OutputFormat     = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName  = advectSWFVM.CFmesh
+Simulator.SubSystem.Tecplot.FileName = advectSWFVM.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 30
+
+A#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerFaces SuperInlet FaceSouth FaceWest FaceNorth
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./advectSWFVM.CFmesh.START
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.9
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Prim
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 0.0
+
+Simulator.SubSystem.CellCenterFVM.BcComds = SuperInletFVMCC SuperInletFVMCC SuperInletFVMCC SuperOutletFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = East South West North
+
+Simulator.SubSystem.CellCenterFVM.East.applyTRS = SuperInlet
+Simulator.SubSystem.CellCenterFVM.East.Vars = x y
+Simulator.SubSystem.CellCenterFVM.East.Def = 0.0
+
+Simulator.SubSystem.CellCenterFVM.South.applyTRS = FaceSouth
+Simulator.SubSystem.CellCenterFVM.South.Vars = x y
+Simulator.SubSystem.CellCenterFVM.South.Def = sin(2*x*3.14159265359)
+
+Simulator.SubSystem.CellCenterFVM.West.applyTRS = FaceWest
+Simulator.SubSystem.CellCenterFVM.West.Vars = x y
+Simulator.SubSystem.CellCenterFVM.West.Def = 0.0
+
+Simulator.SubSystem.CellCenterFVM.North.applyTRS = FaceNorth
+

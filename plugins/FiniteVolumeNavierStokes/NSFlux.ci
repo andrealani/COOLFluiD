@@ -1,0 +1,212 @@
+#include "Framework/GeometricEntity.hh"
+#include "FiniteVolume/DerivativeComputer.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVS>
+void NSFlux<DIFFVS>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< bool >("isRadiusNeeded","Flag telling if the radius must be computed.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVS>
+NSFlux<DIFFVS>::NSFlux(const std::string& name) :
+  ComputeDiffusiveFlux(name),
+  socket_wallDistance("wallDistance",false),
+  socket_volumes("volumes",false),
+  _wallDistance(CFNULL),
+  _diffVar(CFNULL),
+  _nbCVStates(0),
+  _radius(0.),
+  _wallDistanceExists(false),
+  _wallDistanceDataHandleName(""),
+  _states(),
+  _values(),
+  _gradients(),
+  _avState()
+{
+  this->addConfigOptionsTo(this);
+  
+  _isRadiusNeeded = false;
+  this->setParameter("isRadiusNeeded",&_isRadiusNeeded);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVS>
+NSFlux<DIFFVS>::~NSFlux()
+{
+  for (CFuint i = 0; i< _gradients.size(); ++i) {
+    deletePtr(_gradients[i]);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVS>
+void NSFlux<DIFFVS>::computeFlux(RealVector& result)
+{
+ using namespace std;
+ using namespace COOLFluiD::Framework;
+ using namespace COOLFluiD::Common;
+  
+ CFLogDebugMin("NSFlux::computeFlux() START\n");
+  
+  GeometricEntity& geo = *getMethodData().getCurrentFace();
+  SafePtr<DerivativeComputer> derivComputer = getMethodData().getDerivativeComputer();
+  
+  const bool isPerturb = this->getMethodData().isPerturb();
+  const CFuint iPerturbVar = this->getMethodData().iPerturbVar();
+  if (_wallDistanceExists) {
+    setWallDistance();
+  }
+  
+  if (!isPerturb) { 
+    // set the state values (pointers) corresponding to the
+    // vertices of the control volume
+    derivComputer->computeControlVolume(_states, &geo);
+    _nbCVStates = derivComputer->getNbVerticesInControlVolume(&geo);
+    
+    _radius = 0.0;
+    if (getMethodData().isAxisymmetric() || _isRadiusNeeded) {
+      const Node& node0 = *geo.getNode(0);
+      const Node& node1 = *geo.getNode(1);
+      _radius = 0.5*(node0[YY] + node1[YY]);
+    }
+  }
+    
+  // compute speed components and temperature in the given states
+  // if you are updating in conservative variables your nodal values
+  // MUST be already in primitive variables (there is inconsistency here !!!)
+  _diffVar->setGradientVars(_states, _values, _nbCVStates);
+  
+  // compute control volume around the face and gradients
+  derivComputer->computeGradients(&geo, _values, _gradients);
+
+  // compute the average values
+  derivComputer->computeAverageValues(&geo, _states, _avState);
+  
+  _diffVar->setComposition(_avState, isPerturb, iPerturbVar);
+  const CFreal faceArea = this->socket_faceAreas.getDataHandle()[geo.getID()];
+  
+  // set the flux
+  result = _diffVar->getFlux(_avState, _gradients, getMethodData().getUnitNormal(), _radius);
+  result *= faceArea;
+  
+  CFLog(DEBUG_MAX, "NSFlux::computeFlux() => result = " << result << "\n");
+  
+  if (!isPerturb) {
+    const CFreal nu = _diffVar->getCurrDynViscosity()/_diffVar->getDensity(_avState);
+    //const CFreal nu = max(_diffVar->getCurrDynViscosity()/_diffVar->getDensity(_avState),_diffVar->getCurrThermConductivity());
+    const CFreal diffUpdateCoeff = nu*faceArea*faceArea/(derivComputer->getControlVolume());
+    
+    CFLog(DEBUG_MAX, "NSFlux::computeFlux() => diffUpdateCoeff = " << diffUpdateCoeff << "\n");
+    
+    //CFreal diffUpdateCoeff = nu*faceArea*derivComputer->getRefCVFaceArea(0)/(derivComputer->getControlVolume());
+    //  const CFreal diffUpdateCoeff = max(nu,_diffVar->getCurrThermConductivity())*
+    //	faceArea*max(faceArea,derivComputer->getMaxCVFaceArea())/(derivComputer->getControlVolume());
+    // const CFreal diffUpdateCoeff = mu*faceArea*derivComputer->getMaxCVFaceArea()/
+    //		(avRho*derivComputer->getControlVolume());
+    
+    DataHandle<CFreal> updateCoeff = this->socket_updateCoeff.getDataHandle();
+    // left contribution to update coefficient
+    const CFuint leftID = geo.getState(0)->getLocalID();
+    updateCoeff[leftID] += diffUpdateCoeff;
+    
+    if (!geo.getState(1)->isGhost()) {
+      /// big change here
+      //diffUpdateCoeff = nu*faceArea*derivComputer->getRefCVFaceArea(1)/(derivComputer->getControlVolume());
+      
+      // right contribution to update coefficient
+      const CFuint rightID = geo.getState(1)->getLocalID();
+      updateCoeff[rightID] += diffUpdateCoeff;
+    }
+  }
+
+  CFLogDebugMin("NSFlux::computeFlux() END\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVS>
+void NSFlux<DIFFVS>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+ 
+  CFLogDebugMin("NSFlux::setup() START\n");
+  cf_assert(isConfigured());
+  
+  ComputeDiffusiveFlux::setup();
+  
+  CFLog(VERBOSE, "NSFlux<DIFFVS>::setup() => diffusive vars name = " << 
+	getMethodData().getDiffusiveVar()->getName() << "/n");
+  
+  _diffVar = getMethodData().getDiffusiveVar().template d_castTo<DIFFVS>();
+  cf_assert(_diffVar.isNotNull());
+  
+  const std::string namespaceName = MeshDataStack::getActive()->getPrimaryNamespace();
+  _wallDistanceDataHandleName = namespaceName + "_wallDistance";
+  _wallDistanceExists = MeshDataStack::getActive()->
+    getDataStorage()->checkData(_wallDistanceDataHandleName);
+  
+  if (_wallDistanceExists) {
+    _wallDistance = MeshDataStack::getActive()->getDataStorage()->
+      getData<CFreal>(_wallDistanceDataHandleName);
+  }
+  
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  SafePtr<DerivativeComputer> derivComputer =
+    getMethodData().getDerivativeComputer();
+
+  // AL: careful here: this cannot assume that setup() has been run on derivComputer
+  const CFuint nbNodesInControlVolume = derivComputer->getMaxNbVerticesInControlVolume();
+  _states.resize(nbNodesInControlVolume);
+  _values.resize(nbEqs, nbNodesInControlVolume);
+  
+  _gradients.resize(nbEqs);
+  for (CFuint i = 0; i< nbEqs; ++i) {
+    _gradients[i] = new RealVector(PhysicalModelStack::getActive()->getDim());
+  }
+  
+  _avState.resize(PhysicalModelStack::getActive()->getNbEq());
+  
+  // set the diffusive flux jacobians to 0.
+  _lFluxJacobian = 0.0;
+  _rFluxJacobian = 0.0;  
+  
+  CFLogDebugMin("NSFlux::setup() END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVS>
+void NSFlux<DIFFVS>::configure ( Config::ConfigArgs& args )
+{
+  CFLogDebugMin("NSFlux::configure() START\n");
+  
+  ComputeDiffusiveFlux::configure(args);
+  
+  CFLogDebugMin("NSFlux::configure() START\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

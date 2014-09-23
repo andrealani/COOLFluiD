@@ -1,0 +1,684 @@
+#include "Common/PE.hh"
+#include "MathTools/MathConsts.hh"
+#include "Environment/SingleBehaviorFactory.hh"
+#include "Environment/FileHandlerOutput.hh"
+#include "Common/BadValueException.hh"
+#include "Framework/DataProcessing.hh"
+#include "Framework/SubSystemStatus.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/PathAppender.hh"
+#include "Environment/DirPaths.hh"
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "FiniteVolume/CellCenterFVM.hh"
+#include "FiniteVolumeICP/LorentzForceSourceTermComm.hh"
+#include "FiniteVolumeICP/VectorPotential.hh"
+#include "TecplotWriter/WriteTecplot.hh"
+#include "NavierStokes/EulerTerm.hh"
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
+/////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+    namespace Numerics {
+
+  namespace FiniteVolumeICP {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+void LorentzForceSourceTerm<ST>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< bool >("AppendTime","Save each iteration to different file with suffix _time#.");
+  options.template addConfigOption< bool >("AppendIter","Save each iteration to different file with suffix _iter#.");
+  options.template addConfigOption< std::string >("OutputFileLorentzForce","Name of Output File to write the Lorentz Force.");
+  options.template addConfigOption< CFuint >("FaceCenterComputationMethod","use diamond shape to compute face center values.");
+  options.template addConfigOption< CFuint >("AverageInNodeStrategy","Set which way values at node must be computed.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+LorentzForceSourceTerm<ST>::LorentzForceSourceTerm(const std::string& name) :
+  Framework::DataProcessingCom(name),
+  socket_vacuumElFieldIntensity("vacuumElFieldIntensity"),
+  socket_vacuumElFieldIntensityInNodes("vacuumElFieldIntensityInNodes"),
+  socket_vacuumElFieldIntensityInGhostCells("vacuumElFieldIntensityInGhostCells"),
+  socket_elCondField("elCondField"),
+  socket_LorentzForce("LorentzForce"),
+  socket_volumes("volumes"),
+  socket_nodes("nodes"),
+  socket_states("states"),
+  socket_nstates("nstates"),
+  socket_normals("normals"),
+  socket_isOutward("isOutward"),
+  socket_gstates("gstates"),
+  m_library(CFNULL),
+  m_geoBuilder(),
+  m_cellBuilder(CFNULL),
+  m_srcTerm(CFNULL),
+  m_states()
+{
+  this->addConfigOptionsTo(this);
+
+  m_appendIter = false;
+  setParameter("AppendIter",&m_appendIter);
+  
+  m_appendTime = false;
+  setParameter("AppendTime",&m_appendTime);
+  
+  m_nameOutputFileLorentzForce = "LorentzForce.plt";
+  setParameter("OutputFileLorentzForce",&m_nameOutputFileLorentzForce);
+  
+  m_FaceCenterComputationMethod = 0; // THIS SHALL BE 1!!
+  setParameter("FaceCenterComputationMethod",&m_FaceCenterComputationMethod);
+  
+  m_averageInNodeStrategy = 1;
+  setParameter("AverageInNodeStrategy",&m_averageInNodeStrategy);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+LorentzForceSourceTerm<ST>::~LorentzForceSourceTerm()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > 
+LorentzForceSourceTerm<ST>::providesSockets()
+{
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > result;
+  result.push_back(&socket_LorentzForce);
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> >
+LorentzForceSourceTerm<ST>::needsSockets()
+{
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result;
+  
+  result.push_back(&socket_volumes);
+  result.push_back(&socket_nodes);
+  result.push_back(&socket_nstates);
+  result.push_back(&socket_states);
+  result.push_back(&socket_vacuumElFieldIntensity);
+  result.push_back(&socket_vacuumElFieldIntensityInNodes);
+  result.push_back(&socket_vacuumElFieldIntensityInGhostCells);
+  result.push_back(&socket_elCondField);
+  result.push_back(&socket_normals);
+  result.push_back(&socket_isOutward);
+  result.push_back(&socket_gstates);
+  
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+void LorentzForceSourceTerm<ST>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Numerics::FiniteVolume;
+
+  CFAUTOTRACE;
+  
+  CFLog(VERBOSE, "LorentzForceSourceTerm::setup\n");
+  
+  // Get number of cells
+  Common::SafePtr<Common::ConnectivityTable<CFuint> > cells =
+    MeshDataStack::getActive()->getConnectivity("cellStates_InnerCells");
+  
+  const CFuint nbCells = cells->nbRows();
+  
+  DataHandle<RealVector> LorentzForce = socket_LorentzForce.getDataHandle();
+  LorentzForce.resize(2);
+  LorentzForce[0].resize(nbCells);
+  LorentzForce[1].resize(nbCells);
+  for(CFuint iCell = 0; iCell < nbCells; ++iCell) {
+    LorentzForce[0][iCell] = 0.0;
+    LorentzForce[1][iCell] = 0.0;
+  }
+  
+  // suppose that just one space method is available
+  SafePtr<SpaceMethod> spaceMethod = getMethodData().template getCollaborator<SpaceMethod>();
+  SafePtr<CellCenterFVM> fvmcc = spaceMethod.template d_castTo<CellCenterFVM>();
+  cf_assert(fvmcc.isNotNull());
+  
+  m_cellBuilder = fvmcc->getData()->getCellTrsGeoBuilder();
+  
+  m_geoBuilder.setup();
+  
+  m_library = PhysicalModelStack::getActive()->getImplementor()->
+    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  cf_assert(m_library.isNotNull());
+  
+  m_srcTerm = PhysicalModelStack::getActive()->getImplementor()->
+    getSourceTerm().d_castTo<ST>();
+  cf_assert(m_srcTerm.isNotNull());
+  
+  const CFuint maxNbNodesIn2DCV = 4;
+  m_states.reserve(maxNbNodesIn2DCV);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+void LorentzForceSourceTerm<ST>::execute()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Numerics::FiniteVolume;
+  using namespace COOLFluiD::Physics::NavierStokes;	
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::TecplotWriter;
+
+  CFAUTOTRACE;
+  
+  CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+  
+  // this is needed for coupling
+  CFLogDebugMin( "::execute()" << "\n");
+  
+  const CFuint totNbEqs = PhysicalModelStack::getActive()->getNbEq();
+  
+  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+  DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
+  DataHandle<RealVector> vacuumElFieldIntensity = socket_vacuumElFieldIntensity.getDataHandle();
+  DataHandle<RealVector> vacuumElFieldIntensityInNodes = socket_vacuumElFieldIntensityInNodes.getDataHandle();
+  DataHandle<RealVector> LorentzForce = socket_LorentzForce.getDataHandle();
+  DataHandle<CFreal> normals = socket_normals.getDataHandle();
+  DataHandle<CFint> isOutward = socket_isOutward.getDataHandle();
+  DataHandle<Framework::State*, Framework::GLOBAL> states = socket_states.getDataHandle();
+  DataHandle<RealVector> nstates = socket_nstates.getDataHandle();
+  DataHandle<CFreal> elCondField = socket_elCondField.getDataHandle();
+    
+  // set the builders of cells
+  Common::SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->
+    getTrs("InnerCells");
+  //const CFuint nbCells = cells->getLocalNbGeoEnts();
+  Common::SafePtr<CellTrsGeoBuilder> geoBuilderPtr = m_cellBuilder->getGeoBuilder();
+  geoBuilderPtr->setDataSockets(socket_states, socket_gstates, socket_nodes);
+  CellTrsGeoBuilder::GeoData& geoData = m_cellBuilder->getDataGE();
+  geoData.trs = cells;
+  
+  
+  // ---------------------------------------[ size: nbCells ]
+  const CFuint nbCells = cells->getLocalNbGeoEnts();
+  RealVector cellsRadius(0.,nbCells);
+  
+  
+  // ---------------------------------------[ size: nbNodes ]
+  const CFuint nbNodes = nodes.size();
+  RealVector volumeSumB(0.,nbNodes);
+  RealVector vacuumElFieldIntensityInNodeRe(0.,nbNodes);
+  RealVector vacuumElFieldIntensityInNodeIm(0.,nbNodes);
+  RealVector oneOverDistance_Sum(0.,nbNodes);
+  RealVector plasmaElfieldInNodesRe(0.,nbNodes);                  
+  RealVector plasmaElfieldInNodesIm(0.,nbNodes);                   
+  
+  // ---------------------------------------[ some constants ]
+  SafePtr<EulerTerm> eulerTerm = PhysicalModelStack::getActive()->getImplementor()->
+    getConvectiveTerm().template d_castTo<EulerTerm>();
+  cf_assert(eulerTerm.isNotNull());
+  const RealVector& refData = eulerTerm->getReferencePhysicalData();
+  const CFreal freq = 1000000.*(m_srcTerm->getFreqMHz());
+  
+  const CFuint E_r = totNbEqs - 2;
+  const CFuint E_i = totNbEqs - 1;
+  CFreal r = 0.;
+  //CFreal z = 0.;
+  
+  // use stored data for coils position and current.
+  VectorPotential::getInstance().useStandardData();
+  
+  // el Conductivity
+  /*UNCOMMENT THIS TO COMPUTE elConductivity EVERY ITERATION
+    CFreal Tdim = 0.;
+    CFreal pdim = 0.;
+    CFreal dp = 0.;
+    const CFreal p = m_updateVarSet->getModel()->getThermodynamPressInf();
+    CFreal elConductivity = 0.;  */
+  
+  //
+  // ---------------------------------------[ some messages ]
+  if( m_srcTerm->extraVerboseRate() != 0 ) 
+    if(!( iter % m_srcTerm->extraVerboseRate() )) {
+      if (m_averageInNodeStrategy == 1)
+	if(PE::GetPE().GetRank() == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF using 1/distance-based average to compute Ev in nodes)\n");}
+      if (m_averageInNodeStrategy == 2)
+	if(PE::GetPE().GetRank() == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF using volume-based average to compute Ev in nodes)\n");}
+      if (m_averageInNodeStrategy == 0)
+	if(PE::GetPE().GetRank() == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF using Ev explicitly computed in nodes)\n");}
+      if (m_FaceCenterComputationMethod == 0)
+	if(PE::GetPE().GetRank() == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF computes FaceCenter values using average between nodes)\n");}
+      if (m_FaceCenterComputationMethod == 2)
+	if(PE::GetPE().GetRank() == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF computes FaceCenter values using distance-based average between cell centers)\n");}
+      if (m_FaceCenterComputationMethod == 1)
+	if(PE::GetPE().GetRank() == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF computes FaceCenter values using distance-based diamond-shape computational stencil)\n");}
+    } 
+  
+  /// @TODO VP: have to be done parallel
+    
+    // ---------------------------------------------------------------------------------------[ PREPROCESSING ]
+    // LorentzForce.AverageInNodeStrategy:
+    // 0:LorentzForce takes Ev coming from RMSJouleHeatSourceComm.cxx 
+    // 1:LorentzForce compute Ev usign distance-based average 
+    // 2:LorentzForce computes Ev in the original way, usign volume-based average
+    if (m_averageInNodeStrategy == 1) {
+      for (CFuint iCell = 0; iCell < nbCells; ++iCell)
+        {
+           // set the builder data and build the GeometricEntity
+	  geoData.idx = iCell;
+	  GeometricEntity *const element = m_cellBuilder->buildGE();
+	  
+	  State& currState = *element->getState(0);                     // cell center coords
+	  const CFreal XCellCenter = currState.getCoordinates()[XX];    //
+	  const CFreal YCellCenter = currState.getCoordinates()[YY];    // 
+	  
+	  const vector<Node*>* const LocalNodes = element->getNodes();
+	  for (CFuint iLocalNode = 0; iLocalNode < LocalNodes->size(); ++iLocalNode) 
+	    {
+              Node* currNode = (*LocalNodes)[iLocalNode];       // now we can have coords in this way (*currNode)[XX]
+                                                                // it was also possible using two times *:
+                                                                // (*(*LocalNodes)[iLocalNode])[XX]
+              // getting node ID
+              CFuint nodeID = currNode->getLocalID(); //or getLocalID() ?
+
+              /*if (iLocalNode == 0) {                          // do we really need this?
+		vacuumElFieldIntensityInNodeRe[nodeID] = 0.;   //
+		vacuumElFieldIntensityInNodeIm[nodeID] = 0.;   //
+		}*/
+	      
+              CFreal distanceNodeToCellCenter = std::sqrt(  ((*currNode)[XX]-XCellCenter)*((*currNode)[XX]-XCellCenter)
+						       + ((*currNode)[YY]-YCellCenter)*((*currNode)[YY]-YCellCenter)  );
+              //cout << "NODE XX:" << (*currNode)[XX] << "  NODE YY:" << (*currNode)[YY]  << "  XCellCenter:" << XCellCenter  << "  YCellCenter:" << YCellCenter << "\n";
+              vacuumElFieldIntensityInNodeRe[nodeID] += vacuumElFieldIntensity[0][iCell] / distanceNodeToCellCenter;
+              vacuumElFieldIntensityInNodeIm[nodeID] += vacuumElFieldIntensity[1][iCell] / distanceNodeToCellCenter;
+              oneOverDistance_Sum[nodeID] += 1/distanceNodeToCellCenter;
+	    }
+	  m_cellBuilder->releaseGE();
+        }
+      for (CFuint iNode = 0; iNode < nbNodes; ++iNode) {
+	vacuumElFieldIntensityInNodeRe[iNode] *= 1/oneOverDistance_Sum[iNode];
+              vacuumElFieldIntensityInNodeIm[iNode] *= 1/oneOverDistance_Sum[iNode];
+              //cout << vacuumElFieldIntensityInNodeIm[iNode] << "  " << vacuumElFieldIntensityInNodes[iNode][1] << "  sum(1/d):" << oneOverDistance_Sum[iNode] << "\n";
+	      /*              if ((vacuumElFieldIntensityInNodeRe[iNode] - vacuumElFieldIntensityInNodes[iNode][0])/vacuumElFieldIntensityInNodes[iNode][0] > 0.05 ||
+			      (vacuumElFieldIntensityInNodeRe[iNode] - vacuumElFieldIntensityInNodes[iNode][0])/vacuumElFieldIntensityInNodes[iNode][0] < -0.05 ) { cout << " " << iNode;  }
+			      if ((vacuumElFieldIntensityInNodeIm[iNode] - vacuumElFieldIntensityInNodes[iNode][1])/vacuumElFieldIntensityInNodes[iNode][1] > 0.05 ||
+			      (vacuumElFieldIntensityInNodeIm[iNode] - vacuumElFieldIntensityInNodes[iNode][1])/vacuumElFieldIntensityInNodes[iNode][1] < -0.05 ) { cout << " " << iNode;  }  */
+      }
+    } else if (m_averageInNodeStrategy == 2) {
+      for (CFuint iCell = 0; iCell < nbCells; ++iCell)
+        {
+	  // set the builder data and build the GeometricEntity
+	  geoData.idx = iCell;
+	  GeometricEntity *const element = m_cellBuilder->buildGE();
+	  //State& currState = *element->getState(0);
+	  
+	  const vector<Node*>* const LocalNodes = element->getNodes();
+	  
+	  for (CFuint iLocalNode = 0; iLocalNode < LocalNodes->size(); ++iLocalNode) 
+	    {
+              // getting node ID
+              CFuint nodeID = (*LocalNodes)[iLocalNode]->getLocalID(); //or getLocalID() ?
+	      
+              volumeSumB[nodeID] += volumes[iCell]; // we need this sum after in the code, so I do it once at the beginning
+	      
+              vacuumElFieldIntensityInNodeRe[nodeID] += vacuumElFieldIntensity[0][iCell]*volumes[iCell];
+              vacuumElFieldIntensityInNodeIm[nodeID] += vacuumElFieldIntensity[1][iCell]*volumes[iCell];
+	    }
+	  m_cellBuilder->releaseGE();
+        }
+      for (CFuint iNode = 0; iNode < nbNodes; ++iNode) {
+	vacuumElFieldIntensityInNodeRe[iNode] *= 1/volumeSumB[iNode];
+	vacuumElFieldIntensityInNodeIm[iNode] *= 1/volumeSumB[iNode];
+        }
+    } else {   // ==0, default!
+      for (CFuint iNode = 0; iNode < nbNodes; ++iNode) {
+	vacuumElFieldIntensityInNodeRe[iNode] = vacuumElFieldIntensityInNodes[0][iNode];
+	vacuumElFieldIntensityInNodeIm[iNode] = vacuumElFieldIntensityInNodes[1][iNode];
+      }
+    } // end preprocessing.
+
+    // ---------------------------------------------------------------------------------------[ MAIN CYCLE OVER CELLs ]
+    
+    const CFuint maxNbNodesIn2DCV = 4;
+    RealVector plasmaElfieldRe(0.,maxNbNodesIn2DCV);                  //
+    RealVector plasmaElfieldIm(0.,maxNbNodesIn2DCV);                  // 
+    for (CFuint iCell = 0; iCell < nbCells; ++iCell)
+    {
+       // set the builder data and build the GeometricEntity
+       geoData.idx = iCell;
+       GeometricEntity *const element = m_cellBuilder->buildGE();
+     
+       // please note the reference &
+       State& currState = *element->getState(0);
+       m_states.clear();
+       const vector<Node*>* const LocalNodes = element->getNodes();
+       const CFuint nbNodesInElem = LocalNodes->size();
+
+       for (CFuint i = 0; i < nbNodesInElem; ++i)
+       {
+           m_states.push_back(&nstates[(*LocalNodes)[i]->getLocalID()]);
+       }
+
+       const vector<GeometricEntity*>& faces = *element->getNeighborGeos();
+
+       cf_assert(faces.size() == nbNodesInElem);
+
+       // set coordinates of cell centroid
+       Node& coordinate = currState.getCoordinates();
+       // z = coordinate[XX];
+       r = coordinate[YY];
+       cellsRadius[iCell] = r;
+
+     /*UNCOMMENT THIS TO COMPUTE elConductivity EVERY ITERATION
+       pdim = getModel()->getPressureFromState(currState[0]); // *getModel()->getPressRef(); watch out with this reference pressure
+       Tdim = currState[3]*refData[EulerTerm::T];
+       
+       m_library->setComposition(Tdim,pdim);
+
+        cout << "Lorentz:: T, p => " << Tdim << ", " << pdim << endl;
+
+       elConductivity = m_library->sigma(Tdim, pdim, CFNULL);
+
+       if(isnan(elConductivity))  ///test
+       {
+           CF_DEBUG_OBJ(Tdim);
+           CF_DEBUG_OBJ(pdim);
+           CF_DEBUG_OBJ(elConductivity);
+           abort();
+       }
+       ///    elConductivity = std::max(0.,((Tdim-6000.)/4000.)*3000.); //approximation
+
+       if (elCondField[iCell] != elConductivity)
+           cout << "OH SHIT! this is a problem.... elCondField socket gives different values from elConductivity!\n";
+
+       if (m_srcTerm->pegaseApproximation())                           // linear approximation of sigma: OBSOLETE
+       {                                                               // 
+            if (Tdim > 7250)                                           // now, use interpolation in MutationLibrary.cxx
+               elConductivity=904.11+(elConductivity-904.11)*0.91;     // (this flag should be removed!)
+       } 
+       // KEEP THIS COMMENTED IF IT'S ONLY TO TEST elCondField ?= elConductivity:  
+       //elCondField[iCell] = elConductivity;
+       */
+
+       // compute the gradients by applying Green Gauss in the
+       // cell volume
+       CFreal dErdX = 0.0;
+       CFreal dErdR = 0.0;
+       CFreal dEidX = 0.0;
+       CFreal dEidR = 0.0;
+       CFuint nodeID[4];                                              //
+                                                                      //
+       for (CFuint iNode = 0; iNode < nbNodesInElem; ++iNode)         //
+       {                                                              //
+           plasmaElfieldRe[iNode] = (*m_states[iNode])[E_r];          //
+           plasmaElfieldIm[iNode] = (*m_states[iNode])[E_i];          //
+           nodeID[iNode] = (*LocalNodes)[iNode]->getLocalID();        //
+           plasmaElfieldInNodesRe[nodeID[iNode]] = plasmaElfieldRe[iNode];  // this is kinda slow but I need this (it's done 4 times per node)
+           plasmaElfieldInNodesIm[nodeID[iNode]] = plasmaElfieldIm[iNode];  // this is kinda slow but I need this (it's done 4 times per node)
+       }                                                              //
+
+       CFuint iFace = 0;
+       CFreal radius = 0.;
+
+       for (CFuint iNode = 0; iNode < nbNodesInElem; ++iNode)
+       {
+           CFreal EvR = 0.0;
+           CFreal EvI = 0.0;
+           CFreal EpR = 0.0;
+           CFreal EpI = 0.0;
+     
+           // get the face normal
+           const CFuint faceID = faces[iNode]->getID();
+           const CFuint startID = faceID*PhysicalModelStack::getActive()->getDim();
+     
+           const CFreal XCellCenter = currState.getCoordinates()[XX];
+           const CFreal YCellCenter = currState.getCoordinates()[YY];
+           
+           State *externalState = faces[iNode]->getState(1);      // if we are taking the wrong side of the face..
+
+           CFreal nx = normals[startID];
+           CFreal ny = normals[startID + 1];
+           if (static_cast<CFuint>(isOutward[faceID]) != iCell)
+           {
+              externalState = faces[iNode]->getState(0);          // we change it!
+              nx *= -1.;
+              ny *= -1.;
+           }
+
+           CFuint iExternalCell = externalState->getLocalID();    // and now, this really is the external cell!
+           //if (externalState->isGhost()) 
+           //      cout << iExternalCell << " is ghost!\n" ;
+
+           // let's use distance!
+           const CFreal XexternalCellCenter = externalState->getCoordinates()[XX];
+           const CFreal YexternalCellCenter = externalState->getCoordinates()[YY];
+
+           //const Node& node0 = faces[iNode]->getState(1)->getCoordinates();  // EEERRRROR!!
+           //const Node& node1 = faces[iNode]->getState(0)->getCoordinates();  // EEERRRROR!!
+           const Node& node0 = *(faces[iNode]->getNode(0));
+           const Node& node1 = *(faces[iNode]->getNode(1));
+
+           radius = .5*(node0[YY] + node1[YY]);              // radius of the face center
+           CFreal xPosition = .5*(node0[XX] + node1[XX]);    // x position of the face center
+                                                             // the face center is located at (xPosition,radius)
+           // distance to cell center:
+           CFreal distanceFromExternalCellCenter = std::sqrt((XexternalCellCenter - xPosition)*(XexternalCellCenter - xPosition) 
+                                    + (YexternalCellCenter - radius)*(YexternalCellCenter - radius));
+           CFreal distanceFromCellCenter = std::sqrt((XCellCenter - xPosition)*(XCellCenter - xPosition) 
+                                    + (YCellCenter - radius)*(YCellCenter - radius));
+           CFreal distanceFromNodes = std::sqrt((node0[XX] - xPosition)*(node0[XX] - xPosition) 
+                                    + (node0[YY] - radius)*(node0[YY] - radius));
+
+           // values of Ep and Ev in the middle of faces
+           if (m_FaceCenterComputationMethod == 0) 
+           {
+               if (iNode < (nbNodesInElem - 1))
+               {
+                   EpR = .5*(plasmaElfieldRe[iNode] + plasmaElfieldRe[iNode+1]);
+                   EpI = .5*(plasmaElfieldIm[iNode] + plasmaElfieldIm[iNode+1]);
+                   EvR = .5*(vacuumElFieldIntensityInNodeRe[nodeID[iNode]] + vacuumElFieldIntensityInNodeRe[nodeID[iNode+1]]);
+                   EvI = .5*(vacuumElFieldIntensityInNodeIm[nodeID[iNode]] + vacuumElFieldIntensityInNodeIm[nodeID[iNode+1]]); 
+               }
+               else
+               {
+                   EpR = .5*(plasmaElfieldRe[iNode] + plasmaElfieldRe[0]);
+                   EpI = .5*(plasmaElfieldIm[iNode] + plasmaElfieldIm[0]);
+                   EvR = .5*(vacuumElFieldIntensityInNodeRe[nodeID[iNode]] + vacuumElFieldIntensityInNodeRe[nodeID[0]]);
+                   EvI = .5*(vacuumElFieldIntensityInNodeIm[nodeID[iNode]] + vacuumElFieldIntensityInNodeIm[nodeID[0]]);
+               }
+           } 
+           else 
+           {
+               // in case we use FaceCenterComputationMethod==1 or 2, we will need 
+               // Ev in the external cell. It may be a cell or a ghost cell
+               CFreal EvExternalCell_Re = 0.;
+               CFreal EvExternalCell_Im = 0.;
+               if (externalState->isGhost()) {
+                   //  is ghost!
+                   VectorPotential::getInstance().setCoords(XexternalCellCenter,YexternalCellCenter);
+                   VectorPotential::getInstance().getElectricField(EvExternalCell_Re, EvExternalCell_Im);
+               } else {    
+                   // it's merely a cell
+                   EvExternalCell_Re = vacuumElFieldIntensity[0][iExternalCell];
+                   EvExternalCell_Im = vacuumElFieldIntensity[1][iExternalCell];
+               }
+
+               // CellCenters or DiamondShape?
+               if (m_FaceCenterComputationMethod == 2) 
+               {   // if we are using cell centers to compute face center values, using distance-based average:
+                                                                                                               //       cout << "= "<< EpR << "  "  << EpI << "  "  << EvR << "  "  << EvI << " [face " << nodeID[iNode] <<"] iCell" << iCell << " iExternalCell"<< iExternalCell  << "\n" ;
+                   EpR = distanceWeightedMean ( currState[E_r], distanceFromCellCenter, (*externalState)[E_r], distanceFromExternalCellCenter );
+                   EpI = distanceWeightedMean ( currState[E_i], distanceFromCellCenter, (*externalState)[E_i], distanceFromExternalCellCenter );
+                   EvR = distanceWeightedMean ( vacuumElFieldIntensity[0][iCell], distanceFromCellCenter, EvExternalCell_Re, distanceFromExternalCellCenter );
+                   EvI = distanceWeightedMean ( vacuumElFieldIntensity[1][iCell], distanceFromCellCenter, EvExternalCell_Im, distanceFromExternalCellCenter );
+                                                                                                           /*       CFreal oneOverD_sum = 1/distanceFromCellCenter + 1/distanceFromExternalCellCenter;
+                                                                                                                    EpR = (currState[E_r] / distanceFromCellCenter + (*externalState)[E_r] / distanceFromExternalCellCenter) / oneOverD_sum;
+                                                                                                                    EpI = (currState[E_i] / distanceFromCellCenter + (*externalState)[E_i] / distanceFromExternalCellCenter) / oneOverD_sum;
+                                                                                                                    EvR = (vacuumElFieldIntensity[iCell][0] / distanceFromCellCenter + vacuumElFieldIntensity[iExternalCell][0] / distanceFromExternalCellCenter) / oneOverD_sum;
+                                                                                                                    EvI = (vacuumElFieldIntensity[iCell][1] / distanceFromCellCenter + vacuumElFieldIntensity[iExternalCell][1] / distanceFromExternalCellCenter) / oneOverD_sum; */
+                                                                                                           //       cout << "> " << EpR << "  "  << EpI << "  "  << EvR << "  "  << EvI << "\n" ;
+               }
+               else if (m_FaceCenterComputationMethod == 1) 
+               {   // if we are using diamond shape to compute face center values (2 nodes and 2 cell centers)
+                   if (iNode < (nbNodesInElem - 1))
+                   {
+                       EpR = distanceWeightedMean (plasmaElfieldRe[iNode], distanceFromNodes, plasmaElfieldRe[iNode+1], distanceFromNodes, 
+                                          currState[E_r], distanceFromCellCenter, (*externalState)[E_r], distanceFromExternalCellCenter );
+                       EpI = distanceWeightedMean (plasmaElfieldIm[iNode], distanceFromNodes, plasmaElfieldIm[iNode+1], distanceFromNodes, 
+                                          currState[E_i], distanceFromCellCenter, (*externalState)[E_i], distanceFromExternalCellCenter );
+                       EvR = distanceWeightedMean (vacuumElFieldIntensityInNodeRe[nodeID[iNode]], distanceFromNodes, vacuumElFieldIntensityInNodeRe[nodeID[iNode+1]], distanceFromNodes, 
+                                          vacuumElFieldIntensity[0][iCell], distanceFromCellCenter, EvExternalCell_Re, distanceFromExternalCellCenter );
+                       EvI = distanceWeightedMean (vacuumElFieldIntensityInNodeIm[nodeID[iNode]], distanceFromNodes, vacuumElFieldIntensityInNodeIm[nodeID[iNode+1]], distanceFromNodes, 
+                                          vacuumElFieldIntensity[1][iCell], distanceFromCellCenter, EvExternalCell_Im, distanceFromExternalCellCenter );
+                   }
+                   else
+                   {
+                       EpR = distanceWeightedMean (plasmaElfieldRe[iNode], distanceFromNodes, plasmaElfieldRe[0], distanceFromNodes, 
+                                          currState[E_r], distanceFromCellCenter, (*externalState)[E_r], distanceFromExternalCellCenter );
+                       EpI = distanceWeightedMean (plasmaElfieldIm[iNode], distanceFromNodes, plasmaElfieldIm[0], distanceFromNodes, 
+                                          currState[E_i], distanceFromCellCenter, (*externalState)[E_i], distanceFromExternalCellCenter );
+                       EvR = distanceWeightedMean (vacuumElFieldIntensityInNodeRe[nodeID[iNode]], distanceFromNodes, vacuumElFieldIntensityInNodeRe[nodeID[0]], distanceFromNodes, 
+                                          vacuumElFieldIntensity[0][iCell], distanceFromCellCenter, EvExternalCell_Re, distanceFromExternalCellCenter );
+                       EvI = distanceWeightedMean (vacuumElFieldIntensityInNodeIm[nodeID[iNode]], distanceFromNodes, vacuumElFieldIntensityInNodeIm[nodeID[0]], distanceFromNodes, 
+                                          vacuumElFieldIntensity[1][iCell], distanceFromCellCenter, EvExternalCell_Im, distanceFromExternalCellCenter );
+                   }
+               }
+	   }
+           
+           dErdX += radius*nx*(EvR + EpR);
+           dErdR += radius*ny*(EvR + EpR);
+           dEidX += radius*nx*(EvI + EpI);
+           dEidR += radius*ny*(EvI + EpI);
+           iFace++;
+       }
+     
+       dErdX /= volumes[iCell];
+       dErdR /= volumes[iCell];
+       dEidX /= volumes[iCell];
+       dEidR /= volumes[iCell];
+
+       CFreal Er = currState[E_r] + vacuumElFieldIntensity[0][iCell] ;
+       CFreal Ei = currState[E_i] + vacuumElFieldIntensity[1][iCell] ;
+       CFreal LorentzForce_x = -(elCondField[iCell]/(4.*MathTools::MathConsts::CFrealPi()*freq))*((Er/r)*dEidX - (Ei/r)*dErdX);
+       CFreal LorentzForce_r = -(elCondField[iCell]/(4.*MathTools::MathConsts::CFrealPi()*freq))*((Er/r)*dEidR - (Ei/r)*dErdR);
+
+       const CFreal scale = refData[refData.size()-1];
+       cf_assert(scale > 0.0);
+       // rescaling Lorentz Force corresponding to desired power
+       LorentzForce_x *= scale * scale;
+       LorentzForce_r *= scale * scale;
+
+       /*     if (LorentzForce_x < -200) 
+                cout  << " Cell:" << iCell << " Er=" << Er  << " dEr=" << dErdX  << " Ei=" << Ei  << " dEi=" << dEidX << "\n";   */
+
+/*     // TRICKY SCALING FOR NEGATIVE VALUES /////////////////////////////////////////////////////////
+       if (LorentzForce_x < 0 ) {                                                                   //
+         LorentzForce_x *= 1.05;                                                                    //
+       }                                                                                            //
+       if (LorentzForce_r < 0 ) {                                                                   //
+         LorentzForce_r *= 1.015;                                                                   //
+       }                                                                                            //
+       /////////////////////////////////////////////////////////////////////////////////////////////// */
+
+       LorentzForce[0][iCell] = LorentzForce_x;
+       LorentzForce[1][iCell] = LorentzForce_r;
+
+       // Lorentz Force in  source multiplied by radius - axisymmetric equations
+       LorentzForce[0][iCell] *= r;
+       LorentzForce[1][iCell] *= r;
+
+       m_cellBuilder->releaseGE();
+    }  // [ MAIN CYCLE OVER CELLs END]
+
+
+    // PUT HERE TECPLOT STUFF /////////////////
+    if(!(iter % m_srcTerm->outputFileEM_SaveRate())) 
+    {
+      if(PE::GetPE().GetRank() == 0) {
+        CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => Writing Lorentz Force to " << m_srcTerm->outputFileEM() << "\n");
+      }
+
+      WriteTecplot::getInstance().setNodeExtrapolation(2); //we can use default 1
+      ////WriteTecplot::getInstance().writeFileStructure("Ema.plt");
+            
+      WriteTecplot::getInstance().setTitle("and Lorentz Force");
+      
+      //preparing ouytput values in local variables. 
+      // this why we have to call .writeOutput method here, or we will lose the
+      // temporary variables!
+      RealVector LorentzForceInCells(nbCells) ;
+      RealVector LorentzForceInCellsRe(nbCells) ;
+      RealVector LorentzForceInCellsIm(nbCells) ;
+      for (CFuint iC = 0 ; iC < nbCells ; iC++ ) {
+         LorentzForceInCellsRe[iC] = LorentzForce[0][iC] / cellsRadius[iC] ;
+         LorentzForceInCellsIm[iC] = LorentzForce[1][iC] / cellsRadius[iC] ;
+         LorentzForceInCells[iC] = std::sqrt(LorentzForceInCellsRe[iC]*LorentzForceInCellsRe[iC] + LorentzForceInCellsIm[iC]*LorentzForceInCellsIm[iC]) ;
+      }
+      
+      const CFreal scale = refData[refData.size()-1];
+
+      WriteTecplot::getInstance().addOutput("EpR'", &plasmaElfieldInNodesRe[0], scale, true);
+      WriteTecplot::getInstance().addOutput("EpI'", &plasmaElfieldInNodesIm[0], scale, true);
+      WriteTecplot::getInstance().addOutput("z-LorentzForce", &LorentzForceInCellsRe[0], 1);
+      WriteTecplot::getInstance().addOutput("r-LorentzForce", &LorentzForceInCellsIm[0], 1);
+      WriteTecplot::getInstance().addOutput("LorentzForce", &LorentzForceInCells[0], 1);
+            
+      WriteTecplot::getInstance().writeOutput(m_srcTerm->outputFileEM());
+      
+      //WriteTecplot::getInstance().writeOutput("Ema.plt");
+    }
+    // TECPLOT STUFF END //////////////////////
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+CFreal LorentzForceSourceTerm<ST>::distanceWeightedMean(CFreal value1, CFreal d1, CFreal value2, CFreal d2, 
+           CFreal value3, CFreal d3, CFreal value4, CFreal d4) 
+{
+  CFreal oneOverD_sum = 1/d1 + 1/d2;
+  CFreal valuesDividedByD_sum = value1 / d1 + value2 / d2;
+  if (d3 != 0.) {
+    oneOverD_sum += 1/d3;
+    valuesDividedByD_sum += value3 / d3;
+  }
+  if (d4 != 0.) {
+    oneOverD_sum += 1/d4;
+    valuesDividedByD_sum += value4 / d4;
+  }
+
+  return valuesDividedByD_sum / oneOverD_sum;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+void LorentzForceSourceTerm<ST>::unsetup()
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolumeICP
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

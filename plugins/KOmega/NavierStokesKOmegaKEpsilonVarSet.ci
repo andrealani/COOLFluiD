@@ -1,0 +1,43 @@
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace KOmega {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+NavierStokesKOmegaKEpsilonVarSet<BASE, SGROUP>::NavierStokesKOmegaKEpsilonVarSet
+(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  NavierStokesKOmegaVarSet<BASE, SGROUP>(name, model)
+{
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+NavierStokesKOmegaKEpsilonVarSet<BASE, SGROUP>::~NavierStokesKOmegaKEpsilonVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+void NavierStokesKOmegaKEpsilonVarSet<BASE, SGROUP>::computeBlendingCoefFromGradientVars
+(const RealVector& state,  const RealVector& gradK,
+ const RealVector& gradOmega, const CFreal& distance)
+{
+  this->_blendingCoef1 = 0.;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace KOmega
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

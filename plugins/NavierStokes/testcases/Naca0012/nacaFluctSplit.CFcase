@@ -1,0 +1,90 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -1.79078
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libForwardEuler libFluctSplitNavierStokes libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Naca0012/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.listTRS = InnerCells Airfoil FarField
+
+Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
+Simulator.SubSystem.Euler2D.refValues = 1.204524948 \
+        260.259224953 \
+        9.088452403 \
+        281463.624745345
+
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = naca.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = naca.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 500
+Simulator.SubSystem.CFmesh.SaveRate = 500
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 10
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 500
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = nacatg.CFmesh
+
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.01
+Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = if(r>-4,0.005,0.2)
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysN
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Char
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Roe
+
+#Solution initialization
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 1.204524948 \
+          260.259224953 \
+          9.088452403 \
+                                        281463.624745345
+
+#Boundary conditions
+Simulator.SubSystem.FluctuationSplit.BcComds = WeakSlipWallEuler2D WeakFarField2D
+Simulator.SubSystem.FluctuationSplit.BcNames = WeakSlipWall FField
+
+Simulator.SubSystem.FluctuationSplit.WeakSlipWall.applyTRS = Airfoil
+
+Simulator.SubSystem.FluctuationSplit.FField.applyTRS = FarField
+Simulator.SubSystem.FluctuationSplit.FField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.FField.Def = 1.204524948 \
+          260.259224953 \
+          9.088452403 \
+                                        281463.624745345
+

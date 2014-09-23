@@ -1,0 +1,125 @@
+       Parade Version 2.2
+
+       Release Notes
+
+
+
+Contacts
+
+A J Smith    FGE        arthur.smith@fluidgravity.co.uk
+M Fertig     IRS        fertig@irs.uni-stuttgart.de              
+L Marraffa   ESTEC/YPA  lionel.marraffa@esa.int
+
+please notify me of new users and your e-mail so I can keep you all up
+to date and collect your problems. The current PARADE build standard 
+is given in the file report.txt. 
+ 
+A J Smith
+6 July 2006
+
+
+
+on Intel and compatible PC's compile with single precision (real *4,int *4)
+
+Since v1.4, delivered to team members under ESTEC contract 11148/94/NL/FG 
+the following changes have been made:
+
+v1.4.1 Minor changes to allow execution on the IBM RISC 6000 series
+
+v1.4.2 Minor changes to common blocks for execution on the Dec Alpha
+       and SGI.
+       Note that for these machines, compile with double precision ( real *8)
+       and int *4 
+
+v1.5   correction to allow correct atomic line calculation when using
+       qss routines now both group degeneracies are read in with the level
+       data, and individual level degeneracies are read with the transition
+       data.
+       This is a temporary measure as it makes the input files complex.  Note
+       new data files are also issued.
+    
+       corrections to the use of partition function when calculating the 
+       excited level number densities and equivalent temperatures for
+       molecules,  equilibrium  and nonequilibrium respectively.
+       (note still only N2+, but extension is now easy)
+
+       optical depth for escape factor in qss claculation is hardwired 
+       so FORT 1 file is not needed.
+
+       corrections to NEQAIR85 routines as previously notified
+
+       This version (V1.5) is the distributed code from ESTEC until Jan 2003)
+ 
+v1.6   After the end of the first contract phase Seb Kanne made a further correction for
+       group degeneracies to function correctly.  We still regard this as a
+       temporary measure in the input files which will probably still be present in
+       V2 WTS!
+
+       recently some rearrangement of common blocks for F90 compatability
+       memory restrictions removed (ie only one parade.inc file is necessary since we now
+       have much bigger memory PC's (suggest 256Mb), in this case if GRID.FLO is present
+       a whole flowfield solution will be undertaken. (instead of hardwiring ix, iy in parade.inc)
+
+       LINK$ is tested only if present
+   
+       This code (v1.6) is the starting point for CCN1
+
+v1.7   PARADE can now solve the 1D, non-scattering, radiation transport equation.
+
+       The relevant routines for the interface with PARADE, solving the RTE and
+       calculating the output are in the following source code files:
+          fluxes.f90
+          integrate.f90
+          precision.f90
+          rad_field.f90
+          rad_prog.f90
+          rad_trans.f90
+          radiation.f90
+          transport.f90
+
+       'Makefile's are included, for compilation with the Portland or Intel Fortran 90 compilers.
+
+       An input file 'radiation.in', which specifies the options, must be present for
+       the routines to run successfully. An example of the file 'radiation.in' is
+       included, which describes the possible commands and how the file should be
+       formatted.
+
+       The routines are called automatically from within PARADE at the end of its
+       calculations of emission and absorption coefficients. They first check that
+       the option file 'radiation.in' is present in the current directory. If it is
+       and is read without errors, the solution of the RTE can proceed. In any case,
+       the required data are stored in the unformatted file 'radiation.arg' so that
+       the RTE routines can be run again later, without having to recalculate the
+       emission and absorption coefficients.
+
+       The routines can also be called directly from the command line after PARADE has
+       already been called, by typing the command 'radiation'. The files 'radiation.in'
+       and 'radiation.arg' must both be present for this to be successful.
+       The user manual will be updated at the end of CCN1.
+ 
+       The 1D transport does not work with adaptive wavelength descretisation
+
+       Note it is the intention to move PARADE completely to f90 but this is not 
+       scheduled under CCN1, but new routines should take full advantage of f90 features.
+
+       NIST data implemented for atomic species of interest
+
+v1.8   Includes air molecules from the thesis of Laux + new discretisation routine for
+       molecules (cant be used with adaptive routines). Interface to HERTA updated but is maintained as a
+       separate main routine.
+
+v1.9   Many refinements to molecules datafiles particularly CN, some refinements to ease of use and
+       radiation transport. 
+
+v2.0   Deliverable under CCN1, also includes CO4+
+
+v2.1   Main memory allocation is now under F90.  This is a 'quick fix' to ease
+       usage on differing problems
+
+v2.2   New reading of NIST data (from original database format)
+       Gaunt factors internal calculation for bound-free radiation
+       Pseudo-species model implemented for CN
+       Add molecules data CO$^{+}$ and CH
+       Suppression of FORT4 file
+       More output choices for the user
+          

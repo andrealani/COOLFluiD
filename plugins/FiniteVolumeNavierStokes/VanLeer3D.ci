@@ -1,0 +1,189 @@
+#include "Framework/VolumeIntegrator.hh"
+#include "Framework/MethodStrategyProvider.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+VanLeer3D<UPDATEVAR>::VanLeer3D(const std::string& name) :
+  VanLeer2D<UPDATEVAR>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+VanLeer3D<UPDATEVAR>::~VanLeer3D()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void VanLeer3D<UPDATEVAR>::compute(RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  const vector<RealVector>& pdata = this->getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
+  const RealVector& leftData = pdata[LEFT];
+  const RealVector& rightData = pdata[RIGHT];
+  
+  // The flow at the freestream is assumed to be one-dimensional
+  const RealVector& unitNormal = this->getMethodData().getUnitNormal();
+  const CFreal nx = unitNormal[XX];
+  const CFreal ny = unitNormal[YY];
+  const CFreal nz = unitNormal[ZZ];
+  
+  // calculation of the primitive variables at the left and right
+  // states
+  const CFreal rhoL = leftData[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR = rightData[UPDATEVAR::PTERM::RHO];
+  const CFreal uL = leftData[UPDATEVAR::PTERM::VX];
+  const CFreal vL = leftData[UPDATEVAR::PTERM::VY];
+  const CFreal wL = leftData[UPDATEVAR::PTERM::VZ];
+  const CFreal uR = rightData[UPDATEVAR::PTERM::VX];
+  const CFreal vR = rightData[UPDATEVAR::PTERM::VY];
+  const CFreal wR = rightData[UPDATEVAR::PTERM::VZ];
+  const CFreal pL = leftData[UPDATEVAR::PTERM::P];
+  const CFreal pR = rightData[UPDATEVAR::PTERM::P];
+  const CFreal hL = leftData[UPDATEVAR::PTERM::H];
+  const CFreal hR = rightData[UPDATEVAR::PTERM::H];
+  const CFreal aL = leftData[UPDATEVAR::PTERM::A];
+  const CFreal aR = rightData[UPDATEVAR::PTERM::A];
+
+  // calculation of the normal component of velocity for
+  // the left and right states
+  const CFreal unL = uL*nx + vL*ny + wL*nz;
+  const CFreal unR = uR*nx + vR*ny + wR*nz;
+
+  // calculation of the normal Mach numbers for the sides
+  const CFreal mnL = unL / aL;
+  const CFreal mnR = unR / aR;
+
+  const CFuint nbSpecies = this->_updateVarSet->getModel()->getNbScalarVars(0);
+  const CFuint first = this->_updateVarSet->getModel()->getFirstScalarVar(0);
+
+  // calculation of flux vector according to Van Leer
+
+  // left side
+  // supersonic case
+  if (mnL >= 1.0) { // flow out of cell
+    this->_vfluxL[0] = rhoL*unL;
+    this->_vfluxL[1] = this->_vfluxL[0]*uL + pL*nx;
+    this->_vfluxL[2] = this->_vfluxL[0]*vL + pL*ny;
+    this->_vfluxL[3] = this->_vfluxL[0]*wL + pL*nz;
+    this->_vfluxL[4] = this->_vfluxL[0]*hL;
+
+    for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+      this->_vfluxL[5 + ie] = this->_vfluxL[0]*leftData[first + ie];
+    }
+  }
+  else {
+    if (mnL <= -1.0) { // flow into cell
+      this->_vfluxL = 0.0;
+    }
+    else { // subsonic case
+      // calculation of mass fluxes through the face according to
+      // Van Leer (m is for mass, L: plus, R: minus)
+      const CFreal mfluxL =  0.25*rhoL*aL * pow(mnL + 1.0, 2.0);
+
+      const CFreal gammaL = leftData[UPDATEVAR::PTERM::GAMMA];
+
+      // calculating the rest of the fluxes according to
+      // Van Leer (v is for vector, L: plus, R: minus)
+
+      this->_vfluxL[0] = mfluxL;
+      this->_vfluxL[1] = mfluxL * ( (-unL + 2.0*aL) * nx/gammaL + uL );
+      this->_vfluxL[2] = mfluxL * ( (-unL + 2.0*aL) * ny/gammaL + vL );
+      this->_vfluxL[3] = mfluxL * ( (-unL + 2.0*aL) * nz/gammaL + wL );
+      this->_vfluxL[4] = mfluxL * ( hL - pow(unL - aL,2.0)/(gammaL + 1.) );
+
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+        this->_vfluxL[5 + ie] = mfluxL * leftData[first + ie];
+      }
+    }
+  }
+
+  // right side
+  // supersonic case
+  if (mnR <= -1.0) { // flow out of cell
+    this->_vfluxR[0] = rhoR*unR;
+    this->_vfluxR[1] = this->_vfluxR[0]*uR + pR*nx;
+    this->_vfluxR[2] = this->_vfluxR[0]*vR + pR*ny;
+    this->_vfluxR[3] = this->_vfluxR[0]*wR + pR*nz;
+    this->_vfluxR[4] = this->_vfluxR[0]*hR;
+
+    for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+      this->_vfluxR[5 + ie] = this->_vfluxR[0]*rightData[first + ie];
+    }
+  }
+  else {
+    if (mnR >= 1.0) { // flow into cell
+      this->_vfluxR = 0.0;
+    }
+    else { // subsonic case
+      // calculation of mass fluxes through the face according to
+      // Van Leer (m is for mass, L: plus, R: minus)
+      const CFreal mfluxR = -0.25*rhoR*aR * pow(mnR - 1.0, 2.0);
+
+      const CFreal gammaR = rightData[UPDATEVAR::PTERM::GAMMA];
+
+      // calculating the rest of the fluxes according to
+      // Van Leer (v is for vector, L: plus, R: minus)
+
+      this->_vfluxR[0] = mfluxR;
+      this->_vfluxR[1] = mfluxR * ( (-unR - 2.0*aR) * nx/gammaR + uR );
+      this->_vfluxR[2] = mfluxR * ( (-unR - 2.0*aR) * ny/gammaR + vR );
+      this->_vfluxR[3] = mfluxR * ( (-unR - 2.0*aR) * nz/gammaR + wR );
+      this->_vfluxR[4] = mfluxR * ( hR - pow(unR + aR,2.0)/(gammaR + 1.) );
+
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+        this->_vfluxR[5 + ie] = mfluxR * rightData[first + ie];
+      }
+    }
+  }
+
+  result =  this->_vfluxL + this->_vfluxR;
+
+  // end of flux vector calculation
+    
+  // compute update coefficient
+  if (!this->getMethodData().isPerturb()) { 
+    CellCenterFVMData& data = this->getMethodData(); 
+    GeometricEntity& face = *data.getCurrentFace();
+    const CFreal faceArea = this->socket_faceAreas.getDataHandle()[face.getID()]/
+      data.getPolyReconstructor()->nbQPoints();
+    DataHandle<CFreal> updateCoeff = this->socket_updateCoeff.getDataHandle();
+    
+    // left contribution to update coefficient
+    const CFuint leftID = face.getState(0)->getLocalID();
+    CFreal maxEV = this->_updateVarSet->getMaxEigenValue(pdata[0], unitNormal);
+    updateCoeff[leftID] += max(maxEV, 0.)*faceArea;
+    
+    if (!face.getState(1)->isGhost()) {
+      // right contribution to update coefficient
+      const CFuint rightID = face.getState(1)->getLocalID();
+      this->_tempUnitNormal = -1.0*unitNormal;
+      maxEV = this->_updateVarSet->getMaxEigenValue(pdata[1],this->_tempUnitNormal);
+      updateCoeff[rightID] += max(maxEV, 0.)*faceArea;
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

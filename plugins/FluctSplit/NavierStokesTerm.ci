@@ -1,0 +1,357 @@
+#include "Common/BadValueException.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Framework/MeshData.hh"
+#include "NavierStokes/NavierStokesVarSet.hh"
+#include "NavierStokes/EulerVarSet.hh"
+#include "FluctSplit/NavierStokesTerm.hh"
+#include "FluctSplit/InwardNormalsData.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+    namespace FluctSplit {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+NavierStokesTerm<BASE>::NavierStokesTerm(const std::string& name) :
+  BASE(name),
+  _upVar(CFNULL),
+  _diffVar(CFNULL),
+  _radius(0.),
+  _states(),
+  _values(),
+  _avValues(CFNULL),
+  _normal()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+NavierStokesTerm<BASE>::~NavierStokesTerm()
+{
+  deletePtr(_avValues);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void NavierStokesTerm<BASE>::setDiffusiveVarSet(Common::SafePtr<Framework::DiffusiveVarSet> diffVar)
+{
+  _diffVar = diffVar.template d_castTo<Physics::NavierStokes::NavierStokesVarSet>();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void NavierStokesTerm<BASE>::setUpdateVarSet(Common::SafePtr<Framework::ConvectiveVarSet> updateVar)
+{ 
+  if (BASE::addToDerivedTerm()) {	
+    BASE::setUpdateVarSet(updateVar);
+ }
+  this->_upVar = updateVar.template d_castTo<Physics::NavierStokes::EulerVarSet>();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void NavierStokesTerm<BASE>::computeDiffusiveTerm
+(Framework::GeometricEntity *const geo, 
+ std::vector<RealVector>& result, bool updateCoeffFlag)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  if (BASE::addToDerivedTerm()) {			
+    BASE::computeDiffusiveTerm(geo, result, updateCoeffFlag);
+  }
+  
+  // gradient and average values computation
+  const RealVector& edata = _upVar->getModel()->getPhysicalData();
+  computeCellGradientsAndAverageState(geo, edata);
+  
+  DataHandle< InwardNormalsData*> normals = this->socket_normals.getDataHandle();
+  DataHandle< CFreal> updateCoeff = this->socket_updateCoeff.getDataHandle();
+  const CFuint nbCellStates = geo->getStates()->size();
+  
+  if (updateCoeffFlag) {
+    // compute the radius (axysimmetric computations)
+    _radius = 0.0;
+    if (this->getMethodData().isAxisymmetric()) {
+      for (CFuint i = 0; i < nbCellStates; ++i) {
+	const Node& node = *geo->getNode(i);
+	_radius += node[YY];
+      }
+      _radius /= nbCellStates;
+    }
+  }
+  
+  DistributionData& dd = this->getMethodData().getDistributionData();
+  
+  const CFuint cellID = geo->getID();
+  cellVolume = this->socket_volumes.getDataHandle()[cellID];
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFreal dimCoeff = 1./dim;
+  const CFreal ovDimCoeff2 = 1./(dimCoeff*dimCoeff);
+  NSTerm& model = _diffVar->getModel();
+  
+  vector<RealVector*>& gradients = dd.gradients;
+  RealVector& avState = dd.avState;
+  const CFreal avRho = edata[EulerTerm::RHO];
+  
+  // set the diffusive term
+  for (CFuint i = 0; i < nbCellStates; ++i) {
+    // this is not the unit normal !!
+    for (CFuint iDim = 0; iDim < dim; ++iDim) {
+      _normal[iDim] = normals[cellID]->getNodalNormComp(i,iDim);
+    }
+    
+    const RealVector& flux = _diffVar->getFlux(avState, gradients, _normal, _radius);
+    if (BASE::addToDerivedTerm()) {
+      result[i] += (-dimCoeff)*flux;
+    }
+    else { 
+      result[i] = (-dimCoeff)*flux;
+    }
+    
+    if (updateCoeffFlag) {
+      const CFreal faceArea = normals[cellID]->getAreaNode(i);
+      const CFreal mu = (model.getPhysicalData())[NSTerm::MU];
+      const CFreal diffCoeff = mu/avRho;
+      updateCoeff[geo->getState(i)->getLocalID()] += diffCoeff*faceArea*faceArea/(cellVolume*ovDimCoeff2);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void NavierStokesTerm<BASE>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  BASE::setup();	
+
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint nbNodesInControlVolume =
+    MeshDataStack::getActive()->Statistics().getMaxNbStatesInCell();
+  
+  _states.resize(nbNodesInControlVolume);
+  _values.resize(nbEqs, nbNodesInControlVolume);
+  _normal.resize(PhysicalModelStack::getActive()->getDim());
+  normaljState.resize(PhysicalModelStack::getActive()->getDim());
+  _avValues = new State();
+  Ax.resize(nbEqs, nbEqs);
+  Ay.resize(nbEqs, nbEqs);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void NavierStokesTerm<BASE>::configure ( Config::ConfigArgs& args )
+{
+  BASE::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void NavierStokesTerm<BASE>::computeCellGradientsAndAverageState
+(Framework::GeometricEntity *const geo, const RealVector& pdata) 
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+    
+  DataHandle< InwardNormalsData*> normals = this->socket_normals.getDataHandle();
+  vector<State*> *const cellStates = geo->getStates();
+  const CFuint nbCellStates = cellStates->size();
+  
+  // store the pointers to state in another array (of RealVector*)
+  for (CFuint i = 0; i < nbCellStates; ++i) {
+    _states[i] = (*cellStates)[i];
+  }
+  
+  // compute vars that will be used to compute the gradients
+  _diffVar->setGradientVars(_states, _values, geo->nbNodes());
+  
+  const CFuint cellID = geo->getID();
+  const CFreal cellVolume = this->socket_volumes.getDataHandle()[cellID];
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFreal dimCoeff = 1./dim;
+  const CFreal coeffGrad = dimCoeff/cellVolume;
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  
+  vector<RealVector*>& gradients = this->getMethodData().getDistributionData().gradients;
+  
+  for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+    RealVector& grad = *gradients[iEq];
+    grad = 0.0;
+    
+    for (CFuint is = 0; is < nbCellStates; ++is) {
+      for (CFuint iDim = 0; iDim < dim; ++iDim) {
+	grad[iDim] += _values(iEq,is)*normals[cellID]->getNodalNormComp(is,iDim);
+      }
+    }
+    grad *= coeffGrad;
+  }
+  
+  SafePtr<EulerTerm> eulerModel = _upVar->getModel();
+  const CFreal avRho = pdata[EulerTerm::RHO];
+
+  if(avRho < 0.0) {
+    cout << "negative avRho = " << avRho << " in cell "<< geo->getID() << endl;
+    cout << "pdata = " << pdata << endl;
+    throw BadValueException (FromHere(),"Negative average density in cell");
+  }
+  
+  if (pdata[EulerTerm::A] < 0.0) {
+    cout << "negative a = " << pdata[EulerTerm::A] << " in cell "<< geo->getID() << endl;
+    cout << "pdata = " << pdata << endl;
+    throw BadValueException (FromHere(),"Negative average sound speed in cell");
+  }
+  
+ _upVar->computeStateFromPhysicalData(pdata, *_avValues);
+  
+  //  *_avValues = 0.0;
+  //   for (CFuint is = 0; is < nbCellStates; ++is) {
+  //     const RealVector& state = *_states[is];
+  //     for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+  //       (*_avValues)[iEq] += state[iEq];
+  //     }
+  //   }
+  //   *_avValues /= nbCellStates;
+  
+  // back up of the average state
+  this->getMethodData().getDistributionData().avState = *_avValues;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+template <typename BASE>
+void NavierStokesTerm<BASE>::computePicardDiffJacob(Framework::GeometricEntity *const geo, 
+                                                    std::vector<RealMatrix*>& jacob)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  // carefull with the signs !!!
+  DataHandle< InwardNormalsData*> normals = this->socket_normals.getDataHandle();
+ vector<State*> *const cellStates = geo->getStates();
+ const CFuint nbCellStates = cellStates->size();
+ const CFuint cellID = geo->getID();
+ CFreal nxi = 0.;
+ CFreal nyi = 0.;
+ 
+ for (CFuint iState = 0; iState < nbCellStates; ++iState) {
+  nxi = normals[cellID]->getNodalNormComp(iState,0);
+    nyi = normals[cellID]->getNodalNormComp(iState,1);
+
+   const CFuint nStart = iState*nbCellStates;
+    for (CFuint jState = 0; jState < nbCellStates; ++jState) {
+      RealMatrix *const block = jacob[nStart + jState];
+      normaljState[XX] =  normals[cellID]->getNodalNormComp(jState,0);
+      normaljState[YY] =  normals[cellID]->getNodalNormComp(jState,1);
+      computeJacobNSFlux((*cellStates)[jState],normaljState, Ax, Ay);
+      for(CFint iEq= 0; iEq<4;iEq++)
+	for(CFint jEq= 0; jEq<4;jEq++)
+	  (*block)(iEq,jEq) = (0.5*nxi)*Ax(iEq,jEq)+(0.5*nyi)*Ay(iEq,jEq);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void NavierStokesTerm<BASE>::computeJacobNSFlux(Framework::State* state, 
+                                                RealVector& normal, RealMatrix& A, RealMatrix& B)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+    
+  DistributionData& dd = this->getMethodData().getDistributionData();
+  NSTerm& model = _diffVar->getModel();
+  RealVector& avState = dd.avState;
+  CFreal u = avState[1]/avState[0];
+  CFreal v = avState[2]/avState[0];
+  //  const RealVector& nsData = _upVar->getModel().getPhysicalData();
+  CFreal mu = (model.getPhysicalData())[NSTerm::MU];
+  const CFreal gamma = _upVar->getModel()->getGamma();
+  CFreal R = _upVar->getModel()->getR();
+  CFreal k = model.getCoeffQ()*(model.getPhysicalData())[NSTerm::LAMBDA];
+
+  CFreal DtauxxDrho = mu*(-(*state)[1]*normal[XX] + (1./3.)*((*state)[1]*normal[XX] + (*state)[2]*normal[YY]) )/
+    ((*state)[0]*(*state)[0]*cellVolume);
+  CFreal DtauxxDrhou = mu*(2.0/3.0)*(normal[XX]/(cellVolume*(*state)[0]));
+  CFreal DtauxxDrhov = -mu*(1.0/3.0)*(normal[YY]/(cellVolume*(*state)[0]));
+  CFreal DtauxxDrhoE = 0.0;
+  
+  CFreal DtauxyDrho  = -mu*((*state)[1]*normal[YY] + (*state)[2]*normal[XX])/(2.0*(*state)[0]*(*state)[0]*cellVolume);
+  CFreal DtauxyDrhou = mu*(normal[YY]/(2.0*cellVolume*(*state)[0]));
+  CFreal DtauxyDrhov = mu*(normal[XX]/(2.0*cellVolume*(*state)[0]));
+  CFreal DtauxyDrhoE = 0.0;
+
+  CFreal DtauyyDrho  = mu*(-(*state)[2]*normal[YY] + (1./3.)*((*state)[1]*normal[XX] + (*state)[2]*normal[YY]) )/
+    ((*state)[0]*(*state)[0]*cellVolume);
+  CFreal DtauyyDrhou = -mu*(1.0/3.0)*(normal[XX]/(cellVolume*(*state)[0]));
+  CFreal DtauyyDrhov =  mu*(2.0/3.0)*(normal[YY]/(cellVolume*(*state)[0]));
+  CFreal DtauyyDrhoE = 0.0;
+
+  CFreal DqxDrho     = -(normal[XX]*k*(gamma-1.0)/(2.0*cellVolume))*(-(*state)[3]/((*state)[0]*(*state)[0]*R)+
+								     +(((*state)[1]*(*state)[1]+(*state)[2]*(*state)[2])/
+								       ((*state)[0]*(*state)[0]*(*state)[0]*R)));
+  CFreal DqxDrhou    = (normal[XX]*k*(gamma-1.0)/(2.0*cellVolume))*(*state)[1]/(R*(*state)[0]*(*state)[0]);
+  CFreal DqxDrhov    = (normal[XX]*k*(gamma-1.0)/(2.0*cellVolume))*(*state)[2]/(R*(*state)[0]*(*state)[0]);
+  CFreal DqxDrhoE    = -(normal[XX]*k*(gamma-1.0))/(R*(*state)[0]*(2.0*cellVolume));
+
+  CFreal DqyDrho     = -(normal[YY]*k*(gamma-1.0)/(2.0*cellVolume))*(-((*state)[3]/((*state)[0]*(*state)[0]*R)+
+								      +(((*state)[1]*(*state)[1]+(*state)[2]*(*state)[2])/
+									((*state)[0]*(*state)[0]*(*state)[0]*R))));
+ CFreal DqyDrhou    = (normal[YY]*k*(gamma-1.0)/(2.0*cellVolume))*(*state)[1]/(R*(*state)[0]*(*state)[0]);
+ CFreal DqyDrhov    = (normal[YY]*k*(gamma-1.0)/(2.0*cellVolume))*(*state)[2]/(R*(*state)[0]*(*state)[0]);
+ CFreal DqyDrhoE    = -(normal[YY]*k*(gamma-1.0))/(R*(*state)[0]*(2.0*cellVolume));
+
+  A(0,0) = 0.; A(0,1) = 0.; A(0,2) = 0.0; A(0,3) = 0.0;
+
+  A(1,0) = DtauxxDrho; A(1,1) = DtauxxDrhou;
+  A(1,2) = DtauxxDrhov; A(1,3) = DtauxxDrhoE;
+
+  A(2,0) = DtauxyDrho; A(2,1) = DtauxyDrhou;
+  A(2,2) = DtauxyDrhov; A(2,3) = DtauxyDrhoE;
+  A(3,0) = u*DtauxxDrho + v*DtauxyDrho - DqxDrho;
+  A(3,1) = u*DtauxxDrhou + v*DtauxyDrhou - DqxDrhou;
+  A(3,2) = u*DtauxxDrhov + v*DtauxyDrhov - DqxDrhov;
+  A(3,3) = u*DtauxxDrhoE + v*DtauxyDrhoE - DqxDrhoE;
+
+ B(0,0) = 0.; B(0,1) = 0.; B(0,2) = 0.0; B(0,3) = 0.0;
+
+  B(1,0) = DtauxyDrho; B(1,1) = DtauxyDrhou;
+  B(1,2) = DtauxyDrhov; B(1,3) = DtauxyDrhoE;
+
+  B(2,0) = DtauyyDrho; B(2,1) = DtauyyDrhou;
+  B(2,2) = DtauyyDrhov; B(2,3) = DtauyyDrhoE;
+
+  B(3,0) = u*DtauxyDrho + v*DtauyyDrho - DqyDrho;
+  B(3,1) = u*DtauxyDrhou + v*DtauyyDrhou - DqyDrhou;
+  B(3,2) = u*DtauxyDrhov + v*DtauyyDrhov - DqyDrhov;
+  B(3,3) = u*DtauxyDrhoE + v*DtauyyDrhoE - DqyDrhoE;
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace FluctSplit
+
+} // namespace COOLFluiD
+
+///////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,111 @@
+!####################################################################
+/**
+ * @file dirichletexplicitneumannrib3d.CFcase Testing case for Dirichlet and explicit Neumann boundaries on ribd.
+ *
+ * @cfimage{ dirichletexplicitneumannrib3d.png }
+ *
+ * There are two ribs aligned x,y and z direction to fully test the boundaries.
+ * At x=0 and y=0 dirichlet BC T=0 and on the end of the ribs an explicit neumann 
+ * BC dT/dn=-5 is applied.
+ *
+ * @author 
+ *   Tamas Banyai
+ * @note 
+ *   3d steady laplace potential heat conduction test dirichlet explicit neumann
+**/
+#!###################################################################
+
+# libraries, paths
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libPhysicalModelDummy libTecplotWriter libNewtonMethod libGambit2CFmesh libUFEM libUFEMTriagP1P1Cell libUFEMTetraP1P1Cell libMeshTools 
+
+Simulator.Paths.WorkingDir       = plugins/UFEM/testcases/neumannbctest/grid
+Simulator.Paths.ResultsDir       = ./output
+
+# subsystem
+Simulator.SubSystem.Default.PhysicalModelType = PhysicalModelDummy
+Simulator.SubSystem.PhysicalModelDummy.Dimensions = 3
+Simulator.SubSystem.PhysicalModelDummy.Equations  = T
+
+# saving results to tecplot
+Simulator.SubSystem.OutputFormat       = Tecplot
+Simulator.SubSystem.Tecplot.FileName   = dirichletexplicitneumannrib3d.plt
+Simulator.SubSystem.Tecplot.AppendIter = true
+Simulator.SubSystem.Tecplot.SaveRate   = 10
+Simulator.SubSystem.Tecplot.Data.updateVar  = Prim
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlock
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.SocketNames   = rhs
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.VariableNames = dt
+
+# stop condition on maxiter
+Simulator.SubSystem.StopCondition                       = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -30
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter      = 10
+
+# mesh input
+Simulator.SubSystem.Default.listTRS = InnerCells inner outer
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = rib3d.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1.
+
+# linear solver
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = LSS
+Simulator.SubSystem.LSS.Data.Output = true
+Simulator.SubSystem.LSS.Data.PCType = PCILU #PCASM #PCILU
+Simulator.SubSystem.LSS.Data.ILULevels = 3
+Simulator.SubSystem.LSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.LSS.Data.NbKrylovSpaces = 50
+Simulator.SubSystem.LSS.Data.RelativeTolerance = 1E-6
+Simulator.SubSystem.LSS.Data.MaxIter = 100
+
+# newtonmethod
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.NormRes      = L2
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value    = 1.
+Simulator.SubSystem.NewtonIterator.Data.MaxSteps     = 1
+Simulator.SubSystem.NewtonIterator.Data.Norm         = -10
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+Simulator.SubSystem.NewtonIterator.SetupCom          = UFEMSetup
+Simulator.SubSystem.NewtonIterator.UnSetupCom        = UFEMUnSetup
+Simulator.SubSystem.NewtonIterator.PrepareCom        = UFEMPrepare
+Simulator.SubSystem.NewtonIterator.UpdateSol               = StdUpdateSol
+Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation = 1
+Simulator.SubSystem.NewtonIterator.Data.SaveSystemToFile = false
+
+# UFEM config
+Simulator.SubSystem.SpaceMethod = UFEM
+Simulator.SubSystem.UFEM.Restart      = false
+Simulator.SubSystem.UFEM.Data.Dt      = 100.0
+Simulator.SubSystem.UFEM.Data.Dtmult  = 1.0
+Simulator.SubSystem.UFEM.Data.Dtlimit = 100.0
+Simulator.SubSystem.UFEM.Data.OExtrap = 2
+
+Simulator.SubSystem.UFEM.Data.Terms   = HeatConduction
+Simulator.SubSystem.UFEM.Data.TetraP1P1Cell_HeatConduction.a= 10.
+
+Simulator.SubSystem.UFEM.Data.UpdateVar     = Prim
+Simulator.SubSystem.UFEM.Data.DiffusiveVar  = Prim
+Simulator.SubSystem.UFEM.SolveCom           = StdSolve
+Simulator.SubSystem.UFEM.StdSolve.applyTRS  = InnerCells
+
+Simulator.SubSystem.UFEM.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.UFEM.Data.IntegratorOrder      = P1
+
+Simulator.SubSystem.UFEM.InitComds = InitState      
+Simulator.SubSystem.UFEM.InitNames = InitialField   
+
+Simulator.SubSystem.UFEM.InitialField.applyTRS = InnerCells
+Simulator.SubSystem.UFEM.InitialField.Def = 0.
+
+Simulator.SubSystem.UFEM.BcComds = DirichletBC NeumannBC
+Simulator.SubSystem.UFEM.BcNames = INNER       OUTER
+
+Simulator.SubSystem.UFEM.INNER.applyTRS = inner 
+Simulator.SubSystem.UFEM.INNER.Vars = x y z t T
+Simulator.SubSystem.UFEM.INNER.Def = -5.
+
+Simulator.SubSystem.UFEM.OUTER.applyTRS = outer
+Simulator.SubSystem.UFEM.OUTER.Vars = x y z t T
+Simulator.SubSystem.UFEM.OUTER.Def = 50.
+

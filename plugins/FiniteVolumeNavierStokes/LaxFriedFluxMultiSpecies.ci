@@ -1,0 +1,120 @@
+#include "Framework/GeometricEntity.hh"
+#include "FiniteVolume/FVMCC_PolyRec.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+LaxFriedFluxMultiSpecies<UPDATEVAR>::LaxFriedFluxMultiSpecies(const std::string& name) :
+  LaxFriedNSvtFlux(name),
+  _upVar(CFNULL)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+LaxFriedFluxMultiSpecies<UPDATEVAR>::~LaxFriedFluxMultiSpecies()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void LaxFriedFluxMultiSpecies<UPDATEVAR>::setup()
+{
+  LaxFriedNSvtFlux::setup();
+  
+  _upVar = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void LaxFriedFluxMultiSpecies<UPDATEVAR>::compute(RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  cf_assert(_upVar.isNotNull());
+  
+  CellCenterFVMData& data = this->getMethodData(); 
+  SafePtr<FVMCC_PolyRec> polyRec = data.getPolyReconstructor();
+  State& stateL = polyRec->getCurrLeftState();
+  State& stateR = polyRec->getCurrRightState();
+  vector<RealVector>& pdata = polyRec->getExtrapolatedPhysicaData();
+  const RealVector& unitNormal = data.getUnitNormal();
+
+  // flux for the right and left state
+  _sumFlux = _upVar->getFlux()(pdata[0], unitNormal);
+  _sumFlux += _upVar->getFlux()(pdata[1], unitNormal);
+  
+  _upVar->computeEigenValues(pdata[1], unitNormal, _rightEv);
+  _upVar->computeEigenValues(pdata[0], unitNormal, _leftEv);
+  
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  CFreal aR = 0.0;
+  CFreal aL = 0.0;
+  for (CFuint i = 0; i < nbEqs; ++i) {
+    aR = max(aR, std::abs(_rightEv[i]));
+    aL = max(aL, std::abs(_leftEv[i]));
+  }
+  const CFreal a = max(aR,aL);
+  vector<State*> *const solutionStates = getMethodData().getUpdateToSolutionVecTrans()->
+    transformFromRefData(&pdata);
+  
+  // you must work with references (no copying allowed) !!!!
+  State& leftState  = *(*solutionStates)[0];
+  State& rightState = *(*solutionStates)[1];
+  const CFreal aDiff = a*this->getReductionCoeff();
+  const CFuint nbChemVars = _upVar->getModel()->getNbScalarVars(0);
+  // unused //  const CFuint first = _upVar->getModel()->getFirstScalarVar(0);
+  const CFuint nsSize = nbEqs - nbChemVars;
+  
+  result.slice(0, nsSize) = 0.5*(_sumFlux.slice(0, nsSize) - aDiff*
+			 (rightState.slice(0, nsSize) - leftState.slice(0, nsSize)));
+  
+  const CFreal fn = 0.5*result[0];
+  
+  result.slice(nsSize, nbChemVars) = fn*(stateL.slice(nsSize, nbChemVars) + stateR.slice(nsSize, nbChemVars))
+    - std::abs(fn)*(stateR.slice(nsSize, nbChemVars) - stateL.slice(nsSize, nbChemVars));
+  
+  // compute update coefficient
+  if (!this->getMethodData().isPerturb()) {
+    GeometricEntity& face = *data.getCurrentFace();
+    const CFreal faceArea = socket_faceAreas.getDataHandle()[face.getID()]/
+      data.getPolyReconstructor()->nbQPoints();
+    
+    DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+    // left contribution to update coefficient
+    const CFuint leftID = face.getState(0)->getLocalID();
+    updateCoeff[leftID] += max(_leftEv.max(), 0.0)*faceArea;
+    
+    if (!face.getState(1)->isGhost()) {
+      // right contribution to update coefficient
+      _tempUnitNormal = -1.0*unitNormal;
+      const CFreal maxEV = _upVar->getMaxEigenValue(pdata[1], _tempUnitNormal);
+      
+      const CFuint rightID = face.getState(1)->getLocalID();
+      updateCoeff[rightID] += max(maxEV, 0.0)*faceArea;
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

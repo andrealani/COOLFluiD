@@ -1,0 +1,184 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace LTE {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, class BASE>
+void NavierStokesLTEDemix<DIM, BASE>::defineConfigOptions(Config::OptionList& options)
+{
+   options.template addConfigOption< CFuint >("nelem","Number of elemental fractions.");
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, class BASE>
+NavierStokesLTEDemix<DIM, BASE>::NavierStokesLTEDemix(const std::string& name)
+  : Framework::ConvectionDiffusionPM<Framework::MultiScalarTerm<BASE>,
+                          Physics::NavierStokes::NSTerm >(name)
+{
+  this->addConfigOptionsTo(this);
+  _nelem = 0;
+  this->setParameter("nelem",&_nelem);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, class BASE>
+NavierStokesLTEDemix<DIM, BASE>::~NavierStokesLTEDemix()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM, class BASE>
+CFuint NavierStokesLTEDemix<DIM, BASE>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, class BASE>
+CFuint NavierStokesLTEDemix<DIM, BASE>::getNbEquations() const
+{
+  // set the number of elemental fractions
+  // in the convective term
+  std::valarray<CFuint> v(1);
+  v[0] = _nelem;
+  this->getConvTerm()->setNbScalarVars(v);
+
+  return DIM + 2 + _nelem;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM, class BASE>
+std::string NavierStokesLTEDemix<DIM, BASE>::getConvectiveName() const
+{
+  /// @TODO find a cleaner solution for this
+  if (this->getName() == "NavierStokes2DLTEDemix") {
+    return "Euler2DLTEDemix";
+  }
+  return "Euler3DLTEDemix";
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, class BASE>
+std::string NavierStokesLTEDemix<DIM, BASE>::getDiffusiveName() const
+{
+  return this->getName();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, class BASE>
+void NavierStokesLTEDemix<DIM, BASE>::setReferenceValues()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  SafePtr<MultiScalarTerm<BASE> > convTerm = this->getConvTerm();
+  SafePtr<NSTerm> diffTerm = this->getDiffTerm();
+
+  const CFreal tempRef = convTerm->getTempRef();
+  const CFreal pRef    = convTerm->getPressRef();
+  
+  CFLog(NOTICE, "tempRef = "   << tempRef << "\n");
+  CFLog(NOTICE, "(This could be == 0) pRef   = "    << pRef << "\n");
+
+  // reference viscosity is computed using Sutherland formula
+  const CFreal dynViscosityRef = this->getDiffTerm()->getDynViscosityDim(pRef, tempRef);
+  const CFreal gamma = convTerm->getGamma();
+  const CFreal cp = convTerm->getRdim()*gamma/(gamma - 1.);
+  const CFreal Re = diffTerm->getReynolds();
+
+  // reference values for the diffusive part
+  RealVector& refDataDiff = diffTerm->getReferencePhysicalData();
+  // reference values for the convective part
+  RealVector& refDataConv = convTerm->getReferencePhysicalData();
+
+  // set the reference values
+  refDataDiff[NSTerm::MU]     = dynViscosityRef;
+  refDataDiff[NSTerm::LAMBDA] = dynViscosityRef*cp/diffTerm->getPrandtl();
+  refDataDiff[NSTerm::RE]     = Re;
+
+  CFout << "WATCH OUT: tempRef or machInf or Re missing" << "\n";
+  CFout << "Equations will be solved dimensionally" << "\n";
+
+  // if the pressure and temperature reference values
+  // have not been specified set all the ref values to 1.
+  refDataConv = 1.0;
+  refDataDiff = 1.0;
+
+  convTerm->setRRef(convTerm->getRdim());
+  convTerm->setTempRef(1.0);
+  convTerm->setPressRef(1.0);
+
+  // scaling coefficient for the momentum equations
+  diffTerm->setCoeffTau(1.0);
+  // scaling coefficient for the energy equation
+  diffTerm->setCoeffQ(1.0);
+
+  this->_isAdimensional = false;
+
+  // set the cp over prandtl
+  const CFreal cpOverPrandtl = gamma/(gamma - 1.)*
+    convTerm->getRdim()/diffTerm->getPrandtl();
+
+  diffTerm->setCpOverPrandtl(cpOverPrandtl);
+
+  CFLog(NOTICE, "dynViscosityRef   = " << refDataDiff[NSTerm::MU]     << "\n");
+  CFLog(NOTICE, "thermConductivity = " << refDataDiff[NSTerm::LAMBDA] << "\n");
+  CFLog(NOTICE, "ReynoldsRef       = " << refDataDiff[NSTerm::RE] << "\n");
+  CFLog(NOTICE, "tempRef = "   << convTerm->getTempRef() << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, class BASE>
+void NavierStokesLTEDemix<DIM, BASE>::setReferenceTime()
+{
+//   RealVector& refDataConv = getConvTerm()->getReferencePhysicalData();
+  // since velocity scale is set to 1.0 above by default, just equal to getRefLength()
+  this->_refTime = this->getRefLength()/1.0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, class BASE>
+void NavierStokesLTEDemix<DIM, BASE>::configure ( Config::ConfigArgs& args )
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::Physics;
+
+  Framework::ConvectionDiffusionPM<Framework::MultiScalarTerm<BASE>, NSTerm>::configure(args);
+
+  cf_assert (getDimension() > 0);
+  cf_assert (getNbEquations() > 0);
+
+  // allocate jacobians
+  this->_jacobians = std::vector<RealMatrix>(getDimension());
+  for (CFuint i = 0; i < getDimension(); ++i) {
+   this->_jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace LTE
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

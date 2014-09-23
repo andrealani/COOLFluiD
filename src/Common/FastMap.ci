@@ -1,0 +1,105 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Common_FastMap_ci
+#define COOLFluiD_Common_FastMap_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Common {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY, typename VALUE>
+ FastMap<KEY, VALUE>::FastMap(size_t maxSize) :
+   _sorted(false)
+{
+  if (maxSize > 0) {
+    _vectorMap.reserve(maxSize);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY, typename VALUE>
+FastMap<KEY, VALUE>::~FastMap()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY, typename VALUE>
+inline void FastMap<KEY, VALUE>::insert(const KEY& aKey,
+					const VALUE& aValue)
+{
+  _sorted = false;
+  _vectorMap.push_back(std::pair<KEY, VALUE>(aKey, aValue));
+  CFLogDebugMax("FastMap::insert() KEY inserted: " << aKey << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY, typename VALUE>
+inline VALUE FastMap<KEY, VALUE>::find(const KEY& aKey,
+				       bool& isFound)
+{
+  cf_assert(_sorted);
+  typename std::vector<std::pair<KEY,VALUE> >::iterator itr =
+    std::lower_bound(_vectorMap.begin(),_vectorMap.end(),
+		     aKey, Compare());
+  
+  // this can fail if only one key is inserted !!!
+  isFound = (itr->first == aKey);
+  cf_assert(_vectorMap.size() > 1);
+  return itr->second;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY, typename VALUE>
+inline VALUE& FastMap<KEY, VALUE>::getAccessToValue(const KEY& aKey)
+{
+  cf_assert(_sorted);
+  typename std::vector<std::pair<KEY,VALUE> >::iterator itr =
+    std::lower_bound(_vectorMap.begin(),_vectorMap.end(),
+		     aKey, Compare());
+  return itr->second;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY, typename VALUE>
+inline void FastMap<KEY, VALUE>::replace(const KEY& aKey, 
+					 const VALUE& newValue)
+{
+  cf_assert(_sorted);
+  typename std::vector<std::pair<KEY,VALUE> >::iterator itr =
+    std::lower_bound(_vectorMap.begin(),_vectorMap.end(),
+		     aKey, Compare());
+  itr->second = newValue;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY, typename VALUE>
+inline void FastMap<KEY, VALUE>::sortKeys()
+{
+  std::sort(_vectorMap.begin(),_vectorMap.end(), LessThan());
+  _sorted = true;
+  CFLogDebugMed("FastMap::sortKeys() KEYs sorted." << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Common
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Common_FastMap_ci

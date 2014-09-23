@@ -1,0 +1,20 @@
+\chapter{Introduction}
+
+The frames used to exchange information between the server and the client are
+all written in XML. They all contain the same root tag
+(\texttt{ClientServerXML} tag) to ensure that a frame is a part of this
+protocol. The root has exactly one child, the type tag, whose name gives the
+type of the frame. This type tag may have children or not depending on the type
+of the frame.\\
+
+There are four frames structures : 
+
+\begin{itemize}
+ \item Some type tags need arguments. All arguments are mandatory. If
+an argument is missing, the frame is not valid.
+ \item Some type tags need XML data, appended as children of the type tag. Data
+format depends on the type tag.
+ \item Some type tags need arguments and data.
+ \item Some type tags need neither arguments nor data.
+\end{itemize}
+

@@ -1,0 +1,66 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace NonLinearAdv {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+NonLinearAdvPhysicalModel<DIM>::NonLinearAdvPhysicalModel(const std::string& name)
+  : Framework::ConvectionPM<NonLinearAdvTerm>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+NonLinearAdvPhysicalModel<DIM>::~NonLinearAdvPhysicalModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint NonLinearAdvPhysicalModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint NonLinearAdvPhysicalModel<DIM>::getNbEquations() const
+{
+  return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void NonLinearAdvPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionPM<NonLinearAdvTerm>::configure(args);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(DIM);
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace NonLinearAdv
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

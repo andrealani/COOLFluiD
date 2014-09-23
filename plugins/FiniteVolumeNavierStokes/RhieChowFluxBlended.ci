@@ -1,0 +1,64 @@
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+RhieChowFluxBlended<UPDATEVAR>::RhieChowFluxBlended(const std::string& name) :
+  RhieChowFlux<UPDATEVAR>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+RhieChowFluxBlended<UPDATEVAR>::~RhieChowFluxBlended()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+CFreal RhieChowFluxBlended<UPDATEVAR>::getBeta(const RealVector& leftData, 
+					       const RealVector& rightData) 
+{
+  using namespace std;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  cf_assert(this->m_PressDissipScale < 0.);
+  
+  // local flow speed norm
+  const CFreal aL   = leftData[UPDATEVAR::PTERM::A];
+  const CFreal aR   = rightData[UPDATEVAR::PTERM::A];
+  const CFreal a12   = .5*(aL + aR);
+  const CFreal localFlowSpeedNorm = std::sqrt(this->m_u12*this->m_u12 + 
+					      this->m_v12*this->m_v12 + 
+					      this->m_w12*this->m_w12);
+  
+  // local Mach number
+  const CFreal localMach = localFlowSpeedNorm/std::abs(a12);
+  // choose the minimal value of local velocity value and local sound speed
+  const CFreal chooseSpeed = (localMach > 1.) ? std::abs(a12) : localFlowSpeedNorm;
+    
+  // minimal treshold speed value - is not clear
+  const CFreal tresholdSpeedValue = .01*this->m_globalFlowSpeedEstimate;
+  
+  // choose beta as the maximum of chooseSpeed and globalFlowSpeedEstimate
+  return std::max(chooseSpeed,tresholdSpeedValue);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

@@ -1,0 +1,66 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#include "Common/CFLog.hh"
+#include "Environment/ObjectProvider.hh"
+
+#include "Framework/NullPhysicalPropertyLibrary.hh"
+#include "Framework/Framework.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+Environment::ObjectProvider<NullPhysicalPropertyLibrary,
+               PhysicalPropertyLibrary,
+               FrameworkLib,
+               1>
+nullPhysicalPropertyLibraryProvider("Null");
+
+//////////////////////////////////////////////////////////////////////////////
+
+NullPhysicalPropertyLibrary::NullPhysicalPropertyLibrary(const std::string& name) :
+  PhysicalPropertyLibrary(name)
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+NullPhysicalPropertyLibrary::~NullPhysicalPropertyLibrary()
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NullPhysicalPropertyLibrary::setup()
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NullPhysicalPropertyLibrary::unsetup()
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

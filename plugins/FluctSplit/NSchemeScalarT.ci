@@ -1,0 +1,90 @@
+#include "NSchemeScalarT.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+
+
+    namespace FluctSplit {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <CFuint N>
+NSchemeScalarT<N>::NSchemeScalarT(const std::string& name) :
+  RDS_SplitterScalar(name),
+  _sumKminU(),
+  _sumKmin(),
+  _uTemp(),
+  _uMin(),
+  _temp(),
+  _tStateTmp(N),
+  _kTmp(N)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <CFuint N>
+NSchemeScalarT<N>::~NSchemeScalarT()
+{ 
+  // realease the pointers
+  _tStateTmp.release();
+  _kTmp.release();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <CFuint N>
+void NSchemeScalarT<N>::setup()
+{
+  RDS_SplitterScalar::setup();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <CFuint N>
+void NSchemeScalarT<N>::distribute(std::vector<RealVector>& residual)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  const vector<State*>& tStates = *getMethodData().getDistributionData().tStates;
+ 
+  _tStateTmp.setPtr(*tStates[0]);
+  _kTmp.setPtr(_kMin[0]);
+  _sumKminU = _kTmp *_tStateTmp;
+  _sumKmin  = _kTmp;
+  
+  const CFuint nbStatesInCell = _nbStatesInCell;
+  for (CFuint iState = 1; iState < nbStatesInCell; ++iState) {
+    _tStateTmp.setPtr(*tStates[iState]);
+    _kTmp.setPtr(_kMin[iState]);
+    _sumKminU += _kTmp * _tStateTmp;
+    _sumKmin  += _kTmp;
+  }
+  
+  _uTemp = _sumKminU / _sumKmin;
+  
+  for (CFuint iState = 0; iState < nbStatesInCell; ++iState) {
+    _tStateTmp.setPtr(*tStates[iState]);
+    _kTmp.setPtr(_kPlus[iState]);
+    residual[iState] = _kTmp * (_tStateTmp - _uTemp); 
+  }
+  
+  //  for (CFuint i=0; i < 10; ++i) {
+  //  _uTemp = _sumKmin*_sumKminU / _sumKmin + _sumKmin  - _sumKminU +_sumKmin*_sumKminU+_sumKminU/_sumKmin;
+  //  _uTemp = _sumKmin*_sumKminU / _sumKmin + _sumKmin  - _sumKminU +_sumKmin*_sumKminU+_sumKminU/_sumKmin;
+  //  _uTemp = _sumKmin*_sumKminU / _sumKmin + _sumKmin  - _sumKminU +_sumKmin*_sumKminU+_sumKminU/_sumKmin;
+  // }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+     } // namespace FluctSplit
+
+
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

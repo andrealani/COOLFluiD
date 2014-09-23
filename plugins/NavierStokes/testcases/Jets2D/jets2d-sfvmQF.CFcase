@@ -1,0 +1,108 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+# Residual = -14.5912
+# Parallel = off
+
+# CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libSpectralFV libSpectralFVNavierStokes libRungeKutta2 libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets2D/
+Simulator.Paths.ResultsDir       = ./
+
+#Simulator.SubSystem.Default.PhysicalModelType = Euler2D
+#Simulator.SubSystem.Euler2D.pRef = 101325.
+#Simulator.SubSystem.Euler2D.tempRef = 293.
+
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2D
+#Simulator.SubSystem.NavierStokes2D.refValues = 1.0 0.414125584 0.414125584 1.0
+Simulator.SubSystem.NavierStokes2D.refLength = 1.0
+Simulator.SubSystem.NavierStokes2D.DiffTerm.Reynolds = 76000.
+Simulator.SubSystem.NavierStokes2D.ConvTerm.pRef = 101325.
+Simulator.SubSystem.NavierStokes2D.ConvTerm.tempRef = 293.
+
+#Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2D
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName     = jets2d-sfvm-sol.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 500
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+
+Simulator.SubSystem.Tecplot.FileName    = jets2d-sfvm-sol.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+
+Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 10
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
+
+Simulator.SubSystem.ConvergenceMethod = RK2
+Simulator.SubSystem.RK2.ConvergenceFile = convergence.plt
+Simulator.SubSystem.RK2.ShowRate        = 1
+Simulator.SubSystem.RK2.ConvRate        = 50
+Simulator.SubSystem.RK2.Data.CFL.Value = 0.2
+Simulator.SubSystem.RK2.Data.TimeAccurate = false
+
+Simulator.SubSystem.SpaceMethod = SpectralFVMethod
+
+Simulator.SubSystem.Default.listTRS = InnerCells InnerFaces SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2d-sfvm-1670n.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = SpectralFVMethod
+
+# choose which builder we use
+# Simulator.SubSystem.SpectralFVMethod.Builder = StdBuilder
+Simulator.SubSystem.SpectralFVMethod.Builder = MeshUpgrade
+Simulator.SubSystem.SpectralFVMethod.Builder.SVPolynomialOrder = P1
+Simulator.SubSystem.SpectralFVMethod.SpaceRHSJacobCom = RHS
+Simulator.SubSystem.SpectralFVMethod.DivideRHSByVolumeCom = DivideByVolFracRHS
+
+Simulator.SubSystem.SpectralFVMethod.Data.UpdateVar   = Cons
+Simulator.SubSystem.SpectralFVMethod.Data.SolutionVar = Cons
+Simulator.SubSystem.SpectralFVMethod.Data.LinearVar   = Roe
+Simulator.SubSystem.SpectralFVMethod.Data.DiffusiveVar= Cons
+Simulator.SubSystem.SpectralFVMethod.Data.VolTermComputer     = NSQuadFreeVolTermComputer
+Simulator.SubSystem.SpectralFVMethod.Data.FaceTermComputer    = NSQuadFreeFaceTermComputer
+Simulator.SubSystem.SpectralFVMethod.Data.BndFaceTermComputer = NSQuadFreeBndFaceTermComputer
+
+Simulator.SubSystem.SpectralFVMethod.InitComds = StdInitState
+Simulator.SubSystem.SpectralFVMethod.InitNames = InField
+
+Simulator.SubSystem.SpectralFVMethod.InField.applyTRS = InnerCells
+Simulator.SubSystem.SpectralFVMethod.InField.Vars = x y
+Simulator.SubSystem.SpectralFVMethod.InField.Def = if(y>0.5,1.,1.) \
+                                                   if(y>0.5,2.83972,2.83972) \
+                                                   0.0 \
+                                                   if(y>0.5,6.532,6.532)
+#                                                   if(y>0.5,0.5,1.) \
+#                                                   if(y>0.5,1.67332,2.83972) \
+#                                                   0.0 \
+#                                                   if(y>0.5,3.425,6.532)
+
+Simulator.SubSystem.SpectralFVMethod.BcNames = InBC           OutBC
+Simulator.SubSystem.SpectralFVMethod.InBC.applyTRS = SuperInlet
+Simulator.SubSystem.SpectralFVMethod.OutBC.applyTRS = SuperOutlet
+
+Simulator.SubSystem.SpectralFVMethod.Data.BcTypes    = Dirichlet  SuperOutlet
+Simulator.SubSystem.SpectralFVMethod.Data.BcNames    = InBC        OutBC
+
+Simulator.SubSystem.SpectralFVMethod.Data.InBC.Vars = x y
+Simulator.SubSystem.SpectralFVMethod.Data.InBC.Def =  if(y>0.5,1.,1.) \
+                                                 if(y>0.5,2.83972,2.83972) \
+                                                 0.0 \
+                                                 if(y>0.5,6.532,6.532)
+#                                                 if(y>0.5,0.5,1.) \
+#                                                 if(y>0.5,1.67332,2.83972) \
+#                                                 0.0 \
+#                                                 if(y>0.5,3.425,6.532)

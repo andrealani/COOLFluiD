@@ -1,0 +1,4 @@
+Simulator.SubSystem.BwdEuler.Data.CFL.Interactive.CFL = 1000.0
+Simulator.SubSystem.FwdEuler.Data.CFL.Interactive.CFL = 0.5
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.limitRes = -4.0
+Simulator.SubSystem.CellCenterFVM.Data.LaxFried.DiffCoeff = 1.0

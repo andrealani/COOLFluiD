@@ -1,0 +1,286 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+CFEnv.VerboseEvents = false
+CFEnv.ExceptionLogLevel = 200
+Simulator.Maestro = LoopMaestro
+Simulator.SubSystems = SubSysA SubSysB
+Simulator.SubSystemTypes = StandardSubSystem StandardSubSystem
+
+Simulator.LoopMaestro.GlobalStopCriteria = GlobalMaxNumberSteps
+Simulator.LoopMaestro.GlobalMaxNumberSteps.nbSteps = 5
+Simulator.LoopMaestro.AppendIter = true
+Simulator.LoopMaestro.RestartFromPreviousSolution = true
+Simulator.LoopMaestro.InitialFiles = CouplingStartFiles/Pipe2DFVM/*
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libForwardEuler libGambit2CFmesh libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFiniteVolume libLinearAdv libLoopMaestro libSubSystemCoupler
+
+Simulator.Paths.WorkingDir = plugins/SubSystemCoupler/testcases/FSI/
+Simulator.Paths.ResultsDir       = ./
+
+### SubSystem A Coupler Method Parameters #######################################################
+
+Simulator.SubSysA.CouplerMethod = SubSystemCoupler
+
+Simulator.SubSysA.SubSystemCoupler.SetupCom = FVMCCSetup
+
+Simulator.SubSysA.SubSystemCoupler.UnSetupComs = StdUnSetup
+Simulator.SubSysA.SubSystemCoupler.UnSetupNames = UnSetup1
+
+Simulator.SubSysA.SubSystemCoupler.PreProcessReadComs = StdPreProcessRead
+Simulator.SubSysA.SubSystemCoupler.PreProcessReadNames = PreProcessRead1
+
+Simulator.SubSysA.SubSystemCoupler.PreProcessWriteComs = FVMCCPreProcessWrite
+Simulator.SubSysA.SubSystemCoupler.PreProcessWriteNames = PreProcessWrite1
+
+Simulator.SubSysA.SubSystemCoupler.MeshMatchingReadComs = StdMeshMatcherRead
+Simulator.SubSysA.SubSystemCoupler.MeshMatchingReadNames = MeshMatcherRead1
+
+Simulator.SubSysA.SubSystemCoupler.MeshMatchingWriteComs = FVMCCNewtonMeshMatcherWrite
+Simulator.SubSysA.SubSystemCoupler.MeshMatchingWriteNames = MeshMatcherWrite1
+
+Simulator.SubSysA.SubSystemCoupler.PostProcessComs = StdPostProcess
+Simulator.SubSysA.SubSystemCoupler.PostProcessNames = PostProcess1
+
+Simulator.SubSysA.SubSystemCoupler.InterfacesReadComs = FVMCCReadDataTransfer
+Simulator.SubSysA.SubSystemCoupler.InterfacesReadNames = ReadData1
+Simulator.SubSysA.SubSystemCoupler.InterfacesWriteComs = FVMCCWriteDataTransfer
+Simulator.SubSysA.SubSystemCoupler.InterfacesWriteNames = WriteData1
+
+Simulator.SubSysA.SubSystemCoupler.InterfacesNames = Interface1
+Simulator.SubSysA.SubSystemCoupler.CoupledSubSystems = SubSysB
+
+Simulator.SubSysA.SubSystemCoupler.Data.PreVariableTransformers = Null
+Simulator.SubSysA.SubSystemCoupler.Data.PostVariableTransformers = Null
+Simulator.SubSysA.SubSystemCoupler.Data.CoordType = Nodes
+
+Simulator.SubSysA.SubSystemCoupler.CommandGroups = Interaction1
+Simulator.SubSysA.SubSystemCoupler.Interaction1.groupedTRS = East
+Simulator.SubSysA.SubSystemCoupler.Interaction1.groupedComs  = Setup1 UnSetup1 PreProcessRead1 PreProcessWrite1 MeshMatcherRead1 MeshMatcherWrite1 ReadData1 WriteData1 PostProcess1
+
+### SubSystem A  Parameters #######################################################
+
+Simulator.SubSysA.Default.PhysicalModelType  = LinearAdv2D
+Simulator.SubSysA.LinearAdv2D.VX = 1.0
+Simulator.SubSysA.LinearAdv2D.VY = 0.0
+
+
+Simulator.SubSysA.ConvergenceFile     = convergence1.plt
+
+Simulator.SubSysA.OutputFormat     = Tecplot CFmesh
+Simulator.SubSysA.CFmesh.FileName  = pipe1FVM.CFmesh
+Simulator.SubSysA.Tecplot.FileName = pipe1FVM.plt
+Simulator.SubSysA.Tecplot.Data.updateVar = Prim
+Simulator.SubSysA.Tecplot.SaveRate = 50
+Simulator.SubSysA.CFmesh.SaveRate = 50
+Simulator.SubSysA.Tecplot.AppendTime = false
+Simulator.SubSysA.CFmesh.AppendTime = false
+Simulator.SubSysA.Tecplot.AppendIter = false
+Simulator.SubSysA.CFmesh.AppendIter = false
+
+Simulator.SubSysA.ConvRate            = 1
+Simulator.SubSysA.ShowRate            = 5
+
+Simulator.SubSysA.StopCondition       = MaxNumberSteps
+Simulator.SubSysA.MaxNumberSteps.nbSteps = 30
+
+#Simulator.SubSysA.StopCondition       = Norm
+#Simulator.SubSysA.Norm.valueNorm      = -10.0
+
+Simulator.SubSysA.Default.listTRS = InnerFaces South West North East
+
+Simulator.SubSysA.MeshCreator = CFmeshFileReader
+Simulator.SubSysA.CFmeshFileReader.Data.FileName = 2Dpipe_1.CFmesh
+Simulator.SubSysA.CFmeshFileReader.Data.builderName = FVMCC
+Simulator.SubSysA.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSysA.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSysA.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSysA.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+Simulator.SubSysA.ConvergenceMethod = FwdEuler
+
+Simulator.SubSysA.SpaceMethod = CellCenterFVM
+
+Simulator.SubSysA.CellCenterFVM.Data.FluxSplitter = Roe
+Simulator.SubSysA.CellCenterFVM.Data.UpdateVar  = Prim
+Simulator.SubSysA.CellCenterFVM.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSysA.CellCenterFVM.Data.IntegratorOrder = P1
+Simulator.SubSysA.CellCenterFVM.Data.PolyRec = Constant
+
+Simulator.SubSysA.CellCenterFVM.InitComds = InitState \
+        SuperInletFVMCC \
+        SuperInletFVMCC \
+        SuperInletFVMCC \
+        SuperOutletFVMCC
+
+Simulator.SubSysA.CellCenterFVM.InitNames = InField Inlet FaceS FaceN FaceE
+
+Simulator.SubSysA.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSysA.CellCenterFVM.InField.Vars = x y
+Simulator.SubSysA.CellCenterFVM.InField.Def = 0.0
+
+Simulator.SubSysA.CellCenterFVM.Inlet.applyTRS = West
+Simulator.SubSysA.CellCenterFVM.Inlet.Vars = x y
+Simulator.SubSysA.CellCenterFVM.Inlet.Def = sin(2*y*3.14159265359)
+
+Simulator.SubSysA.CellCenterFVM.FaceS.applyTRS = South
+Simulator.SubSysA.CellCenterFVM.FaceS.Vars = x y
+Simulator.SubSysA.CellCenterFVM.FaceS.Def = 0.0
+
+Simulator.SubSysA.CellCenterFVM.FaceN.applyTRS = North
+Simulator.SubSysA.CellCenterFVM.FaceN.Vars = x y
+Simulator.SubSysA.CellCenterFVM.FaceN.Def = 0.0
+
+Simulator.SubSysA.CellCenterFVM.FaceE.applyTRS = East
+
+Simulator.SubSysA.CellCenterFVM.BcComds = SuperInletFVMCC SuperInletFVMCC SuperInletFVMCC SuperOutletFVMCC
+Simulator.SubSysA.CellCenterFVM.BcNames = West South North East
+
+Simulator.SubSysA.CellCenterFVM.South.applyTRS = South
+Simulator.SubSysA.CellCenterFVM.South.Vars = x y
+Simulator.SubSysA.CellCenterFVM.South.Def = 0.
+
+Simulator.SubSysA.CellCenterFVM.West.applyTRS = West
+Simulator.SubSysA.CellCenterFVM.West.Vars = x y
+Simulator.SubSysA.CellCenterFVM.West.Def = sin(2*y*3.14159265359)
+
+Simulator.SubSysA.CellCenterFVM.North.applyTRS = North
+Simulator.SubSysA.CellCenterFVM.North.Vars = x y
+Simulator.SubSysA.CellCenterFVM.North.Def = 0.
+
+Simulator.SubSysA.CellCenterFVM.East.applyTRS = East
+
+### SubSystem B  Parameters #######################################################
+### SubSystem B Coupler Method Parameters #######################################################
+
+Simulator.SubSysB.CouplerMethod = SubSystemCoupler
+
+Simulator.SubSysB.SubSystemCoupler.SetupCom = FVMCCSetup
+
+Simulator.SubSysB.SubSystemCoupler.UnSetupComs = StdUnSetup
+Simulator.SubSysB.SubSystemCoupler.UnSetupNames = UnSetup1
+
+Simulator.SubSysB.SubSystemCoupler.PreProcessReadComs = StdPreProcessRead
+Simulator.SubSysB.SubSystemCoupler.PreProcessReadNames = PreProcessRead1
+Simulator.SubSysB.SubSystemCoupler.PreProcessWriteComs = FVMCCPreProcessWrite
+Simulator.SubSysB.SubSystemCoupler.PreProcessWriteNames = PreProcessWrite1
+
+Simulator.SubSysB.SubSystemCoupler.MeshMatchingReadComs = StdMeshMatcherRead
+Simulator.SubSysB.SubSystemCoupler.MeshMatchingReadNames = MeshMatcherRead1
+Simulator.SubSysB.SubSystemCoupler.MeshMatchingWriteComs = FVMCCNewtonMeshMatcherWrite
+Simulator.SubSysB.SubSystemCoupler.MeshMatchingWriteNames = MeshMatcherWrite1
+
+Simulator.SubSysB.SubSystemCoupler.PostProcessComs = StdPostProcess
+Simulator.SubSysB.SubSystemCoupler.PostProcessNames = PostProcess1
+
+Simulator.SubSysB.SubSystemCoupler.InterfacesReadComs = FVMCCReadDataTransfer
+Simulator.SubSysB.SubSystemCoupler.InterfacesReadNames = ReadData1
+Simulator.SubSysB.SubSystemCoupler.InterfacesWriteComs = FVMCCWriteDataTransfer
+Simulator.SubSysB.SubSystemCoupler.InterfacesWriteNames = WriteData1
+
+Simulator.SubSysB.SubSystemCoupler.InterfacesNames = Interface1
+Simulator.SubSysB.SubSystemCoupler.CoupledSubSystems = SubSysA
+
+Simulator.SubSysB.SubSystemCoupler.Data.PreVariableTransformers = Null
+Simulator.SubSysB.SubSystemCoupler.Data.PostVariableTransformers = Null
+Simulator.SubSysB.SubSystemCoupler.Data.CoordType = Nodes
+
+Simulator.SubSysB.SubSystemCoupler.CommandGroups = Interaction1
+Simulator.SubSysB.SubSystemCoupler.Interaction1.groupedTRS = West
+Simulator.SubSysB.SubSystemCoupler.Interaction1.groupedComs  = Setup1 UnSetup1 PreProcessRead1 PreProcessWrite1 MeshMatcherRead1 MeshMatcherWrite1 ReadData1 WriteData1 PostProcess1
+
+### SubSystem B  Parameters #######################################################
+Simulator.SubSysB.Default.PhysicalModelType  = LinearAdv2D
+Simulator.SubSysB.LinearAdv2D.VX = 1.0
+Simulator.SubSysB.LinearAdv2D.VY = 0.0
+
+
+Simulator.SubSysB.ConvergenceFile     = convergence2.plt
+
+Simulator.SubSysB.OutputFormat     = Tecplot CFmesh
+Simulator.SubSysB.CFmesh.FileName  = pipe2FVM.CFmesh
+Simulator.SubSysB.Tecplot.FileName = pipe2FVM.plt
+Simulator.SubSysB.Tecplot.Data.updateVar = Prim
+Simulator.SubSysB.Tecplot.SaveRate = 50
+Simulator.SubSysB.CFmesh.SaveRate = 50
+Simulator.SubSysB.Tecplot.AppendTime = false
+Simulator.SubSysB.CFmesh.AppendTime = false
+Simulator.SubSysB.Tecplot.AppendIter = false
+Simulator.SubSysB.CFmesh.AppendIter = false
+
+Simulator.SubSysB.ConvRate            = 1
+Simulator.SubSysB.ShowRate            = 5
+
+Simulator.SubSysB.StopCondition       = MaxNumberSteps
+Simulator.SubSysB.MaxNumberSteps.nbSteps = 30
+
+#Simulator.SubSysB.StopCondition       = Norm
+#Simulator.SubSysB.Norm.valueNorm      = -10.0
+
+Simulator.SubSysB.Default.listTRS = InnerFaces South West North East
+
+Simulator.SubSysB.MeshCreator = CFmeshFileReader
+Simulator.SubSysB.CFmeshFileReader.Data.FileName = 2Dpipe_2.CFmesh
+Simulator.SubSysB.CFmeshFileReader.Data.builderName = FVMCC
+Simulator.SubSysB.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSysB.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSysB.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSysB.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+Simulator.SubSysB.ConvergenceMethod = FwdEuler
+Simulator.SubSysA.FwdEuler.Data.CFL.Value = 0.9
+Simulator.SubSysB.FwdEuler.Data.CFL.Value = 0.9
+
+Simulator.SubSysB.SpaceMethod = CellCenterFVM
+
+Simulator.SubSysB.CellCenterFVM.Data.FluxSplitter = Roe
+Simulator.SubSysB.CellCenterFVM.Data.UpdateVar  = Prim
+Simulator.SubSysB.CellCenterFVM.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSysB.CellCenterFVM.Data.IntegratorOrder = P1
+Simulator.SubSysB.CellCenterFVM.Data.PolyRec = Constant
+
+Simulator.SubSysB.CellCenterFVM.InitComds = InitState \
+        SuperInletFVMCC \
+        SuperInletFVMCC \
+        SuperInletFVMCC \
+        SuperOutletFVMCC
+
+Simulator.SubSysB.CellCenterFVM.InitNames = InField Inlet FaceS FaceN FaceE
+
+Simulator.SubSysB.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSysB.CellCenterFVM.InField.Vars = x y
+Simulator.SubSysB.CellCenterFVM.InField.Def = 0.0
+
+Simulator.SubSysB.CellCenterFVM.Inlet.applyTRS = West
+Simulator.SubSysB.CellCenterFVM.Inlet.Vars = x y
+Simulator.SubSysB.CellCenterFVM.Inlet.Def = 0.0
+
+Simulator.SubSysB.CellCenterFVM.FaceS.applyTRS = South
+Simulator.SubSysB.CellCenterFVM.FaceS.Vars = x y
+Simulator.SubSysB.CellCenterFVM.FaceS.Def = 0.0
+
+Simulator.SubSysB.CellCenterFVM.FaceN.applyTRS = North
+Simulator.SubSysB.CellCenterFVM.FaceN.Vars = x y
+Simulator.SubSysB.CellCenterFVM.FaceN.Def = 0.0
+
+Simulator.SubSysB.CellCenterFVM.FaceE.applyTRS = East
+
+Simulator.SubSysB.CellCenterFVM.BcComds = CoupledSuperInlet_NodalFVMCC SuperInletFVMCC SuperInletFVMCC SuperOutletFVMCC
+Simulator.SubSysB.CellCenterFVM.BcNames = West South North East
+
+Simulator.SubSysB.CellCenterFVM.South.applyTRS = South
+Simulator.SubSysB.CellCenterFVM.South.Vars = x y
+Simulator.SubSysB.CellCenterFVM.South.Def = 0.
+
+Simulator.SubSysB.CellCenterFVM.West.applyTRS = West
+Simulator.SubSysB.CellCenterFVM.West.Interface = Interaction1
+Simulator.SubSysB.CellCenterFVM.West.Vars = x y
+Simulator.SubSysB.CellCenterFVM.West.Def = 0.
+
+Simulator.SubSysB.CellCenterFVM.North.applyTRS = North
+Simulator.SubSysB.CellCenterFVM.North.Vars = x y
+Simulator.SubSysB.CellCenterFVM.North.Def = 0.
+
+Simulator.SubSysB.CellCenterFVM.East.applyTRS = East
+

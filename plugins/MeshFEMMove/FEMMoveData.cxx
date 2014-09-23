@@ -1,0 +1,67 @@
+#include "MeshFEMMove/MeshFEMMove.hh"
+
+#include "FEMMoveData.hh"
+#include "Framework/MethodCommandProvider.hh"
+#include "Framework/PhysicalModelImpl.hh"
+#include "Framework/PhysicalModel.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace MeshFEMMove {
+
+//////////////////////////////////////////////////////////////////////////////
+
+MethodCommandProvider<NullMethodCommand<FEMMoveData>, FEMMoveData, MeshFEMMoveModule> nullFEMMoveComProvider("Null");
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FEMMoveData::defineConfigOptions(Config::OptionList& options)
+{
+   options.addConfigOption<std::string>("OtherNamespace","Name of the namespace of the subsystem.");
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+FEMMoveData::FEMMoveData(Common::SafePtr<Framework::Method> owner)
+  : MeshAdapterData(owner)
+{
+   addConfigOptionsTo(this);
+
+   setParameter("OtherNamespace",&_otherNamespace);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+FEMMoveData::~FEMMoveData()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FEMMoveData::configure ( Config::ConfigArgs& args )
+{
+  CFAUTOTRACE;
+
+  MeshAdapterData::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace MeshFEMMove
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

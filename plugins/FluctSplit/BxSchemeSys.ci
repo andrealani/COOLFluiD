@@ -1,0 +1,448 @@
+#include "Framework/MeshData.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Framework/ConvectiveVarSet.hh"
+#include "Common/BadValueException.hh"
+#include "NavierStokes/EulerTerm.hh"
+#include "FluctSplit/FluctuationSplitData.hh"
+
+#include <cmath>
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+
+
+    namespace FluctSplit {
+
+//////////////////////////////////////////////////////////////////////////////
+  
+template <class BASE, class MODEL>
+BxSchemeSys<BASE,MODEL>::BxSchemeSys(const std::string& name) :
+  BASE(name),
+  _cterm(CFNULL),
+  _pData(),
+  _grad(),
+  _varID(0)
+{
+  this->addConfigOptionsTo(this);
+  
+  _deltaVar = 0.0;
+  this->setParameter("Delta",&_deltaVar);
+  
+  _length = 1.0;
+  this->setParameter("Length",&_length);
+  
+  _speed = 1.0;
+  this->setParameter("Speed",&_speed); 
+  
+  _varName = "p";
+  this->setParameter("VarName",&_varName);
+
+  _order = 1;
+  this->setParameter("Order",&_order);
+
+  _sh_detector = "Jirka";
+  // Choice between Jirka shock capturing and 
+  // The improved one of Antonino, the one of Antonino
+  // is implemented only in 2D
+  this->setParameter("Shockdetector",&_sh_detector);
+
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class MODEL>
+BxSchemeSys<BASE,MODEL>::~BxSchemeSys()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class MODEL>
+void BxSchemeSys<BASE,MODEL>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFreal>("Delta","Delta of variable.");
+  options.template addConfigOption< CFreal>("Length","Reference Length.");
+  options.template addConfigOption< CFreal>("Speed","Reference Speed."); 
+  options.template addConfigOption< std::string>("VarName","Variable name.");
+  options.template addConfigOption< CFuint >("Order","Order of the discretization of the solution");
+  options.template addConfigOption< std::string>("Shockdetector","Which shock detetecto to use");
+
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class MODEL>
+void BxSchemeSys<BASE,MODEL>::configure ( Config::ConfigArgs& args )
+{
+  BASE::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class MODEL>
+void BxSchemeSys<BASE,MODEL>::setup()
+{
+  BASE::setup();
+  
+  _cterm = Framework::PhysicalModelStack::getActive()->getImplementor()->
+    getConvectiveTerm().template d_castTo<MODEL>();
+  
+  _cterm->resizePhysicalData(_pData);
+
+  _Uavg.resize(_pData.size());
+  
+  _grad.resize(Framework::PhysicalModelStack::getActive()->getDim());
+  
+  // set _choiceVar to pressure if default value is required
+  if (_varName == "rho")
+  {
+    _varID = Physics::NavierStokes::EulerTerm::RHO;
+  }
+   
+  if (_varName == "p")
+  {
+    _varID = Physics::NavierStokes::EulerTerm::P;
+  }
+
+  if (_varName == "T")
+  {
+    _varID = Physics::NavierStokes::EulerTerm::T;
+  }
+
+  if ( _varName != "p" && _varName != "rho" && _varName != "T" )
+    throw Common::BadValueException (FromHere(),"Variable to base the shock detector must be either [rho] or [p]");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class MODEL>
+void BxSchemeSys<BASE,MODEL>::computeBlendingCoeff()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  if (this->m_freezeTheta == 0) {    
+    GeometricEntity *const cell = this->getMethodData().getDistributionData().cell;
+    
+    vector<State*>* states = (this->getMethodData().getDistributionData().subStates != CFNULL) ?
+      this->getMethodData().getDistributionData().subStates : cell->getStates();
+    
+    DataHandle<InwardNormalsData*> normals = this->socket_normals.getDataHandle();
+    DataHandle<CFreal> volumes = this->socket_volumes.getDataHandle();
+    
+    SafePtr<ConvectiveVarSet> upVar = this->getMethodData().getUpdateVar();
+    const RealVector& lData =  _cterm->getPhysicalData();
+    
+    const CFuint cellID = cell->getID();
+    const CFuint nbStates = states->size();
+    const CFuint dim = PhysicalModelStack::getActive()->getDim();
+    
+    _grad = 0.0;
+    for (CFuint i = 0; i < nbStates; ++i) {
+      upVar->computePhysicalData(*(*states)[i], _pData);
+      
+      for (CFuint iDim = 0; iDim < dim; ++iDim) {
+        _grad[iDim] += _pData[_varID]*normals[cellID]->getNodalNormComp(i,iDim);	
+      }
+    }
+    CFreal vol = volumes[cellID];
+    
+    vol /= _order*_order;
+    CFreal h;
+   if (dim == DIM_2D) h = 2.0*std::sqrt(static_cast<CFreal>(vol/MathTools::MathConsts::CFrealPi()));
+   else if (dim == DIM_3D) h = 2.0*std::pow(3.0*vol/(4.0*MathTools::MathConsts::CFrealPi()),0.33333); 
+    CFreal theta = 0.0;
+    
+    if (_sh_detector == "Jirka"){
+      theta = _grad[XX]*lData[EulerTerm::VX] + _grad[YY]*lData[EulerTerm::VY];
+      if (dim == DIM_3D) {
+        theta += _grad[ZZ]*lData[EulerTerm::VZ];
+      } 
+      
+      updateScalingValues();
+      
+      theta *= _length/(vol*dim*_deltaVar*_speed);
+    }
+
+	else if (_sh_detector == "Gnoffo"){
+
+      upVar->computePhysicalData(*(*states)[0], _pData);
+      CFreal var_min = _pData[_varID];
+      CFreal var_Max = _pData[_varID];
+      
+      for (CFuint i = 1; i < nbStates; ++i) {
+            upVar->computePhysicalData(*(*states)[i], _pData);
+            var_min = std::min(_pData[_varID], var_min);
+            var_Max = std::max(_pData[_varID], var_Max);
+      }
+
+      CFreal phi = var_Max/var_min;
+
+      const CFreal phi_min = 2.;
+      const CFreal phi_Max = 3.;
+      
+      const CFreal z = (phi_Max - phi)/(phi_Max - phi_min);
+      const CFreal Z = std::min(1., std::max(0., z));
+      const CFreal arg = Z*MathTools::MathConsts::CFrealPi();
+
+      theta = 1 - 0.5*(1. - std::cos(arg) );
+
+//       std::cout << "1.theta = " << theta << std::endl;
+
+      theta = std::sqrt(theta/h);
+//       std::cout << "2.theta = " << theta << std::endl;
+      
+    }
+
+    else if (_sh_detector == "Ducros"){
+	  assert (dim == DIM_2D);
+                  
+      upVar->computePhysicalData(*(*states)[0], _pData);
+      
+      CFreal uI = _pData[Physics::NavierStokes::EulerTerm::VX];
+      CFreal vI = _pData[Physics::NavierStokes::EulerTerm::VY];
+      CFreal nxI = normals[cellID]->getNodalNormComp(0,XX);
+      CFreal nyI = normals[cellID]->getNodalNormComp(0,YY);
+	  
+	  CFreal div  = uI*nxI + vI*nyI; // only for 2D
+      CFreal rotZ = vI*nxI - uI*nyI; // only for 2D
+      
+            
+      for (CFuint i = 1; i < nbStates; ++i) {
+            upVar->computePhysicalData(*(*states)[i], _pData);
+			
+            uI  = _pData[Physics::NavierStokes::EulerTerm::VX];
+            vI  = _pData[Physics::NavierStokes::EulerTerm::VY];
+            nxI = normals[cellID]->getNodalNormComp(i,XX);
+            nyI = normals[cellID]->getNodalNormComp(i,YY);
+
+            div  += uI*nxI + vI*nyI;
+            rotZ += vI*nxI - uI*nyI; // only for 2D
+      }
+      
+      div  /= 2.*vol;
+      rotZ /= 2.*vol;
+
+      theta = div < 0. && std::abs(div) > 1.e-10? div*div / ( div*div + rotZ*rotZ + 1.e-10 ) : 0.;//MathTools::MathConsts::CFrealEps()
+
+      //std::cout << "1.theta = " << theta << std::endl;
+
+      theta = std::sqrt(theta/h);
+//       std::cout << "2.theta = " << theta << std::endl;
+
+    }
+    
+    else if (_sh_detector == "Anton"){
+      theta = _grad[XX] * lData[EulerTerm::VX] + _grad[YY] * lData[EulerTerm::VY];
+      
+      theta *= std::pow(    (std::pow(lData[EulerTerm::VX],2) + std::pow(lData[EulerTerm::VY],2)), 0.5   );
+      
+      updateScalingValues();
+      
+      theta *= _length/(vol*dim*_deltaVar * _speed * _speed);   //modified!!
+    }
+
+	else if (_sh_detector == "JGM"){      
+      _grad /= (dim*vol); // units: deltaVar / meter
+
+      const CFreal l_OVER_UdeltaVar_ref = _length/(_speed*_deltaVar);// units: meter / (deltaVar m/s)/
+
+//       const CFreal l_OVER_UdeltaVar_ref = _length/(lData[EulerTerm::V]*_deltaP);
+
+      const CFreal shockDetector = (_grad[XX]*lData[EulerTerm::VX] + _grad[YY]*lData[EulerTerm::VY])*l_OVER_UdeltaVar_ref;// units: non-dimensional
+
+      // JGM: Factor 1./sqrt(_length) serves to non-dimensionalize
+	  // the product theta*theta*h, appearing later on...
+
+      theta = shockDetector/std::sqrt(_length);// units: m^-0.5
+    }
+    
+    
+    // AL: this was missing
+    theta = std::max(0.,theta);
+    
+    this->m_theta = std::min(1.0,theta*theta*h);
+    
+    // this->_alpha = min(1.0,theta*h); 
+    // cout << "theta = " << this->m_theta << endl;
+  }
+  else {
+    // if theta is to be frozen, copy previous theta value 
+    // @TODO AL: this works only for P1 elements 
+    DistributionData& distdata = this->getMethodData().getDistributionData();
+    const CFuint cellID = distdata.cellID;
+    const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+    Framework::DataHandle< CFreal > thetas = this->socket_thetas.getDataHandle();
+    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+      this->m_theta[iEq] = thetas(cellID, iEq, nbEqs);
+    }
+  }
+  
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class MODEL>
+void BxSchemeSys<BASE,MODEL>::updateScalingValues()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class MODEL> 
+ void BxSchemeSys<BASE,MODEL>::addExtraDissipation(std::vector<RealVector>& residual)
+ {
+//    std::cout << "template <class BASE, class MODEL> void BxSchemeSys<BASE,MODEL>::addExtraDissipation() --- BX\n";
+
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+////   std::cout << "VarName = " << _varName << std::endl;
+////   std::cout << "Delta   = " << _deltaVar << std::endl;
+////   std::cout << "Length  = " << _length << std::endl;
+////   std::cout << "Speed   = " << _speed << std::endl;
+//  
+//  typedef MultiScalarTerm<COOLFluiD::Physics::NavierStokes::EulerTerm> NEQTerm;
+//
+//  if (this->m_addExtraDiss) {    
+//
+//    const CFuint XX = 0;
+//    const CFuint YY = 1;
+//    
+//    const CFuint N0 = 0;
+//    const CFuint N1 = 1;
+//    const CFuint N2 = 2;
+//
+//    GeometricEntity *const cell = this->getMethodData().getDistributionData().cell;
+//
+//
+//
+//    const vector<State*>& tStates = *(this->getMethodData().getDistributionData().tStates);
+//
+//
+//
+//    SafePtr<ConvectiveVarSet> upVar = this->getMethodData().getUpdateVar();
+//    const RealVector& lData =  _cterm->getPhysicalData();
+//
+//    const CFuint cellID = cell->getID();
+//    const CFuint nbStates = tStates.size();
+//    const CFuint dim = PhysicalModelStack::getActive()->getDim();
+//
+//    _model = PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm().d_castTo<NEQTerm>();
+//
+//    _model->resizePhysicalData(_pData);
+//
+//    _Uavg = (*tStates[N0] + *tStates[N1] + *tStates[N2])/this->_nbStatesInCell;
+//
+//    this->getMethodData().getLinearVar()->computePhysicalData(_Uavg, _pData);
+//    
+//    const CFreal a = _pData[EulerTerm::A];
+//    const CFreal V = _pData[EulerTerm::V];
+//
+//    const CFuint nbSpecies = _model->getNbScalarVars(0);
+//
+//    const CFuint uID = nbSpecies;
+//    const CFuint vID = nbSpecies + 1;
+//
+//    CFreal aux_density = 0.;
+//
+//    for(CFuint iSpecies = 0 ; iSpecies < nbSpecies; iSpecies++){
+//      aux_density += _Uavg[iSpecies];
+//    }
+//
+//    const CFreal rho = aux_density;
+//
+//    const CFreal ux = _Uavg[uID]/rho;
+//    const CFreal uy = _Uavg[vID]/rho;
+//
+//
+//    DataHandle<InwardNormalsData*> normals = this->socket_normals.getDataHandle();
+//    DataHandle<CFreal> volumes = this->socket_volumes.getDataHandle();
+//    const CFreal vol = volumes[cellID];
+//
+//    RealVector _gradVar(2);
+//
+//    _gradVar[XX] = 0.;
+//    _gradVar[YY] = 0.;
+//
+//    for(CFuint iState = 0; iState < this->_nbStatesInCell; iState++){
+//      this->getMethodData().getLinearVar()->computePhysicalData(*tStates[iState], _pData);
+//
+//      const CFreal nodalVar = _pData[_varID];
+//
+//      for(CFuint iDim = 0; iDim < dim; iDim++){
+//        const CFreal n_s__d = normals[cellID]->getNodalNormComp(iState,iDim);
+//        _gradVar[iDim] += nodalVar*n_s__d;
+//      }
+//    }
+//    _gradVar /= (dim*vol);
+//
+//    const CFreal l_OVER_UdeltaVar_ref = _length/(_speed*_deltaVar);
+//
+//    cf_assert(dim == DIM_2D);
+//    const CFreal sigma_aux = (_gradVar[XX]*ux + _gradVar[YY]*uy)*l_OVER_UdeltaVar_ref;
+//
+//    const CFreal sigma = std::max(0.,sigma_aux);
+//
+//    // Diameter of a circle with the same area of the element:
+//    const CFreal h = 2.0*std::sqrt(static_cast<CFreal>(vol/MathTools::MathConsts::CFrealPi()));
+//
+//    // Attention!!! this THETA is DIFFERENT from the theta used to blend NC and LDAC schemes
+//    CFreal THETA = std::min(1., (h/_length)*sigma*sigma);
+//
+///*
+//    if( _freezeAdditionalDiss == 0 ) {
+//      if (_last_accessed_at_iter != SubSystemStatusStack::getActive()->getNbIter()){
+//        socket_ExtraDiss_active.getDataHandle() = 0;
+//      }
+//
+//      socket_ExtraDiss_active.getDataHandle()[cellID] = THETA;
+//    }
+//    else {
+//      THETA = socket_ExtraDiss_active.getDataHandle()[cellID];
+//    }
+//
+//    _last_accessed_at_iter = SubSystemStatusStack::getActive()->getNbIter();
+//*/
+//
+//        
+////     if (_last_accessed_at_iter != SubSystemStatusStack::getActive()->getNbIter()){
+////       socket_ExtraDiss_active.getDataHandle() = 0;
+////     }
+//// 
+////     socket_ExtraDiss_active.getDataHandle()[cellID] = THETA;
+//// 
+////     _last_accessed_at_iter = SubSystemStatusStack::getActive()->getNbIter();
+//
+//    const CFreal char_size = std::sqrt(vol);
+//
+//    CFreal K_diss = 0.01*V*char_size/3.;
+//
+//    residual[0] += THETA*K_diss*(2.*(*tStates[N0]) - *tStates[N1] - *tStates[N2] );
+//    residual[1] += THETA*K_diss*(2.*(*tStates[N1]) - *tStates[N2] - *tStates[N0] );
+//    residual[2] += THETA*K_diss*(2.*(*tStates[N2]) - *tStates[N0] - *tStates[N1] );
+//
+////     std::cout << "residual[0] = " << (*tStates[N0]) << std::endl;
+////     std::cout << "residual[1] = " << (*tStates[N1]) << std::endl;
+////     std::cout << "residual[2] = " << (*tStates[N2]) << std::endl;
+//  }
+//
+////    std::cout << "exiting ... template <class BASE, class MODEL> void BxSchemeSys<BASE,MODEL>::addExtraDissipation() --- BX\n";  
+ }
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace FluctSplit
+
+
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

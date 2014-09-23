@@ -1,0 +1,437 @@
+#include "FiniteVolume/FluxData.hh"
+
+#include "Framework/CellConn.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/MathTypes.hh"
+#include "Common/CUDA/CudaDeviceManager.hh"
+#include "Common/CUDA/CFVec.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::FVMCC_ComputeRHSCell(const std::string& name) :
+  FVMCC_ComputeRHS(name), 
+  socket_stencil("stencil"),
+  socket_uX("uX"),
+  socket_uY("uY"),
+  socket_uZ("uZ"),
+  m_cellFaces(CFNULL),
+  m_cellNodes(CFNULL),
+  m_centerNodes(), 
+  m_ghostStates(),
+  m_ghostNodes(),
+  m_cellInfo(),
+  m_cellStencil(),
+  m_neighborTypes(),
+  m_cellConn(),
+  m_nbBlocksPerGridX(),
+  m_nbBlocksPerGridY()
+{
+  this->addConfigOptionsTo(this);
+  
+  m_onGPU = false;
+  setParameter("OnGPU",&m_onGPU);
+  
+  m_nbCellsPerBlock = 1;
+  setParameter("NbCellsPerBlock",&m_nbCellsPerBlock);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::~FVMCC_ComputeRHSCell()
+{  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::unsetup()
+{  
+  FVMCC_ComputeRHS::unsetup();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< bool > ("OnGPU", "Flag telling to solve on GPU");
+  options.template addConfigOption< CFuint > ("NbCellsPerBlock", "Number of cells per block");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::configure ( Config::ConfigArgs& args )
+{
+  FVMCC_ComputeRHS::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::initializeComputationRHS()
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRHSCell::initializeComputationRHS() START\n");
+  
+  // copy locally the ghost states, gstates should be treated as states, with pointers to a 1D storage
+  DataHandle < Framework::State* > gstates = socket_gstates.getDataHandle();
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  for (CFuint i = 0; i < gstates.size(); ++i) {
+    const State& gs = *gstates[i];
+    for (CFuint d = 0; d < nbEqs; ++d) {
+      m_ghostStates[i*nbEqs+d] = gs[d];
+    }
+  } 
+  
+  this->getMethodData().getPolyReconstructor()->prepareReconstruction();
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRHSCell::initializeComputationRHS() END\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::needsSockets()
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  std::vector<SafePtr<BaseDataSocketSink> > result = FVMCC_ComputeRHS::needsSockets();
+  result.push_back(&socket_stencil);
+  result.push_back(&socket_uX);
+  result.push_back(&socket_uY);
+  result.push_back(&socket_uZ);
+  return result;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::storeStencilData()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRHSCell::storeStencilData() START\n");
+  
+  // flag the partition ghost states
+  cf_assert(socket_gstates.getDataHandle().size() > 0);
+  vector<bool> isPartitionState(socket_gstates.getDataHandle().size(), false);
+  
+  // prepare the building of the faces
+  SafePtr<GeometricEntityPool<FaceTrsGeoBuilder> > geoBuilder = getMethodData().getFaceTrsGeoBuilder();
+  geoBuilder->getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
+  FaceTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
+  SafePtr<TopologicalRegionSet> currTrs = MeshDataStack::getActive()->getTrs("PartitionFaces");
+  const CFuint nbTrsFaces = currTrs->getLocalNbGeoEnts();
+  geoData.trs = currTrs;
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRHSCell::storeStencilData() => Nb of PartitionFaces = " << nbTrsFaces << "\n");
+  
+  for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace) {
+    geoData.idx = iFace;
+    GeometricEntity*const face = geoBuilder->buildGE();
+    const CFuint ghostID = face->getState(1)->getLocalID();
+    cf_assert(ghostID < isPartitionState.size());
+    isPartitionState[ghostID] = true;
+    geoBuilder->releaseGE(); 
+  }
+  
+  // reorder the stencil storage to place face neighbors at first   
+  DataHandle<vector<State*> > stencil = socket_stencil.getDataHandle();
+  const CFuint nbCells = stencil.size();
+  cf_assert(nbCells > 0);
+  m_cellInfo.resize(5*nbCells);
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRHSCell::storeStencilData() => nbCells = " << nbCells << "\n");
+  
+  CFuint countStencil = 0;
+  CFuint maxNbNeighbors = 0;
+  for (CFuint i = 0; i < nbCells; ++i) {
+    cf_assert(i < stencil.size());
+    maxNbNeighbors = std::max((CFuint)maxNbNeighbors, (CFuint)stencil[i].size());
+    countStencil += stencil[i].size();
+  }
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRHSCell::storeStencilData() => maxNbNeighbors = " << maxNbNeighbors << "\n");
+  
+  // not all faces belong to the stencil: partition faces are discarded!
+  // stencil must be bigger than the local (in this processor) number of cells  
+  cf_assert(countStencil > nbCells);
+  cf_assert(maxNbNeighbors > 0);
+  
+  m_cellStencil.resize(countStencil);
+  m_neighborTypes.resize(countStencil);
+  
+  // preallocated array to use for reordering, cell by cell
+  vector<State*> tmp; tmp.reserve(maxNbNeighbors);
+  
+  // create and setup the cell builder
+  SafePtr<GeometricEntityPool<CellTrsGeoBuilder> > cellBuilder = getMethodData().getCellTrsGeoBuilder();
+  SafePtr<CellTrsGeoBuilder> cellBuilderPtr = cellBuilder->getGeoBuilder();
+  CellTrsGeoBuilder::GeoData& cellData = cellBuilder->getDataGE();
+  SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
+  cellData.trs = cells;
+  cf_assert(nbCells == cellData.trs->getLocalNbGeoEnts());
+  
+  CFuint countN = 0;
+  for (CFuint iCell = 0; iCell < nbCells; ++iCell) {
+    // build the cell
+    cellData.idx = iCell;
+    GeometricEntity *const cell = cellBuilder->buildGE();
+    const CFuint cellID = cell->getState(0)->getLocalID();
+    cf_assert(cellID == iCell);
+    cf_assert(iCell < stencil.size());
+    vector<State*>& currStencil = stencil[iCell];
+    const CFuint stencilSize = currStencil.size();
+    cf_assert(stencilSize > 0);
+    
+    const vector<GeometricEntity*>& faces = *cell->getNeighborGeos();
+    const CFuint nbFaces = faces.size();
+    cf_assert(nbFaces > 2);
+    
+    // set the cell info array 
+    const CFuint cstart = iCell*5;
+    cf_assert(cstart   < m_cellInfo.size());
+    cf_assert(cstart+1 < m_cellInfo.size());
+    cf_assert(cstart+2 < m_cellInfo.size());
+    
+    m_cellInfo[cstart]   = countN;      // stencil info start for cell iCell
+    m_cellInfo[cstart+1] = stencilSize; // stencil size for cell iCell
+    m_cellInfo[cstart+2] = nbFaces;     // number of faces (including partition) for cell iCell
+    
+    // insert face neighbors first
+    CFuint nbActiveFaces = 0;
+    for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+      GeometricEntity *const face = faces[iFace];
+      State *const st = (face->getState(0)->getLocalID() == cellID) ? face->getState(1) : face->getState(0);
+      
+      // WATCH OUT: partition faces must be discarded in the stencil for consistency
+      //            with the algorithm computing the stencil
+      if (!st->isGhost() || (st->isGhost() && !isPartitionState[st->getLocalID()])) {
+        // here you are either internal (updatable or not) or not-partition-boundary ghost state
+	// hence you have a VALID local ID
+	CFLog(DEBUG_MIN, "st->isGhost() = " << st->isGhost() << ", st->getLocalID() = " << st->getLocalID() << "\n");
+	cf_assert(countN < m_cellStencil.size());
+	// cf_assert(st->getLocalID() < nbCells) fails on very small meshes for which nb of ghosts >= nbCells 
+        cf_assert(countN < m_cellStencil.size());
+	m_cellStencil[countN] = st->getLocalID();
+	
+        // neighbor cell types: internal (1), partition (0), physical boundary (-1)  
+        cf_assert(countN < m_neighborTypes.size());
+        m_neighborTypes[countN] = (!st->isGhost()) ? 1 : -1;
+	
+        ++countN;
+        ++nbActiveFaces;
+      }
+    }
+    
+    cf_assert(cstart+4 < m_cellInfo.size());
+    m_cellInfo[cstart+4] = nbActiveFaces; // number of active faces in cell iCell
+    
+    // CFLog(VERBOSE, "FVMCC_ComputeRHSCell::storeStencilData() => (iCell,countN) = " << iCell << "," << countN << "\n");
+    
+    for (CFuint n = 0; n < stencilSize; ++n) {
+      cf_assert(n < currStencil.size());
+      State *const neighbor = currStencil[n];
+      bool found = false;
+      for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+	cf_assert(iFace < faces.size());
+	GeometricEntity *const face = faces[iFace];
+	State *const st = (face->getState(0)->getLocalID() == cellID) ? face->getState(1) : face->getState(0);
+	if (neighbor == st) {
+	  found = true;
+	  break;
+	}
+      }
+      
+      // insert remaining vertex neighbors 
+      if(!found) {
+	if (!neighbor->isGhost() || (neighbor->isGhost() && !isPartitionState[neighbor->getLocalID()])) {
+	  cf_assert(countN < m_cellStencil.size());
+	  cf_assert(countN < m_neighborTypes.size());
+	  m_cellStencil[countN]   = neighbor->getLocalID();
+	  m_neighborTypes[countN] = (!neighbor->isGhost()) ? 1 : -1;
+	  ++countN;
+	}
+      }
+      
+      // CFLog(VERBOSE, "FVMCC_ComputeRHSCell::storeStencilData() => found after = " << found << "\n");
+    } 
+    
+    //   CFLog(VERBOSE, "FVMCC_ComputeRHSCell::storeStencilData() => (iCell,countN+1) = " << iCell << "," << countN << "\n");
+    
+    cellBuilder->releaseGE();
+  }
+  CFLog(VERBOSE, "FVMCC_ComputeRHSCell::storeStencilData() => hello 3\n");
+  
+  
+  cf_assert(countN == m_cellStencil.size());
+ 
+  // set the cell shapes
+  SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
+  const CFuint nbElemTypes = elemType->size();
+  CFuint counter = 0;
+  for (CFuint iType = 0; iType < nbElemTypes; ++iType) {
+    const CFuint nbCellsInType = (*elemType)[iType].getNbElems();
+    for (CFuint i = 0; i < nbCellsInType; ++i, ++counter) {
+      cf_assert(counter*5+3 < m_cellInfo.size());
+      m_cellInfo[counter*5+3] = (*elemType)[iType].getGeoShape();
+    }
+  }
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRHSCell::storeStencilData() END\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::setup()
+{
+  CFAUTOTRACE;
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRHSCell::setup() START\n");
+  
+  FVMCC_ComputeRHS::setup();
+  
+  // store locally the cell centers
+  // in the future compute them on the GPU, this needs element node connectivity + number of nodes per element info 
+  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+  const CFuint nbCells = states.size(); 
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  m_centerNodes.resize(0., nbCells*dim);
+  cf_assert(m_centerNodes.size() == nbCells*dim);
+  for (CFuint i = 0; i < nbCells; ++i) {
+    const RealVector& coord = states[i]->getCoordinates();
+    for (CFuint d = 0; d <dim; ++d) {
+      cf_assert(i*dim+d < m_centerNodes.size());
+      m_centerNodes[i*dim+d] = coord[d];
+    }
+  }
+  
+  // copy locally the ghost states
+  DataHandle < Framework::State* > gstates = socket_gstates.getDataHandle();
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  m_ghostStates.resize(gstates.size()*nbEqs);
+  m_ghostNodes.resize(gstates.size()*dim);
+  for (CFuint i = 0; i < gstates.size(); ++i) {
+    const RealVector& gs = gstates[i]->getCoordinates();
+    for (CFuint d = 0; d < dim; ++d) {
+      cf_assert(i*dim+d < m_ghostNodes.size());
+      m_ghostNodes[i*dim+d] = gs[d];
+    }
+  }
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRHSCell::setup() after gstates\n");
+  
+  storeStencilData();
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRHSCell::setup() after storeStencilData\n");
+  
+  m_cellFaces = MeshDataStack::getActive()->getConnectivity("cellFaces");
+  m_cellNodes = MeshDataStack::getActive()->getConnectivity("cellNodes_InnerCells");
+  
+  // copy of data that will not change during the computation, unless mesh changes
+  socket_nodes.getDataHandle().getGlobalArray()->put();
+  m_centerNodes.put();
+  m_ghostNodes.put(); // this must be copied at each iteration if repositioning is applied
+  socket_normals.getDataHandle().getLocalArray()->put();   // this could be computed on the fly inside the GPU
+  socket_limiter.getDataHandle().getLocalArray()->put();   // this is needed if the limiter is frozen
+  socket_isOutward.getDataHandle().getLocalArray()->put(); // this could be not necessary on the GPU
+  m_cellInfo.put();
+  m_cellStencil.put();
+  m_cellFaces->getPtr()->put(); 
+  m_cellNodes->getPtr()->put();
+  m_neighborTypes.put();
+  
+  copyLocalCellConnectivity();	
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRHSCell::setup() after copyLocalCellConnectivity\n");
+  
+  // what about packing m_cellInfo, m_cellStencil and m_neighborTypes in one object? inefficient?
+  
+  // set the sizes of the grid to launch on the Framework::DEVICE
+  const CFuint nbActualBlocks = nbCells/m_nbCellsPerBlock;
+  m_nbBlocksPerGridX = std::min(nbActualBlocks, (CFuint)CudaEnv::CudaDeviceManager::getInstance().getNBlocks());
+  m_nbBlocksPerGridY = static_cast<CFuint>(std::max((CFreal)1., std::ceil((CFreal)nbActualBlocks/
+									  (CFreal)m_nbBlocksPerGridX)));
+  CFLog(INFO, "FVMCC_ComputeRHSCell::setup() => Kernel grid sizes: <<< [" << 
+	m_nbBlocksPerGridX << " - " << m_nbBlocksPerGridY << "], " << 
+	CudaEnv::CudaDeviceManager::getInstance().getNThreads() << ">>>\n");
+  cout << m_nbBlocksPerGridX*m_nbBlocksPerGridY  << " >= " << nbCells/m_nbCellsPerBlock << endl;
+  cf_assert(m_nbBlocksPerGridX*m_nbBlocksPerGridY >= nbCells/m_nbCellsPerBlock);
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRHSCell::setup() END\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::copyLocalCellConnectivity()
+{
+  CFAUTOTRACE;
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  // set the cell local connectivity data
+  SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
+  const CFuint nbElemTypes = elemType->size();
+  
+  m_cellConn.resize(8); // maximum number of types is 8 (@see src/Framework/CFGeoShape.hh)
+  for (CFuint iType = 0; iType < nbElemTypes; ++iType) {
+    const CFGeoShape::Type shapeIdx = (*elemType)[iType].getGeoShape();
+    const Table<CFuint>& conn = *LocalConnectionData::getInstance().getFaceDofLocal
+      (shapeIdx, CFPolyOrder::ORDER1, NODE, CFPolyForm::LAGRANGE);
+    const CFuint nbCellFaces = conn.nbRows();
+    cf_assert(shapeIdx < m_cellConn.size()); 
+    cf_assert(nbCellFaces <= 6); // hexa have 6 faces
+    
+    CFLog(VERBOSE, "FVMCC_ComputeRHSCell::copyLocalCellConnectivity() => shapeIdx    = " << shapeIdx << "\n");
+    CFLog(VERBOSE, "FVMCC_ComputeRHSCell::copyLocalCellConnectivity() => nbCellFaces = " << nbCellFaces << "\n");
+    
+    m_cellConn[shapeIdx].setNbFaces(nbCellFaces);
+    for (CFuint f = 0; f < nbCellFaces; ++f) {
+      const CFuint nbFaceNodes = conn.nbCols(f);
+      CFLog(VERBOSE, "FVMCC_ComputeRHSCell::copyLocalCellConnectivity() => face [" << f << "] has "<< nbFaceNodes << " nodes\n");
+      cf_assert(nbFaceNodes <= 4); // quad faces have 4 nodes
+      m_cellConn[shapeIdx].setNbFaceNodes(f,nbFaceNodes);
+      for (CFuint n = 0; n < nbFaceNodes; ++n) {
+	cf_assert(f < 6);
+	cf_assert(n < 4);
+	const CFuint nodeID = conn(f,n);
+	cf_assert(nodeID < 8); // hexa have 8 nodes
+	m_cellConn[shapeIdx].setNodeID(f,n,nodeID);
+      }
+    }
+  }
+  m_cellConn.put();
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+    } // namespace FiniteVolume
+    
+  } // namespace Numerics
+  
+} // namespace COOLFluiD

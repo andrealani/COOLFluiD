@@ -1,0 +1,204 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+#
+
+# IXV CATE: Mach 25         p [Pa]  1.87   T  [K] 205.73
+
+#CFEnv.ErrorOnUnusedConfig = true
+#CFEnv.ExceptionLogLevel = 200
+#CFEnv.ExceptionDumps = true
+
+# Simulation Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libLTE libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libGambit2CFmesh libPetscI libMutation2OLD libMutation2OLDI libAeroCoefFVM
+
+# relative path to working directory
+Simulator.Paths.WorkingDir = ./
+# relative path to results directory 
+Simulator.Paths.ResultsDir = ./RESULTS
+
+# name of the file where to put interactive settings
+Simulator.SubSystem.InteractiveParamReader.FileName = ./IXV.inter
+# how often the interactive file is read
+Simulator.SubSystem.InteractiveParamReader.readRate = 10
+
+# setting for the thermo-chemical nonequilibrium model and MUTATION library 
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2D
+
+# those are reference values for the implicit jacobian: they have to be kept >= the free stream values
+# variables are  PuvtLTE=[p u v T]
+# the order of species for rho_i is defined in the mixture file (air11.mix, see below)   
+Simulator.SubSystem.NavierStokes2D.refValues = 1.87 7188.34 7188.34 205.73 
+Simulator.SubSystem.NavierStokes2D.PropertyLibrary = Mutation2OLD
+Simulator.SubSystem.NavierStokes2D.Mutation2OLD.mixtureName = air11
+Simulator.SubSystem.NavierStokes2D.Mutation2OLD.dynViscAlgo = CG
+Simulator.SubSystem.NavierStokes2D.Mutation2OLD.thermCondAlgo = Direct
+
+# output settings: TECPLOT and CFmesh file (CF format used for restarting)  
+Simulator.SubSystem.OutputFormat      = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName   = IXV.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate   = 500
+Simulator.SubSystem.CFmesh.AppendIter = true  # this appends the iteration number to the CFmesh files
+
+Simulator.SubSystem.Tecplot.FileName              = IXV.plt
+Simulator.SubSystem.Tecplot.Data.outputVar        = PuvtLTE
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true # prints solution variables PuvtLTE, Mach, rho, pressure
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS       = wall Cate1 Cate2
+Simulator.SubSystem.Tecplot.SaveRate              = 100
+Simulator.SubSystem.Tecplot.AppendIter = false  # this appends the iteration number to the TECPLOT files
+
+# stop the simulation wfter a certain number of iterations
+Simulator.SubSystem.StopCondition = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 3
+
+# stop the simulation when a certain residual norm is reached
+#Simulator.SubSystem.StopCondition  = Norm
+#Simulator.SubSystem.Norm.valueNorm = -3.0
+
+# name of the boundary patches in the mesh file (must be consistent)
+Simulator.SubSystem.Default.listTRS = wall Cate1 Cate2 sym inlet outlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./CATE_v7_small.CFmesh
+
+# uncomment the following if restarting from a new GAMBIT file
+#
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+#Scaling factor: to be used ONLY if Restart=false (WATCH OUT: the code divides by this number)
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1000. 
+
+# setting for PETSC linear system solver	
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+
+# implicit time integrator for steady calculations
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
+# the CFL can be changed interactively in ./IXV.inter 
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = \
+#	if(i<150,0.3,if(i<500,0.5,if(i<1500,0.9,if(i<3000,1.5,if(i<5000,2.5,if(i<6000,4.,if(i<7000,6.,if(i<9000,10.,min(100.,cfl*1.02)))))))))
+
+# underelaxation parameter (usually it can be kept equal to 1)
+Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation = 1.
+# monitored residual variable for convergence
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 0
+# computed residual variable(s)
+#Simulator.SubSystem.NewtonIterator.Data.L2.ComputedVarID = 0
+Simulator.SubSystem.NewtonIterator.Data.FilterState = Max
+Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs   = 1  0  0  1
+Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0. 0. 0. 0.
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+# set to true if the simulation restarts from a previous .CFmesh file with solution
+#Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff = true
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+#AUSM flux splitter
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlus2D
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlus2D.choiceA12 = 1
+
+# useful variables (not to  be changed)
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar = PuvtLTE
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = PuvtLTE 
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
+
+#Second order settings
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+# second order can be activated by setting gradientFactor to 1. in IXV.inter 
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 0.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.useFullStencil = true
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.length = 1.0
+
+#### only activate if you are restarting from a 2nd order solution #########
+#Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarNames = InitLimiter
+#Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarTags = limiter
+#Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarStrides = 4
+#Simulator.SubSystem.CellCenterFVM.Setup1.InitLimiterSocket = InitLimiter
+##########################################################################
+### field for extra state-related variables
+## this saves the limiter as extra variables allowing to restart from the latest saved values 
+## only useful if "freezing" of limiter has been already activated (LinearLS3D.limitRes > 8.0)
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarNames = limiter
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarStrides = 4
+#
+Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = NavierStokes2DAxiST
+
+Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMove
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TRSName = wall Cate1 Cate2
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.ValuesIdx = 1 2 3 
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.Values = 0. 0. 1000.
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TrsPriorityList = wall Cate1 Cate2 sym inlet outlet
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.NbIterAdiabatic = 3000.
+
+# initial field
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 1.87 7188.34 0. 205.73 
+
+# boundary conditions commands
+Simulator.SubSystem.CellCenterFVM.BcComds = \
+				NoSlipWallIsothermalNSvtFVMCC \
+				MirrorVelocityFVMCC \
+                                SuperInletFVMCC \
+                                SuperOutletFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = \
+					  Cat1 \
+					  Mirror \
+					  SInlet \
+					  SOutlet
+
+Simulator.SubSystem.CellCenterFVM.Cat1.applyTRS = wall Cate1 Cate2
+Simulator.SubSystem.CellCenterFVM.Cat1.TWall = 1000.
+
+Simulator.SubSystem.CellCenterFVM.Mirror.applyTRS = sym
+# second order: impose gradient=0 on the variables for wich the mask array value is "1" 
+Simulator.SubSystem.CellCenterFVM.Mirror.ZeroGradientFlags = 1 0 0 1
+
+Simulator.SubSystem.CellCenterFVM.SInlet.applyTRS = inlet
+Simulator.SubSystem.CellCenterFVM.SInlet.Vars = x y
+Simulator.SubSystem.CellCenterFVM.SInlet.Def = 1.87 7188.34 0. 205.73
+
+Simulator.SubSystem.CellCenterFVM.SOutlet.applyTRS = outlet
+# second order: impose gradient=0 on the variables for wich the mask array value is "1" 
+Simulator.SubSystem.CellCenterFVM.SOutlet.ZeroGradientFlags = 1 1 1 1
+
+# wall quantities (heat flux, skin friction) postprocessing
+Simulator.SubSystem.DataPostProcessing = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames = DataProcessing3
+Simulator.SubSystem.DataProcessing3.ProcessRate = 3
+Simulator.SubSystem.DataProcessing3.Comds = NavierStokesSkinFrictionHeatFluxCC
+Simulator.SubSystem.DataProcessing3.Names = SkinFriction
+Simulator.SubSystem.DataProcessing3.SkinFriction.applyTRS = wall Cate1 Cate2
+#Simulator.SubSystem.DataProcessing3.SkinFriction.OutputFileWall = walldata.plt
+# ALL the following free stream values and update variable IDs MUST be specified
+Simulator.SubSystem.DataProcessing3.SkinFriction.rhoInf = 0.000031666
+Simulator.SubSystem.DataProcessing3.SkinFriction.pInf = 1.87
+Simulator.SubSystem.DataProcessing3.SkinFriction.uInf = 7188.34
+Simulator.SubSystem.DataProcessing3.SkinFriction.TInf = 205.73
+Simulator.SubSystem.DataProcessing3.SkinFriction.UID = 1
+Simulator.SubSystem.DataProcessing3.SkinFriction.VID = 2
+Simulator.SubSystem.DataProcessing3.SkinFriction.TID = 3
+

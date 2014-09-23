@@ -1,0 +1,171 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -2.22955
+
+#
+
+CFEnv.ErrorOnUnusedConfig = false
+CFEnv.OnlyCPU0Writes = true
+#CFEnv.RegistSignalHandlers = false
+#CFEnv.ExceptionAborts = true
+
+
+# SubSystem Modules
+Simulator.Modules.Libs =  libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libParaViewWriter  libNavierStokes libForwardEuler libFiniteVolume libExplicitFilters libTHOR2CFmesh libFiniteVolumeNavierStokes 
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/ExplicitFilters/testcases/
+Simulator.Paths.ResultsDir = ./
+
+#####################################################################
+# Filtering PreProcessing
+Simulator.SubSystem.DataPreProcessing = Filter
+Simulator.SubSystem.DataPreProcessingNames = FilterSolution
+Simulator.SubSystem.FilterSolution.PrepareCmd = Prepare
+Simulator.SubSystem.FilterSolution.ProcessComds = FilterSolution
+Simulator.SubSystem.FilterSolution.ProcessNames = FilterSolution
+
+# Reconstruction filter
+Simulator.SubSystem.FilterSolution.Data.StencilComputer = StencilComputer
+Simulator.SubSystem.FilterSolution.Data.FilterType = ReconstructionFilter2D
+Simulator.SubSystem.FilterSolution.Data.ReconstructionFilter2D.RelaxationFactor = 0
+Simulator.SubSystem.FilterSolution.Data.ReconstructionFilter2D.MaxNbStencilRecomputations = 4
+
+# General filter properties
+Simulator.SubSystem.FilterSolution.Data.FilterGridRatio = 2
+Simulator.SubSystem.FilterSolution.Data.StencilGridRatio = 4.2
+Simulator.SubSystem.FilterSolution.Data.Order = 2
+Simulator.SubSystem.FilterSolution.Data.TargetFilterOrder = 2
+
+#####################################################################
+# Filtering PostProcessing
+Simulator.SubSystem.DataPostProcessing = Filter
+Simulator.SubSystem.DataPostProcessingNames = FilterRHS
+Simulator.SubSystem.FilterRHS.PrepareCmd = Prepare
+Simulator.SubSystem.FilterRHS.ProcessComds =  FilterRhs
+Simulator.SubSystem.FilterRHS.ProcessNames =  FilterRhs
+Simulator.SubSystem.FilterRHS.FilterRhs.ProcessRate = 1
+
+# Reconstruction filter
+Simulator.SubSystem.FilterRHS.Data.StencilComputer = StencilComputer
+Simulator.SubSystem.FilterRHS.Data.FilterType = ReconstructionFilter2D
+Simulator.SubSystem.FilterRHS.Data.ReconstructionFilter2D.RelaxationFactor = 0
+Simulator.SubSystem.FilterRHS.Data.ReconstructionFilter2D.MaxNbStencilRecomputations = 1
+
+# General filter properties
+Simulator.SubSystem.FilterRHS.Data.FilterGridRatio = 2
+Simulator.SubSystem.FilterRHS.Data.StencilGridRatio = 4.2
+Simulator.SubSystem.FilterRHS.Data.Order = 2
+Simulator.SubSystem.FilterRHS.Data.TargetFilterOrder = 2
+
+#####################################################################
+Simulator.SubSystem.Default.PhysicalModelType     = Euler2D
+Simulator.SubSystem.Euler2D.refValues = 1. 2.83972 2.83972 6.532
+Simulator.SubSystem.Euler2D.refLength = 1.0
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+#Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+#Simulator.SubSystem.CFmesh.FileName     = jets2DFVM.CFmesh
+#Simulator.SubSystem.Tecplot.FileName    = jets2DFVM.plt
+#Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+
+Simulator.SubSystem.OutputFormat        = CFmesh Tecplot ParaView
+Simulator.SubSystem.CFmesh.FileName     = jets2D-sol.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = jets2D-sol.plt
+Simulator.SubSystem.ParaView.FileName    = jets2D-sol.vtu
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 500
+Simulator.SubSystem.ParaView.SaveRate = 500
+Simulator.SubSystem.CFmesh.SaveRate = 500
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 20
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 200
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerFaces SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2DFVM.CFmesh
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2
+
+#Simulator.SubSystem.MeshCreator = FileMeshReaderModule
+#Simulator.SubSystem.FileMeshReaderModule.Data.FileName = jets2D-sol.hdf5
+#Simulator.SubSystem.FileMeshReaderModule.StdReadMesh.Partitioner = ParMetis
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 1.0
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+#Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+# Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+#Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+#Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+#Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = StdSetup
+Simulator.SubSystem.CellCenterFVM.SetupNames = StdSetup
+# Simulator.SubSystem.CellCenterFVM.Data.CollaboratorNames = Filter
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
+#Centred
+#Simulator.SubSystem.CellCenterFVM.Data.Centred.Flux = GForce
+#Simulator.SubSystem.CellCenterFVM.Data.Centred.GForce.DiffCoeff = 0.5
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar   = Cons
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+
+Simulator.SubSystem.CellCenterFVM.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.CellCenterFVM.Data.IntegratorOrder = P1
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.7
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = if(y>0.5,0.5,1.) \
+                                         if(y>0.5,1.67332,2.83972) \
+                                         0.0 \
+                                         if(y>0.5,3.425,6.532)
+
+# example usage of InitStateAddVar to initialize
+#Simulator.SubSystem.CellCenterFVM.InField.InitVars = x y
+#Simulator.SubSystem.CellCenterFVM.InField.InitDef = sqrt(x^2+y^2)
+#Simulator.SubSystem.CellCenterFVM.InField.Vars = x y r
+#Simulator.SubSystem.CellCenterFVM.InField.Def = if(r<0.5,0.5,1.) \
+#                                         if(r<0.5,1.67332,2.83972) \
+#                                         0.0 \
+#                                         if(r>0.5,3.425,6.532)
+
+Simulator.SubSystem.CellCenterFVM.BcComds = SuperInletFVMCC SuperOutletFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = Jet1        Jet2
+
+Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = SuperInlet
+Simulator.SubSystem.CellCenterFVM.Jet1.Vars = x y
+Simulator.SubSystem.CellCenterFVM.Jet1.Def =  if(y>0.5,0.5,1.) \
+                                        if(y>0.5,1.67332,2.83972) \
+                                        0.0 \
+                                        if(y>0.5,3.425,6.532)
+
+Simulator.SubSystem.CellCenterFVM.Jet2.applyTRS = SuperOutlet
+
+
+

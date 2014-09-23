@@ -1,0 +1,71 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Framework_IndexList_ci
+#define COOLFluiD_Framework_IndexList_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
+IndexList<TYPE>::IndexList() : _total(0)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
+IndexList<TYPE>::~IndexList()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
+IndexList<TYPE>& IndexList<TYPE>::getList()
+{
+  static IndexList<TYPE> indexList;
+  return indexList;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
+IndexID IndexList<TYPE>::createID(TYPE_PTR ptr)
+{
+  // no sense in creating a index for a null object
+  cf_assert(ptr != CFNULL);
+  
+  // increase the total
+  ++_total;
+
+  // the actual index is the vector size minus one to start from zero.
+  ptr->setLocalID(size() - 1);
+  return ptr->getLocalID();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
+void IndexList<TYPE>::removeID()
+{
+  --_total;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Framework_IndexList_ci

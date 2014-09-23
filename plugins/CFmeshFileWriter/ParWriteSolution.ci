@@ -1,0 +1,151 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#include "CFmeshFileWriter/CFmeshFileWriter.hh"
+#include "Common/SafePtr.hh"
+#include "ParWriteSolution.hh"
+#include "Environment/DirPaths.hh"
+#include "Common/FilesystemException.hh"
+#include "Framework/MethodCommandProvider.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+    namespace CFmeshFileWriter {
+
+//////////////////////////////////////////////////////////////////////////////
+      
+template <typename WRITER>
+ParWriteSolution<WRITER>::ParWriteSolution(const std::string& name) :
+  CFmeshWriterCom(name),
+  _data(new Framework::CFmeshWriterSource()),
+  _sockets(), 
+  _writer()
+{
+  // this->addConfigOptionsTo(this);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename WRITER>
+ParWriteSolution<WRITER>::~ParWriteSolution()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename WRITER>
+void ParWriteSolution<WRITER>::configure ( Config::ConfigArgs& args )
+{
+  CFAUTOTRACE;
+
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Config;
+  
+  CFmeshWriterCom::configure(args);
+  
+  Common::SafePtr<Common::CFMap<std::string, pair<std::string,CFuint> > > extraNVars =
+    getMethodData().getExtraNVarSocketNamesAndTags();
+  Common::SafePtr<Common::CFMap<std::string, pair<std::string,CFuint> > > extraSVars =
+    getMethodData().getExtraSVarSocketNamesAndTags();
+  Common::SafePtr<Common::CFMap<std::string, pair<std::string,CFuint> > > extraVars =
+    getMethodData().getExtraVarSocketNamesAndTags();
+
+  for(CFuint iNVar = 0; iNVar < extraNVars->size();iNVar++){
+    std::string socketName = (*extraNVars)[iNVar].first;
+    _sockets.createSocketSink<CFreal>(socketName);
+  }
+
+  for(CFuint iSVar = 0; iSVar < extraSVars->size();iSVar++){
+    std::string socketName = (*extraSVars)[iSVar].first;
+    _sockets.createSocketSink<CFreal>(socketName);
+  }
+  
+  for(CFuint iVar = 0; iVar < extraVars->size();iVar++){
+    std::string socketName = (*extraVars)[iVar].first;
+    _sockets.createSocketSink<CFreal>(socketName);
+  }
+
+  bool storePastNodes = getMethodData().storePastNodes();
+  bool storePastStates = getMethodData().storePastStates();
+
+  if(storePastNodes) _sockets.createSocketSink<Node*>("pastNodes");
+  if(storePastStates) _sockets.createSocketSink<State*>("pastStates");
+
+  bool storeInterNodes = getMethodData().storeInterNodes();
+  bool storeInterStates = getMethodData().storeInterStates();
+
+  if(storeInterNodes) _sockets.createSocketSink<Node*>("interNodes");
+  if(storeInterStates) _sockets.createSocketSink<State*>("interStates");
+  
+  this->configureNested(&_writer, args);
+}
+      
+//////////////////////////////////////////////////////////////////////
+
+template <typename WRITER>
+void ParWriteSolution<WRITER>::setup()
+{
+  CFAUTOTRACE;
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  _data->setMeshData();
+  _data->consistencyCheck();
+  _data->setPastDataStorageFlags(getMethodData().storePastNodes(),
+                                 getMethodData().storePastStates() );
+  _data->setInterDataStorageFlags(getMethodData().storeInterNodes(),
+                                 getMethodData().storeInterStates() );
+
+  _data->setExtraVarNamesAndTags(getMethodData().getExtraNVarSocketNamesAndTags(),
+                                 getMethodData().getExtraSVarSocketNamesAndTags(),
+                                 getMethodData().getExtraVarSocketNamesAndTags());
+
+  _data->setExtraDataSockets(&_sockets);
+  
+  _writer.setWriteData(_data.get());
+  _writer.setup();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename WRITER>
+void ParWriteSolution<WRITER>::execute()
+{
+  CFAUTOTRACE;
+
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  // Write the File
+  _writer.writeToFile(getMethodData().getFilename());
+  
+  CFout << "Writing solution to: " << getMethodData().getFilename().string() << "\n";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename WRITER>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > 
+ParWriteSolution<WRITER>::needsSockets()
+{
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result =
+    _sockets.getAllSinkSockets();
+
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace CFmeshFileWriter
+
+} // namespace COOLFluiD

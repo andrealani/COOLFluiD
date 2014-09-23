@@ -1,0 +1,154 @@
+#include "Framework/GeometricEntity.hh"
+#include "Framework/BaseTerm.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void StegerWarmingFluxT<BASE>::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< CFuint >("NbEqs", "Number of equations to apply SW to");
+  options.addConfigOption< CFuint >("StartID", "Start of the equations to apply SW to");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+StegerWarmingFluxT<BASE>::StegerWarmingFluxT(const std::string& name) :
+  BASE(name),
+  _solutionVarSet(CFNULL),
+  _updateVarSet(CFNULL),
+  _updateToSolutionVarTrans(CFNULL), 
+  _solutionStates(CFNULL),
+  _eValues(),
+  _jacobPlus(),
+  _jacobMin(),
+  _jacobDummy(),
+  _tempUnitNormal()
+{
+  this->addConfigOptionsTo(this);
+  
+  m_nbEqs = 0;
+  this->setParameter("NbEqs", &m_nbEqs);
+  
+  m_startID = 0;
+  this->setParameter("StartID", &m_startID);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+StegerWarmingFluxT<BASE>::~StegerWarmingFluxT()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void StegerWarmingFluxT<BASE>::compute(RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  const EquationSubSysDescriptor& eqSSD = PhysicalModelStack::getActive()->
+    getEquationSubSysDescriptor();
+  const CFuint nbEqs = eqSSD.getNbEqsSS();
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
+  
+  if (eqSSD.getEqSS() == 0 || nbEqs == totalNbEqs) {
+    BASE::compute(result);
+  }
+  
+  if (eqSSD.getEqSS() == 1 || nbEqs == totalNbEqs) {
+    CellCenterFVMData& data = this->getMethodData(); 
+    SafePtr<FVMCC_PolyRec> polyRec = data.getPolyReconstructor();
+    
+    this->_statesLR[0] = &polyRec->getCurrLeftState();
+    this->_statesLR[1] = &polyRec->getCurrRightState();
+    
+    if (!this->getMethodData().reconstructSolVars()) {
+      _solutionStates = this->getMethodData().getUpdateToSolutionVecTrans()->transform(&this->_statesLR);
+    }
+    else {
+      _solutionStates = &this->_statesLR;
+    }
+    
+    // set the jacobian plus and minus
+    const RealVector& unitNormal = data.getUnitNormal();
+    
+    _updateVarSet->setExtraData(true);
+    _solutionVarSet->splitJacobian(_jacobPlus, _jacobDummy,_eValues, unitNormal);
+    _solutionVarSet->splitJacobian(_jacobDummy, _jacobMin, _eValues, unitNormal);
+    _updateVarSet->setExtraData(false);
+    
+    State& stateL = *(*_solutionStates)[0];
+    State& stateR = *(*_solutionStates)[1];
+    
+    // jacobians must be evaluated in different states
+    result.slice(m_startID, m_nbEqs) = _jacobPlus*stateL.slice(m_startID, m_nbEqs) +
+      _jacobMin*stateR.slice(m_startID, m_nbEqs);
+    
+    // here we assume that the update coefficient is already computed
+    // unless m_startID == 0
+    if (m_startID > 0) {
+      // compute update coefficient
+      if (!this->getMethodData().isPerturb()) {
+	vector<RealVector>& pdata = polyRec->getExtrapolatedPhysicaData();
+	GeometricEntity& face = *data.getCurrentFace();
+	const CFreal faceArea = this->socket_faceAreas.getDataHandle()[face.getID()]/polyRec->nbQPoints();
+	DataHandle<CFreal> updateCoeff = this->socket_updateCoeff.getDataHandle();
+	
+	// left contribution to update coefficient
+	CFreal maxEV = _updateVarSet->getMaxEigenValue(pdata[0], unitNormal);
+	
+	const CFuint leftID = face.getState(0)->getLocalID();
+	updateCoeff[leftID] += max(maxEV, (CFreal)0.)*faceArea;
+	
+	if (!face.getState(1)->isGhost()) {
+	  // right contribution to update coefficient
+	  _tempUnitNormal = -1.0*unitNormal;
+	  maxEV = _updateVarSet->getMaxEigenValue(pdata[1],_tempUnitNormal);
+	  const CFuint rightID = face.getState(1)->getLocalID();
+	  updateCoeff[rightID] += max(maxEV, (CFreal)0.)*faceArea;
+	}
+      }
+    }
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void StegerWarmingFluxT<BASE>::setup()
+{
+  BASE::setup();
+  
+  _solutionVarSet = this->getMethodData().getSolutionVar();
+  _updateVarSet = this->getMethodData().getUpdateVar();
+  _updateToSolutionVarTrans = this->getMethodData().getUpdateToSolutionVecTrans();
+  
+  _eValues.resize(m_nbEqs);
+  _jacobPlus.resize(m_nbEqs, m_nbEqs);
+  _jacobMin.resize(m_nbEqs, m_nbEqs);  
+  _jacobDummy.resize(m_nbEqs, m_nbEqs);
+  
+  _tempUnitNormal.resize(Framework::PhysicalModelStack::getActive()->getDim());
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

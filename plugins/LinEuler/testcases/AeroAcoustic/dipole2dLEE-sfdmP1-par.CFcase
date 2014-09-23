@@ -1,0 +1,101 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+# Residual = -2.841
+
+
+#CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libGmsh2CFmesh libParaViewWriter libLinEuler libSpectralFD libSpectralFDLinEuler libRungeKuttaLS
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/LinEuler/testcases/AeroAcoustic
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.DataPreProcessing      = DataProcessing
+Simulator.SubSystem.DataPreProcessingNames = PreProcessor
+Simulator.SubSystem.PreProcessor.Comds = CreateMeanFlowAnalytic
+Simulator.SubSystem.PreProcessor.Names = CMFlowAnalytic
+Simulator.SubSystem.PreProcessor.CMFlowAnalytic.applyTRS = InnerCells
+Simulator.SubSystem.PreProcessor.CMFlowAnalytic.Vars = x y t
+#Simulator.SubSystem.PreProcessor.CMFlowAnalytic.MeanFlow = 1.0 0.0 0.0 1.0
+Simulator.SubSystem.PreProcessor.CMFlowAnalytic.MeanFlow = 1.0 0.591607978 0.0 1.0
+
+Simulator.SubSystem.Default.PhysicalModelType = LinEuler2D
+Simulator.SubSystem.LinEuler2D.ConvTerm.gamma = 1.4;
+
+Simulator.SubSystem.OutputFormat        = ParaView CFmesh
+
+#Simulator.SubSystem.CFmesh.FileName     = dipole2dLEE-sfdm-solP1.CFmesh
+Simulator.SubSystem.CFmesh.FileName     = dipole2dLEE-M05-sfdm-solP1.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+
+#Simulator.SubSystem.ParaView.FileName   = dipole2dLEE-sfdm-solP1.vtu
+Simulator.SubSystem.ParaView.FileName   = dipole2dLEE-M05-sfdm-solP1.vtu
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.SaveRate = 100
+Simulator.SubSystem.ParaView.AppendTime = true
+Simulator.SubSystem.ParaView.AppendIter = false
+Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
+
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1000
+
+Simulator.SubSystem.ConvergenceMethod  = RKLS
+Simulator.SubSystem.RKLS.ConvergenceFile = convergence.plt
+Simulator.SubSystem.RKLS.ShowRate        = 10
+Simulator.SubSystem.RKLS.ConvRate        = 10
+Simulator.SubSystem.RKLS.Data.CFL.Value  = 0.2
+Simulator.SubSystem.RKLS.Data.Order      = 3
+Simulator.SubSystem.RKLS.Data.TimeAccurate = true
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.1
+
+Simulator.SubSystem.SpaceMethod = SpectralFDMethod
+
+Simulator.SubSystem.Default.listTRS = InnerCells Top Left Bottom Right
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = square.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = SpectralFDMethod
+
+# choose which builder we use
+#Simulator.SubSystem.SpectralFDMethod.Builder = StdBuilder
+Simulator.SubSystem.SpectralFDMethod.Builder = MeshUpgrade
+Simulator.SubSystem.SpectralFDMethod.Builder.PolynomialOrder = P1
+Simulator.SubSystem.SpectralFDMethod.SpaceRHSJacobCom = RHS
+Simulator.SubSystem.SpectralFDMethod.ExtrapolateCom = Null
+Simulator.SubSystem.SpectralFDMethod.SrcTermNames = LinEulerMeanFlow Dipole2DSourceTerm
+Simulator.SubSystem.SpectralFDMethod.SrcTermComds = LinEulerMeanFlow Dipole2DSourceTerm
+#Simulator.SubSystem.SpectralFDMethod.SrcTermComds = LinEulerMeanFlow AnalyticalSourceTerm
+
+#Simulator.SubSystem.SpectralFDMethod.Dipole2DSourceTerm.Vars = x y t
+#Simulator.SubSystem.SpectralFDMethod.Dipole2DSourceTerm.Def = 0.0 \
+#                                                              0.01*exp(-0.060205999*(y-0.5)*(y-0.5))*cos(0.314159*(x-0.5))*sin(0.104719667*t) \
+#                                                              0.0 \
+#                                                              0.0
+
+Simulator.SubSystem.SpectralFDMethod.Data.ComputeVolumeForEachState = true
+Simulator.SubSystem.SpectralFDMethod.Data.UpdateVar   = Cons
+Simulator.SubSystem.SpectralFDMethod.Data.SolutionVar = Cons
+Simulator.SubSystem.SpectralFDMethod.Data.LinearVar   = Cons
+Simulator.SubSystem.SpectralFDMethod.Data.RiemannFlux = LaxFriedrichsFlux
+
+Simulator.SubSystem.SpectralFDMethod.InitComds = StdInitState
+Simulator.SubSystem.SpectralFDMethod.InitNames = InField
+
+Simulator.SubSystem.SpectralFDMethod.InField.applyTRS = InnerCells
+Simulator.SubSystem.SpectralFDMethod.InField.Vars = x y
+Simulator.SubSystem.SpectralFDMethod.InField.Def = 0.0 0.0 0.0 0.0
+
+Simulator.SubSystem.SpectralFDMethod.BcNames = FarField
+Simulator.SubSystem.SpectralFDMethod.FarField.applyTRS = Top Left Bottom Right
+
+Simulator.SubSystem.SpectralFDMethod.Data.BcTypes = FarField1DCharLinEuler2D
+Simulator.SubSystem.SpectralFDMethod.Data.BcNames = FarField

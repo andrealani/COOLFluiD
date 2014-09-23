@@ -1,0 +1,10 @@
+<SubSystem>
+  <ConvergenceMethod>
+    <FwdEuler/>
+    <BwdEuler/>
+  </ConvergenceMethod>
+  <SpaceMethod>
+    <FEM/>
+    <FluctuationSplit/>
+  </SpaceMethod>
+</SubSystem>

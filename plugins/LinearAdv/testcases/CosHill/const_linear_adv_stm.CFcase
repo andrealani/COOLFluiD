@@ -1,0 +1,95 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libLinearAdv libFluctSplit libFluctSplitScalar libFluctSplitSpaceTime libNewtonMethod libGambit2CFmesh libForwardEuler
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/LinearAdv/testcases/CosHill
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType       = LinearAdv2D
+Simulator.SubSystem.LinearAdv2D.VX = 10.0
+Simulator.SubSystem.LinearAdv2D.VY = 10.0
+
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.0001
+Simulator.SubSystem.SubSystemStatus.ComputeDT = FunctionDT
+Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = 0.0001
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = const_linear_adv_lda.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = true
+
+Simulator.SubSystem.Tecplot.FileName    = const_linear_adv_lda.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+
+Simulator.SubSystem.StopCondition   = MaxTime
+Simulator.SubSystem.MaxTime.maxTime = 0.1
+
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -6.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells bottom right top left
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = lineadvST60.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.9
+Simulator.SubSystem.FwdEuler.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.FwdEuler.RelativeNormAndMaxIter.AbsNorm = -6.0
+Simulator.SubSystem.FwdEuler.RelativeNormAndMaxIter.MaxIter = 10
+Simulator.SubSystem.FwdEuler.Data.PrintHistory = true
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Restart = false
+
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = STM_CRD
+
+Simulator.SubSystem.FluctuationSplit.Data.ScalarSplitter = STM_ScalarLDAC
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar = Prim
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar   = Prim
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar  = Prim
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar   = Prim
+
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorOrder = P1
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField   InBottom
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def  = if(x>y,350,300)
+
+Simulator.SubSystem.FluctuationSplit.InBottom.applyTRS = bottom
+Simulator.SubSystem.FluctuationSplit.InBottom.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InBottom.Def  = 350
+
+Simulator.SubSystem.FluctuationSplit.BcComds = SuperInlet SuperInlet SuperOutlet SuperOutlet
+Simulator.SubSystem.FluctuationSplit.BcNames = BcBottom   BcLeft     BcTop       BcRight
+
+Simulator.SubSystem.FluctuationSplit.BcBottom.applyTRS = bottom
+Simulator.SubSystem.FluctuationSplit.BcBottom.Vars = x y t
+Simulator.SubSystem.FluctuationSplit.BcBottom.Def  = 350
+
+Simulator.SubSystem.FluctuationSplit.BcLeft.applyTRS = left
+Simulator.SubSystem.FluctuationSplit.BcLeft.Vars = x y t
+Simulator.SubSystem.FluctuationSplit.BcLeft.Def = 300
+
+Simulator.SubSystem.FluctuationSplit.BcTop.applyTRS = top
+
+Simulator.SubSystem.FluctuationSplit.BcRight.applyTRS = right

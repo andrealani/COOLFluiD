@@ -1,0 +1,301 @@
+#include "Common/ShouldNotBeHereException.hh"
+#include "Common/NotImplementedException.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace SA {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>      
+NavierStokesSACons<BASE>::NavierStokesSACons
+(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  BASE(name, model)
+{ 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+NavierStokesSACons<BASE>::~NavierStokesSACons()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+void NavierStokesSACons<BASE>::setGradientVars(const std::vector<RealVector*>& states,
+						  RealMatrix& values,
+						  const CFuint stateSize)
+{
+  using namespace COOLFluiD::Framework;
+  
+  const CFreal R = this->_eulerModel->getR();
+  const CFreal cv = R/(this->_eulerModel->getGamma() - 1.);
+  const CFuint nbStates = stateSize;
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint TID = this->_TID;
+  const CFuint KID = TID+1;
+  cf_assert(values.nbRows() == PhysicalModelStack::getActive()->getNbEq());
+  
+  for (CFuint i = 0; i < nbStates; ++i) {
+    const RealVector& state = *states[i];
+    const CFreal overRho = 1./state[0];
+   
+    CFreal v2 = 0.;
+    for (CFuint iDim = 0; iDim < dim; ++iDim) {
+      const CFreal vxi = state[1+iDim]*overRho;
+      values(1+iDim,i) = vxi;
+      v2 += vxi*vxi;
+    }
+    
+    values(TID,i) = (state[TID] - 0.5*state[0]*v2)/(state[0]*cv);
+    values(0,i) = R*state[0]*values(TID,i);
+    values(KID,i) = state[KID]*overRho;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+void NavierStokesSACons<BASE>::setGradientVarGradients
+(const std::vector<RealVector*>& states,
+ const std::vector< std::vector<RealVector*> >& stateGradients,
+ std::vector< std::vector<RealVector*> >& gradVarGradients,
+ const CFuint stateSize)
+{
+  //  // get heat capacity at constant volume
+//   const CFreal R = _eulerModel->getR();
+//   const CFreal gammaM1 = _eulerModel->getGamma() - 1.;
+//   const CFreal cvInv = gammaM1/R;
+
+//   for (CFuint j = 0; j < stateSize; ++j)
+//   {
+//     // dereference states
+//     const CFreal rho      = (*states[j])[0];
+//     const CFreal rhoU     = (*states[j])[1];
+//     const CFreal rhoV     = (*states[j])[2];
+//     const CFreal rhoE     = (*states[j])[3];
+
+//     // dereference state gradients
+//     const RealVector& gradRho  = *stateGradients[j][0];
+//     const RealVector& gradRhoU = *stateGradients[j][1];
+//     const RealVector& gradRhoV = *stateGradients[j][2];
+//     const RealVector& gradRhoE = *stateGradients[j][3];
+
+//     // helper variables
+//     const CFreal rhoInv   = 1.0/rho;
+//     const CFreal rhoInvSq = rhoInv*rhoInv;
+//     const CFreal rhoVelMagSq = rhoU*rhoU + rhoV*rhoV;
+//     const RealVector rhoVelTimesGradRhoVel = rhoU*gradRhoU + rhoV*gradRhoV;
+
+//     // pressure gradient
+//     *gradVarGradients[j][0] = gammaM1*(
+//                                        0.5*rhoVelMagSq*rhoInvSq*gradRho
+//                                        - rhoInv*rhoVelTimesGradRhoVel
+//                                        + gradRhoE
+//                                       );
+
+//     // velocity gradients
+//     *gradVarGradients[j][1] = rhoInv*gradRhoU - rhoU*rhoInvSq*gradRho;
+//     *gradVarGradients[j][2] = rhoInv*gradRhoV - rhoV*rhoInvSq*gradRho;
+
+//     // temperature gradient
+//     *gradVarGradients[j][3] = cvInv*rhoInvSq*(
+//                                               (rhoVelMagSq*rhoInv - rhoE)*gradRho
+//                                               - rhoVelTimesGradRhoVel
+//                                               + rho*gradRhoE
+//                                              );
+//   }
+  
+  throw Common::NotImplementedException(FromHere(), "NavierStokesSACons::setGradientVarGradients()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+void NavierStokesSACons<BASE>::setStateGradients
+(const std::vector<RealVector*>& states,
+ const std::vector< std::vector<RealVector*> >& gradVarGradients,
+ std::vector< std::vector<RealVector*> >& stateGradients,
+ const CFuint stateSize)
+{
+  using namespace COOLFluiD::Framework;
+  
+  // get heat capacity at constant volume
+  const CFreal RInv = 1.0/this->_eulerModel->getR();
+  const CFreal gammaM1 = this->_eulerModel->getGamma() - 1.;
+  const CFreal gammaM1Inv = 1.0/gammaM1;
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint TID = this->_TID;
+  
+  for (CFuint j = 0; j < stateSize; ++j) {
+    // dereference states
+    const CFreal rho  = (*states[j])[0];
+    const CFreal rhoU = (*states[j])[1];
+    const CFreal rhoV = (*states[j])[2];
+    const CFreal rhoW = (dim == DIM_3D) ? (*states[j])[3] : 0.;
+    const CFreal rhoE = (*states[j])[TID];
+    
+    // dereference gradient variable gradients
+    const RealVector& gradP = *gradVarGradients[j][0];
+    const RealVector& gradU = *gradVarGradients[j][1];
+    const RealVector& gradV = *gradVarGradients[j][2];
+    const RealVector& gradT = *gradVarGradients[j][TID];
+    
+    // helper variables
+    const CFreal rhoInv = 1.0/rho;
+    const CFreal u = rhoU*rhoInv;
+    const CFreal v = rhoV*rhoInv;
+    const CFreal w = (dim == DIM_3D) ? rhoW*rhoInv : 0.;
+    const CFreal eKin = 0.5*(u*u + v*v + w*w);
+    const CFreal p = gammaM1*(rhoE - rho*eKin);
+    const CFreal T = p*rhoInv*RInv;
+    
+    // mass density gradient
+    RealVector& gradRho = *stateGradients[j][0];
+    gradRho = rho*(gradP/p - gradT/T);
+    
+    // momentum gradients
+    *stateGradients[j][1] = rho*gradU + u*gradRho;
+    *stateGradients[j][2] = rho*gradV + v*gradRho;
+        
+    // total energy gradient
+    *stateGradients[j][TID] = gammaM1Inv*gradP + rho*(u*gradU + v*gradV) + eKin*gradRho;
+    if (dim == DIM_3D) {
+      const RealVector& gradW = *gradVarGradients[j][3];
+      *stateGradients[j][3] = rho*gradW + w*gradRho;
+      *stateGradients[j][TID] += rho*(w*gradW);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+CFreal NavierStokesSACons<BASE>::getLaminarDynViscosityFromGradientVars(const RealVector& state)
+{
+  // here it is assumed that state is in grad variables !!!
+  const CFreal Tdim = this->_eulerModel->getTempRef()*state[this->_TID];
+  const CFreal pdim = this->_eulerModel->getPressRef()*state[0];
+  return this->getModel().getDynViscosityDim(pdim, Tdim)/
+    (this->getModel().getReferencePhysicalData())[NavierStokes::NSTurbTerm::MU];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+CFreal NavierStokesSACons<BASE>::getTurbDynViscosityFromGradientVars(const RealVector& state, 
+								    const std::vector<RealVector*>& gradients)
+{
+  const CFreal rho = state[0]/(this->_eulerModel->getR()*state[this->_TID]);
+  const CFreal NIUtilda = state[this->_TID+1];
+  const CFreal mu = getLaminarDynViscosityFromGradientVars(state);
+  const CFreal NIU = mu / rho;
+  const CFreal Qsi = NIUtilda / NIU;
+  const CFreal Cv1 = 7.1;
+  const CFreal fv1 = pow(Qsi,3) / ( pow(Qsi,3) + pow(Cv1,3) );
+  const CFreal NIUt = NIUtilda * fv1;
+  const CFreal mut = rho * NIUt;
+  
+  return mut;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+CFreal NavierStokesSACons<BASE>::getDensity(const RealVector& state)
+{
+  return state[0];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+      
+template <typename BASE> 
+void NavierStokesSACons<BASE>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::Common;
+  
+  // call  the parent setup()
+  BASE::setup();
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  
+  const CFuint nbTurbEquations = this->_eulerModel->getNbScalarVars(0);
+  cf_assert(nbTurbEquations == 1);
+  vector<std::string> names(dim + 2 + nbTurbEquations);
+  names[0] = "p";
+  names[1] = "u";
+  names[2] = "v";
+  if (dim == DIM_3D) {
+    names[3] = "w";
+  }
+  
+  this->_uID = 1;
+  this->_vID = 2;
+  this->_TID = 3;
+  if (dim == DIM_3D) {
+    this->_wID = 3;
+    this->_TID = 4;
+  }
+  
+  names[this->_TID] = "T";
+  
+  // Names for turbulent variables
+  names[this->_TID+1] = "K";
+    
+  this->setVarNames(names);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+CFreal NavierStokesSACons<BASE>::getCurrUpdateDiffCoeff(CFuint iEqSS)
+{  
+  return (this->getModel().getPhysicalData())[NavierStokes::NSTurbTerm::MU] + 
+    (this->getModel().getPhysicalData())[NavierStokes::NSTurbTerm::MUT];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+   
+template <typename BASE>
+void NavierStokesSACons<BASE>::setGradientState(const RealVector& state)
+{
+  using namespace COOLFluiD::Framework;
+  
+  const CFreal R = this->_eulerModel->getR();
+  const CFreal cv = R/(this->_eulerModel->getGamma() - 1.);
+  const CFreal overRho = 1./state[0];
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  
+  CFreal v2 = 0.;
+  for (CFuint i = 0; i < dim; ++i) {
+    const CFreal vxi = state[1+i]*overRho;
+    this->_gradState[1+i] = vxi;
+    v2 += vxi*vxi;
+  }
+  
+  const CFuint TID = this->_TID;
+  this->_gradState[TID] = (state[TID] - 0.5*state[0]*v2)/(state[0]*cv);
+  this->_gradState[0] = R*state[0]*this->_gradState[TID];
+  
+  const CFuint KID = TID+1;
+  this->_gradState[KID] = state[KID]*overRho;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace SA
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

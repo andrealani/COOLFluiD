@@ -1,0 +1,177 @@
+#include "Common/CFLog.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/EquationSetData.hh"
+#include "FiniteVolume/ComputeDiffusiveFlux.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+NavierStokes2DNEQSourceTerm<EULERVAR, NSVAR>::
+NavierStokes2DNEQSourceTerm(const std::string& name) :
+  NavierStokes2DAxiSourceTerm<EULERVAR,NSVAR>(name),
+  m_gradients()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+NavierStokes2DNEQSourceTerm<EULERVAR, NSVAR>::~NavierStokes2DNEQSourceTerm()
+{ 
+  for (CFuint i = 0; i< m_gradients.size(); ++i) {
+    deletePtr(m_gradients[i]);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+void NavierStokes2DNEQSourceTerm<EULERVAR, NSVAR>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  NavierStokes2DAxiSourceTerm<EULERVAR, NSVAR>::setup();
+  
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  m_gradients.resize(nbEqs);
+  for (CFuint i = 0; i< nbEqs; ++i) {
+    m_gradients[i] = new RealVector(PhysicalModelStack::getActive()->getDim());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+void NavierStokes2DNEQSourceTerm<EULERVAR, NSVAR>::computeSource
+(Framework::GeometricEntity *const element, RealVector& source)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  CFLogDebugMed( "NavierStokes2DNEQSourceTerm::computeSource()\n");
+  
+  DataHandle<RealVector> nstates =
+    this->_sockets.template getSocketSink<RealVector>("nstates")->getDataHandle();
+  DataHandle<CFint> isOutward = this->socket_isOutward.getDataHandle();
+  DataHandle<CFreal> normals = this->socket_normals.getDataHandle();
+  
+  cf_assert(this->_varSet.isNotNull());
+  
+  // please note the reference &
+  State& currState = *element->getState(0);
+  // this is BULL SHIT
+  
+  /*  static State state;
+      for (CFuint iEq = 0; iEq < currState.size(); ++iEq) {
+      for (CFuint i = 0; i < 3; ++i) {
+      state[iEq] += nstates[element->getNode(i)->getLocalID()][iEq];
+      }
+      }
+      state /= 3.;*/
+  //  state[1] = 0.001468;
+  
+  
+  this->_varSet->computePhysicalData(currState, this->_physicalData);
+  // this->_varSet->computePhysicalData(state, this->_physicalData);
+    
+  this->_states.clear();
+  const vector<Node*>* const nodes = element->getNodes();
+  const CFuint nbNodesInElem = nodes->size();
+  for (CFuint i = 0; i < nbNodesInElem; ++i) {
+    this->_states.push_back(&nstates[(*nodes)[i]->getLocalID()]);
+  }
+  
+  this->_diffVarSet->setGradientVars(this->_states, this->_values, this->_states.size());
+  
+  const vector<GeometricEntity*>& faces = *element->getNeighborGeos();
+  
+  cf_assert(faces.size() == nbNodesInElem);
+  
+  const CFuint elemID = element->getID();
+  
+  // compute all the flow variable gradients by applying Green 
+  // Gauss in the cell volume
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+
+  DataHandle<CFreal> volumes = this->socket_volumes.getDataHandle();
+
+  // static vector<CFuint> v(3);
+  // v[0] = element->getNode(0)->getLocalID();
+  // v[1] = element->getNode(1)->getLocalID();
+  //v[2] = element->getNode(2)->getLocalID();
+  
+  for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+    RealVector& grad = *m_gradients[iEq];
+    grad = 0.0;
+
+    for (CFuint i = 0; i < nbNodesInElem; ++i) {
+      // get the face normal
+      const CFuint faceID = faces[i]->getID();
+      const CFuint startID = faceID*dim;
+      
+      CFreal nx = normals[startID];
+      CFreal ny = normals[startID + 1];
+      if (static_cast<CFuint>(isOutward[faceID]) != elemID) {
+	nx *= -1.;
+	ny *= -1.;
+      }
+      
+      if (i < (nbNodesInElem - 1)) {
+	grad[XX] += nx*(this->_values(iEq, i) + this->_values(iEq, i+1));
+	grad[YY] += ny*(this->_values(iEq, i) + this->_values(iEq, i+1));
+      }
+      else {
+	grad[XX] += nx*(this->_values(iEq, i) + this->_values(iEq, 0));
+	grad[YY] += ny*(this->_values(iEq, i) + this->_values(iEq, 0));
+      }
+    }
+    grad *= 0.5/volumes[elemID];
+    
+    // if (v[0] == 0 && v[1] == 1 && v[2] == 257) {  
+    //  cout << "grad["<< iEq << "] = " << grad << endl;
+    // }
+  }
+    
+  const CFreal radius = currState.getCoordinates()[YY];
+  this->_diffVarSet->getAxiSourceTerm(this->_physicalData, currState, 
+				      m_gradients, radius, source);
+  
+  //  this->_diffVarSet->getAxiSourceTerm(this->_physicalData, state, 
+  // m_gradients, radius, source);
+  
+  source *= (volumes[elemID]/radius);
+  
+  /* if (v[0] == 0 && v[1] == 1 && v[2] == 257) {
+     cout << "cellID = " << element->getID() << endl;  
+     cout << "cellNodes = " << *element->getNode(0) << "," 
+     << *element->getNode(1) << "," << *element->getNode(2) << endl;
+     //cout << "state  = " << currState << endl;
+     cout << "pdata  = " << this->_physicalData << endl;
+     cout << "state  = " << state << endl;
+     cout << "radius = " << radius << endl;
+     cout << "volume = " << volumes[elemID] << endl; 
+     cout << "source = " << source << endl;
+     }*/
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

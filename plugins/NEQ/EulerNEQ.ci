@@ -1,0 +1,194 @@
+#include "Framework/PhysicalChemicalLibrary.hh"
+
+//////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace NEQ {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void EulerNEQ<DIM>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFuint >
+     ("nbSpecies","Number of species.");
+
+  options.template addConfigOption< CFuint >
+    ("nbEulerEqs","Number of euler equations.");
+
+  options.template addConfigOption< CFuint >
+    ("nbVibEnergyEqs","Number of vibrational energy equations.");
+
+  options.template addConfigOption< CFuint >
+    ("nbTe","Number of electron temperatures.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+EulerNEQ<DIM>::EulerNEQ(const std::string& name) :
+  Framework::ConvectionReactionPM<Framework::MultiScalarTerm<NavierStokes::EulerTerm>, NEQReactionTerm>(name)
+{
+  addConfigOptionsTo(this);
+  _nbSpecies = 0;
+  setParameter("nbSpecies",&_nbSpecies);
+
+  _nbEulerEqs = DIM + 2;
+  setParameter("nbEulerEqs",&_nbEulerEqs);
+
+  _nbVibEnergyEqs = 0;
+  setParameter("nbVibEnergyEqs",&_nbVibEnergyEqs);
+
+  _nbTe = 0;
+  setParameter("nbTe",&_nbTe);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+EulerNEQ<DIM>::~EulerNEQ()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint EulerNEQ<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint EulerNEQ<DIM>::getNbEquations() const
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  std::valarray<CFuint> v(2);
+  v[0] = _nbSpecies;
+
+  //const CFuint nbTe =
+  // getPhysicalPropertyLibrary<PhysicalChemicalLibrary>()->getNbTe();
+  v[1] = _nbVibEnergyEqs + _nbTe;
+
+  // set the number of species in the convective term
+  getConvTerm()->setNbScalarVars(v);
+
+  return _nbEulerEqs + _nbSpecies + _nbVibEnergyEqs + _nbTe;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void EulerNEQ<DIM>::setReferenceValues()
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  SafePtr<MultiScalarTerm<EulerTerm> > convTerm = getConvTerm();
+  SafePtr<NEQReactionTerm> sourceTerm = getSrcTerm();
+
+  const CFreal tempRef = convTerm->getTempRef();
+  const CFreal pRef = convTerm->getPressRef();
+  const CFreal MachInf = convTerm->getMachInf();
+
+  CFLog(NOTICE, "tempRef = "   << tempRef << "\n");
+  CFLog(NOTICE, "pRef   = "    << pRef << "\n");
+  CFLog(NOTICE, "machInf   = " << MachInf << "\n");
+
+  if (!(MachInf > 0.)) {
+    CFout << "WARNING: Mach infinity NOT set"<< "\n";
+  }
+
+  // reference physical data to set
+  RealVector& refData = convTerm->getReferencePhysicalData();
+  RealVector& refDataSource = sourceTerm->getReferencePhysicalData();
+
+  // each component of the velocity is set equal to the
+  // reference value => avVel.norm2() != avSpeed in this case
+  if ((tempRef > 0.) && (pRef > 0.)) {
+    const CFreal refSpeed = std::sqrt(convTerm->getRdim()*tempRef);
+
+    // set all values to 1.0
+    refData = 1.0;
+
+    // @todo AL check that the scaling is correct here !!
+    // override all the values except he elemental fractions
+    refData[EulerTerm::V]   = refSpeed;
+    refData[EulerTerm::VX]  = refSpeed;
+    refData[EulerTerm::VY]  = refSpeed;
+    refData[EulerTerm::VZ]  = refSpeed;
+    refData[EulerTerm::RHO] = pRef/(refSpeed*refSpeed);
+    refData[EulerTerm::P]   = pRef;
+    refData[EulerTerm::H]   = refSpeed*refSpeed;
+    refData[EulerTerm::E]   = refSpeed*refSpeed;
+    refData[EulerTerm::A]   = refSpeed;
+    refData[EulerTerm::T]   = tempRef;
+
+    convTerm->setRRef(1.0);
+    _isAdimensional = true;
+  }
+  else {
+    // if the pressure and temperature reference values
+    // have not been specified set all the ref values to 1.
+    refData = 1.0;
+
+    convTerm->setRRef(convTerm->getRdim());
+    convTerm->setTempRef(1.0);
+    convTerm->setPressRef(1.0);
+
+    refDataSource[NEQReactionTerm::TAU] = 1.0;
+    _isAdimensional = false;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void EulerNEQ<DIM>::setReferenceTime()
+{
+  using namespace COOLFluiD::Physics::NavierStokes;
+  RealVector& refDataConv = getConvTerm()->getReferencePhysicalData();
+  _refTime = getRefLength()/refDataConv[EulerTerm::V];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void EulerNEQ<DIM>::configure ( Config::ConfigArgs& args )
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  ConvectionReactionPM<MultiScalarTerm<EulerTerm>, NEQReactionTerm>::configure(args);
+
+  cf_assert(getDimension() > 0);
+  cf_assert(getNbEquations() > 0);
+
+  getPhysicalPropertyLibrary<PhysicalChemicalLibrary>()->setNbTempVib
+    (_nbVibEnergyEqs);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(getDimension());
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace NEQ
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

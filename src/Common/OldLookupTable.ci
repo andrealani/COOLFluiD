@@ -1,0 +1,92 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Common_LookUpTable_ci
+#define COOLFluiD_Common_LookUpTable_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Common {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY, class VALUE>
+LookUpTable<KEY,VALUE>::LookUpTable(size_t maxSize) :
+  CFMap<KEY,VALUE>(maxSize)
+{
+}
+  
+//////////////////////////////////////////////////////////////////////////////
+  
+template<class KEY, class VALUE>
+LookUpTable<KEY,VALUE>::~LookUpTable()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY, class VALUE>
+void LookUpTable<KEY, VALUE>::saveToStream(std::ostream& out) 
+{
+  typename std::vector<std::pair<KEY,VALUE> >::iterator itr;
+
+  out << CFMap<KEY,VALUE>::size() << "\n";
+  for(itr = CFMap<KEY,VALUE>::begin(); 
+      itr != CFMap<KEY,VALUE>::end(); ++itr) {
+    out << itr->first << " " << itr->second << "\n";
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY, class VALUE>
+void LookUpTable<KEY, VALUE>::readFromStream(std::istream& in) 
+{
+  CFuint size;
+  in  >> size;
+
+  KEY   aKey;
+  VALUE aValue;
+
+  for(CFuint i = 0; i < size; ++i) {
+    in >> aKey >> aValue;
+    insert(aKey,aValue);
+  }
+  CFMap<KEY,VALUE>::sortKeys();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY, class VALUE>
+VALUE LookUpTable<KEY,VALUE>::get(const KEY& key)
+{
+  std::pair<typename std::vector<typename std::pair<KEY,VALUE> >::iterator,
+            typename std::vector<typename std::pair<KEY,VALUE> >::iterator>
+    result = this->findBounds(key);
+
+  const KEY prv = result.first->first;
+  const KEY aft = result.second->first;
+  const VALUE prvVal = result.first->second;
+  const VALUE aftVal = result.second->second;
+
+  if(aft == prv) {
+    return prvVal;
+  }
+
+  return (aftVal - prvVal)/(aft - prv)*(key - prv) + prvVal;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace COOLFluiD
+ 
+} // namespace Common 
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Common_LookUpTable_ci

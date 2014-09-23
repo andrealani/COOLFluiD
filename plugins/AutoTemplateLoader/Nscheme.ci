@@ -1,0 +1,63 @@
+#include "Nscheme.hh"
+
+//////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Benchmark {
+
+//////////////////////////////////////////////////////////////////////
+
+template < unsigned int NEQS, unsigned int NSTATES >
+Nscheme<NEQS,NSTATES>::Nscheme()
+ : skplus_u(NEQS), skplus(NEQS,NEQS), inv_k(NEQS,NEQS), u_in(NEQS)
+{
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template < unsigned int NEQS, unsigned int NSTATES >
+Nscheme<NEQS,NSTATES>::~Nscheme()
+{
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template < unsigned int NEQS, unsigned int NSTATES >
+void Nscheme<NEQS,NSTATES>::
+     distribute ( const std::vector<Matrix_t*>& kplus,
+                  const std::vector<Vector_t*>& states,
+                  const Vector_t&  res,
+                        std::vector<Vector_t*>& st_res )
+{
+  cf_assert ( kplus.size()  == NSTATES );
+  cf_assert ( states.size() == NSTATES );
+  cf_assert ( st_res.size() == NSTATES );
+
+  skplus   = *kplus[0];
+  skplus_u = *kplus[0] * *states[0];
+  for ( CFuint i = 1; i < NSTATES; ++i )
+  {
+// CF_DEBUG_OBJ ( *kplus[i] );
+    skplus   += *kplus[i];
+    skplus_u += *kplus[i] * *states[i];
+  }
+
+// CF_DEBUG_OBJ ( skplus );
+
+  inverter.invert(skplus,inv_k);
+
+  u_in = inv_k * (skplus_u - res);
+
+  for ( CFuint i = 1; i < NSTATES; ++i )
+  {
+    *st_res[i] = *kplus[i] * ( *states[i] - u_in );
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
+  } // namespace Benchmark
+
+} // namespace COOLFluiD
+

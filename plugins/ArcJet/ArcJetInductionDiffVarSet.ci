@@ -1,0 +1,126 @@
+#include "Framework/PhysicalConsts.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Framework/PhysicalChemicalLibrary.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace ArcJet {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASEVS, typename ST>
+ArcJetInductionDiffVarSet<BASEVS, ST>::ArcJetInductionDiffVarSet
+(const std::string& name,
+ Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  BASEVS(name, model),
+  m_arcJetReactionTerm(model->getSourceTerm().d_castTo<ST>()),
+  m_library(CFNULL)
+{
+  this->addVarName("Bx");
+  this->addVarName("By");
+  this->addVarName("Bz");
+  this->addVarName("Phi");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASEVS, typename ST>
+ArcJetInductionDiffVarSet<BASEVS, ST>::~ArcJetInductionDiffVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASEVS, typename ST>
+void ArcJetInductionDiffVarSet<BASEVS, ST>::setup()
+{
+  BASEVS::setup();
+  
+  using namespace COOLFluiD::Framework;
+  
+  m_library = PhysicalModelStack::getActive()->getImplementor()->
+    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASEVS, typename ST>
+RealVector& ArcJetInductionDiffVarSet<BASEVS, ST>::getFlux
+(const RealVector& values,
+ const std::vector<RealVector*>& gradients,
+ const RealVector& normal,
+ const CFreal& radius)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  typedef ArcJetInductionTerm<NavierStokes::EulerTerm> PTERM;
+   
+  // AL: implement diffusive flux for last 4 equations here
+	
+  const CFuint dim    = PhysicalModelStack::getActive()->getDim(); 
+  const CFuint nbEqs  = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
+  const CFuint eqSSID = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getEqSS();
+  const CFuint totalNbEqs = this->_flux.size();
+      
+  // AL: not generic this assumes [p v T] variables !!!    
+  CFreal Tdim = values[this->_TID];
+  cf_assert(this->_TID > 0);  
+  CFreal pdim = values[0];
+  
+  /* Access the mutation library to get sigma*/
+  CFreal* tVec = CFNULL;
+  const CFreal sigma = m_library->sigma(Tdim, pdim, tVec);
+  const CFreal pi = 3.14159265358979323846;
+  const CFreal mu = 4.0*pi*1E-7;
+  const CFreal oneovermusigma = 1.0/(mu*sigma);
+  const CFreal nx = normal[XX];
+  const CFreal ny = normal[YY];
+  const CFreal nz = (dim < DIM_3D) ? 0. : normal[ZZ];
+  
+  
+  // here it is assumed that you don't derive from this class (for the moment is
+  // a reasonable assumption)
+  // if more than 2 or all the equations are considered
+  if (nbEqs != 4 || (nbEqs == 4 && eqSSID == 0) || nbEqs == totalNbEqs) {
+    BASEVS::getFlux(values,gradients,normal,radius);
+  }
+  
+  // if only the last two equations or all the equations are considered
+  if ((nbEqs == 4 && eqSSID == 1) || nbEqs == totalNbEqs) {
+    const RealVector& gradBx = *gradients[totalNbEqs - 4];
+     const RealVector& gradBy = *gradients[totalNbEqs - 3];
+     const RealVector& gradBz = *gradients[totalNbEqs - 2];
+        
+     this->_flux[totalNbEqs -4] = oneovermusigma*(gradBy[XX] -gradBx[YY])*ny + (gradBz[XX] - gradBx[ZZ])*nz;
+     this->_flux[totalNbEqs -3] = oneovermusigma*(gradBx[YY] -gradBy[XX])*nx + (gradBz[YY] - gradBy[ZZ])*nz;
+     this->_flux[totalNbEqs -2] = oneovermusigma*(gradBx[ZZ] -gradBz[XX])*nx + (gradBy[ZZ] - gradBz[YY])*ny;
+     this->_flux[totalNbEqs -1] = 0.0;
+   }
+     
+  return this->_flux;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASEVS, typename ST>
+CFreal ArcJetInductionDiffVarSet<BASEVS, ST>::getCurrUpdateDiffCoeff(CFuint iEqSS)
+{
+  if (iEqSS == 0) {
+    return BASEVS::getCurrUpdateDiffCoeff(iEqSS);
+  }
+  return 0.0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace ArcJet
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

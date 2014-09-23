@@ -1,0 +1,79 @@
+#include "Environment/ObjectProvider.hh"
+
+#include "UFEM/QuadP1P1Cell/CellProps.hh"
+#include "UFEM/QuadP1P1Cell/UFEMQuadP1P1Cell.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+  namespace UFEM {
+    namespace QuadP1P1Cell {
+
+using namespace COOLFluiD::Framework;
+
+//////////////////////////////////////////////////////////////////////////////
+
+Environment::ObjectProvider < CellProps,
+                              ElemProps,
+                              UFEMQuadP1P1CellPlugin,
+                              ElemProps::NARGS >
+aQuadP1P1CellProps_Provider ( "QuadP1P1CellProps" );
+
+//////////////////////////////////////////////////////////////////////////////
+
+void CellProps::defineConfigOptions ( Config::OptionList& options )
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+CellProps::CellProps ( const std::string& name ) : ElemProps ( name )
+{
+  CFAUTOTRACE;
+  addConfigOptionsTo(this);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+CellProps::~CellProps() 
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void CellProps::configure ( Config::ConfigArgs& args )
+{
+  CFAUTOTRACE;
+  ElemProps::configure ( args );
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void CellProps::setup ()
+{
+  CFAUTOTRACE;
+  ElemProps::setup ();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void CellProps::unsetup ()
+{
+  CFAUTOTRACE;
+  ElemProps::unsetup ();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void CellProps::prepare ( const Framework::GeometricEntity& cell )
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    }  // end namespace QuadP1P1Cell
+  }  // end namespace UFEM
+}  // end namespace COOLFluiD

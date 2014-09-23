@@ -1,0 +1,182 @@
+#include "Framework/MeshData.hh"
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "NavierStokes/EulerTerm.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+NoSlipWallIsothermalNSrvtLTE<MODEL>::NoSlipWallIsothermalNSrvtLTE(const std::string& name) :
+  NoSlipWallIsothermalNSrvt<MODEL>(name),
+  m_library(CFNULL),
+  m_model(CFNULL),
+  m_tVec(), 
+  m_ysIn(),
+  m_ysEq(),
+  m_xs()	
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+NoSlipWallIsothermalNSrvtLTE<MODEL>::~NoSlipWallIsothermalNSrvtLTE()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSrvtLTE<MODEL>::setup()
+{
+  NoSlipWallIsothermalNSrvt<MODEL>::setup();
+  
+  m_library = Framework::PhysicalModelStack::getActive()->
+    getImplementor()->template getPhysicalPropertyLibrary
+    <Framework::PhysicalChemicalLibrary>();
+  
+  m_model = Framework::PhysicalModelStack::getActive()->
+    getImplementor()->getConvectiveTerm().template d_castTo<MODEL>();
+  
+  m_tVec.resize(this->m_nbTv);
+  
+  m_ysIn.resize(m_library->getNbSpecies());
+  cf_assert(m_ysIn.size() > 0); 
+  
+  m_ysEq.resize(m_library->getNbSpecies());
+  cf_assert(m_ysEq.size() > 0);
+  
+  m_xs.resize(m_library->getNbSpecies());
+  cf_assert(m_xs.size() > 0);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSrvtLTE<MODEL>::setGhostStateImpl
+(const Framework::State& innerState,
+ Framework::State& ghostState)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+ 
+  if (this->m_adiabatic || this->getMethodData().getNodalStatesExtrapolator()->runAdiabatic()) {
+    this->imposeAdiabatic(innerState, ghostState);
+  } 
+ else {
+  // here a fix is needed in order to have always m_ghostT > 0
+  // dynamic relocation of the ghost state: the position of the
+  // ghost state is locally changed, and the BC is imposed
+  // using a weighted average of ghost state (in the new location)
+  // and inner state
+  
+  CFuint iTemp = this->m_tempID;
+  for (CFuint i = 0; i < this->m_innerTTvib.size(); ++i, ++iTemp) {
+    this->m_innerTTvib[i] = innerState[iTemp];
+    this->m_ghostTTvib[i] = ghostState[iTemp];
+  }
+  
+  this->repositionNode(this->m_innerTTvib, this->m_ghostTTvib, this->m_wallTemp, this->m_ghostTempMin);
+  
+  // reset the ghost node with the new position
+  ghostState.getCoordinates() = this->m_tempGhostNode;
+  
+  // set the species mass fractions
+  CFreal rho = 0.;
+  for (CFuint i = 0; i < this->m_nbSpecies; ++i) {
+    m_ysIn[i] = innerState[i];
+    rho += innerState[i];
+  }
+  m_ysIn /= rho;
+  
+  const RealVector& refData = m_model->getReferencePhysicalData();
+  CFreal rhodim = rho*refData[Physics::NavierStokes::EulerTerm::RHO];
+  CFreal Tdim = this->m_wallTemp * m_model->getTempRef();
+  
+  // first set the species fractions
+  m_library->setSpeciesFractions(m_ysIn);
+  
+  // internal pressure is extrapolated constantly on the wall
+  CFreal Tin = innerState[this->m_tempID];
+  
+  const CFuint nbTv = m_library->getNbTempVib();
+  for (CFuint i = 0; i < nbTv; ++i) {
+    m_tVec[i] = Tin;
+  }
+  const CFuint nbTe = m_library->getNbTe(); 
+  if (nbTe == 1) {
+    m_tVec[nbTv] = innerState[innerState.size()-1]; 
+  }
+  
+  CFreal* TeDim = (m_library->getNbTempVib() > 0) ? &m_tVec[0] : CFNULL;
+  CFreal pdim = m_library->pressure(rhodim, Tin, TeDim);
+  
+  // set the elemental molar fractions starting from species mass fractions
+  m_library->setElementXFromSpeciesY(m_ysIn);
+  
+  // cout << "m_ysIn.sum() = " << m_ysIn.sum() << endl;
+  // cout << "pdim = " << pdim << endl;
+  // cout << "Tdim = " << Tdim << endl;
+
+  // this overrides the species molar composition
+  m_library->setComposition(Tdim,pdim,&m_xs);
+  
+  // cout << "m_xs.sum() = " << m_xs.sum() << endl;
+
+  const CFreal rhoEq = m_library->density(Tdim, pdim, TeDim)/refData[EulerTerm::RHO];
+  m_library->getSpeciesMassFractions(m_xs, m_ysEq);
+  
+  // cout << "m_ysEq.sum() = " << m_ysEq.sum() << endl;
+  
+  const CFuint sizeState = innerState.size();
+  cf_assert(this->m_isVelocityComp.size() == sizeState);
+  
+  const CFreal ratioT = Tdim/this->m_ghostTTvib[0];
+  for (CFuint i = 0; i < sizeState; ++i) {
+    if (this->m_isVelocityComp[i]) {
+      this->linearInterpolate(innerState[i], 0.0, ghostState[i]);
+    }
+    else {
+      if (i < this->m_nbSpecies) {
+	// check that the pressure is the same in ghostState and innerState
+	//this->linearInterpolate(innerState[i], m_ys[i]*rhoEq, ghostState[i]);
+	// 	CFreal ghostYs = 0.0;
+	// 	this->linearInterpolate(m_ysIn[i], m_ysEq[i], ghostYs);
+	ghostState[i] = rhoEq*m_ysEq[i]*ratioT;
+      }
+      
+      if (i < this->m_tempID && i >= this->m_nbSpecies) {
+	cf_assert(false);
+	// constant extrapolation by default
+	ghostState[i] = innerState[i];
+      }
+      
+      if (i >= this->m_tempID) {
+	if (i < sizeState - nbTe) {
+	  ghostState[i] = this->m_ghostTTvib[i - this->m_tempID];
+	}
+	else {
+	  // adiabatic condition for the free electrons temperature
+	  ghostState[i] = innerState[i];
+	}
+      }
+    }
+  }
+ }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

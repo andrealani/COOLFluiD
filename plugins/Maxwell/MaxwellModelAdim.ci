@@ -1,0 +1,89 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace Maxwell {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MaxwellModelAdim<DIM>::defineConfigOptions(Config::OptionList& options)
+{
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+MaxwellModelAdim<DIM>::MaxwellModelAdim(const std::string& name)
+  : Framework::ConvectionPM<MaxwellAdimTerm>(name)
+{
+  addConfigOptionsTo(this);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+MaxwellModelAdim<DIM>::~MaxwellModelAdim()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint MaxwellModelAdim<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MaxwellModelAdim<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionPM<MaxwellAdimTerm>::configure(args);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(getDimension());
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint MaxwellModelAdim<DIM>::getNbEquations() const
+{
+  return 6;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MaxwellModelAdim<DIM>::setReferenceValues()
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  
+  SafePtr<MaxwellAdimTerm> convTerm = getConvTerm();
+  
+  // reference values for the convective part
+  RealVector& refDataConv = convTerm->getReferencePhysicalData();
+  
+  // if the pressure and temperature reference values
+  // have not been specified set all the ref values to 1.
+  refDataConv = 1.0;
+  _isAdimensional = false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace MHD
+
+} // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

@@ -1,0 +1,376 @@
+#include "MathTools/MathConsts.hh"
+#include "Framework/EquationSetData.hh"
+#include "Common/CFPrintContainer.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+RhieChowFlux<UPDATEVAR>::RhieChowFlux(const std::string& name) :
+  FVMCC_FluxSplitter(name),
+  m_updateVarSet(CFNULL),
+  m_diffusiveVarSet(CFNULL),
+  m_u12(0.),
+  m_v12(0.),
+  m_w12(0.),
+  m_rho12(0.),
+  m_rhoUn12(0.),
+  m_TempUnitNormal(),
+  _avState(),
+  m_DummyGradients()
+{
+  addConfigOptionsTo(this);
+  m_PressStab = true;
+  setParameter("PressStab",&m_PressStab);
+
+  m_PressDissipScale = -1.;
+  setParameter("PressDissipScale",&m_PressDissipScale); 
+  
+  m_globalFlowSpeedEstimate = 0.0;
+  setParameter("GlobalSpeed",&m_globalFlowSpeedEstimate);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+RhieChowFlux<UPDATEVAR>::~RhieChowFlux()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void RhieChowFlux<UPDATEVAR>::compute(RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+ 
+  // reset the result to 0 not to have problems in weakly-coupled cases     
+  result = 0.0;
+  
+  const CFuint nbEqs =
+    PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
+  const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
+  const CFuint nbEulerEqs = eulerVarIDs.size() ;
+  
+  // unused // const CFuint eulerID = eulerEqSet.getEqSetID();
+  const vector<EquationSetData>& eqsData = UPDATEVAR::getEqSetData();
+  const CFuint nbSS = eqsData.size();
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
+  CFLog(DEBUG_MIN, "RhieChowFlux::compute() => nbSS = " << nbSS << "\n"); 
+  
+  CellCenterFVMData& data = this->getMethodData(); 
+  GeometricEntity& face = *data.getCurrentFace();
+  SafePtr<FVMCC_PolyRec> polyRec = data.getPolyReconstructor();
+  const vector<bool>& maskArray = m_updateVarSet->getMaskVariableArray();
+    
+  // this is needed for coupling
+  if (nbEqs >= nbEulerEqs) {
+    
+    CFLog(DEBUG_MED, "RhieChowFlux::compute() => isPerturb " 
+	  << getMethodData().isPerturb() << ", iVar = " << getMethodData().iPerturbVar() <<"\n");
+    
+    vector<RealVector>& pdata = getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
+    const RealVector& leftData = pdata[LEFT];
+    const RealVector& rightData = pdata[RIGHT];
+    
+    // The flow at the freestream is assumed to be one-dimensional
+    
+    // calculation of the primitive variables at the left and right states
+    const CFreal rhoL = leftData [UPDATEVAR::PTERM::RHO];
+    const CFreal rhoR = rightData[UPDATEVAR::PTERM::RHO];
+    const CFreal uL   = leftData [UPDATEVAR::PTERM::VX];
+    const CFreal uR   = rightData[UPDATEVAR::PTERM::VX];
+    const CFreal vL   = leftData [UPDATEVAR::PTERM::VY];
+    const CFreal vR   = rightData[UPDATEVAR::PTERM::VY];
+    const CFreal wL   = leftData [UPDATEVAR::PTERM::VZ];
+    const CFreal wR   = rightData[UPDATEVAR::PTERM::VZ];
+    const CFreal dpL  = leftData [UPDATEVAR::PTERM::P];
+    const CFreal dpR  = rightData[UPDATEVAR::PTERM::P];
+    const CFreal hL   = leftData [UPDATEVAR::PTERM::H];
+    const CFreal hR   = rightData[UPDATEVAR::PTERM::H];
+    
+    // calculation of the primitive variables at the interface
+    m_rho12 = .5*(rhoL + rhoR);
+    const CFreal dp12  = .5*(dpL + dpR);
+    const CFreal h12   = .5*(hL + hR);
+    m_u12   = .5*(uL + uR);
+    m_v12   = .5*(vL + vR);
+    
+    const RealVector& unitNormal = data.getUnitNormal();
+    const CFreal nx = unitNormal[XX];
+    const CFreal ny = unitNormal[YY];
+    
+    // calculation of the normal component of velocity for
+    // the left and right states
+
+    CFreal unL = 0.0;
+    CFreal unR = 0.0;
+    if (dim == DIM_3D)
+    {
+      const CFreal nz = unitNormal[ZZ];
+      unL = uL*nx + vL*ny + wL*nz;
+      unR = uR*nx + vR*ny + wR*nz;
+    }
+    else
+    {
+      unL = uL*nx + vL*ny;
+      unR = uR*nx + vR*ny;
+    }
+
+    m_rhoUn12 = .5*(rhoL*unL + rhoR*unR);
+    
+    // this can modify m_rhoUn12
+    this->computeMeshSpeed();
+    
+    // estimated global flow speed
+    const CFreal beta = getBeta(leftData, rightData);
+    
+    // calculation of the face area
+    const CFreal faceArea = socket_faceAreas.getDataHandle()[face.getID()];
+    
+    // determination of local dynamic viscosity and added artificial dissipation coefficient
+    CFreal dynamicViscosity = 0.;
+    CFreal addLambdaU = 0.;
+    if(m_diffusiveVarSet.isNull()) // dynamic viscosity inviscid case - Euler
+    {
+      dynamicViscosity = 0.;
+
+      // added artificial dissipation coefficient for momentum equation - Euler
+      addLambdaU = m_rho12*beta;
+    }
+    else // dynamic viscosity viscous case - Navier Stokes
+    {
+      // here the average must involve the nodal states and not the left and right ones!!
+      _avState = .5*(polyRec->getCurrRightState() + polyRec->getCurrLeftState());
+      m_diffusiveVarSet->setComposition(_avState, data.isPerturb(), data.iPerturbVar());
+      
+      ///@todo here this works only if gradientVar = diffusiveVar
+      ///@todo this will not work if gradients are needed for viscosity (SST Turb model) !!!
+      ///@todo We should set the distances here!!!! This is NOT ok for SST Turb model
+      m_diffusiveVarSet->setWallDistance(0.);
+      
+      //  cout << "xyz is ghost= " << face.getState(1)->isGhost() << ", " << face.getState(0)->getCoordinates() <<  endl;
+      // cout << "rhoL="  << rhoL << ", rhoR="  << rhoR << ", dpL="  << dpL << ", dpR="  << dpR << ", hL="  << hL << ", hR="  << hR << endl;
+      
+      dynamicViscosity = .5*
+      (m_diffusiveVarSet->getDynViscosity(polyRec->getCurrRightState(), m_DummyGradients) +
+       m_diffusiveVarSet->getDynViscosity(polyRec->getCurrLeftState(), m_DummyGradients));
+      
+      // added artificial dissipation coefficient for momentum equation - Navier-Stokes
+      addLambdaU = 0.;
+    }
+
+    // local cell Reynolds number
+    const CFreal length = (dim == DIM_3D) ? 2.*std::sqrt(faceArea/MathTools::MathConsts::CFrealPi()) : faceArea; // check this
+    const CFreal oneOverLocalRe = dynamicViscosity/(m_rho12*m_globalFlowSpeedEstimate*length);
+    
+    // calculation of factor scaling the pressure dissipation in regions of
+    // low cell Reynolds numbers
+    CFreal lambda = 0.;
+
+    if(m_PressDissipScale < 0.) lambda = 1./(1. + oneOverLocalRe);
+    else lambda = m_PressDissipScale;
+
+    // calculation of the pressure-stabilized mass flux normal to a edge
+    const CFreal mflux12 = m_rhoUn12 - .5*(lambda/beta)*(dpR - dpL);
+    
+    // use of pressure stabilization in momentum equations and upwinding
+    const CFreal mflux = (m_PressStab) ? mflux12 : m_rhoUn12;
+    
+    // this case corresponds to the case with a single global continuity equation
+    if (nbEulerEqs == dim + 2) {
+      result[0] = mflux12;
+    }
+    
+    // calculation of the dimensional numerical fluxes at the interface
+    if (dim == DIM_3D)
+    {
+      m_w12   = .5*(wL + wR);
+      const CFreal nz = unitNormal[ZZ];
+      if (nbEulerEqs == dim + 2) {
+	result[1] = mflux*m_u12 - .5*(std::abs(mflux) + addLambdaU)*(uR - uL) + dp12*nx;
+	result[2] = mflux*m_v12 - .5*(std::abs(mflux) + addLambdaU)*(vR - vL) + dp12*ny;
+	result[3] = mflux*m_w12 - .5*(std::abs(mflux) + addLambdaU)*(wR - wL) + dp12*nz;
+	result[4] = mflux12*h12 - .5*std::abs(mflux)*(hR - hL);
+	
+	for (CFuint i = 0; i < nbSS; ++i) {
+	  // only consider the active equation subsets
+	    const CFuint nbVars = m_updateVarSet->getModel()->getNbScalarVars(i);
+	    const CFuint firstVar = m_updateVarSet->getModel()->getFirstScalarVar(i);
+	    
+	    CFLog(DEBUG_MIN, "RhieChowFlux::compute() => nbVars = " << nbVars 
+		  << ", firstVar = " << firstVar << "\n");
+	    
+	    for (CFuint ie = 0; ie < nbVars; ++ie) {
+	      const CFreal YL = leftData[firstVar + ie];
+	      const CFreal YR = rightData[firstVar + ie];
+              const CFuint maID = 5+ie;
+             if (maskArray[maID]) {
+	      result[maID] = mflux12*.5*(YL + YR) - 0.5*std::abs(mflux)*(YR - YL);
+	  }
+	  }
+	}
+      }
+      else {
+	// NEQ cases should enter here
+	result[eulerVarIDs[0]] = mflux*m_u12 - .5*(std::abs(mflux) + addLambdaU)*(uR - uL) + dp12*nx;
+	result[eulerVarIDs[1]] = mflux*m_v12 - .5*(std::abs(mflux) + addLambdaU)*(vR - vL) + dp12*ny;
+	result[eulerVarIDs[2]] = mflux*m_w12 - .5*(std::abs(mflux) + addLambdaU)*(wR - wL) + dp12*nz;
+	result[eulerVarIDs[3]] = mflux12*h12 - .5*std::abs(mflux)*(hR - hL);
+	
+	if (totalNbEqs > nbEulerEqs) {
+	  for (CFuint i = 0; i < nbSS; ++i) {
+	    // only consider the active equation subsets
+	      const CFuint nbVars = m_updateVarSet->getModel()->getNbScalarVars(i);
+	      const CFuint firstVar = m_updateVarSet->getModel()->getFirstScalarVar(i);
+	      const vector<CFuint>& varIDs = eqsData[i].getEqSetVarIDs();
+	      
+	      CFLog(DEBUG_MIN, "RhieChowFlux::compute() => nbVars = " << nbVars 
+		  << ", firstVar = " << firstVar << ", " 
+		    << CFPrintContainer<const vector<CFuint> >("varIDs  = ", &varIDs));
+	      
+	      for (CFuint ie = 0; ie < nbVars; ++ie) {
+		const CFreal YL = leftData[firstVar + ie];
+		const CFreal YR = rightData[firstVar + ie];
+                const CFuint maID = varIDs[ie];
+             if (maskArray[maID]) {
+		result[maID] = mflux12*.5*(YL + YR) - 0.5*std::abs(mflux)*(YR - YL);
+              }
+	    }
+	  }
+	}
+      }
+    }
+    else {      
+      if (nbEulerEqs == dim + 2) {
+	result[1] = mflux*m_u12 - .5*(std::abs(mflux) + addLambdaU)*(uR - uL) + dp12*nx;
+	result[2] = mflux*m_v12 - .5*(std::abs(mflux) + addLambdaU)*(vR - vL) + dp12*ny;
+	result[3] = mflux12*h12 - .5*std::abs(mflux)*(hR - hL);
+	
+	// loop over the equation set data
+	for (CFuint i = 0; i < nbSS; ++i) {
+	  // only consider the active equation subsets
+	    const CFuint nbVars = m_updateVarSet->getModel()->getNbScalarVars(i);
+	    const CFuint firstVar = m_updateVarSet->getModel()->getFirstScalarVar(i);
+	    
+	    CFLog(DEBUG_MIN, "RhieChowFlux::compute() => nbVars = " << nbVars 
+		  << ", firstVar = " << firstVar << "\n");
+	    
+	    for (CFuint ie = 0; ie < nbVars; ++ie) {
+	      const CFreal YL = leftData[firstVar + ie];
+	      const CFreal YR = rightData[firstVar + ie];
+               const CFuint maID = 4+ie;
+             if (maskArray[maID]) {
+	      result[maID] = mflux12*.5*(YL + YR) - 0.5*std::abs(mflux)*(YR - YL);
+	      }
+	  }
+	}
+      }
+      else {	
+	// NEQ cases should enter here
+	result[eulerVarIDs[0]] = mflux*m_u12 - .5*(std::abs(mflux) + addLambdaU)*(uR - uL) + dp12*nx;
+	result[eulerVarIDs[1]] = mflux*m_v12 - .5*(std::abs(mflux) + addLambdaU)*(vR - vL) + dp12*ny;
+	result[eulerVarIDs[3]] = mflux12*h12 - .5*std::abs(mflux)*(hR - hL);
+	
+	if (totalNbEqs > nbEulerEqs) {
+	  for (CFuint i = 0; i < nbSS; ++i) {
+	      const CFuint nbVars = m_updateVarSet->getModel()->getNbScalarVars(i);
+	      const CFuint firstVar = m_updateVarSet->getModel()->getFirstScalarVar(i);
+	      const vector<CFuint>& varIDs = eqsData[i].getEqSetVarIDs();
+	      
+	      CFLog(DEBUG_MIN, "RhieChowFlux::compute() => nbVars = " << nbVars 
+		    << ", firstVar = " << firstVar << ", " 
+		    << CFPrintContainer<const vector<CFuint> >("varIDs  = ", &varIDs));
+	      
+	      for (CFuint ie = 0; ie < nbVars; ++ie) {
+		const CFreal YL = leftData[firstVar + ie];
+		const CFreal YR = rightData[firstVar + ie];
+		const CFuint maID = varIDs[ie];
+		if (maskArray[maID]) {
+		result[maID] = mflux12*.5*(YL + YR) - 0.5*std::abs(mflux)*(YR - YL);
+		}				
+	    }
+	  }
+	}	
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void RhieChowFlux<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< bool >
+    ("PressStab","Use pressure stabilization in momentum equation.");
+
+  options.template addConfigOption< CFreal >
+    ("PressDissipScale",
+     "Sets the value of pressure dissipation scaling factor to a constant chosen value.");
+  
+  options.template addConfigOption< CFreal >
+    ("GlobalSpeed","Estimated global speed.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void RhieChowFlux<UPDATEVAR>::setup()
+{
+  using namespace COOLFluiD::Framework;
+  
+  FVMCC_FluxSplitter::setup();
+  
+  m_updateVarSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+  
+  try {
+    m_diffusiveVarSet = this->getMethodData().getDiffusiveVar().template d_castTo<Physics::NavierStokes::NavierStokesVarSet>();
+  }
+  catch (Common::FailedCastException& e) {
+    CFLog(WARN,"RhieChowFlux::setup() => running inviscid Euler\n");
+    m_diffusiveVarSet = CFNULL;
+  }
+  
+  m_TempUnitNormal.resize(PhysicalModelStack::getActive()->getDim());
+  _avState.resize(PhysicalModelStack::getActive()->getNbEq());
+  
+  // estimated global flow speed 
+  // this should not be 1, unless you are adimensional!!!
+  if (!(m_globalFlowSpeedEstimate > 0)) {
+    m_globalFlowSpeedEstimate = m_updateVarSet->getModel()->getVelInf()/m_updateVarSet->getModel()->getVelRef();
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+CFreal RhieChowFlux<UPDATEVAR>::getBeta(const RealVector& leftData, 
+					const RealVector& rightData) 
+{
+  return m_globalFlowSpeedEstimate;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

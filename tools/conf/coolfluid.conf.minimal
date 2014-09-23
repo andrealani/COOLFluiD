@@ -1,0 +1,18 @@
+# This is an example of minimal coolfluid configuration
+# You need to have: cmake, boost, mpi and parmetis
+
+coolfluid_dir = $HOME/workspace/coolfluid
+basebuild_dir = $HOME/workspace/coolfluid/builds/$ARCH
+
+# set compilers here compilers
+cc     = $HOME/local/$ARCH/bin/mpicc
+cxx    = $HOME/local/$ARCH/bin/mpic++
+fc     = gfortran
+
+mpi_dir       = $HOME/local/$ARCH
+boost_dir     = $HOME/local/$ARCH
+parmetis_dir  = $HOME/local/$ARCH/local/parmetis
+
+# dont get all the modules
+mods-getall = 0
+

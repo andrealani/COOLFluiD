@@ -1,0 +1,7 @@
+Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 5.0 #100.0 
+Simulator.SubSystem.BDF2.Data.CFL.Interactive.CFL = 0.6
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.gradientFactor = 0.0 #0.8 
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.limitRes = 0.0 #-0.2
+Simulator.SubSystem.CellCenterFVM.Data.LaxFried.DiffCoeff = 1.0
+Simulator.SubSystem.CellCenterFVM.Data.MHD3DProjectionConsLaxFriedTanaka.DiffCoeff = 1.0 
+Simulator.SubSystem.CellCenterFVM.Data.MHD3DProjectionPolytropicConsLaxFriedTanaka.DiffCoeff = 1.0

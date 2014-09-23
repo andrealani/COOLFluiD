@@ -1,0 +1,130 @@
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "Common/BadValueException.hh"
+
+//////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace Maxwell {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MaxwellModel<DIM>::defineConfigOptions(Config::OptionList& options)
+{
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+MaxwellModel<DIM>::MaxwellModel(const std::string& name)
+  : Framework::ConvectionPM<ConvMaxwellTerm>(name)
+{
+  addConfigOptionsTo(this);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+MaxwellModel<DIM>::~MaxwellModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint MaxwellModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint MaxwellModel<DIM>::getNbEquations() const
+{
+  return 6;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+template <int DIM>
+std::string MaxwellModel<DIM>::getConvectiveName() const
+{
+  if (DIM == 2) return "Maxwell2D";
+  return "Maxwell3D";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string MaxwellModel<DIM>::getDiffusiveName() const
+{
+  return "Null";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>	
+std::string MaxwellModel<DIM>::getSourceName() const
+{	
+  return "Null";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MaxwellModel<DIM>::setReferenceValues()
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  
+  SafePtr<ConvMaxwellTerm> convTerm = getConvTerm();
+  
+  // reference values for the convective part
+  RealVector& refDataConv = convTerm->getReferencePhysicalData();
+  
+  // if the pressure and temperature reference values
+  // have not been specified set all the ref values to 1.
+  refDataConv = 1.0;
+  _isAdimensional = false;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MaxwellModel<DIM>::setReferenceTime()
+{
+  _refTime = 1.;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MaxwellModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  using namespace COOLFluiD::Framework;
+  
+  ConvectionPM<ConvMaxwellTerm>::configure(args);
+
+  cf_assert(getDimension() > 0);
+  cf_assert(getNbEquations() > 0);
+    
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(getDimension());
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace Maxwell
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

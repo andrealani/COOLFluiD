@@ -1,0 +1,101 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -0.644711
+
+#
+
+# CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFluctSplit libFluctSplitSystem libFluctSplitNavierStokes libForwardEuler libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets3D/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType       = Euler3D
+
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = jets3Dhexa.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = jets3Dhexa.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 10
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 50
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells FaceSouth FaceWest FaceNorth FaceEast Top Bottom
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = hexa-coarse.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.8
+#Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = min(0.1+(i*0.0025),0.8)
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+#Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = CRD
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysN
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Roe
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField MachStep
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells FaceSouth FaceNorth FaceWest FaceEast Top
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.InField.Def = 0.5 \
+          0.0 \
+                                        0.0 \
+                                        1.67332 \
+                                        3.425
+
+Simulator.SubSystem.FluctuationSplit.MachStep.applyTRS = Bottom
+Simulator.SubSystem.FluctuationSplit.MachStep.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.MachStep.Def = if(y>0.5,0.5,1.) \
+                                         0.0 \
+                                         0.0 \
+                                         if(y>0.5,1.67332,2.83972) \
+                                         if(y>0.5,3.425,6.532)
+
+Simulator.SubSystem.FluctuationSplit.BcComds = SuperInlet SuperOutlet
+Simulator.SubSystem.FluctuationSplit.BcNames = InJet      OutJet
+
+Simulator.SubSystem.FluctuationSplit.InJet.applyTRS = Bottom
+Simulator.SubSystem.FluctuationSplit.InJet.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.InJet.Def =  if(y>0.5,0.5,1.) \
+                                         0.0 \
+                                         0.0 \
+                                         if(y>0.5,1.67332,2.83972) \
+                                         if(y>0.5,3.425,6.532)
+
+Simulator.SubSystem.FluctuationSplit.OutJet.applyTRS = FaceSouth FaceNorth FaceWest FaceEast Top
+
+
+

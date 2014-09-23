@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Labels</key>
+	<string>Transferfunction for cell 0
+k \Delta
+G
+k
+target            FGR = 0
+diagonal xy   FGR = 0
+diagonal x     FGR = 0
+</string>
+	<key>Text</key>
+	<string></string>
+</dict>
+</plist>

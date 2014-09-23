@@ -1,0 +1,166 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+# Residual = -2.22955
+# Parallel = off
+#
+#
+#CFEnv.ErrorOnUnusedConfig = true
+#CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs =  libCFmeshFileWriter libCFmeshFileReader libNewtonMethod libPetscI libTecplotWriter libMaxwell libForwardEuler libFiniteVolume libGambit2CFmesh libFiniteVolumeMaxwell 
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = ./
+Simulator.Paths.ResultsDir = ./RESULTS_electrode
+
+Simulator.SubSystem.Default.PhysicalModelType = Maxwell2DProjectionAdim #Maxwell2DProjection
+Simulator.SubSystem.Maxwell2DProjectionAdim.ConvTerm.divECleaningConst = 1
+Simulator.SubSystem.Maxwell2DProjectionAdim.ConvTerm.divBAdimCleaningConst = 1
+Simulator.SubSystem.Maxwell2DAdim.refValues = 1. 1. 1. 1. 1. 1. 
+#Simulator.SubSystem.Maxwell2D.refLength = 1.0
+
+#Simulator.SubSystem.SubSystemStatus.TimeStep = 2.35867367553e-12
+
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = FunctionDT
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = sqrt(2)/200
+
+Simulator.SubSystem.OutputFormat        = CFmesh Tecplot
+Simulator.SubSystem.CFmesh.FileName     = electrode2D.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = electrode2D.plt
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.Tecplot.Data.outputVar = Cons
+#Simulator.SubSystem.Tecplot.Data.SurfaceTRS = x0
+Simulator.SubSystem.Tecplot.SaveRate = 10
+#Simulator.SubSystem.CFmesh.SaveRate = 10
+
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = Btheta #divB divE BxPWTheory ByPWTheory BzPWTheory ExPWTheory EyPWTheory EzPWTheory ErrorBxPW ErrorByPW ErrorBzPW ErrorExPW ErrorEyPW ErrorEzPW 
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = Btheta #divB divE BxPWTheory ByPWTheory BzPWTheory ExPWTheory EyPWTheory EzPWTheory ErrorBxPW ErrorByPW ErrorBzPW ErrorExPW ErrorEyPW ErrorEzPW 
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 #1 1 1 1 1 1 1 1 1 1 1 1 1 1
+#Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
+
+#Simulator.SubSystem.StopCondition       = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime     = 10
+
+#Simulator.SubSystem.StopCondition          = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 100
+
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -20
+
+Simulator.SubSystem.Default.listTRS = Inlet Outlet Wall
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = electrode2D150x300.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 500
+
+#Simulator.SubSystem.ConvergenceMethod = BDF2
+#Simulator.SubSystem.BDF2.ShowRate = 1
+##Simulator.SubSystem.BDF2.Data.CFL.Value = 1.0
+##Simulator.SubSystem.BDF2.ConvergenceFile = convergence_UnsteadyMagnetosphereACAImplPrim0_85READFROMFILE.plt 
+##Simulator.SubSystem.BDF2.Data.CFL.ComputeCFL = Interactive
+##Simulator.SubSystem.BDF2.Data.MaxSteps = 10
+#Simulator.SubSystem.BDF2.Data.MaxSteps = 20 
+##Simulator.SubSystem.BDF2.Data.L2.MonitoredVarID = 8
+#Simulator.SubSystem.BDF2.Data.Norm = -10.
+#Simulator.SubSystem.BDF2.Data.PrintHistory = true
+#
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1000
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<500,1.0,min(1e4,cfl*1.05))
+#Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation = 0.1
+#Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+#Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 0
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+#Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhs
+##Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhsLimited
+###Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.TimeLimiter = MinMod
+###Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.MinMod.SlopeRatio = 3.
+Simulator.SubSystem.CellCenterFVM.BDF2TimeRhs.zeroDiagValue = 0 0 0 0 0 0 1 1
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+#Constant
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.7
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = StegerWarmingMaxwellProjectionAdim2D #StegerWarmingMaxwellProjection2D
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar   = Cons
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Cons
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 0. 0. 0. 0. 0. 0. 0. 0.
+
+Simulator.SubSystem.CellCenterFVM.BcComds = SuperInletFVMCC  SuperInletFVMCC SuperInletFVMCC #Irradiation2DProjectionDimFVMCC
+#UnsteadySuperInletFVMCC SuperOutletFVMCC SilverMullerCondition2DFVMCC UnsteadyPerfectConductingWall2DProjectionDimFVMCC 
+Simulator.SubSystem.CellCenterFVM.BcNames = Jet1 Jet2 Jet3 #Jet4
+
+Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = Inlet
+Simulator.SubSystem.CellCenterFVM.Jet1.Vars = x y  
+Simulator.SubSystem.CellCenterFVM.Jet1.Def = \
+                                        if(x>0,-sin(atan(y/x)),sin(atan(y/x)))\
+                                        if(x>0.,cos(atan(y/x)),-cos(atan(y/x)))\
+                                        0.\
+                                        0.\
+                                        0.\
+                                        0.\
+					0.\
+					0.
+
+Simulator.SubSystem.CellCenterFVM.Jet2.applyTRS = Outlet
+Simulator.SubSystem.CellCenterFVM.Jet2.Vars = x y 
+Simulator.SubSystem.CellCenterFVM.Jet2.Def = 0. 0. 0. 0. 0. 0. 0. 0.
+
+# for superoutlet impose gradients to be 0 strongly for all variables
+#Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 1 1 1 1 1 1
+
+
+Simulator.SubSystem.CellCenterFVM.Jet3.applyTRS = Wall
+Simulator.SubSystem.CellCenterFVM.Jet3.Vars = x y 
+Simulator.SubSystem.CellCenterFVM.Jet3.Def = 0. 0. 0. 0. 0. 0. 0. 0.
+                                      
+#############################DATA PROCESSING####################################
+
+#Simulator.SubSystem.DataPostProcessing = DataProcessing
+#Simulator.SubSystem.DataProcessing.Data.updateVar = Cons
+
+###### DIVERGENCE ##
+#Simulator.SubSystem.DataProcessing.Comds = DivMonitoring
+#Simulator.SubSystem.DataProcessing.Names = DivMonitoring
+#Simulator.SubSystem.DataProcessing.ProcessRate = 1
+#Simulator.SubSystem.DataProcessing.DivMonitoring.OutputFileDivMonitoring = ./RESULTS_electrode/DivMonitoring.plt
+
+

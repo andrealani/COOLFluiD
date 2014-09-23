@@ -1,0 +1,90 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -0.051360156
+
+# periodic boundary condition is not parallel
+#
+
+# CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libForwardEuler libFluctSplit libFluctSplitScalar libFluctSplitSpaceTime libLinearAdv libTHOR2CFmesh libMeshTools
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/LinearAdv/testcases/SinusWave
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = LinearAdv2D
+Simulator.SubSystem.LinearAdv2D.VX = -0.5
+Simulator.SubSystem.LinearAdv2D.VY = 1.0
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName = sinus_wave_fsm.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 10
+
+Simulator.SubSystem.Tecplot.FileName = sinus_wave_fsm.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 10
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 60
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells FaceSouth FaceWest FaceNorth FaceEast
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = square-1670n.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom   = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.5
+Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = min(0.5+(i*0.01),1.0)
+Simulator.SubSystem.FwdEuler.Data.NormRes = L2
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Data.ScalarSplitter = ScalarN
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Prim
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Prim
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Prim
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Prim
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState InitState InitState InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField   InitFaceS InitFaceE InitFaceW
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = sin(x)*cos(y)
+
+Simulator.SubSystem.FluctuationSplit.InitFaceS.applyTRS = FaceSouth
+Simulator.SubSystem.FluctuationSplit.InitFaceS.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InitFaceS.Def = sin(2*x*3.14159265359)
+
+Simulator.SubSystem.FluctuationSplit.InitFaceE.applyTRS = FaceEast
+Simulator.SubSystem.FluctuationSplit.InitFaceE.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InitFaceE.Def = 0.0
+
+Simulator.SubSystem.FluctuationSplit.InitFaceW.applyTRS = FaceWest
+Simulator.SubSystem.FluctuationSplit.InitFaceW.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InitFaceW.Def = 0.0
+
+Simulator.SubSystem.FluctuationSplit.BcComds = SuperInlet PeriodicBC SuperOutlet
+Simulator.SubSystem.FluctuationSplit.BcNames = South      West       North
+
+Simulator.SubSystem.FluctuationSplit.South.applyTRS = FaceSouth
+Simulator.SubSystem.FluctuationSplit.South.Vars = x y
+Simulator.SubSystem.FluctuationSplit.South.Def = sin(2*x*3.14159265359)
+
+Simulator.SubSystem.FluctuationSplit.West.applyTRS   = FaceEast
+Simulator.SubSystem.FluctuationSplit.West.CoupledTrs = FaceWest
+Simulator.SubSystem.FluctuationSplit.West.Transform  = x-1.0 y
+
+Simulator.SubSystem.FluctuationSplit.North.applyTRS = FaceNorth
+

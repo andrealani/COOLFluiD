@@ -1,0 +1,86 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace RotationAdvSys {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+RotationAdvSysPhysicalModel<DIM>::RotationAdvSysPhysicalModel(const std::string& name)
+  : Framework::ConvectionPM<RotationAdvSysTerm>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+RotationAdvSysPhysicalModel<DIM>::~RotationAdvSysPhysicalModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint RotationAdvSysPhysicalModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint RotationAdvSysPhysicalModel<DIM>::getNbEquations() const
+{
+  return 4;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+void RotationAdvSysPhysicalModel<DIM>::setReferenceValues()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void RotationAdvSysPhysicalModel<DIM>::setReferenceTime()
+{
+//   RealVector& refDataConv = getConvTerm()->getReferencePhysicalData();
+  // since velocity scale is set to 1.0 above by default, just equal to getRefLength()
+  _refTime = this->getRefLength()/1.0;
+}
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void RotationAdvSysPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionPM<RotationAdvSysTerm>::configure(args);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(DIM);
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace RotationAdv
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

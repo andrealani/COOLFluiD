@@ -1,0 +1,197 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume  libFiniteVolumeNavierStokes libNewtonMethod libDpl2CFmesh libMeshTools libPetscI libLoopMaestro libSimpleGlobalMeshAdapter libKOmega 
+
+Simulator.Maestro = LoopMaestro
+Simulator.SubSystems = SubSystem
+
+Simulator.LoopMaestro.GlobalStopCondition = GlobalMaxNumberSteps
+Simulator.LoopMaestro.GlobalMaxNumberSteps.nbSteps = 1
+Simulator.LoopMaestro.AppendIter = true
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Valve2D/
+#Simulator.Paths.WorkingDir = ./
+Simulator.Paths.ResultsDir = ./
+
+
+Simulator.SubSystem.Namespaces = Valve RemeshValve
+
+Simulator.SubSystem.Valve.MeshData = ValveMeshData
+Simulator.SubSystem.Valve.PhysicalModelName = ValveNS2D
+Simulator.SubSystem.Valve.PhysicalModelType = NavierStokes2DKOmega
+Simulator.SubSystem.ValveNS2D.refValues  = 1. 1. 1. 1. 1. 1.
+Simulator.SubSystem.ValveNS2D.refLength  = 1.0
+Simulator.SubSystem.Valve.SubSystemStatus = ValveSubSystemStatus
+
+Simulator.SubSystem.RemeshValve.MeshData = RemeshValveMeshData
+Simulator.SubSystem.RemeshValve.PhysicalModelName = RemeshValveNS2D
+Simulator.SubSystem.RemeshValve.PhysicalModelType = NavierStokes2DKOmega
+Simulator.SubSystem.RemeshValveNS2D.refValues  = 1. 1. 1. 1. 1. 1.
+Simulator.SubSystem.RemeshValveNS2D.refLength  = 1.0
+Simulator.SubSystem.RemeshValve.SubSystemStatus = RemeshValveSubSystemStatus
+
+Simulator.SubSystem.ValveMeshData.listTRS = InnerFaces Inlet Outlet Sym_axis Valve Cylinder
+Simulator.SubSystem.ValveMeshData.Namespaces = Valve
+Simulator.SubSystem.RemeshValveMeshData.listTRS = InnerFaces Inlet Outlet Sym_axis Valve Cylinder
+Simulator.SubSystem.RemeshValveMeshData.Namespaces = RemeshValve
+
+Simulator.SubSystem.MeshAdapterMethod = SimpleMeshAdapter
+Simulator.SubSystem.SimpleMeshAdapter.AdaptRate = 1
+Simulator.SubSystem.SimpleMeshAdapter.Namespace = RemeshValve
+Simulator.SubSystem.SimpleMeshAdapter.Data.OtherNamespace = Valve
+Simulator.SubSystem.SimpleMeshAdapter.Data.CollaboratorNames = NewtonIterator CFmeshFileReader2 CFmesh2 CellCenterFVM
+Simulator.SubSystem.SimpleMeshAdapter.PrepareCom = CopyFilesPrepare
+Simulator.SubSystem.SimpleMeshAdapter.CopyFilesPrepare.InitialFiles = newValveMesh.dpl
+Simulator.SubSystem.SimpleMeshAdapter.MeshGeneratorCom = DummyMeshGenerator
+Simulator.SubSystem.SimpleMeshAdapter.DummyMeshGenerator.Filename = newValveMesh.CFmesh
+
+#Simulator.SubSystem.SimpleMeshAdapter.MeshInterpolatorCom = DummyMeshInterpolator
+#Simulator.SubSystem.SimpleMeshAdapter.MeshInterpolatorCom = ShepardMeshInterpolator
+Simulator.SubSystem.SimpleMeshAdapter.ShepardMeshInterpolator.MinCoord = -0.01 -0.01
+Simulator.SubSystem.SimpleMeshAdapter.ShepardMeshInterpolator.MaxCoord = 150 150
+Simulator.SubSystem.SimpleMeshAdapter.ShepardMeshInterpolator.NbSubdiv = 5 5
+Simulator.SubSystem.SimpleMeshAdapter.ShepardMeshInterpolator.NbSelectedStates = 20
+
+Simulator.SubSystem.SimpleMeshAdapter.MeshInterpolatorCom = LinearMeshInterpolatorFVMCC
+Simulator.SubSystem.SimpleMeshAdapter.LinearMeshInterpolatorFVMCC.MinCoord = 0. 0.
+Simulator.SubSystem.SimpleMeshAdapter.LinearMeshInterpolatorFVMCC.MaxCoord = 0.150 0.150
+Simulator.SubSystem.SimpleMeshAdapter.LinearMeshInterpolatorFVMCC.NbSubdiv = 50 50
+
+
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh CFmesh
+Simulator.SubSystem.OutputFormatNames   = Tecplot1 CFmesh1 CFmesh2
+
+Simulator.SubSystem.CFmesh1.Namespace    = Valve
+Simulator.SubSystem.CFmesh1.FileName     = valve_NS_FVM.CFmesh
+Simulator.SubSystem.CFmesh1.SaveRate     = 100
+Simulator.SubSystem.CFmesh1.AppendTime   = false
+Simulator.SubSystem.CFmesh1.AppendIter   = false
+Simulator.SubSystem.CFmesh1.Data.CollaboratorNames = CellCenterFVM
+
+Simulator.SubSystem.Tecplot1.Namespace    = Valve
+Simulator.SubSystem.Tecplot1.FileName       = valve_NS_FVM.plt
+Simulator.SubSystem.Tecplot1.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot1.SaveRate       = 100
+Simulator.SubSystem.Tecplot1.AppendTime     = false
+Simulator.SubSystem.Tecplot1.AppendIter     = false
+Simulator.SubSystem.Tecplot1.Data.CollaboratorNames = CellCenterFVM
+
+Simulator.SubSystem.CFmesh2.Namespace    = RemeshValve
+Simulator.SubSystem.CFmesh2.FileName     = valve_NS_FVM.CFmesh
+Simulator.SubSystem.CFmesh2.SaveRate     = 1
+Simulator.SubSystem.CFmesh2.AppendTime   = false
+Simulator.SubSystem.CFmesh2.AppendIter   = false
+Simulator.SubSystem.CFmesh2.Data.CollaboratorNames = CellCenterFVM
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+Simulator.SubSystem.InitialTime         = 0.
+Simulator.SubSystem.InitialIter         = 0
+
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 4.
+
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 4
+
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+
+Simulator.SubSystem.MeshCreator      = CFmeshFileReader CFmeshFileReader
+Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader1 CFmeshFileReader2
+
+Simulator.SubSystem.CFmeshFileReader1.Namespace = Valve
+Simulator.SubSystem.CFmeshFileReader1.Data.CollaboratorNames = CellCenterFVM
+Simulator.SubSystem.CFmeshFileReader1.Data.FileName = valve_solution.CFmesh
+
+Simulator.SubSystem.CFmeshFileReader2.Namespace = RemeshValve
+Simulator.SubSystem.CFmeshFileReader2.Data.CollaboratorNames = CellCenterFVM
+Simulator.SubSystem.CFmeshFileReader2.Data.FileName = newValveMesh.CFmesh
+Simulator.SubSystem.CFmeshFileReader2.Data.ScalingFactor = 1000.
+Simulator.SubSystem.CFmeshFileReader2.convertFrom = Dpl2CFmesh
+Simulator.SubSystem.CFmeshFileReader2.Dpl2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader2.Dpl2CFmesh.SolutionOrder = P0
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1.0
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = min(100.,cfl*1.01)
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 0
+Simulator.SubSystem.NewtonIterator.Namespace = Valve
+Simulator.SubSystem.NewtonIterator.Data.CollaboratorNames = CellCenterFVM
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Namespace = Valve
+#Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCILU
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Namespace = Valve
+Simulator.SubSystem.CellCenterFVM.Data.CollaboratorNames = NewtonIteratorLSS
+
+Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+Simulator.SubSystem.CellCenterFVM.ALETimeRhs.useGlobalDT = true
+#Simulator.SubSystem.CellCenterFVM.ALETimeRhs.useAnalyticalMatrix = false
+
+#Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupCom = StdSetup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+#Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+#Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = StdUnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+ 
+#comment
+#Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = LiouSteffenAUSM2D
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar   = Puvt
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar   = BSLPuvt
+
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.7
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+
+Simulator.SubSystem.CellCenterFVM.BcComds = SubInletEuler2DUVTFVMCC \
+                                            TransOutletNSTurb2DFVMCC \
+                                            MirrorEuler2DFVMCC \
+                                            MirrorEuler2DFVMCC \
+                                            MirrorEuler2DFVMCC
+
+Simulator.SubSystem.CellCenterFVM.BcNames = BCInlet \
+                                            BCOutlet \
+                                            BCValve \
+                                            BCSymmetry \
+                                            BCCylinder
+
+Simulator.SubSystem.CellCenterFVM.BCInlet.applyTRS = Inlet
+Simulator.SubSystem.CellCenterFVM.BCInlet.Vx = 16.9859114157
+Simulator.SubSystem.CellCenterFVM.BCInlet.Vy = 0.0
+Simulator.SubSystem.CellCenterFVM.BCInlet.T = 288.15
+
+Simulator.SubSystem.CellCenterFVM.BCOutlet.applyTRS = Outlet
+#Simulator.SubSystem.CellCenterFVM.BCOutlet.P = 23293.10
+Simulator.SubSystem.CellCenterFVM.BCOutlet.P = 15293.10
+
+Simulator.SubSystem.CellCenterFVM.BCValve.applyTRS = Valve
+Simulator.SubSystem.CellCenterFVM.BCSymmetry.applyTRS = Sym_axis
+Simulator.SubSystem.CellCenterFVM.BCCylinder.applyTRS = Cylinder
+

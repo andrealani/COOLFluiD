@@ -1,0 +1,238 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Common_Table_ci
+#define COOLFluiD_Common_Table_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Common {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+Table<T>::Table(const CFuint nbRows,
+    const CFuint nbColumns,
+    T value)
+{
+  resize(nbRows,nbColumns,value);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+Table<T>::Table(const std::valarray<CFuint>& columnPattern,
+    T value)
+{
+  resize(columnPattern,value);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+void Table<T>::resize(const std::valarray<CFuint>& columnPattern,
+          T value)
+{
+  DoubleVectorT().swap(_table);
+  _nbEntries = columnPattern.sum();
+  _isHybrid  = checkIsHybrid(columnPattern);
+
+  const CFuint nbRows = columnPattern.size();
+
+  _table.resize(nbRows);
+  for (CFuint i = 0; i < nbRows; ++i) {
+    _table[i].resize((_isHybrid) ? columnPattern[i] : columnPattern[0],value);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+void Table<T>::resize(const CFuint nbRows,
+                const CFuint nbColumns,
+                      T value)
+{
+  DoubleVectorT().swap(_table);
+  _nbEntries = nbColumns * nbRows;
+  _isHybrid  = false;
+  _table.resize(nbRows);
+  for (CFuint i = 0; i < nbRows; ++i) {
+    _table[i].resize(nbColumns,value);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+void Table<T>::increase(const std::valarray<CFuint>& columnPattern,
+            T value)
+{
+  _nbEntries += columnPattern.sum();
+
+  const CFuint nbNewRows = columnPattern.size();
+  const CFuint nbOldRows = _table.size();
+
+  // store older Table
+  DoubleVectorT store = _table;
+  DoubleVectorT().swap(_table);
+
+  _table.resize(nbNewRows + nbOldRows);
+
+  // copy the old part
+  for(CFuint i = 0; i < nbOldRows; ++i) {
+    _table[i].resize(store[i].size());
+    _table[i] = store[i];
+  }
+
+  // resize the new part and initialize
+  for (CFuint i = 0; i < nbNewRows; ++i) {
+    const CFuint row = i + nbOldRows;
+    _table[row].resize(columnPattern[i]);
+
+    for (CFuint j = 0; j < _table[row].size(); ++j) {
+      _table[row][j] = value;
+    }
+  }
+
+  // check if it is hybrid
+  _isHybrid = computeIsHybrid();
+
+  cf_assert(_table.size() == columnPattern.size() + nbOldRows);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+void Table<T>::copyTable(const DoubleVectorT& table)
+{
+  DoubleVectorT().swap(_table);
+  const CFuint nbRows = table.size();
+  _table.resize(nbRows);
+  for (CFuint i = 0; i < nbRows; ++i) {
+    const CFuint nbCols = table[i].size();
+    _table[i].resize(nbCols);
+    for (CFuint j = 0; j < nbCols; ++j) {
+      _table[i][j] = table[i][j];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+Table<T>::Table(const Table<T>& init) :
+  _nbEntries(init._nbEntries),
+  _isHybrid(init._isHybrid)
+{
+  copyTable(init._table);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+const Table<T>& Table<T>::operator= (const Table<T>& other)
+{
+  _nbEntries  = other._nbEntries;
+  _isHybrid = other._isHybrid;
+  copyTable(other._table);
+
+  return *this;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class T>
+Table<T>& Table<T>::operator-=(const T& value)
+{
+  for (CFuint i = 0; i < nbRows(); ++i) {
+    for (CFuint j = 0; j < nbCols(i); ++j) {
+      _table[i][j] -= value;
+    }
+  }
+  return *this;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class T>
+Table<T>& Table<T>::operator+=(const T& value)
+{
+  for (CFuint i = 0; i < nbRows(); ++i) {
+    for (CFuint j = 0; j < nbCols(i); ++j) {
+      _table[i][j] += value;
+    }
+  }
+  return *this;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+Table<T>::~Table()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+const std::vector<T>& Table<T>::getRow(const CFuint& iRow) const
+{
+  /// @todo this may fail with ICC compiler
+  cf_assert(iRow < _table.size());
+  return _table[iRow];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+CFuint Table<T>::nbCols(CFuint iRow) const
+{
+  cf_assert(iRow < _table.size());
+  return _table[iRow].size();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+bool Table<T>::checkIsHybrid(const std::valarray<CFuint>& nbColumns)
+{
+  for (CFuint i = 0; i < nbColumns.size(); ++i) {
+    if (nbColumns[i] != nbColumns[0]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+bool Table<T>::computeIsHybrid()
+{
+  if(_table.size() > 1) {
+
+    bool notHybrid = true;
+
+    for(CFuint i = 1; i < _table.size(); ++i) {
+      // this line IS coorect! If you do not understand it, RTFM!
+      notHybrid &= (_table[i].size() == _table[i-1].size());
+    }
+    return !notHybrid;
+  }
+  return false;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Common
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Common_Table_ci

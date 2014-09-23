@@ -1,0 +1,37 @@
+#include "MeshRigidMove/MeshRigidMove.hh"
+#include "StdSetup.hh"
+#include "Framework/MethodCommandProvider.hh"
+#include "Framework/SubSystemStatus.hh"
+#include "Framework/MeshData.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace COOLFluiD::Framework;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace MeshRigidMove {
+
+//////////////////////////////////////////////////////////////////////////////
+
+MethodCommandProvider<StdSetup, RigidMoveData, MeshRigidMoveModule> stdSetupProvider("StdSetup");
+
+//////////////////////////////////////////////////////////////////////////////
+
+void StdSetup::execute()
+{
+  SubSystemStatusStack::getActive()->setMovingMesh(true);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+    } // namespace MeshRigidMove
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

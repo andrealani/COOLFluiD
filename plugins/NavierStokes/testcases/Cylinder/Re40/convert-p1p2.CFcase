@@ -1,0 +1,83 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libFiniteElement libStructMech libNewtonMethod libPetscI libFiniteElementStructMech libGambit2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir       = testcases/Cylinder
+Simulator.Paths.ResultsDir       = testcases/Cylinder
+
+Simulator.SubSystem.Default.PhysicalModelType = StructMech2D
+
+# Some kind of steel
+Simulator.SubSystem.StructMech2D.Young = 205E9
+Simulator.SubSystem.StructMech2D.Poisson = 0.30
+Simulator.SubSystem.StructMech2D.Lambda = 1.0
+Simulator.SubSystem.StructMech2D.mu = 1.0
+Simulator.SubSystem.StructMech2D.Density = 7850.0
+
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = cylinder_11kn_p2.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = cylinder_11kn_p2.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Disp
+Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.CFmesh.SaveRate = 1
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.WriteSol     = WriteSolution
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
+
+Simulator.SubSystem.Default.listTRS = InnerCells North East West South
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cylinder_11kn_unstr.CFmesh
+# Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 0.005
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCLU
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 100
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1.0
+Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+Simulator.SubSystem.NewtonIterator.Data.SaveSystemToFile = false
+Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
+Simulator.SubSystem.NewtonIterator.InitCom = ResetSystem
+
+Simulator.SubSystem.SpaceMethod = FiniteElementMethod
+Simulator.SubSystem.FiniteElementMethod.Builder = FiniteElementHO
+Simulator.SubSystem.FiniteElementMethod.FiniteElementHO = 2
+Simulator.SubSystem.FiniteElementMethod.Data.UpdateVar = Disp
+Simulator.SubSystem.FiniteElementMethod.Data.DiffusiveVar = Disp
+#Simulator.SubSystem.FiniteElementMethod.Data.SourceVar = StructMech2DSourceDisp
+
+Simulator.SubSystem.FiniteElementMethod.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.FiniteElementMethod.Data.ResidualStrategy = StdElementComputer
+
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorOrder = P3
+
+Simulator.SubSystem.FiniteElementMethod.ComputeSpaceResidual = ExplicitComputeSpaceResCom
+Simulator.SubSystem.FiniteElementMethod.ExplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.StdComputeTimeResCom.applyTRS = InnerCells

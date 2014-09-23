@@ -1,0 +1,145 @@
+#include "Common/CFLog.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/EquationSetData.hh"
+#include "FiniteVolume/DerivativeComputer.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+NavierStokesChannelSourceTerm<EULERVAR, NSVAR>::
+NavierStokesChannelSourceTerm(const std::string& name) :
+  ComputeSourceTermFVMCC(name),
+  m_volumes(CFNULL),
+  m_varSet(CFNULL),
+  m_diffVarSet(CFNULL),
+  m_physicalData(),
+  m_streamwiseMomentumEquationID(1),
+  m_frictionVelocity(1.),
+  m_halfChannelWidth(1.),
+  m_rho(0.),
+  m_useVariableDensity(true),
+  m_channelLength(0.0)
+{
+  addConfigOptionsTo(this);
+
+  setParameter("StreamwiseMomentumEquationID", &m_streamwiseMomentumEquationID);
+  setParameter("FrictionVelocity", &m_frictionVelocity);
+  setParameter("HalfChannelWidth", &m_halfChannelWidth);
+  setParameter("ConstantDensity", &m_rho);
+  setParameter("ChannelLength",&m_channelLength);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+void NavierStokesChannelSourceTerm<EULERVAR, NSVAR>::defineConfigOptions
+(Config::OptionList& options)
+{
+  options.template addConfigOption< CFuint > ("StreamwiseMomentumEquationID", "ID of the streamwise momentum equation");
+  options.template addConfigOption< CFreal > ("FrictionVelocity", "Friction Velocity");
+  options.template addConfigOption< CFreal > ("HalfChannelWidth", "Half Channel Width");
+  options.template addConfigOption< CFreal > ("ConstantDensity", "Constant Density");
+  options.template addConfigOption< CFreal > ("ChannelLength", "Channel Length (optional, for debug purpose)");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+NavierStokesChannelSourceTerm<EULERVAR, NSVAR>::~NavierStokesChannelSourceTerm()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+void NavierStokesChannelSourceTerm<EULERVAR, NSVAR>::setup()
+{  
+  CFLog(INFO, "Setup ["<<getClassName()<<"] \n");
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+
+  ComputeSourceTermFVMCC::setup();
+  
+  m_varSet = getMethodData().getUpdateVar().template d_castTo<EULERVAR>();  
+  m_diffVarSet = getMethodData().getDiffusiveVar().template d_castTo<NSVAR>();
+ 
+  cf_assert(m_varSet.isNotNull());
+  m_varSet->getModel()->resizePhysicalData(m_physicalData);
+  
+  if(m_rho != 0.0) {  // Use constant density
+    m_useVariableDensity = false;
+  }
+  else { // set _rho to reference value for informative calculation
+    State refState = PhysicalModelStack::getActive()->getImplementor()->getRefStateValues();
+    m_varSet->computePhysicalData(refState, m_physicalData);
+    m_rho = m_physicalData[EULERVAR::PTERM::RHO];
+  }
+  
+  // Reference values
+  CFreal R = (Framework::PhysicalModelStack::getActive()->getImplementor()->isAdimensional() ? m_varSet->getModel()->getRdim() : 1.0);
+  CFreal refLength = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
+  CFreal velRef = m_varSet->getModel()->getVelRef();
+  CFreal pressRef = m_varSet->getModel()->getPressRef();
+  CFreal tempRef = m_varSet->getModel()->getTempRef();
+  CFreal rhoRef = pressRef/(R*tempRef);
+  
+  // adimensionalize input
+  m_halfChannelWidth /= refLength;  
+  m_frictionVelocity /= velRef;
+  m_rho /= rhoRef;
+  
+  // Informative calculation of pressure drop and gradient (check)
+  CFreal dpdx = - m_frictionVelocity*m_frictionVelocity * m_rho / m_halfChannelWidth;
+  
+  // dimensionalize dpdx
+  dpdx *= pressRef/refLength;
+  
+  if (m_channelLength != 0.0) {
+    CFreal dp = dpdx*m_channelLength;
+    CFLog(INFO, " ==> Corresponding Pressure drop over channel = " << dp << " \n");
+  }
+  CFLog(INFO, " ==> Corresponding Pressure gradient = " << dpdx << " \n");
+
+
+  m_volumes = socket_volumes.getDataHandle();
+  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+void NavierStokesChannelSourceTerm<EULERVAR, NSVAR>::
+computeSource(Framework::GeometricEntity *const element,
+	      RealVector& source,
+	      RealMatrix& jacobian)
+{
+  cf_assert(m_varSet.isNotNull());
+
+  if (m_useVariableDensity) {
+    Framework::State& currState = *element->getState(0);
+    m_varSet->computePhysicalData(currState, m_physicalData);
+    m_rho = m_physicalData[EULERVAR::PTERM::RHO];
+  }
+  
+  source[m_streamwiseMomentumEquationID] = m_frictionVelocity*m_frictionVelocity * m_rho / m_halfChannelWidth;
+  source *= m_volumes[element->getID()];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

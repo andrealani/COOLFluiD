@@ -1,0 +1,78 @@
+#ifndef COOLFluiD_Physics_NEQ_Euler2DNEQLinearConsCNEQ_hh
+#define COOLFluiD_Physics_NEQ_Euler2DNEQLinearConsCNEQ_hh
+
+//////////////////////////////////////////////////////////////////////////////
+
+#include "Framework/JacobianLinearizer.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+    class State;
+    template <class TERM> class MultiScalarTerm;
+  }
+
+  namespace Physics {
+
+    namespace NavierStokes {
+      class EulerTerm;
+    }
+    
+    namespace NEQ {
+
+//////////////////////////////////////////////////////////////////////////////
+
+ /**
+  * This class performs a linearization of phyical quantities in the case of 
+  * thermo-chemical NEQ
+  *
+  * @author Andrea Lani
+  * @author Jesus Garicano Mena
+  */
+class Euler2DNEQLinearConsCNEQ : public Framework::JacobianLinearizer {
+public:
+    
+  /**
+   * Default constructor without arguments
+   */
+  Euler2DNEQLinearConsCNEQ(Common::SafePtr<Framework::PhysicalModel> model);
+
+  /**
+   * Default destructor
+   */
+  ~Euler2DNEQLinearConsCNEQ();
+
+  /**
+   * Linearize the states
+   */
+  void linearize(const std::vector<Framework::State*>& statesInCell);
+
+private: //data
+  
+  /// acquaintance of the PhysicalModel
+  Common::SafePtr<Framework::MultiScalarTerm<NavierStokes::EulerTerm> > _model;
+    
+  /// Vector storing the elemental composition
+  RealVector _ye;
+  
+  /// array to store density, enthalpy and energy
+  RealVector _dhe;
+  
+ /// species molar masses
+  RealVector _mmasses;
+    
+}; // end of class Euler2DNEQLinearConsCNEQ
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } //  namespace NEQ
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Physics_NEQ_Euler2DNEQLinearConsCNEQ_hh

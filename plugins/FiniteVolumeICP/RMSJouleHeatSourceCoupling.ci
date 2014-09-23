@@ -1,0 +1,893 @@
+#include "Common/PE.hh"
+#include "MathTools/MathConsts.hh"
+#include "Environment/SingleBehaviorFactory.hh"
+#include "Environment/FileHandlerOutput.hh"
+#include "Common/BadValueException.hh"
+#include "Framework/DataProcessing.hh"
+#include "Framework/SubSystemStatus.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/PathAppender.hh"
+#include "Environment/DirPaths.hh"
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "FiniteVolume/CellCenterFVM.hh"
+#include "FiniteVolumeICP/VectorPotential.hh"
+#include "TecplotWriter/WriteTecplot.hh"
+#include "NavierStokes/EulerTerm.hh"
+		
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolumeICP {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+void RMSJouleHeatSourceCoupling<ST>::defineConfigOptions(Config::OptionList& options)
+{
+   options.template addConfigOption< CFreal >("DesiredPower","Desired torch power [kW].");
+   options.template addConfigOption< CFuint >("NbCoils","Number of coils.");
+   options.template addConfigOption< std::vector<CFreal> >("RadiusCoils","Radius of each circular coil.");
+   options.template addConfigOption< std::vector<CFreal> >("ZPositionCoils","Position on z-axis of each coil.");
+   options.template addConfigOption< bool >("AppendTime","Save each iteration to different file with suffix _time#.");
+   options.template addConfigOption< bool >("AppendIter","Save each iteration to different file with suffix _iter#.");
+   options.template addConfigOption< std::string >("OutputFileElCurrent","Name of Output File to write the electric current.");
+   options.template addConfigOption< std::string >("Command","something to run...");
+   options.template addConfigOption< std::string >("ElectricCurrent","set fixed current, real + i imaginary");
+   options.template addConfigOption< bool >("SkipPreparation","skip the preparation phase");  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+RMSJouleHeatSourceCoupling<ST>::RMSJouleHeatSourceCoupling(const std::string& name) :
+  Framework::DataProcessingCom(name),
+  socket_vacuumElFieldIntensity("vacuumElFieldIntensity"),
+  socket_vacuumElFieldIntensityInNodes("vacuumElFieldIntensityInNodes"),
+  socket_vacuumElFieldIntensityInGhostCells("vacuumElFieldIntensityInGhostCells"),
+  socket_rmsJouleHeatSource("rmsJouleHeatSource"),
+  socket_elCondField("elCondField"),
+  socket_volumes("volumes"),
+  socket_nodes("nodes"),
+  socket_states("states"),
+  socket_isOutward("isOutward"),
+  socket_currentInCells("currentInCells"),  
+  socket_pressure("pressure"),
+  m_library(CFNULL),
+  m_geoBuilder(),
+  m_srcTerm(CFNULL),
+  m_physicalData(),
+  m_rescaleElCurrent(0.),
+  m_radiusOfTheCell(CFNULL)
+{
+  this->addConfigOptionsTo(this);
+    
+    m_elCurrent.resize(2);     // Real and Imaginary component
+    m_electricCurrent = "1";   // default values for m_elCurrent[] are useless since they are always changed in "setup" step...
+                               //   m_elCurrent[0] = 1.;
+                               //   m_elCurrent[1] = 0.;
+    this->setParameter("ElectricCurrent",&m_electricCurrent);
+    
+    m_desiredPowerkW = 0.;
+    this->setParameter("DesiredPower",&m_desiredPowerkW);
+
+    m_nbCoils = 0;
+    this->setParameter("NbCoils",&m_nbCoils);
+
+    m_radiusCoils = std::vector<CFreal>();
+    this->setParameter("RadiusCoils",&m_radiusCoils);
+
+    m_zPositionCoils = std::vector<CFreal>();
+    this->setParameter("ZPositionCoils",&m_zPositionCoils);
+
+    m_appendIter = false;
+    this->setParameter("AppendIter",&m_appendIter);
+
+    m_appendTime = false;
+    this->setParameter("AppendTime",&m_appendTime);
+
+    m_nameOutputFileElCurrent = "ElectricCurrent.plt";
+    this->setParameter("OutputFileElCurrent",&m_nameOutputFileElCurrent);
+
+    m_toRun = "";
+    this->setParameter("Command",&m_toRun);
+    
+    m_skipPreparation = false;
+    this->setParameter("SkipPreparation",&m_skipPreparation);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+RMSJouleHeatSourceCoupling<ST>::~RMSJouleHeatSourceCoupling()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > 
+RMSJouleHeatSourceCoupling<ST>::providesSockets()
+{	
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > result;
+
+  result.push_back(&socket_vacuumElFieldIntensity);
+  result.push_back(&socket_vacuumElFieldIntensityInNodes);
+  result.push_back(&socket_vacuumElFieldIntensityInGhostCells);
+  result.push_back(&socket_rmsJouleHeatSource);
+  result.push_back(&socket_elCondField);
+  result.push_back(&socket_currentInCells); 
+  result.push_back(&socket_pressure);
+
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > 
+RMSJouleHeatSourceCoupling<ST>::needsSockets()
+{
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result;
+
+  result.push_back(&socket_volumes);
+  result.push_back(&socket_nodes);
+  result.push_back(&socket_states);
+  result.push_back(&socket_isOutward);
+
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+void RMSJouleHeatSourceCoupling<ST>::setup()
+{ 
+  CFLog(VERBOSE, "RMSJouleHeatSourceCoupling<ST>::setup() START\n");
+  
+   using namespace std;
+   using namespace COOLFluiD::Framework;
+   using namespace COOLFluiD::Common;
+   using namespace COOLFluiD::Physics::NavierStokes;
+   using namespace COOLFluiD::Numerics::FiniteVolume;
+   using namespace COOLFluiD::MathTools;
+   using namespace COOLFluiD::TecplotWriter;
+
+   CFAUTOTRACE;
+
+   // run WriteTecplot setup
+   WriteTecplot::getInstance().setup();
+   WriteTecplot::getInstance().setDataSockets(socket_volumes, socket_nodes);
+
+   // geometry builder setup
+   m_geoBuilder.setup();
+
+   // Get number of cells
+   Common::SafePtr<Common::ConnectivityTable<CFuint> > cells =
+     MeshDataStack::getActive()->getConnectivity("cellStates_InnerCells");
+   const CFuint nbCells = cells->nbRows();
+
+   // Get vacuumElFieldIntensity socket data handle
+   DataHandle<RealVector> vacuumElFieldIntensity = socket_vacuumElFieldIntensity.getDataHandle();
+    // resizing it:
+    vacuumElFieldIntensity.resize(2);
+    vacuumElFieldIntensity[0].resize(nbCells);
+    vacuumElFieldIntensity[1].resize(nbCells);
+    for(CFuint iCell = 0; iCell < nbCells; ++iCell) {
+       vacuumElFieldIntensity[0][iCell] = 0.0 ;
+       vacuumElFieldIntensity[1][iCell] = 0.0 ;
+    }
+
+
+    // Get nodes infos
+    DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
+    const CFuint nbNodes = nodes.size();
+    // Get vacuumElFieldIntensity socket data handle
+    DataHandle<RealVector> vacuumElFieldIntensityInNodes = socket_vacuumElFieldIntensityInNodes.getDataHandle();
+    // resizing it:
+    vacuumElFieldIntensityInNodes.resize(2);
+    vacuumElFieldIntensityInNodes[0].resize(nbNodes);
+    vacuumElFieldIntensityInNodes[1].resize(nbNodes);
+    for(CFuint iNode = 0; iNode < nbNodes; ++iNode) {
+       vacuumElFieldIntensityInNodes[0][iNode] = 0.0;
+       vacuumElFieldIntensityInNodes[1][iNode] = 0.0;
+    }
+
+
+    // Get vacuumElFieldIntensity socket data handle
+    DataHandle<RealVector> currentInCells = socket_currentInCells.getDataHandle();
+    // resizing it:
+    currentInCells.resize(2);
+    currentInCells[0].resize(nbCells);
+    currentInCells[1].resize(nbCells);
+    for(CFuint iCell = 0; iCell < nbCells; ++iCell) {
+       currentInCells[0][iCell] = 0.0;
+       currentInCells[1][iCell] = 0.0;
+    }
+
+
+    // preparing JouleHeatSource socket
+    DataHandle<CFreal> rmsJouleHeatSource = socket_rmsJouleHeatSource.getDataHandle();
+    rmsJouleHeatSource.resize(nbCells);
+    rmsJouleHeatSource = 0.0;
+
+
+    // preparing el conductivity socket
+    DataHandle<CFreal> elCondField = socket_elCondField.getDataHandle();
+    elCondField.resize(nbCells);
+    elCondField = 0.0;
+    
+    // pressure in cell
+    DataHandle<CFreal> pressure = socket_pressure.getDataHandle();
+    pressure.resize(nbCells);
+    pressure = 0.0;
+    
+    
+    // preparing radius vector
+    m_radiusOfTheCell.resize(nbCells);
+    m_radiusOfTheCell = 0.;
+
+    // physical chemical library
+    m_library = PhysicalModelStack::getActive()->getImplementor()->
+      getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+    cf_assert(m_library.isNotNull());
+
+    // ICP reaction source term
+    m_srcTerm = PhysicalModelStack::getActive()->getImplementor()->getSourceTerm().d_castTo<ST>();
+    cf_assert(m_srcTerm.isNotNull());
+    
+    PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm()->resizePhysicalData(m_physicalData);
+    
+    // m_electricCurrent is a string. I need m_elCurrent values!
+    sTc(m_electricCurrent,m_elCurrent[0],m_elCurrent[1]);
+    
+    if (PE::GetPE().GetRank() == 0) {
+      cout << "elCurrent RE: " << m_elCurrent[0] << "  elCurrent IM: " << m_elCurrent[1] << "\n"; // "+++++++++++++++++++++++++\n";
+    }
+
+    // if i need a specific external program to run;
+    // eg, something to plot convergence or automatically
+    // set CFL number.
+    if (m_toRun.size() != 0)
+    {
+       m_toRun = m_toRun + " & ";
+       system(m_toRun.c_str());
+    }
+
+
+    // setting up object VectorPotential
+    const CFreal freqMHz = m_srcTerm->getFreqMHz();
+    const CFreal permeability = m_srcTerm->getPermeability();
+    // general settings
+    VectorPotential::getInstance().setPermeability(permeability);
+    VectorPotential::getInstance().setFrequency(freqMHz*1000000.);
+    // coil settings
+    VectorPotential::getInstance().setElCurrent(m_elCurrent[0],m_elCurrent[1]);
+    VectorPotential::getInstance().setElCurrentVectorCoords(m_radiusCoils, m_zPositionCoils);
+    // memorize coil data as standard values, so they can easily be used
+    VectorPotential::getInstance().setStandardData();
+
+    ///////////////       Ev in cells an nodes         //////////////////
+    //                                                                 //
+    //    it's always the same, since we are using el current = 1A     //
+    //    and we scale it at the end. By the way, if one day somebody  //
+    //    (janos molnar!!) wants to move to a "adapting current"       //
+    //    strategy, with current changing in every iteration,          //
+    //    it will be possible to call these functions from ::execute   //
+    //                                                                 //
+
+    prepareEvInCells();
+
+    prepareEvInNodes();
+
+    //                                                                 //
+    /////////////////////////////////////////////////////////////////////
+
+    // this can save some computational time.
+    // needed also to compute BCs in ICPplasmaFieldComputingBC !
+    prepareElConductivity();
+    
+ CFLog(VERBOSE, "RMSJouleHeatSourceCoupling<ST>::setup() END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+void RMSJouleHeatSourceCoupling<ST>::prepareEvInCells ()
+{
+   // did you already call m_geoBuider.setup?
+   using namespace std;
+   using namespace COOLFluiD::Framework;
+   using namespace COOLFluiD::Common;
+
+    // Get number of cells
+    Common::SafePtr<TopologicalRegionSet> cells =
+        MeshDataStack::getActive()->getTrs("InnerCells");
+    StdTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
+    geoData.trs = cells;
+    const CFuint nbCells = cells->getLocalNbGeoEnts();
+
+    // Get vacuumElFieldIntensity socket data handle
+    DataHandle<RealVector> vacuumElFieldIntensity = socket_vacuumElFieldIntensity.getDataHandle();
+
+    // Ev in cell centers ////////
+    for (CFuint iCell = 0; iCell < nbCells; ++iCell) {
+        // set the builder data and build the GeometricEntity
+        geoData.idx = iCell;
+        GeometricEntity* currCell = m_geoBuilder.buildGE();
+        // set coordinates of cell centroid
+        Node& coordinate = currCell->getState(0)->getCoordinates();
+        // computing Ev
+        VectorPotential::getInstance().setCoords(coordinate[XX],coordinate[YY]);
+        VectorPotential::getInstance().getElectricField(vacuumElFieldIntensity[0][iCell],vacuumElFieldIntensity[1][iCell]);
+        // ready to next iteration
+        m_geoBuilder.releaseGE();
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+void RMSJouleHeatSourceCoupling<ST>::prepareEvInNodes ( )
+{
+   using namespace std;
+   using namespace COOLFluiD::Framework;
+   using namespace COOLFluiD::Common;
+
+   // Get nodes infos
+    DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
+    const CFuint nbNodes = nodes.size();
+
+    // Get vacuumElFieldIntensity socket data handle
+    DataHandle<RealVector> vacuumElFieldIntensityInNodes = socket_vacuumElFieldIntensityInNodes.getDataHandle();
+
+    /////////////// Ev                        in nodes //////////////////
+    //                                                                 //
+    //    it's always the same, since we are using el current = 1A     //
+    //    and we scale it at the end.                                  //
+    //                                                                 //
+
+    for (CFuint iNode = 0; iNode < nbNodes; ++iNode) {
+        const Node& currNode = *nodes[iNode];
+        // setting node coordinates and computing Ev
+        VectorPotential::getInstance().setCoords(currNode[XX],currNode[YY]);
+        VectorPotential::getInstance().getElectricField(vacuumElFieldIntensityInNodes[0][iNode],
+                   vacuumElFieldIntensityInNodes[1][iNode]);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+void RMSJouleHeatSourceCoupling<ST>::prepareElConductivity ()
+{
+  CFLog(VERBOSE, "RMSJouleHeatSourceCoupling<ST>::prepareElConductivity() START\n");
+   
+   // did you already call m_geoBuider.setup?
+   using namespace std;
+   using namespace COOLFluiD::Framework;
+   using namespace COOLFluiD::Common;
+   using namespace COOLFluiD::Physics::NavierStokes;
+   using namespace COOLFluiD::Numerics::FiniteVolume;
+   using namespace COOLFluiD::MathTools;
+   using namespace COOLFluiD::TecplotWriter;
+   
+  // Get number of cells
+  Common::SafePtr<TopologicalRegionSet> cells =
+    MeshDataStack::getActive()->getTrs("InnerCells");
+  StdTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
+  geoData.trs = cells;
+  const CFuint nbCells = cells->getLocalNbGeoEnts();
+  
+  // get data handle
+  DataHandle<CFreal> elCondField = socket_elCondField.getDataHandle();
+    
+  SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
+  cf_assert(updateVarSet.isNotNull());
+  SafePtr<EulerTerm> eulerTerm = PhysicalModelStack::getActive()->getImplementor()->
+    getConvectiveTerm().d_castTo<EulerTerm>();
+  cf_assert(eulerTerm.isNotNull());
+  const RealVector& refData = eulerTerm->getReferencePhysicalData();
+  cf_assert(refData.size() > 0);
+  cf_assert(m_physicalData.size() > 0); 
+  
+  updateVarSet->setup();
+ 
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint nbTs = m_library->getNbTempVib() + m_library->getNbTe();
+  const CFuint TvID = nbEqs-nbTs-2;
+
+  // let's compute it!
+  for (CFuint iCell = 0; iCell < nbCells; ++iCell) {
+    // set the builder data and build the GeometricEntity
+    geoData.idx = iCell;
+    GeometricEntity* currCell = m_geoBuilder.buildGE();
+    // getting real EpR and imaginary EpI part of plasma el. field intensity from states
+    State *currState = currCell->getState(0);
+    
+    // AL: very ugly, find alternative way
+    if (!m_skipPreparation) {
+      updateVarSet->computePhysicalData(*currState, m_physicalData);
+    }
+    
+    CFreal pdim = eulerTerm->getPressureFromState(m_physicalData[EulerTerm::P])*refData[EulerTerm::P];
+    // correction in case pdim=0 (e.g. when starting from scratch in compressible mode)
+    pdim = (pdim > 0.01) ? pdim : eulerTerm->getPressInfComp()*refData[EulerTerm::P];
+    cf_assert(pdim > 0.);
+    
+    socket_pressure.getDataHandle()[iCell] = pdim;
+    
+    CFreal Tdim = m_physicalData[EulerTerm::T]*refData[EulerTerm::T]; 
+    // cf_assert(Tdim > 0.);
+    // we will have conductivity!
+    CFreal* tVec = (nbTs > 0) ? &(*currState)[TvID] : CFNULL;
+    elCondField[iCell] = m_library->sigma(Tdim, pdim, tVec);
+
+    if (m_srcTerm->pegaseApproximation()) {
+       if (Tdim > 7250) {
+         elCondField[iCell] = 904.11+(elCondField[iCell] - 904.11)*0.91;
+       }
+    }
+
+    if(isnan(elCondField[iCell]) && SubSystemStatusStack::getActive()->getNbIter() > 0) {
+      CF_DEBUG_OBJ(Tdim);
+      CF_DEBUG_OBJ(pdim);
+      CF_DEBUG_OBJ(elCondField[iCell]);
+      CF_DEBUG_OBJ(currState->getCoordinates());
+      abort();
+    }
+
+    CFLog(DEBUG_MIN, "[" << iCell << "] => " << "p=" << m_physicalData[EulerTerm::P] 
+	  << ", pdim=" << pdim << ", Tdim=" << Tdim << ", elCondField= " << elCondField[iCell] << "\n");
+	  
+    // ready to next iteration
+    m_geoBuilder.releaseGE();
+  }
+  
+  // reset the flag to the default so that next time the physica data will be computed
+  m_skipPreparation = false;
+  
+  CFLog(VERBOSE, "RMSJouleHeatSourceCoupling<ST>::prepareElConductivity() END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+void RMSJouleHeatSourceCoupling<ST>::configure ( Config::ConfigArgs& args )
+{
+  CFAUTOTRACE;
+ 
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  DataProcessingCom::configure(args);
+
+  if (m_radiusCoils.size() != m_nbCoils) {
+    throw BadValueException (FromHere(),"Number of coils doesn't match the size of the vector of coils radius");
+  }
+
+  if (m_zPositionCoils.size() != m_nbCoils) {
+    throw BadValueException (FromHere(),"Number of coils doesn't match the size of the vector of z-axis positions of coils");
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+void RMSJouleHeatSourceCoupling<ST>::execute()
+{
+  CFAUTOTRACE;
+   
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::Numerics::FiniteVolume;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::TecplotWriter;
+
+  CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+
+  // this is needed for coupling
+  CFLogDebugMin( "RMSJouleHeatSourceCoupling::execute()" << "\n");
+
+  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+  DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
+  DataHandle<RealVector> vacuumElFieldIntensity = socket_vacuumElFieldIntensity.getDataHandle();
+  DataHandle<RealVector> vacuumElFieldIntensityInNodes = socket_vacuumElFieldIntensityInNodes.getDataHandle();
+  DataHandle<CFreal> rmsJouleHeatSource = socket_rmsJouleHeatSource.getDataHandle();
+  DataHandle<CFreal> elCondField = socket_elCondField.getDataHandle();
+  DataHandle<RealVector> currentInCells = socket_currentInCells.getDataHandle();
+
+  // geometry
+  Common::SafePtr<TopologicalRegionSet> cells =
+    MeshDataStack::getActive()->getTrs("InnerCells");
+  StdTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
+  geoData.trs = cells;
+
+  // refData needed to obtain Tdim, pdim...
+  SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
+  cf_assert(updateVarSet.isNotNull());
+  SafePtr<EulerTerm> eulerTerm = PhysicalModelStack::getActive()->getImplementor()->
+    getConvectiveTerm().d_castTo<EulerTerm>();
+  cf_assert(eulerTerm.isNotNull());
+  RealVector& refData = eulerTerm->getReferencePhysicalData();
+  
+  CFreal r = 0.;
+  CFreal actualPower = 0.;
+
+  // ---------------------------------------[ size: nbNodes ]
+
+  // ---------------------------------------[ size: nbCells ]
+  const CFuint nbCells = cells->getLocalNbGeoEnts();
+  RealVector E_Re(nbCells);
+  RealVector E_Im(nbCells);
+  RealVector Ep_Re(nbCells);
+  RealVector Ep_Im(nbCells);
+  	     
+  //
+  // ---------------------------------------[ some messages ]
+  if( m_srcTerm->extraVerboseRate() != 0 )
+  if(!( iter % m_srcTerm->extraVerboseRate() )) {
+    if (m_srcTerm->pegaseApproximation() && (iter % 10 == 0))
+         if (PE::GetPE().GetRank() == 0) {  
+	   cout << " (Using pegase el conductivity)\n";
+	 }
+    if (m_srcTerm->use2DModel()) {
+      if (PE::GetPE().GetRank() == 0) {
+	cout << " (Using 2D model for the EM field)\n";
+      }
+    }
+    else {
+      if (PE::GetPE().GetRank() == 0) {
+	cout << " (Using 1D model for the EM field, with xMax = " << m_srcTerm->xMaxUsing1DModel() << ")\n";
+      }
+    }
+  }
+
+  // we compute (and access the library) the el conductivity
+  // just once per iteration!
+  prepareElConductivity();  // this is needed also for ICPplasmaFieldComputingBC
+
+  ///@TODO VP: have to be done parallel
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  
+  //
+  // ---------------------------------------[ MAIN CYCLE ]
+  //
+  for (CFuint iCell = 0; iCell < nbCells; ++iCell) {
+    // set the builder data and build the GeometricEntity
+    geoData.idx = iCell;
+    GeometricEntity* currCell = m_geoBuilder.buildGE();
+
+    // set coordinates of cell centroid
+    Node& coordinate = currCell->getState(0)->getCoordinates();
+    r = coordinate[YY] ;
+    m_radiusOfTheCell[iCell] = r ;
+    
+    // getting real EpR and imaginary EpI part of plasma el. field intensity from states
+    State *currState = currCell->getState(0);
+    
+    Ep_Re[iCell] = (*currState)[nbEqs-2];
+    Ep_Im[iCell] = (*currState)[nbEqs-1];
+    
+    // real and imaginary component of electric field intensity are always the same
+    // (current is set to 1A, E is computed, and final values of QJ and LF are then scaled.
+    //prepareEvInCells(); // this is done in setup phase! but with adjustable current, we need to compute it always...
+    //prepareEvInNodes(); //
+    
+    // AL: here notice that E_* is different from Ep_*
+    E_Re[iCell] = Ep_Re[iCell] + vacuumElFieldIntensity[0][iCell] ;
+    E_Im[iCell] = Ep_Im[iCell] + vacuumElFieldIntensity[1][iCell] ;
+    
+/*  UNCOMMENT THIS IF YOU WANT TO COMPUTE elConductivity EVERY ITERATION
+    // set temperature and pressure:
+    const CFreal pdim =  getModel()->getPressureFromState((*currState)[0])*refData[EulerTerm::P];
+    const CFreal Tdim = (*currState)[3]*refData[EulerTerm::T];  */
+    /*
+////// TO OBTAIN elConductivity or thermalConductivity GRAPHS: //.................................................
+    if (iCell == 200) {   // Writing Tecplot header
+        double variabile;
+
+        cout << "writing lambda graphs..." << "\n";
+        int iiiii=9850;
+        const std::string outfile = "mutation_LAMBDA.dat";
+        ofstream fout(outfile.c_str());
+        fout << "TITLE  =  thermal cond."<< endl;
+        fout << "VARIABLES  =  T";
+        for(iiiii=5000; iiiii<=100000; iiiii=iiiii+1000*(iiiii/1000 - 4)) {
+             fout << " \t" <<  StringOps::to_str(static_cast<CFuint>(iiiii));
+        }
+        fout << "\t 100000\t 10000" << endl;
+
+        // declaring
+        double deltaT=50;
+        double pp=10000.;
+        double TT = 300;//Tmin;
+        double Tmaxx = 10500;
+        do {
+          fout << TT;
+          for(iiiii=5000; iiiii<=100000; iiiii=iiiii+1000*(iiiii/1000 - 4)) {
+            pp = iiiii;
+            m_library->setComposition(TT,pp);
+            variabile = m_library->lambdaEQ(TT, pp);//            variabile = m_library->sigma(TT, pp, CFNULL);
+            fout  << "\t" << variabile;
+          }
+          //extra cause we like to have p = 100000...
+          pp = 100000;
+          m_library->setComposition(TT,pp);
+          variabile = m_library->lambdaEQ(TT, pp);//            variabile = m_library->sigma(TT, pp, CFNULL);
+          fout  << "\t" << variabile;
+          ///////
+          //extra cause we like to have p = 10000
+          pp = 10000;
+          m_library->setComposition(TT,pp);
+          variabile = m_library->lambdaEQ(TT, pp);//            variabile = m_library->sigma(TT, pp, CFNULL);
+          fout  << "\t" << variabile;
+          ///////
+          fout << endl;
+          TT += deltaT;
+        } while (TT < Tmaxx);
+    }
+
+//////////////////////////////////////.....................................................  */
+
+  /*  UNCOMMENT THIS IF YOU WANT TO COMPUTE elConductivity EVERY ITERATION
+    // TODO: once we are sure that this is working, we can compute elConductivity
+    //       only in prepareElConductivity()
+    m_library->setComposition(Tdim,pdim);
+    const CFreal elConductivity = m_library->sigma(Tdim, pdim, CFNULL);
+
+    if (elCondField[iCell] != elConductivity)
+        cout << "OH SHIT! this is a problem.... elCondField socket gives different values from elConductivity!\n";
+
+    if(isnan(elConductivity)) { ///test
+      CF_DEBUG_OBJ(Tdim);
+      CF_DEBUG_OBJ(pdim);
+      CF_DEBUG_OBJ(elConductivity);
+      abort();
+    }
+
+    // easyest approx to pegase conductivity values
+    if (m_srcTerm->pegaseApproximation()) {
+       if (Tdim > 7250)
+          elConductivity=904.11+(elConductivity-904.11)*0.91;
+    }
+
+    // electric conductivity field
+    // if we did prepareElConductivity() everytime ::execute() is called,
+    // we will no more need this elConductivity computation. we could always use elCondField[iCell]
+    elCondField[iCell] = elConductivity; */
+
+    // time-averaged Joule heat source not scaled to rescaled el. current yet
+    rmsJouleHeatSource[iCell] = .5*elCondField[iCell]*
+                                     (E_Re[iCell]*E_Re[iCell] + E_Im[iCell]*E_Im[iCell]);
+
+    // take into account only contribution from updatable states
+    if (currCell->getState(0)->isParUpdatable())
+         actualPower += rmsJouleHeatSource[iCell]*volumes[iCell]*2.*MathTools::MathConsts::CFrealPi()*r;
+
+    //
+    // Joule heat source multiplied by radius - axisymmetric equations
+    rmsJouleHeatSource[iCell] *= r;
+
+    m_geoBuilder.releaseGE();
+  }
+  // --------------------------------------------------------!
+
+
+  /// @TODO AL: temporary solution ....
+  CFdouble totalPower = 0.0;
+  if (PE::GetPE().GetProcessorCount() > 1) {
+  
+#ifdef CF_HAVE_MPI
+    MPI_Allreduce(&actualPower, &totalPower, 1, MPI_DOUBLE, MPI_SUM,
+      PE::GetPE().GetCommunicator());
+#endif
+  }
+  else {
+    totalPower = actualPower;
+  }
+
+
+  //
+  // ---------------------------------------[ SCALING FACTOR ]
+  //
+  // parameter rescaling the electric current
+    
+  m_rescaleElCurrent = std::sqrt(m_desiredPowerkW*1000./totalPower);
+    
+  // output on screen
+  if (PE::GetPE().GetRank() == 0) {
+    CFLog(INFO, "RMSJouleHeatSourceCoupling::prepareElConductivity() => sqrt( 1000*desiredPower [" << 
+	  m_desiredPowerkW << "] / totalPower [" << totalPower << "] ) = el_current [" << 
+	  m_rescaleElCurrent << "]\n");
+    cf_assert(m_rescaleElCurrent > 0.);
+  }
+  
+  // writes electric current
+  printElCurrentToFile();
+
+  // set the last 2 reference data components with the value of the current rescaling
+  refData[refData.size()-1] = m_rescaleElCurrent;
+  refData[refData.size()-2] = m_rescaleElCurrent;
+
+  // rescaling Joule heat source and electric field intensity corresponding to desired power
+  for (CFuint iCell = 0; iCell < nbCells; ++iCell) {
+    // EvR and EvI is not rescaled before putting in induction eq.
+    //vacuumElFieldIntensity[0][iCell] *= m_rescaleElCurrent;
+    //vacuumElFieldIntensity[1][iCell] *= m_rescaleElCurrent;
+    rmsJouleHeatSource[iCell] *= m_rescaleElCurrent*m_rescaleElCurrent;
+  }
+
+
+  //
+  // ---------------------------------------[ TECPLOT STUFF ]
+  //
+  if(!(iter % m_srcTerm->outputFileEM_SaveRate()))
+  {
+    string rootfileEM = m_srcTerm->outputFileEM();
+    StringOps::subst(string(".plt"),string("-P"),rootfileEM);
+    const string outfileEM  = rootfileEM + StringOps::to_str(PE::GetPE().GetRank()) + ".plt";
+    
+    if (PE::GetPE().GetRank() == 0) {
+      CFLog(VERBOSE, "RMSJouleHeatSourceCoupling<ST>::execute() => Writing Electromagnetic Field to " << outfileEM << "\n");
+    }
+    
+    // do not forget to first write the file structure:
+    // WriteTecplot::getInstance().writeFileStructure(outfileEM);
+    
+    WriteTecplot::getInstance().setTitle("Electromagnetic Field");
+    //WriteTecplot::getInstance().setNodeExtrapolation(1); //we can use default 1
+
+      // momentary data:
+      RealVector one; one.resize(nbCells); for (CFuint iC = 0 ; iC < nbCells ; iC++ ) { one[iC] = 1.; }  // vector of 1
+      RealVector rmsJouleHeatSourceToPlot;   rmsJouleHeatSourceToPlot.resize(nbCells);                                     // rmsJouleHeatSource to plot
+      for (CFuint iC = 0 ; iC < nbCells ; iC++ ) rmsJouleHeatSourceToPlot[iC] = rmsJouleHeatSource[iC]/m_radiusOfTheCell[iC] ;  // is not multilpied by r!
+      RealVector totalElField;   totalElField.resize(nbCells);
+      for (CFuint iC = 0 ; iC < nbCells ; iC++ ) totalElField[iC] =
+            std::sqrt( (E_Re[iC]*E_Re[iC])+(E_Im[iC]*E_Im[iC]) );
+      RealVector EvAmplitude;   EvAmplitude.resize(nbCells);      RealVector EvPhase;   EvPhase.resize(nbCells);
+      RealVector EpAmplitude;   EpAmplitude.resize(nbCells);      RealVector EpPhase;   EpPhase.resize(nbCells);
+      RealVector EpToEvPhaseShift;   EpToEvPhaseShift.resize(nbCells);
+      RealVector Jamplitude;   Jamplitude.resize(nbCells);      RealVector Jphase;   Jphase.resize(nbCells);
+      for (CFuint iC = 0 ; iC < nbCells ; iC++ )  {
+          WriteTecplot::getInstance().ReIm_TO_ModPhase( vacuumElFieldIntensity[0][iC], vacuumElFieldIntensity[1][iC], EvAmplitude[iC], EvPhase[iC]);
+          WriteTecplot::getInstance().ReIm_TO_ModPhase( Ep_Re[iC], Ep_Im[iC], EpAmplitude[iC], EpPhase[iC]);
+          WriteTecplot::getInstance().ReIm_TO_ModPhase( currentInCells[0][iC], currentInCells[1][iC], Jamplitude[iC], Jphase[iC]);
+          EpToEvPhaseShift[iC] = WriteTecplot::getInstance().normalizeAngle ( EpPhase[iC] - EvPhase[iC] );
+      }
+
+      // setting data:
+      WriteTecplot::getInstance().addOutput("E", &totalElField[0], m_rescaleElCurrent);
+      WriteTecplot::getInstance().addOutput("ER", &E_Re[0], m_rescaleElCurrent);
+      WriteTecplot::getInstance().addOutput("EI", &E_Im[0], m_rescaleElCurrent);
+      WriteTecplot::getInstance().addOutput("EvR", &vacuumElFieldIntensity[0][0], m_rescaleElCurrent);
+      WriteTecplot::getInstance().addOutput("EvI", &vacuumElFieldIntensity[1][0], m_rescaleElCurrent);
+      WriteTecplot::getInstance().addOutput("EvR'", &vacuumElFieldIntensityInNodes[0][0], m_rescaleElCurrent,true);
+      WriteTecplot::getInstance().addOutput("EvI'", &vacuumElFieldIntensityInNodes[1][0], m_rescaleElCurrent,true);
+      WriteTecplot::getInstance().addOutput("Ev", &EvAmplitude[0], m_rescaleElCurrent);
+      WriteTecplot::getInstance().addOutput("EvPhase", &EvPhase[0], 1);
+      WriteTecplot::getInstance().addOutput("EpR", &Ep_Re[0], m_rescaleElCurrent);
+      WriteTecplot::getInstance().addOutput("EpI", &Ep_Im[0], m_rescaleElCurrent);
+      WriteTecplot::getInstance().addOutput("Ep", &EpAmplitude[0], m_rescaleElCurrent);
+      WriteTecplot::getInstance().addOutput("EpPhase", &EpPhase[0], 1);
+      WriteTecplot::getInstance().addOutput("EpToEvPhaseShift", &EpToEvPhaseShift[0], 1);
+      WriteTecplot::getInstance().addOutput("elConductivity", &elCondField[0], 1);
+      WriteTecplot::getInstance().addOutput("Jr", &currentInCells[0][0], m_rescaleElCurrent);
+      WriteTecplot::getInstance().addOutput("Ji", &currentInCells[1][0], m_rescaleElCurrent);
+      WriteTecplot::getInstance().addOutput("J", &Jamplitude[0], m_rescaleElCurrent);
+      WriteTecplot::getInstance().addOutput("Jphase", &Jphase[0], 1);
+      WriteTecplot::getInstance().addOutput("QJ", &rmsJouleHeatSourceToPlot[0], 1);
+
+      // writing data:
+      // the following is buggy : WriteTecplot::getInstance().writeOutput(outfileEM);
+      WriteTecplot::getInstance().writeFile(outfileEM);
+   }
+  // END OF TECPLOT STUFF ///////////////////
+
+
+  // AL: check this one day
+  // reset to 0 the electric field before starting computing    ????????????????????????????????
+  // DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+  // const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  // const CFuint Er = nbEqs - 2;
+  // const CFuint Ei = nbEqs - 1;
+  // for (CFuint i = 0; i < states.size(); ++i) {
+  //   // (*states[i])[Er] = 0.0;
+  //   // (*states[i])[Ei] = 0.0;
+  // }
+  // // ???????????????????????????????????????????????????????????????????????????????????????????
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+void RMSJouleHeatSourceCoupling<ST>::printElCurrentToFile()
+{
+  CFAUTOTRACE;
+
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  boost::filesystem::path fpath (m_nameOutputFileElCurrent);
+  //  fpath = PathAppender::getInstance().appendAllInfo( fpath);
+  fpath = PathAppender::getInstance().appendAllInfo( fpath, m_appendIter, m_appendTime);
+
+//  SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
+//  ofstream& outputFile = fhandle->open(fpath,ios::app);
+//
+//  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+//  const CFreal actualElCurrent = m_rescaleElCurrent*m_elCurrent;
+//
+//  if (iter == 0) {
+//    outputFile << "TITLE  =  Electric Current\n";
+//    outputFile << "VARIABLES = Iter I m_elCurrent\n";
+//  }
+//  outputFile << iter << " " << actualElCurrent << " " << m_elCurrent << "\n";
+//
+//  fhandle->close();
+
+  SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
+
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+  const CFreal actualElCurrent = m_rescaleElCurrent*m_elCurrent[0];
+
+  // in the first iteration, open elCurrent file with ios::out parameter, to overwrite it:  --
+  if (iter == 0)
+  {
+    ofstream& outputFile = fhandle->open(fpath,ios::out);
+    outputFile << "TITLE  =  Electric Current\n" << "VARIABLES = Iter I m_elCurrent\n";
+    fhandle->close();
+  }
+
+  ofstream& outputFile = fhandle->open(fpath,ios::app);
+  outputFile << iter << " " << actualElCurrent << " " << m_elCurrent << "\n";
+  fhandle->close();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+void RMSJouleHeatSourceCoupling<ST>::sTc(std::string const stringCurrent, CFreal& currentRe, CFreal& currentIm)
+{
+  std::string sRe;
+  std::string sIm;
+
+  // real and imaginary part of the input string, for instance "123.4+i56.7" or "1 i3" or "i34.5" or "123.5" ...
+  sRe = stringCurrent;
+
+  // this: stringCurrent.find("i")!=-1 could be written as stringCurrent.find("i")<100000 ...
+  if (stringCurrent.substr(0,1)=="i" || (stringCurrent.find("i")!=0 && stringCurrent.find("i")!=-1)) {  // -1 stands for huge value, like 1654744857867967 ...
+    sIm = stringCurrent.substr(stringCurrent.find("i")+1);
+    sRe = stringCurrent.substr(0,stringCurrent.find("i"));
+  }
+
+  { std::stringstream ss;
+    ss << sRe;
+    ss >> currentRe; }
+  { std::stringstream ss;
+    ss << sIm;
+    ss >> currentIm; }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename ST>
+void RMSJouleHeatSourceCoupling<ST>::unsetup()
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolumeICP
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

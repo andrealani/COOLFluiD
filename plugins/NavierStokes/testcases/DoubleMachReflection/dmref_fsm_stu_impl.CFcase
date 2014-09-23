@@ -1,0 +1,183 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+
+### Residual = -2.95542
+
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libFluctSplit libFluctSplitSystem libFluctSplitSpaceTime libFluctSplitNavierStokes libMeshRigidMove libNewtonMethod libFluctSplitSpaceTimeNavierStokes libPetscI
+#CFEnv.TraceToStdOut = true  
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir       = plugins/NavierStokes/testcases/DoubleMachReflection/
+Simulator.Paths.ResultsDir       = ./
+#################################################################
+##    Physical model                                           ##
+#################################################################
+Simulator.SubSystem.Default.PhysicalModelType     = Euler2D
+
+Simulator.SubSystem.Euler2D.refValues = 8.0 60.0 -33.0 500.0
+Simulator.SubSystem.Euler2D.refLength = 1.0
+
+########################################################
+##   Time Step                                        ##
+########################################################
+
+Simulator.SubSystem.SubSystemStatus.TimeStep       = 1.e-05
+Simulator.SubSystem.SubSystemStatus.ComputeDT      = MaxDT
+Simulator.SubSystem.SubSystemStatus.MaxDT.DT_Ratio = 0.9
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.NewtonIterator.ShowRate            = 1
+
+
+#############################################################
+## Writing the solution                                    ##
+#############################################################
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh 
+
+Simulator.SubSystem.CFmesh.FileName     = dmref_stm_stuNP1_1kn.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate     = 100
+Simulator.SubSystem.CFmesh.AppendTime   = true
+Simulator.SubSystem.CFmesh.AppendIter   = false
+Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+
+Simulator.SubSystem.Tecplot.WriteSol       = WriteSolutionBlock
+Simulator.SubSystem.Tecplot.FileName    = dmref_stm_stuNP1_1kn.plt
+Simulator.SubSystem.Tecplot.SaveRate    = 50
+Simulator.SubSystem.Tecplot.AppendTime  = true
+Simulator.SubSystem.Tecplot.AppendIter  = false
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+
+##############################################################
+## Stop condition                                           ##
+##############################################################
+
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 0.2
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
+
+
+
+##################################################################
+## Reading the mesh                                             ##
+##################################################################
+
+Simulator.SubSystem.Default.listTRS = InnerCells FaceSouthWest FaceSouthEast FaceEast FaceNorth FaceWest
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = double-mach-ref_1kn.CFmesh
+
+##################################################################
+## Pseudo-itme convergence                                      ##
+##################################################################
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 10.0
+Simulator.SubSystem.NewtonIterator.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.NewtonIterator.RelativeNormAndMaxIter.MaxIter = 5
+Simulator.SubSystem.NewtonIterator.RelativeNormAndMaxIter.RelativeNorm= -6.0
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+
+##################################################################
+## Linear Solver PETSC                                          ##
+##################################################################
+
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.Output = false
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.ILULevels = 6
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 50
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1E-10
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 2500
+
+###################################################################
+##  Solver                                                       ##
+###################################################################
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+
+Simulator.SubSystem.FluctuationSplit.ComputeRHS = RhsJacob
+Simulator.SubSystem.FluctuationSplit.ComputeTimeRHS = StdTimeRhs
+Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
+
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = STU_CRD
+
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = STKT_SysNC
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar   = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar   = Cons
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorOrder = P3
+
+
+###################################################################
+##  Initial condition                                            ##
+###################################################################
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = if(x<0.166667+y/1.73205,8.0,1.4) \
+                                                   if(x<0.166667+y/1.73205,57.15767,0.0) \
+                                                   if(x<0.166667+y/1.73205,-33.0,0.0) \
+                                                   if(x<0.166667+y/1.73205,563.5,2.5) 
+                                                   
+
+######################################################################
+## Boundary conditions                                              ##
+######################################################################
+
+Simulator.SubSystem.FluctuationSplit.BcComds = UnsteadyWeakSlipWallEuler2DConsImpl\ 
+                                               SuperInletImpl\
+                                               SuperInletImpl \
+                                               SuperOutlet \
+                                               SuperInletImpl
+
+Simulator.SubSystem.FluctuationSplit.BcNames = SouthEast\
+                                               SouthWest\
+                                               West\
+                                               East\
+                                               North 
+
+
+Simulator.SubSystem.FluctuationSplit.SouthEast.applyTRS  = FaceSouthEast
+Simulator.SubSystem.FluctuationSplit.SouthEast.alpha = 0.75
+
+Simulator.SubSystem.FluctuationSplit.SouthWest.applyTRS  = FaceSouthWest
+Simulator.SubSystem.FluctuationSplit.SouthWest.Vars = x y t
+Simulator.SubSystem.FluctuationSplit.SouthWest.Def = 8.0 \
+                                                     57.15767 \
+                                                     -33.0 \
+                                                     563.5
+
+Simulator.SubSystem.FluctuationSplit.West.applyTRS  = FaceWest
+Simulator.SubSystem.FluctuationSplit.West.Vars = x y t
+Simulator.SubSystem.FluctuationSplit.West.Def = 8.0 \
+                                                57.15767 \
+                                                -33.0 \
+                                                563.5
+
+Simulator.SubSystem.FluctuationSplit.East.applyTRS  = FaceEast
+
+
+Simulator.SubSystem.FluctuationSplit.North.applyTRS  = FaceNorth
+Simulator.SubSystem.FluctuationSplit.North.Vars = x y t
+Simulator.SubSystem.FluctuationSplit.North.Def = if(x<0.1667+(0.8+20*t)/1.732,8.0,1.4) \
+                                                 if(x<0.1667+(0.8+20*t)/1.732,57.15767,0.0) \
+                                                 if(x<0.1667+(0.8+20*t)/1.732,-33.0,0.0) \
+                                                 if(x<0.1667+(0.8+20*t)/1.732,563.5,2.5) 

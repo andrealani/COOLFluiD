@@ -1,0 +1,198 @@
+#include <set>
+
+#include "Framework/MeshData.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Framework/ConvectiveVarSet.hh"
+#include "Common/CFMultiMap.hh"
+#include "NavierStokes/EulerTerm.hh"
+#include "MathTools/MathConsts.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+    namespace FluctSplit {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class MODEL>
+BxSchemeSysLocal<BASE,MODEL>::BxSchemeSysLocal(const std::string& name) :
+  BxSchemeSys<BASE,MODEL>(name),
+  m_diam(),
+  m_stencilStates()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class MODEL>
+BxSchemeSysLocal<BASE,MODEL>::~BxSchemeSysLocal()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class MODEL>
+void BxSchemeSysLocal<BASE,MODEL>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+
+  BxSchemeSys<BASE,MODEL>::setup();
+
+  // cell builder
+  GeometricEntityPool<StdTrsGeoBuilder> cellBuilder;
+  cellBuilder.setup();
+
+  SafePtr<TopologicalRegionSet> cellTRS = MeshDataStack::getActive()->getTrs("InnerCells");
+  // compute all the node-to-cell connectivity
+  StdTrsGeoBuilder::GeoData& geoData = cellBuilder.getDataGE();
+  geoData.trs = cellTRS;
+  const CFuint nbCells = geoData.trs->getLocalNbGeoEnts();
+
+  m_diam.resize(nbCells);
+
+  // node to cell connectivity
+  CFMultiMap<CFuint,CFuint> mapState2CellID
+  (nbCells*MeshDataStack::getActive()->Statistics().getMaxNbStatesInCell());
+
+  // here we cannot use the DataSocket "volumes" because has NOT been connected yet
+  RealVector volumes(nbCells);
+
+  std::valarray<CFuint> columnPattern(nbCells);
+  for (CFuint cellID = 0; cellID < nbCells; ++cellID) {
+    // build the GeometricEntity
+    geoData.idx = cellID;
+    GeometricEntity *const cell = cellBuilder.buildGE();
+
+    volumes[cellID] = cell->computeVolume();
+
+    vector<State*> *const states = cell->getStates();
+    for (CFuint is = 0; is < states->size(); ++is) {
+      mapState2CellID.insert((*states)[is]->getLocalID(), cellID);
+    }
+    cellBuilder.releaseGE();
+  }
+  mapState2CellID.sortKeys();
+
+  typedef CFMultiMap<CFuint,CFuint> MapNode2Cell;
+  typedef MapNode2Cell::MapIterator MapIt;
+
+  // temporary storage for the state IDs in the stencil of each cell
+  vector<vector<CFuint> > cell2States(nbCells);
+
+  for (CFuint cellID = 0; cellID < nbCells; ++cellID) {
+    // build the GeometricEntity
+    geoData.idx = cellID;
+    GeometricEntity *const cell = cellBuilder.buildGE();
+    vector<State*>& states = *cell->getStates();
+    const CFuint nbStates = states.size();
+
+    cf_assert(cell->getID() == cellID);
+    set<CFuint> stencilStates;
+    set<CFuint> stencilCells;
+    for (CFuint i = 0; i < nbStates; ++i) {
+      stencilStates.insert(states[i]->getLocalID());
+
+      bool fo = false;
+      pair<MapIt, MapIt> nCells = mapState2CellID.find(states[i]->getLocalID(),fo);
+      cf_assert(fo);
+      
+      for (MapIt cPtr = nCells.first; cPtr != nCells.second; ++cPtr) {
+	const CFuint currCellID = cPtr->second;
+	const CFuint nbStatesInCell = cellTRS->getNbStatesInGeo(currCellID);
+	for (CFuint is = 0; is < nbStatesInCell; ++is) {
+	  stencilStates.insert(cellTRS->getStateID(currCellID, is));
+	}
+	stencilCells.insert(currCellID);
+      }
+    }
+    
+    const CFuint ssize = stencilStates.size();
+    cell2States[cellID].resize(ssize);
+    columnPattern[cellID] = ssize;
+
+    set<CFuint>::const_iterator its;
+    CFuint iState = 0;
+    for (its = stencilStates.begin(); its != stencilStates.end(); ++its, ++iState) {
+      cell2States[cellID][iState] = *its;
+    }
+
+    set<CFuint>::const_iterator itd;
+    m_diam[cellID] = 0.;
+    for (itd = stencilCells.begin(); itd != stencilCells.end(); ++itd) {
+      m_diam[cellID] += volumes[*itd];
+    }
+    m_diam[cellID] = 2.0*std::sqrt(static_cast<CFreal>(m_diam[cellID]/MathTools::MathConsts::CFrealPi()));
+
+    cellBuilder.releaseGE();
+  }
+
+  m_stencilStates.resize(columnPattern);
+
+  // copy the temporary storage of stencil states into the more efficient connectivity table
+  for (CFuint i = 0; i < nbCells; ++i) {
+    const CFuint nbSS = cell2States[i].size();
+    for (CFuint s = 0; s < nbSS; ++s) {
+      m_stencilStates(i,s) = cell2States[i][s];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class MODEL>
+void BxSchemeSysLocal<BASE,MODEL>::updateScalingValues()
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+
+  if (!this->getMethodData().getDistributionData().isPerturb) {
+    GeometricEntity *const cell = this->getMethodData().getDistributionData().cell;
+
+    const CFuint cellID = cell->getID();
+    DataHandle<State*,GLOBAL> states = this->socket_states.getDataHandle();
+    SafePtr<ConvectiveVarSet> upVar = this->getMethodData().getUpdateVar();
+
+    CFreal maxValue = 0.;
+    CFreal minValue = MathTools::MathConsts::CFrealMax();
+//    CFreal sumVel = 0.0;
+    CFreal maxVel = 0.0;
+    const CFuint nbSStates = m_stencilStates.nbCols(cellID);
+    for (CFuint s = 0; s < nbSStates; ++s) {
+      const CFuint stateID = m_stencilStates(cellID,s);
+      upVar->computePhysicalData(*states[stateID], this->_pData);
+      maxValue = max(maxValue, this->_pData[this->_varID]);
+      minValue = min(minValue, this->_pData[this->_varID]);
+  //    sumVel += this->_pData[Physics::NavierStokes::EulerTerm::V];
+     maxVel = max(maxVel,this->_pData[Physics::NavierStokes::EulerTerm::V]);
+    }
+
+    this->_deltaVar = maxValue - minValue;
+    this->_speed  = maxVel; //sumVel/nbSStates;
+    this->_length = m_diam[cellID];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class MODEL>
+void BxSchemeSysLocal<BASE,MODEL>::addExtraDissipation()
+{
+  std::cout << "template <class BASE, class MODEL> void BxSchemeSysLocal<BASE,MODEL>::addExtraDissipation() --- BX\n";
+  std::cout << "nothing is done\n";
+  std::cout << "exiting ... template <class BASE, class MODEL> void BxSchemeSysLocal<BASE,MODEL>::addExtraDissipation() --- BX\n";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FluctSplit
+
+
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

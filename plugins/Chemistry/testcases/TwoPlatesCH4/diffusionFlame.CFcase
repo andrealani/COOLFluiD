@@ -1,0 +1,126 @@
+# COOLFluiD solver Startfile
+# Comments begin with "#"
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libFiniteElement libChemistryCH4 libNewtonMethod
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/Chemistry/testcases/TwoPlatesCH4/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = ChemCH43D
+Simulator.SubSystem.ChemCH43D.Temperature = 3000
+Simulator.SubSystem.ChemCH43D.Pressure = 100000
+Simulator.SubSystem.ChemCH43D.R = 275
+
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat           = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName        = diff-flame-sol.CFmesh
+Simulator.SubSystem.Tecplot.FileName       = diff-flame-sol.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.CFmesh.SaveRate = 1
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 30
+
+Simulator.SubSystem.Default.listTRS = InnerCells Side1 Side2 Side3 Side4 Side5 Side6
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cube.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = FiniteElement
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCILU
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 100
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1.0
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 3
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+Simulator.SubSystem.NewtonIterator.Data.SaveSystemToFile = true
+Simulator.SubSystem.NewtonIterator.UpdateSol = StdUpdateSol
+Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation = 0.1
+Simulator.SubSystem.NewtonIterator.InitCom = ResetSystem
+
+Simulator.SubSystem.SpaceMethod = FiniteElementMethod
+
+Simulator.SubSystem.FiniteElementMethod.Data.UpdateVar = Prim
+Simulator.SubSystem.FiniteElementMethod.Data.DiffusiveVar = ChemCH43DPrimDiffusive
+Simulator.SubSystem.FiniteElementMethod.Data.SourceVar = ChemCH43DPrimArrhenius
+Simulator.SubSystem.FiniteElementMethod.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.FiniteElementMethod.Data.ResidualStrategy = StdElementComputer
+
+Simulator.SubSystem.FiniteElementMethod.Data.ChemCH43DPrimDiffusive.DiffusiveCoeff = 100. 100. 100. 100.
+
+Simulator.SubSystem.FiniteElementMethod.Data.ChemCH43DPrimArrhenius.A = 1.3E8
+Simulator.SubSystem.FiniteElementMethod.Data.ChemCH43DPrimArrhenius.EaR = 24358
+Simulator.SubSystem.FiniteElementMethod.Data.ChemCH43DPrimArrhenius.m = -0.3
+Simulator.SubSystem.FiniteElementMethod.Data.ChemCH43DPrimArrhenius.n = 1.3
+
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorOrder = P1
+
+Simulator.SubSystem.FiniteElementMethod.ComputeSpaceResidual = ImplicitComputeSpaceResCom
+Simulator.SubSystem.FiniteElementMethod.ImplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSystem.FiniteElementMethod.InitComds = InitState
+Simulator.SubSystem.FiniteElementMethod.InitNames = InitialField
+
+Simulator.SubSystem.FiniteElementMethod.InitialField.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.InitialField.Vars = x y z
+Simulator.SubSystem.FiniteElementMethod.InitialField.Def = 0.3333333 0.666666 0.0 0.0
+
+Simulator.SubSystem.FiniteElementMethod.BcComds = DirichletBC DirichletBC
+Simulator.SubSystem.FiniteElementMethod.BcNames = BOUND1      BOUND2
+
+# Stoichiometric mixture
+Simulator.SubSystem.FiniteElementMethod.BOUND1.applyTRS = Side1
+Simulator.SubSystem.FiniteElementMethod.BOUND1.Implicit = true
+Simulator.SubSystem.FiniteElementMethod.BOUND1.Vars = x y z t
+Simulator.SubSystem.FiniteElementMethod.BOUND1.Def =  0.3333333 0.666666 0.0 0.0
+Simulator.SubSystem.FiniteElementMethod.BOUND2.applyTRS = Side3
+Simulator.SubSystem.FiniteElementMethod.BOUND2.Implicit = true
+Simulator.SubSystem.FiniteElementMethod.BOUND2.Vars = x y z t
+Simulator.SubSystem.FiniteElementMethod.BOUND2.Def = 0.3333333 0.666666 0.0 0.0
+
+# Diffusion mixture
+#Simulator.SubSystem.FiniteElementMethod.BOUND1.applyTRS = Side1
+#Simulator.SubSystem.FiniteElementMethod.BOUND1.Implicit = true
+#Simulator.SubSystem.FiniteElementMethod.BOUND1.Vars = x y z t
+#Simulator.SubSystem.FiniteElementMethod.BOUND1.Def =  0.2 0.8 0.0 0.0
+#Simulator.SubSystem.FiniteElementMethod.BOUND2.applyTRS = Side3
+#Simulator.SubSystem.FiniteElementMethod.BOUND2.Implicit = true
+#Simulator.SubSystem.FiniteElementMethod.BOUND2.Vars = x y z t
+#Simulator.SubSystem.FiniteElementMethod.BOUND2.Def = 0.466666 0.533333 0.0 0.0
+
+#Simulator.SubSystem.FiniteElementMethod.BcComds = NeumannBCImplicit   NeumannBCImplicit
+#Simulator.SubSystem.FiniteElementMethod.BcNames = BOUND1              BOUND2
+
+# Diffusion mixture
+# Vars are [x y z XCH4 XO2 XCO2 XH2O]
+#Simulator.SubSystem.FiniteElementMethod.BOUND1.applyTRS = Side1
+#Simulator.SubSystem.FiniteElementMethod.BOUND1.Vars = x y z t XCH4 XO2 XCO2 XH2O nx ny nz
+#Simulator.SubSystem.FiniteElementMethod.BOUND1.Def =  100 0.0 0.0 0.0
+#Simulator.SubSystem.FiniteElementMethod.BOUND2.applyTRS = Side3
+#Simulator.SubSystem.FiniteElementMethod.BOUND2.Vars = x y z t XCH4 XO2 XCO2 XH2O nx ny nz
+#Simulator.SubSystem.FiniteElementMethod.BOUND2.Def = 0.0 -100 0.0 0.0
+
+
+

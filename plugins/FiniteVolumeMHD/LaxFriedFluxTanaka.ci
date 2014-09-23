@@ -1,0 +1,133 @@
+#include "Framework/GeometricEntity.hh"
+
+//////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+void LaxFriedFluxTanaka<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+LaxFriedFluxTanaka<UPDATEVAR>::LaxFriedFluxTanaka(const std::string& name) :
+  LaxFriedFlux(name),
+  _updateVarSet(CFNULL)
+{
+  addConfigOptionsTo(this);
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+LaxFriedFluxTanaka<UPDATEVAR>::~LaxFriedFluxTanaka()
+{
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+void LaxFriedFluxTanaka<UPDATEVAR>::setup()
+{
+  LaxFriedFlux::setup();
+  _updateVarSet = getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+void LaxFriedFluxTanaka<UPDATEVAR>::compute(RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  cf_assert(_updateVarSet.isNotNull());
+  vector<RealVector>& pdata = getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
+  const RealVector& unitNormal = getMethodData().getUnitNormal();
+
+  const CFuint currFaceID = getMethodData().getCurrentFace()->getID();
+  _updateVarSet->setEntityID(currFaceID);
+
+  // flux for the right and left state
+  this->_sumFlux = _updateVarSet->computeTanakaFluxPowell99Formulation(pdata[1], unitNormal);
+  this->_sumFlux += _updateVarSet->computeTanakaFluxPowell99Formulation(pdata[0], unitNormal);
+
+  _updateVarSet->computeEigenValues(pdata[1], unitNormal, this->_rightEv);
+  _updateVarSet->computeEigenValues(pdata[0], unitNormal, this->_leftEv);
+
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  CFreal aR = 0.0;
+  CFreal aL = 0.0;
+  for (CFuint i = 0; i < nbEqs; ++i) {
+    aR = max(aR, std::abs(this->_rightEv[i]));
+    aL = max(aL, std::abs(this->_leftEv[i]));
+  }
+  const CFreal a = max(aR,aL);
+  
+  SafePtr<FVMCC_PolyRec> polyRec = getMethodData().getPolyReconstructor();
+  _statesLR[0] = &polyRec->getCurrLeftState();
+  _statesLR[1] = &polyRec->getCurrRightState();
+  cf_assert(*_statesLR[0] == polyRec->getCurrLeftState());
+  cf_assert(*_statesLR[1] == polyRec->getCurrRightState());
+  
+  if (!getMethodData().reconstructSolVars()) {
+    _solutionStates = getMethodData().getUpdateToSolutionVecTrans()->transform(&_statesLR);
+  }
+  else {
+    _solutionStates = &_statesLR;
+  }
+  
+  // you must work with references (no copying allowed) !!!!
+  State& leftState  = *(*this->_solutionStates)[0];
+  State& rightState = *(*this->_solutionStates)[1];
+  CFreal aDiff = a*this->getReductionCoeff();
+
+  std::string nameAccuracyIncreaserMethod = _updateVarSet->getNameAccuracyIncreaserMethod();
+
+  if (nameAccuracyIncreaserMethod == "ISLND") {
+    const CFreal ISLNDLimit = _updateVarSet->getISLNDLimit();
+    aDiff = min(a,ISLNDLimit)*this->getReductionCoeff();
+  }
+
+  result = 0.5*(this->_sumFlux - aDiff*(rightState - leftState));
+
+ // compute update coefficient
+  if (!getMethodData().isPerturb()) {
+    CellCenterFVMData& data = this->getMethodData(); 
+    GeometricEntity& face = *data.getCurrentFace();
+    const CFreal faceArea = socket_faceAreas.getDataHandle()[face.getID()]/
+      data.getPolyReconstructor()->nbQPoints();
+    
+    DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+    // left contribution to update coefficient
+    const CFuint leftID = face.getState(0)->getLocalID();
+    updateCoeff[leftID] += max(this->_leftEv.max(), (CFreal)0.0)*faceArea;
+    
+    if (!face.getState(1)->isGhost()) {
+      // right contribution to update coefficient
+      this->_tempUnitNormal = -1.0*unitNormal;
+      const CFreal maxEV = _updateVarSet->getMaxEigenValue(pdata[1], this->_tempUnitNormal);
+      const CFuint rightID = face.getState(1)->getLocalID();
+      updateCoeff[rightID] += max(maxEV, (CFreal)0.0)*faceArea;
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
+} // namespace FiniteVolume
+
+} // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////

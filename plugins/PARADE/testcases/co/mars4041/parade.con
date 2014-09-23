@@ -1,0 +1,57 @@
+c User input file for PARADE
+c 1. Spectrum control data:
+c
+  200.0        wavlo [A]
+  20000.0      wavhi [A]
+  10000         npoints
+c 2. Parameters for adaptive wavelength discretisation:
+  0.0005       minimum distance between adjacent points
+   100.        integration limit for line shape
+  0.001        minimum fraction for use of energy level
+c 3. Switches for radiation mechanisms:
+  'Y'          free-free  radiation (y/n)
+  'Y'          free-bound radiation (y/n)
+  'Y'          atomic line radiation (y/n)
+  'Y'          molecular band radiation (y/n)
+  'N'          nonequilibrium excitation (y/n)
+  'N'          adaptive wavelength discretisation (y/n)
+  'N'          equal wavelength increments (y/n)
+  'Y'          equal frequency increments (y/n)
+c 4. rad(y/n) remark  at. spec  ttr  tv  te    rad.file
+ 'N',        'C2'	2         1   2   2,   ' ' 
+ 'N',        'C'	1         1   0   2,   '../../../NIST/cinist.dat'       
+ 'N',        'N2'	2         1   2   2,   '../../../data/n2ibp.dat'
+ 'b'    'N21p'
+ 'b'    'N22p'
+ 'b'    'N2bh2'
+ 'N',        'N'	1         1   0   2,   '../../../NIST/niNIST.dat'        
+ 'Y',        'CO'	2         1   2   2,   '../../../data/coilm.dat'       
+ 'b'    'CO4p'
+ 'b'    'COA'
+ 'N',        'O'	1         1   0   2,   '../../../NIST/oiNIST.dat'
+ 'Y',        'CN'	2         1   2   2,   '../../../data/cnimds.dat'
+ 'b'    'CNviolet'
+ 'b'    'CNred'
+ 'N',        'O2'	2         1   2   2,   '../../../data/o2ibp.dat'      
+ 'b'   'O2sr'
+ 'N',        'NO'	2         1   2   2,   '../../../data/noibp.dat'      
+ 'b'    'NObeta'
+ 'b'    'NOgamma'
+ 'b'    'NOdelta'               
+ 'b'    'NOepsilon' 
+ 'N',        'CO2'	3         1   2   2,   ' ' 
+ 'N',        'NCO'	3         1   2   2,   ' '                             
+ 'N',        'CN+'	2         1   2   2,   ' '
+ 'N',        'N+'	1         1   0   2,   '../../../NIST/niiNIST.dat'
+ 'N',        'N2+'	2         1   2   2,   '../../../data/n2iibp.dat'
+ 'b'    'N2p1n'
+ 'b'    'N2pmei'
+ 'N',        'C+'	1         1   0   2,   '../../../NIST/ciinist.dat'       
+ 'N',        'O+'	1         1   0   2,   '../../../NIST/oiiNIST.dat'
+ 'N',        'AR'       1         1   0   2,   '../../../NIST/arinist.dat '
+ 'N',        'AR+'      1         1   0   2,   '../../../NIST/ariinist.dat '
+ 'N',        'C2+'	2         1   2   2,   ' ' 
+ 'N',        'O2+'	2         1   2   2,   ' '
+ 'N',        'CO+'	2         1   2   2,   ' '
+ 'N',        'NO+'	2         1   2   2,   ' '
+ 'N',        'E'        0         1   0   2,   ' '

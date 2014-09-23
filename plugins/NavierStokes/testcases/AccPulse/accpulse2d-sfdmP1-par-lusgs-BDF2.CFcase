@@ -1,0 +1,97 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -11.5678
+
+# Parallel works, but due to the working of the algorithm, #cpus has an influence on the residual history
+
+#CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libNavierStokes libSpectralFD libSpectralFDNavierStokes libLUSGSMethod
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/AccPulse/
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = Euler2D
+Simulator.SubSystem.Euler2D.pRef = 1.
+Simulator.SubSystem.Euler2D.rhoRef = 1.
+
+Simulator.SubSystem.OutputFormat        = ParaView CFmesh
+
+Simulator.SubSystem.CFmesh.FileName     = accpulse2d-sfdm-solP1-lusgs-BDF2.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ParaView.FileName   = accpulse2d-sfdm-solP1-lusgs-BDF2.vtu
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.SaveRate = 3
+Simulator.SubSystem.ParaView.AppendTime = false
+Simulator.SubSystem.ParaView.AppendIter = true
+
+Simulator.SubSystem.StopCondition = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 5
+
+Simulator.SubSystem.ConvergenceMethod  = NonlinearLUSGSBDF2
+Simulator.SubSystem.NonlinearLUSGSBDF2.SetupCom = BDF2Setup
+Simulator.SubSystem.NonlinearLUSGSBDF2.ConvergenceFile = convergence-lusgsBDF2.plt
+Simulator.SubSystem.NonlinearLUSGSBDF2.ShowRate        = 1
+Simulator.SubSystem.NonlinearLUSGSBDF2.ConvRate        = 50
+Simulator.SubSystem.NonlinearLUSGSBDF2.Data.JacobFreezFreq = 1
+Simulator.SubSystem.NonlinearLUSGSBDF2.Data.MaxSweepsPerStep = 5
+Simulator.SubSystem.NonlinearLUSGSBDF2.Data.Norm = -10.
+Simulator.SubSystem.NonlinearLUSGSBDF2.Data.NormRes = L2LUSGS
+Simulator.SubSystem.NonlinearLUSGSBDF2.Data.PrintHistory = true
+Simulator.SubSystem.NonlinearLUSGSBDF2.Data.CFL.Value  = 1.0
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.001
+
+Simulator.SubSystem.SpaceMethod = SpectralFDMethod
+
+Simulator.SubSystem.Default.listTRS = InnerCells SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = accpulse2d-sfdm-solP1.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = SpectralFDMethod
+
+# choose which builder we use
+Simulator.SubSystem.SpectralFDMethod.Builder = StdBuilder
+Simulator.SubSystem.SpectralFDMethod.SpaceRHSJacobCom = DiagBlockJacob
+Simulator.SubSystem.SpectralFDMethod.TimeRHSJacobCom  = BDF2TimeDiagBlockJacob
+Simulator.SubSystem.SpectralFDMethod.SpaceRHSForGivenCell = RhsInGivenCell
+Simulator.SubSystem.SpectralFDMethod.TimeRHSForGivenCell  = BDF2TimeRHSInGivenCell
+Simulator.SubSystem.SpectralFDMethod.SetupCom = LUSGSSetup
+Simulator.SubSystem.SpectralFDMethod.UnSetupCom = LUSGSUnSetup
+Simulator.SubSystem.SpectralFDMethod.PrepareCom = LUSGSPrepare
+
+Simulator.SubSystem.SpectralFDMethod.Data.ComputeVolumeForEachState = true
+Simulator.SubSystem.SpectralFDMethod.Data.UpdateVar   = Cons
+Simulator.SubSystem.SpectralFDMethod.Data.SolutionVar = Cons
+Simulator.SubSystem.SpectralFDMethod.Data.LinearVar   = Roe
+Simulator.SubSystem.SpectralFDMethod.Data.RiemannFlux = RoeFlux
+
+Simulator.SubSystem.SpectralFDMethod.InitComds = StdInitState
+Simulator.SubSystem.SpectralFDMethod.InitNames = InField
+
+Simulator.SubSystem.SpectralFDMethod.InField.applyTRS = InnerCells
+Simulator.SubSystem.SpectralFDMethod.InField.Vars = x y
+Simulator.SubSystem.SpectralFDMethod.InField.Def = 1.0+0.001*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)) \
+                                                   0.0 \
+                                                   0.0 \
+                                                   (1.0+0.001*1.4*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)))/0.4
+
+Simulator.SubSystem.SpectralFDMethod.BcNames = FarField
+Simulator.SubSystem.SpectralFDMethod.FarField.applyTRS = SuperInlet SuperOutlet
+
+Simulator.SubSystem.SpectralFDMethod.Data.BcTypes = Dirichlet
+Simulator.SubSystem.SpectralFDMethod.Data.BcNames = FarField
+
+Simulator.SubSystem.SpectralFDMethod.Data.FarField.Vars = x y
+Simulator.SubSystem.SpectralFDMethod.Data.FarField.Def = 1.0+0.001*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)) \
+                                                         0.0 \
+                                                         0.0 \
+                                                         (1.0+0.001*1.4*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)))/0.4
+CFEnv.RegistSignalHandlers = false

@@ -1,0 +1,129 @@
+# COOLFluiD Startfile
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = 0.88343749
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libGambit2CFmesh libForwardEuler libCFmeshExtruder
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Cylinder/
+Simulator.Paths.ResultsDir = ./
+
+CFEnv.ExceptionLogLevel = 200
+
+Simulator.SubSystem.Default.PhysicalModelType     = NavierStokes3D
+Simulator.SubSystem.NavierStokes3D.refValues = 1. 0.2369 0.2369 0.2369 1.0
+Simulator.SubSystem.NavierStokes3D.refLength = 1.0
+
+Simulator.SubSystem.NavierStokes3D.DiffTerm.Reynolds = 40.0
+Simulator.SubSystem.NavierStokes3D.ConvTerm.tempRef = 288.15
+Simulator.SubSystem.NavierStokes3D.ConvTerm.machInf = 0.2
+
+Simulator.SubSystem.ConvergenceFile = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = cyl3D_viscous_Re40.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = cyl3D_viscous_Re40.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Pvt
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -8.0
+
+Simulator.SubSystem.Default.listTRS = InnerFaces Cylinder Farfield Top Bottom
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cylinder_3D_hexa.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = FVMCC
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 200.
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = cylinder_2D_quad.CFmesh
+#cylinder_2D_triag.CFmesh
+#cylinder_2D_quad.CFmesh
+
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Extruder2DFVM
+Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.NbLayers = 5
+Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.ExtrudeSize = 0.5
+Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.Split = false
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1e6
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<30,1e6,min(1e20,cfl*5.))
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Restart = false
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Pvt
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Pvt
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS3D
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.InField.Def = 0.869869 68.058 0.0 0.0 288.15
+
+Simulator.SubSystem.CellCenterFVM.BcComds = FarFieldEulerChar3DFVMCC \
+						NoSlipWallAdiabaticNSPvtFVMCC \
+						MirrorVelocityFVMCC \
+						MirrorVelocityFVMCC
+
+Simulator.SubSystem.CellCenterFVM.BcNames = \
+	BCFarField BCWall BCTop BCBottom
+
+Simulator.SubSystem.CellCenterFVM.BCTop.applyTRS = Top
+Simulator.SubSystem.CellCenterFVM.BCBottom.applyTRS = Bottom
+
+Simulator.SubSystem.CellCenterFVM.BCFarField.applyTRS = Farfield
+Simulator.SubSystem.CellCenterFVM.BCFarField.Uinf = 68.058
+Simulator.SubSystem.CellCenterFVM.BCFarField.Vinf = 0.
+Simulator.SubSystem.CellCenterFVM.BCFarField.Winf = 0.
+Simulator.SubSystem.CellCenterFVM.BCFarField.Pinf = 0.869869
+Simulator.SubSystem.CellCenterFVM.BCFarField.Tinf = 288.15
+
+Simulator.SubSystem.CellCenterFVM.BCWall.applyTRS = Cylinder
+
+

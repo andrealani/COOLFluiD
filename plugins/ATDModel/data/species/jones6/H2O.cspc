@@ -1,0 +1,44 @@
+/H2O
+/Constitutive atoms: 
+3
+/Molar mass (g):
+18.01528
+/Formation enthalpy (J/kg) [gaseous water!]:
+-13.4229387e6
+/ tetha_vs:
+0.0
+/ Tets:
+0.0
+/ AsMu1:
+0.49966928
+/ BsMu1:
+-697.84297
+/ CsMu1:
+88274.722
+/ DsMu1:
+3.0878979
+/ AsMu2:
+0.58963330
+/ BsMu2:
+-538.75152
+/ CsMu2:
+54745.230
+/ DsMu2:
+2.3409644
+/ AsK1:
+1.1322991
+/ BsK1:
+-512.13867
+/ CsK1:
+99913.498
+/ DsK1:
+-0.52900911
+/ AsK2:
+0.50036257
+/ BsK2:
+-1719.4289
+/ CsK2:
+387590.61
+/ DsK2:
+4.7558670
+stop

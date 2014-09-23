@@ -1,0 +1,76 @@
+#include "Framework/MeshData.hh"
+  
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolumeICP {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+ICPMirror<BASE>::
+ICPMirror(const std::string& name) :
+  BASE(name)
+{
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+ICPMirror<BASE>::~ICPMirror()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void ICPMirror<BASE>::setup()
+{
+  BASE::setup();
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void ICPMirror<BASE>::setGhostState
+(Framework::GeometricEntity *const face)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint nbPrevEqs = totalNbEqs - 2;
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
+  
+  if (nbEqs >= nbPrevEqs) {
+    BASE::setGhostState(face);
+  }
+  
+  // here it is assumed that the ICP induction equations are the last ones 
+  if (nbEqs == 2 || nbEqs > nbPrevEqs) {
+    State *const innerState = face->getState(0);
+    State *const ghostState = face->getState(1);
+    
+    ///@TODO assumption r=y !! everywhere in the code ...
+      // const CFreal rI = innerState->getCoordinates()[YY];
+      const CFuint epR = innerState->size() - 2;
+      const CFuint epI = innerState->size() - 1;
+      // const CFreal rRatio = std::abs(rI/ghostState->getCoordinates()[YY]);
+      
+      (*ghostState)[epR] =  - (*innerState)[epR];
+      (*ghostState)[epI] =  - (*innerState)[epI];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

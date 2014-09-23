@@ -1,0 +1,116 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libBackwardEuler libFluctSplitNavierStokes libTHOR2CFmesh libPetscI
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/F15/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType       = Euler3D
+Simulator.SubSystem.Euler3D.refValues = 1.2 \
+        408.2416 \
+        408.2416 \
+        408.2416 \
+        322754.6683
+
+Simulator.SubSystem.Euler3D.refLength = 1.0
+
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = f15.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = f15.plt
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = SlipWall
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 30
+Simulator.SubSystem.CFmesh.SaveRate = 30
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 3
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -5.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells SlipWall FarField SubOutlet SuperInlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = f15.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = BwdEuler
+Simulator.SubSystem.BwdEuler.Data.CFL.Value = 1.0
+Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = if(i>100,min(100.,5.^(i-200)),1.0)
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = BwdEulerLSS
+Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
+Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.ComputeRHS = RhsJacob
+Simulator.SubSystem.FluctuationSplit.ComputeTimeRHS = StdTimeRhs
+
+Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Picard
+#Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysN
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Roe
+
+#Solution initialization
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.InField.Def = 1.2 \
+                                        408.2416 \
+                                        0.0 \
+                                        0.0 \
+                                        322754.6683
+
+#Boundary conditions
+Simulator.SubSystem.FluctuationSplit.BcComds = WeakSlipWallEuler3DConsImpl \
+                                WeakFarField3DImpl \
+                                WeakSubOutletEuler3DConsImpl \
+                                SuperInletImpl
+Simulator.SubSystem.FluctuationSplit.BcNames = Wall FField SubOutlet SuperInlet
+
+Simulator.SubSystem.FluctuationSplit.Wall.applyTRS = SlipWall
+
+Simulator.SubSystem.FluctuationSplit.FField.applyTRS = FarField
+Simulator.SubSystem.FluctuationSplit.FField.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.FField.Def = 1.2 \
+                                        408.2416 \
+                                        0.0 \
+                                        0.0 \
+                                        322754.6683
+
+Simulator.SubSystem.FluctuationSplit.SubOutlet.applyTRS = SubOutlet
+Simulator.SubSystem.FluctuationSplit.SubOutlet.P = 101325.0
+
+#p = 23146.95218
+#ptot const
+Simulator.SubSystem.FluctuationSplit.SuperInlet.applyTRS = SuperInlet
+Simulator.SubSystem.CellCenterFVM.SuperInlet.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.SuperInlet.Def = 0.426929673 \
+                                        235.2442903 \
+                                        0.0 \
+                                        0.0 \
+                                        122678.8465
+

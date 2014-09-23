@@ -1,0 +1,34 @@
+#include "Maxwell/Maxwell.hh"
+#include "MaxwellModelAdim.hh"
+#include "Environment/ObjectProvider.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace COOLFluiD::Framework;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace Maxwell {
+
+//////////////////////////////////////////////////////////////////////////////
+
+Environment::ObjectProvider<MaxwellModelAdim<DIM_2D>, PhysicalModelImpl, MaxwellModule,1>
+Maxwell2DModelAdimProvider("Maxwell2DAdim");
+
+Environment::ObjectProvider<MaxwellModelAdim<DIM_3D>, PhysicalModelImpl, MaxwellModule,1>
+Maxwell3DModelAdimProvider("Maxwell3DAdim");
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace Maxwell
+
+} // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<XCFcase>
+  <Solver>
+         <bdir>@COOLFluiD_SOURCE_DIR@</bdir>
+         <ldir>@COOLFluiD_DSO_DIR@</ldir>
+  </Solver>
+</XCFcase>

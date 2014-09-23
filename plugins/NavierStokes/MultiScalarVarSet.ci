@@ -1,0 +1,197 @@
+#include "Framework/State.hh"
+#include "Common/NotImplementedException.hh"
+#include "Framework/PhysicalModel.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace COOLFluiD::Common;
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace NavierStokes {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+MultiScalarVarSet<BASEVS>::MultiScalarVarSet
+(Common::SafePtr<Framework::BaseTerm> term) :
+  Framework::MultiScalarVarSetBase<BASEVS>(term)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+MultiScalarVarSet<BASEVS>::~MultiScalarVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+CFreal MultiScalarVarSet<BASEVS>::getMaxEigenValue
+(const RealVector& pdata, const RealVector& normal)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->
+    getEquationSubSysDescriptor(); 
+  
+  cf_assert(eqSS.getTotalNbEqSS() > 0);
+  const CFuint currNbEqs = eqSS.getNbEqsSS();
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
+
+  if (eqSS.getTotalNbEqSS() > 1 && (currNbEqs < totalNbEqs)) {
+    // case with weak coupling (only one equation subset is considered)
+    vector<EquationSetData>& eqsData = MultiScalarVarSet<BASEVS>::getEqSetData();
+    const CFuint nbSS = eqsData.size();
+
+    // loop over the equation set data array
+    for (CFuint i = 0; i < nbSS; ++i) {
+      const CFuint currID = eqsData[i].getEqSetID();
+      if (eqSS.getEqSS() == currID) {
+	      return this->getNormalSpeed(pdata, normal);
+      }
+    }
+
+    // the other equation subsets is considered and will have to compute
+    return BASEVS::getMaxEigenValue(pdata, normal);
+  }
+  
+  // fully coupled case
+  return std::max(BASEVS::getMaxEigenValue(pdata, normal), this->getNormalSpeed(pdata, normal));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+CFreal MultiScalarVarSet<BASEVS>::getMaxAbsEigenValue
+(const RealVector& pdata, const RealVector& normal)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->
+    getEquationSubSysDescriptor(); 
+  cf_assert(eqSS.getTotalNbEqSS() > 0);
+  const CFuint currNbEqs = eqSS.getNbEqsSS();
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
+  
+  if (eqSS.getTotalNbEqSS() > 1 && (currNbEqs < totalNbEqs)) {
+    // case with weak coupling (only one equation subset is considered)
+    vector<EquationSetData>& eqsData = MultiScalarVarSet<BASEVS>::getEqSetData();
+    const CFuint nbSS = eqsData.size();
+    // loop over the equation set data array
+    for (CFuint i = 0; i < nbSS; ++i) {
+      const CFuint currID = eqsData[i].getEqSetID();
+      if (eqSS.getEqSS() == currID) {
+	return abs(this->getNormalSpeed(pdata, normal));
+      }
+    }
+    // the other equation subsets is considered and will have to compute
+    return BASEVS::getMaxAbsEigenValue(pdata, normal);
+  }
+  
+  // fully coupled case
+  return std::max(BASEVS::getMaxAbsEigenValue(pdata, normal),
+		  std::abs(this->getNormalSpeed(pdata, normal)));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void MultiScalarVarSet<BASEVS>::computeEigenValues(const RealVector& pdata,
+						   const RealVector& normal,
+						   RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  // case with weak coupling (current equation subset considered)
+  const vector<EquationSetData>& eqsData = MultiScalarVarSet<BASEVS>::getEqSetData();
+  const CFuint nbSS = eqsData.size();
+  
+  EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->
+    getEquationSubSysDescriptor(); 
+  const CFuint iEqSS = eqSS.getEqSS();
+  const CFuint totNbEqSS = eqSS.getTotalNbEqSS();
+  
+  // if all equation sets or a set != the current one are considered, call the parent
+  if (totNbEqSS == 1 || !this->isCurrEqSS(iEqSS,nbSS,eqsData)) {
+    BASEVS::computeEigenValues(pdata,normal,result);
+  }
+  const CFreal un = this->getNormalSpeed(pdata, normal);
+  
+  for (CFuint i = 0; i < nbSS; ++i) {
+    if (totNbEqSS == 1 || iEqSS == eqsData[i].getEqSetID()) {
+      const CFuint nbVars = this->getModel()->getNbScalarVars(i);
+      const vector<CFuint>& varIDs = eqsData[i].getEqSetVarIDs();
+      for (CFuint ie = 0; ie < nbVars; ++ie){
+	result[varIDs[ie]] = un;
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void MultiScalarVarSet<BASEVS>::computeFlux(const RealVector& pdata,
+					    const RealVector& normal)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  // case with weak coupling (current equation subset considered)
+  const vector<EquationSetData>& eqsData = MultiScalarVarSet<BASEVS>::getEqSetData();
+  const CFuint nbSS = eqsData.size();
+  
+  EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->
+    getEquationSubSysDescriptor(); 
+  const CFuint iEqSS = eqSS.getEqSS();
+  const CFuint totNbEqSS = eqSS.getTotalNbEqSS();
+
+  // if all equation sets or a set != the current one are considered, call the parent
+  if (totNbEqSS == 1 || !this->isCurrEqSS(iEqSS,nbSS,eqsData)) {
+    BASEVS::computeFlux(pdata,normal);
+  }
+  
+  const CFreal un = this->getNormalSpeed(pdata, normal);
+  const CFreal rhoVn = pdata[BASEVS::PTERM::RHO]*un;
+  
+  for (CFuint i = 0; i < nbSS; ++i) {
+    const CFuint currID = eqsData[i].getEqSetID();
+    if (totNbEqSS == 1 || iEqSS == currID) {
+      const CFuint nbVars = this->getModel()->getNbScalarVars(i);
+      const CFuint firstVar = this->getModel()->getFirstScalarVar(i);
+      const vector<CFuint>& varIDs = eqsData[i].getEqSetVarIDs();
+      for (CFuint ie = 0; ie < nbVars; ++ie) {
+	this->_fluxArray[varIDs[ie]] = pdata[firstVar + ie]*rhoVn;
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void MultiScalarVarSet<BASEVS>::computeStateFlux(const RealVector& pdata)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  throw Common::NotImplementedException (FromHere(),"MultiScalarVarSet<BASEVS>::computeStateFlux()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace NavierStokes
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

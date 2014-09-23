@@ -1,0 +1,15 @@
+LIST ( APPEND FiniteVolumeCombustion_files
+AUSMFluxCombustion.cxx
+FiniteVolumeCombustion.hh
+NavierStokesNEQKOmegaSourceTerm.cxx
+NoSlipWallIsothermalNSKOmegaRhoivt.ci
+NoSlipWallIsothermalNSKOmegaRhoivt.cxx
+NoSlipWallIsothermalNSKOmegaRhoivt.hh
+)
+
+LIST ( APPEND FiniteVolumeCombustion_cflibs NavierStokes KOmega NEQ FiniteVolume FiniteVolumeNavierStokes FiniteVolumeKOmega FiniteVolumeNEQ )
+LIST ( APPEND FiniteVolumeCombustion_requires_mods NavierStokes KOmega NEQ FiniteVolume FiniteVolumeNavierStokes FiniteVolumeTurb FiniteVolumeNEQ )
+
+CF_ADD_PLUGIN_LIBRARY ( FiniteVolumeCombustion )
+
+CF_WARN_ORPHAN_FILES()

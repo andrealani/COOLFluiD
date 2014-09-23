@@ -1,0 +1,64 @@
+#include "Framework/MethodCommandProvider.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/ProxyDofIterator.hh"
+
+#include "UFEM/UFEM.hh"
+#include "UFEM/StdUnSetup.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::MathTools;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+    namespace UFEM {
+
+//////////////////////////////////////////////////////////////////////////////
+
+MethodCommandProvider<StdUnSetup, UFEMSolverData, UFEMPlugin> stdUnSetupProvider("StdUnSetup");
+
+//////////////////////////////////////////////////////////////////////////////
+
+StdUnSetup::StdUnSetup(const std::string& name) : UFEMSolverCom(name),
+  socket_nstatesProxy("nstatesProxy")
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+StdUnSetup::~StdUnSetup()
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+std::vector<Common::SafePtr<BaseDataSocketSink> >
+StdUnSetup::needsSockets()
+{
+  CFAUTOTRACE;
+  std::vector<Common::SafePtr<BaseDataSocketSink> > result;
+
+  result.push_back(&socket_nstatesProxy);
+
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void StdUnSetup::execute()
+{
+  CFAUTOTRACE;
+
+  deleteAllPtr(socket_nstatesProxy);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace UFEM
+
+} // namespace COOLFluiD

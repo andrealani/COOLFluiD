@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<XCFcase>
+	<Simulator>
+		<Modules Libs="libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libForwardEuler libTHOR2CFmesh"/>
+		<Paths ResultsDir="./" WorkingDir="testcases/NavierStokes/Jets2D/"/>
+		<SubSystem ConvergenceFile="convergence.plt" ConvergenceMethod="FwdEuler" MeshCreator="CFmeshFileReader" OutputFormat="Tecplot CFmesh" SpaceMethod="FluctuationSplit" StopCondition="MaxNumberSteps">
+			<CFmesh AppendIter="false" AppendTime="false" FileName="jets2DCRD.CFmesh" SaveRate="1000"/>
+			<CFmeshFileReader convertFrom="THOR2CFmesh">
+				<Data FileName="jets2D.CFmesh" builderName="RDS" polyTypeName="Lagrange"/>
+			</CFmeshFileReader>
+			<Default PhysicalModelType="Euler2D" listTRS="InnerCells SuperInlet SuperOutlet"/>
+			<FluctuationSplit BcComds="SuperInlet SuperOutlet" BcNames="Jet1        Jet2" InitComds="InitState InitState" InitNames="InField MachStep">
+				<Data DistribVar="Symm" FluctSplitStrategy="CRD" IntegratorOrder="P3" IntegratorQuadrature="GaussLegendre" LinearVar="Cons" ScalarSplitter="ScalarNC" SolutionVar="Cons" SysSplitter="SysNC" UpdateVar="Cons"/>
+				<InField Def="0.5           1.67332                                         0.0                                         3.425" Vars="x y" applyTRS="InnerCells SuperOutlet"/>
+				<Jet1 Def="if(y&gt;0.5,0.5,1.)                                         if(y&gt;0.5,1.67332,2.83972)                                         0.0                                         if(y&gt;0.5,3.425,6.532)" Vars="x y" applyTRS="SuperInlet"/>
+				<Jet2 applyTRS="SuperOutlet"/>
+				<MachStep Def="if(y&gt;0.5,0.5,1.)                                          if(y&gt;0.5,1.67332,2.83972)                                          0.0                                          if(y&gt;0.5,3.425,6.532)" Vars="x y" applyTRS="SuperInlet"/>
+			</FluctuationSplit>
+			<FwdEuler ShowRate="20">
+				<Data>
+					<CFL Value="1.0"/>
+				</Data>
+			</FwdEuler>
+			<MaxNumberSteps nbSteps="60"/>
+			<Tecplot AppendIter="false" AppendTime="false" FileName="jets2DCRD.plt" SaveRate="1000">
+				<Data updateVar="Cons"/>
+			</Tecplot>
+		</SubSystem>
+	</Simulator>
+</XCFcase>
+

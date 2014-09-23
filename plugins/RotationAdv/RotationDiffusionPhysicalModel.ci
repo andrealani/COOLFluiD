@@ -1,0 +1,84 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace RotationAdv {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+RotationDiffusionPhysicalModel<DIM>::RotationDiffusionPhysicalModel(const std::string& name)
+  : Framework::ConvectionDiffusionPM<RotationAdvTerm, RDTerm>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+RotationDiffusionPhysicalModel<DIM>::~RotationDiffusionPhysicalModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint RotationDiffusionPhysicalModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint RotationDiffusionPhysicalModel<DIM>::getNbEquations() const
+{
+  return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string RotationDiffusionPhysicalModel<DIM>::getConvectiveName() const
+{
+  if (DIM == 2) return "RotationAdv2D";
+  cf_assert (DIM == 3);
+  return "RotationAdv3D";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string RotationDiffusionPhysicalModel<DIM>::getDiffusiveName() const
+{
+  return getTypeName();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void RotationDiffusionPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionDiffusionPM<RotationAdvTerm, RDTerm>::configure(args);
+
+  _jacobians = std::vector<RealMatrix>(DIM);
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace LinearAdv
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

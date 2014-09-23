@@ -1,0 +1,62 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Framework_IndexedObject_ci
+#define COOLFluiD_Framework_IndexedObject_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
+IndexedObject<TYPE>::IndexedObject() :
+  _localID(NO_INDEX), _globalID(NO_INDEX)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
+IndexedObject<TYPE>::IndexedObject(const IndexedObject<TYPE>& idxObj) :
+_localID(idxObj._localID),
+_globalID(idxObj._globalID)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
+IndexedObject<TYPE>::~IndexedObject()
+{
+  if (isIndexed()) {
+    IndexList<TYPE>::getList().removeID();
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
+IndexedObject<TYPE>& IndexedObject<TYPE>::operator=(const IndexedObject<TYPE>& obj)
+{
+  // should not copy the _indexed as this is only set by IndexedList
+  _localID = obj._localID;
+  _globalID = obj._globalID;
+  return *this;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Framework_IndexedObject_ci

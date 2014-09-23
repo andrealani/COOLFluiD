@@ -1,0 +1,49 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#include "Common/StringOps.hh"
+#include "Config/PositiveLessThanOne.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Config {
+
+//////////////////////////////////////////////////////////////////////////////
+
+PositiveLessThanOne::PositiveLessThanOne(Option * opt) : OptionValidation(opt)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+PositiveLessThanOne::~PositiveLessThanOne()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+bool PositiveLessThanOne::isValid ()
+{
+  CFreal value = Common::StringOps::from_str<CFreal>(m_opt->getValueAsString());
+  return ( value > 0. && value <= 1.0);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+std::string PositiveLessThanOne::getReason ()
+{
+  return "value is not bigger than zero and smaller than one";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Config
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

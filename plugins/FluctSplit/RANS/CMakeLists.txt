@@ -1,0 +1,34 @@
+LIST ( APPEND OPTIONAL_dirfiles 
+)
+
+LIST ( APPEND FluctSplitRANS_files
+FluctSplitKOmega.hh
+
+NavierStokes2DKOmegaSourceTerm.ci
+NavierStokes2DKOmegaSourceTerm.cxx
+NavierStokes2DKOmegaSourceTerm.hh
+NavierStokes3DKOmegaSourceTerm.ci
+NavierStokes3DKOmegaSourceTerm.cxx
+NavierStokes3DKOmegaSourceTerm.hh
+
+StrongNoSlipWallAdiabaticNSKOmega2D.cxx
+StrongNoSlipWallAdiabaticNSKOmega2D.hh
+StrongNoSlipWallAdiabaticNSKOmega2DImpl.cxx
+StrongNoSlipWallAdiabaticNSKOmega2DImpl.hh
+StrongNoSlipWallAdiabaticNSKOmega3D.cxx
+StrongNoSlipWallAdiabaticNSKOmega3D.hh
+StrongNoSlipWallAdiabaticNSKOmega3DImpl.cxx
+StrongNoSlipWallAdiabaticNSKOmega3DImpl.hh
+
+StrongSubInletEulerKOmega2DCons.cxx
+StrongSubInletEulerKOmega2DCons.hh
+)
+
+
+
+LIST ( APPEND FluctSplitRANS_cflibs FluctSplit NavierStokes KOmega )
+LIST ( APPEND FluctSplitRANS_requires_mods FluctSplit NavierStokes KOmega )
+
+CF_ADD_PLUGIN_LIBRARY ( FluctSplitRANS )
+
+CF_WARN_ORPHAN_FILES()

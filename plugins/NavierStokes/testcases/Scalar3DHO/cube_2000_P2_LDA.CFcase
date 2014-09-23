@@ -1,0 +1,118 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -3.51052
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libForwardEuler libTHOR2CFmesh libFluctSplit libFluctSplitHO libFluctSplitScalar libLinearAdv libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Scalar3DHO/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType       = LinearAdv3D
+Simulator.SubSystem.LinearAdv3D.VX = 0.0
+Simulator.SubSystem.LinearAdv3D.VY = 0.0
+Simulator.SubSystem.LinearAdv3D.VZ = 1.0
+
+
+#Simulator.SubSystem.ConvRate            = 10
+#Simulator.SubSystem.ShowRate            = 10
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat     = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName  = cube_2000_P2_LDA.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.Tecplot.FileName = cube_2000_P2_LDA.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHO
+Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 10
+Simulator.SubSystem.ShowRate            = 10
+#Simulator.SubSystem.onlyMesh            = true
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 100
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -6.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet
+#Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cube_2000_P2.CFmesh
+#Simulator.SubSystem.CFmeshFileReader.Data.FileName = cube_17.CFmesh
+
+
+#Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
+#Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.9
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = HOCRD3D
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = ScalarLDAC
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Prim
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Prim
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Prim
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Prim
+
+#########################################
+# Initialization
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField WaveIn
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells Outlet
+#Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells Outlet
+
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y z
+
+Simulator.SubSystem.FluctuationSplit.InField.Def = 0
+#Simulator.SubSystem.FluctuationSplit.InField.Def = if(sqrt((x-0.0)^2+(y-0.0)^2)<0.25,cos(2*sqrt((x-0.0)^2+(y-0.0)^2)*3.1415)^2,0.0)
+
+Simulator.SubSystem.FluctuationSplit.InField.InputVar = Prim
+
+Simulator.SubSystem.FluctuationSplit.WaveIn.applyTRS = Inlet
+#Simulator.SubSystem.FluctuationSplit.WaveIn.applyTRS = Inlet
+
+Simulator.SubSystem.FluctuationSplit.WaveIn.Vars = x y z
+
+#Simulator.SubSystem.FluctuationSplit.WaveIn.Def = 10*sin(x)*cos(y)*cos(z)
+Simulator.SubSystem.FluctuationSplit.WaveIn.Def = if(sqrt((x-0.0)^2+(y-0.0)^2)<0.25,cos(2*sqrt((x-0.0)^2+(y-0.0)^2)*3.1415)^2,0.0)
+
+Simulator.SubSystem.FluctuationSplit.WaveIn.InputVar = Prim
+
+##########################################
+# Boundary Conditions
+
+Simulator.SubSystem.FluctuationSplit.BcComds = SuperInlet SuperOutlet
+Simulator.SubSystem.FluctuationSplit.BcNames = In         Out
+
+Simulator.SubSystem.FluctuationSplit.In.applyTRS = Inlet
+#Simulator.SubSystem.FluctuationSplit.In.applyTRS = Inlet
+
+Simulator.SubSystem.FluctuationSplit.In.Vars = x y z
+#Simulator.SubSystem.FluctuationSplit.In.Def =  10*sin(2*y*3.14159265359)
+Simulator.SubSystem.FluctuationSplit.In.Def = if(sqrt((x-0.0)^2+(y-0.0)^2)<0.25,cos(2*sqrt((x-0.0)^2+(y-0.0)^2)*3.1415)^2,0.0)
+
+Simulator.SubSystem.FluctuationSplit.Out.applyTRS = Outlet
+#Simulator.SubSystem.FluctuationSplit.Out.applyTRS = Outlet
+
+

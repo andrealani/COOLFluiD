@@ -1,0 +1,84 @@
+# COOLFluiD solver Startfile
+# Comments begin with "#"
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libForwardEuler libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libLinearAdv libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/LinearAdv/testcases/Channel3D
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType       = LinearAdv3D
+Simulator.SubSystem.LinearAdv3D.VX = 1.0
+Simulator.SubSystem.LinearAdv3D.VY = 0.0
+Simulator.SubSystem.LinearAdv3D.VZ = 0.0
+
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat           = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName        = channel.CFmesh
+Simulator.SubSystem.Tecplot.FileName       = channel.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+#Simulator.SubSystem.onlyMesh            = true
+
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 300
+
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -6.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = channel3dcoarse.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 1.0
+Simulator.SubSystem.FwdEuler.Data.CFL = 1.0
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = ScalarN
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Prim
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Prim
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Prim
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Prim
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField WaveIn
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells SuperOutlet
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.InField.Def = 10*sin(x)*cos(y)
+Simulator.SubSystem.FluctuationSplit.InField.InputVar = Prim
+
+Simulator.SubSystem.FluctuationSplit.WaveIn.applyTRS = SuperInlet
+Simulator.SubSystem.FluctuationSplit.WaveIn.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.WaveIn.Def = 10*sin(x)*cos(y)
+Simulator.SubSystem.FluctuationSplit.WaveIn.InputVar = Prim
+
+Simulator.SubSystem.FluctuationSplit.BcComds = SuperInlet SuperOutlet
+Simulator.SubSystem.FluctuationSplit.BcNames = In         Out
+
+Simulator.SubSystem.FluctuationSplit.In.applyTRS = SuperInlet
+Simulator.SubSystem.FluctuationSplit.In.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.In.Def =  10*sin(2*z*3.14159265359)
+
+Simulator.SubSystem.FluctuationSplit.Out.applyTRS = SuperOutlet
+
+
+

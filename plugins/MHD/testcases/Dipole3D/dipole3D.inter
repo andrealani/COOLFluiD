@@ -1,0 +1,6 @@
+Simulator.SubSystem.BwdEuler.Data.CFL.Interactive.CFL = 0.3
+Simulator.SubSystem.FwdEuler.Data.CFL.Interactive.CFL = 0.5
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.limitRes = -4.0
+Simulator.SubSystem.CellCenterFVM.Data.Centred.MHD3DProjectionConsLaxFriedTanaka.DiffCoeff = 1.0
+Simulator.SubSystem.CellCenterFVM.Data.Centred.MHD3DConsLaxFriedTanaka.DiffCoeff = 1.0
+

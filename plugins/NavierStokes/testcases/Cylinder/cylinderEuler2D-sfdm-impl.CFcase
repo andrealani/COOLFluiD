@@ -1,0 +1,128 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -0.433858
+
+
+#CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libGmsh2CFmesh libNavierStokes libSpectralFD libSpectralFDNavierStokes libBackwardEuler libPetscI libAeroCoefSpectralFD
+
+####################################
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Cylinder/
+Simulator.Paths.ResultsDir = ./
+
+####################################
+Simulator.SubSystem.Default.PhysicalModelType = Euler2D
+Simulator.SubSystem.Euler2D.refValues = 1.0 0.449622064 0.449622064 2.60108
+Simulator.SubSystem.Euler2D.refLength = 1.0
+#Simulator.SubSystem.Euler2D.ConvTerm.pRef = 1.
+#Simulator.SubSystem.Euler2D.ConvTerm.tempRef = 0.003483762
+#Simulator.SubSystem.Euler2D.ConvTerm.machInf = 0.38
+
+####################################
+Simulator.SubSystem.OutputFormat        = CFmesh
+
+Simulator.SubSystem.CFmesh.FileName     = cylinderEuler-sfdmP2P2-sol.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+
+Simulator.SubSystem.ParaView.FileName    = cylinderEuler-sfdmP2P2-sol.vtu
+Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.SaveRate = 10
+Simulator.SubSystem.ParaView.AppendTime = false
+Simulator.SubSystem.ParaView.AppendIter = false
+
+Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 5
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
+
+####################################
+Simulator.SubSystem.ConvergenceMethod = BwdEuler
+Simulator.SubSystem.BwdEuler.Data.CFL.Value = 0.5
+Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(10000,0.5*2.0^max(i-10,0))
+Simulator.SubSystem.BwdEuler.ConvergenceFile = convergenceImpl.plt
+Simulator.SubSystem.BwdEuler.ShowRate        = 1
+Simulator.SubSystem.BwdEuler.ConvRate        = 1
+
+####################################
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = BwdEulerLSS
+Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 2000
+Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
+Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
+#Simulator.SubSystem.BwdEulerLSS.Data.Output = true
+
+####################################
+Simulator.SubSystem.SpaceMethod = SpectralFDMethod
+
+Simulator.SubSystem.Default.listTRS = InnerCells Cylinder FarField
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cylinderNSQuadCurved.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = SpectralFDMethod
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+
+####################################
+# choose which builder we use
+Simulator.SubSystem.SpectralFDMethod.Builder = MeshUpgrade
+Simulator.SubSystem.SpectralFDMethod.Builder.PolynomialOrder = P2
+Simulator.SubSystem.SpectralFDMethod.SpaceRHSJacobCom = RHSJacob
+Simulator.SubSystem.SpectralFDMethod.TimeRHSJacobCom  = StdTimeRHSJacob
+Simulator.SubSystem.SpectralFDMethod.ExtrapolateCom = Null
+Simulator.SubSystem.SpectralFDMethod.JacobianSparsity = CellCentered
+
+Simulator.SubSystem.SpectralFDMethod.Data.UpdateVar   = Cons
+Simulator.SubSystem.SpectralFDMethod.Data.SolutionVar = Cons
+Simulator.SubSystem.SpectralFDMethod.Data.LinearVar   = Roe
+Simulator.SubSystem.SpectralFDMethod.Data.RiemannFlux = LaxFriedrichsFlux
+
+####################################
+Simulator.SubSystem.SpectralFDMethod.InitComds = StdInitState
+Simulator.SubSystem.SpectralFDMethod.InitNames = InField
+
+Simulator.SubSystem.SpectralFDMethod.InField.applyTRS = InnerCells
+Simulator.SubSystem.SpectralFDMethod.InField.Vars = x y
+Simulator.SubSystem.SpectralFDMethod.InField.Def = 1.0 0.449622064 0.0 2.60108
+
+Simulator.SubSystem.SpectralFDMethod.BcNames = Wall FarField
+Simulator.SubSystem.SpectralFDMethod.Wall.applyTRS = Cylinder
+Simulator.SubSystem.SpectralFDMethod.FarField.applyTRS = FarField
+
+Simulator.SubSystem.SpectralFDMethod.Data.BcTypes = MirrorEuler2D  Dirichlet
+Simulator.SubSystem.SpectralFDMethod.Data.BcNames = Wall           FarField
+
+Simulator.SubSystem.SpectralFDMethod.Data.FarField.Vars = x y
+Simulator.SubSystem.SpectralFDMethod.Data.FarField.Def  = 1.0 0.449622064 0.0 2.60108
+
+####################################
+#
+# DataProcessing to get the aerodynamic coeficients
+#
+Simulator.SubSystem.DataPostProcessing = DataProcessing
+Simulator.SubSystem.DataProcessing.Data.updateVar = Cons
+Simulator.SubSystem.DataProcessing.Comds = EulerConsComputeAeroSpectralFD
+Simulator.SubSystem.DataProcessing.Names = AeroCoef
+Simulator.SubSystem.DataProcessing.ProcessRate = 1
+
+Simulator.SubSystem.DataProcessing.AeroCoef.applyTRS = Cylinder
+Simulator.SubSystem.DataProcessing.AeroCoef.Alpha = 0.0
+Simulator.SubSystem.DataProcessing.AeroCoef.SaveRateAero = 1
+Simulator.SubSystem.DataProcessing.AeroCoef.OutputFileAero = AeroCoefCylEuler.plt
+
+Simulator.SubSystem.DataProcessing.AeroCoef.OutputFileWall = WallCylEuler.plt
+Simulator.SubSystem.DataProcessing.AeroCoef.SaveRateWall = 1
+
+Simulator.SubSystem.DataProcessing.AeroCoef.uInf = 0.449622064
+Simulator.SubSystem.DataProcessing.AeroCoef.rhoInf = 1.0
+Simulator.SubSystem.DataProcessing.AeroCoef.pInf = 1.0
+

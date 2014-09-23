@@ -1,0 +1,121 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+
+#
+
+CFEnv.DoAssertions     = true
+CFEnv.AssertionDumps   = false
+CFEnv.AssertionThrows  = false
+CFEnv.ExceptionOutputs = true
+CFEnv.ExceptionDumps   = true
+CFEnv.ExceptionAborts  = false
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes  libLinearAdvSys libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFluctSplitNavierStokes libForwardEuler libGambit2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir       = plugins/LinearAdvSys/testcases/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType     = LinearAdvSys2D
+
+Simulator.SubSystem.LinearAdvSys2D.ConvTerm.c0x = 1.
+Simulator.SubSystem.LinearAdvSys2D.ConvTerm.c1x = 1.
+Simulator.SubSystem.LinearAdvSys2D.ConvTerm.c2x = 1.
+Simulator.SubSystem.LinearAdvSys2D.ConvTerm.c3x = 1.
+Simulator.SubSystem.LinearAdvSys2D.ConvTerm.c0y = 0.
+Simulator.SubSystem.LinearAdvSys2D.ConvTerm.c1y = 0.
+Simulator.SubSystem.LinearAdvSys2D.ConvTerm.c2y = 0.
+Simulator.SubSystem.LinearAdvSys2D.ConvTerm.c3y = 0.
+
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.05
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = MaxDT
+#Simulator.SubSystem.SubSystemStatus.MaxDT.DT_Ratio = 0.1
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot
+Simulator.SubSystem.CFmesh.FileName     = accpulse_STRDS.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = GaussPulse_LDA_noFlov.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 50
+Simulator.SubSystem.CFmesh.SaveRate = 1000
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+Simulator.SubSystem.CFmesh.AppendIter = true
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = mesh100.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 50
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1000
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells East North West South
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.9
+Simulator.SubSystem.FwdEuler.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.FwdEuler.RelativeNormAndMaxIter.RelativeNorm = -5.0
+Simulator.SubSystem.FwdEuler.RelativeNormAndMaxIter.MaxIter = 30
+Simulator.SubSystem.FwdEuler.Data.PrintHistory = true
+Simulator.SubSystem.FwdEuler.Data.NormRes = L2
+Simulator.SubSystem.FwdEuler.Data.L2.MonitoredVarID = 0
+Simulator.SubSystem.FwdEuler.Data.L2.ComputedVarID = 0 1 2 3
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = STM_RDS
+
+#Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = STM_SysN
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = STM_SysLDA
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar = Prim
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar   = Prim
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar  = Prim
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar   = Prim
+#Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Roe
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState 
+Simulator.SubSystem.FluctuationSplit.InitNames = InField 
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 0.001/1.4*exp(-log(2)/9*(x*x+y*y)) \
+                                                   0.0 \
+                                                   0.0 \
+                                                   0.001*exp(-log(2)/9*(x*x+y*y))
+
+#Simulator.SubSystem.FluctuationSplit.InField.Def =  0 \
+#						    0 \
+#						    0 \
+#						    0
+
+Simulator.SubSystem.FluctuationSplit.BcComds = SuperInlet
+Simulator.SubSystem.FluctuationSplit.BcNames = Boundary
+
+Simulator.SubSystem.FluctuationSplit.Boundary.applyTRS = East North West South
+Simulator.SubSystem.FluctuationSplit.Boundary.Vars = x y t
+#Simulator.SubSystem.FluctuationSplit.Boundary.Def = 1/(1.67*1.67)*exp(-log(2)/9*(x*x+y*y)) \
+#                                                    0.0 \
+#                                                    0.0 \
+#                                                    exp(-log(2)/9*(x*x+y*y))
+Simulator.SubSystem.FluctuationSplit.Jet1.Def =  0 \
+						  0 \
+						  0 \
+						  0

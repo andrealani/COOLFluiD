@@ -1,0 +1,145 @@
+#include "MathTools/MathConsts.hh"
+#include "MathTools/MathFunctions.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace SA {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+NavierStokesSAVarSet<BASE, SGROUP>::NavierStokesSAVarSet
+(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  NavierStokes::NavierStokesTurbVarSet<BASE, SGROUP>(name, model),
+  _eulerModel(model->getConvectiveTerm().d_castTo<EulerSATerm>()),
+  _isPerturb(false),
+  _iPerturbVar(),
+  _unperturbedFluxK(0.)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+NavierStokesSAVarSet<BASE, SGROUP>::~NavierStokesSAVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+CFreal NavierStokesSAVarSet<BASE, SGROUP>::getDynViscosity(const RealVector& state, 
+							   const std::vector<RealVector*>& gradients)
+{
+  // AL: be sure to call getDynViscosity() in NEQ cases
+  const CFreal mu  = this->getLaminarDynViscosityFromGradientVars(state);
+  const CFreal mut = this->getTurbDynViscosityFromGradientVars(state,gradients);
+  return (mu + mut);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+template <typename BASE, int SGROUP>
+void NavierStokesSAVarSet<BASE, SGROUP>::setup()
+{
+  // call  the parent setup()
+  NavierStokes::NavierStokesTurbVarSet<BASE, SGROUP>::setup();
+  
+  // AL: is this correct?
+  this->getModel().setPrandtlTurb( 0.9 ); 
+  
+  // this is a reasonable estimation for _kID but each derived class can override
+  // and correct this value if needed 
+  const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq(); 
+  this->_kID = nbEqs - _eulerModel->getNbScalarVars(SGROUP);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+RealVector& NavierStokesSAVarSet<BASE, SGROUP>::getFlux(const RealVector& values,
+							const std::vector<RealVector*>& gradients,
+							const RealVector& normal,
+							const CFreal& radius)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  // compute the flux in the base class
+  RealVector& flux = BASE::getFlux(values, gradients, normal, radius);
+  
+  const CFuint kID = this->_kID;
+  assert(kID < gradients.size());
+  const RealVector& gradK = *gradients[kID];
+  
+  RealVector& nsData = this->getModel().getPhysicalData();
+  
+  // SA diffusive term:
+  const CFreal overSigma = 1.5;
+  //unused//    const CFreal Cb2 = 0.622;
+  const CFreal rho = this->getDensity(values);
+  const CFreal mutilda = this->_gradState[kID]*rho;
+  const CFreal mu = nsData[NSTurbTerm::MU];
+  
+  flux[kID] = this->getModel().getCoeffTau() * overSigma * (mu + mutilda)*
+    MathFunctions::innerProd(gradK, normal);
+  
+  // jacobian contribution
+  if(_isPerturb) {
+    if(_iPerturbVar != kID) {
+      flux[kID] = _unperturbedFluxK;
+    }
+  }
+  else {
+    _unperturbedFluxK = flux[kID];
+  }
+  
+  return flux;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+RealMatrix& NavierStokesSAVarSet<BASE, SGROUP>::getFlux(const RealVector& values,
+							const std::vector<RealVector*>& gradients,
+							const CFreal& radius)
+{
+  CFLog(INFO, "RealMatrix IN NavierStokesSAVarSet<BASE, SGROUP>::getFlux \n");
+  throw Common::NotImplementedException (FromHere(),"RealMatrix& NavierStokesSAVarSet<BASE, SGROUP>::getFlux() not implemented...");
+  return this->_fluxVec;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+CFreal NavierStokesSAVarSet<BASE, SGROUP>::getHeatFlux(const RealVector& state,
+						       const std::vector<RealVector*>& gradients,
+						       const RealVector& normal)
+{
+  // AL: carefull here!! needs to be overridden for NEQ 
+  const RealVector& gradT = *gradients[this->_TID];
+  // adimensional dynamical viscosity
+  const CFreal muLam = this->getLaminarDynViscosityFromGradientVars(state);
+  // adimensional turbulent dynamical viscosity
+  const CFreal muTurb = this->getTurbDynViscosityFromGradientVars(state, gradients);
+  // adimensional thermal conductivity
+  const CFreal lambda = this->getThermConductivity(state, muLam + muTurb);
+  return -this->getModel().getCoeffQ()*lambda*MathTools::MathFunctions::innerProd(gradT, normal);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace SA
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

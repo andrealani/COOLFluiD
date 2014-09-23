@@ -1,0 +1,170 @@
+#include "Framework/EquationSetData.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+AUSMPlusFluxPrec<UPDATEVAR>::AUSMPlusFluxPrec(const std::string& name) :
+  AUSMFluxPrec<UPDATEVAR>(name)
+{
+  this->addConfigOptionsTo(this);
+  
+  m_beta = 1./8.;
+  this->setParameter("beta",&m_beta);
+  
+  m_alpha = 3./16.;
+  this->setParameter("alpha",&m_alpha);
+
+  m_nu = 0.0;
+  this->setParameter("nu",&m_nu);
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+AUSMPlusFluxPrec<UPDATEVAR>::~AUSMPlusFluxPrec()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusFluxPrec<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFreal >
+    ("beta"," -1/16 <= beta coefficient <= 1/2.");
+  
+  options.template addConfigOption< CFreal >
+    ("alpha"," -3/4 <= beta coefficient <= 3/16.");
+
+  options.template addConfigOption< CFreal >
+    ("nu","kinematic viscosity");
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusFluxPrec<UPDATEVAR>::computeMassFlux()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  this->m_choiceA12 = 2;                                                         // calcul de maniere centree
+  this->computeInterfaceSoundSpeed();                                            // m_a12
+  const CFreal a = this->m_a12;
+
+  const CFreal vxL = (*this->m_lData)[UPDATEVAR::PTERM::VX];
+  const CFreal vxR = (*this->m_rData)[UPDATEVAR::PTERM::VX];
+  const CFreal vyL = (*this->m_lData)[UPDATEVAR::PTERM::VY];
+  const CFreal vyR = (*this->m_rData)[UPDATEVAR::PTERM::VY];
+  const CFreal u = 0.5*(vxL+vxR);
+  const CFreal v = 0.5*(vyL+vyR);
+  const CFreal m = sqrt(pow(u,2.0)+pow(v,2.0))/a;
+
+  const CFreal aL = (*this->m_lData)[UPDATEVAR::PTERM::A];                       // determination of the scaling parameter needed for M viscous
+  const CFreal aR = (*this->m_rData)[UPDATEVAR::PTERM::A];
+  const CFreal deltaa = aR-aL;
+  const CFreal rhoL = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
+  const CFreal Recell = deltaa*m/m_nu;
+  const CFreal lambdav = Recell/(1+Recell);
+  const CFreal mv = m/lambdav;                                                  // definition of M viscous
+
+  const CFreal minf = 2.5;                                                      // definition of M infinite, the cut-off Mach number
+
+  const CFreal MAX = max(pow(m,2.0),pow(mv,2.0));
+  const CFreal MIN = min(max(MAX,pow(minf,2.0)),1.0);
+  const CFreal mprec = sqrt(MIN);                                               // preconditionning mach number
+
+
+  // calculation of the normal mach number Mn
+  const CFreal uL = this->m_unL;
+  const CFreal uR = this->m_unR;
+  const CFreal mn = 0.5*(uL+uR)/a;
+
+  // calculation of the preconditionning speed of sound (numerical speed of sound in Diebel)
+  const CFreal f = sqrt(pow(1-pow(mprec,2.0),2.0)*pow(mn,2.0)+4.0*pow(mprec,2.0))/(1+pow(mprec,2.0));
+  const CFreal aprec = f*a;
+
+  // calculation of the Mach number for the left and the right states
+  this->m_mL = 0.5*((1+pow(mprec,2.0))*uL/aprec+((1-pow(mprec,2.0))*uR/aprec));
+  this->m_mR = 0.5*((1+pow(mprec,2.0))*uR/aprec+((1-pow(mprec,2.0))*uL/aprec));
+  const CFreal mL = this->m_mL;
+  const CFreal mR = this->m_mR;
+
+  // calculation of the new parameters wPlus and wMin
+  const CFreal pL = (*this->m_lData)[UPDATEVAR::PTERM::P];
+  const CFreal pR = (*this->m_rData)[UPDATEVAR::PTERM::P];
+
+  const CFreal wPlus = 2.0*(pL/rhoL)/(pL/rhoL+pR/rhoR);
+  const CFreal wMin = 2.0-wPlus;
+
+  // calculation of the up and downstream mach numbers at the interface
+  const CFreal M4Plus = (std::abs(mL) >= 1.0) ? this->mach1Plus(mL) :
+    this->mach2Plus(mL)*wPlus + this->mach1Plus(mL)*(1.0-wPlus);
+
+  const CFreal M4Minus = (std::abs(mR) >= 1.0) ? this->mach1Min(mR) :
+    this->mach2Min(mR)*wMin - this->mach1Min(mR)*(1.0-wMin); 
+
+  // calculation of the Mach number at the interface
+  const CFreal m12 = M4Plus + M4Minus;
+
+
+  // calculation of the mass flux at the interfaceAUSMFluxPrec
+  this->m_mflux12 = (m12 > 0.0) ? a*m12*rhoL : a*m12*rhoR;
+
+  // calculation of the pressure diffusion scaling parameters
+  const CFreal mLPlus = (std::abs(mL) >= 1.0) ? this->mach1Plus(mL) :
+    this->mach2Plus(mL);
+  const CFreal mRMin = (std::abs(mR) >= 1.0) ? this->mach1Min(mR) :
+    this->mach2Min(mR);
+  
+  // pressure diffusion scaling parameter
+  const CFreal fM = (mLPlus-this->mach1Plus(mL))-(mRMin-this->mach1Min(mR));          
+
+  // calculation of the mass flux due to pressure diffusion
+  this->m_mfluxp = aprec*((1/pow(mprec,2.0))-1.0)*fM*((pR-pL)/(pL/rhoL+pR/rhoR));
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusFluxPrec<UPDATEVAR>::computePressureFlux()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+
+  // here in AIAA 2003-4116 there is only "m_fa"
+  const CFreal mL = this->m_mL;
+  const CFreal mR = this->m_mR;
+  const CFreal P5Plus = (std::abs(mL) >= 1.0) ? 0.5*(1+ MathFunctions::sign(mL)) : 
+    this->mach2Plus(mL)*(2.0-mL) + m_alpha*mL*pow(mL*mL-1., 2.0);
+
+  const CFreal P5Minus = (std::abs(mR) >= 1.0) ? 0.5*(1- MathFunctions::sign(mR)) : 
+    -this->mach2Min(mR)*(2.0+mR) - m_alpha*mR*pow(mR*mR-1., 2.0);
+
+  const CFreal pL = (*this->m_lData)[UPDATEVAR::PTERM::P];
+  const CFreal pR = (*this->m_rData)[UPDATEVAR::PTERM::P];
+  // calculation of the pressure flux at the interface
+  this->m_p12 = P5Plus*pL + P5Minus*pR;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

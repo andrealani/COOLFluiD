@@ -1,0 +1,145 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = 10.2708
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libNewtonMethod libDiscontGalerkin libTHOR2CFmesh libPetscI
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets3D/
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType       = Euler3D
+
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+
+#Simulator.SubSystem.OutputFormat     = Tecplot CFmesh
+Simulator.SubSystem.OutputFormat     = Tecplot
+#Simulator.SubSystem.CFmesh.FileName  = jets3DFVM.CFmesh
+Simulator.SubSystem.Tecplot.FileName = jets3DFVM.plt
+#Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockDG
+Simulator.SubSystem.Tecplot.SaveRate = 1
+#Simulator.SubSystem.CFmesh.SaveRate = 5
+Simulator.SubSystem.Tecplot.AppendTime = false
+#Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+#Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 5
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerFaces SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+#Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets3Dcoarse.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets3DFVM.CFmesh
+#Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+#Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P1
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+#Simulator.SubSystem.ConvergenceMethod = FwdEuler
+#Simulator.SubSystem.FwdEuler.Data.CFL.Value = 1.0
+
+##############################################################################
+# Linear system solver
+##############################################################################
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1.0e-15
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
+
+Simulator.SubSystem.NewtonIterator.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.NewtonIterator.RelativeNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.RelativeNormAndMaxIter.RelativeNorm = -4
+
+Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
+Simulator.SubSystem.NewtonIterator.InitCom = ResetSystem
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1
+
+##############################################################################
+# Setup Integrators
+##############################################################################
+
+Simulator.SubSystem.DiscontGalerkinSolver.Data.VolumeIntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.DiscontGalerkinSolver.Data.VolumeIntegratorOrder = P4
+
+Simulator.SubSystem.DiscontGalerkinSolver.Data.ContourIntegratorQuadrature = DGGaussLegendre
+Simulator.SubSystem.DiscontGalerkinSolver.Data.ContourIntegratorOrder = P4
+
+
+##############################################################################
+# Space discretization
+##############################################################################
+
+Simulator.SubSystem.SpaceMethod = DiscontGalerkinSolver
+#Simulator.SubSystem.DiscontGalerkinSolver.Builder = DG
+Simulator.SubSystem.DiscontGalerkinSolver.Builder = DG_MeshUpgrade
+Simulator.SubSystem.DiscontGalerkinSolver.Builder.SolutionPolyOrder = P2
+
+Simulator.SubSystem.DiscontGalerkinSolver.SolveCellsCom = StdSolveCells
+Simulator.SubSystem.DiscontGalerkinSolver.SolveFacesCom = StdSolveFaces
+#Simulator.SubSystem.DiscontGalerkinSolver.StabilizationCom = StdStabilization
+Simulator.SubSystem.DiscontGalerkinSolver.StdSolveFaces.applyTRS = InnerFaces
+
+Simulator.SubSystem.DiscontGalerkinSolver.Data.UpdateVar  = Cons
+Simulator.SubSystem.DiscontGalerkinSolver.Data.MaxCFL = 10000
+
+#Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
+#Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
+#Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+#Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+
+# 
+##comment
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+
+##############################################################################
+# Solution initialization
+##############################################################################
+
+
+Simulator.SubSystem.DiscontGalerkinSolver.InitComds = InitState
+Simulator.SubSystem.DiscontGalerkinSolver.InitNames = InField
+
+Simulator.SubSystem.DiscontGalerkinSolver.InField.applyTRS = InnerCells
+Simulator.SubSystem.DiscontGalerkinSolver.InField.Vars = x y z
+Simulator.SubSystem.DiscontGalerkinSolver.InField.Def = if(y>0.5,0.5,1.) \
+          if(y>0.5,1.67332,2.83972) \
+          0.0 \
+          0.0 \
+          if(y>0.5,3.425,6.532)
+
+Simulator.SubSystem.DiscontGalerkinSolver.BcComds = SuperInletBC SuperOutletBC
+Simulator.SubSystem.DiscontGalerkinSolver.BcNames = Jet1 Jet2
+
+Simulator.SubSystem.DiscontGalerkinSolver.Jet1.applyTRS = SuperInlet
+Simulator.SubSystem.DiscontGalerkinSolver.Jet1.Vars = x y z
+Simulator.SubSystem.DiscontGalerkinSolver.Jet1.Def =  if(y>0.5,0.5,1.) \
+          if(y>0.5,1.67332,2.83972) \
+          0.0 \
+          0.0 \
+          if(y>0.5,3.425,6.532)
+
+Simulator.SubSystem.DiscontGalerkinSolver.Jet2.applyTRS = SuperOutlet
+Simulator.SubSystem.DiscontGalerkinSolver.Top.applyTRS = SlipWall
+CFEnv.RegistSignalHandlers = false

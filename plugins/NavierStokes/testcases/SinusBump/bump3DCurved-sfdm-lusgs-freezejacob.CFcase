@@ -1,0 +1,106 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -3.90369
+
+
+#CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libGmsh2CFmesh libParaViewWriter libNavierStokes libSpectralFD libSpectralFDNavierStokes libLUSGSMethod
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/SinusBump
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = Euler3D
+Simulator.SubSystem.DefaultEuler3D.refValues = 1.0 0.591607978 0.591607978 0.591607978 2.675
+Simulator.SubSystem.Euler3D.refLength = 1.0
+Simulator.SubSystem.Euler3D.ConvTerm.pRef = 1.
+Simulator.SubSystem.Euler3D.ConvTerm.tempRef = 0.003483762
+Simulator.SubSystem.Euler3D.ConvTerm.machInf = 0.5
+
+Simulator.SubSystem.OutputFormat        = ParaView CFmesh
+
+Simulator.SubSystem.CFmesh.FileName     = bump3D-sfdm-solP2P2.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+
+Simulator.SubSystem.ParaView.FileName    = bump3D-sfdm-solP2P2.vtu
+Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.SaveRate = 1
+Simulator.SubSystem.ParaView.AppendTime = false
+Simulator.SubSystem.ParaView.AppendIter = false
+
+Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 25
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
+
+Simulator.SubSystem.ConvergenceMethod = NonlinearLUSGSIterator
+Simulator.SubSystem.NonlinearLUSGSIterator.ConvergenceFile = convergence-lusgs.plt
+#Simulator.SubSystem.NonlinearLUSGSIterator.LUFactorization        = LUFact
+#Simulator.SubSystem.NonlinearLUSGSIterator.ComputeSolUpdate       = ComputeStatesSetUpdate
+Simulator.SubSystem.NonlinearLUSGSIterator.ShowRate        = 1
+Simulator.SubSystem.NonlinearLUSGSIterator.ConvRate        = 1
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.JacobFreezFreq = 10
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.MaxSweepsPerStep = 5
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.Norm = -6.
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.NormRes = L2LUSGS
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.PrintHistory = true
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.CFL.Value = 0.5
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.CFL.Function.Def = min(500,0.5*2.0^max(i-0,0))
+
+Simulator.SubSystem.SpaceMethod = SpectralFDMethod
+
+Simulator.SubSystem.Default.listTRS = InnerCells Bump Top Inlet Outlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = sineBumpHexaCurved3D.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = SpectralFDMethod
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+
+# choose which builder we use
+Simulator.SubSystem.SpectralFDMethod.Builder = MeshUpgrade
+Simulator.SubSystem.SpectralFDMethod.Builder.PolynomialOrder = P2
+Simulator.SubSystem.SpectralFDMethod.SpaceRHSJacobCom = DiagBlockJacob
+Simulator.SubSystem.SpectralFDMethod.TimeRHSJacobCom  = PseudoSteadyTimeDiagBlockJacob
+Simulator.SubSystem.SpectralFDMethod.SpaceRHSForGivenCell = RhsInGivenCell
+Simulator.SubSystem.SpectralFDMethod.TimeRHSForGivenCell  = PseudoSteadyTimeRHSInGivenCell
+Simulator.SubSystem.SpectralFDMethod.SetupCom = LUSGSSetup
+Simulator.SubSystem.SpectralFDMethod.UnSetupCom = LUSGSUnSetup
+Simulator.SubSystem.SpectralFDMethod.PrepareCom = LUSGSPrepare
+Simulator.SubSystem.SpectralFDMethod.ExtrapolateCom = Null
+
+Simulator.SubSystem.SpectralFDMethod.Data.UpdateVar   = Cons
+Simulator.SubSystem.SpectralFDMethod.Data.SolutionVar = Cons
+Simulator.SubSystem.SpectralFDMethod.Data.LinearVar   = Roe
+Simulator.SubSystem.SpectralFDMethod.Data.RiemannFlux = RoeFlux
+
+Simulator.SubSystem.SpectralFDMethod.InitComds = StdInitState
+Simulator.SubSystem.SpectralFDMethod.InitNames = InField
+
+Simulator.SubSystem.SpectralFDMethod.InField.applyTRS = InnerCells
+Simulator.SubSystem.SpectralFDMethod.InField.Vars = x y z
+Simulator.SubSystem.SpectralFDMethod.InField.Def = 1.0 0.591607978 0.0 0.0 2.675
+
+Simulator.SubSystem.SpectralFDMethod.BcNames = Wall Inlet Outlet
+Simulator.SubSystem.SpectralFDMethod.Wall.applyTRS = Bump Top Left Right
+Simulator.SubSystem.SpectralFDMethod.Inlet.applyTRS = Inlet
+Simulator.SubSystem.SpectralFDMethod.Outlet.applyTRS = Outlet
+
+Simulator.SubSystem.SpectralFDMethod.Data.BcTypes = MirrorEuler3D SubInletEulerTtPtAlpha3D SubOutletEuler3D
+Simulator.SubSystem.SpectralFDMethod.Data.BcNames = Wall          Inlet                    Outlet
+
+Simulator.SubSystem.SpectralFDMethod.Data.Inlet.Ttot = 0.00365795
+Simulator.SubSystem.SpectralFDMethod.Data.Inlet.Ptot = 1.186212306
+Simulator.SubSystem.SpectralFDMethod.Data.Inlet.alphaXY = 0.0
+Simulator.SubSystem.SpectralFDMethod.Data.Inlet.alphaXZ = 0.0
+
+Simulator.SubSystem.SpectralFDMethod.Data.Outlet.P = 1.0
+CFEnv.RegistSignalHandlers = false

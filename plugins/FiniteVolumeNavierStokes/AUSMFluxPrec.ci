@@ -1,0 +1,82 @@
+#include "Framework/EquationSetData.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+AUSMFluxPrec<UPDATEVAR>::AUSMFluxPrec(const std::string& name) :
+  AUSMFlux<UPDATEVAR>(name),
+  m_mfluxp(0.)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+AUSMFluxPrec<UPDATEVAR>::~AUSMFluxPrec()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFluxPrec<UPDATEVAR>::computeMassFluxImpl(const CFuint eulerID,
+                 			          const CFuint nbEulerEqs,
+					          const std::vector<CFuint>& eulerVarIDs,
+                                                  RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const RealVector& normal = this->getMethodData().getUnitNormal();
+  
+  // calculation of the dimensional numerical fluxes at the interface
+
+  if (nbEulerEqs == dim+1) 
+  {
+    for (CFuint idim = 0; idim < dim; ++idim)
+    {
+      const CFreal vplus   = (*this->m_lData)[UPDATEVAR::PTERM::VX+idim]+(*this->m_rData)[UPDATEVAR::PTERM::VX+idim];
+      const CFreal vminus  = (*this->m_rData)[UPDATEVAR::PTERM::VX+idim]-(*this->m_lData)[UPDATEVAR::PTERM::VX+idim];
+      result[eulerVarIDs[idim]] = 0.5*(this->m_mflux12+this->m_mfluxp)*vplus - 0.5*abs(this->m_mflux12)*vminus + this->m_p12*normal[idim];
+    }
+     
+    const CFreal Hplus   = (*this->m_lData)[UPDATEVAR::PTERM::H]+(*this->m_rData)[UPDATEVAR::PTERM::H];
+    const CFreal Hminus  = (*this->m_rData)[UPDATEVAR::PTERM::H]-(*this->m_lData)[UPDATEVAR::PTERM::H];
+    result[eulerVarIDs[dim]] = 0.5*(this->m_mflux12 + this->m_mfluxp)*Hplus - 0.5*abs(this->m_mflux12)*Hminus;
+  }
+
+  else
+  {
+    result[0] = this->m_mflux12;
+
+    for (CFuint idim = 0; idim < dim; ++idim)
+    {
+      const CFreal vplus   = (*this->m_lData)[UPDATEVAR::PTERM::VX+idim]+(*this->m_rData)[UPDATEVAR::PTERM::VX+idim];
+      const CFreal vminus  = (*this->m_rData)[UPDATEVAR::PTERM::VX+idim]-(*this->m_lData)[UPDATEVAR::PTERM::VX+idim];
+      result[idim+1] = 0.5*(this->m_mflux12+this->m_mfluxp)*vplus - 0.5*abs(this->m_mflux12)*vminus + this->m_p12*normal[idim];
+    }
+
+    const CFreal Hplus   = (*this->m_lData)[UPDATEVAR::PTERM::H]+(*this->m_rData)[UPDATEVAR::PTERM::H];
+    const CFreal Hminus  = (*this->m_rData)[UPDATEVAR::PTERM::H]-(*this->m_lData)[UPDATEVAR::PTERM::H];
+    result[dim+1] = 0.5*(this->m_mflux12 + this->m_mfluxp)*Hplus - 0.5*abs(this->m_mflux12)*Hminus;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

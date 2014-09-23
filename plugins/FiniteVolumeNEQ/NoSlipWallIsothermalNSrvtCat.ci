@@ -1,0 +1,301 @@
+#include "Framework/MeshData.hh"
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "Framework/CatalycityModel.hh"
+#include "MathTools/MatrixInverter.hh"
+
+#include "NavierStokes/EulerTerm.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSrvtCat<MODEL>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< std::string >("CatalycityModel", "Catalycity model");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+NoSlipWallIsothermalNSrvtCat<MODEL>::NoSlipWallIsothermalNSrvtCat(const std::string& name) :
+  NoSlipWallIsothermalNSrvt<MODEL>(name),
+  m_library(CFNULL),
+  m_model(CFNULL), 
+  m_numJacob(new Framework::NumericalJacobian("NumericalJacobian")),
+  m_inverter(CFNULL),
+  m_tVec(), 
+  m_ysIn(),
+  m_ysG(), 
+  m_ysWall(),
+  m_rhouDiff(), 
+  m_catProduction(),
+  m_ysGradients(),  
+  m_ysSol(), 
+  m_RHS(),
+  m_pertRHS(),
+  m_diffRHS(),
+  m_dFdY(),
+  m_invdFdY(),
+  m_catModel()
+{
+  this->addConfigOptionsTo(this);
+  
+  m_catModelName = "Null";
+  this->setParameter("CatalycityModel",&m_catModelName);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+NoSlipWallIsothermalNSrvtCat<MODEL>::~NoSlipWallIsothermalNSrvtCat()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSrvtCat<MODEL>::configure ( Config::ConfigArgs& args )
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Config;
+  using namespace COOLFluiD::Framework;
+  
+  CellCenterFVMCom::configure(args);
+  
+  m_catModel = Environment::Factory<CatalycityModel>::getInstance().
+    getProvider(m_catModelName)->create(m_catModelName);
+  this->configureNested ( m_catModel.getPtr(), args );
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSrvtCat<MODEL>::setup()
+{
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Framework;
+  
+  NoSlipWallIsothermalNSrvt<MODEL>::setup();
+
+  m_catModel->setup();
+  
+  m_library = PhysicalModelStack::getActive()->
+    getImplementor()->template getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  
+  m_model = PhysicalModelStack::getActive()->
+    getImplementor()->getConvectiveTerm().template d_castTo<MODEL>();
+  
+  const CFuint nbSpecies = m_library->getNbSpecies();
+  RealVector refValues(1.0, nbSpecies);
+  m_numJacob->setRefValues(refValues);
+  
+  m_inverter.reset(MatrixInverter::create(nbSpecies, false));
+  
+  m_tVec.resize(this->m_nbTv);
+  
+  m_ysIn.resize(nbSpecies);
+  cf_assert(m_ysIn.size() > 0); 
+  
+  m_ysG.resize(nbSpecies);
+  cf_assert(m_ysG.size() > 0);
+  
+  m_ysWall.resize(nbSpecies);
+  cf_assert(m_ysWall.size() > 0);
+  
+  m_rhouDiff.resize(nbSpecies);
+  cf_assert(m_rhouDiff.size() > 0);
+  
+  m_catProduction.resize(nbSpecies);
+  cf_assert(m_catProduction.size() > 0);
+  
+  m_ysGradients.resize(nbSpecies);
+  cf_assert(m_ysGradients.size() > 0);
+
+  m_ysSol.resize(nbSpecies);
+  cf_assert(m_ysSol.size() > 0);
+  
+  m_RHS.resize(nbSpecies);
+  m_pertRHS.resize(nbSpecies);
+  m_diffRHS.resize(nbSpecies);
+  m_dFdY.resize(nbSpecies, nbSpecies);
+  m_invdFdY.resize(nbSpecies, nbSpecies);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSrvtCat<MODEL>::setGhostStateImpl
+(const Framework::State& innerState,
+ Framework::State& ghostState)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  // here a fix is needed in order to have always m_ghostT > 0
+  // dynamic relocation of the ghost state: the position of the
+  // ghost state is locally changed, and the BC is imposed
+  // using a weighted average of ghost state (in the new location)
+  // and inner state
+  
+  CFuint iTemp = this->m_tempID;
+  for (CFuint i = 0; i < this->m_innerTTvib.size(); ++i, ++iTemp) {
+    this->m_innerTTvib[i] = innerState[iTemp];
+    this->m_ghostTTvib[i] = ghostState[iTemp];
+  }
+  
+  this->repositionNode(this->m_innerTTvib, this->m_ghostTTvib, this->m_wallTemp, this->m_ghostTempMin);
+  
+  // reset the ghost node with the new position
+  ghostState.getCoordinates() = this->m_tempGhostNode;
+  
+  // set the species mass fractions
+  CFreal rho = 0.;
+  for (CFuint i = 0; i < this->m_nbSpecies; ++i) {
+    m_ysIn[i] = innerState[i];
+    rho += innerState[i];
+  }
+  m_ysIn /= rho;
+  
+  const RealVector& refData = m_model->getReferencePhysicalData();
+  CFreal rhodim = rho*refData[Physics::NavierStokes::EulerTerm::RHO];
+  CFreal Tdim = this->m_wallTemp * m_model->getTempRef();
+  
+  // first set the species fractions
+  m_library->setSpeciesFractions(m_ysIn);
+  
+  // internal pressure is extrapolated constantly on the wall
+  CFreal Tin = innerState[this->m_tempID];
+  
+  const CFuint nbTv = m_library->getNbTempVib();
+  for (CFuint i = 0; i < nbTv; ++i) {
+    m_tVec[i] = Tin;
+  }
+  const CFuint nbTe = m_library->getNbTe(); 
+  if (nbTe == 1) {
+    m_tVec[nbTv] = innerState[innerState.size()-1]; 
+  }
+  
+  CFreal* TeDim = (m_library->getNbTempVib() > 0) ? &m_tVec[0] : CFNULL;
+  CFreal pdim = m_library->pressure(rhodim, Tin, TeDim);
+  
+  // compute the mass fractions in order to satisfy the catalyticity condition
+  // initialize the ghost mass fractions with 1/nbSpecies
+  m_ysG = (1./static_cast<CFreal>(this->m_nbSpecies));
+  
+  // initialization of the solution vector
+  m_ysSol = 1.0;
+  
+  // here we need to solve a non linear system to compute the ghost mass fractions
+  // F(Yg) = SM(Yg, dYg/dn) - CAT(Yg) 
+  const CFreal ratioR = this->m_drXiXw/this->m_drXiXg;
+  if (m_ysSol.norm2() > 1e-10) {
+    for (CFuint i = 0; i < this->m_nbSpecies; ++i) { 
+      m_ysGradients = (m_ysIn - m_ysG)/this->m_drXiXg;
+    }
+    
+    // ys at the wall given by linear interpolation
+    m_ysWall = (m_ysG - m_ysIn)*ratioR + m_ysIn;
+    
+    m_library->setSpeciesFractions(m_ysWall);
+    CFreal coeffNew = m_library->getRgas()/m_library->getMMass();
+    CFreal rhoNew = pdim/(this->m_ghostTTvib[0]*coeffNew); 
+    
+    CFreal* TeDim = (m_library->getNbTempVib() > 0) ? &m_tVec[0] : CFNULL;
+    m_library->getRhoUdiff(Tdim, pdim, m_ysGradients, TeDim, m_rhouDiff);
+    
+    // each Wall BC (and each corresponding TRS) has its own catalycity model
+    m_catModel->computeMassProduction(Tdim, rhoNew, m_ysWall, m_catProduction);
+        
+    m_RHS = m_rhouDiff - m_catProduction;
+    // here numerical finite difference for determining the jacobian m_dF/dY
+    
+    // first the contribution to the rhs is computed
+    for (CFuint iVar = 0; iVar < this->m_nbSpecies; ++iVar) {
+      // perturb the given component of the state vector
+      m_numJacob->perturb(iVar, m_ysG[iVar]);
+      
+      for (CFuint i = 0; i < this->m_nbSpecies; ++i) { 
+	m_ysGradients = (m_ysIn - m_ysG)/this->m_drXiXg;
+      }
+      
+      m_ysWall = (m_ysG - m_ysIn)*ratioR + m_ysIn;
+      m_library->setSpeciesFractions(m_ysWall);
+      
+      coeffNew = m_library->getRgas()/m_library->getMMass();
+      rhoNew = pdim/(this->m_ghostTTvib[0]*coeffNew); 
+      
+      m_library->getRhoUdiff(Tdim, pdim, m_ysGradients, TeDim, m_rhouDiff);
+      m_catModel->computeMassProduction(Tdim, rhoNew, m_ysWall, m_catProduction);
+      m_pertRHS = m_rhouDiff - m_catProduction; 
+      
+      // compute the finite difference derivative of the flux
+      m_numJacob->computeDerivative(m_RHS, m_pertRHS, m_diffRHS);
+      
+      m_dFdY.setColumn(m_diffRHS,iVar);
+      
+      // restore the unperturbed value
+      m_numJacob->restore(m_ysG[iVar]);
+    }
+    
+    // compute solution of the linear system
+    m_inverter->invert(m_dFdY, m_invdFdY);
+    m_ysSol = m_invdFdY*m_RHS;
+    
+    // update the value of ghost mass fractions
+    m_ysG += m_ysSol;
+  }
+  
+  // now the mass fraction in the ghost are set in such a way that the catalytic condition apply
+  // for the given wal temperature
+  m_library->setSpeciesFractions(m_ysG);
+  const CFreal coeff = m_library->getRgas()/m_library->getMMass();
+  
+  // density in ghost states must be such that pressure_ghost = pressure_inner 
+  // equation of state for the ghost state gives the following 
+  const CFreal rhoG = pdim/(this->m_ghostTTvib[0]*coeff); 
+  const CFuint sizeState = innerState.size();
+  cf_assert(this->m_isVelocityComp.size() == sizeState);
+  
+  for (CFuint i = 0; i < sizeState; ++i) {
+    if (this->m_isVelocityComp[i]) {
+      this->linearInterpolate(innerState[i], 0.0, ghostState[i]);
+    }
+    else {
+      if (i < this->m_nbSpecies) {
+	ghostState[i] = rhoG*m_ysG[i];
+      }
+      
+      if (i < this->m_tempID && i >= this->m_nbSpecies) {
+	cf_assert(false);
+	// constant extrapolation by default
+	ghostState[i] = innerState[i];
+      }
+      
+      if (i >= this->m_tempID) {
+	if (i < sizeState - nbTe) {
+	  ghostState[i] = this->m_ghostTTvib[i - this->m_tempID];
+	}
+	else {
+	  // adiabatic condition for the free electrons temperature
+	  ghostState[i] = innerState[i];
+	}
+      }
+    }
+  } 
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

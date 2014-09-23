@@ -1,0 +1,231 @@
+#include "Framework/EquationSetData.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+AUSMPlusUpFluxMultiFluid<UPDATEVAR>::AUSMPlusUpFluxMultiFluid(const std::string& name) :
+  AUSMFluxMultiFluid<UPDATEVAR>(name),
+  m_fa(0.0)
+{
+  this->addConfigOptionsTo(this);
+  
+  m_coeffKu = 0.75;
+  this->setParameter("coeffKu",&m_coeffKu);
+
+  m_coeffKp = 0.25;
+  this->setParameter("coeffKp",&m_coeffKp);
+
+  m_coeffSigma = 1.0;
+  this->setParameter("sigma",&m_coeffSigma);
+  
+  m_machInf = std::vector<CFreal>();
+  this->setParameter("machInf",&m_machInf);
+
+  m_beta = 1./8.;
+  this->setParameter("beta",&m_beta);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+AUSMPlusUpFluxMultiFluid<UPDATEVAR>::~AUSMPlusUpFluxMultiFluid()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFreal >
+    ("coeffKu","Coefficient for Ku.");
+  options.template addConfigOption< CFreal >
+    ("coeffKp","Way of computing the pressure.");
+  options.template addConfigOption< CFreal >
+    ("sigma","Coefficient for sigma.");
+  options.template addConfigOption< std::vector<CFreal> >
+    ("machInf","Free stream Mach number.");
+  options.template addConfigOption< CFreal >
+    ("beta"," -1/16 <= beta coefficient <= 1/2.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::configure ( Config::ConfigArgs& args )
+{
+    AUSMFluxMultiFluid<UPDATEVAR>::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::setup()
+{
+  AUSMFluxMultiFluid<UPDATEVAR>::setup();
+  
+  const CFuint nbSpecies = this->m_updateVarSet->getModel()->getNbScalarVars(0);
+  
+  if (m_machInf.size() == 1) {
+    const CFreal machInf = m_machInf[0];
+    m_machInf.resize(nbSpecies, machInf); 
+  } 
+  
+  if (m_machInf.size() != nbSpecies) {
+    m_machInf.resize(nbSpecies, 0.);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::computeMassFlux()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  const CFuint nbSpecies = this->m_updateVarSet->getModel()->getNbScalarVars(0);
+  
+  
+  for (CFuint ie = 0; ie < nbSpecies; ++ie) { 
+    
+    if (m_machInf[ie] <= 0.) {
+      cout << "AUSMPlusUpFluxMultiFluid requires machInf > 0.!!: change your input file!!" << endl;
+    }
+  }
+  
+  this->computeInterfaceSoundSpeed(); // m_a12[] 
+  
+  const CFuint firstSpecies = this->m_updateVarSet->getModel()->getFirstScalarVar(0);
+  const CFuint firstTemperature = this->m_updateVarSet->getModel()->getFirstScalarVar(2);
+  
+  // calculation of the Mach number for the left and the right states
+  
+  for (CFuint ie = 0; ie < nbSpecies; ++ie) {  
+    this->m_mL[ie] = this->m_unL[ie]/this->m_a12[ie];
+    this->m_mR[ie] = this->m_unR[ie]/this->m_a12[ie];
+    const CFreal mL = this->m_mL[ie];
+    const CFreal mR = this->m_mR[ie];
+    const CFreal mBarSq = 0.5*(mL*mL + mR*mR);
+      
+    const CFreal mInf = correctMachInf(this->m_machInf[ie]);
+    const CFreal mZero = sqrt(min(1.0, max(mBarSq,  mInf*mInf)));
+    cf_assert(mZero <= 1.0);
+
+    m_fa = mZero * (2.0-mZero);
+    cf_assert(m_fa > 0.0);
+   
+    const CFreal M4Plus = (std::abs(mL) >= 1.0) ? this->mach1Plus(mL) :
+      this->mach2Plus(mL)*(1.0 - 16.*m_beta*this->mach2Min(mL));
+
+    const CFreal M4Minus = (std::abs(mR) >= 1.0) ? this->mach1Min(mR) :
+      this->mach2Min(mR)*(1.0 + 16.*m_beta*this->mach2Plus(mR));
+
+//   CFreal M4Plus = 0.0;
+//   if (std::abs(mL) >= 1.0) {
+//     M4Plus = 0.5 * (mL + std::abs(mL));
+//   }
+//   else {
+//     M4Plus = 0.25*pow(mL + 1.0, 2.0) + beta*pow(mL*mL - 1.0, 2.0);
+//   }
+
+//   CFreal M4Minus = 0.0;
+//   if (std::abs(mR) >= 1.0) {
+//     M4Minus = 0.5 * (mR - std::abs(mR));
+//   }
+//   else {
+//     M4Minus = -0.25*pow(mR - 1.0, 2.0) - beta*pow(mR*mR - 1.0, 2.0);
+//   }
+
+    const CFreal rhoL = (*this->m_lData)[UPDATEVAR::PTERM::RHO]*(*this->m_lData)[firstSpecies + ie];
+    const CFreal rhoR = (*this->m_rData)[UPDATEVAR::PTERM::RHO]*(*this->m_rData)[firstSpecies + ie];
+    const CFreal pL = (*this->m_lData)[firstTemperature + 4*ie + 1];
+    const CFreal pR = (*this->m_rData)[firstTemperature + 4*ie + 1];
+    const CFreal rhoa2 = 0.5*(rhoL + rhoR)*this->m_a12[ie]*this->m_a12[ie];
+    const CFreal mP = (-this->m_coeffKp/m_fa) * max(1.0 - this->m_coeffSigma*mBarSq, 0.0)*
+      (pR-pL)/rhoa2;
+
+    // calculation of the Mach number at the interface
+    const CFreal m12 = M4Plus + M4Minus + mP;
+    // calculation of the mass flux at the interface
+    this->m_mflux12[ie] = (m12 > 0.0) ? this->m_a12[ie] * m12 * rhoL : this->m_a12[ie] * m12 * rhoR;   
+    
+//     cout << "AUSMPlusUpFluxMultiFluid InterfaceSoundSpeed = "<< this->m_a12[ie] << endl;
+//   cout << "AUSMPlusUpFluxMultiFluid rhoL = "<< rhoL << endl;
+//   cout << "AUSMPlusUpFluxMultiFluid InterfaceSoundSpeed = "<< a12 << endl;
+//   cout << "AUSMPlusUpFluxMultiFluid UPDATEVAR::PTERM::RHO = "<< UPDATEVAR::PTERM::RHO<< endl;
+//   cout << "AUSMPlusUpFluxMultiFluid RHO = "<< (*this->m_lData)[UPDATEVAR::PTERM::RHO]<< endl;
+//   cout << "AUSMPlusUpFluxMultiFluid RHOi = "<< (*this->m_lData)[firstSpecies + ie] << endl;
+  
+ 
+ 
+  }
+}
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::computePressureFlux()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  // here in AIAA 2003-4116 there is only "m_fa"
+  const CFuint nbSpecies = this->m_updateVarSet->getModel()->getNbScalarVars(0);
+  const CFuint firstSpecies = this->m_updateVarSet->getModel()->getFirstScalarVar(0);
+  const CFuint firstTemperature = this->m_updateVarSet->getModel()->getFirstScalarVar(2);
+  
+  for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+    
+    const CFreal alpha = (3.0/16.0) * (-4.0 + 5.0*m_fa*m_fa);
+    const CFreal mL = this->m_mL[ie];
+    const CFreal mR = this->m_mR[ie];
+    const CFreal P5Plus = (std::abs(mL) >= 1.0) ? this->mach1Plus(mL)/mL :
+      this->mach2Plus(mL)*((2.0-mL)-16.*alpha*mL*this->mach2Min(mL));
+
+    const CFreal P5Minus = (std::abs(mR) >= 1.0) ? this->mach1Min(mR)/mR :
+      this->mach2Min(mR)*((-2.0-mR)+16.*alpha*mR*this->mach2Plus(mR));
+   
+  // CFreal P5Plus = 0.0;
+//   if (std::abs(mL) >= 1.0) {
+//     P5Plus = 0.5 * (mL + std::abs(mL))/mL;
+//   }
+//   else {
+//     P5Plus = 0.25*pow(mL + 1.0, 2.0)*(2.0-mL) + alpha*mL*pow(mL*mL - 1.0, 2.0);
+//   }
+  
+//   // CFreal P5Minus = getP5Min(mR);
+//   CFreal P5Minus = 0.0;
+//   if (std::abs(mR) >= 1.0) {
+//     P5Minus = 0.5 * (mR - std::abs(mR))/mR;
+//   }
+//   else {
+//     P5Minus = 0.25*pow(mR - 1.0, 2.0)*(2.0+mR) - alpha*mR*pow(mR*mR - 1.0, 2.0);
+//   }
+  
+    const CFreal rhoL = (*this->m_lData)[UPDATEVAR::PTERM::RHO]*(*this->m_lData)[firstSpecies + ie];
+    const CFreal rhoR = (*this->m_rData)[UPDATEVAR::PTERM::RHO]*(*this->m_rData)[firstSpecies + ie];
+    const CFreal pL = (*this->m_lData)[firstTemperature + 4*ie + 1];
+    const CFreal pR = (*this->m_rData)[firstTemperature + 4*ie + 1];
+    const CFreal pU = -this->m_coeffKu * P5Plus * P5Minus *
+      (rhoL + rhoR) * m_fa * this->m_a12[ie]*(this->m_unR[ie]-this->m_unL[ie]);
+
+  // calculation of the pressure flux at the interface
+    this->m_p12[ie] = P5Plus*pL + P5Minus*pR + pU;
+  }
+}
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

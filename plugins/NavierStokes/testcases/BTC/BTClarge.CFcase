@@ -1,0 +1,216 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual =
+#
+
+##############################################################################
+# Loading of components
+##############################################################################
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libNewtonMethod libDiscontGalerkin libTHOR2CFmesh libPetscI
+
+##############################################################################
+# Directory paths
+##############################################################################
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir       = plugins/NavierStokes/testcases/BTC/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+##############################################################################
+# Physcial model
+##############################################################################
+
+Simulator.SubSystem.Default.PhysicalModelType       = Euler3D
+
+##############################################################################
+# Mesh writting
+##############################################################################
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = BTC3D.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = BTC3D.plt
+#Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockDG
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+##############################################################################
+# Stop condition
+##############################################################################
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+##############################################################################
+# Mesh reading
+##############################################################################
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+#Simulator.SubSystem.CFmeshFileReader.Data.FileName = BTC3D.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = volume1000_8.CFmeshFE
+#Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = btc0_1_coarse.thor
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+#Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+#Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P1
+
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+#Simulator.SubSystem.CFmeshFileReader.convertBack = true
+Simulator.SubSystem.Default.listTRS = InnerFaces FarField SlipWall
+##############################################################################
+# Pseudo-time discretization
+##############################################################################
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+
+##############################################################################
+# Linear system solver
+##############################################################################
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1.0e-15
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1
+
+Simulator.SubSystem.NewtonIterator.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.NewtonIterator.RelativeNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.RelativeNormAndMaxIter.RelativeNorm = -4
+
+Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
+Simulator.SubSystem.NewtonIterator.InitCom = ResetSystem
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1
+
+##############################################################################
+# Setup Integrators
+##############################################################################
+
+Simulator.SubSystem.DiscontGalerkinSolver.Data.VolumeIntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.DiscontGalerkinSolver.Data.VolumeIntegratorOrder = P2
+
+Simulator.SubSystem.DiscontGalerkinSolver.Data.ContourIntegratorQuadrature = DGGaussLegendre
+Simulator.SubSystem.DiscontGalerkinSolver.Data.ContourIntegratorOrder = P2
+
+
+##############################################################################
+# Space discretization
+##############################################################################
+
+Simulator.SubSystem.SpaceMethod = DiscontGalerkinSolver
+#Simulator.SubSystem.DiscontGalerkinSolver.Builder = DG
+Simulator.SubSystem.DiscontGalerkinSolver.Builder = DG_MeshUpgrade
+Simulator.SubSystem.DiscontGalerkinSolver.Builder.SolutionPolyOrder = P1
+
+Simulator.SubSystem.DiscontGalerkinSolver.SolveCellsCom = StdSolveCells
+Simulator.SubSystem.DiscontGalerkinSolver.SolveFacesCom = StdSolveFaces
+#Simulator.SubSystem.DiscontGalerkinSolver.StabilizationCom = StdStabilization
+Simulator.SubSystem.DiscontGalerkinSolver.StdSolveFaces.applyTRS = InnerFaces
+
+Simulator.SubSystem.DiscontGalerkinSolver.Data.UpdateVar  = Cons
+
+##############################################################################
+# Solution initialization
+##############################################################################
+
+Simulator.SubSystem.DiscontGalerkinSolver.InitComds = InitState
+Simulator.SubSystem.DiscontGalerkinSolver.InitNames = InField
+
+Simulator.SubSystem.DiscontGalerkinSolver.InField.applyTRS = InnerCells
+Simulator.SubSystem.DiscontGalerkinSolver.InField.Vars = x y z
+Simulator.SubSystem.DiscontGalerkinSolver.InField.Def = 1.4 \
+          0.69989339 \
+          0.0 \
+          0.01221668 \
+          2.85
+
+Simulator.SubSystem.DiscontGalerkinSolver.BcComds = InletBC InletBC InletBC InletBC InletBC InletBC InletBC InletBC WallBC WallBC WallBC WallBC WallBC WallBC WallBC WallBC WallBC WallBC WallBC WallBC WallBC WallBC
+Simulator.SubSystem.DiscontGalerkinSolver.BcNames = trs0 trs1 trs2 trs3 trs4 trs5 trs6 trs7 trs8 trs9 trs10 trs11 trs12 trs13 trs14 trs15 trs16 trs17 trs18 trs19 trs20 trs21
+
+Simulator.SubSystem.DiscontGalerkinSolver.trs0.applyTRS = trs0
+Simulator.SubSystem.DiscontGalerkinSolver.trs0.Vars = x y z
+Simulator.SubSystem.DiscontGalerkinSolver.trs0.Def = 1.4 \
+          0.69989339 \
+          0.0 \
+          0.01221668 \
+          2.85
+Simulator.SubSystem.DiscontGalerkinSolver.trs1.applyTRS = trs1
+Simulator.SubSystem.DiscontGalerkinSolver.trs1.Vars = x y z
+Simulator.SubSystem.DiscontGalerkinSolver.trs1.Def = 1.4 \
+          0.69989339 \
+          0.0 \
+          0.01221668 \
+          2.85
+
+Simulator.SubSystem.DiscontGalerkinSolver.trs2.applyTRS = trs2
+Simulator.SubSystem.DiscontGalerkinSolver.trs2.Vars = x y z
+Simulator.SubSystem.DiscontGalerkinSolver.trs2.Def = 1.4 \
+          0.69989339 \
+          0.0 \
+          0.01221668 \
+          2.85
+Simulator.SubSystem.DiscontGalerkinSolver.trs3.applyTRS = trs3
+Simulator.SubSystem.DiscontGalerkinSolver.trs3.Vars = x y z
+Simulator.SubSystem.DiscontGalerkinSolver.trs3.Def = 1.4 \
+          0.69989339 \
+          0.0 \
+          0.01221668 \
+          2.85
+Simulator.SubSystem.DiscontGalerkinSolver.trs4.applyTRS = trs4
+Simulator.SubSystem.DiscontGalerkinSolver.trs4.Vars = x y z
+Simulator.SubSystem.DiscontGalerkinSolver.trs4.Def = 1.4 \
+          0.69989339 \
+          0.0 \
+          0.01221668 \
+          2.85
+Simulator.SubSystem.DiscontGalerkinSolver.trs5.applyTRS = trs5
+Simulator.SubSystem.DiscontGalerkinSolver.trs5.Vars = x y z
+Simulator.SubSystem.DiscontGalerkinSolver.trs5.Def = 1.4 \
+          0.69989339 \
+          0.0 \
+          0.01221668 \
+          2.85
+Simulator.SubSystem.DiscontGalerkinSolver.trs6.applyTRS = trs6
+Simulator.SubSystem.DiscontGalerkinSolver.trs6.Vars = x y z
+Simulator.SubSystem.DiscontGalerkinSolver.trs6.Def = 1.4 \
+          0.69989339 \
+          0.0 \
+          0.01221668 \
+          2.85
+Simulator.SubSystem.DiscontGalerkinSolver.trs7.applyTRS = trs7
+Simulator.SubSystem.DiscontGalerkinSolver.trs7.Vars = x y z
+Simulator.SubSystem.DiscontGalerkinSolver.trs7.Def = 1.4 \
+          0.69989339 \
+          0.0 \
+          0.01221668 \
+          2.85
+Simulator.SubSystem.DiscontGalerkinSolver.trs8.applyTRS = trs8
+Simulator.SubSystem.DiscontGalerkinSolver.trs9.applyTRS = trs9
+Simulator.SubSystem.DiscontGalerkinSolver.trs10.applyTRS = trs10
+Simulator.SubSystem.DiscontGalerkinSolver.trs11.applyTRS = trs11
+Simulator.SubSystem.DiscontGalerkinSolver.trs12.applyTRS = trs12
+Simulator.SubSystem.DiscontGalerkinSolver.trs13.applyTRS = trs13
+Simulator.SubSystem.DiscontGalerkinSolver.trs14.applyTRS = trs14
+Simulator.SubSystem.DiscontGalerkinSolver.trs15.applyTRS = trs15
+Simulator.SubSystem.DiscontGalerkinSolver.trs16.applyTRS = trs16
+Simulator.SubSystem.DiscontGalerkinSolver.trs17.applyTRS = trs17
+Simulator.SubSystem.DiscontGalerkinSolver.trs18.applyTRS = trs18
+Simulator.SubSystem.DiscontGalerkinSolver.trs19.applyTRS = trs19
+Simulator.SubSystem.DiscontGalerkinSolver.trs20.applyTRS = trs20
+Simulator.SubSystem.DiscontGalerkinSolver.trs21.applyTRS = trs21

@@ -1,0 +1,148 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Common_CFMap2D_ci
+#define COOLFluiD_Common_CFMap2D_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Common {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY1, typename KEY2, typename VALUE>
+ CFMap2D<KEY1, KEY2, VALUE>::CFMap2D(size_t maxSize) :
+   m_sorted(false)
+{
+  if(maxSize != 0) {
+    m_vectorMap.reserve(maxSize);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY1, typename KEY2, typename VALUE>
+CFMap2D<KEY1, KEY2, VALUE>::~CFMap2D()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY1, typename KEY2, typename VALUE>
+void CFMap2D<KEY1, KEY2, VALUE>::insert(const KEY1& aKey1,
+                                        const KEY2& aKey2,
+                                        const VALUE& aValue)
+{
+  m_sorted = false;
+  m_vectorMap.push_back(Trio<KEY1, KEY2, VALUE>(aKey1, aKey2, aValue));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY1, typename KEY2, typename VALUE>
+std::pair<typename std::vector<Trio<KEY1,KEY2,VALUE> >::iterator,
+    typename std::vector<Trio<KEY1,KEY2,VALUE> >::iterator>
+CFMap2D<KEY1, KEY2, VALUE>::findBounds(const KEY1& aKey1,const KEY2& aKey2)
+{
+  if(m_vectorMap.empty()) {
+    valueNotFound(aKey1,aKey2);
+  }
+
+  if(!m_sorted) { sortKeys(); }
+
+  Iterator itr =
+   std::lower_bound(m_vectorMap.begin(),
+                    m_vectorMap.end(),
+                    std::make_pair(aKey1,aKey2),
+                    LessThan());
+  if((itr->first != aKey1) || (itr->second != aKey2)) {
+    valueNotFound(aKey1,aKey2);
+  }
+
+  Equal eq;
+  std::pair<KEY1,KEY2> key(aKey1,aKey2);
+  Iterator before = itr;
+  for( ; itr != m_vectorMap.end(); ++itr) {
+    if (!eq(*itr,key)) break;
+  }
+
+  return std::make_pair(before,itr);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY1, typename KEY2, typename VALUE>
+void CFMap2D<KEY1, KEY2, VALUE>::valueNotFound(const KEY1& aKey1, const KEY2& aKey2)
+{
+   std::string msg = "CFMap2D: KEYS not found: ";
+   msg += StringOps::to_str(aKey1);
+   msg += " ";
+   msg += StringOps::to_str(aKey2);
+   throw Common::NoSuchValueException (FromHere(),msg);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY1, typename KEY2, typename VALUE>
+VALUE CFMap2D<KEY1, KEY2, VALUE>::find(const std::pair<KEY1,KEY2>& aKey)
+{
+  return find(aKey.first, aKey.second);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY1, typename KEY2, typename VALUE>
+bool CFMap2D<KEY1, KEY2, VALUE>::isPresent(const Trio<KEY1,KEY2,VALUE>& value)
+{
+  cf_assert(m_sorted);
+  return std::binary_search(m_vectorMap.begin(), m_vectorMap.end(), value, LessThan());
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+template<typename KEY1, typename KEY2, typename VALUE>
+VALUE CFMap2D<KEY1, KEY2, VALUE>::find(const KEY1& aKey1 ,const KEY2& aKey2)
+{
+  if(m_vectorMap.empty()) {
+    valueNotFound(aKey1,aKey2);
+  }
+
+  if(!m_sorted) { sortKeys(); }
+
+  Iterator itr =
+   std::lower_bound(m_vectorMap.begin(),
+                    m_vectorMap.end(),
+                    std::make_pair(aKey1,aKey2),
+                    LessThan());
+
+ if((itr->first != aKey1) || (itr->second != aKey2)) {
+    valueNotFound(aKey1,aKey2);
+ }
+
+ return itr->third;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY1, typename KEY2, typename VALUE>
+void CFMap2D<KEY1, KEY2, VALUE>::sortKeys()
+{
+  std::sort(m_vectorMap.begin(),m_vectorMap.end(), LessThan());
+  m_sorted = true;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Common
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Common_CFMap2D_ci

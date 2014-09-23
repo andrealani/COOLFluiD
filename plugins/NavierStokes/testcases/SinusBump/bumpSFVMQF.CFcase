@@ -1,0 +1,98 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+#
+### Residual = -1.08171
+
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libSpectralFV libSpectralFVNavierStokes libRungeKutta2 libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/SinusBump
+Simulator.Paths.ResultsDir       = ./
+
+#Simulator.SubSystem.Default.PhysicalModelType = Euler2D
+#Simulator.SubSystem.Euler2D.pRef = 101325.
+#Simulator.SubSystem.Euler2D.tempRef = 293.
+
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2D
+
+Simulator.SubSystem.OutputFormat    = Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName = bump-sfvm-sol.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 500
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+
+Simulator.SubSystem.Tecplot.FileName    = bump-sfvm-sol.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate   = 100
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+
+Simulator.SubSystem.StopCondition       = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 10
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
+
+Simulator.SubSystem.ConvergenceMethod = RK2
+Simulator.SubSystem.RK2.ConvergenceFile = convergence.plt
+Simulator.SubSystem.RK2.ShowRate        = 1
+Simulator.SubSystem.RK2.ConvRate        = 1
+Simulator.SubSystem.RK2.Data.CFL.Value  = 0.1
+Simulator.SubSystem.RK2.Data.TimeAccurate = false
+
+Simulator.SubSystem.SpaceMethod = SpectralFVMethod
+
+Simulator.SubSystem.Default.listTRS = InnerCells InnerFaces SlipWall SubInlet SubOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = bump-sfvm.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = bump-fine.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = SpectralFVMethod
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+# choose which builder we use
+# Simulator.SubSystem.SpectralFVMethod.Builder = StdBuilder
+Simulator.SubSystem.SpectralFVMethod.Builder = MeshUpgrade
+Simulator.SubSystem.SpectralFVMethod.Builder.SVPolynomialOrder = P2
+Simulator.SubSystem.SpectralFVMethod.SpaceRHSJacobCom = RHS
+Simulator.SubSystem.SpectralFVMethod.DivideRHSByVolumeCom = DivideByVolFracRHS
+
+Simulator.SubSystem.SpectralFVMethod.Data.UpdateVar   = Cons
+Simulator.SubSystem.SpectralFVMethod.Data.SolutionVar = Cons
+Simulator.SubSystem.SpectralFVMethod.Data.LinearVar   = Roe
+Simulator.SubSystem.SpectralFVMethod.Data.DiffusiveVar= Cons
+Simulator.SubSystem.SpectralFVMethod.Data.VolTermComputer     = NSQuadFreeVolTermComputer
+Simulator.SubSystem.SpectralFVMethod.Data.FaceTermComputer    = NSQuadFreeFaceTermComputer
+Simulator.SubSystem.SpectralFVMethod.Data.BndFaceTermComputer = NSQuadFreeBndFaceTermComputer
+
+Simulator.SubSystem.SpectralFVMethod.InitComds = StdInitState
+Simulator.SubSystem.SpectralFVMethod.InitNames = InField
+
+Simulator.SubSystem.SpectralFVMethod.InField.applyTRS = InnerCells
+Simulator.SubSystem.SpectralFVMethod.InField.Vars = x y
+Simulator.SubSystem.SpectralFVMethod.InField.Def = 1.204524948 \
+                                                   206.7002847 \
+                                                   0.0 \
+                                                   271044.375
+
+Simulator.SubSystem.SpectralFVMethod.BcNames = Wall Inlet Outlet
+Simulator.SubSystem.SpectralFVMethod.Wall.applyTRS = SlipWall
+Simulator.SubSystem.SpectralFVMethod.Inlet.applyTRS = SubInlet
+Simulator.SubSystem.SpectralFVMethod.Outlet.applyTRS = SubOutlet
+
+Simulator.SubSystem.SpectralFVMethod.Data.BcTypes     = MirrorEuler2D \
+                                                        SubInletEulerTtPtAlpha2D \
+                                                        SubOutletEuler2D
+Simulator.SubSystem.SpectralFVMethod.Data.BcNames     = Wall       \
+                                                        Inlet      \
+                                                        Outlet
+
+Simulator.SubSystem.SpectralFVMethod.Data.Inlet.Ttot = 307.6488978
+Simulator.SubSystem.SpectralFVMethod.Data.Inlet.Ptot = 120195.4453
+Simulator.SubSystem.SpectralFVMethod.Data.Inlet.alpha = 0.0
+
+Simulator.SubSystem.SpectralFVMethod.Data.Outlet.P = 101325.0

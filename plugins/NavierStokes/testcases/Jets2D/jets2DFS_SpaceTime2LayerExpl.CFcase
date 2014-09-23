@@ -1,0 +1,125 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libForwardEuler libMeshRigidMove libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libTHOR2CFmesh libFluctSplitNavierStokes
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets2D/
+#Simulator.Paths.WorkingDir = ./
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType     = Euler2D
+Simulator.SubSystem.Euler2D.refValues = 1. 2.83972 2.83972 6.532
+Simulator.SubSystem.Euler2D.refLength = 1.0
+
+
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.00001
+Simulator.SubSystem.SubSystemStatus.TimeStepLayers = 2
+Simulator.SubSystem.SubSystemStatus.InnerDTRatio = 0.1 0.9
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = jets2D.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = jets2D.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.CFmesh.SaveRate = 1
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+Simulator.SubSystem.InitialTime         = 0.
+Simulator.SubSystem.InitialIter         = 0
+
+Simulator.SubSystem.StopCondition   = MaxTime
+Simulator.SubSystem.MaxTime.maxTime = 0.5
+
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 5
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2D.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.MeshAdapterMethod = RigidMove
+Simulator.SubSystem.RigidMove.Data.OX = 0.
+Simulator.SubSystem.RigidMove.Data.OY = 0.5
+#Simulator.SubSystem.RigidMove.Data.VX = 0.
+#Simulator.SubSystem.RigidMove.Data.VY = 0.1
+#Simulator.SubSystem.RigidMove.Data.RotationSpeed = -1.
+Simulator.SubSystem.RigidMove.Data.ExpansionRatioX = 0.99
+#Simulator.SubSystem.RigidMove.Data.ExpansionRatioY = 0.999
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.9
+#Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = 100.0*i
+Simulator.SubSystem.FwdEuler.SetupCom = TwoLayerSetup
+Simulator.SubSystem.FwdEuler.UnSetupCom = TwoLayerUnSetup
+Simulator.SubSystem.FwdEuler.PrepareCom = TwoLayerPrepare
+Simulator.SubSystem.FwdEuler.UpdateSol = TwoLayerUpdateSol
+
+Simulator.SubSystem.FwdEuler.AbsoluteNormAndMaxIter.MaxIter = 10
+Simulator.SubSystem.FwdEuler.AbsoluteNormAndMaxIter.AbsNorm = -5.0
+Simulator.SubSystem.FwdEuler.Data.PrintHistory = true
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.ComputeRHS = TwoLayerComputeRhs
+Simulator.SubSystem.FluctuationSplit.SetupCom = TwoLayerSetup StdALESetup
+Simulator.SubSystem.FluctuationSplit.SetupNames = Setup1 Setup2
+Simulator.SubSystem.FluctuationSplit.UnSetupCom = TwoLayerUnSetup StdALEUnSetup
+Simulator.SubSystem.FluctuationSplit.UnSetupNames = UnSetup1 UnSetup2
+Simulator.SubSystem.FluctuationSplit.BeforeMeshUpdateCom = StdALEPrepare
+Simulator.SubSystem.FluctuationSplit.AfterMeshUpdateCom = TwoLayerALEUpdate
+
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = ST2_RDS
+
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = ST2SysNlim
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Roe
+
+Simulator.SubSystem.FluctuationSplit.InitComds = TwoLayerInitState TwoLayerInitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField MachStep
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 0.5 \
+                                          1.67332 \
+                                          0.0 \
+                                          3.425
+
+Simulator.SubSystem.FluctuationSplit.MachStep.applyTRS = SuperInlet
+Simulator.SubSystem.FluctuationSplit.MachStep.Vars = x y
+Simulator.SubSystem.FluctuationSplit.MachStep.Def = if(y>0.5,0.5,1.) \
+                                         if(y>0.5,1.67332,2.83972) \
+                                         0.0 \
+                                         if(y>0.5,3.425,6.532)
+
+Simulator.SubSystem.FluctuationSplit.BcComds = TwoLayerSuperInlet
+Simulator.SubSystem.FluctuationSplit.BcNames = Inlet
+
+Simulator.SubSystem.FluctuationSplit.Inlet.applyTRS = SuperInlet
+Simulator.SubSystem.FluctuationSplit.Inlet.Vars = x y t
+Simulator.SubSystem.FluctuationSplit.Inlet.Def = if(y>0.5,0.5,1.) \
+                                        if(y>0.5,1.67332,2.83972) \
+                                        0.0 \
+                                        if(y>0.5,3.425,6.532)
+

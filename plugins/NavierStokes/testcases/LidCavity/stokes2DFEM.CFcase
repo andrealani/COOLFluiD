@@ -1,0 +1,134 @@
+# COOLFluiD solver Startfile
+# Comments begin with "#"
+
+# SubSystem Modules
+Simulator.Modules.Libs = libFileMeshWriterModule libCFmeshFileWriter libCFmeshFileReader  libIncompNavierStokes libFiniteElement libNewtonMethod libTecplotWriter
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/Fluid/testcases/LidCavity/
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = IncompNavierStokes2D
+Simulator.SubSystem.IncompNavierStokes2D.refValues = 1. 1. 1.
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence-stokes2DFEM.plt
+Simulator.SubSystem.onlyIsoParamElements = true
+
+#Simulator.SubSystem.OutputFormat       = Tecplot CFmesh
+Simulator.SubSystem.OutputFormat        = Tecplot
+Simulator.SubSystem.CFmesh.FileName     = square-03.7kn-stokes2DFEM.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = square-03.7kn-stokes2DFEM.plt
+#Simulator.SubSystem.Tecplot.Data.SurfaceTRS = inlet outlet
+Simulator.SubSystem.Tecplot.Data.updateVar = uvp
+Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.CFmesh.SaveRate = 10
+
+Simulator.SubSystem.ConvRate =  1
+Simulator.SubSystem.ShowRate =  1
+
+#Simulator.SubSystem.StopCondition  = Norm
+#Simulator.SubSystem.Norm           = -8.0
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSystem.Default.listTRS = InnerCells North East West South
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = square-03.7kn.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = FiniteElement
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+#Simulator.SubSystem.MeshCreator = FileMeshReaderModule
+#Simulator.SubSystem.FileMeshReaderModule.FileName = square-03.7kn.hdf5
+#Simulator.SubSystem.FileMeshReaderModule.builderName = FiniteElement
+#Simulator.SubSystem.FileMeshReaderModule.Partitioner = ParMetis
+#Simulator.SubSystem.FileMeshReaderModule.ParMetis.NCommonNodes = 3
+#Simulator.SubSystem.FileMeshReaderModule.PolyTypeName = Lagrange
+
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCLU
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-8
+Simulator.SubSystem.NewtonIteratorLSS.Data.AbsoluteTolerance = 1e-8
+Simulator.SubSystem.NewtonIteratorLSS.Data.Output = true
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 100
+
+#Simulator.SubSystem.LinearSystemSolver = TRILINOS
+#Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+#Simulator.SubSystem.NewtonIteratorLSS.Data.ResidualType = r0
+#Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = cg
+#Simulator.SubSystem.NewtonIteratorLSS.Data.PCType  = dd
+#Simulator.SubSystem.NewtonIteratorLSS.Data.PCSubSolveType = ILU
+#Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 2500
+#Simulator.SubSystem.NewtonIteratorLSS.Data.tolerance = 1e-8
+#Simulator.SubSystem.NewtonIteratorLSS.Data.ReOrder = false
+#Simulator.SubSystem.NewtonIteratorLSS.Data.OutputLevel = 2
+
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1.0
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+Simulator.SubSystem.NewtonIterator.Data.SaveSystemToFile = false
+Simulator.SubSystem.NewtonIterator.InitCom = ResetSystem
+# implicit/explicit
+Simulator.SubSystem.NewtonIterator.UpdateSol = StdUpdateSol
+#Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation = 0.9
+#Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
+
+Simulator.SubSystem.SpaceMethod = FiniteElementMethod
+
+Simulator.SubSystem.FiniteElementMethod.Data.UpdateVar = uvp
+Simulator.SubSystem.FiniteElementMethod.Data.DiffusiveVar = IncompNavierStokes2DDiffVarSet
+#Simulator.SubSystem.FiniteElementMethod.Data.ConvectiveVar = IncompNavierStokes2DConvVarSet
+#Simulator.SubSystem.FiniteElementMethod.Data.SourceVar = Heat2DSourceTDep
+#Simulator.SubSystem.FiniteElementMethod.Data.IncompNavierStokes2DDiffVarSet.Rho = 1.2
+Simulator.SubSystem.FiniteElementMethod.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.FiniteElementMethod.Data.Numerical.tol = 1e-7
+Simulator.SubSystem.FiniteElementMethod.Data.ResidualStrategy = StdElementComputer
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorOrder = P1
+
+# Vars are [x y]
+#Simulator.SubSystem.FiniteElementMethod.Data.Heat2DSourceTDep.IndepCoef = 100.
+#Simulator.SubSystem.FiniteElementMethod.Data.Heat2DSourceTDep.LinearCoef = 0.
+
+# implicit/explicit
+Simulator.SubSystem.FiniteElementMethod.ComputeSpaceResidual = ImplicitComputeSpaceResCom
+Simulator.SubSystem.FiniteElementMethod.ImplicitComputeSpaceResCom.applyTRS = InnerCells
+#Simulator.SubSystem.FiniteElementMethod.ComputeSpaceResidual = ExplicitComputeSpaceResCom
+#Simulator.SubSystem.FiniteElementMethod.ExplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSystem.FiniteElementMethod.InitComds = InitState
+Simulator.SubSystem.FiniteElementMethod.InitNames = InitialField
+
+
+# Vars are [x y]
+Simulator.SubSystem.FiniteElementMethod.InitialField.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.InitialField.Vars = x y
+Simulator.SubSystem.FiniteElementMethod.InitialField.Def = 0. 0. 1.
+
+Simulator.SubSystem.FiniteElementMethod.BcComds = DirichletBC DirichletBC
+Simulator.SubSystem.FiniteElementMethod.BcNames = LID CAVITY
+
+# Vars are [x y t u v p]
+Simulator.SubSystem.FiniteElementMethod.LID.applyTRS = North
+Simulator.SubSystem.FiniteElementMethod.LID.Implicit = true
+Simulator.SubSystem.FiniteElementMethod.LID.Vars = x y t u v p
+Simulator.SubSystem.FiniteElementMethod.LID.Def = 1. 0. 0
+Simulator.SubSystem.FiniteElementMethod.LID.ApplyEqs = 0 1 2
+
+# Vars are [x y t u v p]
+Simulator.SubSystem.FiniteElementMethod.CAVITY.applyTRS = East West South
+Simulator.SubSystem.FiniteElementMethod.CAVITY.Implicit = true
+Simulator.SubSystem.FiniteElementMethod.CAVITY.Vars = x y t u v p
+Simulator.SubSystem.FiniteElementMethod.CAVITY.Def = 0. 0. 0.
+Simulator.SubSystem.FiniteElementMethod.CAVITY.ApplyEqs = 0 1
+
+

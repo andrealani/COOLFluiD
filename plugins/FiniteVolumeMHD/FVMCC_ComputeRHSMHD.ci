@@ -1,0 +1,498 @@
+#include "Framework/SubSystemStatus.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/GeometricEntityPool.hh"
+#include "Framework/CellTrsGeoBuilder.hh"
+#include "Framework/FaceCellTrsGeoBuilder.hh"
+
+#include "FiniteVolume/FVMCC_BC.hh"
+#include "MHD/MHDTerm.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void FVMCC_ComputeRHSMHD<BASE>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFuint >
+    ("SaveRate","Output file save rate that should be equal to Tecplot SaveRate option.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+FVMCC_ComputeRHSMHD<BASE>::FVMCC_ComputeRHSMHD(const std::string& name) :
+  BASE(name),
+  socket_divBNodal("divBNodal"),
+  socket_divBCellCenter("divBCellCenter"),
+  socket_avgBxFace("avgBxFace"),
+  socket_avgByFace("avgByFace"),
+  socket_avgBzFace("avgBzFace"),
+  _isFirstMHDConsACAST(false),
+  _firstSourceTermComputerName(),
+  _divB(),
+  _currStateXCoord(),
+  _currStateYCoord(),
+  _currStateZCoord(),
+  _sumr()
+{
+ this->addConfigOptionsTo(this);
+
+ _outputSaveRate = 1;
+ this->setParameter("SaveRate",&_outputSaveRate);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+FVMCC_ComputeRHSMHD<BASE>::~FVMCC_ComputeRHSMHD()
+{
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void FVMCC_ComputeRHSMHD<BASE>::configure ( Config::ConfigArgs& args )
+{
+  BASE::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+template <typename BASE>
+void FVMCC_ComputeRHSMHD<BASE>::unsetup()
+{
+  BASE::unsetup();
+
+  deletePtr(_sumr);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void FVMCC_ComputeRHSMHD<BASE>::computeDivBNodalValues(RealVector& divB)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::MHD;
+ 
+  // weighted averaging performed to transfer the divB values from cell
+  // centers to nodes to be able to view in Tecplot
+
+  DataHandle<CFreal> divBNodal  = socket_divBNodal.getDataHandle();
+
+  const CFuint nbNodes = MeshDataStack::getActive()->getNbNodes();
+  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
+  for (CFuint iNode = 0; iNode < nbNodes; ++iNode) {
+      divBNodal[iNode] = 0.0;
+      (*_sumr)[iNode] = 0.0;
+  }
+
+  SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
+  const CFuint nbCells = cells->getLocalNbGeoEnts();
+  
+  Common::SafePtr<GeometricEntityPool<CellTrsGeoBuilder> > cellBuilder = this->getMethodData().getCellTrsGeoBuilder();
+  cellBuilder->getGeoBuilder()->setDataSockets(this->socket_states, this->socket_gstates, this->socket_nodes);
+  CellTrsGeoBuilder::GeoData& geoData = this->getMethodData().getCellTrsGeoBuilder()->getDataGE();
+  geoData.trs = cells;
+  
+  for (CFuint iCell = 0; iCell < nbCells; ++iCell) {
+      // build the GeometricEntity
+      geoData.idx = iCell;
+      GeometricEntity *const currCell = cellBuilder->buildGE();
+
+      State *const currState = currCell->getState(0);
+      cf_assert(!currState->isGhost());
+      const CFuint currStateID = currState->getLocalID();
+
+      const vector<Node*>* const cellNodes = currCell->getNodes();
+      const CFuint nbNodesInCell = cellNodes->size();
+
+      CFreal nodeZCoordinate = 0.;
+      CFreal noeminusStateZCoordinate = 0.;
+      CFreal r = 0.;
+
+      for (CFuint iNode = 0; iNode < nbNodesInCell; ++iNode) {
+	  const CFuint nodeID = (*cellNodes)[iNode]->getLocalID();
+	  const CFreal nodeXCoordinate = (*(*cellNodes)[iNode])[XX];
+	  const CFreal nodeYCoordinate = (*(*cellNodes)[iNode])[YY];
+	  if (nbDim == 3)
+	     nodeZCoordinate = (*(*cellNodes)[iNode])[ZZ];
+
+	  // distance from the node to the cell center
+	  const CFreal noeminusStateXCoordinate = nodeXCoordinate-_currStateXCoord[currStateID];
+	  const CFreal noeminusStateYCoordinate = nodeYCoordinate-_currStateYCoord[currStateID];
+	  if (nbDim == 3)
+	     noeminusStateZCoordinate = nodeZCoordinate-_currStateZCoord[currStateID];
+
+	  if (nbDim == 2)
+	     r = sqrt(noeminusStateXCoordinate*noeminusStateXCoordinate +
+		      noeminusStateYCoordinate*noeminusStateYCoordinate);
+	  if (nbDim == 3)
+	     r = sqrt(noeminusStateXCoordinate*noeminusStateXCoordinate +
+		      noeminusStateYCoordinate*noeminusStateYCoordinate +
+		      noeminusStateZCoordinate*noeminusStateZCoordinate);
+
+	  divBNodal[nodeID] += divB[currStateID]/r;
+	  (*_sumr)[nodeID] += 1.0/r;
+	  cf_assert(r > 0.0);
+      }
+      // release the cell
+      cellBuilder->releaseGE();
+  }
+
+  for (CFuint iNode = 0; iNode < nbNodes; ++iNode) {
+      divBNodal[iNode] /= (*_sumr)[iNode];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void FVMCC_ComputeRHSMHD<BASE>::computeInterConvDiff()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::MHD;
+ 
+  // the first source term (if there are multiple source terms) in the CFcase files is restricted
+  // according to the cf_assertion below
+  
+  SafePtr<MHDTerm> model = PhysicalModelStack::getActive()->getImplementor()->
+    getConvectiveTerm().d_castTo<MHDTerm>();
+  const CFreal refSpeed = model->getRefSpeed();
+  const CFreal refSpeedSq = refSpeed*refSpeed;
+  
+  DataHandle<CFreal> volumes = this->socket_volumes.getDataHandle();
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+  bool flagSaveRate = false;
+  if (iter % _outputSaveRate == 0) {
+    flagSaveRate = true;
+  }
+
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  if (_isFirstMHDConsACAST && (flagSaveRate)) {
+    // computing the divB values in the cell centers from the last flux values
+    // corresponding to the scalar potential function
+    if (!this->getMethodData().isPerturb()) {
+      const CFuint leftStateID = this->_currFace->getState(0)->getLocalID();
+      const CFuint rightStateID = this->_currFace->getState(1)->getLocalID();
+      
+      const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
+      assert(!this->_currFace->getState(0)->isGhost());
+      if (!this->_currFace->getState(0)->isGhost()) {
+	_divB[leftStateID] += this->_flux[nbEqs-1]/(refSpeedSq*volumes[leftStateID]);
+	_currStateXCoord[leftStateID] = this->_currFace->getState(0)->getCoordinates()[0];
+	_currStateYCoord[leftStateID] = this->_currFace->getState(0)->getCoordinates()[1];
+	if (nbDim == 3) {
+	  _currStateZCoord[leftStateID] = this->_currFace->getState(0)->getCoordinates()[2];
+        }
+      }
+ 
+      if (!this->_currFace->getState(1)->isGhost()) {
+	_divB[rightStateID] -= this->_flux[nbEqs-1]/(refSpeedSq*volumes[rightStateID]);
+	_currStateXCoord[rightStateID] = this->_currFace->getState(1)->getCoordinates()[0];
+	_currStateYCoord[rightStateID] = this->_currFace->getState(1)->getCoordinates()[1];
+	if (nbDim == 3)
+	  _currStateZCoord[rightStateID] = this->_currFace->getState(1)->getCoordinates()[2];
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+     
+template <typename BASE>
+void FVMCC_ComputeRHSMHD<BASE>::finalizeComputationRHS()
+{   
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRHSMHD::finalizeComputationRHS() START\n");
+
+  const bool isExplicit = this->getMethodData().getLinearSystemSolver()[0]->getName() == "Null";
+  if (isExplicit && this->getMethodData().isResidualTransformationNeeded()) {
+    this->transformResidual();
+  }
+  
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+  bool flagSaveRate = false;
+  if (iter % _outputSaveRate == 0) {
+    flagSaveRate = true;
+  }
+  
+  if (flagSaveRate) {
+    if (!this->getMethodData().isPerturb()) {
+  	const CFuint nbStates = MeshDataStack::getActive()->getNbStates();
+  
+    if (_isFirstMHDConsACAST) {
+      // weighted averaging of the elemental divB values computed above to the nodes
+      computeDivBNodalValues(_divB);
+      
+      CFreal divBMax = 0.0;
+      CFreal divBMin = 0.0;
+      for (CFuint iState = 0; iState < nbStates; ++iState) {
+        divBMax = max(divBMax,_divB[iState]);
+	    divBMin = min(divBMin,_divB[iState]);
+      }
+   	  CFLog(VERBOSE, "divBMax = " << divBMax << ", divBMin = " << divBMin << "\n");
+
+      // setting the elemental divB values to zero at the end of the computation of nodal divB values
+      for (CFuint iState = 0; iState < nbStates; ++iState) {
+	    _divB[iState] = 0.0;
+     }
+    }
+    else {
+      // weighted averaging of the elemental divB values computed in Powell source term either in 2D or 3D to the nodes
+      RealVector divBPowell(nbStates);
+      DataHandle<CFreal> divBCellCenter = socket_divBCellCenter.getDataHandle();
+      for (CFuint iState = 0; iState < nbStates; ++iState) {
+        divBPowell[iState] = divBCellCenter[iState];
+      }
+      computeDivBNodalValues(divBPowell);
+     }
+    }
+  }
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRHSMHD::finalizeComputationRHS() END\n");
+  
+  BASE::finalizeComputationRHS();
+}
+      
+/////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void FVMCC_ComputeRHSMHD<BASE>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::MHD;
+  
+  BASE::setup();
+
+  const CFuint nbStates = MeshDataStack::getActive()->getNbStates();
+  const CFuint nbNodes = MeshDataStack::getActive()->getNbNodes();
+  const CFuint nbFaces = MeshDataStack::getActive()->Statistics().getNbFaces();
+  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
+
+  _currStateXCoord.resize(nbStates);
+  _currStateYCoord.resize(nbStates);
+  _currStateZCoord.resize(nbStates);
+  _sumr = new vector<CFreal>(nbNodes);
+
+  DataHandle<CFreal> divBNodal  = socket_divBNodal.getDataHandle();
+  divBNodal.resize(nbNodes);
+  
+  _firstSourceTermComputerName = this->getMethodData().getSourceTermComputerNames()[0];
+  cf_assert((_firstSourceTermComputerName == "MHDConsACAST") ||
+	    (_firstSourceTermComputerName == "MHD2DPowellST") ||
+	    (_firstSourceTermComputerName == "MHD3DPowellST"));
+  
+  _isFirstMHDConsACAST = (_firstSourceTermComputerName == "MHDConsACAST");
+  
+  if (!_isFirstMHDConsACAST) {
+    DataHandle<CFreal> divBCellCenter  = socket_divBCellCenter.getDataHandle();
+    divBCellCenter.resize(nbStates);
+    
+    DataHandle<CFreal> avgBxFace  = socket_avgBxFace.getDataHandle();
+    avgBxFace.resize(nbFaces);
+    
+    DataHandle<CFreal> avgByFace  = socket_avgByFace.getDataHandle();
+    avgByFace.resize(nbFaces);
+    
+    if (nbDim == 3) {
+      DataHandle<CFreal> avgBzFace  = socket_avgBzFace.getDataHandle();
+      avgBzFace.resize(nbFaces);
+    }
+  }
+  
+  _divB.resize(nbStates);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void FVMCC_ComputeRHSMHD<BASE>::initializeComputationRHS()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  BASE::initializeComputationRHS();  
+
+  CFLog(VERBOSE, "FVMCC_ComputeRHSMHD::initializeComputationRHS() START\n");
+  
+  if (!_isFirstMHDConsACAST) {
+    // set the list of faces
+    vector<SafePtr<TopologicalRegionSet> > trs = MeshDataStack::getActive()->getTrsList();
+    const CFuint nbTRSs = trs.size();
+    
+    this->_faceIdx = 0;
+    
+    // no variable perturbation is needed in explicit residual computation
+    this->getMethodData().setIsPerturb(false);
+    
+    // prepare the building of the faces
+    Common::SafePtr<GeometricEntityPool<FaceCellTrsGeoBuilder> > geoBuilder = this->getMethodData().getFaceCellTrsGeoBuilder();
+    geoBuilder->getGeoBuilder()->setDataSockets(this->socket_states, this->socket_gstates, this->socket_nodes);
+    FaceCellTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
+    vector<bool> zeroGrad(PhysicalModelStack::getActive()->getNbEq(), false);
+    DataHandle<CFreal> avgBxFace  = socket_avgBxFace.getDataHandle();
+    DataHandle<CFreal> avgByFace  = socket_avgByFace.getDataHandle();
+    DataHandle<CFreal> avgBzFace  = socket_avgBzFace.getDataHandle();
+    const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
+    
+    // this could be set during set up with no guarantee that it will be effective:
+    // a MethodStrategy could set it to a different value afterwards, before entering here
+    geoData.allCells = this->getMethodData().getBuildAllCells();
+    
+    for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
+      SafePtr<TopologicalRegionSet> currTrs = trs[iTRS];
+      
+      CFLog(VERBOSE, "TRS name = " << currTrs->getName() << "\n");
+      
+      // the faces on the boundary of the partition don't have to
+      // be processed (their fluxes could give NaN)
+      if (currTrs->getName() != "PartitionFaces" && currTrs->getName() != "InnerCells") {
+	if (currTrs->hasTag("writable")) {
+	  this->_currBC = this->_bcMap.find(iTRS);
+	  
+	  // set the flag telling if the ghost states have to be placed on the face itself
+	  this->_currBC->setPutGhostsOnFace();
+	  
+	  CFLog(VERBOSE, "BC name = " << this->_currBC->getName() << "\n");
+	  
+	  geoData.isBFace = true;
+	  
+	  // set the flags specifying the variables for which the boundary condition
+	  // imposes constant extrapolation (zero gradient)
+	  this->_polyRec->setZeroGradient(this->_currBC->getZeroGradientsFlags());
+	}
+	else {
+	  geoData.isBFace = false;
+	  this->_polyRec->setZeroGradient(&zeroGrad);
+	}
+	
+	// set the current TRS in the geoData
+	geoData.faces = currTrs;
+	
+	const CFuint nbTrsFaces = currTrs->getLocalNbGeoEnts();
+	for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace, ++this->_faceIdx) {
+	  CFLogDebugMed( "iFace = " << iFace << "\n");
+	  
+	  // reset the equation subsystem descriptor
+	  PhysicalModelStack::getActive()->resetEquationSubSysDescriptor();
+	  
+	  // build the GeometricEntity
+	  geoData.idx = iFace;
+	  this->_currFace = geoBuilder->buildGE();
+	  
+	  if (this->_currFace->getState(0)->isParUpdatable() || 
+	      (!this->_currFace->getState(1)->isGhost() && this->_currFace->getState(1)->isParUpdatable())) {
+	    
+	    // set the data for the FaceIntegrator
+	    this->setFaceIntegratorData();
+	    
+	    // extrapolate (and LIMIT, if the reconstruction is linear or more)
+	    // the solution in the quadrature points
+	    this->_polyRec->extrapolate(this->_currFace);
+	    
+	    // average B values are computed to be used in the computation of divB in Powell source term
+	    // this is important in case of a TVD treatment where reconstructed B values are needed
+	    const CFuint currFaceID = this->_currFace->getID();
+	    vector<State*>& extrapValues = this->getMethodData().getPolyReconstructor()->getExtrapolatedValues();
+	    
+	    avgBxFace[currFaceID] = 0.5*((*extrapValues[0])[4]+(*extrapValues[1])[4]);
+	    avgByFace[currFaceID] = 0.5*((*extrapValues[0])[5]+(*extrapValues[1])[5]);
+	    if (nbDim == 3) {
+	      avgBzFace[currFaceID] = 0.5*((*extrapValues[0])[6]+(*extrapValues[1])[6]);
+	    }
+	    
+	    const CFuint leftStateID = this->_currFace->getState(0)->getLocalID();
+	    const CFuint rightStateID = this->_currFace->getState(1)->getLocalID();
+
+	    assert(!this->_currFace->getState(0)->isGhost());
+	    if (!this->_currFace->getState(0)->isGhost()) {
+	      _currStateXCoord[leftStateID] = this->_currFace->getState(0)->getCoordinates()[0];
+	      _currStateYCoord[leftStateID] = this->_currFace->getState(0)->getCoordinates()[1];
+	      if (nbDim == 3) {
+		_currStateZCoord[leftStateID] = this->_currFace->getState(0)->getCoordinates()[2];
+	      }
+	    }
+	    
+	    if (!this->_currFace->getState(1)->isGhost()) {
+	      _currStateXCoord[rightStateID] = this->_currFace->getState(1)->getCoordinates()[0];
+	      _currStateYCoord[rightStateID] = this->_currFace->getState(1)->getCoordinates()[1];
+	      if (nbDim == 3)
+		_currStateZCoord[rightStateID] = this->_currFace->getState(1)->getCoordinates()[2];
+	    }
+	  }
+	  
+	  geoBuilder->releaseGE(); 
+	}
+      }
+    }
+  }
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRHSMHD::initializeComputationRHS() END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSource> >
+FVMCC_ComputeRHSMHD<BASE>::providesSockets()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::MHD;
+
+  const std::string firstSourceTermComputerName = this->getMethodData().getSourceTermComputerNames()[0];
+  std::vector<Common::SafePtr<BaseDataSocketSource> > result =
+	 BASE::providesSockets();
+  result.push_back(&socket_divBNodal);
+
+  if (firstSourceTermComputerName != "MHDConsACAST") {
+    result.push_back(&socket_avgBxFace);
+    result.push_back(&socket_avgByFace);
+    result.push_back(&socket_avgBzFace);
+  }
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > FVMCC_ComputeRHSMHD<BASE>::needsSockets()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  const std::string firstSourceTermComputerName = this->getMethodData().getSourceTermComputerNames()[0];
+  vector<SafePtr<BaseDataSocketSink> > result = BASE::needsSockets();
+  if (firstSourceTermComputerName != "MHDConsACAST") {
+    result.push_back(&socket_divBCellCenter);
+  }
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace FiniteVolume
+
+} // namespace Numerics
+
+} // namespace COOLFluiD

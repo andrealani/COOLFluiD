@@ -1,0 +1,8 @@
+Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 0.1
+Simulator.SubSystem.DataProcessing3.ProcessRate = 100
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitIter = 10000
+Simulator.SubSystem.Norm.valueNorm = -5.
+# to be commented out when running non adiabatic
+#Simulator.SubSystem.CellCenterFVM.Data.DistanceBased.NbIterAdiabatic = 15000

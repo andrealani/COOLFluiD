@@ -1,0 +1,449 @@
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "Common/CFLog.hh"
+#include "Common/PE.hh"
+
+#include "Framework/GeometricEntity.hh"
+#include "Common/NoSuchValueException.hh"
+#include "NavierStokes/NavierStokesVarSet.hh"
+#include "FiniteVolume/ComputeDiffusiveFlux.hh"
+#include "NEQ/NEQReactionTerm.hh"
+#include "FiniteVolume/DerivativeComputer.hh"
+
+#include "Environment/DirPaths.hh"
+#include "Environment/SingleBehaviorFactory.hh"
+#include "Environment/FileHandlerInput.hh"
+
+#include <fstream>
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+EulerQuasi1DChemNEQST<UPDATEVAR>::EulerQuasi1DChemNEQST(const std::string& name) :
+  ComputeSourceTermFVMCC(name),
+  _varSet(CFNULL),
+  _nstates(CFNULL),
+  _isOutward(CFNULL),
+  _library(CFNULL),
+  _omega(),
+  _omegaTv(),
+  _ys(),
+  _physicalData(),
+  _tvDim(),  
+  _temp(),
+  _states(),
+  _dhe(),
+  _qrad(CFNULL),
+  _hasRadiationCoupling(false),	
+  _values(),
+  _dummyGradients(), 
+  _mapGlobalID2dAdX()
+{
+  addConfigOptionsTo(this);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+EulerQuasi1DChemNEQST<UPDATEVAR>::~EulerQuasi1DChemNEQST()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void EulerQuasi1DChemNEQST<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void EulerQuasi1DChemNEQST<UPDATEVAR>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  ComputeSourceTermFVMCC::setup();
+  
+  _varSet =this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+  _varSet->getModel()->resizePhysicalData(_physicalData);
+  cf_assert(_varSet.isNotNull());
+
+  _nstates =
+    _sockets.template getSocketSink<RealVector>("nstates")->getDataHandle();
+
+  _isOutward = this->socket_isOutward.getDataHandle();
+
+  _library = PhysicalModelStack::getActive()->getImplementor()->template
+    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  cf_assert (_library.isNotNull());
+
+  SafePtr<typename UPDATEVAR::PTERM> term = _varSet->getModel();
+  const CFuint nbSpecies = term->getNbScalarVars(0);
+  _omega.resize(nbSpecies);
+  _ys.resize(nbSpecies);  
+
+  const CFuint nbTv = term->getNbScalarVars(1);
+
+  _tvDim.resize((nbTv > 1) ? nbTv : 1);
+  _temp.resize(PhysicalModelStack::getActive()->getNbEq());
+
+  SafePtr<DerivativeComputer> derComput =
+    this->getMethodData().getDerivativeComputer();
+  const CFuint nbNodesInControlVolume = derComput->getMaxNbVerticesInControlVolume();
+  _values.resize(PhysicalModelStack::getActive()->getNbEq(), nbNodesInControlVolume);
+
+  _omegaTv.resize(nbTv);  
+  _dhe.resize(3+nbTv);
+
+  // read the files with dAdX
+  if (PE::GetPE().IsParallel()) {
+    PE::GetPE().setBarrier();
+    
+    for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
+      if (i == PE::GetPE().GetRank ()) {
+	readInputFile();
+      }
+      
+      PE::GetPE().setBarrier();
+    }
+  }
+  else {
+    readInputFile();
+  }	
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR>
+void EulerQuasi1DChemNEQST<EULERVAR>::readInputFile()
+{ 
+  using namespace COOLFluiD::Framework;
+  
+  CFuint Cells = 0;
+  CFuint state = 0;  
+  CFreal dlnRdx;
+  Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle = 
+    Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
+  
+  std::string fileR = "Radius_avg.dat";
+  boost::filesystem::path radfilePath(Environment::DirPaths::getInstance().getWorkingDir()/boost::filesystem::path(fileR));
+  std::ifstream& areaData = fhandle->open(radfilePath);
+  
+  areaData >> Cells; 
+
+  for (CFuint i = 0; i < Cells; i++)
+  {       
+    areaData >> state >> dlnRdx;
+    _mapGlobalID2dAdX.insert(state,dlnRdx);
+  }
+  _mapGlobalID2dAdX.sortKeys();
+  
+  areaData.close();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void EulerQuasi1DChemNEQST<UPDATEVAR>::computeSource
+(Framework::GeometricEntity *const element, 
+ RealVector& source, RealMatrix& jacobian)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NEQ;
+ 
+  CFLogDebugMin( "EulerQuasi1DChemNEQST::computeSource()" << "\n");
+  const EquationSubSysDescriptor& eqSS =
+    PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
+
+  const CFuint iEqSS = eqSS.getEqSS();
+  SafePtr<typename UPDATEVAR::PTERM> term = _varSet->getModel();
+  const CFuint nbSpecies = term->getNbScalarVars(0);
+  const CFuint nbTv = term->getNbScalarVars(1);
+  const CFuint nbTe = _library->getNbTe();
+  const CFuint nbEvEqs =  nbTv -nbTe; 
+  vector<Node*>& nodes = *element->getNodes();
+
+  const vector<CFuint>& evVarIDs = UPDATEVAR::getEqSetData()[1].getEqSetVarIDs();
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbEulerEq = 3;
+   
+  const CFuint nbEqs = eqSS.getNbEqsSS();
+  const vector<CFuint>& varIDs =
+    UPDATEVAR::EULERSET::getEqSetData()[0].getEqSetVarIDs();
+
+  bool doComputeST = false;
+  if (varIDs[0] > 0 && (iEqSS == 0 && nbEqs >= nbSpecies)) {
+    doComputeST = true;
+  }
+
+  if ((varIDs[0] == 0 && (iEqSS == 0) && (nbEqs >= nbEulerEq+nbSpecies)) ||
+      (varIDs[0] == 0 && (iEqSS == 1)))	 {
+    doComputeST = true;
+  }
+
+  if (doComputeST) {
+    
+    const vector<State*>* const states = element->getStates();
+
+    cf_assert(states->size() == 1) ;
+
+    _varSet->computePhysicalData(*(*states)[0], _physicalData);
+
+    RealVector& refData       = _varSet->getModel()->getReferencePhysicalData();
+
+    SafePtr<NEQReactionTerm> rt = PhysicalModelStack::getActive()->getImplementor()->
+      getSourceTerm().d_castTo<Physics::NEQ::NEQReactionTerm>(); 
+
+    CFreal pdim = _physicalData[UPDATEVAR::PTERM::P]*refData[UPDATEVAR::PTERM::P];
+    CFreal Tdim = _physicalData[UPDATEVAR::PTERM::T]*refData[UPDATEVAR::PTERM::T];
+    CFreal rhodim = _physicalData[UPDATEVAR::PTERM::RHO]*refData[UPDATEVAR::PTERM::RHO];    
+
+    const CFuint firstSpecies = term->getFirstScalarVar(0);
+    for (CFuint i = 0; i < nbSpecies; ++i) {
+      _ys[i] = _physicalData[firstSpecies + i];
+    }
+
+    State *const currState = (*states)[0];  
+
+    if (nbEvEqs != 0) {
+       setVibTemperature(_physicalData, *currState, _tvDim); 
+    } 
+      else { 
+       _tvDim *= refData[UPDATEVAR::PTERM::T];
+    }
+
+    const CFreal u = _physicalData[UPDATEVAR::PTERM::VX];
+    const CFreal H = _physicalData[UPDATEVAR::PTERM::H]; 
+    const CFuint elemID = element->getID();
+    const CFreal dAdX = _mapGlobalID2dAdX.find(currState->getGlobalID());
+
+    CFdouble omegaRad = 0.0;
+    _omegaTv = 0.0; 
+     
+    // compute the conservation equation source term
+    // AL: ugly but effective
+    // the real solution would be to implement the function
+    // MutationLibrary2OLD::getSource()
+    if (_library->getName() != "Mutation2OLD") {
+    _library->getSource(Tdim, _tvDim, pdim, rhodim, _ys,
+		        this->useAnalyticalJacob(),
+		       _omega, _omegaTv, omegaRad, jacobian);
+    }    
+    else {
+     // compute the mass production/destruction term
+      _library->getMassProductionTerm(Tdim, _tvDim,
+				      pdim, rhodim, _ys,
+				      this->useAnalyticalJacob(),
+				      _omega,
+				      jacobian);      
+      
+      // compute energy relaxation and excitation term 
+      if (nbEvEqs != 0) { 
+	_library->getSourceTermVT(Tdim, _tvDim, pdim, 
+				  rhodim, _omegaTv, omegaRad); 
+      }
+    }
+    
+    const string qradName = MeshDataStack::getActive()->getPrimaryNamespace() + "_qrad";
+    _hasRadiationCoupling = MeshDataStack::getActive()->getDataStorage()->checkData(qradName);
+  
+     // source term due radiation (it is provided by using the PARADE library and must be added to the energy equations)
+    if (_hasRadiationCoupling) {
+      _qrad = MeshDataStack::getActive()->getDataStorage()->getData<CFreal>(qradName);
+      omegaRad = _qrad[elemID];
+    }
+    
+    DataHandle<CFreal> volumes = socket_volumes.getDataHandle(); 
+
+    // Case of the analytical jacobian for the source term vector
+
+    if (this-> useAnalyticalJacob()) {
+
+       _library->setDensityEnthalpyEnergy(Tdim, _tvDim, pdim, _dhe, true);
+       SafePtr<PhysicalChemicalLibrary::ExtraData> eData = _library->getExtraData();
+       
+       for (CFuint is = 0; is < nbSpecies; is++) {          
+          jacobian(is,is) += u*dAdX; 
+          jacobian(is,nbSpecies) += rhodim*_ys[is]*dAdX;
+          jacobian(nbSpecies,is) = u*u*dAdX;
+          jacobian(nbSpecies+1,is) = u*dAdX*(eData->enthalpyTt[is]+u*u/2.0);       
+       }            
+       jacobian(nbSpecies,nbSpecies) = 2.0*rhodim*u*dAdX;   
+       jacobian(nbSpecies,nbSpecies+1) = 0.0; 
+       jacobian(nbSpecies+1,nbSpecies) = rhodim*dAdX*(H+u*u);   
+       jacobian(nbSpecies+1,nbSpecies+1) = rhodim*u*dAdX*eData->dHdT;        
+
+       if (nbEvEqs != 0) {  
+
+           if (nbEvEqs == 1) { 
+
+              CFuint v = 0;
+              for (CFuint is = 0; is < nbSpecies; is++) {
+                  jacobian(nbSpecies+2,is) += u*dAdX*eData->energyVib[is];
+                  jacobian(nbSpecies+2,nbSpecies) += rhodim*_ys[is]*dAdX*eData->energyVib[is]; 
+              }
+    
+              jacobian(nbSpecies+2,nbSpecies+2) += rhodim*u*dAdX*eData->cpVib[v]; 
+              jacobian(nbSpecies+1,nbSpecies+2) = rhodim*u*dAdX*eData->cpVib[v]; 
+
+           }
+
+           else {
+
+              CFuint ivt = 0;
+              CFuint icc = 0;
+              for (CFuint v = 0; v < nbEvEqs; v++) {
+                  jacobian(nbSpecies+2+v,nbSpecies+2+v) += rhodim*u*dAdX*eData->cpVib[v];  
+                  jacobian(nbSpecies+1,nbSpecies+2+v) += rhodim*u*dAdX*eData->cpVib[v]; 
+                
+                     for (CFuint nv = 0; nv < (eData->list)[icc+v]; nv++) {
+                         CFuint Mol = (eData->list)[icc+v+nv+1];
+                         jacobian(nbSpecies+2+v,Mol) += u*dAdX*eData->energyVib[Mol];
+                         jacobian(nbSpecies+2+v,nbSpecies) += rhodim*dAdX*_ys[Mol]*eData->energyVib[Mol];   
+                         ivt = ivt + 1;
+                     }
+                   
+              }
+           } 
+
+       }
+
+       if (nbTe != 0) {
+
+             DataHandle<RealVector> nstates =
+             this->_sockets.template getSocketSink<RealVector>("nstates")->getDataHandle();
+
+             const RealVector& n1 = nstates[nodes[0]->getLocalID()];
+             const RealVector& n2 = nstates[nodes[1]->getLocalID()];
+             const CFreal pe = this->_library->getElectronPress()/refData[UPDATEVAR::PTERM::P];
+             const CFreal dudx = (n2[nbSpecies] - n1[nbSpecies])/volumes[elemID];
+
+             for (CFuint is = 0; is < nbSpecies; is++) {
+                  if (is == 0) {
+                     jacobian(nbSpecies+2+nbEvEqs,is) += pe/(rhodim*_ys[is])*(2.5*u*dAdX-dudx);
+                  } 
+                  else { 
+                     jacobian(nbSpecies+2+nbEvEqs,is) += u*dAdX*eData->eElec[is];
+                  }
+
+                 jacobian(nbSpecies+2+nbEvEqs,nbSpecies) += rhodim*dAdX*eData->eElec[is]*_ys[is];
+                 jacobian(nbSpecies+1,nbSpecies+2+nbEvEqs) += rhodim*u*dAdX*_ys[is]*eData->cpElec[is]; 
+                 jacobian(nbSpecies+2+nbEvEqs,nbSpecies+2+nbEvEqs) += eData->cpElec[is]*rhodim*_ys[is]*u*dAdX; 
+             } 
+             jacobian(nbSpecies+2+nbEvEqs,nbSpecies) += pe*dAdX;
+             jacobian(nbSpecies+2+nbEvEqs,nbSpecies+2+nbEvEqs) += pe/_tvDim[nbEvEqs]*(-dudx+2.5*u*dAdX); 
+       }       
+       
+    } else {
+      _library->setDensityEnthalpyEnergy(Tdim, _tvDim, pdim,_dhe);
+    }   
+ 
+    // volume has to multiply the source term derivative
+    jacobian *= volumes[elemID];
+
+//    if   (this-> useAnalyticalJacob()) {
+//    for (CFuint ll = 0; ll < nbEqs; ll++) {
+//        for (CFuint ff = 0; ff < nbEqs; ff++) {
+//           std::cout << jacobian(ll,ff) << "  ";
+//        }
+//    std::cout << endl;
+//    } 
+//    std::string ch;
+//    std::cin >> ch;
+//    } 
+   
+    const vector<CFuint>& speciesVarIDs =
+      UPDATEVAR::getEqSetData()[0].getEqSetVarIDs();        
+
+    const CFreal ovOmegaRef = PhysicalModelStack::getActive()->getImplementor()->
+      getRefLength()/(refData[UPDATEVAR::PTERM::RHO]*refData[UPDATEVAR::PTERM::V]);
+    
+    // Species continuity conservation equation source term: chemical reactions and area variation
+    
+    for (CFuint i = 0; i < nbSpecies; ++i) {
+      source[speciesVarIDs[i]] = (_omega[i]*ovOmegaRef +_ys[i]*rhodim*u*dAdX)*volumes[elemID];
+    }        
+
+   // Global momentum and energy conservation equation source terms
+
+    source[nbSpecies] = dAdX*volumes[elemID]*rhodim*u*u; 
+    if (_hasRadiationCoupling) {
+      source[nbSpecies+1] = volumes[elemID]*(rhodim*u*H*dAdX - _qrad[elemID]);
+    } else {
+      source[nbSpecies+1] = volumes[elemID]*(rhodim*u*H*dAdX - omegaRad); 
+    }
+
+    // Vibrational energy conservation equation source term: energy exchange mechanism and area variation
+    
+    if (nbEvEqs != 0){  
+
+       const CFreal ovOmegavRef = PhysicalModelStack::getActive()->
+       getImplementor()->getRefLength()/(refData[UPDATEVAR::PTERM::RHO]*
+				      refData[UPDATEVAR::PTERM::H]*
+				      refData[UPDATEVAR::PTERM::V]); 
+
+       for (CFuint i = 0; i < nbEvEqs; ++i) {   
+               source[evVarIDs[i]] = (_omegaTv[i]*ovOmegavRef+dAdX*rhodim*u*_dhe[3+i])*volumes[elemID];    
+           } 
+
+      if (nbTe != 0) {
+
+         const CFuint TeID = (this->_library->getNbTe() == 0) ? 
+         nbSpecies + dim + 1 + this->_library->getElectrEnergyID() : currState->size() - 1;
+
+         DataHandle<RealVector> nstates =
+         this->_sockets.template getSocketSink<RealVector>("nstates")->getDataHandle();
+ 
+         const RealVector& n1 = nstates[nodes[0]->getLocalID()];
+         const RealVector& n2 = nstates[nodes[1]->getLocalID()];
+         const CFreal pe = this->_library->getElectronPress()/refData[UPDATEVAR::PTERM::P];
+         const CFreal dudx = (n2[nbSpecies] - n1[nbSpecies])/volumes[elemID];  
+
+         source[TeID] = (_omegaTv[nbEvEqs] + 1.5*_omega[0]*ovOmegaRef*pe/(rhodim*_ys[0]) - pe*dudx + 
+                        dAdX*u*(pe +rhodim*_dhe[3+nbEvEqs]))*volumes[elemID];        
+
+         if (_hasRadiationCoupling) {
+           source[TeID] -= _qrad[elemID]*volumes[elemID];
+          }
+  
+      }
+
+    }
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template<class UPDATEVAR>
+void EulerQuasi1DChemNEQST<UPDATEVAR>::setVibTemperature(const RealVector& pdata, 
+							 const Framework::State& state,
+							 RealVector& tvib)
+{
+  const CFuint startID = this->_ys.size() + Framework::PhysicalModelStack::getActive()->getDim()  + 1;
+  for (CFuint i = 0; i < tvib.size(); ++i) {
+     tvib[i] =  state[startID + i];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

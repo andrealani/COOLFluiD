@@ -1,0 +1,136 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -4.24801
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libNewtonMethod libPetscI libGambit2CFmesh libAeroCoef libAeroCoefFVM
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/SodRiemann/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
+Simulator.SubSystem.Euler2D.refValues   = 1. 2.83972 2.83972 6.532
+Simulator.SubSystem.Euler2D.refLength   = 1.0
+
+
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.01
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = MaxDT
+#Simulator.SubSystem.SubSystemStatus.MaxDT.ST_CFL = 0.9
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = FunctionDT
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Vars = i
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = 1.0
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = sod2d.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate     = 40
+Simulator.SubSystem.CFmesh.AppendTime   = false
+Simulator.SubSystem.CFmesh.AppendIter   = true
+Simulator.SubSystem.Tecplot.FileName    = sod2d.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate    = 40
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+
+# Extract a section of the solution
+Simulator.SubSystem.DataPostProcessing = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames = DataProcessing
+Simulator.SubSystem.DataProcessing.Comds = Extract2DSectionCC
+Simulator.SubSystem.DataProcessing.Names = ExtractSection
+Simulator.SubSystem.DataProcessing.ProcessRate = 1
+Simulator.SubSystem.DataProcessing.ExtractSection.applyTRS = SuperOutlet
+Simulator.SubSystem.DataProcessing.ExtractSection.SaveRate = 20
+Simulator.SubSystem.DataProcessing.ExtractSection.AppendIter = true
+Simulator.SubSystem.DataProcessing.ExtractSection.AppendTime = false
+Simulator.SubSystem.DataProcessing.ExtractSection.OutputFile = section_sod_MinMod2.dat
+Simulator.SubSystem.DataProcessing.ExtractSection.ExtractCoord = 0. 0.5
+Simulator.SubSystem.DataProcessing.ExtractSection.ExtractAlongNormal = true
+
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 5
+
+#Simulator.SubSystem.StopCondition       = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime      = 0.2
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = shockTubeQD.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = FVMCC
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSystem.CFmeshFileReader.Data.numericalMethod = CellCenterFVM
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = BDF2LSS
+Simulator.SubSystem.BDF2LSS.Data.PCType = PCILU
+Simulator.SubSystem.BDF2LSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.BDF2LSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.ConvergenceMethod = BDF2
+Simulator.SubSystem.BDF2.ShowRate = 1
+Simulator.SubSystem.BDF2.Data.CFL.Value = 10.0
+Simulator.SubSystem.BDF2.Data.CFL.ComputeCFL = Determine
+#Simulator.SubSystem.BDF2.Data.CFL.Function.Def = 3.0*i
+Simulator.SubSystem.BDF2.Data.MaxSteps = 10
+Simulator.SubSystem.BDF2.Data.Norm = -5.
+Simulator.SubSystem.BDF2.Data.PrintHistory = true
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+#Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhs
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhsLimited
+Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.TimeLimiter = MinMod
+Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.MinMod.SlopeRatio = 1.
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -5.0
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = if(x>0.5,0.1,1.) \
+                                          0.00001 \
+                                          0.0 \
+                                          if(x>0.5,0.25,2.5) \
+
+Simulator.SubSystem.CellCenterFVM.BcComds = SuperOutletFVMCC \
+                                            SuperOutletFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = Bottom \
+                                            Top
+Simulator.SubSystem.CellCenterFVM.Bottom.applyTRS = SuperInlet
+Simulator.SubSystem.CellCenterFVM.Top.applyTRS = SuperOutlet
+
+CFEnv.RegistSignalHandlers = false

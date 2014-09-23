@@ -1,0 +1,15 @@
+AnalyticalDM.ModelDim = 2
+
+# circle of radius 10
+AnalyticalDM.FuncX =  10*cos(u*3.1415927)  10*cos(u*3.1415927)
+AnalyticalDM.FuncY =  10*sin(u*3.1415927) -10*sin(u*3.1415927)
+AnalyticalDM.FuncZ =  0.                   0.
+AnalyticalDM.DFuncX =  -31.415927*sin(u*3.1415927)  -31.415927*sin(u*3.1415927)
+AnalyticalDM.DFuncY =   31.415927*cos(u*3.1415927)  -31.415927*cos(u*3.1415927)
+AnalyticalDM.DFuncZ =  0.                   0.
+
+# naca0012, cord = 10, truncated
+#AnalyticalDM.FuncX = 10*u 10*u
+#AnalyticalDM.FuncY = 10*0.12/0.2*(0.2969*sqrt(u)-0.126*u-0.3516*u*u+0.2843*u*u*u-0.1015*u*u*u*u) 10*0.12/0.2*(0.2969*sqrt(u)-0.126*u-0.3516*u*u+0.2843*u*u*u-0.1015*u*u*u*u)
+#AnalyticalDM.FuncZ =  0.                   0.
+

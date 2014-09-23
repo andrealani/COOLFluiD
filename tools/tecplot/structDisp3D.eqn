@@ -1,0 +1,7 @@
+#!MC 900
+$!ALTERDATA 
+  EQUATION = '{DispX} = {x0}+{u}*100' 
+$!ALTERDATA 
+  EQUATION = '{DispY} = {x1}+{v}*100' 
+$!ALTERDATA 
+  EQUATION = '{DispZ} = {x2}+{w}*100' 

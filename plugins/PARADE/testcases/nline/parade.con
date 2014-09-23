@@ -1,0 +1,51 @@
+c User input file for PARADE
+c 1. Spectrum control data:
+  7467.6       wavlo [A]
+  7469.1       wavhi [A]
+  200          npoints
+c 2. Parameters for adaptive wavelength discretisation:
+  0.0005       minimum distance between adjacent points
+  100.         integration limit for line shape
+  0.0001       minimum fraction for use of energy level
+c 3. Switches for radiation mechanisms:
+  'Y'          free-free  radiation (y/n)
+  'Y'          free-bound radiation (y/n)
+  'Y'          atomic line radiation (y/n)
+  'N'          molecular band radiation (y/n)
+  'N'          nonequilibrium excitation (y/n)
+  'N'          adaptive wavelength discretisation (y/n)
+  'Y'          equal wavelength increments (y/n)
+  'N'          equal frequency increments (y/n)
+c 3(bis). Switches for output options
+  1 		iout (row number for main outputs)
+  1		jout (column number for main outputs)
+  'N'          'par_res.imo' for each cell (y/n)
+  'N'          time integrated emission coefficient until cell number
+  60           max cell number for time integration (shock tube test)
+c
+c 4. rad(y/n) remark  at. spec  ttr  tv  te    rad.file
+ 'Y',        'N'      1         1   0   2,   '/parade/data/ni.dat'
+ 'N',        ' '      1         1   0   2,   ' '
+ 'N',        ' '      1         1   0   2,   ' '
+ 'N',        ' '      1         1   0   2,   ' '
+ 'N',        ' '      1         1   0   2,   ' '
+ 'N',        ' '      1         1   0   2,   ' '
+ 'N',        ' '      1         1   0   2,   ' '
+ 'N',        ' '      1         1   0   2,   ' '
+ 'N',        ' '      1         1   0   2,   ' '
+ 'N',        ' '      1         1   0   2,   ' '
+ 'N',        ' '      0         0   0   1,   ' '
+c 5. Temperatures and number densities
+  17152.0             T trans
+  17152.0             T elec
+  1.1E23              No. density
+  0.                  No. density
+  0.                  No. density
+  0.                  No. density
+  0.                  No. density
+  0.                  No. density
+  0.                  No. density
+  0.                  No. density
+  0.                  No. density
+  0.                  No. density
+  0.                  No. density

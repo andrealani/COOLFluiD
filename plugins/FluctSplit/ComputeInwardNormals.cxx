@@ -1,0 +1,59 @@
+#include "FluctSplit/ComputeInwardNormals.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+    namespace FluctSplit {
+
+//////////////////////////////////////////////////////////////////////////////
+
+ComputeInwardNormals::ComputeInwardNormals()
+  : ComputeNormals(),
+  socket_normals(CFNULL),
+  socket_normalsData(CFNULL),
+  socket_tempSize(CFNULL),
+  socket_pastNormals(CFNULL),
+  socket_interNormals(CFNULL)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+ComputeInwardNormals::~ComputeInwardNormals()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ComputeInwardNormals::setNormalsSockets(Common::SafePtr<DataSocketSink<InwardNormalsData*> > normals)
+{
+  socket_normals = normals;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ComputeInwardNormals::setNormalsDataSockets(Common::SafePtr<DataSocketSink<CFreal> > normalsData)
+{
+  socket_normalsData = normalsData;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ComputeInwardNormals::setTempSizeSockets(Common::SafePtr<DataSocketSink<CFuint> > tempSize)
+{
+  socket_tempSize = tempSize;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FluctSplit
+
+} // namespace COOLFluiD
+
+

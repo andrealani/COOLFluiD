@@ -1,0 +1,642 @@
+#include "MathTools/RealMatrix.hh"
+#include "MathTools/InverterT.hh"
+
+#include "Framework/MeshData.hh"
+#include "Framework/ComputeDummyStates.hh"
+#include "Framework/ComputeNormals.hh"
+#include "Framework/VolumeCalculator.hh"
+#include "Framework/DofDataHandleIterator.hh"
+#include "Framework/NamespaceSwitcher.hh"
+#include "Framework/ComputeFaceNormalsFVMCC.hh"
+#include "Framework/GeometricEntityPool.hh"
+#include "Framework/FaceTrsGeoBuilder.hh"
+#include "Framework/CellTrsGeoBuilder.hh"
+#include "Framework/TrsGeoWithNodesBuilder.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Framework/ElementDataArray.hh"
+#include "Common/PE.hh"
+#include "Common/CFMultiMap.hh"
+
+#ifdef CF_HAVE_MPI
+#include <mpi.h>
+#include "Common/MPI/MPIStructDef.hh"
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void BaseSetupFVMCC<BASE>::defineConfigOptions(Config::OptionList& options)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+BaseSetupFVMCC<BASE>::BaseSetupFVMCC(const std::string& name) :
+  BASE(name),
+  m_dynamicSockets(),
+  socket_normals("normals"),
+  socket_faceAreas("faceAreas"),  
+  socket_faceCenters("faceCenters"),
+  socket_isOutward("isOutward"),
+  socket_cellFlag("cellFlag"),
+  socket_gstates("gstates"),
+  socket_volumes("volumes"),
+  socket_limiter("limiter"),
+  socket_nstates("nstates"),
+  socket_nstatesProxy("nstatesProxy"),
+  socket_trsID("trsID"),
+  socket_rankPartitionFaces("rankPartitionFaces"),
+  socket_states("states"),
+  socket_nodes("nodes"),
+  m_stored_args()
+{
+  this->addConfigOptionsTo(this);
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+BaseSetupFVMCC<BASE>::~BaseSetupFVMCC()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+std::vector<Common::SafePtr<BaseDataSocketSource> > BaseSetupFVMCC<BASE>::providesSockets()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  
+  CFAUTOTRACE;
+  
+  std::vector<Common::SafePtr<BaseDataSocketSource> > result;
+
+  result.push_back(&socket_normals);
+  result.push_back(&socket_faceAreas);
+  result.push_back(&socket_faceCenters);
+  result.push_back(&socket_isOutward);
+  result.push_back(&socket_gstates);
+  result.push_back(&socket_volumes);
+  result.push_back(&socket_limiter);
+  result.push_back(&socket_nstates);
+  result.push_back(&socket_nstatesProxy);
+  result.push_back(&socket_trsID);
+  result.push_back(&socket_rankPartitionFaces);
+  result.push_back(&socket_cellFlag);
+
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void BaseSetupFVMCC<BASE>::configure ( Config::ConfigArgs& args )
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  
+  CFAUTOTRACE;
+  
+  BASE::configure(args);
+
+  // Loop over the TRS's and add the "TRSName" + "-boundaryNormals" datasocketsink 
+  // to the m_dynamicSockets
+  std::string name = this->getMethodData().getNamespace();
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<MeshData> meshData = MeshDataStack::getInstance().getEntryByNamespace(nsp);
+  
+  vector<std::string> trsList = meshData->getTRSNameList();
+  const CFint nbTRSs = trsList.size();
+  
+  for (CFint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
+    const std::string trsName = trsList[iTRS];
+    
+    if (trsName != "PartitionFaces" && trsName != "InnerCells" && trsName != "InnerFaces") {
+      const std::string socketName = trsName + "-boundaryNormals";
+      const bool isEssential = false;
+      m_dynamicSockets.createSocketSink<const CFreal*>(socketName,isEssential);
+    }
+  }
+    
+  m_stored_args = args;
+}      
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void BaseSetupFVMCC<BASE>::allocateArrays()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  
+  CFAUTOTRACE;
+  
+  CFLog(VERBOSE, "BaseSetupFVMCC<BASE>::allocateArrays() => start\n");
+  
+  // local counts
+  const CFuint nbFaces = MeshDataStack::getActive()->Statistics().getNbFaces();
+  const CFuint nbCells = socket_states.getDataHandle().size();
+  const CFuint nbNodes = socket_nodes.getDataHandle().size();
+  const CFuint dim     = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbEqs   = PhysicalModelStack::getActive()->getNbEq();
+  
+  socket_normals.getDataHandle().resize(nbFaces*dim);
+  socket_faceAreas.getDataHandle().resize(nbFaces);
+  socket_faceCenters.getDataHandle().resize(nbFaces*dim);
+  
+  socket_isOutward.getDataHandle().resize(nbFaces);
+  socket_isOutward.getDataHandle() = -1;
+  
+  socket_cellFlag.getDataHandle().resize(nbCells);
+  socket_cellFlag.getDataHandle() = false;
+  
+  // count the boundary faces to be able to resize the ghost states array
+  CFuint nbBoundaryFaces = 0;
+  vector< SafePtr<TopologicalRegionSet> > alltrs = MeshDataStack::getActive()->getTrsList();
+  vector< SafePtr<TopologicalRegionSet> >::iterator iTRS;
+  for (iTRS = alltrs.begin(); iTRS != alltrs.end(); ++iTRS) {
+    if ((*iTRS)->getName() != "InnerCells" && (*iTRS)->getName() != "InnerFaces") {
+      nbBoundaryFaces += (*iTRS)->getLocalNbGeoEnts();
+    }
+  }
+  CFLogDebugMax("nbBoundaryFaces = " << nbBoundaryFaces << "\n");
+  socket_gstates.getDataHandle().resize(nbBoundaryFaces);
+  
+  socket_volumes.getDataHandle().resize(nbCells);
+  
+  socket_limiter.getDataHandle().resize(0); // 0 is default size
+  
+  DataHandle<RealVector> nstates = socket_nstates.getDataHandle();
+  nstates.resize(nbNodes);
+  for (CFuint i = 0; i < nstates.size(); ++i) {
+    nstates[i].resize(nbEqs);
+  }
+  
+  socket_nstatesProxy.getDataHandle().resize(1);
+  socket_nstatesProxy.getDataHandle()[0] = new DofDataHandleIterator<RealVector,RealVector>(nstates);
+  
+  socket_trsID.getDataHandle().resize(nbNodes);
+  socket_trsID.getDataHandle() = -1;
+  
+  CFLog(VERBOSE, "BaseSetupFVMCC::allocateArrays() => end\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void BaseSetupFVMCC<BASE>::execute()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  
+  CFAUTOTRACE;
+  
+  CFLog(VERBOSE, "BaseSetupFVMCC<BASE>::execute() => start\n");
+ 
+  // allocate all data arrays
+  allocateArrays();
+  
+  // compute the normals-related data, cell volumes, dummy states positions  
+  this->getMethodData().getGeoDataComputer()->compute();
+  
+  //store the boundaryNormals
+  storeBoundaryNormals(); 
+  
+  // assign global IDs to partition face ghost states
+  if (PE::GetPE().IsParallel()) {assignPartitionFaceGlobalGhostStateIDS();}
+  
+  CFLog(VERBOSE, "BaseSetupFVMCC::execute() => end\n");
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void BaseSetupFVMCC<BASE>::storeBoundaryNormals()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  
+  CFAUTOTRACE;
+  
+  CFLog(VERBOSE, "BaseSetupFVMCC::storeBoundaryNormals() => start\n");
+  
+  // Loop over the TRS's and add the "TRSName" + "-boundaryNormals" datasocketsink 
+  // to the m_dynamicSockets
+  vector<Common::SafePtr<TopologicalRegionSet> > trs = MeshDataStack::getActive()->getTrsList();
+  const CFint nbTRSs = trs.size();
+  
+  for (CFint iTRS = 0; iTRS < nbTRSs; ++iTRS)
+  {
+    SafePtr<TopologicalRegionSet> currTrs = trs[iTRS];
+    
+    if (currTrs->getName() != "PartitionFaces" &&
+        currTrs->getName() != "InnerCells" &&
+        currTrs->getName() != "InnerFaces")
+      {
+	CFLog(VERBOSE, "BaseSetupFVMCC::storeBoundaryNormals() => TRS name = " << currTrs->getName() << "\n");
+	const std::string socketName = currTrs->getName() + "-boundaryNormals";
+	Common::SafePtr<DataSocketSink< const CFreal*> > boundaryNormals = 
+	  m_dynamicSockets.getSocketSink<const CFreal*>(socketName);
+	
+      if(boundaryNormals->isConnected())
+      {
+        Common::SafePtr<GeometricEntityPool<FaceTrsGeoBuilder> >
+          geoBuilder = this->getMethodData().getFaceTrsGeoBuilder();
+
+        FaceTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
+
+        SafePtr<FaceTrsGeoBuilder> geoBuilderPtr = geoBuilder->getGeoBuilder();
+        geoBuilderPtr->setDataSockets(socket_states, socket_gstates, socket_nodes);
+
+        geoData.trs = currTrs;
+
+        const CFuint nbFaces = currTrs->getLocalNbGeoEnts();
+
+        // get the normals
+        DataHandle< CFreal> normals = socket_normals.getDataHandle();
+
+        // get the boundaryNormals
+        DataHandle< const CFreal*> boundaryNormalsHandle = boundaryNormals->getDataHandle();
+
+        //resize the boundaryNormals datahandle
+        boundaryNormalsHandle.resize(nbFaces);
+
+        for (CFuint iFace = 0; iFace < nbFaces; ++iFace)
+        {
+          geoData.idx = iFace;
+
+          GeometricEntity *const currFace = geoBuilder->buildGE();
+
+          CFuint faceID = currFace->getID();
+          boundaryNormalsHandle[iFace] = &(normals[faceID*PhysicalModelStack::getActive()->getDim()]);
+
+          // release the face
+          geoBuilder->releaseGE();
+        }
+      }
+    }
+  }
+
+  CFLog(VERBOSE, "BaseSetupFVMCC::storeBoundaryNormals() => end\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void BaseSetupFVMCC<BASE>::computeNormalsData()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  
+  CFAUTOTRACE;
+  
+  SafePtr<vector<ElementTypeData> > elemTypes = MeshDataStack::getActive()->getElementTypeData();
+  DataSocketSink<CFreal> sinkNormals(socket_normals);
+  DataSocketSink<CFint> sinkIsOutward(socket_isOutward);
+  
+  SafePtr<DataSocketSink<CFreal> > sinkNormalsPtr = &sinkNormals;
+  SafePtr<DataSocketSink<CFint> > sinkIsOutwardPtr = &sinkIsOutward;
+
+  for (CFuint iType = 0; iType < elemTypes->size(); ++iType)
+  {
+    const CFuint geoOrder = (*elemTypes)[iType].getGeoOrder();
+    const std::string elemName = (*elemTypes)[iType].getShape() + CFPolyOrder::Convert::to_str(geoOrder);
+
+    SelfRegistPtr<ComputeNormals> computeFaceNormals =
+      Environment::Factory<ComputeNormals>::getInstance().
+      getProvider("Face" + elemName)->create();
+
+    const CFuint firstElem = (*elemTypes)[iType].getStartIdx();
+    const CFuint lastElem  = (*elemTypes)[iType].getEndIdx();
+
+    SelfRegistPtr<ComputeFaceNormalsFVMCC> faceNormalsComputer =
+      computeFaceNormals.d_castTo<ComputeFaceNormalsFVMCC>();
+
+    faceNormalsComputer->setSockets(sinkNormalsPtr,
+				    sinkIsOutwardPtr);
+
+    (*faceNormalsComputer)(firstElem, lastElem);
+  } 
+  
+  // computation of face areas
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  DataHandle< CFreal> normals = socket_normals.getDataHandle();
+  DataHandle< CFreal> faceAreas = socket_faceAreas.getDataHandle();
+  RealVector faceNormal(dim);
+  
+  for (CFuint iFace = 0; iFace < faceAreas.size(); ++iFace) {
+    const CFuint startID = iFace*dim;
+    for (CFuint i = 0; i < dim; ++i) {      
+      faceNormal[i] = normals[startID + i];
+    }
+    faceAreas[iFace] = faceNormal.norm2();
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void BaseSetupFVMCC<BASE>::computeCellVolumes()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  
+  CFAUTOTRACE;
+
+  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+
+  Common::SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->
+   getTrs("InnerCells");
+
+  Common::SafePtr<GeometricEntityPool<TrsGeoWithNodesBuilder> >
+    geoBuilder = this->getMethodData().getGeoWithNodesBuilder();
+
+  TrsGeoWithNodesBuilder::GeoData& geoData = geoBuilder->getDataGE();
+  geoData.trs = cells;
+  
+  CFuint countNegativeVol = 0;
+  const CFuint nbElems = cells->getLocalNbGeoEnts();
+  for (CFuint iElem = 0; iElem < nbElems; ++iElem) {
+    // build the GeometricEntity
+    geoData.idx = iElem;
+    GeometricEntity *const cell = geoBuilder->buildGE();
+    volumes[iElem] = cell->computeVolume();
+    
+    if (volumes[iElem] < 0.0)
+    {
+      countNegativeVol++;
+      cout.precision(14);
+      CFout << "Cell [" << iElem << "] with [" << cell->nbNodes() << "] nodes has negative volume [" << volumes[iElem] << "]\n";
+      volumes[iElem] = 0.0;
+    }
+
+    if ( MathChecks::isZero(volumes[iElem]) )
+    {
+      cout.precision(14);
+      CFout << "Cell [" << iElem << "] with [" << cell->nbNodes() << "] nodes has zero volume [" << volumes[iElem] << "]\n";
+      // print coordinates
+      for (CFuint i = 0; i < cell->nbNodes(); ++i) {
+       CFout << *cell->getNode(i) << ", ";
+      } CFout << "\n";
+      volumes[iElem] = 0.0;
+    }
+
+    //   cf_assert(volumes[iElem] > 0.);
+
+    //release the GeometricEntity
+    geoBuilder->releaseGE();
+  }
+  
+  CFLogDebugMin ( "Negative volumes count [" << countNegativeVol << "]\n" );
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > 
+BaseSetupFVMCC<BASE>::needsSockets()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  CFAUTOTRACE;
+  
+  vector<SafePtr<BaseDataSocketSink> > result  = m_dynamicSockets.getAllSinkSockets();
+  result.push_back(&socket_states);
+  result.push_back(&socket_nodes);
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+      
+template <typename BASE>
+void BaseSetupFVMCC<BASE>::assignPartitionFaceGlobalGhostStateIDS()
+{  
+#ifdef CF_HAVE_MPI
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  
+  CFAUTOTRACE;
+  
+  GeometricEntityPool<FaceTrsGeoBuilder> faceBuilder;
+  faceBuilder.setup();
+  faceBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
+  FaceTrsGeoBuilder::GeoData& faceData = faceBuilder.getDataGE();
+  SafePtr<TopologicalRegionSet> pTRS = MeshDataStack::getActive()->getTrs("PartitionFaces");
+  faceData.trs = pTRS;
+  faceData.isBFace = true;
+  
+  // count the entries into the soon-to-be-built map in order to save memory 
+  const CFuint nbFaces = faceData.trs->getLocalNbGeoEnts();
+  CFuint faceNodesSize = 0;
+  for (CFuint i = 0; i < nbFaces; ++i) {
+    faceNodesSize += pTRS->getNbNodesInGeo(i);
+  }
+  
+  DataHandle<CFuint> rankPartitionFaces = socket_rankPartitionFaces.getDataHandle();
+  rankPartitionFaces.resize(nbFaces);
+  
+  // create a mapping between partition face nodes and corresponding local TRS face ID
+  CFMultiMap<CFuint, CFuint> mapNodeIDToTrsFaceID(faceNodesSize);
+  typedef CFMultiMap<CFuint, CFuint>::MapIterator MapIt;
+  
+  for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+    faceData.idx = iFace;
+    GeometricEntity *const face = faceBuilder.buildGE();
+    const CFuint nbNodes = face->nbNodes();
+    const vector<Node*>& nodes = *face->getNodes();
+    assert(nbNodes <= 4);
+    for (CFuint in = 0; in < nbNodes; ++in) {
+      mapNodeIDToTrsFaceID.insert(nodes[in]->getGlobalID(), iFace);
+    }
+    faceBuilder.releaseGE();
+  } 
+  mapNodeIDToTrsFaceID.sortKeys();
+  
+  DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
+  SafePtr<TopologicalRegionSet> cellTRS = MeshDataStack::getActive()->getTrs("InnerCells");
+  const CFuint nbCells = states.size();
+  assert(nbCells == cellTRS->getLocalNbGeoEnts());
+  
+  // compute the size of the data needed for describing all partition cells
+  // store the corresponding cell local IDs
+  vector<CFuint> nbPartitionCellsAndSize(2, 0);
+  vector<CFuint> partitionCellsIDs; 
+  partitionCellsIDs.reserve(nbCells);
+  for (CFuint s = 0; s < nbCells; ++s){
+    // only parallel updatable cells can have internal faces that are partition faces for other processors
+    // if (states[s]->isParUpdatable()) {
+    partitionCellsIDs.push_back(s);
+    nbPartitionCellsAndSize[1] += ElementDataArray<0>::getElementSize(cellTRS->getNbNodesInGeo(s), 1);
+    // }
+  }
+  
+  nbPartitionCellsAndSize[0] = partitionCellsIDs.size();
+  assert(nbPartitionCellsAndSize[0] > 0);
+  assert(nbPartitionCellsAndSize[1] > 0);
+  assert(nbPartitionCellsAndSize[0] < nbPartitionCellsAndSize[1]);
+  
+  // compute the maximum sizes for the number of partition cells and their description data
+  vector<CFuint> maxNbPartitionCellsAndSize(2, 0);
+  const CFuint nbPr = PE::GetPE().GetProcessorCount();
+  MPI_Comm comm = PE::GetPE().GetCommunicator();
+  const CFuint rank = PE::GetPE().GetRank();
+  MPI_Allreduce(&nbPartitionCellsAndSize[0], &maxNbPartitionCellsAndSize[0], 2, MPI_UNSIGNED, MPI_MAX, comm);
+  assert(maxNbPartitionCellsAndSize[0] > 0);
+  assert(maxNbPartitionCellsAndSize[1] > 0);
+  assert(maxNbPartitionCellsAndSize[0] < nbPartitionCellsAndSize[1]);
+    
+  // store all data needed for the local partition cell description
+  ElementDataArray<0> partitionCells;
+  partitionCells.reserve(maxNbPartitionCellsAndSize[0], maxNbPartitionCellsAndSize[1]);
+  assert(maxNbPartitionCellsAndSize[0] < maxNbPartitionCellsAndSize[1]);
+  
+  // build only cells belonging to the partition and store all related data
+  GeometricEntityPool<CellTrsGeoBuilder> cellBuilder;
+  cellBuilder.setup();
+  cellBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
+  CellTrsGeoBuilder::GeoData& cellData = cellBuilder.getDataGE();
+  cellData.trs = cellTRS;
+  
+  for (CFuint i = 0; i < partitionCellsIDs.size(); ++i) {
+    cellData.idx = partitionCellsIDs[i];
+    GeometricEntity *const cell = cellBuilder.buildGE();
+    
+    // insert partition cell data
+    partitionCells.setBeginEptr();
+    partitionCells.addElemDataEntry(cell->getState(0)->getGlobalID());
+    
+    // local ID  (no need to give a consistent value here)
+    partitionCells.addElemDataEntry(cell->getState(0)->getLocalID());
+    // entity type ID (no need to give a consistent value here)
+    partitionCells.addElemDataEntry(0);
+    
+    const CFuint nbCellNodes = cell->nbNodes();
+    partitionCells.addElemDataEntry(nbCellNodes);
+    partitionCells.addElemDataEntry(1); // nb states in cell
+    for (CFuint n = 0; n < nbCellNodes; ++n) {
+      partitionCells.addElemDataEntry(cell->getNode(n)->getGlobalID()); 
+    }
+    partitionCells.addElemDataEntry(cell->getState(0)->getGlobalID());
+    partitionCells.setEndEptr();
+    
+    cellBuilder.releaseGE();
+  }
+    
+  // array of flags to detect which partition faces have been successfully processed 
+  vector<bool> foundID(nbFaces, false);
+  
+  ElementDataArray<0> commPartitionCells;
+  commPartitionCells.resize(maxNbPartitionCellsAndSize[0], maxNbPartitionCellsAndSize[1]);
+  
+  int ln[3];
+  ln[0] = maxNbPartitionCellsAndSize[0];
+  ln[1] = maxNbPartitionCellsAndSize[1];
+  ln[2] = 1;
+  
+  for (CFuint root = 0; root < nbPr; ++root) {
+    
+    CFuint commNbCells = 0;
+    // only root copy its data
+    if (root == rank) {
+      commPartitionCells.copy(partitionCells, false);
+      commNbCells = partitionCellsIDs.size();
+    }
+    
+    MPIStruct ms;
+    MPIStructDef::buildMPIStruct(commPartitionCells.startPtr(), commPartitionCells.startData(), &commNbCells, ln, ms);
+    MPI_Bcast(ms.start, 1, ms.type, root, comm);
+    
+    // partition face is surely attached to one cell belonging to the partition region and not belonging to the current partition 
+    // find such cell by scanning all faces of communicated partition cells
+    if (root != rank) {
+      ElementDataArray<0>::Itr itr;
+      for (CFuint iElem = 0; iElem < commNbCells; ++iElem) {
+	itr = commPartitionCells.getElement(iElem); 
+	// check if at least one node of the current partition cell belongs to local partition faces 
+	bool isFound =  false;
+	
+	const CFuint nbNodesInCell = itr.get(ElementDataArray<0>::NB_NODES);	
+	assert(nbNodesInCell <= 8);	
+	for (CFuint jn = 0; jn < nbNodesInCell; ++jn) {
+	  pair<MapIt, MapIt> localFaceIDs = mapNodeIDToTrsFaceID.find(itr.getNode(jn), isFound);
+	  
+	  if (isFound) {
+	    // don't exit the loop but process all available faces: the same cell could be connected to multiple partition faces 
+	    for (MapIt faceItr = localFaceIDs.first; faceItr != localFaceIDs.second; ++faceItr) {
+	      const CFuint faceID = faceItr->second;
+	      
+	      if (!foundID[faceID]) {
+		faceData.idx = faceID;
+		GeometricEntity *const face = faceBuilder.buildGE();
+		const CFuint nbNodesInFace = face->nbNodes();
+		assert(nbNodesInFace < nbNodesInCell);
+		
+		CFuint counter = 0;
+		for (CFuint in = 0; in < nbNodesInFace; ++in) {
+		  for (CFuint jn = 0; jn < nbNodesInCell; ++jn) {
+		    if (itr.getNode(jn) == face->getNode(in)->getGlobalID()) {
+		      counter++;
+		      break;
+		    }
+		  }
+		}
+		
+		// if all global node IDs of the face are contained in the partition cell and the global cell ID is different
+		// from the left state of the face, set the global ID in the ghost state of the current partition face
+		if (counter == nbNodesInFace && (itr.get(ElementDataArray<0>::GLOBAL_ID) != face->getState(0)->getGlobalID())) {
+		  face->getState(1)->setGlobalID(itr.get(ElementDataArray<0>::GLOBAL_ID));
+		  foundID[faceID] = true;
+		  rankPartitionFaces[faceID] = root;
+		}
+		
+		faceBuilder.releaseGE();
+	      } 
+	    }
+	  }
+	}
+      }
+    }
+  }
+  
+  // sanity check
+  for (CFuint i = 0; i < nbFaces; ++i) {
+    if (!foundID[i]) {
+      CFLog(WARN, "WATCH OUT: global ghost state ID not found for Face [" << i << "] in P-" << rank  << "\n");
+    }
+  }
+  
+#endif
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace Framework
+
+} // namespace COOLFluiD

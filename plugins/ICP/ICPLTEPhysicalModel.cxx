@@ -1,0 +1,35 @@
+#include "ICP/ICP.hh"
+#include "ICPLTEPhysicalModel.hh"
+#include "Environment/ObjectProvider.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace ICP {
+
+//////////////////////////////////////////////////////////////////////////////
+
+Environment::ObjectProvider<ICPLTEPhysicalModel<DIM_2D>, PhysicalModelImpl, ICPModule, 1>
+icpLTE2DProvider("ICPLTE2D");
+
+Environment::ObjectProvider<ICPLTEPhysicalModel<DIM_3D>, PhysicalModelImpl, ICPModule, 1>
+icpLTE3DProvider("ICPLTE3D");
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace ICP
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

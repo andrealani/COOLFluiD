@@ -1,0 +1,141 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+
+##############################################################################
+# Loading of components
+##############################################################################
+
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes libFluctSplit  libFluctSplitSystem libFluctSplitNavierStokes libNewtonMethod libPetscI libAeroCoef libAeroCoefFS libGambit2CFmesh libForwardEuler
+
+##############################################################################
+# Directory paths
+##############################################################################
+
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Ringleb
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.FwdEuler.ShowRate            = 1
+Simulator.SubSystem.FwdEuler.ConvRate            = 1
+Simulator.SubSystem.FwdEuler.ConvergenceFile     = ringleb.conv.plt
+
+##############################################################################
+# Physcial model
+##############################################################################
+
+Simulator.SubSystem.Default.PhysicalModelType = Euler2D
+Simulator.SubSystem.Euler2D.refValues = 1.0 1.0 1.0 1.0
+Simulator.SubSystem.Euler2D.refLength = 1.0
+
+#Simulator.SubSystem.Euler2D.ConvTerm.pRef    = 9.99444E+2
+#Simulator.SubSystem.Euler2D.ConvTerm.tempRef = 298.15
+#Simulator.SubSystem.Euler2D.ConvTerm.machInf = 0.4381782
+
+##############################################################################
+# CFL
+##############################################################################
+
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.01
+
+
+##############################################################################
+# Stop condition
+##############################################################################
+
+Simulator.SubSystem.StopCondition          = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -8
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 150000
+
+
+##############################################################################
+# Mesh reading
+##############################################################################
+
+Simulator.SubSystem.Default.listTRS = InnerCells FaceNorth FaceEast FaceSouth FaceWest
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = ringleb_test.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+##############################################################################
+# Mesh writting
+##############################################################################
+
+Simulator.SubSystem.OutputFormat           = Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName        = ringleb_lda_inputringleb_output_unstruct.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate        = 100
+
+Simulator.SubSystem.Tecplot.FileName       = ringleb_lda_inputringleb_output_unstruct.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate       = 100
+Simulator.SubSystem.Tecplot.WriteSol       = WriteSolutionBlock
+
+##############################################################################
+# Pseudo-time discretization
+##############################################################################
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEulerNewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+
+Simulator.SubSystem.FwdEuler.Data.NormRes = L2
+Simulator.SubSystem.FwdEuler.Data.L2.MonitoredVarID = 0
+Simulator.SubSystem.FwdEuler.Data.L2.ComputedVarID  = 0 1 2 3
+
+##############################################################################
+# Space discretization
+##############################################################################
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = CRD
+Simulator.SubSystem.FluctuationSplit.Restart = false
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysLDAC
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar   = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar     = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar    = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar     = Roe
+
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorOrder = P3
+
+##############################################################################
+# Solution initialization
+##############################################################################
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 1.16778E-2 0 1.77123E+0 2.63294E+03 
+
+##############################################################################
+# Boundary conditions
+##############################################################################
+
+Simulator.SubSystem.FluctuationSplit.BcComds = WeakSubInletEuler2DConsRingleb \
+                                               WeakSlipWallEuler2D \
+                                               WeakSlipWallEuler2D \ 
+                                               WeakSubOutletEuler2DConsRingleb
+                                               
+Simulator.SubSystem.FluctuationSplit.BcNames = South\   
+                                               West\
+                                               East\
+                                               North
+                                               
+Simulator.SubSystem.FluctuationSplit.West.applyTRS = FaceWest
+Simulator.SubSystem.FluctuationSplit.East.applyTRS = FaceEast
+
+Simulator.SubSystem.FluctuationSplit.South.applyTRS = FaceSouth
+Simulator.SubSystem.FluctuationSplit.South.Ttot = 3.09599E+2
+Simulator.SubSystem.FluctuationSplit.South.Mach = 0.4381782
+#Simulator.SubSystem.FluctuationSplit.South.Ptot = 1.14034E+3
+#Simulator.SubSystem.FluctuationSplit.South.angle = 90.0
+
+
+Simulator.SubSystem.FluctuationSplit.North.applyTRS = FaceNorth
+#Simulator.SubSystem.FluctuationSplit.North.P = 9.99443E+2
+ 

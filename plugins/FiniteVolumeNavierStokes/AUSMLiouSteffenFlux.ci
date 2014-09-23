@@ -1,0 +1,138 @@
+#include "Framework/EquationSetData.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+AUSMLiouSteffenFlux<UPDATEVAR>::AUSMLiouSteffenFlux(const std::string& name) :
+  AUSMFlux<UPDATEVAR>(name)
+{
+  this->addConfigOptionsTo(this);
+  _choiceKp = 1;
+  this->setParameter("choiceKp",&_choiceKp);
+
+  // override default value
+  this->m_choiceA12 = 0;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+AUSMLiouSteffenFlux<UPDATEVAR>::~AUSMLiouSteffenFlux()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMLiouSteffenFlux<UPDATEVAR>::defineConfigOptions
+(Config::OptionList& options)
+{
+  using namespace COOLFluiD::Framework;
+
+  options.template addConfigOption< CFuint >
+    ("choiceKp","Way of computing the pressure.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMLiouSteffenFlux<UPDATEVAR>::computeMassFlux()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  const CFreal aL = (*this->m_lData)[UPDATEVAR::PTERM::A];
+  const CFreal aR = (*this->m_rData)[UPDATEVAR::PTERM::A];
+  
+  // calculation of the Mach number for the left and the right states
+  if (this->m_choiceA12 == 0) {
+    this->m_mL = this->m_unL/aL;
+    this->m_mR = this->m_unR/aR;
+  }
+  else {
+   this->computeInterfaceSoundSpeed();
+   this->m_mL = this->m_unL/this->m_a12;
+   this->m_mR = this->m_unR/this->m_a12;
+  }
+  
+  const CFreal mL = this->m_mL;
+  const CFreal mR = this->m_mR;
+  
+  const CFreal M4Plus = (std::abs(mL) > 1.0) ? this->mach1Plus(mL) :
+    this->mach2Plus(mL);
+  
+  const CFreal M4Minus = (std::abs(mR) > 1.0) ? this->mach1Min(mR) :
+    this->mach2Min(mR);
+  
+  const CFreal rhoL = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR = (*this->m_rData)[UPDATEVAR::PTERM::RHO]; 
+  
+  // calculation of the Mach number at the interface
+  const CFreal m12 = M4Plus + M4Minus;
+  
+  // calculation of the mass flux at the interface
+  if (this->m_choiceA12 == 0) {
+   this->m_mflux12 = (m12 > 0.0) ? aL * m12 * rhoL : aR * m12 * rhoR;
+  }
+  else {
+   this->m_mflux12 = (m12 > 0.0) ? this->m_a12 * m12 * rhoL : 
+    	this->m_a12 * m12 * rhoR; 
+  }
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMLiouSteffenFlux<UPDATEVAR>::computePressureFlux()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  
+  // here in AIAA 2003-4116 there is only "m_fa"
+  const CFreal mL = this->m_mL;
+  const CFreal mR = this->m_mR;
+  CFreal P5Plus = 0.0;
+  CFreal P5Minus = 0.0;
+  
+  if (_choiceKp == 1) {
+    P5Plus = (std::abs(mL) >= 1.0) ? this->mach1Plus(mL)/mL : 
+      this->mach2Plus(mL)*(2.0-mL);
+    
+    P5Minus = (std::abs(mR) >= 1.0) ? this->mach1Min(mR)/mR : 
+      -this->mach2Min(mR)*(2.0+mR);
+  }
+  
+  if (_choiceKp == 2) {
+    // 2nd Way of calculation of the pressure
+    P5Plus = (std::abs(mL) >= 1.0) ? (1.0/mL) * 0.5 * (mL + std::abs(mL)) : 
+      0.5 * (1.0+mL);
+    
+    P5Minus = (std::abs(mR) >= 1.0) ? (1.0/mR) * 0.5 * (mR - std::abs(mR)) : 
+      0.5 * (1.0-mR);
+  }
+  
+  const CFreal pL = (*this->m_lData)[UPDATEVAR::PTERM::P];
+  const CFreal pR = (*this->m_rData)[UPDATEVAR::PTERM::P];
+  
+  // calculation of the pressure flux at the interface
+  this->m_p12 = P5Plus*pL + P5Minus*pR;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

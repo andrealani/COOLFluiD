@@ -1,0 +1,295 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+CFEnv.VerboseEvents = false
+Simulator.Maestro = LoopMaestro
+Simulator.SubSystems = SubSysA SubSysB
+Simulator.SubSystemTypes = StandardSubSystem StandardSubSystem
+
+Simulator.LoopMaestro.GlobalStopCriteria = GlobalMaxNumberSteps
+Simulator.LoopMaestro.GlobalMaxNumberSteps.nbSteps = 2
+Simulator.LoopMaestro.AppendIter = true
+Simulator.LoopMaestro.RestartFromPreviousSolution = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNewtonMethod libTHOR2CFmesh libFiniteElement libStructMech libLoopMaestro libSubSystemCoupler  libFiniteElementStructMech
+
+Simulator.Paths.WorkingDir = plugins/SubSystemCoupler/testcases/FSI/
+Simulator.Paths.ResultsDir       = ./
+
+### SubSystem A Coupler Method Parameters #######################################################
+
+Simulator.SubSysA.CouplerMethod = SubSystemCoupler
+
+Simulator.SubSysA.SubSystemCoupler.SetupComs = StdSetup
+Simulator.SubSysA.SubSystemCoupler.SetupNames = Setup1
+
+Simulator.SubSysA.SubSystemCoupler.UnSetupComs = StdUnSetup
+Simulator.SubSysA.SubSystemCoupler.UnSetupNames = UnSetup1
+
+Simulator.SubSysA.SubSystemCoupler.PreProcessReadComs = StdPreProcessRead
+Simulator.SubSysA.SubSystemCoupler.PreProcessReadNames = PreProcessRead1
+
+Simulator.SubSysA.SubSystemCoupler.PreProcessWriteComs = StdPreProcessWrite
+Simulator.SubSysA.SubSystemCoupler.PreProcessWriteNames = PreProcessWrite1
+
+Simulator.SubSysA.SubSystemCoupler.MeshMatchingReadComs = StdMeshMatcherRead
+Simulator.SubSysA.SubSystemCoupler.MeshMatchingReadNames = MeshMatcherRead1
+
+Simulator.SubSysA.SubSystemCoupler.MeshMatchingWriteComs = NewtonMeshMatcherWrite
+Simulator.SubSysA.SubSystemCoupler.MeshMatchingWriteNames = MeshMatcherWrite1
+
+Simulator.SubSysA.SubSystemCoupler.PostProcessComs = StdPostProcess
+Simulator.SubSysA.SubSystemCoupler.PostProcessNames = PostProcess1
+
+Simulator.SubSysA.SubSystemCoupler.InterfacesReadComs = StdReadDataTransfer
+Simulator.SubSysA.SubSystemCoupler.InterfacesReadNames = ReadData1
+Simulator.SubSysA.SubSystemCoupler.InterfacesWriteComs = StdWriteDataTransfer
+Simulator.SubSysA.SubSystemCoupler.InterfacesWriteNames = WriteData1
+
+Simulator.SubSysA.SubSystemCoupler.InterfacesNames = Interface1
+Simulator.SubSysA.SubSystemCoupler.CoupledSubSystems = SubSysB
+
+#Simulator.SubSysA.SubSystemCoupler.Data.NonMatchingGeometry = 1
+#Simulator.SubSysA.SubSystemCoupler.Data.NonMatchingGeometryRotation = 90.
+#Simulator.SubSysA.SubSystemCoupler.Data.NonMatchingGeometryVector = 0. 1.
+Simulator.SubSysA.SubSystemCoupler.Data.VariableTransformers = Temp2Flux
+Simulator.SubSysA.SubSystemCoupler.Data.CoordType = Gauss
+
+Simulator.SubSysA.SubSystemCoupler.CommandGroups = Interaction1
+Simulator.SubSysA.SubSystemCoupler.Interaction1.groupedTRS = South
+Simulator.SubSysA.SubSystemCoupler.Interaction1.groupedComs  = Setup1 UnSetup1 PreProcessRead1 PreProcessWrite1 MeshMatcherRead1 MeshMatcherWrite1 ReadData1 WriteData1 PostProcess1
+
+### SubSystem A  Parameters #######################################################
+Simulator.SubSysA.Default.PhysicalModelType = StructMech2D
+
+# Some kind of steel
+Simulator.SubSysA.StructMech2D.Young = 205E9
+Simulator.SubSysA.StructMech2D.Poisson = 0.3
+Simulator.SubSysA.StructMech2D.Lambda = 1.0
+Simulator.SubSysA.StructMech2D.mu = 1.0
+Simulator.SubSysA.StructMech2D.Density = 7850.0
+
+
+Simulator.SubSysA.ConvergenceFile     = convergence.plt
+
+
+Simulator.SubSysA.OutputFormat        = Tecplot CFmesh
+Simulator.SubSysA.CFmesh.FileName     = beam1.CFmesh
+Simulator.SubSysA.Tecplot.FileName    = beam1.plt
+Simulator.SubSysA.Tecplot.Data.updateVar = Disp
+Simulator.SubSysA.Tecplot.Data.printExtraValues = false
+Simulator.SubSysA.Tecplot.SaveRate = 10
+Simulator.SubSysA.CFmesh.SaveRate = 10
+Simulator.SubSysA.Tecplot.AppendTime = false
+Simulator.SubSysA.CFmesh.AppendTime = false
+Simulator.SubSysA.Tecplot.AppendIter = false
+Simulator.SubSysA.CFmesh.AppendIter = false
+
+Simulator.SubSysA.ConvRate            = 1
+Simulator.SubSysA.ShowRate            = 1
+
+Simulator.SubSysA.StopCondition       = MaxNumberSteps
+Simulator.SubSysA.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSysA.Default.listTRS = InnerCells North East West South
+
+Simulator.SubSysA.MeshCreator = CFmeshFileReader
+Simulator.SubSysA.CFmeshFileReader.Data.FileName = beam-tg.CFmesh
+Simulator.SubSysA.CFmeshFileReader.Data.builderName = FiniteElement
+Simulator.SubSysA.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSysA.CFmeshFileReader.Data.TranslateMesh = true
+Simulator.SubSysA.CFmeshFileReader.Data.TranslationVector = 0. 1.0
+
+Simulator.SubSysA.LinearSystemSolver = PETSC
+Simulator.SubSysA.PETSC.Data.PCType = PCLU
+Simulator.SubSysA.PETSC.Data.KSPType = KSPGMRES
+Simulator.SubSysA.PETSC.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSysA.PETSC.Data.RelativeTolerance = 1e-10
+Simulator.SubSysA.PETSC.Data.MaxIter = 100
+
+Simulator.SubSysA.ConvergenceMethod = NewtonIterator
+Simulator.SubSysA.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 5
+Simulator.SubSysA.NewtonIterator.Data.PrintHistory = true
+Simulator.SubSysA.NewtonIterator.Data.SaveSystemToFile = false
+Simulator.SubSysA.NewtonIterator.UpdateSol = StdUpdateSol
+Simulator.SubSysA.NewtonIterator.InitCom = ResetSystem
+
+Simulator.SubSysA.SpaceMethod = FiniteElementMethod
+
+Simulator.SubSysA.FiniteElementMethod.Data.UpdateVar = Disp
+Simulator.SubSysA.FiniteElementMethod.Data.DiffusiveVar = Disp
+#Simulator.SubSysA.FiniteElementMethod.Data.StructMech2DDiffusiveDisp.PlaneStress = true
+Simulator.SubSysA.FiniteElementMethod.Data.SourceVar = StructMech2DSourceDisp
+
+Simulator.SubSysA.FiniteElementMethod.Data.JacobianStrategy = Numerical
+Simulator.SubSysA.FiniteElementMethod.Data.ResidualStrategy = StdElementComputer
+
+# Vars are [ x y rho u v]
+#Simulator.SubSysA.FiniteElementMethod.Data.StructMech2DSourceDisp.IndepDef = 0. -9.81*rho
+
+Simulator.SubSysA.FiniteElementMethod.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSysA.FiniteElementMethod.Data.IntegratorOrder = P1
+
+Simulator.SubSysA.FiniteElementMethod.ComputeSpaceResidual = ImplicitComputeSpaceResCom
+Simulator.SubSysA.FiniteElementMethod.ImplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSysA.FiniteElementMethod.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSysA.FiniteElementMethod.InitComds = InitState
+Simulator.SubSysA.FiniteElementMethod.InitNames = InitialField
+
+Simulator.SubSysA.FiniteElementMethod.InitialField.applyTRS = InnerCells
+Simulator.SubSysA.FiniteElementMethod.InitialField.Vars = x y
+Simulator.SubSysA.FiniteElementMethod.InitialField.Def = 0 0
+
+Simulator.SubSysA.FiniteElementMethod.BcComds = NeumannBC  DirichletBC
+Simulator.SubSysA.FiniteElementMethod.BcNames = BOUND2      BOUND1
+
+Simulator.SubSysA.FiniteElementMethod.BOUND1.applyTRS = West
+Simulator.SubSysA.FiniteElementMethod.BOUND1.Implicit = true
+Simulator.SubSysA.FiniteElementMethod.BOUND1.Vars = x y t
+Simulator.SubSysA.FiniteElementMethod.BOUND1.Def = 0 0
+
+Simulator.SubSysA.FiniteElementMethod.BOUND2.applyTRS = East
+Simulator.SubSysA.FiniteElementMethod.BOUND2.Implicit = true
+Simulator.SubSysA.FiniteElementMethod.BOUND2.Vars = x y t u v nx ny
+Simulator.SubSysA.FiniteElementMethod.BOUND2.Def = 0 -100000
+
+### SubSystem B  Parameters #######################################################
+### SubSystem B Coupler Method Parameters #######################################################
+
+Simulator.SubSysB.CouplerMethod = SubSystemCoupler
+
+Simulator.SubSysB.SubSystemCoupler.SetupComs = StdSetup
+Simulator.SubSysB.SubSystemCoupler.SetupNames = Setup1
+
+Simulator.SubSysB.SubSystemCoupler.UnSetupComs = StdUnSetup
+Simulator.SubSysB.SubSystemCoupler.UnSetupNames = UnSetup1
+
+Simulator.SubSysB.SubSystemCoupler.PreProcessReadComs = StdPreProcessRead
+Simulator.SubSysB.SubSystemCoupler.PreProcessReadNames = PreProcessRead1
+Simulator.SubSysB.SubSystemCoupler.PreProcessWriteComs = StdPreProcessWrite
+Simulator.SubSysB.SubSystemCoupler.PreProcessWriteNames = PreProcessWrite1
+
+Simulator.SubSysB.SubSystemCoupler.MeshMatchingReadComs = StdMeshMatcherRead
+Simulator.SubSysB.SubSystemCoupler.MeshMatchingReadNames = MeshMatcherRead1
+Simulator.SubSysB.SubSystemCoupler.MeshMatchingWriteComs = NewtonMeshMatcherWrite
+Simulator.SubSysB.SubSystemCoupler.MeshMatchingWriteNames = MeshMatcherWrite1
+
+Simulator.SubSysB.SubSystemCoupler.PostProcessComs = StdPostProcess
+Simulator.SubSysB.SubSystemCoupler.PostProcessNames = PostProcess1
+
+Simulator.SubSysB.SubSystemCoupler.InterfacesReadComs = StdReadDataTransfer
+Simulator.SubSysB.SubSystemCoupler.InterfacesReadNames = ReadData1
+Simulator.SubSysB.SubSystemCoupler.InterfacesWriteComs = StdWriteDataTransfer
+Simulator.SubSysB.SubSystemCoupler.InterfacesWriteNames = WriteData1
+
+Simulator.SubSysB.SubSystemCoupler.InterfacesNames = Interface1
+Simulator.SubSysB.SubSystemCoupler.CoupledSubSystems = SubSysA
+
+Simulator.SubSysB.SubSystemCoupler.Data.VariableTransformers = Null
+Simulator.SubSysB.SubSystemCoupler.Data.CoordType = Nodal
+
+Simulator.SubSysB.SubSystemCoupler.CommandGroups = Interaction1
+Simulator.SubSysB.SubSystemCoupler.Interaction1.groupedTRS = North
+Simulator.SubSysB.SubSystemCoupler.Interaction1.groupedComs  = Setup1 UnSetup1 PreProcessRead1 PreProcessWrite1 MeshMatcherRead1 MeshMatcherWrite1 ReadData1 WriteData1 PostProcess1
+
+### SubSystem B  Parameters #######################################################
+Simulator.SubSysB.Default.PhysicalModelType = StructMech2D
+
+# Some kind of steel
+Simulator.SubSysB.StructMech2D.Young = 205E9
+Simulator.SubSysB.StructMech2D.Poisson = 0.3
+Simulator.SubSysB.StructMech2D.Lambda = 1.0
+Simulator.SubSysB.StructMech2D.mu = 1.0
+Simulator.SubSysB.StructMech2D.Density = 7850.0
+
+
+Simulator.SubSysB.ConvergenceFile     = convergence.plt
+
+
+Simulator.SubSysB.OutputFormat        = Tecplot CFmesh
+Simulator.SubSysB.CFmesh.FileName     = beam2.CFmesh
+Simulator.SubSysB.Tecplot.FileName    = beam2.plt
+Simulator.SubSysB.Tecplot.Data.updateVar = Disp
+Simulator.SubSysB.Tecplot.Data.printExtraValues = false
+Simulator.SubSysB.Tecplot.SaveRate = 10
+Simulator.SubSysB.CFmesh.SaveRate = 10
+Simulator.SubSysB.Tecplot.AppendTime = false
+Simulator.SubSysB.CFmesh.AppendTime = false
+Simulator.SubSysB.Tecplot.AppendIter = false
+Simulator.SubSysB.CFmesh.AppendIter = false
+
+
+Simulator.SubSysB.ConvRate            = 1
+Simulator.SubSysB.ShowRate            = 1
+
+Simulator.SubSysB.StopCondition       = MaxNumberSteps
+Simulator.SubSysB.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSysB.Default.listTRS = InnerCells North East West South
+
+Simulator.SubSysB.MeshCreator = CFmeshFileReader
+Simulator.SubSysB.CFmeshFileReader.Data.FileName = beam-tg.CFmesh
+Simulator.SubSysB.CFmeshFileReader.Data.builderName = FiniteElement
+Simulator.SubSysB.CFmeshFileReader.Data.polyTypeName = Lagrange
+
+Simulator.SubSysB.LinearSystemSolver = PETSC
+Simulator.SubSysB.PETSC.Data.PCType = PCLU
+Simulator.SubSysB.PETSC.Data.KSPType = KSPGMRES
+Simulator.SubSysB.PETSC.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSysB.PETSC.Data.RelativeTolerance = 1e-10
+Simulator.SubSysB.PETSC.Data.MaxIter = 100
+
+Simulator.SubSysB.ConvergenceMethod = NewtonIterator
+Simulator.SubSysA.NewtonIterator.Data.CFL.Value = 1.0
+Simulator.SubSysB.NewtonIterator.Data.CFL.Value = 1.0
+Simulator.SubSysB.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 5
+Simulator.SubSysB.NewtonIterator.Data.PrintHistory = true
+Simulator.SubSysB.NewtonIterator.Data.SaveSystemToFile = false
+Simulator.SubSysB.NewtonIterator.UpdateSol = StdUpdateSol
+Simulator.SubSysB.NewtonIterator.InitCom = ResetSystem
+
+Simulator.SubSysB.SpaceMethod = FiniteElementMethod
+
+Simulator.SubSysB.FiniteElementMethod.Data.UpdateVar = Disp
+Simulator.SubSysB.FiniteElementMethod.Data.DiffusiveVar = Disp
+#Simulator.SubSysB.FiniteElementMethod.Data.StructMech2DDiffusiveDisp.PlaneStress = true
+Simulator.SubSysB.FiniteElementMethod.Data.SourceVar = StructMech2DSourceDisp
+
+Simulator.SubSysB.FiniteElementMethod.Data.JacobianStrategy = Numerical
+Simulator.SubSysB.FiniteElementMethod.Data.ResidualStrategy = StdElementComputer
+
+# Vars are [ x y rho u v]
+#Simulator.SubSysB.FiniteElementMethod.Data.StructMech2DSourceDisp.IndepDef = 0. -9.81*rho
+
+Simulator.SubSysB.FiniteElementMethod.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSysB.FiniteElementMethod.Data.IntegratorOrder = P1
+
+Simulator.SubSysB.FiniteElementMethod.ComputeSpaceResidual = ImplicitComputeSpaceResCom
+Simulator.SubSysB.FiniteElementMethod.ImplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSysB.FiniteElementMethod.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSysB.FiniteElementMethod.InitComds = InitState
+Simulator.SubSysB.FiniteElementMethod.InitNames = InitialField
+
+Simulator.SubSysB.FiniteElementMethod.InitialField.applyTRS = InnerCells
+Simulator.SubSysB.FiniteElementMethod.InitialField.Vars = x y
+Simulator.SubSysB.FiniteElementMethod.InitialField.Def = 0 0
+
+Simulator.SubSysB.FiniteElementMethod.BcComds = NeumannBC DirichletBC  CoupledDirichletBC
+Simulator.SubSysB.FiniteElementMethod.BcNames = BOUND2    BOUND1     BOUND3
+
+Simulator.SubSysB.FiniteElementMethod.BOUND1.applyTRS = West
+Simulator.SubSysB.FiniteElementMethod.BOUND1.Implicit = true
+Simulator.SubSysB.FiniteElementMethod.BOUND1.Vars = x y t
+Simulator.SubSysB.FiniteElementMethod.BOUND1.Def = 0 0
+
+Simulator.SubSysB.FiniteElementMethod.BOUND2.applyTRS = East
+Simulator.SubSysB.FiniteElementMethod.BOUND2.Vars = x y t u v nx ny
+Simulator.SubSysB.FiniteElementMethod.BOUND2.Def = 0 0
+
+Simulator.SubSysB.FiniteElementMethod.BOUND3.applyTRS = North
+Simulator.SubSysB.FiniteElementMethod.BOUND3.Implicit = true
+Simulator.SubSysB.FiniteElementMethod.BOUND3.Interface = Interaction1
+

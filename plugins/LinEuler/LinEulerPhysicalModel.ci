@@ -1,0 +1,80 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace LinearizedEuler {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+LinEulerPhysicalModel<DIM>::LinEulerPhysicalModel(const std::string& name)
+  : Framework::ConvectionPM<LinEulerTerm>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+LinEulerPhysicalModel<DIM>::~LinEulerPhysicalModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+CFuint LinEulerPhysicalModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+CFuint LinEulerPhysicalModel<DIM>::getNbEquations() const
+{
+  return DIM+2;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+void LinEulerPhysicalModel<DIM>::setReferenceValues()
+{
+}
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void LinEulerPhysicalModel<DIM>::setReferenceTime()
+{
+//   RealVector& refDataConv = getConvTerm()->getReferencePhysicalData();
+  // since velocity scale is set to 1.0 above by default, just equal to getRefLength()
+  _refTime = this->getRefLength()/1.0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+void LinEulerPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionPM<LinEulerTerm>::configure(args);
+
+  cf_assert(getDimension() > 0);
+  cf_assert(getNbEquations() > 0);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(getDimension());
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace LinearizedEuler
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

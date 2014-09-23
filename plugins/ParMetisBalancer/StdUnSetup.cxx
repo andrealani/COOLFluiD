@@ -1,0 +1,46 @@
+#include "Framework/MethodCommandProvider.hh"
+#include "ParMetisBalancer/ParMetisBalancer.hh"
+#include "ParMetisBalancer/StdUnSetup.hh"
+
+#include "ParMetisBalancer/ParMetisBalancerModule.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  using namespace Framework;
+
+    namespace ParMetisBalancer {
+
+//////////////////////////////////////////////////////////////////////////////
+
+MethodCommandProvider<StdUnSetup,
+                      ParMetisBalancerData,
+                      ParMetisBalancerModule> stdUnSetupProvider("StdUnSetup");
+
+//////////////////////////////////////////////////////////////////////////////
+
+StdUnSetup::StdUnSetup(const std::string& name) : ParMetisBalancerCom(name)
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+StdUnSetup::~StdUnSetup()
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void StdUnSetup::execute()
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace CFmeshFileReader
+
+} // namespace COOLFluiD

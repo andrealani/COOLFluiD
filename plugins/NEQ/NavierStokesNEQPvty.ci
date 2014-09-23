@@ -1,0 +1,229 @@
+#include "Framework/PhysicalChemicalLibrary.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace NEQ {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+NavierStokesNEQPvty<BASE>::NavierStokesNEQPvty
+(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  BASE(name, model)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+NavierStokesNEQPvty<BASE>::~NavierStokesNEQPvty()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokesNEQPvty<BASE>::setGradientVars(const std::vector<RealVector*>& states,
+						RealMatrix& values,
+						const CFuint stateSize)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  const CFuint nbValues = values.nbRows();
+  for (CFuint i = 0; i < nbValues; ++i) {
+    for (CFuint j = 0; j < stateSize; ++j) {
+      values(i,j) = (*states[j])[i];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokesNEQPvty<BASE>::setGradientVarGradients(const std::vector<RealVector*>& states,
+							const std::vector< std::vector<RealVector*> >& stateGradients,
+							std::vector< std::vector<RealVector*> >& gradVarGradients,
+							const CFuint stateSize)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  cf_assert(stateGradients.size() > 0);
+  const CFuint nbValues = stateGradients[0].size();
+  for (CFuint i = 0; i < nbValues; ++i)
+  {
+    for (CFuint j = 0; j < stateSize; ++j)
+    {
+      *gradVarGradients[j][i] = *stateGradients[j][i];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokesNEQPvty<BASE>::setStateGradients(const std::vector<RealVector*>& states,
+						  const std::vector< std::vector<RealVector*> >& gradVarGradients,
+						  std::vector< std::vector<RealVector*> >& stateGradients,
+						  const CFuint stateSize)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  cf_assert(stateGradients.size() > 0);
+  const CFuint nbValues = stateGradients[0].size();
+  for (CFuint i = 0; i < nbValues; ++i)
+    {
+      for (CFuint j = 0; j < stateSize; ++j)
+	{
+	  *stateGradients[j][i] = *gradVarGradients[j][i];
+	}
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+CFreal NavierStokesNEQPvty<BASE>::getDynViscosity
+(const RealVector& state, const std::vector<RealVector*>& gradients)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  CFreal Tdim = this->_eulerModel->getTempRef()*state[this->_TID];
+  CFreal pdim = this->_eulerModel->getPressRef()*state[0];
+  return this->_library->eta(Tdim, pdim, CFNULL) /
+    (this->getModel().getReferencePhysicalData())[NavierStokes::NSTerm::MU];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+CFreal NavierStokesNEQPvty<BASE>::getDensity(const RealVector& state)
+{
+  CFreal Tdim = this->_eulerModel->getTempRef()*state[this->_TID];
+  CFreal pdim = this->_eulerModel->getPressRef()*state[0];
+  return this->_library->density(Tdim,pdim)/
+    (this->_eulerModel->getReferencePhysicalData())[NavierStokes::EulerTerm::RHO];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokesNEQPvty<BASE>::setup()
+{
+  BASE::setup();
+  
+  // set the variable IDs inside the state vector
+  this->_uID = 1;
+  this->_vID = 2;
+  this->_TID = 3;
+  if (Framework::PhysicalModelStack::getActive()->getDim() == DIM_3D) {
+    this->_wID = 3;
+    this->_TID = 4;
+  }
+  
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  for (CFuint is = 0; is < nbSpecies; ++is) {
+    this->_yID[is] = this->_TID + 1 + is;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokesNEQPvty<BASE>::setComposition(const RealVector& state,
+					    const bool isPerturb,
+					    const CFuint iVar)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  // this is to avoid useless expensive re-computations
+  this->useBackUpValues(false);
+  this->setBackUpValues(false);
+  
+  // Set the species fractions
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  for (CFuint is = 0; is < nbSpecies; ++is) {
+    this->_ys[is] = state[this->_yID[is]];
+  }
+  this->_library->setSpeciesFractions(this->_ys);
+  
+  const CFuint dim =  PhysicalModelStack::getActive()->getDim();
+  // case in which speed components are perturbed (u+du, v+dv)
+  if ((isPerturb && (dim == DIM_2D && (iVar == this->_uID || iVar == this->_vID))) ||
+      (isPerturb && (dim == DIM_2D && (iVar == this->_uID || iVar == this->_vID || iVar == this->_wID))))  {
+    this->useBackUpValues(true);
+  }
+  
+  // store the back up values if an unperturbed flux is computed
+  if (!isPerturb) {
+    this->setBackUpValues(true);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+CFreal NavierStokesNEQPvty<BASE>::getThermConductivity
+(const RealVector& state,
+ const CFreal& dynViscosity)
+{
+  CFreal Tdim = this->_eulerModel->getTempRef()*state[this->_TID];
+  CFreal pdim = this->_eulerModel->getPressRef()*state[0];
+  return this->_library->lambdaNEQ(Tdim,pdim) /
+    (this->getModel().getReferencePhysicalData())[NavierStokes::NSTerm::LAMBDA];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+CFreal NavierStokesNEQPvty<BASE>::getCurrUpdateDiffCoeff(CFuint iEqSS)
+{
+  if (iEqSS == 0) {
+    return (this->getModel().getPhysicalData())[NavierStokes::NSTerm::MU];
+  }
+  throw Common::NotImplementedException (FromHere(),"NavierStokesNEQPvty::getCurrUpdateDiffCoeff()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokesNEQPvty<BASE>::setGradientState(const RealVector& state)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  // species mass fractions
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    this->_gradState[i] = state[this->_TID + 1 + i];
+  }
+  
+  // other variables [... u v T]
+  this->_gradState[this->_uID] = state[1];
+  this->_gradState[this->_vID] = state[2];
+  this->_gradState[this->_TID] = state[3];
+  if (PhysicalModelStack::getActive()->getDim() == DIM_3D) {
+    this->_gradState[this->_wID] = state[3];
+    this->_gradState[this->_TID] = state[4];
+  }
+    
+  this->_avP = state[0];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace NEQ
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,63 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace MHD {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+MHDProjectionPolytropic<DIM>::MHDProjectionPolytropic(const std::string& name)
+  : Framework::ConvectionPM<MHDProjectionPolytropicTerm>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+MHDProjectionPolytropic<DIM>::~MHDProjectionPolytropic()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MHDProjectionPolytropic<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionPM<MHDProjectionPolytropicTerm>::configure(args);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(getDimension());
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint MHDProjectionPolytropic<DIM>::getDimension() const
+{
+  if (getName() == "MHD2DProjectionPolytropic") return 2;
+  cf_assert(getName() == "MHD3DProjectionPolytropic");
+  return 3;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint MHDProjectionPolytropic<DIM>::getNbEquations() const
+{
+  return 8;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace MHD
+
+} // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

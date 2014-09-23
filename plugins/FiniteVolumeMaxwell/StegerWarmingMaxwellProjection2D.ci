@@ -1,0 +1,443 @@
+#include "Framework/EquationSetData.hh"
+#include "Framework/BaseTerm.hh"
+#include "FiniteVolume/FVMCC_PolyRec.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+StegerWarmingMaxwellProjection2D<UPDATEVAR>::StegerWarmingMaxwellProjection2D(const std::string& name) :
+  FVMCC_FluxSplitter(name),
+  m_updateVarSet(CFNULL),
+  m_lData(CFNULL),
+  m_rData(CFNULL),
+  m_tempUnitNormal(),
+  m_pdata(),
+  _rightEv(),
+  _leftEv(),
+  _eValues(),
+  _absEvalues(),
+  _absJacob(),
+  _jRight(),
+  _jLeft(),
+  _jacob(),
+  _jacobLeftTransf(),
+  _jacobRightTransf(),
+  _jacobDummy(),
+  _EMField_l(),
+  _EMField_r(), 
+  _Aplus(),
+  _Aminus(),  
+  _statesLR(2)
+{
+  addConfigOptionsTo(this);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+StegerWarmingMaxwellProjection2D<UPDATEVAR>::~StegerWarmingMaxwellProjection2D()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void StegerWarmingMaxwellProjection2D<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void StegerWarmingMaxwellProjection2D<UPDATEVAR>::setup()
+{
+  using namespace COOLFluiD::Framework;
+  
+  CFLog(NOTICE, "StegerWarmingMaxwellProjection2D::setup()\n");
+  
+  FVMCC_FluxSplitter::setup();
+  
+  CFLog(NOTICE, "StegerWarmingMaxwellProjection2D::setup() 1\n");
+  
+  m_tempUnitNormal.resize(PhysicalModelStack::getActive()->getDim());
+
+  PhysicalModelStack::getActive()->getImplementor()->
+    getConvectiveTerm()->resizePhysicalData(m_pdata);
+  
+  CFLog(NOTICE, "StegerWarmingMaxwellProjection2D::setup() 2\n");
+  
+  m_updateVarSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+  
+  CFLog(NOTICE, "StegerWarmingMaxwellProjection2D::setup() 3\n");
+  
+  // Roe scheme related data
+  const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+  _rightEv.resize(nbEqs, nbEqs);
+  _leftEv.resize(nbEqs, nbEqs);
+  _eValues.resize(nbEqs);
+  _absEvalues.resize(nbEqs);
+  _absJacob.resize(nbEqs,nbEqs);
+  _jRight.resize(nbEqs,nbEqs);
+  _jLeft.resize(nbEqs, nbEqs);
+  _jacob.resize(nbEqs, nbEqs);
+  _jacobLeftTransf.resize(nbEqs, nbEqs);
+  _jacobRightTransf.resize(nbEqs, nbEqs);
+  _jacobDummy.resize(nbEqs, nbEqs); 
+  _EMField_l.resize(nbEqs);
+  _EMField_r.resize(nbEqs);
+  _Aplus.resize(nbEqs,nbEqs);
+  _Aminus.resize(nbEqs,nbEqs);  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void StegerWarmingMaxwellProjection2D<UPDATEVAR>::compute(RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  //CFLog(NOTICE, "StegerWarmingMaxwellProjection2D::compute() 1\n");  
+  
+  m_updateVarSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+
+  //CFLog(NOTICE, "StegerWarmingMaxwellProjection2D::compute() 2\n");  
+  
+  vector<RealVector>& pdata = getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
+  //CFLog(NOTICE, "StegerWarmingMaxwellProjection2D::compute() 3\n");    
+  m_lData = &pdata[LEFT];
+  m_rData = &pdata[RIGHT];
+  
+  //const RealVector& normal = getMethodData().getUnitNormal();
+  //CFLog(NOTICE, "StegerWarmingMaxwellProjection2D::compute() 4\n");      
+  // here there could be the current number of equations if we want
+  // different eigenvalues for each set of equations
+  const CFuint nbEMField = 8;  
+  
+  // const CFuint EMFieldSetID = eqSetEMField.getEqSetID();
+  
+  for (CFuint i = 0; i < nbEMField; ++i){
+    _EMField_l[i] = (*this->m_lData)[i];
+    _EMField_r[i] = (*this->m_rData)[i];  
+  }
+  
+  computeMatrixAplus();
+  computeMatrixAminus();  
+  
+    result = 0.5*_Aplus*_EMField_l + 0.5*_Aminus*_EMField_r; 
+//     std::cout<<"result = "<<  result[0] <<"\t\t "<<  result[1] <<"\t\t " <<  result[2] <<"\t\t "<<  result[3] <<"\t\t"<<  result[4] <<"\t\t "<<  result[5]<<"\t\t"<<  result[6]<<"\t\t" << result[7]<<"\n";
+
+     
+  if (!this->getMethodData().isPerturb()) {
+    computeUpdateCoeff();
+  }
+}
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void StegerWarmingMaxwellProjection2D<UPDATEVAR>::computeMatrixAplus()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  const RealVector& normal = getMethodData().getUnitNormal();
+  const CFreal gamma = m_updateVarSet->getModel()->getDivBCleaningConst();	//DivB cleaning technique constant
+  const CFreal chi = m_updateVarSet->getModel()->getDivECleaningConst();
+  const CFreal c_e = m_updateVarSet->getModel()->getLightSpeed();//speed of light
+  
+  
+//   cout<<"gamma = "<< gamma <<"\n";
+//   cout<<"chi = "<< chi <<"\n";
+  
+  
+  _Aplus(0,0) = (normal[1]*normal[1] + gamma*normal[0]*normal[0])*c_e;
+  _Aplus(0,1) = (gamma - 1)*normal[0]*normal[1]*c_e;
+  _Aplus(0,2) = 0;
+  _Aplus(0,3) = 0;
+  _Aplus(0,4) = 0;
+  _Aplus(0,5) = normal[1];
+  _Aplus(0,6) = gamma*gamma*normal[0]; 
+  _Aplus(0,7) = 0; 
+
+  _Aplus(1,0) = (gamma - 1)*normal[0]*normal[1]*c_e;
+  _Aplus(1,1) = (normal[0]*normal[0] + gamma*normal[1]*normal[1])*c_e;
+  _Aplus(1,2) = 0;
+  _Aplus(1,3) = 0;
+  _Aplus(1,4) = 0;
+  _Aplus(1,5) = -normal[0];
+  _Aplus(1,6) = gamma*gamma*normal[1]; 
+  _Aplus(1,7) = 0; 
+
+  _Aplus(2,0) = 0;
+  _Aplus(2,1) = 0;
+  _Aplus(2,2) = c_e;
+  _Aplus(2,3) = -normal[1];
+  _Aplus(2,4) = normal[0];
+  _Aplus(2,5) = 0;
+  _Aplus(2,6) = 0; 
+  _Aplus(2,7) = 0; 
+
+  _Aplus(3,0) = 0;
+  _Aplus(3,1) = 0;
+  _Aplus(3,2) = -normal[1]*c_e*c_e;
+  _Aplus(3,3) = (normal[1]*normal[1] + chi*normal[0]*normal[0])*c_e;
+  _Aplus(3,4) = (chi - 1)*normal[0]*normal[1]*c_e;
+  _Aplus(3,5) = 0;
+  _Aplus(3,6) = 0;  
+  _Aplus(3,7) = chi*chi*normal[0]*c_e*c_e;  
+  
+  _Aplus(4,0) = 0;
+  _Aplus(4,1) = 0;
+  _Aplus(4,2) = normal[0]*c_e*c_e;
+  _Aplus(4,3) = (chi -1)*normal[0]*normal[1]*c_e;
+  _Aplus(4,4) = (normal[0]*normal[0] + chi*normal[1]*normal[1])*c_e;
+  _Aplus(4,5) = 0;
+  _Aplus(4,6) = 0; 
+  _Aplus(4,7) = chi*chi*normal[1]*c_e*c_e;  
+
+  _Aplus(5,0) = normal[1]*c_e*c_e;
+  _Aplus(5,1) = -normal[0]*c_e*c_e;
+  _Aplus(5,2) = 0;
+  _Aplus(5,3) = 0;
+  _Aplus(5,4) = 0;
+  _Aplus(5,5) = c_e; 
+  _Aplus(5,6) = 0; 
+  _Aplus(5,7) = 0; 
+  
+  _Aplus(6,0) = normal[0]*c_e*c_e;
+  _Aplus(6,1) = normal[1]*c_e*c_e;
+  _Aplus(6,2) = 0;
+  _Aplus(6,3) = 0;
+  _Aplus(6,4) = 0;
+  _Aplus(6,5) = 0; 
+  _Aplus(6,6) = gamma*c_e; 
+  _Aplus(6,7) = 0;
+  
+  _Aplus(7,0) = 0;
+  _Aplus(7,1) = 0;
+  _Aplus(7,2) = 0;
+  _Aplus(7,3) = normal[0];
+  _Aplus(7,4) = normal[1];
+  _Aplus(7,5) = 0; 
+  _Aplus(7,6) = 0; 
+  _Aplus(7,7) = chi*c_e;  
+  
+//   std::cout<<"Aplus = "<<  _Aplus(0,0) <<"\t\t "<<  _Aplus(0,1) <<"\t\t " <<  _Aplus(0,2) <<"\t\t "<<  _Aplus(0,3) <<"\t\t"<<  _Aplus(0,4) <<"\t\t "<<  _Aplus(0,5) <<"\n";
+//   std::cout<<"        "<<  _Aplus(1,0) <<"\t\t "<<  _Aplus(1,1) <<"\t\t " <<  _Aplus(1,2) <<"\t\t "<<  _Aplus(1,3) <<"\t\t"<<  _Aplus(1,4) <<"\t\t "<<  _Aplus(1,5) <<"\n";
+//   std::cout<<"        "<<  _Aplus(2,0) <<"\t\t "<<  _Aplus(2,1) <<"\t\t " <<  _Aplus(2,2) <<"\t\t "<<  _Aplus(2,3) <<"\t\t"<<  _Aplus(2,4) <<"\t\t "<<  _Aplus(2,5) <<"\n";
+//   std::cout<<"        "<<  _Aplus(3,0) <<"\t\t "<<  _Aplus(3,1) <<"\t\t " <<  _Aplus(3,2) <<"\t\t "<<  _Aplus(3,3) <<"\t\t"<<  _Aplus(3,4) <<"\t\t "<<  _Aplus(3,5) <<"\n";
+//   std::cout<<"        "<<  _Aplus(4,0) <<"\t\t "<<  _Aplus(4,1) <<"\t\t " <<  _Aplus(4,2) <<"\t\t "<<  _Aplus(4,3) <<"\t\t"<<  _Aplus(4,4) <<"\t\t "<<  _Aplus(4,5) <<"\n";
+//   std::cout<<"        "<<  _Aplus(5,0) <<"\t\t "<<  _Aplus(5,1) <<"\t\t " <<  _Aplus(5,2) <<"\t\t "<<  _Aplus(5,3) <<"\t\t"<<  _Aplus(5,4) <<"\t\t "<<  _Aplus(5,5) <<"\n"; 
+
+  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void StegerWarmingMaxwellProjection2D<UPDATEVAR>::computeMatrixAminus()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  const RealVector& normal = getMethodData().getUnitNormal();
+  const CFreal gamma = m_updateVarSet->getModel()->getDivBCleaningConst();	//DivB cleaning technique constant
+  const CFreal chi = m_updateVarSet->getModel()->getDivECleaningConst();
+  const CFreal c_e = m_updateVarSet->getModel()->getLightSpeed();//speed of light
+ 
+  
+  _Aminus(0,0) = -(normal[1]*normal[1] + gamma*normal[0]*normal[0])*c_e;
+  _Aminus(0,1) = (1 - gamma)*normal[0]*normal[1]*c_e;
+  _Aminus(0,2) = 0;
+  _Aminus(0,3) = 0;
+  _Aminus(0,4) = 0;
+  _Aminus(0,5) = normal[1];
+  _Aminus(0,6) = gamma*gamma*normal[0]; 
+  _Aminus(0,7) = 0; 
+
+  _Aminus(1,0) = (1 - gamma)*normal[0]*normal[1]*c_e;
+  _Aminus(1,1) = -(normal[0]*normal[0] + gamma*normal[1]*normal[1])*c_e;
+  _Aminus(1,2) = 0;
+  _Aminus(1,3) = 0;
+  _Aminus(1,4) = 0;
+  _Aminus(1,5) = -normal[0];
+  _Aminus(1,6) = gamma*gamma*normal[1]; 
+  _Aminus(1,7) = 0; 
+
+  _Aminus(2,0) = 0;
+  _Aminus(2,1) = 0;
+  _Aminus(2,2) = -c_e;
+  _Aminus(2,3) = -normal[1];
+  _Aminus(2,4) = normal[0];
+  _Aminus(2,5) = 0;
+  _Aminus(2,6) = 0;
+  _Aminus(2,7) = 0; 
+
+  _Aminus(3,0) = 0;
+  _Aminus(3,1) = 0;
+  _Aminus(3,2) = -normal[1]*c_e*c_e;
+  _Aminus(3,3) = -(normal[1]*normal[1] + chi*normal[0]*normal[0])*c_e;
+  _Aminus(3,4) = (1 - chi)*normal[0]*normal[1]*c_e;
+  _Aminus(3,5) = 0;
+  _Aminus(3,6) = 0;  
+  _Aminus(3,7) = chi*chi*normal[0]*c_e*c_e;  
+  
+  _Aminus(4,0) = 0;
+  _Aminus(4,1) = 0;
+  _Aminus(4,2) = normal[0]*c_e*c_e;
+  _Aminus(4,3) = (1 - chi)*normal[0]*normal[1]*c_e ;
+  _Aminus(4,4) = -(normal[0]*normal[0] + chi*normal[1]*normal[1])*c_e;
+  _Aminus(4,5) = 0;
+  _Aminus(4,6) = 0; 
+  _Aminus(4,7) = chi*chi*normal[1]*c_e*c_e;  
+
+  _Aminus(5,0) = normal[1]*c_e*c_e;
+  _Aminus(5,1) = -normal[0]*c_e*c_e;
+  _Aminus(5,2) = 0;
+  _Aminus(5,3) = 0;
+  _Aminus(5,4) = 0;
+  _Aminus(5,5) = -c_e; 
+  _Aminus(5,6) = 0; 
+  _Aminus(5,7) = 0; 
+  
+  _Aminus(6,0) = normal[0]*c_e*c_e;
+  _Aminus(6,1) = normal[1]*c_e*c_e;
+  _Aminus(6,2) = 0;
+  _Aminus(6,3) = 0;
+  _Aminus(6,4) = 0;
+  _Aminus(6,5) = 0; 
+  _Aminus(6,6) = -gamma*c_e; 
+  _Aminus(6,7) = 0;
+  
+  _Aminus(7,0) = 0;
+  _Aminus(7,1) = 0;
+  _Aminus(7,2) = 0;
+  _Aminus(7,3) = normal[0];
+  _Aminus(7,4) = normal[1];
+  _Aminus(7,5) = 0; 
+  _Aminus(7,6) = 0; 
+  _Aminus(7,7) = -chi*c_e;  
+  
+/*  std::cout<<"Aminus = "<<  _Aminus(0,0) <<"\t\t "<<  _Aminus(0,1) <<"\t\t " <<  _Aminus(0,2) <<"\t\t "<<  _Aminus(0,3) <<"\t\t"<<  _Aminus(0,4) <<"\t\t "<<  _Aminus(0,5) <<"\t\t "<< _Aminus(0,6)<<"\t\t "<<  _Aminus(0,7) <<"\n";
+  std::cout<<"        "<<  _Aminus(1,0) <<"\t\t "<<  _Aminus(1,1) <<"\t\t " <<  _Aminus(1,2) <<"\t\t "<<  _Aminus(1,3) <<"\t\t"<<  _Aminus(1,4) <<"\t\t "<<  _Aminus(1,5) <<"\t\t "<<  _Aminus(1,6)<<"\t\t "<<  _Aminus(1,7)<<"\n";
+  std::cout<<"        "<<  _Aminus(2,0) <<"\t\t "<<  _Aminus(2,1) <<"\t\t " <<  _Aminus(2,2) <<"\t\t "<<  _Aminus(2,3) <<"\t\t"<<  _Aminus(2,4) <<"\t\t "<<  _Aminus(2,5) <<"\t\t "<<  _Aminus(2,6)<<"\t\t "<<  _Aminus(2,7)<<"\n";
+  std::cout<<"        "<<  _Aminus(3,0) <<"\t\t "<<  _Aminus(3,1) <<"\t\t " <<  _Aminus(3,2) <<"\t\t "<<  _Aminus(3,3) <<"\t\t"<<  _Aminus(3,4) <<"\t\t "<<  _Aminus(3,5) <<"\t\t "<<  _Aminus(3,6)<<"\t\t "<<  _Aminus(3,7)<<"\n";
+  std::cout<<"        "<<  _Aminus(4,0) <<"\t\t "<<  _Aminus(4,1) <<"\t\t " <<  _Aminus(4,2) <<"\t\t "<<  _Aminus(4,3) <<"\t\t"<<  _Aminus(4,4) <<"\t\t "<<  _Aminus(4,5) <<"\t\t "<<  _Aminus(4,6)<<"\t\t "<<  _Aminus(4,7)<<"\n";
+  std::cout<<"        "<<  _Aminus(5,0) <<"\t\t "<<  _Aminus(5,1) <<"\t\t " <<  _Aminus(5,2) <<"\t\t "<<  _Aminus(5,3) <<"\t\t"<<  _Aminus(5,4) <<"\t\t "<<  _Aminus(5,5) <<"\t\t "<<  _Aminus(5,6)<<"\t\t "<<  _Aminus(5,7)<<"\n"; 
+  std::cout<<"        "<<  _Aminus(6,0) <<"\t\t "<<  _Aminus(6,1) <<"\t\t " <<  _Aminus(6,2) <<"\t\t "<<  _Aminus(6,3) <<"\t\t"<<  _Aminus(6,4) <<"\t\t "<<  _Aminus(6,5) <<"\t\t "<<  _Aminus(6,6)<<"\t\t "<<  _Aminus(6,7)<<"\n";
+  std::cout<<"        "<<  _Aminus(6,0) <<"\t\t "<<  _Aminus(6,1) <<"\t\t " <<  _Aminus(6,2) <<"\t\t "<<  _Aminus(6,3) <<"\t\t"<<  _Aminus(6,4) <<"\t\t "<<  _Aminus(6,5) <<"\t\t "<<  _Aminus(6,6)<<"\t\t "<<  _Aminus(6,7)<<"\n"; */
+  
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void StegerWarmingMaxwellProjection2D<UPDATEVAR>::computeUpdateCoeff()
+{
+ using namespace std;
+ using namespace COOLFluiD::Framework;
+  
+  CellCenterFVMData& data = this->getMethodData(); 
+  GeometricEntity& face = *data.getCurrentFace();
+  const CFreal faceArea = socket_faceAreas.getDataHandle()[face.getID()]/
+    data.getPolyReconstructor()->nbQPoints();
+  const EquationSubSysDescriptor& eqSSD = PhysicalModelStack::getActive()->
+    getEquationSubSysDescriptor();
+  
+  DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+  const CFuint nbEqSS = eqSSD.getTotalNbEqSS();
+  for (CFuint i = 0; i < nbEqSS; ++i) {
+    // left contribution to update coefficient
+    const CFuint leftID = face.getState(0)->getLocalID();
+    CFreal maxEV = m_updateVarSet->getMaxEigenValue(*m_lData, data.getUnitNormal());
+    updateCoeff[leftID*nbEqSS + i] += max(maxEV, 0.)*faceArea;
+//     cout << "StegerWarmingMaxwellProjection2D::computeUpdateCoeff=>updateCoeff[leftID*nbEqSS + i]" << updateCoeff[leftID*nbEqSS + i]<<"\n";
+        
+    if (!face.getState(1)->isGhost()) {
+      // right contribution to update coefficient
+      const CFuint rightID = face.getState(1)->getLocalID();
+      m_tempUnitNormal = -1.0*data.getUnitNormal();
+      maxEV = m_updateVarSet->getMaxEigenValue(*m_rData,m_tempUnitNormal);
+    
+      updateCoeff[rightID*nbEqSS + i] += max(maxEV, 0.)*faceArea;
+//       cout << "StegerWarmingMaxwellProjection2D::computeUpdateCoeff=>updateCoeff[rightID*nbEqSS + i]" << updateCoeff[rightID*nbEqSS + i]<<"\n";
+     
+      
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void StegerWarmingMaxwellProjection2D<UPDATEVAR>::computeLeftJacobian()
+{  
+//  using namespace std;
+//  using namespace COOLFluiD::Framework;
+//  using namespace COOLFluiD::Common;
+  
+//  CellCenterFVMData& data = this->getMethodData(); 
+//   GeometricEntity& face = *data.getCurrentFace();
+//   State *const leftState = face.getState(LEFT);
+//   RealVector& pData = PhysicalModelStack::getActive()->getImplementor()->
+//     getConvectiveTerm()->getPhysicalData();
+//   getMethodData().getUpdateVar()->computePhysicalData(*leftState, pData);
+//   getMethodData().getSolutionVar()->computeProjectedJacobian(data.getUnitNormal(), _jacob); 
+//   _jLeft = 0.5*(_jacob + _absJacob);
+  
+//   // computeTransformMatrix(leftState);
+//   // _lFluxJacobian = _jLeft*_jacobDummy;
+  
+//   SafePtr<VarSetMatrixTransformer>  vs = 
+//     getMethodData().getUpdateToSolutionInUpdateMatTrans();
+//   vs->setMatrix(*leftState);
+//   const RealMatrix& dUdP = *vs->getMatrix();  
+//   _lFluxJacobian = _jLeft*dUdP;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void StegerWarmingMaxwellProjection2D<UPDATEVAR>::computeRightJacobian()
+{ 
+//  using namespace std;
+//  using namespace COOLFluiD::Framework;
+//  using namespace COOLFluiD::Common;
+  
+//   CellCenterFVMData& data = this->getMethodData(); 
+//   GeometricEntity& face = *data.getCurrentFace();
+//   State *const rightState = face.getState(RIGHT);
+//   RealVector& pData = PhysicalModelStack::getActive()->getImplementor()->
+//     getConvectiveTerm()->getPhysicalData();
+//   getMethodData().getUpdateVar()->computePhysicalData(*rightState, pData);
+//   getMethodData().getSolutionVar()->computeProjectedJacobian(data.getUnitNormal(), _jacob);
+//   _jRight = 0.5*(_jacob - _absJacob);
+  
+//   // computeTransformMatrix(rightState);
+//   //_rFluxJacobian = _jRight*_jacobDummy;
+  
+//   SafePtr<VarSetMatrixTransformer>  vs = 
+//     getMethodData().getUpdateToSolutionInUpdateMatTrans();
+//   vs->setMatrix(*rightState);
+//   const RealMatrix& dUdP = *vs->getMatrix();
+//   _rFluxJacobian = _jRight*dUdP;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

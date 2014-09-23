@@ -1,0 +1,110 @@
+# HOTFluiD Startfile
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = 4.0283518
+
+# Note:
+#    Cannot convert mesh to P2 and run parallel immediatly
+#    Must convert first, and relaunch to run parallel
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libFiniteElement libHeat libNewtonMethod libPetscI libFiniteElementHeat
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/Heat/testcases/TwoPlates/
+Simulator.Paths.ResultsDir  =  ./
+
+Simulator.SubSystem.Default.PhysicalModelType = Heat2D
+Simulator.SubSystem.Heat2D.Conductivity = 1.0
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = twoPlates2D.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate     = 1
+Simulator.SubSystem.CFmesh.AppendTime   = false
+Simulator.SubSystem.CFmesh.AppendIter   = true
+Simulator.SubSystem.CFmesh.WriteSol     = WriteSolution
+
+Simulator.SubSystem.Tecplot.FileName    = twoPlates2D.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate   = 1
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSystem.Default.listTRS = InnerCells FaceSouth FaceWest FaceNorth SuperInlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = 1stOrderTestMesh_9cells.CFmesh
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 200
+Simulator.SubSystem.NewtonIteratorLSS.Data.SaveSystemToFile = true
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1.0
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
+
+Simulator.SubSystem.SpaceMethod = FiniteElementMethod
+Simulator.SubSystem.FiniteElementMethod.Builder = FiniteElementHO
+Simulator.SubSystem.FiniteElementMethod.Data.UpdateVar = Prim
+Simulator.SubSystem.FiniteElementMethod.Data.DiffusiveVar = Prim
+#Simulator.SubSystem.FiniteElementMethod.Data.SourceVar = Heat2DSourceTConst
+
+#Simulator.SubSystem.FiniteElementMethod.Data.Heat2DSourceTConst.IndepCoef = 100.
+#Simulator.SubSystem.FiniteElementMethod.Data.Heat2DSourceTConst.LinearCoef = 0.
+
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorOrder = P4
+
+Simulator.SubSystem.FiniteElementMethod.ExplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSystem.FiniteElementMethod.InitComds = InitState
+Simulator.SubSystem.FiniteElementMethod.InitNames = InitialField
+
+# Vars are [x y z]
+Simulator.SubSystem.FiniteElementMethod.InitialField.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.InitialField.Vars = x y
+Simulator.SubSystem.FiniteElementMethod.InitialField.Def = 1000+1000*y
+
+Simulator.SubSystem.FiniteElementMethod.BcComds = DirichletBC DirichletBC #DirichletBC DirichletBC
+Simulator.SubSystem.FiniteElementMethod.BcNames = T1000K      T2000K      #Side1 Side2
+
+# Vars are [x y z t]
+Simulator.SubSystem.FiniteElementMethod.T1000K.applyTRS = SuperInlet
+Simulator.SubSystem.FiniteElementMethod.T1000K.Implicit = false
+Simulator.SubSystem.FiniteElementMethod.T1000K.Vars = x y t T
+Simulator.SubSystem.FiniteElementMethod.T1000K.Def = 1000
+
+# Vars are [x y z t]
+Simulator.SubSystem.FiniteElementMethod.T2000K.applyTRS = FaceWest
+Simulator.SubSystem.FiniteElementMethod.T2000K.Implicit = false
+Simulator.SubSystem.FiniteElementMethod.T2000K.Vars = x y t T
+Simulator.SubSystem.FiniteElementMethod.T2000K.Def = 2000
+
+# Vars are [x y z t]
+Simulator.SubSystem.FiniteElementMethod.Side1.applyTRS = FaceSouth
+Simulator.SubSystem.FiniteElementMethod.Side1.Implicit = false
+Simulator.SubSystem.FiniteElementMethod.Side1.Vars = x y t T
+Simulator.SubSystem.FiniteElementMethod.Side1.Def = 1000.+x*1000
+# Vars are [x y z t]
+Simulator.SubSystem.FiniteElementMethod.Side2.applyTRS = FaceNorth
+Simulator.SubSystem.FiniteElementMethod.Side2.Implicit = false
+Simulator.SubSystem.FiniteElementMethod.Side2.Vars = x y t T
+Simulator.SubSystem.FiniteElementMethod.Side2.Def = 1000.+x*1000
+

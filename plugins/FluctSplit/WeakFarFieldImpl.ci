@@ -1,0 +1,246 @@
+#ifndef COOLFluiD_Numerics_FluctSplit_WeakFarFieldImpl_ci
+#define COOLFluiD_Numerics_FluctSplit_WeakFarFieldImpl_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+
+
+    namespace FluctSplit {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename WEAKBCTYPE >
+void WeakFarFieldImpl<WEAKBCTYPE>::defineConfigOptions(Config::OptionList& options)
+{
+   options.template addConfigOption< std::vector<std::string> >("Vars","Definition of the Variables.");
+   options.template addConfigOption< std::vector<std::string> >("Def","Definition of the Functions.");
+   options.template addConfigOption< std::string >("InputVar","Input variables.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename WEAKBCTYPE >
+WeakFarFieldImpl<WEAKBCTYPE>::WeakFarFieldImpl(const std::string& name) :
+  WEAKBCTYPE(name),
+  m_vFunction(),
+  m_dimState(CFNULL),
+  m_gstateCons(CFNULL),
+  m_stateCons(CFNULL),
+  m_inputToUpdateVar(),
+  m_updateToSolutionVar(),
+  m_variables(),
+  m_input(CFNULL),
+  m_isUnsteady(false)
+ {
+  this->addConfigOptionsTo(this);
+
+  m_functions = std::vector<std::string>();
+  WeakFarFieldImpl<WEAKBCTYPE>::setParameter("Def",&m_functions);
+
+  m_vars = std::vector<std::string>();
+  WeakFarFieldImpl<WEAKBCTYPE>::setParameter("Vars",&m_vars);
+
+  m_inputVarStr = "Null";
+  WeakFarFieldImpl<WEAKBCTYPE>::setParameter("InputVar",&m_inputVarStr);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename WEAKBCTYPE >
+WeakFarFieldImpl<WEAKBCTYPE>::~WeakFarFieldImpl()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename WEAKBCTYPE >
+void WeakFarFieldImpl<WEAKBCTYPE>::setup()
+{
+  using namespace COOLFluiD::Framework;
+  WEAKBCTYPE::setup();
+
+  m_dimState = new State();
+  m_input = new State();
+  const CFuint maxNbStatesInCell = Framework::MeshDataStack::getActive()->Statistics().getMaxNbStatesInCell();
+
+  if(SubSystemStatusStack::getActive()->getDT() > 0.) m_isUnsteady = true;
+
+  m_variables.resize(PhysicalModelStack::getActive()->getDim());
+  if(m_isUnsteady) m_variables.resize(PhysicalModelStack::getActive()->getDim()+1);
+
+  m_inputToUpdateVar->setup(maxNbStatesInCell);
+
+  m_updateToSolutionVar->setup(maxNbStatesInCell);
+
+  m_gstateCons = new State();
+  m_stateCons  = new State();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename WEAKBCTYPE >
+void WeakFarFieldImpl<WEAKBCTYPE>::unsetup()
+{
+  deletePtr(m_dimState);
+  deletePtr(m_input);
+
+  deletePtr(m_gstateCons);
+  deletePtr(m_stateCons);
+
+  WEAKBCTYPE::unsetup();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename WEAKBCTYPE >
+void WeakFarFieldImpl<WEAKBCTYPE>::computeFluxAndJacob(
+                                   std::vector<Framework::State*>& states,
+			                             RealVector& flux,
+			                             RealMatrix& fluxJacob)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  // the first state is the ghost one
+  State *const gstate = states[0];
+  State *const state  = states[1];
+
+  // set the values in the ghost state (whose position coincides
+  // with the boundary states)
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const RealVector& temp = state->getCoordinates();
+  for (CFuint i = 0; i < dim; ++i){
+    m_variables[i] = temp[i];
+  }
+  if(m_isUnsteady) m_variables[temp.size()] = SubSystemStatusStack::getActive()->getCurrentTimeDim();
+
+  // set the values in the ghost state (whose position coincides
+  // with the boundary states)
+  m_vFunction.evaluate(m_variables, *m_input);
+
+  // transform to update variables
+  *m_dimState = *m_inputToUpdateVar->transform(m_input);
+
+  // Adimensionalize the value
+  SafePtr<ConvectiveVarSet> updateVarSet = WeakFarFieldImpl<WEAKBCTYPE>::getMethodData().getUpdateVar();
+  updateVarSet->setAdimensionalValues(*m_dimState, *gstate);
+
+  // here you are transforming 2 states but the transformer works
+  // on MaxNbStatesInCell states
+  vector<State*> *const linearStates = this->m_updateToLinearVecTrans->transform(&states);
+
+  this->m_twoStates[0] = (*linearStates)[0];
+  this->m_twoStates[1] = (*linearStates)[1];
+
+  // linearize the states in the cell
+  this->m_linearizer->linearize(this->m_twoStates);
+  const CFreal kCoeff = 1./ PhysicalModelStack::getActive()->getDim();
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  // adimensionalize the normal
+  const CFreal faceArea = this->m_faceNormal.norm2();
+  this->m_adimNormal = this->m_faceNormal/faceArea;
+
+  // compute the Kplus in conservative variables
+  SafePtr<ConvectiveVarSet> solutionVarSet = WeakFarFieldImpl<WEAKBCTYPE>::getMethodData().getSolutionVar();
+
+  solutionVarSet->computeEigenValuesVectors(this->m_rightEv,
+              this->m_leftEv,
+              this->m_eValues,
+              this->m_adimNormal);
+
+  for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+    this->m_eValuesP[iEq] = max(0.,this->m_eValues[iEq]);
+  }
+  this->m_kPlus = this->m_rightEv*(this->m_eValuesP*this->m_leftEv);
+  this->m_kPlus *= kCoeff*faceArea;
+
+  // flux in conservative variables
+  *m_gstateCons = *m_updateToSolutionVar->transform(states[0]);
+  *m_stateCons  = *m_updateToSolutionVar->transform(states[1]);
+
+  flux = this->m_kPlus*(*m_gstateCons - *m_stateCons);
+
+  // jacobian of the flux in conservative variables
+  // dFdU = - K_plus
+
+  fluxJacob = this->m_kPlus;
+
+  if ( WeakFarFieldImpl<WEAKBCTYPE>::getMethodData().isResidualTransformationNeeded()) {
+     // set the transformation from update to solution in update      
+     SafePtr<VarSetMatrixTransformer> updateToSolInUpdate =           
+      WeakFarFieldImpl<WEAKBCTYPE>::getMethodData().getUpdateToSolutionInUpdateMatTrans();         
+                                                                      
+     updateToSolInUpdate->setMatrix(*state);                           
+     const RealMatrix& tMatrix = *updateToSolInUpdate->getMatrix();   
+
+	 RealMatrix tempMatrix = fluxJacob;
+
+     fluxJacob = tempMatrix*tMatrix;
+  }                      
+  
+  fluxJacob *= -1.;
+ }
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename WEAKBCTYPE >
+void WeakFarFieldImpl<WEAKBCTYPE>::configure ( Config::ConfigArgs& args )
+{
+  using namespace COOLFluiD::Framework;
+  WEAKBCTYPE::configure(args);
+
+  m_updateVarStr = WeakFarFieldImpl<WEAKBCTYPE>::getMethodData().getUpdateVarStr();
+
+  // create the transformer from input to update variables
+  if (m_inputVarStr == "Null") {
+    m_inputVarStr = m_updateVarStr;
+  }
+
+  std::string name = WeakFarFieldImpl<WEAKBCTYPE>::getMethodData().getNamespace();
+
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
+
+  std::string provider = VarSetTransformer::getProviderName(physModel->getConvectiveName(), m_inputVarStr, m_updateVarStr);
+
+  m_inputToUpdateVar = Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider)->create(physModel->getImplementor());
+
+  cf_assert(m_inputToUpdateVar.isNotNull());
+
+  // create the transformer from Update to Solution variables
+  m_solutionVarStr = WeakFarFieldImpl<WEAKBCTYPE>::getMethodData().getSolutionVarStr();
+
+  std::string provider2 = VarSetTransformer::getProviderName(physModel->getConvectiveName(), m_updateVarStr, m_solutionVarStr);
+
+  m_updateToSolutionVar = Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider2)->create(physModel->getImplementor());
+
+  cf_assert(m_updateToSolutionVar.isNotNull());
+
+
+  m_vFunction.setFunctions(m_functions);
+  m_vFunction.setVariables(m_vars);
+  try
+  {
+    m_vFunction.parse();
+  }
+  catch (Common::ParserException& e)
+  {
+    CFout << e.what() << "\n";
+    throw; // retrow the exception to signal the error to the user
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace FluctSplit
+
+
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Numerics_FluctSplit_WeakFarField_ci

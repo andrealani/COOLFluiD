@@ -1,0 +1,61 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace MHD {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+MHDPhysicalModel<DIM>::MHDPhysicalModel(const std::string& name)
+  : Framework::ConvectionPM<MHDTerm>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+MHDPhysicalModel<DIM>::~MHDPhysicalModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MHDPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionPM<MHDTerm>::configure(args);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(DIM);
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint MHDPhysicalModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint MHDPhysicalModel<DIM>::getNbEquations() const
+{
+  return 8;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace MHD
+
+} // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

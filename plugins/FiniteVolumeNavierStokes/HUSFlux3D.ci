@@ -1,0 +1,913 @@
+#include <iostream>
+
+#include "MathTools/MathFunctions.hh"
+#include "MathTools/MatrixInverterT.hh"
+
+#include "Framework/VolumeIntegrator.hh"
+#include "Framework/MethodStrategyProvider.hh"
+#include "Framework/EquationSetData.hh"
+
+//////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+HUSFlux3D<UPDATEVAR>::HUSFlux3D(const std::string& name) :
+  HUSFlux2D<UPDATEVAR>(name),
+  _velL(),
+  _velR(),
+  _velLS(),
+  _velRS(),
+  _t1L(),
+  _t1R(),
+  _t2L(),
+  _t2R(),
+  _coordsL(),
+  _coordsR(),
+  _coordsLinv(),
+  _coordsRinv(),
+  _velRelL(),
+  _velRelR()
+{
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+HUSFlux3D<UPDATEVAR>::~HUSFlux3D()
+{
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HUSFlux3D<UPDATEVAR>::setup()
+{ 
+  using namespace COOLFluiD::Framework;
+  
+  HUSFlux2D<UPDATEVAR>::setup();
+  
+  _velL.resize(3);
+  _velR.resize(3);
+  _velLS.resize(3);
+  _velRS.resize(3);
+  _t1L.resize(3);
+  _t1R.resize(3);
+  _t2L.resize(3);
+  _t2R.resize(3);
+  _coordsL.resize(3,3);
+  _coordsR.resize(3,3);
+  _coordsLinv.resize(3,3);
+  _coordsRinv.resize(3,3);
+  _velRelL.resize(3);
+  _velRelR.resize(3);
+}
+      
+//////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HUSFlux3D<UPDATEVAR>::compute(RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace MathTools;
+  
+  const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
+  const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
+  const CFuint nbEulerEqs = eulerVarIDs.size();
+  
+  // determines if we are looking at just the Euler equations or more
+  if(nbEulerEqs == 5) {
+    CNEQ(result);
+  }
+  else {
+    TCNEQ(result);
+  }
+  
+  CellCenterFVMData& data = this->getMethodData(); 
+  SafePtr<FVMCC_PolyRec> polyRec = data.getPolyReconstructor();
+  vector<RealVector>& pdata = polyRec->getExtrapolatedPhysicaData();
+  
+  // compute update coefficient
+  if (!this->getMethodData().isPerturb()) { 
+    GeometricEntity& face = *data.getCurrentFace();
+    const CFreal faceArea = this->socket_faceAreas.getDataHandle()[face.getID()]/
+      data.getPolyReconstructor()->nbQPoints();
+    
+    DataHandle<CFreal> updateCoeff = this->socket_updateCoeff.getDataHandle();
+    // left contribution to update coefficient
+    const CFuint leftID = face.getState(0)->getLocalID();
+    CFreal maxEV = this->_updateVarSet->getMaxEigenValue(pdata[0], data.getUnitNormal());
+    updateCoeff[leftID] += std::max(maxEV, 0.)*faceArea;
+    
+    if (!face.getState(1)->isGhost()) {
+      // right contribution to update coefficient
+      const CFuint rightID = face.getState(1)->getLocalID();
+      this->_tempUnitNormal = -1.0*data.getUnitNormal();
+      maxEV = this->_updateVarSet->getMaxEigenValue(pdata[1],this->_tempUnitNormal);
+      updateCoeff[rightID] += std::max(maxEV, 0.)*faceArea;
+    }
+  }
+}
+  
+////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HUSFlux3D<UPDATEVAR>::CNEQ(RealVector& result) 
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace MathTools;
+  
+  const vector<RealVector>& pdata = this->getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
+  const RealVector& leftData = pdata[LEFT];
+  const RealVector& rightData = pdata[RIGHT];
+  
+  // The flow at the freestream is assumed to be one-dimensional
+  const RealVector& unitNormal = this->getMethodData().getUnitNormal();
+  const CFreal nx = unitNormal[XX];
+  const CFreal ny = unitNormal[YY];
+  const CFreal nz = unitNormal[ZZ];
+  
+  // calculation of the primitive variables at the left and right
+  // states
+  const CFreal rhoL = leftData[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR = rightData[UPDATEVAR::PTERM::RHO];
+  const CFreal uL = leftData[UPDATEVAR::PTERM::VX];
+  const CFreal vL = leftData[UPDATEVAR::PTERM::VY];
+  const CFreal wL = leftData[UPDATEVAR::PTERM::VZ];
+  const CFreal uR = rightData[UPDATEVAR::PTERM::VX];
+  const CFreal vR = rightData[UPDATEVAR::PTERM::VY];
+  const CFreal wR = rightData[UPDATEVAR::PTERM::VZ];
+  const CFreal pL = leftData[UPDATEVAR::PTERM::P];
+  const CFreal pR = rightData[UPDATEVAR::PTERM::P];
+  const CFreal hL = leftData[UPDATEVAR::PTERM::H];
+  const CFreal hR = rightData[UPDATEVAR::PTERM::H];
+  const CFreal aL = leftData[UPDATEVAR::PTERM::A];
+  const CFreal aR = rightData[UPDATEVAR::PTERM::A];
+  const CFreal gammaL = leftData[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaR = rightData[UPDATEVAR::PTERM::GAMMA];
+
+  // stores velocities in new vectors
+  _velL[0] = uL;
+  _velL[1] = vL;
+  _velL[2] = wL;
+  _velR[0] = uR;
+  _velR[1] = vR;
+  _velR[2] = wR;
+
+  // calculates secondary tangential velocity (perpendicular
+  // to velocity
+  MathFunctions::crossProd(_velL,unitNormal,_t2L);
+  MathFunctions::crossProd(_velR,unitNormal,_t2R);
+  _t2L.normalize();
+  _t2R.normalize();
+
+  // calculates primary tangential velocity (in face and 
+  // in direction of velocity)
+  MathFunctions::crossProd(unitNormal,_t2L,_t1L);
+  MathFunctions::crossProd(unitNormal,_t2R,_t1R);
+  _t1L.normalize();
+  _t1R.normalize();
+
+
+  // calculation of the normal component of velocity for
+  // the left and right states
+  const CFreal unL = MathFunctions::innerProd(_velL,unitNormal);
+  const CFreal unR = MathFunctions::innerProd(_velR,unitNormal);
+
+  // calculation of the tangent component of velocity for
+  // the left and right states
+  const CFreal ut2L = MathFunctions::innerProd(_velL,_t2L);
+  const CFreal ut2R = MathFunctions::innerProd(_velR,_t2R);
+  
+  // calculation of the tangent component of velocity for
+  // the left and right states
+  const CFreal ut1L = MathFunctions::innerProd(_velL,_t1L);
+  const CFreal ut1R = MathFunctions::innerProd(_velR,_t1R);
+
+  // stores relative velocities in new vectors
+  _velRelL[0] = unL;
+  _velRelL[1] = ut2L;
+  _velRelL[2] = ut1L;
+  _velRelR[0] = unR;
+  _velRelR[1] = ut2R;
+  _velRelR[2] = ut1R;
+
+  // stores normal and tangential vectors in matrix form
+  _coordsL(0,0) = nx;
+  _coordsL(0,1) = ny;
+  _coordsL(0,2) = nz;
+  _coordsR(0,0) = nx;
+  _coordsR(0,1) = ny;
+  _coordsR(0,2) = nz;
+  for( CFuint i = 0; i < 3; i++) {
+    _coordsL(1,i) = _t2L[i];
+    _coordsR(1,i) = _t2R[i];
+    _coordsL(2,i) = _t1L[i];
+    _coordsR(2,i) = _t1R[i];
+  }
+
+  //cout << "left v:" << endl;
+  //cout << _velL << endl;
+  //cout << "left coords:" << endl;
+  //cout << _coordsL << endl;
+  //cout << "right v:" << endl;
+  //cout << _velL << endl;
+  //cout << "right coords:" << endl;
+  //cout << _coordsR << endl;
+
+
+  // calculation of the normal Mach numbers for the sides
+  const CFreal mnL = unL / aL;
+  const CFreal mnR = unR / aR;
+
+  const CFuint nbSpecies = this->_updateVarSet->getModel()->getNbScalarVars(0);
+  const CFuint first = this->_updateVarSet->getModel()->getFirstScalarVar(0);
+
+  // calculation of flux vector according to Van Leer part of HUS
+  
+  // left side
+  // supersonic case
+  if (mnL >= 1.0) { // flow out of cell
+    this->_vfluxL[0] = rhoL*unL;
+    this->_vfluxL[1] = this->_vfluxL[0]*uL + pL*nx;
+    this->_vfluxL[2] = this->_vfluxL[0]*vL + pL*ny;
+    this->_vfluxL[3] = this->_vfluxL[0]*wL + pL*nz;
+    this->_vfluxL[4] = this->_vfluxL[0]*hL;
+
+    for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+      this->_vfluxL[5 + ie] = this->_vfluxL[0]*leftData[first + ie];
+    }
+  }
+  else {
+    if (mnL <= -1.0) { // flow into cell
+      this->_vfluxL = 0.0;
+    }
+    else { // subsonic case
+      // calculation of mass fluxes through the face according to
+      // Van Leer (m is for mass, L: plus, R: minus)
+      const CFreal mfluxL =  0.25*rhoL*aL * pow(mnL + 1.0, 2.0);
+ 
+      // calculating the rest of the fluxes according to
+      // Van Leer (v is for vector, L: plus, R: minus)
+
+      this->_vfluxL[0] = mfluxL;
+      this->_vfluxL[1] = mfluxL * ( (-unL + 2.0*aL) * nx/gammaL + uL );
+      this->_vfluxL[2] = mfluxL * ( (-unL + 2.0*aL) * ny/gammaL + vL );
+      this->_vfluxL[3] = mfluxL * ( (-unL + 2.0*aL) * nz/gammaL + wL );
+      this->_vfluxL[4] = mfluxL * ( hL - pow(unL - aL,2.0)/(gammaL + 1.) );
+
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+        this->_vfluxL[5 + ie] = mfluxL * leftData[first + ie];      
+      }
+    }
+  }
+
+  // right side
+  // supersonic case
+  if (mnR <= -1.0) { // flow out of cell
+    this->_vfluxR[0] = rhoR*unR;
+    this->_vfluxR[1] = this->_vfluxR[0]*uR + pR*nx;
+    this->_vfluxR[2] = this->_vfluxR[0]*vR + pR*ny;
+    this->_vfluxR[3] = this->_vfluxR[0]*wR + pR*nz;
+    this->_vfluxR[4] = this->_vfluxR[0]*hR;
+
+    for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+      this->_vfluxR[5 + ie] = this->_vfluxR[0]*rightData[first + ie];
+    }
+  }
+  else {
+    if (mnR >= 1.0) { // flow into cell
+      this->_vfluxR = 0.0;
+    }
+    else { // subsonic case
+      // calculation of mass fluxes through the face according to
+      // Van Leer (m is for mass, L: plus, R: minus)
+      const CFreal mfluxR = -0.25*rhoR*aR * pow(mnR - 1.0, 2.0);
+ 
+      // calculating the rest of the fluxes according to
+      // Van Leer (v is for vector, L: plus, R: minus)
+
+      this->_vfluxR[0] = mfluxR;
+      this->_vfluxR[1] = mfluxR * ( (-unR - 2.0*aR) * nx/gammaR + uR );
+      this->_vfluxR[2] = mfluxR * ( (-unR - 2.0*aR) * ny/gammaR + vR );
+      this->_vfluxR[3] = mfluxR * ( (-unR - 2.0*aR) * nz/gammaR + wR );
+      this->_vfluxR[4] = mfluxR * ( hR - pow(unR + aR,2.0)/(gammaR + 1.) );
+
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+        this->_vfluxR[5 + ie] = mfluxR * rightData[first + ie];
+      }
+    }
+  }
+
+  result =  this->_vfluxL + this->_vfluxR;
+
+  // end of flux vector calculation for the Van Leer part of HUS
+
+
+
+  // compute intermediate pressure (pS) with Newton method
+
+  // variables to decrease computation time
+  const CFreal KLS = aL / (gammaL-1);
+  const CFreal KRS = aR / (gammaR-1);
+  const CFreal expLS = 0.5 * (gammaL-1) / gammaL;
+  const CFreal expRS = 0.5 * (gammaR-1) / gammaR;
+  const CFreal KS = 0.5*this->_beta*(unL-unR) + KLS + KRS;
+  const CFreal ALS = KLS / pow(pL, expLS);
+  const CFreal ARS = KRS / pow(pR, expRS);
+
+  // Newton iteration variables
+  const CFuint iMax = 6;
+  const CFreal epsP = 1.0e-6;
+  CFreal pS = 0.5 * (pL + pR); // initial guess
+  CFreal pSprev = pS;
+  const CFreal deltaPS = pS * epsP;
+
+  for (CFuint i = 0; i < iMax; ++i) {
+    CFreal BLS = ALS * pow(pS, expLS);
+    CFreal BRS = ARS * pow(pS, expRS);
+    pS = pS * ( 1 - (BLS + BRS - KS) / (expLS*BLS + expRS*BRS) );
+    if ( std::abs(pS-pSprev) <= deltaPS ) break;
+    pSprev = pS;
+//    if ( i == iMax - 1) cout << "HUSFlux: Newton convergence was not reached!" << endl;
+  }
+
+  // computing variables for intermediate state (S)
+
+  const CFreal eL = leftData[UPDATEVAR::PTERM::E];
+  const CFreal eR = rightData[UPDATEVAR::PTERM::E];
+  const CFreal gamma2L = 1 + pL/(rhoL*eL);
+  const CFreal gamma2R = 1 + pR/(rhoR*eR);
+  const CFreal u2L = uL*uL + vL*vL + wL*wL;
+  const CFreal u2R = uR*uR + vR*vR + wR*wR;
+
+  const CFreal rhoLS = rhoL * pow(pS/pL, 1/gammaL);
+  const CFreal rhoRS = rhoR * pow(pS/pR, 1/gammaR);
+  RealVector YsLS(nbSpecies);
+  RealVector YsRS(nbSpecies);
+  for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+    YsLS[ie] =  leftData[first + ie];
+    YsRS[ie] = rightData[first + ie];
+  }
+  const CFreal aLS = aL * pow(pS/pL, expLS);
+  const CFreal aRS = aR * pow(pS/pR, expRS);
+
+  // new normal velocity, tangential velocities preserved
+  const CFreal unS = unL + this->_beta * 2 / (gammaL-1) * (aL - aLS);
+  _velRelL[0] = unS;
+  _velRelR[0] = unS;
+
+  if ((_coordsL(0,2)==_coordsL(1,2))&&(_coordsL(0,2)==_coordsL(2,2))) {
+    cout << "uhoh - singularity." << endl;
+  }
+
+  m_inverter3.invert(_coordsL,_coordsLinv);
+  m_inverter3.invert(_coordsR,_coordsRinv);
+
+  _velLS = _coordsLinv * _velRelL;
+  _velRS = _coordsRinv * _velRelR;
+
+  const CFreal uLS = _velLS[0];
+  const CFreal vLS = _velLS[1];
+  const CFreal wLS = _velLS[2];
+  const CFreal uRS = _velRS[0];
+  const CFreal vRS = _velRS[1];
+  const CFreal wRS = _velRS[2];
+  
+  const CFreal u2LS = uLS*uLS + vLS*vLS + wLS*wLS;
+  const CFreal u2RS = uRS*uRS + vRS*vRS + wRS*wRS;
+  const CFreal eLS = (eL-0.5*u2L) * pow(rhoLS/rhoL, gamma2L-1) + 0.5 * u2LS;
+  const CFreal eRS = (eR-0.5*u2R) * pow(rhoRS/rhoR, gamma2R-1) + 0.5 * u2RS;
+  const CFreal hLS = eLS + pS / rhoLS;
+  const CFreal hRS = eRS + pS / rhoRS;
+  const CFreal mnLS = unS / aLS;
+  const CFreal mnRS = unS / aRS;
+
+  // computing the anti-diffusive terms of the HUS flux
+
+  if (unS > 0.0) {
+
+    // left state (minus)
+    if (mnLS < 1.0) {
+      const CFreal mfluxLS = -0.25*rhoLS*aLS * pow(mnLS - 1.0, 2.0);
+ 
+      this->_vfluxL[0] = mfluxLS;
+      this->_vfluxL[1] = mfluxLS * ( (-unS - 2.0*aLS) * nx/gammaL + uLS );
+      this->_vfluxL[2] = mfluxLS * ( (-unS - 2.0*aLS) * ny/gammaL + vLS );
+      this->_vfluxL[3] = mfluxLS * ( (-unS - 2.0*aLS) * nz/gammaL + wLS );
+      this->_vfluxL[4] = mfluxLS * ( hLS - pow(unS + aLS,2.0)/(gammaL + 1.) );
+
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+        this->_vfluxL[4 + ie] = mfluxLS * YsLS[ie];
+      }
+    }
+    else {
+      this->_vfluxL = 0.0;
+    }
+
+    // right state (minus)
+    if (mnRS < 1.0) {
+      const CFreal mfluxRS = -0.25*rhoRS*aRS * pow(mnRS - 1.0, 2.0);
+
+      this->_vfluxR[0] = mfluxRS;
+      this->_vfluxR[1] = mfluxRS * ( (-unS - 2.0*aRS) * nx/gammaR + uRS );
+      this->_vfluxR[2] = mfluxRS * ( (-unS - 2.0*aRS) * ny/gammaR + vRS );
+      this->_vfluxL[3] = mfluxRS * ( (-unS - 2.0*aLS) * nz/gammaL + wLS );
+      this->_vfluxR[4] = mfluxRS * ( hRS - pow(unS + aRS,2.0)/(gammaR + 1.) );
+
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+        this->_vfluxR[4 + ie] = mfluxRS * YsRS[ie];
+      }
+    }
+    else {
+      this->_vfluxR = 0.0;
+    }
+
+    // assembling the final flux
+    result += this->_vfluxL - this->_vfluxR;
+  }
+  else {
+
+    // left state (plus)
+    if (mnLS > -1.0) {
+      const CFreal mfluxLS = 0.25*rhoLS*aLS * pow(mnLS + 1.0, 2.0);
+ 
+      this->_vfluxL[0] = mfluxLS;
+      this->_vfluxL[1] = mfluxLS * ( (-unS + 2.0*aLS) * nx/gammaL + uLS );
+      this->_vfluxL[2] = mfluxLS * ( (-unS + 2.0*aLS) * ny/gammaL + vLS );
+      this->_vfluxL[3] = mfluxLS * ( (-unS + 2.0*aLS) * nz/gammaL + wLS );
+      this->_vfluxL[4] = mfluxLS * ( hLS - pow(unS - aLS,2.0)/(gammaL + 1.) );
+
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+        this->_vfluxL[4 + ie] = mfluxLS * YsLS[ie];
+      }
+    }
+    else {
+      this->_vfluxL = 0.0;
+    }
+
+    // right state (plus)
+    if (mnRS > -1.0) {
+      const CFreal mfluxRS = 0.25*rhoRS*aRS * pow(mnRS + 1.0, 2.0);
+
+      this->_vfluxR[0] = mfluxRS;
+      this->_vfluxR[1] = mfluxRS * ( (-unS + 2.0*aRS) * nx/gammaR + uRS );
+      this->_vfluxR[2] = mfluxRS * ( (-unS + 2.0*aRS) * ny/gammaR + vRS );
+      this->_vfluxL[3] = mfluxRS * ( (-unS + 2.0*aLS) * nz/gammaL + wLS );
+      this->_vfluxR[4] = mfluxRS * ( hRS - pow(unS - aRS,2.0)/(gammaR + 1.) );
+
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+        this->_vfluxR[4 + ie] = mfluxRS * YsRS[ie];
+      }
+    }
+    else {
+      this->_vfluxR = 0.0;
+    }
+
+    // assembling the final flux
+    result += this->_vfluxR - this->_vfluxL;
+  }
+  
+  // compute update coefficient
+  if (!this->getMethodData().isPerturb()) {
+    CellCenterFVMData& data = this->getMethodData(); 
+    GeometricEntity& face = *data.getCurrentFace();
+    const CFreal faceArea = this->socket_faceAreas.getDataHandle()[face.getID()]/
+      data.getPolyReconstructor()->nbQPoints();
+    
+    DataHandle<CFreal> updateCoeff = this->socket_updateCoeff.getDataHandle();
+    // left contribution to update coefficient
+    const CFuint leftID = face.getState(0)->getLocalID();
+    CFreal maxEV = this->_updateVarSet->getMaxEigenValue(pdata[0], unitNormal);
+    updateCoeff[leftID] += std::max(maxEV, 0.)*faceArea;
+    
+    if (!face.getState(1)->isGhost()) {
+      // right contribution to update coefficient
+      const CFuint rightID = face.getState(1)->getLocalID();
+      this->_tempUnitNormal = -1.0*unitNormal;
+      maxEV = this->_updateVarSet->getMaxEigenValue(pdata[1],this->_tempUnitNormal);
+      updateCoeff[rightID] += std::max(maxEV, 0.)*faceArea;
+    }
+  }
+} 
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HUSFlux3D<UPDATEVAR>::TCNEQ(RealVector& result) 
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace MathTools;
+  
+  const vector<RealVector>& pdata = this->getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
+  const RealVector& leftData = pdata[LEFT];
+  const RealVector& rightData = pdata[RIGHT];
+  
+  // The flow at the freestream is assumed to be one-dimensional
+  const RealVector& unitNormal = this->getMethodData().getUnitNormal();
+  const CFreal nx = unitNormal[XX];
+  const CFreal ny = unitNormal[YY];
+  const CFreal nz = unitNormal[ZZ];
+  
+  // calculation of the primitive variables at the left and right
+  // states
+  const CFreal rhoL = leftData[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR = rightData[UPDATEVAR::PTERM::RHO];
+  const CFreal uL = leftData[UPDATEVAR::PTERM::VX];
+  const CFreal vL = leftData[UPDATEVAR::PTERM::VY];
+  const CFreal wL = leftData[UPDATEVAR::PTERM::VZ];
+  const CFreal uR = rightData[UPDATEVAR::PTERM::VX];
+  const CFreal vR = rightData[UPDATEVAR::PTERM::VY];
+  const CFreal wR = rightData[UPDATEVAR::PTERM::VZ];
+  const CFreal pL = leftData[UPDATEVAR::PTERM::P];
+  const CFreal pR = rightData[UPDATEVAR::PTERM::P];
+  const CFreal hL = leftData[UPDATEVAR::PTERM::H];
+  const CFreal hR = rightData[UPDATEVAR::PTERM::H];
+  const CFreal aL = leftData[UPDATEVAR::PTERM::A];
+  const CFreal aR = rightData[UPDATEVAR::PTERM::A];
+  const CFreal gammaL = leftData[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaR = rightData[UPDATEVAR::PTERM::GAMMA];
+
+  // stores velocities in new vectors
+  _velL[0] = uL;
+  _velL[1] = vL;
+  _velL[2] = wL;
+  _velR[0] = uR;
+  _velR[1] = vR;
+  _velR[2] = wR;
+
+  // calculates secondary tangential velocity (perpendicular
+  // to velocity
+  MathFunctions::crossProd(_velL,unitNormal,_t2L);
+  MathFunctions::crossProd(_velR,unitNormal,_t2R);
+  _t2L.normalize();
+  _t2R.normalize();
+
+  // calculates primary tangential velocity (in face and 
+  // in direction of velocity)
+  MathFunctions::crossProd(unitNormal,_t2L,_t1L);
+  MathFunctions::crossProd(unitNormal,_t2R,_t1R);
+  _t1L.normalize();
+  _t1R.normalize();
+
+
+  // calculation of the normal component of velocity for
+  // the left and right states
+  const CFreal unL = MathFunctions::innerProd(_velL,unitNormal);
+  const CFreal unR = MathFunctions::innerProd(_velR,unitNormal);
+
+  // calculation of the tangent component of velocity for
+  // the left and right states
+  const CFreal ut2L = MathFunctions::innerProd(_velL,_t2L);
+  const CFreal ut2R = MathFunctions::innerProd(_velR,_t2R);
+  
+  // calculation of the tangent component of velocity for
+  // the left and right states
+  const CFreal ut1L = MathFunctions::innerProd(_velL,_t1L);
+  const CFreal ut1R = MathFunctions::innerProd(_velR,_t1R);
+
+  // stores relative velocities in new vectors
+  _velRelL[0] = unL;
+  _velRelL[1] = ut2L;
+  _velRelL[2] = ut1L;
+  _velRelR[0] = unR;
+  _velRelR[1] = ut2R;
+  _velRelR[2] = ut1R;
+
+  // stores normal and tangential vectors in matrix form
+  _coordsL(0,0) = nx;
+  _coordsL(0,1) = ny;
+  _coordsL(0,2) = nz;
+  _coordsR(0,0) = nx;
+  _coordsR(0,1) = ny;
+  _coordsR(0,2) = nz;
+  for( CFuint i = 0; i < 2; ++i) {
+    _coordsL(1,i) = _t2L[i];
+    _coordsR(1,i) = _t2R[i];
+    _coordsL(2,i) = _t1L[i];
+    _coordsR(2,i) = _t1R[i];
+  }
+
+  //cout << "left coords:" << endl;
+  //cout << _coordsL << endl;
+  //cout << "right coords:" << endl;
+  //cout << _coordsR << endl;
+
+
+  // calculation of the normal Mach numbers for the sides
+  const CFreal mnL = unL / aL;
+  const CFreal mnR = unR / aR;
+
+  CFreal mfluxL = 0.0;
+  CFreal mfluxR = 0.0;
+  
+  const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
+  const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
+  const vector<EquationSetData>& eqsData = UPDATEVAR::getEqSetData();
+  
+  const CFuint nbSpecies = this->_updateVarSet->getModel()->getNbScalarVars(0);
+  const CFuint firstSpec = this->_updateVarSet->getModel()->getFirstScalarVar(0);
+  const vector<CFuint>& specIDs = eqsData[0].getEqSetVarIDs();
+  
+  const CFuint nbVib = this->_updateVarSet->getModel()->getNbScalarVars(1);
+  const CFuint firstVib = this->_updateVarSet->getModel()->getFirstScalarVar(1);
+  const vector<CFuint>& vibIDs = eqsData[1].getEqSetVarIDs();
+
+
+  // calculation of flux vector according to Van Leer part of HUS
+  
+  // left side
+  // supersonic case
+  if (mnL >= 1.0) { // flow out of cell
+    
+    mfluxL = rhoL*unL;
+    
+    // update species
+    for (CFuint j = 0; j < nbSpecies; ++j) {
+      this->_vfluxL[specIDs[j]] = mfluxL*leftData[firstSpec + j];
+    }
+    
+    // update euler variables
+    this->_vfluxL[eulerVarIDs[0]] = mfluxL*uL + pL*nx;
+    this->_vfluxL[eulerVarIDs[1]] = mfluxL*vL + pL*ny;
+    this->_vfluxL[eulerVarIDs[2]] = mfluxL*wL + pL*nz;
+    this->_vfluxL[eulerVarIDs[3]] = mfluxL*hL;
+    
+    // update vibrational temperatures
+    for(CFuint k = 0; k < nbVib; ++k) {
+      this->_vfluxL[vibIDs[k]] = mfluxL*leftData[firstVib + k];
+    }
+
+
+
+  }
+  else {
+    if (mnL <= -1.0) { // flow into cell
+      this->_vfluxL = 0.0;
+    }
+    else { // subsonic case
+      // calculation of mass fluxes through the face according to
+      // Van Leer (m is for mass, L: plus, R: minus)
+      mfluxL = 0.25*rhoL*aL * pow(mnL + 1.0, 2.0);
+      
+      // update species
+      for (CFuint j = 0; j < nbSpecies; ++j) {
+	this->_vfluxL[specIDs[j]] = mfluxL * leftData[firstSpec + j];
+      }
+      
+      this->_vfluxL[eulerVarIDs[0]] = mfluxL * ( (-unL + 2.0*aL) * nx/gammaL + uL );
+      this->_vfluxL[eulerVarIDs[1]] = mfluxL * ( (-unL + 2.0*aL) * ny/gammaL + vL );
+      this->_vfluxL[eulerVarIDs[2]] = mfluxL * ( (-unL + 2.0*aL) * nz/gammaL + wL );
+      this->_vfluxL[eulerVarIDs[3]] = mfluxL * ( hL - pow(unL - aL,2.0)/(gammaL + 1.) );
+      
+      for (CFuint k = 0; k < nbVib; ++k) {
+	this->_vfluxL[vibIDs[k]] = mfluxL * leftData[firstVib + k];
+      }
+    }
+  }
+
+  // right side
+  // supersonic case
+  if (mnR <= -1.0) { // flow out of cell
+    mfluxR = rhoR*unR;
+    
+    // update species
+    for (CFuint j = 0; j < nbSpecies; ++j) {
+      this->_vfluxR[specIDs[j]] = mfluxR*rightData[firstSpec + j];
+    }
+    
+    // update euler variables
+    this->_vfluxR[eulerVarIDs[0]] = mfluxR*uR + pR*nx;
+    this->_vfluxR[eulerVarIDs[1]] = mfluxR*vR + pR*ny;
+    this->_vfluxR[eulerVarIDs[2]] = mfluxR*wR + pR*nz;
+    this->_vfluxR[eulerVarIDs[3]] = mfluxR*hR;
+    
+    // update vibrational temperatures
+    for(CFuint k = 0; k < nbVib; ++k) {
+      this->_vfluxR[vibIDs[k]] = mfluxR * rightData[firstVib + k];
+    }
+  }
+  else {
+    if (mnR >= 1.0) { // flow into cell
+      this->_vfluxR = 0.0;
+    }
+    else { // subsonic case
+      // calculation of mass fluxes through the face according to
+      // Van Leer (m is for mass, L: plus, R: minus)
+      mfluxR = -0.25*rhoR*aR * pow(mnR - 1.0, 2.0);
+      
+      // update species
+      for (CFuint j = 0; j < nbSpecies; ++j) {
+	this->_vfluxR[specIDs[j]] = mfluxR * rightData[firstSpec + j];
+      }
+      
+      this->_vfluxR[eulerVarIDs[0]] = mfluxR * ( (-unR - 2.0*aR) * nx/gammaR + uR );
+      this->_vfluxR[eulerVarIDs[1]] = mfluxR * ( (-unR - 2.0*aR) * ny/gammaR + vR );
+      this->_vfluxR[eulerVarIDs[2]] = mfluxR * ( (-unR - 2.0*aR) * nz/gammaR + wR );
+      this->_vfluxR[eulerVarIDs[3]] = mfluxR * ( hR - pow(unR + aR,2.0)/(gammaR + 1.) );
+      
+      for (CFuint k = 0; k < nbVib; ++k) {
+	this->_vfluxR[vibIDs[k]] = mfluxR * rightData[firstVib + k];
+      }
+    }
+  }
+
+  result =  this->_vfluxL + this->_vfluxR;
+
+  // end of flux vector calculation for the Van Leer part of HUS
+
+
+
+  // compute intermediate pressure (pS) with Newton method
+
+  // variables to decrease computation time
+  const CFreal KLS = aL / (gammaL-1);
+  const CFreal KRS = aR / (gammaR-1);
+  const CFreal expLS = 0.5 * (gammaL-1) / gammaL;
+  const CFreal expRS = 0.5 * (gammaR-1) / gammaR;
+  const CFreal KS = 0.5*this->_beta*(unL-unR) + KLS + KRS;
+  const CFreal ALS = KLS / pow(pL, expLS);
+  const CFreal ARS = KRS / pow(pR, expRS);
+
+  // Newton iteration variables
+  const CFuint iMax = 6;
+  const CFreal epsP = 1.0e-6;
+  CFreal pS = 0.5 * (pL + pR); // initial guess
+  CFreal pSprev = pS;
+  const CFreal deltaPS = pS * epsP;
+
+  for (CFuint i = 0; i < iMax; ++i) {
+    CFreal BLS = ALS * pow(pS, expLS);
+    CFreal BRS = ARS * pow(pS, expRS);
+    pS = pS * ( 1 - (BLS + BRS - KS) / (expLS*BLS + expRS*BRS) );
+    if ( std::abs(pS-pSprev) <= deltaPS ) break;
+    pSprev = pS;
+//    if ( i == iMax - 1) cout << "HUSFlux: Newton convergence was not reached!" << endl;
+  }
+
+  // computing variables for intermediate state (S)
+
+  const CFreal eL = leftData[UPDATEVAR::PTERM::E];
+  const CFreal eR = rightData[UPDATEVAR::PTERM::E];
+  const CFreal gamma2L = 1 + pL/(rhoL*eL);
+  const CFreal gamma2R = 1 + pR/(rhoR*eR);
+  const CFreal u2L = uL*uL + vL*vL + wL*wL;
+  const CFreal u2R = uR*uR + vR*vR + wR*wR;
+
+  const CFreal rhoLS = rhoL * pow(pS/pL, 1/gammaL);
+  const CFreal rhoRS = rhoR * pow(pS/pR, 1/gammaR);
+  RealVector YsLS(nbSpecies);
+  RealVector YsRS(nbSpecies);
+  for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+    YsLS[ie] =  leftData[firstSpec + ie];
+    YsRS[ie] = rightData[firstSpec + ie];
+  }
+  const CFreal aLS = aL * pow(pS/pL, expLS);
+  const CFreal aRS = aR * pow(pS/pR, expRS);
+
+  // new normal velocity, tangential velocities preserved
+  const CFreal unS = unL + this->_beta * 2 / (gammaL-1) * (aL - aLS);
+  _velRelL[0] = unS;
+  _velRelR[0] = unS;
+
+  m_inverter3.invert(_coordsL,_coordsLinv);
+  m_inverter3.invert(_coordsR,_coordsRinv);
+
+  _velLS = _coordsLinv * _velRelL;
+  _velRS = _coordsRinv * _velRelR;
+
+  const CFreal uLS = _velLS[0];
+  const CFreal vLS = _velLS[1];
+  const CFreal wLS = _velLS[2];
+  const CFreal uRS = _velRS[0];
+  const CFreal vRS = _velRS[1];
+  const CFreal wRS = _velRS[2];
+  
+  const CFreal u2LS = uLS*uLS + vLS*vLS + wLS*wLS;
+  const CFreal u2RS = uRS*uRS + vRS*vRS + wRS*wRS;
+  const CFreal eLS = (eL-0.5*u2L) * pow(rhoLS/rhoL, gamma2L-1) + 0.5 * u2LS;
+  const CFreal eRS = (eR-0.5*u2R) * pow(rhoRS/rhoR, gamma2R-1) + 0.5 * u2RS;
+  const CFreal hLS = eLS + pS / rhoLS;
+  const CFreal hRS = eRS + pS / rhoRS;
+  const CFreal mnLS = unS / aLS;
+  const CFreal mnRS = unS / aRS;
+
+  // computing the anti-diffusive terms of the HUS flux
+
+  if (unS > 0.0) {
+
+    // left state (minus)
+    if (mnLS < 1.0) {
+
+      const CFreal mfluxLS = -0.25*rhoLS*aLS * pow(mnLS - 1.0, 2.0);
+      
+      for (CFuint jl = 0; jl < nbSpecies; ++jl) {
+        this->_vfluxL[specIDs[jl]] = mfluxLS * this->_YsLS[jl];
+      }
+ 
+      this->_vfluxL[eulerVarIDs[0]] = mfluxLS * ( (-unS - 2.0*aLS) * nx/gammaL + uLS );
+      this->_vfluxL[eulerVarIDs[1]] = mfluxLS * ( (-unS - 2.0*aLS) * ny/gammaL + vLS );
+      this->_vfluxL[eulerVarIDs[2]] = mfluxLS * ( (-unS - 2.0*aLS) * nz/gammaL + wLS );
+      this->_vfluxL[eulerVarIDs[3]] = mfluxLS * ( hLS - pow(unS + aLS,2.0)/(gammaL + 1.) );
+
+      for (CFuint kl = 0; kl < nbVib; ++kl) {
+        this->_vfluxL[vibIDs[kl]] = mfluxLS * this->_evLS[kl];
+      }
+    }
+    else {
+      this->_vfluxL = 0.0;
+    }
+
+    // right state (minus)
+    if (mnRS < 1.0) {
+      const CFreal mfluxRS = -0.25*rhoRS*aRS * pow(mnRS - 1.0, 2.0);
+      
+      for (CFuint jr = 0; jr < nbSpecies; ++jr) {
+        this->_vfluxR[specIDs[jr]] = mfluxRS * this->_YsRS[jr];
+      }
+      
+      this->_vfluxR[eulerVarIDs[0]] = mfluxRS * ( (-unS - 2.0*aRS) * nx/gammaR + uRS );
+      this->_vfluxR[eulerVarIDs[1]] = mfluxRS * ( (-unS - 2.0*aRS) * ny/gammaR + vRS );
+      this->_vfluxR[eulerVarIDs[2]] = mfluxRS * ( (-unS - 2.0*aRS) * nz/gammaR + wRS );
+      this->_vfluxR[eulerVarIDs[3]] = mfluxRS * ( hRS - pow(unS + aRS,2.0)/(gammaR + 1.) );
+
+      for (CFuint kr = 0; kr < nbVib; ++kr) {
+        this->_vfluxR[vibIDs[kr]] = mfluxRS *this->_evRS[kr];
+      }
+    }
+    else {
+      this->_vfluxR = 0.0;
+    }
+
+    // assembling the final flux
+    result += this->_vfluxL - this->_vfluxR;
+  }
+  else {
+
+    // left state (plus)
+    if (mnLS > -1.0) {
+      const CFreal mfluxLS = 0.25*rhoLS*aLS * pow(mnLS + 1.0, 2.0);
+
+      for (CFuint jl = 0; jl < nbSpecies; ++jl) {
+        this->_vfluxL[specIDs[jl]] = mfluxLS * this->_YsLS[jl];
+      }
+
+      this->_vfluxL[eulerVarIDs[0]] = mfluxLS * ( (-unS + 2.0*aLS) * nx/gammaL + uLS );
+      this->_vfluxL[eulerVarIDs[1]] = mfluxLS * ( (-unS + 2.0*aLS) * ny/gammaL + vLS );
+      this->_vfluxL[eulerVarIDs[2]] = mfluxLS * ( (-unS + 2.0*aLS) * nz/gammaL + wLS );
+      this->_vfluxL[eulerVarIDs[3]] = mfluxLS * ( hLS - pow(unS - aLS,2.0)/(gammaL + 1.) );
+
+      for (CFuint kl = 0; kl < nbVib; ++kl) {
+        this->_vfluxL[vibIDs[kl]] = mfluxLS * this->_evLS[kl];
+      }
+      
+    }
+    else {
+      this->_vfluxL = 0.0;
+    }
+
+    // right state (plus)
+    if (mnRS > -1.0) {
+      const CFreal mfluxRS = 0.25*rhoRS*aRS * pow(mnRS + 1.0, 2.0);
+
+      for (CFuint jr = 0; jr < nbSpecies; ++jr) {
+        this->_vfluxR[specIDs[jr]] = mfluxRS * this->_YsRS[jr];
+      }
+      
+      this->_vfluxR[eulerVarIDs[0]] = mfluxRS * ( (-unS + 2.0*aRS) * nx/gammaR + uRS );
+      this->_vfluxR[eulerVarIDs[1]] = mfluxRS * ( (-unS + 2.0*aRS) * ny/gammaR + vRS );
+      this->_vfluxR[eulerVarIDs[2]] = mfluxRS * ( (-unS + 2.0*aRS) * nz/gammaR + wRS );
+      this->_vfluxR[eulerVarIDs[3]] = mfluxRS * ( hRS - pow(unS - aRS,2.0)/(gammaR + 1.) );
+      
+      for (CFuint kr = 0; kr < nbVib; ++kr) {
+        this->_vfluxR[vibIDs[kr]] = mfluxRS * this->_evRS[kr];
+      }
+    }
+    else {
+      this->_vfluxR = 0.0;
+    }
+
+    // assembling the final flux
+    result += this->_vfluxR - this->_vfluxL;
+  }
+}
+
+
+//////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////

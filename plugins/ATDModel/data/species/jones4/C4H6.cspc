@@ -1,0 +1,44 @@
+/C4H6
+/Constitutive atoms: 
+10
+/Molar mass (g):
+54.0908
+/Formation enthalpy (J/kg):
+2.01143263e6
+/ tetha_vs:
+0
+/ Tets:
+0
+/ AsMu1:
+0.0
+/ BsMu1:
+0.0
+/ CsMu1:
+0.0
+/ DsMu1:
+0.0
+/ AsMu2:
+0.0
+/ BsMu2:
+0.0
+/ CsMu2:
+0.0
+/ DsMu2:
+0.0
+/ AsK1:
+0.0
+/ BsK1:
+0.0
+/ CsK1:
+0.0
+/ DsK1:
+0.0
+/ AsK2:
+0.0
+/ BsK2:
+0.0
+/ CsK2:
+0.0
+/ DsK2:
+0.0
+stop

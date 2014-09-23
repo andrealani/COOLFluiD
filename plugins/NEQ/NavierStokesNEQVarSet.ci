@@ -1,0 +1,101 @@
+#include "Framework/PhysicalChemicalLibrary.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+namespace COOLFluiD {
+
+  namespace Physics {
+        
+    namespace NEQ {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+NavierStokesNEQVarSet<BASE>::NavierStokesNEQVarSet
+(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  BASE(name, model),
+  _library(CFNULL),
+  _eulerModel(model->getConvectiveTerm().d_castTo<EulerNEQTerm>()),
+  _freezeEnthalpies(false),
+  _tempY(),
+  _ys(),
+  _rhoUdiff(),
+  _hsTot(),
+  _moleculeIdx(),
+  _hsVib(),
+  _hsEl(),
+  _normConcGradients(),
+  _rhoUdiffBkp(),
+  _hsTotBkp(),
+  _hsVibBkp(),
+  _hsElBkp(),
+  _normConcGradientsBkp(),
+  _yID(),
+  _TvibID(),
+  _avP(0.),
+  _avTvib(),
+  _avTvibdim(),
+  _lambdaVib(),
+  _lambdaTR(0.),
+  _thermCondCoeffVib()
+{
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+NavierStokesNEQVarSet<BASE>::~NavierStokesNEQVarSet()
+{ 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void NavierStokesNEQVarSet<BASE>::setup()
+{ 
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  
+  BASE::setup();
+  
+  _library = PhysicalModelStack::getActive()->getImplementor()->
+    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  cf_assert(_library.isNotNull());
+    
+  const CFuint nbSpecies = _eulerModel->getNbScalarVars(0);
+  _tempY.resize(nbSpecies);
+  _ys.resize(nbSpecies);
+  _rhoUdiff.resize(nbSpecies);
+  _hsTot.resize(nbSpecies);
+  
+  _library->setMoleculesIDs(_moleculeIdx);
+  _hsVib.resize(_moleculeIdx.size());
+  _hsEl.resize(nbSpecies);
+  
+  _rhoUdiffBkp.resize(nbSpecies);
+  _hsTotBkp.resize(nbSpecies);
+  _hsVibBkp.resize(_moleculeIdx.size());
+  _hsElBkp.resize(nbSpecies);
+ 
+  _normConcGradients.resize(nbSpecies);
+  _normConcGradientsBkp.resize(nbSpecies);
+  _yID.resize(nbSpecies);
+  
+  const CFuint nbTv = _eulerModel->getNbScalarVars(1);
+  
+  _TvibID.resize(nbTv);
+  _avTvib.resize(nbTv);
+  _avTvibdim.resize(nbTv);
+  _lambdaVib.resize(nbTv);
+  _thermCondCoeffVib.resize(nbTv);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace NEQ
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

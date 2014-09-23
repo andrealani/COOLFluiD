@@ -1,0 +1,95 @@
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "Common/BadValueException.hh"
+
+//////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace NEQKOmega {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename RTERM>
+void NavierStokesNEQKOmega<DIM, RTERM>::defineConfigOptions(Config::OptionList& options)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename RTERM>
+NavierStokesNEQKOmega<DIM, RTERM>::NavierStokesNEQKOmega(const std::string& name)
+  : NEQ::NavierStokesNEQ<DIM, 
+			 Framework::MultiScalarTerm<NavierStokes::EulerTerm>, 
+			 NavierStokes::NSTurbTerm,
+			 KOmega::KOmegaReactionTerm<RTERM> >(name)
+{
+  this->addConfigOptionsTo(this);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename RTERM>
+NavierStokesNEQKOmega<DIM, RTERM>::~NavierStokesNEQKOmega()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename RTERM>
+CFuint NavierStokesNEQKOmega<DIM, RTERM>::getNbEquations() const
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  std::valarray<CFuint> v(3);
+  v[0] = this->_nbSpecies;
+  
+  //const CFuint nbTe =
+  // getPhysicalPropertyLibrary<PhysicalChemicalLibrary>()->getNbTe();
+  v[1] = this->_nbVibEnergyEqs + this->_nbTe;
+  v[2] = 2; // K and Omega
+  
+  // set the number of species in the convective term
+  this->getConvTerm()->setNbScalarVars(v);
+  
+  return this->_nbEulerEqs + v.sum();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename RTERM>
+std::string NavierStokesNEQKOmega<DIM, RTERM>::getConvectiveName() const
+{
+  if (DIM == 2) return "Euler2DNEQKOmega";
+  return "Euler3DNEQKOmega";
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename RTERM>
+void NavierStokesNEQKOmega<DIM, RTERM>::setReferenceValues()
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  NEQ::NavierStokesNEQ<DIM, Framework::MultiScalarTerm<EulerTerm>, NSTurbTerm, 
+    KOmega::KOmegaReactionTerm<RTERM> >::setReferenceValues();
+  
+  SafePtr<NSTurbTerm> diffTerm = this->getDiffTerm();
+  // reference values for the diffusive part
+  RealVector& refDataDiff = diffTerm->getReferencePhysicalData();
+  refDataDiff[NSTurbTerm::MUT] =  refDataDiff[NSTurbTerm::MU];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace NEQKOmega
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

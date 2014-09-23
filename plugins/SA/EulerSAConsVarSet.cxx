@@ -1,0 +1,34 @@
+#include "SA/SA.hh"
+#include "SA/EulerSAConsVarSet.hh"
+#include "Environment/ObjectProvider.hh"
+#include "NavierStokes/MultiScalarVarSet.hh"
+#include "NavierStokes/Euler2DCons.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Physics::NavierStokes;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace SA {
+
+//////////////////////////////////////////////////////////////////////////////
+
+Environment::ObjectProvider<EulerSAConsVarSet<MultiScalarVarSet<Euler2DCons>, 0>, 
+			    ConvectiveVarSet, SAModule, 1>
+euler2DSAConsProvider("Euler2DSACons");
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace SA
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

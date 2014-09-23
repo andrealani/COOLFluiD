@@ -1,0 +1,122 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -8.01639
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNewtonMethod libTHOR2CFmesh libFluctSplit libFluctSplitScalar libFluctSplitSpaceTime libBurgers
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/Burgers/testcases/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType       = Burgers2D
+Simulator.SubSystem.Burgers2D.refValues = 1.0
+Simulator.SubSystem.Burgers2D.refLength = 1.0
+
+
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.005
+Simulator.SubSystem.SubSystemStatus.ComputeDT = MaxDT
+Simulator.SubSystem.SubSystemStatus.MaxDT.ST_CFL = 2.0
+
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = FunctionDT
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Vars = i
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = 1.0
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName  = burgers.CFmesh
+Simulator.SubSystem.Tecplot.FileName = burgers.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+Simulator.SubSystem.CFmesh.AppendIter = true
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+
+Simulator.SubSystem.Default.listTRS = InnerCells FaceSouth FaceWest FaceNorth SuperInlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = burgers.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value           = 20.
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 10
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.AbsNorm = -8.0
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCILU
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.ComputeRHS = RhsJacob
+Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = STM_RDS
+
+Simulator.SubSystem.FluctuationSplit.Data.ScalarSplitter = STM_ScalarN
+
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Prim
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar= Prim
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Prim
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Prim
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState InitState InitState InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField FaceS FaceW Inlet
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 1.5
+Simulator.SubSystem.FluctuationSplit.InField.InputVar = Prim
+
+Simulator.SubSystem.FluctuationSplit.FaceS.applyTRS = FaceSouth
+Simulator.SubSystem.FluctuationSplit.FaceS.Vars = x y
+Simulator.SubSystem.FluctuationSplit.FaceS.Def = 1.5-2.*x
+Simulator.SubSystem.FluctuationSplit.FaceS.InputVar = Prim
+
+Simulator.SubSystem.FluctuationSplit.FaceW.applyTRS = FaceWest
+Simulator.SubSystem.FluctuationSplit.FaceW.Vars = x y
+Simulator.SubSystem.FluctuationSplit.FaceW.Def = -0.5
+Simulator.SubSystem.FluctuationSplit.FaceW.InputVar = Prim
+
+Simulator.SubSystem.FluctuationSplit.Inlet.applyTRS = SuperInlet
+Simulator.SubSystem.FluctuationSplit.Inlet.Vars = x y
+Simulator.SubSystem.FluctuationSplit.Inlet.Def = 1.5
+Simulator.SubSystem.FluctuationSplit.Inlet.InputVar = Prim
+
+Simulator.SubSystem.FluctuationSplit.BcComds = SuperInletImpl SuperInletImpl SuperInletImpl SuperOutlet
+Simulator.SubSystem.FluctuationSplit.BcNames = South West East North
+
+Simulator.SubSystem.FluctuationSplit.South.applyTRS = FaceSouth
+Simulator.SubSystem.FluctuationSplit.South.Vars = x y t
+Simulator.SubSystem.FluctuationSplit.South.Def = 1.5-2.*x
+
+Simulator.SubSystem.FluctuationSplit.West.applyTRS = FaceWest
+Simulator.SubSystem.FluctuationSplit.West.Vars = x y t
+Simulator.SubSystem.FluctuationSplit.West.Def = -0.5
+
+Simulator.SubSystem.FluctuationSplit.East.applyTRS = SuperInlet
+Simulator.SubSystem.FluctuationSplit.East.Vars = x y t
+Simulator.SubSystem.FluctuationSplit.East.Def = 1.5
+
+Simulator.SubSystem.FluctuationSplit.North.applyTRS = FaceNorth
+
+

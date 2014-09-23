@@ -1,0 +1,317 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class FUNCTOR, class RETURN>
+void VolumeIntegrator::integrateConstantFunctorOnGeoEnt(GeometricEntity* const geo,
+                                                     FUNCTOR& functor,
+                                                     RETURN& result)
+{
+  cf_assert(_setup);
+
+  _intgGeo = getGeometryIntegrator(geo);
+  cf_assert(_intgGeo.isNotNull());
+
+  std::vector<Node*>& nodes   = *geo->getNodes();
+
+  _intgGeo->computeJacobianDetAtQuadraturePoints(nodes, _detJacobian);
+
+  const std::valarray<CFreal>& coeff = _intgGeo->getCoeff();
+
+  cf_assert(functor.size() == result.size());
+  cf_assert(_detJacobian.size() >= coeff.size());
+
+  cf_assert(functor.size() == result.size());
+
+  result = 0.0;
+  for(CFuint iPoint = 0; iPoint < coeff.size(); ++iPoint) {
+
+    result += functor() *= coeff[iPoint] * _detJacobian[iPoint];
+  }
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class FUNCTOR, class RETURN>
+void VolumeIntegrator::integrateSolutionFunctorOnGeoEnt(GeometricEntity* const geo,
+                                                     FUNCTOR& functor,
+                                                     RETURN& result)
+{
+  cf_assert(_setup);
+
+  _intgSol = getSolutionIntegrator(geo);
+  _intgGeo = getGeometryIntegrator(geo);
+
+  cf_assert(_intgSol.isNotNull());
+  cf_assert(_intgGeo.isNotNull());
+
+  std::vector<Node*>& nodes   = *geo->getNodes();
+  std::vector<State*>& states = *geo->getStates();
+
+  _intgSol->computeSolutionAtQuadraturePoints(states, _solValues);
+  _intgGeo->computeJacobianDetAtQuadraturePoints(nodes, _detJacobian);
+
+  const std::valarray<CFreal>& coeff = _intgSol->getCoeff();
+
+  cf_assert(_solValues.size() >= coeff.size());
+  cf_assert(_detJacobian.size() >= coeff.size());
+
+  cf_assert(functor.size() == result.size());
+
+  result = 0.0;
+  for(CFuint iPoint = 0; iPoint < coeff.size(); ++iPoint) {
+
+    result += functor(*_solValues[iPoint]) *= coeff[iPoint] * _detJacobian[iPoint];
+
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class FUNCTOR, class RETURN>
+void VolumeIntegrator::integrateGeometricFunctorOnGeoEnt(GeometricEntity *const geo,
+                                                      FUNCTOR& functor,
+                                                      RETURN& result)
+{
+  cf_assert(_setup);
+
+  _intgSol = getSolutionIntegrator(geo);
+  _intgGeo = getGeometryIntegrator(geo);
+
+  cf_assert(_intgSol.isNotNull());
+  cf_assert(_intgGeo.isNotNull());
+
+  std::vector<Node*>& nodes   = *geo->getNodes();
+
+  _intgGeo->computeCoordinatesAtQuadraturePoints(nodes, _coord);
+  _intgGeo->computeJacobianDetAtQuadraturePoints(nodes, _detJacobian);
+
+  const std::valarray<CFreal>& coeff = _intgGeo->getCoeff();
+
+  cf_assert(_coord.size() >= coeff.size());
+  cf_assert(_detJacobian.size() >= coeff.size());
+
+  cf_assert(functor.size() == result.size());
+
+  result = 0.0;
+  for(CFuint iPoint = 0; iPoint < coeff.size(); ++iPoint) {
+
+    result += (coeff[iPoint] * _detJacobian[iPoint]) * functor(_coord[iPoint]);
+
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class FUNCTOR, class RETURN>
+void VolumeIntegrator::integrateGradFunctorOnGeoEnt(GeometricEntity* const geo,
+                                                 FUNCTOR& functor,
+                                                 RETURN& result)
+{
+  cf_assert(_setup);
+
+  _intgSol = getSolutionIntegrator(geo);
+  _intgGeo = getGeometryIntegrator(geo);
+
+  cf_assert(_intgSol.isNotNull());
+  cf_assert(_intgGeo.isNotNull());
+
+  const std::vector<RealVector>& mapCoord = _intgSol->getQuadraturePointsCoordinates();
+
+  std::vector<Node*>& nodes   = *geo->getNodes();
+  std::vector<State*>& states = *geo->getStates();
+
+  _intgGeo->computeJacobianAtQuadraturePoints(nodes, mapCoord, _jacob);
+  _intgSol->computeSolutionAtQuadraturePoints(states, _solValues);
+  _intgSol->computeGradSolutionShapeFAtQuadraturePoints(_jacob,mapCoord,_gradValues);
+
+  _intgGeo->computeJacobianDetAtQuadraturePoints(nodes, _detJacobian);
+
+  const std::valarray<CFreal>& coeff  = _intgSol->getCoeff();
+  const std::vector<RealVector>& shapeF = _intgSol->getShapeFunctionsAtQuadraturePoints();
+
+  cf_assert(_solValues.size() >= coeff.size());
+  cf_assert(_gradValues.size() >= coeff.size());
+  cf_assert(_detJacobian.size() >= coeff.size());
+
+  cf_assert(functor.size() == result.size());
+
+  result = 0.0;
+  for(CFuint iPoint = 0; iPoint < coeff.size(); ++iPoint) {
+
+    result += functor(*_solValues[iPoint], shapeF[iPoint], _gradValues[iPoint]) *= coeff[iPoint] * _detJacobian[iPoint];
+
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class FUNCTOR, class RETURN>
+void VolumeIntegrator::integrateGeneralFunctorOnGeoEnt(GeometricEntity* const geo,
+                                                    FUNCTOR& functor,
+                                                    RETURN& result)
+{
+  cf_assert(_setup);
+
+  _intgSol = getSolutionIntegrator(geo);
+  _intgGeo = getGeometryIntegrator(geo);
+
+  cf_assert(_intgSol.isNotNull());
+  cf_assert(_intgGeo.isNotNull());
+
+  const std::vector<RealVector>& mapCoord = _intgSol->getQuadraturePointsCoordinates();
+
+  std::vector<Node*>& nodes   = *geo->getNodes();
+  std::vector<State*>& states = *geo->getStates();
+
+  _intgGeo->computeJacobianAtQuadraturePoints(nodes, mapCoord, _jacob);
+
+  _intgSol->computeSolutionAtQuadraturePoints(states, _solValues);
+
+  _intgSol->computeGradSolutionShapeFAtQuadraturePoints(_jacob,mapCoord,_gradValues);
+
+  _intgGeo->computeJacobianDetAtQuadraturePoints(nodes, _detJacobian);
+
+  const std::valarray<CFreal>& coeff  = _intgSol->getCoeff();
+  const std::vector<RealVector>& shapeF = _intgSol->getShapeFunctionsAtQuadraturePoints();
+
+  cf_assert(_solValues.size() >= coeff.size());
+  cf_assert(_gradValues.size() >= coeff.size());
+  cf_assert(_detJacobian.size() >= coeff.size());
+
+  cf_assert(functor.size() == result.size());
+
+  result = 0.0;
+  for(CFuint iPoint = 0; iPoint < coeff.size(); ++iPoint) {
+
+    result += functor(_solValues, shapeF[iPoint], _gradValues[iPoint], geo)
+           *= coeff[iPoint] * _detJacobian[iPoint];
+
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class FUNCTOR, class RETURN>
+void VolumeIntegrator::integrateVectorialFunctorOnGeoEnt(GeometricEntity* const geo,
+                                                      FUNCTOR& functor,
+                                                      VectorialFunction& vf,
+                                                      RETURN& result)
+{
+  cf_assert(_setup);
+
+  _intgSol = getSolutionIntegrator(geo);
+  _intgGeo = getGeometryIntegrator(geo);
+
+  cf_assert(_intgSol.isNotNull());
+  cf_assert(_intgGeo.isNotNull());
+
+  std::vector<Node*>& nodes   = *geo->getNodes();
+  std::vector<State*>& states = *geo->getStates();
+
+  _intgSol->computeSolutionAtQuadraturePoints(states, _solValues);
+  _intgGeo->computeJacobianDetAtQuadraturePoints(nodes, _detJacobian);
+
+  const std::valarray<CFreal>& coeff =  _intgSol->getCoeff();
+  const std::vector<RealVector>& shapeF = _intgSol->getShapeFunctionsAtQuadraturePoints();
+
+  cf_assert(_solValues.size() >= coeff.size());
+  cf_assert(_gradValues.size() >= coeff.size());
+  cf_assert(_detJacobian.size() >= coeff.size());
+
+  cf_assert(functor.size() == result.size());
+
+  result = 0.0;
+  for(CFuint iPoint = 0; iPoint < coeff.size(); ++iPoint) {
+    result += functor(*_solValues[iPoint], shapeF[iPoint], vf) *= coeff[iPoint] * _detJacobian[iPoint];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class FUNCTOR, class RETURN>
+void VolumeIntegrator::integrateShapeFFunctorOnGeoEnt(GeometricEntity* const geo,
+                                                   FUNCTOR& functor,
+                                                   RETURN& result)
+{
+  cf_assert(_setup);
+
+  _intgSol = getSolutionIntegrator(geo);
+  _intgGeo = getGeometryIntegrator(geo);
+
+  cf_assert(_intgSol.isNotNull());
+  cf_assert(_intgGeo.isNotNull());
+
+  std::vector<Node*>& nodes   = *geo->getNodes();
+  std::vector<State*>& states = *geo->getStates();
+
+  _intgSol->computeSolutionAtQuadraturePoints(states, _solValues);
+  _intgGeo->computeJacobianDetAtQuadraturePoints(nodes, _detJacobian);
+
+  const std::valarray<CFreal>& coeff =  _intgSol->getCoeff();
+  const std::vector<RealVector>& shapeF = _intgSol->getShapeFunctionsAtQuadraturePoints();
+
+  cf_assert(_solValues.size() >= coeff.size());
+  cf_assert(_gradValues.size() >= coeff.size());
+  cf_assert(_detJacobian.size() >= coeff.size());
+
+  cf_assert(functor.size() == result.size());
+
+  result = 0.0;
+  for(CFuint iPoint = 0; iPoint < coeff.size(); ++iPoint) {
+    result += functor(*_solValues[iPoint], shapeF[iPoint]) *=
+      coeff[iPoint] * _detJacobian[iPoint];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class FUNCTOR, class RETURN>
+void VolumeIntegrator::integrateShapeFGeoFunctorOnGeoEnt(GeometricEntity* const geo,
+                                                   FUNCTOR& functor,
+                                                   RETURN& result)
+{
+  cf_assert(_setup);
+
+  _intgSol = getSolutionIntegrator(geo);
+  _intgGeo = getGeometryIntegrator(geo);
+
+  cf_assert(_intgSol.isNotNull());
+  cf_assert(_intgGeo.isNotNull());
+
+  std::vector<Node*>& nodes   = *geo->getNodes();
+  std::vector<State*>& states = *geo->getStates();
+
+  _intgSol->computeSolutionAtQuadraturePoints(states, _solValues);
+  _intgGeo->computeJacobianDetAtQuadraturePoints(nodes, _detJacobian);
+
+  const std::valarray<CFreal>& coeff =  _intgSol->getCoeff();
+  const std::vector<RealVector>& shapeF = _intgSol->getShapeFunctionsAtQuadraturePoints();
+
+  cf_assert(_solValues.size() >= coeff.size());
+  cf_assert(_gradValues.size() >= coeff.size());
+  cf_assert(_detJacobian.size() >= coeff.size());
+
+  cf_assert(functor.size() == result.size());
+
+  result = 0.0;
+  for(CFuint iPoint = 0; iPoint < coeff.size(); ++iPoint) {
+    result += functor(*_solValues[iPoint], shapeF[iPoint], geo) *=
+      coeff[iPoint] * _detJacobian[iPoint];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD

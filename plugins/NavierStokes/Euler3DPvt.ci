@@ -1,0 +1,201 @@
+#include "Common/NotImplementedException.hh"
+#include "EulerTerm.hh"
+#include "Framework/State.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace NavierStokes {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE> 
+Euler3DPvt<BASE>::Euler3DPvt(Common::SafePtr<Framework::BaseTerm> term) :
+  BASE(term)
+{
+  std::vector<std::string> names(5);
+  names[0] = (!this->getModel()->isIncompressible()) ? "p" : "dp";
+  names[1] = "u";
+  names[2] = "v";
+  names[3] = "w";
+  names[4] = "T";
+  this->setVarNames(names);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+Euler3DPvt<BASE>::~Euler3DPvt()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void Euler3DPvt<BASE>::computeJacobians()
+{
+  throw Common::NotImplementedException (FromHere(),"Euler3DPvt<BASE>::computeJacobians()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void Euler3DPvt<BASE>::computeEigenValuesVectors(RealMatrix& rightEv,
+  	                                         RealMatrix& leftEv,
+        	                                 RealVector& eValues,
+                	                         const RealVector& normal)
+{
+  throw Common::NotImplementedException (FromHere(),"Euler3DPvt<BASE>::computeEigenValuesVectors()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+CFuint Euler3DPvt<BASE>::getBlockSeparator() const
+{
+  return 5;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void Euler3DPvt<BASE>::splitJacobian(RealMatrix& jacobPlus,
+           RealMatrix& jacobMin,
+           RealVector& eValues,
+           const RealVector& normal)
+{
+  throw Common::NotImplementedException (FromHere(),"Euler3DPvt<BASE>::splitJacobian()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void Euler3DPvt<BASE>::computePhysicalData(const Framework::State& state,
+                                           RealVector& data)
+{
+  using namespace COOLFluiD::Framework;	
+  
+  const CFreal p = this->getModel()->getPressureFromState(state[0]);
+  cf_assert(p > 0);
+  const CFreal u = state[1];
+  const CFreal v = state[2];
+  const CFreal w = state[3];
+  const CFreal T = state[4];
+  cf_assert(T > 0);
+  const CFreal rho = this->getModel()->getDensity(p,T);
+  const CFreal V2 = u*u + v*v + w*w;
+  const CFreal gamma = this->getModel()->getGamma();
+  const CFreal gammaDivGammaMinus1 = gamma/(gamma - 1.);
+  const CFreal pOvRho = p/rho;
+  
+  data[EulerTerm::RHO] = rho;
+  data[EulerTerm::P] = state[0]; // p or dp
+  data[EulerTerm::H] = gammaDivGammaMinus1*pOvRho + 0.5*V2;
+  data[EulerTerm::E] = data[EulerTerm::H] - pOvRho;
+  cf_assert(gamma*pOvRho > 0);
+  data[EulerTerm::A] = sqrt(gamma*pOvRho);
+  data[EulerTerm::T] = T;
+  data[EulerTerm::V] = sqrt(V2);
+  data[EulerTerm::VX] = u;
+  data[EulerTerm::VY] = v;
+  data[EulerTerm::VZ] = w;
+  data[EulerTerm::GAMMA] = gamma;
+  
+  if (this->_physDataNeedCoordinates) {
+    const RealVector& node = state.getCoordinates();
+    data[EulerTerm::XP] = node[XX];
+    data[EulerTerm::YP] = node[YY];
+    data[EulerTerm::ZP] = node[ZZ];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void Euler3DPvt<BASE>::computeStateFromPhysicalData(const RealVector& data,
+						    Framework::State& state)
+{
+  using namespace COOLFluiD::Framework;	
+  
+  state[0] = data[EulerTerm::P]; // p or dp
+  state[1] = data[EulerTerm::VX];
+  state[2] = data[EulerTerm::VY];
+  state[3] = data[EulerTerm::VZ];
+  state[4] = data[EulerTerm::T];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+CFreal Euler3DPvt<BASE>::getSpeed(const Framework::State& state) const
+{
+  using namespace COOLFluiD::Framework;	
+  return sqrt(state[1]*state[1] + state[2]*state[2] + state[3]*state[3]);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void Euler3DPvt<BASE>::setDimensionalValues(const Framework::State& state,
+				                            RealVector& result)
+{
+  using namespace COOLFluiD::Framework;	
+
+  const RealVector& refData =  this->getModel()->getReferencePhysicalData();
+
+  result[0] = state[0]*refData[EulerTerm::P];
+  result[1] = state[1]*refData[EulerTerm::V];
+  result[2] = state[2]*refData[EulerTerm::V];
+  result[3] = state[3]*refData[EulerTerm::V];
+  result[4] = state[4]*this->getModel()->getTempRef();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void Euler3DPvt<BASE>::setAdimensionalValues(const Framework::State& state,
+				                             RealVector& result)
+{
+  using namespace COOLFluiD::Framework;	
+
+  const RealVector& refData = this->getModel()->getReferencePhysicalData();
+
+  result[0] = state[0]/refData[EulerTerm::P];
+  result[1] = state[1]/refData[EulerTerm::V];
+  result[2] = state[2]/refData[EulerTerm::V];
+  result[3] = state[3]/refData[EulerTerm::V];
+  result[4] = state[4]/(this->getModel()->getTempRef());
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+bool Euler3DPvt<BASE>::isValid(const RealVector& data)
+{
+  using namespace COOLFluiD::Framework;
+  
+  enum index {P, Ux, Uy, Uz, temp};
+  const CFreal gamma = this->getModel()->getGamma();
+  const CFreal p = data[P];
+  const CFreal T = data[temp];
+  const CFreal a = sqrt(gamma*this->getModel()->getR()*T);
+  
+  if( ( p < 0.) || (T < 0.) || (a < 0.) ){
+    return false;
+  }
+  
+  return true;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+   } // namespace NavierStokes
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,141 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = 3.2713896
+
+#
+
+# Simulation Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes libFluctSplit libFluctSplitSystem libNewtonMethod libFluctSplitNavierStokes libForwardEuler libTHOR2CFmesh libRungeKutta2
+
+# Simulation Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/DoubleCone/Run35_N2/
+Simulator.Paths.ResultsDir = ./
+
+#Simulator.SubSystem.InteractiveParamReader.FileName = ./DCone.inter
+#Simulator.SubSystem.InteractiveParamReader.readRate = 10
+CFEnv.ExceptionLogLevel = 200
+
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2D
+Simulator.SubSystem.NavierStokes2D.refValues = 21.9886852 2713. 2713. 138.
+#1e-16 1e-16 1e-16 1e-16
+#21.9886852 2713. 2713. 138.9
+
+Simulator.SubSystem.NavierStokes2D.ConvTerm.RDim = 296.9285714
+Simulator.SubSystem.NavierStokes2D.ConvTerm.gamma = 1.4
+Simulator.SubSystem.NavierStokes2D.DiffTerm.ViscosityLaw = SimplerSutherland
+Simulator.SubSystem.NavierStokes2D.DiffTerm.SimplerSutherland.Gas = N2
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName     = DConeN2.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 200
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.Tecplot.FileName    = DConeN2.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Puvt
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Side0
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendIter = false
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 5
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -3.0
+
+Simulator.SubSystem.Default.listTRS = \
+	InnerFaces Side0 Side3 Side2 Side1
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cone256x128.dat.FEM.Split.CFmesh
+#DConeN2-P0.CFmesh.START 
+#cone256x128.dat.FEM.Split.CFmesh
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1500
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 3.0
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = \
+if(i<250,3.,min(cfl*1.02,1e10))
+
+#Function
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<1200,1.0,min(3000.,cfl*1.03))
+
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 0
+#Simulator.SubSystem.NewtonIterator.Data.FilterState = Max
+#Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs = 1 0 0 1
+#Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0. 0. 0. 10.
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+#Simulator.SubSystem.FluctuationSplit.Restart = true
+Simulator.SubSystem.FluctuationSplit.ComputeRHS = RhsJacob
+Simulator.SubSystem.FluctuationSplit.ComputeTimeRHS = PseudoSteadyTimeRhs
+Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
+#Simulator.SubSystem.FluctuationSplit.Data.NumericalJacobian.tol = 1e-9
+
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysN
+#SysBx
+#SysB
+#Simulator.SubSystem.FluctuationSplit.Data.SysBx.Delta  = 0.092
+#10000.
+#Simulator.SubSystem.FluctuationSplit.Data.SysBx.Length = 0.2 
+#Simulator.SubSystem.FluctuationSplit.Data.SysBx.Speed  = 3000. 
+#Simulator.SubSystem.FluctuationSplit.Data.SysBx.VarName = rho
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Puvt
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Roe
+Simulator.SubSystem.FluctuationSplit.Data.DiffusiveVar = Puvt
+Simulator.SubSystem.FluctuationSplit.Data.DiffusiveTerm = NavierStokes
+
+Simulator.SubSystem.FluctuationSplit.Data.isAxisymm = true
+Simulator.SubSystem.FluctuationSplit.Data.SourceTerm = NavierStokes2DAxiST
+Simulator.SubSystem.FluctuationSplit.Data.SourceTermSplitter = Beta
+Simulator.SubSystem.FluctuationSplit.Data.Beta.ExcludeBStates = true
+
+Simulator.SubSystem.FluctuationSplit.InitComds = \
+	InitState InitState StrongNoSlipWallIsothermalVTImpl
+
+Simulator.SubSystem.FluctuationSplit.InitNames = InField InInlet InWall
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 21.9886852 2713. 0. 138.9
+
+Simulator.SubSystem.FluctuationSplit.InInlet.applyTRS = Side2
+Simulator.SubSystem.FluctuationSplit.InInlet.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InInlet.Def = 21.9886852 2713. 0. 138.9
+
+Simulator.SubSystem.FluctuationSplit.InWall.applyTRS = Side0
+Simulator.SubSystem.FluctuationSplit.InWall.TWall = 296.1
+
+Simulator.SubSystem.FluctuationSplit.BcComds = StrongNoSlipWallIsothermalVTImpl \
+					WeakSlipWallEuler2DImpl \
+					SuperInletImpl
+
+Simulator.SubSystem.FluctuationSplit.BcNames = Wall Mirror SInlet
+
+Simulator.SubSystem.FluctuationSplit.Mirror.applyTRS = Side3
+
+Simulator.SubSystem.FluctuationSplit.Wall.applyTRS = Side0
+Simulator.SubSystem.FluctuationSplit.Wall.TWall = 296.1
+
+Simulator.SubSystem.FluctuationSplit.SInlet.applyTRS = Side2
+Simulator.SubSystem.FluctuationSplit.SInlet.Vars = x y
+Simulator.SubSystem.FluctuationSplit.SInlet.Def = 21.9886852 2713. 0. 138.9
+

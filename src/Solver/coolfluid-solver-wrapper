@@ -1,0 +1,38 @@
+# vars used
+bdir=$(pwd)
+ldir=@COOLFluiD_BINARY_DIR@/dso
+mpicmd=@CF_MPIRUN_PROGRAM@
+cf_cmd=@coolfluid_solver_exe@
+runcmd="${cf_cmd}"
+printonly=0
+
+# process comand line arguments
+while test -n "$1"; do
+   case "$1" in
+      --help|-h) 
+         echo "Usage: $0 [--nproc|-np] [--echo-only|-e]"
+         $cf_cmd --help
+         exit 0
+         ;;
+      --nproc|-np)
+         shift
+         runcmd="${mpicmd} -np ${1} ${runcmd}"
+         shift
+         ;;
+      --echo-command|-e)
+         printonly=1
+         shift
+         ;;
+      *)
+         runcmd="${runcmd} ${1}"
+         shift
+         ;;
+   esac
+done
+
+# execute
+echo "${runcmd} --bdir ${bdir} --ldir ${ldir}"
+if [ "${printonly}" == "0" ] ; then
+  ${runcmd}  --bdir ${bdir} --ldir ${ldir}
+fi
+

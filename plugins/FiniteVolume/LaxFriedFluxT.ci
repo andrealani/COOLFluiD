@@ -1,0 +1,89 @@
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <DeviceType DT, typename UPDATEVAR>
+HOST_DEVICE LaxFriedFluxT<DT, UPDATEVAR>::LaxFriedFluxT()
+{
+  m_currentDiffRedCoeff = 1.0;
+}
+      
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <DeviceType DT, typename UPDATEVAR>
+HOST_DEVICE LaxFriedFluxT<DT, UPDATEVAR>::~LaxFriedFluxT()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <DeviceType DT, typename UPDATEVAR>
+HOST_DEVICE void LaxFriedFluxT<DT, UPDATEVAR>::setup()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <DeviceType DT, typename UPDATEVAR>
+HOST_DEVICE void LaxFriedFluxT<DT, UPDATEVAR>::compute(FluxData<UPDATEVAR>* data)
+{  
+  typename MathTypes<DT,UPDATEVAR::DIM>::SLICEVEC unitNormal(data->getUnitNormal());
+  const CFreal coeff = (data->isOutward()) ? 1. : -1.;
+  m_tempUnitNormal = coeff*unitNormal;
+  
+  typename MathTypes<DT,UPDATEVAR::NBEQS>::SLICEVEC stateL(data->getState(0));
+  typename MathTypes<DT,UPDATEVAR::NBEQS>::SLICEVEC stateR(data->getState(1));
+  typename MathTypes<DT,UPDATEVAR::NBEQS>::SLICEVEC flux(data->getResidual());
+  
+  // right physical data, flux and eigenvalues
+  m_model.computePhysicalData(data->getState(1), data->getNode(1), &m_pdata[0]);
+  m_model.getFlux(&m_pdata[0], &m_tempUnitNormal[0], &m_tmp[0]);
+  flux = 0.5*m_tmp;
+  
+  m_model.computeEigenValues(&m_pdata[0], &m_tempUnitNormal[0], &m_tmp[0]);
+  CFreal aR = 0.0;
+  for (CFuint i = 0; i < UPDATEVAR::NBEQS; ++i) {
+    aR = max(aR, abs(m_tmp[i]));
+  }
+  
+  // left physical data, flux and eigenvalues
+  m_model.computePhysicalData(data->getState(0), data->getNode(0), &m_pdata[0]);
+  m_model.getFlux(&m_pdata[0], &m_tempUnitNormal[0], &m_tmp[0]);
+  flux += 0.5*m_tmp;
+  
+  m_model.computeEigenValues(&m_pdata[0], &m_tempUnitNormal[0], &m_tmp[0]);
+  CFreal aL = 0.0;
+  for (CFuint i = 0; i < UPDATEVAR::NBEQS; ++i) {
+    aL = max(aL, abs(m_tmp[i]));
+  }
+  
+  const CFreal a = max(aR,aL);
+  const CFreal aDiff = a*getReductionCoeff();
+  flux -= (0.5*aDiff)*(stateR - stateL);
+  
+  // NOTE THE AREA HERE !!!!!!!!!!!!!!!!
+  flux *= data->getFaceArea();
+  
+  // compute update coefficient
+  bool isPerturb = false;
+  if (!isPerturb) {    
+    data->setUpdateCoeff(max(m_tmp.max(), 0.)*data->getFaceArea());
+  } 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

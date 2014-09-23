@@ -1,0 +1,63 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace MHD {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+MHDProjection<DIM>::MHDProjection(const std::string& name)
+  : Framework::ConvectionPM<MHDProjectionTerm>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+MHDProjection<DIM>::~MHDProjection()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MHDProjection<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionPM<MHDProjectionTerm>::configure(args);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(getDimension());
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint MHDProjection<DIM>::getDimension() const
+{
+  if (getName() == "MHD2DProjection") return 2;
+  cf_assert(getName() == "MHD3DProjection");
+  return 3;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint MHDProjection<DIM>::getNbEquations() const
+{
+  return 9;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace MHD
+
+} // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

@@ -1,0 +1,68 @@
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "NavierStokes/NSTurbTerm.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+namespace COOLFluiD {
+
+  namespace Physics {
+        
+    namespace NEQKOmega {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+NavierStokesNEQKOmegaVarSet<BASE>::NavierStokesNEQKOmegaVarSet
+(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  BASE(name, model)
+{
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+NavierStokesNEQKOmegaVarSet<BASE>::~NavierStokesNEQKOmegaVarSet()
+{ 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void NavierStokesNEQKOmegaVarSet<BASE>::setup()
+{ 
+  BASE::setup();
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void NavierStokesNEQKOmegaVarSet<BASE>::computeTransportProperties
+(const RealVector& state,
+ const std::vector<RealVector*>& gradients,
+ const RealVector& normal)
+{
+  BASE::NEQ::computeTransportProperties(state, gradients, normal);
+  
+  RealVector& nsData = this->getModel().getPhysicalData();
+  if (this->_freezeDiffCoeff || this->_useBackUpValues) {
+    nsData[NavierStokes::NSTurbTerm::MUT] = this->_turbDynViscCoeff;
+  }
+  else {
+    // turbulent dynamical viscosity
+    nsData[NavierStokes::NSTurbTerm::MUT] = this->getTurbDynViscosityFromGradientVars(state, gradients);
+    
+    if (this->_setBackUpValues) {
+      cf_assert(!this->_freezeDiffCoeff);
+      this->_turbDynViscCoeff = nsData[NavierStokes::NSTurbTerm::MUT];
+    }
+  }
+} 
+      
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace NEQKOmega
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,119 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Framework_ContourIntegrator_ci
+#define COOLFluiD_Framework_ContourIntegrator_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+#include "Framework/GeometricEntity.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class FUNCTOR>
+void ContourIntegrator::integrateConstantFunctorOnGeo(GeometricEntity* const geo,
+                                                      FUNCTOR& functor,
+                                                      RealVector& result)
+{
+  cf_assert(_setup);
+  cf_assert(_unitFaceNormals != CFNULL);
+
+  // gets the correct implementor corresponding to the
+  // shape of the element where you want to integrate
+  ContourIntegratorImpl *const impl = getSolutionIntegrator(geo);
+  cf_assert(impl != CFNULL);
+  impl->computeFaceJacobianDetAtQuadraturePoints(*geo->getNodes(), _faceJacobian);
+
+  const std::vector<RealVector>& coeff = impl->getCoeff();
+
+  cf_assert(functor.size() == result.size());
+
+  result = 0.0;
+  CFuint ip = 0;
+  for(CFuint iFace = 0; iFace < coeff.size(); ++iFace) {
+    for(CFuint iPoint = 0; iPoint < coeff[iFace].size(); ++iPoint, ++ip) {
+
+      result += functor((*_unitFaceNormals)[iFace])
+             *= coeff[iFace][iPoint] * _faceJacobian[iFace][iPoint];
+
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class FUNCTOR>
+inline void ContourIntegrator::integrateSolutionFunctorOnGeo(GeometricEntity* const geo,
+                                                             FUNCTOR& functor,
+		                  			     const std::vector<RealVector>& pdata,
+                                                             RealVector& result)
+{
+  cf_assert(_setup);
+  cf_assert(_unitFaceNormals != CFNULL);
+  cf_assert(functor.size() == result.size());
+  cf_assert(getSolutionIntegrator(geo)!= CFNULL);
+
+  getSolutionIntegrator(geo)->computeFaceJacobianDetAtQuadraturePoints(*geo->getNodes(), _faceJacobian);
+  const std::vector<RealVector>& coeff = getSolutionIntegrator(geo)->getCoeff();
+  
+  result = 0.0;
+  CFuint ip = 0;
+  for(CFuint iFace = 0; iFace < coeff.size(); ++iFace) {
+    for(CFuint iPoint = 0; iPoint < coeff[iFace].size(); ++iPoint, ++ip) {
+      const RealVector& res = functor(pdata[ip],(*_unitFaceNormals)[iFace]);
+      result += res*(coeff[iFace][iPoint]*_faceJacobian[iFace][iPoint]);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class FUNCTOR>
+void ContourIntegrator::integrateGeometricFunctorOnGeo(GeometricEntity* const geo,
+                                                       FUNCTOR& functor,
+                                                       RealVector& result)
+{
+  cf_assert(_setup);
+  cf_assert(_unitFaceNormals != CFNULL);
+
+  // gets the correct implementor corresponding to the
+  // shape of the element where you want to integrate
+  ContourIntegratorImpl *const impl = getSolutionIntegrator(geo);
+  cf_assert(impl != CFNULL);
+  impl->computeCoordinatesAtQuadraturePoints(*geo->getNodes(), _coord);
+  impl->computeFaceJacobianDetAtQuadraturePoints(*geo->getNodes(), _faceJacobian);
+
+  const std::vector<RealVector>& coeff = impl->getCoeff();
+
+  cf_assert(functor.size() == result.size());
+
+  result = 0.0;
+  CFuint ip = 0;
+  for(CFuint iFace = 0; iFace < coeff.size(); ++iFace) {
+    for(CFuint iPoint = 0; iPoint < coeff[iFace].size(); ++iPoint, ++ip) {
+
+      const RealVector& res = functor(*_coord[ip],(*_unitFaceNormals)[iFace]);
+      result += res * (coeff[iFace][iPoint]*_faceJacobian[iFace][iPoint]);
+
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Framework_ContourIntegrator_ci

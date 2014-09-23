@@ -1,0 +1,375 @@
+#include "Common/VarRegistry.hh"
+#include "MathTools/MathConsts.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/SubSystemStatus.hh"
+#include "Framework/NamespaceSwitcher.hh"
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+// #define NETTIS_DEBUG_OUT(x) std::cout << x << std::endl
+// std::cout << "ciao1 \n" <<std::endl;
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void CoupledNoSlipWallIsothermalNSvt_Nodes_2DHF<MODEL>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< std::string >("Interface","Name of the Interface.");
+  options.template addConfigOption< CFuint >("DefaultIterations","Number of iterations during which to use the default values.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+CoupledNoSlipWallIsothermalNSvt_Nodes_2DHF<MODEL>::CoupledNoSlipWallIsothermalNSvt_Nodes_2DHF(const std::string& name) :
+  NoSlipWallIsothermalNSvt<MODEL>(name),
+  _sockets(),
+  _diffusiveVarSet(CFNULL),
+  _dummyGradients()
+{
+  addConfigOptionsTo(this);
+
+  _interfaceName = "";
+  this->setParameter("Interface",&_interfaceName);
+
+  _defaultIterations = 0;
+  this->setParameter("DefaultIterations",&_defaultIterations);
+
+  _setIndex = false;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+CoupledNoSlipWallIsothermalNSvt_Nodes_2DHF<MODEL>::~CoupledNoSlipWallIsothermalNSvt_Nodes_2DHF()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void CoupledNoSlipWallIsothermalNSvt_Nodes_2DHF<MODEL>::setup()
+{
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
+using namespace COOLFluiD::MathTools;
+using namespace COOLFluiD::Physics::NavierStokes;
+
+
+  NoSlipWallIsothermalNSvt<MODEL>::setup();
+
+  // store the wall value given by user
+  m_wallTempConst = NoSlipWallIsothermalNSvt<MODEL>::m_wallTemp;
+
+  //Create a Map to get back the index of the node in the TRS list from its LocalID
+  SafePtr<TopologicalRegionSet> trs = this->getCurrentTRS();
+  Common::SafePtr< vector<CFuint> > const trsNodes = trs->getNodesInTrs();
+
+  const CFuint nbNodesInTRS = trsNodes->size();
+  for (CFuint iNode = 0; iNode < nbNodesInTRS; ++iNode) {
+    const CFuint nodeID = (*trsNodes)[iNode];
+    _trsNodeIDMap.insert(nodeID, iNode);
+  }
+  _trsNodeIDMap.sortKeys();
+
+  Common::SafePtr<MODEL> modelTerm = Framework::PhysicalModelStack::getActive()->
+    getImplementor()->getConvectiveTerm().template d_castTo<MODEL>();
+  m_refTemp = modelTerm->getTempRef();
+
+  _diffusiveVarSet = this->getMethodData().getDiffusiveVar().template d_castTo<NavierStokes2DVarSet>();
+  cf_assert(_diffusiveVarSet.isNotNull());
+
+    // declared the global variable to store the sum of square delta flux
+  Common::SafePtr<SubSystemStatus> ssys_status = SubSystemStatusStack::getActive();
+  Common::SafePtr<VarRegistry> ssys_var_regist = ssys_status->getVarRegistry();
+
+  m_sqr_delta_flux = MathTools::MathConsts::CFrealMax();
+
+  ssys_var_regist->registVar<CFreal>("SqrDeltaFlux", &m_sqr_delta_flux);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void CoupledNoSlipWallIsothermalNSvt_Nodes_2DHF<MODEL>::unsetup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+
+  Common::SafePtr<SubSystemStatus> ssys_status = SubSystemStatusStack::getActive();
+  Common::SafePtr<VarRegistry> ssys_var_regist = ssys_status->getVarRegistry();
+
+  ssys_var_regist->unregistVar<CFreal>("SqrDeltaFlux");
+
+  NoSlipWallIsothermalNSvt<MODEL>::unsetup();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void CoupledNoSlipWallIsothermalNSvt_Nodes_2DHF<MODEL>::setIndex()
+{
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
+using namespace COOLFluiD::MathTools;
+
+  ///@todo move this to setup
+  Common::SafePtr<TopologicalRegionSet> trs = this->getCurrentTRS();
+  const std::string trsName = trs->getName();
+  const std::string currentSubSystem = SubSystemStatusStack::getActive()->getSubSystemName();
+  const std::string nameSpace = this->getMethodData().getNamespace();
+
+  const std::string baseSocketName =
+    "COUPLING_" + _interfaceName + "_" + trsName + "_" + nameSpace + "_" + currentSubSystem + "_Nodes_";
+
+  DataHandle<CFreal> isAccepted =
+    _sockets.template getSocketSink<CFreal>(baseSocketName + "ISACCEPTED")->getDataHandle();
+
+  Common::SafePtr< vector<CFuint> > const trsNodes = trs->getNodesInTrs();
+  const CFuint nbNodesInTRS = trsNodes->size();
+
+  cf_assert(isAccepted.size() == trsNodes->size());
+
+  _coupledDataID.resize(nbNodesInTRS);
+  CFuint idx = 0;
+  for(CFuint iNode=0; iNode < nbNodesInTRS; ++iNode)
+  {
+    if(isAccepted[iNode] >= 0.)
+    {
+      _coupledDataID[iNode] = idx;
+      idx++;
+    }
+    else{
+      _coupledDataID[iNode] = -1;
+    }
+  }
+
+  _setIndex = true;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> >
+CoupledNoSlipWallIsothermalNSvt_Nodes_2DHF<MODEL>::needsSockets()
+{
+
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result = NoSlipWallIsothermalNSvt<MODEL>::needsSockets();
+
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result2 = _sockets.getAllSinkSockets();
+
+  for(CFuint i=0;i<result2.size();++i)
+  {
+    result.push_back(result2[i]);
+  }
+
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void CoupledNoSlipWallIsothermalNSvt_Nodes_2DHF<MODEL>::setGhostState(Framework::GeometricEntity *const face)
+{
+
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  if(!_setIndex) setIndex();
+
+  Common::SafePtr<TopologicalRegionSet> trs = this->getCurrentTRS();
+  Common::SafePtr< vector<CFuint> > const trsNodes = trs->getNodesInTrs();
+
+  const std::string trsName = trs->getName();
+  const std::string currentSubSystem = SubSystemStatusStack::getActive()->getSubSystemName();
+  const std::string nameSpace = this->getMethodData().getNamespace();
+
+  const std::string baseSocketName =
+    "COUPLING_" + _interfaceName + "_" + trsName + "_" + nameSpace + "_" + currentSubSystem + "_Nodes_";
+
+  DataHandle<RealVector> interfaceData =
+    _sockets.template getSocketSink<RealVector>(baseSocketName + "DATA")->getDataHandle();
+  DataHandle<CFreal> isAccepted =
+    _sockets.template getSocketSink<CFreal>(baseSocketName + "ISACCEPTED")->getDataHandle();
+  DataHandle<RealVector> coordinates =
+    _sockets.template getSocketSink<RealVector>(baseSocketName + "COORD")->getDataHandle();
+
+  // check that the datahandle has same size as the TRS Nodes
+  cf_assert(isAccepted.size() == trsNodes->size());
+
+  vector<Node*> *const faceNodes = face->getNodes();
+  const CFuint nbFaceNodes = faceNodes->size();
+
+  //Get the transfered values at the nodes of the face
+  //First find the corresponding index
+  vector<CFuint> faceNodesTrsID(nbFaceNodes);
+  for(CFuint iNode=0; iNode < nbFaceNodes; ++iNode)
+  {
+    faceNodesTrsID[iNode] = _trsNodeIDMap.find((*faceNodes)[iNode]->getLocalID());
+  }
+
+  // then get the values at the face nodes from the coupled DataHandle
+  RealVector faceNodesTempSolid(nbFaceNodes);
+  RealVector faceNodesFluxSolid(nbFaceNodes);
+
+  for(CFuint iNode=0; iNode < nbFaceNodes; ++iNode)
+  {
+    if((isAccepted[faceNodesTrsID[iNode]] >= 0.) &&
+       (SubSystemStatusStack::getActive()->getNbIter() > _defaultIterations))
+    {
+      cf_assert(interfaceData[_coupledDataID[faceNodesTrsID[iNode]]].size() == 2); // temperature plus flux
+      cf_assert(interfaceData[_coupledDataID[faceNodesTrsID[iNode]]][0] > NoSlipWallIsothermalNSvt<MODEL>::m_ghostTempMin);
+
+      faceNodesTempSolid[iNode] = interfaceData[_coupledDataID[faceNodesTrsID[iNode]]][0];
+      faceNodesFluxSolid[iNode] = -1.*interfaceData[_coupledDataID[faceNodesTrsID[iNode]]][1];
+    }
+    else
+    {
+      //here we multiply by Tref because afterwards, we will divide by Tref
+      faceNodesTempSolid[iNode] = m_wallTempConst*m_refTemp;
+      faceNodesFluxSolid[iNode] = 0;
+    }
+  }
+////////////////////////////// //////////////////////////// ////////////////////
+
+  NoSlipWallIsothermalNSvt<MODEL>::computeGhostPosition(face);
+
+  //Compute the wall value (at m_midNode)
+  CFreal wallTempSolid = 0.;
+  CFreal wallFluxSolid = 0.;
+  CFreal totalDistance = 0.;
+  for(CFuint iNode=0; iNode < nbFaceNodes; ++iNode)
+  {
+    const CFreal distance =
+      MathFunctions::getDistance(NoSlipWallIsothermalNSvt<MODEL>::m_midNode, *(face->getNode(iNode)));
+    wallTempSolid += (faceNodesTempSolid[iNode] * distance);
+    wallFluxSolid += (faceNodesFluxSolid[iNode] * distance);
+    totalDistance += distance;
+  }
+  wallTempSolid /= totalDistance;
+  wallFluxSolid /= totalDistance;
+  
+
+  //std::cout << "Solid Flux: " <<wallFluxSolid<< std::endl;
+  //std::cout << "Solid Temp: " <<wallFluxSolid<< std::endl;
+
+// CFout << "Imposing Dim: "<<wallTempSolid<<"\n";
+  //Adimensionalize if needed
+  wallTempSolid /= m_refTemp;
+
+//-----------------------------------------------------------
+// Compute the T gradient on the side of the FVM fluid
+
+/////////////////// GET the value on the fluid /////////////////////////////
+
+// Extraction of the temperature
+
+   State *const innerState = face->getState(0);
+   State *const ghostState = face->getState(1);
+
+   // Evaluate the DeltaN for the T gradient
+   const CFreal distance = MathFunctions::getDistance(innerState->getCoordinates(),ghostState->getCoordinates());
+      _diffusiveVarSet->setWallDistance(distance/2.);
+   const CFreal dynamicViscosity = _diffusiveVarSet->getDynViscosity(*innerState, _dummyGradients);
+      // Evaluate the lambda for the flux
+   const CFreal lambda = _diffusiveVarSet->getThermConductivity(*innerState,dynamicViscosity);
+   //std::cout << "lambda: " <<lambda<< std::endl;
+
+   CFreal wallTempFluid = 0.;
+   CFreal wallFluxFluid = 0.;
+
+   // evaluating and storing the value at the interface
+   wallTempFluid = 0.5*((*innerState)[3]+(*ghostState)[3]);
+   wallFluxFluid = lambda /distance *((*ghostState)[3] - (*innerState)[3]);
+
+   //std::cout << "Fluid Flux: " <<wallFluxFluid<< std::endl;
+
+
+
+//-----------------------------------------------------------
+// Compute the delta flux based on the gradient of FVM fluid
+// and FEM solid passed in interfaceData
+
+
+   CFreal norm_delta_flux = 0.;
+
+   const CFreal delta_flux = std::abs(wallFluxSolid - wallFluxFluid);
+   norm_delta_flux += delta_flux*delta_flux;
+
+
+
+//-----------------------------------------------------------
+// compute the norm of delta flux and place it in SubSystemStatus
+
+  Common::SafePtr<SubSystemStatus> ssys_status = SubSystemStatusStack::getActive();
+  Common::SafePtr<VarRegistry> ssys_var_regist = ssys_status->getVarRegistry();
+
+  CFreal& SqrDeltaFlux = ssys_var_regist->getVar<CFreal>("SqrDeltaFlux");
+
+  SqrDeltaFlux = norm_delta_flux;
+
+//-----------------------------------------------------------
+
+  //CFout << "Imposing Temp: "<<wallTempSolid<<"\n";
+  //Set the wall value with the info coming from solid side
+  NoSlipWallIsothermalNSvt<MODEL>::m_wallTemp = wallTempSolid;
+
+  NoSlipWallIsothermalNSvt<MODEL>::setGhostStateImpl(*face->getState(0), *face->getState(1));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void CoupledNoSlipWallIsothermalNSvt_Nodes_2DHF<MODEL>::configure(const Config::ConfigArgs& args)
+{
+  CFAUTOTRACE;
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
+using namespace COOLFluiD::MathTools;
+
+  NoSlipWallIsothermalNSvt<MODEL>::configure(args);
+
+  const std::string nameSpace = this->getMethodData().getNamespace();
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(nameSpace);
+  Common::SafePtr<SubSystemStatus> subsystemStatus = SubSystemStatusStack::getInstance().getEntryByNamespace(nsp);
+
+  const std::string currentSubSystem = subsystemStatus->getSubSystemName();
+  const std::vector<std::string> trsNames = this->getTrsNames();
+
+  for(CFuint iTRS = 0; iTRS < trsNames.size(); iTRS++)
+  {
+    const std::string trsName = trsNames[iTRS];
+
+    const std::string baseSocketName =
+      "COUPLING_" + _interfaceName + "_" + trsName + "_" + nameSpace + "_" + currentSubSystem + "_Nodes_";
+
+    _sockets.template createSocketSink<CFreal>(baseSocketName + "ISACCEPTED");
+    _sockets.template createSocketSink<RealVector>(baseSocketName + "DATA");
+    _sockets.template createSocketSink<RealVector>(baseSocketName + "COORD");
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

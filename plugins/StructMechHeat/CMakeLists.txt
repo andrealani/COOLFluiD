@@ -1,0 +1,25 @@
+LIST ( APPEND StructMechHeat_files
+StructMechHeat.hh
+StructMechHeat2D.cxx
+StructMechHeat2D.hh
+StructMechHeat2DDiffusiveDisp.cxx
+StructMechHeat2DDiffusiveDisp.hh
+StructMechHeat2DDiffusiveAxiDisp.cxx
+StructMechHeat2DDiffusiveAxiDisp.hh
+StructMechHeat2DDiffusiveVarSet.hh
+StructMechHeat2DDisp.cxx
+StructMechHeat2DDisp.hh
+StructMechHeat2DInertiaDisp.cxx
+StructMechHeat2DInertiaDisp.hh
+StructMechHeat2DInertiaVarSet.hh
+StructMechHeat2DSourceDisp.cxx
+StructMechHeat2DSourceDisp.hh
+StructMechHeat2DSourceVarSet.hh
+StructMechHeatPhysicalModel.cxx
+StructMechHeatPhysicalModel.hh
+)
+
+LIST ( APPEND StructMechHeat_requires_mods Framework StructMech )
+LIST ( APPEND StructMechHeat_cflibs Framework StructMech )
+CF_ADD_PLUGIN_LIBRARY ( StructMechHeat )
+CF_WARN_ORPHAN_FILES()

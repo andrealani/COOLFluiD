@@ -1,0 +1,57 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -5.0166776
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs =  libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes libMarcoTest  libMeshGenerator1D libEmptySpaceMethod
+# libPetscI
+
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Nozzle1D/
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType     = Euler1D
+Simulator.SubSystem.Euler1D.refValues = 101325. 200. 5000.
+Simulator.SubSystem.Euler1D.refLength = 1.0
+
+Simulator.SubSystem.OutputFormat        = CFmesh Tecplot
+Simulator.SubSystem.CFmesh.FileName     = PG.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate     = 1
+
+Simulator.SubSystem.Tecplot.FileName    = PG.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = Pvt
+#Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolution1D
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -5.0
+
+Simulator.SubSystem.StopCondition = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSystem.Default.listTRS = InnerFaces Inlet Outlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = ParametersShock.CFmesh
+#Mesh generation
+Simulator.SubSystem.CFmeshFileReader.MeshGenerator1D.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.MeshGenerator1D.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = MeshGenerator1D
+
+#Implicit solver
+#Simulator.SubSystem.LinearSystemSolver = PETSC
+#Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+#Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+#Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+#Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.ConvergenceMethod = MarcoTestMethod
+Simulator.SubSystem.MarcoTestMethod.AlgoCom = Shock
+
+Simulator.SubSystem.SpaceMethod = Null
+Simulator.SubSystem.Null.Builder = FVMCC

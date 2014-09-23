@@ -1,0 +1,546 @@
+#include <memory>
+#include "FiniteVolume/FluxData.hh"
+#include "FiniteVolume/FVMCC_BC.hh"
+
+#include "Framework/LSSMatrix.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/MathTypes.hh"
+#include "Framework/BlockAccumulator.hh"
+#include "Common/CUDA/CudaDeviceManager.hh"
+#include "Common/CUDA/CFVec.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::FVMCC_ComputeRhsJacobCell(const std::string& name) :
+  FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>(name), 
+  m_lss(CFNULL),
+  m_blockStart(), 
+  m_nbCellsInKernel(),
+  m_blockStartKernel(), 
+  m_blockStartKernelCellID(), 
+  m_blockJacobians(),
+  _numericalJacob(CFNULL),
+  _pertFlux(),
+  _fluxDiff(),
+  _origState(),
+  _bAcc(CFNULL)
+{
+  this->addConfigOptionsTo(this);
+  
+  m_nbKernelBlocks = 64;
+  this->setParameter("NbKernelBlocks",&m_nbKernelBlocks);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::~FVMCC_ComputeRhsJacobCell()
+{  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::unsetup()
+{  
+  FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::unsetup();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFuint > ("NbKernelBlocks", "Number of kernel blocks");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::initializeComputationRHS()
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::initializeComputationRHS() START\n");
+  
+  FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::initializeComputationRHS();
+  
+  // reset to zero all non zero entries in the jacobian
+  if (this->getMethodData().doComputeJacobian()) {
+    m_lss->getMatrix()->resetToZeroEntries();
+  }
+  
+  this->getMethodData().getPolyReconstructor()->prepareReconstruction();
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::initializeComputationRHS() END\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::setup()
+{
+  CFAUTOTRACE;
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::setup() START\n");
+  
+  FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::setup();
+  
+  // linear system solver
+  m_lss = this->getMethodData().getLinearSystemSolver()[0];
+  
+  const CFuint nbCells = this->socket_states.getDataHandle().size(); 
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  m_blockStart.resize(nbCells);
+  
+  // very expensive solution: allocate the memory for holding the full matrix
+  const CFuint nbEqs2 = nbEqs*nbEqs;
+  CFuint countBlocks  = 0;
+  CFuint countEntries = 0;
+  for (CFuint i = 0; i < nbCells; ++i) {
+    m_blockStart[i] = countEntries;
+    
+    // here we have to consider ghosts
+    cf_assert(i*5+4 < this->m_cellInfo.size());
+    const CFuint nbFacesInCell = this->m_cellInfo[i*5+4];
+    // nonzero blocks: diagonal + off-diagonal blocks
+    const CFuint nbNonZeroBlocks = nbFacesInCell+1;
+    countBlocks  += nbNonZeroBlocks;
+    countEntries += nbNonZeroBlocks*nbEqs2;
+  }
+  
+  const CFuint fullMatrixSize = nbEqs2*countBlocks;
+  cf_assert(fullMatrixSize == countEntries);
+  
+  if (!this->m_onGPU) {
+    m_nbCellsInKernel.resize(1, nbCells);
+    m_blockStartKernel.resize(1, 0); 
+    m_blockStartKernelCellID.resize(1, 0);
+    m_blockJacobians.resize(fullMatrixSize);
+  } 
+  else {
+    // looking for a cheap solution to store the sparse matrix, we assemble the jacobian 
+    // contributions over multiple kernel calls, so that only entries corresponding to 
+    // m_nbKernelBlocks*nThreads cells are computed at once
+    const CFuint blocksPerGrid = CudaEnv::CudaDeviceManager::getInstance().getBlocksPerGrid(nbCells);
+    const CFuint nThreads = CudaEnv::CudaDeviceManager::getInstance().getNThreads();
+    // minimum number of kernel calls to assemble the full RHS + jacobian
+    const CFuint sizeb = (blocksPerGrid+(m_nbKernelBlocks-1))/m_nbKernelBlocks;
+    // array storing the max number of cells whose RHS+jacobian will be computed in each kernel  
+    m_nbCellsInKernel.resize(sizeb,nThreads*m_nbKernelBlocks);
+    
+    const CFuint nbKernels = m_nbCellsInKernel.size();
+    m_blockStartKernel.resize(nbKernels, 0);
+    m_blockStartKernelCellID.resize(nbKernels, 0);
+    CFuint maxSizeJacobEntries = 0;
+    CFuint startCellID = 0;
+    CFuint startEntryID = 0;
+    for (CFuint s = 0; s < nbKernels; ++s) {
+      const CFuint maxCellID = (s < nbKernels-1) ? startCellID + m_nbCellsInKernel[s] : nbCells-1;
+      cf_assert(maxCellID < m_blockStart.size());
+      cf_assert(startCellID < m_blockStart.size());
+      const CFuint deltaStart = m_blockStart[maxCellID] - m_blockStart[startCellID];
+      const CFuint delta = (s < nbKernels-1) ? deltaStart : fullMatrixSize - m_blockStart[startCellID];
+      maxSizeJacobEntries = max(maxSizeJacobEntries, delta);
+      cf_assert(s < m_blockStartKernel.size());
+      cf_assert(s < m_blockStartKernelCellID.size());
+      m_blockStartKernel[s] = startEntryID;
+      m_blockStartKernelCellID[s] = startCellID;
+      startCellID = maxCellID;
+      startEntryID += delta;
+    }
+    
+    cf_assert(startCellID  == nbCells-1);
+    cf_assert(startEntryID == fullMatrixSize);
+    
+    CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::setup() => uses maxSizeJacobEntries < fullMatrixSize => " 
+	  << maxSizeJacobEntries << " < " << fullMatrixSize << "\n");
+    cf_assert(maxSizeJacobEntries < fullMatrixSize);
+    
+    // m_blockJacobians is allocated with the maximum possible size needed by a single kernel
+    m_blockJacobians.resize(maxSizeJacobEntries);
+    
+    // here we need to overwrite m_blockStart in such a way that 
+    // m_blockStart[cellID] will give the start in the m_blockJacobians storage for the corresponding kernel ID
+    // (each cellID is uniquely assigned to just one kernel ID, i.e. the corresponding RHS+jacobian will be 
+    //  computed by just one kernel)
+    CFuint cellID = 0;
+    CFuint offset = 0; 
+    for (CFuint s = 0; s < nbKernels; ++s) {
+      const CFuint nbKernelCells = (s < nbKernels-1) ? m_nbCellsInKernel[s] : (nbCells - cellID);
+      for (CFuint i = 0; i < nbKernelCells; ++i, ++cellID) {
+	cf_assert(cellID < m_blockStart.size());
+	m_blockStart[cellID] -= offset;
+	if (i == 0) {cf_assert(m_blockStart[cellID] == 0);}
+      }
+      if (s < nbKernels-1) {
+	cf_assert(s   < m_blockStartKernel.size());
+	cf_assert(s+1 < m_blockStartKernel.size());
+	offset += m_blockStartKernel[s+1]-m_blockStartKernel[s];
+      }
+    }
+    cf_assert(cellID == nbCells);
+  }
+  
+  m_blockStart.put();
+  
+  // numerical jacobian
+  _numericalJacob = &this->getMethodData().getNumericalJacobian();
+  
+  _pertFlux.resize(nbEqs);
+  _fluxDiff.resize(nbEqs);
+  _origState.resize(nbEqs);
+  
+  // block accumulator for boundary jacobians
+  _bAcc.reset(m_lss->createBlockAccumulator(1, 1, nbEqs));
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::setup() END\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::updateSystemMatrix(CFuint kernelID)
+{
+  CFAUTOTRACE;
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::updateSystemMatrix() START\n");
+  
+  const CFuint nbEqs = PHYSICS::NBEQS; 
+  cf_assert(m_blockJacobians.size() > 0);
+  cf_assert(0*5+4 <this->m_cellInfo.size());
+  const CFuint nbFacesInCell0 = this->m_cellInfo[0*5+4];
+  const CFuint nbRows0 = nbFacesInCell0 + 1;
+  CFreal* start = &m_blockJacobians[0];  
+  auto_ptr<BlockAccumulator> acc(m_lss->createBlockAccumulator(nbRows0, 1, nbEqs, start));
+  const CFuint nbCells = this->socket_states.getDataHandle().size(); 
+  
+  cf_assert(kernelID < m_blockStartKernelCellID.size());
+  const CFuint startCellID = m_blockStartKernelCellID[kernelID];
+  
+  const CFuint nbKernels = m_nbCellsInKernel.size();
+  const CFuint nbKernelCells = (kernelID < nbKernels-1) ? m_nbCellsInKernel[kernelID] : (nbCells - startCellID);
+  const CFuint endCellID   = startCellID + nbKernelCells;
+  cf_assert(endCellID <= nbCells);
+  
+  DataHandle<State*,GLOBAL > states = this->socket_states.getDataHandle();
+  CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::updateSystemMatrix() => startCellID = " << startCellID << 
+	", endCellID = " << endCellID << "\n");
+  
+  // skip contribution to non-updatable states rows, since those must be provided by corresponding owning processes 
+  for (CFuint cellID = startCellID; cellID < endCellID; ++cellID) {
+    cf_assert(cellID < states.size());
+    cf_assert(cellID*5+4 < this->m_cellInfo.size());
+    const CFuint nbFacesInCell = this->m_cellInfo[cellID*5+4];
+    cf_assert(cellID < m_blockStart.size());
+    const CFuint bStartCellID = m_blockStart[cellID]; 
+    // cout << "[" << cellID << "] has bStartCellID = " << bStartCellID << endl;
+    const CFuint nbRows = nbFacesInCell + 1;
+    // cout << "nbRows = " << nbRows << ", bStartCellID = " << bStartCellID << ", m_blockJacobians.size() = " << m_blockJacobians.size() <<  endl;
+    cf_assert(bStartCellID < m_blockJacobians.size());
+    CFreal* startb = &m_blockJacobians[bStartCellID];  
+    acc->resetB(nbRows, 1, nbEqs, startb);
+    
+    // here we only need to set the IDs, the data are already stored
+    cf_assert(cellID < states.size());
+    const CFint rowID = (states[cellID]->isParUpdatable()) ? (CFint)cellID : -1;
+    acc->setRowIndex(0, rowID);
+    acc->setColIndex(0, cellID);
+    
+    // cout << "Neighbors are ["<< " ";
+    cf_assert(cellID*5 < this->m_cellInfo.size());
+    const CFuint startStencil = this->m_cellInfo[cellID*5];
+    for (CFuint f = 0; f < nbFacesInCell; ++f) { 
+      const CFuint index = startStencil + f;
+      cf_assert(index < this->m_neighborTypes.size());
+      cf_assert(index < this->m_cellStencil.size());
+      const CFint stype = this->m_neighborTypes[index]; 
+      
+      CFint neighID = (stype > 0) ? (CFint)this->m_cellStencil[index] : -1; 
+      // here invalidate state ID if not updatable
+      if (neighID > -1) {
+	cf_assert(neighID < states.size());
+	if (!states[neighID]->isParUpdatable()) {neighID = -1;}
+      }
+      
+      // here we are assuming that this block contribution is = 0
+      // so adding 0 to block (cellID,cellID) will not harm 
+      acc->setRowIndex(f+1, neighID);
+      // cout << neighID << " ";
+    }
+    //  cout << "]" <<endl;
+    
+    m_lss->getMatrix()->addValues(*acc);
+    
+    // acc->print(); abort();
+  }
+  
+  //m_lss->getMatrix()->printToScreen();
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::updateSystemMatrix() END\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::finalizeComputationRHS()
+{ 
+  using namespace COOLFluiD::Framework;
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::finalizeComputationRHS() START\n");
+  
+  // compute dynamically the CFL
+  if (this->getMethodData().doComputeJacobian()) {
+    this->getMethodData().getCFL()->update();
+  }
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::finalizeComputationRHS() END\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+ 
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::executeBC()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  // set the list of faces
+  vector<SafePtr<TopologicalRegionSet> > trs = MeshDataStack::getActive()->getTrsList();
+  const CFuint nbTRSs = trs.size();
+  
+  this->_faceIdx = 0;
+  
+  // no variable perturbation is needed in explicit residual computation
+  this->getMethodData().setIsPerturb(false);
+  
+  // prepare the building of the faces
+  Common::SafePtr<GeometricEntityPool<FaceCellTrsGeoBuilder> > geoBuilder = this->getMethodData().getFaceCellTrsGeoBuilder();
+  geoBuilder->getGeoBuilder()->setDataSockets(this->socket_states, this->socket_gstates, this->socket_nodes);
+  FaceCellTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
+  vector<bool> zeroGrad(PhysicalModelStack::getActive()->getNbEq(), false);
+  const bool hasSourceTerm = (this->getMethodData().isAxisymmetric() || this-> getMethodData().hasSourceTerm());
+  
+  // this could be set during set up with no guarantee that it will be effective:
+  // a MethodStrategy could set it to a different value afterwards, before entering here
+  geoData.allCells = this->getMethodData().getBuildAllCells();
+  
+  DataHandle<bool> cellFlag = this->socket_cellFlag.getDataHandle();
+  
+  for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
+    SafePtr<TopologicalRegionSet> currTrs = trs[iTRS];
+    
+    CFLog(VERBOSE, "TRS name = " << currTrs->getName() << "\n");
+
+    // the faces on the boundary of the partition don't have to
+    // be processed (their fluxes could give NaN)
+    if (currTrs->getName() != "PartitionFaces" && currTrs->getName() != "InnerCells") {
+      if (currTrs->hasTag("writable")) {
+        this->_currBC = this->_bcMap.find(iTRS);
+	
+	// set the flag telling if the ghost states have to be placed on the face itself
+	this->_currBC->setPutGhostsOnFace();
+	
+        CFLog(VERBOSE, "BC name = " << this->_currBC->getName() << "\n");
+	
+        geoData.isBFace = true;
+	
+	// set the flags specifying the variables for which the boundary condition
+	// imposes constant extrapolation (zero gradient)
+	this->_polyRec->setZeroGradient(this->_currBC->getZeroGradientsFlags());
+	
+	// set the current TRS in the geoData
+	geoData.faces = currTrs;
+	
+	const CFuint nbTrsFaces = currTrs->getLocalNbGeoEnts();
+	for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace, ++this->_faceIdx) {
+	  CFLogDebugMed( "iFace = " << iFace << "\n");
+	  
+	  // reset the equation subsystem descriptor
+	  PhysicalModelStack::getActive()->resetEquationSubSysDescriptor();
+	  
+	  // build the GeometricEntity
+	  geoData.idx = iFace;
+	  this->_currFace = geoBuilder->buildGE();
+	  
+	  if (this->_currFace->getState(0)->isParUpdatable() || 
+	      (!this->_currFace->getState(1)->isGhost() && this->_currFace->getState(1)->isParUpdatable())) {
+	    
+	    // set the data for the FaceIntegrator
+	    this->setFaceIntegratorData();
+	    
+	    // avoid to recompute the gradient
+	    cellFlag[this->_currFace->getState(0)->getLocalID()] = true;
+	    
+	    // cout << "states = " << this->_currFace->getState(0)->getLocalID()  << ", " <<  this->_currFace->getState(1)->getLocalID() << endl;
+	    
+	    // extrapolate (and LIMIT, if the reconstruction is linear or more)
+	    // the solution in the quadrature points
+	    this->_polyRec->extrapolate(this->_currFace);
+	    
+	    // compute the physical data for each left and right reconstructed
+	    // state and in the left and right cell centers
+	    this->computePhysicalData();
+	    
+	    // a jacobian free method requires to re-compute the update coefficient every time the 
+	    // residual is calculated to get F*v from the finite difference formula
+	    // in particular the time dependent part of the residual depend on a updateCoeff
+	    // that has to be up-to-date
+	    
+	    //   this was very buggy !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!111
+	    // this->getMethodData().setIsPerturb(false);
+	    // we have to avoid to update updateCoeff
+	    this->getMethodData().setIsPerturb(true);
+	    
+	    // cout << "L = " << *this->_currFace->getState(0) << endl;
+	    // cout << "R = " << *this->_currFace->getState(1) << endl;
+	    this->_currBC->computeFlux(this->_flux);
+	    
+	    // cout.precision(12);cout << currTrs->getName() << " C flux = " << _flux << endl;
+	    this->computeInterConvDiff();
+	    
+	    //this->_isDiffusionActive = (*this->_eqFilters)[0]->filterOnGeo(this->_currFace);
+	    
+	    // if (this->_hasDiffusiveTerm && this->_isDiffusionActive) {
+	    //   // reset to false the flag telling to freeze the diffusive coefficients
+	    //   this->_diffVar->setFreezeCoeff(false);
+	    
+	    //   // put virtual function here or parameter
+	    //   if (this->_extrapolateInNodes) {
+	    // 	this->_nodalExtrapolator->extrapolateInNodes(*this->_currFace->getNodes());
+	    //   }
+	    //   _diffusiveFlux->computeFlux(_dFlux);
+	    //   _flux -= _dFlux;
+	    // }
+	    
+	    //  cout.precision(12);cout << currTrs->getName() << " C+D flux = " << _flux << endl; CFABORT(1);
+	    
+	    CFLogDebugMed("flux = " <<  this->_flux  << "\n");
+	    
+	    // compute the source term
+	    // if (hasSourceTerm) {			
+	    //   computeSourceTerm();
+	    // }
+	    
+	    // source term jacobians are only computed while processing internal faces 
+	    //_diffVar->setFreezeCoeff(_freezeDiffCoeff);
+	    
+	    computeBoundaryJacobianTerm();
+	  }
+	  
+	  geoBuilder->releaseGE(); 
+	}
+      }
+    }
+  }
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
+void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::computeBoundaryJacobianTerm()
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  this->getMethodData().setIsPerturb(true);
+  
+  // set the index of the block corresponding to the current
+  // state in the jacobian matrix
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  State& currState = *this->_currFace->getState(0);
+  State& ghostState = *this->_currFace->getState(1);
+  cf_assert(ghostState.isGhost());
+  
+  if (currState.isParUpdatable()) {
+    // const bool isAxi = getMethodData().isAxisymmetric();
+    // _upFactor[LEFT] = (!isAxi) ? getResFactor() : getResFactor()*(_rMid*_invr[0]);
+    // _upStFactor[LEFT] = (!isAxi) ? -getResFactor() :-getResFactor()*_invr[0];
+    
+    // copy the original value of the ghost state
+    _origState = ghostState;
+    _bAcc->setRowColIndex(0, currState.getLocalID());
+    
+    for (CFuint iVar = 0; iVar < nbEqs; ++iVar) {
+      CFLogDebugMax( "Perturbing iVar = " << iVar << "\n");
+      
+      // set the perturbed variable
+      this->getMethodData().setIPerturbVar(iVar);
+      
+      // perturb the given component of the state vector
+      _numericalJacob->perturb(iVar, currState[iVar]);
+      
+      // compute the ghost state in the perturbed inner state
+      this->_currBC->setGhostState(this->_currFace);
+            
+      // extrapolate (and LIMIT, if the reconstruction is linear or more)
+      // the solution in the quadrature points
+      this->_polyRec->extrapolate(this->_currFace);
+            
+      // compute the physical data for each left and right reconstructed
+      // state and in the left and right cell centers
+      this->computeStatesData();
+      
+      this->_currBC->computeFlux(_pertFlux);
+      
+      // if (_hasDiffusiveTerm && _isDiffusionActive) {
+      // 	//_nodalExtrapolator->extrapolateInNodes(*this->_currFace->getNodes());
+      //   _diffusiveFlux->computeFlux(_dFlux);
+      //   _pertFlux -= _dFlux;
+      // }
+
+      // compute the finite difference derivative of the flux
+      _numericalJacob->computeDerivative(this->getJacobianFlux(),_pertFlux,_fluxDiff);
+      
+      // addJacobTerm(0, iVar, 0, _bAcc.get());
+      _bAcc->addValues(0, 0, iVar, &_fluxDiff[0]);
+      
+      // restore the unperturbed value
+      _numericalJacob->restore(currState[iVar]);
+      
+      // restore the original ghost state
+      ghostState = _origState;
+    }
+
+    // compute analytical jacobian for source term 
+    // if (computeSourceTermJacob(LEFT,_stAnJacobIDs)) {
+    //   addAnalyticSourceTermJacob(LEFT, _bAcc.get());
+    // }
+    
+    // add the values in the jacobian matrix
+    m_lss->getMatrix()->addValues(*_bAcc);
+    // std::cout << "BAC" << std::endl;_bAcc->print();
+    
+    // reset to zero the entries in the block accumulator
+    _bAcc->reset();
+    // _sourceJacobOnCell[LEFT] = false;
+  } 
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+ } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

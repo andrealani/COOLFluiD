@@ -1,0 +1,52 @@
+===================
+   STARTING FILE
+===================
+
+Nbr. of grid levels :   3
+Viscous/inviscid :      1
+Struct. grid type :     4
+Semi/full coarsening :  2
+Remeshing :             0
+Free-stream :           .50 0.0 1.0E+5 300.0
+### BOUNDARY POINT DISTRIBUTION ########################
+--------------------------------------------------------
+Nbr. bodies :		5
+--------------------------------------------------------
+Pts file :		plate.pts
+Config. file :          plate.cfg
+Dpl input file :	plate.dpl
+XYoutput file :		plate.xyout
+--------------------------------------------------------
+Angle thresh wawa :	5.0
+Angle thresh far-fld :  20.0
+--------------------------------------------------------
+Proximity thresh :	0.5
+Max theta & thetap :	70.0 80.0
+Max ang. for if lgth :	20.0
+--------------------------------------------------------
+Max AR at extr. :	10.0
+--------------------------------------------------------
+### STRUCTURED GRID GENERATION #########################
+--------------------------------------------------------
+2nd order expl coeff :  2.5
+2nd order impl coeff :  2.0
+4th order expl coeff :  0.0
+Implicit factor :       0.0
+--------------------------------------------------------
+Volume average factor : 0.5
+--------------------------------------------------------
+### UNSTRUCTURED GRID GENERATION #######################
+--------------------------------------------------------
+Spacing exp. base :     1.9
+Nbr iter spc smooth :   4
+Conv thresh spc smth :  1.0e-2
+Ovrelax coef spc smth : 1.0
+--------------------------------------------------------
+Distance tolerance :    0.65
+Stretching tolerance :  0.65
+--------------------------------------------------------
+Max number of row :     100
+--------------------------------------------------------
+Smth. beta coeff :	0.5
+Smth. relaxation fact : 1.4
+========================================================

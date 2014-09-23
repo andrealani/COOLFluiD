@@ -1,0 +1,8 @@
+#ifndef COOLFluiD_LES_config_hh
+#define COOLFluiD_LES_config_hh
+
+/// Auto-generated config header for the LES module
+
+#cmakedefine CF_HAVE_LESMODELS
+
+#endif // !COOLFluiD_LES_config_hh

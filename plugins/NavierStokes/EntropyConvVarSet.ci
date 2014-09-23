@@ -1,0 +1,104 @@
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace NavierStokes {
+
+//////////////////////////////////////////////////////////////////////////////
+      
+template <class BASE>
+EntropyConvVarSet<BASE>::EntropyConvVarSet(Common::SafePtr<Framework::BaseTerm> term) :
+  BASE(term)
+{
+  std::string name = "s";
+  this->addVarName(name);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+EntropyConvVarSet<BASE>::~EntropyConvVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void EntropyConvVarSet<BASE>::setEnthalpyEnergySoundSpeed(const Framework::State& state,
+							  RealVector& data,
+							  CFdouble& tempDim, 
+							  CFdouble& pdim,
+							  CFdouble& rhodim)
+{
+  BASE::setEnthalpyEnergySoundSpeed(state, data, tempDim, pdim, rhodim);
+  
+  const CFuint nbScalarSets = BASE::getEqSetData().size();
+  data[getModel()->getFirstScalarVar(nbScalarSets)] = state[state.size() - 1];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void EntropyConvVarSet<BASE>::setDimensionalValues(const Framework::State& state,
+						   RealVector& result)
+{
+  // first call the parent
+  BASE::setDimensionalValues(state,result);
+  
+  const CFuint sID = state.size() - 1;
+  result[sID] = state[sID];
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void EntropyConvVarSet<BASE>::setAdimensionalValues(const Framework::State& state,
+						    RealVector& result)
+{
+  // first call the parent
+  BASE::setAdimensionalValues(state,result); 
+  
+  const CFuint sID = state.size() - 1;
+  result[sID] = state[sID];
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void EntropyConvVarSet<BASE>::setDimensionalValuesPlusExtraValues
+(const Framework::State& state, RealVector& result, RealVector& extra)
+{
+  // first call the parent
+  BASE::setDimensionalValues(state,result);
+  
+  const CFuint sID = state.size() - 1;
+  result[sID] = state[sID];
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void EntropyConvVarSet<BASE>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  BASE::setup();
+  BASE::addEqSetData(1);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace NavierStokes
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

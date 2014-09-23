@@ -1,0 +1,106 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Environment_Registry_hh
+#define COOLFluiD_Environment_Registry_hh
+
+//////////////////////////////////////////////////////////////////////////////
+
+#include "Common/CFLog.hh"
+#include "Environment/Registry.hh"
+#include "Environment/TYPE.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace COOLFluiD::Common;
+
+namespace COOLFluiD {
+
+  namespace Environment {
+
+//////////////////////////////////////////////////////////////////////////////
+
+Registry::Registry()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+Registry::~Registry()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void Registry::regist(TYPE* entry)
+{
+  try {
+    m_store.addEntry(entry->getName(),entry);
+    CFLog(NOTICE,TYPE::getClassName() + entry->getName() + " registered\n");
+  }
+  catch (Common::StorageExistsException& e) {
+    CFLogWarn(TYPE::getClassName() + " " + entry->getName() + " already registered : skipping registration\n");
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void Registry::unregist(const std::string& entryName)
+{
+  try {
+    m_store.removeEntry(entryName);
+  }
+  catch (Common::NoSuchStorageException& e) {
+    CFLogWarn(TYPE::getClassName() + " " +  + entryName + " not registered : skipping removal\n");
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+bool Registry::isRegistered(const std::string& entryName)
+{
+  return m_store.checkEntry(entryName);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+Common::SafePtr<TYPE>
+Registry::getTYPE(const std::string& entryName)
+{
+  try {
+    return m_store.getEntry(entryName);
+  }
+  catch (Common::NoSuchStorageException& e) {
+    CFLogWarn(TYPE::getClassName() + " " +  + entryName + " not registered : returning null pointer\n");
+  }
+  return Common::SafePtr<TYPE>(CFNULL);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+std::vector< Common::SafePtr< TYPE > >
+Registry::getAllModules()
+{
+  std::vector< SafePtr<TYPE> > all;
+  all.reserve(m_store.size());
+  std::transform(m_store.begin(),
+                 m_store.end(),
+                 back_inserter(all),
+                 GeneralStorage<TYPE>::extract);
+  return all;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Environment
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOFluiD_Environment_Registry_hh

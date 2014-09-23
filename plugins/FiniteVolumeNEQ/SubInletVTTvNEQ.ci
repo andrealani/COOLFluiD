@@ -1,0 +1,105 @@
+#include "Framework/MeshData.hh"
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "Framework/ConsistencyException.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+SubInletVTTvNEQ<MODEL>::
+SubInletVTTvNEQ(const std::string& name) :
+  FiniteVolume::FVMCC_BC(name),
+  m_library(CFNULL),
+  m_model(CFNULL),
+  m_ysIn()
+{
+  addConfigOptionsTo(this);
+  m_vTTv = std::vector<CFreal>();
+  setParameter("VTTv",&m_vTTv);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+SubInletVTTvNEQ<MODEL>::~SubInletVTTvNEQ()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void SubInletVTTvNEQ<MODEL>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< std::vector<CFreal> >
+    ("VTTv", "Inlet Velocity components, temperatures");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void SubInletVTTvNEQ<MODEL>::setup()
+{
+  FVMCC_BC::setup();
+
+  m_library = Framework::PhysicalModelStack::getActive()->
+    getImplementor()->template getPhysicalPropertyLibrary
+    <Framework::PhysicalChemicalLibrary>();
+  
+  m_model = Framework::PhysicalModelStack::getActive()->
+    getImplementor()->getConvectiveTerm().template d_castTo<MODEL>();
+  
+  m_ysIn.resize(m_library->getNbSpecies());
+  cf_assert(m_ysIn.size() > 0); 
+  
+  m_model->resizePhysicalData(m_pData);  
+  
+  const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+  
+  if (m_vTTv.size() != nbEqs - m_library->getNbSpecies()) {
+    throw Framework::ConsistencyException
+      (FromHere(), "SubInletVTTvNEQ<MODEL>::setup() => wrong size for YiVTTv");
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void SubInletVTTvNEQ<MODEL>::setGhostState(Framework::GeometricEntity *const face)
+{
+  using namespace COOLFluiD::Framework;
+   
+  // set the physical data corresponding to the inner cell
+  const State& innerState = *face->getState(LEFT);
+  
+  //   this->getMethodData().getUpdateVar()->computePhysicalData(innerState,m_pData);
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbSpecies = m_library->getNbSpecies();
+    
+  // extrapolate the partial pressure from inside
+  const CFuint TID = nbSpecies + dim;
+  
+  State& ghostState = *face->getState(RIGHT);
+  for (CFuint i = 0; i < m_vTTv.size(); ++i) {
+    ghostState[nbSpecies+i] = 2.*m_vTTv[i] - innerState[nbSpecies+i];
+  }
+  
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    ghostState[i] = innerState[i]*innerState[TID]/ghostState[TID];
+  }
+}
+ 
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

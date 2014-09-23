@@ -1,0 +1,164 @@
+#include "Common/CFLog.hh"
+#include "Common/PE.hh"
+
+#include "Framework/GeometricEntity.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/EquationSetData.hh"
+#include "FiniteVolume/DerivativeComputer.hh"
+#include "Environment/FileHandlerInput.hh"
+#include "Environment/SingleBehaviorFactory.hh"
+#include "Environment/DirPaths.hh"
+
+#include <fstream>
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR>
+Quasi1DEuler<EULERVAR>::Quasi1DEuler(const std::string& name) :
+  ComputeSourceTermFVMCC(name),
+  _varSet(CFNULL),
+  _physicalData(),
+  _mapGlobalID2dAdX()
+{
+  addConfigOptionsTo(this);
+
+  _uID = std::vector<CFuint>();
+  setParameter("uIDs", &_uID);
+
+ /// opzione per il file dei raggi
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR>
+void Quasi1DEuler<EULERVAR>::defineConfigOptions
+(Config::OptionList& options)
+{
+  options.template addConfigOption< std::vector<CFuint> > ("uIDs", "IDs u component");
+
+// opzione per il file dei raggi
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR>
+Quasi1DEuler<EULERVAR>::~Quasi1DEuler()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR>
+void Quasi1DEuler<EULERVAR>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+
+  ComputeSourceTermFVMCC::setup();
+  
+  _varSet = this->getMethodData().getUpdateVar().template d_castTo<EULERVAR>();
+  _varSet->getModel()->resizePhysicalData(_physicalData);
+  
+  // default setting for _uID array
+  if (_uID.size() != 1) {
+    _uID.resize(1);
+    _uID[0] = 1;
+  }
+
+  // read the files with dAdX
+  if (PE::GetPE().IsParallel()) {
+    PE::GetPE().setBarrier();
+
+    for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
+      if (i == PE::GetPE().GetRank ()) {
+	readInputFile();
+      }
+
+      PE::GetPE().setBarrier();
+    }
+  }
+  else {
+    readInputFile();
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR>
+void Quasi1DEuler<EULERVAR>::readInputFile()
+{
+  using namespace COOLFluiD::Framework;
+
+  CFuint Cells = 0;
+  CFuint state = 0;
+  CFreal dlnRdx;
+  
+  Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
+  std::string file = "Radius_avg.dat";
+  boost::filesystem::path radfilePath(Environment::DirPaths::getInstance().getWorkingDir()/boost::filesystem::path(file));
+  std::ifstream& areaData = fhandle->open(radfilePath);
+    
+  // std::ifstream areaData(Section.c_str());
+
+  areaData >> Cells;
+
+  for (CFuint i = 0; i < Cells; i++)
+  {
+    areaData >> state >> dlnRdx;
+    _mapGlobalID2dAdX.insert(state,dlnRdx);
+  }
+  _mapGlobalID2dAdX.sortKeys();
+
+  areaData.close();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+// for the moment chemistry is not considered
+template <class EULERVAR>
+void Quasi1DEuler<EULERVAR>::computeSource(Framework::GeometricEntity *const element,
+					   RealVector& source,
+					   RealMatrix& jacobian)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  cf_assert(_varSet.isNotNull());
+  
+  const CFuint elemID = element->getID();
+  State& currState = *socket_states.getDataHandle()[elemID];
+  _varSet->computePhysicalData(currState, _physicalData);
+    
+  //  source term for the Quasi 1D Euler equations
+  
+  const CFreal rho = _physicalData[EULERVAR::PTERM::RHO];
+  const CFreal u = _physicalData[EULERVAR::PTERM::VX];
+  const CFreal H = _physicalData[EULERVAR::PTERM::H];
+  const CFreal dAdX = _mapGlobalID2dAdX.find(currState.getGlobalID());
+  
+  source[0] = dAdX*rho*u;
+  source[1] = dAdX*rho*u*u;
+  source[2] = dAdX*rho*u*H;
+  
+  source *= socket_volumes.getDataHandle()[elemID];
+}
+      
+////////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

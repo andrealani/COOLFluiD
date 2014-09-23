@@ -1,0 +1,671 @@
+#include "Framework/GeometricEntity.hh"
+#include "Framework/PhysicalChemicalLibrary.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class UPDATEVAR> 
+RoeVinokurTCNEQFlux<BASE, UPDATEVAR>::RoeVinokurTCNEQFlux(const std::string& name) :
+  BASE(name),
+  _upVar(CFNULL),
+  _lData(),
+  _rData(),
+  _mmasses(),
+  _fcoeff(),
+  _library(NULL),
+  _model(NULL),
+  _dRhoiOvMM(),
+  _dJdZ()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class UPDATEVAR>
+RoeVinokurTCNEQFlux<BASE, UPDATEVAR>::~RoeVinokurTCNEQFlux()
+{ 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class UPDATEVAR>
+void RoeVinokurTCNEQFlux<BASE, UPDATEVAR>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  BASE::setup();
+  _upVar = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+  _upVar->getModel()->resizePhysicalData(_lData);
+  _upVar->getModel()->resizePhysicalData(_rData);
+  
+  SafePtr<PhysicalChemicalLibrary> library =
+    PhysicalModelStack::getActive()->getImplementor()->template 
+    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+
+  Common::SafePtr<PhysicalChemicalLibrary::ExtraData> eData = library->getExtraData();
+
+  _model = PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm().d_castTo<NEQTerm>();
+  
+  const CFuint nbSpecies = library->getNbSpecies();
+ 
+  const CFuint firstVibMode = _model->getFirstScalarVar(1);
+  
+  const CFuint nbVibModes = _model->getNbScalarVars(1);
+
+  _mmasses.resize(nbSpecies);
+  
+  library->getMolarMasses(_mmasses);
+  
+  this->_fcoeff.resize(nbSpecies);
+  
+  vector<CFuint> moleculeIDs;
+  library->setMoleculesIDs(moleculeIDs);
+  vector<bool> flag(nbSpecies, false);
+  
+  for (CFuint i = 0; i < moleculeIDs.size(); ++i) {
+    flag[moleculeIDs[i]] = true;
+  }
+  
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    this->_fcoeff[i] = (flag[i]) ? 2.5 : 1.5;
+  }
+  
+  _dRhoiOvMM.resize(nbSpecies);
+
+  // #  
+  eData->needsBarVars = true;
+  eData->dP_Bar.resize(nbSpecies + 1);
+
+  _RiGas.resize(nbSpecies);
+  _mmasses.resize(nbSpecies);
+  
+  _ys.resize(nbSpecies);
+  _alpha_hat.resize(nbSpecies);
+  _alpha_bar.resize(nbSpecies);
+  
+  _energyTr_L.resize(nbSpecies);
+  _energyTr_R.resize(nbSpecies); 
+  _energyTr_hat.resize(nbSpecies);
+    
+//   _beta_hat_nodal.resize(nbCellStates);
+  _RiGas.resize(nbSpecies);
+  _mmasses.resize(nbSpecies);
+
+  // Z vector and transformation matrix resized:
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+
+  _Zavg.resize(nbEqs);
+  _ZRight.resize(nbEqs);
+  _ZLeft.resize(nbEqs);
+  
+  _dJdZ.resize(nbSpecies+3,nbEqs);
+
+  _DeltaZ.resize(nbEqs);
+  
+  _DeltaJ.resize(nbSpecies + 2 + nbVibModes);
+  _DeltaSqrtRhoTimesYs.resize(nbSpecies);
+  
+  // Gradient storing facilities resized:
+   
+  _consistent_DeltaRhoYs.resize(nbSpecies);
+  
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE, class UPDATEVAR>
+void RoeVinokurTCNEQFlux<BASE, UPDATEVAR>::linearize()
+{  /*
+    * Try consistent sqrtRho_hat
+    * Try beta_hat and alpha_hat computed as a L and R average instead of evaluating them at the averaged conditions
+    */
+    
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  RealVector& linearData = _upVar->getModel()->getPhysicalData();
+  // NEQ data:
+  SafePtr<PhysicalChemicalLibrary> library =
+    PhysicalModelStack::getActive()->getImplementor()->template 
+    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  SafePtr<PhysicalChemicalLibrary::ExtraData> eData = library->getExtraData();
+  
+  _upVar->setExtraData(true);
+  _upVar->computePhysicalData(*this->_statesLR[0], _lData);
+  _energyTr_L = (eData->energyTr);  
+  _upVar->computePhysicalData(*this->_statesLR[1], _rData);
+  _energyTr_R = (eData->energyTr);
+  _upVar->setExtraData(false);
+ 
+  typedef typename UPDATEVAR::PTERM UPTERM;
+  
+  const CFreal rhoL = _lData[UPTERM::RHO];
+  const CFreal rhoR = _rData[UPTERM::RHO];
+  cf_assert (rhoL > 0.0);
+  cf_assert (rhoR > 0.0);
+
+  const CFreal sqrtRho_Left  = std::sqrt(rhoL);
+  const CFreal sqrtRho_Right = std::sqrt(rhoR);
+   
+  const CFuint nbSpecies = _upVar->getModel()->getNbScalarVars(0);
+  
+  const CFuint uID  = nbSpecies;
+  const CFuint vID  = nbSpecies+1;
+  const CFuint eID  = nbSpecies+2;
+  const CFuint evID = nbSpecies+3;
+
+  const CFuint firstSpecies = _upVar->getModel()->getFirstScalarVar(0);
+  const CFuint nbVibModes   = _upVar->getModel()->getNbScalarVars(1);
+  const CFuint firstVibMode = _upVar->getModel()->getFirstScalarVar(1);  
+  
+  const CFuint start = (library->presenceElectron()) ? 1 : 0;
+
+  cf_assert(_ys.size() == nbSpecies);
+  cf_assert(nbVibModes == 1);
+
+  linearData = 0.;
+
+  // Fill _ZLeft and _ZRight vectors with the RoeVinokur States
+//   cout << "(*this->_statesLR[0]) = " << (*this->_statesLR[0]) << "\t(*this->_statesLR[1]) = " << (*this->_statesLR[1]) << endl;
+  for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+    
+    _ZLeft[iSpecies]  = (*this->_statesLR[0])[iSpecies]/sqrtRho_Left;
+    _ZRight[iSpecies] = (*this->_statesLR[1])[iSpecies]/sqrtRho_Right;
+  }
+
+  _ZLeft[uID]  = sqrtRho_Left * _lData[UPTERM::VX];
+  _ZLeft[vID]  = sqrtRho_Left * _lData[UPTERM::VY];
+  _ZLeft[eID]  = sqrtRho_Left * _lData[UPTERM::H];
+  _ZLeft[evID] = sqrtRho_Left * _lData[firstVibMode];
+
+  _ZRight[uID]  = sqrtRho_Right * _rData[UPTERM::VX];
+  _ZRight[vID]  = sqrtRho_Right * _rData[UPTERM::VY];
+  _ZRight[eID]  = sqrtRho_Right * _rData[UPTERM::H];
+  _ZRight[evID] = sqrtRho_Right * _rData[firstVibMode];
+
+  
+  _Zavg = 0.5 * ( _ZLeft + _ZRight );
+  _energyTr_hat = 0.5 * ( _energyTr_L + _energyTr_R );
+
+ const CFreal sqrtRho_hat = 0.5 * ( sqrtRho_Left + sqrtRho_Right );
+//     const CFreal sqrtRho_hat = std::sqrt(sqrtRho_Left*sqrtRho_Right);
+
+/* Numerical check: computing averaged values through Z vectors and through aL and aR coefficients is the same.
+
+//   const CFreal aL = sqrtRho_Left / ( sqrtRho_Left + sqrtRho_Right );
+//   const CFreal aR = sqrtRho_Right / ( sqrtRho_Left + sqrtRho_Right );
+// 
+// for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+//     cout << "\ndiffIn["<< iSpecies <<"] = " << ( sqrtRho_hat * (aL * (*this->_statesLR[0])[iSpecies]/rhoL + aR * (*this->_statesLR[1])[iSpecies] /rhoR)  - _Zavg[iSpecies]);
+//   }
+//   cout << "\ndiffInU = " << (sqrtRho_hat * (aL * _lData[UPTERM::VX] + aR * _rData[UPTERM::VX])  - _Zavg[uID]);
+//   cout << "\ndiffInV = " << (sqrtRho_hat * (aL * _lData[UPTERM::VY] + aR * _rData[UPTERM::VY])  - _Zavg[vID]);
+//   cout << "\ndiffInH = " << (sqrtRho_hat * (aL * _lData[UPTERM::H] + aR * _rData[UPTERM::H]) - _Zavg[eID]);
+//   cout << "\ndiffInEv = " << (sqrtRho_hat * (aL * _lData[firstVibMode] + aR * _rData[firstVibMode])  - _Zavg[evID]);
+*/
+
+  _ys = 0.;
+
+  for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++ ){
+
+    const CFreal Ys = _Zavg[iSpecies]/sqrtRho_hat;
+    _ys[iSpecies] = Ys;
+  }
+
+  //Quoting from Euler2DNEQRhoivtTv:
+  // set the current species fractions in the thermodynamic library
+  // this has to be done right here, before computing any other thermodynamic quantity !!! 
+  library->setSpeciesFractions(_ys);
+
+  
+  //-------------------------------------------------------------------------//
+  
+  // Filling part of linearData:
+
+  for (CFuint iSpecies = 0; iSpecies < nbSpecies; ++iSpecies) {
+
+    linearData[firstSpecies + iSpecies] = _ys[iSpecies];
+    if (_ys[iSpecies] > 1.1 ) {
+      cout << "ys[" << iSpecies << "] > 1.1 = " << _ys[iSpecies] << endl;
+    }
+  }
+
+//     cout << "linearData(1) = "<< linearData << endl;
+
+  const CFreal rho_hat = sqrtRho_hat * sqrtRho_hat;
+  linearData[UPTERM::RHO] = rho_hat;
+//     cout << "linearData = "<< linearData << endl;
+
+  const CFreal sqrtRhoU_hat = _Zavg[uID];
+  linearData[UPTERM::VX] = sqrtRhoU_hat/sqrtRho_hat;
+//     cout << "linearData = "<< linearData << endl;
+
+  const CFreal sqrtRhoV_hat = _Zavg[vID];
+  linearData[UPTERM::VY] = sqrtRhoV_hat/sqrtRho_hat;
+//     cout << "linearData = "<< linearData << endl;
+
+  linearData[UPTERM::V] = std::sqrt(linearData[UPTERM::VX]*linearData[UPTERM::VX] + linearData[UPTERM::VY]*linearData[UPTERM::VY]);
+//     cout << "linearData = "<< linearData << endl;
+
+  const CFreal sqrtRhoH_hat = _Zavg[eID];
+  linearData[UPTERM::H] = sqrtRhoH_hat/sqrtRho_hat;
+//     cout << "linearData = "<< linearData << endl;
+
+  const CFreal sqrtRhoEv_hat = _Zavg[evID];
+  linearData[firstVibMode] = sqrtRhoEv_hat/sqrtRho_hat;
+//     cout << "linearData = "<< linearData << endl;
+
+//         cout << "linearData(2) = "<< linearData << endl;
+  // Filling part of linearData(end)
+   
+  const CFreal p_L = _lData[UPTERM::P];
+  const CFreal p_R = _rData[UPTERM::P];
+
+  const CFreal p_hat = 0.5 * ( p_L + p_R );
+
+  _DeltaP = p_R - p_L;
+
+//     cout << "***************************************************************************\n";
+//     cout << "p_L = "<< p_L  << " p_R = "<< p_R << endl;
+//     cout << "_DeltaP = " << _DeltaP  << endl;
+ 
+//     CFreal numBeta = 0.;
+//     CFreal denBeta = 0.;
+//     for (CFuint i = 0; i < nbSpecies; ++i) {
+//       const CFreal sigmai = linData[firstVarY + i]/_mmasses[i];
+//       numBeta += sigmai;
+//       denBeta += sigmai*this->_fcoeff[i];
+//     }
+// 
+// const CFreal beta = numBeta/denBeta;
+// const CFreal Rgas = library->getRgas();
+
+  // Compute \gammaMinusBetaU2_s and \beta at hat conditions:
+
+  library->setRiGas(_RiGas);
+  library->getMolarMasses(_mmasses);
+  SafePtr<RealVector> fcoeff = library->getAtomicityCoeff();
+
+
+  // Compute beta|_nodes, _beta_hat, gammaMinusBetaU2_s|_nodes and gammaMinusBetaU2_s_hat
+
+  //    _beta_hat computed at the average state conditions
+  CFreal numBeta = 0.;
+  CFreal denBeta = 0.;
+
+  CFreal numBeta_L = 0.;
+  CFreal denBeta_L = 0.;
+
+  CFreal numBeta_R = 0.;
+  CFreal denBeta_R = 0.;
+
+  for (CFuint iSpecies = start; iSpecies < nbSpecies; ++iSpecies) {
+
+//     const CFreal Ys = _ys[iSpecies];
+// 
+//     const CFreal sigmai = Ys/_mmasses[iSpecies];
+// 
+//     numBeta += sigmai;
+//     denBeta += sigmai*(*fcoeff)[iSpecies];
+
+  const CFreal Ys_L = _ZLeft[iSpecies]/sqrtRho_Left;
+  const CFreal Ys_R = _ZRight[iSpecies]/sqrtRho_Right;
+
+  const CFreal sigmai_L = Ys_L/_mmasses[iSpecies];
+  const CFreal sigmai_R = Ys_R/_mmasses[iSpecies];
+
+    numBeta_L += sigmai_L;
+    denBeta_L += sigmai_L*(*fcoeff)[iSpecies];
+    
+    numBeta_R += sigmai_R;
+    denBeta_R += sigmai_R*(*fcoeff)[iSpecies];
+
+  }//end: loop over nbSpecies
+
+//   _beta_hat = numBeta/denBeta;
+
+  const CFreal beta_L = numBeta_L / denBeta_L;
+  const CFreal beta_R = numBeta_R / denBeta_R;
+
+  _beta_hat = 0.5 * (beta_L + beta_R);
+
+
+  const CFreal T_L = _lData[UPTERM::T];
+  const CFreal T_R = _rData[UPTERM::T];
+  const CFreal T_hat = 0.5 * ( T_L + T_R);
+
+  //  _alpha_hat evaluated at T_hat = sum T_i/3.0
+  _alpha_hat = 0.;
+
+  for (CFuint iSpecies = start; iSpecies < nbSpecies; ++iSpecies) {
+
+    const CFreal alphaS_L = _RiGas[iSpecies] * T_L - beta_L * _energyTr_L[iSpecies];
+    const CFreal alphaS_R = _RiGas[iSpecies] * T_R - beta_R * _energyTr_R[iSpecies];
+
+    //     const CFreal alpha_s = _RiGas[iSpecies] * T_hat - _beta_hat * _energyTr_hat[iSpecies];
+
+//     _alpha_hat[iSpecies] = alpha_s;
+    _alpha_hat[iSpecies] = 0.5 * (alphaS_L + alphaS_R);
+
+  }//end: loop over nbSpecies
+
+  // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  const CFreal U2_hat = linearData[UPTERM::V]*linearData[UPTERM::V];
+  
+  const CFreal h_hat = linearData[UPTERM::H] - 0.5 * U2_hat;
+
+  const CFreal ev_hat = linearData[firstVibMode];
+
+  // Evaluate sound speed at 'hat' conditions.
+
+  CFreal sumAlphaHatYs = 0.0;
+  
+  for (CFuint iSpecies = 0; iSpecies < nbSpecies; ++iSpecies) {
+
+    sumAlphaHatYs += _alpha_hat[iSpecies] * _ys[iSpecies];
+  }
+
+
+  const CFreal c_hatSq_sum = sumAlphaHatYs + _beta_hat * (h_hat - ev_hat);
+  const CFreal c_hatSq_pressure = (1. + _beta_hat) * p_hat/rho_hat ;//Note: When there is a shock in the cell, c_hatSq_pressure and c_hatSq_sum are different, typically c_hatSq_pressure is bigger.
+
+  const CFreal sigma_hat = c_hatSq_pressure;
+  const CFreal sigma_hatSq = sigma_hat * sigma_hat;
+
+  //---------------------------------------------------------------------//
+  // Fill in dJdZ matrix
+  // This matrix computes the gradients of RhoS, rhoU2, rhoH and rhoEv
+  // in terms of the gradients of the linearization
+  // vars Z = [sqrtRhoS, sqrtRhoU,..., sqrtRhoW, sqrtRhoH, sqrtRhoEv]
+
+  const CFuint eKineticID = nbSpecies;
+  const CFuint HID = nbSpecies + 1;
+  const CFuint EvID = nbSpecies + 2;
+
+  _dJdZ = 0.;
+
+  for (CFuint iSpecies = 0; iSpecies < nbSpecies; ++iSpecies) {
+
+    const CFreal Ys = _ys[iSpecies];
+
+    for (CFuint jSpecies = 0; jSpecies < nbSpecies; ++jSpecies) {      
+
+      _dJdZ(iSpecies,jSpecies) = sqrtRho_hat * Ys;
+
+      if (iSpecies == jSpecies){
+        _dJdZ(iSpecies,jSpecies) += sqrtRho_hat;
+      }
+    }
+
+    _dJdZ(HID,iSpecies) = sqrtRhoH_hat;
+    _dJdZ(EvID,iSpecies) = sqrtRhoEv_hat;
+  }
+
+  _dJdZ(eKineticID,eKineticID)   = sqrtRhoU_hat;
+  _dJdZ(eKineticID,eKineticID+1) = sqrtRhoV_hat;
+
+  _dJdZ(HID,eID)  = sqrtRho_hat;
+
+  _dJdZ(EvID,evID)  = sqrtRho_hat;
+
+  //       cout << "_dJdZ = \n"<< _dJdZ << endl;
+
+  // Filling dJdZ (end)
+
+  for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++ ){
+
+    const CFreal  sqrtRhoTimesYs_Left = _ZLeft[iSpecies];
+    const CFreal  sqrtRhoTimesYs_Right = _ZRight[iSpecies];
+
+    _DeltaSqrtRhoTimesYs[iSpecies] = sqrtRhoTimesYs_Right - sqrtRhoTimesYs_Left;
+  }
+  //*************************
+
+  _DeltaSqrtRhoTimesU = 0.;
+  _DeltaSqrtRhoTimesV = 0.;
+
+  const CFreal  sqrtRhoTimesU_Left  = _ZLeft[uID];
+  const CFreal  sqrtRhoTimesU_Right = _ZRight[uID];
+
+  const CFreal  sqrtRhoTimesV_Left  = _ZLeft[vID];
+  const CFreal  sqrtRhoTimesV_Right = _ZRight[vID];
+
+  _DeltaSqrtRhoTimesU = sqrtRhoTimesU_Right - sqrtRhoTimesU_Left;
+  _DeltaSqrtRhoTimesV = sqrtRhoTimesV_Right - sqrtRhoTimesV_Left;
+  //*************************
+
+  _DeltaSqrtRhoTimesH = 0.;
+  _DeltaSqrtRhoTimesEv = 0.;
+
+  const CFreal  sqrtRhoTimesH_Left  = _ZLeft[eID];
+  const CFreal  sqrtRhoTimesH_Right = _ZRight[eID];
+
+  const CFreal  sqrtRhoTimesEv_Left  = _ZLeft[evID];
+  const CFreal  sqrtRhoTimesEv_Right = _ZRight[evID];
+
+  _DeltaSqrtRhoTimesH  = sqrtRhoTimesH_Right - sqrtRhoTimesH_Left;
+  _DeltaSqrtRhoTimesEv = sqrtRhoTimesEv_Right - sqrtRhoTimesEv_Left;
+  //*************************
+
+  _DeltaZ = 0.;
+  
+  for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++ ){
+    _DeltaZ[iSpecies] = _DeltaSqrtRhoTimesYs[iSpecies];
+  }
+  
+  _DeltaZ[uID] = _DeltaSqrtRhoTimesU;
+  _DeltaZ[vID] = _DeltaSqrtRhoTimesV;
+  _DeltaZ[eID] = _DeltaSqrtRhoTimesH;
+  _DeltaZ[evID] = _DeltaSqrtRhoTimesEv;
+
+  //     cout << "_DeltaZ = "<< _DeltaZ << endl;
+
+    _DeltaJ = 0.;
+    _DeltaJ = _dJdZ * _DeltaZ;
+
+  //     cout << "_DeltaJ = "<< _DeltaJ << endl;
+
+
+    for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++ ){
+
+      _consistent_DeltaRhoYs[iSpecies] = _DeltaJ[iSpecies];
+    }
+
+  _consistent_DeltaHalfRhoUSq = _DeltaJ[eKineticID];
+
+  _consistent_DeltaRhoH = _DeltaJ[HID];
+  _consistent_DeltaRhoEv = _DeltaJ[EvID];
+
+  // end: compute gradients
+
+
+   const CFreal errorInC_hatSq = c_hatSq_pressure - c_hatSq_sum;
+   const CFreal errorInC_hatSq_InPercent = 100. * std::abs( (c_hatSq_pressure - c_hatSq_sum)/c_hatSq_pressure );
+
+   CFreal p_bar = 0.;
+   CFreal T_bar = 0.;
+   CFreal c_barSq = 0.;
+
+      CFreal pressureInconsistency = (1. + _beta_hat) * _DeltaP - _beta_hat * ( _consistent_DeltaRhoH - _consistent_DeltaHalfRhoUSq - _consistent_DeltaRhoEv );
+
+
+      for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+        pressureInconsistency -= _alpha_hat[iSpecies] * _consistent_DeltaRhoYs[iSpecies];
+      }
+   
+
+//    cout << "errorInP = " << errorInP << endl;
+  const CFreal detector = std::abs(p_hat -   rho_hat * c_hatSq_sum / (1. +  _beta_hat) );
+
+
+    /**/
+    CFreal AUX = (1. + _beta_hat) * _DeltaP - _beta_hat * ( _consistent_DeltaRhoH - _consistent_DeltaHalfRhoUSq - _consistent_DeltaRhoEv );
+    for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+      AUX -= _alpha_hat[iSpecies] * _consistent_DeltaRhoYs[iSpecies];
+    }
+
+    cout << "detector = " << detector << "\terrorInP = " << AUX << endl;
+
+    /**/
+  
+   if( detector < 1e-8 ){
+				//errorInC_hatSq_InPercent < 0.1
+				//std::abs(pressureInconsistency)
+				//std::abs(pressureInconsistency)  < .1 * c_hatSq_pressure * std::abs(sqrtRho_Right - sqrtRho_Left)
+
+     _beta_bar = _beta_hat;
+     _alpha_bar = _alpha_hat;
+     
+     p_bar = p_hat;
+     T_bar = T_hat;
+     c_barSq = c_hatSq_sum;
+
+//      cout << "p_bar ( =  p_hat) = " << p_bar << endl;
+//      cout << "T_bar ( =  T_hat) = " << T_bar << endl;
+   }
+
+   else{
+
+    std::cout << "Linearizing!\n";
+     
+    CFreal D = _DeltaP * _DeltaP;
+    CFreal errorInP = (1. + _beta_hat) * _DeltaP - _beta_hat * ( _consistent_DeltaRhoH - _consistent_DeltaHalfRhoUSq - _consistent_DeltaRhoEv );
+
+
+    for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+      D += sigma_hatSq * _consistent_DeltaRhoYs[iSpecies] * _consistent_DeltaRhoYs[iSpecies];
+      errorInP -= _alpha_hat[iSpecies] * _consistent_DeltaRhoYs[iSpecies];
+    }
+    
+
+      CFreal num = 0.;
+      const CFreal denominator = D - _DeltaP * errorInP;
+
+      if(std::abs(denominator) > 1.e-12){
+        std::cout << "Really linearizing!\n";
+        _beta_bar = _beta_hat * D / denominator;
+
+        for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+          num = D * _alpha_hat[iSpecies] + sigma_hatSq * _consistent_DeltaRhoYs[iSpecies] * errorInP;
+          _alpha_bar[iSpecies] = num/denominator;
+        }        
+      }
+
+      else{
+        _beta_bar = _beta_hat;
+        _alpha_bar = _alpha_hat;        
+      }
+      
+      /**/
+      cout << "D = " << D << "\t_DeltaP = " << _DeltaP << "\terrorInP = " << errorInP << endl;
+      cout << "D - DeltaP * errorInP = " << (D - _DeltaP * errorInP) << endl;
+      cout << "_beta_bar = " << _beta_bar << "\t_alpha_bar = " << _alpha_bar << endl;
+      /**/
+
+      CFreal sumAlphasBarYs = 0.0;
+
+      for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+          sumAlphasBarYs += _alpha_bar[iSpecies] * _ys[iSpecies] ;
+      }
+
+      c_barSq = sumAlphasBarYs + _beta_bar * (h_hat - ev_hat);
+
+//       std::cout << "c_barSq = " << c_barSq << "\n";
+//       assert(c_barSq > 0.);
+      if( c_barSq < 0.){
+        assert(false);
+//         c_barSq = std::sqrt(c_hatSq_pressure * c_hatSq_sum);
+      }
+
+      p_bar = linearData[UPTERM::RHO] * c_barSq / (1. + _beta_bar) ;
+
+      CFreal sum_Rs_Rho_s = 0.;
+      
+      for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+
+          const CFreal rho_s = rho_hat *_ys[iSpecies];
+          sum_Rs_Rho_s  += _RiGas[iSpecies] * rho_s;
+      }
+
+      T_bar = p_bar / sum_Rs_Rho_s;
+      
+//       cout << "p_bar = " << p_bar << endl;
+//       cout << "T_bar = " << T_bar << endl;
+
+      /*Debugging*/
+
+      CFreal non_consistency = (1. + _beta_hat) * _DeltaP - _beta_hat * ( _consistent_DeltaRhoH - _consistent_DeltaHalfRhoUSq - _consistent_DeltaRhoEv );
+      CFreal consistency = (1. + _beta_bar) * _DeltaP - _beta_bar * ( _consistent_DeltaRhoH - _consistent_DeltaHalfRhoUSq - _consistent_DeltaRhoEv );
+
+
+      const CFreal non_consistency_2 = sumAlphaHatYs + _beta_hat * (h_hat - ev_hat) - (1.+ _beta_hat) * p_hat/rho_hat;
+      const CFreal consistency_2 = sumAlphasBarYs + _beta_bar * (h_hat - ev_hat) - (1.+ _beta_bar) * p_bar/rho_hat;
+
+      for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+        non_consistency -= _alpha_hat[iSpecies] * _consistent_DeltaRhoYs[iSpecies];
+        consistency -= _alpha_bar[iSpecies] * _consistent_DeltaRhoYs[iSpecies];
+      }
+      
+//       if (consistency > 1.e-10)
+//         cout << "non_consistency = " << non_consistency << "\tconsistency = "<< consistency<< "\tConsistency not attained!"<< endl;
+
+//       if (consistency_2 > 1.e-9)
+        cout << "Consistency measure # 2 = "<< consistency_2 << "\tNon consistency = "<< non_consistency_2<<  endl;
+
+//       if ( p_bar < min(p_L,p_R))
+//         cout <<"p_bar below min(p_L,p_R) " << p_bar << " < " << min(p_L,p_R) << endl;
+//       else if ( p_bar > max(p_L,p_R))
+//         cout <<"p_bar over max(p_L,p_R) " << p_bar << " > " << max(p_L,p_R) << endl;
+// 
+//       if ( T_bar < min(T_L,T_R))
+//         cout <<"T_bar below min(T_L,T_R) "<< T_bar << " < " << min(T_L,T_R) << endl;
+//       else if ( T_bar > max(T_L,T_R))
+//         cout <<"T_bar over max(T_L,T_R) " << T_bar << " > " << max(T_L,T_R) << endl;
+
+  /*Debugging (end)*/
+      
+   }
+
+    // Update dpdRhos and dpdRhoE
+    eData->dP_Bar = 0.;
+
+    for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+
+      eData->dP_Bar[iSpecies] = _alpha_bar[iSpecies];
+    }
+
+    eData->dP_Bar[nbSpecies] = _beta_bar;
+    // Update dpdRhos and dpdRhoE (end)
+
+//     cout << "_alpha_hat = " << _alpha_hat << ";\t_beta_hat = " << _beta_hat << endl;
+//     cout << "_alpha_bar = " << _alpha_bar << ";\t_beta_bar = " << _beta_bar << endl;
+
+    linearData[UPTERM::P] = p_bar;
+    linearData[UPTERM::E] = linearData[UPTERM::H] - linearData[UPTERM::P] / linearData[UPTERM::RHO];
+    linearData[UPTERM::T] = T_bar;
+    linearData[UPTERM::A] = std::sqrt(c_barSq);
+
+//     cout << "linearData = "<< linearData << endl;
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

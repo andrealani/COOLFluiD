@@ -1,0 +1,173 @@
+# COOLFluiD Startfile
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+# Residual = 
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libForwardEuler libParaViewWriter libNavierStokes libFiniteVolume libNewtonMethod libNewtonMethodFVMNavierStokes libFiniteVolumeNavierStokes libGambit2CFmesh libGmsh2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/SolarConvection/
+Simulator.Paths.ResultsDir = ./RESULTS
+
+# this checks that all options that are given are spelled correctly and actually exist
+# this always fails for Gambit settings
+#CFEnv.ErrorOnUnusedConfig = true
+
+###############################################################################
+# Physical Model
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes3D
+Simulator.SubSystem.NavierStokes3D.refValues = 7.03e12 1.0 1.0 1.0 2.37e6
+Simulator.SubSystem.NavierStokes3D.refLength = 1.0
+Simulator.SubSystem.NavierStokes3D.ConvTerm.gamma = 1.66
+#Simulator.SubSystem.NavierStokes3D.ConvTerm.RDim = 287.046 
+
+#Simulator.SubSystem.NavierStokes3D.DiffTerm.Reynolds =   10778.4
+#Simulator.SubSystem.NavierStokes3D.ConvTerm.tempRef = 288.1428
+#Simulator.SubSystem.NavierStokes3D.ConvTerm.pRef = 101325
+#Simulator.SubSystem.NavierStokes3D.ConvTerm.machInf =   0.1760
+
+# using kinematic viscosity
+# Simulator.SubSystem.NavierStokes3D.DiffTerm.ViscosityLaw = FixedKinematicViscosity
+# Simulator.SubSystem.NavierStokes3D.DiffTerm.FixedKinematicViscosity.KinVisc = 0.0100
+
+# using dynamic viscosity
+Simulator.SubSystem.NavierStokes3D.DiffTerm.ViscosityLaw = Fixed
+Simulator.SubSystem.NavierStokes3D.DiffTerm.Fixed.Fix_visc = 1e12
+
+###############################################################################
+# Output
+Simulator.SubSystem.OutputFormat        =  CFmesh Tecplot
+
+Simulator.SubSystem.Tecplot.FileName    = cube.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = Pvt
+Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+
+Simulator.SubSystem.CFmesh.FileName = cube.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 1000
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+#Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
+
+###############################################################################
+# Time Marching
+Simulator.SubSystem.StopCondition = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1 #100000000
+Simulator.SubSystem.SubSystemStatus.TimeStep = 1.
+# Simulator.SubSystem.SubSystemStatus.ComputeDT = MaxDT
+# Simulator.SubSystem.SubSystemStatus.MaxDT.DT_Ratio = 0.9
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = FunctionDT
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Vars = i
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = 1.0
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 4.
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = BDFLSS
+Simulator.SubSystem.BDFLSS.Data.PCType = PCASM
+Simulator.SubSystem.BDFLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.BDFLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.BDFLSS.Data.MaxIter = 1000
+Simulator.SubSystem.BDFLSS.Data.RelativeTolerance = 1e-4
+
+Simulator.SubSystem.ConvergenceMethod = BDF2
+Simulator.SubSystem.BDF2.ShowRate = 1
+Simulator.SubSystem.BDF2.Data.CFL.Value = 1.0
+Simulator.SubSystem.BDF2.Data.CFL.ComputeCFL = Determine
+# Simulator.SubSystem.BDF2.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.BDF2.Data.CFL.Function.Def = 4
+Simulator.SubSystem.BDF2.Data.MaxSteps = 10
+Simulator.SubSystem.BDF2.Data.Norm = -3.
+Simulator.SubSystem.BDF2.Data.PrintHistory = true
+Simulator.SubSystem.BDF2.ConvergenceFile = convergence.plt
+Simulator.SubSystem.BDF2.UpdateSol = ImposeHSEquilibriumUpdateSol
+
+###############################################################################
+# Mesh Reader
+Simulator.SubSystem.Default.listTRS = Inlet Outlet Periodic1 Periodic2
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cube32x32x128.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 0.000000657
+
+###############################################################################
+# Space Method
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhs
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+#Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUp3D
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp3D.choiceA12 = 1
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp3D.machInf = 0.01
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Pvt
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Pvt
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS3D
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp3D
+# Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn3D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn3D.coeffEps = 1.0
+
+# Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = NavierStokesChannelST
+# Simulator.SubSystem.CellCenterFVM.Data.NavierStokesChannelST.ChannelLength = 12.5663706143591725
+
+###############################################################################
+# Initial Conditions
+Simulator.SubSystem.CellCenterFVM.Restart = false
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.InField.Def = \
+					7.03e12*(1.+exp(-(x^2.+y^2.+z^2.)/(4.872e7)^2.)/10.) \
+					0.  \
+					0. \
+					0. \
+					2.37e6
+                                         
+#7.03e12*(1.+exp(-(x^2.+y^2.+z^2.))/1000000.) \        
+###############################################################################
+# Boundary Conditions
+
+# Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMove
+# Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TrsPriorityList = wall
+# Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TRSName = wall
+
+# all periodic boundaries
+Simulator.SubSystem.CellCenterFVM.BcComds = MirrorVelocityFVMCC BCPeriodicFVMCC BCPeriodicFVMCC MirrorVelocityFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = BCInlet BCPer1 BCPer2 BCOutlet
+
+Simulator.SubSystem.CellCenterFVM.BCPer1.applyTRS  = Periodic1
+Simulator.SubSystem.CellCenterFVM.BCPer1.Threshold = 100000.
+Simulator.SubSystem.CellCenterFVM.BCPer1.TranslationVector = 48720000. 0. 0.
+
+Simulator.SubSystem.CellCenterFVM.BCPer2.applyTRS = Periodic2
+Simulator.SubSystem.CellCenterFVM.BCPer2.Threshold = 100000.
+Simulator.SubSystem.CellCenterFVM.BCPer2.TranslationVector = 0. 48720000. 0.
+
+Simulator.SubSystem.CellCenterFVM.BCInlet.applyTRS = Inlet
+Simulator.SubSystem.CellCenterFVM.BCOutlet.applyTRS = Outlet
+
+###############################################################################
+# DataProcessing
+
+

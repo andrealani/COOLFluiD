@@ -1,0 +1,52 @@
+===================
+   STARTING FILE
+===================
+
+Nbr. of grid levels :   1
+Viscous/inviscid :      0
+Struct. grid type :     3
+Semi/full coarsening :  1
+Remeshing :             0
+Free-stream :           .203 0.4 2.0E+5 290.0
+### BOUNDARY POINT DISTRIBUTION ########################
+--------------------------------------------------------
+Nbr. bodies :		6
+--------------------------------------------------------
+Pts file :		dlrr4c_aoa1.pts
+Config. file :		dlrr4c_aoa1.cfg
+Dpl input file :	dlrr4c_aoa1.dpl
+XYoutput file :		dlrr4c_aoa1.xyout
+--------------------------------------------------------
+Angle thresh wawa :	5.0
+Angle thresh far-fld :  20.0
+--------------------------------------------------------
+Proximity thresh :	0.25
+Max theta & thetap :	70.0 80.0
+Max ang. for if lgth :	20.0
+--------------------------------------------------------
+Max AR at extr. :	10.0
+--------------------------------------------------------
+### STRUCTURED GRID GENERATION #########################
+--------------------------------------------------------
+2nd order expl coeff :  3.0
+2nd order impl coeff :  2.0
+4th order expl coeff :  0.0
+Implicit factor :       1.0
+--------------------------------------------------------
+Volume average factor : 0.8
+--------------------------------------------------------
+### UNSTRUCTURED GRID GENERATION #######################
+--------------------------------------------------------
+Spacing exp. base :     1.95
+Nbr iter spc smooth :   4
+Conv thresh spc smth :  1.0e-2
+Ovrelax coef spc smth : 1.0
+--------------------------------------------------------
+Distance tolerance :    0.65
+Stretching tolerance :  0.65
+--------------------------------------------------------
+Max number of row :     150
+--------------------------------------------------------
+Smth. beta coeff :	0.5
+Smth. relaxation fact : 1.4
+========================================================

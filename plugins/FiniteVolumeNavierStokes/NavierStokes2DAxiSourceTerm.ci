@@ -1,0 +1,214 @@
+#include "Common/CFLog.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/EquationSetData.hh"
+#include "FiniteVolume/DerivativeComputer.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+NavierStokes2DAxiSourceTerm<EULERVAR, NSVAR>::
+NavierStokes2DAxiSourceTerm(const std::string& name) :
+  ComputeSourceTermFVMCC(name),
+  _varSet(CFNULL),
+  _diffVarSet(CFNULL),
+  _temp(),
+  _physicalData(),
+  _values(),
+  _states(),
+  _dummyGradients()
+{
+  addConfigOptionsTo(this);
+
+  _uvID = std::vector<CFuint>();
+  setParameter("uvIDs", &_uvID);
+  
+  _useGradientLS = false;
+  setParameter("UseGradientLS", &_useGradientLS);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+void NavierStokes2DAxiSourceTerm<EULERVAR, NSVAR>::defineConfigOptions
+(Config::OptionList& options)
+{
+  options.template addConfigOption< std::vector<CFuint> > ("uvIDs", "IDs of u and v components");
+  options.template addConfigOption< bool > 
+    ("UseGradientLS", "Use the gradient computed with the least square reconstruction");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+NavierStokes2DAxiSourceTerm<EULERVAR, NSVAR>::~NavierStokes2DAxiSourceTerm()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+void NavierStokes2DAxiSourceTerm<EULERVAR, NSVAR>::setup()
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+
+  ComputeSourceTermFVMCC::setup();
+
+  _temp.resize(PhysicalModelStack::getActive()->getNbEq());
+
+  _varSet = this->getMethodData().getUpdateVar().template d_castTo<EULERVAR>();
+  _varSet->getModel()->resizePhysicalData(_physicalData);
+  _pressureJacob.resize(PhysicalModelStack::getActive()->getNbEq());
+  _pressureJacob = 0.0;
+  
+  _diffVarSet = this->getMethodData().getDiffusiveVar().template d_castTo<NSVAR>();
+
+  SafePtr<DerivativeComputer> derComput =
+    this->getMethodData().getDerivativeComputer();
+  const CFuint nbNodesInControlVolume = derComput->getMaxNbVerticesInControlVolume();
+  _values.resize(PhysicalModelStack::getActive()->getNbEq(), nbNodesInControlVolume);
+
+  const CFuint maxNbNodesIn2DCV = 4;
+  _states.reserve(maxNbNodesIn2DCV);
+
+  // default setting for _uvID array
+  if (_uvID.size() != 2) {
+    _uvID.resize(2);
+    _uvID[0] = 1;
+    _uvID[1] = 2;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+void NavierStokes2DAxiSourceTerm<EULERVAR, NSVAR>::computeSource
+(Framework::GeometricEntity *const element, RealVector& source, RealMatrix& jacobian)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  const EquationSubSysDescriptor& eqSSD = PhysicalModelStack::getActive()->
+    getEquationSubSysDescriptor();
+  const CFuint nbEqs = eqSSD.getNbEqsSS();
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
+
+  // AL: this may fail in general cases other than ICP!
+  //     Here we are assuming that there is fluid + something else
+  //     In a weakly coupled simulation you must enter here only when the fluid is active
+  //     (i.e. during the RHS and RHS fluid jacobian computations)
+  // AL: this will fail if you try to solve turbulence decoupled
+  if (eqSSD.getEqSS() == 0 || nbEqs == totalNbEqs) {
+    CFLogDebugMed( "NavierStokes2DAxiSourceTerm::computeSource()\n");
+
+    DataHandle<RealVector> nstates = 
+      _sockets.template getSocketSink<RealVector>("nstates")->getDataHandle();
+    DataHandle<CFint> isOutward = this->socket_isOutward.getDataHandle();    
+    DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+    DataHandle<CFreal> normals = this->socket_normals.getDataHandle();
+    cf_assert(_varSet.isNotNull());
+    
+    // please note the reference &
+    State& currState = *element->getState(0);
+
+    _varSet->computePhysicalData(currState, _physicalData);
+    
+    const CFuint elemID = element->getID();
+    
+    // compute the gradients by applying Green Gauss in the
+    // cell volume
+    CFreal dUdX = 0.0;
+    CFreal dVdR = 0.0;
+    
+    const CFuint uID = _uvID[0];
+    const CFuint vID = _uvID[1];
+    
+    CFLog(DEBUG_MED, "NavierStokes2DAxiSourceTerm::computeSource() => uID = " << uID << ", vID = " << vID << "\n"); 
+    
+    if (_useGradientLS && this->m_gradientsExist) {
+      const CFuint start = elemID*totalNbEqs;
+      dUdX = this->m_ux[start+uID];
+      dVdR = this->m_uy[start+vID];
+      CFLog(DEBUG_MED, "NavierStokes2DAxiSourceTerm::computeSource() => LS gradient in cell [" << 
+	    elemID << " ] => dUdX = [" << dUdX << "], dVdR = [" << dVdR << "]\n");
+    }
+    else {
+      _states.clear();
+      const vector<Node*>* const nodes = element->getNodes();
+      const CFuint nbNodesInElem = nodes->size();
+      for (CFuint i = 0; i < nbNodesInElem; ++i) {
+	_states.push_back(&nstates[(*nodes)[i]->getLocalID()]);
+      }
+      
+      const vector<GeometricEntity*>& faces = *element->getNeighborGeos();
+      cf_assert(faces.size() == nbNodesInElem);
+      
+      _diffVarSet->setGradientVars(_states, _values, nbNodesInElem);
+      for (CFuint i = 0; i < nbNodesInElem; ++i) {
+	// get the face normal
+	const CFuint faceID = faces[i]->getID();
+	const CFuint startID = faceID*PhysicalModelStack::getActive()->getDim();
+	CFreal nx = normals[startID];
+	CFreal ny = normals[startID + 1];
+	if (static_cast<CFuint>(isOutward[faceID]) != elemID) {
+	  nx *= -1.;
+	  ny *= -1.;
+	}
+	
+	if (i < (nbNodesInElem - 1)) {
+	  dUdX += nx*(_values(uID, i) + _values(uID, i+1));
+	  dVdR += ny*(_values(vID, i) + _values(vID, i+1));
+	}
+	else {
+	  dUdX += nx*(_values(uID, i) + _values(uID, 0));
+	  dVdR += ny*(_values(vID, i) + _values(vID, 0));
+	}
+      }
+      dUdX *= 0.5/volumes[elemID];
+      dVdR *= 0.5/volumes[elemID];
+      CFLog(DEBUG_MED, "NavierStokes2DAxiSourceTerm::computeSource() => GG gradient in cell [" << 
+	    elemID << " ] => dUdX = [" << dUdX << "], dVdR = [" << dVdR << "]\n");
+    }
+    
+    const CFreal avV = _physicalData[EULERVAR::PTERM::VY];
+    
+    // @todo this will not work if gradients are needed (Menter SST turb model)
+    const CFreal mu = _diffVarSet->getDynViscosity(currState, _dummyGradients);
+    const CFreal coeffMu = _diffVarSet->getModel().getCoeffTau()*2./3.*mu;
+    const CFreal invR = 1./(currState.getCoordinates())[YY];
+    const CFreal tauThetaTheta = -coeffMu*(dUdX + dVdR - 2.*avV*invR);
+    const CFreal volume = volumes[elemID];
+    
+    // AL: check this in Hontzatko's report (dp!)
+    source[vID] = _physicalData[EULERVAR::PTERM::P] - tauThetaTheta;
+    source *= volume;
+    
+    if (this->useAnalyticalJacob()) {
+      _varSet->computePressureDerivatives(currState, _pressureJacob);
+      _pressureJacob *= volume;
+      
+      jacobian.setRow(_pressureJacob, vID);
+      jacobian(vID, vID) = -2.*coeffMu*invR*volume;
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

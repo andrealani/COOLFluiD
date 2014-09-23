@@ -1,0 +1,186 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Common_LookUpTable2D_ci
+#define COOLFluiD_Common_LookUpTable2D_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Common {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY1, class KEY2, class VALUE>
+LookUpTable2D<KEY1,KEY2,VALUE>::LookUpTable2D(size_t table1size,
+					      size_t table2size) :
+  _table2size(table2size),
+  _table()
+{
+  if (table1size > 0) {
+    _table.reserve(table1size);
+  }
+}
+  
+//////////////////////////////////////////////////////////////////////////////
+  
+template<class KEY1, class KEY2, class VALUE>
+LookUpTable2D<KEY1,KEY2,VALUE>::~LookUpTable2D()
+{
+  typename std::vector<std::pair<key1_type,intablePtr_type> >::iterator itr;
+  for(itr = _table.begin(); itr != _table.end(); ++itr) {
+    delete itr->second;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY1, class KEY2, class VALUE>
+void LookUpTable2D<KEY1,KEY2,VALUE>::saveToStream(std::ostream& out) 
+{
+  CFuint size = 0;
+  typename std::vector<std::pair<key1_type,intablePtr_type> >::iterator itr;
+  for(itr = _table.begin(); itr != _table.end(); ++itr) {
+    size += itr->second->getSize();
+  }
+  
+  out << size << "\n";
+  typename std::vector<std::pair<key2_type,value_type> >::iterator jtr;
+  for(itr = _table.begin(); itr != _table.end(); ++itr) {
+    for(jtr = itr->second->begin(); jtr != itr->second->end(); ++jtr) {
+      out << itr->first  << " "
+	  << jtr->first  << " "
+	  << jtr->second << "\n";
+      --size;
+    }
+  }
+  cf_assert(size==0);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY1, class KEY2, class VALUE>
+void LookUpTable2D<KEY1,KEY2,VALUE>::readFromStream(std::istream& in) 
+{
+  CFuint size;
+  in  >> size;
+
+  KEY1  aKey1;
+  KEY2  aKey2;
+  VALUE aValue;
+
+  for(CFuint i = 0; i < size; ++i) {
+    in >> aKey1 >> aKey2 >> aValue;
+    insert(aKey1, aKey2, aValue);
+  }
+  sortKeys();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY1, class KEY2, class VALUE>
+void LookUpTable2D<KEY1,KEY2,VALUE>::sortKeys() 
+{
+  _table.sortKeys();
+  
+  typename std::vector<std::pair<key1_type,intablePtr_type> >::iterator itr;
+  for(itr = _table.begin(); itr != _table.end(); ++itr) {
+    itr->second->sortKeys();
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY1, class KEY2, class VALUE>
+void LookUpTable2D<KEY1,KEY2,VALUE>::insert(const KEY1& aKey1,
+					    const KEY2& aKey2,
+					    const VALUE& aValue)
+{
+  intablePtr_type intable;
+  // try to findif a table for the first key exists
+  try {
+    intable = _table.find(aKey1);
+  }
+  // if it doesn't, create it...
+  catch (Common::NoSuchValueException& e) {
+    intable = new intable_type(_table2size);
+    _table.insert(aKey1,intable);
+  }
+  
+  //then insert the value in that table with the second key
+  intable->insert(aKey2,aValue);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY1, class KEY2, class VALUE>
+VALUE LookUpTable2D<KEY1,KEY2,VALUE>::get(const KEY1& aKey1,
+					  const KEY2& aKey2)
+{
+  // std::pair<typename std::vector<typename std::pair<KEY1,intablePtr_type> >::iterator,
+  //     typename std::vector<typename std::pair<KEY1,intablePtr_type> >::iterator>
+  //     key1Bounds = _table.findBounds(aKey1);
+  
+  //   const KEY1 prv1 = result.first->first;
+  //   const KEY1 aft1 = result.second->first;
+  
+  //   const intablePtr_type prvTbl1 = key1Bounds.first->second;
+  //   const intablePtr_type aftTbl1 = key1Bounds.second->second;
+  
+  // std::pair<typename std::vector<typename std::pair<KEY2,
+  // VALUE> >::iterator,
+  //     typename std::vector<typename std::pair<KEY2,VALUE> >::iterator>
+  //     key2Bounds1 = prvTbl1.findBounds(aKey2);
+  
+  // std::pair<typename std::vector<typename std::pair<KEY2,
+  // VALUE> >::iterator,
+  //     typename std::vector<typename std::pair<KEY2,VALUE> >::iterator>
+  //     key2Bounds2 = prvTbl2.findBounds(aKey2);
+  
+  //   const KEY2 prv2 = result.first->first;
+  //   const KEY2 aft2 = result.second->first;
+  
+  
+  //   if(aft == prv) {
+  //     return prvTbl->get(aKey2);
+  //   }
+  
+  //   const VALUE aftVal = aftTbl->get(aKey2);
+  //   const VALUE prvVal = prvTbl->get(aKey2);
+  
+  //   return (aftVal - prvVal)/(aft - prv)*(aKey1 - prv) + prvVal;
+
+  
+  std::pair<typename std::vector<typename std::pair<KEY1,intablePtr_type> >::iterator,
+    typename std::vector<typename std::pair<KEY1,intablePtr_type> >::iterator>
+    result = _table.findBounds(aKey1);
+  
+  const KEY1 prv = result.first->first;
+  const KEY1 aft = result.second->first;
+  
+  const intablePtr_type prvTbl = result.first->second;
+  const intablePtr_type aftTbl = result.second->second;
+  
+  if(aft == prv) {
+    return prvTbl->get(aKey2);
+  }
+  
+  const VALUE aftVal = aftTbl->get(aKey2);
+  const VALUE prvVal = prvTbl->get(aKey2);
+  
+  return (aftVal - prvVal)/(aft - prv)*(aKey1 - prv) + prvVal;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace COOLFluiD
+ 
+} // namespace Common 
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Common_LookUpTable2D_ci

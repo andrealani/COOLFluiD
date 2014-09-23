@@ -1,0 +1,204 @@
+### Residual = 3.06722
+
+
+# Plasmatron torch - Air 11 - Adiabatic Inlet - 30kW - 12g/s
+# no initial solution: starts from torch.neu
+# Total Number Iter: 4 Reached Residual: 3.06722 and took: 1 min 42.0424 sec
+# FV 21dec2006
+
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+# Simulation Modules
+Simulator.Modules.Libs = libTecplotWriter\
+                         libNavierStokes\
+                         libMutation libMutationI\
+                         libICP\
+                         libLTE libICPLTE\
+                          \
+                         libFiniteVolume\
+                         libFiniteVolumeNavierStokes\
+                         libFiniteVolumeICP\
+                         libNewtonMethod\
+                         libGambit2CFmesh\
+                         libCFmeshFileReader\
+                         libCFmeshFileWriter
+
+# Simulation Parameters
+Simulator.Paths.WorkingDir = plugins/ICP/testcases/Plasmatron/AirTorch30kW_12gps_10kPa/
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType     = IncompNavierStokes2D
+Simulator.SubSystem.IncompNavierStokes2D.refValues = 1. 100. 100. 10000.
+Simulator.SubSystem.IncompNavierStokes2D.refLength = 1.
+
+Simulator.SubSystem.IncompNavierStokes2D.ConvTerm.uInf = 100.
+Simulator.SubSystem.IncompNavierStokes2D.ConvTerm.p0Inf = 10000.
+
+Simulator.SubSystem.IncompNavierStokes2D.PropertyLibrary = Mutation
+Simulator.SubSystem.IncompNavierStokes2D.Mutation.mixtureName = air11
+Simulator.SubSystem.IncompNavierStokes2D.Mutation.thermCondAlgo = Direct
+
+
+Simulator.SubSystem.ConvergenceFile = ./convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = torch_out.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = torch_out.plt
+Simulator.SubSystem.Tecplot.SaveRate    = 5
+Simulator.SubSystem.Tecplot.Data.updateVar = dPuvtLTE
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 4
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerFaces Symmetry Torch_wall_up Torch_wall_in Inlet Outlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = torch.neu
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+#Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 10E-6
+#Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 100
+#Simulator.SubSystem.NewtonIteratorLSS.Data.Output = true
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1.
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<40,1.,if(i<120,5.,if(i<175,50.,1000.)))
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<1000,0.2,if(i<2000,min(1.0,cfl*1.01),min(1000.,cfl*1.01)))
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation = .3
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Restart = false
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobFast
+Simulator.SubSystem.CellCenterFVM.NumJacobFast.FreezeDiffCoeff = false
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+#Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+#Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+#Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+#Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+#Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = RhieChow
+Simulator.SubSystem.CellCenterFVM.Data.RhieChow.Flux.PressStab = false
+Simulator.SubSystem.CellCenterFVM.Data.RhieChow.Flux.PressDissipScale = 1.
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = dPuvtLTE
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = dPuvtLTE
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMove
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TrsPriorityList = \
+                             Symmetry Torch_wall_up Torch_wall_in Inlet Outlet
+
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TRSName = Torch_wall_up
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.ValuesIdx = 1 2 3
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.Values = 0. 0. 350.
+
+Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = NavierStokesIncomp2DAxiST RMSJouleHeatST
+
+Simulator.SubSystem.CellCenterFVM.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.CellCenterFVM.Data.IntegratorOrder = P1
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -0.2
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Limiter = BarthJesp2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Limiter = Venktn2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Venktn2D.coeffEps = 1.0
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState \
+                                              NoSlipWallIsothermalNSdPvtFVMCC \
+                                              MirrorVelocityFVMCC \
+                                              NoSlipWallAdiabaticIncompNS2DdPuvtFVMCC \
+                                              SubInletIncompEuler2DdPuvtUVTLTEFVMCC \
+                                              SubOutletIncompEuler2DdPuvtFVMCC
+
+Simulator.SubSystem.CellCenterFVM.InitNames = InField \
+                                              InTorchWallUp \
+                                              InSymmetry \
+                                              InTorchWallIn \
+                                              InInlet \
+                                              InOutlet
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 0.0 \
+                                                if(y>.075,10.,0.) \
+                                                0.0 \
+                                                if(x>0.01,if(y>.075,1000.,if(y>.05,-(4000./.025)*(y-.05)+5000.,5000.)),1000.)
+
+Simulator.SubSystem.CellCenterFVM.InTorchWallUp.applyTRS = Torch_wall_up
+Simulator.SubSystem.CellCenterFVM.InTorchWallUp.TWall = 350.
+
+Simulator.SubSystem.CellCenterFVM.InSymmetry.applyTRS = Symmetry
+
+Simulator.SubSystem.CellCenterFVM.InTorchWallIn.applyTRS = Torch_wall_in
+
+Simulator.SubSystem.CellCenterFVM.InInlet.applyTRS = Inlet
+Simulator.SubSystem.CellCenterFVM.InInlet.MassFlow = 12.
+Simulator.SubSystem.CellCenterFVM.InInlet.T = 350.
+Simulator.SubSystem.CellCenterFVM.InInlet.InletRadii = .075 .08
+
+Simulator.SubSystem.CellCenterFVM.InOutlet.applyTRS = Outlet
+Simulator.SubSystem.CellCenterFVM.InOutlet.P = 0.0
+
+Simulator.SubSystem.CellCenterFVM.BcComds = NoSlipWallIsothermalNSdPvtFVMCC \
+                                            MirrorVelocityFVMCC \
+                                            NoSlipWallAdiabaticIncompNS2DdPuvtFVMCC \
+                                            SubInletIncompEuler2DdPuvtUVTLTEFVMCC \
+                                            SubOutletIncompEuler2DdPuvtFVMCC
+
+Simulator.SubSystem.CellCenterFVM.BcNames = BcTorchWallUp \
+                                            BcSymmetry \
+                                            BcTorchWallIn \
+                                            BcInlet \
+                                            BcOutlet
+
+Simulator.SubSystem.CellCenterFVM.BcTorchWallUp.applyTRS = Torch_wall_up
+Simulator.SubSystem.CellCenterFVM.BcTorchWallUp.TWall = 350.
+
+Simulator.SubSystem.CellCenterFVM.BcSymmetry.applyTRS = Symmetry
+
+Simulator.SubSystem.CellCenterFVM.BcTorchWallIn.applyTRS = Torch_wall_in
+
+Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS = Inlet
+Simulator.SubSystem.CellCenterFVM.BcInlet.MassFlow = 12.
+Simulator.SubSystem.CellCenterFVM.BcInlet.T = 350.
+Simulator.SubSystem.CellCenterFVM.BcInlet.InletRadii = .075 .08
+
+Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS = Outlet
+Simulator.SubSystem.CellCenterFVM.BcOutlet.P = 0.0
+
+Simulator.SubSystem.DataPreProcessing = DataProcessing
+Simulator.SubSystem.DataProcessing.Data.updateVar = dPuvtLTE
+
+Simulator.SubSystem.DataProcessing.Comds = RMSJouleHeatSource
+Simulator.SubSystem.DataProcessing.Names = JouleHeatSource
+Simulator.SubSystem.DataProcessing.ProcessRate = 1
+Simulator.SubSystem.DataProcessing.JouleHeatSource.SaveRate = 50
+Simulator.SubSystem.DataProcessing.JouleHeatSource.OutputFileElCurrent = ./elCurrent.plt
+Simulator.SubSystem.DataProcessing.JouleHeatSource.OutputFileEMField = ./EMField.plt
+Simulator.SubSystem.DataProcessing.JouleHeatSource.Freq = 0.37
+Simulator.SubSystem.DataProcessing.JouleHeatSource.DesiredPower = 30.
+Simulator.SubSystem.DataProcessing.JouleHeatSource.Permeability = 0.0000012566
+Simulator.SubSystem.DataProcessing.JouleHeatSource.NbCoils = 6
+Simulator.SubSystem.DataProcessing.JouleHeatSource.RadiusCoils = .109 .109 .109 .109 .109 .109
+Simulator.SubSystem.DataProcessing.JouleHeatSource.ZPositionCoils = .127 .177 .227 .277 .327 .377
+

@@ -1,0 +1,106 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFluctSplitNavierStokes libMeshRigidMove libGambit2CFmesh libForwardEuler
+
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/BlastWaves
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType     = Euler2D
+
+Simulator.SubSystem.SubSystemStatus.TimeStep       = 1e-05
+#Simulator.SubSystem.SubSystemStatus.ComputeDT      = MaxDT
+#Simulator.SubSystem.SubSystemStatus.MaxDT.DT_Ratio = 0.75
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.FwdEuler.ShowRate            = 1
+
+Simulator.SubSystem.OutputFormat        = Tecplot # CFmesh
+
+#Simulator.SubSystem.CFmesh.FileName     = blastwaves_fsm_stmez_nlim_100x3.CFmesh
+#Simulator.SubSystem.CFmesh.SaveRate     = 100
+#Simulator.SubSystem.CFmesh.AppendTime   = true
+#Simulator.SubSystem.CFmesh.AppendIter   = false
+
+Simulator.SubSystem.Tecplot.FileName    = blastwaves_fsm_stmez_nlim_100x3.plt
+Simulator.SubSystem.Tecplot.SaveRate    = 10
+Simulator.SubSystem.Tecplot.AppendTime  = true
+Simulator.SubSystem.Tecplot.AppendIter  = false
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+
+Simulator.SubSystem.StopCondition   = MaxTime
+Simulator.SubSystem.MaxTime.maxTime = 0.038
+
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSystem.Default.listTRS = InnerCells FaceSouth FaceEast FaceNorth FaceWest
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = blastwaves_100x3.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+
+Simulator.SubSystem.FwdEuler.Data.CFL.Value    = 0.6
+Simulator.SubSystem.FwdEuler.Data.PrintHistory = false
+Simulator.SubSystem.FwdEuler.Data.FilterState = Max
+Simulator.SubSystem.FwdEuler.Data.Max.maskIDs = 1 0 0 1
+Simulator.SubSystem.FwdEuler.Data.Max.minValues = 0. 0. 0. 0.
+
+#Simulator.SubSystem.FwdEuler.AbsoluteNormAndMaxIter.MaxIter  = 1000
+#Simulator.SubSystem.FwdEuler.AbsoluteNormAndMaxIter.AbsNorm  = -5.0
+
+Simulator.SubSystem.FwdEuler.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.FwdEuler.RelativeNormAndMaxIter.Warn  = true
+Simulator.SubSystem.FwdEuler.RelativeNormAndMaxIter.MaxIter  = 1000
+Simulator.SubSystem.FwdEuler.RelativeNormAndMaxIter.RelativeNorm  = -4.5
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = STU_CRD
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = STKT_SysNlimC
+
+#Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = STKT_SysBC
+
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar   = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar   = Cons
+
+
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.InputVar = Prim
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y 
+Simulator.SubSystem.FluctuationSplit.InField.Def = 1.0 \
+                                                   0.0 \
+                                                   0.0 \
+                                                   if(x>0.9,100.,if(x<0.1,1000.,0.001))
+
+
+Simulator.SubSystem.FluctuationSplit.BcComds = StrongMirrorEuler2DCons \
+                                               StrongMirrorEuler2DCons \
+                                               PeriodicBC
+Simulator.SubSystem.FluctuationSplit.BcNames = LeftBC \
+                                               RightBC \
+                                               Infinit
+
+Simulator.SubSystem.FluctuationSplit.LeftBC.applyTRS  = FaceWest
+Simulator.SubSystem.FluctuationSplit.RightBC.applyTRS = FaceEast
+
+
+Simulator.SubSystem.FluctuationSplit.Infinit.applyTRS   = FaceSouth
+Simulator.SubSystem.FluctuationSplit.Infinit.CoupledTrs = FaceNorth
+Simulator.SubSystem.FluctuationSplit.Infinit.Transform  = x y+0.01

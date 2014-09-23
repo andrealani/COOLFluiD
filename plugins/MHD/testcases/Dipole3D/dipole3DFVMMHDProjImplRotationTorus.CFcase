@@ -1,0 +1,179 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -0.747412
+
+#
+
+# Simulator Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libMHD libFiniteVolume libFiniteVolumeMHD libBackwardEuler libBackwardEulerMHD libGambit2CFmesh libTHOR2CFmesh
+
+# Simulator Parameters
+Simulator.Paths.WorkingDir = plugins/MHD/testcases/Dipole3D/
+Simulator.Paths.ResultsDir       = plugins/MHD/testcases/Dipole3D/
+
+Simulator.SubSystem.Default.PhysicalModelType       = MHD3DProjection
+Simulator.SubSystem.MHD3DProjection.ConvTerm.gamma = 1.3
+
+Simulator.SubSystem.MHD3DProjection.ConvTerm.refSpeed = 1.0
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.dissipCoeff = 1.5
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.correctionType = Mixed
+
+Simulator.SubSystem.MHD3DProjection.ConvTerm.mX = 0.0
+Simulator.SubSystem.MHD3DProjection.ConvTerm.mY = 0.0
+Simulator.SubSystem.MHD3DProjection.ConvTerm.mZ = -1690.0
+
+#Simulator.SubSystem.InteractiveParamReader.readRate = 15
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MHD/testcases/Dipole3D/dipole3D.inter
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+#Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CFmesh.FileName     = dipole3DFVMMHD1stProjImplRotationTorus.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = dipole3DFVMMHD1stProjImplRotationTorus.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot.SaveRate = 50
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 3
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -6.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SuperInlet SuperOutlet
+
+Simulator.SubSystem.NormRes = L2
+Simulator.SubSystem.L2.varID = 0
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = dipole3DCOARSE.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = BwdEuler
+#Simulator.SubSystem.BwdEuler.Data.CFL.Value = 0.3
+Simulator.SubSystem.BwdEuler.ConvergenceFile = convergence_dipole3DFVMMHD1stProjImplRotationTorus.plt
+Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Interactive
+Simulator.SubSystem.BwdEuler.UpdateSol = UpdateSolMHD
+Simulator.SubSystem.BwdEuler.UpdateSolMHD.pressureCorrectionValue = 0.000000000001
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = BwdEulerLSS
+Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
+Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobMHD
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = StdTimeRhs
+Simulator.SubSystem.CellCenterFVM.NumJacobMHD.SaveRate = 50
+
+#Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+#Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+#Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+#Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+#Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Centred
+Simulator.SubSystem.CellCenterFVM.Data.Centred.Flux = MHD3DProjectionConsLaxFriedTanaka
+Simulator.SubSystem.CellCenterFVM.Data.Centred.MHD3DProjectionConsLaxFriedTanaka.NameFluxFunction = Powell99
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Cons
+Simulator.SubSystem.CellCenterFVM.Data.hasSourceTerm = true
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = MHDConsACAST MHD3DProjectionIoTorusST
+#Simulator.SubSystem.CellCenterFVM.Data.MHD3DProjectionIoTorusST.distanceTorusCenterFromOrigin = 5.91
+#Simulator.SubSystem.CellCenterFVM.Data.MHD3DProjectionIoTorusST.radiusTorus = 1.01
+#Simulator.SubSystem.CellCenterFVM.Data.MHD3DProjectionIoTorusST.velTangentialTorus = 1.01
+#Simulator.SubSystem.CellCenterFVM.Data.MHD3DProjectionIoTorusST.dRhodtTorusPlasma = 1.01
+
+Simulator.SubSystem.CellCenterFVM.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.CellCenterFVM.Data.IntegratorOrder = P1
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS3D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.limitRes = -0.1
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp3D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.freezeLimiter = true
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn3D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn3D.coeffEps = 1.0
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState \
+        MirrorMHD3DProjectionTanakaRotationFVMCC \
+        SuperInletFVMCC \
+        SuperOutletMHD3DProjectionFVMCC
+
+Simulator.SubSystem.CellCenterFVM.InitNames = InField \
+        InMirror \
+        InInlet \
+        InOutlet
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.InField.Def =  5.0 \
+          				0.0 \
+                                        0.0 \
+                			0.0 \
+          				0.0 \  
+          				0.0 \  
+                			0.0 \
+          				1.613333333 \
+					0.0
+
+Simulator.SubSystem.CellCenterFVM.InMirror.applyTRS = SlipWall
+Simulator.SubSystem.CellCenterFVM.InMirror.rhoFixed = 5.0
+Simulator.SubSystem.CellCenterFVM.InMirror.T = 5422.877765
+
+Simulator.SubSystem.CellCenterFVM.InInlet.applyTRS = SuperInlet
+Simulator.SubSystem.CellCenterFVM.InInlet.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.InInlet.Def =  5.0 \
+                                        5.0 \
+                                        0.0 \
+                                        0.0 \
+                                        0.22 \
+                                        0.0 \
+                                        0.0 \
+                                        4.137533333 \
+                                        0.0
+
+Simulator.SubSystem.CellCenterFVM.InOutlet.applyTRS = SuperOutlet
+Simulator.SubSystem.CellCenterFVM.InOutlet.refPhi = 0.0
+
+Simulator.SubSystem.CellCenterFVM.BcComds = MirrorMHD3DProjectionTanakaRotationFVMCC \
+        SuperInletFVMCC \
+        SuperOutletMHD3DProjectionFVMCC
+
+Simulator.SubSystem.CellCenterFVM.BcNames = Wall \
+              Inlet \
+              Outlet
+
+Simulator.SubSystem.CellCenterFVM.Wall.applyTRS = SlipWall
+Simulator.SubSystem.CellCenterFVM.Wall.rhoFixed = 5.0
+Simulator.SubSystem.CellCenterFVM.Wall.T = 5422.877765
+
+Simulator.SubSystem.CellCenterFVM.Inlet.applyTRS = SuperInlet
+Simulator.SubSystem.CellCenterFVM.Inlet.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.Inlet.Def =  5.0 \
+                                        5.0 \
+                                        0.0 \
+                                        0.0 \
+                                        0.22 \
+                                        0.0 \
+                                        0.0 \
+                                        4.137533333 \
+                                        0.0
+
+Simulator.SubSystem.CellCenterFVM.Outlet.applyTRS = SuperOutlet
+Simulator.SubSystem.CellCenterFVM.Outlet.refPhi = 0.0

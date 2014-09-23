@@ -1,0 +1,470 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace NEQ {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>      
+NavierStokesTCNEQVarSet<BASE>::NavierStokesTCNEQVarSet
+(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  NavierStokesNEQVarSet<BASE>(name, model),
+  _normConcGradientsAxi(),
+  _rhoUdiffAxi(),
+  _lambdaVibAxi()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>      
+NavierStokesTCNEQVarSet<BASE>::~NavierStokesTCNEQVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>      
+void NavierStokesTCNEQVarSet<BASE>::setup()
+{ 
+  NavierStokesNEQVarSet<BASE>::setup();
+  
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  this->_normConcGradientsAxi.resize(nbSpecies);
+  this->_rhoUdiffAxi.resize(nbSpecies);
+  
+  const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
+  this->_lambdaVibAxi.resize(nbTv);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>      
+RealVector& NavierStokesTCNEQVarSet<BASE>::getFlux(const RealVector& state,
+						   const std::vector<RealVector*>& gradients,
+						   const RealVector& normal,
+						   const CFreal& radius)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  
+  // compute a portion of the flux in the base class
+  RealVector& flux = BASE::getFlux(state, gradients, normal, radius);
+  
+  flux[this->_TID] -= MathFunctions::innerProd(this->_hsTotBkp,this->_rhoUdiff);
+  
+  // Fluxes for the species continuities
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  for (CFuint is = 0; is < nbSpecies; ++is) {
+    flux[this->_yID[is]] = -this->_rhoUdiff[is];
+  }
+  
+  cf_assert(this->_moleculeIdx.size() > 0);
+  
+  const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
+  const CFuint nbTvib = nbTv - this->_library->getNbTe();
+  if (nbTvib > 1) {
+    // list of the molecule IDs corresponding to each vibrational energy equations 
+    // e.g. in air5 with 2 Tv  => 0(N2) 2(O2)  
+    const vector<CFuint>& molEvIDs = this->_library->getMolecule2EqIDs(); 
+    cf_assert(molEvIDs.size() == nbTv - this->_library->getNbTe());
+    
+    for (CFuint i = 0; i < nbTvib; ++i) {
+      const CFuint iMol2Tv = molEvIDs[i];
+      const CFuint ispecies = this->_moleculeIdx[iMol2Tv];
+      const RealVector& gradTv = *gradients[this->_TvibID[i]];
+      const CFreal qVib = this->_gradState[ispecies]*this->_lambdaVib[i]*MathFunctions::innerProd(gradTv, normal);
+      flux[this->_TID] += qVib;
+      flux[this->_TvibID[i]] = qVib - this->_hsVibBkp[iMol2Tv]*this->_rhoUdiff[ispecies];
+    }
+  }
+  else {
+    const RealVector& gradTv = *gradients[this->_TvibID[0]];
+    const CFreal qVib = this->_lambdaVib[0]*MathFunctions::innerProd(gradTv, normal);
+    flux[this->_TID] += qVib;
+    flux[this->_TvibID[0]] = qVib;
+    
+    const CFuint nbMol = this->_moleculeIdx.size();
+    for (CFuint i = 0; i < nbMol; ++i) {
+      flux[this->_TvibID[0]] -= this->_hsVibBkp[i]*this->_rhoUdiff[this->_moleculeIdx[i]];
+    }
+    
+    if (this->_library->getNbTe() == 0) {
+      flux[this->_TvibID[0]] -= MathFunctions::innerProd(this->_hsElBkp, this->_rhoUdiff);
+    }
+    
+    if (this->_library->getNbTe() == 1) {
+      const RealVector& gradTe = *gradients[this->_TvibID[1]];
+      const CFreal qe = this->_lambdaVib[1] *MathFunctions::innerProd(gradTe, normal);
+      flux[this->_TID] += qe;
+      flux[this->_TvibID[1]] = qe - MathFunctions::innerProd(this->_hsElBkp, this->_rhoUdiff);
+    }
+  }
+  
+  return flux;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>      
+RealMatrix& NavierStokesTCNEQVarSet<BASE>::getFlux(const RealVector& state,
+						   const std::vector<RealVector*>& gradients,
+						   const CFreal& radius)
+{
+  throw Common::NotImplementedException (FromHere(),"RealMatrix& NavierStokesTCNEQVarSet::getFlux() not implemented...");
+
+  return this->_fluxVec;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>      
+CFreal NavierStokesTCNEQVarSet<BASE>::getHeatFlux(const RealVector& state,
+						    const std::vector<RealVector*>& gradients,
+						    const RealVector& normal)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  
+  // set the private data storing the adimensional values
+  // of velocity, pressure, density and temperature
+  this->setGradientState(state);
+  
+  RealVector& nsData = this->getModel().getPhysicalData();
+  RealVector& refData = this->getModel().getReferencePhysicalData();
+  const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
+  
+  RealVector& eulerRefData = this->_eulerModel->getReferencePhysicalData();
+  CFreal avTdim = eulerRefData[EulerTerm::T]*this->_gradState[this->_TID];
+  CFreal avpdim = this->_avP*eulerRefData[EulerTerm::P];
+  for (CFuint i = 0; i <  nbTv; ++i) {
+    this->_avTvibdim[i] = eulerRefData[EulerTerm::T]*this->_gradState[this->_TvibID[i]];
+  }
+  
+  // Getting species total enthalpies
+  this->_library->getSpeciesTotEnthalpies(avTdim, this->_avTvibdim, avpdim, this->_hsTot, &this->_hsVib, &this->_hsEl);
+  const CFreal invHref = 1./eulerRefData[EulerTerm::H];
+  this->_hsTot *= invHref; 
+  this->_hsVib *= invHref;
+  this->_hsEl *= invHref;
+
+  // Computing normal concentration gradients
+  const CFreal ovL = 1./PhysicalModelStack::getActive()->
+    getImplementor()->getRefLength();
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  for (CFuint is = 0; is < nbSpecies; ++is) {
+    this->_normConcGradients[is] = MathFunctions::innerProd((*gradients[this->_yID[is]]), normal)*ovL;
+  }
+  
+  this->_library->getRhoUdiff(avTdim, avpdim, this->_normConcGradients, &this->_avTvibdim[0], this->_rhoUdiff);
+  this->_rhoUdiff /= (eulerRefData[EulerTerm::RHO]*eulerRefData[EulerTerm::V]);  
+  
+  // adimensional thermal conductivity
+  this->_library->lambdaVibNEQ(avTdim, this->_avTvibdim, avpdim, this->_lambdaTR, this->_lambdaVib);
+  this->_lambdaVib /= refData[NSTerm::LAMBDA];
+  
+  nsData[NSTerm::LAMBDA] = this->_lambdaTR/refData[NSTerm::LAMBDA];
+
+  // heatFlux variable store the heat flux entering the surface
+  const RealVector& gradT = *gradients[this->_TID];
+  CFreal heatFlux = - this->getModel().getCoeffQ()*nsData[NSTerm::LAMBDA]*MathFunctions::innerProd(gradT, normal);
+  
+  // heat flux due to enthalpy diffusion
+  heatFlux += MathFunctions::innerProd(this->_hsTot, this->_rhoUdiff);
+  cf_assert(this->_moleculeIdx.size() > 0);
+  
+  if (nbTv > 1) {
+    // list of the molecule IDs corresponding to each vibrational energy equations 
+    // e.g. in air5 with 2 Tv  => 0(N2) 2(O2)  
+    const vector<CFuint>& molEvIDs = this->_library->getMolecule2EqIDs(); 
+    cf_assert(molEvIDs.size() == nbTv);
+    
+    for (CFuint i = 0; i < nbTv; ++i) {
+      const CFuint iMol2Tv = molEvIDs[i];
+      const CFuint ispecies = this->_moleculeIdx[iMol2Tv];
+      const RealVector& gradTv = *gradients[this->_TvibID[i]];
+      heatFlux -= this->_gradState[ispecies]*this->_lambdaVib[i]*MathFunctions::innerProd(gradTv, normal);
+      heatFlux += this->_hsVib[iMol2Tv]*this->_rhoUdiff[ispecies];
+    }
+  }
+  else {
+    const RealVector& gradTv = *gradients[this->_TvibID[0]];
+    heatFlux -= this->_lambdaVib[0]*MathFunctions::innerProd(gradTv, normal);
+    
+    const CFuint nbMol = this->_moleculeIdx.size();
+    for (CFuint i = 0; i < nbMol; ++i) {
+      heatFlux += this->_hsVib[i]*this->_rhoUdiff[this->_moleculeIdx[i]];
+    }
+    
+    if (this->_library->presenceElectron()) {
+      heatFlux += MathFunctions::innerProd(this->_hsEl, this->_rhoUdiff);
+    }
+    
+    if (this->_library->getNbTe() == 1) {
+      const RealVector& gradTe = *gradients[this->_TvibID[1]];
+      heatFlux -= this->_lambdaVib[1]*MathFunctions::innerProd(gradTe, normal);
+    }
+  }
+  
+  return heatFlux;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+      
+template <typename BASE>      
+void NavierStokesTCNEQVarSet<BASE>::getAxiSourceTerm(const RealVector& physicalData,
+						     const RealVector& state,
+						     const std::vector<RealVector*>& gradients,
+						     const CFreal& radius,
+						     RealVector& source)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  
+  cf_assert(PhysicalModelStack::getActive()->getDim() == 2);
+  
+  // set the private data storing the adimensional values
+  // of velocity, pressure, density and temperature
+  this->setGradientState(state);
+  
+  cf_assert(radius > 0.0);
+  
+  // this is done for safety
+  RealVector& nsData = this->getModel().getPhysicalData();
+  RealVector& refData = this->getModel().getReferencePhysicalData();
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  const CFuint firstSpecies = this->_eulerModel->getFirstScalarVar(0);
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    this->_ys[i] = physicalData[firstSpecies + i];
+  }
+  this->_library->setSpeciesFractions(this->_ys);
+  
+  const CFreal rho = physicalData[EulerTerm::RHO];
+  const CFreal u = physicalData[EulerTerm::VX];
+  const CFreal v = physicalData[EulerTerm::VY];
+  const CFreal rhov = rho*v;
+  const CFreal vOverRadius = v/radius;
+  const RealVector& gradU = *gradients[this->_uID];
+  const RealVector& gradV = *gradients[this->_vID];
+  const RealVector& gradT = *gradients[this->_TID];
+
+  RealVector& eulerRefData = this->_eulerModel->getReferencePhysicalData();
+  const CFreal Tref = eulerRefData[EulerTerm::T];
+  const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
+  CFreal avTdim = Tref*physicalData[EulerTerm::T];
+  CFreal avpdim = (physicalData[EulerTerm::P] + this->_eulerModel->getPressInf())*eulerRefData[EulerTerm::P];
+  for (CFuint i =  0; i <  nbTv; ++i) {
+    this->_avTvibdim[i] = Tref*state[this->_TvibID[i]];
+  }
+    
+  // Getting species total enthalpies
+  this->_library->getSpeciesTotEnthalpies(avTdim, this->_avTvibdim, avpdim, this->_hsTot, &this->_hsVib, &this->_hsEl);
+  const CFreal invHref = 1./eulerRefData[EulerTerm::H];
+  this->_hsTot *= invHref; 
+  this->_hsVib *= invHref;
+  this->_hsEl *= invHref;
+  
+  // Computing normal concentration gradients
+  const CFreal ovL = 1./PhysicalModelStack::getActive()->
+    getImplementor()->getRefLength();
+  for (CFuint is = 0; is < nbSpecies; ++is) {
+    this->_normConcGradients[is] = (*gradients[this->_yID[is]])[YY]*ovL;
+  }
+  
+  // Getting diffusion velocities multiplied by species densities
+  this->_library->getRhoUdiff(avTdim, avpdim, this->_normConcGradients, 
+			&this->_avTvibdim[0], this->_rhoUdiff);
+  this->_rhoUdiff /= (eulerRefData[EulerTerm::RHO]*eulerRefData[EulerTerm::V]);  
+  
+  // frozen transport properties or case with u+du, v+dv
+  if (this->_freezeDiffCoeff || this->_useBackUpValues) {
+    // cout << "SOURCE FREEZE " << this->_freezeDiffCoeff << endl;
+    // in this case the backup quantities are used and not recomputed
+    nsData[NSTerm::MU] = this->_dynViscCoeff;
+    nsData[NSTerm::LAMBDA] = this->_thermCondCoeff;
+    this->_lambdaVib = this->_thermCondCoeffVib;
+    
+    // cout << "mu = " << nsData[NSTerm::MU] << endl;
+    // cout << "lambda = " << nsData[NSTerm::LAMBDA] << endl;
+    // cout << "lambdaVib = " << this->_lambdaVib << endl;
+  }
+  else {
+    // the quantities are back up for later use
+    // adimensional dynamical viscosity
+    nsData[NSTerm::MU] = this->_library->eta(avTdim, avpdim, &this->_avTvibdim[0])/
+      refData[NSTerm::MU]*this->getModel().getArtDiffCoeff();
+    
+    // adimensional thermal conductivity
+    this->_library->lambdaVibNEQ(avTdim, this->_avTvibdim, avpdim, this->_lambdaTR, this->_lambdaVib);
+    this->_lambdaVib /= refData[NSTerm::LAMBDA];
+    
+    nsData[NSTerm::LAMBDA] = this->_lambdaTR/refData[NSTerm::LAMBDA];
+    
+    if (this->_setBackUpValues) {
+      cf_assert(!this->_freezeDiffCoeff);
+      
+      this->_dynViscCoeff   = nsData[NSTerm::MU];
+      this->_thermCondCoeff = nsData[NSTerm::LAMBDA];
+      this->_rhoUdiffBkp = this->_rhoUdiff;
+      this->_thermCondCoeffVib = this->_lambdaVib;
+    }
+  }
+
+  const CFreal twoThird = 2./3.;
+  const CFreal divV = gradU[XX] + gradV[YY];
+  const CFreal coeffTauMu = this->getModel().getCoeffTau()*nsData[NSTerm::MU];
+  const CFreal tauRX = coeffTauMu*(gradU[YY] + gradV[XX]);
+  const CFreal tauRR = coeffTauMu*(2.*gradV[YY] - twoThird*(divV + vOverRadius));
+  const CFreal tauTT = -coeffTauMu*twoThird*(divV - 2.*vOverRadius);
+  const CFreal qFlux = - this->getModel().getCoeffQ()*nsData[NSTerm::LAMBDA]*gradT[YY];
+
+  // Nonequilibrium term of the energy equation
+  CFreal qNEQ = 0.0;
+  for (CFuint is = 0; is < nbSpecies; ++is) {
+    qNEQ += this->_hsTot[is] * this->_rhoUdiff[is];
+  }
+
+  source[this->_uID] = -rhov*u + tauRX;
+  source[this->_vID] = -rhov*v + tauRR - tauTT;
+  source[this->_TID] = -rhov*physicalData[EulerTerm::H] + tauRX*u + tauRR*v - qFlux - qNEQ;
+  
+  cf_assert(this->_moleculeIdx.size() > 0);
+  
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    // -rho_i v - this->_rhoUdiff[i]
+    source[this->_yID[i]] = -rhov*physicalData[firstSpecies + i] -this->_rhoUdiff[i]; 
+  }
+  
+  const CFuint firstTv = this->_eulerModel->getFirstScalarVar(1);
+  if (nbTv > 1) {
+    // list of the molecule IDs corresponding to each vibrational energy equations 
+    // e.g. in air5 with 2 Tv  => 0(N2) 2(O2)  
+    const vector<CFuint>& molEvIDs = this->_library->getMolecule2EqIDs(); 
+    cf_assert(molEvIDs.size() == nbTv);
+    
+    for (CFuint i = 0; i < nbTv; ++i) {
+      const CFuint iMol2Tv = molEvIDs[i];
+      const CFuint ispecies = this->_moleculeIdx[iMol2Tv];
+      const RealVector& gradTv = *gradients[this->_TvibID[i]];
+      const CFreal qVib = this->_ys[ispecies]*this->_lambdaVib[i]*gradTv[YY];
+      source[this->_TID] += qVib;
+      source[this->_TvibID[i]] = -rhov*physicalData[firstTv + i] + qVib - 
+	this->_hsVib[iMol2Tv]*this->_rhoUdiff[ispecies];
+    }
+  }
+  else {
+    const CFreal qVib = this->_lambdaVib[0]*(*gradients[this->_TvibID[0]])[YY];
+    source[this->_TID] += qVib;
+    source[this->_TvibID[0]] = -rhov*physicalData[firstTv] + qVib;
+    
+    for (CFuint i = 0; i < this->_moleculeIdx.size(); ++i) {
+      source[this->_TvibID[0]] -= this->_hsVib[i]*this->_rhoUdiff[this->_moleculeIdx[i]];
+    }
+  }
+}
+  
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void NavierStokesTCNEQVarSet<BASE>::computeTransportProperties
+(const RealVector& state,
+ const std::vector<RealVector*>& gradients,
+ const RealVector& normal)
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::MathTools;
+  
+  RealVector& nsData = this->getModel().getPhysicalData();
+  RealVector& refData = this->getModel().getReferencePhysicalData();
+  RealVector& eulerRefData = this->_eulerModel->getReferencePhysicalData();
+  
+  CFreal avTdim = eulerRefData[EulerTerm::T]*this->_gradState[this->_TID];
+  CFreal avpdim =  this->_avP*eulerRefData[EulerTerm::P];
+  const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
+  for (CFuint i =  0; i <  nbTv; ++i) {
+    this->_avTvibdim[i] = eulerRefData[EulerTerm::T]*state[this->_TvibID[i]];
+  }
+    
+  // Getting species total enthalpies
+  if (!this->_freezeEnthalpies) {
+    this->_library->getSpeciesTotEnthalpies(avTdim, this->_avTvibdim, avpdim, this->_hsTotBkp, &this->_hsVibBkp, &this->_hsElBkp);
+    const CFreal invHref = 1./eulerRefData[EulerTerm::H];
+    this->_hsTotBkp *= invHref; 
+    this->_hsVibBkp *= invHref;
+    this->_hsElBkp *= invHref;
+  }
+  
+  // Computing normal concentration gradients
+  //if (!this->_useBackUpValues) {
+  const CFreal ovL = 1./PhysicalModelStack::getActive()->getImplementor()->getRefLength();
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  for (CFuint is = 0; is < nbSpecies; ++is) {
+    this->_normConcGradients[is] = MathFunctions::innerProd((*gradients[this->_yID[is]]), normal)*ovL;
+  }
+  
+  // Getting diffusion velocities multiplied by species densities
+  //    const bool fast = (!(this->_freezeDiffCoeff)) ? false : true; 
+  
+  // change this to get more arguments:  flag for knowing if to use D*gradientsmodel or rhoU (SM) model
+  //  add RealMatrix as argument 
+  this->_library->getRhoUdiff(avTdim, avpdim, this->_normConcGradients, &this->_avTvibdim[0], this->_rhoUdiff, false);
+  this->_rhoUdiff /= (eulerRefData[EulerTerm::RHO]*eulerRefData[EulerTerm::V]);  
+  //}
+  //else {
+  // this->_rhoUdiff = this->_rhoUdiffBkp;
+  // back up here and reuse later the matrix of diffusion coefficients if available (above mentioned
+  // flag set to true)
+  // }
+  
+  // frozen transport properties or case with u+du, v+dv
+  if (this->_freezeDiffCoeff || this->_useBackUpValues) {
+    // in this case the backup quantities are used and not recomputed
+    nsData[NSTerm::MU] = this->_dynViscCoeff;
+    nsData[NSTerm::LAMBDA] = this->_thermCondCoeff;
+    this->_lambdaVib = this->_thermCondCoeffVib;
+  }
+  else {
+    // the quantities are back up for later use
+    // adimensional dynamical viscosity
+    nsData[NSTerm::MU] = this->_library->eta(avTdim, avpdim, &this->_avTvibdim[0])/refData[NSTerm::MU]*
+      this->getModel().getArtDiffCoeff();
+    
+    // adimensional thermal conductivity
+    this->_library->lambdaVibNEQ(avTdim, this->_avTvibdim, avpdim, this->_lambdaTR, this->_lambdaVib);
+    this->_lambdaVib /= refData[NSTerm::LAMBDA];
+    
+    nsData[NSTerm::LAMBDA] = this->_lambdaTR/refData[NSTerm::LAMBDA];
+    
+    if (this->_setBackUpValues) {
+      cf_assert(!this->_freezeDiffCoeff);
+      
+      this->_dynViscCoeff   = nsData[NSTerm::MU];
+      this->_thermCondCoeff = nsData[NSTerm::LAMBDA];
+      this->_rhoUdiffBkp = this->_rhoUdiff;
+      this->_thermCondCoeffVib = this->_lambdaVib;
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace NEQ
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

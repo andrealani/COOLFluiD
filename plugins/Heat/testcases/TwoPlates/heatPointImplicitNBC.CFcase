@@ -1,0 +1,105 @@
+# HOTFluiD Startfile
+# Comments begin with "#"
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libFiniteElement libHeat libNewtonMethod  libFiniteElementHeat
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/Heat/testcases/TwoPlates/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = Heat3D
+Simulator.SubSystem.Heat3D.refValues = 1.
+Simulator.SubSystem.Heat3D.Conductivity = 1.0
+
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = heat.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = heat.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+#Simulator.SubSystem.Tecplot.AppendIter = true
+#Simulator.SubSystem.CFmesh.AppendIter = true
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm = -10
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+
+Simulator.SubSystem.Default.listTRS = InnerCells Side1 Side2 Side3 Side4 Side5 Side6
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cube.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = FiniteElement
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.PETSC.Data.PCType = PCLU
+Simulator.SubSystem.PETSC.Data.KSPType = KSPGMRES
+Simulator.SubSystem.PETSC.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.PETSC.Data.RelativeTolerance = 1e-10
+Simulator.SubSystem.PETSC.Data.MaxIter = 100
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1.0
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+Simulator.SubSystem.NewtonIterator.Data.SaveSystemToFile = false
+Simulator.SubSystem.NewtonIterator.InitCom = ResetSystem
+# Implicit
+Simulator.SubSystem.NewtonIterator.UpdateSol = StdUpdateSol
+#Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation = 0.9
+# Explicit
+#Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
+
+
+Simulator.SubSystem.SpaceMethod = FiniteElementMethod
+
+Simulator.SubSystem.FiniteElementMethod.Data.UpdateVar = Prim
+Simulator.SubSystem.FiniteElementMethod.Data.DiffusiveVar = Prim
+#Simulator.SubSystem.FiniteElementMethod.Data.SourceVar = Heat3DSourceTDep
+Simulator.SubSystem.FiniteElementMethod.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.FiniteElementMethod.Data.ResidualStrategy = StdElementComputer
+Simulator.SubSystem.FiniteElementMethod.Data.Numerical.tol = 1e-6
+
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorOrder = P1
+
+Simulator.SubSystem.FiniteElementMethod.ComputeSpaceResidual = ImplicitComputeSpaceResCom
+Simulator.SubSystem.FiniteElementMethod.ImplicitComputeSpaceResCom.applyTRS = InnerCells
+#Simulator.SubSystem.FiniteElementMethod.ComputeSpaceResidual = ExplicitComputeSpaceResCom
+#Simulator.SubSystem.FiniteElementMethod.ExplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSystem.FiniteElementMethod.InitComds = InitState
+Simulator.SubSystem.FiniteElementMethod.InitNames = InitialField
+
+Simulator.SubSystem.FiniteElementMethod.InitialField.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.InitialField.Vars = x y z
+Simulator.SubSystem.FiniteElementMethod.InitialField.Def = 1
+
+Simulator.SubSystem.FiniteElementMethod.BcComds = NeumannBCImplicit DirichletBC
+Simulator.SubSystem.FiniteElementMethod.BcNames = SURF2             SURF1
+
+# Vars [x y z t T]
+Simulator.SubSystem.FiniteElementMethod.SURF1.applyTRS = Side1
+Simulator.SubSystem.FiniteElementMethod.SURF1.Implicit = true
+Simulator.SubSystem.FiniteElementMethod.SURF1.Vars = x y z t T
+Simulator.SubSystem.FiniteElementMethod.SURF1.Def = 5
+
+# Vars [x y z t T]
+Simulator.SubSystem.FiniteElementMethod.SURF2.applyTRS = Side3
+Simulator.SubSystem.FiniteElementMethod.SURF2.Vars = x y z t T nx ny nz
+Simulator.SubSystem.FiniteElementMethod.SURF2.Def = -1000*T
+
+

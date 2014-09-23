@@ -1,0 +1,35 @@
+#include "RoeFluxT.hh"
+#include "FiniteVolume/FiniteVolume.hh"
+#include "Framework/MethodStrategyProvider.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+MethodStrategyProvider<RoeFluxT<4>,
+                       CellCenterFVMData,
+                       FluxSplitter<CellCenterFVMData>,
+                       FiniteVolumeModule>
+roe4FluxProvider("RoeT4");
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

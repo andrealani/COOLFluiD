@@ -1,0 +1,287 @@
+#include "Framework/GeometricEntity.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+void HLLEFlux<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< CFuint, Config::DynamicOption<> >
+    ("UseRoeAverage", "Use Roe average");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+HLLEFlux<UPDATEVAR>::HLLEFlux(const std::string& name) :
+  HLLFlux(name),
+  _upVar(CFNULL),
+  _solutionStates(CFNULL),
+  _statesLR(2)
+{
+  addConfigOptionsTo(this);
+  _useRoeAverage = 0;
+  setParameter("UseRoeAverage", &_useRoeAverage);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>      
+HLLEFlux<UPDATEVAR>::~HLLEFlux()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+void HLLEFlux<UPDATEVAR>::setup()
+{
+  HLLFlux::setup();
+  _upVar = getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+  cf_always_assert(_upVar.isNotNull());
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+void HLLEFlux<UPDATEVAR>::compute(RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  CellCenterFVMData& data = this->getMethodData(); 
+  SafePtr<FVMCC_PolyRec> polyRec = data.getPolyReconstructor();
+  
+  _statesLR[0] = &polyRec->getCurrLeftState();
+  _statesLR[1] = &polyRec->getCurrRightState();
+  
+  vector<RealVector>& pdata = polyRec->getExtrapolatedPhysicaData();
+  
+  // flux for the right and left state
+  const RealVector& unitNormal = getMethodData().getUnitNormal();
+  const RealVector& ldata = pdata[0];
+  const RealVector& rdata = pdata[1];
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  
+  CFreal uL = ldata[UPDATEVAR::PTERM::VX]*unitNormal[XX];
+  CFreal uR = rdata[UPDATEVAR::PTERM::VX]*unitNormal[XX];
+  for (CFuint i = 1; i < dim; ++i) {
+    uL += ldata[UPDATEVAR::PTERM::VX+i]*unitNormal[i];
+    uR += rdata[UPDATEVAR::PTERM::VX+i]*unitNormal[i];
+  }
+  const CFreal aL = ldata[UPDATEVAR::PTERM::A];
+  const CFreal aR = rdata[UPDATEVAR::PTERM::A];
+  
+  CFreal uAvg = 0.5*(uL + uR);
+  CFreal aAvg = 0.5*(aL + aR);
+  if (_useRoeAverage) {
+    // linearize using Roe average
+    vector<State*> *const linearStates = getMethodData().getSolutionToLinearVecTrans()->
+      transform(&_statesLR);
+    getMethodData().getJacobianLinearizer()->linearize(*linearStates);
+    const RealVector& linData = _upVar->getModel()->getPhysicalData();
+    
+    uAvg = linData[UPDATEVAR::PTERM::VX]*unitNormal[XX];
+    for (CFuint i = 1; i < dim; ++i) {
+      uAvg += linData[UPDATEVAR::PTERM::VX+i]*unitNormal[i];
+    }
+    
+    aAvg = linData[UPDATEVAR::PTERM::A];
+  }
+  
+  if (!getMethodData().reconstructSolVars()) {
+    _solutionStates = getMethodData().getUpdateToSolutionVecTrans()->transform(&_statesLR);
+  }
+  else {
+    _solutionStates = &_statesLR;
+  }
+  
+  // you must work with references (no copying allowed) !!!!
+  const State& leftState  = *(*_solutionStates)[0];
+  const State& rightState = *(*_solutionStates)[1];
+  _leftFlux  = _upVar->getFlux()(ldata, unitNormal);
+  _rightFlux = _upVar->getFlux()(rdata, unitNormal);
+  
+  const CFreal lambdaM = min(0., min(uAvg - aAvg, uL - aL));
+  const CFreal lambdaP = max(0., max(uAvg + aAvg, uR + aR));
+  const CFreal ovLambdaDiff = 1./(lambdaP - lambdaM);
+  
+  // HLLE flux function
+  result = ovLambdaDiff*((lambdaP*_leftFlux - lambdaM*_rightFlux) +  (lambdaP*lambdaM)*(rightState - leftState));
+
+  // compute update coefficient
+  if (!getMethodData().isPerturb()) {    
+    GeometricEntity& face = *data.getCurrentFace();
+    DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+    const CFreal faceArea = socket_faceAreas.getDataHandle()[face.getID()]/
+      polyRec->nbQPoints();
+    
+    // left contribution to update coefficient
+    CFreal maxEV = _upVar->getMaxEigenValue(pdata[0], unitNormal);
+    
+    const CFuint leftID = face.getState(0)->getLocalID();
+    updateCoeff[leftID] += max(maxEV, 0.)*faceArea;
+    
+    if (!face.getState(1)->isGhost()) {
+      // right contribution to update coefficient
+      
+      _tempUnitNormal = -1.0*unitNormal;
+      maxEV = _upVar->getMaxEigenValue(pdata[1],_tempUnitNormal);
+      
+      const CFuint rightID = face.getState(1)->getLocalID();
+      updateCoeff[rightID] += max(maxEV, 0.)*faceArea;
+    }
+  }
+  
+
+ //  // compute update coefficient
+//   if (!getMethodData().isPerturb()) {
+//     CellCenterFVMData& data = this->getMethodData(); 
+//     GeometricEntity& face = *data.getCurrentFace();
+//     const CFreal faceArea = socket_faceAreas.getDataHandle()[face.getID()]/data.getPolyReconstructor()->nbQPoints();
+//     DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+    
+//     // left contribution to update coefficient
+//     const CFuint leftID = face.getState(0)->getLocalID();
+//     const CFreal lambdaMaxL = max(0., uL + aL); //max(0., max(uAvg + aAvg, uL + aL));
+//     const CFreal lambdaMinL = min(0., uL - aL); //lambdaM;
+//     updateCoeff[leftID] += lambdaMaxL*lambdaMaxL/(lambdaMaxL - lambdaMinL)*faceArea;
+    
+//     if (!face.getState(1)->isGhost()) {
+//       // right contribution to update coefficient
+//       _tempUnitNormal = -1.0*unitNormal;
+      
+//       CFreal uR1 = rdata[UPDATEVAR::PTERM::VX]*_tempUnitNormal[XX];
+//       for (CFuint i = 1; i < dim; ++i) {
+//   	uR1 += rdata[UPDATEVAR::PTERM::VX+i]*_tempUnitNormal[i];
+//       }
+//       const CFreal lambdaMaxR = max(0., uR1 + aR);
+//       const CFreal lambdaMinR = min(0., uR1 - aR);
+//       // const CFreal lambdaMaxR = max(0., max(uAvg + aAvg, uR1 + aR));
+//       // const CFreal lambdaMinR = min(0., min(uAvg - aAvg, uR1 - aR));
+//       updateCoeff[face.getState(1)->getLocalID()] += lambdaMaxR*lambdaMaxR/(lambdaMaxR - lambdaMinR)*faceArea;
+//     }
+//   }
+  
+
+  // compute update coefficient
+ //  if (!getMethodData().isPerturb()) {    
+//     DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+//     GeometricEntity& face = *data.getCurrentFace();
+//     const CFreal faceArea = socket_faceAreas.getDataHandle()[face.getID()]/
+//       polyRec->nbQPoints();
+    
+//     // left contribution to update coefficient
+//     CFreal maxEV = _upVar->getMaxEigenValue(ldata, unitNormal);
+//     const CFuint leftID = face.getState(0)->getLocalID();
+//     updateCoeff[leftID] += max(maxEV, 0.)*faceArea;
+    
+//     if (!face.getState(1)->isGhost()) {
+//       // right contribution to update coefficient
+      
+//       _tempUnitNormal = -1.0*unitNormal;
+//       maxEV = _upVar->getMaxEigenValue(rdata,_tempUnitNormal);
+      
+//       const CFuint rightID = face.getState(1)->getLocalID();
+//       updateCoeff[rightID] += max(maxEV, 0.)*faceArea;
+//     }
+//   }
+  
+//    // compute update coefficient
+//     if (!getMethodData().isPerturb()) {
+//       CellCenterFVMData& data = this->getMethodData(); 
+//       GeometricEntity& face = *data.getCurrentFace();
+//       const CFreal faceArea = socket_faceAreas.getDataHandle()[face.getID()]/data.getPolyReconstructor()->nbQPoints();
+//       DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+  
+//       // left contribution to update coefficient
+//       const CFuint leftID = face.getState(0)->getLocalID();
+//       updateCoeff[leftID] += max(0.0, max(uAvg + aAvg, uL+aL))*faceArea;
+  
+//       if (!face.getState(1)->isGhost()) {
+//         // right contribution to update coefficient
+//         _tempUnitNormal = -1.0*unitNormal;
+  
+//         CFreal uR1 = rdata[UPDATEVAR::PTERM::VX]*_tempUnitNormal[XX];
+//         for (CFuint i = 1; i < dim; ++i) {
+// 	  uR1 += rdata[UPDATEVAR::PTERM::VX+i]*_tempUnitNormal[i];
+//         }
+	
+//         updateCoeff[face.getState(1)->getLocalID()] += max(0.0, max(uAvg + aAvg, uR1+aR))*faceArea;
+//       }
+//     }
+
+  
+//   // compute update coefficient
+//   if (!getMethodData().isPerturb()) {
+//     CellCenterFVMData& data = this->getMethodData(); 
+//     GeometricEntity& face = *data.getCurrentFace();
+//     const CFreal faceArea = socket_faceAreas.getDataHandle()[face.getID()]/data.getPolyReconstructor()->nbQPoints();
+//     DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+    
+//     // left contribution to update coefficient
+//     const CFuint leftID = face.getState(0)->getLocalID();
+//     updateCoeff[leftID] += (std::abs(uAvg) + aAvg)*faceArea;
+    
+//     if (!face.getState(1)->isGhost()) {
+//       // right contribution to update coefficient
+//       _tempUnitNormal = -1.0*unitNormal;
+      
+//       CFreal uR1 = rdata[UPDATEVAR::PTERM::VX]*_tempUnitNormal[XX];
+//       for (CFuint i = 1; i < dim; ++i) {
+// 	uR1 += rdata[UPDATEVAR::PTERM::VX+i]*_tempUnitNormal[i];
+//       }
+      
+//       updateCoeff[face.getState(1)->getLocalID()] += (std::abs(uAvg) + aAvg)*faceArea;
+//     }
+//   }
+  
+ //  // compute update coefficient
+//   if (!getMethodData().isPerturb()) {
+//     CellCenterFVMData& data = this->getMethodData(); 
+//     GeometricEntity& face = *data.getCurrentFace();
+//     const CFreal faceArea = socket_faceAreas.getDataHandle()[face.getID()]/data.getPolyReconstructor()->nbQPoints();
+//     DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+    
+//     // left contribution to update coefficient
+//     const CFuint leftID = face.getState(0)->getLocalID();
+//     const CFreal lambdaMaxL = max(0., max(uAvg + aAvg, uL + aL));
+//     const CFreal lambdaMinL = lambdaM;
+//     //updateCoeff[leftID] += lambdaMaxL*lambdaMaxL/(lambdaMaxL - lambdaMinL)*faceArea;
+//     updateCoeff[leftID] += (lambdaMaxL*(uAvg + aAvg) - 2.*lambdaMinL*lambdaMaxL + lambdaMinL*(uAvg + aAvg))/
+//       (lambdaMaxL - lambdaMinL)*faceArea;
+    
+//     if (!face.getState(1)->isGhost()) {
+//       // right contribution to update coefficient
+//       _tempUnitNormal = -1.0*unitNormal;
+      
+//       CFreal uR1 = rdata[UPDATEVAR::PTERM::VX]*_tempUnitNormal[XX];
+//       for (CFuint i = 1; i < dim; ++i) {
+//   	uR1 += rdata[UPDATEVAR::PTERM::VX+i]*_tempUnitNormal[i];
+//       }
+      
+//       const CFreal lambdaMaxR = max(0., max(uAvg + aAvg, uR1 + aR));
+//       const CFreal lambdaMinR = min(0., min(uAvg - aAvg, uR1 - aR));
+//       updateCoeff[face.getState(1)->getLocalID()] += 
+// 	(lambdaMaxR*(uAvg + aAvg) - 2.*lambdaMinR*lambdaMaxR + lambdaMinR*(uAvg + aAvg))/(lambdaMaxR - lambdaMinR)*faceArea;
+//     }
+//   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

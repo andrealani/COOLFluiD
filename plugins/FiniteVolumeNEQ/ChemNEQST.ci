@@ -1,0 +1,326 @@
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "Common/CFLog.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Common/NoSuchValueException.hh"
+#include "NavierStokes/NavierStokesVarSet.hh"
+#include "FiniteVolume/ComputeDiffusiveFlux.hh"
+#include "NEQ/NEQReactionTerm.hh"
+#include "FiniteVolume/DerivativeComputer.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+ChemNEQST<UPDATEVAR>::ChemNEQST(const std::string& name) :
+  ComputeSourceTermFVMCC(name),
+  _varSet(CFNULL),
+  _diffVarSet(CFNULL),
+  _nstates(CFNULL),
+  _isOutward(CFNULL),
+  _qrad(CFNULL),
+  _library(CFNULL),
+  _omega(),
+  _ys(),
+  _physicalData(),
+  _tvDim(),
+  _temp(),
+  _states(),
+  _values(),
+  _dummyGradients()
+{
+  addConfigOptionsTo(this);
+  
+  _includeAxiNS = false;
+  setParameter("IncludeAxiNS",&_includeAxiNS);
+  
+  _uvID = std::vector<CFuint>();
+  setParameter("uvIDs", &_uvID);
+
+  _radRelaxationFactor = 1.0;
+  setParameter("RadRelaxationFactor", &_radRelaxationFactor);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+ChemNEQST<UPDATEVAR>::~ChemNEQST()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void ChemNEQST<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< bool >
+    ("IncludeAxiNS", "Flag asking to include the source term for axisymmetric NS");
+
+  options.template addConfigOption< std::vector<CFuint> >
+    ("uvIDs", "IDs of u and v components");
+
+  options.template addConfigOption< CFreal, Config::DynamicOption<> >
+    ("RadRelaxationFactor", "Relaxation factor for qrad");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void ChemNEQST<UPDATEVAR>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  ComputeSourceTermFVMCC::setup();
+  
+  _varSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+  _varSet->getModel()->resizePhysicalData(_physicalData);
+  cf_assert(_varSet.isNotNull());
+  
+  if (_includeAxiNS) {
+    _diffVarSet = this->getMethodData().getDiffusiveVar().template
+      d_castTo<NavierStokesVarSet>();
+  }
+  
+  DataHandle<CFreal> normals = this->socket_normals.getDataHandle();
+  _nstates = _sockets.template getSocketSink<RealVector>("nstates")->getDataHandle();
+  _isOutward = this->socket_isOutward.getDataHandle();
+  
+  _library = PhysicalModelStack::getActive()->getImplementor()->template
+    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  cf_assert (_library.isNotNull());
+    
+  SafePtr<typename UPDATEVAR::PTERM> term = _varSet->getModel();
+  const CFuint nbSpecies = term->getNbScalarVars(0);
+  _omega.resize(nbSpecies);
+  _ys.resize(nbSpecies);
+
+  const CFuint nbTv = term->getNbScalarVars(1);
+  _tvDim.resize((nbTv > 1) ? nbTv : 1);
+
+  _temp.resize(PhysicalModelStack::getActive()->getNbEq());
+
+  const CFuint maxNbNodesIn2DCV = 4;
+  _states.reserve(maxNbNodesIn2DCV);
+
+ SafePtr<DerivativeComputer> derComput =
+    this->getMethodData().getDerivativeComputer();
+  const CFuint nbNodesInControlVolume = derComput->getMaxNbVerticesInControlVolume();
+  _values.resize(PhysicalModelStack::getActive()->getNbEq(), nbNodesInControlVolume);
+   
+  // default setting for _uvID array
+  if (_includeAxiNS && _uvID.size() == 0) {
+    throw NoSuchValueException (FromHere(),"ChemNEQST<UPDATEVAR>::setup() => uvID option not set");
+  }
+  
+  const string qradName = MeshDataStack::getActive()->getPrimaryNamespace() + "_qrad";
+  _hasRadiationCoupling = MeshDataStack::getActive()->getDataStorage()->checkData(qradName);
+  
+  if (_hasRadiationCoupling) {
+    _qrad = MeshDataStack::getActive()->getDataStorage()->getData<CFreal>(qradName);
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void ChemNEQST<UPDATEVAR>::computeSource
+(Framework::GeometricEntity *const element, RealVector& source, RealMatrix& jacobian)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NEQ;
+  
+  CFLogDebugMin( "ChemNEQST::computeSource()" << "\n");
+  const EquationSubSysDescriptor& eqSS =
+    PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
+  
+  const CFuint iEqSS = eqSS.getEqSS();
+  SafePtr<typename UPDATEVAR::PTERM> term = _varSet->getModel();
+  const CFuint nbSpecies = term->getNbScalarVars(0);
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbEulerEq = dim + 2;
+  const CFuint nbEqs = eqSS.getNbEqsSS();
+  const vector<CFuint>& varIDs =
+    UPDATEVAR::EULERSET::getEqSetData()[0].getEqSetVarIDs();
+  
+  bool doComputeST = false;
+  if (varIDs[0] > 0 && (iEqSS == 0 && nbEqs >= nbSpecies)) {
+    doComputeST = true;
+  }
+
+  if ((varIDs[0] == 0 && (iEqSS == 0) && (nbEqs >= nbEulerEq+nbSpecies)) ||
+      (varIDs[0] == 0 && (iEqSS == 1)))	 {
+    doComputeST = true;
+  }
+
+  if (doComputeST) {
+    // this source term is for axisymmetric flows
+    const vector<State*>* const states = element->getStates();
+
+    cf_assert(states->size() == 1);
+
+    _varSet->computePhysicalData(*(*states)[0], _physicalData);
+
+    // this cannot be used as is in weakly coupled simulation
+    if (_includeAxiNS) {
+      computeAxiNS(element, source);
+    }
+    
+    RealVector& refData = _varSet->getModel()->getReferencePhysicalData();
+    
+    SafePtr<NEQReactionTerm> rt = PhysicalModelStack::getActive()->getImplementor()->
+      getSourceTerm().d_castTo<Physics::NEQ::NEQReactionTerm>();
+    
+    CFreal pdim = (this->_physicalData[UPDATEVAR::PTERM::P] + this->_varSet->getModel()->getPressInf())*
+      refData[UPDATEVAR::PTERM::P];
+    CFreal Tdim = _physicalData[UPDATEVAR::PTERM::T]*refData[UPDATEVAR::PTERM::T];
+    CFreal rhodim = _physicalData[UPDATEVAR::PTERM::RHO]*refData[UPDATEVAR::PTERM::RHO];
+    
+    const CFuint firstSpecies = term->getFirstScalarVar(0);
+    for (CFuint i = 0; i < nbSpecies; ++i) {
+      _ys[i] = _physicalData[firstSpecies + i];
+    }
+
+    State *const currState = (*states)[0];
+    setVibTemperature(_physicalData, *currState, _tvDim);
+    _tvDim *= refData[UPDATEVAR::PTERM::T];
+    
+    CFLog(DEBUG_MAX, "ChemNEQST::computeSource() => T = " << Tdim << ", p = " << pdim << ", rho = " << rhodim << ", Tv = " << _tvDim << "\n");
+    CFLog(DEBUG_MAX, "ChemNEQST::computeSource() => ys = " << _ys << "\n");
+    cf_assert(_ys.sum() > 0.9999 && _ys.sum() < 1.0001);
+    
+    // compute the mass production/destruction term
+    _library->getMassProductionTerm(Tdim, _tvDim,
+				    pdim, rhodim, _ys,
+				    this->useAnalyticalJacob(),
+				    _omega,
+				    jacobian);
+    
+    CFLog(DEBUG_MAX, "ChemNEQST::computeSource() => omega = " << _omega << "\n");
+    
+    DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+    
+    const CFreal r = (this->getMethodData().isAxisymmetric()) ? currState->getCoordinates()[YY] : 1.0;
+    
+    // volume has to multiply the source term derivative
+    jacobian *= volumes[element->getID()]*r;
+    
+    const vector<CFuint>& speciesVarIDs =
+      UPDATEVAR::getEqSetData()[0].getEqSetVarIDs();
+    
+    //     const CFreal ovOmegaRef = PhysicalModelStack::getActive()->
+    //       getImplementor()->getRefLength()/(refData[UPDATEVAR::PTERM::V]*
+    // 					sourceRefData[NEQReactionTerm::TAU]);
+    
+    const CFreal ovOmegaRef = PhysicalModelStack::getActive()->getImplementor()->
+      getRefLength()/(refData[UPDATEVAR::PTERM::RHO]*refData[UPDATEVAR::PTERM::V]);
+    
+    for (CFuint i = 0; i < nbSpecies; ++i) {
+      source[speciesVarIDs[i]] = _omega[i]*volumes[element->getID()]*ovOmegaRef*r;
+    }
+    CFLog(DEBUG_MAX,"ChemNEQST::computeSource() => souurce = " << source << "\n");
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class UPDATEVAR>
+void ChemNEQST<UPDATEVAR>::setVibTemperature(const RealVector& pdata,
+					     const Framework::State& state,
+					     RealVector& tvib)
+{
+  cf_assert(tvib.size() == 1);
+  tvib[0] = pdata[UPDATEVAR::PTERM::T];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class UPDATEVAR>
+void ChemNEQST<UPDATEVAR>::computeAxiNS(Framework::GeometricEntity *const element,
+					RealVector& source)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+  DataHandle<CFreal> normals = socket_normals.getDataHandle();
+
+  cf_assert (_varSet.isNotNull());
+
+  // please note the reference &
+  State& currState = *element->getState(0);
+
+  _states.clear();
+  const vector<Node*>* const nodes = element->getNodes();
+  const CFuint nbNodesInElem = nodes->size();
+  for (CFuint i = 0; i < nbNodesInElem; ++i) {
+    _states.push_back(&_nstates[(*nodes)[i]->getLocalID()]);
+  }
+
+  _diffVarSet->setGradientVars(_states, _values, _states.size());
+
+  const vector<GeometricEntity*>& faces = *element->getNeighborGeos();
+
+  cf_assert (faces.size() == nbNodesInElem);
+
+  const CFuint elemID = element->getID();
+
+  // compute the gradients by applying Green Gauss in the
+  // cell volume
+  CFreal dUdX = 0.0;
+  CFreal dVdR = 0.0;
+  const CFuint uID = _uvID[0];
+  const CFuint vID = _uvID[1];
+
+  for (CFuint i = 0; i < nbNodesInElem; ++i) {
+    // get the face normal
+    const CFuint faceID = faces[i]->getID();
+    const CFuint startID = faceID*PhysicalModelStack::getActive()->getDim();
+    CFreal nx = normals[startID];
+    CFreal ny = normals[startID + 1];
+    if (static_cast<CFuint>(_isOutward[faceID]) != elemID) {
+      nx *= -1.;
+      ny *= -1.;
+    }
+
+    if (i < (nbNodesInElem - 1)) {
+      dUdX += nx*(_values(uID, i) + _values(uID, i+1));
+      dVdR += ny*(_values(vID, i) + _values(vID, i+1));
+    }
+    else {
+      dUdX += nx*(_values(uID, i) + _values(uID, 0));
+      dVdR += ny*(_values(vID, i) + _values(vID, 0));
+    }
+  }
+  dUdX *= 0.5/volumes[elemID];
+  dVdR *= 0.5/volumes[elemID];
+
+  const CFreal avV = _physicalData[UPDATEVAR::PTERM::VY];
+  ///@todo this will not work if gradients are needed (Menter SST turb model)
+  const CFreal mu = _diffVarSet->getDynViscosity(currState, _dummyGradients);
+  const CFreal tauThetaTheta = -_diffVarSet->getModel().getCoeffTau()*2./3.*mu*
+    (dUdX + dVdR - 2.*avV/(currState.getCoordinates())[YY]);
+  
+  source[_uvID[1]] = (_physicalData[UPDATEVAR::PTERM::P] - tauThetaTheta)*volumes[elemID];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

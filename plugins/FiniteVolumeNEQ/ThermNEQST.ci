@@ -1,0 +1,495 @@
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "Common/CFLog.hh"
+#include "Framework/GeometricEntity.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+ThermNEQST<UPDATEVAR>::ThermNEQST(const std::string& name) :
+  ChemNEQST<UPDATEVAR>(name),
+  _refData(CFNULL),
+  _omegaRad(0.),
+  _divV(0.),
+  _pe(0.),
+  _omegaTv(),
+  _omegaTvPert(),
+  _omegaTvDiff(),
+  _omegaDiff(),
+  _omegaPert()
+{
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+ThermNEQST<UPDATEVAR>::~ThermNEQST()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void ThermNEQST<UPDATEVAR>::setup()
+{
+  using namespace COOLFluiD::Framework;
+    
+  ChemNEQST<UPDATEVAR>::setup();
+  
+  const CFuint nbVibEnergyEqs = this->_varSet->getModel()->getNbScalarVars(1); 
+  _omegaTv.resize(nbVibEnergyEqs);
+  _omegaTvPert.resize(nbVibEnergyEqs);
+  _omegaTvDiff.resize(nbVibEnergyEqs);
+  
+  const CFuint nbSpecies = this->_varSet->getModel()->getNbScalarVars(0); 
+  _omegaDiff.resize(nbSpecies);
+  _omegaPert.resize(nbSpecies);
+  Common::SafePtr<typename UPDATEVAR::PTERM> term = this->_varSet->getModel(); 
+  _refData = &term->getReferencePhysicalData();
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+/*template <class UPDATEVAR>
+void ThermNEQST<UPDATEVAR>::computeSource
+(Framework::GeometricEntity *const element,
+ RealVector& source, RealMatrix& jacobian)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  // first compute the mass production term
+  ChemNEQST<UPDATEVAR>::computeSource(element,source,jacobian);
+  
+  CFLogDebugMin( "ThermNEQST::computeSource()" << "\n");
+  //  const EquationSubSysDescriptor& eqSS = 
+  //  PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
+  //  const CFuint iEqSS = eqSS.getEqSS();
+  
+  SafePtr<typename UPDATEVAR::PTERM> term = this->_varSet->getModel(); 
+  const CFreal ovOmegavRef = PhysicalModelStack::getActive()->
+    getImplementor()->getRefLength()/((*_refData)[UPDATEVAR::PTERM::RHO]*
+				      (*_refData)[UPDATEVAR::PTERM::H]*
+				      (*_refData)[UPDATEVAR::PTERM::V]);
+  
+  State *const currState = element->getState(0);
+  DataHandle<CFreal> volumes = this->socket_volumes.getDataHandle();
+  const CFuint elemID = element->getID();
+  
+  _omegaTv = 0.0;
+  _omegaRad = 0.0; 
+  computeSourceVT(_omegaTv, _omegaRad);
+  
+  const vector<CFuint>& evVarIDs = UPDATEVAR::getEqSetData()[1].getEqSetVarIDs();
+  // omega rad is subtracted from the total energy equation
+  const CFreal r = (this->getMethodData().isAxisymmetric()) ? currState->getCoordinates()[YY] : 1.0;
+  const CFreal coeff = volumes[elemID]*ovOmegavRef*r;
+  const CFuint nbSpecies = term->getNbScalarVars(0); 
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint TID = nbSpecies + dim;
+  cf_always_assert(TID == (evVarIDs[0]-1));
+  source[TID] = -_omegaRad*coeff;
+  
+  const CFuint nbEvEqs = term->getNbScalarVars(1); 
+  for (CFuint i = 0; i < nbEvEqs; ++i) {
+    source[evVarIDs[i]] = _omegaTv[i]*coeff;
+  }
+  
+  if (this->_library->presenceElectron()) {
+    computePeDivV(element,source,jacobian);
+  }
+  
+  if (this->useAnalyticalJacob()) {
+    const CFuint TeID = (this->_library->getNbTe() == 0) ? 
+      TID + 1 + this->_library->getElectrEnergyID() : currState->size() - 1;
+    
+    NumericalJacobian& numJacob = this->getMethodData().getNumericalJacobian();
+    // first the contribution to the rhs is computed
+    const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+    for (CFuint iVar = 0; iVar < nbEqs; ++iVar) {
+      if ((iVar < nbSpecies) || (iVar >= TID)) {
+	// perturb the given component of the state vector
+	numJacob.perturb(iVar, (*currState)[iVar]);
+	
+	this->_varSet->computePhysicalData(*currState, this->_physicalData);
+	
+	_omegaTvPert = 0.0;
+	CFreal omegaRadPert = 0.0;
+	computeSourceVT(_omegaTvPert, omegaRadPert);
+	
+	// compute the finite difference derivative of the flux
+	numJacob.computeDerivative(_omegaTv, _omegaTvPert, _omegaTvDiff);
+	_omegaTvDiff *= coeff;
+	
+	for (CFuint iTv = 0; iTv < nbEvEqs; ++iTv) {
+	  jacobian(evVarIDs[iTv], iVar) = _omegaTvDiff[iTv];
+	}
+	
+	CFreal omegaRadDiff = 0.0;
+	numJacob.computeDerivative(_omegaRad, omegaRadPert, omegaRadDiff);
+	jacobian(TID, iVar) = -omegaRadDiff*coeff;
+	
+	const CFreal pePert = this->_library->getElectronPress()/(*_refData)[UPDATEVAR::PTERM::P];
+	CFreal peDiff = 0.0;
+	numJacob.computeDerivative(_pe, pePert, peDiff);
+	jacobian(TeID, iVar) -= r*peDiff*_divV;
+	
+	// restore the unperturbed value
+	numJacob.restore((*currState)[iVar]);
+      }
+    }    
+  }
+  }*/
+      
+template <class UPDATEVAR>
+void ThermNEQST<UPDATEVAR>::computeSource
+(Framework::GeometricEntity *const element, RealVector& source, RealMatrix& jacobian)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NEQ;
+  
+  CFTRACEBEGIN;
+  
+  const EquationSubSysDescriptor& eqSS =
+    PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
+  
+  const CFuint iEqSS = eqSS.getEqSS();
+  SafePtr<typename UPDATEVAR::PTERM> term = this->_varSet->getModel();
+  const CFuint nbSpecies = term->getNbScalarVars(0);
+  const CFuint nbEvEqs = term->getNbScalarVars(1);
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbEulerEq = dim + 2;
+  const CFuint nbEqs = eqSS.getNbEqsSS();
+  const vector<CFuint>& varIDs =
+    UPDATEVAR::EULERSET::getEqSetData()[0].getEqSetVarIDs();
+  
+  bool doComputeST = false;
+  if (varIDs[0] > 0 && (iEqSS == 0 && nbEqs >= nbSpecies)) {
+    doComputeST = true;
+  }
+  
+  if ((varIDs[0] == 0 && (iEqSS == 0) && (nbEqs >= nbEulerEq+nbSpecies)) ||
+      (varIDs[0] == 0 && (iEqSS == 1)))	 {
+    doComputeST = true;
+  }
+
+  if (doComputeST) {
+    // this source term is for axisymmetric flows
+    State *const currState = element->getState(0);
+    
+    this->_varSet->computePhysicalData(*currState, this->_physicalData);
+    
+    // this cannot be used as is in weakly coupled simulation
+    if (this->_includeAxiNS) {
+      this->computeAxiNS(element, source);
+    }
+    
+    RealVector& refData = this->_varSet->getModel()->getReferencePhysicalData();
+    SafePtr<NEQReactionTerm> rt = PhysicalModelStack::getActive()->getImplementor()->
+      getSourceTerm().d_castTo<Physics::NEQ::NEQReactionTerm>();
+    
+    CFreal pdim = (this->_physicalData[UPDATEVAR::PTERM::P] + this->_varSet->getModel()->getPressInf())*
+      refData[UPDATEVAR::PTERM::P];
+    cf_assert(pdim > 0.);
+    CFreal Tdim = this->_physicalData[UPDATEVAR::PTERM::T]*refData[UPDATEVAR::PTERM::T];
+    cf_assert(Tdim > 0.);
+    CFreal rhodim = this->_physicalData[UPDATEVAR::PTERM::RHO]*refData[UPDATEVAR::PTERM::RHO];
+    cf_assert(rhodim > 0.);
+    const CFuint firstSpecies = term->getFirstScalarVar(0);
+    for (CFuint i = 0; i < nbSpecies; ++i) {
+      this->_ys[i] = this->_physicalData[firstSpecies + i];
+    }
+    
+    this->setVibTemperature(this->_physicalData, *currState, this->_tvDim);
+    this->_tvDim *= refData[UPDATEVAR::PTERM::T];
+    cf_assert(this->_tvDim > 0.);
+    
+    DataHandle<CFreal> volumes = this->socket_volumes.getDataHandle();
+    
+    _omegaTv = 0.0;
+    _omegaRad = 0.0; 
+   
+    // compute the conservation equation source term
+    // AM: ugly but effective
+    // the real solution would be to implement the function
+    // MutationLibrary2OLD::getSource() 
+    if (this-> _library->getName() != "Mutation2OLD" && this-> _library->getName() != "MutationPanesi") {
+        this-> _library->getSource(Tdim, this-> _tvDim, pdim, rhodim, this-> _ys,
+		        this->useAnalyticalJacob(),
+		        this-> _omega, _omegaTv, _omegaRad, jacobian);
+    }    
+    else {
+      // compute the mass production/destruction term
+      this-> _library->getMassProductionTerm(Tdim, this-> _tvDim, pdim, rhodim, this-> _ys,
+				               this->useAnalyticalJacob(), this-> _omega, jacobian);      
+      
+      // compute energy relaxation and excitation term 
+      if (nbEvEqs != 0) { 
+	  this-> _library->getSourceTermVT(Tdim, this-> _tvDim, pdim, rhodim, _omegaTv, _omegaRad); 
+     }
+    }    
+    
+    const CFreal r = (this->getMethodData().isAxisymmetric()) ? currState->getCoordinates()[YY] : 1.0;
+    
+    if (this->useAnalyticalJacob()) {
+      // volume has to multiply the source term derivative
+      jacobian *= volumes[element->getID()]*r;
+    }
+    
+    const vector<CFuint>& speciesVarIDs = UPDATEVAR::getEqSetData()[0].getEqSetVarIDs();
+    const vector<CFuint>& evVarIDs = UPDATEVAR::getEqSetData()[1].getEqSetVarIDs();
+    const CFreal ovOmegaRef = PhysicalModelStack::getActive()->getImplementor()->
+      getRefLength()/(refData[UPDATEVAR::PTERM::RHO]*refData[UPDATEVAR::PTERM::V]);
+    
+    //     const CFreal ovOmegaRef = PhysicalModelStack::getActive()->
+    //       getImplementor()->getRefLength()/(refData[UPDATEVAR::PTERM::V]*
+    // 					sourceRefData[NEQReactionTerm::TAU]);
+    
+    const CFreal ovOmegavRef = PhysicalModelStack::getActive()->
+      getImplementor()->getRefLength()/((*_refData)[UPDATEVAR::PTERM::RHO]*
+					(*_refData)[UPDATEVAR::PTERM::H]*
+					(*_refData)[UPDATEVAR::PTERM::V]);
+    
+    const CFuint elemID = element->getID(); 
+    // omega rad is subtracted from the total energy equation
+    const CFreal coeffc = volumes[elemID]*ovOmegaRef*r;
+    const CFreal coeffv = volumes[elemID]*ovOmegavRef*r;
+    
+    for (CFuint i = 0; i < nbSpecies; ++i) {
+      source[speciesVarIDs[i]] = this->_omega[i]*coeffc;
+    }
+    
+    SafePtr<typename UPDATEVAR::PTERM> term = this->_varSet->getModel(); 
+    const CFuint nbSpecies = term->getNbScalarVars(0); 
+    const CFuint nbEvEqs = term->getNbScalarVars(1); 
+    const CFuint dim = PhysicalModelStack::getActive()->getDim();
+    const CFuint TID = nbSpecies + dim;
+    const CFuint TED = nbSpecies + dim + nbEvEqs;
+    
+    cf_always_assert(TID == (evVarIDs[0]-1));
+    
+    source[TID] = -_omegaRad*coeffv;
+    
+    // Radiative energy loss term to be added to the energy equations when 
+    // performing radiation coupling (the term is added to the (free-electron)-electronic energy
+    // conservation equation only in case of ionized mixtures)
+    if (this->_hasRadiationCoupling) {
+      cf_assert(elemID < this->_qrad.size()); 
+      source[TID] = - this->_radRelaxationFactor*this->_qrad[elemID]*coeffv;
+      if (this->_library->presenceElectron()) {
+        source[TED] -= this->_radRelaxationFactor*this->_qrad[elemID]*coeffv;   
+      } 
+    }
+
+    for (CFuint i = 0; i < nbEvEqs; ++i) {
+      source[evVarIDs[i]] = _omegaTv[i]*coeffv;
+    }
+    
+    if (this->_library->presenceElectron()) {
+      computePeDivV(element,source,jacobian);
+      
+      if (this->useAnalyticalJacob()) {
+	const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+	const CFuint TeID = (this->_library->getNbTe() == 0) ? TID + 1 + this->_library->getElectrEnergyID() : currState->size() - 1;
+	cf_assert(TeID < nbEqs);
+	
+	NumericalJacobian& numJacob = this->getMethodData().getNumericalJacobian();
+	// first the contribution to the rhs is computed
+	const CFreal eeID = _omegaTv.size()-1;
+	const CFreal omegaTe =  _omegaTv[eeID];
+	for (CFuint iVar = 0; iVar < nbEqs; ++iVar) {
+	  // pe depends only on rho_e (or y_e) and T_e
+	  // perturb the given component of the state vector
+	  numJacob.perturb(iVar, (*currState)[iVar]);
+	  this->_varSet->computePhysicalData(*currState, this->_physicalData);
+	  
+	  for (CFuint i = 0; i < nbSpecies; ++i) {
+	    this->_ys[i] = this->_physicalData[firstSpecies + i];
+	  }
+	  
+	  setVibTemperature(this->_physicalData, *currState, this->_tvDim);
+	  this->_tvDim *= refData[UPDATEVAR::PTERM::T];
+	  
+	  // overwrite terms dS_i/drho_e in the source term jacobian matrix
+	  if (iVar == 0) {
+	    CFreal pdime = (this->_physicalData[UPDATEVAR::PTERM::P] + this->_varSet->getModel()->getPressInf())*
+	      refData[UPDATEVAR::PTERM::P];
+	    CFreal Tdime = this->_physicalData[UPDATEVAR::PTERM::T]*refData[UPDATEVAR::PTERM::T];
+	    CFreal rhodime = this->_physicalData[UPDATEVAR::PTERM::RHO]*refData[UPDATEVAR::PTERM::RHO];
+	    
+	    // compute the mass production/destruction term
+	    this->_library->getMassProductionTerm(Tdime, this->_tvDim,
+						  pdime, rhodime, this->_ys,
+						  false, this->_omegaPert, jacobian);
+	    
+	    numJacob.computeDerivative(this->_omega, _omegaPert, _omegaDiff);
+	    
+	    for (CFuint isp = 0; isp < nbSpecies; ++isp) {
+	      jacobian(speciesVarIDs[isp], 0) = _omegaDiff[isp]*coeffc;
+	    }
+	  }
+	  
+	  CFreal omegaTePert = 0.0;
+	  CFreal omegaDiffE = 0.0;
+	  computeSourceEE(omegaTePert);
+	  
+	  // compute the finite difference derivative of the flux
+	  numJacob.computeDerivative(omegaTe, omegaTePert, omegaDiffE);
+	  jacobian(TeID, iVar) = omegaDiffE*coeffv;
+	  
+	  if ((iVar == 0) || (iVar == TeID)) {
+	    const CFreal pePert = this->_library->getElectronPress()/(*_refData)[UPDATEVAR::PTERM::P];
+	    CFreal peDiff = 0.0;
+	    numJacob.computeDerivative(_pe, pePert, peDiff);
+	    jacobian(TeID, iVar) -= r*peDiff*_divV;
+	  }
+	  
+	  // restore the unperturbed value
+	  numJacob.restore((*currState)[iVar]);
+	}
+      }    
+    }	
+    
+    //    if (this->useAnalyticalJacob()) {
+    //       const CFuint TeID = (this->_library->getNbTe() == 0) ? 
+// 	TID + 1 + this->_library->getElectrEnergyID() : currState->size() - 1;
+    
+//       NumericalJacobian& numJacob = this->getMethodData().getNumericalJacobian();
+//       // first the contribution to the rhs is computed
+//       const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+//       for (CFuint iVar = 0; iVar < nbEqs; ++iVar) {
+// 	if ((iVar < nbSpecies) || (iVar >= TID)) {
+// 	  // perturb the given component of the state vector
+// 	  numJacob.perturb(iVar, (*currState)[iVar]);
+	  
+// 	  this->_varSet->computePhysicalData(*currState, this->_physicalData);
+	  
+// 	  _omegaTvPert = 0.0;
+// 	  CFreal omegaRadPert = 0.0;
+// 	  computeSourceVT(_omegaTvPert, omegaRadPert);
+	  
+// 	  // compute the finite difference derivative of the flux
+// 	  numJacob.computeDerivative(_omegaTv, _omegaTvPert, _omegaTvDiff);
+// 	  _omegaTvDiff *= coeff;
+	  
+// 	  for (CFuint iTv = 0; iTv < nbEvEqs; ++iTv) {
+// 	    jacobian(evVarIDs[iTv], iVar) = _omegaTvDiff[iTv];
+// 	  }
+	  
+// 	  CFreal omegaRadDiff = 0.0;
+// 	  numJacob.computeDerivative(_omegaRad, omegaRadPert, omegaRadDiff);
+// 	  jacobian(TID, iVar) = -omegaRadDiff*coeff;
+	  
+// 	  const CFreal pePert = this->_library->getElectronPress()/(*_refData)[UPDATEVAR::PTERM::P];
+// 	  CFreal peDiff = 0.0;
+// 	  numJacob.computeDerivative(_pe, pePert, peDiff);
+// 	  jacobian(TeID, iVar) -= r*peDiff*_divV;
+	  
+// 	  // restore the unperturbed value
+// 	  numJacob.restore((*currState)[iVar]);
+// 	}
+//       }    
+//     }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void ThermNEQST<UPDATEVAR>::computePeDivV
+(Framework::GeometricEntity *const element, RealVector& source, RealMatrix& jacobian)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  SafePtr<typename UPDATEVAR::PTERM> term = this->_varSet->getModel(); 
+  State *const currState = element->getState(0);		
+  
+  // omega rad is subtracted from the total energy equation
+  const CFreal r = (this->getMethodData().isAxisymmetric()) ? currState->getCoordinates()[YY] : 1.0;
+  const CFuint nbSpecies = term->getNbScalarVars(0); 
+  
+  // term for Park's model
+  DataHandle<CFreal> normals = this->socket_normals.getDataHandle();
+  DataHandle<RealVector> nstates = this->_sockets.template getSocketSink<RealVector>("nstates")->getDataHandle();
+  DataHandle<CFint> isOutward = this->socket_isOutward.getDataHandle();
+  
+  vector<Node*>& nodes = *element->getNodes();
+  const CFuint nbNodesInElem = nodes.size();
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  cf_assert(this->_library->getElectrEnergyID() >= 0);
+  const CFuint TeID = (this->_library->getNbTe() == 0) ? 
+    nbSpecies + dim + 1 + this->_library->getElectrEnergyID() : currState->size() - 1;
+  
+  CFreal dudX = 0.;
+  CFreal dvdY = 0.;
+  
+  const vector<GeometricEntity*>& faces = *element->getNeighborGeos();
+  cf_assert(faces.size() == nbNodesInElem);
+  
+  for (CFuint i = 0; i < nbNodesInElem; ++i) {
+    // get the face normal
+    const CFuint faceID = faces[i]->getID();
+    const CFuint startID = faceID*PhysicalModelStack::getActive()->getDim();
+    
+    // for now only 2D
+    CFreal nx = normals[startID];
+    CFreal ny = normals[startID + 1];
+    if (static_cast<CFuint>(isOutward[faceID]) != element->getID()) {
+      nx *= -1.;
+      ny *= -1.;
+    }
+    
+    CFuint iPlus1 = 0;
+    if (i < (nbNodesInElem - 1)) {
+      iPlus1 = i+1;
+    }
+    const RealVector& n1 = nstates[nodes[i]->getLocalID()];
+    const RealVector& n2 = nstates[nodes[iPlus1]->getLocalID()];
+    dudX += nx*(n1[nbSpecies] + n2[nbSpecies]);
+    dvdY += ny*(n1[nbSpecies+1] + n2[nbSpecies+1]);
+  }
+  
+  //  VOLUME is OK for pe term
+  _divV = 0.5*(dudX + dvdY); // here 1./volume but after *volume so 1 in total 
+  
+  // this electron pressure has been already calculated in ChemNEQST when calling computePhysicalData()
+  _pe = this->_library->getElectronPress()/(*_refData)[UPDATEVAR::PTERM::P];
+  source[TeID] -= r*_pe*_divV;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template<class UPDATEVAR>
+void ThermNEQST<UPDATEVAR>::setVibTemperature(const RealVector& pdata, 
+					      const Framework::State& state,
+					      RealVector& tvib)
+{
+  const CFuint startID = this->_ys.size() + 
+    Framework::PhysicalModelStack::getActive()->getDim()  + 1;
+  
+  for (CFuint i = 0; i < tvib.size(); ++i) {
+    tvib[i] =  state[startID + i];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

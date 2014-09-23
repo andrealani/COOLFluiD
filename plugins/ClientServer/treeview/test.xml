@@ -1,0 +1,1243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="xbel2html.xsl"?>
+<xbel>
+  <title>Bookmarks</title>
+  <desc>Bookmarks Menu</desc>
+    <separator/>
+  <folder added="907269962" folded="no">
+    <title>GNU/Linux</title>
+
+  <folder added="907270202" folded="no">
+    <title>Aide et documentation Linux</title>
+    <desc>— Pour l’aide spécifique aux applications, voir plus bas
+        </desc>
+  <folder added="1101016588" folded="no">
+    <title>Général</title>
+    <bookmark href="http://www.aboutdebian.com/index.htm" added="1146031663" modified="1197156836">
+      <title>Debian Linux Tutorial - Guide On How To Install Linux Software for Servers and Network Installation and Set Up for Beginners with Instructions On How To Configure A Home Server</title>
+
+    <desc>— Newbies guides on installing Linux and networking setup with Internet and LAN servers administration including Web, e-mail, proxy, firewall, file, and print servers. Beginner tutorials on Linux basics, networking, compiling software, and security. Installing, setting up, and configuring Debian Linux are covered.
+                </desc>
+    </bookmark>
+    <bookmark href="http://www.tldp.org/" added="1193558919" modified="1197156861">
+      <title>The Linux Documentation Project</title>
+    <desc>— The Linux Documentation Project is working towards developing free, high quality documentation for the Linux operating
+system. The overall goal of the LDP is to collaborate in all of the issues
+of Linux documentation.
+                </desc>
+    </bookmark>
+    <bookmark href="http://www.linux-tutorial.info/" added="1193558873" modified="1197156876">
+
+      <title>Linux Knowledge Base and Tutorial</title>
+    <desc>— The place where you learn Linux. Hundreds of articles, "Test Your Knowledge" quizzes, popup glossary, and much, much more help you learn Linux the easy way.
+                </desc>
+    </bookmark>
+    <bookmark href="http://www.justlinux.com/" added="1193558727" modified="1197156887">
+      <title>JustLinux: Wanna learn Linux?</title>
+    <desc>— Welcome to JustLinux: Wanna learn linux?
+                </desc>
+    </bookmark>
+
+    <bookmark href="http://linux.die.net/" added="1193559007" modified="1197156887">
+      <title>Linux Documentation - linux.die.net</title>
+    </bookmark>
+    <bookmark href="http://linux.about.com/" added="1080469444" modified="1197156887">
+      <title>Linux Operating System and Linux Distributions</title>
+    </bookmark>
+    <bookmark href="http://www.comptechdoc.org/os/linux/" added="1193559128" modified="1197156899">
+      <title>Linux</title>
+
+    </bookmark>
+    <bookmark href="http://www.techtutorials.info/linux.html" added="1083379986" modified="1197156899">
+      <title>Linux Resources</title>
+    </bookmark>
+    <bookmark href="http://www.yolinux.com/TUTORIALS/" added="1086409316" modified="1193559333">
+      <title>YoLinux: Index of Linux Tutorials</title>
+    </bookmark>
+    <bookmark href="http://linux.togaware.com/survivor/" added="1193559660" modified="1197156920">
+
+      <title>GNU/Linux Desktop Survival Guide</title>
+    <desc>— Debian GNU/Linux Desktop Survival Guide
+                </desc>
+    </bookmark>
+    <bookmark href="http://linux-newbie.sunsite.dk/" added="1080629003" modified="1197156920">
+      <title>Linux Newbie Guide by Stan, Peter and Marie Klimas</title>
+    </bookmark>
+    <bookmark href="http://www.fr.debian.org/doc/user-manuals" added="1193560970" modified="1197156920">
+
+      <title>Debian -- Manuels DDP pour les utilisateurs</title>
+    </bookmark>
+    <bookmark href="http://huijts.student.utwente.nl/~jarkko/linux/lgh" added="1193562010" modified="1193562086">
+      <title>Linux Gebruikers Handleiding (LGH)</title>
+    </bookmark>
+    <bookmark href="http://en.wikibooks.org/wiki/Linux_For_Newbies" added="1162068909" modified="1193562086">
+      <title>Linux For Newbies - Wikibooks, collection of open-content textbooks</title>
+
+    </bookmark>
+    <bookmark href="http://www.linuxtopia.org/index.html" added="1196590254" modified="1197156940">
+      <title>On-line Linux and Open Source Technology Books and How To Guides</title>
+    </bookmark>
+    <bookmark href="http://www.howtoforge.com/" added="1206521007" modified="1197156940">
+      <title>HowtoForge - Linux Howtos and Tutorials | Howtos about Linux and Open Source</title>
+    </bookmark>
+    <bookmark href="http://searchenterpriselinux.techtarget.com/" added="1206521521" modified="1197156940">
+
+      <title>The Web's best resource for Linux admins and managers</title>
+    <desc>Find the latest Linux news and resources on Linux servers, operating system (OS), software, administration, security, Red Hat, SUSE, Ubunti Linux and more.
+                </desc>
+    </bookmark>
+    <bookmark href="http://wiki.linuxquestions.org/wiki/Main_Page" added="1207034383" modified="1197156940">
+      <title>LinuxQuestions.org Wiki</title>
+    </bookmark>
+  </folder>
+
+  <folder added="1101016645" folded="no">
+    <title>Commandes</title>
+    <bookmark href="http://linuxcommand.org/" added="1094403838" modified="1209155168">
+      <title>LinuxCommand.org: Learn the Linux command line. Write shell scripts.</title>
+    </bookmark>
+    <bookmark href="http://www.oreillynet.com/linux/cmd/" added="1082751579" modified="1209155168">
+      <title>Linux commands O'Reilly Network: [2004 23, April]</title>
+
+    </bookmark>
+    <bookmark href="http://www.laynetworks.com/linux.htm" added="1082751299" modified="1209155168">
+      <title>Linux Commands Summary</title>
+    </bookmark>
+    <bookmark href="http://hegel.ittc.ukans.edu/topics/linux/man-pages/index/alpha-index.html" added="1094404058" modified="1209155168">
+      <title>Alphabetical Index of Manual Pages</title>
+    </bookmark>
+    <bookmark href="http://leapster.org/linoleum/" added="907291962" modified="907291960">
+
+      <title>Linoleum: Linux Programming References</title>
+    </bookmark>
+    <bookmark href="http://linux.com.hk/penguin/manpages.jsp" added="1143359554" modified="907291960">
+      <title>Linux Man</title>
+    </bookmark>
+    <bookmark href="http://www.onlamp.com/linux/cmd/" added="1150432517" modified="1197156987">
+      <title>Linux Command Directory: Index</title>
+
+    <desc>— This directory of Linux commands is from Linux in a Nutshell, 3rd Edition. Click on any of the 379 commands below to get a description and list of available options.
+                </desc>
+    </bookmark>
+    <bookmark href="http://www.gnu.org/manual/manual.html" added="1150432640" modified="1197156987">
+      <title>GNU Manuals Online</title>
+    </bookmark>
+    <bookmark href="http://cs.wwc.edu/~aabyan/Linux/fundamentals/node1.html" added="1087659887" modified="1197156987">
+      <title>Fundamentals</title>
+
+    </bookmark>
+    <bookmark href="http://burks.brighton.ac.uk/burks/linux/rute/rute.htm" added="1099842804" modified="1197156987">
+      <title>Rute Users Tutorial and Exposition</title>
+    </bookmark>
+    <bookmark href="http://www.unicog.org/docs/linux_howto.html" added="1114678543" modified="1193563773">
+      <title>Linux howtos - Christophe Pallier</title>
+    </bookmark>
+    <bookmark href="http://pagesperso-orange.fr/freelinuxien/index.html" added="1195198315" modified="1197157013">
+
+      <title>Linux et mes commandes</title>
+    <desc>— Linux et mes commandes, installer votre propre serveur, entrainez-vous à utiliser cette diablesse de ligne de commande
+                </desc>
+    </bookmark>
+    <bookmark href="http://linux.math.tifr.res.in/manuals/" added="1209236552" modified="1209236552">
+      <title>Documentation on Linux commands</title>
+    <desc>
+            
+            </desc>
+
+    </bookmark>
+  </folder>
+  <folder added="1101134942" folded="no">
+    <title>Installation</title>
+    <bookmark href="http://en.wikibooks.org/wiki/Linux_Guide/Installing_Linux" added="1193562202" modified="1209155168">
+      <title>Linux Guide/Installing Linux - Wikibooks, collection of open-content textbooks</title>
+    </bookmark>
+    <bookmark href="http://wiki.linuxquestions.org/wiki/Partition" added="1150403485" modified="1209155168">
+
+      <title>Partition - LQWiki</title>
+    </bookmark>
+    <bookmark href="http://linuxhelp.blogspot.com/2005/12/concise-apt-get-dpkg-primer-for-new.html" added="1135156647" modified="1193563444">
+      <title>A Concise apt-get / dpkg primer for new Debian users</title>
+    </bookmark>
+    <bookmark href="http://www.newsforge.com/article.pl?sid=04/12/02/1710208" added="1103084228" modified="1193563444">
+      <title>An apt-get primer</title>
+
+    </bookmark>
+    <bookmark href="http://www.debian.org/doc/manuals/apt-howto/" added="1135156671" modified="1193563444">
+      <title>APT HOWTO</title>
+    </bookmark>
+    <bookmark href="http://marc.herbert.free.fr/linux/win2linstall.html" added="1120723735" modified="1193563444">
+      <title>Install GNU/Linux without any CD, floppy, USB-key, nor any other removable media</title>
+    </bookmark>
+    <bookmark href="http://www.cyberdogtech.com/firewalls/" added="1129060501" modified="1193563444">
+
+      <title>Debian Firewalls :: cyberdogtech.com</title>
+    </bookmark>
+    <bookmark href="http://www.instalinux.com/howto.php" added="1147875386" modified="1197157044">
+      <title>Create a Custom Linux Network Install Image</title>
+    <desc>— Create a custom, hands-free Linux Network Install CD
+                </desc>
+    </bookmark>
+    <bookmark href="https://help.ubuntu.com/community/Java" added="1193563091" modified="1197157044">
+
+      <title>Java - Community Ubuntu Documentation</title>
+    </bookmark>
+    <bookmark href="http://tldp.org/HOWTO/Module-HOWTO/" added="1166275795" modified="1197157044">
+      <title>Linux Loadable Kernel Module HOWTO</title>
+    </bookmark>
+    <bookmark href="https://help.ubuntu.com/community/PinningHowto" added="1193563273" modified="1197157044">
+      <title>PinningHowto - Community Ubuntu Documentation</title>
+
+    </bookmark>
+  </folder>
+  <folder added="1110623368" folded="no">
+    <title>Démarrage</title>
+    <bookmark href="http://www.linuxjournal.com/article/5476" added="1110623392" modified="1209155168">
+      <title>syslog Configuration | Linux Journal</title>
+    </bookmark>
+  </folder>
+
+  <folder added="1101016709" folded="no">
+    <title>Systèmes de fichiers et permissions</title>
+    <bookmark href="http://www.linuxsa.org.au/tips/file-permissions.html" added="1087590175" modified="1209155168">
+      <title>About File Permissions</title>
+    </bookmark>
+    <bookmark href="http://www.tuxfiles.org/linuxhelp/fstab.html" added="1101017166" modified="1209155168">
+      <title>How to edit and understand /etc/fstab</title>
+
+    </bookmark>
+    <bookmark href="http://www.osnews.com/story/9681" added="1203753809" modified="1209155168">
+      <title>The vfat file system and Linux</title>
+    <desc>OSNews.com informs you about the latest news on a vast range of operating systems, from the well-known mainstream OSes, down to small embedded (but also very interesting technically) ones.
+            
+            </desc>
+    </bookmark>
+  </folder>
+  <folder added="1102181547" folded="no">
+    <title>Types de fichiers</title>
+
+    <bookmark href="http://linux.seindal.dk/item8.html" added="1102181563" modified="1209155168">
+      <title>Nautilus 2.6 and mime types - Living with Linux</title>
+    </bookmark>
+    <bookmark href="http://www.freedesktop.org/wiki/Standards/AddingMIMETutor" added="1151898476" modified="1193563669">
+      <title>Standards/AddingMIMETutor</title>
+    </bookmark>
+  </folder>
+  <folder added="1101016765" folded="no">
+
+    <title>Divers</title>
+    <bookmark href="http://www.linuxprinting.org/database.html" added="1080674997" modified="1209155168">
+      <title>Printer Compatibility Database</title>
+    </bookmark>
+    <bookmark href="http://www.togaware.com/linux/survivor/Audio_Not.shtml" added="1096177264" modified="1209155168">
+      <title>Audio Not Working</title>
+    </bookmark>
+
+    <bookmark href="http://www.groovyweb.uklinux.net/?page_name=Linux%20firewall%20Iptables%20Basics%20NHF" added="1109046662" modified="1209155168">
+      <title>Linux firewall Iptables Basics NHF :How-to.tk: :Free downloads and tutorials</title>
+    </bookmark>
+    <bookmark href="http://avi.alkalay.net/linux/docs/font-howto/Font.html" added="1110109707" modified="1209155168">
+      <title>Optimal Use of Fonts on Linux</title>
+    </bookmark>
+    <bookmark href="http://www.justlinux.com/" added="1109046789" modified="1209155168">
+      <title>Welcome to JustLinux: Wanna learn Linux?</title>
+
+    </bookmark>
+    <bookmark href="http://www.troubleshooters.com/linux/coasterless_dvd.htm" added="1148898818" modified="1197157093">
+      <title>Coasterless CD Burning</title>
+    <desc>— Here's how to avoid those little coaster producing gotchas when you burn CD's
+                </desc>
+    </bookmark>
+    <bookmark href="http://fy.chalmers.se/~appro/linux/DVD+RW/" added="1148899604" modified="1197157103">
+      <title>DVD+RW/+R/-R[W] for Linux</title>
+
+    <desc>— DVD+RW/+R/-R[W] support for Linux, NetBSD, Solaris, FreeBSD, HP-UX:
+				  user-land utilities and optional Linux
+				  kernel patch
+                </desc>
+    </bookmark>
+    <bookmark href="https://help.ubuntu.com/community/AudioCDCreation" added="1193563834" modified="1197157103">
+      <title>AudioCDCreation - Community Ubuntu Documentation</title>
+    </bookmark>
+  </folder>
+  <folder added="1115092494" folded="no">
+    <title>Ubuntu</title>
+
+    <bookmark href="https://help.ubuntu.com/ubuntu/desktopguide/fr/index.html" added="1151265505" modified="1197157137">
+      <title>Guide du bureau d'Ubuntu</title>
+    <desc>— Bienvenu(e) dans le Guide du bureau d'Ubuntu, un guide complet qui traite de l'utilisation d'Ubuntu dans un environnement de bureau.
+                </desc>
+    </bookmark>
+    <bookmark href="http://www.xhtml.net/articles/Ubuntu-Linux" added="1136152219" modified="1197157137">
+      <title>Ubuntu Linux, une jeune distribution pleine de promesses - XHTML.net</title>
+    </bookmark>
+
+  <folder added="1144183183" folded="no">
+    <title>Multimedia</title>
+    <bookmark href="http://easyubuntu.freecontrib.org/" added="1144183200" modified="1197157186">
+      <title>EasyUbuntu</title>
+    </bookmark>
+    <bookmark href="http://www.ubuntulinux.org/wiki/RestrictedFormats" added="1117386784" modified="1197157186">
+      <title>Ubuntu - wikipage</title>
+
+    </bookmark>
+  </folder>
+    <bookmark href="http://www.duggmirror.com/linux_unix/Ubuntu_Dapper_Drake_6.06_Guide/" added="1151332639" modified="1197157158">
+      <title>Ubuntu Dapper Drake 6.06 Guide - KrazyPenguin.net</title>
+    <desc>— Guide based on Ubuntu Linux Dapper Drake 6.06.  Shows how to setup and install applications easily and more.
+                </desc>
+    </bookmark>
+    <bookmark href="http://ubuntuguide.org/wiki/Ubuntu_Edgy" added="1165165228" modified="1197157158">
+      <title>Ubuntu:Edgy -</title>
+
+    </bookmark>
+    <bookmark href="http://wiki.ubuntu-fr.org/" added="1165187790" modified="1197157158">
+      <title>Accueil - Documentation Ubuntu Francophone</title>
+    </bookmark>
+  </folder>
+  <folder added="1125522098" folded="no">
+    <title>Sécurité</title>
+    <bookmark href="http://www.linuxjournal.com/article/4547" added="1125522110" modified="1209155168">
+
+      <title>Battening down the Hatches with Bastille | Linux Journal</title>
+    </bookmark>
+    <bookmark href="http://www.networkcomputing.com/unixworld/tutorial/013/013.part2.html" added="1125969416" modified="1209155168">
+      <title>Tutorial: Linux Internet Server: Set Up a Firewall Part 2</title>
+    </bookmark>
+    <bookmark href="http://www.networkcomputing.com/unixworld/tutorial/013/013.part1.html" added="1125969511" modified="1209155168">
+      <title>Tutorial: Set Up a Linux Internet Server Part 1</title>
+
+    </bookmark>
+    <bookmark href="http://www.theregister.co.uk/2003/10/06/linux_vs_windows_viruses/" added="1132139559" modified="1209155168">
+      <title>Linux vs. Windows Viruses | The Register</title>
+    </bookmark>
+  </folder>
+  <folder added="1146696337" folded="no">
+    <title>Réseau</title>
+    <bookmark href="http://www.aboutdebian.com/lan.htm" added="1146718329" modified="1209155168">
+
+      <title>LAN Linux File Server with Samba and Linux Print Server - How To Set Up and Configure Debian Linux</title>
+    <desc>How to set up and test a Linux file server, print server, and Windows server using Samba.
+                </desc>
+    </bookmark>
+    <bookmark href="http://www.oreilly.com/catalog/debian/chapter/book/ch10_01.html" added="1146696353" modified="1209155168">
+      <title>[Chapter 10] Setting Up a Linux-Based LAN</title>
+    </bookmark>
+    <bookmark href="http://www.linuxquestions.org/linux/answers/Networking/Newbies_Guide_to_Small_Home_LAN" added="1146718066" modified="1209155168">
+
+      <title>Newbie's Guide to Small Home LAN -</title>
+    </bookmark>
+    <bookmark href="http://www.faqs.org/docs/linux_network/" added="1166341523" modified="1209155168">
+      <title>Linux Network Administrators Guide</title>
+    </bookmark>
+    <bookmark href="http://pagesperso-orange.fr/freelinuxien/srv/index.html" added="1195198035" modified="1209155168">
+      <title>Linux et mes commandes</title>
+
+    <desc>linux et mes commandes, installer votre propre serveur, entrainez vous à utiliser cette diablesse de ligne de commande
+                </desc>
+    </bookmark>
+    <bookmark href="http://www.cpqlinux.com/hostname.html" added="1195198931" modified="1209155168">
+      <title>Setting the Linux Host Name</title>
+    <desc>How to Set or Change the System Host Name in Linux.
+            
+            </desc>
+    </bookmark>
+  </folder>
+
+  <folder added="1138809290" folded="no">
+    <title>Bluetooth</title>
+  <folder added="1151249690" folded="no">
+    <title>Headset</title>
+    <bookmark href="http://www.linux.ie/articles/bluetoothheadset.php" added="1138809329" modified="1209155168">
+      <title>Linux.ie :: Linux and Bluetooth Headset howto (AKA, Fedora, BTSCO, Bluez, Jabra and Skype)</title>
+    </bookmark>
+
+    <bookmark href="http://bluetooth-alsa.sourceforge.net/" added="1138809802" modified="1209155168">
+      <title>Bluetooth-alsa Project</title>
+    </bookmark>
+  </folder>
+    <bookmark href="http://lists.gnomehack.com/pipermail/gnome-bluetooth/" added="1138812892" modified="1205877710">
+      <title>The gnome-bluetooth Archives</title>
+    </bookmark>
+    <bookmark href="http://ubuntuforums.org/showthread.php?t=75978" added="1138817324" modified="1205877710">
+
+      <title>HOWTO: Using Bluetooth to acces Mobile Phone and use BT-Headset to use Skype - Ubuntu Forums</title>
+    </bookmark>
+    <bookmark href="http://www.ubuntuforums.org/showthread.php?t=113903" added="1138817976" modified="1205877710">
+      <title>No bluetooth popup - Ubuntu Forums</title>
+    </bookmark>
+    <bookmark href="http://tuxmobil.org/bluetooth_linux.html" added="1142762223" modified="1205877710">
+      <title>TuxMobil: Linux and Laptops, PDAs, Mobile (Cell) Phones with Bluetooth(TM)</title>
+
+    <desc>How to use laptops, mobile (cellular) phones and PDAs together with Bluetooth(TM) and Linux, applications, drivers and some tips and tricks.
+                </desc>
+    </bookmark>
+    <bookmark href="http://www.holtmann.org/linux/bluetooth/" added="1142762865" modified="1205877710">
+      <title>Bluetooth and Linux</title>
+    <desc>Linux Bluetooth BT
+                </desc>
+    </bookmark>
+    <bookmark href="http://www-uxsup.csx.cam.ac.uk/pub/doc/suse/suse9.3/suselinux-adminguide_en/sec.pcmcia.btooth.html" added="1143361605" modified="1205877710">
+
+      <title>SUSE LINUX 9.3 Bluetooth</title>
+    </bookmark>
+    <bookmark href="http://linuxgazette.net/109/oregan3.html" added="1161528570" modified="1205877710">
+      <title>Accessing a Bluetooth phone LG #109</title>
+    </bookmark>
+  </folder>
+  <folder added="1151343560" folded="no">
+    <title>Bugs</title>
+
+    <bookmark href="https://lists.ubuntu.com/archives/launchpad-users/" added="1151343585" modified="1209155168">
+      <title>The launchpad-users Archives</title>
+    </bookmark>
+    <bookmark href="https://launchpad.net/" added="1151343607" modified="1209155168">
+      <title>Launchpad</title>
+    </bookmark>
+    <bookmark href="https://help.ubuntu.com/community/ReportingBugs" added="1151353906" modified="1209155168">
+      <title>ReportingBugs - Community Ubuntu Documentation</title>
+
+    </bookmark>
+    <bookmark href="http://www.chiark.greenend.org.uk/~sgtatham/bugs.html" added="1151353981" modified="1209155168">
+      <title>How to Report Bugs Effectively</title>
+    </bookmark>
+  </folder>
+  </folder>
+  <folder added="1021558191" folded="no">
+    <title>Applications et leur aide</title>
+
+    <bookmark href="http://borel.slu.edu/gramadoir/index.html" added="1122482069" modified="1209155168">
+      <title>An Gramadóir</title>
+    </bookmark>
+  <folder added="1200892254" folded="no">
+    <title>Bastille</title>
+    <bookmark href="http://www.unofficial-support.com/article/how-to/bastille_linux" added="1119330257" modified="1209155168">
+      <title>HOW-TO: Bastille Linux 2.1.2 | Unofficial-Support(.com)</title>
+
+    </bookmark>
+    <bookmark href="http://www.linuxjournal.com/article/4547" added="1125522067" modified="1209155168">
+      <title>Battening down the Hatches with Bastille | Linux Journal</title>
+    </bookmark>
+  </folder>
+    <bookmark href="http://bluefish.openoffice.nl/manual/" added="1086406114" modified="1200892268">
+      <title>Bluefish: The Definitive Guide</title>
+    </bookmark>
+
+  <folder added="1205871309" folded="no">
+    <title>Comptabilité</title>
+  <folder added="1200892281" folded="no">
+    <title>GnuCash</title>
+    <bookmark href="http://www.gnucash.org/" added="1111912707" modified="1209155168">
+      <title>GnuCash - Open Source Accounting Software</title>
+    </bookmark>
+
+    <bookmark href="http://www.at.gnucash.org/fr/" added="1111912876" modified="1209155168">
+      <title>GnuCash - Logiciel de Gestion comptable Open Source</title>
+    </bookmark>
+  </folder>
+    <bookmark href="http://www.phpcompta.org/pmwiki.php" added="1205866025" modified="1200892304">
+      <title>PhpCompta | Main / HomePage</title>
+    </bookmark>
+    <bookmark href="http://tinyerp.com/" added="1205869992" modified="1200892304">
+
+      <title>Tiny ERP - Home</title>
+    <desc>Tiny ERP - Open Source ERP &amp;amp; CRM
+            
+            </desc>
+    </bookmark>
+  </folder>
+    <bookmark href="http://www.gnome.org/projects/dia/" added="1114061683" modified="1205871355">
+      <title>Dia a drawing program</title>
+    </bookmark>
+
+    <bookmark href="http://www.feyrer.de/g4u/" added="1112001343" modified="1205871355">
+      <title>g4u - Harddisk Image Cloning for PCs</title>
+    </bookmark>
+    <bookmark href="http://galeon.sourceforge.net/" added="1021558708" modified="1021558710">
+      <title>Galeon browser</title>
+    </bookmark>
+  <folder added="1161540903" folded="no">
+    <title>Gammu-Wammu et cetera</title>
+
+    <bookmark href="http://www.cihar.com/gammu/" added="1084170292" modified="1132290858">
+      <title>Gammu</title>
+    </bookmark>
+    <bookmark href="http://www.cihar.com/gammu/wammu/" added="1084170632" modified="1132290858">
+      <title>Wammu - Gammu GUI | cihar.com</title>
+    </bookmark>
+    <bookmark href="https://www.linux-magazine.com/issue/58/Gammu_und_Wammu.pdf" added="1161540992" modified="1161541032">
+      <title>Gammu-Wammu dans Linux Magazine</title>
+
+    </bookmark>
+    <bookmark href="http://www.gammu.net/" added="1127888542" modified="1161541032">
+      <title>MyGnokii - Gammu+</title>
+    </bookmark>
+    <bookmark href="http://www.gnokii.org/" added="1161528641" modified="1161541032">
+      <title>gnokii.org - Home</title>
+    </bookmark>
+  </folder>
+
+    <bookmark href="http://www.gimp.org/" added="1029774111" modified="1029774112">
+      <title>The GIMP Homepage</title>
+    </bookmark>
+    <bookmark href="http://grac.sourceforge.net/" added="1112217393" modified="1029774112">
+      <title>GRAC: GRAmmar Checker</title>
+    </bookmark>
+    <bookmark href="http://tidy.sourceforge.net/docs/quickref.html" added="1194301144" modified="1029774112">
+      <title>HTML Tidy Configuration Options Quick Reference</title>
+
+    </bookmark>
+    <bookmark href="http://tidy.sourceforge.net/" added="1203267976" modified="1029774112">
+      <title>HTML Tidy Project Page</title>
+    </bookmark>
+    <bookmark href="http://www.charlescooke.me.uk/web/kz-ug-home.htm" added="1199187900" modified="1029774112">
+      <title>KompoZer User Guide - Home</title>
+    <desc>Gateway to User Guide to Nvu and KompoZer web authoring tool.
+            </desc>
+
+    </bookmark>
+  <folder added="1083495190" folded="no">
+    <title>Mail</title>
+    <bookmark href="http://www.yolinux.com/TUTORIALS/LinuxTutorialMailMTA.html" added="1083495207" modified="1209155168">
+      <title>Linux: Linux Mail Transfer Agent (MTA) server software</title>
+    </bookmark>
+    <bookmark href="http://www.list.org/" added="1083496135" modified="1209155168">
+      <title>Mailman, the GNU Mailing List Manager</title>
+
+    </bookmark>
+  </folder>
+  <folder added="961099767" folded="no">
+    <title>Mozilla Project</title>
+  <folder added="961099767" folded="no">
+    <title>mozilla.org</title>
+    <bookmark href="http://www.mozilla.org/" added="961099870" modified="1209155168">
+      <title>The Mozilla Organization</title>
+
+    </bookmark>
+    <bookmark href="http://www.mozilla.org/status/" added="961099993" modified="1209155168">
+      <title>Weekly Status Update</title>
+    </bookmark>
+    <bookmark href="http://www.mozilla.org/feedback.html" added="961100017" modified="1209155168">
+      <title>Feedback</title>
+    </bookmark>
+  </folder>
+
+  <folder added="1209155168" folded="no">
+    <title>Firefox &amp; Mozilla Information</title>
+    <desc>Information about Firefox and Mozilla
+                </desc>
+    <bookmark href="http://texturizer.net/firefox/extensions/" added="1209155168" modified="1209155168">
+      <title>Firefox Extensions</title>
+    <desc>Firefox add-ons and extensions
+                    </desc>
+
+    </bookmark>
+    <bookmark href="http://texturizer.net/firefox/themes/" added="1209155168" modified="1209155168">
+      <title>Firefox Themes</title>
+    <desc>Firefox themes
+                    </desc>
+    </bookmark>
+    <bookmark href="http://forums.mozillazine.org/index.php?c=4" added="1209155168" modified="1209155168">
+      <title>Firefox Discussions</title>
+
+    <desc>MozillaZine's Firefox discussion forums
+                    </desc>
+    </bookmark>
+    <bookmark href="http://www.mozillazine.org/" added="1209155168" modified="1209155168">
+      <title>MozillaZine</title>
+    <desc>Mozilla community news and advocacy
+                    </desc>
+    </bookmark>
+    <bookmark href="http://texturizer.net/firefox/index.html" added="1209155168" modified="1209155168">
+
+      <title>Firefox Help</title>
+    <desc>David Tenser's Firefox help site
+                    </desc>
+    </bookmark>
+    <bookmark href="http://forums.mozillazine.org/viewforum.php?f=38" added="1209155168" modified="1209155168">
+      <title>Firefox Support</title>
+    <desc>MozillaZine's Firefox Support forum
+                    </desc>
+    </bookmark>
+
+    <bookmark href="http://plugindoc.mozdev.org/faqs/" added="1209155168" modified="1209155168">
+      <title>Plug-in FAQ</title>
+    <desc>Firefox Plug-in Frequently Asked Questions
+                    </desc>
+    </bookmark>
+    <bookmark href="http://www.mozilla.org/support/firefox/" added="1101154129" modified="1209155168">
+      <title>Firefox Help - Online Help for the Mozilla Firefox Web Browser</title>
+    </bookmark>
+
+    <bookmark href="https://wiki.ubuntu.com/FirefoxNewVersion" added="1141682160" modified="1209155168">
+      <title>FirefoxNewVersion - Ubuntu Wiki</title>
+    </bookmark>
+  </folder>
+  <folder added="961106554" folded="no">
+    <title>Third-Party Tools</title>
+    <bookmark href="http://aphrodite.mozdev.org/total_recall.html" added="961106831" modified="1209155168">
+      <title>Crash Recovery - Alphanumerica's Total Recall</title>
+
+    </bookmark>
+    <bookmark href="http://oasis.unc.edu/help/documentation/backend/testing/syncronize-addressbook" added="1202800579" modified="1209155168">
+      <title>Syncronize Address Book Across Computers — OASIS - Office of Arts &amp; Sciences Information Services</title>
+    <desc>If you have more than one computer you can use this extension to sync across multiple computers.
+                    </desc>
+    </bookmark>
+    <bookmark href="http://michauko.org/blog/2007/04/13/synchronisation-des-carnet-dadresses-thunderbird/" added="1202800783" modified="1209155168">
+      <title>Le blog de Michauko » Synchronisation des carnet d’adresses Thunderbird</title>
+
+    </bookmark>
+  </folder>
+  <folder added="961102203" folded="no">
+    <title>Developer Information</title>
+    <bookmark href="http://www.mozilla.org/get-involved.html" added="961102879" modified="1209155168">
+      <title>Getting Involved</title>
+    </bookmark>
+    <bookmark href="http://www.mozilla.org/docs/" added="961102901" modified="1209155168">
+
+      <title>Documentation</title>
+    </bookmark>
+    <bookmark href="http://www.mozilla.org/source.html" added="961105505" modified="1209155168">
+      <title>Download Source Code</title>
+    </bookmark>
+  <folder added="961102925" folded="no">
+    <title>Standards</title>
+
+    <bookmark href="http://www.w3c.org/" added="961102978" modified="1209155168">
+      <title>World Wide Web Consortium</title>
+    </bookmark>
+    <bookmark href="http://www.faqs.org/rfcs/" added="961104168" modified="1209155168">
+      <title>RFC Archive</title>
+    </bookmark>
+  </folder>
+  <folder added="961103100" folded="no">
+
+    <title>User interface design</title>
+    <bookmark href="http://developer.apple.com/techpubs/mac/HIGuidelines/HIGuidelines-2.html" added="961104987" modified="1209155168">
+      <title>Macintosh Human Interface Guidelines</title>
+    </bookmark>
+    <bookmark href="http://msdn.microsoft.com/ui/" added="961104948" modified="1209155168">
+      <title>Microsoft User Experience and Interface Design Resources</title>
+    </bookmark>
+
+    <bookmark href="http://developer.kde.org/documentation/standards/kde/style/basics/" added="961105043" modified="1209155168">
+      <title>KDE User Interface Guidelines</title>
+    </bookmark>
+  </folder>
+  </folder>
+  <folder added="961105105" folded="no">
+    <title>Webtools</title>
+    <bookmark href="http://lxr.mozilla.org/" added="961105149" modified="1209155168">
+
+      <title>lxr - Mozilla Cross-Reference</title>
+    </bookmark>
+    <bookmark href="http://bonsai.mozilla.org/" added="961105218" modified="1209155168">
+      <title>bonsai - CVS Tree Control</title>
+    </bookmark>
+    <bookmark href="http://tinderbox.mozilla.org/showbuilds.cgi" added="961105359" modified="1209155168">
+      <title>tinderbox - Tree Status</title>
+
+    </bookmark>
+    <bookmark href="http://bugzilla.mozilla.org/" added="961105401" modified="1209155168">
+      <title>bugzilla - Bug-Tracking System</title>
+    </bookmark>
+  </folder>
+  <folder added="961111855" folded="no">
+    <title>Community</title>
+    <bookmark href="http://www.mozilla.org/community.html" added="961111887" modified="1209155168">
+
+      <title>Newsgroups</title>
+    </bookmark>
+    <bookmark href="http://www.mozillazine.org/" added="961111887" modified="1209155168">
+      <title>MozillaZine</title>
+    </bookmark>
+    <bookmark href="http://www.mozdev.org/" added="961112176" modified="1209155168">
+      <title>Alphanumerica's Mozilla Development Projects</title>
+
+    </bookmark>
+  </folder>
+  <folder added="1164049941" folded="no">
+    <title>Thunderbird</title>
+    <bookmark href="http://kb.mozillazine.org/Junk_Mail_Controls" added="1164049954" modified="1209155168">
+      <title>Junk Mail Controls - MozillaZine Knowledge Base</title>
+    </bookmark>
+  </folder>
+
+  </folder>
+  <folder added="1155711015" folded="no">
+    <title>Multimedia</title>
+  <folder added="1151067447" folded="no">
+    <title>Alsa</title>
+    <bookmark href="http://www.sabi.co.uk/Notes/linuxSoundALSA.html" added="1151067459" modified="1209155168">
+      <title>Linux ALSA sound notes</title>
+
+    <desc>Linux sound ALSA configuration
+                    </desc>
+    </bookmark>
+    <bookmark href="http://ubuntuforums.org/showthread.php?t=8882&amp;highlight=hear+multiple+sound" added="1151078201" modified="1209155168">
+      <title>HOWTO: Hear multiple sounds at once - Ubuntu Forums</title>
+    <desc>HOWTO:  Hear multiple sounds at once Warty 4.10 Customization Tips &amp; Tricks
+                    </desc>
+    </bookmark>
+
+    <bookmark href="http://www.ubuntuforums.org/showthread.php?t=32063" added="1151078225" modified="1209155168">
+      <title>HOWTO: Hear multiple sounds using Both ESD &amp; ALSA - Ubuntu Forums</title>
+    <desc>HOWTO: Hear multiple sounds using Both ESD &amp; ALSA Hoary 5.04 Customization Tips &amp; Tricks
+                
+                </desc>
+    </bookmark>
+  </folder>
+
+  <folder added="1155711025" folded="no">
+    <title>TV</title>
+    <bookmark href="http://www.linuxtv.org/" added="1155711035" modified="1209155168">
+      <title>LinuxTV.org - Television with Linux</title>
+    </bookmark>
+    <bookmark href="http://forum.ubuntu-fr.org/viewtopic.php?pid=323215#p323215" added="1157253304" modified="1209155168">
+      <title>Forum Ubuntu-fr.org / Pinnacle PCTV USB Stick et ubuntu</title>
+
+    </bookmark>
+    <bookmark href="http://www.linuxtv.org/v4lwiki/index.php/Em2880" added="1157272503" modified="1209155168">
+      <title>Em2880 - V4LWiki</title>
+    </bookmark>
+    <bookmark href="http://www.marcushellberg.com/pages/projects/digital-tv-in-linux.php" added="1157273391" modified="1209155168">
+      <title>Digital tv in Linux with em2880</title>
+    <desc>Reviews of stuff I've used, tutorials showing how I've done some stuff, hopefully helpful to someone searching for an answer to their problems. Computers, linux and gadgets are the main theme.
+                    </desc>
+
+    </bookmark>
+    <bookmark href="http://forum.ubuntu-fr.org/viewtopic.php?pid=1396500" added="1204388483" modified="1209155168">
+      <title>Forum Ubuntu-fr.org / [rÃ©solu]Comment installer un tuner asus u3000 mini ou u3100 mini?</title>
+    </bookmark>
+    <bookmark href="http://dlsvr01.asus.com/pub/ASUS/vga/tvtuner/EeePC_TVAP_15712.zip" added="1204388673" modified="1209155168">
+      <title>Asus U3000 driver EeePC_TVAP_ 15712.zip</title>
+    </bookmark>
+    <bookmark href="http://dlsvr01.asus.com/pub/ASUS/vga/tvtuner/EeePC_TVAP_15711.zip" added="1204388703" modified="1209155168">
+
+      <title>Asus U3000 player EeePC_TVAP_ 15711.zip</title>
+    </bookmark>
+    <bookmark href="http://article.gmane.org/gmane.linux.drivers.dvb/38058" added="1204389547" modified="1209155168">
+      <title>Asus MyCinema U3000 Mini</title>
+    </bookmark>
+  </folder>
+    <bookmark href="http://lists.ubuntulinux.org/archives/ubuntu-users/2005-March/025797.html" added="1131922218" modified="1204389547">
+      <title>*.wmv files under totem-gstreamer</title>
+
+    </bookmark>
+    <bookmark href="http://www.mplayerhq.hu/homepage/design6/news.html" added="1055969762" modified="1090680853">
+      <title>Mplayer</title>
+    </bookmark>
+  </folder>
+  <folder added="1159538204" folded="no">
+    <title>OpenOffice.org</title>
+    <bookmark href="http://fr.openoffice.org/Documentation/Guides/Indexguide.html" added="1159538290" modified="1209155168">
+
+      <title>fr: Documentation</title>
+    <desc>OpenOffice.org: The Open Office Suite
+                </desc>
+    </bookmark>
+    <bookmark href="http://www.openoffice.org/" added="1054796620" modified="1054796622">
+      <title>OpenOffice.org</title>
+    </bookmark>
+  <folder added="1204314971" folded="no">
+
+    <title>Base</title>
+    <bookmark href="http://www.nothickmanuals.info/doku.php/articles:ooobaseprimer" added="1204315000" modified="1209155168">
+      <title>OOo Base Primer [No Thick Manuals]</title>
+    </bookmark>
+  </folder>
+  </folder>
+    <bookmark href="http://www.opera.com/" added="1054796621" modified="1054796622">
+      <title>Opera browser</title>
+
+    </bookmark>
+    <bookmark href="http://rapple.sourceforge.net/" added="1133336797" modified="1054796622">
+      <title>Rapple website tool</title>
+    </bookmark>
+  <folder added="1200892341" folded="no">
+    <title>Scribus</title>
+    <bookmark href="http://www.scribus.net/" added="1151267497" modified="1197156790">
+      <title>Scribus :: Open Source Desktop Publishing for Linux, Mac OS® X and Windows®</title>
+
+    <desc>— Open Source Desktop Publishing for Linux, Mac OS® X and Windows®
+                </desc>
+    </bookmark>
+    <bookmark href="http://applications.linux.com/article.pl?sid=06/02/21/2152219&amp;tid=13" added="1151268065" modified="1197156800">
+      <title>Desktop publishing with Writer and Scribus, Linux.com</title>
+    <desc>— Desktop publishing with Writer and Scribus -- article related to Desktop Software.
+            
+            </desc>
+    </bookmark>
+  </folder>
+
+  <folder added="1150462111" folded="no">
+    <title>Skype</title>
+    <bookmark href="http://www.skype.com/" added="1125578265" modified="1209155168">
+      <title>Skype - The whole world can talk for free.</title>
+    </bookmark>
+    <bookmark href="http://www.skype.com/help/guides/soundsetup_linux.html" added="1151041097" modified="1209155168">
+      <title>Skype for Linux Sound Setup</title>
+
+    </bookmark>
+    <bookmark href="http://forum.skype.com/viewtopic.php?p=230040#230040" added="1150462132" modified="1209155168">
+      <title>forum.skype.com :: View topic - .asoundrc to make Skype work with aoss</title>
+    </bookmark>
+    <bookmark href="http://forum.skype.com/viewtopic.php?p=16772#16772" added="1150997595" modified="1209155168">
+      <title>forum.skype.com :: View topic - Linux sound FAQ</title>
+    </bookmark>
+    <bookmark href="http://wiki.archlinux.org/index.php/Skype" added="1151047824" modified="1209155168">
+
+      <title>Skype - ArchWiki</title>
+    </bookmark>
+    <bookmark href="http://my.opera.com/thoughts/blog/index.dml/tag/linux" added="1150462165" modified="1209155168">
+      <title>random thoughts - by thoughts</title>
+    </bookmark>
+    <bookmark href="https://help.ubuntu.com/community/Skype" added="1151077653" modified="1209155168">
+      <title>Skype - Community Ubuntu Documentation</title>
+
+    </bookmark>
+  </folder>
+  <folder added="1200892172" folded="no">
+    <title>Tesseract</title>
+    <bookmark href="http://code.google.com/p/tesseract-ocr/" added="1198270065" modified="1209155168">
+      <title>tesseract-ocr - Google Code</title>
+    </bookmark>
+    <bookmark href="http://sourceforge.net/projects/tesseract-ocr" added="1198269944" modified="1209155168">
+
+      <title>Tesseract OCR on SourceForge.net</title>
+    <desc>The world's largest development and download repository of Open Source code and applications
+                </desc>
+    </bookmark>
+    <bookmark href="http://doc.ubuntu-fr.org/tesseract-ocr" added="1206784006" modified="1209155168">
+      <title>tesseract-ocr - Documentation Ubuntu Francophone</title>
+    </bookmark>
+  </folder>
+
+  <folder added="1200892209" folded="no">
+    <title>VueScan</title>
+    <bookmark href="http://www.hamrick.com/" added="1196312170" modified="1197156814">
+      <title>VueScan Scanning Software</title>
+    <desc>— Software for film scanners and flatbed scanners
+                </desc>
+    </bookmark>
+    <bookmark href="http://www.hamrick.com/vuescan/html/vuesc.htm" added="1196312327" modified="1197156814">
+
+      <title>VueScan User's Guide</title>
+    </bookmark>
+  </folder>
+    <bookmark href="http://www.winehq.com/" added="1054796649" modified="1054796650">
+      <title>Wine Development HQ</title>
+    </bookmark>
+    <bookmark href="http://www.xsane.org/doc/sane-xsane-doc.html" added="1139826617" modified="1054796650">
+      <title>XSane - Documentation index</title>
+
+    </bookmark>
+  </folder>
+  <folder added="1193383566" folded="no">
+    <title>Hardware</title>
+    <bookmark href="http://www.davicom.com.tw/eng/download/driver.htm" added="1193383781" modified="1209155168">
+      <title>Davicom Semiconductor Inc.</title>
+    </bookmark>
+    <bookmark href="http://ubuntuforums.org/showthread.php?s=a70b31ab09b404b7690f628a26a4521b&amp;t=483189" added="1193384646" modified="1209155168">
+
+      <title>[SOLVED] Davicom DM9601 USB 10/100 Ethernet - Ubuntu Forums</title>
+    <desc>[SOLVED] Davicom DM9601 USB 10/100 Ethernet Networking &amp; Wireless
+            </desc>
+    </bookmark>
+    <bookmark href="http://alcopop.org/unix/linux/dm9601/" added="1193384751" modified="1209155168">
+      <title>/unix/linux/dm9601/</title>
+    <desc>Jon Dowland's personal website,
+including a blog; code; articles about unix, debian gnu/linux, the
+world-wide-web, programming, the computer game doom; photos; art.
+            </desc>
+
+    </bookmark>
+    <bookmark href="http://www.linux.com/feature/118497" added="1199471373" modified="1209155168">
+      <title>Linux.com :: Is my hardware Linux-compatible? Find out here</title>
+    <desc>Deciding whether a particular computer is a good candidate for installing GNU/Linux can involve a nightmare of details about hardware compatibility. Nor is assembling a custom computer on which to run GNU/Linux any easier. In both cases, you need to evaluate video cards, sound cards, printers, scanners, digital camera, wireless cards, and mobile devices for compatibility with the operating system. Fortunately, help is available.
+            </desc>
+    </bookmark>
+    <bookmark href="http://www.linux-drivers.org/" added="1199472349" modified="1209155168">
+      <title>Linux-drivers.org - Linux Hardware Compatibility Lists &amp; Linux Drivers</title>
+
+    <desc>Directory of Resources for Linux Hardware Compatibility Lists and Linux Drivers: Video, Audio, Network, Internet, Printer, Scanner, USB, Notebooks and more
+            </desc>
+    </bookmark>
+    <bookmark href="http://wiki.ubuntuusers.de/Hardwaredatenbank" added="1199472477" modified="1209155168">
+      <title>Hardwaredatenbank - ubuntuusers Wiki</title>
+    </bookmark>
+  </folder>
+  <folder added="907270202" folded="no">
+    <title>Software</title>
+
+    <bookmark href="http://freshmeat.net/" added="904054389" modified="904054375">
+      <title>FreshMeat</title>
+    </bookmark>
+    <bookmark href="http://www.linuxapps.com/" added="962594902" modified="962594874">
+      <title>LinuxApps</title>
+    </bookmark>
+    <bookmark href="http://sal.kachinatech.com/" added="907292069" modified="907292063">
+      <title>Scientific Applications on Linux (SAL)</title>
+
+    </bookmark>
+    <bookmark href="http://www.lottalinuxlinks.com/index.html" added="1106414221" modified="907292063">
+      <title>lottalinuxlinks: Top</title>
+    </bookmark>
+    <bookmark href="http://www.local.attac.org/attac25/docs/ApplicationsGnulinux.html" added="1101033541" modified="907292063">
+      <title>Les applications disponibles sous GNU/Linux</title>
+    </bookmark>
+    <bookmark href="http://www.apt-get.org/" added="1112003808" modified="907292063">
+
+      <title>apt-get.org: Unofficial APT repositories</title>
+    </bookmark>
+    <bookmark href="http://www.linux-ocr.ekitap.gen.tr/en/" added="1113940903" modified="907292063">
+      <title>Linux and OCR - Linux OCR Software + Optical Character Recognition Solutions and Articles</title>
+    </bookmark>
+    <bookmark href="http://debian.vitavonni.de/packagebrowser/index.cgi" added="1122449290" modified="907292063">
+      <title>Debian Tag Browser</title>
+
+    </bookmark>
+    <bookmark href="http://larswiki.atrc.utoronto.ca/wiki/LinuxUnixAccessibilitySoftware" added="1135274754" modified="907292063">
+      <title>LinuxUnixAccessibilitySoftware - Linux Accessibility Resource Site</title>
+    </bookmark>
+    <bookmark href="http://debianlinux.net/text_management.html" added="1143530837" modified="907292063">
+      <title>Text Management</title>
+    </bookmark>
+    <bookmark href="http://wiki.linuxquestions.org/wiki/Linux_software_equivalent_to_Windows_software#Desktop_Publishing" added="1151268589" modified="907292063">
+
+      <title>Linux software equivalent to Windows software - LQWiki</title>
+    </bookmark>
+  </folder>
+  <folder added="1079474147" folded="no">
+    <title>Distros</title>
+  <folder added="1161788525" folded="no">
+    <title>GNU</title>
+
+    <bookmark href="http://www.gnu.org/software/hurd/docs.html" added="1109784345" modified="1209155168">
+      <title>The GNU Hurd - GNU Project - Free Software Foundation (FSF)</title>
+    </bookmark>
+    <bookmark href="http://www.gnu.org/" added="903300211" modified="903300172">
+      <title>GNU Project</title>
+    </bookmark>
+  </folder>
+  <folder added="997239640" folded="no">
+
+    <title>Debian</title>
+    <bookmark href="http://www.debian.org/" added="1209155168" modified="997239662">
+      <title>Debian GNU/Linux</title>
+    </bookmark>
+  <folder added="907272423" folded="no">
+    <title>About Debian</title>
+    <bookmark href="http://www.debian.org/intro/about" added="907270351" modified="907270348">
+
+      <title>About Debian</title>
+    </bookmark>
+    <bookmark href="http://www.linuxmafia.com/faq/Debian/installers.html" added="1093372023" modified="907270348">
+      <title>Debian Installers</title>
+    </bookmark>
+    <bookmark href="http://security.debian.org/" added="907272258" modified="907272255">
+      <title>Security Information</title>
+
+    </bookmark>
+    <bookmark href="http://www.debian.org/devel/" added="1209155168" modified="997239701">
+      <title>Debian Developers' Corner</title>
+    </bookmark>
+    <bookmark href="http://www.debian.org/social_contract" added="907270351" modified="907270348">
+      <title>Debian Social Contract</title>
+    </bookmark>
+    <bookmark href="http://www.debian.org/social_contract#guidelines" added="907270345" modified="962591126">
+
+      <title>Debian Free Software Guidelines</title>
+    </bookmark>
+    <bookmark href="http://www.debian.org/donations" added="907272287" modified="907272282">
+      <title>Donations to Software in the Public Interest</title>
+    </bookmark>
+    <bookmark href="http://www.enterprisenetworkingplanet.com/netos/print.php/3526396" added="1125460471" modified="1125460561">
+      <title>Debian distros for business</title>
+
+    </bookmark>
+    <bookmark href="http://lists.debian.org/debian-project/2005/08/msg00206.html" added="1125461905" modified="1125460561">
+      <title>Dissertation chapter - Gabriella Coleman</title>
+    </bookmark>
+  </folder>
+  <folder added="907270202" folded="no">
+    <title>News</title>
+    <bookmark href="http://www.debian.org/News/" added="1209155168" modified="997239675">
+
+      <title>Latest Debian News</title>
+    </bookmark>
+    <bookmark href="http://www.debian.org/News/weekly/" added="903300211" modified="903300172">
+      <title>Debian Weekly News</title>
+    </bookmark>
+    <bookmark href="http://www.debianplanet.org/debianplanet/" added="1209155168" modified="997239743">
+      <title>Debian Planet</title>
+
+    </bookmark>
+  </folder>
+  <folder added="907270202" folded="no">
+    <title>Support</title>
+    <bookmark href="http://www.debian.org/support" added="1209155168" modified="997239687">
+      <title>Debian Support</title>
+    </bookmark>
+    <bookmark href="http://www.debian.org/releases/stable/installmanual" added="962592659" modified="962592646">
+
+      <title>Installation Manual</title>
+    </bookmark>
+    <bookmark href="http://www.debian.org/doc/" added="962592659" modified="962592646">
+      <title>Documentation</title>
+    </bookmark>
+    <bookmark href="http://www.debian.org/Bugs/" added="1209155168" modified="997239722">
+      <title>Debian bug tracking system</title>
+
+    </bookmark>
+  </folder>
+  <folder added="907272432" folded="no">
+    <title>Packages</title>
+    <bookmark href="http://packages.debian.org/" added="907272131" modified="907272128">
+      <title>Debian Packages</title>
+    </bookmark>
+    <bookmark href="http://www.debian.org/distrib/ftplist" added="907272327" modified="907272326">
+
+      <title>The FTP server network</title>
+    </bookmark>
+    <bookmark href="http://www.debian.org/CD/vendors" added="907272321" modified="907272317">
+      <title>CD Vendors</title>
+    </bookmark>
+    <bookmark href="http://www.debian.org/ports/" added="907272706" modified="907272703">
+      <title>Debian Ports</title>
+
+    </bookmark>
+  </folder>
+    <bookmark href="http://wiki.debian.org/" added="1127896482" modified="1125461905">
+      <title>Debian Wiki</title>
+    </bookmark>
+    <bookmark href="http://blog.thedebianuser.org/" added="1155065873" modified="1125461905">
+      <title>the debian user</title>
+    </bookmark>
+
+    <bookmark href="http://times.debian.net/" added="1155065929" modified="1125461905">
+      <title>DebianTimes</title>
+    </bookmark>
+    <bookmark href="http://www.newsforge.com/article.pl?sid=05/01/10/1727246" added="1112002172" modified="1125461905">
+      <title>NewsForge | Installing Debian From Scratch</title>
+    </bookmark>
+  </folder>
+  <folder added="1110214698" folded="no">
+
+    <title>Ubuntu</title>
+    <bookmark href="file:///usr/share/ubuntu-artwork/home/index.html" added="1101011986" modified="1110214741">
+      <title>Ubuntu /usr/share...</title>
+    </bookmark>
+    <bookmark href="http://www.ubuntulinux.org/" added="1095884354" modified="1110214741">
+      <title>Ubuntu Linux - Welcome to Ubuntu Linux</title>
+    </bookmark>
+
+    <bookmark href="http://www.kubuntu.org/" added="1113141619" modified="1110214741">
+      <title>Kubuntu - Pure KGX</title>
+    </bookmark>
+    <bookmark href="http://packages.ubuntu.com/" added="1116773791" modified="1110214741">
+      <title>Ubuntu packages</title>
+    </bookmark>
+    <bookmark href="http://www.ubuntulinux.org/wiki/Archive" added="1113281511" modified="1110214741">
+      <title>Ubuntu Mirror System</title>
+
+    </bookmark>
+  </folder>
+  <folder added="1158611203" folded="no">
+    <title>Small</title>
+    <bookmark href="https://wiki.ubuntu.com/Xubuntu" added="1127875539" modified="1209155168">
+      <title>Xubuntu - Ubuntu Wiki</title>
+    </bookmark>
+    <bookmark href="http://www.osnews.com/story.php?news_id=9973" added="1111525669" modified="1209155168">
+
+      <title>PC Resurrection with Debian - xfld</title>
+    </bookmark>
+    <bookmark href="http://www.xubuntu.org/" added="1158612127" modified="1209155168">
+      <title>Xubuntu - Xfce and Ubuntu Dynamite</title>
+    </bookmark>
+    <bookmark href="http://www.binonabiso.com/en/Ubuntu-miniRAM-HOWTO.html" added="1106720836" modified="1209155168">
+      <title>Ubuntu-miniRAM-HOWTO</title>
+
+    </bookmark>
+  </folder>
+  <folder added="1161788346" folded="no">
+    <title>Enterprise migration</title>
+    <bookmark href="http://www.redbooks.ibm.com/redbooks/SG246380/wwhelp/wwhimpl/java/html/wwhelp.htm" added="1161788424" modified="1161788492">
+      <title>Linux Client Migration Cookbook, Version 2</title>
+    <desc>A Practical Planning and Implementation Guide for Migrating to Desktop Linux
+            
+            </desc>
+
+    </bookmark>
+  </folder>
+  <folder added="1146027329" folded="no">
+    <title>Network attached storage</title>
+    <bookmark href="http://www.pcquest.com/content/linux/2005/105041201.asp" added="1146027356" modified="1209155168">
+      <title>PCQuest : Linux : Turn any PC into a NAS</title>
+    <desc>Use NASLite to configure a dedicated storage server in less than five minutes
+                </desc>
+
+    </bookmark>
+    <bookmark href="http://www.serverelements.com/naslite.php" added="1146027610" modified="1209155168">
+      <title>NASLite v1.x File Servers</title>
+    </bookmark>
+    <bookmark href="http://www.aboutdebian.com/lan.htm" added="1146031404" modified="1209155168">
+      <title>LAN Linux File Server with Samba and Linux Print Server - How To Set Up and Configure Debian Linux</title>
+    <desc>How to set up and test a Linux file server, print server, and Windows server using Samba.
+            
+            </desc>
+
+    </bookmark>
+  </folder>
+    <bookmark href="http://www.distrowatch.com/index.php?language=FR" added="1079426576" modified="1079426578">
+      <title>DistroWatch</title>
+    </bookmark>
+    <bookmark href="http://www.linuxbasis.com/distributions.html" added="1163109460" modified="1079426578">
+      <title>Linux Distributions Directory</title>
+    <desc>Directory of popular Linux distributions: Redhat Knoppix, Suse, Debian
+        
+        </desc>
+
+    </bookmark>
+  </folder>
+  <folder added="907270202" folded="no">
+    <title>Desktop</title>
+    <bookmark href="http://themes.freshmeat.net/" added="907273912" modified="907273903">
+      <title>Themes.org</title>
+    </bookmark>
+    <bookmark href="http://www.kde.org/" added="907273912" modified="907273903">
+
+      <title>KDE</title>
+    </bookmark>
+    <bookmark href="http://www.gnome.org/" added="907273912" modified="907273903">
+      <title>GNOME</title>
+    </bookmark>
+  </folder>
+  <folder added="1106722212" folded="no">
+    <title>Magazines, portails et divers</title>
+
+  <folder added="907270202" folded="no">
+    <title>News</title>
+    <bookmark href="http://www.lwn.net/" added="903300211" modified="903300172">
+      <title>Linux Weekly News</title>
+    </bookmark>
+    <bookmark href="http://slashdot.org/" added="903300211" modified="903300172">
+      <title>Slashdot.org</title>
+
+    </bookmark>
+    <bookmark href="http://www.linuxgazette.com/" added="962596564" modified="962596528">
+      <title>Linux Gazette</title>
+    </bookmark>
+    <bookmark href="http://www.linuxjournal.com/" added="962596606" modified="962596578">
+      <title>Linux Journal</title>
+    </bookmark>
+    <bookmark href="http://www.delinuxspecialist.info/" added="1112996247" modified="962596578">
+
+      <title>De Linuxspecialist Info | Linux voor iedereen !</title>
+    </bookmark>
+    <bookmark href="http://linux.slashdot.org/" added="1113207461" modified="962596578">
+      <title>Slashdot: News for nerds, stuff that matters</title>
+    </bookmark>
+  </folder>
+    <bookmark href="http://www.linux.org/" added="1054796638" modified="1054796640">
+      <title>Linux</title>
+
+    </bookmark>
+    <bookmark href="http://www.linux.com/" added="962596248" modified="962596237">
+      <title>Linux.com</title>
+    </bookmark>
+    <bookmark href="http://www.linux.org/" added="962596347" modified="962596262">
+      <title>Linux Online</title>
+    </bookmark>
+    <bookmark href="http://www.kernel.org/" added="903300211" modified="903300172">
+
+      <title>Linux Kernel</title>
+    </bookmark>
+    <bookmark href="http://www.linux.eu.org/" added="1209155168" modified="903300172">
+      <title>EuroLinux</title>
+    </bookmark>
+    <bookmark href="http://linuxreviews.org/" added="1112828854" modified="903300172">
+      <title>Linux Reviews</title>
+
+    </bookmark>
+    <bookmark href="http://www.guilinux.com/index.php?siteid=1" added="1112937125" modified="903300172">
+      <title>GUILinux - GUI Linux, your Linux Desktop news source</title>
+    </bookmark>
+    <bookmark href="http://www.uselinuxathome.com/FRindex.htm" added="1094280586" modified="903300172">
+      <title>Linux Domestique - Linux pour débutant</title>
+    </bookmark>
+  <folder added="1112946061" folded="no">
+
+    <title>Ubuntu</title>
+    <bookmark href="http://www.linuxquestions.org/questions/forumdisplay.php?forumid=63" added="1112946075" modified="1209155168">
+      <title>LinuxQuestions.org - Ubuntu - where Linux users come for help</title>
+    </bookmark>
+  </folder>
+    <bookmark href="http://www.linux-watch.com/news/NS9004150120.html" added="1163614703" modified="1112946075">
+      <title>Samba team denounces Novell/Microsoft patent pact</title>
+
+    <desc>Linux views, rumors, hot news, and buzz
+            </desc>
+    </bookmark>
+    <bookmark href="http://www.bxlug.be/" added="1087883463" modified="1112946075">
+      <title>Accueil - BxLUG</title>
+    </bookmark>
+    <bookmark href="http://lea-linux.org/" added="1055315144" modified="1055315146">
+      <title>[Léa] Léa, site d'aide Linux francophone</title>
+
+    </bookmark>
+    <bookmark href="http://linux.scola.ac-paris.fr/" added="1082960930" modified="1055315146">
+      <title>Aide Linux</title>
+    </bookmark>
+    <bookmark href="http://www.debian-administration.org/" added="1115702768" modified="1055315146">
+      <title>Debian GNU/Linux System Administration Resources</title>
+    </bookmark>
+    <bookmark href="http://linux.seindal.dk/" added="1193564091" modified="1055315146">
+
+      <title>Living with Linux</title>
+    </bookmark>
+    <bookmark href="http://searchenterpriselinux.techtarget.com/" added="1206521536" modified="1055315146">
+      <title>The Web's best resource for Linux admins and managers</title>
+    <desc>Find the latest Linux news and resources on Linux servers, operating system (OS), software, administration, security, Red Hat, SUSE, Ubunti Linux and more.
+        
+        </desc>
+    </bookmark>
+  </folder>
+
+  <folder added="1165701297" folded="no">
+    <title>FreeBSD</title>
+    <bookmark href="http://www.freebsd.org/doc/en_US.ISO8859-1/books/handbook/" added="1165701339" modified="1209155168">
+      <title>FreeBSD Handbook</title>
+    </bookmark>
+    <bookmark href="http://www.onlamp.com/pub/a/bsd/2004/05/13/FreeBSD_Basics.html?page=1" added="1165706172" modified="1209155168">
+      <title>FreeBSD Networking Basics (ONLamp.com)</title>
+
+    <desc>Dru Lavigne explains how to verify, configure, and optimize FreeBSD networking.
+            </desc>
+    </bookmark>
+    <bookmark href="http://www.freebsd.org/cgi/man.cgi?manpath=FreeBSD+6.1-RELEASE" added="1165738249" modified="1209155168">
+      <title>FreeBSD Hypertext Man Pages: Index Page</title>
+    </bookmark>
+    <bookmark href="http://www.freebsddiary.org/" added="1165874408" modified="1209155168">
+      <title>The FreeBSD Diary</title>
+
+    <desc>The FreeBSD Diary is a collection of how-to guides for FreeBSD operating system
+            </desc>
+    </bookmark>
+    <bookmark href="http://www.quesaco.org/astuces/astuce-freebsd.php" added="1165955935" modified="1209155168">
+      <title>Quesaco: FreeBSD, installer et configurer FreeBSD, redémarrage du système par le clavier ou supprimer un caractère indésirable ? Quelques astuces.</title>
+    <desc>FreeBSD est un système absolument fabuleux ! Mais qui nécessite une grande volonté et  - il faut bien le reconnaître - pas mal de temps libre. Vous me direz, c'est un peu le cas pour tous les environnements informatiques. Mais se retrouver à paramétrer son environnement en éditant des fichiers au format texte ou en recompilant certains programmes en rebute plus d'un. Pourtant, n'est-ce pas là la meilleure solution pour maîtriser réellement ce qui se passe sur sa station de travail ? Voici par exemple comment empêcher le redémarrage du système par le clavier.
+            </desc>
+    </bookmark>
+    <bookmark href="http://wiki.debian.org/Debian_GNU/kFreeBSD_FAQ" added="1165962060" modified="1209155168">
+
+      <title>Debian GNU/kFreeBSD FAQ - Debian Wiki</title>
+    </bookmark>
+    <bookmark href="http://imil.net/docs/sexy-FreeBSD.txt" added="1165957187" modified="1209155168">
+      <title>sexy-FreeBSD.txt</title>
+    </bookmark>
+  </folder>
+  </folder>
+    <separator/>
+</xbel>
+

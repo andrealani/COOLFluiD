@@ -1,0 +1,62 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace ArcJet {
+
+//////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+ArcJetPvtToCons<BASE>::ArcJetPvtToCons
+(Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  BASE(model)
+{
+  cf_assert(model.isNotNull());
+}
+      
+//////////////////////////////////////////////////////////////////////
+      
+template <typename BASE>
+ArcJetPvtToCons<BASE>::~ArcJetPvtToCons()
+{
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void ArcJetPvtToCons<BASE>::transform(const Framework::State& state, Framework::State& result)
+{
+  BASE::transform(state, result);
+  
+  // here we assume that Bx,By,Bz,Phi are the last four components
+  const CFuint start = result.size()-4; 
+  for (CFuint i = 0; i < 4; ++i) {
+    result[start+i] = state[start+i];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+     
+template <typename BASE>
+void ArcJetPvtToCons<BASE>::transformFromRef(const RealVector& data, 
+					     Framework::State& result)
+{
+  BASE::transformFromRef(data, result);
+  
+  // here we assume that Bx,By,Bz,Phi are the last four components
+  const CFuint starts = result.size()-4;
+  const CFuint startd = data.size()-4;
+  for (CFuint i = 0; i < 4; ++i) {
+    result[starts+i] = data[startd+i];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
+    } // namespace ArcJet
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////

@@ -1,0 +1,112 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -0.209726
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs =  libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libFluctSplit libFluctSplitSystem libFluctSplitHO libFluctSplitNavierStokes libNewtonMethod libPetscI libFluctSplitHONavierStokes
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Wedge/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
+Simulator.SubSystem.Euler2D.refValues = 1. 2.366431913 2.366431913 5.3
+Simulator.SubSystem.Euler2D.refLength = 1.0
+
+
+Simulator.SubSystem.NewtonIterator.ConvergenceFile     = wedge-1_15-P2-P1-BximpP1.conv.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName     = wedge-1_15-BxP2.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 100
+
+Simulator.SubSystem.Tecplot.FileName    = wedge-1_15-BxP2.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = thetas
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize   = 4
+Simulator.SubSystem.Tecplot.WriteSol     = WriteSolutionBlock
+
+
+Simulator.SubSystem.StopCondition          = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -10
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 3
+
+
+Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = wedge-1_15-P2.CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 2.0
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i>30,2.0+(i-30)/2.0,2.0)
+
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.Output = true
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.ILULevels = 3
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 50
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1E-6
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 2500
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.SetupCom    = StdSetup     ThetaSetup
+Simulator.SubSystem.FluctuationSplit.UnSetupCom  = ThetaUnSetup StdUnSetup
+Simulator.SubSystem.FluctuationSplit.ThetaSetup1.MaxNbSubElems = 4
+Simulator.SubSystem.FluctuationSplit.ComputeRHS = RhsJacob
+Simulator.SubSystem.FluctuationSplit.ComputeTimeRHS = PseudoSteadyTimeRhs
+Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = HOCRD
+
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysBCx
+
+Simulator.SubSystem.FluctuationSplit.Data.SysBCx.Delta   = 1.5
+Simulator.SubSystem.FluctuationSplit.Data.SysBCx.Length  = 3.0
+Simulator.SubSystem.FluctuationSplit.Data.SysBCx.Speed   = 2.0
+Simulator.SubSystem.FluctuationSplit.Data.SysBCx.VarName = rho
+Simulator.SubSystem.FluctuationSplit.Data.SysBCx.HO = true
+Simulator.SubSystem.FluctuationSplit.Data.SysBCx.StoreThetas   = true
+Simulator.SubSystem.FluctuationSplit.Data.SysBCx.MaxNbSubElems = 4
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar    = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar   = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar    = Cons
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorOrder = P3
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 1. \
+          2.366431913 \
+          0.0 \
+          5.3
+
+Simulator.SubSystem.FluctuationSplit.BcComds = WeakSlipWallEuler2DHOImpl SuperInletImpl
+
+Simulator.SubSystem.FluctuationSplit.BcNames = Wall Inlet
+
+Simulator.SubSystem.FluctuationSplit.Wall.applyTRS = SlipWall
+Simulator.SubSystem.FluctuationSplit.Wall.alpha = 1.0
+
+Simulator.SubSystem.FluctuationSplit.Inlet.applyTRS = SuperInlet
+Simulator.SubSystem.FluctuationSplit.Inlet.Vars = x y
+Simulator.SubSystem.FluctuationSplit.Inlet.Def = 1. \
+          2.366431913 \
+          0.0 \
+          5.3
+

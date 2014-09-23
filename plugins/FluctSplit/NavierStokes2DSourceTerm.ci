@@ -1,0 +1,130 @@
+#include "NavierStokes/NavierStokesVarSet.hh"
+#include "NavierStokes/EulerTerm.hh"
+#include "InwardNormalsData.hh"
+#include "Common/CFLog.hh"
+#include "Framework/State.hh"
+#include "Framework/MeshData.hh"
+#include "FluctSplit/ComputeDiffusiveTerm.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+
+
+    namespace FluctSplit {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+NavierStokes2DSourceTerm<UPDATEVAR>::NavierStokes2DSourceTerm(const std::string& name) :
+  ComputeSourceTermFSM(name),
+  m_diffVar(CFNULL),
+  m_updateVar(CFNULL),
+  m_avRadius(0.),
+  m_cellVolume(0.)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+NavierStokes2DSourceTerm<UPDATEVAR>::~NavierStokes2DSourceTerm()
+{ 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void NavierStokes2DSourceTerm<UPDATEVAR>::setup()
+{
+  ComputeSourceTermFSM::setup();
+  
+  // set the flag to tell that the gradients will be computed by this 
+  // source term, instead by the diffusive term
+  this->getMethodData().getDistributionData().sourceComputeGradients = true;
+  m_updateVar = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+  m_diffVar = this->getMethodData().getDiffusiveVar().template d_castTo<Physics::NavierStokes::NavierStokesVarSet>();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void NavierStokes2DSourceTerm<UPDATEVAR>::computeSourceFSM
+(Framework::GeometricEntity *const cell,
+ RealVector& source,
+ const FluctSplit::InwardNormalsData& normalsData)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  // reset the source to 0
+  source = 0.;
+  
+  DistributionData& dd = this->getMethodData().getDistributionData();
+  const vector<State*>& states = *cell->getStates(); 
+  const CFuint nbCellStates = cell->getStates()->size();
+  m_cellVolume = this->socket_volumes.getDataHandle()[cell->getID()];
+  
+  //  static vector<CFuint> v(3);
+  //   v[0] = cell->getNode(0)->getLocalID();
+  //   v[1] = cell->getNode(1)->getLocalID();
+  //   v[2] = cell->getNode(2)->getLocalID();
+  
+  if (!dd.isPerturb) {
+    m_avRadius = 0.;
+    for (CFuint iState = 0; iState < nbCellStates; ++iState) {
+      m_avRadius += (states[iState]->getCoordinates())[YY];
+    }
+    m_avRadius /= nbCellStates;
+  }
+  
+  RealVector& pdata = m_updateVar->getModel()->getPhysicalData();
+
+  // this will compute the gradients and the average state
+  this->getMethodData().getDiffusiveTermComputer()->
+    computeCellGradientsAndAverageState(cell,pdata);
+  
+  vector<RealVector*>& gradients = dd.gradients;
+  RealVector& avState = dd.avState;
+  
+  // if (v[0] == 0 && v[1] == 1 && v[2] == 257) {
+  //     for (CFuint iEq = 0; iEq <avState.size(); ++iEq) {
+  //       cout << "grad["<< iEq << "] = " << *gradients[iEq] << endl;
+  //     }
+  //   }
+ 
+//  cout << dd.isPerturb << ",iVar " << dd.iVar << endl;
+ 
+  m_diffVar->setComposition(avState, dd.isPerturb, dd.iVar);
+  
+  m_diffVar->getAxiSourceTerm(pdata, 
+			      avState, 
+			      gradients,
+			      m_avRadius,
+			      source);
+  
+  source *= (m_cellVolume/m_avRadius);
+  
+  // if (v[0] == 0 && v[1] == 1 && v[2] == 257) {
+  //    cout << "cellID = " << cell->getID() << endl;  
+  //    cout << "cellNodes = " << *cell->getNode(0) << "," 
+  // 	<< *cell->getNode(1) << "," << *cell->getNode(2) << endl;
+  //    cout << "pdata  = " << m_updateVar->getModel()->getPhysicalData() << endl;
+  //    cout << "state  = " << avState << endl;
+  //    cout << "radius = " << m_avRadius << endl;
+  //    cout << "volume = " << m_cellVolume << endl; 
+  //    cout << "source = " << source << endl;
+  //   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FluctSplit
+
+
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,191 @@
+#include "Common/ShouldNotBeHereException.hh"
+#include "Common/NotImplementedException.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace SA {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>      
+NavierStokesSAPvt<BASE>::NavierStokesSAPvt
+(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  BASE(name, model)
+{ 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+NavierStokesSAPvt<BASE>::~NavierStokesSAPvt()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+void NavierStokesSAPvt<BASE>::setGradientVars(const std::vector<RealVector*>& states,
+						  RealMatrix& values,
+						  const CFuint stateSize)
+{
+  const CFuint nbValues = values.nbRows();
+  const CFuint KID = this->_TID+1;
+  for (CFuint i = 0; i < nbValues; ++i) {
+    for (CFuint j = 0; j < stateSize; ++j) {
+      values(i,j) = (*states[j])[i];
+      
+      if (i == KID) {
+        const CFreal rho = getDensity(*states[j]);
+        values(i,j) *= std::sqrt(rho);
+      }
+    }
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+void NavierStokesSAPvt<BASE>::setGradientVarGradients
+(const std::vector<RealVector*>& states,
+ const std::vector< std::vector<RealVector*> >& stateGradients,
+ std::vector< std::vector<RealVector*> >& gradVarGradients,
+ const CFuint stateSize)
+{
+  cf_assert(stateGradients.size() > 0);
+  const CFuint nbValues = stateGradients[0].size();
+  for (CFuint i = 0; i < nbValues; ++i) {
+    for (CFuint j = 0; j < stateSize; ++j) {
+      *gradVarGradients[j][i] = *stateGradients[j][i];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+void NavierStokesSAPvt<BASE>::setStateGradients
+(const std::vector<RealVector*>& states,
+ const std::vector< std::vector<RealVector*> >& gradVarGradients,
+ std::vector< std::vector<RealVector*> >& stateGradients,
+ const CFuint stateSize)
+{
+  cf_assert(stateGradients.size() > 0);
+  const CFuint nbValues = stateGradients[0].size();
+  for (CFuint i = 0; i < nbValues; ++i)
+  {
+    for (CFuint j = 0; j < stateSize; ++j)
+    {
+      *stateGradients[j][i] = *gradVarGradients[j][i];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+CFreal NavierStokesSAPvt<BASE>::getLaminarDynViscosityFromGradientVars(const RealVector& state)
+{
+  const CFreal Tdim = this->_eulerModel->getTempRef()*state[this->_TID];
+  const CFreal pdim = this->_eulerModel->getPressRef()*state[0];
+  return this->getModel().getDynViscosityDim(pdim, Tdim)/
+    (this->getModel().getReferencePhysicalData())[NavierStokes::NSTurbTerm::MU];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+CFreal NavierStokesSAPvt<BASE>::getTurbDynViscosityFromGradientVars(const RealVector& state, 
+								    const std::vector<RealVector*>& gradients)
+{
+  const CFreal rho = getDensity(state);
+  const CFreal niuTilda = state[this->_TID+1];
+  const CFreal mu = getLaminarDynViscosityFromGradientVars(state);
+  const CFreal niu = mu / rho;
+  const CFreal Qsi = niuTilda / niu;
+  const CFreal Cv1 = 7.1;
+  const CFreal fv1 = pow(Qsi,3) / ( pow(Qsi,3) + pow(Cv1,3) );
+  const CFreal NIUt = niuTilda * fv1;
+  const CFreal mut = rho * NIUt;
+  
+  return mut;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+CFreal NavierStokesSAPvt<BASE>::getDensity(const RealVector& state)
+{
+  return state[0]/(this->_eulerModel->getR()*state[this->_TID]);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+      
+template <typename BASE> 
+void NavierStokesSAPvt<BASE>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::Common;
+  
+  // call  the parent setup()
+  BASE::setup();
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  
+  const CFuint nbTurbEquations = this->_eulerModel->getNbScalarVars(0);
+  cf_assert(nbTurbEquations == 1);
+  vector<std::string> names(dim + 2 + nbTurbEquations);
+  names[0] = "p";
+  names[1] = "u";
+  names[2] = "v";
+  if (dim == DIM_3D) {
+    names[3] = "w";
+  }
+  
+  this->_uID = 1;
+  this->_vID = 2;
+  this->_TID = 3;
+  if (dim == DIM_3D) {
+    this->_wID = 3;
+    this->_TID = 4;
+  }
+  
+  names[this->_TID] = "T";
+  
+  // Names for turbulent variables
+  names[this->_TID+1] = "K";
+    
+  this->setVarNames(names);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+CFreal NavierStokesSAPvt<BASE>::getCurrUpdateDiffCoeff(CFuint iEqSS)
+{  
+  return (this->getModel().getPhysicalData())[NavierStokes::NSTurbTerm::MU] + 
+    (this->getModel().getPhysicalData())[NavierStokes::NSTurbTerm::MUT];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+   
+template <typename BASE>
+void NavierStokesSAPvt<BASE>::setGradientState(const RealVector& state)
+{
+  this->_gradState = state; 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace SA
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

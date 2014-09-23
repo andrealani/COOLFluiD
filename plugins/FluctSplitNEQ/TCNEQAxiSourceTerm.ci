@@ -1,0 +1,145 @@
+#include "Common/CFLog.hh"
+#include "FluctSplit/InwardNormalsData.hh"
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "Framework/MeshData.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+
+
+    namespace FluctSplitNEQ {
+
+//////////////////////////////////////////////////////////////////////////////
+      
+template <class UPDATEVAR>
+TCNEQAxiSourceTerm<UPDATEVAR>::TCNEQAxiSourceTerm(const std::string& name) :
+  FluctSplit::NavierStokes2DSourceTerm<UPDATEVAR>(name),
+  m_library(CFNULL),
+  m_omega(),
+  m_ys(),
+  m_tvDim(),
+  m_omegaTv()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+TCNEQAxiSourceTerm<UPDATEVAR>::~TCNEQAxiSourceTerm()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void TCNEQAxiSourceTerm<UPDATEVAR>::setup()
+{
+  using namespace COOLFluiD::Framework;
+  
+  FluctSplit::NavierStokes2DSourceTerm<UPDATEVAR>::setup();
+  
+  m_library = PhysicalModelStack::getActive()->getImplementor()->template
+    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  cf_assert(m_library.isNotNull());
+    
+  const CFuint nbSpecies = m_library->getNbSpecies();
+  m_omega.resize(nbSpecies);
+  m_ys.resize(nbSpecies);
+  
+  const CFuint nbTv = m_library->getNbTempVib(); 
+  m_tvDim.resize((nbTv > 1) ? nbTv : 1);
+  
+  m_omegaTv.resize(nbTv);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void TCNEQAxiSourceTerm<UPDATEVAR>::computeSourceFSM(Framework::GeometricEntity *const cell,
+						     RealVector& source,
+						     const FluctSplit::InwardNormalsData& normalsData)
+{ 
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  
+  // first the axisymmetric source term
+  FluctSplit::NavierStokes2DSourceTerm<UPDATEVAR>::computeSourceFSM(cell, source, normalsData);
+
+  const vector<State*>& states = *cell->getStates(); 
+  const CFuint nbSpecies = this->m_updateVar->getModel()->getNbScalarVars(0);
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint startID = nbSpecies + dim + 1;
+  RealVector& refData = this->m_updateVar->getModel()->getReferencePhysicalData();
+  RealVector& pData = this->m_updateVar->getModel()->getPhysicalData();
+  
+  // compute average vibrational temperatures in the cell
+  m_tvDim = 0.0;
+  cf_assert(m_tvDim.size() == 1);
+  const CFuint nbStates = states.size();
+  for (CFuint i = 0; i < m_tvDim.size(); ++i) {
+    for (CFuint iState = 0; iState < nbStates; ++iState) {
+      m_tvDim[i] += (*states[iState])[startID + i];
+    }
+  }
+  m_tvDim *= (refData[UPDATEVAR::PTERM::T]/static_cast<CFreal>(nbStates));
+  
+  CFreal pdim = pData[UPDATEVAR::PTERM::P]*refData[UPDATEVAR::PTERM::P];
+  CFreal Tdim = pData[UPDATEVAR::PTERM::T]*refData[UPDATEVAR::PTERM::T];
+  CFreal rhodim = pData[UPDATEVAR::PTERM::RHO]*refData[UPDATEVAR::PTERM::RHO];
+  
+  const CFuint firstSpecies = this->m_updateVar->getModel()->getFirstScalarVar(0);
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    m_ys[i] = pData[firstSpecies + i];
+  } 
+  
+  // RealMatrix& jacobMatrix = this->getJacobMatrix();
+  //jacobMatrix.resize(PhysicalModelStack::getActive()->getNbEq(),
+  // PhysicalModelStack::getActive()->getNbEq());
+  
+  // cout << "Tdim   = " << Tdim << endl;
+  // cout << "m_tvDim = " << m_tvDim << endl;
+  // cout << "pdim = " << pdim << endl;
+  // cout << "rhodim = " << rhodim << endl;
+  // cout << "m_ys = " << m_ys << endl;
+  
+  // compute the mass production/destruction term
+  m_library->getMassProductionTerm(Tdim, m_tvDim, 
+				   pdim, rhodim, m_ys, 
+				   this->_analyticalJacob,
+				   m_omega,
+				   this->_jacobMatrix);
+  
+  // cout << "m_omega = " << m_omega << endl << endl;
+  
+  DataHandle<CFreal> volumes = this->socket_volumes.getDataHandle();
+  cf_assert(volumes[cell->getID()] > 0.0);
+  
+  const vector<CFuint>& speciesVarIDs = 
+    UPDATEVAR::getEqSetData()[0].getEqSetVarIDs();
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    source[speciesVarIDs[i]] += m_omega[i]*volumes[cell->getID()];
+  }
+  
+  const CFuint nbTv = this->m_updateVar->getModel()->getNbScalarVars(1); 
+  const vector<CFuint>& evVarIDs = UPDATEVAR::getEqSetData()[1].getEqSetVarIDs();
+  
+  CFdouble omegaRad = 0.0;
+  m_library->getSourceTermVT(Tdim, m_tvDim, pdim, rhodim, m_omegaTv, omegaRad);
+  
+  for (CFuint i = 0; i < nbTv; ++i) {
+    source[evVarIDs[i]] += m_omegaTv[i]*volumes[cell->getID()];
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FluctSplitNEQ
+
+
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

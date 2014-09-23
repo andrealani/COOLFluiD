@@ -1,0 +1,170 @@
+#
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -1.04434
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFluctSplitNavierStokes libNewtonMethod libMeshLaplacianSmoothing libMeshTools libFluctSplitSpaceTimeNavierStokes
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Naca0012/
+#Simulator.Paths.WorkingDir       = ./
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
+Simulator.SubSystem.Euler2D.refValues = 1.204524948 \
+                                260.259224953 \
+                                30. \
+                                281463.624745345
+Simulator.SubSystem.Euler2D.refLength = 1.0
+Simulator.SubSystem.Euler2D.velRef = 300.
+Simulator.SubSystem.Euler2D.pRef = 101325.0
+Simulator.SubSystem.Euler2D.rhoRef = 1.204524948
+
+#law for N and H-E
+#law for LDA
+
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.001
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = MaxDT
+#Simulator.SubSystem.SubSystemStatus.MaxDT.ST_CFL = 0.9
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = FunctionDT
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Vars = i
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = if(i<3,0.1,0.01)
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = naca0012smooth.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = naca0012smooth.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+Simulator.SubSystem.InitialTime         = 0.
+Simulator.SubSystem.InitialIter         = 0
+
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 100.
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells Airfoil FarField
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = naca0012SolRDS.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+# Compute the Wall distance
+Simulator.SubSystem.DataPreProcessing = DataProcessing
+Simulator.SubSystem.DataPreProcessingNames = DataProcessing1
+Simulator.SubSystem.DataProcessing1.Comds = ComputeWallDistance
+Simulator.SubSystem.DataProcessing1.Names = WallDistance
+Simulator.SubSystem.DataProcessing1.WallDistance.BoundaryTRS = Airfoil
+Simulator.SubSystem.DataProcessing1.WallDistance.OutputFile = distances.dat
+
+Simulator.SubSystem.MeshAdapterMethod = LaplacianSmoothing
+Simulator.SubSystem.LaplacianSmoothing.Data.CollaboratorNames = CFmeshFileReader NewtonIterator CFmesh FluctuationSplit
+Simulator.SubSystem.LaplacianSmoothing.PrepareComds = StdPrepare
+Simulator.SubSystem.LaplacianSmoothing.PrepareNames = Prepare1
+Simulator.SubSystem.LaplacianSmoothing.Prepare1.applyTRS = Airfoil
+Simulator.SubSystem.LaplacianSmoothing.UpdateMeshCom = UpdateMesh
+Simulator.SubSystem.LaplacianSmoothing.UpdateMesh.Relaxation = 1.2
+Simulator.SubSystem.LaplacianSmoothing.UpdateMesh.NbSmoothingIter = 4
+Simulator.SubSystem.LaplacianSmoothing.UpdateMesh.Weight = overLength #Uniform #overLength #overDistance
+Simulator.SubSystem.LaplacianSmoothing.UpdateMesh.QualityThreshold = 1.
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 10.0
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = 10000.0
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i>1,min(1000000.,2.*10.^(i-1)),2.)
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i>30,min(1000000.,2.*2.^(i-30)),2.)
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i>50,min(100.,2.*1.2^(i-50)),2.)
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+#Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.AbsNorm = -5.0
+#Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.lssNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCILU
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.SetupCom = StdSetup StdALESetup
+Simulator.SubSystem.FluctuationSplit.SetupNames = Setup1 Setup2
+Simulator.SubSystem.FluctuationSplit.UnSetupCom = StdUnSetup StdALEUnSetup
+Simulator.SubSystem.FluctuationSplit.UnSetupNames = UnSetup1 UnSetup2
+Simulator.SubSystem.FluctuationSplit.BeforeMeshUpdateCom = StdALEPrepare
+Simulator.SubSystem.FluctuationSplit.AfterMeshUpdateCom = StdALEUpdate
+Simulator.SubSystem.FluctuationSplit.ComputeRHS = RhsJacob
+Simulator.SubSystem.FluctuationSplit.ComputeTimeRHS = StdTimeRhs
+
+Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = STM_RDS
+
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = STM_SysN
+#Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = STM_SysNlim
+#Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = STM_SysLDA
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Roe
+
+#Solution initialization
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.InputVar = RhoMachAlphaP
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 1.204524948 \
+                                        0.755 \
+                                        0.016 \
+                                        101325.
+
+#Boundary conditions
+Simulator.SubSystem.FluctuationSplit.BcComds = UnsteadyWeakSlipWallEuler2DImpl \
+                                      WeakFarField2DImpl
+Simulator.SubSystem.FluctuationSplit.BcNames = WeakSlipWall \
+                                      FField
+
+Simulator.SubSystem.FluctuationSplit.WeakSlipWall.applyTRS = Airfoil
+
+Simulator.SubSystem.FluctuationSplit.FField.applyTRS = FarField
+Simulator.SubSystem.FluctuationSplit.FField.InputVar = RhoMachAlphaP
+Simulator.SubSystem.FluctuationSplit.FField.Vars = x y t
+Simulator.SubSystem.FluctuationSplit.FField.Def = 1.204524948 \
+                                        0.755 \
+                                        0.016 \
+                                        101325.
+
+#Data Processing
+Simulator.SubSystem.DataProcessing = DataProcessing
+Simulator.SubSystem.DataProcessing.Comds = ComputeMeshQuality
+Simulator.SubSystem.DataProcessing.Names = MeshQuality
+
+Simulator.SubSystem.DataProcessing.MeshQuality.OutputFile = test.plt
+Simulator.SubSystem.DataProcessing.MeshQuality.OutputType = Histogram
+Simulator.SubSystem.DataProcessing.MeshQuality.HistogramRange = 1. 2. 3. 4. 5. 6. 10. 100.
+Simulator.SubSystem.DataProcessing.MeshQuality.SaveRate = 1
+Simulator.SubSystem.DataProcessing.MeshQuality.QualityType = Concrete
+

@@ -1,0 +1,52 @@
+===================
+   STARTING FILE
+===================
+
+Nbr. of grid levels :   1
+Viscous/inviscid :      1
+Struct. grid type :     3
+Semi/full coarsening :  1
+Remeshing :             0
+Free-stream :           .203 0.7 8.87E+5 256.05
+### BOUNDARY POINT DISTRIBUTION ########################
+--------------------------------------------------------
+Nbr. bodies :		2
+--------------------------------------------------------
+Pts file :		RAE_design.pts
+Config. file :		RAE_rans.cfg
+Dpl input file :	raew.dpl
+XYoutput file :		RAE.xyout
+--------------------------------------------------------
+Angle thresh wawa :	5.0
+Angle thresh far-fld :  10.0
+--------------------------------------------------------
+Proximity thresh :	0.5
+Max theta & thetap :	60.0 70.0
+Max ang. for if lgth :	20.0
+--------------------------------------------------------
+Max AR at extr. :	8.0
+--------------------------------------------------------
+### STRUCTURED GRID GENERATION #########################
+--------------------------------------------------------
+2nd order expl coeff :  3.0
+2nd order impl coeff :  2.0
+4th order expl coeff :  0.0
+Implicit factor :       0.0
+--------------------------------------------------------
+Volume average factor : 0.5
+--------------------------------------------------------
+### UNSTRUCTURED GRID GENERATION #######################
+--------------------------------------------------------
+Spacing exp. base :     1.80
+Nbr iter spc smooth :   10
+Conv thresh spc smth :  1.0e-3
+Ovrelax coef spc smth : 0.5
+--------------------------------------------------------
+Distance tolerance :    0.65
+Stretching tolerance :  0.65
+--------------------------------------------------------
+Max number of row :    300
+--------------------------------------------------------
+Smth. beta coeff :	0.5
+Smth. relaxation fact : 1.4
+========================================================

@@ -1,0 +1,164 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+CFEnv.VerboseEvents = false
+Simulator.Maestro = LoopMaestro
+Simulator.SubSystems = SubSysA SubSysB
+
+Simulator.LoopMaestro.GlobalStopCondition = GlobalMaxNumberSteps
+Simulator.LoopMaestro.GlobalMaxNumberSteps.nbSteps = 3
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libForwardEuler libTHOR2CFmesh libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libLinearAdv libLoopMaestro
+
+Simulator.Paths.WorkingDir = plugins/SubSystemCoupler/testcases/FSI/
+Simulator.Paths.ResultsDir       = ./
+
+### SubSystem A  Parameters #######################################################
+Simulator.SubSysA.Default.PhysicalModelType  = LinearAdv2D
+Simulator.SubSysA.LinearAdv2D.VX = 0.0
+Simulator.SubSysA.LinearAdv2D.VY = 1.0
+
+
+Simulator.SubSysA.ConvergenceFile     = convergence.plt
+
+
+Simulator.SubSysA.OutputFormat        = Tecplot CFmesh
+Simulator.SubSysA.CFmesh.FileName     = advectSW.CFmesh
+Simulator.SubSysA.Tecplot.FileName    = advectSW.plt
+Simulator.SubSysA.Tecplot.Data.updateVar = Prim
+Simulator.SubSysA.Tecplot.SaveRate = 10
+Simulator.SubSysA.CFmesh.SaveRate = 10
+Simulator.SubSysA.Tecplot.AppendTime = false
+Simulator.SubSysA.CFmesh.AppendTime = false
+Simulator.SubSysA.Tecplot.AppendIter = false
+Simulator.SubSysA.CFmesh.AppendIter = false
+
+Simulator.SubSysA.ConvRate            = 1
+Simulator.SubSysA.ShowRate            = 5
+
+Simulator.SubSysA.StopCondition       = MaxNumberSteps
+Simulator.SubSysA.MaxNumberSteps.nbSteps = 30
+
+Simulator.SubSysA.Default.listTRS = InnerCells FaceSouth FaceWest FaceNorth SuperInlet
+
+Simulator.SubSysA.MeshCreator = CFmeshFileReader
+Simulator.SubSysA.CFmeshFileReader.Data.FileName = advectSW.CFmesh
+Simulator.SubSysA.CFmeshFileReader.Data.builderName = RDS
+Simulator.SubSysA.CFmeshFileReader.Data.polyTypeName = Lagrange
+
+Simulator.SubSysA.ConvergenceMethod = FwdEuler
+
+Simulator.SubSysA.SpaceMethod = FluctuationSplit
+Simulator.SubSysA.FluctuationSplit.Data.ScalarSplitter = ScalarN
+
+Simulator.SubSysA.FluctuationSplit.Data.SolutionVar  = Prim
+Simulator.SubSysA.FluctuationSplit.Data.UpdateVar  = Prim
+Simulator.SubSysA.FluctuationSplit.Data.DistribVar = Prim
+Simulator.SubSysA.FluctuationSplit.Data.LinearVar  = Prim
+
+Simulator.SubSysA.FluctuationSplit.InitComds = InitState InitState InitState InitState
+Simulator.SubSysA.FluctuationSplit.InitNames = InField FaceS FaceW Inlet
+
+Simulator.SubSysA.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSysA.FluctuationSplit.InField.Vars = x y
+Simulator.SubSysA.FluctuationSplit.InField.Def = sin(x)*cos(y)
+
+Simulator.SubSysA.FluctuationSplit.FaceS.applyTRS = FaceSouth
+Simulator.SubSysA.FluctuationSplit.FaceS.Vars = x y
+Simulator.SubSysA.FluctuationSplit.FaceS.Def = sin(2*x*3.14159265359)
+
+Simulator.SubSysA.FluctuationSplit.FaceW.applyTRS = FaceWest
+Simulator.SubSysA.FluctuationSplit.FaceW.Vars = x y
+Simulator.SubSysA.FluctuationSplit.FaceW.Def = 0.0
+
+Simulator.SubSysA.FluctuationSplit.Inlet.applyTRS = SuperInlet
+Simulator.SubSysA.FluctuationSplit.Inlet.Vars = x y
+Simulator.SubSysA.FluctuationSplit.Inlet.Def = 0.0
+
+Simulator.SubSysA.FluctuationSplit.BcComds = SuperInlet SuperInlet SuperInlet SuperOutlet
+Simulator.SubSysA.FluctuationSplit.BcNames = South West East North
+
+Simulator.SubSysA.FluctuationSplit.South.applyTRS = FaceSouth
+Simulator.SubSysA.FluctuationSplit.South.Vars = x y
+Simulator.SubSysA.FluctuationSplit.South.Def = sin(2*x*3.14159265359)
+
+Simulator.SubSysA.FluctuationSplit.West.applyTRS = FaceWest
+Simulator.SubSysA.FluctuationSplit.West.Vars = x y
+Simulator.SubSysA.FluctuationSplit.West.Def = 0.0
+
+Simulator.SubSysA.FluctuationSplit.East.applyTRS = SuperInlet
+Simulator.SubSysA.FluctuationSplit.East.Vars = x y
+Simulator.SubSysA.FluctuationSplit.East.Def = 0.0
+
+Simulator.SubSysA.FluctuationSplit.North.applyTRS = FaceNorth
+
+### SubSystem B  Parameters #######################################################
+
+Simulator.SubSysB.Default.PhysicalModelType = LinearAdv3D
+Simulator.SubSysB.LinearAdv3D.VX = 0.0
+Simulator.SubSysB.LinearAdv3D.VY = 0.0
+Simulator.SubSysB.LinearAdv3D.VZ =-1.0
+
+
+Simulator.SubSysB.ConvergenceFile     = convergence.plt
+
+
+Simulator.SubSysB.OutputFormat        = Tecplot CFmesh
+Simulator.SubSysB.CFmesh.FileName     = cube-hexa.CFmesh
+Simulator.SubSysB.Tecplot.FileName    = cube-hexa.plt
+Simulator.SubSysB.Tecplot.Data.updateVar = Prim
+Simulator.SubSysB.Tecplot.SaveRate = 100
+Simulator.SubSysB.CFmesh.SaveRate = 100
+Simulator.SubSysB.Tecplot.AppendTime = false
+Simulator.SubSysB.CFmesh.AppendTime = false
+Simulator.SubSysB.Tecplot.AppendIter = false
+Simulator.SubSysB.CFmesh.AppendIter = false
+
+Simulator.SubSysB.ConvRate            = 1
+Simulator.SubSysB.ShowRate            = 10
+
+Simulator.SubSysB.StopCondition       = MaxNumberSteps
+Simulator.SubSysB.MaxNumberSteps.nbSteps = 30
+
+Simulator.SubSysB.Default.listTRS = InnerCells Top Bottom FaceSouth FaceNorth FaceWest FaceEast
+
+Simulator.SubSysB.MeshCreator = CFmeshFileReader
+Simulator.SubSysB.CFmeshFileReader.Data.FileName = hexa-coarse.CFmesh
+Simulator.SubSysB.CFmeshFileReader.Data.builderName = RDS
+Simulator.SubSysB.CFmeshFileReader.Data.polyTypeName = Lagrange
+
+Simulator.SubSysB.ConvergenceMethod = FwdEuler
+Simulator.SubSysA.FwdEuler.Data.CFL.Value = 0.5
+Simulator.SubSysA.FwdEuler.Data.CFL.ComputeCFL = Function
+Simulator.SubSysA.FwdEuler.Data.CFL.Function.Def = min(0.5+(i*0.01),1.0)
+Simulator.SubSysB.FwdEuler.Data.CFL.Value = 0.7
+
+Simulator.SubSysB.SpaceMethod = FluctuationSplit
+Simulator.SubSysB.FluctuationSplit.Data.SysSplitter = ScalarB
+
+Simulator.SubSysB.FluctuationSplit.Data.SolutionVar = Prim
+Simulator.SubSysB.FluctuationSplit.Data.UpdateVar  = Prim
+Simulator.SubSysB.FluctuationSplit.Data.DistribVar = Prim
+Simulator.SubSysB.FluctuationSplit.Data.LinearVar  = Prim
+
+Simulator.SubSysB.FluctuationSplit.InitComds = InitState InitState
+Simulator.SubSysB.FluctuationSplit.InitNames = InField WaveIn
+
+Simulator.SubSysB.FluctuationSplit.InField.applyTRS = InnerCells Bottom
+Simulator.SubSysB.FluctuationSplit.InField.Vars = x y z
+Simulator.SubSysB.FluctuationSplit.InField.Def = 10*sin(x)*cos(y)*cos(z)
+
+Simulator.SubSysB.FluctuationSplit.WaveIn.applyTRS = Top
+Simulator.SubSysB.FluctuationSplit.WaveIn.Vars = x y z
+Simulator.SubSysB.FluctuationSplit.WaveIn.Def = 10*sin(x)*cos(y)*cos(z)
+
+Simulator.SubSysB.FluctuationSplit.BcComds = SuperInlet SuperOutlet
+Simulator.SubSysB.FluctuationSplit.BcNames = In         Out
+
+Simulator.SubSysB.FluctuationSplit.In.applyTRS = Top
+Simulator.SubSysB.FluctuationSplit.In.Vars = x y z
+Simulator.SubSysB.FluctuationSplit.In.Def  = 10*sin(2*x*3.14159265359)
+
+Simulator.SubSysB.FluctuationSplit.Out.applyTRS = Bottom
+

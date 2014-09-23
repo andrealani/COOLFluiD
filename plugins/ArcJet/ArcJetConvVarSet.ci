@@ -1,0 +1,207 @@
+#include "Framework/State.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Common/CFPrintContainer.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace ArcJet {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+ArcJetConvVarSet<BASEVS>::ArcJetConvVarSet
+(Common::SafePtr<Framework::BaseTerm> term) :
+  BASEVS(term),
+  _arcJetModel(term.template d_castTo<PTERM>())
+{
+  this->addVarName("Phi");
+  
+  CFLog(DEBUG_MAX, "ArcJetConvVarSet::ArcJetConvVarSet()\n");
+  CFLog(DEBUG_MAX, Common::CFPrintContainer<const std::vector<std::string> >("varnames = ", &this->getVarNames()));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+ArcJetConvVarSet<BASEVS>::~ArcJetConvVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+CFreal ArcJetConvVarSet<BASEVS>::getMaxEigenValue
+  (const RealVector& pdata, const RealVector& normal)
+{
+  return BASEVS::getMaxEigenValue(pdata, normal);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+CFreal ArcJetConvVarSet<BASEVS>::getMaxAbsEigenValue
+(const RealVector& pdata, const RealVector& normal)
+{
+  return BASEVS::getMaxAbsEigenValue(pdata, normal);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+template <class BASEVS>
+void ArcJetConvVarSet<BASEVS>:: computeEigenValues	
+(const RealVector& pdata, const RealVector& normal, RealVector& eValues)
+{
+  using namespace COOLFluiD::Framework;
+
+  // first call the parent class
+  BASEVS::computeEigenValues(pdata,normal,eValues);
+
+  const CFuint nbBaseEqs = eValues.size() - 1;
+  eValues[nbBaseEqs] = 0.0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetConvVarSet<BASEVS>::computeFlux
+(const Framework::State& vars, const RealVector& normals)
+{
+  using namespace COOLFluiD::Framework;
+
+  // first call the parent class
+  BASEVS::computeFlux(vars,normals);
+  
+  const CFuint nbBaseEqs = vars.size() - 1;
+  this->_fluxArray[nbBaseEqs] = 0.0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetConvVarSet<BASEVS>::computeFlux
+(const Framework::State& vars)
+{
+  throw Common::NotImplementedException
+    (FromHere(), "ArcJetConvVarSet::computeFlux()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetConvVarSet<BASEVS>::computePhysicalData
+(const Framework::State& state, RealVector& data)
+{
+  CFLog(DEBUG_MIN, "ArcJetConvVarSet::computePhysicalData() START\n");
+  
+  BASEVS::computePhysicalData(state,data);
+  
+  const CFuint nbBaseEqs = state.size() - 1;
+  const CFuint firstScalarVar = _arcJetModel->getDataSize()-1;
+  data[firstScalarVar]   = state[nbBaseEqs];
+  
+  CFLog(DEBUG_MIN, "ArcJetConvVarSet::computePhysicalData() END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetConvVarSet<BASEVS>::computeStateFromPhysicalData
+(const RealVector& data,Framework::State& state)
+{
+  throw Common::NotImplementedException
+    (FromHere(), "ArcJetConvVarSet::computeStateFromPhysicalData()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+CFuint ArcJetConvVarSet<BASEVS>::getBlockSeparator() const
+{
+  return Framework::PhysicalModelStack::getActive()->getNbEq();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetConvVarSet<BASEVS>::setDimensionalValues
+(const Framework::State& state,
+ RealVector& result)
+{
+  using namespace COOLFluiD::Framework;
+
+  BASEVS::setDimensionalValues(state, result);
+
+  // we assume here that the E variables are the last two in the state
+  const RealVector& refData = _arcJetModel->getReferencePhysicalData();
+  const CFuint nbBaseEqs = state.size() - 1;
+  const CFuint firstScalarVar = _arcJetModel->getDataSize()-1;
+  cf_assert(refData[firstScalarVar] > 0.);
+  
+  result[nbBaseEqs] = state[nbBaseEqs]*refData[firstScalarVar];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetConvVarSet<BASEVS>::setAdimensionalValues
+(const Framework::State& state,
+ RealVector& result)
+{
+  BASEVS::setAdimensionalValues(state, result);
+  
+  // we assume here that the E variables are the last two in the state
+  const RealVector& refData = _arcJetModel->getReferencePhysicalData();
+  const CFuint nbBaseEqs = state.size() - 1;
+  const CFuint firstScalarVar = _arcJetModel->getDataSize()-1;
+  cf_assert(refData[firstScalarVar] > 0.);
+  
+  result[nbBaseEqs] = state[nbBaseEqs]/refData[firstScalarVar];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetConvVarSet<BASEVS>::setDimensionalValuesPlusExtraValues
+(const Framework::State& state, RealVector& result, RealVector& extra)
+{
+  CFLog(DEBUG_MIN, "ArcJetConvVarSet<BASEVS>::setDimensionalValuesPlusExtraValues() START\n");
+  BASEVS::setDimensionalValuesPlusExtraValues(state, result, extra);
+  
+  // we assume here that the E variables are the last two in the state
+  const RealVector& refData = _arcJetModel->getReferencePhysicalData();
+  const CFuint nbBaseEqs = state.size() - 1;
+  const CFuint firstScalarVar = _arcJetModel->getDataSize()-1;
+  cf_assert(refData[firstScalarVar] > 0.);
+  
+  result[nbBaseEqs] = state[nbBaseEqs]*refData[firstScalarVar];
+  
+  CFLog(DEBUG_MIN, "ArcJetConvVarSet<BASEVS>::setDimensionalValuesPlusExtraValues() END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void ArcJetConvVarSet<BASEVS>::setup()
+{
+  BASEVS::setup();
+  
+  const CFuint nbLastEq = Framework::PhysicalModelStack::getActive()->getNbEq()-1;
+  
+  // inactivate variables
+  this->_maskArray[nbLastEq] = false; 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace ArcJet
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

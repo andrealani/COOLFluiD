@@ -1,0 +1,118 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Wedge/
+#Simulator.Paths.WorkingDir       = ./
+Simulator.Paths.ResultsDir       = ./
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFluctSplitSpaceTimeNavierStokes libFluctSplitNavierStokes libNewtonMethod libMeshRigidMove libTHOR2CFmesh libPetscI
+
+Simulator.SubSystem.Default.PhysicalModelType     = Euler2D
+Simulator.SubSystem.Euler2D.refValues = 1. 2.366431913 2.366431913 5.3
+Simulator.SubSystem.Euler2D.refLength = 1.0
+
+
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.001
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = MaxDT
+#Simulator.SubSystem.SubSystemStatus.MaxDT.DT_Ratio = 0.9
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = wedge.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = wedge.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.CFmesh.SaveRate = 1
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+Simulator.SubSystem.CFmesh.AppendIter = true
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+Simulator.SubSystem.InitialTime         = 0.001
+Simulator.SubSystem.InitialIter         = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1000
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -8.0
+
+#Simulator.SubSystem.StopCondition       = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime     = 1.
+
+Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = wedge_iter_1.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 100.
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = 13.0*2^i
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i>10,10.0*1.2^(i-10),10.0)
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 2
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.AbsNorm = -5.0
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+
+#Simulator.SubSystem.MeshAdapterMethod = RigidMove
+#Simulator.SubSystem.RigidMove.Data.CollaboratorNames = FwdEuler CFmesh CFmeshFileReader FluctuationSplit
+#Simulator.SubSystem.RigidMove.UpdateMeshCom = Wedge
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCILU
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Restart = true
+Simulator.SubSystem.FluctuationSplit.ComputeRHS = RhsJacob
+Simulator.SubSystem.FluctuationSplit.ComputeTimeRHS = StdTimeRhs
+
+Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = STM_RDS
+
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = STM_SysN
+#Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = STM_SysNlim
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Roe
+
+#Simulator.SubSystem.FluctuationSplit.InitComds = InitState StrongMirrorEuler2DCons
+#Simulator.SubSystem.FluctuationSplit.InitNames = InField InWall
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 1. \
+                                        2.366431913 \
+                                        0.0 \
+                                        5.3
+
+#Simulator.SubSystem.FluctuationSplit.InWall.applyTRS = SlipWall
+
+Simulator.SubSystem.FluctuationSplit.BcComds = SuperInletImpl UnsteadyWeakSlipWallEuler2DImpl
+Simulator.SubSystem.FluctuationSplit.BcNames = Inlet Wall
+
+Simulator.SubSystem.FluctuationSplit.Wall.applyTRS = SlipWall
+Simulator.SubSystem.FluctuationSplit.Wall.alpha = 1.0
+
+Simulator.SubSystem.FluctuationSplit.Inlet.applyTRS = SuperInlet
+Simulator.SubSystem.FluctuationSplit.Inlet.Vars = x y
+Simulator.SubSystem.FluctuationSplit.Inlet.Def = 1. \
+                                        2.366431913 \
+                                        0.0 \
+                                        5.3
+

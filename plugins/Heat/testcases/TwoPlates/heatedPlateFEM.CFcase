@@ -1,0 +1,96 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = 5.05176
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libFiniteElement libHeat libNewtonMethod  libFiniteElementHeat
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/Heat/testcases/TwoPlates/
+Simulator.Paths.ResultsDir  =  ./
+
+Simulator.SubSystem.Default.PhysicalModelType = Heat3D
+Simulator.SubSystem.Heat3D.Conductivity = 1.0
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = twoPlates.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = twoPlates.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.CFmesh.SaveRate = 1
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSystem.Default.listTRS = InnerCells Side1 Side2 Side3 Side4 Side5 Side6
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cube.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = FiniteElement
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 100
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1.0
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
+
+Simulator.SubSystem.SpaceMethod = FiniteElementMethod
+
+Simulator.SubSystem.FiniteElementMethod.Data.UpdateVar = Prim
+Simulator.SubSystem.FiniteElementMethod.Data.DiffusiveVar = Prim
+#Simulator.SubSystem.FiniteElementMethod.Data.SourceVar = Heat3DSourceTConst
+
+#Simulator.SubSystem.FiniteElementMethod.Data.Heat3DSourceTConst.IndepCoef = 100.
+#Simulator.SubSystem.FiniteElementMethod.Data.Heat3DSourceTConst.LinearCoef = 0.
+
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorOrder = P1
+
+Simulator.SubSystem.FiniteElementMethod.ExplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSystem.FiniteElementMethod.InitComds = InitState
+Simulator.SubSystem.FiniteElementMethod.InitNames = InitialField
+
+# Vars are [x y z]
+Simulator.SubSystem.FiniteElementMethod.InitialField.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.InitialField.Vars = x y z
+Simulator.SubSystem.FiniteElementMethod.InitialField.Def = 200
+
+Simulator.SubSystem.FiniteElementMethod.BcComds = NeumannBC   DirichletBC
+Simulator.SubSystem.FiniteElementMethod.BcNames = HeatedPlate T1000K
+
+# Vars are [x y z t T]
+Simulator.SubSystem.FiniteElementMethod.T1000K.applyTRS = Side1
+Simulator.SubSystem.FiniteElementMethod.T1000K.Implicit = false
+Simulator.SubSystem.FiniteElementMethod.T1000K.Vars = x y z t T
+Simulator.SubSystem.FiniteElementMethod.T1000K.Def = 1000
+
+# Vars are [x y z t T]
+Simulator.SubSystem.FiniteElementMethod.HeatedPlate.applyTRS = Side3
+Simulator.SubSystem.FiniteElementMethod.HeatedPlate.Vars = x y z t T nx ny nz
+Simulator.SubSystem.FiniteElementMethod.HeatedPlate.Def = 500
+
+

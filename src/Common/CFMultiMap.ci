@@ -1,0 +1,104 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Common_CFMultiMap_ci
+#define COOLFluiD_Common_CFMultiMap_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Common {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY, class VALUE>
+CFMultiMap<KEY, VALUE>::CFMultiMap(size_t maxSize) :
+   _sorted(false)
+{
+  if(maxSize != 0) {
+    _vectorMap.reserve(maxSize);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY, class VALUE>
+CFMultiMap<KEY, VALUE>::~CFMultiMap()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY, class VALUE>
+inline void CFMultiMap<KEY, VALUE>::insert(const KEY& key, const VALUE& value)
+{
+  _sorted = false;
+  _vectorMap.push_back(std::pair<KEY, VALUE>(key, value));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY, class VALUE>
+std::pair<typename std::vector<std::pair<KEY, VALUE> >::iterator,
+    typename std::vector<std::pair<KEY, VALUE> >::iterator>
+CFMultiMap<KEY, VALUE>::find(const KEY& aKey, bool& isFound)
+{
+  if(!_sorted) {  sortKeys(); }
+  
+  // AL: note that the map can have 0 size (in parallel programming it
+  // can easily happen!)
+  // this fix is needed because if you apply an equal_range to a vector
+  // with null size you get crazy stuff ...
+  // this MUST NOT be changed !!!
+  if (_vectorMap.empty()) {
+    isFound = false;
+
+    std::pair<typename std::vector<std::pair<KEY, VALUE> >::iterator,
+      typename std::vector<std::pair<KEY, VALUE> >::iterator> result;
+   return result;
+ }
+
+  std::pair<typename std::vector<std::pair<KEY, VALUE> >::iterator,
+    typename std::vector<std::pair<KEY, VALUE> >::iterator> result;
+  
+  std::pair<KEY,VALUE> pp(aKey,VALUE());
+  result=std::equal_range(_vectorMap.begin(),_vectorMap.end(),pp,Compare());
+  
+  isFound = (result.first->first == aKey);
+  
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY, class VALUE>
+inline void CFMultiMap<KEY, VALUE>::valueNotFound(const KEY& aKey)
+  throw (Common::NoSuchValueException)
+{
+   std::string msg = "CFMultiMap: KEY not found: ";
+   msg += Common::StringOps::to_str(aKey);
+   throw Common::NoSuchValueException (FromHere(),msg);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY, class VALUE>
+inline void CFMultiMap<KEY, VALUE>::sortKeys()
+{
+  std::sort(_vectorMap.begin(),_vectorMap.end(), LessThan());
+  _sorted = true;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace COOLFluiD
+
+} // namespace Common
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Common_CFMultiMap_ci

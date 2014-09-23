@@ -1,0 +1,672 @@
+#include "Framework/VolumeIntegrator.hh"
+#include "Framework/MethodStrategyProvider.hh"
+#include "Framework/EquationSetData.hh"
+#include "FiniteVolume/FVMCC_PolyRec.hh"
+
+//////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+OsherFlux2D<UPDATEVAR>::OsherFlux2D(const std::string& name) :
+  FVMCC_FluxSplitter(name),
+  _updateVarSet(CFNULL),
+  _tempUnitNormal(),
+  _vfluxL(),
+  _vfluxR(),
+  _YsLS(),
+  _YsRS(),
+  _evLS(),
+  _evRS()
+{
+  addConfigOptionsTo(this);
+  _isNatural = true;
+  setParameter("isNatural",&_isNatural);
+}
+      
+//////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+OsherFlux2D<UPDATEVAR>::~OsherFlux2D()
+{
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void OsherFlux2D<UPDATEVAR>::compute(RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
+  const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
+  const CFuint nbEulerEqs = eulerVarIDs.size();
+
+  // determines if we are looking at just the Euler equations or more
+  if(nbEulerEqs == 4) {
+    CNEQ(result);
+  }
+  else {
+    TCNEQ(result);
+  }
+  
+  CellCenterFVMData& data = this->getMethodData(); 
+  SafePtr<FVMCC_PolyRec> polyRec = data.getPolyReconstructor();
+  vector<RealVector>& pdata = polyRec->getExtrapolatedPhysicaData();
+  
+  // compute update coefficient
+  if (!this->getMethodData().isPerturb()) {
+    GeometricEntity& face = *data.getCurrentFace();
+    const CFreal faceArea = socket_faceAreas.getDataHandle()[face.getID()]/
+      data.getPolyReconstructor()->nbQPoints();
+    
+    DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+   // left contribution to update coefficient
+   const CFuint leftID = face.getState(0)->getLocalID();
+   CFreal maxEV = _updateVarSet->getMaxEigenValue(pdata[0], data.getUnitNormal());
+   updateCoeff[leftID] += max(maxEV, 0.)*faceArea;
+   
+   if (!face.getState(1)->isGhost()) {
+     // right contribution to update coefficient
+     const CFuint rightID = face.getState(1)->getLocalID();
+     _tempUnitNormal = -1.0*data.getUnitNormal();
+     maxEV = _updateVarSet->getMaxEigenValue(pdata[1],_tempUnitNormal);
+     updateCoeff[rightID] += max(maxEV, 0.)*faceArea;
+   }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void OsherFlux2D<UPDATEVAR>::setup()
+{
+  using namespace COOLFluiD::Framework;
+  
+  FVMCC_FluxSplitter::setup();
+  
+  _updateVarSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+  
+  const CFuint nbSpecies = _updateVarSet->getModel()->getNbScalarVars(0);
+  const CFuint nbVibT = _updateVarSet->getModel()->getNbScalarVars(1);
+  
+  _tempUnitNormal.resize(PhysicalModelStack::getActive()->getDim());
+  _vfluxL.resize(PhysicalModelStack::getActive()->getNbEq());
+  _vfluxR.resize(PhysicalModelStack::getActive()->getNbEq());
+  _beta = _isNatural ? 1.0 : -1.0;
+  _YsLS.resize(nbSpecies);
+  _YsRS.resize(nbSpecies);
+  _evLS.resize(nbVibT);
+  _evRS.resize(nbVibT);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void OsherFlux2D<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< bool >
+    ("isNatural","Choice between natural or inverse order.");
+}
+
+//////////////////////////////////////////////////////////////////////
+      
+template <class UPDATEVAR>
+void OsherFlux2D<UPDATEVAR>::CNEQ(RealVector& result) 
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  const vector<RealVector>& pdata = getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
+  const RealVector& leftData  = pdata[LEFT];
+  const RealVector& rightData = pdata[RIGHT];
+  
+  // The flow at the freestream is assumed to be one-dimensional
+  const CFreal nx = getMethodData().getUnitNormal()[XX];
+  const CFreal ny = getMethodData().getUnitNormal()[YY];
+    
+  // calculation of the primitive variables at the left and right
+    // states
+  const CFreal rhoL = leftData[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR = rightData[UPDATEVAR::PTERM::RHO];
+  const CFreal uL = leftData[UPDATEVAR::PTERM::VX];
+  const CFreal vL = leftData[UPDATEVAR::PTERM::VY];
+  const CFreal uR = rightData[UPDATEVAR::PTERM::VX];
+  const CFreal vR = rightData[UPDATEVAR::PTERM::VY];
+  const CFreal pL = leftData[UPDATEVAR::PTERM::P];
+  const CFreal pR = rightData[UPDATEVAR::PTERM::P];
+  const CFreal hL = leftData[UPDATEVAR::PTERM::H];
+  const CFreal hR = rightData[UPDATEVAR::PTERM::H];
+  const CFreal aL = leftData[UPDATEVAR::PTERM::A];
+  const CFreal aR = rightData[UPDATEVAR::PTERM::A];
+  const CFreal gammaL = leftData[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaR = rightData[UPDATEVAR::PTERM::GAMMA];
+  
+  // calculation of the normal component of velocity for
+  // the left and right states
+  const CFreal unL = uL*nx + vL*ny;
+  const CFreal unR = uR*nx + vR*ny;
+  
+  // calculation of the normal Mach numbers for the sides
+  const CFreal mnL = unL / aL;
+  const CFreal mnR = unR / aR;
+  
+  const CFuint nbSpecies = _updateVarSet->getModel()->getNbScalarVars(0);
+  const CFuint first = _updateVarSet->getModel()->getFirstScalarVar(0);
+  
+  
+  //calculation of flux vector according at left and right states
+  
+  // left side
+  if (mnL <= -1.0) {// flow into cell
+    _vfluxL = 0.0;
+  }
+  
+  else { //flow out of cell
+    _vfluxL[0] = rhoL*unL;
+    _vfluxL[1] = _vfluxL[0]*uL + pL*nx;
+    _vfluxL[2] = _vfluxL[0]*vL + pL*ny;
+    _vfluxL[3] = _vfluxL[0]*hL;
+    
+    for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+      _vfluxL[4 + ie] = _vfluxL[0]*leftData[first + ie];
+    }
+  }
+  
+  // right side
+  if (mnR >= 1.0) { // flow into cell
+    _vfluxR = 0.0;
+  }
+  
+  else { // flow out of cell
+    _vfluxR[0] = rhoR*unR;
+    _vfluxR[1] = _vfluxR[0]*uR + pR*nx;
+    _vfluxR[2] = _vfluxR[0]*vR + pR*ny;
+    _vfluxR[3] = _vfluxR[0]*hR;
+    
+    for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+      _vfluxR[4 + ie] = _vfluxR[0]*rightData[first + ie];
+    }
+  } 
+  
+  result =  _vfluxL + _vfluxR; // F(U) + F(V)
+  
+  // compute intermediate pressure (pS) with Newton method
+  
+  // variables to decrease computation time
+  const CFreal KLS = aL / (gammaL-1);
+  const CFreal KRS = aR / (gammaR-1);
+  const CFreal expLS = 0.5 * (gammaL-1) / gammaL;
+  const CFreal expRS = 0.5 * (gammaR-1) / gammaR;
+  const CFreal KS = 0.5*_beta*(unL-unR) + KLS + KRS;
+  const CFreal ALS = KLS / pow(pL, expLS);
+  const CFreal ARS = KRS / pow(pR, expRS);
+  
+  // Newton iteration variables
+  const CFuint iMax = 6;
+  const CFreal epsP = 1.0e-6;
+  CFreal pS = 0.5 * (pL + pR); // initial guess
+  CFreal pSprev = pS;
+  const CFreal deltaPS = pS * epsP;
+  
+  for (CFuint i = 0; i < iMax; ++i) {
+    CFreal BLS = ALS * pow(pS, expLS);
+    CFreal BRS = ARS * pow(pS, expRS);
+    pS = pS * ( 1 - (BLS + BRS - KS) / (expLS*BLS + expRS*BRS) );
+    if ( std::abs(pS-pSprev) <= deltaPS ) break;
+    pSprev = pS;
+    //    if ( i == iMax - 1) cout << "HUSFlux: Newton convergence was not reached!" << endl;
+  }
+  
+  // computing variables for intermediate state (S)
+ 
+  const CFreal eL =  leftData[UPDATEVAR::PTERM::E];
+  const CFreal eR = rightData[UPDATEVAR::PTERM::E];
+  const CFreal u2L = uL*uL + vL*vL;
+  const CFreal u2R = uR*uR + vR*vR;
+  const CFreal gamma2L = 1 + pL/(rhoL*(eL-0.5*u2L));
+  const CFreal gamma2R = 1 + pR/(rhoR*(eR-0.5*u2R));
+  const CFreal rhoLS = rhoL * pow(pS/pL, 1/gammaL);
+  const CFreal rhoRS = rhoR * pow(pS/pR, 1/gammaR);
+  RealVector YsLS(nbSpecies);
+  RealVector YsRS(nbSpecies);
+  for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+    YsLS[ie] =  leftData[first + ie];
+    YsRS[ie] = rightData[first + ie];
+  }
+  const CFreal aLS = aL * pow(pS/pL, expLS);
+  const CFreal aRS = aR * pow(pS/pR, expRS);
+  const CFreal unS = unL + _beta * 2 / (gammaL-1) * (aL - aLS);
+  const CFreal utLS = -ny*uL + nx*vL;
+  const CFreal utRS = -ny*uR + nx*vR;
+  const CFreal uLS = nx*unS - ny*utLS;
+  const CFreal vLS = ny*unS + nx*utLS;
+  const CFreal uRS = nx*unS - ny*utRS;
+  const CFreal vRS = ny*unS + nx*utRS;
+  const CFreal u2LS = uLS*uLS + vLS*vLS;
+  const CFreal u2RS = uRS*uRS + vRS*vRS;
+  const CFreal eLS = (eL-0.5*u2L) * pow(rhoLS/rhoL, gamma2L-1) + 0.5 * u2LS;
+  const CFreal eRS = (eR-0.5*u2R) * pow(rhoRS/rhoR, gamma2R-1) + 0.5 * u2RS;
+  const CFreal hLS = eLS + pS / rhoLS;
+  const CFreal hRS = eRS + pS / rhoRS;
+  const CFreal mnLS = unS / aLS;
+  const CFreal mnRS = unS / aRS;
+
+
+  // computing the anti-diffusive terms
+
+  if (unS > 0.0) {
+    // left state
+    if (mnLS < 1.0) { 
+      _vfluxL[0] = rhoLS*unS;
+      _vfluxL[1] = _vfluxL[0]*uLS + pS*nx;
+      _vfluxL[2] = _vfluxL[0]*vLS + pS*ny;
+      _vfluxL[3] = _vfluxL[0]*hLS;
+      
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+	_vfluxL[4 + ie] = _vfluxL[0]*YsLS[ie];
+      }
+    }    
+    else {
+      _vfluxL = 0.0;
+    }
+    
+    // right state
+    if (mnRS < 1.0) {
+      _vfluxR[0] = rhoRS*unS;
+      _vfluxR[1] = _vfluxR[0]*uRS + pS*nx;
+      _vfluxR[2] = _vfluxR[0]*vRS + pS*ny;
+      _vfluxR[3] = _vfluxR[0]*hRS;
+      
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+	_vfluxR[4 + ie] = _vfluxR[0]*YsRS[ie];
+      }
+    }    
+    // species contribution for ensuring positivity
+    const CFreal result0 = result[0] + _vfluxL[0] - _vfluxR[0];
+    if (result0 >= 0.0) {
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+	_vfluxL[4 + ie] = result0 * leftData[first + ie];
+      }
+    }
+    else {
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+	_vfluxR[4 + ie] = result0 * rightData[first + ie];
+      }   
+    }
+    
+    //assembling final flux
+    result += _vfluxL - _vfluxR;
+  }
+
+  else {
+
+    // left state
+    if (mnLS > -1.0) { 
+      _vfluxL[0] = rhoLS*unS;
+      _vfluxL[1] = _vfluxL[0]*uLS + pS*nx;
+      _vfluxL[2] = _vfluxL[0]*vLS + pS*ny;
+      _vfluxL[3] = _vfluxL[0]*hLS;
+      
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+	_vfluxL[4 + ie] = _vfluxL[0]*YsLS[ie];
+      }
+    }    
+    else {
+      _vfluxL = 0.0;
+    }
+    
+    // right state
+    if (mnRS > -1.0) {
+      _vfluxR[0] = rhoRS*unS;
+      _vfluxR[1] = _vfluxR[0]*uRS + pS*nx;
+      _vfluxR[2] = _vfluxR[0]*vRS + pS*ny;
+      _vfluxR[3] = _vfluxR[0]*hRS;
+      
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+	_vfluxR[4 + ie] = _vfluxR[0]*YsRS[ie];
+      }
+    }
+    else {
+      _vfluxR = 0.0;
+    }
+
+    // species contribution for ensuring positivity
+     const CFreal result0 = result[0] + _vfluxR[0] - _vfluxL[0];
+     if (result0 >= 0.0) {
+       for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+	 _vfluxL[4 + ie] = result0 * leftData[first + ie];
+       }
+     }
+     else {
+       for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+	 _vfluxR[4 + ie] = result0 * rightData[first + ie];
+       }   
+     }
+     
+    //assembling final flux
+     result += _vfluxR - _vfluxL;
+  }
+  
+  result = 0.5 * result;
+}
+      
+////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void OsherFlux2D<UPDATEVAR>::TCNEQ(RealVector& result) 
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  const vector<RealVector>& pdata = getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
+  const RealVector& leftData = pdata[LEFT];
+  const RealVector& rightData = pdata[RIGHT];
+  
+  // The flow at the freestream is assumed to be one-dimensional
+  const CFreal nx = getMethodData().getUnitNormal()[XX];
+  const CFreal ny = getMethodData().getUnitNormal()[YY];
+    
+  // calculation of the primitive variables at the left and right
+    // states
+  const CFreal rhoL = leftData[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR = rightData[UPDATEVAR::PTERM::RHO];
+  const CFreal uL = leftData[UPDATEVAR::PTERM::VX];
+  const CFreal vL = leftData[UPDATEVAR::PTERM::VY];
+  const CFreal uR = rightData[UPDATEVAR::PTERM::VX];
+  const CFreal vR = rightData[UPDATEVAR::PTERM::VY];
+  const CFreal pL = leftData[UPDATEVAR::PTERM::P];
+  const CFreal pR = rightData[UPDATEVAR::PTERM::P];
+  const CFreal hL = leftData[UPDATEVAR::PTERM::H];
+  const CFreal hR = rightData[UPDATEVAR::PTERM::H];
+  const CFreal aL = leftData[UPDATEVAR::PTERM::A];
+  const CFreal aR = rightData[UPDATEVAR::PTERM::A];
+  const CFreal gammaL = leftData[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaR = rightData[UPDATEVAR::PTERM::GAMMA];
+  
+  // calculation of the normal component of velocity for
+  // the left and right states
+  const CFreal unL = uL*nx + vL*ny;
+  const CFreal unR = uR*nx + vR*ny;
+  
+  // calculation of the normal Mach numbers for the sides
+  const CFreal mnL = unL / aL;
+  const CFreal mnR = unR / aR;
+    
+  CFreal mfluxL = 0.0;
+  CFreal mfluxR = 0.0;
+  
+  const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
+  const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
+  const vector<EquationSetData>& eqsData = UPDATEVAR::getEqSetData();
+  
+  const CFuint nbSpecies = _updateVarSet->getModel()->getNbScalarVars(0);
+  const CFuint firstSpec = _updateVarSet->getModel()->getFirstScalarVar(0);
+  const vector<CFuint>& specIDs = eqsData[0].getEqSetVarIDs();
+  
+  const CFuint nbVib = _updateVarSet->getModel()->getNbScalarVars(1);
+  const CFuint firstVib = _updateVarSet->getModel()->getFirstScalarVar(1);
+  const vector<CFuint>& vibIDs = eqsData[1].getEqSetVarIDs();
+  
+  //calculation of flux vector according at left and right states
+  
+  // left side
+  if (mnL <= -1.0) {// flow into cell
+    _vfluxL = 0.0;
+  }
+  
+  else { //flow out of cell
+
+    mfluxL = rhoL*unL;
+
+    // update species
+    for (CFuint j = 0; j < nbSpecies; ++j) {
+      _vfluxL[specIDs[j]] = mfluxL*leftData[firstSpec + j];
+    }
+
+    // update euler variables
+    _vfluxL[eulerVarIDs[0]] = mfluxL*uL + pL*nx;
+    _vfluxL[eulerVarIDs[1]] = mfluxL*vL + pL*ny;
+    _vfluxL[eulerVarIDs[2]] = mfluxL*hL;
+    
+    // update vibrational temperatures
+    for(CFuint k = 0; k < nbVib; ++k) {
+      _vfluxL[vibIDs[k]] = mfluxL*leftData[firstVib + k];
+    } 
+    
+    }
+ 
+  
+  // right side
+  if (mnR >= 1.0) { // flow into cell
+    _vfluxR = 0.0;
+  }
+  
+  else { // flow out of cell
+    
+    mfluxR = rhoR*unR;
+    
+    // update species
+    for (CFuint j = 0; j < nbSpecies; ++j) {
+      _vfluxR[specIDs[j]] = mfluxR*rightData[firstSpec + j];
+    }
+    
+    // update euler variables
+    _vfluxR[eulerVarIDs[0]] = mfluxR*uR + pR*nx;
+    _vfluxR[eulerVarIDs[1]] = mfluxR*vR + pR*ny;
+    _vfluxR[eulerVarIDs[2]] = mfluxR*hR;
+    
+    // update vibrational temperatures
+    for(CFuint k = 0; k < nbVib; ++k) {
+      _vfluxR[vibIDs[k]] = mfluxR * rightData[firstVib + k];
+    }
+  } 
+  
+  result =  _vfluxL + _vfluxR; 
+  
+  // compute intermediate pressure (pS) with Newton method
+  
+  // variables to decrease computation time
+  const CFreal KLS = aL / (gammaL-1);
+  const CFreal KRS = aR / (gammaR-1);
+  const CFreal expLS = 0.5 * (gammaL-1) / gammaL;
+  const CFreal expRS = 0.5 * (gammaR-1) / gammaR;
+  const CFreal KS = 0.5*_beta*(unL-unR) + KLS + KRS;
+  const CFreal ALS = KLS / pow(pL, expLS);
+  const CFreal ARS = KRS / pow(pR, expRS);
+  
+  // Newton iteration variables
+  const CFuint iMax = 6;
+  const CFreal epsP = 1.0e-6;
+  CFreal pS = 0.5 * (pL + pR); // initial guess
+  CFreal pSprev = pS;
+  const CFreal deltaPS = pS * epsP;
+  
+  for (CFuint i = 0; i < iMax; ++i) {
+    CFreal BLS = ALS * pow(pS, expLS);
+    CFreal BRS = ARS * pow(pS, expRS);
+    pS = pS * ( 1 - (BLS + BRS - KS) / (expLS*BLS + expRS*BRS) );
+    if ( std::abs(pS-pSprev) <= deltaPS ) break;
+    pSprev = pS;
+    //    if ( i == iMax - 1) cout << "HUSFlux: Newton convergence was not reached!" << endl;
+  }
+  
+  // computing variables for intermediate state (S)
+ 
+  const CFreal eL =  leftData[UPDATEVAR::PTERM::E];
+  const CFreal eR = rightData[UPDATEVAR::PTERM::E];
+  const CFreal u2L = uL*uL + vL*vL;
+  const CFreal u2R = uR*uR + vR*vR;
+  const CFreal gamma2L = 1 + pL/(rhoL*(eL-0.5*u2L));
+  const CFreal gamma2R = 1 + pR/(rhoR*(eR-0.5*u2R));
+  const CFreal rhoLS = rhoL * pow(pS/pL, 1/gammaL);
+  const CFreal rhoRS = rhoR * pow(pS/pR, 1/gammaR);
+  
+  for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+    _YsLS[ie] =  leftData[firstSpec + ie];
+    _YsRS[ie] = rightData[firstSpec + ie];
+  }
+  for (CFuint ie = 0; ie < nbVib; ++ie) {
+    _evLS[ie] =  leftData[firstVib + ie];
+    _evRS[ie] = rightData[firstVib + ie];
+  }
+  const CFreal aLS = aL * pow(pS/pL, expLS);
+  const CFreal aRS = aR * pow(pS/pR, expRS);
+  const CFreal unS = unL + _beta * 2 / (gammaL-1) * (aL - aLS);
+  const CFreal utLS = -ny*uL + nx*vL;
+  const CFreal utRS = -ny*uR + nx*vR;
+  const CFreal uLS = nx*unS - ny*utLS;
+  const CFreal vLS = ny*unS + nx*utLS;
+  const CFreal uRS = nx*unS - ny*utRS;
+  const CFreal vRS = ny*unS + nx*utRS;
+  const CFreal u2LS = uLS*uLS + vLS*vLS;
+  const CFreal u2RS = uRS*uRS + vRS*vRS;
+  const CFreal eLS = (eL-0.5*u2L) * pow(rhoLS/rhoL, gamma2L-1) + 0.5 * u2LS;
+  const CFreal eRS = (eR-0.5*u2R) * pow(rhoRS/rhoR, gamma2R-1) + 0.5 * u2RS;
+  const CFreal hLS = eLS + pS / rhoLS;
+  const CFreal hRS = eRS + pS / rhoRS;
+  const CFreal mnLS = unS / aLS;
+  const CFreal mnRS = unS / aRS;
+
+
+  // computing the anti-diffusive terms
+
+  if (unS > 0.0) {
+    // left state
+    if (mnLS < 1.0) { 
+      
+      const CFreal mfluxLS = rhoLS*unS;
+      
+      for (CFuint jl = 0; jl < nbSpecies; ++jl) {
+        _vfluxL[specIDs[jl]] = mfluxLS * _YsLS[jl];
+      }
+
+      _vfluxL[eulerVarIDs[0]] = mfluxLS*uLS + pS*nx;
+      _vfluxL[eulerVarIDs[1]] = mfluxLS*vLS + pS*ny;
+      _vfluxL[eulerVarIDs[2]] = mfluxLS*hLS;
+      
+      for (CFuint kl = 0; kl < nbVib; ++kl) {
+        _vfluxL[vibIDs[kl]] = mfluxLS * _evLS[kl];
+      }
+    }    
+    else {
+      _vfluxL = 0.0;
+    }
+    
+    // right state
+    if (mnRS < 1.0) {
+
+      const CFreal mfluxRS = rhoRS*unS;
+
+      for (CFuint jr = 0; jr < nbSpecies; ++jr) {
+        _vfluxR[specIDs[jr]] = mfluxRS * _YsRS[jr];
+      }
+
+      _vfluxR[eulerVarIDs[0]] = mfluxRS*uRS + pS*nx;
+      _vfluxR[eulerVarIDs[1]] = mfluxRS*vRS + pS*ny;
+      _vfluxR[eulerVarIDs[2]] = mfluxRS*hRS;
+       
+      for (CFuint kr = 0; kr < nbVib; ++kr) {
+        _vfluxR[vibIDs[kr]] = mfluxRS *_evRS[kr];
+      }
+    }    
+    // species contribution for ensuring positivity
+    const CFreal result0 = result[0] + _vfluxL[0] - _vfluxR[0];
+    if (result0 >= 0.0) {
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+	_vfluxL[4 + ie] = result0 * leftData[firstSpec + ie];
+      }
+    }
+    else {
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+	_vfluxR[4 + ie] = result0 * rightData[firstSpec + ie];
+      }   
+    }
+    
+    //assembling final flux
+    result += _vfluxL - _vfluxR;
+  }
+
+  else {
+
+    // left state
+    if (mnLS > -1.0) { 
+
+      const CFreal mfluxLS = rhoLS*unS;
+      
+      for (CFuint jl = 0; jl < nbSpecies; ++jl) {
+        _vfluxL[specIDs[jl]] = mfluxLS * _YsLS[jl];
+      }
+
+      _vfluxL[eulerVarIDs[0]] = mfluxLS*uLS + pS*nx;
+      _vfluxL[eulerVarIDs[1]] = mfluxLS*vLS + pS*ny;
+      _vfluxL[eulerVarIDs[2]] = mfluxLS*hLS;
+      
+      for (CFuint kl = 0; kl < nbVib; ++kl) {
+        _vfluxL[vibIDs[kl]] = mfluxLS * _evLS[kl];
+      }
+    }    
+    else {
+      _vfluxL = 0.0;
+    }
+    
+    // right state
+    if (mnRS > -1.0) {
+     
+      const CFreal mfluxRS = rhoRS*unS;
+
+      for (CFuint jr = 0; jr < nbSpecies; ++jr) {
+        _vfluxR[specIDs[jr]] = mfluxRS * _YsRS[jr];
+      }
+
+      _vfluxR[eulerVarIDs[0]] = mfluxRS*uRS + pS*nx;
+      _vfluxR[eulerVarIDs[1]] = mfluxRS*vRS + pS*ny;
+      _vfluxR[eulerVarIDs[2]] = mfluxRS*hRS;
+       
+      for (CFuint kr = 0; kr < nbVib; ++kr) {
+        _vfluxR[vibIDs[kr]] = mfluxRS *_evRS[kr];
+      }
+    }
+    
+    else {
+      _vfluxR = 0.0;
+    }
+    
+    // species contribution for ensuring positivity
+    const CFreal result0 = result[0] + _vfluxR[0] - _vfluxL[0];
+    if (result0 >= 0.0) {
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+	_vfluxL[4 + ie] = result0 * leftData[firstSpec + ie];
+      }
+    }
+    else {
+      for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+	_vfluxR[4 + ie] = result0 * rightData[firstSpec + ie];
+      }   
+    }
+    
+    //assembling final flux
+    result += _vfluxR - _vfluxL;
+  }
+  
+  result *= 0.5;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////

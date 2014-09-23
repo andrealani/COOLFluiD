@@ -1,0 +1,110 @@
+#ifndef COOLFluiD_Numerics_FluctSplit_WeakFarField_ci
+#define COOLFluiD_Numerics_FluctSplit_WeakFarField_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+
+
+    namespace FluctSplit {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename WEAKBCTYPE >
+void WeakFarField<WEAKBCTYPE>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< std::vector<std::string> >("Def","Definition of the Functions.");
+  options.template addConfigOption< std::vector<std::string> >("Vars","Definition of the Variables.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename WEAKBCTYPE >
+WeakFarField<WEAKBCTYPE>::WeakFarField(const std::string& name) :
+  WEAKBCTYPE(name),
+  m_vFunction(),
+  m_dimState(CFNULL)
+{
+  this->addConfigOptionsTo(this);
+
+  m_functions = std::vector<std::string>();
+  WeakFarField<WEAKBCTYPE>::setParameter("Def",&m_functions);
+
+  m_vars = std::vector<std::string>();
+  WeakFarField<WEAKBCTYPE>::setParameter("Vars",&m_vars);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename WEAKBCTYPE >
+WeakFarField<WEAKBCTYPE>::~WeakFarField()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename WEAKBCTYPE >
+void WeakFarField<WEAKBCTYPE>::setup()
+{
+  WEAKBCTYPE::setup();
+
+  m_dimState = new Framework::State();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename WEAKBCTYPE >
+void WeakFarField<WEAKBCTYPE>::unsetup()
+{
+  deletePtr(m_dimState);
+
+  WEAKBCTYPE::unsetup();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename WEAKBCTYPE >
+void WeakFarField<WEAKBCTYPE>::setGhostState(const Framework::State& state, Framework::State& gstate)
+{
+  // set the values in the ghost state (whose position coincides
+  // with the boundary states)
+  m_vFunction.evaluate(state.getCoordinates(), *m_dimState);
+
+  // Adimensionalize the value
+  Common::SafePtr<Framework::ConvectiveVarSet> updateVarSet = WeakFarField<WEAKBCTYPE>::getMethodData().getUpdateVar();
+  updateVarSet->setAdimensionalValues(*m_dimState, gstate);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename WEAKBCTYPE >
+void WeakFarField<WEAKBCTYPE>::configure ( Config::ConfigArgs& args )
+{
+  WEAKBCTYPE::configure(args);
+
+  m_vFunction.setFunctions(m_functions);
+  m_vFunction.setVariables(m_vars);
+
+  try
+  {
+    m_vFunction.parse();
+  }
+  catch (Common::ParserException& e)
+  {
+    CFout << e.what() << "\n";
+    throw; // retrow the exception to signal the error to the user
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace FluctSplit
+
+
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Numerics_FluctSplit_WeakFarField_ci

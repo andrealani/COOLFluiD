@@ -1,0 +1,1323 @@
+#include "FluctSplit/InwardNormalsData.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Framework/MeshData.hh"
+#include "MathTools/MatrixInverter.hh"
+
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include <iomanip>
+#include <fstream>
+#include <boost/lexical_cast.hpp>
+
+//
+//#include <limits>
+//#include <iomanip>
+
+//
+using namespace COOLFluiD::Physics::NavierStokes;
+using namespace COOLFluiD::MathTools;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+    namespace FluctSplitNEQ {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+SplitStrategyNEQ<BASE>::SplitStrategyNEQ(const std::string& name) :
+   BASE(name),
+  _library(NULL),
+  _model(NULL),
+  _updateVS(NULL),
+  _dPdZ(),
+  _dJdZ(),
+  _coefficients_Lagrange(),
+  _inverseMat_Lagrange(),
+  _inverter_Lagrange(NULL)
+{
+  this->addConfigOptionsTo(this);
+
+  _store_debugging_data = 0;
+  this->setParameter("StoreDebuggingData", &_store_debugging_data);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+SplitStrategyNEQ<BASE>::~SplitStrategyNEQ()
+{
+  deletePtr(_inverter_Lagrange);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void SplitStrategyNEQ<BASE>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFuint, Config::DynamicOption<> >
+    ("StoreDebuggingData", "Stores debugging data");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void SplitStrategyNEQ<BASE>::setup()
+{
+  using namespace std;
+
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::FluctSplit;
+  using namespace COOLFluiD::Framework;
+
+  BASE::setup();
+  
+  _library = PhysicalModelStack::getActive()->getImplementor()->
+    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  
+  Common::SafePtr<PhysicalChemicalLibrary::ExtraData> eData = _library->getExtraData();
+
+
+  _model = PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm().d_castTo<NEQTerm>();
+  
+  _model->resizePhysicalData(_pData);
+
+  _model->resizePhysicalData(_pData0);
+  _model->resizePhysicalData(_pData1);
+  _model->resizePhysicalData(_pData2);
+
+  FluctuationSplitData& mdata = this->getMethodData();
+  
+  _updateVS = mdata.getUpdateVar();
+  
+  cf_assert(_model.isNotNull());
+
+  const CFuint nbSpecies = _model->getNbScalarVars(0);
+  const CFuint nbVibModes = _model->getNbScalarVars(1);
+
+  eData->needsBarVars = true;  
+  eData->dP_Bar.resize(nbSpecies + 1);
+  
+  _ys.resize(nbSpecies);
+  _alpha_hat.resize(nbSpecies);
+  _alpha_bar.resize(nbSpecies);
+  _alpha_bar_xx.resize(nbSpecies);
+  _alpha_bar_yy.resize(nbSpecies);
+  _energyTr_hat.resize(nbSpecies);
+  _alpha_bar_cons.resize(nbSpecies);
+
+  _RiGas.resize(nbSpecies);
+  _mmasses.resize(nbSpecies);
+  
+  // Z vector and transformation matrix resized:
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+ 
+  _Zavg.resize(nbEqs);
+  
+  _dPdZ.resize(nbEqs,nbEqs);
+  _dJdZ.resize(nbSpecies+3,nbEqs);
+
+  _dZdX.resize(nbEqs);
+  _dZdY.resize(nbEqs);
+
+  _dJdX.resize(nbSpecies + 2 + nbVibModes);
+  _dJdY.resize(nbSpecies + 2 + nbVibModes);
+  
+  // Gradient storing facilities resized:
+
+  const CFreal dim = PhysicalModelStack::getActive()->getDim();
+
+  _sqrtRho_atNodes.resize(dim + 1);
+
+  _gradP.resize(dim);
+
+//   _dRhoYsdL.resize(nbSpecies);
+
+//   _gradRho.resize(dim);
+//   _gradRhoYs.resize(dim, nbSpecies);
+//   _gradRhoU.resize(dim);
+//   _gradRhoV.resize(dim);
+//   _gradRhoUSq.resize(dim);
+//   _gradRhoVSq.resize(dim);
+//   _gradRhoH.resize(dim);
+//   _gradRhoEv.resize(dim);
+  
+   _consistent_gradRhoYs.resize(dim, nbSpecies);
+   _consistent_gradHalfRhoUSq.resize(dim);
+   _consistent_gradRhoH.resize(dim);
+   _consistent_gradRhoEv.resize(dim);
+
+  _gradSqrtRhoTimesYs.resize(dim, nbSpecies);
+  _gradSqrtRhoTimesU.resize(dim);
+  _gradSqrtRhoTimesV.resize(dim);
+  _gradSqrtRhoTimesH.resize(dim);
+  _gradSqrtRhoTimesEv.resize(dim);
+
+  _dRhoYsdL.resize(nbSpecies);
+
+  ///////////////////////////////////////////
+  
+  _rhs_Lagrange.resize(dim);
+  _solution_Lagrange.resize(dim);
+  _coefficients_Lagrange.resize(dim,dim);
+  _inverseMat_Lagrange.resize(dim,dim);
+  _inverter_Lagrange = MatrixInverter::create(dim, false);
+
+  //
+  _non_consistency.resize(dim);
+  _consistency.resize(dim);  
+  // 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void SplitStrategyNEQ<BASE>::configure ( Config::ConfigArgs& args )
+{
+BASE::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void SplitStrategyNEQ<BASE>::setCurrentCell()
+{
+  using namespace std;
+  cout << "template <class BASE> void SplitStrategyNEQ<BASE>::setCurrentCell()" << endl;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::FluctSplit;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  DistributionData& ddata = this->getMethodData().getDistributionData();
+//   std::cout << "cellID = " << ddata.cell->getID() <<"\n";
+  DataHandle<InwardNormalsData*> normals = this->socket_normals.getDataHandle();
+  
+  const InwardNormalsData& normalsData = *normals[ddata.cellID];
+  FluctuationSplitData& mdata = this->getMethodData();
+
+  cf_assert(_model.isNotNull());
+  RealVector& linearData = _model->getPhysicalData();
+
+//   cout << "Transforming inputStates\n";
+  this->m_linearStates = mdata.getUpdateToLinearVecTrans()->transform(ddata.states);
+   
+  vector<State*> *const  cellStates = this->m_linearStates;
+
+  const CFuint nbCellStates = cellStates->size();
+
+  for (CFuint stateIdx = 0; stateIdx < nbCellStates; stateIdx++){
+    cout << "inputStates["<<stateIdx<<"]"<< ( *((*ddata.states)[stateIdx]) )<< endl;
+    cout << "transformedStates["<<stateIdx<<"]"<< ( *((*cellStates)[stateIdx]) )<< endl;
+  }
+
+  // NEQ data:
+  Common::SafePtr<PhysicalChemicalLibrary::ExtraData> eData = _library->getExtraData();
+     
+  const CFuint nbSpecies = _model->getNbScalarVars(0);
+  
+  const CFuint uID  = nbSpecies;
+  const CFuint vID  = nbSpecies+1;
+  const CFuint eID  = nbSpecies+2;
+  const CFuint evID = nbSpecies+3;
+  const CFuint firstVibMode = _model->getFirstScalarVar(1);
+  const CFuint nbVibModes = _model->getNbScalarVars(1);
+
+  const CFuint firstSpecies = _model->getFirstScalarVar(0);
+  const CFuint start = (_library->presenceElectron()) ? 1 : 0;
+
+  //const CFuint firstTv = _model->getFirstScalarVar(1);
+
+  cf_assert(_ys.size() == nbSpecies);
+  cf_assert(nbVibModes == 1);
+ 
+  _Zavg = ( (*((*cellStates)[0])) + (*((*cellStates)[1])) + (*((*cellStates)[2])) )/static_cast<CFreal>(nbCellStates);
+
+  CFreal sqrtRho_hat = 0.;
+
+  for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++ ){
+    
+    sqrtRho_hat += _Zavg[iSpecies];
+  }
+
+  _ys = 0.;
+  
+  for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++ ){
+    
+    const CFreal Ys = _Zavg[iSpecies]/sqrtRho_hat;
+    _ys[iSpecies] = Ys;
+  }
+
+  linearData = 0.;
+  _library->setSpeciesFractions(_ys);
+  
+  // Needed for gradient computations:
+  for (CFuint iStates = 0; iStates < nbCellStates; iStates++){
+    
+    _sqrtRho_atNodes[iStates] = 0.;
+    
+    for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++ ){
+
+      _sqrtRho_atNodes[iStates] += (*((*cellStates)[iStates]))[iSpecies];
+    }
+  }
+
+  //-------------------------------------------------------------------------//
+  //Cell gradients computation:
+
+
+  // Filling part of linearData:
+
+  //   cout << "linearData(0) = "<< linearData << endl;
+   for (CFuint iSpecies = 0; iSpecies < nbSpecies; ++iSpecies) {
+
+      linearData[firstSpecies + iSpecies] = _ys[iSpecies];
+      if (_ys[iSpecies] > 1.01 ) {
+        cout << "ys[" << iSpecies << "] > 1.01 = " << _ys[iSpecies] << endl;
+      }
+    }
+    
+    const CFreal rho_hat = sqrtRho_hat * sqrtRho_hat;
+
+    linearData[EulerTerm::RHO] = rho_hat;
+
+    const CFreal sqrtRhoU_hat = _Zavg[uID];
+    linearData[EulerTerm::VX] = sqrtRhoU_hat/sqrtRho_hat;
+
+    const CFreal sqrtRhoV_hat = _Zavg[vID];
+    linearData[EulerTerm::VY] = sqrtRhoV_hat/sqrtRho_hat;
+
+    linearData[EulerTerm::V] = std::sqrt( linearData[EulerTerm::VX] * linearData[EulerTerm::VX] +  linearData[EulerTerm::VY] * linearData[EulerTerm::VY]);
+
+    const CFreal sqrtRhoH_hat = _Zavg[eID];
+    linearData[EulerTerm::H] = sqrtRhoH_hat/sqrtRho_hat;
+
+    const CFreal sqrtRhoEv_hat = _Zavg[evID];
+    linearData[firstVibMode] = sqrtRhoEv_hat/sqrtRho_hat;
+      
+    // Filling part of linearData(end)
+
+    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+      const CFreal cellID = ddata.cell->getID();      
+      const CFreal cellVolume = ddata.cell->computeVolume();
+      const CFreal dim = PhysicalModelStack::getActive()->getDim();
+      const CFreal dimCoeff = 1./dim;
+      const CFreal coeffGrad = dimCoeff/cellVolume;
+
+      // Gradient of pressure, computed from surface integration.
+      // The integral must be exact for quadratic functions (e.g. Simpson's rule).
+
+      _energyTr_hat = 0.;      
+
+//       cout << "computePhysicalData for state[0]\n";
+      _updateVS->computePhysicalData( ( *((*ddata.states)[0]) ), _pData0);
+      _energyTr_hat += (eData->energyTr);
+      RealVector energyTr0 = (eData->energyTr);
+//       cout << "eData->energyTr[0] = " << (eData->energyTr) << endl;
+      
+      _updateVS->computePhysicalData( ( *((*ddata.states)[1]) ), _pData1);
+      _energyTr_hat += (eData->energyTr);
+      RealVector energyTr1 = (eData->energyTr);
+//       cout << "eData->energyTr[1] = " << (eData->energyTr) << endl;
+
+//       cout << "computePhysicalData for state[2]\n";
+      _updateVS->computePhysicalData( ( *((*ddata.states)[2]) ), _pData2);
+      RealVector energyTr2 = (eData->energyTr);
+      _energyTr_hat += (eData->energyTr);
+//       cout << "eData->energyTr[2] = " << (eData->energyTr) << endl;
+            
+      _energyTr_hat /= nbCellStates;
+       
+
+      const CFreal p_0 = _pData0[EulerTerm::P];
+      const CFreal nx0 = normals[cellID]->getNodalNormComp(0,XX);
+      const CFreal ny0 = normals[cellID]->getNodalNormComp(0,YY);
+      const CFreal nx0_F = normals[cellID]->getFaceNormComp(0,XX);
+      const CFreal ny0_F = normals[cellID]->getFaceNormComp(0,YY);
+
+      const CFreal p_1 = _pData1[EulerTerm::P];
+      const CFreal nx1 = normals[cellID]->getNodalNormComp(1,XX);
+      const CFreal ny1 = normals[cellID]->getNodalNormComp(1,YY);
+      const CFreal nx1_F = normals[cellID]->getFaceNormComp(1,XX);
+      const CFreal ny1_F = normals[cellID]->getFaceNormComp(1,YY);
+
+      const CFreal p_2 = _pData2[EulerTerm::P];
+      const CFreal nx2 = normals[cellID]->getNodalNormComp(2,XX);
+      const CFreal ny2 = normals[cellID]->getNodalNormComp(2,YY);
+      const CFreal nx2_F = normals[cellID]->getFaceNormComp(2,XX);
+      const CFreal ny2_F = normals[cellID]->getFaceNormComp(2,YY);
+
+//       const CFreal p_hat = (_sqrtRho_atNodes[0] * p_0 + _sqrtRho_atNodes[1] * p_1 + _sqrtRho_atNodes[2] * p_2)/_sqrtRho_atNodes.sum();
+
+        const CFreal p_hat = ( p_0 + p_1 + p_2 ) / nbCellStates;
+
+       _gradP = 0.;
+
+//        _gradP[XX] = 0.5 * ( (p_1 + p_2) * nx0_F + (p_2 + p_0) * nx1_F + (p_0 + p_1) * nx2_F ) / cellVolume;
+//        _gradP[YY] = 0.5 * ( (p_1 + p_2) * ny0_F + (p_2 + p_0) * ny1_F + (p_0 + p_1) * ny2_F ) / cellVolume;
+       
+       // /* */
+//       _gradP[XX] = 0.5 * ( (p_1 + p_2) * nx0 + (p_2 + p_0) * nx1 + (p_0 + p_1) * nx2 ) / cellVolume;
+//       _gradP[YY] = 0.5 * ( (p_1 + p_2) * ny0 + (p_2 + p_0) * ny1 + (p_0 + p_1) * ny2 ) / cellVolume;
+
+
+      _gradP[XX] = ( p_0 * nx0 + p_1 * nx1 + p_2 * nx2 ) * coeffGrad;
+      _gradP[YY] = ( p_0 * ny0 + p_1 * ny1 + p_2 * ny2 ) * coeffGrad;
+
+      
+//   cout <<  "[_gradP[XX] - px, _gradP[YY] - py ] = "<< (_gradP[XX] - px) << " "<< (_gradP[YY] - py)<<  "\t [_gradP[XX], _gradP[YY]] = "<< _gradP[XX] << " " << _gradP[YY] << "\t[px, py] = " << px << " " << py << endl;
+      
+      
+
+//       cout << "***************************************************************************\n";
+      /*cout << "p_0 = "<< p_0  << " p_1 = "<< p_1 << " p_2 = "<< p_2 << endl;
+      cout << "_gradP = " << _gradP  << endl;*/
+//       cout << "***************************************************************************\n";
+
+      _library->setRiGas(_RiGas);
+      _library->getMolarMasses(_mmasses);
+      SafePtr<RealVector> fcoeff = _library->getAtomicityCoeff();
+
+//       // Compute beta|_nodes, _beta_hat, gammaMinusBetaU2_s|_nodes and gammaMinusBetaU2_s_hat
+
+ //    _beta_hat computed as an average of the nodal beta's
+      /*
+       CFreal numBeta0 = 0.;
+       CFreal denBeta0 = 0.;
+       CFreal numBeta1 = 0.;
+       CFreal denBeta1 = 0.;
+       CFreal numBeta2 = 0.;
+       CFreal denBeta2 = 0.;
+
+       for (CFuint iSpecies = start; iSpecies < nbSpecies; ++iSpecies) {
+
+         const CFreal Ys0 = (*((*cellStates)[0]))[iSpecies]/_sqrtRho_atNodes[0];
+         const CFreal Ys1 = (*((*cellStates)[1]))[iSpecies]/_sqrtRho_atNodes[1];
+         const CFreal Ys2 = (*((*cellStates)[2]))[iSpecies]/_sqrtRho_atNodes[2];
+
+         const CFreal sigmai0 = Ys0/_mmasses[iSpecies];
+         numBeta0 += sigmai0;
+         denBeta0 += sigmai0 * (*fcoeff)[iSpecies];
+
+         const CFreal sigmai1 = Ys1/_mmasses[iSpecies];
+         numBeta1 += sigmai1;
+         denBeta1 += sigmai1 * (*fcoeff)[iSpecies];
+
+         const CFreal sigmai2 = Ys2/_mmasses[iSpecies];
+         numBeta2 += sigmai2;
+         denBeta2 += sigmai2 * (*fcoeff)[iSpecies];
+
+       }//end: loop over nbSpecies
+
+       const CFreal beta0 = numBeta0/denBeta0;
+       const CFreal beta1 = numBeta1/denBeta1;
+       const CFreal beta2 = numBeta2/denBeta2;
+
+       _beta_hat = (beta0 + beta1 + beta2)/nbCellStates;
+       */
+
+      
+// //    _beta_hat computed at the average state conditions
+      CFreal numBeta = 0.;
+      CFreal denBeta = 0.;
+
+      for (CFuint iSpecies = start; iSpecies < nbSpecies; ++iSpecies) {
+
+        const CFreal Ys = _ys[iSpecies];
+
+        const CFreal sigmai = Ys/_mmasses[iSpecies];
+        numBeta += sigmai;
+        denBeta += sigmai*(*fcoeff)[iSpecies];
+
+      }//end: loop over nbSpecies
+
+      _beta_hat = numBeta/denBeta;
+
+
+      CFreal T_hat = 0.;
+      for(CFuint iStates = 0; iStates < nbCellStates; iStates++){
+        // Assumes that the State passed is in RhoivtTv
+//         T_hat += _sqrtRho_atNodes[iStates] * (*((*ddata.states)[iStates]))[eID] ;
+        T_hat += (*((*ddata.states)[iStates]))[eID] ;
+      }
+//       T_hat /=  _sqrtRho_atNodes.sum();
+      T_hat /= nbCellStates;
+
+//     _alpha_hat evaluated as alpha_hat = sum alpha_i/3.0
+      /*
+      _alpha_hat = 0.;
+      RealVector alpha0(nbSpecies);
+      RealVector alpha1(nbSpecies);
+      RealVector alpha2(nbSpecies);
+
+      const CFreal T0 = _pData0[EulerTerm::T];
+      const CFreal T1 = _pData1[EulerTerm::T];
+      const CFreal T2 = _pData2[EulerTerm::T];
+
+      for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+
+        alpha0[iSpecies] = _RiGas[iSpecies] * T0 - beta0 * energyTr0 [iSpecies];
+        alpha1[iSpecies] = _RiGas[iSpecies] * T1 - beta1 * energyTr1 [iSpecies];
+        alpha2[iSpecies] = _RiGas[iSpecies] * T2 - beta2 * energyTr2 [iSpecies];
+      }
+
+//       _alpha_hat = (alpha0 + alpha1 + alpha2 )/static_cast<CFreal>(nbCellStates);
+      _alpha_hat = ( _sqrtRho_atNodes[0] * alpha0 + _sqrtRho_atNodes[1] * alpha1 + _sqrtRho_atNodes[2] * alpha2 ) / _sqrtRho_atNodes.sum();
+      */
+
+//       cout << "_RiGas = " << _RiGas << endl;
+//       cout << "T_hat = " << T_hat << endl;
+//       cout << "_beta_hat = " << _beta_hat << endl;
+//       cout << "_energyTr_hat = " << _energyTr_hat << endl;
+// //  _alpha_hat evaluated at T_hat = sum T_i/3.0
+      _alpha_hat = 0.;
+
+      for (CFuint iSpecies = start; iSpecies < nbSpecies; ++iSpecies) {
+
+        const CFreal alpha_s = _RiGas[iSpecies] * T_hat - _beta_hat * _energyTr_hat[iSpecies];
+
+        _alpha_hat[iSpecies] = alpha_s;
+
+      }//end: loop over nbSpecies
+//       cout << "_alpha_hat = " << _alpha_hat << endl;
+
+      const CFreal oneOverOnePlusBeta_hat  = 1./(1. + _beta_hat);
+      const CFreal beta_hatOverOnePlusBeta_hat = _beta_hat/(1. + _beta_hat);
+
+      //   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+      const CFreal U2_hat = linearData[EulerTerm::V]*linearData[EulerTerm::V];
+
+      const CFreal h_hat  = linearData[EulerTerm::H]- 0.5 * U2_hat;
+
+      const CFreal ev_hat = linearData[firstVibMode];
+
+//      const CFreal ev_hat = linearData[firstTv];
+
+
+
+      // Evaluate sound speed at 'hat' conditions.
+
+      CFreal sumAlphaHatYs = 0.0;
+
+      for (CFuint iSpecies = 0; iSpecies < nbSpecies; ++iSpecies) {
+        
+        sumAlphaHatYs += _alpha_hat[iSpecies] * _ys[iSpecies];
+      }
+ 
+      const CFreal c_hatSq_sum = sumAlphaHatYs + _beta_hat * (h_hat - ev_hat);
+      
+      const CFreal c_hatSq_pressure = (1. + _beta_hat) * p_hat / rho_hat ;
+
+//      cout << "c_hatSq_sum = "<< c_hatSq_sum << "\tc_hatSq_pressure = "<< c_hatSq_pressure << endl ;
+
+//       if ( c_hatSq_sum  < c_hatSq_pressure ){
+//         cout << "c_hatSq_sum  < c_hatSq_pressure\n";
+//       }
+// 
+//       if ( c_hatSq_sum  > c_hatSq_pressure ){
+//         cout << "c_hatSq_sum  > c_hatSq_pressure\n";
+//       }
+//       cout << "c_hatSq_pressure = "<< c_hatSq_pressure << " c_hatSq_sum = " << c_hatSq_sum <<  endl;
+
+    CFreal p_bar = 0.;
+    CFreal T_bar = 0.;
+    CFreal c_barSq_sum = 0.;
+
+    static CFreal thePressure_bar = 0.;
+    static CFreal theEnthalpy_bar = 0.;
+    static CFreal theTemperature_bar = 0.;
+    static CFreal theSoundSpeed_bar = 0.;
+    
+
+    _message_state = "Info: Arithmetic averaging...";
+    _message_consistency = "No info on consistency.";
+    _message_betaBar_alphaBar = "No info on _beta_bar and _alpha_bar.";
+    
+
+  if (!this->getMethodData().getDistributionData().isPerturb) {
+
+      const CFreal sigma_hat = c_hatSq_sum;
+//const CFreal sigma_hat = c_hatSq_pressure;
+      //c_hatSq_pressure;
+//       c_hatSq_sum;
+//       c_hatSq_pressure;
+      const CFreal sigma_hatSq = sigma_hat * sigma_hat;
+      
+      // Fill in dJdZ matrix
+      // This matrix computes the gradients of RhoS, rhoU2, rhoH and rhoEv
+      // in terms of the gradients of the linearization
+      // vars Z = [sqrtRhoS, sqrtRhoU,..., sqrtRhoW, sqrtRhoH, sqrtRhoEv]
+
+      const CFuint eKineticID = nbSpecies;
+      const CFuint HID = nbSpecies + 1;
+      const CFuint EVID = nbSpecies + 2;
+      
+      _dJdZ = 0.;
+      
+      for (CFuint iSpecies = 0; iSpecies < nbSpecies; ++iSpecies) {
+
+        const CFreal  Ys = _ys[iSpecies];
+        
+        for (CFuint jSpecies = 0; jSpecies < nbSpecies; ++jSpecies) {
+          
+          _dJdZ(iSpecies,jSpecies) = sqrtRho_hat * Ys;
+
+          if (iSpecies == jSpecies){
+            _dJdZ(iSpecies,jSpecies) += sqrtRho_hat;            
+          }
+
+          _dJdZ(HID,jSpecies) = sqrtRhoH_hat;
+          _dJdZ(EVID,jSpecies) = sqrtRhoEv_hat;
+        }        
+
+      }
+
+      _dJdZ(eKineticID,uID)   = sqrtRhoU_hat;
+      _dJdZ(eKineticID,vID)   = sqrtRhoV_hat;
+      
+      _dJdZ(HID,eID)          = sqrtRho_hat;
+
+      _dJdZ(EVID,evID)        = sqrtRho_hat;
+
+//       cout << "_dJdZ = \n"<< _dJdZ << endl;
+
+      // Filling dJdZ (end)
+
+//     //*************************   
+//     _gradRhoYs = 0.;
+//     
+// 
+//     for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++ ){
+//       for (CFuint iStates = 0; iStates < nbCellStates; iStates++ ){
+//         const CFreal nx = normals[cellID]->getNodalNormComp(iStates,XX);
+//         const CFreal ny = normals[cellID]->getNodalNormComp(iStates,YY);
+// 
+//         const CFreal  RhoYs = ( *((*ddata.states)[iStates]) )[iSpecies];
+// 
+//         _gradRhoYs(0,iSpecies) += RhoYs * nx ;
+//         _gradRhoYs(1,iSpecies) += RhoYs * ny ;
+//       }
+//     }
+// 
+//     _gradRhoYs *= coeffGrad;
+//     //*************************   
+
+    // Gradient of sqrt(Rho)*Ys
+    _gradSqrtRhoTimesYs = 0.;
+    
+    for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++ ){
+      for (CFuint iStates = 0; iStates < nbCellStates; iStates++ ){
+
+//         const CFreal nx_F = normals[cellID]->getFaceNormComp(iStates,XX);
+//         const CFreal ny_F = normals[cellID]->getFaceNormComp(iStates,YY);
+        
+        const CFreal nx = normals[cellID]->getNodalNormComp(iStates,XX);
+        const CFreal ny = normals[cellID]->getNodalNormComp(iStates,YY);
+
+        const CFreal  sqrtRhoTimesYs = ( *((*cellStates)[iStates]) )[iSpecies];
+
+        _gradSqrtRhoTimesYs(XX,iSpecies) += sqrtRhoTimesYs * nx ;
+        _gradSqrtRhoTimesYs(YY,iSpecies) += sqrtRhoTimesYs * ny ;
+//         _gradSqrtRhoTimesYs(XX,iSpecies) += sqrtRhoTimesYs * nx_F ;
+//         _gradSqrtRhoTimesYs(YY,iSpecies) += sqrtRhoTimesYs * ny_F ;
+      }
+    }
+    
+    _gradSqrtRhoTimesYs *= coeffGrad;
+        
+    //*************************   
+
+//     // Gradients of rho*vec(u), rho*U*U and rho*V*V
+// 
+//     _gradRhoU = 0.;
+//     _gradRhoV = 0.;
+// 
+//     _gradRhoUSq = 0.;
+//     _gradRhoVSq = 0.;
+// 
+//     for (CFuint iStates = 0; iStates < nbCellStates; iStates++ ){
+// 
+//         const CFreal nx = normals[cellID]->getNodalNormComp(iStates,XX);
+//         const CFreal ny = normals[cellID]->getNodalNormComp(iStates,YY);
+// 
+//         const CFreal  U = ( *((*ddata.states)[iStates]) )[uID];
+//         const CFreal  V = ( *((*ddata.states)[iStates]) )[vID];
+// 
+//         const CFreal  rhoU = _sqrtRho_atNodes[iStates]*_sqrtRho_atNodes[iStates]*U;
+//         const CFreal  rhoV = _sqrtRho_atNodes[iStates]*_sqrtRho_atNodes[iStates]*V;
+// 
+//         _gradRhoU[0] += rhoU * nx;
+//         _gradRhoU[1] += rhoU 0.;//* ny;
+// 
+//         _gradRhoV[0] += rhoV * nx;
+//         _gradRhoV[1] += rhoV 0.;//* ny;
+// 
+//         const CFreal  rhoUSq = _sqrtRho_atNodes[iStates]*_sqrtRho_atNodes[iStates]*U*U;
+//         const CFreal  rhoVSq = _sqrtRho_atNodes[iStates]*_sqrtRho_atNodes[iStates]*V*V;
+// 
+//         _gradRhoUSq[0] += rhoUSq * nx;
+//         _gradRhoUSq[1] += rhoUSq 0.;//* ny;
+// 
+//         _gradRhoVSq[0] += rhoVSq * nx;
+//         _gradRhoVSq[1] += rhoVSq * 0.;//* ny;
+//     }
+// 
+//     _gradRhoU *= coeffGrad;
+//     _gradRhoV *= coeffGrad;
+// 
+//     _gradRhoUSq *= coeffGrad;
+//     _gradRhoVSq *= coeffGrad;
+
+    // Gradients of sqrt(rho)*vec(u)
+
+    _gradSqrtRhoTimesU = 0.;
+    _gradSqrtRhoTimesV = 0.;
+
+    for (CFuint iStates = 0; iStates < nbCellStates; iStates++ ){
+
+//         const CFreal nx_F = normals[cellID]->getFaceNormComp(iStates,XX);
+//         const CFreal ny_F = normals[cellID]->getFaceNormComp(iStates,YY);
+
+        const CFreal nx = normals[cellID]->getNodalNormComp(iStates,XX);
+        const CFreal ny = normals[cellID]->getNodalNormComp(iStates,YY);
+
+        const CFreal  sqrtRhoTimesU = ( *((*cellStates)[iStates]))[uID];
+        const CFreal  sqrtRhoTimesV = ( *((*cellStates)[iStates]))[vID];
+
+        _gradSqrtRhoTimesU[XX] += sqrtRhoTimesU * nx;
+        _gradSqrtRhoTimesU[YY] += sqrtRhoTimesU * ny;
+
+        _gradSqrtRhoTimesV[XX] += sqrtRhoTimesV * nx;
+        _gradSqrtRhoTimesV[YY] += sqrtRhoTimesV * ny;
+
+//         _gradSqrtRhoTimesU[XX] += sqrtRhoTimesU * nx_F;
+//         _gradSqrtRhoTimesU[YY] += sqrtRhoTimesU * ny_F;
+// 
+//         _gradSqrtRhoTimesV[XX] += sqrtRhoTimesV * nx_F;
+//         _gradSqrtRhoTimesV[YY] += sqrtRhoTimesV * ny_F;
+    }
+
+    _gradSqrtRhoTimesU *= coeffGrad;
+    _gradSqrtRhoTimesV *= coeffGrad;
+
+  //*************************   
+
+
+// //   // Gradients of rho*H and rho*ev
+// // 
+//   _gradRhoH = 0.;
+//   _gradRhoEv = 0.;
+// 
+// 
+//   for (CFuint iStates = 0; iStates < nbCellStates; iStates++ ){
+//     const CFreal nx = normals[cellID]->getNodalNormComp(iStates,XX);
+//     const CFreal ny = normals[cellID]->getNodalNormComp(iStates,YY);
+// 
+//     const CFreal  sqrtRhoTimesH  = (*((*cellStates)[iStates]))[eID];
+//     const CFreal  sqrtRhoTimesEv = (*((*cellStates)[iStates]))[evID];
+// 
+//     _gradRhoH[0] += _sqrtRho_atNodes[iStates] * sqrtRhoTimesH * nx ;
+//     _gradRhoH[1] += _sqrtRho_atNodes[iStates] * sqrtRhoTimesH * ny ;
+// 
+//     _gradRhoEv[0] += _sqrtRho_atNodes[iStates] * sqrtRhoTimesEv * nx ;
+//     _gradRhoEv[1] += _sqrtRho_atNodes[iStates] * sqrtRhoTimesEv * ny ;
+// 
+//   }
+//   
+//   _gradRhoH *= coeffGrad;
+//   _gradRhoEv *= coeffGrad;
+
+
+    //   // Gradients of sqrtRhoTimesH and sqrtRhoTimesEv
+  
+    _gradSqrtRhoTimesH = 0.;
+    _gradSqrtRhoTimesEv = 0.;
+
+    for (CFuint iStates = 0; iStates < nbCellStates; iStates++ ){
+      
+      const CFreal nx = normals[cellID]->getNodalNormComp(iStates,XX);
+      const CFreal ny = normals[cellID]->getNodalNormComp(iStates,YY);
+
+//       const CFreal nx_F = normals[cellID]->getFaceNormComp(iStates,XX);
+//       const CFreal ny_F = normals[cellID]->getFaceNormComp(iStates,YY);
+      
+
+      const CFreal  sqrtRhoTimesH  = (*((*cellStates)[iStates]))[eID];
+      const CFreal  sqrtRhoTimesEv = (*((*cellStates)[iStates]))[evID];
+
+      _gradSqrtRhoTimesH[XX] += sqrtRhoTimesH * nx ;
+      _gradSqrtRhoTimesH[YY] += sqrtRhoTimesH * ny ;
+
+      _gradSqrtRhoTimesEv[XX] += sqrtRhoTimesEv * nx ;
+      _gradSqrtRhoTimesEv[YY] += sqrtRhoTimesEv * ny ;
+      
+//       _gradSqrtRhoTimesH[XX] += sqrtRhoTimesH * nx_F ;
+//       _gradSqrtRhoTimesH[YY] += sqrtRhoTimesH * ny_F ;
+// 
+//       _gradSqrtRhoTimesEv[XX] += sqrtRhoTimesEv * nx_F ;
+//       _gradSqrtRhoTimesEv[YY] += sqrtRhoTimesEv * ny_F ;
+
+    }
+
+    _gradSqrtRhoTimesH *= coeffGrad;
+    _gradSqrtRhoTimesEv *= coeffGrad;
+
+    //*************************
+
+    for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++ ){
+      _dZdX[iSpecies] = _gradSqrtRhoTimesYs(XX,iSpecies);
+      _dZdY[iSpecies] = _gradSqrtRhoTimesYs(YY,iSpecies);
+    }
+
+    _dZdX[uID] = _gradSqrtRhoTimesU[XX];
+    _dZdX[vID] = _gradSqrtRhoTimesV[XX];
+    _dZdX[eID] = _gradSqrtRhoTimesH[XX];
+    _dZdX[evID] = _gradSqrtRhoTimesEv[XX];
+    
+    _dZdY[uID] = _gradSqrtRhoTimesU[YY];
+    _dZdY[vID] = _gradSqrtRhoTimesV[YY];
+    _dZdY[eID] = _gradSqrtRhoTimesH[YY];
+    _dZdX[evID] = _gradSqrtRhoTimesEv[YY];
+    
+    _dJdX = _dJdZ * _dZdX;
+    _dJdY = _dJdZ * _dZdY;
+
+//     cout << "_dJdX = "<< _dJdX << " _dJdX = "<< _dJdY << endl;
+//     cout << "_dZdX = "<< _dZdX << " _dZdX = "<< _dZdY << endl;
+
+    /*
+     * There are differences between dPdX_i and dPdZ*_dZdX_i
+     * for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++ ){
+
+      cout << "(_gradRhoYs(0,iSpecies)- dJdX[iSpecies] = " << (_gradRhoYs(0,iSpecies)- dJdX[iSpecies] ) << endl;
+      cout << "(_gradRhoYs(1,iSpecies)- dJdY[iSpecies] = " << (_gradRhoYs(1,iSpecies)- dJdY[iSpecies] ) << endl;
+
+    }
+
+
+    cout << "0.5*(_gradRhoUSq+_gradRhoVSq)[0]- dJdX[nbSpecies] = " << ( _gradRhoUSq[0]+_gradRhoVSq[0]- dJdX[nbSpecies]) << endl;
+    cout << "0.5*(_gradRhoUSq+_gradRhoVSq)[1]- dJdY[nbSpecies] = " << ( _gradRhoUSq[1]+_gradRhoVSq[1]- dJdY[nbSpecies]) << endl;
+    
+    
+    cout << "_gradRhoH[0] - dJdX[eID] = " << (_gradRhoH[0] - dJdX[eID]) << endl;
+    cout << "_gradRhoH[1] - dJdY[eID] = " << (_gradRhoH[1] - dJdY[eID]) << endl;
+
+    cout << "_gradRhoEv[0] - dJdX[evID] = " << (_gradRhoEv[0] - dJdX[evID]) << endl;
+    cout << "_gradRhoEv[1] - dJdY[evID] = " << (_gradRhoEv[1] - dJdY[evID]) << endl;
+
+      for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++ ){
+      _consistent_gradRhoYs(0, iSpecies) = dJdX[iSpecies];
+      _consistent_gradRhoYs(1, iSpecies) = dJdY[iSpecies];
+
+      cout << "(_consistent_gradRhoYs(0,iSpecies)- dJdX[iSpecies] = " << (_consistent_gradRhoYs(0,iSpecies)- dJdX[iSpecies] ) << endl;
+      cout << "(_consistent_gradRhoYs(0,iSpecies)- dJdY[iSpecies] = " << (_consistent_gradRhoYs(1,iSpecies)- dJdY[iSpecies] ) << endl;
+
+    }
+*/
+    for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++ ){
+      _consistent_gradRhoYs(XX, iSpecies) = _dJdX[iSpecies];
+      _consistent_gradRhoYs(YY, iSpecies) = _dJdY[iSpecies];
+    }
+
+   
+   _consistent_gradHalfRhoUSq[XX] = _dJdX[eKineticID];
+   _consistent_gradHalfRhoUSq[YY] = _dJdY[eKineticID];
+
+   _consistent_gradRhoH[XX] = _dJdX[HID];
+   _consistent_gradRhoH[YY] = _dJdY[HID];
+
+   _consistent_gradRhoEv[XX] = _dJdX[EVID];
+   _consistent_gradRhoEv[YY] = _dJdY[EVID];
+
+   // end: compute gradients
+
+  
+//-------------------------------------------------------------------------//
+
+    const CFdouble onePlusOmegaHat = 1. + 1./_beta_hat;
+
+    CFdouble Dxx =  _gradP[XX] * _gradP[XX];
+    CFdouble Cxy =  _gradP[XX] * _gradP[YY];
+    CFdouble Dyy =  _gradP[YY] * _gradP[YY];
+
+    CFdouble RHS_x = - onePlusOmegaHat * _gradP[XX] + (_consistent_gradRhoH[XX] - _consistent_gradHalfRhoUSq[XX] - _consistent_gradRhoEv[XX] );
+    CFdouble RHS_y = - onePlusOmegaHat * _gradP[YY] + (_consistent_gradRhoH[YY] - _consistent_gradHalfRhoUSq[YY] - _consistent_gradRhoEv[YY] );
+    
+    for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+
+      Dxx += sigma_hatSq * _consistent_gradRhoYs(XX,iSpecies) * _consistent_gradRhoYs(XX,iSpecies);
+      Cxy += sigma_hatSq * _consistent_gradRhoYs(XX,iSpecies) * _consistent_gradRhoYs(YY,iSpecies);
+      Dyy += sigma_hatSq * _consistent_gradRhoYs(YY,iSpecies) * _consistent_gradRhoYs(YY,iSpecies);
+
+      const CFreal xi_hat = _alpha_hat[iSpecies] / _beta_hat;
+
+      RHS_x += xi_hat * _consistent_gradRhoYs(XX,iSpecies);
+      RHS_y += xi_hat * _consistent_gradRhoYs(YY,iSpecies);
+    }    
+
+//       const CFreal detectorInPercent = 100. * std::abs( 1. -   rho_hat * c_hatSq_sum /( p_hat * (1. + _beta_hat) ) ); // Has it any importance using c_hatSq_sum or c_hatSq_pressure????
+//       const CFreal detector = std::abs( p_hat -   rho_hat * c_hatSq_sum /(1. + _beta_hat) ); // Has it any importance using c_hatSq_sum or c_hatSq_pressure????
+
+    const CFreal detector = std::abs( p_hat -   rho_hat * c_hatSq_sum / (1. + _beta_hat) ); // Has it any importance using c_hatSq_sum or c_hatSq_pressure????
+
+
+    const CFreal omega_hat = 1./_beta_hat;
+    
+    if (detector > 1.e-6) {
+              
+        const CFreal determinant_Lagrange = Dxx * Dyy - Cxy * Cxy;
+        const CFreal zero_threshold = 1e-9;//1e-12;
+
+        
+        CFreal norm_xx_Sq = _gradP[XX] * _gradP[XX];
+        CFreal norm_yy_Sq = _gradP[YY] * _gradP[YY];
+        CFreal scalarProduct = _gradP[XX] * _gradP[YY];
+
+        for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+          
+          scalarProduct += _consistent_gradRhoYs(XX,iSpecies) * _consistent_gradRhoYs(YY,iSpecies);
+
+          norm_xx_Sq += _consistent_gradRhoYs(XX,iSpecies) * _consistent_gradRhoYs(XX,iSpecies);
+          norm_yy_Sq += _consistent_gradRhoYs(YY,iSpecies) * _consistent_gradRhoYs(YY,iSpecies);
+        }
+
+        const CFreal cosTheta = scalarProduct / std::sqrt(norm_xx_Sq * norm_yy_Sq);
+
+        bool flag_2D = false;
+        bool flag_1D = false;
+        bool flag_2D_decaffeinated = false;
+        
+
+        if ( std::abs(determinant_Lagrange) > zero_threshold ){//std::abs(cosTheta) != 1.
+
+          flag_2D = true;
+        }
+
+        else{
+          
+          flag_1D = true;
+        }
+
+        if (flag_2D){
+            // Using inverter ( 2D approach )
+            //             cout << "In branch abs(cosTheta) != 1."<< endl;
+            _rhs_Lagrange[XX] =  RHS_x;
+            _rhs_Lagrange[YY] =  RHS_y;
+
+            _coefficients_Lagrange(XX,XX) = Dxx;
+            _coefficients_Lagrange(XX,YY) = Cxy;
+
+            _coefficients_Lagrange(YY,XX) = Cxy;
+            _coefficients_Lagrange(YY,YY) = Dyy;
+
+            // Don't forget this update!!!
+            _coefficients_Lagrange *= 0.5;
+            _inverter_Lagrange->invert(_coefficients_Lagrange, _inverseMat_Lagrange);
+
+            _solution_Lagrange = _inverseMat_Lagrange * _rhs_Lagrange;
+            // Using inverter (end)
+            CFreal lambda_x = _solution_Lagrange[XX];
+            CFreal lambda_y = _solution_Lagrange[YY];
+
+            const CFreal omega_bar = omega_hat + 0.5 * (_gradP[XX] * lambda_x + _gradP[YY] * lambda_y);
+
+            _beta_bar = 1. / omega_bar;
+
+            for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+
+              const CFreal xi_hat = _alpha_hat[iSpecies] / _beta_hat;
+
+              const CFreal xi_bar = xi_hat - 0.5 * sigma_hatSq * ( _consistent_gradRhoYs(XX,iSpecies) * lambda_x + _consistent_gradRhoYs(YY,iSpecies) * lambda_y );
+
+              _alpha_bar[iSpecies] = xi_bar * _beta_bar;
+            }
+            
+            // Needed to decide wether setting flag_1D to true or not
+            CFreal sumAlphasBarYs = 0.0;
+
+            for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+
+                sumAlphasBarYs += _alpha_bar[iSpecies] * _ys[iSpecies];
+            }
+
+
+            c_barSq_sum = sumAlphasBarYs + _beta_bar * (h_hat - ev_hat);            
+            
+            if ( (c_barSq_sum < 0.) || (_beta_bar <= 0.) ){// try 1D solution
+              flag_1D = true;
+            }
+
+            
+            _message_state = "\nInfo: Lagrange2D...";
+            eval_consistency(_beta_hat,_alpha_hat,_beta_bar,_alpha_bar);
+            _message_betaBar_alphaBar = "_beta_bar_CF = ";
+            _message_betaBar_alphaBar = _message_betaBar_alphaBar + ( boost::lexical_cast<std::string>(_beta_bar  ) ) + "\n_alpha_bar_CF = ["  + boost::lexical_cast<std::string>( _alpha_bar ) + "]\n";
+            
+        } // if 2D Lagrange problem is not ill-conditioned
+        
+
+        if ( flag_1D ){ // but if 2D Lagrange problem is ill-conditioned,
+                    // or if _beta_bar or _cBarSq are negative
+                    // switch to dimension by dimension 1D approach
+          // Lagrange1D
+
+
+	      CFreal deltaP_xx = (1. + _beta_hat) * _gradP[XX]- _beta_hat * (_consistent_gradRhoH[XX] -_consistent_gradRhoEv[XX] - _consistent_gradHalfRhoUSq[XX] );
+
+          CFreal deltaP_yy = (1. + _beta_hat) * _gradP[YY]- _beta_hat * (_consistent_gradRhoH[YY] -_consistent_gradRhoEv[YY] - _consistent_gradHalfRhoUSq[YY] );
+                    
+
+          for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+
+            deltaP_xx -= _alpha_hat[iSpecies] * _consistent_gradRhoYs(XX,iSpecies);
+            deltaP_yy -= _alpha_hat[iSpecies] * _consistent_gradRhoYs(YY,iSpecies);
+          }
+
+
+          const CFreal _beta_bar_xx = _beta_hat * Dxx / (Dxx - deltaP_xx * _gradP[XX] );
+          const CFreal _beta_bar_yy = _beta_hat * Dyy / (Dyy - deltaP_yy * _gradP[YY] );
+
+          _alpha_bar_xx = 0.;
+          _alpha_bar_yy = 0.;
+
+          for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+
+            const CFreal num_xx = Dxx * _alpha_hat[iSpecies]  + sigma_hatSq * _consistent_gradRhoYs(XX,iSpecies) * deltaP_xx;
+            const CFreal den_xx = (Dxx - deltaP_xx * _gradP[XX] );
+
+            _alpha_bar_xx[iSpecies] = num_xx / den_xx;
+
+            const CFreal num_yy = Dyy * _alpha_hat[iSpecies]  + sigma_hatSq * _consistent_gradRhoYs(YY,iSpecies) * deltaP_yy;
+            const CFreal den_yy = (Dyy - deltaP_yy * _gradP[YY] );
+
+            _alpha_bar_yy[iSpecies] = num_yy / den_yy;
+          }
+
+//           _beta_bar = 0.5 * (  _beta_bar_xx + _beta_bar_yy );
+//               _alpha_bar = 0.5 * (  _alpha_bar_xx + _alpha_bar_yy );
+
+            if( _beta_bar_yy < 0.){ //std::abs(_gradP[XX]) > std::abs(_gradP[YY])
+              _beta_bar  = _beta_bar_xx;
+              _alpha_bar = _alpha_bar_xx;
+              
+            }
+            
+            else {
+              _beta_bar  = _beta_bar_yy;
+              _alpha_bar = _alpha_bar_yy;              
+            }
+
+
+            // Needed to decide wether setting flag_2D_decaffeinated to true or not
+            CFreal sumAlphasBarYs = 0.0;
+
+            for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+
+                sumAlphasBarYs += _alpha_bar[iSpecies] * _ys[iSpecies];
+            }
+
+
+            c_barSq_sum = sumAlphasBarYs + _beta_bar * (h_hat - ev_hat);
+            // c_barSq_sum = sumAlphasBarYs + _beta_bar * (h_hat - ev_hat);
+
+            if ( (c_barSq_sum < 0.) || (_beta_bar <= 0.) ){// try 2D_decaffeinated solution
+              flag_2D_decaffeinated = true;
+            }
+
+            eval_consistency(_beta_hat,_alpha_hat,_beta_bar,_alpha_bar);
+
+            _message_state = _message_state + " failed\nInfo: Lagrange1D..." ;
+            _message_betaBar_alphaBar = "_beta_bar_CF = ";
+            _message_betaBar_alphaBar = _message_betaBar_alphaBar + ( boost::lexical_cast<std::string>(_beta_bar  ) ) + "\n_alpha_bar_CF = ["  + boost::lexical_cast<std::string>( _alpha_bar ) + "]\n";
+                
+        } // Lagrange1D (end)
+
+        // Lagrange2D_decaffeinated
+        if ( flag_2D_decaffeinated ){ // but if 1D Lagrange problem yields to a
+                                      // negative _beta_bar or _cBarSq
+                                      // switch to 'decaffeinated' 1D approach
+
+          const CFreal dxx = Dxx - _gradP[XX] * _gradP[XX];
+          const CFreal cxy = Cxy - _gradP[XX] * _gradP[YY];
+          const CFreal dyy = Dyy - _gradP[YY] * _gradP[YY];
+
+          _rhs_Lagrange[XX] =  RHS_x;
+          _rhs_Lagrange[YY] =  RHS_y;
+
+          _coefficients_Lagrange(XX,XX) = dxx;
+          _coefficients_Lagrange(XX,YY) = cxy;
+
+          _coefficients_Lagrange(YY,XX) = cxy;
+          _coefficients_Lagrange(YY,YY) = dyy;
+
+          // Don't forget this update!!!
+          _coefficients_Lagrange *= 0.5;
+          _inverter_Lagrange->invert(_coefficients_Lagrange, _inverseMat_Lagrange);
+
+          const CFreal determinant_Lagrange_decaffeinated = dxx * dyy - cxy * cxy;
+
+          
+          if ( determinant_Lagrange_decaffeinated > zero_threshold ){
+//           if ( determinant_Lagrange_decaffeinated > zero_threshold ){
+            _solution_Lagrange = _inverseMat_Lagrange * _rhs_Lagrange;
+            // Using inverter (end)
+            CFreal lambda_x = _solution_Lagrange[XX];
+            CFreal lambda_y = _solution_Lagrange[YY];
+
+            const CFreal omega_bar = omega_hat;
+
+            _beta_bar = 1. / omega_bar;
+
+            for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+
+              const CFreal xi_hat = _alpha_hat[iSpecies] / _beta_hat;
+
+              const CFreal xi_bar = xi_hat - 0.5 * sigma_hatSq * ( _consistent_gradRhoYs(XX,iSpecies) * lambda_x + _consistent_gradRhoYs(YY,iSpecies) * lambda_y );
+
+              _alpha_bar[iSpecies] = xi_bar * _beta_bar;
+            }           
+          }
+
+          eval_consistency(_beta_hat,_alpha_hat,_beta_bar,_alpha_bar);
+
+          _message_state = _message_state + " failed\nInfo: Lagrange2D_decaffeinated...";
+          _message_betaBar_alphaBar = "_beta_bar_CF = ";
+          _message_betaBar_alphaBar = _message_betaBar_alphaBar + ( boost::lexical_cast<std::string>(_beta_bar  ) ) + "\n_alpha_bar_CF = ["  + boost::lexical_cast<std::string>( _alpha_bar ) + "]\n";
+
+        } // Lagrange2D_decaffeinated (end)
+
+      CFreal sumAlphasBarYs = 0.0;
+
+      for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+
+          sumAlphasBarYs += _alpha_bar[iSpecies] * _ys[iSpecies];
+      }
+
+
+      c_barSq_sum = sumAlphasBarYs + _beta_bar * (h_hat - ev_hat);
+
+//       cout << "c_barSq_sum (Lagrange2D) = " << c_barSq_sum << "\n";
+
+      p_bar = linearData[EulerTerm::RHO] * c_barSq_sum / (1. + _beta_bar) ;
+
+      CFreal sum_Rs_Rho_s = 0.;
+      for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+
+          const CFreal rho_s = rho_hat *_ys[iSpecies];
+          sum_Rs_Rho_s  += _RiGas[iSpecies] * rho_s;
+      }
+
+      T_bar = p_bar / sum_Rs_Rho_s;
+
+//       cout << "Info(Lagrange2D): c_barSq_sum = "<< c_barSq_sum  << " p_bar = "<< p_bar << " T_bar = "<< T_bar <<
+//       "\n _alpha_bar = " << _alpha_bar << "_beta_bar = " << _beta_bar << endl;
+
+
+      if (c_barSq_sum < 0. || _beta_bar <= 0.){ // if 2D, 1D and 2D_decaffeinated approaches have failed,
+                                                // do arithmetic averaging:
+
+        if (c_barSq_sum < 0. && _beta_bar <= 0.){          
+          _message_state = _message_state + " failed\nInfo: Averaging, since c_barSq_sum < 0. && _beta_bar <= 0.\n";
+        }
+        else if (c_barSq_sum < 0.){
+          _message_state = _message_state + " failed\nInfo: Averaging, since c_barSq_sum < 0.\n";
+        }
+        
+        else if (_beta_bar <= 0.){          
+          _message_state = _message_state + " failed\nInfo: Averaging, since _beta_bar <= 0.\n";
+        }
+
+        eval_consistency(_beta_hat,_alpha_hat,_beta_bar,_alpha_bar);
+
+        _message_betaBar_alphaBar = "_beta_bar_CF = ";
+        _message_betaBar_alphaBar = _message_betaBar_alphaBar + ( boost::lexical_cast<std::string>(_beta_bar  ) ) + "\n_alpha_bar_CF = ["  + boost::lexical_cast<std::string>( _alpha_bar ) + "]\n";
+         
+        // Absolutely needed
+        _beta_bar = _beta_hat;
+        _alpha_bar = _alpha_hat;
+
+        p_bar = p_hat;
+        T_bar = T_hat;
+        c_barSq_sum = c_hatSq_sum;
+
+      }
+
+      eval_consistency(_beta_hat,_alpha_hat,_beta_bar,_alpha_bar);
+
+     
+   }// if detector < tol
+
+   else{ // detector > tol
+
+    // Absolutely needed to compute properly
+        _beta_bar = _beta_hat;
+        _alpha_bar = _alpha_hat;
+
+        p_bar = p_hat;
+        T_bar = T_hat;
+        c_barSq_sum = c_hatSq_sum;
+
+        _message_state = "\nInfo(detectorInactive).\n";
+        eval_consistency(_beta_hat,_alpha_hat,_beta_bar,_alpha_bar);
+
+    } //else
+
+   thePressure_bar = p_bar;
+   theEnthalpy_bar = linearData[EulerTerm::H];
+   theTemperature_bar = T_bar;
+   theSoundSpeed_bar = std::sqrt(c_barSq_sum);
+   
+   linearData[EulerTerm::P] = p_bar;
+   linearData[EulerTerm::E] = linearData[EulerTerm::H] - linearData[EulerTerm::P] / linearData[EulerTerm::RHO];
+   linearData[EulerTerm::T] = T_bar;
+   linearData[EulerTerm::A] = std::sqrt(c_barSq_sum);
+//    cout << "Info: No perturbing -> linearData = "<< linearData << endl;
+
+   // Update dpdRhos and dpdRhoE
+   eData->dP_Bar = 0.;
+
+   for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+
+     eData->dP_Bar[iSpecies] = _alpha_bar[iSpecies];
+   }
+
+   eData->dP_Bar[nbSpecies] = _beta_bar;
+   // Update dpdRhos and dpdRhoE (end)
+
+  
+   }//if (!this->getMethodData().getDistributionData().isPerturb)
+
+   else{ // isPerturb == true
+
+//    cout << "linearData = "<< linearData << endl;
+    
+
+   linearData[EulerTerm::P] = thePressure_bar;
+   linearData[EulerTerm::H] = theEnthalpy_bar;
+   linearData[EulerTerm::E] = linearData[EulerTerm::H] - linearData[EulerTerm::P] / linearData[EulerTerm::RHO];
+   linearData[EulerTerm::T] = theTemperature_bar;
+   linearData[EulerTerm::A] = theSoundSpeed_bar;   
+  }
+
+
+  /* Debugging */
+
+  if ( true ){//_store_debugging_data == 1 
+    
+    ofstream debugging_data("info_debugging.txt", ios::out | ios::app);
+    debugging_data << "\n% % ***************************************************************************\n";
+    debugging_data << "cellID = " << cellID <<";"<< endl;
+    debugging_data << "% % " << _message_state << endl;
+    debugging_data << "% % " << _message_consistency << endl;
+  //   debugging_data << "cellVolume = " << cellVolume <<";" << endl;
+  //
+  //   debugging_data << "_RiGas = [" << _RiGas << "];" << endl;
+  //   debugging_data << "_mmasses = [" << _mmasses << "];" << endl;
+  //   debugging_data << "fcoeff = [" << (*fcoeff) << "];" << endl;
+  //
+  //   debugging_data << "_P0 = ["<< ( *((*ddata.states)[0]) )<< "];\n";
+  //   debugging_data << "_Z0 = ["<< (*((*cellStates)[0]) )<< "];\n";
+  //   debugging_data << "p_0 = "<< p_0 << ";\n";
+  //   debugging_data << "T_0 = "<< (*((*ddata.states)[0]))[eID] << ";\n";
+  //   debugging_data << "normal0 = ["<< (normals[cellID]->getNodalNormComp(0,XX)) << " " << (normals[cellID]->getNodalNormComp(0,YY)) << "];\n";
+  //   debugging_data << "energyTr0 = ["<< energyTr0 << "];\n\n";
+  //
+  //   debugging_data << "_P1 = ["<< ( *((*ddata.states)[1]) )<< "];\n";
+  //   debugging_data << "_Z1 = ["<< (*((*cellStates)[1]) )<< "];\n";
+  //   debugging_data << "p_1 = "<< p_1 << ";\n";
+  //   debugging_data << "T_1 = "<< (*((*ddata.states)[1]))[eID] << ";\n";
+  //   debugging_data << "normal1 = ["<< (normals[cellID]->getNodalNormComp(1,XX)) << " " << (normals[cellID]->getNodalNormComp(1,YY)) << "];\n";
+  //   debugging_data << "energyTr1 = ["<< energyTr1 << "];\n\n";
+  //
+  //   debugging_data << "_P2 = ["<< ( *((*ddata.states)[2]) )<< "];\n";
+  //   debugging_data << "_Z2 = ["<< (*((*cellStates)[2]) )<< "];\n";
+  //   debugging_data << "p_2 = "<< p_2 << ";\n";
+  //   debugging_data << "T_2 = "<< (*((*ddata.states)[2]))[eID] << ";\n";
+  //   debugging_data << "normal2 = ["<< (normals[cellID]->getNodalNormComp(2,XX)) << " " << (normals[cellID]->getNodalNormComp(2,YY)) << "];\n";
+  //   debugging_data << "energyTr2 = ["<< energyTr1 << "];\n\n";
+  //   debugging_data << "_Zavg = ["<< _Zavg << "];\n";
+  //   debugging_data << "_dJdZ_CF = [\n"<< _dJdZ << "]"<< endl;
+  //
+    debugging_data << "_beta_hat_CF = "<< _beta_hat << "\n_alpha_hat_CF = ["<< _alpha_hat << "]" << endl;
+    debugging_data << _message_betaBar_alphaBar << endl;
+  //
+  //   debugging_data << "normals = [normal0; normal1; normal2];"<< endl;
+  //   debugging_data << "_ZStates = [_Z0; _Z1; _Z2];"<< endl;
+  //   debugging_data << "\n% % ***************************************************************************\n";
+    debugging_data.close();
+  }
+     
+  /**/
+
+// computes an average state in which jacobians will be linearized
+// mdata.getLinearizer()->linearize(*m_linearStates);!?
+
+// transformation from linear to consistent variables!?
+ddata.tStates =  mdata.getLinearToDistribMatTrans()->transformFromRef(this->m_linearStates);
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+template <class BASE>
+void SplitStrategyNEQ<BASE>::linearization_general_case(){
+  
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+template <class BASE>
+void SplitStrategyNEQ<BASE>::linearization_zero_gradP(){
+  // cout << "gradP = [0 0]\n ";//<< in cell[" << cellID << "];" << endl;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+template <class BASE>
+void SplitStrategyNEQ<BASE>::eval_consistency( const CFreal& _beta_hat,
+                                               const RealVector& _alpha_hat,
+                                               const CFreal& _beta_bar,
+                                               const RealVector& _alpha_bar ){
+
+  const CFreal XX = 0;
+  const CFreal YY = 1;
+    
+  const CFuint nbSpecies = _model->getNbScalarVars(0);
+
+  _non_consistency[XX] = (1. + _beta_hat) * _gradP[XX] - _beta_hat * ( _consistent_gradRhoH[XX] - _consistent_gradHalfRhoUSq[XX] - _consistent_gradRhoEv[XX] );
+
+  _non_consistency[YY] = (1. + _beta_hat) * _gradP[YY] - _beta_hat * ( _consistent_gradRhoH[YY] - _consistent_gradHalfRhoUSq[YY] - _consistent_gradRhoEv[YY] );
+  
+  _consistency[XX] = (1. + _beta_bar) * _gradP[XX] - _beta_bar * ( _consistent_gradRhoH[XX] - _consistent_gradHalfRhoUSq[XX] - _consistent_gradRhoEv[XX] );
+  _consistency[YY] = (1. + _beta_bar) * _gradP[YY] - _beta_bar * ( _consistent_gradRhoH[YY] - _consistent_gradHalfRhoUSq[YY] - _consistent_gradRhoEv[YY] );
+
+  for (CFuint iSpecies = 0; iSpecies < nbSpecies; iSpecies++){
+    _non_consistency[XX] -= _alpha_hat[iSpecies] * _consistent_gradRhoYs(XX,iSpecies);
+    _non_consistency[YY] -= _alpha_hat[iSpecies] * _consistent_gradRhoYs(YY,iSpecies);
+
+    _consistency[XX] -= _alpha_bar[iSpecies] * _consistent_gradRhoYs(XX,iSpecies);
+    _consistency[YY] -= _alpha_bar[iSpecies] * _consistent_gradRhoYs(YY,iSpecies);
+  }
+
+  //       const CFreal _non_consistency_2 = sumAlphaHatYs + _beta_hat * (h_hat - ev_hat) - (1.+ _beta_hat) * p_hat/rho_hat;
+  //       const CFreal consistency_2 = sumAlphasBarYs + _beta_bar * (h_hat - ev_hat) - (1.+ _beta_bar) * p_bar/rho_hat;
+
+  if ( std::abs(_consistency[XX]) > 1.e-8 || std::abs(_consistency[YY]) > 1.e-8){
+    
+    _message_consistency = _message_consistency + "\tnon_consistency = ";
+    _message_consistency = _message_consistency + ( boost::lexical_cast<std::string>( _non_consistency ) );
+    _message_consistency = _message_consistency + "\tconsistency = " + ( boost::lexical_cast<std::string>(_consistency ) );
+  //         +  "\n% _non_consistency # 2 = " + ( boost::lexical_cast<std::string>( _non_consistency_2) ) + "\tconsistency # 2 = " + ( boost::lexical_cast<std::string>( consistency_2 )) + '\n';
+
+    _message_betaBar_alphaBar = _message_betaBar_alphaBar + "\n_beta_bar_CF = ";
+    _message_betaBar_alphaBar = _message_betaBar_alphaBar + ( boost::lexical_cast<std::string>(_beta_bar  ) ) + "\n_alpha_bar_CF = ["  + boost::lexical_cast<std::string>( _alpha_bar ) + "]\n";
+  }
+  
+}
+
+} // namespace FluctSplitNEQ
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

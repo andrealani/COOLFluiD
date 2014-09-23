@@ -1,0 +1,95 @@
+# COOLFluiD solver Startfile
+# Comments begin with "#"
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libFiniteElement libHeat libNewtonMethod  libFiniteElementHeat
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/Heat/testcases/TwoPlates/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = Heat3D
+Simulator.SubSystem.Heat3D.Conductivity = 40.0
+
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = wheels.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = wheels.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.CFmesh.SaveRate = 1
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 5
+
+Simulator.SubSystem.Default.listTRS = InnerCells Wheels Front Back Periodic
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = wheels.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = FiniteElement
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCILU
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 100
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1.0
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.Data.SaveSystemToFile = true
+Simulator.SubSystem.NewtonIterator.UpdateSol = StdUpdateSol
+Simulator.SubSystem.NewtonIterator.InitCom = ResetSystem
+
+Simulator.SubSystem.SpaceMethod = FiniteElementMethod
+
+Simulator.SubSystem.FiniteElementMethod.Data.UpdateVar = Prim
+Simulator.SubSystem.FiniteElementMethod.Data.DiffusiveVar = Heat3DDiffusivePrim
+#Simulator.SubSystem.FiniteElementMethod.Data.SourceVar = Heat3DSourceTDep
+Simulator.SubSystem.FiniteElementMethod.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.FiniteElementMethod.Data.ResidualStrategy = StdElementComputer
+
+# Vars are [ x y z T ]
+#Simulator.SubSystem.FiniteElementMethod.Data.Heat3DSourceTDep.IndepDef = 2000*(y)
+#Simulator.SubSystem.FiniteElementMethod.Data.Heat3DSourceTDep.LinearDef = 0.
+
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorOrder = P1
+
+Simulator.SubSystem.FiniteElementMethod.ComputeSpaceResidual = ImplicitComputeSpaceResCom
+Simulator.SubSystem.FiniteElementMethod.ImplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSystem.FiniteElementMethod.InitComds = InitState
+Simulator.SubSystem.FiniteElementMethod.InitNames = InitialField
+
+Simulator.SubSystem.FiniteElementMethod.InitialField.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.InitialField.Vars = x y z
+Simulator.SubSystem.FiniteElementMethod.InitialField.Def = 20
+
+Simulator.SubSystem.FiniteElementMethod.BcComds = DirichletBC NeumannBC
+Simulator.SubSystem.FiniteElementMethod.BcNames = TANK        WHEELS
+
+# Vars are [ x y z T ]
+Simulator.SubSystem.FiniteElementMethod.WHEELS.applyTRS = Wheels
+Simulator.SubSystem.FiniteElementMethod.WHEELS.Implicit = true
+Simulator.SubSystem.FiniteElementMethod.WHEELS.Vars = x y z t T nx ny nz
+Simulator.SubSystem.FiniteElementMethod.WHEELS.Def = -1000*T
+
+# Vars are [ x y z T ]
+Simulator.SubSystem.FiniteElementMethod.TANK.applyTRS = Back Front Periodic
+Simulator.SubSystem.FiniteElementMethod.TANK.Implicit = true
+Simulator.SubSystem.FiniteElementMethod.TANK.Vars = x y z
+Simulator.SubSystem.FiniteElementMethod.TANK.Def = 5
+
+

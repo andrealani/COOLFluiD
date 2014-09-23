@@ -1,0 +1,88 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace LinearAdvSys {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+LinearAdvSysPhysicalModel<DIM>::LinearAdvSysPhysicalModel(const std::string& name)
+  : Framework::ConvectionPM<LinearAdvSysTerm>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+LinearAdvSysPhysicalModel<DIM>::~LinearAdvSysPhysicalModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+CFuint LinearAdvSysPhysicalModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+CFuint LinearAdvSysPhysicalModel<DIM>::getNbEquations() const
+{
+  return 4;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+void LinearAdvSysPhysicalModel<DIM>::setReferenceValues()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void LinearAdvSysPhysicalModel<DIM>::setReferenceTime()
+{
+//   RealVector& refDataConv = getConvTerm()->getReferencePhysicalData();
+  // since velocity scale is set to 1.0 above by default, just equal to getRefLength()
+  _refTime = this->getRefLength()/1.0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+void LinearAdvSysPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionPM<LinearAdvSysTerm>::configure(args);
+
+  cf_assert(getDimension() > 0);
+  cf_assert(getNbEquations() > 0);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(getDimension());
+  for (CFuint i = 0; i < getDimension(); ++i)
+  {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace LinearAdvSys
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

@@ -1,0 +1,90 @@
+#include "FiniteVolumeNavierStokes/Euler2DAxiSourceTerm.hh"
+#include "NavierStokes/Euler2DVarSet.hh"
+#include "Common/CFLog.hh"
+#include "Framework/GeometricEntity.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+Euler2DAxiSourceTerm<UPDATEVAR>::Euler2DAxiSourceTerm(const std::string& name) :
+  ComputeSourceTermFVMCC(name),
+  _varSet(CFNULL),
+  _temp(),
+  _physicalData(),
+  _sID()
+{
+  addConfigOptionsTo(this);
+  setParameter("sID",&_sID);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+Euler2DAxiSourceTerm<UPDATEVAR>::~Euler2DAxiSourceTerm()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void Euler2DAxiSourceTerm<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFuint >
+    ("sID","ID of the equation which has a source term != 0.");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void Euler2DAxiSourceTerm<UPDATEVAR>::setup()
+{
+  ComputeSourceTermFVMCC::setup();
+
+  _temp.resize(Framework::PhysicalModelStack::getActive()->getNbEq()); 
+  
+  _varSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+  _varSet->getModel()->resizePhysicalData(_physicalData);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void Euler2DAxiSourceTerm<UPDATEVAR>::computeSource(Framework::GeometricEntity *const element,
+						    RealVector& source,
+						    RealMatrix& jacobian)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  CFLogDebugMin( "Euler2DAxiSourceTerm::computeSource()" << "\n");
+  
+  cf_assert (_varSet.isNotNull());
+  State& currState = *socket_states.getDataHandle()[element->getID()];
+  
+  _varSet->computePhysicalData(currState, _physicalData);
+  
+  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+  
+  source = 0.0;
+  source[_sID] = _physicalData[EulerTerm::P]*volumes[element->getID()];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,275 @@
+#include "Common/ShouldNotBeHereException.hh"
+#include "Common/NotImplementedException.hh"
+#include "NavierStokes/EulerTerm.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace NEQKOmega {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>      
+NavierStokesNEQKOmegaRhoivt<BASE>::NavierStokesNEQKOmegaRhoivt
+(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  NavierStokesNEQKOmegaVarSet<BASE>(name, model),
+  _tempVib()
+{
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+NavierStokesNEQKOmegaRhoivt<BASE>::~NavierStokesNEQKOmegaRhoivt()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+void NavierStokesNEQKOmegaRhoivt<BASE>::setGradientVars(const std::vector<RealVector*>& states,
+							RealMatrix& values,
+							const CFuint stateSize)
+{
+  const CFuint nbValues = values.nbRows();
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  for (CFuint j = 0; j < stateSize; ++j) {
+    CFreal invRho = 0.0;
+    const RealVector& st = (*states[j]);
+    for (CFuint i = 0; i < nbSpecies; ++i) {
+      invRho += st[i];
+    }
+    invRho = 1./invRho;
+    
+    for (CFuint i = 0; i < nbValues; ++i) {
+      values(i,j) = (i < nbSpecies) ? st[i]*invRho : st[i];
+    }
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+void NavierStokesNEQKOmegaRhoivt<BASE>::setGradientVarGradients
+(const std::vector<RealVector*>& states,
+ const std::vector< std::vector<RealVector*> >& stateGradients,
+ std::vector< std::vector<RealVector*> >& gradVarGradients,
+ const CFuint stateSize)
+{
+  throw Common::NotImplementedException
+    (FromHere(), "NavierStokesNEQKOmegaRhoivt::setGradientVarGradients");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+void NavierStokesNEQKOmegaRhoivt<BASE>::setStateGradients
+(const std::vector<RealVector*>& states,
+ const std::vector< std::vector<RealVector*> >& gradVarGradients,
+ std::vector< std::vector<RealVector*> >& stateGradients,
+ const CFuint stateSize)
+{
+  throw Common::NotImplementedException
+    (FromHere(),"NavierStokesNEQKOmegaRhoivt::setStateGradients");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+CFreal NavierStokesNEQKOmegaRhoivt<BASE>::getLaminarDynViscosityFromGradientVars(const RealVector& state)
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  // Set the mixture density (sum of the partial densities)
+  // it is assumed that the composition has already been set
+  const RealVector& refData = this->_eulerModel->getReferencePhysicalData();
+  CFreal rhodim = getDensity(state)*refData[EulerTerm::RHO];
+  CFreal Tdim = state[this->_TID]*refData[EulerTerm::T];
+  
+  CFreal* tVec = CFNULL;
+  if (_tempVib.size() > 0) {
+    const CFuint nbTv = _tempVib.size();
+    for (CFuint i = 0; i < nbTv; ++i) {
+      _tempVib[i] = state[this->_TvibID[i]]*refData[EulerTerm::T];
+    }
+    tVec = &_tempVib[0];
+  }
+  
+  CFreal pdim = this->_library->pressure(rhodim, Tdim, tVec);
+  return this->_library->eta(Tdim, pdim, tVec) /
+    (this->getModel().getReferencePhysicalData())[NavierStokes::NSTurbTerm::MU];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+CFreal NavierStokesNEQKOmegaRhoivt<BASE>::getDensity(const RealVector& state)
+{
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  CFreal rho = 0.0;
+  for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+    rho += state[ie];
+  }
+  
+  cf_assert(rho > 0.0);
+  return rho;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+      
+template <typename BASE> 
+void NavierStokesNEQKOmegaRhoivt<BASE>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  // call  the parent setup()
+  BASE::setup();
+  
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  for (CFuint is = 0; is < nbSpecies; ++is) {
+    this->_yID[is] = is;
+  }
+  
+  this->_uID = nbSpecies;
+  this->_vID = nbSpecies + 1;
+  this->_TID = nbSpecies + 2;
+  if (PhysicalModelStack::getActive()->getDim() == DIM_3D) {
+    this->_wID = nbSpecies + 2;
+    this->_TID = nbSpecies + 3;
+  }
+  
+  CFuint TvibID = this->_TID + 1;
+  const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
+  for (CFuint is = 0; is < nbTv; ++is, ++TvibID) {
+    this->_TvibID[is] = TvibID;
+  }
+  
+  _tempVib.resize(nbTv);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+CFreal NavierStokesNEQKOmegaRhoivt<BASE>::getCurrUpdateDiffCoeff(CFuint iEqSS)
+{
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  /// @todo extremely bad programming here
+  
+  if (iEqSS == 0) {
+    return ((this->getModel().getPhysicalData())[NSTurbTerm::MU] + (this->getModel().getPhysicalData())[NSTurbTerm::MUT]);
+  }
+  
+  if (iEqSS == 1) {
+    return ((this->getModel().getPhysicalData())[NSTurbTerm::MU] + (this->getSigmaK() * (this->getModel().getPhysicalData())[NSTurbTerm::MUT]));
+  }
+  
+  if (iEqSS == 2) {
+    return ((this->getModel().getPhysicalData())[NSTurbTerm::MU] + (this->getSigmaOmega() * (this->getModel().getPhysicalData())[NSTurbTerm::MUT]));
+  }
+  
+  throw Common::ShouldNotBeHereException (FromHere(),"NavierStokesNEQKOmegaRhoivt::getCurrUpdateDiffCoeff() : iEqSS should not be greater than 2. Some error happened upstream.");
+  
+  return 0.; // this is here not to get a warning in compilation
+}
+
+//////////////////////////////////////////////////////////////////////////////
+  
+template <typename BASE>
+CFreal NavierStokesNEQKOmegaRhoivt<BASE>::getSqSoundSpeed(const RealVector& state)
+{
+  using namespace Framework;
+  using namespace Physics::NavierStokes;
+  
+  // Set the mixture density (sum of the partial densities)
+  CFreal rho = 0.0;
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+    rho += state[ie]; // state[ie] is partial density
+    this->_ys[ie] = state[ie];
+  }
+  this->_ys /= rho;
+  
+  // set the current species fractions in the thermodynamic library
+  // this has to be done before computing any other thermodynamic quantity !!! 
+  this->_library->setSpeciesFractions(this->_ys);
+  
+  const RealVector& refData = this->_eulerModel->getReferencePhysicalData();
+  CFreal rhodim = rho*refData[EulerTerm::RHO];
+  CFreal Tdim = state[this->_TID]*refData[EulerTerm::T];
+  
+  RealVector* tVec = CFNULL;
+  CFreal* te = CFNULL; 
+  if (this->_library->getNbTempVib() > 0) {
+    const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
+    const CFuint startTv = nbSpecies + PhysicalModelStack::getActive()->getDim() + 1;
+    for (CFuint ie = 0; ie < nbTv; ++ie) {
+      _tempVib[ie] = state[startTv + ie]*refData[EulerTerm::T];
+    }
+    tVec = &_tempVib;
+    te = &_tempVib[0];
+  }
+  
+  CFreal pdim = this->_library->pressure(rhodim, Tdim, te);
+  CFreal gamma = 0.0;
+  CFreal a = 0.0;
+  
+  this->_library->frozenGammaAndSoundSpeed(Tdim,pdim,rhodim, gamma, a, tVec);
+  return a*a;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+  
+template <class BASE>
+void NavierStokesNEQKOmegaRhoivt<BASE>::setGradientState(const RealVector& state)
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  CFreal rho = 0.;
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    rho += state[i];
+  }
+  
+  const CFreal ovRho = 1./rho;
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    this->_gradState[i] = state[i]*ovRho;
+  }
+  
+  for (CFuint i = nbSpecies; i < this->_gradState.size(); ++i) {
+    this->_gradState[i] = state[i];
+  }
+  
+  const RealVector& refData = this->_eulerModel->getReferencePhysicalData();
+  CFreal rhodim = rho*refData[EulerTerm::RHO];
+  CFreal Tdim =  this->_gradState[this->_TID]*refData[EulerTerm::T];
+  CFreal* tVec = CFNULL;
+
+  if (this->_library->getNbTempVib() > 1) {
+    const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
+    if (nbTv > 0) {
+      for (CFuint i = 0; i < nbTv; ++i) {
+	this->_avTvib[i] = state[this->_TvibID[i]];
+      }
+      tVec = &this->_avTvib[0];
+    }
+  }
+  
+  this->_avP = this->_library->pressure(rhodim, Tdim, tVec)/refData[EulerTerm::P];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace NEQKOmega
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,206 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = 5.2161992
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libNewtonMethod libDpl2CFmesh libTecplotWriter libMeshTools libKOmega libFiniteVolumeKOmega libMeshToolsFVM libAeroCoef libAeroCoefFVM libSA libFiniteVolumeSA
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Naca0012/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DKOmega
+Simulator.SubSystem.NavierStokes2DKOmega.refValues  = 43490 170.131 170.131 288.15 3.0e-05 170.131
+Simulator.SubSystem.NavierStokes2DKOmega.ConvTerm.machInf = 0.1
+
+Simulator.SubSystem.NavierStokes2DKOmega.refLength  = 1.0
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -5.0
+
+Simulator.SubSystem.Default.listTRS = InnerFaces Airfoil FarField
+
+# Post process the data to compute the skin friction and y+
+Simulator.SubSystem.DataPostProcessing = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
+Simulator.SubSystem.DataProcessing2.ProcessRate = 100
+Simulator.SubSystem.DataProcessing2.Comds = NavierStokesBLExtractionCC
+Simulator.SubSystem.DataProcessing2.Names = SkinFriction
+
+Simulator.SubSystem.DataProcessing2.SkinFriction.applyTRS = Airfoil
+Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFile = skinOut.plt
+#Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileAero = aeroCoef.plt
+Simulator.SubSystem.DataProcessing2.SkinFriction.SaveRate = 1
+Simulator.SubSystem.DataProcessing2.SkinFriction.uInf = 170.131
+Simulator.SubSystem.DataProcessing2.SkinFriction.pInf = 43490.
+Simulator.SubSystem.DataProcessing2.SkinFriction.Tinf = 288.15
+
+Simulator.SubSystem.DataProcessing2.SkinFriction.extractBL = false
+Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileBL = profile.plt
+Simulator.SubSystem.DataProcessing2.SkinFriction.ExtractCoord = 0.506139 0.0522259
+Simulator.SubSystem.DataProcessing2.SkinFriction.BLThickness = 0.050
+
+# Compute the Wall distance
+Simulator.SubSystem.DataPreProcessing = DataProcessing
+Simulator.SubSystem.DataPreProcessingNames = DataProcessing1
+Simulator.SubSystem.DataProcessing1.Comds = ComputeWallDistanceVector2CC
+#Simulator.SubSystem.DataProcessing1.Comds = ComputeWallDistanceFVMCC
+Simulator.SubSystem.DataProcessing1.Names = WallDistance
+Simulator.SubSystem.DataProcessing1.WallDistance.BoundaryTRS = Airfoil
+Simulator.SubSystem.DataProcessing1.WallDistance.OutputFile = AB_WallDistances.dat
+
+# Mesh reading
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = naca0012_triang.CFmesh
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = Dpl2CFmesh
+#Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarNames = WallDistance
+#Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarTags = WallDistance
+#Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarStrides = 1
+Simulator.SubSystem.CFmeshFileReader.Dpl2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Dpl2CFmesh.SolutionOrder = P0
+
+# Mesh writing
+Simulator.SubSystem.OutputFormat        = CFmesh
+Simulator.SubSystem.CFmesh.FileName     = naca0012_triang_KOmegaBSL_2nd_decoupled.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate     = 100
+Simulator.SubSystem.CFmesh.AppendTime   = false
+Simulator.SubSystem.CFmesh.AppendIter   = false
+#Simulator.SubSystem.CFmesh.WriteSol     = WriteSolution
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarNames = wallDistance
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarTags = wallDistance
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarStrides = 1
+
+Simulator.SubSystem.OutputFormat           += Tecplot
+Simulator.SubSystem.Tecplot.FileName        = naca0012_triang_KOmegaBSL_2nd_decoupled.plt
+Simulator.SubSystem.Tecplot.SaveRate        = 100
+Simulator.SubSystem.Tecplot.AppendTime      = false
+Simulator.SubSystem.Tecplot.AppendIter      = false
+Simulator.SubSystem.Tecplot.Data.updateVar  = Puvt
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CollaboratorNames = NavierStokesLSS KLSS OmegaLSS
+Simulator.SubSystem.NewtonIterator.UpdateSol = TurbUpdateSol
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 10.
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = min(200.,cfl*1.01)
+Simulator.SubSystem.NewtonIterator.ConvRate = 1
+Simulator.SubSystem.NewtonIterator.ShowRate = 1
+Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergence_naca0012_triang_KOmegaBSL_2nd_decoupled.plt
+
+
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 0
+Simulator.SubSystem.NewtonIterator.Data.L2.ComputedVarID = 0 1 2 3 4 5
+
+Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs = 0 0 0 0 1 1
+Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0.
+
+Simulator.SubSystem.LinearSystemSolver = PETSC PETSC PETSC
+Simulator.SubSystem.LSSNames = NavierStokesLSS KLSS OmegaLSS
+
+Simulator.SubSystem.NavierStokesLSS.Data.PCType = PCILU
+Simulator.SubSystem.NavierStokesLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NavierStokesLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NavierStokesLSS.MaskEquationIDs = 0 1 2 3
+Simulator.SubSystem.NavierStokesLSS.Data.SaveSystemToFile = false
+Simulator.SubSystem.NavierStokesLSS.Data.Output= false
+
+Simulator.SubSystem.KLSS.Data.PCType = PCILU
+Simulator.SubSystem.KLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.KLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.KLSS.MaskEquationIDs = 4
+Simulator.SubSystem.KLSS.Data.SaveSystemToFile = false
+Simulator.SubSystem.KLSS.Data.Output = false
+
+Simulator.SubSystem.OmegaLSS.Data.PCType = PCILU
+Simulator.SubSystem.OmegaLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.OmegaLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.OmegaLSS.MaskEquationIDs = 5
+Simulator.SubSystem.OmegaLSS.Data.SaveSystemToFile = false
+Simulator.SubSystem.OmegaLSS.Data.Output = false
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Restart = false
+Simulator.SubSystem.CellCenterFVM.Data.CollaboratorNames = NavierStokesLSS KLSS OmegaLSS
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobCoupling
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhsCoupling
+
+# Post process the data to avoid negative values of turbulent intensity
+#Simulator.SubSystem.DataPostProcessing = DataProcessing
+#Simulator.SubSystem.DataPostProcessingNames = DataProcessing2b
+#Simulator.SubSystem.DataProcessing2b.Comds = NavierStokesSATruncateK
+#Simulator.SubSystem.DataProcessing2b.Names = SATruncateK
+
+#Only needed for 2nd order reconstruction
+Simulator.SubSystem.CellCenterFVM.SetupCom       = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames     = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSystem.CellCenterFVM.UnSetupCom     = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames   = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUpTurb2D
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar     = Puvt
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar   = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar     = Roe
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar  = BSLPuvt
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokesCoupling
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMoveKOmega2D
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveKOmega2D.TRSName = Airfoil
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveKOmega2D.ValuesIdx = 1 2 4
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveKOmega2D.Values = 0. 0. 3.04429e-05
+
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = 3.4
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 0.1
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
+
+Simulator.SubSystem.CellCenterFVM.Data.hasSourceTerm = true
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = NavierStokesKOmega2DSourceTerm
+
+#Initialization
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState \
+                                              NoSlipWallAdiabaticNSTurb2DFVMCC \
+                                              FarFieldEuler2DTurbFVMCC
+
+Simulator.SubSystem.CellCenterFVM.InitNames = InField \
+                                              InWall \
+                                              InFar
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 43490 170.131 0.00 288.15 3.04429e-05 170.131
+
+Simulator.SubSystem.CellCenterFVM.InWall.applyTRS = Airfoil
+
+Simulator.SubSystem.CellCenterFVM.InFar.applyTRS = FarField
+Simulator.SubSystem.CellCenterFVM.InFar.Tinf = 288.15
+Simulator.SubSystem.CellCenterFVM.InFar.Pinf = 43490
+Simulator.SubSystem.CellCenterFVM.InFar.Uinf = 170.131
+Simulator.SubSystem.CellCenterFVM.InFar.Vinf = 0.0
+
+Simulator.SubSystem.CellCenterFVM.BcComds = NoSlipWallAdiabaticNSTurb2DFVMCC \
+                                            FarFieldEuler2DTurbFVMCC
+
+Simulator.SubSystem.CellCenterFVM.BcNames = BcWall \
+                                            BcFar
+
+Simulator.SubSystem.CellCenterFVM.BcWall.applyTRS = Airfoil
+
+Simulator.SubSystem.CellCenterFVM.BcFar.applyTRS = FarField
+Simulator.SubSystem.CellCenterFVM.BcFar.Tinf = 288.15
+Simulator.SubSystem.CellCenterFVM.BcFar.Pinf = 43490
+Simulator.SubSystem.CellCenterFVM.BcFar.Uinf = 170.131
+Simulator.SubSystem.CellCenterFVM.BcFar.Vinf = 0.0
+CFEnv.RegistSignalHandlers = false

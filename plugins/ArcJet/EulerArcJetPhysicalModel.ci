@@ -1,0 +1,108 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace ArcJet {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+EulerArcJetPhysicalModel<DIM>::EulerArcJetPhysicalModel(const std::string& name)
+  : Framework::ConvectionReactionPM< ArcJetInductionTerm<NavierStokes::EulerTerm>,
+				     ArcJetReactionTerm<Framework::BaseTerm> > (name)
+{
+}	
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+EulerArcJetPhysicalModel<DIM>::~EulerArcJetPhysicalModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint EulerArcJetPhysicalModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint EulerArcJetPhysicalModel<DIM>::getNbEquations() const
+{
+  // set the number of induction equations
+  return DIM+2+3+1; // fluid equations + B field + Phi (HDC method)
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string EulerArcJetPhysicalModel<DIM>::getConvectiveName() const
+{
+  return "ArcJet" + Common::StringOps::to_str(DIM) + "D";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void EulerArcJetPhysicalModel<DIM>::setReferenceValues()
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  SafePtr<ArcJetInductionTerm<EulerTerm> > convTerm = getConvTerm();
+  SafePtr<ArcJetReactionTerm<BaseTerm> > srcTerm = getSrcTerm();
+
+  // reference values for the convective part
+  RealVector& refDataConv = convTerm->getReferencePhysicalData();
+  // reference values for the reaction (source) part
+  RealVector& refDataSrc = srcTerm->getReferencePhysicalData();
+
+  // override the reference values for Euler data starting from
+  CFout << "WATCH OUT: Equations will be solved dimensionally." << "\n";
+  
+  refDataConv = 1.0;
+  refDataSrc  = 1.0;
+  
+  // the constant of real gas, density, thermodynamic pressure and Cv
+  // set to infinite dimensional values
+  convTerm->setRRef(convTerm->getRdim());
+  
+  // reference values set to 1.0
+  convTerm->setTempRef(1.0);
+  convTerm->setPressRef(1.0);
+
+  _isAdimensional = false;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void EulerArcJetPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionReactionPM< ArcJetInductionTerm<NavierStokes::EulerTerm>,
+    ArcJetReactionTerm<Framework::BaseTerm> >::configure(args);
+  
+  cf_assert(getDimension() > 0);
+  cf_assert(getNbEquations() > 0);
+  
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(DIM);
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace ArcJet 
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

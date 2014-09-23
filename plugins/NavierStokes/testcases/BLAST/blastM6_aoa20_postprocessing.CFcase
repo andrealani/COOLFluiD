@@ -1,0 +1,147 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+#
+
+## BLAST M=1.3  AoA = 0.
+
+# Simulator.TraceToStdOut = true
+
+# Simulation Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libForwardEuler libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libGambit2CFmesh libPetscI libAeroCoefFVM
+
+CFEnv.ErrorOnUnusedConfig = true
+#CFEnv.ExceptionLogLevel = 200
+
+#Simulation Parameters
+Simulator.Paths.WorkingDir       = plugins/NavierStokes/testcases/BLAST
+
+Simulator.SubSystems = SubSystem
+Simulator.SubSystemTypes = PrePostProcessingSubSystem
+
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes3D
+
+Simulator.SubSystem.OutputFormat = Tecplot
+Simulator.SubSystem.Tecplot.FileName = blast.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Pvt
+Simulator.SubSystem.Tecplot.SaveRate = 200
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Wall 
+#Simulator.SubSystem.Tecplot.Data.SurfaceOnly = true
+#Simulator.SubSystem.Tecplot.Data.CoordinatesOnly = true
+
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSystem.Default.listTRS = InnerFaces Wall Inlet Outlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar = Pvt
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar = Roe
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Pvt
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+
+# node extrapolation enforcing strongly the no slip condition on boundary nodes
+Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMove
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TrsPriorityList = \
+        Wall Inlet Outlet
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TRSName = Wall
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.ValuesIdx = \
+	1 2 3
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.Values = \
+	0. 0. 0.
+
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y z
+
+Simulator.SubSystem.CellCenterFVM.BcComds = \
+                                        NoSlipWallIsothermalNSvtFVMCC \
+                                        SuperInletFVMCC \
+                                        SuperOutletFVMCC
+
+Simulator.SubSystem.CellCenterFVM.BcNames = \
+                                        BcWall \
+                                        BcInlet \
+                                        BcOutlet
+
+Simulator.SubSystem.CellCenterFVM.BcWall.applyTRS = Wall
+Simulator.SubSystem.CellCenterFVM.BcWall.TWall = 300.
+#Simulator.SubSystem.CellCenterFVM.BcWall.TGhostMin = 200.
+Simulator.SubSystem.CellCenterFVM.BcWall.VelocityIDs = 1 2 3
+#Simulator.SubSystem.CellCenterFVM.BcWall.Adiabatic = true
+###### settings for the radiative equilibrium condition ######
+Simulator.SubSystem.CellCenterFVM.BcWall.RadEquilibrium = true
+Simulator.SubSystem.CellCenterFVM.BcWall.Emissivity = 0.8
+Simulator.SubSystem.CellCenterFVM.BcWall.MaxRadEqDTwall = 100.
+Simulator.SubSystem.CellCenterFVM.BcWall.DistantBodyTemp = 0.
+
+Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS = Inlet
+Simulator.SubSystem.CellCenterFVM.BcInlet.Vars = x y z
+#Simulator.SubSystem.CellCenterFVM.BcInlet.InteractiveVarIDs = 1
+#Simulator.SubSystem.CellCenterFVM.BcInlet.InteractiveFactor = 0.2
+
+Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS = Outlet
+Simulator.SubSystem.CellCenterFVM.BcOutlet.ZeroGradientFlags = 1 1 1 1 1
+
+##### not important #####
+### reference values for numerical perturbation
+Simulator.SubSystem.NavierStokes3D.refValues = 2142.83 390.27 390.27 390.27 222.68
+
+### initializing values
+Simulator.SubSystem.CellCenterFVM.InField.Def = 2142.83 390.27 0. 0. 222.68
+
+### Post process the data to compute aerodynamic data
+Simulator.SubSystem.DataPostProcessing = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
+Simulator.SubSystem.DataProcessing2.ProcessRate = 1
+Simulator.SubSystem.DataProcessing2.Comds = NavierStokesSkinFrictionHeatFluxCC3D
+Simulator.SubSystem.DataProcessing2.Names = AeroForces
+Simulator.SubSystem.DataProcessing2.AeroForces.applyTRS = Wall
+Simulator.SubSystem.DataProcessing2.AeroForces.SaveRateWall = 1
+Simulator.SubSystem.DataProcessing2.AeroForces.SaveRateAero = 1
+Simulator.SubSystem.DataProcessing2.AeroForces.GravityCenter = 0.5236 0. -0.033572 
+#Simulator.SubSystem.DataProcessing2.AeroForces.GravityCenter = 0. 0. 0.
+Simulator.SubSystem.DataProcessing2.AeroForces.RefLength2D = 1.54
+Simulator.SubSystem.DataProcessing2.AeroForces.RefArea = 1.8627
+Simulator.SubSystem.DataProcessing2.AeroForces.UID = 1
+Simulator.SubSystem.DataProcessing2.AeroForces.VID = 2
+Simulator.SubSystem.DataProcessing2.AeroForces.WID = 3
+Simulator.SubSystem.DataProcessing2.AeroForces.TID = 4
+Simulator.SubSystem.DataProcessing2.AeroForces.OutputFileAero = blastAeroCG.plt
+Simulator.SubSystem.DataProcessing2.AeroForces.OutputFileWall = blastWall.plt
+
+###########################################################################	
+################## settings to be changed #################################
+###########################################################################
+
+### results directory
+Simulator.Paths.ResultsDir = ./Mach6_AOA_20
+
+### mesh file
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = blast.CFmesh.START
+
+### inlet values
+Simulator.SubSystem.CellCenterFVM.BcInlet.Def = \
+181.38 1936.18*cos(20./180*3.14159265358979323846) 0. 1936.18*sin(20./180*3.14159265358979323846) 259.96
+
+### aerodynamic inputs
+Simulator.SubSystem.DataProcessing2.AeroForces.pInf = 181.38
+Simulator.SubSystem.DataProcessing2.AeroForces.uInf = 1936.18
+Simulator.SubSystem.DataProcessing2.AeroForces.TInf = 259.96
+Simulator.SubSystem.DataProcessing2.AeroForces.rhoInf = 0.0024307
+Simulator.SubSystem.DataProcessing2.AeroForces.Alpha = 20.
+Simulator.SubSystem.DataProcessing2.AeroForces.Beta = 0.

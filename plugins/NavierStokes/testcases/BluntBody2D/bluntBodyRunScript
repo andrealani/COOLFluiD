@@ -1,0 +1,9 @@
+#!/bin/bash
+
+cd ~/workspace/COOLFluiD/debug/app/core
+
+./run-coolfluid.sh ../../../testcases/TestGambit/first_evaluation_meeting/Blunt_Body_2D/bluntBodyQuad/bluntBodyLTE.CFcase
+
+./run-coolfluid.sh ../../../testcases/TestGambit/first_evaluation_meeting/Blunt_Body_2D/bluntBodyHyb/bluntBodyLTE.CFcase
+
+./run-coolfluid.sh ../../../testcases/TestGambit/first_evaluation_meeting/Blunt_Body_2D/bluntBodyTriag/bluntBodyLTE.CFcase

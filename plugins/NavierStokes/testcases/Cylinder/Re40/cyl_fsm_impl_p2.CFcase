@@ -1,0 +1,158 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = 0.27090557
+
+### Tolerance = 6
+
+##############################################################################
+# Loading of components
+##############################################################################
+
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFluctSplit libFluctSplitSystem libNewtonMethod libFluctSplitNavierStokes libTHOR2CFmesh libGambit2CFmesh libFluctSplitHO libFluctSplitHONavierStokes
+
+##############################################################################
+# Directory paths
+##############################################################################
+
+
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Cylinder/Re40
+Simulator.Paths.ResultsDir = ./
+CFEnv.ExceptionLogLevel = 200
+
+Simulator.SubSystem.NewtonIterator.ShowRate            = 1
+Simulator.SubSystem.NewtonIterator.ConvRate            = 1
+Simulator.SubSystem.NewtonIterator.ConvergenceFile     = convergence.plt
+
+##############################################################################
+# Physcial model
+##############################################################################
+
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2D
+Simulator.SubSystem.NavierStokes2D.refValues = 1. 0.2369 0.2369 2.528060805
+Simulator.SubSystem.NavierStokes2D.refLength = 1.0
+
+Simulator.SubSystem.NavierStokes2D.DiffTerm.Reynolds = 40.0
+Simulator.SubSystem.NavierStokes2D.ConvTerm.tempRef = 288.15
+Simulator.SubSystem.NavierStokes2D.ConvTerm.machInf = 0.2
+
+##############################################################################
+# CFL
+##############################################################################
+
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 500000
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = 500000
+
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.InteractiveParamReader.FileName = plugins/NavierStokes/testcases/Cylinder/Re40/cylinder.inter
+#Simulator.SubSystem.InteractiveParamReader.readRate = 1
+
+##############################################################################
+# Stop condition
+##############################################################################
+
+Simulator.SubSystem.StopCondition          = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -8
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 1
+
+##############################################################################
+# Mesh reading
+##############################################################################
+
+Simulator.SubSystem.Default.listTRS = InnerCells Cylinder Farfield
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cylinder_11kn_p2.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1000.
+
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = CGNS2CFmesh
+#Simulator.SubSystem.CFmeshFileReader.convertBack = true
+#Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = cylinder.cgns
+
+##############################################################################
+# Mesh writting
+##############################################################################
+
+Simulator.SubSystem.OutputFormat           = Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName        = cylinder_11kn_fsm_ldacrd_fullvisc_cfl_p2.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate        = 20
+
+Simulator.SubSystem.Tecplot.FileName       = cylinder_11kn_fsm_ldacrd_fullvisc_cfl_p2.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate       = 20
+Simulator.SubSystem.Tecplot.WriteSol       = WriteSolutionHO
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.SocketNames = rhs
+
+##############################################################################
+# Pseudo-time discretization
+##############################################################################
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+
+##############################################################################
+# Linear system solver
+##############################################################################
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.Output = false
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.ILULevels = 3
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 50
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1E-6
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 2500
+
+##############################################################################
+# Space discretization
+##############################################################################
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = HOCRD
+Simulator.SubSystem.FluctuationSplit.Restart = false
+Simulator.SubSystem.FluctuationSplit.ComputeRHS = RhsJacob
+Simulator.SubSystem.FluctuationSplit.ComputeTimeRHS = PseudoSteadyTimeRhs
+Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysLDAC
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar    = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar   = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar    = Roe
+Simulator.SubSystem.FluctuationSplit.Data.DiffusiveVar = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DiffusiveTerm = NavierStokesHO
+
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorOrder = P3
+
+##############################################################################
+# Solution initialization
+##############################################################################
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState StrongNoSlipWallAdiabaticNS2DImpl
+Simulator.SubSystem.FluctuationSplit.InitNames = InField InWall
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 0.000010517 0.000715752 0. 2.198987342
+
+Simulator.SubSystem.FluctuationSplit.InWall.applyTRS = Cylinder
+
+##############################################################################
+# Boundary conditions
+##############################################################################
+
+Simulator.SubSystem.FluctuationSplit.BcComds = StrongNoSlipWallAdiabaticNS2DImpl WeakFarField2DImpl
+Simulator.SubSystem.FluctuationSplit.BcNames = BCWall                            BCFarField
+
+Simulator.SubSystem.FluctuationSplit.BCFarField.applyTRS = Farfield
+Simulator.SubSystem.FluctuationSplit.BCFarField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.BCFarField.Def = 0.000010517 0.000715752 0. 2.198987342
+
+Simulator.SubSystem.FluctuationSplit.BCWall.applyTRS = Cylinder
+

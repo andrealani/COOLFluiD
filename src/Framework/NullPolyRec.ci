@@ -1,0 +1,91 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Framework_NullPolyRec_ci
+#define COOLFluiD_Framework_NullPolyRec_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+NullPolyRec<METHODDATA>::NullPolyRec(const std::string& name) :
+  PolyReconstructor<METHODDATA>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+NullPolyRec<METHODDATA>::~NullPolyRec()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+void NullPolyRec<METHODDATA>::allocateReconstructionData()
+{
+  CFLog(VERBOSE,"WARNING: NullPolyRec::allocateReconstructionData() called" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+void NullPolyRec<METHODDATA>::extrapolateImpl(Framework::GeometricEntity* const geo)
+{
+  CFLog(VERBOSE,"WARNING: NullPolyRec::extrapolateImpl() called" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+void NullPolyRec<METHODDATA>::extrapolateImpl
+(Framework::GeometricEntity* const geo,
+ CFuint iVar, CFuint leftOrRight)
+{
+  CFLog(VERBOSE,"WARNING: NullPolyRec::extrapolateImpl() called" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+void NullPolyRec<METHODDATA>::baseExtrapolateImpl(Framework::GeometricEntity* const geo)
+{
+  CFLog(VERBOSE,"WARNING: NullPolyRec::extrapolateImpl() called" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+void NullPolyRec<METHODDATA>::baseExtrapolateImpl
+(Framework::GeometricEntity* const geo,
+ CFuint iVar, CFuint leftOrRight)
+{
+  CFLog(VERBOSE,"WARNING: NullPolyRec::extrapolateImpl() called" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+void NullPolyRec<METHODDATA>::computeGradients()
+{
+  CFLog(VERBOSE,"WARNING: NullPolyRec::computeGradients() called" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Framework_NullPolyRec_ci

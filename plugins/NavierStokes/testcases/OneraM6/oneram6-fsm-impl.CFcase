@@ -1,0 +1,126 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libBackwardEuler  libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFluctSplitNavierStokes libTHOR2CFmesh libPetscI
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/OneraM6/
+Simulator.Paths.ResultsDir       = plugins/NavierStokes/testcases/OneraM6/
+
+Simulator.SubSystem.Default.PhysicalModelType = Euler3D
+
+# for perturbing the numerical jacobian
+Simulator.SubSystem.Euler3D.refValues = \
+                                1.4     \
+                                1.176   \
+                                1.176   \ 
+                                1.176   \
+                                2.99392
+
+Simulator.SubSystem.Euler3D.refLength = 10.0
+
+
+#Simulator.SubSystem.InteractiveParamReader.FileName = plugins/NavierStokes/testcases/OneraM6/oneram6.inter
+#Simulator.SubSystem.InteractiveParamReader.readRate = 1
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = oneram6-316kn-sol-nscheme.CFmesh
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.SaveRate = 5
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.Tecplot.FileName    = oneram6-316kn-sol-nscheme.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = wing
+Simulator.SubSystem.Tecplot.SaveRate = 5
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+#Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
+#Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 1000
+#Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
+
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 20
+
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -6.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells symmetry far_field wing
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = oneram6-316kn.CFmesh
+# Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
+
+Simulator.SubSystem.ConvergenceMethod = BwdEuler
+Simulator.SubSystem.BwdEuler.Data.CFL.Value = 5.0
+Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = if(i>50,min(50.,5.0*5.0^(i-50)),5.0)
+#Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Interactive
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = BwdEulerLSS
+Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
+Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.BwdEulerLSS.Data.Output = true
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysN
+Simulator.SubSystem.FluctuationSplit.ComputeRHS = RhsJacob
+Simulator.SubSystem.FluctuationSplit.ComputeTimeRHS = StdTimeRhs
+
+#Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Picard
+Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar    = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar   = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar    = Roe
+
+#Solution initialization
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.InField.Def = \
+                                1.40000 \
+                                1.17432 \
+                                0.00000 \
+                                0.06278 \
+                                2.99392
+
+#Boundary conditions
+Simulator.SubSystem.FluctuationSplit.BcComds = WeakSlipWallEuler3DConsImpl  WeakFarField3DImpl
+Simulator.SubSystem.FluctuationSplit.BcNames = SlipWall                     FField
+
+Simulator.SubSystem.FluctuationSplit.SlipWall.applyTRS = symmetry wing
+
+Simulator.SubSystem.FluctuationSplit.FField.applyTRS = far_field
+Simulator.SubSystem.FluctuationSplit.FField.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.FField.Def = \
+                                1.40000 \
+                                1.17432 \
+                                0.00000 \
+                                0.06278 \
+                                2.99392
+
+# Data Processing
+Simulator.SubSystem.DataProcessing = DataProcessing
+Simulator.SubSystem.DataProcessing.Comds = Euler3DConsComputeAero
+Simulator.SubSystem.DataProcessing.Names = AeroCoef
+
+Simulator.SubSystem.DataProcessing.AeroCoef.applyTRS = wing
+Simulator.SubSystem.DataProcessing.AeroCoef.OutputFile = aerocoef.plt
+Simulator.SubSystem.DataProcessing.AeroCoef.SaveRate = 1
+Simulator.SubSystem.DataProcessing.AeroCoef.Alpha = 3.06
+

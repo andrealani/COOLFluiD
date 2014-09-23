@@ -1,0 +1,112 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libForwardEuler libTHOR2CFmesh libNewtonMethod libPetscI
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/SodRiemann/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
+Simulator.SubSystem.Euler2D.refValues   = 1. 2.83972 2.83972 6.532
+Simulator.SubSystem.Euler2D.refLength   = 1.0
+
+
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.0003
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = MaxDT
+#Simulator.SubSystem.SubSystemStatus.MaxDT.ST_CFL = 0.9
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = FunctionDT
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Vars = i
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = 1.0
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = sod2d.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = sod2d.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 20
+Simulator.SubSystem.CFmesh.SaveRate = 20
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+Simulator.SubSystem.CFmesh.AppendIter = true
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
+
+Simulator.SubSystem.StopCondition       = MaxTime
+Simulator.SubSystem.MaxTime.maxTime      = 0.2
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+#Simulator.SubSystem.Default.listTRS = InnerCells FaceNorth FaceEast SuperInlet FaceWest
+Simulator.SubSystem.Default.listTRS = InnerCells SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+#Simulator.SubSystem.CFmeshFileReader.Data.FileName = sq.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = shockTube2D_QD100.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.numericalMethod = CellCenterFVM
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = CrankNicholsonLSS
+Simulator.SubSystem.CrankNicholsonLSS.Data.PCType = PCILU
+Simulator.SubSystem.CrankNicholsonLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.CrankNicholsonLSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.ConvergenceMethod = CrankNicholson
+Simulator.SubSystem.CrankNicholson.Data.CFL.Value = 1.0
+Simulator.SubSystem.CrankNicholson.Data.CFL.ComputeCFL = Determine
+#Simulator.SubSystem.CrankNicholson.Data.CFL.Function.Def = 3.0*i
+Simulator.SubSystem.CrankNicholson.Data.MaxSteps = 10
+Simulator.SubSystem.CrankNicholson.Data.Norm = -5.
+Simulator.SubSystem.CrankNicholson.Data.PrintHistory = true
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+#Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.useGlobalDT = true
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.2
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = if(((2*x-1)*(2*y-1))<0.,0.1,1.) \
+                                          0.01 \
+                                          0.0 \
+                                          if(((2*x-1)*(2*y-1))<0.,0.25,2.5) \
+
+Simulator.SubSystem.CellCenterFVM.BcComds = SuperOutletFVMCC \
+          SuperOutletFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = Bottom \
+                                            Top \
+
+Simulator.SubSystem.CellCenterFVM.Bottom.applyTRS = SuperInlet
+Simulator.SubSystem.CellCenterFVM.Top.applyTRS = SuperOutlet
+

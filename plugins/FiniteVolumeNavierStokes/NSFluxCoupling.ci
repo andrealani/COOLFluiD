@@ -1,0 +1,126 @@
+#include "Framework/GeometricEntity.hh"
+#include "FiniteVolume/DerivativeComputer.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVS>
+NSFluxCoupling<DIFFVS>::NSFluxCoupling(const std::string& name) :
+  NSFlux<DIFFVS>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DIFFVS>
+NSFluxCoupling<DIFFVS>::~NSFluxCoupling()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+    
+template <typename DIFFVS>  
+void NSFluxCoupling<DIFFVS>::computeFlux(RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  
+  GeometricEntity& geo = *this->getMethodData().getCurrentFace();
+  
+  CFLog(DEBUG_MED, "NSFluxCoupling::computeFlux() => isPerturb " 
+	<< this->getMethodData().isPerturb() << ", iVar = " << this->getMethodData().iPerturbVar() <<"\n");
+  
+  SafePtr<DerivativeComputer> derivComputer =
+    this->getMethodData().getDerivativeComputer();
+  
+  if (this->_wallDistanceExists) {
+    this->setWallDistance();
+  }
+  
+  const bool isPerturb = this->getMethodData().isPerturb();
+  const CFuint iPerturbVar = this->getMethodData().iPerturbVar();
+  
+  if (!isPerturb) {
+    this->_radius = 0.;
+    
+    // set the state values (pointers) corresponding to the
+    // vertices of the control volume
+    derivComputer->computeControlVolume(this->_states, &geo);
+    this->_nbCVStates = derivComputer->getNbVerticesInControlVolume(&geo);
+    
+    if (this->getMethodData().isAxisymmetric() || this->_isRadiusNeeded) {
+      const Node& node0 = *geo.getNode(0);
+      const Node& node1 = *geo.getNode(1);
+      this->_radius = 0.5*(node0[YY] + node1[YY]);
+    }
+  }
+  
+  // compute speed components and temperature in the given states
+  // if you are updating in conservative variables your nodal values
+  // MUST be already in primitive variables (there is inconsistency here !!!)
+  this->_diffVar->setGradientVars(this->_states, this->_values, this->_nbCVStates);
+  
+  // compute control volume around the face and gradients
+  derivComputer->computeGradients(&geo, this->_values, this->_gradients);
+
+  // compute the average values
+  derivComputer->computeAverageValues(&geo, this->_states, this->_avState);
+
+  this->_diffVar->setComposition(this->_avState, isPerturb, iPerturbVar);
+
+  const CFreal faceArea = this->socket_faceAreas.getDataHandle()[geo.getID()];
+  // set the flux
+  result = this->_diffVar->getFlux(this->_avState, this->_gradients, this->getMethodData().getUnitNormal(), this->_radius);
+  result *= faceArea;
+
+  if (!isPerturb) {
+    // const CFreal mu    = this->_diffVar->getCurrDynViscosity();
+    const CFreal avRho = this->_diffVar->getDensity(this->_avState);
+    //     const CFreal diffUpdateCoeff = mu*faceArea*faceArea/
+    //       (avRho*derivComputer->getControlVolume());
+
+    DataHandle<CFreal> updateCoeff = this->socket_updateCoeff.getDataHandle();
+
+    const EquationSubSysDescriptor& eqData =
+      PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
+
+    const CFuint nbEqSS = eqData.getTotalNbEqSS();
+    for (CFuint i = 0; i < nbEqSS; ++i) {
+      const CFreal mu = this->_diffVar->getCurrUpdateDiffCoeff(i);
+      const CFreal diffUpdateCoeff = mu*faceArea*faceArea/
+	(avRho*derivComputer->getControlVolume());
+      
+      // left contribution to update coefficient
+      const CFuint leftID = geo.getState(0)->getLocalID();
+      updateCoeff[leftID*nbEqSS + i] += diffUpdateCoeff;
+
+      if (!geo.getState(1)->isGhost()) {
+	// right contribution to update coefficient
+	const CFuint rightID = geo.getState(1)->getLocalID();
+	updateCoeff[rightID*nbEqSS + i] += diffUpdateCoeff;
+      }
+    }
+  }
+
+  CFLog(DEBUG_MED, "NSFluxCoupling<DIFFVS>::computeFlux() => iPerturb = " << isPerturb 
+                   << ", iPerturbVar = " << iPerturbVar << ", flux = " << result << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

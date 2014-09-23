@@ -1,0 +1,229 @@
+´# COOLFluiD Startfile
+# Comments begin with "#"
+
+# sphere.CFmesh is used only for fast convergence which is needed in testcases.catalog. Switch to the finer CFmesh that
+# is commented out below for obtaining nice results
+
+#CFEnv.ErrorOnUnusedConfig = true
+
+# Simulator Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libMHD libFiniteVolume libFiniteVolumeMHD libNewtonMethod libNewtonMethodMHD libGambit2CFmesh
+
+# Simulator Parameters
+Simulator.Paths.WorkingDir       = ./
+Simulator.Paths.ResultsDir       = ./RESULT_RESTART
+
+Simulator.SubSystem.Default.PhysicalModelType       = MHD3DProjection
+Simulator.SubSystem.MHD3DProjection.ConvTerm.gamma = 1.666666667
+
+Simulator.SubSystem.MHD3DProjection.ConvTerm.potentialBType = Dipole
+Simulator.SubSystem.MHD3DProjection.ConvTerm.mX = 1780.4959152744 
+Simulator.SubSystem.MHD3DProjection.ConvTerm.mY = 0.0
+Simulator.SubSystem.MHD3DProjection.ConvTerm.mZ = -8419.9214741732
+
+Simulator.SubSystem.MHD3DProjection.ConvTerm.refSpeed = 10.877434703482 
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.dissipCoeff = 10.877434703482
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.correctionType = Mixed
+
+#Simulator.SubSystem.InteractiveParamReader.readRate = 15
+Simulator.SubSystem.InteractiveParamReader.FileName = ./06042000.inter
+
+Simulator.SubSystem.OutputFormat          = Tecplot CFmesh
+Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.Tecplot.FileName      = Steady06042000Storm_Final.plt
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot.Data.outputVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 500
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = shockSensor
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = ss
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
+Simulator.SubSystem.Tecplot.WriteSolutionBlockFV.NodalOutputVar = true
+
+Simulator.SubSystem.CFmesh.SaveRate = 500
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.FileName     = Steady06042000Storm_Final.CFmesh
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarNames = limiter
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarStrides = 9
+
+#Simulator.SubSystem.StopCondition          = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = final.CFmesh
+#APRIL2000STORM_CUBICSOURCE_1633k.CFmesh
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
+#Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+#Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+# only activate if you are restarting from a 2nd order solution #########
+#Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarNames = InitLimiter
+#Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarTags = limiter
+#Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarStrides = 9
+#Simulator.SubSystem.CellCenterFVM.Setup1.InitLimiterSocket = InitLimiter
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 0.5
+Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergence_Steady06042000Storm.plt
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 10.
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = 1e6
+#if(i<118,10.,1e6)
+
+Simulator.SubSystem.NewtonIterator.UpdateSol = UpdateSolMHD
+Simulator.SubSystem.NewtonIterator.UpdateSolMHD.pressureCorrectionValue = 0.000000000001
+
+Simulator.SubSystem.LinearSystemSolver = PETSC PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS MeshAlgoLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 700
+
+Simulator.SubSystem.MeshAlgoLSS.Data.UseNodeBased = true
+Simulator.SubSystem.MeshAlgoLSS.Data.PCType = PCASM
+Simulator.SubSystem.MeshAlgoLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.MeshAlgoLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.MeshAlgoLSS.Data.MaxIter = 1000
+Simulator.SubSystem.MeshAlgoLSS.Data.SaveSystemToFile = false
+Simulator.SubSystem.MeshAlgoLSS.MaskEquationIDs = 0 1 2
+Simulator.SubSystem.MeshAlgoLSS.Data.NbKrylovSpaces = 50
+# this could be replace by some flag n the individual system
+Simulator.SubSystem.NewtonIterator.Data.NbLSSToSolveAtOnce = 1
+Simulator.SubSystem.NewtonIterator.Data.CollaboratorNames = NewtonIteratorLSS
+Simulator.SubSystem.CellCenterFVM.Data.CollaboratorNames = NewtonIteratorLSS
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobMHD
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+Simulator.SubSystem.CellCenterFVM.NumJacobMHD.SaveRate = 500
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = MHD3DProjectionConsLaxFriedTanaka
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Prim
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Cons
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = MHDConsACAST
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS3D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.limitRes = -1.2
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.gradientFactor = 1.
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp3D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.freezeLimiter = true
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn3D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn3D.coeffEps = 1.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.Vars = i
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.Def = \
+				if(i<152,0.,if(i<212,0.6,0.8)) \
+				if(i<152,0.,if(i<212,0.6,0.8)) \
+				if(i<152,0.,if(i<212,0.6,0.8)) \
+				if(i<152,0.,if(i<212,0.6,0.8)) \
+				if(i<152,0.,if(i<212,0.6,0.8)) \
+                                if(i<152,0.,if(i<212,0.6,0.8)) \
+                                if(i<152,0.,if(i<212,0.6,0.8)) \
+                                if(i<152,0.,if(i<212,0.6,0.8)) \
+				if(i<152,0.,if(i<212,0.6,0.8))
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.InField.Def = 1.26020 \
+                                        -10.8434 \
+                                        -0.859678 \
+                                        0.0146937 \
+                                        0.0 \
+                                        0.0 \
+                                        0.0 \
+                                        0.565198 \
+                                        0.0
+
+Simulator.SubSystem.CellCenterFVM.BcComds = MirrorMHD3DProjectionTanakaPFixFVMCC \
+           SuperInletFVMCC \
+	   SuperOutletMHD3DProjectionFVMCC
+	   
+Simulator.SubSystem.CellCenterFVM.BcNames = Wall \
+           Inlet \
+	   Outlet
+
+Simulator.SubSystem.CellCenterFVM.Wall.applyTRS = SlipWall
+Simulator.SubSystem.CellCenterFVM.Wall.rhoFixed = 11.2 
+Simulator.SubSystem.CellCenterFVM.Wall.pFixed = 5.60 # p=nFixed*k*2*T_prot where nFixed=56 amu/cm^3 and T_prot=35000 K
+
+Simulator.SubSystem.CellCenterFVM.Inlet.applyTRS = SuperInlet
+Simulator.SubSystem.CellCenterFVM.Inlet.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.Inlet.Def = 1.26020 \
+                                        -10.8434 \
+                                        -0.859678 \
+                                        0.0146937 \
+                                        0.591792 \
+                                        -2.13282 \
+                                        -0.602181 \
+                                        0.565198 \
+                                        0.0
+					      
+Simulator.SubSystem.CellCenterFVM.Outlet.applyTRS = SuperOutlet
+Simulator.SubSystem.CellCenterFVM.Outlet.refPhi = 0.0
+
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = true
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+#CFEnv.ExceptionAborts      = true
+CFEnv.ExceptionDumps       = true
+CFEnv.ExceptionOutputs     = true
+#CFEnv.TraceToStdOut = true
+#CFEnv.TraceActive = true
+#CFEnv.ErrorOnUnusedConfig = true
+CFEnv.RegistSignalHandlers = false
+
+##Settings for postprocessing: radiation coupling and heat flux
+Simulator.SubSystem.DataPostProcessing               = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames          = MeFiAlgo
+
+Simulator.SubSystem.MeFiAlgo.Comds = MeshFittingAlgorithmMHD3DProjection
+Simulator.SubSystem.MeFiAlgo.Data.CollaboratorNames = MeshAlgoLSS
+Simulator.SubSystem.MeFiAlgo.ProcessRate        = 1
+#Simulator.SubSystem.MeFiAlgo.StopIter           = 900
+Simulator.SubSystem.MeFiAlgo.Names              = Foo
+Simulator.SubSystem.MeFiAlgo.Data.updateVar     = Cons
+
+Simulator.SubSystem.MeFiAlgo.Foo.monitorVar  = rho
+Simulator.SubSystem.MeFiAlgo.Foo.maRate = 3
+Simulator.SubSystem.MeFiAlgo.Foo.stopAdaptationIter = 20
+Simulator.SubSystem.MeFiAlgo.Foo.alpha = 0.25
+Simulator.SubSystem.MeFiAlgo.Foo.minPerc  = 0.5
+Simulator.SubSystem.MeFiAlgo.Foo.maxPerc  = 0.8
+Simulator.SubSystem.MeFiAlgo.Foo.ssRate = 1
+Simulator.SubSystem.MeFiAlgo.Foo.phiMinSS    = 1.0
+Simulator.SubSystem.MeFiAlgo.Foo.phiMaxSS    = 1.4
+Simulator.SubSystem.MeFiAlgo.Foo.boundaryDegreeNM = 2
+Simulator.SubSystem.MeFiAlgo.Foo.printKesToFile = true
+
+Simulator.SubSystem.CellCenterFVM.AfterMeshUpdateCom = StdMeshFittingUpdate
+
+
+
+
+

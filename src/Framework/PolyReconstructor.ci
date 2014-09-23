@@ -1,0 +1,125 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Framework_PolyReconstructor_ci
+#define COOLFluiD_Framework_PolyReconstructor_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+#include "Environment/Factory.hh"
+
+#include "Framework/VolumeIntegrator.hh"
+#include "Framework/MeshData.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA >
+void PolyReconstructor<METHODDATA>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFuint, Config::DynamicOption<> >
+    ("limitIter","Iteration after which the limiter historical modification is activated.");
+  options.template addConfigOption< CFreal, Config::DynamicOption<> >
+    ("limitRes","Threshold value for limiter historical modification.");     
+  options.template addConfigOption< CFreal, Config::DynamicOption<> >
+    ("gradientFactor","Factor to multiply the gradient [0,1].");
+  options.template addConfigOption< bool >
+    ("freezeLimiter","Flag telling if the limiter value must be frozen.");
+  options.template addConfigOption< bool >
+    ("BcFix","Fix the BC treatment.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA >
+PolyReconstructor<METHODDATA>::PolyReconstructor(const std::string& name) :
+  MethodStrategy<METHODDATA>(name),
+  _isBoundaryFace(false),
+  _extrapCoord(),
+  _extrapValues(),
+  _backupValues(),
+  _extrapPhysData(),
+  _backupPhysData(),
+  socket_limiter("limiter"),
+  _zeroGradient(CFNULL)
+{
+  this->addConfigOptionsTo(this);
+  
+  _limitIter = 1000000000;
+  Config::ConfigObject::setParameter("limitIter",&_limitIter);
+  
+  _limitRes = -2.0;
+  Config::ConfigObject::setParameter("limitRes",&_limitRes);
+
+  _gradientFactor = 1.0;
+  Config::ConfigObject::setParameter("gradientFactor",&_gradientFactor);
+  
+  _freezeLimiter = false;
+  Config::ConfigObject::setParameter("freezeLimiter",&_freezeLimiter);
+  
+  _bcFix = false;
+  Config::ConfigObject::setParameter("BcFix",&_bcFix);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA >
+PolyReconstructor<METHODDATA>::~PolyReconstructor()
+{
+  for (CFuint i = 0; i < _extrapCoord.size(); ++i) {
+    deletePtr(_extrapCoord[i]);
+  }
+  
+  for (CFuint i = 0; i < _extrapValues.size(); ++i) {
+    deletePtr(_extrapValues[i]);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA >
+void PolyReconstructor<METHODDATA>::setup()
+{
+  CFAUTOTRACE;
+  
+  allocateReconstructionData();
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA >
+void PolyReconstructor<METHODDATA>::configure ( Config::ConfigArgs& args )
+{
+  MethodStrategy<METHODDATA>::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA >
+std::vector<Common::SafePtr<BaseDataSocketSink> > PolyReconstructor<METHODDATA>::needsSockets()
+{
+  // create socket sink for new limiter values
+  std::vector<Common::SafePtr<BaseDataSocketSink> > result;
+
+  result.push_back(&socket_limiter);
+
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Framework_PolyReconstructor_ci

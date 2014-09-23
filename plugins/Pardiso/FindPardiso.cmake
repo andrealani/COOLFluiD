@@ -1,0 +1,71 @@
+# Needs environmental variables
+#   PARDISO_INCLUDE_DIR
+#   PARDISO_LIBRARY_DIR
+#   PARDISO_GFORTRANLIB_DIR
+# Sets
+#   CF_PARDISO_INCLUDE
+#   CF_PARDISO_LIB
+#   CF_HAVE_PARDISO
+#   CF_HAVE_PARDISO_UBASEL
+MARK_AS_ADVANCED(CF_PARDISO_INCLUDE CF_PARDISO_LIB CF_HAVE_PARDISO CF_HAVE_PARDISO_UBASEL)
+
+SET(CF_HAVE_PARDISO_UBASEL 0)
+
+# look for Intel MKL version, versions 10 should work fine.
+# (setup for the GNU compilers, 64 lp version)
+FIND_PATH(PARDISO_IN mkl_pardiso.h ${PARDISO_INCLUDE_DIR} NO_DEFAULT_PATH)
+FIND_LIBRARY(PARDISO_L1 libmkl_solver_lp64.a ${PARDISO_LIBRARY_DIR} NO_DEFAULT_PATH)
+FIND_LIBRARY(PARDISO_L2 libmkl_gf_lp64.a     ${PARDISO_LIBRARY_DIR} NO_DEFAULT_PATH)
+FIND_LIBRARY(PARDISO_L3 mkl_gnu_thread       ${PARDISO_LIBRARY_DIR} NO_DEFAULT_PATH)
+FIND_LIBRARY(PARDISO_L4 gfortran             ${PARDISO_GFORTRANLIB_DIR} NO_DEFAULT_PATH)
+FIND_LIBRARY(PARDISO_L5 iomp5                ${PARDISO_LIBRARY_DIR} NO_DEFAULT_PATH)
+FIND_LIBRARY(PARDISO_L6 mkl_core             ${PARDISO_LIBRARY_DIR} NO_DEFAULT_PATH)
+
+MARK_AS_ADVANCED( PARDISO_IN PARDISO_L1 PARDISO_L2 PARDISO_L3 PARDISO_L4 PARDISO_L5 PARDISO_L6)
+
+IF( PARDISO_IN AND PARDISO_L1 AND PARDISO_L2 AND PARDISO_L3 AND PARDISO_L4 AND PARDISO_L5 AND PARDISO_L6)
+
+  SET(CF_PARDISO_INCLUDE ${PARDISO_IN})
+  SET(CF_PARDISO_LIB     ${PARDISO_L1} ${PARDISO_L2} ${PARDISO_L3} ${PARDISO_L4} ${PARDISO_L5} ${PARDISO_L6})
+  SET(CF_HAVE_PARDISO 1 CACHE BOOL "Pardiso libraries: found (MKL)")
+
+ELSE()
+
+  # look for University Basel version, version 3.3 works fine
+  # (requires lapack and blas, set by package Lapack)
+  # PARDISO_LIBRARY_DIR directory should have pointers to libm.so
+  # and libiomp5.so (*1)
+  FIND_LIBRARY(PARDISO_L7 pardiso_GNU42_EM64T_INT64_P ${PARDISO_LIBRARY_DIR} NO_DEFAULT_PATH)
+  FIND_LIBRARY(PARDISO_L8 m     ${PARDISO_LIBRARY_DIR} NO_DEFAULT_PATH)
+  FIND_LIBRARY(PARDISO_L9 iomp5 ${PARDISO_LIBRARY_DIR} NO_DEFAULT_PATH)
+
+	MARK_AS_ADVANCED( PARDISO_L7 PARDISO_L8 PARDISO_L9 )
+
+  IF(CF_HAVE_BLASLAPACK AND PARDISO_L7 AND PARDISO_L4 AND PARDISO_L8 AND PARDISO_L9)
+    
+    # (*1) libiomp5 is a temporary fix from Intel MKL instead of libgomp; gcc
+    # openmp support comes through -fopenmp option (ADD_DEFINITIONS(-fopenmp))
+    # and should also be in linking line, but cmake doesn't provide an elegant
+    # solution -- should i force it with -lgomp instead of L9?
+    # (this ambiguity will wait for gcc-4.4, with libgomp merged into gcc)
+    SET(CF_HAVE_PARDISO_UBASEL 1)
+    SET(CPARDISO_INCLUDE ${PARDISO_INCLUDE_DIR})
+    SET(CF_PARDISO_LIB ${PARDISO_L7} ${CF_BLASLAPACK_LIBRARIES} ${PARDISO_L4} ${PARDISO_L8} ${PARDISO_L9})
+    SET(CF_HAVE_PARDISO 1 CACHE BOOL "Pardiso libraries: found (U. Basel)")
+  
+  ELSE()
+    
+    SET ( CF_HAVE_PARDISO 0 CACHE BOOL "Pardiso libraries: not found" )
+  
+  ENDIF()
+
+ENDIF()
+
+# TODO: generate PardisoConfig.hh
+
+LOG("CF_HAVE_PARDISO: [${CF_HAVE_PARDISO}]")
+IF(CF_HAVE_PARDISO)
+   LOG ("  CF_PARDISO_INCLUDE: [${CF_PARDISO_INCLUDE}]")
+   LOG ("  CF_PARDISO_LIB:     [${CF_PARDISO_LIB}]")
+ENDIF(CF_HAVE_PARDISO)
+

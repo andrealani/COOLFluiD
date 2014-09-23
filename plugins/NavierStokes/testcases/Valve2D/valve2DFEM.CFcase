@@ -1,0 +1,111 @@
+# HOTFluiD Startfile
+# Comments begin with "#"
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libFiniteElement libHeat libNewtonMethod libDpl2CFmesh libFiniteElementHeat
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Valve2D/
+Simulator.Paths.ResultsDir  =  ./
+
+Simulator.SubSystem.Default.PhysicalModelType = Heat2D
+Simulator.SubSystem.Heat2D.Conductivity = 1.0
+
+Simulator.SubSystem.CFL.Value = 1.0
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = valve2DFEM.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = valve2DFEM.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.CFmesh.SaveRate = 1
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSystem.Default.listTRS = InnerCells Cylinder Valve Symmetry Inlet Outlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = valveNS_coarse_hybrid.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1000.
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Dpl2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Dpl2CFmesh.isHybrid = true
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.lssNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCILU
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 100
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
+
+Simulator.SubSystem.SpaceMethod = FiniteElementMethod
+
+Simulator.SubSystem.FiniteElementMethod.Data.UpdateVar = Prim
+Simulator.SubSystem.FiniteElementMethod.Data.DiffusiveVar = Prim
+Simulator.SubSystem.FiniteElementMethod.Data.SourceVar = Heat2DSourceTConst
+
+Simulator.SubSystem.FiniteElementMethod.Data.Heat2DSourceTConst.IndepCoef = 1.
+#Simulator.SubSystem.FiniteElementMethod.Data.Heat2DSourceTConst.LinearCoef = 0.
+
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorOrder = P1
+
+Simulator.SubSystem.FiniteElementMethod.ExplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSystem.FiniteElementMethod.InitComds = InitState
+Simulator.SubSystem.FiniteElementMethod.InitNames = InitialField
+
+# Vars are [x y z]
+Simulator.SubSystem.FiniteElementMethod.InitialField.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.InitialField.Vars = x y
+Simulator.SubSystem.FiniteElementMethod.InitialField.Def = 0
+
+Simulator.SubSystem.FiniteElementMethod.BcComds = DirichletBC \
+                                                  DirichletBC
+Simulator.SubSystem.FiniteElementMethod.BcNames = BCCylinder \
+                                                  BCValve
+
+# Vars are [x y z t T]
+Simulator.SubSystem.FiniteElementMethod.BCCylinder.applyTRS = Cylinder
+Simulator.SubSystem.FiniteElementMethod.BCCylinder.Implicit = false
+Simulator.SubSystem.FiniteElementMethod.BCCylinder.Vars = x y t T
+Simulator.SubSystem.FiniteElementMethod.BCCylinder.Def = 0
+
+Simulator.SubSystem.FiniteElementMethod.BCValve.applyTRS = Valve
+Simulator.SubSystem.FiniteElementMethod.BCValve.Implicit = false
+Simulator.SubSystem.FiniteElementMethod.BCValve.Vars = x y t T
+Simulator.SubSystem.FiniteElementMethod.BCValve.Def = 0
+
+
+# Vars are [x y z t]
+Simulator.SubSystem.FiniteElementMethod.BCInlet.applyTRS = Inlet
+Simulator.SubSystem.FiniteElementMethod.BCInlet.Implicit = false
+Simulator.SubSystem.FiniteElementMethod.BCInlet.Vars = x y t T
+Simulator.SubSystem.FiniteElementMethod.BCInlet.Def = 0.045-y
+
+# Vars are [x y z t]
+Simulator.SubSystem.FiniteElementMethod.BCSymmetry.applyTRS = Symmetry
+Simulator.SubSystem.FiniteElementMethod.BCSymmetry.Implicit = false
+Simulator.SubSystem.FiniteElementMethod.BCSymmetry.Vars = x y t T
+Simulator.SubSystem.FiniteElementMethod.BCSymmetry.Def = if(0.081-x>0.045,0.045,0.081-x)
+
+# Vars are [x y z t]
+Simulator.SubSystem.FiniteElementMethod.BCOutlet.applyTRS = Outlet
+Simulator.SubSystem.FiniteElementMethod.BCOutlet.Implicit = false
+Simulator.SubSystem.FiniteElementMethod.BCOutlet.Vars = x y t T
+Simulator.SubSystem.FiniteElementMethod.BCOutlet.Def = if(y>0.00855,0.0145-y,y-0.0026)

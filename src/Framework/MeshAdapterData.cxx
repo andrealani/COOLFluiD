@@ -1,0 +1,75 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#include "Framework/MeshAdapterData.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Config;
+using namespace COOLFluiD::Common;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+void MeshAdapterData::defineConfigOptions(Config::OptionList& options)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+MeshAdapterData::MeshAdapterData(Common::SafePtr<Method> owner)
+ : MethodData(owner)
+{
+  addConfigOptionsTo(this);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+MeshAdapterData::~MeshAdapterData()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void MeshAdapterData::configure ( Config::ConfigArgs& args )
+{
+  MethodData::configure(args);
+  
+  CFLog(VERBOSE, "MeshAdapterData::configure() => Collaborator names = \n");
+  for (CFuint i = 0; i < m_CollaboratorNames.size(); ++i) {
+    CFLog(VERBOSE, m_CollaboratorNames[i] << " ");
+  }
+  CFLog(VERBOSE, "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void MeshAdapterData::setup()
+{
+  MethodData::setup();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void MeshAdapterData::unsetup()
+{
+  MethodData::unsetup();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

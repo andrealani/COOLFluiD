@@ -1,0 +1,274 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+Simulator.Maestro = SimpleMaestro
+Simulator.SubSystems = SubSystem
+
+Simulator.SimpleMaestro.GlobalStopCondition = GlobalMaxNumberSteps
+Simulator.SimpleMaestro.GlobalMaxNumberSteps.nbSteps = 2
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libBackwardEuler libFluctSplit libFluctSplitScalar libFluctSplitSpaceTime libLinearAdv libTHOR2CFmesh libFiniteVolume libPetscI libNewtonMethod libMeshFEMMove libFiniteElement libStructMech libFiniteElementStructMech libMeshTools
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/LinearAdv/testcases/AdvectSinusWave/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Namespaces = Test Test1
+
+Simulator.SubSystem.Test.MeshData = TestMeshData
+Simulator.SubSystem.Test.PhysicalModelName = TestLinearAdv2D
+Simulator.SubSystem.Test.PhysicalModelType = LinearAdv2D
+Simulator.SubSystem.TestLinearAdv2D.VX = 1.0
+Simulator.SubSystem.TestLinearAdv2D.VY = 0.0
+Simulator.SubSystem.Test.SubSystemStatus = TestSubSystemStatus
+
+Simulator.SubSystem.Test1.MeshData = Test1MeshData
+Simulator.SubSystem.Test1.PhysicalModelName = Test1StructMech2D
+Simulator.SubSystem.Test1.PhysicalModelType = StructMech2D
+# Some kind of steel
+Simulator.SubSystem.Test1StructMech2D.Young = 205E9
+Simulator.SubSystem.Test1StructMech2D.Poisson = 0.
+Simulator.SubSystem.Test1StructMech2D.Lambda = 1.0
+Simulator.SubSystem.Test1StructMech2D.mu = 1.0
+Simulator.SubSystem.Test1StructMech2D.Density = 7850.0
+
+Simulator.SubSystem.Test1.SubSystemStatus = Test1SubSystemStatus
+
+Simulator.SubSystem.TestMeshData.listTRS = InnerFaces FaceSouth FaceWest FaceNorth SuperInlet
+Simulator.SubSystem.TestMeshData.Namespaces = Test
+
+Simulator.SubSystem.Test1MeshData.listTRS = InnerCells FaceSouth FaceWest FaceNorth SuperInlet
+Simulator.SubSystem.Test1MeshData.Namespaces = Test1
+
+Simulator.SubSystem.MeshAdapterMethod = FEMMove
+Simulator.SubSystem.FEMMove.Namespace = Test1
+Simulator.SubSystem.FEMMove.Data.CollaboratorNames = NewtonIterator2
+
+Simulator.SubSystem.FEMMove.Data.OtherNamespace  = Test
+Simulator.SubSystem.FEMMove.UpdateMeshCom              = UpdateMesh
+Simulator.SubSystem.FEMMove.UpdateMesh.ConvRate        = 1
+Simulator.SubSystem.FEMMove.UpdateMesh.ShowRate        = 1
+Simulator.SubSystem.FEMMove.UpdateMesh.StopCondition   = MaxNumberSteps
+Simulator.SubSystem.FEMMove.UpdateMesh.MaxNumberSteps.nbSteps  = 1
+Simulator.SubSystem.FEMMove.UpdateMesh.ConvergenceFile = convergenceFEM.plt
+
+Simulator.SubSystem.FEMMove.PrepareComds = ImposedMovementPrepare
+Simulator.SubSystem.FEMMove.PrepareNames = ImposedMovement
+Simulator.SubSystem.FEMMove.ImposedMovement.RotationAngle = -1.
+#Simulator.SubSystem.FEMMove.ImposedMovement.RotationAngle = 0.
+Simulator.SubSystem.FEMMove.ImposedMovement.RotationCenter = 0. 0.
+Simulator.SubSystem.FEMMove.ImposedMovement.applyTRS = SuperInlet
+
+Simulator.SubSystem.ErrorEstimatorMethod = Null Null
+Simulator.SubSystem.ErrorEstimatorNames = NullErrorEstimator1 NullErrorEstimator2
+Simulator.SubSystem.NullErrorEstimator1.Data.CollaboratorNames = CellCenterFVM1
+Simulator.SubSystem.NullErrorEstimator1.Namespace = Test
+Simulator.SubSystem.NullErrorEstimator2.Data.CollaboratorNames = FiniteElementMethod1
+Simulator.SubSystem.NullErrorEstimator2.Namespace = Test1
+
+
+
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh Tecplot CFmesh
+Simulator.SubSystem.OutputFormatNames   = Tecplot1 CFmesh1 Tecplot2 CFmesh2
+
+Simulator.SubSystem.CFmesh1.Namespace = Test
+Simulator.SubSystem.CFmesh1.FileName = advectSW.CFmesh
+Simulator.SubSystem.CFmesh1.Data.CollaboratorNames = CellCenterFVM1
+Simulator.SubSystem.Tecplot1.Namespace = Test
+Simulator.SubSystem.Tecplot1.FileName = advectSW.plt
+Simulator.SubSystem.Tecplot1.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot1.Data.CollaboratorNames = CellCenterFVM1
+Simulator.SubSystem.CFmesh2.Namespace = Test1
+Simulator.SubSystem.CFmesh2.FileName = advectSW_TEST.CFmesh
+Simulator.SubSystem.CFmesh2.Data.CollaboratorNames = FiniteElementMethod1
+Simulator.SubSystem.Tecplot2.Namespace = Test1
+Simulator.SubSystem.Tecplot2.FileName = advectSW_TEST.plt
+Simulator.SubSystem.Tecplot2.Data.updateVar = Disp
+Simulator.SubSystem.Tecplot2.Data.CollaboratorNames = FiniteElementMethod1
+Simulator.SubSystem.Tecplot1.SaveRate = 2
+Simulator.SubSystem.CFmesh1.SaveRate = 2
+Simulator.SubSystem.Tecplot1.AppendTime = false
+Simulator.SubSystem.CFmesh1.AppendTime = false
+Simulator.SubSystem.Tecplot1.AppendIter = false
+Simulator.SubSystem.CFmesh1.AppendIter = false
+Simulator.SubSystem.Tecplot2.SaveRate = 2
+Simulator.SubSystem.CFmesh2.SaveRate = 2
+Simulator.SubSystem.Tecplot2.AppendTime = false
+Simulator.SubSystem.CFmesh2.AppendTime = false
+Simulator.SubSystem.Tecplot2.AppendIter = false
+Simulator.SubSystem.CFmesh2.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader CFmeshFileReader
+Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader1 CFmeshFileReader2
+Simulator.SubSystem.CFmeshFileReader1.Namespace = Test
+Simulator.SubSystem.CFmeshFileReader1.Data.FileName = advectSW.CFmesh
+Simulator.SubSystem.CFmeshFileReader1.convertFrom = THOR2CFmesh
+Simulator.SubSystem.CFmeshFileReader1.THOR2CFmesh.Discontinuous = true
+
+Simulator.SubSystem.CFmeshFileReader2.Namespace = Test1
+Simulator.SubSystem.CFmeshFileReader2.Data.FileName = advectSW.CFmesh
+Simulator.SubSystem.CFmeshFileReader2.Data.builderName = RDS
+Simulator.SubSystem.CFmeshFileReader2.Data.polyTypeName = Lagrange
+Simulator.SubSystem.CFmeshFileReader2.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator NewtonIterator
+Simulator.SubSystem.ConvergenceMethodNames = NewtonIterator1 NewtonIterator2
+
+Simulator.SubSystem.NewtonIterator1.Namespace = Test
+Simulator.SubSystem.NewtonIterator1.Data.CollaboratorNames = CellCenterFVM1 NewtonIterator1LSS
+Simulator.SubSystem.NewtonIterator1.Data.MaxSteps = 10
+Simulator.SubSystem.NewtonIterator1.Data.Norm = -5.0
+Simulator.SubSystem.NewtonIterator1.Data.PrintHistory = false
+Simulator.SubSystem.NewtonIterator1.Data.CFL.Value = 100.
+Simulator.SubSystem.NewtonIterator1.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NewtonIterator1.Data.CFL.Function.Def = min(0.5+(i*0.01),1.0)
+#Simulator.SubSystem.NewtonIterator1.Data.CFL.ComputeCFL = SER
+#Simulator.SubSystem.NewtonIterator1.Data.CFL.SER.coeffCFL = 1.5
+#Simulator.SubSystem.NewtonIterator1.Data.CFL.SER.maxCFL = 1.0
+#Simulator.SubSystem.NewtonIterator1.Data.CFL.SER.power = 1.0
+
+Simulator.SubSystem.NewtonIterator2.Namespace = Test1
+Simulator.SubSystem.NewtonIterator2.Data.CollaboratorNames = FiniteElementMethod1 NewtonIterator2LSS
+Simulator.SubSystem.NewtonIterator2.Data.MaxSteps = 10
+Simulator.SubSystem.NewtonIterator2.Data.Norm = -5.0
+Simulator.SubSystem.NewtonIterator2.Data.PrintHistory = false
+Simulator.SubSystem.NewtonIterator2.UpdateSol = StdUpdateSol
+Simulator.SubSystem.NewtonIterator2.InitCom = ResetSystem
+Simulator.SubSystem.NewtonIterator2.Data.CFL.Value = 100.
+Simulator.SubSystem.NewtonIterator2.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NewtonIterator2.Data.CFL.Function.Def = min(0.5+(i*0.01),1.0)
+#Simulator.SubSystem.NewtonIterator2.Data.CFL.ComputeCFL = SER
+#Simulator.SubSystem.NewtonIterator2.Data.CFL.SER.coeffCFL = 1.5
+#Simulator.SubSystem.NewtonIterator2.Data.CFL.SER.maxCFL = 1.0
+#Simulator.SubSystem.NewtonIterator2.Data.CFL.SER.power = 1.0
+
+Simulator.SubSystem.LinearSystemSolver = PETSC PETSC
+Simulator.SubSystem.LSSNames = NewtonIterator1LSS NewtonIterator2LSS
+Simulator.SubSystem.NewtonIterator1LSS.Namespace = Test
+Simulator.SubSystem.NewtonIterator1LSS.Data.PCType = PCILU
+Simulator.SubSystem.NewtonIterator1LSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIterator1LSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.NewtonIterator2LSS.Namespace = Test1
+Simulator.SubSystem.NewtonIterator2LSS.Data.PCType = PCLU
+Simulator.SubSystem.NewtonIterator2LSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIterator2LSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIterator2LSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystem.NewtonIterator2LSS.Data.MaxIter = 100
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM FiniteElementMethod
+Simulator.SubSystem.SpaceMethodNames = CellCenterFVM1 FiniteElementMethod1
+
+Simulator.SubSystem.CellCenterFVM1.Namespace = Test
+Simulator.SubSystem.CellCenterFVM1.Data.CollaboratorNames = NewtonIterator1LSS NewtonIterator1
+Simulator.SubSystem.CellCenterFVM1.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM1.ComputeTimeRHS = PseudoSteadyTimeRhs
+#Simulator.SubSystem.CellCenterFVM1.PseudoSteadyTimeRhs.useGlobalDT = true
+
+Simulator.SubSystem.CellCenterFVM1.Data.FluxSplitter = Roe
+Simulator.SubSystem.CellCenterFVM1.Data.UpdateVar  = Prim
+Simulator.SubSystem.CellCenterFVM1.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.CellCenterFVM1.Data.IntegratorOrder = P1
+Simulator.SubSystem.CellCenterFVM1.Data.PolyRec = Constant
+
+Simulator.SubSystem.CellCenterFVM1.InitComds = InitState \
+        SuperInletFVMCC \
+        SuperInletFVMCC \
+        SuperInletFVMCC \
+        SuperOutletFVMCC
+
+Simulator.SubSystem.CellCenterFVM1.InitNames = InField Inlet FaceS FaceW FaceN
+
+Simulator.SubSystem.CellCenterFVM1.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM1.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM1.InField.Def = 0.0
+
+Simulator.SubSystem.CellCenterFVM1.Inlet.applyTRS = SuperInlet
+Simulator.SubSystem.CellCenterFVM1.Inlet.Vars = x y
+Simulator.SubSystem.CellCenterFVM1.Inlet.Def = sin(2*y*3.14159265359)
+
+Simulator.SubSystem.CellCenterFVM1.FaceS.applyTRS = FaceSouth
+Simulator.SubSystem.CellCenterFVM1.FaceS.Vars = x y
+Simulator.SubSystem.CellCenterFVM1.FaceS.Def = 0.0
+
+Simulator.SubSystem.CellCenterFVM1.FaceW.applyTRS = FaceWest
+Simulator.SubSystem.CellCenterFVM1.FaceW.Vars = x y
+Simulator.SubSystem.CellCenterFVM1.FaceW.Def = 0.0
+
+Simulator.SubSystem.CellCenterFVM1.FaceN.applyTRS = FaceNorth
+
+Simulator.SubSystem.CellCenterFVM1.BcComds = SuperInletFVMCC SuperInletFVMCC SuperOutletFVMCC SuperInletFVMCC
+Simulator.SubSystem.CellCenterFVM1.BcNames = East South West North
+
+Simulator.SubSystem.CellCenterFVM1.East.applyTRS = SuperInlet
+Simulator.SubSystem.CellCenterFVM1.East.Vars = x y
+Simulator.SubSystem.CellCenterFVM1.East.Def = sin(2*y*3.14159265359)
+
+Simulator.SubSystem.CellCenterFVM1.South.applyTRS = FaceSouth
+Simulator.SubSystem.CellCenterFVM1.South.Vars = x y
+Simulator.SubSystem.CellCenterFVM1.South.Def = 0.0
+
+Simulator.SubSystem.CellCenterFVM1.West.applyTRS = FaceWest
+
+Simulator.SubSystem.CellCenterFVM1.North.applyTRS = FaceNorth
+Simulator.SubSystem.CellCenterFVM1.North.Vars = x y
+Simulator.SubSystem.CellCenterFVM1.North.Def = 0.0
+
+Simulator.SubSystem.FiniteElementMethod1.Namespace = Test1
+Simulator.SubSystem.FiniteElementMethod1.Data.CollaboratorNames = NewtonIterator2LSS NewtonIterator2
+Simulator.SubSystem.FiniteElementMethod1.Data.UpdateVar = Disp
+Simulator.SubSystem.FiniteElementMethod1.Data.DiffusiveVar = Disp
+Simulator.SubSystem.FiniteElementMethod1.Data.StructMech2DDiffusiveDisp.PlaneStress = true
+Simulator.SubSystem.FiniteElementMethod1.Data.StructMech2DDiffusiveDisp.NonLinear = false
+Simulator.SubSystem.FiniteElementMethod1.Data.SourceVar = StructMech2DSourceDisp
+
+Simulator.SubSystem.FiniteElementMethod1.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.FiniteElementMethod1.Data.ResidualStrategy = StdElementComputer
+
+# Vars are [ x y rho u v]
+#Simulator.SubSystem.FiniteElementMethod1.Data.StructMech2DSourceDisp.IndepDef = 0. -9.81*rho
+
+Simulator.SubSystem.FiniteElementMethod1.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FiniteElementMethod1.Data.IntegratorOrder = P1
+
+Simulator.SubSystem.FiniteElementMethod1.ComputeSpaceResidual = ImplicitComputeSpaceResCom
+Simulator.SubSystem.FiniteElementMethod1.ImplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod1.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSystem.FiniteElementMethod1.InitComds = InitState
+Simulator.SubSystem.FiniteElementMethod1.InitNames = InitialField
+
+Simulator.SubSystem.FiniteElementMethod1.InitialField.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod1.InitialField.Vars = x y
+Simulator.SubSystem.FiniteElementMethod1.InitialField.Def = 0 0
+
+Simulator.SubSystem.FiniteElementMethod1.BcComds = MeshMovementDirichletBC DirichletBC
+#Simulator.SubSystem.FiniteElementMethod1.BcComds = DirichletBC DirichletBC
+Simulator.SubSystem.FiniteElementMethod1.BcNames = BOUND1      BOUND2
+
+# Vars are [x y t u v]
+Simulator.SubSystem.FiniteElementMethod1.BOUND1.applyTRS = SuperInlet
+Simulator.SubSystem.FiniteElementMethod1.BOUND1.Implicit = true
+#Simulator.SubSystem.FiniteElementMethod1.BOUND1.Vars = x y t u v
+#Simulator.SubSystem.FiniteElementMethod1.BOUND1.Def = -0.01 0
+
+# Vars are [x y t u v]
+Simulator.SubSystem.FiniteElementMethod1.BOUND2.applyTRS = FaceWest
+Simulator.SubSystem.FiniteElementMethod1.BOUND2.Implicit = true
+Simulator.SubSystem.FiniteElementMethod1.BOUND2.Vars = x y t u v
+Simulator.SubSystem.FiniteElementMethod1.BOUND2.Def = 0 0
+

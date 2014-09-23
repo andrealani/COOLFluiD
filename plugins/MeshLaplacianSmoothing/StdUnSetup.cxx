@@ -1,0 +1,41 @@
+#include "MeshLaplacianSmoothing/MeshLaplacianSmoothing.hh"
+#include "StdUnSetup.hh"
+#include "Framework/MethodCommandProvider.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace COOLFluiD::Framework;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace MeshLaplacianSmoothing {
+
+//////////////////////////////////////////////////////////////////////////////
+
+MethodCommandProvider<StdUnSetup, LaplacianSmoothingData, MeshLaplacianSmoothingModule> stdUnSetupProvider("StdUnSetup");
+
+//////////////////////////////////////////////////////////////////////////////
+
+StdUnSetup::StdUnSetup(std::string name) :
+  LaplacianSmoothingCom(name)
+{
+  std::cout << "StdUnSetup LaplacianSmoothingCom" << std::endl;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+StdUnSetup::~StdUnSetup()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace MeshLaplacianSmoothing
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

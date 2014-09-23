@@ -1,0 +1,27 @@
+LIST ( APPEND RotationAdvSys_files
+RotationAdvSys.hh
+RotationAdvSys2DLinearPrim.cxx
+RotationAdvSys2DLinearPrim.hh
+RotationAdvSys2DPrim.cxx
+RotationAdvSys2DPrim.hh
+RotationAdvSys2DVarSet.cxx
+RotationAdvSys2DVarSet.hh
+RotationAdvSys3DLinearPrim.cxx
+RotationAdvSys3DLinearPrim.hh
+RotationAdvSys3DPrim.cxx
+RotationAdvSys3DPrim.hh
+RotationAdvSys3DVarSet.cxx
+RotationAdvSys3DVarSet.hh
+RotationAdvSysPhysicalModel.ci
+RotationAdvSysPhysicalModel.cxx
+RotationAdvSysPhysicalModel.hh
+RotationAdvSysTerm.cxx
+RotationAdvSysTerm.hh
+RotationAdvSysData.hh
+RotationAdvSysVarSet.hh
+)
+
+LIST ( APPEND RotationAdvSys_cflibs Framework )
+
+CF_ADD_PLUGIN_LIBRARY ( RotationAdvSys )
+CF_WARN_ORPHAN_FILES()

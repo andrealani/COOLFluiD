@@ -1,0 +1,136 @@
+#include "Framework/GeometricEntity.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+HLLETanakaFlux<UPDATEVAR>::HLLETanakaFlux(const std::string& name) :
+  HLLEFlux<UPDATEVAR>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>      
+HLLETanakaFlux<UPDATEVAR>::~HLLETanakaFlux()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+void HLLETanakaFlux<UPDATEVAR>::setup()
+{
+  HLLEFlux<UPDATEVAR>::setup();
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename UPDATEVAR>
+void HLLETanakaFlux<UPDATEVAR>::compute(RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  CellCenterFVMData& data = this->getMethodData(); 
+  SafePtr<FVMCC_PolyRec> polyRec = data.getPolyReconstructor();
+  
+  this->_statesLR[0] = &polyRec->getCurrLeftState();
+  this->_statesLR[1] = &polyRec->getCurrRightState();
+  
+  vector<RealVector>& pdata = polyRec->getExtrapolatedPhysicaData();
+  
+  // flux for the right and left state
+  const RealVector& unitNormal = this->getMethodData().getUnitNormal();
+  const RealVector& ldata = pdata[0];
+  const RealVector& rdata = pdata[1];
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  
+  CFreal uL = ldata[UPDATEVAR::PTERM::VX]*unitNormal[XX];
+  CFreal uR = rdata[UPDATEVAR::PTERM::VX]*unitNormal[XX];
+  for (CFuint i = 1; i < dim; ++i) {
+    uL += ldata[UPDATEVAR::PTERM::VX+i]*unitNormal[i];
+    uR += rdata[UPDATEVAR::PTERM::VX+i]*unitNormal[i];
+  }
+  const CFreal aL = ldata[UPDATEVAR::PTERM::A];
+  const CFreal aR = rdata[UPDATEVAR::PTERM::A];
+  
+  CFreal uAvg = 0.5*(uL + uR);
+  CFreal aAvg = 0.5*(aL + aR);
+  if (this->_useRoeAverage) {
+    // linearize using Roe average
+    vector<State*> *const linearStates = this->getMethodData().getSolutionToLinearVecTrans()->
+      transform(&this->_statesLR);
+    this->getMethodData().getJacobianLinearizer()->linearize(*linearStates);
+    const RealVector& linData = this->_upVar->getModel()->getPhysicalData();
+    
+    uAvg = linData[UPDATEVAR::PTERM::VX]*unitNormal[XX];
+    for (CFuint i = 1; i < dim; ++i) {
+      uAvg += linData[UPDATEVAR::PTERM::VX+i]*unitNormal[i];
+    }
+    
+    aAvg = linData[UPDATEVAR::PTERM::A];
+  }
+  
+  if (!this->getMethodData().reconstructSolVars()) {
+    this->_solutionStates = this->getMethodData().getUpdateToSolutionVecTrans()->transform(&this->_statesLR);
+  }
+  else {
+    this->_solutionStates = &this->_statesLR;
+  }
+  
+  // you must work with references (no copying allowed) !!!!
+  const State& leftState  = *(*this->_solutionStates)[0];
+  const State& rightState = *(*this->_solutionStates)[1];
+  this->_leftFlux  = this->_upVar->computeTanakaFluxPowell99Formulation(ldata, unitNormal);
+  this->_rightFlux = this->_upVar->computeTanakaFluxPowell99Formulation(rdata, unitNormal);
+  
+  const CFreal lambdaM = min(0., min(uAvg - aAvg, uL - aL));
+  const CFreal lambdaP = max(0., max(uAvg + aAvg, uR + aR));
+  const CFreal ovLambdaDiff = 1./(lambdaP - lambdaM);
+  
+  // HLLE flux function
+  result = ovLambdaDiff*((lambdaP*this->_leftFlux - lambdaM*this->_rightFlux) +  (lambdaP*lambdaM)*(rightState - leftState));
+
+  // compute update coefficient
+  if (!this->getMethodData().isPerturb()) {    
+    GeometricEntity& face = *data.getCurrentFace();
+    DataHandle<CFreal> updateCoeff = this->socket_updateCoeff.getDataHandle();
+    const CFreal faceArea = this->socket_faceAreas.getDataHandle()[face.getID()]/
+      polyRec->nbQPoints();
+    
+    // left contribution to update coefficient
+    CFreal maxEV = this->_upVar->getMaxEigenValue(pdata[0], unitNormal);
+    
+    const CFuint leftID = face.getState(0)->getLocalID();
+    updateCoeff[leftID] += max(maxEV, 0.)*faceArea;
+    
+    if (!face.getState(1)->isGhost()) {
+      // right contribution to update coefficient
+      
+      this->_tempUnitNormal = -1.0*unitNormal;
+      maxEV = this->_upVar->getMaxEigenValue(pdata[1],this->_tempUnitNormal);
+      
+      const CFuint rightID = face.getState(1)->getLocalID();
+      updateCoeff[rightID] += max(maxEV, 0.)*faceArea;
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

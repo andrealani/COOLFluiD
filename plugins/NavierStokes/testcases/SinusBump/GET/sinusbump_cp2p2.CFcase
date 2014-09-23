@@ -1,0 +1,116 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libRungeKutta2 libForwardEuler libFluctSplitNavierStokes libFluctSplitHO libFluctSplitHONavierStokes libGETModel libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/SinusBump/GET/
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType   = Euler2D
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName     = sinusbump_cp2p2-sol.CFmesh
+Simulator.SubSystem.CFmesh.WriteSol = WriteSolution # Serial write
+Simulator.SubSystem.CFmesh.SaveRate = 500
+
+Simulator.SubSystem.Tecplot.FileName    = sinusbump_cp2p2-sol.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 500
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHO # High order write
+
+Simulator.SubSystem.StopCondition       = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter      = 100000
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -8
+
+Simulator.SubSystem.Default.listTRS = InnerCells UpperWall LowerWall SubInlet SubOutlet
+
+Simulator.SubSystem.Default.DomainModel = GET_DM
+Simulator.SubSystem.Default.GET_DM.ModelDim = 2
+Simulator.SubSystem.Default.GET_DM.MapTopologicalRegions =       LowerWall 0 LowerWall 1 LowerWall 2 SubOutlet 0 LowerWall 0 SubInlet 0
+Simulator.SubSystem.Default.GET_DM.MapTopologicalRegionsCADids = 1           5           1           2           3           4
+Simulator.SubSystem.Default.GET_DM.FileName = sinus_bump.get
+
+#Simulator.SubSystem.Default.DomainModel = AnalyticalDM
+#Simulator.SubSystem.Default.AnalyticalDM.ModelDim = 2
+#Simulator.SubSystem.Default.AnalyticalDM.MapTopologicalRegions = LowerWall 0
+#Simulator.SubSystem.Default.AnalyticalDM.FuncX  =  4*u
+#Simulator.SubSystem.Default.AnalyticalDM.FuncY  =  if(u<0.25,0.,if(u>0.75,0.,0.1*sin(3.1415927*(4*u-1.5))+0.1))
+#Simulator.SubSystem.Default.AnalyticalDM.FuncZ  =  0.                   0.
+#Simulator.SubSystem.Default.AnalyticalDM.DFuncX =  4.
+#Simulator.SubSystem.Default.AnalyticalDM.DFuncY =  if(u<0.25,0.,if(u>0.75,0.,0.4*3.1415927*cos(3.1415927*(4*u-1.5))))
+#Simulator.SubSystem.Default.AnalyticalDM.DFuncZ =  0.
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+#Simulator.SubSystem.CFmeshFileReader.Data.FileName = sinusbump_cp2p2-sol.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = bump.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.7
+Simulator.SubSystem.FwdEuler.ConvRate = 10
+Simulator.SubSystem.FwdEuler.ShowRate = 50
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+
+##############################################################################
+# Upgrade mesh
+##############################################################################
+
+Simulator.SubSystem.FluctuationSplit.Builder = FluctSplitHO
+Simulator.SubSystem.FluctuationSplit.Builder.GeoOrder = 2
+Simulator.SubSystem.FluctuationSplit.Builder.SolOrder = 2 
+
+##########################################################################
+##
+##               SETUP TO MOVE BOUNDARY
+##
+###########################################################################
+#
+Simulator.SubSystem.FluctuationSplit.SetupCom   =  MoveBoundary StdSetupCurved 
+Simulator.SubSystem.FluctuationSplit.SetupNames = MoveLowerWall StdSetup1
+Simulator.SubSystem.FluctuationSplit.MoveLowerWall.applyTRS = LowerWall
+#
+###########################################################################
+
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = HOCRD_Curved
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysLDAC
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar    = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar   = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar    = Cons
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def =  1.204751547 \
+                                          206.7002847 \
+                                          0.0 \
+                                          271044.375
+
+Simulator.SubSystem.FluctuationSplit.BcComds = WeakSubInletEuler2DCons  WeakSubOutletEuler2DCons WeakSlipWallEulerHO2DCurved WeakSlipWallEulerHO2DCurved
+Simulator.SubSystem.FluctuationSplit.BcNames = Inlet                    Outlet			         TopWall                     BottomWall
+
+Simulator.SubSystem.FluctuationSplit.TopWall.applyTRS = UpperWall
+
+Simulator.SubSystem.FluctuationSplit.BottomWall.applyTRS = LowerWall
+
+Simulator.SubSystem.FluctuationSplit.Inlet.applyTRS = SubInlet
+Simulator.SubSystem.FluctuationSplit.Inlet.Ttot = 307.6488978
+Simulator.SubSystem.FluctuationSplit.Inlet.Ptot = 120195.4453
+Simulator.SubSystem.FluctuationSplit.Inlet.angle = 0.0
+Simulator.SubSystem.FluctuationSplit.Inlet.HighOrder = true
+
+Simulator.SubSystem.FluctuationSplit.Outlet.applyTRS = SubOutlet
+Simulator.SubSystem.FluctuationSplit.Outlet.P = 101325.0
+Simulator.SubSystem.FluctuationSplit.Outlet.HighOrder = true
+

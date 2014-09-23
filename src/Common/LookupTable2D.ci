@@ -1,0 +1,142 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Common_LookupTable2D_ci
+#define COOLFluiD_Common_LookupTable2D_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Common {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY1, class KEY2, class VALUE>
+LookupTable2D<KEY1,KEY2,VALUE>::LookupTable2D() :
+  _isInitialized(false),
+  _valueStride(0),
+  _key1ToIdx(),
+  _key2ToIdx(),
+  _values(),
+  _v(4)
+{
+}
+  
+//////////////////////////////////////////////////////////////////////////////
+  
+template<class KEY1, class KEY2, class VALUE>
+LookupTable2D<KEY1,KEY2,VALUE>::~LookupTable2D()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+    
+template<class KEY1, class KEY2, class VALUE>
+void LookupTable2D<KEY1,KEY2,VALUE>::initialize(const std::vector<KEY1>& key1, 
+						const std::vector<KEY2>& key2,
+						size_t valueStride)
+{
+  using namespace std;
+  
+  const size_t key1size = key1.size();
+  const size_t key2size = key2.size();
+  _valueStride = valueStride;
+  
+  cf_assert(key1size > 0);
+  cf_assert(key2size > 0);
+  cf_assert(_valueStride > 0);
+  
+  // here you must reserve()	
+  _key1ToIdx.reserve(key1size);
+  _key2ToIdx.reserve(key2size);
+  // here you must resize()
+  _values.resize(key1size*key2size*valueStride);
+  
+  for (size_t i1 = 0; i1 < key1size; ++i1) {
+    _key1ToIdx.insert(key1[i1],i1);
+  }
+  
+  for (size_t i2 = 0; i2 < key2size; ++i2) {
+    _key2ToIdx.insert(key2[i2],i2);
+  }
+  
+  // sort the keys
+  _key1ToIdx.sortKeys();
+  _key2ToIdx.sortKeys();
+  
+  _isInitialized = true;
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY1, class KEY2, class VALUE>
+inline void LookupTable2D<KEY1,KEY2,VALUE>::insert(const KEY1& key1,
+						   const KEY2& key2,
+						   const size_t iValue,
+						   const VALUE& value)
+{
+  cf_assert(_isInitialized);
+  _values[getLookUpIndex(key1, key2, iValue)] = value;
+} 
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY1, class KEY2, class VALUE>
+VALUE LookupTable2D<KEY1,KEY2,VALUE>::get(const KEY1& key1, 
+					  const KEY2& key2, 
+					  const size_t iValue)
+{
+  using namespace std;
+  cf_assert(_isInitialized);
+  
+  pair<typename vector<pair<KEY1, size_t> >::iterator,
+    typename vector<pair<KEY1, size_t> >::iterator>
+    key1Bounds = _key1ToIdx.findBounds(key1);
+  
+  pair<typename vector<pair<KEY2,size_t> >::iterator,
+    typename vector<pair<KEY2,size_t> >::iterator>
+    key2Bounds = _key2ToIdx.findBounds(key2);
+  
+    const KEY1 prv1 = key1Bounds.first->first;
+    const KEY1 aft1 = key1Bounds.second->first;
+    const KEY2 prv2 = key2Bounds.first->first;
+    const KEY2 aft2 = key2Bounds.second->first;
+    
+    // the interpolation algorithm is based on the bilinear shape functions
+    // for a quadrilateral element
+    _v[0] = _values[getLookUpIndex(prv1, prv2, iValue)];
+    _v[1] = _values[getLookUpIndex(aft1, prv2, iValue)];
+    _v[2] = _values[getLookUpIndex(aft1, aft2, iValue)];
+    _v[3] = _values[getLookUpIndex(prv1, aft2, iValue)];
+    
+    // csi(aft1) = 1 && csi(prv1) = -1
+    const VALUE eps = numeric_limits<VALUE>::epsilon();
+    const VALUE csi = ((aft1 - prv1) > eps) ? 
+	(2.*key1 - (aft1 + prv1))/(aft1 - prv1) : 1.;
+    const VALUE eta = ((aft2 - prv2) > eps) ? 
+	(2.*key2 - (aft2 + prv2))/(aft2 - prv2) : 1.;
+    const VALUE N0 = (1. - csi)*(1. - eta);
+    const VALUE N1 = (1. + csi)*(1. - eta);
+    const VALUE N2 = (1. + csi)*(1. + eta);
+    const VALUE N3 = (1. - csi)*(1. + eta);
+    
+    return 0.25*(N0*_v[0] + N1*_v[1] + N2*_v[2] + N3*_v[3]);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace COOLFluiD
+ 
+} // namespace Common 
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Common_LookupTable2D_ci

@@ -1,0 +1,85 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace ICP {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASEVS, typename ST>
+ICPInductionDiffVarSet<BASEVS, ST>::ICPInductionDiffVarSet
+(const std::string& name,
+ Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  BASEVS(name, model),
+  m_icpReactionTerm(model->getSourceTerm().d_castTo<ST>())
+{
+  this->addVarName("EpR");
+  this->addVarName("EpI");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASEVS, typename ST>
+ICPInductionDiffVarSet<BASEVS, ST>::~ICPInductionDiffVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASEVS, typename ST>
+RealVector& ICPInductionDiffVarSet<BASEVS, ST>::getFlux
+(const RealVector& values,
+ const std::vector<RealVector*>& gradients,
+ const RealVector& normal,
+ const CFreal& radius)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+	
+  const CFuint nbEqs =
+    PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
+
+  // here it is assumed that you don't derive from this class (for the moment is
+  // a reasonable assumption)
+  const CFuint totalNbEqs = this->_flux.size();
+  // if more than 2 or all the equations equations are considered
+  if (nbEqs > 2 || nbEqs == totalNbEqs) {
+    BASEVS::getFlux(values,gradients,normal,radius);
+  }
+  
+  // if only the last two equations or all the equations are considered
+  if (nbEqs == 2 || nbEqs == totalNbEqs) {
+    const RealVector& gradEpR = *gradients[totalNbEqs -2];
+    const RealVector& gradEpI = *gradients[totalNbEqs -1];
+    this->_flux[totalNbEqs -2] = - gradEpR[YY]*normal[YY];
+    this->_flux[totalNbEqs -1] = - gradEpI[YY]*normal[YY];
+        
+    if (m_icpReactionTerm->use2DModel()) {
+      this->_flux[totalNbEqs -2] -= gradEpR[XX]*normal[XX];
+      this->_flux[totalNbEqs -1] -= gradEpI[XX]*normal[XX];
+    }
+  }
+  
+  return this->_flux;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASEVS, typename ST>
+CFreal ICPInductionDiffVarSet<BASEVS, ST>::getCurrUpdateDiffCoeff(CFuint iEqSS)
+{
+  if (iEqSS == 0) {
+    return BASEVS::getCurrUpdateDiffCoeff(iEqSS);
+  }
+  return 0.0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace ICP
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

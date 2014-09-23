@@ -1,0 +1,48 @@
+c       User input file for PARADE
+c       1. Spectrum control data:
+c
+  3400.00       wavlo [A]
+  4300.00       wavhi [A]
+  1000          npoints
+c
+c       2. Parameters for adaptive wavelength discretisation:
+  0.0005       minimum distance between adjacent points
+   100.        integration limit for line shape
+  0.001        minimum fraction for use of energy level
+c       3. Switches for radiation mechanisms:
+  'Y'          free-free  radiation (y/n)
+  'Y'          free-bound radiation (y/n)
+  'Y'          atomic line radiation (y/n)
+  'Y'          molecular band radiation (y/n)
+c
+c It is strongly recommended not to use QSS (i.e. nonequilibrium
+c excitation) for molecule radiation calculations even with original
+c NEQAIR data. NEQAIR radiation module requires that upper and lower
+c electronic level are first and second entry in FORT4. QSS however
+c uses FORT3 to compute an electronic excitatition temperature which
+c gives the same particle density used in a Boltzmann distribution
+c function. There is no re-ordering of the levels for different
+c radiation bands such that results are simply wrong.
+c
+  'N'          nonequilibrium excitation (y/n)
+  'N'          adaptive wavelength discretisation (y/n)
+  'N'          equal wavelength increments (y/n)
+  'Y'          equal frequency increments (y/n)
+c  
+c 	3(bis). Switches for output options
+  1 		iout (row number for main outputs)
+  1		jout (column number for main outputs)
+  'N'          'par_res.imo' for each cell (y/n)
+  'N'          time integrated emission coefficient until cell number
+  60           max cell number for time integration (shock tube test)
+c
+c 4. rad(y/n) remark  at. spec  ttr  tv  te    rad.file
+ 'Y',        'CN'     2         1   2   2,   '../../../data/cnibp.dat'      
+ 'b'    'CNviolet'  'N'
+ 'b'    'CNred'     'N'
+ 'N',        'E'      0         1   0   2,   ' '  
+c 5. Temperatures and number densities
+  7000.0              T trans
+  7000.0              T elec
+  1.21E18            7000.0
+  2.0E16              No. density

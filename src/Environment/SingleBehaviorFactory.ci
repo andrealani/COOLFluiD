@@ -1,0 +1,111 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Common_SingleBehaviorFactory_ci
+#define COOLFluiD_Common_SingleBehaviorFactory_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+#include "Common/NoSuchValueException.hh"
+#include "Common/CFLog.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Environment {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
+SingleBehaviorFactory<TYPE>& SingleBehaviorFactory<TYPE>::getInstance()
+{
+   static SingleBehaviorFactory<TYPE> obj;
+   return obj;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
+SingleBehaviorFactory<TYPE>::SingleBehaviorFactory() : m_default ()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
+SingleBehaviorFactory<TYPE>::~SingleBehaviorFactory()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
+void SingleBehaviorFactory<TYPE>::setDefaultBehavior(const std::string& name)
+{
+   if (Environment::Factory<TYPE>::getInstance().exists(name))
+   {
+      m_default = name;
+   }
+   else
+   {
+      std::vector<Common::ProviderBase*> all = Environment::Factory<TYPE>::getInstance().getAllProviders();
+      if (all.empty())
+      {
+         m_default = ""; // no default set
+         throw Common::NoSuchValueException (FromHere(), "No providers in factory of '" + TYPE::getClassName() + "'" );
+      }
+      else // since there is no default we use the first on the list of providers
+      {
+        CFLog ( WARN, "No provider in factory of '" << TYPE::getClassName() << "' with name '" << name << "'\n" );
+        CFLog ( WARN, "Choosing '" << dynamic_cast<typename TYPE::PROVIDER*>(*(all.begin()))->getName() << "' as default.\n" );
+        m_default = dynamic_cast<typename TYPE::PROVIDER*>(*(all.begin()))->getName();
+      }
+   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
+std::string SingleBehaviorFactory<TYPE>::getDefaultBehavior()
+{
+   return m_default;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
+Common::SelfRegistPtr<TYPE> SingleBehaviorFactory<TYPE>::create()
+{
+   Common::SafePtr<typename TYPE::PROVIDER> prov;
+   if (!m_default.empty()) 
+   {
+       prov = Environment::Factory<TYPE>::getInstance().getProvider(m_default);
+   }
+   else 
+   {
+      std::vector<Common::ProviderBase*> all = Environment::Factory<TYPE>::getInstance().getAllProviders();
+      if (all.empty())
+      {
+         throw Common::NoSuchValueException (FromHere(),"No providers in factory of '" + TYPE::getClassName() + "'");
+      }
+      else // since there is no default we use the first on the list of providers
+      {
+        prov = dynamic_cast<typename TYPE::PROVIDER*>(*(all.begin()));
+      }
+   }
+   return prov->create();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Environment
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Common_SingleBehaviorFactory_ci

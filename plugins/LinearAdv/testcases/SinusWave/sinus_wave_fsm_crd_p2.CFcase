@@ -1,0 +1,97 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = 0.0631233
+
+
+# CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileReader libTecplotWriter  libForwardEuler libTHOR2CFmesh libFluctSplit libFluctSplitScalar libFluctSplitHO libLinearAdv
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/LinearAdv/testcases/SinusWave
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.listTRS = InnerCells FaceSouth FaceWest FaceNorth FaceEast
+
+Simulator.SubSystem.Default.PhysicalModelType  = LinearAdv2D
+Simulator.SubSystem.LinearAdv2D.VX = 0.0
+Simulator.SubSystem.LinearAdv2D.VY = 1.0
+
+Simulator.SubSystem.OutputFormat    = Tecplot
+
+Simulator.SubSystem.Tecplot.FileName = advectSW.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate       = 10
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = thetas
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize   = 4
+Simulator.SubSystem.Tecplot.WriteSol       = WriteSolutionBlock
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 30
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = square-fem-p2-1670n.CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.6
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = HOCRD
+
+Simulator.SubSystem.FluctuationSplit.SetupCom    = StdSetup     ThetaSetup
+Simulator.SubSystem.FluctuationSplit.UnSetupCom  = ThetaUnSetup StdUnSetup
+Simulator.SubSystem.FluctuationSplit.ThetaSetup1.MaxNbSubElems = 4
+
+Simulator.SubSystem.FluctuationSplit.Data.ScalarSplitter = ScalarBC
+Simulator.SubSystem.FluctuationSplit.Data.ScalarBC.StoreThetas   = true
+Simulator.SubSystem.FluctuationSplit.Data.ScalarBC.MaxNbSubElems = 4
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Prim
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar    = Prim
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar   = Prim
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar    = Prim
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorOrder = P1
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState InitState InitState InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField FaceS FaceW FaceE
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def  = 0.0
+
+Simulator.SubSystem.FluctuationSplit.FaceS.applyTRS = FaceSouth
+Simulator.SubSystem.FluctuationSplit.FaceS.Vars = x y
+Simulator.SubSystem.FluctuationSplit.FaceS.Def = sin(2*x*3.14159265359)
+
+Simulator.SubSystem.FluctuationSplit.FaceW.applyTRS = FaceWest
+Simulator.SubSystem.FluctuationSplit.FaceW.Vars = x y
+Simulator.SubSystem.FluctuationSplit.FaceW.Def = 0.0
+
+Simulator.SubSystem.FluctuationSplit.FaceE.applyTRS = FaceEast
+Simulator.SubSystem.FluctuationSplit.FaceE.Vars = x y
+Simulator.SubSystem.FluctuationSplit.FaceE.Def = 0.0
+
+Simulator.SubSystem.FluctuationSplit.BcComds = SuperInlet SuperInlet SuperInlet SuperOutlet
+Simulator.SubSystem.FluctuationSplit.BcNames = South West East North
+
+Simulator.SubSystem.FluctuationSplit.South.applyTRS = FaceSouth
+Simulator.SubSystem.FluctuationSplit.South.Vars = x y
+Simulator.SubSystem.FluctuationSplit.South.Def = sin(2*x*3.14159265359)
+
+Simulator.SubSystem.FluctuationSplit.West.applyTRS = FaceWest
+Simulator.SubSystem.FluctuationSplit.West.Vars = x y
+Simulator.SubSystem.FluctuationSplit.West.Def = 0.0
+
+Simulator.SubSystem.FluctuationSplit.East.applyTRS = FaceEast
+Simulator.SubSystem.FluctuationSplit.East.Vars = x y
+Simulator.SubSystem.FluctuationSplit.East.Def = 0.0
+
+Simulator.SubSystem.FluctuationSplit.North.applyTRS = FaceNorth

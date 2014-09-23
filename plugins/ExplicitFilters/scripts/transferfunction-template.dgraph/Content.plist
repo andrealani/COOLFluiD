@@ -1,0 +1,2058 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Canvas</key>
+	<dict>
+		<key>Above</key>
+		<string></string>
+		<key>Axis Background</key>
+		<dict>
+			<key>Color</key>
+			<dict>
+				<key>Space</key>
+				<string>NSCalibratedWhiteColorSpace</string>
+				<key>White</key>
+				<real>1</real>
+			</dict>
+			<key>Gradient</key>
+			<dict>
+				<key>First Color</key>
+				<dict>
+					<key>Alpha</key>
+					<real>0.36000001430511475</real>
+					<key>Blue</key>
+					<real>1</real>
+					<key>Green</key>
+					<real>1</real>
+					<key>Red</key>
+					<real>1</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>First of Three</key>
+				<dict>
+					<key>Alpha</key>
+					<real>0.80000001192092896</real>
+					<key>Blue</key>
+					<real>1</real>
+					<key>Green</key>
+					<real>0.0</real>
+					<key>Red</key>
+					<real>0.0</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Location of Middle</key>
+				<string>0.5</string>
+				<key>Second Color</key>
+				<dict>
+					<key>Alpha</key>
+					<real>0.36000001430511475</real>
+					<key>Blue</key>
+					<real>1</real>
+					<key>Green</key>
+					<real>0.65190315246582031</real>
+					<key>Red</key>
+					<real>0.0</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Second of Three</key>
+				<dict>
+					<key>Alpha</key>
+					<real>0.0</real>
+					<key>Blue</key>
+					<real>1</real>
+					<key>Green</key>
+					<real>1</real>
+					<key>Red</key>
+					<real>1</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Third of Three</key>
+				<dict>
+					<key>Alpha</key>
+					<real>0.80000001192092896</real>
+					<key>Blue</key>
+					<real>0.0</real>
+					<key>Green</key>
+					<real>0.0</real>
+					<key>Red</key>
+					<real>1</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Type</key>
+				<integer>1</integer>
+			</dict>
+			<key>Graphic</key>
+			<dict/>
+			<key>Pattern</key>
+			<dict>
+				<key>Background</key>
+				<dict>
+					<key>Blue</key>
+					<real>1</real>
+					<key>Green</key>
+					<real>1</real>
+					<key>Red</key>
+					<real>1</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Foreground</key>
+				<dict>
+					<key>Blue</key>
+					<real>0.0</real>
+					<key>Green</key>
+					<real>0.0</real>
+					<key>Red</key>
+					<real>0.0</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Line Width</key>
+				<string>0.5</string>
+				<key>Pattern</key>
+				<integer>1</integer>
+			</dict>
+			<key>Position</key>
+			<integer>3</integer>
+			<key>Type</key>
+			<integer>1</integer>
+		</dict>
+		<key>Background</key>
+		<dict>
+			<key>Color</key>
+			<dict>
+				<key>Space</key>
+				<string>NSCalibratedWhiteColorSpace</string>
+				<key>White</key>
+				<real>1</real>
+			</dict>
+			<key>Gradient</key>
+			<dict>
+				<key>First Color</key>
+				<dict>
+					<key>Alpha</key>
+					<real>0.36000001430511475</real>
+					<key>Blue</key>
+					<real>1</real>
+					<key>Green</key>
+					<real>1</real>
+					<key>Red</key>
+					<real>1</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>First of Three</key>
+				<dict>
+					<key>Alpha</key>
+					<real>0.80000001192092896</real>
+					<key>Blue</key>
+					<real>1</real>
+					<key>Green</key>
+					<real>0.0</real>
+					<key>Red</key>
+					<real>0.0</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Location of Middle</key>
+				<string>0.5</string>
+				<key>Second Color</key>
+				<dict>
+					<key>Alpha</key>
+					<real>0.36000001430511475</real>
+					<key>Blue</key>
+					<real>1</real>
+					<key>Green</key>
+					<real>0.65190315246582031</real>
+					<key>Red</key>
+					<real>0.0</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Second of Three</key>
+				<dict>
+					<key>Alpha</key>
+					<real>0.0</real>
+					<key>Blue</key>
+					<real>1</real>
+					<key>Green</key>
+					<real>1</real>
+					<key>Red</key>
+					<real>1</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Third of Three</key>
+				<dict>
+					<key>Alpha</key>
+					<real>0.80000001192092896</real>
+					<key>Blue</key>
+					<real>0.0</real>
+					<key>Green</key>
+					<real>0.0</real>
+					<key>Red</key>
+					<real>1</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Type</key>
+				<integer>1</integer>
+			</dict>
+			<key>Graphic</key>
+			<dict/>
+			<key>Pattern</key>
+			<dict>
+				<key>Background</key>
+				<dict>
+					<key>Blue</key>
+					<real>1</real>
+					<key>Green</key>
+					<real>1</real>
+					<key>Red</key>
+					<real>1</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Foreground</key>
+				<dict>
+					<key>Blue</key>
+					<real>0.0</real>
+					<key>Green</key>
+					<real>0.0</real>
+					<key>Red</key>
+					<real>0.0</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Line Width</key>
+				<string>0.5</string>
+				<key>Pattern</key>
+				<integer>1</integer>
+			</dict>
+			<key>Position</key>
+			<integer>3</integer>
+			<key>Type</key>
+			<integer>1</integer>
+		</dict>
+		<key>Below</key>
+		<string></string>
+		<key>Drawing Magnification</key>
+		<integer>100</integer>
+		<key>Drawing Size</key>
+		<string>5in,3in</string>
+		<key>Drawing Size Method</key>
+		<integer>1</integer>
+		<key>Export Background</key>
+		<true/>
+		<key>FG</key>
+		<dict>
+			<key>Color</key>
+			<dict>
+				<key>Alpha</key>
+				<real>0.0</real>
+				<key>Space</key>
+				<string>NSDeviceWhiteColorSpace</string>
+				<key>White</key>
+				<real>1</real>
+			</dict>
+			<key>Gradient</key>
+			<dict>
+				<key>First Color</key>
+				<dict>
+					<key>Alpha</key>
+					<real>0.36000001430511475</real>
+					<key>Blue</key>
+					<real>1</real>
+					<key>Green</key>
+					<real>1</real>
+					<key>Red</key>
+					<real>1</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>First of Three</key>
+				<dict>
+					<key>Alpha</key>
+					<real>0.80000001192092896</real>
+					<key>Blue</key>
+					<real>1</real>
+					<key>Green</key>
+					<real>0.0</real>
+					<key>Red</key>
+					<real>0.0</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Location of Middle</key>
+				<string>0.5</string>
+				<key>Second Color</key>
+				<dict>
+					<key>Alpha</key>
+					<real>0.36000001430511475</real>
+					<key>Blue</key>
+					<real>1</real>
+					<key>Green</key>
+					<real>0.65190315246582031</real>
+					<key>Red</key>
+					<real>0.0</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Second of Three</key>
+				<dict>
+					<key>Alpha</key>
+					<real>0.0</real>
+					<key>Blue</key>
+					<real>1</real>
+					<key>Green</key>
+					<real>1</real>
+					<key>Red</key>
+					<real>1</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Third of Three</key>
+				<dict>
+					<key>Alpha</key>
+					<real>0.80000001192092896</real>
+					<key>Blue</key>
+					<real>0.0</real>
+					<key>Green</key>
+					<real>0.0</real>
+					<key>Red</key>
+					<real>1</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Type</key>
+				<integer>1</integer>
+			</dict>
+			<key>Pattern</key>
+			<dict>
+				<key>Background</key>
+				<dict>
+					<key>Blue</key>
+					<real>1</real>
+					<key>Green</key>
+					<real>1</real>
+					<key>Red</key>
+					<real>1</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Foreground</key>
+				<dict>
+					<key>Blue</key>
+					<real>0.0</real>
+					<key>Green</key>
+					<real>0.0</real>
+					<key>Red</key>
+					<real>0.0</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Line Width</key>
+				<string>0.5</string>
+				<key>Pattern</key>
+				<integer>1</integer>
+			</dict>
+			<key>Type</key>
+			<integer>1</integer>
+		</dict>
+		<key>Left</key>
+		<string></string>
+		<key>Open</key>
+		<false/>
+		<key>Right</key>
+		<string></string>
+		<key>Stacking Choice</key>
+		<integer>2</integer>
+		<key>Title</key>
+		<array>
+			<string>Transferfunction for cell </string>
+			<dict>
+				<key>Digits</key>
+				<integer>4</integer>
+				<key>Label</key>
+				<string>cell</string>
+				<key>Parameter</key>
+				<string>cell</string>
+			</dict>
+		</array>
+		<key>Title Font Style</key>
+		<dict>
+			<key>Font</key>
+			<integer>2</integer>
+			<key>Name</key>
+			<string>Helvetica</string>
+			<key>Overwrite Size</key>
+			<integer>1</integer>
+			<key>Overwrite Style</key>
+			<integer>1</integer>
+			<key>Size</key>
+			<real>12</real>
+		</dict>
+		<key>Type</key>
+		<string>Canvas Settings</string>
+		<key>X Label Height</key>
+		<integer>2</integer>
+		<key>Y Label Width</key>
+		<integer>2</integer>
+	</dict>
+	<key>Columns</key>
+	<array>
+		<dict>
+			<key>Name</key>
+			<string>#</string>
+			<key>Type</key>
+			<string>Line Number</string>
+			<key>Width</key>
+			<real>35</real>
+		</dict>
+		<dict>
+			<key>Currency</key>
+			<integer>10</integer>
+			<key>Name</key>
+			<string>kxy</string>
+			<key>Number Format</key>
+			<integer>1</integer>
+			<key>Open</key>
+			<false/>
+			<key>Show</key>
+			<true/>
+			<key>Type</key>
+			<string>Ascii</string>
+			<key>Width</key>
+			<real>71</real>
+		</dict>
+		<dict>
+			<key>Currency</key>
+			<integer>10</integer>
+			<key>Name</key>
+			<string>target</string>
+			<key>Number Format</key>
+			<integer>1</integer>
+			<key>Open</key>
+			<false/>
+			<key>Show</key>
+			<true/>
+			<key>Type</key>
+			<string>Ascii</string>
+			<key>Width</key>
+			<real>71</real>
+		</dict>
+		<dict>
+			<key>Currency</key>
+			<integer>10</integer>
+			<key>Name</key>
+			<string>Gxy</string>
+			<key>Number Format</key>
+			<integer>1</integer>
+			<key>Open</key>
+			<false/>
+			<key>Show</key>
+			<true/>
+			<key>Type</key>
+			<string>Ascii</string>
+			<key>Width</key>
+			<real>71</real>
+		</dict>
+		<dict>
+			<key>Currency</key>
+			<integer>10</integer>
+			<key>Name</key>
+			<string>kx</string>
+			<key>Number Format</key>
+			<integer>1</integer>
+			<key>Open</key>
+			<false/>
+			<key>Show</key>
+			<true/>
+			<key>Type</key>
+			<string>Ascii</string>
+			<key>Width</key>
+			<real>71</real>
+		</dict>
+		<dict>
+			<key>Currency</key>
+			<integer>10</integer>
+			<key>Name</key>
+			<string>Gx</string>
+			<key>Number Format</key>
+			<integer>1</integer>
+			<key>Open</key>
+			<false/>
+			<key>Show</key>
+			<true/>
+			<key>Type</key>
+			<string>Ascii</string>
+			<key>Width</key>
+			<real>71</real>
+		</dict>
+		<dict>
+			<key>At Least</key>
+			<string></string>
+			<key>Digits</key>
+			<integer>5</integer>
+			<key>Expression</key>
+			<string>kxy/kx.max</string>
+			<key>Minimum Length</key>
+			<string></string>
+			<key>Name</key>
+			<string>kxy_norm</string>
+			<key>Open</key>
+			<false/>
+			<key>Seed</key>
+			<string>200</string>
+			<key>Show</key>
+			<true/>
+			<key>Type</key>
+			<string>Expression</string>
+			<key>Width</key>
+			<real>71</real>
+		</dict>
+		<dict>
+			<key>At Least</key>
+			<string></string>
+			<key>Digits</key>
+			<integer>5</integer>
+			<key>Expression</key>
+			<string>kx/kx.max</string>
+			<key>Minimum Length</key>
+			<string></string>
+			<key>Name</key>
+			<string>kx_norm</string>
+			<key>Open</key>
+			<false/>
+			<key>Seed</key>
+			<string>200</string>
+			<key>Show</key>
+			<true/>
+			<key>Type</key>
+			<string>Expression</string>
+			<key>Width</key>
+			<real>71</real>
+		</dict>
+	</array>
+	<key>Commands</key>
+	<array>
+		<dict>
+			<key>Crop X</key>
+			<string>-∞,∞</string>
+			<key>Crop Y</key>
+			<string>ymin,ymax</string>
+			<key>Draw X Labels</key>
+			<true/>
+			<key>Draw Y Labels</key>
+			<true/>
+			<key>Include X</key>
+			<string></string>
+			<key>Include Y</key>
+			<string></string>
+			<key>Open</key>
+			<true/>
+			<key>Pad X Range</key>
+			<integer>10</integer>
+			<key>Pad Y Range</key>
+			<integer>10</integer>
+			<key>Type</key>
+			<string>Main Axis</string>
+			<key>X Categories</key>
+			<integer>0</integer>
+			<key>X Currency</key>
+			<integer>1</integer>
+			<key>X Currency Negative</key>
+			<false/>
+			<key>X Currency Negative Red</key>
+			<false/>
+			<key>X Degree/Radians</key>
+			<integer>1</integer>
+			<key>X Minor Ticks Values</key>
+			<string>0.5,1.5</string>
+			<key>X Orientation</key>
+			<integer>1</integer>
+			<key>X Prefix</key>
+			<string></string>
+			<key>X Suffix</key>
+			<string></string>
+			<key>X Tick Labels</key>
+			<integer>-2</integer>
+			<key>X Tick Locations</key>
+			<integer>0</integer>
+			<key>X Ticks Choice</key>
+			<integer>1</integer>
+			<key>X Ticks Stride</key>
+			<string>1</string>
+			<key>X Ticks Values</key>
+			<string>0,1,2</string>
+			<key>X Title</key>
+			<array>
+				<string>k \Delta</string>
+			</array>
+			<key>X Type</key>
+			<integer>1</integer>
+			<key>Y Categories</key>
+			<integer>0</integer>
+			<key>Y Currency</key>
+			<integer>1</integer>
+			<key>Y Currency Negative</key>
+			<false/>
+			<key>Y Currency Negative Red</key>
+			<false/>
+			<key>Y Degree/Radians</key>
+			<integer>1</integer>
+			<key>Y Minor Ticks Values</key>
+			<string>0.5,1.5</string>
+			<key>Y Prefix</key>
+			<string></string>
+			<key>Y Suffix</key>
+			<string></string>
+			<key>Y Tick Labels</key>
+			<integer>-2</integer>
+			<key>Y Tick Locations</key>
+			<integer>0</integer>
+			<key>Y Ticks Choice</key>
+			<integer>1</integer>
+			<key>Y Ticks Stride</key>
+			<string>1</string>
+			<key>Y Ticks Values</key>
+			<string>0,1,2</string>
+			<key>Y Title</key>
+			<array>
+				<string>G</string>
+			</array>
+			<key>Y Type</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>Crop X</key>
+			<string>-∞,∞</string>
+			<key>Draw X Labels</key>
+			<true/>
+			<key>Include X</key>
+			<string></string>
+			<key>Open</key>
+			<false/>
+			<key>Pad X Range</key>
+			<integer>10</integer>
+			<key>Relative Size</key>
+			<string>1</string>
+			<key>Space Before</key>
+			<integer>3</integer>
+			<key>Space Before Pixels</key>
+			<string>10</string>
+			<key>Type</key>
+			<string>X Axis</string>
+			<key>X Categories</key>
+			<integer>0</integer>
+			<key>X Currency</key>
+			<integer>1</integer>
+			<key>X Currency Negative</key>
+			<false/>
+			<key>X Currency Negative Red</key>
+			<false/>
+			<key>X Degree/Radians</key>
+			<integer>1</integer>
+			<key>X Minor Ticks Values</key>
+			<string>0.5,1.5</string>
+			<key>X Orientation</key>
+			<integer>1</integer>
+			<key>X Prefix</key>
+			<string></string>
+			<key>X Suffix</key>
+			<string></string>
+			<key>X Tick Labels</key>
+			<integer>-2</integer>
+			<key>X Tick Locations</key>
+			<integer>0</integer>
+			<key>X Ticks Choice</key>
+			<integer>1</integer>
+			<key>X Ticks Stride</key>
+			<string>1</string>
+			<key>X Ticks Values</key>
+			<string>0,1,2</string>
+			<key>X Title</key>
+			<array>
+				<string>k</string>
+			</array>
+			<key>X Type</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>Between</key>
+			<integer>-2</integer>
+			<key>Between Which Axis</key>
+			<dict>
+				<key>Same Axis</key>
+				<false/>
+			</dict>
+			<key>Bridge Gaps</key>
+			<false/>
+			<key>Connections</key>
+			<integer>1</integer>
+			<key>Crop</key>
+			<string>-∞,∞</string>
+			<key>Error Bar Size</key>
+			<string>pen</string>
+			<key>Error Color</key>
+			<dict>
+				<key>Blue</key>
+				<real>0.0</real>
+				<key>Green</key>
+				<real>0.0</real>
+				<key>Red</key>
+				<real>1</real>
+				<key>Space</key>
+				<string>NSCalibratedRGBColorSpace</string>
+			</dict>
+			<key>Error Style</key>
+			<integer>1</integer>
+			<key>Exclude</key>
+			<false/>
+			<key>Fill</key>
+			<dict>
+				<key>Color</key>
+				<dict>
+					<key>Blue</key>
+					<real>0.91847825050354004</real>
+					<key>Green</key>
+					<real>0.66231644153594971</real>
+					<key>Red</key>
+					<real>0.59735554456710815</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Gradient</key>
+				<dict>
+					<key>First Color</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.36000001430511475</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>1</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>First of Three</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.80000001192092896</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>0.0</real>
+						<key>Red</key>
+						<real>0.0</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Location of Middle</key>
+					<string>0.5</string>
+					<key>Second Color</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.36000001430511475</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>0.65190315246582031</real>
+						<key>Red</key>
+						<real>0.0</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Second of Three</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.0</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>1</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Third of Three</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.80000001192092896</real>
+						<key>Blue</key>
+						<real>0.0</real>
+						<key>Green</key>
+						<real>0.0</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Type</key>
+					<integer>1</integer>
+				</dict>
+				<key>Pattern</key>
+				<dict>
+					<key>Background</key>
+					<dict>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>1</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Foreground</key>
+					<dict>
+						<key>Blue</key>
+						<real>0.0</real>
+						<key>Green</key>
+						<real>0.0</real>
+						<key>Red</key>
+						<real>0.0</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Line Width</key>
+					<string>0.5</string>
+					<key>Pattern</key>
+					<integer>1</integer>
+				</dict>
+				<key>Type</key>
+				<integer>1</integer>
+			</dict>
+			<key>Fill Method</key>
+			<integer>1</integer>
+			<key>Hide</key>
+			<false/>
+			<key>Label Font</key>
+			<dict>
+				<key>Font</key>
+				<integer>4</integer>
+				<key>Name</key>
+				<string>Helvetica</string>
+				<key>Overwrite Size</key>
+				<integer>1</integer>
+				<key>Overwrite Style</key>
+				<integer>1</integer>
+				<key>Size</key>
+				<real>12</real>
+			</dict>
+			<key>Labels</key>
+			<integer>-2</integer>
+			<key>Labels Offset</key>
+			<string>2,0</string>
+			<key>Legend</key>
+			<array>
+				<string>target            FGR = </string>
+				<dict>
+					<key>Digits</key>
+					<integer>4</integer>
+					<key>Label</key>
+					<string>FGR_target</string>
+					<key>Parameter</key>
+					<string>FGR_target</string>
+				</dict>
+			</array>
+			<key>Line Style</key>
+			<dict>
+				<key>Color</key>
+				<dict>
+					<key>Blue</key>
+					<real>0.0</real>
+					<key>Green</key>
+					<real>0.56122446060180664</real>
+					<key>Red</key>
+					<real>0.18313953280448914</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Line Number</key>
+				<integer>1</integer>
+				<key>Type</key>
+				<integer>5</integer>
+				<key>Width</key>
+				<string>pen</string>
+			</dict>
+			<key>Negative X Error</key>
+			<integer>-2</integer>
+			<key>Negative Y Error</key>
+			<integer>-2</integer>
+			<key>Offset</key>
+			<string>0,0</string>
+			<key>Open</key>
+			<false/>
+			<key>Point Fill Color</key>
+			<dict>
+				<key>Space</key>
+				<string>NSCalibratedWhiteColorSpace</string>
+				<key>White</key>
+				<real>1</real>
+			</dict>
+			<key>Point Size</key>
+			<string>point</string>
+			<key>Point Style</key>
+			<integer>1</integer>
+			<key>Positive X Error</key>
+			<integer>-2</integer>
+			<key>Positive Y Error</key>
+			<integer>-2</integer>
+			<key>Spline Type</key>
+			<integer>1</integer>
+			<key>Type</key>
+			<string>Plot</string>
+			<key>Which X Axis</key>
+			<integer>0</integer>
+			<key>Which Y Axis</key>
+			<integer>0</integer>
+			<key>X</key>
+			<integer>6</integer>
+			<key>X Error Type</key>
+			<integer>1</integer>
+			<key>Y</key>
+			<integer>2</integer>
+			<key>Y Error Type</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>Between</key>
+			<integer>-2</integer>
+			<key>Between Which Axis</key>
+			<dict>
+				<key>Same Axis</key>
+				<false/>
+			</dict>
+			<key>Bridge Gaps</key>
+			<false/>
+			<key>Connections</key>
+			<integer>1</integer>
+			<key>Crop</key>
+			<string>-∞,∞</string>
+			<key>Error Bar Size</key>
+			<string>pen</string>
+			<key>Error Color</key>
+			<dict>
+				<key>Blue</key>
+				<real>0.0</real>
+				<key>Green</key>
+				<real>0.0</real>
+				<key>Red</key>
+				<real>1</real>
+				<key>Space</key>
+				<string>NSCalibratedRGBColorSpace</string>
+			</dict>
+			<key>Error Style</key>
+			<integer>1</integer>
+			<key>Exclude</key>
+			<false/>
+			<key>Fill</key>
+			<dict>
+				<key>Color</key>
+				<dict>
+					<key>Blue</key>
+					<real>0.91847825050354004</real>
+					<key>Green</key>
+					<real>0.66231644153594971</real>
+					<key>Red</key>
+					<real>0.59735554456710815</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Gradient</key>
+				<dict>
+					<key>First Color</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.36000001430511475</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>1</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>First of Three</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.80000001192092896</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>0.0</real>
+						<key>Red</key>
+						<real>0.0</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Location of Middle</key>
+					<string>0.5</string>
+					<key>Second Color</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.36000001430511475</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>0.65190315246582031</real>
+						<key>Red</key>
+						<real>0.0</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Second of Three</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.0</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>1</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Third of Three</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.80000001192092896</real>
+						<key>Blue</key>
+						<real>0.0</real>
+						<key>Green</key>
+						<real>0.0</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Type</key>
+					<integer>1</integer>
+				</dict>
+				<key>Pattern</key>
+				<dict>
+					<key>Background</key>
+					<dict>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>1</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Foreground</key>
+					<dict>
+						<key>Blue</key>
+						<real>0.0</real>
+						<key>Green</key>
+						<real>0.0</real>
+						<key>Red</key>
+						<real>0.0</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Line Width</key>
+					<string>0.5</string>
+					<key>Pattern</key>
+					<integer>1</integer>
+				</dict>
+				<key>Type</key>
+				<integer>1</integer>
+			</dict>
+			<key>Fill Method</key>
+			<integer>1</integer>
+			<key>Hide</key>
+			<false/>
+			<key>Label Font</key>
+			<dict>
+				<key>Font</key>
+				<integer>4</integer>
+				<key>Name</key>
+				<string>Helvetica</string>
+				<key>Overwrite Size</key>
+				<integer>1</integer>
+				<key>Overwrite Style</key>
+				<integer>1</integer>
+				<key>Size</key>
+				<real>12</real>
+			</dict>
+			<key>Labels</key>
+			<integer>-2</integer>
+			<key>Labels Offset</key>
+			<string>2,0</string>
+			<key>Legend</key>
+			<array>
+				<string>diagonal xy   FGR = </string>
+				<dict>
+					<key>Digits</key>
+					<integer>4</integer>
+					<key>Label</key>
+					<string>FGR_xy</string>
+					<key>Parameter</key>
+					<string>FGR_xy</string>
+				</dict>
+			</array>
+			<key>Line Style</key>
+			<dict>
+				<key>Color</key>
+				<dict>
+					<key>Blue</key>
+					<real>1</real>
+					<key>Green</key>
+					<real>0.60588204860687256</real>
+					<key>Red</key>
+					<real>0.12080395221710205</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Line Number</key>
+				<integer>1</integer>
+				<key>Type</key>
+				<integer>2</integer>
+				<key>Width</key>
+				<string>pen</string>
+			</dict>
+			<key>Negative X Error</key>
+			<integer>-2</integer>
+			<key>Negative Y Error</key>
+			<integer>-2</integer>
+			<key>Offset</key>
+			<string>0,0</string>
+			<key>Open</key>
+			<false/>
+			<key>Point Fill Color</key>
+			<dict>
+				<key>Space</key>
+				<string>NSCalibratedWhiteColorSpace</string>
+				<key>White</key>
+				<real>1</real>
+			</dict>
+			<key>Point Size</key>
+			<string>point</string>
+			<key>Point Style</key>
+			<integer>1</integer>
+			<key>Positive X Error</key>
+			<integer>-2</integer>
+			<key>Positive Y Error</key>
+			<integer>-2</integer>
+			<key>Spline Type</key>
+			<integer>1</integer>
+			<key>Type</key>
+			<string>Plot</string>
+			<key>Which X Axis</key>
+			<integer>0</integer>
+			<key>Which Y Axis</key>
+			<integer>0</integer>
+			<key>X</key>
+			<integer>6</integer>
+			<key>X Error Type</key>
+			<integer>1</integer>
+			<key>Y</key>
+			<integer>3</integer>
+			<key>Y Error Type</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>Between</key>
+			<integer>-2</integer>
+			<key>Between Which Axis</key>
+			<dict>
+				<key>Same Axis</key>
+				<false/>
+			</dict>
+			<key>Bridge Gaps</key>
+			<false/>
+			<key>Connections</key>
+			<integer>1</integer>
+			<key>Crop</key>
+			<string>-∞,∞</string>
+			<key>Error Bar Size</key>
+			<string>pen</string>
+			<key>Error Color</key>
+			<dict>
+				<key>Blue</key>
+				<real>0.0</real>
+				<key>Green</key>
+				<real>0.0</real>
+				<key>Red</key>
+				<real>1</real>
+				<key>Space</key>
+				<string>NSCalibratedRGBColorSpace</string>
+			</dict>
+			<key>Error Style</key>
+			<integer>1</integer>
+			<key>Exclude</key>
+			<false/>
+			<key>Fill</key>
+			<dict>
+				<key>Color</key>
+				<dict>
+					<key>Blue</key>
+					<real>0.91847825050354004</real>
+					<key>Green</key>
+					<real>0.66231644153594971</real>
+					<key>Red</key>
+					<real>0.59735554456710815</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Gradient</key>
+				<dict>
+					<key>First Color</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.36000001430511475</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>1</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>First of Three</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.80000001192092896</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>0.0</real>
+						<key>Red</key>
+						<real>0.0</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Location of Middle</key>
+					<string>0.5</string>
+					<key>Second Color</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.36000001430511475</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>0.65190315246582031</real>
+						<key>Red</key>
+						<real>0.0</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Second of Three</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.0</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>1</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Third of Three</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.80000001192092896</real>
+						<key>Blue</key>
+						<real>0.0</real>
+						<key>Green</key>
+						<real>0.0</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Type</key>
+					<integer>1</integer>
+				</dict>
+				<key>Pattern</key>
+				<dict>
+					<key>Background</key>
+					<dict>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>1</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Foreground</key>
+					<dict>
+						<key>Blue</key>
+						<real>0.0</real>
+						<key>Green</key>
+						<real>0.0</real>
+						<key>Red</key>
+						<real>0.0</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Line Width</key>
+					<string>0.5</string>
+					<key>Pattern</key>
+					<integer>1</integer>
+				</dict>
+				<key>Type</key>
+				<integer>1</integer>
+			</dict>
+			<key>Fill Method</key>
+			<integer>1</integer>
+			<key>Hide</key>
+			<false/>
+			<key>Label Font</key>
+			<dict>
+				<key>Font</key>
+				<integer>4</integer>
+				<key>Name</key>
+				<string>Helvetica</string>
+				<key>Overwrite Size</key>
+				<integer>1</integer>
+				<key>Overwrite Style</key>
+				<integer>1</integer>
+				<key>Size</key>
+				<real>12</real>
+			</dict>
+			<key>Labels</key>
+			<integer>-2</integer>
+			<key>Labels Offset</key>
+			<string>2,0</string>
+			<key>Legend</key>
+			<array>
+				<string>diagonal x     FGR = </string>
+				<dict>
+					<key>Digits</key>
+					<integer>4</integer>
+					<key>Label</key>
+					<string>FGR_x</string>
+					<key>Parameter</key>
+					<string>FGR_x</string>
+				</dict>
+			</array>
+			<key>Line Style</key>
+			<dict>
+				<key>Color</key>
+				<dict>
+					<key>Blue</key>
+					<real>0.81122446060180664</real>
+					<key>Green</key>
+					<real>0.068179883062839508</real>
+					<key>Red</key>
+					<real>0.29791247844696045</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Line Number</key>
+				<integer>1</integer>
+				<key>Type</key>
+				<integer>2</integer>
+				<key>Width</key>
+				<string>pen</string>
+			</dict>
+			<key>Negative X Error</key>
+			<integer>-2</integer>
+			<key>Negative Y Error</key>
+			<integer>-2</integer>
+			<key>Offset</key>
+			<string>0,0</string>
+			<key>Open</key>
+			<false/>
+			<key>Point Fill Color</key>
+			<dict>
+				<key>Space</key>
+				<string>NSCalibratedWhiteColorSpace</string>
+				<key>White</key>
+				<real>1</real>
+			</dict>
+			<key>Point Size</key>
+			<string>point</string>
+			<key>Point Style</key>
+			<integer>1</integer>
+			<key>Positive X Error</key>
+			<integer>-2</integer>
+			<key>Positive Y Error</key>
+			<integer>-2</integer>
+			<key>Spline Type</key>
+			<integer>1</integer>
+			<key>Type</key>
+			<string>Plot</string>
+			<key>Which X Axis</key>
+			<integer>0</integer>
+			<key>Which Y Axis</key>
+			<integer>0</integer>
+			<key>X</key>
+			<integer>7</integer>
+			<key>X Error Type</key>
+			<integer>1</integer>
+			<key>Y</key>
+			<integer>5</integer>
+			<key>Y Error Type</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>Between</key>
+			<integer>-2</integer>
+			<key>Between Which Axis</key>
+			<dict>
+				<key>Same Axis</key>
+				<false/>
+			</dict>
+			<key>Bridge Gaps</key>
+			<false/>
+			<key>Connections</key>
+			<integer>1</integer>
+			<key>Crop</key>
+			<string>-∞,∞</string>
+			<key>Error Bar Size</key>
+			<string>pen</string>
+			<key>Error Color</key>
+			<dict>
+				<key>Blue</key>
+				<real>0.0</real>
+				<key>Green</key>
+				<real>0.0</real>
+				<key>Red</key>
+				<real>1</real>
+				<key>Space</key>
+				<string>NSCalibratedRGBColorSpace</string>
+			</dict>
+			<key>Error Style</key>
+			<integer>1</integer>
+			<key>Exclude</key>
+			<false/>
+			<key>Fill</key>
+			<dict>
+				<key>Color</key>
+				<dict>
+					<key>Blue</key>
+					<real>0.91847825050354004</real>
+					<key>Green</key>
+					<real>0.66231644153594971</real>
+					<key>Red</key>
+					<real>0.59735554456710815</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Gradient</key>
+				<dict>
+					<key>First Color</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.36000001430511475</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>1</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>First of Three</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.80000001192092896</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>0.0</real>
+						<key>Red</key>
+						<real>0.0</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Location of Middle</key>
+					<string>0.5</string>
+					<key>Second Color</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.36000001430511475</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>0.65190315246582031</real>
+						<key>Red</key>
+						<real>0.0</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Second of Three</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.0</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>1</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Third of Three</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.80000001192092896</real>
+						<key>Blue</key>
+						<real>0.0</real>
+						<key>Green</key>
+						<real>0.0</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Type</key>
+					<integer>1</integer>
+				</dict>
+				<key>Pattern</key>
+				<dict>
+					<key>Background</key>
+					<dict>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>1</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Foreground</key>
+					<dict>
+						<key>Blue</key>
+						<real>0.0</real>
+						<key>Green</key>
+						<real>0.0</real>
+						<key>Red</key>
+						<real>0.0</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Line Width</key>
+					<string>0.5</string>
+					<key>Pattern</key>
+					<integer>1</integer>
+				</dict>
+				<key>Type</key>
+				<integer>1</integer>
+			</dict>
+			<key>Fill Method</key>
+			<integer>1</integer>
+			<key>Hide</key>
+			<true/>
+			<key>Label Font</key>
+			<dict>
+				<key>Font</key>
+				<integer>4</integer>
+				<key>Name</key>
+				<string>Helvetica</string>
+				<key>Overwrite Size</key>
+				<integer>1</integer>
+				<key>Overwrite Style</key>
+				<integer>1</integer>
+				<key>Size</key>
+				<real>12</real>
+			</dict>
+			<key>Labels</key>
+			<integer>-2</integer>
+			<key>Labels Offset</key>
+			<string>2,0</string>
+			<key>Legend</key>
+			<array/>
+			<key>Line Style</key>
+			<dict>
+				<key>Color</key>
+				<dict>
+					<key>Blue</key>
+					<real>0.0</real>
+					<key>Green</key>
+					<real>0.0</real>
+					<key>Red</key>
+					<real>0.0</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Line Number</key>
+				<integer>1</integer>
+				<key>Type</key>
+				<integer>2</integer>
+				<key>Width</key>
+				<string>pen</string>
+			</dict>
+			<key>Negative X Error</key>
+			<integer>-2</integer>
+			<key>Negative Y Error</key>
+			<integer>-2</integer>
+			<key>Offset</key>
+			<string>0,0</string>
+			<key>Open</key>
+			<false/>
+			<key>Point Fill Color</key>
+			<dict>
+				<key>Space</key>
+				<string>NSCalibratedWhiteColorSpace</string>
+				<key>White</key>
+				<real>1</real>
+			</dict>
+			<key>Point Size</key>
+			<string>point</string>
+			<key>Point Style</key>
+			<integer>1</integer>
+			<key>Positive X Error</key>
+			<integer>-2</integer>
+			<key>Positive Y Error</key>
+			<integer>-2</integer>
+			<key>Spline Type</key>
+			<integer>1</integer>
+			<key>Type</key>
+			<string>Plot</string>
+			<key>Which X Axis</key>
+			<integer>1</integer>
+			<key>Which Y Axis</key>
+			<integer>0</integer>
+			<key>X</key>
+			<integer>1</integer>
+			<key>X Error Type</key>
+			<integer>1</integer>
+			<key>Y</key>
+			<integer>2</integer>
+			<key>Y Error Type</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>Background</key>
+			<dict>
+				<key>Color</key>
+				<dict>
+					<key>Space</key>
+					<string>NSCalibratedWhiteColorSpace</string>
+					<key>White</key>
+					<real>1</real>
+				</dict>
+				<key>Gradient</key>
+				<dict>
+					<key>First Color</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.36000001430511475</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>1</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>First of Three</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.80000001192092896</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>0.0</real>
+						<key>Red</key>
+						<real>0.0</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Location of Middle</key>
+					<string>0.5</string>
+					<key>Second Color</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.36000001430511475</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>0.65190315246582031</real>
+						<key>Red</key>
+						<real>0.0</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Second of Three</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.0</real>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>1</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Third of Three</key>
+					<dict>
+						<key>Alpha</key>
+						<real>0.80000001192092896</real>
+						<key>Blue</key>
+						<real>0.0</real>
+						<key>Green</key>
+						<real>0.0</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Type</key>
+					<integer>1</integer>
+				</dict>
+				<key>Pattern</key>
+				<dict>
+					<key>Background</key>
+					<dict>
+						<key>Blue</key>
+						<real>1</real>
+						<key>Green</key>
+						<real>1</real>
+						<key>Red</key>
+						<real>1</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Foreground</key>
+					<dict>
+						<key>Blue</key>
+						<real>0.0</real>
+						<key>Green</key>
+						<real>0.0</real>
+						<key>Red</key>
+						<real>0.0</real>
+						<key>Space</key>
+						<string>NSCalibratedRGBColorSpace</string>
+					</dict>
+					<key>Line Width</key>
+					<string>0.5</string>
+					<key>Pattern</key>
+					<integer>1</integer>
+				</dict>
+				<key>Type</key>
+				<integer>2</integer>
+			</dict>
+			<key>Border Style</key>
+			<dict>
+				<key>Color</key>
+				<dict>
+					<key>Blue</key>
+					<real>0.0</real>
+					<key>Green</key>
+					<real>0.0</real>
+					<key>Red</key>
+					<real>0.0</real>
+					<key>Space</key>
+					<string>NSCalibratedRGBColorSpace</string>
+				</dict>
+				<key>Line Number</key>
+				<integer>1</integer>
+				<key>Type</key>
+				<integer>2</integer>
+				<key>Width</key>
+				<string>pen</string>
+			</dict>
+			<key>Exclude</key>
+			<false/>
+			<key>Font Style</key>
+			<dict>
+				<key>Font</key>
+				<integer>4</integer>
+				<key>Name</key>
+				<string>Helvetica</string>
+				<key>Overwrite Size</key>
+				<integer>1</integer>
+				<key>Overwrite Style</key>
+				<integer>1</integer>
+				<key>Size</key>
+				<real>12</real>
+			</dict>
+			<key>Graph Position</key>
+			<integer>1</integer>
+			<key>Hide</key>
+			<false/>
+			<key>Horizontal Position</key>
+			<integer>2</integer>
+			<key>Horizontal X Offset</key>
+			<string>0</string>
+			<key>Horizontal Y Offset</key>
+			<string>20</string>
+			<key>Include Position</key>
+			<integer>1</integer>
+			<key>Layout</key>
+			<integer>1</integer>
+			<key>Legend Title</key>
+			<array/>
+			<key>Offset</key>
+			<string>15,13</string>
+			<key>Open</key>
+			<false/>
+			<key>Position</key>
+			<integer>1</integer>
+			<key>Type</key>
+			<string>Legend</string>
+			<key>Which X Axis</key>
+			<integer>0</integer>
+			<key>Which Y Axis</key>
+			<integer>0</integer>
+			<key>Width</key>
+			<string>177</string>
+		</dict>
+	</array>
+	<key>Drawing Size</key>
+	<string>{757, 563}</string>
+	<key>Parameters</key>
+	<dict>
+		<key>Animation</key>
+		<dict>
+			<key>Enabled</key>
+			<true/>
+			<key>Exact Value</key>
+			<real>0.0</real>
+			<key>Max</key>
+			<real>1</real>
+			<key>Min</key>
+			<real>0.0</real>
+			<key>Name</key>
+			<string>t</string>
+			<key>Range</key>
+			<string>0,1</string>
+			<key>Slider Value</key>
+			<real>0.0</real>
+			<key>Value</key>
+			<string>0</string>
+		</dict>
+		<key>Animation Duration</key>
+		<string>10</string>
+		<key>List</key>
+		<array>
+			<dict>
+				<key>Exact Value</key>
+				<real>0.0</real>
+				<key>Name</key>
+				<string>cell</string>
+				<key>Value</key>
+				<string>0</string>
+			</dict>
+			<dict>
+				<key>Exact Value</key>
+				<real>0.0</real>
+				<key>Name</key>
+				<string>FGR_target</string>
+				<key>Value</key>
+				<string>0</string>
+			</dict>
+			<dict>
+				<key>Exact Value</key>
+				<real>0.0</real>
+				<key>Name</key>
+				<string>FGR_xy</string>
+				<key>Value</key>
+				<string>0</string>
+			</dict>
+			<dict>
+				<key>Exact Value</key>
+				<real>0.0</real>
+				<key>Name</key>
+				<string>FGR_x</string>
+				<key>Value</key>
+				<string>0</string>
+			</dict>
+			<dict>
+				<key>Exact Value</key>
+				<real>-infinity</real>
+				<key>Name</key>
+				<string>ymin</string>
+				<key>Value</key>
+				<string>-∞</string>
+			</dict>
+			<dict>
+				<key>Exact Value</key>
+				<real>+infinity</real>
+				<key>Name</key>
+				<string>ymax</string>
+				<key>Value</key>
+				<string>∞</string>
+			</dict>
+		</array>
+		<key>Loop Animation</key>
+		<false/>
+	</dict>
+	<key>QuickTime Settings</key>
+	<dict>
+		<key>Compression Number</key>
+		<integer>1</integer>
+		<key>Frames Per Second</key>
+		<integer>24</integer>
+		<key>Transparency</key>
+		<false/>
+	</dict>
+	<key>Style</key>
+	<dict>
+		<key>Axis Font Style</key>
+		<dict>
+			<key>Font</key>
+			<integer>1</integer>
+			<key>Name</key>
+			<string>Helvetica</string>
+			<key>Overwrite Size</key>
+			<integer>1</integer>
+			<key>Overwrite Style</key>
+			<integer>1</integer>
+			<key>Size</key>
+			<real>12</real>
+		</dict>
+		<key>Box Style</key>
+		<integer>1</integer>
+		<key>Box Style Offset</key>
+		<integer>2</integer>
+		<key>Box Style Offset Specified</key>
+		<string>point*0.6</string>
+		<key>Draw Minor Tick Marks</key>
+		<true/>
+		<key>Draw Mirrored Tick Marks</key>
+		<false/>
+		<key>Grid Color</key>
+		<dict>
+			<key>Blue</key>
+			<real>0.0</real>
+			<key>Green</key>
+			<real>0.0</real>
+			<key>Red</key>
+			<real>0.0</real>
+			<key>Space</key>
+			<string>NSCalibratedRGBColorSpace</string>
+		</dict>
+		<key>Grid Style</key>
+		<dict>
+			<key>Color</key>
+			<dict>
+				<key>Blue</key>
+				<real>0.0</real>
+				<key>Green</key>
+				<real>0.0</real>
+				<key>Red</key>
+				<real>0.0</real>
+				<key>Space</key>
+				<string>NSCalibratedRGBColorSpace</string>
+			</dict>
+			<key>Line Number</key>
+			<integer>1</integer>
+			<key>Type</key>
+			<integer>3</integer>
+			<key>Width</key>
+			<string>pen</string>
+		</dict>
+		<key>Grid Width</key>
+		<string>pen</string>
+		<key>Grid X and/or Y</key>
+		<integer>1</integer>
+		<key>Label Font Style</key>
+		<dict>
+			<key>Font</key>
+			<integer>1</integer>
+			<key>Name</key>
+			<string>Helvetica</string>
+			<key>Overwrite Size</key>
+			<integer>1</integer>
+			<key>Overwrite Style</key>
+			<integer>1</integer>
+			<key>Size</key>
+			<real>12</real>
+		</dict>
+		<key>Line Color</key>
+		<dict>
+			<key>Blue</key>
+			<real>0.0</real>
+			<key>Green</key>
+			<real>0.0</real>
+			<key>Red</key>
+			<real>0.0</real>
+			<key>Space</key>
+			<string>NSCalibratedRGBColorSpace</string>
+		</dict>
+		<key>Line Width</key>
+		<string>0.5</string>
+		<key>Main Font Style</key>
+		<dict>
+			<key>Font</key>
+			<integer>30</integer>
+			<key>Name</key>
+			<string>Helvetica</string>
+			<key>Size</key>
+			<real>12</real>
+			<key>Standard Color</key>
+			<dict>
+				<key>Blue</key>
+				<real>0.0</real>
+				<key>Green</key>
+				<real>0.0</real>
+				<key>Red</key>
+				<real>0.0</real>
+				<key>Space</key>
+				<string>NSCalibratedRGBColorSpace</string>
+			</dict>
+			<key>Standard Font</key>
+			<integer>1</integer>
+			<key>Standard Size</key>
+			<integer>12</integer>
+		</dict>
+		<key>Marker Size</key>
+		<string>5</string>
+		<key>Open</key>
+		<false/>
+		<key>Styles</key>
+		<array>
+			<dict>
+				<key>Name</key>
+				<string></string>
+				<key>Properties</key>
+				<dict/>
+			</dict>
+		</array>
+		<key>Tick Placement</key>
+		<integer>2</integer>
+		<key>Tick Size</key>
+		<integer>2</integer>
+		<key>Title Font Style</key>
+		<dict>
+			<key>Font</key>
+			<integer>1</integer>
+			<key>Name</key>
+			<string>Helvetica</string>
+			<key>Overwrite Size</key>
+			<integer>1</integer>
+			<key>Overwrite Style</key>
+			<integer>1</integer>
+			<key>Size</key>
+			<real>12</real>
+		</dict>
+		<key>Type</key>
+		<string>Style Settings</string>
+		<key>Which Style Set</key>
+		<integer>0</integer>
+	</dict>
+	<key>Window Size</key>
+	<string>{764, 570}</string>
+</dict>
+</plist>

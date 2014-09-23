@@ -1,0 +1,50 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#include "Environment/ObjectProvider.hh"
+
+#include "Framework/IdentityFilterState.hh"
+#include "Framework/Framework.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+Environment::ObjectProvider<IdentityFilterState,
+			    FilterState,
+			    FrameworkLib,1>
+identityFilterStateProvider("Identity");
+
+//////////////////////////////////////////////////////////////////////////////
+
+IdentityFilterState::IdentityFilterState(const std::string& name) :
+  FilterState(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+ 
+IdentityFilterState::~IdentityFilterState()
+{
+}
+  
+//////////////////////////////////////////////////////////////////////////////
+
+void IdentityFilterState::filter (RealVector& state) const
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

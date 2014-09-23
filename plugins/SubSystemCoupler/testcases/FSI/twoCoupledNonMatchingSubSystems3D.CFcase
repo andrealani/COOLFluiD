@@ -1,0 +1,260 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -13.8292
+
+#
+
+CFEnv.VerboseEvents = false
+Simulator.Maestro = LoopMaestro
+Simulator.LoopMaestro.InitialFiles = CouplingStartFiles/Advect3D/*
+Simulator.SubSystems = SubSysA SubSysB
+Simulator.SubSystemTypes = StandardSubSystem StandardSubSystem
+
+Simulator.LoopMaestro.GlobalStopCriteria = GlobalMaxNumberSteps
+Simulator.LoopMaestro.GlobalMaxNumberSteps.nbSteps = 1
+Simulator.LoopMaestro.AppendIter = true
+Simulator.LoopMaestro.RestartFromPreviousSolution = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libForwardEuler libTHOR2CFmesh libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libLinearAdv libLoopMaestro libSubSystemCoupler
+
+Simulator.Paths.WorkingDir = plugins/SubSystemCoupler/testcases/FSI/
+Simulator.Paths.ResultsDir       = ./
+
+### SubSystem A Coupler Method Parameters #######################################################
+
+Simulator.SubSysA.CouplerMethod = SubSystemCoupler
+
+Simulator.SubSysA.SubSystemCoupler.SetupCom = StdSetup
+
+Simulator.SubSysA.SubSystemCoupler.UnSetupComs = StdUnSetup
+Simulator.SubSysA.SubSystemCoupler.UnSetupNames = UnSetup1
+
+Simulator.SubSysA.SubSystemCoupler.PreProcessReadComs = StdPreProcessRead
+Simulator.SubSysA.SubSystemCoupler.PreProcessReadNames = PreProcessRead1
+
+Simulator.SubSysA.SubSystemCoupler.PreProcessWriteComs = StdPreProcessWrite
+Simulator.SubSysA.SubSystemCoupler.PreProcessWriteNames = PreProcessWrite1
+
+Simulator.SubSysA.SubSystemCoupler.MeshMatchingReadComs = StdMeshMatcherRead
+Simulator.SubSysA.SubSystemCoupler.MeshMatchingReadNames = MeshMatcherRead1
+
+Simulator.SubSysA.SubSystemCoupler.MeshMatchingWriteComs = NewtonMeshMatcherWrite
+Simulator.SubSysA.SubSystemCoupler.MeshMatchingWriteNames = MeshMatcherWrite1
+
+Simulator.SubSysA.SubSystemCoupler.PostProcessComs = StdPostProcess
+Simulator.SubSysA.SubSystemCoupler.PostProcessNames = PostProcess1
+
+Simulator.SubSysA.SubSystemCoupler.InterfacesReadComs = StdReadDataTransfer
+Simulator.SubSysA.SubSystemCoupler.InterfacesReadNames = ReadData1
+Simulator.SubSysA.SubSystemCoupler.InterfacesWriteComs = StdWriteDataTransfer
+Simulator.SubSysA.SubSystemCoupler.InterfacesWriteNames = WriteData1
+
+Simulator.SubSysA.SubSystemCoupler.InterfacesNames = Interface1
+Simulator.SubSysA.SubSystemCoupler.CoupledSubSystems = SubSysB
+
+Simulator.SubSysA.SubSystemCoupler.Data.NonMatchingGeometry = 0
+Simulator.SubSysA.SubSystemCoupler.Data.NonMatchingGeometryThreshold = 0.05
+Simulator.SubSysA.SubSystemCoupler.Data.NonMatchingGeometryRotation = 0.
+Simulator.SubSysA.SubSystemCoupler.Data.NonMatchingGeometryVector = 0. 0. 0.
+Simulator.SubSysA.SubSystemCoupler.Data.PreVariableTransformers = Null
+Simulator.SubSysA.SubSystemCoupler.Data.PostVariableTransformers = Null
+Simulator.SubSysA.SubSystemCoupler.Data.CoordType = States
+
+Simulator.SubSysA.SubSystemCoupler.CommandGroups = Interaction1
+Simulator.SubSysA.SubSystemCoupler.Interaction1.groupedTRS = Side3
+Simulator.SubSysA.SubSystemCoupler.Interaction1.groupedComs  = Setup1 UnSetup1 PreProcessRead1 PreProcessWrite1 MeshMatcherRead1 MeshMatcherWrite1 ReadData1 WriteData1 PostProcess1
+
+### SubSystem A  Parameters #######################################################
+
+Simulator.SubSysA.Default.PhysicalModelType       = LinearAdv3D
+Simulator.SubSysA.LinearAdv3D.VX = 1.0
+Simulator.SubSysA.LinearAdv3D.VY = 0.0
+Simulator.SubSysA.LinearAdv3D.VZ = 0.0
+
+
+Simulator.SubSysA.ConvergenceFile     = convergence.plt
+Simulator.SubSysA.OutputFormat        = Tecplot CFmesh
+Simulator.SubSysA.CFmesh.FileName     = cubeA.CFmesh
+Simulator.SubSysA.Tecplot.FileName    = cubeA.plt
+Simulator.SubSysA.Tecplot.Data.updateVar = Prim
+Simulator.SubSysA.Tecplot.SaveRate = 10
+Simulator.SubSysA.CFmesh.SaveRate = 10
+Simulator.SubSysA.Tecplot.AppendTime = false
+Simulator.SubSysA.CFmesh.AppendTime = false
+Simulator.SubSysA.Tecplot.AppendIter = false
+Simulator.SubSysA.CFmesh.AppendIter = false
+
+Simulator.SubSysA.ConvRate            = 1
+Simulator.SubSysA.ShowRate            = 10
+#Simulator.SubSysA.onlyMesh            = true
+
+Simulator.SubSysA.StopCondition       = MaxNumberSteps
+Simulator.SubSysA.MaxNumberSteps.nbSteps = 50
+
+#Simulator.SubSysA.StopCondition       = Norm
+#Simulator.SubSysA.Norm.valueNorm      = -6.0
+
+Simulator.SubSysA.Default.listTRS = InnerCells Side1 Side2 Side3 Side4 Side5 Side6
+
+Simulator.SubSysA.MeshCreator = CFmeshFileReader
+Simulator.SubSysA.CFmeshFileReader.Data.FileName = cube.CFmesh
+Simulator.SubSysA.CFmeshFileReader.Data.builderName = RDS
+Simulator.SubSysA.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSysA.CFmeshFileReader.Data.TranslateMesh = true
+Simulator.SubSysA.CFmeshFileReader.Data.TranslationVector = -1.0 0.0 0.0
+
+Simulator.SubSysA.ConvergenceMethod = FwdEuler
+
+Simulator.SubSysA.SpaceMethod = FluctuationSplit
+Simulator.SubSysA.FluctuationSplit.Data.SysSplitter = ScalarN
+
+Simulator.SubSysA.FluctuationSplit.Data.SolutionVar  = Prim
+Simulator.SubSysA.FluctuationSplit.Data.UpdateVar  = Prim
+Simulator.SubSysA.FluctuationSplit.Data.DistribVar = Prim
+Simulator.SubSysA.FluctuationSplit.Data.LinearVar  = Prim
+
+Simulator.SubSysA.FluctuationSplit.InitComds = InitState InitState
+Simulator.SubSysA.FluctuationSplit.InitNames = InField WaveIn
+
+Simulator.SubSysA.FluctuationSplit.InField.applyTRS = InnerCells Side4
+Simulator.SubSysA.FluctuationSplit.InField.Vars = x y z
+Simulator.SubSysA.FluctuationSplit.InField.Def = 0.
+Simulator.SubSysA.FluctuationSplit.InField.InputVar = Prim
+
+Simulator.SubSysA.FluctuationSplit.WaveIn.applyTRS = Side1
+Simulator.SubSysA.FluctuationSplit.WaveIn.Vars = x y z
+Simulator.SubSysA.FluctuationSplit.WaveIn.Def = 10*sin(2*y*3.14159265359)
+Simulator.SubSysA.FluctuationSplit.WaveIn.InputVar = Prim
+
+Simulator.SubSysA.FluctuationSplit.BcComds = SuperInlet SuperOutlet SuperInlet
+Simulator.SubSysA.FluctuationSplit.BcNames = In         Out         Sides
+
+Simulator.SubSysA.FluctuationSplit.In.applyTRS = Side1
+Simulator.SubSysA.FluctuationSplit.In.Vars = x y z
+Simulator.SubSysA.FluctuationSplit.In.Def = 10*sin(2*y*3.14159265359)
+
+Simulator.SubSysA.FluctuationSplit.Sides.applyTRS = Side2 Side4
+Simulator.SubSysA.FluctuationSplit.Sides.Vars = x y z
+Simulator.SubSysA.FluctuationSplit.Sides.Def = 0.
+
+Simulator.SubSysA.FluctuationSplit.Out.applyTRS = Side3
+
+### SubSysA B  Parameters #######################################################
+### SubSystem B Coupler Method Parameters #######################################################
+
+Simulator.SubSysB.CouplerMethod = SubSystemCoupler
+
+Simulator.SubSysB.SubSystemCoupler.SetupCom = StdSetup
+
+Simulator.SubSysB.SubSystemCoupler.UnSetupComs = StdUnSetup
+Simulator.SubSysB.SubSystemCoupler.UnSetupNames = UnSetup1
+
+Simulator.SubSysB.SubSystemCoupler.PreProcessReadComs = StdPreProcessRead
+Simulator.SubSysB.SubSystemCoupler.PreProcessReadNames = PreProcessRead1
+Simulator.SubSysB.SubSystemCoupler.PreProcessWriteComs = StdPreProcessWrite
+Simulator.SubSysB.SubSystemCoupler.PreProcessWriteNames = PreProcessWrite1
+
+Simulator.SubSysB.SubSystemCoupler.MeshMatchingReadComs = StdMeshMatcherRead
+Simulator.SubSysB.SubSystemCoupler.MeshMatchingReadNames = MeshMatcherRead1
+Simulator.SubSysB.SubSystemCoupler.MeshMatchingWriteComs = NewtonMeshMatcherWrite
+Simulator.SubSysB.SubSystemCoupler.MeshMatchingWriteNames = MeshMatcherWrite1
+
+Simulator.SubSysB.SubSystemCoupler.PostProcessComs = StdPostProcess
+Simulator.SubSysB.SubSystemCoupler.PostProcessNames = PostProcess1
+
+Simulator.SubSysB.SubSystemCoupler.InterfacesReadComs = StdReadDataTransfer
+Simulator.SubSysB.SubSystemCoupler.InterfacesReadNames = ReadData1
+Simulator.SubSysB.SubSystemCoupler.InterfacesWriteComs = StdWriteDataTransfer
+Simulator.SubSysB.SubSystemCoupler.InterfacesWriteNames = WriteData1
+
+Simulator.SubSysB.SubSystemCoupler.InterfacesNames = Interface1
+Simulator.SubSysB.SubSystemCoupler.CoupledSubSystems = SubSysA
+
+Simulator.SubSysB.SubSystemCoupler.Data.NonMatchingGeometry = 0
+Simulator.SubSysB.SubSystemCoupler.Data.NonMatchingGeometryThreshold = 0.05
+Simulator.SubSysB.SubSystemCoupler.Data.NonMatchingGeometryRotation = 0.0
+Simulator.SubSysB.SubSystemCoupler.Data.NonMatchingGeometryVector = 0. 0. 0.
+Simulator.SubSysB.SubSystemCoupler.Data.PreVariableTransformers = Null
+Simulator.SubSysB.SubSystemCoupler.Data.PostVariableTransformers = Null
+Simulator.SubSysB.SubSystemCoupler.Data.CoordType = States
+
+Simulator.SubSysB.SubSystemCoupler.CommandGroups = Interaction1
+Simulator.SubSysB.SubSystemCoupler.Interaction1.groupedTRS = Side1
+Simulator.SubSysB.SubSystemCoupler.Interaction1.groupedComs  = Setup1 UnSetup1 PreProcessRead1 PreProcessWrite1 MeshMatcherRead1 MeshMatcherWrite1 ReadData1 WriteData1 PostProcess1
+
+### SubSystem B  Parameters #######################################################
+
+Simulator.SubSysB.Default.PhysicalModelType  = LinearAdv3D
+Simulator.SubSysB.LinearAdv3D.VX = 1.0
+Simulator.SubSysB.LinearAdv3D.VY = 0.0
+Simulator.SubSysB.LinearAdv3D.VZ = 0.0
+
+
+Simulator.SubSysB.ConvergenceFile     = convergence.plt
+Simulator.SubSysB.OutputFormat        = Tecplot CFmesh
+Simulator.SubSysB.CFmesh.FileName     = cubeB.CFmesh
+Simulator.SubSysB.Tecplot.FileName    = cubeB.plt
+Simulator.SubSysB.Tecplot.Data.updateVar = Prim
+Simulator.SubSysB.Tecplot.SaveRate = 100
+Simulator.SubSysB.CFmesh.SaveRate = 100
+Simulator.SubSysB.Tecplot.AppendTime = false
+Simulator.SubSysB.CFmesh.AppendTime = false
+Simulator.SubSysB.Tecplot.AppendIter = false
+Simulator.SubSysB.CFmesh.AppendIter = false
+
+Simulator.SubSysB.ConvRate            = 1
+Simulator.SubSysB.ShowRate            = 10
+
+Simulator.SubSysB.StopCondition       = MaxNumberSteps
+Simulator.SubSysB.MaxNumberSteps.nbSteps = 50
+
+#Simulator.SubSysB.StopCondition       = Norm
+#Simulator.SubSysB.Norm.valueNorm      = -6.0
+
+Simulator.SubSysB.Default.listTRS = InnerCells Side1 Side2 Side3 Side4 Side5 Side6
+
+Simulator.SubSysB.MeshCreator = CFmeshFileReader
+Simulator.SubSysB.CFmeshFileReader.Data.FileName = cube.CFmesh
+Simulator.SubSysB.CFmeshFileReader.Data.builderName = RDS
+Simulator.SubSysB.CFmeshFileReader.Data.polyTypeName = Lagrange
+#Simulator.SubSysB.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSysB.ConvergenceMethod = FwdEuler
+Simulator.SubSysA.FwdEuler.Data.CFL.Value = 1.0
+Simulator.SubSysB.FwdEuler.Data.CFL.Value = 1.0
+
+Simulator.SubSysB.SpaceMethod = FluctuationSplit
+Simulator.SubSysB.FluctuationSplit.Data.SysSplitter = ScalarN
+
+Simulator.SubSysB.FluctuationSplit.Data.SolutionVar  = Prim
+Simulator.SubSysB.FluctuationSplit.Data.UpdateVar  = Prim
+Simulator.SubSysB.FluctuationSplit.Data.DistribVar = Prim
+Simulator.SubSysB.FluctuationSplit.Data.LinearVar  = Prim
+
+Simulator.SubSysB.FluctuationSplit.InitComds = InitState
+Simulator.SubSysB.FluctuationSplit.InitNames = InField
+
+Simulator.SubSysB.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSysB.FluctuationSplit.InField.Vars = x y z
+Simulator.SubSysB.FluctuationSplit.InField.Def = 0.
+Simulator.SubSysB.FluctuationSplit.InField.InputVar = Prim
+
+Simulator.SubSysB.FluctuationSplit.BcComds = CoupledSuperInlet SuperOutlet SuperInlet
+Simulator.SubSysB.FluctuationSplit.BcNames = In                Out         Sides
+
+Simulator.SubSysB.FluctuationSplit.In.applyTRS = Side1
+Simulator.SubSysB.FluctuationSplit.In.Interface = Interaction1
+Simulator.SubSysB.FluctuationSplit.In.Vars = x y z
+Simulator.SubSysB.FluctuationSplit.In.Def = 0.
+
+Simulator.SubSysB.FluctuationSplit.Sides.applyTRS = Side2 Side4
+Simulator.SubSysB.FluctuationSplit.Sides.Vars = x y z
+Simulator.SubSysB.FluctuationSplit.Sides.Def = 0.
+
+Simulator.SubSysB.FluctuationSplit.Out.applyTRS = Side3
+
+CFEnv.RegistSignalHandlers = false

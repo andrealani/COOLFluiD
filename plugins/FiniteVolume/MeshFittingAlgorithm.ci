@@ -1,0 +1,1044 @@
+#include <queue>
+#include "Common/PE.hh"
+#include "Common/EventHandler.hh"
+#include "MathTools/MathConsts.hh"
+#include "Environment/SingleBehaviorFactory.hh"
+#include "Environment/FileHandlerOutput.hh"
+#include "Common/BadValueException.hh"
+#include "Framework/DataProcessing.hh"
+#include "Framework/SubSystemStatus.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/LSSMatrix.hh"
+#include "Framework/LSSVector.hh"
+#include "Framework/PathAppender.hh"
+#include "Environment/DirPaths.hh"
+
+/*
+  TODO: Fix RHS size for problems with states.size()<nodes.size()
+*/
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename MODEL>
+void MeshFittingAlgorithm<MODEL>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFreal >("phiMaxSS","Maximum phi");
+  options.template addConfigOption< CFreal >("phiMinSS","Minimum phi");
+  options.template addConfigOption< CFreal >("minPerc","Spring constant minimum percentile limit");
+  options.template addConfigOption< CFreal >("maxPerc","Spring constant maximum percentile limit");
+  options.template addConfigOption< CFuint >("boundaryDegreeNM","Degree from boundary for non-modifiable nodes");
+  options.template addConfigOption< CFuint >("stopAdaptationIter","Stop adaptation (only shock sensor)");
+  options.template addConfigOption< CFuint >("ssRate","Shock sensor rate");
+  options.template addConfigOption< CFuint >("maRate","Mesh adaptation rate");  
+  options.template addConfigOption< CFreal >("alpha","Step for adaptation");
+  options.template addConfigOption< std::string >("monitorVar","Monitor variable for mesh adaptation");
+  options.template addConfigOption< bool   >("printKesToFile","Print spring constants to file");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename MODEL>
+MeshFittingAlgorithm<MODEL>::MeshFittingAlgorithm(const std::string& name) :
+  Framework::DataProcessingCom(name),
+  socket_shockSensor("shockSensor"),
+  socket_gradientPhi("gradientPhi"),
+  socket_pressure("pressure"),
+  socket_volumes("volumes"),
+  socket_nodes("nodes"),
+  socket_states("states"),
+  socket_nstates("nstates"),
+  socket_gstates("gstates"),
+  socket_normals("normals"),
+  socket_rhs("rhs"),
+  socket_isOutward("isOutward"),
+  m_lss(CFNULL),
+  m_fvmccData(CFNULL),
+  m_physicalData()
+  //m_acc(CFNULL)
+{
+  this->addConfigOptionsTo(this);
+  
+  m_phiMinSS = 2.0;
+  this->setParameter("phiMinSS", &m_phiMinSS);
+  
+  m_phiMaxSS = 3.0;
+  this->setParameter("phiMaxSS", &m_phiMaxSS);
+  
+  m_minPerc = 0.65;
+  this->setParameter("minPerc", &m_minPerc);
+
+  m_maxPerc = 0.70;
+  this->setParameter("maxPerc", &m_maxPerc);
+
+  m_printKesToFile = false;
+  this->setParameter("printKesToFile", &m_printKesToFile);  
+
+  m_boundaryDegreeNM = 2;
+  this->setParameter("boundaryDegreeNM", &m_boundaryDegreeNM);
+
+  m_alpha = 1.0;  
+  this->setParameter("alpha", &m_alpha);
+  
+  m_ssRate = 1;
+  this->setParameter("ssRate", &m_ssRate);
+  
+  m_maRate = 20;
+  this->setParameter("maRate", &m_maRate);
+  
+  m_monitorVar = "rho";
+  this->setParameter("monitorVar", &m_monitorVar);
+  
+  m_stopAdaptationIter = 0;
+  this->setParameter("stopAdaptationIter", &m_stopAdaptationIter);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename MODEL>
+void MeshFittingAlgorithm<MODEL>::configure ( Config::ConfigArgs& args )
+{
+  CFAUTOTRACE;
+
+  Framework::DataProcessingCom::configure(args);
+  
+  cf_assert(1.0 <= m_phiMinSS && m_phiMinSS < m_phiMaxSS);
+  cf_assert(0 <= m_minPerc && m_minPerc <= m_maxPerc && m_maxPerc <= 1);
+  cf_assert(0 <= m_boundaryDegreeNM);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename MODEL>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > 
+MeshFittingAlgorithm<MODEL>::needsSockets()
+{
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result;
+  
+  result.push_back(&socket_volumes);
+  result.push_back(&socket_nodes);
+  result.push_back(&socket_states);
+  result.push_back(&socket_nstates);
+  result.push_back(&socket_gstates);
+  result.push_back(&socket_normals);
+  result.push_back(&socket_rhs);
+  result.push_back(&socket_isOutward);
+  
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename MODEL>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > 
+MeshFittingAlgorithm<MODEL>::providesSockets()
+{
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > result;
+  result.push_back(&socket_shockSensor);
+  result.push_back(&socket_gradientPhi);
+  result.push_back(&socket_pressure);
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename MODEL>
+void MeshFittingAlgorithm<MODEL>::setup()
+{
+  CFAUTOTRACE;
+
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  
+  // get the linear system associated to this object and set it up
+  vector<SafePtr<LinearSystemSolver> > lssList = 
+    getMethodData().template getAllCollaborators<LinearSystemSolver>();
+  m_lss = lssList[0]; 
+  
+  CFLog(VERBOSE, "MeshFittingAlgorithm::setup() => collaborating LinearSystemSolver is " 
+	<< m_lss->getName() << "\n");
+
+  SafePtr<SpaceMethod> spaceMethod = getMethodData().template getCollaborator<SpaceMethod>();
+  SafePtr<CellCenterFVM> fvmcc = spaceMethod.d_castTo<CellCenterFVM>();
+  cf_assert(fvmcc.isNotNull());
+  m_fvmccData = fvmcc->getData();
+  
+  //////////////
+  
+  const CFuint nbCells = socket_states.getDataHandle().size();
+  const CFuint nbNodes = socket_nodes.getDataHandle().size();
+  const CFuint nbGhosts = socket_gstates.getDataHandle().size();
+  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
+  
+  /// resize output sockets
+  socket_pressure.getDataHandle().resize(nbCells);
+  socket_shockSensor.getDataHandle().resize(nbCells);
+  socket_gradientPhi.getDataHandle().resize(nbCells * nbDim);
+
+  /// resize connectivity tables
+  connectedNodes.resize(nbNodes);
+  connectedCells.resize(nbNodes);
+  connectedGhosts.resize(nbNodes);
+  ghostNodes.resize(nbGhosts);  
+  
+  /// resize gradient arrays
+  m_gradPhiNodes.resize(nbNodes * nbDim);
+  m_gradPhiCells.resize(nbCells * nbDim);
+  m_gradPhiGhosts.resize(nbGhosts * nbDim);
+  
+  /// resize arrays for computations
+  m_ke.resize(nbNodes);
+  visited.resize(nbNodes);
+  
+  /// setup geobuilder
+  m_geoBuilder.setup();
+  m_geoBuilder.getGeoBuilder()->setDataSockets(socket_states,
+					       socket_gstates,
+					       socket_nodes);
+ 
+  getMethodData().getUpdateVarSet()->setup();
+ 
+  // resize the physical data array
+  PhysicalModelStack::getActive()->getImplementor()->
+    getConvectiveTerm()->resizePhysicalData(m_physicalData);
+  
+  /// create mapping between monitor variable and its model
+  std::map<std::string, CFuint> variables;
+  variables["rho"] = MODEL::PTERM::RHO;
+  variables["p"] = MODEL::PTERM::P;
+  
+  std::map<std::string, CFuint>::iterator it = variables.find(m_monitorVar);
+  cf_assert(it != variables.end());
+  m_phi = it->second;
+
+  
+  createConnectivity();
+  determineNonModNodes();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Create node->node, node->cell, node->ghost
+ * and ghost->node connectivities
+ */  
+template <typename MODEL>
+void MeshFittingAlgorithm<MODEL>::createConnectivity()
+{
+  CFAUTOTRACE;
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  
+  CFLogDebugMin("MeshFittingAlgorithm::createConnectivity()" << "\n");
+  
+  SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");  
+  const CFuint nbCells = cells->getLocalNbGeoEnts();
+  
+  CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
+  geoData.trs = cells;
+  
+  /// Iterate over each cell, then over each face, then over each node
+  for (CFuint iCell = 0; iCell < nbCells; ++iCell) {
+    geoData.idx = iCell;
+    GeometricEntity *const currCell = m_geoBuilder.buildGE();
+    const std::vector<GeometricEntity*>&  facesInCell = *currCell->getNeighborGeos();
+    const CFuint nbFaces = facesInCell.size();
+    
+    for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+      std::vector<Node*>& faceNodes = *facesInCell[iFace]->getNodes();
+      const CFuint nbFaceNodes = faceNodes.size();
+
+      if (facesInCell[iFace]->getState(1)->isGhost()) {
+        const CFuint ghostID = facesInCell[iFace]->getState(1)->getLocalID();
+        for(CFuint iNode=0; iNode < nbFaceNodes; ++iNode) {
+          const CFuint nodeID = faceNodes[iNode]->getLocalID();
+          m_boundaryNodes.insert(nodeID);
+          ghostNodes[ghostID].push_back(nodeID);
+          connectedGhosts[nodeID].insert(ghostID);
+        }
+      }
+
+      for(CFuint iNode = 0; iNode < nbFaceNodes; ++iNode) {
+        const CFuint nodeID = faceNodes[iNode]->getLocalID();
+        
+        /// This assumes that the nodes on a face are given in order
+        /// For a quad ABCD, faceNodes must be a rotation, e.g.: CDAB
+        const CFuint prev = (iNode-1+nbFaceNodes) % nbFaceNodes;
+        const CFuint next = (iNode+1) % nbFaceNodes;
+        
+        connectedNodes[nodeID].insert( faceNodes[prev]->getLocalID() );
+        connectedNodes[nodeID].insert( faceNodes[next]->getLocalID() );        
+        connectedCells[nodeID].insert( currCell->getState(0)->getLocalID() );
+      }
+    }
+    m_geoBuilder.releaseGE();
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+        
+/**
+ * Determine and register non-modifiable nodes:
+ * paralell partition nodes, boundary nodes and
+ * close to the boundary nodes
+ */
+template <typename MODEL>
+void MeshFittingAlgorithm<MODEL>::determineNonModNodes()
+{
+  CFAUTOTRACE;
+  CFLogDebugMin("MeshFittingAlgorithm::determineNonModNodes()" << "\n");
+
+  if (m_ssRate == 0) {
+    return;
+  }
+
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;  
+
+  DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle();
+  const CFuint nbNodes = nodes.size();
+  
+  /// nonModifiableNodes due to parallel partition
+  for(CFuint iNode=0; iNode < nbNodes; ++iNode) {
+    const CFuint nodeID = nodes[iNode]->getLocalID();
+    cf_assert(nodeID == iNode);
+    if (m_nonModifiableNodes.find(nodeID) != m_nonModifiableNodes.end()) continue;
+
+    std::set<CFuint>& neighbors = connectedNodes[nodeID];
+    
+    /// Lock iNode if either iNode or one of its neighbors isn't parUpdatable
+    if (!nodes[iNode]->isParUpdatable()) {
+      m_nonModifiableNodes.insert(nodeID);
+
+      for(std::set<CFuint>::iterator it=neighbors.begin(); it != neighbors.end(); ++it) {
+        m_nonModifiableNodes.insert(*it);
+      }
+    }
+    else {
+      for(std::set<CFuint>::iterator it=neighbors.begin(); it != neighbors.end(); ++it) {
+        if (!nodes[*it]->isParUpdatable()) {
+          m_nonModifiableNodes.insert(nodeID);
+          break;
+        }
+      }
+    }
+  }
+
+  /// Lock nodes close to the boundary via BFS
+  std::queue< std::pair<CFuint,CFuint> > qu;
+  std::fill(visited.begin(), visited.end(), 0);
+  
+  for(std::set<CFuint>::iterator it=m_boundaryNodes.begin(); it != m_boundaryNodes.end(); ++it) {
+    qu.push( make_pair(*it, 0) );
+    visited[*it] = true;
+  }
+
+  while (!qu.empty()) {
+    std::pair<CFuint,CFuint> t = qu.front();
+    qu.pop();
+    
+    m_nonModifiableNodes.insert(t.first);
+
+    if (t.second < m_boundaryDegreeNM) {
+      std::set<CFuint>& neighbors = connectedNodes[t.first];
+      for(std::set<CFuint>::iterator it=neighbors.begin(); it != neighbors.end(); ++it) {
+        if (!visited[*it]) {
+          qu.push( make_pair(*it, t.second+1) );
+          visited[*it] = true;
+        }
+      }
+    }
+  }
+  
+  /// Debug information -- consider commenting it out
+  
+  CFuint prank = PE::GetPE().GetRank();
+  ostringstream convert;
+  convert << "nm_P" << prank << ".dat";
+  string fname = convert.str();
+  ofstream nmFile;
+  nmFile.open(fname.c_str());
+  for(std::set<CFuint>::iterator it=m_nonModifiableNodes.begin(); it != m_nonModifiableNodes.end(); ++it) {
+    Node& node = *nodes[*it];
+    nmFile << node[XX] << " " << node[YY] << endl;
+  }
+  nmFile.close();
+  
+  ///////////////////////////////////  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Compute the gradient of the monitor variable Phi
+ * TODO:  use look-up table (face->flux) to avoid re-computations (1)
+ *        remove duplicate code and instead use a function (2)
+ *        put values on nodes or on cells according to config (3)
+ */
+template <typename MODEL>
+void MeshFittingAlgorithm<MODEL>::computeGradientPhi()
+{
+  CFAUTOTRACE;
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  
+  CFLogDebugMin( "MeshFittingAlgorithm::computeGradientPhi()" << "\n");
+
+  DataHandle < CFreal > volumes   = socket_volumes.getDataHandle();
+  DataHandle < CFreal > normals   = socket_normals.getDataHandle();
+  DataHandle < CFint > isOutward  = socket_isOutward.getDataHandle();
+  DataHandle < RealVector > nstates     = socket_nstates.getDataHandle();  
+  DataHandle < Node*, GLOBAL > nodes    = socket_nodes.getDataHandle(); 
+  DataHandle < State*, GLOBAL > states  = socket_states.getDataHandle();
+  DataHandle < State* > gstates  = socket_gstates.getDataHandle();
+  
+  DataHandle < CFreal > gradientPhi = socket_gradientPhi.getDataHandle();
+  gradientPhi = 0.0;
+
+  SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
+  CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
+  geoData.trs = cells;
+  
+  SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
+  cf_assert(updateVarSet.isNotNull());
+  
+  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbCells = cells->getLocalNbGeoEnts();
+  const CFuint nbNodes = nodes.size();
+  const CFuint nbGhosts = gstates.size();
+  
+  cf_assert(nbCells == states.size());
+  cf_assert(nbNodes == nstates.size());
+    
+  RealVector gradPhi(nbDim);
+  RealVector normal(nbDim);
+  
+  Node faceCenter;
+
+  m_gradPhiCells = 0.0;
+  
+  
+  /// iterate over each cell to compute the gradient of phi
+  for (CFuint iCell = 0; iCell < nbCells; ++iCell) {
+    geoData.idx = iCell;
+    GeometricEntity *const currCell = m_geoBuilder.buildGE();
+    
+    const CFuint cellID = currCell->getID();
+    
+    const std::vector<GeometricEntity*>& facesInCell = *currCell->getNeighborGeos();
+    const CFuint nbFaces = facesInCell.size();
+    
+    /// Vector of dimension nbDim whose components are dPhi/dx_i
+    gradPhi = 0.0;
+    
+    /// It's re-computing physical data for each cell
+    /// TODO: 1 (see method comment on top)
+    for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+    
+      if (!facesInCell[iFace]->getState(1)->isParUpdatable()) continue;
+      
+      const CFuint faceID = facesInCell[iFace]->getID();
+      
+      // get normal to face and reverse if not outward
+      for(CFuint i = 0; i < nbDim; ++i) {
+        normal[i] = normals[faceID*nbDim + i];
+      }
+      
+      if (static_cast<CFuint>(isOutward[faceID]) != iCell) {
+        normal *= -1.;
+      }
+      
+      const vector<Node*>& faceNodes = *facesInCell[iFace]->getNodes();
+      
+      /// Compute face center as average of its nodes
+      for(CFuint i = 0; i < nbDim; ++i) faceCenter[XX+i] = 0.0;
+      for(CFuint i = 0; i < faceNodes.size(); ++i) {
+        Node& node = *faceNodes[i];
+        for(CFuint j = 0; j < nbDim; ++j) 
+          faceCenter[XX+j] += node[XX+j];
+      }
+      faceCenter /= static_cast<CFreal>(faceNodes.size());
+
+      CFreal phiEdge = 0.0;
+      CFreal totalWeight = 0.0;
+      
+      for(CFuint i = 0; i < faceNodes.size(); ++i) {
+        CFuint nodeID = faceNodes[i]->getLocalID();
+        
+        const RealVector& nodeValues = nstates[nodeID];
+        
+        State tmp(nodeValues, false);
+        tmp.setSpaceCoordinates(faceNodes[i]);
+        
+        updateVarSet->computePhysicalData(tmp, m_physicalData);        
+        const CFreal phiNode = m_physicalData[m_phi];
+        
+        const CFreal dist = getDistance(faceCenter, *faceNodes[i]);
+        const CFreal weight = 1.0/dist;
+        totalWeight += weight;
+        
+        phiEdge += phiNode * weight;
+      }
+      
+      gradPhi += phiEdge / totalWeight * normal;      
+    }
+    
+    /// Divison by the volume comes from Gauss theorem
+    gradPhi /= volumes[cellID];
+    
+    for (CFuint i = 0; i < nbDim; ++i)
+      m_gradPhiCells[iCell * nbDim + i] = gradPhi[i];
+    
+    m_geoBuilder.releaseGE();
+  }
+
+  /// iterate over each ghost state to compute the gradient of phi
+  for(CFuint iGhost=0; iGhost<nbGhosts; ++iGhost) {
+    Node& ghostCenter = gstates[iGhost]->getCoordinates();
+    updateVarSet->computePhysicalData( *gstates[iGhost], m_physicalData);
+    const CFreal phiGhost = m_physicalData[m_phi];
+    
+    CFreal totalWeight = 0.0;
+    
+    std::vector<CFuint>& gNodes = ghostNodes[iGhost];
+    
+    for(CFuint iNode=0; iNode<gNodes.size(); ++iNode) {
+      const CFreal dist = getDistance(ghostCenter, *nodes[ gNodes[iNode] ]);
+      const CFreal weight = 1.0/dist;
+      totalWeight += weight;
+
+      const CFuint nodeID = nodes[ gNodes[iNode] ]->getLocalID();
+      const RealVector& nodeValues = nstates[nodeID];
+      
+      State tmp(nodeValues, false);
+      tmp.setSpaceCoordinates(nodes[nodeID]);
+      
+      updateVarSet->computePhysicalData(tmp, m_physicalData);
+      const CFreal phiNode = m_physicalData[m_phi];
+      
+      const CFreal dPhi = phiNode - phiGhost;
+      const CFreal grad = dPhi / dist;
+
+      for(CFuint i = 0; i < nbDim; ++i) {
+        const CFreal dcoord = (*nodes[ gNodes[iNode] ])[XX+i] - ghostCenter[XX+i];
+        m_gradPhiGhosts[iGhost*nbDim + i] += grad * dcoord/dist * weight;
+      }
+    }
+
+    for(CFuint i = 0; i < nbDim; ++i)
+      m_gradPhiGhosts[iGhost*nbDim + i] /= totalWeight;
+  }
+
+  m_gradPhiNodes = 0.0;
+
+  /// Extrapolate value on nodes using values on cells and ghosts
+  /// TODO: 2 (see method comment on top)
+  for(CFuint iNode = 0; iNode < nodes.size(); ++iNode) {
+    CFreal totalWeight = 0.0;
+
+    std::set<CFuint>& nodeCells = connectedCells[iNode];   
+    for(std::set<CFuint>::iterator it = nodeCells.begin(); it != nodeCells.end(); ++it) {
+      Node& cellCenter = states[*it]->getCoordinates();
+
+      const CFreal dist = getDistance(cellCenter, *nodes[iNode]);
+      const CFreal weight = 1.0/dist;
+      totalWeight += weight;
+      
+      for(CFuint i = 0; i < nbDim; ++i)
+        m_gradPhiNodes[iNode*nbDim + i] += m_gradPhiCells[(*it)*nbDim + i] * weight;
+    }
+    
+    std::set<CFuint>& nodeGhosts = connectedGhosts[iNode];
+    for(std::set<CFuint>::iterator it = nodeGhosts.begin(); it != nodeGhosts.end(); ++it) {
+      Node& ghostCenter = gstates[*it]->getCoordinates();
+
+      const CFreal dist = getDistance(ghostCenter, *nodes[iNode]);
+      const CFreal weight = 1.0/dist;
+      totalWeight += weight;
+      
+      for(CFuint i = 0; i < nbDim; ++i)
+        m_gradPhiNodes[iNode*nbDim + i] += m_gradPhiGhosts[(*it)*nbDim + i] * weight;
+    }
+    
+    for(CFuint i = 0; i < nbDim; ++i)
+      m_gradPhiNodes[iNode*nbDim + i] /= totalWeight;
+  }
+
+
+  // gradientPhi is the socket handle
+  // TODO: 3
+  for(CFuint iCell = 0; iCell < nbCells; ++iCell)
+    for(CFuint i = 0; i < nbDim; ++i)
+      gradientPhi[iCell*nbDim + i] = m_gradPhiCells[iCell*nbDim + i];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+/** 
+ *  Computes spring constants for all edges
+ */
+template <typename MODEL>
+void MeshFittingAlgorithm<MODEL>::computeSprings() 
+{
+  CFAUTOTRACE;
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  
+  CFLogDebugMin( "MeshFittingAlgorithm::computeSprings()" << "\n");
+  
+  DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle(); 
+
+  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbNodes = nodes.size();
+
+  CFreal total = 0;
+  CFuint cnt = 0;
+  
+  std::vector<CFreal> allSpringConstants;
+
+  /// For each node compute its displacement
+  for(CFuint iNode = 0; iNode < nbNodes; ++iNode) {
+    if (m_nonModifiableNodes.find(iNode) != m_nonModifiableNodes.end()) continue;
+  
+    const std::set<CFuint>& neighbors = connectedNodes[iNode];
+    const Node& node = *nodes[iNode];
+    
+    std::map<CFuint,CFreal>& current = m_ke[iNode];
+    
+    for(std::set<CFuint>::iterator it = neighbors.begin(); it != neighbors.end(); ++it) {
+      const Node& neighbor = *nodes[*it];
+           
+      /// gradPhi is the gradient of the monitor variable Phi
+      RealVector dGradPhi(nbDim);
+      RealVector dPos(nbDim);
+      
+      CFreal num = 0.0, den = 0.0;
+      
+      for(CFuint i = 0; i < nbDim; ++i) {
+        dGradPhi[i] = m_gradPhiNodes[iNode*nbDim+i] - m_gradPhiNodes[(*it)*nbDim+i];
+        dPos[i] = node[XX+i] - neighbor[XX+i];
+        num += dPos[i] * dGradPhi[i];
+        den += dPos[i] * dPos[i];
+      }
+      
+      const CFreal _ke = std::abs(num)/den;
+      
+      current[*it] = _ke;
+      total += _ke;
+      cnt++;
+
+      allSpringConstants.push_back(_ke);
+    }
+  }
+
+  if (allSpringConstants.size() < 1) return;
+  sort(allSpringConstants.begin(), allSpringConstants.end());
+  
+  /// Indices for minimum and maximum spring constant allowed
+  const CFuint idxMin = static_cast<CFuint>(m_minPerc * (allSpringConstants.size()-1));
+  const CFuint idxMax = static_cast<CFuint>(m_maxPerc * (allSpringConstants.size()-1));
+  
+  cf_assert(idxMin < allSpringConstants.size());
+  cf_assert(idxMax < allSpringConstants.size());
+  
+  const CFreal minLim = allSpringConstants[ idxMin ];
+  const CFreal maxLim = allSpringConstants[ idxMax ];
+  
+  /// Average spring constant over the domain
+  const CFreal avgKe = total / static_cast<CFreal>(cnt);
+
+
+  /// Debug information -- consider commenting it out
+  
+  if (m_printKesToFile) {
+    ofstream keFile;
+    CFuint prank = PE::GetPE().GetRank();
+    ostringstream convert;
+    convert << "kes_P" << prank << ".dat";
+    string fname = convert.str();
+    keFile.open(fname.c_str());
+    for(CFuint i=0; i < allSpringConstants.size(); i++)
+      keFile << allSpringConstants[i] << " " << static_cast<CFreal>(i) / static_cast<CFreal>(allSpringConstants.size()) << " " << minLim << " " << maxLim << " " << avgKe << " " << i%2 << endl;
+    keFile.close();
+  }
+
+  for(CFuint iNode = 0; iNode < nbNodes; ++iNode) {
+    std::map<CFuint,CFreal>& current = m_ke[iNode];
+    for(std::map<CFuint,CFreal>::iterator it = current.begin(); it != current.end(); ++it) {
+      const CFreal ratio = it->second;
+      it->second = std::max( std::min(maxLim, ratio), minLim );
+    }
+  }
+  
+  ///////////////////////////////////
+  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Fill matrix and RHS of the system to be solved
+ */
+template <typename MODEL>
+void MeshFittingAlgorithm<MODEL>::fillSystem() {
+  CFAUTOTRACE;
+  CFLog(VERBOSE, "MeshFittingAlgorithm::fillSystem()\n");
+
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+    
+  DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle();
+  DataHandle < State*, GLOBAL > states = socket_states.getDataHandle();
+
+  const CFuint nbNodes = nodes.size();
+
+  SafePtr<LSSMatrix> jacobMatrix = m_lss->getMatrix();
+  jacobMatrix->resetToZeroEntries();
+  const LSSIdxMapping& idxMapping = m_lss->getLocalToGlobalMapping();
+
+  DataHandle < CFreal > rhs = socket_rhs.getDataHandle();
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getDim();
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
+  
+  const CFuint rhsSize = std::max(nodes.size()*totalNbEqs,states.size()*totalNbEqs);
+  
+  //cout << nodes.size()*totalNbEqs << " "
+  //    << states.size()*totalNbEqs << " "
+  //    << rhs.size()  << endl;
+  //return; //mark
+  
+  if (rhs.size() != rhsSize) rhs.resize(rhsSize);
+
+  cf_assert(nbEqs < totalNbEqs);
+  SafePtr<vector<CFuint> > eqIDs = m_lss->getEquationIDs();
+
+  for (CFuint iNode = 0; iNode < nbNodes; ++iNode) {
+    CFreal diagValue;
+
+    if (!nodes[iNode]->isParUpdatable()) {
+      continue;
+    }
+
+    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+    	const CFuint varID = (*eqIDs)[iEq];
+    	const CFreal rhsVal = (*nodes[iNode])[XX+iEq];
+     	rhs(iNode, varID, totalNbEqs) = rhsVal;
+    }
+    
+    if (m_nonModifiableNodes.find(iNode) == m_nonModifiableNodes.end()) {
+      std::map<CFuint,CFreal>& current = m_ke[iNode];
+      CFreal totalKe = 0.0;
+      
+      for(std::map<CFuint,CFreal>::iterator it = current.begin(); it != current.end(); ++it) {
+        if (!nodes[it->first]->isParUpdatable()) continue;
+        CFuint colGlobalID = idxMapping.getColID(nodes[it->first]->getLocalID())*nbEqs;
+        CFuint rowGlobalID = idxMapping.getRowID(nodes[iNode]->getLocalID())*nbEqs;
+        for(CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+          jacobMatrix->addValue(rowGlobalID + iEq, colGlobalID + iEq, -it->second * m_alpha);
+        }
+        totalKe += it->second;
+      }
+      diagValue = 1.0 + m_alpha * totalKe;
+    }
+    else {
+      diagValue = 1.0;
+    }
+    
+    CFuint globalID = idxMapping.getColID(nodes[iNode]->getLocalID())*nbEqs;
+    for(CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+      jacobMatrix->addValue(globalID + iEq, globalID + iEq, diagValue);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Update the positions of the nodes
+ */
+template <typename MODEL>
+void MeshFittingAlgorithm<MODEL>::updateNodePositions() {
+  CFAUTOTRACE;
+  CFLog(VERBOSE, "MeshFittingAlgorithm::updateNodePositions()\n");
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  //using namespace COOLFluiD::Common;
+  //using namespace COOLFluiD::MathTools;
+  
+  DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle();
+
+  DataHandle < CFreal > rhs = socket_rhs.getDataHandle();
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getDim();
+  
+  CFreal displacement = 0.0;
+  
+  for (CFuint i = 0; i < nodes.size(); ++i) {
+    if (nodes[i]->isParUpdatable()) {
+      Node& currNode = *nodes[i];
+      for(CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+        const CFreal delta = currNode[iEq] - rhs(i, iEq, totalNbEqs);
+        displacement += delta*delta;
+        currNode[iEq] = rhs(i, iEq, totalNbEqs);
+      }
+    }
+  }
+  
+  //cout << "\t\t-------> Displacement: " << std::sqrt(displacement) << endl;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Synchronize nodes and recompute mesh data
+ */
+template <typename MODEL>
+void MeshFittingAlgorithm<MODEL>::syncNodesAndRecomputeMeshData() {
+  CFAUTOTRACE;
+  CFLog(VERBOSE, "MeshFittingAlgorithm::syncNodesAndRecomputeMeshData()\n");
+  
+  //using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  //using namespace COOLFluiD::MathTools;
+  
+  DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle();
+  
+  const bool isParallel = Common::PE::GetPE().IsParallel();
+  
+  if (isParallel) {
+    nodes.beginSync();
+    nodes.endSync();
+  }
+  
+  // 2nd alternative (more elegant): raise the event forcing update of mesh data
+  std::string msg;
+  Common::SafePtr<EventHandler> event_handler = Environment::CFEnv::getInstance().getEventHandler();
+  event_handler->call_signal ( "CF_ON_MESHADAPTER_AFTERMESHUPDATE", msg );
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Shock sensor
+ */
+template <typename MODEL>
+void MeshFittingAlgorithm<MODEL>::shockSensor()
+{
+  CFAUTOTRACE;
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  
+  CFLogDebugMin( "MeshFittingAlgorithm::shockSensor()" << "\n");
+
+  DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle(); 
+  DataHandle < State*, GLOBAL > states = socket_states.getDataHandle();
+  DataHandle < RealVector > nstates = socket_nstates.getDataHandle();
+  
+  DataHandle < CFreal > shockSensor = socket_shockSensor.getDataHandle();
+  shockSensor = 1.0;
+
+  DataHandle < CFreal > sPressure = socket_pressure.getDataHandle();
+  sPressure = 0.0;
+  
+  SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
+  CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
+  geoData.trs = cells;
+  
+  SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
+  cf_assert(updateVarSet.isNotNull());
+  
+  const CFuint nbCells = cells->getLocalNbGeoEnts();
+  const CFuint nbNodes = nodes.size();
+  
+  cf_assert(nbCells == states.size());
+  cf_assert(nbNodes == nstates.size());
+
+  /// here pSomething is the monitor variable
+  /// not to be confuse with phi (Gnoffo's ratio)
+  for (CFuint iCell = 0; iCell < nbCells; ++iCell) {
+    geoData.idx = iCell;
+    GeometricEntity *const currCell = m_geoBuilder.buildGE();
+
+    if (!currCell->getState(0)->isParUpdatable()) {
+      m_geoBuilder.releaseGE();
+      continue;
+    }
+    
+    updateVarSet->computePhysicalData(*currCell->getState(0), m_physicalData);
+    const CFreal cellPressure = m_physicalData[m_phi];
+    
+    std::vector<Node*>& nodes = *currCell->getNodes();
+    const CFuint nbNodes = nodes.size();
+    
+    CFreal pMin = 1E19;
+    CFreal pMax = 0.0;
+    
+    for (CFuint iNode = 0; iNode < nbNodes; ++iNode) {
+      const Node* node = nodes[iNode];
+      const CFuint nodeID = node->getLocalID();
+      const RealVector& vertexValues = nstates[nodeID];
+      
+      State tmp(vertexValues, false);
+      tmp.setSpaceCoordinates(nodes[iNode]);
+  
+      updateVarSet->computePhysicalData(tmp, m_physicalData);
+      const CFreal pNode = m_physicalData[m_phi];
+      
+      pMin = std::min(pMin, pNode);
+      pMax = std::max(pMax, pNode);
+    }
+    
+    cf_assert(pMin <= pMax);
+
+    /// As defined in Gnoffo's paper  
+    const CFreal phi    = pMax/pMin;
+    const CFreal phiHat = std::min(1.0, std::max(0.0, (m_phiMaxSS-phi)/(m_phiMaxSS-m_phiMinSS)));
+    const CFreal bigPhi = 0.5 * (1 - std::cos(phiHat*MathConsts::CFrealPi()));
+
+    shockSensor[iCell] = bigPhi;
+    sPressure[iCell] = cellPressure;
+ 
+    if (phi < 0.)  {
+      cout << iCell << ", pmax = " << pMax << ", pmin = " << pMin << endl; abort();
+    }
+    
+    m_geoBuilder.releaseGE();
+  }  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename MODEL>
+void MeshFittingAlgorithm<MODEL>::execute()
+{
+  CFAUTOTRACE;
+  CFLog(VERBOSE, "MeshFittingAlgorithm::execute()\n");
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  //using namespace COOLFluiD::MathTools;
+  
+  /// Debug information -- consider commenting it out  
+    
+  CFuint prank = PE::GetPE().GetRank();
+  ostringstream convert;
+  convert << "mfa_P" << prank << ".dat";
+  string fname = convert.str();
+  ofstream mfaFile;
+  mfaFile.open(fname.c_str());
+
+  CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+  
+  convert.str("");
+  convert.clear();
+  convert << iter;
+
+  mfaFile << "MeshFittingAlgorithm executing #" << convert.str() << endl; mfaFile.flush();
+  
+  bool runAdaptation = (iter <= m_stopAdaptationIter) &&
+                  m_maRate > 0 &&
+                  iter % m_maRate == 1;
+  
+  if (runAdaptation) {
+    mfaFile << "Computing gradient phi" << endl; mfaFile.flush();
+    computeGradientPhi();
+    mfaFile << "Computing spring constants" << endl; mfaFile.flush();
+    computeSprings();
+    mfaFile << "Filling system (matrix and rhs)" << endl; mfaFile.flush();
+    fillSystem();
+    mfaFile << "Solving system" << endl; mfaFile.flush();
+    m_lss->solveSys();
+    mfaFile << "Updating node positions" << endl; mfaFile.flush();
+    updateNodePositions();
+    mfaFile << "Synchronizing nodes and recomputing mesh data" << endl; mfaFile.flush();
+    syncNodesAndRecomputeMeshData();
+  }
+  
+  bool runShockSensor = m_ssRate > 0 && iter % m_ssRate == 1;
+  
+  if (runShockSensor) {
+    mfaFile << "Running Shock Sensor" << endl; mfaFile.flush();
+    shockSensor();
+  }
+  
+  mfaFile << "MeshFittingAlgorithm finished" << endl; mfaFile.flush();
+  
+  mfaFile.close();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename MODEL>
+MeshFittingAlgorithm<MODEL>::~MeshFittingAlgorithm()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename MODEL>
+void MeshFittingAlgorithm<MODEL>::unsetup()
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Computes Euclidean distance between two Nodes
+ */
+template <typename MODEL>
+CFreal MeshFittingAlgorithm<MODEL>::getDistance(Framework::Node& a, Framework::Node& b)
+{
+  CFAUTOTRACE;
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  //using namespace COOLFluiD::Common;    
+  
+  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
+    
+  CFreal dist = 0.0;
+  for(CFuint i=0; i<nbDim; ++i) {
+    dist += (a[XX+i] - b[XX+i])*(a[XX+i] - b[XX+i]);
+  }
+  
+  return std::sqrt(dist);
+}
+  
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

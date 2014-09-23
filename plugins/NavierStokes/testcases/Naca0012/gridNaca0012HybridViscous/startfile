@@ -1,0 +1,52 @@
+===================
+   STARTING FILE
+===================
+
+Nbr. of grid levels :   1
+Viscous/inviscid :      1
+Struct. grid type :     4
+Semi/full coarsening :  1
+Remeshing :             0
+Free-stream :           .203 0.46 2.E+7 256.05
+### BOUNDARY POINT DISTRIBUTION ########################
+--------------------------------------------------------
+Nbr. bodies :		2
+--------------------------------------------------------
+Pts file :		naca0012.pts
+Config. file :		naca0012.cfg
+Dpl input file :	naca0012.dpl
+XYoutput file :		naca0012.xyout
+--------------------------------------------------------
+Angle thresh wawa :	5.0
+Angle thresh far-fld :  20.0
+--------------------------------------------------------
+Proximity thresh :	0.25
+Max theta & thetap :	70.0 80.0
+Max ang. for if lgth :	20.0
+--------------------------------------------------------
+Max AR at extr. :	1000000.0
+--------------------------------------------------------
+### STRUCTURED GRID GENERATION #########################
+--------------------------------------------------------
+2nd order expl coeff :  3.0
+2nd order impl coeff :  2.0
+4th order expl coeff :  0.0
+Implicit factor :       1.0
+--------------------------------------------------------
+Volume average factor : 0.8
+--------------------------------------------------------
+### UNSTRUCTURED GRID GENERATION #######################
+--------------------------------------------------------
+Spacing exp. base :     1.85
+Nbr iter spc smooth :   10
+Conv thresh spc smth :  1.0e-3
+Ovrelax coef spc smth : 0.5
+--------------------------------------------------------
+Distance tolerance :    0.65
+Stretching tolerance :  0.65
+--------------------------------------------------------
+Max number of row :     150
+--------------------------------------------------------
+Smth. beta coeff :	0.5
+Smth. relaxation fact : 1.4
+========================================================

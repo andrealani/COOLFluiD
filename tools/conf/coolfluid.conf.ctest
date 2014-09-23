@@ -1,0 +1,56 @@
+#==================================================================
+# Configuration opions for the prepare.pl script
+#==================================================================
+# This file should be in the directory from where the script is run
+#==================================================================
+# This file is meant as an example and it should be copied
+# and renamed to coolfluid.conf, and adapted to the
+# characteristics of the envrionment where you plan to
+# configure and run COOLFluiD
+#
+# If you used the install-coolfluid.pl script, just replace
+#    $HOME for your home account directory
+#    $ARCH for the result of command "uname -m"
+#==================================================================
+
+#==================================================================
+# default build options
+#==================================================================
+
+coolfluid_dir = @CTEST_SOURCE_DIRECTORY@
+basebuild_dir = @CTEST_BINARY_DIRECTORY@
+
+# compilers
+cc     = @CF_DEPS@/bin/mpicc
+cxx    = @CF_DEPS@/bin/mpic++
+fc     = gfortran
+
+# library locations
+mpi_dir       = @CF_DEPS@
+curl_dir      = @CF_DEPS@
+boost_dir     = @CF_DEPS@
+petsc_dir     = @CF_DEPS@/petsc
+parmetis_dir  = @CF_DEPS@
+
+mods-getall = 0
+
+mod_CFmeshFileReader = on
+mod_CFmeshFileWriter = on
+mod_CFmeshFormatChecker = on
+mod_FiniteVolume = on
+mod_ForwardEuler = on
+mod_Gambit2CFmesh = on
+mod_NavierStokes = on
+mod_Solver = on
+mod_TecplotWriter = on
+mod_THOR2CFmesh = on
+mod_Petsc = on
+mod_UFEM = on
+mod_NewtonMethod = on
+mod_PhysicalModelDummy = on
+mod_MeshTools = on
+mod_Trilinos = on
+mod_ParaViewWriter = on
+
+with_testcases = on
+

@@ -1,0 +1,177 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+#
+### Residual = 2.81033
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libMutation libMutationI libNEQ libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFluctSplitNavierStokes libNewtonMethod libTHOR2CFmesh libForwardEuler libPetscI libGambit2CFmesh libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitNEQ
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NEQ/testcases/PrabhuCylinder/
+Simulator.Paths.ResultsDir       = ./
+
+#Simulator.SubSystem.InteractiveParamReader.FileName = ./Prabhu.inter
+#Simulator.SubSystem.InteractiveParamReader.readRate = 5
+
+Simulator.SubSystem.Default.PhysicalModelType     = NavierStokes2DNEQ
+Simulator.SubSystem.NavierStokes2DNEQ.refValues = \
+	1e-8 1e-8 1e-8 1e-8 1e-8 4678.00 4678.00 241.0 241.0
+
+Simulator.SubSystem.NavierStokes2DNEQ.refLength = 1.0
+Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary = Mutation
+Simulator.SubSystem.NavierStokes2DNEQ.Mutation.mixtureName = air5
+Simulator.SubSystem.NavierStokes2DNEQ.Mutation.reactionName = park5
+Simulator.SubSystem.NavierStokes2DNEQ.nbSpecies = 5
+Simulator.SubSystem.NavierStokes2DNEQ.nbEulerEqs = 3
+Simulator.SubSystem.NavierStokes2DNEQ.nbVibEnergyEqs = 1
+Simulator.SubSystem.NavierStokes2DNEQ.Mutation.dynViscAlgo = CG
+Simulator.SubSystem.NavierStokes2DNEQ.Mutation.thermCondAlgo = Direct #CG
+# neglect the electronic energy
+Simulator.SubSystem.NavierStokes2DNEQ.Mutation.noElectronicEnergy = true
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = PrabhuRDS.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 50
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.Tecplot.FileName    = PrabhuRDS.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = RhoivtTv
+Simulator.SubSystem.Tecplot.SaveRate = 50
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Wall
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -6.0
+
+Simulator.SubSystem.Default.listTRS = InnerFaces Wall Inlet Outlet Symmetry
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = grid2.CFmesh
+#PrabhuRDS-P0.CFmesh.START
+#cylTriagFull.CFmesh
+#PrabhuRDS-P0.CFmesh.5400
+#cylTriagFull.CFmesh
+#PrabhuRDS-P0.CFmesh.4500
+#cyl1_4800.CFmesh
+#grid1_60_1_06.CFmesh
+#grid2.CFmesh
+#grid1_60_1_06.CFmesh
+
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1000000.
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+#Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 50
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
+
+#Simulator.SubSystem.LinearSystemSolver = TRILINOS
+#Simulator.SubSystem.LSSNames = BwdEulerLSS
+#Simulator.SubSystem.BwdEulerLSS.Data.PCType = dd # domain decomposition (dd),
+#Simulator.SubSystem.BwdEulerLSS.Data.PCSubSolveType = ILU
+#Simulator.SubSystem.BwdEulerLSS.Data.PCOrder = 3
+#Simulator.SubSystem.BwdEulerLSS.Data.ILUTDropTol = 0.0
+#Simulator.SubSystem.BwdEulerLSS.Data.ILUTfill = 1.0
+#Simulator.SubSystem.BwdEulerLSS.Data.ILUfill = 0
+#Simulator.SubSystem.BwdEulerLSS.Data.RILUomega = 1.0
+#Simulator.SubSystem.BwdEulerLSS.Data.PCrecalc = 0
+#Simulator.SubSystem.BwdEulerLSS.Data.DDOverlap = 1
+#Simulator.SubSystem.BwdEulerLSS.Data.GMRESrestart = 30
+#Simulator.SubSystem.BwdEulerLSS.Data.tolerance = 1e-5
+#Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 1000
+#Simulator.SubSystem.BwdEulerLSS.Data.KSPType = gmres
+#Simulator.SubSystem.BwdEulerLSS.Data.OutputLevel = -1
+#Simulator.SubSystem.BwdEulerLSS.Data.maxNbLevels = 6
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 0.1
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation = 0.1
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 7
+Simulator.SubSystem.NewtonIterator.Data.FilterState = Max
+Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs = \
+         1 1 1 1 1 0 0 1 1
+Simulator.SubSystem.NewtonIterator.Data.Max.minValues = \
+         0. 0. 0. 0. 0. 0. 0. 30. 30.
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+#Simulator.SubSystem.FluctuationSplit.Restart = true
+Simulator.SubSystem.FluctuationSplit.ComputeRHS = RhsJacob
+Simulator.SubSystem.FluctuationSplit.ComputeTimeRHS = PseudoSteadyTimeRhs
+Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
+
+# CRD settings
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = CRD
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysNC
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = RhoivtTv
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Cons
+#RhoivtTv
+#Simulator.SubSystem.FluctuationSplit.Data.IntegratorQuadrature = GaussLegendre
+#Simulator.SubSystem.FluctuationSplit.Data.IntegratorOrder = P3
+#Simulator.SubSystem.FluctuationSplit.Data.includeSourceInFlux = true
+
+# LRD settings
+#Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysN
+#Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+#Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = RhoivtTv
+#Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Cons
+#Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Roe
+#RhoivtTv
+
+#Simulator.SubSystem.FluctuationSplit.Data.isAxisymm = true
+#Simulator.SubSystem.FluctuationSplit.Data.SourceTerm = Euler2DNEQAxiST
+Simulator.SubSystem.FluctuationSplit.Data.SourceTermSplitter = Beta
+Simulator.SubSystem.FluctuationSplit.Data.Beta.ExcludeBStates = true
+
+#Simulator.SubSystem.FluctuationSplit.Data.useLumpedGalerkinForSource = true
+Simulator.SubSystem.FluctuationSplit.Data.SourceTerm = Euler2DNEQST
+
+Simulator.SubSystem.FluctuationSplit.Data.DiffusiveVar = RhoivtTv
+Simulator.SubSystem.FluctuationSplit.Data.DiffusiveTerm = TCNEQ2D
+
+Simulator.SubSystem.FluctuationSplit.InitComds = \
+	 InitState InitState StrongNoSlipWallIsothermalTCNEQ2DImpl
+Simulator.SubSystem.FluctuationSplit.InitNames = InField InInlet InWall
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = \
+	0. 0.  0.007072 0. 0.002136  4678. 0. 241. 241.
+
+Simulator.SubSystem.FluctuationSplit.InInlet.applyTRS = Inlet
+Simulator.SubSystem.FluctuationSplit.InInlet.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InInlet.Def = \
+	0. 0.  0.007072 0. 0.002136  4678. 0. 241. 241.
+
+Simulator.SubSystem.FluctuationSplit.InWall.applyTRS = Wall
+Simulator.SubSystem.FluctuationSplit.InWall.TWall = 811.
+
+Simulator.SubSystem.FluctuationSplit.BcComds = \
+	SuperInletImpl StrongNoSlipWallIsothermalTCNEQ2DImpl StrongSymmetryPlaneImpl
+Simulator.SubSystem.FluctuationSplit.BcNames = BcInlet BcWall BcMirror
+
+Simulator.SubSystem.FluctuationSplit.BcInlet.applyTRS = Inlet
+Simulator.SubSystem.FluctuationSplit.BcInlet.Vars = x y
+Simulator.SubSystem.FluctuationSplit.BcInlet.Def = \
+	0. 0.  0.007072 0. 0.002136  4678. 0. 241. 241.
+
+Simulator.SubSystem.FluctuationSplit.BcWall.applyTRS = Wall
+Simulator.SubSystem.FluctuationSplit.BcWall.TWall = 811.
+
+Simulator.SubSystem.FluctuationSplit.BcMirror.applyTRS = Symmetry
+Simulator.SubSystem.FluctuationSplit.BcMirror.annullVarID = 6
+

@@ -1,0 +1,210 @@
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "Common/CFLog.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Common/NoSuchValueException.hh"
+#include "FiniteVolume/ComputeDiffusiveFlux.hh"
+#include "FiniteVolume/DerivativeComputer.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+HartmannSourceTerm<UPDATEVAR>::HartmannSourceTerm(const std::string& name) :
+  ComputeSourceTermFVMCC(name),
+  _varSet(CFNULL),
+  _nstates(CFNULL),
+  _isOutward(CFNULL),
+  _ys(),
+  _physicalData(),
+  _temp(),
+  _states(),
+  _values(),
+  _NonInducedEMField(),
+  _J(),
+  _dummyGradients()
+{
+  addConfigOptionsTo(this);
+  
+  _electricalConductivity = 1.;
+  setParameter("electricalConductivity",&_electricalConductivity);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+HartmannSourceTerm<UPDATEVAR>::~HartmannSourceTerm()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HartmannSourceTerm<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFreal >
+     ("electricalConductivity", "electrical Conductivity used in Ohm's law");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HartmannSourceTerm<UPDATEVAR>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  
+  ComputeSourceTermFVMCC::setup();
+  
+  _varSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+  _varSet->getModel()->resizePhysicalData(_physicalData);
+  cf_assert(_varSet.isNotNull());
+  
+  DataHandle<CFreal> normals = this->socket_normals.getDataHandle();
+  _nstates = _sockets.template getSocketSink<RealVector>("nstates")->getDataHandle();
+  _isOutward =  this->socket_isOutward.getDataHandle();
+  
+  SafePtr<typename UPDATEVAR::PTERM> term = _varSet->getModel();
+  const CFuint nbSpecies = term->getNbScalarVars(0);
+  _ys.resize(nbSpecies);
+
+  _temp.resize(PhysicalModelStack::getActive()->getNbEq());
+
+  const CFuint maxNbNodesIn2DCV = 4;
+  _states.reserve(maxNbNodesIn2DCV);
+  
+  SafePtr<DerivativeComputer> derComput = this->getMethodData().getDerivativeComputer();
+  const CFuint nbNodesInControlVolume = derComput->getMaxNbVerticesInControlVolume();
+  _values.resize(PhysicalModelStack::getActive()->getNbEq(), nbNodesInControlVolume);
+  
+  _NonInducedEMField.resize(6);
+  _J.resize(3);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HartmannSourceTerm<UPDATEVAR>::computeSource
+(Framework::GeometricEntity *const element, RealVector& source, RealMatrix& jacobian)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  
+  SafePtr<typename UPDATEVAR::PTERM> term = _varSet->getModel();
+  
+  const vector<State*>* const states = element->getStates(); 
+  const CFuint elemID = element->getID();
+
+  
+  cf_assert(states->size() == 1);
+  
+  _varSet->computePhysicalData(*(*states)[0], _physicalData);
+  
+//   RealVector& refData = _varSet->getModel()->getReferencePhysicalData();
+   
+  const CFuint firstVelocity = term->getFirstScalarVar(1); 
+ 
+  State *const currState = (*states)[0]; 
+
+  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+  
+  _NonInducedEMField = _varSet->getModel()->getNonInducedEMField(currState->getCoordinates()[XX], currState->getCoordinates()[YY]);
+  const CFreal BxTotal = _physicalData[UPDATEVAR::PTERM::BX] + _NonInducedEMField[0];
+  const CFreal ByTotal = _physicalData[UPDATEVAR::PTERM::BY] + _NonInducedEMField[1];
+  const CFreal BzTotal = _physicalData[UPDATEVAR::PTERM::BZ] + _NonInducedEMField[2];
+  const CFreal ExTotal = _physicalData[UPDATEVAR::PTERM::EX] + _NonInducedEMField[3];
+  const CFreal EyTotal = _physicalData[UPDATEVAR::PTERM::EY] + _NonInducedEMField[4];
+  const CFreal EzTotal = _physicalData[UPDATEVAR::PTERM::EZ] + _NonInducedEMField[5];
+ 
+//   std::cout <<"HartmannSourceTerm::computeSource. _NonInducedEMField = "<< _NonInducedEMField <<"\n";
+  
+  
+  //Set the velocities
+  const CFreal u = _physicalData[firstVelocity];
+  const CFreal v = _physicalData[firstVelocity + 1]; 
+//   std::cout <<"HartmannSourceTerm::computeSource. u = "<< u <<"\n";
+//   std::cout <<"HartmannSourceTerm::computeSource. v = "<< v <<"\n";  
+  
+  const CFreal omega = _electricalConductivity;
+  //const CFreal ovEpsilon = 1./term->getPermittivity(); OLD way of getting the permittivity
+  const CFreal c_e = term->getLightSpeed();
+  const CFreal mu0 = term->getPermeability();
+  const CFreal ovEpsilon = c_e*c_e*mu0;
+  
+//   std::cout <<"HartmannSourceTerm::computeSource. epsilon = "<< epsilon <<"\n";
+  
+  const CFreal Jx = omega*(ExTotal + v*BzTotal);
+  const CFreal Jy = omega*(EyTotal - u*BzTotal);  
+  const CFreal Jz = omega*(EzTotal + u*ByTotal - v*BxTotal);  
+    
+  source[0] = 0;			//x-Faraday's Law
+  source[1] = 0;			//y-Faraday's Law
+  source[2] = 0;			//z-Faraday's Law
+  source[3] = - ovEpsilon*Jx;			//x-Ampere's Law
+  source[4] = - ovEpsilon*Jy;			//y-Ampere's Law
+  source[5] = - ovEpsilon*Jz;  		//z-Ampere's Law
+  source[6] = 0;			//y-Ampere's Law
+  source[7] = 0;  		//z-Ampere's Law  
+  
+  source[8] = 0;		//Continuity equation
+  source[9] = Jy*BzTotal -Jz*ByTotal;			//x-momentum equation  
+  source[10] = Jz*BxTotal -Jx*BzTotal;			//y-momentum equation
+  source[11] = Jx*ExTotal + Jy*EyTotal + Jz*EzTotal;	//Total Energy
+  // Total Energy old version (Jy*BxTotal -Jz*ByTotal)*u + (Jy*BxTotal -Jz*ByTotal)*v + (1/omega)*(Jx*Jx + Jy*Jy);			//Total Energy
+  
+  source *= volumes[elemID];
+  
+  CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm BX = " << source[0] <<"\n");
+  CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm BY = " << source[1] <<"\n");
+  CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm BZ = " << source[2] <<"\n"); 
+  CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm EX = " << source[3] <<"\n"); 
+  CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm EY = " << source[4] <<"\n");
+  CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm EZ = " << source[5] <<"\n");
+  CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm PSI = " << source[6] <<"\n");
+  CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm PHI = " << source[7] <<"\n");  
+  CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm mass = " << source[8] <<"\n");  
+  CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm X-mom = " << source[9] <<"\n");  
+  CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm Y-mom = " << source[10] <<"\n");
+  CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm Energy = " << source[11] <<"\n");
+  
+  
+//   if (v > 1) {
+//     cout << "HartmannSourceTerm::computeSource --> sourceTerm X-mom = " << source[9] <<"\n";  
+//     cout << "HartmannSourceTerm::computeSource --> sourceTerm Y-mom = " << source[10] <<"\n";  
+//   }
+//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm BX     = " << source[0] <<"\n";
+//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm BY     = " << source[1] <<"\n";
+//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm BZ     = " << source[2] <<"\n"; 
+//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm EX     = " << source[3] <<"\n"; 
+//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm EY     = " << source[4] <<"\n";
+//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm EZ     = " << source[5] <<"\n";
+//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm PSI    = " << source[6] <<"\n";
+//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm PHI    = " << source[7] <<"\n";  
+//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm mass   = " << source[8]  <<"\n";  
+//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm X-mom  = " << source[9]  <<"\n";  
+//      cout <<"HartmannSourceTerm::computeSource --> sourceTerm Y-mom       = " << source[10] <<"\n";
+
+//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm Energy = " << source[11] <<"\n";  
+ 
+  CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> NonInduced Field = " << _NonInducedEMField << "\n");
+
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

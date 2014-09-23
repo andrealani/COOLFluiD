@@ -1,0 +1,114 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -1.6809486
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs =  libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libForwardEuler libFiniteVolume libMeshGenerator1D libFiniteVolumeNavierStokes libNewtonMethod libPetscI libRungeKutta
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Nozzle1D
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType     = Euler1D
+Simulator.SubSystem.Euler1D.refValues = 1. 1. 1.
+Simulator.SubSystem.Euler1D.refLength = 1.0
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = CFmesh Tecplot
+Simulator.SubSystem.CFmesh.FileName     = shocktube1DFVM.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 1000
+
+Simulator.SubSystem.Tecplot.FileName    = shocktube1DFVM.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+#rate at which the solution is written in the output file 
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolution1D
+Simulator.SubSystem.Tecplot.AppendIter = true
+Simulator.SubSystem.Tecplot.AppendTime = true
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+
+#Number of time steps during the solution
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1000
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerFaces Inlet Outlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = ParametersST.CFmesh
+Simulator.SubSystem.CFmeshFileReader.MeshGenerator1D.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.MeshGenerator1D.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = MeshGenerator1D
+
+#----- these lines make the code explicit -----------------------------#
+#Simulator.SubSystem.ConvergenceMethod = RK
+#Simulator.SubSystem.RK.Data.CFL.Value = 0.1
+#Simulator.SubSystem.RK.Data.Order = 4
+#Simulator.SubSystem.RK.Data.TimeAccurate = true
+#Simulator.SubSystem.RK.ConvRate = 1
+#Simulator.SubSystem.RK.ShowRate = 1
+#Simulator.SubSystem.SubSystemStatus.TimeStep = 0.0001
+#Simulator.SubSystem.RK.Data.L2.MonitoredVarID = 0
+
+#Simulator.SubSystem.ConvergenceMethod = FwdEuler
+#Simulator.SubSystem.FwdEuler.Data.CFL.Value = 1.0
+#Simulator.SubSystem.FwdEuler.ConvRate = 1
+#Simulator.SubSystem.FwdEuler.ShowRate = 1
+
+#----- these lines make the code implicit -----------------------------#
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1.0
+
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+#----------------------------------------------------------------------# 
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+
+#Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+#Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+#Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+#Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+#Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlus1D
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar   = Cons
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+#Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x
+Simulator.SubSystem.CellCenterFVM.InField.Def = if(x<0.5,1.176,11.76) 0. if(x<0.5,253312.5,2533125.)
+
+Simulator.SubSystem.CellCenterFVM.BcComds = MirrorVelocityFVMCC MirrorVelocityFVMCC
+#SuperOutletFVMCC SuperOutletFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = Jet1 Jet2
+
+Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = Inlet
+Simulator.SubSystem.CellCenterFVM.Jet1.VelocityIDs = 1
+
+Simulator.SubSystem.CellCenterFVM.Jet2.applyTRS = Outlet
+Simulator.SubSystem.CellCenterFVM.Jet2.VelocityIDs = 1
+
+
+

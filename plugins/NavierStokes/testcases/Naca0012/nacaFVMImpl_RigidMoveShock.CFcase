@@ -1,0 +1,267 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -5.06758
+
+#
+
+Simulator.Maestro = SimpleMaestro
+Simulator.SubSystems = SubSystem
+
+Simulator.SimpleMaestro.GlobalStopCondition = GlobalMaxNumberSteps
+Simulator.SimpleMaestro.GlobalMaxNumberSteps.nbSteps = 1
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libTHOR2CFmesh libFiniteVolume libFiniteVolumeNavierStokes libPetscI libNewtonMethod libMeshRigidMove libAeroCoefFVM
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Naca0012/
+Simulator.Paths.ResultsDir       = ./
+
+#
+#Define the 2 meshdata's
+#
+Simulator.SubSystem.Namespaces = FlowNamespace
+
+#
+#Define the meshdata for the flow solver
+#
+Simulator.SubSystem.FlowNamespace.MeshData = FlowMeshData
+Simulator.SubSystem.FlowNamespace.SubSystemStatus = FlowSubSystemStatus
+Simulator.SubSystem.FlowNamespace.PhysicalModelType = Euler2D
+Simulator.SubSystem.FlowNamespace.PhysicalModelName = FlowPM
+Simulator.SubSystem.FlowPM.refValues = 1. 256.8982996572 256.8982996572 239745.993183375
+Simulator.SubSystem.FlowPM.refLength = 1.0
+
+#
+#Define the meshdata details for the flow
+#
+Simulator.SubSystem.FlowMeshData.listTRS = InnerFaces Airfoil FarField
+Simulator.SubSystem.FlowMeshData.Namespaces = FlowNamespace
+
+#
+#Define the collaborators for the ErrorEstimator (even if null)
+#
+Simulator.SubSystem.ErrorEstimatorMethod = Null
+Simulator.SubSystem.ErrorEstimatorNames = NullErrorEstimator1
+Simulator.SubSystem.NullErrorEstimator1.Data.CollaboratorNames = Flow
+Simulator.SubSystem.NullErrorEstimator1.Namespace = FlowNamespace
+
+#
+#Define the mesh adapter method
+#
+Simulator.SubSystem.MeshAdapterMethod = RigidMove
+Simulator.SubSystem.RigidMove.Namespace = FlowNamespace
+Simulator.SubSystem.RigidMove.Data.CollaboratorNames = NewtonIterator CFmesh1 CFmeshFileReader1
+
+Simulator.SubSystem.RigidMove.AdaptRate
+Simulator.SubSystem.RigidMove.UpdateMeshCom = OscillatingAirfoil
+Simulator.SubSystem.RigidMove.Data.OX = 0.25
+Simulator.SubSystem.RigidMove.Data.OY = 0.
+
+Simulator.SubSystem.FEMMove.AdaptRate = 1
+Simulator.SubSystem.FEMMove.Data.OtherNamespace        = FlowNamespace
+Simulator.SubSystem.FEMMove.UpdateMeshCom              = UpdateMesh
+Simulator.SubSystem.FEMMove.UpdateMesh.ConvRate        = 1
+Simulator.SubSystem.FEMMove.UpdateMesh.ShowRate        = 1
+Simulator.SubSystem.FEMMove.UpdateMesh.SaveRate        = 1
+Simulator.SubSystem.FEMMove.UpdateMesh.AppendTime      = true
+Simulator.SubSystem.FEMMove.UpdateMesh.AppendIter      = false
+Simulator.SubSystem.FEMMove.UpdateMesh.StopCondition   = MaxNumberSteps
+Simulator.SubSystem.FEMMove.UpdateMesh.MaxNumberSteps.nbSteps  = 1
+Simulator.SubSystem.FEMMove.UpdateMesh.ConvergenceFile = convergenceFEM.plt
+
+Simulator.SubSystem.FEMMove.PrepareComds = OscillatingAirfoilPrepare
+Simulator.SubSystem.FEMMove.PrepareNames = OscillatingAirfoil
+Simulator.SubSystem.FEMMove.OscillatingAirfoil.RotationCenter = 0.25 0.
+Simulator.SubSystem.FEMMove.OscillatingAirfoil.applyTRS = Airfoil
+
+#
+#Define the CFL (it is not used in this case)
+#
+
+
+#
+#Define the timestep
+#
+Simulator.SubSystem.FlowSubSystemStatus.TimeStep = 0.001
+
+#
+#Define the output formatters
+#
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.OutputFormatNames   = Tecplot1 CFmesh1
+
+Simulator.SubSystem.CFmesh1.Namespace = FlowNamespace
+Simulator.SubSystem.CFmesh1.FileName = nacaFVM_FEM_ALE_flow.CFmesh
+Simulator.SubSystem.CFmesh1.Data.CollaboratorNames = Flow
+
+Simulator.SubSystem.Tecplot1.Namespace = FlowNamespace
+Simulator.SubSystem.Tecplot1.FileName = nacaFVM_FEM_ALE_flow.plt
+Simulator.SubSystem.Tecplot1.Data.updateVar = Puvt
+Simulator.SubSystem.Tecplot1.Data.CollaboratorNames = Flow
+Simulator.SubSystem.Tecplot1.SaveRate = 10
+Simulator.SubSystem.CFmesh1.SaveRate = 10
+Simulator.SubSystem.Tecplot1.AppendTime = false
+Simulator.SubSystem.CFmesh1.AppendTime = false
+Simulator.SubSystem.Tecplot1.AppendIter = true
+Simulator.SubSystem.CFmesh1.AppendIter = true
+
+#
+#Define the general subsystem info
+#
+#
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
+
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 200.
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+#
+#Define the mesh creators
+#
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader1
+
+Simulator.SubSystem.CFmeshFileReader1.Namespace = FlowNamespace
+Simulator.SubSystem.CFmeshFileReader1.Data.FileName = nacatg-fvm-6kn.CFmesh
+Simulator.SubSystem.CFmeshFileReader1.Data.builderName = FVMCC
+Simulator.SubSystem.CFmeshFileReader1.Data.polyTypeName = Lagrange
+Simulator.SubSystem.CFmeshFileReader1.THOR2CFmesh.Discontinuous = true
+#Simulator.SubSystem.CFmeshFileReader1.convertFrom = Dpl2CFmesh
+#Simulator.SubSystem.CFmeshFileReader1.Dpl2CFmesh.isHybrid = true
+
+#
+#Define the convergence methods
+#
+
+Simulator.SubSystem.ConvergenceMethod = CrankNicholson
+Simulator.SubSystem.ConvergenceMethodNames = CrankNicholson
+
+Simulator.SubSystem.CrankNicholson.Namespace = FlowNamespace
+Simulator.SubSystem.CrankNicholson.Data.CollaboratorNames = Flow CrankNicholsonLSS
+Simulator.SubSystem.CrankNicholson.ALEUpdateCom = ALE_FVMGeometricAverage
+Simulator.SubSystem.CrankNicholson.UpdateSol = StdUpdateSol
+Simulator.SubSystem.CrankNicholson.StdUpdateSol.Relaxation = 0.8
+Simulator.SubSystem.CrankNicholson.Data.MaxSteps = 10
+Simulator.SubSystem.CrankNicholson.Data.Norm = -5.0
+Simulator.SubSystem.CrankNicholson.Data.PrintHistory = true
+
+#
+#Define the LinearSystemSolver
+#
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = CrankNicholsonLSS
+Simulator.SubSystem.CrankNicholsonLSS.Namespace = FlowNamespace
+Simulator.SubSystem.CrankNicholsonLSS.Data.PCType = PCILU
+Simulator.SubSystem.CrankNicholsonLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.CrankNicholsonLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.CrankNicholsonLSS.Data.Output = false
+
+#
+#Define the Space Method
+#
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.SpaceMethodNames = Flow
+
+#
+# Space Method for solving the flow + BCs
+#
+Simulator.SubSystem.Flow.Namespace = FlowNamespace
+Simulator.SubSystem.Flow.Data.CollaboratorNames = CrankNicholsonLSS CrankNicholson
+
+Simulator.SubSystem.Flow.Restart = true
+Simulator.SubSystem.Flow.ComputeRHS = NumJacob
+Simulator.SubSystem.Flow.ComputeTimeRHS = ALETimeRhs
+Simulator.SubSystem.Flow.ALETimeRhs.useGlobalDT = false
+Simulator.SubSystem.Flow.ALETimeRhs.useAnalyticalMatrix = false
+
+#Simulator.SubSystem.Flow.SetupCom = LeastSquareP1Setup StdALESetup
+Simulator.SubSystem.Flow.SetupCom = StdSetup StdALESetup
+Simulator.SubSystem.Flow.SetupNames = Setup1 Setup2
+#Simulator.SubSystem.Flow.Setup1.stencil = FaceVertex
+#Simulator.SubSystem.Flow.UnSetupCom = LeastSquareP1UnSetup StdALEUnSetup
+Simulator.SubSystem.Flow.UnSetupCom = StdUnSetup StdALEUnSetup
+Simulator.SubSystem.Flow.UnSetupNames = UnSetup1 UnSetup2
+Simulator.SubSystem.Flow.BeforeMeshUpdateCom = StdALEPrepare
+Simulator.SubSystem.Flow.AfterMeshUpdateCom = StdALEUpdate
+
+Simulator.SubSystem.Flow.Data.FluxSplitter = RoeALE
+Simulator.SubSystem.Flow.Data.UpdateVar   = Cons
+Simulator.SubSystem.Flow.Data.SolutionVar = Cons
+Simulator.SubSystem.Flow.Data.LinearVar   = Roe
+
+Simulator.SubSystem.Flow.Data.PolyRec = Constant
+#Simulator.SubSystem.Flow.Data.PolyRec = LinearLS2D
+#Simulator.SubSystem.Flow.Data.LinearLS2D.limitRes = -1.7
+#Simulator.SubSystem.Flow.Data.Limiter = Venktn2D
+#Simulator.SubSystem.Flow.Data.Venktn2D.coeffEps = 1.0
+#Simulator.SubSystem.Flow.Data.Limiter = BarthJesp2D
+
+Simulator.SubSystem.Flow.InitComds = InitState UnsteadySlipWallEuler2DFVMCC FarFieldEuler2DFVMCC
+Simulator.SubSystem.Flow.InitNames = InField InAirfoil InFarfield
+
+Simulator.SubSystem.Flow.InField.applyTRS = InnerFaces
+Simulator.SubSystem.Flow.InField.Vars = x y
+Simulator.SubSystem.Flow.InField.Def =  1. \
+                                        256.8982996572 \
+                                        0.0 \
+                                        239745.993183375
+
+Simulator.SubSystem.Flow.InAirfoil.applyTRS = Airfoil
+
+Simulator.SubSystem.Flow.InFarfield.applyTRS = FarField
+Simulator.SubSystem.Flow.InFarfield.Tinf = 288.15
+Simulator.SubSystem.Flow.InFarfield.Pinf = 82699.05
+Simulator.SubSystem.Flow.InFarfield.Uinf = 256.8982996572
+Simulator.SubSystem.Flow.InFarfield.Vinf = 0.
+
+Simulator.SubSystem.Flow.BcComds = UnsteadySlipWallEuler2DFVMCC \
+                                   FarFieldEuler2DFVMCC
+
+Simulator.SubSystem.Flow.BcNames = Wall \
+                                   Far
+
+Simulator.SubSystem.Flow.Wall.applyTRS = Airfoil
+
+Simulator.SubSystem.Flow.Far.applyTRS = FarField
+Simulator.SubSystem.Flow.Far.Tinf = 288.15
+Simulator.SubSystem.Flow.Far.Pinf = 82699.05
+Simulator.SubSystem.Flow.Far.Uinf = 256.8982996572
+Simulator.SubSystem.Flow.Far.Vinf = 0.
+
+#
+# DataProcessing to get the aerodynamic coeficients
+#
+Simulator.SubSystem.DataPostProcessing = DataProcessing
+Simulator.SubSystem.DataProcessing.Namespace = FlowNamespace
+Simulator.SubSystem.DataProcessing.Data.CollaboratorNames = Flow CrankNicholson
+Simulator.SubSystem.DataProcessing.Comds = Euler2DConsComputeAeroFVMCC
+Simulator.SubSystem.DataProcessing.Names = AeroCoef
+
+Simulator.SubSystem.DataProcessing.Data.updateVar = Cons
+
+Simulator.SubSystem.DataProcessing.AeroCoef.applyTRS = Airfoil
+Simulator.SubSystem.DataProcessing.AeroCoef.Alpha = 0.016+(2.51*sin(2.*0.0814*t*256.8982996572))
+Simulator.SubSystem.DataProcessing.AeroCoef.SaveRateAero = 1
+Simulator.SubSystem.DataProcessing.AeroCoef.OutputFileAero = moving_aeroCoef.plt
+
+Simulator.SubSystem.DataProcessing.AeroCoef.OutputFileWall = moving_wallValues
+Simulator.SubSystem.DataProcessing.AeroCoef.SaveRateWall = 100
+Simulator.SubSystem.DataProcessing.AeroCoef.AppendIter = false
+Simulator.SubSystem.DataProcessing.AeroCoef.AppendTime = true
+
+Simulator.SubSystem.DataProcessing.AeroCoef.uInf = 256.8982996572
+Simulator.SubSystem.DataProcessing.AeroCoef.rhoInf = 1.
+Simulator.SubSystem.DataProcessing.AeroCoef.pInf = 82699.05
+
+CFEnv.RegistSignalHandlers = false

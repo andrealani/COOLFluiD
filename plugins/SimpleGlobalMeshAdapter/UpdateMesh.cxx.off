@@ -1,0 +1,131 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#include "SimpleGlobalMeshAdapter/SimpleGlobalMeshAdapter.hh"
+#include <cassert>
+
+#include "UpdateMesh.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Framework/MethodCommandProvider.hh"
+#include "Framework/SubSystemStatus.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/Node.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::MathTools;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace SimpleGlobalMeshAdapter {
+
+//////////////////////////////////////////////////////////////////////////////
+
+MethodCommandProvider<UpdateMesh, SimpleMeshAdapterData, SimpleGlobalMeshAdapterModule> updateMeshProvider("UpdateMesh");
+
+//////////////////////////////////////////////////////////////////////////////
+
+void UpdateMesh::defineConfigOptions(Config::OptionList& options)
+{
+   options.addConfigOption< CFString >("remeshMethod","Method to use for remeshing.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+UpdateMesh::UpdateMesh(const CFString& name)  :
+  SimpleMeshAdapterCom(name),
+  socket_nodes("nodes")
+{
+   addConfigOptionsTo(this);
+
+  _remeshMethod = "remeshMethod";
+   setParameter("remeshMethod",&_remeshMethod);
+
+//////////////////////////////////////////////////////////////////////////////
+
+void UpdateMesh::execute()
+{
+  CFAUTOTRACE;
+
+  createNewMesh();
+
+  readNewMesh();
+
+  interpolateSolution();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void UpdateMesh::createNewMesh()
+{
+
+  //run gambit, run daedalus or whatever mesh writer...
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void UpdateMesh::readNewMesh()
+{
+
+  // Using MeshCreator
+  // read new mesh and store it in another Namespace
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void UpdateMesh::interpolateSolution()
+{
+
+  //read new mesh and store it in another MeshData in the same namespace
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void UpdateMesh::writeMesh()
+{
+
+  //write solution in a new file using OutputFormatter
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void UpdateMesh::modifyFileNameForRestart(const CFString filename)
+{
+  _data->setFileName(filename);
+  _data->setIsTranslated(false);
+  _converterStr = "CFmesh";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+std::vector<Utils::SafePtr<BaseDataSocketSink> >
+UpdateMesh::needsSockets()
+{
+
+  std::vector<Utils::SafePtr<BaseDataSocketSink> > result;
+
+  result.push_back(&socket_nodes);
+
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace SimpleGlobalMeshAdapter
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

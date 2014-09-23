@@ -1,0 +1,172 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#include "Common/CFLog.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Common {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY, typename VALUE>
+ CFMap<KEY, VALUE>::CFMap(size_t maxSize) :
+   m_sorted(false)
+{
+  if (maxSize > 0) {
+    m_vectorMap.reserve(maxSize);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY, typename VALUE>
+CFMap<KEY, VALUE>::~CFMap()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY, typename VALUE>
+inline void CFMap<KEY, VALUE>::insert(const KEY& aKey, const VALUE& aValue)
+{
+  m_sorted = false;
+  m_vectorMap.push_back(std::pair<KEY, VALUE>(aKey, aValue));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY, typename VALUE>
+std::pair<typename std::vector<std::pair<KEY,VALUE> >::iterator,
+          typename std::vector<std::pair<KEY,VALUE> >::iterator>
+CFMap<KEY,VALUE>::findBounds(const KEY& aKey)
+{
+  if(m_vectorMap.empty()) {
+    valueNotFound(aKey);
+  }
+
+  if(!m_sorted) { sortKeys(); }
+
+  if(aKey < m_vectorMap.front().first) { return std::make_pair(m_vectorMap.begin(),m_vectorMap.begin()); }
+
+  if(aKey > m_vectorMap.back().first) { return std::make_pair(--m_vectorMap.end(),--m_vectorMap.end()); }
+
+  typename std::vector<std::pair<KEY,VALUE> >::iterator after =
+    lower_bound(m_vectorMap.begin(),m_vectorMap.end(),aKey,Compare());
+
+  typename std::vector<std::pair<KEY,VALUE> >::iterator before = after;
+  --before;
+
+  return std::make_pair(before,after);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY, typename VALUE>
+inline void CFMap<KEY, VALUE>::valueNotFound(const KEY& aKey)
+{
+   std::string msg = "CFMap: KEY not found: ";
+   msg += Common::StringOps::to_str(aKey);
+   throw Common::NoSuchValueException (FromHere(),msg);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY, typename VALUE>
+VALUE CFMap<KEY, VALUE>::find(const KEY& aKey)
+{
+  if(m_vectorMap.empty()) { valueNotFound(aKey); }
+
+  if(!m_sorted) { sortKeys(); }
+
+  typename std::vector<std::pair<KEY,VALUE> >::iterator itr =
+   std::lower_bound(m_vectorMap.begin(),
+                    m_vectorMap.end(),
+                    aKey,
+                    Compare());
+
+ if (itr == m_vectorMap.end()) { valueNotFound(aKey); }
+
+ if (itr->first != aKey) { valueNotFound(aKey); }
+
+ cf_assert(itr->first == aKey); // must have one at least
+
+ return itr->second;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<class KEY, class VALUE>
+inline VALUE CFMap<KEY, VALUE>::find(const KEY& aKey, bool& isFound)
+{
+  cf_assert(!m_vectorMap.empty());
+  cf_assert(m_sorted);
+
+  typename std::vector<std::pair<KEY,VALUE> >::iterator itr =
+    std::lower_bound(m_vectorMap.begin(),m_vectorMap.end(),
+                     aKey, Compare());
+
+  // this can fail if only one key is inserted !!!
+  isFound = (itr->first == aKey);
+  cf_assert(m_vectorMap.size() > 1);
+
+  return itr->second;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY, typename VALUE>
+bool CFMap<KEY, VALUE>::exists(const KEY& aKey)
+{
+  /// @TODO AL:  change this : it is hellish inefficient !!!!
+  if(m_vectorMap.empty()) { return false; }
+
+  if(!m_sorted) { sortKeys(); }
+
+  typename std::vector<std::pair<KEY,VALUE> >::iterator itr =
+   std::lower_bound(m_vectorMap.begin(),
+                    m_vectorMap.end(),
+                    aKey,
+                    Compare());
+
+ if (itr == m_vectorMap.end()) { return false; }
+
+ if (itr->first != aKey) { return false; }
+
+ cf_assert(itr->first == aKey); // must have one at least
+
+ return true;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY, typename VALUE>
+inline void CFMap<KEY, VALUE>::sortKeys()
+{
+  std::sort(m_vectorMap.begin(),m_vectorMap.end(), LessThan());
+  m_sorted = true;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename KEY, typename VALUE>
+inline void CFMap<KEY, VALUE>::print()
+{
+  const CFuint sizeM = m_vectorMap.size();
+  for (CFuint i = 0; i < sizeM; ++i) {
+    CFout << m_vectorMap[i].first << " => " << m_vectorMap[i].second << "\n";
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Common
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

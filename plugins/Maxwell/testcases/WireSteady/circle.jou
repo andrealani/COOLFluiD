@@ -1,0 +1,98 @@
+/ Journal File for GAMBIT 2.4.6, Database 2.4.4, lnamd64 SP2007051420
+/ Identifier "default_id"
+/ File opened for write Fri Jun  1 16:43:28 2012.
+vertex create coordinates 0 0 0
+vertex create coordinates 1 0 0
+vertex create coordinates 0 1 0
+vertex create coordinates 0 10000 0
+vertex create coordinates 10000 0 0
+vertex create coordinates -1 0 0
+window matrix 1 entries 1 0 0 0 0 1 0 0 0 0 1 0 -9.432179450989 \
+  9.432179450989 -7.349999904633 7.349999904633 -100 100
+edge create radius 1 startangle 0 endangle 180 center "vertex.1" xyplane arc
+vertex create coordinates -10000 0 0
+edge create radius 10000 startangle 0 endangle 180 center "vertex.1" xyplane arc
+window matrix 1 entries 1 0 0 0 0 1 0 0 0 0 1 0 -4365.807128906 \
+  3518.718017578 -3760.886474609 2383.105224609 -40000 40000
+edge create straight "vertex.5" "vertex.2"
+undo
+/Undone to: edge create straight "vertex.5" "vertex.2"
+edge create straight "vertex.7" "vertex.10"
+undo
+/Undone to: edge create straight "vertex.7" "vertex.10"
+redo
+edge create straight "vertex.8" "vertex.11"
+face create wireframe "edge.3" "edge.2" "edge.4" "edge.1" real
+undo begingroup
+edge picklink "edge.3" "edge.4"
+edge mesh "edge.4" "edge.3" successive ratio1 1.1 intervals 100
+undo endgroup
+undo begingroup
+edge picklink "edge.1"
+edge mesh "edge.1" successive ratio1 1 intervals 80
+undo endgroup
+undo begingroup
+edge delete "edge.3" "edge.4" keepsettings onlymesh
+edge mesh "edge.3" "edge.4" successive ratio1 1.1 intervals 110
+undo endgroup
+undo begingroup
+edge delete "edge.2" keepsettings onlymesh
+edge picklink "edge.2"
+edge mesh "edge.2" successive ratio1 1 intervals 80
+undo endgroup
+face mesh "face.1" map size 1
+face creflect "face.1" multiple 1 linkmesh vector 0 0 1 origin 0 0 0
+face reflect "face.1" vector 0 0 1 origin 0 0 0 connected
+undo
+/Undone to: face reflect "face.1" vector 0 0 1 origin 0 0 0 connected
+undo
+/Undone to: face creflect "face.1" multiple 1 linkmesh vector 0 0 1 origin 0 0 0
+undo
+/Undone to: face mesh "face.1" map size 1
+redo
+face reflect "face.1" vector 0 0 -1 origin 0 0 0 connected
+undo
+/Undone to: face reflect "face.1" vector 0 0 -1 origin 0 0 0 connected
+undo
+/Undone to: face mesh "face.1" map size 1
+redo
+face creflect "face.1" multiple 1 linkmesh vector 1 0 0 origin 0 0 0
+undo
+/Undone to: face creflect "face.1" multiple 1 linkmesh vector 1 0 0 origin 0 0 0
+undo
+/Undone to: face mesh "face.1" map size 1
+redo
+face creflect "face.1" multiple 1 linkmesh vector 9999 0 0 origin 1 0 0
+undo
+/Undone to: face creflect "face.1" multiple 1 linkmesh vector 9999 0 0 origin 1 0
+face cmove "face.1" multiple 1 linkmesh dangle 180 vector 1 0 0 origin 0 0 0
+solver select "Generic"
+physics create "Inlet" btype "ELEMENT_SIDE" edge "edge.2" "edge.6"
+physics modify "Inlet" btype label "Outlet" edge "edge.2" "edge.6"
+physics create "Inlet" btype "ELEMENT_SIDE" edge "edge.1" "edge.8"
+physics create btype "ELEMENT_SIDE"
+physics delete "element_side.3" btype
+save name "circle.dbs"
+export gambit "circle80x110.neu"
+/ File closed at Fri Jun  1 17:02:51 2012, 8.81 cpu second(s), 19706864 maximum memory.
+/ Journal File for GAMBIT 2.4.6, Database 2.4.4, lnamd64 SP2007051420
+/ Identifier "circle"
+/ File opened for append Fri Jun  1 18:48:17 2012.
+solver select "Generic"
+edge connect "edge.3" "edge.5" real
+solver select "Generic"
+physics delete btype
+physics create "Inlet" btype "ELEMENT_SIDE" edge "edge.2" "edge.6"
+physics delete btype
+physics create "Inlet" btype "ELEMENT_SIDE" edge "edge.1" "edge.8"
+physics create "Outlet" btype "ELEMENT_SIDE" edge "edge.6" "edge.2"
+save
+export gambit \
+  "/data1/andrea/CF2/plugins/Maxwell/testcases/WireSteady/circle80x110.neu"
+/ File closed at Fri Jun  1 18:51:02 2012, 0.70 cpu second(s), 2777536 maximum memory.
+/ Journal File for GAMBIT 2.4.6, Database 2.4.4, lnamd64 SP2007051420
+/ Identifier "circle"
+/ File opened for append Mon Jun  4 14:33:36 2012.
+edge connect "edge.4" "edge.7" real
+export gambit "circle.neu"
+/ File closed at Mon Jun  4 14:34:37 2012, 0.48 cpu second(s), 2769328 maximum memory.

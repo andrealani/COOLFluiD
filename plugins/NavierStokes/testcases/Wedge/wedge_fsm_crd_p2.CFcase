@@ -1,0 +1,138 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+# CFEnv.TraceToStdOut = true
+### Residual = -0.43678358
+#
+##############################################################################
+# Loading of components
+##############################################################################
+
+Simulator.Modules.Libs =  libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libForwardEuler libFluctSplitNavierStokes libTHOR2CFmesh libFluctSplitHO libFluctSplitHONavierStokes
+
+##############################################################################
+# Directory paths
+##############################################################################
+
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Wedge
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.FwdEuler.ShowRate            = 10
+Simulator.SubSystem.FwdEuler.ConvRate            = 1
+Simulator.SubSystem.FwdEuler.ConvergenceFile     = convergenceBxpP2.plt
+
+##############################################################################
+# Physcial model
+##############################################################################
+
+Simulator.SubSystem.Default.PhysicalModelType = Euler2D
+
+##############################################################################
+# CFL
+##############################################################################
+
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.9
+
+##############################################################################
+# Stop condition
+##############################################################################
+
+Simulator.SubSystem.StopCondition          = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 30
+
+##############################################################################
+# Mesh reading
+##############################################################################
+
+Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = wedge_fsm_p2_4k.CFmesh
+
+##############################################################################
+# Mesh writting
+##############################################################################
+
+Simulator.SubSystem.OutputFormat           = Tecplot CFmesh
+
+Simulator.SubSystem.Tecplot.FileName    = wedgeBxpP2.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate    = 10
+Simulator.SubSystem.Tecplot.WriteSol    = WriteSolutionBlock
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = thetas
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize   = 4
+
+Simulator.SubSystem.CFmesh.FileName     = wedgeBxpP2.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 100
+
+##############################################################################
+# Pseudo-time discretization
+##############################################################################
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+
+##############################################################################
+# Space discretization
+##############################################################################
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Restart = false
+
+Simulator.SubSystem.FluctuationSplit.SetupCom    = StdSetup     ThetaSetup
+Simulator.SubSystem.FluctuationSplit.UnSetupCom  = ThetaUnSetup StdUnSetup
+Simulator.SubSystem.FluctuationSplit.ThetaSetup1.MaxNbSubElems = 4
+
+
+#Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = HOCRD
+#Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysBCx
+
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = HOCRD_SysBT
+
+
+Simulator.SubSystem.FluctuationSplit.Data.HOCRD_SysBT.Delta  = 3.0
+Simulator.SubSystem.FluctuationSplit.Data.HOCRD_SysBT.Length = 3.0
+Simulator.SubSystem.FluctuationSplit.Data.HOCRD_SysBT.Speed  = 2.0
+Simulator.SubSystem.FluctuationSplit.Data.HOCRD_SysBT.VarName = p
+
+Simulator.SubSystem.FluctuationSplit.Data.HOCRD_SysBT.StoreThetas   = true
+Simulator.SubSystem.FluctuationSplit.Data.HOCRD_SysBT.MaxNbSubElems = 4
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar    = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar   = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar    = Roe
+
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorOrder = P3
+
+##############################################################################
+# Solution initialization
+##############################################################################
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 1. 2.366431913 0.0 5.3
+
+##############################################################################
+# Boundary conditions
+##############################################################################
+
+Simulator.SubSystem.FluctuationSplit.BcComds = StrongSlipWallEuler2DCons SuperInlet
+Simulator.SubSystem.FluctuationSplit.BcNames = Wall Inlet
+
+Simulator.SubSystem.FluctuationSplit.Wall.applyTRS = SlipWall
+Simulator.SubSystem.FluctuationSplit.Wall.alpha = 1.0
+
+Simulator.SubSystem.FluctuationSplit.Inlet.applyTRS = SuperInlet
+Simulator.SubSystem.FluctuationSplit.Inlet.Vars = x y
+Simulator.SubSystem.FluctuationSplit.Inlet.Def = 1. \
+          2.366431913 \
+          0.0 \
+          5.3
+

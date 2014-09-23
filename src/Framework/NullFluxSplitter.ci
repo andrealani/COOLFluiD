@@ -1,0 +1,37 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Framework_NullFluxSplitter_ci
+#define COOLFluiD_Framework_NullFluxSplitter_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+template < typename METHODDATA>
+NullFluxSplitter<METHODDATA>::NullFluxSplitter(const std::string& name) :
+  FluxSplitter<METHODDATA>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+template < typename METHODDATA>
+NullFluxSplitter<METHODDATA>::~NullFluxSplitter()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Framework_NullFluxSplitter_ci

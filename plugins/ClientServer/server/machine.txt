@@ -1,0 +1,7 @@
+arlin23 slots=4
+aglin4 slots=2
+aglin2 slots=2
+aglin5 slots=2
+aglin10 slots=8
+aglin11 slots=4
+aglin8 slots=2

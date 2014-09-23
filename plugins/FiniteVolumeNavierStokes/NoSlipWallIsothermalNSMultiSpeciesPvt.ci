@@ -1,0 +1,86 @@
+#include "Framework/MeshData.hh"
+  
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+NoSlipWallIsothermalNSMultiSpeciesPvt<MODEL>::
+NoSlipWallIsothermalNSMultiSpeciesPvt(const std::string& name) :
+  NoSlipWallIsothermalNSPvt(name), _nbChemVars(0)
+{
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+NoSlipWallIsothermalNSMultiSpeciesPvt<MODEL>::
+~NoSlipWallIsothermalNSMultiSpeciesPvt()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSMultiSpeciesPvt<MODEL>::setup()
+{
+  NoSlipWallIsothermalNSPvt::setup();
+  
+  Common::SafePtr<MODEL> modelTerm = Framework::PhysicalModelStack::getActive()->
+    getImplementor()->getConvectiveTerm().template d_castTo<MODEL>();
+  
+  _nbChemVars = modelTerm->getNbScalarVars(0);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class MODEL>
+void NoSlipWallIsothermalNSMultiSpeciesPvt<MODEL>::setGhostState
+(Framework::GeometricEntity *const face)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  
+  const CFuint nbEqs = 
+    PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbEqsNS = (dim == DIM_3D) ? 5 : 4; 
+  
+  if (nbEqs >= nbEqsNS) {
+    NoSlipWallIsothermalNSPvt::setGhostState(face);
+  }
+  
+  if (nbEqs != nbEqsNS) {
+    State *const innerState = face->getState(0);
+    State *const ghostState = face->getState(1);
+    
+    // Assume grad(Ye) * n = 0 at the wall
+    if (dim == DIM_3D) {
+      for(CFuint ie = 0; ie < _nbChemVars; ++ie) {
+	(*ghostState)[5 + ie] = (*innerState)[5 + ie];
+      }
+    }
+    else {
+      for(CFuint ie = 0; ie < _nbChemVars; ++ie) {
+	(*ghostState)[4 + ie] = (*innerState)[4 + ie];
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

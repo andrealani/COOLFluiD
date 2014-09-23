@@ -1,0 +1,140 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -4.54866
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFluctSplit libFluctSplitSystem libFluctSplitSpaceTime libNewtonMethod libFluctSplitSpaceTimeNavierStokes
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Naca0012/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
+Simulator.SubSystem.Euler2D.refValues = 1.204524948 \
+                                260.259224953 \
+                                30. \
+                                281463.624745345
+Simulator.SubSystem.Euler2D.refLength = 1.0
+Simulator.SubSystem.Euler2D.velRef = 300.
+Simulator.SubSystem.Euler2D.pRef = 101325.0
+Simulator.SubSystem.Euler2D.rhoRef = 1.204524948
+
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.001
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = MaxDT
+#Simulator.SubSystem.SubSystemStatus.MaxDT.ST_CFL = 0.9
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = FunctionDT
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Vars = i
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = if(i<3,0.1,0.01)
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = naca0012-sol.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = naca0012-sol.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+Simulator.SubSystem.CFmesh.AppendIter = true
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 100.
+
+Simulator.SubSystem.Default.listTRS = InnerCells Airfoil FarField
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = nacaRDS_M0755_A0016_sol.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 10.
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = 10000.0
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i>1,min(1000000.,2.*10.^(i-1)),2.)
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i>30,min(1000000.,2.*2.^(i-30)),2.)
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i>50,min(100.,2.*1.2^(i-50)),2.)
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 10
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.AbsNorm = -5.0
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCILU
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Restart = true
+Simulator.SubSystem.FluctuationSplit.ComputeRHS = RhsJacob
+Simulator.SubSystem.FluctuationSplit.ComputeTimeRHS = StdTimeRhs
+
+Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = STM_RDS
+
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = STM_SysN
+#Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = STM_SysNlim
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Roe
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def =  1204524948 \
+                                260.259224953 \
+                                260.259224953 \
+                                281463.624745345
+
+Simulator.SubSystem.FluctuationSplit.BcComds = UnsteadyWeakSlipWallEuler2DImpl \
+				WeakFarField2DImpl
+
+Simulator.SubSystem.FluctuationSplit.BcNames = WeakSlipWall \
+                                      FField
+
+Simulator.SubSystem.FluctuationSplit.WeakSlipWall.applyTRS = Airfoil
+Simulator.SubSystem.FluctuationSplit.WeakSlipWall.alpha = 0.6666666666
+
+Simulator.SubSystem.FluctuationSplit.FField.applyTRS = FarField
+Simulator.SubSystem.FluctuationSplit.FField.InputVar = RhoMachAlphaP
+Simulator.SubSystem.FluctuationSplit.FField.Vars = x y t
+Simulator.SubSystem.FluctuationSplit.FField.Def = 1.204524948 \
+                                        0.755 \
+                                        0.016 \
+                                        101325.
+
+#Data Processing
+#Simulator.SubSystem.DataProcessing = DataProcessing
+#Simulator.SubSystem.DataProcessing.Comds = Euler2DConsComputeAero Euler2DConsComputeWall#
+#Simulator.SubSystem.DataProcessing.Names = AeroCoef Wall
+
+#Simulator.SubSystem.DataProcessing.AeroCoef.applyTRS = Airfoil
+#Simulator.SubSystem.DataProcessing.AeroCoef.OutputFile = test.plt
+#Simulator.SubSystem.DataProcessing.AeroCoef.SaveRate = 1
+#Simulator.SubSystem.DataProcessing.AeroCoef.Alpha = 0.016+(2.51*sin(0.0814*t))
+
+#Simulator.SubSystem.DataProcessing.Wall.applyTRS = Airfoil
+#Simulator.SubSystem.DataProcessing.Wall.AppendIter = true
+#Simulator.SubSystem.DataProcessing.Wall.SaveRate = 1
+

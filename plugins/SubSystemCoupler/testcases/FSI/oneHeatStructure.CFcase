@@ -1,0 +1,186 @@
+#
+# COOLFluiD startfile
+#
+# This tetscase is for the simulation of heat transfer between two bodies
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+#
+
+CFEnv.VerboseEvents = false
+CFEnv.ExceptionLogLevel = 200
+
+# This defines the order of the iterations
+Simulator.SubSystems = SubSysA
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libFiniteElement libHeat libLoopMaestro libNewtonMethod libSubSystemCoupler libSubSystemCouplerHeat  libFiniteElementHeat
+
+Simulator.Paths.WorkingDir = plugins/SubSystemCoupler/testcases/FSI/
+Simulator.Paths.ResultsDir       = ./
+
+#
+#Define the general subsystem info
+#
+#
+Simulator.SubSysA.ConvergenceFile     = convergenceHeat.plt
+Simulator.SubSysA.ConvRate            = 1
+Simulator.SubSysA.ShowRate            = 1
+Simulator.SubSysA.InitialTime         = 0.
+Simulator.SubSysA.InitialIter         = 0
+
+Simulator.SubSysA.StopCondition       = MaxNumberSteps
+Simulator.SubSysA.MaxNumberSteps.nbSteps = 3
+
+#Simulator.SubSysA.StopCondition   = MaxTime
+#Simulator.SubSysA.MaxTime.maxTime = 20.
+
+#Simulator.SubSysA.StopCondition       = Norm
+#Simulator.SubSysA.Norm.valueNorm      = -10.0
+
+
+#
+#Define the 3 namespaces in which will 'live' the two heat structures
+#
+Simulator.SubSysA.Namespaces = Body1Namespace
+
+#
+#Define the meshdata/physical model for the Body1
+#
+Simulator.SubSysA.Body1Namespace.MeshData = Body1MeshData
+Simulator.SubSysA.Body1Namespace.SubSystemStatus = Body1SubSystemStatus
+
+Simulator.SubSysA.Body1Namespace.PhysicalModelType = Heat2D
+Simulator.SubSysA.Body1Namespace.PhysicalModelName = Body1PM
+Simulator.SubSysA.Body1PM.Conductivity = 2.0
+
+#
+#Define the meshdata details for the 2 bodies
+#
+Simulator.SubSysA.Body1MeshData.listTRS = InnerCells FaceSouth FaceWest FaceNorth SuperInlet
+Simulator.SubSysA.Body1MeshData.Namespaces = Body1Namespace
+
+#
+#Define the output formatters
+#
+Simulator.SubSysA.OutputFormat        = Tecplot CFmesh
+Simulator.SubSysA.OutputFormatNames   = Tecplot1 CFmesh1
+
+Simulator.SubSysA.CFmesh1.Namespace = Body1Namespace
+Simulator.SubSysA.CFmesh1.Data.CollaboratorNames = Body1
+Simulator.SubSysA.CFmesh1.FileName = twoPlates2D_1.CFmesh
+Simulator.SubSysA.CFmesh1.SaveRate = 1
+Simulator.SubSysA.CFmesh1.AppendTime = false
+Simulator.SubSysA.CFmesh1.AppendIter = true
+
+Simulator.SubSysA.Tecplot1.Namespace = Body1Namespace
+Simulator.SubSysA.Tecplot1.Data.CollaboratorNames = Body1
+Simulator.SubSysA.Tecplot1.FileName = twoPlates2D_1.plt
+Simulator.SubSysA.Tecplot1.Data.updateVar = Prim
+Simulator.SubSysA.Tecplot1.SaveRate = 1
+Simulator.SubSysA.Tecplot1.AppendTime = false
+Simulator.SubSysA.Tecplot1.AppendIter = true
+
+#
+#Define the mesh creators
+#
+Simulator.SubSysA.MeshCreator = CFmeshFileReader
+Simulator.SubSysA.MeshCreatorNames = CFmeshFileReader1
+
+#For the Body1
+Simulator.SubSysA.CFmeshFileReader1.Namespace = Body1Namespace
+Simulator.SubSysA.CFmeshFileReader1.Data.FileName = square-fine.CFmesh
+Simulator.SubSysA.CFmeshFileReader1.Data.builderName = FiniteElement
+Simulator.SubSysA.CFmeshFileReader1.Data.polyTypeName = Lagrange
+
+
+#
+#Define the convergence methods
+#
+Simulator.SubSysA.ConvergenceMethod = NewtonIterator
+Simulator.SubSysA.ConvergenceMethodNames = Body1CM
+
+#For the body 1
+Simulator.SubSysA.Body1CM.Namespace = Body1Namespace
+Simulator.SubSysA.Body1CM.Data.CollaboratorNames = Body1 Body1LSS
+Simulator.SubSysA.Body1CM.Data.MaxSteps = 1
+Simulator.SubSysA.Body1CM.UpdateSol = CopySol
+Simulator.SubSysA.Body1CM.InitCom = ResetSystem
+Simulator.SubSysA.Body1CM.Data.CFL.Value = 1.0
+
+#
+#Define the LinearSystemSolvers
+#
+Simulator.SubSysA.LinearSystemSolver = PETSC
+Simulator.SubSysA.LSSNames = Body1LSS
+
+Simulator.SubSysA.Body1LSS.Namespace = Body1Namespace
+Simulator.SubSysA.Body1LSS.Data.PCType = PCLU
+Simulator.SubSysA.Body1LSS.Data.KSPType = KSPGMRES
+Simulator.SubSysA.Body1LSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSysA.Body1LSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSysA.Body1LSS.Data.MaxIter = 100
+
+#
+#Define the Space Methods
+#
+Simulator.SubSysA.SpaceMethod = FiniteElementMethod
+Simulator.SubSysA.SpaceMethodNames = Body1
+
+#
+# Space Method for solving the Body1 + BCs
+#
+Simulator.SubSysA.Body1.Namespace = Body1Namespace
+Simulator.SubSysA.Body1.Data.CollaboratorNames = Body1LSS Body1CM
+
+Simulator.SubSysA.Body1.Data.UpdateVar = Prim
+Simulator.SubSysA.Body1.Data.DiffusiveVar = Prim
+
+Simulator.SubSysA.Body1.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSysA.Body1.Data.IntegratorOrder = P1
+
+Simulator.SubSysA.Body1.ExplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSysA.Body1.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSysA.Body1.InitComds = InitState
+Simulator.SubSysA.Body1.InitNames = InitialField
+
+# Vars are [x y]
+Simulator.SubSysA.Body1.InitialField.applyTRS = InnerCells
+Simulator.SubSysA.Body1.InitialField.Vars = x y
+Simulator.SubSysA.Body1.InitialField.Def = 1000
+
+Simulator.SubSysA.Body1.BcComds = NeumannBC DirichletBC DirichletBC DirichletBC
+Simulator.SubSysA.Body1.BcNames = CoupledBC1 T1000K T1000K1     T1000K2
+
+# Vars are [x y t T]
+Simulator.SubSysA.Body1.T1000K.applyTRS = FaceWest
+Simulator.SubSysA.Body1.T1000K.Implicit = false
+Simulator.SubSysA.Body1.T1000K.Vars = x y t T
+Simulator.SubSysA.Body1.T1000K.Def = if(y<0.5,1000,200)
+
+Simulator.SubSysA.Body1.T1000K1.applyTRS = FaceSouth
+Simulator.SubSysA.Body1.T1000K1.Implicit = false
+Simulator.SubSysA.Body1.T1000K1.Vars = x y t T
+Simulator.SubSysA.Body1.T1000K1.Def = if(y<0.5,1000,200)
+
+Simulator.SubSysA.Body1.T1000K2.applyTRS = FaceNorth
+Simulator.SubSysA.Body1.T1000K2.Implicit = false
+Simulator.SubSysA.Body1.T1000K2.Vars = x y t T
+Simulator.SubSysA.Body1.T1000K2.Def = if(y<0.5,1000,200)
+
+Simulator.SubSysA.Body1.T1000K3.applyTRS = SuperInlet
+Simulator.SubSysA.Body1.T1000K3.Implicit = false
+Simulator.SubSysA.Body1.T1000K3.Vars = x y t T
+Simulator.SubSysA.Body1.T1000K3.Def = if(y<0.5,1000,200)
+
+# Vars are [x y t T nx ny]
+Simulator.SubSysA.Body1.CoupledBC1.applyTRS = SuperInlet
+Simulator.SubSysA.Body1.CoupledBC1.Vars = x y t T nx ny
+Simulator.SubSysA.Body1.CoupledBC1.Def = -80
+
+Simulator.SubSysA.Body1.CoupledBC2.applyTRS = SuperInlet
+Simulator.SubSysA.Body1.CoupledBC2.Vars = x y t T nx ny
+Simulator.SubSysA.Body1.CoupledBC2.Def = 0
+

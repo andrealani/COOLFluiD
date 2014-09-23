@@ -1,0 +1,89 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+# Residual = -2.841
+
+
+#CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libLinEuler libSpectralFD libSpectralFDLinEuler libRungeKuttaLS
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/LinEuler/testcases/AeroAcoustic
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.DataPreProcessing      = DataProcessing
+Simulator.SubSystem.DataPreProcessingNames = PreProcessor
+Simulator.SubSystem.PreProcessor.Comds = CreateMeanFlowAnalytic
+Simulator.SubSystem.PreProcessor.Names = CMFlowAnalytic
+Simulator.SubSystem.PreProcessor.CMFlowAnalytic.applyTRS = InnerCells
+Simulator.SubSystem.PreProcessor.CMFlowAnalytic.Vars = x y t
+Simulator.SubSystem.PreProcessor.CMFlowAnalytic.MeanFlow = 1.0 0.5 0.0 1.0
+
+Simulator.SubSystem.Default.PhysicalModelType = LinEuler2D
+Simulator.SubSystem.LinEuler2D.ConvTerm.gamma = 1.4;
+
+Simulator.SubSystem.OutputFormat        = ParaView CFmesh
+
+Simulator.SubSystem.CFmesh.FileName     = accpulse2dLEE-sfdm-solP1.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+
+Simulator.SubSystem.ParaView.FileName   = accpulse2dLEE-sfdm-solP1.vtu
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.SaveRate = 100
+Simulator.SubSystem.ParaView.AppendTime = true
+Simulator.SubSystem.ParaView.AppendIter = false
+
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+
+Simulator.SubSystem.ConvergenceMethod  = RKLS
+Simulator.SubSystem.RKLS.ConvergenceFile = convergence.plt
+Simulator.SubSystem.RKLS.ShowRate        = 1
+Simulator.SubSystem.RKLS.ConvRate        = 1
+Simulator.SubSystem.RKLS.Data.CFL.Value  = 0.2
+Simulator.SubSystem.RKLS.Data.Order      = 3
+Simulator.SubSystem.RKLS.Data.TimeAccurate = true
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.0005
+
+Simulator.SubSystem.SpaceMethod = SpectralFDMethod
+
+Simulator.SubSystem.Default.listTRS = InnerCells SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = accpulse2d-sfdm-solP1.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = SpectralFDMethod
+
+# choose which builder we use
+Simulator.SubSystem.SpectralFDMethod.Builder = StdBuilder
+Simulator.SubSystem.SpectralFDMethod.SpaceRHSJacobCom = RHS
+Simulator.SubSystem.SpectralFDMethod.SrcTermNames = LinEulerMeanFlow
+Simulator.SubSystem.SpectralFDMethod.SrcTermComds = LinEulerMeanFlow
+
+Simulator.SubSystem.SpectralFDMethod.Data.ComputeVolumeForEachState = true
+Simulator.SubSystem.SpectralFDMethod.Data.UpdateVar   = Cons
+Simulator.SubSystem.SpectralFDMethod.Data.SolutionVar = Cons
+Simulator.SubSystem.SpectralFDMethod.Data.LinearVar   = Cons
+Simulator.SubSystem.SpectralFDMethod.Data.RiemannFlux = LaxFriedrichsFlux
+
+Simulator.SubSystem.SpectralFDMethod.InitComds = LEEInitState
+Simulator.SubSystem.SpectralFDMethod.InitNames = InField
+
+Simulator.SubSystem.SpectralFDMethod.InField.applyTRS = InnerCells
+Simulator.SubSystem.SpectralFDMethod.InField.Vars = x y
+Simulator.SubSystem.SpectralFDMethod.InField.Def = exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)) \
+                                                   0.0 \
+                                                   0.0 \
+                                                   1.4*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1))
+
+Simulator.SubSystem.SpectralFDMethod.BcNames = FarField
+Simulator.SubSystem.SpectralFDMethod.FarField.applyTRS = SuperInlet SuperOutlet
+
+Simulator.SubSystem.SpectralFDMethod.Data.BcTypes = FarField1DCharLinEuler2D
+Simulator.SubSystem.SpectralFDMethod.Data.BcNames = FarField

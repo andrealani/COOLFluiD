@@ -1,0 +1,112 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace ICP {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void ICPReactionTerm<BASE>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFreal >("Permeability","Permeability of the free space.");
+  options.template addConfigOption< CFreal >("Freq","Operating frequency of the torch [MHz].");
+  options.template addConfigOption< bool >("Use2DModel","Flag telling if to use the 2D model.");
+  options.template addConfigOption< bool >("PegaseApproximation","used for testing.");
+  options.template addConfigOption< std::string >("OutputFile","EMfield-LorentzForce Tecplot file.");
+  options.template addConfigOption< int >("OutputFileSaveRate","EMfield-LorentzForce Tecplot file save rate.");
+  options.template addConfigOption< CFreal >("xMaxUsing1DModel","max x coordinate considering Ep sources in 1D EMfield model");
+  options.template addConfigOption< CFint >("extraVerboseRate","extra messages rate");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+ICPReactionTerm<BASE>::ICPReactionTerm(const std::string& name) :
+  BASE(name)
+{
+  this->addConfigOptionsTo(this);
+  
+  m_permeability = 0.;
+  this->setParameter("Permeability",&m_permeability);
+  
+  m_freqMHz = 0.;
+  this->setParameter("Freq",&m_freqMHz);
+  
+  m_use2DModel = false;
+  this->setParameter("Use2DModel",&m_use2DModel);  
+
+  m_xMaxUsing1DModel = 0.486 ;
+  this->setParameter("xMaxUsing1DModel",&m_xMaxUsing1DModel);
+
+  m_tecplotFileEM = "EM.plt";
+  this->setParameter("OutputFile",&m_tecplotFileEM);
+  m_tecplotFileEMSaveRate = 5;
+  this->setParameter("OutputFileSaveRate",&m_tecplotFileEMSaveRate);
+
+  m_pegaseValues = false;
+  this->setParameter("PegaseApproximation",&m_pegaseValues);
+
+  // m_extraVerboseRate == 0 means NO EXTRA MESSAGES
+  m_extraVerboseRate = 10;
+  this->setParameter("extraVerboseRate",&m_extraVerboseRate);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+ICPReactionTerm<BASE>::~ICPReactionTerm()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void ICPReactionTerm<BASE>::configure ( Config::ConfigArgs& args )
+{
+  BASE::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void ICPReactionTerm<BASE>::resizePhysicalData(RealVector& physicalData)
+{
+  // resize the physical data
+  cf_assert(getDataSize() > 0);
+  physicalData.resize(getDataSize());
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void ICPReactionTerm<BASE>::setupPhysicalData()
+{
+  cf_assert(getDataSize() > 0);
+
+  // set the size of each physical data in the StatesData
+  resizePhysicalData(this->m_physicalData);
+  resizePhysicalData(this->m_refPhysicalData);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+CFreal ICPReactionTerm<BASE>::getElConductivity(const CFreal& Tdim, const CFreal& pdim) const
+{
+  /** @TODO the acces of PhysicalChemicalLibrary to be solved to be able to use this method
+      m_library->setComposition(Tdim,pdim);
+      return m_library->sigma(Tdim, pdim);
+  */
+  return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace ICP
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,143 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -0.498262
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libNewtonMethod libFiniteVolumeNavierStokes libDpl2CFmesh libTecplotWriter libMeshTools
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Naca0012/
+#Simulator.Paths.WorkingDir       = ./
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType       = NavierStokes2D
+Simulator.SubSystem.NavierStokes2D.refValues = 1. 0.591607978309962 0.591607978309962 1.
+Simulator.SubSystem.NavierStokes2D.refLength = 1.0
+
+Simulator.SubSystem.NavierStokes2D.DiffTerm.Reynolds = 5000.
+Simulator.SubSystem.NavierStokes2D.ConvTerm.tempRef = 288.15
+Simulator.SubSystem.NavierStokes2D.ConvTerm.machInf = 0.5
+
+Simulator.SubSystem.ConvergenceFile     = convergence_viscous_2ndOrder.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = naca_hybrid_viscous_2ndOrder.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = naca_hybrid_viscous_2ndOrder.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Puvt
+Simulator.SubSystem.Tecplot.SaveRate = 20
+Simulator.SubSystem.CFmesh.SaveRate = 20
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 20
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerFaces Airfoil FarField
+
+# Post process the data to compute the mesh quality
+Simulator.SubSystem.DataPreProcessing = DataProcessing
+Simulator.SubSystem.DataPreProcessingNames = DataProcessing
+Simulator.SubSystem.DataProcessing.Comds = ComputeMeshQuality
+Simulator.SubSystem.DataProcessing.Names = MeshQuality
+Simulator.SubSystem.DataProcessing.MeshQuality.OutputFile = quality.plt
+Simulator.SubSystem.DataProcessing.MeshQuality.OutputType = Raw #Histogram
+#Simulator.SubSystem.DataProcessing.MeshQuality.HistogramRange = 1. 10. 100. 1000. 10000. 100000.
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = naca0012_hybrid.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Dpl2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Dpl2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Dpl2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.Dpl2CFmesh.isHybrid = true
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1000.
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<250,1000.0,if(i<2000,10000.,if(i<4000,100000.,1000000.)))
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 20.
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCILU
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.Output = false
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 50
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
+
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Puvt
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Puvt
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.6
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 0.1
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState \
+          NoSlipWallAdiabaticNS2DFVMCC \
+          FarFieldEuler2DFVMCC
+
+Simulator.SubSystem.CellCenterFVM.InitNames = InField \
+          InNoSlip \
+          InFar
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.AdimensionalValues = true
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 1. \
+          0.591607978309962 \
+          0.0 \
+          1.
+
+Simulator.SubSystem.CellCenterFVM.InNoSlip.applyTRS = Airfoil
+
+Simulator.SubSystem.CellCenterFVM.InFar.applyTRS = FarField
+Simulator.SubSystem.CellCenterFVM.InFar.Tinf = 288.15
+Simulator.SubSystem.CellCenterFVM.InFar.Pinf = 43.4899480490556
+Simulator.SubSystem.CellCenterFVM.InFar.Uinf = 170.1313242763
+Simulator.SubSystem.CellCenterFVM.InFar.Vinf = 0.0
+
+Simulator.SubSystem.CellCenterFVM.BcComds = NoSlipWallAdiabaticNS2DFVMCC \
+          FarFieldEuler2DFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = Wall \
+        Infarfld
+
+Simulator.SubSystem.CellCenterFVM.Wall.applyTRS = Airfoil
+
+Simulator.SubSystem.CellCenterFVM.Infarfld.applyTRS = FarField
+Simulator.SubSystem.CellCenterFVM.Infarfld.Tinf = 288.15
+Simulator.SubSystem.CellCenterFVM.Infarfld.Pinf = 43.4899480490556
+Simulator.SubSystem.CellCenterFVM.Infarfld.Uinf = 170.1313242763
+Simulator.SubSystem.CellCenterFVM.Infarfld.Vinf = 0.0
+

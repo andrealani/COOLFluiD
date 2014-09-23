@@ -1,0 +1,104 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+# Residual = -0.31623328
+
+
+# CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libNavierStokes libSpectralFV libSpectralFVNavierStokes libBackwardEuler libTHOR2CFmesh libPetscI libTecplotWriter libGETModel
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Cylinder/GET
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = Euler2D
+Simulator.SubSystem.Euler2D.refValues = 1.0 0.449622064 0.449622064 2.60108
+Simulator.SubSystem.Euler2D.refLength = 1.0
+
+Simulator.SubSystem.OutputFormat        = ParaView CFmesh Tecplot
+
+Simulator.SubSystem.CFmesh.FileName     = cylinderEuler2D-sfvm-sol.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+
+Simulator.SubSystem.ParaView.FileName    = cylinderEuler2D-sfvm-solP3-normalsMesh.vtu
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.SaveRate = 1
+
+Simulator.SubSystem.Tecplot.FileName    = cylinderEuler2D-sfvm-solP3-normalsMesh.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+# Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.Tecplot.SaveRate = 1
+
+Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
+
+Simulator.SubSystem.ConvergenceMethod = BwdEuler
+Simulator.SubSystem.BwdEuler.Data.CFL.Value = 0.5
+Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(1e16,0.5*2.0^max(i-5,0))
+Simulator.SubSystem.BwdEuler.ConvergenceFile = convergenceImpl.plt
+Simulator.SubSystem.BwdEuler.ShowRate        = 1
+Simulator.SubSystem.BwdEuler.ConvRate        = 1
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = BwdEulerLSS
+Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 2000
+Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
+Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
+#Simulator.SubSystem.BwdEulerLSS.Data.Output = true
+
+Simulator.SubSystem.SpaceMethod = SpectralFVMethod
+
+Simulator.SubSystem.Default.listTRS = InnerCells Cylinder  FarField
+
+Simulator.SubSystem.Default.DomainModel = GET_DM
+Simulator.SubSystem.Default.GET_DM.ModelDim = 2
+Simulator.SubSystem.Default.GET_DM.MapTopologicalRegions =       Cylinder    0
+Simulator.SubSystem.Default.GET_DM.MapTopologicalRegionsCADids =             1
+Simulator.SubSystem.Default.GET_DM.FileName = cylinder.get
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cylinder_2sides_3kn.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = SpectralFVMethod
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = cylinder.thor
+
+# choose which builder we use
+Simulator.SubSystem.SpectralFVMethod.Builder = MeshUpgrade
+Simulator.SubSystem.SpectralFVMethod.Builder.SVPolynomialOrder = P3
+Simulator.SubSystem.SpectralFVMethod.SpaceRHSJacobCom = RHSJacob
+Simulator.SubSystem.SpectralFVMethod.TimeRHSJacobCom  = StdTimeRHSJacob
+
+Simulator.SubSystem.SpectralFVMethod.Data.UpdateVar   = Cons
+Simulator.SubSystem.SpectralFVMethod.Data.SolutionVar = Cons
+Simulator.SubSystem.SpectralFVMethod.Data.LinearVar   = Roe
+Simulator.SubSystem.SpectralFVMethod.Data.VolTermComputer     = NSQuadFreeVolTermComputer
+Simulator.SubSystem.SpectralFVMethod.Data.FaceTermComputer    = NSQuadFreeFaceTermComputer
+Simulator.SubSystem.SpectralFVMethod.Data.BndFaceTermComputer = NSQuadFreeBndFaceTermComputer
+Simulator.SubSystem.SpectralFVMethod.Data.RiemannFlux = RoeFlux
+
+Simulator.SubSystem.SpectralFVMethod.InitComds = StdInitState
+Simulator.SubSystem.SpectralFVMethod.InitNames = InField
+
+Simulator.SubSystem.SpectralFVMethod.InField.applyTRS = InnerCells
+Simulator.SubSystem.SpectralFVMethod.InField.Vars = x y
+Simulator.SubSystem.SpectralFVMethod.InField.Def = 1.0 0.449622064 0.0 2.60108
+
+Simulator.SubSystem.SpectralFVMethod.BcNames = Wall FarField
+Simulator.SubSystem.SpectralFVMethod.Wall.applyTRS =  Cylinder
+Simulator.SubSystem.SpectralFVMethod.FarField.applyTRS =  FarField
+
+Simulator.SubSystem.SpectralFVMethod.Data.BcTypes = CurvedWallEuler2D  Dirichlet
+Simulator.SubSystem.SpectralFVMethod.Data.BcNames = Wall               FarField
+
+Simulator.SubSystem.SpectralFVMethod.Data.Wall.UseDomainModel = true
+
+Simulator.SubSystem.SpectralFVMethod.Data.FarField.Vars = x y
+Simulator.SubSystem.SpectralFVMethod.Data.FarField.Def  = 1.0 0.449622064 0.0 2.60108

@@ -1,0 +1,198 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Framework_SubSystem_ci
+#define COOLFluiD_Framework_SubSystem_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class METHOD>
+void SubSystem::configureMultiMethod(Config::ConfigArgs& args, MultiMethodTuple<METHOD>& method)
+{
+  using namespace COOLFluiD::Common;
+
+  const CFuint nbMethods = method.mKeys.size();
+  // if no names are specified, set names = self registrable keys
+  if (nbMethods >= 1 && method.mNames.size() == 0) {
+
+    for (CFuint i = 0; i < nbMethods; ++i) {
+      CFuint isIdentical = 0;
+      for (CFuint j = 0; j < nbMethods; ++j) {
+        if(method.mKeys[i] == method.mKeys[j]){
+          isIdentical++;
+          std::string msg = std::string ("Trying to configure several methods of the same type (") + method.mKeys[j] +  std::string(") without giving a name!");
+          if(isIdentical>1) throw Common::BadValueException (FromHere(),msg);
+        }
+      }
+    }
+
+    method.mNames.resize(nbMethods);
+    for (CFuint i = 0; i < nbMethods; ++i)
+    {
+      method.mNames[i] = method.mKeys[i];
+      Common::SelfRegistPtr<METHOD> metPtr;
+      configureMethod<METHOD>(args,
+                              metPtr,
+                              method.mKeys[i],
+                              method.mNames[i]);
+      method.addPtr(method.mNames[i], metPtr);
+      metPtr->setSocketNamespaces();
+    }
+  }
+  // if names and keys are specified
+  // supposing that their number is the same
+  else if (nbMethods >= 1 && method.mNames.size() >=1)
+  {
+    if (nbMethods != method.mNames.size())
+      throw BadValueException (FromHere(),"Number of methods is different that nb of names");
+    for (CFuint i = 0; i < nbMethods; ++i)
+    {
+      Common::SelfRegistPtr<METHOD> metPtr;
+      configureMethod<METHOD>(args,
+                              metPtr,
+                              method.mKeys[i],
+                              method.mNames[i]);
+      method.addPtr(method.mNames[i], metPtr);
+      metPtr->setSocketNamespaces();
+    }
+  }
+  // if no key is specified, assume method is null
+  // if we accept to cretae null methods
+  else if ((nbMethods == 0) && m_has_null_methods)
+  {
+    method.mKeys.resize(1);
+    method.mNames.resize(1);
+    method.mKeys[0] = "Null";
+    method.mNames[0] = "Null" + Common::StringOps::to_str(m_nbmethods);
+    Common::SelfRegistPtr<METHOD> metPtr;
+    configureMethod<METHOD>(args,
+                            metPtr,
+                            method.mKeys[0],
+                            method.mNames[0]);
+    method.addPtr(method.mNames[0], metPtr);
+    metPtr->setSocketNamespaces();
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class METHOD, class COLLAB>
+void SubSystem::setCollaborators(MultiMethodTuple<METHOD>& method,
+                                 MultiMethodTuple<COLLAB>& collaborator)
+{
+  MultiMethodHandle<COLLAB> mmh;
+
+  if (collaborator.mNames.size() == 1) {
+    mmh.addMethod(collaborator[0]);
+    for (CFuint i = 0; i < method.size(); ++i) {
+      method[i]->setCollaborator(mmh);
+    }
+  }
+  else {
+    for (CFuint i = 0; i < method.size(); ++i) {
+      mmh.clear();
+      if(!method[i]->isNull())
+      {
+      try {
+        CFLog(DEBUG_MIN, "\nMethod name: " << method[i]->QName().str() );
+        CFLog(DEBUG_MIN, " has " << method[i]->getMethodData()->getCollaboratorQNames().size() << " collaborators declared\n");
+        setMatchingCollaborators<COLLAB>
+          (method[i]->getMethodData()->getCollaboratorQNames(), collaborator, mmh);
+      }
+      catch (Common::NoSuchValueException& ex){
+        CFLog(WARN, "WARNING: SubSystem::setCollaborators() => " << ex.what() << "\n");
+	// throw;
+      }
+      method[i]->setCollaborator(mmh);
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEMETHOD>
+void SubSystem::configureMethod(Config::ConfigArgs& args,
+                                Common::SelfRegistPtr<BASEMETHOD>& mtd,
+                                const std::string& type,
+                                const std::string& name )
+{
+   // set the name of the method to the same as the type not supplied
+   std::string localName(name);
+   if (localName.empty()) { localName = type; }
+
+   CFLog(NOTICE,"-------------------------------------------------------------\n");
+   CFLog(NOTICE,"Creating " << BASEMETHOD::getClassName() << " : " << localName << "\n");
+
+   Common::SafePtr<typename BASEMETHOD::PROVIDER> prov;
+   try {
+      prov = Environment::Factory<BASEMETHOD>::getInstance().getProvider(type);
+      cf_assert(prov.isNotNull());
+   }
+   catch (Common::NoSuchValueException& e) {
+
+    // warn about not finding the method provider
+    CFLog(ERROR, e.what() << "\n");
+    CFLog(ERROR,"SubSystem with name " << getName()
+                << " was trying to configure a method named : " << name
+                << " with type : " << type << "\n");
+    CFLog(ERROR,"Rethrowing to be handled by upper layer\n");
+    throw;
+  }
+
+  mtd.reset(prov->create(localName));
+  configureNested ( mtd.getPtr(), args );
+
+  MethodRegistry::getInstance().regist( mtd.getPtr() );
+  ++m_nbmethods;
+
+  CFLog(NOTICE,"-------------------------------------------------------------\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class COLLAB>
+void SubSystem::setMatchingCollaborators(const std::vector<QualifiedName>& names,
+                                         MultiMethodTuple<COLLAB>& collab,
+                                         MultiMethodHandle<COLLAB>& cList)
+{
+  std::vector<QualifiedName>::const_iterator itr = names.begin();
+  for (; itr != names.end(); ++itr)
+  {
+    CFLog(DEBUG_MIN, "QName " << itr->str() << " try match :");
+    for (CFuint iCollab = 0; iCollab < collab.size(); ++iCollab)
+    {
+      CFLog(DEBUG_MIN,  " " << collab[iCollab]->getName());
+      if(collab[iCollab]->getName() == itr->getName())
+      {
+        CFLog(DEBUG_MIN,  "(*)");
+        cList.addMethod(collab[iCollab]);
+      }
+    }
+    CFLog(DEBUG_MIN, "\n");
+  }
+
+  if ( cList.size() == 0 )
+  {
+    throw Common::NoSuchValueException (FromHere(),"No match found for a " + COLLAB::getClassName());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Framework_SubSystem_ci

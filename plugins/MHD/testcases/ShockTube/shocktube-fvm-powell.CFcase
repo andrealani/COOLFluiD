@@ -1,0 +1,111 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libMHD libFiniteVolume libFiniteVolumeMHD libRungeKutta2 libGambit2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/MHD/testcases/ShockTube/
+Simulator.Paths.ResultsDir       = plugins/MHD/testcases/ShockTube/
+
+Simulator.SubSystem.Default.PhysicalModelType = MHD2D
+Simulator.SubSystem.MHD2D.ConvTerm.gamma = 2.
+
+Simulator.SubSystem.MHD2D.ConvTerm.divBErrorFileName = ../../../plugins/MHD/testcases/ShockTube/divB-80k.dat
+Simulator.SubSystem.MHD2D.ConvTerm.divBErrorFileSaveRate = 50
+
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.00005
+
+Simulator.SubSystem.ConvergenceFile     = ../../../plugins/MHD/testcases/ShockTube/convergence2.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = shocktube-fvm-powell-sol-80k.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = shocktube-fvm-powell-sol-80k.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 500
+Simulator.SubSystem.CFmesh.SaveRate = 500
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 500
+
+Simulator.SubSystem.StopCondition       = MaxTime
+Simulator.SubSystem.MaxTime.maxTime     = .1000
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -6.0
+
+Simulator.SubSystem.Default.listTRS = InnerFaces SuperOutlet
+
+Simulator.SubSystem.AppendTime = true
+Simulator.SubSystem.AppendIter = true
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = shocktube-fvm-80k.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = FVMCC
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = RK2
+#Simulator.SubSystem.RK2.Data.CFL.Value = 0.8
+Simulator.SubSystem.RK2.Data.TimeAccurate = true
+Simulator.SubSystem.RK2.PredictorStep = PredictorTVD
+Simulator.SubSystem.RK2.CorrectorStep = CorrectorTVD
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Centred
+#Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
+#Simulator.SubSystem.CellCenterFVM.Data.Roe.Flux = MHD2DConsRoe
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Cons
+Simulator.SubSystem.CellCenterFVM.Data.hasSourceTerm = true
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = MHD2DPowellST
+
+Simulator.SubSystem.CellCenterFVM.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.CellCenterFVM.Data.IntegratorOrder = P3
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.2
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState \
+          SuperOutletFVMCC
+
+Simulator.SubSystem.CellCenterFVM.InitNames = InField \
+          InOutlet
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = if(x>.5,1./8.,1.) \
+                                         0.0 \
+                                         0.0 \
+                                         0.0 \
+                                         0.75 \
+                                         if(x>.5,-1.,1.) \
+                                         0.0 \
+                                         if(x>.5,141./160.,57./32.)
+
+Simulator.SubSystem.CellCenterFVM.InOutlet.applyTRS = SuperOutlet
+
+Simulator.SubSystem.CellCenterFVM.BcComds = SuperOutletFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = Outlet
+
+Simulator.SubSystem.CellCenterFVM.Outlet.applyTRS = SuperOutlet
+

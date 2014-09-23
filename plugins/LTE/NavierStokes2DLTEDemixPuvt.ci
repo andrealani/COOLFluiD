@@ -1,0 +1,548 @@
+#include "LTE/LTE.hh"
+#include "MathTools/MathConsts.hh"
+#include "NavierStokes2DLTEDemixPuvt.hh"
+#include "Environment/ObjectProvider.hh"
+#include "Framework/PhysicalChemicalLibrary.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace LTE {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+NavierStokes2DLTEDemixPuvt<BASE>::NavierStokes2DLTEDemixPuvt
+(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  NavierStokesLTEDemixVarSet(name, model),
+  _library(CFNULL),
+  _eulerModel(model->getConvectiveTerm().template d_castTo<EulerLTEDemixTerm>()),
+  _tempX(),
+  _ye(),
+  _lambdaEL(),
+  _eldifcoef(),
+  _eltdifcoef(),
+  _lambdaELBkp(),
+  _eldifcoefBkp(),
+  _eltdifcoefBkp()
+
+{
+  const CFuint nbElements = _eulerModel->getNbScalarVars(0);
+
+  std::vector<std::string> names(4 + nbElements);
+  names[0] = (!_eulerModel->isIncompressible()) ? "p" : "dp";
+  names[1] = "u";
+  names[2] = "v";
+  names[3] = "T";
+  
+  // Names for the elemental fractions
+  for (CFuint ie = 0; ie < nbElements; ++ie) {
+    names[4 + ie] = "ye" + Common::StringOps::to_str(ie);
+  }
+  
+  setVarNames(names);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+NavierStokes2DLTEDemixPuvt<BASE>::~NavierStokes2DLTEDemixPuvt()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokes2DLTEDemixPuvt<BASE>::setGradientVars(const std::vector<RealVector*>& states,
+                   RealMatrix& values,
+                   const CFuint stateSize)
+{
+  const CFuint nbValues = values.nbRows();
+  for (CFuint i = 0; i < nbValues; ++i) {
+    for (CFuint j = 0; j < stateSize; ++j) {
+      values(i,j) = (*states[j])[i];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokes2DLTEDemixPuvt<BASE>::setGradientVarGradients(const std::vector<RealVector*>& states,
+                                                               const std::vector< std::vector<RealVector*> >& stateGradients,
+                                                               std::vector< std::vector<RealVector*> >& gradVarGradients,
+                                                               const CFuint stateSize)
+{
+  throw Common::NotImplementedException(FromHere(),"setGradientVarGradients");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokes2DLTEDemixPuvt<BASE>::setStateGradients(const std::vector<RealVector*>& states,
+                                                         const std::vector< std::vector<RealVector*> >& gradVarGradients,
+                                                         std::vector< std::vector<RealVector*> >& stateGradients,
+                                                         const CFuint stateSize)
+{
+  throw Common::NotImplementedException(FromHere(),"setStateGradients");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+CFreal NavierStokes2DLTEDemixPuvt<BASE>::getDynViscosity(const RealVector& state, const std::vector<RealVector*>& gradients)
+{
+
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  CFreal Tdim = _eulerModel->getTempRef()*state[3];
+  CFreal pdim   = _eulerModel->getPressureFromState(state[0])*
+    (_eulerModel->getReferencePhysicalData())[BASE::P];
+  return _library->eta(Tdim, pdim, CFNULL) /
+    (getModel().getReferencePhysicalData())[NSTerm::MU];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+CFreal NavierStokes2DLTEDemixPuvt<BASE>::getDensity(const RealVector& state)
+{
+  CFreal Tdim = _eulerModel->getTempRef()*state[3];
+  CFreal pdim   = _eulerModel->getPressureFromState(state[0])*
+    (_eulerModel->getReferencePhysicalData())[BASE::P];
+  const CFreal rhoRef = (_eulerModel->getReferencePhysicalData())[BASE::RHO];
+  return _library->density(Tdim,pdim)/rhoRef;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokes2DLTEDemixPuvt<BASE>::setup()
+{
+
+  using namespace COOLFluiD::Framework;
+
+  //  fluct split has to call setup()
+  NavierStokesLTEDemixVarSet::setup();
+
+  _library = PhysicalModelStack::getActive()->getImplementor()->template
+    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  cf_assert (_library.isNotNull());
+
+  _tempX.resize(_library->getNbSpecies());
+
+  const CFuint nbElements = _eulerModel->getNbScalarVars(0);
+  _flux.resize(4 + nbElements);
+  _ye.resize(nbElements);
+  _lambdaEL.resize(nbElements);
+  _eldifcoef.resize(nbElements, nbElements);
+  _eltdifcoef.resize(nbElements);
+  _lambdaELBkp.resize(nbElements);
+  _eldifcoefBkp.resize(nbElements, nbElements);
+  _eltdifcoefBkp.resize(nbElements);
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokes2DLTEDemixPuvt<BASE>::setComposition(const RealVector& state,
+                                                const bool isPerturb,
+                                                const CFuint iVar)
+{
+  // this is to avoid useless expensive re-computations
+  useBackUpValues(false);
+  setBackUpValues(false);
+
+  if (isPerturb && (iVar == 1 || iVar == 2)) {
+    useBackUpValues(true);
+  }
+  //  else if (isPerturb && (iVar == 0 || iVar >= 3)) {
+  //     _library->resetComposition(_tempX);
+  //   }
+  else if (isPerturb && (iVar == 0 || iVar >= 3)) {
+    CFreal Tdim = _eulerModel->getTempRef()*state[3];
+    CFreal pdim   = _eulerModel->getPressureFromState(state[0])*
+      (_eulerModel->getReferencePhysicalData())[BASE::P];
+    
+    // Set the elemental fractions
+    const CFuint nbElements = _eulerModel->getNbScalarVars(0);
+    for (CFuint ie = 0; ie < nbElements; ++ie) {
+      _ye[ie] = state[4 + ie];
+    }
+    
+    _library->setElemFractions(_ye);
+    _library->setComposition(Tdim,pdim);
+  }
+  else if (!isPerturb) {
+    CFreal Tdim = _eulerModel->getTempRef()*state[3];
+    CFreal pdim   = _eulerModel->getPressureFromState(state[0])*
+      (_eulerModel->getReferencePhysicalData())[BASE::P];
+    
+    // Set the elemental fractions
+    const CFuint nbElements = _eulerModel->getNbScalarVars(0);
+    for (CFuint ie = 0; ie < nbElements; ++ie) {
+      _ye[ie] = state[4 + ie];
+    }
+    
+    _library->setElemFractions(_ye);
+    _library->setComposition(Tdim,pdim,&_tempX);
+
+    // set and store the back up values only if an unperturbed flux
+    // is computed
+    setBackUpValues(true);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+RealVector& NavierStokes2DLTEDemixPuvt<BASE>::getFlux(const RealVector& values,
+                                                const std::vector<RealVector*>& gradients,
+                                                const RealVector& normal,
+                                                const CFreal& radius)
+{
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::Framework;
+
+
+  CFreal vOverRadius = 0.0;
+  if (radius > MathTools::MathConsts::CFrealEps()) {
+    // if the face is a boundary face, the radius could be 0
+    // check against eps instead of 0. for safety
+    vOverRadius = values[2]/radius;
+  }
+
+  const RealVector& gradU = *gradients[1];
+  const RealVector& gradV = *gradients[2];
+  const RealVector& gradT = *gradients[3];
+  const CFreal twoThirdDivV = 2./3.*(gradU[XX] + gradV[YY] + vOverRadius);
+
+  const CFreal avU = values[1];
+  const CFreal avV = values[2];
+  RealVector& nsData = getModel().getPhysicalData();
+
+  // adimensional dynamical viscosity
+  if (_useBackUpValues || _freezeDiffCoeff) {
+    nsData[NSTerm::MU] = _dynViscCoeff;
+    nsData[NSTerm::LAMBDA] = _thermCondCoeff;
+    // here I could just point to the backup values or to the last ones
+    _lambdaEL    = _lambdaELBkp;
+    _eldifcoef   = _eldifcoefBkp;
+    _eltdifcoef  = _eltdifcoefBkp;
+  }
+  else {
+    CFreal avTdim   = _eulerModel->getTempRef()*values[3];
+    CFreal avpdim   = _eulerModel->getPressureFromState(values[0])*
+      (_eulerModel->getReferencePhysicalData())[BASE::P];
+    CFdouble lambdaR = 0.0; // thermal reactive conductivity
+    CFdouble lambdaD = 0.0; // thermal demixing conductivity
+    
+    // get transport properties
+    _library->getTransportCoefs(avTdim,
+        avpdim,
+        lambdaR,
+        lambdaD,
+        _lambdaEL,
+        _eldifcoef,
+        _eltdifcoef);
+
+    // adimensional dynamical viscosity
+    nsData[NSTerm::MU] = getDynViscosity(values, gradients);
+
+    // adimensional thermal conductivity
+    nsData[NSTerm::LAMBDA] =
+      (_library->lambdaEQ(avTdim, avpdim) + lambdaR + lambdaD)/
+      (getModel().getReferencePhysicalData())[NSTerm::LAMBDA];
+
+    if (_setBackUpValues) {
+      _dynViscCoeff   = nsData[NSTerm::MU];
+      _thermCondCoeff = nsData[NSTerm::LAMBDA];
+      _lambdaELBkp    = _lambdaEL;
+      _eldifcoefBkp   = _eldifcoef;
+      _eltdifcoefBkp  = _eltdifcoef;
+    }
+  }
+
+  const CFreal nx = normal[XX];
+  const CFreal ny = normal[YY];
+  const CFuint nbElements = _eulerModel->getNbScalarVars(0);
+
+  const CFuint nbEqs =
+    PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
+
+  if (nbEqs >= 4) {
+    const CFreal coeffTauMu = getModel().getCoeffTau()*nsData[NSTerm::MU];
+    const CFreal tauXX = coeffTauMu*(2.*gradU[XX] - twoThirdDivV);
+    const CFreal tauXY = coeffTauMu*(gradU[YY] + gradV[XX]);
+    const CFreal tauYY = coeffTauMu*(2.*gradV[YY] - twoThirdDivV);
+
+    // Elemental heat transfer coefficient term
+    CFdouble lambdaelGradYex = 0.0;
+    CFdouble lambdaelGradYey = 0.0;
+    for (CFuint ie = 0; ie < nbElements; ++ie) {
+      lambdaelGradYex += _lambdaEL[ie] * (*gradients[4 + ie])[XX];
+      lambdaelGradYey += _lambdaEL[ie] * (*gradients[4 + ie])[YY];
+    }
+
+    const CFreal qFlux = - getModel().getCoeffQ()*nsData[NSTerm::LAMBDA]*
+      (gradT[XX]*nx + gradT[YY]*ny) -
+      (lambdaelGradYex*nx + lambdaelGradYey*ny);
+
+    _flux[1] = tauXX*nx + tauXY*ny;
+    _flux[2] = tauXY*nx + tauYY*ny;
+    _flux[3] = (tauXX*avU + tauXY*avV)*nx + (tauXY*avU + tauYY*avV)*ny - qFlux;
+  }
+
+  if (nbEqs != 4) {
+    // Fluxes for the element continuities
+    for (CFuint ie = 0; ie < nbElements; ++ie) {
+      // Elemental multicomponent diffusion coefficient terms
+      CFdouble rhoDGradYex = 0.0;
+      CFdouble rhoDGradYey = 0.0;
+      for (CFuint je = 0; je < nbElements; ++je) {
+  rhoDGradYex += _eldifcoef(ie, je) * (*gradients[4 + je])[XX];
+  rhoDGradYey += _eldifcoef(ie, je) * (*gradients[4 + je])[YY];
+      }
+
+      _flux[4 + ie] = (_eltdifcoef[ie] * gradT[XX] + rhoDGradYex) * nx +
+  (_eltdifcoef[ie] * gradT[YY] + rhoDGradYey) * ny;
+    }
+  }
+
+  return _flux;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+RealMatrix& NavierStokes2DLTEDemixPuvt<BASE>::getFlux(const RealVector& values,
+                                                const std::vector<RealVector*>& gradients,
+                                                const CFreal& radius)
+{
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::Framework;
+
+  CFreal vOverRadius = 0.0;
+  if (radius > MathTools::MathConsts::CFrealEps()) {
+    // if the face is a boundary face, the radius could be 0
+    // check against eps instead of 0. for safety
+    vOverRadius = values[2]/radius;
+  }
+
+  const RealVector& gradU = *gradients[1];
+  const RealVector& gradV = *gradients[2];
+  const RealVector& gradT = *gradients[3];
+  const CFreal twoThirdDivV = 2./3.*(gradU[XX] + gradV[YY] + vOverRadius);
+
+  const CFreal avU = values[1];
+  const CFreal avV = values[2];
+  RealVector& nsData = getModel().getPhysicalData();
+
+  // adimensional dynamical viscosity
+  if (_useBackUpValues || _freezeDiffCoeff) {
+    nsData[NSTerm::MU] = _dynViscCoeff;
+    nsData[NSTerm::LAMBDA] = _thermCondCoeff;
+    // here I could just point to the backup values or to the last ones
+    _lambdaEL    = _lambdaELBkp;
+    _eldifcoef   = _eldifcoefBkp;
+    _eltdifcoef  = _eltdifcoefBkp;
+  }
+  else {
+    CFreal avTdim   = _eulerModel->getTempRef()*values[3];
+    CFreal avpdim   = _eulerModel->getPressureFromState(values[0])*
+      (_eulerModel->getReferencePhysicalData())[BASE::P];
+    CFdouble lambdaR = 0.0; // thermal reactive conductivity
+    CFdouble lambdaD = 0.0; // thermal demixing conductivity
+
+    // get transport properties
+    _library->getTransportCoefs(avTdim,
+                                avpdim,
+                                lambdaR,
+                                lambdaD,
+                                _lambdaEL,
+                                _eldifcoef,
+                                _eltdifcoef);
+
+    // adimensional dynamical viscosity
+    nsData[NSTerm::MU] = getDynViscosity(values, gradients);
+
+    // adimensional thermal conductivity
+    nsData[NSTerm::LAMBDA] =
+      (_library->lambdaEQ(avTdim, avpdim) + lambdaR + lambdaD)/
+      (getModel().getReferencePhysicalData())[NSTerm::LAMBDA];
+
+    if (_setBackUpValues) {
+      _dynViscCoeff   = nsData[NSTerm::MU];
+      _thermCondCoeff = nsData[NSTerm::LAMBDA];
+      _lambdaELBkp    = _lambdaEL;
+      _eldifcoefBkp   = _eldifcoef;
+      _eltdifcoefBkp  = _eltdifcoef;
+    }
+  }
+
+  const CFuint nbElements = _eulerModel->getNbScalarVars(0);
+
+  const CFuint nbEqs =
+    PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
+
+  if (nbEqs >= 4) {
+    const CFreal coeffTauMu = getModel().getCoeffTau()*nsData[NSTerm::MU];
+    const CFreal tauXX = coeffTauMu*(2.*gradU[XX] - twoThirdDivV);
+    const CFreal tauXY = coeffTauMu*(gradU[YY] + gradV[XX]);
+    const CFreal tauYY = coeffTauMu*(2.*gradV[YY] - twoThirdDivV);
+
+    // Elemental heat transfer coefficient term
+    RealVector lambdaelGradYe(0.0,2);
+    for (CFuint ie = 0; ie < nbElements; ++ie) {
+      lambdaelGradYe += _lambdaEL[ie] * (*gradients[4 + ie]);
+    }
+
+    const RealVector qFlux = - getModel().getCoeffQ()*nsData[NSTerm::LAMBDA]*gradT;
+
+    _fluxVec(1,XX) = tauXX;
+    _fluxVec(1,YY) = tauXY;
+
+    _fluxVec(2,XX) = tauXY;
+    _fluxVec(2,YY) = tauYY;
+
+    _fluxVec(3,XX) = tauXX*avU + tauXY*avV - qFlux[XX];
+    _fluxVec(3,YY) = tauXY*avU + tauYY*avV - qFlux[YY];
+  }
+
+  if (nbEqs != 4) {
+    // Fluxes for the element continuities
+    for (CFuint ie = 0; ie < nbElements; ++ie) {
+      // Elemental multicomponent diffusion coefficient terms
+      RealVector rhoDGradYe(0.0,2);
+      for (CFuint je = 0; je < nbElements; ++je) {
+        rhoDGradYe += _eldifcoef(ie, je) * (*gradients[4 + je]);
+      }
+
+      rhoDGradYe += _eltdifcoef[ie]*gradT;
+      _fluxVec.setRow(rhoDGradYe,4 + ie);
+    }
+  }
+
+  return _fluxVec;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+CFreal NavierStokes2DLTEDemixPuvt<BASE>::getThermConductivity
+(const RealVector& state,
+ const CFreal& dynViscosity)
+{
+
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  CFreal Tdim   = _eulerModel->getTempRef()*state[3];
+  CFreal pdim   = _eulerModel->getPressureFromState(state[0])*
+    (_eulerModel->getReferencePhysicalData())[BASE::P];
+  CFdouble lambdaR = 0.0; // thermal reactive conductivity
+  CFdouble lambdaD = 0.0; // thermal demixing conductivity
+
+  // get transport properties
+  _library->getTransportCoefs(Tdim,
+            pdim,
+            lambdaR,
+            lambdaD,
+            _lambdaEL,
+            _eldifcoef,
+            _eltdifcoef);
+
+  return (_library->lambdaEQ(Tdim,pdim) + lambdaR + lambdaD)/
+    (getModel().getReferencePhysicalData())[NSTerm::LAMBDA];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+CFreal NavierStokes2DLTEDemixPuvt<BASE>::getCurrUpdateDiffCoeff(CFuint iEqSS)
+{
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  if (iEqSS == 0) {
+    return (getModel().getPhysicalData())[NSTerm::MU];
+  }
+
+  CFreal maxCoeff = 0.0;
+  const CFuint nbElements = _eulerModel->getNbScalarVars(0);
+  for (CFuint ie = 0; ie < nbElements; ++ ie) {
+    maxCoeff = std::max(_eldifcoefBkp(ie,ie), maxCoeff);
+  }
+  cf_assert (maxCoeff > 0.0);
+
+  if (maxCoeff == 0.0) {
+    std::cout << "maxCoeff == 0.0" << std::endl;
+    abort();
+  }
+  return maxCoeff;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokes2DLTEDemixPuvt<BASE>::setGradientState(const RealVector& state)
+{
+  cf_assert (_gradState.size() == state.size());
+  _gradState = state;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+CFreal NavierStokes2DLTEDemixPuvt<BASE>::getHeatFlux(const RealVector& state,
+                 const std::vector<RealVector*>& gradients,
+                 const RealVector& normal)
+{
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::Framework;
+
+  const RealVector& gradT = *gradients[3];
+  CFreal avTdim   = _eulerModel->getTempRef()*state[3];
+  CFreal avpdim   = _eulerModel->getPressureFromState(state[0])*
+    (_eulerModel->getReferencePhysicalData())[BASE::P];
+  CFdouble lambdaR = 0.0; // thermal reactive conductivity
+  CFdouble lambdaD = 0.0; // thermal demixing conductivity
+  
+  // get transport properties
+  _library->getTransportCoefs(avTdim,
+            avpdim,
+            lambdaR,
+            lambdaD,
+            _lambdaEL,
+            _eldifcoef,
+            _eltdifcoef);
+
+  // adimensional thermal conductivity
+  const CFreal lambda = (_library->lambdaEQ(avTdim, avpdim) + lambdaR + lambdaD)/
+    (getModel().getReferencePhysicalData())[NSTerm::LAMBDA];
+
+  // Elemental heat transfer coefficient term
+  CFdouble lambdaelGradYex = 0.0;
+  CFdouble lambdaelGradYey = 0.0;
+  const CFuint nbElements = _eulerModel->getNbScalarVars(0);
+  for (CFuint ie = 0; ie < nbElements; ++ie) {
+    lambdaelGradYex += _lambdaEL[ie] * (*gradients[4 + ie])[XX];
+    lambdaelGradYey += _lambdaEL[ie] * (*gradients[4 + ie])[YY];
+  }
+
+  return (-getModel().getCoeffQ()*lambda*(gradT[XX]*normal[XX] + gradT[YY]*normal[YY]) -
+    (lambdaelGradYex*normal[XX] + lambdaelGradYey*normal[YY]));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace LTE
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,181 @@
+#include "MathTools/MathConsts.hh"
+#include "Common/CFLog.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Framework/MeshData.hh"
+#include "ICP/ICPReactionTerm.hh"
+#include "Framework/PhysicalChemicalLibrary.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolumeICP {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class ST>
+ICPInductionEquationSourceTerm<EULERVAR, ST>::
+ICPInductionEquationSourceTerm(const std::string& name) :
+  FiniteVolume::ComputeSourceTermFVMCC(name),
+  socket_vacuumElFieldIntensity("vacuumElFieldIntensity"),
+  m_updateVarSet(CFNULL),
+  m_srcTerm(CFNULL),
+  m_library(CFNULL),
+  m_physicalData()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class ST>
+ICPInductionEquationSourceTerm<EULERVAR, ST>::~ICPInductionEquationSourceTerm()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class ST>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> >
+ICPInductionEquationSourceTerm<EULERVAR, ST>::needsSockets()
+{
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result =
+      ComputeSourceTermFVMCC::needsSockets();
+  result.push_back(&socket_vacuumElFieldIntensity);
+
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class ST>
+void ICPInductionEquationSourceTerm<EULERVAR, ST>::setup()
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::ICP;
+  using namespace COOLFluiD::Numerics::FiniteVolume;
+  
+  ComputeSourceTermFVMCC::setup();
+  
+  m_updateVarSet = this->getMethodData().getUpdateVar().template d_castTo<EULERVAR>();
+  cf_assert(m_updateVarSet.isNotNull());
+  m_updateVarSet->getModel()->resizePhysicalData(m_physicalData);
+  
+  m_srcTerm = PhysicalModelStack::getActive()->getImplementor()->
+    getSourceTerm().template d_castTo<ST>();
+  cf_assert(m_srcTerm.isNotNull());
+  
+  m_library = PhysicalModelStack::getActive()->getImplementor()->template
+    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  cf_assert(m_library.isNotNull());
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class ST>
+void ICPInductionEquationSourceTerm<EULERVAR, ST>::
+computeSource(Framework::GeometricEntity *const element,
+	      RealVector& source, RealMatrix& jacobian)
+{   
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  const CFuint nbEqs =
+    PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
+  
+  // this is needed for coupling
+  if (nbEqs == 2 || nbEqs == source.size()) {
+    CFLogDebugMin( "ICPInductionEquationSourceTerm::computeSource()" << "\n");
+    
+    DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+    DataHandle<RealVector> vacuumElFieldIntensity =
+      socket_vacuumElFieldIntensity.getDataHandle();
+    
+    State *const currState = element->getState(0);
+    
+    // set coordinates of cell centroid
+    Node& coordinate = currState->getCoordinates();
+    const CFreal r = coordinate[YY];
+    const CFreal x = coordinate[XX];
+
+    cf_assert(m_updateVarSet.isNotNull());
+    const RealVector& refData = m_updateVarSet->getModel()->getReferencePhysicalData();
+    
+    const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+    const CFuint nbTs = m_library->getNbTempVib() + m_library->getNbTe();
+    const CFuint TvID = nbEqs-nbTs-2;
+				       
+    const CFuint erID = nbEqs-2;
+    const CFuint eiID = nbEqs-1;
+    
+    const CFreal EpR = (*currState)[erID];
+    const CFreal EpI = (*currState)[eiID];
+    
+    const CFreal permeability = m_srcTerm->getPermeability();
+    const CFreal freq = 1000000.*m_srcTerm->getFreqMHz();
+    
+    // this is needed to get the el conductivity:
+    // BUT TODO we'd better use elCondField socket!!!
+    m_updateVarSet->computePhysicalData(*currState, m_physicalData);
+    CFreal pdim = m_updateVarSet->getModel()->getPressureFromState
+      (m_physicalData[EulerTerm::P])*refData[EulerTerm::P];
+    cf_assert(pdim > 0.);
+    CFreal Tdim = m_physicalData[EulerTerm::T]*refData[EulerTerm::T];
+    cf_assert(Tdim > 0.);
+    CFreal* tVec = (nbTs > 0) ? &(*currState)[TvID] : CFNULL;
+    CFreal elConductivity = m_library->sigma(Tdim, pdim, tVec);  
+   
+    CFLog(DEBUG_MAX, "ICPInductionEquationSourceTerm::computeSource() => erID = " << erID << ", eiID = " << eiID << ", tvID = "<< TvID << "\n");
+    CFLog(DEBUG_MAX, "ICPInductionEquationSourceTerm::computeSource() => pdim = " << pdim << ", Tdim = " << Tdim << " ");
+    if (nbTs > 0) {
+      CFLog(DEBUG_MAX, ", tVec = " << tVec[0] << "\n");
+    }
+    CFLog(DEBUG_MAX, "\n");
+    
+    if (m_srcTerm->pegaseApproximation()) 
+    {
+      if (Tdim > 7250.)
+         elConductivity=904.11+(elConductivity-904.11)*0.91;
+    }
+
+    const CFuint elemID = element->getID();
+    const CFreal EvR = vacuumElFieldIntensity[0][elemID];
+    const CFreal EvI = vacuumElFieldIntensity[1][elemID];
+    
+    // setting sources:
+    if ( (m_srcTerm->use2DModel()) || ( (!m_srcTerm->use2DModel()) &&  ( x < m_srcTerm->xMaxUsing1DModel() )) )
+    {
+      // in 2D EMfield model, sources are considered everywhere!
+      // in 1D EMfield model, sources are considered only for x < m_srcTerm->xMaxUsing1DModel() ,
+      // that is, in the torch and not in the chamber!
+      source[erID] = (EpR/r) - 2.*MathTools::MathConsts::CFrealPi()*permeability*elConductivity*freq*r*(EpI + EvI);
+      source[eiID] = (EpI/r) + 2.*MathTools::MathConsts::CFrealPi()*permeability*elConductivity*freq*r*(EpR + EvR);
+      
+      CFLog(DEBUG_MAX, "ICPInductionEquationSourceTerm::computeSource() => source[" << erID << "] = " << source[erID] << "\n");
+      CFLog(DEBUG_MAX, "ICPInductionEquationSourceTerm::computeSource() => source[" << eiID << "] = " << source[eiID] << "\n");
+    }
+    else
+    {
+      // in 1D EMfield model, in the chamber sources are set to zero
+      source[erID] = 0;
+      source[eiID] = 0;
+    }
+    
+    source *= volumes[elemID];
+    
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolumeICP
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

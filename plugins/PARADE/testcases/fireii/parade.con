@@ -1,0 +1,53 @@
+c       User input file for PARADE
+c       1. Spectrum control data:
+c
+  2000.0        wavlo [A]
+  40000.0      wavhi [A]
+  100000         npoints
+c       2. Parameters for adaptive wavelength discretisation:
+  0.0005       minimum distance between adjacent points
+   100.        integration limit for line shape
+  0.001        minimum fraction for use of energy level
+c       3. Switches for radiation mechanisms:
+  'Y'          free-free  radiation (y/n)
+  'Y'          free-bound radiation (y/n)
+  'Y'          atomic line radiation (y/n)
+  'Y'          molecular band radiation (y/n)
+  'N'          nonequilibrium excitation (y/n)
+  'N'          adaptive wavelength discretisation (y/n)
+  'N'          equal wavelength increments (y/n)
+  'Y'          equal frequency increments (y/n)
+c 3(bis). Switches for output options
+  1 		iout (row number for main outputs)
+  1		jout (column number for main outputs)
+  'N'          'par_res.imo' for each cell (y/n)
+  'N'          time integrated emission coefficient until cell number
+  60           max cell number for time integration (shock tube test)
+c
+c       4. rad(y/n) remark  at. spec  ttr  tv  te    rad.file
+ 'y',        'N2'     2         1   2   2,   '/home/joanne/parade/data/n2ibp.dat'     
+c
+c Note, that 'b' marks a transition band of a molecule. In order to
+c deactivate a band it is necessary to make the line a comment, i.e.
+c place a 'c' in the first row. Using other datasets e.g. Park's data
+c may result in a program abort, since bands are not available.
+c
+   'b'            'N21p'  'N'
+   'b'            'N22p'  'N'
+   'b'            'N2bh2'  'N'
+ 'y',        'N'      1         1   0   3,   '/home/joanne/parade/data/niseb.dat'    
+ 'y',        'O2'     2         1   2   2,   '/home/joanne/parade/data/o2ibp.dat'
+   'b',   'O2sr'  'N'
+ 'Y',        'O'      1         1   0   3,   '/home/joanne/parade/NIST/oiNIST.dat'
+ 'y',        'NO'     2         1   2   2,   '/home/joanne/parade/data/noibp.dat'
+   'b'    'NObeta'  'N'
+   'b'    'NOgamma'  'N'
+   'b'    'NOdelta'  'N'               
+   'b'    'NOepsilon'  'N'        
+ 'y',        'N2+'    2         1   2   2,   '/home/joanne/parade/data/n2iibp.dat'
+   'b'    'N2p1n'  'N'
+ 'Y',        'N+'     1         1   0   3,   '/home/joanne/parade/NIST/niiNIST.dat'
+ 'N',        'O2+'    2         1   2   2,   '' 
+ 'Y',        'O+'     1         1   0   3,   '/home/joanne/parade/data/oiiseb.dat'
+ 'N',        'NO+'    2         1   2   2,   '/home/joanne/parade/data/noiipark.dat' #do not use
+ 'Y',        'E'      0         1   0   3,   ' '

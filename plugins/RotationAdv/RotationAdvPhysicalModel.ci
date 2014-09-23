@@ -1,0 +1,66 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace RotationAdv {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+RotationAdvPhysicalModel<DIM>::RotationAdvPhysicalModel(const std::string& name)
+  : Framework::ConvectionPM<RotationAdvTerm>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+RotationAdvPhysicalModel<DIM>::~RotationAdvPhysicalModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint RotationAdvPhysicalModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint RotationAdvPhysicalModel<DIM>::getNbEquations() const
+{
+  return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void RotationAdvPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionPM<RotationAdvTerm>::configure(args);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(DIM);
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace RotationAdv
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

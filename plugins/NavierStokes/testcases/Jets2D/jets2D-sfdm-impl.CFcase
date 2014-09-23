@@ -1,0 +1,104 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = 0.576127
+
+
+#CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libNavierStokes libSpectralFD libSpectralFDNavierStokes libBackwardEuler libPetscI libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets2D/
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = Euler2D
+Simulator.SubSystem.Euler2D.refValues = 1.0 0.449622064 0.449622064 2.60108
+Simulator.SubSystem.Euler2D.refLength = 1.0
+
+Simulator.SubSystem.OutputFormat        = ParaView #CFmesh
+
+Simulator.SubSystem.CFmesh.FileName     = jets2D-sfdm-solP1.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+
+Simulator.SubSystem.ParaView.FileName    = jets2D-sfdm-solP2TVB.vtu
+Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.SaveRate = 10
+Simulator.SubSystem.ParaView.AppendTime = false
+Simulator.SubSystem.ParaView.AppendIter = false
+
+Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 15
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
+
+Simulator.SubSystem.ConvergenceMethod = BwdEuler
+Simulator.SubSystem.BwdEuler.Data.CFL.Value = 0.5
+Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(10,0.5*2.^max(i-10,0))
+Simulator.SubSystem.BwdEuler.ConvergenceFile = convergenceImpl.plt
+Simulator.SubSystem.BwdEuler.ShowRate        = 1
+Simulator.SubSystem.BwdEuler.ConvRate        = 1
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = BwdEulerLSS
+Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 2000
+Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
+Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
+#Simulator.SubSystem.BwdEulerLSS.Data.Output = true
+
+Simulator.SubSystem.SpaceMethod = SpectralFDMethod
+
+Simulator.SubSystem.Default.listTRS = InnerCells SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2Dsfdm.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = jets2DQDPert.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = SpectralFDMethod
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+# choose which builder we use
+Simulator.SubSystem.SpectralFDMethod.Builder = MeshUpgrade
+Simulator.SubSystem.SpectralFDMethod.Builder.PolynomialOrder = P2
+Simulator.SubSystem.SpectralFDMethod.SpaceRHSJacobCom = RHSJacob
+Simulator.SubSystem.SpectralFDMethod.TimeRHSJacobCom  = StdTimeRHSJacob
+Simulator.SubSystem.SpectralFDMethod.ExtrapolateCom = Null
+Simulator.SubSystem.SpectralFDMethod.LimiterCom = TVBLimiterEuler2D
+Simulator.SubSystem.SpectralFDMethod.TVBLimiterEuler2D.TVBFactor = 100
+
+Simulator.SubSystem.SpectralFDMethod.Data.UpdateVar   = Cons
+Simulator.SubSystem.SpectralFDMethod.Data.SolutionVar = Cons
+Simulator.SubSystem.SpectralFDMethod.Data.LinearVar   = Roe
+Simulator.SubSystem.SpectralFDMethod.Data.RiemannFlux = RoeFlux
+
+Simulator.SubSystem.SpectralFDMethod.InitComds = StdInitState
+Simulator.SubSystem.SpectralFDMethod.InitNames = InField
+
+Simulator.SubSystem.SpectralFDMethod.InField.applyTRS = InnerCells
+Simulator.SubSystem.SpectralFDMethod.InField.Vars = x y
+Simulator.SubSystem.SpectralFDMethod.InField.Def = if(y>0.5,0.5,1.) \
+                                                   if(y>0.5,1.67332,2.83972) \
+                                                   0.0 \
+                                                   if(y>0.5,3.425,6.532)
+
+Simulator.SubSystem.SpectralFDMethod.BcNames = Inlet Outlet
+Simulator.SubSystem.SpectralFDMethod.Inlet.applyTRS = SuperInlet
+Simulator.SubSystem.SpectralFDMethod.Outlet.applyTRS = SuperOutlet
+
+Simulator.SubSystem.SpectralFDMethod.Data.BcTypes = Dirichlet  SuperOutlet
+Simulator.SubSystem.SpectralFDMethod.Data.BcNames = Inlet      Outlet
+
+Simulator.SubSystem.SpectralFDMethod.Data.Inlet.Vars = x y
+Simulator.SubSystem.SpectralFDMethod.Data.Inlet.Def  = if(y>0.5,0.5,1.) \
+                                                       if(y>0.5,1.67332,2.83972) \
+                                                       0.0 \
+                                                       if(y>0.5,3.425,6.532)

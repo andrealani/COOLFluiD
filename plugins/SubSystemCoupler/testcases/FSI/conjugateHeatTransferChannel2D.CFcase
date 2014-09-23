@@ -1,0 +1,668 @@
+#
+# COOLFluiD Startfile
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+
+# CFEnv.TraceToStdOut = true
+
+CFEnv.VerboseEvents = false
+CFEnv.ExceptionLogLevel = 200
+
+# This defines the order of the iterations
+Simulator.SubSystems = SubSysA
+Simulator.SubSystemTypes = CustomSubSystem
+
+Simulator.SubSysA.RunSequence = SubSystemCouplerBody1:dataTransferRead \
+                                SubSystemCouplerBody2:dataTransferRead \
+                                Body1CM:takeStep:10 \
+                                SubSystemCouplerBody1:dataTransferWrite \
+                                SubSystemCouplerBody2:dataTransferWrite \
+                                SubSystemCouplerBody3:dataTransferRead \
+                                Body2CM:takeStep:5 \
+                                SubSystemCouplerBody3:dataTransferWrite \
+                                SubSystemCouplerBody4:dataTransferRead \
+                                Body3CM:takeStep:5 \
+                                SubSystemCouplerBody4:dataTransferWrite
+!#
+Simulator.SubSysA.RunSequence = Body1CM:takeStep:10 \
+                                Body2CM:takeStep:1 \
+                                Body3CM:takeStep:1
+#!
+
+# Simulation Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libTHOR2CFmesh  libFiniteElement libHeat libSubSystemCoupler libSubSystemCouplerHeat libSubSystemCouplerNavierStokes libPetscI libGambit2CFmesh libFiniteElementHeat
+
+# Simulation Parameters
+Simulator.Paths.WorkingDir = plugins/SubSystemCoupler/testcases/FSI/
+Simulator.Paths.ResultsDir = ./
+
+
+#
+#Define the general subsystem info
+#
+#
+Simulator.SubSysA.ConvergenceFile     = convergenceConjugateHeat.plt
+Simulator.SubSysA.ConvRate            = 1
+Simulator.SubSysA.ShowRate            = 1
+Simulator.SubSysA.InitialTime         = 0.
+Simulator.SubSysA.InitialIter         = 0
+
+Simulator.SubSysA.StopCondition       = MaxNumberSteps
+Simulator.SubSysA.MaxNumberSteps.nbSteps = 100
+
+#Simulator.SubSysA.StopCondition   = MaxTime
+#Simulator.SubSysA.MaxTime.maxTime = 20.
+
+#Simulator.SubSysA.StopCondition       = Norm
+#Simulator.SubSysA.Norm.valueNorm      = -10.0
+
+#Simulator.SubSysA.StopCondition       = RelativeNormAndMaxIter
+#Simulator.SubSysA.RelativeNormAndMaxIter.RelativeNorm = -10.
+#Simulator.SubSysA.RelativeNormAndMaxIter.MaxIter = 10
+
+#
+#Define the 3 namespaces in which will 'live' the three simulations
+#
+Simulator.SubSysA.Namespaces = Body1Namespace Body2Namespace Body3Namespace
+
+#
+#Define the meshdata/physical model for the Body1
+#
+Simulator.SubSysA.Body1Namespace.MeshData = Body1MeshData
+Simulator.SubSysA.Body1Namespace.SubSystemStatus = Body1SubSystemStatus
+
+Simulator.SubSysA.Body1Namespace.PhysicalModelType   = IncompNavierStokes2D
+Simulator.SubSysA.Body1Namespace.PhysicalModelName = Body1PM
+Simulator.SubSysA.Body1PM.refValues = 1. 1. 1. 298.15
+Simulator.SubSysA.Body1PM.refLength = 1.
+
+Simulator.SubSysA.Body1PM.ConvTerm.rhoInf  = 1.
+Simulator.SubSysA.Body1PM.ConvTerm.uInf    = 1.
+Simulator.SubSysA.Body1PM.ConvTerm.tempRef = 298.15
+Simulator.SubSysA.Body1PM.ConvTerm.p0Inf   = 101325.0
+Simulator.SubSysA.Body1PM.ConvTerm.cvInf   = 4167.51
+
+Simulator.SubSysA.Body1PM.DiffTerm.ViscosityLaw = Constant
+Simulator.SubSysA.Body1PM.DiffTerm.Constant.Value = 0.01
+Simulator.SubSysA.Body1PM.DiffTerm.ThermConductivity = 0.606
+
+#
+#Define the meshdata/physical model for the Body2
+#
+Simulator.SubSysA.Body2Namespace.MeshData = Body2MeshData
+Simulator.SubSysA.Body2Namespace.SubSystemStatus = Body2SubSystemStatus
+
+Simulator.SubSysA.Body2Namespace.PhysicalModelType = Heat2D
+Simulator.SubSysA.Body2Namespace.PhysicalModelName = Body2PM
+Simulator.SubSysA.Body2PM.Conductivity = 1.0
+
+#
+#Define the meshdata/physical model for the Body3
+#
+Simulator.SubSysA.Body3Namespace.MeshData = Body3MeshData
+Simulator.SubSysA.Body3Namespace.SubSystemStatus = Body3SubSystemStatus
+
+Simulator.SubSysA.Body3Namespace.PhysicalModelType = Heat2D
+Simulator.SubSysA.Body3Namespace.PhysicalModelName = Body3PM
+Simulator.SubSysA.Body3PM.Conductivity = 1.0
+
+#
+#Define the meshdata details for the 2 bodies
+#
+Simulator.SubSysA.Body1MeshData.listTRS = InnerFaces FaceSouth FaceNorth FaceWest FaceEast
+Simulator.SubSysA.Body1MeshData.Namespaces = Body1Namespace
+
+Simulator.SubSysA.Body2MeshData.listTRS = InnerCells FaceSouth FaceWest FaceNorth SuperInlet
+Simulator.SubSysA.Body2MeshData.Namespaces = Body2Namespace
+
+Simulator.SubSysA.Body3MeshData.listTRS = InnerCells FaceSouth FaceWest FaceNorth SuperInlet
+Simulator.SubSysA.Body3MeshData.Namespaces = Body3Namespace
+
+#
+#Define the output formatters
+#
+Simulator.SubSysA.OutputFormat        = Tecplot CFmesh Tecplot CFmesh  Tecplot CFmesh
+Simulator.SubSysA.OutputFormatNames   = Tecplot1 CFmesh1 Tecplot2 CFmesh2 Tecplot3 CFmesh3
+
+Simulator.SubSysA.CFmesh1.Namespace = Body1Namespace
+Simulator.SubSysA.CFmesh1.Data.CollaboratorNames = Body1
+Simulator.SubSysA.CFmesh1.FileName = body1.CFmesh
+Simulator.SubSysA.CFmesh1.SaveRate = 1
+Simulator.SubSysA.CFmesh1.AppendTime = false
+Simulator.SubSysA.CFmesh1.AppendIter = true
+
+Simulator.SubSysA.Tecplot1.Namespace = Body1Namespace
+Simulator.SubSysA.Tecplot1.Data.CollaboratorNames = Body1
+Simulator.SubSysA.Tecplot1.FileName = body1.plt
+Simulator.SubSysA.Tecplot1.Data.updateVar = dPuvt
+Simulator.SubSysA.Tecplot1.SaveRate = 1
+Simulator.SubSysA.Tecplot1.AppendTime = false
+Simulator.SubSysA.Tecplot1.AppendIter = true
+
+Simulator.SubSysA.CFmesh2.Namespace = Body2Namespace
+Simulator.SubSysA.CFmesh2.Data.CollaboratorNames = Body2
+Simulator.SubSysA.CFmesh2.FileName = body2.CFmesh
+Simulator.SubSysA.CFmesh2.SaveRate = 100
+Simulator.SubSysA.CFmesh2.AppendTime = false
+Simulator.SubSysA.CFmesh2.AppendIter = true
+
+Simulator.SubSysA.Tecplot2.Namespace = Body2Namespace
+Simulator.SubSysA.Tecplot2.Data.CollaboratorNames = Body2
+Simulator.SubSysA.Tecplot2.FileName = body2.plt
+Simulator.SubSysA.Tecplot2.Data.updateVar = Prim
+Simulator.SubSysA.Tecplot2.SaveRate = 1
+Simulator.SubSysA.Tecplot2.AppendTime = false
+Simulator.SubSysA.Tecplot2.AppendIter = true
+
+Simulator.SubSysA.CFmesh3.Namespace = Body3Namespace
+Simulator.SubSysA.CFmesh3.Data.CollaboratorNames = Body3
+Simulator.SubSysA.CFmesh3.FileName = body3.CFmesh
+Simulator.SubSysA.CFmesh3.SaveRate = 100
+Simulator.SubSysA.CFmesh3.AppendTime = false
+Simulator.SubSysA.CFmesh3.AppendIter = true
+
+Simulator.SubSysA.Tecplot3.Namespace = Body3Namespace
+Simulator.SubSysA.Tecplot3.Data.CollaboratorNames = Body3
+Simulator.SubSysA.Tecplot3.FileName = body3.plt
+Simulator.SubSysA.Tecplot3.Data.updateVar = Prim
+Simulator.SubSysA.Tecplot3.SaveRate = 1
+Simulator.SubSysA.Tecplot3.AppendTime = false
+Simulator.SubSysA.Tecplot3.AppendIter = true
+
+#
+#Define the mesh creators
+#
+Simulator.SubSysA.MeshCreator = CFmeshFileReader CFmeshFileReader CFmeshFileReader
+Simulator.SubSysA.MeshCreatorNames = CFmeshFileReader1 CFmeshFileReader2 CFmeshFileReader3
+
+#For the Body1
+Simulator.SubSysA.CFmeshFileReader1.Namespace = Body1Namespace
+Simulator.SubSysA.CFmeshFileReader1.Data.CollaboratorNames = Body1
+Simulator.SubSysA.CFmeshFileReader1.Data.FileName = channelqd-fvm-6kn.CFmesh
+
+#For the Body2
+Simulator.SubSysA.CFmeshFileReader2.Namespace = Body2Namespace
+Simulator.SubSysA.CFmeshFileReader2.Data.CollaboratorNames = Body2
+Simulator.SubSysA.CFmeshFileReader2.Data.FileName = square40.CFmesh
+Simulator.SubSysA.CFmeshFileReader2.Data.TranslateMesh = true
+Simulator.SubSysA.CFmeshFileReader2.Data.TranslationVector = 1. -1.
+Simulator.SubSysA.CFmeshFileReader2.convertFrom = Gambit2CFmesh
+
+#For the Body3
+Simulator.SubSysA.CFmeshFileReader3.Namespace = Body3Namespace
+Simulator.SubSysA.CFmeshFileReader3.Data.CollaboratorNames = Body3
+Simulator.SubSysA.CFmeshFileReader3.Data.FileName = square40.CFmesh
+Simulator.SubSysA.CFmeshFileReader3.Data.TranslateMesh = true
+Simulator.SubSysA.CFmeshFileReader3.Data.TranslationVector = 1. 1.
+Simulator.SubSysA.CFmeshFileReader3.convertFrom = Gambit2CFmesh
+
+#
+#Define the convergence methods
+#
+Simulator.SubSysA.ConvergenceMethod = NewtonIterator NewtonIterator NewtonIterator
+Simulator.SubSysA.ConvergenceMethodNames = Body1CM Body2CM Body3CM
+
+#For the body 1
+Simulator.SubSysA.Body1CM.Namespace = Body1Namespace
+Simulator.SubSysA.Body1CM.Data.CollaboratorNames = Body1 Body1LSS
+Simulator.SubSysA.Body1CM.Data.MaxSteps = 1
+Simulator.SubSysA.Body1CM.Data.CFL.Value           = 1.
+Simulator.SubSysA.Body1CM.Data.CFL.ComputeCFL      = Function
+Simulator.SubSysA.Body1CM.Data.CFL.Function.Def    = 1000.
+
+#For the body 2
+Simulator.SubSysA.Body2CM.Namespace = Body2Namespace
+Simulator.SubSysA.Body2CM.Data.CollaboratorNames = Body2 Body2LSS
+Simulator.SubSysA.Body2CM.Data.MaxSteps = 1
+Simulator.SubSysA.Body2CM.InitCom = ResetSystem
+# Implicit
+Simulator.SubSysA.Body2CM.UpdateSol = StdUpdateSol
+Simulator.SubSysA.Body2CM.StdUpdateSol.Relaxation = 0.8
+# Explicit
+#Simulator.SubSysA.Body2CM.UpdateSol = CopySol
+Simulator.SubSysA.Body2CM.Data.CFL.Value           = 1.
+Simulator.SubSysA.Body2CM.Data.CFL.ComputeCFL      = Function
+Simulator.SubSysA.Body2CM.Data.CFL.Function.Def    = 1000.
+
+#For the body 3
+Simulator.SubSysA.Body3CM.Namespace = Body3Namespace
+Simulator.SubSysA.Body3CM.Data.CollaboratorNames = Body3 Body3LSS
+Simulator.SubSysA.Body3CM.Data.MaxSteps = 1
+Simulator.SubSysA.Body3CM.InitCom = ResetSystem
+# Implicit
+Simulator.SubSysA.Body3CM.UpdateSol = StdUpdateSol
+Simulator.SubSysA.Body3CM.StdUpdateSol.Relaxation = 0.8
+# Explicit
+#Simulator.SubSysA.Body3CM.UpdateSol = CopySol
+Simulator.SubSysA.Body3CM.Data.CFL.Value           = 1.
+Simulator.SubSysA.Body3CM.Data.CFL.ComputeCFL      = Function
+Simulator.SubSysA.Body3CM.Data.CFL.Function.Def    = 1000.
+
+#
+#Define the LinearSystemSolvers
+#
+Simulator.SubSysA.LinearSystemSolver = PETSC PETSC PETSC
+Simulator.SubSysA.LSSNames = Body1LSS Body2LSS Body3LSS
+
+Simulator.SubSysA.Body1LSS.Data.MaxIter  = 50
+Simulator.SubSysA.Body1LSS.Data.Output   = false
+Simulator.SubSysA.Body1LSS.Data.PCType = PCASM
+Simulator.SubSysA.Body1LSS.Data.KSPType = KSPGMRES
+Simulator.SubSysA.Body1LSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSysA.Body2LSS.Namespace = Body2Namespace
+Simulator.SubSysA.Body2LSS.Data.PCType = PCASM
+Simulator.SubSysA.Body2LSS.Data.KSPType = KSPGMRES
+Simulator.SubSysA.Body2LSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSysA.Body2LSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSysA.Body2LSS.Data.MaxIter = 100
+
+Simulator.SubSysA.Body3LSS.Namespace = Body3Namespace
+Simulator.SubSysA.Body3LSS.Data.PCType = PCASM
+Simulator.SubSysA.Body3LSS.Data.KSPType = KSPGMRES
+Simulator.SubSysA.Body3LSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSysA.Body3LSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSysA.Body3LSS.Data.MaxIter = 100
+
+#
+#Define the Space Methods
+#
+Simulator.SubSysA.SpaceMethod = CellCenterFVM FiniteElementMethod FiniteElementMethod
+Simulator.SubSysA.SpaceMethodNames = Body1 Body2 Body3
+
+#
+# Space Method for solving the Body1 + BCs
+#
+Simulator.SubSysA.Body1.Namespace = Body1Namespace
+Simulator.SubSysA.Body1.Data.CollaboratorNames = Body1LSS Body1CM
+
+Simulator.SubSysA.Body1.Restart = false
+#Simulator.SubSysA.Body1.Data.NodalExtrapolation = DistanceBased
+#Simulator.SubSysA.Body1.Data.DistanceBased.TrsPriorityList = Wall Top Bottom
+
+Simulator.SubSysA.Body1.ComputeRHS = NumJacob
+Simulator.SubSysA.Body1.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+Simulator.SubSysA.Body1.SetupCom = LeastSquareP1Setup
+Simulator.SubSysA.Body1.SetupNames = Setup1
+Simulator.SubSysA.Body1.Setup1.stencil = FaceVertex
+Simulator.SubSysA.Body1.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSysA.Body1.UnSetupNames = UnSetup1
+
+Simulator.SubSysA.Body1.Data.FluxSplitter = RhieChow2D
+#Simulator.SubSysA.Body1.Data.RhieChow2D.Flux.PressStab = true
+Simulator.SubSysA.Body1.Data.UpdateVar     = dPuvt
+Simulator.SubSysA.Body1.Data.SolutionVar   = Cons
+Simulator.SubSysA.Body1.Data.DiffusiveVar  = dPuvt
+Simulator.SubSysA.Body1.Data.DiffusiveFlux = NavierStokes
+
+Simulator.SubSysA.Body1.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSysA.Body1.Data.IntegratorOrder = P1
+#Simulator.SubSysA.Body1.Data.PolyRec = Constant
+
+Simulator.SubSysA.Body1.Data.PolyRec = LinearLS2D
+Simulator.SubSysA.Body1.OnlyInitComs = true
+
+Simulator.SubSysA.Body1.InitComds = InitState \
+                                    NoSlipWallAdiabaticIncompNSPvtFVMCC \
+                                    NoSlipWallAdiabaticIncompNSPvtFVMCC \
+                                    SubInletIncompEulerDpvtVTFVMCC \
+                                    SubOutletIncompEulerDpvtFVMCC
+
+Simulator.SubSysA.Body1.InitNames = InField \
+                                    InWallUp \
+                                    InWallDown \
+                                    InInlet \
+                                    InOutlet
+
+Simulator.SubSysA.Body1.InField.applyTRS = InnerFaces
+Simulator.SubSysA.Body1.InField.Vars = x y
+Simulator.SubSysA.Body1.InField.Def = 0. 1. 0. 298.15
+
+Simulator.SubSysA.Body1.InWallUp.applyTRS = FaceNorth
+Simulator.SubSysA.Body1.InWallDown.applyTRS = FaceSouth
+
+Simulator.SubSysA.Body1.InInlet.applyTRS = FaceWest
+Simulator.SubSysA.Body1.InInlet.Def = -(4*(y-0.5)*(y-0.5)-1) 0. 298.15
+
+Simulator.SubSysA.Body1.InOutlet.applyTRS = FaceEast
+Simulator.SubSysA.Body1.InOutlet.P = -0.08
+
+Simulator.SubSysA.Body1.BcComds = CoupledNoSlipWallIsothermalNSdPvt_GhostFVMCC \
+                                  CoupledNoSlipWallIsothermalNSdPvt_GhostFVMCC \
+                                  SubInletIncompEulerDpvtVTFVMCC \
+                                  SubOutletIncompEulerDpvtFVMCC
+Simulator.SubSysA.Body1.BcNames = BcWallUp \
+                                  BcWallDown \
+                                  BcInlet \
+                                  BcOutlet
+
+Simulator.SubSysA.Body1.BcWallUp.applyTRS = FaceNorth
+Simulator.SubSysA.Body1.BcWallUp.TWall = 250.
+Simulator.SubSysA.Body1.BcWallUp.DefaultIterations = 10
+Simulator.SubSysA.Body1.BcWallUp.Interface = InteractionBC_Top
+
+Simulator.SubSysA.Body1.BcWallDown.applyTRS = FaceSouth
+Simulator.SubSysA.Body1.BcWallDown.TWall = 320.
+Simulator.SubSysA.Body1.BcWallDown.DefaultIterations = 10
+Simulator.SubSysA.Body1.BcWallDown.Interface = InteractionBC_Bottom
+
+Simulator.SubSysA.Body1.BcInlet.applyTRS = FaceWest
+Simulator.SubSysA.Body1.BcInlet.Def = -(4*(y-0.5)*(y-0.5)-1) 0. 298.15
+
+Simulator.SubSysA.Body1.BcOutlet.applyTRS = FaceEast
+Simulator.SubSysA.Body1.BcOutlet.dP = -0.08
+
+
+#
+# Space Method for solving the Body2 + BCs
+#
+Simulator.SubSysA.Body2.Namespace = Body2Namespace
+Simulator.SubSysA.Body2.Data.CollaboratorNames = Body2LSS Body2CM
+
+Simulator.SubSysA.Body2.Data.UpdateVar = Prim
+Simulator.SubSysA.Body2.Data.DiffusiveVar = Prim
+Simulator.SubSysA.Body2.Data.JacobianStrategy = Numerical
+Simulator.SubSysA.Body2.Data.ResidualStrategy = StdElementComputer
+
+Simulator.SubSysA.Body2.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSysA.Body2.Data.IntegratorOrder = P1
+
+#Implicit
+Simulator.SubSysA.Body2.ComputeSpaceResidual = ImplicitComputeSpaceResCom
+Simulator.SubSysA.Body2.ImplicitComputeSpaceResCom.applyTRS = InnerCells
+#Explicit
+#Simulator.SubSysA.Body2.ExplicitComputeSpaceResCom.applyTRS = InnerCells
+
+Simulator.SubSysA.Body2.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSysA.Body2.InitComds = InitState
+Simulator.SubSysA.Body2.InitNames = InitialField
+
+# Vars are [x y]
+Simulator.SubSysA.Body2.InitialField.applyTRS = InnerCells
+Simulator.SubSysA.Body2.InitialField.Vars = x y
+Simulator.SubSysA.Body2.InitialField.Def = 200
+
+Simulator.SubSysA.Body2.BcComds = DirichletBC CoupledRobinImplicitBC
+Simulator.SubSysA.Body2.BcNames = FixedBC     CoupledBC
+
+# Vars are [x y t T]
+Simulator.SubSysA.Body2.FixedBC.applyTRS = FaceSouth
+Simulator.SubSysA.Body2.FixedBC.Implicit = true
+Simulator.SubSysA.Body2.FixedBC.Vars = x y t T
+Simulator.SubSysA.Body2.FixedBC.Def = 200
+
+# Vars are [x y t T]
+Simulator.SubSysA.Body2.CoupledBC.applyTRS = FaceNorth
+Simulator.SubSysA.Body2.CoupledBC.Interface = InteractionBC_Bottom
+Simulator.SubSysA.Body2.CoupledBC.Vars = x y t T nx ny
+Simulator.SubSysA.Body2.CoupledBC.Def = 0
+
+#
+# Space Method for solving the Body3 + BCs
+#
+Simulator.SubSysA.Body3.Namespace = Body3Namespace
+Simulator.SubSysA.Body3.Data.CollaboratorNames = Body3LSS Body3CM
+
+Simulator.SubSysA.Body3.Data.UpdateVar = Prim
+Simulator.SubSysA.Body3.Data.DiffusiveVar = Prim
+Simulator.SubSysA.Body3.Data.JacobianStrategy = Numerical
+Simulator.SubSysA.Body3.Data.ResidualStrategy = StdElementComputer
+
+Simulator.SubSysA.Body3.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSysA.Body3.Data.IntegratorOrder = P1
+
+#Implicit
+Simulator.SubSysA.Body3.ComputeSpaceResidual = ImplicitComputeSpaceResCom
+Simulator.SubSysA.Body3.ImplicitComputeSpaceResCom.applyTRS = InnerCells
+#Explicit
+Simulator.SubSysA.Body3.ExplicitComputeSpaceResCom.applyTRS = InnerCells
+
+Simulator.SubSysA.Body3.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSysA.Body3.InitComds = InitState
+Simulator.SubSysA.Body3.InitNames = InitialField
+
+# Vars are [x y]
+Simulator.SubSysA.Body3.InitialField.applyTRS = InnerCells
+Simulator.SubSysA.Body3.InitialField.Vars = x y
+Simulator.SubSysA.Body3.InitialField.Def = 200
+
+Simulator.SubSysA.Body3.BcComds = DirichletBC CoupledRobinImplicitBC
+Simulator.SubSysA.Body3.BcNames = FixedBC     CoupledBC
+
+# Vars are [x y t T]
+Simulator.SubSysA.Body3.FixedBC.applyTRS = FaceNorth
+Simulator.SubSysA.Body3.FixedBC.Implicit = true
+Simulator.SubSysA.Body3.FixedBC.Vars = x y t T
+Simulator.SubSysA.Body3.FixedBC.Def = 200
+
+# Vars are [x y t T]
+Simulator.SubSysA.Body3.CoupledBC.applyTRS = FaceSouth
+Simulator.SubSysA.Body3.CoupledBC.isImplicit = false
+Simulator.SubSysA.Body3.CoupledBC.Interface = InteractionBC_Top
+Simulator.SubSysA.Body3.CoupledBC.Vars = x y t T nx ny
+Simulator.SubSysA.Body3.CoupledBC.Def = 0
+
+#
+## SubSystem A Coupler Method Parameters ##########################################
+#
+#
+# We will couple the Body1 -> Body2
+# We will couple the Body2 -> Body1
+# We will couple the Body1 -> Body3
+# We will couple the Body3 -> Body1
+
+Simulator.SubSysA.CouplerMethod       = SubSystemCoupler \
+                                        SubSystemCoupler \
+                                        SubSystemCoupler \
+                                        SubSystemCoupler
+Simulator.SubSysA.CouplerMethodNames  = SubSystemCouplerBody1 \
+                                        SubSystemCouplerBody2 \
+                                        SubSystemCouplerBody3 \
+                                        SubSystemCouplerBody4
+#
+## This is for the coupling Body1_To_Body2
+#
+Simulator.SubSysA.SubSystemCouplerBody1.Data.CollaboratorNames = Body1
+Simulator.SubSysA.SubSystemCouplerBody1.Namespace = Body1Namespace
+
+Simulator.SubSysA.SubSystemCouplerBody1.SetupComs = StdSetup
+Simulator.SubSysA.SubSystemCouplerBody1.SetupNames = Setup1
+
+Simulator.SubSysA.SubSystemCouplerBody1.UnSetupComs = StdUnSetup
+Simulator.SubSysA.SubSystemCouplerBody1.UnSetupNames = UnSetup1
+
+Simulator.SubSysA.SubSystemCouplerBody1.PreProcessReadComs = StdPreProcessRead
+Simulator.SubSysA.SubSystemCouplerBody1.PreProcessReadNames = PreProcessRead1
+
+Simulator.SubSysA.SubSystemCouplerBody1.PreProcessWriteComs = FVMCCPreProcessWrite
+Simulator.SubSysA.SubSystemCouplerBody1.PreProcessWriteNames = PreProcessWrite1
+
+Simulator.SubSysA.SubSystemCouplerBody1.MeshMatchingReadComs = StdMeshMatcherRead
+Simulator.SubSysA.SubSystemCouplerBody1.MeshMatchingReadNames = MeshMatcherRead1
+
+Simulator.SubSysA.SubSystemCouplerBody1.MeshMatchingWriteComs = FVMCCNewtonMeshMatcherWrite
+Simulator.SubSysA.SubSystemCouplerBody1.MeshMatchingWriteNames = MeshMatcherWrite1
+
+Simulator.SubSysA.SubSystemCouplerBody1.InterfacesReadComs = FVMCCReadDataTransfer
+Simulator.SubSysA.SubSystemCouplerBody1.InterfacesReadNames = ReadData1
+
+Simulator.SubSysA.SubSystemCouplerBody1.InterfacesWriteComs = FVMCCWriteDataTransfer
+Simulator.SubSysA.SubSystemCouplerBody1.InterfacesWriteNames = WriteData1
+
+Simulator.SubSysA.SubSystemCouplerBody1.PostProcessComs = StdPostProcess
+Simulator.SubSysA.SubSystemCouplerBody1.PostProcessNames = PostProcess1
+
+Simulator.SubSysA.SubSystemCouplerBody1.InterfacesNames = InterfaceBody1Bottom
+Simulator.SubSysA.SubSystemCouplerBody1.CoupledSubSystems = SubSysA
+Simulator.SubSysA.SubSystemCouplerBody1.CoupledNameSpaces = Body2Namespace
+
+Simulator.SubSysA.SubSystemCouplerBody1.Data.PreVariableTransformers = FluidSolidHeatPreFVMCC
+Simulator.SubSysA.SubSystemCouplerBody1.Data.FluidSolidHeatPreFVMCC.hValue = 2000.
+Simulator.SubSysA.SubSystemCouplerBody1.Data.PostVariableTransformers = Null
+Simulator.SubSysA.SubSystemCouplerBody1.Data.CoordType = Ghost
+Simulator.SubSysA.SubSystemCouplerBody1.Data.NonMatchingGeometry = true
+Simulator.SubSysA.SubSystemCouplerBody1.Data.NonMatchingGeometryThreshold = 0.01
+Simulator.SubSysA.SubSystemCouplerBody1.Data.NonMatchingGeometryRotation = 0.
+Simulator.SubSysA.SubSystemCouplerBody1.Data.NonMatchingGeometryVector = 0. 0.
+
+Simulator.SubSysA.SubSystemCouplerBody1.CommandGroups = InteractionBC_Bottom
+Simulator.SubSysA.SubSystemCouplerBody1.InteractionBC_Bottom.groupedTRS = FaceSouth
+Simulator.SubSysA.SubSystemCouplerBody1.InteractionBC_Bottom.groupedComs  = Setup1 UnSetup1 PreProcessRead1 PreProcessWrite1 MeshMatcherRead1 MeshMatcherWrite1 ReadData1 WriteData1 PostProcess1
+
+#
+## This is for the coupling Body1_To_Body3
+#
+Simulator.SubSysA.SubSystemCouplerBody2.Data.CollaboratorNames = Body1
+Simulator.SubSysA.SubSystemCouplerBody2.Namespace = Body1Namespace
+
+Simulator.SubSysA.SubSystemCouplerBody2.SetupComs = StdSetup
+Simulator.SubSysA.SubSystemCouplerBody2.SetupNames = Setup1
+
+Simulator.SubSysA.SubSystemCouplerBody2.UnSetupComs = StdUnSetup
+Simulator.SubSysA.SubSystemCouplerBody2.UnSetupNames = UnSetup1
+
+Simulator.SubSysA.SubSystemCouplerBody2.PreProcessReadComs = StdPreProcessRead
+Simulator.SubSysA.SubSystemCouplerBody2.PreProcessReadNames = PreProcessRead1
+
+Simulator.SubSysA.SubSystemCouplerBody2.PreProcessWriteComs = FVMCCPreProcessWrite
+Simulator.SubSysA.SubSystemCouplerBody2.PreProcessWriteNames = PreProcessWrite1
+
+Simulator.SubSysA.SubSystemCouplerBody2.MeshMatchingReadComs = StdMeshMatcherRead
+Simulator.SubSysA.SubSystemCouplerBody2.MeshMatchingReadNames = MeshMatcherRead1
+
+Simulator.SubSysA.SubSystemCouplerBody2.MeshMatchingWriteComs = FVMCCNewtonMeshMatcherWrite
+Simulator.SubSysA.SubSystemCouplerBody2.MeshMatchingWriteNames = MeshMatcherWrite1
+
+Simulator.SubSysA.SubSystemCouplerBody2.InterfacesReadComs = FVMCCReadDataTransfer
+Simulator.SubSysA.SubSystemCouplerBody2.InterfacesReadNames = ReadData1
+
+Simulator.SubSysA.SubSystemCouplerBody2.InterfacesWriteComs = FVMCCWriteDataTransfer
+Simulator.SubSysA.SubSystemCouplerBody2.InterfacesWriteNames = WriteData1
+
+Simulator.SubSysA.SubSystemCouplerBody2.PostProcessComs = StdPostProcess
+Simulator.SubSysA.SubSystemCouplerBody2.PostProcessNames = PostProcess1
+
+Simulator.SubSysA.SubSystemCouplerBody2.InterfacesNames = InterfaceBody1Top
+Simulator.SubSysA.SubSystemCouplerBody2.CoupledSubSystems = SubSysA
+Simulator.SubSysA.SubSystemCouplerBody2.CoupledNameSpaces = Body3Namespace
+
+Simulator.SubSysA.SubSystemCouplerBody2.Data.PreVariableTransformers = FluidSolidHeatPreFVMCC
+Simulator.SubSysA.SubSystemCouplerBody2.Data.FluidSolidHeatPreFVMCC.hValue = 2000.
+Simulator.SubSysA.SubSystemCouplerBody2.Data.PostVariableTransformers = Null
+Simulator.SubSysA.SubSystemCouplerBody2.Data.CoordType = Ghost
+Simulator.SubSysA.SubSystemCouplerBody2.Data.NonMatchingGeometry = true
+Simulator.SubSysA.SubSystemCouplerBody2.Data.NonMatchingGeometryThreshold = 0.01
+Simulator.SubSysA.SubSystemCouplerBody2.Data.NonMatchingGeometryRotation = 0.
+Simulator.SubSysA.SubSystemCouplerBody2.Data.NonMatchingGeometryVector = 0. 0.
+
+Simulator.SubSysA.SubSystemCouplerBody2.CommandGroups = InteractionBC_Top
+Simulator.SubSysA.SubSystemCouplerBody2.InteractionBC_Top.groupedTRS  = FaceNorth
+Simulator.SubSysA.SubSystemCouplerBody2.InteractionBC_Top.groupedComs = Setup1 UnSetup1 PreProcessRead1 PreProcessWrite1 MeshMatcherRead1 MeshMatcherWrite1 ReadData1 WriteData1 PostProcess1
+
+#
+## This is for the coupling Body2_To_Body1
+#
+Simulator.SubSysA.SubSystemCouplerBody3.Data.CollaboratorNames = Body2
+Simulator.SubSysA.SubSystemCouplerBody3.Namespace = Body2Namespace
+
+Simulator.SubSysA.SubSystemCouplerBody3.SetupComs = StdSetup
+Simulator.SubSysA.SubSystemCouplerBody3.SetupNames = Setup1
+
+Simulator.SubSysA.SubSystemCouplerBody3.UnSetupComs = StdUnSetup
+Simulator.SubSysA.SubSystemCouplerBody3.UnSetupNames = UnSetup1
+
+Simulator.SubSysA.SubSystemCouplerBody3.PreProcessReadComs = StdPreProcessRead
+Simulator.SubSysA.SubSystemCouplerBody3.PreProcessReadNames = PreProcessRead1
+
+Simulator.SubSysA.SubSystemCouplerBody3.PreProcessWriteComs = StdPreProcessWrite
+Simulator.SubSysA.SubSystemCouplerBody3.PreProcessWriteNames = PreProcessWrite1
+
+Simulator.SubSysA.SubSystemCouplerBody3.MeshMatchingReadComs = StdMeshMatcherRead
+Simulator.SubSysA.SubSystemCouplerBody3.MeshMatchingReadNames = MeshMatcherRead1
+
+Simulator.SubSysA.SubSystemCouplerBody3.MeshMatchingWriteComs = NewtonMeshMatcherWrite
+Simulator.SubSysA.SubSystemCouplerBody3.MeshMatchingWriteNames = MeshMatcherWrite1
+
+Simulator.SubSysA.SubSystemCouplerBody3.InterfacesReadComs = StdReadDataTransfer
+Simulator.SubSysA.SubSystemCouplerBody3.InterfacesReadNames = ReadData1
+
+Simulator.SubSysA.SubSystemCouplerBody3.InterfacesWriteComs = StdWriteDataTransfer
+Simulator.SubSysA.SubSystemCouplerBody3.InterfacesWriteNames = WriteData1
+
+Simulator.SubSysA.SubSystemCouplerBody3.PostProcessComs = StdPostProcess
+Simulator.SubSysA.SubSystemCouplerBody3.PostProcessNames = PostProcess1
+
+Simulator.SubSysA.SubSystemCouplerBody3.InterfacesNames = InterfaceBody2
+Simulator.SubSysA.SubSystemCouplerBody3.CoupledSubSystems = SubSysA
+Simulator.SubSysA.SubSystemCouplerBody3.CoupledNameSpaces = Body1Namespace
+
+Simulator.SubSysA.SubSystemCouplerBody3.Data.PreVariableTransformers = Null
+Simulator.SubSysA.SubSystemCouplerBody3.Data.PostVariableTransformers = Null
+Simulator.SubSysA.SubSystemCouplerBody3.Data.CoordType = Gauss
+Simulator.SubSysA.SubSystemCouplerBody3.Data.NonMatchingGeometry = true
+Simulator.SubSysA.SubSystemCouplerBody3.Data.NonMatchingGeometryThreshold = 0.01
+Simulator.SubSysA.SubSystemCouplerBody3.Data.NonMatchingGeometryRotation = 0.
+Simulator.SubSysA.SubSystemCouplerBody3.Data.NonMatchingGeometryVector = 0. 0.
+
+Simulator.SubSysA.SubSystemCouplerBody3.CommandGroups = InteractionBC_Bottom
+Simulator.SubSysA.SubSystemCouplerBody3.InteractionBC_Bottom.groupedTRS   = FaceNorth
+Simulator.SubSysA.SubSystemCouplerBody3.InteractionBC_Bottom.groupedComs  = Setup1 UnSetup1 PreProcessRead1 PreProcessWrite1 MeshMatcherRead1 MeshMatcherWrite1 ReadData1 WriteData1 PostProcess1
+
+#
+## This is for the coupling Body3_To_Body1
+#
+Simulator.SubSysA.SubSystemCouplerBody4.Data.CollaboratorNames = Body3
+Simulator.SubSysA.SubSystemCouplerBody4.Namespace = Body3Namespace
+
+Simulator.SubSysA.SubSystemCouplerBody4.SetupComs = StdSetup
+Simulator.SubSysA.SubSystemCouplerBody4.SetupNames = Setup1
+
+Simulator.SubSysA.SubSystemCouplerBody4.UnSetupComs = StdUnSetup
+Simulator.SubSysA.SubSystemCouplerBody4.UnSetupNames = UnSetup1
+
+Simulator.SubSysA.SubSystemCouplerBody4.PreProcessReadComs = StdPreProcessRead
+Simulator.SubSysA.SubSystemCouplerBody4.PreProcessReadNames = PreProcessRead1
+
+Simulator.SubSysA.SubSystemCouplerBody4.PreProcessWriteComs = StdPreProcessWrite
+Simulator.SubSysA.SubSystemCouplerBody4.PreProcessWriteNames = PreProcessWrite1
+
+Simulator.SubSysA.SubSystemCouplerBody4.MeshMatchingReadComs = StdMeshMatcherRead
+Simulator.SubSysA.SubSystemCouplerBody4.MeshMatchingReadNames = MeshMatcherRead1
+
+Simulator.SubSysA.SubSystemCouplerBody4.MeshMatchingWriteComs = NewtonMeshMatcherWrite
+Simulator.SubSysA.SubSystemCouplerBody4.MeshMatchingWriteNames = MeshMatcherWrite1
+
+Simulator.SubSysA.SubSystemCouplerBody4.InterfacesReadComs = StdReadDataTransfer
+Simulator.SubSysA.SubSystemCouplerBody4.InterfacesReadNames = ReadData1
+
+Simulator.SubSysA.SubSystemCouplerBody4.InterfacesWriteComs = StdWriteDataTransfer
+Simulator.SubSysA.SubSystemCouplerBody4.InterfacesWriteNames = WriteData1
+
+Simulator.SubSysA.SubSystemCouplerBody4.PostProcessComs = StdPostProcess
+Simulator.SubSysA.SubSystemCouplerBody4.PostProcessNames = PostProcess1
+
+Simulator.SubSysA.SubSystemCouplerBody4.InterfacesNames = InterfaceBody3
+Simulator.SubSysA.SubSystemCouplerBody4.CoupledSubSystems = SubSysA
+Simulator.SubSysA.SubSystemCouplerBody4.CoupledNameSpaces = Body1Namespace
+
+Simulator.SubSysA.SubSystemCouplerBody4.Data.PreVariableTransformers = Null
+Simulator.SubSysA.SubSystemCouplerBody4.Data.PostVariableTransformers = Null
+Simulator.SubSysA.SubSystemCouplerBody4.Data.CoordType = Gauss
+Simulator.SubSysA.SubSystemCouplerBody4.Data.NonMatchingGeometry = true
+Simulator.SubSysA.SubSystemCouplerBody4.Data.NonMatchingGeometryThreshold = 0.01
+Simulator.SubSysA.SubSystemCouplerBody4.Data.NonMatchingGeometryRotation = 0.
+Simulator.SubSysA.SubSystemCouplerBody4.Data.NonMatchingGeometryVector = 0. 0.
+
+Simulator.SubSysA.SubSystemCouplerBody4.CommandGroups = InteractionBC_Top
+Simulator.SubSysA.SubSystemCouplerBody4.InteractionBC_Top.groupedTRS = FaceSouth
+Simulator.SubSysA.SubSystemCouplerBody4.InteractionBC_Top.groupedComs  = Setup1 UnSetup1 PreProcessRead1 PreProcessWrite1 MeshMatcherRead1 MeshMatcherWrite1 ReadData1 WriteData1 PostProcess1
+
+
+
+
+

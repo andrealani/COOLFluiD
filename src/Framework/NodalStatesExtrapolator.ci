@@ -1,0 +1,662 @@
+#include <fstream>
+
+#include "Framework/MeshData.hh"
+#include "Framework/MapGeoToTrsAndIdx.hh"
+#include "Framework/State.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Framework/GeometricEntityPool.hh"
+#include "Framework/FaceTrsGeoBuilder.hh"
+#include "Framework/TrsNotFoundException.hh"
+#include "MathTools/MathChecks.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DATA>
+void NodalStatesExtrapolator<DATA>::defineConfigOptions(Config::OptionList& options)
+{
+  using namespace std;
+	
+  options.addConfigOption< vector<std::string> >
+    ("TrsPriorityList",
+     "list of the names of the TRS defining the priority");
+
+  options.addConfigOption< vector<std::string> >
+   ("TRSName","Name of the TRSs on which values must be prescribed");
+
+  options.addConfigOption<std::string>
+    ("FileNameTw", "Name of the file with the temperature distribution");
+
+  options.addConfigOption<CFreal>
+    ("RotationAngle", "Rotation angle (in degrees) to apply to the wall distribution coordinates");
+
+  options.addConfigOption<std::vector<CFuint> >
+    ("RotationCoordIDs", "IDs (must be 2) of the coordinates lying in the rotation plane");
+
+  options.addConfigOption<CFuint>
+    ("TemperatureID", "ID of the temperature in the wall distribution"); 
+  
+  options.addConfigOption<CFuint>
+    ("NbClosestPoints", "Number of closest points for surface interpolation"); 
+  
+  options.addConfigOption<vector<CFint> >
+    ("ExtractCoordXYIDs", "IDs corresponding to the x,y coordinate (z=0) for which plane is extracted");
+
+  options.addConfigOption<CFuint, Config::DynamicOption<> >
+    ("NbIterAdiabatic", "Number of iterations to run adiabatic");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DATA>
+NodalStatesExtrapolator<DATA>::NodalStatesExtrapolator(const std::string& name) :
+  Framework::MethodStrategy<DATA>(name),
+  socket_nodes("nodes"),
+  socket_nstates("nstates"),
+  socket_trsID("trsID"),
+  socket_states("states"),
+  socket_gstates("gstates"),
+  _currNodeID(0),
+  _nodalValuesIDFlags(),
+  _mapTrs2NodalValues(),
+  _mapNodeID2TrsNodeID(),
+  _mapTrsNameToID(),
+  m_trsID2LookupState(),
+  _orderedTrsList(),
+  _neighborStates(),
+  m_extractCoordZID(-1)
+{
+  this->addConfigOptionsTo(this);
+
+  using namespace std;	
+  
+  _trsPriorityList = vector<std::string>();
+  this->setParameter("TrsPriorityList",&_trsPriorityList);
+
+  _trsName = vector<std::string>();
+  this->setParameter("TRSName",&_trsName);
+
+  m_fileNameTw = "";
+  this->setParameter("FileNameTw",&m_fileNameTw);
+
+  m_angle = 0.0;
+  this->setParameter("RotationAngle",&m_angle);
+
+  m_xvec = std::vector<CFuint>();
+  this->setParameter("RotationCoordIDs",&m_xvec);
+
+  m_tempID = 0;
+  this->setParameter("TemperatureID",&m_tempID);
+  
+  m_nbClosestPoints = 0;
+  this->setParameter("NbClosestPoints",&m_nbClosestPoints);
+  
+  m_extractCoordXYID = vector<CFint>();
+  this->setParameter("ExtractCoordXYIDs",&m_extractCoordXYID);
+
+  m_nbIterAdiabatic = 0;
+  this->setParameter("NbIterAdiabatic",&m_nbIterAdiabatic);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DATA>
+NodalStatesExtrapolator<DATA>::~NodalStatesExtrapolator()
+{
+  for (CFuint i = 0; i < _mapTrs2NodalValues.size(); ++i) {
+    for (CFuint j = 0; j < _mapTrs2NodalValues[i]->size(); ++j) {
+      deletePtr((*_mapTrs2NodalValues[i])[j]);
+    }
+    deletePtr(_mapTrs2NodalValues[i]);
+  }
+
+  for (CFuint i = 0; i < _mapNodeID2TrsNodeID.size(); ++i) {
+    deletePtr(_mapNodeID2TrsNodeID[i]);
+  }
+
+  CFLog(VERBOSE, "NodalStatesExtrapolator<DATA>::~NodalStatesExtrapolator()\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DATA>
+void NodalStatesExtrapolator<DATA>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  
+  CFAUTOTRACE;
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  if (m_nbClosestPoints == 0) {
+    m_nbClosestPoints = dim + (dim - 2); // 2 in 2D, 4 in 3D
+  }
+  
+  if (_nodalValuesIDFlags.size() == 0) {
+    _nodalValuesIDFlags.resize(PhysicalModelStack::getActive()->getNbEq());
+    _nodalValuesIDFlags.assign(_nodalValuesIDFlags.size(), false);
+  }
+
+  DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
+
+  DataHandle<CFint> trsID = socket_trsID.getDataHandle();
+
+  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+
+  Common::SafePtr<TopologicalRegionSet> cells =
+    MeshDataStack::getActive()->getTrs("InnerCells");
+
+  SafePtr<MapGeoToTrsAndIdx> mapGeoToTrs =
+    MeshDataStack::getActive()->getMapGeoToTrs("MapFacesToTrs");
+
+  const CFuint nbCells = cells->getLocalNbGeoEnts();
+  const CFuint nbNodes = nodes.size();
+  _neighborStates.resize(nbNodes);
+
+  // map between the face ID and the TRS ID (on purpose,
+  // this last be one can be negative!!)
+  CFMap<CFuint, CFint> mapFaceTrsID;
+
+  // create a mapping to tell what boundary faces reference a
+  // certain node
+  vector< vector<CFuint> > bFacesPerNode(nbNodes);
+
+  // loop over TRSs and consider also the ghost state neighbors
+  // for the mesh nodes
+  addBoundaryNeighbors(bFacesPerNode, mapFaceTrsID);
+
+  vector<CFuint> faceNodeIDs;
+
+  // build the list of neighbor states for each node
+  for (CFuint iCell = 0; iCell < nbCells; ++iCell) {
+    State *const currState = states[iCell];
+    const CFuint nbNodesInCell = cells->getNbNodesInGeo(iCell);
+
+    // if this cell shares a node with a boundary face take it into
+    // account only if it shares at least a second one with the face
+    for (CFuint iNode = 0; iNode < nbNodesInCell; ++iNode) {
+      const CFuint nodeID = cells->getNodeID(iCell, iNode);
+      const CFuint nbBFacesPerNode = bFacesPerNode[nodeID].size();
+
+      // this will have to be changed in 3D
+      if (nbBFacesPerNode > 0) {
+        for (CFuint i = 0; i < nbBFacesPerNode; ++i) {
+          // nodeID already matches
+          CFuint countNodes = 1;
+          // identify the i-th boundary face referencing the current node
+          const CFuint faceID = bFacesPerNode[nodeID][i];
+          SafePtr<TopologicalRegionSet> faceTrs = mapGeoToTrs->getTrs(faceID);
+          const CFuint faceIdx = mapGeoToTrs->getIdxInTrs(faceID);
+          cf_assert(mapGeoToTrs->isBGeo(faceID));
+
+          // number of nodes in the current face
+          const CFuint nbFaceNodes = faceTrs->getNbNodesInGeo(faceIdx);
+          faceNodeIDs.resize(nbFaceNodes);
+          // build a list of all the local nodeIDs in the current face
+          for (CFuint jn = 0; jn < nbFaceNodes; ++jn) {
+            faceNodeIDs[jn] = faceTrs->getNodeID(faceIdx, jn);
+          }
+
+          // check if the current face shares more than 1 node with the
+          // current cell
+          for (CFuint jNode = 0; jNode < nbNodesInCell; ++jNode) {
+            // the iNode-th node already matches
+            if (jNode != iNode) {
+              const CFuint nodeIDToMatch = cells->getNodeID(iCell, jNode);
+              for (CFuint k = 0; k < nbFaceNodes; ++k) {
+                if (nodeIDToMatch == faceNodeIDs[k]) {
+                  countNodes++;
+                }
+              }
+            }
+          }
+
+          // this should work also in 3D but you better check ...
+          if (countNodes >= PhysicalModelStack::getActive()->getDim()) {
+            if (mapFaceTrsID.find(faceID) == trsID[nodeID]) {
+              _neighborStates[nodeID].push_back(currState);
+            }
+            break;
+          }
+        }
+      }
+      else {
+        // in this case the node is not contained in a bface so
+        // the current state is surely a neighbor
+        _neighborStates[nodeID].push_back(currState);
+      }
+    }
+  }
+
+  if (m_fileNameTw != "") {
+    
+    if (m_extractCoordXYID.size() > 0) {
+      if ((m_extractCoordXYID[0] == 0 && m_extractCoordXYID[1] == 1) ||
+	  (m_extractCoordXYID[0] == 1 && m_extractCoordXYID[1] == 0)) {
+	m_extractCoordZID = 2;
+      }
+      
+      if ((m_extractCoordXYID[0] == 0 && m_extractCoordXYID[1] == 2) ||
+	  (m_extractCoordXYID[0] == 2 && m_extractCoordXYID[1] == 0)) {
+	m_extractCoordZID = 1;
+      } 
+      
+      if ((m_extractCoordXYID[0] == 1 && m_extractCoordXYID[1] == 2) ||
+	  (m_extractCoordXYID[0] == 2 && m_extractCoordXYID[1] == 1)) {
+	m_extractCoordZID = 0;
+      }
+    }
+    
+    if (std::abs(m_angle) > 0.0) {
+      // conversion to radiants
+      m_angle *= MathTools::MathConsts::CFrealPi()/180.;
+      cf_always_assert(m_xvec.size() == 2);
+    }
+    extrapolateVarsFromFile();
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DATA>
+void NodalStatesExtrapolator<DATA>::addBoundaryNeighbors
+(std::vector< std::vector<CFuint> >& bFacesPerNode,
+ Common::CFMap<CFuint, CFint>& mapFaceTrsID)
+{
+  CFAUTOTRACE;
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+
+  DataHandle<CFint> trsID = socket_trsID.getDataHandle();
+
+  // reset all the trsIDs to -1
+  trsID = -1;
+
+  vector< SafePtr<TopologicalRegionSet> > trsList = MeshDataStack::getActive()->getTrsList();
+
+  if (_trsPriorityList.size() > 0) {
+    for (CFuint i = 0; i < _trsPriorityList.size(); ++i) {
+      const std::string name = _trsPriorityList[i];
+      bool nameFound = false;
+      for (CFuint j = 0; j < trsList.size(); ++j) {
+	if (name == trsList[j]->getName()) {
+	  _orderedTrsList.push_back(trsList[j]);
+	  nameFound = true;
+	  break;
+	}
+      }
+      if (!nameFound) {
+	throw TrsNotFoundException (FromHere(), name + " not found!!");
+      }
+    }
+  }
+  else {
+    for (CFuint iTRS = 0; iTRS < trsList.size(); ++iTRS) {
+        SafePtr<TopologicalRegionSet> currTrs = trsList[iTRS];
+
+      if (currTrs->getName() != "InnerCells" &&
+         currTrs->getName() != "InnerFaces" &&
+         currTrs->getName() != "PartitionFaces") {
+
+         _orderedTrsList.push_back(trsList[iTRS]);
+      }
+    }
+  }
+
+  GeometricEntityPool<FaceTrsGeoBuilder> geoBuilder;
+  SafePtr<FaceTrsGeoBuilder> geoBuilderPtr = geoBuilder.getGeoBuilder();
+  geoBuilderPtr->setDataSockets(socket_states, socket_gstates, socket_nodes);
+
+  geoBuilder.setup();
+
+  FaceTrsGeoBuilder::GeoData& geoData = geoBuilder.getDataGE();
+
+  const CFint nbTRSs = _orderedTrsList.size();
+  for (CFint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
+    SafePtr<TopologicalRegionSet> currTrs = _orderedTrsList[iTRS];
+
+    if (currTrs->getName() != "InnerCells" &&
+        currTrs->getName() != "InnerFaces" &&
+        currTrs->getName() != "PartitionFaces") {
+
+      CFuint countTrs = 0;
+      geoData.trs = currTrs;
+      geoData.isBFace = true;
+
+      const CFuint nbTrsFaces = currTrs->getLocalNbGeoEnts();
+      for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace) {
+        CFLogDebugMed( "iFace = " << iFace << "\n");
+
+        // build the GeometricEntity
+        geoData.idx = iFace;
+        GeometricEntity *const currFace = geoBuilder.buildGE();
+
+        State* const gstate = currFace->getState(1);
+        cf_assert(gstate != CFNULL);
+
+        const vector<Node*>* const bnodes = currFace->getNodes();
+        const CFuint nbNodesInFace = bnodes->size();
+        for (CFuint iNode = 0; iNode < nbNodesInFace; ++iNode) {
+          const CFuint nodeID = (*bnodes)[iNode]->getLocalID();
+          // set this face in the list of boundary faces referencing
+          // this node
+          bFacesPerNode[nodeID].push_back(currFace->getID());
+
+          // if the trsID is different from -1 or the current one
+          // nothing will happen : this is to prevent to distribute
+          // contributions to CORNER boundary nodes from different TRSs
+          if (trsID[nodeID] == -1) {
+            // if the trsID hasn't been set yet, it is done and
+            // the corresponding nodal state and sum of the weights are
+            // reset to 0.
+            trsID[nodeID] = iTRS;
+
+            if (countTrs == 0) {
+	      // register the name of the TRS with the corresponding ID
+	      _mapTrsNameToID.insert(currTrs->getName(), iTRS);
+              countTrs++;
+            }
+          }
+
+          if (trsID[nodeID] == iTRS) {
+            // this neighbor must be considered
+            _neighborStates[nodeID].push_back(gstate);
+          }
+
+          mapFaceTrsID.insert(currFace->getID(), iTRS);
+        }
+
+        geoBuilder.releaseGE();
+      }
+    }
+  }
+
+  mapFaceTrsID.sortKeys();
+  _mapTrsNameToID.sortKeys();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DATA>
+void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+
+  vector<SurfaceData*> surfaces;
+  readSurfaceData(surfaces);
+
+  const CFuint nbSurf = surfaces.size();
+
+  // Get the TRS list
+  vector< SafePtr<TopologicalRegionSet> > trsList;
+  for (CFuint i = 0; i < _trsName.size(); ++i) {
+    trsList.push_back(MeshDataStack::getActive()->getTrs(_trsName[i]));
+  }
+
+  // build the mapTrs2NodalValues storage
+  SafePtr<vector<MapTrs2NodalValues*> > mapTrs2NodalValues = getMapTrs2NodalValues();
+
+  // ideally this should be handled by NodalStatesExtrapolator but unfortunately its setup()
+  // is called after this function ...
+  mapTrs2NodalValues->resize(PhysicalModelStack::getActive()->getNbEq());
+  // resize the mapping TRS to nodal values with the number of equations
+  // you have one map for each variable
+
+  // allocate storage for mapping TRS to nodal values (temperature in this case)
+  (*mapTrs2NodalValues)[m_tempID] = new MapTrs2NodalValues();
+  for (CFuint iTrs = 0; iTrs < trsList.size(); ++iTrs) {
+    SafePtr<TopologicalRegionSet> trs = trsList[iTrs];
+    const CFuint nbTrsNodes = trs->getNbNodesInTrs();
+    RealVector* tWall = new RealVector(0.0,nbTrsNodes);
+    (*mapTrs2NodalValues)[m_tempID]->insert(&*trs, tWall);
+  }
+  (*mapTrs2NodalValues)[m_tempID]->sortKeys();
+
+  // allocate storage for mapping TRS to a mapping local (in the local mesh) nodeIDs
+  // and local TRS nodeIDs
+  SafePtr<MapTrsNodeIDs> mapNodeID2TrsNodeID = getMapTrs2NodeIDs();
+
+  for (CFuint iTrs = 0; iTrs < trsList.size(); ++iTrs) {
+    SafePtr<TopologicalRegionSet> trs = trsList[iTrs];
+    SafePtr<vector<CFuint> > trsNodeIDs = trs->getNodesInTrs();
+    const CFuint nbTrsNodes = trsNodeIDs->size();
+    CFMap<CFuint,CFuint>* mapNodeIDs = new CFMap<CFuint,CFuint>(nbTrsNodes);
+    for (CFuint i = 0; i < nbTrsNodes; ++i) {
+      mapNodeIDs->insert((*trsNodeIDs)[i],i);
+    }
+    mapNodeIDs->sortKeys();
+    mapNodeID2TrsNodeID->insert(&*trs, mapNodeIDs);
+  }
+  mapNodeID2TrsNodeID->sortKeys();
+
+  RealVector tmpNode(dim);
+  DataHandle<Node*,GLOBAL> nodes = socket_nodes.getDataHandle();
+    
+  ClosestPointData closestPoint;
+  closestPoint.surfaceIDs.resize(m_nbClosestPoints); 
+  closestPoint.pointsIDs.resize(m_nbClosestPoints); 
+  closestPoint.r.resize(m_nbClosestPoints); 
+  
+  for (CFuint iTrs = 0; iTrs < trsList.size(); ++iTrs) {
+    SafePtr<TopologicalRegionSet> trs = trsList[iTrs];
+    RealVector& nodalTwall = *(*mapTrs2NodalValues)[m_tempID]->find(&*trs);
+    SafePtr<vector<CFuint> > trsNodeIDs = trs->getNodesInTrs();
+    const CFuint nbTrsNodes = trsNodeIDs->size();
+    for (CFuint iNode = 0; iNode < nbTrsNodes; ++iNode) {
+      const Node& currNode = *nodes[(*trsNodeIDs)[iNode]];
+      
+      // during this preprocessing m_nbClosestPoints closest neighbors are sought
+      closestPoint.reset();
+      
+      bool flagOut = false;
+      for (CFuint is = 0; is < nbSurf && (!flagOut); ++is) {
+	const SurfaceData& sf = *surfaces[is];
+	const CFuint nbPoints = sf.Tw.size();
+	for (CFuint ip = 0; ip < nbPoints; ++ip) {
+	  sf.xyz.putRow(ip,tmpNode);
+	  
+	  const CFreal distance = MathFunctions::getDistance(currNode, tmpNode);
+	  if (distance < 1e-8) {
+	    // in this case we assume that the current node coincides with the mapping node
+	    // set the matching Twall in the array
+	    nodalTwall[iNode] = sf.Tw[ip]; 
+	    flagOut = true;
+	    break;
+	  }
+	  
+	  CFint counter = -1;
+	  for (CFuint n = 0; n < m_nbClosestPoints; ++n) {
+	    if (distance < closestPoint.r[n]) {
+	      counter++;
+	    }
+	  }
+	  
+	  if (counter >= 0) {
+	    // counter == (m_nbClosestPoints-1) corresponds to the point with min distance within the stencil
+	    // counter == 0                      corresponds to the point with max distance within the stencil
+	    
+	    for (CFuint i = 0; i < static_cast<CFuint>(counter); ++i) {
+	      closestPoint.regressionFromTo(i+1, i);
+	    }
+	    
+	    closestPoint.surfaceIDs[counter] = is; 
+	    closestPoint.pointsIDs[counter] = ip; 
+	    closestPoint.r[counter] = distance;
+	    
+	    // sanity check
+	    // const CFuint nbN = m_nbClosestPoints -1;
+	    // 	    for (CFuint i = 0; i < nbN; ++i) {
+	    // 	      cf_always_assert (closestPoint.r[i+1] <= closestPoint.r[i]);
+	    // 	    }
+	  }
+	}
+      }
+      
+      CFreal matchingTw = 0.0;
+      CFreal sumWeights = 0.0;
+      for (CFuint n = 0; n < m_nbClosestPoints; ++n) {
+	const SurfaceData& sf = *surfaces[closestPoint.surfaceIDs[n]];
+	const CFreal weight = 1./closestPoint.r[n]; 
+	sumWeights += weight;
+	matchingTw += weight*sf.Tw[closestPoint.pointsIDs[n]]; 
+      }
+      matchingTw /= sumWeights;
+      
+      // set the matching Twall in the array
+      nodalTwall[iNode] = matchingTw;
+      cf_assert(matchingTw > 0.0);
+    }
+  } 
+  
+  // cleanup the memory
+  for (CFuint is = 0; is < nbSurf; ++is) {
+    deletePtr(surfaces[is]);
+  }
+
+  // array of flags telling which interpolated or previously computed nodal values are available
+  _nodalValuesIDFlags.resize(PhysicalModelStack::getActive()->getNbEq());
+  _nodalValuesIDFlags.assign(_nodalValuesIDFlags.size(), false);
+  _nodalValuesIDFlags[m_tempID] = true;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DATA>
+void NodalStatesExtrapolator<DATA>::readSurfaceData(std::vector<SurfaceData*>& surfaces)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+
+  const CFuint dim = (m_extractCoordZID < 0) ? PhysicalModelStack::getActive()->getDim() : 3;
+  
+  ifstream fin(m_fileNameTw.c_str());
+  // The format is as follows:
+  
+  // NumberOfSurfaces
+  // SURFACE_NAME1 NumberOfPoints
+  // x y z T
+  // ...
+  // SURFACE_NAME2 NumberOfPoints
+  // x y z T
+  // ...
+  
+  CFLogInfo("START reading file " << m_fileNameTw << "\n");
+  
+  CFuint nbSurf = 0;
+  fin >> nbSurf;
+  
+  surfaces.resize(nbSurf);
+  
+  // store all the surface data
+  for (CFuint is = 0; is < nbSurf; ++is) {
+    std::string nameSurf = "";
+    fin >> nameSurf;
+    CFuint nbPoints = 0;
+    fin >> nbPoints;
+    
+    
+    CFLogInfo("NameSurf = " << nameSurf << ", nbPoints = " << nbPoints << "\n");
+    SurfaceData* sf = new SurfaceData();
+    sf->xyz.resize(nbPoints,dim);
+    sf->Tw.resize(nbPoints);
+    
+    for (CFuint ip = 0; ip < nbPoints; ++ip) {
+      for (CFuint iDim = 0; iDim < dim; ++iDim) {
+	fin >> sf->xyz(ip,iDim);
+      }
+      
+      if (m_xvec.size() > 0) {
+	cf_assert(std::abs(m_angle) > 0.0);
+	
+	// rotate coordinates
+	const CFreal x1 =  sf->xyz(ip,m_xvec[0])*std::cos(m_angle) + sf->xyz(ip,m_xvec[1])*std::sin(m_angle);
+	const CFreal y1 = -sf->xyz(ip,m_xvec[0])*std::sin(m_angle) + sf->xyz(ip,m_xvec[1])*std::	cos(m_angle);
+	sf->xyz(ip,m_xvec[0]) = x1;				   
+	sf->xyz(ip,m_xvec[1]) = y1;				   
+      }	
+      fin >> sf->Tw[ip];
+    }
+	
+    surfaces[is] = (m_extractCoordZID < 0) ?  sf : extractLineData(sf);
+  }
+  
+  CFLogInfo("END reading file " << m_fileNameTw << "\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DATA>
+typename NodalStatesExtrapolator<DATA>::SurfaceData* 
+NodalStatesExtrapolator<DATA>::extractLineData(SurfaceData* surface)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+
+  /// @TODO here there might be a BUG: be careful !!!
+
+  // if m_extractCoordZID >= 0 a line distribution is extracted from a {x y z T} distribution for z=0
+  //                           with z = x[m_extractCoordZID]
+  
+  CFreal minZ = MathConsts::CFrealMax();
+  const CFuint nbPoints = surface->Tw.size();
+  for (CFuint ip = 0; ip < nbPoints; ++ip) {
+    minZ = std::min(std::abs(surface->xyz(ip, m_extractCoordZID)), minZ);
+  }
+  
+  CFuint nbPointsOnLine = 0;
+  for (CFuint ip = 0; ip < nbPoints; ++ip) {
+    if (MathChecks::isEqual(std::abs(surface->xyz(ip, m_extractCoordZID)), minZ)) {
+      nbPointsOnLine++;
+    }
+  }
+  
+  SurfaceData* newData = new SurfaceData(); 
+  newData->xyz.resize(nbPointsOnLine,2);
+  newData->Tw.resize(nbPointsOnLine);
+  
+  CFuint counter = 0;
+  for (CFuint ip = 0; ip < nbPoints; ++ip) {
+    if (MathChecks::isEqual(std::abs(surface->xyz(ip, m_extractCoordZID)), minZ)) {
+      cout << surface->Tw[ip] << endl;
+      newData->xyz(counter, XX) = surface->xyz(ip, m_extractCoordXYID[XX]);
+      newData->xyz(counter, YY) = surface->xyz(ip, m_extractCoordXYID[YY]);
+      newData->Tw[counter] = surface->Tw[ip];
+      counter++;
+    }
+  }
+  
+  cf_always_assert(counter == nbPointsOnLine);
+  
+  // remove old SurfaceData
+  deletePtr(surface);
+  
+  //replace with new SurfaceData
+  return newData;  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,50 @@
+LIST( APPEND SpectralFVNavierStokes_files
+BCCurvedWallEuler2D.cxx
+BCCurvedWallEuler2D.hh
+BCCurvedWallEuler3D.cxx
+BCCurvedWallEuler3D.hh
+BCFarFieldCharEuler2D.cxx
+BCFarFieldCharEuler2D.hh
+BCFarFieldCharEuler3D.cxx
+BCFarFieldCharEuler3D.hh
+BCMirrorEuler2D.cxx
+BCMirrorEuler2D.hh
+BCMirrorEuler3D.cxx
+BCMirrorEuler3D.hh
+BCNoSlipWallHeatFluxNS2D.cxx
+BCNoSlipWallHeatFluxNS2D.hh
+BCNoSlipWallHeatFluxNS3D.cxx
+BCNoSlipWallHeatFluxNS3D.hh
+BCSubInletEulerRhoV3D.cxx
+BCSubInletEulerRhoV3D.hh
+BCSubInletEulerTtPtAlpha2D.cxx
+BCSubInletEulerTtPtAlpha2D.hh
+BCSubInletEulerTtPtAlpha3D.cxx
+BCSubInletEulerTtPtAlpha3D.hh
+BCSubOutletEuler2D.cxx
+BCSubOutletEuler2D.hh
+BCSubOutletEuler3D.cxx
+BCSubOutletEuler3D.hh
+NSQuadFreeBndFaceTermComputer.cxx
+NSQuadFreeBndFaceTermComputer.hh
+NSQuadFreeFaceTermComputer.cxx
+NSQuadFreeFaceTermComputer.hh
+NSQuadFreeVolTermComputer.cxx
+NSQuadFreeVolTermComputer.hh
+NSStdBndFaceTermComputer.cxx
+NSStdBndFaceTermComputer.hh
+NSStdFaceTermComputer.cxx
+NSStdFaceTermComputer.hh
+NSStdVolTermComputer.cxx
+NSStdVolTermComputer.hh
+NSFaceDiffusiveFluxLocalApproach.cxx
+NSFaceDiffusiveFluxLocalApproach.hh
+SpectralFVNavierStokes.hh
+)
+
+LIST ( APPEND SpectralFVNavierStokes_cflibs Framework ShapeFunctions)
+LIST ( APPEND SpectralFVNavierStokes_requires_mods  ShapeFunctions)
+
+CF_ADD_PLUGIN_LIBRARY ( SpectralFVNavierStokes )
+
+CF_WARN_ORPHAN_FILES()

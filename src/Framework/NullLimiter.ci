@@ -1,0 +1,59 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Framework_NullLimiter_ci
+#define COOLFluiD_Framework_NullLimiter_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+void NullLimiter<METHODDATA>::setup()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+template < typename METHODDATA>
+void NullLimiter<METHODDATA>::limit
+(const std::vector<std::vector<Node*> >& coord,
+ Framework::GeometricEntity* const cell,
+ CFreal* limiterValue)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+void NullLimiter<METHODDATA>::limitOnFace
+(const RealVector& rLeft, 
+ const RealVector& rRight,
+ CFreal* limiterValue)
+{
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+void NullLimiter<METHODDATA>::limitScalar(CFreal r, CFreal& limiterValue)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Framework_NullLimiter_ci

@@ -1,0 +1,406 @@
+#include "Framework/MeshData.hh"
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "FiniteVolume/CellCenterFVM.hh"
+#include "Common/PE.hh"
+#include "Common/MPI/MPIStructDef.hh"
+#include "MathTools/MathConsts.hh"
+#include "NavierStokes/EulerVarSet.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolumeICP {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename ST>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> >
+ICPplasmaFieldComputingBC<BASE,ST>::needsSockets()
+{
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result = BASE::needsSockets();
+  
+  result.push_back(&socket_volumes);
+  result.push_back(&socket_vacuumElFieldIntensity);
+  result.push_back(&socket_elCondField);
+  result.push_back(&socket_currentInCells);
+
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename ST>
+ICPplasmaFieldComputingBC<BASE,ST>::
+ICPplasmaFieldComputingBC(const std::string& name) :
+  BASE(name),
+  socket_volumes("volumes"),
+  socket_vacuumElFieldIntensity("vacuumElFieldIntensity"),
+  socket_elCondField("elCondField"),
+  socket_currentInCells("currentInCells"),
+  m_library(CFNULL),
+  m_srcTerm(CFNULL),
+  m_mapGhostState2ID(),
+  m_EpR_inGhostCell_sum(),
+  m_EpI_inGhostCell_sum(),
+  m_cellCentersCoord(),
+  m_currentInCells(),
+  m_physicalData(),
+  m_nbStatesInProc()
+{
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename ST>
+ICPplasmaFieldComputingBC<BASE,ST>::~ICPplasmaFieldComputingBC()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename ST>
+void ICPplasmaFieldComputingBC<BASE,ST>::setup()
+{ 
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  
+  BASE::setup();
+  
+  m_library = COOLFluiD::Framework::PhysicalModelStack::getActive()->getImplementor()->
+    getPhysicalPropertyLibrary<COOLFluiD::Framework::PhysicalChemicalLibrary>();  
+  cf_assert(m_library.isNotNull()); 
+
+  m_srcTerm = PhysicalModelStack::getActive()->getImplementor()->
+    getSourceTerm().d_castTo<ST>();
+  cf_assert(m_srcTerm.isNotNull());
+
+  // build the mapping between local ghost states and a local ID
+  const vector< SafePtr<TopologicalRegionSet> >& trs = this->getTrsList();
+  CFuint totalNbBCFaces = 0; 
+  for (CFuint i = 0; i < trs.size(); ++i) {
+    totalNbBCFaces += trs[i]->getLocalNbGeoEnts();
+  }
+  
+  m_mapGhostState2ID.reserve(totalNbBCFaces);
+  
+  Common::SafePtr<GeometricEntityPool<FaceTrsGeoBuilder> >
+    geoBuilder = this->getMethodData().getFaceTrsGeoBuilder();
+
+  SafePtr<FaceTrsGeoBuilder> geoBuilderPtr = geoBuilder->getGeoBuilder();
+  geoBuilderPtr->setDataSockets(this->socket_states, this->socket_gstates, this->socket_nodes);
+  FaceTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
+  geoData.isBFace = true;
+  
+  CFuint ghostID = 0;
+  for (CFuint i = 0; i < trs.size(); ++i) {
+    geoData.trs = trs[i];
+    const CFuint nbTrsFaces = geoData.trs->getLocalNbGeoEnts();
+    for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace, ++ghostID) {
+      // build the GeometricEntity
+      geoData.idx = iFace;
+      GeometricEntity *const face = geoBuilder->buildGE();
+      
+      m_mapGhostState2ID.insert(face->getState(1),ghostID);
+      // release the GeometricEntity
+      geoBuilder->releaseGE();
+    }
+  }
+  
+  m_EpR_inGhostCell_sum.resize(totalNbBCFaces);
+  m_EpI_inGhostCell_sum.resize(totalNbBCFaces);
+
+  PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm()->resizePhysicalData(m_physicalData);
+  cf_assert(m_physicalData.size() > 0);
+	  
+  const CFuint nbCellsInProc = this->socket_states.getDataHandle().size();
+  const CFuint nbProc = PE::GetPE().GetProcessorCount();
+  m_nbStatesInProc.resize(nbProc, 0);
+  
+  if (nbProc > 1) {
+#ifdef CF_HAVE_MPI
+    vector<CFuint> nbCellsInProcVec(nbProc, 0);
+    nbCellsInProcVec[PE::GetPE().GetRank()] = nbCellsInProc;
+    
+    MPI_Allreduce(&nbCellsInProcVec[0], &m_nbStatesInProc[0], nbProc, MPI_UNSIGNED, MPI_MAX,
+		  PE::GetPE().GetCommunicator());
+#endif
+  }
+  else {
+    m_nbStatesInProc[0] = nbCellsInProc;
+  }
+  
+  CFuint maxNbCellsInProc = m_nbStatesInProc[0];
+  for (CFuint i = 1; i < nbProc; ++i) {
+    if (m_nbStatesInProc[i] > maxNbCellsInProc) {
+      maxNbCellsInProc = m_nbStatesInProc[i];
+    }
+  }
+  
+  // allocate the maximum possible size for the cell center coordinates array
+  m_cellCentersCoord.resize(maxNbCellsInProc*PhysicalModelStack::getActive()->getDim());
+  m_currentInCells.resize(maxNbCellsInProc*2);
+  
+  // this is needed for preventing base classes to handle the last two variables
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  this->m_computeVars[nbEqs-2] = this->m_computeVars[nbEqs-1] = false;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename ST>
+void ICPplasmaFieldComputingBC<BASE,ST>::setGhostState
+(Framework::GeometricEntity *const face)
+{
+  // coupling (*ghostState) with every cell in the domain
+  ///@TODO assumption r=y !! everywhere in the code ...
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::ICP;
+  using namespace COOLFluiD::Numerics::FiniteVolume;
+    
+  // PLEASE NOTE that j*S (current) is computed in ::preProcessing
+  //             and stored in two vectors and in a socket.
+  //             The socket is needed only to write the tecplot file,
+  //             it is not used here.
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint nbPrevEqs = totalNbEqs - 2;
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
+  
+  if (nbEqs >= nbPrevEqs) {
+    BASE::setGhostState(face);
+  }
+    
+  // here it is assumed that the ICP induction equations are the last ones.
+  // this is a "test" and only if it's ok we compute BCs
+  if (nbEqs == 2 || nbEqs > nbPrevEqs) {
+    State *const innerState = face->getState(0);
+    State *const ghostState = face->getState(1);
+    
+    const CFuint epR = innerState->size() - 2;
+    const CFuint epI = innerState->size() - 1;
+    
+    const CFuint ghostID = m_mapGhostState2ID.find(ghostState);
+    (*ghostState)[epR] = m_EpR_inGhostCell_sum[ghostID];
+    (*ghostState)[epI] = m_EpI_inGhostCell_sum[ghostID];
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename ST>
+void ICPplasmaFieldComputingBC<BASE,ST>::preProcess()
+{
+  // this method computes el Conductivity first and
+  // then current in cells, which is actually what we need
+  // TODO assumption r=y !! everywhere in the code ...
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  CFLog(VERBOSE, "ICPplasmaFieldComputingBC<BASE,ST>::preProcess() START\n");
+    
+  // socket where we will store results
+  DataHandle < Framework::State*, Framework::GLOBAL > states = this->socket_states.getDataHandle();
+  DataHandle<RealVector> currentInCells = socket_currentInCells.getDataHandle();
+  const CFuint nbCells = states.size();
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  
+  // preprocess current in all cells and store the result (only one BC per iteration computes this)
+  if (!this->getMethodData().preProcessBCFlag()) {
+    this->getMethodData().preProcessBCFlag() = true;
+    
+    // volumes are needed!
+    DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+    // conductivity is needed! we can save a lot of time with this..
+    DataHandle<CFreal> elCondField = socket_elCondField.getDataHandle();
+    // Ev field in cells is needed
+    DataHandle<RealVector> vacuumElFieldIntensity = socket_vacuumElFieldIntensity.getDataHandle();
+
+    const CFuint nbTs = m_library->getNbTempVib() + m_library->getNbTe();
+    const CFuint TvID = nbEqs-nbTs-2;
+    // this is needed to obtain Tdim and pdim
+    SafePtr<ConvectiveVarSet> updateVarSet = this->getMethodData().getUpdateVar();
+    cf_assert(updateVarSet.isNotNull());
+    SafePtr<EulerTerm> eulerTerm = PhysicalModelStack::getActive()->getImplementor()->
+    getConvectiveTerm().d_castTo<EulerTerm>();
+    cf_assert(eulerTerm.isNotNull());
+    const RealVector& refData = eulerTerm->getReferencePhysicalData();
+    const CFuint eRID = nbEqs-2;
+    const CFuint eIID = nbEqs-1;
+ 
+    for (CFuint iCell = 0; iCell < nbCells; ++iCell) 
+    {
+      // T, p
+      State *const currState = states[iCell];
+      updateVarSet->computePhysicalData(*currState, m_physicalData);
+      CFreal pdim = eulerTerm->getPressureFromState(m_physicalData[EulerTerm::P])*refData[EulerTerm::P];
+      CFreal Tdim = m_physicalData[EulerTerm::T]*refData[EulerTerm::T];
+      CFreal* tVec = (nbTs > 0) ? &(*currState)[TvID] : CFNULL;
+      elCondField[iCell] = m_library->sigma(Tdim, pdim, tVec);
+            
+      if (m_srcTerm->pegaseApproximation())                           // linear approximation of sigma: OBSOLETE
+      {                                                               // 
+        if (Tdim > 7250)                                           // now, use interpolation in MutationLibrary.cxx
+              elCondField[iCell]=904.11+(elCondField[iCell] -904.11)*0.91;     // (this flag should be removed!)
+      }
+   
+      // computing j*S (current) and store result in socket
+      currentInCells[0][iCell] = ((*currState)[eRID] + vacuumElFieldIntensity[0][iCell])*volumes[iCell]*elCondField[iCell];
+      currentInCells[1][iCell] = ((*currState)[eIID] + vacuumElFieldIntensity[1][iCell])*volumes[iCell]*elCondField[iCell]; 
+    }
+  }
+  
+  // frequency and permeability
+  const CFreal frequency = m_srcTerm->getFreqMHz() * 1000000.; 
+  const CFreal permeability = m_srcTerm->getPermeability();
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbProc = PE::GetPE().GetProcessorCount();
+  const CFuint rank   = PE::GetPE().GetRank();
+  
+  // cells E contribution sum
+  m_EpR_inGhostCell_sum = 0.;
+  m_EpI_inGhostCell_sum = 0.;
+  
+  for (CFuint root = 0; root < nbProc; ++root) {
+
+#ifdef CF_HAVE_MPI
+    MPIStruct ms;
+    int ln[3];
+    ln[0] = 1;
+    ln[1] = m_nbStatesInProc[root]*dim;
+    ln[2] = m_nbStatesInProc[root]*2;
+#endif
+			
+    CFuint nbUpdatables = 0;
+    CFuint eUpdatables = 0;
+    if (rank == root) {
+      for (CFuint iCell = 0; iCell < nbCells; ++iCell) {
+	// only updatable states are used so that we are sure that one state won't be counted more than once
+	if (states[iCell]->isParUpdatable()) {
+	  for (CFuint ix = 0; ix < dim; ++ix) {
+	    m_cellCentersCoord[nbUpdatables++] = states[iCell]->getCoordinates()[ix];
+	  }
+	  
+	  m_currentInCells[eUpdatables++] = currentInCells[0][iCell];
+	  m_currentInCells[eUpdatables++] = currentInCells[1][iCell];
+	}
+      }
+    }    
+    
+#ifdef CF_HAVE_MPI  
+    MPIStructDef::buildMPIStruct(&nbUpdatables, &m_cellCentersCoord[0], &m_currentInCells[0], ln, ms);
+    MPI_Bcast(ms.start, 1, ms.type, root, PE::GetPE().GetCommunicator());
+#endif
+    
+    const CFuint totalNbBCFaces = m_mapGhostState2ID.size();
+    for (CFuint ig = 0; ig < totalNbBCFaces; ++ig) {
+      State *const ghostState = m_mapGhostState2ID.getKey(ig);
+      const CFuint ghostID = m_mapGhostState2ID.find(ghostState);
+      const CFreal rGhostCell = ghostState->getCoordinates()[YY];
+      const CFreal zGhostCell = ghostState->getCoordinates()[XX];
+      
+      const CFuint nbCellsInProc = nbUpdatables/dim; 
+      for (CFuint iCell = 0; iCell < nbCellsInProc; ++iCell) {
+	// set coordinates of cell centroid
+	const CFuint startID = iCell*dim;
+	const CFreal rCell = m_cellCentersCoord[startID + YY];
+	const CFreal zCell = m_cellCentersCoord[startID + XX];
+	
+	// k to be used in elliptic integrals
+	const CFreal k = sqrt(4.*rCell*rGhostCell/((rCell+rGhostCell)*(rCell+rGhostCell)+(zGhostCell-zCell)*(zGhostCell-zCell)));
+	
+	// we need the Electric Field (real & imaginary part):
+	// real component of electric field intensity (from vector potential imaginary component)
+	// const CFreal vectorPotentialIm = sqrt(rCell/rGhostCell)*ellipticIntegralCombined(k)*.5*permeability*currentInCells[1][iCell]/MathTools::MathConsts::CFrealPi() ;
+	//       const CFreal EpR_inGhostCell_contribute = 2.*MathTools::MathConsts::CFrealPi()*frequency*vectorPotentialIm ;
+	//       // imaginary component of electric field intensity (from vector potential real component)
+	//       const CFreal vectorPotentialRe = sqrt(rCell/rGhostCell)*ellipticIntegralCombined(k)* .5*permeability*currentInCells[0][iCell]/MathTools::MathConsts::CFrealPi() ;
+	//       const CFreal EpI_inGhostCell_contribute = -2.*MathTools::MathConsts::CFrealPi()*frequency*vectorPotentialRe ;
+	
+	// we need the Electric Field (real & imaginary part):
+	// real component of electric field intensity (from vector potential imaginary component)
+	const CFuint startIDe = iCell*2;
+	cf_assert(rGhostCell > 0.);
+		
+	const CFreal coeff = sqrt(rCell/rGhostCell)*ellipticIntegralCombined(k)*.5*permeability*frequency;
+	// real component of electric field intensity (from vector potential imaginary component)
+	const CFreal EpR_inGhostCell_contribute = 2.*coeff*m_currentInCells[startIDe+1];
+	// imaginary component of electric field intensity (from vector potential real component)
+	const CFreal EpI_inGhostCell_contribute = -2.*coeff*m_currentInCells[startIDe];
+	
+	// adding up contribution:
+	m_EpR_inGhostCell_sum[ghostID] += EpR_inGhostCell_contribute;
+	m_EpI_inGhostCell_sum[ghostID] += EpI_inGhostCell_contribute;
+      }
+    }
+  } 
+  
+  CFLog(VERBOSE, "ICPplasmaFieldComputingBC<BASE,ST>::preProcess() END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename ST> 
+inline CFreal ICPplasmaFieldComputingBC<BASE,ST>::ellipticIntegralFirstKind(CFreal const& k)
+{
+  CFreal elIntFirstKind = 0.;
+  const CFreal P = 1.- k*k;
+
+  if(P < 1.e-15) elIntFirstKind = exp(1000.);
+  else {
+    elIntFirstKind = 1.38629436 + P*(0.096663443 + P*(0.035900924
+         + P*(0.037425637 + 0.014511962*P)))
+         - log(P)*(0.5 + P*(0.12498594 + P*(0.068802486
+         + P*(0.033283553 + 0.0044178701*P))));
+  }
+
+  return elIntFirstKind;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename ST> 
+inline CFreal ICPplasmaFieldComputingBC<BASE,ST>::ellipticIntegralSecondKind(CFreal const& k)
+{
+  CFreal elIntSecondKind = 0.;
+  const CFreal P = 1.- k*k;
+
+  if(P < 1.e-15) elIntSecondKind = 1.;
+  else {
+    elIntSecondKind = 1. + P*(0.44325141 + P*(0.062606012 + P*(0.047573836
+         + 0.017365065*P)))
+         - log(P)*P*(0.24998368 + P*(0.0920018
+         + P*(0.040696975 + 0.0052644964*P)));
+  }
+
+  return elIntSecondKind;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename ST> 
+inline CFreal ICPplasmaFieldComputingBC<BASE,ST>::ellipticIntegralCombined(CFreal const& k)
+{
+  CFreal elIntComb = 0.;
+  if(k < 1.e-15) elIntComb = 0.;
+  else elIntComb = ((2./k) - k)*ellipticIntegralFirstKind(k) - (2./k)*ellipticIntegralSecondKind(k);
+  return elIntComb;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

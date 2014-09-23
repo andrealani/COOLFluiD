@@ -1,0 +1,49 @@
+GET_VER 0.2
+
+HEADER;
+	2D;
+	cylinder;
+	cylinder at Re 40;
+END_HEADER;
+
+
+GEOMETRY;
+
+	SEC_POINT;
+	// id x y z 
+	#1 = POINT(  0.5, 0.0 );
+	#2 = POINT( 10.0, 0.0 );
+	END_SEC_POINT;
+
+	SEC_CURVE;
+	// inner circle				
+	#1 = CIRCLE( (0.0,0.0), (1,0), (0,1), 0.5  ); // circle ( center, ox, oy, radius )
+	#2 = CIRCLE( (0.0,0.0), (1,0), (0,1), 10.0 ); // circle ( center, ox, oy, radius )
+	END_SEC_CURVE;
+
+END_GEOMETRY;
+
+
+
+
+TOPOLOGY;
+
+	SEC_VERTEX;
+	//id point_id
+	#1 = VERTEX( #1);
+	#2 = VERTEX( #2);
+	END_SEC_VERTEX;
+
+	SEC_EDGE;
+	// id id_curve id_vertex_1 id_vertex_2
+	#1 = EDGE(#1,(#1,#1), T);
+	#2 = EDGE(#2,(#2,#2), F);
+	END_SEC_EDGE;
+
+	SEC_FACE;
+	// id id_surface list_of_lists_of_edgeids
+	#1 = FACE( #0, LOOP( ( (#1,T), (#2,T) ), T) );
+	END_SEC_FACE;
+
+	
+END_TOPOLOGY;

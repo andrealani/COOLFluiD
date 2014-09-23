@@ -1,0 +1,354 @@
+#include "FluctSplit/InwardNormalsData.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Framework/MeshData.hh"
+#include "NavierStokes/NavierStokesVarSet.hh"
+#include "NavierStokes/EulerTerm.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+
+
+    namespace FluctSplitNEQ {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename UPDATEVAR>
+TCNEQDiffTerm<BASE, UPDATEVAR>::TCNEQDiffTerm(const std::string& name) :
+  BASE(name),
+  _diffVar(CFNULL),
+  _radius(0.0),
+  _updateVar(CFNULL),
+  _states(),
+  _values(),
+  _normal(),
+  _jacobRiYi(),
+  _gradRi(),
+  _gradYi()
+{
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename UPDATEVAR >
+TCNEQDiffTerm<BASE, UPDATEVAR>::~TCNEQDiffTerm()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename UPDATEVAR>
+void TCNEQDiffTerm<BASE, UPDATEVAR>::setDiffusiveVarSet
+(Common::SafePtr<Framework::DiffusiveVarSet> diffVar)
+{
+  _diffVar = diffVar.template d_castTo<Physics::NavierStokes::NavierStokesVarSet>();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename UPDATEVAR>
+void TCNEQDiffTerm<BASE, UPDATEVAR>::setUpdateVarSet
+(Common::SafePtr<Framework::ConvectiveVarSet> updateVar)
+{
+  if (BASE::addToDerivedTerm()) {	
+    BASE::setUpdateVarSet(updateVar);
+ }
+  _updateVar = updateVar.template d_castTo<UPDATEVAR>();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename UPDATEVAR>
+void TCNEQDiffTerm<BASE, UPDATEVAR>::computeDiffusiveTerm
+(Framework::GeometricEntity *const geo, 
+ std::vector<RealVector>& result, bool updateCoeffFlag)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::FluctSplit;
+  using namespace COOLFluiD::Physics::NavierStokes;
+   
+  if (BASE::addToDerivedTerm()) {			
+    BASE::computeDiffusiveTerm(geo, result, updateCoeffFlag);
+  }
+  
+  // gradient and average values computation
+  const RealVector& edata = _updateVar->getModel()->getPhysicalData();
+  DistributionData& dd = this->getMethodData().getDistributionData();
+  RealVector& avState = dd.avState;
+  
+  if (!dd.sourceComputeGradients) {
+    computeCellGradientsAndAverageState(geo, edata);
+    _diffVar->setComposition(avState, dd.isPerturb, dd.iVar);
+  }
+  
+  //_diffVar->setComposition(avState, dd.isPerturb, dd.iVar);
+
+  DataHandle< InwardNormalsData*> normals = this->socket_normals.getDataHandle();
+  DataHandle< CFreal> updateCoeff = this->socket_updateCoeff.getDataHandle();
+  const CFuint nbCellStates = geo->getStates()->size();
+
+  if (updateCoeffFlag) {
+    // compute the radius (axysimmetric computations)
+    _radius = 0.0;
+    if (this->getMethodData().isAxisymmetric()) {
+      for (CFuint i = 0; i < nbCellStates; ++i) {
+	const Node& node = *geo->getNode(i);
+	_radius += node[YY];
+      }
+      _radius /= nbCellStates;
+    }
+  }
+  
+  const CFuint cellID = geo->getID();
+  const CFreal cellVolume = this->socket_volumes.getDataHandle()[cellID];
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFreal dimCoeff = 1./dim;
+  const CFreal ovDimCoeff2 = 1./(dimCoeff*dimCoeff);
+  NSTerm& model = _diffVar->getModel();
+  
+  vector<RealVector*>& gradients = dd.gradients;
+  const CFreal avRho = edata[EulerTerm::RHO];
+  
+  // set the diffusive term
+  for (CFuint i = 0; i < nbCellStates; ++i) {
+    // this is not the unit normal !!
+    for (CFuint iDim = 0; iDim < dim; ++iDim) {
+      _normal[iDim] = normals[cellID]->getNodalNormComp(i,iDim);
+    }
+    
+    const RealVector& flux = _diffVar->getFlux(avState, gradients, _normal, _radius);
+    if (BASE::addToDerivedTerm()) {
+      result[i] += (-dimCoeff)*flux;
+    }
+    else { 
+      result[i] = (-dimCoeff)*flux;
+    }
+        
+    if (updateCoeffFlag) {
+      const CFreal faceArea = normals[cellID]->getAreaNode(i);
+      const CFreal nu = (model.getPhysicalData())[NSTerm::MU]/avRho;
+      updateCoeff[geo->getState(i)->getLocalID()] += nu*faceArea*faceArea/(cellVolume*ovDimCoeff2);
+      
+      // compute and store the cell Peclet number
+      if (this->_store_Pe_cell) {
+	vector<State*> *const cellStates = geo->getStates();
+	CFreal prodEdgeLenghts = MathFunctions::getDistance((*cellStates)[0]->getCoordinates(), (*cellStates)[1]->getCoordinates());
+	prodEdgeLenghts *= MathFunctions::getDistance((*cellStates)[1]->getCoordinates(), (*cellStates)[2]->getCoordinates());
+	prodEdgeLenghts *= MathFunctions::getDistance((*cellStates)[2]->getCoordinates(), (*cellStates)[0]->getCoordinates());
+	CFreal nbEdges = 3.0;
+	if (dim == DIM_3D && cellStates->size() == 4) {
+	  // this is only valid for tetrahedra (as the whole discretization here, anyway)
+	  prodEdgeLenghts *= MathFunctions::getDistance((*cellStates)[0]->getCoordinates(), (*cellStates)[3]->getCoordinates());
+	  prodEdgeLenghts *= MathFunctions::getDistance((*cellStates)[1]->getCoordinates(), (*cellStates)[3]->getCoordinates());
+	  prodEdgeLenghts *= MathFunctions::getDistance((*cellStates)[2]->getCoordinates(), (*cellStates)[3]->getCoordinates());
+	  nbEdges *= 2.0;
+	}
+	
+	const CFreal avgEdgeSize = pow ( prodEdgeLenghts, 1./nbEdges);
+	this->socket_Pe_cell.getDataHandle()[cellID] = avgEdgeSize*edata[EulerTerm::V]/nu;
+      }
+    }
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename UPDATEVAR>
+void TCNEQDiffTerm<BASE, UPDATEVAR>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+   BASE::setup();
+  
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbNodesInControlVolume =
+    MeshDataStack::getActive()->Statistics().getMaxNbStatesInCell();
+  
+  _states.resize(nbNodesInControlVolume);
+  _values.resize(nbEqs, nbNodesInControlVolume);
+  _normal.resize(dim);
+  
+  const CFuint nbSpecies = _updateVar->getModel()->getNbScalarVars(0);
+  _jacobRiYi.resize(nbSpecies,nbSpecies);
+  _gradRi.resize(nbSpecies, dim);
+  _gradYi.resize(nbSpecies, dim);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename UPDATEVAR>
+void TCNEQDiffTerm<BASE, UPDATEVAR>::configure ( Config::ConfigArgs& args )
+{
+  BASE::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename UPDATEVAR>
+void TCNEQDiffTerm<BASE, UPDATEVAR>::computeCellGradientsAndAverageState
+(Framework::GeometricEntity *const geo, const RealVector& pdata)
+{ 
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::FluctSplit;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  DataHandle< InwardNormalsData*> normals = this->socket_normals.getDataHandle();
+  vector<State*> *const cellStates = geo->getStates();
+  const CFuint nbCellStates = cellStates->size();
+  
+  // store the pointers to state in another array (of RealVector*)
+  for (CFuint i = 0; i < nbCellStates; ++i) {
+    _states[i] = (*cellStates)[i];
+  }
+  
+  // OLD
+  // compute vars that will be used to compute the gradients
+  //_diffVar->setGradientVars(_states, _values, geo->nbNodes());
+  
+  const CFuint cellID = geo->getID();
+  const CFreal cellVolume = this->socket_volumes.getDataHandle()[cellID];
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFreal dimCoeff = 1./dim;
+  const CFreal coeffGrad = dimCoeff/cellVolume;
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint nbSpecies = _updateVar->getModel()->getNbScalarVars(0);
+  const CFreal avRho = pdata[EulerTerm::RHO];
+  if(avRho < 0.0) {
+    cout << "negative avRho = " << avRho << " in cell "<< geo->getID() << endl;
+    cout << "pdata = " << pdata << endl;
+    abort();
+  }
+  const CFreal ovRho = 1./avRho;
+  
+ /* // OLD
+  vector<RealVector*>& gradients = 
+    this->getMethodData().getDistributionData().gradients;
+  
+  for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+    RealVector& grad = *gradients[iEq];
+    grad = 0.0;
+    
+    // u,v,w,T,Tv_i
+    if (iEq >= nbSpecies) {
+      for (CFuint is = 0; is < nbCellStates; ++is) {
+	for (CFuint iDim = 0; iDim < dim; ++iDim) {
+	  grad[iDim] += _values(iEq,is)*normals[cellID]->getNodalNormComp(is,iDim);
+	}
+      }
+    }
+    else {
+      // in the case of partial densities compute first the gradients
+      // of the partial densities and then divide by the average cell 
+      // density to get the gradient of mass fractions
+      for (CFuint is = 0; is < nbCellStates; ++is) {
+        for (CFuint iDim = 0; iDim < dim; ++iDim) {
+	  grad[iDim] += (*_states[is])[iEq]*normals[cellID]->getNodalNormComp(is,iDim);
+        }
+      }
+      grad *= ovRho;
+    }
+    grad *= coeffGrad;
+  }*/
+  
+  /// ---------------------------------------------------------- ///
+  /// all the following should be moved to a function 
+  /// UPDATEVAR::setAverage(pdata, avState, _values)
+  const CFuint firstSpecies = _updateVar->getModel()->getFirstScalarVar(0);
+  
+  // AL: @TODO we suppose that {rho_i u v T Tv, aka RhoivtTv, variables are used !!!!
+  RealVector& avState = this->getMethodData().getDistributionData().avState;
+  for (CFuint is = 0; is < nbSpecies; ++is) {
+    const CFreal ys = pdata[firstSpecies + is];
+    avState[is] = avRho*ys;
+    
+    for (CFuint js = 0; js < nbSpecies; ++js) {
+      _jacobRiYi(is,js) = (js != is) ? -ys*ovRho : (1.-ys)*ovRho;
+    }
+  }
+  
+ //OLD
+ /* RealVector& avState = this->getMethodData().getDistributionData().avState;
+  for (CFuint is = 0; is < nbSpecies; ++is) {
+    avState[is] = avRho*pdata[firstSpecies + is];
+  }*/
+
+  
+  avState[nbSpecies]   = pdata[EulerTerm::VX];
+  avState[nbSpecies+1] = pdata[EulerTerm::VY];
+  
+  const CFuint nbTvs = _updateVar->getModel()->getNbScalarVars(1);
+  if (nbTvs > 0) {
+    CFreal avTv = 0.0; 
+    const CFuint tvID = nbSpecies + dim + 1;
+    for (CFuint iState = 0; iState < nbCellStates; ++iState) {
+      avTv += (*_states[iState])[tvID];
+    }
+    avTv /= nbCellStates;
+    
+    avState[tvID] = avTv; 
+  }
+  
+  if (dim == DIM_3D) {
+    avState[nbSpecies+2] = avRho*pdata[EulerTerm::VZ];
+    avState[nbSpecies+3] = pdata[EulerTerm::T];
+  }
+  else {
+    avState[nbSpecies+2] = pdata[EulerTerm::T];
+  }
+  
+  vector<RealVector*>& gradients = 
+    this->getMethodData().getDistributionData().gradients;
+  
+  for (CFuint iEq = nbSpecies; iEq < nbEqs; ++iEq) {
+    RealVector& grad = *gradients[iEq];
+    grad = 0.0;
+    
+    // u,v,w,T,Tv_i
+    for (CFuint is = 0; is < nbCellStates; ++is) {
+      for (CFuint iDim = 0; iDim < dim; ++iDim) {
+	grad[iDim] += (*_states[is])[iEq]*normals[cellID]->getNodalNormComp(is,iDim);
+      }
+    }
+    grad *= coeffGrad;
+  }
+  
+  // species mass fractions gradients
+  _gradRi = 0.0;
+  for (CFuint iEq = 0; iEq < nbSpecies; ++iEq) {
+    // rho_s gradients
+    for (CFuint is = 0; is < nbCellStates; ++is) {
+      for (CFuint iDim = 0; iDim < dim; ++iDim) {
+	const CFreal nn = normals[cellID]->getNodalNormComp(is,iDim);
+	_gradRi(iEq, iDim) += (*_states[is])[iEq]*nn*coeffGrad;
+      }
+    }
+  }  
+  
+  _gradYi = _jacobRiYi*_gradRi;
+ 
+  for (CFuint iEq = 0; iEq < nbSpecies; ++iEq) {
+    RealVector& grad = *gradients[iEq];
+    for (CFuint iDim = 0; iDim < dim; ++iDim) {
+      grad[iDim] = _gradYi(iEq,iDim);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace FluctSplitNEQ
+
+
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

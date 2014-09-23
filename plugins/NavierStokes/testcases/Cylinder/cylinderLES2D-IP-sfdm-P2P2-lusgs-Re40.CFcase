@@ -1,0 +1,128 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+# The following residual is computed using a constant WALE model with the constant set to 0.3
+### Residual = -0.73632286
+
+
+#Simulator.TraceToStdOut = true
+
+RegistSignalHandlers = off
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libGmsh2CFmesh libParaViewWriter libTecplotWriter libNavierStokes libSpectralFD libSpectralFDNavierStokes libLUSGSMethod libAeroCoefSpectralFD libLES libSpectralFDLES 
+
+####################################
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Cylinder/
+Simulator.Paths.ResultsDir = ./
+
+####################################
+Simulator.SubSystem.Default.PhysicalModelType = LES2D
+Simulator.SubSystem.LES2D.refValues = 1.0 0.1774823934930 0.1774823934930 2.51575
+#Simulator.SubSystem.LES2D.refLength = 1.0
+#Simulator.SubSystem.LES2D.ConvTerm.pRef    = 1
+#Simulator.SubSystem.LES2D.ConvTerm.tempRef = 0.003483762
+#Simulator.SubSystem.LES2D.ConvTerm.machInf = 0.15
+#Simulator.SubSystem.LES2D.DiffTerm.Reynolds = 40.0
+Simulator.SubSystem.LES2D.DiffTerm.ViscosityLaw = FixedKinematicViscosity
+Simulator.SubSystem.LES2D.DiffTerm.FixedKinematicViscosity.KinVisc = 0.00443706
+
+####################################
+Simulator.SubSystem.OutputFormat        = CFmesh ParaView Tecplot
+Simulator.SubSystem.CFmesh.FileName     = cylinderNS-sfdmP2P1-sol.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+
+Simulator.SubSystem.ParaView.FileName    = cylinderNS-sfdmP2P1-sol.vtu
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.ParaView.SaveRate = 10
+Simulator.SubSystem.ParaView.AppendTime = false
+Simulator.SubSystem.ParaView.AppendIter = false
+
+Simulator.SubSystem.Tecplot.FileName    = cylinderNS-sfdmP2P1-sol.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+
+####################################
+Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 5
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
+
+Simulator.SubSystem.ConvergenceMethod = NonlinearLUSGSIterator
+Simulator.SubSystem.NonlinearLUSGSIterator.ConvergenceFile = convergence-lusgs.plt
+Simulator.SubSystem.NonlinearLUSGSIterator.ShowRate        = 1
+Simulator.SubSystem.NonlinearLUSGSIterator.ConvRate        = 1
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.JacobFreezFreq = 1
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.MaxSweepsPerStep = 5
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.Norm = -6.
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.NormRes = L2LUSGS
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.PrintHistory = true
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.CFL.Value = 0.5
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.CFL.Function.Def = min(1e16,0.5*2.0^max(i-0,0))
+
+####################################
+Simulator.SubSystem.SpaceMethod = SpectralFDMethod
+
+Simulator.SubSystem.Default.listTRS = InnerCells Cylinder FarField
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cylinderNSQuadCurved.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = SpectralFDMethod
+
+####################################
+# choose which builder we use
+#Simulator.SubSystem.SpectralFDMethod.Builder = StdBuilder
+Simulator.SubSystem.SpectralFDMethod.Builder = MeshUpgrade
+Simulator.SubSystem.SpectralFDMethod.Builder.PolynomialOrder = P1
+Simulator.SubSystem.SpectralFDMethod.SpaceRHSJacobCom = DiagBlockJacob
+Simulator.SubSystem.SpectralFDMethod.TimeRHSJacobCom  = PseudoSteadyTimeDiagBlockJacob
+Simulator.SubSystem.SpectralFDMethod.SpaceRHSForGivenCell = RhsInGivenCellCompact
+Simulator.SubSystem.SpectralFDMethod.TimeRHSForGivenCell  = PseudoSteadyTimeRHSInGivenCell
+Simulator.SubSystem.SpectralFDMethod.SetupCom = LUSGSSetup
+Simulator.SubSystem.SpectralFDMethod.UnSetupCom = LUSGSUnSetup
+Simulator.SubSystem.SpectralFDMethod.PrepareCom = LUSGSPrepare
+Simulator.SubSystem.SpectralFDMethod.ExtrapolateCom = Null
+#Simulator.SubSystem.SpectralFDMethod.Restart = true
+
+####################################
+Simulator.SubSystem.SpectralFDMethod.Data.UpdateVar   = Cons
+Simulator.SubSystem.SpectralFDMethod.Data.SolutionVar = Cons
+Simulator.SubSystem.SpectralFDMethod.Data.LinearVar   = Roe
+Simulator.SubSystem.SpectralFDMethod.Data.DiffusiveVar= Cons
+Simulator.SubSystem.SpectralFDMethod.Data.VolTermComputer     = LESCompactVolTermComputer
+Simulator.SubSystem.SpectralFDMethod.Data.FaceTermComputer    = LESIPFaceTermComputer
+Simulator.SubSystem.SpectralFDMethod.Data.BndFaceTermComputer = LESIPBndFaceTermComputer
+Simulator.SubSystem.SpectralFDMethod.Data.RiemannFlux = LaxFriedrichsFlux
+Simulator.SubSystem.SpectralFDMethod.Data.FaceDiffFlux = LESIPApproach
+
+####################################
+Simulator.SubSystem.SpectralFDMethod.InitComds = StdInitState
+Simulator.SubSystem.SpectralFDMethod.InitNames = InField
+
+Simulator.SubSystem.SpectralFDMethod.InField.applyTRS = InnerCells
+Simulator.SubSystem.SpectralFDMethod.InField.Vars = x y
+Simulator.SubSystem.SpectralFDMethod.InField.Def = 1.0 0.1774823934930 0.0 2.51575
+
+Simulator.SubSystem.SpectralFDMethod.BcNames = Wall FarField
+Simulator.SubSystem.SpectralFDMethod.Wall.applyTRS = Cylinder
+Simulator.SubSystem.SpectralFDMethod.FarField.applyTRS = FarField
+
+Simulator.SubSystem.SpectralFDMethod.Data.BcTypes = NoSlipWallHeatFluxNS2D  Dirichlet
+Simulator.SubSystem.SpectralFDMethod.Data.BcNames = Wall                    FarField
+
+Simulator.SubSystem.SpectralFDMethod.Data.FarField.Vars = x y
+Simulator.SubSystem.SpectralFDMethod.Data.FarField.Def  = 1.0 0.1774823934930 0.0 2.51575
+
+####################################
+CFEnv.RegistSignalHandlers = false

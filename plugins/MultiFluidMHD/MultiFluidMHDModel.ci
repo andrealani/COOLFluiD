@@ -1,0 +1,169 @@
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "Common/BadValueException.hh"
+
+//////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace MultiFluidMHD {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MultiFluidMHDModel<DIM>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFuint >
+    ("nbSpecies","Number of species.");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+MultiFluidMHDModel<DIM>::MultiFluidMHDModel(const std::string& name)
+  : Framework::ConvectionDiffusionReactionPM
+<Framework::MultiScalarTerm<EulerMFMHDTerm>,DiffMFMHDTerm, ReacMFMHDTerm>(name)
+{
+  addConfigOptionsTo(this);
+  _nbSpecies = 1;
+  setParameter("nbSpecies",&_nbSpecies);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+MultiFluidMHDModel<DIM>::~MultiFluidMHDModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint MultiFluidMHDModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint MultiFluidMHDModel<DIM>::getNbEquations() const
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  std::valarray<CFuint> v(3);
+  v[0] = _nbSpecies;     // y_i
+  v[1] = _nbSpecies*DIM; // u_i, v_i, w_i
+  v[2] = _nbSpecies;   // E_i
+  
+  // strides tell how many entries in the physical data array are needed 
+  // for each scalar variable
+  std::valarray<CFuint> strides(3);
+  strides[0] = 1;
+  strides[1] = 1;
+  strides[2] = 4; // [T,p,a,H] for each E_i 
+  
+  cf_assert(v.size() == strides.size());
+  
+  // set the number of species in the convective term
+  getConvTerm()->setNbScalarVars(v, &strides);
+  
+  const CFreal nbBEEqs = 8; // equations for Ex,Ey,Ez,Bx,By,Bz,Phi(E),Psi(B)
+  return nbBEEqs + v.sum();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string MultiFluidMHDModel<DIM>::getConvectiveName() const
+{
+  if (DIM == 2) return "EulerMFMHD2D";
+  return "EulerMFMHD3D";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string MultiFluidMHDModel<DIM>::getDiffusiveName() const
+{
+  return getTypeName();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>	
+std::string MultiFluidMHDModel<DIM>::getSourceName() const
+{	
+  return getTypeName();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MultiFluidMHDModel<DIM>::setReferenceValues()
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  
+  SafePtr<MultiScalarTerm<EulerMFMHDTerm> > convTerm = getConvTerm();
+  SafePtr<DiffMFMHDTerm> diffTerm = getDiffTerm();
+  SafePtr<ReacMFMHDTerm> sourceTerm = getSrcTerm();
+  
+  // reference values for the convective part
+  RealVector& refDataConv = convTerm->getReferencePhysicalData();
+  // reference values for the diffusive part
+  RealVector& refDataDiff = diffTerm->getReferencePhysicalData();
+  // reference values for the reaction part
+  RealVector& refDataSource = sourceTerm->getReferencePhysicalData();
+  
+  // if the pressure and temperature reference values
+  // have not been specified set all the ref values to 1.
+  refDataConv = 1.0;
+  refDataDiff = 1.0;
+  refDataSource = 1.0;
+  _isAdimensional = false;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MultiFluidMHDModel<DIM>::setReferenceTime()
+{
+  // RealVector& refDataConv = getConvTerm()->getReferencePhysicalData();
+  _refTime = 1.; // getRefLength()/refDataConv[EulerTerm::V];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MultiFluidMHDModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  using namespace COOLFluiD::Framework;
+  
+  ConvectionDiffusionReactionPM
+    <Framework::MultiScalarTerm<EulerMFMHDTerm>,DiffMFMHDTerm, ReacMFMHDTerm>::configure(args);
+
+  cf_assert(getDimension() > 0);
+  cf_assert(getNbEquations() > 0);
+  
+  // getPhysicalPropertyLibrary<PhysicalChemicalLibrary>()->setNbTempVib
+  //     (_nbVibEnergyEqs);
+  
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(getDimension());
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace MultiFluidMHD
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

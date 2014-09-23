@@ -1,0 +1,282 @@
+#include "Framework/MeshData.hh"  
+#include "Framework/PhysicalChemicalLibrary.hh"  
+#include "Common/PE.hh"  
+#include "Common/ParserException.hh"
+#include "NavierStokes/EulerTerm.hh"
+
+#ifdef CF_HAVE_MPI
+#include <mpi.h>
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolumeArcJet {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void ArcJetPhiOutlet<BASE>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFreal, Config::DynamicOption<> >("ImposedCurrent", "Value for the imposed current");
+  options.addConfigOption< std::vector<std::string> >("Def","Definition of the Function.");
+  options.addConfigOption< std::vector<std::string> >("Vars","Definition of the Variables."); 
+  options.addConfigOption< CFreal >("MachineVoltageLimit", "Maximum voltage given by the machine");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+ArcJetPhiOutlet<BASE>::ArcJetPhiOutlet(const std::string& name) :
+  BASE(name),
+  socket_faceAreas("faceAreas"),
+  m_library(CFNULL),
+  m_sigmaIntegral(0.),
+  _iter(),
+  _resultI()
+{
+  this->addConfigOptionsTo(this);
+  
+  m_imposedI = 0.;
+  this->setParameter("ImposedCurrent", &m_imposedI);
+  
+  _function = std::vector<std::string>();
+  this->setParameter("Def",&_function);  
+  
+  _vars = std::vector<std::string>();
+  this->setParameter("Vars",&_vars);
+  
+  _machineLimit = 0.;
+  this->setParameter("MachineVoltageLimit", &_machineLimit);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+ArcJetPhiOutlet<BASE>::~ArcJetPhiOutlet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void ArcJetPhiOutlet<BASE>::setup()
+{
+  BASE::setup();  
+  
+  using namespace Framework;
+
+  m_library = PhysicalModelStack::getActive()->getImplementor()->
+    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  cf_assert (m_library.isNotNull());
+
+  _iter.resize(1);
+  _resultI.resize(1);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void ArcJetPhiOutlet<BASE>::setGhostState
+(Framework::GeometricEntity *const face)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint lastEq = totalNbEqs - 1;
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
+  const CFuint eqSSID = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getEqSS();
+  
+  _vFunction.setFunctions(_function);
+  _vFunction.setVariables(_vars);
+  try {
+    _vFunction.parse();
+  }
+  catch (Common::ParserException& e) {
+    CFout << e.what() << "\n";
+    throw; // retrow the exception to signal the error to the user
+  }
+
+  
+  SafePtr<EulerTerm> eulerTerm = PhysicalModelStack::getActive()->getImplementor()->
+    getConvectiveTerm().d_castTo<EulerTerm>();
+     
+  _iter = SubSystemStatusStack::getActive()->getNbIter();
+  
+  _vFunction.evaluate(_iter, _resultI);
+  m_imposedI = _resultI[0];
+  //   std::cout<< "_iter" << _iter << "\n";
+  //   std::cout<< "_resultI" << _resultI << "\n";
+  
+  
+  if (nbEqs > 1 || (nbEqs == 1 && eqSSID == 0) || nbEqs == totalNbEqs) {
+    //std::cout <<"ArcJetPhiOutlet:: Entering the base class\n";
+    BASE::setGhostState(face);
+  }
+  
+  // here it is assumed that the ArcJet induction equations are the last ones 
+  if ((nbEqs == 1 && eqSSID == 1) || nbEqs == totalNbEqs) {
+    State *const innerState = face->getState(0);
+    State *const ghostState = face->getState(1);
+    
+    //std::cout <<"ArcJetPhiOutlet:: Entering the phi equation\n";
+         
+    // AL: this is not general, change for NEQ
+    const CFuint pID = 0;
+    const CFuint TID = totalNbEqs - 2;
+    CFreal pdim = eulerTerm->getPressureFromState(0.5*((*innerState)[pID] + (*ghostState)[pID]));
+    cf_assert(pdim > 0.01);
+    CFreal Tdim = 0.5*((*innerState)[TID] + (*ghostState)[TID]);
+    cf_assert(Tdim > 0.01);
+    CFreal* tVec = CFNULL;
+    
+    m_library->setComposition(Tdim, pdim, CFNULL);
+
+    const CFreal sigma = m_library->sigma(Tdim, pdim, tVec);
+    //     const CFreal sigma = 0.27311;  //Only For debugging
+    //     std::cout <<"Outlet::T     = " << Tdim <<"\n";
+    //     std::cout <<"Outlet::p     = " << pdim <<"\n";    
+    //     std::cout <<"Outlet::sigma = " << sigma <<"\n";
+    //Debugging. Printing a table with the sigma
+    //CFuint Stop = 1;
+    //for (CFreal Pi = 101325; Pi < 1519875;) {
+      //std::cout <<"----------------------------- \n";
+      //std::cout <<"PRESSURE = " << Pi <<"Pa = " << Pi/101325 <<" atm \n";
+      //for (CFreal Ti = 300; Ti < 13100.;) {
+	//const CFreal sigma = m_library->sigma(Ti, Pi, tVec);
+	//std::cout <<"sigma [" << Pi <<", " << Ti <<"] = "<< sigma <<"\n";
+	//Ti += 100;
+      //} 
+     //std::cout <<"----------------------------- \n";
+     //Pi += 101325;
+    //}
+    //cf_assert(Stop == 0);
+    
+    
+    //    const CFreal sigma = 490;				WATCH OUT: only for debugging
+    cf_assert(sigma > 0.);
+    
+    // const CFreal Vz = m_imposedI*sigma/m_sigmaIntegral;
+    cf_assert(m_sigmaIntegral > 0.);
+
+    const CFreal dVz = -m_imposedI/m_sigmaIntegral;
+    //cout<<"m_imposedI = " << m_imposedI << endl;
+    //     std::cout <<"cVz = " << dVz << std::endl;
+    const CFreal dr = MathFunctions::getDistance(ghostState->getCoordinates(),
+                                                   innerState->getCoordinates());
+    (*ghostState)[lastEq] = dVz*dr + (*innerState)[lastEq]; // AAL: This line is the one imposing the current
+    
+    CFreal phiOutlet = ((*ghostState)[lastEq] + (*innerState)[lastEq])/2;
+        
+    if(_machineLimit != 0.){ //This option avoids limiting to 0 by mistake
+      CFreal machineVoltage = (-1)*_machineLimit;
+      if(std::abs(phiOutlet) > std::abs(machineVoltage)){
+	(*ghostState)[lastEq] = 2*machineVoltage - (*innerState)[lastEq]; 
+      }
+    }
+    ///This is a test
+    //(*ghostState)[lastEq] = 2*(-320) - (*innerState)[lastEq];
+    //std::cout <<"dVz   = " << dVz << std::endl;
+    //std::cout <<"sigma = " << sigma<< endl;
+    //std::cout <<"sigma*Area = " << m_sigmaIntegral << std::endl;
+    //std::cout <<"Iimposed   = " << m_imposedI << std::endl;
+    //std::cout <<"dr         = " << dr << std::endl;
+    //(*ghostState)[lastEq] = -2e3 - (*innerState)[lastEq]; //AAL: This is a test. It imposes constant voltage phi = -1e3 at outlet
+   
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void ArcJetPhiOutlet<BASE>::preProcess()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  DataHandle<CFreal> faceAreas   = socket_faceAreas.getDataHandle();
+  
+  Common::SafePtr<GeometricEntityPool<FaceTrsGeoBuilder> >
+    geoBuilder = this->getMethodData().getFaceTrsGeoBuilder();
+
+  SafePtr<FaceTrsGeoBuilder> geoBuilderPtr = geoBuilder->getGeoBuilder();
+  geoBuilderPtr->setDataSockets(this->socket_states, this->socket_gstates, this->socket_nodes);
+  
+  SafePtr<EulerTerm> eulerTerm = PhysicalModelStack::getActive()->getImplementor()->
+    getConvectiveTerm().d_castTo<EulerTerm>();
+  
+  FaceTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
+  geoData.isBFace = true;
+  
+  SafePtr<TopologicalRegionSet> trs = this->getCurrentTRS();
+  geoData.trs = trs;
+  
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  
+  // AL: this is not general, change for NEQ
+  const CFuint pID = 0;
+  const CFuint TID = nbEqs - 2;
+  
+  m_sigmaIntegral = 0.;
+  CFreal localSigmaIntegral = 0.;
+  const CFuint nbTrsFaces = trs->getLocalNbGeoEnts();
+  for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace) {
+    CFLogDebugMed( "iFace = " << iFace << "\n");
+    
+    // build the GeometricEntity
+    geoData.idx = iFace;
+    
+    GeometricEntity *const face = geoBuilder->buildGE();
+    CFreal pdim = eulerTerm->getPressureFromState((*face->getState(0))[pID]);
+    CFreal Tdim = (*face->getState(0))[TID];
+    CFreal* tVec = CFNULL;
+    
+    m_library->setComposition(Tdim,pdim,CFNULL);
+
+    const CFreal sigma = m_library->sigma(Tdim, pdim, tVec);
+    //     const CFreal sigma = 0.27111; 				//WATCH OUT: only for debugging
+    cf_assert(sigma > 0.);
+    if (face->getState(0)->isParUpdatable()) {
+      localSigmaIntegral += sigma*faceAreas[face->getID()];
+    }
+    
+    // release the GeometricEntity
+    geoBuilder->releaseGE();
+  }
+  
+  m_sigmaIntegral = localSigmaIntegral;
+#ifdef CF_HAVE_MPI
+  MPI_Allreduce(&localSigmaIntegral, &m_sigmaIntegral, 1, MPI_DOUBLE, MPI_SUM, 
+		PE::GetPE().GetCommunicator());
+#endif
+  cf_assert(m_sigmaIntegral > 0.);
+//   std::cout << "Outlet::sigmaIntegral = " << m_sigmaIntegral <<"\n";
+}
+ 
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > ArcJetPhiOutlet<BASE>::needsSockets()
+{
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result  = BASE::needsSockets();
+  result.push_back(&socket_faceAreas);
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+   } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

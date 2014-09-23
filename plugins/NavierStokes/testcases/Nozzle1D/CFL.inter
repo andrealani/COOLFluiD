@@ -1,0 +1,2 @@
+Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
+Simulator.SubSystem.Norm.valueNorm      = -4.0

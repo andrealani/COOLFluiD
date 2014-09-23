@@ -1,0 +1,197 @@
+\chapter{From server to client}
+
+\section{Tree}
+\label{tree}
+
+\subsection{Description}
+
+This frame is used by the server to send the tree.
+
+\subsection{Structure}
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <tree>
+    (tree)
+  </tree>
+</ClientServerXML>
+\end{lstlisting}
+
+\subsection{Data structure}
+
+Data represent the tree as returned by the simulator.
+
+%-------------------------------------------------------------
+%-------------------------------------------------------------
+
+\section{Message}
+\label{message}
+
+\subsection{Description}
+
+This frame is used by the server to send a message to the client.
+
+\subsection{Structure}
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <message value="Message text" />
+</ClientServerXML>
+\end{lstlisting}
+
+\subsection{Arguments}
+\descrXMLAttr{value}{Message text}
+
+%-------------------------------------------------------------
+%-------------------------------------------------------------
+
+\section{Error}
+\label{error}
+
+\subsection{Description}
+
+This frame is used by the server to send a message describing an error to
+the client.
+
+\subsection{Structure}
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <error value="Error message" />
+</ClientServerXML>
+\end{lstlisting}
+
+\subsection{Arguments}
+\descrXMLAttr{value}{Error message text}
+
+%-------------------------------------------------------------
+%-------------------------------------------------------------
+
+\section{Abstract types}
+\label{abstractTypes}
+
+\subsection{Description}
+
+This frame is used by the server to send abstract types list to the client. 
+
+\subsection{Structure}
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <abstractTypes typeName="typeName" typesList="type1, type2, ..." />
+</ClientServerXML>
+\end{lstlisting}
+
+\subsection{Arguments}
+\descrXMLAttr{typeName}{Name of the type containing these abstract types.\\}
+\descrXMLAttr{typesList}{Types list. Items are separated by the string ", ".}
+
+%-------------------------------------------------------------
+%-------------------------------------------------------------
+
+\section{Concrete types}
+\label{concreteTypes}
+
+\subsection{Description}
+
+This frame is used by the server to send concrete types list to the client.
+
+\subsection{Structure}
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <concreteTypes typeName="typeName" typesList="type1, type2, ..." />
+</ClientServerXML>
+\end{lstlisting}
+
+\subsection{Arguments}
+\descrXMLAttr{typeName}{Name of the abstract type containing these concrete
+types.\\}
+\descrXMLAttr{typesList}{Types list. Items are separated by the string ", ".}
+
+%-------------------------------------------------------------
+%-------------------------------------------------------------
+
+\section{Directory contents}
+\label{dirContent}
+
+\subsection{Description}
+
+This frame is used by the server to a directory contents.
+
+\subsection{Structure}
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <dirContent path="/path/to/dir" dirs="dir1*dir2*dir3..." 
+      files="file1*file2*file3..." />
+</ClientServerXML>
+\end{lstlisting}
+
+\subsection{Arguments}
+\descrXMLAttr{path}{Directory path.\\}
+\descrXMLAttr{dir}{Sub-directories list. Items are separated by an asterisk.\\}
+\descrXMLAttr{files}{Files list. Items are separated by an asterisk.}
+
+%-------------------------------------------------------------
+%-------------------------------------------------------------
+
+\section{Acknowledgement}
+\label{ack}
+
+\subsection{Description}
+
+This frame is used by the server to indicate that the specified command
+(specified by the type of its frame) succeeded.
+
+\subsection{Structure}
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <ack type="typeToAck" />
+</ClientServerXML>
+\end{lstlisting}
+
+\subsection{Arguments}
+\descrXMLAttr{type}{Type to acknowledge.\\}
+
+%-------------------------------------------------------------
+%-------------------------------------------------------------
+
+\section{Non-acknowledgement}
+\label{nack}
+
+\subsection{Description}
+
+This frame is used by the server to indicate that the specified command
+(specified by the type of its frame) failed.
+
+\subsection{Structure}
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <nack type="typeToNack" />
+</ClientServerXML>
+\end{lstlisting}
+
+\subsection{Arguments}
+\descrXMLAttr{type}{Type to non-acknowledge.\\}
+
+%-------------------------------------------------------------
+%-------------------------------------------------------------
+
+\section{Simulation running}
+\label{simulationRunning}
+
+\subsection{Description}
+
+This frame is used by the server to indicate that the simulation is running.
+Used to notify a new client that a simulation is already running.
+
+\subsection{Structure}
+
+\begin{lstlisting}[language=XML]
+<ClientServerXML>
+  <simulationRunning />
+</ClientServerXML>
+\end{lstlisting}

@@ -1,0 +1,104 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libMHD libForwardEuler libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTimeMHD libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/MHD/testcases/Wedge/
+Simulator.Paths.ResultsDir       = plugins/MHD/testcases/Wedge/
+
+Simulator.SubSystem.Default.PhysicalModelType = MHD2DProjection
+Simulator.SubSystem.MHD2DProjection.ConvTerm.refSpeed = 8.0
+Simulator.SubSystem.MHD2DProjection.ConvTerm.gamma = 1.4
+
+#Simulator.SubSystem.CFL = 1.0
+Simulator.SubSystem.InteractiveParamReader.readRate = 10
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MHD/testcases/Wedge/wedge.inter
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = wedgeACACRD.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = wedgeACACRD-Bsys.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 50
+Simulator.SubSystem.CFmesh.SaveRate = 50
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 5
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 15
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = wedge.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Interactive
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = CRD
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysBC
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Prim
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Prim
+
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorOrder = P3
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState StrongSlipWallMHD2DProjection
+Simulator.SubSystem.FluctuationSplit.InitNames = InField InitWall
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 1.0 \
+          5.0 \
+                                        0.0 \
+                0.0 \
+          2.0 \
+          0.0 \
+                0.0 \
+                                       16.0  0.0
+
+Simulator.SubSystem.FluctuationSplit.InitWall.applyTRS = SlipWall
+
+Simulator.SubSystem.FluctuationSplit.BcComds = StrongSlipWallMHD2DProjection \
+                    SuperInlet \
+              SuperOutlet
+Simulator.SubSystem.FluctuationSplit.BcNames = StrongSlipWall \
+              Inlet \
+              Outlet
+
+Simulator.SubSystem.FluctuationSplit.StrongSlipWall.applyTRS = SlipWall
+
+Simulator.SubSystem.FluctuationSplit.Inlet.applyTRS = SuperInlet
+Simulator.SubSystem.FluctuationSplit.Inlet.Vars = x y
+Simulator.SubSystem.FluctuationSplit.Inlet.Def = 1.0 \
+          5.0 \
+          0.0 \
+          0.0 \
+          2.0 \
+          0.0 \
+          0.0 \
+          16.0  0.0
+
+Simulator.SubSystem.FluctuationSplit.Outlet.applyTRS = SuperOutlet
+

@@ -1,0 +1,64 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+
+### Architecture = 32bit
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFluctSplitNavierStokes libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/SinusBump
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystems = SubSysA
+Simulator.SubSystemTypes = OnlyMeshSubSystem
+Simulator.SubSysA.Default.PhysicalModelType = Euler2D
+Simulator.SubSysA.ConvergenceFile     = convergence.plt
+
+Simulator.SubSysA.OutputFormat        = Tecplot CFmesh
+Simulator.SubSysA.CFmesh.FileName     = bump-fine.CFmesh
+Simulator.SubSysA.Tecplot.FileName    = bump-fine.plt
+Simulator.SubSysA.Tecplot.Data.updateVar = Cons
+Simulator.SubSysA.Tecplot.SaveRate = 100
+Simulator.SubSysA.CFmesh.SaveRate = 100
+Simulator.SubSysA.Tecplot.AppendTime = false
+Simulator.SubSysA.CFmesh.AppendTime = false
+Simulator.SubSysA.Tecplot.AppendIter = false
+Simulator.SubSysA.CFmesh.AppendIter = false
+
+Simulator.SubSysA.ConvRate            = 1
+Simulator.SubSysA.ShowRate            = 10
+
+Simulator.SubSysA.Default.listTRS = InnerCells SlipWall SubInlet SubOutlet
+
+Simulator.SubSysA.MeshCreator = CFmeshFileReader
+Simulator.SubSysA.CFmeshFileReader.Data.FileName = bump-fine.CFmesh
+Simulator.SubSysA.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSysA.SpaceMethod = FluctuationSplit
+Simulator.SubSysA.FluctuationSplit.Data.SysSplitter = Null
+#SysLDA
+#Simulator.SubSysA.FluctuationSplit.Data.ScalarSplitter = ScalarPSI
+
+Simulator.SubSysA.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSysA.FluctuationSplit.Data.UpdateVar  = Cons
+Simulator.SubSysA.FluctuationSplit.Data.DistribVar = Char
+Simulator.SubSysA.FluctuationSplit.Data.LinearVar  = Roe
+
+Simulator.SubSysA.FluctuationSplit.ComputeRHS = Null
+Simulator.SubSysA.FluctuationSplit.InitComds = InitState
+Simulator.SubSysA.FluctuationSplit.InitNames = InField
+
+Simulator.SubSysA.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSysA.FluctuationSplit.InField.Vars = x y
+Simulator.SubSysA.FluctuationSplit.InField.Def = 1.204751547 \
+                                          206.7002847 \
+                                          0.0 \
+                                          271044.375
+
+Simulator.SubSysA.FluctuationSplit.BcComds = Null 
+Simulator.SubSysA.FluctuationSplit.BcNames = Null

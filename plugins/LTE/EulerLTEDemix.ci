@@ -1,0 +1,158 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace LTE {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, class BASE>
+void EulerLTEDemix<DIM, BASE>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFuint >("nelem","Number of elemental fractions.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, class BASE>
+EulerLTEDemix<DIM, BASE>::EulerLTEDemix(const std::string& name) :
+  Framework::ConvectionPM<Framework::MultiScalarTerm<BASE> >(name)
+{
+  this->addConfigOptionsTo(this);
+  _nelem = 0;
+  this->setParameter("nelem",&_nelem);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, class BASE>
+EulerLTEDemix<DIM, BASE>::~EulerLTEDemix()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, class BASE>
+CFuint EulerLTEDemix<DIM, BASE>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, class BASE>
+CFuint EulerLTEDemix<DIM, BASE>::getNbEquations() const
+{
+  // set the number of elemental fractions
+  // in the convective term
+  std::valarray<CFuint> v(1);
+  v[0] = _nelem;
+  this->getConvTerm()->setNbScalarVars(v);
+
+  return DIM + 2 + _nelem;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, class BASE>
+void EulerLTEDemix<DIM, BASE>::setReferenceValues()
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+//  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::Physics;
+
+  SafePtr<MultiScalarTerm<BASE> > convTerm = this->getConvTerm();
+
+  // reference physical data to set
+  RealVector& refData = convTerm->getReferencePhysicalData();
+
+ //  const CFreal tempRef = convTerm->getTempRef();
+//   const CFreal pRef = convTerm->getPressRef();
+//   const CFreal MachInf = convTerm->getMachInf();
+
+//   CFLog(NOTICE, "tempRef = "   << tempRef << "\n");
+//   CFLog(NOTICE, "pRef   = "    << pRef << "\n");
+//   CFLog(NOTICE, "machInf   = " << MachInf << "\n");
+
+//   if (!(MachInf > 0.)) {
+//     CFout << "WARNING: Mach infinity NOT set"<< "\n";
+//   }
+
+  // these are reference values => avVel == avSpeed =>
+  // each component of the velocity is set equal to the
+  // reference value => avVel.norm2() != avSpeed in this case
+  // if ((tempRef > 0.) && (pRef > 0.)) {
+  // const CFreal refSpeed = std::sqrt(convTerm->getRdim()*tempRef);
+
+  // set all values to 1.0
+  //  refData = 1.0;
+
+  // @todo AL check that the scaling is correct here !!
+    // override all the values except he elemental fractions
+    //   refData[BASE::V]   = refSpeed;
+    //     refData[BASE::VX]  = refSpeed;
+    //     refData[BASE::VY]  = refSpeed;
+    //     refData[BASE::VZ]  = refSpeed;
+    //     refData[BASE::RHO] = pRef/(refSpeed*refSpeed);
+    //     refData[BASE::P]   = pRef;
+    //     refData[BASE::H]   = refSpeed*refSpeed;
+    //     refData[BASE::E]   = refSpeed*refSpeed;
+    //     refData[BASE::A]   = refSpeed;
+    //     refData[BASE::T]   = tempRef;
+
+  // convTerm->setRRef(1.0);
+  // this->_isAdimensional = true;
+  // }
+  // else {
+  // if the pressure and temperature reference values
+  // have not been specified set all the ref values to 1.
+  refData = 1.0;
+
+  convTerm->setRRef(convTerm->getRdim());
+  convTerm->setTempRef(1.0);
+  convTerm->setPressRef(1.0);
+  this ->_isAdimensional = false;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, class BASE>
+void EulerLTEDemix<DIM, BASE>::setReferenceTime()
+{
+//   RealVector& refDataConv = getConvTerm()->getReferencePhysicalData();
+  // since velocity scale is set to 1.0 above by default, just equal to getRefLength()
+  this->_refTime = this->getRefLength()/1.0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, class BASE>
+void EulerLTEDemix<DIM, BASE>::configure ( Config::ConfigArgs& args )
+{
+  using namespace COOLFluiD::Framework;
+//  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::Physics;
+
+  ConvectionPM<MultiScalarTerm<BASE> >::configure(args);
+
+  cf_assert(getDimension() > 0);
+  cf_assert(getNbEquations() > 0);
+
+  // allocate jacobians
+  this -> _jacobians = std::vector<RealMatrix>(getDimension());
+  for (CFuint i = 0; i < getDimension(); ++i) {
+  this -> _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace LTE
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

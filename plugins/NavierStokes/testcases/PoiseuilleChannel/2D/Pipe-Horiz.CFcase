@@ -1,0 +1,131 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+# Simulation Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libNewtonMethod libFluctSplitNavierStokes libFluctSplitNavierStokes libForwardEuler libGambit2CFmesh libRungeKutta2 libPetscI libCFmeshExtruder
+
+# Simulation Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/PoiseuilleChannel/2D
+Simulator.Paths.ResultsDir = ./
+CFEnv.ExceptionLogLevel = 200
+
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2D
+
+### non dimensional solve
+Simulator.SubSystem.NavierStokes2D.refValues = 1.0 2.36643E-1 2.36643E-1 2.52800E+0
+Simulator.SubSystem.NavierStokes2D.refLength = 1.0
+Simulator.SubSystem.NavierStokes2D.DiffTerm.Reynolds = 500.
+Simulator.SubSystem.NavierStokes2D.ConvTerm.tempRef  = 200
+Simulator.SubSystem.NavierStokes2D.ConvTerm.machInf  = 0.2
+
+### dimensional solve
+#Simulator.SubSystem.NavierStokes2D.refValues = 1.74184E-2 9.87639E-1 9.87639E-1 2.52800E+03
+#Simulator.SubSystem.NavierStokes2D.refLength = 1.0
+
+
+Simulator.SubSystem.NavierStokes2D.DiffTerm.ViscosityLaw = Fixed
+Simulator.SubSystem.NavierStokes2D.DiffTerm.Fixed.Fix_visc = 3.95055E-03
+
+#Simulator.SubSystem.InteractiveParamReader.FileName = ./fp.inter #./Pipe.CFcase
+Simulator.SubSystem.InteractiveParamReader.readRate = 1
+
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName     = Pipe2D-Horiz.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 40
+
+Simulator.SubSystem.Tecplot.FileName    = Pipe2D-Horiz.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 1 
+#Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Inlet #Wall_B Wall_T
+
+Simulator.SubSystem.StopCondition       = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 4000
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6.0
+
+#Simulator.SubSystem.Default.listTRS = InnerCells Inlet Wall_B Wall_T  Outlet
+Simulator.SubSystem.Default.listTRS = InnerCells Inlet Wall Symm Top_Wall Top_Symm  Outlet
+
+
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = HorizontalPipe-Big.CFmesh
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1000
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+#Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = Extruder2D
+#Simulator.SubSystem.CFmeshFileReader.Extruder2D.NbLayers = 16
+#Simulator.SubSystem.CFmeshFileReader.Extruder2D.ExtrudeSize = 16.0
+#Simulator.SubSystem.CFmeshFileReader.Extruder2D.Split = true
+#Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = PipeInlet2D.CFmesh
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.Output = true
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCILU
+Simulator.SubSystem.NewtonIteratorLSS.Data.ILULevels = 3
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 10
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL =  Interactive #Function
+# Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<100,12.,min(1e12,cfl*1.05))
+# Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Restart = false #command to restart computation from a previous solution
+
+Simulator.SubSystem.FluctuationSplit.ComputeRHS = RhsJacob
+Simulator.SubSystem.FluctuationSplit.ComputeTimeRHS = PseudoSteadyTimeRhs
+Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
+
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter   = SysLDA
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar   = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar     = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar    = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar     = Roe
+Simulator.SubSystem.FluctuationSplit.Data.DiffusiveVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DiffusiveTerm = NavierStokes
+
+Simulator.SubSystem.FluctuationSplit.Data.
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState   StrongNoSlipWallAdiabaticNS2DImpl
+Simulator.SubSystem.FluctuationSplit.InitNames = InField     InitWall
+
+Simulator.SubSystem.FluctuationSplit.InitWall.applyTRS =  Wall  Top_Wall #Symm Top_Symm 
+
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 1.74184E-2 9.87639E-1 0.000 2.52800E+03
+
+
+Simulator.SubSystem.FluctuationSplit.BcComds = \
+	 WeakSubInletEuler2DConsImpl WeakSubOutletEuler2DConsImpl StrongNoSlipWallAdiabaticNS2DImpl
+#Simulator.SubSystem.FluctuationSplit.BcComds = \
+#	StrongNoSlipWallAdiabaticNS2DImpl WeakSlipWallEuler2DImpl WeakSubInletEuler2DConsImpl WeakSubOutletEuler2DConsImpl
+
+#Simulator.SubSystem.FluctuationSplit.BcNames =  BcWall Far SInlet SOutlet
+Simulator.SubSystem.FluctuationSplit.BcNames =  SInlet SOutlet BcWall
+
+Simulator.SubSystem.FluctuationSplit.BcWall.applyTRS = Wall  Top_Wall #Symm Top_Symm #Wall_T
+
+Simulator.SubSystem.FluctuationSplit.Far.applyTRS = Symm Top_Symm #Wall_T
+
+Simulator.SubSystem.FluctuationSplit.SInlet.applyTRS = Inlet
+Simulator.SubSystem.FluctuationSplit.SInlet.Ttot     = 201.600
+Simulator.SubSystem.FluctuationSplit.SInlet.Ptot     = 1028.28
+Simulator.SubSystem.FluctuationSplit.SInlet.angle = 0.0
+
+Simulator.SubSystem.FluctuationSplit.SOutlet.applyTRS = Outlet 
+Simulator.SubSystem.FluctuationSplit.SOutlet.P        = 980.
+
+#

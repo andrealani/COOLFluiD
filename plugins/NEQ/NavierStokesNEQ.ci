@@ -1,0 +1,364 @@
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "Common/BadValueException.hh"
+#include "NavierStokes/EulerTerm.hh"
+#include "NavierStokes/NSTerm.hh"
+#include <valarray>
+#include "MathTools/MathFunctions.hh"
+#include "MathTools/MathConsts.hh"
+
+//////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace NEQ {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename CTERM, typename DTERM, typename RTERM>
+void NavierStokesNEQ<DIM, CTERM, DTERM, RTERM>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFuint >
+     ("nbSpecies","Number of species.");
+
+  options.template addConfigOption< CFuint >
+    ("nbEulerEqs","Number of euler equations.");
+
+  options.template addConfigOption< CFuint >
+    ("nbVibEnergyEqs","Number of vibrational energy equations.");
+
+  options.template addConfigOption< CFuint >
+    ("nbTe","Number of electron temperatures.");
+  
+  options.template addConfigOption< std::vector<CFreal> >
+    ("yInf","Free stream composition.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename CTERM, typename DTERM, typename RTERM>
+NavierStokesNEQ<DIM, CTERM, DTERM, RTERM>::NavierStokesNEQ(const std::string& name)
+  : Framework::ConvectionDiffusionReactionPM<CTERM, DTERM, RTERM>(name)
+{
+  this->addConfigOptionsTo(this);
+  _nbSpecies = 0;
+  this->setParameter("nbSpecies",&_nbSpecies);
+  
+  _nbEulerEqs = DIM + 2;
+  this->setParameter("nbEulerEqs",&_nbEulerEqs);
+  
+  _nbVibEnergyEqs = 0;
+  this->setParameter("nbVibEnergyEqs",&_nbVibEnergyEqs);
+  
+  _nbTe = 0;
+  this->setParameter("nbTe",&_nbTe);
+  
+  _yInf = std::vector<CFreal>();
+  this->setParameter("yInf",&_yInf);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename CTERM, typename DTERM, typename RTERM>
+NavierStokesNEQ<DIM, CTERM, DTERM, RTERM>::~NavierStokesNEQ()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename CTERM, typename DTERM, typename RTERM>
+CFuint NavierStokesNEQ<DIM, CTERM, DTERM, RTERM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename CTERM, typename DTERM, typename RTERM>
+CFuint NavierStokesNEQ<DIM, CTERM, DTERM, RTERM>::getNbEquations() const
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  std::valarray<CFuint> v(2);
+  v[0] = _nbSpecies;
+
+  //const CFuint nbTe =
+  // getPhysicalPropertyLibrary<PhysicalChemicalLibrary>()->getNbTe();
+  v[1] = _nbVibEnergyEqs + _nbTe;
+
+  // set the number of species in the convective term
+  this->getConvTerm()->setNbScalarVars(v);
+  
+  return _nbEulerEqs + _nbSpecies + _nbVibEnergyEqs + _nbTe;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename CTERM, typename DTERM, typename RTERM>
+std::string NavierStokesNEQ<DIM, CTERM, DTERM, RTERM>::getConvectiveName() const
+{
+  if (DIM == 2) return "Euler2DNEQ";
+  return "Euler3DNEQ";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename CTERM, typename DTERM, typename RTERM>
+std::string NavierStokesNEQ<DIM, CTERM, DTERM, RTERM>::getDiffusiveName() const
+{
+  return getTypeName();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename CTERM, typename DTERM, typename RTERM>
+std::string NavierStokesNEQ<DIM, CTERM, DTERM, RTERM>::getSourceName() const
+{	
+  return getTypeName();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename CTERM, typename DTERM, typename RTERM>
+void NavierStokesNEQ<DIM, CTERM, DTERM, RTERM>::setReferenceValues()
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  SafePtr<CTERM> convTerm = this->getConvTerm();
+  SafePtr<DTERM> diffTerm = this->getDiffTerm();
+  SafePtr<RTERM> sourceTerm = this->getSrcTerm();
+  
+  const CFreal tempRef = convTerm->getTempRef();
+  CFreal pRef = convTerm->getPressRef();
+  const CFreal MachInf = convTerm->getMachInf();
+  const CFreal Uinf = MachInf*std::sqrt(convTerm->getGamma()*
+				     convTerm->getRdim()*tempRef);
+  const CFreal refSpeed = std::sqrt(convTerm->getRdim()*tempRef);
+  
+  // reference viscosity is computed using Sutherland formula
+  const CFreal dynViscosityRef = this->getDiffTerm()->getDynViscosityDim(pRef, tempRef);
+  
+  CFout << "dynViscosityRef = " << dynViscosityRef << "\n";
+  const CFreal gamma = convTerm->getGamma();
+  const CFreal cp = convTerm->getRdim()*gamma/(gamma - 1.);
+  const CFreal Re = diffTerm->getReynolds();
+
+  // reference values for the convective part
+  RealVector& refDataConv = convTerm->getReferencePhysicalData();
+  // reference values for the diffusive part
+  RealVector& refDataDiff = diffTerm->getReferencePhysicalData();
+  // reference values for the reaction part
+  RealVector& refDataSource = sourceTerm->getReferencePhysicalData();
+  
+  // set the reference values
+  refDataDiff[NSTerm::MU]     = dynViscosityRef;
+  refDataDiff[NSTerm::LAMBDA] = dynViscosityRef*cp/diffTerm->getPrandtl();
+  refDataDiff[NSTerm::RE]     = Re;
+  
+  // override the reference values for Euler data starting from
+  // machInf, tempRef, RRref, Lref, ReynoldsRef
+  if ((tempRef > 0.) && (MachInf > 0.) && (Re > 0.)) {
+    const CFreal Lref = this->getRefLength();
+    
+    refDataConv[EulerTerm::V]  = refSpeed;
+    refDataConv[EulerTerm::VX] = refSpeed;
+    refDataConv[EulerTerm::VY] = refSpeed;
+    refDataConv[EulerTerm::VZ] = refSpeed;
+
+    // rhoref = rho at infinity
+    refDataConv[EulerTerm::RHO] = Re*dynViscosityRef/(Uinf*Lref);
+
+    // pref = p at infinity
+    pRef = refDataConv[EulerTerm::RHO]*convTerm->getRdim()*tempRef;
+    refDataConv[EulerTerm::P] = pRef;
+    refDataConv[EulerTerm::H] = refSpeed*refSpeed;
+    refDataConv[EulerTerm::E] = refSpeed*refSpeed;
+    refDataConv[EulerTerm::A] = refSpeed;
+    refDataConv[EulerTerm::T] = tempRef;
+
+    convTerm->setTempRef(tempRef);
+    convTerm->setPressRef(refDataConv[EulerTerm::P]);
+    convTerm->setRRef(1.0);
+
+    const CFreal invReynolds = 1./Re;
+    const CFreal coeffTau = std::sqrt(gamma)*MachInf*invReynolds;
+    // scaling coefficient for the momentum equations
+    diffTerm->setCoeffTau(coeffTau);
+    // scaling coefficient for the energy equation
+    diffTerm->setCoeffQ(coeffTau*gamma/(gamma-1.)*diffTerm->getPrandtl());
+    	
+    computeTauChem();
+       
+    this->_isAdimensional = true;
+  }
+  else {
+    CFout << "WATCH OUT: tempRef or machInf or Re missing" << "\n";
+    CFout << "Equations will be solved dimensionally" << "\n";
+
+    // if the pressure and temperature reference values
+    // have not been specified set all the ref values to 1.
+    refDataConv = 1.0;
+    refDataDiff = 1.0;
+    convTerm->setRRef(convTerm->getRdim());
+    convTerm->setTempRef(1.0);
+    convTerm->setPressRef(1.0);
+    // scaling coefficient for the momentum equations
+    diffTerm->setCoeffTau(1.0);
+    // scaling coefficient for the energy equation
+    diffTerm->setCoeffQ(1.0);
+
+    this-> _isAdimensional = false;
+    
+    refDataSource[RTERM::TAU] = 1.0; 
+  }
+  
+  // set the cp over prandtl
+  const CFreal cpOverPrandtl = gamma/(gamma - 1.)*
+    convTerm->getRdim()/diffTerm->getPrandtl();
+
+  diffTerm->setCpOverPrandtl(cpOverPrandtl);
+
+  CFLog(NOTICE, "tempRef = "   << convTerm->getTempRef() << "\n");
+  CFLog(NOTICE, "pRef    = "    << convTerm->getPressRef() << "\n");
+  CFLog(NOTICE, "rhoRef  = "  << refDataConv[EulerTerm::RHO] << "\n");
+  CFLog(NOTICE, "machInf = " << MachInf << "\n");
+  CFLog(NOTICE, "Uinf    = " << Uinf << "\n");
+  CFLog(NOTICE, "dynViscosityRef   = " << refDataDiff[NSTerm::MU]     << "\n");
+  CFLog(NOTICE, "thermConductivity = " << refDataDiff[NSTerm::LAMBDA] << "\n");
+  CFLog(NOTICE, "ReynoldsRef       = " << Re << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename CTERM, typename DTERM, typename RTERM>
+void NavierStokesNEQ<DIM, CTERM, DTERM, RTERM>::setReferenceTime()
+{
+  using namespace COOLFluiD::Physics::NavierStokes;
+  RealVector& refDataConv = this->getConvTerm()->getReferencePhysicalData();
+  this->_refTime = this->getRefLength()/refDataConv[EulerTerm::V];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename CTERM, typename DTERM, typename RTERM>
+void NavierStokesNEQ<DIM, CTERM, DTERM, RTERM>::configure ( Config::ConfigArgs& args )
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  ConvectionDiffusionReactionPM<CTERM, DTERM, RTERM>::configure(args);
+  
+  cf_assert(getDimension() > 0);
+  cf_assert(getNbEquations() > 0);
+  
+  PhysicalModelImpl::getPhysicalPropertyLibrary<PhysicalChemicalLibrary>()->setNbTempVib(_nbVibEnergyEqs);
+  
+  // allocate jacobians
+  this->_jacobians = std::vector<RealMatrix>(getDimension());
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    this->_jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM, typename CTERM, typename DTERM, typename RTERM>
+void NavierStokesNEQ<DIM, CTERM, DTERM, RTERM>::computeTauChem()
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  SafePtr<CTERM> convTerm = this->getConvTerm();
+  
+  // reference values for the convective part
+  RealVector& refDataConv = convTerm->getReferencePhysicalData();
+  
+  const CFuint nbSpecies = convTerm->getNbScalarVars(0);
+  RealVector ys(nbSpecies);
+  RealVector rhois(nbSpecies);
+  RealVector omega(0.0, nbSpecies);
+  RealVector omegap(0.0, nbSpecies);
+  
+  if (_yInf.size() == nbSpecies) {
+    // set the free stream composition
+    for (CFuint j = 0; j < nbSpecies; ++j) {
+      ys[j] = _yInf[j];
+    }
+  }
+  else {
+    throw BadValueException(FromHere(), "NavierStokesNEQ::computeTauChem()");
+  }
+  
+  // get the free stream composition from input 
+  RealMatrix jacobMatrix(getNbEquations(),getNbEquations());
+  jacobMatrix = 0.0;
+  
+  RealMatrix omegaRhoi(nbSpecies, nbSpecies);
+  omegaRhoi = 0.0;
+  
+  const CFuint nbTv = convTerm->getNbScalarVars(1);
+  RealVector tvDim((nbTv > 1) ? nbTv : 1);
+  tvDim = refDataConv[EulerTerm::T];
+  
+  // unperturbed omega
+  PhysicalModelImpl::getPhysicalPropertyLibrary< PhysicalChemicalLibrary >()->	
+    getMassProductionTerm(refDataConv[EulerTerm::T], tvDim,
+			  refDataConv[EulerTerm::P], 
+			  refDataConv[EulerTerm::RHO], 
+			  ys, false, omega,
+			  jacobMatrix);
+  
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    rhois[i] = ys[i]*refDataConv[EulerTerm::RHO];
+  }
+
+  // here you should perturb the rho and then calculate the corresponding y
+  const CFreal eps = 1e-6;
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    const CFreal rhoi = rhois[i];
+    const CFreal drhoi = std::max(MathTools::MathConsts::CFrealEps(),eps*rhoi);
+    rhois[i] += drhoi;
+    
+    // compute the ys correspoding to the perturbed rhoi
+    CFreal rhoSum = 0.0;
+    for (CFuint j = 0; j < nbSpecies; ++j) {
+      ys[j] = rhois[j];
+      rhoSum += rhois[j];
+    }
+    ys /= rhoSum;
+    
+    for (CFuint j = 0; j < nbSpecies; ++j) {
+      PhysicalModelImpl::getPhysicalPropertyLibrary<PhysicalChemicalLibrary>()->	
+	getMassProductionTerm(refDataConv[EulerTerm::T], tvDim,
+			      refDataConv[EulerTerm::P], 
+			      refDataConv[EulerTerm::RHO], 
+			      ys, false, omegap,
+			      jacobMatrix);
+      
+      omegaRhoi(j, i) = (omegap[j] - omega[j])/drhoi;
+    }
+    
+    // restore
+    rhois[i] = rhoi;
+  }
+     
+  // reference values for the reaction part
+  RealVector& refDataSource = this->getSrcTerm()->getReferencePhysicalData();
+  refDataSource[RTERM::TAU] = 
+    1./std::sqrt(MathTools::MathFunctions::innerProd(omegaRhoi,omegaRhoi));
+ }
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace NEQ
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

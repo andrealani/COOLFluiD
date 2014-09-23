@@ -1,0 +1,184 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+# This testcase verifies the MonteCarlo algorithm for a 3D slab testcase
+#
+### Residual = -5.36945
+
+#
+#
+############################################################################
+# Simulation Modules
+#
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libMeshTools libMeshToolsFVM libGambit2CFmesh libPetscI libRadiativeTransfer #libParade
+
+#CFEnv.ErrorOnUnusedConfig   = true
+#CFEnv.ExceptionLogLevel     = 200
+#
+############################################################################
+# directory
+#
+Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/Slab
+Simulator.Paths.ResultsDir = ./OUTPUT
+#
+############################################################################
+# physical model type
+#
+Simulator.SubSystem.Default.PhysicalModelType   = NavierStokes3D
+
+############################################################################
+# adapt reference values
+#
+Simulator.SubSystem.NavierStokes3D.refValues  = 101325. 10.0 10.0 10.0 10000.
+Simulator.SubSystem.NavierStokes3D.refLength  = 1.0
+#
+############################################################################
+# interactive parameters
+#
+#Simulator.SubSystem.InteractiveParamReader.FileName = ./slabCoarse.inter
+#Simulator.SubSystem.InteractiveParamReader.readRate = 10
+#
+############################################################################
+# stop condition
+#
+Simulator.SubSystem.StopCondition           = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps  = 1
+
+#Simulator.SubSystem.StopCondition         = Norm
+#Simulator.SubSystem.Norm.valueNorm        = -4.0
+#
+############################################################################
+# check TRS names
+#
+Simulator.SubSystem.Default.listTRS = InnerFaces wall inlet outlet
+#
+############################################################################
+# Mesh reading
+#
+Simulator.SubSystem.MeshCreator                                   = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName                = slabCoarse.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous  = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder  = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom                  = Gambit2CFmesh
+#Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor          = 1000.
+#
+############################################################################
+# Mesh writing
+#
+Simulator.SubSystem.OutputFormat            =  Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName         = slabCoarse.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate         = 1
+Simulator.SubSystem.CFmesh.AppendTime       = false
+Simulator.SubSystem.CFmesh.AppendIter       = false
+
+Simulator.SubSystem.Tecplot.FileName        = slabCoarse.plt
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = wall inlet outlet
+Simulator.SubSystem.Tecplot.SaveRate        = 1
+Simulator.SubSystem.Tecplot.AppendIter      = false
+Simulator.SubSystem.Tecplot.AppendTime      = false
+#
+############################################################################
+# LinearSystemSolver
+#
+Simulator.SubSystem.LinearSystemSolver                       = PETSC
+Simulator.SubSystem.LSSNames                                 = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType            = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType           = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType   = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter           = 500
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4 # or 1e-3
+
+Simulator.SubSystem.ConvergenceMethod                        = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value            = 1.0
+Simulator.SubSystem.NewtonIterator.Data.MaxSteps             = 1
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID    = 0
+Simulator.SubSystem.NewtonIterator.Data.FilterState          = Max
+Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs          = 1 0 0 0 1 
+Simulator.SubSystem.NewtonIterator.Data.Max.minValues        = 0. 0. 0. 0. 0. 
+Simulator.SubSystem.NewtonIterator.ConvergenceFile           = convergence.plt
+#
+############################################################################
+# Space Method
+#
+Simulator.SubSystem.SpaceMethod                               = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Restart                     = false
+Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff    = true
+Simulator.SubSystem.CellCenterFVM.ComputeRHS                  = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS              = PseudoSteadyTimeRhs
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter           = Roe
+# AUSM Roe Centred StegerWarming VanLeer3D HUS3D
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar              = Pvt
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar            = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar              = Roe
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar           = Pvt
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux          = NavierStokes
+
+Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation                   = DistanceBasedGMove
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TrsPriorityList   = wall inlet outlet
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TRSName           = wall
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.ValuesIdx         = 1 2 3
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.Values            = 0. 0. 0.
+
+#### first order ############
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec                = Constant
+#
+###########################################################################################
+#Initialization
+#
+Simulator.SubSystem.CellCenterFVM.InitComds           = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames           = InField
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS    = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars        = x y z
+Simulator.SubSystem.CellCenterFVM.InField.Def         = 160000.0 0.01 0. 0. 10000.
+#### p u v t  ### check initial values
+#
+############################################################################
+#Boundary Conditions
+#
+Simulator.SubSystem.CellCenterFVM.BcComds = \
+                                            NoSlipWallIsothermalNSvtFVMCC \
+					    SubInletEuler3DTtPtAlphaFVMCC \
+					    SuperOutletFVMCC
+
+Simulator.SubSystem.CellCenterFVM.BcNames = \
+                                            BcWall \
+					    BcInlet \
+					    BcOutlet
+
+Simulator.SubSystem.CellCenterFVM.BcWall.applyTRS = wall
+Simulator.SubSystem.CellCenterFVM.BcWall.TWall  = 10000.
+Simulator.SubSystem.CellCenterFVM.BcWall.VelocityIDs = 1 2 3
+Simulator.SubSystem.CellCenterFVM.BcWall.Adiabatic  = true
+
+Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS            = inlet
+Simulator.SubSystem.CellCenterFVM.BcInlet.Ttot                = 10000.0
+Simulator.SubSystem.CellCenterFVM.BcInlet.Ptot                = 160000.0
+Simulator.SubSystem.CellCenterFVM.BcInlet.alphaxy             = 0.0
+Simulator.SubSystem.CellCenterFVM.BcInlet.alphaxz             = 0.0
+
+Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS           = outlet
+Simulator.SubSystem.CellCenterFVM.BcOutlet.ZeroGradientFlags  = 1 1 1 1 1
+#
+############################################################################
+#Commands
+#
+Simulator.SubSystem.DataPostProcessing                         = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames                    = DataProcessing1
+Simulator.SubSystem.DataProcessing1.Comds                     = RadiativeTransferMonteCarloFVMCC
+Simulator.SubSystem.DataProcessing1.Names                     = RT
+Simulator.SubSystem.DataProcessing1.RT.applyTRS               = InnerFaces # wall inlet outlet
+#Simulator.SubSystem.DataProcessing1.RT.RadiationLibrary       = Parade
+Simulator.SubSystem.DataProcessing1.RT.wallTrsNames           = wall
+Simulator.SubSystem.DataProcessing1.RT.boundaryTrsNames       = inlet outlet
+Simulator.SubSystem.DataProcessing1.RT.numberOfRays           = 100
+Simulator.SubSystem.DataProcessing1.RT.TestcaseID             = 2 
+
+
+
+

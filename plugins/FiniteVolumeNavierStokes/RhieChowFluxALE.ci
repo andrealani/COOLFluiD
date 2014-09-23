@@ -1,0 +1,114 @@
+#include "Framework/SubSystemStatus.hh"
+#include "Framework/Node.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+RhieChowFluxALE<BASE>::RhieChowFluxALE(const std::string& name) :
+  BASE(name),
+  socket_pastNodes("pastNodes"),
+  socket_futureNodes("futureNodes"),
+  m_vgn(0.),
+  m_meshSpeed()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+RhieChowFluxALE<BASE>::~RhieChowFluxALE()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void RhieChowFluxALE<BASE>::setup()
+{
+  BASE::setup();
+  
+  m_meshSpeed.resize(Framework::PhysicalModelStack::getActive()->getDim());
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void RhieChowFluxALE<BASE>::computeMeshSpeed()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  // Compute the meshSpeed
+  const CFreal dt = Framework::SubSystemStatusStack::getActive()->getDT();
+  
+  CellCenterFVMData& data = this->getMethodData(); 
+  Framework::GeometricEntity *const geo = data.getCurrentFace();
+  //Geometric shape function at the current quadrature point
+  const RealVector& shapeFunction = data.getPolyReconstructor()->getCurrentGeoShapeFunction(geo);
+    
+  m_meshSpeed = 0.;
+  
+  DataHandle<Node*> pastNodes = socket_pastNodes.getDataHandle();
+  DataHandle<Node*> futureNodes = socket_futureNodes.getDataHandle();
+  
+  const CFuint nbNodes = geo->nbNodes();
+  const CFuint dim = Framework::PhysicalModelStack::getActive()->getDim();
+
+  // Compute speed of the mesh at current quadrature point
+  for(CFuint iNode = 0; iNode < nbNodes; iNode++) {
+    const CFuint nodeID = (geo->getNode(iNode))->getLocalID();
+    for(CFuint iDim = 0; iDim < dim; iDim++){
+      m_meshSpeed[iDim] += shapeFunction[iNode] * (*(futureNodes[nodeID]))[iDim];
+      m_meshSpeed[iDim] -= shapeFunction[iNode] * (*(pastNodes[nodeID]))[iDim];
+    }
+  }
+  
+  m_meshSpeed /= dt;
+  
+  // CFout << "Meshspeed: " << _meshSpeed <<"\n";
+  //Compute vg*n
+  const RealVector& unitNormal = data.getUnitNormal(); 
+  m_vgn = m_meshSpeed[0] * unitNormal[0];
+  for(CFuint iDim = 1;iDim < dim ;iDim++){
+    m_vgn += m_meshSpeed[iDim] * unitNormal[iDim];
+  }
+  // CFout << "Normal meshspeed: " << _vgn <<"\n";
+  
+  this->m_rhoUn12 -= this->m_rho12*m_vgn;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> >  
+RhieChowFluxALE<BASE>::needsSockets()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  vector<SafePtr<BaseDataSocketSink> > result  = BASE::needsSockets();
+  
+  result.push_back(&socket_pastNodes);
+  result.push_back(&socket_futureNodes);
+  
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

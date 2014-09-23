@@ -1,0 +1,154 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+
+#
+### Residual = -1.82716
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes  libLinearAdvSys libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitNavierStokes libFluctSplitSpaceTime libForwardEuler libGambit2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir       = plugins/LinearAdvSys/testcases/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType     = LinearAdvSys3D
+
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c0x = 0.
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c1x = 0.
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c2x = 0.
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c3x = 0.
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c0y = 1.
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c1y = 1.
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c2y = 1.
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c3y = 1.
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c0z = 0.5
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c1z = 0.5
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c2z = 0.5
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c3z = 0.5
+
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.006
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = MaxDT
+#Simulator.SubSystem.SubSystemStatus.MaxDT.DT_Ratio = 0.9
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot
+Simulator.SubSystem.CFmesh.FileName     = accpulse_STRDS.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = LinAdvSys_STKT.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 20
+Simulator.SubSystem.CFmesh.SaveRate = 1000
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+Simulator.SubSystem.CFmesh.AppendIter = true
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = mesh3D.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells boundary1 boundary2 boundary3 boundary4 boundary5 boundary6
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.6
+Simulator.SubSystem.FwdEuler.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.FwdEuler.RelativeNormAndMaxIter.RelativeNorm = -5.0
+Simulator.SubSystem.FwdEuler.RelativeNormAndMaxIter.MaxIter = 5
+Simulator.SubSystem.FwdEuler.Data.PrintHistory = true
+
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = STU_CRD
+
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = STKT_SysLDAC
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorOrder = P3
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar = Prim
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar   = Prim
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar  = Prim
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar   = Prim
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState 
+Simulator.SubSystem.FluctuationSplit.InitNames = InField 
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.InField.InputVar = Prim
+Simulator.SubSystem.FluctuationSplit.InField.Def =if(sqrt((x-0.5)^2+(y-0.5)^2+(z-0.5)^2)<0.25,cos(2*sqrt((x-0.5)^2+(y-0.5)^2+(z-0.5)^2)*3.1415)^2,0.0) if(sqrt((x-0.5)^2+(y-0.5)^2+(z-0.5)^2)<0.25,cos(2*sqrt((x-0.5)^2+(y-0.5)^2+(z-0.5)^2)*3.1415)^2,0.0) \
+                                                   if(sqrt((x-0.5)^2+(y-0.5)^2+(z-0.5)^2)<0.25,cos(2*sqrt((x-0.5)^2+(y-0.5)^2+(z-0.5)^2)*3.1415)^2,0.0) \
+                                                  if(sqrt((x-0.5)^2+(y-0.5)^2+(z-0.5)^2)<0.25,cos(2*sqrt((x-0.5)^2+(y-0.5)^2+(z-0.5)^2)*3.1415)^2,0.0)  \
+                                                  
+
+Simulator.SubSystem.FluctuationSplit.BcComds = SuperInlet \
+                                               SuperInlet \                                       
+                                               SuperInlet \
+                                               SuperInlet \
+                                               SuperInlet \
+                                              SuperInlet
+
+Simulator.SubSystem.FluctuationSplit.BcNames = BCboundary1 \
+                                               BCboundary2 \
+                                               BCboundary3 \
+                                               BCboundary4 \
+                                               BCboundary5 \
+                                               BCboundary6
+
+Simulator.SubSystem.FluctuationSplit.BCboundary1.applyTRS = boundary1
+Simulator.SubSystem.FluctuationSplit.BCboundary1.Vars = x y z t
+Simulator.SubSystem.FluctuationSplit.BCboundary1.Def =  0 \
+						  0 \
+						  0 \
+						  0
+
+
+Simulator.SubSystem.FluctuationSplit.BCboundary2.applyTRS = boundary2
+Simulator.SubSystem.FluctuationSplit.BCboundary2.Vars = x y z t
+Simulator.SubSystem.FluctuationSplit.BCboundary2.Def =  0 \
+						  0 \
+						  0 \
+						  0
+
+Simulator.SubSystem.FluctuationSplit.BCboundary3.applyTRS = boundary3
+Simulator.SubSystem.FluctuationSplit.BCboundary3.Vars = x y z t
+Simulator.SubSystem.FluctuationSplit.BCboundary3.Def =  0 \
+						  0 \
+						  0 \
+						  0
+
+Simulator.SubSystem.FluctuationSplit.BCboundary4.applyTRS = boundary4
+Simulator.SubSystem.FluctuationSplit.BCboundary4.Vars = x y z t
+Simulator.SubSystem.FluctuationSplit.BCboundary4.Def =  0 \
+						  0 \
+						  0 \
+						  0
+
+Simulator.SubSystem.FluctuationSplit.BCboundary5.applyTRS = boundary5
+Simulator.SubSystem.FluctuationSplit.BCboundary5.Vars = x y z t
+Simulator.SubSystem.FluctuationSplit.BCboundary5.Def =  0 \
+						  0 \
+						  0 \
+						  0
+
+Simulator.SubSystem.FluctuationSplit.BCboundary6.applyTRS = boundary6
+Simulator.SubSystem.FluctuationSplit.BCboundary6.Vars = x y z t
+Simulator.SubSystem.FluctuationSplit.BCboundary6.Def =  0 \
+						  0 \
+						  0 \
+						  0
+

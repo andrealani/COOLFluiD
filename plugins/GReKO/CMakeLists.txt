@@ -1,0 +1,39 @@
+LIST ( APPEND GReKO_files
+Euler2DGReKOCons.cxx
+Euler2DGReKOCons.hh
+Euler2DGReKOConsToPuvtInPuvt.cxx
+Euler2DGReKOConsToPuvtInPuvt.hh
+Euler2DGReKOConsToRoe.cxx
+Euler2DGReKOConsToRoe.hh
+Euler2DGReKOLinearRoe.cxx
+Euler2DGReKOLinearRoe.hh
+#Euler2DGReKOMachAlphaPTToCons.cxx
+#Euler2DGReKOMachAlphaPTToCons.hh
+#Euler2DGReKOMachAlphaPTToPuvt.cxx
+#Euler2DGReKOMachAlphaPTToPuvt.hh
+Euler2DGReKOPuvt.cxx
+Euler2DGReKOPuvt.hh
+Euler2DGReKOPuvtToCons.cxx
+Euler2DGReKOPuvtToCons.hh
+Euler2DGReKOPuvtToConsInPuvt.cxx
+Euler2DGReKOPuvtToConsInPuvt.hh
+GReKO.hh
+GReKOReactionTerm.cxx
+GReKOReactionTerm.hh
+NavierStokes2DGReKOBSLPuvt.cxx
+NavierStokes2DGReKOBSLPuvt.hh
+NavierStokes2DGReKOPuvt.cxx
+NavierStokes2DGReKOPuvt.hh
+NavierStokes2DGReKOSSTPuvt.cxx
+NavierStokes2DGReKOSSTPuvt.hh
+NavierStokesGReKOPhysicalModel.ci
+NavierStokesGReKOPhysicalModel.cxx
+NavierStokesGReKOPhysicalModel.hh
+#WNavierStokes2DGReKOPuvt.cxx
+#WNavierStokes2DGReKOPuvt.hh
+)
+
+LIST ( APPEND GReKO_cflibs NavierStokes KOmega )
+LIST ( APPEND GReKO_requires_mods NavierStokes KOmega)
+CF_ADD_PLUGIN_LIBRARY ( GReKO )
+CF_WARN_ORPHAN_FILES()

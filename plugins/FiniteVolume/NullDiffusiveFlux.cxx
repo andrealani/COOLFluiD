@@ -1,0 +1,71 @@
+#include "Framework/MethodStrategyProvider.hh"
+
+#include "NullDiffusiveFlux.hh"
+#include "FiniteVolume/FiniteVolume.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+MethodStrategyProvider<NullDiffusiveFlux,
+                       CellCenterFVMData,
+		       ComputeDiffusiveFlux,
+                       FiniteVolumeModule>
+nullDiffusiveFluxProvider("Null");
+
+//////////////////////////////////////////////////////////////////////////////
+
+NullDiffusiveFlux::NullDiffusiveFlux(const std::string& name) :
+  ComputeDiffusiveFlux(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+NullDiffusiveFlux::~NullDiffusiveFlux()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NullDiffusiveFlux::setDiffusiveVarSet(SafePtr<DiffusiveVarSet>
+					   diffVar)
+{
+  CFLog(VERBOSE, "NullDiffusiveFlux::setDiffusiveVarSet() called" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NullDiffusiveFlux::computeFlux(RealVector& result)
+{
+  CFLog(VERBOSE, "NullDiffusiveFlux::computeFlux() called" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NullDiffusiveFlux::setFluxData(SafePtr<FluxSplitterData> fluxData)
+{
+  CFLog(VERBOSE, "NullDiffusiveFlux::setFluxData() called" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,5 @@
+Simulator.SubSystem.Norm.valueNorm  = -5.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.limitRes = -15.0
+Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.
+# second order can be activated by setting gradientFactor to 1.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.gradientFactor = 1.

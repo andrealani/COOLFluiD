@@ -1,0 +1,38 @@
+c User input file for PARADE
+c 1. Spectrum control data:
+c
+  1000       wavlo [A]
+  8000       wavhi [A]
+  4000         npoints
+c 2. Parameters for adaptive wavelength discretisation:
+  0.0005       minimum distance between adjacent points
+  100.         integration limit for line shape
+  0.0001       minimum fraction for use of energy level
+c 3. Switches for radiation mechanisms:
+  'Y'          free-free  radiation (y/n)
+  'Y'          free-bound radiation (y/n)
+  'N'          atomic line radiation (y/n)
+  'Y'          molecular band radiation (y/n)
+  'N'          nonequilibrium excitation (y/n)
+  'N'          adaptive wavelength discretisation (y/n)
+  'N'          equal wavelength increments (y/n)
+  'Y'          equal frequency increments (y/n)
+c 3(bis). Switches for output options
+  1 		iout (row number for main outputs)
+  1		jout (column number for main outputs)
+  'N'          'par_res.imo' for each cell (y/n)
+  'N'          time integrated emission coefficient until cell number
+  60           max cell number for time integration (shock tube test)
+c
+c 4. rad(y/n) remark  at. spec  ttr  tv  te    rad.file
+ 'Y',        'CO'     2         1   2   2,   '../../../data/coibp.dat'
+ 'b'	'CO4p'   'N'
+ 'b'    'Angstroem'   'N'
+  'b'   'CO3p'         'N'
+ 'N',        'E'      0         0   0   2,   ' '
+c 5. Temperatures and number densities
+  8000.0              T trans
+  8000.0              T elec
+  1.21E18            8000.0
+  2.0E16              No. density
+

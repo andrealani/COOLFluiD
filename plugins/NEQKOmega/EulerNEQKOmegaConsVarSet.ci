@@ -1,0 +1,122 @@
+#include "Common/NotImplementedException.hh"
+#include "NavierStokes/EulerTerm.hh"
+#include "NavierStokes/NSTurbTerm.hh"
+#include "Framework/MeshData.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace NEQKOmega {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+EulerNEQKOmegaConsVarSet<BASE, SGROUP>::EulerNEQKOmegaConsVarSet(Common::SafePtr<Framework::BaseTerm> term) :
+  KOmega::EulerKOmegaConsVarSet<BASE, SGROUP>(term),
+  m_startK(0.),
+  m_tmpResult(),
+  m_pdatak()
+{
+  this->addVarName("K");
+  this->addVarName("Omega");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+EulerNEQKOmegaConsVarSet<BASE, SGROUP>::~EulerNEQKOmegaConsVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+void EulerNEQKOmegaConsVarSet<BASE, SGROUP>::computeEigenValuesVectors(RealMatrix& rightEv,
+								    RealMatrix& leftEv,
+								    RealVector& eValues,
+								    const RealVector& normal)
+{
+  throw Common::NotImplementedException (FromHere(),"EulerNEQKOmegaConsVarSet::computeEigenValuesVectors()");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+template <typename BASE, CFuint SGROUP>
+CFuint EulerNEQKOmegaConsVarSet<BASE, SGROUP>::getBlockSeparator() const
+{
+  return Framework::PhysicalModelStack::getActive()->getNbEq();
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+void EulerNEQKOmegaConsVarSet<BASE, SGROUP>::splitJacobian(RealMatrix& jacobPlus,
+						    RealMatrix& jacobMin,
+						    RealVector& eValues,
+						    const RealVector& normal)
+{
+  throw Common::NotImplementedException (FromHere(),"EulerNEQKOmegaConsVarSet::splitJacobian()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+void EulerNEQKOmegaConsVarSet<BASE, SGROUP>::computePhysicalData(const Framework::State& state,
+								 RealVector& data)
+{
+  throw Common::NotImplementedException (FromHere(), "EulerNEQKOmegaConsVarSet::computePhysicalData()");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+void EulerNEQKOmegaConsVarSet<BASE, SGROUP>::computeStateFromPhysicalData(const RealVector& data,
+									  Framework::State& state)
+{
+  throw Common::NotImplementedException (FromHere(), "EulerNEQKOmegaConsVarSet::computePhysicalData()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+void EulerNEQKOmegaConsVarSet<BASE, SGROUP>::setDimensionalValuesPlusExtraValues
+(const Framework::State& state, RealVector& result, RealVector& extra)
+{
+  throw Common::NotImplementedException (FromHere(), "EulerNEQKOmegaConsVarSet::setDimensionalValuesPlusExtraValues()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+void EulerNEQKOmegaConsVarSet<BASE, SGROUP>::setup()
+{
+  BASE::setup();
+  
+  m_startK = 0;
+  for (int i = 0; i < SGROUP; ++i) {
+    m_startK += this->getModel()->getNbScalarVars(i);
+  }
+  
+  // AL: check if this is correct
+  m_startK += BASE::EULERSET::getEqSetData()[0].size();
+  
+  const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+  m_tmpResult.resize(nbEqs);
+  assert(m_startK <= nbEqs-2);
+  
+  this->addEqSetData(2);
+  this->getModel()->resizePhysicalData(m_pdatak);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace NEQKOmega
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

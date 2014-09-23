@@ -1,0 +1,89 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace Maxwell {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MaxwellProjectionAdim<DIM>::defineConfigOptions(Config::OptionList& options)
+{
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+MaxwellProjectionAdim<DIM>::MaxwellProjectionAdim(const std::string& name)
+  : Framework::ConvectionPM<MaxwellProjectionAdimTerm>(name)
+{
+  addConfigOptionsTo(this);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+MaxwellProjectionAdim<DIM>::~MaxwellProjectionAdim()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint MaxwellProjectionAdim<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MaxwellProjectionAdim<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionPM<MaxwellProjectionAdimTerm>::configure(args);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(getDimension());
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint MaxwellProjectionAdim<DIM>::getNbEquations() const
+{
+return 8;  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MaxwellProjectionAdim<DIM>::setReferenceValues()
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  
+  SafePtr<MaxwellProjectionAdimTerm> convTerm = getConvTerm();
+  
+  // reference values for the convective part
+  RealVector& refDataConv = convTerm->getReferencePhysicalData();
+  
+  // if the pressure and temperature reference values
+  // have not been specified set all the ref values to 1.
+  refDataConv = 1.0;
+  _isAdimensional = false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace MHD
+
+} // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+

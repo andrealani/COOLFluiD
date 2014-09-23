@@ -1,0 +1,504 @@
+#include "Framework/EquationSetData.hh"
+#include "Framework/BaseTerm.hh"
+#include "FiniteVolume/FVMCC_PolyRec.hh"
+#include "MunzFluxMaxwell2D.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+MunzFluxMaxwell2D<UPDATEVAR>::MunzFluxMaxwell2D(const std::string& name) :
+  FVMCC_FluxSplitter(name),
+  m_updateVarSet(CFNULL),
+  m_lData(CFNULL),
+  m_rData(CFNULL),
+  m_tempUnitNormal(),
+  m_pdata(),
+  _rightEv(),
+  _leftEv(),
+  _eValues(),
+  _absEvalues(),
+  _absJacob(),
+  _jRight(),
+  _jLeft(),
+  _jacob(),
+  _jacobLeftTransf(), 
+  _jacobRightTransf(),
+  _jacobDummy(),
+  _EMField_l(),
+  _EMField_r(),
+  _D(),
+  _E(),
+  _Aplus(),
+  _Aminus(),
+  _statesLR(2)
+{
+  addConfigOptionsTo(this);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+MunzFluxMaxwell2D<UPDATEVAR>::~MunzFluxMaxwell2D()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void MunzFluxMaxwell2D<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void MunzFluxMaxwell2D<UPDATEVAR>::setup()
+{
+  using namespace COOLFluiD::Framework;
+  
+  CFLog(NOTICE, "MunzFluxMaxwell2D::setup()\n");
+  
+  FVMCC_FluxSplitter::setup();
+  
+  CFLog(NOTICE, "MunzFluxMaxwell2D::setup() 1\n");
+  
+  m_tempUnitNormal.resize(PhysicalModelStack::getActive()->getDim());
+
+  PhysicalModelStack::getActive()->getImplementor()->
+    getConvectiveTerm()->resizePhysicalData(m_pdata);
+  
+  CFLog(NOTICE, "MunzFluxMaxwell2D::setup() 2\n");
+  
+  m_updateVarSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+  
+  CFLog(NOTICE, "MunzFluxMaxwell2D::setup() 3\n");
+  
+  // Roe scheme related data
+  const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+  _rightEv.resize(nbEqs, nbEqs);
+  _leftEv.resize(nbEqs, nbEqs);
+  _eValues.resize(nbEqs);
+  _absEvalues.resize(nbEqs);
+  _absJacob.resize(nbEqs,nbEqs);
+  _jRight.resize(nbEqs,nbEqs);
+  _jLeft.resize(nbEqs, nbEqs);
+  _jacob.resize(nbEqs, nbEqs);
+  _jacobLeftTransf.resize(nbEqs, nbEqs);
+  _jacobRightTransf.resize(nbEqs, nbEqs);
+  _jacobDummy.resize(nbEqs, nbEqs); 
+  _EMField_l.resize(nbEqs);
+  _EMField_r.resize(nbEqs);
+  _D.resize(4,4);
+  _E.resize(4,4);
+  _Aplus.resize(8,8);
+  _Aminus.resize(8,8);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void MunzFluxMaxwell2D<UPDATEVAR>::compute(RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  //CFLog(NOTICE, "MunzFluxMaxwell2D::compute() 1\n");  
+  
+  m_updateVarSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+  
+  vector<RealVector>& pdata = getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
+  m_lData = &pdata[LEFT];
+  m_rData = &pdata[RIGHT];
+  
+    
+  // here there could be the current number of equations if we want
+  // different eigenvalues for each set of equations
+  const CFuint nbEMField = 8;
+  
+  // const CFuint EMFieldSetID = eqSetEMField.getEqSetID();
+  
+  for (CFuint i = 0; i < nbEMField; ++i){
+    _EMField_l[i] = (*this->m_lData)[i];
+    _EMField_r[i] = (*this->m_rData)[i];  
+  }
+  RealVector EMField_lMunz(nbEMField);  
+  RealVector EMField_rMunz(nbEMField);
+  
+  //Ordering the Variables vector as done in the article
+  //Loop to put in order the components of the Electric Field
+  for (CFuint i = 0; i < 3; ++i){
+    EMField_lMunz[i] = _EMField_l[i + 3]; 
+    EMField_rMunz[i] = _EMField_r[i + 3];    
+  }
+
+  //Loop to put in order the components of the Magetic Field
+  for (CFuint i = 4; i < 7; ++i){
+    EMField_lMunz[i] = _EMField_l[i - 4]; 
+    EMField_rMunz[i] = _EMField_r[i - 4];    
+  }
+  
+  //Putting in order the div E cleaning variable
+  EMField_lMunz[3] = _EMField_l[7];
+  EMField_rMunz[3] = _EMField_r[7];
+   
+  //Putting in order the div B cleaning variable
+  EMField_lMunz[7] = _EMField_l[6];
+  EMField_rMunz[7] = _EMField_r[6];   
+  
+  //CFLog(NOTICE, "MunzFluxMaxwell2D::compute() 2\n");  
+  
+  computeMatrixAplus();
+  computeMatrixAminus();
+ 
+  
+  RealVector resultMunz(nbEMField);
+  
+  resultMunz = _Aplus*EMField_lMunz + _Aminus*EMField_rMunz; 
+ 
+  //std::cout<<"resultMunz = ( ";
+  //for (CFuint i = 0; i < nbEMField -1; ++i){
+    //std::cout<< resultMunz[i] <<", ";   
+  //}  
+  //std::cout<< resultMunz[nbEMField - 1]<<" )\n";;
+  
+  //Loop to put in order the components of the flux;first the Faraday's Law
+  for (CFuint i = 0; i < 3; ++i){
+    result[i] = resultMunz[i + 4];   
+  }
+  
+  //Loop to put in order the Ampere's law
+  for (CFuint i = 3; i < 6; ++i){
+    result[i] = resultMunz[i - 3];    
+  }
+  
+  //put next Gauss' Law for B-Field  
+  result[6] = resultMunz[3];    
+    
+  //put next Gauss' law for E-Field
+  result[7] = resultMunz[7];
+  
+  //std::cout<<"result = ( ";
+  //for (CFuint i = 0; i < nbEMField -1; ++i){
+    //std::cout<< result[i] <<", ";   
+  //}  
+  //std::cout<< result[nbEMField -1]<<" )\n";  
+  
+  //std::cout<<"//////////////////////////////////////////////////////////////////////////////////////////////////////////////////\n";
+ 
+  
+  if (!this->getMethodData().isPerturb()) {
+    computeUpdateCoeff();
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void MunzFluxMaxwell2D<UPDATEVAR>::computeSubMatrixD(CFreal mu, CFreal nu)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;  
+  
+  m_updateVarSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+ 
+
+  const RealVector& normal = getMethodData().getUnitNormal();
+  const CFreal c_e = m_updateVarSet->getModel()->getLightSpeed(); 
+  
+  _D(0,0) = (1 + normal[0]*normal[0]*(mu-1))*c_e;
+  _D(0,1) = normal[0]*normal[1]*(mu-1)*c_e; 
+  _D(0,2) = 0.0;
+  _D(0,3) = 0.0;  
+
+  _D(1,0) = normal[0]*normal[1]*(mu-1)*c_e;
+  _D(1,1) = (1 + normal[1]*normal[1]*(mu-1))*c_e; 
+  _D(1,2) = 0.0;
+  _D(1,3) = 0.0;   
+
+  _D(2,0) = 0.0;
+  _D(2,1) = 0.0; 
+  _D(2,2) = c_e;
+  _D(2,3) = 0.0; 
+
+  _D(3,0) = 0.0;
+  _D(3,1) = 0.0; 
+  _D(3,2) = 0.0;
+  _D(3,3) = nu*c_e;
+  
+  //std::cout<<"D = "<<  _D(0,0) <<"\t\t "<<  _D(0,1) <<"\t\t " <<  _D(0,2) <<"\t\t "<<  _D(0,3) <<"\n";
+  //std::cout<<"    "<<  _D(1,0) <<"\t\t "<<  _D(1,1) <<"\t\t " <<  _D(1,2) <<"\t\t "<<  _D(1,3) <<"\n";  
+  //std::cout<<"    "<<  _D(2,0) <<"\t\t "<<  _D(2,1) <<"\t\t " <<  _D(2,2) <<"\t\t "<<  _D(2,3) <<"\n";
+  //std::cout<<"    "<<  _D(3,0) <<"\t\t "<<  _D(3,1) <<"\t\t " <<  _D(3,2) <<"\t\t "<<  _D(3,3) <<"\n";  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void MunzFluxMaxwell2D<UPDATEVAR>::computeSubMatrixE()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  m_updateVarSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+
+  
+  const RealVector& normal = getMethodData().getUnitNormal();
+  const CFreal gamma = m_updateVarSet->getModel()->getDivBAdimCleaningConst();	//DivB cleaning technique constant
+  const CFreal chi = m_updateVarSet->getModel()->getDivECleaningConst();
+  //std::cout<<"gamma = "<< gamma <<", chi = "<< chi<<"\n"; 
+  
+  
+  _E(0,0) = 0.0;
+  _E(0,1) = 0.0; 
+  _E(0,2) = -normal[1];
+  _E(0,3) = normal[0]*chi;  
+
+  _E(1,0) = 0.0;
+  _E(1,1) = 0.0; 
+  _E(1,2) = normal[0];
+  _E(1,3) = normal[1]*chi;   
+
+  _E(2,0) = normal[1];
+  _E(2,1) = -normal[0]; 
+  _E(2,2) = 0.0;
+  _E(2,3) = 0.0; 
+
+  _E(3,0) = normal[0]*gamma;
+  _E(3,1) = normal[1]*gamma; 
+  _E(3,2) = 0.0;
+  _E(3,3) = 0.0;
+  
+  //std::cout<<"E = "<<  _E(0,0) <<"\t\t "<<  _E(0,1) <<"\t\t " <<  _E(0,2) <<"\t\t "<<  _E(0,3) <<"\n";
+  //std::cout<<"    "<<  _E(1,0) <<"\t\t "<<  _E(1,1) <<"\t\t " <<  _E(1,2) <<"\t\t "<<  _E(1,3) <<"\n";  
+  //std::cout<<"    "<<  _E(2,0) <<"\t\t "<<  _E(2,1) <<"\t\t " <<  _E(2,2) <<"\t\t "<<  _E(2,3) <<"\n";
+  //std::cout<<"    "<<  _E(3,0) <<"\t\t "<<  _E(3,1) <<"\t\t " <<  _E(3,2) <<"\t\t "<<  _E(3,3) <<"\n";
+  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void MunzFluxMaxwell2D<UPDATEVAR>::computeMatrixAplus()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  m_updateVarSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+
+  
+  const CFreal c_e = m_updateVarSet->getModel()->getLightSpeed();
+  const CFreal gamma = m_updateVarSet->getModel()->getDivBAdimCleaningConst();	//DivB cleaning technique constant
+  const CFreal chi = m_updateVarSet->getModel()->getDivECleaningConst();
+  
+  computeSubMatrixD(chi,gamma);
+  computeSubMatrixE();
+  
+  //loop for writing the upper-left corner submatrix  
+  for (CFuint i = 0; i < 4; ++i){
+    for(CFuint j = 0; j < 4; ++j){
+      _Aplus(i,j) = _D(i,j);
+    }
+  }
+  
+  //loop for writing the upper-right corner submatrix
+  for (CFuint i = 0; i < 4; ++i){
+    for(CFuint j = 4; j < 8; ++j){
+      _Aplus(i,j) = c_e*c_e*_E(i,j - 4);
+    }
+  }  
+  
+  //loop for writing the lower-left corner submatrix
+  for (CFuint i = 4; i < 8; ++i){
+    for(CFuint j = 0; j < 4; ++j){
+      _Aplus(i,j) = _E(j, i - 4);
+    }
+  }  
+  
+  computeSubMatrixD(gamma,chi);  
+  //loop for writing the lower-right corner submatrix
+  for (CFuint i = 4; i < 8; ++i){
+    for(CFuint j = 4; j < 8; ++j){
+      _Aplus(i,j) = _D(i - 4,j - 4);
+    }
+  }
+  
+  //std::cout<<"Aplus = "<<  _Aplus(0,0) <<"\t\t "<<  _Aplus(0,1) <<"\t\t " <<  _Aplus(0,2) <<"\t\t "<<  _Aplus(0,3) <<"\t\t"<<  _Aplus(0,4) <<"\t\t "<<  _Aplus(0,5) <<"\t\t " <<  _Aplus(0,6) <<"\t\t "<<  _Aplus(0,7) <<"\n";
+  //std::cout<<"        "<<  _Aplus(1,0) <<"\t\t "<<  _Aplus(1,1) <<"\t\t " <<  _Aplus(1,2) <<"\t\t "<<  _Aplus(1,3) <<"\t\t"<<  _Aplus(1,4) <<"\t\t "<<  _Aplus(1,5) <<"\t\t " <<  _Aplus(1,6) <<"\t\t "<<  _Aplus(1,7) <<"\n";
+  //std::cout<<"        "<<  _Aplus(2,0) <<"\t\t "<<  _Aplus(2,1) <<"\t\t " <<  _Aplus(2,2) <<"\t\t "<<  _Aplus(2,3) <<"\t\t"<<  _Aplus(2,4) <<"\t\t "<<  _Aplus(2,5) <<"\t\t " <<  _Aplus(2,6) <<"\t\t "<<  _Aplus(2,7) <<"\n";
+  //std::cout<<"        "<<  _Aplus(3,0) <<"\t\t "<<  _Aplus(3,1) <<"\t\t " <<  _Aplus(3,2) <<"\t\t "<<  _Aplus(3,3) <<"\t\t"<<  _Aplus(3,4) <<"\t\t "<<  _Aplus(3,5) <<"\t\t " <<  _Aplus(3,6) <<"\t\t "<<  _Aplus(3,7) <<"\n";
+  //std::cout<<"        "<<  _Aplus(4,0) <<"\t\t "<<  _Aplus(4,1) <<"\t\t " <<  _Aplus(4,2) <<"\t\t "<<  _Aplus(4,3) <<"\t\t"<<  _Aplus(4,4) <<"\t\t "<<  _Aplus(4,5) <<"\t\t " <<  _Aplus(4,6) <<"\t\t "<<  _Aplus(4,7) <<"\n";
+  //std::cout<<"        "<<  _Aplus(5,0) <<"\t\t "<<  _Aplus(5,1) <<"\t\t " <<  _Aplus(5,2) <<"\t\t "<<  _Aplus(5,3) <<"\t\t"<<  _Aplus(5,4) <<"\t\t "<<  _Aplus(5,5) <<"\t\t " <<  _Aplus(5,6) <<"\t\t "<<  _Aplus(5,7) <<"\n";
+  //std::cout<<"        "<<  _Aplus(6,0) <<"\t\t "<<  _Aplus(6,1) <<"\t\t " <<  _Aplus(6,2) <<"\t\t "<<  _Aplus(6,3) <<"\t\t"<<  _Aplus(6,4) <<"\t\t "<<  _Aplus(6,5) <<"\t\t " <<  _Aplus(6,6) <<"\t\t "<<  _Aplus(6,7) <<"\n";
+  //std::cout<<"        "<<  _Aplus(7,0) <<"\t\t "<<  _Aplus(7,1) <<"\t\t " <<  _Aplus(7,2) <<"\t\t "<<  _Aplus(7,3) <<"\t\t"<<  _Aplus(7,4) <<"\t\t "<<  _Aplus(7,5) <<"\t\t " <<  _Aplus(7,6) <<"\t\t "<<  _Aplus(7,7) <<"\n";
+  
+  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void MunzFluxMaxwell2D<UPDATEVAR>::computeMatrixAminus()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  m_updateVarSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+  
+  
+  const CFreal c_e = m_updateVarSet->getModel()->getLightSpeed();
+  const CFreal gamma = m_updateVarSet->getModel()->getDivBAdimCleaningConst();	//DivB cleaning technique constant
+  const CFreal chi = m_updateVarSet->getModel()->getDivECleaningConst();
+  
+  computeSubMatrixD(chi,gamma);
+  computeSubMatrixE();
+  
+  //loop for writing the upper-left corner submatrix  
+  for (CFuint i = 0; i < 4; ++i){
+    for(CFuint j = 0; j < 4; ++j){
+      _Aminus(i,j) = -_D(i,j);
+    }
+  }
+  
+  //loop for writing the upper-right corner submatrix
+  for (CFuint i = 0; i < 4; ++i){
+    for(CFuint j = 4; j < 8; ++j){
+      _Aminus(i,j) = c_e*c_e*_E(i,j - 4);
+    }
+  }  
+  
+  //loop for writing the lower-left corner submatrix
+  for (CFuint i = 4; i < 8; ++i){
+    for(CFuint j = 0; j < 4; ++j){
+      _Aminus(i,j) = _E(j, i - 4);
+    }
+  }  
+  
+  computeSubMatrixD(gamma,chi);  
+  //loop for writing the lower-right corner submatrix
+  for (CFuint i = 4; i < 8; ++i){
+    for(CFuint j = 4; j < 8; ++j){
+      _Aminus(i,j) = - _D(i - 4,j - 4);  
+    }
+  }  
+  
+  //std::cout<<"Aminus = "<<  _Aminus(0,0) <<"\t\t "<<  _Aminus(0,1) <<"\t\t " <<  _Aminus(0,2) <<"\t\t "<<  _Aminus(0,3) <<"\t\t"<<  _Aminus(0,4) <<"\t\t "<<  _Aminus(0,5) <<"\t\t " <<  _Aminus(0,6) <<"\t\t "<<  _Aminus(0,7) <<"\n";
+  //std::cout<<"         "<<  _Aminus(1,0) <<"\t\t "<<  _Aminus(1,1) <<"\t\t " <<  _Aminus(1,2) <<"\t\t "<<  _Aminus(1,3) <<"\t\t"<<  _Aminus(1,4) <<"\t\t "<<  _Aminus(1,5) <<"\t\t " <<  _Aminus(1,6) <<"\t\t "<<  _Aminus(1,7) <<"\n";
+  //std::cout<<"         "<<  _Aminus(2,0) <<"\t\t "<<  _Aminus(2,1) <<"\t\t " <<  _Aminus(2,2) <<"\t\t "<<  _Aminus(2,3) <<"\t\t"<<  _Aminus(2,4) <<"\t\t "<<  _Aminus(2,5) <<"\t\t " <<  _Aminus(2,6) <<"\t\t "<<  _Aminus(2,7) <<"\n";
+  //std::cout<<"         "<<  _Aminus(3,0) <<"\t\t "<<  _Aminus(3,1) <<"\t\t " <<  _Aminus(3,2) <<"\t\t "<<  _Aminus(3,3) <<"\t\t"<<  _Aminus(3,4) <<"\t\t "<<  _Aminus(3,5) <<"\t\t " <<  _Aminus(3,6) <<"\t\t "<<  _Aminus(3,7) <<"\n";
+  //std::cout<<"         "<<  _Aminus(4,0) <<"\t\t "<<  _Aminus(4,1) <<"\t\t " <<  _Aminus(4,2) <<"\t\t "<<  _Aminus(4,3) <<"\t\t"<<  _Aminus(4,4) <<"\t\t "<<  _Aminus(4,5) <<"\t\t " <<  _Aminus(4,6) <<"\t\t "<<  _Aminus(4,7) <<"\n";
+  //std::cout<<"         "<<  _Aminus(5,0) <<"\t\t "<<  _Aminus(5,1) <<"\t\t " <<  _Aminus(5,2) <<"\t\t "<<  _Aminus(5,3) <<"\t\t"<<  _Aminus(5,4) <<"\t\t "<<  _Aminus(5,5) <<"\t\t " <<  _Aminus(5,6) <<"\t\t "<<  _Aminus(5,7) <<"\n";
+  //std::cout<<"         "<<  _Aminus(6,0) <<"\t\t "<<  _Aminus(6,1) <<"\t\t " <<  _Aminus(6,2) <<"\t\t "<<  _Aminus(6,3) <<"\t\t"<<  _Aminus(6,4) <<"\t\t "<<  _Aminus(6,5) <<"\t\t " <<  _Aminus(6,6) <<"\t\t "<<  _Aminus(6,7) <<"\n";
+  //std::cout<<"         "<<  _Aminus(7,0) <<"\t\t "<<  _Aminus(7,1) <<"\t\t " <<  _Aminus(7,2) <<"\t\t "<<  _Aminus(7,3) <<"\t\t"<<  _Aminus(7,4) <<"\t\t "<<  _Aminus(7,5) <<"\t\t " <<  _Aminus(7,6) <<"\t\t "<<  _Aminus(7,7) <<"\n";
+
+  
+  
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void MunzFluxMaxwell2D<UPDATEVAR>::computeUpdateCoeff()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  CellCenterFVMData& data = this->getMethodData(); 
+  GeometricEntity& face = *data.getCurrentFace();
+  const CFreal faceArea = socket_faceAreas.getDataHandle()[face.getID()]/
+    data.getPolyReconstructor()->nbQPoints();
+  const EquationSubSysDescriptor& eqSSD = PhysicalModelStack::getActive()->
+    getEquationSubSysDescriptor();
+  
+  DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+  const CFuint nbEqSS = eqSSD.getTotalNbEqSS();
+  for (CFuint i = 0; i < nbEqSS; ++i) {
+    // left contribution to update coefficient
+    const CFuint leftID = face.getState(0)->getLocalID();
+    CFreal maxEV = m_updateVarSet->getMaxEigenValue(*m_lData, data.getUnitNormal());
+    updateCoeff[leftID*nbEqSS + i] += max(maxEV, 0.)*faceArea;
+        
+    if (!face.getState(1)->isGhost()) {
+      // right contribution to update coefficient
+      const CFuint rightID = face.getState(1)->getLocalID();
+      m_tempUnitNormal = -1.0*data.getUnitNormal();
+      maxEV = m_updateVarSet->getMaxEigenValue(*m_rData,m_tempUnitNormal);
+    
+      updateCoeff[rightID*nbEqSS + i] += max(maxEV, 0.)*faceArea;
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void MunzFluxMaxwell2D<UPDATEVAR>::computeLeftJacobian()
+{  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+ //  CellCenterFVMData& data = this->getMethodData(); 
+//   GeometricEntity& face = *data.getCurrentFace();
+//   State *const leftState = face.getState(LEFT);
+//   RealVector& pData = PhysicalModelStack::getActive()->getImplementor()->
+//     getConvectiveTerm()->getPhysicalData();
+//   getMethodData().getUpdateVar()->computePhysicalData(*leftState, pData);
+//   getMethodData().getSolutionVar()->computeProjectedJacobian(data.getUnitNormal(), _jacob); 
+//   _jLeft = 0.5*(_jacob + _absJacob);
+  
+//   // computeTransformMatrix(leftState);
+//   // _lFluxJacobian = _jLeft*_jacobDummy;
+  
+//   SafePtr<VarSetMatrixTransformer>  vs = 
+//     getMethodData().getUpdateToSolutionInUpdateMatTrans();
+//   vs->setMatrix(*leftState);
+//   const RealMatrix& dUdP = *vs->getMatrix();  
+//   _lFluxJacobian = _jLeft*dUdP;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void MunzFluxMaxwell2D<UPDATEVAR>::computeRightJacobian()
+{ 
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+//   CellCenterFVMData& data = this->getMethodData(); 
+//   GeometricEntity& face = *data.getCurrentFace();
+//   State *const rightState = face.getState(RIGHT);
+//   RealVector& pData = PhysicalModelStack::getActive()->getImplementor()->
+//     getConvectiveTerm()->getPhysicalData();
+//   getMethodData().getUpdateVar()->computePhysicalData(*rightState, pData);
+//   getMethodData().getSolutionVar()->computeProjectedJacobian(data.getUnitNormal(), _jacob);
+//   _jRight = 0.5*(_jacob - _absJacob);
+  
+//   // computeTransformMatrix(rightState);
+//   //_rFluxJacobian = _jRight*_jacobDummy;
+  
+//   SafePtr<VarSetMatrixTransformer>  vs = 
+//     getMethodData().getUpdateToSolutionInUpdateMatTrans();
+//   vs->setMatrix(*rightState);
+//   const RealMatrix& dUdP = *vs->getMatrix();
+//   _rFluxJacobian = _jRight*dUdP;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

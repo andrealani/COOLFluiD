@@ -1,0 +1,116 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -5.9427795
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libParaViewWriter libAnalyticalEE libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes  libLinearAdvSys libFluctSplit libFluctSplitSystem libFluctSplitSpaceTime  libFluctSplitNavierStokes libForwardEuler 
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir       = plugins/LinearAdvSys/testcases
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.Default.PhysicalModelType     = LinearAdvSys2D
+
+Simulator.SubSystem.LinearAdvSys2D.ConvTerm.c0x = 0.
+Simulator.SubSystem.LinearAdvSys2D.ConvTerm.c1x = 0.
+Simulator.SubSystem.LinearAdvSys2D.ConvTerm.c2x = 0.
+Simulator.SubSystem.LinearAdvSys2D.ConvTerm.c3x = 0.
+Simulator.SubSystem.LinearAdvSys2D.ConvTerm.c0y = 1.
+Simulator.SubSystem.LinearAdvSys2D.ConvTerm.c1y = 1.
+Simulator.SubSystem.LinearAdvSys2D.ConvTerm.c2y = 1.
+Simulator.SubSystem.LinearAdvSys2D.ConvTerm.c3y = 1.
+
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.05
+Simulator.SubSystem.SubSystemStatus.ComputeDT = MaxDT
+Simulator.SubSystem.SubSystemStatus.MaxDT.DT_Ratio = 0.9
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot
+Simulator.SubSystem.CFmesh.FileName     = linadvSys-sol.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = linadvSys-sol.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.CFmesh.SaveRate = 1
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+Simulator.SubSystem.CFmesh.AppendIter = true
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition   = MaxTime
+Simulator.SubSystem.MaxTime.maxTime = 0.06
+
+
+Simulator.SubSystem.Default.listTRS = InnerCells FaceBottom FaceRight FaceTop FaceLeft
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+#Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
+#Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = unst_square800n-P2.CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 1.0
+Simulator.SubSystem.FwdEuler.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.FwdEuler.RelativeNormAndMaxIter.RelativeNorm = -5.0
+Simulator.SubSystem.FwdEuler.RelativeNormAndMaxIter.MaxIter = 1000
+Simulator.SubSystem.FwdEuler.Data.PrintHistory = true
+Simulator.SubSystem.FwdEuler.Data.NormRes = L2
+Simulator.SubSystem.FwdEuler.Data.L2.MonitoredVarID = 0
+Simulator.SubSystem.FwdEuler.Data.L2.ComputedVarID = 0 1 2 3
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = STM_HOCRD
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = STM_SysLDAC_HO
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar = Prim
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar   = Prim
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar  = Prim
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar   = Prim
+#Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Roe
+
+#Simulator.SubSystem.FluctuationSplit.Data.IntegratorQuadrature = GaussLegendre
+#Simulator.SubSystem.FluctuationSplit.Data.IntegratorOrder = P1
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState 
+Simulator.SubSystem.FluctuationSplit.InitNames = InField 
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = if(sqrt((x-0.5)^2+(y-0.5)^2)<0.25,cos(2*sqrt((x-0.5)^2+(y-0.5)^2)*3.1415)^2,0.0) \
+                                                   if(sqrt((x-0.5)^2+(y-0.5)^2)<0.25,cos(2*sqrt((x-0.5)^2+(y-0.5)^2)*3.1415)^2,0.0) \
+                                                   if(sqrt((x-0.5)^2+(y-0.5)^2)<0.25,cos(2*sqrt((x-0.5)^2+(y-0.5)^2)*3.1415)^2,0.0) \
+                                                   if(sqrt((x-0.5)^2+(y-0.5)^2)<0.25,cos(2*sqrt((x-0.5)^2+(y-0.5)^2)*3.1415)^2,0.0)
+
+
+
+#Simulator.SubSystem.FluctuationSplit.InField.Def =  0 \
+#						    0 \
+#						    0 \
+#						    0
+
+Simulator.SubSystem.FluctuationSplit.BcComds = SuperInlet \
+                                      SuperOutlet \
+                                      SuperOutlet \
+                                      SuperOutlet
+
+Simulator.SubSystem.FluctuationSplit.BcNames = Bott \
+                                      Left \
+                                      Top \
+                                      Right
+
+Simulator.SubSystem.FluctuationSplit.Bott.applyTRS = FaceBottom
+Simulator.SubSystem.FluctuationSplit.Bott.Vars = x y t
+Simulator.SubSystem.FluctuationSplit.Bott.Def = 0\
+                                                0\
+                                                0\
+                                                0

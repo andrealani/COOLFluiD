@@ -1,0 +1,234 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = 
+
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libMutation2 libMutation2I libNEQ libFiniteVolume libFiniteVolumeNavierStokes libFiniteVolumeNEQ libNewtonMethod libPetscI libMeshGenerator1D   
+
+Simulator.Paths.WorkingDir = ./
+Simulator.Paths.ResultsDir = ./NOZZLE_OUTPUT/
+
+Simulator.SubSystem.Default.PhysicalModelType     = Euler1DNEQ
+Simulator.SubSystem.Euler1D.refValues = \ 
+1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 
+1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12
+1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12
+1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12
+1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12
+1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12
+1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12
+1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12   
+1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12
+1.0e-12 1.0e-12 1.0e-12 1.0e-12 1.0e-12 300.0 10000. 10000. 10000. 10000. 10000.
+
+Simulator.SubSystem.Euler1D.refLength = 1.0
+Simulator.SubSystem.Euler1DNEQ.PropertyLibrary = Mutation2
+Simulator.SubSystem.Euler1DNEQ.Mutation2.mixtureName = air11starB
+Simulator.SubSystem.Euler1DNEQ.Mutation2.reactionName = Abba_At
+Simulator.SubSystem.Euler1DNEQ.Mutation2.transfName = air113TvTe
+Simulator.SubSystem.Euler1DNEQ.nbSpecies = 95
+Simulator.SubSystem.Euler1DNEQ.nbEulerEqs = 2
+Simulator.SubSystem.Euler1DNEQ.nbVibEnergyEqs = 3
+Simulator.SubSystem.Euler1DNEQ.nbTe = 1
+Simulator.SubSystem.Euler1DNEQ.Mutation2.includeElectronicEnergy = true
+Simulator.SubSystem.Euler1DNEQ.Mutation2.electrEnergyID = 0
+Simulator.SubSystem.Euler1DNEQ.Mutation2.BoltzmannIDs = 86 87 88 89 90 91 92 93 94  
+Simulator.SubSystem.Euler1DNEQ.Mutation2.Escape = 1.0
+
+Simulator.SubSystem.ConvergenceFile     = convergence_CR.plt
+
+Simulator.SubSystem.OutputFormat        = CFmesh Tecplot
+Simulator.SubSystem.CFmesh.FileName     = nozzle1DFVM_ThermNEQMultiTvTe_CR_At.CFmesh
+
+Simulator.SubSystem.CFmesh.SaveRate = 500
+
+Simulator.SubSystem.Tecplot.FileName    = nozzle1DFVM_ThermNEQMultiTvTe_CR_At.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = RhoivtTv
+Simulator.SubSystem.Tecplot.SaveRate = 500
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolution1D
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -4.0
+Simulator.SubSystem.Default.listTRS = InnerFaces Inlet Outlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = nozzle1DFVM_PG_Newton_100.CFmesh
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.InputToUpdate = Euler1DNEQPvtToRhoivtTv
+
+#implicit solver
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 10.0
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<35,10.,20000.)
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<10,100.,175000.)
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 16
+
+Simulator.SubSystem.InteractiveParamReader.FileName = ./nozzle.inter
+Simulator.SubSystem.InteractiveParamReader.readRate = 10
+
+#Space method
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobFast
+Simulator.SubSystem.CellCenterFVM.NumJacobFast.FreezeDiffCoeff = true
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSM
+Simulator.SubSystem.CellCenterFVM.Data.AUSM.Flux = PlusMS1D
+Simulator.SubSystem.CellCenterFVM.Data.AUSM.PlusMS1D.choiceA12 = 5
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = EulerQuasi1DCNEQST
+#Simulator.SubSystem.CellCenterFVM.Data.EulerQuasi1DCNEQST.UseAnalyticalJacob = true
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar   = RhoivtTv
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+
+ 
+#comment
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x
+Simulator.SubSystem.CellCenterFVM.InField.Def = \ 
+1.575272325077394e-8 \
+1.277167226494929e-2 \
+3.939193657747968e-3 \
+9.056123636539797e-5 \
+3.022168074807543e-6 \
+5.172971568379387e-8 \
+1.230078532519307e-6 \
+3.215026943814622e-6 \
+3.400129108425351e-4 \
+9.301276455209373e-9 \
+6.741904115990175e-5 \
+if(x<0.005,25.0,if(x<0.015,200.0,if(x<0.025,1250.0,if(x<0.035,2000.0,2500.0)))) \
+if(x<0.005,9900.0,if(x<0.015,8900.0,if(x<0.025,7850.0,if(x<0.035,5000.0,3000.0)))) \
+if(x<0.005,9900.0,if(x<0.015,8900.0,if(x<0.025,7850.0,if(x<0.035,5000.0,3000.0)))) \
+if(x<0.005,9900.0,if(x<0.015,8900.0,if(x<0.025,7850.0,if(x<0.035,5000.0,3000.0)))) \
+if(x<0.005,9900.0,if(x<0.015,8900.0,if(x<0.025,7850.0,if(x<0.035,5000.0,3000.0)))) \ 
+if(x<0.005,9900.0,if(x<0.015,8900.0,if(x<0.025,7850.0,if(x<0.035,5000.0,3000.0))))
+ 
+Simulator.SubSystem.CellCenterFVM.BcComds = SubInletEuler1DTtPtYiMultiTvTeFVMCC SuperOutletFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = Jet1 Jet2
+Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = Inlet
+Simulator.SubSystem.CellCenterFVM.Jet1.Ttot = 10000.15
+Simulator.SubSystem.CellCenterFVM.Jet1.Ptot = 101350.0
+Simulator.SubSystem.CellCenterFVM.Jet1.Yi = \
+9.149834083666197E-007 \
+0.628166969584656 \
+0.216385550007910 \    
+9.875404438012088E-002 \
+1.485853644991454E-002 \
+1.169875820138103E-005 \
+3.873940378699901E-006 \
+5.865088782093505E-006 \
+4.460597354592834E-007 \
+3.722090957198482E-006 \
+2.028025118817099E-006 \ 
+5.653869671935439E-007 \
+1.397291469378892E-006 \
+7.302183228795337E-007 \
+9.298056346891420E-007 \
+6.252757425308034E-007 \
+2.906024296780281E-007 \
+2.732471817955330E-007 \
+1.257661942715864E-006 \ 
+1.146353813373628E-006 \
+8.614950158672131E-007 \
+4.233134787918194E-007 \ 
+6.974689741848996E-008 \
+6.635025909570212E-007 \
+3.876449776809567E-007 \
+3.134231567896063E-007 \
+1.213582982399320E-007 \
+1.776645515194234E-007 \
+2.564719834903814E-007 \
+1.247061462699088E-007 \
+1.804504151152866E-006 \
+2.485564996062399E-006 \
+4.604089363738738E-007 \
+3.608123828383177E-008 \
+6.683057570805901E-007 \
+6.777476188718988E-008 \
+1.602604439972547E-007 \
+9.042666776350969E-008 \
+2.577719353603750E-007 \
+8.405318668977186E-007 \
+1.742658622404034E-006 \
+4.151914907678502E-007 \
+2.091739103900476E-007 \
+1.032562529690620E-006 \
+2.055638954348810E-006 \
+2.185666728650822E-007 \
+1.103404508948209E-006 \
+1.723218371434590E-007 \
+1.222173081388911E-002 \
+1.859388139486557E-004 \
+2.955068209343161E-006 \
+1.147530757746490E-006 \
+1.394384407108984E-006 \
+6.258952652191669E-007 \
+1.299854469524959E-007 \
+7.009421315378911E-008 \
+4.851017882151861E-007 \
+2.877301231691772E-007 \
+2.281049218730054E-007 \
+1.261956563286602E-007 \
+1.706730853095698E-007 \
+4.949466321598538E-008 \
+2.835237710971491E-008 \
+4.563697747817304E-008 \
+2.229278457986833E-007 \
+1.322259741929489E-007 \
+4.879240937219313E-007 \
+1.191112320810625E-007 \
+6.902121730902745E-008 \
+3.259602368060710E-008 \
+1.910703576509904E-008 \
+2.460428224447368E-007 \
+3.416957522736222E-007 \
+8.706839556818032E-008 \
+5.163575277751850E-008 \
+2.614419225558468E-008 \
+1.550476540962752E-008 \
+8.483853355959159E-007 \
+2.301182679450079E-008 \
+1.364712180080830E-008 \
+4.301601039620071E-007 \
+3.347869656273885E-008 \
+1.662175145177571E-007 \
+3.169744581461575E-008 \
+1.575777428311269E-007 \
+1.142706414570479E-008 \
+1.518356537135789E-007 \
+5.260171679295893E-003 \
+1.755400384887946E-004 \
+3.004676132291484E-006 \
+7.144805569969187E-005 \
+1.867420803509316E-004 \
+1.974935806963241E-002 \
+5.402566589703443E-007 \
+3.915977135335336E-003
+
+Simulator.SubSystem.CellCenterFVM.Jet1.Tv = \
+10000.0 \
+10000.0 \
+10000.0 
+
+Simulator.SubSystem.CellCenterFVM.Jet1.Te = 10000.0 
+Simulator.SubSystem.CellCenterFVM.Jet2.applyTRS = Outlet

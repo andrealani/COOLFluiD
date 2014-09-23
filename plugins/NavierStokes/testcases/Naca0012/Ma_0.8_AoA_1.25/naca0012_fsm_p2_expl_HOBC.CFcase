@@ -1,0 +1,171 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -0.22552045
+
+
+# CFEnv.TraceToStdOut = true
+
+##############################################################################
+# Loading of components
+##############################################################################
+
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libForwardEuler libNavierStokes libFluctSplit libFluctSplitSystem libFluctSplitNavierStokes libFluctSplitHONavierStokes libAeroCoef libAeroCoefFS libFluctSplitHO
+
+##############################################################################
+# Directory paths
+##############################################################################
+
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Naca0012/Ma_0.8_AoA_1.25/
+Simulator.Paths.ResultsDir       = ./
+
+Simulator.SubSystem.FwdEuler.ShowRate            = 10
+Simulator.SubSystem.FwdEuler.ConvRate            = 1
+Simulator.SubSystem.FwdEuler.ConvergenceFile     = naca0012_fsm_p2_3k.conv.plt
+
+##############################################################################
+# Physcial model
+##############################################################################
+
+Simulator.SubSystem.Default.PhysicalModelType = Euler2D
+
+#Simulator.SubSystem.Euler2D.refValues = 1.64 347.0 347.0 400000
+#Simulator.SubSystem.Euler2D.refLength = 1.0
+
+#Simulator.SubSystem.Euler2D.ConvTerm.pRef    = 101325
+#Simulator.SubSystem.Euler2D.ConvTerm.tempRef = 288.15
+#Simulator.SubSystem.Euler2D.ConvTerm.machInf = 0.8
+
+##############################################################################
+# CFL
+##############################################################################
+
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.6
+
+
+##############################################################################
+# Stop condition
+##############################################################################
+
+Simulator.SubSystem.StopCondition          = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -10.0
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 10
+
+#Simulator.SubSystem.StopCondition          = AeroCoef
+#Simulator.SubSystem.AeroCoef.ConvCL  = 5E-5
+#Simulator.SubSystem.AeroCoef.ConvCD  = 5E-5
+#Simulator.SubSystem.AeroCoef.ConvCM  = 5E-5
+#Simulator.SubSystem.AeroCoef.CheckCL = true
+#Simulator.SubSystem.AeroCoef.CheckCD = true
+#Simulator.SubSystem.AeroCoef.CheckCM = true
+#Simulator.SubSystem.AeroCoef.NbIters = 60
+#Simulator.SubSystem.AeroCoef.MaxIter = 8000
+
+##############################################################################
+# Mesh reading
+##############################################################################
+
+Simulator.SubSystem.Default.listTRS = InnerCells Wall Farfield
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = naca0012_triag_p2_3k.CFmesh
+
+##############################################################################
+# Mesh writting
+##############################################################################
+
+Simulator.SubSystem.OutputFormat           = Tecplot CFmesh
+
+Simulator.SubSystem.Tecplot.FileName       = naca0012_fsm_p2_3k.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate       = 100
+Simulator.SubSystem.Tecplot.WriteSol       = WriteSolutionBlock
+
+Simulator.SubSystem.CFmesh.FileName        = naca0012_fsm_p2_3k.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate        = 100
+
+##############################################################################
+# Pseudo-time discretization
+##############################################################################
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+
+Simulator.SubSystem.FwdEuler.Data.NormRes = L2
+Simulator.SubSystem.FwdEuler.Data.L2.MonitoredVarID = 0
+Simulator.SubSystem.FwdEuler.Data.L2.ComputedVarID  = 0 1 2 3
+
+##############################################################################
+# Space discretization
+##############################################################################
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Restart = false
+
+
+#Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysNC
+# predicted delta of pressure and average speed
+# for shock-detector
+
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = HOCRD_SysBT
+Simulator.SubSystem.FluctuationSplit.Data.HOCRD_SysBT.Delta   = 20000.
+Simulator.SubSystem.FluctuationSplit.Data.HOCRD_SysBT.Length  = 1.0
+Simulator.SubSystem.FluctuationSplit.Data.HOCRD_SysBT.Speed   = 218.60
+Simulator.SubSystem.FluctuationSplit.Data.HOCRD_SysBT.VarName = p
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar    = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar   = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar    = Cons
+
+
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorOrder = P3
+
+##############################################################################
+# Solution initialization
+##############################################################################
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 1.22500E+0 3.33409E+2 7.27500E+0 2.98706E+05
+
+##############################################################################
+# Boundary conditions
+##############################################################################
+
+Simulator.SubSystem.FluctuationSplit.BcComds = WeakSlipWallEulerHO2D WeakFarField2D
+Simulator.SubSystem.FluctuationSplit.BcNames = WeakSlipWall FField
+
+Simulator.SubSystem.FluctuationSplit.FField.applyTRS = Farfield
+Simulator.SubSystem.FluctuationSplit.FField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.FField.Def  = 1.22500E+0 3.33409E+2 7.27500E+0 2.98706E+05
+
+Simulator.SubSystem.FluctuationSplit.WeakSlipWall.applyTRS = Wall
+Simulator.SubSystem.FluctuationSplit.WeakSlipWall.alpha = 0.75
+
+##############################################################################
+# Aerodynamic coefficients
+##############################################################################
+
+Simulator.SubSystem.DataPostProcessing      = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames = PostProcessor
+
+Simulator.SubSystem.PostProcessor.ProcessRate = 1
+Simulator.SubSystem.PostProcessor.Data.updateVar = Cons
+
+Simulator.SubSystem.PostProcessor.Comds = NavierStokes2DConsComputeAero
+Simulator.SubSystem.PostProcessor.Names = AeroCoef
+Simulator.SubSystem.PostProcessor.AeroCoef.PInf           = 101325
+Simulator.SubSystem.PostProcessor.AeroCoef.RhoInf         = 1.22500E+0
+Simulator.SubSystem.PostProcessor.AeroCoef.UInf           = 272.235
+Simulator.SubSystem.PostProcessor.AeroCoef.applyTRS       = Wall
+Simulator.SubSystem.PostProcessor.AeroCoef.Alpha          = -1.25
+Simulator.SubSystem.PostProcessor.AeroCoef.OutputFileAero = naca0012_fsm_p2_3k.forces.plt
+Simulator.SubSystem.PostProcessor.AeroCoef.SaveRateAero   = 1
+Simulator.SubSystem.PostProcessor.AeroCoef.OutputFileWall = naca0012_fsm_p2_3k.wall.plt
+Simulator.SubSystem.PostProcessor.AeroCoef.SaveRateWall   = 1

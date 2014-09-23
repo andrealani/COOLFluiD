@@ -1,0 +1,155 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+# Simulation Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeNavierStokes libForwardEuler libCFMeshExtruder
+
+# Simulation Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/FlatPlate/
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType     = NavierStokes3D
+Simulator.SubSystem.NavierStokes3D.refValues = 1.0 0.414125584 0.414125584 0.414125584 1.0
+Simulator.SubSystem.NavierStokes3D.refLength = 1.0
+
+Simulator.SubSystem.NavierStokes3D.DiffTerm.Reynolds = 76000.
+Simulator.SubSystem.NavierStokes3D.ConvTerm.tempRef = 298.15
+Simulator.SubSystem.NavierStokes3D.ConvTerm.machInf = 0.35
+
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = flatPlate3D_sol.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = flatPlate3D_sol.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Pvt
+Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 5
+
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerFaces SlipWall NoSlipWall Inlet Outlet Top Bottom
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = flatPlate3D.CFmesh
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
+
+Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = flatPlate.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Extruder2DFVM
+Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.NbLayers = 2
+Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.ExtrudeSize = 0.1
+Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.Split = false
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+#Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCILU
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 10.
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<15,10.,100.)
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<15,10.,if(i<20,100.,min(1e5,10.^(i-18))))
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Pvt
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Pvt
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+#Simulator.SubSystem.CellCenterFVM.Data.NavierStokes.postProcessData = true
+#Simulator.SubSystem.CellCenterFVM.Data.NavierStokes.NodalExtrapolation = HolmesConnell
+
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -0.2
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState \
+          NoSlipWallAdiabaticNS3DFVMCC \
+          MirrorEuler3DFVMCC \
+          SubInletEuler3DUVTFVMCC \
+          SubOutletEuler3DFVMCC \
+          MirrorEuler3DFVMCC \
+          MirrorEuler3DFVMCC
+
+Simulator.SubSystem.CellCenterFVM.InitNames = InField \
+                                InWall \
+                                InMirror \
+                                InInlet \
+                                InOutlet \
+                                InTop \
+                                InBottom
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.InField.Def = 1.0 0.414125584 0.0 0.0 1.0
+
+Simulator.SubSystem.CellCenterFVM.InMirror.applyTRS = SlipWall
+
+Simulator.SubSystem.CellCenterFVM.InWall.applyTRS = NoSlipWall
+
+Simulator.SubSystem.CellCenterFVM.InInlet.applyTRS = Inlet
+Simulator.SubSystem.CellCenterFVM.InInlet.Vx = 0.414125584
+Simulator.SubSystem.CellCenterFVM.InInlet.Vy = 0.0
+Simulator.SubSystem.CellCenterFVM.InInlet.Vz = 0.0
+Simulator.SubSystem.CellCenterFVM.InInlet.T = 1.0
+
+Simulator.SubSystem.CellCenterFVM.InOutlet.applyTRS = Outlet
+Simulator.SubSystem.CellCenterFVM.InOutlet.P = 1.0
+
+Simulator.SubSystem.CellCenterFVM.BcComds = NoSlipWallAdiabaticNS3DFVMCC \
+                                MirrorEuler3DFVMCC \
+                                SubInletEuler3DUVTFVMCC \
+                                SubOutletEuler3DFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = Wall \
+                                Mirror \
+                                BcInlet \
+                                BcOutlet
+
+Simulator.SubSystem.CellCenterFVM.Mirror.applyTRS = SlipWall
+
+Simulator.SubSystem.CellCenterFVM.Wall.applyTRS = NoSlipWall
+
+Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS = Inlet
+Simulator.SubSystem.CellCenterFVM.BcInlet.Vx = 0.414125584
+Simulator.SubSystem.CellCenterFVM.BcInlet.Vy = 0.0
+Simulator.SubSystem.CellCenterFVM.BcInlet.Vz = 0.0
+Simulator.SubSystem.CellCenterFVM.BcInlet.T = 1.0
+
+Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS = Outlet
+Simulator.SubSystem.CellCenterFVM.BcOutlet.P = 1.0
+
+
+

@@ -1,0 +1,95 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -4.7268
+
+
+# CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libNavierStokes libSpectralFV libSpectralFVNavierStokes libRungeKutta2 libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/AccPulse/
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = Euler2D
+Simulator.SubSystem.Euler2D.pRef = 1.
+Simulator.SubSystem.Euler2D.rhoRef = 1.
+
+Simulator.SubSystem.OutputFormat        = ParaView CFmesh
+
+Simulator.SubSystem.CFmesh.FileName     = accpulse2d-sfvm-sol.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 500
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+
+Simulator.SubSystem.ParaView.FileName    = accpulse2d-sfvm-sol.vtu
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.SaveRate = 50
+Simulator.SubSystem.ParaView.AppendTime = false
+Simulator.SubSystem.ParaView.AppendIter = false
+
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 50
+
+Simulator.SubSystem.ConvergenceMethod  = RK2
+Simulator.SubSystem.RK2.ConvergenceFile = convergence.plt
+Simulator.SubSystem.RK2.ShowRate        = 10
+Simulator.SubSystem.RK2.ConvRate        = 50
+Simulator.SubSystem.RK2.Data.CFL.Value  = 0.2
+Simulator.SubSystem.RK2.Data.TimeAccurate = true
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.00025
+
+Simulator.SubSystem.SpaceMethod = SpectralFVMethod
+
+Simulator.SubSystem.Default.listTRS = InnerCells InnerFaces SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2d-sfvm-1670n.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = SpectralFVMethod
+
+Simulator.SubSystem.SpectralFVMethod.Builder = MeshUpgrade
+Simulator.SubSystem.SpectralFVMethod.Builder.SVPolynomialOrder = P2
+Simulator.SubSystem.SpectralFVMethod.SpaceRHSJacobCom = RHS
+Simulator.SubSystem.SpectralFVMethod.DivideRHSByVolumeCom = DivideByVolFracRHS
+
+Simulator.SubSystem.SpectralFVMethod.Data.ComputeVolumeForEachState = true
+Simulator.SubSystem.SpectralFVMethod.Data.UpdateVar   = Cons
+Simulator.SubSystem.SpectralFVMethod.Data.SolutionVar = Cons
+Simulator.SubSystem.SpectralFVMethod.Data.LinearVar   = Roe
+Simulator.SubSystem.SpectralFVMethod.Data.VolTermComputer     = NSStdVolTermComputer
+Simulator.SubSystem.SpectralFVMethod.Data.FaceTermComputer    = NSStdFaceTermComputer
+Simulator.SubSystem.SpectralFVMethod.Data.BndFaceTermComputer = NSStdBndFaceTermComputer
+
+Simulator.SubSystem.SpectralFVMethod.InitComds = StdInitState
+Simulator.SubSystem.SpectralFVMethod.InitNames = InField
+
+Simulator.SubSystem.SpectralFVMethod.InField.applyTRS = InnerCells
+Simulator.SubSystem.SpectralFVMethod.InField.Vars = x y
+Simulator.SubSystem.SpectralFVMethod.InField.Def = 1.0+0.001*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)) \
+                                                   0.0 \
+                                                   0.0 \
+                                                   (1.0+0.001*1.4*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)))/0.4
+
+Simulator.SubSystem.SpectralFVMethod.BcNames = FarField1  FarField2
+Simulator.SubSystem.SpectralFVMethod.FarField1.applyTRS = SuperInlet
+Simulator.SubSystem.SpectralFVMethod.FarField2.applyTRS = SuperOutlet
+
+Simulator.SubSystem.SpectralFVMethod.Data.BcTypes = Dirichlet  Dirichlet
+Simulator.SubSystem.SpectralFVMethod.Data.BcNames = FarField1  FarField2
+
+Simulator.SubSystem.SpectralFVMethod.Data.FarField1.Vars = x y
+Simulator.SubSystem.SpectralFVMethod.Data.FarField1.Def  = 1.0+0.001*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)) \
+                                                           0.0 \
+                                                           0.0 \
+                                                           (1.0+0.001*1.4*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)))/0.4
+
+Simulator.SubSystem.SpectralFVMethod.Data.FarField2.Vars = x y
+Simulator.SubSystem.SpectralFVMethod.Data.FarField2.Def  = 1.0+0.001*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)) \
+                                                   0.0 \
+                                                   0.0 \
+                                                   (1.0+0.001*1.4*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)))/0.4

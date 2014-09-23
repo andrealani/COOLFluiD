@@ -1,0 +1,558 @@
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace COOLFluiD::Common;
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace MultiFluidMHD {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+MultiFluidMHDVarSet<BASE>::MultiFluidMHDVarSet(Common::SafePtr<Framework::BaseTerm> term) :
+  BASE(term),
+  m_mfModel(term.d_castTo<PTERM>())
+{
+  cf_assert(m_mfModel.isNotNull());
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+MultiFluidMHDVarSet<BASE>::~MultiFluidMHDVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+ 
+template <typename BASE>
+void MultiFluidMHDVarSet<BASE>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  BASE::setup();
+  
+  // [species], [momentum], [energy], [Maxwell]
+  const CFuint nbBaseEqs = BASE::getNbEqs();
+  
+  // set the equation set data for each of the equation subsets
+  MultiFluidMHDVarSet<BASE>::getEqSetData().resize(3);
+  
+  // first equation subset: species continuity
+  const CFuint nbSpecies = getModel()->getNbScalarVars(0);
+  MultiFluidMHDVarSet<BASE>::getEqSetData()[0].setup(0,0,nbSpecies);
+  
+  // second equation subset: species momentum 
+  const CFuint nbMomentumEqs = getModel()->getNbScalarVars(1);
+  MultiFluidMHDVarSet<BASE>::getEqSetData()[1].setup(1,nbSpecies,nbMomentumEqs);
+  
+  // third energy equations should be considered
+  const CFuint nbEnergyEqs = getModel()->getNbScalarVars(2);
+  MultiFluidMHDVarSet<BASE>::getEqSetData()[2].setup(2,nbSpecies + nbMomentumEqs, nbEnergyEqs);
+  
+  // fourth equation subset: B,E field + scalar potentials for divergence cleaning
+  BASE::getEqSetData().resize(1);
+  BASE::getEqSetData()[0].setup(3, nbSpecies + nbMomentumEqs + nbEnergyEqs, nbBaseEqs);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+CFreal MultiFluidMHDVarSet<BASE>::getMaxEigenValue(const RealVector& pdata,
+						   const RealVector& normal)
+{
+  
+  if (this->getEqSS() == 0) {
+    const CFreal ce = getModel()->getLightSpeed();
+    const CFreal chi = getModel()->getDivECleaningConst();
+    const CFreal gamma = getModel()->getDivBCleaningConst();
+    
+    if (gamma > 1.) {
+      if (chi > gamma){
+	return chi*ce;
+      }
+      else{
+	return gamma*ce;
+      }
+    }
+    else{
+      if (chi > 1.){
+	return chi*ce;
+      }
+      else {
+	return ce;
+      }
+    }
+  }
+  
+  if (this->getEqSS() == 1) {
+    CFreal maxEv = 0.;
+    const CFuint dim = Framework::PhysicalModelStack::getActive()->getDim();
+    const CFuint nbSpecies = this->getModel()->getNbScalarVars(0);
+    const CFuint firstVelocity = this->getModel()->getFirstScalarVar(1);
+    const CFuint firstTemperature = this->getModel()->getFirstScalarVar(2);
+    
+    for (CFuint i = 0; i < nbSpecies; ++i) {  
+      const CFreal a_i = pdata[firstTemperature + 4*i + 2];
+      CFreal un_i = 0.0;
+      for (CFuint d = 0; d < dim; ++d) {
+	un_i += pdata[firstVelocity + dim*i+d]*normal[d];
+      }
+      maxEv = std::max(maxEv, un_i + a_i);
+    }
+    return maxEv;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+CFreal MultiFluidMHDVarSet<BASE>::getMaxAbsEigenValue(const RealVector& pdata,
+						      const RealVector& normal)
+{
+  if (this->getEqSS() == 0) {
+    const CFreal ce = getModel()->getLightSpeed();
+    const CFreal chi = getModel()->getDivECleaningConst();
+    const CFreal gamma = getModel()->getDivBCleaningConst();
+    
+    if (gamma > 1){
+      if (chi > gamma){
+	return chi*ce;
+      }
+      else{
+	return gamma*ce;
+      }
+    }
+    else{
+      if (chi > 1){
+	return chi*ce;
+      }
+      else{
+	return ce;
+      }
+    }
+  }
+  
+  
+  if (this->getEqSS() == 1) {
+    CFreal maxEv = 0.;
+    const CFuint dim = Framework::PhysicalModelStack::getActive()->getDim();
+    const CFuint nbSpecies = this->getModel()->getNbScalarVars(0);
+    const CFuint firstVelocity = this->getModel()->getFirstScalarVar(1);
+    const CFuint firstTemperature = this->getModel()->getFirstScalarVar(2);
+    for (CFuint i = 0; i < nbSpecies; ++i) {  
+      const CFreal a_i = pdata[firstTemperature + 4*i + 2];
+      CFreal un_i = 0.0;
+      for (CFuint d = 0; d < dim; ++d) {
+	un_i += pdata[firstVelocity + dim*i+d]*normal[d];
+      }
+      maxEv = std::max(maxEv, std::abs(un_i) + a_i);
+    }
+    return maxEv;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void MultiFluidMHDVarSet<BASE>::computeEigenValuesVectors(RealMatrix& rightEv,
+							  RealMatrix& leftEv,
+							  RealVector& eValues,
+							  const RealVector& normal)
+{
+  throw Common::NotImplementedException (FromHere(),"MultiFluidMHDVarSet::computeEigenValuesVectors()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void MultiFluidMHDVarSet<BASE>::computeEigenValues(const RealVector& pdata,
+						   const RealVector& normals,
+						   RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  const EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();	// Maxwell's Eqs.+ Multifluid NavierStokes Eqs.
+  const CFuint nbEqs = eqSS.getNbEqsSS();  				
+  const CFuint iEqSS = eqSS.getEqSS();
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  
+
+  if (nbEqs == totalNbEqs || iEqSS == 0) {
+    const CFreal ce = getModel()->getLightSpeed();
+    const CFreal chi = getModel()->getDivECleaningConst();
+    const CFreal gamma = getModel()->getDivBCleaningConst();
+
+    result[0] = ce; 
+    result[1] = ce;
+    result[2] = -ce;
+    result[3] = -ce;
+    result[4] = gamma*ce;
+    result[5] = -gamma*ce;
+    result[6] = chi*ce;
+    result[7] = -chi*ce;
+  } 
+  if (nbEqs == totalNbEqs || iEqSS == 1) {
+    //   EquationSetData& eqSetSpecies = MultiFluidMHDVarSet::getEqSetData()[0];
+    // const vector<CFuint>& varIDsSpecies = eqSetSpecies.getEqSetVarIDs();
+    const CFuint nbSpecies = this->getModel()->getNbScalarVars(0);
+    // const CFuint firstSpecies = this->getModel()->getFirstScalarVar(0);
+    // EquationSetData& eqSetVelocities = MultiFluidMHDVarSet::getEqSetData()[1];
+    const CFuint firstVelocity = this->getModel()->getFirstScalarVar(1);
+    const CFuint firstTemperature = this->getModel()->getFirstScalarVar(2);
+    const CFuint endEM = 8;
+    if (dim == 2){    
+      
+      const CFreal nx = normals[XX];
+      const CFreal ny = normals[YY];  
+    
+      for (CFuint i = 0; i < nbSpecies; ++i) {  
+	const CFreal a_i = pdata[firstTemperature + 4*i + 2]; //i species
+	const CFreal u_i = pdata[firstVelocity + dim*i];
+	const CFreal v_i = pdata[firstVelocity + 1 + dim*i];
+	const CFreal un_i = u_i*nx + v_i*ny; 
+	
+	result[endEM + i] = un_i;
+	result[endEM + nbSpecies + i] = un_i;
+	result[endEM + 2*nbSpecies + i] = un_i + a_i;
+	result[endEM + 3*nbSpecies + i] = un_i - a_i;    
+      } 
+    }
+    else if (dim == 3){    
+
+    const CFreal nx = normals[XX];
+    const CFreal ny = normals[YY];  
+    const CFreal nz = normals[ZZ];
+    
+      for (CFuint i = 0; i < nbSpecies; ++i) {  
+	const CFreal a_i = pdata[firstTemperature + 4*i + 2];				//i species
+	const CFreal u_i = pdata[firstVelocity + dim*i];
+	const CFreal v_i = pdata[firstVelocity + 1+ dim*i];
+	const CFreal w_i = pdata[firstVelocity + dim*i + 2];
+	const CFreal un_i = u_i*nx + v_i*ny + w_i*nz; 
+	
+	result[endEM + i] = un_i;
+	result[endEM + nbSpecies + i] = un_i;
+	result[endEM + 2*nbSpecies + i] = un_i;
+	result[endEM + 3*nbSpecies + i] = un_i + a_i;
+	result[endEM + 4*nbSpecies + i] = un_i - a_i;    
+      } 
+    } 
+  }
+  
+  //BASE::computeEigenValues(pdata, normals, result); 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void MultiFluidMHDVarSet<BASE>::computeFlux (const RealVector& pdata, const RealVector& normals)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  const EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();	// Maxwell's Eqs.+ Multifluid NavierStokes Eqs.
+  const CFuint nbEqs = eqSS.getNbEqsSS();  				
+  const CFuint iEqSS = eqSS.getEqSS();
+  CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint endEM = 8; 
+  
+  if (nbEqs == totalNbEqs || iEqSS == 0) {
+    const CFreal gamma = getModel()->getDivBCleaningConst();
+    const CFreal ce = getModel()->getLightSpeed();
+    const CFreal chi = getModel()->getDivECleaningConst();
+
+
+    if (dim == 2){    
+
+      const CFreal nx = normals[XX];
+      const CFreal ny = normals[YY];
+      this->_fluxArray[0] = gamma*gamma*pdata[PTERM::PSI]*nx + pdata[PTERM::EZ]*ny;
+      this->_fluxArray[1] = - pdata[PTERM::EZ]*nx + gamma*gamma*pdata[PTERM::PSI]*ny;
+      this->_fluxArray[2] = pdata[PTERM::EY]*nx - pdata[PTERM::EX]*ny;
+      this->_fluxArray[3] = (chi*chi*pdata[PTERM::PHI]*nx- pdata[PTERM::BZ]*ny)*ce*ce;
+      this->_fluxArray[4] = (pdata[PTERM::BZ]*nx + chi*chi*pdata[PTERM::PHI]*ny)*ce*ce;
+      this->_fluxArray[5] = (- pdata[PTERM::BY]*nx + pdata[PTERM::BX]*ny)*ce*ce;
+      this->_fluxArray[6] = (pdata[PTERM::BX]*nx + pdata[PTERM::BY]*ny)*ce*ce;
+      this->_fluxArray[7] = pdata[PTERM::EX]*nx + pdata[PTERM::EY]*ny;  
+    }
+    if (dim == 3){  
+      const CFreal nx = normals[XX];
+      const CFreal ny = normals[YY];
+      const CFreal nz = normals[ZZ];
+
+
+      this->_fluxArray[0] = gamma*gamma*pdata[PTERM::PSI]*nx + pdata[PTERM::EZ]*ny - pdata[PTERM::EY]*nz ;
+      this->_fluxArray[1] = - pdata[PTERM::EZ]*nx + gamma*gamma*pdata[PTERM::PSI]*ny + pdata[PTERM::EX]*nz;
+      this->_fluxArray[2] = pdata[PTERM::EY]*nx - pdata[PTERM::EX]*ny + gamma*gamma*pdata[PTERM::PSI]*nz;
+      this->_fluxArray[3] = chi*chi*ce*ce*pdata[PTERM::PHI]*nx - ce*ce*pdata[PTERM::BZ]*ny +  ce*ce*pdata[PTERM::BY]*nz;
+      this->_fluxArray[4] = ce*ce*pdata[PTERM::BZ]*nx + chi*chi*ce*ce*pdata[PTERM::PHI]*ny - ce*ce*pdata[PTERM::BX]*nz ;
+      this->_fluxArray[5] = - ce*ce*pdata[PTERM::BY]*nx + ce*ce*pdata[PTERM::BX]*ny + ce*ce*chi*chi*pdata[PTERM::PHI]*nz;
+      this->_fluxArray[6] = (pdata[PTERM::BX]*nx + pdata[PTERM::BY]*ny + pdata[PTERM::BZ]*nz)*ce*ce;
+      this->_fluxArray[7] = pdata[PTERM::EX]*nx + pdata[PTERM::EY]*ny + pdata[PTERM::EZ]*nz;
+    }
+  }
+  if (nbEqs == totalNbEqs || iEqSS == 1) {
+    EquationSetData& eqSetSpecies = MultiFluidMHDVarSet::getEqSetData()[0];
+    //const vector<CFuint>& varIDsSpecies = eqSetSpecies.getEqSetVarIDs();
+    const CFuint nbSpecies = this->getModel()->getNbScalarVars(0);
+    //const CFuint nbMomentum = this->getModel()->getNbScalarVars(1);
+    //const CFuint nbEnergyEqs = this->getModel()->getNbScalarVars(2);
+    
+    const CFuint firstSpecies = this->getModel()->getFirstScalarVar(0);
+    //EquationSetData& eqSetVelocities = MultiFluidMHDVarSet::getEqSetData()[1];
+    const CFuint firstVelocity = this->getModel()->getFirstScalarVar(1);
+    const CFuint firstTemperature = this->getModel()->getFirstScalarVar(2);
+    //const CFuint nbVelocities = this->getModel()->getNbScalarVars(1);
+    //const vector<CFuint>& varIDsVelocities = eqSetVelocities.getEqSetVarIDs();  
+  
+
+    if (dim == 2){    
+
+      const CFreal nx = normals[XX];
+      const CFreal ny = normals[YY]; 
+
+      
+      for (CFuint i = 0; i < nbSpecies; ++i) {  
+	const CFreal rho_i = pdata[PTERM::RHO]*pdata[firstSpecies + i];				//i species
+	const CFreal u_i = pdata[firstVelocity + dim*i];
+	const CFreal v_i = pdata[firstVelocity + 1 + dim*i];
+	const CFreal un_i = u_i*nx + v_i*ny;
+	const CFreal rhoVn_i = rho_i*un_i;
+	const CFreal P_i = pdata[firstTemperature + 4*i + 1];
+	//const CFreal T_i = pdata[firstTemperature + 4*i];      
+	const CFreal H_i = pdata[firstTemperature + 4*i + 3]; 
+	
+	this->_fluxArray[endEM + i] = rhoVn_i;	
+	this->_fluxArray[endEM + nbSpecies + i*dim] = rhoVn_i*u_i + P_i*nx;
+	this->_fluxArray[endEM + nbSpecies + i*dim + 1] = rhoVn_i*v_i + P_i*ny;      
+	this->_fluxArray[endEM + nbSpecies + nbSpecies*dim + i] = rho_i*un_i*H_i;
+      }  
+    }
+    else if (dim == 3){
+	
+      const CFreal nx = normals[XX];
+      const CFreal ny = normals[YY];
+      const CFreal nz = normals[ZZ];
+	  
+      for (CFuint i = 0; i < nbSpecies; ++i) {  
+	const CFreal rho_i = pdata[PTERM::RHO]*pdata[firstSpecies + i];				//i species
+	const CFreal u_i = pdata[firstVelocity + dim*i];
+	const CFreal v_i = pdata[firstVelocity + dim*i + 1];
+	const CFreal w_i = pdata[firstVelocity + dim*i + 2];
+	const CFreal un_i = u_i*nx + v_i*ny + w_i*nz;
+	const CFreal rhoVn_i = rho_i*un_i;      
+	const CFreal P_i = pdata[firstTemperature + 4*i + 1]; 
+	//const CFreal T_i = pdata[firstTemperature + 4*i];      
+	const CFreal H_i = pdata[firstTemperature + 4*i + 3];      
+	
+	this->_fluxArray[i] = rhoVn_i;	
+	this->_fluxArray[nbSpecies + i*dim] = rhoVn_i*u_i +  P_i*nx;
+	this->_fluxArray[nbSpecies + i*dim + 1] = rhoVn_i*v_i + P_i*ny;
+	this->_fluxArray[nbSpecies + i*dim + 2] = rhoVn_i*w_i + P_i*nz;
+	this->_fluxArray[nbSpecies + nbSpecies*dim + i] = rho_i*un_i*H_i;      
+      }
+    }
+  }
+  //BASE::computeFlux(pdata,normals);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void MultiFluidMHDVarSet<BASE>::computeStateFlux (const RealVector& pdata)
+{  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+//   EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->
+//     getEquationSubSysDescriptor(); 
+    
+//   const CFuint totalNbEqSS = eqSS.getNbEqsSS();
+  CFuint dim = PhysicalModelStack::getActive()->getDim();
+
+  std::cout << "MultiFluidMHDVarSet<BASE>::computeStateFlux" <<"\n";
+  
+  const EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();	// Maxwell's Eqs.+ Multifluid NavierStokes Eqs.
+  const CFuint nbEqs = eqSS.getNbEqsSS();  				
+  const CFuint iEqSS = eqSS.getEqSS();
+  EquationSetData& eqSetSpecies = MultiFluidMHDVarSet::getEqSetData()[0];
+  const vector<CFuint>& varIDsSpecies = eqSetSpecies.getEqSetVarIDs();
+  const CFuint nbSpecies = this->getModel()->getNbScalarVars(0);
+  const CFuint nbMomentum = this->getModel()->getNbScalarVars(1);
+  const CFuint nbEnergyEqs = this->getModel()->getNbScalarVars(2);
+  const CFuint firstSpecies = this->getModel()->getFirstScalarVar(0);
+//   EquationSetData& eqSetVelocities = MultiFluidMHDVarSet::getEqSetData()[1];
+  const CFuint firstVelocity = this->getModel()->getFirstScalarVar(1);
+  const CFuint firstTemperature = this->getModel()->getFirstScalarVar(2);
+  //const CFuint nbVelocities = this->getModel()->getNbScalarVars(1);
+  //const vector<CFuint>& varIDsVelocities = eqSetVelocities.getEqSetVarIDs();
+
+  const CFreal ce = getModel()->getLightSpeed();
+  const CFreal gamma = getModel()->getDivBCleaningConst();
+  const CFreal chi = getModel()->getDivECleaningConst(); 
+  const CFuint endEM = 8;
+
+  
+  if (dim == 2){  
+    
+    if (nbEqs == totalNbEqs || iEqSS == 0) {
+    
+      this->_physFlux(0,XX) = gamma*gamma*pdata[PTERM::PSI];
+      this->_physFlux(0,YY) = pdata[PTERM::EZ];
+
+      this->_physFlux(1,XX) = - pdata[PTERM::EZ];
+      this->_physFlux(1,YY) = gamma*gamma*pdata[PTERM::PSI];
+
+      this->_physFlux(2,XX) = pdata[PTERM::EY];
+      this->_physFlux(2,YY) = - pdata[PTERM::EX];
+
+      this->_physFlux(3,XX) = chi*chi*pdata[PTERM::PHI]*ce*ce;
+      this->_physFlux(3,YY) = - pdata[PTERM::BZ]*ce*ce;
+
+      this->_physFlux(4,XX) = pdata[PTERM::BZ]*ce*ce;
+      this->_physFlux(4,YY) = chi*chi*pdata[PTERM::PHI]*ce*ce;
+
+      this->_physFlux(5,XX) = - pdata[PTERM::BY]*ce*ce;
+      this->_physFlux(5,YY) = pdata[PTERM::BX]*ce*ce;
+    
+      this->_physFlux(6,XX) = pdata[PTERM::BX]*ce*ce;
+      this->_physFlux(6,YY) = pdata[PTERM::BY]*ce*ce;
+
+      this->_physFlux(7,XX) = pdata[PTERM::EX];
+      this->_physFlux(7,YY) = pdata[PTERM::EY]; 
+    }
+    if (nbEqs == totalNbEqs || iEqSS == 1) {
+      for (CFuint i = 0; i < nbSpecies; ++i) {  
+    
+	const CFreal u_i = pdata[firstVelocity + dim*i];
+	const CFreal v_i = pdata[firstVelocity + dim*i + 1];
+	const CFreal rho_i = pdata[PTERM::RHO]*pdata[firstSpecies + i];
+	const CFreal rhoU_i = rho_i*u_i;
+	const CFreal rhoV_i = rho_i*v_i;
+	const CFreal rhoUU_i = rhoU_i*u_i;
+	const CFreal rhoVV_i = rhoV_i*v_i;
+	const CFreal rhoUV_i = rhoU_i*v_i;
+	const CFreal P_i = pdata[firstTemperature + 4*i + 1]; 
+  //       const CFreal T_i = pdata[firstTemperature + 4*i];      
+	const CFreal H_i = pdata[firstTemperature + 4*i + 3]; 
+	
+	this->_physFlux(endEM + i,XX) = rhoU_i;
+	this->_physFlux(endEM + i,YY) = rhoV_i;
+	
+	this->_physFlux(endEM + nbSpecies + i*dim,XX) = P_i + rhoUU_i;
+	this->_physFlux(endEM + nbSpecies + i*dim,YY) = rhoUV_i;      
+	
+	this->_physFlux(endEM + nbSpecies + i*dim + 1,XX) = rhoUV_i;
+	this->_physFlux(endEM + nbSpecies + i*dim + 1,YY) = P_i + rhoVV_i;
+	
+	this->_physFlux(endEM + nbSpecies + nbSpecies*dim + i,XX) = rho_i*u_i*H_i;      
+	this->_physFlux(endEM + nbSpecies + nbSpecies*dim + i,YY) = rho_i*v_i*H_i;         
+      }
+    }
+  }
+  else if (dim == 3){
+    if (nbEqs == totalNbEqs || iEqSS == 0) {
+      this->_physFlux(0,XX) = gamma*gamma*pdata[PTERM::PSI];
+      this->_physFlux(0,YY) = pdata[PTERM::EZ];
+      this->_physFlux(0,ZZ) = - pdata[PTERM::EY]; 
+
+      this->_physFlux(1,XX) = - pdata[PTERM::EZ];
+      this->_physFlux(1,YY) = gamma*gamma*pdata[PTERM::PSI];
+      this->_physFlux(1,ZZ) = pdata[PTERM::EX];  
+
+      this->_physFlux(2,XX) = pdata[PTERM::EY];
+      this->_physFlux(2,YY) = - pdata[PTERM::EX];
+      this->_physFlux(2,ZZ) = gamma*gamma*pdata[PTERM::PSI];  
+
+      this->_physFlux(3,XX) = ce*ce*chi*chi*pdata[PTERM::PHI];
+      this->_physFlux(3,YY) = - ce*ce*pdata[PTERM::BZ];
+      this->_physFlux(3,ZZ) = ce*ce*pdata[PTERM::BY];  
+
+      this->_physFlux(4,XX) = ce*ce*pdata[PTERM::BZ];
+      this->_physFlux(4,YY) = ce*ce*chi*chi*pdata[PTERM::PHI];
+      this->_physFlux(4,ZZ) = - ce*ce*pdata[PTERM::BX];  
+
+      this->_physFlux(5,XX) = - ce*ce*pdata[PTERM::BY];
+      this->_physFlux(5,YY) = ce*ce*pdata[PTERM::BX];
+      this->_physFlux(5,ZZ) = ce*ce*chi*chi*pdata[PTERM::PHI];  
+      
+      this->_physFlux(6,XX) = pdata[PTERM::BX]*ce*ce;
+      this->_physFlux(6,YY) = pdata[PTERM::BY]*ce*ce;
+      this->_physFlux(6,ZZ) = pdata[PTERM::BZ]*ce*ce;    
+
+      this->_physFlux(7,XX) = pdata[PTERM::EX];
+      this->_physFlux(7,YY) = pdata[PTERM::EY]; 
+      this->_physFlux(8,ZZ) = pdata[PTERM::EZ];  
+
+    }
+    if (nbEqs == totalNbEqs || iEqSS == 1) {
+      for (CFuint i = 0; i < nbSpecies; ++i) {  
+    
+	const CFreal u_i = pdata[firstVelocity + dim*i];
+	const CFreal v_i = pdata[firstVelocity + dim*i + 1];
+	const CFreal w_i = pdata[firstVelocity + dim*i + 2];      
+	const CFreal rho_i = pdata[PTERM::RHO]*pdata[firstSpecies + i];
+	const CFreal rhoU_i = rho_i*u_i;
+	const CFreal rhoV_i = rho_i*v_i;
+	const CFreal rhoW_i = rho_i*w_i;
+	const CFreal rhoUU_i = rhoU_i*u_i;
+	const CFreal rhoVV_i = rhoV_i*v_i;
+	const CFreal rhoWW_i = rhoW_i*w_i;      
+	const CFreal rhoUV_i = rhoU_i*v_i;
+	const CFreal rhoUW_i = rhoU_i*w_i;
+	const CFreal rhoVW_i = rhoV_i*w_i; 
+	const CFreal P_i = pdata[firstTemperature + 4*i + 1];
+  //       const CFreal T_i = pdata[firstTemperature + 4*i];      
+	const CFreal H_i = pdata[firstTemperature + 4*i + 3];     
+	
+	this->_physFlux(i,XX) = rhoU_i;
+	this->_physFlux(i,YY) = rhoV_i;
+	this->_physFlux(i,ZZ) = rhoW_i;      
+	
+	this->_physFlux(nbSpecies + i*dim,XX) = P_i + rhoUU_i;
+	this->_physFlux(nbSpecies + i*dim,YY) = rhoUV_i;
+	this->_physFlux(nbSpecies + i*dim,ZZ) = rhoUW_i;
+	
+	this->_physFlux(nbSpecies + i*dim + 1,XX) = rhoUV_i;
+	this->_physFlux(nbSpecies + i*dim + 1,YY) = P_i + rhoVV_i;      
+	this->_physFlux(nbSpecies + i*dim + 1,ZZ) = rhoVW_i;
+	
+	this->_physFlux(nbSpecies + i*dim + 2,XX) = rhoUW_i;
+	this->_physFlux(nbSpecies + i*dim + 2,YY) = rhoVW_i;      
+	this->_physFlux(nbSpecies + i*dim + 2,ZZ) = P_i + rhoWW_i;
+	
+	this->_physFlux(nbSpecies + nbSpecies*dim + i,XX) = rho_i*u_i*H_i;
+	this->_physFlux(nbSpecies + nbSpecies*dim + i,YY) = rho_i*v_i*H_i;      
+	this->_physFlux(nbSpecies + nbSpecies*dim + i,ZZ) = rho_i*w_i*H_i; 
+      }
+    }
+  }      
+}  
+
+//////////////////////////////////////////////////////////////////////////////
+ 
+template <typename BASE>
+CFreal MultiFluidMHDVarSet<BASE>::getNormalSpeed(const RealVector& data, 
+						 const RealVector& normal) const
+{
+  std::cout<<" MultiFluidMHDVarSet::getNormalSpeed not implemented \n";
+  return 0.;
+}
+  
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace MultiFluidMHD
+
+} // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

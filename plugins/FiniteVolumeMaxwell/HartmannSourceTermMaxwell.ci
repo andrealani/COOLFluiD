@@ -1,0 +1,244 @@
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "Common/CFLog.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Common/NoSuchValueException.hh"
+#include "FiniteVolume/ComputeDiffusiveFlux.hh"
+#include "FiniteVolume/DerivativeComputer.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+HartmannSourceTermMaxwell<UPDATEVAR>::HartmannSourceTermMaxwell(const std::string& name) :
+  ComputeSourceTermFVMCC(name),
+  _varSet(CFNULL),
+  _nstates(CFNULL),
+  _isOutward(CFNULL),
+  _ys(),
+  _physicalData(),
+  _temp(),
+  _states(),
+  _values(),
+  _J(),
+  _dummyGradients()
+{
+  addConfigOptionsTo(this);
+  
+  _electricalConductivity = 0.728;
+  setParameter("electricalConductivity",&_electricalConductivity);
+  
+  _H = 10.;
+  setParameter("H",&_H);
+  
+  _Umax = 56.83635;
+  setParameter("Umax",&_Umax); 
+  
+  _nonInducedEMField = std::vector<CFreal>();
+  setParameter("nonInducedElectromagnetic",&_nonInducedEMField);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+HartmannSourceTermMaxwell<UPDATEVAR>::~HartmannSourceTermMaxwell()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HartmannSourceTermMaxwell<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFreal >
+     ("electricalConductivity", "electrical Conductivity used in Ohm's law");
+     
+  options.template addConfigOption< CFreal >
+     ("H", "Hartmann Number");    
+     
+  options.template addConfigOption< CFreal >
+     ("Umax", "Max velocity in Hartmann Flow");    
+     
+  options.addConfigOption< std::vector<CFreal> >("nonInducedElectromagnetic", "nonInduced Electromagnetic Field");   
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HartmannSourceTermMaxwell<UPDATEVAR>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  
+  ComputeSourceTermFVMCC::setup();
+  
+  _varSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+  _varSet->getModel()->resizePhysicalData(_physicalData);
+  cf_assert(_varSet.isNotNull());
+  
+  DataHandle<CFreal> normals = this->socket_normals.getDataHandle();
+  _nstates = _sockets.template getSocketSink<RealVector>("nstates")->getDataHandle();
+  _isOutward =  this->socket_isOutward.getDataHandle();
+  
+  SafePtr<typename UPDATEVAR::PTERM> term = _varSet->getModel();
+  const CFuint nbSpecies = term->getNbScalarVars(0);
+  _ys.resize(nbSpecies);
+
+  _temp.resize(PhysicalModelStack::getActive()->getNbEq());
+
+  const CFuint maxNbNodesIn2DCV = 4;
+  _states.reserve(maxNbNodesIn2DCV);
+  
+  SafePtr<DerivativeComputer> derComput = this->getMethodData().getDerivativeComputer();
+  const CFuint nbNodesInControlVolume = derComput->getMaxNbVerticesInControlVolume();
+  _values.resize(PhysicalModelStack::getActive()->getNbEq(), nbNodesInControlVolume);
+  
+//   _nonInducedEMField.resize(6);
+  _J.resize(3);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HartmannSourceTermMaxwell<UPDATEVAR>::computeSource
+(Framework::GeometricEntity *const element, RealVector& source, RealMatrix& jacobian)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  
+  SafePtr<typename UPDATEVAR::PTERM> term = _varSet->getModel();
+  
+  // this source term is for axisymmetric flows
+  const vector<State*>* const states = element->getStates();
+//   std::cout <<"HartmannSourceTermMaxwell::computeSource" <<"\n";  
+  
+  cf_assert(states->size() == 1);
+  
+  _varSet->computePhysicalData(*(*states)[0], _physicalData);
+  
+//   RealVector& refData = _varSet->getModel()->getReferencePhysicalData();
+   
+  const CFuint firstVelocity = term->getFirstScalarVar(1); 
+ 
+  State *const currState = (*states)[0]; 
+  if (currState->isParUpdatable()) {
+  
+  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+  
+  const CFreal Bx0 = _nonInducedEMField[0];
+  const CFreal By0 = _nonInducedEMField[1];  
+  const CFreal Bz0 = _nonInducedEMField[2];
+  const CFreal Ex0 = _nonInducedEMField[3];
+  const CFreal Ey0 = _nonInducedEMField[4];
+  const CFreal Ez0 = _nonInducedEMField[5];  
+  
+//   _NonInducedEMField = _varSet->getModel()->getNonInducedEMField(currState->getCoordinates()[XX], currState->getCoordinates()[YY]);
+  
+  const CFreal BxTotal = _physicalData[0] + Bx0 ;
+  const CFreal ByTotal = _physicalData[1] + By0;
+  const CFreal BzTotal = _physicalData[2] + Bz0;
+  const CFreal ExTotal = _physicalData[3] + Ex0;
+  const CFreal EyTotal = _physicalData[4] + Ey0;
+  const CFreal EzTotal = _physicalData[5] + Ez0;
+  
+  //Set the coordinates
+  const CFreal x = currState->getCoordinates()[XX];
+  const CFreal y = currState->getCoordinates()[YY];
+  
+  const CFreal HartmannNb = _H;
+  const CFreal VelMax = _Umax;
+  const CFreal omega = _electricalConductivity;
+  const CFreal epsilon = 8.854187817e-12;  
+  const CFreal c = _varSet->getModel()->getLightSpeed();
+  
+  ///half tube OFF
+  //Set the velocities
+  const CFreal u = -VelMax*((std::cosh(HartmannNb*(y - 0.05)/0.05))/(std::cosh(HartmannNb)) - 1);
+  const CFreal v = 0.; 
+  
+  
+//   std::cout <<"HartmannSourceTermMaxwell::computeSource. u = "<< u <<"\n";
+//   std::cout <<"HartmannSourceTermMaxwell::computeSource. v = "<< v <<"\n";    
+  
+  const CFreal Jx = omega*(ExTotal + v*BzTotal);
+  const CFreal Jy = omega*(EyTotal - u*BzTotal);  
+  const CFreal Jz = omega*(EzTotal + u*ByTotal - v*BxTotal);  
+    
+  source[0] = 0;				//x-Faraday's Law
+  source[1] = 0;				//y-Faraday's Law
+  source[2] = 0;				//z-Faraday's Law
+  source[3] = -(1/epsilon)*Jx;			//x-Ampere's Law
+  source[4] = -(1/epsilon)*Jy;			//y-Ampere's Law
+  source[5] = -(1/epsilon)*Jz;  		//z-Ampere's Law
+  source[6] = 0;				//B-Field divergence cleaning
+  source[7] = 0;  				//E-Field divergence cleaning
+  
+//   source[8] = 0;		//Continuity equation
+//   source[9] = Jy*BzTotal -Jz*ByTotal;			//x-momentum equation  
+//   source[10] = Jz*BxTotal -Jx*BzTotal;			//y-momentum equation
+//   source[11] = Jx*ExTotal + Jy*EyTotal + Jz*EzTotal;	//Total Energy
+  // Total Energy old version (Jy*BxTotal -Jz*ByTotal)*u + (Jy*BxTotal -Jz*ByTotal)*v + (1/omega)*(Jx*Jx + Jy*Jy);			//Total Energy
+  
+  
+  
+//   std::cout << "u       = "<< u << "\n"; 
+//   std::cout << "ByTotal = "<< ByTotal<< "\n";
+//   std::cout << "EzTotal = "<< EzTotal << "\n";
+//   std::cout << "Jz      = "<< Jz << "\n"; 
+//   std::cout << "mu0*Jz  = "<< -(1/(c*c*epsilon))*Jz << "\n";
+//   std::cout << "BxTotal = "<< BxTotal << "\n";
+  
+  CFLog(VERBOSE,"HartmannSourceTermMaxwell::computeSource --> sourceTerm BX = " << source[0] <<"\n");
+  CFLog(VERBOSE,"HartmannSourceTermMaxwell::computeSource --> sourceTerm BY = " << source[1] <<"\n");
+  CFLog(VERBOSE,"HartmannSourceTermMaxwell::computeSource --> sourceTerm BZ = " << source[2] <<"\n"); 
+  CFLog(VERBOSE,"HartmannSourceTermMaxwell::computeSource --> sourceTerm EX = " << source[3] <<"\n"); 
+  CFLog(VERBOSE,"HartmannSourceTermMaxwell::computeSource --> sourceTerm EY = " << source[4] <<"\n");
+  CFLog(VERBOSE,"HartmannSourceTermMaxwell::computeSource --> sourceTerm EZ = " << source[5] <<"\n");
+  CFLog(VERBOSE,"HartmannSourceTermMaxwell::computeSource --> sourceTerm PSI = " << source[6] <<"\n");
+  CFLog(VERBOSE,"HartmannSourceTermMaxwell::computeSource --> sourceTerm PHI = " << source[7] <<"\n");  
+//   CFLog(VERBOSE,"HartmannSourceTermMaxwell::computeSource --> sourceTerm mass = " << source[8] <<"\n");  
+//   CFLog(VERBOSE,"HartmannSourceTermMaxwell::computeSource --> sourceTerm X-mom = " << source[9] <<"\n");  
+//   CFLog(VERBOSE,"HartmannSourceTermMaxwell::computeSource --> sourceTerm Y-mom = " << source[10] <<"\n");
+//   CFLog(VERBOSE,"HartmannSourceTermMaxwell::computeSource --> sourceTerm Energy = " << source[11] <<"\n");
+  
+  
+//   if (v > 1) {
+//     cout << "HartmannSourceTermMaxwell::computeSource --> sourceTerm X-mom = " << source[9] <<"\n";  
+//     cout << "HartmannSourceTermMaxwell::computeSource --> sourceTerm Y-mom = " << source[10] <<"\n";  
+//   }
+//   cout <<"HartmannSourceTermMaxwell::computeSource --> sourceTerm BX     = " << source[0] <<"\n";
+//   cout <<"HartmannSourceTermMaxwell::computeSource --> sourceTerm BY     = " << source[1] <<"\n";
+//   cout <<"HartmannSourceTermMaxwell::computeSource --> sourceTerm BZ     = " << source[2] <<"\n"; 
+//   cout <<"HartmannSourceTermMaxwell::computeSource --> sourceTerm EX     = " << source[3] <<"\n"; 
+//   cout <<"HartmannSourceTermMaxwell::computeSource --> sourceTerm EY     = " << source[4] <<"\n";
+//   cout <<"HartmannSourceTermMaxwell::computeSource --> sourceTerm EZ     = " << source[5] <<"\n";
+//   cout <<"HartmannSourceTermMaxwell::computeSource --> sourceTerm PSI    = " << source[6] <<"\n";
+//   cout <<"HartmannSourceTermMaxwell::computeSource --> sourceTerm PHI    = " << source[7] <<"\n";  
+//   cout <<"HartmannSourceTermMaxwell::computeSource --> sourceTerm mass   = " << source[8]  <<"\n";  
+//   cout <<"HartmannSourceTermMaxwell::computeSource --> sourceTerm X-mom  = " << source[9]  <<"\n";  
+//      cout <<"HartmannSourceTermMaxwell::computeSource --> sourceTerm Y-mom       = " << source[10] <<"\n";
+
+//   cout <<"HartmannSourceTermMaxwell::computeSource --> sourceTerm Energy = " << source[11] <<"\n";  
+ 
+//   CFLog(VERBOSE,"HartmannSourceTermMaxwell::computeSource --> NonInduced Field = " << _NonInducedEMField << "\n");
+ }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

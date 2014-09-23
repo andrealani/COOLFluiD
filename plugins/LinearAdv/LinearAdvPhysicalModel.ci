@@ -1,0 +1,90 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+namespace COOLFluiD {
+
+  namespace Physics {
+namespace LinearAdv {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void LinearAdvPhysicalModel<DIM>::defineConfigOptions(Config::OptionList& options)
+{
+   options.template addConfigOption< CFreal >("VY","Advection speed in Y direction.");
+   options.template addConfigOption< CFreal >("VX","Advection speed in X direction.");
+   options.template addConfigOption< CFreal >("VZ","Advection speed in X direction.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+LinearAdvPhysicalModel<DIM>::LinearAdvPhysicalModel(const std::string& name)
+  : Framework::ConvectionPM<LinearAdvTerm>(name)
+{
+   addConfigOptionsTo(this);
+   m_VX = 0.0;
+   setParameter("VX",&m_VX);
+
+   m_VY = 0.0;
+   setParameter("VY",&m_VY);
+
+   m_VZ = 1.0;
+   setParameter("VZ",&m_VZ);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+LinearAdvPhysicalModel<DIM>::~LinearAdvPhysicalModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint LinearAdvPhysicalModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint LinearAdvPhysicalModel<DIM>::getNbEquations() const
+{
+  return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void LinearAdvPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionPM<LinearAdvTerm>::configure(args);
+
+  // allocate jacobians
+  _jacobians.resize(DIM);
+  for (CFuint i = 0; i < DIM; ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+
+  _jacobians[XX] = m_VX;
+  if (DIM > DIM_1D) {
+    _jacobians[YY] = m_VY;
+  }
+  if (DIM > DIM_2D) {
+    _jacobians[ZZ] = m_VZ;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace LinearAdv
+}
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

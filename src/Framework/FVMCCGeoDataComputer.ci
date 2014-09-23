@@ -1,0 +1,293 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#include "Framework/MeshData.hh"
+#include "Framework/ComputeDummyStates.hh"
+#include "Framework/ComputeNormals.hh"
+#include "Framework/VolumeCalculator.hh"
+#include "Framework/ComputeFaceNormalsFVMCC.hh"
+#include "Framework/GeometricEntityPool.hh"
+#include "Framework/FaceTrsGeoBuilder.hh"
+#include "Framework/CellTrsGeoBuilder.hh"
+#include "Framework/TrsGeoWithNodesBuilder.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Framework/SetElementStateCoord.hh"
+#include "MathTools/MathChecks.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+FVMCCGeoDataComputer<METHODDATA>::FVMCCGeoDataComputer(const std::string& name) :
+  GeoDataComputer<METHODDATA>(name),
+  socket_normals("normals"),
+  socket_faceAreas("faceAreas"),  
+  socket_faceCenters("faceCenters"),
+  socket_isOutward("isOutward"),
+  socket_gstates("gstates"),
+  socket_volumes("volumes")
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+FVMCCGeoDataComputer<METHODDATA>::~FVMCCGeoDataComputer()
+{
+}
+  
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+void FVMCCGeoDataComputer<METHODDATA>::setup()
+{
+  CFAUTOTRACE;
+  CFLog(VERBOSE, "FVMCCGeoDataComputer<METHODDATA>::setup()\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+void FVMCCGeoDataComputer<METHODDATA>::compute()
+{
+  CFAUTOTRACE;
+  CFLog(VERBOSE, "FVMCCGeoDataComputer<METHODDATA>::compute()\n");
+  
+  // compute the normals-related data
+  computeNormalsData();
+  
+  // compute the dummy (ghost) states
+  ComputeDummyStates computeDummyStates;
+  computeDummyStates.setDataSockets(socket_normals, socket_gstates, 
+				    this->socket_states, this->socket_nodes);
+  computeDummyStates.setup();
+  std::vector<std::string> dummy;
+  computeDummyStates(dummy);
+  
+  // compute volumes
+  computeCellVolumes();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+    
+template < typename METHODDATA>
+void FVMCCGeoDataComputer<METHODDATA>::unsetup()
+{
+  CFAUTOTRACE;
+  CFLog(VERBOSE, "FVMCCGeoDataComputer<METHODDATA>::unsetup()\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> >
+FVMCCGeoDataComputer<METHODDATA>::needsSockets()
+{
+  CFAUTOTRACE;
+  CFLog(VERBOSE, "FVMCCGeoDataComputer<METHODDATA>::needsSockets()\n");
+  
+  std::vector<Common::SafePtr<BaseDataSocketSink> > result = 
+    GeoDataComputer<METHODDATA>::needsSockets();
+  
+  result.push_back(&socket_normals);
+  result.push_back(&socket_faceAreas);
+  result.push_back(&socket_faceCenters);
+  result.push_back(&socket_isOutward);
+  result.push_back(&socket_gstates);
+  result.push_back(&socket_volumes);
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+void FVMCCGeoDataComputer<METHODDATA>::computeNormalsData()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  
+  CFAUTOTRACE;
+
+  SafePtr<vector<ElementTypeData> > elemTypes = MeshDataStack::getActive()->getElementTypeData();
+  DataSocketSink<CFreal> sinkNormals(socket_normals);
+  DataSocketSink<CFint> sinkIsOutward(socket_isOutward);
+  
+  SafePtr<DataSocketSink<CFreal> > sinkNormalsPtr = &sinkNormals;
+  SafePtr<DataSocketSink<CFint> > sinkIsOutwardPtr = &sinkIsOutward;
+  
+  // reset the isOutward array
+  socket_isOutward.getDataHandle() = -1;
+  
+  for (CFuint iType = 0; iType < elemTypes->size(); ++iType)
+  {
+    const CFuint geoOrder = (*elemTypes)[iType].getGeoOrder();
+    const std::string elemName = (*elemTypes)[iType].getShape() + CFPolyOrder::Convert::to_str(geoOrder);
+
+    SelfRegistPtr<ComputeNormals> computeFaceNormals =
+      Environment::Factory<ComputeNormals>::getInstance().
+      getProvider("Face" + elemName)->create();
+
+    const CFuint firstElem = (*elemTypes)[iType].getStartIdx();
+    const CFuint lastElem  = (*elemTypes)[iType].getEndIdx();
+
+    SelfRegistPtr<ComputeFaceNormalsFVMCC> faceNormalsComputer =
+      computeFaceNormals.d_castTo<ComputeFaceNormalsFVMCC>();
+
+    faceNormalsComputer->setSockets(sinkNormalsPtr,
+				    sinkIsOutwardPtr);
+
+    (*faceNormalsComputer)(firstElem, lastElem);
+  } 
+  
+  // computation of face areas
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  DataHandle< CFreal> normals = socket_normals.getDataHandle();
+  DataHandle< CFreal> faceAreas = socket_faceAreas.getDataHandle();
+  RealVector faceNormal(dim);
+  
+  for (CFuint iFace = 0; iFace < faceAreas.size(); ++iFace) {
+    const CFuint startID = iFace*dim;
+    for (CFuint i = 0; i < dim; ++i) {      
+      faceNormal[i] = normals[startID + i];
+    }
+    faceAreas[iFace] = faceNormal.norm2();
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename METHODDATA>
+void FVMCCGeoDataComputer<METHODDATA>::computeCellVolumes()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  
+  CFAUTOTRACE;
+
+  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+
+  Common::SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->
+   getTrs("InnerCells");
+
+  Common::SafePtr<GeometricEntityPool<TrsGeoWithNodesBuilder> >
+    geoBuilder = this->getMethodData().getGeoWithNodesBuilder();
+
+  TrsGeoWithNodesBuilder::GeoData& geoData = geoBuilder->getDataGE();
+  geoData.trs = cells;
+  
+  CFuint countNegativeVol = 0;
+  const CFuint nbElems = cells->getLocalNbGeoEnts();
+  for (CFuint iElem = 0; iElem < nbElems; ++iElem) {
+    // build the GeometricEntity
+    geoData.idx = iElem;
+    GeometricEntity *const cell = geoBuilder->buildGE();
+    volumes[iElem] = cell->computeVolume();
+    
+    if (volumes[iElem] < 0.0)
+    {
+      countNegativeVol++;
+      cout.precision(14);
+      CFout << "Cell [" << iElem << "] with [" << cell->nbNodes() << "] nodes has negative volume [" << volumes[iElem] << "]\n";
+      volumes[iElem] = 0.0;
+    }
+
+    if ( MathChecks::isZero(volumes[iElem]) )
+    {
+      cout.precision(14);
+      CFout << "Cell [" << iElem << "] with [" << cell->nbNodes() << "] nodes has zero volume [" << volumes[iElem] << "]\n";
+      // print coordinates
+      for (CFuint i = 0; i < cell->nbNodes(); ++i) {
+       CFout << *cell->getNode(i) << ", ";
+      } CFout << "\n";
+      volumes[iElem] = 0.0;
+    }
+
+    //   cf_assert(volumes[iElem] > 0.);
+
+    //release the GeometricEntity
+    geoBuilder->releaseGE();
+  }
+  
+  CFLog(VERBOSE, "Negative volumes count [" << countNegativeVol << "]\n" );
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename METHODDATA>
+void FVMCCGeoDataComputer<METHODDATA>::modifyOffMeshNodes()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  
+  CFAUTOTRACE;
+  
+  /// The cell-center nodes (and ghost nodes) have NOT been moved during the mesh adaptation!!!
+  //
+  /// Modify the element state coordinates
+
+  SafePtr<vector<ElementTypeData> > elementType =
+    MeshDataStack::getActive()->getElementTypeData();
+
+  CFuint nbElemTypes = elementType->size();
+
+  DataHandle < Framework::State*, Framework::GLOBAL > states = 
+    this->socket_states.getDataHandle();
+  
+  SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->
+    getTrs("InnerCells");
+
+  SafePtr<GeometricEntityPool<TrsGeoWithNodesBuilder> > geoBuilder =
+    this->getMethodData().getGeoWithNodesBuilder();
+  
+  TrsGeoWithNodesBuilder::GeoData& geoData = geoBuilder->getDataGE();
+  geoData.trs = cells;
+
+  vector<State*> eState(1);
+
+  CFuint elemID = 0;
+  for (CFuint iType = 0; iType < nbElemTypes; ++iType) {
+
+    ///@todo change this for other order!!
+    const std::string elemName = CFGeoShape::Convert::to_str((*elementType)[iType].getGeoShape()) + "LagrangeP1LagrangeP0";
+
+    SelfRegistPtr<SetElementStateCoord> setStateCoord = Environment::Factory<SetElementStateCoord>::getInstance().
+      getProvider(elemName)->create();
+
+    const CFuint nbElemPerType = (*elementType)[iType].getNbElems();
+    for (CFuint iElem = 0; iElem < nbElemPerType; ++iElem, ++elemID) {
+      // build the cell
+      geoData.idx = elemID;
+      GeometricEntity *const currCell = geoBuilder->buildGE();
+
+      const vector<Node*>& eNodes = *currCell->getNodes();
+      eState[0] = states[elemID];
+
+      setStateCoord->update(eNodes,eState);
+
+      // release the cell
+      geoBuilder->releaseGE();
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

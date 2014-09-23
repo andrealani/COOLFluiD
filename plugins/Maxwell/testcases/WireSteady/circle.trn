@@ -1,0 +1,49 @@
+/ File opened for write Mon Jun  4 14:33:36 2012.
+ 
+*** LISTING "circle" FILES IN DIRECTORY:
+    .
+ 
+    circle.trn
+    circle.dbs
+    circle.lok
+    circle.jou
+Copyright(c) 1988-2012, Fluent Inc. All rights reserved.
+http://www.fluent.com
+ 
+Gambit incorporates Simulation Modeling Suite(TM) software by Simmetrix Inc.
+ 
+Portions of this software are owned by Parametric Technology Corporation.
+Copyright(c) 2002. All Rights Reserved.
+ 
+Portions of this software are owned by Unigraphics Solutions Corporation or its subsidiaries.
+Copyright(c) 2004. All Rights Reserved.
+ 
+Spatial Indexing Library version 0.81b (beta) provided under GNU Lesser General Public License
+(http://www.gnu.org/copyleft/lesser.html)
+ 
+Command> edge connect "edge.4" "edge.7" real
+Connected vertex vertex.8 to vertex.15, which is deleted
+Connected vertex vertex.11 to vertex.14, which is deleted
+Connected edge edge.4 to edge.7, which is deleted
+ERROR: Entity edge.4 currently exists in the select list.
+ERROR: Entity edge.4 currently exists in the select list.
+ERROR: Entity edge.4 currently exists in the select list.
+ERROR: Entity edge.3 currently exists in the select list.
+ERROR: Entity edge.3 currently exists in the select list.
+ERROR: Entity edge.3 currently exists in the select list.
+ERROR: Entity edge.2 currently exists in the select list.
+ERROR: Entity edge.2 currently exists in the select list.
+ERROR: Entity edge.2 currently exists in the select list.
+ERROR: Entity edge.2 currently exists in the select list.
+ERROR: Entity edge.6 currently exists in the select list.
+ERROR: Entity edge.6 currently exists in the select list.
+Command> export gambit "circle.neu"
+A default (FLUID) continuum entity was created for 2 entities including the following:
+face.2 and face.1 
+ 
+Writing 17760 nodes, 17600 elements, 1 group and 2 bc sets
+to GAMBIT Neutral file circle.neu.
+Done writing Neutral file.
+Command> end
+/ File closed at Mon Jun  4 14:34:37 2012, 0.48 cpu second(s), 2769328 maximum memory.
+Total of 0.75 cpu second(s), 2769328 maximum memory.

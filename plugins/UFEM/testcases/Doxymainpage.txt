@@ -1,0 +1,23 @@
+/**
+ * @mainpage Welcome to the COOLFluiD/UFEM testcases documentation.
+ * 
+ * @section userguide For users:
+ *
+ * May luck be with you on your journey to find the testcase you are looking for! 
+ *
+ * You can choose one of the following methods to browse through the testcases:
+ * - Go to \a \b files tab and look for the testcase explicitly.
+ * - Go to \a \b directories tab and browse through the directory structure.
+ * - Use the \a \b search \a \b engine on the top right. Keywords attached to each testcase.
+ * 
+ * @section developerguide For testcase developers:
+ *
+ * Please respect the following guidelines:
+ * - Always fill \a \b completely  and  \a \b sensfully  the header part, it may makes your life easier when you look for something done in the far past.
+ * - For a template header, please checkout the \a \b Doxyheader.CFcase file in the testcase root directory
+ * - Use the \a \b note paragraph to enter keyword for the search engine
+ * - For how to commit the grid, please refer to the \a \b COOLFluiD \a \b howto pages.
+ * - Insert a picture (use the alias cfimage)?
+ * - And don't forget to add put your mesh up onto webdav server and change Simulator.Paths.WorkingDir.
+ *
+**/ 

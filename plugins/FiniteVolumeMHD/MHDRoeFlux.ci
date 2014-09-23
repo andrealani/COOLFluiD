@@ -1,0 +1,163 @@
+#ifndef COOLFluiD_Numerics_FiniteVolume_MHDRoeFlux_ci
+#define COOLFluiD_Numerics_FiniteVolume_MHDRoeFlux_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+#include "Framework/GeometricEntity.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class SOLUTION_VAR>
+MHDRoeFlux<SOLUTION_VAR>::
+MHDRoeFlux(const std::string& name) :
+  RoeFlux(name),
+  _solutionVarSet(CFNULL),
+  _deltaFlux(),
+  _tempResult(),
+  _columnRightEv(),
+  _waveStrengths(),
+  _rm(),
+  _rmInv()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class SOLUTION_VAR>
+MHDRoeFlux<SOLUTION_VAR>::~MHDRoeFlux()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class SOLUTION_VAR>
+void MHDRoeFlux<SOLUTION_VAR>::setup()
+{
+  RoeFlux::setup();
+  
+  _solutionVarSet = this->getMethodData().getSolutionVar().template d_castTo<SOLUTION_VAR>();
+  
+  _deltaFlux.resize(Framework::PhysicalModelStack::getActive()->getNbEq());
+  _tempResult.resize(Framework::PhysicalModelStack::getActive()->getNbEq());
+  _columnRightEv.resize(Framework::PhysicalModelStack::getActive()->getNbEq());
+  _waveStrengths.resize(Framework::PhysicalModelStack::getActive()->getNbEq());
+  _rm.resize(Framework::PhysicalModelStack::getActive()->getNbEq(),
+	     Framework::PhysicalModelStack::getActive()->getNbEq());
+  _rmInv.resize(Framework::PhysicalModelStack::getActive()->getNbEq(),
+		Framework::PhysicalModelStack::getActive()->getNbEq());
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class SOLUTION_VAR>
+void MHDRoeFlux<SOLUTION_VAR>::compute(RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVar();
+  CellCenterFVMData& data = this->getMethodData(); 
+  GeometricEntity& face = *data.getCurrentFace();
+  SafePtr<FVMCC_PolyRec> polyRec = data.getPolyReconstructor();
+  
+  _statesLR[0] = &polyRec->getCurrLeftState();
+  _statesLR[1] = &polyRec->getCurrRightState();
+  
+  cf_assert(*_statesLR[0] == polyRec->getCurrLeftState());
+  cf_assert(*_statesLR[1] == polyRec->getCurrRightState());
+  
+  if (!getMethodData().reconstructSolVars()) {
+    _solutionStates = getMethodData().getUpdateToSolutionVecTrans()->transform(&_statesLR);
+  }
+  else {
+    _solutionStates = &_statesLR;
+  }
+  
+  linearize();
+  
+  const RealVector& unitNormal = getMethodData().getUnitNormal();
+
+  // set the eigenvectors and eigenvalues of the linearized jacobian
+  _solutionVarSet->computeEigenValuesVectors(_rightEv,
+					     _leftEv,
+					     _eValues,
+					     unitNormal);
+  
+  
+  State& stateL = *(*_solutionStates)[0];
+  State& stateR = *(*_solutionStates)[1];
+  
+  _solutionVarSet->setWaveStrengths(_waveStrengths,
+				    _leftEv,
+				    stateL,
+				    stateR,
+				    unitNormal);
+  
+  _solutionVarSet->setRotationMatrices(unitNormal,
+				       _rm,
+				       _rmInv);
+  
+  // flux for the right and left state
+  vector<RealVector>& pdata = polyRec->getExtrapolatedPhysicaData();
+  _sumFlux =  _solutionVarSet->getRotatedFlux(stateL, unitNormal);
+  _sumFlux += _solutionVarSet->getRotatedFlux(stateR, unitNormal);
+  
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+
+  // calculation of the diffusive part of the Roe flux
+  _deltaFlux = 0.0;
+  for (CFuint i = 0; i < nbEqs; ++i) {
+    for (CFuint j = 0; j < nbEqs; ++j) {
+      _columnRightEv[j] = _rightEv(j,i);
+    }
+    _deltaFlux += _waveStrengths[i]*std::abs(_eValues[i])*_columnRightEv;
+  }
+
+  _tempResult = 0.5*(_sumFlux - _deltaFlux);
+
+  result = _rmInv*_tempResult;
+
+  // compute update coefficient
+  if (!getMethodData().isPerturb()) {    
+    DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+    const CFreal faceArea = socket_faceAreas.getDataHandle()[face.getID()]/
+      polyRec->nbQPoints();
+    
+    // left contribution to update coefficient
+    CFreal maxEV = updateVarSet->getMaxEigenValue(pdata[0], unitNormal);
+    
+    const CFuint leftID = face.getState(0)->getLocalID();
+    updateCoeff[leftID] += max(maxEV, (CFreal)0.)*faceArea;
+    
+    if (!face.getState(1)->isGhost()) {
+      // right contribution to update coefficient
+      
+      _tempUnitNormal = -1.0*unitNormal;
+      maxEV = updateVarSet->getMaxEigenValue(pdata[1],_tempUnitNormal);
+      
+      const CFuint rightID = face.getState(1)->getLocalID();
+      updateCoeff[rightID] += max(maxEV, (CFreal)0.)*faceArea;
+    }
+  } 
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace FiniteVolume
+
+} // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Numerics_FiniteVolume_MHDRoeFlux_ci

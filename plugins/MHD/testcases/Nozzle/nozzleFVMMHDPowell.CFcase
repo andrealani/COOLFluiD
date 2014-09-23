@@ -1,0 +1,140 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -0.501638
+
+#
+#CFEnv.ErrorOnUnusedConfig = true
+#
+# Simulator Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libMHD libFiniteVolume libFiniteVolumeMHD libForwardEuler libTHOR2CFmesh
+
+# Simulator Parameters
+Simulator.Paths.WorkingDir = plugins/MHD/testcases/Nozzle/
+Simulator.Paths.ResultsDir = ./RESULTS
+
+Simulator.SubSystem.Default.PhysicalModelType  = MHD2D
+Simulator.SubSystem.MHD2D.ConvTerm.gamma = 1.4
+
+Simulator.SubSystem.MHD2D.ConvTerm.divBErrorFileName = divB_nozzleFVMMHD1stPowell
+Simulator.SubSystem.MHD2D.ConvTerm.divBErrorFileSaveRate = 10
+
+Simulator.SubSystem.InteractiveParamReader.readRate = 15
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MHD/testcases/Nozzle/nozzle.inter
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = nozzleFVMMHD1stPowell.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = nozzleFVMMHD1stPowell.plt
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot.Data.outputVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -6.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = nozzle.CFmesh
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+#Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.5
+Simulator.SubSystem.FwdEuler.ConvergenceFile = convergence_nozzleFVMMHD1stPowell.plt
+Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Interactive
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = FVMCCMHD
+#Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+#Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+#Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+#Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+#Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+#Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = LaxFried
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = MHD2DConsRoe
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Cons
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = MHD2DPowellST
+
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.14
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.freezeLimiter = true
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState \
+        MirrorMHD2DFVMCC \
+        SuperInletFVMCC \
+        SuperOutletFVMCC
+
+Simulator.SubSystem.CellCenterFVM.InitNames = InField \
+        InMirror \
+        InInlet \
+        InOutlet
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 1.0 \
+                                        3.0 \
+                                        0.0 \
+                                        0.0 \
+                                        0.0 \
+                                        0.0 \
+                                        0.0 \
+                    			7.0
+
+Simulator.SubSystem.CellCenterFVM.InMirror.applyTRS = SlipWall
+
+Simulator.SubSystem.CellCenterFVM.InInlet.applyTRS = SuperInlet
+Simulator.SubSystem.CellCenterFVM.InInlet.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InInlet.Def = 1.0 \
+                                        3.0 \
+                                        0.0 \
+                                        0.0 \
+                                        1.0 \
+                                        0.0 \
+                                        0.0 \
+                                        7.5
+
+Simulator.SubSystem.CellCenterFVM.InOutlet.applyTRS = SuperOutlet
+
+Simulator.SubSystem.CellCenterFVM.BcComds = MirrorMHD2DFVMCC \
+        SuperInletFVMCC \
+        SuperOutletFVMCC
+
+Simulator.SubSystem.CellCenterFVM.BcNames = Wall \
+              Inlet \
+              Outlet
+
+Simulator.SubSystem.CellCenterFVM.Wall.applyTRS = SlipWall
+
+Simulator.SubSystem.CellCenterFVM.Inlet.applyTRS = SuperInlet
+Simulator.SubSystem.CellCenterFVM.Inlet.Vars = x y
+Simulator.SubSystem.CellCenterFVM.Inlet.Def = 1.0 \
+                                        3.0 \
+                                        0.0 \
+                                        0.0 \
+                                        1.0 \
+                                        0.0 \
+                                        0.0 \
+                                        7.5
+
+Simulator.SubSystem.CellCenterFVM.Outlet.applyTRS = SuperOutlet
+
+CFEnv.RegistSignalHandlers = false

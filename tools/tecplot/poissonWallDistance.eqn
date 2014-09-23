@@ -1,0 +1,13 @@
+#!MC 1000
+$!ALTERDATA 
+  EQUATION = '{dTdX}=ddx({T})' 
+$!ALTERDATA 
+  EQUATION = '{dTdY}=ddy({T})' 
+$!ALTERDATA 
+  EQUATION = '{sumGrad}={dTdX}*{dTdX}+{dTdY}*{dTdY}' 
+$!ALTERDATA 
+  EQUATION = '{root1} = {sumGrad}' 
+$!ALTERDATA 
+  EQUATION = '{root2} = {sumGrad} +2*{T}' 
+$!ALTERDATA 
+  EQUATION = '{d}=-sqrt({root1})+sqrt({root2})' 

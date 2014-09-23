@@ -1,0 +1,63 @@
+#include "NschemeTVMET.hh"
+
+//////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Benchmark {
+
+//////////////////////////////////////////////////////////////////////
+
+template < unsigned int NEQS, unsigned int NSTATES >
+NschemeTVMET<NEQS,NSTATES>::NschemeTVMET()
+ : skplus_u(), skplus(), inv_k(), u_in()
+{
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template < unsigned int NEQS, unsigned int NSTATES >
+NschemeTVMET<NEQS,NSTATES>::~NschemeTVMET()
+{
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template < unsigned int NEQS, unsigned int NSTATES >
+void NschemeTVMET<NEQS,NSTATES>::
+     distribute ( const std::vector<Matrix_t*>& kplus,
+                  const std::vector<Vector_t*>& states,
+                  const Vector_t&  res,
+                        std::vector<Vector_t*>& st_res )
+{
+  cf_assert ( kplus.size()  == NSTATES );
+  cf_assert ( states.size() == NSTATES );
+  cf_assert ( st_res.size() == NSTATES );
+
+  skplus   = *kplus[0];
+  skplus_u = *kplus[0] * *states[0];
+  for ( CFuint i = 1; i < NSTATES; ++i )
+  {
+// CF_DEBUG_OBJ ( *kplus[i] );
+    skplus   += *kplus[i];
+    skplus_u += prod(*kplus[i] , *states[i]);
+  }
+
+// CF_DEBUG_OBJ ( skplus );
+
+  inverter.invert(skplus,inv_k);
+
+  u_in = inv_k * (skplus_u - res);
+
+  for ( CFuint i = 1; i < NSTATES; ++i )
+  {
+    *st_res[i] = prod( *kplus[i] , ( *states[i] - u_in ));
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
+  } // namespace Benchmark
+
+} // namespace COOLFluiD
+

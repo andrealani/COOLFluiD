@@ -1,0 +1,74 @@
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void SubOutletRiga<BASE>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< std::vector<CFreal> >("ye", "Scalar Variables");
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+SubOutletRiga<BASE>::SubOutletRiga(const std::string& name) :
+  BASE(name)
+{
+  this->addConfigOptionsTo(this);
+
+  m_ye = std::vector<CFreal>();
+  this->setParameter("ye", &m_ye);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+SubOutletRiga<BASE>::~SubOutletRiga()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void SubOutletRiga<BASE>::setGhostState(Framework::GeometricEntity *const face)
+{
+  using namespace COOLFluiD::Framework;
+
+  BASE::setGhostState(face);
+
+//   State *const innerState = face->getState(0);
+  State *const ghostState = face->getState(1);
+
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint start = BASE::EULERSET::getEqSetData()[0].getEqSetVarIDs().size();
+  const CFuint nbScalarEqs = nbEqs - start;
+  
+  for (CFuint i = 0; i < nbScalarEqs; ++i) {
+  (*ghostState)[start + i] = m_ye[i];  
+  }
+ 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void SubOutletRiga<BASE>::setup()
+{
+  using namespace COOLFluiD::Framework;
+
+  BASE::setup();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

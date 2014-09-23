@@ -1,0 +1,53 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#ifndef COOLFluiD_Framework_GeoDataComputer_ci
+#define COOLFluiD_Framework_GeoDataComputer_ci
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA >
+void GeoDataComputer<METHODDATA>::defineConfigOptions(Config::OptionList& options)
+{
+  // options.template addConfigOption< CFreal >("alpha","Coefficient <=1 to tune the limiter.");
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA >
+GeoDataComputer<METHODDATA>::GeoDataComputer(const std::string& name) :
+  Framework::MethodStrategy<METHODDATA>(name),
+  socket_states("states"),
+  socket_nodes("nodes")
+{
+  this->addConfigOptionsTo(this);
+  
+  //   m_alpha = 1.0;  
+  // Config::ConfigObject::setParameter("alpha",&m_alpha);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA >
+GeoDataComputer<METHODDATA>::~GeoDataComputer()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace Framework
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Framework_GeoDataComputer_ci

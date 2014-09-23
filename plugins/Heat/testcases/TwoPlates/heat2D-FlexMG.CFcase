@@ -1,0 +1,107 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libFiniteElement libHeat libNewtonMethod libTHOR2CFmesh libFlexMG libFiniteElementHeat
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/Heat/testcases/TwoPlates/
+Simulator.Paths.ResultsDir  =  ./
+
+Simulator.SubSystem.Default.PhysicalModelType = Heat2D
+Simulator.SubSystem.Heat2D.Conductivity = 1.0
+
+
+Simulator.SubSystem.ConvergenceFile     = convergence.plt
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName = heat2D.CFmesh
+Simulator.SubSystem.Tecplot.FileName = heat2D.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.CFmesh.SaveRate = 1
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.ConvRate            = 1
+Simulator.SubSystem.ShowRate            = 1
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSystem.Default.listTRS = InnerCells FaceSouth FaceWest FaceNorth SuperInlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = square.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.builderName = FiniteElement
+Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.LinearSystemSolver = FlexMG
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 100
+Simulator.SubSystem.NewtonIteratorLSS.Data.ILINSOLVE = 5
+Simulator.SubSystem.NewtonIteratorLSS.Data.EPSILON = 1E-8
+Simulator.SubSystem.NewtonIteratorLSS.Data.ILUTLFIL = 5
+Simulator.SubSystem.NewtonIteratorLSS.Data.ILUTHRES = 1E-5
+Simulator.SubSystem.NewtonIteratorLSS.Data.MGDBG = 3
+Simulator.SubSystem.NewtonIteratorLSS.Data.IFPMETHOD = 2
+Simulator.SubSystem.NewtonIteratorLSS.Data.MGSTYLE = 1
+Simulator.SubSystem.NewtonIteratorLSS.Data.MGLEVS = 1
+Simulator.SubSystem.NewtonIteratorLSS.Data.MGCTYPE = 1
+Simulator.SubSystem.NewtonIteratorLSS.Data.TOPITERS = 10
+Simulator.SubSystem.NewtonIteratorLSS.Data.SMOOTHING1 = 1
+Simulator.SubSystem.NewtonIteratorLSS.Data.SMOOTHING2 = 1
+Simulator.SubSystem.NewtonIteratorLSS.Data.AGGSCALE = 1.0
+Simulator.SubSystem.NewtonIteratorLSS.Data.NREC = 20
+Simulator.SubSystem.NewtonIteratorLSS.Data.NUMPART = 4
+Simulator.SubSystem.NewtonIteratorLSS.Data.IPRECOND = 2
+Simulator.SubSystem.NewtonIteratorLSS.Data.GMRESPRECONDITER = 1
+Simulator.SubSystem.NewtonIteratorLSS.Data.KRYLOVVECTORS = 10
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1.0
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
+
+Simulator.SubSystem.SpaceMethod = FiniteElementMethod
+
+Simulator.SubSystem.FiniteElementMethod.Data.UpdateVar = Prim
+Simulator.SubSystem.FiniteElementMethod.Data.DiffusiveVar = Prim
+#Simulator.SubSystem.FiniteElementMethod.Data.SourceVar = Heat2DSourceTConst
+
+#Simulator.SubSystem.FiniteElementMethod.Data.Heat2DSourceTConst.IndepCoef = 100.
+#Simulator.SubSystem.FiniteElementMethod.Data.Heat2DSourceTConst.LinearCoef = 0.
+
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FiniteElementMethod.Data.IntegratorOrder = P1
+
+Simulator.SubSystem.FiniteElementMethod.ExplicitComputeSpaceResCom.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.StdComputeTimeResCom.applyTRS = InnerCells
+
+Simulator.SubSystem.FiniteElementMethod.InitComds = InitState
+Simulator.SubSystem.FiniteElementMethod.InitNames = InitialField
+
+# Vars are [x y]
+Simulator.SubSystem.FiniteElementMethod.InitialField.applyTRS = InnerCells
+Simulator.SubSystem.FiniteElementMethod.InitialField.Vars = x y
+Simulator.SubSystem.FiniteElementMethod.InitialField.Def = 200
+
+Simulator.SubSystem.FiniteElementMethod.BcComds = NeumannBC     DirichletBC
+Simulator.SubSystem.FiniteElementMethod.BcNames = HeatedPlate   T1000K
+
+# Vars are [x y t T]
+Simulator.SubSystem.FiniteElementMethod.T1000K.applyTRS = FaceNorth
+Simulator.SubSystem.FiniteElementMethod.T1000K.Implicit = false
+Simulator.SubSystem.FiniteElementMethod.T1000K.Vars = x y t T
+Simulator.SubSystem.FiniteElementMethod.T1000K.Def = 1000
+
+# Vars are [x y t T]
+Simulator.SubSystem.FiniteElementMethod.HeatedPlate.applyTRS = FaceSouth
+Simulator.SubSystem.FiniteElementMethod.HeatedPlate.Vars = x y t T nx ny
+Simulator.SubSystem.FiniteElementMethod.HeatedPlate.Def = 500
+
+

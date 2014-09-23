@@ -1,0 +1,50 @@
+# do doxy
+rm -rf ./html
+doxygen Doxyfile
+
+# loop on *CFcase.html
+for HTMLFILE in $(ls -1 ./html/*CFcase.html)
+do
+  echo "File:          $HTMLFILE"
+  HTMLTMPFILE="$HTMLFILE.tmp"
+  RELATIVEDIR=""
+
+  # get directory
+  while read HTMLLINE
+  do
+    TESTLEN=${#HTMLLINE}
+    TESTVAR=${HTMLLINE%<title>*}
+    if [ "${#TESTVAR}" != "$TESTLEN" ] ; then
+      RELATIVEDIR=${HTMLLINE%/*.CFcase*}
+      RELATIVEDIR=${RELATIVEDIR##* }
+      echo "  Directory:   $RELATIVEDIR"
+    fi
+  done < <( cat $HTMLFILE )
+
+  # replace where "CFIMAGE ." found, and copy to tmp file
+  if [ -a "$HTMLTMPFILE" ] ; then
+    rm "$HTMLTMPFILE"
+  fi
+  cat $HTMLFILE | while read HTMLLINE
+  do
+    TESTLEN=${#HTMLLINE}
+    TESTVAR=${HTMLLINE#*CFIMAGE }
+    if [ "${#TESTVAR}" != "$TESTLEN" ] ; then
+      LINEBEG=${HTMLLINE%%CFIMAGE*}
+      LINEEND=${HTMLLINE#*CFIMAGE }
+      HTMLLINE="$LINEBEG ./$RELATIVEDIR/$LINEEND"
+      FILENAME="$LINEEND "
+      FILENAME=${LINEEND%% *}
+      echo "  File copy:   ./$RELATIVEDIR/$FILENAME -> ./html/$RELATIVEDIR/$FILENAME"
+      DIRNAME="./html/$RELATIVEDIR/$FILENAME"
+      DIRNAME=${DIRNAME%/*}
+      mkdir -p "$DIRNAME"
+      cp "./$RELATIVEDIR/$FILENAME" "./html/$RELATIVEDIR/$FILENAME"
+    fi
+    echo "$HTMLLINE" >> "$HTMLTMPFILE"
+  done
+  
+  #finally renaming
+  mv "$HTMLTMPFILE" "$HTMLFILE"
+  
+done

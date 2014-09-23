@@ -1,0 +1,140 @@
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class VARSET>
+void SubInletEulerPvtVT<VARSET>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< std::vector<std::string> >("Def","Definition of the Functions.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class VARSET>
+SubInletEulerPvtVT<VARSET>::SubInletEulerPvtVT(const std::string& name) :
+  FVMCC_BC(name),
+  m_varSet(CFNULL),
+  m_uvwT(),
+  m_uvwTRef(),
+  m_bCoord(),
+  m_vars()
+{
+  addConfigOptionsTo(this);
+
+  m_functions = std::vector<std::string>();
+  setParameter("Def",&m_functions);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class VARSET>
+SubInletEulerPvtVT<VARSET>::~SubInletEulerPvtVT()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class VARSET>
+void SubInletEulerPvtVT<VARSET>::configure ( Config::ConfigArgs& args )
+{
+  using namespace COOLFluiD::Framework;
+
+  FVMCC_BC::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class VARSET>
+void SubInletEulerPvtVT<VARSET>::setGhostState(Framework::GeometricEntity *const face)
+{
+  using namespace COOLFluiD::Framework;
+
+  State *const innerState = face->getState(0);
+  State *const ghostState = face->getState(1);
+
+  // coordinate of the boundary point
+  m_bCoord = (innerState->getCoordinates() + ghostState->getCoordinates());
+  m_bCoord *= 0.5;
+
+  m_vFunction.evaluate(m_bCoord, m_uvwT);
+
+  /// @todo this adimensionalization must be checked to be working correctly or not
+  m_uvwT /= m_uvwTRef;
+
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint vtSize = dim + 1;
+
+  (*ghostState)[0] = (*innerState)[0];
+  for (CFuint i = 0; i < dim; ++i) {
+    const CFuint iPlus1 = i+1;
+    (*ghostState)[iPlus1] = 2.*m_uvwT[i] - (*innerState)[iPlus1];
+  }
+  (*ghostState)[vtSize] = 2.*m_uvwT[dim] - (*innerState)[vtSize];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class VARSET>
+void SubInletEulerPvtVT<VARSET>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  FVMCC_BC::setup();
+
+  m_varSet = getMethodData().getUpdateVar().template d_castTo<VARSET>();
+
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint vtSize = dim + 1;
+
+  if (m_functions.size() != vtSize )
+  {
+    std::string msg ("User supplied ");
+    msg += Common::StringOps::to_str(m_functions.size());
+    msg += " BC functions for velocity and T but must supply ";
+    msg += Common::StringOps::to_str(vtSize);
+    throw Common::BadValueException(FromHere(), msg);
+  }
+
+  m_uvwT.resize(vtSize);
+  m_uvwTRef.resize(vtSize);
+  m_bCoord.resize(dim);
+
+  // set the reference values
+  for (CFuint i = 0; i < dim; ++i)
+  {
+    m_uvwTRef[i] = m_varSet->getModel()->getVelRef();
+  }
+  m_uvwTRef[dim] = m_varSet->getModel()->getTempRef();
+
+  // set up the vectorial functions for u,v,w,T
+  m_vFunction.setFunctions(m_functions);
+  m_vars.resize(dim);
+
+  m_vars[XX] = "x";
+  m_vars[YY] = "y";
+  if (dim == DIM_3D) { m_vars[ZZ] = "z"; }
+
+  m_vFunction.setVariables(m_vars);
+  try
+  {
+    m_vFunction.parse();
+  }
+  catch (Common::ParserException& e)
+  {
+    CFout << e.what() << "\n";
+    throw; // retrow the exception to signal the error to the user
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
