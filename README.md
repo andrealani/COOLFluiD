@@ -5,7 +5,7 @@ The object-oriented HPC platform for CFD, plasma and multi-physics simulations w
 
 #########################################################################
 #                                                                       #
-# This is some information to get started with COOLFluiD                #
+# Some tips to get started with COOLFluiD                               #
 # (more detailed info will be available on the website, once restored). #
 #                                                                       #
 #########################################################################
