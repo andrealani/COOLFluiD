@@ -1,0 +1,143 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -0.23889941
+##### Parallel = on
+#
+##############################################################################
+# Loading of components
+##############################################################################
+
+Simulator.Modules.Libs =  libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libFluctSplit libFluctSplitHO libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libForwardEuler libTHOR2CFmesh libFluctSplitNavierStokes libGmsh2CFmesh
+
+
+CFEnv.DoAssertions         = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+CFEnv.ExceptionAborts      = true
+CFEnv.ExceptionDumps       = true
+CFEnv.ExceptionOutputs     = true
+CFEnv.RegistSignalHandlers = false
+
+##############################################################################
+# Directory paths
+##############################################################################
+
+Simulator.Paths.WorkingDir = ./
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.FwdEuler.ShowRate            = 10
+Simulator.SubSystem.FwdEuler.ConvRate            = 10
+Simulator.SubSystem.FwdEuler.ConvergenceFile     = convergence-jets3d_900F2_P2_LDA.plt
+
+##############################################################################
+# Physical model
+##############################################################################
+
+Simulator.SubSystem.Default.PhysicalModelType       = Euler3D
+Simulator.SubSystem.Euler2D.refValues = 1.0 1.0 1.0 1.0
+Simulator.SubSystem.Euler2D.refLength = 1.0
+
+Simulator.SubSystem.Euler2D.ConvTerm.pRef    = 101325
+Simulator.SubSystem.Euler2D.ConvTerm.tempRef = 288.15
+Simulator.SubSystem.Euler2D.ConvTerm.machInf = 0.5
+
+##############################################################################
+# Stop condition
+##############################################################################
+
+Simulator.SubSystem.StopCondition          = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -5
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 1
+
+#Simulator.SubSystem.StopCondition    = AeroCoef
+#Simulator.SubSystem.AeroCoef.ConvCL  = 5E-6
+#Simulator.SubSystem.AeroCoef.ConvCD  = 5E-6
+#Simulator.SubSystem.AeroCoef.ConvCM  = 5E-6
+#Simulator.SubSystem.AeroCoef.CheckCL = true
+#Simulator.SubSystem.AeroCoef.CheckCD = true
+#Simulator.SubSystem.AeroCoef.CheckCM = true
+#Simulator.SubSystem.AeroCoef.NbIters = 10
+#Simulator.SubSystem.AeroCoef.MaxIter = 60000
+
+##############################################################################
+# Mesh reading
+##############################################################################
+
+Simulator.SubSystem.Default.listTRS = InnerCells X Y Z XX YY ZZ
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = scalaradv.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+
+
+##############################################################################
+# Mesh writing
+##############################################################################
+
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName     = sphereP2LDA_bis.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 100000
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.Tecplot.FileName    = spehereP2LDA.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 50
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.Tecplot.WriteSol     = WriteSolutionHO
+##############################################################################
+# Pseudo-time discretization
+##############################################################################
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.0001
+Simulator.SubSystem.FwdEuler.Data.PrintHistory = true
+Simulator.SubSystem.FwdEuler.Data.NormRes = L2
+Simulator.SubSystem.FwdEuler.Data.L2.MonitoredVarID = 0
+Simulator.SubSystem.FwdEuler.Data.L2.ComputedVarID  = 0 1 2 3
+
+##############################################################################
+# Space discretization
+##############################################################################
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Restart = false
+
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = HOCRD3D
+Simulator.SubSystem.FluctuationSplit.SetupCom    = StdSetupMeshIsoP2CompP1P2
+
+
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysNC
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar   = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar     = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar    = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar     = Cons
+
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorOrder = P3
+
+##############################################################################
+# Solution initialization
+##############################################################################
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState 
+Simulator.SubSystem.FluctuationSplit.InitNames = InField  
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells  
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.InField.Def = 1.0 1.0 0 0 10.0
+
+
+
+
+
+
+
