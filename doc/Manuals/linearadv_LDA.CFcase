@@ -1,0 +1,234 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -0.23889941
+##### Parallel = on
+#
+##############################################################################
+# Loading of components
+##############################################################################
+
+Simulator.Modules.Libs =  libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libLinearAdvSys libFluctSplit libFluctSplitHO libFluctSplitScalar libFluctSplitSpaceTime libForwardEuler libFluctSplitNavierStokes libFluctSplitAdvectionDiffusion libAnalyticalEE
+
+
+CFEnv.DoAssertions         = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+CFEnv.ExceptionAborts      = true
+CFEnv.ExceptionDumps       = true
+CFEnv.ExceptionOutputs     = true
+CFEnv.RegistSignalHandlers = false
+
+##############################################################################
+# Directory paths
+##############################################################################
+
+Simulator.Paths.WorkingDir = ./
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.FwdEuler.ShowRate            = 10
+Simulator.SubSystem.FwdEuler.ConvRate            = 10
+Simulator.SubSystem.FwdEuler.ConvergenceFile     = convergence-jets3d_900F2_P2_LDA.plt
+
+##############################################################################
+# Physical model
+##############################################################################
+
+Simulator.SubSystem.Default.PhysicalModelType  = LinearAdvSys3D
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c0x = 0.0
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c0y = 0.0
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c0z = 1.0
+
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c1x = 0.0
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c1y = 0.0
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c1z = 1.0
+
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c2x = 0.0
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c2y = 0.0
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c2z = 1.0
+
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c3x = 0.0
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c3y = 0.0
+Simulator.SubSystem.LinearAdvSys3D.ConvTerm.c3z = 1.0
+
+
+#Simulator.SubSystem.AdvectionDiffusion3D.DiffTerm.DiffCoef = 0.0
+
+
+##############################################################################
+# Stop condition
+##############################################################################
+
+Simulator.SubSystem.StopCondition          = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -8
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 15
+
+#Simulator.SubSystem.StopCondition    = AeroCoef
+#Simulator.SubSystem.AeroCoef.ConvCL  = 5E-6
+#Simulator.SubSystem.AeroCoef.ConvCD  = 5E-6
+#Simulator.SubSystem.AeroCoef.ConvCM  = 5E-6
+#Simulator.SubSystem.AeroCoef.CheckCL = true
+#Simulator.SubSystem.AeroCoef.CheckCD = true
+#Simulator.SubSystem.AeroCoef.CheckCM = true
+#Simulator.SubSystem.AeroCoef.NbIters = 10
+#Simulator.SubSystem.AeroCoef.MaxIter = 60000
+
+##############################################################################
+# Mesh reading
+##############################################################################
+
+Simulator.SubSystem.Default.listTRS = InnerCells X XX Y YY Z ZZ
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = jet_0_05.CFmesh
+
+##############################################################################
+# Mesh writing
+##############################################################################
+
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName     = jets3D_900F2_P2_LDA.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.Tecplot.FileName    = jets3D_900F2_P2_LDA.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.Tecplot.WriteSol     = WriteSolutionHO
+##############################################################################
+# Pseudo-time discretization
+##############################################################################
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.6
+Simulator.SubSystem.FwdEuler.Data.PrintHistory = true
+Simulator.SubSystem.FwdEuler.Data.NormRes = L2
+Simulator.SubSystem.FwdEuler.Data.L2.MonitoredVarID = 0
+Simulator.SubSystem.FwdEuler.Data.L2.ComputedVarID  = 0 
+
+##############################################################################
+# Space discretization
+##############################################################################
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.Restart = false
+
+
+#Simulator.SubSystem.FluctuationSplit.SetupCom = StdSetupIsoP2
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = HOCRD3D
+
+Simulator.SubSystem.FluctuationSplit.SetupCom    = StdSetupMeshIsoP2CompP1P2
+#Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = ScalarLDAC
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar   = Prim
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar     = Prim
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar    = Prim
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar     = Prim
+Simulator.SubSystem.FluctuationSplit.Data.DiffusiveVar  = Prim
+
+#Simulator.SubSystem.FluctuationSplit.Data.DitrueveTerm = LinearAdvHO3D
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorQuadrature = GaussLegendre
+Simulator.SubSystem.FluctuationSplit.Data.IntegratorOrder = P3
+
+##############################################################################
+# Solution initialization
+##############################################################################
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState 
+Simulator.SubSystem.FluctuationSplit.InitNames = InField   
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells  
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.InField.Def = cos(3.14159*(x+y)) \
+						 cos(3.14159*(y+x)) \
+						 cos(3.14159*(x+y)) \
+						 cos(3.14159*(x+y)) 
+
+#Simulator.SubSystem.FluctuationSplit.InField.Def = 1.0 \
+#						1.0 \
+ #                                               1.0 \
+  #                                              1.0
+	
+
+
+##############################################################################
+# Boundary conditions
+##############################################################################
+
+Simulator.SubSystem.FluctuationSplit.BcComds = SuperInlet  SuperInlet  SuperInlet SuperInlet  SuperInlet   SuperInlet
+Simulator.SubSystem.FluctuationSplit.BcNames =   InletZ        InletY    InletX    InletYY    InletXX      OutletZZ
+
+Simulator.SubSystem.FluctuationSplit.InletZ.applyTRS = Z 
+Simulator.SubSystem.FluctuationSplit.InletZ.Vars = x y z
+#Simulator.SubSystem.FluctuationSplit.InletZ.Def = 5.0
+Simulator.SubSystem.FluctuationSplit.InletZ.Def =  cos(3.14159*(x+y))  \
+							cos(3.14159*(x+y)) \
+							cos(3.14159*(x+y)) \
+							cos(3.14159*(x+y)) 
+
+Simulator.SubSystem.FluctuationSplit.InletY.applyTRS = Y
+Simulator.SubSystem.FluctuationSplit.InletY.Vars = x y z
+#Simulator.SubSystem.FluctuationSplit.InletY.Def =  4.0
+Simulator.SubSystem.FluctuationSplit.InletY.Def =  cos(3.14159*(x+y)) \
+							cos(3.14159*(x+y)) \
+							cos(3.14159*(x+y)) \
+							cos(3.14159*(x+y)) 
+
+
+Simulator.SubSystem.FluctuationSplit.InletX.applyTRS = X
+Simulator.SubSystem.FluctuationSplit.InletX.Vars = x y z
+#Simulator.SubSystem.FluctuationSplit.InletX.Def =  3.0
+Simulator.SubSystem.FluctuationSplit.InletX.Def = cos(3.14159*(x+y)) \
+							cos(3.14159*(x+y)) \
+						cos(3.14159*(x+y)) \
+						cos(3.14159*(x+y)) 
+
+
+Simulator.SubSystem.FluctuationSplit.InletYY.applyTRS = YY
+Simulator.SubSystem.FluctuationSplit.InletYY.Vars = x y z
+#Simulator.SubSystem.FluctuationSplit.InletYY.Def =  2.0
+Simulator.SubSystem.FluctuationSplit.InletYY.Def = cos(3.14159*(x+y)) \
+							cos(3.14159*(x+y)) \
+							cos(3.14159*(x+y)) \
+							cos(3.14159*(x+y)) 
+
+
+Simulator.SubSystem.FluctuationSplit.InletXX.applyTRS = XX
+Simulator.SubSystem.FluctuationSplit.InletXX.Vars = x y z
+#Simulator.SubSystem.FluctuationSplit.InletXX.Def =  1.0
+Simulator.SubSystem.FluctuationSplit.InletXX.Def = cos(3.14159*(x+y)) \
+					           cos(3.14159*(x+y)) \
+						cos(3.14159*(x+y)) \
+						cos(3.14159*(x+y)) 
+
+
+
+Simulator.SubSystem.FluctuationSplit.OutletZZ.applyTRS = ZZ
+Simulator.SubSystem.FluctuationSplit.OutletZZ.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.OutletZZ.Def = cos(3.14159*(x+y)) \
+                                                cos(3.14159*(x+y))  \
+                                               cos(3.14159*(x+y)) \
+                                                cos(3.14159*(x+y))
+
+
+#Simulator.SubSystem.FluctuationSplit.OutletZZ.Vars = x y z
+#Simulator.SubSystem.FluctuationSplit.OutletZZ.Def =  6.0
+
+
+
+Simulator.SubSystem.ErrorEstimatorMethod = AnalyticalEE
+Simulator.SubSystem.AnalyticalEE.ComputeCom = ComputeDiscreteError
+Simulator.SubSystem.AnalyticalEE.ComputeDiscreteError.Vars = x y z
+Simulator.SubSystem.AnalyticalEE.ComputeDiscreteError.Functions = cos(3.14159*x) \
+								cos(3.14159*x) \
+								cos(3.14159*x) \
+									cos(3.14159*x) 
+Simulator.SubSystem.AnalyticalEE.ComputeDiscreteError.OutputFile = grid_conv_BP3_square10.errornorm
