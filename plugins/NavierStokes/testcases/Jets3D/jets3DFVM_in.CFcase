@@ -3,8 +3,8 @@
 # This COOLFluiD CFcase file tests: 
 # 
 # Finite Volume, Euler3D, Forward Euler, mesh with only prisms, restart from a 
-# binary CFmesh, second-order reconstruction, supersonic inlet and outlet BC,
-# field initialization with analytical function
+# binary CFmesh, second-order reconstruction with Barth limiter, supersonic 
+# inlet and outlet BC
 #
 ################################################################################
 #
