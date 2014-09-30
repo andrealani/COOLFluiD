@@ -1,4 +1,12 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, Euler3D, Forward Euler, mesh extrusion from 2D( triangles) to 
+# 3D (prisms), writing binary CFmesh, first-order reconstruction, supersonic 
+# inlet and outlet BC, field initialization with analytical function
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
