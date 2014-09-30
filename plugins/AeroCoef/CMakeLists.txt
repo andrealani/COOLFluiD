@@ -108,8 +108,7 @@ NavierStokesComputeAeroDG.cxx
 )
 
 LIST ( APPEND AeroCoefDG_requires_mods DiscontGalerkin )
-
-LIST ( APPEND AeroCoefDGheat_libs DiscontGalerkin NavierStokes Framework )
+LIST ( APPEND AeroCoefDG_libs DiscontGalerkin NavierStokes Framework )
 CF_ADD_PLUGIN_LIBRARY ( AeroCoefDG )
 
 ##################################################################
@@ -121,7 +120,7 @@ EulerConsComputeAeroSpectralFV.hh
 )
 
 LIST ( APPEND AeroCoefSpectralFV_requires_mods SpectralFV NavierStokes )
-LIST ( APPEND AeroCoefSpectralFV_cflibs SpectralFV NavierStokes Framework )
+LIST ( APPEND AeroCoefSpectralFV_libs SpectralFV NavierStokes Framework )
 
 CF_ADD_PLUGIN_LIBRARY ( AeroCoefSpectralFV )
 

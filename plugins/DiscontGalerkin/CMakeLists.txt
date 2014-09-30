@@ -52,6 +52,8 @@ StdComputeResidual.hh
 StdComputeResidual.cxx
 )
 
+LIST ( APPEND DiscontGalerkin_cflibs Framework )
+
 CF_ADD_PLUGIN_LIBRARY ( DiscontGalerkin )
 
 CF_WARN_ORPHAN_FILES()
