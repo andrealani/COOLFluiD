@@ -1,10 +1,18 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, NavierStokes2D, Backward Euler, mesh with quads, second-order 
+# reconstruction without limiter, subsonic inlet and outlet, adiabatic noslip 
+# wall, Holmes-Connell extrapolation, postprocessing of wall aerodynamic 
+# quantities and coefficients 
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -4.0919526
-
+### Residual = -4.0920645
 #
 
 # Simulation Modules
@@ -56,9 +64,6 @@ Simulator.SubSystem.Default.listTRS = InnerFaces SlipWall NoSlipWall Inlet Outle
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = flatPlateQD.CFmesh
-#Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
-#Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
-#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = NewtonIteratorLSS
@@ -79,7 +84,8 @@ Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1e20
 Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
-Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob #Analytic
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+#Analytic
 #Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff = true
 Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
 
@@ -99,50 +105,18 @@ Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Puvt
 Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
 #Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NSFluxAndJacobian
 
-#Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = HolmesConnell
+Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = HolmesConnell
 #Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = StateDiff
 #Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
 #Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = CorrectedGG2D
 
-#Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBased
-#Simulator.SubSystem.CellCenterFVM.Data.DistanceBased.TrsPriorityList = \
-#						SlipWall NoSlipWall Inlet Outlet
-
-#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
-
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
-#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -0.2
-#Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
-#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
-#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
 
-Simulator.SubSystem.CellCenterFVM.InitComds = InitState \
-          NoSlipWallAdiabaticNS2DFVMCC \
-          MirrorVelocityFVMCC \
-          SubInletEuler2DUVTFVMCC \
-          SubOutletEuler2DFVMCC
-
-Simulator.SubSystem.CellCenterFVM.InitNames = InField \
-                                InWall \
-                                InMirror \
-                                InInlet \
-                                InOutlet
-
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
 Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
 Simulator.SubSystem.CellCenterFVM.InField.Def = 986.369 121.151 0.0 298.15
-
-Simulator.SubSystem.CellCenterFVM.InMirror.applyTRS = SlipWall
-
-Simulator.SubSystem.CellCenterFVM.InWall.applyTRS = NoSlipWall
-
-Simulator.SubSystem.CellCenterFVM.InInlet.applyTRS = Inlet
-Simulator.SubSystem.CellCenterFVM.InInlet.Vx = 121.151
-Simulator.SubSystem.CellCenterFVM.InInlet.Vy = 0.0
-Simulator.SubSystem.CellCenterFVM.InInlet.T = 298.15
-
-Simulator.SubSystem.CellCenterFVM.InOutlet.applyTRS = Outlet
-Simulator.SubSystem.CellCenterFVM.InOutlet.P = 986.369
 
 Simulator.SubSystem.CellCenterFVM.BcComds = NoSlipWallAdiabaticNS2DFVMCC \
                                 MirrorVelocityFVMCC \
