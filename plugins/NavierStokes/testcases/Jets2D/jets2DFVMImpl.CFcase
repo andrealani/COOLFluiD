@@ -45,8 +45,8 @@ Simulator.SubSystem.Euler2D.refLength = 1.0
 Simulator.SubSystem.ConvergenceFile     = convergence.plt
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
-Simulator.SubSystem.CFmesh.FileName     = jets2DFVM.CFmesh
-Simulator.SubSystem.Tecplot.FileName    = jets2DFVM.plt
+Simulator.SubSystem.CFmesh.FileName     = jets2DFVM_out.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = jets2DFVM_out.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 400
 Simulator.SubSystem.CFmesh.SaveRate = 400

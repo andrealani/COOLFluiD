@@ -191,6 +191,8 @@ FluxSplitter.hh
 Framework.hh
 FVMCCGeoDataComputer.ci
 FVMCCGeoDataComputer.hh
+FVMCC_BaseBC.ci
+FVMCC_BaseBC.hh
 FVMCC_MeshDataBuilder.cxx
 FVMCC_MeshDataBuilder.hh
 GaussLegendreContourIntegratorImpl.hh
