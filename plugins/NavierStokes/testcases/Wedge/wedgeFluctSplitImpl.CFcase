@@ -27,8 +27,8 @@ Simulator.SubSystem.Euler2D.refValues = 1. 2.366431913 2.366431913 5.3
 Simulator.SubSystem.Euler2D.refLength = 1.0
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
-Simulator.SubSystem.CFmesh.FileName     = wedge.CFmesh
-Simulator.SubSystem.Tecplot.FileName    = wedge.plt
+Simulator.SubSystem.CFmesh.FileName     = wedge_out.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = wedge_out.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 50
 Simulator.SubSystem.CFmesh.SaveRate = 50
