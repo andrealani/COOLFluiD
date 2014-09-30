@@ -1,9 +1,17 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Residual Distribution Schemes, Euler2D, Backward Euler, mesh with triangles, 
+# converter from THOR to CFmesh, first-order scheme N (system) with distribution 
+# in characteristic variables, supersonic inlet and outlet, wall BCs 
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = 0.30257823
+### Residual = -6.124386
 
 #
 
@@ -18,11 +26,6 @@ Simulator.SubSystem.Default.PhysicalModelType     = Euler2D
 Simulator.SubSystem.Euler2D.refValues = 1. 2.366431913 2.366431913 5.3
 Simulator.SubSystem.Euler2D.refLength = 1.0
 
-
-
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
-
-
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = wedge.CFmesh
 Simulator.SubSystem.Tecplot.FileName    = wedge.plt
@@ -34,21 +37,16 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 1
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 15
 
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 15
-
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -6.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -6.0
 
 Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SuperInlet SuperOutlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = wedge.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
-Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.ConvergenceMethod = BwdEuler
