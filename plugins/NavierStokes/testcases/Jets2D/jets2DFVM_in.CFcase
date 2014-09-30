@@ -1,11 +1,17 @@
-# COOLFluiD CFcase file: 
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, Euler2D, Forward Euler, mesh with triangles, restart from a 
+# binary CFmesh, writing of binary CFmesh, second-order reconstruction with 
+# Venkatakhrisnan limiter, supersonic inlet and outlet BC
 #
-# This testcase verifies the parallel I/O capability for the binary CFmesh format for the FV solver.     
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -1.70022
+### Residual = -10.001562
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -19,7 +25,9 @@ CFEnv.RegistSignalHandlers = false
 #CFEnv.TraceToStdOut = true
 #CFEnv.TraceActive = true
 
-####### TEST CONFIGURATION
+# This tests the configuration file: it gives error if some options are wrong
+# This always fails with converters (THOR2CFmesh, Gambit2CFmesh, etc.): 
+# deactivate the option in those cases 
 CFEnv.ErrorOnUnusedConfig = true
 
 # SubSystem Modules
@@ -33,83 +41,70 @@ Simulator.SubSystem.Default.PhysicalModelType = Euler2D
 Simulator.SubSystem.Euler2D.refValues = 1. 2.83972 2.83972 6.532
 Simulator.SubSystem.Euler2D.refLength = 1.0
 
-Simulator.SubSystem.OutputFormat        = CFmesh Tecplot
-Simulator.SubSystem.CFmesh.FileName     = jets2D-sol.CFmesh
-Simulator.SubSystem.Tecplot.FileName    = jets2D-sol.plt
-Simulator.SubSystem.Tecplot.Data.outputVar = Cons
-Simulator.SubSystem.Tecplot.SaveRate = 500
-Simulator.SubSystem.CFmesh.SaveRate = 500
-
-# test new writer
+Simulator.SubSystem.OutputFormat     = CFmesh Tecplot
+Simulator.SubSystem.CFmesh.FileName  = jets2D-sol.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate  = 500
+# binary CFmesh writer
 Simulator.SubSystem.CFmesh.WriteSol = ParWriteBinarySolution
 Simulator.SubSystem.CFmesh.ParWriteBinarySolution.ParCFmeshBinaryFileWriter.NbWriters = 4
+Simulator.SubSystem.Tecplot.FileName = jets2D-sol.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 200
 
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 20
+#Simulator.SubSystem.StopCondition          = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 20
 
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -10.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -10.0
 
 Simulator.SubSystem.Default.listTRS = InnerFaces SuperInlet SuperOutlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
+# binary CFmesh reader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2D-sol.CFmesh
 Simulator.SubSystem.CFmeshFileReader.ReadCFmesh = ParReadCFmeshBinary
-#Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
-#Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
-#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-Simulator.SubSystem.FwdEuler.Data.CFL.Value = 1.0
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.8
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 Simulator.SubSystem.CellCenterFVM.Restart = true
-#Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
-#Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
-#Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
-#Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
-#Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 
 Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = RoeT4
-#Centred
-#Simulator.SubSystem.CellCenterFVM.Data.Centred.Flux = GForce
-#Simulator.SubSystem.CellCenterFVM.Data.Centred.GForce.DiffCoeff = 0.5
-
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar   = Cons
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
 
-Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
-#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
-#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.7
-#Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
-#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+# second order reconstruction + limiter
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
 
-Simulator.SubSystem.CellCenterFVM.InitComds = InitState
-Simulator.SubSystem.CellCenterFVM.InitNames = InField
-
-Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
-Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
-Simulator.SubSystem.CellCenterFVM.InField.Def = if(y>0.5,0.5,1.) \
-                                         if(y>0.5,1.67332,2.83972) \
-                                         0.0 \
-                                         if(y>0.5,3.425,6.532)
-
-# example usage of InitStateAddVar to initialize
-#Simulator.SubSystem.CellCenterFVM.InField.InitVars = x y
-#Simulator.SubSystem.CellCenterFVM.InField.InitDef = sqrt(x^2+y^2)
-#Simulator.SubSystem.CellCenterFVM.InField.Vars = x y r
-#Simulator.SubSystem.CellCenterFVM.InField.Def = if(r<0.5,0.5,1.) \
-#                                         if(r<0.5,1.67332,2.83972) \
-#                                         0.0 \
-#                                         if(r>0.5,3.425,6.532)
+# initialization is useless if you restart from previous solution
+#Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+#Simulator.SubSystem.CellCenterFVM.InitNames = InField
+#Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+#Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+#Simulator.SubSystem.CellCenterFVM.InField.Def = \
+#					if(y>0.5,0.5,1.) \
+#					if(y>0.5,1.67332,2.83972) \
+#					0.0 \
+#					if(y>0.5,3.425,6.532)
 
 Simulator.SubSystem.CellCenterFVM.BcComds = SuperInletFVMCC SuperOutletFVMCC
-Simulator.SubSystem.CellCenterFVM.BcNames = Jet1        Jet2
+Simulator.SubSystem.CellCenterFVM.BcNames = Jet1 Jet2
 
 Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = SuperInlet
 Simulator.SubSystem.CellCenterFVM.Jet1.Vars = x y
-Simulator.SubSystem.CellCenterFVM.Jet1.Def =  if(y>0.5,0.5,1.) \
+Simulator.SubSystem.CellCenterFVM.Jet1.Def = \
+					if(y>0.5,0.5,1.) \
                                         if(y>0.5,1.67332,2.83972) \
                                         0.0 \
                                         if(y>0.5,3.425,6.532)
