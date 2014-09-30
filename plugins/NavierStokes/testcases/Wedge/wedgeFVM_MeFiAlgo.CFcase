@@ -1,11 +1,17 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, Euler2D, Forward Euler, mesh with triangles, converter from 
+# THOR to CFmesh, second-order reconstruction with Venkatakhrisnan limiter, 
+# supersonic inlet and outlet, wall BC, mesh fitting algorithm 
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -0.7813297
-
-#
+### Residual = -4.0015715
 
 # SubSystem Modules
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libForwardEuler libPetscI libTHOR2CFmesh
@@ -16,39 +22,22 @@ Simulator.Paths.ResultsDir       = ./
 
 Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
 
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
-
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = wedgeFVM.CFmesh
-Simulator.SubSystem.Tecplot.FileName    = wedgeFVM.plt
-Simulator.SubSystem.Tecplot.Data.updateVar = Cons
-Simulator.SubSystem.Tecplot.SaveRate = 100
 Simulator.SubSystem.CFmesh.SaveRate = 100
-Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendTime = false
-Simulator.SubSystem.Tecplot.AppendIter = true
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = pressure
-#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = pressure
-#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
-#Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
-#Simulator.SubSystem.Tecplot.WriteSolutionBlockFV.NodalOutputVar = true
-
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = shockSensor
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = shockSensor
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
+Simulator.SubSystem.Tecplot.FileName    = wedgeFVM.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 500
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = shockSensor pressure #dPdX dPdY
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = shockSensor pressure #dPdY dPdY
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
 Simulator.SubSystem.Tecplot.WriteSolutionBlockFV.NodalOutputVar = true
-
-#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = gradientPhi
-#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = dPdX dPdY
-#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
-#Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
-#Simulator.SubSystem.Tecplot.WriteSolutionBlockFV.NodalOutputVar = true
-
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 10
 
 #Simulator.SubSystem.StopCondition       = MaxNumberSteps
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 200
@@ -82,49 +71,32 @@ Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.Value = 1.0
 Simulator.SubSystem.FwdEuler.UpdateSol = StdUpdateSol
 Simulator.SubSystem.FwdEuler.StdUpdateSol.ClipResidual = false 
-#true for AUSM type schemes
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
-#Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
-#Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
-#Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
-#Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
-#Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
-
-Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
-#AUSMPlus2D 
-# Centred GForce
-#Simulator.SubSystem.CellCenterFVM.Data.GForce.MaxCoeff = 1.0
-#Simulator.SubSystem.CellCenterFVM.Data.GForce.GradVarID = 1
-
-Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlus2D
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar   = Cons
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
 
-Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
-
-#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
-#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.2
-#Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
-#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
-#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.2
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
 
 Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField
 
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
 Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
-Simulator.SubSystem.CellCenterFVM.InField.Def = 1. \
-          2.366431913 \
-                                        0.0 \
-                                        5.3
+Simulator.SubSystem.CellCenterFVM.InField.Def = 1. 2.366431913 0.0 5.3
 
-Simulator.SubSystem.CellCenterFVM.BcComds = MirrorEuler2DFVMCC \
-          SuperInletFVMCC \
-          SuperOutletFVMCC
-Simulator.SubSystem.CellCenterFVM.BcNames = Wall \
-        Inlet \
-        Outlet
+Simulator.SubSystem.CellCenterFVM.BcComds = MirrorEuler2DFVMCC SuperInletFVMCC SuperOutletFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = Wall Inlet Outlet
 
 Simulator.SubSystem.CellCenterFVM.Wall.applyTRS = SlipWall
 
@@ -137,12 +109,12 @@ Simulator.SubSystem.CellCenterFVM.Inlet.Def = 1. \
 
 Simulator.SubSystem.CellCenterFVM.Outlet.applyTRS = SuperOutlet
 
-Simulator.SubSystem.DataPostProcessing               = DataProcessing
-Simulator.SubSystem.DataPostProcessingNames          = MeFiAlgo
+Simulator.SubSystem.DataPostProcessing          = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames     = MeFiAlgo
 Simulator.SubSystem.MeFiAlgo.Comds              = MeshFittingAlgorithmNS
 Simulator.SubSystem.MeFiAlgo.Data.CollaboratorNames = MeshAlgoLSS
 Simulator.SubSystem.MeFiAlgo.ProcessRate        = 20
-#Simulator.SubSystem.MeFiAlgo.StopIter           = 1000
+#Simulator.SubSystem.MeFiAlgo.StopIter          = 1000
 Simulator.SubSystem.MeFiAlgo.Names              = Foo
 Simulator.SubSystem.MeFiAlgo.Data.updateVar     = Cons
 
@@ -155,7 +127,7 @@ Simulator.SubSystem.MeFiAlgo.Foo.maxPerc  = 0.85
 Simulator.SubSystem.MeFiAlgo.Foo.printKesToFile = true
 Simulator.SubSystem.MeFiAlgo.Foo.ssRate = 20
 Simulator.SubSystem.MeFiAlgo.Foo.maRate = 60
-Simulator.SubSystem.MeFiAlgo.Foo.boundaryDegreeNM = 2
-Simulator.SubSystem.MeFiAlgo.Foo.stopAdaptationIter = 2000
+Simulator.SubSystem.MeFiAlgo.Foo.boundaryDegreeNM = 1 #2
+Simulator.SubSystem.MeFiAlgo.Foo.stopAdaptationIter = 800 #2000
 Simulator.SubSystem.MeFiAlgo.Foo.alpha = 0.1
 Simulator.SubSystem.CellCenterFVM.AfterMeshUpdateCom = StdMeshFittingUpdate
