@@ -4,8 +4,8 @@
 # 
 # Finite Volume, Euler2D, Forward Euler, mesh with triangles, converter from 
 # THOR to CFmesh, second-order reconstruction with Venkatakhrisnan limiter, 
-# supersonic inlet and outlet, wall BC, mesh fitting algorithm (which is still 
-# buggy in parallel) 
+# supersonic inlet and outlet, slip wall BC, mesh fitting algorithm (which is 
+# still buggy in parallel) 
 #
 ################################################################################
 #
@@ -58,7 +58,6 @@ Simulator.SubSystem.MeshAlgoLSS.Data.MaxIter = 1000
 Simulator.SubSystem.MeshAlgoLSS.Data.SaveSystemToFile = false
 Simulator.SubSystem.MeshAlgoLSS.MaskEquationIDs = 0 1
 Simulator.SubSystem.MeshAlgoLSS.Data.NbKrylovSpaces = 50
-
 
 Simulator.SubSystem.Default.listTRS = InnerFaces SlipWall SuperInlet SuperOutlet
 

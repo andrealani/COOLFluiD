@@ -4,8 +4,8 @@
 # 
 # Residual Distribution Schemes, Euler2D, Forward Euler, mesh with triangles, 
 # converter from THOR to CFmesh, second-order scheme B (system) + PSI (scalar) 
-# with distribution in symmetrizing variables, supersonic inlet and outlet, wall 
-# BCs 
+# with distribution in symmetrizing variables, supersonic inlet and outlet, slip
+# wall BCs 
 #
 ################################################################################
 #
