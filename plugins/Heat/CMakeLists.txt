@@ -36,4 +36,4 @@ LIST ( APPEND Heat_cflibs Framework )
 
 CF_ADD_PLUGIN_LIBRARY ( Heat )
 CF_WARN_ORPHAN_FILES()
-ADD_SUBDIRECTORY ( testcases )
+#ADD_SUBDIRECTORY ( testcases )

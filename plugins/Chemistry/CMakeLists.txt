@@ -1,2 +1,2 @@
 ADD_SUBDIRECTORY ( CH4 )
-ADD_SUBDIRECTORY ( testcases )
+#ADD_SUBDIRECTORY ( testcases )

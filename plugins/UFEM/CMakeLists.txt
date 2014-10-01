@@ -80,7 +80,7 @@ ENDIF (CF_HAVE_PLAS)
 #############################################################################
 ### testcases
 
-ADD_SUBDIRECTORY ( testcases )
+#ADD_SUBDIRECTORY ( testcases )
 
 OPTION ( CF_BUILD_UFEM_UTESTS "Build the UFEM unit tests, used to compare with CF3" OFF )
 mark_as_advanced(CF_BUILD_UFEM_UTESTS)

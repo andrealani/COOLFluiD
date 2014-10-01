@@ -318,6 +318,15 @@ ENDIF ()
 # check for subversion support
 INCLUDE(CheckSvnVersion)
 
+# enable all kind of tests
+IF ( CF_ENABLE_TESTCASES )
+  SET (CF_ENABLE_UNIT_TESTS ON) 
+  SET (CF_ENABLE_UNIT_CASES ON)    
+  SET (CF_ENABLE_PERFORMANCE_TESTS ON)     
+
+  SET (CF_ENABLE_PERFORMANCE_CASES ON)
+ENDIF()
+
 ##############################################################################
 LOG ( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++" )
 LOG ( "Kernel Configuration ")

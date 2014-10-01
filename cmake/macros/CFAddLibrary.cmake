@@ -48,14 +48,18 @@ MACRO( CF_ADD_LIBRARY LIBNAME )
     ENDIF ()
   ENDFOREACH ( reqmod ${${LIBNAME}_requires_mods} )
 
-  IF (CF_BUILD_${LIBNAME} AND ${LIBNAME}_all_mods_pres)
+  #IF (CF_BUILD_${LIBNAME} AND ${LIBNAME}_all_mods_pres)
+  IF ( CF_COMPILES_${LIBNAME} )
     SET ( ${LIBNAME}_will_compile ON )
   ELSE()
     SET ( ${LIBNAME}_will_compile OFF )
   ENDIF()
 
   SET ( ${LIBNAME}_dir ${CMAKE_CURRENT_SOURCE_DIR} )
-  SET ( CF_COMPILES_${LIBNAME} ${${LIBNAME}_will_compile} CACHE INTERNAL "" FORCE )
+  #SET ( CF_COMPILES_${LIBNAME} ${${LIBNAME}_will_compile} CACHE INTERNAL "" FORCE )
+  
+  # this proves that only libraries that come before in alphabetical order are checked !!! BUG !!!
+  # message (WARNING "COOLFluiD Library ${LIBNAME} will compile:  ${${LIBNAME}_will_compile}" )
 
   LOGVERBOSE ("lib_${LIBNAME} = ${${LIBNAME}_will_compile}")
 

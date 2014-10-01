@@ -1,10 +1,18 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# High-Order Residual Distribution Schemes, Backward Euler, Forward Euler, mesh 
+# with P2 triangles, CRD Bx-P2 scheme (system) with linearization & distribution 
+# in conservative variables, supersonic inlet and outlet, slip wall BCs, output 
+# of shock sensor in TECPLOT 
+#
+##################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -0.209726
-
+### Residual = -4.6188191
 #
 
 # SubSystem Modules
@@ -17,7 +25,6 @@ Simulator.Paths.ResultsDir       = ./
 Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
 Simulator.SubSystem.Euler2D.refValues = 1. 2.366431913 2.366431913 5.3
 Simulator.SubSystem.Euler2D.refLength = 1.0
-
 
 Simulator.SubSystem.NewtonIterator.ConvergenceFile     = wedge-1_15-P2-P1-BximpP1.conv.plt
 
@@ -33,11 +40,9 @@ Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = thetas
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize   = 4
 Simulator.SubSystem.Tecplot.WriteSol     = WriteSolutionBlock
 
-
 Simulator.SubSystem.StopCondition          = RelativeNormAndMaxIter
-Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -10
-Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 3
-
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -10.
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 100
 
 Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SuperInlet SuperOutlet
 
@@ -48,7 +53,6 @@ Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 2.0
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
 Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i>30,2.0+(i-30)/2.0,2.0)
-
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = NewtonIteratorLSS

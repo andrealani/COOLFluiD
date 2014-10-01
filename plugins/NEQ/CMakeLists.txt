@@ -133,4 +133,4 @@ LIST ( APPEND NEQ_requires_mods NavierStokes )
 
 CF_ADD_PLUGIN_LIBRARY ( NEQ )
 CF_WARN_ORPHAN_FILES()
-ADD_SUBDIRECTORY ( testcases )
+#ADD_SUBDIRECTORY ( testcases )

@@ -35,7 +35,7 @@ CF_ADD_PLUGIN_LIBRARY ( RadiativeTransferSanna )
 
 ##################################################################
 
-ADD_SUBDIRECTORY ( testcases )
+#ADD_SUBDIRECTORY ( testcases )
 
 ##################################################################
 

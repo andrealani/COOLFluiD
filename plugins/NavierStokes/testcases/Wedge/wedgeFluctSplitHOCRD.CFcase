@@ -1,17 +1,16 @@
 ################################################################################
-## 
-## This COOLFluiD CFcase file tests: 
-## 
-## Residual Distribution Schemes, Euler2D, Forward Euler, mesh with triangles, 
-## converter from THOR to CFmesh, CRD N-P2 scheme (system) with linearization 
-## and distribution in conservative variables, supersonic inlet and outlet, slip
-## wall BCs 
-##
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# High-Order Residual Distribution Schemes, Euler2D, Forward Euler, mesh with 
+# P2 triangles, CRD N-P2 scheme (system) with linearization and distribution 
+# in conservative variables, supersonic inlet and outlet, slip wall BCs 
+#
 #################################################################################
-##
-## Comments begin with "#"
-## Meta Comments begin with triple "#"
-##
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
 ### Residual = -4.0014991
 #
 

@@ -6,7 +6,6 @@
 # modules
 use Term::ANSIColor;
 use Getopt::Long;
-#use Switch;
 use File::Path;
 use File::Basename;
 use Cwd;
@@ -163,7 +162,7 @@ my %modlibs;                      # which libs are in each module
 my %modapps;                      # which apps are in each module
 my %modtests;                     # which tests are in each module
 
-my @all_mods;                  # all the modules
+my @all_mods;                     # all the modules
 my @all_libs;                     # all the plugin libs
 my @all_apps;                     # all the plugin apps
 my @all_tests;                    # all the plugin unit tests
@@ -183,61 +182,61 @@ sub parse_command_line_options()
 {
    # parse command line
    $options{'help'}=1 unless GetOptions (
-         'help'           => \$options{'help'},
-         'debug'          => \$options{'debug'},
-         'nocolor'        => \$options{'nocolor'},
-         'mods-list'      => \$options{'mods-list'},
-         'mods-update'    => \$options{'mods-update'},
-         'mods-select=s'  => \$options{'mods-select'},
-         'mods-getall'    => \$options{'mods-getall'},
-         'mods-revision=i'=> \$options{'mods-revision'},
-         'coolfluid-version=s' => \$options{'coolfluid-version'},
-         'config'         => \$options{'config'},
-         'nodeps'         => \$options{'nodeps'},
-         'find'           => \$options{'find'},
-         'dry-run'        => \$options{'dry-run'},
-         'with_unit_tests'    => \$options{'with_unit_tests'},
-         'verbose'        => \$options{'verbose'},
-         'allstatic'      => \$options{'allstatic'},
-         'allactive'      => \$options{'allactive'},
-         'search-dirs=s'  => \$options{'search_dirs'},
-         'extra-search-dirs=s'  => \$options{'extra_search_dirs'},
-         'install-api=s'  => \$options{'install_api'},
-         'config-file=s'  => \$options{'config_file'},
-         'build=s'        => \$options{'build'},
-         'buildtype=s'    => \$options{'buildtype'},
-         'coolfluid_dir=s'=> \$options{'coolfluid_dir'},
-         'install_dir=s'  => \$options{'install_dir'},
-         'cmake_generator=s' => \$options{'cmake_generator'},
-   );
-
+       'help'           => \$options{'help'},
+       'debug'          => \$options{'debug'},
+       'nocolor'        => \$options{'nocolor'},
+       'mods-list'      => \$options{'mods-list'},
+       'mods-update'    => \$options{'mods-update'},
+       'mods-select=s'  => \$options{'mods-select'},
+       'mods-getall'    => \$options{'mods-getall'},
+       'mods-revision=i'=> \$options{'mods-revision'},
+       'coolfluid-version=s' => \$options{'coolfluid-version'},
+       'config'         => \$options{'config'},
+       'nodeps'         => \$options{'nodeps'},
+       'find'           => \$options{'find'},
+       'dry-run'        => \$options{'dry-run'},
+       'with_unit_tests'    => \$options{'with_unit_tests'},
+       'verbose'        => \$options{'verbose'},
+       'allstatic'      => \$options{'allstatic'},
+       'allactive'      => \$options{'allactive'},
+       'search-dirs=s'  => \$options{'search_dirs'},
+       'extra-search-dirs=s'  => \$options{'extra_search_dirs'},
+       'install-api=s'  => \$options{'install_api'},
+       'config-file=s'  => \$options{'config_file'},
+       'build=s'        => \$options{'build'},
+       'buildtype=s'    => \$options{'buildtype'},
+       'coolfluid_dir=s'=> \$options{'coolfluid_dir'},
+       'install_dir=s'  => \$options{'install_dir'},
+       'cmake_generator=s' => \$options{'cmake_generator'},
+       );
+   
    # remove duplicated entries in options
    while ( my ($key, $value) = each(%default_options) ) {
-      if ( $value eq $options{$key}) {
-         delete $options{$key};
-      };
+       if ( $value eq $options{$key}) {
+	   delete $options{$key};
+       };
    }
-
+   
    # show help if required
    if ($options{'help'} != 0)
    {
-print <<ZZZ;
-   prepare.pl : this script prepares the COOLFluiD Build Environment
-
-   OPTIONS
-
-   behavior:
-         --help              Show this help.
-         --nocolor           Don't color output
-         --dry-run           Don't actually execute the system calls.
-                             Just output what you would do.
-         --nodeps            Don't do check for action dependencies.
-         --verbose           Print extra information.
+       print <<ZZZ;
+       prepare.pl : this script prepares the COOLFluiD Build Environment
+	   
+	   OPTIONS
+	   
+	 behavior:
+	   --help              Show this help.
+	   --nocolor           Don't color output
+           --dry-run           Don't actually execute the system calls.
+	 Just output what you would do.
+            --nodeps            Don't do check for action dependencies.
+            --verbose           Print extra information.
 
   configuration:
          --allactive         Makes all libraries active by default.
                                This is the default.
-         --allactive         Makes all libraries static by default, instead of dynamic.
+         --allstatic         Makes all libraries static by default, instead of dynamic.
                                They still can be desactivated in the configuration file.
          --with_unit_tests   Create the unit tests. [Default: $default_options{'with_unit_tests'}]
          --config-file=      User config file to overide default configuration options
@@ -714,26 +713,25 @@ sub setup_deps()
 
   # dependency variables
   my @dep_variables = ( "boost_includedir",
-	                    "boost_librarydir",
-	                    "petsc_dir",
-	                    "plas_dir",
-	                    "pardiso_include_dir",
-	                    "pardiso_dir",
-	                    "pardiso_gfortran_dir",
-	                    "lesmodels_dir",
-	                    "samg_dir",
-	                    "samg_options",
-	                    "blas_dir",
-	                    "lapack_dir",
-			            "gsl_includedir",
-			            "gsl_librarydir",
+			"boost_librarydir",
+			"petsc_dir",
+			"plas_dir",
+			"pardiso_include_dir",
+			"pardiso_dir",
+			"pardiso_gfortran_dir",
+			"lesmodels_dir",
+			"samg_dir",
+			"samg_options",
+			"blas_dir",
+			"lapack_dir",
+			"gsl_includedir",
+			"gsl_librarydir",
                         "mutationpp_librarydir",
                         "mutationpp_includedir",
-	                    "lapack_libraries" );
-
+			"lapack_libraries" );
+  
   foreach (@dep_variables) {  add_cmake_option($_); }
-
-
+  
   foreach (@libraries) {  setup_library($_); }
 }
 
@@ -753,9 +751,9 @@ sub setup_library($) # setup a dependecy library
     if    ($lib_skip) {  $plugin_options .= " -DCF_SKIP_$libcaps=ON";   }
     else              
     {
-	   if ( !($lib_dir eq '') )
-	   { $plugin_options .= " -D$libcaps\_HOME=\"$lib_dir\""; }  
-	}
+	if ( !($lib_dir eq '') )
+	{ $plugin_options .= " -D$libcaps\_HOME=\"$lib_dir\""; }  
+    }
 }
 
 #==========================================================================
@@ -802,11 +800,23 @@ sub setup_cfgoptions()
 
   # plugins are ON by default, no need to add them to the configuration
 
-  foreach (@$disablelibs)  {  $plugin_options .= " -DCF_BUILD_$_=OFF"; }
+  foreach (@$disablelibs)  
+  {  
+   $plugin_options .= " -DCF_BUILD_$_=OFF"; 
+   $plugin_options .= " -DCF_COMPILES_$_=OFF";
+  }
 
   foreach (@$disableapps)  {  $plugin_options .= " -DCF_BUILD_$_=OFF"; }
 
   foreach (@$disabletests) {  $plugin_options .= " -DCF_BUILD_$_=OFF"; }
+
+  print my_colored("List of enabled libs:\n", $OKCOLOR);
+  foreach (@$enablelibs) 
+  {  
+   print "$_ "; 
+   $plugin_options .= " -DCF_COMPILES_$_=ON";
+  }
+  print "\n";
 
   if ( get_option('install_api') )
   {
