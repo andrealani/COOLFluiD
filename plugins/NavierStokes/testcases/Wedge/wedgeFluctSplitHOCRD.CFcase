@@ -27,9 +27,9 @@ Simulator.SubSystem.Euler2D.refLength = 1.0
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 
-Simulator.SubSystem.CFmesh.FileName     = wedge.CFmesh
+Simulator.SubSystem.CFmesh.FileName = wedge_out.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate = 100
-Simulator.SubSystem.CFmesh.WriteSol     = WriteSolution
+Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
 
 Simulator.SubSystem.Tecplot.FileName       = wedge.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Cons

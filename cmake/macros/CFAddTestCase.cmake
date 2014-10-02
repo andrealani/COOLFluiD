@@ -28,14 +28,22 @@ function( cf_add_case )
 #MESSAGE(INFO,"***CASE*** CF_ENABLE_UNIT_CASES= ${CF_ENABLE_UNIT_CASES}")
 #MESSAGE(INFO,"***CASE*** CF_ENABLE_PERFORMANCE_CASES= ${CF_ENABLE_PERFORMANCE_CASES}")
 
-  set( single_value_args UCASE PCASE)
-  set( multi_value_args  MPI)
+  set( single_value_args UCASE PCASE CASEDIR )
+#  set( multi_value_args  MPI)
+  set( multi_value_args  MPI CASEFILES)
+  
   set( _TEST_DIR ${CMAKE_CURRENT_BINARY_DIR} )
 
 #MESSAGE(INFO,"***CASE*** CF_ENABLE_PERFORMANCE_CASES= ${CF_ENABLE_PERFORMANCE_CASES}")
 
   # parse and complain if stg wrong with the arguments
   cmake_parse_arguments(_PAR "${options}" "${single_value_args}" "${multi_value_args}"  ${_FIRST_ARG} ${ARGN})
+
+  FOREACH( ACFG ${_PAR_CASEFILES} )
+   EXECUTE_PROCESS(COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/${_PAR_CASEDIR}/${ACFG} ${CMAKE_CURRENT_BINARY_DIR}/${_PAR_CASEDIR})
+   LOGVERBOSE("***Copying ${CMAKE_CURRENT_SOURCE_DIR}/${_PAR_CASEDIR}/${ACFG} to ${CMAKE_CURRENT_BINARY_DIR}/${_PAR_CASEDIR}")
+  ENDFOREACH()
+
   foreach(unparsed_arg ${_PAR_UNPARSED_ARGUMENTS})
     if( NOT ( (${unparsed_arg} STREQUAL "AND") OR (${unparsed_arg} STREQUAL "OR") OR (${unparsed_arg} STREQUAL "NOT") ) )
       list( APPEND _UNPARSED_ARGUMENTS ${unparsed_arg} )
@@ -50,11 +58,11 @@ function( cf_add_case )
 
   # select unit/acceptance/performance tests, removing extension if present
   if(_PAR_UCASE)
-    set(_TEST_NAME ${_PAR_UCASE})
+    set(_TEST_NAME ${_PAR_CASEDIR}/${_PAR_UCASE})
     set(_TEST_TARGETNAME "case-unit-")
     set(_TEST_ENABLED ${CF_ENABLE_UNIT_CASES})
   elseif(_PAR_PCASE)
-    set(_TEST_NAME ${_PAR_PCASE})
+    set(_TEST_NAME ${_PAR_CASEDIR}/${_PAR_PCASE})
     set(_TEST_TARGETNAME "case-perf-")
     set(_TEST_ENABLED ${CF_ENABLE_PERFORMANCE_CASES})
   endif()

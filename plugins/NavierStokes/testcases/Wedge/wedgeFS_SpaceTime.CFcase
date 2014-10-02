@@ -30,9 +30,9 @@ Simulator.SubSystem.SubSystemStatus.ComputeDT = MaxDT
 Simulator.SubSystem.SubSystemStatus.MaxDT.DT_Ratio = 0.9
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
-Simulator.SubSystem.CFmesh.FileName     = wedge.CFmesh
-Simulator.SubSystem.Tecplot.FileName    = wedge.plt
-Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.CFmesh.FileName     = wedge_out.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = wedge_out.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 100
 Simulator.SubSystem.CFmesh.SaveRate = 100
 Simulator.SubSystem.Tecplot.AppendTime = false
