@@ -783,16 +783,16 @@ CF_ADD_PLUGIN_LIBRARY ( FluctSplitScalar )
 
 #############################################################################
 
-LIST ( APPEND FluctSplitLTE_files
-FluctSplitLTE.hh
-WeakSlipWallEuler2DPrvtLTEImpl.hh
-WeakSlipWallEuler2DPrvtLTEImpl.cxx
-)
+#LIST ( APPEND FluctSplitLTE_files
+#FluctSplitLTE.hh
+#WeakSlipWallEuler2DPrvtLTEImpl.hh
+#WeakSlipWallEuler2DPrvtLTEImpl.cxx
+#)
 
-LIST ( APPEND FluctSplitLTE_cflibs FluctSplit LTE )
-LIST ( APPEND FluctSplitLTE_requires_mods FluctSplit LTE FluctSplitSystem )
+#LIST ( APPEND FluctSplitLTE_cflibs FluctSplit LTE )
+#LIST ( APPEND FluctSplitLTE_requires_mods FluctSplit LTE FluctSplitSystem )
 
-CF_ADD_PLUGIN_LIBRARY ( FluctSplitLTE )
+#CF_ADD_PLUGIN_LIBRARY ( FluctSplitLTE )
 
 #############################################################################
 

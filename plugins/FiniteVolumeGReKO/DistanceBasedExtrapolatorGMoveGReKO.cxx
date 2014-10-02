@@ -28,7 +28,7 @@ MethodStrategyProvider<DistanceBasedExtrapolatorGMoveGReKO
                        <MultiScalarVarSet<Euler2DVarSet>,
 			NavierStokesTurb2DVarSet>,
 		       CellCenterFVMData,
-		       NodalStatesExtrapolator,
+		       NodalStatesExtrapolator<CellCenterFVMData>,
 		       FiniteVolumeGReKOModule>
 distanceBasedExtrapolatorGMoveGReKO2DProvider("DistanceBasedGMoveGReKO2Dnew");
       

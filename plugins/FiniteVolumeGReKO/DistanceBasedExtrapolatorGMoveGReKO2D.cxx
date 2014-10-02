@@ -28,7 +28,7 @@ namespace COOLFluiD {
 
 MethodStrategyProvider<DistanceBasedExtrapolatorGMoveGReKO2D,
                        CellCenterFVMData,
-                       NodalStatesExtrapolator,
+                       NodalStatesExtrapolator<CellCenterFVMData>,
                        FiniteVolumeGReKOModule>
 DistanceBasedExtrapolatorGMoveGReKO2DProvider("DistanceBasedGMoveGReKO2D");
 
