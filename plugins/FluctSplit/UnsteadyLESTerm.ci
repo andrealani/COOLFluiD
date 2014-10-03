@@ -1,31 +1,19 @@
-
 #include "Common/BadValueException.hh"
 #include "Framework/GeometricEntity.hh"
 #include "NavierStokes/EulerVarSet.hh"
+#include "NavierStokes/NSTerm.hh"
 #include "Framework/SubSystemStatus.hh"
-
+#include "Framework/DiffusiveVarSet.hh"
 #include "FluctSplit/InwardNormalsData.hh"
-
-#include "ComputeDiffusiveTerm.hh"
-//////////////////////////////////////////////////////////////////////////////
-
-using namespace std;
-using namespace COOLFluiD::Framework;
-using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Physics::NavierStokes;
-using namespace COOLFluiD::Physics::LESvki;
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
-
     namespace FluctSplit {
 
 //////////////////////////////////////////////////////////////////////////////
 
-
-//////////////////////////////////////////////////////////////////////////////
 template <class DIFFVAR>
 UnsteadyLESTerm<DIFFVAR>::UnsteadyLESTerm(const std::string& name) :
   ComputeDiffusiveTerm(name),
@@ -46,6 +34,7 @@ UnsteadyLESTerm<DIFFVAR>::UnsteadyLESTerm(const std::string& name) :
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
 template <class DIFFVAR>
 UnsteadyLESTerm<DIFFVAR>::~UnsteadyLESTerm()
 {
@@ -54,24 +43,34 @@ UnsteadyLESTerm<DIFFVAR>::~UnsteadyLESTerm()
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
 template <class DIFFVAR>
-void UnsteadyLESTerm<DIFFVAR>::setDiffusiveVarSet(SafePtr<DiffusiveVarSet> diffVar)
+void UnsteadyLESTerm<DIFFVAR>::setDiffusiveVarSet
+(Common::SafePtr<Framework::DiffusiveVarSet> diffVar)
 {
   _diffVar = diffVar.d_castTo<DIFFVAR>();
  }
 
 //////////////////////////////////////////////////////////////////////////////
-template <class DIFFVAR>
-void UnsteadyLESTerm<DIFFVAR>::setUpdateVarSet(SafePtr<ConvectiveVarSet> updateVar)
-{
-  _updateVar = updateVar.d_castTo<EulerVarSet>();
-}
 
+template <class DIFFVAR>
+void UnsteadyLESTerm<DIFFVAR>::setUpdateVarSet
+(Common::SafePtr<Framework::ConvectiveVarSet> updateVar)
+{
+  _updateVar = updateVar.d_castTo<Physics::NavierStokes::EulerVarSet>();
+}
+      
 //////////////////////////////////////////////////////////////////////////////
+
 template <class DIFFVAR>
 void UnsteadyLESTerm<DIFFVAR>::computeDiffusiveTerm
-(GeometricEntity *const geo, vector<RealVector>& result, bool updateCoeffFlag)
+(Framework::GeometricEntity *const geo, std::vector<RealVector>& result, bool updateCoeffFlag)
 {
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
   DistributionData& ddata = getMethodData().getDistributionData();
   const CFuint nbStatesInCell = ddata.states->size();
   const CFreal ovNbStatesInCell = 1./nbStatesInCell;
@@ -144,9 +143,14 @@ void UnsteadyLESTerm<DIFFVAR>::computeDiffusiveTerm
 }
       
 //////////////////////////////////////////////////////////////////////////////
+
 template <class DIFFVAR>
 void UnsteadyLESTerm<DIFFVAR>::setup()
 {
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const CFuint nbNodesInControlVolume =
@@ -166,6 +170,7 @@ void UnsteadyLESTerm<DIFFVAR>::setup()
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
 template <class DIFFVAR>
 void UnsteadyLESTerm<DIFFVAR>::configure ( Config::ConfigArgs& args )
 {
@@ -173,16 +178,22 @@ void UnsteadyLESTerm<DIFFVAR>::configure ( Config::ConfigArgs& args )
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
 template <class DIFFVAR>
 void UnsteadyLESTerm<DIFFVAR>::computeCellGradientsAndAverageState
-(GeometricEntity *const geo, const RealVector& pdata)
+(Framework::GeometricEntity *const geo, const RealVector& pdata)
 {
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
   DataHandle< InwardNormalsData*> normals = socket_normals.getDataHandle();
   const CFuint nbCellStates = _states.size();
-
+  
   // compute vars that will be used to compute the gradients
   _diffVar->setGradientVars(_states, _values, geo->nbNodes());
-
+  
   const CFuint cellID = geo->getID();
   const CFreal cellVolume = this->socket_volumes.getDataHandle()[cellID];
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
@@ -252,6 +263,7 @@ void UnsteadyLESTerm<DIFFVAR>::computeCellGradientsAndAverageState
 //////////////////////////////////////////////////////////////////////////////
 
 } // namespace FluctSplit
+
 } // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////

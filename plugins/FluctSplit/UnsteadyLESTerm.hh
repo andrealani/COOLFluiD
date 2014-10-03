@@ -3,31 +3,23 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "Framework/DiffusiveVarSet.hh"
 #include "ComputeDiffusiveTerm.hh"
-
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
+
+  namespace Framework {
+    class DiffusiveVarSet;
+  }
   
-
-   namespace Physics {
-     namespace NavierStokes {
-       class EulerVarSet;
+  namespace Physics {
+    namespace NavierStokes {
+      class EulerVarSet;
      }
-   }  
-  //    namespace LESvki {
-  //      class Gradient2DVarSet;
-  //      class Clark2DVarSet;
-  //      class Smagorinsky2DVarSet;
-  //      class WALES2DVarSet;
-   
-  // }
-  //}  
-
-
-    namespace FluctSplit {
+  }
+  
+  namespace FluctSplit {
             
 //////////////////////////////////////////////////////////////////////////////
 
@@ -169,6 +161,10 @@ protected: // data
     } // namespace FluctSplit
 
 } // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#include "FluctSplit/UnsteadyLESTerm.ci"
 
 //////////////////////////////////////////////////////////////////////////////
 

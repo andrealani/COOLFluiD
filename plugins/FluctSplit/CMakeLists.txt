@@ -843,8 +843,8 @@ UnsteadyLESTerm.cxx
 UnsteadyLESTerm.ci
 )
 
-LIST ( APPEND FluctSplitLES_cflibs  FluctSplit LESvki FluctSplitNavierStokes )
-LIST ( APPEND FluctSplitLES_requires_mods FluctSplit LESvki FluctSplitNavierStokes )
+LIST ( APPEND FluctSplitLES_cflibs NavierStokes LESvki FluctSplit FluctSplitNavierStokes )
+LIST ( APPEND FluctSplitLES_requires_mods NavierStokes LESvki FluctSplit )
 CF_ADD_PLUGIN_LIBRARY ( FluctSplitLES )
 
 
