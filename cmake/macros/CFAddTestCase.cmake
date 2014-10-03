@@ -39,9 +39,14 @@ function( cf_add_case )
   # parse and complain if stg wrong with the arguments
   cmake_parse_arguments(_PAR "${options}" "${single_value_args}" "${multi_value_args}"  ${_FIRST_ARG} ${ARGN})
 
+  SET( _BUILD_CASEDIR  ${CMAKE_CURRENT_BINARY_DIR}/${_PAR_CASEDIR} )
   FOREACH( ACFG ${_PAR_CASEFILES} )
-   EXECUTE_PROCESS(COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/${_PAR_CASEDIR}/${ACFG} ${CMAKE_CURRENT_BINARY_DIR}/${_PAR_CASEDIR})
-   LOGVERBOSE("***Copying ${CMAKE_CURRENT_SOURCE_DIR}/${_PAR_CASEDIR}/${ACFG} to ${CMAKE_CURRENT_BINARY_DIR}/${_PAR_CASEDIR}")
+   #EXECUTE_PROCESS(COMMAND "if [ ! -d ${_BUILD_CASEDIR} ]; then mkdir ${_BUILD_CASEDIR}; fi" )   
+   IF (NOT IS_DIRECTORY ${_BUILD_CASEDIR})
+   EXECUTE_PROCESS(COMMAND mkdir ${_BUILD_CASEDIR} )
+   ENDIF()
+   EXECUTE_PROCESS(COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/${_PAR_CASEDIR}/${ACFG} ${_BUILD_CASEDIR})
+   LOGVERBOSE("***Copying ${CMAKE_CURRENT_SOURCE_DIR}/${_PAR_CASEDIR}/${ACFG} to ${_BUILD_CASEDIR}")
   ENDFOREACH()
 
   foreach(unparsed_arg ${_PAR_UNPARSED_ARGUMENTS})
