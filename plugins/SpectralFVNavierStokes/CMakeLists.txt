@@ -42,7 +42,7 @@ NSFaceDiffusiveFluxLocalApproach.hh
 SpectralFVNavierStokes.hh
 )
 
-LIST ( APPEND SpectralFVNavierStokes_cflibs Framework ShapeFunctions)
+LIST ( APPEND SpectralFVNavierStokes_cflibs Framework ShapeFunctions SpectralFV NavierStokes )
 LIST ( APPEND SpectralFVNavierStokes_requires_mods  ShapeFunctions)
 
 CF_ADD_PLUGIN_LIBRARY ( SpectralFVNavierStokes )
