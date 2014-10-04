@@ -1,4 +1,12 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Residual Distribution Schemes, Euler2D, Forward Euler, mesh with triangles, 
+# converter from THOR to CFmesh, second-order  (system) + PSI (scalar) scheme, 
+# distribution in characteristic variables, supersonic inlet and outlet BC
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"

@@ -1,4 +1,13 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Residual Distribution Schemes, Euler2D, Backward Euler, mesh with triangles, 
+# converter from THOR to CFmesh, first-order N (system) scheme, distribution in 
+# characteristic variables, supersonic inlet and outlet BC
+#
+################################################################################
+## COOLFluiD CFcase file
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
@@ -19,12 +28,6 @@ Simulator.Paths.ResultsDir       = ./
 Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
 Simulator.SubSystem.Euler2D.refValues = 1. 2.83972 2.83972 6.532
 Simulator.SubSystem.Euler2D.refLength = 1.0
-
-
-
-
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
-
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = jets2D.CFmesh
