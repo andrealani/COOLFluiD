@@ -19,6 +19,7 @@
 
 coolfluid_dir = /data/user/COOLFluiD
 basebuild_dir = /data/user/COOLFluiD/OPENMPI
+install_dir   = /data/user/COOLFluiD/OPENMPI_INSTALL
 
 # compilers
 cc     = /software/alternate/coolfluid/cf2/2013.9/openmpi/bin/mpicc
