@@ -19,6 +19,7 @@
 
 coolfluid_dir = $HOME/workspace/coolfluid
 basebuild_dir = $HOME/workspace/coolfluid/builds/$ARCH
+install_dir   = $HOME/workspace/coolfluid/builds/$ARCH/INSTALL
 
 # compilers
 cc     = $HOME/local/$ARCH/bin/mpicc
