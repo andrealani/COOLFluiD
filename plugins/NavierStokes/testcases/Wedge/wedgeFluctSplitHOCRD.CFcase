@@ -11,7 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -4.0014991
+### Residual = -2.0003742
 #
 
 # SubSystem Modules
@@ -39,7 +39,7 @@ Simulator.SubSystem.Tecplot.SaveRate = 100
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
 
 Simulator.SubSystem.StopCondition       = Norm
-Simulator.SubSystem.Norm.valueNorm      = -4.0
+Simulator.SubSystem.Norm.valueNorm      = -2.0
 
 Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SuperInlet SuperOutlet
 

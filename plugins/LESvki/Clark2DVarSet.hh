@@ -29,11 +29,11 @@ public: // classes
    * @see Smagorinsky2D
    */
    Clark2DVarSet(const std::string& name,
-		       Common::SafePtr<Framework::PhysicalModelImpl> model) :
+		 Common::SafePtr<Framework::PhysicalModelImpl> model) :
      NavierStokes::NavierStokesTurb2DVarSet(name, model)
   {
   }
-
+  
   /**
    * Default destructor
    */

@@ -15,7 +15,7 @@
 #
 
 # SubSystem Modules
-Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFluctSplitSpaceTimeNavierStokes libFluctSplitNavierStokes libNewtonMethod libMeshRigidMove libTHOR2CFmesh 
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFluctSplitSpaceTimeNavierStokes libFluctSplitNavierStokes libNewtonMethod libMeshRigidMove 
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Wedge/
@@ -54,7 +54,7 @@ Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
 Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SuperInlet SuperOutlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = wedge.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = wedgestart.CFmesh
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 100.
