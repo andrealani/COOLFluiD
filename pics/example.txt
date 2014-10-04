@@ -1,0 +1,14 @@
+andreas-MacBook-Pro:optim lani$ make test
+Running tests...
+Test project /Users/lani/COOLFluiD_GITHUB/trunk/OPENMPI/optim
+     Start  1: test-unit-mathtools1_serial
+ 1/4 Test  #1: test-unit-mathtools1_serial .........................................................   Passed    0.02 sec
+     Start  2: test-perf-mathtools2_4procs
+ 2/4 Test  #2: test-perf-mathtools2_4procs .........................................................   Passed    0.01 sec
+     Start  3: case-perf-plugins-NavierStokes-testcases-Jets2D-jets2DFluctSplit_dprocs
+ 3/4 Test  #3: case-perf-plugins-NavierStokes-testcases-Jets2D-jets2DFluctSplit_dprocs .............   Passed   12.06 sec
+     Start  4: case-perf-plugins-NavierStokes-testcases-Jets2D-jets2DFluctSplitImpl_dprocs
+ 4/4 Test  #4: case-perf-plugins-NavierStokes-testcases-Jets2D-jets2DFluctSplitImpl_dprocs .........   Passed    4.79 sec
+
+100% tests passed, 0 tests failed out of 4
+
