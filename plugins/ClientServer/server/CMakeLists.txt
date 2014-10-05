@@ -49,4 +49,4 @@ CONFIGURE_FILE ( advect_wave.thor ${CMAKE_CURRENT_BINARY_DIR}/advect_wave.thor @
 CONFIGURE_FILE ( advect_wave.SP ${CMAKE_CURRENT_BINARY_DIR}/advect_wave.SP @ONLY )
 
 # add tests
-cf_add_case( MPI 1 UCASE fsm_advect_wave.CFcase )
+#cf_add_case( MPI 1 UCASE fsm_advect_wave.CFcase )

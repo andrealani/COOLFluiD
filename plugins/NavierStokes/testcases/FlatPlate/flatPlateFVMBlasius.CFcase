@@ -4,15 +4,15 @@
 # 
 # Finite Volume, NavierStokes2D, Backward Euler, mesh with quads, second-order 
 # reconstruction without limiter, subsonic inlet and outlet, adiabatic noslip 
-# wall, Holmes-Connell extrapolation, postprocessing of wall aerodynamic 
-# quantities and coefficients 
+# wall, PETSc AIJ matrix, postprocessing of wall aerodynamic quantities and 
+# coefficients 
 #
 ################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -4.0920645
+### Residual = -6.0373281
 #
 
 # Simulation Modules
@@ -44,11 +44,11 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+#Simulator.SubSystem.StopCondition          = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
 
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -6.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -6.0
 
 # Post process the data to compute the skin friction
 Simulator.SubSystem.DataPostProcessing = DataProcessing
@@ -105,7 +105,7 @@ Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Puvt
 Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
 #Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NSFluxAndJacobian
 
-Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = HolmesConnell
+#Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = HolmesConnell
 #Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = StateDiff
 #Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
 #Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = CorrectedGG2D
