@@ -15,4 +15,15 @@ parmetis_dir  = $HOME/local/$ARCH/local/parmetis
 
 # dont get all the modules
 mods-getall = 0
+allactive = 0
+
+# mimimum set of libs to be able to compile CF
+lib_Common = on
+lib_MathTools = on
+lib_logcpp = on
+lib_Config = on
+lib_Environment = on
+lib_Framework = on
+lib_ShapeFunctions = on
+lib_AnalyticalModel = on
 
