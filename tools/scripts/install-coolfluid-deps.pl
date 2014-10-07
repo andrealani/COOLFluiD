@@ -12,7 +12,6 @@ use Term::ANSIColor;
 use Getopt::Long;
 use File::Path;
 use File::Copy;
-#use Switch;
 
 #==========================================================================
 # Constants
@@ -225,6 +224,10 @@ ZZZ
     exit(0);
     }
     @opt_install = split(/,/,join(',',@opt_install));
+
+   # gory fix to circumvent downloading from internal server
+   run_command_or_die("svn co https://github.com/andrealani/COOLFluiD/trunk/packages $opt_tmp_dir");
+   run_command_or_die("mv $opt_tmp_dir/packages/* $opt_tmp_dir ; rm -fr packages");
 }
 
 #==========================================================================
