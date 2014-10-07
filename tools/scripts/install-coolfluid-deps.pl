@@ -46,14 +46,14 @@ my $opt_compile       = 0;
 my $opt_fetchonly     = 0;
 my $opt_many_mpi      = 0;
 my $opt_with_cuda     = 0;
-my $opt_install_dir   = "$home/local/$arch";
+my $opt_install_dir   = "$home/local/coolfluid_deps/$arch";
 my $opt_install_mpi_dir = "";
 my $opt_petsc_dir = "";
 my $opt_parmetis_dir = "";
 my $opt_cuda_bin  = "";
 my $opt_cmake_dir     = "";
 my $opt_confile       = "coolfluid.conf";
-my $opt_tmp_dir       = "$home/tmp";
+my $opt_tmp_dir       = "$home/coolfluid_tmp";
 my $opt_build         = "optim";
 #my $opt_dwnldsrc      = "http://coolfluidsrv.vki.ac.be/webfiles/coolfluid/packages";
 my $opt_dwnldsrc      = "https://github.com/andrealani/COOLFluiD/tree/master/packages";
@@ -225,9 +225,20 @@ ZZZ
     }
     @opt_install = split(/,/,join(',',@opt_install));
 
+   
    # gory fix to circumvent downloading from internal server
-   run_command_or_die("svn co https://github.com/andrealani/COOLFluiD/trunk/packages $opt_tmp_dir");
-   run_command_or_die("mv $opt_tmp_dir/packages/* $opt_tmp_dir ; rm -fr packages");
+   run_command_or_die("mkdir $opt_tmp_dir"); 
+   run_command_or_die("cp ../../packages/* $opt_tmp_dir");
+   
+   #run_command_or_die("mkdir $opt_tmp_dir");
+   #my $status = get_command_status("cp ../../packages/* $opt_tmp_dir");
+   #print my_colored("STATUS IS $status\n",$OKCOLOR);
+   #if ($status eq 0)
+   #{
+   # run_command_or_die("svn co https://github.com/andrealani/COOLFluiD/trunk/packages $opt_tmp_dir");
+   # run_command_or_die("mv $opt_tmp_dir/packages/* $opt_tmp_dir ; rm -fr packages");
+   #}
+
 }
 
 #==========================================================================
