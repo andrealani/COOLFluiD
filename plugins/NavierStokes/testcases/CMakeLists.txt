@@ -17,3 +17,4 @@ cf_add_case( MPI default CASEDIR Wedge  PCASE wedgeFVM.CFcase CASEFILES wedge.th
 cf_add_case( MPI default CASEDIR Naca0012 PCASE nacaFluctSplitImplHOCRD.CFcase CASEFILES MTC1_naca0012_unstr_mesh2_triP2.CFmesh )
 cf_add_case( MPI default CASEDIR Naca0012 PCASE nacaFluctSplitImplviscousHOCRD.CFcase CASEFILES MTC3_naca0012_unstr_mesh1_triP2.CFmesh )
 cf_add_case( MPI default CASEDIR Naca0012 PCASE nacaFVMImpl_FEMMoveShock.CFcase CASEFILES nacatg-fvm-6kn.CFmesh nacatg-fem-6kn.CFmesh )
+cf_add_case( MPI default CASEDIR Naca0012 PCASE nacaFVMImpl_hybrid_euler.CFcase CASEFILES naca0012_hybrid.SP naca0012_hybrid.dpl )
