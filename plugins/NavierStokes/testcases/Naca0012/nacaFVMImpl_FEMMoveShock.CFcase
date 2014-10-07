@@ -1,12 +1,17 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# flow coupled to pseudo-elastic system, ALE Finite Volume with Euler2D, moving 
+# mesh with MeshFEMMove, CrankNicholson, NewtonMethod, FiniteElement, structural 
+# mechanics, far field and unsteady slip wall BCs
+#
+#################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.40554
-#-7.59918
-
-#
+### Residual = -7.66176
 
 Simulator.Maestro = SimpleMaestro
 Simulator.SubSystems = SubSystem
@@ -87,7 +92,7 @@ Simulator.SubSystem.FEMMove.UpdateMeshCom              = UpdateMesh
 Simulator.SubSystem.FEMMove.UpdateMesh.ConvRate        = 1
 Simulator.SubSystem.FEMMove.UpdateMesh.ShowRate        = 1
 Simulator.SubSystem.FEMMove.UpdateMesh.StopCondition   = MaxNumberSteps
-Simulator.SubSystem.FEMMove.UpdateMesh.MaxNumberSteps.nbSteps  = 1
+Simulator.SubSystem.FEMMove.UpdateMesh.MaxNumberSteps.nbSteps  = 20
 Simulator.SubSystem.FEMMove.UpdateMesh.ConvergenceFile = convergenceFEM.plt
 
 Simulator.SubSystem.FEMMove.PrepareComds = OscillatingAirfoilPrepare
@@ -130,26 +135,18 @@ Simulator.SubSystem.Tecplot2.FileName = nacaFVM_FEM_ALE_mesh.plt
 Simulator.SubSystem.Tecplot2.Data.updateVar = Disp
 Simulator.SubSystem.Tecplot2.Data.CollaboratorNames = Mesh
 
-Simulator.SubSystem.Tecplot1.SaveRate = 1
-Simulator.SubSystem.CFmesh1.SaveRate = 1
+Simulator.SubSystem.Tecplot1.SaveRate = 10
+Simulator.SubSystem.CFmesh1.SaveRate = 10
 Simulator.SubSystem.Tecplot1.AppendIter = true
 Simulator.SubSystem.CFmesh1.AppendIter = true
 
-Simulator.SubSystem.Tecplot2.SaveRate = 1
-Simulator.SubSystem.CFmesh2.SaveRate = 1
+Simulator.SubSystem.Tecplot2.SaveRate = 10
+Simulator.SubSystem.CFmesh2.SaveRate = 10
 Simulator.SubSystem.Tecplot2.AppendIter = false
 Simulator.SubSystem.CFmesh2.AppendIter = false
 
-#
-#Define the general subsystem info
-#
-#
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 1
-
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 20
 
 #Simulator.SubSystem.StopCondition   = MaxTime
 #Simulator.SubSystem.MaxTime.maxTime = 200.
@@ -166,7 +163,7 @@ Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader1 CFmeshFileReader2
 Simulator.SubSystem.CFmeshFileReader1.Namespace = FlowNamespace
 Simulator.SubSystem.CFmeshFileReader1.Data.FileName =  nacatg-fvm-6kn.CFmesh
 Simulator.SubSystem.CFmeshFileReader1.Data.CollaboratorNames = Flow
-Simulator.SubSystem.CFmeshFileReader1.THOR2CFmesh.Discontinuous = true
+#Simulator.SubSystem.CFmeshFileReader1.THOR2CFmesh.Discontinuous = true
 #Simulator.SubSystem.CFmeshFileReader1.convertFrom = Dpl2CFmesh
 #Simulator.SubSystem.CFmeshFileReader1.Dpl2CFmesh.isHybrid = true
 
@@ -241,7 +238,7 @@ Simulator.SubSystem.Flow.ALETimeRhs.useAnalyticalMatrix = false
 #Simulator.SubSystem.Flow.SetupCom = LeastSquareP1Setup StdALESetup
 Simulator.SubSystem.Flow.SetupCom = StdSetup StdALESetup
 Simulator.SubSystem.Flow.SetupNames = Setup1 Setup2
-#Simulator.SubSystem.Flow.Setup1.stencil = FaceVertex
+#Simulator.SubSystem.Flow.Setup1.stencil = FaceVertexPlusGhost
 #Simulator.SubSystem.Flow.UnSetupCom = LeastSquareP1UnSetup StdALEUnSetup
 Simulator.SubSystem.Flow.UnSetupCom = StdUnSetup StdALEUnSetup
 Simulator.SubSystem.Flow.UnSetupNames = UnSetup1 UnSetup2
