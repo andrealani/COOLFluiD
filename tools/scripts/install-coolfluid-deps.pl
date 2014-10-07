@@ -12,7 +12,7 @@ use Term::ANSIColor;
 use Getopt::Long;
 use File::Path;
 use File::Copy;
-use Switch;
+#use Switch;
 
 #==========================================================================
 # Constants
