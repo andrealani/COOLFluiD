@@ -227,7 +227,7 @@ ZZZ
 
    
    # gory fix to circumvent downloading from internal server
-   run_command_or_die("mkdir $opt_tmp_dir"); 
+   run_command("mkdir $opt_tmp_dir"); 
    run_command_or_die("cp ../../packages/* $opt_tmp_dir");
    
    #run_command_or_die("mkdir $opt_tmp_dir");
