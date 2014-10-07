@@ -53,9 +53,12 @@ mods-getall = 1
 # enable doxygen
 withdocs = 1
 
-mod_BaldwinLomax = off
-mod_ClientServer = off
-mod_DiscontGalerkin = off
+lib_Mutation = off
+lib_Mutation2I = off
+lib_Mutation2OLDI = off
+#mod_BaldwinLomax = off
+#mod_ClientServer = off
+#mod_DiscontGalerkin = off
 #mod_MutationI = off
 #mod_Mutation = off
 #mod_MutationPanesi = off
