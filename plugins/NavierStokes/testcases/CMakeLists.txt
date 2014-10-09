@@ -18,3 +18,6 @@ cf_add_case( MPI default CASEDIR Naca0012 PCASE nacaFluctSplitImplHOCRD.CFcase C
 cf_add_case( MPI default CASEDIR Naca0012 PCASE nacaFluctSplitImplviscousHOCRD.CFcase CASEFILES MTC3_naca0012_unstr_mesh1_triP2.CFmesh )
 cf_add_case( MPI default CASEDIR Naca0012 PCASE nacaFVMImpl_FEMMoveShock.CFcase CASEFILES nacatg-fvm-6kn.CFmesh nacatg-fem-6kn.CFmesh )
 cf_add_case( MPI default CASEDIR Naca0012 PCASE nacaFVMImpl_hybrid_euler.CFcase CASEFILES naca0012_hybrid.SP naca0012_hybrid.dpl )
+cf_add_case( MPI 4       CASEDIR SinusBump PCASE bumpFVMTtPtAlpha.CFcase CASEFILES bump-fine.SP bump-fine.thor )
+cf_add_case( MPI default CASEDIR SinusBump PCASE bumpFluctSplitWeakImpl.CFcase CASEFILES bump-fine.SP bump-fine.thor )
+cf_add_case( MPI default CASEDIR SinusBump PCASE bumpFluctSplitWeakImplHOCRD.CFcase CASEFILES bump-coarseP2.CFmesh )

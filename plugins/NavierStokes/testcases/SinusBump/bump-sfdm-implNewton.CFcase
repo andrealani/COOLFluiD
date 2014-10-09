@@ -9,7 +9,7 @@
 #CFEnv.TraceToStdOut = true
 
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libGmsh2CFmesh libParaViewWriter libNavierStokes libSpectralFD libSpectralFDNavierStokes libNewtonMethod libPetscI
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libGmsh2CFmesh libParaViewWriter libNavierStokes libSpectralFD libSpectralFDNavierStokes libNewtonMethod libPetscI
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/SinusBump
@@ -19,7 +19,7 @@ Simulator.SubSystem.Default.PhysicalModelType = Euler2D
 Simulator.SubSystem.Euler2D.refValues = 1.0 0.591607978 0.591607978 2.675
 Simulator.SubSystem.Euler2D.refLength = 4.0
 
-Simulator.SubSystem.OutputFormat        = ParaView CFmesh
+Simulator.SubSystem.OutputFormat        = ParaView CFmesh Tecplot
 
 Simulator.SubSystem.CFmesh.FileName     = bump-sfdm-solP1.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate = 10
@@ -32,6 +32,12 @@ Simulator.SubSystem.ParaView.Data.updateVar = Cons
 Simulator.SubSystem.ParaView.SaveRate = 1
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
+
+Simulator.SubSystem.Tecplot.FileName    = bump-sfdm-solP1.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
 
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
 Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 100

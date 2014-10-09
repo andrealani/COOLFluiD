@@ -1,14 +1,18 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Residual Distribution Schemes, Euler2D, Backward Euler, mesh with triangles, 
+# converter from THOR to CFmesh, second-order scheme LDA (system) with distribution 
+# in symmetrizing variables, implicit weak subsonic inlet, outlet, slip wall BCs 
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -10.0997
-
-### Architecture = 32bit
+### Residual = -10.836585
 #
-
-CFEnv.RegistSignalHandlers = false
 
 # SubSystem Modules
 Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libBackwardEuler libFluctSplitNavierStokes libTHOR2CFmesh libPetscI
@@ -17,28 +21,19 @@ Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTe
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/SinusBump
 Simulator.Paths.ResultsDir = ./
 
-Simulator.SubSystem.Default.PhysicalModelType     = Euler2D
+Simulator.SubSystem.Default.PhysicalModelType  = Euler2D
 Simulator.SubSystem.Euler2D.refValues = 1.204751547 206.7002847 206.7002847 271044.375
-
-# numerical jacob + char variables + HE
-
-
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
-
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = bumpImpl.CFmesh
 Simulator.SubSystem.Tecplot.FileName    = bumpImpl.plt
-Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 100
 Simulator.SubSystem.CFmesh.SaveRate = 100
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
-
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 1
 
 #Simulator.SubSystem.StopCondition       = MaxNumberSteps
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 100
@@ -50,15 +45,12 @@ Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SubInlet SubOutlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = bump-fine.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
-Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.ConvergenceMethod = BwdEuler
 Simulator.SubSystem.BwdEuler.Data.CFL.Value = 0.01
 Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
 Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = if(i>4,min(0.05*10^(i-4),1e20),0.05)
-#Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(20.*10^i,1e20)
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = BwdEulerLSS
@@ -74,12 +66,11 @@ Simulator.SubSystem.FluctuationSplit.ComputeTimeRHS = StdTimeRhs
 Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
 
 Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysLDA
-#Simulator.SubSystem.FluctuationSplit.Data.ScalarSplitter = ScalarPSI
 
 Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
-Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Cons
-Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Cons
-Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar    = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar   = Symm
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar    = Roe
 Simulator.SubSystem.FluctuationSplit.Data.IntegratorQuadrature = GaussLegendre
 Simulator.SubSystem.FluctuationSplit.Data.IntegratorOrder = P3
 

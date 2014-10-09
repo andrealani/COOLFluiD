@@ -4,7 +4,7 @@
 # 
 # Residual Distribution Schemes, Euler2D, Backward Euler, mesh with triangles, 
 # converter from THOR to CFmesh, first-order scheme N (system) with distribution 
-# in characteristic variables, supersonic inlet and outlet, wall BCs 
+# in characteristic variables, implicit supersonic inlet and outlet, slip wall BCs 
 #
 ################################################################################
 #

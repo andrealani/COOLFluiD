@@ -1,10 +1,17 @@
-# COOLFluiD CFcase file
+###############################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, Euler2D, Forward Euler, mesh with triangles, converter from 
+# THOR to CFmesh, second-order reconstruction, subsonic inlet (Tt, pt, alpha),
+# outlet, slip wall BCs
+#
+###############################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -1.278322
-
+### Residual = -0.19952795
 #
 
 # SubSystem Modules
@@ -12,13 +19,11 @@ Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWrite
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/SinusBump
-Simulator.Paths.ResultsDir       = ./
+Simulator.Paths.ResultsDir = ./
 
-Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
+Simulator.SubSystem.Default.PhysicalModelType = Euler2D
 Simulator.SubSystem.Euler2D.refValues = 1.204524948 206.7002847 206.7002847 271044.375
 Simulator.SubSystem.Euler2D.refLength = 1.0
-
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = bumpFVM.CFmesh
@@ -31,11 +36,8 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 20
-
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 100
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10000
 
 #Simulator.SubSystem.StopCondition       = Norm
 #Simulator.SubSystem.Norm.valueNorm      = -10.0
@@ -49,35 +51,27 @@ Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-Simulator.SubSystem.FwdEuler.Data.CFL.Value = 1.0
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.6
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
-Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
-Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
-Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar    = Cons
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar  = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar    = Roe
 
-Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
-#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
-#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.6
-#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
-
-#Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
-#Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
-#Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
-#Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
-#Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 
 #Solution initialization
 Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField
-
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
 Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
-Simulator.SubSystem.CellCenterFVM.InField.Def = 1.204524948 \
-          206.7002847 \
-                                        0.0 \
-                                        271044.375
+Simulator.SubSystem.CellCenterFVM.InField.Def = 1.204524948 206.7002847 0.0 271044.375
 
 #Boundary conditions
 Simulator.SubSystem.CellCenterFVM.BcComds = MirrorEuler2DFVMCC \
