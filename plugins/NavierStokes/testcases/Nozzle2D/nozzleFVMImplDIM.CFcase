@@ -36,7 +36,7 @@ CFEnv.RegistSignalHandlers = false
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = ./
-Simulator.Paths.ResultsDir = ./RESULTS
+Simulator.Paths.ResultsDir = ./RESULTS_meshX2
 
 # M=0.3, T=300, p=10000, U=104.165, rho=0.116125406  
 Simulator.SubSystem.Default.PhysicalModelType = Euler2D
@@ -49,19 +49,19 @@ Simulator.SubSystem.Euler2D.ConvTerm.gamma = 1.4 #1.2
 #Simulator.SubSystem.Euler2D.ConvTerm.pRef = 100000.
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
-Simulator.SubSystem.CFmesh.FileName     = jets2DFVM_out.CFmesh
-Simulator.SubSystem.CFmesh.SaveRate = 400
+Simulator.SubSystem.CFmesh.FileName     = nozzle2DFVM_out.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 500
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.Tecplot.FileName    = jets2DFVM_out.plt
+Simulator.SubSystem.Tecplot.FileName    = nozzle2DFVM_out.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Cons
-Simulator.SubSystem.Tecplot.SaveRate = 5
+Simulator.SubSystem.Tecplot.SaveRate = 500
 Simulator.SubSystem.Tecplot.AppendTime = false
-Simulator.SubSystem.Tecplot.AppendIter = true
+Simulator.SubSystem.Tecplot.AppendIter = false
 
-#Simulator.SubSystem.StopCondition       = MaxNumberSteps
-#Simulator.SubSystem.MaxNumberSteps.nbSteps = 50
+#Simulator.SubSystem.StopCondition          = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
 
 Simulator.SubSystem.StopCondition       = Norm
 Simulator.SubSystem.Norm.valueNorm      = -6.0
@@ -69,7 +69,7 @@ Simulator.SubSystem.Norm.valueNorm      = -6.0
 Simulator.SubSystem.Default.listTRS = Inlet Outlet Mirror Wall
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = nozzle.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = nozzleNEWx2.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
@@ -83,7 +83,7 @@ Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
 Simulator.SubSystem.ConvergenceMethod = BwdEuler
 Simulator.SubSystem.BwdEuler.Data.CFL.Value = 1.0
 Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = if(i<1500,1.,min(10.,cfl*1.05))
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = if(i<5000,1.,min(10.,cfl*1.02))
 Simulator.SubSystem.BwdEuler.Data.Norm = L2
 Simulator.SubSystem.BwdEuler.Data.L2.MonitoredVarID = 0
 Simulator.SubSystem.BwdEuler.Data.L2.ComputedVarID = 0 2 3
@@ -94,25 +94,23 @@ Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = StdTimeRhs
 
 Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
 Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
-Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex #PlusGhost
 Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 
 Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlus2D
 #RoeEntropyFix
-#AUSMPlus2D
-
 Simulator.SubSystem.CellCenterFVM.Data.AUSMPlus2D.choiceA12 = 1
 
-#RoeEntropyFix
 #Simulator.SubSystem.CellCenterFVM.Data.RoeEntropyFix.entropyFixID = 1
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+#Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = Euler2DAxiST
 
-Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant #LinearLS2D
-#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.7
-#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -8.0
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
 #Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
 
 Simulator.SubSystem.CellCenterFVM.InitComds = InitState
@@ -120,15 +118,22 @@ Simulator.SubSystem.CellCenterFVM.InitNames = InField
 
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
 Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
-Simulator.SubSystem.CellCenterFVM.InField.Def = 0.116125406 12.0962 0. 25630.00049
+Simulator.SubSystem.CellCenterFVM.InField.Def = 0.116125406 if(x<0.095,12.0962,44.352) 0. 25630.00049
 
-Simulator.SubSystem.CellCenterFVM.BcComds = SubInletEuler2DUVTFVMCC SubOutletEuler2DFVMCC MirrorVelocityFVMCC
-Simulator.SubSystem.CellCenterFVM.BcNames = BcInlet BcOutlet BcMirror
+#Simulator.SubSystem.CellCenterFVM.BcComds = MirrorVelocityFVMCC SubInletEuler2DUVTFVMCC SubOutletEuler2DFVMCC
+#Simulator.SubSystem.CellCenterFVM.BcNames = BcMirror BcInlet BcOutlet
+
+Simulator.SubSystem.CellCenterFVM.BcComds = MirrorVelocityFVMCC SubInletEuler2DTtPtAlphaFVMCC SubOutletEuler2DFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = BcMirror BcInlet BcOutlet
 
 Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS = Inlet 
-Simulator.SubSystem.CellCenterFVM.BcInlet.Vx = 104.165
-Simulator.SubSystem.CellCenterFVM.BcInlet.Vy = 0.
-Simulator.SubSystem.CellCenterFVM.BcInlet.T = 300.
+#Simulator.SubSystem.CellCenterFVM.BcInlet.Vx = 104.165
+#Simulator.SubSystem.CellCenterFVM.BcInlet.Vy = 0.
+#Simulator.SubSystem.CellCenterFVM.BcInlet.T = 300.
+
+Simulator.SubSystem.CellCenterFVM.BcInlet.Ttot  = 305.4
+Simulator.SubSystem.CellCenterFVM.BcInlet.Ptot  = 10644.30286153
+Simulator.SubSystem.CellCenterFVM.BcInlet.alpha = 0.0
 
 Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS = Outlet
 Simulator.SubSystem.CellCenterFVM.BcOutlet.P = 7500.
