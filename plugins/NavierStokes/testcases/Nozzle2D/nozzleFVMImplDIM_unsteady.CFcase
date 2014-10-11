@@ -16,7 +16,7 @@
 #
 
 # SubSystem Modules
-Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libBackwardEuler libNewtonMethod libGambit2CFmesh
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libParaViewWriter libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libBackwardEuler libNewtonMethod libGambit2CFmesh
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -48,7 +48,7 @@ Simulator.SubSystem.Euler2D.ConvTerm.gamma = 1.4 #1.2
 #Simulator.SubSystem.Euler2D.ConvTerm.tempRef = 200.
 #Simulator.SubSystem.Euler2D.ConvTerm.pRef = 100000.
 
-Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh ParaView
 Simulator.SubSystem.CFmesh.FileName     = nozzle2DFVM_out.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate = 500
 Simulator.SubSystem.CFmesh.AppendTime = false
@@ -59,6 +59,12 @@ Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 500
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
+
+Simulator.SubSystem.ParaView.FileName    = nozzle2DFVM_out.vtu
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.SaveRate = 10
+Simulator.SubSystem.ParaView.AppendTime = false
+Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.StopCondition          = MaxNumberSteps
 Simulator.SubSystem.MaxNumberSteps.nbSteps = 200000
