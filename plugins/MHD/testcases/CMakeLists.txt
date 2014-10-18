@@ -59,6 +59,6 @@ cf_add_case( MPI default CASEDIR Nozzle PCASE nozzleFVMMHDProjImplPRIM.CFcase CA
 #cf_add_case( MPI 1       PCASE Wedge/wedgeFVMMHDPowell.CFcase )
 #cf_add_case( MPI default PCASE Wedge/wedgeFVMMHDPowellImpl.CFcase )
 cf_add_case( MPI 8 CASEDIR Wedge PCASE wedgeFVMMHDProj.CFcase CASEFILES wedge.thor wedge.SP )
-#cf_add_case( MPI 1       PCASE Wedge/wedgeFVMMHDProjImpl.CFcase )
+cf_add_case( MPI 4 CASEDIR Wedge PCASE wedgeFVMMHDProjImpl.CFcase CASEFILES wedge.thor wedge.SP )
 #cf_add_case( MPI default PCASE Wedge/wedgeMHDFluctSplitCRD.CFcase )
 #cf_add_case( MPI default PCASE Wedge/wedgeMHDProjFluctSplitCRD.CFcase )
