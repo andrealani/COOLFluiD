@@ -1,16 +1,16 @@
-################################################################################
-## 
-## This COOLFluiD CFcase file tests: 
-## 
-## Finite Volume, Euler2D, Forward Euler, mesh with triangles, converter from 
-## THOR to CFmesh, second-order reconstruction with Venkatakhrisnan limiter, 
-## supersonic inlet and outlet, slip wall BC
-##
-#################################################################################
-##
-## Comments begin with "#"
-## Meta Comments begin with triple "#"
-##
+###############################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, Euler2D, Forward Euler, mesh with triangles, converter from 
+# THOR to CFmesh, second-order reconstruction with Venkatakhrisnan limiter, 
+# supersonic inlet and outlet, slip wall BC
+#
+###############################################################################
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
 ### Residual = -4.0017502
 #
 

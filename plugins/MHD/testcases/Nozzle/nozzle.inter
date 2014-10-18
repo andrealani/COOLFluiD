@@ -2,5 +2,5 @@ Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1000.
 Simulator.SubSystem.BDF2.Data.CFL.Interactive.CFL = 0.6
 Simulator.SubSystem.BwdEuler.Data.CFL.Interactive.CFL = 1000.0 
 Simulator.SubSystem.FwdEuler.Data.CFL.Interactive.CFL = 0.5
-#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.6
 Simulator.SubSystem.CellCenterFVM.Data.LaxFried.DiffCoeff = 1.

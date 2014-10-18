@@ -1,10 +1,18 @@
-# COOLFluiD CFcase file
+#############################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, MHD2DProjection, Backward Euler, mesh with triangles, 
+# converter from THOR to CFmesh, second-order reconstruction with Barth 
+# limiter, supersonic inlet and outlet, slip MHD wall BC, Powell source term,
+# Lax Friedrichs scheme, PETSC with PCJACOBI (not ideal preconditioner!)
+#
+#############################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = 1.1759576
-
+### Residual = -6.1482788
 #
 
 #CFEnv.ErrorOnUnusedConfig = true
@@ -24,9 +32,6 @@ Simulator.SubSystem.MHD2DProjection.ConvTerm.refSpeed = 3.0
 #Simulator.SubSystem.MHD2DProjection.ConvTerm.dissipCoeff = 3.0
 #Simulator.SubSystem.MHD2DProjection.ConvTerm.correctionType = Mixed
 
-#Simulator.SubSystem.InteractiveParamReader.readRate = 15
-Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MHD/testcases/Nozzle/nozzle.inter
-
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = nozzleFVMMHD1stProjImpl.CFmesh
 Simulator.SubSystem.Tecplot.FileName    = nozzleFVMMHD1stProjImpl.plt
@@ -39,11 +44,11 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 5
+#Simulator.SubSystem.StopCondition          = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 5
 
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -3.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -6.0
 
 Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SuperInlet SuperOutlet
 
@@ -54,15 +59,12 @@ Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.ConvergenceMethod = BwdEuler
-Simulator.SubSystem.BwdEuler.Data.CFL.Value = 1.0
+Simulator.SubSystem.BwdEuler.Data.CFL.Value = 100000.0
 Simulator.SubSystem.BwdEuler.ConvergenceFile = convergence_nozzleFVMMHD1stProjImpl.plt
-Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Interactive
-#Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
-#Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = if(i<5,1000.,if(i<20,2000.,1.1*cfl))
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = BwdEulerLSS
-Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCJACOBI #PCSACUSP #PCASM # PCJACOBI #PCASM #PCSACUSP
+Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCJACOBI #PCASM #PCSACUSP
 Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
 #Simulator.SubSystem.BwdEulerLSS.Data.Output = true
@@ -73,12 +75,12 @@ Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = StdTimeRhs
 Simulator.SubSystem.CellCenterFVM.NumJacobMHD.SaveRate = 25
 
 ####### GPU ########
-Simulator.SubSystem.BwdEulerLSS.Data.UseGPU = true
-Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
+#Simulator.SubSystem.BwdEulerLSS.Data.UseGPU = true
+#Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
 
 Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
 Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
-Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
 Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 
@@ -90,13 +92,10 @@ Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Cons
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = MHDConsACAST
 
-#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.14
 Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
 Simulator.SubSystem.CellCenterFVM.Data.BarthJesp2D.useFullStencil = true
-#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.freezeLimiter = true
-
 #Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
 #Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
 

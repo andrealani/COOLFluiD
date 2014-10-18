@@ -1,10 +1,18 @@
-# COOLFluiD CFcase file
+##############################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, MHD2D, Forward Euler, mesh with triangles, converter from 
+# THOR to CFmesh, second-order reconstruction with Barth limiter, 
+# supersonic inlet and outlet, slip MHD wall BC, Powell source term,
+# Roe scheme for MHD
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -0.501638
-
+### Residual = -6.0156794
 #
 #CFEnv.ErrorOnUnusedConfig = true
 #
@@ -36,11 +44,11 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
 
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -6.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -6.0
 
 Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SuperInlet SuperOutlet
 
@@ -57,23 +65,21 @@ Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Interactive
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = FVMCCMHD
-#Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
-#Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
-#Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
-#Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
-#Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 
-#Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = LaxFried
 Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = MHD2DConsRoe
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Cons
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = MHD2DPowellST
 
-Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
-#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
-#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.14
-#Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.14
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
 #Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.freezeLimiter = true
 #Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
 #Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
