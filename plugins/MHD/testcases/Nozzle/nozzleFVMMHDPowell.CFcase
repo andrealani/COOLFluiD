@@ -27,7 +27,7 @@ Simulator.SubSystem.Default.PhysicalModelType  = MHD2D
 Simulator.SubSystem.MHD2D.ConvTerm.gamma = 1.4
 
 Simulator.SubSystem.MHD2D.ConvTerm.divBErrorFileName = divB_nozzleFVMMHD1stPowell
-Simulator.SubSystem.MHD2D.ConvTerm.divBErrorFileSaveRate = 10
+Simulator.SubSystem.MHD2D.ConvTerm.divBErrorFileSaveRate = 500
 
 Simulator.SubSystem.InteractiveParamReader.readRate = 15
 Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MHD/testcases/Nozzle/nozzle.inter
