@@ -4,8 +4,8 @@
 # 
 # Finite Volume, MHD2DProjection, NewtonIterator, mesh with triangles, 
 # converter from THOR to CFmesh, second-order reconstruction with Barth 
-# limiter, supersonic inlet and outlet, slip MHD wall BC, Powell source term,
-# Lax Friedrichs scheme, update in primitive variables
+# limiter, supersonic inlet and outlet, slip MHD wall BC, Lax Friedrichs 
+# scheme, update in primitive variables
 #
 ############################################################################
 #
