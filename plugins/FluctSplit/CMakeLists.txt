@@ -22,8 +22,6 @@ StrongSubOutletEuler3DCons.hh
 StrongSubOutletEuler3DCons.cxx
 WeakSubInletEuler2DCons.hh
 WeakFarFieldEuler2DConsAlphaMTP.hh
-WeakSlipWall2DImpl.cxx
-WeakSlipWall2DImpl.hh
 WeakOutletEuler2DCons.hh
 StrongSlipWallEuler3DCons.hh
 Euler2DSourceTerm.hh
@@ -329,8 +327,8 @@ SuperInletMHD2DProjection.cxx
 MHD3DSourceTerm.cxx
 )
 
-LIST ( APPEND FluctSplitMHD_requires_mods MHD FluctSplit )
-LIST ( APPEND FluctSplitMHD_cflibs MHD FluctSplit FluctSplitSystem FluctSplitNavierStokes )
+LIST ( APPEND FluctSplitMHD_requires_mods MHD )
+LIST ( APPEND FluctSplitMHD_cflibs MHD FluctSplit FluctSplitSystem )
 
 CF_ADD_PLUGIN_LIBRARY ( FluctSplitMHD )
 
@@ -480,6 +478,8 @@ WeakBC2DImpl.cxx
 WeakBC2DImpl.hh
 WeakBC3DImpl.cxx
 WeakBC3DImpl.hh
+WeakSlipWall2DImpl.cxx
+WeakSlipWall2DImpl.hh
 SuperInletImpl.cxx
 SuperInletImpl.hh
 CoupledSuperInlet.cxx

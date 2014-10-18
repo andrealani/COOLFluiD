@@ -1,34 +1,34 @@
-# COOLFluiD CFcase file
+###############################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Residual Distribution Schemes, MHD2DProjection, Forward Euler, mesh with
+# triangles, converter from THOR to CFmesh, CRD, second-order scheme B (system) 
+# supersonic inlet and outlet, slip wall MHD BCs 
+##
+#################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -0.758005
-
+### Residual = -2.0006904
 #
 
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libMHD libForwardEuler libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTimeMHD libTHOR2CFmesh
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libMHD libForwardEuler libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFluctSplitMHD libTHOR2CFmesh
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/MHD/testcases/Nozzle/
-Simulator.Paths.ResultsDir       = plugins/MHD/testcases/Nozzle/
+Simulator.Paths.ResultsDir = ./RESULTS
 
-Simulator.SubSystem.Default.PhysicalModelType       = MHD2DProjection
+Simulator.SubSystem.Default.PhysicalModelType         = MHD2DProjection
 Simulator.SubSystem.MHD2DProjection.ConvTerm.refSpeed = 5.0
-Simulator.SubSystem.MHD2DProjection.ConvTerm.gamma = 1.4
-
-#Simulator.SubSystem.CFL = 0.9
-Simulator.SubSystem.InteractiveParamReader.readRate = 10
-Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MHD/testcases/Nozzle/nozzle.inter
-
-
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
+Simulator.SubSystem.MHD2DProjection.ConvTerm.gamma    = 1.4
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = nozzleACACRD.CFmesh
 Simulator.SubSystem.Tecplot.FileName    = nozzleACACRD-Bsys.plt
-Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 50
 Simulator.SubSystem.CFmesh.SaveRate = 50
 Simulator.SubSystem.Tecplot.AppendTime = false
@@ -36,30 +36,25 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 5
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 15
 
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 15
-
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -10
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -2.0
 
 Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SuperInlet SuperOutlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = nozzle.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
-Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Interactive
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.9
 
 Simulator.SubSystem.SpaceMethod = FluctuationSplit
 Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = CRD
 Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysBC
-Simulator.SubSystem.FluctuationSplit.Data.SourceTerm = MHD2DST
+Simulator.SubSystem.FluctuationSplit.Data.SourceTerm = MHD2DProjectionST #MHD2DST
 Simulator.SubSystem.FluctuationSplit.Data.includeSourceInFlux = true
 Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
 Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Cons

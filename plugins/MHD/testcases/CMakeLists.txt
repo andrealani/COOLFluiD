@@ -22,6 +22,7 @@
 #cf_add_case( MPI default PCASE Nozzle/cuda.CFcase )
 #cf_add_case( MPI default PCASE Nozzle/cudaImpl.CFcase )
 #cf_add_case( MPI default PCASE Nozzle/nozzleFluctSplitMHD.CFcase )
+cf_add_case( MPI 4 CASEDIR Nozzle PCASE nozzleMHDProjFluctSplitCRD.CFcase CASEFILES nozzle.thor nozzle.SP )
 cf_add_case( MPI 4 CASEDIR Nozzle PCASE nozzleFVMMHDPowell.CFcase CASEFILES nozzle.thor nozzle.SP nozzle.inter )
 #cf_add_case( MPI default PCASE Nozzle/nozzleFVMMHDPowellImpl.CFcase )
 #cf_add_case( MPI default PCASE Nozzle/nozzleFVMMHDProj.CFcase )

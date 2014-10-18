@@ -16,8 +16,6 @@ using namespace COOLFluiD::Framework;
 
 namespace COOLFluiD {
 
-
-
     namespace FluctSplit {
 
 //////////////////////////////////////////////////////////////////////////////
@@ -247,8 +245,6 @@ void WeakSlipWall2DImpl::setFaceNormal
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace FluctSplit
-
-
 
 } // namespace COOLFluiD
 

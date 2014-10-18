@@ -25,7 +25,7 @@ namespace COOLFluiD {
 
 MethodStrategyProvider<MHD2DSourceTerm,
 		       FluctuationSplitData,
-		       ComputeSourceTerm<FluctuationSplitData>,
+		       ComputeSourceTermFSM,
 		       FluctSplitMHDModule>
 mhd2DSTProvider("MHD2DST");
 
