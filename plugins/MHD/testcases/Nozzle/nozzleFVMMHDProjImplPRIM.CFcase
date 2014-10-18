@@ -1,12 +1,19 @@
-# COOLFluiD CFcase file
+###########################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, MHD2DProjection, NewtonIterator, mesh with triangles, 
+# converter from THOR to CFmesh, second-order reconstruction with Barth 
+# limiter, supersonic inlet and outlet, slip MHD wall BC, Powell source term,
+# Lax Friedrichs scheme, update in primitive variables
+#
+############################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = 1.23814
-
+### Residual = -6.03225
 #
-# This testcase tests implicit MHD2DProjection cases with Prim variables 
 #CFEnv.ErrorOnUnusedConfig = true
 
 # Simulator Modules
@@ -23,9 +30,6 @@ Simulator.SubSystem.MHD2DProjection.ConvTerm.refSpeed = 3.0
 #Simulator.SubSystem.MHD2DProjection.ConvTerm.dissipCoeff = 3.0
 #Simulator.SubSystem.MHD2DProjection.ConvTerm.correctionType = Mixed
 
-#Simulator.SubSystem.InteractiveParamReader.readRate = 15
-Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MHD/testcases/Nozzle/nozzle.inter
-
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = nozzleFVMMHD1stProjImpl.CFmesh
 Simulator.SubSystem.Tecplot.FileName    = nozzleFVMMHD1stProjImpl.plt
@@ -38,11 +42,11 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 5
+#Simulator.SubSystem.StopCondition          = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 5
 
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -3.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -6.0
 
 Simulator.SubSystem.Default.listTRS = InnerCells SlipWall SuperInlet SuperOutlet
 
@@ -53,11 +57,8 @@ Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
-Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1.0
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1000000.0
 Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergence_nozzleFVMMHD1stProjImpl.plt
-Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
-#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<5,1000.,if(i<20,2000.,1.1*cfl))
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = NewtonIteratorLSS
@@ -78,27 +79,22 @@ Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 
 Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = LaxFried
-#Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = MHD2DProjectionConsRoe
-
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Prim 
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Cons
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = MHDConsACAST
 
-#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.14
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
 Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
 Simulator.SubSystem.CellCenterFVM.Data.BarthJesp2D.useFullStencil = true
 #Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.freezeLimiter = true
-
 #Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
 #Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
 
 Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField
-
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
 Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
 Simulator.SubSystem.CellCenterFVM.InField.Def = 1.0 \

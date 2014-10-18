@@ -5,7 +5,8 @@
 # Finite Volume, MHD2DProjection, Backward Euler, mesh with triangles, 
 # converter from THOR to CFmesh, second-order reconstruction with Barth 
 # limiter, supersonic inlet and outlet, slip MHD wall BC, Powell source term,
-# Lax Friedrichs scheme, PETSC with PCJACOBI (not ideal preconditioner!)
+# Lax Friedrichs scheme, update in conservative variables, PETSC with PCJACOBI 
+# (not ideal preconditioner!)
 #
 #############################################################################
 #
