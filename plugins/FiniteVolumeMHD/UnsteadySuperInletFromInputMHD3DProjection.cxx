@@ -5,6 +5,7 @@
 #include "UnsteadySuperInletFromInputMHD3DProjection.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/SubSystemStatus.hh"
+#include "Common/OSystem.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -313,7 +314,38 @@ void UnsteadySuperInletFromInputMHD3DProjection::preProcess()
     }
     
     _flagReadInputFile = 0;
-  } 
+    
+    // only master process manipulates file
+    if ( PE::GetPE().GetRank () == 0) {
+      // AL this will fail in general !! change this !!!
+      const string activateFlag = "Simulator.SubSystem.CellCenterFVM.Inlet.readInputFileFlag = 0";
+      const string inputFile = "06042000.inter";
+      const string outputFile = "out.inter";
+      ifstream fin(inputFile.c_str());
+      ofstream fout(outputFile.c_str());
+      
+      string line = "";
+      int nbLines = 0;
+      if (fin.is_open()) {
+	while (true) {
+	  if (fin.eof()) {
+	    break;
+	  }
+	  getline (fin,line);
+	  if (nbLines == 0) {
+	    // cout << "line 0 is " << line << endl
+	    // cout << activateFlag << endl;
+	    line = activateFlag;
+	  }
+	  fout << line << endl;
+	  ++nbLines;
+	}
+      }
+      // copy the modified file into the original one
+      const string command = "mv out.inter 06042000.inter"; 
+      OSystem::getInstance().executeCommand(command);
+    } 
+  }
 }
 	  
 ////////////////////////////////////////////////////////////////////////////// 
