@@ -68,6 +68,7 @@ my %default_options = (
     'search_dirs'  => "src plugins",
     'install_api'  => "",
     'extra_search_dirs'  => "",
+    'extra_mods_url'     => "",
     'svnserver'    => "https://github.com/andrealani/COOLFluiD/trunk",
     'config_file'  => "coolfluid.conf",
     'build'        => "RelWithDebInfo",
@@ -154,7 +155,8 @@ foreach my $libname ( @libraries )
 my %options = %default_options;   # for command line options
 my %user_pref;                    # for config file options
 
-my $extrasearchdirs = "";         # record the extra search dirs
+my $extrasearchdirs  = "";        # record the extra search dirs
+my $extramodsurl  = "";          # record the extra mods dirs
 my $install_api = "";             # which libraries should have their API installed
 
 my %moddir;                       # in which dir the module resides
@@ -201,6 +203,7 @@ sub parse_command_line_options()
        'allactive'      => \$options{'allactive'},
        'search-dirs=s'  => \$options{'search_dirs'},
        'extra-search-dirs=s'  => \$options{'extra_search_dirs'},
+       'extra-mods-url=s'  => \$options{'extra_mods_url'},
        'install-api=s'  => \$options{'install_api'},
        'config-file=s'  => \$options{'config_file'},
        'build=s'        => \$options{'build'},
@@ -265,6 +268,11 @@ sub parse_command_line_options()
          --extra-search-dirs=   Comma separated list of directories where to search for modules
                                   Default: $default_options{'extra_search_dirs'}
 
+         --extra-mods-url=   Comma separated list of svn directories where to search for modules
+                                  Default: $default_options{'extra_mods_url'}
+        
+
+
   ACTIONS
 
   build actions:
@@ -278,7 +286,7 @@ sub parse_command_line_options()
          --mods-update     Checkout or Updates the selected modules from the svn server
 
 ZZZ
-   exit(0);
+   exi(0);
    }
 }
 
@@ -434,11 +442,23 @@ sub find_modules()
      my @array_extradirs = split(',',get_option('extra_search_dirs'));
      $extrasearchdirs = join(" ",@array_extradirs);
    }
+   
+   # check out additional user-defined modules into the "plugins" folder 
+   if (get_option('extra_mods_url'))
+   {
+     # fix the mods dir option which comes comma separated
+     my @array_extramurl = split(',',get_option('extra_mods_url'));
+     my $coolfluid_dir = get_option('coolfluid_dir');
+     foreach my $mdir ( @array_extramurl )
+     {
+       print my_colored("\nChecking out extra module from $mdir\n",$SECTIONCOLOR);
+       run_command("cd $coolfluid_dir/plugins ; svn co $mdir ; cd -");  
+     }
+   }
 
    my $searchdirs = get_search_paths() . " " . $extrasearchdirs;
-
    my $search_unittests = get_option('with_unit_tests');
-
+   
    open FILE, "-|", "find -L $searchdirs -name $cmakelist" or die ("Error searching for  $cmakelist - $!");
 
    while (my $file=<FILE>)
@@ -446,6 +466,10 @@ sub find_modules()
       my $dir     = dirname($file);
       my $modname = $dir;
       $modname =~ s/\//_/g;
+
+      #print my_colored("\n##### FILE   => $file\n",$SECTIONCOLOR);
+      #print my_colored("\n##### DIR    => $dir\n",$SECTIONCOLOR);
+      #print my_colored("\n##### MODULE => $modname\n",$SECTIONCOLOR);
 
       push(@all_mods, $modname);
 
@@ -948,14 +972,16 @@ sub print_configinfo() # print information about the
     my $build = get_build();
     my $coolfluid_dir = get_option('coolfluid_dir');
     my $install_dir = get_option('install_dir');
-    my $extra_search_dirs = get_option('extra_search_dirs');
+    my $extra_search_dirs = get_option('extra_search_dirs'); 
+    my $extra_mods_url = get_option('extra_mods_url');
     my $buildpath = get_build_path();
 
     print my_colored("\nDirectories\n",$SECTIONCOLOR);
 
-    print_var("COOLFluiD   dir  ", $coolfluid_dir);
-    print_var("Build       dir  ", $buildpath);
-    print_var("Extra       dirs ", "$extra_search_dirs");
+    print_var("COOLFluiD    dir  ", $coolfluid_dir);
+    print_var("Build        dir  ", $buildpath);
+    print_var("Extra        dirs ", "$extra_search_dirs");
+    print_var("Extra module dirs ", "$extra_mods_url");
     print_var("Installation dir ", $install_dir);
 
   my $cc   = get_option('cc');

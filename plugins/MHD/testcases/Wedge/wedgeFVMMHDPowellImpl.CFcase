@@ -12,16 +12,13 @@ Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTe
 
 # Simulator Parameters
 Simulator.Paths.WorkingDir = plugins/MHD/testcases/Wedge/
-Simulator.Paths.ResultsDir = plugins/MHD/testcases/Wedge/
+Simulator.Paths.ResultsDir = ./RESULTS
 
 Simulator.SubSystem.Default.PhysicalModelType       = MHD2D
 Simulator.SubSystem.MHD2D.ConvTerm.gamma = 1.666666667
 
 Simulator.SubSystem.MHD2D.ConvTerm.divBErrorFileName = divB_wedgeFVMMHD1stPowellImpl
 Simulator.SubSystem.MHD2D.ConvTerm.divBErrorFileSaveRate = 10
-
-#Simulator.SubSystem.InteractiveParamReader.readRate = 15
-Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MHD/testcases/Wedge/wedge.inter
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = wedgeFVMMHD1stPowellImpl.CFmesh
@@ -50,9 +47,10 @@ Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.ConvergenceMethod = BwdEuler
-#Simulator.SubSystem.BwdEuler.Data.CFL.Value = 1.0
+Simulator.SubSystem.BwdEuler.Data.CFL.Value = 1.0
+Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = if(i<400,1.,min(50,cfl*1.1))
 Simulator.SubSystem.BwdEuler.ConvergenceFile = convergence_wedgeFVMMHD1stPowellImpl.plt
-Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Interactive
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = BwdEulerLSS
@@ -72,8 +70,6 @@ Simulator.SubSystem.CellCenterFVM.NumJacobMHD.SaveRate = 25
 #Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 
 Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = LaxFried
-#Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
-#Simulator.SubSystem.CellCenterFVM.Data.Roe.Flux = MHD2DConsRoe
 
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
