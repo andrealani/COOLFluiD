@@ -53,14 +53,20 @@ mods-getall = 1
 # enable doxygen
 withdocs = 1
 
-lib_Mutation = off
-lib_Mutation2I = off
+lib_Mutation2OLD  = off
 lib_Mutation2OLDI = off
-#mod_BaldwinLomax = off
+lib_Mutation2     = off
+lib_Mutation2I    = off
+lib_Mutation      = off
+lib_MutationI     = off
+
+#
+# URL of folders where extra modules are 
+#extra_mods_url = https://minarossa.vki.ac.be/svn/coolfluid-plugins/Mutation,https://minarossa.vki.ac.be/svn/coolfluid-plugins/Mutation2.0,https://minarossa.vki.ac.be/svn/coolfluid-plugins/Mutation2.0.0
+#
+#
 #mod_ClientServer = off
 #mod_DiscontGalerkin = off
-#mod_MutationI = off
-#mod_Mutation = off
 #mod_MutationPanesi = off
 #mod_MutationUsage = off
 #
