@@ -286,7 +286,7 @@ sub parse_command_line_options()
          --mods-update     Checkout or Updates the selected modules from the svn server
 
 ZZZ
-   exi(0);
+   exit(0);
    }
 }
 
