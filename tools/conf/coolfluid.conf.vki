@@ -60,10 +60,10 @@ lib_Mutation2I    = off
 lib_Mutation      = off
 lib_MutationI     = off
 
-#
-# URL of folders where extra modules are 
-#extra_mods_url = https://minarossa.vki.ac.be/svn/coolfluid-plugins/Mutation,https://minarossa.vki.ac.be/svn/coolfluid-plugins/Mutation2.0,https://minarossa.vki.ac.be/svn/coolfluid-plugins/Mutation2.0.0
-#
+# names of the extra modules to download
+extra_mods_list = Mutation,Mutation2.0,Mutation2.0.0
+# URL from which extra modules are downloadable (order must match extra_mods_list)
+extra_mods_url  = https://minarossa.vki.ac.be/svn/coolfluid-plugins/Mutation,https://minarossa.vki.ac.be/svn/coolfluid-plugins/Mutation2.0,https://minarossa.vki.ac.be/svn/coolfluid-plugins/Mutation2.0.0
 #
 #mod_ClientServer = off
 #mod_DiscontGalerkin = off

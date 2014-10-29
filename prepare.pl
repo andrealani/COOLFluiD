@@ -69,6 +69,7 @@ my %default_options = (
     'install_api'  => "",
     'extra_search_dirs'  => "",
     'extra_mods_url'     => "",
+    'extra_mods_list'    => "",
     'svnserver'    => "https://github.com/andrealani/COOLFluiD/trunk",
     'config_file'  => "coolfluid.conf",
     'build'        => "RelWithDebInfo",
@@ -204,6 +205,7 @@ sub parse_command_line_options()
        'search-dirs=s'  => \$options{'search_dirs'},
        'extra-search-dirs=s'  => \$options{'extra_search_dirs'},
        'extra-mods-url=s'  => \$options{'extra_mods_url'},
+       'extra-mods-list=s'  => \$options{'extra_mods_list'},
        'install-api=s'  => \$options{'install_api'},
        'config-file=s'  => \$options{'config_file'},
        'build=s'        => \$options{'build'},
@@ -270,6 +272,10 @@ sub parse_command_line_options()
 
          --extra-mods-url=   Comma separated list of svn directories where to search for modules
                                   Default: $default_options{'extra_mods_url'}
+  
+         --extra-mods-list=   Comma separated list of extra modules
+                                  Default: $default_options{'extra_mods_list'}
+
         
 
 
@@ -443,19 +449,25 @@ sub find_modules()
      $extrasearchdirs = join(" ",@array_extradirs);
    }
    
-   # check out additional user-defined modules into the "plugins" folder 
-   if (get_option('extra_mods_url'))
+   # check out additional user-defined modules into the "plugins" folder
+   if (get_option('extra_mods_list') and get_option('extra_mods_url'))
    {
      # fix the mods dir option which comes comma separated
-     my @array_extramurl = split(',',get_option('extra_mods_url'));
+     my @array_extramlist = split(',',get_option('extra_mods_list'));
+     my @array_extramurl  = split(',',get_option('extra_mods_url'));
      my $coolfluid_dir = get_option('coolfluid_dir');
-     foreach my $mdir ( @array_extramurl )
+     for (my $idir = 0; $idir <= $#array_extramlist; $idir++)
      {
-       print my_colored("\nChecking out extra module from $mdir\n",$SECTIONCOLOR);
-       run_command("cd $coolfluid_dir/plugins ; svn co $mdir ; cd -");  
+       my $mdir = "$coolfluid_dir/plugins/$array_extramlist[$idir]";
+       print my_colored("\nChecking whether dir $mdir exists\n",$SECTIONCOLOR);
+       if (!(-d $mdir) ) 
+       {	 
+        print my_colored("\nChecking out extra module $array_extramlist[$idir] from $array_extramurl[$idir]\n",$SECTIONCOLOR);
+        run_command("svn co $array_extramurl[$idir] $mdir");  
+       }
      }
    }
-
+   
    my $searchdirs = get_search_paths() . " " . $extrasearchdirs;
    my $search_unittests = get_option('with_unit_tests');
    
