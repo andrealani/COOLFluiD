@@ -455,6 +455,13 @@ sub find_modules()
      # fix the mods dir option which comes comma separated
      my @array_extramlist = split(',',get_option('extra_mods_list'));
      my @array_extramurl  = split(',',get_option('extra_mods_url'));
+
+     if ( $#array_extramlist != $#array_extramurl ) 
+     {
+       print my_colored("\nERROR: <extra_mods_list> must have same number of entries as <extra_mods_url> in coolfluid.conf\n",$SECTIONCOLOR); 
+       exit(0);
+     }
+
      my $coolfluid_dir = get_option('coolfluid_dir');
      for (my $idir = 0; $idir <= $#array_extramlist; $idir++)
      {
