@@ -188,8 +188,8 @@ GalerkinStructMechHeat2DIndepSourceEntity.cxx
 GalerkinStructMechHeat2DIndepSourceEntity.hh
 )
 
-LIST ( APPEND FiniteElementStructMechHeat_cflibs FiniteElementStructMech FiniteElement Heat StructMech )
-LIST ( APPEND FiniteElementStructMechHeat_requires_mods FiniteElementStructMech FiniteElement Heat StructMech )
+LIST ( APPEND FiniteElementStructMechHeat_cflibs FiniteElementStructMech FiniteElement Heat StructMech StructMechHeat )
+LIST ( APPEND FiniteElementStructMechHeat_requires_mods FiniteElementStructMech FiniteElement Heat StructMech StructMechHeat )
 
 CF_ADD_PLUGIN_LIBRARY ( FiniteElementStructMechHeat )
 

@@ -105,10 +105,10 @@ protected:
   }
   
   /// @todo broken after release 2009.3
-  virtual void computeFlux(const RealVector& pdata, const RealVector& normals);
+  virtual void computeFlux(const RealVector& pdata, const RealVector& normals) {}
   
   /// @todo broken after release 2009.3
-  virtual void computeStateFlux(const RealVector& pdata);
+  virtual void computeStateFlux(const RealVector& pdata) {}
 
 private:
 

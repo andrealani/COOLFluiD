@@ -71,7 +71,7 @@ void SubInletEuler2DUVT::setGhostState(GeometricEntity *const face)
   const CFreal gamma = _varSet->getModel()->getGamma();
   const CFreal gammaDivGammaMinus1 = gamma/(gamma -1.0);
   const CFreal R = _varSet->getModel()->getR();
-//  cout << "R = " << R << endl;
+  //  cout << "R = " << R << endl;
 
   const CFreal pInnerState = _dataInnerState[EulerTerm::P];
 

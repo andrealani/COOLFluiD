@@ -58,6 +58,7 @@ void PetscOptions::setPCTypes()
   _pcType["PCBICGSTABCUSP"] = PCBICGSTABCUSP;
   _pcType["PCGASM"] = PCGASM;
   _pcType["PCKSP"] = PCKSP;
+  _pcType["PCGAMG"] = PCGAMG;
 }
 
 //////////////////////////////////////////////////////////////////////////////

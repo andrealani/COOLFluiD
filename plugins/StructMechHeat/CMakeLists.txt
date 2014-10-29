@@ -20,6 +20,6 @@ StructMechHeatPhysicalModel.hh
 )
 
 LIST ( APPEND StructMechHeat_requires_mods Framework StructMech )
-LIST ( APPEND StructMechHeat_cflibs Framework StructMech )
+LIST ( APPEND StructMechHeat_cflibs Framework MathTools StructMech )
 CF_ADD_PLUGIN_LIBRARY ( StructMechHeat )
 CF_WARN_ORPHAN_FILES()

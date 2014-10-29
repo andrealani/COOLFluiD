@@ -179,10 +179,13 @@ private: //data
   
   /// Euler physical data
   RealVector m_physicalData;
-
+  
   // accumulator for LSSMatrix
   //std::auto_ptr<Framework::BlockAccumulator> m_acc;
   
+  /// L2 norm of delta U
+  CFreal m_norm;
+    
   /// minimum pressure ratio for shock sensor
   CFreal m_phiMinSS;
   

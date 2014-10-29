@@ -61,8 +61,9 @@ MeshFittingAlgorithm<MODEL>::MeshFittingAlgorithm(const std::string& name) :
   socket_isOutward("isOutward"),
   m_lss(CFNULL),
   m_fvmccData(CFNULL),
-  m_physicalData()
-  //m_acc(CFNULL)
+  m_physicalData(),
+  //m_acc(CFNULL),
+  m_norm(0.)
 {
   this->addConfigOptionsTo(this);
   
@@ -785,24 +786,25 @@ void MeshFittingAlgorithm<MODEL>::updateNodePositions() {
   
   using namespace std;
   using namespace COOLFluiD::Framework;
-  //using namespace COOLFluiD::Common;
-  //using namespace COOLFluiD::MathTools;
   
   DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle();
-
   DataHandle < CFreal > rhs = socket_rhs.getDataHandle();
+  
   const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFuint nbEqs = PhysicalModelStack::getActive()->getDim();
   
-  CFreal displacement = 0.0;
-  
+  // this norm accumulation has to be done in parallel (global reduce)
+  m_norm = 0.0;
   for (CFuint i = 0; i < nodes.size(); ++i) {
     if (nodes[i]->isParUpdatable()) {
       Node& currNode = *nodes[i];
       for(CFuint iEq = 0; iEq < nbEqs; ++iEq) {
         const CFreal delta = currNode[iEq] - rhs(i, iEq, totalNbEqs);
-        displacement += delta*delta;
-        currNode[iEq] = rhs(i, iEq, totalNbEqs);
+        m_norm += delta*delta;
+        
+	/// AL: check why rhs is the new node position and not the displacement
+	///     (in the latter case here would be currNode[iEq] += rhs(...)
+	currNode[iEq] = rhs(i, iEq, totalNbEqs);
       }
     }
   }
@@ -968,6 +970,8 @@ void MeshFittingAlgorithm<MODEL>::execute()
                   iter % m_maRate == 1;
   
   if (runAdaptation) {
+    /// here you need an extra Newton loop while (std::sqrt(m_norm) > eps)
+    
     mfaFile << "Computing gradient phi" << endl; mfaFile.flush();
     computeGradientPhi();
     mfaFile << "Computing spring constants" << endl; mfaFile.flush();
@@ -980,6 +984,8 @@ void MeshFittingAlgorithm<MODEL>::execute()
     updateNodePositions();
     mfaFile << "Synchronizing nodes and recomputing mesh data" << endl; mfaFile.flush();
     syncNodesAndRecomputeMeshData();
+    
+    ///
   }
   
   bool runShockSensor = m_ssRate > 0 && iter % m_ssRate == 1;
