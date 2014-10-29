@@ -458,7 +458,7 @@ sub find_modules()
 
      if ( $#array_extramlist != $#array_extramurl ) 
      {
-       print my_colored("\nERROR: <extra_mods_list> must have same number of entries as <extra_mods_url> in coolfluid.conf\n",$SECTIONCOLOR); 
+       print my_colored("\nERROR: <extra_mods_list> must have same number of entries as <extra_mods_url> in coolfluid.conf\n",$ERRORCOLOR); 
        exit(0);
      }
 
