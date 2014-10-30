@@ -107,8 +107,8 @@ NavierStokesComputeAeroDG.hh
 NavierStokesComputeAeroDG.cxx
 )
 
-LIST ( APPEND AeroCoefDG_requires_mods DiscontGalerkin )
-LIST ( APPEND AeroCoefDG_libs DiscontGalerkin NavierStokes Framework )
+LIST ( APPEND AeroCoefDG_requires_mods DiscontGalerkin NavierStokes )
+LIST ( APPEND AeroCoefDG_cflibs DiscontGalerkin NavierStokes Framework )
 CF_ADD_PLUGIN_LIBRARY ( AeroCoefDG )
 
 ##################################################################

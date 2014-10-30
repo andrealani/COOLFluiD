@@ -194,7 +194,7 @@ void ParCFmeshBinaryFileWriter::writeToFileStream
 
   // last group is writers group
   PE::Group& wg = PE::getGroup(0);
-  char* fileName = const_cast<char*>(filepath.c_str()); 
+  char* fileName = const_cast<char*>(filepath.string().c_str()); 
   
   // all writers open the file for the second or more time
   if (_isWriterRank) {

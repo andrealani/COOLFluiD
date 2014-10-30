@@ -1,4 +1,4 @@
-﻿#ifndef COOLFluiD_RadiativeTransfer_ParticleTracking_hh
+#ifndef COOLFluiD_RadiativeTransfer_ParticleTracking_hh
 #define COOLFluiD_RadiativeTransfer_ParticleTracking_hh
 
 //////////////////////////////////////////////////////////////////////////////
@@ -92,4 +92,4 @@ protected: //data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_RadiativeTransfer_ComputeNonLocalParameters_hh
+#endif // COOLFluiD_RadiativeTransfer_ParticleTracking_hh
