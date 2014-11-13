@@ -674,10 +674,10 @@ protected: // data to use to interface FORTRAN77
   CFdouble _deltaP;
 
   /// Lagrange-Sonine computation option (polynom order???)
-  CFint _sonine;
+  int _sonine;
 
   /// Where to compute transport properties
-  CFint _imod;
+  int _imod;
 
   /// Small value for mole fractions to limit the composition with COMPOTOL2
   CFdouble _Xlim;
@@ -695,28 +695,28 @@ protected: // data to use to interface FORTRAN77
   EtaAlgo    _etaAlgo;
 
   /// flag telling if there are electrons
-  CFint NE;
+  int NE;
 
   /// what is this??? (Number of reactions? : Janos)
-  CFint NREA;
+  int NREA;
 
  /// Level at which start the Binaries Diffusion coefficients in WR2 
-  CFint IBINIJ;
+  int IBINIJ;
 
   /// lenght of work vector WR1
-  CFint LWR1;
+  int LWR1;
 
   /// lenght of work vector WR2
-  CFint LWR2;
+  int LWR2;
 
   /// lenght of work vector WR3
-  CFint LWR3;
+  int LWR3;
 
   /// lenght of work vector WI
-  CFint LWI;
+  int LWI;
 
   /// lenght of work vector WC
-  CFint LWC;
+  int LWC;
 
   /// Small disturbance
   CFdouble EPS;

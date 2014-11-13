@@ -43,11 +43,9 @@ static MPI_Datatype getMPIType(__type__* type)  \
 MPIDTYPE(double,MPI_DOUBLE)
 MPIDTYPE(float,MPI_FLOAT)
 MPIDTYPE(int,MPI_INT)
-MPIDTYPE(long,MPI_LONG)
-MPIDTYPE(short,MPI_SHORT)
 MPIDTYPE(unsigned int,MPI_UNSIGNED)
 MPIDTYPE(long unsigned int,MPI_UNSIGNED_LONG)
-MPIDTYPE(short unsigned int,MPI_UNSIGNED_SHORT)
+MPIDTYPE(long long int, MPI_LONG_LONG_INT)
 MPIDTYPE(char,MPI_CHAR)
 
 #undef MPIDTYPE

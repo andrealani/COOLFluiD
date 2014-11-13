@@ -102,20 +102,20 @@ public:
 
   /// Returns the list of ghost nodes (by processor rank) to be sent to
   /// another processor
-  const std::vector< std::vector< unsigned int > >&
+  const std::vector< std::vector< CFuint > >&
   getGhostSendList() const
   {
     return _globalPtr->GetGhostSendList();
   }
-
+  
   /// Returns the list of ghost nodes (by processor rank) to be received
   /// from another processor
-  const std::vector< std::vector< unsigned int > >&
+  const std::vector< std::vector< CFuint > >&
   getGhostReceiveList() const
   {
     return _globalPtr->GetGhostReceiveList();
   }
-
+  
   /// Build a continuous global mapping.
   /// Should be called after all points are added,
   /// and after buildMap is called

@@ -1454,7 +1454,7 @@ void ParCFmeshBinaryFileReader::readGeomEntList(MPI_File* fh)
   CFLogDebugMin("Rank " << m_myRank << " nbTRsAdded = " << nbTRsAdded << "\n");
   
   // Set some global info
-  SafePtr<vector<vector<vector<unsigned int> > > > trsGlobalIDs =
+  SafePtr<vector<vector<vector<CFuint> > > > trsGlobalIDs =
     MeshDataStack::getActive()->getGlobalTRSGeoIDs();
   (*trsGlobalIDs)[iTRS].resize(nbTRsAdded);
   
@@ -2307,8 +2307,8 @@ void ParCFmeshBinaryFileReader::createStatesAll(const vector<CFreal>& localState
 
 void ParCFmeshBinaryFileReader::setSendCountDispl(const std::vector<CFuint>& ranks,
 						  const CFuint stride,
-						  std::vector<CFint>& sendCount,
-						  std::vector<CFint>& sendDispl)
+						  std::vector<int>& sendCount,
+						  std::vector<int>& sendDispl)
 {
   sendDispl[ranks[0]] = 0;
   CFuint displ = 0;
@@ -2326,8 +2326,8 @@ void ParCFmeshBinaryFileReader::setSendCountDispl(const std::vector<CFuint>& ran
   
 //////////////////////////////////////////////////////////////////////
 
-void ParCFmeshBinaryFileReader::setRecvDispl(const std::vector<CFint>& recvCount,
-					     std::vector<CFint>& recvDispl)
+void ParCFmeshBinaryFileReader::setRecvDispl(const std::vector<int>& recvCount,
+					     std::vector<int>& recvDispl)
 {
   recvDispl[0] = 0;
   CFuint count = recvCount[0];
@@ -2357,22 +2357,22 @@ void ParCFmeshBinaryFileReader::getLocalData(const vector<CFreal>& buf,
   }
     
   // counts for data to send
-  vector<CFint> sendCount(m_nbProc, static_cast<CFuint>(0));
+  vector<int> sendCount(m_nbProc, static_cast<CFuint>(0));
   // counts for data to receive
-  vector<CFint> recvCount(m_nbProc, static_cast<CFuint>(0));
+  vector<int> recvCount(m_nbProc, static_cast<CFuint>(0));
   // displacements for data to send
-  vector<CFint> sendDispl(m_nbProc, static_cast<CFuint>(0));
+  vector<int> sendDispl(m_nbProc, static_cast<CFuint>(0));
   // displacements for data to receive
-  vector<CFint> recvDispl(m_nbProc, static_cast<CFuint>(0));
+  vector<int> recvDispl(m_nbProc, static_cast<CFuint>(0));
   
   // counts for data to send
-  vector<CFint> sendPtrCount(m_nbProc, static_cast<CFuint>(0));
+  vector<int> sendPtrCount(m_nbProc, static_cast<CFuint>(0));
   // counts for data to receive
-  vector<CFint> recvPtrCount(m_nbProc, static_cast<CFuint>(0));
+  vector<int> recvPtrCount(m_nbProc, static_cast<CFuint>(0));
   // displacements for data to send
-  vector<CFint> sendPtrDispl(m_nbProc, static_cast<CFuint>(0));
+  vector<int> sendPtrDispl(m_nbProc, static_cast<CFuint>(0));
   // displacements for data to receive
-  vector<CFint> recvPtrDispl(m_nbProc, static_cast<CFuint>(0));
+  vector<int> recvPtrDispl(m_nbProc, static_cast<CFuint>(0));
   
   // two total exchanges for IDs list
   // 1) process I send process J the IDs of the data that I needs from J 

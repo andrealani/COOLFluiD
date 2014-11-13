@@ -74,6 +74,7 @@ public:
                             const CFint onz,
                             const CFint* onnz,
                             const char* name = CFNULL) = 0;
+  
   /// Create a parallel block sparse matrix
   virtual void createParBAIJ(MPI_Comm comm,
                              const CFuint blockSize,

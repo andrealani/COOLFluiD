@@ -346,7 +346,7 @@ void Periodic3DMPI::setup()
       sdisplsWest[p] = sdisplsWest[p-1] + sendcountsWest[p-1];
     }
   }
-  vector<CFint> RecvDisWest(rdisplsWest);
+  vector<int> RecvDisWest(rdisplsWest);
   LastDisplacementWest = rdisplsWest[_n_P-1] + recvcountsWest[_n_P-1];
 
   // buil vector of processes for west face
@@ -394,7 +394,7 @@ void Periodic3DMPI::setup()
       sdisplsEast[p] = sdisplsEast[p-1] + sendcountsEast[p-1];
     }
   }
-  vector<CFint> RecvDisEast(rdisplsEast);
+  vector<int> RecvDisEast(rdisplsEast);
   LastDisplacementEast = rdisplsEast[_n_P-1] + recvcountsEast[_n_P-1];
 
   // buil vector of processes for east face

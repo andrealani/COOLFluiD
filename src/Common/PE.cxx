@@ -142,17 +142,17 @@ WorkerStatus::Type PE::getCurrentStatus()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void PE::createGroup(const std::vector<CFint>& ranks, const bool mapRank2Group) 
+void PE::createGroup(const std::vector<int>& ranks, const bool mapRank2Group) 
 {
-  const unsigned nranks = ranks.size();
+  const CFuint nranks = ranks.size();
   cf_assert(nranks > 0);
   
   Group* g = new Group();
   g->globalRanks.resize(nranks);
   
-  const CFint groupID = m_groups.size();
+  const int groupID = m_groups.size();
   // std::cout << "inserting ranks ";
-  for (unsigned i = 0; i < nranks; ++i) {
+  for (CFuint i = 0; i < nranks; ++i) {
     g->globalRanks[i] = ranks[i];
     // std::cout << ranks[i] << " ";
     if (mapRank2Group) {
@@ -166,7 +166,7 @@ void PE::createGroup(const std::vector<CFint>& ranks, const bool mapRank2Group)
   MPI_Group allGroup; 
   MPI_Comm_group(MPI_COMM_WORLD, &allGroup); 
   
-  CFint rank = 0;
+  int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
   MPI_Group_incl(allGroup, nranks, &g->globalRanks[0], &g->group); 
   MPI_Comm_create(MPI_COMM_WORLD, g->group, &g->comm);
@@ -176,7 +176,7 @@ void PE::createGroup(const std::vector<CFint>& ranks, const bool mapRank2Group)
   
   m_groups.push_back(g);
 }
-      
+    
 //////////////////////////////////////////////////////////////////////////////
 
   } // Common

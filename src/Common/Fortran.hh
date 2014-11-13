@@ -157,7 +157,7 @@ typedef logical fortran_logical_t;
 //////////////////////////////////////////////////////////////////////////////
 
   /// INTEGER type to interface with FORTRAN77
-  typedef CFint*         FINT;
+  typedef int*         FINT;
 
   /// DOUBLE type (array) to interface with FORTRAN77
   typedef CFdouble*      FDOUBLE;

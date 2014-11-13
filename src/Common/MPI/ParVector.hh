@@ -95,12 +95,12 @@ public: // functions
   
   /// Returns the list of ghost nodes (by processor rank) to be sent to
   /// another processor
-  const std::vector< std::vector< unsigned int > >& GetGhostSendList() const
+  const std::vector< std::vector< CFuint > >& GetGhostSendList() const
   {return m_pattern.GetGhostSendList();}
 
   /// Returns the list of ghost nodes (by processor rank) to be received
   /// from another processor
-  const std::vector< std::vector< unsigned int > >& GetGhostReceiveList() const
+  const std::vector< std::vector< CFuint > >& GetGhostReceiveList() const
   {return m_pattern.GetGhostReceiveList();}
   
   /// Build a continuous global mapping.

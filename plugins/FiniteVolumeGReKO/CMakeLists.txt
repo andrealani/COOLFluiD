@@ -23,7 +23,6 @@ WNavierStokesGReKO2DSourceTerm_Lang.hh
 #SubInletNSGReKO2DTtPtAlpha.hh
 )
 
-#LIST ( APPEND FiniteVolumeGReKO_cflibs FiniteVolume FiniteVolumeNavierStokes FiniteVolumeKOmega )
 LIST ( APPEND FiniteVolumeGReKO_cflibs NavierStokes GReKO FiniteVolume FiniteVolumeNavierStokes FiniteVolumeKOmega )
 LIST ( APPEND FiniteVolumeGReKO_requires_mods NavierStokes GReKO FiniteVolume FiniteVolumeNavierStokes FiniteVolumeKOmega )
 

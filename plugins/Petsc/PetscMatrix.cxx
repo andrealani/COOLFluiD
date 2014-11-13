@@ -37,7 +37,7 @@ PetscMatrix::~PetscMatrix()
 void PetscMatrix::createSeqAIJ(const CFint m,
                                const CFint n,
                                const CFint nz,
-                               const int* nnz,
+                               const CFint* nnz,
                                const char* name)
 {
   // creation of the matrix
@@ -54,7 +54,7 @@ void PetscMatrix::createSeqBAIJ(const CFuint blockSize,
                                 const CFint m,
                                 const CFint n,
                                 const CFint nz,
-                                const int* nnz,
+                                const CFint* nnz,
                                 const char* name)
 {
   CF_CHKERRCONTINUE(MatCreate(PETSC_COMM_SELF, &m_mat));
@@ -115,9 +115,9 @@ void PetscMatrix::createParAIJ(MPI_Comm comm,
                                const CFint M,
                                const CFint N,
                                const CFint dnz,
-                               const int* dnnz,
+                               const CFint* dnnz,
                                const CFint onz,
-                               const int* onnz,
+                               const CFint* onnz,
                                const char* name)
 {
  #if PETSC_VERSION_MINOR==4 
@@ -135,16 +135,16 @@ void PetscMatrix::createParAIJ(MPI_Comm comm,
 
 #ifdef CF_HAVE_MPI
 void PetscMatrix::createParBAIJ(MPI_Comm comm,
-        const CFuint blockSize,
-        const CFint m,
-        const CFint n,
-        const CFint M,
-        const CFint N,
-        const CFint dnz,
-        const int* dnnz,
-        const CFint onz,
-        const int* onnz,
-        const char* name)
+				const CFuint blockSize,
+				const CFint m,
+				const CFint n,
+				const CFint M,
+				const CFint N,
+				const CFint dnz,
+				const CFint* dnnz,
+				const CFint onz,
+				const CFint* onnz,
+				const char* name)
 {
   CF_CHKERRCONTINUE(MatCreate(comm, &m_mat));
   CF_CHKERRCONTINUE(MatSetSizes(m_mat, m, n, M, N));

@@ -44,7 +44,7 @@ void ArcJetInsulatedWall<BASE>::setGhostState
   using namespace COOLFluiD::MathTools;
   
   const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
-  const CFuint nbPrevEqs = totalNbEqs - 4;
+  // const CFuint nbPrevEqs = totalNbEqs - 4;
   const CFuint nbEqs = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
   const CFuint eqSSID = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getEqSS();
   
@@ -64,7 +64,7 @@ void ArcJetInsulatedWall<BASE>::setGhostState
     const CFuint iBz = innerState->size() - 2;
     const CFuint iphi = innerState->size() - 1;
     
-    const CFreal rRatio = rI/ghostState->getCoordinates()[YY];
+    // const CFreal rRatio = rI/ghostState->getCoordinates()[YY];
     // cf_assert(rRatio > 0.);
     
     (*ghostState)[iBx] =   (*innerState)[iBx];

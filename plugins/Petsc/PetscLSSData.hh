@@ -255,10 +255,10 @@ private:
 
   /// rhs vector
   PetscVector _bVec;
-
+  
   /// matrix
   PetscMatrix _aMat;
-
+  
   /// preconditioner matrix
   PetscMatrix _aPrecoMat;
 

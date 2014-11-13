@@ -138,7 +138,7 @@ void ParMetis::doPartition(PartitionerData& pData)
     //    for (int i=0; i<pData.part->size(); ++i) std::cout << " " << (*pData.part)[i];
     //    std::cout << "\n" << std::flush; sleep(1);
   }
-
+    
   CFLogNotice("ParMetis: ncommonnodes = " << ncommonnodes << "\n");
   MetisTimer.start ();
   PartitionerData::IndexT nbPartitions = (PartitionerData::IndexT)CommSize;

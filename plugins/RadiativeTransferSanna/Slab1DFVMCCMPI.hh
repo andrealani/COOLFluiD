@@ -185,16 +185,16 @@ private:
   std::vector<CFint> m_destIDsToRecv;
   
   /// array storing the data count to send
-  std::vector<CFint> m_sendCount;
+  std::vector<int> m_sendCount;
   
   /// array storing the displacement of the data to send
-  std::vector<CFint> m_sendDispl;
+  std::vector<int> m_sendDispl;
   
   /// array storing the data count to receive
-  std::vector<CFint> m_recvCount;
+  std::vector<int> m_recvCount;
   
   /// array storing the displacement of the data to receive
-  std::vector<CFint> m_recvDispl;
+  std::vector<int> m_recvDispl;
   
   /// maximum number of normal faces in the direction orthogonal to the wall
   CFuint m_maxNbNormalFaces;

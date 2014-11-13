@@ -19,6 +19,10 @@ ICPReactionTerm.hh
 ICPReactionTerm.ci
 )
 
+LIST ( APPEND ICP_requires_mods NavierStokes LTE )
+LIST ( APPEND ICP_cflibs Framework NavierStokes ICP LTE )
+CF_ADD_PLUGIN_LIBRARY ( ICP )
+
 LIST ( APPEND ICPNEQ_files
 ICPNEQ.hh
 ICPNEQ2DPvtToPivtTv.hh
@@ -38,14 +42,8 @@ ICPNEQPhysicalModel.ci
 ICPNEQPhysicalModel.cxx
 )
 
-LIST ( APPEND ICP_requires_mods NavierStokes )
-LIST ( APPEND ICP_cflibs Framework )
-LIST ( APPEND ICP_libs NavierStokes ICP LTE )
-
 LIST ( APPEND ICPNEQ_requires_mods NavierStokes ICP NEQ )
-LIST ( APPEND ICPNEQ_libs NavierStokes ICP NEQ )
-
-CF_ADD_PLUGIN_LIBRARY ( ICP )
+LIST ( APPEND ICPNEQ_cflibs Framework NavierStokes ICP NEQ )
 CF_ADD_PLUGIN_LIBRARY ( ICPNEQ )
 
 CF_WARN_ORPHAN_FILES()

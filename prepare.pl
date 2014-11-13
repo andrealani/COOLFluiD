@@ -143,7 +143,8 @@ my %default_options = (
     'mutationpp_librarydir' => "/usr/lib64",
     'mutationpp_includedir' => "/usr/include",
     'command'              => "",
-    'single_precision'     => 0
+    'single_precision'     => 0,
+    'with_longint'         => 0
 );
 
 # add skip default skip options
@@ -915,6 +916,7 @@ sub setup_cfgoptions()
   setup_option('allstatic',           'CF_ENABLE_STATIC');
   setup_option('warnings',            'CF_ENABLE_WARNINGS');
   setup_option('single_precision',    'CF_PRECISION_SINGLE');
+  setup_option('with_longint',        'CF_ENABLE_LONG');
 }
 
 #==========================================================================

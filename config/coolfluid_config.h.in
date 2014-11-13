@@ -93,5 +93,6 @@
   #endif
 #endif
 
+#cmakedefine CF_HAVE_LONG           // long unsigned int support
 
 #endif // !COOLFluiD_CFconfig_hh

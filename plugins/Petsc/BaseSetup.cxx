@@ -29,13 +29,12 @@ namespace COOLFluiD {
 /**
  * Monitor PETSc solver convergence
  */
-CFint monitorPetscConvergence(KSP ksp, CFint it,
-			      CFdouble rnorm, void *ctx)
+int monitorPetscConvergence(KSP ksp, CFint it, CFdouble rnorm, void *ctx)
 {
   CFout << "PETSc Iter: " << it << " Norm: " << rnorm << "\n";
   return 0;
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 BaseSetup::BaseSetup(const std::string& name) :
@@ -103,18 +102,18 @@ void BaseSetup::setKSP()
   PC& pc = getMethodData().getPreconditioner();
   KSP& ksp = getMethodData().getKSP();
 
-  CFuint ierr = 0;
+  int ierr = 0;
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);
   CHKERRCONTINUE(ierr);
-
+  
   // set the pointer to the preconditioner
   ierr = KSPGetPC(ksp, &pc);
   CHKERRCONTINUE(ierr);
-
+  
   // set the type of preconditioner
   ierr = PCSetType(pc, getMethodData().getPCType());
   CHKERRCONTINUE(ierr);
-
+  
   ierr = PCFactorSetLevels(pc, getMethodData().getILULevels());
   CHKERRCONTINUE(ierr);
 

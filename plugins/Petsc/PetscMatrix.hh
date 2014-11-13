@@ -55,11 +55,11 @@ public: // functions
    * @param nnz exact number of non-zero entries in the diagonal portion of the local matrix for each row
    */
   void createSeqAIJ(const CFint m,
-        const CFint n,
-        const CFint nz,
-        const int* nnz,
-        const char* name = CFNULL);
-
+		    const CFint n,
+		    const CFint nz,
+		    const CFint* nnz,
+		    const char* name = CFNULL);
+  
   /**
    * Create a sequential block sparse matrix
    * @param blocksize size of the block matrix
@@ -69,20 +69,20 @@ public: // functions
    * @param nnz exact number of non-zero entries in the diagonal portion of the local matrix for each row
    */
   void createSeqBAIJ(const CFuint blockSize,
-         const CFint m,
-         const CFint n,
-         const CFint nz,
-         const int* nnz,
-         const char* name = CFNULL);
-
-	/**
-	* Create a sequential Jacobian-Free matrix
-	* @param m number of Rows of the matrix
-	* @param n number of Columns of the matrix
-	* @param M number of Rows of the matrix - same as "m" - (different only in parallel)
-	* @param N number of Columns of the matrix - same as "n" - (different only in parallel)
-	* @param ctx pointer to data needed for the Jacobian-Free method
-	*/
+		     const CFint m,
+		     const CFint n,
+		     const CFint nz,
+		     const CFint* nnz,
+		     const char* name = CFNULL);
+  
+  /**
+   * Create a sequential Jacobian-Free matrix
+   * @param m number of Rows of the matrix
+   * @param n number of Columns of the matrix
+   * @param M number of Rows of the matrix - same as "m" - (different only in parallel)
+   * @param N number of Columns of the matrix - same as "n" - (different only in parallel)
+   * @param ctx pointer to data needed for the Jacobian-Free method
+   */
   void createSeqJFMat(const CFint m,
 		      const CFint n,
 		      const CFint M,
@@ -108,9 +108,9 @@ public: // functions
 		    const CFint M,
 		    const CFint N,
 		    const CFint dnz,
-		    const int* dnnz,
+		    const CFint* dnnz,
 		    const CFint onz,
-		    const int* onnz,
+		    const CFint* onnz,
 		    const char* name = CFNULL);
 #endif
   
@@ -134,13 +134,13 @@ public: // functions
 		     const CFint M,
 		     const CFint N,
 		     const CFint dnz,
-		     const int* dnnz,
+		     const CFint* dnnz,
 		     const CFint onz,
-		     const int* onnz,
+		     const CFint* onnz,
 		     const char* name = CFNULL);
 #endif
-
-	/**
+  
+  /**
 	* Create a parallel Jacobian-Free matrix
 	* @param comm MPI communicator
 	* @param m local number of Rows of the matrix
@@ -262,10 +262,10 @@ public: // functions
    * Get a list of values
    */
   void getValues(const CFuint m,
-     const CFint* im,
-     const CFuint n,
-     const CFint* in,
-     CFreal* values)
+		 const CFint* im,
+		 const CFuint n,
+		 const CFint* in,
+		 CFreal* values)
   {
     CF_CHKERRCONTINUE(MatGetValues(m_mat, m, im, n, in, values));
   }
@@ -275,16 +275,16 @@ public: // functions
    * Set a row, diagonal and off-diagonals separate values 
    */
   virtual void setRow(CFuint row, CFreal diagval, CFreal offdiagval){
-    int ncols,*cols;
+    CFint ncols,*cols;
     CF_CHKERRCONTINUE(MatGetRow(m_mat,row,&ncols,(const PetscInt**)&cols,0));
     PetscScalar *val=new PetscScalar[ncols],dv=(PetscScalar)diagval,odv=(PetscScalar)offdiagval;
-    for(int i=0; i<ncols; i++) val[i] = ((int)row==cols[i]) ? dv : odv;
+    for(CFint i=0; i<ncols; i++) val[i] = ((CFint)row==cols[i]) ? dv : odv;
     CF_CHKERRCONTINUE(MatSetValues(m_mat,1,(const PetscInt*)&row,ncols,cols,val,INSERT_VALUES));
     finalAssembly();
     CF_CHKERRCONTINUE(MatRestoreRow(m_mat,row,&ncols,(const PetscInt**)&cols,0));
     delete(val);
   }
-
+  
   /**
    * Set the diagonal
    */

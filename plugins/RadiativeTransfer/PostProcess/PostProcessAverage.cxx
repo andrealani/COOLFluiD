@@ -191,7 +191,7 @@ void PostProcessAverage::runPostProcess(DataHandle<CFreal> dataVector){
 
 
   //send all tuples to process 0 to be stored in a common file
-  vector<CFint> nbsElems, disps;
+  vector<int> nbsElems, disps;
   
   nbsElems.resize(nbProcesses,0);
   disps.resize(nbProcesses,0);

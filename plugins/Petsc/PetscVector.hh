@@ -174,20 +174,20 @@ public: // functions
     return m_vec;
   }
 	
-	/**
+  /**
    * Copy the vector into 
    */
-	void copyVec(Vec x)
-	{
-		VecCopy(x, m_vec);
-	}
-	
+  void copyVec(Vec x)
+  {
+    VecCopy(x, m_vec);
+  }
+  
   /**
    * Gets the local size of the Vector
    */
   CFuint getLocalSize() const
   {
-    int size = 0;
+    CFint size = 0;
     CF_CHKERRCONTINUE(VecGetLocalSize(m_vec, &size));
     return static_cast<CFuint>(size);
   }
@@ -197,7 +197,7 @@ public: // functions
    */
   CFuint getGlobalSize() const
   {
-    int size = 0;
+    CFint size = 0;
     CF_CHKERRCONTINUE(VecGetSize(m_vec, &size));
     return static_cast<CFuint>(size);
   }

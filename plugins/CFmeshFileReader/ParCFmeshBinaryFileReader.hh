@@ -266,12 +266,12 @@ private: // member functions
   /// Set send counts and displacements
   void setSendCountDispl(const std::vector<CFuint>& ranks,
 			 const CFuint stride,
-			 std::vector<CFint>& sendCount,
-			 std::vector<CFint>& sendDispl);
+			 std::vector<int>& sendCount,
+			 std::vector<int>& sendDispl);
   
   /// Set receive displacements
-  void setRecvDispl(const std::vector<CFint>& recvCount,
-		    std::vector<CFint>& recvDispl);
+  void setRecvDispl(const std::vector<int>& recvCount,
+		    std::vector<int>& recvDispl);
   
   /// Get the local (nodes or states) data
   void getLocalData(const std::vector<CFreal>& buf,

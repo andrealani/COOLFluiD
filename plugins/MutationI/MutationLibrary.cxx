@@ -581,7 +581,7 @@ void MutationLibrary:: setLibrarySequentially()
   WR1 = new CFdouble[LWR1];
   WR2 = new CFdouble[LWR2];
   WR3 = new CFdouble[LWR3];
-  WI  = new CFint[LWI];
+  WI  = new int[LWI];
   WC  = new char[LWC*4+1];
   FIJ = new CFdouble[_NS*(_NS-1)/2];
 
@@ -605,7 +605,7 @@ void MutationLibrary:: setLibrarySequentially()
   DF =  new CFdouble[_NS];
   JDIF =  new CFdouble[_NS];
 
-  for(CFint i = 0; i < _NS; ++i) {
+  for(int i = 0; i < _NS; ++i) {
     X[i] = 1.0;
     Y[i] = 1.0;
   }
@@ -649,7 +649,7 @@ void MutationLibrary:: setLibrarySequentially()
   _CPINT = new CFdouble[_NS];
 
   _CHIH = new CFdouble[_NS];
-  _CHARGE = new CFint[_NS];
+  _CHARGE = new int[_NS];
 
   _TVIBEPS1 = new CFdouble[2];
   _TVIBEPS  = new CFdouble[2];
@@ -690,7 +690,7 @@ void MutationLibrary:: setLibrarySequentially()
 
   // formation enthalpy per unity mass
   FORTRAN_NAME(enthalpyform)(WR1, &LWR1, _HFORM);
-  for (CFint i = 0; i < _NS; ++i) {
+  for (int i = 0; i < _NS; ++i) {
     _extraData.enthalpyForm[i] = _HFORM[i]/MOLARMASSP[i];
   }
 
@@ -699,7 +699,7 @@ void MutationLibrary:: setLibrarySequentially()
   for (CFuint i = 0; i < _moleculesIDs.size(); ++i) {
     _flagMoleculesIDs[_moleculesIDs[i]] = true;
   }
-  for (CFint i = 0; i < _NS; ++i) {
+  for (int i = 0; i < _NS; ++i) {
     _atomicityCoeff[i] = (_flagMoleculesIDs[i]) ? 2.5 : 1.5;
   }
 
@@ -1088,7 +1088,7 @@ void MutationLibrary::lambdaVibNEQ(CFreal& temperature,
 	//_CPVIB[2]   = (_HVIBRP[3] - _HVIBR[3]) / (tempEps);
       }
       else if (_nbTvib == 1) {
-	for (CFint is = 0; is <_NS; ++is) {
+	for (int is = 0; is <_NS; ++is) {
 	  _CPINT[is] = (_HVIBRP[is] - _HVIBR[is]) / (_TVIBEPS[0]);
         }
       }
@@ -1117,7 +1117,7 @@ void MutationLibrary::lambdaVibNEQ(CFreal& temperature,
 	//_CPVIB[2]   = (_HVIBRP[3] - _HVIBR[3]) / (tempEps);
       }
       else if (_nbTvib == 1) {
-	for (CFint is = 0; is <_NS; ++is) {
+	for (int is = 0; is <_NS; ++is) {
 	  _CPINT[is] = (_HVIBRP[is] - _HVIBR[is]) / (_TVIBEPS[0]);
         }
       }
@@ -1175,7 +1175,7 @@ void MutationLibrary::lambdaVibNEQ(CFreal& temperature,
     else {
       lambdaTrRo = lambdaRot + lambdaTh;
     }
-    for (CFint i = 0; i < _nbTvib; i++ ){
+    for (int i = 0; i < _nbTvib; i++ ){
       lambdaVib[i] = _LAMBDAVIB[i];
     }
   }
@@ -1389,7 +1389,7 @@ void MutationLibrary::frozenGammaAndSoundSpeed(CFdouble& temp,
  //  CFreal numBeta = 0.;
  //  CFreal denBeta = 0.;
  //  const CFuint start = (presenceElectron()) ? 1 : 0;
- //  for (CFint i = start; i < _NS; ++i) {
+ //  for (int i = start; i < _NS; ++i) {
  //    const CFreal sigmai = Y[i]/MOLARMASSP[i];
  //    numBeta += sigmai;
  //    denBeta += sigmai*_atomicityCoeff[i];
@@ -1428,7 +1428,7 @@ void MutationLibrary::setComposition(CFdouble& temp,
 {
   if (!_useLookUpTable) {
     // initialization of the molar fractions
-    for(CFint i = 0; i < _NS; ++i) {
+    for(int i = 0; i < _NS; ++i) {
       Xini[i] = 1.0;
     }
 
@@ -1437,14 +1437,14 @@ void MutationLibrary::setComposition(CFdouble& temp,
     FORTRAN_NAME(composition)(WR1,&LWR1,WI,&LWI,&temp,&pressure,Xn,Xini,X);
 
     if (x != CFNULL) {
-      for(CFint i = 0; i < _NS; ++i) {
+      for(int i = 0; i < _NS; ++i) {
 	(*x)[i] = static_cast<CFreal>(X[i]);
       }
     }
     
     // set mass fractions which will be used later
     CFreal massTot = 0.;
-    for (CFint is = 0; is < _NS; ++is) {
+    for (int is = 0; is < _NS; ++is) {
       if (X[is] > 1.00000000001) {
 	cout << "X[" << is << "] = " << X[is] << endl;
 	abort();
@@ -1454,7 +1454,7 @@ void MutationLibrary::setComposition(CFdouble& temp,
       Y[is] = mm;
     }
     
-    for (CFint is = 0; is < _NS; ++is) {
+    for (int is = 0; is < _NS; ++is) {
       Y[is] /= massTot;
     }    
   }
@@ -1485,7 +1485,7 @@ void MutationLibrary::setDensityEnthalpyEnergy(CFdouble& temp,
     // sum up all the internal energies for each species
     dhe[1] = 0.0;
     dhe[2] = 0.0;
-    for(CFint i = 0; i < _NS; ++i) {
+    for(int i = 0; i < _NS; ++i) {
       dhe[1] += X[i]*_HTOTAL[i];
       dhe[2] += X[i]*(_HTOTAL[i] - pOvRhoMM);
     }
@@ -1534,7 +1534,7 @@ void MutationLibrary::setDensityEnthalpyEnergy(CFdouble& temp,
     // sum up all the internal energies for each species
     dhe = 0.0;
 
-    for(CFint i = 0; i < _NS; ++i) {
+    for(int i = 0; i < _NS; ++i) {
       dhe[1] += X[i]*_HTOTAL[i];
       dhe[2] += X[i]*(_HTOTAL[i] - pOvRhoMM);
       if (_nbTvib == 1) {
@@ -1569,7 +1569,7 @@ void MutationLibrary::setDensityEnthalpyEnergy(CFdouble& temp,
     // sum up all the internal energies for each species
     dhe = 0.0;
 
-    for(CFint i = 0; i < _NS; ++i) {
+    for(int i = 0; i < _NS; ++i) {
       dhe[1] += X[i]*_HTOTAL[i];
       dhe[2] += X[i]*(_HTOTAL[i] - pOvRhoMM);
 
@@ -1598,7 +1598,7 @@ void MutationLibrary::setDensityEnthalpyEnergy(CFdouble& temp,
       cf_assert(_nbTvib == 1);
       _extraData.dEdT = 0.0;
       // store the roto-translational energy (plus formation enthalpy)
-      for(CFint i = 0; i < _NS; ++i) {
+      for(int i = 0; i < _NS; ++i) {
 	_extraData.energyTr[i] = (_HTRANS[i] - pOvRhoMM + _HROT[i] + _HFORM[i])/MOLARMASSP[i];
 	_extraData.dRhoEdRhoi[i] = _extraData.energyTr[i];
 	_extraData.energyVib[i] = _HVIBR[i]/MOLARMASSP[i];
@@ -1618,7 +1618,7 @@ void MutationLibrary::setDensityEnthalpyEnergy(CFdouble& temp,
       CFdouble startTv = _TVARRAY[0];
       _TVARRAY[0] = startTv*(1.+EPS);
       CFdouble epsTv = startTv*EPS;
-      for (CFint is = 0; is < _NS; ++is) {
+      for (int is = 0; is < _NS; ++is) {
 	_tmp[is] = _HVIBR[is];
       }
 
@@ -1634,7 +1634,7 @@ void MutationLibrary::setDensityEnthalpyEnergy(CFdouble& temp,
       }
 
       _extraData.dEvTv = 0.0;
-      for(CFint is = 0; is < _NS; ++is) {
+      for(int is = 0; is < _NS; ++is) {
 	_extraData.dEvTv += X[is]*(_HVIBR[is] - _tmp[is]);
       }
       _extraData.dEvTv /= (epsTv*MMass);
@@ -1645,19 +1645,19 @@ void MutationLibrary::setDensityEnthalpyEnergy(CFdouble& temp,
 /*   if (temp > 8000.0) {
   cout << "temp --> " << temp << endl;
   cout << "pressure --> " << pressure << endl;
-  for(CFint i = 0; i < _NS; ++i) {
+  for(int i = 0; i < _NS; ++i) {
     cout << "HTOTA --> " << _HTOTAL[i] << endl;
   }
-  for(CFint i = 0; i < _NS; ++i) {
+  for(int i = 0; i < _NS; ++i) {
     cout << "HTRANS --> " << _HTRANS[i] << endl;
   }
-  for(CFint i = 0; i < _NS; ++i) {
+  for(int i = 0; i < _NS; ++i) {
     cout << "HELECT --> " << _HELECT[i] << endl;
   }
-  for(CFint i = 0; i < _NS; ++i) {
+  for(int i = 0; i < _NS; ++i) {
     cout << "HVIBR --> " << _HVIBR[i] << endl;
   }
-  for(CFint i = 0; i < _NS; ++i) {
+  for(int i = 0; i < _NS; ++i) {
     cout << "HFORM --> " << _HFORM[i] << endl;
     cout << "MOLARMASS --> " << MOLARMASSP[i] << endl;
   }
@@ -1689,7 +1689,7 @@ CFdouble MutationLibrary::density(CFdouble& temp,
 
 void MutationLibrary::setSpeciesMolarFractions(const RealVector& xs)
 {
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     X[is] = xs[is];
      if (X[is] < 0.0) X[is] = 0.0;
     if (X[is] > 1.00000000001) {
@@ -1751,7 +1751,7 @@ CFdouble MutationLibrary::energy(CFdouble& temp,
 
     // sum up all the internal energies for each species
     CFdouble intEnergy = 0.0;
-    for(CFint i = 0; i < _NS; ++i) {
+    for(int i = 0; i < _NS; ++i) {
       intEnergy += X[i]*_ETOTAL[i];
     }
     return intEnergy /= MMass;
@@ -1781,7 +1781,7 @@ CFdouble MutationLibrary::enthalpy(CFdouble& temp,
 
     // sum up all the internal energies for each species
     CFdouble h = 0.0;
-    for(CFint i = 0; i < _NS; ++i) {
+    for(int i = 0; i < _NS; ++i) {
       h += X[i]*_HTOTAL[i];
     }
     return h /= MMass;
@@ -1795,7 +1795,7 @@ CFdouble MutationLibrary::enthalpy(CFdouble& temp,
 
 void MutationLibrary::setElemFractions(const RealVector& yn)
 {
-  for (CFint ic = 0; ic < _NC; ++ic) {
+  for (int ic = 0; ic < _NC; ++ic) {
     Yn[ic] = yn[ic];
 
     if (!(Yn[ic] >= 0.0 && Yn[ic] <= 1.0)) {
@@ -1819,7 +1819,7 @@ void MutationLibrary::setElementXFromSpeciesY(const RealVector& ys)
   cf_assert(_NC == 2);
 
   CFreal massTot = 0.;
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     if (ys[is] > 1.00000000001) {
       // cout << "ys[is] = " << ys[is] << endl;
       // abort();
@@ -1831,7 +1831,7 @@ void MutationLibrary::setElementXFromSpeciesY(const RealVector& ys)
   }
 
   massTot = 1./massTot;
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     X[is] *= massTot;
   }
 
@@ -1847,7 +1847,7 @@ void MutationLibrary::setElectronFraction(RealVector& ys)
 
   // charge neutrality: xEl = sum(xIon)
   CFdouble yEl = 0.0;
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     if (_CHARGE[is] > 0) {
       yEl += ys[is] / MOLARMASSP[is];
     }
@@ -1866,7 +1866,7 @@ void MutationLibrary::setSpeciesFractions(const RealVector& ys)
     setElectronFraction(const_cast<RealVector&>(ys));
   }
 
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     Y[is] = ys[is];
 
     if (Y[is] < 0.0) Y[is] = 0.0;
@@ -1888,7 +1888,7 @@ void MutationLibrary::getSpeciesMolarFractions
 (const RealVector& ys, RealVector& xs)
 {
   CFreal massTot = 0.;
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     if (ys[is] > 1.00000000001) {
       //cout << "ys[is] = " << ys[is] << endl;
       //abort();
@@ -1900,7 +1900,7 @@ void MutationLibrary::getSpeciesMolarFractions
   }
   xs *= 1./massTot;
 
-  //   for (CFint is = 0; is < _NS; ++is) {
+  //   for (int is = 0; is < _NS; ++is) {
   //     Y[is] = ys[is];
 
   //     if (Y[is] < 0.0) Y[is] = 0.0;
@@ -1913,7 +1913,7 @@ void MutationLibrary::getSpeciesMolarFractions
   //   // Fills X according to Y
   //   FORTRAN_NAME(specmasstomolfrac)(WR1, &LWR1, WI, &LWI, Y, X);
 
-  //   for (CFint is = 0; is < _NS; ++is) {
+  //   for (int is = 0; is < _NS; ++is) {
   //     xs[is] = X[is];
   //   }
 }
@@ -1924,7 +1924,7 @@ void MutationLibrary::getSpeciesMassFractions
 (const RealVector& xs, RealVector& ys)
 {
   CFreal massTot = 0.;
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     if (xs[is] > 1.00000000001) {
       cout << "xs[" << is << "] = " << xs[is] << endl;
       abort();
@@ -1942,7 +1942,7 @@ void MutationLibrary::getSpeciesMassFractions
 
 void MutationLibrary::getSpeciesMassFractions(RealVector& ys)
 {
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     ys[is] = Y[is];
   }
 }
@@ -1981,10 +1981,10 @@ void MutationLibrary::getTransportCoefs(CFdouble& temp,
 			  LAMBDAEL, ELDIFCOEF, ELTDIFCOEF);
 
   // Copying non scalar data
-  for (CFint ic = 0; ic < _NC; ++ic) {
+  for (int ic = 0; ic < _NC; ++ic) {
     lambdael[ic] = LAMBDAEL[ic];
     eltdifcoef[ic] = ELTDIFCOEF[ic];
-    for (CFint jc = 0; jc < _NC; ++jc) {
+    for (int jc = 0; jc < _NC; ++jc) {
       // Careful because C++ and Fortran label matrices differently!
       eldifcoef(ic,jc) = ELDIFCOEF[jc*_NC+ic];
     }
@@ -2006,11 +2006,11 @@ void MutationLibrary::getMassProductionTerm(CFdouble& temperature,
     // Limit the mass composition of species !!!
     CFdouble YLIM = 1.0e-15;
     // Flag to Fortran
-    // CFint getJacobian = flagJac ? 1 : 0;
+    // int getJacobian = flagJac ? 1 : 0;
     CFdouble temp = max(_TminFix, temperature);
 
     // Fill species mass fractions
-    for (CFint is = 0; is < _NS; ++is) {
+    for (int is = 0; is < _NS; ++is) {
       Y[is] = ys[is];
 
       if (Y[is] < 0.0) Y[is] = 0.0;
@@ -2053,7 +2053,7 @@ void MutationLibrary::getMassProductionTerm(CFdouble& temperature,
     }
 
     // Returning the reaction rates
-    for (CFint is = 0; is < _NS; ++is) {
+    for (int is = 0; is < _NS; ++is) {
       omega[is] = _factorOmega*OMEGA[is];
     }
     
@@ -2064,13 +2064,13 @@ void MutationLibrary::getMassProductionTerm(CFdouble& temperature,
       CFuint NbEqu = jacobian.nbRows();
       cf_assert ( jacobian.nbCols() == NbEqu );
       CFuint NbEuler = NbEqu - _NS;
-      for (CFint is = 0; is < _NS; ++is) {
+      for (int is = 0; is < _NS; ++is) {
 	// Pressure contribution
 	jacobian(NbEuler+is,0) = DWDP[is];
 	// Temperature contribution
 	jacobian(NbEuler+is,NbEuler-1) = DWDT[is];
 	// Species mass fractions contribution
-	for (CFint js = 0; js < _NS; ++js) {
+	for (int js = 0; js < _NS; ++js) {
 	  // Careful because C++ and Fortran label matrices differently!
 	  jacobian(NbEuler+is,NbEuler+js) = DWDYI[js*_NS+is];
 	}
@@ -2079,7 +2079,7 @@ void MutationLibrary::getMassProductionTerm(CFdouble& temperature,
   }
   else {
     // Returning the reaction rates
-    for (CFint is = 0; is < _NS; ++is) {
+    for (int is = 0; is < _NS; ++is) {
       omega[is] = 0.0;
     }
   }
@@ -2146,12 +2146,12 @@ void MutationLibrary::getRhoUdiff(CFdouble& temperature,
 
   // Set driving forces as gradients of molar fractions
   CFreal normMMassGradient = 0.0;
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     normMMassGradient += normConcGradients[is] / MOLARMASSP[is];
   }
   normMMassGradient *= -MMass*MMass;
 
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     DF[is] = (MMass*normConcGradients[is] + Y[is]*normMMassGradient) /
       MOLARMASSP[is];
   }
@@ -2166,7 +2166,7 @@ void MutationLibrary::getRhoUdiff(CFdouble& temperature,
     //FORTRAN_NAME(smneutsut)(WR1, &LWR1, WR2, &LWR2, XTOL, &ND, DF, FIJ, JDIF);
   }
 
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     rhoUdiff[is] = JDIF[is];
   }
 
@@ -2201,8 +2201,8 @@ void MutationLibrary::getDij_fick(RealVector& dx,
  
   // First we fill the matrix of the binary diffusion coefficients
   CFuint ij;
-  for (CFint is = 1; is < _NS+1; ++is) {
-    for (CFint js = 1; js < _NS+1; ++js) {
+  for (int is = 1; is < _NS+1; ++is) {
+    for (int js = 1; js < _NS+1; ++js) {
           ij = ((is-1)*(2*_NS-is)+2*js)/2;
           Dij(is-1,js-1) = WR2[IBINIJ+ij-1] /ND;
           
@@ -2218,7 +2218,7 @@ void MutationLibrary::getDij_fick(RealVector& dx,
     CFreal sum = 0.0;
     if (_NS == 5){
       if (X[0] != 0.0){
-	for (CFint js = 1; js < _NS; ++js)
+	for (int js = 1; js < _NS; ++js)
 	  {
 	    sum += (X[js]/Dij(0,js));
 	  }
@@ -2227,7 +2227,7 @@ void MutationLibrary::getDij_fick(RealVector& dx,
       }
       
       else if (X[1] != 0.0){
-	for (CFint js = 0; js < _NS; ++js)
+	for (int js = 0; js < _NS; ++js)
 	  { if (js != 1)
 	      sum += (X[js]/Dij(1,js));
 	  }
@@ -2237,7 +2237,7 @@ void MutationLibrary::getDij_fick(RealVector& dx,
       }
       
       else if (X[2] != 0.0){
-	for (CFint js = 0; js < _NS; ++js)
+	for (int js = 0; js < _NS; ++js)
 	  {	if (js != 2)
 	      sum += (X[js]/Dij(2,js));
 	  }
@@ -2247,7 +2247,7 @@ void MutationLibrary::getDij_fick(RealVector& dx,
       }
     
       else if(X[3] != 0.0){
-	for (CFint js = 0; js < _NS; ++js){
+	for (int js = 0; js < _NS; ++js){
 	  if (js != 2)
 	    sum += (X[js]/Dij(3,js));
 	}
@@ -2257,7 +2257,7 @@ void MutationLibrary::getDij_fick(RealVector& dx,
       }
 	
       else if(X[4] != 0.0){
-	for (CFint js = 0; js < _NS; ++js){
+	for (int js = 0; js < _NS; ++js){
 	  sum += (X[js]/Dij(4,js));
 	}
 	sum *= X[4];
@@ -2271,7 +2271,7 @@ void MutationLibrary::getDij_fick(RealVector& dx,
     
     else if (_NS==11 ){ 
 if (X[1] != 0.0){
-	for (CFint js = 0; js < _NS; ++js)
+	for (int js = 0; js < _NS; ++js)
 	  { if (js != 1)
 	      sum += (X[js]/Dij(1,js));
 	  }
@@ -2281,7 +2281,7 @@ if (X[1] != 0.0){
       }
       
       else if (X[2] != 0.0){
-	for (CFint js = 0; js < _NS; ++js)
+	for (int js = 0; js < _NS; ++js)
 	  {	if (js != 2)
 	      sum += (X[js]/Dij(2,js));
 	  }
@@ -2291,7 +2291,7 @@ if (X[1] != 0.0){
       }
     
       else if(X[3] != 0.0){
-	for (CFint js = 0; js < _NS; ++js){
+	for (int js = 0; js < _NS; ++js){
 	  if (js != 3)
 	    sum += (X[js]/Dij(3,js));
 	}
@@ -2301,7 +2301,7 @@ if (X[1] != 0.0){
       }
 	
       else if(X[4] != 0.0){
-	for (CFint js = 0; js < _NS; ++js){
+	for (int js = 0; js < _NS; ++js){
 	   if (js != 4)
 	     sum += (X[js]/Dij(4,js));
 	}
@@ -2310,7 +2310,7 @@ if (X[1] != 0.0){
 	
       }
       else if(X[5] != 0.0){
-	for (CFint js = 0; js < _NS; ++js){
+	for (int js = 0; js < _NS; ++js){
 	  if (js != 5)
 	    sum += (X[js]/Dij(5,js));
 	}
@@ -2319,7 +2319,7 @@ if (X[1] != 0.0){
 	
       }
       // else if(X[6] != 0.0){
-      // 	for (CFint js = 0; js < _NS; ++js){
+      // 	for (int js = 0; js < _NS; ++js){
       // 	  if (js != 6)
       // 	  sum += (X[js]/Dij(6,js));
       // 	}
@@ -2328,7 +2328,7 @@ if (X[1] != 0.0){
 	
       // }
       // else if(X[7] != 0.0){
-      // 	for (CFint js = 0; js < _NS; ++js){
+      // 	for (int js = 0; js < _NS; ++js){
       // 	  if (js != 7)
       // 	  sum += (X[js]/Dij(7,js));
       // 	}
@@ -2337,7 +2337,7 @@ if (X[1] != 0.0){
 	
       // }
     //   else if(X[8] != 0.0){
-  // 	for (CFint js = 0; js < _NS; ++js){
+  // 	for (int js = 0; js < _NS; ++js){
   // 	  if (js != 8)
   // 	  sum += (X[js]/Dij(8,js));
   // 	}
@@ -2346,7 +2346,7 @@ if (X[1] != 0.0){
 	
   //     }
   //     else if(X[9] != 0.0){
-  // 	for (CFint js = 0; js < _NS; ++js){
+  // 	for (int js = 0; js < _NS; ++js){
   // 	  if (js != 9)
   // 	  sum += (X[js]/Dij(9,js));
   // 	}
@@ -2355,7 +2355,7 @@ if (X[1] != 0.0){
 	
   //     }
   // else if(X[10] != 0.0){
-  // 	for (CFint js = 0; js < _NS; ++js){
+  // 	for (int js = 0; js < _NS; ++js){
   // 	  if (js != 10)
   // 	  sum += (X[js]/Dij(10,js));
   // 	}
@@ -2370,7 +2370,7 @@ if (X[1] != 0.0){
    
     //    Diff_coeff = rho*(1.0 - yi)/sum;
     
-    for (CFint is = 0; is < _NS; ++is){
+    for (int is = 0; is < _NS; ++is){
       rhoUdiff[is] = -dx[is]*rho*(1.0 - yi)/sum;
     }
 }
@@ -2395,7 +2395,7 @@ void MutationLibrary::getSpeciesTotEnthalpies(CFdouble& temp,
 
     // MARCO ION Here we have to check that ENTHALPY VIB!!! CHANGE IT
     // THIS IS FOR TCNEQ
-    CFint sizeTvib = tVec.size();
+    int sizeTvib = tVec.size();
     if (_NS >= 5) {
       if (presenceElectron()) {
 	CFdouble TEL = _TVARRAY[0];  // I impose that the electronic temperature is equal
@@ -2446,7 +2446,7 @@ void MutationLibrary::getSpeciesTotEnthalpies(CFdouble& temp,
   }
 
   // returning the total enthalpies per unit mass of species
-  for(CFint i = 0; i < _NS; ++i) {
+  for(int i = 0; i < _NS; ++i) {
     hsTot[i] = (!_noElectEnergy) ? _HTOTAL[i] / MOLARMASSP[i] :
       (_HTOTAL[i] -_HELECT[i])/MOLARMASSP[i];
   }
@@ -2654,7 +2654,7 @@ void MutationLibrary::getMolarMasses(RealVector& mm)
   cf_assert(mm.size() == static_cast<CFuint>(_NS));
 
   // check the units
-  for (CFint i = 0; i < _NS; ++i) {
+  for (int i = 0; i < _NS; ++i) {
     mm[i] = MOLARMASSP[i];
   }
 }

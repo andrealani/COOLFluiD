@@ -104,8 +104,8 @@ void ParCFmeshBinaryFileWriter::setup()
   }
   
   // in reality ranks will be user-defined 
-  vector<CFint> ranks;
-  vector<CFint> writerRanks(_nbWriters);
+  vector<int> ranks;
+  vector<int> writerRanks(_nbWriters);
   CFint count = 0;
   bool first = true;
   for (CFuint i = 0; i < _nbWriters; ++i) {    
@@ -134,7 +134,7 @@ void ParCFmeshBinaryFileWriter::setup()
   PE::createGroup(writerRanks, false);
   
   CFLog(VERBOSE, "ParCFmeshBinaryFileWriter::setup() => " << 
-	CFPrintContainer<vector<CFint> >(" writerRanks  = ",  &writerRanks) << "\n");  
+	CFPrintContainer<vector<int> >(" writerRanks  = ",  &writerRanks) << "\n");  
   
   // if (_myRank == 0) {
   //   for (CFuint i = 0; i < _nbProc; ++i) {

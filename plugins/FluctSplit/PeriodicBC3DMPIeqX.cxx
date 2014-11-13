@@ -152,7 +152,7 @@ void PeriodicBC3DMPIeqX::setup()
   CF_DEBUG_POINT;
   _ConnectionStatePeriodic.reserve( nb_st_trs);
   _ConnectionProcessPeriodic.reserve( nb_st_trs);
-  vector<CFint> RecvDis(rdispls);
+  vector<int> RecvDis(rdispls);
   LastDisplacement = rdispls[_n_P-1] + recvcounts[_n_P-1];
   vector<double> rbuf(LastDisplacement,0.0);
   vector<double> sbuf(SendNodeCoordinate);

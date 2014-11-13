@@ -115,8 +115,8 @@ void NewParSetup::setMatrix(const CFuint localSize,
     sparsity->computeNNzNodeBased(allNonZero, outDiagNonZero);
   
   const CFuint localSizeUp = (!getMethodData().useGPU() && !getMethodData().useAIJ()) ? localSize : localSize*nbEqs; 
-  std::valarray<CFint> allNonZeroUp(0,localSizeUp);
-  std::valarray<CFint> outDiagNonZeroUp(0,localSizeUp);
+  std::valarray<CFint> allNonZeroUp((CFint)0,localSizeUp);
+  std::valarray<CFint> outDiagNonZeroUp((CFint)0,localSizeUp);
   
   CFuint countUp = 0;
   if (!getMethodData().useGPU() && !getMethodData().useAIJ()) {

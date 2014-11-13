@@ -577,7 +577,7 @@ void MutationLibrary2::setLibrarySequentially()
   _WR2 = new CFdouble[_LWR2];
   _WR3 = new CFdouble[_LWR3];
   _WR4 = new CFdouble[_LWR4];
-  _WI  = new CFint[_LWI];
+  _WI  = new int[_LWI];
   _WC  = new char[_LWC*4+1];
   _FIJ = new CFdouble[_NS*(_NS-1)/2];
 
@@ -590,7 +590,7 @@ void MutationLibrary2::setLibrarySequentially()
   _Yini =  new CFdouble[_NS];
 
   // initialization
-  for(CFint i = 0; i < _NS; ++i) {
+  for(int i = 0; i < _NS; ++i) {
     _X[i] = 1.0;
     _Y[i] = 1.0;
   }
@@ -665,7 +665,7 @@ void MutationLibrary2::setLibrarySequentially()
   _CPVIB = new CFdouble[_NS];
 
   _CHIH = new CFdouble[_NS];
-  _CHARGE = new CFint[_NS];
+  _CHARGE = new int[_NS];
 
   // initialize some data in work vectors
   // Careful!!! WR2 is filled by function "collision"
@@ -721,7 +721,7 @@ void MutationLibrary2::setLibrarySequentially()
   for (CFuint i = 0; i < _molecIDs.size(); ++i) {
     _flagMoleculesIDs[_molecIDs[i]] = true;
   }
-  for (CFint i = 0; i < _NS; ++i) {
+  for (int i = 0; i < _NS; ++i) {
     _atomicityCoeff[i] = (_flagMoleculesIDs[i]) ? 2.5 : 1.5;
   }
   
@@ -1132,7 +1132,7 @@ void MutationLibrary2::lambdaVibNEQ(CFreal& temperature,
   }
 
   CFuint ic = 0;
-  for (CFint i = 0; i < _NS; ++i) {
+  for (int i = 0; i < _NS; ++i) {
     const CFuint nvibMode = _WI[_IVIBI+i-1];
     for (CFuint j = 0; j < nvibMode; ++j, ++ic) {
       const CFuint ivib = _WI[_IVIBTEMPI+i-1]-2;
@@ -1161,7 +1161,7 @@ void MutationLibrary2::lambdaVibNEQ(CFreal& temperature,
   FORTRAN_NAME(enthalpy)(_WR1, &_LWR1, _WI, &_LWI, &tempEps1, &TeEps1, &tempEps1, _TVIBEPS1,
        &pressure, _HTOTALP, _HTRANSP, _HELECTP, _HROTP, _HVIBRP, _HFORMP);
 
-  for(CFint is = 0; is < _NS ; is++) {
+  for(int is = 0; is < _NS ; is++) {
     // _CPE[is]   = (_HELECTP[is] - _HELECT[is])/TeEps;
     _CPR[is]   = (_HROTP[is] - _HROT[is])/tempEps;
 
@@ -1205,7 +1205,7 @@ void MutationLibrary2::lambdaVibNEQ(CFreal& temperature,
   FORTRAN_NAME(lambdae)(_WR1, &_LWR1, _WR2, &_LWR2, _XTOL, &Te, &lambdaTe, &i);
   lambdaTrRo = lambdaRot + lambdaTh;
 
-  for (CFint i = 0; i < _nbTvib; i++ ){
+  for (int i = 0; i < _nbTvib; i++ ){
     lambdaInt[i] = _LAMBDAVIB[i];
   }
 
@@ -1328,8 +1328,8 @@ void MutationLibrary2::frozenGammaAndSoundSpeed(CFdouble& temp,
   if (getNbTe() == 0) {
     CFreal numBeta = 0.;
     CFreal denBeta = 0.;
-    const CFint start = (presenceElectron()) ? 1 : 0;
-    for (CFint i = start; i < _NS; ++i) {
+    const int start = (presenceElectron()) ? 1 : 0;
+    for (int i = start; i < _NS; ++i) {
       const CFreal sigmai = _Y[i]/_MOLARMASSP[i];
       numBeta += sigmai;
       denBeta += sigmai*_atomicityCoeff[i];
@@ -1372,7 +1372,7 @@ void MutationLibrary2::setComposition(CFdouble& temp,
              RealVector* x)
 {
   // initialization of the molar fractions
-  for(CFint i = 0; i < _NS; ++i) {
+  for(int i = 0; i < _NS; ++i) {
     _Xini[i] = 1.0;
   }
   
@@ -1381,14 +1381,14 @@ void MutationLibrary2::setComposition(CFdouble& temp,
   FORTRAN_NAME(composition)(_WR1,&_LWR1,_WI,&_LWI,&temp,&pressure,_Xn,_Xini,_X);
   
   if (x != CFNULL) {
-    for(CFint i = 0; i < _NS; ++i) {
+    for(int i = 0; i < _NS; ++i) {
       (*x)[i] = static_cast<CFreal>(_X[i]);
     }
   }
   
   // set mass fractions which will be used later
   CFreal massTot = 0.;
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     if (_X[is] > 1.00000000001) {
       cout << "X[" << is << "] = " << _X[is] << endl;
       abort();
@@ -1398,7 +1398,7 @@ void MutationLibrary2::setComposition(CFdouble& temp,
     _Y[is] = mm;
   }
   
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     _Y[is] /= massTot;
   }
 }
@@ -1420,12 +1420,12 @@ void MutationLibrary2::setDensityEnthalpyEnergy(CFdouble& temp,
   dhe = 0.0;
   
    if (_noElectEnergy) {
-      for(CFint i = 0; i < _NS; ++i) {
+      for(int i = 0; i < _NS; ++i) {
          dhe[1] += _Y[i]*(_HTOTALUM[i] - _HELECTUM[i]);
          rho += _X[i]*pressure/((_Rgas/_MOLARMASSP[i])*temp);
       }
    } else {
-     for(CFint i = 0; i < _NS; ++i) {
+     for(int i = 0; i < _NS; ++i) {
         dhe[1] += _Y[i]*_HTOTALUM[i];
         rho += _X[i]*pressure/((_Rgas/_MOLARMASSP[i])*temp);
      }
@@ -1469,7 +1469,7 @@ void MutationLibrary2::setDensityEnthalpyEnergy(CFdouble& temp,
   // sum up all the internal energies for each species
   dhe = 0.0;
   
-  for(CFint i = 0; i < _NS; ++i) {  
+  for(int i = 0; i < _NS; ++i) {  
     dhe[1] += _Y[i]*_HTOTALUM[i];
     if (presenceElectron() && i == 0) {
       rho += _X[i]*pressure/((_Rgas/_MOLARMASSP[i])*Te);
@@ -1484,7 +1484,7 @@ void MutationLibrary2::setDensityEnthalpyEnergy(CFdouble& temp,
   } 
   
   CFuint icc=0;
-  for (CFint i = 0; i < _nbTvib; ++i) {
+  for (int i = 0; i < _nbTvib; ++i) {
     const CFuint nvSize = _WI[_INVIBSPEI+i-1];
     for (CFuint j = 0; j < nvSize; ++j, ++icc) {
       const CFuint idx = _WI[_IVIBSPEI+icc-1]-1; 
@@ -1525,7 +1525,7 @@ void MutationLibrary2::setDensityEnthalpyEnergy(CFdouble& temp,
     _extraData.dEdT = 0.0;
     _extraData.dHdT = 0.0;
    
-    for(CFint i = 0; i < _NS; ++i) {
+    for(int i = 0; i < _NS; ++i) {
       const CFreal Ti = (presenceElectron() && (i == 0)) ? Te : temp; 
       _extraData.energyTr[i] = _HTRANSUM[i] + _HROTUM[i] + _HFORMUM[i] - (_Rgas/_MOLARMASSP[i])*Ti;
       _extraData.enthalpyTt[i] = (_noElectEnergy) ? _HTOTALUM[i] - _HELECTUM[i] : _HTOTALUM[i];
@@ -1564,7 +1564,7 @@ void MutationLibrary2::setDensityEnthalpyEnergy(CFdouble& temp,
 	
         _extraData.cpVib = 0.0;
         _extraData.dEvTv = 0.0;
-	for(CFint is = 0; is < _NS; ++is) {
+	for(int is = 0; is < _NS; ++is) {
 	  _extraData.cpVib[_nbTvib-1] += _Y[is]*(_HVIBRUM[is] - _extraData.energyVib[is]);   
 	}
         _extraData.cpVib[_nbTvib-1] /= epsTv; 
@@ -1572,7 +1572,7 @@ void MutationLibrary2::setDensityEnthalpyEnergy(CFdouble& temp,
       }
       else {
 	CFdouble TePert = Te*(1.0+_EPS);
-	for (CFint v = 0; v < _NV; v++) {
+	for (int v = 0; v < _NV; v++) {
 	  _TVARRAY[v] += _TVARRAY[v]*_EPS;      
 	}  
 	
@@ -1584,9 +1584,9 @@ void MutationLibrary2::setDensityEnthalpyEnergy(CFdouble& temp,
 	_extraData.list.clear(); // there was a mistake here! you cannot push_back continuously !!!  
 	_extraData.cpVib = 0.;
 	
-	for (CFint v = 0; v < _nbTvib; v++) {
+	for (int v = 0; v < _nbTvib; v++) {
 	  _extraData.list.push_back(_WI[_INVIBSPEI+v-1]);
-	  for (CFint j = 0; j < _WI[_INVIBSPEI+v-1]; j++, icc++) {
+	  for (int j = 0; j < _WI[_INVIBSPEI+v-1]; j++, icc++) {
 	    CFuint ivt = _WI[_IVIBSPEI+icc-1]-1; 
 	    _extraData.list.push_back(ivt); 
 	    _extraData.cpVib[v] += _Y[ivt]*(_HVIBRUM[ivt] - _extraData.energyVib[ivt])/(_TVEC[v+1]*_EPS);  
@@ -1594,7 +1594,7 @@ void MutationLibrary2::setDensityEnthalpyEnergy(CFdouble& temp,
 	}  
       }
       
-      for (CFint is = 0; is < _NS; is++) {
+      for (int is = 0; is < _NS; is++) {
 	if ((_WI[_IATOMI+is-1]) == 0) { 
 	  _extraData.cpElec[is] = 2.5*_Rgas/_MOLARMASSP[is];
 	} else {
@@ -1624,7 +1624,7 @@ void MutationLibrary2::setDensityEnthalpyEnergy(CFdouble& temp,
       }
       
       if (!_noElectEnergy) { 
-	for (CFint is = 0; is < _NS; ++is) {
+	for (int is = 0; is < _NS; ++is) {
 	  const CFreal dEdT = 
 	    _Y[is]*(_HVIBRUM[is] + _HELECTUM[is] - (_extraData.energyVib[is]
 						    + _extraData.eElec[is]))/(_EPS*temp);
@@ -1632,7 +1632,7 @@ void MutationLibrary2::setDensityEnthalpyEnergy(CFdouble& temp,
 	  _extraData.dHdT += dEdT;
 	}
       } else {
-	for (CFint is = 0; is < _NS; ++is) {
+	for (int is = 0; is < _NS; ++is) {
 	  const CFreal dEdT = _Y[is]*(_HVIBRUM[is] - _extraData.energyVib[is])/(_EPS*temp);   
 	  _extraData.dEdT += dEdT;
 	  _extraData.dHdT += dEdT;
@@ -1709,7 +1709,7 @@ CFdouble MutationLibrary2::energy(CFdouble& temp,
 
   const CFreal pOvRhoMM = pressure/rho*MMass;
   CFdouble intEnergy = 0.;
-  for(CFint i = 0; i < _NS; ++i) {
+  for(int i = 0; i < _NS; ++i) {
     intEnergy += _X[i]*(_HTOTAL[i] - pOvRhoMM);
   }
 
@@ -1737,7 +1737,7 @@ CFdouble MutationLibrary2::enthalpy(CFdouble& temp,
 
   // sum up all the internal energies for each species
   CFdouble h = 0.0;
-  for(CFint i = 0; i < _NS; ++i) {
+  for(int i = 0; i < _NS; ++i) {
     h += _X[i]*_HTOTAL[i];
   }
   return h /= MMass;
@@ -1747,7 +1747,7 @@ CFdouble MutationLibrary2::enthalpy(CFdouble& temp,
 
 void MutationLibrary2::setElemFractions(const RealVector& yn)
 {
-  for (CFint ic = 0; ic < _NC; ++ic) {
+  for (int ic = 0; ic < _NC; ++ic) {
     _Yn[ic] = yn[ic];
 
     if (!(_Yn[ic] >= 0.0 && _Yn[ic] <= 1.0)) {
@@ -1770,7 +1770,7 @@ void MutationLibrary2::setElementXFromSpeciesY(const RealVector& ys)
   cf_assert(ys.size() == static_cast<CFuint>(_NS));
   
   CFreal massTot = 0.;
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     cf_assert (ys[is] < 1.1);
     
     const CFreal mm = ys[is]/_MOLARMASSP[is];
@@ -1779,7 +1779,7 @@ void MutationLibrary2::setElementXFromSpeciesY(const RealVector& ys)
   }
   
   massTot = 1./massTot;
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     _X[is] *= massTot;
   }
 
@@ -1795,7 +1795,7 @@ void MutationLibrary2::setElectronFraction(RealVector& ys)
 
   // charge neutrality: xEl = sum(xIon)
   CFdouble yEl = 0.0;
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     if (_CHARGE[is] > 0) {
       yEl += ys[is] / _MOLARMASSP[is];
     }
@@ -1813,7 +1813,7 @@ void MutationLibrary2::setSpeciesFractions(const RealVector& ys)
     setElectronFraction(const_cast<RealVector&>(ys));
   }
   
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     _Y[is] = ys[is];
 
     if (_Y[is] < 0.0) _Y[is] = 0.0;
@@ -1830,7 +1830,7 @@ void MutationLibrary2::getSpeciesMolarFractions
 (const RealVector& ys, RealVector& xs)
 {
   CFreal massTot = 0.;
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     cf_always_assert (ys[is] < 1.1);
 
     const CFreal mm = ys[is]/_MOLARMASSP[is];
@@ -1847,7 +1847,7 @@ void MutationLibrary2::getSpeciesMassFractions
 {
   CFreal massTot = 0.;
 
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     cf_assert (xs[is] < 1.1);
     const CFreal mm = xs[is]*_MOLARMASSP[is];
     massTot += mm;
@@ -1860,7 +1860,7 @@ void MutationLibrary2::getSpeciesMassFractions
 
 void MutationLibrary2::getSpeciesMassFractions(RealVector& ys)
 {
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     ys[is] = _Y[is];
   }
 }
@@ -1904,10 +1904,10 @@ void MutationLibrary2::getTransportCoefs(CFdouble& temp,
         _LAMBDAEL, _ELDIFCOEF, _ELTDIFCOEF);
 
   // Copying non scalar data
-  for (CFint ic = 0; ic < _NC; ++ic) {
+  for (int ic = 0; ic < _NC; ++ic) {
     lambdael[ic] = _LAMBDAEL[ic];
     eltdifcoef[ic] = _ELTDIFCOEF[ic];
-    for (CFint jc = 0; jc < _NC; ++jc) {
+    for (int jc = 0; jc < _NC; ++jc) {
       // Careful because C++ and Fortran label matrices differently!
       eldifcoef(ic,jc) = _ELDIFCOEF[jc*_NC+ic];
     }
@@ -1929,11 +1929,11 @@ void MutationLibrary2::getMassProductionTerm(CFdouble& temperature,
     // Limit the mass composition of species !!!
     CFdouble YLIM = 1.0e-20;
     // Flag to Fortran
-    // CFint getJacobian = flagJac ? 1 : 0;
+    // int getJacobian = flagJac ? 1 : 0;
     CFdouble temp = max(_TminFix, temperature);
 
     // Fill species mass fractions
-    for (CFint is = 0; is < _NS; ++is) {
+    for (int is = 0; is < _NS; ++is) {
       _Y[is] = ys[is];
 
       if (_Y[is] < 0.0) _Y[is] = 0.0;
@@ -1944,9 +1944,9 @@ void MutationLibrary2::getMassProductionTerm(CFdouble& temperature,
     // set the working _TVEC array
     setTVec(temp,tVec);
     
-    CFint flagJ = (flagJac == true) ? 1 : 0;
+    int flagJ = (flagJac == true) ? 1 : 0;
     
-    CFint iimolF77 = _iimol+1;
+    int iimolF77 = _iimol+1;
     
     FORTRAN_NAME(arrhenius) (_WR1, &_LWR1, _WR2, &_LWR2, _WR3, &_LWR3, _WR4, &_LWR4,
                              _WI, &_LWI, _Y, &YLIM, &pressure,
@@ -1954,7 +1954,7 @@ void MutationLibrary2::getMassProductionTerm(CFdouble& temperature,
 			     _OMEGAJACOB, &iimolF77, &flagJ);
 
     // Returning the reaction rates
-    for (CFint is = 0; is < _NS; ++is) {
+    for (int is = 0; is < _NS; ++is) {
       omega[is] = _factorOmega*_OMEGA[is];
     }
     // Assembling Jacobian matrix of the source term corresponding to
@@ -2010,7 +2010,7 @@ void MutationLibrary2::getMassProductionTerm(CFdouble& temperature,
   }
   else {
     // Returning the reaction rates
-    for (CFint is = 0; is < _NS; ++is) {
+    for (int is = 0; is < _NS; ++is) {
       omega[is] = 0.0;
     }
   } 
@@ -2039,7 +2039,7 @@ void MutationLibrary2::getSource(CFdouble& temperature,
   CFdouble YTOL = 1e-20;
 
   // Fill species mass fractions
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
       _Y[is] = ys[is];
 
       if (_Y[is] < 0.0) _Y[is] = 0.0;
@@ -2067,13 +2067,13 @@ void MutationLibrary2::getSource(CFdouble& temperature,
       FORTRAN_NAME(enthalpy)(_WR1, &_LWR1, _WI, &_LWI, &temp, &Te, &temp, _TVARRAY, &pressure,
                              _HTOTAL, _HTRANS, _HELECT, _HROT, _HVIBR, _HFORM);
 
-      CFint  modes = 0;
-      CFint ic = 0;
-      for (CFint i = 0; i < _NS; ++i) {
+      int  modes = 0;
+      int ic = 0;
+      for (int i = 0; i < _NS; ++i) {
           _HTV[i] = 0.0;
           _HEV[i] = 0.0;
           modes = _WI[_IVIBI+i-1];     
-          for (CFint j = 0; j < modes; j++) {
+          for (int j = 0; j < modes; j++) {
                _HTV[i] +=  (_Rgas*_WR1[_ITV+ic+j-1])/(exp(_WR1[_ITV+ic+j-1]/temp) - 1.0);
                _HEV[i] +=  (_Rgas*_WR1[_ITV+ic+j-1])/(exp(_WR1[_ITV+ic+j-1]/Te) - 1.0);             
           }  
@@ -2081,12 +2081,12 @@ void MutationLibrary2::getSource(CFdouble& temperature,
       }
   }
 
-  CFint iimolF77 = _iimol+1; 
+  int iimolF77 = _iimol+1; 
 
   // this must be returned and summed to the global energy equation 
   omegaRad = 0.0;
   if (_escape > 0.) {
-     for(CFint i = 0; i < _NS; ++i) {
+     for(int i = 0; i < _NS; ++i) {
        _HINT[i] = _HTOTAL[i] - _HTRANS[i];
      }
      FORTRAN_NAME (arrheniusrad)(_WR1, &_LWR1, _WR3, &_LWR3, _WI, &_LWI, _Y, &YTOL, &rho,
@@ -2096,7 +2096,7 @@ void MutationLibrary2::getSource(CFdouble& temperature,
   // Source term of species continuity, vibrational energies and free electron-
   // electronic energy conservation equations
 
-  CFint flagJ = (flagJac == true) ? 1 : 0;
+  int flagJ = (flagJac == true) ? 1 : 0;
   FORTRAN_NAME(source) (_WR1, &_LWR1, _WR2, &_LWR2, _WR3, &_LWR3, _WR4, &_LWR4, 
                        _WI, &_LWI, _Y, &YTOL, &pressure, _TVEC, &rho, &_escape, 
                        _HTV, _HVIBR, _HEV, _OMEGA, _STVIB, _OMEGAVV, 
@@ -2104,14 +2104,14 @@ void MutationLibrary2::getSource(CFdouble& temperature,
                        &iimolF77, &flagJ);
 
   // Returning the mass production terms
-    for (CFint is = 0; is < _NS; ++is) {
+    for (int is = 0; is < _NS; ++is) {
       omega[is] = _factorOmega*_OMEGA[is];
     }
 
   // Returning the energy transfer terms (vibrational energy and free electrons)
   if (_nbTvib != 0 ) {
     if (_nbTe == 0) {
-    for (CFint i = 0; i < _nbTvib; ++i) {
+    for (int i = 0; i < _nbTvib; ++i) {
       omegav[i] = _STVIB[i] + _OMEGAVV[i] + _factorOmega*_OMEGACV[i];
     }
 
@@ -2126,7 +2126,7 @@ void MutationLibrary2::getSource(CFdouble& temperature,
   }
   else {
     CFreal sumOmegaVE = 0.0;
-    for (CFint i = 0; i < _nbTvib; ++i) {
+    for (int i = 0; i < _nbTvib; ++i) {
       // this is wrong for multi-Tv: only N2 gets the OMEGAVEs to be generalized
 //      _OMEGAVE[i] = 0.0;  // to remove
       omegav[i] = _STVIB[i] + _OMEGAVE[i] + _OMEGAVV[i] + _factorOmega*_OMEGACV[i];
@@ -2230,12 +2230,12 @@ void MutationLibrary2::getRhoUdiff(CFdouble& temperature,
   
   // Set driving forces as gradients of molar fractions
   CFreal normMMassGradient = 0.0;
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     normMMassGradient += normConcGradients[is] / _MOLARMASSP[is];
   }
   normMMassGradient *= -MMass*MMass;
   
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     _DF[is] = (MMass*normConcGradients[is] + _Y[is]*normMMassGradient) /
       _MOLARMASSP[is];
   }
@@ -2255,7 +2255,7 @@ void MutationLibrary2::getRhoUdiff(CFdouble& temperature,
     // FORTRAN_NAME(smneutsut)(_WR1, &_LWR1, _WR2, &_LWR2, _XTOL, &ND, _DF, _FIJ, _JDIF);
   }
 
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     rhoUdiff[is] = _JDIF[is];
   }
 }
@@ -2319,7 +2319,7 @@ void MutationLibrary2::getSpeciesTotEnthalpies(CFdouble& temp,
   /* if (tVec.size() > 0) {
    *hsVib = 0.;
    CFuint icc=0;
-   for (CFint i = 0; i < _nbTvib; ++i, ++icc) {
+   for (int i = 0; i < _nbTvib; ++i, ++icc) {
    const CFuint nvSize = _WI[_INVIBSPEI+i-1];
    for (CFuint j = 0; j < nvSize; ++j) {
    const CFuint idx = _WI[_IVIBSPEI+icc-1]-1;
@@ -2336,7 +2336,7 @@ void MutationLibrary2::getSpeciesTotEnthalpies(CFdouble& temp,
   }
   
   // returning the total enthalpies per unit mass of species
-  for(CFint i = 0; i < _NS; ++i) {
+  for(int i = 0; i < _NS; ++i) {
     hsTot[i] = (!_noElectEnergy) ? _HTOTALUM[i] : (_HTOTALUM[i] -_HELECTUM[i]);
   }
   
@@ -2388,27 +2388,27 @@ void MutationLibrary2::getSourceTermVT(CFdouble& temperature,
   // this must be returned and summed to the global energy equation 
   omegaRad = 0.0;
   if (_escape > 0.) {
-     for(CFint i = 0; i < _NS; ++i) {
+     for(int i = 0; i < _NS; ++i) {
        _HINT[i] = _HTOTAL[i] - _HTRANS[i];
      }
      FORTRAN_NAME (arrheniusrad)(_WR1, &_LWR1, _WR3, &_LWR3, _WI, &_LWI, _Y, &YTOL, &rho,
                               &Te, _HINT, &_escape, &omegaRad);
   }
 
-  CFint  modes = 0;
-  CFint ic = 0;
-  for (CFint i = 0; i < _NS; ++i) {
+  int  modes = 0;
+  int ic = 0;
+  for (int i = 0; i < _NS; ++i) {
     _HTV[i] = 0.0;
     _HEV[i] = 0.0;
         modes = _WI[_IVIBI+i-1];     
-        for (CFint j = 0; j < modes; j++) {
+        for (int j = 0; j < modes; j++) {
             _HTV[i] +=  (_Rgas*_WR1[_ITV+ic+j-1])/(exp(_WR1[_ITV+ic+j-1]/temp) - 1.0);
             _HEV[i] +=  (_Rgas*_WR1[_ITV+ic+j-1])/(exp(_WR1[_ITV+ic+j-1]/Te) - 1.0);             
         }  
         ic += modes;
   }
  
-  CFint iimolF77 = _iimol+1; 
+  int iimolF77 = _iimol+1; 
 
   FORTRAN_NAME(omegavtransfer) (&_LWR1, _WR1, &_LWR2, _WR2, &_LWR3, _WR3, &_LWR4, _WR4,
         &_LWI, _WI, &iimolF77, &pressure, _TVEC, _Y, &YTOL, &rho, _HTV, _HVIBR, _HEV,
@@ -2460,7 +2460,7 @@ void MutationLibrary2::getSourceTermVT(CFdouble& temperature,
 //  }
 
   if (_nbTe == 0) {
-    for (CFint i = 0; i < _nbTvib; ++i) {
+    for (int i = 0; i < _nbTvib; ++i) {
       omegav[i] = _STVIB[i] + _OMEGAVV[i] + _factorOmega*_OMEGACV[i];
     }
 
@@ -2475,7 +2475,7 @@ void MutationLibrary2::getSourceTermVT(CFdouble& temperature,
   }
   else {
     CFreal sumOmegaVE = 0.0;
-    for (CFint i = 0; i < _nbTvib; ++i) {
+    for (int i = 0; i < _nbTvib; ++i) {
       // this is wrong for multi-Tv: only N2 gets the OMEGAVEs to be generalized
 //      _OMEGAVE[i] = 0.0;  // to remove
       omegav[i] = _STVIB[i] + _OMEGAVE[i] + _OMEGAVV[i] + _factorOmega*_OMEGACV[i];
@@ -2501,7 +2501,7 @@ void MutationLibrary2::getMolarMasses(RealVector& mm)
   assert(mm.size() == static_cast<CFuint>(_NS));
 
   // check the units
-  for (CFint i = 0; i < _NS; ++i) {
+  for (int i = 0; i < _NS; ++i) {
     mm[i] = _MOLARMASSP[i];
   }
 }
@@ -2511,7 +2511,7 @@ void MutationLibrary2::getMolarMasses(RealVector& mm)
 void MutationLibrary2::cvCandler()
 {
   CFuint icc=0;
-  for (CFint i = 0; i < _nbTvib; ++i) {
+  for (int i = 0; i < _nbTvib; ++i) {
     _OMEGACV[i] = 0.0;
     const CFuint nvSize = _WI[_INVIBSPEI+i-1];
     for (CFuint j = 0; j < nvSize; ++j, ++icc) {
@@ -2529,7 +2529,7 @@ void MutationLibrary2::cvGnoffo()
   assert(_prefDissFactor.size() >= static_cast<CFuint>(_nbTvib));
 
   CFuint icc=0;
-  for (CFint i = 0; i < _nbTvib; ++i) {
+  for (int i = 0; i < _nbTvib; ++i) {
     _OMEGACV[i] = 0.0;
     const CFuint nvSize = _WI[_INVIBSPEI+i-1];
     for (CFuint j = 0; j < nvSize; ++j, ++icc) {
@@ -2561,7 +2561,7 @@ void MutationLibrary2::testAndWriteProperties()
 
     fout << "TITLE = physical properties\n";
     fout << "VARIABLES = T p ";
-    for (CFint i = 0; i < _NS; ++i) {
+    for (int i = 0; i < _NS; ++i) {
       fout << "H" << Common::StringOps::to_str(i) << " ";
     }
     fout << "gamma lambda eta" << endl;
@@ -2630,7 +2630,7 @@ void MutationLibrary2::testAndWriteProperties()
       FORTRAN_NAME(etacg)(_WR1, &_LWR1, _WR2, &_LWR2, _XTOL, &eta);
 
       fout << T << " " << p << " ";
-      for (CFint ip = 0; ip < _NS; ++ip) {
+      for (int ip = 0; ip < _NS; ++ip) {
   fout << _HTOTAL[ip] << " ";
   // fout << _HTOTAL[ip] << " " << _HELECT[ip] << " " << " " << _HVIBR[ip] << " ";
       }
@@ -2666,10 +2666,10 @@ void MutationLibrary2::testAndWriteSourceTerms()
 
     fout << "TITLE = source terms\n";
     fout << "VARIABLES = T p ";
-    for (CFint i = 0; i < _NS; ++i) {
+    for (int i = 0; i < _NS; ++i) {
       fout << "OMEGA" << StringOps::to_str(i) << " ";
     }
-    for (CFint i = 0; i < _NS; ++i) {
+    for (int i = 0; i < _NS; ++i) {
       fout << "OMEGACV" << StringOps::to_str(i) << " ";
     }
     fout << "OMEGAI\n";
@@ -2684,18 +2684,18 @@ void MutationLibrary2::testAndWriteSourceTerms()
       FORTRAN_NAME(numberd)(_WR1,&_LWR1,&p,&T,&T,_X,&ND);
       FORTRAN_NAME(density)(_WR1,&_LWR1,_X,&ND,&rho);
  
-      CFint flagJ = 0;      
-      CFint iimolF77 = _iimol+1;
+      int flagJ = 0;      
+      int iimolF77 = _iimol+1;
 
       FORTRAN_NAME(arrhenius) (_WR1, &_LWR1, _WR2, &_LWR2, _WR3, &_LWR3, _WR4, &_LWR4,
 			       _WI, &_LWI, _Y, &YLIM, &p, _TVEC, &rho, &_escape, _OMEGA, 
                                _OMEGACV, &_OMEGAI, _OMEGAJACOB, &iimolF77, &flagJ);       
 
       fout << T << " " << p << " ";
-      for (CFint ip = 0; ip < _NS; ++ip) {
+      for (int ip = 0; ip < _NS; ++ip) {
            fout << _factorOmega*_OMEGA[ip] << " ";
       }
-      for (CFint ip = 0; ip < _NS; ++ip) {
+      for (int ip = 0; ip < _NS; ++ip) {
            fout << _factorOmega*_OMEGACV[ip] << " ";
       }
       fout << _OMEGAI << endl;
@@ -2746,7 +2746,7 @@ void MutationLibrary2::transportCoeffNEQ(CFreal& temperature,
   CFdouble lambdaTe  = 0.0;
   
   CFuint ic = 0;
-  for (CFint i = 0; i < _NS; ++i) {
+  for (int i = 0; i < _NS; ++i) {
     const CFuint nvibMode = _WI[_IVIBI+i-1];
     for (CFuint j = 0; j < nvibMode; ++j, ++ic) {
       const CFuint ivib = _WI[_IVIBTEMPI+i-1]-2;
@@ -2770,7 +2770,7 @@ void MutationLibrary2::transportCoeffNEQ(CFreal& temperature,
   FORTRAN_NAME(enthalpy)(_WR1, &_LWR1, _WI, &_LWI, &tempEps1, &TeEps1, &tempEps1, _TVIBEPS1,
 			 &pressure, _HTOTALP, _HTRANSP, _HELECTP, _HROTP, _HVIBRP, _HFORMP);
   
-  for(CFint is = 0; is < _NS ; is++) {
+  for(int is = 0; is < _NS ; is++) {
     // _CPE[is]   = (_HELECTP[is] - _HELECT[is])/TeEps;
     _CPR[is]   = (_HROTP[is] - _HROT[is])/tempEps;
     
@@ -2810,7 +2810,7 @@ void MutationLibrary2::transportCoeffNEQ(CFreal& temperature,
   FORTRAN_NAME(lambdae)(_WR1, &_LWR1, _WR2, &_LWR2, _XTOL, &Te, &lambdaTe, &i);
   lambdaTrRo = lambdaRot + lambdaTh;
   
-  for (CFint i = 0; i < _nbTvib; i++ ){
+  for (int i = 0; i < _nbTvib; i++ ){
     lambdaInt[i] = _LAMBDAVIB[i];
   }
   
@@ -2842,12 +2842,12 @@ void MutationLibrary2::transportCoeffNEQ(CFreal& temperature,
   
   // Set driving forces as gradients of molar fractions
   CFreal normMMassGradient = 0.0;
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     normMMassGradient += normConcGradients[is] / _MOLARMASSP[is];
   }
   normMMassGradient *= -MMass*MMass;
   
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     _DF[is] = (MMass*normConcGradients[is] + _Y[is]*normMMassGradient) /
       _MOLARMASSP[is];
   }
@@ -2867,7 +2867,7 @@ void MutationLibrary2::transportCoeffNEQ(CFreal& temperature,
     // FORTRAN_NAME(smneutsut)(_WR1, &_LWR1, _WR2, &_LWR2, _XTOL, &ND, _DF, _FIJ, _JDIF);
   }
   
-  for (CFint is = 0; is < _NS; ++is) {
+  for (int is = 0; is < _NS; ++is) {
     rhoUdiff[is] = _JDIF[is];
   }
 }
@@ -2906,20 +2906,20 @@ void MutationLibrary2::getSourceEE(CFdouble& temperature,
   FORTRAN_NAME(enthalpy)(_WR1, &_LWR1, _WI, &_LWI, &temp, &Te, &temp, _TVARRAY, &pressure,
 			 _HTOTAL, _HTRANS, _HELECT, _HROT, _HVIBR, _HFORM);
   
-  CFint  modes = 0;
-  CFint ic = 0;
-  for (CFint i = 0; i < _NS; ++i) {
+  int  modes = 0;
+  int ic = 0;
+  for (int i = 0; i < _NS; ++i) {
     _HTV[i] = 0.0;
     _HEV[i] = 0.0;
     modes = _WI[_IVIBI+i-1];     
-    for (CFint j = 0; j < modes; j++) {
+    for (int j = 0; j < modes; j++) {
       _HTV[i] +=  (_Rgas*_WR1[_ITV+ic+j-1])/(exp(_WR1[_ITV+ic+j-1]/temp) - 1.0);
       _HEV[i] +=  (_Rgas*_WR1[_ITV+ic+j-1])/(exp(_WR1[_ITV+ic+j-1]/Te) - 1.0);             
     }  
     ic += modes;
   }
   
-  CFint iimolF77 = _iimol+1; 
+  int iimolF77 = _iimol+1; 
 
   FORTRAN_NAME(omegavtransfer) (&_LWR1, _WR1, &_LWR2, _WR2, &_LWR3, _WR3, &_LWR4, _WR4,
         &_LWI, _WI, &iimolF77, &pressure, _TVEC, _Y, &YTOL, &rho, _HTV, _HVIBR, _HEV,
@@ -2938,7 +2938,7 @@ void MutationLibrary2::getSourceEE(CFdouble& temperature,
   //  }
   
   if (_nbTe == 0) {
-    for (CFint i = 0; i < _nbTvib; ++i) {
+    for (int i = 0; i < _nbTvib; ++i) {
       omegaEE = _STVIB[i] + _OMEGAVV[i] + _factorOmega*_OMEGACV[i];
     }
     
@@ -2953,7 +2953,7 @@ void MutationLibrary2::getSourceEE(CFdouble& temperature,
   }
   else {
     CFreal sumOmegaVE = 0.0;
-    for (CFint i = 0; i < _nbTvib; ++i) {
+    for (int i = 0; i < _nbTvib; ++i) {
       // this is wrong for multi-Tv: only N2 gets the OMEGAVEs to be generalized
       //      _OMEGAVE[i] = 0.0;  // to remove
       sumOmegaVE += _OMEGAVE[i];      

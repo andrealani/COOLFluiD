@@ -524,18 +524,18 @@ public:
   }
   
 protected:
-
+  
   /// number of (types of) species
-  CFint _NS;
+  int _NS;
 
   /// Number of (types of) elements
-  CFint _NC;
+  int _NC;
 
   /// number of vibrational temperatures
-  CFint _nbTvib;
+  int _nbTvib;
 
   /// number of free electron temperatures (0 or 1)
-  CFint _nbTe;
+  int _nbTe;
   
   /// flag telling if the mixture is ionized
   bool _hasElectrons;
@@ -556,14 +556,14 @@ protected:
   std::vector<CFuint> _molecule2EqIDs;
 
   /// ID of the variable entry that gets the electronic energy
-  CFint _electrEnergyID;
+  int _electrEnergyID;
 
   /// freeze the chemistry
   bool  _freezeChemistry;
-
+  
   /// Max value for Te
   CFdouble _maxTe;
-
+  
 }; // end of class PhysicalChemicalLibrary
 
 //////////////////////////////////////////////////////////////////////////////

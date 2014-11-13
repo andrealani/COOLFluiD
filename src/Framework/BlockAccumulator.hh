@@ -330,7 +330,7 @@ private:
   CFuint _coefc;
   
   /// added by TB: workspace (for translation of indices)
-  std::vector<int> workspace;
+  std::vector<CFint> workspace;
   
 }; // end of class BlockAccumulator
 

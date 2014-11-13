@@ -30,7 +30,7 @@ class ArrayAllocator
 {
 public:
   
-  typedef unsigned int IndexType;
+  typedef CFuint IndexType;
   typedef T TYPE;
   
   /// Constructor

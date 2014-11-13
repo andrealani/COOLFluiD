@@ -681,10 +681,10 @@ protected: // data to use to interface FORTRAN77
   bool _includeElectronicEnergy;
 
   /// Lagrange-Sonine computation option (polynom order???)
-  CFint _sonine;
+  int _sonine;
 
   /// Where to compute transport properties
-  CFint _imod;
+  int _imod;
 
   /// Small value for mole fractions to limit the composition with COMPOTOL2
   CFdouble _Xlim;
@@ -702,52 +702,52 @@ protected: // data to use to interface FORTRAN77
   EtaAlgo    _etaAlgo;
 
   /// flag telling if there are electrons
-  CFint _NE;
+  int _NE;
 
   /// flag telling the number of molecules
-  CFint _NV;
+  int _NV;
 
   /// what is this??? (Number of reactions? : Janos)
-  CFint _NREA;
+  int _NREA;
 
   /// lenght of work vector WR1
-  CFint _LWR1;
+  int _LWR1;
 
   /// lenght of work vector WR2
-  CFint _LWR2;
+  int _LWR2;
 
   /// lenght of work vector WR3
-  CFint _LWR3;
+  int _LWR3;
 
   /// lenght of work vector WR4
-  CFint _LWR4;
+  int _LWR4;
 
   /// lenght of work vector WI
-  CFint _LWI;
+  int _LWI;
 
   /// lenght of work vector WC
-  CFint _LWC;
+  int _LWC;
 
   ///  Index of vibrational temperatures per species
-  CFint _IVIBTEMPI;
+  int _IVIBTEMPI;
 
   ///  Index of species per each equation (vibrational Temperature)
-  CFint _IVIBSPEI;
+  int _IVIBSPEI;
 
   ///  NUMBER of species per each equation (vibrational Temperature) I.E.(TVIB(1) == N2+NOp etc)
-  CFint _INVIBSPEI;
+  int _INVIBSPEI;
 
   ///  NUMBER of species per each equation (vibrational Temperature) I.E.(TVIB(1) == N2+NOp etc)
-  CFint _IVIBI;
+  int _IVIBI;
 
   ///  ATOMS per species
-  CFint _IATOMI;
+  int _IATOMI;
 
   /// Pointer to molecule characteristic vibrational temperatures
-  CFint _ITV;
+  int _ITV;
 
   ///  index for dissociation
-  CFint _IDIS;
+  int _IDIS;
 
   /// Small disturbance
   CFdouble _EPS;
@@ -1009,7 +1009,7 @@ protected: // data to use to interface FORTRAN77
   CFdouble _escape;
 
   /// iimol factor
-  CFint _iimol;
+  int _iimol;
 
   /// model for the CV coupling
   CFuint _cvModel;

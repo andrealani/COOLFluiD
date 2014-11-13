@@ -36,6 +36,7 @@ my $opt_nocolor       = 0;
 my $opt_envars        = 0;
 my $opt_genconf       = 0;
 my $opt_debug         = "1";
+my $opt_int64         = "0";
 my $opt_cuda_dir      = "";
 my $opt_nompi         = 0;
 my $opt_mpi           = "openmpi";
@@ -138,6 +139,7 @@ sub parse_commandline() # Parse command line
         'envars'                => \$opt_envars,
         'genconf'               => \$opt_genconf,
         'debug=s'               => \$opt_debug,
+        'int64=s'               => \$opt_int64,
 	'nompi'                 => \$opt_nompi,
         'many-mpi'              => \$opt_many_mpi,
         'mpi=s'                 => \$opt_mpi,
@@ -1231,6 +1233,11 @@ sub install_petsc ()
 
     my $wdebug = "--with-debugging=1";
     if ($opt_debug eq "0") { $wdebug = "--with-debugging=0" };
+
+    my $use_int64 = "";
+    if ($opt_int64 eq 1) {
+       $use_int64 = "--with-64-bit-indices";
+    } 
     
     my $cuda_support = "";
     if ($opt_cuda_dir) {
@@ -1276,7 +1283,7 @@ sub install_petsc ()
    run_command_or_die("make $opt_makeopts");
   } 
    else {
-   run_command_or_die("./configure --prefix=$install_dir $wdebug COPTFLAGS='-O3 ' FOPTFLAGS='-O3 ' --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 --with-shared-libraries=1 --with-dynamic-loading=1 $cuda_support --PETSC_ARCH=$petsc_arch");
+   run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 COPTFLAGS='-O3 ' FOPTFLAGS='-O3 ' --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 --with-shared-libraries=1 --with-dynamic-loading=1 $cuda_support --PETSC_ARCH=$petsc_arch");
    run_command_or_die("make");
   }
     run_command_or_die("make install PETSC_DIR=$build_dir");

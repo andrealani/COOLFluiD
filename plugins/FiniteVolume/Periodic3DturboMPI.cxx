@@ -207,12 +207,12 @@ void Periodic3DturboMPI::setup()
     // build vectors to be sent
     vector<CFreal> sendFHCwest(rootnWf,0);
     vector<CFreal> sendFACwest(rootnWf,0);
-    vector<unsigned> sendFFwest(rootnWf,0);
+    vector<CFuint> sendFFwest(rootnWf,0);
 
     vector<CFreal> sendFHCeast(rootnEf,0);
     vector<CFreal> sendFACeast(rootnEf,0);
-    vector<unsigned> sendFFeast(rootnEf,0);
-
+    vector<CFuint> sendFFeast(rootnEf,0);
+    
     if(_my_nP == root){
       for(CFuint i=0; i<rootnWf; i++){
         sendFHCwest[i] = FaceHeightCwest[i];

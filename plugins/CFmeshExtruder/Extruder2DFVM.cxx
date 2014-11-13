@@ -6,6 +6,7 @@
 
 #include <ctime>
 #include <cstdlib>
+#include <boost/progress.hpp>
 
 #include "Common/BadValueException.hh"
 #include "Common/Stopwatch.hh"
@@ -13,7 +14,6 @@
 #include "Environment/DirPaths.hh"
 #include "Environment/ObjectProvider.hh"
 
-// #include "CFmeshFormatChecker/CFmeshFileChecker.hh" // move the checker to Framework
 #include "CFmeshExtruder/Extruder2DFVM.hh"
 #include "CFmeshExtruder/CFmeshExtruder.hh"
 
@@ -104,18 +104,14 @@ void Extruder2DFVM::configure ( Config::ConfigArgs& args )
     throw BadValueException (FromHere(),"Extruder2DFVM received zero extruding size");
 
   _zDelta = _zSize / _nbLayers;
-
-
+  
   if (_split != false){
-    //CFout << _newTetras.size() << "\n";
     for (CFuint i=0;i < _newTetras.size();++i){
       _newTetras[i].resize(4);
-      //CFout << _newTetras[i].size() << "\n";
-      }
+    }
     for (CFuint i=0;i < _newTriag.size();++i){
       _newTriag[i].resize(3);
-      //CFout << _newTetras[i].size() << "\n";
-      }
+    }
   }
 }
 
@@ -191,13 +187,16 @@ void Extruder2DFVM::extrude()
 
   // create subsequent layers of elements
   if (_nbLayers > 1){
-  for(CFuint iLayer = 1; iLayer < _nbLayers; ++iLayer) {
-    _iLayer = iLayer;
-    createAnotherLayer();
+    auto_ptr<boost::progress_display> progressBar
+      (new boost::progress_display(_nbLayers));
+    for(CFuint iLayer = 1; iLayer < _nbLayers; ++iLayer) {
+      ++(*progressBar);
+      _iLayer = iLayer;
+      createAnotherLayer();
+    }
+    if (_random == true) randomNodes();
   }
-  if (_random == true) randomNodes();
-  }
-
+  
   //if(isHybrid) reorderElementNodeState();
 
   updateTRSData();
@@ -221,11 +220,11 @@ void Extruder2DFVM::transformNodesTo3D()
   CFAUTOTRACE;
 
   CFmeshReaderWriterSource& data = *(_data.get());
-
-// @todo check THIS
+  
+  // @todo check THIS
   RealVector newValue(DIM_3D);
   const CFuint nbNodes = data.getTotalNbNodes();
-
+  
   for(CFuint iNode = 0; iNode < nbNodes; ++iNode) {
     const RealVector* oldValue = data.getNode(iNode);
     for (CFuint i = 0; i < DIM_2D; ++i) {
@@ -259,8 +258,7 @@ void Extruder2DFVM::convertCurrentElementsTo3D()
 
   _nbNodesPerLayer   = data.getTotalNbNodes();
   _nbStatesPerLayer  = data.getTotalNbStates();
-  const CFuint z = 2;
-
+  
   /// this is for FVM
   cf_assert(data.getNbElements() == data.getTotalNbStates());
 
@@ -271,45 +269,40 @@ void Extruder2DFVM::convertCurrentElementsTo3D()
 
   RealVector tmpNode(DIM_3D);
   for(CFuint iNode = 0; iNode < data.getTotalNbNodes(); ++iNode) {
-
     tmpNode = (*nodes)[iNode];
-    tmpNode[z] += _zDelta;
-
+    tmpNode[ZZ] += _zDelta;
     nodes->push_back(tmpNode);
   }
 
   SafePtr< Table<CFuint> > elementNode  = data.getElementNode();
   SafePtr< Table<CFuint> > elementState = data.getElementState();
-
+  
   elementNode->clear();
   elementState->clear();
-
-  SafePtr< vector<ElementTypeData> > elementType =
-    data.getElementTypeData();
-
+  
+  SafePtr< vector<ElementTypeData> > elementType = data.getElementTypeData();
   const CFuint nbElements = data.getNbElements();
 
   if (_split != true) {
     _nodePattern.resize(nbElements);
     _statePattern.resize(nbElements);
-    }
-  else
-    {
+  }
+  else {
     _nodePattern.resize(3*nbElements);
     _statePattern.resize(3*nbElements);
-    }
-
+  }
+  
   const CFuint nbElementTypes = data.getNbElementTypes();
   cf_assert(nbElementTypes == elementType->size());
 
   // search for the specific element type IDs
   CFuint elemID = 0;
   for(CFuint iType = 0; iType <  nbElementTypes; ++iType) {
-
+    
     if((*elementType)[iType].getGeoShape() ==  CFGeoShape::TETRA) {
       _tetraTypeID = iType;
     }
-
+    
     if((*elementType)[iType].getGeoShape() ==  CFGeoShape::PRISM) {
       _prismTypeID = iType;
     }
@@ -358,7 +351,11 @@ void Extruder2DFVM::convertCurrentElementsTo3D()
   CFuint newNbElements = nbElements;
   _nbElemPerLayer = nbElements;
 
-  elemID = 0;
+  elemID = 0; 
+  
+  vector<CFuint> newID(3);
+  vector<CFuint> tempPrism(6);
+  
   for (CFuint iType = 0; iType < nbElementTypes; ++iType) {
     const CFGeoShape::Type currShape = (*elementType)[iType].getGeoShape();
     const CFuint nbElemPerType = (*elementType)[iType].getNbElems();
@@ -368,32 +365,29 @@ void Extruder2DFVM::convertCurrentElementsTo3D()
       switch(currShape) {
 
       case CFGeoShape::TETRA:
-
-        {
+	
+	{
         newNbElements += 2;
 
         // here we assume all the elements are of the same type !!
         /// @todo change this
 
-        vector<CFuint> newID(3);
-        newID[0] = iElem;
+	newID[0] = iElem;
         newID[1] = iElem + _nbElemPerLayer;
         newID[2] = iElem + 2*_nbElemPerLayer;
 
         CFuint oldNbElemsPerType = (*elementType)[_tetraTypeID].getNbElems();
         (*elementType)[_tetraTypeID].setNbElems(oldNbElemsPerType + 2);
-
-        vector<CFuint> tempPrism;
-        tempPrism.resize(6);
-        // Create the Prism
+	
+	// Create the Prism
         for(CFuint localID = 0; localID < 3; ++localID) {
-            tempPrism[localID] = _oldElemNode(elemID,localID);
-            tempPrism[localID+3] = _nbNodesPerLayer + _oldElemNode(elemID,localID);
-            //CFout << tempPrism[localID] << "  " << tempPrism[localID+3] << "\n";
-            }
-
+	  tempPrism[localID] = _oldElemNode(elemID,localID);
+	  tempPrism[localID+3] = _nbNodesPerLayer + _oldElemNode(elemID,localID);
+	  //CFout << tempPrism[localID] << "  " << tempPrism[localID+3] << "\n";
+	}
+	
         splitPrism(tempPrism);
-
+	
         //Create the tetrahedras
         for (CFuint iTetra = 0; iTetra < 3; ++iTetra) {
           for(CFuint localID = 0; localID < 4; ++localID) {
@@ -402,10 +396,10 @@ void Extruder2DFVM::convertCurrentElementsTo3D()
             //CFout << _newTetras[iTetra][localID]  << " " << localID << "\n";
             (*elementNode)(newID[iTetra],localID) = _newTetras[iTetra][localID];
             (*elementState)(newID[iTetra],localID) = _newTetras[iTetra][localID];
-
+	    
           }
         }
-
+	
         ++elemID;
         }
         break;
@@ -414,14 +408,12 @@ void Extruder2DFVM::convertCurrentElementsTo3D()
         {
         for(CFuint localID = 0; localID < 3; ++localID) {
           // first layer
-          (*elementNode)(elemID,localID) =
-            _oldElemNode(elemID,localID);
-
+          (*elementNode)(elemID,localID) = _oldElemNode(elemID,localID);
+	  
           // next layer
-          (*elementNode)(elemID,localID + 3) =
-            _nbNodesPerLayer  + _oldElemNode (elemID,localID);
+          (*elementNode)(elemID,localID + 3) = _nbNodesPerLayer  + _oldElemNode (elemID,localID);
         }
-
+	
         // state
         (*elementState)(elemID,0) = _oldElemState(elemID,0);
 
@@ -431,16 +423,14 @@ void Extruder2DFVM::convertCurrentElementsTo3D()
 
       case CFGeoShape::HEXA:
         {
-        for(CFuint localID = 0; localID < 4; ++localID) {
-          // first layer
-          (*elementNode)(elemID,localID) =
-            _oldElemNode (elemID,localID);
-
-          // next layer
-          (*elementNode)(elemID,localID + 4) =
-            _nbNodesPerLayer  + _oldElemNode (elemID,localID);
+	  for(CFuint localID = 0; localID < 4; ++localID) {
+	    // first layer
+	    (*elementNode)(elemID,localID) = _oldElemNode (elemID,localID);
+	    
+	    // next layer
+	    (*elementNode)(elemID,localID + 4) = _nbNodesPerLayer  + _oldElemNode (elemID,localID);
         }
-
+	
         // state
         (*elementState)(elemID,0) = _oldElemState(elemID,0);
 
@@ -521,9 +511,7 @@ void Extruder2DFVM::createAnotherLayer()
   CFmeshReaderWriterSource& data = *(_data.get());
   SafePtr< vector<RealVector> > nodes  = data.getNodeList();
   SafePtr< vector<RealVector> > states = data.getStateList();
-
-  const CFuint z = 2;
-
+  
   const CFuint nStartID = nodes->size() - _nbNodesPerLayer;
   const CFuint nEndID   = nodes->size();
 
@@ -533,24 +521,22 @@ void Extruder2DFVM::createAnotherLayer()
   // Add new nodes and states for the new layer
   RealVector tmpNode(DIM_3D);
   for(CFuint iNode = nStartID; iNode < nEndID; ++iNode) {
-
     tmpNode = (*nodes)[iNode];
-    tmpNode[z] += _zDelta;
-
+    tmpNode[ZZ] += _zDelta;
     nodes->push_back(tmpNode);
   }
-
+  
   for(CFuint iState = sStartID; iState < sEndID; ++iState) {
     states->push_back((*states)[iState]);
   }
 
   SafePtr< Table<CFuint> > elementNode  = data.getElementNode();
   SafePtr< Table<CFuint> > elementState  = data.getElementState();
-
-//unused//  const CFuint oldNbElements = elementNode->nbRows();
+  
+  //unused//  const CFuint oldNbElements = elementNode->nbRows();
   elementNode->increase(_nodePattern);
   elementState->increase(_statePattern);
-
+  
   CFuint nbElements = data.getNbElements();
   CFuint eStartID = nbElements - _nbElemPerLayer;
   CFuint eEndID   = nbElements;
@@ -558,7 +544,7 @@ void Extruder2DFVM::createAnotherLayer()
     eStartID = 0;
     eEndID   = _nbElemPerLayer;
   }
-
+  
   CFuint newNbElements = nbElements;
 
   ///@todo  later RECHECK THIS PART ACCURATELY
@@ -574,53 +560,52 @@ void Extruder2DFVM::createAnotherLayer()
       const CFGeoShape::Type currElemType = (*elementType)[iType].getGeoShape();
       const CFuint nbElemPerType = (*elementType)[iType].getNbElems();
       const CFuint nbElemPerTypePerLayer = nbElemPerType/_iLayer;
-
+      
       for (CFuint iElem = 0; iElem < nbElemPerTypePerLayer; ++iElem) {
         elementShapes[elemID] = currElemType;
         ++elemID;
       }
+    }
   }
-  }
-
-   cf_assert(nbElements == elemID);
-// std::cout << "eStartID: " <<eStartID<<std::endl;
-// std::cout << "eEndID: " <<eEndID<<std::endl;
-
+  
+  cf_assert(nbElements == elemID);
+  // std::cout << "eStartID: " <<eStartID<<std::endl;
+  // std::cout << "eEndID: " <<eEndID<<std::endl;
+  vector<CFuint> newIDs(3);
+  vector<CFuint> tempPrism(6); 
+  
   for(CFuint iElem = eStartID; iElem < eEndID; ++iElem) {
-
+    
     ++newNbElements;
-
+    
     CFuint newID = iElem + _nbElemPerLayer;
-
+    
     CFuint oldNbElemsPerType = 0;
-
+    
     // is this iElem valid???? check
     switch(elementShapes[iElem]) {
-
-    // for tetrahedras, we assume that we start from triangles
+      
+      // for tetrahedras, we assume that we start from triangles
     case CFGeoShape::TETRA:
-        {
+      {
         newNbElements += 2;
 
         newID += (nbElements - _nbElemPerLayer);
         // here we assume all the elements are of the same type !!
         /// @todo change this
-        vector<CFuint> newIDs(3);
-        newIDs[0] = newID;
+	newIDs[0] = newID;
         newIDs[1] = newID + _nbElemPerLayer;
         newIDs[2] = newID + 2*_nbElemPerLayer;
-
+	
         CFuint oldNbElemsPerType = (*elementType)[_tetraTypeID].getNbElems();
         (*elementType)[_tetraTypeID].setNbElems(oldNbElemsPerType + 3);
-
-        vector<CFuint> tempPrism;
-        tempPrism.resize(6);
+	
         // Create the Prism
         for(CFuint localID = 0; localID < 3; ++localID) {
-            tempPrism[localID] = (*elementNode)(iElem,localID) + _iLayer*_nbNodesPerLayer;
-            tempPrism[localID+3] = (*elementNode)(iElem,localID) + (_iLayer+1)*_nbNodesPerLayer;
-            }
-
+	  tempPrism[localID] = (*elementNode)(iElem,localID) + _iLayer*_nbNodesPerLayer;
+	  tempPrism[localID+3] = (*elementNode)(iElem,localID) + (_iLayer+1)*_nbNodesPerLayer;
+	}
+	
         splitPrism(tempPrism);
 
         //Create the tetrahedras
@@ -783,7 +768,7 @@ void Extruder2DFVM::extrudeCurrentTRSs()
 //  const CFuint halfStatesInGeo = 2;
 
   CFmeshReaderWriterSource& data = *(_data.get());
-
+  vector<CFuint> tempQuad(4);
   SafePtr< vector<CFuint> > nbTRs = data.getNbTRs();
   SafePtr< vector<vector<CFuint> > > nbGeomEntsPerTR = data.getNbGeomEntsPerTR();
 
@@ -854,15 +839,14 @@ void Extruder2DFVM::extrudeCurrentTRSs()
     //CFuint nbNodesInTetra = 4;
 
     // Compute the tetrahedras
-    vector<CFuint> tempQuad(4);
     // Create the Quads
-    for(CFuint nodeID = 0; nodeID < halfNodesInGeo; ++nodeID) {
-      tempQuad[nodeID] = oldNodeCon[nodeID] + iLayer * _nbNodesPerLayer;
-      tempQuad[nodeID+halfNodesInGeo] = oldNodeCon[nodeID] + (iLayer + 1) * _nbNodesPerLayer;
+      for(CFuint nodeID = 0; nodeID < halfNodesInGeo; ++nodeID) {
+	tempQuad[nodeID] = oldNodeCon[nodeID] + iLayer * _nbNodesPerLayer;
+	tempQuad[nodeID+halfNodesInGeo] = oldNodeCon[nodeID] + (iLayer + 1) * _nbNodesPerLayer;
       }
-    swap(tempQuad[2],tempQuad[3]);
-    splitQuads(tempQuad);
-
+      swap(tempQuad[2],tempQuad[3]);
+      splitQuads(tempQuad);
+      
     // Set the node connectivity
     for(CFuint stateID = 0; stateID < 3; ++stateID) {
       nodeCon[stateID] = _newTriag[0][stateID];
@@ -890,14 +874,14 @@ void Extruder2DFVM::extrudeCurrentTRSs()
     swap(nodeCon[2],nodeCon[3]);
     //swap(stateCon[2],stateCon[3]);
     }
-  }
+    }
       }
-
+      
       (*nbGeomEntsPerTR)[iTRS][iTR] = geoC.size();
     }
   }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void Extruder2DFVM::createTopBottomTRSs()
@@ -909,8 +893,8 @@ void Extruder2DFVM::createTopBottomTRSs()
 //////////////////////////////////////////////////////////////////////////////
 
 void Extruder2DFVM::createSideTRS(const std::string& name,
-             const CFuint& layer,
-             const bool& bottom)
+				  const CFuint& layer,
+				  const bool& bottom)
 {
   cf_assert(_oldElemNode.nbRows() == _oldElemState.nbRows());
 
@@ -964,14 +948,13 @@ void Extruder2DFVM::createSideTRS(const std::string& name,
       swap(trCon[iGeo].first[1],trCon[iGeo].first[2]);
       //swap(trCon[iGeo].second[1],trCon[iGeo].second[2]);
     }
-
   }
 }
 
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Extruder2DFVM::splitPrism(vector<CFuint> prism)
+void Extruder2DFVM::splitPrism(const vector<CFuint>& prism)
 {
   CFAUTOTRACE;
 
@@ -1058,10 +1041,10 @@ void Extruder2DFVM::splitPrism(vector<CFuint> prism)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Extruder2DFVM::splitQuads(vector<CFuint> quad)
+void Extruder2DFVM::splitQuads(const vector<CFuint>& quad)
 {
   CFAUTOTRACE;
-
+  
   // unused // const CFuint nbNodesinTetra  = 4;
 
   if ( min( quad[0],quad[2] ) < min( quad[1],quad[3] ) ) {
@@ -1100,10 +1083,8 @@ void Extruder2DFVM::randomNodes()
   srand(time(0));
   CFmeshReaderWriterSource& data = *(_data.get());
   SafePtr< vector<RealVector> > nodes  = data.getNodeList();
-  const CFuint z = 2;
-  for (CFuint iNode=_nbNodesPerLayer;iNode < nodes->size() - _nbNodesPerLayer;iNode++)
-  {
-    (*nodes)[iNode][z]=((rand() % 10000)/10000.0 -0.5)*_zDelta/2.0 + _zDelta*(iNode / _nbNodesPerLayer);
+  for (CFuint iNode=_nbNodesPerLayer;iNode < nodes->size() - _nbNodesPerLayer;iNode++) {
+    (*nodes)[iNode][ZZ]=((rand() % 10000)/10000.0 -0.5)*_zDelta/2.0 + _zDelta*(iNode / _nbNodesPerLayer);
   }
 }
 

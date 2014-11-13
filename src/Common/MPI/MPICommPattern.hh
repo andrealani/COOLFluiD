@@ -36,7 +36,6 @@
 #ifndef COOLFluiD_Common_MPICommPattern_hh
 #define COOLFluiD_Common_MPICommPattern_hh
 
-#include <mpi.h>
 #include <set>
 #include <sstream>
 #include <fstream>
@@ -44,14 +43,14 @@
 #include <limits>
 
 #include "Common/COOLFluiD.hh"
+#include "Common/PE.hh"
+#include "Common/ArrayAllocator.hh"
+#include "Common/CFLog.hh"
 #include "Common/MPI/MPIDataTypeHandler.hh"
 #include "Common/MPI/ParVectorException.hh"
 #include "Common/MPI/MPIException.hh"
-#include "Common/ArrayAllocator.hh"
-#include "Common/CFLog.hh"
-
 #include "Common/MPI/MPIHelper.hh"
-#include "Common/PE.hh"
+#include "Common/MPI/MPIStructDef.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -496,9 +495,9 @@ void MPICommPattern<DATA>::BuildCGlobalLocal (std::vector<IndexType> & Ghosts)
 
   // Prefix scan
   MPI_Scan (const_cast<CFuint*>(&LocalOwned),
-    &StartID, 1, MPI_UNSIGNED,
-    MPI_SUM, _Communicator);
-
+	    &StartID, 1,  MPIStructDef::getMPIType(&StartID),
+	    MPI_SUM, _Communicator);
+  
   // Correct for exclusive scan
   StartID -= LocalOwned;
   
@@ -550,7 +549,7 @@ void MPICommPattern<DATA>::BuildCGlobal ()
   
   Common::CheckMPIStatus(MPI_Allreduce (const_cast<CFuint *>(&LocalGhostSize),
 					&MaxGhostSize, 1,
-					MPI_UNSIGNED, MPI_MAX, _Communicator));
+					MPIStructDef::getMPIType(&MaxGhostSize), MPI_MAX, _Communicator));
   
   // Create a vector to do the translation for every ghost
   std::vector<IndexType> Ghosts;
@@ -911,18 +910,19 @@ void MPICommPattern<DATA>::BuildCGlobal ()
       IndexType MaxGhostSize;
 
       // Determine needed buffer size
-      Common::CheckMPIStatus (MPI_Allreduce (&_GhostSize, &MaxGhostSize, 1, MPI_INT, MPI_MAX,
-             _Communicator));
-
+      Common::CheckMPIStatus (MPI_Allreduce (&_GhostSize, &MaxGhostSize, 1, 
+					     MPIStructDef::getMPIType(&_GhostSize), 
+					     MPI_MAX, _Communicator));
+      
       // it is unsigned, so this is useless // cf_assert(MaxGhostSize>=0);
 
       if (!MaxGhostSize)
         return;     // No node has ghost points
-
+      
       // Allocate storage
       const IndexType StorageSize = MaxGhostSize+1;
       IndexType * Storage = new IndexType[StorageSize];
-
+      
       typename TIndexMap::const_iterator Iter;
 
       // Broadcast needed points
@@ -938,22 +938,24 @@ void MPICommPattern<DATA>::BuildCGlobal ()
 	      int i=1;
 	      for (typename TGhostMap::const_iterator Iter=_GhostMap.begin();
 		   Iter!=_GhostMap.end(); Iter++)
-		  Storage[i++]=Iter->first;
-
-	      Common::CheckMPIStatus(MPI_Bcast (Storage, StorageSize, MPI_INT, RankTurn,
-						_Communicator));
+		Storage[i++]=Iter->first;
+	      
+	      Common::CheckMPIStatus(MPI_Bcast (Storage, StorageSize,  
+						MPIStructDef::getMPIType(&Storage[0]), 
+						RankTurn, _Communicator));
 	  }
 	  else
-	  {
+	    {
 	      //
 	      // Time to receive the list
 	      //
-	      Common::CheckMPIStatus(MPI_Bcast (Storage, StorageSize, MPI_INT, RankTurn,
+	      Common::CheckMPIStatus(MPI_Bcast (Storage, StorageSize, 	
+						MPIStructDef::getMPIType(&Storage[0]), RankTurn,
 						_Communicator));
-
+	      
 	      const IndexType Aantal = Storage[0];
 	      cf_assert (Aantal <= MaxGhostSize);
-
+	      
 	      for (IndexType j=1; j<=Aantal; j++)
 	      {
 		  // Could use GlobalToLocal here, the exception-
@@ -997,10 +999,11 @@ void MPICommPattern<DATA>::BuildCGlobal ()
       }
 
     Common::CheckMPIStatus(MPI_Irecv (&ReceiveStorage[i*_GhostSize], _GhostSize,
-            MPI_INT, i, _MPI_TAG_BUILDGHOSTMAP, _Communicator,
-            &Requests[i]));
+				      MPIStructDef::getMPIType(&_GhostSize), 
+				      i, _MPI_TAG_BUILDGHOSTMAP, _Communicator,
+				      &Requests[i]));
         }
-
+      
       // Send ghost points
       for (int i=0; i<_CommSize; i++)
         {

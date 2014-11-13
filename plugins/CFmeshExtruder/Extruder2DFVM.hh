@@ -184,14 +184,14 @@ private:
    *               is the bottom or the top one.
    */
   void createSideTRS(const std::string& name,
-         const CFuint& layer,
-         const bool& bottom);
-
+		     const CFuint& layer,
+		     const bool& bottom);
+  
   /**
    * Split 3D elements into tetrahedras
    */
-  void splitPrism(std::vector<CFuint> prism);
-
+  void splitPrism(const std::vector<CFuint>& prism);
+  
   /**
    * Random z coordinate for nodes in inner layers
    */
@@ -200,7 +200,7 @@ private:
   /**
    * Split Quads into triangles
    */
-  void splitQuads(std::vector<CFuint> quad);
+  void splitQuads(const std::vector<CFuint>& quad);
 
   /**
    * Dirty hack if hybrid

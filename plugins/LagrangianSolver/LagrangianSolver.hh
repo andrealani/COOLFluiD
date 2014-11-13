@@ -190,18 +190,18 @@ void LagrangianSolver<UserData,PARTICLE_TRACKING>::setupParticleDatatype(MPI_Dat
 
     int counts[3]={3,3,1};
     MPIStructDef::buildMPIStruct<CFreal,CFreal,CFuint>
-            (&commonData.direction[0], &commonData.currentPoint[0], &commonData.cellID, &counts[0], commonDataType);
-
+      (&commonData.direction[0], &commonData.currentPoint[0], &commonData.cellID, &counts[0], commonDataType);
+    
     //set the complete particle dataType
-
+    
     Particle<UserData> particle;
-
+    
     MPI_Aint displacements[2], start_address, address;
-
+    
     // get block lenghts
-    CFint block_lengths[2] = { 1,1 };
+    int block_lengths[2] = { 1,1 };
     MPI_Datatype typeList[2] = {commonDataType.type, ptrUserDatatype};
-
+    
     displacements[0] =0;
     MPI_Address(&particle.commonData, &start_address);
 
@@ -213,7 +213,7 @@ void LagrangianSolver<UserData,PARTICLE_TRACKING>::setupParticleDatatype(MPI_Dat
 
     // commit new datatype
     MPI_Type_commit( &m_particleDataType );
-
+    
     m_sendBuffer.setMPIdatatype(m_particleDataType);
 }
 

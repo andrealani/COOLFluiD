@@ -1106,9 +1106,9 @@ void ParCFmeshFileWriter::writeGeoList(CFuint iTRS, ofstream *const fout)
   cf_assert(states.size() > 0);
 
   // buffer data to send
-  vector<int> sendElements(maxElemSendSize, -1);
-  vector<int> elementToPrint(maxElemSendSize, -1);
-
+  vector<CFint> sendElements(maxElemSendSize, -1);
+  vector<CFint> elementToPrint(maxElemSendSize, -1);
+  
   CFuint rangeID = 0;
   for (CFuint iType = 0; iType < nbElementTypes; ++iType) {
     const CFuint maxNbNodesInType  = nbNodesStatesInTRGeo(iType, 0);
@@ -1180,14 +1180,15 @@ void ParCFmeshFileWriter::writeGeoList(CFuint iTRS, ofstream *const fout)
       cf_assert(sendSize <= sendElements.size());
       cf_assert(sendSize <= elementToPrint.size());
 
-    //   MPI_Reduce(&sendElements[0], &elementToPrint[0], sendSize,
-// 		 MPI_INT, MPI_MAX, _ioRank, _comm);
-
-      MPI_Allreduce(&sendElements[0], &elementToPrint[0], maxElemSendSize, MPI_INT, MPI_MAX, _comm);
+      //   MPI_Reduce(&sendElements[0], &elementToPrint[0], sendSize,
+      // 		 MPI_INT, MPI_MAX, _ioRank, _comm);
+      
+      MPI_Allreduce(&sendElements[0], &elementToPrint[0], maxElemSendSize, 
+		    MPIStructDef::getMPIType(&elementToPrint[0]), MPI_MAX, _comm);
       
       CFLogDebugMax(_myRank << CFPrintContainer<vector<CFint> >
 		    (" elementToPrint  = ", &elementToPrint, maxNodesPlusStates) << "\n");
-
+      
       if (_myRank == _ioRank) {
 	for (CFuint i = 0; i < sendSize; ++i) {
 	  if ((i+1)%maxNodesPlusStates > 0) {

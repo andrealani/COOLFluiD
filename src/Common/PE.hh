@@ -71,17 +71,17 @@ public:
      /// destructor
      ~Group() {MPI_Group_free(&group);}
      
-     std::vector<CFint> globalRanks;
-     std::vector<CFint> groupRanks; 
+     std::vector<int> globalRanks;
+     std::vector<int> groupRanks; 
      MPI_Group group;
      MPI_Comm comm;
    };
-
+   
    /// @return group corresponding to given global rank
-   static CFint getGroupID(CFint rank) {return m_rank2Group.find(rank)->second;}
+   static CFint getGroupID(int rank) {return m_rank2Group.find(rank)->second;}
    
    /// @return the group data corresponding to given group ID
-   static Group& getGroup(CFint groupID) 
+   static Group& getGroup(int groupID) 
    {
      cf_assert(static_cast<CFuint>(groupID) < m_groups.size());
      return *m_groups[groupID];
@@ -92,14 +92,14 @@ public:
    /// @param mapRank2Group  flag telling whether to build a reverse 
    ///                       rank-group mapping (each rank MUST be associated 
    ///                       to a unique group)
-   static void createGroup(const std::vector<CFint>& ranks, 
+   static void createGroup(const std::vector<int>& ranks, 
 			   const bool mapRank2Group); 
    
    /// clear the groups 
    /// @pre cannot be called from ~PE() because static PE object is destroyed 
    ///      after MPI_finalize(): it would try to double delete MPI_group's otherwise 
    static void clearGroups() {
-     for (unsigned i = 0; i < m_groups.size(); ++i) { 
+     for (CFuint i = 0; i < m_groups.size(); ++i) { 
        delete m_groups[i]; 
      } 
    }

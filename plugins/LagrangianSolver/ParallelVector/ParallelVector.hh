@@ -4,6 +4,7 @@
 #include "Framework/SocketBundleSetter.hh"
 #include <vector>
 #include "LagrangianSolver/LagrangianSolverModule.hh"
+#include "Common/MPI/MPIStructDef.hh"
 
 namespace COOLFluiD{
 
@@ -39,12 +40,12 @@ private:
   vector<CFuint> m_sendVectorOverlapLocalIDs;
   vector<CFuint> m_recvVectorOverlapLocalIDs;
 
-  vector<CFint> m_sendVectorOverlapRankDisps;
-  vector<CFint> m_recvVectorOverlapRankDisps;
-
-  vector<CFint> m_sendVectorOverlapRankCounts;
-  vector<CFint> m_recvVectorOverlapRankCounts;
-
+  vector<int> m_sendVectorOverlapRankDisps;
+  vector<int> m_recvVectorOverlapRankDisps;
+  
+  vector<int> m_sendVectorOverlapRankCounts;
+  vector<int> m_recvVectorOverlapRankCounts;
+  
   CFuint m_myProcessRank;
   MPI_Comm m_comm;
   CFuint m_nbProcesses;
@@ -66,14 +67,16 @@ void ParallelVector<T>::sincronizeAdd(){
   for( CFuint i =0; i < m_sendVectorOverlapLocalIDs.size(); ++i){
     sendBuffer[i] = m_data[ m_sendVectorOverlapLocalIDs[i] ];
   }
-
-  MPI_Alltoallv(&sendBuffer[0], &m_sendVectorOverlapRankCounts[0], &m_sendVectorOverlapRankDisps[0], MPI_UNSIGNED,
-      &recvBuffer[0], &m_recvVectorOverlapRankCounts[0], &m_recvVectorOverlapRankDisps[0], MPI_UNSIGNED, m_comm);
-
+  
+  MPI_Alltoallv(&sendBuffer[0], &m_sendVectorOverlapRankCounts[0], &m_sendVectorOverlapRankDisps[0], 
+		Common::MPIStructDef::getMPIType(&sendBuffer[0]),
+		&recvBuffer[0], &m_recvVectorOverlapRankCounts[0], &m_recvVectorOverlapRankDisps[0], 
+		Common::MPIStructDef::getMPIType(&recvBuffer[0]), m_comm);
+  
   for(CFuint i=0; i< m_recvVectorOverlapLocalIDs.size(); ++i){
     m_data[ m_recvVectorOverlapLocalIDs[i] ] += recvBuffer[i];
   }
-
+  
 }
 
 template<typename T>
@@ -88,9 +91,11 @@ void ParallelVector<T>::sincronizeAssign(){
     sendBuffer[i] = m_data[ m_sendVectorOverlapLocalIDs[i] ];
   }
 
-  MPI_Alltoallv(&sendBuffer[0], &m_sendVectorOverlapRankCounts[0], &m_sendVectorOverlapRankDisps[0], MPI_UNSIGNED,
-      &recvBuffer[0], &m_recvVectorOverlapRankCounts[0], &m_recvVectorOverlapRankDisps[0], MPI_UNSIGNED, m_comm);
-
+  MPI_Alltoallv(&sendBuffer[0], &m_sendVectorOverlapRankCounts[0], &m_sendVectorOverlapRankDisps[0], 
+		Common::MPIStructDef::getMPIType(&sendBuffer[0]),
+		&recvBuffer[0], &m_recvVectorOverlapRankCounts[0], &m_recvVectorOverlapRankDisps[0],
+		Common::MPIStructDef::getMPIType(&recvBuffer[0]), m_comm);
+  
   for(CFuint i=0; i< m_recvVectorOverlapLocalIDs.size(); ++i){
     m_data[ m_recvVectorOverlapLocalIDs[i] ] = recvBuffer[i];
   }
@@ -182,8 +187,8 @@ void ParallelVector<T>::getSharedEntries(){
     }
 
 
-    vector<CFint> gatherCounts(m_nbProcesses);
-    vector<CFint> gatherDisps(m_nbProcesses);
+    vector<int> gatherCounts(m_nbProcesses);
+    vector<int> gatherDisps(m_nbProcesses);
 
     CFint nbReply = replyGlobalCellIDs.size();
 
@@ -194,16 +199,16 @@ void ParallelVector<T>::getSharedEntries(){
       gatherDisps[i] = totalSendCount;
       totalSendCount += gatherCounts[i];
     }
-
-
+    
     gatherGlobalCellIDs.resize( totalSendCount );
-    MPI_Gatherv( &replyGlobalCellIDs[0], replyGlobalCellIDs.size(), MPI_UNSIGNED,
-        &gatherGlobalCellIDs[0], &gatherCounts[0], &gatherDisps[0],
-        MPI_UNSIGNED, processRank, m_comm );
-
-
+    MPI_Gatherv( &replyGlobalCellIDs[0], replyGlobalCellIDs.size(), 
+		 Common::MPIStructDef::getMPIType(&replyGlobalCellIDs[0]),
+		 &gatherGlobalCellIDs[0], &gatherCounts[0], &gatherDisps[0],
+		 Common::MPIStructDef::getMPIType(&gatherGlobalCellIDs[0]), 
+		 processRank, m_comm );
+    
     if(m_myProcessRank == processRank){
-
+      
       m_sendVectorOverlapLocalIDs.resize( gatherGlobalCellIDs.size() );
 
       for(CFuint i=0 ; i< gatherGlobalCellIDs.size(); ++i ){

@@ -8,6 +8,13 @@ IF ( NOT CF_ENABLE_ASSERTIONS)
   ADD_DEFINITIONS(-DNDEBUG)
 ENDIF ()
 
+# use of long unsigned integers
+IF( CF_ENABLE_LONG )
+  OPTION(CF_HAVE_LONG   "CFuint is set to long unsigned int" ON )
+ELSE ()
+  OPTION(CF_HAVE_LONG   "CFuint is set to long unsigned int" OFF )
+ENDIF() 
+
 # precision real numbers
 IF ( NOT CF_PRECISION_SINGLE )
 OPTION(CF_PRECISION_SINGLE       "Real numbers have single precision"       OFF )

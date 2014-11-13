@@ -165,7 +165,7 @@ void PeriodicX2DMPI::setup()
   }
   _ConnectionFacePeriodic.reserve(nbTrsFaces);
   _ConnectionProcessPeriodic.reserve(nbTrsFaces);
-  vector<CFint> RecvDis(rdispls);
+  vector<int> RecvDis(rdispls);
   LastDisplacement = rdispls[_n_P-1] + recvcounts[_n_P-1];
   vector<CFreal> rbuf(LastDisplacement,0.0);
   vector<CFreal> sbuf(SendNodeCoordinate);

@@ -802,24 +802,22 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
   while( !done ){
       recvSize = photonStack.size();
       //generate and raytrace the inner photons
-      CFuint nbCellPhotons = std::min(
-      std::max(CFint(m_nbRaysCycle) - CFint(recvSize),0), CFint(toGenerateCellPhotons) );
+      CFuint nbCellPhotons =
+	std::min(std::max(CFint(m_nbRaysCycle) - CFint(recvSize),(CFint)0), CFint(toGenerateCellPhotons) );
 
-      CFuint nbWallPhotons = std::min(
-      std::max(CFint(m_nbRaysCycle) - CFint(recvSize) - CFint(nbCellPhotons),0	), CFint(toGenerateWallPhotons ));
-
+      CFuint nbWallPhotons = 
+	std::min(std::max(CFint(m_nbRaysCycle) - CFint(recvSize) - CFint(nbCellPhotons),(CFint)0), CFint(toGenerateWallPhotons ));
       
-   
-//   CFLog(INFO, recvSize<<' '<<toGenerateCellPhotons<<' '<<toGenerateWallPhotons<<'\n');
-//   CFLog(INFO, nbCellPhotons<<' '<<nbWallPhotons<<'\n');
-  for(CFuint i=0; i < nbCellPhotons ; ++i ){
+      //   CFLog(INFO, recvSize<<' '<<toGenerateCellPhotons<<' '<<toGenerateWallPhotons<<'\n');
+      //   CFLog(INFO, nbCellPhotons<<' '<<nbWallPhotons<<'\n');
+      for(CFuint i=0; i < nbCellPhotons ; ++i ){
         if(getCellPhotonData( photon )){
           //CFLog(INFO,"PHOTON: " << photon.cellID<<' '<<photon.userData.KS<<'\n' );
           //printPhoton(photon);
           rayTracing(photon);
         }
-        -- toGenerateCellPhotons;
-          if (m_myProcessRank == 0)  ++*(progressBar);
+        --toGenerateCellPhotons;
+	if (m_myProcessRank == 0)  ++*(progressBar);
       }
 
       for(CFuint i=0; i < nbWallPhotons ; ++i ){

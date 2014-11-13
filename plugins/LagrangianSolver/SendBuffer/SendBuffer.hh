@@ -20,7 +20,7 @@ class SendBuffer
 {
 private:
     std::vector<T    > m_sendBuffer;
-    std::vector<CFint> m_sendCounts;
+    std::vector<int>  m_sendCounts;
     std::vector<CFint> m_sendRanks;
     std::vector<T    > m_sendBufferOrdered;
     CFuint              m_nbProcesses;
@@ -69,18 +69,19 @@ bool SendBuffer<T>::sincronize( std::vector<T> &recvBuffer, bool isLastPhoton){
     //get the number of photons to send and the displacements
 
     CFuint nbPhotonsSend=0;
-    std::vector<CFint> displacements(m_nbProcesses);
+    std::vector<int> displacements(m_nbProcesses);
     for(CFuint i=0; i< m_nbProcesses ; ++i ){
       displacements[i] = nbPhotonsSend;
       nbPhotonsSend += m_sendCounts[i];
     }
-
+    
     m_sendBufferOrdered.resize(nbPhotonsSend);
-
+    
     //get the number of photons to receive
-    std::vector<CFint> recvCounts(m_nbProcesses), recvDisps(m_nbProcesses);
+    std::vector<int> recvCounts(m_nbProcesses);
+    std::vector<int> recvDisps(m_nbProcesses);
     MPI_Alltoall(&m_sendCounts[0], 1 , MPI_UNSIGNED, &recvCounts[0],  1 , MPI_UNSIGNED, m_comm);
-
+    
     CFuint nbPhotonsRecv=0;
     for(CFuint i=0; i< m_nbProcesses ; ++i ){
       recvDisps[i]   = nbPhotonsRecv;
@@ -91,8 +92,8 @@ bool SendBuffer<T>::sincronize( std::vector<T> &recvBuffer, bool isLastPhoton){
 
     //copy and organize the data into the new buffer
     //TODO: let's look for a way to do it without an extra buffer!
-    std::vector<CFint> tempDisps= displacements;
-    CFint *tempDisp;
+    std::vector<int> tempDisps= displacements;
+    int *tempDisp;
     for( CFuint i=0; i < m_sendBuffer.size(); ++i ){
       tempDisp= &(tempDisps[ m_sendRanks[i] ]);
       m_sendBufferOrdered[ *tempDisp ] = m_sendBuffer[i];
@@ -103,7 +104,7 @@ bool SendBuffer<T>::sincronize( std::vector<T> &recvBuffer, bool isLastPhoton){
     MPI_Alltoallv(&m_sendBufferOrdered[0], &m_sendCounts[0], &displacements[0],
                   m_MPIdatatype, &recvBuffer[0], &recvCounts[0],
                   &recvDisps[0], m_MPIdatatype, m_comm );
-   
+    
     //CFLog(INFO,"End sincronize!\n");
     //clear the sendbuffers
     m_sendBuffer.clear();
