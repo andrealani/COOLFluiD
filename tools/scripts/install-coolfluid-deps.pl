@@ -108,10 +108,11 @@ my %packages = (  #  version   default install priority      function
     "boost"      => [ "1_54_0", 'on' ,  'off', $priority++,  \&install_boost ],
 #   "openmpi"    => [ "1.4.2",  'off',  'off', $priority++,  \&install_openmpi ],
     "openmpi"    => [ "1.6.5",  'off',  'off', $priority++,  \&install_openmpi ],
-#    "mpich"      => [ "1.2.7p1",'off',  'off', $priority++,  \&install_mpich ],
-    "mpich"      => [ "3.1b1",'off',  'off', $priority++,  \&install_mpich ],    	
+#    "mpich"      => [ "3.1b1",'off',  'off', $priority++,  \&install_mpich ],    	
+    "mpich"      => [ "3.1.3",'off',  'off', $priority++,  \&install_mpich ], 
     "mpich2"     => [ "1.4.1p1",  'off',  'off', $priority++,  \&install_mpich2 ],
     "mvapich2"   => [ "1.9",      'off',  'off', $priority++,  \&install_mvapich2 ],
+#     "mvapich2"  => [ "2.0.1", 'off',  'off', $priority++,  \&install_mvapich2 ], 
     "parmetis"   => [ "4.0.3",  'on' ,  'off', $priority++,  \&install_parmetis ],
     # "parmetis"   => [ "3.1.1",  'on' ,  'off', $priority++,  \&install_parmetis ],
     "hdf5"       => [ "1.6.4",  'off',  'off', $priority++,  \&install_hdf5 ],
@@ -185,6 +186,7 @@ options:
                               Default: $opt_many_mpi.
 
         --debug=             Compile dependencies and coolfluid with debug symbols (=1 is default)
+        --int64=             If =1 compiles PETSc using long long int. 
         --fetchonly          Just download the sources. Do not install anything.
         --dry-run            Don't actually perform the configuration.
                              Just output what you would do.
@@ -1081,7 +1083,7 @@ sub install_mpich() {
       }
  
       # --enable-shared
-      run_command_or_die("./configure --prefix=$opt_mpi_dir --disable-f77 --disable-fc $optim_options --with-device=ch3:nemesis"); 
+      run_command_or_die("./configure --prefix=$opt_mpi_dir --disable-f77 --disable-fortran --disable-fc $optim_options --with-device=ch3:nemesis"); 
       run_command_or_die("make");
       run_command_or_die("make install");
   }
