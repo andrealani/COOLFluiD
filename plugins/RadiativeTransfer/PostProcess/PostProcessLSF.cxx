@@ -213,12 +213,12 @@ void PostProcessLSF::runPostProcess(DataHandle<CFreal> dataVector){
   
   nbsElems.resize(nbProcesses,0);
   disps.resize(nbProcesses,0);
-
-  CFuint local_size = Q_out.size();
-  MPI_Gather(&local_size,  1, MPI_UNSIGNED,
-             &nbsElems[0], 1, MPI_UNSIGNED,
-      0, comm);
-
+  
+  int local_size = Q_out.size();
+  MPI_Gather(&local_size,  1, Common::MPIStructDef::getMPIType(&local_size),
+             &nbsElems[0], 1, Common::MPIStructDef::getMPIType(&nbsElems[0]),
+	     0, comm);
+  
   CFuint globalSize=0;
   for (CFuint i=0; i< nbProcesses; ++i){
     disps[i] = globalSize;

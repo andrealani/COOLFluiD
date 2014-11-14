@@ -125,7 +125,7 @@ void ICPplasmaFieldComputingBC<BASE,ST>::setup()
     vector<CFuint> nbCellsInProcVec(nbProc, 0);
     nbCellsInProcVec[PE::GetPE().GetRank()] = nbCellsInProc;
     
-    MPI_Allreduce(&nbCellsInProcVec[0], &m_nbStatesInProc[0], nbProc, MPI_UNSIGNED, MPI_MAX,
+    MPI_Allreduce(&nbCellsInProcVec[0], &m_nbStatesInProc[0], nbProc, MPIStructDef::getMPIType(&nbCellsInProcVec[0]), MPI_MAX,
 		  PE::GetPE().GetCommunicator());
 #endif
   }

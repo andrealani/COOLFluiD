@@ -169,8 +169,10 @@ void BCPeriodicMFMHD::setup()
   
   std::vector<CFuint> nbWestFacesPerProcess(_nbProcesses,0);
   std::vector<CFuint> nbEastFacesPerProcess(_nbProcesses,0);
-  MPI_Allgather(&nbWestFaces, 1, MPI_UNSIGNED, &nbWestFacesPerProcess[0], 1, MPI_UNSIGNED, _comm);
-  MPI_Allgather(&nbEastFaces, 1, MPI_UNSIGNED, &nbEastFacesPerProcess[0], 1, MPI_UNSIGNED, _comm);
+  MPI_Allgather(&nbWestFaces, 1, MPIStructDef::getMPIType(&nbWestFaces), 
+	&nbWestFacesPerProcess[0], 1, MPIStructDef::getMPIType(&nbWestFaces), _comm);
+  MPI_Allgather(&nbEastFaces, 1, MPIStructDef::getMPIType(&nbEastFaces), 
+	&nbEastFacesPerProcess[0], 1, MPIStructDef::getMPIType(&nbEastFaces), _comm);
   
   CFuint totalNbWestFaces = 0;
   CFuint totalNbEastFaces = 0;
@@ -267,7 +269,8 @@ void BCPeriodicMFMHD::setupMPI()
   _periodicState->resize(_nE);
   
   MPI_Barrier(_comm);
-  MPI_Allgather(&_nbTrsFaces, 1, MPI_UNSIGNED, &_nbFacesPerProcess[0], 1, MPI_UNSIGNED, _comm);
+  MPI_Allgather(&_nbTrsFaces, 1, MPIStructDef::getMPIType(&_nbTrsFaces), 
+	&_nbFacesPerProcess[0], 1, MPIStructDef::getMPIType(&_nbTrsFaces), _comm);
 
   
   // build counts and displacements for preProcess step

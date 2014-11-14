@@ -101,10 +101,10 @@ void ParCFmeshFileWriter::writeToFile(const boost::filesystem::path& filepath)
    // the partitioning is not well balanced
    CFuint nbLocalElements = getWriteData().getNbElements();
    CFuint minNumberElements = 0;
-   MPI_Allreduce(&nbLocalElements, &minNumberElements, 1, MPI_UNSIGNED, MPI_MIN, _comm);
+   MPI_Allreduce(&nbLocalElements, &minNumberElements, 1, MPIStructDef::getMPIType(&nbLocalElements), MPI_MIN, _comm);
    CFuint rank = (minNumberElements == nbLocalElements)  ? _myRank : 0;
    // IO rank is maximum rank whose corresponding process has minimum number of elements
-   MPI_Allreduce(&rank, &_ioRank, 1, MPI_UNSIGNED, MPI_MAX, _comm);    
+   MPI_Allreduce(&rank, &_ioRank, 1, MPIStructDef::getMPIType(&rank), MPI_MAX, _comm);    
    CFout << "ParCFmeshFileWriter::writeToFile() => IO rank is " << _ioRank << "\n";
  
   Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
@@ -125,7 +125,7 @@ void ParCFmeshFileWriter::writeToFile(const boost::filesystem::path& filepath)
   }
 
   // communicate to all the processors about the status of the current file
-  MPI_Bcast(&_isNewFile, 1, MPI_UNSIGNED, _ioRank, _comm);
+  MPI_Bcast(&_isNewFile, 1, MPIStructDef::getMPIType(&_isNewFile), _ioRank, _comm);
 
   writeToFileStream(filepath, file);
 
@@ -534,9 +534,9 @@ void ParCFmeshFileWriter::writeElementList(std::ofstream *const fout)
       cf_assert(sendSize <= elementToPrint.size());
 
 //      MPI_Reduce(&sendElements[0], &elementToPrint[0], sendSize,
-//		 MPI_UNSIGNED, MPI_MAX, _ioRank, _comm); // allocates too much memory on master node with OPENMPI
+//		 MPIStructDef::getMPIType(&sendElements[0]), MPI_MAX, _ioRank, _comm); // allocates too much memory on master node with OPENMPI
       
-      MPI_Allreduce(&sendElements[0], &elementToPrint[0], maxElemSendSize, MPI_UNSIGNED, MPI_MAX, _comm);
+      MPI_Allreduce(&sendElements[0], &elementToPrint[0], maxElemSendSize, MPIStructDef::getMPIType(&sendElements[0]), MPI_MAX, _comm);
       
       CFLogDebugMax(_myRank << CFPrintContainer<vector<CFuint> >
 		    (" elementToPrint  = ", &elementToPrint, nodesPlusStates) << "\n");
@@ -1039,7 +1039,7 @@ void ParCFmeshFileWriter::writeGeoList(CFuint iTRS, ofstream *const fout)
   // example: in a TR with quads and triangles nbNodesStatesInTRGeoTmp(iTR,0) = 4
   // example: in a TR with quads and triangles nbNodesStatesInTRGeoTmp(iTR,1) = 4 (FEM) or 1 (FVMCC)
   MPI_Allreduce(&nbNodesStatesInTRGeoTmp[0], &nbNodesStatesInTRGeo[0],
-		nbNodesStatesInTRGeo.size(), MPI_UNSIGNED, MPI_MAX, _comm);
+		nbNodesStatesInTRGeo.size(), MPIStructDef::getMPIType(&nbNodesStatesInTRGeoTmp[0]), MPI_MAX, _comm);
 
   CFLogDebugMin("nbNodesStatesInTRGeo = " << nbNodesStatesInTRGeo << "\n");
 
@@ -1181,7 +1181,7 @@ void ParCFmeshFileWriter::writeGeoList(CFuint iTRS, ofstream *const fout)
       cf_assert(sendSize <= elementToPrint.size());
 
       //   MPI_Reduce(&sendElements[0], &elementToPrint[0], sendSize,
-      // 		 MPI_INT, MPI_MAX, _ioRank, _comm);
+      // 		 MPIStructDef::getMPIType(&sendElements[0]), MPI_MAX, _ioRank, _comm);
       
       MPI_Allreduce(&sendElements[0], &elementToPrint[0], maxElemSendSize, 
 		    MPIStructDef::getMPIType(&elementToPrint[0]), MPI_MAX, _comm);

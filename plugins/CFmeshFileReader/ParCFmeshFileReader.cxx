@@ -1983,13 +1983,13 @@ void ParCFmeshFileReader::moveElementData( ElementDataArray<0>& localElem, Parti
   vector<CFuint> elemSize(totRecvPtrCount, static_cast<CFuint>(0));
 
   MPI_Alltoallv(tmpElem.startData(), &sendCount[0],
-		&sendDispl[0], MPIStructDef::getMPIType(&sendCount[0]), localElem.startData(),
-		&recvCount[0], &recvDispl[0], MPIStructDef::getMPIType(&recvCount[0]), m_comm);
+		&sendDispl[0], MPIStructDef::getMPIType(tmpElem.startData()), localElem.startData(),
+		&recvCount[0], &recvDispl[0], MPIStructDef::getMPIType(localElem.startData()), m_comm);
   
   MPI_Alltoallv(&tmpElemSize[0], &sendPtrCount[0],
-		&sendPtrDispl[0], MPIStructDef::getMPIType(&sendPtrCount[0]), &elemSize[0],
+		&sendPtrDispl[0], MPIStructDef::getMPIType(&tmpElemSize[0]), &elemSize[0],
 		&recvPtrCount[0], &recvPtrDispl[0],
-		MPIStructDef::getMPIType(&recvPtrCount[0]), m_comm);
+		MPIStructDef::getMPIType(&elemSize[0]), m_comm);
   
   // print some hardcore info in case of need for debugging
   CFLogDebugMin(CFPrintContainer<vector<int> >("sendCount  = ", &sendCount));
@@ -2012,11 +2012,11 @@ void ParCFmeshFileReader::moveElementData( ElementDataArray<0>& localElem, Parti
   // globally reduce the size of the element array
   vector<CFuint> tmpSizeElemArray(m_nbProc, static_cast<CFuint>(0));
   tmpSizeElemArray[m_myRank] = localElem.sizeData();
-
+  
   vector<CFuint> sizeElemArray(m_nbProc, static_cast<CFuint>(0));
   MPI_Allreduce(&tmpSizeElemArray[0], &sizeElemArray[0], m_nbProc,
-    MPIStructDef::getMPIType(&newNbElemPerProc[0]), MPI_SUM, m_comm);
-
+		MPIStructDef::getMPIType(&tmpSizeElemArray[0]), MPI_SUM, m_comm);
+  
   /// @todo here is a possible place to do optimization
   /// if memory or speed problems arise
   vector<bool> isLocalNode(m_totNbNodes, false);
@@ -2212,7 +2212,6 @@ void ParCFmeshFileReader::setIsLocalNodeState(ElementDataArray<0>& elem,
     const CFuint nbNodesInElem = itr.get(ElementDataArray<0>::NB_NODES);
     for (CFuint in = 0; in < nbNodesInElem; ++in) {
       const CFuint nodeID = itr.getNode(in);
-      cout << "nodeID = " << nodeID << endl;
       cf_assert(nodeID < isLocalNode.size());
       if (!isLocalNode[nodeID]) {
 	isLocalNode[nodeID] = true;

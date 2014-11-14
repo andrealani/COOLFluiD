@@ -44,7 +44,8 @@ namespace COOLFluiD {
   /// typedef for int
   typedef long long int      CFint;
   /// typedef for unsigned int
-  typedef long unsigned int  CFuint;
+  typedef long long int      CFuint;
+  //typedef long unsigned int  CFuint;
 #else
   /// typedef for int
   typedef int                CFint;

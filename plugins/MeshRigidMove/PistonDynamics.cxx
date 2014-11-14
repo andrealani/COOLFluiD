@@ -350,7 +350,7 @@ CFreal PistonDynamics::getdeltaP()
       if (iTRS < trsList.size()-1) {
        if (PE::GetPE().GetProcessorCount() > 1) {
         MPI_Allreduce(&av_perssure, &Total_av_perssure, 1, MPI_DOUBLE, MPI_SUM,PE::GetPE().GetCommunicator());  
-       MPI_Allreduce(&nbFaces, &nbFacesG, 1, MPI_INTEGER, MPI_SUM,PE::GetPE().GetCommunicator());  
+       MPI_Allreduce(&nbFaces, &nbFacesG, 1, MPIStructDef::getMPIType(&nbFaces), MPI_SUM,PE::GetPE().GetCommunicator());  
            }
        else {
           Total_av_perssure = av_perssure;

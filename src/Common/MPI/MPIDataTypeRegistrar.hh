@@ -100,8 +100,8 @@ REGISTRAR_TYPE(double, MPI_DOUBLE)
 REGISTRAR_TYPE(float,MPI_FLOAT)
 REGISTRAR_TYPE(int,MPI_INT)
 REGISTRAR_TYPE(unsigned int,MPI_UNSIGNED)
-REGISTRAR_TYPE(long, MPI_LONG)
-REGISTRAR_TYPE(unsigned long, MPI_LONG)
+REGISTRAR_TYPE(long unsigned int,MPI_UNSIGNED_LONG)
+REGISTRAR_TYPE(long long int, MPI_LONG_LONG_INT)
 
 //////////////////////////////////////////////////////////////////////////////
 

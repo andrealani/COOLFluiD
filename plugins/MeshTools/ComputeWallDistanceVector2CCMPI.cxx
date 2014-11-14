@@ -131,7 +131,7 @@ void ComputeWallDistanceVector2CCMPI::execute3D()
       CFuint nbLocalTrsFaces = faces->getLocalNbGeoEnts();
       
 #ifdef CF_HAVE_MPI
-      MPI_Bcast(&nbLocalTrsFaces, 1, MPI_UNSIGNED, root, m_comm);
+      MPI_Bcast(&nbLocalTrsFaces, 1, MPIStructDef::getMPIType(&nbLocalTrsFaces), root, m_comm);
 #endif
       
       // something is gonna be packed to be sent only if the number of faces 
@@ -229,7 +229,7 @@ void ComputeWallDistanceVector2CCMPI::execute2D()
       CFuint nbLocalTrsFaces = faces->getLocalNbGeoEnts();
       
 #ifdef CF_HAVE_MPI
-      MPI_Bcast(&nbLocalTrsFaces, 1, MPI_UNSIGNED, root, m_comm);
+      MPI_Bcast(&nbLocalTrsFaces, 1, MPIStructDef::getMPIType(&nbLocalTrsFaces), root, m_comm);
 #endif
       
       CFuint nodeSize = 0;
@@ -289,7 +289,7 @@ void ComputeWallDistanceVector2CCMPI::execute2D()
 	
 #ifdef CF_HAVE_MPI
 	// broadcast the sizes of the storages to make possible to preallocate the distributed arrays
-	MPI_Bcast(&sizes[0], 3, MPI_INT, root, m_comm);
+	MPI_Bcast(&sizes[0], 3, MPIStructDef::getMPIType(&sizes[0]), root, m_comm);
 #endif
 	
 	if (m_myRank != root) {

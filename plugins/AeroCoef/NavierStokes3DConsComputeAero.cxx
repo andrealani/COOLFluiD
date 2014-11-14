@@ -301,6 +301,8 @@ bool nodeComparator(CFuint* a, CFuint* b) {
 
 void NavierStokes3DConsComputeAero::executeOnTrs()
 {
+  /// AL: this needs to be dapted to work with "long long int"
+
   CFAUTOTRACE;
   CFuint currtrsid=getCurrentTrsID();
   Common::SafePtr<Common::ConnectivityTable<CFuint> > g2n=getCurrentTRS()->getGeo2NodesConn();

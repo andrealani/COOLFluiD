@@ -124,7 +124,7 @@ void StegerWarmingCorrFluxMPI::buildFaceBCData()
     << " has globalNbLayersToAdd = " << globalNbLayersToAdd << "\n");
 
   MPI_Allreduce(&localNbLayersToAdd, &globalNbLayersToAdd,
-    1, MPI_UNSIGNED,MPI_MAX,PE::GetPE().GetCommunicator());
+    1, MPIStructDef::getMPIType(&localNbLayersToAdd),MPI_MAX,PE::GetPE().GetCommunicator());
 
   while (globalNbLayersToAdd > 0) {
     processBFaces(pName,
@@ -137,7 +137,7 @@ void StegerWarmingCorrFluxMPI::buildFaceBCData()
     localNbLayersToAdd = accumulate(nbLayersToAdd.begin(), nbLayersToAdd.end(),0);
 
     MPI_Allreduce(&localNbLayersToAdd, &globalNbLayersToAdd,
-      1, MPI_UNSIGNED,MPI_MAX,PE::GetPE().GetCommunicator());
+      1, MPIStructDef::getMPIType(&localNbLayersToAdd),MPI_MAX,PE::GetPE().GetCommunicator());
   }
 }
 
@@ -226,7 +226,7 @@ void StegerWarmingCorrFluxMPI::processBFaces
     
     // make the other processors know the size of the data to distribute
     // from the current processor
-    MPI_Bcast(&sizeData[0], 2, MPI_UNSIGNED, root, PE::GetPE().GetCommunicator());
+    MPI_Bcast(&sizeData[0], 2, MPIStructDef::getMPIType(&sizeData[0]), root, PE::GetPE().GetCommunicator());
     
     if (sizeData[0] > 0) {
       if (root != myRank) {

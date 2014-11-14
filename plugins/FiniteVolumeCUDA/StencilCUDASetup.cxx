@@ -445,7 +445,8 @@ void StencilCUDASetup::assignPartitionFaceGlobalGhostStateIDS()
   const CFuint nbPr = PE::GetPE().GetProcessorCount();
   MPI_Comm comm = PE::GetPE().GetCommunicator();
   const CFuint rank = PE::GetPE().GetRank();
-  MPI_Allreduce(&nbPartitionCellsAndSize[0], &maxNbPartitionCellsAndSize[0], 2, MPI_UNSIGNED, MPI_MAX, comm);
+  MPI_Allreduce(&nbPartitionCellsAndSize[0], &maxNbPartitionCellsAndSize[0], 2, 
+                MPIStructDef::getMPIType(&nbPartitionCellsAndSize[0]), MPI_MAX, comm);
   assert(maxNbPartitionCellsAndSize[0] > 0);
   assert(maxNbPartitionCellsAndSize[1] > 0);
   assert(maxNbPartitionCellsAndSize[0] < nbPartitionCellsAndSize[1]);

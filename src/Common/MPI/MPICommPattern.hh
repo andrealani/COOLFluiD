@@ -502,34 +502,28 @@ void MPICommPattern<DATA>::BuildCGlobalLocal (std::vector<IndexType> & Ghosts)
   StartID -= LocalOwned;
   
   _FirstCGlobal = StartID;
-  CFLogDebugMin( "First CGlobal ID: " << _FirstCGlobal <<
- ", Count=" << LocalOwned << "\n");
-
+  CFLog (DEBUG_MIN, "First CGlobal ID: " << _FirstCGlobal << ", Count=" << LocalOwned << "\n");
+  
   // resize CGlobal
   _CGlobal.resize (GetLocalSize()+GetGhostSize());
   
   const size_t gsize = size();
-  CFLog (INFO, "MPICommPattern<DATA>::reserve() -> m_data->GetTotalSize() = " << gsize << "\n" );
-  for (CFuint i=0; i< gsize; ++i)
-    {
-      if (IsGhost (i))
-      {
-        // Ghosts holds the local indexes of the ghost elements
-        // (the global one can be found directly)
-        Ghosts.push_back (i);
-        continue;
-      }
-
-    _CGlobal[i] = StartID;
-
-    ++StartID;
+  CFLog (DEBUG_MIN, "MPICommPattern<DATA>::reserve() -> m_data->GetTotalSize() = " << gsize << "\n");
+  for (CFuint i=0; i< gsize; ++i) {
+    if (IsGhost (i)) {
+      // Ghosts holds the local indexes of the ghost elements
+      // (the global one can be found directly)
+      Ghosts.push_back (i);
+      continue;
     }
-
-  CFLogDebugMin( "ParVector: CMap: Remaining to translate: "
-		 << Ghosts.size() << " ghost elements...\n");
+    _CGlobal[i] = StartID;
+    ++StartID;
+  }
+  
+  CFLog(DEBUG_MIN, "MPICommPattern<DATA>: CMap: Remaining to translate: " << Ghosts.size() << " ghost elements...\n");
   // Now all CGlobal IDs are set for every non-ghost element
 }
-
+      
 template <typename DATA>
 bool MPICommPattern<DATA>::HasCGlobal () const
 {
@@ -609,10 +603,9 @@ void MPICommPattern<DATA>::BuildCGlobal ()
     const CFuint EleCount = ReceiveBuf[0];
 
     cf_assert (EleCount <= MaxGhostSize);
-
-    CFLogDebugMin( "BuildCMap: Translating "
-             << EleCount << " elements...\n");
-
+    
+    CFLogDebugMin( "BuildCMap: Translating " << EleCount << " elements...\n");
+    
     for (CFuint i=0; i<EleCount; ++i)
       {
         const CFuint CurID = i+1;
@@ -622,35 +615,29 @@ void MPICommPattern<DATA>::BuildCGlobal ()
         // We have to map CurGlobalID to CGlobalID
 
         // If it is already mapped, skip
-        if (!IsFlagSet(CurVal, _FLAG_GHOST))
-          {
-      CFLogDebugMed( "Skipping " <<
-               NormalIndex(CurVal) << "\n");
-      continue;
-          }
-
+        if (!IsFlagSet(CurVal, _FLAG_GHOST)) {
+	  CFLogDebugMax( "Skipping " << NormalIndex(CurVal) << "\n");
+	  continue;
+	}
+	
         // We check if we have it
         IndexType LocalID = FindLocal (NormalIndex(CurVal));
 
         // If we don't have it, leave it
-        if (LocalID == _NOT_FOUND)
-          {
-      CFLogDebugMed( "Don't have " << NormalIndex(CurVal)
-               << "\n");
-      continue;
-          }
-
+        if (LocalID == _NOT_FOUND) {
+	  CFLogDebugMax( "Don't have " << NormalIndex(CurVal) << "\n");
+	  continue;
+	}
+	
         // Now we have the local ID overhere, replace the
         // global one with the CGlobal one
 
         // For non-ghost entries CGlobal is already valid...
-
+	
         cf_assert (!IsGhost (LocalID));
-
-        CFLogDebugMed( "Translating "
-           << NormalIndex (CurVal) <<
-           " by " << _CGlobal[LocalID] << "\n");
-
+	
+        CFLogDebugMax( "Translating " << NormalIndex (CurVal) << " by " << _CGlobal[LocalID] << "\n");
+	
         ReceiveBuf[CurID] = _CGlobal[LocalID];
       }
 
@@ -754,7 +741,7 @@ void MPICommPattern<DATA>::BuildCGlobal ()
         }
       
       CFLogDebugMax( "Warning: Using slow FindLocal (no index created) in"
-		     " parvector\n");
+		     " MPICommPattern<DATA>\n");
       for (CFuint i=0; i<size(); i++)
         {
 	  IndexType I = _MetaData(i).GlobalIndex;
@@ -781,7 +768,7 @@ void MPICommPattern<DATA>::BuildCGlobal ()
 	  }
 	
 	CFLogDebugMax( "Warning: Using slow FindGhost (no index created) in"
-		       " parvector\n");
+		       " MPICommPattern<DATA>\n");
 	for (CFuint i=0; i<size (); i++)
 	  {
 	    IndexType I = _MetaData(i).GlobalIndex;
@@ -890,7 +877,7 @@ void MPICommPattern<DATA>::BuildCGlobal ()
       if (Iter2!=_GhostMap.end())
         return Iter2->second;
 
-      throw NotFoundException (FromHere(),"Parvector: NotFoundException");
+      throw NotFoundException (FromHere(),"MPICommPattern<DATA>: NotFoundException");
     }
 
 
@@ -999,7 +986,7 @@ void MPICommPattern<DATA>::BuildCGlobal ()
       }
 
     Common::CheckMPIStatus(MPI_Irecv (&ReceiveStorage[i*_GhostSize], _GhostSize,
-				      MPIStructDef::getMPIType(&_GhostSize), 
+				      MPIStructDef::getMPIType(&ReceiveStorage[i*_GhostSize]), 
 				      i, _MPI_TAG_BUILDGHOSTMAP, _Communicator,
 				      &Requests[i]));
         }
@@ -1097,7 +1084,7 @@ void MPICommPattern<DATA>::BuildCGlobal ()
       if (GhostFound != _GhostSize)
       {
 	  // Error: we don't have all the ghost points
-	  CFLog(NOTICE, "Not all ghost points were found! Starting investigation\n");
+	  CFLog(DEBUG_MIN, "Not all ghost points were found! Starting investigation\n");
 
 	  std::set<CFuint> Ghosts;
 	  std::set<CFuint> Receives;
@@ -1225,7 +1212,7 @@ void MPICommPattern<DATA>::BuildCGlobal ()
         return;
       
       IndexType growBy =  reservesize - m_data->size();
-      CFLogDebugMin( "par_vector reserve called: reservesize="
+      CFLogDebugMin( "MPICommPattern<DATA>::reserve() => reservesize ="
 		     << reservesize << ", growing by " << growBy
 		     << ", current size=" << m_data->size() << "\n");
       grow (growBy);
@@ -1290,7 +1277,7 @@ typename MPICommPattern<DATA>::IndexType MPICommPattern<DATA>::AllocNext ()
   // Check to see if we reached the limit of our base IndexType
   if (IsFlagSet (size()+1, _FLAG_DELETED|_FLAG_GHOST))
   {
-    CFLog(NOTICE, "Limit of IndexType reached!!!!!\n");
+    CFLog(DEBUG_MIN, "Limit of IndexType reached!!!!!\n");
     return _NO_MORE_FREE;
   }
   
@@ -1469,7 +1456,7 @@ typename MPICommPattern<DATA>::IndexType MPICommPattern<DATA>::AllocNext ()
 
       if (Iter!=_GhostMap.end())
         throw DoubleElementException
-    (FromHere(), "Parvector: AddGhostPoint: DoubleElementException");
+    (FromHere(), "MPICommPattern<DATA>: AddGhostPoint: DoubleElementException");
 
       //
       // Alternative:
@@ -1479,7 +1466,7 @@ typename MPICommPattern<DATA>::IndexType MPICommPattern<DATA>::AllocNext ()
       typename TIndexMap::const_iterator Iter2 = _IndexMap.find(GlobalIndex);
       if (Iter2!=_IndexMap.end())
         throw DoubleElementException
-    (FromHere(), "ParVector: AddGhostPoint: DoubleElementException");
+    (FromHere(), "MPICommPattern<DATA>: AddGhostPoint: DoubleElementException");
 
       IndexType NewLocalID = AllocNext ();
 
@@ -1510,7 +1497,7 @@ typename MPICommPattern<DATA>::IndexType MPICommPattern<DATA>::AllocNext ()
 
       if (NewLocalID == _NO_MORE_FREE )
         throw StorageException
-    (FromHere(), "ParVector: AddLocalPoint: No more free space");
+    (FromHere(), "MPICommPattern<DATA>: AddLocalPoint: No more free space");
 
       cf_assert (NewLocalID!=_NO_MORE_FREE);
 
@@ -1520,7 +1507,7 @@ typename MPICommPattern<DATA>::IndexType MPICommPattern<DATA>::AllocNext ()
       typename TIndexMap::const_iterator Iter = _IndexMap.find(GlobalIndex);
       if (Iter != _IndexMap.end())
         throw DoubleElementException
-    (FromHere(), "ParVector: AddLocalPoint: DoubleElementException!");
+    (FromHere(), "MPICommPattern<DATA>: AddLocalPoint: DoubleElementException!");
 
       _IndexMap[GlobalIndex]=NewLocalID;
 
@@ -1598,8 +1585,8 @@ typename MPICommPattern<DATA>::IndexType MPICommPattern<DATA>::AllocNext ()
 	  MPI_Type_free (&_ReceiveTypes[i]);
 	}
       }
-
-      CFLogDebugMin( "parVector DoneMPI\n");
+      
+      CFLogDebugMin( "MPICommPattern<DATA>::DoneMPI\n");
     }
 
 
@@ -1653,8 +1640,8 @@ typename MPICommPattern<DATA>::IndexType MPICommPattern<DATA>::AllocNext ()
     _BasicType = MPIDataTypeHandler::GetType<T>();
 #endif
         }
-
-      CFLogDebugMin( "parvector InitMPI\n");
+      
+      CFLogDebugMin( "MPICommPattern<DATA>::InitMPI\n");
     }
 
 //////////////////////////////////////////////////////////////////////////////

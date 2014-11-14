@@ -7,6 +7,7 @@
 #include <parmetis.h>
 #include "Common/PE.hh"
 #include "Common/CFAssert.hh"
+#include "Common/MPI/MPIStructDef.hh"
 #include "Common/ParallelException.hh"
 #include "Framework/PartitionerData.hh"
 
@@ -247,7 +248,8 @@ inline void commMPIstruct<CFuint>::MPIcommunicate()
   for(CFuint p=0; p<PE::GetPE().GetProcessorCount(); ++p) 
     if(p!=PE::GetPE().GetRank() && m_MPIReci[p].size() > 0)
     { 
-      MPI_Irecv( &m_MPIReci[p][0], m_MPIReci[p].size(), MPI_UNSIGNED, p, tag, PE::GetPE().GetCommunicator(), &tabreqs[licznik]);
+      MPI_Irecv( &m_MPIReci[p][0], m_MPIReci[p].size(), 
+	Common::MPIStructDef::getMPIType(&m_MPIReci[p][0]), p, tag, PE::GetPE().GetCommunicator(), &tabreqs[licznik]);
       ++licznik;
     }
   // ----------------  send
@@ -255,7 +257,8 @@ inline void commMPIstruct<CFuint>::MPIcommunicate()
     if(p!=PE::GetPE().GetRank() && m_MPISend[p].size() > 0)
     {
       //cout<<mProcId<<": pSize["<<p<<"]="<<pSize[p]<<" pSizeIn[p]"<<pSizeIn[p]<<endl;
-      MPI_Isend(&m_MPISend[p][0], m_MPISend[p].size(), MPI_UNSIGNED, p, tag, PE::GetPE().GetCommunicator(), &tabreqs[licznik]); //wysylam id
+      MPI_Isend(&m_MPISend[p][0], m_MPISend[p].size(), 
+	Common::MPIStructDef::getMPIType(&m_MPISend[p][0]), p, tag, PE::GetPE().GetCommunicator(), &tabreqs[licznik]); //wysylam id
       ++licznik;
     }
   MPI_Waitall( licznik, &tabreqs[0], &tabstats[0]);

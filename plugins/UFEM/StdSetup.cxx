@@ -440,7 +440,7 @@ void StdSetup::setWallNearestSegment()
     // calculating boundary segments centroids
     CFuint nbBndGeoEnt=bndTrs->getLocalNbGeoEnts();
     CFuint nbBndGeoEntAll=0;
-    MPI_Allreduce(&nbBndGeoEnt,&nbBndGeoEntAll,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&nbBndGeoEnt,&nbBndGeoEntAll,1,MPIStructDef::getMPIType(&nbBndGeoEnt), MPI_SUM,MPI_COMM_WORLD);
     std::vector<CFreal> bndCentroidsX(nbBndGeoEntAll,0.);
     std::vector<CFreal> bndCentroidsY(nbBndGeoEntAll,0.);
     std::vector<CFreal> bndCentroidsZ(nbBndGeoEntAll,0.);

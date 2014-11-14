@@ -24,6 +24,8 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
+/// AL: this will not work with "long long int", needs to be adapted     
+
 void PartitionerPeriodicTools::writePeriodicInfo(const int ndim, 
 						 std::string& name0, 
 						 std::vector<int> &gidx0, 
@@ -39,21 +41,25 @@ void PartitionerPeriodicTools::writePeriodicInfo(const int ndim,
   std::vector<int> displs1(Common::PE::GetPE().GetProcessorCount(),0);
   int iprocsend0=gidx0.size();
   int iprocsend1=gidx1.size();
-  MPI_Gather(&iprocsend0,1,MPI_UNSIGNED,&ngidx0[0],1,MPI_UNSIGNED,0,Common::PE::GetPE().GetCommunicator());
-  MPI_Gather(&iprocsend1,1,MPI_UNSIGNED,&ngidx1[0],1,MPI_UNSIGNED,0,Common::PE::GetPE().GetCommunicator());
+  MPI_Gather(&iprocsend0,1,Common::MPIStructDef::getMPIType(&iprocsend0),
+	     &ngidx0[0],1,Common::MPIStructDef::getMPIType(&ngidx0[0]),0,Common::PE::GetPE().GetCommunicator());
+  MPI_Gather(&iprocsend1,1,Common::MPIStructDef::getMPIType(&iprocsend1),
+	     &ngidx1[0],1,Common::MPIStructDef::getMPIType(&ngidx1[0]),0,Common::PE::GetPE().GetCommunicator());
   for(unsigned int i=1; i<ngidx0.size(); ++i) displs0[i]=displs0[i-1]+ngidx0[i-1];
   for(unsigned int i=1; i<ngidx1.size(); ++i) displs1[i]=displs1[i-1]+ngidx1[i-1];
   const int totgidx0=displs0[displs0.size()-1]+ngidx0[ngidx0.size()-1];
   const int totgidx1=displs1[displs1.size()-1]+ngidx1[ngidx1.size()-1];
-
+  
   // collect gidx to process 0
   std::vector<int> allgidx0;
   std::vector<int> allgidx1;
   if (Common::PE::GetPE().GetRank()==0) allgidx0.resize(totgidx0);
   if (Common::PE::GetPE().GetRank()==0) allgidx1.resize(totgidx1);
-  MPI_Gatherv(&gidx0[0],gidx0.size(),MPI_UNSIGNED,&allgidx0[0],&ngidx0[0],&displs0[0],MPI_UNSIGNED,0,Common::PE::GetPE().GetCommunicator());
-  MPI_Gatherv(&gidx1[0],gidx1.size(),MPI_UNSIGNED,&allgidx1[0],&ngidx1[0],&displs1[0],MPI_UNSIGNED,0,Common::PE::GetPE().GetCommunicator());
-
+  MPI_Gatherv(&gidx0[0],gidx0.size(),Common::MPIStructDef::getMPIType(&gidx0[0]),
+	      &allgidx0[0],&ngidx0[0],&displs0[0],Common::MPIStructDef::getMPIType(&allgidx0[0]),0,Common::PE::GetPE().GetCommunicator());
+  MPI_Gatherv(&gidx1[0],gidx1.size(),Common::MPIStructDef::getMPIType(&gidx1[0]),
+	      &allgidx1[0],&ngidx1[0],&displs1[0],Common::MPIStructDef::getMPIType(&allgidx1[0]),0,Common::PE::GetPE().GetCommunicator());
+  
   // collect coord to process 0
   for(unsigned int i=0; i<ngidx0.size(); ++i) { ngidx0[i]*=ndim; displs0[i]*=ndim; }
   for(unsigned int i=0; i<ngidx1.size(); ++i) { ngidx1[i]*=ndim; displs1[i]*=ndim; }

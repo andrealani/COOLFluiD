@@ -139,15 +139,14 @@ void ParallelVector<T>::getSharedEntries(){
 
   CFuint maxNbCells = 0;
   CFuint localNbCells = globalLocalGhostMap.size() ;
-  MPI_Allreduce(&localNbCells, &maxNbCells, 1, MPI_UNSIGNED, MPI_MAX, m_comm);
-
+  MPI_Allreduce(&localNbCells, &maxNbCells, 1, 
+		Common::MPIStructDef::getMPIType(&localNbCells), MPI_MAX, m_comm);
+  
   vector<CFuint> bCastGlobalCellIDs; bCastGlobalCellIDs.resize(maxNbCells+1);
-
   vector<CFuint> replyGlobalCellIDs; replyGlobalCellIDs.reserve(maxNbCells+1);
   vector<CFuint> replyProcessorRank; replyProcessorRank.reserve(maxNbCells+1);
-
   vector<CFuint> gatherGlobalCellIDs; gatherGlobalCellIDs.reserve(maxNbCells+1);
-
+  
   m_recvVectorOverlapLocalIDs.reserve(maxNbCells);
 
   std::map<CFuint,CFuint>::iterator it;
@@ -164,9 +163,10 @@ void ParallelVector<T>::getSharedEntries(){
         bCastGlobalCellIDs[idx]=(it->first);
       }
     }
-
-    MPI_Bcast(&bCastGlobalCellIDs[0], bCastGlobalCellIDs.size(), MPI_UNSIGNED, processRank, m_comm);
-
+    
+    MPI_Bcast(&bCastGlobalCellIDs[0], bCastGlobalCellIDs.size(),
+	      Common::MPIStructDef::getMPIType(&bCastGlobalCellIDs[0]), processRank, m_comm);
+    
     replyGlobalCellIDs.clear();
 
     if ( processRank != m_myProcessRank) {
@@ -191,9 +191,10 @@ void ParallelVector<T>::getSharedEntries(){
     vector<int> gatherDisps(m_nbProcesses);
 
     CFint nbReply = replyGlobalCellIDs.size();
-
-    MPI_Gather(& nbReply, 1 ,MPI_INT, &gatherCounts[0] ,1 ,MPI_INT, processRank, m_comm );
-
+    
+    MPI_Gather(&nbReply, 1, Common::MPIStructDef::getMPIType(&nbReply), &gatherCounts[0], 
+	       1, Common::MPIStructDef::getMPIType(&nbReply), processRank, m_comm);
+    
     CFint totalSendCount=0;
     for(CFuint i=0;i<gatherCounts.size(); ++i){
       gatherDisps[i] = totalSendCount;

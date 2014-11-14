@@ -85,7 +85,7 @@ void NewParSetup::setIdxMapping()
   
   getMethodData().getLocalToGlobalMapping().createMapping(stateGlobalIDs, isGhost);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void NewParSetup::setMatrix(const CFuint localSize,

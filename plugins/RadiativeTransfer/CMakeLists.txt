@@ -23,7 +23,6 @@ RadiationLibrary/Models/Reflection/DiffuseReflector.cxx
 RadiationLibrary/Models/Reflection/SpecularReflector.hh
 RadiationLibrary/Models/Reflection/SpecularReflector.cxx
 Solvers/MonteCarlo/RadiativeTransferMonteCarlo.hh
-Solvers/MonteCarlo/RadiativeTransferMonteCarlo.ci
 Solvers/MonteCarlo/RadiativeTransferMonteCarlo.cxx
 Solvers/MonteCarlo/RandomNumberGenerator.hh
 Solvers/MonteCarlo/RandomNumberGenerator.cxx
