@@ -37,6 +37,8 @@ SubOutletPEIWRhoiViTi.cxx
 SubOutletPEIWRhoiViTi.hh
 SubOutletPPCWRhoiViTi.cxx
 SubOutletPPCWRhoiViTi.hh
+SubOutletPPCWRhoiViTi3D.cxx
+SubOutletPPCWRhoiViTi3D.hh
 )
 
 LIST ( APPEND FiniteVolumeMultiFluidMHD_requires_mods NavierStokes Maxwell MultiFluidMHD FiniteVolume FiniteVolumeNavierStokes )
