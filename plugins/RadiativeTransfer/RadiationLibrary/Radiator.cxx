@@ -27,15 +27,13 @@ CFreal Radiator::getCellVolume( CFuint stateID )
       return volume;
 }
 
-
 CFreal Radiator::getCurrentCellVolume()
 {
       CFuint stateID = m_radPhysicsHandlerPtr->getCurrentCellStateID();
       return getCellVolume( stateID );
 }
 
-
-CFreal Radiator::getWallArea( CFuint wallGeoID)
+CFreal Radiator::getWallArea( CFuint wallGeoID )
 {
       //Framework::State* state = m_radPhysicsPtr->getWallState( wallTrsIdx );
 
@@ -47,8 +45,13 @@ CFreal Radiator::getWallArea( CFuint wallGeoID)
 
       static bool isAxi = m_radPhysicsHandlerPtr->isAxi();
       //convert to axi volumes if necessary
-      //std::cout<<"area: "<<faceAreas[wallGeoID]<<std::endl;
-      return faceAreas[wallGeoID] * ( (isAxi)? 2.*3.141516* faceCenters[wallGeoID*DIM_2D+YY] : 1. );
+      CFreal area = faceAreas[wallGeoID];
+      //std::cout<<"My area: "<<area;
+      CFreal h =  faceCenters[wallGeoID*DIM_2D+YY];
+      CFreal coeff = (isAxi) ? h * 2.*3.141516 : 1. ;
+      area = area * coeff;
+      //std::cout<<" r: "<<h<<" coeff: "<<coeff<<" final area: "<<area<<std::endl;
+      return area ;
 }
 
 CFreal Radiator::getCurrentWallArea()

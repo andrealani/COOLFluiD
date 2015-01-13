@@ -481,7 +481,7 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::setup()
   m_radiation->setupAxiFlag(m_isAxi);
 
   //MPI_Datatype Userdatatype, particleDatatype;
-  MPIStruct Userdatatype, particleDatatype;
+  MPIStruct Userdatatype;//, particleDatatype;
 
   PhotonData photonData;
   int counts[3] = {1,1,1};
@@ -489,7 +489,7 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::setup()
           (&photonData.KS, &photonData.energyFraction, &photonData.wavelength, counts , Userdatatype);
 
   m_lagrangianSolver.setupParticleDatatype( Userdatatype.type );
-  particleDatatype.type = m_lagrangianSolver.getParticleDataType();
+ // particleDatatype.type = m_lagrangianSolver.getParticleDataType();
 
   // resize the storage of qrad in each cell
   socket_qrad.getDataHandle().resize(nCells);
@@ -511,6 +511,9 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::setup()
     nbFaces += WallFaces->getLocalNbGeoEnts();
   }
   socket_qradFluxWall.getDataHandle().resize(nbFaces);
+
+
+
 }
 /////////////////////////////////////////////////////////////////////////////
 template<class PARTICLE_TRACKING>
@@ -543,7 +546,6 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::executeOnTrs()
 
 template<class PARTICLE_TRACKING>
 void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getTotalEnergy(){
-
 
     CFuint nbStates = m_radiation->getNbStates();
     CFuint nbGhostStates = m_radiation->getNbGhostStates();
@@ -582,18 +584,18 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getTotalEnergy(){
       if ( !m_radiation->isGhostStateNull(gstate) ){
         m_ghostStateRadPower[gstate]= m_radiation->getWallDistPtr(gstate)
                                                   ->getRadiatorPtr()->getSpectaLoopPower();
-        //cout<<"THE OTHER: m_axi Volume: "<<m_axiVolumes[i]<<endl;
-        //m_stateRadPower[i] = cellK*sigma*pow(T,4.)*m_axiVolumes[i];
-        gStateRadPower += m_ghostStateRadPower[gstate];
+        //cout<<"gstate radPower: "<<m_ghostStateRadPower[gstate]<<endl;
 
+        gStateRadPower += m_ghostStateRadPower[gstate];
       }
       else{
        //cout<<"is ghost!"<<endl;
-       m_ghostStateRadPower[gstate] = .0;
+       m_ghostStateRadPower[gstate] = 0.;
       }
     }
+    cout<<" walls rad power : "<< gStateRadPower<<endl;
 
-    m_totalRadPower = stateRadPower+ gStateRadPower;
+    m_totalRadPower = stateRadPower + gStateRadPower;
 
     //cout<<"statePhotons"<<endl;
     for(CFuint i= 0; i< m_stateRadPower.size(); ++i){
@@ -661,11 +663,11 @@ bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getCellPhotonData(Photon &r
 
         //cout<<endl;
 
-        for(CFuint i=0;i<m_dim;++i){
+        for(CFuint i=0;i<m_dim2;++i){
           //  cout<<baricenter[i]<<' ';
           ray.commonData.currentPoint[i]=baricenter[i];
         }
-        for(CFuint i=m_dim;i<3;++i){
+        for(CFuint i=m_dim;i<m_dim;++i){
           //  cout<<baricenter[i]<<' ';
           ray.commonData.currentPoint[i]=0.;
         }
@@ -689,71 +691,123 @@ bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getCellPhotonData(Photon &r
 template<class PARTICLE_TRACKING>
 bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getFacePhotonData(Photon &ray){
 
-    //static CellTrsGeoBuilder::GeoData& cellData = m_cellBuilder.getDataGE();
-    static CFuint photon=0, gState=0;
-    static CFuint nbGstates = m_nbPhotonsGhostState.size();
+  //static CellTrsGeoBuilder::GeoData& cellData = m_cellBuilder.getDataGE();
+  static CFuint photon=0, gState=0;
+  static CFuint nbGstates = m_nbPhotonsGhostState.size();
 
-    for(; gState < nbGstates ; ++gState)
+  for(; gState < nbGstates ; ++gState)
+  {
+    for(;photon<m_nbPhotonsGhostState[gState];)
     {
-      for(;photon<m_nbPhotonsGhostState[gState];)
-      {
-//        cout<<"m_nbPhotonsState[state]: "<<m_nbPhotonsState[state]<<' '<<";state: "<<state<<endl;
-//        cout<<"photon: "<<photon<<endl;
+      //cout<<"m_nbPhotonsState[state]: "<<m_nbPhotonsState[state]<<' '<<";state: "<<state<<endl;
+      //cout<<"photon: "<<photon<<endl;
 
-        //cellData.idx =  state;
+      //cellData.idx =  state;
 
-        //cellData.idx = 50;
-        //GeometricEntity *const cell = m_cellBuilder.buildGE();
-        //if( cell->getState(0)->isParUpdatable() ){
-        // Calculate the wavelength
-        //cout<<"wavelength= "<<ray.userData.wavelength<<endl;
+      //cellData.idx = 50;
+      //GeometricEntity *const cell = m_cellBuilder.buildGE();
+      //if( cell->getState(0)->isParUpdatable() ){
+      // Calculate the wavelength
+      //cout<<"wavelength= "<<ray.userData.wavelength<<endl;
 
-        //Get directions
+      //Get directions
 
-        RealVector directions(m_dim2);
-        m_radiation->getWallDistPtr( gState )->
-            getRadiatorPtr()->getRandomEmission(ray.userData.wavelength, directions );
+      RealVector directions(m_dim2);
+      m_radiation->getWallDistPtr( gState )->
+          getRadiatorPtr()->getRandomEmission(ray.userData.wavelength, directions );
 
-        CFuint faceGeoID = m_radiation->getCurrentWallGeoID();
 
-        //cout<<"ray directions: ";
-        for(CFuint ii=0; ii<m_dim2; ++ii){
-          ray.commonData.direction[ii]=directions[ii];
-        }
-        //cout<<endl;
+      CFuint faceGeoID = m_radiation->getCurrentWallGeoID();
+      CFuint cellID = m_lagrangianSolver.getWallStateId( faceGeoID );
 
-        //Get the beam max optical path Ks
-        ray.userData.KS = - std::log( m_rand.uniformRand() );
-        // ray.actualKS = 0;
+      static Framework::DataHandle<Framework::State*, Framework::GLOBAL> states
+              = socket_states.getDataHandle();
 
-        //Get the face center
-        DataHandle<CFreal> faceCenters = socket_faceCenters.getDataHandle();
+      Node& cellCenter = (*states[cellID]).getCoordinates();
 
-        //cout<<"baricenter: ";
-        for(CFuint i=0;i<m_dim;++i){
-            ///+cout<<faceCenters[m_dim * faceGeoID + i]<<' ';
-          ray.commonData.currentPoint[i]=faceCenters[m_dim * faceGeoID + i];
-        }
-        for(CFuint i=m_dim;i<3;++i){
-          //cout<<"0 ";
-          ray.commonData.currentPoint[i]=0.;
-        }
-        //cout<<endl;
 
-        //Get the remaining information
-        //const CFuint cellID = cell->getID();
-        CFuint cellID = m_lagrangianSolver.getWallStateId( faceGeoID );
-        ray.commonData.cellID = cellID;
-
-        ray.userData.energyFraction= m_ghostStateRadPower[gState]/CFreal(m_nbPhotonsGhostState[gState]);
-
-        //m_cellBuilder.releaseGE();
-        ++photon;
-        return true;
+      //cout<<"direction = [";
+      for(CFuint ii=0; ii<m_dim; ++ii){
+      //    cout<< -directions[ii] << ' ';
+        ray.commonData.direction[ii]= directions[ii];
       }
-       photon=0;
+      //cout<<" ]; "<<endl;
+
+      //Get the beam max optical path Ks
+      ray.userData.KS = - std::log( m_rand.uniformRand() );
+      // ray.actualKS = 0;
+
+      //Get the face center
+      DataHandle<CFreal> faceCenters = socket_faceCenters.getDataHandle();
+
+      //cout<<"baricenter= [ ";
+
+      //cout<<" ]; "<<endl;
+
+      RealVector cartPosition2(3);
+      cartPosition2[0] = ray.commonData.currentPoint[0];
+      cartPosition2[1] = ray.commonData.currentPoint[1];
+      cartPosition2[2] = ray.commonData.currentPoint[2];
+
+      RealVector faceNormal2(3);
+      m_lagrangianSolver.getNormals(faceGeoID, cartPosition2, faceNormal2);
+
+      // small correction to make sure the initial point is inside the cell
+      // move the initial point 1% closer to the cell center
+      CFreal tCenter = 0.;
+      for(CFuint i=0;i<m_dim;++i){
+          tCenter += faceNormal2[i] * (faceCenters[i] - cellCenter[i]);
+      }
+
+      for(CFuint i=0;i<m_dim;++i){
+        //cout<<faceCenters[m_dim * faceGeoID + i]<<' ';
+          ray.commonData.currentPoint[i]=faceCenters[m_dim * faceGeoID + i] + .01 * faceNormal2[i]*tCenter;
+      }
+
+
+      //cout<<"normal= [" << faceNormal2 <<" ]; "<<endl;
+
+      if(m_isAxi){
+          //rotate the position and vector to a random theta
+          CFreal theta = m_rand.uniformRand(-3.141516, 3.141516);
+
+          CFreal x = ray.commonData.currentPoint[0];
+          CFreal y = ray.commonData.currentPoint[1];
+
+          ray.commonData.currentPoint[0] = x;
+          ray.commonData.currentPoint[1] = y*std::cos(theta);
+          ray.commonData.currentPoint[2] = y*std::sin(theta);
+
+          RealVector cartPosition(3);
+          cartPosition[0] = ray.commonData.currentPoint[0];
+          cartPosition[1] = ray.commonData.currentPoint[1];
+          cartPosition[2] = ray.commonData.currentPoint[2];
+
+          RealVector faceNormal(3), sOut(3);
+          m_lagrangianSolver.getNormals(faceGeoID, cartPosition,faceNormal);
+
+          m_rand.hemiDirections(3, faceNormal, sOut);
+
+          ray.commonData.direction[0] = sOut[0];
+          ray.commonData.direction[1] = sOut[1];
+          ray.commonData.direction[2] = sOut[2];
+      }
+
+      //cout<<endl;
+
+      //Get the remaining information
+      //const CFuint cellID = cell->getID();
+      ray.commonData.cellID = cellID;
+
+      ray.userData.energyFraction= m_ghostStateRadPower[gState]/CFreal(m_nbPhotonsGhostState[gState]);
+
+      //m_cellBuilder.releaseGE();
+      ++photon;
+      return true;
     }
-    return false;
+    photon=0;
+  }
+  return false;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -780,7 +834,7 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
 
   //cout<<nbPhotons<<' '<<totalnbPhotons<<endl;
 
-//  cout<<"number of photons to emmit: "<<m_nbRaysCycle<< " "<<m_sendBufferSize<<endl;
+  //  cout<<"number of photons to emmit: "<<m_nbRaysCycle<< " "<<m_sendBufferSize<<endl;
   CFuint recvSize = 0;
   bool done = false;
 
@@ -797,57 +851,58 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
   vector< Photon > photonStack;
   photonStack.reserve(m_sendBufferSize);
   while( !done ){
-      recvSize = photonStack.size();
-      //generate and raytrace the inner photons
-      CFuint nbCellPhotons =
-	std::min(std::max(CFint(m_nbRaysCycle) - CFint(recvSize),(CFint)0), CFint(toGenerateCellPhotons) );
+    recvSize = photonStack.size();
+    //generate and raytrace the inner photons
+    CFuint nbCellPhotons =
+        std::min(std::max(CFint(m_nbRaysCycle) - CFint(recvSize),(CFint)0), CFint(toGenerateCellPhotons) );
 
-      CFuint nbWallPhotons = 
-	std::min(std::max(CFint(m_nbRaysCycle) - CFint(recvSize) - CFint(nbCellPhotons),(CFint)0), CFint(toGenerateWallPhotons ));
-      
-      //   CFLog(INFO, recvSize<<' '<<toGenerateCellPhotons<<' '<<toGenerateWallPhotons<<'\n');
-      //   CFLog(INFO, nbCellPhotons<<' '<<nbWallPhotons<<'\n');
-      for(CFuint i=0; i < nbCellPhotons ; ++i ){
-        if(getCellPhotonData( photon )){
-          //CFLog(INFO,"PHOTON: " << photon.cellID<<' '<<photon.userData.KS<<'\n' );
-          //printPhoton(photon);
-          rayTracing(photon);
-        }
-        --toGenerateCellPhotons;
-	if (m_myProcessRank == 0)  ++*(progressBar);
+    CFuint nbWallPhotons =
+        std::min(std::max(CFint(m_nbRaysCycle) - CFint(recvSize) - CFint(nbCellPhotons),(CFint)0), CFint(toGenerateWallPhotons ));
+
+    //   CFLog(INFO, recvSize<<' '<<toGenerateCellPhotons<<' '<<toGenerateWallPhotons<<'\n');
+    //CFLog(INFO, nbCellPhotons<<' '<<nbWallPhotons<<'\n');
+    for(CFuint i=0; i < nbCellPhotons ; ++i ){
+      if(getCellPhotonData( photon )){
+        //CFLog(INFO,"PHOTON: " << photon.cellID<<' '<<photon.userData.KS<<'\n' );
+        //printPhoton(photon);
+        rayTracing(photon);
       }
+      --toGenerateCellPhotons;
+      if (m_myProcessRank == 0)  ++*(progressBar);
+    }
 
-      for(CFuint i=0; i < nbWallPhotons ; ++i ){
-        if(getFacePhotonData( photon )){
-          //CFLog(INFO,"PHOTON: " << photon.cellID<<' '<<photon.userData.KS<<'\n' );
-          //printPhoton(photon);
-          rayTracing(photon);
-        }
-        -- toGenerateWallPhotons;
-          if (m_myProcessRank == 0)  ++*(progressBar);
+    for(CFuint i=0; i < nbWallPhotons ; ++i ){
+      if(getFacePhotonData( photon )){
+        //CFLog(INFO, "****************************************/nNEW PHOTON! /n*******************************\n");
+        //printPhoton(photon);
+        rayTracing(photon);
       }
+      -- toGenerateWallPhotons;
+      if (m_myProcessRank == 0)  ++*(progressBar);
+    }
 
-//      CFLog(INFO, "raytrace the outer photons \n");
-      for(CFuint i = 0; i< photonStack.size(); ++i ){
-          //photon=photonStack[i];
-          //CFLog(INFO,"PHOTON: " << photon.cellID<<' '<<photon.userData.KS<<'\n' );
-          //printPhoton(photonStack[i]);
-          rayTracing( photonStack[i] );
-      }
+    //      CFLog(INFO, "raytrace the outer photons \n");
+    for(CFuint i = 0; i< photonStack.size(); ++i ){
+      //photon=photonStack[i];
+      //CFLog(INFO,"PHOTON: " << photon.cellID<<' '<<photon.userData.KS<<'\n' );
+      //printPhoton(photonStack[i]);
+      rayTracing( photonStack[i] );
+    }
 
-      //sincronize
-//      CFLog(INFO, "sincronizing\n");
-      bool isLastPhoton = (toGenerateCellPhotons + toGenerateWallPhotons == 0);
-      done = m_lagrangianSolver.sincronizeParticles(photonStack, isLastPhoton);
+    //sincronize
+    //      CFLog(INFO, "sincronizing\n");
+    bool isLastPhoton = (toGenerateCellPhotons + toGenerateWallPhotons == 0);
+    done = m_lagrangianSolver.sincronizeParticles(photonStack, isLastPhoton);
 
-//      CFLog(INFO, "done Sincronizing; "<< "receiv_size= "<< photonStack.size() << " photons to Generate= "<<toGenerateCellPhotons <<"\n");
+    //      CFLog(INFO, "done Sincronizing; "<< "receiv_size= "<< photonStack.size()
+    //        << " photons to Generate= "<<toGenerateCellPhotons <<"\n");
 
-//      if(m_myProcessRank == 0){
-//       cout<<"Done sincronizing"<<endl<<"CPU "<<m_myProcessRank<< " has received: "<<photonStack.size()<<
-//             " photons and has generated "<< totalnbPhotons-toGeneratePhotons <<" photons"<<endl;
-//      }
+    //      if(m_myProcessRank == 0){
+    //       cout<<"Done sincronizing"<<endl<<"CPU "<<m_myProcessRank<< " has received: "<<photonStack.size()<<
+    //             " photons and has generated "<< totalnbPhotons-toGeneratePhotons <<" photons"<<endl;
+    //      }
   }
-   delete progressBar;
+  delete progressBar;
 
   //CFLog(INFO,"Raytracing took "<<s.readTimeHMS().str()<<'\n');
 }
@@ -903,7 +958,7 @@ CFuint RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::rayTracing(Photon& beam)
   PhotonData &beamData = m_lagrangianSolver.getUserDataPtr();
   exitCellID=m_lagrangianSolver.getExitCellID();
 
-  bool foundEntity = false;
+  //bool foundEntity = false;
   //cout<<"Start K= "<<previousK<<endl;
   //cout<<"Beam KS= "<<beam.KS<<endl;
   while(nbIter <= m_maxVisitedCells){
@@ -952,7 +1007,7 @@ CFuint RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::rayTracing(Photon& beam)
         cf_assert(gEndId < m_stateInRadPowers.size());
         m_stateInRadPowers[gEndId]+=energyFraction;
         //cout<<"new energy: "<<m_gInRadPowers[gEndId]<<endl;
-        foundEntity = true;
+        //foundEntity = true;
         return currentCellID;
       }
 
@@ -960,21 +1015,25 @@ CFuint RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::rayTracing(Photon& beam)
 
       if ( faceType == ParticleTracking::WALL_FACE){
         //CFLog(INFO,"HERE WALL !!\n");
-
+        CommonData beam2;
+        m_lagrangianSolver.getCommonData(beam2);
         RealVector entryDirection(m_dim2), position(m_dim2);
         for(CFuint i=0; i < m_dim2; ++i){
-          entryDirection[i]= beam.commonData.direction[i];
+          entryDirection[i]= beam2.direction[i];
         }
+
         m_lagrangianSolver.getExitPoint(position);
+
 
         RealVector normal(m_dim2);
         //CFuint stateID = m_lagrangianSolver.getWallGhotsStateId(exitFaceID);
         CFuint ghostStateID = m_lagrangianSolver.getWallGhotsStateId(exitFaceID);
 
-        m_lagrangianSolver.getNormals(exitFaceID,position,normal);
 
         const CFreal wallK = m_radiation->getWallDistPtr(ghostStateID)
             ->getRadiatorPtr()->getAbsorption( beamData.wavelength, entryDirection );
+
+        m_lagrangianSolver.getNormals(exitFaceID,position,normal);
 
         const CFreal reflectionProbability =  m_rand.uniformRand();
 
@@ -983,21 +1042,30 @@ CFuint RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::rayTracing(Photon& beam)
           //entity = WALL_FACE;
           const CFuint ghostStateID = m_lagrangianSolver.getWallGhotsStateId(exitFaceID);
           m_ghostStateInRadPowers[ghostStateID] += beamData.energyFraction;
-          foundEntity = true;
+          //foundEntity = true;
           return exitFaceID;
         }
         else {
+          //CFLog(INFO,"Reflected !!\n");
+
           RealVector exitDirection(m_dim2);
           m_radiation->getWallDistPtr(ghostStateID)->getReflectorPtr()->getRandomDirection(
                 beamData.wavelength, exitDirection, entryDirection, normal);
           m_lagrangianSolver.newDirection( exitDirection );
+
+          //cout<<"Entry Direction: "
+          //    <<entryDirection[0] <<' '<<entryDirection[1] <<' '<<entryDirection[2] <<endl;
+          //cout<<"Normal: "
+          //    <<normal[0] <<' '<<normal[1] <<' '<< normal[2] <<endl;
+          //cout<<"Exit direction: "
+          //   <<exitDirection[0] <<' '<<exitDirection[1] <<' '<< exitDirection[2] <<endl;
         }
       }
 
       if (faceType == ParticleTracking::BOUNDARY_FACE ){
         //CFLog(INFO,"HERE BOUNDARY !!\n");
         //entity = DISAPPEARED;
-        foundEntity = true;
+        //foundEntity = true;
         return 0;
       }
 
@@ -1043,6 +1111,7 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
       volume *= (m_isAxi ? 6.283185307179586*(*states[istate]).getCoordinates()[YY] : 1.);
       //gasRadiativeHeatSource[istate] = (- m_stateInRadPowers[istate] + m_stateRadPower[istate]) / volume ;
       gasRadiativeHeatSource[istate] = (m_stateInRadPowers[istate]-m_stateRadPower[istate] ) / volume;
+
       //cout<<"state: "<<m_stateInRadPowers[istate]<<
       //	      ' '<< m_stateRadPower[istate]<<' '<<gasRadiativeHeatSource[istate]<<endl;
     
@@ -1061,9 +1130,15 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
   const CFuint nbWallTrs = wallTrsNames.size();
   CFuint ff = 0;
   for(CFuint i=0; i<nbWallTrs; ++i){
-    SafePtr<TopologicalRegionSet> wallFaces = MeshDataStack::getActive()->getTrs(wallTrsNames[i]);
+
     Framework::FaceTrsGeoBuilder::GeoData& facesData = m_wallFaceBuilder.getDataGE();
+
+    SafePtr<TopologicalRegionSet> wallFaces =
+            MeshDataStack::getActive()->getTrs(wallTrsNames[i]);
+
+    facesData.trs = wallFaces;
     const CFuint nbFacesWall = wallFaces->getLocalNbGeoEnts();
+    //cout<<"CPU "<< Common::PE::GetPE().GetRank()<<": trying TRS " << wallTrsNames[i]<<" whith "<<nbFacesWall<< " faces " <<endl;
     for(CFuint f=0; f<nbFacesWall; ++f, ++ff){
       facesData.idx = f;
       Framework::GeometricEntity *const face = m_wallFaceBuilder.buildGE();
@@ -1075,10 +1150,9 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
                                      +m_ghostStateRadPower[faceGhostStateID] ) / area;
       m_wallFaceBuilder.releaseGE();
     }
+    //cout<<"CPU "<< Common::PE::GetPE().GetRank()<<" done " <<endl;
   }
-
   m_postProcess->runPostProcess(gasRadiativeHeatSource);
-
 }
 
   } // namespace RadiativeTransfer

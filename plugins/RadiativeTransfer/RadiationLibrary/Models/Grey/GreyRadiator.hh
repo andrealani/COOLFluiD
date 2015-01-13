@@ -63,7 +63,10 @@ protected:
      for (CFuint i=0; i<dim2; ++i){
         normals[i] = -socketNormals[wallGeoID*dim2+i];
      }
+     //normals.normalize();
+
      m_rand.hemiDirections(dim, normals, s_o);
+     //std::cout<< "outDir= ["<<s_o<<" ]; \n";
   }
 
   void getSphericalDirections(CFuint dim, RealVector &s_o){

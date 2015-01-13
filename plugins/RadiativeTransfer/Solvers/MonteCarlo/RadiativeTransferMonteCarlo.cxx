@@ -29,7 +29,7 @@ RadiativeTransferMonteCarlo2DFVMCCProvider("RadiativeTransferMonteCarlo2DFVMCC")
 //////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////
-
+///
 //void RadiativeTransferMonteCarlo::myReduceSpectra(const RealMatrix& indata,
 //                                                  RealMatrix& outdata)
 //{
@@ -69,7 +69,7 @@ RadiativeTransferMonteCarlo2DFVMCCProvider("RadiativeTransferMonteCarlo2DFVMCC")
 //      inAm [i] = indata(s,i*3+2);
 //    }
 
-//    vector<CFreal> tempOutWav,tempOutAm,tempOutEm;
+//    vector<CFreal> tempOutWav,tempOut Am,tempOutEm;
 //    tempOutWav.reserve(nInStride/nOutStride);
 //    tempOutAm.reserve(nInStride/nOutStride);
 //    tempOutEm.reserve(nInStride/nOutStride);
@@ -166,7 +166,6 @@ RadiativeTransferMonteCarlo2DFVMCCProvider("RadiativeTransferMonteCarlo2DFVMCC")
 //      }
 //    }
 //  }
-
 ////  for(CFuint j=0; j<(*(m_pdfEm[0])).size();++j){
 ////      cout<< (*(m_pdfEm[0]))[j]<<endl;
 ////  }

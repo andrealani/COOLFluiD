@@ -114,7 +114,7 @@ void RadiationPhysicsHandler::setupWavStride(CFuint loop){
 
 
 Common::SharedPtr< RadiationPhysics > RadiationPhysicsHandler::getCellDistPtr(CFuint stateID){
-    //std::cout<<" stateID: "<<stateID<<std::flush;
+  //CFLog(INFO,"Cell; stateID: "<<stateID<<"\n");
   cf_assert(stateID<m_statesOwner.size() );
   cf_assert(m_statesOwner[stateID][0] != -1 );
   m_cellStateID = stateID;
@@ -124,7 +124,7 @@ Common::SharedPtr< RadiationPhysics > RadiationPhysicsHandler::getCellDistPtr(CF
 }
 
 Common::SharedPtr< RadiationPhysics > RadiationPhysicsHandler::getWallDistPtr(CFuint GhostStateID){
-    //std::cout<<" stateID: "<<stateID<<std::flush;
+  //CFLog(INFO,"Wall; stateID: "<<GhostStateID<<"\n");
   cf_assert(GhostStateID<m_ghostStatesOwner.size() );
   cf_assert(m_ghostStatesOwner[GhostStateID][0] != -1 );
   m_ghostStateID = GhostStateID;
@@ -143,6 +143,7 @@ void RadiationPhysicsHandler::configureTRS()
   Framework::DataHandle < Framework::State*, Framework::LOCAL> gstates =
       m_sockets.gstates.getDataHandle();
   m_sockets.states.getDataHandle();
+
   m_statesOwner.resize(states.size(), std::vector<CFint>(2,-1) );
   m_ghostStatesOwner.resize(gstates.size(), std::vector<CFint>(3,-1) );
   vector<CFuint> buffer, buffer2;
@@ -172,19 +173,19 @@ void RadiationPhysicsHandler::configureTRS()
   }
 
 /*
-  std::cout<<"m_statesOwner: "<<std::endl;
+  CFLog(INFO,"m_statesOwner: \n");
   for(CFuint i = 0; i< m_statesOwner.size(); ++i){
-    std::cout<< m_statesOwner[i][0] <<' '<< m_statesOwner[i][1] <<std::endl;
+      CFLog(INFO, m_statesOwner[i][0] <<' '<< m_statesOwner[i][1] <<'\n');
   }
 
-  std::cout<<"m_ghostStatesOwner "<<std::endl;
+  CFLog(INFO, " m_ghostStatesOwner \n");
   for(CFuint i = 0; i< m_ghostStatesOwner.size(); ++i){
-    std::cout<< m_ghostStatesOwner[i][0] <<' '
-             << m_ghostStatesOwner[i][1] <<' '
-             << m_ghostStatesOwner[i][2] <<std::endl;
+    CFLog(INFO,   m_ghostStatesOwner[i][0] <<' '
+               << m_ghostStatesOwner[i][1] <<' '
+               << m_ghostStatesOwner[i][2] <<'\n');
   }
-
 */
+
   std::string bufferName;
   TRStypeID bufferType;
   for(CFuint i=0; i<m_radiationPhysics.size();++i){

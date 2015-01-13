@@ -136,11 +136,13 @@ CFreal GreyRadiator::getSpectaLoopPower(){
    CFreal a2 = computeComulativePlankFraction(m_maxWav, T);
    CFreal a3 = (a2-a1)*computeStefanBoltzmann(T) * m_emsCoeff * getSpaceIntegrator();
 
-   // std::cout<<"Temperatute: "<<T<<" Area: "<<getSpaceIntegrator()<<" emsCoeff "<<m_emsCoeff<<std::endl;
-   // std::cout<<"computeStefanBoltzmann "<<computeStefanBoltzmann(T)<<std::endl;
-   // std::cout<<"space integrator:  "<<getSpaceIntegrator()<<std::endl;
-   //std::cout<<"total:  "<<(a2-a1)*a3 <<std::endl;
-   // std::cout<<"a1: "<<a1<<" a2: "<<a2<<" a3: "<<a3<<std::endl;
+//   if(m_TRStypeID == WALL ){
+//      std::cout<<"Temperatute: "<<T<<" Area: "<<getSpaceIntegrator()<<" emsCoeff "<<m_emsCoeff<<std::endl;
+//      std::cout<<"computeStefanBoltzmann "<<computeStefanBoltzmann(T)<<std::endl;
+//      std::cout<<"space integrator:  "<<getSpaceIntegrator()<<std::endl;
+//      std::cout<<"total:  "<<(a2-a1)*a3 <<std::endl;
+//      std::cout<<"a1: "<<a1<<" a2: "<<a2<<" a3: "<<a3<<std::endl;
+//   }
 
    return (a2-a1)*a3;
 }

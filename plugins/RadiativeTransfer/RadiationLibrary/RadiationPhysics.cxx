@@ -43,10 +43,10 @@ void RadiationPhysics::getWallStateIDs(std::vector<CFuint>& statesID,
   for(CFuint i=0; i<nbFaces; ++i){
     facesData.idx = i;
     Framework::GeometricEntity *const face = faceTRSBuilder->buildGE();
-    //if( face->getState(1)->isParUpdatable() ){
+     if( !face->getState(1)->isParUpdatable() && face->getState(0)->isParUpdatable() ){
       statesID.push_back( face->getState(1)->getLocalID() );
       wallGeoIdx.push_back( face->getID() );
-    //}
+    }
     faceTRSBuilder->releaseGE();
   }
 }
@@ -67,7 +67,7 @@ void RadiationPhysics::getCellStateIDs(std::vector<CFuint>& statesID){
   statesID.reserve( nbCells );
   for(CFuint i=0; i<nbCells; ++i){
     cellsData.idx = i;
-    if (cellTRS->getNbStatesInGeo(i) == 1 ){
+ //   if (cellTRS->getNbStatesInGeo(i) == 1 ){
       Framework::GeometricEntity *const cell = cellBuilder->buildGE();
       if(!cell->getState(0)->isGhost() && cell->getState(0)->isParUpdatable() ){
         statesID.push_back( cell->getState(0)->getLocalID() );
@@ -75,7 +75,7 @@ void RadiationPhysics::getCellStateIDs(std::vector<CFuint>& statesID){
       }
       cellBuilder->releaseGE();
     }
-  }
+ // }
 }
 //////////////////////////////////////////////////////////////////////////////
 /// \brief RadiationPhysics::computeInterpolatedStates
