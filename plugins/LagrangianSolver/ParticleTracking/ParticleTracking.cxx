@@ -48,24 +48,23 @@ ParticleTracking::~ParticleTracking()
 
 void ParticleTracking::getAxiNormals(CFuint faceID, RealVector& CartPosition, RealVector& faceNormal ){
 
-    faceNormal.resize( 3 );
+  faceNormal.resize( 3 );
+  static RealVector cartNormal(2);
 
   //Create the Cylindrical normal vector
 
   //1. Get the 2D cartesian normal
-  getCartNormals(faceID, CartPosition, faceNormal);
+  getCartNormals(faceID, CartPosition, cartNormal);
 
+  //std::cout<<"ParticleTracking::getCartNormals: "<<cartNormal[0]<<' '<<cartNormal[1]<<endl;
   //2. Convert them in Cinlindrical coordinates
-  static RealVector normalR(2);
-  normalR[0]=-CartPosition[YY];
-  normalR[1]=-CartPosition[ZZ];
-  normalR.normalize();
+  CFreal invNorm = 1. / std::sqrt( pow(CartPosition[1],2) + pow(CartPosition[2],2));
 
-  CFreal normalR_norm = std::abs(faceNormal[YY]);
+  faceNormal[XX] = cartNormal[0];
+  faceNormal[YY] = cartNormal[1]*CartPosition[1] * invNorm;
+  faceNormal[ZZ] = cartNormal[1]*CartPosition[2] * invNorm;
+  //std::cout<<"ParticleTracking::getAxiNormals: "<<faceNormal[0]<<' '<<faceNormal[1]<<endl;
 
-  faceNormal[XX]=faceNormal[XX];
-  faceNormal[YY]=normalR[0]*normalR_norm;
-  faceNormal[ZZ]=normalR[1]*normalR_norm;
 }
 
 /////////////////////////////////////////////////////////////////////////////

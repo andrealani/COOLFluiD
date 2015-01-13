@@ -76,7 +76,7 @@ void ParticleTracking3D::trackingStep(){
   using namespace COOLFluiD::MathTools;
 
 
- // cout<<"%\n%Start tracking; CellID: "<<m_exitCellID<<endl<<"%\n";
+  cout<<"%\n%Start tracking; CellID: "<<m_exitCellID<<endl<<"%\n";
   m_exitFaceID=-1;
   //m_exitCellID=-1;
 
@@ -94,8 +94,8 @@ void ParticleTracking3D::trackingStep(){
   GeometricEntity *const cell = m_cellBuilder.buildGE();
   CFuint nFaces = cell->nbNeighborGeos();
 
-//  cout<<"direction = ["<<m_direction<<"];"<<endl;
-//  cout<<"initialPoint = ["<< initialPoint<<"];"<<endl;
+  cout<<"direction = ["<<m_direction<<"];"<<endl;
+  cout<<"initialPoint = ["<< initialPoint<<"];"<<endl;
 
   static CFreal temp2[3];
   static CFreal temp3[3];
@@ -108,9 +108,10 @@ void ParticleTracking3D::trackingStep(){
     CFint faceID=face->getID();
     vector<Node*>& myNodes = *face->getNodes();
     //RealVector centroid = face->computeCentroid();
-
+    RealVector centroid(3);
 
     const CFuint nbNodes= myNodes.size();
+    cout<<"nbNodes("<<f+1<<") = "<<nbNodes<<";"<<endl;
 
     for(CFuint ii=0; ii<nbNodes; ++ii){
       CFuint ii_1 =( ii == nbNodes-1 ) ? 0 : ii +1;
@@ -132,8 +133,8 @@ void ParticleTracking3D::trackingStep(){
       //innerProds[ii] = MathFunctions::innerProd(temp1, m_direction );
 
 
-//     cout<<"pointsFace("<<ii+1<<",:,"<< f+1 <<") = [" << *myNodes[ii] <<"];"<<endl;
-//     cout<<"pointsFace("<<ii+2<<",:,"<< f+1 <<") = [" << *myNodes[ii_1] <<"];"<<endl;
+     cout<<"pointsFace("<<ii+1<<",:,"<< f+1 <<") = [" << *myNodes[ii] <<"];"<<endl;
+     cout<<"pointsFace("<<ii+2<<",:,"<< f+1 <<") = [" << *myNodes[ii_1] <<"];"<<endl;
     }
 
     const CFreal circulation = (static_cast<CFuint>(faceIsOutwards[faceID])==m_entryCellID) ? 1.:-1.;
@@ -142,17 +143,12 @@ void ParticleTracking3D::trackingStep(){
     faceOutNormal[1]=normals[faceIdx+1]*circulation;
     faceOutNormal[2]=normals[faceIdx+2]*circulation;
 
-    //centroid[0] = faceCenters[faceIdx+0];
-    //centroid[1] = faceCenters[faceIdx+1];
-    //centroid[2] = faceCenters[faceIdx+2];
+    centroid[0] = faceCenters[faceIdx+0];
+    centroid[1] = faceCenters[faceIdx+1];
+    centroid[2] = faceCenters[faceIdx+2];
 
-//    cout<<"faceCenter("<< f+1<<",:) = ["<<centroid<<"];" <<endl;
+    cout<<"faceCenter("<< f+1<<",:) = ["<<centroid<<"];" <<endl;
 
-
-//    RealVector faceOutNormal(3);
-//    faceOutNormal.normalize();
-//    faceOutNormal*=circulation;
-    //bool isExitFaceCondition = MathFunctions::innerProd(faceOutNormal, m_direction) > 0;
 
     const CFreal dot_direction_normal = faceOutNormal[0] * m_direction[0] +
                                         faceOutNormal[1] * m_direction[1] +
@@ -160,26 +156,25 @@ void ParticleTracking3D::trackingStep(){
 
     bool isExitFaceCondition = (dot_direction_normal> 0. );
 
-//    cout<<"circulation("<< f+1<<",:) ="<<circulation<<";" <<endl;
-//    cout<<"normal("<< f+1<<",:) = ["<< faceOutNormal[0]<<' '
-//                                    << faceOutNormal[1]<<' '
-//                                    << faceOutNormal[2] <<"];"<<endl;
+   cout<<"circulation("<< f+1<<",:) ="<<circulation<<";" <<endl;
+   cout<<"normal("<< f+1<<",:) = ["<< faceOutNormal[0]<<' '
+                                    << faceOutNormal[1]<<' '
+                                    << faceOutNormal[2] <<"];"<<endl;
 
-//    cout<<"%innerProds: ";
-//    for(CFuint ii=0; ii<innerProds.size(); ++ii){
-//        cout<<innerProds[ii]*circulation<<' ';
-//    }
-//    cout<<endl;
+   cout<<"%innerProds: ";
+   for(CFuint ii=0; ii<innerProds.size(); ++ii){
+     cout<<innerProds[ii]*circulation<<' ';
+   }
+    cout<<endl;
 
     bool crossesFaceCondition = true;
     for(CFuint ii=0; ii<nbNodes-1; ++ii){
       crossesFaceCondition &= (innerProds[ii]*innerProds[ii+1]  > 0);
     }
 
-    //cout<<"%Crosses face: "<<crossesFaceCondition<<" isExitFaceCondition: "<<isExitFaceCondition<<endl<<endl;
+   cout<<"%Crosses face: "<<crossesFaceCondition<<" isExitFaceCondition: "<<isExitFaceCondition<<endl<<endl;
     if (isExitFaceCondition && crossesFaceCondition){
-      //cout<<"%IS EXIT FACE"<<endl;
-
+      cout<<"%IS EXIT FACE"<<endl;
 
         //const RealVector temp4 =   centroid - initialPoint;
 
@@ -195,9 +190,9 @@ void ParticleTracking3D::trackingStep(){
                   ) / ( dot_direction_normal );
 
 
-      //cout<<"%stepDist = "<< m_stepDist <<endl;
+      cout<<"%stepDist = "<< m_stepDist <<endl;
       m_exitPoint = initialPoint + m_direction * m_stepDist;
-      //cout<<"my_exitPoint = [ "<<m_exitPoint<<" ];"<<endl<<endl;
+      cout<<"my_exitPoint = [ "<<m_exitPoint<<" ];"<<endl<<endl;
 
 
       m_exitFaceID = face->getID();
@@ -215,7 +210,7 @@ void ParticleTracking3D::trackingStep(){
 
 void ParticleTracking3D::newParticle(CommonData &particle){
 
-    //std::cout<<"%*******************\n %NEW PARTICLE \n %************************************\n";
+  std::cout<<"%*******************\n%NEW PARTICLE\n%************************************\n";
 
   static RealVector buffer(3);
   ParticleTracking::newParticle(particle);

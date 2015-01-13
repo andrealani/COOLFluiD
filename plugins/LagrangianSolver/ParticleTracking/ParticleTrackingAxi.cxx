@@ -118,22 +118,22 @@ void ParticleTrackingAxi::trackingStep(){
   m_exitCellID=-1;
   m_exitFaceID=-1;
 
-//    cout<<"****************************************************"<<endl;
-//    cout<<"New Step!"<<endl<<"on Cell with ID: "<<  this->m_entryCellID<<endl;
+//  cout<<"****************************************************"<<endl;
+//  cout<<"New Step!"<<endl<<"on Cell with ID: "<<  m_entryCellID<<endl;
 
 //  cout<<"direction: "<<
-//      this->m_particle.direction[0]<<' '<<
-//      this->m_particle.direction[1]<<' '<<
-//      this->m_particle.direction[2]<< endl;
+//     m_particleCommonData.direction[0]<<' '<<
+//     m_particleCommonData.direction[1]<<' '<<
+//     m_particleCommonData.direction[2]<< endl;
 
-  //cout<<"Particle t: "<<m_particle_t<<endl;
+//  cout<<"Particle t: "<<m_particle_t<<endl;
 
 //  cout<<"position: "<<
-//        this->m_particle.currentPoint[0] + m_particle_t * this->m_particle.direction[0]<<' '<<
-//        this->m_particle.currentPoint[1] + m_particle_t * this->m_particle.direction[1]<<' '<<
-//        this->m_particle.currentPoint[2] + m_particle_t * this->m_particle.direction[2]<< endl;
+//        m_particleCommonData.currentPoint[0] + m_particle_t * m_particleCommonData.direction[0]<<' '<<
+//        m_particleCommonData.currentPoint[1] + m_particle_t * m_particleCommonData.direction[1]<<' '<<
+//        m_particleCommonData.currentPoint[2] + m_particle_t * m_particleCommonData.direction[2]<< endl;
 
-  //static DataHandle<CFint> faceIsOutwards= m_sockets.isOutward.getDataHandle();
+  static DataHandle<CFint> faceIsOutwards= m_sockets.isOutward.getDataHandle();
 
   static vector<CFreal> t_candidates(m_maxNbFaces*2);
   static vector<CFuint> f_candidates(m_maxNbFaces*2);
@@ -156,7 +156,7 @@ void ParticleTrackingAxi::trackingStep(){
   for(CFuint f=0; f<nFaces; ++f){
     GeometricEntity* const face = cell->getNeighborGeo(f);
     vector<Node*>& nodes = *face->getNodes();
-    //CFint faceID=face->getID();
+    CFint faceID=face->getID();
     m_z1 = (*(nodes[0]))[XX]; m_z2 = (*(nodes[1]))[XX];
     m_r1 = (*(nodes[0]))[YY]; m_r2 = (*(nodes[1]))[YY];
     //cout<<"line: ( "<< m_z1 <<" , "<< m_r1 <<" ) to ( "<< m_z2 <<" , "<< m_r2 <<" )"<<endl;
@@ -164,12 +164,12 @@ void ParticleTrackingAxi::trackingStep(){
     m_dr=m_r2-m_r1; m_dz=m_z2-m_z1; m_zz=m_x0-m_z1;
     m_dr_2=pow(m_dr,2); m_dz_2=pow(m_dz,2);
 
-    //faceOutNormal[0] =  m_dr;
-    //faceOutNormal[1] = -m_dz;
+    faceOutNormal[0] =  m_dr;
+    faceOutNormal[1] = -m_dz;
     // this way we assume that the parametrization runs clockwise over the cell's facets.
     // so that the face normal points outwards
     // CF doesn't impose this condition ( bug? ), so we have to correct it
-    //faceOutNormal *= ( static_cast<CFuint>(faceIsOutwards[faceID])==m_cellIdx) ? 1.:-1.;
+    faceOutNormal *= ( static_cast<CFuint>(faceIsOutwards[faceID])==m_cellIdx) ? 1.:-1.;
     const CFreal temp1 = m_dr*(m_c*m_zz-m_cx0)+m_c*m_dz*m_r1;
     const CFreal temp2 = m_b*m_dz*m_r1+m_dr*(m_b*m_zz-m_cy0);
     m_D=temp1*temp1 + temp2*temp2 - m_dz_2*m_D22;
@@ -200,12 +200,14 @@ void ParticleTrackingAxi::trackingStep(){
         kk= isS2 ? kk+1 : kk;
         for (CFuint k=0;k<kk;++k){
           rayTangent[0]=m_a;
-          //rayTangent[1]=( m_c*( m_z0+m_c*m_t[k] ) + m_b*( m_y0+m_b*m_t[k]) )/
-          //               std::sqrt( pow(m_z0+m_c*m_t[k],2) + pow(m_y0+m_b*m_t[k],2) );
+          rayTangent[1]=( m_c*( m_z0+m_c*m_t[k] ) + m_b*( m_y0+m_b*m_t[k]) )/
+                         std::sqrt( pow(m_z0+m_c*m_t[k],2) + pow(m_y0+m_b*m_t[k],2) );
           //avoid use pow!! be cache friendly :)
           //cout<<"fount t= "<<m_t[k]<<endl;
-          if (m_t[k]>m_particle_t /*&& MathFunctions::innerProd(rayTangent,faceOutNormal)>=0*/){ //found exit point
-             //cout<<"current t:"<<m_t[k]<<endl;
+          CFreal innerProd = MathFunctions::innerProd(rayTangent,faceOutNormal);
+          //cout<<"InnerPRod: "<<innerProd;
+          if (m_t[k]>m_particle_t && innerProd>=0){ //found exit point
+             //cout<<"fount t:"<<m_t[k]<<endl;
              t_candidates[candId] = m_t[k];
              f_candidates[candId] = f;
              ++candId;
@@ -217,8 +219,13 @@ void ParticleTrackingAxi::trackingStep(){
   }
   //cout<<"number of candidates: "<<tCantidates.size()<<endl;
 
-  //CFLog(INFO,"Can't find an exit point! \n");
-
+  if(candId==0){
+      CFLog(INFO,"Can't find an exit point! \n");
+      m_exitCellID=-1;
+      m_exitFaceID=-1;
+      m_cellBuilder.releaseGE();
+      return;
+  }
 
 
   CFreal myT= t_candidates[0];
@@ -232,8 +239,8 @@ void ParticleTrackingAxi::trackingStep(){
       index = condition ? i : index;
   }
 
- // cout<<"Particle t: "<<myT<<endl;
- // cout<<"Particle t old : "<<m_particle_t_old<<endl;
+  //cout<<"Particle t: "<<myT<<endl;
+  //cout<<"Particle t old : "<<m_particle_t_old<<endl;
 
   m_particle_t_old=m_particle_t;
   m_particle_t=myT;
