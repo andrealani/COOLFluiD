@@ -56,7 +56,7 @@ public:
   ///                 much more inefficient.
   /// @post           if the maximum size is supplied, the maxSize
   ///                 of the map will be set to maxSize.
-  CFMultiMap(size_t maxSize = 0);
+  CFMultiMap(CFuint maxSize = 0);
 
   /// Default destructor
   ~CFMultiMap();
@@ -65,7 +65,7 @@ public:
   /// @param size of the map to be set before starting inserting pairs in the  map
   /// @post  the memory corresponding to the given size will be reserved for
   ///        the future insertions.
-  void reserve(const size_t& maxSize)
+  void reserve(const CFuint maxSize)
   {
     _vectorMap.reserve(maxSize);
   }
@@ -97,11 +97,11 @@ public:
   std::pair<MapIterator, MapIterator> find(const KEY& key, bool& isFound);
 
   /// Get the number of pairs already inserted
-  size_t getSize() const {return _vectorMap.size();}
+  CFuint getSize() const {return _vectorMap.size();}
 
   /// Get the number of pairs already inserted
-  size_t size() const {return _vectorMap.size();}
-
+  CFuint size() const {return _vectorMap.size();}
+  
   /// Sort all the pairs in the map by key
   /// @pre before using find() the CFMultiMap has to be sorted
   void sortKeys();

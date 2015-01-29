@@ -397,19 +397,15 @@ void CFmeshFileWriterDG<DATA>::writeNodeList(std::ofstream& fout)
 //   const CFuint nbExtraNodalVars = getWriteData().getNbExtraNodalVars();
   const CFreal refL = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
 
-
+  const CFuint dim = getWriteData().getDimension();
   for (CFuint n = 0; n < nbNodes; ++n)
   {
-   const RealVector * node = getWriteData().getNode(n);
-
-//   const State& state = *getWriteData().getCoordState(n);
-
-// RealVector node = state.getCoordinates();
-    for (CFuint iDim = 0; iDim < (*node).size(); ++iDim) {
-      fout.precision(12);
-      fout << (*node)[iDim]*refL << " ";
-    }
-
+   const CFreal* node = getWriteData().getNode(n);
+   for (CFuint iDim = 0; iDim < dim; ++iDim) {
+     fout.precision(12);
+     fout << node[iDim]*refL << " ";
+   }
+   
 //     const RealVector& extraNodalValues = getWriteData().getExtraNodalValues(n);
 //     for (CFuint iVar = 0; iVar < nbExtraNodalVars; ++iVar) {
 //       fout.precision(12);
@@ -440,10 +436,15 @@ void CFmeshFileWriterDG<DATA>::writeStateList(std::ofstream& fout)
   if (getWriteData().isWithSolution()){
     const CFuint nbExtraStateVars = getWriteData().getNbExtraStateVars();
     const CFuint nbStates = getWriteData().getTotalNbStates();
+    const CFuint nbEqs = getWriteData().getNbEquations();
     for (CFuint n = 0; n < nbStates; ++n) {
-      fout.precision(12);
-      fout << *getWriteData().getState(n) << "\n";
-
+      const CFreal* state = getWriteData().getState(n);
+      for (CFuint iDim = 0; iDim < nbEqs; ++iDim) {
+	fout.precision(12);
+	fout << state[iDim] << " ";
+      }
+      fout << "\n";
+      
       const RealVector& extraStateValues = getWriteData().getExtraStateValues(n);
       for (CFuint iVar = 0; iVar < nbExtraStateVars; ++iVar) {
         fout.precision(12);
@@ -451,10 +452,10 @@ void CFmeshFileWriterDG<DATA>::writeStateList(std::ofstream& fout)
       }
     }
   }
-
+  
   CFLogDebugMin( "CFmeshFileWriter<DATA>::writeStateList() end" << "\n");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 template <class DATA>

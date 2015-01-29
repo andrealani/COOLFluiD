@@ -556,7 +556,7 @@ protected:
   std::vector<CFuint> _molecule2EqIDs;
 
   /// ID of the variable entry that gets the electronic energy
-  int _electrEnergyID;
+  CFint _electrEnergyID;
 
   /// freeze the chemistry
   bool  _freezeChemistry;

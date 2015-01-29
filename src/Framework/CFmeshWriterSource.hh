@@ -82,19 +82,19 @@ public: // functions
   /// Get the node corresponding to the given ID
   /// @post the template parameter allows to return
   ///         const RealVector& or const Node*&
-  const RealVector* getNode(const CFuint nodeID) const
+  CFreal* getNode(const CFuint nodeID)
   {
-    return _nodes[nodeID];
+    return &(*_nodes[nodeID])[0];
   }
-
+  
   /// Get the state corresponding to the given ID
   /// @post the template parameter allows to return
   ///         const RealVector& or const State*&
-  const RealVector* getState(const CFuint stateID) const
+  CFreal* getState(const CFuint stateID)
   {
-    return _states[stateID];
+    return &(*_states[stateID])[0];
   }
-
+  
   /// Get the state corresponding to the given ID
   /// @post the template parameter allows to return
   ///         const RealVector& or const State*&

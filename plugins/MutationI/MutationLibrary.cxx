@@ -391,8 +391,8 @@ void MutationLibrary::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::vector<std::string> >("lookUpVars","Name of the vars to store in the table.");
   options.addConfigOption< CFdouble >("Tmax","Maximum temperature in the table.");
   options.addConfigOption< CFdouble >("Pmin","Minimum pressure in the table.");
-  options.addConfigOption< CFint >("sonine","Sonine polynome order.");
-  options.addConfigOption< CFint >("IMOD","Compute transport properties.");
+  options.addConfigOption< int >("sonine","Sonine polynome order.");
+  options.addConfigOption< int >("IMOD","Compute transport properties.");
   options.addConfigOption< CFdouble >("deltaP","Delta pressure.");
   options.addConfigOption< std::string >("mixtureName","Name of the mixture.");
   options.addConfigOption< std::string >("reactionName","Name of the reaction.");

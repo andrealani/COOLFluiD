@@ -15,7 +15,6 @@
 #include "Common/StringOps.hh"
 #include "Common/SwapEmpty.hh"
 #include "Common/BadValueException.hh"
-#include "Common/MPI/MPIStructDef.hh"
 
 #include "Environment/FileHandlerInput.hh"
 #include "Environment/SingleBehaviorFactory.hh"
@@ -1392,11 +1391,11 @@ void ParCFmeshFileReader::readElemListRank(PartitionerData& pdata,
       if (iElem < start || iElem >= end) {
 	for (CFuint iNode = 0; iNode < nbNodesInElem; ++iNode) {
 	  fin >> nodeID;
-	  checkDofID(nodeID, m_totNbNodes);
+	  checkDofID("node", iElem, iNode, nodeID, m_totNbNodes);
 	}
 	for (CFuint iState = 0; iState < nbStatesInElem; ++iState) {
 	  fin >> stateID;
-	  checkDofID(stateID, m_totNbStates);
+	  checkDofID("state", iElem, iState, stateID, m_totNbStates);
 	}
       }
       else {
@@ -1408,11 +1407,11 @@ void ParCFmeshFileReader::readElemListRank(PartitionerData& pdata,
 	
 	for (CFuint j = 0; j < nbNodesInElem; ++j, ++ncount) {
 	  fin >> eNode[ncount];
-	  checkDofID(eNode[ncount], m_totNbNodes);
+	  checkDofID("node", iElem, j, eNode[ncount], m_totNbNodes);
 	}
 	for (CFuint j = 0; j < nbStatesInElem; ++j, ++scount) {
 	  fin >> eState[scount];
-	  checkDofID(eState[scount], m_totNbStates);
+	  checkDofID("state", iElem, j, eState[scount], m_totNbStates);
 	}
 	
 	if (ipos == nbEEminProcMinus1) {
@@ -1853,13 +1852,14 @@ void ParCFmeshFileReader::setSizeElemVec(vector<PartitionerData::IndexT>& sizeEl
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
-void ParCFmeshFileReader::moveElementData( ElementDataArray<0>& localElem, PartitionerData& pdata )
+      
+void ParCFmeshFileReader::moveElementData(ElementDataArray<0>& localElem, 
+					  PartitionerData& pdata )
 {
   // set the global element IDs
   const CFuint partSize = pdata.part->size();
   vector<CFuint> globalElemIDs(partSize);
-
+  
   // compute the starting element ID
   CFuint elemID = 0;
   for (CFuint i = 0; i <m_nbProc; ++i) {
@@ -1868,7 +1868,7 @@ void ParCFmeshFileReader::moveElementData( ElementDataArray<0>& localElem, Parti
       elemID += m_nbElemPerProc[i];
     }
   }
-
+  
   const CFuint startElemID = elemID;
   CFLogDebugMin(m_myRank << " startElemID = " << startElemID << "\n");
   vector<CFuint> elementSize(partSize);
@@ -1877,10 +1877,10 @@ void ParCFmeshFileReader::moveElementData( ElementDataArray<0>& localElem, Parti
     globalElemIDs[i] = elemID;
     elementSize[i] = 3 + pdata.eptrn[i+1] + pdata.eptrs[i+1];
   }
-
-  CFMultiMap<CFint, CFint> mapProcToOldElemID(partSize);
+  
+  CFMultiMap<PartitionerData::IndexT, CFuint> mapProcToOldElemID(partSize);
   sortPartVec(globalElemIDs, *pdata.part, mapProcToOldElemID);
-
+  
   // counts for data to send
   vector<int> sendCount(m_nbProc, static_cast<CFuint>(0));
   // counts for data to receive
@@ -1906,42 +1906,53 @@ void ParCFmeshFileReader::moveElementData( ElementDataArray<0>& localElem, Parti
   /// @todo nbScalarInfo will have to be changed if other element
   /// info (polyorder??) needs to be distributed
   const CFuint nbScalarInfo = 3;
-  const CFuint totSendElemSize = nbScalarInfo*partSize +
-    pdata.elemNode.size() + pdata.elemState.size();
+  const CFuint totSendElemSize = nbScalarInfo*partSize + pdata.elemNode.size() + pdata.elemState.size();
   tmpElem.reserve(partSize, totSendElemSize);
-
+  
   // data have to be put in the array tmpElem in sorted order
   sendDispl[(*pdata.part)[0]] = 0;
   sendPtrDispl[(*pdata.part)[0]] = 0;
   CFuint displ = 0;
   CFuint ptrDispl = 0;
   vector<CFuint> tmpElemSize(partSize, static_cast<CFuint>(0));
-
+  
+  // pdata.elemNode is ok, pdata.elemState is ok
+  
   for (CFuint i = 0; i < partSize; ++i) {
     const CFuint globalElemID = mapProcToOldElemID[i];
     const CFuint localElemID = globalElemID - startElemID;
-    addElement(pdata, globalElemID, localElemID,
-         tmpElem, tmpElemSize[i]);
-
+    addElement(pdata, globalElemID, localElemID, tmpElem, tmpElemSize[i]);
+        
     sendCount[(*pdata.part)[i]] += tmpElemSize[i];
-    sendPtrCount[(*pdata.part)[i]]++;
+    cf_assert(sendCount[(*pdata.part)[i]] > 0);
 
+    sendPtrCount[(*pdata.part)[i]]++;
+    cf_assert(sendPtrCount[(*pdata.part)[i]] > 0);
+    
     // case with i == 0 is already treated out of the loop
     if (i > 0) {
       if ((*pdata.part)[i] != (*pdata.part)[i-1]) {
-  sendDispl[(*pdata.part)[i]] = displ;
-  sendPtrDispl[(*pdata.part)[i]] = ptrDispl;
+	sendDispl[(*pdata.part)[i]] = displ;
+        cf_assert(sendDispl[(*pdata.part)[i]] > 0);
+
+	sendPtrDispl[(*pdata.part)[i]] = ptrDispl;
+        cf_assert(sendPtrDispl[(*pdata.part)[i]] > 0);
       }
     }
-
+    
     displ += tmpElemSize[i];
     ptrDispl++;
   }
   
-  MPI_Alltoall(&sendCount[0], 1, MPIStructDef::getMPIType(&sendCount[0]),
-	       &recvCount[0], 1, MPIStructDef::getMPIType(&recvCount[0]), m_comm);
-  MPI_Alltoall(&sendPtrCount[0], 1, MPIStructDef::getMPIType(&sendPtrCount[0]),
-	       &recvPtrCount[0], 1, MPIStructDef::getMPIType(&recvPtrCount[0]), m_comm);
+  MPIError::getInstance().check
+    ("MPI_Alltoall", "ParCFmeshFileReader::moveElementData()",
+     MPI_Alltoall(&sendCount[0], 1, MPIStructDef::getMPIType(&sendCount[0]),
+		  &recvCount[0], 1, MPIStructDef::getMPIType(&recvCount[0]), m_comm));
+  
+  MPIError::getInstance().check
+    ("MPI_Alltoall", "ParCFmeshFileReader::moveElementData()",
+     MPI_Alltoall(&sendPtrCount[0], 1, MPIStructDef::getMPIType(&sendPtrCount[0]),
+		  &recvPtrCount[0], 1, MPIStructDef::getMPIType(&recvPtrCount[0]), m_comm));
   
   CFuint count = 0;
   CFuint countPtr = 0;
@@ -1959,17 +1970,17 @@ void ParCFmeshFileReader::moveElementData( ElementDataArray<0>& localElem, Parti
     countPtr += recvPtrCount[i];
   }
   
-  const CFuint totRecvCount = std::accumulate
-    (recvCount.begin(), recvCount.end(), 0);
-
-  const CFuint totRecvPtrCount = std::accumulate
-    (recvPtrCount.begin(), recvPtrCount.end(), 0);
-
+  const CFuint totRecvCount = std::accumulate(recvCount.begin(), recvCount.end(), 0);
+  const CFuint totRecvPtrCount = std::accumulate(recvPtrCount.begin(), recvPtrCount.end(), 0);
+  
   // update the array storing the number of elements per processor
   vector<CFuint> newNbElemPerProc(m_nbProc, static_cast<CFuint>(0));
   newNbElemPerProc[m_myRank] = totRecvPtrCount;
-  MPI_Allreduce(&newNbElemPerProc[0], &m_nbElemPerProc[0], m_nbProc,
-		MPIStructDef::getMPIType(&newNbElemPerProc[0]), MPI_SUM, m_comm);
+  
+  MPIError::getInstance().check
+    ("MPI_Allreduce", "ParCFmeshFileReader::moveElementData()",
+     MPI_Allreduce(&newNbElemPerProc[0], &m_nbElemPerProc[0], m_nbProc,
+		   MPIStructDef::getMPIType(&newNbElemPerProc[0]), MPI_SUM, m_comm));
   
   // deallocate PartitionerData
   SwapEmpty(pdata.elemNode);
@@ -1977,19 +1988,34 @@ void ParCFmeshFileReader::moveElementData( ElementDataArray<0>& localElem, Parti
   SwapEmpty(pdata.eptrn);
   SwapEmpty(pdata.eptrs);
   //  SwapEmpty(pdata.part);
-
+  
   // allocate the storage for the local ElementDataArray<0>
   localElem.resize(totRecvPtrCount, totRecvCount);
   vector<CFuint> elemSize(totRecvPtrCount, static_cast<CFuint>(0));
-
-  MPI_Alltoallv(tmpElem.startData(), &sendCount[0],
-		&sendDispl[0], MPIStructDef::getMPIType(tmpElem.startData()), localElem.startData(),
-		&recvCount[0], &recvDispl[0], MPIStructDef::getMPIType(localElem.startData()), m_comm);
   
-  MPI_Alltoallv(&tmpElemSize[0], &sendPtrCount[0],
-		&sendPtrDispl[0], MPIStructDef::getMPIType(&tmpElemSize[0]), &elemSize[0],
-		&recvPtrCount[0], &recvPtrDispl[0],
-		MPIStructDef::getMPIType(&elemSize[0]), m_comm);
+  if (m_nbProc > 1) {
+    MPIError::getInstance().check
+      ("MPI_Alltoallv", "ParCFmeshFileReader::moveElementData()",
+       MPI_Alltoallv(tmpElem.startData(), &sendCount[0],
+		     &sendDispl[0], MPIStructDef::getMPIType(tmpElem.startData()), localElem.startData(),
+		     &recvCount[0], &recvDispl[0], MPIStructDef::getMPIType(localElem.startData()), m_comm));
+    
+    MPIError::getInstance().check
+      ("MPI_Alltoallv", "ParCFmeshFileReader::moveElementData()",
+       MPI_Alltoallv(&tmpElemSize[0], &sendPtrCount[0],
+		     &sendPtrDispl[0], MPIStructDef::getMPIType(&tmpElemSize[0]), &elemSize[0],
+		     &recvPtrCount[0], &recvPtrDispl[0],
+		     MPIStructDef::getMPIType(&elemSize[0]), m_comm));
+  }
+  else {
+    for (CFuint i = 0; i < totRecvCount; ++i) {
+      localElem.startData()[i] = tmpElem.startData()[i];
+    }
+    
+    for (CFuint i = 0; i < tmpElemSize.size(); ++i) {
+      elemSize[i] = tmpElemSize[i];
+    }
+  }
   
   // print some hardcore info in case of need for debugging
   CFLogDebugMin(CFPrintContainer<vector<int> >("sendCount  = ", &sendCount));
@@ -2000,7 +2026,7 @@ void ParCFmeshFileReader::moveElementData( ElementDataArray<0>& localElem, Parti
   CFLogDebugMin(CFPrintContainer<vector<int> >("recvPtrCount  = ", &recvPtrCount));
   CFLogDebugMin(CFPrintContainer<vector<int> >("sendPtrDispl  = ", &sendPtrDispl));
   CFLogDebugMin(CFPrintContainer<vector<int> >("recvPtrDispl  = ", &recvPtrDispl));
-
+  
   // wipe clean the sent element array
   tmpElem.clear();
   SwapEmpty(tmpElemSize);
@@ -2026,7 +2052,7 @@ void ParCFmeshFileReader::moveElementData( ElementDataArray<0>& localElem, Parti
 
   // each processor builds an initial list of local node and state IDs
   setIsLocalNodeState(localElem, isLocalNode, isLocalState, localNodeIDs, localStateIDs);
-
+    
   vector<CFuint> tmpLocalNodeIDs;
   vector<CFuint> tmpLocalStateIDs;
   vector<CFuint> localNodeIDsToRemove;
@@ -2057,72 +2083,77 @@ void ParCFmeshFileReader::moveElementData( ElementDataArray<0>& localElem, Parti
       nbLocalNodeIDs  = localNodeIDs.size();
       nbLocalStateIDs = localStateIDs.size();
     }
-
+    
     MPIStruct ms;
-    int ln[2];
-    ln[0] = ln[1] = 1;
-
-    MPIStructDef::buildMPIStruct(&nbLocalNodeIDs, &nbLocalStateIDs, ln, ms);
-    MPI_Bcast(ms.start, 1, ms.type, root, m_comm);
-
+    
+    // only broadcast if you are running parallel, otherwise all data are already local
+    if (m_nbProc > 1) {
+      int ln[2];
+      ln[0] = ln[1] = 1;
+      
+      MPIStructDef::buildMPIStruct(&nbLocalNodeIDs, &nbLocalStateIDs, ln, ms);
+      MPI_Bcast(ms.start, 1, ms.type, root, m_comm);
+    }
+    
     tmpLocalNodeIDs.resize(nbLocalNodeIDs);
     tmpLocalStateIDs.resize(nbLocalStateIDs);
-
+    
     if (m_myRank == root) {
       copy(localNodeIDs.begin(), localNodeIDs.end(), tmpLocalNodeIDs.begin());
       copy(localStateIDs.begin(), localStateIDs.end(), tmpLocalStateIDs.begin());
     }
-
-    int le[4];
-    le[0] = rootElemSize;
-    le[1] = rootNbElem + 1;
-    le[2] = nbLocalNodeIDs;
-    le[3] = nbLocalStateIDs;
-
-    MPIStructDef::buildMPIStruct<CFuint, CFuint, CFuint, CFuint>
-      (tmpElem.startData(), tmpElem.startPtr(),
-       &tmpLocalNodeIDs[0], &tmpLocalStateIDs[0], le, ms);
-    MPI_Bcast(ms.start, 1, ms.type, root, m_comm);
     
+    // only broadcast if you are running parallel, otherwise all data are already local
+    if (m_nbProc > 1) {
+      int le[4];
+      le[0] = rootElemSize;
+      le[1] = rootNbElem + 1;
+      le[2] = nbLocalNodeIDs;
+      le[3] = nbLocalStateIDs;
+      
+      MPIStructDef::buildMPIStruct<CFuint, CFuint, CFuint, CFuint>
+	(tmpElem.startData(), tmpElem.startPtr(),
+	 &tmpLocalNodeIDs[0], &tmpLocalStateIDs[0], le, ms);
+      MPI_Bcast(ms.start, 1, ms.type, root, m_comm);
+    }
     
     // AL: the number of overlap layers is set here
     m_nbOverLayers = (m_nbOverLayers < 2) ? 
       MeshDataStack::getActive()->getNbOverlapLayers() : m_nbOverLayers;
     
-
     if (m_myRank != root) {
       isOverlap.assign(isOverlap.size(),false);
       vector<CFuint> newLocalNodeIDs;
       vector<CFuint> newLocalStateIDs;
-
+      
       for (CFuint iOver = 0; iOver < m_nbOverLayers; ++iOver) {
-  updateIsLocalNodeState(root, tmpElem, overlapElem,
-             isLocalNode, isLocalState,
-             ghostNodeIDs, ghostStateIDs,
-             newLocalNodeIDs, newLocalStateIDs,
-             localNodeIDsToRemove,
-             localStateIDsToRemove,
-             isOverlap,
-             iOver+1);
+	updateIsLocalNodeState(root, tmpElem, overlapElem,
+			       isLocalNode, isLocalState,
+			       ghostNodeIDs, ghostStateIDs,
+			       newLocalNodeIDs, newLocalStateIDs,
+			       localNodeIDsToRemove,
+			       localStateIDsToRemove,
+			       isOverlap,
+			       iOver+1);
       }
-
+      
       const CFuint nbNewLocalNodeIDs = newLocalNodeIDs.size();
       for (CFuint in = 0; in < nbNewLocalNodeIDs; ++in) {
-  isLocalNode[newLocalNodeIDs[in]] = false;
+	isLocalNode[newLocalNodeIDs[in]] = false;
       }
       const CFuint nbNewLocalStateIDs = newLocalStateIDs.size();
       for (CFuint in = 0; in < nbNewLocalStateIDs; ++in) {
-  isLocalState[newLocalStateIDs[in]] = false;
+	isLocalState[newLocalStateIDs[in]] = false;
       }
     }
   }
-
+  
   // add the storage of the overlap elements to the local elements
   localElem.add(overlapElem);
 
   // set the number of the local (= locally owned + ghost) elements
   getReadData().setNbElements(localElem.getNbElements());
-
+  
   // remove duplicated ghost nodes
   sort(ghostNodeIDs.begin(), ghostNodeIDs.end());
   unique_copy(ghostNodeIDs.begin() , ghostNodeIDs.end(), back_inserter(m_ghostNodeIDs));
@@ -2160,11 +2191,10 @@ void ParCFmeshFileReader::moveElementData( ElementDataArray<0>& localElem, Parti
       m_localStateIDs.push_back(stateID);
     }
     else {
-      isLocalState[stateID] = false;
+      isLocalState[stateID] = false; 
     }
   }
-
-  
+    
   CFLogDebugMax(CFPrintContainer<vector<CFuint> >("localNodeIDs  = ", &m_localNodeIDs));
   CFLogDebugMax(CFPrintContainer<vector<CFuint> >("localStateIDs = ", &m_localStateIDs));
   CFLogDebugMax(CFPrintContainer<vector<CFuint> >("ghostNodeIDs  = ", &m_ghostNodeIDs));
@@ -2175,67 +2205,106 @@ void ParCFmeshFileReader::moveElementData( ElementDataArray<0>& localElem, Parti
 
 void ParCFmeshFileReader::sortPartVec(const vector<CFuint>& globalElemIDs,
 				      vector<PartitionerData::IndexT>& part,
-				      CFMultiMap<CFint,CFint>& mapProcToOldElemID)
+				      CFMultiMap<PartitionerData::IndexT,CFuint>& mapProcToOldElemID)
 {
   const CFuint partSize = part.size();
-
+  
   // map the processorID with the corresponding global element IDs
   for (CFuint i = 0; i < partSize; ++i) {
     mapProcToOldElemID.insert(part[i], globalElemIDs[i]);
   }
   mapProcToOldElemID.sortKeys();
-
+  
   // override the old pdata.part with sorted keys
   for (CFuint i = 0; i < partSize; ++i) {
     part[i] = mapProcToOldElemID.getKey(i);
   }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void ParCFmeshFileReader::setIsLocalNodeState(ElementDataArray<0>& elem,
-                vector<bool>& isLocalNode,
-                vector<bool>& isLocalState,
-                vector<CFuint>& localNodeIDs,
-                vector<CFuint>& localStateIDs)
+					      vector<bool>& isLocalNode,
+					      vector<bool>& isLocalState,
+					      vector<CFuint>& localNodeIDs,
+					      vector<CFuint>& localStateIDs)
 {
   CFAUTOTRACE;
-
+  
   ElementDataArray<0>::Itr itr = elem.begin();
   ElementDataArray<0>::Itr end = elem.end();
-
+  
   CFuint countn = 0; // counter of local nodes
   CFuint counts = 0; // counter of local states
   CFuint localElemID = 0;
-
+  
+  // counters for sanity check
+  vector<CFuint> ncounter;
+  if (m_nbProc == 1) {ncounter.resize(m_totNbNodes, (CFuint)0);}
+  vector<CFuint> scounter;
+  if (m_nbProc == 1) {scounter.resize(m_totNbStates, (CFuint)0);}
+  
   for (; itr != end; ++itr, ++localElemID) {
     const CFuint nbNodesInElem = itr.get(ElementDataArray<0>::NB_NODES);
-    for (CFuint in = 0; in < nbNodesInElem; ++in) {
+    
+    // if (itr.getState(0) == 0) cout << "E[" <<localElemID <<"] has stateID=0 and nodeIDs=(";
+    
+    for (CFuint in = 0; in < nbNodesInElem; ++in) { 
       const CFuint nodeID = itr.getNode(in);
       cf_assert(nodeID < isLocalNode.size());
+      if (m_nbProc == 1) {ncounter[nodeID]++;}
+      // if (itr.getState(0) == 0) cout << nodeID << " ";   
       if (!isLocalNode[nodeID]) {
 	isLocalNode[nodeID] = true;
 	countn++;
       }
     }
+    // if (itr.getState(0) == 0) cout << ")\n";
     
     const CFuint nbStatesInElem = itr.get(ElementDataArray<0>::NB_STATES);
     for (CFuint is = 0; is < nbStatesInElem; ++is) {
       const CFuint stateID = itr.getState(is);
+      if (m_nbProc == 1) {scounter[stateID]++;}
       cf_assert(stateID < isLocalState.size());
       if (!isLocalState[stateID]) {
-       isLocalState[stateID] = true;
-       counts++;
+	isLocalState[stateID] = true;
+	counts++;
       }
     }
   }
-
+  
+  // sanity checks (to be removed)
+  bool exitLoop = false;
+  if (m_nbProc == 1) {
+    bool exitLoop = false;
+    for (CFuint i = 0; i < m_totNbStates; ++i) {
+      if (scounter[i] == 0) {
+	static CFuint countStates = 0;
+	CFLog(ERROR,"ParCFmeshFileReader::setIsLocalNodeState() => " << ++countStates <<  " state [" << i << "] not found\n");
+	exitLoop = true;
+      }
+      if (scounter[i] > 1) {
+	CFLog(ERROR,"ParCFmeshFileReader::setIsLocalNodeState() => state [" << i << "] found #" << scounter[i] << " times\n");
+	exitLoop = true;
+      }
+    }  
+  
+    for (CFuint i = 0; i < m_totNbNodes; ++i) {	
+      if (ncounter[i] == 0) {
+	CFLog(ERROR,"ParCFmeshFileReader::setIsLocalNodeState() => node [" << i << "] not found\n");
+	exitLoop = true;
+      }
+    }
+    
+    if (exitLoop) exit(1);
+  }
+  
   for (CFuint i = 0; i < m_totNbNodes; ++i) {
     if (isLocalNode[i]) {
       localNodeIDs.push_back(i);
     }
   }
-
+  
   for (CFuint i = 0; i < m_totNbStates; ++i) {
     if (isLocalState[i]) {
       localStateIDs.push_back(i);

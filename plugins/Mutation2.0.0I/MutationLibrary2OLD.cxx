@@ -320,8 +320,8 @@ void MutationLibrary2OLD::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >
     ("noElectronicEnergy","Flag telling to ignore the electronic energy.");
   options.addConfigOption< bool >("includeElectronicEnergy","Include the electronic energy.");
-  options.addConfigOption< CFint >("sonine","Sonine polynome order.");
-  options.addConfigOption< CFint >("IMOD","Compute transport properties.");
+  options.addConfigOption< int >("sonine","Sonine polynome order.");
+  options.addConfigOption< int >("IMOD","Compute transport properties.");
   options.addConfigOption< std::string >("mixtureName","Name of the mixture.");
   options.addConfigOption< std::string >("reactionName","Name of the reaction.");
   options.addConfigOption< std::string >("transfName","Name of the transfer file.");
@@ -1194,11 +1194,11 @@ void MutationLibrary2OLD::lambdaVibNEQ(CFreal& temperature,
   }
   else {
     if (presenceElectron()) {
-      lambdaInt[max(0,_electrEnergyID)] +=  lambdaE + lambdaTe;
+      lambdaInt[max((CFint)0,_electrEnergyID)] +=  lambdaE + lambdaTe;
     }
     else {
       if (_includeElectronicEnergy) {
-  lambdaInt[max(0,_electrEnergyID)] +=  lambdaE;
+	lambdaInt[max((CFint)0,_electrEnergyID)] +=  lambdaE;
       }
       lambdaTe = 0.0;
     }
@@ -1475,12 +1475,12 @@ void MutationLibrary2OLD::setDensityEnthalpyEnergy(CFdouble& temp,
   //      FOR CR IT WE NEED TO SPLIT THAT WAY !!
   if (getNbTe() == 0 && presenceElectron()) {
     //    TO BE CHANGED MARCO
-    //    dhe[3+max(0,_electrEnergyID)] +=_Y[0]*_HTRANSUM[0];
+    //    dhe[3+max((CFint)0,_electrEnergyID)] +=_Y[0]*_HTRANSUM[0];
     if (_includeElectronicEnergy) {
-      dhe[3+max(0,_electrEnergyID)] +=_Y[0]*_HTRANSUM[0]; 
+      dhe[3+max((CFint)0,_electrEnergyID)] +=_Y[0]*_HTRANSUM[0]; 
       for (CFuint i = 0; i < _boltzmannIDs.size(); ++i) {
             const CFuint elEnergyID = _boltzmannIDs[i];
-            dhe[3+max(0,_electrEnergyID)] += _Y[elEnergyID]*_HELECTUM[elEnergyID];
+            dhe[3+max((CFint)0,_electrEnergyID)] += _Y[elEnergyID]*_HELECTUM[elEnergyID];
       }
     }
   } 
@@ -2446,10 +2446,10 @@ void MutationLibrary2OLD::getSourceTermVT(CFdouble& temperature,
 
     // Park's model
     if (_includeElectronicEnergy && presenceElectron()) {
-      omegav[max(0,_electrEnergyID)] += omegaet + _OMEGAI;
+      omegav[max((CFint)0,_electrEnergyID)] += omegaet + _OMEGAI;
       for(CFuint i = 0; i < _boltzmannIDs.size(); ++i) {
         const CFuint elEnergyID = _boltzmannIDs[i];
-	omegav[max(0,_electrEnergyID)] += _OMEGA[elEnergyID]*_HELECT[elEnergyID]/_MOLARMASSP[elEnergyID];
+	omegav[max((CFint)0,_electrEnergyID)] += _OMEGA[elEnergyID]*_HELECT[elEnergyID]/_MOLARMASSP[elEnergyID];
       }
     }
   }
@@ -2799,11 +2799,11 @@ void MutationLibrary2OLD::transportCoeffNEQ(CFreal& temperature,
   }
   else {
     if (presenceElectron()) {
-      lambdaInt[max(0,_electrEnergyID)] +=  lambdaE + lambdaTe;
+      lambdaInt[max((CFint)0,_electrEnergyID)] +=  lambdaE + lambdaTe;
     }
     else {
       if (_includeElectronicEnergy) {
-	lambdaInt[max(0,_electrEnergyID)] +=  lambdaE;
+	lambdaInt[max((CFint)0,_electrEnergyID)] +=  lambdaE;
       }
       lambdaTe = 0.0;
     }

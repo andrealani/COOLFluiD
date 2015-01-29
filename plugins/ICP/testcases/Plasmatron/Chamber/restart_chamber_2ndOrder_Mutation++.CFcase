@@ -40,7 +40,6 @@ Simulator.SubSystem.ICPLTE2D.SourceTerm.Freq = 0.37
 ###### CHEMICAL LIBRARY ##
 Simulator.SubSystem.ICPLTE2D.PropertyLibrary = Mutationpp
 Simulator.SubSystem.ICPLTE2D.Mutationpp.mixtureName = air11
-Simulator.SubSystem.ICPLTE2D.Mutationpp.thermCondAlgo = Direct
 
 #Simulator.SubSystem.ConvergenceFile = ./convergence.plt
 
@@ -54,11 +53,11 @@ Simulator.SubSystem.Tecplot.Data.printExtraValues = true
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Symmetry
 #Wall_torch_in
 
-Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
+#Simulator.SubSystem.StopCondition          = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 3
 
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -4.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -4.0
 
 Simulator.SubSystem.Default.listTRS = InnerFaces Symmetry Wall_torch_up Wall_torch_in Inlet Outlet Wall_ch Outlet_up Wall_probe
 

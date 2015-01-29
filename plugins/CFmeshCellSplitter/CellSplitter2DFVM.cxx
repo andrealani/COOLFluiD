@@ -147,16 +147,16 @@ void CellSplitter2DFVM::split()
   data.copyElementStateTo(_oldElemState);
 
   transformQuadElements();
-
-  SafePtr< vector<RealVector> > nodes  = data.getNodeList();
-  SafePtr< vector<RealVector> > states = data.getStateList();
-
-  data.setNbUpdatableNodes(nodes->size());
+  
+  SafePtr< vector<CFreal> > nodes  = data.getNodeList();
+  SafePtr< vector<CFreal> > states = data.getStateList();
+  
+  data.setNbUpdatableNodes(nodes->size()/data.getDimension());
   data.setNbNonUpdatableNodes(0);
-
+  
   data.setNbUpdatableStates(_statePattern.size());
   data.setNbNonUpdatableStates(0);
-
+  
   data.setNbElementTypes(1);
   data.consistencyCheck();
   data.setWithSolution(false);

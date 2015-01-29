@@ -65,7 +65,7 @@ Simulator.SubSystem.Default.listTRS = InnerFaces SuperInlet SuperOutlet Top Bott
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets3DFVM_binary.CFmesh
 Simulator.SubSystem.CFmeshFileReader.ReadCFmesh = ParReadCFmeshBinary
-Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
+#Simulator.SubSystem.CFmeshFileReader.ParReadCFmeshBinary.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.Value = 1.0

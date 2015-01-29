@@ -143,15 +143,15 @@ void TriangleSplitter::split()
 
   refineElements();
 
-  SafePtr< vector<RealVector> > nodes  = data.getNodeList();
-  SafePtr< vector<RealVector> > states = data.getStateList();
+  SafePtr< vector<CFreal> > nodes  = data.getNodeList();
+  SafePtr< vector<CFreal> > states = data.getStateList();
 
-  data.setNbUpdatableNodes(nodes->size());
+  data.setNbUpdatableNodes(nodes->size()/data.getDimension());
   data.setNbNonUpdatableNodes(0);
-
-  data.setNbUpdatableStates(states->size());
+  
+  data.setNbUpdatableStates(states->size()/data.getNbEquations());
   data.setNbNonUpdatableStates(0);
-
+  
   data.consistencyCheck();
 }
 
@@ -309,17 +309,12 @@ for(CFuint iNode = 0; iNode < nbTriangles; ++iNode) {
           newNodes[triagElemID] = 0.;
           for(CFuint localID = 0; localID < 3; ++localID) {
             tempTriag[localID] = _oldElemNode(elemID,localID);
-            newNodes[triagElemID] += *(data.getNode(tempTriag[localID]));
-          }
+	    const CFreal* node = data.getNode(tempTriag[localID]);
+	    for (CFuint d = 0; d < DIM_2D; ++d) {
+	      newNodes[triagElemID][d] += node[d];
+	    }
+	  }
           newNodes[triagElemID] /= 3.;
-/*CFout << "TriangleNodeID: " <<(tempTriag[0]) <<"\n";
-CFout << "TriangleNodeID: " <<(tempTriag[1]) <<"\n";
-CFout << "TriangleNodeID: " <<(tempTriag[2]) <<"\n";
-
-CFout << "From: " <<*(data.getNode(tempTriag[0])) <<"\n";
-CFout << "From: " <<*(data.getNode(tempTriag[1])) <<"\n";
-CFout << "From: " <<*(data.getNode(tempTriag[2])) <<"\n";
-CFout << "Created Node: " <<newNodes[triagElemID] <<"\n";*/
           ++elemID;
           ++triagElemID;
         }
@@ -344,57 +339,60 @@ CFout << "Created Node: " <<newNodes[triagElemID] <<"\n";*/
     }
   }
 
-//Resize nodes and add nodes
-//Backup
-std::vector<RealVector> oldNodes(oldNbNodes);
-for(CFuint iNode = 0; iNode < oldNbNodes; ++iNode) {
-  oldNodes[iNode].resize(DIM_2D);
-  oldNodes[iNode] = *(data.getNode(iNode));
-}
-
-//Resize
-data.resizeNodes(nbNodes);
-data.resizeStates(nbStates);
-
-//Put back the old nodes
-for(CFuint iNode = 0; iNode < oldNbNodes; ++iNode) {
-  data.setNode(iNode,oldNodes[iNode]);
-}
-//Put the new nodes
-for(CFuint iNode = 0; iNode < nbTriangles; ++iNode) {
-  data.setNode(oldNbNodes + iNode,newNodes[iNode]);
-}
-
-data.setNbUpdatableNodes(data.getNbUpdatableNodes() + nbTriangles);
-data.setNbUpdatableStates(data.getNbUpdatableStates() + nbTriangles);
-
-CFout << "Initial nbElements: " <<nbElements <<"\n";
+  //Resize nodes and add nodes
+  //Backup
+  std::vector<RealVector> oldNodes(oldNbNodes);
+  for(CFuint iNode = 0; iNode < oldNbNodes; ++iNode) {
+    oldNodes[iNode].resize(DIM_2D);
+    const CFreal* node = data.getNode(iNode);
+    for (CFuint d = 0; d < DIM_2D; ++d) {
+      oldNodes[iNode][d] = node[d];
+    }
+  }
+  
+  //Resize
+  data.resizeNodes(nbNodes);
+  data.resizeStates(nbStates);
+  
+  //Put back the old nodes
+  for(CFuint iNode = 0; iNode < oldNbNodes; ++iNode) {
+    data.setNode(iNode,oldNodes[iNode]);
+  }
+  
+  //Put the new nodes
+  for(CFuint iNode = 0; iNode < nbTriangles; ++iNode) {
+    data.setNode(oldNbNodes + iNode,newNodes[iNode]);
+  }
+  
+  data.setNbUpdatableNodes(data.getNbUpdatableNodes() + nbTriangles);
+  data.setNbUpdatableStates(data.getNbUpdatableStates() + nbTriangles);
+  
+  CFout << "Initial nbElements: " <<nbElements <<"\n";
   CFuint newNbElements = nbElements;
-
+  
   elemID = 0;
   triagElemID = 0;
   for (CFuint iType = 0; iType < nbElementTypes; ++iType) {
     const CFGeoShape::Type currShape = (*elementType)[iType].getGeoShape();
     const CFuint nbElemPerType = (*elementType)[iType].getNbElems();
-
+    
     for(CFuint iElem = 0; iElem < nbElemPerType; ++iElem) {
-
+      
       switch(currShape) {
-
+	
       case CFGeoShape::TRIAG:
         {
-
-// CFout << "Subdividing triangle:  " <<triagElemID <<"\n";
+	  // CFout << "Subdividing triangle:  " <<triagElemID <<"\n";
           newNbElements += 2;
 
           vector<CFuint> newID(3);
           newID[0] = elemID;
           newID[1] = nbElements + triagElemID;
           newID[2] = nbElements + 2*triagElemID;
-
-  /*        CFuint oldNbElemsPerType = (*elementType)[_triagTypeID].getNbElems();
-          (*elementType)[_triagTypeID].setNbElems(oldNbElemsPerType + 1);*/
-//   CFout << "Temp triangle\n";
+	  
+	  /*        CFuint oldNbElemsPerType = (*elementType)[_triagTypeID].getNbElems();
+		    (*elementType)[_triagTypeID].setNbElems(oldNbElemsPerType + 1);*/
+	  //   CFout << "Temp triangle\n";
           vector<CFuint> tempTriag;
           tempTriag.resize(3);
           // Create the Triag
@@ -403,9 +401,9 @@ CFout << "Initial nbElements: " <<nbElements <<"\n";
           }
 
           CFuint newNodeID = oldNbNodes + triagElemID;
-// CFout << "Split triangle\n";
+	  // CFout << "Split triangle\n";
           splitTriags(tempTriag, newNodeID);
-
+	  
           //Create the triangles
           for (CFuint iTriag = 0; iTriag < 3; ++iTriag) {
             for(CFuint localID = 0; localID < 3; ++localID) {
@@ -413,43 +411,43 @@ CFout << "Initial nbElements: " <<nbElements <<"\n";
               (*elementState)(newID[iTriag],localID) = _newTriags[iTriag][localID];
             }
           }
-//   CFout << "Done with triag\n";
+	  //   CFout << "Done with triag\n";
           ++elemID;
           ++triagElemID;
         }
         break;
-
+	
       case CFGeoShape::QUAD:
         {
           for(CFuint localID = 0; localID < 4; ++localID) {
-
+	    
             (*elementNode)(elemID,localID) =
               _oldElemNode (elemID,localID);
-
+	    
             (*elementState)(elemID,localID) =
               _oldElemState(elemID,localID);
           }
           ++elemID;
         }
         break;
-
+	
       default:
-
+	
         std::string shape = CFGeoShape::Convert::to_str(currShape);
-
+	
         std::string msg = std::string("Wrong kind of elements present in 2D mesh: ") +
-                       shape +
-                       std::string(" ElemID: ") +
-                       StringOps::to_str(++elemID);
+	  shape +
+	  std::string(" ElemID: ") +
+	  StringOps::to_str(++elemID);
         throw BadValueException (FromHere(),msg);
-        }
+      }
     }
   }
-
+  
   cf_assert(elemID == nbElements);
-
+  
   data.setNbElements(newNbElements);
-CFout << "New nbElements: " <<newNbElements <<"\n";
+  CFout << "New nbElements: " <<newNbElements <<"\n";
 }
 
 //////////////////////////////////////////////////////////////////////////////

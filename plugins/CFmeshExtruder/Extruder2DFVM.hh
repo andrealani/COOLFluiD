@@ -178,13 +178,13 @@ private:
   /**
    * Creates a side TRS
    * @param name the name to give the TRS
-   * @param layer the nb of the layer of nodes and states on which to base the
+   * @param layer the ID of the layers(1 or more) of nodes and states on which to base the
    *              GeometricEntity's of the TRS
    * @param bottom is a boolean that indicates to the function if the TRS to create
    *               is the bottom or the top one.
    */
   void createSideTRS(const std::string& name,
-		     const CFuint& layer,
+		     const std::vector<CFuint>& layer,
 		     const bool& bottom);
   
   /**
@@ -244,7 +244,10 @@ private:
 
   /// random position of nodes in inner layers?
   bool                                _random;
-
+  
+  /// create one TRS called Periodic
+  bool                                _periodic;
+  
   /// the z diference per layer
   CFreal                                _zDelta;
 

@@ -6,6 +6,7 @@
 
 #include <ctime>
 #include <cstdlib>
+#include <boost/progress.hpp>
 
 #include "Common/Stopwatch.hh"
 #include "Common/BadValueException.hh"
@@ -180,7 +181,7 @@ void Extruder2DDGM::extrude()
   // set dimension to 3D
   cf_assert(data.getDimension() == DIM_2D);
   data.setDimension(DIM_3D);
-
+    
   // save connectivities previous to extrusion
   data.copyElementNodeTo(_oldElemNode);
   data.copyElementStateTo(_oldElemState);
@@ -188,29 +189,38 @@ void Extruder2DDGM::extrude()
   transformNodesTo3D();
 
   createFirstLayer();
-
+  
+  SafePtr< vector<CFreal> > nodes  = data.getNodeList();
+  SafePtr< vector<CFreal> > states = data.getStateList();
+    
   // create subsequent layers of elements
-  if (_nbLayers > 1){
-  for(CFuint iLayer = 1; iLayer < _nbLayers; ++iLayer) {
-    _iLayer = iLayer;
-    createAnotherLayer();
+  if (_nbLayers > 1){ 
+    // preallocation of memory for nodes and states
+    nodes->reserve (nodes->size() + (_nbLayers-1)*nodes->size());
+    states->reserve (states->size() + (_nbLayers-1)*states->size());
+      
+    auto_ptr<boost::progress_display> progressBar
+      (new boost::progress_display(_nbLayers-1));
+    
+    for(CFuint iLayer = 1; iLayer < _nbLayers; ++iLayer) {
+      ++(*progressBar);
+      _iLayer = iLayer;
+      createAnotherLayer();
+    }
+    if (_random == true) randomNodes();
+    CFLog(INFO, "\n");	
   }
-  if (_random == true) randomNodes();
-  }
-
+  
   //if(isHybrid) reorderElementNodeState();
-
+  
   updateTRSData();
-
-  SafePtr< vector<RealVector> > nodes  = data.getNodeList();
-  SafePtr< vector<RealVector> > states = data.getStateList();
-
-  data.setNbUpdatableNodes(nodes->size());
+  
+  data.setNbUpdatableNodes(nodes->size()/data.getDimension());
   data.setNbNonUpdatableNodes(0);
-
-  data.setNbUpdatableStates(states->size());
+  
+  data.setNbUpdatableStates(states->size()/data.getNbEquations());
   data.setNbNonUpdatableStates(0);
-
+  
   data.consistencyCheck();
 }
 
@@ -219,25 +229,29 @@ void Extruder2DDGM::extrude()
 void Extruder2DDGM::transformNodesTo3D()
 {
   CFAUTOTRACE;
-
+  
   CFmeshReaderWriterSource& data = *(_data.get());
-
-// @todo check THIS
-  RealVector newValue(DIM_3D);
+  
   const CFuint nbNodes = data.getTotalNbNodes();
-
+  SafePtr< vector<CFreal> > nodes  = data.getNodeList();
+  
+  // local backup of 2D nodes
+  vector<CFreal> oldValue(*nodes);
+  
+  // resize to 3D
+  nodes->resize(nbNodes*DIM_3D);
+  cf_assert(data.getDimension() == DIM_3D);
+  
   for(CFuint iNode = 0; iNode < nbNodes; ++iNode) {
-    const RealVector* oldValue = data.getNode(iNode);
+    CFreal* newValue = data.getNode(iNode);
+    const CFuint start = iNode*DIM_2D;
     for (CFuint i = 0; i < DIM_2D; ++i) {
-      newValue[i] = (*oldValue)[i];
+      newValue[i] = oldValue[start+i];
     }
     newValue[DIM_2D] = 0.0;
-
-    data.resizeOneNode(iNode);
-    data.setNode(iNode, newValue);
   }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void Extruder2DDGM::createFirstLayer()
@@ -256,28 +270,23 @@ void Extruder2DDGM::convertCurrentElementsTo3D()
   CFAUTOTRACE;
 
   CFmeshReaderWriterSource& data = *(_data.get());
-
+  
   _nbNodesPerLayer   = data.getTotalNbNodes();
   _nbStatesPerLayer  = data.getTotalNbStates();
-  const CFuint z = 2;
-
-  /// this is for FVM
-//   cf_assert(data.getNbElements() == data.getTotalNbStates());
-
-  SafePtr< vector<RealVector> > nodes  = data.getNodeList();
-  SafePtr< vector<RealVector> > states = data.getStateList();
-
+  
+  SafePtr< vector<CFreal> > nodes  = data.getNodeList();
+  SafePtr< vector<CFreal> > states = data.getStateList();
   nodes->reserve (2 * nodes->size());
-
-  RealVector tmpNode(DIM_3D);
-  for(CFuint iNode = 0; iNode < data.getTotalNbNodes(); ++iNode) {
-
-    tmpNode = (*nodes)[iNode];
-    tmpNode[z] += _zDelta;
-
-    nodes->push_back(tmpNode);
+  
+  // add nodes corresponding to first layer
+  const CFuint totalNbNodes = data.getTotalNbNodes();
+  for(CFuint iNode = 0; iNode < totalNbNodes; ++iNode) {
+    const CFuint start = iNode*DIM_3D;
+    nodes->push_back((*nodes)[start]);
+    nodes->push_back((*nodes)[start+1]);
+    nodes->push_back((*nodes)[start+2]+_zDelta);
   }
-
+  
   SafePtr< Table<CFuint> > elementNode  = data.getElementNode();
   SafePtr< Table<CFuint> > elementState = data.getElementState();
 
@@ -520,35 +529,37 @@ void Extruder2DDGM::createAnotherLayer()
   CFAUTOTRACE;
 
   CFmeshReaderWriterSource& data = *(_data.get());
-  SafePtr< vector<RealVector> > nodes  = data.getNodeList();
-  SafePtr< vector<RealVector> > states = data.getStateList();
-
-  const CFuint z = 2;
-
-  const CFuint nStartID = nodes->size() - _nbNodesPerLayer;
-  const CFuint nEndID   = nodes->size();
-
-  const CFuint sStartID = states->size() - _nbStatesPerLayer;
-  const CFuint sEndID   = states->size();
-
+  SafePtr< vector<CFreal> > nodes  = data.getNodeList();
+  SafePtr< vector<CFreal> > states = data.getStateList();
+  
+  const CFuint dimension   = data.getDimension();
+  const CFuint nbEquations = data.getNbEquations();
+  
+  const CFuint nStartID = nodes->size()/dimension - _nbNodesPerLayer;
+  const CFuint nEndID   = nodes->size()/dimension;
+  
+  const CFuint sStartID = states->size()/nbEquations - _nbStatesPerLayer;
+  const CFuint sEndID   = states->size()/nbEquations;
+  
   // Add new nodes and states for the new layer
-  RealVector tmpNode(DIM_3D);
   for(CFuint iNode = nStartID; iNode < nEndID; ++iNode) {
-
-    tmpNode = (*nodes)[iNode];
-    tmpNode[z] += _zDelta;
-
-    nodes->push_back(tmpNode);
+    const CFuint start = iNode*DIM_3D;
+    nodes->push_back((*nodes)[start]);
+    nodes->push_back((*nodes)[start+1]);
+    nodes->push_back((*nodes)[start+2]+_zDelta);
   }
-
+  
   for(CFuint iState = sStartID; iState < sEndID; ++iState) {
-    states->push_back((*states)[iState]);
+    const CFuint start = iState*nbEquations;
+    for (CFuint s = 0; s < nbEquations; ++s) {
+      states->push_back((*states)[start+s]);
+    }
   }
-
+  
   SafePtr< Table<CFuint> > elementNode  = data.getElementNode();
   SafePtr< Table<CFuint> > elementState  = data.getElementState();
-
-//unused//  const CFuint oldNbElements = elementNode->nbRows();
+  
+  //unused//  const CFuint oldNbElements = elementNode->nbRows();
   elementNode->increase(_nodePattern);
   elementState->increase(_statePattern);
 
@@ -641,84 +652,53 @@ void Extruder2DDGM::createAnotherLayer()
 
 
     case CFGeoShape::PRISM:
-      {
-// std::cout << "Prism" <<std::endl;
-// std::cout << "newID: " << newID << std::endl;
-// std::cout << "elementStateSize: " << elementState->nbRows() << std::endl;
-// std::cout << "elementNodeSize: " << elementNode->nbRows() << std::endl;
-// std::cout << "elementNodeCols[" << newID <<"]: " << elementNode->nbCols(newID) << std::endl;
-
+    {
       oldNbElemsPerType = (*elementType)[_prismTypeID].getNbElems();
       (*elementType)[_prismTypeID].setNbElems(oldNbElemsPerType + 1);
 
       for(CFuint localID = 0; localID < 3; ++localID) {
-// std::cout << "localID: " << localID << std::endl;
         // first layer
         (*elementNode)(newID,localID) =
           (*elementNode)(iElem,localID) + _nbNodesPerLayer;
-// std::cout << "localID+3: " << localID+3 << std::endl;
         // next layer
         (*elementNode)(newID,localID + 3) =
           (*elementNode)(iElem,localID + 3) + _nbNodesPerLayer;
       }
-
-// std::cout << "state " << std::endl;
       // state
       (*elementState)(newID,0) = (*elementState)(iElem,0) + _nbStatesPerLayer;
-
+      
       }
       break;
 
     case CFGeoShape::HEXA:
       {
-// std::cout << "Hexa" <<std::endl;
-// std::cout << "newID: " << newID << std::endl;
-// std::cout << "Node pattern.size(): " <<_nodePattern.size() <<std::endl;
-// std::cout << "State pattern.size(): " <<_statePattern.size() <<std::endl;
-// std::cout << "NodePatt: " <<_nodePattern[iElem] << std::endl;
-// std::cout << "StatePatt: " <<_statePattern[iElem] << std::endl;
-
-
       oldNbElemsPerType = (*elementType)[_hexaTypeID].getNbElems();
       (*elementType)[_hexaTypeID].setNbElems(oldNbElemsPerType + 1);
-// std::cout << "State pattern[iElem]: " <<_statePattern[iElem] <<std::endl;
-// std::cout << "Node pattern[iElem]: " <<_nodePattern[iElem] <<std::endl;
-// std::cout << "elementStateSize: " << elementState->nbRows() << std::endl;
-// std::cout << "elementNodeSize: " << elementNode->nbRows() << std::endl;
-// std::cout << "elementNodeCols[" << newID <<"]: " << elementNode->nbCols(newID) << std::endl;
-// std::cout << "newID: " << newID << std::endl;
-// std::cout << "iElem: " << iElem << std::endl;
-// std::cout << "_nbStatesPerLayer: " << _nbStatesPerLayer << std::endl;
-// std::cout << "_nbNodesPerLayer: " << _nbNodesPerLayer << std::endl;
-
+      
       for(CFuint localID = 0; localID < 4; ++localID) {
-// std::cout << "localID: " << localID << std::endl;
-
         // first layer
         (*elementNode)(newID,localID) =
           (*elementNode)(iElem,localID) + _nbNodesPerLayer;
-
-// std::cout << "localID+4: " << localID+4 << std::endl;
-
+	
         // next layer
         (*elementNode)(newID,localID + 4) =
           (*elementNode)(iElem,localID + 4) + _nbNodesPerLayer;
       }
-
+      
       // state
       (*elementState)(newID,0) = (*elementState)(iElem,0) + _nbStatesPerLayer;
       //(*elementState)(newID,0) = _oldElemState(iElem,0) + _nbStatesPerLayer;
-
+      
       }
       break;
-
+      
     default:
       std::string shape = CFGeoShape::Convert::to_str ( elementShapes[iElem] );
       std::string msg = std::string("Unexpected type of element: ") + shape;
       throw BadValueException(FromHere(),msg);
     }
   }
-
+  
   data.setNbElements(newNbElements);
 }
 
@@ -1101,11 +1081,10 @@ void Extruder2DDGM::randomNodes()
 {
   srand(time(0));
   CFmeshReaderWriterSource& data = *(_data.get());
-  SafePtr< vector<RealVector> > nodes  = data.getNodeList();
-  const CFuint z = 2;
-  for (CFuint iNode=_nbNodesPerLayer;iNode < nodes->size() - _nbNodesPerLayer;iNode++)
-  {
-    (*nodes)[iNode][z]=((rand() % 10000)/10000.0 -0.5)*_zDelta/2.0 + _zDelta*(iNode / _nbNodesPerLayer);
+  SafePtr< vector<CFreal> > nodes  = data.getNodeList();
+  const CFuint end = nodes->size()/DIM_3D - _nbNodesPerLayer;
+  for (CFuint iNode=_nbNodesPerLayer;iNode < end; iNode++) {
+    (*nodes)[iNode*DIM_3D + 2] = ((rand() % 10000)/10000.0 -0.5)*_zDelta/2.0 + _zDelta*(iNode / _nbNodesPerLayer);
   }
 }
 

@@ -4,7 +4,6 @@
 # This testcases verifies the simulation of torch + chamber + probe at 100kW
 
 ### Residual = -3.4515694
-# -3.4530147
 
 
 #######TEST CONFIGURATION
@@ -26,6 +25,7 @@ Simulator.SubSystem.ICPLTE2D.ConvTerm.uInf = 666.
 Simulator.SubSystem.ICPLTE2D.ConvTerm.p0Inf = 1500.
 
 ###### EM Field MODEL ##
+
 Simulator.SubSystem.ICPLTE2D.SourceTerm.Use2DModel = true
 #Simulator.SubSystem.ICPLTE2D.SourceTerm.xMaxUsing1DModel = 0.486
 #Simulator.SubSystem.ICPLTE2D.SourceTerm.Use2DModel = false
@@ -55,7 +55,7 @@ Simulator.SubSystem.Tecplot.Data.printExtraValues = true
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Symmetry
 #Wall_torch_in
 
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
 Simulator.SubSystem.MaxNumberSteps.nbSteps = 3
 
 #Simulator.SubSystem.StopCondition       = Norm
@@ -129,7 +129,6 @@ Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhsCoupling.annullDiagValue = 
 Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = RhieChow2D
 Simulator.SubSystem.CellCenterFVM.Data.RhieChow2D.PressStab = false
 Simulator.SubSystem.CellCenterFVM.Data.RhieChow2D.PressDissipScale = 1.
-
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Puvt
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 

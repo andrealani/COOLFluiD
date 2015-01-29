@@ -32,6 +32,18 @@ struct MPIStruct {
 class MPIStructDef {
 public:
   
+  /// Get the MPI_Datatype corresponding to MPI_Offset
+  static MPI_Datatype getMPIOffsetType() 
+  {
+    return MPI_OFFSET;
+    // MPI_Datatype offsetType = MPI_DATATYPE_NULL;
+    // if      (sizeof(MPI_Offset) == sizeof(int))  { return MPI_INT; }
+    // else if (sizeof(MPI_Offset) == sizeof(long)) { return MPI_LONG; }
+    // else if (sizeof(MPI_Offset) == sizeof(long long)) { return MPI_LONG_LONG; }
+    // else { MPI_Abort(MPI_COMM_WORLD, 1); }
+    // return  MPI_DATATYPE_NULL;
+  }
+  
   /// The following function returns the MPI basic type
   /// corresponding to the given argument
 #define MPIDTYPE(__type__,__mpidtype__)  	\

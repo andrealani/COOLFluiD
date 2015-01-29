@@ -675,7 +675,7 @@ protected: // data to use to interface FORTRAN77
 
   /// Lagrange-Sonine computation option (polynom order???)
   int _sonine;
-
+  
   /// Where to compute transport properties
   int _imod;
 

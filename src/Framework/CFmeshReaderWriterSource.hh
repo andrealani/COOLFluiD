@@ -65,13 +65,9 @@ public: // functions
     // to safely resize FREE the memory first
     //(this is NOT done by std::resize())
     if (_nodes.size() > 0) {
-      std::vector<RealVector>().swap(_nodes);
+      std::vector<CFreal>().swap(_nodes);
     }
-    _nodes.resize(nbNodes);
-
-    for (CFuint i = 0; i < nbNodes; ++i) {
-      _nodes[i].resize(_dimension);
-    }
+    _nodes.resize(nbNodes*_dimension);
   }
 
   /// Resize the states
@@ -80,44 +76,34 @@ public: // functions
     // to safely resize FREE the memory first
     //(this is NOT done by std::resize())
     if (_states.size() > 0) {
-      std::vector<RealVector>().swap(_states);
+      std::vector<CFreal>().swap(_states);
     }
-    _states.resize(nbStates);
-
-    for (CFuint i = 0; i < nbStates; ++i) {
-      _states[i].resize(_nbEquations);
-    }
+    _states.resize(nbStates*_nbEquations);
   }
-
-  /// Resize the specified node
-  void resizeOneNode(const CFuint nodeID)
-  {
-    _nodes[nodeID].resize(_dimension);
-  }
-
-  /// Resize the specified state
-  void resizeOneState(const CFuint stateID)
-  {
-    _states[stateID].resize(_nbEquations);
-  }
-
+  
   /// Does not actually create a Node
   /// Set the node corresponding to the given ID
   /// @pre value.size() ==  (*_nodes)[nodeID].size()
   void setNode(const CFuint nodeID, const RealVector& value)
   {
-    cf_assert(value.size() == _nodes[nodeID].size());
-    _nodes[nodeID] = value;
+    cf_assert(value.size() == _dimension);
+    const CFuint start = nodeID*_dimension;
+    for (CFuint i=0; i < _dimension; ++i) {
+      _nodes[start+i] = value[i];
+    }
   }
-
+  
   /// Does not actually create a State
   /// Set the state corresponding to the given ID
   void setState(const CFuint stateID, const RealVector& value)
   {
-    cf_assert(value.size() == _states[stateID].size());
-    _states[stateID] = value;
+    cf_assert(value.size() == _nbEquations);
+    const CFuint start = stateID*_nbEquations;
+    for (CFuint i=0; i < _nbEquations; ++i) {
+      _states[start+i] = value[i];
+    }
   }
-
+  
   /// Set the extra variables corresponding to the given ID
   void setNodalExtraVar(const CFuint nodeID, const RealVector& value)
   {
@@ -175,23 +161,23 @@ public: // functions
   /// Get the node corresponding to the given ID
   /// @post the template parameter allows to return
   ///         const RealVector& or const Node*&
-  const RealVector* getNode(const CFuint nodeID) const
+  CFreal* getNode(const CFuint nodeID)
   {
     // return pointer and not reference to RealVector
     // because otherwise code compiled with icc breaks
-    return &_nodes[nodeID];
+    return &_nodes[nodeID*_dimension];
   }
 
   /// Get the state corresponding to the given ID
   /// @post the template parameter allows to return
   ///         const RealVector& or const State*&
-  const RealVector* getState(const CFuint stateID) const
+  CFreal* getState(const CFuint stateID)
   {
     // return pointer and not reference to RealVector
     // because otherwise code compiled with icc breaks
-    return &_states[stateID];
+    return &_states[stateID*_nbEquations];
   }
-
+  
   /// Resize the element-node connectivity
   void resizeElementNode(const std::valarray<CFuint>& nbCols)
   {
@@ -259,13 +245,13 @@ public: // functions
   }
 
   /// Get the node list
-  Common::SafePtr< std::vector<RealVector> > getNodeList()
+  Common::SafePtr< std::vector<CFreal> > getNodeList()
   {
     return &_nodes;
   }
 
   /// Get the state list
-  Common::SafePtr< std::vector<RealVector> > getStateList()
+  Common::SafePtr< std::vector<CFreal> > getStateList()
   {
     return &_states;
   }
@@ -285,11 +271,11 @@ public: // functions
 private: //data
 
   /// storage for the node list
-  std::vector<RealVector>  _nodes;
-
+  std::vector<CFreal>  _nodes;
+  
   /// storage for the state list
-  std::vector<RealVector>  _states;
-
+  std::vector<CFreal>  _states;
+  
   /// table for the element-node connectivity
   Common::Table<CFuint>    _elementNode;
 

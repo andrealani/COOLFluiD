@@ -103,7 +103,7 @@ void MutationLibrarypp::setup()
 void MutationLibrarypp::setLibrarySequentially2()
 { 
   Mutation::MixtureOptions mo(_mixtureName);
-  mo.setStateModel("TPY");
+  mo.setStateModel("Equil"); // equilibrium
   m_gasMixture.reset(new Mutation::Mixture(mo));
   
   _NS = m_gasMixture->nSpecies();
@@ -156,11 +156,11 @@ void MutationLibrarypp::lambdaVibNEQ(CFreal& temperature,
 
 //////////////////////////////////////////////////////////////////////////////
 
-CFdouble MutationLibrarypp::sigma(CFdouble& temp,   //electrical conductivity
+CFdouble MutationLibrarypp::sigma(CFdouble& temp, //electrical conductivity
 				  CFdouble& pressure,
 				  CFreal* tVec)
 {
-  // m_gasMixture->setStateTPY(&temp, &pressure, &m_y[0]);
+  m_gasMixture->setState(&pressure, &temp, 1);
   return m_gasMixture->sigma();
 }
 
@@ -193,8 +193,7 @@ void MutationLibrarypp::frozenGammaAndSoundSpeed(CFdouble& temp,
       
 CFdouble MutationLibrarypp::soundSpeed(CFdouble& temp, CFdouble& pressure)
 {
-  CFreal tp[2]; tp[0]= temp; tp[1]= pressure;
-  m_gasMixture->setState(&tp[0], &m_y[0]);
+  m_gasMixture->setState(&pressure, &temp, 1);
   return m_gasMixture->equilibriumSoundSpeed();
 }
 
@@ -204,11 +203,12 @@ void MutationLibrarypp::setComposition(CFdouble& temp,
 				       CFdouble& pressure,
 				       RealVector* x)
 {
-  m_gasMixture->equilibriumComposition(temp, pressure, &m_x[0]);
+  m_gasMixture->setState(&pressure, &temp, 1);
+  const double* xm = m_gasMixture->X();
   
   if (x != CFNULL) {
     for(CFint i = 0; i < _NS; ++i) {
-      (*x)[i] = m_x[i];
+      (*x)[i] = xm[i];
     }
   }
 }
@@ -220,7 +220,7 @@ void MutationLibrarypp::setDensityEnthalpyEnergy(CFdouble& temp,
 						 RealVector& dhe)
 {
   dhe[0] = m_gasMixture->density();
-  dhe[1] = m_gasMixture->mixtureHMass();
+  dhe[1] = m_gasMixture->mixtureHMass() - m_gasMixture->mixtureHMass(298.15);
   dhe[2] = m_gasMixture->mixtureEnergyMass();
 }
 
@@ -241,8 +241,7 @@ CFdouble MutationLibrarypp::density(CFdouble& temp,
 				   CFdouble& pressure,
 				   CFreal* tVec)
 {
-  CFreal tp[2]; tp[0]= temp; tp[1]= pressure;
-  m_gasMixture->setState(&tp[0], &m_y[0]);
+  m_gasMixture->setState(&pressure, &temp, 1);
   return m_gasMixture->density();
 }
 
@@ -269,8 +268,7 @@ CFdouble MutationLibrarypp::energy(CFdouble& temp,
 				   CFdouble& pressure)
   
 {
-  CFreal tp[2]; tp[0]= temp; tp[1]= pressure;
-  m_gasMixture->setState(&tp[0], &m_y[0]);
+  m_gasMixture->setState(&pressure, &temp, 1);
   return m_gasMixture->mixtureEnergyMass();
 }
       
@@ -279,11 +277,10 @@ CFdouble MutationLibrarypp::energy(CFdouble& temp,
 CFdouble MutationLibrarypp::enthalpy(CFdouble& temp,
 				     CFdouble& pressure)
 {
- CFreal tp[2]; tp[0]= temp; tp[1]= pressure;
- m_gasMixture->setState(&tp[0], &m_y[0]);
-  return m_gasMixture->mixtureHMass();
+  m_gasMixture->setState(&pressure, &temp, 1);
+  return m_gasMixture->mixtureHMass() - m_gasMixture->mixtureHMass(298.15);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
  void MutationLibrarypp::setElemFractions(const RealVector& yn)

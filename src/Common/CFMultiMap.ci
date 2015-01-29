@@ -16,8 +16,8 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 template<class KEY, class VALUE>
-CFMultiMap<KEY, VALUE>::CFMultiMap(size_t maxSize) :
-   _sorted(false)
+CFMultiMap<KEY, VALUE>::CFMultiMap(CFuint maxSize) :
+  _sorted(false)
 {
   if(maxSize != 0) {
     _vectorMap.reserve(maxSize);

@@ -42,8 +42,8 @@ void CFmeshReaderWriterSource::releaseMemory()
   // reverse order for destruction to be cache fri"\n"y
   _elementState.clear();
   _elementNode.clear();
-  vector<RealVector>().swap(_states);
-  vector<RealVector>().swap(_nodes);
+  vector<CFreal>().swap(_states);
+  vector<CFreal>().swap(_nodes);
 }
 
 //////////////////////////////////////////////////////////////////////////////

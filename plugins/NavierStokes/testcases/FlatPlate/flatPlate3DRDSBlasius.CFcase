@@ -2,7 +2,7 @@
 # Comments begin with "#"
 
 # Simulation Modules
-Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libPetscI libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libNewtonMethod libFluctSplitNavierStokes libFluctSplitNavierStokes libForwardEuler libTHOR2CFmesh libRungeKutta2 libCFmeshExtruder
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libPetscI libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libNewtonMethod libFluctSplitNavierStokes libFluctSplitNavierStokes libCFmeshExtruder
 
 # Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/FlatPlate/
@@ -16,8 +16,8 @@ Simulator.SubSystem.NavierStokes3D.ConvTerm.tempRef = 298.15
 Simulator.SubSystem.NavierStokes3D.ConvTerm.machInf = 0.35
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
-Simulator.SubSystem.CFmesh.FileName     = flatPlate3D.CFmesh
-Simulator.SubSystem.Tecplot.FileName    = flatPlate.plt
+Simulator.SubSystem.CFmesh.FileName     = flatPlate3D_out.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = flatPlate3D_out.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = NoSlipWall
 Simulator.SubSystem.Tecplot.SaveRate = 10
@@ -36,20 +36,19 @@ Simulator.SubSystem.Norm.valueNorm      = -8.0
 Simulator.SubSystem.Default.listTRS = InnerCells SlipWall NoSlipWall Inlet Outlet Bottom Top
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = flatPlate3D.CFmesh
-#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
-
-#Simulator.SubSystem.CFmeshFileReader.convertFrom = Extruder2D
-#Simulator.SubSystem.CFmeshFileReader.Extruder2D.NbLayers = 10
-#Simulator.SubSystem.CFmeshFileReader.Extruder2D.ExtrudeSize = 0.1
-#Simulator.SubSystem.CFmeshFileReader.Extruder2D.Split = true
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = flatPlate3DRDS.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = flatPlate2DRDS.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Extruder2D
+Simulator.SubSystem.CFmeshFileReader.Extruder2D.NbLayers = 10
+Simulator.SubSystem.CFmeshFileReader.Extruder2D.ExtrudeSize = 0.1
+Simulator.SubSystem.CFmeshFileReader.Extruder2D.Split = true
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = NewtonIteratorLSS
 Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
 Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
-Simulator.SubSystem.NewtonIteratorLSS.Data.Output = true
+#Simulator.SubSystem.NewtonIteratorLSS.Data.Output = true
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 12.

@@ -11,6 +11,8 @@
 
 #include "Common/CFMultiMap.hh"
 #include "Common/FilesystemException.hh"
+#include "Common/MPI/MPIError.hh"
+#include "Common/MPI/MPIStructDef.hh"
 
 #include "Framework/FileReader.hh"
 #include "Framework/CFmeshReaderSource.hh"
@@ -356,7 +358,7 @@ return (globalElemID - count);
   /// Sort the m_pdata.part array to prepare a total exchange.
   void sortPartVec(const std::vector<CFuint>& globalElemID,
 		   std::vector<Framework::PartitionerData::IndexT>& part,
-		   Common::CFMultiMap<CFint,CFint>& sortedPart);
+		   Common::CFMultiMap<Framework::PartitionerData::IndexT,CFuint>& sortedPart);
   
   /// Set the array telling if nodes and states are local or not
   void setIsLocalNodeState(Framework::ElementDataArray<0>& localElem,
@@ -392,10 +394,12 @@ return (globalElemID - count);
   void setElements(Framework::ElementDataArray<0>& localElem);
 
   /// Check the validity of a degree of freedom
-  void checkDofID(CFuint dofID, CFuint totCount)
+  void checkDofID(const std::string& typeDof, CFuint iElem, 
+		  CFuint iNode, CFuint dofID, CFuint totCount)
   {
     if (dofID >= totCount) {
-      CFLog(ERROR, "DofID: " << dofID << " >= totCount \n");
+      CFLog(ERROR, "DofID <" << typeDof << ">" << dofID 
+	    << " >= totCount in Elem(" << iElem << ","<< iNode << ") \n");
       abort();
     }
   }
