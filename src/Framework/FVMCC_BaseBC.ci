@@ -1,3 +1,10 @@
+#include "Framework/GeometricEntityPool.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Framework/TopologicalRegionSet.hh"
+#include "Framework/FaceTrsGeoBuilder.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
 namespace COOLFluiD {
 
   namespace Framework {
@@ -68,7 +75,9 @@ void FVMCC_BaseBC<BASE>::setup()
   using namespace COOLFluiD::MathTools;
   
   // set the IDs corresponding to the velocity components
-  this->getMethodData().getUpdateVar()->setStateVelocityIDs(m_velocityIDs);
+  
+  // UNCOMMENT THIS
+  // this->getMethodData().getUpdateVar()->setStateVelocityIDs(m_velocityIDs);
   
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   if(_zeroGradient.size() > 0 && _zeroGradient.size() != nbEqs) {
@@ -135,7 +144,8 @@ void FVMCC_BaseBC<BASE>::executeOnTrs()
     geoData.idx = iFace;
 
     GeometricEntity *const face = geoBuilder->buildGE();
-    this->getMethodData().getCurrentFace() = face;
+    // UNCOMMENT THIS
+    // this->getMethodData().getCurrentFace() = face;
     
     setGhostState(face);
 
@@ -151,7 +161,8 @@ void FVMCC_BaseBC<BASE>::executeOnTrs()
 template <typename BASE>
 void FVMCC_BaseBC<BASE>::computeFlux(RealVector& result)
 {
-  this->getMethodData().getFluxSplitter()->computeFlux(result);
+  // UNCOMMENT THIS
+  // this->getMethodData().getFluxSplitter()->computeFlux(result);
 }
 
 //////////////////////////////////////////////////////////////////////////////

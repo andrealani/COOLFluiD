@@ -10,7 +10,9 @@
 namespace COOLFluiD {
 
   namespace Framework {
-
+    
+    class GeometricEntity;
+    
 //////////////////////////////////////////////////////////////////////////////
 
   /**
