@@ -1,0 +1,300 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+###############################################################################
+# Assertion For Debugging
+
+#CFEnv.ExceptionLogLevel    = 1000
+#CFEnv.DoAssertions         = true
+#CFEnv.AssertionDumps       = true
+#CFEnv.AssertionThrows      = true
+#CFEnv.AssertThrows         = true
+#CFEnv.AssertDumps          = true
+##CFEnv.ExceptionAborts      = true
+#CFEnv.ExceptionDumps       = true
+#CFEnv.ExceptionOutputs     = true
+#CFEnv.RegistSignalHandlers = false
+#CFEnv.TraceToStdOut = true
+#CFEnv.TraceActive = true
+#
+# this will always fail with GAMBIT
+#CFEnv.ErrorOnUnusedConfig = true
+
+
+###############################################################################
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libNavierStokes libMaxwell libMultiFluidMHD libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGambit2CFmesh libForwardEuler libPetscI libTecplotWriter
+
+#Simulation Parameters
+Simulator.Paths.WorkingDir       = ./
+Simulator.Paths.ResultsDir       = ./RESULTHartmannAir_HalfTube
+
+Simulator.SubSystem.InteractiveParamReader.FileName = ./hartmann.inter
+Simulator.SubSystem.InteractiveParamReader.readRate = 10
+
+###############################################################################
+# Physical Model
+
+#we solve dimensional
+Simulator.SubSystem.Default.PhysicalModelType = MultiFluidMHD2D
+Simulator.SubSystem.MultiFluidMHD2D.refValues = 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 
+Simulator.SubSystem.MultiFluidMHD2D.refLength = 1.0
+
+# Fluids Properties
+Simulator.SubSystem.MultiFluidMHD2D.nbSpecies = 1
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.molecularMass1 = 4.8107e-26 
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.gamma = 1.3997
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.nonInducedElectromagnetic = 0. 0.002 0. 0. 0. -0.1  
+#0. 0.070838697 0. 0. 0. -2.41  
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.divBCleaningConst = 1.
+Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.nbSpecies = 1
+Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.dynViscosity = 1.82e-5
+#1.8e-5
+Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.thermConductivity = 0.0257
+#0.0257 #13.07
+
+#Simulator.SubSystem.SubSystemStatus.TimeStep = 1e-7
+
+###############################################################################
+# Output
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh 
+
+Simulator.SubSystem.CFmesh.FileName     = Test-sol.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate     = 200 #1250
+#Simulator.SubSystem.CFmesh.AppendTime   = true 
+#Simulator.SubSystem.CFmesh.AppendIter   = true
+
+Simulator.SubSystem.Tecplot.FileName    = hartmann.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = RhoiViTi
+Simulator.SubSystem.Tecplot.SaveRate    = 1000.
+#Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+#Simulator.SubSystem.Tecplot.Data.SurfaceTRS = x0 y0
+#Simulator.SubSystem.Tecplot.AppendTime = false
+#Simulator.SubSystem.Tecplot.AppendIter = true
+
+# Extra Values from Data Processing
+
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = divB  
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = divB 
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 
+#Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
+
+
+###############################################################################
+# Time Marching
+#Simulator.SubSystem.InitialTime = 87.5
+#Simulator.SubSystem.SubSystemStatus.TimeStep = 2.35867367553e-8
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 7#100000.
+
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 1
+
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+
+# Linear System
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+
+#Explicit
+#Simulator.SubSystem.ConvergenceMethod = FwdEuler
+#Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
+#Simulator.SubSystem.FwddEuler.Data.CFL.ComputeCFL =  Interactive
+
+#Implicit
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+#Simulator.SubSystem.NewtonIterator.UpdateSol = StdUpdateSol
+#Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation= 1.
+
+# CFL definition
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def =\
+#if(i<1000,1e4,if(i<2000,1e5,if(i<5000,1e6,if(i<10000,1e7,1e8))))
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1e4
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
+
+#First order in time
+Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 20
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 9
+Simulator.SubSystem.NewtonIterator.Data.FilterState = Max
+Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs = 0 0 0 0 0 0 0 0 0 0 0 1
+Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 
+
+#Second order in time
+#Simulator.SubSystem.ConvergenceMethod = BDF2
+#Simulator.SubSystem.BDF2.ShowRate = 1
+# CFL definition
+#Simulator.SubSystem.BDF2.Data.CFL.Value = 1.0
+#Simulator.SubSystem.BDF2.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.BDF2.ConvergenceFile = convergence_UnsteadyMagnetosphereACAImplPrim0_85READFROMFILE.plt 
+#Simulator.SubSystem.BDF2.Data.MaxSteps = 20 
+#Simulator.SubSystem.BDF2.Data.L2.MonitoredVarID = 9
+#Simulator.SubSystem.BDF2.Data.Norm = -10.
+#Simulator.SubSystem.BDF2.Data.PrintHistory = true
+
+###############################################################################
+# Mesh Reader
+Simulator.SubSystem.Default.listTRS = x0 x1 y0 y1
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = halfTube40X250.CFmesh
+#tube200X80.CFmesh
+#square100X100.CFmesh
+#tube100X60.CFmesh
+# Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 10
+# comment this out to restart
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+#Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
+
+
+###############################################################################
+# Space Method
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+#Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+#Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff = true
+
+# First Order Time Stepping (Steady)
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.zeroDiagValue = 0 0 0 0 0 0 1 0 0 0 0 0 
+Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.useGlobalDT = false
+
+
+# second order Time stepping
+#Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhs
+##Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhsLimited
+###Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.TimeLimiter = MinMod
+###Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.MinMod.SlopeRatio = 3.
+#Simulator.SubSystem.CellCenterFVM.BDF2TimeRhs.zeroDiagValue = 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+
+### second order: uncomment this
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+
+## second order: uncomment this
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 0.5
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUpMultiFluid2D
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.useMacCormackScaling = true
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.choiceA12 = 1
+# put right value here (a(T=288)=131.51m/s)
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.machInf = 0.125
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar = RhoiViTi
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+#Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = RhoiViTi
+Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
+
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokesMF
+#Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
+
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = HartmannSourceTerm2D
+Simulator.SubSystem.CellCenterFVM.Data.HartmannSourceTerm2D.electricalConductivity = 1.82e5
+
+
+#with this nodal extrapolator some values (no slip wall ones) must be
+#prescribed by the user
+#Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMove
+#Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TRSName = NoSlipWall
+#Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.ValuesIdx = 1 2 3
+# Vars [ u v T ]
+#Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.Values = 0. 0. 300.
+#Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TrsPriorityList = NoSlipWall Symmetry Inlet Outlet
+
+###############################################################################
+# Initial Conditions
+#Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState 
+Simulator.SubSystem.CellCenterFVM.InitNames = InField 
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def =\
+						0.\
+						0.\
+						0.\
+						0.\
+						0.\
+						0.\
+						0.\
+						0.\
+						1.225\
+						40.00\
+						0.\
+						288.2076994
+#initial temperatures 288.2076994-0.393715247*x
+#Analytical velocity -95.5793651*(cosh(10*(y-0.5)/0.05)/cosh(10)-1)
+
+###############################################################################
+# Boundary Conditions
+
+Simulator.SubSystem.CellCenterFVM.BcComds = SubInletUVTEIWRhoiViTiFVMCC SubOutletPEIWRhoiViTiFVMCC MirrorWallFVMCC NoSlipWallIsothermalEIWRhoiViTiFVMCC
+#SubInletUVTPCWRhoiViTiFVMCC SubOutletPPCWRhoiViTiFVMCC NoSlipWallIsothermalPCWRhoiViTiFVMCC NoSlipWallIsothermalPCWRhoiViTiFVMCC 
+Simulator.SubSystem.CellCenterFVM.BcNames = Jet1 Jet2 Jet3 Jet4
+
+
+#################### Inlet Conditions #############################################
+Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = x0
+Simulator.SubSystem.CellCenterFVM.Jet1.Vars = x y
+Simulator.SubSystem.CellCenterFVM.Jet1.Def =\
+					    -40.003633234188*((cosh(10*(y)/0.05)/cosh(10))-1)\
+					    0.\
+					   288.2076994
+
+Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 0 0 0
+
+#Simulator.SubSystem.CellCenterFVM.Jet1.Vx = 1
+#Simulator.SubSystem.CellCenterFVM.Jet1.Vy = 1
+#Simulator.SubSystem.CellCenterFVM.Jet1.Ti = 200
+################################################################################
+
+#################### Oulet Conditions ##########################################
+Simulator.SubSystem.CellCenterFVM.Jet2.applyTRS = x1
+Simulator.SubSystem.CellCenterFVM.Jet2.Pi = 101324.9862
+#101325
+Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 1 1 1 1 1 1 1 1 0 1 1 1
+
+################################################################################
+
+#################### Symmetry plane Conditions ##########################################
+Simulator.SubSystem.CellCenterFVM.Jet3.applyTRS = y0
+Simulator.SubSystem.CellCenterFVM.Jet3.ZeroGradientFlags = 0 1 0 1 0 1 1 0 1 1 0 1
+
+#################### Wall Conditions ##########################################
+Simulator.SubSystem.CellCenterFVM.Jet4.applyTRS = y1
+Simulator.SubSystem.CellCenterFVM.Jet4.TWall = 288.2076994
+Simulator.SubSystem.CellCenterFVM.Jet4.Ez0 = -0.1 
+Simulator.SubSystem.CellCenterFVM.Jet4.ZeroGradientFlags = 0 0 1 0 0 0 0 0 1 0 0 0
+################################################################################
+
+###############################################################################
+# DataProcessing
+
+#Simulator.SubSystem.DataPostProcessing = DataProcessing
+#Simulator.SubSystem.DataProcessing.Data.updateVar = RhoiViTi
+#Simulator.SubSystem.DataProcessing.Comds = DivMonitoring
+#Simulator.SubSystem.DataProcessing.Names = DivMonitoring
+#Simulator.SubSystem.DataProcessing.ProcessRate = 50
+#Simulator.SubSystem.DataProcessing.DivMonitoring.OutputFileDivMonitoring = ./DivMonitoring.plt
+
+
