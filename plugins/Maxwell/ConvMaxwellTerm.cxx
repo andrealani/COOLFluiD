@@ -23,7 +23,7 @@ void ConvMaxwellTerm::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal , Config::DynamicOption<> >("divBCleaningConst","Hyperbolic divB cleaning Constant");
   options.addConfigOption< CFreal , Config::DynamicOption<> >("divECleaningConst","Hyperbolic divE cleaning Constant");   
   options.addConfigOption< CFreal , Config::DynamicOption<> >("divBAdimCleaningConst","Adimensional hyperbolic divB cleaning Constant");       
-  options.addConfigOption< CFreal > ("lightSpeed", "Speed of light. It can be reduced if it is still bigger than the speed of the fluid");
+  options.addConfigOption< CFreal > ("lightSpeedMax", "Speed of light. It can be reduced if it is still bigger than the speed of the fluid");
   //    options.addConfigOption< std::string >("correctionType","Name of correction for the projection scheme.");  
  
 }         
@@ -44,7 +44,7 @@ ConvMaxwellTerm::ConvMaxwellTerm(const std::string& name)
   setParameter("divBAdimCleaningConst",&_divBAdimCleaningConst);
   
   _LightSpeed = 299792458;		//light Speed m/s
-  setParameter("lightSpeed",&_LightSpeed);
+  setParameter("lightSpeedMax",&_LightSpeed);
   
 //   _correctionType = "Hyperbolic";
 //   setParameter("correctionType",&_correctionType);   
