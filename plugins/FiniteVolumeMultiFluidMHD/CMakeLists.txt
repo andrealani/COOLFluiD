@@ -29,6 +29,8 @@ PerfectConductingWall3D.cxx
 PerfectConductingWall3D.hh
 BCPeriodicMFMHD.cxx
 BCPeriodicMFMHD.hh
+SubInletTtPtAlphaEIWRhoiViTi.cxx
+SubInletTtPtAlphaEIWRhoiViTi.hh
 SubInletUVTEIWRhoiViTi.cxx
 SubInletUVTEIWRhoiViTi.hh
 SubInletUVTPCWRhoiViTi.cxx
@@ -37,8 +39,8 @@ SubOutletPEIWRhoiViTi.cxx
 SubOutletPEIWRhoiViTi.hh
 SubOutletPPCWRhoiViTi.cxx
 SubOutletPPCWRhoiViTi.hh
-SubOutletPPCWRhoiViTi3D.cxx
-SubOutletPPCWRhoiViTi3D.hh
+#SubOutletPPCWRhoiViTi3D.cxx
+#SubOutletPPCWRhoiViTi3D.hh
 )
 
 LIST ( APPEND FiniteVolumeMultiFluidMHD_requires_mods NavierStokes Maxwell MultiFluidMHD FiniteVolume FiniteVolumeNavierStokes )

@@ -135,7 +135,6 @@ void SubOutletPEIWRhoiViTi::setGhostState(GeometricEntity *const face)
     (_dataGhostState)[firstTemperature + 4*ie] = (_dataInnerState)[firstTemperature + 4*ie];		//Ti
     (_dataGhostState)[firstTemperature + 4*ie + 1] = 2*Pi - 
 						    (_dataInnerState)[firstTemperature + 4*ie + 1];	//Pi
-						    
     const CFreal Vi2 = (_dataGhostState)[firstVelocity + 2*ie]*(_dataGhostState)[firstVelocity + 2*ie] +
 			(_dataGhostState)[firstVelocity + 2*ie + 1]*(_dataGhostState)[firstVelocity + 2*ie + 1];
     const CFreal rhoi =(_dataGhostState)[endEM]*(_dataGhostState)[firstSpecies + ie];

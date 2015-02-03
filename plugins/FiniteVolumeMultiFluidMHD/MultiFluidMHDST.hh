@@ -94,6 +94,11 @@ public:
   * Compute the Collisional momentum and energy source terms
   */
   void computeCollisionalMomentumEnergy();
+
+  /**
+ *   * Compute the Collisional momentum and energy source terms
+ *     */
+  void computeSpitzerResistivity();
   
 protected: // data
   
@@ -162,12 +167,16 @@ protected: // data
   
   ///rate of particles of ions created in recombination per unit vol
   CFreal _GammaRec_i;     
-  
+ 
+  ///Spitzer resistivity
+  CFreal SpitzerRes; 
 private:
 
   /// Electrical conductivity
   CFreal _electricalResistivity;
-  
+
+  /// Using Spitzer resistivity
+  bool _isSpitzer;
   
 }; // end of class MultiFluidMHDST
 
