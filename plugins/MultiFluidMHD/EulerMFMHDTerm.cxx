@@ -27,7 +27,7 @@ void EulerMFMHDTerm::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal > ("molecularMass2", "Molecular mass of second species");
   options.addConfigOption< CFreal > ("molecularMass3", "Molecular mass of third species");
   options.addConfigOption< std::vector<CFreal> >("nonInducedElectromagnetic", "nonInduced Electromagnetic Field");
-  options.addConfigOption< CFreal > ("lightSpeed", "Speed of light. It can be reduced if it is still bigger than the speed of the fluid");
+  options.addConfigOption< CFreal > ("lightSpeedMF", "Speed of light. It can be reduced if it is still bigger than the speed of the fluid");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -51,7 +51,7 @@ EulerMFMHDTerm::EulerMFMHDTerm(const std::string& name) :
   _mu = 4*MathTools::MathConsts::CFrealPi()*1e-7;
   
   _lightSpeed = 299792458;		//light Speed m/s
-  setParameter("lightSpeed",&_lightSpeed);
+  setParameter("lightSpeedMF",&_lightSpeed);
   
   _molecularMass1 = 9.1094e-31;		// Electron's mass [kg] source:Standart Handbook for Electrical Engineerings   
   setParameter("molecularMass1",&_molecularMass1);  
