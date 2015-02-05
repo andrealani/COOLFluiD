@@ -3,8 +3,7 @@
 
 # This testcases verifies the simulation of torch + chamber + probe at 100kW
 
-### Residual = 0.99889837
-
+### Residual = 3.8452529
 
 #######TEST CONFIGURATION
 CFEnv.ErrorOnUnusedConfig = true

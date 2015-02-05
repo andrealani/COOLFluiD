@@ -2274,7 +2274,7 @@ void ParCFmeshFileReader::setIsLocalNodeState(ElementDataArray<0>& elem,
   }
   
   // sanity checks (to be removed)
-  bool exitLoop = false;
+  /*bool exitLoop = false;
   if (m_nbProc == 1) {
     bool exitLoop = false;
     for (CFuint i = 0; i < m_totNbStates; ++i) {
@@ -2297,7 +2297,7 @@ void ParCFmeshFileReader::setIsLocalNodeState(ElementDataArray<0>& elem,
     }
     
     if (exitLoop) exit(1);
-  }
+  }*/
   
   for (CFuint i = 0; i < m_totNbNodes; ++i) {
     if (isLocalNode[i]) {
