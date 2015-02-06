@@ -305,17 +305,24 @@ void EulerSAConsVarSet<BASE, SGROUP>::computePhysicalData(const Framework::State
   const CFreal rho  = state[0];
   const CFreal rhoU = state[1];
   const CFreal rhoV = state[2];
-  const CFreal rhoE = state[3];
-  const CFreal rhoK = state[4];
+  CFreal rhoW = 0.;
+  CFuint TID = 3;
+  if (PhysicalModelStack::getActive()->getDim() == DIM_3D) {
+   rhoW = state[3];
+   TID = 4; 
+  }
+  const CFreal rhoE = state[TID];
+  const CFreal rhoK = state[TID+1];
   const CFreal overRho  = 1./rho;
 
-  const CFreal V2 = (rhoU*rhoU + rhoV*rhoV)*overRho*overRho;
+  const CFreal V2 = (rhoU*rhoU + rhoV*rhoV + rhoW*rhoW)*overRho*overRho;
   const CFreal R = this->getModel()->getR();
   const CFreal gamma = this->getModel()->getGamma();
   const CFreal gammaMinus1 = gamma - 1.;
   
   data[EulerTerm::VX] = rhoU*overRho;
   data[EulerTerm::VY] = rhoV*overRho;
+  data[EulerTerm::VZ] = rhoW*overRho; 
   data[EulerTerm::RHO] = rho;
   data[EulerTerm::V] = sqrt(V2);
   data[EulerTerm::P] = gammaMinus1*(rhoE - 0.5*rho*V2 - rhoK);

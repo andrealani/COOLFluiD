@@ -210,6 +210,8 @@ NavierStokesTurbVarSet.hh
 NavierStokesTurbVarSetTypes.hh
 NavierStokesVarSet.cxx
 NavierStokesVarSet.hh
+RMS.cxx
+RMS.hh
 SimplerSutherlandDynViscosity.cxx
 SimplerSutherlandDynViscosity.hh
 SutherlandDynViscosity.cxx
@@ -217,6 +219,7 @@ SutherlandDynViscosity.hh
 CreateDampingCoefficientDNS.cxx
 CreateDampingCoefficientDNS.hh
 )
+
 LIST ( APPEND NavierStokes_cflibs Framework )
 CF_ADD_PLUGIN_LIBRARY ( NavierStokes )
 CF_WARN_ORPHAN_FILES()
