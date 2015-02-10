@@ -1,8 +1,8 @@
 LIST ( APPEND MarcoTest_files
 DistanceBasedExtrapolator.cxx
 GeoDataComputer.cxx
-MarcoTest_BC.cxx
-MarcoTest_BC.hh
+#MarcoTest_BC.cxx
+#MarcoTest_BC.hh
 MarcoTestAPI.hh
 MarcoTest.hh	
 MarcoTestMethod.cxx	
