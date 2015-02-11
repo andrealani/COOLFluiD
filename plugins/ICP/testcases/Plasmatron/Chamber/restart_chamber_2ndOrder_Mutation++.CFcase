@@ -1,9 +1,23 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, ICPLTE2D, NewtonIterator using two weakly coupled systems 
+# (fluid and electric field), mesh with quads, second-order reconstruction with
+# limiter, Rhie Chow flux for incompressible flows, subsonic inlet and outlet, 
+# isothermal noslip wall, PETSc using >200 Krylov spaces, computation of Lorentz 
+# force and Joule heating source terms for ICP, Mutation++ for air mixtures in LTE, 
+# restart from a solution on a full torch+chamber+probe configuration (previously 
+# computed with old Mutation F77) 
+#
+################################################################################
+#
 # COOLFluiD Startfile
 # Comments begin with "#"
 
 # This testcases verifies the simulation of torch + chamber + probe at 100kW
-# 4 processors
-### Residual = 3.844613
+# 8 processors
+### Residual = -1.03554
 
 #######TEST CONFIGURATION
 CFEnv.ErrorOnUnusedConfig = true
@@ -16,14 +30,12 @@ CFEnv.ErrorOnUnusedConfig = true
 #CFEnv.ExceptionAborts      = true
 CFEnv.ExceptionDumps       = false
 CFEnv.ExceptionOutputs     = false
-##CFEnv.RegistSignalHandlers = false
-##CFEnv.TraceToStdOut = true
-##CFEnv.TraceActive = true
-#
-
+#CFEnv.RegistSignalHandlers = false
+#CFEnv.TraceToStdOut = true
+#CFEnv.TraceActive = true
 
 # Simulation Modules
-Simulator.Modules.Libs = libPetscI libTecplotWriter libNavierStokes libMutation2OLD libMutation2OLDI libMutationppI libLTE libICP libFiniteVolume libFiniteVolumeNavierStokes libFiniteVolumeICP libNewtonMethod libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
+Simulator.Modules.Libs = libPetscI libTecplotWriter libNavierStokes libMutationppI libLTE libICP libFiniteVolume libFiniteVolumeNavierStokes libFiniteVolumeICP libNewtonMethod libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
 
 # Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/ICP/testcases/Plasmatron/Chamber
@@ -53,9 +65,7 @@ Simulator.SubSystem.ICPLTE2D.SourceTerm.Freq = 0.37
 ###### CHEMICAL LIBRARY ##
 Simulator.SubSystem.ICPLTE2D.PropertyLibrary = Mutationpp
 Simulator.SubSystem.ICPLTE2D.Mutationpp.mixtureName = air11
-#air11nasa9 #air11
-
-#Simulator.SubSystem.ConvergenceFile = ./convergence.plt
+#air11nasa9
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = chamber_out-rest-bis.CFmesh
@@ -71,7 +81,7 @@ Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Symmetry
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 3
 
 Simulator.SubSystem.StopCondition       = Norm
-Simulator.SubSystem.Norm.valueNorm      = -4.0
+Simulator.SubSystem.Norm.valueNorm      = -1.0
 
 Simulator.SubSystem.Default.listTRS = InnerFaces Symmetry Wall_torch_up Wall_torch_in Inlet Outlet Wall_ch Outlet_up Wall_probe
 
@@ -82,7 +92,6 @@ Simulator.SubSystem.CFmeshFileReader.Data.FileName = chamber_out-rest-bis-P0.CFm
 #Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
 #Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
 #Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1000
-
 #Simulator.SubSystem.CFmeshFileReader.Data.UseInitValues = 0 0 0 0 1 1 
 #Simulator.SubSystem.CFmeshFileReader.Data.InitValues = 0. 0. 0. 0. 0. 0. 
 
@@ -269,5 +278,3 @@ Simulator.SubSystem.DataProcessing.LorentzForce.FaceCenterComputationMethod = 1
 ##  1: LorentzForce compute Ev usign distance-based average 
 ##  2: LorentzForce computes Ev in the original way, usign volume-based average
 Simulator.SubSystem.DataProcessing.LorentzForce.AverageInNodeStrategy = 0
-
-CFEnv.RegistSignalHandlers = false
