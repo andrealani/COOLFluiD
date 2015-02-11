@@ -333,7 +333,7 @@ void MutationLibrary2OLD::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFdouble >("GammaN","Factor of Catalycity of N.");
   options.addConfigOption< CFdouble >("GammaO","Factor of Catalycity of O.");
   options.addConfigOption< CFdouble >("Escape","Escape factor.");
-  options.addConfigOption< CFint >("MoleculeID","Molecule ID for EV exchanges.");
+  options.addConfigOption< int >("MoleculeID","Molecule ID for EV exchanges.");
   options.addConfigOption< CFuint >("CVModel","Model for the CV coupling.");
   options.addConfigOption< vector<CFreal> >
     ("PrefDissFactor","Preferential dissociation factors.");
@@ -345,6 +345,8 @@ void MutationLibrary2OLD::defineConfigOptions(Config::OptionList& options)
 
   options.addConfigOption< CFdouble,
     Config::DynamicOption<> >("FactorOmega","Factor to reduce stiffness of chemical sorce terms.");
+  
+  options.addConfigOption< bool >("Ramshaw","Use Ramshaw correction for Fick.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -426,6 +428,9 @@ MutationLibrary2OLD::MutationLibrary2OLD(const std::string& name)
   _factorOmega = 1.0;
   setParameter("FactorOmega",&_factorOmega);
 
+  _useRamshaw = false;
+  setParameter("Ramshaw",&_useRamshaw);
+  
   _EPS = 1e-6; // this value gives problems with air11 (composition, speed of sound) and LTE
   _TOL = 1e-9; // recommended to replace with the use of Xlim and COMPOTOL2
 }
@@ -2039,16 +2044,26 @@ void MutationLibrary2OLD::getRhoUdiff(CFdouble& temperature,
   // set the mixture molar mass
   FORTRAN_NAME(molarmass)(_WR1,&_LWR1,&rho,&ND,&MMass);
 
-  // Set driving forces as gradients of molar fractions
-  CFreal normMMassGradient = 0.0;
-  for (int is = 0; is < _NS; ++is) {
-    normMMassGradient += normConcGradients[is] / _MOLARMASSP[is];
+  // if the input is gradients of mass fractions convert it to molar fractions 
+  if (!fast) {
+    // Set driving forces as gradients of molar fractions
+    // d(y_i) = d(x_i*M_i/M) = 1/M^2*[M*M_i*d(x_i) - M*(x_i*M_i/M)*d(M)] 
+    //                       = 1/M^2*[M*M_i*d(x_i) - y_i*d(M)]  with M = 1/sum_i(y_i/M_i) 
+    CFreal normMMassGradient = 0.0;
+    for (int is = 0; is < _NS; ++is) {
+      normMMassGradient += normConcGradients[is] / _MOLARMASSP[is];
+    }
+    normMMassGradient *= -MMass*MMass;
+    
+    for (int is = 0; is < _NS; ++is) {
+      _DF[is] = (MMass*normConcGradients[is] + _Y[is]*normMMassGradient) /
+	_MOLARMASSP[is];
+    }
   }
-  normMMassGradient *= -MMass*MMass;
-
-  for (int is = 0; is < _NS; ++is) {
-    _DF[is] = (MMass*normConcGradients[is] + _Y[is]*normMMassGradient) /
-      _MOLARMASSP[is];
+  else {
+    for (CFint is = 0; is < _NS; ++is) {
+      _DF[is] = normConcGradients[is];
+    }
   }
 
   // Compute the mass diffusion fluxes
@@ -2057,7 +2072,7 @@ void MutationLibrary2OLD::getRhoUdiff(CFdouble& temperature,
   CFdouble eamb = 0.;
   if (presenceElectron()) {
     FORTRAN_NAME(smd)(_WR1, &_LWR1, _WR2, &_LWR2, _WI, &_LWI, _XTOL, &temp,
-          &Te, &ND, _DF, _FIJ, _JDIF, &eamb);
+		      &Te, &ND, _DF, _FIJ, _JDIF, &eamb);
   }
   else {
     FORTRAN_NAME(smneutd)(_WR1, &_LWR1, _WR2, &_LWR2, _XTOL, &ND, _DF, _FIJ, _JDIF);
@@ -2085,191 +2100,79 @@ void MutationLibrary2OLD::getDij_fick(RealVector& dx,
 {
   // NOTE: X must be set before the calling of this function!
   CFdouble ND = 0.0;
-  CFdouble MMass = 0.0;
   CFdouble rho = 0.0;
-  CFdouble yi = 0.0;
-  
+    
   // Compute number density and density 
   FORTRAN_NAME(numberd)(_WR1, &_LWR1, &pressure, &temperature, &temperature, _X, &ND);
   FORTRAN_NAME(density)(_WR1,&_LWR1,_X,&ND,&rho);
-
+  
   // Fill WR2 vector, necessary if temperature is changed
   FORTRAN_NAME(collision)(_WR1, &_LWR1, _WR2, &_LWR2, &temperature, &temperature, &ND, _X);
-
+  
   // First we fill the matrix of the binary diffusion coefficients
-  CFuint ij;
+  // CFuint ij = 0;
+  //   for (int is = 1; is < _NS+1; ++is) {
+  //     for (int js = 1; js < _NS+1; ++js) {
+  //       ij = ((is-1)*(2*_NS-is)+2*js)/2;
+  //       //cout << "(" << is-1 << ", " << js-1 << ") ==> " << ij << endl;
+  //       Dij(is-1,js-1) = _WR2[_IBINIJ+ij-1]/ND;
+  //     }
+  //   }
+  
+  CFuint ij = 0;
   for (int is = 1; is < _NS+1; ++is) {
-    for (int js = 1; js < _NS+1; ++js) {
-      ij = ((is-1)*(2*_NS-is)+2*js)/2;
-      Dij(is-1,js-1) = _WR2[_IBINIJ+ij-1] /ND;
+    ij++;
+    const CFuint iMin1 = is-1;
+    //  cout << "(" << iMin1 << ", " << iMin1 << ") ==> " << ij << endl;
+    Dij(iMin1, iMin1) = _WR2[_IBINIJ+ij-1]/ND;
+    for (int js = is+1; js < _NS+1; ++js) {
+      ij = (iMin1*(2*_NS-is)+2*js)/2;
+      const CFuint jMin1 = js-1;
+      //cout << "(" << iMin1 << ", " << jMin1 << ") ==> " << ij << endl;
+      Dij(iMin1,jMin1) = _WR2[_IBINIJ+ij-1]/ND;
+      Dij(jMin1,iMin1) = Dij(iMin1,jMin1);
     }
   }
-
+  
+  //cout << "DIJ = \n" <<  Dij << endl; abort();
+  
   // set the mixture molar mass
+  CFdouble MMass = 0.0;
   FORTRAN_NAME(molarmass)(_WR1,&_LWR1,&rho,&ND,&MMass);
   
-  // Compute the Diffusion coefficient
-  // Since we use Fick law with a constant coefficient for all spicies
-  // It is necessary to choose a spicies that is present
-  CFreal sum = 0.0;
-  if (_NS == 5){
-    if (_X[0] != 0.0){
-      for (int js = 1; js < _NS; ++js)
-	{
-	  sum += (_X[js]/Dij(0,js));
-	}
-      sum *= _X[0];
-      yi = _X[0]*_MOLARMASSP[0]/MMass;
-    }
-    
-    else if (_X[1] != 0.0){
-      for (int js = 0; js < _NS; ++js)
-	{ if (js != 1)
-	    sum += (_X[js]/Dij(1,js));
-	}
-      sum *= _X[1];
-      yi = _X[1]*_MOLARMASSP[1]/MMass;
-      
-    }
-    
-    else if (_X[2] != 0.0){
-      for (int js = 0; js < _NS; ++js)
-	{	if (js != 2)
-	    sum += (_X[js]/Dij(2,js));
-	}
-      sum *= _X[2];
-      yi = _X[2]*_MOLARMASSP[2]/MMass;
-      
-    }
-    
-    else if(_X[3] != 0.0){
-      for (int js = 0; js < _NS; ++js){
-	if (js != 2)
-	  sum += (_X[js]/Dij(3,js));
+  const CFreal ovMass = 1./MMass;
+  CFreal sumRhoUdiff = 0.;
+  for (CFint is = 0; is < _NS; ++is) {
+    CFreal sumi = 0.;
+    for (CFint js = 0; js < _NS; ++js) {
+      if (js != is) {
+	sumi += _X[js]/Dij(is,js);
       }
-      sum *= _X[3];
-      yi = _X[3]*_MOLARMASSP[3]/MMass;
-      
     }
     
-    else if(_X[4] != 0.0){
-      for (int js = 0; js < _NS; ++js){
-	sum += (_X[js]/Dij(4,js));
-      }
-      sum *= _X[4];
-      yi = _X[4]*_MOLARMASSP[4]/MMass;
-      
-    }
-    
-    
-    else std::cout<<"There is a bug\n";
+    const CFreal massRatio = _MOLARMASSP[is]*ovMass;
+    const CFreal yi = _X[is]*massRatio;
+    cf_assert(yi < 1.0001);
+    const CFreal Dim = (1.- yi)/sumi;
+    rhoUdiff[is] = -rho*massRatio*Dim*dx[is];
+    sumRhoUdiff += rhoUdiff[is];
   }
   
-  else if (_NS==11 ){ 
-    if (_X[1] != 0.0){
-      for (int js = 0; js < _NS; ++js)
-	{ if (js != 1)
-	    sum += (_X[js]/Dij(1,js));
-	}
-      sum *= _X[1];
-      yi = _X[1]*_MOLARMASSP[1]/MMass;
-      
-    }
-    
-    else if (_X[2] != 0.0){
-      for (int js = 0; js < _NS; ++js)
-	{	if (js != 2)
-	    sum += (_X[js]/Dij(2,js));
-	}
-      sum *= _X[2];
-      yi = _X[2]*_MOLARMASSP[2]/MMass;
-      
-    }
-    
-    else if(_X[3] != 0.0){
-      for (int js = 0; js < _NS; ++js){
-	if (js != 3)
-	  sum += (_X[js]/Dij(3,js));
-      }
-      sum *= _X[3];
-      yi = _X[3]*_MOLARMASSP[3]/MMass;
-      
-    }
-    
-    else if(_X[4] != 0.0){
-      for (int js = 0; js < _NS; ++js){
-	if (js != 4)
-	  sum += (_X[js]/Dij(4,js));
-      }
-      sum *= _X[4];
-      yi = _X[4]*_MOLARMASSP[4]/MMass;
-      
-    }
-    else if(_X[5] != 0.0){
-      for (int js = 0; js < _NS; ++js){
-	if (js != 5)
-	  sum += (_X[js]/Dij(5,js));
-      }
-      sum *= _X[5];
-      yi = _X[5]*_MOLARMASSP[5]/MMass;
-      
-    }
-    // else if(_X[6] != 0.0){
-    // 	for (int js = 0; js < _NS; ++js){
-    // 	  if (js != 6)
-    // 	  sum += (_X[js]/Dij(6,js));
-    // 	}
-    // 	sum *= _X[6];
-    // 	yi = _X[6]*_MOLARMASSP[6]/MMass;
-    
-    // }
-    // else if(_X[7] != 0.0){
-    // 	for (int js = 0; js < _NS; ++js){
-    // 	  if (js != 7)
-    // 	  sum += (_X[js]/Dij(7,js));
-    // 	}
-    // 	sum *= _X[7];
-    // 	yi = _X[7]*_MOLARMASSP[7]/MMass;
-    
-    // }
-    //   else if(_X[8] != 0.0){
-    // 	for (int js = 0; js < _NS; ++js){
-    // 	  if (js != 8)
-    // 	  sum += (_X[js]/Dij(8,js));
-    // 	}
-    // 	sum *= _X[8];
-    // 	yi = _X[8]*_MOLARMASSP[8]/MMass;
-    
-    //     }
-    //     else if(_X[9] != 0.0){
-    // 	for (int js = 0; js < _NS; ++js){
-    // 	  if (js != 9)
-    // 	  sum += (_X[js]/Dij(9,js));
-    // 	}
-    // 	sum *= _X[9];
-    // 	yi = _X[9]*_MOLARMASSP[9]/MMass;
-    
-    //     }
-    // else if(_X[10] != 0.0){
-    // 	for (int js = 0; js < _NS; ++js){
-    // 	  if (js != 10)
-    // 	  sum += (_X[js]/Dij(10,js));
-    // 	}
-    // 	sum *= _X[10];
-    // 	yi = _X[10]*_MOLARMASSP[10]/MMass;
-    
-    //     }
-    
-    else std::cout<<"There is a bug\n";
-    
-  }
+  // add Ramshaw correction
+  if (_useRamshaw) {
+   for (CFint is = 0; is < _NS; ++is) {
+    const CFreal yi = _X[is]*_MOLARMASSP[is]*ovMass;
+    cf_assert(yi < 1.0001);
+    // cout << "[" << is << "] ==> Ji = " << rhoUdiff[is] << ", yi = " << yi << ", sumJi = " << sumRhoUdiff << endl; 
+    rhoUdiff[is] -= yi*sumRhoUdiff;
+   }
+   // cout << endl;
   
-  // Diff_coeff = rho*(1.0 - yi)/sum;
-  for (int is = 0; is < _NS; ++is){
-    rhoUdiff[is] = -dx[is]*rho*(1.0 - yi)/sum;
+    // check mass conservation: sum_i J_i = 0 
+   cf_assert(std::abs(rhoUdiff.sum()) < 1e-12);
   }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrary2OLD::getGammaN(CFreal& m_GN)
@@ -2286,9 +2189,11 @@ void MutationLibrary2OLD::getGammaO(CFreal& m_GO)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void MutationLibrary2OLD::setSpeciesMolarFractions(const RealVector& xs){
-std::cout<< "setSpeciesMolarFractions is not implemented in mutation2.0.0"<<endl;
+void MutationLibrary2OLD::setSpeciesMolarFractions(const RealVector& xs)
+{
+  throw NotImplementedException(FromHere(), "MutationLibrary2OLD::setSpeciesMolarFractions()");
 }
+
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrary2OLD::getSpeciesTotEnthalpies(CFdouble& temp,

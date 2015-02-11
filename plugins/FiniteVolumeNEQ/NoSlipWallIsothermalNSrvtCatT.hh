@@ -82,24 +82,19 @@ private: // data
 			     RealVector& yb, RealVector& yi, 
 			     CFreal& rhob, CFreal& rhoi);
 
-  /// Function that do the transformation from massique
-  /// to molar fraction
-  void mass_frac_to_mol_frac(const RealVector& yb, const RealVector& yi, RealVector& xb, RealVector& xi);
-
-  
   /** This function is computing the rate production at the wall
    * Returns the total enthalpies per unit mass of species
-   * @param rhob the density at the wall
-   * @param yb  the massic fractions
-   * @param Tw  temperature of the wall
+   * @param press pressure at the wall
+   * @param yb    the mass fractions
+   * @param Tw    temperature of the wall
    * @param gamma catalicity factor    
    * TODO Now, gamma is the same for all equations and spieces
    * This needs to be improved
-    * @param nu matrix of the destructions
-    * @param muN matrix of the production
-    * TODO Now, this is working for air5 considering that at
-    * the catalised reactions are N+N -> N2; O+O -> O2; N+O -> NO  **/
-  void getWallRateProd(const CFreal rhob,
+   * @param nu matrix of the destructions
+   * @param muN matrix of the production
+   * TODO Now, this is working for air5 considering that at
+   * the catalised reactions are N+N -> N2; O+O -> O2; N+O -> NO  **/
+  void getWallRateProd(const CFreal press,
                        const RealVector& yb,
                        const CFreal Tw,
                        const RealMatrix& nu,
@@ -115,58 +110,41 @@ private: // data
   ///@param p pressure of the inner cell
   ///@param Tw Temperature at the wall
   void mol_frac_to_part_dens(const RealVector& xb, CFreal press, CFreal Tw, RealVector& partrho);
-  void mol_frac_to_mass_frac(const RealVector& xb, RealVector& yb);
   
-  // get the total molar mass
-  void getMolarMass(RealVector& xp,CFreal& mmt)
-  {
-    mmt = 0.;
-    for (CFuint i = 0; i < this->m_nbSpecies; ++i) {
-      mmt += xp[i]*m_mm[i];
-    }
-  }
-
- /// Setup the FunctionParser that will parse the expression for the
-  /// condition to apply this boundary condition.
-  /// @throw Common::ParserException if the condition string or variables are badly set
-  void setCondition();
-
-  /// Helper function to throw the exception with the error message.
-  /// @param add a string to add to the error output
-  /// @throw Common::ParserException if the condition string or variables are badly set
-  void throwConditionException(const Common::CodeLocation& where, const std::string& add = std::string());
-
+  /// This function transform the molar fraction in partial density
+  ///@param press  pressure at the wall
+  ///@param yw     mass fractions at the wall
+  ///@param dx     gradient of molar fractions normal to the wall
+  ///@param Tw     temperature at the wall 
+  ///@param flux   boundary flux (diffusion - mass production rate)
+  void computeBoundaryFlux(CFreal& press,
+			   RealVector& yw,
+			   RealVector& dx,
+			   CFreal& Tw,
+			   RealVector& flux);
+  
 private: // data
 
   /// temporary data for holding the matrix inverter
   std::auto_ptr<MathTools::MatrixInverter> m_inverter;
   
+  /// Numerical jacobian calculator
+  std::auto_ptr<Framework::NumericalJacobian> m_numJacob;
+  
   // the VectorialFunction to use
   Framework::VectorialFunction m_vFunction;
   
-  /// condition to specify wether to apply the BC or not
- //  MathTools::FunctionParser m_condition;
-  
-//   /// user defined string for the condition
-//   bool m_checkCondition;
-  
-//   /// user defined string for the condition
-//   std::string m_conditionStr;
-  
-  /// Total density at  the wall (in the ghost cell)
-  CFreal m_rhob;
-
-  /// Total density at  the wall
-  CFreal m_rhoi;
-
-  /// Gamma of the wall 
-  /// TODO for the moment it is using the same gamma for all species
-  /// And all reactions
+  /// Gamma for N on the wall
   CFreal m_gammaN;
+  
+  /// Gamma for O on the wall
   CFreal m_gammaO;
-
+  
   /// RealVector holding the input variables
   RealVector m_input;
+  
+  /// array to hold all vibrational temperatures and Te
+  RealVector m_tVec;
   
   /// Massique fractions at the interior
   RealVector m_yi;
@@ -191,7 +169,13 @@ private: // data
   
   /// Molar fractions at the wall
   RealVector m_xw;
-  
+ 
+  /// Vector of the molar fractions computed at the previous Newton step
+  RealVector m_xwBkp;
+
+  /// Difference between current and previous molar masses
+  RealVector m_dxw;
+ 
   /// Molar fractions at the wall that we perturbe to compute 
   /// the diffusive flux
   RealVector m_xp;
@@ -215,7 +199,10 @@ private: // data
   
   /// Vector of the diffusive flux when we perturbe
   RealVector m_Diff_fluxp;
-
+  
+  /// Vector of the diffusive flux when we perturbe
+  RealVector m_diff;
+  
   /// Second hand right-hand side 
   RealVector m_b;
   
@@ -270,6 +257,9 @@ private: // data
   /// that the catalised reactions are N+N -> N2; O+O -> O2; N+O -> NO
   RealMatrix m_muO2;
   
+  // vector conatining the mu for all charged particles 
+  std::vector<RealMatrix> m_muQ;
+  
   /// Matrix of the derivative of the Diffusion flux
   /// minus the wall production wall
   RealMatrix m_a;
@@ -280,7 +270,10 @@ private: // data
   
   /// Epsilon for numerical derivatives
   CFreal m_eps;
-  
+
+  /// Epsilon for controlling Newton iterations
+  CFreal m_epsNewton; 
+ 
   /// Number of reactions catalysed by the wall
   CFuint m_nr;
   
@@ -292,10 +285,13 @@ private: // data
 
   /// a vector of string to hold the functions
   std::vector<std::string> m_vars;
-
-  /// flag forcing the original implementation
-  bool m_oldVersion;
   
+  /// flag to choose Stefan-Maxwell diffusion fluxes
+  bool m_useStefanMaxwell;
+  
+  /// a vector of reference values for molar fractions
+  std::vector<CFreal> m_refXi;
+
 }; // end of class NoSlipWallIsothermalNSrvtCatT
 
 //////////////////////////////////////////////////////////////////////////////

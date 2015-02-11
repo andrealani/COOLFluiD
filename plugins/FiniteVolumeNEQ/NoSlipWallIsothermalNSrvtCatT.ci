@@ -1,5 +1,4 @@
 #include "FiniteVolumeNEQ/FiniteVolumeNEQ.hh"
-#include "FiniteVolumeNEQ/NoSlipWallIsothermalNSrvtCatT.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/PhysicalChemicalLibrary.hh"
 #include "MathTools/MatrixInverter.hh"
@@ -19,13 +18,16 @@ template <class MODEL>
 void NoSlipWallIsothermalNSrvtCatT<MODEL>::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< CFreal > ("Epsilon","Epsilon for numerical derivatives."); 
+  options.addConfigOption< CFreal > ("EpsilonNewton","Max epsilon for stopping Newton iterations.");
   options.addConfigOption< CFuint > ("Nr","Number of catalised equations at the wall");
   options.addConfigOption< CFuint > ("NewtonLoop","Number of Newton loop that we want to do"); 
   options.addConfigOption< std::vector<std::string> >
     ("Vars","Definition of the Variables.");
   options.addConfigOption< std::vector<std::string> >
     ("GammaN_O","Definition of the effective catalytic recombination factor for N and O");
-  options.addConfigOption< bool > ("OldVersion","Nadege's Villedieu original implementation");
+  options.addConfigOption< bool > ("UseStefanMaxwell","Use Stefan-Maxwell's diffusion model");
+  options.addConfigOption< std::vector<CFreal> >
+    ("RefXi","Reference values of molar masses providing a reasonable order of magnitude.");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -34,32 +36,39 @@ template <class MODEL>
 NoSlipWallIsothermalNSrvtCatT<MODEL>::NoSlipWallIsothermalNSrvtCatT(const std::string& name) :
   NoSlipWallIsothermalNSrvt<MODEL>(name),
   m_inverter(CFNULL),
+  m_numJacob(new Framework::NumericalJacobian("NumericalJacobian")),
   m_vFunction(), // m_condition(),
-  m_rhob(0.), m_rhoi(0.), m_gammaN(0.), m_gammaO(0.),
-  m_yi(), m_xi(), m_yb(), m_yw(), m_yp(), m_yg(),  m_xb(), m_xw(), m_xp(), m_mm(), 
-  m_dx(), m_dxp(), m_omega(), m_omegap(), m_Diff_flux(), m_Diff_fluxp(), 
+  m_gammaN(0.), m_gammaO(0.), 
+  m_tVec(), m_yi(), m_xi(), m_yb(), m_yw(), m_yp(), m_yg(),  m_xb(), m_xw(), m_xwBkp(), m_dxw(), m_xp(), m_mm(), 
+  m_dx(), m_dxp(), m_omega(), m_omegap(), m_Diff_flux(), m_Diff_fluxp(), m_diff(),
   m_b(), m_zero(), m_mcal(), m_partrho(), m_rhoG(), m_gammaV(), m_proj(), 
-  m_Dbin(), m_nu(), m_muN(), m_muO(),  m_muN2(),  m_muNO(),   m_muO2(),  m_a(), m_inva()
+  m_Dbin(), m_nu(), m_muN(), m_muO(),  m_muN2(),  m_muNO(),   m_muO2(),  m_muQ(), m_a(), m_inva()
 {
   this->addConfigOptionsTo(this);
   
-  m_nr = 0;
+  m_nr = 2;
   this->setParameter("Nr",&m_nr);
    
-  m_nl = 2;
+  m_nl = 10;
   this->setParameter("NewtonLoop",&m_nl);
   
   m_eps = 1e-7;
   this->setParameter("Epsilon",&m_eps);
+ 
+  m_epsNewton = 1e-10;
+  this->setParameter("EpsilonNewton",&m_epsNewton);
   
   m_functions = std::vector<std::string>();
   this->setParameter("GammaN_O",&m_functions);
   
   m_vars = std::vector<std::string>();
   this->setParameter("Vars",&m_vars);
+    
+  m_useStefanMaxwell = false;
+  this->setParameter("UseStefanMaxwell",&m_useStefanMaxwell);
   
-  m_oldVersion = true;
-  this->setParameter("OldVersion",&m_oldVersion);
+  m_refXi = std::vector<CFreal>();
+  this->setParameter("RefXi",&m_refXi);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -81,15 +90,23 @@ void NoSlipWallIsothermalNSrvtCatT<MODEL>::setGhostStateImpl
   using namespace COOLFluiD::Physics::NavierStokes;
   using namespace COOLFluiD::MathTools;
   
+  const CFreal MAX_COMPOSITION_SUM = 1.01;
+  
   if (this->m_adiabatic || this->getMethodData().getNodalStatesExtrapolator()->runAdiabatic()) {
     this->imposeAdiabatic(innerState, ghostState);
   }
   else {
     // this static int stores the first iteration number at which the code enters here
     static CFuint startIter = SubSystemStatusStack::getActive()->getNbIter();
+    const CFuint dim = PhysicalModelStack::getActive()->getDim();
     
+    // preliminary redundant test to check in advance if repositioning is needed
     cf_assert(this->m_wallTemp > 0.); 
+    cf_assert(this->m_tempID < innerState.size());
     const CFreal Tghost = 2.*this->m_wallTemp - innerState[this->m_tempID];
+    if (Tghost < 0.) {
+      CFLog(INFO, "NoSlipWallIsothermalNSrvtCatT::setGhostStateImpl() => Tghost < 0 => " << Tghost << "\n");
+    }
     
     CFuint iTemp = this->m_tempID;
     for (CFuint i = 0; i < this->m_innerTTvib.size(); ++i, ++iTemp) {
@@ -99,216 +116,176 @@ void NoSlipWallIsothermalNSrvtCatT<MODEL>::setGhostStateImpl
       this->m_ghostTTvib[i] = ghostState[iTemp];
     }
     
-    if (!m_oldVersion) {
-      this->repositionNode(this->m_innerTTvib, this->m_ghostTTvib, this->m_wallTemp, this->m_ghostTempMin);
-      
-      // reset the ghost node with the new position
-      ghostState.getCoordinates() = this->m_tempGhostNode;
-    }
-  
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();
-  
-  //Evaluate the function
-  m_vFunction.evaluate(innerState.getCoordinates(),m_input);
-  m_gammaN = m_input[0];
-  m_gammaO = m_input[1];
-
-  const CFreal RUNIV = this->m_library->getRgas();
-  CFreal diff_coeff = 0.0;
-  cf_assert(this->m_tempID < innerState.size());
-  
-  GeometricEntity *const face = this->getMethodData().getCurrentFace();
-  cf_assert(face != CFNULL);
-  const CFuint faceID = face->getID();
-  const CFuint startID = faceID*dim;
-  DataHandle<CFreal> normals = this->socket_normals.getDataHandle();
-  for (CFuint i = 0; i < dim; ++i) {
+    this->repositionNode(this->m_innerTTvib, this->m_ghostTTvib, this->m_wallTemp, this->m_ghostTempMin);
+    
+    // reset the ghost node with the new position
+    ghostState.getCoordinates() = this->m_tempGhostNode;
+        
+    // Evaluate the function for gamma
+    m_vFunction.evaluate(innerState.getCoordinates(),m_input);
+    m_gammaN = m_input[0];
+    m_gammaO = m_input[1];
+    
+    // get the face normal
+    GeometricEntity *const face = this->getMethodData().getCurrentFace();
+    cf_assert(face != CFNULL);
     cf_assert(this->m_faceNormal.size() == dim);
-    this->m_faceNormal[i] = normals[startID + i];
-  }
-  
-  MathFunctions::computeProjectedPoint(*face->getNode(0), this->m_faceNormal, innerState.getCoordinates(), m_proj);
-  const CFreal walldistance = MathFunctions::getDistance(innerState.getCoordinates(), m_proj);
-    
-  // When we initialize the wall distance is to yet available,
-  // so we just extrapolate the ghost states
-  const CFuint currIter = SubSystemStatusStack::getActive()->getNbIter();
-  if (this->getMethodData().isInitializationPhase() || 
-      (currIter < 1 && (!this->getMethodData().isRestart())) || 
-      (currIter == startIter && this->m_fullLoop)) { // this last case refers to when the user interactively changes from adiabatic to catalytic 
-    
-    for (CFuint i = 0; i < this->m_nbSpecies; ++i) {
-      ghostState[i] = innerState[i];
+    const CFuint startID = face->getID()*dim;
+    DataHandle<CFreal> normals = this->socket_normals.getDataHandle();
+    for (CFuint i = 0; i < dim; ++i) {
+      this->m_faceNormal[i] = normals[startID + i];
     }
-    for (CFuint i = this->m_nbSpecies; i < this->m_nbSpecies+dim; ++i) {
-      cf_assert(i < ghostState.size());
-      ghostState[i] = (m_oldVersion) ? 0.0 : 
-	((Tghost > 0.) ? -innerState[i] : 0.);
-    }
-    for (CFuint it = 0; it < this->m_innerTTvib.size(); ++it) {
-      ghostState[this->m_nbSpecies+dim+it] = (m_oldVersion) ? this->m_wallTemp : 
-	((Tghost > 0.) ? Tghost : this->m_wallTemp);
-    }
-  }
-  else{
-    // Compute the molar fraction: We first compute the massic fraction
-    // and then we convert to molar fraction
-    compute_mass_fraction(innerState, ghostState, m_yb, m_yi, m_rhob, m_rhoi);
-    mass_frac_to_mol_frac(m_yb, m_yi, m_xb, m_xi);
     
-    CFreal press = 0.;
-    if (!m_oldVersion) {
-      // linear interpolation of mass fractions
-      // m_*b is value in the ghost
-      // m_*w is value on the boundary
+    // compute the projection of the inner cell center onto the boundary face 
+    MathFunctions::computeProjectedPoint(*face->getNode(0), this->m_faceNormal, innerState.getCoordinates(), m_proj);
+    // compute the distance between inner cell center and the boundary face
+    const CFreal ovWallDistance = 1./MathFunctions::getDistance(innerState.getCoordinates(), m_proj);
+    
+    const CFuint currIter = SubSystemStatusStack::getActive()->getNbIter();
+    if (this->getMethodData().isInitializationPhase() || 
+	(currIter < 1 && (!this->getMethodData().isRestart())) || 
+	(currIter == startIter && this->m_fullLoop)) { // this last case refers to when the user interactively changes from adiabatic to catalytic 
+      
+      for (CFuint i = 0; i < this->m_nbSpecies; ++i) {
+	ghostState[i] = innerState[i];
+      }
+      for (CFuint i = this->m_nbSpecies; i < this->m_nbSpecies+dim; ++i) {
+	cf_assert(i < ghostState.size());
+	ghostState[i] = ((Tghost > 0.) ? -innerState[i] : 0.);
+      }
+      for (CFuint it = 0; it < this->m_innerTTvib.size(); ++it) {
+	ghostState[this->m_nbSpecies+dim+it] = ((Tghost > 0.) ? Tghost : this->m_wallTemp);
+      }
+    }
+    else {
+      // case when we are restarting from previous solution or current iteration > 1
+      CFreal rhoi = 0.; // total density in the inner state
+      CFreal rhob = 0.; // total density in the ghost state
+      // First compute the mass fraction and then we convert to molar fraction
+      compute_mass_fraction(innerState, ghostState, m_yb, m_yi, rhob, rhoi);
+      this->m_library->getSpeciesMolarFractions(m_yb, m_xb);
+      this->m_library->getSpeciesMolarFractions(m_yi, m_xi);
+      cf_assert(m_yb.sum() < MAX_COMPOSITION_SUM); cf_assert(m_yi.sum() < MAX_COMPOSITION_SUM);
+      cf_assert(m_xb.sum() < MAX_COMPOSITION_SUM); cf_assert(m_xi.sum() < MAX_COMPOSITION_SUM);
+      
+      CFreal* tVec = CFNULL;
+      if (this->m_nbTv > 0) {
+	cf_assert(m_tVec.size() == this->m_nbTv);
+	for (CFuint i = 0; i < this->m_nbTv; ++i) {
+	  m_tVec[i] = this->m_innerTTvib[i+1];
+	}
+	tVec = &m_tVec[0];
+      }
+      
+      // interpolate mass fractions on the wall (m_*b is ghost value, m_*w is boundary value)
       this->linearInterpolateToB(m_yi, m_yb, m_yw);
+      cf_assert(m_yi.sum() < MAX_COMPOSITION_SUM);
+      cf_assert(m_yw.sum() < MAX_COMPOSITION_SUM);
       this->m_library->getSpeciesMolarFractions(m_yw, m_xw);
+      cf_assert(m_xw.sum() < MAX_COMPOSITION_SUM); 
       
       // assumption: wall pressure = inner pressure
       this->m_library->setSpeciesFractions(m_yi);
       cf_assert(this->m_innerTTvib[0] > 0.);
-      press = this->m_library->pressure(m_rhoi, this->m_innerTTvib[0], CFNULL);
-    }
-    else {
-      m_yw = m_yb;
-      m_xw = m_xb;
-      this->m_library->setSpeciesFractions(m_yw);
-      press = this->m_library->pressure(m_rhoi, this->m_wallTemp, CFNULL);
-    }
-    
-    // Newton loop (few loops are necessary)
-    for (CFuint k = 0; k < m_nl; k++) 
-    { 
-      for (CFuint i = 0; i < this->m_nbSpecies; ++i) 
-      {
-	  m_dx[i] = m_xw[i] - m_xi[i]; // gradient of molar fraction X through the boundary
-      }
-      m_dx /= walldistance;
+      CFreal press = this->m_library->pressure(rhoi, this->m_innerTTvib[0], tVec);
       
-      // at the wall pressure=internal pressure, wall temperature
-      if (!m_oldVersion) {
-        this->m_library->setSpeciesFractions(m_yw);
-      }
-      this->m_library->getDij_fick(m_dx, press, this->m_wallTemp, m_Dbin, m_Diff_flux);
-      CFreal mmt = 0.;
-      getMolarMass(m_xw,mmt);
-      CFreal rhow = press/(RUNIV/mmt*this->m_wallTemp);
-      getWallRateProd(rhow, m_yw, this->m_wallTemp, m_nu, m_muN, m_muO, m_muN2, m_muNO, m_muO2, m_omega);
+      // backup the previous molar masses
+      m_xwBkp = m_xw;
+      CFreal epsMax = 1e6;
+      CFuint k = 0; 
+    
+      // try to feed equilibrium composition as initial guess
+      //this->m_library->setComposition(this->m_wallTemp,press,&m_xw);
+      //m_xwBkp = m_xw;
       
-      // Compute the right hand side that is diff_flux - m_omega
-      for (CFuint i = 0; i < this->m_nbSpecies; ++i) 
-      {
-	m_b[i] = m_Diff_flux[i] - m_omega[i];
+      // Newton loop
+      while (k < m_nl && epsMax > m_epsNewton) { 
+	// gradient of molar fraction X through the boundary
+	m_dx = (m_xw - m_xi)*ovWallDistance;
+	
+	// compute the boundary flux
+	computeBoundaryFlux(press, m_yw, m_dx, this->m_wallTemp, m_Diff_flux);
+	
+	// We compute the derivative of the wall production and diffusive flux by numerical perturbation
+	for (CFuint j = 0; j < this->m_nbSpecies; ++j)  { 
+	  // perturb xw_j
+	  // const CFreal bkp = m_xw[j];
+	  m_numJacob->perturb(j, m_xw[j]);
+	  // cout.precision(16); cout << j << " => "<< bkp << " => " << std::abs(m_xw[j]-bkp) << endl; if (j == 10){ cout << endl; abort(); }
+	  
+	  m_dxp = (m_xw - m_xi)*ovWallDistance;
+	  this->m_library->getSpeciesMassFractions(m_xw, m_yp);
+	  
+	  // compute the boundary flux
+	  computeBoundaryFlux(press, m_yp, m_dxp, this->m_wallTemp, m_Diff_fluxp);
+	  
+	  // compute numerical derivative
+	  m_numJacob->computeDerivative(m_Diff_flux, m_Diff_fluxp, m_diff);
+	  
+	  // set corresponding entry in the jacobian
+	  m_a.setColumn(m_diff,j);
+	  
+	  // restore the unperturbed value
+	  m_numJacob->restore(m_xw[j]);
+	}
+	
+	m_inverter->invert(m_a, m_inva);
+	m_xw -= m_inva*m_Diff_flux;
+	
+	// residual on xw
+	m_dxw = abs(m_xw - m_xwBkp);
+	epsMax = m_dxw.max(); // the largest species molar mass residual matters  
+	
+	this->m_library->getSpeciesMassFractions(m_xw, m_yw);
+	this->m_library->setSpeciesFractions(m_yw);
+	k++;
+      }
+    
+      if (m_xw.sum() >=  MAX_COMPOSITION_SUM) { 
+	cout << "m_xw.sum() = " << m_xw.sum() << ", epsMax = " << epsMax << endl;
+	
+	// AL: gory fix here!!! 
+	m_xw = m_xwBkp;
+	this->m_library->getSpeciesMassFractions(m_xw, m_yw);
+	this->m_library->setSpeciesFractions(m_yw);
+	cf_assert(m_xw.sum() < MAX_COMPOSITION_SUM);
       }
       
-    // We compute the derivative of the wall production and diffusive flux by numerical perturbation
-    m_xp = m_xw;
-    m_dxp = m_dx;
-    for (CFuint i = 0; i < this->m_nbSpecies; ++i) 
-    { 
-      for (CFuint j = 0; j < this->m_nbSpecies; ++j) 
-      { 
-	const CFreal epsX = m_xw[j]*m_eps;
-	const CFreal eps2 = (epsX > 0.) ? epsX : m_eps;
-	const CFreal eps = (m_oldVersion) ? m_eps : eps2;
-	m_xp[j] = m_xw[j] + eps;
-	m_dxp[j] = (m_xp[j] - m_xi[i])/walldistance;
-	
-	this->m_library->getSpeciesMassFractions(m_xp, m_yp);
-	this->m_library->setSpeciesFractions(m_yp);
-	getMolarMass(m_xp,mmt);
-	rhow = press/(RUNIV/mmt*this->m_wallTemp);
-	
-	getWallRateProd(rhow, m_yp, this->m_wallTemp, m_nu, m_muN, m_muO, m_muN2, m_muNO, m_muO2, m_omegap);
-		
-	this->m_library->getDij_fick(m_dxp, press, this->m_wallTemp, m_Dbin, m_Diff_fluxp);
-	
-	m_a(i,j)= ((m_Diff_fluxp[i]-m_Diff_flux[i]) -(m_omegap[i] - m_omega[i]))/eps;
-	m_xp[j] = m_xw[j];
-	m_dxp[j] = m_dx[j];
-      }
-    } 
-    m_inverter->invert(m_a, m_inva);
-    m_b = m_inva*m_b; 
-    m_xw -= m_b;
-    
-    this->m_library->getSpeciesMassFractions(m_xw, m_yw);
-    this->m_library->setSpeciesFractions(m_yw);
-  }
-    
-    //  if (m_oldVersion) {
-    // We go back to the partial densities
-    // CFreal pressI = this->m_library->pressure(m_rhoi, this->m_innerTTvib[0], CFNULL);
-    // mol_frac_to_part_dens(m_xb, pressI, this->m_wallTemp, m_partrho);
-    mol_frac_to_part_dens(m_xw, press, this->m_wallTemp, m_partrho);
-    
-    // sanity check
-    this->linearInterpolate(m_yi, m_yw, m_yg);
-    m_yg = max(0.,m_yg);
-    // m_yg = max(0.,2.*m_yw - m_yi);
-    
-    CFreal sumYi = 0.;
-    for (CFuint s = 0; s < this->m_nbSpecies; ++s) {
-      sumYi += m_yg[s];
-    }
-    if (sumYi > 1.1) cout << "sumYi = " << sumYi << endl;
-    cf_assert(sumYi < 1.1);
-    
-    for (CFuint i = 0; i < this->m_nbSpecies; ++i) {
+      cf_assert(m_yw.sum() < MAX_COMPOSITION_SUM); 
+      
+      // compute the partial densities at the wall
+      mol_frac_to_part_dens(m_xw, press, this->m_wallTemp, m_partrho);
+      
       // sanity check
-      // RealSliceVector rhoi = innerState.slice(0, this->m_nbSpecies);
-      // this->linearInterpolate(innerState.slice(), m_partrho, m_yg);
-            
-      ghostState[i] = std::max(0.0,(2.0*m_partrho[i] - innerState[i]));
-    }
-    for (CFuint i = this->m_nbSpecies; i < this->m_nbSpecies+dim; ++i) {
-      ghostState[i] = -innerState[i];
-    }
-    for (CFuint it = 0; it < this->m_innerTTvib.size(); ++it) { 
-      const CFuint idx = this->m_nbSpecies+dim+it;
-      ghostState[idx] = std::max(100.0, Tghost);
-    }
-    
-    /*}
-      else {
-      //this->linearInterpolate(m_yi, m_yb, m_yg);
-      m_yg = max(0.,2.*m_yb - m_yi);
+      this->linearInterpolate(m_yi, m_yw, m_yg);
+      // cout << "m_yg.min() = " << m_yg.min() << endl;
+      m_yg = max(0.,m_yg);
+      // m_yg = max(0.,2.*m_yw - m_yi);
       
-      CFreal yiOvM = 0.;
       CFreal sumYi = 0.;
       for (CFuint s = 0; s < this->m_nbSpecies; ++s) {
-      yiOvM += m_yg[s]/m_mm[s];
-      sumYi += m_yg[s];
+	sumYi += m_yg[s];
+      }
+      if (sumYi > 1.1) cout << "sumYi = " << sumYi << endl;
+      cf_assert(sumYi < 1.1);
+      
+      for (CFuint i = 0; i < this->m_nbSpecies; ++i) {
+	ghostState[i] = std::max(0.0,(2.0*m_partrho[i] - innerState[i]));
       }
       
-      if (sumYi > 1.0001) cout << "sumYi = " << sumYi << endl;
-      cf_assert(sumYi < 1.0001);
-      
-      // CFreal tempI = innerState[this->m_tempID];
-      //     const CFreal pressI = this->m_library->pressure(m_rhoi, tempI, CFNULL);
-      //     const CFreal rhoG =  pressI/(this->m_library->getRgas()*std::max(100., Tghost)*yiOvM);\\ doesn't work
-      // const CFreal rhoG =  press/(this->m_library->getRgas()*this->m_ghostTTvib[0]*yiOvM); \\ doesn't work
-      const CFreal rhoG =  press/(this->m_library->getRgas()*std::max(100., Tghost)*yiOvM); 
-      for (CFuint i = 0; i < this->m_nbSpecies; ++i)  {
-      ghostState[i] = std::max(0.,rhoG*m_yg[i]);
-      }
-    
       for (CFuint i = this->m_nbSpecies; i < this->m_nbSpecies+dim; ++i) {
-      //this->linearInterpolate(innerState[i], 0.0, ghostState[i]);
-      ghostState[i] = (Tghost > 0.) ? -innerState[i] : 0.;
+	ghostState[i] = -innerState[i];
       }
       
-      for (CFuint it = 0; it < this->m_innerTTvib.size(); ++it) {
-      const CFuint idx = this->m_nbSpecies+dim+it;
-      cf_assert(idx < ghostState.size());
-      cf_assert(it < this->m_ghostTTvib.size());
-      // ghostState[idx] = this->m_ghostTTvib[it]; 
-      ghostState[idx] = std::max(100.0, Tghost);
-      } 
-    }*/
-  }
-  // cout.precision(12); cout << "ghostState     = " << ghostState << endl;
- }    
+      for (CFuint it = 0; it < this->m_innerTTvib.size(); ++it) { 
+	const CFuint idx = this->m_nbSpecies+dim+it;
+	ghostState[idx] = std::max(100.0, Tghost);
+      }
+      
+    }
+    
+    CFLog(DEBUG_MED, "NoSlipWallIsothermalNSrvtCatT::setGhostStateImpl() => ghostState = " << ghostState << "\n");
+  }    
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -326,10 +303,20 @@ void NoSlipWallIsothermalNSrvtCatT<MODEL>::setup()
   
   m_inverter.reset(MatrixInverter::create(this->m_nbSpecies, false));
   
+  // default values for refXi
+  if (m_refXi.size() == 0) {
+    m_refXi.resize(this->m_nbSpecies, 1.);
+  }
+  
+  RealVector refv(this->m_nbSpecies);
+  for (CFuint i = 0; i < this->m_nbSpecies; ++i) {refv[i] = m_refXi[i];}
+  m_numJacob->setRefValues(refv);
+  
   m_input.resize(m_functions.size());
   // AL: only N and O for now
   cf_assert(m_functions.size() == 2);
   
+  if (this->m_nbTv > 0) {m_tVec.resize(this->m_nbTv);}
   m_yi.resize(this->m_nbSpecies);
   m_xi.resize(this->m_nbSpecies);
   m_yb.resize(this->m_nbSpecies);
@@ -338,6 +325,8 @@ void NoSlipWallIsothermalNSrvtCatT<MODEL>::setup()
   m_yg.resize(this->m_nbSpecies);
   m_xb.resize(this->m_nbSpecies);
   m_xw.resize(this->m_nbSpecies);
+  m_xwBkp.resize(this->m_nbSpecies);
+  m_dxw.resize(this->m_nbSpecies);
   m_xp.resize(this->m_nbSpecies);
   m_mm.resize(this->m_nbSpecies);
   m_dx.resize(this->m_nbSpecies);
@@ -346,6 +335,7 @@ void NoSlipWallIsothermalNSrvtCatT<MODEL>::setup()
   m_omegap.resize(this->m_nbSpecies);
   m_Diff_flux.resize(this->m_nbSpecies);
   m_Diff_fluxp.resize(this->m_nbSpecies);
+  m_diff.resize(this->m_nbSpecies);
   m_b.resize(this->m_nbSpecies);
   m_zero.resize(this->m_nbSpecies, 0.);
   m_mcal.resize(this->m_nbSpecies);
@@ -361,40 +351,93 @@ void NoSlipWallIsothermalNSrvtCatT<MODEL>::setup()
   m_muN2.resize(this->m_nbSpecies,m_nr);
   m_muNO.resize(this->m_nbSpecies,m_nr);
   m_muO2.resize(this->m_nbSpecies,m_nr);
+
+  if (this->m_nbSpecies == 11) {
+    m_muQ.resize(this->m_nbSpecies);
+    for (CFuint i = 0; i < m_muQ.size(); ++i) {
+      m_muQ[i].resize(this->m_nbSpecies,m_nr);
+      m_muQ[i] = 0.;
+    } 
+  }
+   
   m_a.resize(this->m_nbSpecies,this->m_nbSpecies);
   m_inva.resize(this->m_nbSpecies,this->m_nbSpecies);
-    
+  
+  // initialize to 0 all stochiometric matrices 
+  m_nu  = 0.;
+  m_muN = 0.;
+  m_muO = 0.;
+  
   if (this->m_nbSpecies == 5){
-     m_nu(0,0) = 1.; m_nu(1,0) = 0.; m_nu(2,0) = 0.; m_nu(3,0) = 0.; m_nu(4,0) = 0.;
-     m_nu(0,1) = 0.; m_nu(1,1) = 1.; m_nu(2,1) = 0.; m_nu(3,1) = 0.; m_nu(4,1) = 0.;
-     
-     m_muN(0,0) = 0.; m_muN(1,0) = 0.; m_muN(2,0) = 1.; m_muN(3,0) = 0.; m_muN(4,0) = 0.;
-     m_muN(0,1) = 0.; m_muN(1,1) = 0.; m_muN(2,1) = 0.; m_muN(3,1) = 0.; m_muN(4,1) = 0.; 
-     
-     m_muO(0,0) = 0.; m_muO(1,0) = 0.; m_muO(2,0) = 0.; m_muO(3,0) = 0.; m_muO(4,0) = 0.;
-     m_muO(0,1) = 0.; m_muO(1,1) = 0.; m_muO(2,1) = 0.; m_muO(3,1) = 0.; m_muO(4,1) = 1.; 
-   }
+    // reactions: N+N->N2 (r=0), O+O->O2 (r=1)  
+    // m_nu(i,r) = 1  if species i is destroyed during reaction r
+    m_nu(0,0) = 1.; // in reaction N+N->N2 (r=0) only N (i=0) is destroyed 
+    m_nu(1,1) = 1.; // in reaction O+O->O2 (r=1) only O (i=1) is destroyed 
+       
+    // consider species mu(j,i,r) = m_muJ(i,r), J=[N,O]
+    // m_muJ(i,r) = 1 when species J is destroyed during reaction r, it produces species i
+    m_muN(2,0) = 1.; // when N is destroyed during reaction r=0, it produces species N2 (i=2)
+    m_muO(4,1) = 1.; // when O is destroyed during reaction r=1, it produces species O2 (i=4)
+
+   if (m_nr == 3) {
+      // reactions: N+O->NO (r=2)
+      m_nu(0,2) = 1.; // N (i=0) and O (i=1) are destroyed
+      m_nu(1,2) = 1.;
+    
+      // when N and O are destroyed during r=2, they produces species NO (i=3)
+      m_muN(3,2) = m_muO(3,2) = 1.;
+    }
+  }
   
   if (this->m_nbSpecies == 11){
-      // First equation is N+N->N2  and second is O+O->O2  
-      // If a species is destroyed nu=1 otherzise 0
-      m_nu(0,0) = 0.; m_nu(1,0) = 1.; m_nu(2,0) = 0.; m_nu(3,0) = 0.; m_nu(4,0) = 0.; m_nu(5,0) = 0.;
-      m_nu(5,0) = 0.; m_nu(7,0) = 0.; m_nu(8,0) = 0.; m_nu(9,0) = 0.; m_nu(10,0) = 0.; 
-      m_nu(0,1) = 0.; m_nu(1,1) = 0.; m_nu(2,1) = 1.; m_nu(3,1) = 0.; m_nu(4,1) = 0.;  m_nu(5,1) = 0.; m_nu(6,1) = 0.;
-      m_nu(7,1) = 0.; m_nu(8,1) = 0.;  m_nu(9,1) = 0.; m_nu(10,1) = 0.;
+    // reactions: N+N->N2 (r=0), O+O->O2 (r=1)  
+    // m_nu(i,r) = 1   if species i is destroyed during reaction r
+    m_nu(1,0) = 1.; // in reaction N+N->N2 (r=0) only N (i=1) is destroyed 
+    m_nu(2,1) = 1.; // in reaction O+O->O2 (r=1) only O (i=2) is destroyed 
+    
+    // consider species mu(j,i,r) = m_muJ(i,r), J=[N,O]
+    // m_muJ(i,r) = 1 when species J is destroyed during reaction r, it produces species i
+    m_muN(3,0) = 1.; // when N is destroyed during reaction r=0, it produces species N2 (i=3)
+    m_muO(5,1) = 1.; // when O is destroyed during reaction r=1, it produces species O2 (i=5)
+  
+    CFuint startR = 2; 
+    if (m_nr == 3 || m_nr == 8) {
+      startR = 3;
+      
+      // reactions: N+O->NO (r=2)
+      m_nu(1,2) = 1.; // N (i=1) and O (i=2) are destroyed
+      m_nu(2,2) = 1.;
+    
+      // when N and O are destroyed during r=2, they produces species NO (i=4)
+      m_muN(4,2) = m_muO(4,2) = 1.;
+    }
+    
+    if (m_nr >= 7) {
+      // reactions: Q(i) + e- ->Q(i) (r=startR+i, i=[0,5))
+      for (CFuint s = 0; s < 5; ++s) {
+	const CFuint rIdx = startR+s;
+	m_nu(6+s,rIdx) = 1.; // N2+,NO+,N+,O2+,O+ are all destroyed
+	m_nu(0,rIdx)   = 1.; // e- (i=0)  is destroyed
+      }
      
-     //if a specises is created by destroying N muN=1
-     m_muN(0,0) = 0.; m_muN(1,0) = 0.; m_muN(2,0) = 0.; m_muN(3,0) = 1.; m_muN(4,0) = 0.; m_muN(5,0) = 0.;
-     m_muN(6,0) = 0.; m_muN(7,0) = 0.; m_muN(8,0) = 0.; m_muN(9,0) = 0.; m_muN(10,0) = 0.;
-     m_muN(0,1) = 0.; m_muN(1,1) = 0.; m_muN(2,1) = 0.; m_muN(3,1) = 0.; m_muN(4,1) = 0.; m_muN(5,1) = 0.;
-     m_muN(6,1) = 0.; m_muN(7,1) = 0.; m_muN(8,1) = 0.; m_muN(9,1) = 0.; m_muN(10,1) = 0.;
-     
-     m_muO(0,0) = 0.; m_muO(1,0) = 0.; m_muO(2,0) = 0.; m_muO(3,0) = 0.; m_muO(4,0) = 0.; m_muO(5,0) = 0.;
-     m_muO(6,0) = 0.; m_muO(7,0) = 0.; m_muO(8,0) = 0.; m_muO(9,0) = 0.; m_muO(10,0) = 0.;
-     m_muO(0,1) = 0.; m_muO(1,1) = 0.; m_muO(2,1) = 0.; m_muO(3,1) = 0.; m_muO(4,1) = 0.; m_muO(5,1) = 1.;
-     m_muO(6,1) = 0.; m_muO(7,1) = 0.; m_muO(8,1) = 0.; m_muO(9,1) = 0.; m_muO(10,1) = 0.;
-   }
-
+      cf_always_assert((m_nr==7 && startR==2) || (m_nr==8 && startR==3)); 
+      // when Q and e- are destroyed during r, they produces species i
+      m_muQ[0](3,startR) = 1; m_muQ[6](3,startR) = 1; // N2+ + e- -> N2
+      
+      startR++;
+      m_muQ[0](4,startR) = 1; m_muQ[7](4,startR) = 1; // NO+ + e- -> NO
+      
+      startR++;
+      m_muQ[0](1,startR) = 1; m_muQ[8](1,startR) = 1; // N+ + e- -> N 
+      
+      startR++;
+      m_muQ[0](5,startR) = 1; m_muQ[9](5,startR) = 1; // O2+ + e- -> O2
+ 
+      startR++;
+      m_muQ[0](2,startR) = 1; m_muQ[10](2,startR) = 1; // O+ + e- -> O
+    }
+  }
+  
   // the temperature ID is equal to the maximum velocity ID + 1
   this->m_library->getMolarMasses(m_mm);
 }      
@@ -424,67 +467,9 @@ void NoSlipWallIsothermalNSrvtCatT<MODEL>::configure ( Config::ConfigArgs& args 
     CFout << e.what() << "\n";
     throw; // retrow the exception to signal the error to the user
   }
- //  // configure the expression that controls if to apply or not the BC
-//   try {
-//     if (!this->m_conditionStr.empty()) { setCondition(); }
-//   }
-//   catch (Common::ParserException& e) {
-//     CFout << e.what() << "\n";
-//     throw; // retrow the exception to signal the error to the user
-//   }
- 
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
-template <class MODEL>
-void NoSlipWallIsothermalNSrvtCatT<MODEL>::setCondition()
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Common;
-  using namespace COOLFluiD::Physics::NavierStokes;
-  using namespace COOLFluiD::MathTools;
-  
-//   // some sanity checks
-//   if (Common::StringOps::getWords(this->m_conditionStr).size() != 1)
-//     throwConditionException (FromHere(),"included spaces in definition");
-
- //  if (this->m_vars.empty())
-//     throwConditionException (FromHere(),"didnt define the variables");
-
-//   // join the variables into a single comma separated string
-//   std::string vars (this->m_vars[0]);
-//   for(CFuint i = 1; i < this->m_vars.size(); i++) {
-//     vars += ",";
-//     vars += this->m_vars[i];
-//   }
-  
-//   this->m_condition.Parse(this->m_conditionStr,vars);
-//   if (this->m_condition.ErrorMsg() != 0) {
-//     throwConditionException (FromHere(), std::string(this->m_condition.ErrorMsg()));
-//   }
-//   this->m_checkCondition = true;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-template <class MODEL>
-void NoSlipWallIsothermalNSrvtCatT<MODEL>::throwConditionException 
-(const Common::CodeLocation& where, const std::string& add)
-{
-//   std::string msg("ParseError in NoSlipWallIsothermalNSrvtCatT::setCondition(): ");
-//   msg += add;
-//   msg += " Condition function: " + this->m_conditionStr;
-//   msg += " Vars: ";
-//   for(CFuint i = 0; i < this->m_vars.size(); i++) {
-//     msg += this->m_vars[i];
-//     msg += " ";
-//   }
-//   throw Common::ParserException (where,msg);
-}
-
-//////////////////////////////////////////////////////////////////////
 
 template <class MODEL>
 void NoSlipWallIsothermalNSrvtCatT<MODEL>::compute_mass_fraction
@@ -507,40 +492,6 @@ void NoSlipWallIsothermalNSrvtCatT<MODEL>::compute_mass_fraction
 //////////////////////////////////////////////////////////////////////////////////
 
 template <class MODEL>
-void NoSlipWallIsothermalNSrvtCatT<MODEL>::mass_frac_to_mol_frac
-(const RealVector& yb, const RealVector& yi, RealVector& xb, RealVector& xi)
-{
-  // First we compute the molar mass of the gas
-  CFreal gasmmi = 0.;
-  CFreal gasmmb = 0.;
-  CFreal tmpi = 0.0;
-  CFreal tmpb = 0.0;
-  for (CFuint i = 0; i < this->m_nbSpecies; ++i) {
-    tmpi += yi[i]/this->m_mm[i];
-    tmpb += yb[i]/this->m_mm[i];    
-  }
-  
-  gasmmi = 1.0/tmpi;
-  gasmmb = 1.0/tmpb;
-  
-  //   CF_DEBUG_OBJ(gasmmi);
-  //   CF_DEBUG_OBJ(gasmmb);
-  /*  CF_DEBUG_OBJ(this->m_mm);*/
-  //   CF_DEBUG_OBJ(yb);
-  
-  for (CFuint i = 0; i < this->m_nbSpecies; ++i) {
-    xi[i] = yi[i]/this->m_mm[i];
-    xb[i] = yb[i]/this->m_mm[i];
-  }
-  
-  xi *= gasmmi;
-  xb *= gasmmb;
-  
-  // CF_DEBUG_OBJ(xb);
-}
-//////////////////////////////////////////////////////////////////////////////////
-
-template <class MODEL>
 void NoSlipWallIsothermalNSrvtCatT<MODEL>::mol_frac_to_part_dens
 (const RealVector& xb, CFreal press, CFreal Tw, RealVector& partrho)
 {
@@ -548,17 +499,13 @@ void NoSlipWallIsothermalNSrvtCatT<MODEL>::mol_frac_to_part_dens
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
   
-  const CFreal RUNIV = this->m_library->getRgas();
   CFreal gasmm = 0.;
-  CFreal rho = 0.;
-  
   for (CFuint i = 0; i < this->m_nbSpecies; ++i) {
     gasmm += xb[i]*this->m_mm[i];
-    
   }
   
-  const CFreal Rgb = RUNIV/gasmm;
-  rho = press/(Rgb*Tw);
+  const CFreal Rgb = this->m_library->getRgas()/gasmm;
+  const CFreal rho = press/(Rgb*Tw);
   for (CFuint i = 0; i < this->m_nbSpecies; ++i) {
     partrho[i] = (xb[i]*this->m_mm[i]/gasmm);
   }
@@ -566,29 +513,9 @@ void NoSlipWallIsothermalNSrvtCatT<MODEL>::mol_frac_to_part_dens
 }
 
 //////////////////////////////////////////////////////////////////////////////////
-
-template <class MODEL>
-void NoSlipWallIsothermalNSrvtCatT<MODEL>::mol_frac_to_mass_frac
-(const RealVector& xb, RealVector& yb)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Common;
-  
-  CFreal gasmm = 0.;
-  for (CFuint i = 0; i < this->m_nbSpecies; ++i) {
-    gasmm += xb[i]*this->m_mm[i];
-  }
-
-  for (CFuint i = 0; i < this->m_nbSpecies; ++i) {
-    yb[i] = (xb[i]*this->m_mm[i]/gasmm);
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////
       
 template <class MODEL>
-void NoSlipWallIsothermalNSrvtCatT<MODEL>::getWallRateProd(const CFreal rhob,
+void NoSlipWallIsothermalNSrvtCatT<MODEL>::getWallRateProd(const CFreal press,
 							   const RealVector& yb,
 							   const CFreal Tw,
 							   const RealMatrix& nu,
@@ -603,34 +530,22 @@ void NoSlipWallIsothermalNSrvtCatT<MODEL>::getWallRateProd(const CFreal rhob,
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::MathTools;
-
-  const CFreal Runiv = this->m_library->getRgas();
-  const CFreal Pi = MathConsts::CFrealPi();
-  CFreal tmp = 0.;
-  CFreal tmp2 = 0.;
   
-  for (CFuint i= 0; i<this->m_nbSpecies; i++)
-  {
+  const CFreal Runiv = this->m_library->getRgas();
+  const CFreal mmt = this->m_library->getMMass();
+  const CFreal rhob = press/(Runiv/mmt*Tw);
+  const CFreal Pi = MathConsts::CFrealPi();
+  
+  for (CFuint i= 0; i<this->m_nbSpecies; i++) {
     // We first compute the impinging flux times mi (for derivation see with NV)
     this->m_mcal[i] = yb[i]*rhob*std::sqrt(Tw*Runiv/(2.0*Pi*this->m_mm[i]));
-    // CF_DEBUG_OBJ( yb[i]);
-    // CF_DEBUG_OBJ(Tw);
-    // CF_DEBUG_OBJ(rhob);
-    //   CF_DEBUG_OBJ(this->m_mcal[i]);
   }
-  
-  /* CF_DEBUG_OBJ(this->m_mcal[0]);
-     CF_DEBUG_OBJ(this->m_mcal[1]);*/
-  /*
-    CF_DEBUG_OBJ(this->m_mcal[2]);
-    CF_DEBUG_OBJ(this->m_mcal[3]);
-    CF_DEBUG_OBJ(this->m_mcal[4]);*/
   
   // AL: bug here for air11 
   m_gammaV = 0.;
   CFreal mcalN = 0.;
   CFreal mcalO = 0.;
-
+  
   if (this->m_nbSpecies == 5){
     mcalN = m_mcal[0];
     mcalO = m_mcal[1];
@@ -643,20 +558,37 @@ void NoSlipWallIsothermalNSrvtCatT<MODEL>::getWallRateProd(const CFreal rhob,
     mcalO = m_mcal[2];
     m_gammaV[1] = this->m_gammaN;
     m_gammaV[2] = this->m_gammaO;
+ 
+    if (m_nr >= 7) {
+      m_gammaV[0] = m_gammaV[6] = m_gammaV[7] = m_gammaV[8] = m_gammaV[9] = m_gammaV[10] = 1.; 
+    }
   }
-
-  for (CFuint i= 0; i < this->m_nbSpecies; i++)
-  {
+  
+  // This was wrong for air11 but worked for IXV ... 
+  // mcalN = m_mcal[0];
+  //  mcalO = m_mcal[1];
+  
+  CFreal tmp = 0.;
+  CFreal tmp2 = 0.;
+  for (CFuint i= 0; i < this->m_nbSpecies; i++) {
     // Now we compute the destructing part and the production part
     tmp = 0.0;
     tmp2 = 0.0;
-    for (CFuint r = 0; r < this->m_nr; r++)
-    {
-   
+    for (CFuint r = 0; r < this->m_nr; r++) {
+      // other possibility would be to use "2*gamma_i/(2-gamma_i)" instead of "gamma"
       tmp += m_gammaV[i]*this->m_nu(i,r);
-      tmp2 += (this->m_gammaN*this->m_muN(i,r)*this->m_mcal[0]  + this->m_gammaO*this->m_muO(i,r)*this->m_mcal[1] );
-  
+      tmp2 += (this->m_gammaN*this->m_muN(i,r)*mcalN  + this->m_gammaO*this->m_muO(i,r)*mcalO);
+      
+      if (m_nr >= 7) {
+	// electrons recombination first
+	tmp2 += m_gammaV[0]*this->m_muQ[0](i,r)*m_mcal[0];
+	// all ions recombinations follow
+	for (CFuint j = 6; j < 11; ++j) {
+	  tmp2 += m_gammaV[j]*this->m_muQ[j](i,r)*m_mcal[j];
+	}
+      }
     }
+    
     tmp *= this->m_mcal[i];
     omegawall[i] = tmp - tmp2; 
   }
@@ -664,8 +596,31 @@ void NoSlipWallIsothermalNSrvtCatT<MODEL>::getWallRateProd(const CFreal rhob,
 
 //////////////////////////////////////////////////////////////////////////////
 
+template <class MODEL>
+void NoSlipWallIsothermalNSrvtCatT<MODEL>::computeBoundaryFlux(CFreal& press,
+							       RealVector& yw,
+							       RealVector& dx,
+							       CFreal& Tw,
+							       RealVector& flux)
+{
+  // assumption: T=Te=Twall at the wall
+  this->m_library->setSpeciesFractions(yw);
+  
+  if (m_useStefanMaxwell) {
+    this->m_library->getRhoUdiff(Tw, press, dx, CFNULL, flux, true);	
+  }
+  else {
+    this->m_library->getDij_fick(dx, press, Tw, m_Dbin, flux);
+  }
+  
+  getWallRateProd(press, yw, Tw, m_nu, m_muN, m_muO, m_muN2, m_muNO, m_muO2, m_omega);
+  flux -= m_omega; // right end side
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
     } // namespace FiniteVolume
 
   } // namespace Numerics
-
+  
 } // namespace COOLFluiD

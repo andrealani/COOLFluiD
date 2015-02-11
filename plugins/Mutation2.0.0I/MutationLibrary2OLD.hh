@@ -1029,9 +1029,12 @@ protected: // data to use to interface FORTRAN77
   /// ID to identify the molecule that gets all Tv contributions
   CFuint _molecTvID;
 
-  /// Fator to reduce the stiffness of source terms <1
+  /// Factor to reduce the stiffness of source terms <1
   CFdouble _factorOmega;
-
+  
+  /// add Ramshaw correction to fick law
+  bool _useRamshaw;
+  
 }; // end of class MutationLibrary2OLD
 
 //////////////////////////////////////////////////////////////////////////////
