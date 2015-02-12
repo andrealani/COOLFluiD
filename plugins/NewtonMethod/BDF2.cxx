@@ -113,7 +113,7 @@ void BDF2::takeStepImpl()
   // sweeps to solve the nonlinear system
   for(CFuint k = 0; !m_data->isAchieved(); ++k)
   {
-    *cvgst = getConvergenceMethodData()->getConvergenceStatus();
+    *cvgst = subSysStatus->getConvergenceStatus();
     
     // add if 
     // getConvergenceMethodData()->getCFL()->update(cvgst.get());
