@@ -112,7 +112,7 @@ void NoSlipWallIsothermalEIWRhoiViTi::setGhostState(GeometricEntity *const face)
 //  const CFreal chi = _varSet->getModel()->getDivECleaningConst();
 
   (*ghostState)[0] = (*innerState)[0] - dr*muZero*omega*Ez0;	//Bx
-  (*ghostState)[1] = -(*innerState)[1]; //By 
+  (*ghostState)[1] = -(*innerState)[1]; //By
   (*ghostState)[2] = (*innerState)[2]; //Bz
   (*ghostState)[3] = -(*innerState)[3]; //Ex
   (*ghostState)[4] = -(*innerState)[4]; //Ey
