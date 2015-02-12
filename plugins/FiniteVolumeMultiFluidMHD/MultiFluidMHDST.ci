@@ -43,6 +43,9 @@ MultiFluidMHDST<UPDATEVAR>::MultiFluidMHDST(const std::string& name) :
   
   _electricalResistivity = 0.150886049694899;
   setParameter("electricalResistivity",&_electricalResistivity);
+
+  _isSpitzer = false;
+  setParameter("SpitzerResistivity",&_isSpitzer);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -73,6 +76,8 @@ void MultiFluidMHDST<UPDATEVAR>::defineConfigOptions(Config::OptionList& options
 {
   options.template addConfigOption< CFreal >
      ("electricalResistivity", "electrical Resistivity used in Ohm's law");
+ options.template addConfigOption< bool >
+     ("SpitzerResistivity", "flag to set Spitzer collisional Resistivity");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -193,7 +198,7 @@ void MultiFluidMHDST<UPDATEVAR>::computeSource
     computeCollisionalMomentumEnergy();
     
     /// FLUID EQUATIONS
-      //CONTINUITY
+    //CONTINUITY
       const CFreal massSource_i = _massSource[0];
       const CFreal massSource_n = _massSource[1];
       source[8] = massSource_i;					// Ions continuity equation
@@ -236,55 +241,15 @@ void MultiFluidMHDST<UPDATEVAR>::computeSource
       source[14] = emEnergy + collWorki + _collEnergySource[0] + _ReactEnergySource[0] + kinEnerIon_i - kinEnerIon_e - kinEnerRec_n; //Ions Energy
       source[15] = collWorkn + _collEnergySource[1] + _ReactEnergySource[1] - kinEnerIon_i + kinEnerRec_n; //Neutrals Energy
       
-      source *= volumes[elemID]; 
-      
       // Write the sockets
       if (!this->getMethodData().isPerturb()) { // Condition to avoid writing when the source is perturbed
-	if(currState->isParUpdatable()) { // Condition to write only once the partition cells
-	  GammaIon[elemID] = _GammaIon_n;
-	  GammaRec[elemID] = _GammaRec_i;
-	}
+        if(currState->isParUpdatable()) { // Condition to write only once the partition cells
+        GammaIon[elemID] = _GammaIon_n;
+        GammaRec[elemID] = _GammaRec_i;
+        }
       }
-      //   if(std::abs(vi) > 100){
-      //     if(std::abs(vi) > 1000){
-      //       std::cout <<"--------------- BAD ---------------\n";
-      //       if(std::abs(vi) > 10000){
-      // 	std::cout <<"--------------- VERYBAD ---------------\n";
-//       }
-//     }
-//     std::cout <<"MultiFluidMHDST::computeSource --> sourceTerm BX = " << source[0] <<"\n";
-//     std::cout <<"MultiFluidMHDST::computeSource --> sourceTerm BY = " << source[1] <<"\n";
-//     std::cout <<"MultiFluidMHDST::computeSource --> sourceTerm BZ = " << source[2] <<"\n"; 
-//     std::cout <<"MultiFluidMHDST::computeSource --> sourceTerm EX = " << source[3] <<"\n"; 
-//     std::cout <<"MultiFluidMHDST::computeSource --> sourceTerm EY = " << source[4] <<"\n";
-//     std::cout <<"MultiFluidMHDST::computeSource --> sourceTerm EZ = " << source[5] <<"\n";
-//     std::cout <<"MultiFluidMHDST::computeSource --> sourceTerm PSI = " << source[6] <<"\n";
-//     std::cout <<"MultiFluidMHDST::computeSource --> sourceTerm PHI = " << source[7] <<"\n";  
-//     std::cout <<"MultiFluidMHDST::computeSource --> sourceTerm mass_ions   = " << source[8] <<"\n";
-//     std::cout <<"MultiFluidMHDST::computeSource --> sourceTerm mass_neut   = " << source[9] <<"\n";
-//     std::cout <<"MultiFluidMHDST::computeSource --> sourceTerm X-mom_ions  = " << source[10] <<"\n";
-//     std::cout <<"\t emMomentumX   = "<< emMomentumX <<"\n";
-//     std::cout <<"\t collMomentum_x   = "<< collMomentumSource_ix <<"\n";
-//     std::cout <<"\t IonizMomentumx   = "<< GammaIon_i*mi*un <<"\n";
-//     std::cout <<"\t RecomMomentumx   = "<< GammaRec_n*mi*ui <<"\n";
-//     std::cout <<"MultiFluidMHDST::computeSource --> sourceTerm Y-mom_ions  = " << source[11] <<"\n";
-//     std::cout <<"\t emMomentumY   = "<< emMomentumY <<"\n";
-//     std::cout <<"\t collMomentum_y   = "<< collMomentumSource_iy <<"\n";
-//     std::cout <<"\t IonizMomentumy   = "<< GammaIon_i*mi*vn <<"\n";
-//     std::cout <<"\t RecomMomentumy   = "<< GammaRec_n*mi*vi <<"\n";
-//     std::cout <<"MultiFluidMHDST::computeSource --> sourceTerm X-mom_neut  = " << source[12] <<"\n";  
-//     std::cout <<"MultiFluidMHDST::computeSource --> sourceTerm Y-mom_neut  = " << source[13] <<"\n";
-//     std::cout <<"MultiFluidMHDST::computeSource --> sourceTerm Energy_ions = " << source[14] <<"\n";
-//     std::cout <<"\t EMEnergy   = "<< emEnergy <<"\n";
-//     std::cout <<"\t CollisWork = "<< collWorki <<"\n";
-//     std::cout <<"\t CollisEner = "<< _collEnergySource[0] <<"\n";
-//     std::cout <<"\t ReactEnerg = "<<  _ReactEnergySource[0] <<"\n";
-//     std::cout <<"\t kinetIon_i = "<< kinEnerIon_i <<"\n";
-//     std::cout <<"\t kinetIon_e = "<< kinEnerIon_e <<"\n";
-//     std::cout <<"\t kinetRec_n = "<< kinEnerRec_n <<"\n";
-//     std::cout <<"MultiFluidMHDST::computeSource --> sourceTerm Energy_neut = " << source[15] <<"\n"; 
-//   }
   }
+  source *= volumes[elemID];
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -371,7 +336,14 @@ void MultiFluidMHDST<UPDATEVAR>::computeElectricCurrent()
   const CFreal ui = _physicalData[firstVelocity];
   const CFreal vi = _physicalData[firstVelocity + 1]; 
   
-  const CFreal eta = _electricalResistivity;
+  CFreal eta;
+  //if(_isSpitzer == false){  //For the moment no using Spitzer resistivity
+    eta = _electricalResistivity;
+  //}
+  //else{
+    //computeSpitzerResistivity();
+    //eta = _electricalResistivity;
+  //}
   const CFreal sigma = 1/eta;
   
   const CFreal Jx = sigma*(_Etotal[XX] + vi*_Btotal[ZZ]);
@@ -468,6 +440,53 @@ void MultiFluidMHDST<UPDATEVAR>::computeCollisionalMomentumEnergy()
 //   }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void MultiFluidMHDST<UPDATEVAR>::computeSpitzerResistivity()
+{
+  const CFuint firstDensity = _varSet->getModel()->getFirstScalarVar(0);
+  const CFreal firstVelocity = _varSet->getModel()->getFirstScalarVar(1);
+  const CFuint firstTemperature = _varSet->getModel()->getFirstScalarVar(2);
+
+  // particles density, temperature
+  const CFreal rho = _physicalData[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoi = rho*_physicalData[firstDensity];                  //ions density
+  const CFreal rhon = rho*_physicalData[firstDensity + 1];              //neutrals density
+
+  const CFreal Ti = _physicalData[firstTemperature];
+  const CFreal Tn = _physicalData[firstTemperature + 4]; 
+
+  //data
+  // particle mass
+  const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn = 1.6726e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal me = 9.1093829140e-31;
+  const CFreal kB = Framework::PhysicalConsts::Boltzmann(); // Boltzmann constant
+  const CFreal e_charge = 1.60217656535e-19; //Electron's charge
+  const CFreal epsilon  = 8.8542e-12; 
+
+  // particles per volume
+  const CFreal ni = rhoi/mi;
+  const CFreal nn = rhon/mn;
+  const CFreal ne = ni;
+
+  // electron-neutral collision frequency
+  const CFreal Sigma_en   = 1e-19;
+  const CFreal pi         = MathTools::MathConsts::CFrealPi(); //Pi number  
+  const CFreal m_en       = me*mn/(me + mn); 
+  const CFreal T_en       = (Ti + Tn)/2;
+  const CFreal nu_en      = nn*Sigma_en*std::sqrt(8.*kB*T_en/(pi*m_en));
+
+  // electron-ion collision frequency
+  const CFreal T_ei       = Ti; //assumed thermal equilibrium
+  const CFreal r_debye    = e_charge*e_charge/(4*pi*epsilon*kB*Ti);
+  const CFreal Sigma_ei   = pi*r_debye*r_debye;
+  const CFreal m_ei       = me*mi/(me + mi);
+  const CFreal nu_ei      = ni*Sigma_ei*std::sqrt(8.*kB*T_ei/(pi*m_ei));
+
+  _electricalResistivity = me*ne*(nu_en + nu_ei)/(e_charge*e_charge*ne*ne);
+}
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace FiniteVolume
