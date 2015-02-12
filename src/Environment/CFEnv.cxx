@@ -352,29 +352,36 @@ void CFEnv::initLoggers()
 void CFEnv::initiate ( int argc, char** argv )
 {
   // Initiate the Parallel environment
-  // This modifies argc and argv!
-  CFLog(NOTICE, "-------------------------------------------------------------\n");
-  CFLog(NOTICE, "COOLFluiD Environment\n");
-  CFLog(NOTICE, "-------------------------------------------------------------\n");
+  // This modifies argc and argv! 
   
   CFLog(VERBOSE, "Initializing Parallel Environment : \n");
   COOLFluiD::Common::PE::InitPE(&argc, &argv);
-
-  CFLog(NOTICE, "COOLFluiD version    : " << getVersionString () << "\n");
-  CFLog(NOTICE, "Parallel Environment : " << Common::PE::GetPE().GetName() << "\n");
-  CFLog(NOTICE, "Build system         : " << getBuildSystem() << "\n");
-  CFLog(NOTICE, "Build OS             : " << getLongSystemName() << " [" << getSystemBits() << "bits]\n");
-  CFLog(NOTICE, "Build processor      : " << getBuildProcessor() << "\n");
+  
+  if (Common::PE::GetPE().GetRank() == 0) {
+    CFLog(INFO, "-------------------------------------------------------------\n");
+    CFLog(INFO, "COOLFluiD Environment\n");
+    CFLog(INFO, "-------------------------------------------------------------\n");
+    CFLog(INFO, "COOLFluiD version    : " << getVersionString () << "\n");
+    CFLog(INFO, "Parallel Environment : " << Common::PE::GetPE().GetName() << "\n");
+    CFLog(INFO, "Build system         : " << getBuildSystem() << "\n");
+    CFLog(INFO, "Build OS             : " << getLongSystemName() << " [" << getSystemBits() << "bits]\n");
+    CFLog(INFO, "Build processor      : " << getBuildProcessor() << "\n");
+  }
   
   m_env_vars->InitArgs.first  = argc;
   m_env_vars->InitArgs.second = argv;
   
-  CFLog(VERBOSE, "Initializing Hook Modules ...\n");
+  if (Common::PE::GetPE().GetRank() == 0) {
+    CFLog(VERBOSE, "Initializing Hook Modules ...\n");
+  }
+  
   initiateModules();
   
-  CFLog(NOTICE, "-------------------------------------------------------------\n");
+  if (Common::PE::GetPE().GetRank() == 0) {
+    CFLog(INFO, "-------------------------------------------------------------\n");
+  }
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void CFEnv::initiateModules()

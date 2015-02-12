@@ -93,7 +93,7 @@ void DirPaths::setDir(boost::filesystem::path& dpath, const std::string& dstr, c
 
 void DirPaths::setBaseDir(const std::string& baseDir)
 {
-  CFLog(NOTICE,"Base Dir set to: \'" << baseDir << "\'\n");
+  CFLog(VERBOSE,"Base Dir set to: \'" << baseDir << "\'\n");
   setDir(m_baseDir,baseDir);
 }
 
@@ -135,7 +135,7 @@ void DirPaths::setWorkingDir(const std::string& workingDir)
     wDir = m_baseDir / workPath;
   }
 
-  CFLog(NOTICE,"Working Dir set to: \'" << wDir.string() << "\'\n");
+  CFLog(VERBOSE,"Working Dir set to: \'" << wDir.string() << "\'\n");
   setDir(m_workinDir,wDir.string());
 }
 
@@ -160,7 +160,7 @@ void DirPaths::setResultsDir(const std::string& resultsDir)
     rDir = m_baseDir / resultsPath;
   }
 
-  CFLog(NOTICE,"Results Dir set to: \'" << rDir.string() << "\'\n");
+  CFLog(VERBOSE,"Results Dir set to: \'" << rDir.string() << "\'\n");
   setDir(m_resultsDir,rDir.string(),true);
 }
 

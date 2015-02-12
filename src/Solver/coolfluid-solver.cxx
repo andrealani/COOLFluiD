@@ -101,7 +101,7 @@ class AppOptions : public Config::ConfigObject {
           {
             clog << "Unused argument: " << itr->first << " " << itr->second << endl;
           }
-          cout << writeUsage();
+          CFLog(INFO, writeUsage());
           if (waitend) cin.get();
           exit(1);
         }
@@ -114,7 +114,7 @@ class AppOptions : public Config::ConfigObject {
 
         if (show_help) // show_help if --help
         {
-          cout << writeUsage();
+          CFLog(INFO, writeUsage());
           if (waitend) cin.get();
           exit(0);
         }
@@ -143,17 +143,18 @@ int main(int argc, char** argv)
 {
   using namespace boost;
 
-  CFout << "--- coolfluid-solver ----------------------------------------\n\n";
+  CFLog(VERBOSE, "--- coolfluid-solver ----------------------------------------\n\n");
 
   // print out starting directory
-  CFout << "starting in directory [" << filesystem::current_path().string() << "]\n\n";
-
+  CFLog(VERBOSE, "starting in directory [" << filesystem::current_path().string() << "]\n\n");
+  
   // print out input parameters
-  CFout << "called with arguments:\n";
-  for ( int iarg = 0; iarg < argc; ++iarg )
-    CFout << "arg [" << iarg << "] : [" << argv[iarg] << "]\n";
-  CFout << "\n-------------------------------------------------------------\n";
-
+  CFLog(VERBOSE, "called with arguments:\n");
+  for ( int iarg = 0; iarg < argc; ++iarg ) {
+    CFLog(VERBOSE, "arg [" << iarg << "] : [" << argv[iarg] << "]\n");
+  }
+  CFLog(VERBOSE, "\n-------------------------------------------------------------\n");
+  
   //////////////////////////////////////////////////////////////////
   // process the command line
   AppOptions options;
@@ -177,15 +178,15 @@ int main(int argc, char** argv)
   }
   //////////////////////////////////////////////////////////////////
 
-  CFout << "places to search for libraries ...\n[" ;
+  CFLog(VERBOSE, "places to search for libraries ...\n[");
   std::vector< string >::const_iterator itr = options.libDir.begin();
   for ( ; itr != options.libDir.end() ; ++itr )
   {
-    CFout << "\n\tlibpath [" << *itr << "]" ;
+    CFLog(VERBOSE, "\n\tlibpath [" << *itr << "]");
   }
-  CFout << "\n]" ;
-  CFout << "\n-------------------------------------------------------------\n\n";
-
+  CFLog(VERBOSE, "\n]");
+  CFLog(VERBOSE, "\n-------------------------------------------------------------\n\n");
+  
   int return_value = 0;
   try
   {
@@ -204,7 +205,7 @@ int main(int argc, char** argv)
     PE::GetPE().setBarrier();
     if ( cf_env.getCPURank() == 0 )
     {
-      std::cout << "Removing previous config logs" << std::endl;
+      CFLog(VERBOSE, "Removing previous config logs\n");
       
       filesystem::directory_iterator ditr(filesystem::current_path()), dir_end;
       for( ; ditr != dir_end; ++ditr )
@@ -221,7 +222,7 @@ int main(int argc, char** argv)
 	
 	if ( !is_directory( *ditr ) && ( is_config || is_output ) )
 	{
-	  std::cout << "removing file: " << filename << std::endl;
+	  CFLog(VERBOSE, "removing file: " << filename << "\n");
 	  try { filesystem::remove(*ditr); } catch (...) {};
 	}
       }
@@ -258,21 +259,20 @@ int main(int argc, char** argv)
     if (options.wait) // wait to attach debugger
       {
 	CFuint pid = OSystem::getInstance().getProcessInfo()->getPID();
-	CFout << "Stopping to attach debugger ...\n";
-	CFout << "Current PID is [" << pid << "].\n";
+	CFLog(INFO, "Stopping to attach debugger ...\n");
+	CFLog(INFO, "Current PID is [" << pid << "].\n");
 	char ans;
 	bool first_pass = true;
-	do
-	  {
-	    if (!first_pass) { CFout << "Please type a 'y' or an 'n'.\n"; }
-	    CFout << "Continue (y/n) ?\n";
-	    std::cin >> ans;
-	    first_pass = false;
-	  }
+	do {
+	  if (!first_pass) { CFLog(INFO, "Please type a 'y' or an 'n'.\n"); }
+	  CFout << "Continue (y/n) ?\n";
+	  std::cin >> ans;
+	  first_pass = false;
+	}
 	while((ans !='Y')&&(ans !='N')&&(ans !='y')&&(ans !='n'));
       }
     
-    CFLog(NOTICE,"-------------------------------------------------------------\n");
+    CFLog(VERBOSE,"-------------------------------------------------------------\n");
     
     // create the maestro
     
@@ -281,23 +281,23 @@ int main(int argc, char** argv)
     if ( config_args.find ("Maestro") != config_args.end() )
       maestro_str = config_args["Maestro"];
     
-    CFLog(NOTICE,"Creating Simulation Maestro\n");
+    CFLog(VERBOSE,"Creating Simulation Maestro\n");
     Common::SafePtr<Maestro::PROVIDER> prov = Environment::Factory<Maestro>::getInstance().getProvider( maestro_str );
     cf_assert(prov.isNotNull());
     maestro.reset(prov->create(prov->getName()));
     maestro->configure ( config_args );
     
-    CFLog(NOTICE,"-------------------------------------------------------------\n");
+    CFLog(INFO,"-------------------------------------------------------------\n");
     
     // create the simulation
     
-    CFLog(NOTICE,"Creating Simulation\n");
+    CFLog(INFO,"Creating Simulation\n");
     // create the simulator
     SharedPtr < Simulator > sim ( new Simulator("Simulator") );
     // give him the file to configure from
     sim->openCaseFile(casefile.string());
     
-    CFLog(NOTICE,"-------------------------------------------------------------\n");
+    CFLog(INFO,"-------------------------------------------------------------\n");
     
 //////////////////////////////////////////////////////////////////
 // dumps the tree.xml
@@ -337,10 +337,10 @@ int main(int argc, char** argv)
 
     if ( options.residual != MathConsts::CFrealMax())
     {
-      std::cout << "\n"
-                << "Target   residual [" << options.residual << "]\n"
-                << "Achieved residual [" << totalResidual << "]\n"
-                << "Percent diff      [" << tolerance << "%]\n\n";
+      CFLog(VERBOSE, "\n"
+	    << "Target   residual [" << options.residual << "]\n"
+	    << "Achieved residual [" << totalResidual << "]\n"
+	    << "Percent diff      [" << tolerance << "%]\n\n");
 
       return_value = tolerance > options.tolerance ? 1 : 0;
     }
