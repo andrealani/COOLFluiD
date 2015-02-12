@@ -202,12 +202,14 @@ void NewtonIterator::takeStepImpl()
   CFuint& k = getConvergenceMethodData()->getConvergenceStatus().iter; // use the convergence status iter of the method
   for(k = 1; !m_data->isAchieved(); ++k)
   {
-    *cvgst = getConvergenceMethodData()->getConvergenceStatus();
+    *cvgst = subSysStatus->getConvergenceStatus();
+    
     timer.restart();
-
+    
     subSysStatus->setFirstStep( k == 1 );
     subSysStatus->setMaxDT(MathTools::MathConsts::CFrealMax());
     
+    CFLog(VERBOSE, "NewtonIterator::takeStep(): before first update CFL\n");
     getConvergenceMethodData()->getCFL()->update(cvgst.get());
     
     m_init->execute();
@@ -224,7 +226,10 @@ void NewtonIterator::takeStepImpl()
     CFLog(VERBOSE, "NewtonIterator::takeStep(): computing Space Residual\n");
     // compute the steady space residual
     getMethodData()->getCollaborator<SpaceMethod>()->computeSpaceResidual(1.0);
+    
+    CFLog(VERBOSE, "NewtonIterator::takeStep(): before second update CFL\n");
     getConvergenceMethodData()->getCFL()->update(cvgst.get());
+    
     // do an intermediate step, useful for some special types of temporal discretization
     CFLog(VERBOSE, "NewtonIterator::takeStep(): calling Intermediate step\n");
     m_intermediate->execute();
