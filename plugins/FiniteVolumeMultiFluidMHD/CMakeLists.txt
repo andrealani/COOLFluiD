@@ -39,6 +39,9 @@ SubOutletPEIWRhoiViTi.cxx
 SubOutletPEIWRhoiViTi.hh
 SubOutletPPCWRhoiViTi.cxx
 SubOutletPPCWRhoiViTi.hh
+ThreeFluidMHDST2D.ci
+ThreeFluidMHDST2D.cxx
+ThreeFluidMHDST2D.hh
 #SubOutletPPCWRhoiViTi3D.cxx
 #SubOutletPPCWRhoiViTi3D.hh
 )
