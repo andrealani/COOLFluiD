@@ -120,6 +120,7 @@ Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 
 Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUpTurb2D
+#Roe
 Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpTurb2D.machInf = 0.1
 
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Puvt
@@ -132,13 +133,7 @@ Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBased
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBased.TrsPriorityList = \
                                               SlipWall NoSlipWall Inlet Outlet
 
-#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
-
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
-#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -0.2
-#Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
-#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
-#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
 
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = SA2DSourceTerm
 
