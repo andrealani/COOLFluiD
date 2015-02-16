@@ -37,3 +37,5 @@ LIST ( APPEND SA_requires_mods NavierStokes)
 
 CF_ADD_PLUGIN_LIBRARY ( SA )
 CF_WARN_ORPHAN_FILES()
+ADD_SUBDIRECTORY ( testcases )
+

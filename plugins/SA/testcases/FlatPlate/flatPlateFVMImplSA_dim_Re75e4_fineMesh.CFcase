@@ -22,16 +22,13 @@ CFEnv.ErrorOnUnusedConfig = true
 Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libSA libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeSA libTHOR2CFmesh  libAeroCoef libAeroCoefFVM libMeshTools libMeshToolsFVM
 
 # Simulation Parameters
-Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/FlatPlate/
+Simulator.Paths.WorkingDir = plugins/SA/testcases/FlatPlate/
 Simulator.Paths.ResultsDir = ./
 
 Simulator.SubSystem.Default.PhysicalModelType   = NavierStokes2DSA
 Simulator.SubSystem.NavierStokes2DSA.refValues  = 9300. 121.151 121.151 298.15 0.000002
 Simulator.SubSystem.NavierStokes2DSA.refLength  = 1.0
 Simulator.SubSystem.NavierStokes2DSA.ConvTerm.machInf  = 0.1
-
-#Simulator.SubSystem.InteractiveParamReader.FileName = ./flat.inter
-#Simulator.SubSystem.InteractiveParamReader.readRate = 5
 
 # Compute the Wall distance
 Simulator.SubSystem.DataPreProcessing = DataProcessing
