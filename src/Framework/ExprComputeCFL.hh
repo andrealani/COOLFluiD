@@ -38,7 +38,7 @@ public:
   ~ExprComputeCFL();
 
   /// Check if the stop condition has been achieved
-  void operator() (const ConvergenceStatus& m_cstatus);
+  void operator() (const ConvergenceStatus& cstatus);
 
   /// Configures this object with supplied arguments.
   virtual void configure ( Config::ConfigArgs& args );

@@ -93,7 +93,9 @@ void SubOutletNSTurb2D::setGhostState(GeometricEntity *const face)
   CFreal ghostPressure = 2.0*_pressure - innerPressure;
 
   if (ghostPressure < 0.){
-    ghostPressure = 0.9*_pressure;
+      CFLog(INFO, "SubOutletNSTurb2D::setGhostState() => ghostPressure < 0.\n");
+     
+       ghostPressure = 0.9*_pressure;
 //     // new pressure in the ghost state
 //     ghostPressure = 0.5*_pressure;
 // 

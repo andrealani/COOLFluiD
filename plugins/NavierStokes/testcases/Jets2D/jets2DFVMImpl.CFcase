@@ -12,7 +12,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -4.0068681
+### Residual = -4.0077023
 #
 
 # SubSystem Modules
@@ -80,9 +80,8 @@ Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
 
 Simulator.SubSystem.ConvergenceMethod = BwdEuler
-Simulator.SubSystem.BwdEuler.Data.CFL.Value = 30.0
 Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(100000000.,30.0*10^i)
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(100000000.,30.0*10^(i-1))
 Simulator.SubSystem.BwdEuler.Data.Norm = L2
 Simulator.SubSystem.BwdEuler.Data.L2.MonitoredVarID = 0
 Simulator.SubSystem.BwdEuler.Data.L2.ComputedVarID = 0 2 3

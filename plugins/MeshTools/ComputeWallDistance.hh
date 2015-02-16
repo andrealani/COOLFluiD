@@ -90,7 +90,7 @@ protected: //data
   Framework::DataSocketSource<CFreal> socket_wallDistance;
 
   /// storage of face normals 
-  //  Framework::DataSocketSink<CFreal> socket_normals; 
+  Framework::DataSocketSink<CFreal> socket_normals; 
   
   /// socket for Node's
   Framework::DataSocketSink < Framework::Node* , Framework::GLOBAL > socket_nodes;

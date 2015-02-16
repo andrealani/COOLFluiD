@@ -2,7 +2,7 @@
 # 
 # This COOLFluiD CFcase file tests: 
 # 
-# Finite Volume, NavierStokes2D, Backward Euler, mesh with quads, second-order 
+# Finite Volume, NavierStokes2D, NewtonIterator, mesh with quads, second-order 
 # reconstruction without limiter, subsonic inlet and outlet, adiabatic noslip 
 # wall, PETSc AIJ matrix, postprocessing of wall aerodynamic quantities and 
 # coefficients 

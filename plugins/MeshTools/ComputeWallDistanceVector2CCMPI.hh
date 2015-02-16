@@ -63,14 +63,9 @@ public:
   std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets();
   
 private:
-  
+    
   /**
-   * Execute on a set of dofs
-   */
-  void execute2D();
-
-  /**
-   * Execute on a set of dofs
+   * Compute the distance to the wall in 3D
    */
   void execute3D();
   
@@ -83,6 +78,12 @@ private:
    * Compute the wall distance
    */
   void computeWallDistance3D(std::vector<CFreal>& data);
+  
+  /**
+   * Compute the wall distance
+   */
+  void computeWallDistance3D(Framework::TRSDistributeData& data,
+			     std::vector<CFreal>& faceNormals);
   
 private:
   

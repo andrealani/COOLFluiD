@@ -47,7 +47,7 @@ void ComputeWallDistance::defineConfigOptions(Config::OptionList& options)
 ComputeWallDistance::ComputeWallDistance(const std::string& name) :
   DataProcessingCom(name),
   socket_wallDistance("wallDistance"),
-  // socket_normals("normals"), 
+  socket_normals("normals"), 
   socket_nodes("nodes"),
   socket_states("states"),
   _tmpVector()
@@ -86,7 +86,7 @@ ComputeWallDistance::needsSockets()
 {
   std::vector<Common::SafePtr<BaseDataSocketSink> > result;
   
-  //  result.push_back(&socket_normals); 
+  result.push_back(&socket_normals); 
   result.push_back(&socket_nodes);
   result.push_back(&socket_states);
   

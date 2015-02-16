@@ -58,20 +58,20 @@ ExprComputeCFL::~ExprComputeCFL()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ExprComputeCFL::operator() (const ConvergenceStatus& m_cstatus)
+void ExprComputeCFL::operator() (const ConvergenceStatus& cstatus)
 {
   // store the first residual
   if(SubSystemStatusStack::getActive()->getNbIter() == 1) {
     _firstResidual = SubSystemStatusStack::getActive()->getResidual();
   }
 
-  _eval[0] = m_cstatus.iter;
-  _eval[1] = m_cstatus.res;
+  _eval[0] = cstatus.iter;
+  _eval[1] = cstatus.res;
   _eval[2] = _firstResidual;
   _eval[3] = _lastResidual;
   _eval[4] = _maxResidual;
   _eval[5] = _cfl->getCFLValue();
-
+  
   const CFreal currResidual = SubSystemStatusStack::getActive()->getResidual();
 
   _lastResidual = currResidual;
@@ -79,11 +79,13 @@ void ExprComputeCFL::operator() (const ConvergenceStatus& m_cstatus)
     _maxResidual = currResidual;
   }
 
-  if (m_cstatus.iter > 1) {
-    const CFreal CFLnumber = _functionParser.Eval(_eval);
-    cf_assert(std::abs(CFLnumber) > MathTools::MathConsts::CFrealEps());
-    _cfl->setCFLValue(CFLnumber);
-  }
+  //   if (cstatus.iter > 1) {
+  const CFreal CFLnumber = _functionParser.Eval(_eval);
+  CFLog(VERBOSE, "ExprComputeCFL::operator() => _eval = " << _eval 
+	<< ", CFLnumber = " << CFLnumber << "\n");
+  cf_assert(std::abs(CFLnumber) > MathTools::MathConsts::CFrealEps());
+  _cfl->setCFLValue(CFLnumber);
+  // }
 }
 
 //////////////////////////////////////////////////////////////////////////////
