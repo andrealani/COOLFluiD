@@ -1,11 +1,18 @@
+##############################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, NavierStokes2D, K-Omega BSL RANS model, NewtonIterator,
+# CFL function law, mesh with quads, second-order reconstruction without limiter, 
+# subsonic inlet and outlet, adiabatic noslip wall, parallel computation of 
+# distance to the wall
 #
-# COOLFluiD Startfile
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -3.01503
-
+### Residual = -5.0404973
 
 #This is for Reynolds 750.000 (at length=1)
 
@@ -63,7 +70,7 @@ Simulator.SubSystem.CFmesh.AppendIter = false
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
 
 Simulator.SubSystem.StopCondition       = Norm
-Simulator.SubSystem.Norm.valueNorm      = -3.0
+Simulator.SubSystem.Norm.valueNorm      = -5.0
 
 Simulator.SubSystem.Default.listTRS = InnerFaces SlipWall NoSlipWall Inlet Outlet
 
@@ -87,8 +94,7 @@ Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.UpdateSol = TurbUpdateSol
 Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 100.
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = min(1000.,cfl*1.03)
-#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<15,10.,if(i<20,100.,min(1e6,10.^(i-18))))
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<2,100.,min(1e6,cfl*1.03))
 Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
 Simulator.SubSystem.NewtonIterator.Data.PrintHistory = false
 
@@ -124,7 +130,7 @@ Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveKOmega2D.ValuesIdx = 1 
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveKOmega2D.Values = 0. 0. 1.66e-7
 
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -0.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = 0.3
 Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
 #Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
 #Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
@@ -152,17 +158,18 @@ Simulator.SubSystem.CellCenterFVM.BcNames = Wall \
                                 BcOutlet
 
 Simulator.SubSystem.CellCenterFVM.Mirror.applyTRS = SlipWall
-Simulator.SubSystem.CellCenterFVM.Mirror.ZeroGradientFlags = 0 1 1 0 0 0
+Simulator.SubSystem.CellCenterFVM.Mirror.ZeroGradientFlags = 1 0 0 1 0 0
 
 Simulator.SubSystem.CellCenterFVM.Wall.applyTRS = NoSlipWall
+Simulator.SubSystem.CellCenterFVM.Wall.ZeroGradientFlags = 1 0 0 1 0 0
 
 Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS = Inlet
 Simulator.SubSystem.CellCenterFVM.BcInlet.Vx = 121.151
 Simulator.SubSystem.CellCenterFVM.BcInlet.Vy = 0.0
 Simulator.SubSystem.CellCenterFVM.BcInlet.T = 298.15
 Simulator.SubSystem.CellCenterFVM.BcInlet.TurbVars = 0.000000166 121.151
-Simulator.SubSystem.CellCenterFVM.BcInlet.ZeroGradientFlags = 1 0 0 0 0 0
+#Simulator.SubSystem.CellCenterFVM.BcInlet.ZeroGradientFlags = 1 0 0 0 0 0
 
 Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS = Outlet
 Simulator.SubSystem.CellCenterFVM.BcOutlet.P = 9300.
-Simulator.SubSystem.CellCenterFVM.BcOutlet.ZeroGradientFlags = 0 1 1 1 1 1
+#Simulator.SubSystem.CellCenterFVM.BcOutlet.ZeroGradientFlags = 0 1 1 1 1 1
