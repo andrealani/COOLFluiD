@@ -160,6 +160,7 @@ CFdouble MutationLibrarypp::sigma(CFdouble& temp, //electrical conductivity
 				  CFdouble& pressure,
 				  CFreal* tVec)
 {
+   if (temp < 100.) {temp = 100.;}
   m_gasMixture->setState(&pressure, &temp, 1);
   return m_gasMixture->sigma();
 }
@@ -203,6 +204,8 @@ void MutationLibrarypp::setComposition(CFdouble& temp,
 				       CFdouble& pressure,
 				       RealVector* x)
 {
+  if (temp < 100.) {temp = 100.;}
+
   m_gasMixture->setState(&pressure, &temp, 1);
   const double* xm = m_gasMixture->X();
   
