@@ -29,14 +29,14 @@
 //     5 -- Ez
 //     6 -- Psi
 //     7 -- Phi
-//     8 -- massConservation_ion
-//     9 -- massConservation_electron
+//     8 -- massConservation_electron
+//     9 -- massConservation_ion
 //     10 -- massConservation_neutral
-//     11 -- momConservation_ion
-//     12 -- momConservation_electron
+//     11 -- momConservation_electron
+//     12 -- momConservation_ion
 //     13 -- momConservation_neutral
-//     14 -- energyConservation_ion
-//     15 -- energyConservation_electron
+//     14 -- energyConservation_electron
+//     15 -- energyConservation_ion
 //     16 -- energyConservation_neutral
 //
 //  e.g., the source for the Bx equation is: source[0].
@@ -53,28 +53,27 @@
 //     _physicalData[8] -- RHO (total density)
 //     _physicalData[9] -- x (coordinate of the state)
 //     _physicalData[10] -- y (coordinate of the state)
-//     _physicalData[11] -- z (coordinate of the state)
-//     _physicalData[12] -- y_ion (partial density of ions) ============= firstDensity
-//     _physicalData[13] -- y_electron (partial density of electron)
-//     _physicalData[14] -- y_neutral (partial density of neutral)
-//     _physicalData[15] -- U_ion ======================================= firstVelocity
-//     _physicalData[16] -- V_ion
-//     _physicalData[17] -- U_electron
-//     _physicalData[18] -- V_electron
-//     _physicalData[19] -- U_neutral
-//     _physicalData[20] -- V_neutral
-//     _physicalData[21] -- T_ion ======================================= firstTemperature
-//     _physicalData[22] -- p_ion (pressure)
-//     _physicalData[21] -- a_ion (speed of sound)
-//     _physicalData[22] -- H_ion (total enthalpy)
-//     _physicalData[21] -- T_electron
-//     _physicalData[22] -- p_electron (pressure)
-//     _physicalData[21] -- a_electron (speed of sound)
-//     _physicalData[22] -- H_electron (total enthalpy)
-//     _physicalData[21] -- T_neutral
-//     _physicalData[22] -- p_neutral (pressure)
-//     _physicalData[21] -- a_neutral (speed of sound)
-//     _physicalData[22] -- H_neutral (total enthalpy)
+//     _physicalData[11] -- y_electrons (partial density of ions) ============= firstDensity
+//     _physicalData[12] -- y_ions (partial density of electron)
+//     _physicalData[13] -- y_neutral (partial density of neutral)
+//     _physicalData[14] -- U_electron ======================================= firstVelocity
+//     _physicalData[15] -- V_electron
+//     _physicalData[16] -- U_ion
+//     _physicalData[17] -- V_ion
+//     _physicalData[18] -- U_neutral
+//     _physicalData[19] -- V_neutral
+//     _physicalData[20] -- T_electron ======================================= firstTemperature
+//     _physicalData[21] -- p_electron (pressure)
+//     _physicalData[22] -- a_electron (speed of sound)
+//     _physicalData[23] -- H_electron (total enthalpy)
+//     _physicalData[24] -- T_ion
+//     _physicalData[25] -- p_ion (pressure)
+//     _physicalData[26] -- a_ion (speed of sound)
+//     _physicalData[27] -- H_ion (total enthalpy)
+//     _physicalData[28] -- T_neutral
+//     _physicalData[29] -- p_neutral (pressure)
+//     _physicalData[30] -- a_neutral (speed of sound)
+//     _physicalData[31] -- H_neutral (total enthalpy)
 //
 //
 // Author: Alejandro Alvarez
@@ -195,10 +194,10 @@ protected: // data
   Framework::DataHandle<RealVector> _nstates;  
   
   /// socket for storing the Ionization Rate
-  Framework::DataSocketSource<CFreal> socket_GammaIon;
+  //Framework::DataSocketSource<CFreal> socket_GammaIon;
   
   /// socket for storing the Ionization Rate
-  Framework::DataSocketSource<CFreal> socket_GammaRec;  
+  //Framework::DataSocketSource<CFreal> socket_GammaRec;  
     
   /// pointer to the physical-chemical library
   //Common::SafePtr<Framework::PhysicalChemicalLibrary> _library;
@@ -257,6 +256,9 @@ private:
 
   /// Electrical conductivity
   CFreal _electricalResistivity;
+
+  /// Flag for spitzer resistivity
+  bool _SpitzerFlag;
   
 }; // end of class ThreeFluidMHDST2D
 

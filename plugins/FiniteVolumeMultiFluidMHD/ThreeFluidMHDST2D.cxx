@@ -28,7 +28,8 @@ MethodStrategyProvider<ThreeFluidMHDST2D<MultiFluidMHDVarSet<Maxwell2DProjection
 		       CellCenterFVMData,
 		       Framework::ComputeSourceTerm<CellCenterFVMData>,
 		       FiniteVolumeMultiFluidMHDModule>
-ThreeFluidMHDST2DProvider("ThreeFluidMHDST2D");
+ThreeFluidMHDST2DProvider("ThreeFluidMHDST2D"); //This word is used for the CFcase (check the source term)
+//example: Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = ThreeFluidMHDST2D
 
 //////////////////////////////////////////////////////////////////////////////
 
