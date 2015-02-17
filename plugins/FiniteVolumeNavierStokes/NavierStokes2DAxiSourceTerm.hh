@@ -102,9 +102,6 @@ protected: // data
   /// vector of IDs for u and v components
   std::vector<CFuint> _uvID;
   
-  /// use the gradient computed with the least square reconstruction
-  bool _useGradientLS;
-  
 }; // end of class NavierStokes2DAxiSourceTerm
 
 //////////////////////////////////////////////////////////////////////////////

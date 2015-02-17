@@ -103,6 +103,7 @@ void SA2DSourceTerm::computeSource(Framework::GeometricEntity *const element,
   const EquationSubSysDescriptor& eqData =
     PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
   const CFuint nbEqs = eqData.getNbEqsSS();
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
 
   //jacobian contribution
   const bool isPerturb = this->getMethodData().isPerturb();
@@ -153,96 +154,87 @@ void SA2DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     //cell d's
     CFreal dKdX = 0.0;
     CFreal dKdY = 0.0;
-
     CFreal dRhodX = 0.0;
     CFreal dRhodY = 0.0;
-
     CFreal dVdX = 0.0;
     CFreal dUdY = 0.0;
-
-    for (CFuint i = 0; i < nbNodesInElem; ++i) {
-      //get the face normal
-      const CFuint faceID = faces[i]->getID();
-      const CFuint startID = faceID*PhysicalModelStack::getActive()->getDim();
-      CFreal nx = normals[startID];
-      CFreal ny = normals[startID + 1];
-      if (static_cast<CFuint>( isOutward[faceID]) != elemID) {
-        nx *= -1.;
-        ny *= -1.;
+    
+    if (this->m_useGradientLS && this->m_gradientsExist) {
+      const CFuint pID = 0;
+      const CFuint uID = 1;
+      const CFuint vID = 2;
+      const CFuint TID = 3;
+      const CFuint kID = 4;
+      const CFuint start = elemID*totalNbEqs;
+      
+      dKdX = this->m_ux[start+kID];
+      dVdX = this->m_ux[start+vID];
+      dUdY = this->m_uy[start+uID];
+      dKdY = this->m_uy[start+kID];
+      
+      // AL: here we assume to have one single species
+      // p=rho*R*T  =>  dP=dRho*R*T+rho*R*dT  =>  dRho=(dP-rho*R*dT)/(R*T)
+      const CFreal avRhoR = _physicalData[EulerTerm::RHO]*R;
+      const CFreal avRhoT = _physicalData[EulerTerm::RHO]*_physicalData[EulerTerm::T];
+      dRhodX = (this->m_ux[start+pID] - avRhoR*this->m_ux[start+TID])/avRhoT;
+      dRhodY = (this->m_uy[start+pID] - avRhoR*this->m_uy[start+TID])/avRhoT;
+    } 
+    else { 
+      for (CFuint i = 0; i < nbNodesInElem; ++i) {
+	//get the face normal
+	const CFuint faceID = faces[i]->getID();
+	const CFuint startID = faceID*PhysicalModelStack::getActive()->getDim();
+	CFreal nx = normals[startID];
+	CFreal ny = normals[startID + 1];
+	if (static_cast<CFuint>( isOutward[faceID]) != elemID) {
+	  nx *= -1.;
+	  ny *= -1.;
+	}
+	
+	if (i < (nbNodesInElem - 1))
+	  {
+	    dKdX += nx*(_values(4,i) + _values(4,i+1));
+	    dKdY += ny*(_values(4,i) + _values(4,i+1));
+	    
+	    dRhodX += nx*(_rho[i] + _rho[i+1]);
+	    dRhodY += ny*(_rho[i] + _rho[i+1]);
+	    
+	    dVdX += nx*(_values(2,i) + _values(2,i+1));
+	    dUdY += ny*(_values(1,i) + _values(1,i+1));
+	  }
+	else {
+	  dKdX += nx*(_values(4,i) + _values(4,0));
+	  dKdY += ny*(_values(4,i) + _values(4,0));
+	  
+	  dRhodX += nx*(_rho[i] + _rho[0]);
+	  dRhodY += ny*(_rho[i] + _rho[0]);
+	  
+	  dVdX += nx*(_values(2,i) + _values(2,0));
+	  dUdY += ny*(_values(1,i) + _values(1,0));
+	}
       }
-
-      if (i < (nbNodesInElem - 1))
-      {
-        dKdX += nx*(_values(4,i) + _values(4,i+1));
-        dKdY += ny*(_values(4,i) + _values(4,i+1));
-
-        dRhodX += nx*(_rho[i] + _rho[i+1]);
-        dRhodY += ny*(_rho[i] + _rho[i+1]);
-
-        dVdX += nx*(_values(2,i) + _values(2,i+1));
-        dUdY += ny*(_values(1,i) + _values(1,i+1));
-      }
-      else {
-        dKdX += nx*(_values(4,i) + _values(4,0));
-        dKdY += ny*(_values(4,i) + _values(4,0));
-
-        dRhodX += nx*(_rho[i] + _rho[0]);
-        dRhodY += ny*(_rho[i] + _rho[0]);
-
-        dVdX += nx*(_values(2,i) + _values(2,0));
-        dUdY += ny*(_values(1,i) + _values(1,0));
-      }
+      dKdX *= 0.5/volumes[elemID];
+      dKdY *= 0.5/volumes[elemID];
+      dRhodX *= 0.5/volumes[elemID];
+      dRhodY *= 0.5/volumes[elemID];
+      dUdY *= 0.5/volumes[elemID];
+      dVdX *= 0.5/volumes[elemID];
     }
-    dKdX *= 0.5/volumes[elemID];
-    dKdY *= 0.5/volumes[elemID];
-    dRhodX *= 0.5/volumes[elemID];
-    dRhodY *= 0.5/volumes[elemID];
-    dUdY *= 0.5/volumes[elemID];
-    dVdX *= 0.5/volumes[elemID];
-
-    //compute PUVTK by averaging the nodes (since it is not computed in the
-    //physical data, would be generally wrong computing it from the equation
-    //of perfect gases ... think about the LTE case)
-//     CFreal avP = 0.;
-//     CFreal avU = 0.;
-//     CFreal avV = 0.;
-//     CFreal avT = 0.;
-//     CFreal avK = 0.;
-     CFreal avDist = _wallDistance[currState->getLocalID()];
-//     for (CFuint i = 0; i < nbNodesInElem; ++i) {
-//       avP += _p[i];
-//       avU += _u[i];
-//       avV += _v[i];
-//       avT += _T[i];
-//       avK += _K[i];
-//     }
-//     avP /= nbNodesInElem;
-//     avU /= nbNodesInElem;
-//     avV /= nbNodesInElem;
-//     avT /= nbNodesInElem;
-//     avK /= nbNodesInElem;
-//
-//     _avState[0] = avP;
-//     _avState[1] = avU;
-//     _avState[2] = avV;
-//     _avState[3] = avT;
-//     _avState[4] = avK;
-
-  const CFuint iK = _varSet->getModel()->getFirstScalarVar(0);
-
-  _avState[0] = _physicalData[EulerTerm::P];
-  _avState[1] = _physicalData[EulerTerm::VX];
-  _avState[2] = _physicalData[EulerTerm::VY];
-  _avState[3] = _physicalData[EulerTerm::T];
-  _avState[4] = _physicalData[iK];
-
-
-
+    
+    CFreal avDist = _wallDistance[currState->getLocalID()];
+    const CFuint iK = _varSet->getModel()->getFirstScalarVar(0);
+    
+    _avState[0] = _physicalData[EulerTerm::P];
+    _avState[1] = _physicalData[EulerTerm::VX];
+    _avState[2] = _physicalData[EulerTerm::VY];
+    _avState[3] = _physicalData[EulerTerm::T];
+    _avState[4] = _physicalData[iK];
+    
     const CFreal mu = _diffVarSet->getLaminarDynViscosityFromGradientVars(_avState);
     const CFreal rho = _diffVarSet->getDensity(_avState);
     const CFreal NIU = mu / rho;
     CFreal NIUtilda = _avState[4];
-
+    
     //make sure we don't have negative values of niutilda
     NIUtilda = max(0.,NIUtilda);
 
@@ -272,13 +264,13 @@ void SA2DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     d = max(d,1.e-10);
 
     ///Original definition of the vorticity (can be negative):
-//     const CFreal fv1 = Qsi*Qsi*Qsi / (Qsi*Qsi*Qsi + Cv1*Cv1*Cv1);
-//     const CFreal fv2 = 1. - ( Qsi /(1. + (Qsi * fv1)));
-//     const CFreal S = fabs(dVdX - dUdY);
-//     CFreal Stilda = S + (( NIUtilda/( kappa*kappa*d*d)) * fv2);
+    //     const CFreal fv1 = Qsi*Qsi*Qsi / (Qsi*Qsi*Qsi + Cv1*Cv1*Cv1);
+    //     const CFreal fv2 = 1. - ( Qsi /(1. + (Qsi * fv1)));
+    //     const CFreal S = fabs(dVdX - dUdY);
+    //     CFreal Stilda = S + (( NIUtilda/( kappa*kappa*d*d)) * fv2);
     //Clip the vorticity
-//     Stilda = max(Stilda,1.e-10);
-
+    //     Stilda = max(Stilda,1.e-10);
+    
     /// Modified vorticity definition (always positive)
     // see Ashford, G., An Unstructured Grid Generation and Adaptive Solution
     // Technique for High-Reynolds-Number Compressible Flows, Ph.D. Thesis, University of Michigan 1996.)
@@ -288,56 +280,54 @@ void SA2DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     const CFreal fv3 = ((1. + (Qsi * fv1))*(1. - fv2))/Qsi;
     const CFreal S = fabs(dVdX - dUdY);
     const CFreal Stilda = (S * fv3) + (( NIUtilda/( kappa*kappa*d*d)) * fv2);
-
+    
     CFreal r = NIUtilda / (Stilda * kappa * kappa * d * d );
-
+    
     //for the adimensionalization of the maximum value...
-//    RealVector& refDataConv = *_varSet->getModel()->getReferencePhysicalData();
-//     const CFreal rhoRef = refDataConv[EulerTerm::RHO];
-//     const CFreal Uref = refDataConv[EulerTerm::V];
-//     const CFreal Lref = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
-//     CFreal rRef = 1./(rhoRef * Uref*Uref * Lref * Lref);
+    //    RealVector& refDataConv = *_varSet->getModel()->getReferencePhysicalData();
+    //     const CFreal rhoRef = refDataConv[EulerTerm::RHO];
+    //     const CFreal Uref = refDataConv[EulerTerm::V];
+    //     const CFreal Lref = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
+    //     CFreal rRef = 1./(rhoRef * Uref*Uref * Lref * Lref);
     CFreal rRef = 1.;
-
+    
     ///Clip r to 10.0 (original article)
     // r = min(r, 10.*rRef);
     ///Clip r to 2.0 (G. Ashford)
     r = min(r, 2.*rRef);
-
+    
     const CFreal g = r + Cw2 * ( pow(r,6) - r);
     const CFreal g6 = g*g*g*g*g*g;
     const CFreal Cw3_6 = Cw3*Cw3*Cw3*Cw3*Cw3*Cw3;
     const CFreal sixth = 1./6.;
     const CFreal fw = g * pow( (1. + Cw3_6) / (g6 + Cw3_6) ,sixth);
 
-    const CFreal DU = 0.; // velocity diference point vs.trip point
+    const CFreal DU = 0.; // velocity difference point vs.trip point
     //unused // const CFreal DX = 1.; // grid spacing at the trip point
     //unused // const CFreal wt = 1.; // wall vorticity at the trip point
     //unused // const CFreal dt = 1.; // distance from point to trip point
     //unused // const CFreal gt = min(0.1,DU / (wt * DX));
-
+    
     //trip terms
-//     const CFreal ft1 = Ct1 * gt * exp( -1.0 * Ct2 * ((wt*wt)/(DU*DU)) * (d*d + gt*gt*dt*dt) );
-//     const CFreal ft2 = Ct3 * exp(-1.0 * Ct4 * Qsi*Qsi);
+    //     const CFreal ft1 = Ct1 * gt * exp( -1.0 * Ct2 * ((wt*wt)/(DU*DU)) * (d*d + gt*gt*dt*dt) );
+    //     const CFreal ft2 = Ct3 * exp(-1.0 * Ct4 * Qsi*Qsi);
     const CFreal ft1 = 0.0; //override trip term
     const CFreal ft2 = 0.0; //override trip term
-
+    
     const CFreal positivePart1 = _diffVarSet->getModel().getCoeffTau() * ( Cb2 / sigma ) * (pow(dKdX,2) + pow(dKdY,2));
     const CFreal positivePart2 = Cb1 * ( 1. - ft2 ) * Stilda * NIUtilda;
     const CFreal positivePart3 = (1./_diffVarSet->getModel().getCoeffTau()) * ft1 * pow(DU,2);
-
-    CFreal positivePart = (positivePart1 + positivePart2 + positivePart3)*rho;
+    const CFreal positivePart = (positivePart1 + positivePart2 + positivePart3)*rho;
 
     const CFreal negativePart1 = - _diffVarSet->getModel().getCoeffTau() * ( Cw1 * fw ) * ((NIUtilda*NIUtilda) / (d*d));
     const CFreal negativePart2 = _diffVarSet->getModel().getCoeffTau() * ((Cb1/(kappa*kappa))*ft2) * ((NIUtilda*NIUtilda) / (d*d));
-
     CFreal negativePart = (negativePart1 + negativePart2) * rho;
-
-    //correction for the introduction of rho in the convective flux : G
+    
+    // correction for the introduction of rho in the convective flux : G
     const CFreal G = ( 1. / sigma ) * (NIU + NIUtilda) * ( dKdX + dKdY ) * ( dRhodX + dRhodY );
     const CFreal adimCoef = _diffVarSet->getModel().getCoeffTau();
     negativePart -= G*adimCoef;
-
+    
     if(isPerturb)
     {
       cf_assert(iPerturbVar == 4);

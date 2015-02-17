@@ -30,9 +30,6 @@ NavierStokes2DAxiSourceTerm(const std::string& name) :
 
   _uvID = std::vector<CFuint>();
   setParameter("uvIDs", &_uvID);
-  
-  _useGradientLS = false;
-  setParameter("UseGradientLS", &_useGradientLS);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -135,7 +132,7 @@ void NavierStokes2DAxiSourceTerm<EULERVAR, NSVAR>::computeSource
     
     CFLog(DEBUG_MED, "NavierStokes2DAxiSourceTerm::computeSource() => uID = " << uID << ", vID = " << vID << "\n"); 
     
-    if (_useGradientLS && this->m_gradientsExist) {
+    if (this->m_useGradientLS && this->m_gradientsExist) {
       const CFuint start = elemID*totalNbEqs;
       dUdX = this->m_ux[start+uID];
       dVdR = this->m_uy[start+vID];

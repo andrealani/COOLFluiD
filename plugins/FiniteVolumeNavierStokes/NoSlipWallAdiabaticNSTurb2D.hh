@@ -77,21 +77,7 @@ public:
   virtual void setGhostStateImpl(const Framework::State& innerState, 
 				 Framework::State& ghostState);
   
-  /**
-   * Reposition the node if any of the given ghostState values is < 0
-   */
-  void repositionNode(const CFreal& innerValue, CFreal& ghostValue);
-  
-  /**
-   * This function makes a linear interpolation between the values in the
-   * inner state and the ghost state ones
-   */
-  void linearInterpolate(const CFreal& innerValue, const CFreal& wallValue, CFreal& ghostValue)
-  {
-    ghostValue = innerValue - (innerValue - wallValue)*(m_drXiXg/m_drXiXw);
-  }
-
- private:
+private:
 
   /// physical model convective variable set
   Common::SafePtr<ConvTurb2DVarSet> _varSetTurb;

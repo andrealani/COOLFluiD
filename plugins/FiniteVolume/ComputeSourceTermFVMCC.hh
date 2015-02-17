@@ -33,7 +33,13 @@ namespace COOLFluiD {
 class ComputeSourceTermFVMCC : public Framework::ComputeSourceTerm<CellCenterFVMData> {
 
 public:
-
+  
+  /**
+   * Defines the Config Option's of this class
+   * @param options a OptionList where to add the Option's
+   */
+  static void defineConfigOptions(Config::OptionList& options);
+  
   /**
    * Constructor
    */
@@ -110,6 +116,9 @@ protected:
   
   /// physical data array
   RealVector m_pdataArray;
+  
+  /// use the gradient computed with the least square reconstruction
+  bool m_useGradientLS;
   
 }; // end of class ComputeSourceTermFVMCC
 

@@ -18,6 +18,15 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
+void ComputeSourceTermFVMCC::defineConfigOptions
+(Config::OptionList& options)
+{
+  options.template addConfigOption< bool > 
+    ("UseGradientLS", "Use the gradient computed with the least square reconstruction");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
 ComputeSourceTermFVMCC::ComputeSourceTermFVMCC(const string& name) :
   ComputeSourceTerm<CellCenterFVMData>(name),
   socket_volumes("volumes"),
@@ -34,6 +43,10 @@ ComputeSourceTermFVMCC::ComputeSourceTermFVMCC(const string& name) :
   m_velIDs(),
   m_pdataArray()
 {
+  addConfigOptionsTo(this);
+  
+  m_useGradientLS = false;
+  setParameter("UseGradientLS", &m_useGradientLS);
 }
       
 //////////////////////////////////////////////////////////////////////////////
