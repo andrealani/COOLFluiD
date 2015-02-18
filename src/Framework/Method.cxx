@@ -97,9 +97,9 @@ void Method::configure ( Config::ConfigArgs& args )
 
     setParentNamespace(defaultNamespace);
   }
-
-  CFLog( NOTICE, "Configuring Method [" << getName() << "] in the Namespace: [" << getNamespace() << "]\n");
-
+  
+  CFLog(VERBOSE, "Configuring Method [" << getName() << "] in the Namespace: [" << getNamespace() << "]\n");
+  
   SafePtr<MethodData> data = getMethodData();
   if (data.isNotNull())
   {
@@ -132,13 +132,13 @@ void Method::setMethod()
   CFAUTOTRACE;
 
   CFLog(VERBOSE,"-------------------------------------------------------------\n");
-  CFLog(NOTICE,"Setup Method [" << getName() << "]\n");
-
+  CFLog(VERBOSE,"Setup Method [" << getName() << "]\n");
+  
   cf_assert(isConfigured());
   cf_assert(!isSetup());
 
   pushNamespace();
-
+  
 
   // setup parent class
   SetupObject::setup();
@@ -195,9 +195,7 @@ Common::Signal::return_t
 Method::resetup ( Common::Signal::arg_t input )
 {
   CFAUTOTRACE;
-
-//  CFLog ( NOTICE, "Method::resetup() with name [" << getName() << "]\n" );
-
+  
   Method::unsetMethod();
   Method::setMethod();
 

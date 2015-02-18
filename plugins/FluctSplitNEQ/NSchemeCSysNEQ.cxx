@@ -94,9 +94,10 @@ void NSchemeCSysNEQ::setup()
   _Uavg.resize(_nbEquations);
 
   _model = PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm().d_castTo<NEQTerm>();
-
   _model->resizePhysicalData(_pData);
 
+  _gradVar.resize(2);
+  
   // set _choiceVar to pressure if default value is required
   if (_varName == "rho")
   {
@@ -160,207 +161,181 @@ void NSchemeCSysNEQ::distribute(vector<RealVector>& residual)
   _doAct = 0.;
   _actual_iter = SubSystemStatusStack::getActive()->getNbIter();
   
-//  this->_enhance_dissipation = true;
-
   const CFuint N0 = 0;
   const CFuint N1 = 1;
   const CFuint N2 = 2;
   
-  if(true){//this->_enhance_dissipation
-
-      RealVector alpha(_nbEquations);
-      
-      CFreal alpha_max = 0.;
-
-//       for (CFuint iEqs = 0; iEqs < _nbEquations; iEqs++){
-// 
-//         const CFreal refVal = std::max(std::abs(phiT[iEqs]), std::abs(this->_sumKU[iEqs]));//??
-// //         const CFreal refVal = std::abs(phiT[iEqs]);
-// 
-//         alpha[iEqs] = refVal > 1.e-12? std::abs(this->_sumKU[iEqs] - phiT[iEqs])/refVal: 0.;
-// 
-//         assert( !(alpha[iEqs] != alpha[iEqs]) );
-//          
-//         if( alpha[iEqs] > alpha_max) alpha_max = alpha[iEqs];
-//        
-//       }//std::cout << "\nalpha_max = " << alpha_max <<  std::endl;
-// 
-//       assert(alpha_max >= 0.);assert(alpha_max <= 1.);
-
-      /*-----*/
-      
-      RealVector _Uavg = (*tStates[N0] + *tStates[N1] + *tStates[N2])/this->_nbStatesInCell;
-
-      RealVector _pData;
-
-      _model = PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm().d_castTo<NEQTerm>();
-
-      _model->resizePhysicalData(_pData);
-
-      getMethodData().getLinearVar()->computePhysicalData(_Uavg, _pData);
-      
-      const CFuint cellID = getMethodData().getDistributionData().cell->getID();
-      const CFuint dim = PhysicalModelStack::getActive()->getDim();
-
-      FluctSplit::DistributionData& ddata = getMethodData().getDistributionData();
-      const CFreal cellVolume = ddata.cell->computeVolume();
-      const CFreal char_size = std::sqrt(cellVolume);
-      
-      const CFreal a = _pData[EulerTerm::A];
-      const CFreal V = _pData[EulerTerm::V];
-
-      /* ------------------------------------------------------------------------- */
-
-      const CFuint XX = 0;
-      const CFuint YY = 1;
-
-      const CFuint nbSpecies = _model->getNbScalarVars(0);
-
-      const CFuint uID = nbSpecies;
-      const CFuint vID = nbSpecies + 1;
-
-      CFreal aux_density = 0.;
-
-      for(CFuint iSpecies = 0 ; iSpecies < nbSpecies; iSpecies++){
-        aux_density += _Uavg[iSpecies];
-      }
-
-      const CFreal rho = aux_density;
-
-
-      DataHandle<InwardNormalsData*> normals = socket_normals.getDataHandle();
-      DataHandle<CFreal> volumes             = socket_volumes.getDataHandle();
-
-      const CFreal vol = volumes[cellID];
-
-      RealVector _gradVar(2);
-
-      _gradVar[XX] = 0.;
-      _gradVar[YY] = 0.;
-
-      for(CFuint iState = 0; iState < _nbStatesInCell; iState++){
-        getMethodData().getLinearVar()->computePhysicalData(*tStates[iState], _pData);
-
-        const CFreal nodalVar = _pData[_varID];
-
-        for(CFuint iDim = 0; iDim < dim; iDim++){
-          const CFreal n_s__d = normals[cellID]->getNodalNormComp(iState,iDim);
-          _gradVar[iDim] += nodalVar*n_s__d;
-        }
-      }
-      _gradVar /= (dim*vol);
-
-      const CFreal ux = _Uavg[uID]/rho;
-      const CFreal uy = _Uavg[vID]/rho;
-
-//       cout << (_model->getReferencePhysicalData() ) << endl;
-
-      const CFreal l_OVER_UdeltaVar_ref = _length/(_speed*_deltaVar);
-
-      const CFreal shockDetector_aux = (_gradVar[XX]*ux + _gradVar[YY]*uy)*l_OVER_UdeltaVar_ref;
-
-
-      const CFreal shockDetector = std::max(0.,shockDetector_aux);
-
-      // Diameter of a circle with the same area of the element:
-      const CFreal h = 2.0*std::sqrt(static_cast<CFreal>(vol/MathTools::MathConsts::CFrealPi()));
-
-//       const CFreal theta = std::min(1., h*shockDetector*shockDetector);
-//       const CFreal theta = std::min(1., shockDetector*shockDetector);
-      CFreal theta = std::min(1., (h/_length)*shockDetector*shockDetector);
-
-      if( _freezeAdditionalDiss == 0 ) {
-        if (_last_accessed_at_iter != SubSystemStatusStack::getActive()->getNbIter()){
-          socket_ExtraDiss_active.getDataHandle() = 0;
-        }
-
-        socket_ExtraDiss_active.getDataHandle()[cellID] = theta;
-      }
-      else {
-        theta = socket_ExtraDiss_active.getDataHandle()[cellID];
-      }
-
-//       store_ExtraDiss(theta);
-
-//         if (true) {//if (_store_cells_extraDiss == 1) {
-//                 store_ExtraDiss(theta);
-//               }
-//       Needed to detect when the next timestep has just  been achieved:
-      _last_accessed_at_iter = SubSystemStatusStack::getActive()->getNbIter();
-
-      /*------*/
-        //        CFreal K_diss = 0.; // Doesn't work: T < Tinf, and then blows up!!!
-        //       CFreal K_diss = 0.01*V*char_size/3.;// Doesn't work!
-        //       CFreal K_diss = 0.05*V*char_size/3.;
-//         CFreal K_diss = 0.1*V*char_size/3.; // Works!!! But they need the Carbuncle Fix ...
-        CFreal K_diss = 0.2*V*char_size/3.; // Works!!! But they need the Carbuncle Fix ...
-//		K_diss = V*char_size;
-//         CFreal K_diss = V*char_size/3.; // Works!!! Very diffusive, not improving much w.r.t. convergence for carbuncle fix active
-        //         CFreal K_diss = V*char_size; // Doesn't work!
-
-        //       CFreal K_diss = a*char_size/3.;      // Doesn't work
-        //       CFreal K_diss = 0.1*a*char_size/3.;  // Doesn't work
-        //       CFreal K_diss = 0.05*a*char_size/3.; // Doesn't work
-
-        const CFreal u0 = std::sqrt((*tStates[N0])[uID]*(*tStates[N0])[uID] + (*tStates[N0])[vID]*(*tStates[N0])[vID]);
-        const CFreal u1 = std::sqrt((*tStates[N1])[uID]*(*tStates[N1])[uID] + (*tStates[N1])[vID]*(*tStates[N1])[vID]);
-        const CFreal u2 = std::sqrt((*tStates[N2])[uID]*(*tStates[N2])[uID] + (*tStates[N2])[vID]*(*tStates[N2])[vID]);
-
-        const CFreal uMin = std::min(std::min(u0,u1),u2);
-        const CFreal uMax = std::max(std::max(u0,u1),u2);
-
-//         CFreal K_diss = (uMax - uMin)*h/3.; //Doesn't work
-//         CFreal K_diss = (uMax - uMin)*h;//Doesn't work
-//         CFreal K_diss = 0.5*(uMax + uMin)*h;//Doesn't work
-//         CFreal K_diss = 0.1*0.5*(uMax + uMin)*h;//Doesn't work
-//         CFreal K_diss = (u0 + u1 + u2)*h/3.;
-//       CFreal K_diss = (u0 + u1 + u2)*h;//Blows up!
-//       CFreal K_diss = (u0 + u1 + u2)*char_size/3.;
-      /*------*/
-
-      residual[0] += theta*K_diss*(2.*(*tStates[N0]) - *tStates[N1] - *tStates[N2] );
-      residual[1] += theta*K_diss*(2.*(*tStates[N1]) - *tStates[N2] - *tStates[N0] );
-      residual[2] += theta*K_diss*(2.*(*tStates[N2]) - *tStates[N0] - *tStates[N1] );
-//       
-//         const CFreal rhoE0 = (*tStates[N0])[4];
-//         const CFreal rhoE1 = (*tStates[N1])[4];
-//         const CFreal rhoE2 = (*tStates[N2])[4];
-// 
-//         const CFreal rhoEMin = std::min(std::min(rhoE0,rhoE1),rhoE2);
-//         const CFreal rhoEMax = std::max(std::max(rhoE0,rhoE1),rhoE2);
-// 
-//       residual[0][4] += theta*V*char_size*(rhoE0 - 0.5*(rhoE1 + rhoE2))/3.;
-//       residual[1][4] += theta*V*char_size*(rhoE1 - 0.5*(rhoE2 + rhoE0))/3.;
-//       residual[2][4] += theta*V*char_size*(rhoE2 - 0.5*(rhoE0 + rhoE1))/3.;
-
-      /* ------------------------------------------------------------------------- */
-
-      /* ------------------------------------------------------------------------- */
-
-//       _doAct = alpha_max > 1.e-11? 1.: 0.;
-// 
-//       if( _freezeAdditionalDiss == 0 ) {
-//         if (_last_accessed_at_iter != SubSystemStatusStack::getActive()->getNbIter()){
-//           socket_ExtraDiss_active.getDataHandle() = 0;
-//         }
-// 
-//         socket_ExtraDiss_active.getDataHandle()[cellID] = _doAct;
-//       }
-//       else {
-//         _doAct = socket_ExtraDiss_active.getDataHandle()[cellID];
-//       }
-// //       Needed to detect when the next timestep has just  been achieved:
-//       _last_accessed_at_iter = SubSystemStatusStack::getActive()->getNbIter();
-// 
-//       CFreal K_diss = 0.1*V*char_size/3.; // Works!!! But they need the Carbuncle Fix ...
-// 
-//       residual[0] += _doAct*K_diss*(2.*(*tStates[N0]) - *tStates[N1] - *tStates[N2] );
-//       residual[1] += _doAct*K_diss*(2.*(*tStates[N1]) - *tStates[N2] - *tStates[N0] );
-//       residual[2] += _doAct*K_diss*(2.*(*tStates[N2]) - *tStates[N0] - *tStates[N1] );
-//       
-      /* ------------------------------------------------------------------------- */
-      
-    }// extra dissipation    
+  // RealVector alpha(_nbEquations);
+  
+  // CFreal alpha_max = 0.;
+  
+  //       for (CFuint iEqs = 0; iEqs < _nbEquations; iEqs++){
+  // 
+  //         const CFreal refVal = std::max(std::abs(phiT[iEqs]), std::abs(this->_sumKU[iEqs]));//??
+  // //         const CFreal refVal = std::abs(phiT[iEqs]);
+  // 
+  //         alpha[iEqs] = refVal > 1.e-12? std::abs(this->_sumKU[iEqs] - phiT[iEqs])/refVal: 0.;
+  // 
+  //         assert( !(alpha[iEqs] != alpha[iEqs]) );
+  //          
+  //         if( alpha[iEqs] > alpha_max) alpha_max = alpha[iEqs];
+  //        
+  //       }//std::cout << "\nalpha_max = " << alpha_max <<  std::endl;
+  // 
+  //       assert(alpha_max >= 0.);assert(alpha_max <= 1.);
+  
+  /*-----*/
+  
+  _Uavg = (*tStates[N0] + *tStates[N1] + *tStates[N2])/this->_nbStatesInCell;
+  getMethodData().getLinearVar()->computePhysicalData(_Uavg, _pData);
+  
+  const CFuint cellID = getMethodData().getDistributionData().cell->getID();
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  
+  FluctSplit::DistributionData& ddata = getMethodData().getDistributionData();
+  const CFreal cellVolume = ddata.cell->computeVolume();
+  const CFreal char_size = std::sqrt(cellVolume);
+  
+  const CFreal a = _pData[EulerTerm::A];
+  const CFreal V = _pData[EulerTerm::V];
+  
+  /* ------------------------------------------------------------------------- */
+  const CFuint nbSpecies = _model->getNbScalarVars(0);
+  const CFuint uID = nbSpecies;
+  const CFuint vID = nbSpecies + 1;
+  
+  CFreal aux_density = 0.;
+  
+  for(CFuint iSpecies = 0 ; iSpecies < nbSpecies; iSpecies++){
+    aux_density += _Uavg[iSpecies];
+  }
+  
+  const CFreal rho = aux_density;
+  
+  
+  DataHandle<InwardNormalsData*> normals = socket_normals.getDataHandle();
+  
+  DataHandle<CFreal> volumes             = socket_volumes.getDataHandle();
+  const CFreal vol = volumes[cellID];
+  
+  _gradVar[XX] = 0.;
+  _gradVar[YY] = 0.;
+  
+  for(CFuint iState = 0; iState < _nbStatesInCell; iState++){
+    getMethodData().getLinearVar()->computePhysicalData(*tStates[iState], _pData);
+    
+    const CFreal nodalVar = _pData[_varID];
+    
+    for(CFuint iDim = 0; iDim < dim; iDim++){
+      const CFreal n_s__d = normals[cellID]->getNodalNormComp(iState,iDim);
+      _gradVar[iDim] += nodalVar*n_s__d;
+    }
+  }
+  _gradVar /= (dim*vol);
+  
+  const CFreal ux = _Uavg[uID]/rho;
+  const CFreal uy = _Uavg[vID]/rho;
+  const CFreal l_OVER_UdeltaVar_ref = _length/(_speed*_deltaVar);
+  const CFreal shockDetector_aux = (_gradVar[XX]*ux + _gradVar[YY]*uy)*l_OVER_UdeltaVar_ref;
+  const CFreal shockDetector = std::max(0.,shockDetector_aux);
+  
+  // Diameter of a circle with the same area of the element:
+  const CFreal h = 2.0*std::sqrt(static_cast<CFreal>(vol/MathTools::MathConsts::CFrealPi()));
+  
+  //       const CFreal theta = std::min(1., h*shockDetector*shockDetector);
+  //       const CFreal theta = std::min(1., shockDetector*shockDetector);
+  CFreal theta = std::min(1., (h/_length)*shockDetector*shockDetector);
+  
+  if( _freezeAdditionalDiss == 0 ) {
+    if (_last_accessed_at_iter != SubSystemStatusStack::getActive()->getNbIter()){
+      socket_ExtraDiss_active.getDataHandle() = 0;
+    }
+    
+    socket_ExtraDiss_active.getDataHandle()[cellID] = theta;
+  }
+  else {
+    theta = socket_ExtraDiss_active.getDataHandle()[cellID];
+  }
+  
+  //       store_ExtraDiss(theta);
+  
+  //         if (true) {//if (_store_cells_extraDiss == 1) {
+  //                 store_ExtraDiss(theta);
+  //               }
+  //       Needed to detect when the next timestep has just  been achieved:
+  _last_accessed_at_iter = SubSystemStatusStack::getActive()->getNbIter();
+  
+  /*------*/
+  //        CFreal K_diss = 0.; // Doesn't work: T < Tinf, and then blows up!!!
+  //       CFreal K_diss = 0.01*V*char_size/3.;// Doesn't work!
+  //       CFreal K_diss = 0.05*V*char_size/3.;
+  //         CFreal K_diss = 0.1*V*char_size/3.; // Works!!! But they need the Carbuncle Fix ...
+  const CFreal K_diss = 0.2*V*char_size/3.; // Works!!! But they need the Carbuncle Fix ...
+  //		K_diss = V*char_size;
+  //         CFreal K_diss = V*char_size/3.; // Works!!! Very diffusive, not improving much w.r.t. convergence for carbuncle fix active
+  //         CFreal K_diss = V*char_size; // Doesn't work!
+  
+  //       CFreal K_diss = a*char_size/3.;      // Doesn't work
+  //       CFreal K_diss = 0.1*a*char_size/3.;  // Doesn't work
+  //       CFreal K_diss = 0.05*a*char_size/3.; // Doesn't work
+  
+  const CFreal u0 = std::sqrt((*tStates[N0])[uID]*(*tStates[N0])[uID] + (*tStates[N0])[vID]*(*tStates[N0])[vID]);
+  const CFreal u1 = std::sqrt((*tStates[N1])[uID]*(*tStates[N1])[uID] + (*tStates[N1])[vID]*(*tStates[N1])[vID]);
+  const CFreal u2 = std::sqrt((*tStates[N2])[uID]*(*tStates[N2])[uID] + (*tStates[N2])[vID]*(*tStates[N2])[vID]);
+  
+  const CFreal uMin = std::min(std::min(u0,u1),u2);
+  const CFreal uMax = std::max(std::max(u0,u1),u2);
+  
+  //         CFreal K_diss = (uMax - uMin)*h/3.; //Doesn't work
+  //         CFreal K_diss = (uMax - uMin)*h;//Doesn't work
+  //         CFreal K_diss = 0.5*(uMax + uMin)*h;//Doesn't work
+  //         CFreal K_diss = 0.1*0.5*(uMax + uMin)*h;//Doesn't work
+  //         CFreal K_diss = (u0 + u1 + u2)*h/3.;
+  //       CFreal K_diss = (u0 + u1 + u2)*h;//Blows up!
+  //       CFreal K_diss = (u0 + u1 + u2)*char_size/3.;
+  /*------*/
+  
+  residual[0] += theta*K_diss*(2.*(*tStates[N0]) - *tStates[N1] - *tStates[N2] );
+  residual[1] += theta*K_diss*(2.*(*tStates[N1]) - *tStates[N2] - *tStates[N0] );
+  residual[2] += theta*K_diss*(2.*(*tStates[N2]) - *tStates[N0] - *tStates[N1] );
+  //       
+  //         const CFreal rhoE0 = (*tStates[N0])[4];
+  //         const CFreal rhoE1 = (*tStates[N1])[4];
+  //         const CFreal rhoE2 = (*tStates[N2])[4];
+  // 
+  //         const CFreal rhoEMin = std::min(std::min(rhoE0,rhoE1),rhoE2);
+  //         const CFreal rhoEMax = std::max(std::max(rhoE0,rhoE1),rhoE2);
+  // 
+  //       residual[0][4] += theta*V*char_size*(rhoE0 - 0.5*(rhoE1 + rhoE2))/3.;
+  //       residual[1][4] += theta*V*char_size*(rhoE1 - 0.5*(rhoE2 + rhoE0))/3.;
+  //       residual[2][4] += theta*V*char_size*(rhoE2 - 0.5*(rhoE0 + rhoE1))/3.;
+  
+  /* ------------------------------------------------------------------------- */
+  
+  /* ------------------------------------------------------------------------- */
+  
+  //       _doAct = alpha_max > 1.e-11? 1.: 0.;
+  // 
+  //       if( _freezeAdditionalDiss == 0 ) {
+  //         if (_last_accessed_at_iter != SubSystemStatusStack::getActive()->getNbIter()){
+  //           socket_ExtraDiss_active.getDataHandle() = 0;
+  //         }
+  // 
+  //         socket_ExtraDiss_active.getDataHandle()[cellID] = _doAct;
+  //       }
+  //       else {
+  //         _doAct = socket_ExtraDiss_active.getDataHandle()[cellID];
+  //       }
+  // //       Needed to detect when the next timestep has just  been achieved:
+  //       _last_accessed_at_iter = SubSystemStatusStack::getActive()->getNbIter();
+  // 
+  //       CFreal K_diss = 0.1*V*char_size/3.; // Works!!! But they need the Carbuncle Fix ...
+  // 
+  //       residual[0] += _doAct*K_diss*(2.*(*tStates[N0]) - *tStates[N1] - *tStates[N2] );
+  //       residual[1] += _doAct*K_diss*(2.*(*tStates[N1]) - *tStates[N2] - *tStates[N0] );
+  //       residual[2] += _doAct*K_diss*(2.*(*tStates[N2]) - *tStates[N0] - *tStates[N1] );
+  //       
+  /* ------------------------------------------------------------------------- */
 }
 
 //////////////////////////////////////////////////////////////////////////////

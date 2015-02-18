@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Numerics_FluctSplitNEQ_StrongNoSlipWallIsothermalTCNEQ2DImpl_hh
-#define COOLFluiD_Numerics_FluctSplitNEQ_StrongNoSlipWallIsothermalTCNEQ2DImpl_hh
+#ifndef COOLFluiD_FluctSplitNEQ_StrongNoSlipWallIsothermalTCNEQ2DImpl_hh
+#define COOLFluiD_FluctSplitNEQ_StrongNoSlipWallIsothermalTCNEQ2DImpl_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -10,8 +10,6 @@
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-  
-
 
     namespace FluctSplitNEQ {
 
@@ -58,21 +56,32 @@ protected:
    */
   void executeOnTrs();
 
+  /**
+   * Apply isothermal condition
+   */
+  void computeIsothermal();
+  
+  /**
+   * Apply adiabatic condition for iter < _nbIterAdiabatic
+   */
+  void computeAdiabatic();
+    
 private:
   
   /// dimensional wall temperature
   CFreal _TWall;
-        
+  
+  /// number of iterations to run adiabatic
+  CFuint _nbIterAdiabatic;
+  
 }; // end of class StrongNoSlipWallIsothermalTCNEQ2DImpl
-
+      
 //////////////////////////////////////////////////////////////////////////////
-
+      
     } // namespace FluctSplitNEQ
-
-
 
 } // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Numerics_FluctSplitNEQ_StrongNoSlipWallIsothermalTCNEQ2DImpl_hh
+#endif // COOLFluiD_FluctSplitNEQ_StrongNoSlipWallIsothermalTCNEQ2DImpl_hh

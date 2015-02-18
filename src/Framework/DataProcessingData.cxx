@@ -94,8 +94,8 @@ void DataProcessingData::setup()
 {
   CFAUTOTRACE;
 
-  CFLog ( NOTICE, " +++ DataProcessingData::setup()\n" );  
-    
+  CFLog ( VERBOSE, " +++ DataProcessingData::setup()\n" );  
+  
   MethodData::setup();
  
   _stdTrsGeoBuilder.setup();
@@ -109,8 +109,8 @@ void DataProcessingData::unsetup()
 {
   CFAUTOTRACE;
   
-  CFLog ( NOTICE, " +++ DataProcessingData::unsetup()\n" );
-    
+  CFLog ( VERBOSE, " +++ DataProcessingData::unsetup()\n" );
+  
   _faceTrsGeoBuilder.unsetup();
   _stdTrsGeoBuilder.unsetup();
   

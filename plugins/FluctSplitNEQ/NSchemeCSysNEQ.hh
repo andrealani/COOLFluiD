@@ -128,7 +128,10 @@ protected:
 
   /// Vector holding an average of the Conservative variables
   RealVector _Uavg;
-
+  
+  /// gradiant variables
+  RealVector _gradVar;
+  
   /// pointer holding the physical model
   Common::SafePtr<COOLFluiD::Framework::MultiScalarTerm<COOLFluiD::Physics::NavierStokes::EulerTerm> > _model;  
 

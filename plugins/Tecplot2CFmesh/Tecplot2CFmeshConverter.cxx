@@ -6,6 +6,7 @@
 
 #include <iomanip>
 
+#include "Common/CFLog.hh"
 #include "Common/PE.hh"
 #include "Common/ParallelException.hh"
 #include "Common/Stopwatch.hh"
@@ -43,7 +44,6 @@ Environment::ObjectProvider<Tecplot2CFmeshConverter,
                Tecplot2CFmeshModule,
                1>
 tecplot2CFmeshConverterProvider("Tecplot2CFmesh");
-///thor2CFmeshConverterProvider("Tecplot2CFmesh");
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -128,10 +128,10 @@ void Tecplot2CFmeshConverter::readTecplotFile(CFuint nbZones,
   vector<string> vars;
   readVariables(fin, line, countl, words, vars); // VARIABLES
   for (CFuint i = 0; i < nbZones; ++i) {
-    cout << "START Reading ZONE " << i << endl;
-    cout << "isBoundary =" << isBoundary << endl;
+    CFLog(VERBOSE, "START Reading ZONE " << i << "\n");
+    CFLog(VERBOSE, "isBoundary =" << isBoundary << "\n");
     readZone(fin, countl, vars, isBoundary);
-    cout << "END   Reading ZONE " << i << endl;
+    CFLog(VERBOSE, "END   Reading ZONE " << i << "\n");
   }
   fhandle->close();
 }
@@ -151,10 +151,10 @@ void Tecplot2CFmeshConverter::readZone(ifstream& fin,
   
   // keep on reading lines till when you get a line != empty
   while (line.find("ZONE") == string::npos) {
-   cout << "line = " << line << endl; 
-   getTecplotWordsFromLine(fin, line, countl, words); // ZONE Description
+    CFLog(VERBOSE, "line = " << line << "\n"); 
+    getTecplotWordsFromLine(fin, line, countl, words); // ZONE Description
   }
-  cout << CFPrintContainer<vector<string> >("line = ", &words) << endl;
+  CFLog(VERBOSE, CFPrintContainer<vector<string> >("line = ", &words) << "\n");
   
   bool foundN = false;
   bool foundE = false;
@@ -184,42 +184,41 @@ void Tecplot2CFmeshConverter::readZone(ifstream& fin,
   m_dimension = max(m_dimension, getDim(cellType));
   const CFuint nbNodesInCell = getNbNodesInCell(cellType); 
   
-  cout << "ZONE has: nbNodes = " << nbNodes << ", nbElems = " << nbElems 
-       << ", cellType = " << cellType << ", nbNodesInCell = " << nbNodesInCell << endl;
+  CFLog(VERBOSE, "ZONE has: nbNodes = " << nbNodes << ", nbElems = " << nbElems 
+	<< ", cellType = " << cellType << ", nbNodesInCell = " << nbNodesInCell << "\n");
   
   const CFuint nbVarsToStore = (skipSolution()) ? m_dimension : (m_dimension + m_readVars.size());
   ElementTypeTecplot* elements = new ElementTypeTecplot(nbElems, nbNodesInCell, nbNodes, nbVarsToStore);
   
-  cout << "nbVarsToStore = " << nbVarsToStore << endl;	  
-
+  CFLog(VERBOSE, "nbVarsToStore = " << nbVarsToStore << "\n");	  
+  
   // mesh/solution variables
   const CFuint nbVars = vars.size(); 
   CFreal value = 0;
   
   vector<CFint> varID(nbVars, -1);
   // AL: here we assume that the first m_dimension variables are ALWAYS coordinates x,y,(z)
-  ///for (CFuint i = 0; i < m_dimension; ++i) {
-    ///varID[i] = i;
-  ///}
-  
-  // Quick'n'dirty fix by Tim
-  for (CFuint i = 0; i < nbVars; ++i) {
+  for (CFuint i = 0; i < m_dimension; ++i) {
     varID[i] = i;
   }
   
+  // Quick'n'dirty fix by Tim
+  // for (CFuint i = 0; i < nbVars; ++i) {
+  //   varID[i] = i;
+  // }
+  
   // find matching variable names and assign the corresponding variable IDs
   // but not for boundary zones
-  ///if (!isBoundary) {
-    ///for (CFuint i = m_dimension; i < nbVars; ++i) {
-      ///for (CFuint iVar = 0; iVar < m_readVars.size(); ++iVar) {
-	///if (vars[i] == m_readVars[iVar]) {
-	  ///varID[i] = iVar + m_dimension;
-	///}
-      ///}
-    ///}
-  ///}
-  
-    
+  if (!isBoundary) {
+    for (CFuint i = m_dimension; i < nbVars; ++i) {
+      for (CFuint iVar = 0; iVar < m_readVars.size(); ++iVar) {
+	if (vars[i] == m_readVars[iVar]) {
+	  varID[i] = iVar + m_dimension;
+	}
+      }
+    }
+  }
+        
   if (m_hasBlockFormat) {
     for (CFuint i = 0; i < nbVars; ++i) {
       for (CFuint n = 0; n < nbNodes; ++n) {
@@ -233,12 +232,17 @@ void Tecplot2CFmeshConverter::readZone(ifstream& fin,
   else {
     for (CFuint i = 0; i < nbNodes; ++i) {
       if (!isBoundary) { 
+	CFLog(DEBUG_MAX, "Node["<< i << "] => ");
 	for (CFuint n = 0; n < nbVars; ++n) {
 	  fin >> value;
+	  CFLog(DEBUG_MAX, "(" << n << ": ");
 	  if (varID[n] > -1) {
+	    CFLog(DEBUG_MAX, value);
 	    elements->setVar(i,varID[n], value);
 	  }
+	  CFLog(DEBUG_MAX, ") ");
 	}
+	CFLog(DEBUG_MAX, "\n");
       }
       else {
 	for (CFuint n = 0; n < nbVars; ++n) { 
@@ -257,7 +261,7 @@ void Tecplot2CFmeshConverter::readZone(ifstream& fin,
     for (CFuint n = 0; n < nbNodesInCell; ++n) {
       fin >> (*elements)(i,n);
       if ((*elements)(i,n) > elements->getNbNodes()) {
-	cout << (*elements)(i,n) << " > " << elements->getNbNodes() << endl;
+	CFLog(WARN, (*elements)(i,n) << " > " << elements->getNbNodes() << "\n");
 	assert((*elements)(i,n) < elements->getNbNodes());
       }
     }
@@ -334,16 +338,16 @@ void Tecplot2CFmeshConverter::writeContinuousTrsData(ofstream& fout)
 
 void Tecplot2CFmeshConverter::writeDiscontinuousTrsData(ofstream& fout)
 {
-  cout << "Tecplot2CFmeshConverter::writeDiscontinuousTrsData() START" << endl;
+  CFLog(VERBOSE, "Tecplot2CFmeshConverter::writeDiscontinuousTrsData() START\n");
   
   if (m_dimension == DIM_2D) {renumberTRSData<2>();}
   if (m_dimension == DIM_3D) {renumberTRSData<3>();}
   
-  cout << "Tecplot2CFmeshConverter::writeDiscontinuousTrsData() 1" << endl;
+  CFLog(VERBOSE, "Tecplot2CFmeshConverter::writeDiscontinuousTrsData() 1\n");
   
   buildBFaceNeighbors();
   
-  cout << "Tecplot2CFmeshConverter::writeDiscontinuousTrsData() 2" << endl;
+  CFLog(VERBOSE, "Tecplot2CFmeshConverter::writeDiscontinuousTrsData() 2\n");
   
   const CFuint startTRS = m_nbElemTypes;
   const CFuint nbTRSs = m_elementType.size() - startTRS;
@@ -372,9 +376,9 @@ void Tecplot2CFmeshConverter::writeDiscontinuousTrsData(ofstream& fout)
     }
   }
   
-  cout << "Tecplot2CFmeshConverter::writeDiscontinuousTrsData() END" << endl;
+  CFLog(VERBOSE, "Tecplot2CFmeshConverter::writeDiscontinuousTrsData() END\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void Tecplot2CFmeshConverter::adjustToCFmeshNodeNumbering() 
@@ -396,8 +400,11 @@ void Tecplot2CFmeshConverter::offsetNumbering(CFint offset)
 void Tecplot2CFmeshConverter::readFiles(const boost::filesystem::path& filepath)
 {
   try {
-    if (m_nbElemTypes > 1) {cout << "No hybrid mesh support for now!" << endl; abort();}
-    cout << CFPrintContainer<vector<string> >("surfaces to be read = ", &m_surfaceTRS) << endl;
+    if (m_nbElemTypes > 1) {
+      CFLog(WARN, "No hybrid mesh support for now!\n"); abort();
+    }
+    
+    CFLog(VERBOSE, CFPrintContainer<vector<string> >("surfaces to be read = ", &m_surfaceTRS) <<  "\n");
     
     readTecplotFile(m_nbElemTypes, filepath, getOriginExtension(), false);
     readTecplotFile(m_surfaceTRS.size(), filepath, ".surf.plt", true);
@@ -520,7 +527,7 @@ void Tecplot2CFmeshConverter::writeDiscontinuousElements(ofstream& fout)
 {
   CFAUTOTRACE;
   
-  cout << "Tecplot2CFmeshConverter::writeDiscontinuousElements() START" << endl;
+  CFLog(VERBOSE, "Tecplot2CFmeshConverter::writeDiscontinuousElements() START\n");
   
   SafePtr<ElementTypeTecplot> elements = m_elementType[0];
   const CFuint nbNodes = elements->getNbNodes();  
@@ -577,9 +584,9 @@ void Tecplot2CFmeshConverter::writeDiscontinuousElements(ofstream& fout)
     }
   } 
   
-  cout << "Tecplot2CFmeshConverter::writeDiscontinuousElements() END" << endl;
+  CFLog(VERBOSE, "Tecplot2CFmeshConverter::writeDiscontinuousElements() END\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void Tecplot2CFmeshConverter::writeDiscontinuousStates(ofstream& fout)
@@ -670,17 +677,17 @@ void Tecplot2CFmeshConverter::readVariables(ifstream& fin,
 					    vector<string>& vars)
 {
   getTecplotWordsFromLine(fin, line, lineNb, words); // VARIABLES
-  // cout << CFPrintContainer<vector<string> >("VARIABLES 1 = ", &words) << endl;
-  cout << "VARIABLES = ";
+  
+  CFLog(VERBOSE, "VARIABLES = ");
   for (CFuint i = 0; i < words.size(); ++i) {
     if (words[i].find('=')==string::npos && words[i].find("VARIABLES")==string::npos) {
-      cout << words[i] <<  " ";
+      CFLog(VERBOSE, words[i] << " ");
       
       // store all the variable names
       vars.push_back(words[i]);
     }
   }
-  cout << endl;
+  CFLog(VERBOSE, "\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -780,7 +787,7 @@ void Tecplot2CFmeshConverter::buildBFaceNeighbors()
   }
   
   if (countNeighborIDs != nbBFaces) {
-    cout << "countNeighborIDs != nbBFaces => " << countNeighborIDs << " != " << nbBFaces << endl; 
+    CFLog(WARN, "countNeighborIDs != nbBFaces => " << countNeighborIDs << " != " << nbBFaces << "\n"); 
   }
 }
 
