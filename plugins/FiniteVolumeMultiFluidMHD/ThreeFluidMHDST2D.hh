@@ -184,6 +184,12 @@ public:
  *   * Compute the Collisional momentum and energy source terms
  *     */
   void computeSpitzerResistivity();
+
+ /*
+ * Compute the gravity momentum  
+ */
+  void computegravityTerms();
+
   
 protected: // data
   
@@ -232,10 +238,22 @@ protected: // data
   ///Vector storing the Collisional Momentum Source term
   RealVector _collMomentumSource;  
   
+  ///YGM: Vector storing the Charge Exchage Source terms in the Momentum eqn
+  RealVector _chargexMomentumSource;  
+  
+  ///YGM: Vector storing the Charge Exchage Source terms in the Energy eqn
+  RealVector _chargexEnergySource;  
+
+  ///YGM: Gravity Momentum Source term
+  RealVector _gravityMomentumSource;  
+
+  ///YGM: Gravity Energy Source term
+  RealVector _gravityEnergySource;
+  
   ///Vector storing the Collisional Energy Source term
   RealVector _collEnergySource;  
   
-  ///Vector storing the Collisional Energy Source term
+  ///Vector storing the Reaction Energy Source term
   RealVector _ReactEnergySource;
   
   ///Vector storing the total magnetic Field
