@@ -129,7 +129,7 @@ void NoSlipWallAdiabaticNSTurb2D::setGhostStateImpl
   this->linearInterpolate(innerState[1], _xWallVelocity, ghostState[1]);
   this->linearInterpolate(innerState[2], _yWallVelocity, ghostState[2]);
   ghostState[3] = innerState[3];
-  ghostState[4] = m_ghostK;
+  ghostState[4] = m_ghostK; 
   
   const CFuint nbTurbVars = _varSetTurb->getModel()->getNbScalarVars(0);
   if(nbTurbVars == 2){

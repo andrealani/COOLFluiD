@@ -40,9 +40,9 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 Environment::ObjectProvider<Tecplot2CFmeshConverter,
-               MeshFormatConverter,
-               Tecplot2CFmeshModule,
-               1>
+			    MeshFormatConverter,
+			    Tecplot2CFmeshModule,
+			    1>
 tecplot2CFmeshConverterProvider("Tecplot2CFmesh");
 
 //////////////////////////////////////////////////////////////////////////////

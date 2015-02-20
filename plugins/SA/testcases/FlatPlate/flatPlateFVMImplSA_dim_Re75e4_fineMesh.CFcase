@@ -12,7 +12,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -5.5200846
+### Residual = -5.5535108
 
 # This is a case at Reynolds=750.000
 
@@ -119,9 +119,9 @@ Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
 Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 
-Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUpTurb2D
-#Roe
-Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpTurb2D.machInf = 0.1
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
+#AUSMPlusUpTurb2D
+#Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpTurb2D.machInf = 0.1
 
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Puvt
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
@@ -133,7 +133,7 @@ Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
 Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMove
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TRSName = NoSlipWall
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.ValuesIdx = 1 2 4
-Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.Values = 0. 0. 0.
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.Values = 0. 0. 1e-8
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TrsPriorityList = \
 	SlipWall NoSlipWall Inlet Outlet
 
@@ -142,8 +142,8 @@ Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
 #Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
 
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = SA2DSourceTerm
-#Simulator.SubSystem.CellCenterFVM.Data.SA2DSourceTerm.UseGradientLS = true
-#Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
+Simulator.SubSystem.CellCenterFVM.Data.SA2DSourceTerm.UseGradientLS = true
+Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
 
 Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField
@@ -166,7 +166,7 @@ Simulator.SubSystem.CellCenterFVM.Mirror.ZeroGradientFlags = 1 0 0 1 1
 
 Simulator.SubSystem.CellCenterFVM.Wall.applyTRS = NoSlipWall
 Simulator.SubSystem.CellCenterFVM.Wall.ZeroGradientFlags = 1 0 0 1 0
-Simulator.SubSystem.CellCenterFVM.Wall.KWall = 0.
+Simulator.SubSystem.CellCenterFVM.Wall.KWall = 1e-8
 
 Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS = Inlet
 Simulator.SubSystem.CellCenterFVM.BcInlet.Vx = 121.151

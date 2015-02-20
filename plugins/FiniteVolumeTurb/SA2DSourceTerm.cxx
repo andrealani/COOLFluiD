@@ -168,18 +168,19 @@ void SA2DSourceTerm::computeSource(Framework::GeometricEntity *const element,
       const CFuint start = elemID*totalNbEqs;
       
       dKdX = this->m_ux[start+kID];
+      dKdY = this->m_uy[start+kID];
       dVdX = this->m_ux[start+vID];
       dUdY = this->m_uy[start+uID];
-      dKdY = this->m_uy[start+kID];
       
       // AL: here we assume to have one single species
       // p=rho*R*T  =>  dP=dRho*R*T+rho*R*dT  =>  dRho=(dP-rho*R*dT)/(R*T)
       const CFreal avRhoR = _physicalData[EulerTerm::RHO]*R;
-      const CFreal avRhoT = _physicalData[EulerTerm::RHO]*_physicalData[EulerTerm::T];
-      dRhodX = (this->m_ux[start+pID] - avRhoR*this->m_ux[start+TID])/avRhoT;
-      dRhodY = (this->m_uy[start+pID] - avRhoR*this->m_uy[start+TID])/avRhoT;
+      const CFreal RT = R*_physicalData[EulerTerm::T];
+      dRhodX = (this->m_ux[start+pID] - avRhoR*this->m_ux[start+TID])/RT;
+      dRhodY = (this->m_uy[start+pID] - avRhoR*this->m_uy[start+TID])/RT;
     } 
     else { 
+      // AL: old implementation, to be removed
       for (CFuint i = 0; i < nbNodesInElem; ++i) {
 	//get the face normal
 	const CFuint faceID = faces[i]->getID();
@@ -191,17 +192,16 @@ void SA2DSourceTerm::computeSource(Framework::GeometricEntity *const element,
 	  ny *= -1.;
 	}
 	
-	if (i < (nbNodesInElem - 1))
-	  {
-	    dKdX += nx*(_values(4,i) + _values(4,i+1));
-	    dKdY += ny*(_values(4,i) + _values(4,i+1));
-	    
-	    dRhodX += nx*(_rho[i] + _rho[i+1]);
-	    dRhodY += ny*(_rho[i] + _rho[i+1]);
-	    
-	    dVdX += nx*(_values(2,i) + _values(2,i+1));
-	    dUdY += ny*(_values(1,i) + _values(1,i+1));
-	  }
+	if (i < (nbNodesInElem - 1)) {
+	  dKdX += nx*(_values(4,i) + _values(4,i+1));
+	  dKdY += ny*(_values(4,i) + _values(4,i+1));
+	  
+	  dRhodX += nx*(_rho[i] + _rho[i+1]);
+	  dRhodY += ny*(_rho[i] + _rho[i+1]);
+	  
+	  dVdX += nx*(_values(2,i) + _values(2,i+1));
+	  dUdY += ny*(_values(1,i) + _values(1,i+1));
+	}
 	else {
 	  dKdX += nx*(_values(4,i) + _values(4,0));
 	  dKdY += ny*(_values(4,i) + _values(4,0));

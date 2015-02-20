@@ -33,15 +33,16 @@ void NavierStokesSAPvt<BASE>::setGradientVars(const std::vector<RealVector*>& st
 						  const CFuint stateSize)
 {
   const CFuint nbValues = values.nbRows();
-  const CFuint KID = this->_TID+1;
+  // AL: check this !! why computing k*sqrt(rho) here ???? 
+  //  const CFuint KID = this->_TID+1;
   for (CFuint i = 0; i < nbValues; ++i) {
     for (CFuint j = 0; j < stateSize; ++j) {
       values(i,j) = (*states[j])[i];
       
-      if (i == KID) {
-        const CFreal rho = getDensity(*states[j]);
-        values(i,j) *= std::sqrt(rho);
-      }
+      // if (i == KID) {
+      //   const CFreal rho = getDensity(*states[j]);
+      //   values(i,j) *= std::sqrt(rho);
+      // }
     }
   }
 }
