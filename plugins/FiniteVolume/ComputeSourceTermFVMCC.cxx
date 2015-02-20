@@ -21,7 +21,7 @@ namespace COOLFluiD {
 void ComputeSourceTermFVMCC::defineConfigOptions
 (Config::OptionList& options)
 {
-  options.template addConfigOption< bool > 
+  options.addConfigOption< bool > 
     ("UseGradientLS", "Use the gradient computed with the least square reconstruction");
 }
       
