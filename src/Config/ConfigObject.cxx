@@ -335,12 +335,15 @@ void ConfigObject::processParentArgs ( ConfigArgs& args )
   if ( Common::PE::IsInitialised() )
     rank = Common::PE::GetPE().GetRank();
 
-  std::string filename;
-  filename += "config-p" + StringOps::to_str(rank) + ".log";
-  ofstream confOut(filename.c_str(),ios_base::app);
-  confOut << "### " << getNestName() << "\n";
-  confOut << procargs.first.str();
-  confOut.close();
+  // only rak 0 writes the configuration file
+  if ( rank == 0) {
+    std::string filename;
+    filename += "config-p" + StringOps::to_str(rank) + ".log";
+    ofstream confOut(filename.c_str(),ios_base::app);
+    confOut << "### " << getNestName() << "\n";
+    confOut << procargs.first.str();
+    confOut.close();
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
