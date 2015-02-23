@@ -38,6 +38,20 @@ Simulator.SubSystem.DataProcessing1.Names = WallDistance
 Simulator.SubSystem.DataProcessing1.WallDistance.BoundaryTRS = NoSlipWall
 Simulator.SubSystem.DataProcessing1.WallDistance.OutputFile = distances.dat
 
+Simulator.SubSystem.DataPostProcessing = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
+Simulator.SubSystem.DataProcessing2.Comds = RMS
+Simulator.SubSystem.DataProcessing2.Names = RMS
+Simulator.SubSystem.DataProcessing2.Data.updateVar = Puvt
+Simulator.SubSystem.DataProcessing2.RMS.OutputFile = rms.plt
+Simulator.SubSystem.DataProcessing2.RMS.SaveRate = 100
+Simulator.SubSystem.DataProcessing2.RMS.CompRate = 1
+Simulator.SubSystem.DataProcessing2.RMS.AppendTime = false
+Simulator.SubSystem.DataProcessing2.RMS.AppendIter = true
+Simulator.SubSystem.DataProcessing2.RMS.Restart = false
+Simulator.SubSystem.DataProcessing2.RMS.nbSteps = 0
+Simulator.SubSystem.DataProcessing2.RMS.rmsVars = rho p  
+
 # Post process the data to compute the skin friction and y+
 #Simulator.SubSystem.DataPostProcessing = DataProcessing
 #Simulator.SubSystem.DataPostProcessingNames = DataProcessing2b

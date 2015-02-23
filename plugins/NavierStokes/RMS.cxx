@@ -13,7 +13,6 @@
 #include "Framework/PathAppender.hh"
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/MethodCommandProvider.hh"
-#include "Framework/NamespaceSwitcher.hh"
 #include "Framework/ConvectiveVarSet.hh"
 
 #include "NavierStokes/NavierStokes.hh"
@@ -45,7 +44,6 @@ rmsProvider("RMS"); //it is the name that used for the registration. It is "conn
 
 void RMS::defineConfigOptions(Config::OptionList& options)
 {
-  options.addConfigOption< std::string >("VarType","Name of the variable set.");
   options.addConfigOption< std::string >("OutputFile","Name of Output File.");
   options.addConfigOption< CFuint >("SaveRate","Rate for saving the output file with aerodynamic coefficients.");
   options.addConfigOption< CFuint >("CompRate","Rate for saving the output file with aerodynamic coefficients.");
@@ -101,10 +99,6 @@ RMS::RMS(const std::string& name)
   
   m_rmsOpt = std::vector<std::string>();
   setParameter("rmsVars",&m_rmsOpt);
-  
-  m_varType = "Cons";
-  setParameter("VarType",&m_varType);
- 
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -119,6 +113,14 @@ std::vector<Common::SafePtr<BaseDataSocketSink> > RMS::needsSockets()
 { 
   std::vector<Common::SafePtr<BaseDataSocketSink> > result; // storage the pointers of the local data
   result.push_back(&socket_states); // vector with pointers showing the states P[rho U V W p...]
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+std::vector<Common::SafePtr<BaseDataSocketSource> > RMS::providesSockets()
+{
+  std::vector<Common::SafePtr<BaseDataSocketSource> > result;
   result.push_back(&socket_rms); // vector with pointers showing the rms
   return result;
 }
@@ -129,9 +131,7 @@ std::vector<Common::SafePtr<BaseDataSocketSink> > RMS::needsSockets()
 void RMS::setup()
 {
   CFAUTOTRACE;
- DataProcessingCom::setup(); // first call setup of parent class
-
-  m_varSet->setup(); //set up private data from the ConvectiveVarSet.hh
+  DataProcessingCom::setup(); // first call setup of parent class
   
   // with this command the variable states gets access to the whole states
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
@@ -141,6 +141,7 @@ void RMS::setup()
   
   /// it is the vector where our results will be stored
   DataHandle<CFreal> rms = socket_rms.getDataHandle();
+  
   /// physical data array 
   PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm()->
     resizePhysicalData(m_physicalData);
@@ -149,82 +150,43 @@ void RMS::setup()
   m_rmsresult.resize(totstates,0.0); // it allocates the correct size for the vector of the result
   
   m_nbStep = m_InitSteps;
-
-
 }
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void RMS::execute()
 {
   Common::SafePtr<SubSystemStatus> ssys_status = SubSystemStatusStack::getActive();
-
-  const CFuint iter = ssys_status->getNbIter();
-
-    ///FIXME not needed since rms has already initialize with the data 
-    //because of the command DataHandle<CFreal> rms = socket_rms.getDataHandle(); 
   
-   if (iter == 0){ 
-     if (m_restart){ // this is executed when we restast an application
-        DataHandle<CFreal> rms = socket_rms.getDataHandle();
-        DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
-        m_nbStep = m_InitSteps;
-	 const CFuint nbOpts =  m_rmsOpt.size();
-         const CFuint nbstates = states.size();
-	 const CFuint totstates = nbstates*nbOpts;
-         for (CFuint iState = 0; iState < nbstates; ++iState) {
-       
-	  for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++) {
-	  
-	     m_rmsresult[iState*nbOpts+iOpt] = rms[iState*nbOpts+iOpt];
-	    }
-	  }
-      
-    /* if (m_rmsOpt[iOpt] == "rho")
-     {rho = rms[iState*nbOpts+iOpt]; 
+  const CFuint iter = ssys_status->getNbIter();
+  
+  ///FIXME not needed since rms has already initialize with the data 
+  //because of the command DataHandle<CFreal> rms = socket_rms.getDataHandle(); 
+  
+  if (iter == 0){ 
+    if (m_restart){ // this is executed when we restast an application
+      DataHandle<CFreal> rms = socket_rms.getDataHandle();
+      DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+      m_nbStep = m_InitSteps;
+      const CFuint nbOpts =  m_rmsOpt.size();
+      const CFuint nbstates = states.size();
+      const CFuint totstates = nbstates*nbOpts;
+      for (CFuint iState = 0; iState < nbstates; ++iState) {
+	for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++) {
+	  m_rmsresult[iState*nbOpts+iOpt] = rms[iState*nbOpts+iOpt];
+	}
       }
-     
-     else if (m_rmsOpt[iOpt] == "u")
-     {u = rms[iState*nbOpts+iOpt] ; 
-      }
-     
-     else if (m_rmsOpt[iOpt] == "v")
-     {v = rms[iState*nbOpts+iOpt] ; 
-      }
-     
-     else if (m_rmsOpt[iOpt] == "w")
-     {w = rms[iState*nbOpts+iOpt] ; 
-      }
-     
-     else if (m_rmsOpt[iOpt] == "p")
-     {p = rms[iState*nbOpts+iOpt] ; 
-      }
-     
-     else if (m_rmsOpt[iOpt] == "rhoE")
-     {rms[iState*nbOpts+iOpt] += (rho*E); 
-      }
-     
-     else if (m_rmsOpt[iOpt] == "devU")
-     {rms[iState*nbOpts+iOpt] += u; // decouple the need to calculate also the ubar
-      rms[iState*nbOpts+iOpt] += (u - rms[iState*nbOpts+iOpt]/m_nbStep)*(u - rms[iState*nbOpts+iOpt]/m_nbStep); 
-      }
-     
-     //else ///put an error here
-      
-    } // iOpt for
-     } */
     }
-   } 
-
+  } 
+  
   // compute global integrated coefficients
   if(!(iter % m_compRateRMS)){
     if(!(iter % m_saveRateRMS))  { computeRMS(true); }
     else{ computeRMS(false); }
-  }
-  
-  
+  }  
 }
-
-
+      
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void RMS::computeRMS(bool save)
@@ -233,17 +195,16 @@ void RMS::computeRMS(bool save)
   const CFreal time = subSysStatus->getCurrentTime(); 
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
   DataHandle<CFreal> rms = socket_rms.getDataHandle();
- m_nbStep += 1;
- const CFuint nbstates = states.size(); // number of cells
- const CFuint nbOpts =  m_rmsOpt.size(); // number of user options
-
- for (CFuint iState = 0; iState < nbstates; ++iState) {
-    const CFreal x = (states[iState]->getCoordinates())[XX]; 
-    const CFreal y = (states[iState]->getCoordinates())[YY];
-    const CFreal z = (states[iState]->getCoordinates())[ZZ];
+  m_nbStep += 1;
+  const CFuint nbstates = states.size(); // number of cells
+  const CFuint nbOpts =  m_rmsOpt.size(); // number of user options
+  
+  SafePtr<ConvectiveVarSet> varSet = getMethodData().getUpdateVarSet();
+  
+  for (CFuint iState = 0; iState < nbstates; ++iState) {
     State& curr_state = *states[iState]; // a pointer to current state
-    
-    m_varSet->computePhysicalData(curr_state, m_physicalData); // compute the [P U V W..] of the current state
+   
+    varSet->computePhysicalData(curr_state, m_physicalData); // compute the [P U V W..] of the current state
     
     CFreal rho = m_physicalData[EulerTerm::RHO];
     CFreal u = m_physicalData[EulerTerm::VX];
@@ -251,7 +212,6 @@ void RMS::computeRMS(bool save)
     CFreal w = m_physicalData[EulerTerm::VZ];
     CFreal p = m_physicalData[EulerTerm::P];
     CFreal E = m_physicalData[EulerTerm::E];
-    
     
     for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++) {
       
@@ -276,9 +236,10 @@ void RMS::computeRMS(bool save)
       }
      
      else if (m_rmsOpt[iOpt] == "p")
-     {m_rmsresult[iState*nbOpts+iOpt] += p;
-      rms[iState*nbOpts+iOpt] = m_rmsresult[iState*nbOpts+iOpt];
-      }
+       {
+	 m_rmsresult[iState*nbOpts+iOpt] += p;
+	 rms[iState*nbOpts+iOpt] = m_rmsresult[iState*nbOpts+iOpt];
+       }
      
      else if (m_rmsOpt[iOpt] == "rhoE")
      {m_rmsresult[iState*nbOpts+iOpt] += (rho*E);
@@ -298,39 +259,31 @@ void RMS::computeRMS(bool save)
  } // istate for 
 
 
-  if (save) 
-    { 
-      prepareOutputFileRMS();
-       cf_assert(m_fileRMS->isopen());
-      ofstream& fout = m_fileRMS->get();
-      const CFuint dim = PhysicalModelStack::getActive()->getDim(); // dimension of the problem
-      CFreal theta;
-      for (CFuint iState = 0; iState < nbstates; ++iState) {
-	const CFreal x = (states[iState]->getCoordinates())[XX];
-	const CFreal y = (states[iState]->getCoordinates())[YY];
-	const CFreal z = (states[iState]->getCoordinates())[ZZ];
-	
-
-	fout
-	  << x << " "
-	  << y << " ";
-	if (dim ==3)
-      { fout << z << " ";}
+  if (save)  { 
+    prepareOutputFileRMS();
+    cf_assert(m_fileRMS->isopen());
+    ofstream& fout = m_fileRMS->get();
+    const CFuint dim = PhysicalModelStack::getActive()->getDim(); // dimension of the problem
+    CFreal theta;
+    for (CFuint iState = 0; iState < nbstates; ++iState) {
+      const CFreal x = (states[iState]->getCoordinates())[XX];
+      const CFreal y = (states[iState]->getCoordinates())[YY];
       
-     for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++)
-     {fout << m_rmsresult[iState*nbOpts+iOpt]/m_nbStep << " "; }
-     
-    
-      fout << m_nbStep    << "\n ";
- 
-    
+      fout << x << " " << y << " ";
+      if (dim ==3) {
+	const CFreal z = (states[iState]->getCoordinates())[ZZ]; 
+	fout << z << " ";
       }
-      m_fileRMS->close();
-    } 
-    
-
-}
-  
+      
+      for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++) {
+	fout << m_rmsresult[iState*nbOpts+iOpt]/m_nbStep << " "; 
+      }
+      
+      fout << m_nbStep    << "\n ";
+    }
+    m_fileRMS->close();
+  } 
+}  
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -344,57 +297,42 @@ void RMS::unsetup()
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
 void RMS::prepareOutputFileRMS()
 {
   using boost::filesystem::path;
-
+  
   cf_assert (!m_fileRMS->isopen());
   path file = Environment::DirPaths::getInstance().getResultsDir() / path (m_nameOutputFileRMS);
   file = PathAppender::getInstance().appendAllInfo(file, m_appendIter, m_appendTime );
   const CFuint dim = PhysicalModelStack::getActive()->getDim(); // dimension of the problem
   const CFuint nbOpts =  m_rmsOpt.size(); // number of user options
-
-
+  
   ofstream& fout = m_fileRMS->open(file);
-
-
-      fout << "TITLE  =  RMS in the whole field" << "\n";
-      fout << "VARIABLES = x y ";
-      
-      if (dim == 3)
-    { fout << "z ";}
-
-  for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++)
-     {fout << m_rmsOpt[iOpt] << " "; }
-     
-      fout << "m_nbStep " << "\n";
+  
+  fout << "TITLE  =  RMS in the whole field" << "\n";
+  fout << "VARIABLES = x y ";
+  if (dim == 3) { fout << "z ";}
+  
+  for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++) {
+    fout << m_rmsOpt[iOpt] << " "; 
+  }
+  
+  fout << "m_nbStep " << "\n";
   
   //fout    rhobar Ubar Vbar Wbar pbar rhoEbar devU m_nbStep " << "\n";
-  
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
+      
 void RMS::configure ( Config::ConfigArgs& args )
 {
   DataProcessingCom::configure( args );
-  std::string name = getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
-  
-  Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-  ///@todo THIS NAME HAS TO COME AS AN OPTION
-  ///@todo if this should also be done for diffusive terms. Try to do with the OTHERWAY to avoid if and loops
-  std::string varSetName = PhysicalModelStack::getActive()->getConvectiveName()+m_varType; //"Euler3DCons"; 
-  
-  m_varSet.reset((Environment::Factory<ConvectiveVarSet>::getInstance().getProvider(varSetName)->
-		  create(physModel->getImplementor()->getConvectiveTerm())));
-  
-  cf_assert(m_varSet.isNotNull());
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
- } // namespace NavierStokes
+    } // namespace NavierStokes
 
   } // namespace Physics
 

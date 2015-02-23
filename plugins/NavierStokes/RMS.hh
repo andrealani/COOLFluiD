@@ -14,6 +14,7 @@
 #include "Framework/DataProcessingData.hh"
 #include "Framework/DynamicDataSocketSet.hh"
 #include "Framework/DataSocketSink.hh"
+#include "Framework/DataSocketSource.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -65,6 +66,12 @@ public: // functions
  needsSockets();
 
   /**
+   * Returns the DataSocket's that this command provides as sources
+   * @return a vector of SafePtr with the DataSockets
+   */
+  virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > providesSockets();
+  
+  /**
    * Set up private data and data of the aggregated classes
    * in this command before processing phase
    */
@@ -102,7 +109,7 @@ private: // data
   Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > socket_states;
   
   /// socket for stencil
-  Framework::DataSocketSink<CFreal> socket_rms;
+  Framework::DataSocketSource<CFreal> socket_rms;
   
   /// Output File for Wall Values
   Common::SelfRegistPtr<Environment::FileHandlerOutput> m_fileRMS;
@@ -113,14 +120,7 @@ private: // data
   
   /// Name of Output File where to write the coeficients.
   std::string m_nameOutputFileRMS;
-  std::string m_varType;
-
-  
-  /// physical model (in conservative variables)
-  Common::SelfRegistPtr<Framework::ConvectiveVarSet> m_varSet;
-  
-  ///@todo create physical model (in diffusion/turbulnt variables)
-  
+      
   /// physical data array 
   RealVector m_physicalData;
   
