@@ -124,7 +124,7 @@ std::vector<Common::SafePtr<BaseDataSocketSource> > RMS::providesSockets()
   result.push_back(&socket_rms); // vector with pointers showing the rms
   return result;
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 // it runs during the phase of global setup and allocate memory for this class, namely rms
@@ -290,10 +290,8 @@ void RMS::computeRMS(bool save)
 void RMS::unsetup()
 { 
   DataHandle<CFreal> rms = socket_rms.getDataHandle();
-
   rms.resize(0);
-
-
+  m_rmsresult.resize(0);
 }
 
 //////////////////////////////////////////////////////////////////////////////
