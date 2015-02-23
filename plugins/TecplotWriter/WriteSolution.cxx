@@ -1120,8 +1120,8 @@ void WriteSolution::writeToFileStream(std::ofstream& fout)
             const Node& currNode = *nodes[nodeID];
             // node has to be printed with the right length
             for (CFuint iDim = 0; iDim < dim; ++iDim) {
-              fout << setw(20) << fixed << setprecision(12)
-                  << currNode[iDim]*refL << " ";
+              fout.precision(14); fout.setf(ios::scientific,ios::floatfield);
+              fout << currNode[iDim]*refL << " ";
             }
 	    
             const RealVector& currState = *nodalStates.getState(nodeID);
@@ -1140,13 +1140,15 @@ void WriteSolution::writeToFileStream(std::ofstream& fout)
               // dimensionalize the solution
               updateVarSet->setDimensionalValuesPlusExtraValues
                 (tempState, dimState, extraValues);
+	      fout.precision(14); fout.setf(ios::scientific,ios::floatfield);
               fout << dimState << " " << extraValues << "\n";
             }
             else
             {
               // set other useful (dimensional) physical quantities
               updateVarSet->setDimensionalValues(tempState, dimState);
-              fout << dimState << "\n";
+	      fout.precision(14); fout.setf(ios::scientific,ios::floatfield);
+	      fout << dimState << "\n";
             }
 
             datahandle_output->printStateData(fout,stateID);
@@ -1344,7 +1346,8 @@ void WriteSolution::writeBoundarySurface()
 	      const CFuint nodeID = *itr;
 	      const Node& currNode = *nodes[nodeID];
 	      for (CFuint iDim = 0; iDim < dim; ++iDim) {
-		      fout << setw(20) << fixed << setprecision(12)  << currNode[iDim]*refL << " ";
+		fout.precision(14); fout.setf(ios::scientific,ios::floatfield);
+		fout << currNode[iDim]*refL << " ";
 	      }
 	      
 	      const RealVector& currState = *nodalStates.getState(nodeID);
@@ -1361,11 +1364,13 @@ void WriteSolution::writeBoundarySurface()
 		  // dimensionalize the solution
 		  updateVarSet->setDimensionalValuesPlusExtraValues
 		    (tempState, dimState, extraValues);
+		  fout.precision(14); fout.setf(ios::scientific,ios::floatfield);
 		  fout << dimState << " " << extraValues << "\n";
 		}
 		else {
 		  // set other useful (dimensional) physical quantities
 		  updateVarSet->setDimensionalValues(tempState, dimState);
+		  fout.precision(14); fout.setf(ios::scientific,ios::floatfield);
 		  fout << dimState << "\n";
 		}
 	      }

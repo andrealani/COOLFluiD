@@ -262,7 +262,7 @@ void WriteSolutionBlock::writeToFileStream(std::ofstream& fout)
                fout << "\n\n";
 
           fout.setf(ios::scientific,ios::floatfield);
-          fout.precision(12);
+          fout.precision(14);
 
           // loop over states and print state coordinates
           for (CFuint iDim = 0; iDim < dim; ++iDim)
