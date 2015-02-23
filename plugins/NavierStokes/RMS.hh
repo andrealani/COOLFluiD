@@ -1,3 +1,7 @@
+/*
+ * This program was created to receive user specified values (and coefficients = need implementation) which should 
+ * be time averaged during an unsteady simulation using LES or DES.  
+ */
 #ifndef COOLFluiD_Physics_NavierStokes_RMS_hh
 #define COOLFluiD_Physics_NavierStokes_RMS_hh
 
@@ -27,13 +31,14 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /// This class samples the solution at a point for every iteration
-/// @author 
+/// @author
+      
 class RMS : public Framework::DataProcessingCom {
 public: // functions
 
   /**
    * Defines the Config Option's of this class
-   * @param options a OptionList where to add the Option's
+   * @param options an OptionList where to add the Option's
    */
   static void defineConfigOptions(Config::OptionList& options);
 
@@ -108,20 +113,25 @@ private: // data
   
   /// Name of Output File where to write the coeficients.
   std::string m_nameOutputFileRMS;
+  std::string m_varType;
+
   
   /// physical model (in conservative variables)
   Common::SelfRegistPtr<Framework::ConvectiveVarSet> m_varSet;
   
+  ///@todo create physical model (in diffusion/turbulnt variables)
+  
   /// physical data array 
   RealVector m_physicalData;
   
-  RealVector m_rhobar;
-  RealVector m_Ubar;
-  RealVector m_Vbar;
-  RealVector m_Wbar;
-  RealVector m_pbar;
-  RealVector m_rhoEbar;
-  RealVector m_devU;
+  /// user options
+  std::vector<std::string> m_rmsOpt;
+  
+  // vector to save the rms results
+  RealVector m_rmsresult;
+
+  //RealVector m_AvgSkinFriction;
+  //RealVector m_AvgHeatFlux;
   CFuint m_nbStep;
   
   // ///flag for appending iteration
@@ -131,6 +141,13 @@ private: // data
   bool m_appendTime;
 
   bool m_restart;
+  
+  //We add these options to let the user define which values will be time averaged
+  
+  
+  ///@todo for aerocoef
+  //bool m_DoAvgHeatFlux; 
+  //bool m_DoAvgSkinFric;
 
 
   CFuint m_InitSteps;

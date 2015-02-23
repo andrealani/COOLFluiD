@@ -39,12 +39,13 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 MethodCommandProvider<RMS, DataProcessingData, NavierStokesModule>
-rmsProvider("RMS");
+rmsProvider("RMS"); //it is the name that used for the registration. It is "connected" to the pointer which shows this class
 
 //////////////////////////////////////////////////////////////////////////////
 
 void RMS::defineConfigOptions(Config::OptionList& options)
 {
+  options.addConfigOption< std::string >("VarType","Name of the variable set.");
   options.addConfigOption< std::string >("OutputFile","Name of Output File.");
   options.addConfigOption< CFuint >("SaveRate","Rate for saving the output file with aerodynamic coefficients.");
   options.addConfigOption< CFuint >("CompRate","Rate for saving the output file with aerodynamic coefficients.");
@@ -52,16 +53,26 @@ void RMS::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >("AppendIter","Append Iteration# to file name.");
   options.addConfigOption< bool >("Restart","Should the initial rms be read from the CFmesh");
   options.addConfigOption< CFuint >("nbSteps","Number of steps already known (this option imply that restart=true)");
+  
+  //We add these options to let the user define which values will be time averaged
+  options.addConfigOption< std::vector<std::string> >("rmsVars", "The list of variable names which will be time averaged.");
+  
+/*
+  options.addConfigOption< bool >("DoAvgHeatFlux","(Default = False) If true it will compute the time averaged Heat Flux.");
+  options.addConfigOption< bool >("DoAvgSkinFric","(Default = False) If true it will compute the time averaged Skin Friction.");
+*/
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-RMS::RMS( const std::string& name) :
-  DataProcessingCom(name),
-  m_fhandle(),
-  socket_states("states"),
-  socket_rms("rms")
+// The constructor initialize the parameters either by default or by taking the value from the CFcase file
+RMS::RMS(const std::string& name) 
+  : DataProcessingCom (name),
+  m_fhandle(), // open a file and give access to it for writing the results in the whole domain
+  socket_states("states"), // this will give us access to the states through a pointer
+  socket_rms("rms") // with this will store our results through a pointer
 {
+  // open a file and give access to it for writing the results on the wall
   m_fileRMS = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
 
   addConfigOptionsTo(this);
@@ -85,11 +96,20 @@ RMS::RMS( const std::string& name) :
 
   m_InitSteps = 0;
   setParameter("nbSteps",&m_InitSteps);
+  
+  // Initialization of the user choises
+  
+  m_rmsOpt = std::vector<std::string>();
+  setParameter("rmsVars",&m_rmsOpt);
+  
+  m_varType = "Cons";
+  setParameter("VarType",&m_varType);
+ 
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-RMS::~RMS()
+RMS::~RMS() //default destructor
 {
 }
 
@@ -97,37 +117,37 @@ RMS::~RMS()
 
 std::vector<Common::SafePtr<BaseDataSocketSink> > RMS::needsSockets()
 { 
-  std::vector<Common::SafePtr<BaseDataSocketSink> > result;
-  result.push_back(&socket_states); 
-  result.push_back(&socket_rms);
+  std::vector<Common::SafePtr<BaseDataSocketSink> > result; // storage the pointers of the local data
+  result.push_back(&socket_states); // vector with pointers showing the states P[rho U V W p...]
+  result.push_back(&socket_rms); // vector with pointers showing the rms
   return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
+// it runs during the phase of global setup and allocate memory for this class, namely rms
 void RMS::setup()
 {
   CFAUTOTRACE;
  DataProcessingCom::setup(); // first call setup of parent class
 
-  m_varSet->setup();
-
-  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
-  const CFuint nbstates = states.size();
+  m_varSet->setup(); //set up private data from the ConvectiveVarSet.hh
   
+  // with this command the variable states gets access to the whole states
+  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+  const CFuint nbOpts =  m_rmsOpt.size(); // number of options of the user
+  const CFuint nbstates = states.size(); // number of cells 
+  const CFuint totstates = nbstates*nbOpts;
+  
+  /// it is the vector where our results will be stored
+  DataHandle<CFreal> rms = socket_rms.getDataHandle();
   /// physical data array 
   PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm()->
     resizePhysicalData(m_physicalData);
 
+  rms.resize(totstates); // it throws an error, perhaps it need resize(totstates) only
+  m_rmsresult.resize(totstates,0.0); // it allocates the correct size for the vector of the result
   
-  m_rhobar.resize(nbstates,0.0);
-  m_Ubar.resize(nbstates,0.0);
-  m_Vbar.resize(nbstates,0.0);
-  m_Wbar.resize(nbstates,0.0);
-  m_pbar.resize(nbstates,0.0);
-  m_rhoEbar.resize(nbstates,0.0);
-  m_devU.resize(nbstates,0.0);
-
   m_nbStep = m_InitSteps;
 
 
@@ -140,24 +160,60 @@ void RMS::execute()
 
   const CFuint iter = ssys_status->getNbIter();
 
-   if (iter == 0){
-     if (m_restart){
+    ///FIXME not needed since rms has already initialize with the data 
+    //because of the command DataHandle<CFreal> rms = socket_rms.getDataHandle(); 
+  
+   if (iter == 0){ 
+     if (m_restart){ // this is executed when we restast an application
         DataHandle<CFreal> rms = socket_rms.getDataHandle();
         DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
         m_nbStep = m_InitSteps;
+	 const CFuint nbOpts =  m_rmsOpt.size();
          const CFuint nbstates = states.size();
+	 const CFuint totstates = nbstates*nbOpts;
          for (CFuint iState = 0; iState < nbstates; ++iState) {
        
-         m_rhobar[iState] = rms[7*iState];
-   	m_Ubar[iState] =  rms[7*iState+1];
-   	m_Vbar[iState] =  rms[7*iState+2];
-   	m_Wbar[iState] = rms[7*iState+3];
-   	m_pbar[iState] = rms[7*iState+4] ;
-   	m_rhoEbar[iState] = rms[7*iState+5];
-   	m_devU[iState] = rms[7*iState+6];
-     }
-   }
-   }
+	  for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++) {
+	  
+	     m_rmsresult[iState*nbOpts+iOpt] = rms[iState*nbOpts+iOpt];
+	    }
+	  }
+      
+    /* if (m_rmsOpt[iOpt] == "rho")
+     {rho = rms[iState*nbOpts+iOpt]; 
+      }
+     
+     else if (m_rmsOpt[iOpt] == "u")
+     {u = rms[iState*nbOpts+iOpt] ; 
+      }
+     
+     else if (m_rmsOpt[iOpt] == "v")
+     {v = rms[iState*nbOpts+iOpt] ; 
+      }
+     
+     else if (m_rmsOpt[iOpt] == "w")
+     {w = rms[iState*nbOpts+iOpt] ; 
+      }
+     
+     else if (m_rmsOpt[iOpt] == "p")
+     {p = rms[iState*nbOpts+iOpt] ; 
+      }
+     
+     else if (m_rmsOpt[iOpt] == "rhoE")
+     {rms[iState*nbOpts+iOpt] += (rho*E); 
+      }
+     
+     else if (m_rmsOpt[iOpt] == "devU")
+     {rms[iState*nbOpts+iOpt] += u; // decouple the need to calculate also the ubar
+      rms[iState*nbOpts+iOpt] += (u - rms[iState*nbOpts+iOpt]/m_nbStep)*(u - rms[iState*nbOpts+iOpt]/m_nbStep); 
+      }
+     
+     //else ///put an error here
+      
+    } // iOpt for
+     } */
+    }
+   } 
 
   // compute global integrated coefficients
   if(!(iter % m_compRateRMS)){
@@ -174,47 +230,72 @@ void RMS::execute()
 void RMS::computeRMS(bool save)
 {
   Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
-  const CFreal time = subSysStatus->getCurrentTime();
+  const CFreal time = subSysStatus->getCurrentTime(); 
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
   DataHandle<CFreal> rms = socket_rms.getDataHandle();
  m_nbStep += 1;
- const CFuint nbstates = states.size();
+ const CFuint nbstates = states.size(); // number of cells
+ const CFuint nbOpts =  m_rmsOpt.size(); // number of user options
 
  for (CFuint iState = 0; iState < nbstates; ++iState) {
-    const CFreal x = (states[iState]->getCoordinates())[XX];
+    const CFreal x = (states[iState]->getCoordinates())[XX]; 
     const CFreal y = (states[iState]->getCoordinates())[YY];
     const CFreal z = (states[iState]->getCoordinates())[ZZ];
-    State& curr_state = *states[iState];
+    State& curr_state = *states[iState]; // a pointer to current state
     
-    m_varSet->computePhysicalData(curr_state, m_physicalData);
+    m_varSet->computePhysicalData(curr_state, m_physicalData); // compute the [P U V W..] of the current state
     
-    CFreal rho = (*states[iState])[0];
-    CFreal rhou = (*states[iState])[1];
-    CFreal rhov = (*states[iState])[2];
-    CFreal rhow = (*states[iState])[3];
-    CFreal rhoE = (*states[iState])[4];
-    
+    CFreal rho = m_physicalData[EulerTerm::RHO];
     CFreal u = m_physicalData[EulerTerm::VX];
-    CFreal v = rhov/rho;
-    CFreal w = rhow/rho;
+    CFreal v = m_physicalData[EulerTerm::VY];
+    CFreal w = m_physicalData[EulerTerm::VZ];
     CFreal p = m_physicalData[EulerTerm::P];
+    CFreal E = m_physicalData[EulerTerm::E];
+    
+    
+    for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++) {
       
-  m_rhobar[iState] += rho;
-  m_Ubar[iState] += u ;
-  m_Vbar[iState] += v ;
-  m_Wbar[iState] += w ;
-  m_pbar[iState] += p ;
-  m_rhoEbar[iState] += rhoE;
-  m_devU[iState] += (u - m_Ubar[iState]/m_nbStep)*(u - m_Ubar[iState]/m_nbStep);
-
-  rms[7*iState] = m_rhobar[iState];
-   rms[7*iState+1] = m_Ubar[iState];
-   rms[7*iState+2] = m_Vbar[iState];
-   rms[7*iState+3] = m_Wbar[iState];
-   rms[7*iState+4] = m_pbar[iState];
-   rms[7*iState+5] = m_rhoEbar[iState];
-   rms[7*iState+6] = m_devU[iState];
- }
+     if (m_rmsOpt[iOpt] == "rho")
+     {m_rmsresult[iState*nbOpts+iOpt] += rho;
+      rms[iState*nbOpts+iOpt] = m_rmsresult[iState*nbOpts+iOpt];
+      }
+     
+     else if (m_rmsOpt[iOpt] == "u")
+     {m_rmsresult[iState*nbOpts+iOpt] += u;
+      rms[iState*nbOpts+iOpt] = m_rmsresult[iState*nbOpts+iOpt];
+      }
+     
+     else if (m_rmsOpt[iOpt] == "v")
+     {m_rmsresult[iState*nbOpts+iOpt] += v;
+      rms[iState*nbOpts+iOpt] = m_rmsresult[iState*nbOpts+iOpt];
+      }
+     
+     else if (m_rmsOpt[iOpt] == "w")
+     {m_rmsresult[iState*nbOpts+iOpt] += w;
+      rms[iState*nbOpts+iOpt] = m_rmsresult[iState*nbOpts+iOpt];
+      }
+     
+     else if (m_rmsOpt[iOpt] == "p")
+     {m_rmsresult[iState*nbOpts+iOpt] += p;
+      rms[iState*nbOpts+iOpt] = m_rmsresult[iState*nbOpts+iOpt];
+      }
+     
+     else if (m_rmsOpt[iOpt] == "rhoE")
+     {m_rmsresult[iState*nbOpts+iOpt] += (rho*E);
+      cf_assert(iState*nbOpts+iOpt<rms.size());
+      rms[iState*nbOpts+iOpt] = m_rmsresult[iState*nbOpts+iOpt];
+      }
+     
+     else if (m_rmsOpt[iOpt] == "devU")
+     {m_rmsresult[iState*nbOpts+iOpt] += u; // decouple the need to calculate also the ubar
+      m_rmsresult[iState*nbOpts+iOpt] += (u - m_rmsresult[iState*nbOpts+iOpt]/m_nbStep)*(u - m_rmsresult[iState*nbOpts+iOpt]/m_nbStep);
+      rms[iState*nbOpts+iOpt] = m_rmsresult[iState*nbOpts+iOpt];
+      }
+     
+     //else ///put an error here
+      
+    } // iOpt for
+ } // istate for 
 
 
   if (save) 
@@ -222,6 +303,7 @@ void RMS::computeRMS(bool save)
       prepareOutputFileRMS();
        cf_assert(m_fileRMS->isopen());
       ofstream& fout = m_fileRMS->get();
+      const CFuint dim = PhysicalModelStack::getActive()->getDim(); // dimension of the problem
       CFreal theta;
       for (CFuint iState = 0; iState < nbstates; ++iState) {
 	const CFreal x = (states[iState]->getCoordinates())[XX];
@@ -231,21 +313,21 @@ void RMS::computeRMS(bool save)
 
 	fout
 	  << x << " "
-	  << y << " "
-	  << z << " "
-	  << m_rhobar[iState]/m_nbStep << " "
-	  << m_Ubar[iState]/m_nbStep   << " "
-	  << m_Vbar[iState]/m_nbStep << " "
-	  <<  m_Wbar[iState]/m_nbStep << " "
-	  <<  m_pbar[iState]/m_nbStep << " "
-	  <<  m_rhoEbar[iState]/m_nbStep << " "
-	  <<  sqrt(m_devU[iState])/m_nbStep << " "
-	  << m_nbStep    << "\n ";
+	  << y << " ";
+	if (dim ==3)
+      { fout << z << " ";}
+      
+     for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++)
+     {fout << m_rmsresult[iState*nbOpts+iOpt]/m_nbStep << " "; }
+     
+    
+      fout << m_nbStep    << "\n ";
  
     
       }
       m_fileRMS->close();
-    }
+    } 
+    
 
 }
   
@@ -264,19 +346,30 @@ void RMS::unsetup()
 //////////////////////////////////////////////////////////////////////////////
 void RMS::prepareOutputFileRMS()
 {
-
   using boost::filesystem::path;
 
   cf_assert (!m_fileRMS->isopen());
   path file = Environment::DirPaths::getInstance().getResultsDir() / path (m_nameOutputFileRMS);
   file = PathAppender::getInstance().appendAllInfo(file, m_appendIter, m_appendTime );
+  const CFuint dim = PhysicalModelStack::getActive()->getDim(); // dimension of the problem
+  const CFuint nbOpts =  m_rmsOpt.size(); // number of user options
 
 
   ofstream& fout = m_fileRMS->open(file);
 
 
-  fout << "TITLE  =  RMS in the whole field" << "\n";
-  fout << "VARIABLES = x y z rhobar Ubar Vbar Wbar pbar rhoEbar devU m_nbStep " << "\n";
+      fout << "TITLE  =  RMS in the whole field" << "\n";
+      fout << "VARIABLES = x y ";
+      
+      if (dim == 3)
+    { fout << "z ";}
+
+  for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++)
+     {fout << m_rmsOpt[iOpt] << " "; }
+     
+      fout << "m_nbStep " << "\n";
+  
+  //fout    rhobar Ubar Vbar Wbar pbar rhoEbar devU m_nbStep " << "\n";
   
 }
 
@@ -289,7 +382,10 @@ void RMS::configure ( Config::ConfigArgs& args )
   Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
   
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-  std::string varSetName = "Euler3DCons";  // THIS NAME HAS TO COME AS AN OPTION
+  ///@todo THIS NAME HAS TO COME AS AN OPTION
+  ///@todo if this should also be done for diffusive terms. Try to do with the OTHERWAY to avoid if and loops
+  std::string varSetName = PhysicalModelStack::getActive()->getConvectiveName()+m_varType; //"Euler3DCons"; 
+  
   m_varSet.reset((Environment::Factory<ConvectiveVarSet>::getInstance().getProvider(varSetName)->
 		  create(physModel->getImplementor()->getConvectiveTerm())));
   
