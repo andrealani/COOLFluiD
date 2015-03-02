@@ -44,13 +44,14 @@ Simulator.SubSystem.DataProcessing2.Comds = RMS
 Simulator.SubSystem.DataProcessing2.Names = RMS
 Simulator.SubSystem.DataProcessing2.Data.updateVar = Puvt
 Simulator.SubSystem.DataProcessing2.RMS.OutputFile = rms.plt
-Simulator.SubSystem.DataProcessing2.RMS.SaveRate = 100
+Simulator.SubSystem.DataProcessing2.RMS.SaveRate = 10
 Simulator.SubSystem.DataProcessing2.RMS.CompRate = 1
 Simulator.SubSystem.DataProcessing2.RMS.AppendTime = false
 Simulator.SubSystem.DataProcessing2.RMS.AppendIter = true
 Simulator.SubSystem.DataProcessing2.RMS.Restart = false
 Simulator.SubSystem.DataProcessing2.RMS.nbSteps = 0
 Simulator.SubSystem.DataProcessing2.RMS.rmsVars = rho p  
+Simulator.SubSystem.DataProcessing2.ProcessRate = 1
 
 # Post process the data to compute the skin friction and y+
 #Simulator.SubSystem.DataPostProcessing = DataProcessing
