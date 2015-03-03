@@ -5,6 +5,12 @@ AUSMFluxMultiFluid.hh
 AUSMPlusUpFluxMultiFluid.ci
 AUSMPlusUpFluxMultiFluid.hh
 FiniteVolumeMultiFluidMHD.hh
+GEMMHDST3D.ci
+GEMMHDST3D.cxx
+GEMMHDST3D.hh
+GEMMHDST3DTwoFluid.ci
+GEMMHDST3DTwoFluid.cxx
+GEMMHDST3DTwoFluid.hh
 HartmannSourceTerm.ci
 HartmannSourceTerm.cxx
 HartmannSourceTerm.hh
