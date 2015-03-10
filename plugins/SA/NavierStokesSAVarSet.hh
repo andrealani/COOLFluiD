@@ -18,8 +18,8 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * This class represents a NavierStokes physical model 2D for primitive
-   * variables and K-Omega turbulence model
+   * This class represents a NavierStokes physical model for primitive
+   * variables and SA turbulence model
    *
    * @author Joao Pinto
    * @author Thomas Wuilbaut
@@ -101,7 +101,7 @@ protected:
   CFuint _iPerturbVar;
 
   /// storage of the unperturbed flux for the first equation
-  CFreal _unperturbedFluxK;
+  CFreal _unperturbedFluxNutil;
     
 }; // end of class NavierStokesSAVarSet
 

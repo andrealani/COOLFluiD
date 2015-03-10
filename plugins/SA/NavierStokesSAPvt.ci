@@ -93,7 +93,7 @@ CFreal NavierStokesSAPvt<BASE>::getLaminarDynViscosityFromGradientVars(const Rea
   const CFreal Tdim = this->_eulerModel->getTempRef()*state[this->_TID];
   const CFreal pdim = this->_eulerModel->getPressRef()*state[0];
   return this->getModel().getDynViscosityDim(pdim, Tdim)/
-    (this->getModel().getReferencePhysicalData())[NavierStokes::NSTurbTerm::MU];
+    (this->getModel().getReferencePhysicalData())[NavierStokes::NSTurbTerm::MU]; ///@return mu
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -102,7 +102,7 @@ template <typename BASE>
 CFreal NavierStokesSAPvt<BASE>::getTurbDynViscosityFromGradientVars(const RealVector& state, 
 								    const std::vector<RealVector*>& gradients)
 {
-  const CFreal rho = getDensity(state);
+  const CFreal rho = getDensity(state); // should take from state?
   const CFreal niuTilda = state[this->_TID+1];
   const CFreal mu = getLaminarDynViscosityFromGradientVars(state);
   const CFreal niu = mu / rho;
@@ -120,13 +120,13 @@ CFreal NavierStokesSAPvt<BASE>::getTurbDynViscosityFromGradientVars(const RealVe
 template <typename BASE> 
 CFreal NavierStokesSAPvt<BASE>::getDensity(const RealVector& state)
 {
-  return state[0]/(this->_eulerModel->getR()*state[this->_TID]);
+  return state[0]/(this->_eulerModel->getR()*state[this->_TID]); // state are P u v w T nutil
 }
 
 //////////////////////////////////////////////////////////////////////////////
       
 template <typename BASE> 
-void NavierStokesSAPvt<BASE>::setup()
+void NavierStokesSAPvt<BASE>::setup() ///@!!! there is no unsetup
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
@@ -140,7 +140,7 @@ void NavierStokesSAPvt<BASE>::setup()
   
   const CFuint nbTurbEquations = this->_eulerModel->getNbScalarVars(0);
   cf_assert(nbTurbEquations == 1);
-  vector<std::string> names(dim + 2 + nbTurbEquations);
+  vector<std::string> names(dim + 2 + nbTurbEquations);//2 or 3 Diamensions + (Continuity + Energy) + SA
   names[0] = "p";
   names[1] = "u";
   names[2] = "v";
@@ -159,7 +159,7 @@ void NavierStokesSAPvt<BASE>::setup()
   names[this->_TID] = "T";
   
   // Names for turbulent variables
-  names[this->_TID+1] = "K";
+  names[this->_TID+1] = "Nutil";
     
   this->setVarNames(names);
 }
@@ -169,7 +169,7 @@ void NavierStokesSAPvt<BASE>::setup()
 template <typename BASE> 
 CFreal NavierStokesSAPvt<BASE>::getCurrUpdateDiffCoeff(CFuint iEqSS)
 {  
-  return (this->getModel().getPhysicalData())[NavierStokes::NSTurbTerm::MU] + 
+  return (this->getModel().getPhysicalData())[NavierStokes::NSTurbTerm::MU] + // it returns (mi +  mi_tur)
     (this->getModel().getPhysicalData())[NavierStokes::NSTurbTerm::MUT];
 }
 

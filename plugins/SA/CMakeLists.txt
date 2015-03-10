@@ -22,6 +22,8 @@ Euler2DSAPuvtToCons.cxx
 Euler2DSAPuvtToCons.hh
 Euler2DSAPuvtToConsInPuvt.cxx
 Euler2DSAPuvtToConsInPuvt.hh
+Euler3DSAPuvtToCons.cxx
+Euler3DSAPuvtToCons.hh
 NavierStokesSACons.ci
 NavierStokesSACons.cxx
 NavierStokesSACons.hh

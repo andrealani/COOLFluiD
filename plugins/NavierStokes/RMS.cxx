@@ -15,6 +15,7 @@
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/ConvectiveVarSet.hh"
 
+
 #include "NavierStokes/NavierStokes.hh"
 #include "NavierStokes/RMS.hh"
 #include "NavierStokes/EulerTerm.hh"
@@ -29,8 +30,9 @@ using namespace COOLFluiD::Common;
 
 //////////////////////////////////////////////////////////////////////////////
 
-namespace COOLFluiD {
 
+namespace COOLFluiD {
+  
   namespace Physics {
 
     namespace NavierStokes {
@@ -46,7 +48,7 @@ void RMS::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< std::string >("OutputFile","Name of Output File.");
   options.addConfigOption< CFuint >("SaveRate","Rate for saving the output file with aerodynamic coefficients.");
-  options.addConfigOption< CFuint >("CompRate","Rate for saving the output file with aerodynamic coefficients.");
+  //options.addConfigOption< CFuint >("CompRate","Rate for saving the output file with aerodynamic coefficients.");
   options.addConfigOption< bool >("AppendTime","Append time to file name.");
   options.addConfigOption< bool >("AppendIter","Append Iteration# to file name.");
   options.addConfigOption< bool >("Restart","Should the initial rms be read from the CFmesh");
@@ -65,20 +67,22 @@ void RMS::defineConfigOptions(Config::OptionList& options)
 
 // The constructor initialize the parameters either by default or by taking the value from the CFcase file
 RMS::RMS(const std::string& name) 
-  : DataProcessingCom (name),
+  : DataProcessingCom (name) , 
   m_fhandle(), // open a file and give access to it for writing the results in the whole domain
   socket_states("states"), // this will give us access to the states through a pointer
   socket_rms("rms") // with this will store our results through a pointer
+  
 {
+  addConfigOptionsTo(this);
+  
   // open a file and give access to it for writing the results on the wall
   m_fileRMS = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
 
-  addConfigOptionsTo(this);
   m_nameOutputFileRMS = "RMS_save.dat";
   setParameter("OutputFile",&m_nameOutputFileRMS);
 
-  m_compRateRMS = 1;
-  setParameter("CompRate",&m_compRateRMS);
+  //m_compRateRMS = 1;
+  //setParameter("CompRate",&m_compRateRMS);
  
   m_saveRateRMS = 1;
   setParameter("SaveRate",&m_saveRateRMS);
@@ -149,53 +153,78 @@ void RMS::setup()
   rms.resize(totstates); // it throws an error, perhaps it need resize(totstates) only
   m_rmsresult.resize(totstates,0.0); // it allocates the correct size for the vector of the result
   
-  m_nbStep = m_InitSteps;
+  m_nbStep = m_InitSteps; //initialization of steps
+  
+  if (m_restart){ // this is executed when we restast an application
+      DataHandle<CFreal> rms = socket_rms.getDataHandle();
+      DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+      const CFuint nbOpts =  m_rmsOpt.size();
+      const CFuint nbstates = states.size();
+
+      for (CFuint iState = 0; iState < nbstates; ++iState) {
+	for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++) {
+	  const CFuint totistates = nbstates*nbOpts + iOpt;
+	  m_rmsresult[totistates] = rms[totistates];
+	}
+      }
+    }
+    
+    resetIter = 0;
 }
       
 //////////////////////////////////////////////////////////////////////////////
 
 void RMS::execute()
 {
-  Common::SafePtr<SubSystemStatus> ssys_status = SubSystemStatusStack::getActive();
+  CFAUTOTRACE;
   
-  const CFuint iter = ssys_status->getNbIter();
+  if (SubSystemStatusStack::getActive()->getNbIter() >= getMethodData().getStartIter()) {
+    
+    resetIter = 0;
+    computeRMS();
   
-  ///FIXME not needed since rms has already initialize with the data 
-  //because of the command DataHandle<CFreal> rms = socket_rms.getDataHandle(); 
+  }
   
-  if (iter == 0){ 
-    if (m_restart){ // this is executed when we restast an application
-      DataHandle<CFreal> rms = socket_rms.getDataHandle();
-      DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
-      m_nbStep = m_InitSteps;
-      const CFuint nbOpts =  m_rmsOpt.size();
-      const CFuint nbstates = states.size();
-      const CFuint totstates = nbstates*nbOpts;
-      for (CFuint iState = 0; iState < nbstates; ++iState) {
-	for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++) {
-	  m_rmsresult[iState*nbOpts+iOpt] = rms[iState*nbOpts+iOpt];
+  else // we assume that if this check fails then we restart the computation and we need to reset the values
+  {
+    resetIter += 1;
+    
+    
+    if (resetIter == 1) // to run just the first time
+    {
+    DataHandle<CFreal> rms = socket_rms.getDataHandle();
+    DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+    
+    m_nbStep = 0;
+    
+    const CFuint nbstates = states.size(); // number of cells
+    const CFuint nbOpts =  m_rmsOpt.size(); // number of user options
+    
+    for (CFuint iState = 0; iState < nbstates; ++iState) {
+      
+      for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++) 
+	{m_rmsresult[iState*nbOpts+iOpt] = 0.0;
+	rms[iState*nbOpts+iOpt] = 0.0;
 	}
       }
+    
     }
-  } 
+  }
   
-  // compute global integrated coefficients
-  if(!(iter % m_compRateRMS)){
-    if(!(iter % m_saveRateRMS))  { computeRMS(true); }
-    else{ computeRMS(false); }
-  }  
 }
       
       
 //////////////////////////////////////////////////////////////////////////////
 
-void RMS::computeRMS(bool save)
+void RMS::computeRMS()
 {
   Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
   const CFreal time = subSysStatus->getCurrentTime(); 
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
   DataHandle<CFreal> rms = socket_rms.getDataHandle();
-  m_nbStep += 1;
+  
+  m_nbStep += 1; // number of rms iterations
+
   const CFuint nbstates = states.size(); // number of cells
   const CFuint nbOpts =  m_rmsOpt.size(); // number of user options
   
@@ -258,8 +287,11 @@ void RMS::computeRMS(bool save)
     } // iOpt for
  } // istate for 
 
+ 
+    Common::SafePtr<SubSystemStatus> ssys_status = SubSystemStatusStack::getActive();
+    const CFuint iter = ssys_status->getNbIter();
 
-  if (save)  { 
+  if (!(iter % m_saveRateRMS))  { 
     prepareOutputFileRMS();
     cf_assert(m_fileRMS->isopen());
     ofstream& fout = m_fileRMS->get();
@@ -292,6 +324,8 @@ void RMS::unsetup()
   DataHandle<CFreal> rms = socket_rms.getDataHandle();
   rms.resize(0);
   m_rmsresult.resize(0);
+  
+  DataProcessingCom::unsetup(); // last call setup of parent class
 }
 
 //////////////////////////////////////////////////////////////////////////////

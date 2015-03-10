@@ -42,7 +42,7 @@ public:
   void setup();
 
   /**
-   * Add the value on the boundary for K in the turbulence model
+   * Add the value on the boundary for Nutil in the turbulence model
    */
   void setGhostState(Framework::GeometricEntity *const face);
 

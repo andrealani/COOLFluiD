@@ -19,7 +19,8 @@
 CFEnv.ErrorOnUnusedConfig = true
 
 # Simulation Modules
-Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libSA libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeSA libTHOR2CFmesh  libAeroCoef libAeroCoefFVM libMeshTools libMeshToolsFVM
+Simulator.Modules.Libs = libShapeFunctions libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libSA libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeSA libTHOR2CFmesh  libAeroCoef libAeroCoefFVM libMeshTools libMeshToolsFVM 
+#libCFmeshExtruder
 
 # Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/SA/testcases/FlatPlate/
@@ -29,6 +30,7 @@ Simulator.SubSystem.Default.PhysicalModelType   = NavierStokes2DSA
 Simulator.SubSystem.NavierStokes2DSA.refValues  = 9300. 121.151 121.151 298.15 0.000002
 Simulator.SubSystem.NavierStokes2DSA.refLength  = 1.0
 Simulator.SubSystem.NavierStokes2DSA.ConvTerm.machInf  = 0.1
+
 
 # Compute the Wall distance
 Simulator.SubSystem.DataPreProcessing = DataProcessing
@@ -42,16 +44,17 @@ Simulator.SubSystem.DataPostProcessing = DataProcessing
 Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
 Simulator.SubSystem.DataProcessing2.Comds = RMS
 Simulator.SubSystem.DataProcessing2.Names = RMS
+Simulator.SubSystem.DataProcessing2.ProcessRate = 1
+Simulator.SubSystem.DataProcessing2.StopIter = 5
 Simulator.SubSystem.DataProcessing2.Data.updateVar = Puvt
 Simulator.SubSystem.DataProcessing2.RMS.OutputFile = rms.plt
-Simulator.SubSystem.DataProcessing2.RMS.SaveRate = 10
-Simulator.SubSystem.DataProcessing2.RMS.CompRate = 1
+Simulator.SubSystem.DataProcessing2.RMS.SaveRate = 1
+#Simulator.SubSystem.DataProcessing2.RMS.CompRate = 1
 Simulator.SubSystem.DataProcessing2.RMS.AppendTime = false
-Simulator.SubSystem.DataProcessing2.RMS.AppendIter = true
+Simulator.SubSystem.DataProcessing2.RMS.AppendIter = false
 Simulator.SubSystem.DataProcessing2.RMS.Restart = false
 Simulator.SubSystem.DataProcessing2.RMS.nbSteps = 0
-Simulator.SubSystem.DataProcessing2.RMS.rmsVars = rho p  
-Simulator.SubSystem.DataProcessing2.ProcessRate = 1
+Simulator.SubSystem.DataProcessing2.RMS.rmsVars = rho p devU 
 
 # Post process the data to compute the skin friction and y+
 #Simulator.SubSystem.DataPostProcessing = DataProcessing
@@ -102,7 +105,6 @@ Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = flatPlateQD5.CFmesh
 #Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
 #Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
-#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = NewtonIteratorLSS

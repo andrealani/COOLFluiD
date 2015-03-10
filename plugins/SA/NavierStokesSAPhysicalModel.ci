@@ -33,7 +33,7 @@ CFuint NavierStokesSAPhysicalModel<DIM>::getDimension() const
 template <int DIM>
 CFuint NavierStokesSAPhysicalModel<DIM>::getNbEquations() const
 {
-  // set the number of scalar variables (only K in this case)
+  // set the number of scalar variables (only Nutil in this case)
   // in the convective term
   std::valarray<CFuint> v(1);
   v[0] = 1;
@@ -94,7 +94,7 @@ void NavierStokesSAPhysicalModel<DIM>::setReferenceValues()
   refDataDiff[NSTurbTerm::MU]     = dynViscosityRef;
   refDataDiff[NSTurbTerm::LAMBDA] = dynViscosityRef*cp/diffTerm->getPrandtl();
   refDataDiff[NSTurbTerm::RE]     = Re;
-  refDataDiff[NSTurbTerm::MUT]    = dynViscosityRef;
+  refDataDiff[NSTurbTerm::MUT]    = dynViscosityRef; // same as MU ???
 
   // override the reference values for Euler data starting from
   // machInf, tempRef, RRref, Lref, ReynoldsRef
@@ -120,9 +120,9 @@ void NavierStokesSAPhysicalModel<DIM>::setReferenceValues()
     refDataConv[EulerSATerm::A] = refSpeed;
     refDataConv[EulerSATerm::T] = tempRef;
 
-    const CFuint iK = convTerm->getFirstScalarVar(0);
+    const CFuint iNutil = convTerm->getFirstScalarVar(0);
     //[niutilda]_ref = [niut]_ref = [mut]_ref/[rho]_ref
-    refDataConv[iK] = (Uinf*Lref)/Re;
+    refDataConv[iNutil] = (Uinf*Lref)/Re;
 
     convTerm->setTempRef(tempRef);
     convTerm->setPressRef(pRef);
@@ -170,8 +170,8 @@ void NavierStokesSAPhysicalModel<DIM>::setReferenceValues()
     CFLog(NOTICE, "Uinf    = " << Uinf << "\n");*/
     CFLog(NOTICE, "dynViscosityRef   = " << refDataDiff[NSTurbTerm::MU]     << "\n");
 
-    const CFuint iK = convTerm->getFirstScalarVar(0);
-    CFLog(NOTICE, "Turb Variable Ref   = " << refDataConv[iK] << "\n");
+    const CFuint iNutil = convTerm->getFirstScalarVar(0);
+    CFLog(NOTICE, "Turb Variable Ref   = " << refDataConv[iNutil] << "\n");
     CFLog(NOTICE, "turbDynViscosityRef   = " << refDataDiff[NSTurbTerm::MUT]     << "\n");
     CFLog(NOTICE, "thermConductivity = " << refDataDiff[NSTurbTerm::LAMBDA] << "\n");
     CFLog(NOTICE, "ReynoldsRef       = " << Re << "\n");

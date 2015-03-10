@@ -6,6 +6,8 @@ NoSlipWallIsothermalNSSAPvt.hh
 NoSlipWallIsothermalNSSAPvt.cxx
 SA2DSourceTerm.hh
 SA2DSourceTerm.cxx
+SA3DSourceTerm.hh
+SA3DSourceTerm.cxx
 )
 
 LIST ( APPEND FiniteVolumeSA_cflibs FiniteVolume FiniteVolumeNavierStokes NavierStokes SA )

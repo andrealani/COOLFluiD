@@ -22,7 +22,7 @@ namespace COOLFluiD {
 
   namespace Framework {
     class ConvectiveVarSet;
-  }
+}
   
   namespace Physics {
 
@@ -31,10 +31,17 @@ namespace COOLFluiD {
       
 //////////////////////////////////////////////////////////////////////////////
 
-/// This class samples the solution at a point for every iteration
-/// @author
       
-class RMS : public Framework::DataProcessingCom {
+/// This class samples the solution at a point. It makes sense to use for unstaedy simulations
+/// @ATTENTION for the moment it can be used only for fixed time step.
+/// @ATTENTION the process rate and the stopIter (that is the iteration at which it will stop) for the moment
+/// will be defined by the DataProcessingMethod as
+      //Simulator.SubSystem.DataProcessing2.ProcessRate = 
+      //Simulator.SubSystem.DataProcessing2.StopIter = 
+/// @author Gkoudesnes Christos
+      
+class RMS : public Framework::DataProcessingCom
+{
 public: // functions
 
   /**
@@ -92,7 +99,7 @@ protected: // functions
   /**
    * Compute the values at the wall and write them to file
    */
-  void computeRMS(bool issave );
+  void computeRMS();
 
     /**
    * Open the Output File and Write the header
@@ -116,7 +123,7 @@ private: // data
   
   /// Storage for choosing when to save the wall values file
   CFuint m_saveRateRMS;
-  CFuint m_compRateRMS;
+  //CFuint m_compRateRMS;
   
   /// Name of Output File where to write the coeficients.
   std::string m_nameOutputFileRMS;
@@ -130,8 +137,7 @@ private: // data
   // vector to save the rms results
   RealVector m_rmsresult;
 
-  //RealVector m_AvgSkinFriction;
-  //RealVector m_AvgHeatFlux;
+  // number of rms iterations
   CFuint m_nbStep;
   
   // ///flag for appending iteration
@@ -142,15 +148,9 @@ private: // data
 
   bool m_restart;
   
-  //We add these options to let the user define which values will be time averaged
-  
-  
-  ///@todo for aerocoef
-  //bool m_DoAvgHeatFlux; 
-  //bool m_DoAvgSkinFric;
-
-
   CFuint m_InitSteps;
+  
+  CFuint resetIter; // it is an assistant parameter
 
 }; // end of class SamplingPoint
 

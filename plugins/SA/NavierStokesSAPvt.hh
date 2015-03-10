@@ -17,7 +17,7 @@ namespace COOLFluiD {
 
   /**
    * This class represents a NavierStokes physical model  for primitive
-   * variables and K-Omega turbulence model
+   * variables and SA turbulence model
    *
    * @author Thomas Wuilbaut
    * @author Khalil Bensassi

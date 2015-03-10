@@ -26,11 +26,11 @@ EulerSAConsVarSet<BASE, SGROUP>::EulerSAConsVarSet(Common::SafePtr<Framework::Ba
   BASE(term),
   _rightEv(),
   _leftEv(),
-  m_startK(0.),
+  m_startNutil(0.),
   m_tmpResult(),
-  m_pdatak()
+  m_pdataNutil()
 {
-  this->addVarName("rhoK");
+  this->addVarName("rhoNuitil");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -59,8 +59,8 @@ void EulerSAConsVarSet<BASE, SGROUP>::computeEigenValuesVectors(RealMatrix& righ
   cf_always_assert(nbEqs == 5);
   
   const RealVector& linearData = this->getModel()->getPhysicalData();
-  const CFuint iK = this->getModel()->getFirstScalarVar(0);  
-  const CFreal avK     = linearData[iK];
+  const CFuint iNutil = this->getModel()->getFirstScalarVar(0);  
+  const CFreal avNutil     = linearData[iNutil];
   const CFreal nx = normal[XX];
   const CFreal ny = normal[YY];
   const CFreal avU   = linearData[EulerTerm::VX];
@@ -90,21 +90,21 @@ void EulerSAConsVarSet<BASE, SGROUP>::computeEigenValuesVectors(RealMatrix& righ
   rightEv(1,4) = 0.;
     
   rightEv(2,0) = avV;
-  rightEv(2,1) = -nx;;
+  rightEv(2,1) = -nx;
   rightEv(2,2) = (avV + avA*ny);
   rightEv(2,3) = (avV - avA*ny);
   rightEv(2,4) = 0.;
     
-  rightEv(3,0) = (0.5*q2)+avK;
+  rightEv(3,0) = (0.5*q2)+avNutil; // checked this
   rightEv(3,1) = Vbar; 
   rightEv(3,2) = (avH + avA*Ubar);
   rightEv(3,3) = (avH - avA*Ubar);
   rightEv(3,4) = 1.;
     
-  rightEv(4,0) = avK;
+  rightEv(4,0) = avNutil;
   rightEv(4,1) = 0.;
-  rightEv(4,2) = avK;
-  rightEv(4,3) = avK;
+  rightEv(4,2) = avNutil;
+  rightEv(4,3) = avNutil;
   rightEv(4,4) = 1.;
       
   leftEv(0,0) = 1.-(0.5*GA*q2);
@@ -131,7 +131,7 @@ void EulerSAConsVarSet<BASE, SGROUP>::computeEigenValuesVectors(RealMatrix& righ
   leftEv(3,3) = 0.5*GA;
   leftEv(3,4) = -0.5*GA;
    
-  leftEv(4,0) = -avK; 
+  leftEv(4,0) = -avNutil; 
   leftEv(4,1) = 0.0; 
   leftEv(4,2) = 0.0; 
   leftEv(4,3) = 0.0;
@@ -168,11 +168,15 @@ void EulerSAConsVarSet<BASE, SGROUP>::splitJacobian(RealMatrix& jacobPlus,
 						    RealVector& eValues,
 						    const RealVector& normal)
 {
-
+  
+  
   using namespace std;
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::Physics::NavierStokes;
+  
+  ///@Attention add for 3D not implemented
+
   
   const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
   cf_always_assert(nbEqs == 5);
@@ -180,8 +184,8 @@ void EulerSAConsVarSet<BASE, SGROUP>::splitJacobian(RealMatrix& jacobPlus,
   //BASE::computeEigenValuesVectors(rightEv, leftEv, eValues, normal);
  
   const RealVector& linearData = this->getModel()->getPhysicalData();
-  const CFuint iK = this->getModel()->getFirstScalarVar(0);  
-  const CFreal avK     = linearData[iK];
+  const CFuint iNutil = this->getModel()->getFirstScalarVar(0);  
+  const CFreal avNutil     = linearData[iNutil];
   const CFreal nx = normal[XX];
   const CFreal ny = normal[YY];
   const CFreal avU   = linearData[EulerTerm::VX];
@@ -220,16 +224,16 @@ void EulerSAConsVarSet<BASE, SGROUP>::splitJacobian(RealMatrix& jacobPlus,
   _rightEv(2,3) = (avV - avA*ny);
   _rightEv(2,4) = 0.;
   
-  _rightEv(3,0) = (0.5*q2)+avK;
+  _rightEv(3,0) = (0.5*q2)+avNutil;
   _rightEv(3,1) = Vbar; 
   _rightEv(3,2) = (avH + avA*Ubar);
   _rightEv(3,3) = (avH - avA*Ubar);
   _rightEv(3,4) = 1.;
   
-  _rightEv(4,0) = avK;
+  _rightEv(4,0) = avNutil;
   _rightEv(4,1) = 0.;
-  _rightEv(4,2) = avK;
-  _rightEv(4,3) = avK;
+  _rightEv(4,2) = avNutil;
+  _rightEv(4,3) = avNutil;
   _rightEv(4,4) = 1.;
   
   _leftEv(0,0) = 1.-(0.5*GA*q2);
@@ -256,7 +260,7 @@ void EulerSAConsVarSet<BASE, SGROUP>::splitJacobian(RealMatrix& jacobPlus,
   _leftEv(3,3) = 0.5*GA;
   _leftEv(3,4) = -0.5*GA;
   
-  _leftEv(4,0) = -avK; 
+  _leftEv(4,0) = -avNutil; 
   _leftEv(4,1) = 0.0; 
   _leftEv(4,2) = 0.0; 
   _leftEv(4,3) = 0.0;
@@ -287,6 +291,8 @@ void EulerSAConsVarSet<BASE, SGROUP>::splitJacobian(RealMatrix& jacobPlus,
   CFLogDebugMax( "EigenValues @Euler2DChar::splitJacobian" << "\n"
 		 << eValues << "\n" << "\n");
   
+  
+  
   //   BASE::splitJacobian(jacobPlus, jacobMin, eValues, normal);
   //   throw Common::NotImplementedException (FromHere(),"EulerSAConsVarSet::splitJacobian()");
 }
@@ -312,7 +318,7 @@ void EulerSAConsVarSet<BASE, SGROUP>::computePhysicalData(const Framework::State
    TID = 4; 
   }
   const CFreal rhoE = state[TID];
-  const CFreal rhoK = state[TID+1];
+  const CFreal rhoNutil = state[TID+1];
   const CFreal overRho  = 1./rho;
 
   const CFreal V2 = (rhoU*rhoU + rhoV*rhoV + rhoW*rhoW)*overRho*overRho;
@@ -325,7 +331,7 @@ void EulerSAConsVarSet<BASE, SGROUP>::computePhysicalData(const Framework::State
   data[EulerTerm::VZ] = rhoW*overRho; 
   data[EulerTerm::RHO] = rho;
   data[EulerTerm::V] = sqrt(V2);
-  data[EulerTerm::P] = gammaMinus1*(rhoE - 0.5*rho*V2 - rhoK);
+  data[EulerTerm::P] = gammaMinus1*(rhoE - 0.5*rho*V2 - rhoNutil);
   data[EulerTerm::T] = data[EulerTerm::P]/(R*rho);
   data[EulerTerm::H] = (rhoE + data[EulerTerm::P])*overRho;
   data[EulerTerm::E] = rhoE/rho;
@@ -335,7 +341,7 @@ void EulerSAConsVarSet<BASE, SGROUP>::computePhysicalData(const Framework::State
   data[EulerTerm::GAMMA] = gamma;
   
   const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
-  data[iK]   = rhoK*overRho;
+  data[iK]   = rhoNutil*overRho;
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -348,8 +354,8 @@ void EulerSAConsVarSet<BASE, SGROUP>::computeStateFromPhysicalData(const RealVec
   
   BASE::computeStateFromPhysicalData(data,state);
   
-  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
-  state[m_startK] = data[iK]*data[EulerTerm::RHO];
+  const CFuint iNutil = this->getModel()->getFirstScalarVar(SGROUP);
+  state[m_startNutil] = data[iNutil]*data[EulerTerm::RHO];
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -371,8 +377,8 @@ void EulerSAConsVarSet<BASE, SGROUP>::setDimensionalValues(const Framework::Stat
   BASE::setDimensionalValues(state, result);
   
   const RealVector& refData = this->getModel()->getReferencePhysicalData();
-  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
-  result[m_startK]   = state[m_startK]*refData[EulerTerm::RHO]*refData[iK];
+  const CFuint iNutil = this->getModel()->getFirstScalarVar(SGROUP);
+  result[m_startNutil]   = state[m_startNutil]*refData[EulerTerm::RHO]*refData[iNutil];
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -386,8 +392,8 @@ void EulerSAConsVarSet<BASE, SGROUP>::setAdimensionalValues(const Framework::Sta
   BASE::setAdimensionalValues(state, result);
   
   const RealVector& refData = this->getModel()->getReferencePhysicalData();
-  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
-  result[m_startK]   = state[m_startK]/(refData[EulerTerm::RHO]*refData[iK]);
+  const CFuint iNutil = this->getModel()->getFirstScalarVar(SGROUP);
+  result[m_startNutil]   = state[m_startNutil]/(refData[EulerTerm::RHO]*refData[iNutil]);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -414,21 +420,21 @@ void EulerSAConsVarSet<BASE, SGROUP>::setDimensionalValuesPlusExtraValues
     result[i] = m_tmpResult[i];
   }
   
-  computePhysicalData(state, m_pdatak);
+  computePhysicalData(state, m_pdataNutil);
   
   const RealVector& refData = this->getModel()->getReferencePhysicalData();
-  const CFreal pdim = this->getModel()->getPressureFromState(m_pdatak[EulerTerm::P])*refData[EulerTerm::P];
-  const CFreal Tdim = m_pdatak[EulerTerm::T]*refData[EulerTerm::T];
+  const CFreal pdim = this->getModel()->getPressureFromState(m_pdataNutil[EulerTerm::P])*refData[EulerTerm::P];
+  const CFreal Tdim = m_pdataNutil[EulerTerm::T]*refData[EulerTerm::T];
   
-  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
-  const CFreal Kdim = state[m_startK]*refData[iK]/m_pdatak[EulerTerm::RHO];
-  result[m_startK] = Kdim;
+  const CFuint iNutil = this->getModel()->getFirstScalarVar(SGROUP);
+  const CFreal Nutildim = state[m_startNutil]*refData[iNutil]/m_pdataNutil[EulerTerm::RHO];
+  result[m_startNutil] = Nutildim;
   
   extra.resize(4);
   
   const CFreal Rdim = this->getModel()->getRdim();
   const CFreal rhodim = pdim/(Rdim*Tdim);
-  const CFreal NIUtildadim = Kdim;
+  const CFreal NIUtildadim = Nutildim;
   
   SafePtr<NSTurbTerm> nsTurbTerm  =
     PhysicalModelStack::getActive()->getImplementor()->
@@ -473,22 +479,22 @@ void EulerSAConsVarSet<BASE, SGROUP>::setup()
   _rightEv.resize(nbEqs,nbEqs);
   _leftEv.resize(nbEqs,nbEqs);
   
-  m_startK = 0;
+  m_startNutil = 0;
   for (int i = 0; i < SGROUP; ++i) {
-    m_startK += this->getModel()->getNbScalarVars(i);
+    m_startNutil += this->getModel()->getNbScalarVars(i);
   }
   
   // AL: check if this is correct
-  m_startK += BASE::EULERSET::getEqSetData()[0].size();
+  m_startNutil += BASE::EULERSET::getEqSetData()[0].size();
   
   m_tmpResult.resize(nbEqs);
-  assert(m_startK <= nbEqs-1);
+  assert(m_startNutil <= nbEqs-1);
   
   // AL: EquationSetData is a static object therefore it has to be called only once
   if (EulerSAConsVarSet<BASE, SGROUP>::getEqSetData().size() == 0) {
     this->addEqSetData(1);
   }
-  this->getModel()->resizePhysicalData(m_pdatak);
+  this->getModel()->resizePhysicalData(m_pdataNutil);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -506,8 +512,8 @@ void EulerSAConsVarSet<BASE, SGROUP>::computePerturbedPhysicalData
 	
   BASE::computePerturbedPhysicalData(currState, bData, data, iVar);
   
-  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
-  data[iK]= currState[m_startK]/data[EulerTerm::RHO];
+  const CFuint iNutil = this->getModel()->getFirstScalarVar(SGROUP);
+  data[iNutil]= currState[m_startNutil]/data[EulerTerm::RHO];
 }
 
 //////////////////////////////////////////////////////////////////////////////

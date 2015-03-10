@@ -39,7 +39,7 @@ void NavierStokesSACons<BASE>::setGradientVars(const std::vector<RealVector*>& s
   const CFuint nbStates = stateSize;
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const CFuint TID = this->_TID;
-  const CFuint KID = TID+1;
+  const CFuint NutilID = TID+1;
   cf_assert(values.nbRows() == PhysicalModelStack::getActive()->getNbEq());
   
   for (CFuint i = 0; i < nbStates; ++i) {
@@ -53,9 +53,9 @@ void NavierStokesSACons<BASE>::setGradientVars(const std::vector<RealVector*>& s
       v2 += vxi*vxi;
     }
     
-    values(TID,i) = (state[TID] - 0.5*state[0]*v2)/(state[0]*cv);
-    values(0,i) = R*state[0]*values(TID,i);
-    values(KID,i) = state[KID]*overRho;
+    values(TID,i) = (state[TID] - 0.5*state[0]*v2)/(state[0]*cv); // return T
+    values(0,i) = R*state[0]*values(TID,i); // return P
+    values(NutilID,i) = state[NutilID]*overRho; // return Nuitil
   }
 }
 
@@ -230,7 +230,7 @@ void NavierStokesSACons<BASE>::setup()
   
   const CFuint nbTurbEquations = this->_eulerModel->getNbScalarVars(0);
   cf_assert(nbTurbEquations == 1);
-  vector<std::string> names(dim + 2 + nbTurbEquations);
+  vector<std::string> names(dim + 2 + nbTurbEquations);// number of Dimensions + (Cont + Energy) + SA
   names[0] = "p";
   names[1] = "u";
   names[2] = "v";
@@ -249,7 +249,7 @@ void NavierStokesSACons<BASE>::setup()
   names[this->_TID] = "T";
   
   // Names for turbulent variables
-  names[this->_TID+1] = "K";
+  names[this->_TID+1] = "Nuitil";
     
   this->setVarNames(names);
 }
@@ -260,7 +260,7 @@ template <typename BASE>
 CFreal NavierStokesSACons<BASE>::getCurrUpdateDiffCoeff(CFuint iEqSS)
 {  
   return (this->getModel().getPhysicalData())[NavierStokes::NSTurbTerm::MU] + 
-    (this->getModel().getPhysicalData())[NavierStokes::NSTurbTerm::MUT];
+    (this->getModel().getPhysicalData())[NavierStokes::NSTurbTerm::MUT]; // return (mu + mu_tur)
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -271,23 +271,23 @@ void NavierStokesSACons<BASE>::setGradientState(const RealVector& state)
   using namespace COOLFluiD::Framework;
   
   const CFreal R = this->_eulerModel->getR();
-  const CFreal cv = R/(this->_eulerModel->getGamma() - 1.);
-  const CFreal overRho = 1./state[0];
+  const CFreal cv = R/(this->_eulerModel->getGamma() - 1.); // cv = R/(gamma -1)
+  const CFreal overRho = 1./state[0]; // 1/rho
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   
   CFreal v2 = 0.;
   for (CFuint i = 0; i < dim; ++i) {
-    const CFreal vxi = state[1+i]*overRho;
+    const CFreal vxi = state[1+i]*overRho; // rhoU/rho = U
     this->_gradState[1+i] = vxi;
-    v2 += vxi*vxi;
+    v2 += vxi*vxi; // (u^2 + v^2 + w^2 )
   }
   
   const CFuint TID = this->_TID;
-  this->_gradState[TID] = (state[TID] - 0.5*state[0]*v2)/(state[0]*cv);
-  this->_gradState[0] = R*state[0]*this->_gradState[TID];
+  this->_gradState[TID] = (state[TID] - 0.5*state[0]*v2)/(state[0]*cv); // T=(rhoE - 0.5*rho*(u^2 + v^2 + w^2))/(rho*Cv) 
+  this->_gradState[0] = R*state[0]*this->_gradState[TID]; // R*rho*T = P
   
-  const CFuint KID = TID+1;
-  this->_gradState[KID] = state[KID]*overRho;
+  const CFuint NutilID = TID+1;
+  this->_gradState[NutilID] = state[NutilID]*overRho;
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -7,7 +7,7 @@
 using namespace std;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Physics::NavierStokes;
+using namespace COOLFluiD::Physics::NavierStokes; 
 
 //////////////////////////////////////////////////////////////////////////////
 

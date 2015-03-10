@@ -51,6 +51,8 @@ DataProcessingData::DataProcessingData(Common::SafePtr<Method> owner)
   _updateVarStr = "Null";
   setParameter("updateVar",&_updateVarStr);
   
+  ///@info in order for this to be issued it must be called from the derived class through the command 
+  //getMethodData().getStartIter()
   m_startIter = 0.;
   setParameter("StartIter",&m_startIter);
 }

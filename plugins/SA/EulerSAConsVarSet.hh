@@ -16,7 +16,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * This class represents a convective var set for k-Omega turbulence model
+   * This class represents a convective var set for SA turbulence model
    *
    * @author Andrea Lani
    * @author Khalil Bensassi 
@@ -119,13 +119,13 @@ protected:
   RealMatrix                       _leftEv;
   
   /// start ID for the turbulent equations
-  CFuint m_startK;
+  CFuint m_startNutil;
   
   /// temporary array
   RealVector m_tmpResult;
   
   /// physical data
-  RealVector m_pdatak;
+  RealVector m_pdataNutil;
   
  
 }; // end of class EulerSAConsVarSet

@@ -18,7 +18,7 @@ NavierStokesSAVarSet<BASE, SGROUP>::NavierStokesSAVarSet
   _eulerModel(model->getConvectiveTerm().d_castTo<EulerSATerm>()),
   _isPerturb(false),
   _iPerturbVar(),
-  _unperturbedFluxK(0.)
+  _unperturbedFluxNutil(0.)
 {
 }
 
@@ -75,9 +75,9 @@ RealVector& NavierStokesSAVarSet<BASE, SGROUP>::getFlux(const RealVector& values
   // compute the flux in the base class
   RealVector& flux = BASE::getFlux(values, gradients, normal, radius);
   
-  const CFuint kID = this->_kID;
-  assert(kID < gradients.size());
-  const RealVector& gradK = *gradients[kID];
+  const CFuint NutilID = this->_kID; // _kID is taken from the NavierStokesSAVarSet
+  assert(NutilID < gradients.size());
+  const RealVector& gradNutil = *gradients[NutilID];
   
   RealVector& nsData = this->getModel().getPhysicalData();
   
@@ -85,20 +85,20 @@ RealVector& NavierStokesSAVarSet<BASE, SGROUP>::getFlux(const RealVector& values
   const CFreal overSigma = 1.5;
   //unused//    const CFreal Cb2 = 0.622;
   const CFreal rho = this->getDensity(values);
-  const CFreal mutilda = this->_gradState[kID]*rho;
+  const CFreal mutilda = this->_gradState[NutilID]*rho;
   const CFreal mu = nsData[NSTurbTerm::MU];
   
-  flux[kID] = this->getModel().getCoeffTau() * overSigma * (mu + mutilda)*
-    MathFunctions::innerProd(gradK, normal);
+  flux[NutilID] = this->getModel().getCoeffTau() * overSigma * (mu + mutilda)* 
+    MathFunctions::innerProd(gradNutil, normal); // 1*(1/sigma)*(mu + mutilda) * (
   
   // jacobian contribution
   if(_isPerturb) {
-    if(_iPerturbVar != kID) {
-      flux[kID] = _unperturbedFluxK;
+    if(_iPerturbVar != NutilID) {
+      flux[NutilID] = _unperturbedFluxNutil;
     }
   }
   else {
-    _unperturbedFluxK = flux[kID];
+    _unperturbedFluxNutil = flux[NutilID];
   }
   
   return flux;

@@ -23,11 +23,11 @@ namespace COOLFluiD {
 template <typename BASE, CFuint SGROUP>
 EulerSAVarSet<BASE, SGROUP>::EulerSAVarSet(Common::SafePtr<Framework::BaseTerm> term) :
   BASE(term),
-  m_startK(0.),
+  m_startNutil(0.),
   m_tmpResult(),
-  m_pdatak()
+  m_pdataNutil()
 {
-  this->addVarName("K");
+  this->addVarName("Nuitil");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -75,14 +75,14 @@ void EulerSAVarSet<BASE, SGROUP>::computePhysicalData(const Framework::State& st
 {
   BASE::computePhysicalData(state, data);
   
-  const CFreal k = state[m_startK]; 
+  const CFreal Nutil = state[m_startNutil]; 
   
   // AL: is this needed? also P,T have to change if they are not variables
   // data[NavierStokes::EulerTerm::H] += k;
   // data[NavierStokes::EulerTerm::E] += k;
   
-  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
-  data[iK] = k;
+  const CFuint iNutil = this->getModel()->getFirstScalarVar(SGROUP);
+  data[iNutil] = Nutil;
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -93,8 +93,8 @@ void EulerSAVarSet<BASE, SGROUP>::computeStateFromPhysicalData(const RealVector&
 {
   BASE::computeStateFromPhysicalData(data,state);
   
-  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
-  state[m_startK] = data[iK];
+  const CFuint iNutil = this->getModel()->getFirstScalarVar(SGROUP);
+  state[m_startNutil] = data[iNutil];
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -114,8 +114,8 @@ void EulerSAVarSet<BASE, SGROUP>::setDimensionalValues(const Framework::State& s
   BASE::setDimensionalValues(state, result);
   
   const RealVector& refData = this->getModel()->getReferencePhysicalData();
-  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
-  result[m_startK]   = state[m_startK]*refData[iK];
+  const CFuint iNutil = this->getModel()->getFirstScalarVar(SGROUP);
+  result[m_startNutil]   = state[m_startNutil]*refData[iNutil];
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -127,8 +127,8 @@ void EulerSAVarSet<BASE, SGROUP>::setAdimensionalValues(const Framework::State& 
   BASE::setAdimensionalValues(state, result);
   
   const RealVector& refData = this->getModel()->getReferencePhysicalData();
-  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
-  result[m_startK]   = state[m_startK]/refData[iK];
+  const CFuint iNutil = this->getModel()->getFirstScalarVar(SGROUP);
+  result[m_startNutil]   = state[m_startNutil]/refData[iNutil];
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -160,21 +160,21 @@ void EulerSAVarSet<BASE, SGROUP>::setDimensionalValuesPlusExtraValues
     result[i] = m_tmpResult[i];
   }
     
-  computePhysicalData(state, m_pdatak);
+  computePhysicalData(state, m_pdataNutil);
   
   const RealVector& refData = this->getModel()->getReferencePhysicalData();
-  const CFreal pdim = this->getModel()->getPressureFromState(m_pdatak[EulerTerm::P])*refData[EulerTerm::P];
-  const CFreal Tdim = m_pdatak[EulerTerm::T]*refData[EulerTerm::T];
+  const CFreal pdim = this->getModel()->getPressureFromState(m_pdataNutil[EulerTerm::P])*refData[EulerTerm::P];
+  const CFreal Tdim = m_pdataNutil[EulerTerm::T]*refData[EulerTerm::T];
   
-  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
-  const CFreal Kdim = state[m_startK]*refData[iK];
-  result[m_startK] = Kdim;
+  const CFuint iNutil = this->getModel()->getFirstScalarVar(SGROUP);
+  const CFreal Nutildim = state[m_startNutil]*refData[iNutil];
+  result[m_startNutil] = Nutildim;
   
-  extra.resize(4);
+  extra.resize(4); 
   
   const CFreal Rdim = this->getModel()->getRdim();
   const CFreal rhodim = pdim/(Rdim*Tdim);
-  const CFreal NIUtildadim = Kdim;
+  const CFreal NIUtildadim = Nutildim;
   
   SafePtr<NSTurbTerm> nsTurbTerm  =
     PhysicalModelStack::getActive()->getImplementor()->
@@ -189,7 +189,7 @@ void EulerSAVarSet<BASE, SGROUP>::setDimensionalValuesPlusExtraValues
   extra[0] = NIUtildadim;
   extra[1] = Qsi;
   extra[2] = NIUdim;
-  extra[3] = NIUtildadim * fv1;
+  extra[3] = NIUtildadim * fv1; // return NIUdim
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -213,22 +213,22 @@ void EulerSAVarSet<BASE, SGROUP>::setup()
 {
   BASE::setup();
   
-  m_startK = 0;
+  m_startNutil = 0;
   for (int i = 0; i < SGROUP; ++i) {
-    m_startK += this->getModel()->getNbScalarVars(i);
+    m_startNutil += this->getModel()->getNbScalarVars(i);
   }
   
   // AL: check if this is correct
-  m_startK += BASE::EULERSET::getEqSetData()[0].size();
+  m_startNutil += BASE::EULERSET::getEqSetData()[0].size();
   
   const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
   m_tmpResult.resize(nbEqs);
-  cf_assert(m_startK <= nbEqs-1);
+  cf_assert(m_startNutil <= nbEqs-1);
   
   if (EulerSAVarSet<BASE, SGROUP>::getEqSetData().size() == 0) {
     this->addEqSetData(1);
   }
-  this->getModel()->resizePhysicalData(m_pdatak);
+  this->getModel()->resizePhysicalData(m_pdataNutil);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -244,8 +244,8 @@ void EulerSAVarSet<BASE, SGROUP>::computePerturbedPhysicalData
   
   BASE::computePerturbedPhysicalData(currState, bData, data, iVar);
   
-  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
-  data[iK]= currState[m_startK];
+  const CFuint iNutil = this->getModel()->getFirstScalarVar(SGROUP);
+  data[iNutil]= currState[m_startNutil];
 }
 
 //////////////////////////////////////////////////////////////////////////////
