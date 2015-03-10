@@ -11,7 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.0185727
+### Residual = -6.0185725
 
 #
 CFEnv.ExceptionLogLevel    = 1000
