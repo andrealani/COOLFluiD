@@ -39,8 +39,6 @@ void NavierStokes2DAxiSourceTerm<EULERVAR, NSVAR>::defineConfigOptions
 (Config::OptionList& options)
 {
   options.template addConfigOption< std::vector<CFuint> > ("uvIDs", "IDs of u and v components");
-  options.template addConfigOption< bool > 
-    ("UseGradientLS", "Use the gradient computed with the least square reconstruction");
 }
 
 //////////////////////////////////////////////////////////////////////////////
