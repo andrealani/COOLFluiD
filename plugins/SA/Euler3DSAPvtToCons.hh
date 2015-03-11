@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Physics_SA_Euler3DSAPuvtToCons_hh
-#define COOLFluiD_Physics_SA_Euler3DSAPuvtToCons_hh
+#ifndef COOLFluiD_Physics_SA_Euler3DSAPvtToCons_hh
+#define COOLFluiD_Physics_SA_Euler3DSAPvtToCons_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -26,7 +26,7 @@ namespace COOLFluiD {
  * @modified Christos Gkoudesnes
  *
  */
-class Euler3DSAPuvtToCons : public Framework::VarSetTransformer {
+class Euler3DSAPvtToCons : public Framework::VarSetTransformer {
 public:
 
   typedef Framework::MultiScalarTerm<NavierStokes::EulerTerm> EulerSATerm;
@@ -34,12 +34,12 @@ public:
   /**
    * Constructor
    */
-  Euler3DSAPuvtToCons(Common::SafePtr<Framework::PhysicalModelImpl> model);
+  Euler3DSAPvtToCons(Common::SafePtr<Framework::PhysicalModelImpl> model);
 
   /**
    * Default destructor
    */
-  ~Euler3DSAPuvtToCons();
+  ~Euler3DSAPvtToCons();
   
   /**
    * Transform a state into another one
@@ -57,7 +57,7 @@ private:
   /// acquaintance of the PhysicalModel
   Common::SafePtr<EulerSATerm> _model;
 
-}; // end of class Euler3DSAPuvtToCons
+}; // end of class Euler3DSAPvtToCons
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -69,4 +69,4 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Physics_SA_Euler2DSAPuvtToCons_hh
+#endif // COOLFluiD_Physics_SA_Euler2DSAPvtToCons_hh

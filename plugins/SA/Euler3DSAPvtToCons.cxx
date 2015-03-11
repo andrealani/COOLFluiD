@@ -1,7 +1,6 @@
-#include "Euler3DSAPuvtToCons.hh"
+#include "Euler3DSAPvtToCons.hh"
 #include "Framework/PhysicalModel.hh"
 #include "Environment/ObjectProvider.hh"
-//#include "NavierStokes/EulerPhysicalModel.hh" // not used in the Komega 3D case
 #include "SA.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -21,12 +20,12 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-Environment::ObjectProvider<Euler3DSAPuvtToCons, VarSetTransformer, SAModule, 1> 
-euler3DSAPuvtToConsProvider("Euler3DSAPuvtToCons");
+Environment::ObjectProvider<Euler3DSAPvtToCons, VarSetTransformer, SAModule, 1> 
+euler3DSAPvtToConsProvider("Euler3DSAPvtToCons");
 
 //////////////////////////////////////////////////////////////////////////////
 
-Euler3DSAPuvtToCons::Euler3DSAPuvtToCons
+Euler3DSAPvtToCons::Euler3DSAPvtToCons
 (Common::SafePtr<Framework::PhysicalModelImpl> model) :
   VarSetTransformer(model),
   _model(model->getConvectiveTerm().
@@ -36,13 +35,13 @@ Euler3DSAPuvtToCons::Euler3DSAPuvtToCons
 
 //////////////////////////////////////////////////////////////////////////////
 
-Euler3DSAPuvtToCons::~Euler3DSAPuvtToCons()
+Euler3DSAPvtToCons::~Euler3DSAPvtToCons()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Euler3DSAPuvtToCons::transform(const State& state, State& result)
+void Euler3DSAPvtToCons::transform(const State& state, State& result)
 {
 
   const CFreal R = _model->getR();
@@ -65,7 +64,7 @@ void Euler3DSAPuvtToCons::transform(const State& state, State& result)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Euler3DSAPuvtToCons::transformFromRef(const RealVector& data, State& result)
+void Euler3DSAPvtToCons::transformFromRef(const RealVector& data, State& result)
 {
   const CFreal rho = data[EulerSATerm::RHO];
 
