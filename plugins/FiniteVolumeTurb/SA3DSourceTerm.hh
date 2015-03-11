@@ -107,12 +107,6 @@ private: // data
   /// array of temporary values
   RealMatrix _values;
   
-  /// array of temporary nodal states
-  std::vector<RealVector*> _states;
-  
-  /// density vector
-  RealVector _rho;
-
   /// unperturbed Positive Part
   CFreal _unperturbedPositivePart;
 

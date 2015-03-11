@@ -51,10 +51,7 @@ SA3DSourceTerm::SA3DSourceTerm(const std::string& name) :
   _physicalData(),
   _nstates(CFNULL),
   _wallDistance(CFNULL),
-  _values(),
-  _states(),
-  _rho()
-  
+  _values()
 {
   addConfigOptionsTo(this);
   
@@ -96,7 +93,6 @@ void SA3DSourceTerm::setup()
     derComput->getMaxNbVerticesInControlVolume();
 
   _values.resize(PhysicalModelStack::getActive()->getNbEq(), nbNodesInControlVolume);
-  _states.reserve(PhysicalModelStack::getActive()->getNbEq());
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -107,13 +103,7 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
 {
 
   ///Reset the source term
-  source[0] = 0.0; // continuity
-  source[1] = 0.0; // x-momentum
-  source[2] = 0.0; // y-momentum
-  source[3] = 0.0; // z-momentum
-  source[4] = 0.0; // energy
-  //I add this
-  source[5] = 0.0; // Nuitil
+  source = 0.0;
 
   const EquationSubSysDescriptor& eqData =
     PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
@@ -147,25 +137,7 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     _varSet->computePhysicalData(*currState, _physicalData);
 
     //fill in the nodal states
-    const vector<Node*>* const nodes = element->getNodes();
-    const CFuint nbNodesInElem = nodes->size();
-    _states.clear();
-    for (CFuint i = 0; i < nbNodesInElem; ++i) {
-      _states.push_back(&_nstates[(*nodes)[i]->getLocalID()]);
-    }
-
-    _rho.resize(nbNodesInElem);
-
-    _diffVarSet->setGradientVars(_states, _values, _states.size());
-
     const CFreal R = _varSet->getModel()->getR();
-    for(CFuint iNode = 0; iNode < nbNodesInElem ; iNode++)
-    {
-      _rho[iNode] = _values(0,iNode)/(R*_values(4,iNode)); //rho = P/(R*T)    I change this
-    }
-
-    const vector<GeometricEntity*>& faces = *element->getNeighborGeos();
-    cf_assert(faces.size() == nbNodesInElem);
 
     //compute the gradients by applying Green Gauss in the
     //cell d's

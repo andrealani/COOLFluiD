@@ -1,22 +1,13 @@
-#ifndef COOLFluiD_Numerics_FiniteVolume_NoSlipWallAdiabaticNSTurb2D_hh
-#define COOLFluiD_Numerics_FiniteVolume_NoSlipWallAdiabaticNSTurb2D_hh
+#ifndef COOLFluiD_Numerics_FiniteVolume_NoSlipWallAdiabaticNSTurb_hh
+#define COOLFluiD_Numerics_FiniteVolume_NoSlipWallAdiabaticNSTurb_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
 #include "FiniteVolume/FVMCC_BC.hh"
-#include "NavierStokes/Euler2DPuvt.hh"
-#include "NavierStokes/MultiScalarVarSet.hh"
-#include "NavierStokes/NavierStokesTurbVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-  
-  namespace Physics {
-    namespace NavierStokes {
-      class NavierStokes2DVarSet;
-    }
-  }
   
   namespace Numerics {
 
@@ -31,12 +22,9 @@ namespace COOLFluiD {
    * @author Thomas Wuilbaut
    *
    */
-class NoSlipWallAdiabaticNSTurb2D : public FVMCC_BC {
-
+template <typename ConvTurbVarSet, typename DiffTurbVarSet>
+class NoSlipWallAdiabaticNSTurb : public FVMCC_BC {
 public:
-  
-  typedef Physics::NavierStokes::MultiScalarVarSet<Physics::NavierStokes::Euler2DPuvt> ConvTurb2DVarSet;
-  typedef Physics::NavierStokes::NavierStokesTurbVarSet<Physics::NavierStokes::NavierStokes2DVarSet, 0> DiffTurb2DVarSet;
   
   /**
    * Defines the Config Option's of this class
@@ -47,26 +35,25 @@ public:
   /**
    * Constructor
    */
-  NoSlipWallAdiabaticNSTurb2D(const std::string& name);
+  NoSlipWallAdiabaticNSTurb(const std::string& name);
 
   /**
    * Default destructor
    */
-  ~NoSlipWallAdiabaticNSTurb2D();
+  virtual ~NoSlipWallAdiabaticNSTurb();
 
   /**
    * Set up private data and data of the aggregated classes
    * in this command before processing phase
    */
-  void setup();
-
+  virtual void setup();
+  
   /**
    * Apply boundary condition on the given face
    */
-  void setGhostState(Framework::GeometricEntity *const face);
-
-
- protected:
+  virtual void setGhostState(Framework::GeometricEntity *const face);
+  
+protected:
   
   /**
    * Apply boundary condition on the given ghost state
@@ -78,19 +65,22 @@ public:
 				 Framework::State& ghostState);
   
 private:
-
+  
   /// physical model convective variable set
-  Common::SafePtr<ConvTurb2DVarSet> _varSetTurb;
+  Common::SafePtr<ConvTurbVarSet> _varSetTurb;
 
   /// physical model diffusive variable set
-  Common::SafePtr<DiffTurb2DVarSet> _diffVarTurb;
+  Common::SafePtr<DiffTurbVarSet> _diffVarTurb;
 
   /// X-component of a velocity vector of the wall
   CFreal _xWallVelocity;
 
   /// Y-component of a velocity vector of the wall
   CFreal _yWallVelocity;
-
+  
+  /// Z-component of a velocity vector of the wall
+  CFreal _zWallVelocity;
+  
   /// turb intensity variable ID
   CFuint m_kID;
   
@@ -103,7 +93,7 @@ private:
   /// minimum turb intensity at the ghost
   CFreal m_ghostKMin;
   
-}; // end of class NoSlipWallAdiabaticNSTurb2D
+}; // end of class NoSlipWallAdiabaticNSTurb
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -115,4 +105,8 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Numerics_FiniteVolume_NoSlipWallAdiabaticNSTurb2D_hh
+#include "FiniteVolumeNavierStokes/NoSlipWallAdiabaticNSTurb.ci"
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Numerics_FiniteVolume_NoSlipWallAdiabaticNSTurb_hh

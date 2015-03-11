@@ -94,11 +94,7 @@ void SA2DSourceTerm::computeSource(Framework::GeometricEntity *const element,
 {
 
   ///Reset the source term
-  source[0] = 0.0;
-  source[1] = 0.0;
-  source[2] = 0.0;
-  source[3] = 0.0;
-  source[4] = 0.0;
+  source = 0.0;
 
   const EquationSubSysDescriptor& eqData =
     PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
