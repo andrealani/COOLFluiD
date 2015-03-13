@@ -215,6 +215,11 @@ void PostProcessLSF::runPostProcess(DataHandle<CFreal> dataVector){
   disps.resize(nbProcesses,0);
   
   int local_size = Q_out.size();
+
+  if (local_size <= 0){
+    CFLog(INFO, "Postprocess: Selected regection contains the full domain, aborting post-process routine\n");
+    return;
+  }
   MPI_Gather(&local_size,  1, Common::MPIStructDef::getMPIType(&local_size),
              &nbsElems[0], 1, Common::MPIStructDef::getMPIType(&nbsElems[0]),
 	     0, comm);

@@ -25,8 +25,8 @@ class RadiationPhysicsHandler : public Common::OwnedObject,
 {
 public:
 
-    typedef Environment::ConcreteProvider<RadiationPhysicsHandler,1> PROVIDER;
-    typedef const std::string& ARG1;
+  typedef Environment::ConcreteProvider<RadiationPhysicsHandler,1> PROVIDER;
+  typedef const std::string& ARG1;
 
 
   RadiationPhysicsHandler(const std::string &name);

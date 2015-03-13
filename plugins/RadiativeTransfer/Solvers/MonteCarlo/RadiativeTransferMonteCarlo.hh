@@ -254,6 +254,9 @@ private:
   vector<CFreal> m_ghostStateRadPower;
   vector<CFuint> m_nbPhotonsGhostState;
 
+  //FIXME: persistent memory for cell and face iterators
+  CFuint  m_iphoton_cell_fix, m_istate_cell_fix;
+  CFuint  m_iphoton_face_fix, m_igState_face_fix;
 
   bool getFacePhotonData(Photon &ray);
 }; // end of class RadiativeTransferMonteCarlo
@@ -453,7 +456,7 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::setup()
   m_stateRadPower.setDataSockets(sockets);
   m_stateInRadPowers.setDataSockets(sockets);
   
-// initialize ParticleTracking
+  //initialize ParticleTracking
   m_lagrangianSolver.setDataSockets(sockets);
   m_lagrangianSolver.setupSendBufferSize(m_sendBufferSize);
 
@@ -593,7 +596,7 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getTotalEnergy(){
        m_ghostStateRadPower[gstate] = 0.;
       }
     }
-    cout<<" walls rad power : "<< gStateRadPower<<endl;
+    //cout<<" walls rad power : "<< gStateRadPower<<endl;
 
     m_totalRadPower = stateRadPower + gStateRadPower;
 
@@ -617,12 +620,11 @@ template<class PARTICLE_TRACKING>
 bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getCellPhotonData(Photon &ray){
 	
     //static CellTrsGeoBuilder::GeoData& cellData = m_cellBuilder.getDataGE();
-    static CFuint photon=0, state=0;
-    static CFuint nbStates = m_nbPhotonsState.size();
+    const CFuint nbStates = m_nbPhotonsState.size();
 
-    for(;state<nbStates; ++state)
+    for(;m_istate_cell_fix<nbStates; ++m_istate_cell_fix)
     {
-      for(;photon<m_nbPhotonsState[state];)
+      for(;m_iphoton_cell_fix<m_nbPhotonsState[ m_istate_cell_fix ];)
       {
 //        cout<<"m_nbPhotonsState[state]: "<<m_nbPhotonsState[state]<<' '<<";state: "<<state<<endl;
 //        cout<<"photon: "<<photon<<endl;
@@ -637,7 +639,7 @@ bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getCellPhotonData(Photon &r
 
         //Get directions
         RealVector directions(m_dim2);
-        m_radiation->getCellDistPtr(state)->
+        m_radiation->getCellDistPtr( m_istate_cell_fix )->
             getRadiatorPtr()->getRandomEmission(ray.userData.wavelength, directions );
 
         //cout<<"ray directions: ";
@@ -649,27 +651,27 @@ bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getCellPhotonData(Photon &r
         //Get the beam max optical path Ks
         ray.userData.KS = - std::log( m_rand.uniformRand() );
         // ray.actualKS = 0;
-
+//  cout<<"getCellcenter"<<endl;
         //Get cell center
         static Framework::DataHandle<Framework::State*, Framework::GLOBAL> states
                 = socket_states.getDataHandle();
 
-        Node& baricenter = (*states[state]).getCoordinates();
+        Node& baricenter = (*states[ m_istate_cell_fix ]).getCoordinates();
 
         //RealVector baricenter(_dim);
         //m_particleTracking->computeAverage(*cell->getNodes(), cell->nbNodes(), baricenter);
-
+        //
         //cout<<"baricenter: ";
 
         //cout<<endl;
 
-        for(CFuint i=0;i<m_dim2;++i){
+        for(CFuint i=0;i<m_dim;++i){
           //  cout<<baricenter[i]<<' ';
           ray.commonData.currentPoint[i]=baricenter[i];
         }
-        for(CFuint i=m_dim;i<m_dim;++i){
+        for(CFuint i=m_dim;i<m_dim2;++i){
           //  cout<<baricenter[i]<<' ';
-          ray.commonData.currentPoint[i]=0.;
+          ray.commonData.currentPoint[i] = 0.;
         }
 
         //Get the remaining information
@@ -677,13 +679,13 @@ bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getCellPhotonData(Photon &r
         CFuint cellID = m_radiation->getCurrentCellStateID();
         ray.commonData.cellID = cellID;
 
-        ray.userData.energyFraction= m_stateRadPower[state]/CFreal(m_nbPhotonsState[state]);
+        ray.userData.energyFraction= m_stateRadPower[ m_istate_cell_fix ]/CFreal(m_nbPhotonsState[ m_istate_cell_fix ]);
 
         //m_cellBuilder.releaseGE();
-        ++photon;
+        ++m_iphoton_cell_fix;
         return true;
       }
-       photon=0;
+       m_iphoton_cell_fix=0;
     }
     return false;
 }
@@ -692,12 +694,12 @@ template<class PARTICLE_TRACKING>
 bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getFacePhotonData(Photon &ray){
 
   //static CellTrsGeoBuilder::GeoData& cellData = m_cellBuilder.getDataGE();
-  static CFuint photon=0, gState=0;
-  static CFuint nbGstates = m_nbPhotonsGhostState.size();
+  //m_ photon=0, gState=0;
+  const CFuint nbGstates = m_nbPhotonsGhostState.size();
 
-  for(; gState < nbGstates ; ++gState)
+  for( ; m_igState_face_fix < nbGstates ; ++ m_igState_face_fix)
   {
-    for(;photon<m_nbPhotonsGhostState[gState];)
+    for( ; m_iphoton_face_fix < m_nbPhotonsGhostState[ m_igState_face_fix  ]; )
     {
       //cout<<"m_nbPhotonsState[state]: "<<m_nbPhotonsState[state]<<' '<<";state: "<<state<<endl;
       //cout<<"photon: "<<photon<<endl;
@@ -713,7 +715,7 @@ bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getFacePhotonData(Photon &r
       //Get directions
 
       RealVector directions(m_dim2);
-      m_radiation->getWallDistPtr( gState )->
+      m_radiation->getWallDistPtr( m_igState_face_fix )->
           getRadiatorPtr()->getRandomEmission(ray.userData.wavelength, directions );
 
 
@@ -799,13 +801,13 @@ bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getFacePhotonData(Photon &r
       //const CFuint cellID = cell->getID();
       ray.commonData.cellID = cellID;
 
-      ray.userData.energyFraction= m_ghostStateRadPower[gState]/CFreal(m_nbPhotonsGhostState[gState]);
+      ray.userData.energyFraction= m_ghostStateRadPower[m_igState_face_fix]/CFreal(m_nbPhotonsGhostState[ m_igState_face_fix ]);
 
       //m_cellBuilder.releaseGE();
-      ++photon;
+      ++m_iphoton_face_fix;
       return true;
     }
-    photon=0;
+    m_iphoton_face_fix=0;
   }
   return false;
 }
@@ -853,15 +855,16 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
   while( !done ){
     recvSize = photonStack.size();
     //generate and raytrace the inner photons
+    
+
     CFuint nbCellPhotons =
         std::min(std::max(CFint(m_nbRaysCycle) - CFint(recvSize),(CFint)0), CFint(toGenerateCellPhotons) );
 
     CFuint nbWallPhotons =
         std::min(std::max(CFint(m_nbRaysCycle) - CFint(recvSize) - CFint(nbCellPhotons),(CFint)0), CFint(toGenerateWallPhotons ));
 
-    //   CFLog(INFO, recvSize<<' '<<toGenerateCellPhotons<<' '<<toGenerateWallPhotons<<'\n');
-    //CFLog(INFO, nbCellPhotons<<' '<<nbWallPhotons<<'\n');
     for(CFuint i=0; i < nbCellPhotons ; ++i ){
+       
       if(getCellPhotonData( photon )){
         //CFLog(INFO,"PHOTON: " << photon.cellID<<' '<<photon.userData.KS<<'\n' );
         //printPhoton(photon);
@@ -881,7 +884,7 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
       if (m_myProcessRank == 0)  ++*(progressBar);
     }
 
-    //      CFLog(INFO, "raytrace the outer photons \n");
+//    CFLog(INFO, "raytrace the outer photons \n");
     for(CFuint i = 0; i< photonStack.size(); ++i ){
       //photon=photonStack[i];
       //CFLog(INFO,"PHOTON: " << photon.cellID<<' '<<photon.userData.KS<<'\n' );
@@ -894,13 +897,8 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
     bool isLastPhoton = (toGenerateCellPhotons + toGenerateWallPhotons == 0);
     done = m_lagrangianSolver.sincronizeParticles(photonStack, isLastPhoton);
 
-    //      CFLog(INFO, "done Sincronizing; "<< "receiv_size= "<< photonStack.size()
-    //        << " photons to Generate= "<<toGenerateCellPhotons <<"\n");
-
-    //      if(m_myProcessRank == 0){
-    //       cout<<"Done sincronizing"<<endl<<"CPU "<<m_myProcessRank<< " has received: "<<photonStack.size()<<
-    //             " photons and has generated "<< totalnbPhotons-toGeneratePhotons <<" photons"<<endl;
-    //      }
+    CFLog(INFO,"Received "<<photonStack.size()<< " photons and has generated "<< nbCellPhotons <<" photons\n");
+    CFLog(INFO,"Number of photons left: "<< toGenerateCellPhotons <<"\n");
   }
   delete progressBar;
 
@@ -932,6 +930,10 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::MonteCarlo()
 {
     CFuint nbLoops = m_radiation->getNumberLoops();
 
+    //FIXME: reset persitent cell and face iterators
+    m_iphoton_cell_fix=0, m_istate_cell_fix=0;
+    m_iphoton_face_fix=0, m_igState_face_fix=0;
+
     for(CFuint i=0; i< nbLoops; ++i){
       m_radiation->setupWavStride(i);
       getTotalEnergy();
@@ -947,7 +949,7 @@ CFuint RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::rayTracing(Photon& beam)
 {
   CFuint nbCrossedCells = 0;
   CFuint nbIter = 0;
-  static CFint exitCellID, exitFaceID, currentCellID;
+  CFint exitCellID, exitFaceID, currentCellID;
   //CFLog(INFO, "start Raytracing\n");
 
   //CFLog(DEBUG_MAX, "RadiativeTransferMonteCarlo::rayTracing() => actualCellID = " << actualCellID << "\n");
@@ -977,13 +979,12 @@ CFuint RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::rayTracing(Photon& beam)
     exitCellID=m_lagrangianSolver.getExitCellID();
 
     if(exitFaceID>=0){
-      static CFreal cellK, stepDistance;
 
-      stepDistance=m_lagrangianSolver.getStepDistance();
+      const CFreal stepDistance=m_lagrangianSolver.getStepDistance();
       RealVector null;
 
       //CFLog(INFO, "Absorption IN!\n");
-      cellK= m_radiation->getCellDistPtr(currentCellID)
+      const CFreal cellK= m_radiation->getCellDistPtr(currentCellID)
           ->getRadiatorPtr()->getAbsorption(beamData.wavelength, null);
 
       //CFLog(INFO, "Absorption OUT!\n");
@@ -1158,6 +1159,5 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
   } // namespace RadiativeTransfer
 
 } // namespace COOLFluiD
-
 
 #endif // COOLFluiD_RadiativeTransfer_RadiativeTransferMonteCarloFVMCC_hh
