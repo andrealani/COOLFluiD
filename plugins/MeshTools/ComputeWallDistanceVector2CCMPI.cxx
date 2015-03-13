@@ -42,6 +42,14 @@ ComputeWallDistanceVector2CCMPIProvider("ComputeWallDistanceVector2CCMPI");
 
 //////////////////////////////////////////////////////////////////////////////
 
+void ComputeWallDistanceVector2CCMPI::defineConfigOptions(Config::OptionList& options)
+{
+   options.addConfigOption< bool >
+     ("CentroidBased", "Flag to select algorithm based on wall face centroid (limited usability!).");
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
 ComputeWallDistanceVector2CCMPI::ComputeWallDistanceVector2CCMPI(const std::string& name) :
   ComputeWallDistance(name),
 #ifdef CF_HAVE_MPI
@@ -50,6 +58,10 @@ ComputeWallDistanceVector2CCMPI::ComputeWallDistanceVector2CCMPI(const std::stri
   m_myRank(0),
   m_nbProc(1)
 {
+  addConfigOptionsTo(this);
+  
+  _centroidBased = false;
+  setParameter("CentroidBased",&_centroidBased);
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -99,12 +111,15 @@ void ComputeWallDistanceVector2CCMPI::execute()
   
   CFLog(INFO,"ComputeWallDistanceVector2CCMPI::execute() computing distance to the wall ...\n");
   
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  
+  // AL: gory fix to use centroid-based algorithm 
+  if (_centroidBased && dim == DIM_3D) {execute3D(); return;}
+  
   // (PhysicalModelStack::getActive()->getDim() == DIM_3D) ? execute3D() : execute2D();
   
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   DataHandle <CFreal> normals = socket_normals.getDataHandle();
-    
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();
   cf_always_assert(_boundaryTRS.size() > 0);
   cf_always_assert(dim == DIM_2D || dim == DIM_3D);
   
@@ -436,10 +451,8 @@ void ComputeWallDistanceVector2CCMPI::computeWallDistance3D(Framework::TRSDistri
       node0.wrap(dim, &data.trsNodes[coordID0]);
       fnormal.wrap(dim, &faceNormals[faceID0]);
       
-      const RealVector& stateCoord = states[iState]->getCoordinates();
-      nodeStateVector = stateCoord - node0;
-      const CFreal stateFaceDistance = 
-	std::abs(MathFunctions::innerProd(fnormal, nodeStateVector)/fnormal.norm2());
+      nodeStateVector = states[iState]->getCoordinates() - node0;
+      const CFreal stateFaceDistance = std::abs(MathFunctions::innerProd(fnormal, nodeStateVector)/fnormal.norm2());
       
       if(stateFaceDistance < minimumDistance) {
 	minimumDistance = stateFaceDistance;

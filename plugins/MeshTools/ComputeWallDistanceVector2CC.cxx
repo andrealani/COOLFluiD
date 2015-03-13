@@ -150,7 +150,7 @@ void ComputeWallDistanceVector2CC::execute()
           // compute the original position of the ghost state @see ComputeDummyState
           const Node& firstNode = *currFace.getNode(0);
 	  
-	      // a condition has to be added to check that the projection is internal to the face
+	  // a condition has to be added to check that the projection is internal to the face
           RealVector nodeStateVector = states[iState]->getCoordinates() - firstNode;
           CFreal stateFaceDistance = MathFunctions::innerProd(m_faceNormal, nodeStateVector)/m_faceNormal.norm2();
           if(stateFaceDistance < minimumDistance) minimumDistance = stateFaceDistance;

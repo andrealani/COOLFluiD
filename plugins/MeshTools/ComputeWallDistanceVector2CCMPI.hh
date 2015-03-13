@@ -34,12 +34,18 @@ namespace COOLFluiD {
  */
 class ComputeWallDistanceVector2CCMPI : public ComputeWallDistance {
 public:
-
+  
+  /**
+   * Defines the Config Option's of this class
+   * @param options a OptionList where to add the Option's
+   */
+  static void defineConfigOptions(Config::OptionList& options);
+  
   /**
    * Constructor.
    */
   ComputeWallDistanceVector2CCMPI(const std::string& name);
-
+  
   /**
    * Default destructor
    */
@@ -122,6 +128,9 @@ private:
   /// number for processors
   CFuint m_nbProc;
   
+  /// flag to select centroid-based algorithm
+  bool _centroidBased;
+
 }; // end of class ComputeWallDistanceVector2CCMPI
 
 //////////////////////////////////////////////////////////////////////////////
