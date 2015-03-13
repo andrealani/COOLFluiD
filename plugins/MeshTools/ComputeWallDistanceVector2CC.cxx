@@ -15,7 +15,6 @@
 
 using namespace std;
 using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Common;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::MathTools;
 
@@ -82,88 +81,73 @@ void ComputeWallDistanceVector2CC::execute()
 {
   CFAUTOTRACE;
 
-  CFLog(INFO, "Computing wall distances using Vector's method...\n");
+  CFLog(VERBOSE, "ComputeWallDistanceVector2CC::execute() START\n");
+
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
   DataHandle< CFreal> wallDistance = socket_wallDistance.getDataHandle();
   DataHandle<CFreal> normals = socket_normals.getDataHandle();
-
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  RealVector nodeStateVector(dim);
+  RealVector faceCentroid(dim);
+  
+  Common::SafePtr<GeometricEntityPool<FaceTrsGeoBuilder> >
+	geoBuilder = getMethodData().getFaceTrsGeoBuilder();
+  SafePtr<FaceTrsGeoBuilder> geoBuilderPtr = geoBuilder->getGeoBuilder();
+  geoBuilderPtr->setDataSockets(socket_states, socket_gstates, socket_nodes);
+  FaceTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
+  geoData.isBFace = true;
+  
   const CFuint nbStates = states.size();
-  CFreal minimumDistance;
   for (CFuint iState = 0; iState < nbStates; ++iState)
   {
-    minimumDistance = MathTools::MathConsts::CFrealMax();
+    CFreal minimumDistance = MathTools::MathConsts::CFrealMax();
+    CFreal minStateFaceDistance =  MathTools::MathConsts::CFrealMax();
     for(CFuint iTRS = 0; iTRS < _boundaryTRS.size() ; ++iTRS)
     {
-      Common::SafePtr<Framework::TopologicalRegionSet> const faces =
-         MeshDataStack::getActive()->getTrs(_boundaryTRS[iTRS]);
-      Common::SafePtr<std::vector<CFuint> > nodesInTrs = faces->getNodesInTrs();
-
-      Common::SafePtr<GeometricEntityPool<FaceTrsGeoBuilder> >
-          geoBuilder = getMethodData().getFaceTrsGeoBuilder();
-
-      SafePtr<FaceTrsGeoBuilder> geoBuilderPtr = geoBuilder->getGeoBuilder();
-      geoBuilderPtr->setDataSockets(socket_states, socket_gstates, socket_nodes);
-
-      FaceTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
-      geoData.isBFace = true;
-      geoData.trs = faces;
-
-      const CFuint nbFaces = faces->getLocalNbGeoEnts();
-
+      geoData.trs = MeshDataStack::getActive()->getTrs(_boundaryTRS[iTRS]);
+      
+      const CFuint nbFaces = geoData.trs->getLocalNbGeoEnts();
       for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
         CFLogDebugMed( "Computing iFace = " << iFace << "\n");
-
+	
         // build the GeometricEntity
         geoData.idx = iFace;
-
         GeometricEntity& currFace = *geoBuilder->buildGE();
-
-        const CFuint dim = PhysicalModelStack::getActive()->getDim();
-        const CFuint faceID = currFace.getID();
-        const CFuint startID = faceID*dim;
-
-        // set the current normal
-        for (CFuint i = 0; i < dim; ++i) {
-          m_faceNormal[i] = normals[startID + i];
-        }
-
-        if(dim == 2){
-          // compute the original position of the ghost state @see ComputeDummyState
-          const Node& firstNode = *currFace.getNode(0);
-          const Node& secondNode = *currFace.getNode(1);
-
-          RealVector faceVector = secondNode - firstNode;
-          RealVector nodeStateVector = states[iState]->getCoordinates() - firstNode;
-          CFreal project = MathFunctions::innerProd(faceVector, nodeStateVector)/faceVector.norm2();
-
-          if(project < faceVector.norm2())
-          {
-            faceVector.normalize();
-            RealVector projectCoord = firstNode + project * faceVector;
-            CFreal stateFaceDistance = MathFunctions::getDistance(projectCoord, states[iState]->getCoordinates());
-            if(stateFaceDistance < minimumDistance) minimumDistance = stateFaceDistance;
-          }
-        }
-
-        if(dim == 3){
-          // compute the original position of the ghost state @see ComputeDummyState
-          const Node& firstNode = *currFace.getNode(0);
-	  
-	  // a condition has to be added to check that the projection is internal to the face
-          RealVector nodeStateVector = states[iState]->getCoordinates() - firstNode;
-          CFreal stateFaceDistance = MathFunctions::innerProd(m_faceNormal, nodeStateVector)/m_faceNormal.norm2();
-          if(stateFaceDistance < minimumDistance) minimumDistance = stateFaceDistance;
-        }
-        geoBuilder->releaseGE();
+	
+	faceCentroid = 0.;
+	const CFuint nbNodesInFace = currFace.nbNodes();
+	for (CFuint n = 0; n < nbNodesInFace; ++n) {
+	  faceCentroid += *currFace.getNode(n);
+	}
+	const CFreal ovNbNodesInFace = 1./(CFreal)nbNodesInFace;
+	faceCentroid *= ovNbNodesInFace;
+	
+	const Node& firstNode = *currFace.getNode(0);
+	nodeStateVector = states[iState]->getCoordinates() - firstNode;
+	const CFreal stateFaceDistance = MathFunctions::getDistance(states[iState]->getCoordinates(), faceCentroid);
+	if (stateFaceDistance < minStateFaceDistance) {
+	  for (CFuint i = 0; i < dim; ++i) {
+            const CFuint faceID = currFace.getID();
+            const CFuint startID = faceID*dim;
+	    m_faceNormal[i] = normals[startID + i];
+	  }
+	  // normal to boundary face is always pointing outward with respect to the computational domain 
+	  // a "-" sign needs to be considered
+	  minimumDistance = -MathFunctions::innerProd(m_faceNormal, nodeStateVector)/m_faceNormal.norm2();
+	  minStateFaceDistance = stateFaceDistance;
+	}
+	
+	geoBuilder->releaseGE();
       }
     }
-
-    wallDistance[iState] = minimumDistance;
+    
+    wallDistance[iState] = std::abs(minimumDistance);
   }
 
   printToFile();
-  CFLog(INFO, "Wall distances computation finished...\n");
+  
+  CFLog(VERBOSE, "ComputeWallDistanceVector2CC::execute() END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
