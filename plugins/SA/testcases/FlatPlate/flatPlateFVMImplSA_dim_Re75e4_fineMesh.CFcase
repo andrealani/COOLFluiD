@@ -31,7 +31,6 @@ Simulator.SubSystem.NavierStokes2DSA.refValues  = 9300. 121.151 121.151 298.15 0
 Simulator.SubSystem.NavierStokes2DSA.refLength  = 1.0
 Simulator.SubSystem.NavierStokes2DSA.ConvTerm.machInf  = 0.1
 
-
 # Compute the Wall distance
 Simulator.SubSystem.DataPreProcessing = DataProcessing
 Simulator.SubSystem.DataPreProcessingNames = DataProcessing1
@@ -39,6 +38,9 @@ Simulator.SubSystem.DataProcessing1.Comds = ComputeWallDistanceVector2CCMPI
 Simulator.SubSystem.DataProcessing1.Names = WallDistance
 Simulator.SubSystem.DataProcessing1.WallDistance.BoundaryTRS = NoSlipWall
 Simulator.SubSystem.DataProcessing1.WallDistance.OutputFile = distances.dat
+Simulator.SubSystem.DataProcessing1.RunAtSetup = true
+Simulator.SubSystem.DataProcessing1.SkipFirstIteration = true
+Simulator.SubSystem.DataProcessing1.ProcessRate = 10000000000
 
 Simulator.SubSystem.DataPostProcessing = DataProcessing
 Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
@@ -92,6 +94,10 @@ Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = wallDistance
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = dw
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
 
 #Simulator.SubSystem.StopCondition       = MaxNumberSteps
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 100

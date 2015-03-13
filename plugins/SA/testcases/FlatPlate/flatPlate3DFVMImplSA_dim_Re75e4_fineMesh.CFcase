@@ -37,6 +37,11 @@ Simulator.SubSystem.DataProcessing1.Comds = ComputeWallDistanceVector2CCMPI
 Simulator.SubSystem.DataProcessing1.Names = WallDistance
 Simulator.SubSystem.DataProcessing1.WallDistance.BoundaryTRS = NoSlipWall
 Simulator.SubSystem.DataProcessing1.WallDistance.OutputFile = distances.dat
+Simulator.SubSystem.DataProcessing1.RunAtSetup = true
+Simulator.SubSystem.DataProcessing1.SkipFirstIteration = true
+Simulator.SubSystem.DataProcessing1.ProcessRate = 10000000000
+#Simulator.SubSystem.DataProcessing1.WallDistance.CentroidBased = true
+#
 
 #Simulator.SubSystem.DataPostProcessing = DataProcessing
 #Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
