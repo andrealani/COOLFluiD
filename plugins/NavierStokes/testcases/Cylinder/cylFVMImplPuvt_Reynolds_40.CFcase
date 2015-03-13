@@ -3,12 +3,12 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -0.893723
+### Residual = -0.89372345
 
 #
 
 # SubSystem Modules
-Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libGambit2CFmesh libAeroCoefFVM
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libGambit2CFmesh libAeroCoefFVM libMeshToolsFVM
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Cylinder/
@@ -38,10 +38,22 @@ Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
-Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = wallDistance
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = dw
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
 
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 1
+# Compute the Wall distance
+Simulator.SubSystem.DataPreProcessing = DataProcessing
+Simulator.SubSystem.DataPreProcessingNames = DataProcessing1
+Simulator.SubSystem.DataProcessing1.Comds = ComputeWallDistanceVector2CCMPI
+Simulator.SubSystem.DataProcessing1.Names = WallDistance
+Simulator.SubSystem.DataProcessing1.WallDistance.BoundaryTRS = Cylinder
+Simulator.SubSystem.DataProcessing1.WallDistance.OutputFile = distances.dat
+Simulator.SubSystem.DataProcessing1.RunAtSetup = true
+Simulator.SubSystem.DataProcessing1.SkipFirstIteration = true
+Simulator.SubSystem.DataProcessing1.ProcessRate = 10000000000
+
 #Simulator.SubSystem.InitialTime         = 0.
 #Simulator.SubSystem.InitialIter         = 0
 
@@ -58,11 +70,7 @@ Simulator.SubSystem.Default.listTRS = InnerFaces Cylinder Farfield
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = full_cylinder_farfield.CFmesh
-#cylinder_2D_triag.CFmesh
-#full_cylinder_farfield.CFmesh
 Simulator.SubSystem.CFmeshFileReader.ReadCFmesh = ParReadCFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.builderName = FVMCC
-Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 2000.
@@ -70,7 +78,6 @@ Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = NewtonIteratorLSS
-Simulator.SubSystem.NewtonIteratorLSS.SetupCom = New
 Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
 Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
@@ -90,7 +97,7 @@ Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
 
 Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
 Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
-Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex #PlusGhost
 Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 
@@ -101,7 +108,6 @@ Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
 Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Puvt
 Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
 
-#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
 
 Simulator.SubSystem.CellCenterFVM.InitComds = InitState
@@ -112,7 +118,7 @@ Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
 Simulator.SubSystem.CellCenterFVM.InField.Def = 0.869869 68.058 0.0 288.15
 
 Simulator.SubSystem.CellCenterFVM.BcComds = FarFieldEulerChar2DFVMCC \
-                                            NoSlipWallAdiabaticNS2DPuvtFVMCC
+                                            NoSlipWallAdiabaticNSPvtFVMCC
 
 Simulator.SubSystem.CellCenterFVM.BcNames = BCFarfield \
                                             BCWall
