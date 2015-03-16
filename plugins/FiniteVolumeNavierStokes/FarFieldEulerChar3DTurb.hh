@@ -4,6 +4,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "FiniteVolumeNavierStokes/FarFieldEulerChar3D.hh"
+#include "NavierStokes/Euler3DPvt.hh"
 #include "NavierStokes/Euler3DVarSet.hh"
 #include "NavierStokes/MultiScalarVarSet.hh"
 #include "NavierStokes/NavierStokesTurbVarSet.hh"
@@ -35,9 +36,9 @@ class FarFieldEulerChar3DTurb : public FarFieldEulerChar3D {
 
 public:
 
-  typedef Physics::NavierStokes::MultiScalarVarSet
-  <Physics::NavierStokes::Euler3DVarSet> ConvTurb3DVarSet;
-
+  typedef Physics::NavierStokes::MultiScalarVarSet<
+  Physics::NavierStokes::Euler3DPvt<Physics::NavierStokes::Euler3DVarSet> > ConvTurb3DVarSet;
+  
   typedef Physics::NavierStokes::NavierStokesTurbVarSet<
     Physics::NavierStokes::NavierStokes3DVarSet, 0> DiffTurb3DVarSet;
   

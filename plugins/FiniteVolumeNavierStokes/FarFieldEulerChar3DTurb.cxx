@@ -74,8 +74,10 @@ void FarFieldEulerChar3DTurb::setup()
 
   //This is for one equation model
   if(_turbVars.size() == 1){
-    throw Common::NotImplementedException
-      (FromHere(), "FarFieldEulerChar3DTurb not implemented for SA model");
+    CFLog(WARN, "FarFieldEulerChar3DTurb must be re-checked for SA model\n");
+    
+    //  throw Common::NotImplementedException
+    //  (FromHere(), "FarFieldEulerChar3DTurb not implemented for SA model");
   }
 
   // for k-Omega model
