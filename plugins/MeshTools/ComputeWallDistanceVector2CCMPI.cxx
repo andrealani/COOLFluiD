@@ -108,9 +108,7 @@ void ComputeWallDistanceVector2CCMPI::execute()
   
   Stopwatch<WallTime> stp;
   stp.start();
-  
-  CFLog(INFO,"ComputeWallDistanceVector2CCMPI::execute() computing distance to the wall ...\n");
-  
+    
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   
   // AL: gory fix to use centroid-based algorithm 
@@ -263,10 +261,10 @@ void ComputeWallDistanceVector2CCMPI::execute()
     printToFile();
   }  
   
-  CFLog(INFO,"ComputeWallDistanceVector2CCMPI::execute() took " << stp.read() << "s\n");
+  CFLog(INFO,"ComputeWallDistanceVector2CCMPI::execute() : computing distance to the wall took " << stp.read() << "s\n");
   CFLog(VERBOSE, "ComputeWallDistanceVector2CCMPI::execute() END\n");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void ComputeWallDistanceVector2CCMPI::execute3D()
