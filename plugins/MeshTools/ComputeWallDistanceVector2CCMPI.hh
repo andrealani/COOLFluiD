@@ -9,18 +9,15 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
+#include "Framework/TRSDistributeData.hh"
 #include "MeshTools/ComputeWallDistance.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-      
-  namespace Framework {
-    class TRSDistributeData;
-  }
   
   namespace MeshTools {
-      
+    
 //////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -71,14 +68,20 @@ public:
 private:
     
   /**
+   * This class stores face centers and normals to be distributed in parallel
+   *
+   * @author Andrea Lani
+   */
+  class TRSFaceDistributeData : public Framework::TRSDistributeData {
+  public:
+    std::vector<CFreal> faceCenters; /// face centers
+    std::vector<CFreal> faceNormals; /// face normals
+  };
+  
+  /**
    * Compute the distance to the wall in 3D
    */
   void execute3D();
-  
-  /**
-   * Compute the wall distance (more complex but more accurate)
-   */
-  void computeWallDistance2D(Framework::TRSDistributeData& data);
   
   /**
    * Compute the wall distance
@@ -86,10 +89,9 @@ private:
   void computeWallDistance3D(std::vector<CFreal>& data);
   
   /**
-   * Compute the wall distance
+   * Compute the wall distance (2D and 3D)
    */
-  void computeWallDistance3D(Framework::TRSDistributeData& data,
-			     std::vector<CFreal>& faceNormals);
+  void computeWallDistance(TRSFaceDistributeData& data);
   
 private:
   
@@ -116,6 +118,9 @@ private:
 
   /// temporary face normal
   RealVector m_faceNormal;
+  
+  /// minimum state-face distance
+  RealVector m_minStateFaceDistance;
   
 #ifdef CF_HAVE_MPI
   /// communicator

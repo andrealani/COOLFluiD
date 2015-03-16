@@ -115,8 +115,9 @@ void ComputeWallDistanceVector2CCMPI::execute()
   
   // AL: gory fix to use centroid-based algorithm 
   if (_centroidBased && dim == DIM_3D) {execute3D(); return;}
-  
-  // (PhysicalModelStack::getActive()->getDim() == DIM_3D) ? execute3D() : execute2D();
+  RealVector faceCentroidArray(dim);
+  m_minStateFaceDistance.resize(socket_states.getDataHandle().size());
+  m_minStateFaceDistance = MathTools::MathConsts::CFrealMax();
   
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   DataHandle <CFreal> normals = socket_normals.getDataHandle();
@@ -142,9 +143,8 @@ void ComputeWallDistanceVector2CCMPI::execute()
       // something is gonna be packed to be sent only if the number of faces 
       // inside the current TRS in the root processor is positive
       if (nbLocalTrsFaces > 0) {
-	int sizes[3];
-	TRSDistributeData trsData;  // data to be distributed
-	vector<CFreal> faceNormals; // face normals to be distributed (in 3D) 
+	int sizes[5];
+	TRSFaceDistributeData trsData; // data to be distributed
 	
 	if (m_myRank == root) {
 	  SafePtr<vector<CFuint> > nodesInTrs = faces->getNodesInTrs();
@@ -174,69 +174,77 @@ void ComputeWallDistanceVector2CCMPI::execute()
 	  localNodeIDs2TrsNodeIDs.sortKeys();
 	  cf_assert(trsData.trsNodes.size() == trsData.trsNodes.capacity());
 	  
-	  // loop over faces in the current TRS and store connectivity info into TRSDistributeData
+	  // loop over faces in the current TRS and store connectivity info into TRSFaceDistributeData
+	  trsData.faceCenters.reserve(nbLocalTrsFaces*dim);
 	  for (CFuint iFace = 0; iFace < nbLocalTrsFaces; ++iFace) {
 	    const CFuint nbNodesInGeo = faces->getNbNodesInGeo(iFace);
 	    trsData.trsNbNodesInFace.push_back(nbNodesInGeo);
+	    
+	    // compute the face centroid
+	    faceCentroidArray = 0.;
 	    for (CFuint iNode = 0; iNode < nbNodesInGeo; ++iNode) {
 	      const CFuint nodeID = faces->getNodeID(iFace, iNode);
+	      faceCentroidArray += *nodes[nodeID];
 	      // here you push back the ID of the node within the node storage
 	      // corresponding to the current TRS
 	      bool found = false;
 	      trsData.trsNodeConn.push_back(localNodeIDs2TrsNodeIDs.find(nodeID, found));
 	      cf_assert(found);
 	    }
+	    const CFreal ovNbNodesInGeo = 1./(CFreal)nbNodesInGeo;
+	    faceCentroidArray *= ovNbNodesInGeo;
+	    
+	    for (CFuint iDim = 0; iDim < dim; ++iDim) {
+	      trsData.faceCenters.push_back(faceCentroidArray[iDim]);
+	    }
 	  }
+	  cf_assert(trsData.faceCenters.size() == trsData.faceCenters.capacity());
 	  
 	  sizes[0] = nodeSize; 
 	  sizes[1] = connSize;
 	  sizes[2] = nbLocalTrsFaces;
+	  sizes[3] = sizes[4] = nbLocalTrsFaces*dim;
 	  
 	  // in 3D also the face normal is needed
-	  if (dim == DIM_3D) {
-	    faceNormals.reserve(nbLocalTrsFaces*dim);
-	    for (CFuint iFace = 0; iFace < nbLocalTrsFaces; ++iFace) {
-	      const CFuint start = faces->getLocalGeoID(iFace)*dim;
-	      for (CFuint iDim = 0; iDim < dim; ++iDim) {
-		faceNormals.push_back(normals[start+iDim]);
-	      }
+	  trsData.faceNormals.reserve(nbLocalTrsFaces*dim);
+	  for (CFuint iFace = 0; iFace < nbLocalTrsFaces; ++iFace) {
+	    const CFuint start = faces->getLocalGeoID(iFace)*dim;
+	    for (CFuint iDim = 0; iDim < dim; ++iDim) {
+	      trsData.faceNormals.push_back(normals[start+iDim]);
 	    }
-	    cf_assert(faceNormals.size() == faceNormals.capacity());
 	  }
+	  cf_assert(trsData.faceNormals.size() == trsData.faceNormals.capacity());
 	}
 	
 #ifdef CF_HAVE_MPI
 	// broadcast the sizes of the storages to make possible to preallocate the distributed arrays
-	MPI_Bcast(&sizes[0], 3, MPIStructDef::getMPIType(&sizes[0]), root, m_comm);
+	MPI_Bcast(&sizes[0], 5, MPIStructDef::getMPIType(&sizes[0]), root, m_comm);
 #endif
 	
 	if (m_myRank != root) {
 	  cf_assert(sizes[0] > 0);
 	  cf_assert(sizes[1] > 0);
 	  cf_assert(sizes[2] > 0);
+	  cf_assert(sizes[3] > 0);
+	  cf_assert(sizes[4] > 0);
 	  
 	  trsData.trsNodes.resize(sizes[0]);
 	  trsData.trsNodeConn.resize(sizes[1]);
 	  trsData.trsNbNodesInFace.resize(sizes[2]);
-	  
-	  if (dim == DIM_3D) {
-	    faceNormals.resize(sizes[2]*dim);
-	  }
+	  trsData.faceCenters.resize(sizes[3]);
+	  trsData.faceNormals.resize(sizes[4]);
 	}
 	
 #ifdef CF_HAVE_MPI
 	MPIStruct ms;
-	MPIStructDef::buildMPIStruct<double,CFuint,CFuint>(&trsData.trsNodes[0],
-							   &trsData.trsNodeConn[0],
-							   &trsData.trsNbNodesInFace[0], sizes, ms);
-	MPI_Bcast(ms.start, 1, ms.type, root, m_comm);
+	MPIStructDef::buildMPIStruct<double,CFuint,CFuint,double,double>
+	  (&trsData.trsNodes[0], &trsData.trsNodeConn[0], &trsData.trsNbNodesInFace[0], 
+	   &trsData.faceCenters[0], &trsData.faceNormals[0], sizes, ms);
 	
-	if (dim == DIM_3D) {
-	  MPI_Bcast(&faceNormals[0], faceNormals.size(), MPI_DOUBLE, root, m_comm);
-	}
+	MPI_Bcast(ms.start, 1, ms.type, root, m_comm);
 #endif
 	// compute the distance to the wall starting from broadcast data 
-	(dim == DIM_2D) ? computeWallDistance2D(trsData) : computeWallDistance3D(trsData, faceNormals);
+	computeWallDistance(trsData);
       }
     }
   }
@@ -286,7 +294,7 @@ void ComputeWallDistanceVector2CCMPI::execute3D()
 	trsFaceData.resize(sizeData); 
 		
 	if (m_myRank == root) {
-	  // loop over faces in the current TRS and store connectivity info into TRSDistributeData
+	  // loop over faces in the current TRS and store connectivity info into TRSFaceDistributeData
 	  CFuint count = 0;
 	  for (CFuint iFace = 0; iFace < nbLocalTrsFaces; ++iFace) {
 	    // compute the face centroid
@@ -356,7 +364,7 @@ void ComputeWallDistanceVector2CCMPI::computeWallDistance3D(std::vector<CFreal>&
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ComputeWallDistanceVector2CCMPI::computeWallDistance2D(Framework::TRSDistributeData& data)
+void ComputeWallDistanceVector2CCMPI::computeWallDistance(TRSFaceDistributeData& data)
 {
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
@@ -364,80 +372,18 @@ void ComputeWallDistanceVector2CCMPI::computeWallDistance2D(Framework::TRSDistri
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   
   const CFuint nbStates = states.size();
-  CFreal minimumDistance = MathTools::MathConsts::CFrealMax();
-  RealVector faceVector10(dim);
   RealVector node0(dim, (CFreal*)CFNULL);
-  RealVector node1(dim, (CFreal*)CFNULL);
-  RealVector nodeStateVector(dim);
-  RealVector projectCoord(dim);
-  
-  for (CFuint iState = 0; iState < nbStates; ++iState) {
-    CFuint nodeCount0 = 0;
-    CFuint nodeCount1 = nodeCount0 + 1;
-        
-    // initialize the minimum distance to a huge value
-    minimumDistance = MathTools::MathConsts::CFrealMax();
-    
-    const CFuint nbFaces = data.trsNbNodesInFace.size();
-    for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
-      cf_assert(nodeCount0 < data.trsNodeConn.size());
-      cf_assert(nodeCount1 < data.trsNodeConn.size());
-      const CFuint nodeID0 = data.trsNodeConn[nodeCount0];
-      const CFuint nodeID1 = data.trsNodeConn[nodeCount1];
-      const CFuint coordID0 = nodeID0*dim;
-      const CFuint coordID1 = nodeID1*dim;
-      cf_assert(coordID0 < data.trsNodes.size());
-      cf_assert(coordID1 < data.trsNodes.size());
-      
-      node0.wrap(dim, &data.trsNodes[coordID0]);
-      node1.wrap(dim, &data.trsNodes[coordID1]);
-      const RealVector& stateCoord = states[iState]->getCoordinates();
-            
-      faceVector10 = node1 - node0;
-      nodeStateVector = stateCoord - node0;
-      const CFreal faceVector10Norm = faceVector10.norm2();
-      const CFreal project = MathFunctions::innerProd(faceVector10, nodeStateVector)/faceVector10Norm;
-      if (project < faceVector10Norm) {
-	faceVector10.normalize();
-	projectCoord = node0 + project * faceVector10;
-	const CFreal stateFaceDistance = MathFunctions::getDistance(projectCoord, stateCoord);
-	if(stateFaceDistance < minimumDistance) {
-	  minimumDistance = stateFaceDistance;
-	}
-      }
-      
-      const CFuint nbNodesNFace = data.trsNbNodesInFace[iFace];
-      nodeCount0 += nbNodesNFace;
-      nodeCount1 += nbNodesNFace;
-    }
-    
-    wallDistance[iState] = std::min(wallDistance[iState], minimumDistance);
-    CFLog(DEBUG_MAX, "ComputeWallDistanceVector2CCMPI::computeWallDistance2D() => " <<
-	  "wallDistance[ " <<  iState << " ] = " << wallDistance[iState] << "\n");
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ComputeWallDistanceVector2CCMPI::computeWallDistance3D(Framework::TRSDistributeData& data,
-							    vector<CFreal>& faceNormals)
-{
-  DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
-  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
-  DataHandle< CFreal> wallDistance = socket_wallDistance.getDataHandle();
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();
-  
-  const CFuint nbStates = states.size();
-  CFreal minimumDistance = MathTools::MathConsts::CFrealMax();
-  RealVector node0(dim, (CFreal*)CFNULL);
+  RealVector fcenter(dim, (CFreal*)CFNULL);
   RealVector fnormal(dim, (CFreal*)CFNULL);
   RealVector nodeStateVector(dim);
-  
+    
   for (CFuint iState = 0; iState < nbStates; ++iState) {
     CFuint nodeCount0 = 0;
     
     // initialize the minimum distance to a huge value
-    minimumDistance = MathTools::MathConsts::CFrealMax();
+    // CFreal minimumDistance = MathTools::MathConsts::CFrealMax(); // check this
+    // CFreal minStateFaceDistance = MathTools::MathConsts::CFrealMax(); // check this
+    CFreal minimumDistance = wallDistance[iState];
     
     const CFuint nbFaces = data.trsNbNodesInFace.size();
     for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
@@ -446,27 +392,34 @@ void ComputeWallDistanceVector2CCMPI::computeWallDistance3D(Framework::TRSDistri
       const CFuint coordID0 = nodeID0*dim;
       cf_assert(coordID0 < data.trsNodes.size());
       const CFuint faceID0 = iFace*dim;
-      cf_assert(faceID0 < faceNormals.size());
+      
+      if (faceID0 >= data.faceNormals.size()) cout << "faceID0 = " << faceID0 << " >= " <<  data.faceNormals.size() << endl;
+      
+      cf_assert(faceID0 < data.faceNormals.size());
+      cf_assert(faceID0 < data.faceCenters.size());
       
       node0.wrap(dim, &data.trsNodes[coordID0]);
-      fnormal.wrap(dim, &faceNormals[faceID0]);
-      
-      nodeStateVector = states[iState]->getCoordinates() - node0;
-      const CFreal stateFaceDistance = std::abs(MathFunctions::innerProd(fnormal, nodeStateVector)/fnormal.norm2());
-      
-      if(stateFaceDistance < minimumDistance) {
-	minimumDistance = stateFaceDistance;
+      fcenter.wrap(dim, &data.faceCenters[faceID0]);
+      RealVector& centerCoord = states[iState]->getCoordinates();
+      nodeStateVector = centerCoord - node0;
+      // if distance between the current cell center and the boundary face center is minimal
+      // compute projection of vector joining cell center & first face node onto the face normal direction
+      const CFreal stateFaceDistance = MathFunctions::getDistance(centerCoord, fcenter);
+      if (stateFaceDistance < m_minStateFaceDistance[iState]) {
+	fnormal.wrap(dim, &data.faceNormals[faceID0]);
+	minimumDistance = -MathFunctions::innerProd(fnormal, nodeStateVector)/fnormal.norm2();
+	m_minStateFaceDistance[iState] = stateFaceDistance;
       }
       
-      nodeCount0 += 4; // this is consistent with definition of "connSize" in 3D
+      nodeCount0 += (dim == DIM_3D) ? 4 : 2; // this is consistent with definition of "connSize"
     }
     
-    wallDistance[iState] = std::min(wallDistance[iState], minimumDistance);
+    wallDistance[iState] = std::min(wallDistance[iState], std::abs(minimumDistance));
     CFLog(DEBUG_MAX, "ComputeWallDistanceVector2CCMPI::computeWallDistance3D() => " <<
 	  "wallDistance[ " <<  iState << " ] = " << wallDistance[iState] << "\n");
   }
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace MeshTools
