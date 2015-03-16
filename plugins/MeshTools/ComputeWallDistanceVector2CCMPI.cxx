@@ -412,7 +412,6 @@ void ComputeWallDistanceVector2CCMPI::computeWallDistance(TRSFaceDistributeData&
       node0.wrap(dim, &data.trsNodes[coordID0]);
       fcenter.wrap(dim, &data.faceCenters[faceID0]);
       RealVector& centerCoord = states[iState]->getCoordinates();
-      // if (m_myRank == 0) cout << iState <<  " => " << centerCoord << endl;
       nodeStateVector = centerCoord - node0;
       // if distance between the current cell center and the boundary face center is minimal
       // compute projection of vector joining cell center & first face node onto the face normal direction
@@ -428,7 +427,10 @@ void ComputeWallDistanceVector2CCMPI::computeWallDistance(TRSFaceDistributeData&
       nodeCount0 += (dim == DIM_3D) ? 4 : 2; // this is consistent with definition of "connSize"
     }
     
-    if (updateDistance) {wallDistance[iState] = minimumDistance;} // std::min(wallDistance[iState], minimumDistance);
+    if (updateDistance) {
+      wallDistance[iState] = minimumDistance;
+    }
+    
     CFLog(DEBUG_MAX, "ComputeWallDistanceVector2CCMPI::computeWallDistance3D() => " <<
 	  "wallDistance[ " <<  iState << " ] = " << wallDistance[iState] << "\n");
   }
