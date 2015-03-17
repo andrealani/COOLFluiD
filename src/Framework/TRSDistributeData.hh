@@ -21,10 +21,10 @@ namespace COOLFluiD {
     
 class Framework_API TRSDistributeData {
 public:
-
+  
   std::vector<CFreal> trsNodes;
-  std::vector<CFuint> trsNodeConn;
-  std::vector<CFuint> trsStateConn;
+  std::vector<CFint>  trsNodeConn;
+  std::vector<CFint>  trsStateConn;
   std::vector<CFuint> trsNbNodesInFace;
 };
 

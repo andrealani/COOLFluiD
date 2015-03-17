@@ -28,22 +28,13 @@ LIST ( APPEND MeshToolsFVM_files
 MeshToolsFVM.hh
 ComputeWallDistanceVectorCC.cxx
 ComputeWallDistanceVectorCC.hh
-ComputeWallDistanceVector2CC.cxx
-ComputeWallDistanceVector2CC.hh
+ComputeWallDistanceVector2CCMPI.cxx
+ComputeWallDistanceVector2CCMPI.hh
 ComputeWallDistanceNewtonCC.cxx
 ComputeWallDistanceNewtonCC.hh
 ComputeWallDistanceFVMCC.cxx
 ComputeWallDistanceFVMCC.hh
 )
-
-IF (CF_HAVE_MPI)
-
-  LIST ( APPEND MeshToolsFVM_files
-  ComputeWallDistanceVector2CCMPI.cxx
-  ComputeWallDistanceVector2CCMPI.hh
-  )
-
-ENDIF()
 
 LIST ( APPEND MeshToolsFVM_requires_mods FiniteVolume )
 LIST ( APPEND MeshToolsFVM_cflibs MeshTools FiniteVolume )
