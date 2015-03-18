@@ -17,7 +17,7 @@
 
 # This testcases verifies the simulation of torch + chamber + probe at 100kW
 # 8 processors
-### Residual = -1.03554
+### Residual = -1.0355368
 
 #######TEST CONFIGURATION
 CFEnv.ErrorOnUnusedConfig = true
