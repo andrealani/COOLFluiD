@@ -176,6 +176,9 @@ protected:
   /// Tell if the incompressible correction needs to be applied
   bool addIncompCorrection() const {return m_addIncompCorrection;}
   
+  /// COmpute the flux in a decoupled case 
+  virtual void computeDecoupled(RealVector& result);
+  
 protected:
   
   /// acquaintance of the concrete variable set
@@ -262,6 +265,9 @@ protected:
   /// flag telling if Liou's way of computing the update coeff 
   /// imposing positivity has to be used
   bool m_useLiouUpdateCoeff;
+  
+  /// flag telling to compute fluxes in a decoupled manner
+  bool m_useDecoupled;
   
 }; // end of class AUSMFlux
 

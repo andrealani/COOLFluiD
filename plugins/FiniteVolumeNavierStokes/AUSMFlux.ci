@@ -50,9 +50,12 @@ AUSMFlux<UPDATEVAR>::AUSMFlux(const std::string& name) :
 
   m_useLiouUpdateCoeff = false;
   this->setParameter("useLiouUpdateCoeff",&m_useLiouUpdateCoeff);
+  
+  m_useDecoupled = false;
+  this->setParameter("useDecoupled",&m_useDecoupled);
 }
       
-//////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
 AUSMFlux<UPDATEVAR>::~AUSMFlux()
@@ -70,6 +73,10 @@ void AUSMFlux<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
   options.template addConfigOption< bool >
    ("useLiouUpdateCoeff",
     "Flag to choose Liou's way to compute the update coefficient for imposing positivity.");
+  
+  options.template addConfigOption< bool >
+    ("useDecoupled",
+     "Flag to choose a decoupled algorithm for solving multiple systems.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -109,9 +116,14 @@ void AUSMFlux<UPDATEVAR>::compute(RealVector& result)
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
-
-  CFLog(DEBUG_MIN, "AUSMFlux::compute() START\n");
   
+  if (m_useDecoupled) {
+    computeDecoupled(result); 
+    return;
+  }
+  
+  CFLog(DEBUG_MIN, "AUSMFlux::compute() START\n");
+      
   const EquationSubSysDescriptor& eqSSD = PhysicalModelStack::getActive()->
     getEquationSubSysDescriptor();
   const CFuint nbEqs = eqSSD.getNbEqsSS();
@@ -167,9 +179,7 @@ void AUSMFlux<UPDATEVAR>::compute(RealVector& result)
       computePressureFlux();   // m_p12
       computeMassFluxImpl(eulerID, nbEulerEqs, eulerVarIDs, result); // m_mflux12
     }
-    
-    const vector<bool>& maskArray = m_updateVarSet->getMaskVariableArray();
-    
+        
     //  the following applies only if we are dealing with multi-scalar cases 
     if (totalNbEqs > nbEulerEqs) {
       // this works properly with MultiScalarVarSet but not with just EulerVarSet
@@ -183,6 +193,7 @@ void AUSMFlux<UPDATEVAR>::compute(RealVector& result)
 	const CFuint nbVars = m_updateVarSet->getModel()->getNbScalarVars(i);
 	const CFuint firstVar = m_updateVarSet->getModel()->getFirstScalarVar(i);
 	const vector<CFuint>& varIDs = eqsData[i].getEqSetVarIDs();
+	const vector<bool>& maskArray = m_updateVarSet->getMaskVariableArray();
 	
 	// exclude case where MultiScalarVarSet is not present
 	if (varIDs.size() == nbVars) {
@@ -229,6 +240,130 @@ void AUSMFlux<UPDATEVAR>::compute(RealVector& result)
 	<< ", iVar = " << getMethodData().iPerturbVar() << ", flux = " << result << "\n");
     
   CFLog(DEBUG_MIN, "AUSMFlux::compute() END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFlux<UPDATEVAR>::computeDecoupled(RealVector& result)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  CFLog(DEBUG_MIN, "AUSMFlux::computeDecoupled() START\n");
+  
+  const EquationSubSysDescriptor& eqSSD = PhysicalModelStack::getActive()->
+    getEquationSubSysDescriptor();
+  const CFuint nbEqs = eqSSD.getNbEqsSS();
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint iEqSS = eqSSD.getEqSS();
+  
+  if (this->getMethodData().useAnalyticalConvJacob()) {
+    computeLinearizedAbsJacob();
+  }
+  vector<RealVector>& pdata = getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
+  m_lData = &pdata[LEFT];
+  m_rData = &pdata[RIGHT];
+  
+  // The flow at the freestream is assumed to be one-dimensional
+  // calculation of the normal component of velocity for the left and right states
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const RealVector& normal = getMethodData().getUnitNormal();
+  
+  m_unL = 0.0;
+  m_unR = 0.0;
+  for (CFuint idim = 0; idim < dim; ++idim) {
+    const CFuint currXX = UPDATEVAR::PTERM::VX + idim;
+    m_unL += (*m_lData)[currXX]*normal[idim];
+    m_unR += (*m_rData)[currXX]*normal[idim];
+  }
+  
+  // Compute speed of the mesh at current quadrature point
+  // the normal velocities m_unL and m_unR will be modified accordingly
+  this->computeMeshSpeed();
+  
+  computeMassFlux();              // computes m_mflux12
+  computeIncompCorrectionTerm();  // computes m_mincomp
+  
+  // here there could be the current number of equations if we want
+  // different eigenvalues for each set of equations
+  const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
+  const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
+  const CFuint nbEulerEqs = eulerVarIDs.size() ;
+  const CFuint eulerID = eulerEqSet.getEqSetID();
+  
+  // pressure terms are only needed for the Euler momentum equations
+  // they are computed only if all the equation system is considered or
+  // if only the Euler equations are considered
+  if (nbEqs == totalNbEqs || eqSSD.getEqSS() == 0) {
+    computePressureFlux();   // m_p12
+    computeMassFluxImpl(eulerID, nbEulerEqs, eulerVarIDs, result); // m_mflux12
+  }
+  
+  //  the following applies only if we are dealing with multi-scalar cases 
+  cf_assert(totalNbEqs > nbEulerEqs);
+  
+  if (nbEqs == totalNbEqs || iEqSS > 0) {
+    // this works properly with MultiScalarVarSet but not with just EulerVarSet
+    const vector<EquationSetData>& eqsData = UPDATEVAR::getEqSetData();
+    const CFuint nbEqsData  = eqsData.size();
+    
+    // loop over the multi-scalar equation set data
+    for (CFuint i = 0; i < nbEqsData; ++i) {
+      if (nbEqs == totalNbEqs || iEqSS == eqsData[i].getEqSetID()) {
+	const CFuint nbVars = m_updateVarSet->getModel()->getNbScalarVars(i);
+	const CFuint firstVar = m_updateVarSet->getModel()->getFirstScalarVar(i);
+	const vector<CFuint>& varIDs = eqsData[i].getEqSetVarIDs();
+	const vector<bool>& maskArray = m_updateVarSet->getMaskVariableArray();
+	
+	// exclude case where MultiScalarVarSet is not present
+	if (varIDs.size() == nbVars) {
+	  CFLog(DEBUG_MED, "isPerturb, iPerturbVar, iEqSS, nbEqs = " << this->getMethodData().isPerturb() 
+		<< ", " << this->getMethodData().iPerturbVar() << ", " << iEqSS << ", " << nbEqs << "\t");
+	  
+	  CFLog(DEBUG_MED, "AUSMFlux::computeDecoupled() => nbVars = " << nbVars 
+		<< ", firstVar = " << firstVar << ", " 
+		<< Common::CFPrintContainer<const vector<CFuint> >("varIDs  = ", &varIDs));
+	  
+	  const RealVector *const upwindData = (m_mflux12 > 0.0) ? m_lData : m_rData;
+	  for (CFuint ie = 0; ie < nbVars; ++ie) {
+	    const CFuint maID = varIDs[ie];
+	    if (maskArray[maID]) { 
+	      result[maID] = m_mflux12*(*upwindData)[firstVar + ie];
+	    }
+	  }
+	  
+	  // add the correction for treating incompressible flows 
+	  if (addIncompCorrection()) {
+	    const CFreal halfMincomp = 0.5*m_mincomp;
+	    for (CFuint ie = 0; ie < nbVars; ++ie) {
+	      const CFuint maID = varIDs[ie];
+	      const CFuint varID = firstVar + ie;
+	      if (maskArray[maID]) { 
+		result[maID] += halfMincomp*((*m_lData)[varID]+(*m_rData)[varID]);
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
+  
+  if (!this->getMethodData().isPerturb()) {
+    if (!m_useLiouUpdateCoeff) {
+      computeUpdateCoeff();
+    }
+    else {
+      computeLiouUpdateCoeff();
+    }
+  }
+  
+  CFLog(DEBUG_MAX, "AUSMFlux::computeDecoupled() => L data " << *m_lData << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux::computeDecoupled() => R data " << *m_rData << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux::computeDecoupled() => isPerturb " << getMethodData().isPerturb() 
+	<< ", iVar = " << getMethodData().iPerturbVar() << ", flux = " << result << "\n");
+    
+  CFLog(DEBUG_MIN, "AUSMFlux::computeDecoupled() END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
