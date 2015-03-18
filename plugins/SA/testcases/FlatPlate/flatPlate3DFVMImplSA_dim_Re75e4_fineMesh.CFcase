@@ -140,12 +140,12 @@ Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS3D
 #Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.limitRes = 0.3
 #Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp3D
 
-#Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = SA3DSourceTerm
-#Simulator.SubSystem.CellCenterFVM.Data.SA3DSourceTerm.UseGradientLS = true
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = SA3DSourceTerm
+Simulator.SubSystem.CellCenterFVM.Data.SA3DSourceTerm.UseGradientLS = true
 #Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = SA3DDES97
 #Simulator.SubSystem.CellCenterFVM.Data.SA3DDES97.UseGradientLS = true
-Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = SA3DDelDES
-Simulator.SubSystem.CellCenterFVM.Data.SA3DDelDES.UseGradientLS = true
+#Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = SA3DDelDES
+#Simulator.SubSystem.CellCenterFVM.Data.SA3DDelDES.UseGradientLS = true
 Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected3D
 
 Simulator.SubSystem.CellCenterFVM.InitComds = InitState
