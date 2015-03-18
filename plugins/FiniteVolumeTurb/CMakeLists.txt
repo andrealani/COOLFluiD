@@ -8,6 +8,14 @@ SA2DSourceTerm.hh
 SA2DSourceTerm.cxx
 SA3DSourceTerm.hh
 SA3DSourceTerm.cxx
+SA2DDES97.hh
+SA2DDES97.cxx
+SA3DDES97.hh
+SA3DDES97.cxx
+SA2DDelDES.hh
+SA2DDelDES.cxx
+SA3DDelDES.hh
+SA3DDelDES.cxx
 )
 
 LIST ( APPEND FiniteVolumeSA_cflibs FiniteVolume FiniteVolumeNavierStokes NavierStokes SA )

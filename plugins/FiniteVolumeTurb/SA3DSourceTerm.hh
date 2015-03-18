@@ -28,7 +28,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represents the 3D Spalart Allmaras - noft2 SourceTerm
+ * This class represents the 3D Spalart Allmaras - noft2 SourceTerm and as a user option the compressibility correction term SourceTerm
  * for more details see Allmaras, S. R., Johnson, F. T., and Spalart, P. R., "Modifications and Clarifications for the Implementation 
  * of the Spalart-Allmaras Turbulence Model," ICCFD7-1902, 7th International Conference on Computational Fluid Dynamics, Big Island, Hawaii, 9-13 July 2012.	
  *
@@ -55,7 +55,7 @@ public:
   /**
    * Default destructor
    */
-  ~SA3DSourceTerm();
+  virtual ~SA3DSourceTerm();
 
   /**
    * Configure the object
@@ -72,16 +72,39 @@ public:
    * Set up private data and data of the aggregated classes
    * in this command before processing phase
    */
-  void setup();
+  virtual void setup();
 
   /**
    * Compute the source term
    */
-  void computeSource(Framework::GeometricEntity *const element,
+  virtual void computeSource(Framework::GeometricEntity *const element,
 		     RealVector& source,
 		     RealMatrix& jacobian);
+  
+protected: //methods
+  
+  ///@return the distance to the wall
+  virtual CFreal getDistance (Framework::GeometricEntity *const element);
 
-private: // data
+  // this method is needed for the SA - Comp model and for the DDES and IDDES modes
+  ///@return the sum of the velocity gradients
+  virtual CFreal compSumOfVelocityGrads ();
+  
+  //CG: this method is added so as for the DDES and IDDES modes to have access
+  ///@return the laminar kinematic viscosity
+  virtual CFreal getLamViscosity()
+  {
+    return NIU;
+  };
+  
+  //CG: this method ia added so as for the DDES and IDDES modes to have access
+  ///@return the turbulent kinematic viscosity
+  virtual CFreal getTurbViscosity()
+  {
+    return NIUtilda;
+  };
+  
+protected: // data
   
   /// corresponding variable set
   Common::SafePtr<Physics::NavierStokes::EulerVarSet> _varSet;
@@ -112,8 +135,30 @@ private: // data
 
   CFreal _unperturbedNegativePart;
   
+private:
+  
+  // turbulent and laminar viscosity
+  CFreal NIUtilda;
+  CFreal NIU;
+  
   // this variable is flag for the SA - comp model
   bool _CompTerm;
+  
+  // distance to the wall
+  CFreal _d;
+  
+  // gradients of velocities
+  CFreal dVdX ;
+  CFreal dUdY ;
+  CFreal dUdZ ; 
+  CFreal dWdX ; 
+  CFreal dVdZ ; 
+  CFreal dWdY ; 
+    
+  // these terms are added for the comp model
+  CFreal dUdX ; 
+  CFreal dVdY ;
+  CFreal dWdZ;
 
 }; // end of class SA3DSourceTerm
 

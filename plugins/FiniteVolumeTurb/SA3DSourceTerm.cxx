@@ -37,7 +37,7 @@ SA3DSourceTermFVMCCProvider("SA3DSourceTerm");
 
 void SA3DSourceTerm::defineConfigOptions(Config::OptionList& options)
 {
-  options.addConfigOption< bool >("CompModel","Let the user to decide if the extra destruction term will be used (Default = False)");
+  options.addConfigOption< bool >("CompressibilityCorrectionTerm","Add the extra destruction term (Default = False)");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -56,7 +56,7 @@ SA3DSourceTerm::SA3DSourceTerm(const std::string& name) :
   addConfigOptionsTo(this);
   
   _CompTerm = false;
-  setParameter("CompModel",&_CompTerm);
+  setParameter("CompressibilityCorrectionTerm",&_CompTerm);
 
 }
 
@@ -143,45 +143,45 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     //cell d's
     CFreal dNutildX = 0.0;
     CFreal dNutildY = 0.0;
-    CFreal dNutildZ = 0.0; // I add this !!!!!!!!!!!!!!
+    CFreal dNutildZ = 0.0; 
     CFreal dRhodX = 0.0;
     CFreal dRhodY = 0.0;
-    CFreal dRhodZ = 0.0; // I add this !!!!!!!!!!!!!!
-    CFreal dVdX = 0.0;
-    CFreal dUdY = 0.0;
-    CFreal dUdZ = 0.0; // I add this !!!!!!!!!!!!!!
-    CFreal dWdX = 0.0; // I add this !!!!!!!!!!!!!!
-    CFreal dVdZ = 0.0; // I add this !!!!!!!!!!!!!!
-    CFreal dWdY = 0.0; // I add this !!!!!!!!!!!!!!
+    CFreal dRhodZ = 0.0; 
+	   dVdX = 0.0;
+	   dUdY = 0.0;
+	   dUdZ = 0.0; 
+	   dWdX = 0.0; 
+	   dVdZ = 0.0; 
+	   dWdY = 0.0; 
     
     // these terms are added for the comp model
-    CFreal dUdX = 0.0; // I add this !!!!!!!!!!!!!!
-    CFreal dVdY = 0.0; // I add this !!!!!!!!!!!!!!
-    CFreal dWdZ = 0.0; // I add this !!!!!!!!!!!!!!
+	   dUdX = 0.0; 
+	   dVdY = 0.0; 
+	   dWdZ = 0.0; 
     
     if (this->m_useGradientLS && this->m_gradientsExist) { // what does this check
       const CFuint pID = 0;
       const CFuint uID = 1;
       const CFuint vID = 2;
-      const CFuint wID = 3; // I add this !!!!!!!!!!!!!!
+      const CFuint wID = 3; 
       const CFuint TID = 4;
-      const CFuint NutilID = 5; // I change this
+      const CFuint NutilID = 5; 
       const CFuint start = elemID*totalNbEqs;
       
-      dNutildX = this->m_ux[start+NutilID]; // are these ok
+      dNutildX = this->m_ux[start+NutilID]; 
       dNutildY = this->m_uy[start+NutilID];
-      dNutildZ = this->m_uz[start+NutilID]; // I add this !!!!!!!!!!!!!!
+      dNutildZ = this->m_uz[start+NutilID]; 
       dVdX = this->m_ux[start+vID];
       dUdY = this->m_uy[start+uID];
-      dUdZ = this->m_uz[start+uID]; // I add this !!!!!!!!!!!!!!
-      dWdX = this->m_ux[start+wID]; // I add this !!!!!!!!!!!!!!
-      dVdZ = this->m_uz[start+vID]; // I add this !!!!!!!!!!!!!!
-      dWdY = this->m_uy[start+wID]; // I add this !!!!!!!!!!!!!!
+      dUdZ = this->m_uz[start+uID]; 
+      dWdX = this->m_ux[start+wID]; 
+      dVdZ = this->m_uz[start+vID]; 
+      dWdY = this->m_uy[start+wID]; 
       
       // these terms are added for the comp model
-      dUdX = this->m_ux[start+uID]; // I add this !!!!!!!!!!!!!!
-      dVdY = this->m_uy[start+vID]; // I add this !!!!!!!!!!!!!!
-      dWdZ = this->m_uz[start+wID]; // I add this !!!!!!!!!!!!!!
+      dUdX = this->m_ux[start+uID]; 
+      dVdY = this->m_uy[start+vID]; 
+      dWdZ = this->m_uz[start+wID]; 
       
       // AL: here we assume to have one single species
       // p=rho*R*T  =>  dP=dRho*R*T+rho*R*dT  =>  dRho=(dP-rho*R*dT)/(R*T)
@@ -194,13 +194,13 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     } 
     else { 
      {
-  CFLog(INFO, "Only implemented for Linear Reconstructor \n");
+  CFLog(INFO, "Only implemented for Least Square Reconstructor \n");
   throw Common::NotImplementedException (FromHere(),"For !(this->m_useGradientLS && this->m_gradientsExist) not implemented...");
   
 }
     }
     
-    CFreal avDist = _wallDistance[currState->getLocalID()];
+    
     const CFuint iNutil = _varSet->getModel()->getFirstScalarVar(0);
     
     _avState[0] = _physicalData[EulerTerm::P];
@@ -212,8 +212,8 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     
     const CFreal mu = _diffVarSet->getLaminarDynViscosityFromGradientVars(_avState);
     const CFreal rho = _diffVarSet->getDensity(_avState);
-    const CFreal NIU = mu / rho;
-    CFreal NIUtilda = _avState[5];
+    NIU = mu / rho;
+    NIUtilda = _avState[5];
     
     //make sure we don't have negative values of niutilda
     ///@Attention CG: According to Spalart "cliping updates prevents the convergence of discrete PDE residuals and hampers efforts
@@ -248,15 +248,19 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     //unused // const CFreal Ct3 = 1.2;
     //unused // const CFreal Ct4 = 0.5;
 
+/*
     //Clip the distance from the cell to the closest wall
     CFreal d = avDist;
     d = max(d,1.e-10);
+*/
+	  // it calls the function of the RANS or for the DES modes
+	 _d = this->getDistance(element);
 
     ///Original definition of the vorticity (can be negative):
          const CFreal fv1 = Qsi*Qsi*Qsi / (Qsi*Qsi*Qsi + Cv1*Cv1*Cv1);
          const CFreal fv2 = 1. - ( Qsi /(1. + (Qsi * fv1)));
 	 
-	 const CFreal Nitiloverkapa2d2 = NIUtilda/( kappa*kappa*d*d);
+	 const CFreal Nitiloverkapa2d2 = NIUtilda/( kappa*kappa*_d*_d);
 	 
          const CFreal S = std::sqrt((dVdX - dUdY)*(dVdX - dUdY) + 
 				    (dUdZ - dWdX)*(dUdZ - dWdX) +
@@ -358,7 +362,7 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     
     const CFreal P = Cb1 * Stilda * NIUtilda; // production term
     
-    CFreal D = adimCoef * ( Cw1 * fw ) * ((NIUtilda*NIUtilda) / (d*d)); // destruction term
+    CFreal D = adimCoef * ( Cw1 * fw ) * ((NIUtilda*NIUtilda) / (_d*_d)); // destruction term
     
     // tranform the model into SA - noft2 - comp by adding the extra destruction term
     // It improves the performance of the model in compressible mixing layers
@@ -367,11 +371,9 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     {
       const CFreal C5 = 3.5;
       
-      const CFreal alpha = _physicalData[EulerTerm::A];
+      const CFreal spSound = _physicalData[EulerTerm::A];
       
-      const CFreal extraDest = C5*NIUtilda*NIUtilda/(alpha*alpha)*(dUdX*dUdX + dVdX*dVdX + dWdX*dWdX + 
-								   dUdY*dUdY + dVdY*dVdY + dWdY*dWdY + 
-								   dUdZ*dUdZ + dVdZ*dVdZ + dWdZ*dWdZ );
+      const CFreal extraDest = (C5*NIUtilda*NIUtilda/(spSound*spSound))*(SA3DSourceTerm::compSumOfVelocityGrads());
       
       D += extraDest;
     }
@@ -403,6 +405,35 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
 
   source *= volumes[elemID];
 
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+///@Attention CG: this method should be overrided from the DES models
+CFreal SA3DSourceTerm::getDistance (Framework::GeometricEntity *const element)
+{
+  //Set the physical data for the cell considered
+    State *const currState = element->getState(0); // what we take from this the rho/P or the first cell/BC
+  
+  CFreal d = _wallDistance[currState->getLocalID()];
+    d = max(d,1.e-10);
+    
+    return d;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+// CG: this method compute the sum of the velocity gradients. It is needed for the comp model
+// and for the DDES nad IDDES modes
+ CFreal SA3DSourceTerm::compSumOfVelocityGrads ()
+{
+  
+  CFreal Sum = (dUdX*dUdX + dVdX*dVdX + dWdX*dWdX +
+		dUdY*dUdY + dVdY*dVdY + dWdY*dWdY + 
+		dUdZ*dUdZ + dVdZ*dVdZ + dWdZ*dWdZ );
+  
+  return Sum;
 }
 
 //////////////////////////////////////////////////////////////////////////////
