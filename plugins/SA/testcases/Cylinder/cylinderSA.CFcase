@@ -1,20 +1,31 @@
-################################################################################
+###############################################################################
 # 
 # This COOLFluiD CFcase file tests: 
 # 
-# Finite Volume, NavierStokes3D, NewtonIterator, extruder on mesh with quads, 
-# second-order reconstruction without limiter, far field, adiabatic noslip 
-# wall
+# Finite Volume, NavierStokes3D, Spalart-Allmaras RANS model, NewtonIterator,
+# mesh extruder (from quads to hexa), second-order reconstruction without limiter, 
+# far field for RANS, adiabatic noslip wall, parallel computation of distance to the wall
 #
 ################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -5.0909793
-#
+### Residual = -4.0222847
 
-# SubSystem Modules
+#CFEnv.ExceptionLogLevel    = 1000
+#CFEnv.DoAssertions         = true
+#CFEnv.AssertionDumps       = true
+#CFEnv.AssertionThrows      = true
+#CFEnv.AssertThrows         = true
+#CFEnv.AssertDumps          = true
+#CFEnv.ExceptionAborts      = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
+#CFEnv.RegistSignalHandlers = false
+#CFEnv.ErrorOnUnusedConfig = true
+
+# Simulation Modules
 Simulator.Modules.Libs = libShapeFunctions libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libSA libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeSA libTHOR2CFmesh  libAeroCoef libAeroCoefFVM libMeshTools libMeshToolsFVM libCFmeshExtruder
 
 # SubSystem Parameters
@@ -38,6 +49,21 @@ Simulator.SubSystem.DataProcessing1.SkipFirstIteration = true
 Simulator.SubSystem.DataProcessing1.ProcessRate = 10000000000
 #Simulator.SubSystem.DataProcessing1.WallDistance.CentroidBased = true
 
+#Simulator.SubSystem.DataPostProcessing = DataProcessing
+#Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
+#Simulator.SubSystem.DataProcessing2.Comds = RMS
+#Simulator.SubSystem.DataProcessing2.Names = RMS
+#Simulator.SubSystem.DataProcessing2.ProcessRate = 1
+#Simulator.SubSystem.DataProcessing2.StopIter = 5
+#Simulator.SubSystem.DataProcessing2.Data.updateVar = Pvt
+#Simulator.SubSystem.DataProcessing2.RMS.OutputFile = rms.plt
+#Simulator.SubSystem.DataProcessing2.RMS.SaveRate = 1
+#Simulator.SubSystem.DataProcessing2.RMS.AppendTime = false
+#Simulator.SubSystem.DataProcessing2.RMS.AppendIter = false
+#Simulator.SubSystem.DataProcessing2.RMS.Restart = false
+#Simulator.SubSystem.DataProcessing2.RMS.nbSteps = 0
+#Simulator.SubSystem.DataProcessing2.RMS.rmsVars = rho p devU 
+
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = cyl3D_viscous_Re40.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate = 100
@@ -45,7 +71,7 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
 Simulator.SubSystem.Tecplot.FileName    = cyl3D_viscous_Re40.plt
-Simulator.SubSystem.Tecplot.Data.updateVar = Pvt
+Simulator.SubSystem.Tecplot.Data.outputVar = Pvt
 Simulator.SubSystem.Tecplot.SaveRate = 100
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
@@ -54,11 +80,11 @@ Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = dw
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
 
-Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
+#Simulator.SubSystem.StopCondition          = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 3
 
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -5.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -4.0
 
 Simulator.SubSystem.Default.listTRS = Cylinder Farfield Top Bottom
 
@@ -77,13 +103,12 @@ Simulator.SubSystem.LSSNames = NewtonIteratorLSS
 Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
 Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
-Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 300
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 200
 Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
-Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1e6
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<30,1e6,min(1e10,cfl*2.))
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = 1e6 #2000. #if(i<30,1e6,min(1e10,cfl*2.))
 Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
 Simulator.SubSystem.NewtonIterator.Data.PrintHistory = false
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 0
@@ -123,13 +148,17 @@ Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
 Simulator.SubSystem.CellCenterFVM.InField.Vars = x y z
-Simulator.SubSystem.CellCenterFVM.InField.Def = 0.869869 68.058 0.0 0.0 288.15 0.000002
+Simulator.SubSystem.CellCenterFVM.InField.Def = 0.869869 68.058 0. 0. 288.15 0.000002
 
-Simulator.SubSystem.CellCenterFVM.BcComds = FarFieldEulerChar3DFVMCC \
-						NoSlipWallAdiabaticNSTurb3DFVMCC \
-						MirrorVelocityFVMCC
+Simulator.SubSystem.CellCenterFVM.BcComds = \
+	NoSlipWallAdiabaticNSTurb3DFVMCC FarFieldEulerChar3DTurbFVMCC MirrorVelocityFVMCC
+# the following combination does not work
+# FarFieldEulerChar3DTurbFVMCC NoSlipWallAdiabaticNSTurb3DFVMCC MirrorVelocityFVMCC
 
-Simulator.SubSystem.CellCenterFVM.BcNames = BCFarField BCWall BCMirror
+Simulator.SubSystem.CellCenterFVM.BcNames = \
+	BCWall BCFarField BCMirror
+# the following combination does not work
+# BCFarField BCWall BCMirror
 
 Simulator.SubSystem.CellCenterFVM.BCMirror.applyTRS = Top Bottom
 Simulator.SubSystem.CellCenterFVM.BCMirror.ZeroGradientFlags = 1 0 0 0 1 1 
@@ -140,6 +169,7 @@ Simulator.SubSystem.CellCenterFVM.BCFarField.Vinf = 0.
 Simulator.SubSystem.CellCenterFVM.BCFarField.Winf = 0.
 Simulator.SubSystem.CellCenterFVM.BCFarField.Pinf = 0.869869
 Simulator.SubSystem.CellCenterFVM.BCFarField.Tinf = 288.15
+Simulator.SubSystem.CellCenterFVM.BCFarField.TurbVars = 0.000002
 
 Simulator.SubSystem.CellCenterFVM.BCWall.applyTRS = Cylinder
 Simulator.SubSystem.CellCenterFVM.BCWall.ZeroGradientFlags = 1 0 0 0 1 0
