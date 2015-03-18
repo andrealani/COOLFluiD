@@ -113,7 +113,7 @@ void SubInletEuler2DPuvtUVTLTE::setGhostState(GeometricEntity *const face)
     
     (*ghostState)[0] = (*innerState)[0];
     (*ghostState)[1] = 2.*uInf - (*innerState)[1];
-    (*ghostState)[2] = 0.;
+    (*ghostState)[2] = - (*innerState)[2]; // 0.;
     (*ghostState)[3] = _inletData[1]; 
     const CFreal Tin = 2.*Tinlet - (*innerState)[3];
     if (Tin > 0.) {
