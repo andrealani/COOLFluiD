@@ -46,8 +46,9 @@ Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
 # Compute the Wall distance
 Simulator.SubSystem.DataPreProcessing = DataProcessing
 Simulator.SubSystem.DataPreProcessingNames = DataProcessing1
-Simulator.SubSystem.DataProcessing1.Comds = ComputeWallDistanceVector2CC
-#MPI
+Simulator.SubSystem.DataProcessing1.Comds = ComputeWallDistanceVector2CCMPI
+#ComputeWallDistanceNewtonCC
+#ComputeWallDistanceVector2CCMPI
 Simulator.SubSystem.DataProcessing1.Names = WallDistance
 Simulator.SubSystem.DataProcessing1.WallDistance.BoundaryTRS = Cylinder
 Simulator.SubSystem.DataProcessing1.WallDistance.OutputFile = distances.dat

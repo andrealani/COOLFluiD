@@ -12,7 +12,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -5.0404973
+### Residual = -5.0429398
 
 #This is for Reynolds 750.000 (at length=1)
 
@@ -31,7 +31,6 @@ CFEnv.ErrorOnUnusedConfig = true
 
 # Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/FlatPlate/
-#Simulator.Paths.WorkingDir = ./
 Simulator.Paths.ResultsDir = ./
 
 Simulator.SubSystem.Default.PhysicalModelType   = NavierStokes2DKOmega
@@ -47,6 +46,9 @@ Simulator.SubSystem.DataProcessing1.Comds = ComputeWallDistanceVector2CCMPI
 Simulator.SubSystem.DataProcessing1.Names = WallDistance
 Simulator.SubSystem.DataProcessing1.WallDistance.BoundaryTRS = NoSlipWall
 Simulator.SubSystem.DataProcessing1.WallDistance.OutputFile = distances.dat
+Simulator.SubSystem.DataProcessing1.RunAtSetup = true
+Simulator.SubSystem.DataProcessing1.SkipFirstIteration = true
+Simulator.SubSystem.DataProcessing1.ProcessRate = 10000000000
 
 # Post process the data to compute the skin friction and y+
 #Simulator.SubSystem.DataPostProcessing = DataProcessing
@@ -76,10 +78,6 @@ Simulator.SubSystem.Default.listTRS = InnerFaces SlipWall NoSlipWall Inlet Outle
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = flatPlateQD5.CFmesh
-#Simulator.SubSystem.CFmeshFileReader.Data.FileName = flatPlate.CFmesh
-#Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
-#Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
-#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = NewtonIteratorLSS
@@ -117,10 +115,6 @@ Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
 Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = BSLPuvt
 Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
-#Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = HolmesConnell
-#Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBased
-#Simulator.SubSystem.CellCenterFVM.Data.DistanceBased.TrsPriorityList = \
-#                                              SlipWall NoSlipWall Inlet Outlet
 #Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
 
 # node extrapolation enforcing strongly the no slip condition on boundary nodes
@@ -140,13 +134,11 @@ Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = NavierStokesKOmega2DSourceTe
 #Initialization
 Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField
-
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
 Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
 Simulator.SubSystem.CellCenterFVM.InField.Def = 9300. 121.151 0.0 298.15 0.000000166 121.151
 
 #Boundary COnditions
-# NoSlipWallAdiabaticNSTurb2DFVMCC
 Simulator.SubSystem.CellCenterFVM.BcComds = NoSlipWallAdiabaticNSTurb2DFVMCC \
                                 MirrorVelocityFVMCC \
                                 SubInletNSTurb2DUVTFVMCC \
@@ -158,10 +150,11 @@ Simulator.SubSystem.CellCenterFVM.BcNames = Wall \
                                 BcOutlet
 
 Simulator.SubSystem.CellCenterFVM.Mirror.applyTRS = SlipWall
-Simulator.SubSystem.CellCenterFVM.Mirror.ZeroGradientFlags = 1 0 0 1 0 0
+Simulator.SubSystem.CellCenterFVM.Mirror.ZeroGradientFlags = 1 0 0 1 1 1
 
 Simulator.SubSystem.CellCenterFVM.Wall.applyTRS = NoSlipWall
 Simulator.SubSystem.CellCenterFVM.Wall.ZeroGradientFlags = 1 0 0 1 0 0
+Simulator.SubSystem.CellCenterFVM.Wall.KWall = 1.66e-7
 
 Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS = Inlet
 Simulator.SubSystem.CellCenterFVM.BcInlet.Vx = 121.151
