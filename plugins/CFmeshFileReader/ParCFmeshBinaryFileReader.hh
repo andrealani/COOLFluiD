@@ -67,51 +67,6 @@ protected: // functions
     return key;
   }
   
-  /// Read a scalar
-  template <typename T>
-  void readScalar(MPI_File* fh, T& value)
-  {MPI_File_read_all(*fh, &value, 1, Common::MPIStructDef::getMPIType(&value), &m_status);}
-  
-  /// Read an array
-  template <typename T>
-  void readArray(MPI_File* fh, T* array, CFuint ns)
-  {MPI_File_read_all(*fh, &array[0], (int)ns, Common::MPIStructDef::getMPIType(&array[0]), &m_status);}
-
-  /// Read a buffer using all cores                                                                                                                              
-  template <typename T>
-  void readAll(const std::string& name, MPI_File* fh, MPI_Offset offset, T* buf, const CFuint bufSize)
-  {
-    using namespace COOLFluiD::Common;
-    
-    const CFuint maxSendSize = m_maxBuffSize/sizeof(T);
-    MPI_Offset maxOffset = offset + bufSize*sizeof(T);
-    CFuint bufID = 0;
-    CFuint bufLeft = bufSize;
-    CFuint totBufLeft = bufLeft;
-    MPI_Offset bufOff = offset;
-    do {
-      const CFuint nbBuf =  bufLeft/maxSendSize;
-      const CFuint wSize =  bufLeft%maxSendSize;
-      int wBufSize = (bufOff < maxOffset) ? ((nbBuf > 0) ? (int)maxSendSize : (int)wSize) : 0;
-      CFLog(VERBOSE, m_myRank << " in " << name << " reads buffer of size " << wBufSize << "/" << bufSize << " starting from " << bufOff << "\n");
-      cf_assert(bufID < bufSize);
-      
-      MPIError::getInstance().check
-	("MPI_File_read_at_all", "ParCFmeshBinaryFileReader::readAll()",
-	 MPI_File_read_at_all(*fh, bufOff, &buf[bufID], wBufSize, MPIStructDef::getMPIType(&buf[bufID]), &m_status));
-      
-      bufID   = std::min(bufID + (CFuint)wBufSize, bufSize);
-      bufLeft = std::max(bufLeft - (CFuint)wBufSize, (CFuint)0);
-      bufOff  = std::min(bufOff + (MPI_Offset)(wBufSize*sizeof(T)), maxOffset);
-      CFLog(VERBOSE, m_myRank << " in " << name << " read buffer of size " << wBufSize << "/" << bufSize << " ending in " << bufOff << "\n");
-      
-      totBufLeft = 0.;
-      MPI_Allreduce(&bufLeft, &totBufLeft, 1, MPIStructDef::getMPIType(&totBufLeft), MPI_SUM, m_comm);
-      CFLog(VERBOSE, m_myRank << " in " << name << " total buffer left " << totBufLeft << "\n");
-      
-    } while (totBufLeft > 0);
-  }
-  
  private: // typedefs
   
   typedef std::vector<Framework::ElementTypeData> ElemTypeArray;

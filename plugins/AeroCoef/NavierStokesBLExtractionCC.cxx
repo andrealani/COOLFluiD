@@ -44,7 +44,7 @@ void NavierStokesBLExtractionCC::defineConfigOptions(Config::OptionList& options
   options.addConfigOption< std::vector<CFreal> >
     ("ExtractCoord","Coordinates of the point at which to extract BL");
   options.addConfigOption< bool >
-    ("extractBLs","Flag if to extract boundary layer profile along the profile");
+    ("extractBL","Flag if to extract boundary layer profile along the profile");
   options.addConfigOption< CFreal >
     ("BLThickness","Maximum Thickness of the BL for extraction");
   options.addConfigOption< CFreal >
@@ -60,7 +60,7 @@ NavierStokesBLExtractionCC::NavierStokesBLExtractionCC(const std::string& name) 
   addConfigOptionsTo(this);
 
   _extractBLalongProfile = false;
-  setParameter("extractBLs",&_extractBLalongProfile);
+  setParameter("extractBL",&_extractBLalongProfile);
 
   _outputFileBL = "BLProfile.plt";
   setParameter("OutputFileBL",&_outputFileBL);

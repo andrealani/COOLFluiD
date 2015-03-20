@@ -212,7 +212,7 @@ Simulator.SubSystem.CellCenterFVM.SInlet.applyTRS = Inlet
 Simulator.SubSystem.CellCenterFVM.SInlet.InputFileName = inlet.dat
 Simulator.SubSystem.CellCenterFVM.SInlet.InputVar = RhovtXi
 #Simulator.SubSystem.CellCenterFVM.SInlet.YiVTTv = 0. 0. 0. 0.015187214 0. 0.004613586 0. 0. 0. 0. 0. 20. 0. 350. 350.
-Simulator.SubSystem.CellCenterFVM.SInlet.BlowVelocity = 50.
+#Simulator.SubSystem.CellCenterFVM.SInlet.BlowVelocity = 50.
 
 Simulator.SubSystem.CellCenterFVM.Mirror.applyTRS = Symmetry
 Simulator.SubSystem.CellCenterFVM.Mirror.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 0 0 1 1

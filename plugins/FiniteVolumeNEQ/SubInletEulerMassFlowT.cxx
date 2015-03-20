@@ -174,9 +174,9 @@ void SubInletEulerMassFlowT::setGhostState(GeometricEntity *const face)
     // sanity check: sum(y_i)=1
     cf_assert(sumY > 0.9999 && sumY < 1.0001);
     
-    (*ghostState)[nbSpecies] = 2.*uInf - _dataInnerState[EulerTerm::VX];
-    (*ghostState)[nbSpecies+1] = 0.;
-    if (dim == DIM_3D) {(*ghostState)[nbSpecies+2] = 0.;}
+    (*ghostState)[nbSpecies]   = 2.*uInf - _dataInnerState[EulerTerm::VX];
+    (*ghostState)[nbSpecies+1] = - _dataInnerState[EulerTerm::VY]; // 0; here there was a huge bug
+    if (dim == DIM_3D) {(*ghostState)[nbSpecies+2] = - _dataInnerState[EulerTerm::VZ];}
     
     const CFreal Tin = 2.*Tinlet - (*innerState)[TID];
     (*ghostState)[TID] = (Tin > 0.) ? Tin : Tinlet; 

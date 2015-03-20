@@ -70,14 +70,12 @@ void FarFieldEulerChar2DTurb::setup()
   _varSetTurb->getModel()->resizePhysicalData(_dataGhostState);
 
   if(_turbVars.size() == 0){
-
     _turbVars.resize(_varSetTurb->getModel()->getNbScalarVars(0));
-
   }
 
   //This is for one equation model
   if(_turbVars.size() == 1){
-
+   CFLog(WARN, "FarFieldEulerChar2DTurb must be re-checked for SA model\n");
   }
 
   // for k-Omega model

@@ -15,6 +15,7 @@
 #include "Common/StringOps.hh"
 #include "Common/SwapEmpty.hh"
 #include "Common/BadValueException.hh"
+#include "Common/MPI/MPIIOFunctions.hh"
 
 #include "Environment/FileHandlerInput.hh"
 #include "Environment/SingleBehaviorFactory.hh"
@@ -166,7 +167,7 @@ void ParCFmeshBinaryFileReader::readDimension(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readDimension() start\n");
 
   CFint dimension = 0;
-  readScalar(fh, dimension);
+  MPIIOFunctions::readScalar(fh, dimension);
   
   getReadData().setDimension(static_cast<CFuint>(dimension));
   
@@ -200,7 +201,7 @@ void ParCFmeshBinaryFileReader::readNbEquations(MPI_File* fh)
     }
   }
   
-  readScalar(fh, m_originalNbEqs);
+  MPIIOFunctions::readScalar(fh, m_originalNbEqs);
   cf_assert(m_originalNbEqs > 0);
   CFuint nbEquations = m_originalNbEqs;
   
@@ -234,9 +235,9 @@ void ParCFmeshBinaryFileReader::readNbNodes(MPI_File* fh)
 {
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readNbNodes() start\n");
   
-  readScalar(fh, m_totNbNodes);
+  MPIIOFunctions::readScalar(fh, m_totNbNodes);
   CFint nbNonUpdatableNodes = 0;
-  readScalar(fh, nbNonUpdatableNodes);
+  MPIIOFunctions::readScalar(fh, nbNonUpdatableNodes);
   
   // set the total number of nodes in the MeshData
   MeshDataStack::getActive()->setTotalNodeCount(m_totNbNodes);
@@ -264,9 +265,9 @@ void ParCFmeshBinaryFileReader::readNbStates(MPI_File* fh)
 {
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readNbStates() start\n");
   
-  readScalar(fh, m_totNbStates);
+  MPIIOFunctions::readScalar(fh, m_totNbStates);
   CFint nbNonUpdatableStates = 0;
-  readScalar(fh, nbNonUpdatableStates);
+  MPIIOFunctions::readScalar(fh, nbNonUpdatableStates);
   
   // set the total number of states in the MeshData
   MeshDataStack::getActive()->setTotalStateCount(m_totNbStates);
@@ -295,7 +296,7 @@ void ParCFmeshBinaryFileReader::readStorePastStates(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readStorePastStates() start\n");
   
   CFint flag = 0;
-  readScalar(fh, flag);
+  MPIIOFunctions::readScalar(fh, flag);
   m_hasPastStates = (bool)flag;
   
   if(getReadData().storePastStates())
@@ -315,7 +316,7 @@ void ParCFmeshBinaryFileReader::readStorePastNodes(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readStorePastNodes() start\n");
  
   CFint flag = 0;
-  readScalar(fh, flag);
+  MPIIOFunctions::readScalar(fh, flag);
   m_hasPastNodes = (bool)flag;
 
   if(getReadData().storePastNodes())
@@ -335,7 +336,7 @@ void ParCFmeshBinaryFileReader::readStoreInterStates(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readStoreInterStates() start\n");
   
   CFint flag = 0;
-  readScalar(fh, flag);
+  MPIIOFunctions::readScalar(fh, flag);
   m_hasInterStates = (bool)flag;
   
   if(getReadData().storeInterStates())
@@ -355,7 +356,7 @@ void ParCFmeshBinaryFileReader::readStoreInterNodes(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readStoreInterNodes() start\n");
   
   CFint flag = 0;
-  readScalar(fh, flag);
+  MPIIOFunctions::readScalar(fh, flag);
   m_hasInterNodes = (bool)flag;
   
   if(getReadData().storeInterNodes())
@@ -376,7 +377,7 @@ void ParCFmeshBinaryFileReader::readNbElements(MPI_File* fh)
 
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readNbElements() start\n");
   
-  readScalar(fh, m_totNbElem);
+  MPIIOFunctions::readScalar(fh, m_totNbElem);
   
   getReadData().setNbElements(m_totNbElem);
   
@@ -393,7 +394,7 @@ void ParCFmeshBinaryFileReader::readNbElementTypes(MPI_File* fh)
 {
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readNbElementTypes() start\n");
  
-  readScalar(fh, m_totNbElemTypes);
+  MPIIOFunctions::readScalar(fh, m_totNbElemTypes);
   
   getReadData().setNbElementTypes(m_totNbElemTypes);
 
@@ -421,7 +422,7 @@ void ParCFmeshBinaryFileReader::readGeometricPolyOrder(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readGeometricPolyOrder() start\n");
   
   CFuint order = 0;
-  readScalar(fh, order);
+  MPIIOFunctions::readScalar(fh, order);
   getReadData().setGeometricPolyOrder(static_cast<CFPolyOrder::Type>(order));
   
   if(getReadData().getGeometricPolyOrder() >= CFPolyOrder::MAXORDER ||
@@ -439,7 +440,7 @@ void ParCFmeshBinaryFileReader::readSolutionPolyOrder(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readSolutionPolyOrder() start\n");
   
   CFuint order = 0;
-  readScalar(fh, order);
+  MPIIOFunctions::readScalar(fh, order);
   getReadData().setSolutionPolyOrder(static_cast<CFPolyOrder::Type>(order));
   
   if(getReadData().getSolutionPolyOrder() >= CFPolyOrder::MAXORDER ||
@@ -457,7 +458,7 @@ void ParCFmeshBinaryFileReader::readGeometricPolyType(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readGeometricPolyType() start\n");
   
   CFuint Type = 0;
-  readScalar(fh, Type);
+  MPIIOFunctions::readScalar(fh, Type);
   getReadData().setGeometricPolyType(static_cast<CFPolyForm::Type>(Type));
   
   /// @todo should add check here for validity
@@ -471,7 +472,7 @@ void ParCFmeshBinaryFileReader::readSolutionPolyType(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readSolutionPolyType() start\n");
 
   CFuint Type = 0;
-  readScalar(fh, Type);
+  MPIIOFunctions::readScalar(fh, Type);
   getReadData().setSolutionPolyType(static_cast<CFPolyForm::Type>(Type));
   
   /// @todo should add check here for validity
@@ -516,7 +517,7 @@ void ParCFmeshBinaryFileReader::readNbElementsPerType(MPI_File* fh)
   CFint nbElemPerType = 0;
   
   for (CFuint i = 0; i < nbElementTypes; ++i) {
-    readScalar(fh, nbElemPerType);
+    MPIIOFunctions::readScalar(fh, nbElemPerType);
     (*elementType)[i].setNbElems(static_cast<CFuint>(nbElemPerType));
     
     sumNbElems += nbElemPerType;
@@ -549,7 +550,7 @@ void ParCFmeshBinaryFileReader::readNbNodesPerType(MPI_File* fh)
   
   CFint nbNodesPerType = 0;
   for (CFuint i = 0; i < nbElementTypes; ++i) {
-    readScalar(fh, nbNodesPerType);
+    MPIIOFunctions::readScalar(fh, nbNodesPerType);
     
     (*elementType)[i].setNbNodes(static_cast<CFuint>(nbNodesPerType));
     
@@ -615,7 +616,7 @@ void ParCFmeshBinaryFileReader::readNbStatesPerType(MPI_File* fh)
   
   CFint nbStatesPerType = 0;
   for (CFuint i = 0; i < nbElementTypes; ++i) {
-    readScalar(fh, nbStatesPerType);
+    MPIIOFunctions::readScalar(fh, nbStatesPerType);
     
     (*elementType)[i].setNbStates
       (static_cast<CFuint>(nbStatesPerType));
@@ -694,7 +695,7 @@ void ParCFmeshBinaryFileReader::readNbStatesPerType(MPI_File* fh)
   if (nbExtraVars > 0) {nodeSize += extraVars.size();}
   
   // read "\n" character
-  char c; readScalar(fh, c); 
+  char c; MPIIOFunctions::readScalar(fh, c); 
   
   const CFuint nbNodesToReadAtOnce = m_totNbNodes/m_nbProc;
   vector<CFreal> buf(nbNodesToReadAtOnce*nodeSize);
@@ -788,12 +789,12 @@ void ParCFmeshBinaryFileReader::readNbStatesPerType(MPI_File* fh)
   
   // read flag telling if there is a solution
   CFuint flag = 0;
-  readScalar(fh, flag);
+  MPIIOFunctions::readScalar(fh, flag);
   bool isWithSolution = (bool) flag;
   getReadData().setWithSolution(isWithSolution);
   
   // read "\n" character 
-  char c; readScalar(fh, c);
+  char c; MPIIOFunctions::readScalar(fh, c);
   
   const CFuint nbLocalStates = m_localStateIDs.size() + m_ghostStateIDs.size();
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
@@ -1219,7 +1220,7 @@ void ParCFmeshBinaryFileReader::readElemListRank(PartitionerData& pdata,
   //  ("MPI_File_read_at", "ParCFmeshBinaryFileReader::readElemListRank()", 
   //    MPI_File_read_at_all(*fh, startPos, &buf[0], (int)buf.size(), MPIStructDef::getMPIType(&buf[0]), &m_status)); 
   
-  readAll("ParCFmeshBinaryFileReader::readElemListRank()", fh, startPos, &buf[0], (CFuint)buf.size());
+  MPIIOFunctions::readAll("ParCFmeshBinaryFileReader::readElemListRank()", fh, startPos, &buf[0], (CFuint)buf.size(), m_maxBuffSize);
   
   // CFVec<CFuint> e0(9, &buf[0]); cout   << "element[0] = " << e0 << endl;
   // CFVec<CFuint> eN(9, &buf[buf.size()-9]); cout << "element[N] = " << eN << endl;
@@ -1271,7 +1272,7 @@ void ParCFmeshBinaryFileReader::readNbTRSs(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readNbTRSs() start\n");
   
   CFuint nbTRSs = 0;
-  readScalar(fh, nbTRSs);
+  MPIIOFunctions::readScalar(fh, nbTRSs);
   
   if (nbTRSs < 1)
   {
@@ -1361,7 +1362,7 @@ void ParCFmeshBinaryFileReader::readNbTRs(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readNbTRs() start\n");
 
   CFuint nbTRsInTRS = 0;
-  readScalar(fh, nbTRsInTRS);
+  MPIIOFunctions::readScalar(fh, nbTRsInTRS);
   
   cf_assert(nbTRsInTRS > 0);
 
@@ -1385,7 +1386,7 @@ void ParCFmeshBinaryFileReader::readNbGeomEnts(MPI_File* fh)
   const CFuint idx = m_trs_idxmap[m_curr_trs];
   for (CFuint iTr = 0; iTr < m_curr_nbtr; ++iTr) {
     CFint nbgeo = 0;
-    readScalar(fh, nbgeo);
+    MPIIOFunctions::readScalar(fh, nbgeo);
     cf_assert(nbgeo > 0);
     
     (*getReadData().getNbGeomEntsPerTR())[idx].push_back(nbgeo);
@@ -1438,8 +1439,8 @@ void ParCFmeshBinaryFileReader::readGeomEntList(MPI_File* fh)
   
   // read in the maximum number of nodes/states for each TR geos
   CFMat<CFuint> nbNodesStatesInTRGeo(m_curr_nbtr, 2, static_cast<CFuint>(0));
-  readArray(fh, &nbNodesStatesInTRGeo[0], nbNodesStatesInTRGeo.size());
-  char c; readScalar(fh,c);  // reads a "\n"
+  MPIIOFunctions::readArray(fh, &nbNodesStatesInTRGeo[0], nbNodesStatesInTRGeo.size());
+  char c; MPIIOFunctions::readScalar(fh,c);  // reads a "\n"
     
   typedef CFMultiMap<CFuint,CFuint>::MapIterator MapItr;
   
@@ -1473,7 +1474,7 @@ void ParCFmeshBinaryFileReader::readGeomEntList(MPI_File* fh)
   
   // read the full list of geometric entities
   vector<CFint> buf(sizeBuf);
-  readArray(fh, &buf[0], sizeBuf);
+  MPIIOFunctions::readArray(fh, &buf[0], sizeBuf);
   
   pair<std::valarray<CFuint>, std::valarray<CFuint> > geoConLocal;
   
@@ -1635,7 +1636,7 @@ void ParCFmeshBinaryFileReader::readNbExtraVars(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readNbExtraVars() start\n");
  
   CFint nbExtraVars = 0;
-  readScalar(fh, nbExtraVars);
+  MPIIOFunctions::readScalar(fh, nbExtraVars);
   
   getReadData().setNbExtraVars(static_cast<CFuint>(nbExtraVars));
   
@@ -1654,7 +1655,7 @@ void ParCFmeshBinaryFileReader::readNbExtraNodalVars(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readNbExtraNodalVars() start\n");
 
   CFint nbExtraNodalVars = 0;
-  readScalar(fh, nbExtraNodalVars);
+  MPIIOFunctions::readScalar(fh, nbExtraNodalVars);
   
   getReadData().setNbExtraNodalVars(static_cast<CFuint>(nbExtraNodalVars));
   
@@ -1672,7 +1673,7 @@ void ParCFmeshBinaryFileReader::readNbExtraStateVars(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readNbExtraStateVars() start\n");
   
   CFint nbExtraStateVars = 0;
-  readScalar(fh, nbExtraStateVars);
+  MPIIOFunctions::readScalar(fh, nbExtraStateVars);
   
   getReadData().setNbExtraStateVars(static_cast<CFuint>(nbExtraStateVars));
 
@@ -1746,7 +1747,7 @@ void ParCFmeshBinaryFileReader::readExtraVarStrides(MPI_File* fh)
   const CFuint nbExtraVars = getReadData().getNbExtraVars();
   vector<CFuint> extraVarStrides(nbExtraVars);
   
-  readArray(fh, &extraVarStrides[0], nbExtraVars);
+  MPIIOFunctions::readArray(fh, &extraVarStrides[0], nbExtraVars);
   getReadData().setExtraVarStrides(extraVarStrides);
   
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readExtraVarStrides() end\n");
@@ -1761,7 +1762,7 @@ void ParCFmeshBinaryFileReader::readExtraStateVarStrides(MPI_File* fh)
   const CFuint nbExtraStateVars = getReadData().getNbExtraStateVars();
   vector<CFuint> extraStateVarStrides(nbExtraStateVars);
 
-  readArray(fh, &extraStateVarStrides[0], nbExtraStateVars);
+  MPIIOFunctions::readArray(fh, &extraStateVarStrides[0], nbExtraStateVars);
   getReadData().setExtraStateVarStrides(extraStateVarStrides);
   
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readExtraStateVarStrides() end\n");
@@ -1776,7 +1777,7 @@ void ParCFmeshBinaryFileReader::readExtraNodalVarStrides(MPI_File* fh)
   const CFuint nbExtraNodalVars = getReadData().getNbExtraNodalVars();
   vector<CFuint> extraNodalVarStrides(nbExtraNodalVars);
   
-  readArray(fh, &extraNodalVarStrides[0], nbExtraNodalVars);
+  MPIIOFunctions::readArray(fh, &extraNodalVarStrides[0], nbExtraNodalVars);
   getReadData().setExtraNodalVarStrides(extraNodalVarStrides);
   
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readExtraNodalVarStrides() end\n");
@@ -1798,7 +1799,7 @@ void ParCFmeshBinaryFileReader::readExtraVars(MPI_File* fh)
                                                  extraVarStrides.end(), 0);
     extraVars.resize(sizeExtraVars, 0.);
     getReadData().prepareExtraVars();
-    readArray(fh, &extraVars[0], sizeExtraVars);
+    MPIIOFunctions::readArray(fh, &extraVars[0], sizeExtraVars);
     getReadData().setExtraVar(extraVars);
   }
   
@@ -1812,7 +1813,7 @@ void ParCFmeshBinaryFileReader::readNbGroups(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readNbGroups() start\n");
 
   CFuint nbGroups = 0;
-  readScalar(fh, nbGroups);
+  MPIIOFunctions::readScalar(fh, nbGroups);
   
   if (nbGroups < 1) {
     throw BadFormatException (FromHere(),"Number of nbGroups in file must be at least 1");
@@ -1853,7 +1854,7 @@ void ParCFmeshBinaryFileReader::readGroupElementNb(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readGroupElementNb() start\n");
   
   CFint nbgeo = 0;
-  readScalar(fh, nbgeo);
+  MPIIOFunctions::readScalar(fh, nbgeo);
   cf_assert(nbgeo > 0);
   getReadData().getGroupSizes()->push_back(nbgeo);
   
@@ -1887,7 +1888,7 @@ void ParCFmeshBinaryFileReader::readGroupElementList(MPI_File* fh)
   
   // AL: quick and dirty, this need to be reconsidered
   vector<CFuint> buf(totalNbGroupElems);
-  readArray(fh, &buf[0], buf.size());
+  MPIIOFunctions::readArray(fh, &buf[0], buf.size());
   
   // for each element of the group,
   // check if the local processor has the element
@@ -1992,7 +1993,7 @@ void ParCFmeshBinaryFileReader::readNodeList(MPI_File* fh)
   if (nbExtraVars > 0) {nodeSize += extraVars.size();}
   
   // read "\n" character
-  char c; readScalar(fh, c); 
+  char c; MPIIOFunctions::readScalar(fh, c); 
   
   // get the position of the current pointer in the file
   MPI_Offset startListOffset;
@@ -2018,7 +2019,7 @@ void ParCFmeshBinaryFileReader::readNodeList(MPI_File* fh)
   CFLog(VERBOSE, "ParCFmeshBinaryFileReader::readNodeList() => nodes read in position [" << startPos << 
 	", " << startPos + sizeRead*sizeof(CFreal) << "]\n");
   
-  readAll("ParCFmeshBinaryFileReader::readNodeList()", fh, startPos, &buf[0], (CFuint)sizeRead);
+  MPIIOFunctions::readAll("ParCFmeshBinaryFileReader::readNodeList()", fh, startPos, &buf[0], (CFuint)sizeRead, m_maxBuffSize);
   
   vector<CFreal> localNodesData(m_localNodeIDs.size()*nodeSize);
   getLocalData(buf, ranges, m_localNodeIDs, nodeSize, localNodesData);
@@ -2524,7 +2525,7 @@ void ParCFmeshBinaryFileReader::readStateList(MPI_File* fh)
   
   // read flag telling if there is a solution
   CFuint flag = 0;
-  readScalar(fh, flag);
+  MPIIOFunctions::readScalar(fh, flag);
   bool isWithSolution = (bool) flag;
   getReadData().setWithSolution(isWithSolution);
   
@@ -2619,7 +2620,7 @@ void ParCFmeshBinaryFileReader::readStateList(MPI_File* fh)
   if (nbExtraVars > 0) {stateSize += extraVars.size();}
   
   // read "\n" character 
-  char c; readScalar(fh, c);
+  char c; MPIIOFunctions::readScalar(fh, c);
   
   // get the position of the current pointer in the file
   MPI_Offset startListOffset;
@@ -2646,7 +2647,7 @@ void ParCFmeshBinaryFileReader::readStateList(MPI_File* fh)
     CFLog(VERBOSE, "ParCFmeshBinaryFileReader::readStateList() => states read in position [" << startPos << 
 	  ", " << startPos + sizeRead*sizeof(CFreal) << "]\n");
     
-    readAll("ParCFmeshBinaryFileReader::readStateList()", fh, startPos, &buf[0], (CFuint)sizeRead);
+    MPIIOFunctions::readAll("ParCFmeshBinaryFileReader::readStateList()", fh, startPos, &buf[0], (CFuint)sizeRead, m_maxBuffSize);
     
     vector<CFreal> localStatesData(m_localStateIDs.size()*stateSize);
     getLocalData(buf, ranges, m_localStateIDs, stateSize, localStatesData);

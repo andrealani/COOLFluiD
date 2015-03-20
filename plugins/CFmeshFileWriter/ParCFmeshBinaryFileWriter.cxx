@@ -19,6 +19,7 @@
 #include "Environment/FileHandlerOutput.hh"
 #include "Common/CFMultiMap.hh"
 #include "Common/CFPrintContainer.hh"
+#include "Common/MPI/MPIIOFunctions.hh"
 
 #include "Environment/SingleBehaviorFactory.hh"
 
@@ -173,7 +174,7 @@ void ParCFmeshBinaryFileWriter::writeToFile(const boost::filesystem::path& filep
   CFuint rank = (minNumberElements == nbLocalElements)  ? _myRank : 0;
   // IO rank is maximum rank whose corresponding process has minimum number of elements
   MPI_Allreduce(&rank, &_ioRank, 1, MPIStructDef::getMPIType(&rank), MPI_MAX, _comm);    
-  CFout << "ParCFmeshBinaryFileWriter::writeToFile() => IO rank is " << _ioRank << "\n";
+  CFLog(INFO, "ParCFmeshBinaryFileWriter::writeToFile() => IO rank is " << _ioRank << "\n");
   
   // if the file has already been processed once, open in I/O mode
   if (_fileList.count(filepath) == 0) {
@@ -269,12 +270,12 @@ void ParCFmeshBinaryFileWriter::writeVersionStamp(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileWriter::writeDimension() start\n");
   
   if (_myRank == _ioRank) {
-    writeKeyValue<char>(fh, "!COOLFLUID_VERSION ");
-    writeKeyValue<char>(fh, CFEnv::getInstance().getCFVersion());
-    writeKeyValue<char>(fh, "\n!COOLFLUID_SVNVERSION ");
-    writeKeyValue<char>(fh, CFEnv::getInstance().getSvnVersion());
-    writeKeyValue<char>(fh, "\n!CFMESH_FORMAT_VERSION ");
-    writeKeyValue<char>(fh, "1.3");
+    MPIIOFunctions::writeKeyValue<char>(fh, "!COOLFLUID_VERSION ");
+    MPIIOFunctions::writeKeyValue<char>(fh, CFEnv::getInstance().getCFVersion());
+    MPIIOFunctions::writeKeyValue<char>(fh, "\n!COOLFLUID_SVNVERSION ");
+    MPIIOFunctions::writeKeyValue<char>(fh, CFEnv::getInstance().getSvnVersion());
+    MPIIOFunctions::writeKeyValue<char>(fh, "\n!CFMESH_FORMAT_VERSION ");
+    MPIIOFunctions::writeKeyValue<char>(fh, "1.3");
   }
   
   CFLogDebugMin( "ParCFmeshBinaryFileWriter::writeDimension() end\n");
@@ -287,19 +288,19 @@ void ParCFmeshBinaryFileWriter::writeGlobalCounts(MPI_File* fh)
  CFLogDebugMin( "ParCFmeshBinaryFileWriter::writeDimension() start\n");
  
  if (_myRank  == _ioRank) {
-   writeKeyValue<CFuint>(fh, "\n!NB_DIM ", false, PhysicalModelStack::getActive()->getDim());
-   writeKeyValue<CFuint>(fh, "\n!NB_EQ ", false, PhysicalModelStack::getActive()->getNbEq());
+   MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!NB_DIM ", false, PhysicalModelStack::getActive()->getDim());
+   MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!NB_EQ ", false, PhysicalModelStack::getActive()->getNbEq());
    
-   writeKeyValue<CFuint>(fh, "\n!NB_NODES ", false, MeshDataStack::getActive()->getTotalNodeCount());
+   MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!NB_NODES ", false, MeshDataStack::getActive()->getTotalNodeCount());
    CFuint nuNodes = getWriteData().getNbNonUpdatableNodes();
    MPI_File_write(*fh, &nuNodes, 1, MPIStructDef::getMPIType(&nuNodes), &_status);
    
-   writeKeyValue<CFuint>(fh, "\n!NB_STATES ", false, MeshDataStack::getActive()->getTotalStateCount());
+   MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!NB_STATES ", false, MeshDataStack::getActive()->getTotalStateCount());
    CFuint nuStates = getWriteData().getNbNonUpdatableStates();
    MPI_File_write(*fh, &nuStates, 1, MPIStructDef::getMPIType(&nuStates), &_status);
    
    const std::vector<CFuint>& tElem = MeshDataStack::getActive()->getTotalElements();
-   writeKeyValue<CFuint>(fh, "\n!NB_ELEM ", false, (CFuint)std::accumulate(tElem.begin(), tElem.end(), 0));
+   MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!NB_ELEM ", false, (CFuint)std::accumulate(tElem.begin(), tElem.end(), 0));
  }
  
  CFLogDebugMin( "ParCFmeshBinaryFileWriter::writeDimension() end\n");
@@ -313,30 +314,30 @@ void ParCFmeshBinaryFileWriter::writeExtraVarsInfo(MPI_File* fh)
 
  if (_myRank  == _ioRank) {
    if(getWriteData().storePastStates()) {
-     writeKeyValue<CFuint>(fh, "\n!STORE_PASTSTATES ", false, getWriteData().storePastStates());
+     MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!STORE_PASTSTATES ", false, getWriteData().storePastStates());
    }
    
    if(getWriteData().storePastNodes()) {
-     writeKeyValue<CFuint>(fh, "\n!STORE_PASTNODES ", false, getWriteData().storePastNodes());
+     MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!STORE_PASTNODES ", false, getWriteData().storePastNodes());
    }
 
    if(getWriteData().storeInterStates()) {
-     writeKeyValue<CFuint>(fh, "\n!STORE_INTERSTATES ", false, getWriteData().storeInterStates());
+     MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!STORE_INTERSTATES ", false, getWriteData().storeInterStates());
    }
    
    if(getWriteData().storeInterNodes()) {
-     writeKeyValue<CFuint>(fh, "\n!STORE_INTERNODES ", false, getWriteData().storeInterNodes());
+     MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!STORE_INTERNODES ", false, getWriteData().storeInterNodes());
    }
    
    const CFuint nbExtraNodalVars = getWriteData().getNbExtraNodalVars();
    if(nbExtraNodalVars > 0) {
-     writeKeyValue<CFuint>(fh, "\n!NB_EXTRA_NVARS ", false, nbExtraNodalVars);
+     MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!NB_EXTRA_NVARS ", false, nbExtraNodalVars);
      
-     writeKeyValue<char>(fh, "\n!EXTRA_NVARS_NAMES ");
+     MPIIOFunctions::writeKeyValue<char>(fh, "\n!EXTRA_NVARS_NAMES ");
      for(CFuint iVar = 0; iVar < nbExtraNodalVars; iVar++) {
-       writeKeyValue<char>(fh, (*(getWriteData().getExtraNodalVarNames()))[iVar] + " ");
+       MPIIOFunctions::writeKeyValue<char>(fh, (*(getWriteData().getExtraNodalVarNames()))[iVar] + " ");
      }
-     writeKeyValue<char>(fh, "\n!EXTRA_NVARS_STRIDES ");
+     MPIIOFunctions::writeKeyValue<char>(fh, "\n!EXTRA_NVARS_STRIDES ");
      MPI_File_write(*fh, &(*(getWriteData().getExtraNodalVarStrides()))[0], 
 		    (int)nbExtraNodalVars, 
 		    MPIStructDef::getMPIType(&(*(getWriteData().getExtraNodalVarStrides()))[0]), &_status); 
@@ -344,13 +345,13 @@ void ParCFmeshBinaryFileWriter::writeExtraVarsInfo(MPI_File* fh)
    
    const CFuint nbExtraStateVars = getWriteData().getNbExtraStateVars();
    if (nbExtraStateVars > 0) {
-     writeKeyValue<CFuint>(fh, "\n!NB_EXTRA_SVARS ", false, nbExtraStateVars);
+     MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!NB_EXTRA_SVARS ", false, nbExtraStateVars);
      
-     writeKeyValue<char>(fh, "\n!EXTRA_SVARS_NAMES ");
+     MPIIOFunctions::writeKeyValue<char>(fh, "\n!EXTRA_SVARS_NAMES ");
      for(CFuint iVar = 0; iVar < nbExtraStateVars; iVar++) {
-       writeKeyValue<char>(fh, (*(getWriteData().getExtraStateVarNames()))[iVar] + " ");
+       MPIIOFunctions::writeKeyValue<char>(fh, (*(getWriteData().getExtraStateVarNames()))[iVar] + " ");
      }
-     writeKeyValue<char>(fh, "\n!EXTRA_SVARS_STRIDES ");
+     MPIIOFunctions::writeKeyValue<char>(fh, "\n!EXTRA_SVARS_STRIDES ");
      MPI_File_write(*fh, &(*(getWriteData().getExtraStateVarStrides()))[0], 
 		    (int)nbExtraStateVars, 
 		    MPIStructDef::getMPIType(&(*(getWriteData().getExtraStateVarStrides()))[0]), &_status);
@@ -358,13 +359,13 @@ void ParCFmeshBinaryFileWriter::writeExtraVarsInfo(MPI_File* fh)
    
    const CFuint nbExtraVars = getWriteData().getNbExtraVars();
    if (nbExtraVars > 0) {
-     writeKeyValue<CFuint>(fh, "\n!NB_EXTRA_VARS ", false, nbExtraVars);
+     MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!NB_EXTRA_VARS ", false, nbExtraVars);
      
-     writeKeyValue<char>(fh, "\n!EXTRA_VARS_NAMES ");
+     MPIIOFunctions::writeKeyValue<char>(fh, "\n!EXTRA_VARS_NAMES ");
      for(CFuint iVar = 0; iVar < nbExtraVars; iVar++) {
-       writeKeyValue<char>(fh, (*(getWriteData().getExtraVarNames()))[iVar] + " ");
+       MPIIOFunctions::writeKeyValue<char>(fh, (*(getWriteData().getExtraVarNames()))[iVar] + " ");
      }
-     writeKeyValue<char>(fh, "\n!EXTRA_VARS_STRIDES ");
+     MPIIOFunctions::writeKeyValue<char>(fh, "\n!EXTRA_VARS_STRIDES ");
      MPI_File_write(*fh, &(*(getWriteData().getExtraVarStrides()))[0], 
 		    (int)nbExtraVars, 
 		    MPIStructDef::getMPIType(&(*(getWriteData().getExtraVarStrides()))[0]), &_status);
@@ -387,7 +388,7 @@ void ParCFmeshBinaryFileWriter::writeExtraVars(MPI_File* fh)
     RealVector& extraValues = getWriteData().getExtraValues();
     cf_assert(extraValues.size() == totalNbExtraVars);
     
-    writeKeyValue<char>(fh, "\n!EXTRA_VARS ");
+    MPIIOFunctions::writeKeyValue<char>(fh, "\n!EXTRA_VARS ");
     if (extraValues.size() > 0) {
       MPI_File_write(*fh, &extraValues[0], (int)totalNbExtraVars, 
 		     MPIStructDef::getMPIType(&extraValues[0]), &_status);
@@ -404,33 +405,33 @@ void ParCFmeshBinaryFileWriter::writeElements(MPI_File* fh)
   CFLogDebugMin("ParCFmeshBinaryFileWriter::writeElements() start\n");
     
   if (_myRank  == _ioRank) {
-    writeKeyValue<CFuint>(fh, "\n!NB_ELEM_TYPES ", 
+    MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!NB_ELEM_TYPES ", 
 			  false, MeshDataStack::getActive()->getTotalElements().size());
-    writeKeyValue<CFuint>(fh, "\n!GEOM_POLYORDER ", 
+    MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!GEOM_POLYORDER ", 
 			  false, static_cast<CFuint> (getWriteData().getGeometricPolyOrder()));
-    writeKeyValue<CFuint>(fh, "\n!SOL_POLYORDER ", 
+    MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!SOL_POLYORDER ", 
 			  false, static_cast<CFuint> (getWriteData().getSolutionPolyOrder()));
     
-    writeKeyValue<char>(fh, "\n!ELEM_TYPES ");
+    MPIIOFunctions::writeKeyValue<char>(fh, "\n!ELEM_TYPES ");
     vector<MeshElementType>& me = MeshDataStack::getActive()->getTotalMeshElementTypes();
     const CFuint nbElementTypes = me.size();
     for (CFuint i = 0; i < nbElementTypes; ++i) {
-      writeKeyValue<char>(fh, me[i].elementName + " ");
+      MPIIOFunctions::writeKeyValue<char>(fh, me[i].elementName + " ");
     }
     
-    writeKeyValue<char>(fh, "\n!NB_ELEM_PER_TYPE ");
+    MPIIOFunctions::writeKeyValue<char>(fh, "\n!NB_ELEM_PER_TYPE ");
     for (CFuint i = 0; i < nbElementTypes; ++i) {
       MPI_File_write(*fh, &me[i].elementCount, 1, 
 		     MPIStructDef::getMPIType(&me[i].elementCount), &_status); 
     }
     
-    writeKeyValue<char>(fh, "\n!NB_NODES_PER_TYPE ");
+    MPIIOFunctions::writeKeyValue<char>(fh, "\n!NB_NODES_PER_TYPE ");
     for (CFuint i = 0; i < nbElementTypes; ++i) {
       MPI_File_write(*fh, &me[i].elementNodes, 1, 
 		     MPIStructDef::getMPIType(&me[i].elementNodes), &_status); 
     }
     
-    writeKeyValue<char>(fh, "\n!NB_STATES_PER_TYPE ");
+    MPIIOFunctions::writeKeyValue<char>(fh, "\n!NB_STATES_PER_TYPE ");
     for (CFuint i = 0; i < nbElementTypes; ++i) {
       MPI_File_write(*fh, &me[i].elementStates, 1,
 		     MPIStructDef::getMPIType(&me[i].elementStates), &_status); 
@@ -450,8 +451,8 @@ void ParCFmeshBinaryFileWriter::writeElementList(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileWriter::writeElementList() start\n");
   
   if (_myRank  == _ioRank) {
-    writeKeyValue<char>(fh, "\n!LIST_ELEM");
-    writeKeyValue<char>(fh, "\n");
+    MPIIOFunctions::writeKeyValue<char>(fh, "\n!LIST_ELEM");
+    MPIIOFunctions::writeKeyValue<char>(fh, "\n");
   }
   
   // get the local position in the file and broadcast it to all processes
@@ -653,11 +654,12 @@ void ParCFmeshBinaryFileWriter::writeElementList(MPI_File* fh)
       
       // each writer can now concurrently write all the collected data (related to one element type)
       cf_assert(wRank >= 0);
-      writeAll("ParCFmeshBinaryFileWriter::writeElementList()", fh, wOffset[wRank], &elementToPrint[0], wSendSize);
+      MPIIOFunctions::writeAll("ParCFmeshBinaryFileWriter::writeElementList()", fh, wOffset[wRank], &elementToPrint[0], 
+			       wSendSize, _maxBuffSize);
       
       // test  
       // cf_assert(elementToPrint.size() == wSendSize);
-      // testBuff("ParCFmeshBinaryFileWriter::writeElementList()", wOffset[wRank], &elementToPrint[0], wSendSize);
+      // MPIIOFunctions::testBuff("ParCFmeshBinaryFileWriter::writeElementList()", wOffset[wRank], &elementToPrint[0], wSendSize);
     }
     
     // reset all the elements to print to 0
@@ -709,28 +711,28 @@ void ParCFmeshBinaryFileWriter::writeTrsData(MPI_File* fh)
   // CFLog(INFO, _myRank << " writes TRS starting from " << _offset.elems.second << "\n");
   
   if (_myRank == _ioRank) {
-    writeKeyValue<CFuint>(fh, "\n!NB_TRSs ", false, nbTRSs);
+    MPIIOFunctions::MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!NB_TRSs ", false, nbTRSs);
     CFLogDebugMin("!NB_TRSs " << nbTRSs << "\n");
   }
   
   for(CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
     if (_myRank == _ioRank) {
-      writeKeyValue<char>(fh, "\n!TRS_NAME ");
-      writeKeyValue<char>(fh, trsNames[iTRS]);
+      MPIIOFunctions::MPIIOFunctions::writeKeyValue<char>(fh, "\n!TRS_NAME ");
+      MPIIOFunctions::MPIIOFunctions::writeKeyValue<char>(fh, trsNames[iTRS]);
       CFLogDebugMin("!TRS_NAME " << trsNames[iTRS] << "\n");
       
       const CFuint nbTRsInTRS = trsInfo[iTRS].size();
-      writeKeyValue<CFuint>(fh, "\n!NB_TRs ", false, nbTRsInTRS);
+      MPIIOFunctions::MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!NB_TRs ", false, nbTRsInTRS);
       CFLogDebugMin("!NB_TRs "   << nbTRsInTRS << "\n");
       
-      writeKeyValue<char>(fh, "\n!NB_GEOM_ENTS ");
+      MPIIOFunctions::MPIIOFunctions::writeKeyValue<char>(fh, "\n!NB_GEOM_ENTS ");
       MPI_File_write(*fh, &trsInfo[iTRS][0], (int)nbTRsInTRS, 
 		     MPIStructDef::getMPIType(&trsInfo[iTRS][0]), &_status);
       CFLogDebugMin(CFPrintContainer<const vector<CFuint> >("!NB_GEOM_ENTS ", &trsInfo[iTRS], nbTRsInTRS));
       
       // AL: probably this geom_type info could go away ...
-      writeKeyValue<char>(fh, "\n!GEOM_TYPE ");
-      writeKeyValue<char>(fh, CFGeoEnt::Convert::to_str(CFGeoEnt::FACE));
+      MPIIOFunctions::MPIIOFunctions::writeKeyValue<char>(fh, "\n!GEOM_TYPE ");
+      MPIIOFunctions::MPIIOFunctions::writeKeyValue<char>(fh, CFGeoEnt::Convert::to_str(CFGeoEnt::FACE));
       CFLogDebugMin("!GEOM_TYPE " << CFGeoEnt::FACE << "\n");
     }
     
@@ -751,8 +753,8 @@ void ParCFmeshBinaryFileWriter::writeNodeList(MPI_File* fh)
   }
   
   if (_myRank == _ioRank) {
-    writeKeyValue<char>(fh, "\n!LIST_NODE");
-    writeKeyValue<char>(fh, "\n");
+    MPIIOFunctions::MPIIOFunctions::writeKeyValue<char>(fh, "\n!LIST_NODE");
+    MPIIOFunctions::MPIIOFunctions::writeKeyValue<char>(fh, "\n");
   }
   
   MPI_Offset offset;
@@ -909,7 +911,8 @@ void ParCFmeshBinaryFileWriter::writeNodeList(MPI_File* fh)
     // MPI_File_write_at_all(*fh, wOffset[wRank], &elementToPrint[0], (int)wSendSize, 
     // MPIStructDef::getMPIType(&elementToPrint[0]), &_status); 
     
-    writeAll("ParCFmeshBinaryFileWriter::writeNodeList()", fh, wOffset[wRank], &elementToPrint[0], wSendSize);
+    MPIIOFunctions::writeAll("ParCFmeshBinaryFileWriter::writeNodeList()", fh, wOffset[wRank], &elementToPrint[0], 
+			     wSendSize, _maxBuffSize);
   }
   
   //reset the all sendElement list to 0
@@ -940,8 +943,8 @@ void ParCFmeshBinaryFileWriter::writeStateList(MPI_File* fh)
   }
   
   if (_myRank == _ioRank) {
-    writeKeyValue<CFuint>(fh, "\n!LIST_STATE ", false, getWriteData().isWithSolution());
-    writeKeyValue<char>(fh, "\n");
+    MPIIOFunctions::MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!LIST_STATE ", false, getWriteData().isWithSolution());
+    MPIIOFunctions::MPIIOFunctions::writeKeyValue<char>(fh, "\n");
   }
   
   PE::Group& wgroup = PE::getGroup(0);
@@ -1109,7 +1112,8 @@ void ParCFmeshBinaryFileWriter::writeStateList(MPI_File* fh)
       // MPI_File_write_at_all(*fh, wOffset[wRank], &elementToPrint[0], (int)wSendSize,
       // MPIStructDef::getMPIType(&elementToPrint[0]), &_status); 
       
-      writeAll("ParCFmeshBinaryFileWriter::writeStateList()", fh, wOffset[wRank], &elementToPrint[0], wSendSize);
+      MPIIOFunctions::writeAll("ParCFmeshBinaryFileWriter::writeStateList()", fh, wOffset[wRank], &elementToPrint[0], 
+			       wSendSize, _maxBuffSize);
     }
     
     //reset the all sendElement list to 0
@@ -1189,11 +1193,11 @@ void ParCFmeshBinaryFileWriter::writeGeoList(CFuint iTRS, MPI_File* fh)
   CFLogDebugMin("nbNodesStatesInTRGeo = " << nbNodesStatesInTRGeo << "\n");
   
   if (_myRank == _ioRank) {
-    writeKeyValue<char>(fh, "\n!LIST_GEOM_ENT ");
+    MPIIOFunctions::MPIIOFunctions::writeKeyValue<char>(fh, "\n!LIST_GEOM_ENT ");
     // AL: this is a change to the old format: max number of nodes and states for B faces in TRS is written
     MPI_File_write(*fh, &nbNodesStatesInTRGeo[0], (int)nbNodesStatesInTRGeo.size(),
 		   MPIStructDef::getMPIType(&nbNodesStatesInTRGeo[0]), &_status); 
-    writeKeyValue<char>(fh, "\n");
+    MPIIOFunctions::MPIIOFunctions::writeKeyValue<char>(fh, "\n");
   }
  
   MPI_Offset offset;
@@ -1383,7 +1387,8 @@ void ParCFmeshBinaryFileWriter::writeGeoList(CFuint iTRS, MPI_File* fh)
       // MPI_File_write_at_all(*fh, wOffset[wRank], &elementToPrint[0], (int)wSendSize, 
       //MPIStructDef::getMPIType(&elementToPrint[0]), &_status); 
       
-      writeAll("ParCFmeshBinaryFileWriter::writeGeoList()", fh, wOffset[wRank], &elementToPrint[0], wSendSize);
+      MPIIOFunctions::writeAll("ParCFmeshBinaryFileWriter::writeGeoList()", fh, wOffset[wRank], &elementToPrint[0], 
+			       wSendSize, _maxBuffSize);
       
       // note here we are writing some components that could be = -1
       // this will have to be taken into account in the parallel reader 
@@ -1419,7 +1424,7 @@ void ParCFmeshBinaryFileWriter::writeEndFile(MPI_File* fh)
     MPI_Offset offset;
     MPI_File_get_position(*fh, &offset);
     CFLog(VERBOSE, _myRank << " END FILE offset is " << offset << "\n");
-    writeKeyValue<char>(fh, "\n!END");
+    MPIIOFunctions::MPIIOFunctions::writeKeyValue<char>(fh, "\n!END");
   }
   
   CFLogDebugMin( "ParCFmeshBinaryFileWriter::writeEndFile() end\n");

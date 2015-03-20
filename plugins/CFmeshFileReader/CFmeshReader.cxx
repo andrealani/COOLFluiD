@@ -139,33 +139,32 @@ void CFmeshReader::convertFormat()
 {
   CFAUTOTRACE;
 
-  // insure the converter works serially only on the processor with rank 0
-  if (PE::GetPE().IsParallel())
-  {
-    PE::GetPE().setBarrier();
-
-    if (PE::GetPE().GetRank() == 0) { convert(); }
-
-    PE::GetPE().setBarrier();
-  }
-  else
-  {
-    convert();
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void CFmeshReader::convert()
-{
-  CFAUTOTRACE;
-
-  using namespace boost::filesystem;
-
   // build the MeshFormatConverter to perform the conversion
   Common::SelfRegistPtr<MeshFormatConverter> converter =
     Factory<MeshFormatConverter>::getInstance().getProvider(m_converterStr)->create(m_converterStr);
   configureNested ( converter.getPtr(), m_stored_args );
+  
+  // ensure the converter works serially only on the processor with rank 0
+  // if it is not enabled to work in parallel
+  if (PE::GetPE().IsParallel() && !converter->isParallel()) {
+    PE::GetPE().setBarrier();
+    
+    if (PE::GetPE().GetRank() == 0) { convert(converter); }
+    
+    PE::GetPE().setBarrier();
+  }
+  else {
+    convert(converter);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+      
+void CFmeshReader::convert(Common::SelfRegistPtr<MeshFormatConverter> converter)
+{
+  CFAUTOTRACE;
+  
+  using namespace boost::filesystem;
 
   path fromfile = DirPaths::getInstance().getWorkingDir() / m_data->getConvertFromFileName();
   path tofile   = DirPaths::getInstance().getWorkingDir() / m_data->getFileName();

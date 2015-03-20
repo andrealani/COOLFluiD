@@ -78,10 +78,10 @@ private:  // helper functions
 
   /// Convert the mesh format to the CFmesh one
   void convertFormat();
-
+  
   /// Helper function that actually does the job for converting
-  void convert();
-
+  void convert(Common::SelfRegistPtr<Framework::MeshFormatConverter> converter);
+  
 private: // data
 
   ///The Setup string for configuration

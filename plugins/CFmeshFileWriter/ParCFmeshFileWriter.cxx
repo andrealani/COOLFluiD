@@ -92,24 +92,24 @@ void ParCFmeshFileWriter::writeToFile(const boost::filesystem::path& filepath)
 {
   CFAUTOTRACE;
   ofstream* file = CFNULL;
-
+  
   // reset to 0 the new file flag
   _isNewFile = 0;
-
-   // AL: the processor with less elements is chosen as the master IO node
-   // this can avoid memory "explosion" on master node in cases for which 
-   // the partitioning is not well balanced
-   CFuint nbLocalElements = getWriteData().getNbElements();
-   CFuint minNumberElements = 0;
-   MPI_Allreduce(&nbLocalElements, &minNumberElements, 1, MPIStructDef::getMPIType(&nbLocalElements), MPI_MIN, _comm);
-   CFuint rank = (minNumberElements == nbLocalElements)  ? _myRank : 0;
-   // IO rank is maximum rank whose corresponding process has minimum number of elements
-   MPI_Allreduce(&rank, &_ioRank, 1, MPIStructDef::getMPIType(&rank), MPI_MAX, _comm);    
-   CFout << "ParCFmeshFileWriter::writeToFile() => IO rank is " << _ioRank << "\n";
- 
+  
+  // AL: the processor with less elements is chosen as the master IO node
+  // this can avoid memory "explosion" on master node in cases for which 
+  // the partitioning is not well balanced
+  CFuint nbLocalElements = getWriteData().getNbElements();
+  CFuint minNumberElements = 0;
+  MPI_Allreduce(&nbLocalElements, &minNumberElements, 1, MPIStructDef::getMPIType(&nbLocalElements), MPI_MIN, _comm);
+  CFuint rank = (minNumberElements == nbLocalElements)  ? _myRank : 0;
+  // IO rank is maximum rank whose corresponding process has minimum number of elements
+  MPI_Allreduce(&rank, &_ioRank, 1, MPIStructDef::getMPIType(&rank), MPI_MAX, _comm);    
+  CFLog(INFO, "ParCFmeshFileWriter::writeToFile() => IO rank is " << _ioRank << "\n");
+  
   Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
     Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-
+  
   if (_myRank == _ioRank) {
     // if the file has already been processed once, open in I/O mode
     if (_fileList.count(filepath) > 0) {
