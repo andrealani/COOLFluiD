@@ -93,9 +93,8 @@ Simulator.SubSystem.Default.listTRS = Cylinder Farfield Top Bottom
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = cylinder_2D_hexa.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 200.
-Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = cylinder_2D_quad.CFmesh
-#cylinder_2D_triag.CFmesh
+#Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 200.
+Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = cylinderMirrored.CFmesh
 Simulator.SubSystem.CFmeshFileReader.convertFrom = Extruder2DFVM
 Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.NbLayers = 5
 Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.ExtrudeSize = 0.5

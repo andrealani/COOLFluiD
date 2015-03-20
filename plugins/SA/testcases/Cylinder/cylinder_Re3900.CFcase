@@ -29,7 +29,7 @@ CFEnv.ExceptionOutputs     = false
 Simulator.Modules.Libs = libShapeFunctions libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libSA libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeSA libTHOR2CFmesh  libAeroCoef libAeroCoefFVM libMeshTools libMeshToolsFVM libCFmeshExtruder
 
 # SubSystem Parameters
-Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Cylinder/
+Simulator.Paths.WorkingDir = plugins/SA/testcases/Cylinder/
 Simulator.Paths.ResultsDir = ./
 
 Simulator.SubSystem.Default.PhysicalModelType   = NavierStokes3DSA
