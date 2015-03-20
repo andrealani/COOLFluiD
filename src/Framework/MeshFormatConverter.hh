@@ -84,7 +84,10 @@ public: // functions
   {
     return std::string("." + getOriginFormat());
   }
-
+ 
+  /// Tell if this conveter can work in parallel.
+  virtual bool isParallel() const {return false;}
+  
   /// Gets the Class name
   static std::string getClassName()
   {
