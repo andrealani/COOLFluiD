@@ -92,8 +92,8 @@ void DetermineCFL::operator() (const ConvergenceStatus& m_cstatus)
   avgCFL /= nbStates;
 
   _cfl->setCFLValue(maxCFL);
-
-  CFout << "CFL Statistics - Max: " << maxCFL<< " - Min: " << minCFL<< " - Avg: " << avgCFL<<"\n";
+  
+  CFLog(VERBOSE, "CFL Statistics - Max: " << maxCFL<< " - Min: " << minCFL<< " - Avg: " << avgCFL<<"\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

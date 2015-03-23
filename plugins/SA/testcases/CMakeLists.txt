@@ -1,4 +1,5 @@
 cf_add_case( MPI 8 CASEDIR Cylinder  PCASE cylinder2DSA_Re3900.CFcase CASEFILES cylinder_2D_quad.CFmesh )
+cf_add_case( MPI 8 CASEDIR Cylinder  PCASE cylinder2DSA_Re3900_URANS.CFcase CASEFILES cylinder_2D_quad.CFmesh )
 cf_add_case( MPI 8 CASEDIR Cylinder  PCASE cylinder3DSA_Re3900.CFcase CASEFILES cylinder_2D_quad.CFmesh )
 cf_add_case( MPI 8 CASEDIR Cylinder  PCASE cylinder3DSA_Re3900_decoupled.CFcase CASEFILES cylinder_2D_quad.CFmesh )
 cf_add_case( MPI 1 CASEDIR FlatPlate PCASE flatPlateFVMImplSA_dim_Re75e4_fineMesh.CFcase CASEFILES flatPlateQD5.CFmesh )
