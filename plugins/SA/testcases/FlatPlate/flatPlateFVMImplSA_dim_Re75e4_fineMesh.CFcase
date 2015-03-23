@@ -5,14 +5,15 @@
 # Finite Volume, NavierStokes2D, Spalart-Allmaras RANS model, NewtonIterator,
 # CFL function law, mesh with quads, second-order reconstruction without limiter, 
 # subsonic inlet and outlet, adiabatic noslip wall, parallel computation of 
-# distance to the wall
+# distance to the wall, post-processing algorithms for y+,u+ and mesh quality
+# (only work in serial)
 #
 ################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -5.573364
+### Residual = -5.5743685
 
 # This is a case at Reynolds=750.000
 
@@ -62,8 +63,8 @@ Simulator.SubSystem.DataProcessing2.RMS.nbSteps = 0
 Simulator.SubSystem.DataProcessing2.RMS.rmsVars = rho p devU 
 
 # Post process the data to compute the skin friction and y+
-Simulator.SubSystem.DataProcessing3.Comds = NavierStokesBLExtractionCC
-Simulator.SubSystem.DataProcessing3.Names = SkinFriction
+Simulator.SubSystem.DataProcessing3.Comds = NavierStokesBLExtractionCC ComputeMeshQuality
+Simulator.SubSystem.DataProcessing3.Names = SkinFriction MeshQuality
 Simulator.SubSystem.DataProcessing3.SkinFriction.applyTRS = NoSlipWall
 Simulator.SubSystem.DataProcessing3.SkinFriction.OutputFileBL = skinOutRe750000.plt
 Simulator.SubSystem.DataProcessing3.SkinFriction.OutputFileAero = aeroCoef_FlatPlateSA.plt
@@ -74,23 +75,17 @@ Simulator.SubSystem.DataProcessing3.SkinFriction.TInf = 298.15
 Simulator.SubSystem.DataProcessing3.SkinFriction.extractBL = true
 Simulator.SubSystem.DataProcessing3.SkinFriction.ExtractCoord = 1.4 0.
 Simulator.SubSystem.DataProcessing3.SkinFriction.BLThickness = 0.010
-Simulator.SubSystem.DataProcessing3.ProcessRate = 5
+Simulator.SubSystem.DataProcessing3.ProcessRate = 10
 Simulator.SubSystem.DataProcessing3.SkinFriction.AppendTime = false
 Simulator.SubSystem.DataProcessing3.SkinFriction.AppendIter = false
 
-# Post process the data to compute the skin friction and y+
+Simulator.SubSystem.DataProcessing3.MeshQuality.OutputType = Histogram
+Simulator.SubSystem.DataProcessing3.MeshQuality.HistogramRange = 1. 10. 100. 1000. 10000. 100000.
 
 #Simulator.SubSystem.DataPostProcessing = DataProcessing
 #Simulator.SubSystem.DataPostProcessingNames = DataProcessing2b
 #Simulator.SubSystem.DataProcessing2b.Comds = NavierStokesSATruncateK
 #Simulator.SubSystem.DataProcessing2b.Names = SATruncateK
-
-# Post process the data to compute the skin friction and y+
-#Simulator.SubSystem.DataProcessing2.Comds = ComputeMeshQuality NavierStokesBLExtractionCC
-#Simulator.SubSystem.DataProcessing2.Names = MeshQuality SkinFriction
-
-#Simulator.SubSystem.DataProcessing2.MeshQuality.OutputType = Histogram
-#Simulator.SubSystem.DataProcessing2.MeshQuality.HistogramRange = 1. 10. 100. 1000. 10000. 100000.
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = flatPlateSARe750000.CFmesh
