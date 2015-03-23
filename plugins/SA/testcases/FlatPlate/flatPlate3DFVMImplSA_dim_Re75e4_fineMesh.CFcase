@@ -12,7 +12,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -5.5680266
+### Residual = -5.568018
 
 # This is a case at Reynolds=750.000
 
@@ -40,7 +40,7 @@ Simulator.SubSystem.DataProcessing1.WallDistance.OutputFile = distances.dat
 Simulator.SubSystem.DataProcessing1.RunAtSetup = true
 Simulator.SubSystem.DataProcessing1.SkipFirstIteration = true
 Simulator.SubSystem.DataProcessing1.ProcessRate = 10000000000
-#Simulator.SubSystem.DataProcessing1.WallDistance.CentroidBased = true
+Simulator.SubSystem.DataProcessing1.WallDistance.CentroidBased = true
 #
 
 #Simulator.SubSystem.DataPostProcessing = DataProcessing

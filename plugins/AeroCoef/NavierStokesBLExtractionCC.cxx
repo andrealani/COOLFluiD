@@ -166,7 +166,10 @@ void NavierStokesBLExtractionCC::extractBoundaryLayerProfile(GeometricEntity* cu
   // preparation of the output
   boost::filesystem::path file = Environment::DirPaths::getInstance().getResultsDir() / boost::filesystem::path(_outputFileBL);
   file = PathAppender::getInstance().appendAllInfo(file);
-
+  
+  // file = Framework::PathAppender::getInstance().appendAllInfo  
+  //    (file,this->m_appendIter,this->m_appendTime,false);   
+  
   SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
   ofstream& fout = fhandle->open(file, ios::app);
 
@@ -280,8 +283,8 @@ void NavierStokesBLExtractionCC::extractBoundaryLayerProfile(GeometricEntity* cu
   const CFreal a_e    = sqrt(beta_inf/beta_e)*aInf;
   const CFreal U_e    = Mach_e * a_e;
 
-  std::cout << "The computed external value for the BL extraction is Ue: " << U_e << std::endl;
-
+  CFLog(VERBOSE, "The computed external value for the BL extraction is Ue: " << U_e << "\n");
+  
   ///loop until BL is over
   bool isEndOfBL(false);
   RealVector intersection = _initExtract;
@@ -529,7 +532,9 @@ void NavierStokesBLExtractionCC::extractBLalongProfile()
 
       ///Extract the BL at the center of the face
       extractBoundaryLayerProfile(currFace);
-      std::cout << "Distance to stagnation: " << _distanceToStagnation <<std::endl;
+      
+      CFLog(VERBOSE, "Distance to stagnation: " << _distanceToStagnation << "\n");
+      
       //add the second half of the face to the computation of the distance
       _distanceToStagnation += (0.5 * faceLength);
 

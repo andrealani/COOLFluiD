@@ -12,7 +12,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -5.5554072
+### Residual = -5.573364
 
 # This is a case at Reynolds=750.000
 
@@ -41,9 +41,12 @@ Simulator.SubSystem.DataProcessing1.WallDistance.OutputFile = distances.dat
 Simulator.SubSystem.DataProcessing1.RunAtSetup = true
 Simulator.SubSystem.DataProcessing1.SkipFirstIteration = true
 Simulator.SubSystem.DataProcessing1.ProcessRate = 10000000000
+Simulator.SubSystem.DataProcessing1.WallDistance.CentroidBased = true
+#
+Simulator.SubSystem.DataPostProcessing = DataProcessing DataProcessing
 
-Simulator.SubSystem.DataPostProcessing = DataProcessing
-Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
+# RMS computation
+Simulator.SubSystem.DataPostProcessingNames = DataProcessing2 DataProcessing3
 Simulator.SubSystem.DataProcessing2.Comds = RMS
 Simulator.SubSystem.DataProcessing2.Names = RMS
 Simulator.SubSystem.DataProcessing2.ProcessRate = 1
@@ -59,6 +62,24 @@ Simulator.SubSystem.DataProcessing2.RMS.nbSteps = 0
 Simulator.SubSystem.DataProcessing2.RMS.rmsVars = rho p devU 
 
 # Post process the data to compute the skin friction and y+
+Simulator.SubSystem.DataProcessing3.Comds = NavierStokesBLExtractionCC
+Simulator.SubSystem.DataProcessing3.Names = SkinFriction
+Simulator.SubSystem.DataProcessing3.SkinFriction.applyTRS = NoSlipWall
+Simulator.SubSystem.DataProcessing3.SkinFriction.OutputFileBL = skinOutRe750000.plt
+Simulator.SubSystem.DataProcessing3.SkinFriction.OutputFileAero = aeroCoef_FlatPlateSA.plt
+Simulator.SubSystem.DataProcessing3.SkinFriction.uInf = 121.151
+Simulator.SubSystem.DataProcessing3.SkinFriction.pInf = 9300.
+Simulator.SubSystem.DataProcessing3.SkinFriction.rhoInf = 0.108667
+Simulator.SubSystem.DataProcessing3.SkinFriction.TInf = 298.15
+Simulator.SubSystem.DataProcessing3.SkinFriction.extractBL = true
+Simulator.SubSystem.DataProcessing3.SkinFriction.ExtractCoord = 1.4 0.
+Simulator.SubSystem.DataProcessing3.SkinFriction.BLThickness = 0.010
+Simulator.SubSystem.DataProcessing3.ProcessRate = 5
+Simulator.SubSystem.DataProcessing3.SkinFriction.AppendTime = false
+Simulator.SubSystem.DataProcessing3.SkinFriction.AppendIter = false
+
+# Post process the data to compute the skin friction and y+
+
 #Simulator.SubSystem.DataPostProcessing = DataProcessing
 #Simulator.SubSystem.DataPostProcessingNames = DataProcessing2b
 #Simulator.SubSystem.DataProcessing2b.Comds = NavierStokesSATruncateK
@@ -67,18 +88,6 @@ Simulator.SubSystem.DataProcessing2.RMS.rmsVars = rho p devU
 # Post process the data to compute the skin friction and y+
 #Simulator.SubSystem.DataProcessing2.Comds = ComputeMeshQuality NavierStokesBLExtractionCC
 #Simulator.SubSystem.DataProcessing2.Names = MeshQuality SkinFriction
-
-#Simulator.SubSystem.DataProcessing2.SkinFriction.applyTRS = NoSlipWall
-#Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFile = skinOutRe750000.plt
-#Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileAero = aeroCoef_FlatPlateSA.plt
-#Simulator.SubSystem.DataProcessing2.SkinFriction.SaveRate = 10
-#Simulator.SubSystem.DataProcessing2.SkinFriction.uInf = 121.151
-#Simulator.SubSystem.DataProcessing2.SkinFriction.pInf = 9300.
-#Simulator.SubSystem.DataProcessing2.SkinFriction.Tinf = 298.15
-#Simulator.SubSystem.DataProcessing2.SkinFriction.extractBL = true
-#Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileBL = profileRe750000.plt
-#Simulator.SubSystem.DataProcessing2.SkinFriction.ExtractCoord = 1.4 0.
-#Simulator.SubSystem.DataProcessing2.SkinFriction.BLThickness = 0.010
 
 #Simulator.SubSystem.DataProcessing2.MeshQuality.OutputType = Histogram
 #Simulator.SubSystem.DataProcessing2.MeshQuality.HistogramRange = 1. 10. 100. 1000. 10000. 100000.
@@ -127,7 +136,7 @@ Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 200.
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
 Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = 2000.
-#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = min(1e8,cfl*1.25)
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<100,20.,min(2000.,cfl*1.25))
 Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
 Simulator.SubSystem.NewtonIterator.Data.PrintHistory = false
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 0
