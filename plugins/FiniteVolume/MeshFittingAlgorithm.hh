@@ -133,6 +133,7 @@ private:
    */
   CFreal getDistance(Framework::Node& a, Framework::Node& b);
 
+  
 private: //data
 
   /// storage of shockSensor values
@@ -221,15 +222,6 @@ private: //data
   
   /// Stop adaptation but keep shock sensor
   CFuint m_stopAdaptationIter;
-  
-  /// Gradient of monitor variable Phi on the nodes
-  RealVector m_gradPhiNodes;
-  
-  /// Gradient of monitor variable Phi on the ghosts
-  RealVector m_gradPhiGhosts;
-  
-  /// Gradient of monitor varaible Phi on the cells
-  RealVector m_gradPhiCells;
   
   /// Connectivity "node to node"
   /// connectedNodes[i] gives a set whose members

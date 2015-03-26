@@ -2,6 +2,8 @@
 #include "Common/PE.hh"
 #include "Common/EventHandler.hh"
 #include "MathTools/MathConsts.hh"
+#include "MathTools/LeastSquaresSolver.hh"
+#include "MathTools/MathFunctions.hh"
 #include "Environment/SingleBehaviorFactory.hh"
 #include "Environment/FileHandlerOutput.hh"
 #include "Common/BadValueException.hh"
@@ -13,6 +15,8 @@
 #include "Framework/PathAppender.hh"
 #include "Environment/DirPaths.hh"
 
+
+#include <iostream>
 /*
   TODO: Fix RHS size for problems with states.size()<nodes.size()
 */
@@ -71,8 +75,7 @@ MeshFittingAlgorithm<MODEL>::MeshFittingAlgorithm(const std::string& name) :
   this->setParameter("phiMinSS", &m_phiMinSS);
   
   m_phiMaxSS = 3.0;
-  this->setParameter("phiMaxSS", &m_phiMaxSS);
-  
+  this->setParameter("phiMaxSS", &m_phiMaxSS); 
   m_minPerc = 0.65;
   this->setParameter("minPerc", &m_minPerc);
 
@@ -175,26 +178,21 @@ void MeshFittingAlgorithm<MODEL>::setup()
   
   //////////////
   
-  const CFuint nbCells = socket_states.getDataHandle().size();
+  const CFuint nbStates = socket_states.getDataHandle().size();
   const CFuint nbNodes = socket_nodes.getDataHandle().size();
   const CFuint nbGhosts = socket_gstates.getDataHandle().size();
   const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
   
   /// resize output sockets
-  socket_pressure.getDataHandle().resize(nbCells);
-  socket_shockSensor.getDataHandle().resize(nbCells);
-  socket_gradientPhi.getDataHandle().resize(nbCells * nbDim);
+  socket_pressure.getDataHandle().resize(nbStates);
+  socket_shockSensor.getDataHandle().resize(nbStates);
+  socket_gradientPhi.getDataHandle().resize(nbNodes * nbDim);
 
   /// resize connectivity tables
   connectedNodes.resize(nbNodes);
   connectedCells.resize(nbNodes);
   connectedGhosts.resize(nbNodes);
   ghostNodes.resize(nbGhosts);  
-  
-  /// resize gradient arrays
-  m_gradPhiNodes.resize(nbNodes * nbDim);
-  m_gradPhiCells.resize(nbCells * nbDim);
-  m_gradPhiGhosts.resize(nbGhosts * nbDim);
   
   /// resize arrays for computations
   m_ke.resize(nbNodes);
@@ -311,6 +309,7 @@ void MeshFittingAlgorithm<MODEL>::determineNonModNodes()
   using namespace COOLFluiD::MathTools;  
 
   DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle();
+  
   const CFuint nbNodes = nodes.size();
   
   /// nonModifiableNodes due to parallel partition
@@ -339,31 +338,35 @@ void MeshFittingAlgorithm<MODEL>::determineNonModNodes()
     }
   }
 
-  /// Lock nodes close to the boundary via BFS
-  std::queue< std::pair<CFuint,CFuint> > qu;
-  std::fill(visited.begin(), visited.end(), 0);
-  
-  for(std::set<CFuint>::iterator it=m_boundaryNodes.begin(); it != m_boundaryNodes.end(); ++it) {
-    qu.push( make_pair(*it, 0) );
-    visited[*it] = true;
-  }
+// Lock nodes close to the boundary via BFS
+for(std::set<CFuint>::iterator it=m_boundaryNodes.begin(); it != m_boundaryNodes.end(); ++it) {
+  m_nonModifiableNodes.insert(*it);
+}
 
-  while (!qu.empty()) {
-    std::pair<CFuint,CFuint> t = qu.front();
-    qu.pop();
-    
-    m_nonModifiableNodes.insert(t.first);
-
-    if (t.second < m_boundaryDegreeNM) {
-      std::set<CFuint>& neighbors = connectedNodes[t.first];
-      for(std::set<CFuint>::iterator it=neighbors.begin(); it != neighbors.end(); ++it) {
-        if (!visited[*it]) {
-          qu.push( make_pair(*it, t.second+1) );
-          visited[*it] = true;
-        }
-      }
-    }
-  }
+//  std::queue< std::pair<CFuint,CFuint> > qu;
+//  std::fill(visited.begin(), visited.end(), 0);
+//  
+//  for(std::set<CFuint>::iterator it=m_boundaryNodes.begin(); it != m_boundaryNodes.end(); ++it) {
+//    qu.push( make_pair(*it, 0) );
+//    visited[*it] = true;
+//  }
+//
+//  while (!qu.empty()) {
+//    std::pair<CFuint,CFuint> t = qu.front();
+//    qu.pop();
+//    
+//    m_nonModifiableNodes.insert(t.first);
+//
+//    if (t.second < m_boundaryDegreeNM) {
+//      std::set<CFuint>& neighbors = connectedNodes[t.first];
+//      for(std::set<CFuint>::iterator it=neighbors.begin(); it != neighbors.end(); ++it) {
+//        if (!visited[*it]) {
+//          qu.push( make_pair(*it, t.second+1) );
+//          visited[*it] = true;
+//        }
+//      }
+//    }
+//  }
   
   /// Debug information -- consider commenting it out
   
@@ -394,7 +397,7 @@ template <typename MODEL>
 void MeshFittingAlgorithm<MODEL>::computeGradientPhi()
 {
   CFAUTOTRACE;
-  
+
   using namespace std;
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
@@ -402,199 +405,77 @@ void MeshFittingAlgorithm<MODEL>::computeGradientPhi()
   
   CFLogDebugMin( "MeshFittingAlgorithm::computeGradientPhi()" << "\n");
 
-  DataHandle < CFreal > volumes   = socket_volumes.getDataHandle();
-  DataHandle < CFreal > normals   = socket_normals.getDataHandle();
-  DataHandle < CFint > isOutward  = socket_isOutward.getDataHandle();
-  DataHandle < RealVector > nstates     = socket_nstates.getDataHandle();  
-  DataHandle < Node*, GLOBAL > nodes    = socket_nodes.getDataHandle(); 
-  DataHandle < State*, GLOBAL > states  = socket_states.getDataHandle();
-  DataHandle < State* > gstates  = socket_gstates.getDataHandle();
-  
   DataHandle < CFreal > gradientPhi = socket_gradientPhi.getDataHandle();
-  gradientPhi = 0.0;
-
-  SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
-  CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
-  geoData.trs = cells;
+  DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle();
   
   SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
   cf_assert(updateVarSet.isNotNull());
   
   const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
-  const CFuint nbCells = cells->getLocalNbGeoEnts();
-  const CFuint nbNodes = nodes.size();
-  const CFuint nbGhosts = gstates.size();
-  
-  cf_assert(nbCells == states.size());
-  cf_assert(nbNodes == nstates.size());
-    
-  RealVector gradPhi(nbDim);
-  RealVector normal(nbDim);
-  
-  Node faceCenter;
 
-  m_gradPhiCells = 0.0;
+  //the parameters to estimate are u and its directional derivatives 
+  //TODO make this more obvious
   
-  
-  /// iterate over each cell to compute the gradient of phi
-  for (CFuint iCell = 0; iCell < nbCells; ++iCell) {
-    geoData.idx = iCell;
-    GeometricEntity *const currCell = m_geoBuilder.buildGE();
-    
-    const CFuint cellID = currCell->getID();
-    
-    const std::vector<GeometricEntity*>& facesInCell = *currCell->getNeighborGeos();
-    const CFuint nbFaces = facesInCell.size();
-    
-    /// Vector of dimension nbDim whose components are dPhi/dx_i
-    gradPhi = 0.0;
-    
-    /// It's re-computing physical data for each cell
-    /// TODO: 1 (see method comment on top)
-    for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
-    
-      if (!facesInCell[iFace]->getState(1)->isParUpdatable()) continue;
-      
-      const CFuint faceID = facesInCell[iFace]->getID();
-      
-      // get normal to face and reverse if not outward
-      for(CFuint i = 0; i < nbDim; ++i) {
-        normal[i] = normals[faceID*nbDim + i];
-      }
-      
-      if (static_cast<CFuint>(isOutward[faceID]) != iCell) {
-        normal *= -1.;
-      }
-      
-      const vector<Node*>& faceNodes = *facesInCell[iFace]->getNodes();
-      
-      /// Compute face center as average of its nodes
-      for(CFuint i = 0; i < nbDim; ++i) faceCenter[XX+i] = 0.0;
-      for(CFuint i = 0; i < faceNodes.size(); ++i) {
-        Node& node = *faceNodes[i];
-        for(CFuint j = 0; j < nbDim; ++j) 
-          faceCenter[XX+j] += node[XX+j];
-      }
-      faceCenter /= static_cast<CFreal>(faceNodes.size());
+  const CFuint nbParameters = nbDim+1;   
 
-      CFreal phiEdge = 0.0;
-      CFreal totalWeight = 0.0;
+  LeastSquaresSolver lsSolver(nbParameters);  
+
+  for(CFuint iNode = 0; iNode<nodes.size(); ++iNode)
+  {
+    // iterate over each cell to compute the gradient of phi
+    const std::vector<Framework::State*> neighboringStatesOfCurrentNode = 
+          m_fvmccData->getNodalStatesExtrapolator()->getNodalStateNeighbors(iNode);
+    const CFuint nbNeigboringStates = neighboringStatesOfCurrentNode.size();
+    
+    if( nbNeigboringStates < nbParameters) continue;
+ 
+    //cf_always_assert(nbNeigboringStates >= nbParameters);
+    //TODO unecessary realocation
+    RealVector weights(nbNeigboringStates);
+    RealMatrix coefficients(nbNeigboringStates, nbParameters);
+    RealVector dependentVar(nbNeigboringStates);
+    RealVector solution(nbParameters);
+
+    //fill the weights, dependentVar and parameter matrices
+    for(CFuint iState = 0; iState < nbNeigboringStates; ++iState )
+    {
+      const Node stateCoordinates = neighboringStatesOfCurrentNode[iState]->getCoordinates();
+      updateVarSet->computePhysicalData(*(neighboringStatesOfCurrentNode[iState]), m_physicalData);
+
+      weights[iState] = 1. / MathTools::MathFunctions::getDistance( stateCoordinates, *nodes[iNode]  );
+      //dependentVar[iState] = (*nodes[iNode])[m_phi];
+      dependentVar[iState] = m_physicalData[m_phi];
       
-      for(CFuint i = 0; i < faceNodes.size(); ++i) {
-        CFuint nodeID = faceNodes[i]->getLocalID();
-        
-        const RealVector& nodeValues = nstates[nodeID];
-        
-        State tmp(nodeValues, false);
-        tmp.setSpaceCoordinates(faceNodes[i]);
-        
-        updateVarSet->computePhysicalData(tmp, m_physicalData);        
-        const CFreal phiNode = m_physicalData[m_phi];
-        
-        const CFreal dist = getDistance(faceCenter, *faceNodes[i]);
-        const CFreal weight = 1.0/dist;
-        totalWeight += weight;
-        
-        phiEdge += phiNode * weight;
+      //first coeff is u
+      coefficients(iState,0) = 1.;
+      for(CFuint iDim= 0; iDim < nbDim; iDim++)
+      {
+        const CFreal x0 = (*nodes[iNode])[XX+iDim];
+        const CFreal x1 = stateCoordinates[iDim];
+        coefficients(iState,iDim+1) = x0 -x1;
       }
-      
-      gradPhi += phiEdge / totalWeight * normal;      
+
     }
-    
-    /// Divison by the volume comes from Gauss theorem
-    gradPhi /= volumes[cellID];
-    
-    for (CFuint i = 0; i < nbDim; ++i)
-      m_gradPhiCells[iCell * nbDim + i] = gradPhi[i];
-    
-    m_geoBuilder.releaseGE();
+
+//     std::cout<<"coeffs: "<<std::endl<<coefficients<<std::endl
+//              <<"dependentVar: "<<dependentVar<<std::endl
+//              <<"weights: " <<weights<<std::endl;
+
+    //solve the system in the Least Squares sence
+    lsSolver.solve(coefficients, weights, dependentVar, solution);  
+      
+    //fill the gradientPhi socket with the computed gradients
+    for(CFuint iDim= 0; iDim < nbDim; iDim++)
+    {
+      gradientPhi[iNode*nbDim + iDim] = solution[iDim+1];
+    }
+//    std::cout<<"Node "<< iNode<<" has Phi , grad phi = "<< solution<<std::endl; 
+
   }
 
-  /// iterate over each ghost state to compute the gradient of phi
-  for(CFuint iGhost=0; iGhost<nbGhosts; ++iGhost) {
-    Node& ghostCenter = gstates[iGhost]->getCoordinates();
-    updateVarSet->computePhysicalData( *gstates[iGhost], m_physicalData);
-    const CFreal phiGhost = m_physicalData[m_phi];
-    
-    CFreal totalWeight = 0.0;
-    
-    std::vector<CFuint>& gNodes = ghostNodes[iGhost];
-    
-    for(CFuint iNode=0; iNode<gNodes.size(); ++iNode) {
-      const CFreal dist = getDistance(ghostCenter, *nodes[ gNodes[iNode] ]);
-      const CFreal weight = 1.0/dist;
-      totalWeight += weight;
-
-      const CFuint nodeID = nodes[ gNodes[iNode] ]->getLocalID();
-      const RealVector& nodeValues = nstates[nodeID];
-      
-      State tmp(nodeValues, false);
-      tmp.setSpaceCoordinates(nodes[nodeID]);
-      
-      updateVarSet->computePhysicalData(tmp, m_physicalData);
-      const CFreal phiNode = m_physicalData[m_phi];
-      
-      const CFreal dPhi = phiNode - phiGhost;
-      const CFreal grad = dPhi / dist;
-
-      for(CFuint i = 0; i < nbDim; ++i) {
-        const CFreal dcoord = (*nodes[ gNodes[iNode] ])[XX+i] - ghostCenter[XX+i];
-        m_gradPhiGhosts[iGhost*nbDim + i] += grad * dcoord/dist * weight;
-      }
-    }
-
-    for(CFuint i = 0; i < nbDim; ++i)
-      m_gradPhiGhosts[iGhost*nbDim + i] /= totalWeight;
-  }
-
-  m_gradPhiNodes = 0.0;
-
-  /// Extrapolate value on nodes using values on cells and ghosts
-  /// TODO: 2 (see method comment on top)
-  for(CFuint iNode = 0; iNode < nodes.size(); ++iNode) {
-    CFreal totalWeight = 0.0;
-
-    std::set<CFuint>& nodeCells = connectedCells[iNode];   
-    for(std::set<CFuint>::iterator it = nodeCells.begin(); it != nodeCells.end(); ++it) {
-      Node& cellCenter = states[*it]->getCoordinates();
-
-      const CFreal dist = getDistance(cellCenter, *nodes[iNode]);
-      const CFreal weight = 1.0/dist;
-      totalWeight += weight;
-      
-      for(CFuint i = 0; i < nbDim; ++i)
-        m_gradPhiNodes[iNode*nbDim + i] += m_gradPhiCells[(*it)*nbDim + i] * weight;
-    }
-    
-    std::set<CFuint>& nodeGhosts = connectedGhosts[iNode];
-    for(std::set<CFuint>::iterator it = nodeGhosts.begin(); it != nodeGhosts.end(); ++it) {
-      Node& ghostCenter = gstates[*it]->getCoordinates();
-
-      const CFreal dist = getDistance(ghostCenter, *nodes[iNode]);
-      const CFreal weight = 1.0/dist;
-      totalWeight += weight;
-      
-      for(CFuint i = 0; i < nbDim; ++i)
-        m_gradPhiNodes[iNode*nbDim + i] += m_gradPhiGhosts[(*it)*nbDim + i] * weight;
-    }
-    
-    for(CFuint i = 0; i < nbDim; ++i)
-      m_gradPhiNodes[iNode*nbDim + i] /= totalWeight;
-  }
+} 
 
 
-  // gradientPhi is the socket handle
-  // TODO: 3
-  for(CFuint iCell = 0; iCell < nbCells; ++iCell)
-    for(CFuint i = 0; i < nbDim; ++i)
-      gradientPhi[iCell*nbDim + i] = m_gradPhiCells[iCell*nbDim + i];
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-/** 
- *  Computes spring constants for all edges
- */
 template <typename MODEL>
 void MeshFittingAlgorithm<MODEL>::computeSprings() 
 {
@@ -608,6 +489,7 @@ void MeshFittingAlgorithm<MODEL>::computeSprings()
   CFLogDebugMin( "MeshFittingAlgorithm::computeSprings()" << "\n");
   
   DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle(); 
+  DataHandle < CFreal > gradientPhi = socket_gradientPhi.getDataHandle();
 
   const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
   const CFuint nbNodes = nodes.size();
@@ -636,7 +518,7 @@ void MeshFittingAlgorithm<MODEL>::computeSprings()
       CFreal num = 0.0, den = 0.0;
       
       for(CFuint i = 0; i < nbDim; ++i) {
-        dGradPhi[i] = m_gradPhiNodes[iNode*nbDim+i] - m_gradPhiNodes[(*it)*nbDim+i];
+        dGradPhi[i] = gradientPhi[iNode*nbDim+i] - gradientPhi[(*it)*nbDim+i];
         dPos[i] = node[XX+i] - neighbor[XX+i];
         num += dPos[i] * dGradPhi[i];
         den += dPos[i] * dPos[i];
