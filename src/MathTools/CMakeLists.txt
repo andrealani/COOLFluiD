@@ -54,6 +54,7 @@ MatExprT.hh
 ArrayT.hh
 MacrosET.hh
 CFVec.hh
+LeastSquaresSolver.cxx
 LeastSquaresSolver.hh
 )
 
