@@ -218,7 +218,6 @@ void MeshFittingAlgorithm<MODEL>::setup()
   std::map<std::string, CFuint>::iterator it = variables.find(m_monitorVar);
   cf_assert(it != variables.end());
   m_phi = it->second;
-
   
   createConnectivity();
   determineNonModNodes();
@@ -311,32 +310,44 @@ void MeshFittingAlgorithm<MODEL>::determineNonModNodes()
   DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle();
   
   const CFuint nbNodes = nodes.size();
-  
-  /// nonModifiableNodes due to parallel partition
-  for(CFuint iNode=0; iNode < nbNodes; ++iNode) {
-    const CFuint nodeID = nodes[iNode]->getLocalID();
-    cf_assert(nodeID == iNode);
-    if (m_nonModifiableNodes.find(nodeID) != m_nonModifiableNodes.end()) continue;
 
-    std::set<CFuint>& neighbors = connectedNodes[nodeID];
-    
-    /// Lock iNode if either iNode or one of its neighbors isn't parUpdatable
-    if (!nodes[iNode]->isParUpdatable()) {
-      m_nonModifiableNodes.insert(nodeID);
-
-      for(std::set<CFuint>::iterator it=neighbors.begin(); it != neighbors.end(); ++it) {
-        m_nonModifiableNodes.insert(*it);
-      }
-    }
-    else {
-      for(std::set<CFuint>::iterator it=neighbors.begin(); it != neighbors.end(); ++it) {
-        if (!nodes[*it]->isParUpdatable()) {
-          m_nonModifiableNodes.insert(nodeID);
-          break;
-        }
-      }
+  // nonModifiableNodes due to parallel partition
+  for(CFuint iNode=0; iNode < nbNodes; ++iNode) 
+  {
+    if (!nodes[iNode]->isParUpdatable()) 
+    {
+      m_nonModifiableNodes.insert(iNode);
     }
   }
+
+  
+//  /// nonModifiableNodes due to parallel partition
+//  for(CFuint iNode=0; iNode < nbNodes; ++iNode) {
+//    const CFuint nodeID = nodes[iNode]->getLocalID();
+//    cf_assert(nodeID == iNode);
+//    if (m_nonModifiableNodes.find(nodeID) != m_nonModifiableNodes.end()) continue;
+//
+//    std::set<CFuint>& neighbors = connectedNodes[nodeID];
+//    
+//    /// Lock iNode if either iNode or one of its neighbors isn't parUpdatable
+//    if (!nodes[iNode]->isParUpdatable()) {
+//      m_nonModifiableNodes.insert(nodeID);
+//
+//      for(std::set<CFuint>::iterator it=neighbors.begin(); it != neighbors.end(); ++it) {
+//        m_nonModifiableNodes.insert(*it);
+//      }
+//    }
+//    
+//  else {
+//      for(std::set<CFuint>::iterator it=neighbors.begin(); it != neighbors.end(); ++it) {
+//        if (!nodes[*it]->isParUpdatable()) {
+//          m_nonModifiableNodes.insert(nodeID);
+//          break;
+//        }
+//      }
+//    }
+//
+//  }
 
 // Lock nodes close to the boundary via BFS
 for(std::set<CFuint>::iterator it=m_boundaryNodes.begin(); it != m_boundaryNodes.end(); ++it) {
@@ -370,17 +381,17 @@ for(std::set<CFuint>::iterator it=m_boundaryNodes.begin(); it != m_boundaryNodes
   
   /// Debug information -- consider commenting it out
   
-  CFuint prank = PE::GetPE().GetRank();
-  ostringstream convert;
-  convert << "nm_P" << prank << ".dat";
-  string fname = convert.str();
-  ofstream nmFile;
-  nmFile.open(fname.c_str());
-  for(std::set<CFuint>::iterator it=m_nonModifiableNodes.begin(); it != m_nonModifiableNodes.end(); ++it) {
-    Node& node = *nodes[*it];
-    nmFile << node[XX] << " " << node[YY] << endl;
-  }
-  nmFile.close();
+//  CFuint prank = PE::GetPE().GetRank();
+//  ostringstream convert;
+//  convert << "nm_P" << prank << ".dat";
+//  string fname = convert.str();
+//  ofstream nmFile;
+//  nmFile.open(fname.c_str());
+//  for(std::set<CFuint>::iterator it=m_nonModifiableNodes.begin(); it != m_nonModifiableNodes.end(); ++it) {
+//    Node& node = *nodes[*it];
+//    nmFile << node[XX] << " " << node[YY] << endl;
+//  }
+//  nmFile.close();
   
   ///////////////////////////////////  
 }
@@ -602,7 +613,7 @@ void MeshFittingAlgorithm<MODEL>::fillSystem() {
   const LSSIdxMapping& idxMapping = m_lss->getLocalToGlobalMapping();
 
   DataHandle < CFreal > rhs = socket_rhs.getDataHandle();
-  const CFuint nbEqs = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbDims = PhysicalModelStack::getActive()->getDim();
   const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
   
   const CFuint rhsSize = std::max(nodes.size()*totalNbEqs,states.size()*totalNbEqs);
@@ -614,8 +625,10 @@ void MeshFittingAlgorithm<MODEL>::fillSystem() {
   
   if (rhs.size() != rhsSize) rhs.resize(rhsSize);
 
-  cf_assert(nbEqs < totalNbEqs);
+  cf_assert(nbDims < totalNbEqs);
   SafePtr<vector<CFuint> > eqIDs = m_lss->getEquationIDs();
+
+  rhs = 0.;
 
   for (CFuint iNode = 0; iNode < nbNodes; ++iNode) {
     CFreal diagValue;
@@ -624,10 +637,8 @@ void MeshFittingAlgorithm<MODEL>::fillSystem() {
       continue;
     }
 
-    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
-    	const CFuint varID = (*eqIDs)[iEq];
-    	const CFreal rhsVal = (*nodes[iNode])[XX+iEq];
-     	rhs(iNode, varID, totalNbEqs) = rhsVal;
+    for (CFuint iDim = 0; iDim < nbDims; ++iDim) {
+     	rhs[iNode*totalNbEqs + XX + iDim] = (*nodes[iNode])[XX+iDim] ;
     }
     
     if (m_nonModifiableNodes.find(iNode) == m_nonModifiableNodes.end()) {
@@ -635,11 +646,10 @@ void MeshFittingAlgorithm<MODEL>::fillSystem() {
       CFreal totalKe = 0.0;
       
       for(std::map<CFuint,CFreal>::iterator it = current.begin(); it != current.end(); ++it) {
-        if (!nodes[it->first]->isParUpdatable()) continue;
-        CFuint colGlobalID = idxMapping.getColID(nodes[it->first]->getLocalID())*nbEqs;
-        CFuint rowGlobalID = idxMapping.getRowID(nodes[iNode]->getLocalID())*nbEqs;
-        for(CFuint iEq = 0; iEq < nbEqs; ++iEq) {
-          jacobMatrix->addValue(rowGlobalID + iEq, colGlobalID + iEq, -it->second * m_alpha);
+        CFuint colGlobalID = idxMapping.getColID(nodes[it->first]->getLocalID())*nbDims;
+        CFuint rowGlobalID = idxMapping.getRowID(nodes[iNode]->getLocalID()    )*nbDims;
+        for(CFuint iDim = 0; iDim < nbDims; ++iDim) {
+          jacobMatrix->addValue(rowGlobalID + iDim, colGlobalID + iDim, -it->second * m_alpha);
         }
         totalKe += it->second;
       }
@@ -649,9 +659,9 @@ void MeshFittingAlgorithm<MODEL>::fillSystem() {
       diagValue = 1.0;
     }
     
-    CFuint globalID = idxMapping.getColID(nodes[iNode]->getLocalID())*nbEqs;
-    for(CFuint iEq = 0; iEq < nbEqs; ++iEq) {
-      jacobMatrix->addValue(globalID + iEq, globalID + iEq, diagValue);
+    CFuint globalID = idxMapping.getColID(nodes[iNode]->getLocalID())*nbDims;
+    for(CFuint iDim = 0; iDim < nbDims; ++iDim) {
+      jacobMatrix->addValue(globalID + iDim, globalID + iDim, diagValue);
     }
   }
 }
@@ -673,20 +683,18 @@ void MeshFittingAlgorithm<MODEL>::updateNodePositions() {
   DataHandle < CFreal > rhs = socket_rhs.getDataHandle();
   
   const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
-  const CFuint nbEqs = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbDims = PhysicalModelStack::getActive()->getDim();
   
   // this norm accumulation has to be done in parallel (global reduce)
-  m_norm = 0.0;
-  for (CFuint i = 0; i < nodes.size(); ++i) {
-    if (nodes[i]->isParUpdatable()) {
-      Node& currNode = *nodes[i];
-      for(CFuint iEq = 0; iEq < nbEqs; ++iEq) {
-        const CFreal delta = currNode[iEq] - rhs(i, iEq, totalNbEqs);
-        m_norm += delta*delta;
+  //m_norm = 0.0;
+  for (CFuint iNode = 0; iNode < nodes.size(); ++iNode) {
+    if (nodes[iNode]->isParUpdatable()) {
+      Node& currNode = *nodes[iNode];
+      for(CFuint iDim = 0; iDim < nbDims; ++iDim) {
+        //const CFreal delta = currNode[iDim+XX] - rhs(i, iEq, totalNbEqs);
+        //m_norm += delta*delta;
         
-	/// AL: check why rhs is the new node position and not the displacement
-	///     (in the latter case here would be currNode[iEq] += rhs(...)
-	currNode[iEq] = rhs(i, iEq, totalNbEqs);
+	currNode[XX+iDim] = rhs[iNode*totalNbEqs + XX + iDim];
       }
     }
   }
