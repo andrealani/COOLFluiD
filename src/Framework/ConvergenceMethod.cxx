@@ -370,6 +370,8 @@ void ConvergenceMethod::writeOnScreen()
   {
     ostringstream out;
     out.precision(m_precision);
+    out.setf( std::ios::left );
+
     //    out.setf(ios::scientific,ios::floatfield);
 
     // print subsystem status name
@@ -381,18 +383,21 @@ void ConvergenceMethod::writeOnScreen()
 
     // Print number of iterations
     out << "Iter: ";
-    out.width(5);
+    out.width(6);
     out <<  subSysStatus->getNbIter() << " ";
 
     // Print Residual
-    out.width(3 + m_precision);
-    out << "Res: [" << subSysStatus->getAllResiduals() << "] ";
+    
+    out.precision(m_precision);
+    out.setf( std::ios::fixed, std:: ios::floatfield );
+    // out.width(3 + m_precision);
+    out << " Res: [" << subSysStatus->getAllResiduals() << "] ";
 
+    out.unsetf(std::ios::fixed );
     // Print Current CFL
     out << " CFL: ";
     out.width( m_precision );
     out <<  getConvergenceMethodData()->getCFL()->getCFLValue() ;
-
     // Print Current Time (if Unsteady)
     if (subSysStatus->getDT() > 0.) {
       out << " PhysTime:";
@@ -410,7 +415,9 @@ void ConvergenceMethod::writeOnScreen()
     out << subSysStatus->readWatch() << " ";
 
     // Print Memory Usage
-    out.width( m_precision );
+    out.precision( m_precision );
+    out.setf( std::ios::fixed, std:: ios::floatfield );
+    //out.setf( std::ios::left );
     out << "Mem: " << Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n";
 
     CFout << out.str() << CFendl;
