@@ -116,6 +116,8 @@ void MarcoTestMethod::setMethodImpl()
   m_setup->execute(); 
  
   setupCommandsAndStrategies();
+
+   m_data->getNodalStatesExtrapolator()->extrapolateInAllNodes();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -144,7 +146,7 @@ void MarcoTestMethod::takeStepImpl()
   ConvergenceMethod::syncGlobalDataComputeResidual(false);
   subSysStatus->updateCurrentTime();
   
-  // m_data->getNodalStatesExtrapolator()->extrapolateInAllNodes();
+  m_data->getNodalStatesExtrapolator()->extrapolateInAllNodes();
 }
     
 //////////////////////////////////////////////////////////////////////////////
