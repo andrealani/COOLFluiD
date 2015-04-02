@@ -504,8 +504,11 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSpitzerResistivity()
   _electricalResistivity = me*ne*(nu_en + nu_ei)/(e_charge*e_charge*ne*ne);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 template <class UPDATEVAR>
-void TwoFluidGravMHDST2D<UPDATEVAR>::computegravityTerms(){
+void TwoFluidGravMHDST2D<UPDATEVAR>::computegravityTerms()
+{
 
   const CFuint firstDensity = _varSet->getModel()->getFirstScalarVar(0);
   const CFreal rho  = _physicalData[UPDATEVAR::PTERM::RHO];
@@ -520,7 +523,7 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computegravityTerms(){
   const CFreal vn = _physicalData[firstVelocity + 3]; 
   
   //YGM: gravity momentum source term
-  const CFreal gsun = 274.78; //[m/s2] from Wiki; //G=6.674e-11;//[m/kg]^2
+  const CFreal gsun = -274.78; //[m/s2] from Wiki; //G=6.674e-11;//[m/kg]^2
   const CFreal gx = 0.;
   const CFreal gy = gsun;
 
