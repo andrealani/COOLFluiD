@@ -269,9 +269,6 @@ void ThreeFluidMHDST3D<UPDATEVAR>::computeSource
       source[10] = massSource_n;				// Neutrals continuity equation
       
       //AAL: MOMENTUM
-     //YGM: move to 3D or 2.5D to get the z component of the current (bulk velocity)
-      const CFreal we=0.;
-      const CFreal wi=0.;
 
       const CFreal emMomentumXe = qpare*(_Etotal[XX] + ve*_Btotal[ZZ] - we*_Btotal[YY]);		//Electromagnetic momentum for e- in X
       const CFreal emMomentumXi =  qpari*(_Etotal[XX] + vi*_Btotal[ZZ] - wi*_Btotal[YY]);		//Electromagnetic momentum for ions in X
@@ -321,7 +318,7 @@ void ThreeFluidMHDST3D<UPDATEVAR>::computeSource
       const CFreal gravityMomentumSource_ny = _gravityMomentumSource[7];    
       const CFreal gravityMomentumSource_nz = _gravityMomentumSource[8];    
 
-      //YGM: check the equations below
+      //YGM: source terms for the momentum equations
       source[11] = emMomentumXe + collMomentumSource_ex + GammaIon_i*me*un - GammaRec_n*me*ue + 
                 chargexMomentumSource_ex + gravityMomentumSource_ex; //Electrons X momentum
       source[12] = emMomentumYe + collMomentumSource_ey + GammaIon_i*me*vn - GammaRec_n*me*ve +  
@@ -331,43 +328,28 @@ void ThreeFluidMHDST3D<UPDATEVAR>::computeSource
       source[14] = emMomentumXi + collMomentumSource_ix + GammaIon_i*mi*un - GammaRec_n*mi*ui +
                 chargexMomentumSource_ix + gravityMomentumSource_ix; //Ions X momentum
       source[15] = emMomentumYi + collMomentumSource_iy + GammaIon_i*mi*vn - GammaRec_n*mi*vi +
-                chargexMomentumSource_ix + gravityMomentumSource_ix; //Ions Y momentum
+                chargexMomentumSource_iy + gravityMomentumSource_iy; //Ions Y momentum
       source[16] = emMomentumZi + collMomentumSource_iz + GammaIon_i*mi*wn - GammaRec_n*mi*wi +
                 chargexMomentumSource_iz + gravityMomentumSource_iz; //Ions Z momentum      
-      source[17] = collMomentumSource_nx - GammaIon_i*mi*un + GammaRec_n*mi*ui + 
-                chargexMomentumSource_ex + gravityMomentumSource_nx; //Neutrals X momentum
-      source[18] = collMomentumSource_ny - GammaIon_i*mi*vn + GammaRec_n*mi*vi + 
-                chargexMomentumSource_ey + gravityMomentumSource_ny; //Neutrals Y momentum
-      source[19] = collMomentumSource_nz - GammaIon_i*mi*wn + GammaRec_n*mi*wi + 
-                chargexMomentumSource_ez + gravityMomentumSource_nz; //Neutrals Z momentum
+      source[17] = collMomentumSource_nx - GammaIon_i*mn*un + GammaRec_n*(mi*ui + me*ue) + 
+                chargexMomentumSource_nx + gravityMomentumSource_nx; //Neutrals X momentum
+      source[18] = collMomentumSource_ny - GammaIon_i*mn*vn + GammaRec_n*(mi*vi + me*ve) + 
+                chargexMomentumSource_ny + gravityMomentumSource_ny; //Neutrals Y momentum
+      source[19] = collMomentumSource_nz - GammaIon_i*mn*wn + GammaRec_n*(mi*wi + me*we) + 
+                chargexMomentumSource_nz + gravityMomentumSource_nz; //Neutrals Z momentum
     
       
-     
-      source[14] = emMomentumYi + collMomentumSource_iy + GammaIon_i*mi*vn - GammaRec_n*mi*vi +
-                chargexMomentumSource_ix + gravityMomentumSource_ix; //Ions Y momentum
-      
-      source[15] = collMomentumSource_nx - GammaIon_i*mn*un + GammaRec_n*(mi*ui + me*ue) + 
-                chargexMomentumSource_nx + gravityMomentumSource_nx; //Neutrals X momentum
-      source[16] = collMomentumSource_ny - GammaIon_i*mn*vn + GammaRec_n*(mi*vi + me*ve) + 
-                chargexMomentumSource_ny + gravityMomentumSource_ny; //Neutrals Y momentum
-
-
-      source[15] = collMomentumSource_nx - GammaIon_i*mi*un + GammaRec_n*mi*ui + 
-                chargexMomentumSource_ey + gravityMomentumSource_ey; //Neutrals X momentum
-      source[16] = collMomentumSource_ny - GammaIon_i*mi*vn + GammaRec_n*mi*vi + 
-                chargexMomentumSource_ey + gravityMomentumSource_ey; //Neutrals Y momentum
-  
       //AAL: ENERGY
-      //YGM: check carefully!
+      //YGM: double check all equations
       const CFreal emEnergye = qpare*ue*_Etotal[XX] + qpare*ve*_Etotal[YY] + qpare*we*_Etotal[ZZ]; //electrons
       const CFreal emEnergyi = qpari*ui*_Etotal[XX] + qpari*vi*_Etotal[YY] + qpari*wi*_Etotal[ZZ]; //ions
       const CFreal collWorke = _collMomentumSource[0]*ue + _collMomentumSource[1]*ve + _collMomentumSource[2]*we;
       const CFreal collWorki = _collMomentumSource[3]*ui + _collMomentumSource[4]*vi + _collMomentumSource[5]*wi;
       const CFreal collWorkn = _collMomentumSource[6]*un + _collMomentumSource[7]*vn + _collMomentumSource[8]*wn;
       const CFreal PhiIon = 13.6*1.60217657e-19; //13.6eV to J
-      const CFreal kinEnerIonRec_e = - 0.5*GammaRec_n*me*(ue*ue + ve*ve) + 0.5*GammaIon_i*me*(un*un + vn*vn);
-      const CFreal kinEnerIonRec_i = 0.5*GammaRec_n*mi*(ui*ui + vi*vi) + 0.5*GammaIon_i*mi*(un*un + vn*vn);
-      const CFreal kinEnerIonRec_n = 0.5*GammaRec_n*mi*(ui*ui + vi*vi) + 0.5*GammaRec_n*me*(ue*ue + ve*ve) - 0.5*GammaIon_i*mn*(un*un + vn*vn);
+      const CFreal kinEnerIonRec_e = - 0.5*GammaRec_n*me*(ue*ue + ve*ve + we*we) + 0.5*GammaIon_i*me*(un*un + vn*vn + wn*wn);
+      const CFreal kinEnerIonRec_i = 0.5*GammaRec_n*mi*(ui*ui + vi*vi + wi*wi) + 0.5*GammaIon_i*mi*(un*un + vn*vn + wn*wn);
+      const CFreal kinEnerIonRec_n = 0.5*GammaRec_n*mi*(ui*ui + vi*vi + wi*wi) + 0.5*GammaRec_n*me*(ue*ue + ve*ve + we*we) - 0.5*GammaIon_i*mn*(un*un + vn*vn + wn*wn);
       const CFreal kinPhiIon_e = -GammaIon_i*PhiIon;
 
       //YGM: added work by charge exchane
@@ -607,16 +589,19 @@ void ThreeFluidMHDST3D<UPDATEVAR>::computeCollisionalMomentumEnergy()
   const CFreal m_n_nu_in = m_in*ni*nu_in;
   const CFreal Rin_ix = m_n_nu_in*(un - ui);
   const CFreal Rin_iy = m_n_nu_in*(vn - vi);
+  const CFreal Rin_iz = m_n_nu_in*(wn - wi);
 
  //YGM: added the e-i and e-n collisions
   const CFreal nu_en = nn*Sigma_en*std::sqrt(8.*kB*T_en/(pi*m_en));
   const CFreal m_n_nu_en = m_en*ne*nu_en;
   const CFreal Ren_ex = m_n_nu_en*(un - ue);
   const CFreal Ren_ey = m_n_nu_en*(vn - ve);
+  const CFreal Ren_ez = m_n_nu_en*(wn - we);
   const CFreal nu_ie = ne*Sigma_ie*std::sqrt(8.*kB*T_ie/(pi*m_ie));
   const CFreal m_n_nu_ie = m_ie*ni*nu_ie;
   const CFreal Rie_ix = m_n_nu_ie*(ue - ui);
   const CFreal Rie_iy = m_n_nu_ie*(ve - vi);
+  const CFreal Rie_iz = m_n_nu_ie*(we - wi);
   
   ////electrons momentum
   _collMomentumSource[0] = Ren_ex - Rie_ix;
@@ -636,7 +621,7 @@ void ThreeFluidMHDST3D<UPDATEVAR>::computeCollisionalMomentumEnergy()
   //YGM: charge exchange terms in the momentum
   const CFreal vthi2 = 2.*kB*Ti/(pi*mi);//squared thermal speed of ions
   const CFreal vthn2 = 2.*kB*Tn/(pi*mn); //squared thermal speed of neutrals
-  const CFreal dvin2 = ui*ui + vi*vi +wi*wi -2.*(ui*un+vi*vn +wi*wn) + 
+  const CFreal dvin2 = ui*ui + vi*vi + wi*wi -2.*(ui*un + vi*vn + wi*wn) + 
                         un*un + vn*vn + wn*wn;//squared velocity difference between "i" and "n" 
   const CFreal Vcx = std::sqrt(4.*vthi2/pi + 4.*vthn2/pi + dvin2); // units [m/s]
   const CFreal Sigma_cx0 = 1.12e-18; //in units [m2], see Meier and Shumlak 2012, p.7, Eq. 18  
@@ -646,37 +631,42 @@ void ThreeFluidMHDST3D<UPDATEVAR>::computeCollisionalMomentumEnergy()
   const CFreal Gammacx = Sigma_cx*ni*nn*Vcx; //units [m-3s-1]
   const CFreal Rcxin_X = -mi*Sigma_cx*ni*nn*(ui-un)*vthn2/std::sqrt(16.*vthi2/pi + 4.*dvin2 + 9.*pi*vthn2/4.);
   const CFreal Rcxin_Y = -mi*Sigma_cx*ni*nn*(vi-vn)*vthn2/std::sqrt(16.*vthi2/pi + 4.*dvin2 + 9.*pi*vthn2/4.);
+  const CFreal Rcxin_Z = -mi*Sigma_cx*ni*nn*(wi-wn)*vthn2/std::sqrt(16.*vthi2/pi + 4.*dvin2 + 9.*pi*vthn2/4.);
   const CFreal Rcxni_X = mi*Sigma_cx*ni*nn*(ui-un)*vthi2/std::sqrt(16.*vthn2/pi + 4.*dvin2 + 9.*pi*vthi2/4.);
   const CFreal Rcxni_Y = mi*Sigma_cx*ni*nn*(vi-vn)*vthi2/std::sqrt(16.*vthn2/pi + 4.*dvin2 + 9.*pi*vthi2/4.);
+  const CFreal Rcxni_Z = mi*Sigma_cx*ni*nn*(wi-wn)*vthi2/std::sqrt(16.*vthn2/pi + 4.*dvin2 + 9.*pi*vthi2/4.);
 
   ////electrons momentum
   _chargexMomentumSource[0] = 0.;
   _chargexMomentumSource[1] = 0.;
+  _chargexMomentumSource[2] = 0.;
 
   ////ions momentum
-  _chargexMomentumSource[2] = Gammacx*mi*(un-ui)+ Rcxin_X - Rcxni_X;
-  _chargexMomentumSource[3] = Gammacx*mi*(vn-vi)+ Rcxin_Y - Rcxni_Y;
+  _chargexMomentumSource[3] = Gammacx*mi*(un-ui)+ Rcxin_X - Rcxni_X;
+  _chargexMomentumSource[4] = Gammacx*mi*(vn-vi)+ Rcxin_Y - Rcxni_Y;
+  _chargexMomentumSource[5] = Gammacx*mi*(wn-wi)+ Rcxin_Z - Rcxni_Z;
 
   ////neutrals momentum
-  _chargexMomentumSource[4] = -Gammacx*mi*(un-ui) - Rcxin_X + Rcxni_X;
-  _chargexMomentumSource[5] = -Gammacx*mi*(vn-vi) - Rcxin_Y + Rcxni_Y;
+  _chargexMomentumSource[6] = -Gammacx*mi*(un-ui) - Rcxin_X + Rcxni_X;
+  _chargexMomentumSource[7] = -Gammacx*mi*(vn-vi) - Rcxin_Y + Rcxni_Y;
+  _chargexMomentumSource[8] = -Gammacx*mi*(wn-wi) - Rcxin_Z + Rcxni_Z;
 
   //YGM: Source terms for the energy equations:
   const CFreal Qcxin = (3./4.)*Sigma_cx*mi*ni*nn*vthn2*std::sqrt(4.*vthi2/pi + 64.*vthn2/(9.*pi) + dvin2);
   const CFreal Qcxni = (3./4.)*Sigma_cx*mi*ni*nn*vthi2*std::sqrt(4.*vthn2/pi + 64.*vthi2/(9.*pi) + dvin2);
 
   _chargexEnergySource[0] = 0.;
-  _chargexEnergySource[1] = 0.5*Gammacx*mi*(un*un + vn*vn - ui*ui - vi*vi) + un*Rcxin_X + vn*Rcxin_Y - ui*Rcxni_X - vi*Rcxni_Y + Qcxin - Qcxni;
-  _chargexEnergySource[2] = - 0.5*Gammacx*mi*(un*un + vn*vn - ui*ui - vi*vi) + ui*Rcxni_X + vi*Rcxni_Y - un*Rcxin_X - vn*Rcxin_Y + Qcxni - Qcxni;
+  _chargexEnergySource[1] = 0.5*Gammacx*mi*(un*un + vn*vn + wn*wn - ui*ui - vi*vi - wi*wi) + un*Rcxin_X + vn*Rcxin_Y + wn*Rcxin_Z - ui*Rcxni_X - vi*Rcxni_Y - wi*Rcxni_Z + Qcxin - Qcxni;
+  _chargexEnergySource[2] = - 0.5*Gammacx*mi*(un*un + vn*vn + wn*wn - ui*ui - vi*vi - wi*wi) + ui*Rcxni_X + vi*Rcxni_Y + wi*Rcxni_Z - un*Rcxin_X - vn*Rcxin_Y - wn*Rcxin_Z + Qcxni - Qcxni;
 
   //const CFreal kinEnergin_i = 0.5*(Rin_ix*(un - ui) + Rin_iy*(vn - vi)); //exchange due to different kinetic energy
   //const CFreal intEnergin_i = 3.*m_n_nu/mi*kB*(Tn - Ti); // exchange due to different temperatures
   //YGM: source term in electron energy eqn due to collisions with ions
   //YGM: which Qie_e or Qei_e, CAREFULLY CHECK THE TERM Qie_e BELOW!!!
   //YGM: Example: Qin_i is the source in ions energy due to collisions with neutrals
-  const CFreal Qen_e = 0.5*(Ren_ex*(un - ue) + Ren_ey*(vn - ve)) + 3.*m_n_nu_en/me*kB*(Tn - Te); // [kg m-1 s-3]
-  const CFreal Qin_i = 0.5*(Rin_ix*(un - ui) + Rin_iy*(vn - vi)) + 3.*m_n_nu_in/mi*kB*(Tn - Ti);  // [kg m-1 s-3]  
-  const CFreal Qie_i = 0.5*(Rie_ix*(ue - ui) + Rie_iy*(ve - vi)) + 3.*m_n_nu_ie/mi*kB*(Te - Ti);
+  const CFreal Qen_e = 0.5*(Ren_ex*(un - ue) + Ren_ey*(vn - ve) + Ren_ez*(wn - we)) + 3.*m_n_nu_en/me*kB*(Tn - Te); // [kg m-1 s-3]
+  const CFreal Qin_i = 0.5*(Rin_ix*(un - ui) + Rin_iy*(vn - vi) + Rin_iz*(wn - wi)) + 3.*m_n_nu_in/mi*kB*(Tn - Ti);  // [kg m-1 s-3]  
+  const CFreal Qie_i = 0.5*(Rie_ix*(ue - ui) + Rie_iy*(ve - vi) + Rie_iz*(we - wi)) + 3.*m_n_nu_ie/mi*kB*(Te - Ti);
   const CFreal Qie_e = - Qie_i;    
   const CFreal Qin_n = - Qin_i;
   const CFreal Qen_n = - Qen_e;
@@ -722,7 +712,7 @@ void ThreeFluidMHDST3D<UPDATEVAR>::computegravityTerms(){
   const CFreal wn = _physicalData[firstVelocity + 8];
 
   //YGM: gravity momentum source term
-  const CFreal gsun = 274.78; //[m/s2] from Wiki; //G=6.674e-11;//[m/kg]^2
+  const CFreal gsun = -274.78; //[m/s2] from Wiki; //G=6.674e-11;//[m/kg]^2
   const CFreal gx = 0.;
   const CFreal gy = 0.;
   const CFreal gz = gsun;
