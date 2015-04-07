@@ -133,7 +133,11 @@ private:
    */
   CFreal getDistance(Framework::Node& a, Framework::Node& b);
 
+  bool isNodeLocked(Framework::Node* node);
+
   
+CFreal computeSpringConstant(const Framework::Node* const firstNode, const Framework::Node* const secondNode) ;
+
 private: //data
 
   /// storage of shockSensor values
@@ -226,7 +230,7 @@ private: //data
   /// Connectivity "node to node"
   /// connectedNodes[i] gives a set whose members
   /// are localIDs of nodes connected to node i
-  std::vector< std::set<CFuint> > connectedNodes;
+  std::vector< std::set<CFuint> > m_connectedNodes;
 
   /// Connectivity "node to cell"
   /// connectedCells[i] gives a set whose members
@@ -249,15 +253,13 @@ private: //data
   /// Set of Non-Modifiable Nodes
   std::set<CFuint> m_nonModifiableNodes;
 
-  /// Edge spring constants
-  /// m_ke[i] gives a map such that:
-  ///   key   = neighbor->localID
-  ///   value = spring constant for edge [i<->key]
-  std::vector< std::map<CFuint,CFreal> > m_ke;
-  
   /// Visited array for boundary BFS
   std::vector<bool> visited;
-  
+
+  CFreal m_minLim;
+  CFreal m_maxLim;
+  CFreal m_avgKe;
+
 }; // end of class MeshFittingAlgorithm
 
 //////////////////////////////////////////////////////////////////////////////

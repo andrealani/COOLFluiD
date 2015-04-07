@@ -15,12 +15,15 @@
 #include "Framework/PathAppender.hh"
 #include "Environment/DirPaths.hh"
 
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/p_square_quantile.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
 
+#include <cmath>
 #include <iostream>
-/*
-  TODO: Fix RHS size for problems with states.size()<nodes.size()
-*/
-
+#include <algorithm>
+#include <numeric>
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -189,13 +192,12 @@ void MeshFittingAlgorithm<MODEL>::setup()
   socket_gradientPhi.getDataHandle().resize(nbNodes * nbDim);
 
   /// resize connectivity tables
-  connectedNodes.resize(nbNodes);
+  m_connectedNodes.resize(nbNodes);
   connectedCells.resize(nbNodes);
   connectedGhosts.resize(nbNodes);
   ghostNodes.resize(nbGhosts);  
   
   /// resize arrays for computations
-  m_ke.resize(nbNodes);
   visited.resize(nbNodes);
   
   /// setup geobuilder
@@ -233,6 +235,82 @@ template <typename MODEL>
 void MeshFittingAlgorithm<MODEL>::createConnectivity()
 {
   CFAUTOTRACE;
+
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+ 
+  cf_assert(socket_states.isConnected());
+  cf_assert(socket_nodes.isConnected());
+  
+  Framework::DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
+  
+  std::vector<std::string> tags;
+  tags.push_back ( "inner" );
+  tags.push_back ( "cell" );
+  
+  std::vector< Common::SafePtr<Framework::TopologicalRegionSet> > innerCellsList = 
+    Framework::MeshDataStack::getActive()->getFilteredTrsList(tags);
+  
+  const CFuint nbNodes = nodes.size();
+
+  std::vector< std::vector< CFuint > > neighborCells(nbNodes);
+  std::vector< std::vector< Common::SafePtr<Framework::TopologicalRegionSet> > > neighborCellsTrs(nbNodes);
+  
+  // detect all the neighbor Cells for each Node
+  const CFuint nbGroups = innerCellsList.size();
+  for(CFuint iGroup=0; iGroup < nbGroups; ++iGroup){
+    Common::SafePtr<Framework::TopologicalRegionSet> currTrs = innerCellsList[iGroup];
+    Common::SafePtr<ConnectivityTable< CFuint > > cellNodes =
+      Framework::MeshDataStack::getActive()->getConnectivity("cellNodes_" + currTrs->getName());
+    
+    const CFuint nbCells = cellNodes->nbRows();
+    for (CFuint iCell = 0; iCell < nbCells; ++iCell) {
+      const CFuint nbNodesInCell = cellNodes->nbCols(iCell);
+      for (CFuint iNode = 0; iNode < nbNodesInCell; ++iNode) {
+        const CFuint stateID = (*cellNodes)(iCell,iNode);
+        cf_assert(stateID < nbNodes);
+        neighborCells[stateID].push_back(iCell);
+        neighborCellsTrs[stateID].push_back(currTrs);
+      }
+    }
+  }
+  
+  for (CFuint iNode = 0; iNode < nbNodes; ++iNode)
+  {
+    const CFuint nbNeighborCells = neighborCells[iNode].size();
+
+    for (CFuint iCell = 0; iCell < nbNeighborCells; ++iCell)
+    {
+      const CFuint cellTrsID = neighborCells[iNode][iCell];
+      Common::SafePtr<TopologicalRegionSet> cellTrs = neighborCellsTrs[iNode][iCell];
+      Common::SafePtr< ConnectivityTable< CFuint > > cellNodes =
+        Framework::MeshDataStack::getActive()->getConnectivity("cellNodes_" + cellTrs->getName());
+
+      const CFuint nbNodesInCell = cellNodes->nbCols(cellTrsID);
+      for (CFuint jNode = 0; jNode < nbNodesInCell; ++jNode) 
+      {
+        // store all the neighbor nodes without the considered node itself
+        Node *const currNode = nodes[(*cellNodes)(cellTrsID,jNode)];
+        if( currNode->getLocalID() != iNode )
+        {
+          m_connectedNodes[iNode].insert(currNode->getLocalID());
+        }
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+        
+/**
+ * Determine and register non-modifiable nodes:
+ * paralell partition nodes, boundary nodes and
+ * close to the boundary nodes
+ */
+template <typename MODEL>
+void MeshFittingAlgorithm<MODEL>::determineNonModNodes()
+{
+ CFAUTOTRACE;
   
   using namespace std;
   using namespace COOLFluiD::Framework;
@@ -259,141 +337,14 @@ void MeshFittingAlgorithm<MODEL>::createConnectivity()
       const CFuint nbFaceNodes = faceNodes.size();
 
       if (facesInCell[iFace]->getState(1)->isGhost()) {
-        const CFuint ghostID = facesInCell[iFace]->getState(1)->getLocalID();
         for(CFuint iNode=0; iNode < nbFaceNodes; ++iNode) {
           const CFuint nodeID = faceNodes[iNode]->getLocalID();
           m_boundaryNodes.insert(nodeID);
-          ghostNodes[ghostID].push_back(nodeID);
-          connectedGhosts[nodeID].insert(ghostID);
         }
-      }
-
-      for(CFuint iNode = 0; iNode < nbFaceNodes; ++iNode) {
-        const CFuint nodeID = faceNodes[iNode]->getLocalID();
-        
-        /// This assumes that the nodes on a face are given in order
-        /// For a quad ABCD, faceNodes must be a rotation, e.g.: CDAB
-        const CFuint prev = (iNode-1+nbFaceNodes) % nbFaceNodes;
-        const CFuint next = (iNode+1) % nbFaceNodes;
-        
-        connectedNodes[nodeID].insert( faceNodes[prev]->getLocalID() );
-        connectedNodes[nodeID].insert( faceNodes[next]->getLocalID() );        
-        connectedCells[nodeID].insert( currCell->getState(0)->getLocalID() );
       }
     }
     m_geoBuilder.releaseGE();
   }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-        
-/**
- * Determine and register non-modifiable nodes:
- * paralell partition nodes, boundary nodes and
- * close to the boundary nodes
- */
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::determineNonModNodes()
-{
-  CFAUTOTRACE;
-  CFLogDebugMin("MeshFittingAlgorithm::determineNonModNodes()" << "\n");
-
-  if (m_ssRate == 0) {
-    return;
-  }
-
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Common;
-  using namespace COOLFluiD::MathTools;  
-
-  DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle();
-  
-  const CFuint nbNodes = nodes.size();
-
-  // nonModifiableNodes due to parallel partition
-  for(CFuint iNode=0; iNode < nbNodes; ++iNode) 
-  {
-    if (!nodes[iNode]->isParUpdatable()) 
-    {
-      m_nonModifiableNodes.insert(iNode);
-    }
-  }
-
-  
-//  /// nonModifiableNodes due to parallel partition
-//  for(CFuint iNode=0; iNode < nbNodes; ++iNode) {
-//    const CFuint nodeID = nodes[iNode]->getLocalID();
-//    cf_assert(nodeID == iNode);
-//    if (m_nonModifiableNodes.find(nodeID) != m_nonModifiableNodes.end()) continue;
-//
-//    std::set<CFuint>& neighbors = connectedNodes[nodeID];
-//    
-//    /// Lock iNode if either iNode or one of its neighbors isn't parUpdatable
-//    if (!nodes[iNode]->isParUpdatable()) {
-//      m_nonModifiableNodes.insert(nodeID);
-//
-//      for(std::set<CFuint>::iterator it=neighbors.begin(); it != neighbors.end(); ++it) {
-//        m_nonModifiableNodes.insert(*it);
-//      }
-//    }
-//    
-//  else {
-//      for(std::set<CFuint>::iterator it=neighbors.begin(); it != neighbors.end(); ++it) {
-//        if (!nodes[*it]->isParUpdatable()) {
-//          m_nonModifiableNodes.insert(nodeID);
-//          break;
-//        }
-//      }
-//    }
-//
-//  }
-
-// Lock nodes close to the boundary via BFS
-for(std::set<CFuint>::iterator it=m_boundaryNodes.begin(); it != m_boundaryNodes.end(); ++it) {
-  m_nonModifiableNodes.insert(*it);
-}
-
-//  std::queue< std::pair<CFuint,CFuint> > qu;
-//  std::fill(visited.begin(), visited.end(), 0);
-//  
-//  for(std::set<CFuint>::iterator it=m_boundaryNodes.begin(); it != m_boundaryNodes.end(); ++it) {
-//    qu.push( make_pair(*it, 0) );
-//    visited[*it] = true;
-//  }
-//
-//  while (!qu.empty()) {
-//    std::pair<CFuint,CFuint> t = qu.front();
-//    qu.pop();
-//    
-//    m_nonModifiableNodes.insert(t.first);
-//
-//    if (t.second < m_boundaryDegreeNM) {
-//      std::set<CFuint>& neighbors = connectedNodes[t.first];
-//      for(std::set<CFuint>::iterator it=neighbors.begin(); it != neighbors.end(); ++it) {
-//        if (!visited[*it]) {
-//          qu.push( make_pair(*it, t.second+1) );
-//          visited[*it] = true;
-//        }
-//      }
-//    }
-//  }
-  
-  /// Debug information -- consider commenting it out
-  
-//  CFuint prank = PE::GetPE().GetRank();
-//  ostringstream convert;
-//  convert << "nm_P" << prank << ".dat";
-//  string fname = convert.str();
-//  ofstream nmFile;
-//  nmFile.open(fname.c_str());
-//  for(std::set<CFuint>::iterator it=m_nonModifiableNodes.begin(); it != m_nonModifiableNodes.end(); ++it) {
-//    Node& node = *nodes[*it];
-//    nmFile << node[XX] << " " << node[YY] << endl;
-//  }
-//  nmFile.close();
-  
-  ///////////////////////////////////  
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -488,6 +439,36 @@ void MeshFittingAlgorithm<MODEL>::computeGradientPhi()
 
 
 template <typename MODEL>
+CFreal MeshFittingAlgorithm<MODEL>::computeSpringConstant(const Framework::Node* const firstNode, const Framework::Node* const secondNode) 
+{
+  CFAUTOTRACE;
+ 
+  Framework::DataHandle < CFreal > gradientPhi = socket_gradientPhi.getDataHandle();
+
+   const CFuint nbDim = Framework::PhysicalModelStack::getActive()->getDim();
+    
+  /// gradPhi is the gradient of the monitor variable Phi
+  RealVector dGradPhi(nbDim);
+  RealVector dPos(nbDim);
+  
+
+  const CFuint  firstNodeID =  firstNode->getLocalID();
+  const CFuint secondNodeID = secondNode->getLocalID();
+  
+  CFreal num = 0.0, den = 0.0;
+  
+  for(CFuint i = 0; i < nbDim; ++i) 
+  {
+    dGradPhi[i] = gradientPhi[firstNodeID*nbDim + i] - gradientPhi[secondNodeID*nbDim + i];
+    dPos[i] = (*firstNode)[XX+i] - (*secondNode)[XX+i];
+    num += dPos[i] * dGradPhi[i];
+    den += dPos[i] * dPos[i];
+  }
+  
+  return std::abs(num)/den;
+}
+
+template <typename MODEL>
 void MeshFittingAlgorithm<MODEL>::computeSprings() 
 {
   CFAUTOTRACE;
@@ -496,99 +477,103 @@ void MeshFittingAlgorithm<MODEL>::computeSprings()
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::MathTools;
-  
+  using namespace boost::accumulators;
+
   CFLogDebugMin( "MeshFittingAlgorithm::computeSprings()" << "\n");
   
   DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle(); 
-  DataHandle < CFreal > gradientPhi = socket_gradientPhi.getDataHandle();
 
-  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
   const CFuint nbNodes = nodes.size();
 
-  CFreal total = 0;
-  CFuint cnt = 0;
+  typedef accumulator_set<CFreal, stats<tag::p_square_quantile> > accumulator_t;
+  accumulator_t minQuantileAcc(quantile_probability = m_minPerc);
+  accumulator_t maxQuantileAcc(quantile_probability = m_maxPerc);
+  accumulator_set<double, stats<tag::mean> > meanAcc;
+
+  const int nbProcesses = PE::GetPE().GetProcessorCount();
+  const int processRank = PE::GetPE().GetRank();
+  MPI_Comm communicator = Common::PE::GetPE().GetCommunicator(); 
   
-  std::vector<CFreal> allSpringConstants;
+  std::vector<CFreal> sendSprings;
+  std::vector<CFreal> recvSprings;
 
   /// For each node compute its displacement
-  for(CFuint iNode = 0; iNode < nbNodes; ++iNode) {
-    if (m_nonModifiableNodes.find(iNode) != m_nonModifiableNodes.end()) continue;
-  
-    const std::set<CFuint>& neighbors = connectedNodes[iNode];
-    const Node& node = *nodes[iNode];
-    
-    std::map<CFuint,CFreal>& current = m_ke[iNode];
-    
-    for(std::set<CFuint>::iterator it = neighbors.begin(); it != neighbors.end(); ++it) {
-      const Node& neighbor = *nodes[*it];
-           
-      /// gradPhi is the gradient of the monitor variable Phi
-      RealVector dGradPhi(nbDim);
-      RealVector dPos(nbDim);
-      
-      CFreal num = 0.0, den = 0.0;
-      
-      for(CFuint i = 0; i < nbDim; ++i) {
-        dGradPhi[i] = gradientPhi[iNode*nbDim+i] - gradientPhi[(*it)*nbDim+i];
-        dPos[i] = node[XX+i] - neighbor[XX+i];
-        num += dPos[i] * dGradPhi[i];
-        den += dPos[i] * dPos[i];
-      }
-      
-      const CFreal _ke = std::abs(num)/den;
-      
-      current[*it] = _ke;
-      total += _ke;
-      cnt++;
-
-      allSpringConstants.push_back(_ke);
+  for(CFuint iNode = 0; iNode < nbNodes; ++iNode) 
+  {
+    if ( isNodeLocked(nodes[iNode]) )
+    {
+      continue;
     }
-  }
-
-  if (allSpringConstants.size() < 1) return;
-  sort(allSpringConstants.begin(), allSpringConstants.end());
   
-  /// Indices for minimum and maximum spring constant allowed
-  const CFuint idxMin = static_cast<CFuint>(m_minPerc * (allSpringConstants.size()-1));
-  const CFuint idxMax = static_cast<CFuint>(m_maxPerc * (allSpringConstants.size()-1));
-  
-  cf_assert(idxMin < allSpringConstants.size());
-  cf_assert(idxMax < allSpringConstants.size());
-  
-  const CFreal minLim = allSpringConstants[ idxMin ];
-  const CFreal maxLim = allSpringConstants[ idxMax ];
-  
-  /// Average spring constant over the domain
-  const CFreal avgKe = total / static_cast<CFreal>(cnt);
-
-
-  /// Debug information -- consider commenting it out
-  
-  if (m_printKesToFile) {
-    ofstream keFile;
-    CFuint prank = PE::GetPE().GetRank();
-    ostringstream convert;
-    convert << "kes_P" << prank << ".dat";
-    string fname = convert.str();
-    keFile.open(fname.c_str());
-    for(CFuint i=0; i < allSpringConstants.size(); i++)
-      keFile << allSpringConstants[i] << " " << static_cast<CFreal>(i) / static_cast<CFreal>(allSpringConstants.size()) << " " << minLim << " " << maxLim << " " << avgKe << " " << i%2 << endl;
-    keFile.close();
-  }
-
-  for(CFuint iNode = 0; iNode < nbNodes; ++iNode) {
-    std::map<CFuint,CFreal>& current = m_ke[iNode];
-    for(std::map<CFuint,CFreal>::iterator it = current.begin(); it != current.end(); ++it) {
-      const CFreal ratio = it->second;
-      it->second = std::max( std::min(maxLim, ratio), minLim );
+    const std::set<CFuint>& neighbors = m_connectedNodes[iNode];
+    const Node* node = nodes[iNode];
+    
+    for(std::set<CFuint>::iterator it = neighbors.begin(); it != neighbors.end(); ++it) 
+    {
+      const Node* neighbor = nodes[*it];
+      const CFreal spring = computeSpringConstant(node, neighbor);
+      sendSprings.push_back(spring);
     }
   }
   
-  ///////////////////////////////////
+  int localNbSprings = sendSprings.size();
+  vector<int> recvSpringsCounts(nbProcesses,0); 
+  vector<int> recvSpringsDisp(nbProcesses,0);
+
+  //get total number of springs
   
+  MPI_Gather(&localNbSprings, 1, MPI_INT, &recvSpringsCounts[0], 1, MPI_INT, 0, communicator);
+
+  if(processRank == 0)
+  {
+    int tempDisp = 0;
+    for(CFuint i=0; i< nbProcesses; ++i)
+    {
+      recvSpringsDisp[i] = tempDisp;
+      tempDisp += recvSpringsCounts[i];
+      cout<<recvSpringsCounts[i]<< " ";
+    }
+
+    recvSprings.resize(tempDisp); 
+    cout<<tempDisp<<" "<<std::accumulate(recvSpringsCounts.begin(), recvSpringsCounts.end(), 0 ) <<endl;
+  }
+
+
+  MPI_Gatherv(&sendSprings[0], localNbSprings, MPI_DOUBLE, &recvSprings[0], 
+      &recvSpringsCounts[0], &recvSpringsDisp[0], MPI_DOUBLE, 0, communicator); 
+
+
+  if(processRank == 0)
+  {
+    for(CFuint i=0; i<recvSprings.size(); ++i )
+    {
+      const CFreal ke = recvSprings[i];
+      minQuantileAcc(ke);
+      maxQuantileAcc(ke);
+      meanAcc(ke);
+    }
+    m_minLim = p_square_quantile(minQuantileAcc);
+    m_maxLim = p_square_quantile(maxQuantileAcc);
+    m_avgKe  = mean(meanAcc);
+  }
+
+  MPI_Bcast(&m_minLim, 1, MPI_DOUBLE, 0, communicator);
+  MPI_Bcast(&m_maxLim, 1, MPI_DOUBLE, 0, communicator);
+  MPI_Bcast(&m_avgKe , 1, MPI_DOUBLE, 0, communicator);
+
+}
+//////////////////////////////////////////////////////////////////////////////
+template <typename MODEL>
+bool MeshFittingAlgorithm<MODEL>::isNodeLocked(Framework::Node* node) 
+{
+  const bool isParallel = !node->isParUpdatable();
+  const bool isBoundary = m_boundaryNodes.find(node->getLocalID()) != m_boundaryNodes.end();
+
+  return (isParallel || isBoundary);
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
 
 /**
  * Fill matrix and RHS of the system to be solved
@@ -618,11 +603,6 @@ void MeshFittingAlgorithm<MODEL>::fillSystem() {
   
   const CFuint rhsSize = std::max(nodes.size()*totalNbEqs,states.size()*totalNbEqs);
   
-  //cout << nodes.size()*totalNbEqs << " "
-  //    << states.size()*totalNbEqs << " "
-  //    << rhs.size()  << endl;
-  //return; //mark
-  
   if (rhs.size() != rhsSize) rhs.resize(rhsSize);
 
   cf_assert(nbDims < totalNbEqs);
@@ -633,7 +613,7 @@ void MeshFittingAlgorithm<MODEL>::fillSystem() {
   for (CFuint iNode = 0; iNode < nbNodes; ++iNode) {
     CFreal diagValue;
 
-    if (!nodes[iNode]->isParUpdatable()) {
+    if (!nodes[iNode]->isParUpdatable())  {
       continue;
     }
 
@@ -641,26 +621,34 @@ void MeshFittingAlgorithm<MODEL>::fillSystem() {
      	rhs[iNode*totalNbEqs + XX + iDim] = (*nodes[iNode])[XX+iDim] ;
     }
     
-    if (m_nonModifiableNodes.find(iNode) == m_nonModifiableNodes.end()) {
-      std::map<CFuint,CFreal>& current = m_ke[iNode];
+    if ( isNodeLocked(nodes[iNode]) ) 
+    {
+      diagValue = 1.0;
+    }
+    else
+    {
+      std::set<CFuint>& current = m_connectedNodes[iNode];
       CFreal totalKe = 0.0;
-      
-      for(std::map<CFuint,CFreal>::iterator it = current.begin(); it != current.end(); ++it) {
-        CFuint colGlobalID = idxMapping.getColID(nodes[it->first]->getLocalID())*nbDims;
-        CFuint rowGlobalID = idxMapping.getRowID(nodes[iNode]->getLocalID()    )*nbDims;
-        for(CFuint iDim = 0; iDim < nbDims; ++iDim) {
-          jacobMatrix->addValue(rowGlobalID + iDim, colGlobalID + iDim, -it->second * m_alpha);
+      for(std::set<CFuint>::iterator it = current.begin(); it != current.end(); ++it) 
+      {
+        CFuint colGlobalID = idxMapping.getColID(nodes[*it]->getLocalID())*nbDims;
+        CFuint rowGlobalID = idxMapping.getRowID(nodes[iNode]->getLocalID())*nbDims;
+       
+        const CFreal springForce = computeSpringConstant(nodes[iNode], nodes[*it]);
+        const CFreal normalizedSpringForce = std::max( std::min(m_maxLim/m_avgKe, springForce/m_avgKe), m_minLim/m_avgKe );
+        totalKe += normalizedSpringForce;
+
+        for(CFuint iDim = 0; iDim < nbDims; ++iDim) 
+        {
+          jacobMatrix->addValue(rowGlobalID + iDim, colGlobalID + iDim, -normalizedSpringForce * m_alpha);
         }
-        totalKe += it->second;
       }
       diagValue = 1.0 + m_alpha * totalKe;
     }
-    else {
-      diagValue = 1.0;
-    }
-    
+   
     CFuint globalID = idxMapping.getColID(nodes[iNode]->getLocalID())*nbDims;
-    for(CFuint iDim = 0; iDim < nbDims; ++iDim) {
+    for(CFuint iDim = 0; iDim < nbDims; ++iDim) 
+    {
       jacobMatrix->addValue(globalID + iDim, globalID + iDim, diagValue);
     }
   }
@@ -693,8 +681,7 @@ void MeshFittingAlgorithm<MODEL>::updateNodePositions() {
       for(CFuint iDim = 0; iDim < nbDims; ++iDim) {
         //const CFreal delta = currNode[iDim+XX] - rhs(i, iEq, totalNbEqs);
         //m_norm += delta*delta;
-        
-	currNode[XX+iDim] = rhs[iNode*totalNbEqs + XX + iDim];
+        currNode[XX+iDim] = rhs[iNode*totalNbEqs + XX + iDim];
       }
     }
   }
@@ -817,9 +804,9 @@ void MeshFittingAlgorithm<MODEL>::shockSensor()
     shockSensor[iCell] = bigPhi;
     sPressure[iCell] = cellPressure;
  
-    if (phi < 0.)  {
-      cout << iCell << ", pmax = " << pMax << ", pmin = " << pMin << endl; abort();
-    }
+   // if (phi < 0.)  {
+   //   cout << iCell << ", pmax = " << pMax << ", pmin = " << pMin << endl; abort();
+   // }
     
     m_geoBuilder.releaseGE();
   }  
