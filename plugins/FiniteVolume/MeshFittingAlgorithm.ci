@@ -47,7 +47,6 @@ void MeshFittingAlgorithm<MODEL>::defineConfigOptions(Config::OptionList& option
   options.template addConfigOption< CFuint >("maRate","Mesh adaptation rate");  
   options.template addConfigOption< CFreal >("alpha","Step for adaptation");
   options.template addConfigOption< std::string >("monitorVar","Monitor variable for mesh adaptation");
-  options.template addConfigOption< bool   >("printKesToFile","Print spring constants to file");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -68,9 +67,7 @@ MeshFittingAlgorithm<MODEL>::MeshFittingAlgorithm(const std::string& name) :
   socket_isOutward("isOutward"),
   m_lss(CFNULL),
   m_fvmccData(CFNULL),
-  m_physicalData(),
-  //m_acc(CFNULL),
-  m_norm(0.)
+  m_physicalData()
 {
   this->addConfigOptionsTo(this);
   
@@ -84,9 +81,6 @@ MeshFittingAlgorithm<MODEL>::MeshFittingAlgorithm(const std::string& name) :
 
   m_maxPerc = 0.70;
   this->setParameter("maxPerc", &m_maxPerc);
-
-  m_printKesToFile = false;
-  this->setParameter("printKesToFile", &m_printKesToFile);  
 
   m_boundaryDegreeNM = 2;
   this->setParameter("boundaryDegreeNM", &m_boundaryDegreeNM);
@@ -228,8 +222,7 @@ void MeshFittingAlgorithm<MODEL>::setup()
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * Create node->node, node->cell, node->ghost
- * and ghost->node connectivities
+ * Create node->node connectivity
  */  
 template <typename MODEL>
 void MeshFittingAlgorithm<MODEL>::createConnectivity()
@@ -305,7 +298,6 @@ void MeshFittingAlgorithm<MODEL>::createConnectivity()
 /**
  * Determine and register non-modifiable nodes:
  * paralell partition nodes, boundary nodes and
- * close to the boundary nodes
  */
 template <typename MODEL>
 void MeshFittingAlgorithm<MODEL>::determineNonModNodes()
@@ -351,9 +343,6 @@ void MeshFittingAlgorithm<MODEL>::determineNonModNodes()
 
 /**
  * Compute the gradient of the monitor variable Phi
- * TODO:  use look-up table (face->flux) to avoid re-computations (1)
- *        remove duplicate code and instead use a function (2)
- *        put values on nodes or on cells according to config (3)
  */
 template <typename MODEL>
 void MeshFittingAlgorithm<MODEL>::computeGradientPhi()
@@ -405,7 +394,6 @@ void MeshFittingAlgorithm<MODEL>::computeGradientPhi()
       updateVarSet->computePhysicalData(*(neighboringStatesOfCurrentNode[iState]), m_physicalData);
 
       weights[iState] = 1. / MathTools::MathFunctions::getDistance( stateCoordinates, *nodes[iNode]  );
-      //dependentVar[iState] = (*nodes[iNode])[m_phi];
       dependentVar[iState] = m_physicalData[m_phi];
       
       //first coeff is u
@@ -419,10 +407,6 @@ void MeshFittingAlgorithm<MODEL>::computeGradientPhi()
 
     }
 
-//     std::cout<<"coeffs: "<<std::endl<<coefficients<<std::endl
-//              <<"dependentVar: "<<dependentVar<<std::endl
-//              <<"weights: " <<weights<<std::endl;
-
     //solve the system in the Least Squares sence
     lsSolver.solve(coefficients, weights, dependentVar, solution);  
       
@@ -431,7 +415,6 @@ void MeshFittingAlgorithm<MODEL>::computeGradientPhi()
     {
       gradientPhi[iNode*nbDim + iDim] = solution[iDim+1];
     }
-//    std::cout<<"Node "<< iNode<<" has Phi , grad phi = "<< solution<<std::endl; 
 
   }
 
@@ -468,6 +451,8 @@ CFreal MeshFittingAlgorithm<MODEL>::computeSpringConstant(const Framework::Node*
   return std::abs(num)/den;
 }
 
+//TODO: Cleanup this function
+//Change parallel algorithm
 template <typename MODEL>
 void MeshFittingAlgorithm<MODEL>::computeSprings() 
 {
@@ -531,11 +516,9 @@ void MeshFittingAlgorithm<MODEL>::computeSprings()
     {
       recvSpringsDisp[i] = tempDisp;
       tempDisp += recvSpringsCounts[i];
-      cout<<recvSpringsCounts[i]<< " ";
     }
 
     recvSprings.resize(tempDisp); 
-    cout<<tempDisp<<" "<<std::accumulate(recvSpringsCounts.begin(), recvSpringsCounts.end(), 0 ) <<endl;
   }
 
 
@@ -577,6 +560,7 @@ bool MeshFittingAlgorithm<MODEL>::isNodeLocked(Framework::Node* node)
 
 /**
  * Fill matrix and RHS of the system to be solved
+ * TODO: Use a Block accumulator
  */
 template <typename MODEL>
 void MeshFittingAlgorithm<MODEL>::fillSystem() {
@@ -674,19 +658,15 @@ void MeshFittingAlgorithm<MODEL>::updateNodePositions() {
   const CFuint nbDims = PhysicalModelStack::getActive()->getDim();
   
   // this norm accumulation has to be done in parallel (global reduce)
-  //m_norm = 0.0;
   for (CFuint iNode = 0; iNode < nodes.size(); ++iNode) {
     if (nodes[iNode]->isParUpdatable()) {
       Node& currNode = *nodes[iNode];
       for(CFuint iDim = 0; iDim < nbDims; ++iDim) {
-        //const CFreal delta = currNode[iDim+XX] - rhs(i, iEq, totalNbEqs);
-        //m_norm += delta*delta;
         currNode[XX+iDim] = rhs[iNode*totalNbEqs + XX + iDim];
       }
     }
   }
   
-  //cout << "\t\t-------> Displacement: " << std::sqrt(displacement) << endl;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -804,10 +784,6 @@ void MeshFittingAlgorithm<MODEL>::shockSensor()
     shockSensor[iCell] = bigPhi;
     sPressure[iCell] = cellPressure;
  
-   // if (phi < 0.)  {
-   //   cout << iCell << ", pmax = " << pMax << ", pmin = " << pMin << endl; abort();
-   // }
-    
     m_geoBuilder.releaseGE();
   }  
 }

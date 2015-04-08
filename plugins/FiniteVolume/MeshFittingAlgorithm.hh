@@ -186,11 +186,8 @@ private: //data
   RealVector m_physicalData;
   
   // accumulator for LSSMatrix
-  //std::auto_ptr<Framework::BlockAccumulator> m_acc;
+  // std::auto_ptr<Framework::BlockAccumulator> m_acc;
   
-  /// L2 norm of delta U
-  CFreal m_norm;
-    
   /// minimum pressure ratio for shock sensor
   CFreal m_phiMinSS;
   
@@ -212,9 +209,6 @@ private: //data
   /// Mesh adaptation rate
   CFuint m_maRate;
 
-  /// Print kes to file
-  bool m_printKesToFile;
-  
   /// Monitor variable string
   std::string m_monitorVar;
   
