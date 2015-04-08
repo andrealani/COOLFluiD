@@ -115,16 +115,16 @@ Simulator.SubSystem.MeFiAlgo.ProcessRate        = 20
 Simulator.SubSystem.MeFiAlgo.Names              = Foo
 Simulator.SubSystem.MeFiAlgo.Data.updateVar     = Cons
 
-Simulator.SubSystem.MeFiAlgo.Foo.monitorVar = rho
+Simulator.SubSystem.MeFiAlgo.Foo.monitorVar  = rho
 Simulator.SubSystem.MeFiAlgo.Foo.phiMinSS    = 1.0
 Simulator.SubSystem.MeFiAlgo.Foo.phiMaxSS    = 1.5
-Simulator.SubSystem.MeFiAlgo.Foo.minPerc  = 0.65
-Simulator.SubSystem.MeFiAlgo.Foo.maxPerc  = 0.85
-#Simulator.SubSystem.MeFiAlgo.Foo.ssOnly = false
-Simulator.SubSystem.MeFiAlgo.Foo.printKesToFile = true
+Simulator.SubSystem.MeFiAlgo.Foo.minPerc     = 0.65
+Simulator.SubSystem.MeFiAlgo.Foo.maxPerc     = 0.75
+
+#Simulator.SubSystem.MeFiAlgo.Foo.ssOnly     = false
 Simulator.SubSystem.MeFiAlgo.Foo.ssRate = 20
 Simulator.SubSystem.MeFiAlgo.Foo.maRate = 60
 Simulator.SubSystem.MeFiAlgo.Foo.boundaryDegreeNM = 1 #2
-Simulator.SubSystem.MeFiAlgo.Foo.stopAdaptationIter = 800 #2000
-Simulator.SubSystem.MeFiAlgo.Foo.alpha = 0.1
+Simulator.SubSystem.MeFiAlgo.Foo.stopAdaptationIter = 2000
+Simulator.SubSystem.MeFiAlgo.Foo.alpha = 10.
 Simulator.SubSystem.CellCenterFVM.AfterMeshUpdateCom = StdMeshFittingUpdate
