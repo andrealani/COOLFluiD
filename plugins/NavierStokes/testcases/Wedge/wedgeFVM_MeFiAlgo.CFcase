@@ -119,7 +119,7 @@ Simulator.SubSystem.MeFiAlgo.Foo.monitorVar  = rho
 Simulator.SubSystem.MeFiAlgo.Foo.phiMinSS    = 1.0
 Simulator.SubSystem.MeFiAlgo.Foo.phiMaxSS    = 1.5
 Simulator.SubSystem.MeFiAlgo.Foo.minPerc     = 0.65
-Simulator.SubSystem.MeFiAlgo.Foo.maxPerc     = 0.74
+Simulator.SubSystem.MeFiAlgo.Foo.maxPerc     = 0.75
 
 #Simulator.SubSystem.MeFiAlgo.Foo.ssOnly     = false
 Simulator.SubSystem.MeFiAlgo.Foo.ssRate = 20
