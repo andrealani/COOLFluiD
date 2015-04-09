@@ -27,7 +27,7 @@ namespace COOLFluiD {
 template <typename ST>
 void RMSJouleHeatSourceCoupling<ST>::defineConfigOptions(Config::OptionList& options)
 {
-   options.template addConfigOption< CFreal >("DesiredPower","Desired torch power [kW].");
+   options.template addConfigOption< CFreal, Config::DynamicOption<> >("DesiredPower","Desired torch power [kW].");
    options.template addConfigOption< CFuint >("NbCoils","Number of coils.");
    options.template addConfigOption< std::vector<CFreal> >("RadiusCoils","Radius of each circular coil.");
    options.template addConfigOption< std::vector<CFreal> >("ZPositionCoils","Position on z-axis of each coil.");

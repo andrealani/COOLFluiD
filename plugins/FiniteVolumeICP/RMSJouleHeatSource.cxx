@@ -40,7 +40,7 @@ rmsJouleHeatSourceProvider("RMSJouleHeatSource");
 void RMSJouleHeatSource::defineConfigOptions(Config::OptionList& options)
 {
    options.addConfigOption< CFreal >("Freq","Frequency frequency of the torch [MHz].");
-   options.addConfigOption< CFreal >("DesiredPower","Desired torch power [kW].");
+   options.addConfigOption< CFreal,Config::DynamicOption<> >("DesiredPower", "Desired torch power [kW].");
    options.addConfigOption< CFreal >("Permeability","Permeability of the free space.");
    options.addConfigOption< CFuint >("NbCoils","Number of coils.");
    options.addConfigOption< std::vector<CFreal> >("RadiusCoils","Radius of each circular coil.");
@@ -174,6 +174,10 @@ void RMSJouleHeatSource::configure ( Config::ConfigArgs& args )
 
   if (m_zPositionCoils.size() != m_nbCoils) {
     throw BadValueException (FromHere(),"Number of coils doesn't match the size of the vector of z-axis positions of coils");
+  }
+
+  if (m_desiredPowerkW < 1.0e-8) {
+      throw BadValueException (FromHere(),"The desired ICP power is zero or negative");
   }
 }
 
