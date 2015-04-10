@@ -31,7 +31,7 @@ QualifiedName::~QualifiedName()
 
 bool QualifiedName::operator==(const QualifiedName& qnr) const
 {
-  return (m_namespace == qnr.m_namespace) && (m_namespace == qnr.m_namespace);
+  return (m_namespace == qnr.m_namespace) && (m_qname == qnr.m_qname);
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -2,7 +2,7 @@
 # 
 # This COOLFluiD CFcase file tests: 
 # 
-# Finite Volume, Euler2D, Forward Euler, mesh with triangles, converter from 
+# Finite Volume, Euler2D, Backward Euler, mesh with triangles, converter from 
 # THOR to CFmesh, second-order reconstruction with Venkatakhrisnan limiter, 
 # supersonic inlet and outlet, slip wall BC, mesh fitting algorithm 
 #
@@ -11,10 +11,27 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -4.00014829
+### Residual = -4.09795041
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = true
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+#CFEnv.ExceptionAborts      = true
+CFEnv.ExceptionDumps       = true
+CFEnv.ExceptionOutputs     = true
+#CFEnv.RegistSignalHandlers = false
+##CFEnv.TraceToStdOut = true
+##CFEnv.TraceActive = true
+#
+######## TEST CONFIGURATION
+#CFEnv.ErrorOnUnusedConfig = true
+#
 
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libForwardEuler libPetscI libTHOR2CFmesh
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libBackwardEuler libPetscI libTHOR2CFmesh
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Wedge/
@@ -30,7 +47,7 @@ Simulator.SubSystem.CFmesh.AppendIter = false
 
 Simulator.SubSystem.Tecplot.FileName    = wedgeFVM.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Cons
-Simulator.SubSystem.Tecplot.SaveRate = 500
+Simulator.SubSystem.Tecplot.SaveRate = 100
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = true
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = shockSensor pressure #dPdX dPdY
@@ -45,18 +62,35 @@ Simulator.SubSystem.Tecplot.WriteSolutionBlockFV.NodalOutputVar = true
 Simulator.SubSystem.StopCondition       = Norm
 Simulator.SubSystem.Norm.valueNorm      = -4.0
 
-# setting for PETSC linear system solver
-Simulator.SubSystem.LinearSystemSolver = PETSC
-Simulator.SubSystem.LSSNames = MeshAlgoLSS
-# preconditioner types: PCILU for serial, PCASM for serial/parallel
-Simulator.SubSystem.MeshAlgoLSS.Data.UseNodeBased = true
+Simulator.SubSystem.LinearSystemSolver = PETSC PETSC
+Simulator.SubSystem.LSSNames = MeshAlgoLSS BwdEulerLSS
+
+Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
+Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
+#Simulator.SubSystem.BwdEulerLSS.MaskEquationIDs = 0 1 2 3
+
 Simulator.SubSystem.MeshAlgoLSS.Data.PCType = PCASM
-Simulator.SubSystem.MeshAlgoLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.MeshAlgoLSS.Data.KSPType = KSPGMRES 
 Simulator.SubSystem.MeshAlgoLSS.Data.MatOrderingType = MATORDERING_RCM
 Simulator.SubSystem.MeshAlgoLSS.Data.MaxIter = 1000
 Simulator.SubSystem.MeshAlgoLSS.Data.SaveSystemToFile = false
 Simulator.SubSystem.MeshAlgoLSS.MaskEquationIDs = 0 1
 Simulator.SubSystem.MeshAlgoLSS.Data.NbKrylovSpaces = 50
+Simulator.SubSystem.MeshAlgoLSS.Data.UseNodeBased = true
+
+# this could be replace by some flag n the individual system
+Simulator.SubSystem.BwdEuler.Data.NbLSSToSolveAtOnce = 1
+Simulator.SubSystem.BwdEuler.Data.CollaboratorNames = BwdEulerLSS
+Simulator.SubSystem.CellCenterFVM.Data.CollaboratorNames = BwdEulerLSS
+
+Simulator.SubSystem.ConvergenceMethod = BwdEuler
+Simulator.SubSystem.BwdEuler.Data.CFL.Value = 5.0
+Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = if(i<100,5.,if(i<200,10.,min(1000.,cfl*1.1)))
+Simulator.SubSystem.BwdEuler.Data.Norm = L2
+Simulator.SubSystem.BwdEuler.Data.L2.MonitoredVarID = 0
+Simulator.SubSystem.BwdEuler.Data.L2.ComputedVarID = 0 2 3
 
 Simulator.SubSystem.Default.listTRS = InnerFaces SlipWall SuperInlet SuperOutlet
 
@@ -66,16 +100,13 @@ Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
 Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
 
-Simulator.SubSystem.ConvergenceMethod = FwdEuler
-Simulator.SubSystem.FwdEuler.Data.CFL.Value = 1.0
-Simulator.SubSystem.FwdEuler.UpdateSol = StdUpdateSol
-Simulator.SubSystem.FwdEuler.StdUpdateSol.ClipResidual = false 
-
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlus2D
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar   = Cons
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = StdTimeRhs
 
 Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
 Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
@@ -83,7 +114,7 @@ Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
 Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.2
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -0.2
 Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
 Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
 
@@ -124,6 +155,6 @@ Simulator.SubSystem.MeFiAlgo.Foo.maxPerc     = 0.75
 Simulator.SubSystem.MeFiAlgo.Foo.ssRate = 20
 Simulator.SubSystem.MeFiAlgo.Foo.maRate = 60
 Simulator.SubSystem.MeFiAlgo.Foo.boundaryDegreeNM = 1 #2
-Simulator.SubSystem.MeFiAlgo.Foo.stopAdaptationIter = 2000
+Simulator.SubSystem.MeFiAlgo.Foo.stopAdaptationIter = 300
 Simulator.SubSystem.MeFiAlgo.Foo.alpha = 10.
 Simulator.SubSystem.CellCenterFVM.AfterMeshUpdateCom = StdMeshFittingUpdate

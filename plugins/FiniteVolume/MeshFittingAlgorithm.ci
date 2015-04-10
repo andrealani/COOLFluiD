@@ -161,19 +161,15 @@ void MeshFittingAlgorithm<MODEL>::setup()
   using namespace COOLFluiD::MathTools;
   
   // get the linear system associated to this object and set it up
-  vector<SafePtr<LinearSystemSolver> > lssList = 
-    getMethodData().template getAllCollaborators<LinearSystemSolver>();
-  m_lss = lssList[0]; 
+  const std::string name = getMethodData().getNamespace();
+  m_lss = getMethodData().template getCollaborator<LinearSystemSolver>(name);  
   
-  CFLog(VERBOSE, "MeshFittingAlgorithm::setup() => collaborating LinearSystemSolver is " 
-	<< m_lss->getName() << "\n");
-
+  CFLog(VERBOSE, "MeshFittingAlgorithm::setup() => LSS is " << m_lss->getName() << "\n");
+  
   SafePtr<SpaceMethod> spaceMethod = getMethodData().template getCollaborator<SpaceMethod>();
   SafePtr<CellCenterFVM> fvmcc = spaceMethod.d_castTo<CellCenterFVM>();
   cf_assert(fvmcc.isNotNull());
   m_fvmccData = fvmcc->getData();
-  
-  //////////////
   
   const CFuint nbStates = socket_states.getDataHandle().size();
   const CFuint nbNodes = socket_nodes.getDataHandle().size();

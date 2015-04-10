@@ -46,7 +46,7 @@ public:
 
   /// Operator for comparison between full qualified names
   bool operator== (const QualifiedName& qnr) const;
-
+  
   /// @return a string with the separator for namespaces
   static CFchar separator ();
 
