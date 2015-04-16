@@ -215,7 +215,8 @@ Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
 Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokesMF
 #Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
 
-Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = MultiFluidMHDST2D
+#Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = MultiFluidMHDST2D
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = TwoFluidGravMHDST2D
 Simulator.SubSystem.CellCenterFVM.Data.MultiFluidMHDST2D.electricalResistivity = 0.07544302484745 #0.00382 #0.150886049694899
 
 

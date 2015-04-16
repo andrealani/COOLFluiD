@@ -2,4 +2,4 @@
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
 Simulator.SubSystem.SubSystemStatus.TimeStep = 2.0e-2
-Simulator.SubSystem.Tecplot.SaveRate    = 50
+Simulator.SubSystem.Tecplot.SaveRate    = 1 #50

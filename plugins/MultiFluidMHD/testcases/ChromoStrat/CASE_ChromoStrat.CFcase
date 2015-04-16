@@ -36,6 +36,7 @@ Simulator.SubSystem.InteractiveParamReader.readRate = 10
 
 ###############################################################################
 # Physical Model
+# order of the reference values is Bx, By, Bz, Ex, Ey, Ez, Psi, Phi, rhoi, rhon, ui, vi, un, vn, Ti, Tn
 
 Simulator.SubSystem.Default.PhysicalModelType = MultiFluidMHD2D
 Simulator.SubSystem.MultiFluidMHD2D.refValues = 1e-3 1e-3 1e-3 0.02 0.02 0.02 1e-4 1e-3 7e-11 1.6e-8 1000 20 1000 20 8700 8700
@@ -50,7 +51,7 @@ Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.gamma = 1.6666666666667
 Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.nonInducedElectromagnetic = 0. 0. 0. 0. 0. 0.    
 Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.divBCleaningConst = 1.
 Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.nbSpecies = 2
-Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.dynViscosity = 0.662751793172439e-3 0.662751793172439e-3
+Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.dynViscosity = 0.662751793172439e-3 0.662751793172439e-3 #in units [Pa*s]
 Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.thermConductivity = 21.882471906912727 21.882471906912727
 Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.BraginskiiTransport = true #false
 Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.lightSpeedMax = 3e6 #299792458
@@ -242,6 +243,9 @@ Simulator.SubSystem.CellCenterFVM.InField.Def =\
 						0.\
 						8732.990275983324\
 						8732.990275983324
+#n_n0(y)*mn=(1.6735327160314e-7)*(1169.082383−5.284*y+0.00191304*y^2+0.00003564*y^3−1.03506964668e−7*y^4+1.4059367e−10*y^5−1.088779654746e−13*y^6+4.918132e−17*y^7−1.20773496676e−20*y^8+1.2471e−24*y^9) 
+#n_e0*me=(1.67262177774e-11)*(6432.86−164.26*y+2.37625*y^2−0.0216905*y^3+0.000132001*z^4−5.6014e−7*y^5+1.71446e−9*y^6−3.87866e−12*y^7+6.59561e−15*y^8−8.51813e−18*y^9+8.39206e−21*y^10−6.29668e−24*y^11+3.56702e−27*y^12−1.49851e−30*y^13+4.52157e−34*y^14−9.25791e−38*y^15+1.15112e−41*y^16−6.5581e−46*y^17)
+#T_i0=6430.933−17.272*y+0.11957*y^2−0.000561*y^3+1.42339e−6*y^4−1.996685e−9*y^5+1.61992e−12*y^6−7.5977e−16*y^7+1.9155e−19*y^8−2.011e−23*y^9
 # Ez: 1e-3/(50000*7.544e-2*1.2566e-6*cosh(y/50000)*cosh(y/50000))+18.935*tanh(y/50000)/(cosh(y/50000)*cosh(y/50000))*1e-3*tanh(y/50000)
 #5.519651866542e-11+2.761328981452e-11/(cosh(y/50000)*cosh(y/50000))\
 #1.104531592580724e-8+6.912363384e-9/(cosh(y/50000)*cosh(y/50000))\
