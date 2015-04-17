@@ -1,5 +1,6 @@
 cf_add_case( MPI 8       CASEDIR Cylinder PCASE cyl3DFVMImplPuvt_Reynolds_40.CFcase CASEFILES cylinder_2D_quad.CFmesh )
 cf_add_case( MPI default CASEDIR FlatPlate PCASE flatPlateFVMBlasius.CFcase CASEFILES flatPlateQD.CFmesh )
+cf_add_case( MPI default CASEDIR FlatPlate PCASE flatPlate3DFVMBlasius.CFcase CASEFILES flatPlateQD.CFmesh )
 cf_add_case( MPI default CASEDIR Jets2D PCASE jets2DFluctSplit.CFcase CASEFILES jets2D.thor jets2D.SP )
 cf_add_case( MPI default CASEDIR Jets2D PCASE jets2DFluctSplitImpl.CFcase CASEFILES jets2D.thor jets2D.SP )
 cf_add_case( MPI 1       CASEDIR Jets2D PCASE jets2DFVM_in.CFcase CASEFILES jets2D-sol.CFmesh )

@@ -27,8 +27,8 @@ char               * PE::m_command_workers = CFNULL;
 WorkerStatus::Type   PE::m_current_status = WorkerStatus::NOT_RUNNING;
 
 #ifdef CF_HAVE_MPI
-std::map<CFint,CFint>    PE::m_rank2Group;
-std::vector<PE::Group*>  PE::m_groups; 
+std::map<int,std::string>          PE::m_rank2Group;
+std::map<std::string, PE::Group*>  PE::m_groups; 
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -142,41 +142,57 @@ WorkerStatus::Type PE::getCurrentStatus()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void PE::createGroup(const std::vector<int>& ranks, const bool mapRank2Group) 
+#ifdef CF_HAVE_MPI
+void PE::createGroup(const std::string name, 
+		     const std::vector<int>& ranks, 
+		     const bool mapRank2Group) 
 {
-  const CFuint nranks = ranks.size();
-  cf_assert(nranks > 0);
-  
-  Group* g = new Group();
-  g->globalRanks.resize(nranks);
-  
-  const int groupID = m_groups.size();
-  // std::cout << "inserting ranks ";
-  for (CFuint i = 0; i < nranks; ++i) {
-    g->globalRanks[i] = ranks[i];
-    // std::cout << ranks[i] << " ";
-    if (mapRank2Group) {
-      m_rank2Group.insert(std::make_pair(ranks[i], groupID));
-    }
-  }
-  // std::cout << "\n";
-  
-  g->groupRanks.resize(nranks);
-  
-  MPI_Group allGroup; 
-  MPI_Comm_group(MPI_COMM_WORLD, &allGroup); 
-  
-  int rank = 0;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-  MPI_Group_incl(allGroup, nranks, &g->globalRanks[0], &g->group); 
-  MPI_Comm_create(MPI_COMM_WORLD, g->group, &g->comm);
-  // assign the group ranks corresponding to the given global ranks 
-  MPI_Group_translate_ranks(allGroup, nranks, &g->globalRanks[0],
-			    g->group, &g->groupRanks[0]); 
-  
-  m_groups.push_back(g);
-}
+  if (m_groups.count(name) == 0) {
+    const CFuint nranks = ranks.size();
+    cf_assert(nranks > 0);
     
+    Group* g = new Group();
+    g->globalRanks.resize(nranks);
+    
+    CFLog(VERBOSE, "PE::createGroup() => inserting ranks \t");
+    for (CFuint i = 0; i < nranks; ++i) {
+      g->globalRanks[i] = ranks[i];
+      CFLog(VERBOSE, " " << ranks[i] << "\t");
+      if (mapRank2Group) {
+	m_rank2Group.insert(std::make_pair(ranks[i], name));
+      }
+    }
+    CFLog(VERBOSE, "\n");
+    
+    g->groupRanks.resize(nranks);
+    
+    MPI_Group allGroup; 
+    MPIError::getInstance().check
+      ("MPI_Comm_group", "PE::createGroup()", MPI_Comm_group(MPI_COMM_WORLD, &allGroup)); 
+    
+    int rank = 0;
+    MPIError::getInstance().check
+      ("MPI_Comm_rank", "PE::createGroup()", MPI_Comm_rank(MPI_COMM_WORLD, &rank)); 
+    
+    MPIError::getInstance().check
+      ("MPI_Group_incl", "PE::createGroup()", MPI_Group_incl(allGroup, nranks, &g->globalRanks[0], &g->group));
+    
+    MPIError::getInstance().check
+      ("MPI_Comm_create", "PE::createGroup()", MPI_Comm_create(MPI_COMM_WORLD, g->group, &g->comm));
+    
+    // assign the group ranks corresponding to the given global ranks 
+    MPIError::getInstance().check
+      ("MPI_Group_translate_ranks", "PE::createGroup()", 
+       MPI_Group_translate_ranks(allGroup, nranks, &g->globalRanks[0], g->group, &g->groupRanks[0])); 
+    
+    m_groups.insert(std::make_pair(name, g));
+  }
+  else {
+    CFLog(WARN, "WARNING: PE::createGroup() => group " << name << " already created!\n");
+  }
+}
+#endif    
+
 //////////////////////////////////////////////////////////////////////////////
 
   } // Common

@@ -95,9 +95,13 @@ void TopologicalRegionSet::createStatesList()
       for (CFuint is = 0; is < nbStatesInGeo; ++is)
       {
         const CFuint stateID = (*m_geo2states)(iGeo,is);
-
-        cf_assert(stateID < totalNbStates);
-
+	
+	if (stateID >= totalNbStates) {
+	  CFLog(ERROR, "TopologicalRegionSet::createStatesList() => stateID " << 
+		stateID << " > " << totalNbStates << "\n");
+	  cf_assert(stateID < totalNbStates);
+	}
+	
         if (!isInserted[stateID])
         {
           temp.push_back(stateID);

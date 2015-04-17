@@ -13,9 +13,10 @@
 #include "Common/WorkerStatus.hh"
 
 #ifdef CF_HAVE_MPI
-#  include "Common/MPI/PEInterfaceMPI.hh"
+#include "Common/MPI/PEInterfaceMPI.hh"
+#include "Common/MPI/MPIError.hh"
 #else
-#  include "Common/SERIAL/PEInterfaceSERIAL.hh"
+#include "Common/SERIAL/PEInterfaceSERIAL.hh"
 #endif // CF_HAVE_MPI
 
 //////////////////////////////////////////////////////////////////////////////
@@ -78,46 +79,43 @@ public:
    };
    
    /// @return group corresponding to given global rank
-   static CFint getGroupID(int rank) {return m_rank2Group.find(rank)->second;}
+   static std::string getGroupName(int rank) {return m_rank2Group.find(rank)->second;}
    
-   /// @return the group data corresponding to given group ID
-   static Group& getGroup(int groupID) 
-   {
-     cf_assert(static_cast<CFuint>(groupID) < m_groups.size());
-     return *m_groups[groupID];
-   }
+   /// @return the group data corresponding to given name
+   static Group& getGroup(const std::string name) {return *m_groups.find(name)->second;}
    
    /// create MPI group 
    /// @param ranks          list of the ranks belonging to this group
    /// @param mapRank2Group  flag telling whether to build a reverse 
    ///                       rank-group mapping (each rank MUST be associated 
    ///                       to a unique group)
-   static void createGroup(const std::vector<int>& ranks, 
+   static void createGroup(const std::string name,
+			   const std::vector<int>& ranks, 
 			   const bool mapRank2Group); 
    
-   /// clear the groups 
+   /// clear a group 
    /// @pre cannot be called from ~PE() because static PE object is destroyed 
    ///      after MPI_finalize(): it would try to double delete MPI_group's otherwise 
-   static void clearGroups() {
-     for (CFuint i = 0; i < m_groups.size(); ++i) { 
-       delete m_groups[i]; 
-     } 
-   }
+   // static void clearGroups() {
+   //   for (CFuint i = 0; i < m_groups.size(); ++i) { 
+   //     delete m_groups[i]; 
+   //   } 
+   // }
 #endif
        
 private:
-
-    /// the current PE
-    static PEInterface<> * m_curr_PE;
-
-    /// Flag to keep track of Parallel Enviroment Initialized
-    /// Note: cannot rely on m_curr_PE pointer because objects held by the enviroment
-    ///       could not then check for initialization. An egg and chicken problem,
-    ///       that appeared when using CFLog on the destructors of PEInterface related objects.
-    static bool m_is_init;
+   
+   /// the current PE
+   static PEInterface<> * m_curr_PE;
+   
+   /// Flag to keep track of Parallel Enviroment Initialized
+   /// Note: cannot rely on m_curr_PE pointer because objects held by the enviroment
+   ///       could not then check for initialization. An egg and chicken problem,
+   ///       that appeared when using CFLog on the destructors of PEInterface related objects.
+   static bool m_is_init;
     
     /// Path to the executable used to run the workers
-    static char * m_command_workers;
+    static char* m_command_workers;
     
     /// Current status. 
     /// Default value is @c #NOT_RUNNING.
@@ -125,10 +123,10 @@ private:
     
 #ifdef CF_HAVE_MPI
     /// name of the object
-    static std::map<CFint,CFint> m_rank2Group;
+    static std::map<int,std::string> m_rank2Group;
     
     /// list of groups
-    static std::vector<Group*> m_groups; 
+    static std::map<std::string, Group*> m_groups; 
 #endif
     
 }; // end class PE

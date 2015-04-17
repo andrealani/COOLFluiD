@@ -54,6 +54,9 @@ public:
   /// Sets up private data
   void setup();
 
+  /// Unsetup private data
+  void unsetup();
+
   /// Gets the object where data is stored
   DATA& getWriteData()
   {

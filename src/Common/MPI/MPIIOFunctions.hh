@@ -61,7 +61,7 @@ public:
   {
     using namespace COOLFluiD::Common; 
     
-    PE::Group& wgroup = PE::getGroup(0);
+    PE::Group& wgroup = PE::getGroup(std::string("Writers"));
     const CFuint maxSendSize = maxBuffSize/sizeof(T);
     MPI_Offset maxOffset = offset + bufSize*sizeof(T);
     CFLog(VERBOSE, "maxOffset   = " << maxOffset << "\n");
@@ -115,7 +115,7 @@ public:
     
     // a new file testIO.file is created
     // data are first written then read back and compared with original buffer
-    PE::Group& wgroup = PE::getGroup(0);
+    PE::Group& wgroup = PE::getGroup(std::string("Writers"));
     MPI_File fhh;
     MPI_File* fh = &fhh;
     

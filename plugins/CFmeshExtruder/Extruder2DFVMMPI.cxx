@@ -101,6 +101,9 @@ void Extruder2DFVMMPI::configure ( Config::ConfigArgs& args )
 {
   ConfigObject::configure(args);
   
+  // configure writer
+  configureNested ( &_writer, args );
+    
   //  if (_split)
   //    throw Common::NotImplementedException (FromHere(),"Extruder2DFVMMPI hasn't an implementation to split the extruded 3D meshes into tetrahedra.");
   
@@ -178,6 +181,7 @@ void Extruder2DFVMMPI::convert(const boost::filesystem::path& fromFilepath,
   // write the new 3D data to the file
   _writer.setup();
   _writer.writeToFile(filepath);
+  _writer.unsetup();
   
   stp.stop();
   CFLog(INFO, "Extrusion from 2D CFmesh to 3D CFmesh took: " << stp.read() << "s\n");
@@ -244,8 +248,6 @@ void Extruder2DFVMMPI::extrude()
   }
   
   //if(isHybrid) reorderElementNodeState();
-
-  updateTRSData();
   
   vector<CFuint> nbGlobalNodesStates(2, (CFuint)0);
   vector<CFuint> nbLocalNodesStates(2, (CFuint)0);
@@ -262,6 +264,13 @@ void Extruder2DFVMMPI::extrude()
   CFLog(INFO, "Extruder2DFVMMPI::extrude() => [#nodes, #states] = [" << 
 	nbGlobalNodesStates[0] << ", " << nbGlobalNodesStates[1] << "]\n");
   
+  // set global counts (will be needed by parallel writer)
+  MeshDataStack::getActive()->setTotalNodeCount(nbGlobalNodesStates[0]);
+  MeshDataStack::getActive()->setTotalStateCount(nbGlobalNodesStates[1]);
+  
+  // update the TRS data
+  updateTRSData();
+  
   data.setNbUpdatableNodes(nodes->size()/data.getDimension());
   data.setNbNonUpdatableNodes(0);
   
@@ -269,10 +278,6 @@ void Extruder2DFVMMPI::extrude()
   data.setNbNonUpdatableStates(0);
   
   data.consistencyCheck();
- 
-  // set global counts (will be needed by parallel writer)
-  MeshDataStack::getActive()->setTotalNodeCount(nbGlobalNodesStates[0]);
-  MeshDataStack::getActive()->setTotalStateCount(nbGlobalNodesStates[1]);
   
   SafePtr< vector<ElementTypeData> > elementType = data.getElementTypeData();
   const CFuint totNbElemTypes = elementType->size();
@@ -297,7 +302,7 @@ void Extruder2DFVMMPI::extrude()
   CFuint nbLocalElems = data.getNbElements();
   SafePtr< vector<CFuint> > globalElementIDs = MeshDataStack::getActive()->getGlobalElementIDs();
   globalElementIDs->resize(nbLocalElems);
-  
+    
   // sanity check on the total number of elements
   CFuint totElemCount = 0;
   MPI_Allreduce(&nbLocalElems, &totElemCount, 1, 
@@ -310,6 +315,13 @@ void Extruder2DFVMMPI::extrude()
   const CFuint offsetStateID = _nbStatesPerLayer*minNbLayers*_myRank;
   for (CFuint i = 0; i < nbLocalElems; ++i) {
     (*globalElementIDs)[i] = offsetStateID + i; 
+  }
+  
+  SafePtr< vector<CFuint> > globalNodeIDs = MeshDataStack::getActive()->getGlobalNodeIDs();
+  globalNodeIDs->resize(nbGlobalNodesStates[0]);
+  const CFuint offsetNodeID = _nbNodesPerLayer*minNbLayers*_myRank;
+  for (CFuint i = 0; i < globalNodeIDs->size(); ++i) {
+    (*globalNodeIDs)[i] = offsetNodeID + i;
   }
   
   // set the global info about TRSs
@@ -343,11 +355,11 @@ void Extruder2DFVMMPI::extrude()
       (*trsGlobalIDs)[iTRS][iTR].reserve(nbGeos);
       
       const CFuint nbGeos2D = nbGeos/_nbLayersLocal;
-      const CFuint offseGeoID = minNbLayers*_myRank*nbGeos2D;
+      const CFuint offsetGeoID = (is2DTrs) ? minNbLayers*_myRank*nbGeos2D : 0;
       // if splitting is used things have to be modified
-      // if (split) {offseGeoID*=2;}
+      // if (split) {offsetGeoID*=2;}
       for (CFuint iGeo = 0; iGeo < nbGeos; ++iGeo) {
-	(*trsGlobalIDs)[iTRS][iTR].push_back(offseGeoID + iGeo);
+	(*trsGlobalIDs)[iTRS][iTR].push_back(offsetGeoID + iGeo);
       }
     }
   }
@@ -906,12 +918,20 @@ void Extruder2DFVMMPI::extrudeCurrentTRSs()
   SafePtr< vector<CFuint> > nbTRs = data.getNbTRs();
   SafePtr< vector<vector<CFuint> > > nbGeomEntsPerTR = data.getNbGeomEntsPerTR();
   
+  const CFuint minNbLayers   = _nbLayers/_nbProc;
+  const CFuint offsetNodeID  = _nbNodesPerLayer*minNbLayers*_myRank;
+  const CFuint offsetStateID = _nbStatesPerLayer*minNbLayers*_myRank;
+  const CFuint totNbNodes  = MeshDataStack::getActive()->getTotalNodeCount();
+  const CFuint totNbStates =  MeshDataStack::getActive()->getTotalStateCount();
+  cf_assert(totNbNodes > 0);
+  cf_assert(totNbStates > 0);
+  
   for(CFuint iTRS = 0; iTRS < data.getNbTRSs(); ++iTRS ) {
     
     TRGeoConn& geoConn = data.getTRGeoConn(iTRS);
-
+    
     for(CFuint iTR = 0; iTR < (*nbTRs)[iTRS]; ++iTR ) {
-
+      
       GeoConn& geoC = geoConn[iTR];
       const CFuint oldNbGeos = geoC.size();
       CFuint nbGeos = oldNbGeos;
@@ -927,88 +947,109 @@ void Extruder2DFVMMPI::extrudeCurrentTRSs()
       else{
         geoC.resize(_nbLayersLocal * oldNbGeos);
       }
-
-      for(CFuint iLayer = 0; iLayer < _nbLayersLocal; ++iLayer) {
-
-    for (CFuint iGeo = 0; iGeo < oldNbGeos; ++iGeo) {
-
-    // Dirty trick to avoid out of range problems when not splitting
-    CFuint temp = oldNbGeos;
-    if (!_split) temp = 0;
-
-    std::valarray<CFuint>& nodeCon  = geoC[iGeo + (iLayer * nbGeos)].first;
-    std::valarray<CFuint>& stateCon = geoC[iGeo + (iLayer * nbGeos)].second;
-    std::valarray<CFuint>& nodeCon2  = geoC[iGeo+temp + (iLayer * nbGeos)].first;
-    std::valarray<CFuint>& stateCon2 = geoC[iGeo+temp + (iLayer * nbGeos)].second;
-
-    std::valarray<CFuint>& oldNodeCon  = oldConn[iGeo].first;
-    std::valarray<CFuint>& oldStateCon = oldConn[iGeo].second;
-    
-    const CFuint minNbLayers = _nbLayers/_nbProc;
-    const CFuint offsetNodeID = _nbNodesPerLayer*minNbLayers*_myRank;
-    oldNodeCon += offsetNodeID;
-    
-    // the following has to be modified if splitting into tetra is used
-    const CFuint offsetStateID = _nbStatesPerLayer*minNbLayers*_myRank;
-    oldStateCon += offsetStateID;  
-    
-    nodeCon.resize(nbNodesInGeo);
-    stateCon.resize(nbStatesInGeo);
-    nodeCon2.resize(nbNodesInGeo);
-    stateCon2.resize(nbStatesInGeo);
-
-    // change node connectivity
-    if (!_split){
-    for(CFuint nodeID = 0; nodeID < halfNodesInGeo; ++nodeID) {
-      nodeCon[nodeID] =
-        oldNodeCon[nodeID] + iLayer * _nbNodesPerLayer;
-      nodeCon[nodeID + halfNodesInGeo] =
-        oldNodeCon[nodeID] + (iLayer + 1) * _nbNodesPerLayer;
-    }
-
-    // change state connectivity
-    for(CFuint stateID = 0; stateID < 1; ++stateID) {
-      stateCon[stateID] = oldStateCon[stateID] + iLayer * _nbStatesPerLayer;
-    }
-    }
-    else{
-      // Compute the tetrahedras
-      // Create the Quads
-      for(CFuint nodeID = 0; nodeID < halfNodesInGeo; ++nodeID) {
-	tempQuad[nodeID] = oldNodeCon[nodeID] + iLayer * _nbNodesPerLayer;
-	tempQuad[nodeID+halfNodesInGeo] = oldNodeCon[nodeID] + (iLayer + 1) * _nbNodesPerLayer;
-      }
-      swap(tempQuad[2],tempQuad[3]);
-      splitQuads(tempQuad);
       
-    // Set the node connectivity
-    for(CFuint stateID = 0; stateID < 3; ++stateID) {
-      nodeCon[stateID] = _newTriag[0][stateID];
-      nodeCon2[stateID] = _newTriag[1][stateID];
-      }
-
-    // Do the same for state connectivity
-    // Create the Quads
-    for(CFuint nodeID = 0; nodeID < halfNodesInGeo; ++nodeID) {
-      tempQuad[nodeID] = oldStateCon[nodeID] + iLayer * _nbStatesPerLayer;
-      tempQuad[nodeID+halfNodesInGeo] = oldStateCon[nodeID] + (iLayer + 1) * _nbStatesPerLayer;
-      }
-    swap(tempQuad[2],tempQuad[3]);
-    splitQuads(tempQuad);
-
-    // Set the state connectivity
-    for(CFuint stateID = 0; stateID < 3; ++stateID) {
-      stateCon[stateID] = _newTriag[0][stateID];
-      stateCon2[stateID] = _newTriag[1][stateID];
-      }
-
-    }
-
-    if (!_split) {
-      swap(nodeCon[2],nodeCon[3]);
-      //swap(stateCon[2],stateCon[3]);
-    }
-    }
+      for(CFuint iLayer = 0; iLayer < _nbLayersLocal; ++iLayer) {
+	
+	for (CFuint iGeo = 0; iGeo < oldNbGeos; ++iGeo) {
+	  
+	  // Dirty trick to avoid out of range problems when not splitting
+	  CFuint temp = oldNbGeos;
+	  if (!_split) temp = 0;
+	  
+	  std::valarray<CFuint>& nodeCon   = geoC[iGeo + (iLayer * nbGeos)].first;
+	  std::valarray<CFuint>& stateCon  = geoC[iGeo + (iLayer * nbGeos)].second;
+	  std::valarray<CFuint>& nodeCon2  = geoC[iGeo+temp + (iLayer * nbGeos)].first;
+	  std::valarray<CFuint>& stateCon2 = geoC[iGeo+temp + (iLayer * nbGeos)].second;
+	  std::valarray<CFuint>& oldNodeCon  = oldConn[iGeo].first;
+	  std::valarray<CFuint>& oldStateCon = oldConn[iGeo].second;
+	  // the first time you process this face connectivity an offset is added 
+	  if (iLayer == 0) {oldNodeCon  += offsetNodeID;}
+	  
+	  // AL: the following has to be modified if splitting into tetra is used
+	  
+	  // the first time you process this face connectivity an offset is added 
+	  if (iLayer == 0) {oldStateCon += offsetStateID;}  
+	  
+	  nodeCon.resize(nbNodesInGeo);
+	  stateCon.resize(nbStatesInGeo);
+	  nodeCon2.resize(nbNodesInGeo);
+	  stateCon2.resize(nbStatesInGeo);
+	  
+	  // change node connectivity
+	  if (!_split){
+	    for(CFuint nodeID = 0; nodeID < halfNodesInGeo; ++nodeID) {
+	      nodeCon[nodeID] = oldNodeCon[nodeID] + iLayer * _nbNodesPerLayer;
+	      nodeCon[nodeID + halfNodesInGeo] = oldNodeCon[nodeID] + (iLayer + 1) * _nbNodesPerLayer;
+	      
+	      if (nodeCon[nodeID] >= totNbNodes) {
+		CFLog(ERROR, "Extruder2DFVMMPI::extrudeCurrentTRSs() => TRS nodeID = " 
+		      << nodeCon[nodeID] << " >= " << totNbNodes << "\n");
+		CFLog(ERROR, "Extruder2DFVMMPI::extrudeCurrentTRSs() => old TRS nodeID = " 
+		      << oldNodeCon[nodeID] << ", iLayer/_nbLayersLocal = " << iLayer 
+		      << "/" << _nbLayersLocal << ", _nbNodesPerLayer = " << _nbNodesPerLayer << "\n");
+		cf_assert(nodeCon[nodeID] < totNbNodes);
+	      }
+	      
+	      if (nodeCon[nodeID + halfNodesInGeo] >= totNbNodes) {
+		CFLog(ERROR, "Extruder2DFVMMPI::extrudeCurrentTRSs() => TRS nodeID = " 
+		      << nodeCon[nodeID + halfNodesInGeo] << " >= " << totNbNodes << "\n");
+		cf_assert(nodeCon[nodeID + halfNodesInGeo] < totNbNodes);
+	      }
+	    }
+	    
+	    // change state connectivity
+	    for(CFuint stateID = 0; stateID < 1; ++stateID) {
+	      stateCon[stateID] = oldStateCon[stateID] + iLayer * _nbStatesPerLayer;
+	      
+	      if (stateCon[stateID] >= totNbStates) {
+		CFLog(ERROR, "Extruder2DFVMMPI::extrudeCurrentTRSs() => TRS stateID = " 
+		      << stateCon[stateID] << " >= " << totNbStates << "\n");
+		CFLog(ERROR, "Extruder2DFVMMPI::extrudeCurrentTRSs() => old TRS stateID = " 
+		      << oldStateCon[stateID] << ", iLayer/_nbLayersLocal = " << iLayer 
+		      << "/" << _nbLayersLocal << ", _nbStatesPerLayer = " << _nbStatesPerLayer << "\n");
+		cf_assert(stateCon[stateID] < totNbStates);
+	      }	      
+	    }
+	  }
+	  else {
+	    // AL: this is untested and needs to be re-checked for parallel cases 
+	    
+	    // Compute the tetrahedras
+	    // Create the Quads
+	    for(CFuint nodeID = 0; nodeID < halfNodesInGeo; ++nodeID) {
+	      tempQuad[nodeID] = oldNodeCon[nodeID] + iLayer * _nbNodesPerLayer;
+	      tempQuad[nodeID+halfNodesInGeo] = oldNodeCon[nodeID] + (iLayer + 1) * _nbNodesPerLayer;
+	    }
+	    swap(tempQuad[2],tempQuad[3]);
+	    splitQuads(tempQuad);
+	    
+	    // Set the node connectivity
+	    for(CFuint stateID = 0; stateID < 3; ++stateID) {
+	      nodeCon[stateID] = _newTriag[0][stateID];
+	      nodeCon2[stateID] = _newTriag[1][stateID];
+	    }
+	    
+	    // Do the same for state connectivity
+	    // Create the Quads
+	    for(CFuint nodeID = 0; nodeID < halfNodesInGeo; ++nodeID) {
+	      tempQuad[nodeID] = oldStateCon[nodeID] + iLayer * _nbStatesPerLayer;
+	      tempQuad[nodeID+halfNodesInGeo] = oldStateCon[nodeID] + (iLayer + 1) * _nbStatesPerLayer;
+	    }
+	    swap(tempQuad[2],tempQuad[3]);
+	    splitQuads(tempQuad);
+	    
+	    // Set the state connectivity
+	    for(CFuint stateID = 0; stateID < 3; ++stateID) {
+	      stateCon[stateID] = _newTriag[0][stateID];
+	      stateCon2[stateID] = _newTriag[1][stateID];
+	    }
+	  }
+	  
+	  if (!_split) {
+	    swap(nodeCon[2],nodeCon[3]);
+	    //swap(stateCon[2],stateCon[3]);
+	  }
+	}
       }
       
       (*nbGeomEntsPerTR)[iTRS][iTR] = geoC.size();
@@ -1050,14 +1091,15 @@ void Extruder2DFVMMPI::createSideTRS(const std::string& name,
 				     const bool& bottom)
 {
   cf_assert(_oldElemNode.nbRows() == _oldElemState.nbRows());
-
+  
+  CFLog(VERBOSE, "Extruder2DFVMMPI::createSideTRS() " << name << " start\n");
+  
   const CFuint nbElemsPerLayer = _oldElemNode.nbRows();
-
   const CFuint nbTRinTRS = 1;
   const vector<CFuint> geomsInTR(nbTRinTRS,nbElemsPerLayer*layer.size());
   
   CFmeshReaderWriterSource& data = *(_data.get());
-
+  
   const CFuint iTRS = data.getNbTRSs();
   
   SafePtr<vector<std::string> > nameTRS = data.getNameTRS();
@@ -1079,6 +1121,19 @@ void Extruder2DFVMMPI::createSideTRS(const std::string& name,
   
   GeoConn& trCon = (*geoConn)[iTRS].front();
   
+  const CFuint totNbNodes  = MeshDataStack::getActive()->getTotalNodeCount();
+  const CFuint totNbStates =  MeshDataStack::getActive()->getTotalStateCount();
+  cf_assert(totNbNodes > 0);
+  cf_assert(totNbStates > 0);
+  
+  CFLog(VERBOSE, "Extruder2DFVMMPI::createSideTRS() => totNbNodes  = " << totNbNodes << "\n");
+  CFLog(VERBOSE, "Extruder2DFVMMPI::createSideTRS() => totNbStates = " << totNbStates << "\n");
+  
+  // processor mesh starts its connectivity from a fixed ID
+  const CFuint minNbLayers   = _nbLayers/_nbProc;
+  const CFuint offsetNodeID  = _nbNodesPerLayer*minNbLayers*_myRank;
+  const CFuint offsetStateID = _nbStatesPerLayer*minNbLayers*_myRank;
+  
   CFuint iElem = 0;
   for(CFuint iLayer = 0; iLayer < layer.size(); ++iLayer) {
     const CFuint currLayer = layer[iLayer];
@@ -1088,6 +1143,17 @@ void Extruder2DFVMMPI::createSideTRS(const std::string& name,
       trCon[iElem].first.resize(nbNodesInGeo);
       for (CFuint iNode = 0; iNode < nbNodesInGeo; ++iNode) {
 	trCon[iElem].first[iNode] = _oldElemNode(iGeo,iNode) + (currLayer * _nbNodesPerLayer);
+	
+	// remove the offset added inside the function convertCurrentElementsTo3D()
+	trCon[iElem].first[iNode] -=  offsetNodeID;
+	
+	if (trCon[iElem].first[iNode] >= totNbNodes) {
+	  CFLog(ERROR, "Extruder2DFVMMPI::createSideTRS() => TRS nodeID " <<
+		trCon[iElem].first[iNode] << " >= " << totNbNodes << "\n");
+	  CFLog(ERROR, "Extruder2DFVMMPI::createSideTRS() => TRS nodeID = " <<
+		_oldElemNode(iGeo,iNode) << " + (" << currLayer << " * " << _nbNodesPerLayer << ")\n");
+	  cf_assert(trCon[iElem].first[iNode] < totNbNodes);
+	}
       }
       
       // states
@@ -1106,6 +1172,15 @@ void Extruder2DFVMMPI::createSideTRS(const std::string& name,
 	  const CFuint nbLayer = (iLayer == 0) ? currLayer : (currLayer-1);
 	  trCon[iElem].second[iState] = _oldElemState(iGeo,iState) + (nbLayer * _nbStatesPerLayer);
 	}
+	
+	// remove the offset added inside the function convertCurrentElementsTo3D()
+	trCon[iElem].second[iState] -= offsetStateID;
+	
+	if (trCon[iElem].second[iState] >= totNbStates) {
+	  CFLog(ERROR, "Extruder2DFVMMPI::createSideTRS() => TRS nodeID " <<
+		trCon[iElem].second[iState] << " >= " << totNbStates << "\n");
+	  cf_assert(trCon[iElem].second[iState] < totNbStates);
+	}
       }
       
       if (bottom && layer.size() == 1) {
@@ -1114,6 +1189,8 @@ void Extruder2DFVMMPI::createSideTRS(const std::string& name,
       }
     }
   }
+  
+  CFLog(VERBOSE, "Extruder2DFVMMPI::createSideTRS() " << name << " end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

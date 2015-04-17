@@ -1055,14 +1055,14 @@ void ParCFmeshFileReader::readStateList(ifstream& fin)
       // no init values were used
       if (m_useInitValues.size() == 0)
       {
-  fin >> readState;
+	fin >> readState;
 
         if (m_hasPastStates) 
         {
           fin >> tmpPastState;
         }
-
-       if (m_hasInterStates) {
+	
+	if (m_hasInterStates) {
           fin >> tmpInterState;
         }
 
@@ -1083,53 +1083,53 @@ void ParCFmeshFileReader::readStateList(ifstream& fin)
           tmpState = *m_inputToUpdateVecTrans->transform(&dummyReadState);
         }
       }
-
+      
       // using init values
       else {
-
+	
         cf_assert(m_useInitValues.size() == nbEqs);
-      fin >> readState;
-
-            if (m_hasPastStates) {
-              fin >> tmpPastState;
-            }
-
-            if (m_hasInterStates) {
-              fin >> tmpInterState;
-            }
-
-            if (nbExtraVars > 0) {
-              fin >> extraVars;
-            }
-
-
-      for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
-      if (!m_useInitValues[iEq]) {
-        tmpState[iEq] = readState[iEq];
-       }
+	fin >> readState;
+	
+	if (m_hasPastStates) {
+	  fin >> tmpPastState;
+	}
+	
+	if (m_hasInterStates) {
+	  fin >> tmpInterState;
+	}
+	
+	if (nbExtraVars > 0) {
+	  fin >> extraVars;
+	}
+	
+	
+	for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+	  if (!m_useInitValues[iEq]) {
+	    tmpState[iEq] = readState[iEq];
+	  }
           else {
-      // here we use all initial values or all initial values IDs
-      cf_assert(m_initValues.size() != m_initValuesIDs.size());
+	    // here we use all initial values or all initial values IDs
+	    cf_assert(m_initValues.size() != m_initValuesIDs.size());
             if (m_initValues.size() > 0) {
               cf_assert(m_initValuesIDs.size() == 0);
               tmpState[iEq] = m_initValues[iEq];
             }
-
+	    
             if (m_initValuesIDs.size() > 0) {
-        const CFuint currID = m_initValuesIDs[iEq];
-        // if the current ID is >= nbEqs set this variable to 0.0
-        tmpState[iEq] = (currID < m_originalNbEqs) ? readState[currID] : 0.0;
+	      const CFuint currID = m_initValuesIDs[iEq];
+	      // if the current ID is >= nbEqs set this variable to 0.0
+	      tmpState[iEq] = (currID < m_originalNbEqs) ? readState[currID] : 0.0;
             }
           }
         }
-
+	
         // in case the original nb of equations in the file
         // is bigger than the current number of equations
         // we read the rest of the states and discard them
         if (m_originalNbEqs > nbEqs)
         {
-          for (CFuint iEq = nbEqs; iEq < m_originalNbEqs; ++iEq)
-          {
+	  for (CFuint iEq = nbEqs; iEq < m_originalNbEqs; ++iEq)
+	  {
             fin >> readState[iEq];
           }
         }

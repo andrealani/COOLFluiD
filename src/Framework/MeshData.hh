@@ -254,6 +254,18 @@ public: // methods
     return &m_globalElementIDs;
   }
 
+  /// Get the array storing the global IDs of nodes
+  Common::SafePtr<std::vector<CFuint> > getGlobalNodeIDs()
+  {
+    return &m_globalNodeIDs;
+  }
+  
+  /// Get the array storing the global IDs of states
+  Common::SafePtr<std::vector<CFuint> > getGlobalStateIDs()
+  {
+    return &m_globalStateIDs;
+  }
+
   /// Get the total number of mesh element types for all processors
   Common::SafePtr<std::vector<std::vector<std::vector<CFuint> > > >
   getGlobalTRSGeoIDs()
@@ -351,6 +363,12 @@ private: // member data
   /// global element IDs
   std::vector<CFuint> m_globalElementIDs;
 
+  /// global node IDs
+  std::vector<CFuint> m_globalNodeIDs;
+  
+  /// global state IDs
+  std::vector<CFuint> m_globalStateIDs;
+  
   /// global IDs of the GeometricEntity's in the TRS
   std::vector<std::vector<std::vector<CFuint> > > m_globalTRSGeoIDs;
 

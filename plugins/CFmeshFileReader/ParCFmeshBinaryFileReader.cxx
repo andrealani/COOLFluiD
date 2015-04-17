@@ -1311,8 +1311,8 @@ void ParCFmeshBinaryFileReader::readTRSName(MPI_File* fh)
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readTRSName() start\n");
   
   std::string name = readAndTrimString(fh);
-  CFLogDebugMin( "Found TRS " + name + "\n");
-    
+  CFLog(VERBOSE, "Found TRS " + name + "\n");
+  
   // check if TRS is to be merged
   m_mergedtrs = false;
   m_mergedtrs_just_added = false;
@@ -1368,9 +1368,9 @@ void ParCFmeshBinaryFileReader::readNbTRs(MPI_File* fh)
 
   const CFuint idx = m_trs_idxmap[m_curr_trs];
   (*getReadData().getNbTRs())[idx] += nbTRsInTRS;
-
-  CFLogDebugMin( "TRS " << m_curr_trs << " + " << nbTRsInTRS << "TR, total " << (*getReadData().getNbTRs())[idx] << " TR\n");
-
+  
+  CFLog(VERBOSE, "TRS " << m_curr_trs << " + " << nbTRsInTRS << "TR, total " << (*getReadData().getNbTRs())[idx] << " TR\n");
+  
   // set the current number of TR's being read
   m_curr_nbtr = nbTRsInTRS;
   
@@ -1504,7 +1504,11 @@ void ParCFmeshBinaryFileReader::readGeomEntList(MPI_File* fh)
       {
 	cf_assert(startn+n < buf.size());
 	geoConLocal.first[n] = buf[startn+n];
-        cf_assert(geoConLocal.first[n] < m_totNbNodes);
+	if (geoConLocal.first[n] >= m_totNbNodes) {
+	  CFLog(ERROR, "ParCFmeshBinaryFileReader::readGeomEntList() => TRD nodeID " 
+		<< geoConLocal.first[n] << " >= " << m_totNbNodes << "\n");
+	  cf_assert(geoConLocal.first[n] < m_totNbNodes);
+	}
       }
 
       const CFuint starts = startn + nbNodesInGeo;
@@ -1512,7 +1516,12 @@ void ParCFmeshBinaryFileReader::readGeomEntList(MPI_File* fh)
       {
 	cf_assert(starts+s < buf.size());
 	geoConLocal.second[s] = buf[starts + s];
-	cf_assert(geoConLocal.second[s] < m_totNbStates);
+	
+	if (geoConLocal.second[s] >= m_totNbStates) {
+	  CFLog(ERROR, "ParCFmeshBinaryFileReader::readGeomEntList() => TRD stateID " 
+		<< geoConLocal.second[s] << " >= " << m_totNbStates << "\n");
+	  cf_assert(geoConLocal.second[s] < m_totNbStates);
+	}
       }
       
       // check if the global ID of the first node of the
@@ -2626,6 +2635,12 @@ void ParCFmeshBinaryFileReader::readStateList(MPI_File* fh)
   MPI_Offset startListOffset;
   MPI_File_get_position(*fh, &startListOffset);
   
+  vector<CFreal> localStatesData(m_localStateIDs.size()*stateSize);
+  vector<CFreal> ghostStatesData;
+  if (m_ghostStateIDs.size() > 0) {
+    ghostStatesData.resize(m_ghostStateIDs.size()*stateSize);
+  }
+  
   if (isWithSolution)  { 
     // set the number of states to read in each processor
     vector<CFuint> nbStatesPerProc(m_nbProc);
@@ -2648,18 +2663,16 @@ void ParCFmeshBinaryFileReader::readStateList(MPI_File* fh)
 	  ", " << startPos + sizeRead*sizeof(CFreal) << "]\n");
     
     MPIIOFunctions::readAll("ParCFmeshBinaryFileReader::readStateList()", fh, startPos, &buf[0], (CFuint)sizeRead, m_maxBuffSize);
-    
-    vector<CFreal> localStatesData(m_localStateIDs.size()*stateSize);
     getLocalData(buf, ranges, m_localStateIDs, stateSize, localStatesData);
     
-    vector<CFreal> ghostStatesData;
     if (m_ghostStateIDs.size() > 0) {
-      ghostStatesData.resize(m_ghostStateIDs.size()*stateSize);
       getLocalData(buf, ranges, m_ghostStateIDs, stateSize, ghostStatesData);
     }  
-    
-    createStatesAll(localStatesData, ghostStatesData, states);
-    
+  }
+  
+  createStatesAll(localStatesData, ghostStatesData, states);
+  
+  if (isWithSolution)  { 
     MPI_Barrier(m_comm);
     MPI_Offset endPos = startListOffset + m_totNbStates*stateSize*sizeof(CFreal);
     MPI_File_seek(*fh, endPos, MPI_SEEK_SET);

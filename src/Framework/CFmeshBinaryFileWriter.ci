@@ -41,7 +41,7 @@ void cmpAndTakeMaxAbs2(CFreal* invec, CFreal* inoutvec, int* len,
 
 template <typename DATA>
 CFmeshBinaryFileWriter<DATA>::CFmeshBinaryFileWriter() :
-  ConfigObject("ParCFmeshBinaryFileWriter"),
+  ConfigObject("CFmeshBinaryFileWriter"),
   _comm(0),
   _fh(),
   _status(),
@@ -74,9 +74,9 @@ CFmeshBinaryFileWriter<DATA>::CFmeshBinaryFileWriter() :
 
 template <typename DATA>
 CFmeshBinaryFileWriter<DATA>::~CFmeshBinaryFileWriter()
-{
+{  
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename DATA>
@@ -103,6 +103,8 @@ void CFmeshBinaryFileWriter<DATA>::setup()
     CFLog(WARN, "CFmeshBinaryFileWriter<DATA>::setup() => _nbWriters > _nbProc, therefore they are set equal!\n");
     _nbWriters = _nbProc;
   }
+  
+  CFLog(VERBOSE, "CFmeshBinaryFileWriter<DATA>::setup() => _nbWriters = " << _nbWriters << "\n");
   
   // in reality ranks will be user-defined 
   vector<int> ranks;
@@ -132,8 +134,9 @@ void CFmeshBinaryFileWriter<DATA>::setup()
   }
   
   // create the writers group
-  PE::createGroup(writerRanks, false);
-
+  const string groupName = "Writers";
+  PE::createGroup(groupName, writerRanks, false);
+  
   // AL: the group will be created again by ParCFmeshBinaryFileReader ... this could give problems 
   
   CFLog(VERBOSE, "CFmeshBinaryFileWriter<DATA>::setup() => " << 
@@ -142,6 +145,15 @@ void CFmeshBinaryFileWriter<DATA>::setup()
 }
       
 //////////////////////////////////////////////////////////////////////////////
+
+template <typename DATA>
+void CFmeshBinaryFileWriter<DATA>::unsetup()
+{ 
+  CFLog(VERBOSE, "CFmeshBinaryFileWriter<DATA>::unsetup() START\n");
+  CFLog(VERBOSE, "CFmeshBinaryFileWriter<DATA>::unsetup() END\n");
+}
+   
+////////////////////////////////////////////////////////////////////////////// 
 
 template <typename DATA>
 void CFmeshBinaryFileWriter<DATA>::writeToFile(const boost::filesystem::path& filepath)
@@ -180,9 +192,9 @@ void CFmeshBinaryFileWriter<DATA>::writeToFileStream
   using namespace COOLFluiD::Common;
   
   CFLog(VERBOSE,  "CFmeshBinaryFileWriter<DATA>::writeToFileStream() start\n");
-
-  // last group is writers group
-  PE::Group& wg = PE::getGroup(0);
+  
+  const std::string groupName = "Writers";
+  PE::Group& wg = PE::getGroup(groupName);
   char* fileName = const_cast<char*>(filepath.string().c_str()); 
   
   // all writers open the file for the second or more time
@@ -211,7 +223,7 @@ void CFmeshBinaryFileWriter<DATA>::writeToFileStream
   if (_isWriterRank) {
     _mapFileToStartNodeList[filepath] = _offset.TRS.back().second;
   }
-    
+  
   // write the node list
   writeNodeList(&_fh);
   
@@ -236,7 +248,7 @@ void CFmeshBinaryFileWriter<DATA>::writeVersionStamp(MPI_File* fh)
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::Environment;
   
-  CFLog(VERBOSE,  "CFmeshBinaryFileWriter<DATA>::writeDimension() start\n");
+  CFLog(VERBOSE,  "CFmeshBinaryFileWriter<DATA>::writeVersionStamp() start\n");
   
   if (_myRank == _ioRank) {
     MPIIOFunctions::writeKeyValue<char>(fh, "!COOLFLUID_VERSION ");
@@ -247,9 +259,9 @@ void CFmeshBinaryFileWriter<DATA>::writeVersionStamp(MPI_File* fh)
     MPIIOFunctions::writeKeyValue<char>(fh, "1.3");
   }
   
-  CFLog(VERBOSE,  "CFmeshBinaryFileWriter<DATA>::writeDimension() end\n");
+  CFLog(VERBOSE,  "CFmeshBinaryFileWriter<DATA>::writeVersionStamp() end\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename DATA>
@@ -504,11 +516,16 @@ void CFmeshBinaryFileWriter<DATA>::writeElementList(MPI_File* fh)
   
   CFLog(VERBOSE, "countstates.size() = " << countstates.size() << "\n");
   
-  PE::Group& wgroup = PE::getGroup(0);
+  const string groupName = "Writers";
+  PE::Group& wg = PE::getGroup(groupName);
+  
+  CFLog(VERBOSE,  "wg.globalRanks.size() = " << wg.globalRanks.size() << "\n");
+  
   CFint wRank = -1; 
   CFuint rangeID = 0;
   MPI_Offset dataSize = 0;
   for (CFuint iType = 0; iType < nbElementTypes; ++iType) {
+    cf_assert(iType < me.size());
     const CFuint nbNodesInType  = me[iType].elementNodes;
     const CFuint nbStatesInType = me[iType].elementStates;
     const CFuint nodesPlusStates = nbNodesInType + nbStatesInType;
@@ -559,9 +576,10 @@ void CFmeshBinaryFileWriter<DATA>::writeElementList(MPI_File* fh)
       const CFuint sendSize = elementList.getSendDataSize(rangeID);
       cf_assert(sendSize <= sendElements.size());
       cf_assert(sendSize <= elementToPrint.size());
+      cf_assert(is < wg.globalRanks.size());
       
       // if the rank corresponds to a writing process, record the size to send for this writer
-      if (_isWriterRank && wgroup.globalRanks[is] == _myRank) {
+      if (_isWriterRank && wg.globalRanks[is] == _myRank) {
 	wSendSize = sendSize; // this should be the total sendsize in the range
 	wRank = is;
       }
@@ -569,8 +587,7 @@ void CFmeshBinaryFileWriter<DATA>::writeElementList(MPI_File* fh)
       // for each send, accumulate data to the corresponding writing process
       // this might allocate too much memory on master processes with OPENMPI
       MPI_Reduce(&sendElements[0], &elementToPrint[0], (int)sendSize,
-		 MPIStructDef::getMPIType(&sendElements[0]), MPI_MAX, wgroup.globalRanks[is], _comm);
-
+		 MPIStructDef::getMPIType(&sendElements[0]), MPI_MAX, wg.globalRanks[is], _comm);
       
       /// another sanity check
       if(_nbProc == 1 && getWriteData().getNbUpdatableStates() == getWriteData().getNbElements()) {
@@ -607,11 +624,13 @@ void CFmeshBinaryFileWriter<DATA>::writeElementList(MPI_File* fh)
     } // end sending loop
     
     if (_isWriterRank) { 
-      CFLog(DEBUG_MIN, "CFmeshBinaryFileWriter<DATA>::writeElementList() => P[" << _myRank 
+      CFLog(VERBOSE, "CFmeshBinaryFileWriter<DATA>::writeElementList() => P[" << _myRank 
 	    << "] => offset = " << wOffset[wRank] << "\n");
       
       // each writer can now concurrently write all the collected data (related to one element type)
-      cf_assert(wRank >= 0);
+      cf_assert(wRank >= 0); 
+      cf_assert(wRank < wOffset.size()); 
+      
       MPIIOFunctions::writeAll("CFmeshBinaryFileWriter<DATA>::writeElementList()", fh, 
 			       wOffset[wRank], &elementToPrint[0], wSendSize, _maxBuffSize);
       
@@ -644,7 +663,7 @@ void CFmeshBinaryFileWriter<DATA>::writeElementList(MPI_File* fh)
   CFLogInfo("Element written \n"); 
   
   if (_isWriterRank) {
-    MPI_Barrier(wgroup.comm);
+    MPI_Barrier(wg.comm);
     MPI_File_seek(*fh, _offset.elems.second, MPI_SEEK_SET);
   }
   
@@ -702,8 +721,6 @@ void CFmeshBinaryFileWriter<DATA>::writeTrsData(MPI_File* fh)
   }
   
   CFLog(VERBOSE,  "CFmeshBinaryFileWriter<DATA>::writeTrsData() end\n");
-  
-  for (;;){}
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -717,14 +734,13 @@ void CFmeshBinaryFileWriter<DATA>::writeNodeList(MPI_File* fh)
     
   CFLog(VERBOSE,  "CFmeshBinaryFileWriter<DATA>::writeNodeList() start\n");
   
-  /*
   if (_isWriterRank) {
     MPI_File_seek(*fh, _offset.TRS.back().second, MPI_SEEK_SET);
   }
   
   if (_myRank == _ioRank) {
-  MPIIOFunctions::writeKeyValue<char>(fh, "\n!LIST_NODE");
-  MPIIOFunctions::writeKeyValue<char>(fh, "\n");
+    MPIIOFunctions::writeKeyValue<char>(fh, "\n!LIST_NODE");
+    MPIIOFunctions::writeKeyValue<char>(fh, "\n");
   }
   
   MPI_Offset offset;
@@ -733,14 +749,19 @@ void CFmeshBinaryFileWriter<DATA>::writeNodeList(MPI_File* fh)
   // wOffset is initialized with current offset
   vector<MPI_Offset> wOffset(_nbWriters, offset); 
   
-  PE::Group& wgroup = PE::getGroup(0);
+  const string groupName = "Writers";
+  PE::Group& wg = PE::getGroup(groupName);
+  
   if (_isWriterRank) {
-    MPI_Barrier(wgroup.comm);
+    MPI_Barrier(wg.comm);
   }
   
   const CFuint totNbNodes = MeshDataStack::getActive()->getTotalNodeCount();
   const CFuint dim  = PhysicalModelStack::getActive()->getDim();
   const CFreal refL = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
+  
+  CFLog(VERBOSE, "totNbNodes = " << totNbNodes << "\n");
+  CFLog(VERBOSE, "dim        = " << dim << "\n");
   
   const CFuint nSend = _nbWriters;
   const CFuint nbElementTypes = 1; // just nodes
@@ -768,11 +789,18 @@ void CFmeshBinaryFileWriter<DATA>::writeNodeList(MPI_File* fh)
   // update the maximum possible element-list size to send
   const CFuint maxElemSendSize = elementList.getMaxElemSize();
   
+  SafePtr< vector<CFreal> > nodes = getWriteData().getNodeList();
+  
   // insert in the write list the local IDs of the elements
   // the range ID is automatically determined inside the WriteListMap
-  const CFuint nbLocalElementsInType = nodes.size();
+  const CFuint nbLocalElementsInType = nodes->size()/dim;
+  CFLog(VERBOSE, "nbLocalElementsInType = " << nbLocalElementsInType << "\n");
+  
+  SafePtr< vector<CFuint> > globalNodeIDs = MeshDataStack::getActive()->getGlobalNodeIDs();
+  
+  // TO BE RESTORED
   for (CFuint iElem = 0; iElem < nbLocalElementsInType; ++iElem) {
-    elementList.insertElemLocalID(iElem, nodes[iElem]->getGlobalID(), 0);
+    elementList.insertElemLocalID(iElem, (*globalNodeIDs)[iElem], 0);
   }
   elementList.endElemInsertion(_myRank);
   
@@ -798,24 +826,24 @@ void CFmeshBinaryFileWriter<DATA>::writeNodeList(MPI_File* fh)
       CFuint eSize = 0;
       for (WriteListMap::ListIterator it = elist.first; it != elist.second; ++it, ++eSize) {
 	const CFuint localElemID = it->second;
-	const CFuint globalElemID = nodes[localElemID]->getGlobalID();
+	const CFuint globalElemID = (*globalNodeIDs)[localElemID];
 	const CFuint sendElemID = globalElemID - countElem;
 	
 	CFuint isend = sendElemID*nodesStride;
 	for (CFuint in = 0; in < dim; ++in, ++isend) {
 	  cf_assert(isend < sendElements.size());
-	  sendElements[isend] = (*nodes[localElemID])[in]*refL;
+	  sendElements[isend] = getWriteData().getNode(localElemID)[in]*refL;
 	}
 	
-        if (storePastNodes) {
+	if (storePastNodes) {
 	  const RealVector* pastNodesValues = getWriteData().getPastNode(localElemID);
-	  cf_assert(pastNodesValues->size() == (*nodes[localElemID]).size());
+	  cf_assert(pastNodesValues->size() == dim);
 	  for (CFuint in = 0; in < pastNodesValues->size(); ++in, ++isend) {
 	    cf_assert(isend < sendElements.size());
 	    sendElements[isend] = (*pastNodesValues)[in];
 	  }
-        }
-
+	}
+	
 	if (nbExtraNodalVars > 0) {
 	  const RealVector& extraNodalValues = getWriteData().getExtraNodalValues(localElemID);
 	  cf_assert(extraNodalValues.size() == totalNbExtraNodalVars);
@@ -825,7 +853,7 @@ void CFmeshBinaryFileWriter<DATA>::writeNodeList(MPI_File* fh)
 	  }
 	}
       }
-
+      
       cf_assert(eSize*nodesStride <= elementList.getSendDataSize(rangeID));
     }
 
@@ -837,7 +865,7 @@ void CFmeshBinaryFileWriter<DATA>::writeNodeList(MPI_File* fh)
     cf_assert(sendSize <= elementToPrint.size());
 
     // if the rank corresponds to a writing process, record the size to send for this writer
-    if (_isWriterRank && wgroup.globalRanks[is] == _myRank) {
+    if (_isWriterRank && wg.globalRanks[is] == _myRank) {
       wSendSize = sendSize; // this should be the total sendsize in the range
       wRank = is;
     }
@@ -845,7 +873,7 @@ void CFmeshBinaryFileWriter<DATA>::writeNodeList(MPI_File* fh)
     MPI_Op myMpiOp;
     MPI_Op_create((MPI_User_function *)cmpAndTakeMaxAbs2, 1, &myMpiOp);
     MPI_Reduce(&sendElements[0], &elementToPrint[0], sendSize,
-	       MPIStructDef::getMPIType(&sendElements[0]), myMpiOp, wgroup.globalRanks[is], _comm);
+	       MPIStructDef::getMPIType(&sendElements[0]), myMpiOp, wg.globalRanks[is], _comm);
     
     // MPI_Allreduce(&sendElements[0], &elementToPrint[0], maxElemSendSize, 
     //               MPIStructDef::getMPIType(&sendElements[0]), myMpiOp, _comm);
@@ -887,13 +915,12 @@ void CFmeshBinaryFileWriter<DATA>::writeNodeList(MPI_File* fh)
   }
   
   if (_isWriterRank) {
-    MPI_Barrier(wgroup.comm);
+    MPI_Barrier(wg.comm);
     MPI_File_seek(*fh, _offset.nodes.second, MPI_SEEK_SET);
   }
   
   CFLogInfo("Nodes written \n");
-  */
-  
+    
   CFLog(VERBOSE,  "CFmeshBinaryFileWriter<DATA>::writeNodeList() end\n");
 }
 
@@ -919,28 +946,37 @@ void CFmeshBinaryFileWriter<DATA>::writeStateList(MPI_File* fh)
     MPIIOFunctions::writeKeyValue<char>(fh, "\n");
   }
   
-  PE::Group& wgroup = PE::getGroup(0);
+  const string groupName = "Writers";
+  PE::Group& wg = PE::getGroup(groupName);
+  
+  CFuint totalToSend = 0;
+  
+  MPI_Offset offset;
+  MPI_File_get_position(*fh, &offset);
+  MPI_Bcast(&offset, 1, MPIStructDef::getMPIOffsetType(), _ioRank, _comm);
+  
+  // initialization of offsets
+  _offset.states.first  = offset;
+  _offset.states.second = _offset.states.first;
+  cf_always_assert(_offset.states.first > 0);
+  cf_always_assert(_offset.states.second > 0);
+  
   if (getWriteData().isWithSolution()){
-    MPI_Offset offset;
-    MPI_File_get_position(*fh, &offset);
-    MPI_Bcast(&offset, 1, MPIStructDef::getMPIOffsetType(), _ioRank, _comm);
     // wOffset is initialized with current offset
     vector<MPI_Offset> wOffset(_nbWriters, offset); 
     
     if (_isWriterRank) {
-      MPI_Barrier(wgroup.comm);
+      MPI_Barrier(wg.comm);
     }
     
     const CFuint totNbStates = MeshDataStack::getActive()->getTotalStateCount();
     const CFuint dim = PhysicalModelStack::getActive()->getNbEq();
-    
-    DataHandle < Framework::State*, Framework::GLOBAL > states =
-      MeshDataStack::getActive()->getStateDataSocketSink().getDataHandle();
-    cf_assert(states.size() > 0);
+    SafePtr< vector<CFreal> > states = getWriteData().getStateList();
+    cf_assert(states->size() > 0);
     
     const CFuint nSend = _nbWriters;
     const CFuint nbElementTypes = 1; // just states
-    const CFuint nbLocalElements = states.size();
+    const CFuint nbLocalElements = getWriteData().getNbUpdatableStates();
     
     WriteListMap elementList;
     elementList.reserve(nbElementTypes, nSend, nbLocalElements);
@@ -954,7 +990,7 @@ void CFmeshBinaryFileWriter<DATA>::writeStateList(MPI_File* fh)
     const vector<CFuint>& stateExtraVarsStrides = *getWriteData().getExtraStateVarStrides();
     const CFuint totalNbExtraStateVars = std::accumulate(stateExtraVarsStrides.begin(),
 							 stateExtraVarsStrides.end(), 0);
-
+    
     CFuint statesStride = dim + totalNbExtraStateVars;
     if (storePastStates)  {statesStride += dim;}
     if (storeInterStates) {statesStride += dim;}
@@ -968,14 +1004,16 @@ void CFmeshBinaryFileWriter<DATA>::writeStateList(MPI_File* fh)
     
     // insert in the write list the local IDs of the elements
     // the range ID is automatically determined inside the WriteListMap
-    const CFuint nbLocalElementsInType = states.size();
+    const CFuint nbLocalElementsInType = states->size()/dim;
+    
+    SafePtr< vector<CFuint> > globalStateIDs = MeshDataStack::getActive()->getGlobalStateIDs();
+    
     for (CFuint iElem = 0; iElem < nbLocalElementsInType; ++iElem) {
-      elementList.insertElemLocalID(iElem, states[iElem]->getGlobalID(), 0);
+      elementList.insertElemLocalID(iElem, (*globalStateIDs)[iElem], 0);
     }
     elementList.endElemInsertion(_myRank);
-  
+    
     // start(current position) / end nodes list offset
-    _offset.states.first  = offset;
     _offset.states.second = _offset.states.first + sizeof(CFreal)*totalToSend;
     CFLog(VERBOSE, "CFmeshBinaryFileWriter<DATA>::writeStateList() => offsets = [" 
 	  <<  _offset.states.first << ", " << _offset.states.second << "]\n");
@@ -996,18 +1034,18 @@ void CFmeshBinaryFileWriter<DATA>::writeStateList(MPI_File* fh)
 	CFuint eSize = 0;
 	for (WriteListMap::ListIterator it = elist.first; it != elist.second; ++it, ++eSize) {
 	  const CFuint localElemID = it->second;
-	  const CFuint globalElemID = states[localElemID]->getGlobalID();
+	  const CFuint globalElemID = (*globalStateIDs)[localElemID];
 	  const CFuint sendElemID = globalElemID - countElem;
 	  
 	  CFuint isend = sendElemID*statesStride;
 	  for (CFuint in = 0; in < dim; ++in, ++isend) {
 	    cf_assert(isend < sendElements.size());
-	    sendElements[isend] = (*states[localElemID])[in];
+	    sendElements[isend] = getWriteData().getState(localElemID)[in];
 	  }
 	  
           if(storePastStates){
 	    const RealVector* pastStatesValues = getWriteData().getPastState(localElemID);
-	    cf_assert(pastStatesValues->size() == (*states[localElemID]).size());
+	    cf_assert(pastStatesValues->size() == dim);
 	    for (CFuint in = 0; in < pastStatesValues->size(); ++in, ++isend) {
 	      cf_assert(isend < sendElements.size());
 	      sendElements[isend] = (*pastStatesValues)[in];
@@ -1016,7 +1054,7 @@ void CFmeshBinaryFileWriter<DATA>::writeStateList(MPI_File* fh)
 	  
           if(storeInterStates){
 	    const RealVector* interStatesValues = getWriteData().getInterState(localElemID);
-	    cf_assert(interStatesValues->size() == (*states[localElemID]).size());
+	    cf_assert(interStatesValues->size() == dim);
 	    for (CFuint in = 0; in < interStatesValues->size(); ++in, ++isend) {
 	      cf_assert(isend < sendElements.size());
 	      sendElements[isend] = (*interStatesValues)[in];
@@ -1044,7 +1082,7 @@ void CFmeshBinaryFileWriter<DATA>::writeStateList(MPI_File* fh)
       cf_assert(sendSize <= elementToPrint.size());
       
       // if the rank corresponds to a writing process, record the size to send for this writer
-      if (_isWriterRank && wgroup.globalRanks[is] == _myRank) {
+      if (_isWriterRank && wg.globalRanks[is] == _myRank) {
 	wSendSize = sendSize; // this should be the total sendsize in the range
 	wRank = is;
       }
@@ -1053,7 +1091,7 @@ void CFmeshBinaryFileWriter<DATA>::writeStateList(MPI_File* fh)
       MPI_Op_create((MPI_User_function *)cmpAndTakeMaxAbs2, 1, &myMpiOp);
       MPI_Reduce(&sendElements[0], &elementToPrint[0], sendSize, 
 		 MPIStructDef::getMPIType(&sendElements[0]), 
-		 myMpiOp, wgroup.globalRanks[is], _comm);
+		 myMpiOp, wg.globalRanks[is], _comm);
       // MPI_Allreduce(&sendElements[0], &elementToPrint[0], maxElemSendSize, 
       //               MPIStructDef::getMPIType(&sendElements[0]), myMpiOp, _comm);
       
@@ -1095,12 +1133,12 @@ void CFmeshBinaryFileWriter<DATA>::writeStateList(MPI_File* fh)
   }
   
   if (_isWriterRank) {
-    MPI_Barrier(wgroup.comm);
+    MPI_Barrier(wg.comm);
     MPI_File_seek(*fh, _offset.states.second, MPI_SEEK_SET);
   }
   
   CFLogInfo("States written \n");
-  
+    
   CFLog(VERBOSE,  "CFmeshBinaryFileWriter<DATA>::writeStateList() end\n");
 }
 
@@ -1120,6 +1158,10 @@ void CFmeshBinaryFileWriter<DATA>::writeGeoList(CFuint iTRS, MPI_File* fh)
   
   SafePtr<vector<vector<vector<CFuint> > > > globalGeoIDS =
     MeshDataStack::getActive()->getGlobalTRSGeoIDs();
+  
+  const string nameTRS = MeshDataStack::getActive()->getTotalTRSNames()[iTRS];
+  CFLog(VERBOSE, "CFmeshBinaryFileWriter<DATA>::writeGeoList() for TRS named = " << nameTRS << "\n");
+  const bool is2DTrs = (nameTRS != "Periodic" && nameTRS != "Top" && nameTRS != "Bottom");
   
   const CFuint nbTRsInTRS = (*globalGeoIDS)[iTRS].size();
   CFLog(VERBOSE, "nbTRsInTRS = " << nbTRsInTRS << "\n");
@@ -1152,7 +1194,7 @@ void CFmeshBinaryFileWriter<DATA>::writeGeoList(CFuint iTRS, MPI_File* fh)
       nbNodesStatesInTRGeoTmp(iTR,1) = (isFVMCC) ? 1 : maxNbStatesInTRGeo;
     }
   }
-
+  
   // fill in all the MAXIMUM numbers of nodes and states per all the TRs in this TRS
   // example: in a TR with quads and triangles nbNodesStatesInTRGeoTmp(iTR,0) = 4
   // example: in a TR with quads and triangles nbNodesStatesInTRGeoTmp(iTR,1) = 4 (FEM) or 1 (FVMCC)
@@ -1176,9 +1218,11 @@ void CFmeshBinaryFileWriter<DATA>::writeGeoList(CFuint iTRS, MPI_File* fh)
   // wOffset is initialized with current offset
   vector<MPI_Offset> wOffset(_nbWriters, offset); 
   
-  PE::Group& wgroup = PE::getGroup(0);
+  const string groupName = "Writers";
+  PE::Group& wg = PE::getGroup(groupName);
+  
   if (_isWriterRank) {
-    MPI_Barrier(wgroup.comm);
+    MPI_Barrier(wg.comm);
   }
   
   const CFuint nSend = _nbWriters;
@@ -1195,7 +1239,6 @@ void CFmeshBinaryFileWriter<DATA>::writeGeoList(CFuint iTRS, MPI_File* fh)
   CFuint totalToSend = 0;
   for (CFuint iType = 0; iType < nbElementTypes; ++iType) {
     const CFuint nbElementsInType = trsInfo[iTRS][iType];
-    CFLog(INFO, "MAMMA ############ nbElementsInType = " << nbElementsInType  << "\n");
     const CFuint maxNbNodesInType =  nbNodesStatesInTRGeo(iType, 0);
     const CFuint maxNbStatesInType = nbNodesStatesInTRGeo(iType, 1);
     // the max number of nodes and states includes two additional integers:
@@ -1219,7 +1262,8 @@ void CFmeshBinaryFileWriter<DATA>::writeGeoList(CFuint iTRS, MPI_File* fh)
   // end TRS element list offset
   _offset.TRS[iTRS].second = _offset.TRS[iTRS].first + sizeof(CFint)*totalToSend;
   
-  // cout << _myRank << " TRS[" << iTRS << "] offsets = [" << _offset.TRS[iTRS].first  << ", " << _offset.TRS[iTRS].second << "]\n";
+  CFLog(VERBOSE, "P[" << _myRank << "] => TRS[" << iTRS << "] offsets = [" << 
+	_offset.TRS[iTRS].first  << ", " << _offset.TRS[iTRS].second << "]\n");
   
   if (_isWriterRank) {
     MPI_File_seek(*fh, _offset.TRS[iTRS].first, MPI_SEEK_SET);
@@ -1230,9 +1274,7 @@ void CFmeshBinaryFileWriter<DATA>::writeGeoList(CFuint iTRS, MPI_File* fh)
   for (CFuint iType = 0; iType < nbElementTypes; ++iType) {
     const CFuint nbLocalElementsInType = (*nbGeomEntsPerTR)[iTRS][iType];
     for (CFuint iElem = 0; iElem < nbLocalElementsInType; ++iElem) {
-      // CFLog(INFO, _myRank << " elem = " << iElem << " " << (*globalGeoIDS)[iTRS][iType][iElem] << " " << iType << " BEFORE\n");
       elementList.insertElemLocalID(iElem, (*globalGeoIDS)[iTRS][iType][iElem], iType);
-      // CFLog(INFO, _myRank << " elem = " << iElem << " " << (*globalGeoIDS)[iTRS][iType][iElem] << " " << iType << " AFTER\n");
     }
   }
   elementList.endElemInsertion(_myRank);
@@ -1240,6 +1282,8 @@ void CFmeshBinaryFileWriter<DATA>::writeGeoList(CFuint iTRS, MPI_File* fh)
   // buffer data to send
   vector<CFint> sendElements(maxElemSendSize, -1);
   vector<CFint> elementToPrint(maxElemSendSize, -1);
+  const CFuint totNbNodes  = MeshDataStack::getActive()->getTotalNodeCount();
+  const CFuint totNbStates =  MeshDataStack::getActive()->getTotalStateCount();
   
   CFint wRank = -1; 
   CFuint rangeID = 0;
@@ -1254,8 +1298,9 @@ void CFmeshBinaryFileWriter<DATA>::writeGeoList(CFuint iTRS, MPI_File* fh)
     for (CFuint is = 0; is < nSend; ++is, ++rangeID) {
       bool isRangeFound = false;
       WriteListMap::List elist = elementList.find(rangeID, isRangeFound);
-      
+
       if (isRangeFound) {
+	// if ((isRangeFound && is2DTrs) || (isRangeFound && (!is2DTrs && _myRank == _ioRank))) {
 	CFuint eSize = 0;
 	for (WriteListMap::ListIterator it = elist.first; it != elist.second; ++it, ++eSize) {
 	  const CFuint localElemID = it->second;
@@ -1287,6 +1332,11 @@ void CFmeshBinaryFileWriter<DATA>::writeGeoList(CFuint iTRS, MPI_File* fh)
 	    }
 	    // set the global ID to -1 if the local ID is -1
 	    sendElements[isend] = (localNodeID != -1) ? static_cast<CFint>((*nodesInGeo)[in]) : -1;
+	    if ((*nodesInGeo)[in] >= totNbNodes) {
+	      CFLog(ERROR, "CFmeshBinaryFileWriter<DATA>::writeGeoList() => TRS nodeID " 
+		    << (*nodesInGeo)[in] << " >= " << totNbNodes << "\n");
+	      cf_assert((*nodesInGeo)[in] < totNbNodes);
+	    }
 	  }
 	  
 	  // TR geo states data
@@ -1300,6 +1350,12 @@ void CFmeshBinaryFileWriter<DATA>::writeGeoList(CFuint iTRS, MPI_File* fh)
 	    }
 	    // set the global ID to -1 if the local ID is -1
 	    sendElements[isend] = (localStateID != -1) ? static_cast<CFint>((*statesInGeo)[in]) : -1;
+	    
+	    if ((*statesInGeo)[in] >= totNbStates) {
+	      CFLog(ERROR, "CFmeshBinaryFileWriter<DATA>::writeGeoList() => TRS stateID " 
+		    << (*statesInGeo)[in] << " >= " << totNbStates << "\n");
+	      cf_assert((*statesInGeo)[in] < totNbStates);
+	    }
 	  }
 	}
 	
@@ -1309,19 +1365,24 @@ void CFmeshBinaryFileWriter<DATA>::writeGeoList(CFuint iTRS, MPI_File* fh)
       CFLogDebugMax(_myRank << CFPrintContainer<vector<CFint> >
 		    (" sendElements  = ", &sendElements, maxNodesPlusStates) << "\n");
       
-      const CFuint sendSize = elementList.getSendDataSize(rangeID);
-      cf_assert(sendSize <= sendElements.size());
-      cf_assert(sendSize <= elementToPrint.size());
+      CFuint sendSize = 0;
+      // the following is to make sure that for Top, Bottom, Periodic TRSs only one process
+      // writes out the corresponding data
+      // if (is2DTrs || (!is2DTrs && _myRank == _ioRank)) {
+	sendSize = elementList.getSendDataSize(rangeID);
+	cf_assert(sendSize <= sendElements.size());
+	cf_assert(sendSize <= elementToPrint.size());
+	// }	  
       
       // if the rank corresponds to a writing process, record the size to send for this writer
-      if (_isWriterRank && wgroup.globalRanks[is] == _myRank) {
+      if (_isWriterRank && wg.globalRanks[is] == _myRank) {
 	wSendSize = sendSize; // this should be the total sendsize in the range
 	wRank = is;
       }
       
       // for each send, accumulate data to the corresponding writing process
       MPI_Reduce(&sendElements[0], &elementToPrint[0], (int)sendSize,
-		 MPIStructDef::getMPIType(&sendElements[0]), MPI_MAX, wgroup.globalRanks[is], _comm);
+		 MPIStructDef::getMPIType(&sendElements[0]), MPI_MAX, wg.globalRanks[is], _comm);
       
       CFLogDebugMax(_myRank << CFPrintContainer<vector<CFint> >
 		    (" elementToPrint  = ", &elementToPrint, maxNodesPlusStates) << "\n");
@@ -1370,7 +1431,7 @@ void CFmeshBinaryFileWriter<DATA>::writeGeoList(CFuint iTRS, MPI_File* fh)
   }
   
   if (_isWriterRank) {
-    MPI_Barrier(wgroup.comm);
+    MPI_Barrier(wg.comm);
     MPI_File_seek(*fh, _offset.TRS[iTRS].second, MPI_SEEK_SET);
   }
   
@@ -1391,6 +1452,7 @@ void CFmeshBinaryFileWriter<DATA>::writeEndFile(MPI_File* fh)
   if (_myRank == _ioRank) {
     MPI_Offset offset;
     MPI_File_get_position(*fh, &offset);
+    cf_always_assert(offset > 0);
     CFLog(VERBOSE, _myRank << " END FILE offset is " << offset << "\n");
     MPIIOFunctions::writeKeyValue<char>(fh, "\n!END");
   }
