@@ -34,7 +34,6 @@
 #include "Framework/Namespace.hh"
 #include "Framework/Framework.hh"
 #include "Framework/SimulationStatus.hh"
-#include "Framework/DynamicBalancerMethod.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -71,8 +70,6 @@ void OnlyMeshSubSystem::defineConfigOptions(Config::OptionList& options)
    options.addConfigOption< std::vector<std::string> >("SpaceMethodNames","Names of the space method.");
    options.addConfigOption< std::vector<std::string> >("SpaceMethod","Self-reg keys of the space method.");
    options.addConfigOption< std::vector<std::string> >("OutputFormatNames","Names of the output format.");
-   options.addConfigOption< std::vector<std::string> >("DynamicBalancerMethod","Self-reg keys of the dynamic balancer method.");
-   options.addConfigOption< std::vector<std::string> >("DynamicBalancerMethodNames","Names of the dynamic balancer method");
    options.addConfigOption< CFuint >("InitialIter","Initial Iteration Number");
    options.addConfigOption< CFreal >("InitialTime","Initial Physical Time of the SubSystem");
 }
@@ -105,10 +102,6 @@ OnlyMeshSubSystem::OnlyMeshSubSystem(const std::string& name)
   // OutputFormatter-related configuration options
   setParameter("OutputFormat",&m_outputFormat.mKeys);
   setParameter("OutputFormatNames",&m_outputFormat.mNames);
-
-  // DynamicBalancerMethod configuration options
-  setParameter("DynamicBalancerMethod",&m_dynamicBalancerMethod.mKeys);
-  setParameter("DynamicBalancerMethodNames",&m_dynamicBalancerMethod.mNames);
 
   m_initialTime = 0.;
   setParameter("InitialTime",&m_initialTime);
@@ -149,9 +142,6 @@ void OnlyMeshSubSystem::configure ( Config::ConfigArgs& args )
 
   // builds OutputFormatter
   configureMultiMethod<OutputFormatter>(args, m_outputFormat);
-
-  // builds DynamicBalancer
-  configureMultiMethod<DynamicBalancerMethod>(args, m_dynamicBalancerMethod);
 
   // set collaborators
   setCollaborators();
@@ -381,7 +371,9 @@ void OnlyMeshSubSystem::buildMeshData()
 void OnlyMeshSubSystem::setup()
 {
   CFAUTOTRACE;
-
+ 
+  CFLog(VERBOSE, "OnlyMeshSubSystem::setup() start\n");
+  
   cf_assert(isConfigured());
 
   typedef std::vector<Common::SafePtr<Namespace> > NspVec;
@@ -415,11 +407,6 @@ void OnlyMeshSubSystem::setup()
   m_outputFormat.apply
     (root_mem_fun<void,OutputFormatter>(&OutputFormatter::setMethod));
 
-  CFLog(NOTICE,"-------------------------------------------------------------\n");
-  CFLogInfo("Setting up DynamicBalancer's\n");
-  m_dynamicBalancerMethod.apply
-    (root_mem_fun<void,DynamicBalancerMethod>(&DynamicBalancerMethod::setMethod));
-
   vector <Common::SafePtr<SubSystemStatus> > subSysStatusVec =
     SubSystemStatusStack::getInstance().getAllEntries();
 
@@ -441,6 +428,8 @@ void OnlyMeshSubSystem::setup()
 
   CFLogInfo("Writing initial solution ... \n");
   writeSolution(true);
+  
+  CFLog(VERBOSE, "OnlyMeshSubSystem::setup() end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -448,17 +437,15 @@ void OnlyMeshSubSystem::setup()
 void OnlyMeshSubSystem::run()
 {
   CFAUTOTRACE;
-
-  CFLogInfo("I AM BEING RUN!!!\n");
-  m_dynamicBalancerMethod.apply( mem_fun<void,DynamicBalancerMethod>(&DynamicBalancerMethod::doDynamicBalance) );
-    // call the domain decomposition
-  CFLogInfo("DONE\n");
+  CFLog(VERBOSE, "OnlyMeshSubSystem::run()\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void OnlyMeshSubSystem::setGlobalData()
 {
+  CFLog(VERBOSE, "OnlyMeshSubSystem::setGlobalData() start\n");
+  
   const bool isParallel = PE::GetPE().IsParallel ();
 
   vector <Common::SafePtr<MeshData> > meshDataVector = MeshDataStack::getInstance().getAllEntries();
@@ -485,14 +472,18 @@ void OnlyMeshSubSystem::setGlobalData()
       nodes->endSync();
     }
   }
+  
+  CFLog(VERBOSE, "OnlyMeshSubSystem::setGlobalData() end\n");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void OnlyMeshSubSystem::unsetup()
 {
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE, "OnlyMeshSubSystem::unsetup() start\n");
+  
   Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
 
   vector <Common::SafePtr<SubSystemStatus> > subSysStatusVec =
@@ -514,8 +505,7 @@ void OnlyMeshSubSystem::unsetup()
   m_meshCreator.apply
     (root_mem_fun<void,MeshCreator>(&MeshCreator::unsetMethod));
 
-  m_dynamicBalancerMethod.apply
-    (root_mem_fun<void,DynamicBalancerMethod>(&DynamicBalancerMethod::unsetMethod));
+  CFLog(VERBOSE, "OnlyMeshSubSystem::unsetup() end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -544,10 +534,6 @@ vector<Method*> OnlyMeshSubSystem::getMethodList() const
     mList.push_back(m_outputFormat[i]);
   }
 
-  for (CFuint i = 0; i < m_dynamicBalancerMethod.size(); ++i) {
-    mList.push_back(m_dynamicBalancerMethod[i]);
-  }
-
   return mList;
 }
 
@@ -557,6 +543,8 @@ void OnlyMeshSubSystem::registActionListeners()
 {
   CFAUTOTRACE;
 
+  CFLog(VERBOSE, "OnlyMeshSubSystem::registActionListeners() start\n");
+ 
   // always call the parent class
   SubSystem::registActionListeners();
 
@@ -565,6 +553,8 @@ void OnlyMeshSubSystem::registActionListeners()
 
   event_handler->addListener("CF_ON_MAESTRO_MODIFYRESTART",this,&OnlyMeshSubSystem::modifyRestartAction);
   event_handler->addListener("CF_ON_MESHADAPTER_AFTERGLOBALREMESHING",this,&OnlyMeshSubSystem::afterRemeshingAction);
+  
+  CFLog(VERBOSE, "OnlyMeshSubSystem::registActionListeners() end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -573,8 +563,12 @@ Common::Signal::return_t OnlyMeshSubSystem::afterRemeshingAction(Common::Signal:
 {
   CFAUTOTRACE;
 
+  CFLog(VERBOSE, "OnlyMeshSubSystem::afterRemeshingAction() start\n");
+ 
   SimulationStatus::getInstance().setRestart(true);
-
+  
+  CFLog(VERBOSE, "OnlyMeshSubSystem::afterRemeshingAction() end\n");
+  
   return Common::Signal::return_t ();
 }
 
@@ -583,6 +577,8 @@ Common::Signal::return_t OnlyMeshSubSystem::afterRemeshingAction(Common::Signal:
 Common::Signal::return_t OnlyMeshSubSystem::modifyRestartAction(Common::Signal::arg_t eModifyRestart)
 {
   CFAUTOTRACE;
+  CFLog(VERBOSE, "OnlyMeshSubSystem::modifyRestartAction() start\n");
+  
   using namespace COOLFluiD::Environment;
   for(CFuint iMC=0; iMC < m_meshCreator.size(); iMC++)
   {
@@ -593,8 +589,8 @@ Common::Signal::return_t OnlyMeshSubSystem::modifyRestartAction(Common::Signal::
       std::string filename = SimulationStatus::getInstance().getLastOutputFile(subsystemName, nspName).string();
       CFLog(NOTICE,"Restarting from file : " << filename << "\n");
 
-//     CF_DEBUG_OBJ(Environment::DirPaths::getInstance().getWorkingDir().string());
-//     CF_DEBUG_OBJ(Environment::DirPaths::getInstance().getResultsDir().string());
+      //     CF_DEBUG_OBJ(Environment::DirPaths::getInstance().getWorkingDir().string());
+      //     CF_DEBUG_OBJ(Environment::DirPaths::getInstance().getResultsDir().string());
 
       DirPaths::getInstance().setWorkingDir(
         DirPaths::getInstance().getResultsDir().string()
@@ -611,7 +607,9 @@ Common::Signal::return_t OnlyMeshSubSystem::modifyRestartAction(Common::Signal::
   {
     subSystemStatusVec[i]->setCurrentTimeDim(m_initialTime);
   }
-
+  
+  CFLog(VERBOSE, "OnlyMeshSubSystem::modifyRestartAction() end\n");
+  
   return Common::Signal::return_t ();
 }
 
@@ -639,6 +637,8 @@ void OnlyMeshSubSystem::writeSolution(const bool force_write )
 {
   CFAUTOTRACE;
 
+  CFLog(VERBOSE, "OnlyMeshSubSystem::writeSolution() start\n");
+  
   for (unsigned int i = 0; i < m_outputFormat.size(); ++i)
   {
     if(!m_outputFormat[i]->isNonRootMethod())
@@ -655,13 +655,16 @@ void OnlyMeshSubSystem::writeSolution(const bool force_write )
       }
     }
   }
+  
+  CFLog(VERBOSE, "OnlyMeshSubSystem::writeSolution() end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void OnlyMeshSubSystem::configurePhysicalModel ( Config::ConfigArgs& args )
 {
-
+  CFLog(VERBOSE, "OnlyMeshSubSystem::configurePhysicalModel() start\n");
+ 
   typedef std::vector<Common::SafePtr<Namespace> > NspVec;
   NspVec lst =
     NamespaceSwitcher::getInstance().getAllNamespaces();
@@ -699,6 +702,8 @@ void OnlyMeshSubSystem::configurePhysicalModel ( Config::ConfigArgs& args )
     const CFuint nbEqs = PhysicalModelStack::getInstance().getEntry(physicalModelName)->getNbEq();
     PhysicalModelStack::getInstance().getEntry(physicalModelName)->setEquationSubSysDescriptor(0,nbEqs,0);
   }
+  
+  CFLog(VERBOSE, "OnlyMeshSubSystem::configurePhysicalModel() end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -50,6 +50,8 @@ SMaestro::~SMaestro()
 
 Common::Signal::return_t SMaestro::control ( Common::Signal::arg_t input )
 {
+  CFLog(VERBOSE, "SMaestro::control() start\n");
+  
   /// @todo change in input to xml
   ///       now we assume name type format
   boost::trim(input);
@@ -115,7 +117,9 @@ Common::Signal::return_t SMaestro::control ( Common::Signal::arg_t input )
     CFout << "#\n###### DESTRUCTION SUBSYSTEM PHASE #########\n#\n";
     event_handler->call_signal ( "CF_ON_MAESTRO_DESTROYSUBSYSTEM", msg );
   }
-
+  
+  CFLog(VERBOSE, "SMaestro::control() end\n");
+  
   return Common::Signal::return_t();
 }
 

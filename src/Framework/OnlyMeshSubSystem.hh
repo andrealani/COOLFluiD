@@ -27,7 +27,6 @@ namespace COOLFluiD {
     class PhysicalModelImpl;
     class NumericalCommand;
     class NumericalStrategy;
-    class DynamicBalancerMethod;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -146,9 +145,6 @@ protected: // data
 
   /// Output formatter
   MultiMethodTuple<OutputFormatter> m_outputFormat;
-
-  /// Dynamic Load Balancer
-  MultiMethodTuple<DynamicBalancerMethod> m_dynamicBalancerMethod;
 
   /// Initial Physical Time Step
   CFreal m_initialTime;
