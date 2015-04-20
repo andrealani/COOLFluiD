@@ -11,6 +11,8 @@ CFmeshFileReaderAPI.hh
 CFmeshReader.hh
 CFmeshReaderData.hh
 ReadCFmesh.hh
+ReadDummy.cxx
+ReadDummy.hh
 StdSetup.hh
 StdUnSetup.hh
 )
