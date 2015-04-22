@@ -1021,15 +1021,16 @@ void MPICommPattern<DATA>::BuildCGlobal ()
       break;
 
     cf_assert (Requests[Current]==MPI_REQUEST_NULL);
-
-    IndexType Aantal;
-
-    MPI_Get_count (&Status, MPIDataTypeHandler::GetType<IndexType>(),
-             (int *) &Aantal);
-
-    // it is unsigned, so this is useless // cf_assert (Aantal >= 0 );
-    cf_assert(Aantal <= _GhostSize);
-
+    
+    IndexType Aantal = 0;
+    MPI_Get_count (&Status, MPIDataTypeHandler::GetType<IndexType>(), (int*) &Aantal);
+    
+    if (Aantal > _GhostSize) {
+      CFLog(WARN, "MPICommPattern<DATA>::Sync_BuildReceiveList() => Aantal > _GhostSize : " 
+	    << Aantal << " > " << _GhostSize << "\n");
+      cf_assert(Aantal <= _GhostSize);
+    }
+    
     // Fill in receive list
     for (IndexType i=Current*_GhostSize; i<(Current*_GhostSize)+Aantal; i++)
       {
@@ -1056,8 +1057,8 @@ void MPICommPattern<DATA>::BuildCGlobal ()
            static_cast<CFuint>(_CommSize));
       cf_assert (_GhostReceiveList.size()==
            static_cast<CFuint>(_CommSize));
-
-      CFLogNotice("MPICommPattern<DATA>::BuildGhostMap() START");
+      
+      // CFLogNotice("MPICommPattern<DATA>::BuildGhostMap() START");
 
       // Clear old mapping
       for (int j=0; j<_CommSize; j++)
@@ -1112,7 +1113,7 @@ void MPICommPattern<DATA>::BuildCGlobal ()
 	  throw NotFoundException(FromHere(), S.str().c_str());
       }
 
-      CFLogNotice("MPICommPattern<DATA>::BuildGhostMap()  => Sync_BuildReceiveTypes");
+      // CFLogNotice("MPICommPattern<DATA>::BuildGhostMap()  => Sync_BuildReceiveTypes");
 
       // Build receive datatype
       Sync_BuildReceiveTypes ();
@@ -1120,8 +1121,8 @@ void MPICommPattern<DATA>::BuildCGlobal ()
 #ifdef CF_ENABLE_PARALLEL_DEBUG
       WriteCommPattern ();
 #endif
-
-      CFLogNotice("MPICommPattern<DATA>::BuildGhostMap()  END");
+      
+      //CFLogNotice("MPICommPattern<DATA>::BuildGhostMap()  END");
     }
 
 //////////////////////////////////////////////////////////////////////////////
