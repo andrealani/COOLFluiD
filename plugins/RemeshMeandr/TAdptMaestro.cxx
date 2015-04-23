@@ -6,6 +6,7 @@
 #include "Environment/ObjectProvider.hh"
 #include "Framework/SimulationStatus.hh"
 #include "Framework/GlobalStopCriteria.hh"
+#include "Framework/SubSystemStatus.hh"
 
 #include "RemeshMeandr/TAdptMaestro.hh"
 #include "RemeshMeandr/RemeshMeandr.hh"
