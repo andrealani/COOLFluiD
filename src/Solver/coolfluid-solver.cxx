@@ -347,7 +347,7 @@ int main(int argc, char** argv)
 
     // deallocate Simulator
     sim.release();
-    // deallocate Mestro
+    // deallocate Maestro
     maestro.release();
 
     // unsetup the runtime environment

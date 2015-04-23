@@ -20,7 +20,6 @@
 
 using namespace std;
 using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Common;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -36,7 +35,7 @@ sMaestroProvider("SimpleMaestro");
 //////////////////////////////////////////////////////////////////////////////
 
 SMaestro::SMaestro(const std::string& name) : Maestro(name)
-{
+{   
   create_signal ( "control" , "Take full control of the simulation" )->connect( boost::bind ( &SMaestro::control, this, _1 ) );
 }
 
@@ -86,36 +85,39 @@ Common::Signal::return_t SMaestro::control ( Common::Signal::arg_t input )
     msg += *subSysName + "\n";
     msg += *subSysType + "\n";
 
-    CFout << "#\n###### STARTING SUBSYSTEM : " << *subSysName << " ######\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_BUILDSUBSYSTEM", msg );
+    SubSystemStatusStack::setCurrentName(*subSysName);
+    cf_assert(*subSysName == SubSystemStatusStack::getCurrentName());
+    
+    CFout << "#\n###### STARTING SUBSYSTEM [" << *subSysName << "] ######\n#\n";
+    event_handler->call_signal (event_handler->key("", "CF_ON_MAESTRO_BUILDSUBSYSTEM"), msg );
 
     CFout << "#\n###### CONFIG PHASE #################\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_CONFIGSUBSYSTEM", msg );
+    event_handler->call_signal (event_handler->key("", "CF_ON_MAESTRO_CONFIGSUBSYSTEM"), msg );
 
     CFout << "#\n###### SOCKETS PLUG PHASE ###########\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_PLUGSOCKETS", msg );
+    event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_PLUGSOCKETS"), msg );
 
     CFout << "#\n###### BUILD PHASE ##################\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_BUILDMESHDATA", msg );
+    event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_BUILDMESHDATA"), msg );
 
     CFout << "#\n###### SETUP PHASE ##################\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_SETUP", msg );
+    event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_SETUP"), msg );
 
     CFout << "#\n###### RUN PHASE ####################\n#\n";
     for ( ; !m_stopcriteria->isSatisfied(); )
     {
       simStatus.incrementNbIter();
-      event_handler->call_signal ( "CF_ON_MAESTRO_RUN", msg );
+      event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_RUN"), msg );
     }
 
     CFout << "#\n###### UNSETUP PHASE ################\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_UNSETUP", msg );
+    event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_UNSETUP"), msg );
 
     CFout << "#\n###### SOCKETS UNPLUG PHASE #########\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_UNPLUGSOCKETS", msg );
+    event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_UNPLUGSOCKETS"), msg );
 
     CFout << "#\n###### DESTRUCTION SUBSYSTEM PHASE #########\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_DESTROYSUBSYSTEM", msg );
+    event_handler->call_signal (event_handler->key("", "CF_ON_MAESTRO_DESTROYSUBSYSTEM"), msg );
   }
   
   CFLog(VERBOSE, "SMaestro::control() end\n");

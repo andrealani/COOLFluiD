@@ -186,11 +186,12 @@ void SimpleMeshAdapter::remeshImpl()
 
   Common::SafePtr<EventHandler> event_handler = Environment::CFEnv::getInstance().getEventHandler();
   std::string msg;
-
+  const std::string ssname = SubSystemStatusStack::getCurrentName();   
+  
   if(!(subsystemStatus->getNbIter() % _adaptRate) && _data->isNeedRemeshing())
   {
     // Raise the event for the backup of data prior to change
-//    event_handler->call_signal ( "CF_ON_MESHADAPTER_BEFOREGLOBALREMESHING", msg );
+    //    event_handler->call_signal (event_handler->key(ssname,"CF_ON_MESHADAPTER_BEFOREGLOBALREMESHING"), msg );
 
     _prepare->execute();
     _runMeshGenerator->execute();
@@ -202,10 +203,10 @@ void SimpleMeshAdapter::remeshImpl()
    //   PE::GetPE().setBarrier();
     
     //Raise the event for the update of the data in the other methods
-    event_handler->call_signal ( "CF_ON_MESHADAPTER_AFTERGLOBALREMESHING", msg );
+    event_handler->call_signal (event_handler->key(ssname, "CF_ON_MESHADAPTER_AFTERGLOBALREMESHING"), msg );
   }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace SimpleMeshAdapter

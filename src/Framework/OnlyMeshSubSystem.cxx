@@ -541,13 +541,16 @@ void OnlyMeshSubSystem::registActionListeners()
 
   // add here other ActionListeners
   Common::SafePtr<EventHandler> event_handler = Environment::CFEnv::getInstance().getEventHandler();
-
-  event_handler->addListener("CF_ON_MAESTRO_MODIFYRESTART",this,&OnlyMeshSubSystem::modifyRestartAction);
-  event_handler->addListener("CF_ON_MESHADAPTER_AFTERGLOBALREMESHING",this,&OnlyMeshSubSystem::afterRemeshingAction);
+  
+  const std::string ssname = SubSystemStatusStack::getCurrentName();   
+  event_handler->addListener(event_handler->key(ssname, "CF_ON_MAESTRO_MODIFYRESTART"),
+			     this,&OnlyMeshSubSystem::modifyRestartAction);
+  event_handler->addListener(event_handler->key(ssname, "CF_ON_MESHADAPTER_AFTERGLOBALREMESHING"),
+			     this,&OnlyMeshSubSystem::afterRemeshingAction);
   
   CFLog(VERBOSE, "OnlyMeshSubSystem::registActionListeners() end\n");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 Common::Signal::return_t OnlyMeshSubSystem::afterRemeshingAction(Common::Signal::arg_t eAfterRemesh)

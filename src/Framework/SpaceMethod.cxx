@@ -14,6 +14,7 @@
 #include "Framework/SpaceMethodData.hh"
 #include "Framework/MeshDataBuilder.hh"
 #include "Framework/GlobalJacobianSparsity.hh"
+#include "Framework/SubSystemStatus.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -56,7 +57,7 @@ SpaceMethod::SpaceMethod(const std::string& name)
   registActionListeners();
   // regist the configuration options
   addConfigOptionsTo(this);
-
+  
   m_restart = false;
   setParameter("Restart",&m_restart);
 
@@ -78,11 +79,11 @@ SpaceMethod::~SpaceMethod()
 void SpaceMethod::configure ( Config::ConfigArgs& args )
 {
   CFAUTOTRACE;
-
+    
   Method::configure(args);
-
+  
   m_stored_args = args;
-
+  
   // check that a builder has been chosen
   if (m_builder.empty())
     throw BadValueException (FromHere(),"No builder of mesh data of selected. Set the option 'Builder' in the SpaceMethod");
@@ -95,14 +96,18 @@ void SpaceMethod::registActionListeners()
   CFAUTOTRACE;
 
   Method::registActionListeners();
-
+  
   Common::SafePtr<EventHandler> event_handler = Environment::CFEnv::getInstance().getEventHandler();
-
-  event_handler->addListener("CF_ON_MESHADAPTER_BEFOREMESHUPDATE" , this, &SpaceMethod::beforeMeshUpdateAction);
-  event_handler->addListener("CF_ON_MESHADAPTER_AFTERMESHUPDATE" ,  this, &SpaceMethod::afterMeshUpdateAction);
-  event_handler->addListener("CF_ON_MAESTRO_MODIFYRESTART" ,        this, &SpaceMethod::modifyRestartAction);
+  
+  const std::string ssname = SubSystemStatusStack::getCurrentName();   
+  event_handler->addListener(event_handler->key(ssname, "CF_ON_MESHADAPTER_BEFOREMESHUPDATE"), 
+			     this, &SpaceMethod::beforeMeshUpdateAction);
+  event_handler->addListener(event_handler->key(ssname, "CF_ON_MESHADAPTER_AFTERMESHUPDATE"),  
+			     this, &SpaceMethod::afterMeshUpdateAction);
+  event_handler->addListener(event_handler->key(ssname, "CF_ON_MAESTRO_MODIFYRESTART"),        
+			     this, &SpaceMethod::modifyRestartAction);
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 Common::Signal::return_t SpaceMethod::modifyRestartAction(Common::Signal::arg_t eModifyRestart)

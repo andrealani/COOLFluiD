@@ -888,11 +888,14 @@ void StandardSubSystem::registActionListeners()
 
   // add here other ActionListeners
   Common::SafePtr<EventHandler> event_handler = Environment::CFEnv::getInstance().getEventHandler();
-
-  event_handler->addListener("CF_ON_MAESTRO_MODIFYRESTART",this,&StandardSubSystem::modifyRestartAction);
-  event_handler->addListener("CF_ON_MESHADAPTER_AFTERGLOBALREMESHING",this,&StandardSubSystem::afterRemeshingAction);
+  
+  const std::string ssname = SubSystemStatusStack::getCurrentName();
+  event_handler->addListener(event_handler->key(ssname, "CF_ON_MAESTRO_MODIFYRESTART"),
+			     this,&StandardSubSystem::modifyRestartAction);
+  event_handler->addListener(event_handler->key(ssname, "CF_ON_MESHADAPTER_AFTERGLOBALREMESHING"),
+			     this,&StandardSubSystem::afterRemeshingAction);
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 Common::Signal::return_t StandardSubSystem::afterRemeshingAction(Common::Signal::arg_t eAfterRemesh)

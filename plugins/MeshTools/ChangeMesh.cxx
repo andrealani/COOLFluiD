@@ -647,7 +647,8 @@ void ChangeMesh::execute()
   // this will resetup all existing methods
   // because they might have private data which depends on the new mesh
   Common::Signal::arg_t msg;
-  event_handler->call_signal ( "CF_ON_MESH_UPDATE", msg );
+  const std::string ssname = SubSystemStatusStack::getCurrentName();   
+  event_handler->call_signal (event_handler->key(ssname, "CF_ON_MESH_UPDATE"), msg );
 }
 
 //////////////////////////////////////////////////////////////////////////////

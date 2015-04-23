@@ -171,15 +171,16 @@ void SpringAnalogy::adaptMeshImpl()
 
   Common::SafePtr<EventHandler> event_handler = Environment::CFEnv::getInstance().getEventHandler();
   std::string msg;
-
+  const std::string ssname = SubSystemStatusStack::getCurrentName();   
   if(!(SubSystemStatusStack::getActive()->getNbIter() % _adaptRate))
   {
     (_data.getPtr())->resetCurrentStep();
     const CFuint nbSteps = (_data.getPtr())->getTotalNbSteps();
 
     // raise the event for the backup of data prior to change
-    event_handler->call_signal ( "CF_ON_MESHADAPTER_BEFOREMESHUPDATE", msg );
-
+    
+    event_handler->call_signal (event_handler->key(ssname, "CF_ON_MESHADAPTER_BEFOREMESHUPDATE"), msg );
+    
     for(CFuint iStep = 1;iStep<nbSteps+1;iStep++)
     {
       std::cout << "********************** Step " << iStep<< std::endl;
@@ -194,8 +195,7 @@ void SpringAnalogy::adaptMeshImpl()
     }
 
     // Raise the event for the update of the data in the other methods
-    event_handler->call_signal ( "CF_ON_MESHADAPTER_AFTERMESHUPDATE", msg );
-
+    event_handler->call_signal (event_handler->key(ssname, "CF_ON_MESHADAPTER_AFTERMESHUPDATE"), msg );
   }
 }
 

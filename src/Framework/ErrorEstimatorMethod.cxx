@@ -31,8 +31,10 @@ void ErrorEstimatorMethod::build_dynamic_functions()
 void ErrorEstimatorMethod::registActionListeners()
 {
   Method::registActionListeners();
-
-//   event_handler->addListener("CF_ON_ERRORESTIMATOR_ESTIMATE" ,this,&ErrorEstimatorMethod::estimate);
+  
+  // const std::string ssname = SubSystemStatusStack::getCurrentName();   
+  //   event_handler->addListener(event_handler->key(ssname, "CF_ON_ERRORESTIMATOR_ESTIMATE"),
+  //                              this,&ErrorEstimatorMethod::estimate);
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -47,7 +47,8 @@ void Extruder2DFVMMPI::defineConfigOptions(Config::OptionList& options)
    options.addConfigOption< bool >("Random","Random positions of nodes in inner layers."); 
    options.addConfigOption< bool >("Periodic","Create a single TRS named Periodic instead of Top & Bottom.");
    options.addConfigOption< CFreal >("ExtrudeSize","Extrude size in z coordinate.");
-   options.addConfigOption< CFuint >("NbLayers","Nb of Layers to extrude from the 2D mesh.");
+   options.addConfigOption< CFuint >("NbLayers","Nb of Layers to extrude from the 2D mesh."); 
+    options.addConfigOption< std::string >("Def","Definition of the Function.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -56,7 +57,10 @@ Extruder2DFVMMPI::Extruder2DFVMMPI(const std::string& name)
   : MeshFormatConverter(name),
     _data(new CFmeshReaderWriterSource()),
     _newTetras(3),
-    _newTriag(2)
+    _newTriag(2),
+    _functionParser(),
+    _eval(0.0,3),
+    _vars("x,y,l")
 {
   addConfigOptionsTo(this);
 
@@ -65,7 +69,10 @@ Extruder2DFVMMPI::Extruder2DFVMMPI(const std::string& name)
   _writer.setWriteData(ptr);
   
   // configuration options
-
+  
+  _function = "0";
+  setParameter("Def",&_function);
+  
   _nbLayers = 1;
   setParameter("NbLayers",&_nbLayers);
 
@@ -82,13 +89,13 @@ Extruder2DFVMMPI::Extruder2DFVMMPI(const std::string& name)
   
   _periodic = false;
   setParameter("Periodic",&_periodic);
-  
+    
   _comm   = PE::GetPE().GetCommunicator();
   _myRank = PE::GetPE().GetRank();
   _nbProc = PE::GetPE().GetProcessorCount();
   cf_assert(_nbProc > 0);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 Extruder2DFVMMPI::~Extruder2DFVMMPI()
@@ -103,7 +110,27 @@ void Extruder2DFVMMPI::configure ( Config::ConfigArgs& args )
   
   // configure writer
   configureNested ( &_writer, args );
+  
+  // configure function parser for z spacing
+  try {
+    vector<string> functionDef = StringOps::getWords(_function);
+    cf_assert(functionDef.size() == 1);
     
+    _functionParser.Parse(_function, _vars);
+    
+    if (_functionParser.ErrorMsg() != 0) {
+      std::string msg("ParseError in Extruder2DFVMMPI::configure(): ");
+      msg += std::string(_functionParser.ErrorMsg());
+      msg += " Function: " + _function;
+      msg += " Vars: "     + _vars;
+      throw Common::ParserException (FromHere(),msg);
+    }
+  }
+  catch (Common::ParserException& e) {
+    CFout << e.what() << "\n";
+    throw; // retrow the exception to signal the error to the user
+  }
+  
   //  if (_split)
   //    throw Common::NotImplementedException (FromHere(),"Extruder2DFVMMPI hasn't an implementation to split the extruded 3D meshes into tetrahedra.");
   
@@ -436,13 +463,16 @@ void Extruder2DFVMMPI::convertCurrentElementsTo3D()
   CFLog(INFO, "Extruder2DFVMMPI::convertCurrentElementsTo3D() => [#nodes, #states] = [" << 
 	nodes->size()/data.getDimension() << ", " << states->size()/data.getNbEquations() << "]\n");
   
+  const CFuint currentLayer = minNbLayers*_myRank; // first layer is 0 if _myRank=0
+  
   // add nodes corresponding to first layer
   const CFuint totalNbNodes = data.getTotalNbNodes();
   for(CFuint iNode = 0; iNode < totalNbNodes; ++iNode) {
     const CFuint start = iNode*DIM_3D;
     nodes->push_back((*nodes)[start]);
     nodes->push_back((*nodes)[start+1]);
-    nodes->push_back((*nodes)[start+2]+_zDelta);
+    const CFreal zDelta = getDeltaZ((*nodes)[start],(*nodes)[start+1], (CFreal)currentLayer);
+    nodes->push_back((*nodes)[start+2]+ zDelta);
   }
   
   SafePtr< Table<CFuint> > elementNode  = data.getElementNode();
@@ -695,12 +725,17 @@ void Extruder2DFVMMPI::createAnotherLayer()
   const CFuint sStartID = states->size()/nbEquations - _nbStatesPerLayer;
   const CFuint sEndID   = states->size()/nbEquations;
   
+  const CFuint minNbLayers  = _nbLayers/_nbProc;
+  const CFuint currentLayer = minNbLayers*_myRank + _iLayer;
+  
   // Add new nodes and states for the new layer
   for(CFuint iNode = nStartID; iNode < nEndID; ++iNode) {
     const CFuint start = iNode*DIM_3D;
     nodes->push_back((*nodes)[start]);
     nodes->push_back((*nodes)[start+1]);
-    nodes->push_back((*nodes)[start+2]+_zDelta);
+    
+    const CFreal zDelta = getDeltaZ((*nodes)[start],(*nodes)[start+1], (CFreal)currentLayer);
+    nodes->push_back((*nodes)[start+2]+ zDelta);
   }
   
   for(CFuint iState = sStartID; iState < sEndID; ++iState) {

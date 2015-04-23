@@ -63,9 +63,11 @@ void ConvergenceMethod::registActionListeners()
 {
   Method::registActionListeners();
 
-//   event_handler->addListener("CF_ON_CONVERGENCE_TAKESTEP" ,this,&ConvergenceMethod::solve);
+  //   const std::string ssname = SubSystemStatusStack::getCurrentName();  
+  //   event_handler->addListener(event_handler->key(ssname, "CF_ON_CONVERGENCE_TAKESTEP"),
+  //                              this,&ConvergenceMethod::solve);
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 ConvergenceMethod::ConvergenceMethod(const std::string& name)

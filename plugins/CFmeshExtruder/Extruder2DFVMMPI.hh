@@ -17,6 +17,8 @@
 #include "Framework/CFmeshFileReader.hh"
 #include "Framework/CFmeshBinaryFileWriter.hh"
 #include "Framework/CFmeshReaderWriterSource.hh"
+#include "MathTools/FunctionParser.hh"
+#include "Common/ParserException.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -221,13 +223,45 @@ private:
     /// ID
     RealVector prismID;
   }; // end PhysicalData
-
+  
+  /// get the deltaZ corresponding to the given x,y,l
+  /// @param x  x-coordinate of the mesh point
+  /// @param y  y-coordinate of the mesh point
+  /// @param l  global ID of the current layer  
+  CFreal getDeltaZ(const CFreal x, const CFreal y, const CFreal l)
+  {
+    if (_function != "0") {
+      _eval[0] = x; _eval[1] = y; _eval[2] = l; 
+      return _functionParser.Eval(_eval);
+    }
+    return _zDelta;
+  }
+  
 private:
     
    /// the data to be read, extruded and rewriten to file
   /// this memory is owned here
   std::auto_ptr<Framework::CFmeshReaderWriterSource> _data;
-
+ 
+  /// temp Tetras
+  std::vector<std::vector<CFuint> >  _newTetras;
+  
+  /// temp Triangles
+  std::vector<std::vector<CFuint> >  _newTriag;
+  
+  /// CFL function of iteration
+  MathTools::FunctionParser _functionParser;
+  
+  /// a temporary vector to store CFL
+  /// and pass the function parser
+  RealVector _eval;
+  
+  /// a vector of string to hold the functions
+  std::string _vars;
+  
+  /// a string holding the function definition
+  std::string _function;
+    
   /// the file reader
   Reader _reader;
 
@@ -301,16 +335,7 @@ private:
   /// store the old element-state connectivity for
   /// constructing Top and Bottom TRS's
   Common::Table<CFuint>  _oldElemState;
-
-  /// temp Tetras
-  std::vector<std::vector<CFuint> >  _newTetras;
-
-  /// temp Triangles
-  std::vector<std::vector<CFuint> >  _newTriag;
-
-//std::vector<CFuint> _nbElementofTypePerLayer;
-
-//std::vector<CFGeoShape::Type> _elementShapes;
+  
 }; // end class Extruder2DFVMMPI
 
 //////////////////////////////////////////////////////////////////////////////

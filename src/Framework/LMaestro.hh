@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Numerics_LMaestro_hh
-#define COOLFluiD_Numerics_LMaestro_hh
+#ifndef COOLFluiD_Framework_LMaestro_hh
+#define COOLFluiD_Framework_LMaestro_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -8,14 +8,15 @@
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-namespace LoopMaestro {
+
+  namespace Framework {
 
 //////////////////////////////////////////////////////////////////////////////
 
 /// This class represents a LMaestro. It controls the flow of actions in the SubSystem's through Event's.
 /// @author Tiago Quintino
 /// @author Thomas Wuilbaut
-class LMaestro : public Framework::Maestro {
+class Framework_API LMaestro : public Framework::Maestro {
 public:
 
   /// Defines the Config Option's of this class
@@ -40,9 +41,10 @@ private: //data
 
 //////////////////////////////////////////////////////////////////////////////
 
-} // namespace LoopMaestro
+ } // namespace Framework
+
 } // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Numerics_LMaestro_hh
+#endif // COOLFluiD_Framework_LMaestro_hh

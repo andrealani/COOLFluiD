@@ -16,6 +16,8 @@
 using namespace std;
 using namespace COOLFluiD::Common;
 
+//////////////////////////////////////////////////////////////////////////////
+
 namespace COOLFluiD {
 
   namespace Framework {

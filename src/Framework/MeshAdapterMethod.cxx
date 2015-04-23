@@ -32,8 +32,10 @@ void MeshAdapterMethod::build_dynamic_functions()
 void MeshAdapterMethod::registActionListeners()
 {
   Method::registActionListeners();
-
-//   event_handler->addListener("CF_ON_MESHADAOTER_ADAPT" ,this,&MeshAdapterMethod::solve);
+  
+  // const std::string ssname = SubSystemStatusStack::getCurrentName();   
+  // event_handler->addListener(event_handler->key(ssname, "CF_ON_MESHADAOTER_ADAPT"),
+  //                            this,&MeshAdapterMethod::solve);
 }
 
 //////////////////////////////////////////////////////////////////////////////

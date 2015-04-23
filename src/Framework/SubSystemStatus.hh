@@ -500,12 +500,17 @@ public:
   /// Returns the instance of this meshDataStack
   /// This is the access point to the Singleton
   /// @return the instance of the singleton
-
+  
   static SubSystemStatusStack& getInstance();
-
+  
+  /// Set the current subsystem name
+  static void setCurrentName(const std::string& name) {getInstance().m_ssName = name;}
+  
+  /// Returns the current subsystem name
+  static std::string getCurrentName() {return getInstance().m_ssName;}
+  
 protected: // helper functions from NamespaceStack
-
-
+  
   /// Gets the name of the SubSystemStatus from the Namespace
   /// @param nsp the Namespace from where to get te object name
 
@@ -517,6 +522,11 @@ protected: // helper functions from NamespaceStack
 
   SubSystemStatus * createObject(const std::string& name);
 
+private:
+
+  /// name of the current subsystem
+  std::string m_ssName;
+  
 }; // end of class SubSystemStatusStack;
 
 //////////////////////////////////////////////////////////////////////////////

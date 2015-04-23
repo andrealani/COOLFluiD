@@ -36,7 +36,9 @@ void CouplerMethod::registActionListeners()
 {
   Method::registActionListeners();
 
-//   event_handler->addListener("CF_ON_COUPLERMETHOD_MATCH" ,this,&CouplerMethod::match);
+  // const std::string ssname = SubSystemStatusStack::getCurrentName();   
+  // event_handler->addListener(event_handler->key(ssname, "CF_ON_COUPLERMETHOD_MATCH"),
+  //                            this,&CouplerMethod::match);
 }
 
 //////////////////////////////////////////////////////////////////////////////

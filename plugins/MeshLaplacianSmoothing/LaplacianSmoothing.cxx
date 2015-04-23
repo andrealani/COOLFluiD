@@ -158,13 +158,13 @@ void LaplacianSmoothing::adaptMeshImpl()
   CFAUTOTRACE;
 
   Common::SafePtr<EventHandler> event_handler = Environment::CFEnv::getInstance().getEventHandler();
-
+  const std::string ssname = SubSystemStatusStack::getCurrentName();   
   if(!(SubSystemStatusStack::getActive()->getNbIter() % _adaptRate))
   {
     std::string msg;
 
     //Raise the event for the backup of data prior to change
-    event_handler->call_signal ( "CF_ON_MESHADAPTER_BEFOREMESHUPDATE", msg );
+    event_handler->call_signal (event_handler->key(ssname, "CF_ON_MESHADAPTER_BEFOREMESHUPDATE"), msg );
 
     for(CFuint i=0;i<_prepares.size();i++)
     {
@@ -175,7 +175,7 @@ void LaplacianSmoothing::adaptMeshImpl()
     _transformMesh->execute();
 
     // Raise the event for the update of the data in the other methods
-    event_handler->call_signal ( "CF_ON_MESHADAPTER_AFTERMESHUPDATE", msg );
+    event_handler->call_signal (event_handler->key(ssname, "CF_ON_MESHADAPTER_AFTERMESHUPDATE"), msg );
   }
 }
 

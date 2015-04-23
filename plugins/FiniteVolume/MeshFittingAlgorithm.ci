@@ -692,9 +692,10 @@ void MeshFittingAlgorithm<MODEL>::syncNodesAndRecomputeMeshData() {
   // 2nd alternative (more elegant): raise the event forcing update of mesh data
   std::string msg;
   Common::SafePtr<EventHandler> event_handler = Environment::CFEnv::getInstance().getEventHandler();
-  event_handler->call_signal ( "CF_ON_MESHADAPTER_AFTERMESHUPDATE", msg );
+  const std::string ssname = SubSystemStatusStack::getCurrentName();   
+  event_handler->call_signal (event_handler->key(ssname, "CF_ON_MESHADAPTER_AFTERMESHUPDATE"), msg );
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 /**

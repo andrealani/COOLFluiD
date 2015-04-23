@@ -256,6 +256,8 @@ LimitFilterRHS.cxx
 LimitFilterRHS.hh
 LinearSystemSolver.cxx
 LinearSystemSolver.hh
+LMaestro.cxx
+LMaestro.hh
 LocalCommTypes.hh
 LocalConnectionDataBuilder.cxx
 LocalConnectionDataBuilder.hh

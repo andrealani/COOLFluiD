@@ -39,8 +39,10 @@ void LinearSystemSolver::build_dynamic_functions()
 void LinearSystemSolver::registActionListeners()
 {
   Method::registActionListeners();
-
-//   event_handler->addListener("CF_ON_LSS_SOLVE" ,this,&LinearSystemSolver::solve);
+  
+  // const std::string ssname = SubSystemStatusStack::getCurrentName();  
+  //   event_handler->addListener(event_handler->key(ssname, "CF_ON_LSS_SOLVE"),
+  //                              this,&LinearSystemSolver::solve);
 }
 
 //////////////////////////////////////////////////////////////////////////////

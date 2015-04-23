@@ -39,8 +39,10 @@ void DataProcessingMethod::build_dynamic_functions()
 void DataProcessingMethod::registActionListeners()
 {
   Method::registActionListeners();
-
-//   event_handler->addListener("CF_ON_DATAPROCESS_PROCESS" ,this,&DataProcessingMethod::solve);
+  
+  //  const std::string ssname = SubSystemStatusStack::getCurrentName();  
+  //  event_handler->addListener(event_handler->key(ssname, "CF_ON_DATAPROCESS_PROCESS"),
+  //                              this,&DataProcessingMethod::solve);
 }
 
 //////////////////////////////////////////////////////////////////////////////

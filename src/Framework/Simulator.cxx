@@ -123,12 +123,15 @@ void Simulator::registActionListeners()
   CFAUTOTRACE;
 
   Common::SafePtr<EventHandler> event_handler = Environment::CFEnv::getInstance().getEventHandler();
-
-  event_handler->addListener("CF_ON_MAESTRO_BUILDSUBSYSTEM",   this, &Simulator::buildSubSystem);
-  event_handler->addListener("CF_ON_MAESTRO_DESTROYSUBSYSTEM", this, &Simulator::destroySubSystem);
-  event_handler->addListener("CF_ON_MAESTRO_CONFIGSUBSYSTEM",  this, &Simulator::configSubSystem);
+  
+  event_handler->addListener(event_handler->key("","CF_ON_MAESTRO_BUILDSUBSYSTEM"), 
+			     this, &Simulator::buildSubSystem);
+  event_handler->addListener(event_handler->key("","CF_ON_MAESTRO_DESTROYSUBSYSTEM"),
+			     this, &Simulator::destroySubSystem);
+  event_handler->addListener(event_handler->key("","CF_ON_MAESTRO_CONFIGSUBSYSTEM"), 
+			     this, &Simulator::configSubSystem);
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void Simulator::openCaseFile ( const std::string& sCFcaseFile )

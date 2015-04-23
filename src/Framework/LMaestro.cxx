@@ -7,32 +7,30 @@
 #include "Environment/DirPaths.hh"
 
 #include "Framework/SimulationStatus.hh"
+#include "Framework/SubSystemStatus.hh"
 #include "Framework/GlobalStopCriteria.hh"
 
-#include "LoopMaestro/LoopMaestro.hh"
-#include "LoopMaestro/LMaestro.hh"
+#include "Framework/LMaestro.hh"
+#include "Framework/Framework.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
 using namespace boost::filesystem;
-
-namespace COOLFluiD {
-
-  using namespace Framework;
-  using namespace Common;
-  using namespace Environment;
-
-    namespace LoopMaestro {
+using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Environment;
 
 //////////////////////////////////////////////////////////////////////////////
 
-Environment::ObjectProvider<LMaestro,
-               Maestro,
-               LoopMaestroPlugin,
-               1>
-loopMaestroProvider("LoopMaestro");
+namespace COOLFluiD {
 
+  namespace Framework {
+
+//////////////////////////////////////////////////////////////////////////////
+
+Environment::ObjectProvider<LMaestro, Maestro, FrameworkLib, 1>
+loopMaestroProvider("LoopMaestro");
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void LMaestro::defineConfigOptions(Config::OptionList& options)
@@ -43,11 +41,13 @@ void LMaestro::defineConfigOptions(Config::OptionList& options)
 //////////////////////////////////////////////////////////////////////////////
 
 LMaestro::LMaestro(const std::string& name) : Maestro(name)
-{
+{  
   addConfigOptionsTo(this);
   
   m_init_files = std::vector<std::string>();
   setParameter("InitialFiles",&m_init_files);
+  
+  create_signal ( "control" , "Take full control of the simulation" )->connect( boost::bind ( &LMaestro::control, this, _1 ) );
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -111,51 +111,55 @@ Common::Signal::return_t LMaestro::control ( Common::Signal::arg_t input )
     {
 
       std::string msg;
-
+      
       msg += subsysnames[iter] + "\n";
       msg += subsystypes[iter] + "\n";
-
-      CFout << "#\n###### STARTING SUBSYSTEM : " << subsysnames[iter] << " ######\n#\n";
-      event_handler->call_signal ( "CF_ON_MAESTRO_BUILDSUBSYSTEM", msg );
-
+      
+      const string currSubsysName = subsysnames[iter];
+      SubSystemStatusStack::setCurrentName(currSubsysName);
+      cf_assert(currSubsysName == SubSystemStatusStack::getCurrentName());
+      
+      CFout << "#\n###### STARTING SUBSYSTEM [" << currSubsysName << "] ######\n#\n";
+      event_handler->call_signal (event_handler->key("", "CF_ON_MAESTRO_BUILDSUBSYSTEM"), msg );
+      
       CFout << "#\n###### CONFIG PHASE #################\n#\n";
-      event_handler->call_signal ( "CF_ON_MAESTRO_CONFIGSUBSYSTEM", msg );
-
+      event_handler->call_signal (event_handler->key("", "CF_ON_MAESTRO_CONFIGSUBSYSTEM"), msg );
+      
       CFout << "#\n###### SOCKETS PLUG PHASE ###########\n#\n";
-      event_handler->call_signal ( "CF_ON_MAESTRO_PLUGSOCKETS", msg );
+      event_handler->call_signal (event_handler->key(currSubsysName, "CF_ON_MAESTRO_PLUGSOCKETS"), msg );
 
       // allow to restart from the previous saved iteration
       if ((simStatus.isRestart()) && (simStatus.getNbIter() > 1))
       {
         CFout << "#\n### MODIFY RESTART \n#\n";
-        event_handler->call_signal ( "CF_ON_MAESTRO_MODIFYRESTART", msg );
+        event_handler->call_signal (event_handler->key(currSubsysName, "CF_ON_MAESTRO_MODIFYRESTART"), msg );
       }
 
       CFout << "#\n###### BUILD PHASE ##################\n#\n";
-      event_handler->call_signal ( "CF_ON_MAESTRO_BUILDMESHDATA", msg );
+      event_handler->call_signal (event_handler->key(currSubsysName, "CF_ON_MAESTRO_BUILDMESHDATA"), msg );
 
       CFout << "#\n###### SETUP PHASE ##################\n#\n";
-      event_handler->call_signal ( "CF_ON_MAESTRO_SETUP", msg );
+      event_handler->call_signal (event_handler->key(currSubsysName, "CF_ON_MAESTRO_SETUP"), msg );
 
       CFout << "#\n###### RUN PHASE ####################\n#\n";
-      event_handler->call_signal ( "CF_ON_MAESTRO_RUN", msg );
+      event_handler->call_signal (event_handler->key(currSubsysName, "CF_ON_MAESTRO_RUN"), msg );
 
       CFout << "#\n###### UNSETUP PHASE ################\n#\n";
-      event_handler->call_signal ( "CF_ON_MAESTRO_UNSETUP", msg );
+      event_handler->call_signal (event_handler->key(currSubsysName, "CF_ON_MAESTRO_UNSETUP"), msg );
 
       CFout << "#\n###### SOCKETS UNPLUG PHASE #########\n#\n";
-      event_handler->call_signal ( "CF_ON_MAESTRO_UNPLUGSOCKETS", msg );
-
+      event_handler->call_signal (event_handler->key(currSubsysName, "CF_ON_MAESTRO_UNPLUGSOCKETS"), msg );
+      
       CFout << "#\n###### DESTRUCTION SUBSYSTEM PHASE #########\n#\n";
-      event_handler->call_signal ( "CF_ON_MAESTRO_DESTROYSUBSYSTEM", msg );
+      event_handler->call_signal (event_handler->key("", "CF_ON_MAESTRO_DESTROYSUBSYSTEM"), msg );
     }
   }
-
+  
   return Common::Signal::return_t();
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-} // namespace LoopMaestro
-} // namespace COOLFluiD
+ } // namespace Framework
 
+} // namespace COOLFluiD

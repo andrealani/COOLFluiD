@@ -336,17 +336,24 @@ void SubSystem::setCommands()
 void SubSystem::registActionListeners()
 {
   CFAUTOTRACE;
-
+  
   Common::SafePtr<EventHandler> event_handler = Environment::CFEnv::getInstance().getEventHandler();
-
-  event_handler->addListener("CF_ON_MAESTRO_PLUGSOCKETS",   this,&SubSystem::allocateAllSocketsAction);
-  event_handler->addListener("CF_ON_MAESTRO_BUILDMESHDATA", this,&SubSystem::buildMeshDataAction);
-  event_handler->addListener("CF_ON_MAESTRO_SETUP"  ,this,&SubSystem::setupAction);
-  event_handler->addListener("CF_ON_MAESTRO_RUN"    ,this,&SubSystem::runAction);
-  event_handler->addListener("CF_ON_MAESTRO_UNPLUGSOCKETS", this,&SubSystem::deallocateAllSocketsAction);
-  event_handler->addListener("CF_ON_MAESTRO_UNSETUP",this,&SubSystem::unsetupAction);
+  
+  const std::string ssname = SubSystemStatusStack::getCurrentName();   
+  event_handler->addListener(event_handler->key(ssname, "CF_ON_MAESTRO_PLUGSOCKETS"),
+			     this,&SubSystem::allocateAllSocketsAction);
+  event_handler->addListener(event_handler->key(ssname, "CF_ON_MAESTRO_BUILDMESHDATA"), 
+			     this,&SubSystem::buildMeshDataAction);
+  event_handler->addListener(event_handler->key(ssname, "CF_ON_MAESTRO_SETUP"),
+			     this,&SubSystem::setupAction);
+  event_handler->addListener(event_handler->key(ssname, "CF_ON_MAESTRO_RUN"),
+			     this,&SubSystem::runAction);
+  event_handler->addListener(event_handler->key(ssname, "CF_ON_MAESTRO_UNPLUGSOCKETS"), 
+			     this,&SubSystem::deallocateAllSocketsAction);
+  event_handler->addListener(event_handler->key(ssname, "CF_ON_MAESTRO_UNSETUP"),
+			     this,&SubSystem::unsetupAction);
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 Common::Signal::return_t SubSystem::allocateAllSocketsAction(Common::Signal::arg_t eSocketsPlug)
@@ -370,7 +377,7 @@ Common::Signal::return_t SubSystem::buildMeshDataAction(Common::Signal::arg_t eB
   buildMeshData();
   return Common::Signal::return_t ();
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 Common::Signal::return_t SubSystem::setupAction(Common::Signal::arg_t eModifyRestart)

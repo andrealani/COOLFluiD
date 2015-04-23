@@ -83,7 +83,13 @@ class Common_API DynamicObject
     typedef std::map < Signal::id_t , std::pair< boost::shared_ptr< signal_t > , Signal::desc_t > >  sigmap_t;
 
   public:
-
+    
+    /// build the key
+    const std::string key(const Signal::id_t& pre, const Signal::id_t& sname) const 
+    {
+      const std::string key = pre + ":" + sname; return key;
+    }
+    
     /// Get the list of signals and respective descriptions
     std::vector < std::pair < Signal::id_t, Signal::desc_t > > list_signals () const;
 
@@ -92,7 +98,7 @@ class Common_API DynamicObject
 
     /// Get a signal by providing its name
     boost::shared_ptr<signal_t> get_signal ( const Signal::id_t& sname );
-
+    
     /// Regist signal
     boost::shared_ptr<signal_t> regist_signal ( const Signal::id_t& sname,  const Signal::desc_t& desc );
 
@@ -105,10 +111,10 @@ class Common_API DynamicObject
     }
 #endif
 
-  protected: // functions
+ protected: // functions
     /// Create a signal
     boost::shared_ptr<signal_t> create_signal ( const Signal::id_t& sname,  const Signal::desc_t& desc );
-
+      
   protected: // data
     /// storage of the signals
     sigmap_t  m_signals;

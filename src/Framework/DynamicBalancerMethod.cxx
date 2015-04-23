@@ -51,8 +51,9 @@ void DynamicBalancerMethod::build_dynamic_functions()
 void DynamicBalancerMethod::registActionListeners()
 {
   Method::registActionListeners();
-
-//   event_handler->addListener("CF_ON_CONVERGENCE_TAKESTEP" ,this,&DynamicBalancerMethod::solve);
+  // const std::string ssname = SubSystemStatusStack::getCurrentName();   
+  // event_handler->addListener(event_handler->key(ssname, "CF_ON_CONVERGENCE_TAKESTEP"),
+  //                            this,&DynamicBalancerMethod::solve);
 }
 
 //////////////////////////////////////////////////////////////////////////////

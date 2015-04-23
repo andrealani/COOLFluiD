@@ -112,42 +112,45 @@ Common::Signal::return_t TAdptMaestro::control ( Common::Signal::arg_t input )
 
     msg += subsysnames[iter] + "\n";
     msg += subsystypes[iter] + "\n";
-
-
-    CFout << "#\n###### STARTING SUBSYSTEM : " << subsysnames[iter] << " ######\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_BUILDSUBSYSTEM", msg );
-
+    
+    const string currSubsysName = subsysnames[iter];
+    SubSystemStatusStack::setCurrentName(currSubsysName);
+    cf_assert(currSubsysName == SubSystemStatusStack::getCurrentName());
+    
+    CFout << "#\n###### STARTING SUBSYSTEM [" << subsysnames[iter] << "] ######\n#\n";
+    event_handler->call_signal (event_handler->key("", "CF_ON_MAESTRO_BUILDSUBSYSTEM"), msg );
+    
     CFout << "#\n###### CONFIG PHASE #################\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_CONFIGSUBSYSTEM", msg );
+    event_handler->call_signal (event_handler->key("","CF_ON_MAESTRO_CONFIGSUBSYSTEM"), msg );
 
     CFout << "#\n###### SOCKETS PLUG PHASE ###########\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_PLUGSOCKETS", msg );
+    event_handler->call_signal (event_handler->key(currSubsysName, "CF_ON_MAESTRO_PLUGSOCKETS"), msg );
 
     // allow to restart from the previous saved iteration
     if ((simStatus.isRestart()) && (simStatus.getNbIter() > 1))
     {
         CFout << "#\n### MODIFY RESTART \n#\n";
-        event_handler->call_signal ( "CF_ON_MAESTRO_MODIFYRESTART", msg );
+        event_handler->call_signal (event_handler->key(currSubsysName, "CF_ON_MAESTRO_MODIFYRESTART"), msg );
     }
 
     CFout << "#\n###### BUILD PHASE ##################\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_BUILDMESHDATA", msg );
+    event_handler->call_signal (event_handler->key(currSubsysName, "CF_ON_MAESTRO_BUILDMESHDATA"), msg );
 
     CFout << "#\n###### SETUP PHASE ##################\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_SETUP", msg );
+    event_handler->call_signal (event_handler->key(currSubsysName, "CF_ON_MAESTRO_SETUP"), msg );
 
     CFout << "#\n###### RUN PHASE ####################\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_RUN", msg );
+    event_handler->call_signal (event_handler->key(currSubsysName, "CF_ON_MAESTRO_RUN"), msg );
 
     CFout << "#\n###### UNSETUP PHASE ################\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_UNSETUP", msg );
+    event_handler->call_signal (event_handler->key(currSubsysName, "CF_ON_MAESTRO_UNSETUP"), msg );
 
     CFout << "#\n###### SOCKETS UNPLUG PHASE #########\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_UNPLUGSOCKETS", msg );
+    event_handler->call_signal (event_handler->key(currSubsysName, "CF_ON_MAESTRO_UNPLUGSOCKETS"), msg );
 
     CFout << "#\n###### DESTRUCTION SUBSYSTEM PHASE #########\n#\n";
-    event_handler->call_signal ( "CF_ON_MAESTRO_DESTROYSUBSYSTEM", msg );
-
+    event_handler->call_signal (event_handler->key("", "CF_ON_MAESTRO_DESTROYSUBSYSTEM"), msg );
+    
     CFout << " ------------ " << it << " END \n";
   }
 }
