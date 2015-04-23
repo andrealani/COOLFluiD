@@ -1,11 +1,18 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Space-time Residual Distribution Schemes, Burgers2D, NewtonIterator, 
+# mesh with triangles, converter from THOR to CFmesh, first-order N (scalar) 
+# scheme, implicit supersonic inlet and outlet BC, output files can be used to 
+# generate movie in Tecplot
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -8.01639
-
-#
+### Residual = -12.27117494
 
 # SubSystem Modules
 Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNewtonMethod libTHOR2CFmesh libFluctSplit libFluctSplitScalar libFluctSplitSpaceTime libBurgers
@@ -18,7 +25,6 @@ Simulator.SubSystem.Default.PhysicalModelType       = Burgers2D
 Simulator.SubSystem.Burgers2D.refValues = 1.0
 Simulator.SubSystem.Burgers2D.refLength = 1.0
 
-
 Simulator.SubSystem.SubSystemStatus.TimeStep = 0.005
 Simulator.SubSystem.SubSystemStatus.ComputeDT = MaxDT
 Simulator.SubSystem.SubSystemStatus.MaxDT.ST_CFL = 2.0
@@ -27,32 +33,24 @@ Simulator.SubSystem.SubSystemStatus.MaxDT.ST_CFL = 2.0
 #Simulator.SubSystem.SubSystemStatus.FunctionDT.Vars = i
 #Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = 1.0
 
-
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
-
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName  = burgers.CFmesh
 Simulator.SubSystem.Tecplot.FileName = burgers.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Prim
-Simulator.SubSystem.Tecplot.SaveRate = 10
-Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.Tecplot.SaveRate = 20
+Simulator.SubSystem.CFmesh.SaveRate = 100
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = true
 Simulator.SubSystem.CFmesh.AppendIter = true
 
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 1
-
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 400
 
-Simulator.SubSystem.Default.listTRS = InnerCells FaceSouth FaceWest FaceNorth SuperInlet
+Simulator.SubSystem.Default.listTRS = FaceSouth FaceWest FaceNorth SuperInlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = burgers.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
-Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
@@ -63,7 +61,7 @@ Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = NewtonIteratorLSS
-Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCILU
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
 Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
 
@@ -71,7 +69,6 @@ Simulator.SubSystem.SpaceMethod = FluctuationSplit
 Simulator.SubSystem.FluctuationSplit.ComputeRHS = RhsJacob
 Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
 Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = STM_RDS
-
 Simulator.SubSystem.FluctuationSplit.Data.ScalarSplitter = STM_ScalarN
 
 Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Prim

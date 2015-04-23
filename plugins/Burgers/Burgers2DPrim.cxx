@@ -82,13 +82,11 @@ void Burgers2DPrim::computeEigenValuesVectors(RealMatrix& rightEv,
 void Burgers2DPrim::computeFlux (const RealVector& vars,
 				 const RealVector& normals)
 {
-  /// @todo broken after release 2009.3
- throw Common::NotImplementedException(FromHere(), "Burgers2DPrim::computeStateFlux()");
-//   const CFreal nx = normals[XX];
-//   const CFreal ny = normals[YY];
-// 
-//   // fx = u^2/2, fy = u
-//   _fluxArray[0] = 0.5*vars[0]*vars[0]*nx + vars[0]*ny;
+  const CFreal nx = normals[XX];
+  const CFreal ny = normals[YY];
+
+  // fx = u^2/2, fy = u
+  _fluxArray[0] = 0.5*vars[0]*vars[0]*nx + vars[0]*ny;
 }
 
 //////////////////////////////////////////////////////////////////////////////

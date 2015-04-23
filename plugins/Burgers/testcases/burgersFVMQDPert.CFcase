@@ -1,18 +1,25 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, Burgers2D, Forward Euler, mesh with quads, THOR converter,
+# second-order reconstruction with Barth limiter, supersonic inlet and outlet BC
+#
+################################################################################
+#
 # COOLFluiD Startfile
 # Comments begin with "#"
+
+### Residual = -10.00273777
 
 # SubSystem Modules
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libForwardEuler libTHOR2CFmesh libFiniteVolume libBurgers libTHOR2CFmesh
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/Burgers/testcases/
-Simulator.Paths.ResultsDir       = ./
+Simulator.Paths.ResultsDir = ./
 
-Simulator.SubSystem.Default.PhysicalModelType       = Burgers2D
-
-
-
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
+Simulator.SubSystem.Default.PhysicalModelType = Burgers2D
 
 Simulator.SubSystem.OutputFormat     = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName  = burgersFVMQDPert.CFmesh
@@ -25,21 +32,16 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 20
-
 #Simulator.SubSystem.StopCondition       = MaxNumberSteps
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 60
 
 Simulator.SubSystem.StopCondition       = Norm
 Simulator.SubSystem.Norm.valueNorm      = -10.0
 
-Simulator.SubSystem.Default.listTRS = InnerFaces SuperInlet FaceSouth FaceWest FaceNorth
+Simulator.SubSystem.Default.listTRS = SuperInlet FaceSouth FaceWest FaceNorth
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = burgersQDPert.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.builderName = FVMCC
-Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
 Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
 Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
@@ -51,9 +53,14 @@ Simulator.SubSystem.SpaceMethod = CellCenterFVM
 
 Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Prim
-Simulator.SubSystem.CellCenterFVM.Data.IntegratorQuadrature = GaussLegendre
-Simulator.SubSystem.CellCenterFVM.Data.IntegratorOrder = P1
-Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -14.
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 
 Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField
@@ -78,4 +85,4 @@ Simulator.SubSystem.CellCenterFVM.West.Vars = x y
 Simulator.SubSystem.CellCenterFVM.West.Def = -0.5
 
 Simulator.SubSystem.CellCenterFVM.North.applyTRS = FaceNorth
-
+Simulator.SubSystem.CellCenterFVM.North.ZeroGradientFlags = 1

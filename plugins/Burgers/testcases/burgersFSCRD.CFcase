@@ -1,10 +1,17 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# CRD, Burgers2D, Forward Euler, mesh with triangles, 
+# converter from THOR to CFmesh, second-order PSIC (scalar) scheme, 
+# supersonic inlet and outlet BC
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -10.026
-#
+### Residual = -10.07201007
 
 # SubSystem Modules
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libForwardEuler libTHOR2CFmesh libFluctSplit libFluctSplitScalar libBurgers libTHOR2CFmesh
@@ -14,9 +21,6 @@ Simulator.Paths.WorkingDir = plugins/Burgers/testcases/
 Simulator.Paths.ResultsDir       = ./
 
 Simulator.SubSystem.Default.PhysicalModelType       = Burgers2D
-
-
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
 
 Simulator.SubSystem.OutputFormat     = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName  = burgers.CFmesh
@@ -29,22 +33,16 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 20
-
 #Simulator.SubSystem.StopCondition       = MaxNumberSteps
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 60
 
 Simulator.SubSystem.StopCondition       = Norm
 Simulator.SubSystem.Norm.valueNorm      = -10.0
 
-Simulator.SubSystem.Default.listTRS = InnerCells FaceSouth FaceWest FaceNorth \
-  SuperInlet
+Simulator.SubSystem.Default.listTRS = FaceSouth FaceWest FaceNorth SuperInlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = burgers.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
-Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
@@ -52,8 +50,7 @@ Simulator.SubSystem.FwdEuler.Data.CFL.Value = 1.0
 
 Simulator.SubSystem.SpaceMethod = FluctuationSplit
 Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = CRD
-
-Simulator.SubSystem.FluctuationSplit.Data.ScalarSplitter = ScalarNC
+Simulator.SubSystem.FluctuationSplit.Data.ScalarSplitter = ScalarPSIC
 
 Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Prim
 Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Prim

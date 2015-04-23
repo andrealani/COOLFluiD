@@ -1,9 +1,17 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# High-Order CRD, Burgers2D, Forward Euler, mesh with triangles, 
+# converter from THOR to CFmesh, third-order BC (scalar) scheme, 
+# supersonic inlet and outlet BC, High-Order Tecplot writer
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = 0.689607
+### Residual = -3.50123774
 #
 
 # SubSystem Modules
@@ -14,9 +22,6 @@ Simulator.Paths.WorkingDir = plugins/Burgers/testcases/
 Simulator.Paths.ResultsDir       = ./
 
 Simulator.SubSystem.Default.PhysicalModelType       = Burgers2D
-
-
-Simulator.SubSystem.FwdEuler.ConvergenceFile     = convergence.plt
 
 Simulator.SubSystem.OutputFormat     = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName  = burgersB_us.CFmesh
@@ -30,14 +35,11 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 20
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
 
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
-
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -10.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -3.5
 
 Simulator.SubSystem.Default.listTRS = InnerCells FaceSouth FaceWest FaceNorth SuperInlet
 
@@ -50,7 +52,7 @@ Simulator.SubSystem.FwdEuler.Data.CFL.Value = 1.0
 Simulator.SubSystem.SpaceMethod = FluctuationSplit
 Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = HOCRD_ScalarBT
 
-Simulator.SubSystem.FluctuationSplit.Data.ScalarSplitter =ScalarBC
+Simulator.SubSystem.FluctuationSplit.Data.ScalarSplitter = ScalarBC
 
 Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Prim
 Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Prim
