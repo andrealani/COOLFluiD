@@ -224,6 +224,9 @@ Examples of usage:
 #installation of individual (MPI-dependent) packages in \$opt_install_mpi_dir from \$opt_tmp_dir
 ./install-coolfluid-deps.pl --install=mpich2,petsc,parmetis --install-mpi-dir=\$opt_install_mpi_dir --tmp-dir=\$opt_tmp_dir
 
+# installation of petsc in optimized mode and using long long int
+./install-coolfluid-deps.pl --install=petsc --int64=1 --install-petsc-dir=\$opt_install_mpi_dir/petsc_optim_long --debug=0 --install-mpi-dir=\$opt_install_mpi_dir
+
 ZZZ
     exit(0);
     }
