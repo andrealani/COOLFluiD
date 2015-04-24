@@ -191,9 +191,10 @@ options:
         --dry-run            Don't actually perform the configuration.
                              Just output what you would do.
 
+        --mpi-dir=           Location of existing MPI installation
         --install-dir=       Location of the software installation directory
                               Default: $opt_install_dir
-        --install-mpi-dir=   Location for the mpi dependent installations
+        --install-mpi-dir=   Location where to install MPI
                               Default: $opt_install_mpi_dir
         --install-petsc-dir= Location of the directory where to install petsc (by default is $opt_install_mpi_dir/petsc )
         --install-parmetis-dir= Location of the directory where to install parmetis (by default is $opt_install_mpi_dir )
