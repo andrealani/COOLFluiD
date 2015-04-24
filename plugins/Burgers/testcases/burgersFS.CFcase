@@ -32,6 +32,7 @@ Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
+#Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
 
 Simulator.SubSystem.StopCondition       = RelativeNormAndMaxIter
 Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 160
