@@ -57,16 +57,6 @@ protected: // functions
     return "ParCFmeshBinaryFileReader";
   }
   
-  /// Read a string and trim it
-  std::string readAndTrimString(MPI_File* fh)
-  {
-    std::string key(30, ' ');
-    MPI_File_read_all(*fh, &key[0], (int)key.size(), MPI_CHAR, &m_status);
-    Common::StringOps::trim2(key); // remove leading (none) and trailing spaces
-    CFLog(VERBOSE, "CFmesh key = <" << key << ">\n");
-    return key;
-  }
-  
  private: // typedefs
   
   typedef std::vector<Framework::ElementTypeData> ElemTypeArray;

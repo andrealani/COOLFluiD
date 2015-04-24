@@ -14,6 +14,7 @@
 
 #include "Common/PE.hh"
 #include "Common/CFLog.hh"
+#include "Common/StringOps.hh"
 #include "Common/MPI/MPIStructDef.hh"
 #include "Common/MPI/MPIError.hh"
 
@@ -29,6 +30,17 @@ namespace COOLFluiD {
 /// @author Andrea Lani
 class MPIIOFunctions {
 public:
+  
+  /// Read a string and trim it
+  static std::string readAndTrimString(MPI_File* fh)
+  {
+    MPI_Status status;
+    std::string key(30, ' ');
+    MPI_File_read_all(*fh, &key[0], (int)key.size(), MPI_CHAR, &status);
+    Common::StringOps::trim2(key); // remove leading (none) and trailing spaces
+    CFLog(VERBOSE, "key = <" << key << ">\n");
+    return key;
+  }
   
   /// Write a key and a value
   template <typename T> 

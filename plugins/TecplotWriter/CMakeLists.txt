@@ -29,6 +29,13 @@ WriteTecplot.cxx
 WriteTecplot.hh
 )
 
+IF(CF_HAVE_MPI)
+  LIST ( APPEND TecplotWriter_files
+    ParWriteSolution.cxx
+    ParWriteSolution.hh
+    )
+ENDIF()
+
 LIST ( APPEND OPTIONAL_dirfiles TECXXX.h preutil.c )
 IF( CF_HAVE_UNISTD_H )
   LIST ( APPEND TecplotWriter_files TECXXX.h preutil.c )

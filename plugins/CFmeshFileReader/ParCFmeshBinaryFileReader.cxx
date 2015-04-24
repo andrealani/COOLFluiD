@@ -130,7 +130,7 @@ void ParCFmeshBinaryFileReader::readCFVersion(MPI_File* fh)
 {
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readCFVersion() start\n");
   
-  string version = readAndTrimString(fh);
+  string version = MPIIOFunctions::readAndTrimString(fh);
   CFLog(INFO, "CF version : " << version << "\n");
   
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readCFVersion() end\n");
@@ -142,7 +142,7 @@ void ParCFmeshBinaryFileReader::readSvnVersion(MPI_File* fh)
 {
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readSvnVersion() start\n");
   
-  string version = readAndTrimString(fh);
+  string version = MPIIOFunctions::readAndTrimString(fh);
   CFLog(INFO, "SVN version : " << version << "\n");
   
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readSvnVersion() end\n");
@@ -154,7 +154,7 @@ void ParCFmeshBinaryFileReader::readCFmeshVersion(MPI_File* fh)
 {
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readCFmeshVersion() start\n");
   
-  string version = readAndTrimString(fh);
+  string version = MPIIOFunctions::readAndTrimString(fh);
   CFLog(INFO, "CFmesh version : " << version << "\n");
   
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readCFmeshVersion() end\n");
@@ -493,7 +493,7 @@ void ParCFmeshBinaryFileReader::readElementTypes(MPI_File* fh)
   elementType->resize(nbElementTypes);
   
   for (CFuint i = 0; i < nbElementTypes; ++i) {
-    const std::string elementShape = readAndTrimString(fh);
+    const std::string elementShape = MPIIOFunctions::readAndTrimString(fh);
     (*elementType)[i].setShape(elementShape);
     (*elementType)[i].setGeoShape( CFGeoShape::Convert::to_enum(elementShape) );
   }
@@ -1310,7 +1310,7 @@ void ParCFmeshBinaryFileReader::readTRSName(MPI_File* fh)
 {
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readTRSName() start\n");
   
-  std::string name = readAndTrimString(fh);
+  std::string name = MPIIOFunctions::readAndTrimString(fh);
   CFLog(VERBOSE, "Found TRS " + name + "\n");
   
   // check if TRS is to be merged
@@ -1402,7 +1402,7 @@ void ParCFmeshBinaryFileReader::readGeomType(MPI_File* fh)
 {
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readGeomType() start\n");
   
-  const std::string geomName = readAndTrimString(fh);
+  const std::string geomName = MPIIOFunctions::readAndTrimString(fh);
   CFGeoEnt::Type trs_type = CFGeoEnt::Convert::to_enum ( geomName );
   
   // check if TRS is to be merged
@@ -1603,7 +1603,7 @@ void ParCFmeshBinaryFileReader::readGeomEntList(MPI_File* fh)
 
 bool ParCFmeshBinaryFileReader::readString(MPI_File* fh)
 {
-  string key = readAndTrimString(fh);
+  string key = MPIIOFunctions::readAndTrimString(fh);
   
   // check end of file
   if (key != getReaderTerminator()) {
@@ -1703,7 +1703,7 @@ void ParCFmeshBinaryFileReader::readExtraVarNames(MPI_File* fh)
   vector<std::string> extraVarNames(nbExtraVars);
   
   for (CFuint i = 0; i < nbExtraVars; ++i) {
-    extraVarNames[i] = readAndTrimString(fh);
+    extraVarNames[i] = MPIIOFunctions::readAndTrimString(fh);
   }
   
   getReadData().setExtraVarNames(extraVarNames);
@@ -1721,7 +1721,7 @@ void ParCFmeshBinaryFileReader::readExtraStateVarNames(MPI_File* fh)
   vector<std::string> extraStateVarNames(nbExtraStateVars);
   
   for (CFuint i = 0; i < nbExtraStateVars; ++i) {
-    extraStateVarNames[i] = readAndTrimString(fh);
+    extraStateVarNames[i] = MPIIOFunctions::readAndTrimString(fh);
   }
 
   getReadData().setExtraStateVarNames(extraStateVarNames);
@@ -1739,7 +1739,7 @@ void ParCFmeshBinaryFileReader::readExtraNodalVarNames(MPI_File* fh)
   vector<std::string> extraNodalVarNames(nbExtraNodalVars);
 
   for (CFuint i = 0; i < nbExtraNodalVars; ++i) {
-    extraNodalVarNames[i] = readAndTrimString(fh);
+    extraNodalVarNames[i] = MPIIOFunctions::readAndTrimString(fh);
   }
 
   getReadData().setExtraNodalVarNames(extraNodalVarNames);
@@ -1839,7 +1839,7 @@ void ParCFmeshBinaryFileReader::readGroupName(MPI_File* fh)
 {
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readGroupName() start\n");
   
-  std::string name = readAndTrimString(fh);
+  std::string name = MPIIOFunctions::readAndTrimString(fh);
   
   if(getReadData().getNbGroups() == 1) name = "InnerCells";
   CFLogDebugMin( "Creating Group " + name + "\n");

@@ -56,27 +56,11 @@ void cmpAndTakeMaxAbs2(CFreal* invec, CFreal* inoutvec, int* len,
 //////////////////////////////////////////////////////////////////////////////
 
 ParCFmeshBinaryFileWriter::ParCFmeshBinaryFileWriter() :
+  ParFileWriter(), 
   ConfigObject("ParCFmeshBinaryFileWriter"),
-  _comm(0),
-  _fh(),
-  _status(),
-  _myRank(0),
-  _nbProc(0),
-  _ioRank(0),
-  _myGroupID(0),
-  _offset(),
-  _isNewFile(false),
-  _isWriterRank(false),
-  _writeData(),
-  _fileList(),
-  _mapFileToStartNodeList()
+  _writeData()
 { 
   addConfigOptionsTo(this);
-
-  _comm   = PE::GetPE().GetCommunicator();
-  _myRank = PE::GetPE().GetRank();
-  _nbProc = PE::GetPE().GetProcessorCount();
-  cf_assert(_nbProc > 0);
   
   _nbWriters = 1;
   setParameter("NbWriters",&_nbWriters);
@@ -103,52 +87,7 @@ void ParCFmeshBinaryFileWriter::defineConfigOptions(Config::OptionList& options)
 
 void ParCFmeshBinaryFileWriter::setup()
 {
-  if (_nbWriters > _nbProc) {
-    CFLog(WARN, "ParCFmeshBinaryFileWriter::setup() => _nbWriters > _nbProc, therefore they are set equal!\n");
-    _nbWriters = _nbProc;
-  }
-  
-  // in reality ranks will be user-defined 
-  vector<int> ranks;
-  vector<int> writerRanks(_nbWriters);
-  CFint count = 0;
-  bool first = true;
-  for (CFuint i = 0; i < _nbWriters; ++i) {    
-    const CFuint nbProcPerWriter = _nbProc/_nbWriters;
-    const CFuint nranks =  (i < _nbWriters-1) ? nbProcPerWriter : nbProcPerWriter + _nbProc%_nbWriters;
-    ranks.resize(nranks);
-    for (CFuint r = 0; r < nranks; ++r, ++count) { 
-      ranks[r] = count;
-      if (ranks[r] == _myRank) {
-	// store the ID of the corresponding group
-	_myGroupID = i;
-	cf_assert(first); // sanity check to be sure that each rank is associated to one group
-	first = false;
-      }
-    }
-    // PE::createGroup(ranks, true);
-    
-    // the first rank in each group will be the master process
-    writerRanks[i] = ranks[0];
-    if (ranks[0] == _myRank) {
-      _isWriterRank = true;
-    }
-  }
-  
-  // create the writers group
-  PE::createGroup("Writers",writerRanks, false);
-  
-  CFLog(VERBOSE, "ParCFmeshBinaryFileWriter::setup() => " << 
-	CFPrintContainer<vector<int> >(" writerRanks  = ",  &writerRanks) << "\n");  
-  
-  // if (_myRank == 0) {
-  //   for (CFuint i = 0; i < _nbProc; ++i) {
-  //     cout << "rank [" << i << "] in group " << PE::getGroupName(i) << endl;
-  //   }
-  // }
-  
-  // create an info object
-  // MPI_Info_create(&_info);
+  ParFileWriter::setWriterGroup();
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -200,43 +139,28 @@ void ParCFmeshBinaryFileWriter::writeToFileStream
 (const boost::filesystem::path& filepath)
 {
   CFLog(VERBOSE, "ParCFmeshBinaryFileWriter::writeToFileStream() start\n");
- 
-  CFLog(VERBOSE, "h1\n");
- 
+   
   // last group is writers group
   PE::Group& wg = PE::getGroup("Writers");
   
-  CFLog(VERBOSE, "h2\n");
-  
   char* fileName = const_cast<char*>(filepath.string().c_str()); 
   
-  CFLog(VERBOSE, "h3\n");
-  
   CFLog(VERBOSE, "fileName = " << filepath.string() << "\n");
-  
   CFLog(VERBOSE, "wg.globalRanks.size() = " << wg.globalRanks.size() << "\n");
   CFLog(VERBOSE, "wg.groupRanks.size() = " << wg.groupRanks.size() << "\n");  
   // all writers open the file for the second or more time
   if (_isWriterRank) {
     MPI_File_open(wg.comm, fileName, MPI_MODE_RDWR | MPI_MODE_CREATE, MPI_INFO_NULL, &_fh); 
   }
-  
-  CFLog(VERBOSE, "h4\n");
-  
+    
   if (_isNewFile) {
     writeVersionStamp(&_fh);
-    
-    CFLog(VERBOSE, "h5\n");
     
     // global counts
     writeGlobalCounts(&_fh);
     
-    CFLog(VERBOSE, "h6\n");
-    
     // extra vars info
     writeExtraVarsInfo(&_fh);
-    
-    CFLog(VERBOSE, "h7\n");
     
     if (_isWriterRank) {
       MPI_Barrier(wg.comm);

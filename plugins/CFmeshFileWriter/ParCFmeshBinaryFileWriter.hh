@@ -9,9 +9,8 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include <boost/filesystem/path.hpp>
-
 #include "Config/ConfigObject.hh"
+#include "Framework/ParFileWriter.hh"
 #include "Framework/CFmeshWriterSource.hh"
 #include "Common/MPI/MPIStructDef.hh"
 #include "Common/MPI/MPIError.hh"
@@ -27,9 +26,10 @@ namespace COOLFluiD {
 
 /// This class represents a CFmesh binary format writer.
 /// @author Andrea Lani
-class CFmeshFileWriter_API ParCFmeshBinaryFileWriter : public Config::ConfigObject {
-
-public:
+class CFmeshFileWriter_API ParCFmeshBinaryFileWriter : 
+	public Framework::ParFileWriter, public Config::ConfigObject {
+  
+ public:
 
   /// Constructor.
   ParCFmeshBinaryFileWriter();
@@ -120,67 +120,8 @@ protected: // helper functions
   
 protected: // data
   
-  /// Class holding all offsets defining the parallel file structure
-  class Offset {
-  public:
-    /// start/end of the element list
-    std::pair<MPI_Offset, MPI_Offset> elems;
-    
-    /// start/end of the nodes list
-    std::pair<MPI_Offset, MPI_Offset> nodes;
-    
-    /// start/end of the states list
-    std::pair<MPI_Offset, MPI_Offset> states;
-    
-    /// start/end of the TRS element list
-    std::vector<std::pair<MPI_Offset, MPI_Offset> > TRS;
-  };
-  
-  /// communicator
-  MPI_Comm _comm;
-  
-  /// file handler
-  MPI_File _fh;
-  
-  /// file status
-  MPI_Status _status;
-    
-  /// rank of this processor
-  CFuint _myRank;
-  
-
-  /// number of processors
-  CFuint _nbProc;
-  
-  /// I/O rank
-  CFuint _ioRank;
-  
-  /// group ID
-  CFuint _myGroupID;
-  
-  /// offsets holder
-  Offset _offset;
-    
-  /// flag telling if the file is a new one
-  bool _isNewFile;
-
-  /// flag telling if this processor is a writer
-  bool _isWriterRank;
-  
   /// acquaintance of the data present in the CFmesh file
   Common::SafePtr<Framework::CFmeshWriterSource> _writeData;
-
-  /// set keeping track of the files already created
-  std::set<boost::filesystem::path> _fileList;
-  
-  /// set keeping track of the files already created
-  std::map<boost::filesystem::path, long long> _mapFileToStartNodeList;
-  
-  /// number of writers (and MPI groups)
-  CFuint _nbWriters;
-  
-  /// maximu size of the buffer to write with MPI I/O
-  int _maxBuffSize;
   
 }; // class ParCFmeshBinaryFileWriter
 

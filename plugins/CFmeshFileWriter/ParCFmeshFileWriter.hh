@@ -9,8 +9,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include <boost/filesystem/path.hpp>
-
+#include "Framework/ParFileWriter.hh"
 #include "Framework/CFmeshWriterSource.hh"
 #include "Common/SafePtr.hh"
 #include "CFmeshFileWriter/CFmeshFileWriter.hh"
@@ -26,8 +25,8 @@ namespace COOLFluiD {
 /// This class represents a CFmesh format writer.
 /// @author Andrea Lani
 class CFmeshFileWriter_API ParCFmeshFileWriter : 
-	public Config::ConfigObject {
-
+	public Framework::ParFileWriter, public Config::ConfigObject {
+  
 public:
 
   /// Constructor.
@@ -77,16 +76,16 @@ protected: // methods
   /// Writes to the given file.
   /// @throw Common::FilesystemException
   void writeToFileStream(const boost::filesystem::path& filepath,
-  		 std::ofstream *const fout);
+			 std::ofstream *const fout);
 
   /// Get the name of the reader
   const std::string getWriterName() const
   {
     return "ParCFmeshFileWriter";
   }
-
+  
 private: // helper functions
-
+  
   /// Writes the extra variables info
   void writeExtraVarsInfo(std::ofstream *const fout);
   
@@ -118,31 +117,10 @@ private: // helper functions
   void writeGeoList(CFuint iTRS, std::ofstream *const fout);
 
 protected: // data
-
-  /// communicator
-  MPI_Comm _comm;
-
-  /// rank of this processor
-  CFuint _myRank;
-
-  /// number of processors
-  CFuint _nbProc;
-
-  /// I/O rank
-  CFuint _ioRank;
-
-  /// flag telling if the file is a new one
-  CFuint _isNewFile;
-
+  
   /// acquaintance of the data present in the CFmesh file
   Common::SafePtr<Framework::CFmeshWriterSource> _writeData;
-
-  /// set keeping track of the files already created
-  std::set<boost::filesystem::path> _fileList;
-
-  /// set keeping track of the files already created
-  std::map<boost::filesystem::path, long> _mapFileToStartNodeList;
-
+    
 }; // class ParCFmeshFileWriter
 
 //////////////////////////////////////////////////////////////////////////////

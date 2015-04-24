@@ -56,15 +56,9 @@ void cmpAndTakeMaxAbs(CFreal* invec, CFreal* inoutvec, int* len,
 //////////////////////////////////////////////////////////////////////////////
 
 ParCFmeshFileWriter::ParCFmeshFileWriter() :
+  ParFileWriter(), 
   ConfigObject("ParCFmeshFileWriter"),
-  _comm(0),
-  _myRank(0),
-  _nbProc(0),
-  _ioRank(0),
-  _isNewFile(0),
-  _writeData(),
-  _fileList(),
-  _mapFileToStartNodeList()
+  _writeData()
 {
   addConfigOptionsTo(this);
   
@@ -123,10 +117,12 @@ void ParCFmeshFileWriter::writeToFile(const boost::filesystem::path& filepath)
       _isNewFile = 1;
     }
   }
-
+  
   // communicate to all the processors about the status of the current file
-  MPI_Bcast(&_isNewFile, 1, MPIStructDef::getMPIType(&_isNewFile), _ioRank, _comm);
-
+  int isNewFile = (int)_isNewFile;
+  MPI_Bcast(&isNewFile, 1, MPIStructDef::getMPIType(&isNewFile), _ioRank, _comm);
+  _isNewFile = (isNewFile == 0) ? false : true;
+  
   writeToFileStream(filepath, file);
 
   if (_myRank == _ioRank) {
@@ -167,16 +163,15 @@ void ParCFmeshFileWriter::writeToFileStream
   else {
     cf_assert(_isNewFile == 0);
 
-    long position = 0;
+    long long position = 0;
     if (_myRank == _ioRank) {
       position = _mapFileToStartNodeList.find(filepath)->second;
       fout->seekp(position, ios::beg);
     }
-
+    
     // communicate to all the processors about the position in the current file
-    MPI_Bcast(&position, 1, MPI_LONG, _ioRank, _comm);
+    MPI_Bcast(&position, 1, MPIStructDef::getMPIType(&position), _ioRank, _comm);
   }
-
   
   // extra vars that are not state or node related
   writeExtraVars(fout);

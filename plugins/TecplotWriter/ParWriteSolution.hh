@@ -4,12 +4,12 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_IO_TecplotWriter_WriteSolution_hh
-#define COOLFluiD_IO_TecplotWriter_WriteSolution_hh
+#ifndef COOLFluiD_IO_TecplotWriter_ParWriteSolution_hh
+#define COOLFluiD_IO_TecplotWriter_ParWriteSolution_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "Framework/FileWriter.hh"
+#include "Framework/ParFileWriter.hh"
 #include "Framework/DataSocketSink.hh"
 #include "Framework/ProxyDofIterator.hh"
 
@@ -25,14 +25,11 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This class represents a NumericalCommand action
-/// to write the MeshData soolution to a Tecplot format  file
-/// for visualization.
-/// @author Tiago Quintino
+/// This class represents a parallel writer for TECPLOT files
 /// @author Andrea Lani
-class TecplotWriter_API WriteSolution : 
+class TecplotWriter_API ParWriteSolution : 
 	public TecWriterCom,
-	public Framework::FileWriter {
+	public Framework::ParFileWriter {
   
 public:
 
@@ -41,10 +38,10 @@ public:
   static void defineConfigOptions(Config::OptionList& options);
 
   /// Constructor.
-  explicit WriteSolution(const std::string& name);
+  explicit ParWriteSolution(const std::string& name);
 
   /// Destructor.
-  virtual ~WriteSolution()
+  virtual ~ParWriteSolution()
   {
   }
 
@@ -57,22 +54,25 @@ public:
 
   /// Execute Processing actions
   virtual void execute();
-
+  
   /// Gets the file extension to append to the file name
   const std::string getWriterFileExtension() const
   {
     return std::string(".plt");
   }
-
-protected:
-
+  
+ protected:
+  
+  /// Writes to the given file.
+  /// @throw Common::FilesystemException
+  void writeToFileStream(const boost::filesystem::path& filepath);
+  
+  /// Writes the TECPLOT header
+  void writeHeader(MPI_File* fh);
+  
   /// Write the Tecplot file in Binmary format
   /// @throw Common::FilesystemException
   virtual void writeToBinaryFile();
-
-  /// Write the to the given file stream the MeshData.
-  /// @throw Common::FilesystemException
-  virtual void writeToFileStream(std::ofstream& fout);
   
   /// Write the boundary surface data
   virtual void writeBoundarySurface();
@@ -81,17 +81,17 @@ protected:
   const std::string getWriterName() const;
 
 protected:
-
+  
   /// socket for Node's
   Framework::DataSocketSink < Framework::Node* , Framework::GLOBAL > socket_nodes;
-
+  
   /// socket for State Proxy
   Framework::DataSocketSink<Framework::ProxyDofIterator<RealVector>*> socket_nstatesProxy;
-
+  
   //File format to write in (ASCII or Binary)
   std::string _fileFormatStr;
 
-}; // class WriteSolution
+}; // class ParWriteSolution
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -101,5 +101,5 @@ protected:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_IO_TecplotWriter_WriteSolution_hh
+#endif // COOLFluiD_IO_TecplotWriter_ParWriteSolution_hh
 

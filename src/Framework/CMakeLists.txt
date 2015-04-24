@@ -559,6 +559,8 @@ IF(CF_HAVE_MPI)
          DataHandleMPI.hh
          MeshPartitioner.hh
          MeshPartitioner.cxx
+	 ParFileWriter.cxx
+	 ParFileWriter.hh
          StopConditionControllerMPI.cxx
          StopConditionControllerMPI.hh
        )

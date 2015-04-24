@@ -15,6 +15,7 @@
 
 #include "Common/StringOps.hh"
 #include "Common/FilesystemException.hh"
+#include "Common/NotImplementedException.hh"
 #include "Framework/Framework.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -36,11 +37,11 @@ public:
 
   /// Default destructor
   virtual ~FileWriter();
-
+  
   /// Opens and starts to write to the given file.
   /// @throw Common::FilesystemException
-  void writeToFile(const boost::filesystem::path& filepath);
-
+  virtual void writeToFile(const boost::filesystem::path& filepath);
+  
   /// Gets the file extension to append to the file name
   virtual const std::string getWriterFileExtension() const = 0;
 
@@ -48,7 +49,10 @@ protected:
 
   /// Write the given file. This is an pure abstract method
   /// @throw Common::FilesystemException
-  virtual void writeToFileStream(std::ofstream& fout) = 0;
+  virtual void writeToFileStream(std::ofstream& fout) 
+  {
+    throw Common::NotImplementedException (FromHere(),"FileWriter::writeToFileStream()");
+  }
 
   /// Get the name of the writer
   virtual const std::string getWriterName() const = 0;
