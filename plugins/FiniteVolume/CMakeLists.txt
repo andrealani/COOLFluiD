@@ -337,6 +337,7 @@ RoeSAFluxGhost.hh
 RoeSAFluxGhost.cxx
 UpwindBiasedMUSCLPolyRec.hh
 UpwindBiasedMUSCLPolyRec.cxx
+SimpleEdgeGraph.hh
 )
 
 IF (NOT CF_HAVE_CUDA)
