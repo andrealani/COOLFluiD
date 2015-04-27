@@ -49,7 +49,7 @@ void CGNSReader::read(const std::string& filename)
   CFAUTOTRACE;
 
   // open file in read mode
-  CALL_CGNS ( cg_open(filename.c_str(),MODE_READ,&index_file) );
+  CALL_CGNS ( cg_open(filename.c_str(),CG_MODE_READ,&index_file) );
 
   // check how many bases we have
   CALL_CGNS ( cg_nbases(index_file,&m_nbbases) );
@@ -108,7 +108,8 @@ void CGNSReader::readZone()
   if (zitr->ztype == Structured) throw CGNSException (FromHere(),"Cannot handle structured meshes.");
 
   // get zone size and name
-  CALL_CGNS ( cg_zone_read(index_file,index_base,index_zone,zitr->zonename,zitr->isize[0]) );
+  // CALL_CGNS ( cg_zone_read(index_file,index_base,index_zone,zitr->zonename,zitr->isize[0]) );
+  CALL_CGNS ( cg_zone_read(index_file,index_base,index_zone,zitr->zonename,(cgsize_t*)zitr->isize[0]) );
   // get the number of grids
   CALL_CGNS ( cg_ngrids(index_file,index_base,index_zone,&zitr->m_nbgrids) );
   // find out number of solutions
@@ -188,11 +189,11 @@ void CGNSReader::readGrid()
     gitr->allocate_z(zitr->irmax);
 
   // read grid coordinates
-  CALL_CGNS ( cg_coord_read(index_file,index_base,index_zone,"CoordinateX", RealDouble,&zitr->irmin,&zitr->irmax,gitr->x) );
-  CALL_CGNS ( cg_coord_read(index_file,index_base,index_zone,"CoordinateY", RealDouble,&zitr->irmin,&zitr->irmax,gitr->y) );
+  CALL_CGNS ( cg_coord_read(index_file,index_base,index_zone,"CoordinateX", RealDouble,(cgsize_t*)&zitr->irmin,(cgsize_t*)&zitr->irmax,gitr->x) );
+  CALL_CGNS ( cg_coord_read(index_file,index_base,index_zone,"CoordinateY", RealDouble,(cgsize_t*)&zitr->irmin,(cgsize_t*)&zitr->irmax,gitr->y) );
 
   if (bitr->m_phys_dim == DIM_3D)
-    CALL_CGNS ( cg_coord_read(index_file,index_base,index_zone,"CoordinateZ", RealDouble,&zitr->irmin,&zitr->irmax,gitr->z) );
+    CALL_CGNS ( cg_coord_read(index_file,index_base,index_zone,"CoordinateZ", RealDouble,(cgsize_t*)&zitr->irmin,(cgsize_t*)&zitr->irmax,gitr->z) );
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -225,7 +226,7 @@ void CGNSReader::readSolution()
       CFLog (INFO,"field id : "   << ifield << "\n");
       CFLog (INFO,"field name : " << fitr->fieldname << "\n");
       // read the data of this field
-      CALL_CGNS ( cg_field_read(index_file,index_base,index_zone,index_sol, fitr->fieldname, RealDouble,&zitr->irmin,&zitr->irmax,fitr->field) );
+      CALL_CGNS ( cg_field_read(index_file,index_base,index_zone,index_sol, fitr->fieldname, RealDouble,(cgsize_t*)&zitr->irmin,(cgsize_t*)&zitr->irmax,fitr->field) );
     }
 }
 
@@ -239,7 +240,7 @@ void CGNSReader::readSection()
   int nbndry,iparent_flag,iparentdata;
 
   // reading section data
-  CALL_CGNS ( cg_section_read(index_file,index_base,index_zone,index_sect,secitr->sectionname, &secitr->itype,&secitr->istart,&secitr->iend,&nbndry,&iparent_flag ) );
+  CALL_CGNS ( cg_section_read(index_file,index_base,index_zone,index_sect,secitr->sectionname, &secitr->itype,(cgsize_t*)&secitr->istart,(cgsize_t*)&secitr->iend,&nbndry,&iparent_flag ) );
 
   CFLog(INFO,"section name : " << secitr->sectionname << "\n");
   CFLog(INFO,"section type : " << ElementTypeName[secitr->itype] << "\n");
@@ -252,7 +253,7 @@ void CGNSReader::readSection()
   secitr->allocate();
 
   // get the connecivity for this element type
-  CALL_CGNS ( cg_elements_read(index_file,index_base,index_zone,index_sect,secitr->ielem, &iparentdata) );
+  CALL_CGNS ( cg_elements_read(index_file,index_base,index_zone,index_sect,(cgsize_t*)secitr->ielem, (cgsize_t*)&iparentdata) );
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -262,7 +263,7 @@ void CGNSReader::readBoco()
   CFAUTOTRACE;
 
   // get BC info
-  CALL_CGNS ( cg_boco_info(index_file,index_base,index_zone,index_boco,bcitr->boconame,&bcitr->ibocotype,&bcitr->iptset,&bcitr->nbcpts,bcitr->normalindex,&bcitr->normallistflag,&bcitr->normaldatatype,&bcitr->ndataset) );
+  CALL_CGNS ( cg_boco_info(index_file,index_base,index_zone,index_boco,bcitr->boconame,&bcitr->ibocotype,&bcitr->iptset,(cgsize_t*)&bcitr->nbcpts,bcitr->normalindex,(cgsize_t*)&bcitr->normallistflag,&bcitr->normaldatatype,&bcitr->ndataset) );
 
   // check for types of BCs that we can handle
   if (bcitr->iptset != PointList) throw CGNSException (FromHere(),"Cannot handle boundary conditions different than PointList");
@@ -276,12 +277,13 @@ void CGNSReader::readBoco()
   bcitr->allocate();
 
   // read point list
-  CALL_CGNS( cg_boco_read(index_file,index_base,index_zone,index_boco,bcitr->ibcpnts,&bcitr->normallist) );
+  CALL_CGNS( cg_boco_read(index_file,index_base,index_zone,index_boco,(cgsize_t*)bcitr->ibcpnts,&bcitr->normallist) );
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void CGNSReader::handle_CGNS_error(int ierr)
+//void CGNSReader::handle_CGNS_error(cgsize_t ierr)
 {
   if (ierr)
   {
