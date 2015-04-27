@@ -33,11 +33,12 @@ Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 500
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = true
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = shockSensor pressure #dPdX dPdY
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = shockSensor pressure #dPdY dPdY
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1
-Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
-Simulator.SubSystem.Tecplot.WriteSolutionBlockFV.NodalOutputVar = true
+
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = shockSensor pressure #dPdX dPdY
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = shockSensor pressure #dPdY dPdY
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1
+#Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
+#Simulator.SubSystem.Tecplot.WriteSolutionBlockFV.NodalOutputVar = true
 
 #Simulator.SubSystem.StopCondition       = MaxNumberSteps
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 200
@@ -109,21 +110,15 @@ Simulator.SubSystem.DataPostProcessing          = DataProcessing
 Simulator.SubSystem.DataPostProcessingNames     = MeFiAlgo
 Simulator.SubSystem.MeFiAlgo.Comds              = MeshFittingAlgorithmNS
 Simulator.SubSystem.MeFiAlgo.Data.CollaboratorNames = MeshAlgoLSS
-Simulator.SubSystem.MeFiAlgo.ProcessRate        = 20
-#Simulator.SubSystem.MeFiAlgo.StopIter          = 1000
-Simulator.SubSystem.MeFiAlgo.Names              = Foo
+Simulator.SubSystem.MeFiAlgo.ProcessRate        = 60
+Simulator.SubSystem.MeFiAlgo.SkipFirstIteration = true
+Simulator.SubSystem.MeFiAlgo.StopIter           = 2000
+Simulator.SubSystem.MeFiAlgo.Names              = MeshFitting
 Simulator.SubSystem.MeFiAlgo.Data.updateVar     = Cons
+ 
+Simulator.SubSystem.MeFiAlgo.MeshFitting.minPercentile    = 0.65
+Simulator.SubSystem.MeFiAlgo.MeshFitting.maxPercentile    = 0.75
+Simulator.SubSystem.MeFiAlgo.MeshFitting.meshAcceleration = 10.
+Simulator.SubSystem.MeFiAlgo.MeshFitting.monitorVar       = rho
 
-Simulator.SubSystem.MeFiAlgo.Foo.monitorVar  = rho
-Simulator.SubSystem.MeFiAlgo.Foo.phiMinSS    = 1.0
-Simulator.SubSystem.MeFiAlgo.Foo.phiMaxSS    = 1.5
-Simulator.SubSystem.MeFiAlgo.Foo.minPerc     = 0.65
-Simulator.SubSystem.MeFiAlgo.Foo.maxPerc     = 0.75
-
-#Simulator.SubSystem.MeFiAlgo.Foo.ssOnly     = false
-Simulator.SubSystem.MeFiAlgo.Foo.ssRate = 20
-Simulator.SubSystem.MeFiAlgo.Foo.maRate = 60
-Simulator.SubSystem.MeFiAlgo.Foo.boundaryDegreeNM = 1 #2
-Simulator.SubSystem.MeFiAlgo.Foo.stopAdaptationIter = 2000
-Simulator.SubSystem.MeFiAlgo.Foo.alpha = 10.
 Simulator.SubSystem.CellCenterFVM.AfterMeshUpdateCom = StdMeshFittingUpdate
