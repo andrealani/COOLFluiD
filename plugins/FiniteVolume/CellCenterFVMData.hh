@@ -385,6 +385,14 @@ public:
   }
 
   /**
+   * Tell the names of the TRSs for which no BCs must be applied
+   */
+  const std::vector<std::string>& getTRSsWithNoBC() const
+  {
+    return _trssWithNoBC;
+  }
+
+  /**
    * Gets the Class name
    */
   static std::string getClassName()
@@ -609,6 +617,9 @@ private:
 
   ///  name of the TRSs on which ghost should be placed on the face
   std::vector<std::string> _trssWithGhostsOnFace;
+  
+  ///  name of TRSs for which a BC doesn't have to be applied
+  std::vector<std::string> _trssWithNoBC;
   
   /// flag that tells if the simulation is axisymmetric
   bool _isAxisymm;

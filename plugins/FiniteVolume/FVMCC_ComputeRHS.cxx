@@ -175,6 +175,8 @@ void FVMCC_ComputeRHS::execute()
   // a MethodStrategy could set it to a different value afterwards, before entering here
   geoData.allCells = getMethodData().getBuildAllCells();
   
+  const vector<string>& noBCTRS = getMethodData().getTRSsWithNoBC();
+  
   for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
     SafePtr<TopologicalRegionSet> currTrs = trs[iTRS];
     
@@ -182,7 +184,9 @@ void FVMCC_ComputeRHS::execute()
 
     // the faces on the boundary of the partition don't have to
     // be processed (their fluxes could give NaN)
-    if (currTrs->getName() != "PartitionFaces" && currTrs->getName() != "InnerCells") {
+    if (currTrs->getName() != "PartitionFaces" && currTrs->getName() != "InnerCells" && 
+	!binary_search(noBCTRS.begin(), noBCTRS.end(), currTrs->getName())) {
+      
       if (currTrs->hasTag("writable")) {
         _currBC = _bcMap.find(iTRS);
 	
@@ -674,7 +678,7 @@ void FVMCC_ComputeRHS::setBCList
 {
   const CFuint nbBCs = bcList.size();
   _bcMap.reserve(nbBCs);
-
+  
   vector<FVMCC_BC*> tempBC(nbBCs);
   for (CFuint iBC = 0; iBC < nbBCs; ++iBC) {
     tempBC[iBC] = dynamic_cast<FVMCC_BC*>(bcList[iBC].getPtr());
@@ -699,7 +703,9 @@ void FVMCC_ComputeRHS::setBCList
       std::string nameTRS = names[iName];
       bool nameFound = false;
       for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
+	CFLog(VERBOSE, "FVMCC_ComputeRHS::setBCList() => " << trs[iTRS]->getName() << " == " << nameTRS << "?\n");
 	if (trs[iTRS]->getName() == nameTRS) {
+	  CFLog(VERBOSE, "found iTRS = " << iTRS << " == " << tempBC[iBC] << "\n");
 	  _bcMap.insert(iTRS, tempBC[iBC]);
 	  nameFound = true;
 	  break;

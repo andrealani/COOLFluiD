@@ -35,7 +35,8 @@ void CellCenterFVMData::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("DiffusiveFlux","Diffusive flux computer.");
   options.addConfigOption< std::vector<std::string> >("EquationFilter","Equation filter type(s).");
   options.addConfigOption< std::vector<std::string> >("SourceTerm","Source term type(s).");
-  options.addConfigOption< std::vector<std::string> >("TRSsWithGhostsOnFace","TRSs on which ghost states lay on the face.");
+  options.addConfigOption< std::vector<std::string> >("TRSsWithGhostsOnFace","TRSs on which ghost states lay on the face."); 
+  options.addConfigOption< std::vector<std::string> >("TRSsWithNoBC","TRSs for which no BC must be applied.");
   options.addConfigOption< std::string >("DerivativeStrategy","Derivative computation strategy.");
   options.addConfigOption< std::string >("LinearVar","Linearization variable set.");
   options.addConfigOption< std::string >("NodalExtrapolation","Nodal extrapolation strategy.");
@@ -46,6 +47,7 @@ void CellCenterFVMData::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >("ReconstructSolutionVars", "Reconstruct the solution variables instead of the update ones");
   options.addConfigOption< std::string >("IntegratorOrder","Order of the Integration to be used for numerical quadrature.");
   options.addConfigOption< std::string >("IntegratorQuadrature","Type of Quadrature to be used in the Integration.");
+
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -124,6 +126,9 @@ CellCenterFVMData::CellCenterFVMData(Common::SafePtr<Framework::Method> owner) :
   _trssWithGhostsOnFace = vector<std::string>();
   setParameter("TRSsWithGhostsOnFace",&_trssWithGhostsOnFace);
 
+  _trssWithNoBC = vector<std::string>();
+  setParameter("TRSsWithNoBC",&_trssWithNoBC);
+  
   _isAxisymm = false;
   setParameter("isAxisymm",&_isAxisymm);
 
