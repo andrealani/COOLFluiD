@@ -642,7 +642,7 @@ void AeroForcesFVMCC::prepareOutputFileAero()
     boost::filesystem::path file = Environment::DirPaths::getInstance().getResultsDir() /
       boost::filesystem::path(m_nameOutputFileAero);
     file = Framework::PathAppender::getInstance().appendAllInfo 
-      (file,m_appendIter,m_appendTime,false);  
+      (file,false,false,false);  
        
     SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
     ofstream& fout = fhandle->open(file);
@@ -704,8 +704,8 @@ void AeroForcesFVMCC::updateOutputFileAero()
     boost::filesystem::path file = Environment::DirPaths::getInstance().getResultsDir() / 
       boost::filesystem::path(m_nameOutputFileAero); 
     file = Framework::PathAppender::getInstance().appendAllInfo
-      (file,m_appendIter,m_appendTime,false); 
-      
+      (file,false,false,false); 
+    
       SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create(); 
       ofstream& fout = fhandle->open(file, ios::app); 
       
