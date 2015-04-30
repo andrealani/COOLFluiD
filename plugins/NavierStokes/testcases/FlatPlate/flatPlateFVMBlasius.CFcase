@@ -55,10 +55,14 @@ Simulator.SubSystem.DataPostProcessing = DataProcessing
 Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
 Simulator.SubSystem.DataProcessing2.Comds = NavierStokesSkinFrictionHeatFluxCC
 Simulator.SubSystem.DataProcessing2.Names = SkinFriction
+Simulator.SubSystem.DataProcessing2.ProcessRate = 5
 Simulator.SubSystem.DataProcessing2.SkinFriction.applyTRS = NoSlipWall
 Simulator.SubSystem.DataProcessing2.SkinFriction.rhoInf = 0.01152
 Simulator.SubSystem.DataProcessing2.SkinFriction.uInf = 121.151
 Simulator.SubSystem.DataProcessing2.SkinFriction.pInf = 986.369
+Simulator.SubSystem.DataProcessing2.SkinFriction.AppendIter = true
+Simulator.SubSystem.DataProcessing2.SkinFriction.AppendTime = true
+#Simulator.SubSystem.DataProcessing2.SkipFirstIteration = true
 
 Simulator.SubSystem.Default.listTRS = InnerFaces SlipWall NoSlipWall Inlet Outlet
 
