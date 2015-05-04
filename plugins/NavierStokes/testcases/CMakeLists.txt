@@ -1,3 +1,4 @@
+cf_add_case( MPI 8       CASEDIR Cylinder PCASE cyl_Pg_M15_FVM_1st2nd.CFcase CASEFILES cyl_Pg_M15.plt cyl_Pg_M15.surf.plt )
 cf_add_case( MPI 8       CASEDIR Cylinder PCASE cyl3DFVMImplPuvt_Reynolds_40.CFcase CASEFILES cylinder_2D_quad.CFmesh )
 cf_add_case( MPI default CASEDIR FlatPlate PCASE flatPlateFVMBlasius.CFcase CASEFILES flatPlateQD.CFmesh )
 cf_add_case( MPI default CASEDIR FlatPlate PCASE flatPlate3DFVMBlasius.CFcase CASEFILES flatPlateQD.CFmesh )
@@ -15,6 +16,7 @@ cf_add_case( MPI 8       CASEDIR Wedge  PCASE wedgeFluctSplitHOCRD_Bx_imp.CFcase
 cf_add_case( MPI 8       CASEDIR Wedge  PCASE wedgeFluctSplitHOCRD.CFcase CASEFILES wedgeP2.CFmesh )
 cf_add_case( MPI default CASEDIR Wedge  PCASE wedgeFluctSplitImpl.CFcase CASEFILES wedge.thor wedge.SP )
 cf_add_case( MPI 8       CASEDIR Wedge  PCASE wedgeFVM_MeFiAlgo.CFcase CASEFILES wedge.thor wedge.SP )
+cf_add_case( MPI 8       CASEDIR Wedge  PCASE wedgeFVM_MeFiAlgoQuads.CFcase CASEFILES wedge2dQuads.neu )
 cf_add_case( MPI 8       CASEDIR Wedge  PCASE wedgeFVMImpl_MeFiAlgo.CFcase CASEFILES wedge.thor wedge.SP )
 cf_add_case( MPI 1       CASEDIR Wedge  PCASE wedgeFS_SpaceTime.CFcase CASEFILES wedgestart.CFmesh )
 cf_add_case( MPI default CASEDIR Wedge  PCASE wedgeFVM.CFcase CASEFILES wedge.thor wedge.SP )

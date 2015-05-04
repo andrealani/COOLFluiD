@@ -2,8 +2,8 @@
 # 
 # This COOLFluiD CFcase file tests: 
 # 
-# Finite Volume, Euler2D, Forward Euler, mesh with triangles, converter from 
-# THOR to CFmesh, second-order reconstruction with Venkatakhrisnan limiter, 
+# Finite Volume, Euler2D, Forward Euler, mesh with quads, converter from 
+# Gambit to CFmesh, second-order reconstruction with Venkatakhrisnan limiter, 
 # supersonic inlet and outlet, slip wall BC, mesh fitting algorithm 
 #
 ################################################################################
@@ -11,14 +11,14 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -4.00014829
+### Residual = -4.00162547
 
 # SubSystem Modules
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libForwardEuler libPetscI libGambit2CFmesh
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Wedge/
-Simulator.Paths.ResultsDir       = ./
+Simulator.Paths.ResultsDir = ./
 
 Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
 
@@ -30,7 +30,7 @@ Simulator.SubSystem.CFmesh.AppendIter = false
 
 Simulator.SubSystem.Tecplot.FileName    = wedgeFVM.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Cons
-Simulator.SubSystem.Tecplot.SaveRate = 61
+Simulator.SubSystem.Tecplot.SaveRate = 500
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = true
 
@@ -103,12 +103,12 @@ Simulator.SubSystem.MeFiAlgo.Comds              = MeshFittingAlgorithmNS
 Simulator.SubSystem.MeFiAlgo.Data.CollaboratorNames = MeshAlgoLSS
 Simulator.SubSystem.MeFiAlgo.ProcessRate        = 60
 Simulator.SubSystem.MeFiAlgo.SkipFirstIteration = true
-Simulator.SubSystem.MeFiAlgo.StopIter           = 2000
+Simulator.SubSystem.MeFiAlgo.StopIter           = 1500
 Simulator.SubSystem.MeFiAlgo.Names              = MeshFitting
 Simulator.SubSystem.MeFiAlgo.Data.updateVar     = Cons
  
 Simulator.SubSystem.MeFiAlgo.MeshFitting.minPercentile    = 0.65
-Simulator.SubSystem.MeFiAlgo.MeshFitting.maxPercentile    = 0.75
+Simulator.SubSystem.MeFiAlgo.MeshFitting.maxPercentile    = 0.8
 Simulator.SubSystem.MeFiAlgo.MeshFitting.meshAcceleration = 10.
 Simulator.SubSystem.MeFiAlgo.MeshFitting.monitorVar       = rho
 
