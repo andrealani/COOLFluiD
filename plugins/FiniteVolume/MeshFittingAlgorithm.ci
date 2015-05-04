@@ -206,8 +206,14 @@ void MeshFittingAlgorithm<MODEL>::execute()
   solveLinearSystem();
   updateNodePositions();
   triggerRecomputeMeshData();
+  
+  // to be improved
+  Framework::DataHandle<Framework::State*, Framework::GLOBAL> states = socket_states.getDataHandle();
+  Framework::DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
+  const CFuint totalNbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+  if (rhs.size()/totalNbEqs != states.size()) rhs.resize(states.size()*totalNbEqs);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename MODEL>
@@ -414,6 +420,7 @@ void MeshFittingAlgorithm<MODEL>::fillSpringsRightHandSide() {
   
   if (rhs.size()!=rhsSize) rhs.resize(rhsSize);
   rhs = 0.;
+  
 
   for(CFuint iNode=0; iNode<nbNodes; ++iNode){
     if(nodes[iNode]->isParUpdatable()){
