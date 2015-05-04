@@ -85,11 +85,20 @@ CFreal ComputeL2Norm::GR_GetLocalValue () const
   DataHandle< CFreal > vecnorm = sockets_norm.getSocketSink<CFreal>(m_vecnorm_name)->getDataHandle();
   
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
-    
+  
+  CFLog(VERBOSE, "ComputeL2Norm::GR_GetLocalValue() => m_vecnorm_name = " << m_vecnorm_name << "\n");
+  
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFuint nbStates = vecnorm.size()/nbEqs;
   
-  cf_assert (states.size()== nbStates);
+  CFLog(VERBOSE, "ComputeL2Norm::GR_GetLocalValue() => nbEqs = " << nbEqs << "\n");
+  CFLog(VERBOSE, "ComputeL2Norm::GR_GetLocalValue() => vecnorm.size() = " << vecnorm.size() << "\n");
+  
+  if (states.size() != nbStates) {
+    CFLog(VERBOSE, "ComputeL2Norm::GR_GetLocalValue() => " << states.size()  << " != " <<  nbStates << "\n");
+    cf_assert (states.size()== nbStates);
+  }
+  
   const CFuint iVar = m_compute_var_id[m_var_itr];
   
   CFreal value = 0.0;
