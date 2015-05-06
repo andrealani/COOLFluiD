@@ -215,7 +215,7 @@ void ParadeRadiator::setupSpectra(CFreal wavMin, CFreal wavMax)
   
   m_wavMin = wavMin;
   m_wavMax = wavMax;
-  m_dWav = (m_wavMax - m_wavMin)/((static_cast<CFreal>(m_nbPoints)-1));
+  m_dWav = (m_wavMax-m_wavMin)/((static_cast<CFreal>(m_nbPoints)-1));
 
  // cout<<"wavmin: "<<m_wavMin<<" wavMax: "<<m_wavMax<<" dWav: "<<m_dWav<<
  //   " nbPoints: "<<m_nbPoints<<endl;
@@ -312,7 +312,6 @@ void ParadeRadiator::writeLocalData()
   const CFuint nbTemps = m_radPhysicsHandlerPtr->getNbTemps();
   const CFuint tempID = m_radPhysicsHandlerPtr->getTempID();
 
-
   // write the mesh file
   ofstream& foutG = m_outFileHandle->open(m_gridFile);
   foutG << "TINA" << endl;
@@ -363,7 +362,7 @@ void ParadeRadiator::writeLocalData()
  foutD.setf(ios::scientific,ios::floatfield);
   
   if(m_isLTE) {	  
-    // LTE: composition is computed throught the chenmical library
+    // LTE: composition is computed though the chemical library
     RealVector x(nbSpecies);
     RealVector y(nbSpecies);	 
     CFreal rhoi = 0.;
@@ -387,17 +386,15 @@ void ParadeRadiator::writeLocalData()
   else{ 
     // NEQ: species partial density is a system state
     // here it is assumed that the species densities are the FIRST variables 
-    for (CFuint i =0; i < nbPoints; ++i) {
+    for(CFuint i=0; i<nbPoints; ++i){
        CFreal *const currState = m_pstates->getState(i);
-       for (CFuint t = 0; t < nbSpecies; ++t) {
+       for(CFuint t=0; t<nbSpecies; ++t){
          const CFreal nb = std::max(currState[t]*m_avogadroOvMM[t],m_ndminFix);
          foutD << nb << " ";
        }
        foutD << endl;
      }
   }
-
-
 }   
       
 //////////////////////////////////////////////////////////////////////////////

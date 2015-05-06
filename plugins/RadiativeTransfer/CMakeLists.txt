@@ -35,20 +35,16 @@ PostProcess/PostProcessNull.hh
 PostProcess/PostProcessModule.hh
 )
 
- IF (CF_HAVE_GSL)
-
+IF (CF_HAVE_GSL)
    LIST ( APPEND RadiativeTransfer_includedirs ${GSL_INCLUDE_DIR} )
    LIST ( APPEND RadiativeTransfer_libs ${GSL_LIBRARY} ${BLAS_LIBRARY} )
-
    LIST ( APPEND RadiativeTransfer_files
      PostProcess/PostProcessLSF.cxx
      PostProcess/PostProcessLSF.hh
    )
-
 ENDIF()
 
 LIST ( APPEND RadiativeTransfer_cflibs Framework LagrangianSolver )
-
 CF_ADD_PLUGIN_LIBRARY ( RadiativeTransfer )
-
 CF_WARN_ORPHAN_FILES()
+ADD_SUBDIRECTORY ( testcases )

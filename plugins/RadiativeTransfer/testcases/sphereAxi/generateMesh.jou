@@ -1,0 +1,44 @@
+$InnerRadius = 2
+$OuterRadius = 4
+
+$nbRadialPoints = 10
+$nbAxialPoints = 10
+
+$AxialRatio = 1.1
+$RadialRatio = 1.1
+
+vertex create coordinates -2 0 0
+vertex create coordinates 0 2 0
+vertex create coordinates 2 0 0
+vertex create coordinates 4 0 0
+vertex create coordinates 0 4 0
+vertex create coordinates -4 0 0
+vertex create coordinates 0 0 0
+
+edge create center2points "vertex.7" "vertex.1" "vertex.2" minarc arc
+edge create center2points "vertex.7" "vertex.2" "vertex.3" minarc arc
+edge create center2points "vertex.7" "vertex.5" "vertex.4" minarc arc
+edge create center2points "vertex.7" "vertex.6" "vertex.5" minarc arc
+edge create straight "vertex.3" "vertex.4"
+edge create straight "vertex.1" "vertex.6"
+edge create straight "vertex.2" "vertex.5"
+face create wireframe "edge.3" "edge.7" "edge.2" "edge.5" real
+face create wireframe "edge.7" "edge.4" "edge.6" "edge.1" real
+
+edge delete "edge.5" "edge.7" "edge.6" keepsettings onlymesh
+edge picklink "edge.6" "edge.7" "edge.5"
+edge mesh "edge.5" "edge.7" "edge.6" successive ratio1 $RadialRatio  intervals $nbRadialPoints
+edge delete "edge.3" "edge.2" "edge.1" "edge.4" keepsettings onlymesh
+edge modify "edge.1" "edge.4" backward
+edge picklink "edge.1" "edge.4" "edge.2" "edge.3"
+edge mesh "edge.3" "edge.2" "edge.1" "edge.4" successive ratio1 $AxialRatio intervals $nbAxialPoints
+face mesh "face.1" "face.2" map size 1
+
+solver select "Generic"
+
+physics create "InnerFaces" ctype "FLUID" face "face.1" "face.2"
+physics create "Symmetry" btype "ELEMENT_SIDE" edge "edge.5" "edge.6"
+physics create "Inlet" btype "ELEMENT_SIDE" edge "edge.1" "edge.2"
+physics create "Outlet" btype "ELEMENT_SIDE" edge "edge.3" "edge.4"
+
+export gambit "sphereAxi.neu"

@@ -1,0 +1,212 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+# This testcase verifies the MonteCarlo algorithm for the case of a 3D cylinder
+#
+### Residual = -4.
+#
+#
+############################################################################
+# Simulation Modules
+#
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libGambit2CFmesh libPetscI libRadiativeTransfer 
+
+#CFEnv.ErrorOnUnusedConfig   = true
+#CFEnv.ExceptionLogLevel     = 200
+#
+############################################################################
+# directory
+#
+Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/cylinder3d/
+Simulator.Paths.ResultsDir = ./OUTPUT
+#
+############################################################################
+# physical model type
+#
+Simulator.SubSystem.Default.PhysicalModelType   = NavierStokes3D
+
+############################################################################
+# adapt reference values
+#
+Simulator.SubSystem.NavierStokes3D.refValues  = 101325. 10.0 10.0 10.0 10000.
+Simulator.SubSystem.NavierStokes3D.refLength  = 1.0
+#
+############################################################################
+# interactive parameters
+#
+#Simulator.SubSystem.InteractiveParamReader.FileName = ./cylinder.inter
+#Simulator.SubSystem.InteractiveParamReader.readRate = 10
+#
+############################################################################
+# stop condition
+#
+Simulator.SubSystem.StopCondition           = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps  = 1
+
+#Simulator.SubSystem.StopCondition         = Norm
+#Simulator.SubSystem.Norm.valueNorm        = -4.0
+#
+############################################################################
+# check TRS names
+#
+Simulator.SubSystem.Default.listTRS = Wall Inlet Outlet
+#
+############################################################################
+# Mesh reading
+#
+
+#Simulator.SubSystem.FluctuationSplit.Restart = true
+
+Simulator.SubSystem.MeshCreator                                  = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName               = cylinder3d.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom                 = Gambit2CFmesh
+#
+############################################################################
+# Mesh writing
+#
+Simulator.SubSystem.OutputFormat            =  Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName         = cylinder.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate         = 1
+Simulator.SubSystem.CFmesh.AppendTime       = false
+Simulator.SubSystem.CFmesh.AppendIter       = false
+
+Simulator.SubSystem.Tecplot.FileName        = cylinder.plt
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Wall Inlet Outlet
+Simulator.SubSystem.Tecplot.SaveRate        = 1
+Simulator.SubSystem.Tecplot.AppendIter      = false
+Simulator.SubSystem.Tecplot.AppendTime      = false
+#
+############################################################################
+# LinearSystemSolver
+#
+Simulator.SubSystem.LinearSystemSolver                       = PETSC
+Simulator.SubSystem.LSSNames                                 = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType            = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType           = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType   = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter           = 500
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4 # or 1e-3
+
+Simulator.SubSystem.ConvergenceMethod                        = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value            = 1.0
+Simulator.SubSystem.NewtonIterator.Data.MaxSteps             = 1
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID    = 0
+Simulator.SubSystem.NewtonIterator.Data.FilterState          = Max
+Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs          = 1 0 0 0 1 
+Simulator.SubSystem.NewtonIterator.Data.Max.minValues        = 0. 0. 0. 0. 0. 
+Simulator.SubSystem.NewtonIterator.ConvergenceFile           = convergence.plt
+#
+############################################################################
+# Space Method
+#
+Simulator.SubSystem.SpaceMethod                               = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Restart                     = false
+Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff    = true
+Simulator.SubSystem.CellCenterFVM.ComputeRHS                  = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS              = PseudoSteadyTimeRhs
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter           = Roe 
+# AUSM Roe Centred StegerWarming VanLeer3D HUS3D
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar              = Pvt
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar            = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar              = Roe
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar           = Pvt
+
+Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation                   = DistanceBasedGMove
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TrsPriorityList   = Wall Inlet Outlet
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TRSName           = Wall
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.ValuesIdx         = 1 2 3 4
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.Values            = 0. 0. 0. 10000.
+
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec                = Constant
+
+#
+###########################################################################################
+#Initialization
+#
+Simulator.SubSystem.CellCenterFVM.InitComds           = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames           = InField
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS    = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars        = x y z
+Simulator.SubSystem.CellCenterFVM.InField.Def         = 160000.0 0.01 0. 0. 10000.
+#### p u v t  ### check initial values
+#
+############################################################################
+#Boundary Conditions
+#
+Simulator.SubSystem.CellCenterFVM.BcComds = \
+                                            SubInletEuler3DTtPtAlphaFVMCC \
+					                                  SubInletEuler3DTtPtAlphaFVMCC \
+                                            SubInletEuler3DTtPtAlphaFVMCC 
+					    
+ 
+Simulator.SubSystem.CellCenterFVM.BcNames = \
+                                            BcInlet  \
+                              					    BcOutlet \
+                                            BcWall
+
+Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS  = Inlet
+Simulator.SubSystem.CellCenterFVM.BcInlet.Ttot      = 10000.0
+Simulator.SubSystem.CellCenterFVM.BcInlet.Ptot      = 160000.0
+Simulator.SubSystem.CellCenterFVM.BcInlet.alphaxy   = 0.0
+Simulator.SubSystem.CellCenterFVM.BcInlet.alphaxz   = 0.0
+
+Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS = Outlet
+Simulator.SubSystem.CellCenterFVM.BcOutlet.Ttot     = 10000.0
+Simulator.SubSystem.CellCenterFVM.BcOutlet.Ptot     = 160000.0
+Simulator.SubSystem.CellCenterFVM.BcOutlet.alphaxy  = 0.0
+Simulator.SubSystem.CellCenterFVM.BcOutlet.alphaxz  = 0.0
+
+Simulator.SubSystem.CellCenterFVM.BcWall.applyTRS   = Wall
+Simulator.SubSystem.CellCenterFVM.BcWall.Ttot       = 10000.0
+Simulator.SubSystem.CellCenterFVM.BcWall.Ptot       = 160000.0
+Simulator.SubSystem.CellCenterFVM.BcWall.alphaxy    = 0.0
+Simulator.SubSystem.CellCenterFVM.BcWall.alphaxz    = 0.0
+
+#
+############################################################################
+#Commands
+#
+Simulator.SubSystem.DataPostProcessing               = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames          = DataProcessing1
+Simulator.SubSystem.DataProcessing1.Comds            = RadiativeTransferMonteCarlo3DFVMCC
+Simulator.SubSystem.DataProcessing1.Names            = RT
+
+Simulator.SubSystem.DataProcessing1.RT.applyTRS      = InnerFaces
+Simulator.SubSystem.DataProcessing1.RT.numberOfRays  = 10
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.NumberLoops   = 1
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.TempID        = 4
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMax = 1e10
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMin = 1e-10
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.RadiationPhysicsNames = aa b1 b2 b3
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ApplyTRS   = InnerCells
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.TypeTRS    = Medium
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.Radiator   = GreyRadiator
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.GreyRadiator.ElemEmsCoeff = 1.
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.GreyRadiator.ElemAbsCoeff = 1.
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.GreyRadiator.allIsGrey    = true
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.ApplyTRS   = Inlet
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.TypeTRS    = Boundary
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.ApplyTRS   = Outlet
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.TypeTRS    = Boundary
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.ApplyTRS  = Wall
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.TypeTRS   = Boundary
+
+#Simulator.SubSystem.DataProcessing1.RT.PostProcessName = PostProcessLSF
+#Simulator.SubSystem.DataProcessing1.RT.PostProcessLSF.RegectionDists = 3. 3.
+#Simulator.SubSystem.DataProcessing1.RT.PostProcessLSF.RegectionTRS = Inlet Outlet
+#Simulator.SubSystem.DataProcessing1.RT.PostProcessLSF.AveragingDirection = 0. 0. 1.
+#Simulator.SubSystem.DataProcessing1.RT.PostProcessLSF.isRevolutionVolume3d = true 

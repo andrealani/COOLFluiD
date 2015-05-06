@@ -1,0 +1,44 @@
+$InnerRadius = 2
+$OuterRadius = 4
+$nbRadialPoints = 10
+$nbAngularPoints = 10
+$RadialRatio = 1.1
+
+vertex create coordinates -$InnerRadius 0            0
+vertex create coordinates 0             $InnerRadius 0
+vertex create coordinates $InnerRadius  0            0
+vertex create coordinates $OuterRadius  0            0
+vertex create coordinates 0             $OuterRadius 0
+vertex create coordinates -$OuterRadius 0            0
+vertex create coordinates 0             0            0
+
+edge create center2points "vertex.7" "vertex.1" "vertex.2" minarc arc
+edge create center2points "vertex.7" "vertex.2" "vertex.3" minarc arc
+edge create center2points "vertex.7" "vertex.5" "vertex.4" minarc arc
+edge create center2points "vertex.7" "vertex.6" "vertex.5" minarc arc
+edge create straight "vertex.3" "vertex.4"
+edge create straight "vertex.1" "vertex.6"
+edge merge "edge.3" "edge.4" forced
+edge merge "edge.2" "edge.1" forced
+face create wireframe "edge.3" "edge.2" "edge.6" "edge.5" real
+volume create revolve "face.1" dangle 90 vector 1 0 0 origin 0 0 0
+
+edge picklink "edge.5" "edge.6"
+edge mesh "edge.6" "edge.5" successive ratio1 $RadialRatio intervals $nbRadialPoints
+volume mesh "volume.1" cooper source "face.2" "face.4" intervals $nbAngularPoints
+volume creflect "volume.1" multiple 1 unlinkmesh vector 0 0 -1 origin 0 0 0
+volume creflect "volume.1" "volume.2" multiple 1 unlinkmesh vector 0 -1 0 \
+  origin 0 0 0
+face connect "face.1" "face.2" "face.3" "face.4" "face.5" "face.6" "face.7" \
+  "face.8" "face.9" "face.10" "face.11" "face.12" "face.13" "face.14" \
+  "face.15" "face.16" real
+
+solver select "Generic"
+physics create "InnerFaces" ctype "FLUID" volume "volume.1" "volume.2" \
+  "volume.3" "volume.4"
+physics create "Outlet" btype "ELEMENT_SIDE" face "face.4" "face.10" "face.6" \
+  "face.14"
+physics create "Inlet" btype "ELEMENT_SIDE" face "face.5" "face.13" "face.2" \
+  "face.9"
+
+export gambit "sphere3d.neu"

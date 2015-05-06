@@ -1,0 +1,37 @@
+$Length = 10
+$Height = 1
+$BoundarySize = 10
+
+$nbRadialPoints = 10
+$nbAxialPoints = 30 
+$RadialRatio = 1.1 
+
+$TotalLength = $Length + 2*$BoundarySize
+
+vertex create coordinates 0            0       0
+vertex create coordinates $TotalLength 0       0
+vertex create coordinates $TotalLength $Height 0
+vertex create coordinates 0            $Height 0
+
+edge create straight "vertex.1" "vertex.2"
+edge create straight "vertex.2" "vertex.3"
+edge create straight "vertex.3" "vertex.4"
+edge create straight "vertex.1" "vertex.4"
+face create wireframe "edge.3" "edge.1" "edge.2" "edge.4" real
+
+edge picklink "edge.4" "edge.2"
+edge mesh "edge.2" "edge.4" successive ratio1 $RadialRatio intervals $nbRadialPoints
+edge modify "edge.1" backward
+edge picklink "edge.1" "edge.3"
+edge mesh "edge.3" "edge.1" successive ratio1 1 intervals $nbAxialPoints
+face mesh "face.1" map size 1
+
+solver select "Generic"
+
+physics create "InnerFaces" ctype "FLUID" face "face.1"
+physics create "Symmetry" btype "ELEMENT_SIDE" edge "edge.1"
+physics create "Inlet" btype "ELEMENT_SIDE" edge "edge.4"
+physics create "Outlet" btype "ELEMENT_SIDE" edge "edge.2"
+physics create "Wall" btype "ELEMENT_SIDE" edge "edge.3"
+
+export gambit "cylinderAxi.neu"

@@ -1,0 +1,6 @@
+cf_add_case( MPI 4 CASEDIR cylinder3d PCASE cylinder3d.CFcase CASEFILES cylinder3d.neu )
+cf_add_case( MPI 4 CASEDIR cylinderAxi PCASE cylinderAxi.CFcase CASEFILES cylinderAxi.neu )
+cf_add_case( MPI 4 CASEDIR slab2d PCASE slab2d.CFcase CASEFILES slab2d.neu )
+cf_add_case( MPI 4 CASEDIR slab3d PCASE slab3d.CFcase CASEFILES slab3d.neu )
+cf_add_case( MPI 4 CASEDIR sphereAxi PCASE sphereAxi.CFcase CASEFILES sphereAxi.neu )
+cf_add_case( MPI 4 CASEDIR sphere3d PCASE sphere3d.CFcase CASEFILES sphere3d.neu )

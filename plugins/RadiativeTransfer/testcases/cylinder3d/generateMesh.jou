@@ -1,0 +1,34 @@
+$R = 1
+$L = 10
+
+$nR = 5
+$nL = 10*$nR
+
+vertex create coordinates 0 0  0
+vertex create coordinates 0 $R 0
+
+edge create straight "vertex.1" "vertex.2"
+
+face create revolve "edge.1" dangle 90 vector 0 0 1 origin 0 0 0
+face mesh "face.1" triprimitive intervals $nR
+face cmove "face.1" multiple 3 unlinkmesh dangle 90 vector 0 0 1 origin 0 0 0
+edge connect "edge.1" "edge.2" "edge.3" "edge.4" "edge.5" "edge.6" "edge.7" \
+  "edge.8" "edge.9" "edge.10" "edge.11" "edge.12" real
+edge delete "edge.1" lowertopology
+volume create translate "face.1" "face.2" "face.3" "face.4" vector 0 0 $L  withmesh
+
+edge delete "edge.15" "edge.26" "edge.14" "edge.13" "edge.19" keepsettings onlymesh
+edge picklink "edge.19" "edge.13" "edge.14" "edge.26" "edge.15"
+edge mesh "edge.15" "edge.26" "edge.14" "edge.13" "edge.19" successive ratio1  1 intervals $nL
+face delete "face.19" "face.7" "face.9" "face.13" onlymesh
+face mesh "face.19" "face.7" "face.9" "face.13" map thomasmiddlecoff intervals $nL
+
+volume mesh "volume.1" "volume.2" "volume.3" "volume.4" cooper size 1
+
+solver select "Generic"
+physics create "Inlet" btype "ELEMENT_SIDE" face "face.1" "face.4" "face.3" "face.2"
+physics create "Outlet" btype "ELEMENT_SIDE" face "face.16" "face.20" "face.8" "face.12"
+physics create "Wall" btype "ELEMENT_SIDE" face "face.19" "face.7" "face.9" "face.13"
+physics create "InnerFaces" ctype "FLUID" volume "volume.1" "volume.2" "volume.3" "volume.4"
+
+export Gambit "cylinder3d.neu"

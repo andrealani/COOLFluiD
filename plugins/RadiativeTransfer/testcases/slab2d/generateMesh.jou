@@ -1,0 +1,37 @@
+$Length = 10
+$Height = 20
+$BoundarySize = 10
+
+$nbVerticalPoints = 30
+$nbHorizontalPoints = 30 
+$VerticalRatio = 0.8 
+
+$TotalLength = $Length + 2*$BoundarySize
+
+vertex create coordinates 0            0       0
+vertex create coordinates $TotalLength 0       0
+vertex create coordinates $TotalLength $Height 0
+vertex create coordinates 0            $Height 0
+
+edge create straight "vertex.1" "vertex.2"
+edge create straight "vertex.2" "vertex.3"
+edge create straight "vertex.3" "vertex.4"
+edge create straight "vertex.1" "vertex.4"
+face create wireframe "edge.3" "edge.1" "edge.2" "edge.4" real
+
+edge picklink "edge.4" "edge.2"
+edge mesh "edge.2" "edge.4" biexponent ratio1 $VerticalRatio intervals $nbVerticalPoints
+edge modify "edge.1" backward
+edge picklink "edge.1" "edge.3"
+edge mesh "edge.3" "edge.1" successive ratio1 1 intervals $nbHorizontalPoints
+face mesh "face.1" map size 1
+
+solver select "Generic"
+
+physics create "InnerFaces" ctype "FLUID" face "face.1"
+physics create "Inlet"      btype "ELEMENT_SIDE" edge "edge.4"
+physics create "Outlet"     btype "ELEMENT_SIDE" edge "edge.2"
+physics create "TopWall"    btype "ELEMENT_SIDE" edge "edge.3"
+physics create "BottomWall" btype "ELEMENT_SIDE" edge "edge.1"
+
+export gambit "slab2d.neu"

@@ -1,0 +1,269 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+# This testcase verifies the MonteCarlo algorithm for the case of a 2D axisymmetric
+# medium between two concentric spheres
+### Residual = -2.
+#
+#
+############################################################################
+# Simulation Modules
+#
+Simulator.Modules.Libs = libShapeFunctions libAeroCoef libAeroCoefFVM libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libGambit2CFmesh libPetscI libRadiativeTransfer libMeshToolsFVM
+
+
+############################################################################
+# Configuration options
+#
+CFEnv.OnlyCPU0Writes = false
+#
+############################################################################
+# directory
+#
+Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/sphereAxi/
+Simulator.Paths.ResultsDir = ./OUTPUT
+#
+############################################################################
+# physical model type
+#
+Simulator.SubSystem.Default.PhysicalModelType   = NavierStokes2D
+
+############################################################################
+# adapt reference values
+#
+Simulator.SubSystem.NavierStokes2D.refValues  = 101325. 10.0 10.0 5000.
+Simulator.SubSystem.NavierStokes2D.refLength  = 1.0
+#
+############################################################################
+# stop condition
+#
+Simulator.SubSystem.SWallCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps  = 1
+#Simulator.SubSystem.SWallCondition        = Norm
+#Simulator.SubSystem.Norm.valueNorm        = -4.0
+#
+############################################################################
+# check TRS names
+#
+Simulator.SubSystem.Default.listTRS = InnerFaces Inlet Outlet Symmetry
+#
+############################################################################
+# Mesh reading
+#
+Simulator.SubSystem.MeshCreator                                   = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName                = sphereAxi.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor           = 1.
+Simulator.SubSystem.CFmeshFileReader.convertFrom                  = Gambit2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous    = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder    = P0
+
+#
+############################################################################
+# Mesh writing
+#
+Simulator.SubSystem.OutputFormat            = Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName         = sphere.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate         = 1
+Simulator.SubSystem.CFmesh.AppendTime       = false
+Simulator.SubSystem.CFmesh.AppendIter       = false
+
+Simulator.SubSystem.Tecplot.FileName        = sphere.plt
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Inlet Outlet
+Simulator.SubSystem.Tecplot.SaveRate        = 1
+Simulator.SubSystem.Tecplot.AppendIter      = false
+Simulator.SubSystem.Tecplot.AppendTime      = false
+Simulator.SubSystem.Tecplot.WriteSol        = WriteSolutionBlockFV
+
+Simulator.SubSystem.Tecplot.Data.printExtraValues                 = true
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames   = qrad
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = qrad
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize     = 1
+
+#
+############################################################################
+# LinearSystemSolver
+#
+Simulator.SubSystem.LinearSystemSolver                       = PETSC
+Simulator.SubSystem.LSSNames                                 = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType            = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType           = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType   = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter           = 500
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4 # or 1e-3
+
+Simulator.SubSystem.ConvergenceMethod                        = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value            = 1.0
+Simulator.SubSystem.NewtonIterator.Data.MaxSteps             = 1
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID    = 0
+Simulator.SubSystem.NewtonIterator.Data.FilterState          = Max
+Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs          = 1 0 0 1 
+Simulator.SubSystem.NewtonIterator.Data.Max.minValues        = 0. 0. 0. 0. 
+Simulator.SubSystem.NewtonIterator.ConvergenceFile           = convergence.plt
+#
+############################################################################
+# Space Method
+#
+Simulator.SubSystem.SpaceMethod                               = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Restart                     = false
+Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff    = true
+Simulator.SubSystem.CellCenterFVM.ComputeRHS                  = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS              = PseudoSteadyTimeRhs
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter           = Roe
+# AUSM Roe Centred StegerWarming VanLeer2D HUS2D
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar              = Puvt
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar            = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar              = Roe
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar           = Puvt
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux          = NavierStokes
+Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy     = Corrected2D
+
+Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation                            = DistanceBasedGMoveMultiTRS
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.TrsPriorityList    = Inlet Outlet Symmetry
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.TRSName            = Inlet Outlet Symmetry
+
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Inlet.ValuesIdx    = 1 2 3
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Inlet.Values       = 0. 0. 5000.
+
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Outlet.ValuesIdx   = 1 2 3
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Outlet.Values      = 0. 0. 5000.
+
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Symmetry.ValuesIdx = 1 2
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Symmetry.Values    = 0. 0.
+
+
+############################################################################
+#Second order settings
+Simulator.SubSystem.CellCenterFVM.SetupCom       = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames     = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom     = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames   = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec                   = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 0.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes       = -8.0
+Simulator.SubSystem.CellCenterFVM.Data.Limiter                   = Venktn2D
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps         = 1.0
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.useFullStencil   = true
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.length           = 1.0
+
+#
+#
+###########################################################################################
+#Initialization
+#
+Simulator.SubSystem.CellCenterFVM.InitComds           = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames           = InField
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS    = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars        = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def         = 160000. 0. 0. 5000.
+#### p u v t  ### check initial values
+#
+############################################################################
+#Boundary Conditions
+#
+Simulator.SubSystem.CellCenterFVM.BcComds = \
+                                            NoSlipWallIsothermalNSvtFVMCC \
+                                            NoSlipWallIsothermalNSvtFVMCC \
+                                            MirrorVelocityFVMCC
+					    
+Simulator.SubSystem.CellCenterFVM.BcNames = \
+                                            BcInlet \
+					    BcOutlet \
+                                            BcSymmetry
+
+Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS   = Inlet
+Simulator.SubSystem.CellCenterFVM.BcInlet.TWall      = 5000.
+Simulator.SubSystem.CellCenterFVM.BcInlet.Adiabatic  = true
+
+Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS  = Outlet
+Simulator.SubSystem.CellCenterFVM.BcOutlet.TWall     = 5000.
+Simulator.SubSystem.CellCenterFVM.BcOutlet.Adiabatic = true
+
+Simulator.SubSystem.CellCenterFVM.BcSymmetry.applyTRS   = Symmetry
+
+#
+############################################################################
+#Commands
+#
+Simulator.SubSystem.DataPostProcessing        = DataProcessing DataProcessing
+Simulator.SubSystem.DataPostProcessingNames   = DataProcessing1 DataProcessing2
+
+
+###
+# Radiation Transport Monte Carlo
+###
+Simulator.SubSystem.DataProcessing1.Comds               = RadiativeTransferMonteCarloAxiFVMCC
+Simulator.SubSystem.DataProcessing1.Names               = RT 
+Simulator.SubSystem.DataProcessing1.RT.applyTRS         = InnerCells
+Simulator.SubSystem.DataProcessing1.ProcessRate         = 1
+Simulator.SubSystem.DataProcessing1.SkipFirstIteration  = false
+
+Simulator.SubSystem.DataProcessing1.RT.sendBufferSize   = 1000
+Simulator.SubSystem.DataProcessing1.RT.nbRaysCycle      = 100
+Simulator.SubSystem.DataProcessing1.RT.numberOfRays     = 50
+Simulator.SubSystem.DataProcessing1.RT.Axi              = true
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.NumberLoops           = 1
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.TempID                = 3
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMax         = 1e10
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMin         = 1e-10
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.RadiationPhysicsNames = rMedium rInlet rOutlet rSymmetry
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rMedium.ApplyTRS   = InnerCells
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rMedium.TypeTRS    = Medium
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rMedium.Radiator   = GreyRadiator
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rMedium.GreyRadiator.ElemEmsCoeff  = 1.
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rMedium.GreyRadiator.ElemAbsCoeff  = 1.
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rMedium.GreyRadiator.allIsGrey     = true
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rInlet.ApplyTRS  = Inlet
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rInlet.TypeTRS   = Boundary
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rInlet.TypeTRS   = Wall
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rInlet.Reflector = DiffuseReflector
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rInlet.Radiator  = GreyWallRadiator
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rInlet.GreyWallRadiator.ElemEmsCoeff  = 1.
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rInlet.GreyWallRadiator.ElemAbsCoeff  = 1.
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rInlet.GreyWallRadiator.allIsGrey     = true
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rOutlet.ApplyTRS = Outlet
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rOutlet.TypeTRS  = Boundary
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rOutlet.TypeTRS  = Wall
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rOutlet.Reflector = DiffuseReflector
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rOutlet.Radiator = GreyWallRadiator
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rOutlet.GreyWallRadiator.ElemEmsCoeff  = 1.
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rOutlet.GreyWallRadiator.ElemAbsCoeff  = 1.
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rOutlet.GreyWallRadiator.allIsGrey     = true
+ 
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rSymmetry.ApplyTRS   = Symmetry
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rSymmetry.TypeTRS    = Boundary
+
+
+# Post-Process
+#Simulator.SubSystem.DataProcessing1.RT.PostProcessName = PostProcessAverage
+#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.AveragingDirection = 1 0
+#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.isRevolutionVolume3d = true
+###
+# wall quantities (heat flux, skin friction) postprocessing
+###
+
+#Simulator.SubSystem.DataProcessing2.Data.updateVar = Puvt
+#Simulator.SubSystem.DataProcessing2.Comds          = NavierStokesSkinFrictionHeatFluxCC
+#Simulator.SubSystem.DataProcessing2.Names          = SkinFriction
+#Simulator.SubSystem.DataProcessing2.ProcessRate    = 1
+#
+#Simulator.SubSystem.DataProcessing2.SkinFriction.applyTRS   = Inlet
+#Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileWall = WallData.plt
+#Simulator.SubSystem.DataProcessing2.SkinFriction.rhoInf     = 0.033422944
+#Simulator.SubSystem.DataProcessing2.SkinFriction.pInf       = 101325.0
+#Simulator.SubSystem.DataProcessing2.SkinFriction.uInf       = 1.0 #Simulator.SubSystem.DataProcessing2.SkinFriction.TInf       = 5000
+#Simulator.SubSystem.DataProcessing2.SkinFriction.UID        = 1
+#Simulator.SubSystem.DataProcessing2.SkinFriction.VID        = 2
+#Simulator.SubSystem.DataProcessing2.SkinFriction.TID        = 3
+#
