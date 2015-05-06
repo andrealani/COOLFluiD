@@ -74,7 +74,11 @@ public: // functions
   /// prints the data which is assumed to be relative to id of a state
   /// @pre must call first getDataHandles
   virtual void printStateData (std::ostream& out, CFuint state_id) const ;
-
+  
+  /// fill a given array with the data handle data corresponding to a given state ID
+  /// @post uses and updates the given counter for indexing the output array (out)
+  virtual void fillStateData(CFreal* out, CFuint state_id, CFuint& counter) const;
+  
   /// prints the data which is assumed to be relative to id of a cell
   /// @pre must call first getDataHandles
   virtual void printCCData (std::ostream& out, CFuint cell_id) const ;

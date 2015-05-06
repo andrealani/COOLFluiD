@@ -100,6 +100,9 @@ private: //data
   /// X coordinate where the torch ends and the chamber starts
   CFreal m_torchexitxcoord;
 
+  /// ICP probe radius if zero, no probe.
+  CFreal m_proberadius;
+
 }; // end of class StagnationPropsBL
 
 //////////////////////////////////////////////////////////////////////////////

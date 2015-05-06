@@ -84,8 +84,8 @@ public:
   CFuint _myGroupID;
   
   /// offsets holder
-  Offset _offset;
-    
+  std::vector<Offset> _offset;
+  
   /// flag telling if the file is a new one
   bool _isNewFile;
 

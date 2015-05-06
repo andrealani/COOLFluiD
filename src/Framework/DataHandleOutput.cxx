@@ -326,6 +326,24 @@ void DataHandleOutput::printStateData(std::ostream& out, CFuint state_id) const
 
 //////////////////////////////////////////////////////////////////////////////
 
+void DataHandleOutput::fillStateData(CFreal* out, CFuint state_id, CFuint& counter) const
+{
+  cf_assert(m_cached_datahandles);
+  
+  for (CFuint is = 0; is < m_socket_names.size(); ++is)
+  {
+    const DataHandle<CFreal>& dh = m_datahandles[is];
+    CFLog(VERBOSE, state_id+1 << "/" << dh.size() << "\n");
+    const CFuint dh_nbvars = m_nbvars[is];
+    for (CFuint iv = 0; iv < dh_nbvars; ++iv)
+    {
+      out[counter++] = dh(state_id,iv,dh_nbvars);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void DataHandleOutput::printCCData(std::ostream& out, CFuint cell_id) const
 {
   cf_assert(m_cached_datahandles);

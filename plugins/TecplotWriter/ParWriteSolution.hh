@@ -41,10 +41,8 @@ public:
   explicit ParWriteSolution(const std::string& name);
 
   /// Destructor.
-  virtual ~ParWriteSolution()
-  {
-  }
-
+  virtual ~ParWriteSolution();
+  
     /// Set up private data
   virtual void setup();
 
@@ -65,10 +63,14 @@ public:
   
   /// Writes to the given file.
   /// @throw Common::FilesystemException
-  void writeToFileStream(const boost::filesystem::path& filepath);
+  void writeToFileStream(const boost::filesystem::path& filepath, 
+			 std::ofstream* fout);
   
   /// Writes the TECPLOT header
   void writeHeader(MPI_File* fh);
+  
+  /// Writes the TECPLOT header
+  void writeHeader(std::ofstream* fout);
   
   /// Write the Tecplot file in Binmary format
   /// @throw Common::FilesystemException
@@ -77,9 +79,31 @@ public:
   /// Write the boundary surface data
   virtual void writeBoundarySurface();
   
+  /// Build the mapping between global nodeIDs and global nodeIDs by element type
+  void buildNodeIDMapping();
+  
+  /// Cleanup the mapping between global nodeIDs and global nodeIDs by element type
+  void cleanupNodeIDMapping();
+  
+  /// Write the node list corresponding to the given element type
+  void writeNodeList(std::ofstream* fout, const CFuint iType);
+  
+  /// Write the element list corresponding to the given element type
+  void writeElementList
+    (std::ofstream* fout, const CFuint iType,  
+     Common::SafePtr<Framework::TopologicalRegionSet> elements);
+  
+  /// Write the connectivity for one element, after having translated the local 
+  /// element connectivity (node ordering) from CFmesh to Tecplot format
+  void writeElementConn(std::ofstream& file,
+			CFuint* nodeIDs,
+			const CFuint nbNodes,
+			const CFuint geoOrder,
+			const CFuint dim);
+  
   /// Get the name of the writer
   const std::string getWriterName() const;
-
+  
 protected:
   
   /// socket for Node's
@@ -88,9 +112,21 @@ protected:
   /// socket for State Proxy
   Framework::DataSocketSink<Framework::ProxyDofIterator<RealVector>*> socket_nstatesProxy;
   
+  // global node IDs per type
+  std::vector<std::vector<CFuint> > _nodesInType;
+  
+  // mapping global nodeIDs to global nodeIDs by element type
+  std::vector<Common::CFMap<CFuint, CFuint>*> _mapNodeID2NodeIDByEType;
+    
+  // mapping global nodeIDs to local nodeIDs
+  Common::CFMap<CFuint, CFuint> _mapGlobal2LocalNodeID;
+  
+  // total number of nodes in element type
+  std::vector<CFuint> _totalNbNodesInType;
+  
   //File format to write in (ASCII or Binary)
   std::string _fileFormatStr;
-
+    
 }; // class ParWriteSolution
 
 //////////////////////////////////////////////////////////////////////////////

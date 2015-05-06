@@ -200,7 +200,7 @@ template <typename MODEL>
 void MeshFittingAlgorithm<MODEL>::execute()
 {
   CFAUTOTRACE;
-  CFLog(VERBOSE, "MeshFittingAlgorithm::execute()\n");
+  CFLog(VERBOSE, "MeshFittingAlgorithm::execute() => start \n");
   
   computeSpringTruncationData();
   solveLinearSystem();
@@ -211,7 +211,9 @@ void MeshFittingAlgorithm<MODEL>::execute()
   Framework::DataHandle<Framework::State*, Framework::GLOBAL> states = socket_states.getDataHandle();
   Framework::DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
   const CFuint totalNbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
-  if (rhs.size()/totalNbEqs != states.size()) rhs.resize(states.size()*totalNbEqs);
+  if (rhs.size()/totalNbEqs != states.size()) rhs.resize(states.size()*totalNbEqs); 
+  
+  CFLog(VERBOSE, "MeshFittingAlgorithm::execute() => end \n");
 }
       
 //////////////////////////////////////////////////////////////////////////////

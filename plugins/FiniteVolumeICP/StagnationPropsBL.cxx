@@ -44,6 +44,7 @@ StagnationPropsBLCommProvider("StagnationPropsBLComm");
 void StagnationPropsBL::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< CFreal >("TorchExitXCoord","X coordinate where torch ends and chamber starts (in mesh coordinates)");
+  options.addConfigOption< CFreal >("ProbeRadius","Radiusof the probe (in mesh coordinates)");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -56,10 +57,12 @@ StagnationPropsBL::StagnationPropsBL(const std::string& name) :
   m_globalstagnationline(0),
   m_nrcv(0),
   m_dspl(0),
-  m_torchexitxcoord(0.)
+  m_torchexitxcoord(0.486),
+  m_proberadius(0.050)
 {
   addConfigOptionsTo(this);
   setParameter("TorchExitXCoord",&m_torchexitxcoord);
+  setParameter("ProbeRadius",&m_proberadius);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -239,12 +242,19 @@ void StagnationPropsBL::execute()
 
   // compute dvdx
   std::vector<CFreal> d2vdydx(m_globalstagnationline.size(),0.);
+  std::vector<CFreal> dudx(m_globalstagnationline.size(),0.);  
   if (irank==0)
   {
-    for(int i=1; i<(const int)(d2vdydx.size()-1); ++i)
+      for(int i=1; i<(const int)(d2vdydx.size()-1); ++i) {
       d2vdydx[i]=(dvdyglobal[i+1]-dvdyglobal[i-1])/(m_globalstagnationline[i+1].first-m_globalstagnationline[i-1].first);
+      dudx[i]=(uglobal[i+1]-uglobal[i-1])/(m_globalstagnationline[i+1].first-m_globalstagnationline[i-1].first);
+      }
+
     d2vdydx[0]=d2vdydx[1];
     d2vdydx[d2vdydx.size()-1]=d2vdydx[d2vdydx.size()-2];
+
+      dudx[0]=dudx[1];
+      dudx[dudx.size()-1]=dudx[dudx.size()-2];
   }
 
   // 1. by knowing that the function shape, assuming that before the inflexion point dvdx is always positive
@@ -260,6 +270,11 @@ void StagnationPropsBL::execute()
   CFreal t_delta=0.;
   CFreal dvdy_delta=0.;
   CFreal d2vdydx_delta=0.;
+  
+  CFreal   dudxMax      = 0.0;
+  CFreal   uAtDudxMax   = 0.0;
+  unsigned iDudxMax     = 0; 
+
   if (irank==0)
   {
     // skipping first 5 points, because BL may be oscillatory
@@ -332,6 +347,39 @@ void StagnationPropsBL::execute()
 
         break;
       }
+
+    // attempt to compute the u velocity at the point where the du/dx derivative is minimum to find
+    // approximate value of the free stream velocity in case there is no probe
+    // we limit the earch between x=[0.01-0.4], where the probe is at x=0.
+    
+    // skipping first 5 points, because BL may be oscillatory
+    for(int i=5; i<(const int)(dudx.size()-5); ++i){
+        if ((dudx[i]-dudx[i-1]>=0.)&&(m_globalstagnationline[i-1].first > 0.01)&&(m_globalstagnationline[i-1].first < 0.4)){
+            iDudxMax = i-1;
+            dudxMax  = dudx[i-1];
+            uAtDudxMax = uglobal[i-1];  
+//             CFout << "\n Found U at max du/dx!   i        =  " << iDudxMax        
+//                   << "\n du/dx at i-2                     =  " << dudx[i-2]     
+//                   << "\n du/dx at i-1                     =  " << dudx[i-1]  
+//                   << "\n du/dx at i                       =  " << dudx[i] 
+//                   << "\n du/dx at i+1                     =  " << dudx[i+1] 
+//                   << "\n du/dx at i+2                     =  " << dudx[i+2] 
+//                   << "\n                      du/dx max   =  " << dudxMax   
+//                   << "\n                 U at du/dx max   =  " << uAtDudxMax ;
+            break;
+        }
+
+    }
+
+    if ( (iDudxMax == 0) || (std::abs(uAtDudxMax) < 1.0e-6 )) {
+        cout << " Warning!! du/dx max calculation probably failed!  i      =  " << iDudxMax << endl
+             << "                      du/dx max =  " << dudxMax << endl
+             << "                 U at du/dx max =  " << uAtDudxMax << endl;
+            
+    }
+
+    
+    
   }
 
   // look up velocity at torch exit
@@ -366,7 +414,7 @@ void StagnationPropsBL::execute()
     SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
     ofstream& fout = fhandle->open(fpath);
     fout.precision(15);
-    fout << "VARIABLES = x y p u v T dvdy d2vdydx inflexion" << "\n" << flush;
+    fout << "VARIABLES = x y p u v T dvdy d2vdydx dudx inflexion" << "\n" << flush;
     fout << scientific
          << "0."
          << " " << yglobal[0]
@@ -375,6 +423,7 @@ void StagnationPropsBL::execute()
          << " " << tglobal[0]
          << " " << dvdyglobal[0]
          << " " << d2vdydx[0]
+         << " " << dudx[0]
          << " " << inflex_interp[0]
          << "\n";
     for (int i=0; i<(const int)m_globalstagnationline.size(); ++i){
@@ -386,24 +435,71 @@ void StagnationPropsBL::execute()
                          << tglobal[i]       << " "
                          << dvdyglobal[i]    << " "
                          << d2vdydx[i]       << " "
+                         << dudx[i]          << " "
                          << inflex_interp[i] << " "
       << "\n" << flush;
     }
     fhandle->close();
+
+
+    // Also write the NDOP's on a file
+    boost::filesystem::path fpath2 = Environment::DirPaths::getInstance().getResultsDir() / boost::filesystem::path ("NDP.dat");
+    fpath2 = PathAppender::getInstance().appendAllInfo(fpath2, false, false, false );
+    SelfRegistPtr<Environment::FileHandlerOutput> fhandle2 = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
+    ofstream& fout2 = fhandle2->open(fpath2);
+
+    /*
+      Note here, Tamas's convention of (u,v) and (x,y):
+
+      v,y 
+                                 | delta
+      ^                          |<--->|
+      |                          |
+      |                          |       ____________
+      |                          |      /         ^
+      |                          |      | Probe   | Probe Radius
+      |------------------------- |------|-----------> u,x
+     */
+                                 
+    CFreal ndp1,ndp2,ndp3,ndp4,ndp5,beta,dbeta_dx;
+    beta    = dvdy_delta;
+    dbeta_dx=std::abs(d2vdydx_delta);
+    ndp1    = delta/m_proberadius;
+    ndp2    = beta*m_proberadius/utorchexit;
+    ndp3    = dbeta_dx*m_proberadius*m_proberadius/utorchexit;
+    ndp4    = u_delta/utorchexit;
+    ndp5    = u_delta/uAtDudxMax;
+
+    fout2.precision(15);
+    fout2  << ndp1 << "  " << ndp2 << "  " << ndp3 << "  " << ndp4 << "  " << ndp5 << " "
+           << m_proberadius << "  " << delta << "  " <<  u_delta << "  " << beta << "  "
+           << dbeta_dx << "  " << utorchexit << "  " << uAtDudxMax << "\n";
+    fhandle2->close();
+    
+    CFout << "\n\nStagnationPropsBL:  "
+          << "\n  ndp1.................:  " << ndp1
+          << "\n  ndp2.................:  " << ndp2
+          << "\n  ndp3.................:  " << ndp3
+          << "\n  ndp4.................:  " << ndp4
+          << "\n  ndp5.................:  " << ndp5
+          << "\n  Probe Radius.........:  " << m_proberadius
+          << "\n  delta................:  " << delta
+          << "\n  y@delta..............:  " << y_delta
+          << "\n  p@delta..............:  " << p_delta 
+          << "\n  u@delta..............:  " << u_delta
+          << "\n  v@delta..............:  " << v_delta
+          << "\n  T@delta..............:  " << t_delta
+          << "\n  beta==dv/dy..........:  " << beta
+          << "\n  dbeta/dx.............:  " << dbeta_dx
+          << "\n  xtorchexit...........:  " << xtorchexit
+          << "\n  u@xtorchexit.........:  " << utorchexit
+          << "\n  iDudxMax.............:  " << iDudxMax
+          << "\n  du/dx max........... :  " << dudxMax
+          << "\n  U at du/dx max...... :  " << uAtDudxMax
+          << "\n\n";
+        
   }
 
-  CFout << "StagnationPropsBL:"
-        << "\n  delta="         << delta
-        << "\n  y@delta="       << y_delta
-        << "\n  p@delta="       << p_delta
-        << "\n  u@delta="       << u_delta
-        << "\n  v@delta="       << v_delta
-        << "\n  T@delta="       << t_delta
-        << "\n  dvdy@delta="    << dvdy_delta
-        << "\n  d2vdydx@delta=" << d2vdydx_delta
-        << "\n  xtorchexit="    << xtorchexit
-        << "\n  u@xtorchexit="  << utorchexit
-        << "\n";
 }
 
 //////////////////////////////////////////////////////////////////////////////

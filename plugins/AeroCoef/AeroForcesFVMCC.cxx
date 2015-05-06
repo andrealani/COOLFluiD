@@ -813,7 +813,10 @@ void AeroForcesFVMCC::initSurfaceResiduals()
 {
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const CFuint nbVariables = m_varNames.size() - dim;
-  cf_always_assert(nbVariables > 0);
+  if (nbVariables < 1) {
+    CFLog(WARN, "AeroForcesFVMCC::initSurfaceResiduals() needs nbVariables > 0 => you must use derived class\n");
+    cf_always_assert(nbVariables > 0);
+  }
   m_valuesMatL2.resize(nbVariables);
   m_l2Norm.resize(nbVariables);
   

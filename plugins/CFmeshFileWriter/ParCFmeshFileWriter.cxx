@@ -706,32 +706,35 @@ void ParCFmeshFileWriter::writeNodeList(std::ofstream *const fout)
 	const CFuint localElemID = it->second;
 	const CFuint globalElemID = nodes[localElemID]->getGlobalID();
 	const CFuint sendElemID = globalElemID - countElem;
-
-	CFuint isend = sendElemID*nodesStride;
-	for (CFuint in = 0; in < dim; ++in, ++isend) {
-	  cf_assert(isend < sendElements.size());
-	  sendElements[isend] = (*nodes[localElemID])[in];
-	}
-
-        if(storePastNodes){
-	  const RealVector* pastNodesValues = getWriteData().getPastNode(localElemID);
-	  cf_assert(pastNodesValues->size() == (*nodes[localElemID]).size());
-	  for (CFuint in = 0; in < pastNodesValues->size(); ++in, ++isend) {
+	
+	// only if the node is parallel updatable nmust be written
+	if (nodes[localElemID]->isParUpdatable()) {
+	  CFuint isend = sendElemID*nodesStride;
+	  for (CFuint in = 0; in < dim; ++in, ++isend) {
 	    cf_assert(isend < sendElements.size());
-	    sendElements[isend] = (*pastNodesValues)[in];
+	    sendElements[isend] = (*nodes[localElemID])[in];
 	  }
-        }
-
-	if (nbExtraNodalVars > 0) {
-	  const RealVector& extraNodalValues = getWriteData().getExtraNodalValues(localElemID);
-	  cf_assert(extraNodalValues.size() == totalNbExtraNodalVars);
-	  for (CFuint in = 0; in < totalNbExtraNodalVars; ++in, ++isend) {
-	    cf_assert(isend < sendElements.size());
-	    sendElements[isend] = extraNodalValues[in];
+	  
+	  if(storePastNodes){
+	    const RealVector* pastNodesValues = getWriteData().getPastNode(localElemID);
+	    cf_assert(pastNodesValues->size() == (*nodes[localElemID]).size());
+	    for (CFuint in = 0; in < pastNodesValues->size(); ++in, ++isend) {
+	      cf_assert(isend < sendElements.size());
+	      sendElements[isend] = (*pastNodesValues)[in];
+	    }
+	  }
+	  
+	  if (nbExtraNodalVars > 0) {
+	    const RealVector& extraNodalValues = getWriteData().getExtraNodalValues(localElemID);
+	    cf_assert(extraNodalValues.size() == totalNbExtraNodalVars);
+	    for (CFuint in = 0; in < totalNbExtraNodalVars; ++in, ++isend) {
+	      cf_assert(isend < sendElements.size());
+	      sendElements[isend] = extraNodalValues[in];
+	    }
 	  }
 	}
       }
-
+      
       cf_assert(eSize*nodesStride <= elementList.getSendDataSize(rangeID));
     }
 
@@ -888,41 +891,44 @@ void ParCFmeshFileWriter::writeStateList(std::ofstream *const fout)
 	  const CFuint localElemID = it->second;
 	  const CFuint globalElemID = states[localElemID]->getGlobalID();
 	  const CFuint sendElemID = globalElemID - countElem;
-
-	  CFuint isend = sendElemID*statesStride;
-	  for (CFuint in = 0; in < dim; ++in, ++isend) {
-	    cf_assert(isend < sendElements.size());
-	    sendElements[isend] = (*states[localElemID])[in];
-	  }
-
-          if(storePastStates){
-	    const RealVector* pastStatesValues = getWriteData().getPastState(localElemID);
-	    cf_assert(pastStatesValues->size() == (*states[localElemID]).size());
-	    for (CFuint in = 0; in < pastStatesValues->size(); ++in, ++isend) {
+	  
+	  // only if the state is parallel updatable must be written
+	  if (states[localElemID]->isParUpdatable()) {
+	    CFuint isend = sendElemID*statesStride;
+	    for (CFuint in = 0; in < dim; ++in, ++isend) {
 	      cf_assert(isend < sendElements.size());
-	      sendElements[isend] = (*pastStatesValues)[in];
+	      sendElements[isend] = (*states[localElemID])[in];
 	    }
-          }
-
-          if(storeInterStates){
-	    const RealVector* interStatesValues = getWriteData().getInterState(localElemID);
-	    cf_assert(interStatesValues->size() == (*states[localElemID]).size());
-	    for (CFuint in = 0; in < interStatesValues->size(); ++in, ++isend) {
-	      cf_assert(isend < sendElements.size());
-	      sendElements[isend] = (*interStatesValues)[in];
+	    
+	    if(storePastStates){
+	      const RealVector* pastStatesValues = getWriteData().getPastState(localElemID);
+	      cf_assert(pastStatesValues->size() == (*states[localElemID]).size());
+	      for (CFuint in = 0; in < pastStatesValues->size(); ++in, ++isend) {
+		cf_assert(isend < sendElements.size());
+		sendElements[isend] = (*pastStatesValues)[in];
+	      }
 	    }
-          }
-
-	  if (nbExtraStateVars > 0) {
-	    const RealVector& extraStateValues = getWriteData().getExtraStateValues(localElemID);
-	    cf_assert(extraStateValues.size() == totalNbExtraStateVars);
-	    for (CFuint in = 0; in < totalNbExtraStateVars; ++in, ++isend) {
-	      cf_assert(isend < sendElements.size());
-	      sendElements[isend] = extraStateValues[in];
+	    
+	    if(storeInterStates){
+	      const RealVector* interStatesValues = getWriteData().getInterState(localElemID);
+	      cf_assert(interStatesValues->size() == (*states[localElemID]).size());
+	      for (CFuint in = 0; in < interStatesValues->size(); ++in, ++isend) {
+		cf_assert(isend < sendElements.size());
+		sendElements[isend] = (*interStatesValues)[in];
+	      }
+	    }
+	    
+	    if (nbExtraStateVars > 0) {
+	      const RealVector& extraStateValues = getWriteData().getExtraStateValues(localElemID);
+	      cf_assert(extraStateValues.size() == totalNbExtraStateVars);
+	      for (CFuint in = 0; in < totalNbExtraStateVars; ++in, ++isend) {
+		cf_assert(isend < sendElements.size());
+		sendElements[isend] = extraStateValues[in];
+	      }
 	    }
 	  }
 	}
-
+	
 	cf_assert(eSize*statesStride <= elementList.getSendDataSize(rangeID));
       }
 
