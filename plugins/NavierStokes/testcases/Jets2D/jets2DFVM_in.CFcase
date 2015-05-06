@@ -3,15 +3,15 @@
 # This COOLFluiD CFcase file tests: 
 # 
 # Finite Volume, Euler2D, Forward Euler, mesh with triangles, restart from a 
-# binary CFmesh, writing of binary CFmesh, second-order reconstruction with 
-# Venkatakhrisnan limiter, supersonic inlet and outlet BC
+# binary CFmesh, writing of binary CFmesh, parallel TECPLOT writer, second-order 
+# reconstruction with Venkatakhrisnan limiter, supersonic inlet and outlet BC
 #
 ################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -10.001562
+### Residual = -10.00109576
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -47,12 +47,17 @@ Simulator.SubSystem.CFmesh.SaveRate  = 500
 # binary CFmesh writer
 Simulator.SubSystem.CFmesh.WriteSol = ParWriteBinarySolution
 Simulator.SubSystem.CFmesh.ParWriteBinarySolution.ParCFmeshBinaryFileWriter.NbWriters = 4
+
+# parallel ASCII Tecplot writer
 Simulator.SubSystem.Tecplot.FileName = jets2D-sol.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 200
+Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolution
+Simulator.SubSystem.Tecplot.ParWriteSolution.NbWriters = 4
+Simulator.SubSystem.Tecplot.AppendRank = false
 
 #Simulator.SubSystem.StopCondition          = MaxNumberSteps
-#Simulator.SubSystem.MaxNumberSteps.nbSteps = 20
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
 
 Simulator.SubSystem.StopCondition       = Norm
 Simulator.SubSystem.Norm.valueNorm      = -10.0
@@ -60,6 +65,7 @@ Simulator.SubSystem.Norm.valueNorm      = -10.0
 Simulator.SubSystem.Default.listTRS = InnerFaces SuperInlet SuperOutlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
+
 # binary CFmesh reader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2D-sol.CFmesh
 Simulator.SubSystem.CFmeshFileReader.ReadCFmesh = ParReadCFmeshBinary
