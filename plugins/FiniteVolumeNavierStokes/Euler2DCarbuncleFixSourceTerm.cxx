@@ -76,7 +76,6 @@ Euler2DCarbuncleFixSourceTerm::~Euler2DCarbuncleFixSourceTerm()
 
 void Euler2DCarbuncleFixSourceTerm::setup()
 {
-  cf_assert(_varSet.isNotNull());
   ComputeSourceTermFVMCC::setup();
   
   const CFuint nbCells =
