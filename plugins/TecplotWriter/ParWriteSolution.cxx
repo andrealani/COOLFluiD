@@ -77,11 +77,11 @@ ParWriteSolution::ParWriteSolution(const std::string& name) :
   ParFileWriter(),
   socket_nodes("nodes"),
   socket_nstatesProxy("nstatesProxy"),
+  _headerOffset(),
   _nodesInType(),
   _mapNodeID2NodeIDByEType(),
   _mapGlobal2LocalNodeID(),
-  _totalNbNodesInType(),
-  _headerOffset()
+  _totalNbNodesInType()
 {
   addConfigOptionsTo(this);
 
@@ -265,8 +265,20 @@ void ParWriteSolution::setup()
   TecWriterCom::setup();
   ParFileWriter::setWriterGroup();
   
+  const vector<MeshElementType>& me =
+    MeshDataStack::getActive()->getTotalMeshElementTypes();
+  const CFuint nbElementTypes = me.size();
+  cf_assert(nbElementTypes > 0);
+  
+  _offset.resize(nbElementTypes);
+  
+  _headerOffset.resize(nbElementTypes);
+  for (CFuint i = 0; i < nbElementTypes; ++i) {
+    _headerOffset[i].resize(2);
+  }
+  
   buildNodeIDMapping();
-    
+  
   CFLog(VERBOSE, "ParWriteSolution::setup() => end\n");
 }      
       
@@ -283,6 +295,8 @@ void ParWriteSolution:: cleanupNodeIDMapping()
   }
   
   _mapGlobal2LocalNodeID.clear();
+  
+  vector<CFuint>().swap(_totalNbNodesInType);
 }  
  
 //////////////////////////////////////////////////////////////////////////////
@@ -294,12 +308,12 @@ void ParWriteSolution:: buildNodeIDMapping()
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   
   // MeshElementType stores GLOBAL element type data
-  const vector<MeshElementType>& me = MeshDataStack::getActive()->getTotalMeshElementTypes();
+  const vector<MeshElementType>& me = 
+    MeshDataStack::getActive()->getTotalMeshElementTypes();
   const CFuint nbElementTypes = me.size();
   
-  _offset.resize(nbElementTypes);
-  
   cleanupNodeIDMapping();
+  
   if (_mapNodeID2NodeIDByEType.size() == 0) {
     _nodesInType.resize(nbElementTypes);
     _mapNodeID2NodeIDByEType.resize(nbElementTypes);
@@ -307,11 +321,6 @@ void ParWriteSolution:: buildNodeIDMapping()
     _totalNbNodesInType.resize(nbElementTypes);
   }
   
-  _headerOffset.resize(nbElementTypes);
-  for (CFuint i = 0; i < nbElementTypes; ++i) {
-    _headerOffset[i].resize(2);
-  }
-
   vector<SafePtr<TopologicalRegionSet> > trsList = MeshDataStack::getActive()->getTrsList();
   
   const CFuint totalNodeCount = MeshDataStack::getActive()->getTotalNodeCount();
