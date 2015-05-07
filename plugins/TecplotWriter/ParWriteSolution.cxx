@@ -80,7 +80,8 @@ ParWriteSolution::ParWriteSolution(const std::string& name) :
   _nodesInType(),
   _mapNodeID2NodeIDByEType(),
   _mapGlobal2LocalNodeID(),
-  _totalNbNodesInType()
+  _totalNbNodesInType(),
+  _headerOffset()
 {
   addConfigOptionsTo(this);
 
@@ -206,9 +207,13 @@ void ParWriteSolution::writeToFileStream(const boost::filesystem::path& filepath
 	for (CFuint iType = 0; iType < elementType->size(); ++iType) {
 	  ElementTypeData& eType = (*elementType)[iType];
 	  const CFuint nbCellsInType  = eType.getNbElems();
-	  
+
+	  vector<MPI_Offset>& headerOffset = _headerOffset[iType];
+
 	  // print zone header: one zone per element type
 	  if (_myRank == _ioRank) {
+         headerOffset[0] = fout->tellp();
+
 	    *fout << "ZONE "
 		  << "  T= \"ZONE" << iType << " " << eType.getShape() <<"\""
 		  << ", N=" << _totalNbNodesInType[iType]
@@ -228,8 +233,13 @@ void ParWriteSolution::writeToFileStream(const boost::filesystem::path& filepath
 		    << ", AUXDATA PhysTime=\"" << subSysStatus->getCurrentTimeDim() << "\"";
 	    }
 	    *fout << "\n";
+
+        headerOffset[1] = fout->tellp();
 	  }
-	  
+
+	   // communicate the current file position to all processor
+	    MPI_Bcast(&headerOffset[0], 2, MPIStructDef::getMPIOffsetType(), _ioRank, _comm);
+	   
 	  // print nodal coordinates and stored node variables
 	  writeNodeList(fout, iType);
 	  
@@ -295,8 +305,13 @@ void ParWriteSolution:: buildNodeIDMapping()
     _mapNodeID2NodeIDByEType.resize(nbElementTypes);
     _mapGlobal2LocalNodeID.reserve(nodes.size());
     _totalNbNodesInType.resize(nbElementTypes);
-  }  
+  }
   
+  _headerOffset.resize(nbElementTypes);
+  for (CFuint i = 0; i < nbElementTypes; ++i) {
+    _headerOffset[i].resize(2);
+  }
+
   vector<SafePtr<TopologicalRegionSet> > trsList = MeshDataStack::getActive()->getTrsList();
   
   const CFuint totalNodeCount = MeshDataStack::getActive()->getTotalNodeCount();
@@ -764,18 +779,7 @@ void ParWriteSolution::writeHeader(std::ofstream* fout)
 void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType)
 {
   CFLog(VERBOSE, "ParWriteSolution::writeNodeList() => start\n");
-  
-  MPI_Offset offset;
-  if (_myRank == _ioRank) {
-    offset = fout->tellp();
-  }
-  
-  // communicate the current file position to all processor
-  MPI_Bcast(&offset, 1, MPIStructDef::getMPIOffsetType(), _ioRank, _comm);
-  
-  // wOffset is initialized with current offset
-  vector<MPI_Offset> wOffset(_nbWriters, offset); 
-  
+    
   const CFuint dim  = PhysicalModelStack::getActive()->getDim();
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFreal refL = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
@@ -819,8 +823,9 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType)
   
   const CFuint wordFormatSize = 22;
   
+  vector<MPI_Offset> wOffset(_nbWriters, _headerOffset[iType][1]); 
   // set the offsets for the nodes of this element type
-  _offset[iType].nodes.first  = offset;
+  _offset[iType].nodes.first  = _headerOffset[iType][1];
   _offset[iType].nodes.second = _offset[iType].nodes.first + totalToSend*wordFormatSize;
   
   CFLog(VERBOSE, "ParWriteSolution::writeNodeList() => offsets = [" 

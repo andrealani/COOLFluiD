@@ -124,6 +124,9 @@ protected:
   // total number of nodes in element type
   std::vector<CFuint> _totalNbNodesInType;
   
+  /// start/end of the header
+  std::vector<std::vector<MPI_Offset> > _headerOffset;
+  
   //File format to write in (ASCII or Binary)
   std::string _fileFormatStr;
     
