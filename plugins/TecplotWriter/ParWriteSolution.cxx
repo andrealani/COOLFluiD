@@ -739,28 +739,30 @@ void ParWriteSolution::writeHeader(MPI_File* fh)
       MPIIOFunctions::writeKeyValue<char>(fh, " \"x" + StringOps::to_str(i) + '\"');
     }
     
-    SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
-    const vector<std::string>& varNames = updateVarSet->getVarNames();
-    cf_assert(varNames.size() == nbEqs);
-    
-    for (CFuint i = 0 ;  i < nbEqs; ++i)  {
-      std::string n = varNames[i];
-      if ( *n.begin()  != '\"' )  n  = '\"' + n;
-      if ( *n.rbegin() != '\"' )  n += '\"';
-      MPIIOFunctions::writeKeyValue<char>(fh, " " + n);
-    }
-    
-    if (getMethodData().shouldPrintExtraValues()) {
-      vector<std::string> extraVarNames = updateVarSet->getExtraVarNames();
-      for (CFuint i = 0 ;  i < extraVarNames.size(); ++i) {
-    	MPIIOFunctions::writeKeyValue<char>(fh, " " +  extraVarNames[i]);
+    if (!getMethodData().onlyCoordinates()) {
+      SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
+      const vector<std::string>& varNames = updateVarSet->getVarNames();
+      cf_assert(varNames.size() == nbEqs);
+      
+      for (CFuint i = 0 ;  i < nbEqs; ++i)  {
+	std::string n = varNames[i];
+	if ( *n.begin()  != '\"' )  n  = '\"' + n;
+	if ( *n.rbegin() != '\"' )  n += '\"';
+	MPIIOFunctions::writeKeyValue<char>(fh, " " + n);
       }
-    }
-    
-    SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
-    vector<string> dhVarNames = datahandle_output->getVarNames();
-    for (CFuint i = 0 ;  i < dhVarNames.size(); ++i) {
-      MPIIOFunctions::writeKeyValue<char>(fh, " " + dhVarNames[i]);
+      
+      if (getMethodData().shouldPrintExtraValues()) {
+	vector<std::string> extraVarNames = updateVarSet->getExtraVarNames();
+	for (CFuint i = 0 ;  i < extraVarNames.size(); ++i) {
+	  MPIIOFunctions::writeKeyValue<char>(fh, " " +  extraVarNames[i]);
+	}
+      }
+      
+      SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
+      vector<string> dhVarNames = datahandle_output->getVarNames();
+      for (CFuint i = 0 ;  i < dhVarNames.size(); ++i) {
+	MPIIOFunctions::writeKeyValue<char>(fh, " " + dhVarNames[i]);
+      }
     }
   }
   
@@ -787,28 +789,30 @@ void ParWriteSolution::writeHeader(std::ofstream* fout)
       *fout << " \"x" << StringOps::to_str(i) << '\"';
     }
     
-    SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
-    const vector<std::string>& varNames = updateVarSet->getVarNames();
-    cf_assert(varNames.size() == nbEqs);
-    
-    for (CFuint i = 0 ;  i < nbEqs; ++i)  {
-      std::string n = varNames[i];
-      if ( *n.begin()  != '\"' )  n  = '\"' + n;
-      if ( *n.rbegin() != '\"' )  n += '\"';
-      *fout << " " << n;
-    }
-    
-    if (getMethodData().shouldPrintExtraValues()) {
-      vector<std::string> extraVarNames = updateVarSet->getExtraVarNames();
-      for (CFuint i = 0 ;  i < extraVarNames.size(); ++i) {
-	*fout << " " <<  extraVarNames[i];
+    if (!getMethodData().onlyCoordinates()) {
+      SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
+      const vector<std::string>& varNames = updateVarSet->getVarNames();
+      cf_assert(varNames.size() == nbEqs);
+      
+      for (CFuint i = 0 ;  i < nbEqs; ++i)  {
+	std::string n = varNames[i];
+	if ( *n.begin()  != '\"' )  n  = '\"' + n;
+	if ( *n.rbegin() != '\"' )  n += '\"';
+	*fout << " " << n;
       }
-    }
-    
-    SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
-    vector<string> dhVarNames = datahandle_output->getVarNames();
-    for (CFuint i = 0 ;  i < dhVarNames.size(); ++i) {
-      *fout << " " << dhVarNames[i];
+      
+      if (getMethodData().shouldPrintExtraValues()) {
+	vector<std::string> extraVarNames = updateVarSet->getExtraVarNames();
+	for (CFuint i = 0 ;  i < extraVarNames.size(); ++i) {
+	  *fout << " " <<  extraVarNames[i];
+	}
+      }
+      
+      SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
+      vector<string> dhVarNames = datahandle_output->getVarNames();
+      for (CFuint i = 0 ;  i < dhVarNames.size(); ++i) {
+	*fout << " " << dhVarNames[i];
+      }
     }
     *fout << "\n";
   }
@@ -830,11 +834,14 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType)
   SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
   SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
   
-  CFuint nodesStride = dim + nbEqs;
-  if (getMethodData().shouldPrintExtraValues()) {
-    nodesStride += updateVarSet->getExtraVarNames().size();
+  CFuint nodesStride = dim; 
+  if (!getMethodData().onlyCoordinates()) {
+    nodesStride += nbEqs;
+    if (getMethodData().shouldPrintExtraValues()) {
+      nodesStride += updateVarSet->getExtraVarNames().size();
+    }
+    nodesStride += datahandle_output->getVarNames().size();
   }
-  nodesStride += datahandle_output->getVarNames().size();
   
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes =
     MeshDataStack::getActive()->getNodeDataSocketSink().getDataHandle();
@@ -916,28 +923,30 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType)
 	    sendElements[isend] = (*nodes[nodeID])[in]*refL;
 	  }
 	  
-	  const RealVector& currState = *nodalStates.getState(nodeID);
-	  for (CFuint in = 0; in < nbEqs; ++in, ++isend) {
-	    cf_assert(isend < sendElements.size());
-	    sendElements[isend] = currState[in];
-	  }
-	  
-	  const CFuint stateID = nodalStates.getStateLocalID(nodeID);
-	  tempState.setLocalID(stateID);
-	  // the node is set  in the temporary state
-	  tempState.setSpaceCoordinates(nodes[nodeID]);
-	  
-	  if (getMethodData().shouldPrintExtraValues()) {
-	    // dimensionalize the solution
-	    updateVarSet->setDimensionalValuesPlusExtraValues
-	      (tempState, dimState, extraValues);
-	    for (CFuint in = 0; in < extraValues.size(); ++in, ++isend) {
+	  if (!getMethodData().onlyCoordinates()) {
+	    const RealVector& currState = *nodalStates.getState(nodeID);
+	    for (CFuint in = 0; in < nbEqs; ++in, ++isend) {
 	      cf_assert(isend < sendElements.size());
-	      sendElements[isend] = extraValues[in];
+	      sendElements[isend] = currState[in];
 	    }
+	    
+	    const CFuint stateID = nodalStates.getStateLocalID(nodeID);
+	    tempState.setLocalID(stateID);
+	    // the node is set  in the temporary state
+	    tempState.setSpaceCoordinates(nodes[nodeID]);
+	    
+	    if (getMethodData().shouldPrintExtraValues()) {
+	      // dimensionalize the solution
+	      updateVarSet->setDimensionalValuesPlusExtraValues
+		(tempState, dimState, extraValues);
+	      for (CFuint in = 0; in < extraValues.size(); ++in, ++isend) {
+		cf_assert(isend < sendElements.size());
+		sendElements[isend] = extraValues[in];
+	      }
+	    }
+	    
+	    datahandle_output->fillStateData(&sendElements[0], stateID, isend);
 	  }
-	  
-	  datahandle_output->fillStateData(&sendElements[0], stateID, isend);
 	}
       }
       
