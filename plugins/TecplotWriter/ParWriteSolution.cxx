@@ -46,75 +46,84 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider<ParWriteSolution, TecWriterData, TecplotWriterModule>
-parWriteSolutionProvider("ParWriteSolution");
+ MethodCommandProvider<ParWriteSolution, TecWriterData, TecplotWriterModule>
+ parWriteSolutionProvider("ParWriteSolution");
 
-//////////////////////////////////////////////////////////////////////////////
+ //////////////////////////////////////////////////////////////////////////////
 
-void cmpAndTakeMaxAbs3(CFreal* invec, CFreal* inoutvec, int* len,
-		       MPI_Datatype* datatype)
-{
-  cf_assert(len != CFNULL);
-  int size = *len;
-  for (int i = 0; i < size; ++i) {
-    inoutvec[i] = (fabs(invec[i]) > 0.) ? invec[i] : inoutvec[i];
-  }
-}
+ void cmpAndTakeMaxAbs3(CFreal* invec, CFreal* inoutvec, int* len,
+			MPI_Datatype* datatype)
+ {
+   cf_assert(len != CFNULL);
+   int size = *len;
+   for (int i = 0; i < size; ++i) {
+     inoutvec[i] = (fabs(invec[i]) > 0.) ? invec[i] : inoutvec[i];
+   }
+ }
 
-//////////////////////////////////////////////////////////////////////////////
+ //////////////////////////////////////////////////////////////////////////////
 
-void ParWriteSolution::defineConfigOptions(Config::OptionList& options)
-{
-  options.addConfigOption< std::string>("FileFormat","Format to write Tecplot file."); 
-  options.addConfigOption< CFuint >("NbWriters", "Number of writers (and MPI groups)");
-  options.addConfigOption< int >("MaxBuffSize", "Maximum buffer size for MPI I/O");
-}
-      
-//////////////////////////////////////////////////////////////////////////////
+ void ParWriteSolution::defineConfigOptions(Config::OptionList& options)
+ {
+   options.addConfigOption< std::string>("FileFormat","Format to write Tecplot file."); 
+   options.addConfigOption< CFuint >("NbWriters", "Number of writers (and MPI groups)");
+   options.addConfigOption< int >("MaxBuffSize", "Maximum buffer size for MPI I/O");
+ }
 
-ParWriteSolution::ParWriteSolution(const std::string& name) : 
-  TecWriterCom(name),
-  ParFileWriter(),
-  socket_nodes("nodes"),
-  socket_nstatesProxy("nstatesProxy"),
-  _headerOffset(),
-  _nodesInType(),
-  _mapNodeID2NodeIDByEType(),
-  _mapGlobal2LocalNodeID(),
-  _totalNbNodesInType()
-{
-  addConfigOptionsTo(this);
+ //////////////////////////////////////////////////////////////////////////////
 
-  _fileFormatStr = "ASCII";
-  setParameter("FileFormat",&_fileFormatStr);
-  
-  _nbWriters = 1;
-  setParameter("NbWriters",&_nbWriters);
-  
-  _maxBuffSize = 2147479200; // (CFuint) std::numeric_limits<int>::max();
-  setParameter("MaxBuffSize",&_maxBuffSize);
-}
+ ParWriteSolution::ParWriteSolution(const std::string& name) : 
+   TecWriterCom(name),
+   ParFileWriter(),
+   socket_nodes("nodes"),
+   socket_nstatesProxy("nstatesProxy"),
+   _headerOffset(),
+   _oldNbNodesElemsInType(),
+   _totalNbNodesInType(),
+   _nodesInType(),
+   _mapNodeID2NodeIDByEType(),
+   _mapGlobal2LocalNodeID()
+ {
+   addConfigOptionsTo(this);
 
-//////////////////////////////////////////////////////////////////////////////
+   _fileFormatStr = "ASCII";
+   setParameter("FileFormat",&_fileFormatStr);
 
-ParWriteSolution::~ParWriteSolution() 
-{
-  cleanupNodeIDMapping();
-}
+   _nbWriters = 1;
+   setParameter("NbWriters",&_nbWriters);
 
-//////////////////////////////////////////////////////////////////////////////
+   _maxBuffSize = 2147479200; // (CFuint) std::numeric_limits<int>::max();
+   setParameter("MaxBuffSize",&_maxBuffSize);
+ }
 
-void ParWriteSolution::execute()
-{
-  CFLog(INFO, "Writing solution to " << getMethodData().getFilename().string() << "\n");
-  
-  if(_fileFormatStr == "ASCII"){    
-    // reset to 0 the new file flag
-    _isNewFile = 0;
-    ofstream* file = CFNULL;
-    Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
-      Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-    
+ //////////////////////////////////////////////////////////////////////////////
+
+ ParWriteSolution::~ParWriteSolution() 
+ {
+   CFAUTOTRACE;
+   
+   cleanupNodeIDMapping();
+ }
+
+ //////////////////////////////////////////////////////////////////////////////
+
+ void ParWriteSolution::execute()
+ {
+   CFAUTOTRACE;
+   
+   CFLog(INFO, "Writing solution to " << getMethodData().getFilename().string() << "\n");
+   
+   if (hasChangedMesh()) {
+     buildNodeIDMapping();
+   }
+   
+   if(_fileFormatStr == "ASCII") {    
+     // reset to 0 the new file flag
+     _isNewFile = 0;
+     ofstream* file = CFNULL;
+     Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
+       Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
+     
     if (_isWriterRank) { 
       // if the file has already been processed once, open in I/O mode
       if (_fileList.count(getMethodData().getFilename()) > 0) {
@@ -185,7 +194,9 @@ void ParWriteSolution::writeToFileStream(const boost::filesystem::path& filepath
     datahandle_output->getDataHandles();
     
     // write the TECPLOT file header
-    writeHeader(fout);
+    if (_isNewFile) {
+      writeHeader(fout);
+    }
     
     // MeshElementType stores GLOBAL element type data
     const vector<MeshElementType>& me =
@@ -207,44 +218,55 @@ void ParWriteSolution::writeToFileStream(const boost::filesystem::path& filepath
 	for (CFuint iType = 0; iType < elementType->size(); ++iType) {
 	  ElementTypeData& eType = (*elementType)[iType];
 	  const CFuint nbCellsInType  = eType.getNbElems();
-
-	  vector<MPI_Offset>& headerOffset = _headerOffset[iType];
-
-	  // print zone header: one zone per element type
-	  if (_myRank == _ioRank) {
-         headerOffset[0] = fout->tellp();
-
-	    *fout << "ZONE "
-		  << "  T= \"ZONE" << iType << " " << eType.getShape() <<"\""
-		  << ", N=" << _totalNbNodesInType[iType]
-		  << ", E=" << me[iType].elementCount
-		  << ", F=FEPOINT"
-		  << ", ET=" << MapGeoEnt::identifyGeoEntTecplot
-	      (eType.getNbNodes(),
-	       eType.getGeoOrder(),
-	       PhysicalModelStack::getActive()->getDim()) 
-		  << ", SOLUTIONTIME=" << subSysStatus->getCurrentTimeDim() << flush;
+	  
+	  const bool meshChanged = hasChangedMesh(iType);
+	  if (_isNewFile || meshChanged) {
+	    vector<MPI_Offset>& headerOffset = _headerOffset[iType];
 	    
-	    if (getMethodData().getAppendAuxData()) {
-	      *fout << " AUXDATA TRS=\"" << trs->getName() << "\""
-		    << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
-		    << ", AUXDATA ElementType=\"" << eType.getShape() << "\""
-		    << ", AUXDATA Iter=\"" << subSysStatus->getNbIter() << "\""
-		    << ", AUXDATA PhysTime=\"" << subSysStatus->getCurrentTimeDim() << "\"";
+	    // print zone header: one zone per element type
+	    
+	    if (_myRank == _ioRank) {
+	      headerOffset[0] = fout->tellp();
+	      
+	      *fout << "ZONE "
+		    << "  T= \"ZONE" << iType << " " << eType.getShape() <<"\""
+		    << ", N=" << _totalNbNodesInType[iType]
+		    << ", E=" << me[iType].elementCount
+		    << ", F=FEPOINT"
+		    << ", ET=" << MapGeoEnt::identifyGeoEntTecplot
+		(eType.getNbNodes(),
+		 eType.getGeoOrder(),
+		 PhysicalModelStack::getActive()->getDim()) 
+		    << ", SOLUTIONTIME=" << subSysStatus->getCurrentTimeDim() << flush;
+	      
+	      if (getMethodData().getAppendAuxData()) {
+		*fout << " AUXDATA TRS=\"" << trs->getName() << "\""
+		      << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
+		      << ", AUXDATA ElementType=\"" << eType.getShape() << "\""
+		      << ", AUXDATA Iter=\"" << subSysStatus->getNbIter() << "\""
+		      << ", AUXDATA PhysTime=\"" << subSysStatus->getCurrentTimeDim() << "\"";
+	      }
+	      *fout << "\n";
+	      
+	      headerOffset[1] = fout->tellp();
 	    }
-	    *fout << "\n";
-
-        headerOffset[1] = fout->tellp();
-	  }
-
-	   // communicate the current file position to all processor
+	    
+	    // communicate the current file position to all processor
 	    MPI_Bcast(&headerOffset[0], 2, MPIStructDef::getMPIOffsetType(), _ioRank, _comm);
-	   
+	    
+	    // backup the total counts for this element type
+	    _oldNbNodesElemsInType[iType].first  = _totalNbNodesInType[iType];
+	    _oldNbNodesElemsInType[iType].second = me[iType].elementCount;
+	  }
+	  
 	  // print nodal coordinates and stored node variables
 	  writeNodeList(fout, iType);
 	  
-	  // write element-node connectivity
-	  writeElementList(fout, iType, trs);
+	  if (_isNewFile || meshChanged) {
+	    // write element-node connectivity
+	    writeElementList(fout, iType, trs);
+	  }
+	  
 	}
       } //end if inner cells
     } //end loop over trs
@@ -274,10 +296,16 @@ void ParWriteSolution::setup()
   
   _headerOffset.resize(nbElementTypes);
   for (CFuint i = 0; i < nbElementTypes; ++i) {
-    _headerOffset[i].resize(2);
+    _headerOffset[i].resize(2, 0);
   }
   
-  buildNodeIDMapping();
+  _oldNbNodesElemsInType.resize(nbElementTypes);
+  for (CFuint i = 0; i < nbElementTypes; ++i) {
+    _oldNbNodesElemsInType[i].first = 0;
+    _oldNbNodesElemsInType[i].second = 0;
+  }
+  
+  _totalNbNodesInType.resize(nbElementTypes, 0);
   
   CFLog(VERBOSE, "ParWriteSolution::setup() => end\n");
 }      
@@ -286,6 +314,8 @@ void ParWriteSolution::setup()
  
 void ParWriteSolution:: cleanupNodeIDMapping()
 {  
+  CFAUTOTRACE;
+  
   for (CFuint i = 0; i < _nodesInType.size(); ++i) {
     vector<CFuint>().swap(_nodesInType[i]);
   }
@@ -295,14 +325,14 @@ void ParWriteSolution:: cleanupNodeIDMapping()
   }
   
   _mapGlobal2LocalNodeID.clear();
-  
-  vector<CFuint>().swap(_totalNbNodesInType);
 }  
  
 //////////////////////////////////////////////////////////////////////////////
 
 void ParWriteSolution:: buildNodeIDMapping()
 {   
+  CFAUTOTRACE;
+  
   CFLog(VERBOSE, "ParWriteSolution::buildNodeIDMapping() => start\n");
   
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
@@ -314,16 +344,15 @@ void ParWriteSolution:: buildNodeIDMapping()
   
   cleanupNodeIDMapping();
   
-  if (_mapNodeID2NodeIDByEType.size() == 0) {
-    _nodesInType.resize(nbElementTypes);
-    _mapNodeID2NodeIDByEType.resize(nbElementTypes);
-    _mapGlobal2LocalNodeID.reserve(nodes.size());
-    _totalNbNodesInType.resize(nbElementTypes);
-  }
+  _nodesInType.resize(nbElementTypes);
+  _mapNodeID2NodeIDByEType.resize(nbElementTypes);
+  _mapGlobal2LocalNodeID.reserve(nodes.size());
   
-  vector<SafePtr<TopologicalRegionSet> > trsList = MeshDataStack::getActive()->getTrsList();
+  vector<SafePtr<TopologicalRegionSet> > trsList = 
+    MeshDataStack::getActive()->getTrsList();
   
-  const CFuint totalNodeCount = MeshDataStack::getActive()->getTotalNodeCount();
+  const CFuint totalNodeCount =
+    MeshDataStack::getActive()->getTotalNodeCount();
   cf_assert(totalNodeCount >= nodes.size());
   vector<bool> foundGlobalID(totalNodeCount);
   
@@ -692,6 +721,8 @@ ParWriteSolution::needsSockets()
       
 void ParWriteSolution::writeHeader(MPI_File* fh)
 {
+  CFAUTOTRACE;
+  
   CFLog(VERBOSE, "ParWriteSolution::writeHeader() start\n");
   
   if (_myRank == _ioRank) {
@@ -740,6 +771,8 @@ void ParWriteSolution::writeHeader(MPI_File* fh)
 
 void ParWriteSolution::writeHeader(std::ofstream* fout) 
 {
+  CFAUTOTRACE;
+  
   CFLog(VERBOSE, "ParWriteSolution::writeHeader() start\n");
   
   if (_myRank == _ioRank) {
@@ -787,6 +820,8 @@ void ParWriteSolution::writeHeader(std::ofstream* fout)
   
 void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType)
 {
+  CFAUTOTRACE;
+  
   CFLog(VERBOSE, "ParWriteSolution::writeNodeList() => start\n");
     
   const CFuint dim  = PhysicalModelStack::getActive()->getDim();
@@ -997,6 +1032,8 @@ void ParWriteSolution::writeElementList(ofstream* fout,
 					const CFuint iType,
 					SafePtr<TopologicalRegionSet> elements)
 {
+  CFAUTOTRACE;
+  
   CFLog(VERBOSE, "ParWriteSolution::writeElementList() => start\n");
   
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
@@ -1278,6 +1315,47 @@ void ParWriteSolution::writeElementConn(ofstream& file,
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+      
+bool ParWriteSolution::hasChangedMesh() const
+{
+  CFAUTOTRACE;
+  
+  // use signals monitoring for this in the future
+  for (CFuint iType = 0; iType < _totalNbNodesInType.size(); ++iType) {
+    if (hasChangedMesh(iType)) {
+      CFLog(VERBOSE, "ParWriteSolution::hasChangedMesh() => true\n");
+      return true;
+    }
+  }
+  CFLog(VERBOSE, "ParWriteSolution::hasChangedMesh() => false\n");
+  return false;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+bool ParWriteSolution::hasChangedMesh(const CFuint iType) const
+{
+  CFAUTOTRACE;
+  
+  // use signals monitoring for this in the future
+  cf_assert(iType < _totalNbNodesInType.size());
+  cf_assert(iType < _oldNbNodesElemsInType.size());
+  if (_totalNbNodesInType[iType] != _oldNbNodesElemsInType[iType].first) {
+    CFLog(VERBOSE, "ParWriteSolution::hasChangedMesh (iType = " << iType << ") => true\n");
+    return true;
+  }
+  
+  if (MeshDataStack::getActive()->getTotalMeshElementTypes()[iType].elementCount 
+      != _oldNbNodesElemsInType[iType].second) {
+    CFLog(VERBOSE, "ParWriteSolution::hasChangedMesh (iType = " << iType << ") => true\n");
+    return true;
+  }
+  
+  CFLog(VERBOSE, "ParWriteSolution::hasChangedMesh (iType = " << iType << ") => false\n");
+  return false;
+}
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace TecplotWriter

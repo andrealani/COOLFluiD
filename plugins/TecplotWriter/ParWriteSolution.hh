@@ -104,6 +104,13 @@ public:
   /// Get the name of the writer
   const std::string getWriterName() const;
   
+  /// Tell if the mesh has changed 
+  bool hasChangedMesh() const;    
+  
+  /// Tell if the mesh has changed for a certain mesh type
+  /// @param iType  ID for the mesh type
+  bool hasChangedMesh(const CFuint iType) const;    
+  
 protected:
   
   /// socket for Node's
@@ -115,17 +122,20 @@ protected:
   /// start/end of the header
   std::vector<std::vector<MPI_Offset> > _headerOffset;
   
+  // old total number of nodes and elements in type
+  std::vector<std::pair<CFuint, CFuint> > _oldNbNodesElemsInType;
+  
+  // total number of nodes in element type
+  std::vector<CFuint> _totalNbNodesInType;
+  
   // global node IDs per type
   std::vector<std::vector<CFuint> > _nodesInType;
   
   // mapping global nodeIDs to global nodeIDs by element type
   std::vector<Common::CFMap<CFuint, CFuint>*> _mapNodeID2NodeIDByEType;
-    
+  
   // mapping global nodeIDs to local nodeIDs
   Common::CFMap<CFuint, CFuint> _mapGlobal2LocalNodeID;
-  
-  // total number of nodes in element type
-  std::vector<CFuint> _totalNbNodesInType;
     
   //File format to write in (ASCII or Binary)
   std::string _fileFormatStr;
