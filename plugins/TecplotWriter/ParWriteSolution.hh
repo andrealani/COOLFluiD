@@ -65,6 +65,37 @@ public:
   typedef void (ParWriteSolution::*WriterFun)
     (const boost::filesystem::path&, const bool, const std::string, std::ofstream*);
   
+  /// This class stores indexes and offsets useful for the writing TRS data 
+  class TeclotTRSType {
+  public:
+    /// Constructor
+    TeclotTRSType() {}
+    
+    /// Destructor
+    ~TeclotTRSType() {cleanupMappings();}
+    
+    /// Clean up mappings
+    void cleanupMappings();
+    
+    /// start/end of the header
+    std::vector<std::vector<MPI_Offset> > headerOffset;
+    
+    /// old total number of nodes and elements in type
+    std::vector<std::pair<CFuint, CFuint> > oldNbNodesElemsInType;
+    
+    /// total number of nodes in element type
+    std::vector<CFuint> totalNbNodesInType;
+    
+    /// global node IDs per type
+    std::vector<std::vector<CFuint> > nodesInType;
+    
+    /// mapping global nodeIDs to global nodeIDs by element type
+    std::vector<Common::CFMap<CFuint, CFuint>*> mapNodeID2NodeIDByEType;
+    
+    /// mapping global nodeIDs to local nodeIDs
+    Common::CFMap<CFuint, CFuint> mapGlobal2LocalNodeID;
+  };
+  
   /// write unstructured data on teh given file
   /// @param filepath  namem of the path to the file
   /// @param flag      flag telling if the file has to be created or overwritten
@@ -111,12 +142,18 @@ public:
   void cleanupNodeIDMapping();
   
   /// Write the node list corresponding to the given element type
-  void writeNodeList(std::ofstream* fout, const CFuint iType);
+  void writeNodeList(std::ofstream* fout, const CFuint iType, 
+		     Common::SafePtr<Framework::TopologicalRegionSet> elements);
   
   /// Write the element list corresponding to the given element type
-  void writeElementList
-    (std::ofstream* fout, const CFuint iType,  
-     Common::SafePtr<Framework::TopologicalRegionSet> elements);
+  void writeElementList(std::ofstream* fout,
+			const CFuint iType,
+			const CFuint nbNodesInType,
+			const CFuint nbElementsInType,
+			const CFuint nbLocalElements,
+			const CFuint startElementID,
+			const CFuint geoOrder,
+			Common::SafePtr<Framework::TopologicalRegionSet> elements);
   
   /// Write the connectivity for one element, after having translated the local 
   /// element connectivity (node ordering) from CFmesh to Tecplot format
@@ -130,42 +167,30 @@ public:
   const std::string getWriterName() const;
   
   /// Tell if the mesh has changed 
-  bool hasChangedMesh() const;    
+  bool hasChangedMesh(const TeclotTRSType& tt) const;    
   
   /// Tell if the mesh has changed for a certain mesh type
   /// @param iType  ID for the mesh type
-  bool hasChangedMesh(const CFuint iType) const;    
+  bool hasChangedMesh(const CFuint iType, const TeclotTRSType& tt) const;    
+  
+  /// Return the TRS ID corresponding to the given TRS name in the global storage
+  int getGlobaTRSID(const std::string& name);
   
 protected:
-  
+ 
   /// socket for Node's
   Framework::DataSocketSink < Framework::Node* , Framework::GLOBAL > socket_nodes;
   
   /// socket for State Proxy
   Framework::DataSocketSink<Framework::ProxyDofIterator<RealVector>*> socket_nstatesProxy;
   
-  /// start/end of the header
-  std::vector<std::vector<MPI_Offset> > _headerOffset;
+  /// array of TeclotTRSType
+  Common::CFMap<std::string, TeclotTRSType*> _mapTrsName2TecplotData;
   
-  // old total number of nodes and elements in type
-  std::vector<std::pair<CFuint, CFuint> > _oldNbNodesElemsInType;
-  
-  // total number of nodes in element type
-  std::vector<CFuint> _totalNbNodesInType;
-  
-  // global node IDs per type
-  std::vector<std::vector<CFuint> > _nodesInType;
-  
-  // mapping global nodeIDs to global nodeIDs by element type
-  std::vector<Common::CFMap<CFuint, CFuint>*> _mapNodeID2NodeIDByEType;
-  
-  // mapping global nodeIDs to local nodeIDs
-  Common::CFMap<CFuint, CFuint> _mapGlobal2LocalNodeID;
-  
-  // flag to tell if the boundary file is new
+  /// flag to tell if the boundary file is new
   bool _isNewBFile;
   
-  //File format to write in (ASCII or Binary)
+  /// File format to write in (ASCII or Binary)
   std::string _fileFormatStr;
   
 }; // class ParWriteSolution

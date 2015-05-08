@@ -77,12 +77,7 @@ namespace COOLFluiD {
    ParFileWriter(),
    socket_nodes("nodes"),
    socket_nstatesProxy("nstatesProxy"),
-   _headerOffset(),
-   _oldNbNodesElemsInType(),
-   _totalNbNodesInType(),
-   _nodesInType(),
-   _mapNodeID2NodeIDByEType(),
-   _mapGlobal2LocalNodeID(),
+   _mapTrsName2TecplotData(),
    _isNewBFile(false)
  {
    addConfigOptionsTo(this);
@@ -103,7 +98,9 @@ namespace COOLFluiD {
  {
    CFAUTOTRACE;
    
-   cleanupNodeIDMapping();
+   for (CFuint i = 0; i < _mapTrsName2TecplotData.size(); ++i) {
+    delete _mapTrsName2TecplotData[i];
+   }
  }
 
  //////////////////////////////////////////////////////////////////////////////
@@ -112,9 +109,8 @@ void ParWriteSolution::execute()
 {
   CFAUTOTRACE;
   
-  CFLog(INFO, "Writing solution to " << getMethodData().getFilename().string() << "\n");
-  
-  if (hasChangedMesh()) {
+  const TeclotTRSType& tt = *_mapTrsName2TecplotData.find("InnerCells");
+  if (hasChangedMesh(tt)) {
     buildNodeIDMapping();
   }
   
@@ -126,8 +122,8 @@ void ParWriteSolution::execute()
     }
     
     // write boundary surface data
-    // boost::filesystem::path bpath = cfgpath.branch_path() / ( basename(cfgpath) + "-surf" + extension(cfgpath) );
-    // writeData(bpath, _isNewBFile, "Boundary data", &ParWriteSolution::writeBoundaryData);
+    boost::filesystem::path bpath = cfgpath.branch_path() / ( basename(cfgpath) + ".surf" + extension(cfgpath) );
+    writeData(bpath, _isNewBFile, "Boundary data", &ParWriteSolution::writeBoundaryData);
   }
 }
       
@@ -171,7 +167,7 @@ void ParWriteSolution::writeData(const boost::filesystem::path& filepath,
     fhandle->close();
   }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 const std::string ParWriteSolution::getWriterName() const
@@ -196,6 +192,8 @@ void ParWriteSolution::writeInnerData
 {
   CFAUTOTRACE;
   
+  CFLog(INFO, "Writing solution to " << filepath.string() << "\n");
+  
   SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
   SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
   datahandle_output->getDataHandles();
@@ -208,6 +206,7 @@ void ParWriteSolution::writeInnerData
   // MeshElementType stores GLOBAL element type data
   const vector<MeshElementType>& me =
     MeshDataStack::getActive()->getTotalMeshElementTypes();
+  cf_assert(MeshDataStack::getActive()->getElementTypeData()->size() == me.size());
   
   std::vector<SafePtr<TopologicalRegionSet> > trsList =
     MeshDataStack::getActive()->getTrsList();
@@ -218,26 +217,25 @@ void ParWriteSolution::writeInnerData
     if ((trs->hasTag("inner")) && (trs->hasTag("cell"))) {
       SafePtr<vector<ElementTypeData> > elementType =
 	MeshDataStack::getActive()->getElementTypeData(trs->getName());
+      TeclotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
       
       // loop over the element types
       // and create a zone in the tecplot file
       // for each element type
       for (CFuint iType = 0; iType < elementType->size(); ++iType) {
 	ElementTypeData& eType = (*elementType)[iType];
-	const CFuint nbCellsInType  = eType.getNbElems();
 	
-	const bool meshChanged = hasChangedMesh(iType);
+	const bool meshChanged = hasChangedMesh(iType, tt);
 	if (isNewFile || meshChanged) {
-	  vector<MPI_Offset>& headerOffset = _headerOffset[iType];
+	  vector<MPI_Offset>& headerOffset = tt.headerOffset[iType];
 	  
 	  // print zone header: one zone per element type
-	  
 	  if (_myRank == _ioRank) {
 	    headerOffset[0] = fout->tellp();
 	    
 	    *fout << "ZONE "
 		  << "  T= \"ZONE" << iType << " " << eType.getShape() <<"\""
-		  << ", N=" << _totalNbNodesInType[iType]
+		  << ", N=" << tt.totalNbNodesInType[iType]
 		  << ", E=" << me[iType].elementCount
 		  << ", F=FEPOINT"
 		  << ", ET=" << MapGeoEnt::identifyGeoEntTecplot
@@ -262,16 +260,18 @@ void ParWriteSolution::writeInnerData
 	  MPI_Bcast(&headerOffset[0], 2, MPIStructDef::getMPIOffsetType(), _ioRank, _comm);
 	  
 	  // backup the total counts for this element type
-	  _oldNbNodesElemsInType[iType].first  = _totalNbNodesInType[iType];
-	  _oldNbNodesElemsInType[iType].second = me[iType].elementCount;
+	  tt.oldNbNodesElemsInType[iType].first  = tt.totalNbNodesInType[iType];
+	  tt.oldNbNodesElemsInType[iType].second = me[iType].elementCount;
 	}
 	
 	// print nodal coordinates and stored node variables
-	writeNodeList(fout, iType);
+	writeNodeList(fout, iType, trs);
 	
 	if (isNewFile || meshChanged) {
 	  // write element-node connectivity
-	  writeElementList(fout, iType, trs);
+	  writeElementList(fout, iType, me[iType].elementNodes,
+			   me[iType].elementCount, eType.getNbElems(),  
+			   eType.getStartIdx(), eType.getGeoOrder(), trs);
 	}
       }
     } //end if inner cells
@@ -294,20 +294,26 @@ void ParWriteSolution::setup()
   const CFuint nbElementTypes = me.size();
   cf_assert(nbElementTypes > 0);
   
+  
+  
   _offset.resize(nbElementTypes);
-  
-  _headerOffset.resize(nbElementTypes);
+
+  TeclotTRSType* tt = new TeclotTRSType();
+  tt->headerOffset.resize(nbElementTypes);
   for (CFuint i = 0; i < nbElementTypes; ++i) {
-    _headerOffset[i].resize(2, 0);
+    tt->headerOffset[i].resize(2, 0);
   }
   
-  _oldNbNodesElemsInType.resize(nbElementTypes);
+  tt->oldNbNodesElemsInType.resize(nbElementTypes);
   for (CFuint i = 0; i < nbElementTypes; ++i) {
-    _oldNbNodesElemsInType[i].first = 0;
-    _oldNbNodesElemsInType[i].second = 0;
+    tt->oldNbNodesElemsInType[i].first = 0;
+    tt->oldNbNodesElemsInType[i].second = 0;
   }
   
-  _totalNbNodesInType.resize(nbElementTypes, 0);
+  tt->totalNbNodesInType.resize(nbElementTypes, 0);
+  
+  _mapTrsName2TecplotData.insert("InnerCells", tt);
+  _mapTrsName2TecplotData.sortKeys();
   
   CFLog(VERBOSE, "ParWriteSolution::setup() => end\n");
 }      
@@ -318,15 +324,9 @@ void ParWriteSolution:: cleanupNodeIDMapping()
 {  
   CFAUTOTRACE;
   
-  for (CFuint i = 0; i < _nodesInType.size(); ++i) {
-    vector<CFuint>().swap(_nodesInType[i]);
+  for (CFuint i = 0; i < _mapTrsName2TecplotData.size(); ++i) {
+    _mapTrsName2TecplotData[i]->cleanupMappings();
   }
-  
-  for (CFuint i = 0; i < _mapNodeID2NodeIDByEType.size(); ++i) {
-    delete _mapNodeID2NodeIDByEType[i];
-  }
-  
-  _mapGlobal2LocalNodeID.clear();
 }  
  
 //////////////////////////////////////////////////////////////////////////////
@@ -346,9 +346,10 @@ void ParWriteSolution:: buildNodeIDMapping()
   
   cleanupNodeIDMapping();
   
-  _nodesInType.resize(nbElementTypes);
-  _mapNodeID2NodeIDByEType.resize(nbElementTypes);
-  _mapGlobal2LocalNodeID.reserve(nodes.size());
+  TeclotTRSType& tt = *_mapTrsName2TecplotData.find("InnerCells");
+  tt.nodesInType.resize(nbElementTypes);
+  tt.mapNodeID2NodeIDByEType.resize(nbElementTypes);
+  tt.mapGlobal2LocalNodeID.reserve(nodes.size());
   
   vector<SafePtr<TopologicalRegionSet> > trsList = 
     MeshDataStack::getActive()->getTrsList();
@@ -369,8 +370,7 @@ void ParWriteSolution:: buildNodeIDMapping()
       for (CFuint iType = 0; iType < elementType->size(); ++iType) {
 	ElementTypeData& eType = (*elementType)[iType];
 	const CFuint nbCellsInType  = eType.getNbElems();
-	
-	vector<CFuint>& nodesInType = _nodesInType[iType];
+	vector<CFuint>& nodesInType = tt.nodesInType[iType];
 	
 	// find which global nodeIDs are used in the elements of this type
 	if (nbCellsInType > 0) {
@@ -439,7 +439,7 @@ void ParWriteSolution:: buildNodeIDMapping()
 	  }
 	}
 	
-	_mapNodeID2NodeIDByEType[iType] = new CFMap<CFuint, CFuint>(nodesInType.size());
+	tt.mapNodeID2NodeIDByEType[iType] = new CFMap<CFuint, CFuint>(nodesInType.size());
 	
 	// create mapping between global IDs belonging to the current processor
 	// and global IDs reordered by element type (starting from 0) 
@@ -447,28 +447,29 @@ void ParWriteSolution:: buildNodeIDMapping()
 	CFuint countMatching = 0;
 	for (CFuint globalNodeID = 0; globalNodeID < totalNodeCount; ++globalNodeID) {
 	  if (foundGlobalID[globalNodeID]) {
-	    etypeNodeID++; // in reality TECPLOT IDs start from 1 (later on this will have to be considered)
+	    etypeNodeID++; 
+	    // in TECPLOT IDs start from 1: this is enforced in ParWriteSolution::writeElementConn()
 	  }
 	  if (std::binary_search(nodesInType.begin(), nodesInType.end(), globalNodeID)) {
-	    _mapNodeID2NodeIDByEType[iType]->insert(globalNodeID, etypeNodeID);
+	    tt.mapNodeID2NodeIDByEType[iType]->insert(globalNodeID, etypeNodeID);
 	    countMatching++;
 	  }
 	}
 	
-	_totalNbNodesInType[iType] = etypeNodeID+1;
+	tt.totalNbNodesInType[iType] = etypeNodeID+1;
 	
 	cf_assert(countMatching == nodesInType.size());
 	
-	_mapNodeID2NodeIDByEType[iType]->sortKeys();
+	tt.mapNodeID2NodeIDByEType[iType]->sortKeys();
       } 
     }
   }
   
   // build the inverse mapping global IDs to local IDs for all nodes 
   for (CFuint i = 0; i < nodes.size(); ++i) {
-    _mapGlobal2LocalNodeID.insert(nodes[i]->getGlobalID(), nodes[i]->getLocalID());
+    tt.mapGlobal2LocalNodeID.insert(nodes[i]->getGlobalID(), nodes[i]->getLocalID());
   }
-  _mapGlobal2LocalNodeID.sortKeys();
+  tt.mapGlobal2LocalNodeID.sortKeys();
   
   CFLog(VERBOSE, "ParWriteSolution::buildNodeIDMapping() => end\n");
 }
@@ -482,6 +483,8 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
 {
   CFAUTOTRACE;
   
+  CFLog(INFO, "Writing solution to " << filepath.string() << "\n");
+    
   SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   DataHandle<ProxyDofIterator<RealVector>*> nstatesProxy = socket_nstatesProxy.getDataHandle();
@@ -491,164 +494,158 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
   // but they are always used as arrays of RealVector*
   ProxyDofIterator<RealVector>& nodalStates = *nstatesProxy[0];
   
-  // we assume that the element-node connectivity
-  // is same as element-state connectivity
-  /// @todo tecplot writer should not assume element-to-node
-  //connectivity to be the same as element-to-state
-  //  cf_assert(nodes.size() == nodalStates.getSize());
+  // we assume that the element-node == element-state connectivity
+  // @todo tecplot writer should not assume element-to-node
+  // connectivity to be the same as element-to-state
   
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();
-  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-  const CFreal refL = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
-
-  if (getMethodData().getSurfaceTRSsToWrite().empty())
-     return;
-
+  /// return if the user has not indicated any TRS
+  if (getMethodData().getSurfaceTRSsToWrite().empty()) return;
+  
   const std::vector<std::string>& surfTRS = getMethodData().getSurfaceTRSsToWrite();
-  CFuint countTRToWrite = 0;
-  std::vector<std::string>::const_iterator itr = surfTRS.begin();
-
-  for(; itr != surfTRS.end(); ++itr) {
+  
+  CFuint countTRToWrite = 0;  
+  for(vector<string>::const_iterator itr = surfTRS.begin(); itr != surfTRS.end(); ++itr) {
     Common::SafePtr<TopologicalRegionSet> currTrs = MeshDataStack::getActive()->getTrs(*itr);
     const CFuint nbTRs = currTrs->getNbTRs();
     for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
       SafePtr<TopologicalRegion> tr = currTrs->getTopologicalRegion(iTR);
-      if (tr->getLocalNbGeoEnts() > 0) {
-	countTRToWrite++;
-      }
+      countTRToWrite++;
     }
   }
-
-  // AL: the file is written only if there is at least one TR with more than 0 nodes
-  // else Tecplot cannot handle it and you have manually to skip the file
-  if (countTRToWrite > 0) {
-    path cfgpath = getMethodData().getFilename();
-    path filepath = cfgpath.branch_path() / ( basename(cfgpath) + "-surf" + extension(cfgpath) );
-
-    Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
-      Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-    ofstream& fout = fhandle->open(filepath);
+  cf_assert(countTRToWrite > 0);
+   
+  const vector<vector<CFuint> >&  trsInfo =
+    MeshDataStack::getActive()->getTotalTRSInfo();
+   
+  SafePtr<vector<vector<vector<CFuint> > > > globalGeoIDS =
+    MeshDataStack::getActive()->getGlobalTRSGeoIDs();
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  
+  // loop over the TRSs selecte by the user
+  for(vector<string>::const_iterator itr = surfTRS.begin(); itr != surfTRS.end(); ++itr) {
+    SafePtr<TopologicalRegionSet> trs = MeshDataStack::getActive()->getTrs(*itr);
+    const int iTRS = getGlobaTRSID(trs->getName());
+    cf_assert(iTRS >= 0);
     
-    // array to store the dimensional states
-    RealVector dimState(nbEqs);
-    RealVector extraValues; // size will be set in the VarSet
-    State tempState;
+    const CFuint nbTRs = trs->getNbTRs(); 
+    cf_assert(nbTRs > 0);
+    cf_assert(nbTRs == (*globalGeoIDS)[iTRS].size());
     
-    std::vector<std::string>::const_iterator itr = surfTRS.begin();
-    for(; itr != surfTRS.end(); ++itr) {
-
-      Common::SafePtr<TopologicalRegionSet> currTrs = MeshDataStack::getActive()->getTrs(*itr);
-
-      const CFuint nbTRs = currTrs->getNbTRs();
-      for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
-	SafePtr<TopologicalRegion> tr = currTrs->getTopologicalRegion(iTR);
-	const CFuint nbBFaces = tr->getLocalNbGeoEnts();
-	if (nbBFaces > 0) {
-	  // get all the unique nodes in the TR
-	  vector<CFuint> trNodes;
-	  tr->putNodesInTR(trNodes);
-
-	  const CFuint nbAllNodes = trNodes.size();
-	  CFMap<CFuint,CFuint> mapNodesID(nbAllNodes);
-	  for (CFuint i = 0; i < nbAllNodes; ++i) {
-	    mapNodesID.insert(trNodes[i],i+1);
-	  }
-	  mapNodesID.sortKeys();
-
-	  std::string elemShape;
-	  CFuint maxNbNodesInGeo = 2;
-	  if (dim == 2) {
-	    elemShape = "LINESEG";
-	  }
-	  else if (dim == 3) {
-	    maxNbNodesInGeo = 3;
-	    const CFuint nbBFaces = tr->getLocalNbGeoEnts();
-	    for (CFuint iGeo = 0; iGeo < nbBFaces; ++iGeo) {
-	      maxNbNodesInGeo = max(maxNbNodesInGeo, tr->getNbNodesInGeo(iGeo));
-	    }
-
-	    // AL: the maximum number of nodes in face is considered:
-	    // an extra virtual node is added if TETRA and QUADRILATERAL
-	    // are both present
-	    elemShape = (maxNbNodesInGeo == 3) ? "TRIANGLE" : "QUADRILATERAL";
-	  }
-
-	  // AL: Tecplot doesn't read zones with 0 elements !!! (this was a problem in parallel)
-	  if (tr->getLocalNbGeoEnts() > 0) {
-	    // print zone header
-	    // one zone per TR
-	    fout << "ZONE N=" << nbAllNodes
-		 << ", T=\"" << currTrs->getName() << ", TR " << iTR << "\""
-		 << ", E=" << tr->getLocalNbGeoEnts()
-		 << ", F=FEPOINT"
-		 << ", ET=" << elemShape
-		 << ", SOLUTIONTIME=" << subSysStatus->getCurrentTimeDim()
-		 << "\n";
-	    
-	    vector<CFuint>::const_iterator itr;
-	    // print  nodal coordinates and stored nodal variables
-	    for (itr = trNodes.begin(); itr != trNodes.end(); ++itr) {
-	      // node has to be printed with the right length
-	      const CFuint nodeID = *itr;
-	      const Node& currNode = *nodes[nodeID];
-	      for (CFuint iDim = 0; iDim < dim; ++iDim) {
-		fout.precision(14); fout.setf(ios::scientific,ios::floatfield);
-		fout << currNode[iDim]*refL << " ";
-	      }
-	      
-	      const RealVector& currState = *nodalStates.getState(nodeID);
-	      for (CFuint ieq = 0; ieq < nbEqs; ++ieq) {
-		tempState[ieq] = currState[ieq];
-	      }
-
-	      if (!getMethodData().onlyCoordinates()) {
-		const CFuint stateID = nodalStates.getStateLocalID(nodeID);
-		tempState.setLocalID(stateID);
-		SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
-
-		if (getMethodData().shouldPrintExtraValues()) {
-		  // dimensionalize the solution
-		  updateVarSet->setDimensionalValuesPlusExtraValues
-		    (tempState, dimState, extraValues);
-		  fout.precision(14); fout.setf(ios::scientific,ios::floatfield);
-		  fout << dimState << " " << extraValues << "\n";
-		}
-		else {
-		  // set other useful (dimensional) physical quantities
-		  updateVarSet->setDimensionalValues(tempState, dimState);
-		  fout.precision(14); fout.setf(ios::scientific,ios::floatfield);
-		  fout << dimState << "\n";
-		}
-	      }
-	      else {
-		fout << "\n";
-	      }
-	    }
-
-	    // write  Connectivity
-	    for (CFuint iGeo = 0; iGeo < nbBFaces; ++iGeo) {
-	      const CFuint nbNodesInGeo = tr->getNbNodesInGeo(iGeo);
-	      for (CFuint in = 0; in < nbNodesInGeo; ++in) {
-		fout << mapNodesID.find(tr->getNodeID(iGeo,in)) << " ";
-	      }
-	      // if the number of face nodes is less than the
-	      // maximum number of nodes in a face of this TR
-	      // add an extra dummy node equal to the last "real" one
-	      if (nbNodesInGeo < maxNbNodesInGeo) {
-		cf_assert(maxNbNodesInGeo == nbNodesInGeo + 1);
-		fout << mapNodesID.find(tr->getNodeID(iGeo, (nbNodesInGeo-1))) << " ";
-	      }
-	      fout << "\n";
-	      fout.flush();
-	    }
-	  }
-	}
+    for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
+      SafePtr<TopologicalRegion> tr = trs->getTopologicalRegion(iTR);
+      
+      // count the maximum number of nodes in a boundary face belonging to this TR
+      CFuint maxNbNodesInTRGeo = 0;
+      const CFuint nbTRGeos = (*trs)[iTR]->getLocalNbGeoEnts();
+      for (CFuint iGeo = 0; iGeo < nbTRGeos; ++iGeo) {
+	maxNbNodesInTRGeo = max(maxNbNodesInTRGeo, (*trs)[iTR]->getNbNodesInGeo(iGeo));
       }
+      
+      CFuint maxNbNodesInGeo = 0;
+      MPI_Allreduce(&maxNbNodesInTRGeo, &maxNbNodesInGeo, 1, MPIStructDef::getMPIType
+		    (&maxNbNodesInGeo), MPI_MAX, _comm);
+      cf_assert(maxNbNodesInGeo > 0);
+      
+      std::string elemShape;
+      if (dim == 2) {
+	elemShape = "LINESEG";
+      }
+      else if (dim == 3) {
+	// AL: the maximum number of nodes in face is considered: an extra virtual 
+	// node is added if TETRA and QUADRILATERAL are both present
+	elemShape = (maxNbNodesInGeo == 3) ? "TRIANGLE" : "QUADRILATERAL";
+      }
+      
+      const CFuint totalNbTRGeos = trsInfo[iTRS][iTR];
+      // print zone header: one zone per TR
+      if (_myRank == _ioRank) {
+	
+	/// FIX THIS!!!!!!!!!!!!!!!!!!!!!!!
+	const CFuint nbAllNodes = 0; 
+	
+	
+	
+	*fout << "ZONE N=" << nbAllNodes
+	      << ", T=\"" << trs->getName() << ", TR " << iTR << "\""
+	      << ", E=" << totalNbTRGeos
+	      << ", F=FEPOINT"
+	      << ", ET=" << elemShape
+	      << ", SOLUTIONTIME=" << subSysStatus->getCurrentTimeDim()
+	      << "\n";
+      }
+      
+      // print nodal coordinates and stored node variables
+      // writeNodeList(fout, iType);
+      
+      // if (isNewFile || meshChanged) {
+      // write element-node connectivity
+      // writeElementList(fout, iTR, maxNbNodesInGeo,
+      // totalNbTRGeos, nbTRGeos,  
+      //		       0, 1, trs);
+      // }
     }
-
-    fout.close();
   }
 }
+      
+      // vector<CFuint>::const_iterator itr;
+      // // print  nodal coordinates and stored nodal variables
+      // for (itr = trNodes.begin(); itr != trNodes.end(); ++itr) {
+      // 	// node has to be printed with the right length
+      // 	const CFuint nodeID = *itr;
+      // 	const Node& currNode = *nodes[nodeID];
+      // 	for (CFuint iDim = 0; iDim < dim; ++iDim) {
+      // 	  fout.precision(14); fout.setf(ios::scientific,ios::floatfield);
+      // 		fout << currNode[iDim]*refL << " ";
+      // 	}
+	    
+      // 	const RealVector& currState = *nodalStates.getState(nodeID);
+      // 	    for (CFuint ieq = 0; ieq < nbEqs; ++ieq) {
+      // 	      tempState[ieq] = currState[ieq];
+      // 	    }
+	    
+      // 	    if (!getMethodData().onlyCoordinates()) {
+      // 	      const CFuint stateID = nodalStates.getStateLocalID(nodeID);
+      // 	      tempState.setLocalID(stateID);
+      // 	      SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
+	      
+      // 	      if (getMethodData().shouldPrintExtraValues()) {
+      // 		// dimensionalize the solution
+      // 		updateVarSet->setDimensionalValuesPlusExtraValues
+      // 		  (tempState, dimState, extraValues);
+      // 		fout.precision(14); fout.setf(ios::scientific,ios::floatfield);
+      // 		fout << dimState << " " << extraValues << "\n";
+      // 	      }
+      // 	      else {
+      // 		// set other useful (dimensional) physical quantities
+      // 		updateVarSet->setDimensionalValues(tempState, dimState);
+      // 		fout.precision(14); fout.setf(ios::scientific,ios::floatfield);
+      // 		fout << dimState << "\n";
+      // 	      }
+      // 	    }
+      // 	    else {
+      // 	      fout << "\n";
+      // 	    }
+      // 	    }
+	  
+      // 	    // write  Connectivity
+      // 	  for (CFuint iGeo = 0; iGeo < nbBFaces; ++iGeo) {
+      // 	    const CFuint nbNodesInGeo = tr->getNbNodesInGeo(iGeo);
+      // 	    for (CFuint in = 0; in < nbNodesInGeo; ++in) {
+      // 	      fout << mapNodesID.find(tr->getNodeID(iGeo,in)) << " ";
+      // 	    }
+      // 	    // if the number of face nodes is less than the
+      // 	    // maximum number of nodes in a face of this TR
+      // 	    // add an extra dummy node equal to the last "real" one
+      // 	    if (nbNodesInGeo < maxNbNodesInGeo) {
+      // 	      cf_assert(maxNbNodesInGeo == nbNodesInGeo + 1);
+      // 	      fout << mapNodesID.find(tr->getNodeID(iGeo, (nbNodesInGeo-1))) << " ";
+      // 	    }
+      // 	    fout << "\n";
+      // 	    fout.flush();
+      // 	  }
+      // 	}
+      // }
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -769,12 +766,13 @@ void ParWriteSolution::writeHeader(std::ofstream* fout,
   
 //////////////////////////////////////////////////////////////////////////////
   
-void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType)
+void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
+				     SafePtr<TopologicalRegionSet> elements)
 {
   CFAUTOTRACE;
   
   CFLog(VERBOSE, "ParWriteSolution::writeNodeList() => start\n");
-    
+  
   const CFuint dim  = PhysicalModelStack::getActive()->getDim();
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFreal refL = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
@@ -802,10 +800,12 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType)
   // RealVector but they are used as arrays of RealVector*)
   ProxyDofIterator<RealVector>& nodalStates = *nstatesProxy[0];
   
+  TeclotTRSType& tt = *_mapTrsName2TecplotData.find("InnerCells");
+    
   const CFuint nSend = _nbWriters;
   const CFuint nbElementTypes = 1; // just nodes
-  const CFuint nbLocalElements = _nodesInType[iType].size();
-  const CFuint totNbNodes = _totalNbNodesInType[iType];
+  const CFuint nbLocalElements = tt.nodesInType[iType].size();
+  const CFuint totNbNodes = tt.totalNbNodesInType[iType];
   RealVector dimState(nbEqs);
   RealVector extraValues; // size will be set in the VarSet
   State tempState;
@@ -821,9 +821,9 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType)
   
   const CFuint wordFormatSize = 22;
   
-  vector<MPI_Offset> wOffset(_nbWriters, _headerOffset[iType][1]); 
+  vector<MPI_Offset> wOffset(_nbWriters, tt.headerOffset[iType][1]); 
   // set the offsets for the nodes of this element type
-  _offset[iType].nodes.first  = _headerOffset[iType][1];
+  _offset[iType].nodes.first  = tt.headerOffset[iType][1];
   _offset[iType].nodes.second = _offset[iType].nodes.first + totalToSend*wordFormatSize;
   
   CFLog(VERBOSE, "ParWriteSolution::writeNodeList() => offsets = [" 
@@ -834,9 +834,9 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType)
   
   // insert in the write list the local IDs of the elements
   // the range ID is automatically determined inside the WriteListMap
-  const vector<CFuint>& nodesInType = _nodesInType[iType];
+  const vector<CFuint>& nodesInType = tt.nodesInType[iType];
   for (CFuint iElem = 0; iElem < nbLocalElements; ++iElem) {
-    const CFuint globalTypeID = _mapNodeID2NodeIDByEType[iType]->find(nodesInType[iElem]);
+    const CFuint globalTypeID = tt.mapNodeID2NodeIDByEType[iType]->find(nodesInType[iElem]);
     elementList.insertElemLocalID(iElem, globalTypeID, 0);
   }
   elementList.endElemInsertion(_myRank);
@@ -857,9 +857,9 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType)
       CFuint eSize = 0;
       for (WriteListMap::ListIterator it = elist.first; it != elist.second; ++it, ++eSize) {
 	const CFuint localElemID = it->second;
-	const CFuint globalElemID = _mapNodeID2NodeIDByEType[iType]->find(nodesInType[localElemID]);
+	const CFuint globalElemID = tt.mapNodeID2NodeIDByEType[iType]->find(nodesInType[localElemID]);
 	const CFuint sendElemID = globalElemID - countElem;
-	const CFuint nodeID = _mapGlobal2LocalNodeID.find(nodesInType[localElemID]);
+	const CFuint nodeID = tt.mapGlobal2LocalNodeID.find(nodesInType[localElemID]);
 	
 	// this fix has to be added EVERYWHERE when writing states in parallel
 	if (nodes[nodeID]->isParUpdatable()) {
@@ -984,9 +984,15 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType)
       
 //////////////////////////////////////////////////////////////////////////////
 
-void ParWriteSolution::writeElementList(ofstream* fout,
-					const CFuint iType,
-					SafePtr<TopologicalRegionSet> elements)
+void ParWriteSolution::writeElementList
+(std::ofstream* fout,
+ const CFuint iType,
+ const CFuint nbNodesInType,
+ const CFuint nbElementsInType,
+ const CFuint nbLocalElements,
+ const CFuint startElementID,
+ const CFuint geoOrder,
+ SafePtr<TopologicalRegionSet> elements)
 {
   CFAUTOTRACE;
   
@@ -994,19 +1000,10 @@ void ParWriteSolution::writeElementList(ofstream* fout,
   
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   
-  // MeshElementType stores GLOBAL element type data
-  const vector<MeshElementType>& me =
-    MeshDataStack::getActive()->getTotalMeshElementTypes();
-  
-  SafePtr<vector<ElementTypeData> > elementType =
-    MeshDataStack::getActive()->getElementTypeData();
-  const ElementTypeData& eType = (*elementType)[iType];
-  
-  cf_assert(elementType->size() == me.size());
-  
   const CFuint nSend = _nbWriters;
   const CFuint nbElementTypes = 1; // one element type at a time
-  const CFuint nbLocalElements = eType.getNbElems();
+  
+  TeclotTRSType& tt = *_mapTrsName2TecplotData.find(elements->getName());
   
   WriteListMap elementList;
   elementList.reserve(nbElementTypes, nSend, nbLocalElements);
@@ -1014,8 +1011,6 @@ void ParWriteSolution::writeElementList(ofstream* fout,
   // store global info about the global ID ranges for sending
   // and the size of each send
   // each send will involve one writing process which wil collect all data 
-  const CFuint nbElementsInType = me[iType].elementCount;
-  const CFuint nbNodesInType    = me[iType].elementNodes;
   const CFuint totalSize = nbElementsInType*nbNodesInType;
   
   // fill in the writer list
@@ -1045,14 +1040,13 @@ void ParWriteSolution::writeElementList(ofstream* fout,
   
   // insert in the write list the local IDs of the elements
   // the range ID is automatically determined inside the WriteListMap
-  CFuint elemID = eType.getStartIdx();
-  const CFuint nbLocalElementsInType = eType.getNbElems();
+  CFuint elemID = startElementID;
+  const CFuint nbLocalElementsInType = nbLocalElements;
   for (CFuint iElem = 0; iElem < nbLocalElementsInType; ++iElem, ++elemID) {
     elementList.insertElemLocalID(elemID, (*globalElementIDs)[elemID], 0);
   }
   elementList.endElemInsertion(_myRank);
   
-  cf_assert(elemID == eType.getEndIdx());
   CFLog(VERBOSE,_myRank << " maxElemSendSize = " << maxElemSendSize << "\n");
   
   // buffer data to send
@@ -1085,7 +1079,7 @@ void ParWriteSolution::writeElementList(ofstream* fout,
 	    cf_assert(isend < sendElements.size());
 	  }
 	  const CFuint globalNodeID = nodes[localNodeID]->getGlobalID();
-	  sendElements[isend] = _mapNodeID2NodeIDByEType[iType]->find(globalNodeID);
+	  sendElements[isend] = tt.mapNodeID2NodeIDByEType[iType]->find(globalNodeID);
 	}
       }
       
@@ -1145,7 +1139,7 @@ void ParWriteSolution::writeElementList(ofstream* fout,
     const CFuint nbElementsToWrite = wSendSize/nbNodesInType;
     for (CFuint i = 0; i < nbElementsToWrite; ++i) {
       writeElementConn(*fout, &elementToPrint[i*nbNodesInType],
-		       nbNodesInType, eType.getGeoOrder(), dim);
+		       nbNodesInType, geoOrder, dim);
       *fout << "\n";
     }
     
@@ -1273,13 +1267,13 @@ void ParWriteSolution::writeElementConn(ofstream& file,
 
 //////////////////////////////////////////////////////////////////////////////
       
-bool ParWriteSolution::hasChangedMesh() const
+bool ParWriteSolution::hasChangedMesh(const TeclotTRSType& tt) const
 {
   CFAUTOTRACE;
   
   // use signals monitoring for this in the future
-  for (CFuint iType = 0; iType < _totalNbNodesInType.size(); ++iType) {
-    if (hasChangedMesh(iType)) {
+  for (CFuint iType = 0; iType < tt.totalNbNodesInType.size(); ++iType) {
+    if (hasChangedMesh(iType, tt)) {
       CFLog(VERBOSE, "ParWriteSolution::hasChangedMesh() => true\n");
       return true;
     }
@@ -1290,20 +1284,21 @@ bool ParWriteSolution::hasChangedMesh() const
       
 //////////////////////////////////////////////////////////////////////////////
 
-bool ParWriteSolution::hasChangedMesh(const CFuint iType) const
+bool ParWriteSolution::hasChangedMesh(const CFuint iType, 
+				      const TeclotTRSType& tt) const
 {
   CFAUTOTRACE;
   
   // use signals monitoring for this in the future
-  cf_assert(iType < _totalNbNodesInType.size());
-  cf_assert(iType < _oldNbNodesElemsInType.size());
-  if (_totalNbNodesInType[iType] != _oldNbNodesElemsInType[iType].first) {
+  cf_assert(iType < tt.totalNbNodesInType.size());
+  cf_assert(iType < tt.oldNbNodesElemsInType.size());
+  if (tt.totalNbNodesInType[iType] != tt.oldNbNodesElemsInType[iType].first) {
     CFLog(VERBOSE, "ParWriteSolution::hasChangedMesh (iType = " << iType << ") => true\n");
     return true;
   }
   
   if (MeshDataStack::getActive()->getTotalMeshElementTypes()[iType].elementCount 
-      != _oldNbNodesElemsInType[iType].second) {
+      != tt.oldNbNodesElemsInType[iType].second) {
     CFLog(VERBOSE, "ParWriteSolution::hasChangedMesh (iType = " << iType << ") => true\n");
     return true;
   }
@@ -1312,6 +1307,32 @@ bool ParWriteSolution::hasChangedMesh(const CFuint iType) const
   return false;
 }
       
+//////////////////////////////////////////////////////////////////////////////
+
+int ParWriteSolution::getGlobaTRSID(const string& name)
+{
+  const vector<string>& trsNames = MeshDataStack::getActive()->getTotalTRSNames();
+  for (int i = 0; i < (int)trsNames.size(); ++i) {
+    if (trsNames[i] == name) return i;
+  }
+  return -1;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+ 
+void ParWriteSolution::TeclotTRSType::cleanupMappings() 
+{
+  for (CFuint i = 0; i < nodesInType.size(); ++i) {
+    vector<CFuint>().swap(nodesInType[i]);
+  }
+  
+  for (CFuint i = 0; i < mapNodeID2NodeIDByEType.size(); ++i) {
+    delete mapNodeID2NodeIDByEType[i];
+  }
+  
+  mapGlobal2LocalNodeID.clear();
+}
+ 
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace TecplotWriter
