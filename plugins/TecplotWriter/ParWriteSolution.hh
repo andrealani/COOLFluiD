@@ -61,23 +61,48 @@ public:
   
  protected:
   
-  /// Writes to the given file.
-  /// @throw Common::FilesystemException
-  void writeToFileStream(const boost::filesystem::path& filepath, 
+  /// typedef for pointer to member function
+  typedef void (ParWriteSolution::*WriterFun)
+    (const boost::filesystem::path&, const bool, const std::string, std::ofstream*);
+  
+  /// write unstructured data on teh given file
+  /// @param filepath  namem of the path to the file
+  /// @param flag      flag telling if the file has to be created or overwritten
+  /// @param fun       pointer to member function to be called for writing
+  void writeData(const boost::filesystem::path& filepath, 
+		 bool& flag, 
+		 const std::string title, 
+		 WriterFun fun);
+  
+  /// Writes the inner data to file
+  /// @param filename  name of output file
+  /// @param isNewFile flag to tell if the file is to be created or to be overwritten
+  /// @param fout      pointer to the file  
+  void writeInnerData(const boost::filesystem::path& filepath,
+		      const bool isNewFile,
+		      const std::string title,
+		      std::ofstream* fout);
+  
+  /// Writes the boundary data to file
+  /// @param filename  name of output file
+  /// @param isNewFile flag to tell if the file is to be created or to be overwritten
+  /// @param fout      pointer to the file  
+  void writeBoundaryData(const boost::filesystem::path& filepath,
+			 const bool isNewFile,
+			 const std::string title,
 			 std::ofstream* fout);
   
   /// Writes the TECPLOT header
   void writeHeader(MPI_File* fh);
   
   /// Writes the TECPLOT header
-  void writeHeader(std::ofstream* fout);
+  void writeHeader(std::ofstream* fout, 
+		   const std::string title,
+		   Common::SafePtr<Framework::DataHandleOutput> dh);
   
   /// Write the Tecplot file in Binmary format
   /// @throw Common::FilesystemException
   virtual void writeToBinaryFile();
-  
-  /// Write the boundary surface data
-  virtual void writeBoundarySurface();
   
   /// Build the mapping between global nodeIDs and global nodeIDs by element type
   void buildNodeIDMapping();
@@ -136,10 +161,13 @@ protected:
   
   // mapping global nodeIDs to local nodeIDs
   Common::CFMap<CFuint, CFuint> _mapGlobal2LocalNodeID;
-    
+  
+  // flag to tell if the boundary file is new
+  bool _isNewBFile;
+  
   //File format to write in (ASCII or Binary)
   std::string _fileFormatStr;
-    
+  
 }; // class ParWriteSolution
 
 //////////////////////////////////////////////////////////////////////////////

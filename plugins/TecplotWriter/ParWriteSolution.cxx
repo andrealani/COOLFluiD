@@ -82,7 +82,8 @@ namespace COOLFluiD {
    _totalNbNodesInType(),
    _nodesInType(),
    _mapNodeID2NodeIDByEType(),
-   _mapGlobal2LocalNodeID()
+   _mapGlobal2LocalNodeID(),
+   _isNewBFile(false)
  {
    addConfigOptionsTo(this);
 
@@ -107,62 +108,67 @@ namespace COOLFluiD {
 
  //////////////////////////////////////////////////////////////////////////////
 
- void ParWriteSolution::execute()
- {
-   CFAUTOTRACE;
-   
-   CFLog(INFO, "Writing solution to " << getMethodData().getFilename().string() << "\n");
-   
-   if (hasChangedMesh()) {
-     buildNodeIDMapping();
-   }
-   
-   if(_fileFormatStr == "ASCII") {    
-     // reset to 0 the new file flag
-     _isNewFile = 0;
-     ofstream* file = CFNULL;
-     Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
-       Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-     
-    if (_isWriterRank) { 
-      // if the file has already been processed once, open in I/O mode
-      if (_fileList.count(getMethodData().getFilename()) > 0) {
-	file = &fhandle->open(getMethodData().getFilename(), ios_base::in | ios_base::out);
-      }
-      else {
-	file = &fhandle->open(getMethodData().getFilename());
-	
-	// if the file is a new one add it to the file list
-	_fileList.insert(getMethodData().getFilename());
-	_isNewFile = 1;
-      }
+void ParWriteSolution::execute()
+{
+  CFAUTOTRACE;
+  
+  CFLog(INFO, "Writing solution to " << getMethodData().getFilename().string() << "\n");
+  
+  if (hasChangedMesh()) {
+    buildNodeIDMapping();
+  }
+  
+  if (_fileFormatStr == "ASCII") {    
+    const boost::filesystem::path cfgpath = getMethodData().getFilename();
+    if (!getMethodData().onlySurface()) {
+      // write inner domain data
+      writeData(cfgpath, _isNewFile, string("Unstructured grid data"), &ParWriteSolution::writeInnerData);
     }
     
-    int isNewFile = (int)_isNewFile;
-    MPI_Bcast(&isNewFile, 1, MPIStructDef::getMPIType(&isNewFile), _ioRank, _comm);
-    
-    _isNewFile = (isNewFile == 0) ? false : true;
-    
-    writeToFileStream(getMethodData().getFilename(), file); 
-    
-    if (_isWriterRank) {
-      PE::Group& wg = PE::getGroup("Writers");
-      MPI_Barrier(wg.comm);
-      fhandle->close();
+    // write boundary surface data
+    // boost::filesystem::path bpath = cfgpath.branch_path() / ( basename(cfgpath) + "-surf" + extension(cfgpath) );
+    // writeData(bpath, _isNewBFile, "Boundary data", &ParWriteSolution::writeBoundaryData);
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+void ParWriteSolution::writeData(const boost::filesystem::path& filepath, 
+				 bool& flag, 
+				 const std::string title, 
+				 WriterFun fun)
+{
+  // reset to 0 the new file flag
+  flag = 0;
+  ofstream* file = CFNULL;
+  Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
+    Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
+  
+  if (_isWriterRank) { 
+    // if the file has already been processed once, open in I/O mode
+    if (_fileList.count(filepath) > 0) {
+      file = &fhandle->open(filepath, ios_base::in | ios_base::out);
+    }
+    else {
+      file = &fhandle->open(filepath);
+      
+      // if the file is a new one add it to the file list
+      _fileList.insert(filepath);
+      flag = 1;
     }
   }
-  else {
-    // cf_assert(_fileFormatStr == "BINARY");
-    
-    // ///@todo change this to use the tecplot library
-    // ///this is slow and NOT portable but at least, it takes less space
-    // writeToFile("tmp");
-    // std::string transformFile = "$TECHOME/bin/preplot tmp " + getMethodData().getFilename().string();
-    // CFout << transformFile << "\n";
-    
-    // OSystem::getInstance().executeCommand(transformFile);
-    
-    // //     writeToBinaryFile();
+  
+  int isNewFile = (int)flag;
+  MPI_Bcast(&isNewFile, 1, MPIStructDef::getMPIType(&isNewFile), _ioRank, _comm);
+  
+  flag = (isNewFile == 0) ? false : true;
+  
+  (this->*fun)(filepath, flag, title, file); 
+  
+  if (_isWriterRank) {
+    PE::Group& wg = PE::getGroup("Writers");
+    MPI_Barrier(wg.comm);
+    fhandle->close();
   }
 }
 
@@ -182,98 +188,94 @@ void ParWriteSolution::writeToBinaryFile()
 
 //////////////////////////////////////////////////////////////////////////////
       
-void ParWriteSolution::writeToFileStream(const boost::filesystem::path& filepath, 
-					 std::ofstream* fout)
+void ParWriteSolution::writeInnerData
+(const boost::filesystem::path& filepath,
+ const bool isNewFile,
+ const std::string title,
+ std::ofstream* fout)
 {
   CFAUTOTRACE;
   
   SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
+  SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
+  datahandle_output->getDataHandles();
   
-  if (!getMethodData().onlySurface()) {
-    SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
-    datahandle_output->getDataHandles();
+  // write the TECPLOT file header
+  if (isNewFile) {
+    writeHeader(fout, title, datahandle_output);
+  }
+  
+  // MeshElementType stores GLOBAL element type data
+  const vector<MeshElementType>& me =
+    MeshDataStack::getActive()->getTotalMeshElementTypes();
+  
+  std::vector<SafePtr<TopologicalRegionSet> > trsList =
+    MeshDataStack::getActive()->getTrsList();
+  
+  for(CFuint iTrs= 0; iTrs < trsList.size(); ++iTrs) {
+    SafePtr<TopologicalRegionSet> trs = trsList[iTrs];
     
-    // write the TECPLOT file header
-    if (_isNewFile) {
-      writeHeader(fout);
-    }
-    
-    // MeshElementType stores GLOBAL element type data
-    const vector<MeshElementType>& me =
-      MeshDataStack::getActive()->getTotalMeshElementTypes();
-    
-    std::vector<SafePtr<TopologicalRegionSet> > trsList =
-      MeshDataStack::getActive()->getTrsList();
-    
-    for(CFuint iTrs= 0; iTrs < trsList.size(); ++iTrs) {
-      SafePtr<TopologicalRegionSet> trs = trsList[iTrs];
+    if ((trs->hasTag("inner")) && (trs->hasTag("cell"))) {
+      SafePtr<vector<ElementTypeData> > elementType =
+	MeshDataStack::getActive()->getElementTypeData(trs->getName());
       
-      if ((trs->hasTag("inner")) && (trs->hasTag("cell"))) {
-	SafePtr<vector<ElementTypeData> > elementType =
-	  MeshDataStack::getActive()->getElementTypeData(trs->getName());
+      // loop over the element types
+      // and create a zone in the tecplot file
+      // for each element type
+      for (CFuint iType = 0; iType < elementType->size(); ++iType) {
+	ElementTypeData& eType = (*elementType)[iType];
+	const CFuint nbCellsInType  = eType.getNbElems();
 	
-	// loop over the element types
-	// and create a zone in the tecplot file
-	// for each element type
-	for (CFuint iType = 0; iType < elementType->size(); ++iType) {
-	  ElementTypeData& eType = (*elementType)[iType];
-	  const CFuint nbCellsInType  = eType.getNbElems();
+	const bool meshChanged = hasChangedMesh(iType);
+	if (isNewFile || meshChanged) {
+	  vector<MPI_Offset>& headerOffset = _headerOffset[iType];
 	  
-	  const bool meshChanged = hasChangedMesh(iType);
-	  if (_isNewFile || meshChanged) {
-	    vector<MPI_Offset>& headerOffset = _headerOffset[iType];
+	  // print zone header: one zone per element type
+	  
+	  if (_myRank == _ioRank) {
+	    headerOffset[0] = fout->tellp();
 	    
-	    // print zone header: one zone per element type
+	    *fout << "ZONE "
+		  << "  T= \"ZONE" << iType << " " << eType.getShape() <<"\""
+		  << ", N=" << _totalNbNodesInType[iType]
+		  << ", E=" << me[iType].elementCount
+		  << ", F=FEPOINT"
+		  << ", ET=" << MapGeoEnt::identifyGeoEntTecplot
+	      (eType.getNbNodes(),
+	       eType.getGeoOrder(),
+	       PhysicalModelStack::getActive()->getDim()) 
+		  << ", SOLUTIONTIME=" << subSysStatus->getCurrentTimeDim() << flush;
 	    
-	    if (_myRank == _ioRank) {
-	      headerOffset[0] = fout->tellp();
-	      
-	      *fout << "ZONE "
-		    << "  T= \"ZONE" << iType << " " << eType.getShape() <<"\""
-		    << ", N=" << _totalNbNodesInType[iType]
-		    << ", E=" << me[iType].elementCount
-		    << ", F=FEPOINT"
-		    << ", ET=" << MapGeoEnt::identifyGeoEntTecplot
-		(eType.getNbNodes(),
-		 eType.getGeoOrder(),
-		 PhysicalModelStack::getActive()->getDim()) 
-		    << ", SOLUTIONTIME=" << subSysStatus->getCurrentTimeDim() << flush;
-	      
-	      if (getMethodData().getAppendAuxData()) {
-		*fout << " AUXDATA TRS=\"" << trs->getName() << "\""
-		      << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
-		      << ", AUXDATA ElementType=\"" << eType.getShape() << "\""
-		      << ", AUXDATA Iter=\"" << subSysStatus->getNbIter() << "\""
-		      << ", AUXDATA PhysTime=\"" << subSysStatus->getCurrentTimeDim() << "\"";
-	      }
-	      *fout << "\n";
-	      
-	      headerOffset[1] = fout->tellp();
+	    if (getMethodData().getAppendAuxData()) {
+	      *fout << " AUXDATA TRS=\"" << trs->getName() << "\""
+		    << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
+		    << ", AUXDATA ElementType=\"" << eType.getShape() << "\""
+		    << ", AUXDATA Iter=\"" << subSysStatus->getNbIter() << "\""
+		    << ", AUXDATA PhysTime=\"" << subSysStatus->getCurrentTimeDim() << "\"";
 	    }
+	    *fout << "\n";
 	    
-	    // communicate the current file position to all processor
-	    MPI_Bcast(&headerOffset[0], 2, MPIStructDef::getMPIOffsetType(), _ioRank, _comm);
-	    
-	    // backup the total counts for this element type
-	    _oldNbNodesElemsInType[iType].first  = _totalNbNodesInType[iType];
-	    _oldNbNodesElemsInType[iType].second = me[iType].elementCount;
+	    headerOffset[1] = fout->tellp();
 	  }
 	  
-	  // print nodal coordinates and stored node variables
-	  writeNodeList(fout, iType);
+	  // communicate the current file position to all processor
+	  MPI_Bcast(&headerOffset[0], 2, MPIStructDef::getMPIOffsetType(), _ioRank, _comm);
 	  
-	  if (_isNewFile || meshChanged) {
-	    // write element-node connectivity
-	    writeElementList(fout, iType, trs);
-	  }
-	  
+	  // backup the total counts for this element type
+	  _oldNbNodesElemsInType[iType].first  = _totalNbNodesInType[iType];
+	  _oldNbNodesElemsInType[iType].second = me[iType].elementCount;
 	}
-      } //end if inner cells
-    } //end loop over trs
-  } // if only surface
-  
-  // write boundary surface data
-  // writeBoundarySurface();
+	
+	// print nodal coordinates and stored node variables
+	writeNodeList(fout, iType);
+	
+	if (isNewFile || meshChanged) {
+	  // write element-node connectivity
+	  writeElementList(fout, iType, trs);
+	}
+      }
+    } //end if inner cells
+  } //end loop over trs
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -473,28 +475,28 @@ void ParWriteSolution:: buildNodeIDMapping()
       
 //////////////////////////////////////////////////////////////////////////////
 
-void ParWriteSolution::writeBoundarySurface()
+void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath,
+					 const bool isNewFile,
+					 const std::string title,
+					 std::ofstream* fout)
 {
   CFAUTOTRACE;
-
+  
   SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
-
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
-
-  DataHandle<ProxyDofIterator<RealVector>*> nstatesProxy =
-    socket_nstatesProxy.getDataHandle();
-
+  DataHandle<ProxyDofIterator<RealVector>*> nstatesProxy = socket_nstatesProxy.getDataHandle();
+  
   // AL: this is a handle for the nodal states which can be
   // stored as arrays of State*, RealVector* or RealVector
   // but they are always used as arrays of RealVector*
   ProxyDofIterator<RealVector>& nodalStates = *nstatesProxy[0];
-
+  
   // we assume that the element-node connectivity
   // is same as element-state connectivity
   /// @todo tecplot writer should not assume element-to-node
   //connectivity to be the same as element-to-state
   //  cf_assert(nodes.size() == nodalStates.getSize());
-
+  
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFreal refL = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
@@ -526,47 +528,12 @@ void ParWriteSolution::writeBoundarySurface()
     Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
       Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
     ofstream& fout = fhandle->open(filepath);
-
-    //  Tecplot Header
-    fout << "TITLE      = Boundary data" << "\n";
-    fout << "VARIABLES  = ";
-    for (CFuint i = 0; i < dim; ++i) {
-      fout << " \"x" << i << '\"';
-    }
-
-    if (!getMethodData().onlyCoordinates()) {
-      SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
-      const vector<std::string>& varNames = updateVarSet->getVarNames();
-      cf_assert(varNames.size() == nbEqs);
-
-      for (CFuint i = 0 ;  i < nbEqs; ++i) 
-      {
-	      std::string n = varNames[i];
-	      if ( *n.begin()   != '\"' )  n  = '\"' + n;
-	      if ( *n.rbegin()  != '\"' )  n += '\"';
-	      fout << " " << n;
-      }
-
-      if (getMethodData().shouldPrintExtraValues()) {
-	vector<std::string> extraVarNames = updateVarSet->getExtraVarNames();
-	for (CFuint i = 0 ;  i < extraVarNames.size(); ++i) {
-	  fout << " " << extraVarNames[i];
-	}
-      }
-    }
-
-    fout << "\n";
-
-#if 0 // DEBUG
-    std::string fileNameTST = getMethodData().getFilename() + ".TEST";
-    ofstream tstout(fileNameTST.c_str());
-#endif // DEBUG
-
+    
     // array to store the dimensional states
     RealVector dimState(nbEqs);
     RealVector extraValues; // size will be set in the VarSet
     State tempState;
-
+    
     std::vector<std::string>::const_iterator itr = surfTRS.begin();
     for(; itr != surfTRS.end(); ++itr) {
 
@@ -658,31 +625,10 @@ void ParWriteSolution::writeBoundarySurface()
 	      }
 	    }
 
-	    // #if 0 // DEBUG
-	    //      tstout << "FACES"  << std::endl;
-	    //         // write  Connectivity
-	    //         GeomEntList::const_iterator itg;
-	    //         for (itg = bfaces->begin(); itg != bfaces->end(); ++itg) {
-	    //           const vector<Node*>& nodesInFace = *(*itg)->getNodes();
-	    //           vector<Node*>::const_iterator itr;
-	    //           for (itr = nodesInFace.begin(); itr != nodesInFace.end();
-	    //            ++itr) {
-	    //             tstout << (*itr)->getGlobalID() << "-" << (*itr)->getLocalID()
-	    //                 << " : ";
-	    //           }
-	    //           tstout << std::endl;
-	    //         }
-	    //      tstout << "CONNECTIVITY"  << std::endl;
-	    // #endif
-
 	    // write  Connectivity
 	    for (CFuint iGeo = 0; iGeo < nbBFaces; ++iGeo) {
 	      const CFuint nbNodesInGeo = tr->getNbNodesInGeo(iGeo);
 	      for (CFuint in = 0; in < nbNodesInGeo; ++in) {
-#if 0 // DEBUG
-		tstout << tr->getNodeID(iGeo,in); tstout.flush();
-		tstout << " : " << mapNodesID.find(tr->getNodeID(iGeo,in)) << endl;
-#endif
 		fout << mapNodesID.find(tr->getNodeID(iGeo,in)) << " ";
 	      }
 	      // if the number of face nodes is less than the
@@ -771,7 +717,9 @@ void ParWriteSolution::writeHeader(MPI_File* fh)
   
 //////////////////////////////////////////////////////////////////////////////
 
-void ParWriteSolution::writeHeader(std::ofstream* fout) 
+void ParWriteSolution::writeHeader(std::ofstream* fout, 
+				   const std::string title,
+				   SafePtr<DataHandleOutput> dh) 
 {
   CFAUTOTRACE;
   
@@ -808,8 +756,7 @@ void ParWriteSolution::writeHeader(std::ofstream* fout)
 	}
       }
       
-      SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
-      vector<string> dhVarNames = datahandle_output->getVarNames();
+      vector<string> dhVarNames = dh->getVarNames();
       for (CFuint i = 0 ;  i < dhVarNames.size(); ++i) {
 	*fout << " " << dhVarNames[i];
       }
