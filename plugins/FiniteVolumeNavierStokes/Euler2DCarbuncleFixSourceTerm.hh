@@ -17,6 +17,7 @@ namespace COOLFluiD {
   namespace Physics {
     namespace NavierStokes {
       class Euler2DVarSet;
+      class NavierStokesVarSet;
     }
   }
 
@@ -111,7 +112,10 @@ private: // data
   
   /// corresponding variable set
   Common::SafePtr<Physics::NavierStokes::Euler2DVarSet> _varSet;
-
+	
+  /// corresponding variable set -- limited to 2D & PG
+  Common::SafePtr<Physics::NavierStokes::NavierStokesVarSet> _diffVarSet;
+  
   /// vector to store temporary result
   RealVector _temp;
 
@@ -138,6 +142,15 @@ private: // data
   
   /// flag telling not to recompute the artificial viscous coefficient mu_s
   CFuint _freeze_mu_s;
+	
+	/// flag --- variant chosen
+  CFuint _variantChosen;
+	
+	/// vector of IDs for u and v components
+  std::vector<CFuint> _uvID;
+
+	
+	
   
 }; // end of class Euler2DCarbuncleFixSourceTerm
 
@@ -152,3 +165,4 @@ private: // data
 //////////////////////////////////////////////////////////////////////////////
 
 #endif // COOLFluiD_Numerics_FiniteVolume_Euler2DCarbuncleFixSourceTerm_hh
+

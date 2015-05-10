@@ -4,7 +4,7 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_IO_ParaViewWriter_WriteSolutionHighOrderHighOrder_hh
+#ifndef COOLFluiD_IO_ParaViewWriter_WriteSolutionHighOrder_hh
 #define COOLFluiD_IO_ParaViewWriter_WriteSolutionHighOrder_hh
 
 //////////////////////////////////////////////////////////////////////////////

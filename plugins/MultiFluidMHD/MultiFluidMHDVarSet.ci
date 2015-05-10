@@ -105,6 +105,10 @@ CFreal MultiFluidMHDVarSet<BASE>::getMaxEigenValue(const RealVector& pdata,
     }
     return maxEv;
   }
+  
+  CFLog(ERROR, "MultiFluidMHDVarSet<BASE>::getMaxEigenValue() => wrong return value\n");
+  
+  return 0.;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -152,9 +156,12 @@ CFreal MultiFluidMHDVarSet<BASE>::getMaxAbsEigenValue(const RealVector& pdata,
       maxEv = std::max(maxEv, std::abs(un_i) + a_i);
     }
     return maxEv;
-  }
+  } 
+  
+  CFLog(ERROR, "MultiFluidMHDVarSet<BASE>::getMaxAbsEigenValue() => wrong return value\n");
+  return 0.;
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename BASE>

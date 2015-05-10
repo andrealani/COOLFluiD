@@ -6,6 +6,8 @@
 #include "FiniteVolumeNavierStokes/FiniteVolumeNavierStokes.hh"
 #include "Framework/MethodStrategyProvider.hh"
 #include "FiniteVolume/CellCenterFVMData.hh"
+#include "FiniteVolume/DerivativeComputer.hh"
+#include "NavierStokes/NavierStokes2DVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -39,6 +41,8 @@ void Euler2DCarbuncleFixSourceTerm::defineConfigOptions(Config::OptionList& opti
   
   options.addConfigOption< CFuint, Config::DynamicOption<> >
     ("FreezeArtificialViscosityCoeff", "The artificial viscous coefficient mu_s is not recomputed anymore");
+		
+  options.addConfigOption< CFuint >("Variant", "Selects a particular implementation of the Carbuncle Fix");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -49,6 +53,7 @@ Euler2DCarbuncleFixSourceTerm::Euler2DCarbuncleFixSourceTerm(const std::string& 
   socket_ArtViscCoeff("ArtViscCoeff"),
   socket_faceAreas("faceAreas"),
   _varSet(CFNULL),
+  _diffVarSet(CFNULL),
   _temp(),
   _physicalData(),
   _dX(2),
@@ -64,6 +69,9 @@ Euler2DCarbuncleFixSourceTerm::Euler2DCarbuncleFixSourceTerm(const std::string& 
   
   _freeze_mu_s = 0;
   setParameter("FreezeArtificialViscosityCoeff",&_freeze_mu_s);
+	
+  _variantChosen = 0;
+  setParameter("Variant", &_variantChosen);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -91,7 +99,9 @@ void Euler2DCarbuncleFixSourceTerm::setup()
   
   _varSet = getMethodData().getUpdateVar().d_castTo<Euler2DVarSet>();
   _varSet->getModel()->resizePhysicalData(_physicalData);
-
+	
+  _diffVarSet = getMethodData().getDiffusiveVar().d_castTo<Physics::NavierStokes::NavierStokesVarSet>();
+  
   const CFuint maxNbFacesIn2D = 4;
   _speed.resize(maxNbFacesIn2D);
   _soundSpeed.resize(maxNbFacesIn2D);
@@ -99,6 +109,13 @@ void Euler2DCarbuncleFixSourceTerm::setup()
   const CFuint maxNbNodesIn2DCV = 4;
   _values.resize(PhysicalModelStack::getActive()->getNbEq(), maxNbNodesIn2DCV);
   _states.reserve(maxNbNodesIn2DCV);
+  
+  // default setting for _uvID array
+  if (_uvID.size() != 2) {
+    _uvID.resize(2);
+    _uvID[0] = 1;
+    _uvID[1] = 2;
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -118,7 +135,7 @@ void Euler2DCarbuncleFixSourceTerm::computeSource(Framework::GeometricEntity *co
   // remove the following
   DataHandle<CFint> isOutward =  this->socket_isOutward.getDataHandle();
   DataHandle<RealVector> nstates = _sockets.getSocketSink<RealVector>("nstates")->getDataHandle();
-  
+	
   cf_assert(_varSet.isNotNull());
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   
@@ -141,6 +158,14 @@ void Euler2DCarbuncleFixSourceTerm::computeSource(Framework::GeometricEntity *co
   
   _speed = 0;
   _soundSpeed = 0.;
+	
+	
+	
+	
+	
+	
+	
+	
   
   // detect if the current cell is crossed by a shock:
   // if the currect cell is supersonic and at least one neighbor is subsonic
@@ -192,8 +217,7 @@ void Euler2DCarbuncleFixSourceTerm::computeSource(Framework::GeometricEntity *co
         ny *= -1.;
       }
       
-      const CFreal machSum = (i < (nbNodesInElem - 1)) ? 
-	(_values(machID, i) + _values(machID, i+1)) : (_values(machID, i) +_values(machID,0));
+      const CFreal machSum = (i < (nbNodesInElem - 1)) ? 	(_values(machID, i) + _values(machID, i+1)) : (_values(machID, i) +_values(machID,0));
       dMachDx += nx*machSum;
       dMachDy += ny*machSum;
     }
@@ -215,7 +239,7 @@ void Euler2DCarbuncleFixSourceTerm::computeSource(Framework::GeometricEntity *co
       nbIter = SubSystemStatusStack::getActive()->getNbIter();
       fix_active = 0.0;
       if (_freeze_mu_s == 0) {
-	artViscCoeff = 0.0;
+				artViscCoeff = 0.0;
       }
     }
     
@@ -245,17 +269,17 @@ void Euler2DCarbuncleFixSourceTerm::computeSource(Framework::GeometricEntity *co
       CFreal nx = normals[startID];
       CFreal ny = normals[startID + 1];
       if (static_cast<CFuint>(isOutward[currFace->getID()]) != elemID) {
-	nx *= -1.;
-	ny *= -1.;
+				nx *= -1.;
+				ny *= -1.;
       }
       
       const CFreal newNDotCsi = std::abs(nx*cosD + ny*sinD);
       if (newNDotCsi > nDotCsi) {
-	// choose as characteristic dimension the size of the face which is more aligned with the shock
-	// i.e. for which the norm of the dot product between face normal and velocity direction is maximum 
-	// const CFreal h = sqrt(volumes[elemID]);
-    	nDotCsi = newNDotCsi;
-	h = std::max(h, socket_faceAreas.getDataHandle()[currFace->getID()]);
+				// choose as characteristic dimension the size of the face which is more aligned with the shock
+				// i.e. for which the norm of the dot product between face normal and velocity direction is maximum 
+				// const CFreal h = sqrt(volumes[elemID]);
+						nDotCsi = newNDotCsi;
+				h = std::max(h, socket_faceAreas.getDataHandle()[currFace->getID()]);
       }
       csiTerm += dVdEta*(-nx*sinD + ny*cosD);
     }
@@ -267,9 +291,106 @@ void Euler2DCarbuncleFixSourceTerm::computeSource(Framework::GeometricEntity *co
     }
     csiTerm *= artViscCoeff[elemID];
     
-    source[1] += csiTerm*cosD;
-    source[2] += csiTerm*sinD;
+// 		std::cout << "Epsilon " << _dissipEps << "\n";
+		switch (_variantChosen){
+			case 0 :{ 
+// 				std::cout << "Case 0 \n";
+				source[1] += csiTerm*cosD;
+				source[2] += csiTerm*sinD;
+
+				break;
+			} // end - case 0
+			
+			case 11 :{ 
+// 				std::cout << "Case 11 \n";
+				source[1] += csiTerm*cosD;
+				source[2] += csiTerm*sinD;
+				source[3] += csiTerm*velCell;
+				break;
+			} // end - case 11
+			
+			default :{ 
+				std::cout << "Variant not implemented \n";
+				abort();
+				break;
+			} // end - default
+			
+		}// end - switch
+
   }
+  
+  // // // // // // // // // // // // // // // // // // // 	
+	
+// 	// compute the gradients by applying Green Gauss in the
+//     // cell volume
+//     CFreal dUdX = 0.0;
+//     CFreal dVdR = 0.0;
+//     
+//     const CFuint uID = _uvID[0];
+//     const CFuint vID = _uvID[1];
+// 		
+// 		const CFuint totalNbEqs = 4;
+//     
+//     CFLog(DEBUG_MED, "Euler2DCarbuncleFixSourceTerm::computeSource() => uID = " << uID << ", vID = " << vID << "\n"); 
+//     
+//     if (this->m_useGradientLS && this->m_gradientsExist) {
+//       const CFuint start = elemID*totalNbEqs;
+//       dUdX = this->m_ux[start+uID];
+//       dVdR = this->m_uy[start+vID];
+//       CFLog(DEBUG_MED, "Euler2DCarbuncleFixSourceTerm::computeSource() => LS gradient in cell [" << 
+// 	    elemID << " ] => dUdX = [" << dUdX << "], dVdR = [" << dVdR << "]\n");
+//     }
+//     else {
+//       _states.clear();
+//       const vector<Node*>* const nodes = element->getNodes();
+//       const CFuint nbNodesInElem = nodes->size();
+//       for (CFuint i = 0; i < nbNodesInElem; ++i) {
+// 				_states.push_back(&nstates[(*nodes)[i]->getLocalID()]);
+//       }
+//       
+//       const vector<GeometricEntity*>& faces = *element->getNeighborGeos();
+//       cf_assert(faces.size() == nbNodesInElem);
+//       
+//       _diffVarSet->setGradientVars(_states, _values, nbNodesInElem);
+// 			for (CFuint i = 0; i < nbNodesInElem; ++i) {
+// 				// get the face normal
+// 				const CFuint faceID = faces[i]->getID();
+// 				const CFuint startID = faceID*PhysicalModelStack::getActive()->getDim();
+// 				CFreal nx = normals[startID];
+// 				CFreal ny = normals[startID + 1];
+// 				if (static_cast<CFuint>(isOutward[faceID]) != elemID) {
+// 					nx *= -1.;
+// 					ny *= -1.;
+// 				}
+// 				
+// 				if (i < (nbNodesInElem - 1)) {
+// 					dUdX += nx*(_values(uID, i) + _values(uID, i+1));
+// 					dVdR += ny*(_values(vID, i) + _values(vID, i+1));
+// 				}
+// 				else {
+// 					dUdX += nx*(_values(uID, i) + _values(uID, 0));
+// 					dVdR += ny*(_values(vID, i) + _values(vID, 0));
+// 				}
+//       }
+// 		}
+// // // // // // // // // // // // // // // // // // // // //       
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -328,3 +449,4 @@ Euler2DCarbuncleFixSourceTerm::providesSockets()
 } // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////
+
