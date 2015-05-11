@@ -176,19 +176,18 @@ void FVMCC_ComputeRHS::execute()
   geoData.allCells = getMethodData().getBuildAllCells();
   
   const vector<string>& noBCTRS = getMethodData().getTRSsWithNoBC();
-  
+    
   for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
     SafePtr<TopologicalRegionSet> currTrs = trs[iTRS];
     
     CFLog(VERBOSE, "TRS name = " << currTrs->getName() << "\n");
-
     // the faces on the boundary of the partition don't have to
     // be processed (their fluxes could give NaN)
     if (currTrs->getName() != "PartitionFaces" && currTrs->getName() != "InnerCells" && 
 	!binary_search(noBCTRS.begin(), noBCTRS.end(), currTrs->getName())) {
       
       if (currTrs->hasTag("writable")) {
-        _currBC = _bcMap.find(iTRS);
+	_currBC = _bcMap.find(iTRS);
 	
 	// set the flag telling if the ghost states have to be placed on the face itself
 	_currBC->setPutGhostsOnFace();
@@ -695,6 +694,8 @@ void FVMCC_ComputeRHS::setBCList
     MeshDataStack::getActive()->getTrsList();
 
   const CFuint nbTRSs = trs.size();
+  CFLog(VERBOSE, "FVMCC_ComputeRHS::setBCList() => nbBCs = " << nbBCs << ", nbTRSs = " << nbTRSs << "\n");
+  
   for (CFuint iBC = 0; iBC < nbBCs; ++iBC) {
     // one BC can be associated to more TRSs
     // however there is only one BC associated to each TRS

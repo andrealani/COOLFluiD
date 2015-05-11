@@ -604,6 +604,9 @@ void CellCenterFVMData::setup()
   _unitNormal.resize(dim);
   
   _volumeIntegrator.setup();
+  
+  // sort TRSs to which BCs are not associated
+  sort(_trssWithNoBC.begin(), _trssWithNoBC.end());
 }
       
 //////////////////////////////////////////////////////////////////////////////
