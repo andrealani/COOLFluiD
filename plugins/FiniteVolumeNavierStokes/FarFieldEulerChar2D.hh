@@ -33,13 +33,13 @@ public:
   /**
    * Default destructor
    */
-  ~FarFieldEulerChar2D();
+  virtual ~FarFieldEulerChar2D();
 
   /**
    * Apply boundary condition on the given face
    */
-  void setGhostState(Framework::GeometricEntity *const face);
-
+  virtual void setGhostState(Framework::GeometricEntity *const face);
+  
 }; // end of class FarFieldEulerChar2D
 
 //////////////////////////////////////////////////////////////////////////////

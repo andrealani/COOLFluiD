@@ -58,20 +58,19 @@ public:
   /**
    * Default destructor
    */
-  ~FarFieldEulerChar2DTurb();
+  virtual ~FarFieldEulerChar2DTurb();
 
   /**
    * Set up private data and data of the aggregated classes
    * in this command before processing phase
    */
-  void setup();
+  virtual void setup();
 
   /**
    * Apply boundary condition on the given face
    */
-  void setGhostState(Framework::GeometricEntity *const face);
-
-
+  virtual void setGhostState(Framework::GeometricEntity *const face);
+  
 private:
 
   // physical model var set

@@ -32,7 +32,8 @@ superInletInterpFVMCCProvider("SuperInletInterp");
 
 void SuperInletInterp::defineConfigOptions(Config::OptionList& options)
 {
-   options.addConfigOption< string >("InputFileName","Input data file from which all variables will be extrapolated");
+   options.addConfigOption< string >
+     ("InputFileName","Input data file from which all variables will be extrapolated");
    options.addConfigOption< string >("InputVar","Input variables.");
 }
 
@@ -85,11 +86,12 @@ void SuperInletInterp::setGhostState(GeometricEntity *const face)
   
   // AL: gory fix just to test
   // if (yCoord > 0.075) (*m_bstate)[11] = std::max((*m_bstate)[11], 50.);
-  (*m_bstate)[11] = std::max((*m_bstate)[11], (CFreal)50.);  
+  // (*m_bstate)[11] = std::max((*m_bstate)[11], (CFreal)50.);  
   
   ghostState = 2.*(*m_bstate) - innerState;
   
   for (CFuint i = 0; i < ghostState.size(); ++i) {
+    // AL: this gory fix meant for air-11 must be eliminated !!!
     if ((i < 11 || i > 12) && ghostState[i] < 0.) {
       ghostState[i] = (*m_bstate)[i];
     }
@@ -100,7 +102,11 @@ void SuperInletInterp::setGhostState(GeometricEntity *const face)
 
 void SuperInletInterp::setup()
 {
+  CFLog(VERBOSE, "SuperInletInterp::setup() => start\n");
+  
   FVMCC_BC::setup();
+
+  CFLog(VERBOSE, "SuperInletInterp::setup() => start1\n");
   
   const std::string name = getMethodData().getNamespace();
   Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
@@ -110,15 +116,28 @@ void SuperInletInterp::setup()
     m_inputVarStr = getMethodData().getUpdateVarStr();
   }
   
-  const std::string provider = VarSetTransformer::getProviderName
-    (physModel->getConvectiveName(), m_inputVarStr, getMethodData().getUpdateVarStr());
+    
+  std::string provider = "Identity";
+  if (m_inputVarStr != getMethodData().getUpdateVarStr()) {
+    cout << m_inputVarStr << " != " << getMethodData().getUpdateVarStr() << endl;
+    provider = VarSetTransformer::getProviderName
+      (physModel->getConvectiveName(), m_inputVarStr, getMethodData().getUpdateVarStr());
+  }
+  
+  CFLog(VERBOSE, "SuperInletInterp::setup() => start2 << " << provider << "\n");
+  
   m_inputToUpdateVar = 
     Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider)->
     create(physModel->getImplementor());
-  assert(m_inputToUpdateVar.isNotNull());
+   
+  CFLog(VERBOSE, "SuperInletInterp::setup() => start2 after \n");
+  cf_assert(m_inputToUpdateVar.isNotNull());
+  
   const CFuint maxNbStatesInCell = MeshDataStack::getActive()->Statistics().getMaxNbStatesInCell();
   m_inputToUpdateVar->setup(maxNbStatesInCell);
-    
+  
+  CFLog(VERBOSE, "SuperInletInterp::setup() => start3\n");
+  
   m_tstate = new State();
   m_bstate = new State();
   
@@ -137,8 +156,12 @@ void SuperInletInterp::setup()
     }
   }
   else {
-    cout << "WARNING: SuperInletInterp::setup() => filename not specified!"<< endl;
-  }
+    CFLog(WARN, "WARNING: SuperInletInterp::setup() => filename not specified!\n");
+  } 
+  
+  CFLog(VERBOSE, "SuperInletInterp::setup() => start4\n");
+  
+  CFLog(VERBOSE, "SuperInletInterp::setup() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

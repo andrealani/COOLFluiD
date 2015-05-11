@@ -35,26 +35,25 @@ void FarFieldEuler2D::defineConfigOptions(Config::OptionList& options)
    options.addConfigOption< CFreal >("Tinf","static temperature");
    options.addConfigOption< std::vector<std::string> >("Vars","Definition of the Variables.");
    options.addConfigOption< std::vector<std::string> >("Def","Definition of the Functions.");
-   options.addConfigOption< std::string >("InputVar","Input variables.");
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 FarFieldEuler2D::FarFieldEuler2D(const std::string& name) :
-  FVMCC_BC(name),
+  SuperInletInterp(name),
   _varSet(CFNULL),
   _dataInnerState(),
-  _dataGhostState(),
+  _dataGhostState(), 
+  _pdata(),
   _PuvT(4),
   _useFunction(false),
   _bCoord(),
-  _inputToUpdateVar(),
   _input()
 {
-   addConfigOptionsTo(this);
+  addConfigOptionsTo(this);
+  
   _temperature = 0.0;
-   setParameter("Tinf",&_temperature);
+  setParameter("Tinf",&_temperature);
 
   _pressure = 0.0;
    setParameter("Pinf",&_pressure);
@@ -70,13 +69,11 @@ FarFieldEuler2D::FarFieldEuler2D(const std::string& name) :
 
   _vars = std::vector<std::string>();
    setParameter("Vars",&_vars);
-
-   _inputVarStr = "Null";
-   setParameter("InputVar",&_inputVarStr);
-
-
+   
+   // set the input var string to be consistent with this object 
+   m_inputVarStr = "Puvt";
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 FarFieldEuler2D::~FarFieldEuler2D()
@@ -87,91 +84,61 @@ FarFieldEuler2D::~FarFieldEuler2D()
 
 void FarFieldEuler2D::configure ( Config::ConfigArgs& args )
 {
-  FVMCC_BC::configure(args);
-
-
-  const std::string name = getMethodData().getNamespace();
-
-  Common::SafePtr<Namespace> nsp =
-    NamespaceSwitcher::getInstance().getNamespace(name);
-
-  Common::SafePtr<PhysicalModel> physModel =
-    PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
-  /// @todo Remove this !!!
-  _updateVarStr = "PuvT";
-
-  // create the transformer from input to update variables
-  if (_inputVarStr == "Null") {
-    _inputVarStr = _updateVarStr;
-  }
-
-  const std::string provider = VarSetTransformer::getProviderName
-    (physModel->getConvectiveName(), _inputVarStr, _updateVarStr);
-
-  _inputToUpdateVar =
-    Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider)->
-    create(physModel->getImplementor());
-
-  cf_assert(_inputToUpdateVar.isNotNull());
-
+  SuperInletInterp::configure(args);
+  
   if(!_functions.empty())
-  {
-    _vFunction.setFunctions(_functions);
-    _vFunction.setVariables(_vars);
-    try {
-      _vFunction.parse();
-      _useFunction = true;
+    {
+      _vFunction.setFunctions(_functions);
+      _vFunction.setVariables(_vars);
+      try {
+	_vFunction.parse();
+	_useFunction = true;
     }
-    catch (Common::ParserException& e) {
-      CFout << e.what() << "\n";
-      throw; // retrow the exception to signal the error to the user
+      catch (Common::ParserException& e) {
+	CFout << e.what() << "\n";
+	throw; // rethrow the exception to signal the error to the user
+      }
     }
-  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void FarFieldEuler2D::setup()
-{
-
-  FVMCC_BC::setup();
-
+{  
+  SuperInletInterp::setup();
+  
   _input = new State();
-
-  const CFuint maxNbStatesInCell = MeshDataStack::getActive()->Statistics().getMaxNbStatesInCell();
-  _inputToUpdateVar->setup(maxNbStatesInCell);
-
+  
   _varSet = getMethodData().getUpdateVar().d_castTo<EulerVarSet>();
   _varSet->getModel()->resizePhysicalData(_dataInnerState);
   _varSet->getModel()->resizePhysicalData(_dataGhostState);
-
+  _varSet->getModel()->resizePhysicalData(_pdata);
+  
   _pressure/=_varSet->getModel()->getPressRef();
   _temperature/=_varSet->getModel()->getTempRef();
   _uInf /= _varSet->getModel()->getVelRef();
   _vInf /= _varSet->getModel()->getVelRef();
 }
-
 //////////////////////////////////////////////////////////////////////////////
 
 void FarFieldEuler2D::setGhostState(GeometricEntity *const face)
  {
-
+   CFLog(DEBUG_MIN, "FarFieldEuler2D::setGhostState() => start\n");
+   
    State *const innerState = face->getState(0);
    State *const ghostState = face->getState(1);
 
-   if(_useFunction)
+   if (_useFunction)
    {
-	 std::cout << "Don't want to use function\n Aborting!\n"; abort();
      // coordinate of the boundary point
      _bCoord = (innerState->getCoordinates() +
-               ghostState->getCoordinates());
+		ghostState->getCoordinates());
      _bCoord *= 0.5;
-
+     
      // (*ghostState) = 2*bcState - (*innerState)
      _vFunction.evaluate(_bCoord, *_input);
-      _PuvT = *_inputToUpdateVar->transform(_input);
-
+     _PuvT = *m_inputToUpdateVar->transform(_input);
+     
      _pressure = _PuvT[0] / _varSet->getModel()->getPressRef();
      _uInf = _PuvT[1] / _varSet->getModel()->getVelRef();
      _vInf = _PuvT[2] / _varSet->getModel()->getVelRef();
@@ -294,7 +261,9 @@ void FarFieldEuler2D::setGhostState(GeometricEntity *const face)
  // std::cout <<"Sub Inlet: _dataGhostState" << _dataGhostState << std::endl;
  // std::cout <<"Sub Inlet: *ghostState" << *ghostState << std::endl;
 
-   }
+   }  
+   
+   CFLog(DEBUG_MIN, "FarFieldEuler2D::setGhostState() => end\n");
  }
 
 //////////////////////////////////////////////////////////////////////////////

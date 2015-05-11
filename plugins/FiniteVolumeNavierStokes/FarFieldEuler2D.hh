@@ -3,9 +3,8 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "Framework/VectorialFunction.hh"
 #include "Framework/VarSetTransformer.hh"
-#include "FiniteVolume/FVMCC_BC.hh"
+#include "FiniteVolume/SuperInletInterp.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -25,13 +24,15 @@ namespace COOLFluiD {
 
 /**
  * This class represents a command to implement farfield boundary condition
+ * By deriving from @see SuperInletInterp, it allows to interpolate data from 
+ * a given file 
  *
  * @author Mehmet Sarp Yalim
  * @author Andrea Lani
  * @author Thomas Wuilbaut
  *
  */
-class FarFieldEuler2D : public FVMCC_BC {
+class FarFieldEuler2D : public SuperInletInterp {
 public:
 
   typedef Framework::VarSetTransformer VectorTransformer;
@@ -50,26 +51,26 @@ public:
   /**
    * Default destructor
    */
-  ~FarFieldEuler2D();
+  virtual ~FarFieldEuler2D();
 
   /**
    * Configures the command.
    */
   virtual void configure ( Config::ConfigArgs& args );
-
+  
   /**
    * Set up private data and data of the aggregated classes
    * in this command before processing phase
    */
-  void setup();
+  virtual void setup();
 
   /**
    * Apply boundary condition on the given face
    */
-  void setGhostState(Framework::GeometricEntity *const face);
-
- protected: // data
-
+  virtual void setGhostState(Framework::GeometricEntity *const face);
+  
+protected: // data
+  
   /// physical model (in conservative variables)
   Common::SafePtr<Physics::NavierStokes::EulerVarSet> _varSet;
 
@@ -78,6 +79,9 @@ public:
 
   /// physical model data
   RealVector _dataGhostState;
+
+  /// physical model data
+  RealVector _pdata;
 
   /// array for temporary P,u,v,T
   RealVector                               _PuvT;
@@ -108,19 +112,13 @@ public:
 
   /// the VectorialFunction to use
   Framework::VectorialFunction             _vFunction;
-
-  /// Transformer from Update to Linear Variables
-  Common::SelfRegistPtr<VectorTransformer> _inputToUpdateVar;
-
+  
   /// RealVector holding the input variables
   Framework::State* _input;
 
-  /// a string to hold the name of the input variables
-  std::string _inputVarStr;
-
   /// a string to hold the name of the update variables
   std::string _updateVarStr;
-
+  
 }; // end of class FarFieldEuler2D
 
 //////////////////////////////////////////////////////////////////////////////

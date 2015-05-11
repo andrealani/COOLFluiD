@@ -357,8 +357,8 @@ void FarFieldEulerChar2DTurb::setup()
          "\n                                  Omega = " << _turbVars[1] << "\n";
 
   //Check that the initial values for the turbulent variables have been set
-  cf_assert(_turbVars.size() == _varSetTurb->getModel()->getNbScalarVars(0));
-
+  cf_assert((CFuint)_turbVars.size() == (CFuint)_varSetTurb->getModel()->getNbScalarVars(0));
+  
   const CFuint firstScalarVar = _varSetTurb->getModel()->getFirstScalarVar(0);
   const CFuint nbScalarVars = _varSetTurb->getModel()->getNbScalarVars(0);
 
@@ -373,6 +373,8 @@ void FarFieldEulerChar2DTurb::setup()
 
 void FarFieldEulerChar2DTurb::setGhostState(GeometricEntity *const face)
 {
+  CFLog(DEBUG_MIN, "FarFieldEulerChar2DTurb::setGhostState() => start\n");
+  
    State *const innerState = face->getState(0);
    State *const ghostState = face->getState(1);
 
@@ -505,6 +507,8 @@ void FarFieldEulerChar2DTurb::setGhostState(GeometricEntity *const face)
       _varSetTurb->computeStateFromPhysicalData(_dataGhostState, *ghostState);
     }
   }
+  
+  CFLog(DEBUG_MIN, "FarFieldEulerChar2DTurb::setGhostState() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
