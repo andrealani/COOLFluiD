@@ -78,6 +78,7 @@ namespace COOLFluiD {
    socket_nodes("nodes"),
    socket_nstatesProxy("nstatesProxy"),
    _mapTrsName2TecplotData(),
+   _mapGlobal2LocalNodeID(),
    _isNewBFile(false)
  {
    addConfigOptionsTo(this);
@@ -293,27 +294,21 @@ void ParWriteSolution::setup()
     MeshDataStack::getActive()->getTotalMeshElementTypes();
   const CFuint nbElementTypes = me.size();
   cf_assert(nbElementTypes > 0);
-  
-  
-  
-  _offset.resize(nbElementTypes);
-
-  TeclotTRSType* tt = new TeclotTRSType();
-  tt->headerOffset.resize(nbElementTypes);
-  for (CFuint i = 0; i < nbElementTypes; ++i) {
-    tt->headerOffset[i].resize(2, 0);
-  }
-  
-  tt->oldNbNodesElemsInType.resize(nbElementTypes);
-  for (CFuint i = 0; i < nbElementTypes; ++i) {
-    tt->oldNbNodesElemsInType[i].first = 0;
-    tt->oldNbNodesElemsInType[i].second = 0;
-  }
-  
-  tt->totalNbNodesInType.resize(nbElementTypes, 0);
-  
+    
+  // create TeclotTRSType for the domain interior
+  TeclotTRSType* tt = new TeclotTRSType(nbElementTypes);
   _mapTrsName2TecplotData.insert("InnerCells", tt);
+  
+  // create TeclotTRSType for the domain boundaries
+  const vector<string>& surfTRS = getMethodData().getSurfaceTRSsToWrite();
+  for(CFuint iTrs = 0; iTrs < surfTRS.size(); ++iTrs) {
+    SafePtr<TopologicalRegionSet> trs = MeshDataStack::getActive()->getTrs(surfTRS[iTrs]);
+    TeclotTRSType* tb = new TeclotTRSType(trs->getNbTRs());
+    _mapTrsName2TecplotData.insert(surfTRS[iTrs], tb);
+  }
   _mapTrsName2TecplotData.sortKeys();
+  
+  _mapGlobal2LocalNodeID.reserve(socket_nodes.getDataHandle().size());
   
   CFLog(VERBOSE, "ParWriteSolution::setup() => end\n");
 }      
@@ -327,8 +322,10 @@ void ParWriteSolution:: cleanupNodeIDMapping()
   for (CFuint i = 0; i < _mapTrsName2TecplotData.size(); ++i) {
     _mapTrsName2TecplotData[i]->cleanupMappings();
   }
+  
+  _mapGlobal2LocalNodeID.clear();
 }  
- 
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void ParWriteSolution:: buildNodeIDMapping()
@@ -346,130 +343,64 @@ void ParWriteSolution:: buildNodeIDMapping()
   
   cleanupNodeIDMapping();
   
-  TeclotTRSType& tt = *_mapTrsName2TecplotData.find("InnerCells");
-  tt.nodesInType.resize(nbElementTypes);
-  tt.mapNodeID2NodeIDByEType.resize(nbElementTypes);
-  tt.mapGlobal2LocalNodeID.reserve(nodes.size());
-  
   vector<SafePtr<TopologicalRegionSet> > trsList = 
     MeshDataStack::getActive()->getTrsList();
   
-  const CFuint totalNodeCount =
-    MeshDataStack::getActive()->getTotalNodeCount();
+  const CFuint totalNodeCount = MeshDataStack::getActive()->getTotalNodeCount();
   cf_assert(totalNodeCount >= nodes.size());
   vector<bool> foundGlobalID(totalNodeCount);
   
+  std::vector<std::string> sortedSurfTRS = 
+    getMethodData().getSurfaceTRSsToWrite();
+  
+  sort(sortedSurfTRS.begin(), sortedSurfTRS.end(), less<string>());
+  
   for(CFuint iTrs= 0; iTrs < trsList.size(); ++iTrs) {
     SafePtr<TopologicalRegionSet> trs = trsList[iTrs];
+    
     if ((trs->hasTag("inner")) && (trs->hasTag("cell"))) {
       SafePtr<vector<ElementTypeData> > elementType =
 	MeshDataStack::getActive()->getElementTypeData(trs->getName());
       cf_assert(elementType->size() == nbElementTypes);
       
-      // AL: check possible inconsistency between MeshElementType and ElementTypeData storages
-      for (CFuint iType = 0; iType < elementType->size(); ++iType) {
+      CFLog(VERBOSE, "ParWriteSolution::buildNodeIDMapping() for " << trs->getName() << " \n");
+      
+      // AL: check if there is an inconsistency between MeshElementType 
+      //     and ElementTypeData storages
+      const CFuint nbElemTypes = elementType->size();
+      for (CFuint iType = 0; iType < nbElemTypes; ++iType) {
 	ElementTypeData& eType = (*elementType)[iType];
-	const CFuint nbCellsInType  = eType.getNbElems();
-	vector<CFuint>& nodesInType = tt.nodesInType[iType];
 	
-	// find which global nodeIDs are used in the elements of this type
-	if (nbCellsInType > 0) {
-	  const CFuint nbNodesInType  = eType.getNbNodes();
-	  nodesInType.reserve(nbCellsInType*nbNodesInType); // this array can be oversized
-	  
-	  for (CFuint iCell = eType.getStartIdx(); iCell < eType.getEndIdx(); ++iCell) {
-	    cf_assert(nbNodesInType == trs->getNbNodesInGeo(iCell));
-	    for (CFuint in = 0; in < nbNodesInType; ++in) {
-	      nodesInType.push_back(nodes[trs->getNodeID(iCell,in)]->getGlobalID());
-	    }
-	  }
-	  
-	  // sort the vector so we can then remove duplicated nodes
-	  sort(nodesInType.begin(), nodesInType.end(), std::less<CFuint>());
-	  
-	  // remove duplicated nodes
-	  vector<CFuint>::iterator lastNode = unique(nodesInType.begin(), nodesInType.end());
-	  nodesInType.erase(lastNode, nodesInType.end());
+	storeMappings(trs, iType, eType.getNbElems(), eType.getNbNodes(), 
+		      eType.getStartIdx(), eType.getEndIdx(), foundGlobalID);
+      }
+    }
+    
+    if (binary_search(sortedSurfTRS.begin(), sortedSurfTRS.end(),trs->getName())) {
+      CFLog(VERBOSE, "ParWriteSolution::buildNodeIDMapping() for " << trs->getName() << " \n");
+      
+      const CFuint nbTRs = trs->getNbTRs();
+      for (CFuint iType = 0; iType < nbTRs; ++iType) {
+	SafePtr<TopologicalRegion> tr = (*trs)[iType];
+	const CFuint nbTRGeos = tr->getLocalNbGeoEnts();
+	
+	// compute maximum number of nodes in TR geometric entities
+	CFuint maxNbNodesInTRGeo = 0;
+	for (CFuint iGeo = 0; iGeo < nbTRGeos; ++iGeo) {
+	  maxNbNodesInTRGeo = max(maxNbNodesInTRGeo, tr->getNbNodesInGeo(iGeo));
 	}
 	
-	// now each process has a unique list of global node IDs for the current element type
-	// maximum number of unique nodes across all processors for the current element type
-	CFuint maxNbNodesInProc = 0;
-	CFuint nbLocalNodesInType = nodesInType.size();
-	MPIError::getInstance().check
-	  ("MPI_Allreduce", "ParWriteSolution::setup()",
-	   MPI_Allreduce(&nbLocalNodesInType, &maxNbNodesInProc, 1, 
-			 MPIStructDef::getMPIType(&maxNbNodesInProc), MPI_MAX, _comm));
-	
-	cf_assert(maxNbNodesInProc >= nbLocalNodesInType);
-	
-	// temporary buf to store global IDs
-	vector<CFuint> buf(maxNbNodesInProc);
-	
-	// reset the flags for all nodes
-	foundGlobalID.assign(foundGlobalID.size(), false);
-	
-	// use collective broadcast to know all global IDs referencing the current element type
-	for (CFuint root = 0; root < _nbProc; ++root) {
-	  CFuint bufSize = 0;
-	  if (root == _myRank) {
-	    for (CFuint i = 0; i < nbLocalNodesInType; ++i) {
-	      buf[i] = nodesInType[i];
-	    }
-	    bufSize = nbLocalNodesInType;
-	  } 
-	  
-	  // communicate the buffer size
-	  MPIError::getInstance().check
-	    ("MPI_Bcast", "ParWriteSolution::setup()", 
-	     MPI_Bcast(&bufSize, 1, MPIStructDef::getMPIType(&bufSize), root, _comm));
-	  
-	  // the following check is needed for ensuring consistent collective behaviour
-	  if (bufSize > 0) {
-	    cf_assert(bufSize <= foundGlobalID.size());
-	    
-	    MPIError::getInstance().check
-	      ("MPI_Bcast", "ParWriteSolution::setup()", 
-	       MPI_Bcast(&buf[0], bufSize, MPIStructDef::getMPIType(&buf[0]), root, _comm));
-	    
-	    // flag all global IDs that are found
-	    for (CFuint i = 0; i < bufSize; ++i) {
-	      foundGlobalID[buf[i]] = true;
-	    }
-	  }
-	}
-	
-	tt.mapNodeID2NodeIDByEType[iType] = new CFMap<CFuint, CFuint>(nodesInType.size());
-	
-	// create mapping between global IDs belonging to the current processor
-	// and global IDs reordered by element type (starting from 0) 
-	long long int etypeNodeID = -1;
-	CFuint countMatching = 0;
-	for (CFuint globalNodeID = 0; globalNodeID < totalNodeCount; ++globalNodeID) {
-	  if (foundGlobalID[globalNodeID]) {
-	    etypeNodeID++; 
-	    // in TECPLOT IDs start from 1: this is enforced in ParWriteSolution::writeElementConn()
-	  }
-	  if (std::binary_search(nodesInType.begin(), nodesInType.end(), globalNodeID)) {
-	    tt.mapNodeID2NodeIDByEType[iType]->insert(globalNodeID, etypeNodeID);
-	    countMatching++;
-	  }
-	}
-	
-	tt.totalNbNodesInType[iType] = etypeNodeID+1;
-	
-	cf_assert(countMatching == nodesInType.size());
-	
-	tt.mapNodeID2NodeIDByEType[iType]->sortKeys();
-      } 
+	storeMappings(trs, iType, nbTRGeos, maxNbNodesInTRGeo, 
+		      0, nbTRGeos, foundGlobalID);
+      }
     }
   }
   
   // build the inverse mapping global IDs to local IDs for all nodes 
   for (CFuint i = 0; i < nodes.size(); ++i) {
-    tt.mapGlobal2LocalNodeID.insert(nodes[i]->getGlobalID(), nodes[i]->getLocalID());
+    _mapGlobal2LocalNodeID.insert(nodes[i]->getGlobalID(), nodes[i]->getLocalID());
   }
-  tt.mapGlobal2LocalNodeID.sortKeys();
+  _mapGlobal2LocalNodeID.sortKeys();
   
   CFLog(VERBOSE, "ParWriteSolution::buildNodeIDMapping() => end\n");
 }
@@ -528,6 +459,8 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
     const int iTRS = getGlobaTRSID(trs->getName());
     cf_assert(iTRS >= 0);
     
+    TeclotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
+    
     const CFuint nbTRs = trs->getNbTRs(); 
     cf_assert(nbTRs > 0);
     cf_assert(nbTRs == (*globalGeoIDS)[iTRS].size());
@@ -560,13 +493,7 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
       const CFuint totalNbTRGeos = trsInfo[iTRS][iTR];
       // print zone header: one zone per TR
       if (_myRank == _ioRank) {
-	
-	/// FIX THIS!!!!!!!!!!!!!!!!!!!!!!!
-	const CFuint nbAllNodes = 0; 
-	
-	
-	
-	*fout << "ZONE N=" << nbAllNodes
+	*fout << "ZONE N=" << tt.totalNbNodesInType[iTR]
 	      << ", T=\"" << trs->getName() << ", TR " << iTR << "\""
 	      << ", E=" << totalNbTRGeos
 	      << ", F=FEPOINT"
@@ -823,11 +750,11 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
   
   vector<MPI_Offset> wOffset(_nbWriters, tt.headerOffset[iType][1]); 
   // set the offsets for the nodes of this element type
-  _offset[iType].nodes.first  = tt.headerOffset[iType][1];
-  _offset[iType].nodes.second = _offset[iType].nodes.first + totalToSend*wordFormatSize;
+  tt.nodesOffset[iType].first  = tt.headerOffset[iType][1];
+  tt.nodesOffset[iType].second = tt.nodesOffset[iType].first + totalToSend*wordFormatSize;
   
   CFLog(VERBOSE, "ParWriteSolution::writeNodeList() => offsets = [" 
-	<<  _offset[iType].nodes.first << ", " << _offset[iType].nodes.second << "]\n");
+	<<  tt.nodesOffset[iType].first << ", " << tt.nodesOffset[iType].second << "]\n");
   
   // update the maximum possible element-list size to send
   const CFuint maxElemSendSize = elementList.getMaxElemSize();
@@ -859,7 +786,7 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
 	const CFuint localElemID = it->second;
 	const CFuint globalElemID = tt.mapNodeID2NodeIDByEType[iType]->find(nodesInType[localElemID]);
 	const CFuint sendElemID = globalElemID - countElem;
-	const CFuint nodeID = tt.mapGlobal2LocalNodeID.find(nodesInType[localElemID]);
+	const CFuint nodeID = _mapGlobal2LocalNodeID.find(nodesInType[localElemID]);
 	
 	// this fix has to be added EVERYWHERE when writing states in parallel
 	if (nodes[nodeID]->isParUpdatable()) {
@@ -971,7 +898,7 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
     MPI_Offset maxpos  = 0;
     MPI_Allreduce(&lastpos, &maxpos, 1, MPIStructDef::getMPIOffsetType(), MPI_MAX, wg.comm);
     
-    cf_assert(_offset[iType].nodes.second == maxpos);
+    cf_assert(tt.nodesOffset[iType].second == maxpos);
   }
   
   //reset the all sendElement list to 0
@@ -1023,16 +950,16 @@ void ParWriteSolution::writeElementList
   const CFuint wordFormatSize = 15;
   
   // wOffset is initialized with current offset
-  MPI_Offset offset = _offset[iType].nodes.second;
+  MPI_Offset offset = tt.nodesOffset[iType].second;
   vector<MPI_Offset> wOffset(_nbWriters, offset); 
   
   // start element list offset (current position)
-  _offset[iType].elems.first = offset;
+  tt.elemsOffset[iType].first = offset;
   // end element list offset
-  _offset[iType].elems.second = _offset[iType].elems.first + totalSize*wordFormatSize;
+  tt.elemsOffset[iType].second = tt.elemsOffset[iType].first + totalSize*wordFormatSize;
   
   CFLog(VERBOSE, "ParWriteSolution::writeElementList() => offsets = [" 
-	<<  _offset[iType].elems.first << ", " << _offset[iType].elems.second << "]\n");
+	<<  tt.elemsOffset[iType].first << ", " << tt.elemsOffset[iType].second << "]\n");
   
   SafePtr< vector<CFuint> > globalElementIDs = 
     MeshDataStack::getActive()->getGlobalElementIDs();
@@ -1147,7 +1074,7 @@ void ParWriteSolution::writeElementList
     MPI_Offset maxpos  = 0;
     MPI_Allreduce(&lastpos, &maxpos, 1, MPIStructDef::getMPIOffsetType(), MPI_MAX, wg.comm);
     
-    cf_assert(_offset[iType].elems.second == maxpos);
+    cf_assert(tt.elemsOffset[iType].second == maxpos);
   }
   
   // reset all the elements to print to 0
@@ -1329,10 +1256,154 @@ void ParWriteSolution::TeclotTRSType::cleanupMappings()
   for (CFuint i = 0; i < mapNodeID2NodeIDByEType.size(); ++i) {
     delete mapNodeID2NodeIDByEType[i];
   }
-  
-  mapGlobal2LocalNodeID.clear();
 }
  
+//////////////////////////////////////////////////////////////////////////////
+
+void ParWriteSolution::storeMappings(SafePtr<TopologicalRegionSet> trs,
+				     const CFuint iType,
+				     const CFuint nbCellsInType,
+				     const CFuint nbNodesInType,
+				     const CFuint startIdx, 
+				     const CFuint endIdx,
+				     vector<bool>& foundGlobalID)
+{
+  DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
+  
+  TeclotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
+  vector<CFuint>& nodesInType = tt.nodesInType[iType];
+  
+  // find which global nodeIDs are used in the elements of this type
+  if (nbCellsInType > 0) {
+    cf_assert(nodesInType.size() == 0);
+    nodesInType.reserve(nbCellsInType*nbNodesInType); // this array can be oversized
+    
+    for (CFuint iCell = startIdx; iCell < endIdx; ++iCell) {
+      const CFuint nbNodes = trs->getNbNodesInGeo(iCell);
+      // the following is needed for hybrid meshes for which one TR could contain both 
+      // quads and triangles (nbNodesInType=4 but nbNodes can be=3 or =4)
+      cf_assert(nbNodes <= nbNodesInType);
+      for (CFuint in = 0; in < nbNodes; ++in) {
+	nodesInType.push_back(nodes[trs->getNodeID(iCell,in)]->getGlobalID());
+      }
+    }
+    
+    // sort the vector so we can then remove duplicated nodes
+    sort(nodesInType.begin(), nodesInType.end(), std::less<CFuint>());
+    
+    // remove duplicated nodes
+    vector<CFuint>::iterator lastNode = unique(nodesInType.begin(), nodesInType.end());
+    nodesInType.erase(lastNode, nodesInType.end());
+  }
+  
+  // now each process has a unique list of global node IDs for the current element type
+  // maximum number of unique nodes across all processors for the current element type
+  CFuint maxNbNodesInProc = 0;
+  CFuint nbLocalNodesInType = nodesInType.size();
+  MPIError::getInstance().check
+    ("MPI_Allreduce", "ParWriteSolution::setup()",
+     MPI_Allreduce(&nbLocalNodesInType, &maxNbNodesInProc, 1, 
+		   MPIStructDef::getMPIType(&maxNbNodesInProc), MPI_MAX, _comm));
+  
+  cf_assert(maxNbNodesInProc >= nbLocalNodesInType);
+  
+  // temporary buf to store global IDs
+  vector<CFuint> buf(maxNbNodesInProc);
+  
+  // reset the flags for all nodes
+  foundGlobalID.assign(foundGlobalID.size(), false);
+  
+  // use collective broadcast to know all global IDs referencing the current element type
+  for (CFuint root = 0; root < _nbProc; ++root) {
+    CFuint bufSize = 0;
+    if (root == _myRank) {
+      for (CFuint i = 0; i < nbLocalNodesInType; ++i) {
+	buf[i] = nodesInType[i];
+      }
+      bufSize = nbLocalNodesInType;
+    } 
+    
+    // communicate the buffer size
+    MPIError::getInstance().check
+      ("MPI_Bcast", "ParWriteSolution::setup()", 
+       MPI_Bcast(&bufSize, 1, MPIStructDef::getMPIType(&bufSize), root, _comm));
+    
+    // the following check is needed for ensuring consistent collective behaviour
+    if (bufSize > 0) {
+      cf_assert(bufSize <= foundGlobalID.size());
+      
+      MPIError::getInstance().check
+	("MPI_Bcast", "ParWriteSolution::setup()", 
+	 MPI_Bcast(&buf[0], bufSize, MPIStructDef::getMPIType(&buf[0]), root, _comm));
+      
+      // flag all global IDs that are found
+      for (CFuint i = 0; i < bufSize; ++i) {
+	foundGlobalID[buf[i]] = true;
+      }
+    }
+  }
+  
+  tt.mapNodeID2NodeIDByEType[iType] = new CFMap<CFuint, CFuint>(nodesInType.size());
+  
+  // create mapping between global IDs belonging to the current processor
+  // and global IDs reordered by element type (starting from 0) 
+  long long int etypeNodeID = -1;
+  CFuint countMatching = 0;
+  for (CFuint globalNodeID = 0; globalNodeID < foundGlobalID.size(); ++globalNodeID) {
+    if (foundGlobalID[globalNodeID]) {
+      etypeNodeID++; 
+      // in TECPLOT IDs start from 1: this is enforced in ParWriteSolution::writeElementConn()
+    }
+    if (std::binary_search(nodesInType.begin(), nodesInType.end(), globalNodeID)) {
+      tt.mapNodeID2NodeIDByEType[iType]->insert(globalNodeID, etypeNodeID);
+      countMatching++;
+    }
+  }
+  
+  tt.totalNbNodesInType[iType] = etypeNodeID+1;
+  
+  cf_assert(countMatching == nodesInType.size());
+  
+  tt.mapNodeID2NodeIDByEType[iType]->sortKeys();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+ParWriteSolution::TeclotTRSType::TeclotTRSType(const CFuint nbElementTypes) 
+{
+  headerOffset.resize(nbElementTypes);
+  for (CFuint i = 0; i < nbElementTypes; ++i) {
+    headerOffset[i].resize(2, 0);
+  }
+  
+  elemsOffset.resize(nbElementTypes);
+  for (CFuint i = 0; i < nbElementTypes; ++i) {
+    elemsOffset[i].first = elemsOffset[i].second = 0;
+  }
+  
+  nodesOffset.resize(nbElementTypes);
+  for (CFuint i = 0; i < nbElementTypes; ++i) {
+    nodesOffset[i].first = nodesOffset[i].second = 0;
+  }
+  
+  oldNbNodesElemsInType.resize(nbElementTypes);
+  for (CFuint i = 0; i < nbElementTypes; ++i) {
+    oldNbNodesElemsInType[i].first = 0;
+    oldNbNodesElemsInType[i].second = 0;
+  }
+  totalNbNodesInType.resize(nbElementTypes, 0);
+  
+  nodesInType.resize(nbElementTypes);
+  mapNodeID2NodeIDByEType.resize(nbElementTypes);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+ParWriteSolution::TeclotTRSType::~TeclotTRSType() 
+{
+  cleanupMappings();
+}
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace TecplotWriter

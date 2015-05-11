@@ -69,16 +69,22 @@ public:
   class TeclotTRSType {
   public:
     /// Constructor
-    TeclotTRSType() {}
+    TeclotTRSType(const CFuint nbElementTypes);
     
     /// Destructor
-    ~TeclotTRSType() {cleanupMappings();}
+    ~TeclotTRSType();
     
     /// Clean up mappings
     void cleanupMappings();
     
     /// start/end of the header
     std::vector<std::vector<MPI_Offset> > headerOffset;
+    
+    /// start/end of the element list
+    std::vector<std::pair<MPI_Offset, MPI_Offset> > elemsOffset;
+    
+    /// start/end of the nodes list
+    std::vector<std::pair<MPI_Offset, MPI_Offset> > nodesOffset;
     
     /// old total number of nodes and elements in type
     std::vector<std::pair<CFuint, CFuint> > oldNbNodesElemsInType;
@@ -91,9 +97,6 @@ public:
     
     /// mapping global nodeIDs to global nodeIDs by element type
     std::vector<Common::CFMap<CFuint, CFuint>*> mapNodeID2NodeIDByEType;
-    
-    /// mapping global nodeIDs to local nodeIDs
-    Common::CFMap<CFuint, CFuint> mapGlobal2LocalNodeID;
   };
   
   /// write unstructured data on teh given file
@@ -176,6 +179,16 @@ public:
   /// Return the TRS ID corresponding to the given TRS name in the global storage
   int getGlobaTRSID(const std::string& name);
   
+  
+  /// Store the mapping coresponding to the given TRS and iType (element type or TR)
+  void storeMappings(Common::SafePtr<Framework::TopologicalRegionSet> trs,
+		     const CFuint iType,
+		     const CFuint nbCellsInType,
+		     const CFuint nbNodesInType,
+		     const CFuint startIdx, 
+		     const CFuint endIdx,
+		     std::vector<bool>& foundGlobalID);
+  
 protected:
  
   /// socket for Node's
@@ -186,6 +199,9 @@ protected:
   
   /// array of TeclotTRSType
   Common::CFMap<std::string, TeclotTRSType*> _mapTrsName2TecplotData;
+  
+  /// mapping global nodeIDs to local nodeIDs
+  Common::CFMap<CFuint, CFuint> _mapGlobal2LocalNodeID;
   
   /// flag to tell if the boundary file is new
   bool _isNewBFile;
