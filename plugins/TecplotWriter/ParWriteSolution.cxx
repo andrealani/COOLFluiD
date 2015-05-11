@@ -503,13 +503,11 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
       }
       
       // print nodal coordinates and stored node variables
-      // writeNodeList(fout, iType);
+      // writeNodeList(fout, iTR, trs);
       
       // if (isNewFile || meshChanged) {
       // write element-node connectivity
-      // writeElementList(fout, iTR, maxNbNodesInGeo,
-      // totalNbTRGeos, nbTRGeos,  
-      //		       0, 1, trs);
+      // writeElementList(fout, iTR, maxNbNodesInGeo, totalNbTRGeos, nbTRGeos, 0, 1, trs);
       // }
     }
   }
@@ -979,8 +977,7 @@ void ParWriteSolution::writeElementList
   // buffer data to send
   vector<CFuint> sendElements(maxElemSendSize, 0);
   vector<CFuint> elementToPrint(maxElemSendSize, 0);
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();
-  
+    
   PE::Group& wg = PE::getGroup("Writers");
   CFint wRank = -1; 
   CFuint rangeID = 0;
@@ -1052,6 +1049,13 @@ void ParWriteSolution::writeElementList
     
   } // end sending loop
   
+  const bool isCell = elements->hasTag("cell");
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint dim2print = dim; // (isCell) ? dim : dim-1; 
+  
+  // need to distinguish between writing on boundary and not
+  // need to be able to handle hybrid case ... (with degenerated quads having node[3] = node[2]) 
+  
   if (_isWriterRank) { 
     CFLog(VERBOSE, "ParCFmeshBinaryFileWriter::writeElementList() => P[" << _myRank 
 	  << "] => offset = " << wOffset[wRank] << "\n");
@@ -1066,7 +1070,7 @@ void ParWriteSolution::writeElementList
     const CFuint nbElementsToWrite = wSendSize/nbNodesInType;
     for (CFuint i = 0; i < nbElementsToWrite; ++i) {
       writeElementConn(*fout, &elementToPrint[i*nbNodesInType],
-		       nbNodesInType, geoOrder, dim);
+		       nbNodesInType, geoOrder, dim2print);
       *fout << "\n";
     }
     
@@ -1272,6 +1276,8 @@ void ParWriteSolution::storeMappings(SafePtr<TopologicalRegionSet> trs,
   
   TeclotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
   vector<CFuint>& nodesInType = tt.nodesInType[iType];
+  const bool isCell = trs->hasTag("cell");
+  SafePtr<TopologicalRegion> tr = (isCell) ? CFNULL : (*trs)[iType];
   
   // find which global nodeIDs are used in the elements of this type
   if (nbCellsInType > 0) {
@@ -1279,12 +1285,13 @@ void ParWriteSolution::storeMappings(SafePtr<TopologicalRegionSet> trs,
     nodesInType.reserve(nbCellsInType*nbNodesInType); // this array can be oversized
     
     for (CFuint iCell = startIdx; iCell < endIdx; ++iCell) {
-      const CFuint nbNodes = trs->getNbNodesInGeo(iCell);
+      const CFuint nbNodes = (isCell) ? trs->getNbNodesInGeo(iCell) : tr->getNbNodesInGeo(iCell);
       // the following is needed for hybrid meshes for which one TR could contain both 
       // quads and triangles (nbNodesInType=4 but nbNodes can be=3 or =4)
       cf_assert(nbNodes <= nbNodesInType);
       for (CFuint in = 0; in < nbNodes; ++in) {
-	nodesInType.push_back(nodes[trs->getNodeID(iCell,in)]->getGlobalID());
+	const CFuint localNodeID = (isCell) ? trs->getNodeID(iCell,in) : tr->getNodeID(iCell,in);
+	nodesInType.push_back(nodes[localNodeID]->getGlobalID());
       }
     }
     
