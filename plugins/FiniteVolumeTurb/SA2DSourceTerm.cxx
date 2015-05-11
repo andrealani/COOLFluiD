@@ -255,7 +255,6 @@ void SA2DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     // Generation and Adaptive Solution Technique for High-Reynolds-Number Compressible Flows, Ph.D. Thesis, University of Michigan 1996.)
     // Page 155
     CFreal Qsi = NIUtilda / NIU;
-    Qsi = max (Qsi, 0.001);
 
     //constants of the SA turbulence model:
     const CFreal Cb1 = 0.1355;
@@ -287,7 +286,11 @@ void SA2DSourceTerm::computeSource(Framework::GeometricEntity *const element,
 	 const CFreal fv1 = Qsi*Qsi*Qsi / (Qsi*Qsi*Qsi + Cv1*Cv1*Cv1);
          const CFreal fv2 = 1. - ( Qsi /(1. + (Qsi * fv1)));
 	 
-	 const CFreal Nitiloverkapa2d2 = NIUtilda/( kappa*kappa*_d*_d);
+	 const CFreal dw = SA2DSourceTerm::getDistance(element);
+	 
+	 const CFreal Nitiloverkapa2d2 = NIUtilda/( kappa*kappa*dw*dw);
+
+	 //const CFreal Nitiloverkapa2d2 = NIUtilda/( kappa*kappa*_d*_d);
 	 
          const CFreal S = fabs(dVdX - dUdY);// definition of the 2D vorticity magnitude
 	 
