@@ -3,7 +3,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-# This testcase verifies the MonteCarlo algorithm for the case of a 3D cylinder
+# This testcase verifies the MonteCarlo algorithm for the case of a 3D Slab
 #
 ### Residual = -4.
 
@@ -186,13 +186,12 @@ Simulator.SubSystem.CellCenterFVM.BcWallA4.alphaxz             = 0.0
 ############################################################################
 #Commands
 #
-Simulator.SubSystem.DataPostProcessing                         = DataProcessing
-Simulator.SubSystem.DataPostProcessingNames                    = DataProcessing1
-Simulator.SubSystem.DataProcessing1.Comds                     = RadiativeTransferMonteCarlo3DFVMCC
-Simulator.SubSystem.DataProcessing1.Names                     = RT
-Simulator.SubSystem.DataProcessing1.RT.applyTRS               = InnerFaces
-Simulator.SubSystem.DataProcessing1.RT.numberOfRays           = 10
-Simulator.SubSystem.DataProcessing1.RT.sendBufferSize         = 100000
+Simulator.SubSystem.DataPostProcessing                 = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames            = DataProcessing1
+Simulator.SubSystem.DataProcessing1.Comds              = RadiativeTransferMonteCarlo3DFVMCC
+Simulator.SubSystem.DataProcessing1.Names              = RT
+Simulator.SubSystem.DataProcessing1.RT.applyTRS        = InnerFaces
+Simulator.SubSystem.DataProcessing1.RT.numberOfRays    = 10
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.NumberLoops = 1
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.TempID = 4
@@ -218,10 +217,3 @@ Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.TypeTRS    = B
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b4.ApplyTRS   = Outlet
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b4.TypeTRS    = Boundary
-
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessName = PostProcessAverage
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.RegectionDists = 10. 10. 10. 10. 
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.RegectionTRS = TopWall BottomWall Inlet Outlet
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.AveragingDirection = 0. 0. 1.
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.nbIntervals = 10000
-

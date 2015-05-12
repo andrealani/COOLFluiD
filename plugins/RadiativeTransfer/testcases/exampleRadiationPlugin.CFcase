@@ -1,0 +1,66 @@
+#Example CFcase snippet for the Radiative Transfer Monte Carlo plugin
+
+# Define a postprocessing routine and name it
+Simulator.SubSystem.DataPostProcessing      = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames = DataProcessing1
+
+# Define the postprocessing routine as the Radiative Transfer module
+# Possibilities are:
+# 1. RadiativeTransferMonteCarlo3DFVMCC, for a 3D Cartesian geometry using a cell centered FVM 
+# 2. RadiativeTransferMonteCarloAxiFVMCC, for a 2D Cylindrical geometry using a cell centered FVM
+# 3. RadiativeTransferMonteCarlo2DFVMCC, for a 2D Cartesian geometry using a cell centered FVM
+Simulator.SubSystem.DataProcessing1.Comds = RadiativeTransferMonteCarlo3DFVMCC
+Simulator.SubSystem.DataProcessing1.Names = RT
+
+# Set this to the InnerFaces (Inner TRS )
+Simulator.SubSystem.DataProcessing1.RT.applyTRS      = InnerFaces
+
+# Number of divisions for the full spectra
+# this is more important for tabulated data, as we can import sequentially only a fraction of the full spectra
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.NumberLoops = 1
+
+# Number of rays per cell per spectral loop
+Simulator.SubSystem.DataProcessing1.RT.numberOfRays = 100
+
+# Number of rays to emit before doing a synchronization step 
+# Don't set this value too high with a large number of processors as the system might run out of memory
+Simulator.SubSystem.DataProcessing1.RT.nbRaysCycle = 100
+
+# Temperature ID
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.TempID = 4
+
+# Minimum and maximum wavelength 
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMax = 1e10
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMin = 1e-10
+
+# Define the radiation physics
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.RadiationPhysicsNames = radMedium radWall
+
+# Attach a TRS to the physic
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ApplyTRS = InnerCells
+
+# Type of TRS
+# Possibilities are:
+# 1. Medium, for volumetric radiation
+# 2. Wall, for surface radiation
+# 3. Boundary, an opening to 0K
+# Currently, the Wall radiation is not fully implemented
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.TypeTRS = Medium
+
+# Type of radiatior
+# Possibilities are:
+# 1. GreyRadiator, for a gray model
+# 2. ParadeRadiator, for a PARADE model
+# Please note that the PARADE software is not open source, so it cannot be bundled with COOLFluiD
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.radMedium.Radiator = GreyRadiator
+# For the Gray radiator, the emission coefficient, in fractions of the Plank function
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.radMedium.GreyRadiator.ElemEmsCoeff = 1.
+# For the Gray radiator, the absorption coefficient
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.radMedium.GreyRadiator.ElemAbsCoeff = 1.
+# For the Gray radiator, set this flag to true if all radiators are gray
+# this will avoid calculating a random wavelength 
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.radMedium.GreyRadiator.allIsGrey  = true
+
+#Wall radiator, using a Boundary type 
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.radWall.ApplyTRS = Wall
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.radWall.TypeTRS = Boundary

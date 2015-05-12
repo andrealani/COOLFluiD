@@ -3,8 +3,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-# This testcase verifies the MonteCarlo algorithm for the case of a 2D axisymmetric
-# medium between two concentric spheres
+# This testcase verifies the MonteCarlo algorithm for the case of a 2D axisymmetric medium between two concentric spheres
 ### Residual = -2.
 #
 #
@@ -205,7 +204,6 @@ Simulator.SubSystem.DataProcessing1.RT.applyTRS         = InnerCells
 Simulator.SubSystem.DataProcessing1.ProcessRate         = 1
 Simulator.SubSystem.DataProcessing1.SkipFirstIteration  = false
 
-Simulator.SubSystem.DataProcessing1.RT.sendBufferSize   = 1000
 Simulator.SubSystem.DataProcessing1.RT.nbRaysCycle      = 100
 Simulator.SubSystem.DataProcessing1.RT.numberOfRays     = 50
 Simulator.SubSystem.DataProcessing1.RT.Axi              = true
@@ -225,45 +223,11 @@ Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rMedium.GreyRadia
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rInlet.ApplyTRS  = Inlet
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rInlet.TypeTRS   = Boundary
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rInlet.TypeTRS   = Wall
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rInlet.Reflector = DiffuseReflector
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rInlet.Radiator  = GreyWallRadiator
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rInlet.GreyWallRadiator.ElemEmsCoeff  = 1.
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rInlet.GreyWallRadiator.ElemAbsCoeff  = 1.
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rInlet.GreyWallRadiator.allIsGrey     = true
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rOutlet.ApplyTRS = Outlet
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rOutlet.TypeTRS  = Boundary
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rOutlet.TypeTRS  = Wall
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rOutlet.Reflector = DiffuseReflector
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rOutlet.Radiator = GreyWallRadiator
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rOutlet.GreyWallRadiator.ElemEmsCoeff  = 1.
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rOutlet.GreyWallRadiator.ElemAbsCoeff  = 1.
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rOutlet.GreyWallRadiator.allIsGrey     = true
- 
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rSymmetry.ApplyTRS   = Symmetry
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rSymmetry.TypeTRS    = Boundary
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rSymmetry.ApplyTRS = Symmetry
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.rSymmetry.TypeTRS  = Boundary
 
 
-# Post-Process
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessName = PostProcessAverage
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.AveragingDirection = 1 0
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.isRevolutionVolume3d = true
-###
-# wall quantities (heat flux, skin friction) postprocessing
-###
-
-#Simulator.SubSystem.DataProcessing2.Data.updateVar = Puvt
-#Simulator.SubSystem.DataProcessing2.Comds          = NavierStokesSkinFrictionHeatFluxCC
-#Simulator.SubSystem.DataProcessing2.Names          = SkinFriction
-#Simulator.SubSystem.DataProcessing2.ProcessRate    = 1
-#
-#Simulator.SubSystem.DataProcessing2.SkinFriction.applyTRS   = Inlet
-#Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileWall = WallData.plt
-#Simulator.SubSystem.DataProcessing2.SkinFriction.rhoInf     = 0.033422944
-#Simulator.SubSystem.DataProcessing2.SkinFriction.pInf       = 101325.0
-#Simulator.SubSystem.DataProcessing2.SkinFriction.uInf       = 1.0 #Simulator.SubSystem.DataProcessing2.SkinFriction.TInf       = 5000
-#Simulator.SubSystem.DataProcessing2.SkinFriction.UID        = 1
-#Simulator.SubSystem.DataProcessing2.SkinFriction.VID        = 2
-#Simulator.SubSystem.DataProcessing2.SkinFriction.TID        = 3
-#

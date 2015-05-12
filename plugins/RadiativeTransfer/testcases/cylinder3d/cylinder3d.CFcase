@@ -180,7 +180,7 @@ Simulator.SubSystem.DataProcessing1.Comds            = RadiativeTransferMonteCar
 Simulator.SubSystem.DataProcessing1.Names            = RT
 
 Simulator.SubSystem.DataProcessing1.RT.applyTRS      = InnerFaces
-Simulator.SubSystem.DataProcessing1.RT.numberOfRays  = 10
+Simulator.SubSystem.DataProcessing1.RT.numberOfRays  = 100
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.NumberLoops   = 1
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.TempID        = 4
@@ -202,11 +202,5 @@ Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.TypeTRS    = B
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.ApplyTRS   = Outlet
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.TypeTRS    = Boundary
 
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.ApplyTRS  = Wall
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.TypeTRS   = Boundary
-
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessName = PostProcessLSF
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessLSF.RegectionDists = 3. 3.
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessLSF.RegectionTRS = Inlet Outlet
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessLSF.AveragingDirection = 0. 0. 1.
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessLSF.isRevolutionVolume3d = true 
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.ApplyTRS   = Wall
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.TypeTRS    = Boundary

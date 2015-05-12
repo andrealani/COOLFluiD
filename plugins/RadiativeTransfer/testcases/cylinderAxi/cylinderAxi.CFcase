@@ -181,7 +181,7 @@ Simulator.SubSystem.DataPostProcessing                        = DataProcessing D
 Simulator.SubSystem.DataPostProcessingNames                   = DataProcessing1 DataProcessing3
 Simulator.SubSystem.DataProcessing1.Comds                     = RadiativeTransferMonteCarloAxiFVMCC
 Simulator.SubSystem.DataProcessing1.Names                     = RT
-Simulator.SubSystem.DataProcessing1.ProcessRate               = 2
+Simulator.SubSystem.DataProcessing1.ProcessRate               = 1
 Simulator.SubSystem.DataProcessing1.SkipFirstIteration        = true 
 
 Simulator.SubSystem.DataProcessing1.RT.applyTRS               = InnerCells
@@ -204,46 +204,11 @@ Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.GreyRadiator.a
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.ApplyTRS   = Outlet
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.TypeTRS    = Boundary
 
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.ApplyTRS  = Wall
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.TypeTRS   = Boundary
-
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.ApplyTRS  = Wall
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.TypeTRS   = Wall
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.Reflector = DiffuseReflector
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.Radiator  = GreyWallRadiator
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.GreyWallRadiator.ElemEmsCoeff = 1.
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.GreyWallRadiator.ElemAbsCoeff = 1.
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.GreyWallRadiator.allIsGrey = true
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.ApplyTRS   = Wall
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.TypeTRS    = Boundary
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b4.ApplyTRS   = Symmetry
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b4.TypeTRS    = Boundary
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.ApplyTRS   = Inlet
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.TypeTRS    = Boundary
-
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessName = PostProcessAverage
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.RegectionDists = 3. 3.
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.RegectionTRS = Inlet Outlet
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.AveragingDirection = 0. 1.
-
-Simulator.SubSystem.DataProcessing1.RT.PostProcessName = PostProcessLSF
-Simulator.SubSystem.DataProcessing1.RT.PostProcessLSF.RegectionDists = 3. 3.
-Simulator.SubSystem.DataProcessing1.RT.PostProcessLSF.RegectionTRS = Inlet Outlet
-Simulator.SubSystem.DataProcessing1.RT.PostProcessLSF.AveragingDirection = 0. 1.
-Simulator.SubSystem.DataProcessing1.RT.PostProcessLSF.nbPointsPlot = 40
-Simulator.SubSystem.DataProcessing1.RT.PostProcessLSF.nbCoeffs = 5
-Simulator.SubSystem.DataProcessing1.RT.PostProcessLSF.outNormals = true
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessLSF.mirrorOnOrigin = true
-
-# wall quantities (heat flux, skin friction) postprocessing
-#Simulator.SubSystem.DataProcessing3.ProcessRate = 1
-#Simulator.SubSystem.DataProcessing3.Comds = NavierStokesSkinFrictionHeatFluxCC
-#Simulator.SubSystem.DataProcessing3.Names = SkinFriction
-#Simulator.SubSystem.DataProcessing3.SkinFriction.applyTRS = Wall
-#Simulator.SubSystem.DataProcessing3.SkinFriction.rhoInf = 0.055740195
-#Simulator.SubSystem.DataProcessing3.SkinFriction.pInf = 160000.0
-#Simulator.SubSystem.DataProcessing3.SkinFriction.uInf = 0.01
-#Simulator.SubSystem.DataProcessing3.SkinFriction.TInf = 10000.
-#Simulator.SubSystem.DataProcessing3.SkinFriction.UID = 1
-#Simulator.SubSystem.DataProcessing3.SkinFriction.VID = 2
-

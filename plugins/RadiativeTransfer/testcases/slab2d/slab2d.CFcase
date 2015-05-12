@@ -3,7 +3,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-# This testcase verifies the MonteCarlo algorithm for the case of a 2D axisymmetric cylinder
+# This testcase verifies the MonteCarlo algorithm for the case of a 2D slab 
 #
 ### Residual = -4.
 #
@@ -218,29 +218,3 @@ Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.TypeTRS    = B
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b4.ApplyTRS   = Outlet
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b4.TypeTRS    = Boundary
-
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessName = PostProcessAverage
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.RegectionDists = 3. 3.
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.RegectionTRS = Inlet Outlet
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.AveragingDirection = 0. 1.
-
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessName = PostProcessAverage
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.RegectionDists = 10. 10.
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.RegectionTRS = TopWall BottomWall
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.AveragingDirection = 1. 0.
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.nbIntervals = 10000
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.outrormals = true
-#Simulator.SubSystem.DataProcessing1.RT.PostProcessAverage.mirrorOnOrigin = true
-
-# wall quantities (heat flux, skin friction) postprocessing
-#Simulator.SubSystem.DataProcessing3.ProcessRate = 1
-#Simulator.SubSystem.DataProcessing3.Comds = NavierStokesSkinFrictionHeatFluxCC
-#Simulator.SubSystem.DataProcessing3.Names = SkinFriction
-#Simulator.SubSystem.DataProcessing3.SkinFriction.applyTRS = Inlet Outlet
-#Simulator.SubSystem.DataProcessing3.SkinFriction.rhoInf = 0.055740195
-#Simulator.SubSystem.DataProcessing3.SkinFriction.pInf = 160000.0
-#Simulator.SubSystem.DataProcessing3.SkinFriction.uInf = 0.01
-#Simulator.SubSystem.DataProcessing3.SkinFriction.TInf = 10000.
-#Simulator.SubSystem.DataProcessing3.SkinFriction.UID = 1
-#Simulator.SubSystem.DataProcessing3.SkinFriction.VID = 2
-#Simulator.SubSystem.DataProcessing3.SkinFriction.TID = 3
