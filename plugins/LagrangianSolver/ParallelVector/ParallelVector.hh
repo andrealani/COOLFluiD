@@ -30,6 +30,14 @@ public:
   
   const T& operator[](CFuint idx) const { return (m_data[idx]); }
   
+  ParallelVector<T>& operator = (T val) 
+  {
+    for(CFuint i=0; i<m_data.size();++i ){
+      m_data[i] = val;
+    }
+    return *this;
+  } 
+  
   CFuint size(){ return m_data.size(); }
   
 private:
