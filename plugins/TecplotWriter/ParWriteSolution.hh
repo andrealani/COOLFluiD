@@ -164,7 +164,8 @@ public:
 			CFuint* nodeIDs,
 			const CFuint nbNodes,
 			const CFuint geoOrder,
-			const CFuint dim);
+			const CFuint dim, 
+			const bool isCell);
   
   /// Get the name of the writer
   const std::string getWriterName() const;

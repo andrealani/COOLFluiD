@@ -490,9 +490,13 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
 	elemShape = (maxNbNodesInGeo == 3) ? "TRIANGLE" : "QUADRILATERAL";
       }
       
+      vector<MPI_Offset>& headerOffset = tt.headerOffset[iTR];
+      
       const CFuint totalNbTRGeos = trsInfo[iTRS][iTR];
       // print zone header: one zone per TR
       if (_myRank == _ioRank) {
+	headerOffset[0] = fout->tellp();
+	
 	*fout << "ZONE N=" << tt.totalNbNodesInType[iTR]
 	      << ", T=\"" << trs->getName() << ", TR " << iTR << "\""
 	      << ", E=" << totalNbTRGeos
@@ -500,78 +504,25 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
 	      << ", ET=" << elemShape
 	      << ", SOLUTIONTIME=" << subSysStatus->getCurrentTimeDim()
 	      << "\n";
+	
+	headerOffset[1] = fout->tellp();
       }
       
+      // communicate the current file position to all processor
+      MPI_Bcast(&headerOffset[0], 2, MPIStructDef::getMPIOffsetType(), _ioRank, _comm);
+      
       // print nodal coordinates and stored node variables
-      // writeNodeList(fout, iTR, trs);
+      writeNodeList(fout, iTR, trs);
       
       // if (isNewFile || meshChanged) {
       // write element-node connectivity
-      // writeElementList(fout, iTR, maxNbNodesInGeo, totalNbTRGeos, nbTRGeos, 0, 1, trs);
+      writeElementList(fout, iTR, maxNbNodesInGeo, totalNbTRGeos, nbTRGeos, 0, 
+		       CFPolyOrder::ORDER1, trs);
       // }
     }
   }
 }
       
-      // vector<CFuint>::const_iterator itr;
-      // // print  nodal coordinates and stored nodal variables
-      // for (itr = trNodes.begin(); itr != trNodes.end(); ++itr) {
-      // 	// node has to be printed with the right length
-      // 	const CFuint nodeID = *itr;
-      // 	const Node& currNode = *nodes[nodeID];
-      // 	for (CFuint iDim = 0; iDim < dim; ++iDim) {
-      // 	  fout.precision(14); fout.setf(ios::scientific,ios::floatfield);
-      // 		fout << currNode[iDim]*refL << " ";
-      // 	}
-	    
-      // 	const RealVector& currState = *nodalStates.getState(nodeID);
-      // 	    for (CFuint ieq = 0; ieq < nbEqs; ++ieq) {
-      // 	      tempState[ieq] = currState[ieq];
-      // 	    }
-	    
-      // 	    if (!getMethodData().onlyCoordinates()) {
-      // 	      const CFuint stateID = nodalStates.getStateLocalID(nodeID);
-      // 	      tempState.setLocalID(stateID);
-      // 	      SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
-	      
-      // 	      if (getMethodData().shouldPrintExtraValues()) {
-      // 		// dimensionalize the solution
-      // 		updateVarSet->setDimensionalValuesPlusExtraValues
-      // 		  (tempState, dimState, extraValues);
-      // 		fout.precision(14); fout.setf(ios::scientific,ios::floatfield);
-      // 		fout << dimState << " " << extraValues << "\n";
-      // 	      }
-      // 	      else {
-      // 		// set other useful (dimensional) physical quantities
-      // 		updateVarSet->setDimensionalValues(tempState, dimState);
-      // 		fout.precision(14); fout.setf(ios::scientific,ios::floatfield);
-      // 		fout << dimState << "\n";
-      // 	      }
-      // 	    }
-      // 	    else {
-      // 	      fout << "\n";
-      // 	    }
-      // 	    }
-	  
-      // 	    // write  Connectivity
-      // 	  for (CFuint iGeo = 0; iGeo < nbBFaces; ++iGeo) {
-      // 	    const CFuint nbNodesInGeo = tr->getNbNodesInGeo(iGeo);
-      // 	    for (CFuint in = 0; in < nbNodesInGeo; ++in) {
-      // 	      fout << mapNodesID.find(tr->getNodeID(iGeo,in)) << " ";
-      // 	    }
-      // 	    // if the number of face nodes is less than the
-      // 	    // maximum number of nodes in a face of this TR
-      // 	    // add an extra dummy node equal to the last "real" one
-      // 	    if (nbNodesInGeo < maxNbNodesInGeo) {
-      // 	      cf_assert(maxNbNodesInGeo == nbNodesInGeo + 1);
-      // 	      fout << mapNodesID.find(tr->getNodeID(iGeo, (nbNodesInGeo-1))) << " ";
-      // 	    }
-      // 	    fout << "\n";
-      // 	    fout.flush();
-      // 	  }
-      // 	}
-      // }
-
 //////////////////////////////////////////////////////////////////////////////
 
 std::vector<Common::SafePtr<BaseDataSocketSink> >
@@ -725,8 +676,8 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
   // RealVector but they are used as arrays of RealVector*)
   ProxyDofIterator<RealVector>& nodalStates = *nstatesProxy[0];
   
-  TeclotTRSType& tt = *_mapTrsName2TecplotData.find("InnerCells");
-    
+  TeclotTRSType& tt = *_mapTrsName2TecplotData.find(elements->getName());
+  
   const CFuint nSend = _nbWriters;
   const CFuint nbElementTypes = 1; // just nodes
   const CFuint nbLocalElements = tt.nodesInType[iType].size();
@@ -929,6 +880,7 @@ void ParWriteSolution::writeElementList
   const CFuint nbElementTypes = 1; // one element type at a time
   
   TeclotTRSType& tt = *_mapTrsName2TecplotData.find(elements->getName());
+  const bool isCell = elements->hasTag("cell");
   
   WriteListMap elementList;
   elementList.reserve(nbElementTypes, nSend, nbLocalElements);
@@ -993,15 +945,23 @@ void ParWriteSolution::writeElementList
 	const CFuint localElemID = it->second;
 	const CFuint globalElemID = (*globalElementIDs)[localElemID];
 	const CFuint sendElemID = globalElemID - countElem;
+	const CFuint nbNodes = (isCell) ? elements->getNbNodesInGeo(localElemID) : 
+	  (*elements)[iType]->getNbNodesInGeo(localElemID);
+	cf_assert(nbNodes <= nbNodesInType);
 	
 	CFuint isend = sendElemID*nbNodesInType;
 	for (CFuint in = 0; in < nbNodesInType; ++in, ++isend) {
-	  const CFuint localNodeID = elements->getNodeID(localElemID, in);
+	  // fix for degenerated elements (e.g. quads with 2 coincident nodes)
+	  const CFuint inID = (in < nbNodes) ? in : in-1;
+	  const CFuint localNodeID = (isCell) ? elements->getNodeID(localElemID, in) : 
+	    (*elements)[iType]->getNodeID(localElemID, in);
+	  
 	  if (isend >= sendElements.size()) {
 	    CFLogInfo(_myRank << " nbNodesInType = " << nbNodesInType
 		      << " node isend = " << isend << " , size = " << sendElements.size() << "\n");
 	    cf_assert(isend < sendElements.size());
 	  }
+	  
 	  const CFuint globalNodeID = nodes[localNodeID]->getGlobalID();
 	  sendElements[isend] = tt.mapNodeID2NodeIDByEType[iType]->find(globalNodeID);
 	}
@@ -1049,9 +1009,7 @@ void ParWriteSolution::writeElementList
     
   } // end sending loop
   
-  const bool isCell = elements->hasTag("cell");
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
-  const CFuint dim2print = dim; // (isCell) ? dim : dim-1; 
   
   // need to distinguish between writing on boundary and not
   // need to be able to handle hybrid case ... (with degenerated quads having node[3] = node[2]) 
@@ -1066,11 +1024,10 @@ void ParWriteSolution::writeElementList
     // point to the corresponding writing location
     fout->seekp(wOffset[wRank]);
     
-    CFuint countN = 0;
     const CFuint nbElementsToWrite = wSendSize/nbNodesInType;
     for (CFuint i = 0; i < nbElementsToWrite; ++i) {
       writeElementConn(*fout, &elementToPrint[i*nbNodesInType],
-		       nbNodesInType, geoOrder, dim2print);
+		       nbNodesInType, geoOrder, dim, isCell);
       *fout << "\n";
     }
     
@@ -1085,7 +1042,7 @@ void ParWriteSolution::writeElementList
   for (CFuint i = 0; i < maxElemSendSize; ++i) {
     elementToPrint[i] = 0;
   }
-    
+  
   CFLog(VERBOSE, "ParWriteSolution::writeElementList() => end\n");
 }
       
@@ -1095,104 +1052,150 @@ void ParWriteSolution::writeElementConn(ofstream& file,
 					CFuint* nodeIDs,
 					const CFuint nbNodes,
 					const CFuint geoOrder,
-					const CFuint dim)
+					const CFuint dim, 
+					const bool isCell)
 {
   /// @todo only 1st order geometry
   cf_assert(geoOrder == CFPolyOrder::ORDER1);
   
-  switch(dim) {
-  case DIM_2D:
-    switch(nbNodes) {
+  if (isCell) {
+    switch(dim) {
       
-    case 3:  // TRIANGLE
-      
-      file << std::noshowpos 
-	   << setw(14) << nodeIDs[0]+1 << " "
-	   << setw(14) << nodeIDs[1]+1 << " "
-	   << setw(14) << nodeIDs[2]+1;
-      
+    case DIM_2D:
+      switch(nbNodes) {
+	
+      case 3:  // TRIANGLE
+	file << std::noshowpos 
+	     << setw(14) << nodeIDs[0]+1 << " "
+	     << setw(14) << nodeIDs[1]+1 << " "
+	     << setw(14) << nodeIDs[2]+1;
+	break;
+	
+      case 4: // QUADRILATERAL
+	file << std::noshowpos 
+	     << setw(14) << nodeIDs[0]+1 << " "
+	     << setw(14) << nodeIDs[1]+1 << " "
+	     << setw(14) << nodeIDs[2]+1 << " "
+	     << setw(14) << nodeIDs[3]+1;
+	break;
+	
+      default:
+	std::string msg = std::string("Wrong number of nodes in 2D for cell: ") +
+	  Common::StringOps::to_str(nbNodes);
+	throw BadValueException(FromHere(),msg);
+      }
       break;
-      
-    case 4: // QUADRILATERAL
-      
-      file << std::noshowpos 
-	   << setw(14) << nodeIDs[0]+1 << " "
-	   << setw(14) << nodeIDs[1]+1 << " "
-	   << setw(14) << nodeIDs[2]+1 << " "
-	   << setw(14) << nodeIDs[3]+1;
-      
+    
+    case DIM_3D:
+      switch(nbNodes) {
+	
+      case 4: // TETRAHEDRON
+	file << std::noshowpos 
+	     << setw(14) << nodeIDs[0]+1 << " "
+	     << setw(14) << nodeIDs[1]+1 << " "
+	     << setw(14) << nodeIDs[2]+1 << " "
+	     << setw(14) << nodeIDs[3]+1;
+	break;
+	
+      case 5: // BRICK with nodes coalesced 5,6,7->4
+	file << std::noshowpos 
+	     << setw(14) << nodeIDs[0]+1 << " "
+	     << setw(14) << nodeIDs[1]+1 << " "
+	     << setw(14) << nodeIDs[2]+1 << " "
+	     << setw(14) << nodeIDs[3]+1 << " "
+	     << setw(14) << nodeIDs[4]+1 << " "
+	     << setw(14) << nodeIDs[4]+1 << " "
+	     << setw(14) << nodeIDs[4]+1 << " "
+	     << setw(14) << nodeIDs[4]+1;
+	break;
+	
+      case 6: // BRICK with nodes 2->3 and 6->7 coalesced
+	file << std::noshowpos 
+	     << setw(14) << nodeIDs[0]+1 << " "
+	     << setw(14) << nodeIDs[1]+1 << " "
+	     << setw(14) << nodeIDs[2]+1 << " "
+	     << setw(14) << nodeIDs[2]+1 << " "
+	     << setw(14) << nodeIDs[3]+1 << " "
+	     << setw(14) << nodeIDs[4]+1 << " "
+	     << setw(14) << nodeIDs[5]+1 << " "
+	     << setw(14) << nodeIDs[5]+1;
+	break;
+	
+      case 8: // BRICK
+	file << std::noshowpos 
+	     << setw(14) << nodeIDs[0]+1 << " "
+	     << setw(14) << nodeIDs[1]+1 << " "
+	     << setw(14) << nodeIDs[2]+1 << " "
+	     << setw(14) << nodeIDs[3]+1 << " "
+	     << setw(14) << nodeIDs[4]+1 << " "
+	     << setw(14) << nodeIDs[5]+1 << " "
+	     << setw(14) << nodeIDs[6]+1 << " "
+	     << setw(14) << nodeIDs[7]+1;
+	break;
+      default:
+	std::string msg = std::string("Wrong number of nodes in 3D for cell: ") +
+	  Common::StringOps::to_str(nbNodes);
+	throw BadValueException(FromHere(),msg);
+      }
       break;
     default:
-      std::string msg = std::string("Wrong number of nodes in 2D: ") +
-	Common::StringOps::to_str(nbNodes);
-      throw BadValueException(FromHere(),msg);
-    }
-    break;
-  case DIM_3D:
-    switch(nbNodes) {
-      
-    case 4: // TETRAHEDRON
-      
-      file << std::noshowpos 
-	   << setw(14) << nodeIDs[0]+1 << " "
-	   << setw(14) << nodeIDs[1]+1 << " "
-	   << setw(14) << nodeIDs[2]+1 << " "
-	   << setw(14) << nodeIDs[3]+1;
-      
-      break;
-
-    case 5: // BRICK with nodes coalesced 5,6,7->4
-
-      file << std::noshowpos 
-	   << setw(14) << nodeIDs[0]+1 << " "
-	   << setw(14) << nodeIDs[1]+1 << " "
-	   << setw(14) << nodeIDs[2]+1 << " "
-	   << setw(14) << nodeIDs[3]+1 << " "
-	   << setw(14) << nodeIDs[4]+1 << " "
-	   << setw(14) << nodeIDs[4]+1 << " "
-	   << setw(14) << nodeIDs[4]+1 << " "
-	   << setw(14) << nodeIDs[4]+1;
-      
-      break;
-
-    case 6: // BRICK with nodes 2->3 and 6->7 coalesced
-      
-      file << std::noshowpos 
-	   << setw(14) << nodeIDs[0]+1 << " "
-	   << setw(14) << nodeIDs[1]+1 << " "
-	   << setw(14) << nodeIDs[2]+1 << " "
-	   << setw(14) << nodeIDs[2]+1 << " "
-	   << setw(14) << nodeIDs[3]+1 << " "
-	   << setw(14) << nodeIDs[4]+1 << " "
-	   << setw(14) << nodeIDs[5]+1 << " "
-	   << setw(14) << nodeIDs[5]+1;
-      
-      break;
-      
-    case 8: // BRICK
-      
-      file << std::noshowpos 
-	   << setw(14) << nodeIDs[0]+1 << " "
-	   << setw(14) << nodeIDs[1]+1 << " "
-	   << setw(14) << nodeIDs[2]+1 << " "
-	   << setw(14) << nodeIDs[3]+1 << " "
-	   << setw(14) << nodeIDs[4]+1 << " "
-	   << setw(14) << nodeIDs[5]+1 << " "
-	   << setw(14) << nodeIDs[6]+1 << " "
-	   << setw(14) << nodeIDs[7]+1;
-      
-      break;
-
-    default:
-      std::string msg = std::string("Wrong number of nodes in 3D: ") +
-                   Common::StringOps::to_str(nbNodes);
-      throw BadValueException(FromHere(),msg);
-    }
-    break;
-  default:
-    std::string msg = std::string("Wrong dimension. Can only be 2D or 3D: ") +
+      std::string msg = std::string("Wrong dimension. Can only be 2D or 3D: ") +
       Common::StringOps::to_str(dim);
-    throw BadValueException(FromHere(),msg);
+      throw BadValueException(FromHere(),msg);
+    }
+  }
+  else {
+    // case for 2D and 3D faces
+    cf_assert(!isCell);
+    
+    switch(dim) {
+      
+    case DIM_2D:
+      switch(nbNodes) {
+	
+      case 2: // LINESEG // boundary faces only
+	cf_assert(isCell == false);
+	file << std::noshowpos 
+	     << setw(14) << nodeIDs[0]+1 << " "
+	     << setw(14) << nodeIDs[1]+1;
+	break;
+	
+      default:
+	std::string msg = std::string("Wrong number of nodes in 2D for face: ") +
+	  Common::StringOps::to_str(nbNodes);
+	throw BadValueException(FromHere(),msg);
+      }
+      break;
+      
+    case DIM_3D:
+      switch(nbNodes) {
+	
+      case 3:  // TRIANGLE
+	file << std::noshowpos 
+	     << setw(14) << nodeIDs[0]+1 << " "
+	     << setw(14) << nodeIDs[1]+1 << " "
+	     << setw(14) << nodeIDs[2]+1;
+	break;
+	
+      case 4: // QUADRILATERAL
+	file << std::noshowpos 
+	     << setw(14) << nodeIDs[0]+1 << " "
+	     << setw(14) << nodeIDs[1]+1 << " "
+	     << setw(14) << nodeIDs[2]+1 << " "
+	     << setw(14) << nodeIDs[3]+1;
+	break;
+	
+      default:
+	std::string msg = std::string("Wrong number of nodes in 3D for face: ") +
+	  Common::StringOps::to_str(nbNodes);
+	throw BadValueException(FromHere(),msg);
+      }
+      break;
+    default:
+      std::string msg = std::string("Wrong dimension. Can only be 2D or 3D: ") +
+	Common::StringOps::to_str(dim);
+      throw BadValueException(FromHere(),msg);
+    }  
   }
 }
 
@@ -1284,13 +1287,15 @@ void ParWriteSolution::storeMappings(SafePtr<TopologicalRegionSet> trs,
     cf_assert(nodesInType.size() == 0);
     nodesInType.reserve(nbCellsInType*nbNodesInType); // this array can be oversized
     
-    for (CFuint iCell = startIdx; iCell < endIdx; ++iCell) {
-      const CFuint nbNodes = (isCell) ? trs->getNbNodesInGeo(iCell) : tr->getNbNodesInGeo(iCell);
+    for (CFuint iElem = startIdx; iElem < endIdx; ++iElem) {
+      const CFuint nbNodes = (isCell) ? trs->getNbNodesInGeo(iElem) : tr->getNbNodesInGeo(iElem);
       // the following is needed for hybrid meshes for which one TR could contain both 
       // quads and triangles (nbNodesInType=4 but nbNodes can be=3 or =4)
       cf_assert(nbNodes <= nbNodesInType);
-      for (CFuint in = 0; in < nbNodes; ++in) {
-	const CFuint localNodeID = (isCell) ? trs->getNodeID(iCell,in) : tr->getNodeID(iCell,in);
+      for (CFuint in = 0; in < nbNodesInType; ++in) {
+	// fix for degenerated elements (e.g. quads with 2 coincident nodes)
+	const CFuint inID = (in < nbNodes) ? in : in-1;
+	const CFuint localNodeID = (isCell) ? trs->getNodeID(iElem,in) : tr->getNodeID(iElem,in);
 	nodesInType.push_back(nodes[localNodeID]->getGlobalID());
       }
     }
