@@ -1013,11 +1013,11 @@ void ParCFmeshFileWriter::writeGeoList(CFuint iTRS, ofstream *const fout)
     MeshDataStack::getActive()->getTrs("InnerCells");
 
   const bool isFVMCC = (elements->getNbStatesInGeo(0) == 1);
-
+  
   for (CFuint iTR = 0; iTR < nbTRsInTRS; ++iTR) {
     const CFuint nbGeosInLocalTR = (*trs)[iTR]->getLocalNbGeoEnts();
     CFLogDebugMin("nbGeosInLocalTR " << iTR << " is " << nbGeosInLocalTR << "\n");
-
+    
     // if there is at least one geometric entity, consider the first of them
     // and get its number of states and nodes
     if (nbGeosInLocalTR > 0) {

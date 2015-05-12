@@ -41,8 +41,8 @@ using namespace boost::filesystem;
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-
-    namespace TecplotWriter {
+  
+  namespace TecplotWriter {
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -79,6 +79,7 @@ namespace COOLFluiD {
    socket_nstatesProxy("nstatesProxy"),
    _mapTrsName2TecplotData(),
    _mapGlobal2LocalNodeID(),
+   _intWordFormatSize(),
    _isNewBFile(false)
  {
    addConfigOptionsTo(this);
@@ -124,7 +125,7 @@ void ParWriteSolution::execute()
     
     // write boundary surface data
     boost::filesystem::path bpath = cfgpath.branch_path() / ( basename(cfgpath) + ".surf" + extension(cfgpath) );
-    writeData(bpath, _isNewBFile, "Boundary data", &ParWriteSolution::writeBoundaryData);
+    writeData(bpath, _isNewBFile, string("Boundary data"), &ParWriteSolution::writeBoundaryData);
   }
 }
       
@@ -136,7 +137,7 @@ void ParWriteSolution::writeData(const boost::filesystem::path& filepath,
 				 WriterFun fun)
 {
   // reset to 0 the new file flag
-  flag = 0;
+  flag = false;
   ofstream* file = CFNULL;
   Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
     Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
@@ -151,7 +152,7 @@ void ParWriteSolution::writeData(const boost::filesystem::path& filepath,
       
       // if the file is a new one add it to the file list
       _fileList.insert(filepath);
-      flag = 1;
+      flag = true;
     }
   }
   
@@ -159,7 +160,7 @@ void ParWriteSolution::writeData(const boost::filesystem::path& filepath,
   MPI_Bcast(&isNewFile, 1, MPIStructDef::getMPIType(&isNewFile), _ioRank, _comm);
   
   flag = (isNewFile == 0) ? false : true;
-  
+    
   (this->*fun)(filepath, flag, title, file); 
   
   if (_isWriterRank) {
@@ -236,21 +237,27 @@ void ParWriteSolution::writeInnerData
 	    
 	    *fout << "ZONE "
 		  << "  T= \"ZONE" << iType << " " << eType.getShape() <<"\""
-		  << ", N=" << tt.totalNbNodesInType[iType]
-		  << ", E=" << me[iType].elementCount
+		  << ", N=" << std::noshowpos << setw(_intWordFormatSize) << tt.totalNbNodesInType[iType]
+		  << ", E=" << std::noshowpos << setw(_intWordFormatSize) << me[iType].elementCount
 		  << ", F=FEPOINT"
 		  << ", ET=" << MapGeoEnt::identifyGeoEntTecplot
 	      (eType.getNbNodes(),
 	       eType.getGeoOrder(),
 	       PhysicalModelStack::getActive()->getDim()) 
-		  << ", SOLUTIONTIME=" << subSysStatus->getCurrentTimeDim() << flush;
+		  << ", SOLUTIONTIME=";
+	    fout->precision(14);  
+	    fout->setf(ios::scientific,ios::floatfield);
+	    *fout << subSysStatus->getCurrentTimeDim() << flush;
 	    
 	    if (getMethodData().getAppendAuxData()) {
 	      *fout << " AUXDATA TRS=\"" << trs->getName() << "\""
 		    << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
 		    << ", AUXDATA ElementType=\"" << eType.getShape() << "\""
-		    << ", AUXDATA Iter=\"" << subSysStatus->getNbIter() << "\""
-		    << ", AUXDATA PhysTime=\"" << subSysStatus->getCurrentTimeDim() << "\"";
+		    << ", AUXDATA Iter=\"" << std::noshowpos << setw(_intWordFormatSize) << subSysStatus->getNbIter() << "\""
+		    << ", AUXDATA PhysTime=\"";
+	      fout->precision(14);  
+	      fout->setf(ios::scientific,ios::floatfield);
+	      *fout << subSysStatus->getCurrentTimeDim() << "\"";
 	    }
 	    *fout << "\n";
 	    
@@ -296,20 +303,21 @@ void ParWriteSolution::setup()
   cf_assert(nbElementTypes > 0);
     
   // create TeclotTRSType for the domain interior
-  TeclotTRSType* tt = new TeclotTRSType(nbElementTypes);
+  TeclotTRSType* tt = new TeclotTRSType
+    (nbElementTypes, MeshDataStack::getActive()->getTrs("InnerCells"));
   _mapTrsName2TecplotData.insert("InnerCells", tt);
   
   // create TeclotTRSType for the domain boundaries
   const vector<string>& surfTRS = getMethodData().getSurfaceTRSsToWrite();
   for(CFuint iTrs = 0; iTrs < surfTRS.size(); ++iTrs) {
     SafePtr<TopologicalRegionSet> trs = MeshDataStack::getActive()->getTrs(surfTRS[iTrs]);
-    TeclotTRSType* tb = new TeclotTRSType(trs->getNbTRs());
+    TeclotTRSType* tb = new TeclotTRSType(trs->getNbTRs(), trs);
     _mapTrsName2TecplotData.insert(surfTRS[iTrs], tb);
   }
   _mapTrsName2TecplotData.sortKeys();
   
   _mapGlobal2LocalNodeID.reserve(socket_nodes.getDataHandle().size());
-  
+    
   CFLog(VERBOSE, "ParWriteSolution::setup() => end\n");
 }      
       
@@ -348,6 +356,13 @@ void ParWriteSolution:: buildNodeIDMapping()
   
   const CFuint totalNodeCount = MeshDataStack::getActive()->getTotalNodeCount();
   cf_assert(totalNodeCount >= nodes.size());
+  
+  // compute the integer format size
+  const CFuint maxInteger = 100*totalNodeCount;
+  _intWordFormatSize = (CFuint)std::log10((CFreal)maxInteger);
+  
+  CFLog(VERBOSE, "ParWriteSolution::buildNodeIDMapping() => integer format size = " << _intWordFormatSize << "\n");
+  
   vector<bool> foundGlobalID(totalNodeCount);
   
   std::vector<std::string> sortedSurfTRS = 
@@ -432,6 +447,11 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
   /// return if the user has not indicated any TRS
   if (getMethodData().getSurfaceTRSsToWrite().empty()) return;
   
+  // write the TECPLOT file header
+  if (isNewFile) {
+    writeHeader(fout, title, CFNULL);
+  }
+  
   const std::vector<std::string>& surfTRS = getMethodData().getSurfaceTRSsToWrite();
   
   CFuint countTRToWrite = 0;  
@@ -456,7 +476,7 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
   // loop over the TRSs selecte by the user
   for(vector<string>::const_iterator itr = surfTRS.begin(); itr != surfTRS.end(); ++itr) {
     SafePtr<TopologicalRegionSet> trs = MeshDataStack::getActive()->getTrs(*itr);
-    const int iTRS = getGlobaTRSID(trs->getName());
+    const int iTRS = getGlobalTRSID(trs->getName());
     cf_assert(iTRS >= 0);
     
     TeclotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
@@ -480,49 +500,56 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
 		    (&maxNbNodesInGeo), MPI_MAX, _comm);
       cf_assert(maxNbNodesInGeo > 0);
       
-      std::string elemShape;
-      if (dim == 2) {
-	elemShape = "LINESEG";
-      }
-      else if (dim == 3) {
+      std::string elemShape = "LINESEG";
+      if (dim == 3) {
 	// AL: the maximum number of nodes in face is considered: an extra virtual 
 	// node is added if TETRA and QUADRILATERAL are both present
 	elemShape = (maxNbNodesInGeo == 3) ? "TRIANGLE" : "QUADRILATERAL";
       }
       
-      vector<MPI_Offset>& headerOffset = tt.headerOffset[iTR];
-      
       const CFuint totalNbTRGeos = trsInfo[iTRS][iTR];
-      // print zone header: one zone per TR
-      if (_myRank == _ioRank) {
-	headerOffset[0] = fout->tellp();
-	
-	*fout << "ZONE N=" << tt.totalNbNodesInType[iTR]
-	      << ", T=\"" << trs->getName() << ", TR " << iTR << "\""
-	      << ", E=" << totalNbTRGeos
-	      << ", F=FEPOINT"
-	      << ", ET=" << elemShape
-	      << ", SOLUTIONTIME=" << subSysStatus->getCurrentTimeDim()
-	      << "\n";
-	
-	headerOffset[1] = fout->tellp();
-      }
       
-      // communicate the current file position to all processor
-      MPI_Bcast(&headerOffset[0], 2, MPIStructDef::getMPIOffsetType(), _ioRank, _comm);
+      // print zone header: one zone per TR
+      const bool meshChanged = hasChangedMesh(iTR, tt);
+      if (isNewFile || meshChanged) {
+	vector<MPI_Offset>& headerOffset = tt.headerOffset[iTR];
+	if (_myRank == _ioRank) {
+	  headerOffset[0] = fout->tellp();
+	  
+	  *fout << "ZONE N=" << std::noshowpos << setw(_intWordFormatSize) << tt.totalNbNodesInType[iTR]
+		<< ", T=\"" << trs->getName() << ", TR " << iTR << "\""
+		<< ", E=" << std::noshowpos << setw(_intWordFormatSize) << totalNbTRGeos
+		<< ", F=FEPOINT"
+		<< ", ET=" << elemShape
+		<< ", SOLUTIONTIME=";
+	  fout->precision(14);  
+	  fout->setf(ios::scientific,ios::floatfield);
+	  *fout << subSysStatus->getCurrentTimeDim() << "\n";
+	  
+	  headerOffset[1] = fout->tellp();
+	}
+	
+	// communicate the current file position to all processor
+	MPI_Bcast(&headerOffset[0], 2, MPIStructDef::getMPIOffsetType(), _ioRank, _comm);
+	
+	// backup the total counts for this element type
+	tt.oldNbNodesElemsInType[iTR].first  = tt.totalNbNodesInType[iTR];
+	tt.oldNbNodesElemsInType[iTR].second = totalNbTRGeos;
+      }
       
       // print nodal coordinates and stored node variables
       writeNodeList(fout, iTR, trs);
       
-      // if (isNewFile || meshChanged) {
-      // write element-node connectivity
-      writeElementList(fout, iTR, maxNbNodesInGeo, totalNbTRGeos, nbTRGeos, 0, 
-		       CFPolyOrder::ORDER1, trs);
-      // }
+      if (isNewFile || meshChanged) {
+	// write element-node connectivity
+	writeElementList(fout, iTR, maxNbNodesInGeo, 
+			 totalNbTRGeos, nbTRGeos, 0, 
+			 CFPolyOrder::ORDER1, trs);
+      }
     }
   }
 }
-      
+    
 //////////////////////////////////////////////////////////////////////////////
 
 std::vector<Common::SafePtr<BaseDataSocketSink> >
@@ -596,12 +623,12 @@ void ParWriteSolution::writeHeader(std::ofstream* fout,
 {
   CFAUTOTRACE;
   
-  CFLog(VERBOSE, "ParWriteSolution::writeHeader() start\n");
+  CFLog(VERBOSE, "ParWriteSolution::writeHeader() \"" << title << "\" start\n");
   
   if (_myRank == _ioRank) {
     //  Tecplot Header
     // maximum string size to write includes 30 characters 
-    *fout << "TITLE = Unstructured grid data";
+    *fout << "TITLE = " << title;
     *fout << "\nVARIABLES = ";
     
     const CFuint dim = PhysicalModelStack::getActive()->getDim();
@@ -629,15 +656,17 @@ void ParWriteSolution::writeHeader(std::ofstream* fout,
 	}
       }
       
-      vector<string> dhVarNames = dh->getVarNames();
-      for (CFuint i = 0 ;  i < dhVarNames.size(); ++i) {
-	*fout << " " << dhVarNames[i];
+      if (dh.isNotNull()) {
+	vector<string> dhVarNames = dh->getVarNames();
+	for (CFuint i = 0 ;  i < dhVarNames.size(); ++i) {
+	  *fout << " " << dhVarNames[i];
+	}
       }
     }
     *fout << "\n";
   }
   
-  CFLog(VERBOSE, "ParWriteSolution::writeHeader() end\n");
+  CFLog(VERBOSE, "ParWriteSolution::writeHeader() \"" << title << "\" end\n");
 }
   
 //////////////////////////////////////////////////////////////////////////////
@@ -848,6 +877,8 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
     MPI_Allreduce(&lastpos, &maxpos, 1, MPIStructDef::getMPIOffsetType(), MPI_MAX, wg.comm);
     
     cf_assert(tt.nodesOffset[iType].second == maxpos);
+    
+    fout->seekp(maxpos);
   }
   
   //reset the all sendElement list to 0
@@ -897,7 +928,7 @@ void ParWriteSolution::writeElementList
   
   // update the maximum possible element-list size to send
   const CFuint maxElemSendSize = elementList.getMaxElemSize();
-  const CFuint wordFormatSize = 15;
+  const CFuint wordFormatSize = _intWordFormatSize+1;
   
   // wOffset is initialized with current offset
   MPI_Offset offset = tt.nodesOffset[iType].second;
@@ -911,8 +942,12 @@ void ParWriteSolution::writeElementList
   CFLog(VERBOSE, "ParWriteSolution::writeElementList() => offsets = [" 
 	<<  tt.elemsOffset[iType].first << ", " << tt.elemsOffset[iType].second << "]\n");
   
-  SafePtr< vector<CFuint> > globalElementIDs = 
-    MeshDataStack::getActive()->getGlobalElementIDs();
+  SafePtr< vector<CFuint> > globalElementIDs = MeshDataStack::getActive()->getGlobalElementIDs();
+  if (isCell == false) {
+    const int iTRS = getGlobalTRSID(elements->getName());
+    cf_assert(iTRS >= 0);
+    globalElementIDs = &(*MeshDataStack::getActive()->getGlobalTRSGeoIDs())[iTRS][iType];
+  }
   cf_assert(globalElementIDs->size() >= nbLocalElements);
   
   // insert in the write list the local IDs of the elements
@@ -1036,6 +1071,8 @@ void ParWriteSolution::writeElementList
     MPI_Allreduce(&lastpos, &maxpos, 1, MPIStructDef::getMPIOffsetType(), MPI_MAX, wg.comm);
     
     cf_assert(tt.elemsOffset[iType].second == maxpos);
+    
+    fout->seekp(maxpos);
   }
   
   // reset all the elements to print to 0
@@ -1066,17 +1103,17 @@ void ParWriteSolution::writeElementConn(ofstream& file,
 	
       case 3:  // TRIANGLE
 	file << std::noshowpos 
-	     << setw(14) << nodeIDs[0]+1 << " "
-	     << setw(14) << nodeIDs[1]+1 << " "
-	     << setw(14) << nodeIDs[2]+1;
+	     << setw(_intWordFormatSize) << nodeIDs[0]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[1]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[2]+1;
 	break;
 	
       case 4: // QUADRILATERAL
 	file << std::noshowpos 
-	     << setw(14) << nodeIDs[0]+1 << " "
-	     << setw(14) << nodeIDs[1]+1 << " "
-	     << setw(14) << nodeIDs[2]+1 << " "
-	     << setw(14) << nodeIDs[3]+1;
+	     << setw(_intWordFormatSize) << nodeIDs[0]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[1]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[2]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[3]+1;
 	break;
 	
       default:
@@ -1091,46 +1128,46 @@ void ParWriteSolution::writeElementConn(ofstream& file,
 	
       case 4: // TETRAHEDRON
 	file << std::noshowpos 
-	     << setw(14) << nodeIDs[0]+1 << " "
-	     << setw(14) << nodeIDs[1]+1 << " "
-	     << setw(14) << nodeIDs[2]+1 << " "
-	     << setw(14) << nodeIDs[3]+1;
+	     << setw(_intWordFormatSize) << nodeIDs[0]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[1]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[2]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[3]+1;
 	break;
 	
       case 5: // BRICK with nodes coalesced 5,6,7->4
 	file << std::noshowpos 
-	     << setw(14) << nodeIDs[0]+1 << " "
-	     << setw(14) << nodeIDs[1]+1 << " "
-	     << setw(14) << nodeIDs[2]+1 << " "
-	     << setw(14) << nodeIDs[3]+1 << " "
-	     << setw(14) << nodeIDs[4]+1 << " "
-	     << setw(14) << nodeIDs[4]+1 << " "
-	     << setw(14) << nodeIDs[4]+1 << " "
-	     << setw(14) << nodeIDs[4]+1;
+	     << setw(_intWordFormatSize) << nodeIDs[0]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[1]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[2]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[3]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[4]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[4]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[4]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[4]+1;
 	break;
 	
       case 6: // BRICK with nodes 2->3 and 6->7 coalesced
 	file << std::noshowpos 
-	     << setw(14) << nodeIDs[0]+1 << " "
-	     << setw(14) << nodeIDs[1]+1 << " "
-	     << setw(14) << nodeIDs[2]+1 << " "
-	     << setw(14) << nodeIDs[2]+1 << " "
-	     << setw(14) << nodeIDs[3]+1 << " "
-	     << setw(14) << nodeIDs[4]+1 << " "
-	     << setw(14) << nodeIDs[5]+1 << " "
-	     << setw(14) << nodeIDs[5]+1;
+	     << setw(_intWordFormatSize) << nodeIDs[0]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[1]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[2]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[2]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[3]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[4]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[5]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[5]+1;
 	break;
 	
       case 8: // BRICK
 	file << std::noshowpos 
-	     << setw(14) << nodeIDs[0]+1 << " "
-	     << setw(14) << nodeIDs[1]+1 << " "
-	     << setw(14) << nodeIDs[2]+1 << " "
-	     << setw(14) << nodeIDs[3]+1 << " "
-	     << setw(14) << nodeIDs[4]+1 << " "
-	     << setw(14) << nodeIDs[5]+1 << " "
-	     << setw(14) << nodeIDs[6]+1 << " "
-	     << setw(14) << nodeIDs[7]+1;
+	     << setw(_intWordFormatSize) << nodeIDs[0]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[1]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[2]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[3]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[4]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[5]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[6]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[7]+1;
 	break;
       default:
 	std::string msg = std::string("Wrong number of nodes in 3D for cell: ") +
@@ -1156,8 +1193,8 @@ void ParWriteSolution::writeElementConn(ofstream& file,
       case 2: // LINESEG // boundary faces only
 	cf_assert(isCell == false);
 	file << std::noshowpos 
-	     << setw(14) << nodeIDs[0]+1 << " "
-	     << setw(14) << nodeIDs[1]+1;
+	     << setw(_intWordFormatSize) << nodeIDs[0]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[1]+1;
 	break;
 	
       default:
@@ -1172,17 +1209,17 @@ void ParWriteSolution::writeElementConn(ofstream& file,
 	
       case 3:  // TRIANGLE
 	file << std::noshowpos 
-	     << setw(14) << nodeIDs[0]+1 << " "
-	     << setw(14) << nodeIDs[1]+1 << " "
-	     << setw(14) << nodeIDs[2]+1;
+	     << setw(_intWordFormatSize) << nodeIDs[0]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[1]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[2]+1;
 	break;
 	
       case 4: // QUADRILATERAL
 	file << std::noshowpos 
-	     << setw(14) << nodeIDs[0]+1 << " "
-	     << setw(14) << nodeIDs[1]+1 << " "
-	     << setw(14) << nodeIDs[2]+1 << " "
-	     << setw(14) << nodeIDs[3]+1;
+	     << setw(_intWordFormatSize) << nodeIDs[0]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[1]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[2]+1 << " "
+	     << setw(_intWordFormatSize) << nodeIDs[3]+1;
 	break;
 	
       default:
@@ -1231,8 +1268,17 @@ bool ParWriteSolution::hasChangedMesh(const CFuint iType,
     return true;
   }
   
-  if (MeshDataStack::getActive()->getTotalMeshElementTypes()[iType].elementCount 
-      != tt.oldNbNodesElemsInType[iType].second) {
+  CFuint elemCount = 0; 
+  if ((tt.trs->hasTag("inner")) && (tt.trs->hasTag("cell"))) {
+    elemCount = MeshDataStack::getActive()->getTotalMeshElementTypes()[iType].elementCount; 
+  }
+  else {
+    const int iTRS = getGlobalTRSID(tt.trs->getName());
+    cf_assert(iTRS >= 0);
+    elemCount = MeshDataStack::getActive()->getTotalTRSInfo()[iTRS][iType];
+  }
+  
+  if (elemCount != tt.oldNbNodesElemsInType[iType].second) {
     CFLog(VERBOSE, "ParWriteSolution::hasChangedMesh (iType = " << iType << ") => true\n");
     return true;
   }
@@ -1243,7 +1289,7 @@ bool ParWriteSolution::hasChangedMesh(const CFuint iType,
       
 //////////////////////////////////////////////////////////////////////////////
 
-int ParWriteSolution::getGlobaTRSID(const string& name)
+int ParWriteSolution::getGlobalTRSID(const string& name) const
 {
   const vector<string>& trsNames = MeshDataStack::getActive()->getTotalTRSNames();
   for (int i = 0; i < (int)trsNames.size(); ++i) {
@@ -1381,8 +1427,11 @@ void ParWriteSolution::storeMappings(SafePtr<TopologicalRegionSet> trs,
 
 //////////////////////////////////////////////////////////////////////////////
 
-ParWriteSolution::TeclotTRSType::TeclotTRSType(const CFuint nbElementTypes) 
+ParWriteSolution::TeclotTRSType::TeclotTRSType
+(const CFuint nbElementTypes, SafePtr<TopologicalRegionSet> in) 
 {
+  trs = in;
+  
   headerOffset.resize(nbElementTypes);
   for (CFuint i = 0; i < nbElementTypes; ++i) {
     headerOffset[i].resize(2, 0);

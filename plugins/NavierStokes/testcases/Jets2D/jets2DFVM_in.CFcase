@@ -24,11 +24,15 @@ CFEnv.ExceptionOutputs     = true
 CFEnv.RegistSignalHandlers = false
 #CFEnv.TraceToStdOut = true
 #CFEnv.TraceActive = true
+#CFEnv.OnlyCPU0Writes = false
 
 # This tests the configuration file: it gives error if some options are wrong
 # This always fails with converters (THOR2CFmesh, Gambit2CFmesh, etc.): 
 # deactivate the option in those cases 
 CFEnv.ErrorOnUnusedConfig = true
+
+# global parameter to control the number of writers for all algorithms
+CFEnv.NbWriters = 4
 
 # SubSystem Modules
 Simulator.Modules.Libs =  libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libForwardEuler libFiniteVolume libTHOR2CFmesh libFiniteVolumeNavierStokes
@@ -46,15 +50,18 @@ Simulator.SubSystem.CFmesh.FileName  = jets2D-sol.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate  = 500
 # binary CFmesh writer
 Simulator.SubSystem.CFmesh.WriteSol = ParWriteBinarySolution
-Simulator.SubSystem.CFmesh.ParWriteBinarySolution.ParCFmeshBinaryFileWriter.NbWriters = 4
+#Simulator.SubSystem.CFmesh.ParWriteBinarySolution.ParCFmeshBinaryFileWriter.NbWriters = 4
 
 # parallel ASCII Tecplot writer
 Simulator.SubSystem.Tecplot.FileName = jets2D-sol.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 200
 Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolution
-Simulator.SubSystem.Tecplot.ParWriteSolution.NbWriters = 4
+#Simulator.SubSystem.Tecplot.ParWriteSolution.NbWriters = 4
 Simulator.SubSystem.Tecplot.AppendRank = false
+#Simulator.SubSystem.Tecplot.Data.CoordinatesOnly = true
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = SuperInlet SuperOutlet
+Simulator.SubSystem.Tecplot.AppendIter = true
 
 #Simulator.SubSystem.StopCondition          = MaxNumberSteps
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
@@ -62,7 +69,7 @@ Simulator.SubSystem.Tecplot.AppendRank = false
 Simulator.SubSystem.StopCondition       = Norm
 Simulator.SubSystem.Norm.valueNorm      = -10.0
 
-Simulator.SubSystem.Default.listTRS = InnerFaces SuperInlet SuperOutlet
+Simulator.SubSystem.Default.listTRS = SuperInlet SuperOutlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 

@@ -6,6 +6,7 @@
 
 #include "Environment/CFEnvVars.hh"
 #include "Environment/ModuleRegisterBase.hh"
+#include "Common/PE.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -30,6 +31,8 @@ CFEnvVars::CFEnvVars() :
 {
   InitArgs.first  = 0;
   InitArgs.second = CFNULL;
+  
+  NbWriters = 1;
 }
 
 //////////////////////////////////////////////////////////////////////////////

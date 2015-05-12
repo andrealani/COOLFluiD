@@ -453,7 +453,7 @@ void ParCFmeshBinaryFileWriter::writeElementList(MPI_File* fh)
     MeshDataStack::getActive()->getGlobalElementIDs();
   cf_assert(globalElementIDs->size() == nbLocalElements);
   
-  CFLog(VERBOSE,_myRank << " " << CFPrintContainer<vector<CFuint> >
+  CFLog(DEBUG_MAX,_myRank << " " << CFPrintContainer<vector<CFuint> >
 		(" globalElementIDs  = ", &(*globalElementIDs)) << "\n");
   
   // ElementTypeData stores LOCAL element type data

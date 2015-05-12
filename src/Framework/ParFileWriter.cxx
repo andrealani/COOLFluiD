@@ -7,11 +7,14 @@
 #include "Framework/ParFileWriter.hh"
 #include "Common/PE.hh"
 #include "Common/CFPrintContainer.hh"
+#include "Environment/CFEnvVars.hh"
+#include "Environment/CFEnv.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
 using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Environment;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -57,10 +60,19 @@ void ParFileWriter::setWriterGroup()
 {
   CFAUTOTRACE;
   
+  // the number of writers can be either customized by each derived 
+  // algorithm or uniquely defined fixed for all algorithms 
+  // by setting CFEnv.NbWriters
+  if (_nbWriters == 1) {
+    _nbWriters =  CFEnv::getInstance().getVars()->NbWriters;
+  }
+  
   if (_nbWriters > _nbProc) {
     CFLog(WARN, "ParFileWriter::setWriterGroup() => _nbWriters > _nbProc, therefore they are set equal!\n");
     _nbWriters = _nbProc;
   }
+  
+  CFLog(VERBOSE, "ParFileWriter::setWriterGroup() => _nbWriters = " << _nbWriters << "\n");
   
   // in reality ranks will be user-defined 
   vector<int> ranks;

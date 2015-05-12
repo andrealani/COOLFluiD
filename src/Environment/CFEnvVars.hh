@@ -53,7 +53,9 @@ class Environment_API CFEnvVars : public Common::NonCopyable<CFEnvVars>
     CFuint ExceptionLogLevel;
     /// the initial arguments with which the environment was started
     std::pair<int,char**> InitArgs;
-
+    /// number of writing processes in parallel I/O
+    CFuint NbWriters;
+    
 }; // end class CFEnvVars
 
 //////////////////////////////////////////////////////////////////////////////

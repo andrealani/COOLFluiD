@@ -54,22 +54,23 @@ CFEnv& CFEnv::getInstance()
 
 void CFEnv::defineConfigOptions(Config::OptionList& options)
 {
-   options.addConfigOption< bool >    ("OnlyCPU0Writes",    "Only CPU0 writes to stdout");
-   options.addConfigOption< bool >    ("DoAssertions",      "Turn off assertions dynamically");
-   options.addConfigOption< bool >    ("AssertionDumps",    "If assertions should dump backtraces");
-   options.addConfigOption< bool >    ("AssertionThrows",   "If assertions should throw exceptions instead of aborting code");
-   options.addConfigOption< bool >    ("ExceptionOutputs",  "If exception contructor should output");
-   options.addConfigOption< bool >    ("ExceptionDumps",    "If exception contructor should dump backtrace");
-   options.addConfigOption< bool >    ("ExceptionAborts",   "If exception contructor should abort execution immedietly");
-   options.addConfigOption< CFuint >  ("ExceptionLogLevel", "Loglevel for exceptions");
-   options.addConfigOption< bool >    ("RegistSignalHandlers", "If CPU signal handlers should be registered");
-   options.addConfigOption< bool >    ("TraceToStdOut",     "If Tracing should be sent to stdout also");
-   options.addConfigOption< bool >    ("TraceActive",       "If Tracing should be active");
-   options.addConfigOption< bool >    ("VerboseEvents",     "If Events have verbose output");
-   options.addConfigOption< bool >    ("ErrorOnUnusedConfig","Signal error when some user provided config parameters are not used");
-   options.addConfigOption< std::string >("MainLoggerFileName", "Name of main log file");
+  options.addConfigOption< bool >    ("OnlyCPU0Writes",    "Only CPU0 writes to stdout");
+  options.addConfigOption< bool >    ("DoAssertions",      "Turn off assertions dynamically");
+  options.addConfigOption< bool >    ("AssertionDumps",    "If assertions should dump backtraces");
+  options.addConfigOption< bool >    ("AssertionThrows",   "If assertions should throw exceptions instead of aborting code");
+  options.addConfigOption< bool >    ("ExceptionOutputs",  "If exception contructor should output");
+  options.addConfigOption< bool >    ("ExceptionDumps",    "If exception contructor should dump backtrace");
+  options.addConfigOption< bool >    ("ExceptionAborts",   "If exception contructor should abort execution immedietly");
+  options.addConfigOption< CFuint >  ("ExceptionLogLevel", "Loglevel for exceptions");
+  options.addConfigOption< bool >    ("RegistSignalHandlers", "If CPU signal handlers should be registered");
+  options.addConfigOption< bool >    ("TraceToStdOut",     "If Tracing should be sent to stdout also");
+  options.addConfigOption< bool >    ("TraceActive",       "If Tracing should be active");
+  options.addConfigOption< bool >    ("VerboseEvents",     "If Events have verbose output");
+  options.addConfigOption< bool >    ("ErrorOnUnusedConfig","Signal error when some user provided config parameters are not used");
+  options.addConfigOption< std::string >("MainLoggerFileName", "Name of main log file");
+  options.addConfigOption< CFuint >("NbWriters", "Number of writing processes in parallel I/O");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 CFEnv::CFEnv() : Config::ConfigObject("CFEnv"),
@@ -97,14 +98,18 @@ CFEnv::CFEnv() : Config::ConfigObject("CFEnv"),
   setParameter("TraceActive",           &(m_env_vars->TraceActive));
   setParameter("MainLoggerFileName",    &(m_env_vars->MainLoggerFileName));
   setParameter("ExceptionLogLevel",     &(m_env_vars->ExceptionLogLevel));
+  setParameter("NbWriters",     &(m_env_vars->NbWriters));
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void CFEnv::configure ( Config::ConfigArgs& args )
 {
+  // set the number of writers for parallel I/O
+  m_env_vars->NbWriters = PE::GetPE().GetProcessorCount();
+  
   ConfigObject::configure(args);
-
+  
   CFLog(VERBOSE, "Configuring OSystem signal handlers ... \n");
   if ( m_env_vars->RegistSignalHandlers )
   {

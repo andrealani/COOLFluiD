@@ -69,13 +69,17 @@ public:
   class TeclotTRSType {
   public:
     /// Constructor
-    TeclotTRSType(const CFuint nbElementTypes);
+    TeclotTRSType(const CFuint nbElementTypes, 
+		  Common::SafePtr<Framework::TopologicalRegionSet> in);
     
     /// Destructor
     ~TeclotTRSType();
     
     /// Clean up mappings
     void cleanupMappings();
+    
+    /// pointer to the corresponding TRS
+    Common::SafePtr<Framework::TopologicalRegionSet> trs;
     
     /// start/end of the header
     std::vector<std::vector<MPI_Offset> > headerOffset;
@@ -178,8 +182,7 @@ public:
   bool hasChangedMesh(const CFuint iType, const TeclotTRSType& tt) const;    
   
   /// Return the TRS ID corresponding to the given TRS name in the global storage
-  int getGlobaTRSID(const std::string& name);
-  
+  int getGlobalTRSID(const std::string& name) const;
   
   /// Store the mapping coresponding to the given TRS and iType (element type or TR)
   void storeMappings(Common::SafePtr<Framework::TopologicalRegionSet> trs,
@@ -203,6 +206,9 @@ protected:
   
   /// mapping global nodeIDs to local nodeIDs
   Common::CFMap<CFuint, CFuint> _mapGlobal2LocalNodeID;
+  
+  /// maximum size to be used for formatting integers
+  CFuint _intWordFormatSize;
   
   /// flag to tell if the boundary file is new
   bool _isNewBFile;
