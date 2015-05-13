@@ -182,11 +182,11 @@ Simulator.SubSystem.DataPostProcessingNames                   = DataProcessing1 
 Simulator.SubSystem.DataProcessing1.Comds                     = RadiativeTransferMonteCarloAxiFVMCC
 Simulator.SubSystem.DataProcessing1.Names                     = RT
 Simulator.SubSystem.DataProcessing1.ProcessRate               = 1
-Simulator.SubSystem.DataProcessing1.SkipFirstIteration        = true 
+Simulator.SubSystem.DataProcessing1.SkipFirstIteration        = false
 
 Simulator.SubSystem.DataProcessing1.RT.applyTRS               = InnerCells
 Simulator.SubSystem.DataProcessing1.RT.numberOfRays           = 100
-Simulator.SubSystem.DataProcessing1.RT.Axi                    = false
+Simulator.SubSystem.DataProcessing1.RT.Axi                    = true
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.NumberLoops   = 1
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.TempID        = 3
