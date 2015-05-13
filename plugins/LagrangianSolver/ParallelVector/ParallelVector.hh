@@ -64,7 +64,7 @@ private:
 template<typename T>
 void ParallelVector<T>::sincronizeAdd(){
   if( Common::PE::GetPE().GetProcessorCount() == 1 ) {
-	return;
+  	return;
   }
 
   if ( !m_isSetup ){
@@ -92,7 +92,7 @@ void ParallelVector<T>::sincronizeAdd(){
 template<typename T>
 void ParallelVector<T>::sincronizeAssign(){
   if(  Common::PE::GetPE().GetProcessorCount() == 1 ){
-	return;
+  	return;
   }
 
  if ( !m_isSetup ){
@@ -208,7 +208,7 @@ void ParallelVector<T>::getSharedEntries(){
     std::vector<int> gatherCounts(m_nbProcesses);
     std::vector<int> gatherDisps(m_nbProcesses);
 
-    CFint nbReply = replyGlobalCellIDs.size();
+    int nbReply = int(replyGlobalCellIDs.size());
     
     MPI_Gather(&nbReply, 1, Common::MPIStructDef::getMPIType(&nbReply), &gatherCounts[0], 
 	       1, Common::MPIStructDef::getMPIType(&nbReply), processRank, m_comm);
@@ -220,11 +220,11 @@ void ParallelVector<T>::getSharedEntries(){
     }
     
     gatherGlobalCellIDs.resize( totalSendCount );
-    MPI_Gatherv( &replyGlobalCellIDs[0], replyGlobalCellIDs.size(), 
-		 Common::MPIStructDef::getMPIType(&replyGlobalCellIDs[0]),
-		 &gatherGlobalCellIDs[0], &gatherCounts[0], &gatherDisps[0],
-		 Common::MPIStructDef::getMPIType(&gatherGlobalCellIDs[0]), 
-		 processRank, m_comm );
+    MPI_Gatherv( &replyGlobalCellIDs[0], int(replyGlobalCellIDs.size()), 
+                 Common::MPIStructDef::getMPIType(&replyGlobalCellIDs[0]), 
+                 &gatherGlobalCellIDs[0], &gatherCounts[0], &gatherDisps[0], 
+                 Common::MPIStructDef::getMPIType(&gatherGlobalCellIDs[0]), 
+		             int(processRank), m_comm );
     
     if(m_myProcessRank == processRank){
       
