@@ -40,6 +40,9 @@ FarFieldEuler3D::FarFieldEuler3D(const std::string& name) :
 
   _wInf = 0.0;
    setParameter("Winf",&_wInf);
+
+  // set the input var string to be consistent with this object 
+  m_inputVarStr = "Pvt";
  }
 
 //////////////////////////////////////////////////////////////////////////////
