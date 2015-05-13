@@ -10,7 +10,7 @@
 ############################################################################
 # Simulation Modules
 #
-Simulator.Modules.Libs = libShapeFunctions libAeroCoef libAeroCoefFVM libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libGambit2CFmesh libPetscI libRadiativeTransfer libMeshToolsFVM
+Simulator.Modules.Libs = libShapeFunctions libAeroCoef libAeroCoefFVM libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libGambit2CFmesh libPetscI libRadiativeTransfer
 
 
 ############################################################################
