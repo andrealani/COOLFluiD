@@ -237,8 +237,8 @@ void ParWriteSolution::writeInnerData
 	    
 	    *fout << "ZONE "
 		  << "  T= \"ZONE" << iType << " " << eType.getShape() <<"\""
-		  << ", N=" << std::noshowpos << setw(_intWordFormatSize) << tt.totalNbNodesInType[iType]
-		  << ", E=" << std::noshowpos << setw(_intWordFormatSize) << me[iType].elementCount
+		  << ", N=" << std::noshowpos << tt.totalNbNodesInType[iType]
+		  << ", E=" << std::noshowpos << me[iType].elementCount
 		  << ", F=FEPOINT"
 		  << ", ET=" << MapGeoEnt::identifyGeoEntTecplot
 	      (eType.getNbNodes(),
@@ -516,9 +516,9 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
 	if (_myRank == _ioRank) {
 	  headerOffset[0] = fout->tellp();
 	  
-	  *fout << "ZONE N=" << std::noshowpos << setw(_intWordFormatSize) << tt.totalNbNodesInType[iTR]
+	  *fout << "ZONE N=" << std::noshowpos << tt.totalNbNodesInType[iTR]
 		<< ", T=\"" << trs->getName() << ", TR " << iTR << "\""
-		<< ", E=" << std::noshowpos << setw(_intWordFormatSize) << totalNbTRGeos
+		<< ", E=" << std::noshowpos << totalNbTRGeos
 		<< ", F=FEPOINT"
 		<< ", ET=" << elemShape
 		<< ", SOLUTIONTIME=";
