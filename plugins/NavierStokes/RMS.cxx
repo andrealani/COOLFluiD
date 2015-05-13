@@ -137,7 +137,7 @@ void RMS::setup()
   CFAUTOTRACE;
   DataProcessingCom::setup(); // first call setup of parent class
   
-  // with this command the variable states gets access to the whole states
+  // with this command the variable states get access to the whole states
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
   const CFuint nbOpts =  m_rmsOpt.size(); // number of options of the user
   const CFuint nbstates = states.size(); // number of cells 
@@ -150,25 +150,22 @@ void RMS::setup()
   PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm()->
     resizePhysicalData(m_physicalData);
 
-  rms.resize(totstates); // it throws an error, perhaps it need resize(totstates) only
+  rms.resize(totstates); 
   m_rmsresult.resize(totstates,0.0); // it allocates the correct size for the vector of the result
   
   m_nbStep = m_InitSteps; //initialization of steps
   
   if (m_restart){ // this is executed when we restast an application
-      DataHandle<CFreal> rms = socket_rms.getDataHandle();
-      DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
-      const CFuint nbOpts =  m_rmsOpt.size();
-      const CFuint nbstates = states.size();
 
       for (CFuint iState = 0; iState < nbstates; ++iState) {
-	for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++) {
-	  const CFuint totistates = nbstates*nbOpts + iOpt;
+	for(CFuint iOpt = 0; iOpt < nbOpts; ++iOpt) {
+	  const CFuint totistates = iState*nbOpts + iOpt;
 	  m_rmsresult[totistates] = rms[totistates];
 	}
       }
     }
     
+    //initialization of the reset parameter
     resetIter = 0;
 }
       
@@ -178,6 +175,7 @@ void RMS::execute()
 {
   CFAUTOTRACE;
   
+  // if it should run the rms
   if (SubSystemStatusStack::getActive()->getNbIter() >= getMethodData().getStartIter()) {
     
     resetIter = 0;
@@ -202,9 +200,10 @@ void RMS::execute()
     
     for (CFuint iState = 0; iState < nbstates; ++iState) {
       
-      for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++) 
-	{m_rmsresult[iState*nbOpts+iOpt] = 0.0;
-	rms[iState*nbOpts+iOpt] = 0.0;
+      for(CFuint iOpt = 0; iOpt < nbOpts; ++iOpt) 
+	{const CFuint totistates = iState*nbOpts + iOpt;
+	m_rmsresult[totistates] = 0.0;
+	rms[totistates] = 0.0;
 	}
       }
     
@@ -218,8 +217,8 @@ void RMS::execute()
 
 void RMS::computeRMS()
 {
-  Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
-  const CFreal time = subSysStatus->getCurrentTime(); 
+  //Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
+  //const CFreal time = subSysStatus->getCurrentTime(); 
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
   DataHandle<CFreal> rms = socket_rms.getDataHandle();
   
@@ -243,43 +242,46 @@ void RMS::computeRMS()
     CFreal E = m_physicalData[EulerTerm::E];
     
     for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++) {
+     
+      const CFuint totistates = iState*nbOpts + iOpt;
+      cf_assert(totistates<rms.size());
       
      if (m_rmsOpt[iOpt] == "rho")
-     {m_rmsresult[iState*nbOpts+iOpt] += rho;
-      rms[iState*nbOpts+iOpt] = m_rmsresult[iState*nbOpts+iOpt];
+     {m_rmsresult[totistates] += rho;
+      rms[totistates] = m_rmsresult[totistates]/m_nbStep;
       }
      
      else if (m_rmsOpt[iOpt] == "u")
-     {m_rmsresult[iState*nbOpts+iOpt] += u;
-      rms[iState*nbOpts+iOpt] = m_rmsresult[iState*nbOpts+iOpt];
+     {m_rmsresult[totistates] += u;
+      rms[totistates] = m_rmsresult[totistates]/m_nbStep;
       }
      
      else if (m_rmsOpt[iOpt] == "v")
-     {m_rmsresult[iState*nbOpts+iOpt] += v;
-      rms[iState*nbOpts+iOpt] = m_rmsresult[iState*nbOpts+iOpt];
+     {m_rmsresult[totistates] += v;
+      rms[totistates] = m_rmsresult[totistates]/m_nbStep;
       }
      
      else if (m_rmsOpt[iOpt] == "w")
-     {m_rmsresult[iState*nbOpts+iOpt] += w;
-      rms[iState*nbOpts+iOpt] = m_rmsresult[iState*nbOpts+iOpt];
+     {m_rmsresult[totistates] += w;
+      rms[totistates] = m_rmsresult[totistates]/m_nbStep;
       }
      
      else if (m_rmsOpt[iOpt] == "p")
        {
-	 m_rmsresult[iState*nbOpts+iOpt] += p;
-	 rms[iState*nbOpts+iOpt] = m_rmsresult[iState*nbOpts+iOpt];
+	 m_rmsresult[totistates] += p;
+	 rms[totistates] = m_rmsresult[totistates]/m_nbStep;
        }
      
      else if (m_rmsOpt[iOpt] == "rhoE")
-     {m_rmsresult[iState*nbOpts+iOpt] += (rho*E);
-      cf_assert(iState*nbOpts+iOpt<rms.size());
-      rms[iState*nbOpts+iOpt] = m_rmsresult[iState*nbOpts+iOpt];
+     {m_rmsresult[totistates] += (rho*E);
+      rms[totistates] = m_rmsresult[totistates]/m_nbStep;
       }
      
      else if (m_rmsOpt[iOpt] == "devU")
-     {m_rmsresult[iState*nbOpts+iOpt] += u; // decouple the need to calculate also the ubar
-      m_rmsresult[iState*nbOpts+iOpt] += (u - m_rmsresult[iState*nbOpts+iOpt]/m_nbStep)*(u - m_rmsresult[iState*nbOpts+iOpt]/m_nbStep);
-      rms[iState*nbOpts+iOpt] = m_rmsresult[iState*nbOpts+iOpt];
+     {m_rmsresult[totistates] += u; // decouple the need to calculate also the ubar
+      const CFreal difference = u - m_rmsresult[totistates]/m_nbStep;
+      m_rmsresult[totistates] += std::sqrt(difference*difference);
+      rms[totistates] = m_rmsresult[totistates]/m_nbStep;
       }
      
      //else ///put an error here
@@ -296,7 +298,7 @@ void RMS::computeRMS()
     cf_assert(m_fileRMS->isopen());
     ofstream& fout = m_fileRMS->get();
     const CFuint dim = PhysicalModelStack::getActive()->getDim(); // dimension of the problem
-    CFreal theta;
+ 
     for (CFuint iState = 0; iState < nbstates; ++iState) {
       const CFreal x = (states[iState]->getCoordinates())[XX];
       const CFreal y = (states[iState]->getCoordinates())[YY];
@@ -308,7 +310,8 @@ void RMS::computeRMS()
       }
       
       for(CFuint iOpt = 0; iOpt < nbOpts; iOpt++) {
-	fout << m_rmsresult[iState*nbOpts+iOpt]/m_nbStep << " "; 
+	const CFuint totistates = iState*nbOpts + iOpt;
+	fout << rms[totistates] << " "; 
       }
       
       fout << m_nbStep    << "\n ";

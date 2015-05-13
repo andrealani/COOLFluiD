@@ -212,6 +212,8 @@ NavierStokesVarSet.cxx
 NavierStokesVarSet.hh
 RMS.cxx
 RMS.hh
+RMSTurb.cxx
+RMSTurb.hh
 SimplerSutherlandDynViscosity.cxx
 SimplerSutherlandDynViscosity.hh
 SutherlandDynViscosity.cxx

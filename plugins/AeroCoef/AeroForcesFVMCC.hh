@@ -183,6 +183,9 @@ protected:
   /// storage of the face normals
   Framework::DataSocketSink<CFreal> socket_normals;
   
+  /// storage of face areas
+  Framework::DataSocketSink<CFreal> socket_faceAreas;
+  
   /// Update variable set
   Common::SafePtr<Physics::NavierStokes::EulerVarSet> m_updateVarSet;
   

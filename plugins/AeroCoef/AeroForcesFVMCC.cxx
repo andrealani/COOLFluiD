@@ -68,6 +68,7 @@ AeroForcesFVMCC::AeroForcesFVMCC(const std::string& name) :
   socket_nstates("nstates"),
   socket_gstates("gstates"),
   socket_normals("normals"),
+  socket_faceAreas("faceAreas"),  
   m_updateVarSet(),
   m_fvmccData(CFNULL),
   m_mapTrsFaceToID(),
@@ -190,7 +191,7 @@ AeroForcesFVMCC::needsSockets()
   result.push_back(&socket_nstates);
   result.push_back(&socket_gstates);
   result.push_back(&socket_normals);
-
+  result.push_back(&socket_faceAreas);
   return result;
 }
 
@@ -287,7 +288,9 @@ void AeroForcesFVMCC::computeWetSurface()
 
   SafePtr<FaceTrsGeoBuilder> geoBuilderPtr = geoBuilder->getGeoBuilder();
   geoBuilderPtr->setDataSockets(socket_states, socket_gstates, socket_nodes);
-
+  
+  DataHandle< CFreal> faceAreas = socket_faceAreas.getDataHandle();
+  
   FaceTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
   geoData.isBFace = true;
 
@@ -302,8 +305,7 @@ void AeroForcesFVMCC::computeWetSurface()
       GeometricEntity* const currFace = geoBuilder->buildGE();
       
       if (currFace->getState(0)->isParUpdatable()) {
-	// AL: carefull here, you should never ask a face to compute the volume (in this case it should be fine)
-	wSurface += currFace->computeVolume();
+ 	wSurface += faceAreas[currFace->getID()]; 
       }
       
       // release the geometric entity
