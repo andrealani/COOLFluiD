@@ -181,12 +181,12 @@ void Periodic3DMPI::setup()
      // Nodes
      const vector<Node*>& nodes = *face->getNodes();
      const CFuint nbNodesInFace = nodes.size();
-     cout<<" face = "<<iFace<<" nbNodesInFace = "<<nbNodesInFace<<endl;
+     // cout<<" face = "<<iFace<<" nbNodesInFace = "<<nbNodesInFace<<endl;
 
      CFreal TempNodeXcoordinate = 0.0;
      CFreal TempNodeYcoordinate = 0.0;
      CFreal TempNodeZcoordinate = 0.0;
-     cout<<" Face = "<<iFace<<endl;
+     // cout<<" Face = "<<iFace<<endl;
      for(CFuint i=0; i<nbNodesInFace; i++){
        CFreal nodeXcoordinate = (*(nodes[i]))[XX];
        CFreal nodeYcoordinate = (*(nodes[i]))[YY];
@@ -194,10 +194,10 @@ void Periodic3DMPI::setup()
        TempNodeXcoordinate = TempNodeXcoordinate + nodeXcoordinate;
        TempNodeYcoordinate = TempNodeYcoordinate + nodeYcoordinate;
        TempNodeZcoordinate = TempNodeZcoordinate + nodeZcoordinate;
-       cout<<" node = "<<i<<endl;
-       cout<<" nodeXcoordinate = "<<nodeXcoordinate<<endl;
-       cout<<" nodeYcoordinate = "<<nodeYcoordinate<<endl;
-       cout<<" nodeZcoordinate = "<<nodeZcoordinate<<endl;
+       // cout<<" node = "<<i<<endl;
+       // cout<<" nodeXcoordinate = "<<nodeXcoordinate<<endl;
+       // cout<<" nodeYcoordinate = "<<nodeYcoordinate<<endl;
+       // cout<<" nodeZcoordinate = "<<nodeZcoordinate<<endl;
      }
      CFreal centralPointXcoordinate = TempNodeXcoordinate/nbNodesInFace;
      CFreal centralPointYcoordinate = TempNodeYcoordinate/nbNodesInFace;
@@ -813,11 +813,11 @@ MPI_Barrier(_comm);
   }
 
   for(CFuint i=0; i<LastDisplacementEast; i++){
-    cout<<endl;
-    cout<<" east x["<<i<<"] = "<<(((zQuadCoreeast[i].second).first).first).first<<" west x["<<i<<"] = "<<(((zQuadCorewest[i].second).first).first).first<<endl;
-    cout<<" east y["<<i<<"] = "<<(((zQuadCoreeast[i].second).second).first).first<<" west y["<<i<<"] = "<<(((zQuadCorewest[i].second).second).first).first<<endl;
-    cout<<" east z["<<i<<"] = "<<((zQuadCoreeast[i].first).first).first<<" west z["<<i<<"] = "<<((zQuadCorewest[i].first).first).first<<endl;
-    cout<<endl;
+    // cout<<endl;
+    // cout<<" east x["<<i<<"] = "<<(((zQuadCoreeast[i].second).first).first).first<<" west x["<<i<<"] = "<<(((zQuadCorewest[i].second).first).first).first<<endl;
+    // cout<<" east y["<<i<<"] = "<<(((zQuadCoreeast[i].second).second).first).first<<" west y["<<i<<"] = "<<(((zQuadCorewest[i].second).second).first).first<<endl;
+    // cout<<" east z["<<i<<"] = "<<((zQuadCoreeast[i].first).first).first<<" west z["<<i<<"] = "<<((zQuadCorewest[i].first).first).first<<endl;
+    // cout<<endl;
   }
 
   // build connectivity vectors of west surface
@@ -875,9 +875,9 @@ MPI_Barrier(_comm);
   _ConnectionFacePeriodic.sortKeys();
   _ConnectionProcessPeriodic.sortKeys();
 
-  cout<<" _ConnectionFacePeriodic.print(): "<<endl;
+ // cout<<" _ConnectionFacePeriodic.print(): "<<endl;
   _ConnectionFacePeriodic.print();
-  cout<<" _ConnectionProcessPeriodic.print(): "<<endl;
+  // cout<<" _ConnectionProcessPeriodic.print(): "<<endl;
   _ConnectionProcessPeriodic.print();
 
   // build counts and displacements for preProcess step
