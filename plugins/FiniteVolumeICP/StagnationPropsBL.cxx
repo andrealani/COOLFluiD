@@ -13,6 +13,7 @@
 #include "FiniteVolume/CellCenterFVM.hh"
 #include "FiniteVolumeICP/FiniteVolumeICP.hh"
 #include "FiniteVolumeICP/StagnationPropsBL.hh"
+#include "Framework/PhysicalChemicalLibrary.hh"
 
 #include <iostream>
 #include <fstream>
@@ -273,7 +274,9 @@ void StagnationPropsBL::execute()
   
   CFreal   dudxMax      = 0.0;
   CFreal   uAtDudxMax   = 0.0;
-  unsigned iDudxMax     = 0; 
+  unsigned iDudxMax     = 0;
+
+  // Calculation of the enthalpy at the 
 
   if (irank==0)
   {
@@ -347,25 +350,35 @@ void StagnationPropsBL::execute()
 
         break;
       }
+    CFreal xlower = 0.01;
+    CFreal xupper = 0.4;
+
 
     // attempt to compute the u velocity at the point where the du/dx derivative is minimum to find
     // approximate value of the free stream velocity in case there is no probe
-    // we limit the earch between x=[0.01-0.4], where the probe is at x=0.
+    // we limit the earch between x=[xlower-xupper], where the probe is at x=0.
     
     // skipping first 5 points, because BL may be oscillatory
+    //
+
+    cout << "\n Beginning du/dx max stuff " << endl;
+
+    CFout << "\n Beginning du/dx max stuff \n ";
+
     for(int i=5; i<(const int)(dudx.size()-5); ++i){
-        if ((dudx[i]-dudx[i-1]>=0.)&&(m_globalstagnationline[i-1].first > 0.01)&&(m_globalstagnationline[i-1].first < 0.4)){
+        if ((dudx[i]-dudx[i-1]>=0.)&&(m_globalstagnationline[i-1].first > xlower)&&(m_globalstagnationline[i-1].first < xupper)){
             iDudxMax = i-1;
             dudxMax  = dudx[i-1];
             uAtDudxMax = uglobal[i-1];  
-//             CFout << "\n Found U at max du/dx!   i        =  " << iDudxMax        
-//                   << "\n du/dx at i-2                     =  " << dudx[i-2]     
-//                   << "\n du/dx at i-1                     =  " << dudx[i-1]  
-//                   << "\n du/dx at i                       =  " << dudx[i] 
-//                   << "\n du/dx at i+1                     =  " << dudx[i+1] 
-//                   << "\n du/dx at i+2                     =  " << dudx[i+2] 
-//                   << "\n                      du/dx max   =  " << dudxMax   
-//                   << "\n                 U at du/dx max   =  " << uAtDudxMax ;
+            CFout << "\n Found U at max du/dx!   i        =  " << iDudxMax        
+                  << "\n du/dx at i-2                     =  " << dudx[i-2]     
+                  << "\n du/dx at i-1                     =  " << dudx[i-1]  
+                  << "\n du/dx at i                       =  " << dudx[i] 
+                  << "\n du/dx at i+1                     =  " << dudx[i+1] 
+                  << "\n du/dx at i+2                     =  " << dudx[i+2] 
+                  << "\n                      du/dx max   =  " << dudxMax   
+                  << "\n                 U at du/dx max   =  " << uAtDudxMax
+                  << "\n X-value at i                     =  " << m_globalstagnationline[i].first ;
             break;
         }
 
@@ -441,7 +454,43 @@ void StagnationPropsBL::execute()
     }
     fhandle->close();
 
+    // Compute the thermodynamic information at the boundary layer edge
+    
+    // Set T and P
+    
+    CFdouble p=p_delta;
+    CFdouble T=t_delta;
+    
+    
+    SafePtr<PhysicalChemicalLibrary> library =  PhysicalModelStack::getActive()->getImplementor()->
+        getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+    cf_assert(library.isNotNull());
+    const CFuint nbSpecies = library->getNbSpecies();
 
+    RealVector ys(nbSpecies);
+    RealVector dhe(3);
+    
+    // First must call this
+    library->setComposition(T,p);
+    
+    CFdouble eta        = library->eta(T,p,CFNULL);
+    CFdouble lambda     = library->lambdaEQ(T,p);
+    CFdouble sigma      = library->sigma(T,p,CFNULL);
+    
+    /*  Gets the species mass fractions.
+        @param ys the RealVector of the mass fractions of species
+    */
+    library->getSpeciesMassFractions(ys);
+    
+    
+    /* Returns the total enthalpies per unit mass of species
+       @param temp the mixture temperature
+       @param pressure the mixture pressure 
+    */
+    library->setDensityEnthalpyEnergy(T,p,dhe);
+    CFdouble density    = dhe[0];
+    CFdouble enthalpyTt = dhe[1];
+      
     // Also write the NDOP's on a file
     boost::filesystem::path fpath2 = Environment::DirPaths::getInstance().getResultsDir() / boost::filesystem::path ("NDP.dat");
     fpath2 = PathAppender::getInstance().appendAllInfo(fpath2, false, false, false );
@@ -474,6 +523,33 @@ void StagnationPropsBL::execute()
     fout2  << ndp1 << "  " << ndp2 << "  " << ndp3 << "  " << ndp4 << "  " << ndp5 << " "
            << m_proberadius << "  " << delta << "  " <<  u_delta << "  " << beta << "  "
            << dbeta_dx << "  " << utorchexit << "  " << uAtDudxMax << "\n";
+
+    // Additional chemistry information for the moment test
+    std::string temp;
+    char  legendStr[800];
+    
+    strcpy(legendStr,"VARIABLES  = \" Th[K] \"  \"mu[Pa-s]\"   \" lambda[W/m-K]\" \" sigma[s/m]\"   \" Rho[kg/m^3] \"  \"H  [J/kg] \"");
+    
+    
+    for (CFuint i = 0; i < nbSpecies; ++i) {
+        temp = " \"Y" + StringOps::to_str(i) + " [-] \"";
+        strcat(legendStr,temp.c_str());
+    }
+    fout2 << legendStr  << "\n" << flush;
+    fout2 << scientific
+          << " " << T          << " "
+          << " " << eta        << " "
+          << " " << lambda     << " "
+          << " " << sigma      << " " 
+          << " " << density    << " "
+          << " " << enthalpyTt << " ";
+    for (CFuint i=0;  i < ys.size() ; i++) {
+        fout2  << scientific << " " << ys[i] << " ";
+    }
+    
+
+
+
     fhandle2->close();
     
     CFout << "\n\nStagnationPropsBL:  "
