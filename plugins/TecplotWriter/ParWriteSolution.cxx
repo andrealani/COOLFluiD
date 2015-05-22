@@ -69,7 +69,7 @@ namespace COOLFluiD {
    options.addConfigOption< CFuint >("NbWriters", "Number of writers (and MPI groups)");
    options.addConfigOption< int >("MaxBuffSize", "Maximum buffer size for MPI I/O");
  }
-
+    
  //////////////////////////////////////////////////////////////////////////////
 
  ParWriteSolution::ParWriteSolution(const std::string& name) : 
@@ -83,17 +83,17 @@ namespace COOLFluiD {
    _isNewBFile(false)
  {
    addConfigOptionsTo(this);
-
+   
    _fileFormatStr = "ASCII";
    setParameter("FileFormat",&_fileFormatStr);
-
+   
    _nbWriters = 1;
    setParameter("NbWriters",&_nbWriters);
-
+   
    _maxBuffSize = 2147479200; // (CFuint) std::numeric_limits<int>::max();
-   setParameter("MaxBuffSize",&_maxBuffSize);
+   setParameter("MaxBuffSize",&_maxBuffSize); 
  }
-
+    
  //////////////////////////////////////////////////////////////////////////////
 
  ParWriteSolution::~ParWriteSolution() 
@@ -196,7 +196,6 @@ void ParWriteSolution::writeInnerData
   
   CFLog(INFO, "Writing solution to " << filepath.string() << "\n");
   
-  SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
   SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
   datahandle_output->getDataHandles();
   
@@ -234,33 +233,8 @@ void ParWriteSolution::writeInnerData
 	  // print zone header: one zone per element type
 	  if (_myRank == _ioRank) {
 	    headerOffset[0] = fout->tellp();
-	    
-	    *fout << "ZONE "
-		  << "  T= \"ZONE" << iType << " " << eType.getShape() <<"\""
-		  << ", N=" << std::noshowpos << tt.totalNbNodesInType[iType]
-		  << ", E=" << std::noshowpos << me[iType].elementCount
-		  << ", F=FEPOINT"
-		  << ", ET=" << MapGeoEnt::identifyGeoEntTecplot
-	      (eType.getNbNodes(),
-	       eType.getGeoOrder(),
-	       PhysicalModelStack::getActive()->getDim()) 
-		  << ", SOLUTIONTIME=";
-	    fout->precision(14);  
-	    fout->setf(ios::scientific,ios::floatfield);
-	    *fout << subSysStatus->getCurrentTimeDim() << flush;
-	    
-	    if (getMethodData().getAppendAuxData()) {
-	      *fout << " AUXDATA TRS=\"" << trs->getName() << "\""
-		    << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
-		    << ", AUXDATA ElementType=\"" << eType.getShape() << "\""
-		    << ", AUXDATA Iter=\"" << std::noshowpos << setw(_intWordFormatSize) << subSysStatus->getNbIter() << "\""
-		    << ", AUXDATA PhysTime=\"";
-	      fout->precision(14);  
-	      fout->setf(ios::scientific,ios::floatfield);
-	      *fout << subSysStatus->getCurrentTimeDim() << "\"";
-	    }
-	    *fout << "\n";
-	    
+	    // write the header for the inner domain
+	    writeInnerZoneHeader(fout, iType, eType, trs);
 	    headerOffset[1] = fout->tellp();
 	  }
 	  
@@ -516,15 +490,8 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
 	if (_myRank == _ioRank) {
 	  headerOffset[0] = fout->tellp();
 	  
-	  *fout << "ZONE N=" << std::noshowpos << tt.totalNbNodesInType[iTR]
-		<< ", T=\"" << trs->getName() << ", TR " << iTR << "\""
-		<< ", E=" << std::noshowpos << totalNbTRGeos
-		<< ", F=FEPOINT"
-		<< ", ET=" << elemShape
-		<< ", SOLUTIONTIME=";
-	  fout->precision(14);  
-	  fout->setf(ios::scientific,ios::floatfield);
-	  *fout << subSysStatus->getCurrentTimeDim() << "\n";
+	  writeZoneHeader(fout, iTR, trs->getName(), tt.totalNbNodesInType[iTR], 
+			  totalNbTRGeos, elemShape, "\n");
 	  
 	  headerOffset[1] = fout->tellp();
 	}
@@ -1467,6 +1434,58 @@ ParWriteSolution::TeclotTRSType::~TeclotTRSType()
       
 //////////////////////////////////////////////////////////////////////////////
 
+void ParWriteSolution::writeInnerZoneHeader(std::ofstream* fout, 
+					    const CFuint iType,
+					    ElementTypeData& eType,
+					    SafePtr<TopologicalRegionSet> trs) 
+{
+  SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
+  const vector<MeshElementType>& me =
+    MeshDataStack::getActive()->getTotalMeshElementTypes();
+  TeclotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
+  
+  const string geoType = MapGeoEnt::identifyGeoEntTecplot
+    (eType.getNbNodes(), eType.getGeoOrder(), PhysicalModelStack::getActive()->getDim()); 
+  
+  writeZoneHeader(fout, iType, eType.getShape(), tt.totalNbNodesInType[iType], 
+		  me[iType].elementCount, geoType, "\t");
+  
+  if (getMethodData().getAppendAuxData()) {
+    *fout << ", AUXDATA TRS=\"" << trs->getName() << "\""
+	  << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
+	  << ", AUXDATA ElementType=\"" << eType.getShape() << "\""
+	  << ", AUXDATA Iter=\"" << std::noshowpos << setw(_intWordFormatSize) << subSysStatus->getNbIter() << "\""
+	  << ", AUXDATA PhysTime=\"";
+    fout->precision(14);  
+    fout->setf(ios::scientific,ios::floatfield);
+    *fout << subSysStatus->getCurrentTimeDim() << "\"";
+  }
+  *fout << "\n";
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+  
+void ParWriteSolution::writeZoneHeader(std::ofstream* fout, 
+				       const CFuint iType,
+				       const string& geoShape,
+				       const CFuint nbNodesInType,
+				       const CFuint nbElemsInType,
+				       const string& geoType,
+				       const string& end) 
+{
+  *fout << "ZONE "
+	<< "  T= \"ZONE" << iType << " " << geoShape <<"\""
+	<< ", N=" << std::noshowpos << nbNodesInType
+	<< ", E=" << std::noshowpos << nbElemsInType
+	<< ", F=FEPOINT" << ", ET=" << geoType 
+	<< ", SOLUTIONTIME=";
+  fout->precision(14);  
+  fout->setf(ios::scientific,ios::floatfield);
+  *fout << SubSystemStatusStack::getActive()->getCurrentTimeDim() << end;
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+  
     } // namespace TecplotWriter
   
 } // namespace COOLFluiD

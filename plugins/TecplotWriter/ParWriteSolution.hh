@@ -103,7 +103,7 @@ public:
     std::vector<Common::CFMap<CFuint, CFuint>*> mapNodeID2NodeIDByEType;
   };
   
-  /// write unstructured data on teh given file
+  /// write unstructured data on the given file
   /// @param filepath  namem of the path to the file
   /// @param flag      flag telling if the file has to be created or overwritten
   /// @param fun       pointer to member function to be called for writing
@@ -116,19 +116,19 @@ public:
   /// @param filename  name of output file
   /// @param isNewFile flag to tell if the file is to be created or to be overwritten
   /// @param fout      pointer to the file  
-  void writeInnerData(const boost::filesystem::path& filepath,
-		      const bool isNewFile,
-		      const std::string title,
-		      std::ofstream* fout);
+  virtual void writeInnerData(const boost::filesystem::path& filepath,
+			      const bool isNewFile,
+			      const std::string title,
+			      std::ofstream* fout);
   
   /// Writes the boundary data to file
   /// @param filename  name of output file
   /// @param isNewFile flag to tell if the file is to be created or to be overwritten
   /// @param fout      pointer to the file  
-  void writeBoundaryData(const boost::filesystem::path& filepath,
-			 const bool isNewFile,
-			 const std::string title,
-			 std::ofstream* fout);
+  virtual void writeBoundaryData(const boost::filesystem::path& filepath,
+				 const bool isNewFile,
+				 const std::string title,
+				 std::ofstream* fout);
   
   /// Writes the TECPLOT header
   void writeHeader(MPI_File* fh);
@@ -137,6 +137,21 @@ public:
   void writeHeader(std::ofstream* fout, 
 		   const std::string title,
 		   Common::SafePtr<Framework::DataHandleOutput> dh);
+
+  /// Writes the TECPLOT zone header
+  void writeZoneHeader(std::ofstream* fout, 
+		       const CFuint iType,
+		       const std::string& geoShape,
+		       const CFuint nbNodesInType,
+		       const CFuint nbElemsInType,
+		       const std::string& geoType,
+		       const std::string& end); 
+  
+  /// Writes the TECPLOT inner zone header
+  void writeInnerZoneHeader(std::ofstream* fout, 
+			    const CFuint iType,
+			    Framework::ElementTypeData& eType,
+			    Common::SafePtr<Framework::TopologicalRegionSet> trs); 
   
   /// Write the Tecplot file in Binmary format
   /// @throw Common::FilesystemException

@@ -11,7 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -10.00109576
+### Residual = -10.02916138
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -55,7 +55,7 @@ Simulator.SubSystem.CFmesh.WriteSol = ParWriteBinarySolution
 # parallel ASCII Tecplot writer
 Simulator.SubSystem.Tecplot.FileName = jets2D-sol.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Cons
-Simulator.SubSystem.Tecplot.SaveRate = 200
+Simulator.SubSystem.Tecplot.SaveRate = 100
 Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolution
 #Simulator.SubSystem.Tecplot.ParWriteSolution.NbWriters = 4
 Simulator.SubSystem.Tecplot.AppendRank = false
@@ -95,11 +95,12 @@ Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
 Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.6
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
 Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
 Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
-
+#Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = HolmesConnell
+#
 # initialization is useless if you restart from previous solution
 #Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 #Simulator.SubSystem.CellCenterFVM.InitNames = InField
