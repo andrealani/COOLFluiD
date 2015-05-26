@@ -28,7 +28,7 @@ namespace COOLFluiD {
     namespace AeroCoef {
 
 //////////////////////////////////////////////////////////////////////////////
-
+      
 MethodCommandProvider<AeroForcesFVMCC, DataProcessingData, AeroCoefModule>
 aeroForcesFVMCCProvider("AeroForcesFVMCC");
 
@@ -687,7 +687,7 @@ void AeroForcesFVMCC::updateOutputFileAero()
   
   dragFaeroFxyzMxyz[0] = m_drag;
   dragFaeroFxyzMxyz[1] = m_lateral; 
-  dragFaeroFxyzMxyz[2] = m_drag;
+  dragFaeroFxyzMxyz[2] = m_lift;
   
   CFuint counter = 3;
   for (CFuint i = 0; i < m_force.size(); ++i, ++counter) {
