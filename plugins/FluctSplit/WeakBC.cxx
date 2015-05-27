@@ -97,6 +97,9 @@ WeakBC::needsSockets()
 
 void WeakBC::unsetup()
 {
+  FluctuationSplitCom::unsetup();
+  
+  cout << "WeakBC::unsetup()" << endl; exit(1);
   m_sInterpolator->unsetup();
   
   // allocating data for the temporary local linearized states
@@ -109,6 +112,8 @@ void WeakBC::unsetup()
 
 void WeakBC::setup()
 {
+  FluctuationSplitCom::setup();
+  
   // set the interpolator
   m_sInterpolator->setup();
   
