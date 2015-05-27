@@ -51,24 +51,12 @@ namespace COOLFluiD {
 
  //////////////////////////////////////////////////////////////////////////////
 
- void cmpAndTakeMaxAbs3(CFreal* invec, CFreal* inoutvec, int* len,
-			MPI_Datatype* datatype)
- {
-   cf_assert(len != CFNULL);
-   int size = *len;
-   for (int i = 0; i < size; ++i) {
-     inoutvec[i] = (fabs(invec[i]) > 0.) ? invec[i] : inoutvec[i];
-   }
- }
-
- //////////////////////////////////////////////////////////////////////////////
-
- void ParWriteSolution::defineConfigOptions(Config::OptionList& options)
- {
-   options.addConfigOption< std::string>("FileFormat","Format to write Tecplot file."); 
-   options.addConfigOption< CFuint >("NbWriters", "Number of writers (and MPI groups)");
-   options.addConfigOption< int >("MaxBuffSize", "Maximum buffer size for MPI I/O");
- }
+void ParWriteSolution::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< std::string>("FileFormat","Format to write Tecplot file."); 
+  options.addConfigOption< CFuint >("NbWriters", "Number of writers (and MPI groups)");
+  options.addConfigOption< int >("MaxBuffSize", "Maximum buffer size for MPI I/O");
+}
     
  //////////////////////////////////////////////////////////////////////////////
 
@@ -79,6 +67,8 @@ namespace COOLFluiD {
    socket_nstatesProxy("nstatesProxy"),
    _mapTrsName2TecplotData(),
    _mapGlobal2LocalNodeID(),
+   m_nodalvars(),
+   m_ccvars(),
    _intWordFormatSize(),
    _isNewBFile(false)
  {
@@ -553,8 +543,8 @@ void ParWriteSolution::writeHeader(MPI_File* fh)
     }
     
     if (!getMethodData().onlyCoordinates()) {
-      SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
-      const vector<std::string>& varNames = updateVarSet->getVarNames();
+      SafePtr<ConvectiveVarSet> outputVarSet = getMethodData().getOutputVarSet();
+      const vector<std::string>& varNames = outputVarSet->getVarNames();
       cf_assert(varNames.size() == nbEqs);
       
       for (CFuint i = 0 ;  i < nbEqs; ++i)  {
@@ -565,7 +555,7 @@ void ParWriteSolution::writeHeader(MPI_File* fh)
       }
       
       if (getMethodData().shouldPrintExtraValues()) {
-	vector<std::string> extraVarNames = updateVarSet->getExtraVarNames();
+	vector<std::string> extraVarNames = outputVarSet->getExtraVarNames();
 	for (CFuint i = 0 ;  i < extraVarNames.size(); ++i) {
 	  MPIIOFunctions::writeKeyValue<char>(fh, " " +  extraVarNames[i]);
 	}
@@ -592,6 +582,21 @@ void ParWriteSolution::writeHeader(std::ofstream* fout,
   
   CFLog(VERBOSE, "ParWriteSolution::writeHeader() \"" << title << "\" start\n");
   
+  // store the names of additional variables 
+  m_ccvars.clear();
+  m_nodalvars.clear();
+  if (dh.isNotNull()) {
+    vector<string> dh_varnames = dh->getVarNames();
+    for (CFuint i = 0; i < dh_varnames.size() ; ++i) {
+      m_nodalvars.push_back(dh_varnames[i]);
+    }
+    
+    vector<string> dh_ccvarnames = dh->getCCVarNames();
+    for (CFuint i = 0; i < dh_ccvarnames.size() ; ++i) {
+      m_ccvars.push_back(dh_ccvarnames[i]);
+    }
+  }
+  
   if (_myRank == _ioRank) {
     //  Tecplot Header
     // maximum string size to write includes 30 characters 
@@ -605,8 +610,8 @@ void ParWriteSolution::writeHeader(std::ofstream* fout,
     }
     
     if (!getMethodData().onlyCoordinates()) {
-      SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
-      const vector<std::string>& varNames = updateVarSet->getVarNames();
+      SafePtr<ConvectiveVarSet> outputVarSet = getMethodData().getOutputVarSet();
+      const vector<std::string>& varNames = outputVarSet->getVarNames();
       cf_assert(varNames.size() == nbEqs);
       
       for (CFuint i = 0 ;  i < nbEqs; ++i)  {
@@ -617,25 +622,30 @@ void ParWriteSolution::writeHeader(std::ofstream* fout,
       }
       
       if (getMethodData().shouldPrintExtraValues()) {
-	vector<std::string> extraVarNames = updateVarSet->getExtraVarNames();
+	vector<string> extraVarNames = outputVarSet->getExtraVarNames();
 	for (CFuint i = 0 ;  i < extraVarNames.size(); ++i) {
-	  *fout << " " <<  extraVarNames[i];
+	  *fout << " \"" << extraVarNames[i] << "\"";
 	}
       }
       
       if (dh.isNotNull()) {
 	vector<string> dhVarNames = dh->getVarNames();
 	for (CFuint i = 0 ;  i < dhVarNames.size(); ++i) {
-	  *fout << " " << dhVarNames[i];
+	  *fout << " \"" << dhVarNames[i] << "\"";
+	}
+	
+	vector<string> dhCCVarNames = dh->getCCVarNames();
+	for (CFuint i = 0; i < dhCCVarNames.size() ; ++i) {
+	  *fout << " \"" << dhCCVarNames[i] << "\"";
 	}
       }
     }
     *fout << "\n";
   }
   
-  CFLog(VERBOSE, "ParWriteSolution::writeHeader() \"" << title << "\" end\n");
+  CFLog(VERBOSE, "ParWriteSolutionBlock::writeHeader() \"" << title << "\" end\n");
 }
-  
+ 
 //////////////////////////////////////////////////////////////////////////////
   
 void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
@@ -648,16 +658,18 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
   const CFuint dim  = PhysicalModelStack::getActive()->getDim();
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFreal refL = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
-  SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
+  SafePtr<ConvectiveVarSet> outputVarSet = getMethodData().getOutputVarSet();
   SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
   
   CFuint nodesStride = dim; 
   if (!getMethodData().onlyCoordinates()) {
     nodesStride += nbEqs;
     if (getMethodData().shouldPrintExtraValues()) {
-      nodesStride += updateVarSet->getExtraVarNames().size();
+      nodesStride += outputVarSet->getExtraVarNames().size();
     }
+    // nodal data handle variables 
     nodesStride += datahandle_output->getVarNames().size();
+    cf_assert(datahandle_output->getVarNames().size() == m_nodalvars.size());    
   }
   
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes =
@@ -667,7 +679,7 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
   DataHandle<ProxyDofIterator<RealVector>*> nstatesProxy =
     socket_nstatesProxy.getDataHandle();
 
-  // this isa sort of handle for the nodal states
+  // this is a sort of handle for the nodal states
   // (which can be stored as arrays of State*, RealVector* or
   // RealVector but they are used as arrays of RealVector*)
   ProxyDofIterator<RealVector>& nodalStates = *nstatesProxy[0];
@@ -687,7 +699,7 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
   WriteListMap elementList;
   elementList.reserve(nbElementTypes, nSend, nbLocalElements);
   
-  // fill in the writer ist
+  // fill in the writer list
   CFuint totalToSend = 0;
   elementList.fill(totNbNodes, nodesStride, totalToSend);
   
@@ -744,25 +756,34 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
 	  
 	  if (!getMethodData().onlyCoordinates()) {
 	    const RealVector& currState = *nodalStates.getState(nodeID);
-	    for (CFuint in = 0; in < nbEqs; ++in, ++isend) {
-	      cf_assert(isend < sendElements.size());
-	      sendElements[isend] = currState[in];
-	    }
-	    
 	    const CFuint stateID = nodalStates.getStateLocalID(nodeID);
 	    tempState.setLocalID(stateID);
 	    // the node is set  in the temporary state
 	    tempState.setSpaceCoordinates(nodes[nodeID]);
+	    for (CFuint ieq = 0; ieq < nbEqs; ++ieq) {
+	      tempState[ieq] = currState[ieq];
+	    }
 	    
 	    if (getMethodData().shouldPrintExtraValues()) {
 	      // dimensionalize the solution
-	      updateVarSet->setDimensionalValuesPlusExtraValues
+	      outputVarSet->setDimensionalValuesPlusExtraValues
 		(tempState, dimState, extraValues);
+	      for (CFuint in = 0; in < dimState.size(); ++in, ++isend) {
+		cf_assert(isend < sendElements.size());
+		sendElements[isend] = dimState[in];
+	      }
 	      for (CFuint in = 0; in < extraValues.size(); ++in, ++isend) {
 		cf_assert(isend < sendElements.size());
 		sendElements[isend] = extraValues[in];
 	      }
 	    }
+	    else {
+	      outputVarSet->setDimensionalValues(tempState, dimState);
+	      for (CFuint in = 0; in < dimState.size(); ++in, ++isend) {
+		cf_assert(isend < sendElements.size());
+		sendElements[isend] = dimState[in];
+	      }
+	    }	    
 	    
 	    datahandle_output->fillStateData(&sendElements[0], stateID, isend);
 	  }
@@ -821,21 +842,18 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
     // point to the corresponding writing location
     fout->seekp(wOffset[wRank]);
     
-    CFuint countN = 0;
     CFLog(VERBOSE, "wSendSize = " << wSendSize << ", nodesStride = " << nodesStride << "\n");
     for (CFuint i = 0; i < wSendSize; ++i) {
-      const CFreal coeff = (countN < dim) ? refL : 1.;
+      // const CFreal coeff = (countN < dim) ? refL : 1.;
       // this format corresponds to a line of 22*nodesStride bytes  
       fout->precision(14);
       fout->setf(ios::scientific,ios::floatfield); 
       fout->setf(ios::showpos);
       if ((i+1)%nodesStride > 0) {
-	*fout << elementToPrint[i]*coeff << " ";
-	countN++;
+	*fout << elementToPrint[i] << " ";
       }
       else {
-	*fout << elementToPrint[i]*coeff << "\n";
-	countN = 0; // reset countN to 0
+	*fout << elementToPrint[i] << "\n";
       }
     }
     

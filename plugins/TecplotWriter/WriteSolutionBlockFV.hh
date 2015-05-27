@@ -119,9 +119,9 @@ private: // data
   /// vector with the names of the cell-centered variables to output
   std::vector<std::string> m_ccvars;
   
-  /// flag that specifies if the outputVars are outputted cell-centred or not
+  /// flag that specifies to output cell-centered or nodal variables
   bool m_nodalOutputVar;
-
+  
 }; // class WriteSolutionBlockFV
 
 //////////////////////////////////////////////////////////////////////////////

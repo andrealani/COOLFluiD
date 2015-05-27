@@ -25,14 +25,26 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
+ extern "C" {
+   static void cmpAndTakeMaxAbs3(CFreal* invec, CFreal* inoutvec, int* len,
+				 MPI_Datatype* datatype)
+   {
+     cf_assert(len != CFNULL);
+     int size = *len;
+     for (int i = 0; i < size; ++i) {
+       inoutvec[i] = (fabs(invec[i]) > 0.) ? invec[i] : inoutvec[i];
+     }
+   }
+ }
+      
 /// This class represents a parallel writer for TECPLOT files
 /// @author Andrea Lani
 class TecplotWriter_API ParWriteSolution : 
 	public TecWriterCom,
 	public Framework::ParFileWriter {
   
-public:
-
+public: 
+    
   /// Defines the Config Option's of this class
   /// @param options a OptionList where to add the Option's
   static void defineConfigOptions(Config::OptionList& options);
@@ -134,38 +146,32 @@ public:
   void writeHeader(MPI_File* fh);
   
   /// Writes the TECPLOT header
-  void writeHeader(std::ofstream* fout, 
-		   const std::string title,
-		   Common::SafePtr<Framework::DataHandleOutput> dh);
-
+  virtual void writeHeader(std::ofstream* fout, 
+			   const std::string title,
+			   Common::SafePtr<Framework::DataHandleOutput> dh);
+  
   /// Writes the TECPLOT zone header
-  void writeZoneHeader(std::ofstream* fout, 
-		       const CFuint iType,
-		       const std::string& geoShape,
-		       const CFuint nbNodesInType,
-		       const CFuint nbElemsInType,
-		       const std::string& geoType,
-		       const std::string& end); 
+  virtual void writeZoneHeader(std::ofstream* fout, 
+			       const CFuint iType,
+			       const std::string& geoShape,
+			       const CFuint nbNodesInType,
+			       const CFuint nbElemsInType,
+			       const std::string& geoType,
+			       const std::string& end); 
   
   /// Writes the TECPLOT inner zone header
-  void writeInnerZoneHeader(std::ofstream* fout, 
-			    const CFuint iType,
-			    Framework::ElementTypeData& eType,
-			    Common::SafePtr<Framework::TopologicalRegionSet> trs); 
+  virtual void writeInnerZoneHeader(std::ofstream* fout, 
+				    const CFuint iType,
+				    Framework::ElementTypeData& eType,
+				    Common::SafePtr<Framework::TopologicalRegionSet> trs); 
   
   /// Write the Tecplot file in Binmary format
   /// @throw Common::FilesystemException
   virtual void writeToBinaryFile();
   
-  /// Build the mapping between global nodeIDs and global nodeIDs by element type
-  void buildNodeIDMapping();
-  
-  /// Cleanup the mapping between global nodeIDs and global nodeIDs by element type
-  void cleanupNodeIDMapping();
-  
   /// Write the node list corresponding to the given element type
-  void writeNodeList(std::ofstream* fout, const CFuint iType, 
-		     Common::SafePtr<Framework::TopologicalRegionSet> elements);
+  virtual void writeNodeList(std::ofstream* fout, const CFuint iType, 
+			     Common::SafePtr<Framework::TopologicalRegionSet> elements);
   
   /// Write the element list corresponding to the given element type
   void writeElementList(std::ofstream* fout,
@@ -199,6 +205,12 @@ public:
   /// Return the TRS ID corresponding to the given TRS name in the global storage
   int getGlobalTRSID(const std::string& name) const;
   
+  /// Build the mapping between global nodeIDs and global nodeIDs by element type
+  void buildNodeIDMapping();
+  
+  /// Cleanup the mapping between global nodeIDs and global nodeIDs by element type
+  void cleanupNodeIDMapping();
+  
   /// Store the mapping coresponding to the given TRS and iType (element type or TR)
   void storeMappings(Common::SafePtr<Framework::TopologicalRegionSet> trs,
 		     const CFuint iType,
@@ -221,6 +233,12 @@ protected:
   
   /// mapping global nodeIDs to local nodeIDs
   Common::CFMap<CFuint, CFuint> _mapGlobal2LocalNodeID;
+  
+  /// vector with the names of the nodal variables to output
+  std::vector<std::string> m_nodalvars;
+  
+  /// vector with the names of the cell-centered variables to output
+  std::vector<std::string> m_ccvars;
   
   /// maximum size to be used for formatting integers
   CFuint _intWordFormatSize;

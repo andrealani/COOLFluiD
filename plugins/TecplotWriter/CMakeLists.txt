@@ -33,6 +33,8 @@ IF(CF_HAVE_MPI)
   LIST ( APPEND TecplotWriter_files
     ParWriteSolution.cxx
     ParWriteSolution.hh
+    ParWriteSolutionBlock.cxx
+    ParWriteSolutionBlock.hh
     )
 ENDIF()
 
