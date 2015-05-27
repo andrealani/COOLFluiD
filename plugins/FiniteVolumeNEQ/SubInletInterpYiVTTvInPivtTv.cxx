@@ -47,7 +47,9 @@ void SubInletInterpYiVTTvInPivtTv::setGhostState(GeometricEntity *const face)
   this->computeGhostPosition(face);
   
   // add lookup table in the nodal extrapolator
-  getMethodData().getNodalStatesExtrapolator()->addLookupState(getCurrentTRS()->getName(), &m_lookupState);
+  SafePtr<StateInterpolator> interp = getStateInterpolator();
+  getMethodData().getNodalStatesExtrapolator()->addLookupState
+    (getCurrentTRS()->getName(), interp);
   
   State& innerState = *face->getState(0);
   State& ghostState = *face->getState(1);
@@ -63,7 +65,7 @@ void SubInletInterpYiVTTvInPivtTv::setGhostState(GeometricEntity *const face)
     const CFuint nbEqs = innerState.size();
     for (CFuint i = 0; i < nbEqs; ++i) {
       // interpolated state value in input variables
-      (*m_tstate)[i] = m_lookupState[i]->get(yCoord);
+      interp->interpolate(i, yCoord, (*m_tstate)[i]);
     }
     *m_bstate = *m_inputToUpdateVar->transform(m_tstate);
   }

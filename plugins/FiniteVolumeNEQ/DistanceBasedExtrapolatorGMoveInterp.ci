@@ -83,10 +83,12 @@ void DistanceBasedExtrapolatorGMoveInterp<BASE>::applyBC()
     }
     
     // get the interpolating table data
-    SafePtr<std::vector<Common::LookUpTable<CFreal,CFreal>*> > lookupState = this->m_trsID2LookupState.find(trsID);
+    SafePtr<StateInterpolator> interp = this->m_trsID2LookupState.find(trsID);
+    
     RealVector& nstate = nodalStates[this->_currNodeID];
     for (CFuint i = 0; i < nstate.size(); ++i) {
-      (*m_tstate)[i] = (*lookupState)[i]->get((*nodes[this->_currNodeID])[YY]); // AL: gory assumption here (lookup for YY)
+      // AL: gory assumption here (lookup for YY)
+      interp->interpolate(i, (*nodes[this->_currNodeID])[YY], (*m_tstate)[i]);
     }
     *m_bstate = *m_inputToUpdateVar->transform(m_tstate);
     nstate = (*m_bstate);

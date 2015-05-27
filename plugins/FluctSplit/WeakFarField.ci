@@ -1,5 +1,4 @@
-#ifndef COOLFluiD_Numerics_FluctSplit_WeakFarField_ci
-#define COOLFluiD_Numerics_FluctSplit_WeakFarField_ci
+#include "Framework/StateInterpolator.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -67,33 +66,49 @@ void WeakFarField<WEAKBCTYPE>::unsetup()
 template < typename WEAKBCTYPE >
 void WeakFarField<WEAKBCTYPE>::setGhostState(const Framework::State& state, Framework::State& gstate)
 {
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
   // set the values in the ghost state (whose position coincides
-  // with the boundary states)
-  m_vFunction.evaluate(state.getCoordinates(), *m_dimState);
-
-  // Adimensionalize the value
-  Common::SafePtr<Framework::ConvectiveVarSet> updateVarSet = WeakFarField<WEAKBCTYPE>::getMethodData().getUpdateVar();
-  updateVarSet->setAdimensionalValues(*m_dimState, gstate);
+  // with the boundary states)  
+ if (m_functions.size() > 0) {
+   m_vFunction.evaluate(state.getCoordinates(), *m_dimState);
+ }
+ else {
+   SafePtr<StateInterpolator> interp = this->getStateInterpolator();
+   if (interp.isNotNull()) {
+     const CFreal sCoord = state.getCoordinates().norm2();
+     const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+     for (CFuint i = 0; i < nbEqs; ++i) {
+       // interpolated state value in input variables
+       interp->interpolate(i, sCoord, (*m_dimState)[i]);
+     }
+   }
+ }  
+ 
+ // Adimensionalize the value
+ Common::SafePtr<Framework::ConvectiveVarSet> updateVarSet = WeakFarField<WEAKBCTYPE>::getMethodData().getUpdateVar();
+ updateVarSet->setAdimensionalValues(*m_dimState, gstate);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 template < typename WEAKBCTYPE >
 void WeakFarField<WEAKBCTYPE>::configure ( Config::ConfigArgs& args )
 {
   WEAKBCTYPE::configure(args);
-
-  m_vFunction.setFunctions(m_functions);
-  m_vFunction.setVariables(m_vars);
-
-  try
-  {
-    m_vFunction.parse();
-  }
-  catch (Common::ParserException& e)
-  {
-    CFout << e.what() << "\n";
-    throw; // retrow the exception to signal the error to the user
+  
+  if (m_functions.size() > 0) {
+    m_vFunction.setFunctions(m_functions);
+    m_vFunction.setVariables(m_vars);
+    
+    try {
+      m_vFunction.parse();
+    }
+    catch (Common::ParserException& e) {
+      CFout << e.what() << "\n";
+      throw; // retrow the exception to signal the error to the user
+    }
   }
 }
 
@@ -101,10 +116,6 @@ void WeakFarField<WEAKBCTYPE>::configure ( Config::ConfigArgs& args )
 
 } // namespace FluctSplit
 
-
-
 } // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////
-
-#endif // COOLFluiD_Numerics_FluctSplit_WeakFarField_ci

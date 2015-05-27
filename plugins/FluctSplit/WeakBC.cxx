@@ -1,5 +1,6 @@
 #include "Framework/MeshData.hh"
 #include "Common/ShouldNotBeHereException.hh"
+#include "Environment/Factory.hh"
 
 #include "FluctSplit/WeakBC.hh"
 #include "FluctSplit/InwardNormalsData.hh"
@@ -10,28 +11,29 @@ using namespace std;
 using namespace COOLFluiD::MathTools;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Environment;
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
-
-
-    namespace FluctSplit {
+  namespace FluctSplit {
 
 //////////////////////////////////////////////////////////////////////////////
 
 void WeakBC::defineConfigOptions(Config::OptionList& options)
 {
-   options.addConfigOption< CFreal >("alpha","distribution coefficient");
-   options.addConfigOption< CFuint >("FaceGeoOrder","HO boundary face - order of geometry");
-   options.addConfigOption< CFuint >("SolOrder","HO boundary face - order of solution");
+  options.addConfigOption< CFreal >("alpha","distribution coefficient");
+  options.addConfigOption< CFuint >("FaceGeoOrder","HO boundary face - order of geometry");
+  options.addConfigOption< CFuint >("SolOrder","HO boundary face - order of solution");
+  options.addConfigOption<std::string>("StateInterpolator", "State interpolator for BCs");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 WeakBC::WeakBC(const std::string& name) :
   FluctuationSplitCom(name),
+  m_sInterpolator(),
   socket_rhs("rhs"),
   socket_normals("normals"),
   socket_updateCoeff("updateCoeff"),
@@ -56,6 +58,10 @@ WeakBC::WeakBC(const std::string& name) :
   m_faceGeoOrder(1)
 {
   addConfigOptionsTo(this);
+  
+  m_sInterpolatorStr = "Null";
+  this->setParameter("StateInterpolator",&m_sInterpolatorStr); 
+  
   m_alpha = 1.0;
   setParameter("alpha",&m_alpha);
 
@@ -91,7 +97,8 @@ WeakBC::needsSockets()
 
 void WeakBC::unsetup()
 {
-
+  m_sInterpolator->unsetup();
+  
   // allocating data for the temporary local linearized states
   for (CFuint i = 0; i < MeshDataStack::getActive()->Statistics().getMaxNbStatesInCell(); ++i) {
     deletePtr(m_zStates[i]);
@@ -102,7 +109,9 @@ void WeakBC::unsetup()
 
 void WeakBC::setup()
 {
-
+  // set the interpolator
+  m_sInterpolator->setup();
+  
   m_faceNormal.resize(PhysicalModelStack::getActive()->getDim());
   m_adimNormal.resize(PhysicalModelStack::getActive()->getDim());
   m_rightEv.resize(PhysicalModelStack::getActive()->getNbEq(), PhysicalModelStack::getActive()->getNbEq());
@@ -366,6 +375,29 @@ void WeakBC::computeFlux(const vector<State*>& states, RealVector& flux)
   flux = *m_distToSolutionMatTrans->transformFromRef(&m_tFlux);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+void WeakBC::configure ( Config::ConfigArgs& args )
+{
+  FluctuationSplitCom::configure(args);
+  
+  SafePtr<StateInterpolator::PROVIDER> stateInterpProv = CFNULL;
+  try {
+    stateInterpProv = Factory<StateInterpolator>::getInstance().getProvider(m_sInterpolatorStr);
+  }
+  catch (NoSuchValueException& e) {
+    CFLog(WARN, "FVMCC_BaseBC::configure() => StateInterpolator \"" << 
+	  m_sInterpolatorStr << "\" missing => reset to \"Null\"\n");
+    
+    m_sInterpolatorStr = "Null";
+    stateInterpProv = Factory<StateInterpolator>::getInstance().getProvider(m_sInterpolatorStr);
+  }
+  
+  m_sInterpolator.reset(stateInterpProv->create(m_sInterpolatorStr));
+  
+  configureNested(m_sInterpolator.getPtr(), args);
+}
+    
 //////////////////////////////////////////////////////////////////////////////
 
 } // namespace FluctSplit

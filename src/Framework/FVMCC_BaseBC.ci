@@ -1,3 +1,7 @@
+#include "Environment/Factory.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
 namespace COOLFluiD {
 
   namespace Framework {
@@ -7,6 +11,7 @@ namespace COOLFluiD {
 template <typename BASE>
 FVMCC_BaseBC<BASE>::FVMCC_BaseBC(const std::string& name) :
   BASE(name),
+  m_sInterpolator(),
   _putGhostsOnFace(false),
   socket_normals("normals"),
   socket_states("states"),
@@ -30,6 +35,9 @@ FVMCC_BaseBC<BASE>::FVMCC_BaseBC(const std::string& name) :
 {
   this->addConfigOptionsTo(this);
   
+  m_sInterpolatorStr = "Null";
+  this->setParameter("StateInterpolator",&m_sInterpolatorStr); 
+  
   _zeroGradient = std::vector<bool>();
   this->setParameter("ZeroGradientFlags",&_zeroGradient); 
   
@@ -49,6 +57,9 @@ FVMCC_BaseBC<BASE>::~FVMCC_BaseBC()
 template <typename BASE>
 void FVMCC_BaseBC<BASE>::defineConfigOptions(Config::OptionList& options)
 {
+  options.template addConfigOption< std::string >
+    ("StateInterpolator", "State interpolator for BCs");
+  
   options.template addConfigOption< std::vector<bool> >
     ("ZeroGradientFlags",
      "Flag specifying constantly extrapolated variables");
@@ -69,6 +80,9 @@ void FVMCC_BaseBC<BASE>::setup()
   
   // set the IDs corresponding to the velocity components
   this->getMethodData().getUpdateVar()->setStateVelocityIDs(m_velocityIDs);
+  
+  // set the interpolator
+  m_sInterpolator->setup();
   
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   if(_zeroGradient.size() > 0 && _zeroGradient.size() != nbEqs) {
@@ -99,6 +113,16 @@ void FVMCC_BaseBC<BASE>::setup()
   m_computeVars.resize(PhysicalModelStack::getActive()->getNbEq(), true);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void FVMCC_BaseBC<BASE>::unsetup()
+{
+  BASE::unsetup();
+  
+  m_sInterpolator->unsetup();
+}
+    
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename BASE>
@@ -260,7 +284,34 @@ void FVMCC_BaseBC<BASE>::computeGhostPosition(Framework::GeometricEntity *const 
 } 
       
 //////////////////////////////////////////////////////////////////////////////
-      
+    
+template <typename BASE>
+void FVMCC_BaseBC<BASE>::configure ( Config::ConfigArgs& args )
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Environment;
+  
+  BASE::configure(args);
+  
+  SafePtr<StateInterpolator::PROVIDER> stateInterpProv = CFNULL;
+  try {
+    stateInterpProv = Factory<StateInterpolator>::getInstance().getProvider(m_sInterpolatorStr);
+  }
+  catch (NoSuchValueException& e) {
+    CFLog(WARN, "FVMCC_BaseBC::configure() => StateInterpolator \"" << 
+	  m_sInterpolatorStr << "\" missing => reset to \"Null\"\n");
+    
+    m_sInterpolatorStr = "Null";
+    stateInterpProv = Factory<StateInterpolator>::getInstance().getProvider(m_sInterpolatorStr);
+  }
+  
+  m_sInterpolator.reset(stateInterpProv->create(m_sInterpolatorStr));
+  
+  this->configureNested(m_sInterpolator.getPtr(), args);
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+  
 } // namespace Framework
   
 } // namespace COOLFluiD

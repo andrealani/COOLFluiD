@@ -5,7 +5,7 @@
 
 #include "FluctuationSplitData.hh"
 #include "Framework/DataSocketSink.hh"
-// #include "FluctSplit/P2Normal.hh"
+#include "Framework/StateInterpolator.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -35,10 +35,13 @@ public: // functions
   /// Default destructor
   virtual ~WeakBC();
 
+  /// Configures the command
+  virtual void configure ( Config::ConfigArgs& args );
+  
   /// Set up private data and data of the aggregated classes
   /// in this command before processing phase
   virtual void setup();
-
+  
   /// Unsetup the private data and data of the aggregated classes
   /// in this command after the processing phase
   virtual void unsetup();
@@ -61,7 +64,18 @@ protected: // functions
   /// @param residual  residual contribution for the ghost state
   void computeFlux(const std::vector<Framework::State*>& states,
                    RealVector& flux);
-
+ 
+  /// Get the @see StateInterpolator
+  Common::SafePtr<Framework::StateInterpolator> getStateInterpolator() const 
+  {
+    return m_sInterpolator.getPtr();
+  }
+  
+ private:
+  
+  /// state interpolator object
+  Common::SelfRegistPtr<Framework::StateInterpolator> m_sInterpolator;
+  
 protected: // member data
 
   /// handle to the rhs
@@ -157,7 +171,10 @@ protected: // member data
 
   /// Order of the solution approximation
   CFuint m_solorder;
-
+  
+  /// name of state interpolator object
+  std::string m_sInterpolatorStr;
+  
 }; // end of class WeakBC
 
 //////////////////////////////////////////////////////////////////////////////

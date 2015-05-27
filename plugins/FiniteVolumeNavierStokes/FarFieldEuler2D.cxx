@@ -144,7 +144,40 @@ void FarFieldEuler2D::setGhostState(GeometricEntity *const face)
      _vInf = _PuvT[2] / _varSet->getModel()->getVelRef();
      _temperature = _PuvT[3] / _varSet->getModel()->getTempRef();
    }
-
+   
+   // if a file is present, interpolate p,u,v,T from file
+   SafePtr<StateInterpolator> interp = getStateInterpolator();
+   if (interp->isNotNull()) { 
+     const CFreal sInner = std::sqrt(innerState->getCoordinates()[XX]*
+				     innerState->getCoordinates()[XX] + 
+				     innerState->getCoordinates()[YY]*
+				     innerState->getCoordinates()[YY]);
+     const CFreal sGhost = std::sqrt(ghostState->getCoordinates()[XX]*
+				     ghostState->getCoordinates()[XX] + 
+				     ghostState->getCoordinates()[YY]*
+				     ghostState->getCoordinates()[YY]);
+     
+     // compute curvilinear coordinate 
+     const CFreal sCoord = 0.5*(sInner+sGhost);
+     for (CFuint i = 0; i < m_tstate->size(); ++i) {
+       // interpolated state value in input variables
+       interp->interpolate(i, sCoord, (*m_tstate)[i]);
+     }
+     *m_bstate = *m_inputToUpdateVar->transform(m_tstate);
+     _varSet->computePhysicalData(*m_bstate, _pdata);
+     
+     _pressure = _pdata[EulerTerm::P];
+     cf_assert( _pressure > 0.);
+     _uInf = _pdata[EulerTerm::VX];
+     _vInf = _pdata[EulerTerm::VY];
+     _temperature = _pdata[EulerTerm::T];
+     cf_assert(_temperature > 0.);
+     
+     CFLog(DEBUG_MIN, "FarFieldEuler2D::setGhostState() => s, [p u v T] = " 
+	   << sCoord << ", [" << _pressure << ", " << _uInf << ", " 
+	   << _vInf << ", " << _temperature << "]\n");
+   }
+   
    const CFreal gamma = _varSet->getModel()->getGamma();
    const CFreal gammaDivGammaMinus1 = gamma/(gamma -1.0);
    const CFreal R = _varSet->getModel()->getR();

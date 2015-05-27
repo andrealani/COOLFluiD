@@ -77,12 +77,16 @@ public: // functions
   
   /// fill a given array with the data handle data corresponding to a given state ID
   /// @post uses and updates the given counter for indexing the output array (out)
-  virtual void fillStateData(CFreal* out, CFuint state_id, CFuint& counter) const;
+  virtual void fillStateData(CFreal* out, CFuint state_id, CFuint& counter, int iVar = -1) const;
   
   /// prints the data which is assumed to be relative to id of a cell
   /// @pre must call first getDataHandles
   virtual void printCCData (std::ostream& out, CFuint cell_id) const ;
-
+ 
+  /// fill a given array with the data handle data corresponding to a given state ID
+  /// @post uses and updates the given counter for indexing the output array (out)
+  virtual void fillStateDataCC(CFreal* out, CFuint cell_id, CFuint& counter, int iVar = -1) const;
+  
   /// gets the raw data corresponding to the variable index of state based variables
   /// @param var_id should be less than m_varnames.size()
   DataHandleInfo getCCData(CFuint var_id) const;

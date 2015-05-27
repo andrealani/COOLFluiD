@@ -95,50 +95,63 @@ void WeakFarFieldImpl<WEAKBCTYPE>::unsetup()
 //////////////////////////////////////////////////////////////////////////////
 
 template < typename WEAKBCTYPE >
-void WeakFarFieldImpl<WEAKBCTYPE>::computeFluxAndJacob(
-                                   std::vector<Framework::State*>& states,
-			                             RealVector& flux,
-			                             RealMatrix& fluxJacob)
+void WeakFarFieldImpl<WEAKBCTYPE>::computeFluxAndJacob
+(std::vector<Framework::State*>& states,
+ RealVector& flux,
+ RealMatrix& fluxJacob)
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
-
+  
   // the first state is the ghost one
   State *const gstate = states[0];
   State *const state  = states[1];
 
   // set the values in the ghost state (whose position coincides
   // with the boundary states)
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const RealVector& temp = state->getCoordinates();
   for (CFuint i = 0; i < dim; ++i){
     m_variables[i] = temp[i];
   }
   if(m_isUnsteady) m_variables[temp.size()] = SubSystemStatusStack::getActive()->getCurrentTimeDim();
-
+  
   // set the values in the ghost state (whose position coincides
   // with the boundary states)
-  m_vFunction.evaluate(m_variables, *m_input);
-
+  if (m_functions.size() > 0) {
+    m_vFunction.evaluate(m_variables, *m_input);
+  }
+  else {
+    SafePtr<StateInterpolator> interp = this->getStateInterpolator();
+    if (interp.isNotNull()) {
+      const RealVector& coord = state->getCoordinates();
+      const CFreal sCoord = coord.norm2();
+      for (CFuint i = 0; i < nbEqs; ++i) {
+	// interpolated state value in input variables
+	interp->interpolate(i, sCoord, (*m_input)[i]);
+      }
+    }
+  }  
+  
   // transform to update variables
   *m_dimState = *m_inputToUpdateVar->transform(m_input);
-
+  
   // Adimensionalize the value
   SafePtr<ConvectiveVarSet> updateVarSet = WeakFarFieldImpl<WEAKBCTYPE>::getMethodData().getUpdateVar();
   updateVarSet->setAdimensionalValues(*m_dimState, *gstate);
-
+  
   // here you are transforming 2 states but the transformer works
   // on MaxNbStatesInCell states
   vector<State*> *const linearStates = this->m_updateToLinearVecTrans->transform(&states);
-
+  
   this->m_twoStates[0] = (*linearStates)[0];
   this->m_twoStates[1] = (*linearStates)[1];
 
   // linearize the states in the cell
   this->m_linearizer->linearize(this->m_twoStates);
   const CFreal kCoeff = 1./ PhysicalModelStack::getActive()->getDim();
-  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   // adimensionalize the normal
   const CFreal faceArea = this->m_faceNormal.norm2();
   this->m_adimNormal = this->m_faceNormal/faceArea;
@@ -147,16 +160,16 @@ void WeakFarFieldImpl<WEAKBCTYPE>::computeFluxAndJacob(
   SafePtr<ConvectiveVarSet> solutionVarSet = WeakFarFieldImpl<WEAKBCTYPE>::getMethodData().getSolutionVar();
 
   solutionVarSet->computeEigenValuesVectors(this->m_rightEv,
-              this->m_leftEv,
-              this->m_eValues,
-              this->m_adimNormal);
-
+					    this->m_leftEv,
+					    this->m_eValues,
+					    this->m_adimNormal);
+  
   for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
     this->m_eValuesP[iEq] = max(0.,this->m_eValues[iEq]);
   }
   this->m_kPlus = this->m_rightEv*(this->m_eValuesP*this->m_leftEv);
   this->m_kPlus *= kCoeff*faceArea;
-
+  
   // flux in conservative variables
   *m_gstateCons = *m_updateToSolutionVar->transform(states[0]);
   *m_stateCons  = *m_updateToSolutionVar->transform(states[1]);
@@ -218,18 +231,17 @@ void WeakFarFieldImpl<WEAKBCTYPE>::configure ( Config::ConfigArgs& args )
   m_updateToSolutionVar = Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider2)->create(physModel->getImplementor());
 
   cf_assert(m_updateToSolutionVar.isNotNull());
-
-
-  m_vFunction.setFunctions(m_functions);
-  m_vFunction.setVariables(m_vars);
-  try
-  {
-    m_vFunction.parse();
-  }
-  catch (Common::ParserException& e)
-  {
-    CFout << e.what() << "\n";
-    throw; // retrow the exception to signal the error to the user
+  
+  if (m_functions.size() > 0) {
+    m_vFunction.setFunctions(m_functions);
+    m_vFunction.setVariables(m_vars);
+    try {
+      m_vFunction.parse();
+    }
+    catch (Common::ParserException& e) {
+      CFout << e.what() << "\n";
+      throw; // retrow the exception to signal the error to the user
+    }
   }
 }
 

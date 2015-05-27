@@ -67,17 +67,11 @@ protected: // data
   /// Transformer from input to update Variables
   Common::SelfRegistPtr<Framework::VarSetTransformer> m_inputToUpdateVar;
   
-  /// look up table for u(y)
-  std::vector<Common::LookUpTable<CFreal,CFreal>*> m_lookupState;
-  
   /// temporary state
   Framework::State* m_tstate;
-
+  
   /// boundary state
   Framework::State* m_bstate;
-  
-  /// input data file name
-  std::string m_infile;
   
   /// a string to hold the name of the input variables
   std::string m_inputVarStr;

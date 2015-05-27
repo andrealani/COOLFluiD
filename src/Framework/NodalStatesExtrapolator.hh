@@ -6,12 +6,12 @@
 #include "Common/OwnedObject.hh"
 #include "Common/SafePtr.hh"
 #include "Common/CFMap.hh"
-#include "Common/OldLookupTable.hh"
 #include "Environment/ConcreteProvider.hh"
 #include "Framework/Storage.hh"
 #include "Framework/DataSocketSink.hh"
 #include "Framework/MethodStrategy.hh"
 #include "Framework/SubSystemStatus.hh"
+#include "Framework/StateInterpolator.hh"
 #include "MathTools/RealVector.hh"
 #include "MathTools/RealMatrix.hh"
 #include "MathTools/MathConsts.hh"
@@ -140,11 +140,11 @@ public:
   /// Add an array of lookup tables associated to a particular TRS 
   /// @pre to be filled in during setup() by specific BC Commands
   void addLookupState(const std::string& trsName,
-		      std::vector<Common::LookUpTable<CFreal,CFreal>*>* table)
+		      Common::SafePtr<StateInterpolator> interp)
   {
-    m_trsID2LookupState.insert(_mapTrsNameToID.find(trsName), table);
+    m_trsID2LookupState.insert(_mapTrsNameToID.find(trsName), interp);
   }
- 
+  
   /// return the number of iterations to run adiabatic
   bool runAdiabatic() const 
   {return (Framework::SubSystemStatusStack::getActive()->getNbIter() < m_nbIterAdiabatic);} 
@@ -240,7 +240,7 @@ protected:
   Common::CFMap<std::string, CFint> _mapTrsNameToID;
   
   /// look up table for nodal values
-  Common::CFMap<CFuint, std::vector<Common::LookUpTable<CFreal,CFreal>*>* > m_trsID2LookupState;
+  Common::CFMap<CFuint, Common::SafePtr<StateInterpolator> > m_trsID2LookupState;
   
   /// list of TRSs which has been reordered by priority
   std::vector<Common::SafePtr<Framework::TopologicalRegionSet> > _orderedTrsList;

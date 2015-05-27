@@ -66,7 +66,8 @@ void FarFieldEulerChar2D::setGhostState(GeometricEntity *const face)
    _varSet->computePhysicalData(*innerState, _dataInnerState);
    
    // if a file is present, interpolate p,u,v,T from file
-   if (m_infile != "") {
+   SafePtr<StateInterpolator> interp = getStateInterpolator();
+   if (interp->isNotNull()) { 
      const CFreal sInner = std::sqrt(innerState->getCoordinates()[XX]*
 				     innerState->getCoordinates()[XX] + 
 				     innerState->getCoordinates()[YY]*
@@ -80,7 +81,7 @@ void FarFieldEulerChar2D::setGhostState(GeometricEntity *const face)
      const CFreal sCoord = 0.5*(sInner+sGhost);
      for (CFuint i = 0; i < m_tstate->size(); ++i) {
        // interpolated state value in input variables
-       (*m_tstate)[i] = m_lookupState[i]->get(sCoord);
+       interp->interpolate(i, sCoord, (*m_tstate)[i]);
      }
      *m_bstate = *m_inputToUpdateVar->transform(m_tstate);
      _varSet->computePhysicalData(*m_bstate, _pdata);
@@ -91,6 +92,10 @@ void FarFieldEulerChar2D::setGhostState(GeometricEntity *const face)
      _vInf = _pdata[EulerTerm::VY];
      _temperature = _pdata[EulerTerm::T];
      cf_assert(_temperature > 0.);
+     
+     CFLog(DEBUG_MIN, "FarFieldEulerChar2D::setGhostState() => s, [p u v T] = " 
+	   << sCoord << ", [" << _pressure << ", " << _uInf << ", " 
+	   << _vInf << ", " << _temperature << "]\n");
    }
    
    const CFreal u = _dataInnerState[EulerTerm::VX];
@@ -107,7 +112,7 @@ void FarFieldEulerChar2D::setGhostState(GeometricEntity *const face)
    //Compute the Riemann invariants
    const CFreal RPlus_n = vn + (2.*aInnerState)/(gammaMinus1);
    const CFreal RMin_n = vnInf  - (2.*aInf)/(gammaMinus1);
-   const CFreal RMinRmax = 0.5 * (RPlus_n+ RMin_n);
+   const CFreal RMinRmax = (RPlus_n + RMin_n)*0.5;
 
    // depending on the sign and magnitude of the local Mach number,
    // number of variables to be specified are determined
@@ -154,8 +159,8 @@ void FarFieldEulerChar2D::setGhostState(GeometricEntity *const face)
     {
 
     CFreal vnInner = _dataInnerState[EulerTerm::VX]*nx + _dataInnerState[EulerTerm::VY] * ny;
-    CFreal Ubound = _dataInnerState[EulerTerm::VX] + (((RPlus_n + RMin_n)*0.5) - vnInner)*nx;
-    CFreal Vbound = _dataInnerState[EulerTerm::VY] + (((RPlus_n + RMin_n)*0.5) - vnInner)*ny;
+    CFreal Ubound = _dataInnerState[EulerTerm::VX] + (RMinRmax - vnInner)*nx;
+    CFreal Vbound = _dataInnerState[EulerTerm::VY] + (RMinRmax - vnInner)*ny;
 
      _dataGhostState[EulerTerm::RHO] = _dataInnerState[EulerTerm::RHO];
      _dataGhostState[EulerTerm::VX] = 2.0*Ubound - u;
@@ -180,8 +185,8 @@ void FarFieldEulerChar2D::setGhostState(GeometricEntity *const face)
    // subsonic inlet case
     if (RMinRmax <= 0.)
     {
-    CFreal  Ubound = _uInf + (((RPlus_n + RMin_n)*0.5) - vnInf)*nx;
-    CFreal  Vbound = _vInf + (((RPlus_n + RMin_n)*0.5) - vnInf)*ny;
+    CFreal  Ubound = _uInf + (RMinRmax - vnInf)*nx;
+    CFreal  Vbound = _vInf + (RMinRmax - vnInf)*ny;
 
      _dataGhostState[EulerTerm::RHO] = _pressure/(R*_temperature);
      _dataGhostState[EulerTerm::VX] = 2.0*Ubound - u;

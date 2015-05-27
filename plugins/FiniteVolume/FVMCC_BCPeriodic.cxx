@@ -59,6 +59,8 @@ BCPeriodic::~BCPeriodic()
 
 void BCPeriodic::setup()
 {
+  CFLog(VERBOSE, "BCPeriodic::setup() => start\n");
+  
   CFLog(INFO, "Setup ["<<getClassName()<<"] \n");
   
   /* Setup parent class */
@@ -92,42 +94,53 @@ void BCPeriodic::setup()
   
   /* Check for every local face if it is an east or a west face */ 
   std::vector<FaceStruct> westFaces;
+  westFaces.reserve(_nbTrsFaces); // oversized to avoid frequent memory reallocation
+  
   std::vector<FaceStruct> eastFaces;
+  eastFaces.reserve(_nbTrsFaces); // oversized to avoid frequent memory reallocation
+  
   _localWestEastMap.reserve(_nbTrsFaces);
-  for (CFuint iFace = 0; iFace<_nbTrsFaces; iFace++){
+  
+  DataHandle<CFreal> normals = socket_normals.getDataHandle();
+  RealVector faceNormal(dim);
+  RealVector centreNode(dim);
+  FaceStruct thisFace;
 
+  Stopwatch<WallTime> stp;
+  stp.start();
+  
+  for (CFuint iFace = 0; iFace<_nbTrsFaces; iFace++){
+    
     /* Face setup */
     faceData.idx = iFace;
     GeometricEntity *const face = _faceBuilder.buildGE();
     const CFuint faceGlobalID = face->getID();
     _globalToLocalTRSFaceID.insert(faceGlobalID,iFace);
-
-
+    
+    
     /* Calculate coordinate */
     const std::vector<Node*>& nodes = *face->getNodes();
-    RealVector centreNode(dim);
-    for(CFuint iNode=0; iNode<nodes.size(); ++iNode) {
-      for(CFuint iDim=0; iDim<dim; ++iDim) {
-        centreNode[iDim] += (*(nodes[iNode]))[iDim]/nodes.size();
-      }
+    const CFuint nbNodesInFace = nodes.size();
+    centreNode = 0.;
+    for(CFuint iNode=0; iNode< nbNodesInFace; ++iNode) {
+      centreNode += *(nodes[iNode]);
     }
+    centreNode /= nbNodesInFace;
     
     /* Load this face in a structure */
-    FaceStruct thisFace;
     thisFace.setCentreCoordinates(centreNode);
     thisFace.setGlobalFaceID(faceGlobalID);
     thisFace.setLocalFaceID(iFace);
     
-
+    
     /* Check if the projection of the face-normal on the translation vector
      * is positive (westFace) or negative (eastFace)
      */
     const CFuint startID = faceGlobalID*dim;
-    DataHandle<CFreal> normals = socket_normals.getDataHandle();
-    RealVector faceNormal(dim);
     for(CFuint iDim=0; iDim<dim; ++iDim) {
       faceNormal[iDim]=normals[startID+iDim];
     }
+    
     CFreal proj = MathTools::MathFunctions::innerProd(translationVector, faceNormal);
     if (proj > 0) {
       eastFaces.push_back(thisFace);
@@ -137,17 +150,21 @@ void BCPeriodic::setup()
       westFaces.push_back(thisFace);
       _localWestEastMap.insert(iFace,0);
     }
-
+    
     /* release geometry */
     _faceBuilder.releaseGE();
-
+    
   }
   _localWestEastMap.sortKeys();
-    
-    
+  
+  CFLog(INFO,"BCPeriodic::setup() => step 1 took " << stp.read() << "s\n");
+  stp.start();
+   
   /* Gather the number of Faces for each process */
   CFuint nbWestFaces = westFaces.size();
+  cf_assert(nbWestFaces <= westFaces.capacity());
   CFuint nbEastFaces = eastFaces.size();
+  cf_assert(nbEastFaces <= eastFaces.capacity());
   
   std::vector<CFuint> nbWestFacesPerProcess(_nbProcesses,0);
   std::vector<CFuint> nbEastFacesPerProcess(_nbProcesses,0);
@@ -177,7 +194,10 @@ void BCPeriodic::setup()
     CFLog(INFO, " ==> number of west faces: " << nbWestFaces << " \n");
     CFLog(INFO, " ==> number of east faces: " << nbEastFaces << " \n");
   }
-    
+  
+  CFLog(INFO,"BCPeriodic::setup() => step 2 took " << stp.read() << "s\n");
+  stp.start();
+  
   /* Definition of MPI struct */
   FaceMPIStruct faceMPIStruct;
 
@@ -186,11 +206,13 @@ void BCPeriodic::setup()
    * on which processor the periodic face is, and its local and global ID
    */
   _localConnectivityMap.resize(_nbTrsFaces);
-CFuint matches(0);
+  
+  CFuint matches = 0;
   for(CFuint iP=0; iP<_nbProcesses; ++iP) {
-
+    
     /* Find WestFace connectivity */
-    for(CFuint iFace=0; iFace<nbWestFacesPerProcess[iP]; iFace++) {
+    const CFuint nbW = nbWestFacesPerProcess[iP];
+    for(CFuint iFace=0; iFace<nbW; iFace++) {
     
       /* fill the mpi_struct */
       if(iP == _rank) faceMPIStruct.copy(westFaces[iFace]);  
@@ -212,7 +234,8 @@ CFuint matches(0);
     
 
     /* Find eastFace connectivity */
-    for(CFuint iFace=0; iFace<nbEastFacesPerProcess[iP]; iFace++) {
+    const CFuint nbE = nbEastFacesPerProcess[iP];
+    for(CFuint iFace=0; iFace<nbE; iFace++) {
 
       /* fill the mpi_struct */
       if(iP == _rank) faceMPIStruct.copy(eastFaces[iFace]);
@@ -235,8 +258,12 @@ CFuint matches(0);
   
   MPI_Barrier(_comm);    
   
+  CFLog(INFO,"BCPeriodic::setup() => step 3 took " << stp.read() << "s\n");
+  
   if(matches!=_nbTrsFaces)
     CFLog(INFO, "Only " << matches << "/"<< _nbTrsFaces << " matches found. Wrong TranslationVector or try increasing Threshold \n");  
+  
+  CFLog(VERBOSE, "BCPeriodic::setup() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -290,6 +317,8 @@ void BCPeriodic::setupMPI()
 
 void BCPeriodic::preProcess()
 {
+  CFLog(VERBOSE, "BCPeriodic::preProcess() => start\n");
+  
   if (_nbProcesses > 1) {
     
     _sendbuf.clear();
@@ -298,7 +327,10 @@ void BCPeriodic::preProcess()
     faceData.isBFace = true;
 
     std::vector<CFreal> boundaryState;
-    boundaryState.reserve(_nbTrsFaces*_nE);  
+    if (_nbTrsFaces > 0) {
+      boundaryState.reserve(_nbTrsFaces*_nE); 
+    }
+    
     // Loop for every face
     for(CFuint iFace=0; iFace<_nbTrsFaces; iFace++) {
       faceData.idx = iFace;
@@ -310,8 +342,9 @@ void BCPeriodic::preProcess()
       _faceBuilder.releaseGE();
     }
 
+    const CFuint nbTrsNE = _nbTrsFaces*_nE;
     for(CFuint iP=0; iP<_nbProcesses; iP++){
-      for(CFuint i=0; i<_nbTrsFaces*_nE; i++){
+      for(CFuint i=0; i< nbTrsNE; i++){
         _sendbuf.push_back(boundaryState[i]);
       }
     }
@@ -324,12 +357,16 @@ void BCPeriodic::preProcess()
 		  &_recvbuf[0], &_recvcounts[0], &_recvdispls[0], MPI_CFREAL, _comm);
     MPI_Barrier(_comm);
   }
+  
+  CFLog(VERBOSE, "BCPeriodic::preProcess() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 Framework::State* BCPeriodic::computePeriodicState(GeometricEntity *const face)
 {
+  CFLog(DEBUG_MIN, "BCPeriodic::computePeriodicState() => start\n");
+  
   const CFuint faceGlobalID = face->getID();
   const CFuint faceLocalID = _globalToLocalTRSFaceID.find(faceGlobalID);
   const CFuint j = _localConnectivityMap[faceLocalID].size() - 1;
@@ -342,60 +379,40 @@ Framework::State* BCPeriodic::computePeriodicState(GeometricEntity *const face)
     GeometricEntity *const periodicFace = _faceBuilder.buildGE();
     State *const periodicState = periodicFace->getState(0);
     _faceBuilder.releaseGE();
+    CFLog(DEBUG_MIN, "BCPeriodic::computePeriodicState() => end\n");
     return periodicState;
   }
   else {
+    cf_assert(faceLocalID < _localConnectivityMap.size());
+    cf_assert(j < _localConnectivityMap[faceLocalID].size()); 
+    CFLog(DEBUG_MIN, "BCPeriodic::computePeriodicState() => 1 end\n");
     const CFuint periodicProcess = _localConnectivityMap[faceLocalID][j].getProcess();
     for(CFuint h=0; h<_nE; h++){
-      (*_periodicState)[h] = _recvbuf[_recvdispls[periodicProcess] + _nE*periodicFaceID + h];
+      cf_assert(periodicProcess < _recvdispls.size());
+      CFLog(DEBUG_MIN, "BCPeriodic::computePeriodicState() => 2 start\n");
+      const CFuint idx = _recvdispls[periodicProcess] + _nE*periodicFaceID + h;
+      cf_assert(idx < _recvbuf.size());
+      (*_periodicState)[h] = _recvbuf[idx];
+      CFLog(DEBUG_MIN, "BCPeriodic::computePeriodicState() => 2 end\n");
     }
+    CFLog(DEBUG_MIN, "BCPeriodic::computePeriodicState() => end\n");
     return _periodicState;
   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-bool BCPeriodic::isOutletFace(GeometricEntity *const face)
-{
-  const CFuint faceGlobalID = face->getID();
-  const CFuint faceLocalID = _globalToLocalTRSFaceID.find(faceGlobalID);
-  return _localWestEastMap[faceLocalID];
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-bool BCPeriodic::isInletFace(GeometricEntity *const face)
-{
-  const CFuint faceGlobalID = face->getID();
-  const CFuint faceLocalID = _globalToLocalTRSFaceID.find(faceGlobalID);
-  return !_localWestEastMap[faceLocalID];
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-bool BCPeriodic::isOutletFace(const CFuint& faceLocalID)
-{
-  return _localWestEastMap[faceLocalID];
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-bool BCPeriodic::isInletFace(const CFuint& faceLocalID)
-{
-  return !_localWestEastMap[faceLocalID];
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 void BCPeriodic::setGhostState(GeometricEntity *const face)
 {
+  CFLog(DEBUG_MIN, "BCPeriodic::setGhostState() => start\n");
   State *const ghostState = face->getState(1);
   State *const periodicState = computePeriodicState(face);
   for(CFuint h=0; h<_nE; h++){
     (*ghostState)[h] = (*periodicState)[h];
   }
+  CFLog(DEBUG_MIN, "BCPeriodic::setGhostState() => end\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace FiniteVolume

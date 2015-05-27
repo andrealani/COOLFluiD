@@ -8,9 +8,7 @@
 #include "Common/CFMap.hh"
 #include "Common/PE.hh"
 #include "Common/MPI/MPIStructDef.hh"
-#include "mpi.h"
 #include "Framework/PhysicalModel.hh"
-
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -66,7 +64,7 @@ public:
    * Apply boundary condition on the given face
    */
   virtual void setGhostState(Framework::GeometricEntity *const face);
-
+  
   /** 
    * Gets the Class name
    */
@@ -91,14 +89,32 @@ protected:
   /**
    * Return if the face is an outlet face. (outlet = true, inlet = false)
    */
-  bool isOutletFace(Framework::GeometricEntity *const face);
-  bool isOutletFace(const CFuint& localFaceID);
+  bool isOutletFace(Framework::GeometricEntity *const face)
+  {
+    const CFuint faceGlobalID = face->getID();
+    const CFuint faceLocalID = _globalToLocalTRSFaceID.find(faceGlobalID);
+    return _localWestEastMap[faceLocalID];
+  }
+  
+  bool isOutletFace(const CFuint faceLocalID)
+  {
+    return _localWestEastMap[faceLocalID];
+  }
   
   /**
    * Return if the face is an inlet face. (inlet = true, outlet = false)
    */
-  bool isInletFace(Framework::GeometricEntity *const face);
-  bool isInletFace(const CFuint& localFaceID);
+  bool isInletFace(Framework::GeometricEntity *const face)
+  {
+    const CFuint faceGlobalID = face->getID();
+    const CFuint faceLocalID = _globalToLocalTRSFaceID.find(faceGlobalID);
+    return !_localWestEastMap[faceLocalID];
+  }
+  
+  bool isInletFace(const CFuint faceLocalID)
+  {
+    return !_localWestEastMap[faceLocalID];
+  }
  
   /**
    * Number of periodic faces
@@ -138,8 +154,9 @@ private: // class definitions
       CFuint getGlobalFaceID() const {return _globalFaceID;}
       void setLocalFaceID(CFuint localFaceID) { _localFaceID = localFaceID;}
       CFuint getLocalFaceID() const {return _localFaceID;}
-      void setCentreCoordinates(const RealVector& centreCoordinates) { _centreCoordinates.resize(centreCoordinates.size()); _centreCoordinates = centreCoordinates;}
-      RealVector getCentreCoordinates() const {return _centreCoordinates;}
+    void setCentreCoordinates(const RealVector& centreCoordinates) 
+    { _centreCoordinates.resize(centreCoordinates.size()); _centreCoordinates = centreCoordinates;}
+    const RealVector& getCentreCoordinates() const {return _centreCoordinates;}
   };
   
   /**
@@ -178,35 +195,27 @@ private: // class definitions
    */
   struct findTranslated 
   {
-    RealVector _T;
-    RealVector _V;
     RealVector _Vt;
     const CFreal _threshold;
+    
     findTranslated(const FaceStruct& firstVector, const RealVector& translationVector, const CFreal& threshold) : _threshold(threshold)
     {
-      CFuint dim = translationVector.size();
-      _V.resize(dim);
-      _T.resize(dim);
-      _Vt.resize(dim);
-
-      _V = firstVector.getCentreCoordinates();
-      _T = translationVector;
-      _Vt = _V + _T; 
+      _Vt.resize(translationVector.size());
+      _Vt = firstVector.getCentreCoordinates() + translationVector; 
     }
+    
     bool operator()(const FaceStruct& iter)
     {
       bool isMatch = true;
-      CFuint dim = _V.size();
-    
-      RealVector iterVec(dim);
-      iterVec = iter.getCentreCoordinates();
+      const RealVector& iterVec = iter.getCentreCoordinates();
+      const CFuint dim = iterVec.size();
       for(CFuint i=0; i<dim; ++i) {
         isMatch = isMatch && (std::abs(iterVec[i]-_Vt[i]) < _threshold);
       }
       return isMatch;
-    };
+    }
   };
-
+  
 private: //data
   
   /// Translation Vector between planes

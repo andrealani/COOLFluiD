@@ -4,6 +4,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Framework/DataSocketSink.hh"
+#include "Framework/StateInterpolator.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -78,7 +79,13 @@ public: // functions
    * in this command before processing phase
    */
   virtual void setup();
-
+  
+  /**
+   * Unsetup private data and data of the aggregated classes
+   * in this command after processing phase
+   */
+  virtual void unsetup();
+  
   /**
    * Set the preProcesses connectivity between faces belonging to different process
    *
@@ -89,10 +96,7 @@ public: // functions
   /**
    * Configures the command.
    */
-  virtual void configure ( Config::ConfigArgs& args )
-  {
-    BASE::configure(args);
-  }
+  virtual void configure ( Config::ConfigArgs& args );
   
   /**
    * Get the vector of flags specifying the variables that are 
@@ -182,9 +186,20 @@ protected: // functions
     * Compute the original position of the ghost node
     */
   virtual void computeGhostPosition(Framework::GeometricEntity *const face);
+  
+  /// Get the @see StateInterpolator
+  Common::SafePtr<StateInterpolator> getStateInterpolator() const 
+  {
+    return m_sInterpolator.getPtr();
+  }
  
+ private:
+  
+  /// state interpolator object
+  Common::SelfRegistPtr<Framework::StateInterpolator> m_sInterpolator;
+  
 protected: // data
-
+  
   /// put ghosts on face
   bool _putGhostsOnFace;
     
@@ -199,7 +214,7 @@ protected: // data
 
   /// storage of the nodes
   Framework::DataSocketSink < Framework::Node* , Framework::GLOBAL > socket_nodes;
- 
+  
   /// IDs corresponding to the velocity components
   std::vector<CFuint> m_velocityIDs;
   
@@ -251,6 +266,9 @@ protected: // data
 
   /// coefficient controlling the ghost node movement 
   CFreal m_coeff; 
+  
+  /// name of state interpolator object
+  std::string m_sInterpolatorStr;
   
 }; // end of class FVMCC_BaseBC
 
