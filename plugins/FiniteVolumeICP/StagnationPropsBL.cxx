@@ -26,7 +26,7 @@ using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Common;
 using namespace COOLFluiD::Numerics::FiniteVolume;
 using namespace COOLFluiD::MathTools;
-
+using namespace COOLFluiD::Physics::NavierStokes;
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -45,7 +45,7 @@ StagnationPropsBLCommProvider("StagnationPropsBLComm");
 void StagnationPropsBL::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< CFreal >("TorchExitXCoord","X coordinate where torch ends and chamber starts (in mesh coordinates)");
-  options.addConfigOption< CFreal >("ProbeRadius","Radiusof the probe (in mesh coordinates)");
+  options.addConfigOption< CFreal >("ProbeRadius","Radius of the probe (in mesh coordinates)");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -361,24 +361,24 @@ void StagnationPropsBL::execute()
     // skipping first 5 points, because BL may be oscillatory
     //
 
-    cout << "\n Beginning du/dx max stuff " << endl;
+//     cout << "\n Beginning du/dx max stuff " << endl;
 
-    CFout << "\n Beginning du/dx max stuff \n ";
+//     CFout << "\n Beginning du/dx max stuff \n ";
 
     for(int i=5; i<(const int)(dudx.size()-5); ++i){
         if ((dudx[i]-dudx[i-1]>=0.)&&(m_globalstagnationline[i-1].first > xlower)&&(m_globalstagnationline[i-1].first < xupper)){
             iDudxMax = i-1;
             dudxMax  = dudx[i-1];
             uAtDudxMax = uglobal[i-1];  
-            CFout << "\n Found U at max du/dx!   i        =  " << iDudxMax        
-                  << "\n du/dx at i-2                     =  " << dudx[i-2]     
-                  << "\n du/dx at i-1                     =  " << dudx[i-1]  
-                  << "\n du/dx at i                       =  " << dudx[i] 
-                  << "\n du/dx at i+1                     =  " << dudx[i+1] 
-                  << "\n du/dx at i+2                     =  " << dudx[i+2] 
-                  << "\n                      du/dx max   =  " << dudxMax   
-                  << "\n                 U at du/dx max   =  " << uAtDudxMax
-                  << "\n X-value at i                     =  " << m_globalstagnationline[i].first ;
+//             CFout << "\n Found U at max du/dx!   i        =  " << iDudxMax        
+//                   << "\n du/dx at i-2                     =  " << dudx[i-2]     
+//                   << "\n du/dx at i-1                     =  " << dudx[i-1]  
+//                   << "\n du/dx at i                       =  " << dudx[i] 
+//                   << "\n du/dx at i+1                     =  " << dudx[i+1] 
+//                   << "\n du/dx at i+2                     =  " << dudx[i+2] 
+//                   << "\n                      du/dx max   =  " << dudxMax   
+//                   << "\n                 U at du/dx max   =  " << uAtDudxMax
+//                   << "\n X-value at i                     =  " << m_globalstagnationline[i].first ;
             break;
         }
 
@@ -388,6 +388,9 @@ void StagnationPropsBL::execute()
         cout << " Warning!! du/dx max calculation probably failed!  i      =  " << iDudxMax << endl
              << "                      du/dx max =  " << dudxMax << endl
              << "                 U at du/dx max =  " << uAtDudxMax << endl;
+        CFout << " Warning!! du/dx max calculation probably failed!  i      =  " << iDudxMax << "\n"
+              << "                      du/dx max =  " << dudxMax  << "\n"
+              << "                 U at du/dx max =  " << uAtDudxMax << "\n";
             
     }
 
@@ -456,12 +459,31 @@ void StagnationPropsBL::execute()
 
     // Compute the thermodynamic information at the boundary layer edge
     
-    // Set T and P
-    
-    CFdouble p=p_delta;
+    // Set T and P to the values at the boundary layer edge
     CFdouble T=t_delta;
+
+    // The pressure 
+    CFdouble p=p_delta;
+    CFdouble pinf;
+    // This pressure is "dp" if the flow is incompressible, one must get the absolute pressure
     
-    
+    SafePtr<EulerTerm> model = getMethodData().getUpdateVarSet().d_castTo<EulerVarSet>()->getModel();
+    if(model->isIncompressible()){
+        // Incompressible flow
+        p=model->getPressureFromState(p_delta);
+        // Get also the pressure at infinity
+        pinf = model->getPressInf();
+        CFout << " Incompressible dp at boundary layer edge point delta [Pa]............. :" << p_delta << "\n";
+    }
+    else
+    {
+        // Only useful for the reference pressure
+        pinf = model->getPressInfComp();
+    }
+
+    CFout << " The pressure at infinity [Pa]..................................... : " << pinf << "\n"
+          << " The pressure at boundary layer edge point delta [Pa].............. : " << p    << "\n";
+        
     SafePtr<PhysicalChemicalLibrary> library =  PhysicalModelStack::getActive()->getImplementor()->
         getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
     cf_assert(library.isNotNull());
@@ -510,7 +532,7 @@ void StagnationPropsBL::execute()
       |------------------------- |------|-----------> u,x
      */
                                  
-    CFreal ndp1,ndp2,ndp3,ndp4,ndp5,beta,dbeta_dx;
+    CFdouble ndp1,ndp2,ndp3,ndp4,ndp5,beta,dbeta_dx;
     beta    = dvdy_delta;
     dbeta_dx=std::abs(d2vdydx_delta);
     ndp1    = delta/m_proberadius;
@@ -522,33 +544,55 @@ void StagnationPropsBL::execute()
     fout2.precision(15);
     fout2  << ndp1 << "  " << ndp2 << "  " << ndp3 << "  " << ndp4 << "  " << ndp5 << " "
            << m_proberadius << "  " << delta << "  " <<  u_delta << "  " << beta << "  "
-           << dbeta_dx << "  " << utorchexit << "  " << uAtDudxMax << "\n";
+           << dbeta_dx << "  " << utorchexit << "  " << uAtDudxMax << "\n\n";
+    
+    fout2 << "\n\nStagnationPropsBL:  "
+          << "\n  ndp1.................:  " << ndp1
+          << "\n  ndp2.................:  " << ndp2
+          << "\n  ndp3.................:  " << ndp3
+          << "\n  ndp4.................:  " << ndp4
+          << "\n  ndp5.................:  " << ndp5
+          << "\n  Probe Radius.........:  " << m_proberadius
+          << "\n  delta................:  " << delta
+          << "\n  y@delta..............:  " << y_delta
+          << "\n  p@delta..............:  " << p_delta
+          << "\n  pInf.................:  " << pinf
+          << "\n  p@delta(ABS).........:  " << p
+          << "\n  u@delta..............:  " << u_delta
+          << "\n  v@delta..............:  " << v_delta
+          << "\n  T@delta..............:  " << t_delta
+          << "\n  beta==dv/dy..........:  " << beta
+          << "\n  dbeta/dx.............:  " << dbeta_dx
+          << "\n  xtorchexit...........:  " << xtorchexit
+          << "\n  u@xtorchexit.........:  " << utorchexit
+          << "\n  iDudxMax.............:  " << iDudxMax
+          << "\n  du/dx max........... :  " << dudxMax
+          << "\n  U at du/dx max...... :  " << uAtDudxMax
+          << "\n\n"
+          << "\n  Thermodynamic variables evaluated at p="<< p<< "[Pa] and T=" << T << "[K]"
+          << "\n  mu[Pa-s] ............:  " << eta
+          << "\n  lambda[W/m-K]........:  " << lambda
+          << "\n  sigma[s/m]...........:  " << sigma
+          << "\n  Rho[kg/m^3]sigma[s/m]...........:  " << density
+          << "\n  H  [J/kg].......................:  " << enthalpyTt << "\n\n\n" ;
+        
 
     // Additional chemistry information for the moment test
     std::string temp;
     char  legendStr[800];
     
-    strcpy(legendStr,"VARIABLES  = \" Th[K] \"  \"mu[Pa-s]\"   \" lambda[W/m-K]\" \" sigma[s/m]\"   \" Rho[kg/m^3] \"  \"H  [J/kg] \"");
+    strcpy(legendStr,"\n  Species Information at these conditions \n");
     
     
     for (CFuint i = 0; i < nbSpecies; ++i) {
-        temp = " \"Y" + StringOps::to_str(i) + " [-] \"";
+        temp = "   Y" + StringOps::to_str(i) + "[-]             ";
         strcat(legendStr,temp.c_str());
     }
     fout2 << legendStr  << "\n" << flush;
-    fout2 << scientific
-          << " " << T          << " "
-          << " " << eta        << " "
-          << " " << lambda     << " "
-          << " " << sigma      << " " 
-          << " " << density    << " "
-          << " " << enthalpyTt << " ";
     for (CFuint i=0;  i < ys.size() ; i++) {
         fout2  << scientific << " " << ys[i] << " ";
     }
-    
-
-
+    fout2 << "\n\n\n";;
 
     fhandle2->close();
     
@@ -561,7 +605,9 @@ void StagnationPropsBL::execute()
           << "\n  Probe Radius.........:  " << m_proberadius
           << "\n  delta................:  " << delta
           << "\n  y@delta..............:  " << y_delta
-          << "\n  p@delta..............:  " << p_delta 
+          << "\n  p@delta..............:  " << p_delta
+          << "\n  pInf.................:  " << pinf
+          << "\n  p@delta(ABS).........:  " << p
           << "\n  u@delta..............:  " << u_delta
           << "\n  v@delta..............:  " << v_delta
           << "\n  T@delta..............:  " << t_delta
@@ -572,8 +618,23 @@ void StagnationPropsBL::execute()
           << "\n  iDudxMax.............:  " << iDudxMax
           << "\n  du/dx max........... :  " << dudxMax
           << "\n  U at du/dx max...... :  " << uAtDudxMax
+          << "\n  U at du/dx max...... :  " << uAtDudxMax
+          << "\n\n"
+          << "\n  Thermodynamic variables evaluated at p="<< p<< "[Pa] and T=" << T << "[K]"
+          << "\n  mu[Pa-s] ............:  " << eta
+          << "\n  lambda[W/m-K]........:  " << lambda
+          << "\n  sigma[s/m]...........:  " << sigma
+          << "\n  Rho[kg/m^3]sigma[s/m]...........:  " << density
+          << "\n  H  [J/kg].......................:  " << enthalpyTt
           << "\n\n";
-        
+
+    CFout << legendStr  << "\n";
+    for (CFuint i=0;  i < ys.size() ; i++) {
+        CFout  << scientific << " " << ys[i] << " ";
+    }
+    CFout << "\n\n\n\n";;
+
+    
   }
 
 }
