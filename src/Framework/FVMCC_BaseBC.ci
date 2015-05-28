@@ -78,6 +78,8 @@ void FVMCC_BaseBC<BASE>::setup()
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::MathTools;
   
+  BASE::setup();
+  
   // set the IDs corresponding to the velocity components
   this->getMethodData().getUpdateVar()->setStateVelocityIDs(m_velocityIDs);
   
