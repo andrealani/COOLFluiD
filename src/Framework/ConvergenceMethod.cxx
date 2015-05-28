@@ -391,8 +391,8 @@ void ConvergenceMethod::writeOnScreen()
     // Print Residual
     
     out.precision(m_precision);
-    out.setf( std::ios::fixed, std:: ios::floatfield );
-    // out.width(3 + m_precision);
+    //out.setf( std::ios::fixed, std:: ios::floatfield );
+    out.width(3 + m_precision);
     out << " Res: [" << subSysStatus->getAllResiduals() << "] ";
 
     out.unsetf(std::ios::fixed );
