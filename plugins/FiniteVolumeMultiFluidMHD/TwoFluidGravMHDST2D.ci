@@ -48,6 +48,15 @@ TwoFluidGravMHDST2D<UPDATEVAR>::TwoFluidGravMHDST2D(const std::string& name) :
 
   _isSpitzer = false;
   setParameter("SpitzerResistivity",&_isSpitzer);
+
+  _chemicalReactions = true;
+  setParameter("ChemicalReactions",&_chemicalReactions);
+
+  _collisionalTerms = true;
+  setParameter("CollisionalTerms",&_collisionalTerms);
+
+  _gravityTerms = true;
+  setParameter("GravityTerms",&_gravityTerms);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -80,6 +89,12 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::defineConfigOptions(Config::OptionList& opt
      ("electricalResistivity", "electrical Resistivity used in Ohm's law");
  options.template addConfigOption< bool >
      ("SpitzerResistivity", "flag to set Spitzer collisional Resistivity");
+ options.template addConfigOption< bool >
+     ("ChemicalReactions", "flag to set Chemical reactions");
+ options.template addConfigOption< bool >
+     ("CollisionalTerms", "flag to set Collisional terms");
+ options.template addConfigOption< bool >
+     ("GravityTerms", "flag to set Gravity terms");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -200,11 +215,19 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
     // Compute the source terms
     computeMassReactionsEnergySourceTerm();
     computeCollisionalMomentumEnergy();
+    computegravityTerms();
     
     /// FLUID EQUATIONS
     //CONTINUITY
-      const CFreal massSource_i = _massSource[0];
-      const CFreal massSource_n = _massSource[1];
+      CFreal massSource_i = _massSource[0];
+      CFreal massSource_n = _massSource[1];
+
+      if (_chemicalReactions == false){
+        massSource_i = 0.;
+        massSource_n = 0.;
+      }
+
+
       source[8] = massSource_i;					// Ions continuity equation
       source[9] = massSource_n;					// Neutrals continuity equation  
       
@@ -218,40 +241,79 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
       const CFreal vi = _physicalData[firstVelocity + 1]; 
       const CFreal un = _physicalData[firstVelocity + 2];
       const CFreal vn = _physicalData[firstVelocity + 3];  
-      const CFreal GammaIon_i = - _GammaIon_n;
-      const CFreal GammaRec_n = - _GammaRec_i;
+      CFreal GammaIon_i = - _GammaIon_n;
+      CFreal GammaRec_n = - _GammaRec_i;
       const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
       const CFreal mn = 1.6726e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
-      const CFreal collMomentumSource_ix = _collMomentumSource[0];
-      const CFreal collMomentumSource_iy = _collMomentumSource[1];
-      const CFreal collMomentumSource_nx = _collMomentumSource[2];
-      const CFreal collMomentumSource_ny = _collMomentumSource[3];
+      CFreal collMomentumSource_ix = _collMomentumSource[0];
+      CFreal collMomentumSource_iy = _collMomentumSource[1];
+      CFreal collMomentumSource_nx = _collMomentumSource[2];
+      CFreal collMomentumSource_ny = _collMomentumSource[3];
         
       //YGM: added gravity terms for momentum equations:
-      const CFreal gravityMomentumSource_ix = _gravityMomentumSource[0]; 
-      const CFreal gravityMomentumSource_iy = _gravityMomentumSource[1]; 
-      const CFreal gravityMomentumSource_nx = _gravityMomentumSource[2]; 
-      const CFreal gravityMomentumSource_ny = _gravityMomentumSource[3]; 
+      CFreal gravityMomentumSource_ix = _gravityMomentumSource[0];
+      CFreal gravityMomentumSource_iy = _gravityMomentumSource[1];
+      CFreal gravityMomentumSource_nx = _gravityMomentumSource[2];
+      CFreal gravityMomentumSource_ny = _gravityMomentumSource[3];
+
+      if (_chemicalReactions == false){
+        GammaIon_i = 0.;
+        GammaRec_n = 0.;
+      }
+      if (_collisionalTerms == false){
+        collMomentumSource_ix = 0.;
+        collMomentumSource_iy = 0.;
+        collMomentumSource_nx = 0.;
+        collMomentumSource_ny = 0.;
+      }
+
+      if (_gravityTerms == false){
+        gravityMomentumSource_ix = 0.;
+        gravityMomentumSource_iy = 0.;
+        gravityMomentumSource_nx = 0.;
+        gravityMomentumSource_ny = 0.;
+      }
+      //cout << "gravityMomentumSource_ny = " << gravityMomentumSource_ny <<"\n";
+      //cout << "gravityMomentumSource_iy = " << gravityMomentumSource_iy <<"\n";
 
       source[10] = emMomentumX + collMomentumSource_ix + GammaIon_i*mi*un - GammaRec_n*mi*ui + gravityMomentumSource_ix; //Ions X momentum
       source[11] = emMomentumY + collMomentumSource_iy + GammaIon_i*mi*vn - GammaRec_n*mi*vi + gravityMomentumSource_iy; //Ions Y momentum
       
       source[12] = collMomentumSource_nx - GammaIon_i*mi*un + GammaRec_n*mi*ui + gravityMomentumSource_nx; //Neutrals X momentum
-      source[13] = collMomentumSource_ny - GammaIon_i*mi*vn + GammaRec_n*mi*vi; + gravityMomentumSource_ny;//Neutrals Y momentum
+      source[13] = collMomentumSource_ny - GammaIon_i*mi*vn + GammaRec_n*mi*vi + gravityMomentumSource_ny;//Neutrals Y momentum
          
 
       //ENERGY
       const CFreal emEnergy = _J[XX]*_Etotal[XX] + _J[YY]*_Etotal[YY] + _J[ZZ]*_Etotal[ZZ];
-      const CFreal collWorki = _collMomentumSource[0]*ui + _collMomentumSource[1]*vi;
-      const CFreal collWorkn = _collMomentumSource[2]*un + _collMomentumSource[3]*vn;
-      const CFreal EnergyIon = 13.6*1.60217657e-19;							//13.6eV to J
-      const CFreal kinEnerRec_n = 0.5*GammaRec_n*mi*(ui*ui + vi*vi);
-      const CFreal kinEnerIon_i = 0.5*GammaIon_i*mn*(un*un + vn*vn);
-      const CFreal kinEnerIon_e = GammaIon_i*EnergyIon;
+      CFreal collWorki = _collMomentumSource[0]*ui + _collMomentumSource[1]*vi;
+      CFreal collWorkn = _collMomentumSource[2]*un + _collMomentumSource[3]*vn;
+      CFreal EnergyIon = 13.6*1.60217657e-19;							//13.6eV to J
+      CFreal kinEnerRec_n = 0.5*GammaRec_n*mi*(ui*ui + vi*vi);
+      CFreal kinEnerIon_i = 0.5*GammaIon_i*mn*(un*un + vn*vn);
+      CFreal kinEnerIon_e = GammaIon_i*EnergyIon;
       
       //YGM: added work by gravity
-      const CFreal gravityEnergySource_i = _gravityEnergySource[0]; //ions
-      const CFreal gravityEnergySource_n = _gravityEnergySource[1]; //neutrals
+      CFreal gravityEnergySource_i = _gravityEnergySource[0]; //ions
+      CFreal gravityEnergySource_n = _gravityEnergySource[1]; //neutrals
+
+      if (_chemicalReactions == false){
+        _ReactEnergySource[0] = 0.;
+        _ReactEnergySource[1] = 0.;
+        kinEnerRec_n = 0.;
+        kinEnerIon_i = 0.;
+        kinEnerIon_e = 0.;
+      }
+      if (_collisionalTerms == false){
+        collWorki = 0.;
+        collWorkn = 0.;
+        _collEnergySource[0] = 0.;
+        _collEnergySource[1] = 0.;
+      }
+
+      if (_gravityTerms == false){
+        gravityEnergySource_i = 0.;
+        gravityEnergySource_n = 0.;
+      }
 
       source[14] = emEnergy + collWorki + _collEnergySource[0] + _ReactEnergySource[0] + kinEnerIon_i - kinEnerIon_e - kinEnerRec_n + gravityEnergySource_i; //Ions Energy
       source[15] = collWorkn + _collEnergySource[1] + _ReactEnergySource[1] - kinEnerIon_i + kinEnerRec_n + gravityEnergySource_n; //Neutrals Energy
@@ -370,20 +432,6 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeElectricCurrent()
   _J[YY] = Jy;
   _J[ZZ] = Jz;
 
-//   if(std::abs(vi) > 100){
-//     std::cout <<"TwoFluidGravMHDST2D::computeElectricCurrent --> vi                = " << vi <<"\n";
-//     if(std::abs(vi) > 1000){
-//       std::cout <<"--------------- BAD ---------------\n";
-//       if(std::abs(vi) > 10000){
-// 	std::cout <<"--------------- VERYBAD ---------------\n";
-//       }
-//     }
-//     std::cout <<"TwoFluidGravMHDST2D::computeElectricCurrent --> Bx                = " << _Btotal[XX] <<"\n";
-//     std::cout <<"TwoFluidGravMHDST2D::computeElectricCurrent --> -Bx*vi            = " << vi*_Btotal[XX] <<"  Ez =" << _Etotal[ZZ] <<"\n";
-//     std::cout <<"TwoFluidGravMHDST2D::computeElectricCurrent --> electricalResistivity = " << eta <<"\n";	
-//     std::cout <<"TwoFluidGravMHDST2D::computeElectricCurrent --> ElectricCurrent   = " << _J <<"\n";
-//   }
-  
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -188,7 +188,16 @@ private:
 
   /// Using Spitzer resistivity
   bool _isSpitzer;
-  
+
+  /// flag for chemical reactions
+  bool _chemicalReactions;
+
+  /// flag for collisionall terms
+  bool _collisionalTerms;
+
+  /// flag for gravity terms
+  bool _gravityTerms;
+
 }; // end of class TwoFluidGravMHDST2D
 
 //////////////////////////////////////////////////////////////////////////////
