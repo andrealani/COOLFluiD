@@ -1,5 +1,6 @@
 #include "FiniteVolume/FiniteVolume.hh"
 #include "FiniteVolume/SuperInletInterp.hh"
+#include "Framework/StateInterpolator.hh"
 #include "Framework/NamespaceSwitcher.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Common/OldLookupTable.hh"
