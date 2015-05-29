@@ -157,7 +157,8 @@ public:
 			       const CFuint nbNodesInType,
 			       const CFuint nbElemsInType,
 			       const std::string& geoType,
-			       const std::string& end); 
+			       const std::string& end,
+			       const bool isBoundary); 
   
   /// Writes the TECPLOT inner zone header
   virtual void writeInnerZoneHeader(std::ofstream* fout, 
@@ -171,7 +172,8 @@ public:
   
   /// Write the node list corresponding to the given element type
   virtual void writeNodeList(std::ofstream* fout, const CFuint iType, 
-			     Common::SafePtr<Framework::TopologicalRegionSet> elements);
+			     Common::SafePtr<Framework::TopologicalRegionSet> elements,
+			     const bool isBoundary);
   
   /// Write the element list corresponding to the given element type
   void writeElementList(std::ofstream* fout,

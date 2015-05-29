@@ -58,7 +58,8 @@ public:
 			       const CFuint nbNodesInType,
 			       const CFuint nbElemsInType,
 			       const std::string& geoType,
-			       const std::string& end); 
+			       const std::string& end,
+			       const bool isBoundary); 
   
   /// Write the Tecplot file in Binmary format
   /// @throw Common::FilesystemException
@@ -66,7 +67,8 @@ public:
   
   /// Write the node list corresponding to the given element type
   virtual void writeNodeList(std::ofstream* fout, const CFuint iType, 
-			     Common::SafePtr<Framework::TopologicalRegionSet> elements);
+			     Common::SafePtr<Framework::TopologicalRegionSet> elements,
+			     const bool isBoundary);
   
  protected:
   

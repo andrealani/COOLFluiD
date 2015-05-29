@@ -237,7 +237,7 @@ void ParWriteSolution::writeInnerData
 	}
 	
 	// print nodal coordinates and stored node variables
-	writeNodeList(fout, iType, trs);
+	writeNodeList(fout, iType, trs, false);
 	
 	if (isNewFile || meshChanged) {
 	  // write element-node connectivity
@@ -393,6 +393,8 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
 {
   CFAUTOTRACE;
   
+  CFLog(VERBOSE, "ParWriteSolution::writeBoundaryData() => start\n");
+  
   CFLog(INFO, "Writing solution to " << filepath.string() << "\n");
     
   SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
@@ -437,7 +439,7 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
   
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   
-  // loop over the TRSs selecte by the user
+  // loop over the TRSs selected by the user
   for(vector<string>::const_iterator itr = surfTRS.begin(); itr != surfTRS.end(); ++itr) {
     SafePtr<TopologicalRegionSet> trs = MeshDataStack::getActive()->getTrs(*itr);
     const int iTRS = getGlobalTRSID(trs->getName());
@@ -481,7 +483,7 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
 	  headerOffset[0] = fout->tellp();
 	  
 	  writeZoneHeader(fout, iTR, trs->getName(), tt.totalNbNodesInType[iTR], 
-			  totalNbTRGeos, elemShape, "\n");
+			  totalNbTRGeos, elemShape, "\n", true);
 	  
 	  headerOffset[1] = fout->tellp();
 	}
@@ -495,7 +497,7 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
       }
       
       // print nodal coordinates and stored node variables
-      writeNodeList(fout, iTR, trs);
+      writeNodeList(fout, iTR, trs, true);
       
       if (isNewFile || meshChanged) {
 	// write element-node connectivity
@@ -505,6 +507,8 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
       }
     }
   }
+  
+  CFLog(VERBOSE, "ParWriteSolution::writeBoundaryData() => end\n");
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -576,7 +580,7 @@ void ParWriteSolution::writeHeader(MPI_File* fh)
 
 void ParWriteSolution::writeHeader(std::ofstream* fout, 
 				   const std::string title,
-				   SafePtr<DataHandleOutput> dh) 
+				   SafePtr<DataHandleOutput> dh)
 {
   CFAUTOTRACE;
   
@@ -649,7 +653,8 @@ void ParWriteSolution::writeHeader(std::ofstream* fout,
 //////////////////////////////////////////////////////////////////////////////
   
 void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
-				     SafePtr<TopologicalRegionSet> elements)
+				     SafePtr<TopologicalRegionSet> elements,
+				     const bool isBoundary)
 {
   CFAUTOTRACE;
   
@@ -1466,7 +1471,7 @@ void ParWriteSolution::writeInnerZoneHeader(std::ofstream* fout,
     (eType.getNbNodes(), eType.getGeoOrder(), PhysicalModelStack::getActive()->getDim()); 
   
   writeZoneHeader(fout, iType, eType.getShape(), tt.totalNbNodesInType[iType], 
-		  me[iType].elementCount, geoType, "\t");
+		  me[iType].elementCount, geoType, "\t", false);
   
   if (getMethodData().getAppendAuxData()) {
     *fout << ", AUXDATA TRS=\"" << trs->getName() << "\""
@@ -1489,7 +1494,8 @@ void ParWriteSolution::writeZoneHeader(std::ofstream* fout,
 				       const CFuint nbNodesInType,
 				       const CFuint nbElemsInType,
 				       const string& geoType,
-				       const string& end) 
+				       const string& end,
+				       const bool isBoundary) 
 {
   *fout << "ZONE "
 	<< "  T= \"ZONE" << iType << " " << geoShape <<"\""

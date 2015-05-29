@@ -83,7 +83,6 @@ void ParWriteSolutionBlock::writeToBinaryFile()
 }
 
 //////////////////////////////////////////////////////////////////////////////
-      
 
 void ParWriteSolutionBlock::setup()
 {
@@ -103,126 +102,131 @@ void ParWriteSolutionBlock::writeBoundaryData(const boost::filesystem::path& fil
 					      const std::string title,
 					      std::ofstream* fout)
 {
-  // CFAUTOTRACE;
+  CFAUTOTRACE;
   
-  // CFLog(INFO, "Writing solution to " << filepath.string() << "\n");
-    
-  // SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
-  // DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
-  // DataHandle<ProxyDofIterator<RealVector>*> nstatesProxy = socket_nstatesProxy.getDataHandle();
+  CFLog(VERBOSE, "ParWriteSolutionBlock::writeBoundaryData() => start\n");
   
-  // // AL: this is a handle for the nodal states which can be
-  // // stored as arrays of State*, RealVector* or RealVector
-  // // but they are always used as arrays of RealVector*
-  // ProxyDofIterator<RealVector>& nodalStates = *nstatesProxy[0];
+  CFLog(INFO, "Writing solution to " << filepath.string() << "\n");
+
+  SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
+  DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
+  DataHandle<ProxyDofIterator<RealVector>*> nstatesProxy = socket_nstatesProxy.getDataHandle();
   
-  // // we assume that the element-node == element-state connectivity
-  // // @todo tecplot writer should not assume element-to-node
-  // // connectivity to be the same as element-to-state
+  // AL: this is a handle for the nodal states which can be
+  // stored as arrays of State*, RealVector* or RealVector
+  // but they are always used as arrays of RealVector*
+  ProxyDofIterator<RealVector>& nodalStates = *nstatesProxy[0];
   
-  // /// return if the user has not indicated any TRS
-  // if (getMethodData().getSurfaceTRSsToWrite().empty()) return;
+  // we assume that the element-node == element-state connectivity
+  // @todo tecplot writer should not assume element-to-node
+  // connectivity to be the same as element-to-state
   
-  // // write the TECPLOT file header
-  // if (isNewFile) {
-  //   writeHeader(fout, title, CFNULL);
-  // }
+  /// return if the user has not indicated any TRS
+  if (getMethodData().getSurfaceTRSsToWrite().empty()) return;
   
-  // const std::vector<std::string>& surfTRS = getMethodData().getSurfaceTRSsToWrite();
+  // write the TECPLOT file header
+  if (isNewFile) {
+    writeHeader(fout, title, CFNULL);
+  }
   
-  // CFuint countTRToWrite = 0;  
-  // for(vector<string>::const_iterator itr = surfTRS.begin(); itr != surfTRS.end(); ++itr) {
-  //   Common::SafePtr<TopologicalRegionSet> currTrs = MeshDataStack::getActive()->getTrs(*itr);
-  //   const CFuint nbTRs = currTrs->getNbTRs();
-  //   for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
-  //     SafePtr<TopologicalRegion> tr = currTrs->getTopologicalRegion(iTR);
-  //     countTRToWrite++;
-  //   }
-  // }
-  // cf_assert(countTRToWrite > 0);
+  const std::vector<std::string>& surfTRS = getMethodData().getSurfaceTRSsToWrite();
+  
+  CFuint countTRToWrite = 0;  
+  for(vector<string>::const_iterator itr = surfTRS.begin(); itr != surfTRS.end(); ++itr) {
+    Common::SafePtr<TopologicalRegionSet> currTrs = MeshDataStack::getActive()->getTrs(*itr);
+    const CFuint nbTRs = currTrs->getNbTRs();
+    for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
+      SafePtr<TopologicalRegion> tr = currTrs->getTopologicalRegion(iTR);
+      countTRToWrite++;
+    }
+  }
+  cf_assert(countTRToWrite > 0);
    
-  // const vector<vector<CFuint> >&  trsInfo =
-  //   MeshDataStack::getActive()->getTotalTRSInfo();
+  const vector<vector<CFuint> >&  trsInfo =
+    MeshDataStack::getActive()->getTotalTRSInfo();
    
-  // SafePtr<vector<vector<vector<CFuint> > > > globalGeoIDS =
-  //   MeshDataStack::getActive()->getGlobalTRSGeoIDs();
+  SafePtr<vector<vector<vector<CFuint> > > > globalGeoIDS =
+    MeshDataStack::getActive()->getGlobalTRSGeoIDs();
   
-  // const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
   
-  // // loop over the TRSs selecte by the user
-  // for(vector<string>::const_iterator itr = surfTRS.begin(); itr != surfTRS.end(); ++itr) {
-  //   SafePtr<TopologicalRegionSet> trs = MeshDataStack::getActive()->getTrs(*itr);
-  //   const int iTRS = getGlobalTRSID(trs->getName());
-  //   cf_assert(iTRS >= 0);
+  // loop over the TRSs selected by the user
+  for(vector<string>::const_iterator itr = surfTRS.begin(); itr != surfTRS.end(); ++itr) {
+    SafePtr<TopologicalRegionSet> trs = MeshDataStack::getActive()->getTrs(*itr);
+    const int iTRS = getGlobalTRSID(trs->getName());
+    cf_assert(iTRS >= 0);
     
-  //   TeclotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
+    TeclotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
     
-  //   const CFuint nbTRs = trs->getNbTRs(); 
-  //   cf_assert(nbTRs > 0);
-  //   cf_assert(nbTRs == (*globalGeoIDS)[iTRS].size());
+    const CFuint nbTRs = trs->getNbTRs(); 
+    cf_assert(nbTRs > 0);
+    cf_assert(nbTRs == (*globalGeoIDS)[iTRS].size());
     
-  //   for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
-  //     SafePtr<TopologicalRegion> tr = trs->getTopologicalRegion(iTR);
+    for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
+      SafePtr<TopologicalRegion> tr = trs->getTopologicalRegion(iTR);
       
-  //     // count the maximum number of nodes in a boundary face belonging to this TR
-  //     CFuint maxNbNodesInTRGeo = 0;
-  //     const CFuint nbTRGeos = (*trs)[iTR]->getLocalNbGeoEnts();
-  //     for (CFuint iGeo = 0; iGeo < nbTRGeos; ++iGeo) {
-  // 	maxNbNodesInTRGeo = max(maxNbNodesInTRGeo, (*trs)[iTR]->getNbNodesInGeo(iGeo));
-  //     }
+      // count the maximum number of nodes in a boundary face belonging to this TR
+      CFuint maxNbNodesInTRGeo = 0;
+      const CFuint nbTRGeos = (*trs)[iTR]->getLocalNbGeoEnts();
+      for (CFuint iGeo = 0; iGeo < nbTRGeos; ++iGeo) {
+  	maxNbNodesInTRGeo = max(maxNbNodesInTRGeo, (*trs)[iTR]->getNbNodesInGeo(iGeo));
+      }
       
-  //     CFuint maxNbNodesInGeo = 0;
-  //     MPI_Allreduce(&maxNbNodesInTRGeo, &maxNbNodesInGeo, 1, MPIStructDef::getMPIType
-  // 		    (&maxNbNodesInGeo), MPI_MAX, _comm);
-  //     cf_assert(maxNbNodesInGeo > 0);
+      CFuint maxNbNodesInGeo = 0;
+      MPI_Allreduce(&maxNbNodesInTRGeo, &maxNbNodesInGeo, 1, MPIStructDef::getMPIType
+  		    (&maxNbNodesInGeo), MPI_MAX, _comm);
+      cf_assert(maxNbNodesInGeo > 0);
       
-  //     std::string elemShape = "LINESEG";
-  //     if (dim == 3) {
-  // 	// AL: the maximum number of nodes in face is considered: an extra virtual 
-  // 	// node is added if TETRA and QUADRILATERAL are both present
-  // 	elemShape = (maxNbNodesInGeo == 3) ? "TRIANGLE" : "QUADRILATERAL";
-  //     }
+      std::string elemShape = "LINESEG";
+      if (dim == 3) {
+  	// AL: the maximum number of nodes in face is considered: an extra virtual 
+  	// node is added if TETRA and QUADRILATERAL are both present
+  	elemShape = (maxNbNodesInGeo == 3) ? "TRIANGLE" : "QUADRILATERAL";
+      }
       
-  //     const CFuint totalNbTRGeos = trsInfo[iTRS][iTR];
+      const CFuint totalNbTRGeos = trsInfo[iTRS][iTR];
       
-  //     // print zone header: one zone per TR
-  //     const bool meshChanged = hasChangedMesh(iTR, tt);
-  //     if (isNewFile || meshChanged) {
-  // 	vector<MPI_Offset>& headerOffset = tt.headerOffset[iTR];
-  // 	if (_myRank == _ioRank) {
-  // 	  headerOffset[0] = fout->tellp();
+      // print zone header: one zone per TR
+      const bool meshChanged = hasChangedMesh(iTR, tt);
+      if (isNewFile || meshChanged) {
+  	vector<MPI_Offset>& headerOffset = tt.headerOffset[iTR];
+  	if (_myRank == _ioRank) {
+  	  headerOffset[0] = fout->tellp();
 	  
-  // 	  ParWriteSolution::writeZoneHeader(fout, iTR, trs->getName(), tt.totalNbNodesInType[iTR], 
-  // 					    totalNbTRGeos, elemShape, "\n");
+  	  writeZoneHeader(fout, iTR, trs->getName(), tt.totalNbNodesInType[iTR], 
+			  totalNbTRGeos, elemShape, "\n", true);
 	  
-  // 	  headerOffset[1] = fout->tellp();
-  // 	}
+  	  headerOffset[1] = fout->tellp();
+  	}
 	
-  // 	// communicate the current file position to all processor
-  // 	MPI_Bcast(&headerOffset[0], 2, MPIStructDef::getMPIOffsetType(), _ioRank, _comm);
+  	// communicate the current file position to all processor
+  	MPI_Bcast(&headerOffset[0], 2, MPIStructDef::getMPIOffsetType(), _ioRank, _comm);
 	
-  // 	// backup the total counts for this element type
-  // 	tt.oldNbNodesElemsInType[iTR].first  = tt.totalNbNodesInType[iTR];
-  // 	tt.oldNbNodesElemsInType[iTR].second = totalNbTRGeos;
-  //     }
+  	// backup the total counts for this element type
+  	tt.oldNbNodesElemsInType[iTR].first  = tt.totalNbNodesInType[iTR];
+  	tt.oldNbNodesElemsInType[iTR].second = totalNbTRGeos;
+      }
       
-  //     // print nodal coordinates and stored node variables
-  //     writeNodeList(fout, iTR, trs);
+      // print nodal coordinates and stored node variables
+      writeNodeList(fout, iTR, trs, true);
       
-  //     if (isNewFile || meshChanged) {
-  // 	// write element-node connectivity
-  // 	writeElementList(fout, iTR, maxNbNodesInGeo, 
-  // 			 totalNbTRGeos, nbTRGeos, 0, 
-  // 			 CFPolyOrder::ORDER1, trs);
-  //     }
-  //   }
-  // }
+      if (isNewFile || meshChanged) {
+  	// write element-node connectivity
+  	writeElementList(fout, iTR, maxNbNodesInGeo, 
+  			 totalNbTRGeos, nbTRGeos, 0, 
+  			 CFPolyOrder::ORDER1, trs);
+      }
+    }
+  }
+  
+  CFLog(VERBOSE, "ParWriteSolutionBlock::writeBoundaryData() => end\n");
 }
     
 //////////////////////////////////////////////////////////////////////////////
   
 void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
-					  SafePtr<TopologicalRegionSet> elements)
+					  SafePtr<TopologicalRegionSet> elements,
+					  const bool isBoundary)
 {
   CFAUTOTRACE;
   
@@ -233,6 +237,7 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
   const CFreal refL = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
   SafePtr<ConvectiveVarSet> ouputVarSet = getMethodData().getOutputVarSet();
   SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
+  const bool printExtra = getMethodData().shouldPrintExtraValues();
   
   vector<bool> isVarNodal; 
   
@@ -244,11 +249,12 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
   CFuint totNbVarsCC = 0;
   if (!getMethodData().onlyCoordinates()) {
     bool nodal = false;
-    if (m_nodalOutputVar) {
+    
+    if (m_nodalOutputVar || isBoundary) {
       totNbVarsND += nbEqs;
       nodal = true;
     } 
-    else {
+    else if (!m_nodalOutputVar && !isBoundary) {
       totNbVarsCC += nbEqs;
       nodal = false;
     }
@@ -257,13 +263,13 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
       isVarNodal.push_back(nodal);
     }
     
-    if (getMethodData().shouldPrintExtraValues()) {
+    if (printExtra) {
       const CFuint nbExtraVars = ouputVarSet->getExtraVarNames().size();
-      if (m_nodalOutputVar) { 
+      if (m_nodalOutputVar || isBoundary) {
 	totNbVarsND += nbExtraVars;
 	nodal = true;
       }
-      else {
+      else if (!m_nodalOutputVar && !isBoundary) {
 	totNbVarsCC += nbExtraVars;
 	nodal = false;
       }
@@ -273,18 +279,21 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
       }
     }
     
-    // nodal data handle variables 
-    totNbVarsND += datahandle_output->getVarNames().size();
-    cf_assert(datahandle_output->getVarNames().size() == m_nodalvars.size());
-    for (CFuint i = 0; i < datahandle_output->getVarNames().size(); ++i) {
-      isVarNodal.push_back(true);
-    }
-    
-    // cell-centered data handle variables 
-    totNbVarsCC += datahandle_output->getCCVarNames().size();
-    cf_assert(datahandle_output->getCCVarNames().size() == m_ccvars.size()); 
-    for (CFuint i = 0; i < datahandle_output->getCCVarNames().size(); ++i) {
-      isVarNodal.push_back(false);
+    // data handles are ignored at the boundary
+    if (!isBoundary) {
+      // nodal data handle variables 
+      totNbVarsND += datahandle_output->getVarNames().size();
+      cf_assert(datahandle_output->getVarNames().size() == m_nodalvars.size());
+      for (CFuint i = 0; i < datahandle_output->getVarNames().size(); ++i) {
+	isVarNodal.push_back(true);
+      }
+      
+      // cell-centered data handle variables 
+      totNbVarsCC += datahandle_output->getCCVarNames().size();
+      cf_assert(datahandle_output->getCCVarNames().size() == m_ccvars.size()); 
+      for (CFuint i = 0; i < datahandle_output->getCCVarNames().size(); ++i) {
+	isVarNodal.push_back(false);
+      }
     }
   }
   cf_assert(totNbVarsND >= dim); // at least coordinates are printed in nodal mode
@@ -326,20 +335,21 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
   elementListND.reserve(nbElementTypes, nSend, nbLocalElementsND);
   elementListND.fill(totNbNodes, nodesStride, totalToSendND);
   
-  SafePtr<vector<ElementTypeData> > elementType =
-    MeshDataStack::getActive()->getElementTypeData(elements->getName());
-  ElementTypeData& eType = (*elementType)[iType];
-  
   const vector<MeshElementType>& me =
     MeshDataStack::getActive()->getTotalMeshElementTypes();
-  cf_assert(elementType->size() == me.size());
   
   // fill in the writer list for cell-centered variables
   const CFuint nbElemsInType = me[iType].elementCount;
-  const CFuint nbLocalElementsCC = eType.getNbElems();
+  CFuint nbLocalElementsCC = 0;
   CFuint totalToSendCC = 0;
   WriteListMap elementListCC;
-  if (!m_nodalOutputVar) {
+  if (!m_nodalOutputVar && !isBoundary) { 
+    SafePtr<vector<ElementTypeData> > elementType =
+      MeshDataStack::getActive()->getElementTypeData(elements->getName());
+    ElementTypeData& eType = (*elementType)[iType];
+    cf_assert(elementType->size() == me.size());
+    
+    nbLocalElementsCC = eType.getNbElems();
     elementListCC.reserve(nbElementTypes, nSend, nbLocalElementsCC);
     elementListCC.fill(nbElemsInType, nodesStride, totalToSendCC);
   }
@@ -372,7 +382,10 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
   
   SafePtr< vector<CFuint> > globalElementIDs = MeshDataStack::getActive()->getGlobalElementIDs();
   
-  if (!m_nodalOutputVar) {
+  if (!m_nodalOutputVar && !isBoundary) {
+    SafePtr<vector<ElementTypeData> > elementType =
+      MeshDataStack::getActive()->getElementTypeData(elements->getName());
+    ElementTypeData& eType = (*elementType)[iType];
     // insert in the write list the local IDs of the elements
     // the range ID is automatically determined inside the WriteListMap
     CFuint elemID = eType.getStartIdx();
@@ -395,13 +408,12 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
   const CFuint nbExtraVars = ouputVarSet->getExtraVarNames().size();
   const CFuint nbDHNDVars  = datahandle_output->getVarNames().size();
   const CFuint nbDHCCVars  = datahandle_output->getCCVarNames().size();
-  
   const CFuint endNbEqs = dim + nbEqs;
-  const CFuint endNbExtraVars =  (getMethodData().shouldPrintExtraValues()) ?
-    endNbEqs + nbExtraVars : endNbEqs;
+  const CFuint endNbExtraVars = (printExtra) ? endNbEqs + nbExtraVars : endNbEqs;
   const CFuint endNbDHNDVars = endNbExtraVars + nbDHNDVars;
   const CFuint endNbDHCCVars = endNbDHNDVars + nbDHCCVars;
-  cf_assert(endNbDHCCVars == totNbVars);
+  cf_assert((!isBoundary && endNbDHCCVars == totNbVars) || 
+	    (isBoundary && endNbExtraVars == totNbVars));
   
   for (CFuint iVar = 0; iVar < totNbVars; ++iVar) {
     CFint wRank = -1; 
@@ -467,7 +479,7 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
 		  sendElements[isend++] = dimState[iVar-dim];
 		}
 		
-		if (getMethodData().shouldPrintExtraValues() && (iVar >= endNbEqs && iVar < endNbExtraVars)) {
+		if (printExtra && (iVar >= endNbEqs && iVar < endNbExtraVars)) {
 		  // this is EXTREMELY inefficient !!!! 
 		  // setDimensionalValuesPlusExtraValues() will be called nbExtraVars times per state !!!
 		  // dimensionalize the solution
@@ -477,8 +489,10 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
 		}
 	      }
 	      
-	      if (nbDHNDVars > 0 && iVar >= endNbExtraVars && iVar < endNbDHNDVars) {
-		datahandle_output->fillStateData(&sendElements[0], stateID, isend, iVar-endNbExtraVars);
+	      if (!isBoundary) {
+		if (nbDHNDVars > 0 && iVar >= endNbExtraVars && iVar < endNbDHNDVars) {
+		  datahandle_output->fillStateData(&sendElements[0], stateID, isend, iVar-endNbExtraVars);
+		}
 	      }
 	    }
 	    else if ((!isNodal) && iVar >= dim) {
@@ -490,9 +504,7 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
 		sendElements[isend++] = dimState[iVar-dim];
 	      }
 	      
-	      if (getMethodData().shouldPrintExtraValues() && 
-		  (iVar >= endNbEqs && iVar < endNbExtraVars)) {
-		
+	      if (printExtra && (iVar >= endNbEqs && iVar < endNbExtraVars)) {
 		// this is EXTREMELY inefficient !!!! 
 		// setDimensionalValuesPlusExtraValues() will be called nbExtraVars times per state !!!
 		// dimensionalize the solution
@@ -612,7 +624,8 @@ void ParWriteSolutionBlock::writeZoneHeader(std::ofstream* fout,
 					    const CFuint nbNodesInType,
 					    const CFuint nbElemsInType,
 					    const string& geoType,
-					    const string& end) 
+					    const string& end,
+					    const bool isBoundary) 
 {
   *fout << "ZONE "
 	<< "  T= \"ZONE" << iType << " " << geoShape <<"\""
@@ -635,7 +648,11 @@ void ParWriteSolutionBlock::writeZoneHeader(std::ofstream* fout,
   
   if (!getMethodData().onlyCoordinates()) {
     const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-    const string locationString = m_nodalOutputVar ? "NODAL" : "CELLCENTERED";
+    string locationString = "NODAL";
+    if (!isBoundary) {
+      locationString = m_nodalOutputVar ? "NODAL" : "CELLCENTERED";
+    }
+    
     if (nbEqs!=1) {
       *fout << ",[" << dim+1 << "-" << dim+nbEqs << "]=" << locationString;
     }
@@ -656,23 +673,25 @@ void ParWriteSolutionBlock::writeZoneHeader(std::ofstream* fout,
       }
     }
     
-    if (!m_nodalvars.empty()) {
-      if (m_nodalvars.size()!=1) {
-	*fout << ",[" << dim+nbEqs+1+nbExtraVars << "-" << 
-	  dim+nbEqs+nbExtraVars+m_nodalvars.size() << "]=NODAL";
+    if (!isBoundary) {
+      if (!m_nodalvars.empty()) {
+	if (m_nodalvars.size()!=1) {
+	  *fout << ",[" << dim+nbEqs+1+nbExtraVars << "-" << 
+	    dim+nbEqs+nbExtraVars+m_nodalvars.size() << "]=NODAL";
+	}
+	else {
+	  *fout << "," << dim+nbEqs+1+nbExtraVars << "=NODAL";
+	}
       }
-      else {
-	*fout << "," << dim+nbEqs+1+nbExtraVars << "=NODAL";
-      }
-    }
-    
-    if (!m_ccvars.empty()) {
-      if(m_ccvars.size()!=1) {
-	*fout << ",[" << dim+nbEqs+nbExtraVars+m_nodalvars.size()+1 << "-" << 
-	  dim+nbEqs+nbExtraVars+m_nodalvars.size()+m_ccvars.size() << "]=CELLCENTERED";
-      }
-      else {
-	*fout << "," << dim+nbEqs+nbExtraVars+m_nodalvars.size()+1 << "=CELLCENTERED";
+      
+      if (!m_ccvars.empty()) {
+	if(m_ccvars.size()!=1) {
+	  *fout << ",[" << dim+nbEqs+nbExtraVars+m_nodalvars.size()+1 << "-" << 
+	    dim+nbEqs+nbExtraVars+m_nodalvars.size()+m_ccvars.size() << "]=CELLCENTERED";
+	}
+	else {
+	  *fout << "," << dim+nbEqs+nbExtraVars+m_nodalvars.size()+1 << "=CELLCENTERED";
+	}
       }
     }
   }
