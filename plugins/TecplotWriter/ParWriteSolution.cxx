@@ -53,12 +53,13 @@ namespace COOLFluiD {
 
 void ParWriteSolution::defineConfigOptions(Config::OptionList& options)
 {
+  options.addConfigOption< bool >("OnlyNodal", "This flag forces output to be all nodal.");
   options.addConfigOption< std::string>("FileFormat","Format to write Tecplot file."); 
   options.addConfigOption< CFuint >("NbWriters", "Number of writers (and MPI groups)");
-  options.addConfigOption< int >("MaxBuffSize", "Maximum buffer size for MPI I/O");
+  options.addConfigOption< int >("MaxBuffSize", "Maximum buffer size for MPI I/O"); 
 }
     
- //////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 
  ParWriteSolution::ParWriteSolution(const std::string& name) : 
    TecWriterCom(name),
@@ -74,6 +75,9 @@ void ParWriteSolution::defineConfigOptions(Config::OptionList& options)
  {
    addConfigOptionsTo(this);
    
+   m_onlyNodal = true;
+   setParameter("OnlyNodal",&m_onlyNodal);
+   
    _fileFormatStr = "ASCII";
    setParameter("FileFormat",&_fileFormatStr);
    
@@ -81,7 +85,7 @@ void ParWriteSolution::defineConfigOptions(Config::OptionList& options)
    setParameter("NbWriters",&_nbWriters);
    
    _maxBuffSize = 2147479200; // (CFuint) std::numeric_limits<int>::max();
-   setParameter("MaxBuffSize",&_maxBuffSize); 
+   setParameter("MaxBuffSize",&_maxBuffSize);
  }
     
  //////////////////////////////////////////////////////////////////////////////
@@ -638,9 +642,12 @@ void ParWriteSolution::writeHeader(std::ofstream* fout,
 	  *fout << " \"" << dhVarNames[i] << "\"";
 	}
 	
-	vector<string> dhCCVarNames = dh->getCCVarNames();
-	for (CFuint i = 0; i < dhCCVarNames.size() ; ++i) {
-	  *fout << " \"" << dhCCVarNames[i] << "\"";
+	// discard DataHandle CC if only NODAL
+	if (!m_onlyNodal) {
+	  vector<string> dhCCVarNames = dh->getCCVarNames();
+	  for (CFuint i = 0; i < dhCCVarNames.size() ; ++i) {
+	    *fout << " \"" << dhCCVarNames[i] << "\"";
+	  }
 	}
       }
     }

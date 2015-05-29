@@ -248,9 +248,12 @@ protected:
   /// flag to tell if the boundary file is new
   bool _isNewBFile;
   
+  /// flag that specifies to output cell-centered or nodal variables
+  bool m_onlyNodal;
+  
   /// File format to write in (ASCII or Binary)
   std::string _fileFormatStr;
-  
+    
 }; // class ParWriteSolution
 
 //////////////////////////////////////////////////////////////////////////////

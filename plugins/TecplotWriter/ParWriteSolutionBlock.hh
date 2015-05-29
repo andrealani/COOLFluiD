@@ -27,10 +27,6 @@ class TecplotWriter_API ParWriteSolutionBlock : public ParWriteSolution {
   
 public:
   
-  /// Defines the Config Option's of this class
-  /// @param options a OptionList where to add the Option's
-  static void defineConfigOptions(Config::OptionList& options);
-  
   /// Constructor.
   explicit ParWriteSolutionBlock(const std::string& name);
 
@@ -41,15 +37,6 @@ public:
   virtual void setup();
   
  protected:
-    
-  /// Writes the boundary data to file
-  /// @param filename  name of output file
-  /// @param isNewFile flag to tell if the file is to be created or to be overwritten
-  /// @param fout      pointer to the file  
-  virtual void writeBoundaryData(const boost::filesystem::path& filepath,
-				 const bool isNewFile,
-				 const std::string title,
-				 std::ofstream* fout);
   
   /// Writes the TECPLOT zone header
   virtual void writeZoneHeader(std::ofstream* fout, 
@@ -70,13 +57,8 @@ public:
 			     Common::SafePtr<Framework::TopologicalRegionSet> elements,
 			     const bool isBoundary);
   
- protected:
-  
-  /// flag that specifies to output cell-centered or nodal variables
-  bool m_nodalOutputVar;
-  
 }; // class ParWriteSolutionBlock
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace TecplotWriter
