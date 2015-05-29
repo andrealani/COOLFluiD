@@ -131,22 +131,21 @@ void TecWriterData::configure ( Config::ConfigArgs& args )
 
 void TecWriterData::setup ()
 {
-//  CFLog ( NOTICE, "Calling TecWriterData::setup() with setup [" << isSetup() << "]\n" );
-
+  CFAUTOTRACE;
+  
   OutputFormatterData::setup();
   
   m_updateToOutputVar->setup(1);
-  
+  m_outputVarSet->setup();
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void TecWriterData::unsetup ()
 {
-//  CFLog ( NOTICE, "Calling TecWriterData::unsetup() with setup [" << isSetup() << "]\n" );
-//  CF_DEBUG_POINT;
+  CFAUTOTRACE;
+  
   OutputFormatterData::unsetup();
-//  CF_DEBUG_POINT;
 }
 
 //////////////////////////////////////////////////////////////////////////////

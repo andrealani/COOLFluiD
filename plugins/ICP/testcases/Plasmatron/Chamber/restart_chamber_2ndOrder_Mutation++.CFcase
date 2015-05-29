@@ -8,7 +8,8 @@
 # isothermal noslip wall, PETSc using >200 Krylov spaces, computation of Lorentz 
 # force and Joule heating source terms for ICP, Mutation++ for air mixtures in LTE, 
 # restart from a solution on a full torch+chamber+probe configuration (previously 
-# computed with old Mutation F77) 
+# computed with old Mutation F77), parallel TECPLOT writer in block format (including
+# output for electric conductivity)   
 #
 ################################################################################
 #
@@ -76,6 +77,10 @@ Simulator.SubSystem.Tecplot.Data.outputVar = Puvt
 Simulator.SubSystem.Tecplot.Data.printExtraValues = true
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Symmetry
 #Wall_torch_in
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = elCondField
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = sigma
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
+Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
 
 #Simulator.SubSystem.StopCondition          = MaxNumberSteps
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 3

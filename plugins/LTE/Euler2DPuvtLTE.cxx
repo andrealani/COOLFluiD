@@ -205,7 +205,7 @@ void Euler2DPuvtLTE::setDimensionalValuesPlusExtraValues
   extra[0] = _dhe[0];
   extra[1] = _dhe[1] + 0.5*V2;
   
-  CFLog(VERBOSE, "Euler2DPuvtLTE::setDimensionalValuesPlusExtraValues() => dhe = " << _dhe << "\n");
+  CFLog(DEBUG_MAX, "Euler2DPuvtLTE::setDimensionalValuesPlusExtraValues() => dhe = " << _dhe << "\n");
   
   CFreal gamma = 0.0;
   CFreal a = 0.0;

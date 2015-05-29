@@ -267,6 +267,25 @@ void ParWriteSolution::setup()
   TecWriterCom::setup();
   ParFileWriter::setWriterGroup();
   
+  // store the names of additional variables 
+  m_ccvars.clear();
+  m_nodalvars.clear();
+  
+  SafePtr<DataHandleOutput> dh = getMethodData().getDataHOutput();
+  dh->getDataHandles();
+  
+  if (dh.isNotNull()) {
+    vector<string> dh_varnames = dh->getVarNames();
+    for (CFuint i = 0; i < dh_varnames.size() ; ++i) {
+      m_nodalvars.push_back(dh_varnames[i]);
+    }
+    
+    vector<string> dh_ccvarnames = dh->getCCVarNames();
+    for (CFuint i = 0; i < dh_ccvarnames.size() ; ++i) {
+      m_ccvars.push_back(dh_ccvarnames[i]);
+    }
+  }  
+  
   const vector<MeshElementType>& me =
     MeshDataStack::getActive()->getTotalMeshElementTypes();
   const CFuint nbElementTypes = me.size();
@@ -532,55 +551,55 @@ ParWriteSolution::needsSockets()
 
 //////////////////////////////////////////////////////////////////////////////
       
-void ParWriteSolution::writeHeader(MPI_File* fh)
-{
-  CFAUTOTRACE;
+// void ParWriteSolution::writeHeader(MPI_File* fh)
+// {
+//   CFAUTOTRACE;
   
-  CFLog(VERBOSE, "ParWriteSolution::writeHeader() start\n");
+//   CFLog(VERBOSE, "ParWriteSolution::writeHeader() start\n");
   
-  if (_myRank == _ioRank) {
+//   if (_myRank == _ioRank) {
     
-    //  Tecplot Header
-    // maximum string size to write includes 30 characters 
-    MPIIOFunctions::writeKeyValue<char>(fh, "TITLE = ");
-    MPIIOFunctions::writeKeyValue<char>(fh, "Unstructured grid data");
-    MPIIOFunctions::writeKeyValue<char>(fh, "\nVARIABLES = ");
+//     //  Tecplot Header
+//     // maximum string size to write includes 30 characters 
+//     MPIIOFunctions::writeKeyValue<char>(fh, "TITLE = ");
+//     MPIIOFunctions::writeKeyValue<char>(fh, "Unstructured grid data");
+//     MPIIOFunctions::writeKeyValue<char>(fh, "\nVARIABLES = ");
     
-    const CFuint dim = PhysicalModelStack::getActive()->getDim();
-    const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-    for (CFuint i = 0; i < dim; ++i) {
-      MPIIOFunctions::writeKeyValue<char>(fh, " \"x" + StringOps::to_str(i) + '\"');
-    }
+//     const CFuint dim = PhysicalModelStack::getActive()->getDim();
+//     const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+//     for (CFuint i = 0; i < dim; ++i) {
+//       MPIIOFunctions::writeKeyValue<char>(fh, " \"x" + StringOps::to_str(i) + '\"');
+//     }
     
-    if (!getMethodData().onlyCoordinates()) {
-      SafePtr<ConvectiveVarSet> outputVarSet = getMethodData().getOutputVarSet();
-      const vector<std::string>& varNames = outputVarSet->getVarNames();
-      cf_assert(varNames.size() == nbEqs);
+//     if (!getMethodData().onlyCoordinates()) {
+//       SafePtr<ConvectiveVarSet> outputVarSet = getMethodData().getOutputVarSet();
+//       const vector<std::string>& varNames = outputVarSet->getVarNames();
+//       cf_assert(varNames.size() == nbEqs);
       
-      for (CFuint i = 0 ;  i < nbEqs; ++i)  {
-	std::string n = varNames[i];
-	if ( *n.begin()  != '\"' )  n  = '\"' + n;
-	if ( *n.rbegin() != '\"' )  n += '\"';
-	MPIIOFunctions::writeKeyValue<char>(fh, " " + n);
-      }
+//       for (CFuint i = 0 ;  i < nbEqs; ++i)  {
+// 	std::string n = varNames[i];
+// 	if ( *n.begin()  != '\"' )  n  = '\"' + n;
+// 	if ( *n.rbegin() != '\"' )  n += '\"';
+// 	MPIIOFunctions::writeKeyValue<char>(fh, " " + n);
+//       }
       
-      if (getMethodData().shouldPrintExtraValues()) {
-	vector<std::string> extraVarNames = outputVarSet->getExtraVarNames();
-	for (CFuint i = 0 ;  i < extraVarNames.size(); ++i) {
-	  MPIIOFunctions::writeKeyValue<char>(fh, " " +  extraVarNames[i]);
-	}
-      }
+//       if (getMethodData().shouldPrintExtraValues()) {
+// 	vector<std::string> extraVarNames = outputVarSet->getExtraVarNames();
+// 	for (CFuint i = 0 ;  i < extraVarNames.size(); ++i) {
+// 	  MPIIOFunctions::writeKeyValue<char>(fh, " " +  extraVarNames[i]);
+// 	}
+//       }
       
-      SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
-      vector<string> dhVarNames = datahandle_output->getVarNames();
-      for (CFuint i = 0 ;  i < dhVarNames.size(); ++i) {
-	MPIIOFunctions::writeKeyValue<char>(fh, " " + dhVarNames[i]);
-      }
-    }
-  }
+//       SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
+//       vector<string> dhVarNames = datahandle_output->getVarNames();
+//       for (CFuint i = 0 ;  i < dhVarNames.size(); ++i) {
+// 	MPIIOFunctions::writeKeyValue<char>(fh, " " + dhVarNames[i]);
+//       }
+//     }
+//   }
   
-  CFLog(VERBOSE, "ParWriteSolution::writeHeader() end\n");
-}
+//   CFLog(VERBOSE, "ParWriteSolution::writeHeader() end\n");
+// }
   
 //////////////////////////////////////////////////////////////////////////////
 
@@ -591,21 +610,6 @@ void ParWriteSolution::writeHeader(std::ofstream* fout,
   CFAUTOTRACE;
   
   CFLog(VERBOSE, "ParWriteSolution::writeHeader() \"" << title << "\" start\n");
-  
-  // store the names of additional variables 
-  m_ccvars.clear();
-  m_nodalvars.clear();
-  if (dh.isNotNull()) {
-    vector<string> dh_varnames = dh->getVarNames();
-    for (CFuint i = 0; i < dh_varnames.size() ; ++i) {
-      m_nodalvars.push_back(dh_varnames[i]);
-    }
-    
-    vector<string> dh_ccvarnames = dh->getCCVarNames();
-    for (CFuint i = 0; i < dh_ccvarnames.size() ; ++i) {
-      m_ccvars.push_back(dh_ccvarnames[i]);
-    }
-  }
   
   if (_myRank == _ioRank) {
     //  Tecplot Header
@@ -674,18 +678,20 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
   const CFreal refL = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
   SafePtr<ConvectiveVarSet> outputVarSet = getMethodData().getOutputVarSet();
   SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
+  vector<string> extraVarNames = outputVarSet->getExtraVarNames();
+  const CFuint nbExtraVars = extraVarNames.size();
   
   CFuint nodesStride = dim; 
   if (!getMethodData().onlyCoordinates()) {
     nodesStride += nbEqs;
     if (getMethodData().shouldPrintExtraValues()) {
-      nodesStride += outputVarSet->getExtraVarNames().size();
+      nodesStride += nbExtraVars;
     }
     // nodal data handle variables 
     nodesStride += datahandle_output->getVarNames().size();
     cf_assert(datahandle_output->getVarNames().size() == m_nodalvars.size());    
   }
-  
+    
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes =
     MeshDataStack::getActive()->getNodeDataSocketSink().getDataHandle();
   cf_assert(nodes.size() > 0);
@@ -705,7 +711,10 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
   const CFuint nbLocalElements = tt.nodesInType[iType].size();
   const CFuint totNbNodes = tt.totalNbNodesInType[iType];
   RealVector dimState(nbEqs);
-  RealVector extraValues; // size will be set in the VarSet
+  // size should be set in the VarSet but for safety we resize it here too
+  RealVector extraValues;
+  if (nbExtraVars > 0) extraValues.resize(nbExtraVars);
+  
   State tempState;
   
   PE::Group& wg = PE::getGroup("Writers");
@@ -716,7 +725,7 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
   // fill in the writer list
   CFuint totalToSend = 0;
   elementList.fill(totNbNodes, nodesStride, totalToSend);
-  
+    
   const CFuint wordFormatSize = 22;
   
   vector<MPI_Offset> wOffset(_nbWriters, tt.headerOffset[iType][1]); 
@@ -858,10 +867,14 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
     
     CFLog(VERBOSE, "wSendSize = " << wSendSize << ", nodesStride = " << nodesStride << "\n");
     for (CFuint i = 0; i < wSendSize; ++i) {
+      // this fix is needed for ensuring consistency in the format and avoid 
+      // to have entries with 3 digits in the exponent (e.g. +A.BC..e-XXX)
+      if (std::abs(elementToPrint[i]) < 1e-50) elementToPrint[i] = 0.;
+      
       // const CFreal coeff = (countN < dim) ? refL : 1.;
       // this format corresponds to a line of 22*nodesStride bytes  
       fout->precision(14);
-      fout->setf(ios::scientific,ios::floatfield); 
+      fout->setf(ios::scientific, ios::floatfield); 
       fout->setf(ios::showpos);
       if ((i+1)%nodesStride > 0) {
 	*fout << elementToPrint[i] << " ";
@@ -875,7 +888,11 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
     MPI_Offset maxpos  = 0;
     MPI_Allreduce(&lastpos, &maxpos, 1, MPIStructDef::getMPIOffsetType(), MPI_MAX, wg.comm);
     
-    cf_assert(tt.nodesOffset[iType].second == maxpos);
+    if (tt.nodesOffset[iType].second != maxpos) {
+      CFLog(WARN, "tt.nodesOffset[iType].second (" << tt.nodesOffset[iType].second  
+	    << ") != maxpos (" << maxpos << ")\n");
+      cf_assert(tt.nodesOffset[iType].second == maxpos);
+    }
     
     fout->seekp(maxpos);
   }

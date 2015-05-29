@@ -99,12 +99,13 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
   const CFuint dim  = PhysicalModelStack::getActive()->getDim();
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFreal refL = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
-  SafePtr<ConvectiveVarSet> ouputVarSet = getMethodData().getOutputVarSet();
+  SafePtr<ConvectiveVarSet> outputVarSet = getMethodData().getOutputVarSet();
   SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
   const bool printExtra = getMethodData().shouldPrintExtraValues();
+  vector<string> extraVarNames = outputVarSet->getExtraVarNames();
+  const CFuint nbExtraVars = extraVarNames.size();
   
   vector<bool> isVarNodal; 
-  
   CFuint totNbVarsND = dim;
   for (CFuint i = 0; i < dim; ++i) {
     isVarNodal.push_back(true);
@@ -128,7 +129,6 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
     }
     
     if (printExtra) {
-      const CFuint nbExtraVars = ouputVarSet->getExtraVarNames().size();
       if (m_onlyNodal || isBoundary) {
 	totNbVarsND += nbExtraVars;
 	nodal = true;
@@ -197,7 +197,9 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
   const CFuint nbElementTypes = 1; // just nodes
   
   RealVector dimState(nbEqs);
-  RealVector extraValues; // size will be set in the VarSet
+  // size should be set in the VarSet but for safety we resize it here too
+  RealVector extraValues;
+  if (nbExtraVars > 0) extraValues.resize(nbExtraVars);
   State tempState;
   
   PE::Group& wg = PE::getGroup("Writers");
@@ -230,8 +232,6 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
   }
   
   const CFuint wordFormatSize = 22;
-  
-  SafePtr<ConvectiveVarSet> outputVarSet = getMethodData().getOutputVarSet();
   
   vector<MPI_Offset> wOffset(_nbWriters, tt.headerOffset[iType][1]); 
   // set the offsets for the nodes of this element type
@@ -280,7 +280,6 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
     cf_always_assert(totNbVars == dim); 
   }
   
-  const CFuint nbExtraVars = ouputVarSet->getExtraVarNames().size();
   const CFuint nbDHNDVars  = datahandle_output->getVarNames().size();
   const CFuint nbDHCCVars  = datahandle_output->getCCVarNames().size();
   const CFuint endNbEqs = dim + nbEqs;
@@ -363,7 +362,7 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
 		    // this is EXTREMELY inefficient !!!! 
 		    // setDimensionalValuesPlusExtraValues() will be called nbExtraVars times per state !!!
 		    // dimensionalize the solution
-		    ouputVarSet->setDimensionalValuesPlusExtraValues(tempState, dimState, extraValues);
+		    outputVarSet->setDimensionalValuesPlusExtraValues(tempState, dimState, extraValues);
 		    cf_assert(isend < sendElements.size());
 		    sendElements[isend++] = extraValues[iVar-endNbEqs];
 		  }
@@ -389,7 +388,7 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
 		  // setDimensionalValuesPlusExtraValues() will be called nbExtraVars times per state !!!
 		  // dimensionalize the solution
 		  const State& currState = *states[dofID];
-		  ouputVarSet->setDimensionalValuesPlusExtraValues(currState, dimState, extraValues);
+		  outputVarSet->setDimensionalValuesPlusExtraValues(currState, dimState, extraValues);
 		  cf_assert(isend < sendElements.size());
 		  sendElements[isend++] = extraValues[iVar-endNbEqs];
 		}
@@ -456,6 +455,10 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
 	CFLog(VERBOSE, "wSendSize = " << wSendSize << ", nodesStride = " << nodesStride << "\n");
 	// const CFuint sizeLine = 8;
 	for (CFuint i = 0; i < wSendSize; ++i) {
+	  // this fix is needed for ensuring consistency in the format and avoid 
+	  // to have entries with 3 digits in the exponent (e.g. +A.BC..e-XXX)
+	  if (std::abs(elementToPrint[i]) < 1e-50) elementToPrint[i] = 0.;
+	  
 	  //	const CFreal coeff = (countN < dim) ? refL : 1.;
 	  // this format corresponds to a line of 22*nodesStride bytes  
 	  fout->precision(14);

@@ -143,7 +143,7 @@ public:
 				 std::ofstream* fout);
   
   /// Writes the TECPLOT header
-  void writeHeader(MPI_File* fh);
+  // void writeHeader(MPI_File* fh);
   
   /// Writes the TECPLOT header
   virtual void writeHeader(std::ofstream* fout, 
