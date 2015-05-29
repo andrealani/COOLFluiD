@@ -369,7 +369,7 @@ int main(int argc, char** argv)
     return_value = 1;
   }
 
-  cerr << "Exit value " << return_value << endl;
+  CFLog(VERBOSE, "Exit value " << return_value << "\n");
   if (options.waitend) cin.get();
 
   return return_value;

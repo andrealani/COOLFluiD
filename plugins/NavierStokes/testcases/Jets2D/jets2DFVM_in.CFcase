@@ -3,7 +3,8 @@
 # This COOLFluiD CFcase file tests: 
 # 
 # Finite Volume, Euler2D, Forward Euler, mesh with triangles, restart from a 
-# binary CFmesh, writing of binary CFmesh, parallel TECPLOT writer, second-order 
+# binary CFmesh, writing of binary CFmesh, parallel TECPLOT writer in block 
+# (nodal+cell-centered) format, writing of rhs DataHandle, second-order 
 # reconstruction with Venkatakhrisnan limiter, supersonic inlet and outlet BC
 #
 ################################################################################
@@ -11,7 +12,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -10.02916138
+### Residual = -10.029161
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -55,8 +56,13 @@ Simulator.SubSystem.CFmesh.WriteSol = ParWriteBinarySolution
 # parallel ASCII Tecplot writer
 Simulator.SubSystem.Tecplot.FileName = jets2D-sol.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Cons
-Simulator.SubSystem.Tecplot.SaveRate = 100
-Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolution
+Simulator.SubSystem.Tecplot.SaveRate = 500
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = rhs
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = rhs0 rhs1 rhs2 rhs3
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
+Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
+#Simulator.SubSystem.Tecplot.ParWriteSolutionBlock.OnlyNodal = true
+#Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolution
 #Simulator.SubSystem.Tecplot.ParWriteSolution.NbWriters = 4
 Simulator.SubSystem.Tecplot.AppendRank = false
 #Simulator.SubSystem.Tecplot.Data.CoordinatesOnly = true
@@ -64,7 +70,7 @@ Simulator.SubSystem.Tecplot.Data.SurfaceTRS = SuperInlet SuperOutlet
 Simulator.SubSystem.Tecplot.AppendIter = true
 
 #Simulator.SubSystem.StopCondition          = MaxNumberSteps
-#Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
 
 Simulator.SubSystem.StopCondition       = Norm
 Simulator.SubSystem.Norm.valueNorm      = -10.0
