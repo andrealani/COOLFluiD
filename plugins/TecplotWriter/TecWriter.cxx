@@ -53,7 +53,8 @@ TecWriter::TecWriter(const std::string& name)
   setParameter("UnSetupCom",&m_unSetupStr);
   
   // default has been changed to be parallel
-  m_writeSolutionStr = "ParWriteSolution";
+  // m_writeSolutionStr = "ParWriteSolution";
+  m_writeSolutionStr = "WriteSolution";
   setParameter("WriteSol",&m_writeSolutionStr);
 }
       
