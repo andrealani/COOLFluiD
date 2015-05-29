@@ -4,14 +4,15 @@
 # 
 # Finite Volume, Euler2D, NewtonIterator, hybrid mesh (triangles and quads), 
 # converter from DPL to CFmesh, analytical function as CFL law, second-order 
-# reconstruction, far field and slip wall BCs 
+# reconstruction, far field and slip wall BCs, parallel TECPLOT writer in 
+# nodal format (default)
 #
 ################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -10.13633
+### Residual = -10.134943
 
 # SubSystem Modules
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libNewtonMethod libDpl2CFmesh libTecplotWriter libMeshTools libPetscI
@@ -35,8 +36,8 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 10
+Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolution
+Simulator.SubSystem.Tecplot.ParWriteSolution.NbWriters = 4
 
 #Simulator.SubSystem.StopCondition       = MaxNumberSteps
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 50

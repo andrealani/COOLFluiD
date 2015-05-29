@@ -13,6 +13,7 @@
 
 using namespace std;
 using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -50,11 +51,12 @@ TecWriter::TecWriter(const std::string& name)
 
   m_unSetupStr = "StdUnSetup";
   setParameter("UnSetupCom",&m_unSetupStr);
-
-  m_writeSolutionStr = "WriteSolution";
+  
+  // default has been changed to be parallel
+  m_writeSolutionStr = "ParWriteSolution";
   setParameter("WriteSol",&m_writeSolutionStr);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 TecWriter::~TecWriter()
@@ -106,6 +108,12 @@ void TecWriter::configure ( Config::ConfigArgs& args )
   configureCommand<TecWriterData,TecWriterComProvider>(args, m_unSetup, m_unSetupStr, m_data);
 
   configureCommand<TecWriterData,TecWriterComProvider>(args, m_writeSolution, m_writeSolutionStr, m_data);
+  
+  // automatically set m_appendRank=true if the write command name starts with "Par" 
+  // (i.e. parallel output cases)
+  if (StringOps::startsWith(m_writeSolutionStr, "Par")) {
+    m_appendRank = false;
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -108,7 +108,8 @@ void SuperInletInterp::setup()
   
   std::string provider = "Identity";
   if (m_inputVarStr != getMethodData().getUpdateVarStr()) {
-    cout << m_inputVarStr << " != " << getMethodData().getUpdateVarStr() << endl;
+    CFLog(VERBOSE, "SuperInletInterp::setup() => inputVar (" << m_inputVarStr 
+	  << ") != updateVar (" << getMethodData().getUpdateVarStr() << ")\n");
     provider = VarSetTransformer::getProviderName
       (physModel->getConvectiveName(), m_inputVarStr, getMethodData().getUpdateVarStr());
   }

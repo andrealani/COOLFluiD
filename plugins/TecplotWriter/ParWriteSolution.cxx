@@ -117,9 +117,11 @@ void ParWriteSolution::execute()
       writeData(cfgpath, _isNewFile, string("Unstructured grid data"), &ParWriteSolution::writeInnerData);
     }
     
-    // write boundary surface data
-    boost::filesystem::path bpath = cfgpath.branch_path() / ( basename(cfgpath) + ".surf" + extension(cfgpath) );
-    writeData(bpath, _isNewBFile, string("Boundary data"), &ParWriteSolution::writeBoundaryData);
+    if (!getMethodData().getSurfaceTRSsToWrite().empty()) {
+      // write boundary surface data
+      boost::filesystem::path bpath = cfgpath.branch_path() / ( basename(cfgpath) + ".surf" + extension(cfgpath) );
+      writeData(bpath, _isNewBFile, string("Boundary data"), &ParWriteSolution::writeBoundaryData);
+    }
   }
 }
       

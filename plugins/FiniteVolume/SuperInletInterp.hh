@@ -57,11 +57,6 @@ public:
    */
   virtual void setGhostState(Framework::GeometricEntity *const face);
   
-protected:
-  
-  /// fill the lookup table
-  void fillTable();
-  
 protected: // data
     
   /// Transformer from input to update Variables
