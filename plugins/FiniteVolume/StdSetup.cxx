@@ -83,7 +83,6 @@ void StdSetup::configure ( Config::ConfigArgs& args )
   BaseSetupFVMCC<CellCenterFVMCom>::configure(args);
   
   // here call the mesh reader to ask if _limiterSocketName is one of the extra fields
-  //  getMethodData().getCollaborator<MeshCreator>()->getMethodData();
   if (_limiterSocketName != "Null") {
     m_dynamicSockets.createSocketSink<CFreal>(_limiterSocketName, true);
   }
