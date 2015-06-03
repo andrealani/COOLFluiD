@@ -1,7 +1,3 @@
-/*
- * This program was created to calculate 
- * be time averaged during an unsteady simulation using LES or DES.  
- */
 #ifndef COOLFluiD_Physics_NavierStokes_RMSTurb_hh
 #define COOLFluiD_Physics_NavierStokes_RMSTurb_hh
 
@@ -32,8 +28,9 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
       
-/// This class samples the solution at a point. It makes sense to use for unstaedy simulations
-/// @ATTENTION for the moment it can be used only for fixed time step.
+/// This class samples the solution at a point and computesb turbulent statistical data like fluctuations.
+/// It makes sense to use for unsteady simulations
+/// @ATTENTION for the moment it can be used only for fixed time step (Conformal Meshes).
 /// @ATTENTION the process rate and the stopIter (that is the iteration at which it will stop) for the moment
 /// will be defined by the DataProcessingMethod as
       //Simulator.SubSystem.DataProcessing2.ProcessRate = 
@@ -69,12 +66,11 @@ public: // functions
    * Returns the DataSocket's that this command needs as sinks
    * @return a vector of SafePtr with the DataSockets
    */
- virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > 
- needsSockets();
-
-  /**
-   * Returns the DataSocket's that this command provides as sources
-   * @return a vector of SafePtr with the DataSockets
+ virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets();
+ 
+   /**
+      Returns the DataSocket's that this command provides as sources
+      @return a vector of SafePtr with the DataSockets
    */
   virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > providesSockets();
   
@@ -92,75 +88,86 @@ public: // functions
 
 protected: // functions
 
-  /// Execute this command on the TRS
+  /// Execute RMSTurb
   void execute();
 
 
   /**
-   * Compute the values at the wall and write them to file
+   * Compute the RMS and turbulent stastistics values
    */
   void computeRMS();
 
-    /**
+  /**
    * Open the Output File and Write the header
    */
   //void prepareOutputFileRMS();
 
 private: // data
-
-  /// handle the file where sampling is dumped
-  /// handle is opened in setup() closed in unsetup()
-  //Common::SelfRegistPtr<Environment::FileHandlerOutput> m_fhandle;
   
   /// the socket to the data handle of the state's
   Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > socket_states;
   
   /// socket for stencil
-  Framework::DataSocketSource<CFreal> socket_rms;
+  //Framework::DataSocketSink<CFreal> socket_rmsturb;
+  Framework::DataSocketSource<CFreal> socket_rmsturb;
   
-  /// Output File for Wall Values
-  //Common::SelfRegistPtr<Environment::FileHandlerOutput> m_fileRMS;
-  
-  /// Storage for choosing when to save the wall values file
-  //CFuint m_saveRateRMS;
-  //CFuint m_compRateRMS;
-  
-  /// Name of Output File where to write the coeficients.
-  //std::string m_nameOutputFileRMS;
+  /// the dynamic sockets where the initial solutions will be read from the CFmesh file
+  Framework::DynamicDataSocketSet<> m_dynamicSockets;
       
   /// physical data array 
   RealVector m_physicalData;
   
-  /// user options
-  //std::vector<std::string> m_rmsOpt;
-  
-  // vector to save the rms results
+  // vector to save the additive rms results
   RealVector m_rmsresult;
 
   // number of rms iterations
   CFuint m_nbStep;
+  
+  bool m_restart;
+
+  //flag to say if turbulent intensity and kinetic energy will also be computed
+  bool m_comp;
+  
+  //flag to say if the net values will be also be computed (like net velocity fluctuation)
+  bool m_net;
+  
+  CFuint m_InitSteps;
+  
+  // it is an assistant parameter
+  CFuint resetIter; 
+  
+  // number of the variables to be saved
+  CFuint nbOpts;
+  
+  // number of the auxiliary variables
+  CFuint nbrms;
+  
+  // name of the initial solution for the RMS (Used when we restart the simulation)
+  std::string m_rmsInitSocketName;
+  
+  ///@Note By default it will save the results in the CFmesh files and in the .plt with the other states values
+  /// If it needs to be stored in other file uncomment the below comments
+  
+  /// handle the file where sampling is dumped
+  /// handle is opened in setup() closed in unsetup()
+  //Common::SelfRegistPtr<Environment::FileHandlerOutput> m_fhandle;
   
   // ///flag for appending iteration
   //bool m_appendIter;
 
   // ///flag for appending time
   //bool m_appendTime;
+  
+  /// Output File for RMSTurb values
+  //Common::SelfRegistPtr<Environment::FileHandlerOutput> m_fileRMS;
+  
+  /// Storage for choosing when to save the wall values file
+  //CFuint m_saveRateRMS;
+  
+  /// Name of Output File where to write the coeficients.
+  //std::string m_nameOutputFileRMS;
 
-  bool m_restart;
-
-  bool m_comp;//flag to say if turbulent intensity and kinetic energy will also be computed
-  
-  //bool m_net;//flag to say if the net values will be also be computed
-  
-  CFuint m_InitSteps;
-  
-  CFuint resetIter; // it is an assistant parameter
-  
-  CFuint nbOpts;// number of the variables to be saved
-  
-  CFuint nbrms;// number of the auxiliary variables
-
-}; // end of class SamplingPoint
+}; // end of class RMSTurb
 
 //////////////////////////////////////////////////////////////////////////////
 

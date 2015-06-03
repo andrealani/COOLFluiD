@@ -15,7 +15,6 @@
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/ConvectiveVarSet.hh"
 
-
 #include "NavierStokes/NavierStokes.hh"
 #include "NavierStokes/RMSTurb.hh"
 #include "NavierStokes/EulerTerm.hh"
@@ -47,17 +46,19 @@ rmsTurbProvider("RMSTurb"); //it is the name that used for the registration. It 
 void RMSTurb::defineConfigOptions(Config::OptionList& options)
 {
   //options.addConfigOption< std::string >("OutputFile","Name of Output File.");
-  //options.addConfigOption< CFuint >("SaveRate","Rate for saving the output file with aerodynamic coefficients.");
-  //options.addConfigOption< CFuint >("CompRate","Rate for saving the output file with aerodynamic coefficients.");
+  //options.addConfigOption< CFuint >("SaveRate","Rate for saving the output file with RMSTurb.");
   //options.addConfigOption< bool >("AppendTime","Append time to file name.");
   //options.addConfigOption< bool >("AppendIter","Append Iteration# to file name.");
-  //options.addConfigOption< bool >("ComNetVelocity","If true it will also compute the values derived by net velocity  (default = false)");
-  options.addConfigOption< bool >("ComAllTurbValues","If true it will also compute Turbulent intensities and energy (default = false)");
+  options.addConfigOption< std::string >
+  ("InitRMSTurbSocket","name of the input RMSTurb socket");
+  options.addConfigOption< bool >
+  ("ComNetVelocity","If true it will also compute the values derived by net velocity  (default = false)");
+  options.addConfigOption< bool >
+  ("ComAllTurbValues","If true it will also compute Turbulent intensities and energy (default = false)");
   options.addConfigOption< bool >("Restart","Should the initial rms be read from the CFmesh");
-  options.addConfigOption< CFuint >("nbSteps","Number of steps already known (this option imply that restart=true)");
+  options.addConfigOption< CFuint >
+  ("nbSteps","Number of steps already known (this option implies that restart=true)");
   
-  //We add these options to let the user define which values will be time averaged
-  //options.addConfigOption< std::vector<std::string> >("rmsVars", "The list of variable names which will be time averaged.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -67,7 +68,8 @@ RMSTurb::RMSTurb(const std::string& name)
   : DataProcessingCom (name) , 
   //m_fhandle(), // open a file and give access to it for writing the results in the whole domain
   socket_states("states"), // this will give us access to the states through a pointer
-  socket_rms("rms") // with this will store our results through a pointer
+  socket_rmsturb("rms"), // with this will store our results through a pointer
+  m_dynamicSockets()
   
 {
   addConfigOptionsTo(this);
@@ -77,9 +79,6 @@ RMSTurb::RMSTurb(const std::string& name)
 
   //m_nameOutputFileRMS = "RMS_save.dat";
   //setParameter("OutputFile",&m_nameOutputFileRMS);
-
-  //m_compRateRMS = 1;
-  //setParameter("CompRate",&m_compRateRMS);
  
   //m_saveRateRMS = 1;
   //setParameter("SaveRate",&m_saveRateRMS);
@@ -90,6 +89,9 @@ RMSTurb::RMSTurb(const std::string& name)
   //m_appendTime = false;
   //setParameter("AppendTime",&m_appendTime);
   
+  m_net = false;
+  setParameter("ComNetVelocity",&m_net);
+  
   m_comp = false;
   setParameter("ComAllTurbValues",&m_comp);
  
@@ -99,10 +101,9 @@ RMSTurb::RMSTurb(const std::string& name)
   m_InitSteps = 0;
   setParameter("nbSteps",&m_InitSteps);
   
-  // Initialization of the user choises
+  m_rmsInitSocketName = "Null";
+   setParameter("InitRMSTurbSocket",&m_rmsInitSocketName);
   
-  //m_rmsOpt = std::vector<std::string>();
-  //setParameter("rmsVars",&m_rmsOpt);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -113,111 +114,193 @@ RMSTurb::~RMSTurb() //default destructor
 
 //////////////////////////////////////////////////////////////////////////////
 
-std::vector<Common::SafePtr<BaseDataSocketSink> > RMSTurb::needsSockets()
-{ 
-  std::vector<Common::SafePtr<BaseDataSocketSink> > result; // storage the pointers of the local data
-  result.push_back(&socket_states); // vector with pointers showing the states P[rho U V W p...]
+std::vector<Common::SafePtr<BaseDataSocketSource> >
+RMSTurb::providesSockets()
+{
+  std::vector<Common::SafePtr<BaseDataSocketSource> > result;
+
+  result.push_back(&socket_rmsturb);// vector with pointers showing the RMSTurb values
+
   return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-std::vector<Common::SafePtr<BaseDataSocketSource> > RMSTurb::providesSockets()
-{
-  std::vector<Common::SafePtr<BaseDataSocketSource> > result;
-  result.push_back(&socket_rms); // vector with pointers showing the rms
+std::vector<Common::SafePtr<BaseDataSocketSink> > RMSTurb::needsSockets()
+{ 
+  // storage the pointers of the local data
+  std::vector<Common::SafePtr<BaseDataSocketSink> > result = m_dynamicSockets.getAllSinkSockets();
+  result.push_back(&socket_states); // vector with pointers showing the states P[rho U V W p...]
+
   return result;
+  
+  
 }
-      
+
 //////////////////////////////////////////////////////////////////////////////
 
 // it runs during the phase of global setup and allocate memory for this class, namely rms
 void RMSTurb::setup()
 {
   CFAUTOTRACE;
-  DataProcessingCom::setup(); // first call setup of parent class
+  // first call setup of parent class
+  DataProcessingCom::setup(); 
   
   // with this command the variable states get access to the whole states
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
-  //const CFuint nbOpts =  m_rmsOpt.size(); // number of options of the user
   
-   //CFuint nbOpts = 0;
-   //CFuint nbrms = 0;
+  // this is the vector of the rms results
+  DataHandle<CFreal> rmsturb = socket_rmsturb.getDataHandle();
+  
+    ///Initialization
+  
+    //number of the RMS values
+    nbOpts = 0; 
+    //number of the auxiliary additive values
+    nbrms = 0; 
 
-  const CFuint dim = PhysicalModelStack::getActive()->getDim(); // dimension of the problem
+    // dimension of the problem
+  const CFuint dim = PhysicalModelStack::getActive()->getDim(); 
   switch (dim) {
     case DIM_2D:
       if (m_comp)
       {
-      nbOpts = 15;//it is the number of the turbulent variables that will be saved
-      nbrms = 8; // it is the number of the auxiliary variables used for the calculation of the turbulent variables
+      nbOpts = 15;
+      nbrms = 8; 
+      // for the moment it needs to be true also if m_comp is true
+      m_net = true;
       }
       else{
-      nbOpts = 11;//it is the number of the turbulent variables that will be saved
-      nbrms = 8; // it is the number of the auxiliary variables used for the calculation of the turbulent variables
+      nbOpts = 11;
+      nbrms = 8; 
       }
       break;
     case DIM_3D:
       if (m_comp)
       {
-      nbOpts = 19;//it is the number of the turbulent variables that will be saved
-      nbrms = 10; // it is the number of the auxiliary variables used for the calculation of the turbulent variables
+      nbOpts = 19;
+      nbrms = 10;
+      // for the moment it needs to be true also if m_comp is true
+      m_net = true;
       }
       else{
-      nbOpts = 14;//it is the number of the turbulent variables that will be saved
-      nbrms = 10; // it is the number of the auxiliary variables used for the calculation of the turbulent variables
+      nbOpts = 14;
+      nbrms = 10;
       }
       break;
+  } 
+  
+  // it substracts the number of the NetVelocity Variables
+  if (!(m_net))
+  {
+    nbOpts -= 3;
+    nbrms -= 2;
   }
+  cf_assert(nbOpts>0);
+  cf_assert(nbrms>0);
   
-  const CFuint nbstates = states.size(); // number of cells 
-  const CFuint totstates = nbstates*nbOpts; // number of extra variables for the states
-  const CFuint totrms = nbstates*nbrms; // number of the auxiliary variables
+  // number of cells 
+  const CFuint nbstates = states.size();
   
-  /// it is the vector where our results will be stored
-  DataHandle<CFreal> rms = socket_rms.getDataHandle();
+  // number of the auxiliary variables
+  const CFuint totrms = nbstates*nbrms; 
+  
+  // number of extra variables for all the states
+  const CFuint totstates = nbstates*nbOpts;
   
   /// physical data array 
   PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm()->
     resizePhysicalData(m_physicalData);
-
-  rms.resize(totstates); 
-  m_rmsresult.resize(totrms,0.0); // it allocates the correct size for the auxiliary variables
-  
-  m_nbStep = m_InitSteps; //initialization of steps
-  
-  if (m_restart){ // this is executed when we restart an application
     
+    // it allocates the correct size for the auxiliary variables
+  rmsturb.resize(totstates); 
+
+    // it allocates the correct size for the auxiliary variables
+  m_rmsresult.resize(totrms,0.0); 
+  
+   //initialization of steps
+  m_nbStep = m_InitSteps;
+
+  // this is executed when we restart an application
+  if (m_restart && m_dynamicSockets.sinkSocketExists(m_rmsInitSocketName))
+  { 
+    
+    DataHandle<CFreal> initrms = m_dynamicSockets.getSocketSink<CFreal>(m_rmsInitSocketName)->getDataHandle();
+    cf_assert(initrms.size() == rmsturb.size());
+    for (CFuint i = 0; i < totstates; ++i) {
+      //initialization of the rmsturb with previous stored data
+      rmsturb[i] = initrms[i]; 
+    }
+    
+     // common part (all except Urms Vrms Wrms and Utotrms) of the rmsturb and the m_rmsresults
      CFuint nbofCommonargs = 0;
+     // common part (Urms Vrms Wrms and Utotrms) of the rmsturb and the m_rmsresults
+     CFuint nbofCommonrmsargs = 0;
+     // In case of m_comp = true it will also store the I and k variables
+     CFuint nbofIntensities = 0;
+     
     
     switch (dim) {
     case DIM_2D:
       nbofCommonargs = 5;
+      nbofCommonrmsargs = 3;
+      nbofIntensities = 4;
+      
       break;
     case DIM_3D:
       nbofCommonargs = 6;
+      nbofCommonrmsargs = 4;
+      nbofIntensities = 5;
       break;
 		}
 
-      const CFuint iJump = nbOpts - nbofCommonargs;
-      const CFuint jJump = nbrms - nbofCommonargs;
-      CFuint nbofparts = 0;
+  if (!(m_comp))
+  {
+    nbofIntensities = 0;
+  }
+  
+  if (!(m_net))
+  {
+    nbofCommonargs -= 1;
+    nbofCommonrmsargs -= 1;
+  }
+  cf_assert((nbofCommonargs + nbofCommonrmsargs)==nbrms);
+
+      //Cause rmsturb are saved more data than m_rmsresult there must be a jump 
+      const CFuint iJump = nbOpts - nbrms - nbofIntensities; 
       
-      cf_assert((nbofCommonargs+iJump)==nbOpts);
-      cf_assert((nbofCommonargs+jJump)==nbrms);
+      // this says how many jumbs should be done. One
+      CFuint nbofparts = 0;  
+   
+      // this is the step for the accumulated variables of the RMS class
+      CFuint jState = 0; 
       
-      CFuint jState = 0;
-      for (CFuint iState = 0; iState < totstates; ++iState) {
-	  ++jState;
-	  m_rmsresult[jState] = rms[iState]*m_nbStep;
+      for (CFuint iState = 0; iState < totstates; ++iState, ++jState) {
+	
+	  m_rmsresult[jState] = rmsturb[iState]*m_nbStep; //
+	  
 	  if ( iState == ((nbofCommonargs - 1)+nbofparts*nbOpts))
 	  {
+	    
 	    ++nbofparts;
 	    iState += iJump;
-	    jState += jJump;
-      cf_assert(iState<totstates);
+	    
+	    for (CFuint irms = 0; irms < nbofCommonrmsargs; ++irms) {
+	      ++jState;
+	      ++iState;
+	      m_rmsresult[jState] =  rmsturb[iState]*rmsturb[iState]*m_nbStep;
+	    }
+	    
+	    iState += nbofIntensities;
+	    
+	    cf_assert(jState == (iState-nbofparts*(iJump+nbofIntensities)));
+	    
+	    cf_assert((jState+1) == (nbrms*nbofparts));
+	    cf_assert((iState+1) == (nbOpts*nbofparts));
+	    
 	  }
 	}
+	    cf_assert(nbofparts==nbstates);
       }
     
     
@@ -245,34 +328,21 @@ void RMSTurb::execute()
   {
     ++resetIter;
     
-    
-    if (resetIter == 1) // to run just the first time
+    // to run just the first time
+    if (resetIter == 1) 
     {
-    DataHandle<CFreal> rms = socket_rms.getDataHandle();
+    DataHandle<CFreal> rmsturb = socket_rmsturb.getDataHandle();
     DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
     
     m_nbStep = 0;
     
     const CFuint nbstates = states.size(); // number of cells
-     //CFuint nbOpts = 0;
-     //CFuint nbrms = 0;
- /*   const CFuint dim = PhysicalModelStack::getActive()->getDim(); // dimension of the problem
-  switch (dim) {
-    case DIM_2D:
-      nbOpts = 15;//it is the number of the turbulent variables that will be saved
-      nbrms = 8; // it is the number of the auxiliary variables used for the calculation of the turbulent variables
-      break;
-    case DIM_3D:
-      nbOpts = 19;
-      nbrms = 10;
-      break;
-  }
-*/
+     
     for (CFuint iState = 0; iState < nbstates; ++iState) {
       
       for(CFuint iOpt = 0; iOpt < nbOpts; ++iOpt) 
 	{const CFuint totistates = iState*nbOpts + iOpt;
-	rms[totistates] = 0.0;
+	rmsturb[totistates] = 0.0;
 	}
 	for(CFuint irms = 0; irms < nbrms; ++irms) 
 	{const CFuint totrms = iState*nbrms + irms;
@@ -290,24 +360,26 @@ void RMSTurb::execute()
 
 void RMSTurb::computeRMS()
 {
-  //Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
-  //const CFreal time = subSysStatus->getCurrentTime(); 
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
-  DataHandle<CFreal> rms = socket_rms.getDataHandle();
+  DataHandle<CFreal> rmsturb = socket_rmsturb.getDataHandle();
   
-  ++m_nbStep; // number of rms iterations
+  // number of rms iterations
+  ++m_nbStep;
 
-  const CFuint nbstates = states.size(); // number of cells
-  //const CFuint nbOpts =  m_rmsOpt.size(); // number of user options
+  // number of cells
+  const CFuint nbstates = states.size();
   
+  // to compute the [P U V W..] of the current state
   SafePtr<ConvectiveVarSet> varSet = getMethodData().getUpdateVarSet();
   
-  const CFuint dim = PhysicalModelStack::getActive()->getDim(); // dimension of the problem
+  // dimension of the problem
+  const CFuint dim = PhysicalModelStack::getActive()->getDim(); 
   
   for (CFuint iState = 0; iState < nbstates; ++iState) {
-    State& curr_state = *states[iState]; // a pointer to current state
+    // a pointer to current state
+    State& curr_state = *states[iState];
    
-    varSet->computePhysicalData(curr_state, m_physicalData); // compute the [P U V W..] of the current state
+    varSet->computePhysicalData(curr_state, m_physicalData);
     
     CFreal rho = m_physicalData[EulerTerm::RHO];
     CFreal Utot = m_physicalData[EulerTerm::V];
@@ -319,159 +391,194 @@ void RMSTurb::computeRMS()
     
     if (dim == 2) {
       
-      //const CFuint nbOpts = 15;//it is the number of the turbulent variables that will be saved
-      //const CFuint nbrms = 8; // it is the number of the auxiliary variables used for the calculation of the turbulent variables
-
-      const CFuint totnbOpts = iState*nbOpts;
-      const CFuint totnbrms = iState*nbrms;
+      CFuint totnbOpts = iState*nbOpts;
+      CFuint totnbrms = iState*nbrms;
       
       // Calculation of rho mean
       m_rmsresult[totnbrms] += rho;
-      rms[totnbOpts] = m_rmsresult[totnbrms]/m_nbStep;
+      rmsturb[totnbOpts] = m_rmsresult[totnbrms]/m_nbStep;
       
       // Calculation of p mean
       m_rmsresult[totnbrms + 1] += p;
-      rms[totnbOpts + 1] = m_rmsresult[totnbrms + 1]/m_nbStep;
+      rmsturb[totnbOpts + 1] = m_rmsresult[totnbrms + 1]/m_nbStep;
       
       // Calculation of u mean
       m_rmsresult[totnbrms + 2] += u;
-      rms[totnbOpts + 2] = m_rmsresult[totnbrms + 2]/m_nbStep;
+      rmsturb[totnbOpts + 2] = m_rmsresult[totnbrms + 2]/m_nbStep;
       
       // Calculation of v mean
       m_rmsresult[totnbrms + 3] += v;
-      rms[totnbOpts + 3] = m_rmsresult[totnbrms + 3]/m_nbStep;
+      rmsturb[totnbOpts + 3] = m_rmsresult[totnbrms + 3]/m_nbStep;
       
+      if (m_net)
+      {
       // Calculation of Utot mean
       m_rmsresult[totnbrms + 4] += Utot;
-      rms[totnbOpts + 4] = m_rmsresult[totnbrms + 4]/m_nbStep;
+      rmsturb[totnbOpts + 4] = m_rmsresult[totnbrms + 4]/m_nbStep;
+      }
+      else{
+	totnbOpts -= 1; //we substract so as not to write out of the bound of the vector
+	totnbrms -= 1;
+      }
       
       // Calculation of uprim (u')
-      rms[totnbOpts + 5] = u - rms[totnbOpts + 2];
-      m_rmsresult[totnbrms + 5] += (rms[totnbOpts + 5]*rms[totnbOpts + 5]);
+      rmsturb[totnbOpts + 5] = u - rmsturb[totnbOpts + 2];
+      m_rmsresult[totnbrms + 5] += (rmsturb[totnbOpts + 5]*rmsturb[totnbOpts + 5]);
       
       // Calculation of vprim (v')
-      rms[totnbOpts + 6] = v - rms[totnbOpts + 3];
-      m_rmsresult[totnbrms + 6] += (rms[totnbOpts + 6]*rms[totnbOpts + 6]);
+      rmsturb[totnbOpts + 6] = v - rmsturb[totnbOpts + 3];
+      m_rmsresult[totnbrms + 6] += (rmsturb[totnbOpts + 6]*rmsturb[totnbOpts + 6]);
       
+      if (m_net)
+      {
       // Calculation of Utotprim (Utot')
-      //rms[7] = std::sqrt(0.5*(rms[5]*rms[5] + rms[6]*rms[6]));
-      rms[totnbOpts + 7] = Utot - rms[totnbOpts + 4];
-      m_rmsresult[totnbrms + 7] += (rms[totnbOpts + 7]*rms[totnbOpts + 7]);
+      rmsturb[totnbOpts + 7] = Utot - rmsturb[totnbOpts + 4];
+      m_rmsresult[totnbrms + 7] += (rmsturb[totnbOpts + 7]*rmsturb[totnbOpts + 7]);
+      }
+      else{
+	totnbOpts -= 1; //we substract one so as not to write out of the bound of the vector
+	cf_assert((totnbrms+7)%nbrms==0);
+      }
       
       // Calculation of urms 
-      rms[totnbOpts + 8] = std::sqrt(m_rmsresult[totnbrms + 5]/m_nbStep);
+      rmsturb[totnbOpts + 8] = std::sqrt(m_rmsresult[totnbrms + 5]/m_nbStep);
       
       // Calculation of vrms 
-      rms[totnbOpts + 9] = std::sqrt(m_rmsresult[totnbrms + 6]/m_nbStep);
+      rmsturb[totnbOpts + 9] = std::sqrt(m_rmsresult[totnbrms + 6]/m_nbStep);
       
+      if (m_net)
+      {
       // Calculation of Utotrms 
-      rms[totnbOpts + 10] = std::sqrt(m_rmsresult[totnbrms + 7]/m_nbStep);
+      rmsturb[totnbOpts + 10] = std::sqrt(m_rmsresult[totnbrms + 7]/m_nbStep);
+      }
+      else{
+	totnbOpts -= 1; //we substract so as not to write out of the bound of the vector
+      }
       
       if (m_comp)
       {
       // Turbulence Intensities
       
       // In x-direction
-      rms[totnbOpts + 11] = rms[totnbOpts + 8]/rms[totnbOpts + 2];
+      rmsturb[totnbOpts + 11] = rmsturb[totnbOpts + 8]/rmsturb[totnbOpts + 2];
       
       // In y-direction
-      rms[totnbOpts + 12] = rms[totnbOpts + 9]/rms[totnbOpts + 3];
+      rmsturb[totnbOpts + 12] = rmsturb[totnbOpts + 9]/rmsturb[totnbOpts + 3];
       
       // Total
-      rms[totnbOpts + 13] = rms[totnbOpts + 10]/rms[totnbOpts + 4];
+      rmsturb[totnbOpts + 13] = rmsturb[totnbOpts + 10]/rmsturb[totnbOpts + 4];
       
       // Turbulent kinetic energy
-      rms[totnbOpts + 14] = 0.5*(rms[totnbOpts + 8]*rms[totnbOpts + 8]+rms[totnbOpts + 9]*rms[totnbOpts + 9]);
+      rmsturb[totnbOpts + 14] = 0.5*(rmsturb[totnbOpts + 8]*rmsturb[totnbOpts + 8]+rmsturb[totnbOpts + 9]*rmsturb[totnbOpts + 9]);
       }
     }
     
     else if (dim == 3) {
       
-      //const CFuint nbOpts = 19;//it is the number of the turbulent variables that will be saved
-      //const CFuint nbrms = 10; // it is the number of the auxiliary variables used for the calculation of the turbulent variables
-
-      const CFuint totnbOpts = iState*nbOpts;
-      const CFuint totnbrms = iState*nbrms;
+      CFuint totnbOpts = iState*nbOpts;
+      CFuint totnbrms = iState*nbrms;
       
       // Calculation of rho mean
       m_rmsresult[totnbrms] += rho;
-      rms[totnbOpts] = m_rmsresult[totnbrms]/m_nbStep;
+      rmsturb[totnbOpts] = m_rmsresult[totnbrms]/m_nbStep;
       
       // Calculation of p mean
       m_rmsresult[totnbrms + 1] += p;
-      rms[totnbOpts + 1] = m_rmsresult[totnbrms + 1]/m_nbStep;
+      rmsturb[totnbOpts + 1] = m_rmsresult[totnbrms + 1]/m_nbStep;
       
       // Calculation of u mean
       m_rmsresult[totnbrms + 2] += u;
-      rms[totnbOpts + 2] = m_rmsresult[totnbrms + 2]/m_nbStep;
+      rmsturb[totnbOpts + 2] = m_rmsresult[totnbrms + 2]/m_nbStep;
       
       // Calculation of v mean
       m_rmsresult[totnbrms + 3] += v;
-      rms[totnbOpts + 3] = m_rmsresult[totnbrms + 3]/m_nbStep;
+      rmsturb[totnbOpts + 3] = m_rmsresult[totnbrms + 3]/m_nbStep;
       
       // Calculation of w mean
       m_rmsresult[totnbrms + 4] += w;
-      rms[totnbOpts + 4] = m_rmsresult[totnbrms + 4]/m_nbStep;
+      rmsturb[totnbOpts + 4] = m_rmsresult[totnbrms + 4]/m_nbStep;
       
+      if (m_net)
+      {
       // Calculation of Utot mean
       m_rmsresult[totnbrms + 5] += Utot;
-      rms[totnbOpts + 5] = m_rmsresult[totnbrms + 5]/m_nbStep;
+      rmsturb[totnbOpts + 5] = m_rmsresult[totnbrms + 5]/m_nbStep;
+      }
+      else{
+	totnbOpts -= 1; //we substract so as not to write out of the bound of the vector
+	totnbrms -= 1;
+      }
       
       // Calculation of uprim (u')
-      rms[totnbOpts + 6] = u - rms[totnbOpts + 2];
-      m_rmsresult[totnbrms + 6] += (rms[totnbOpts + 6]*rms[totnbOpts + 6]);
+      rmsturb[totnbOpts + 6] = u - rmsturb[totnbOpts + 2];
+      m_rmsresult[totnbrms + 6] += (rmsturb[totnbOpts + 6]*rmsturb[totnbOpts + 6]);
       
       // Calculation of vprim (v')
-      rms[totnbOpts + 7] = v - rms[totnbOpts + 3];
-      m_rmsresult[totnbrms + 7] += (rms[totnbOpts + 7]*rms[totnbOpts + 7]);
+      rmsturb[totnbOpts + 7] = v - rmsturb[totnbOpts + 3];
+      m_rmsresult[totnbrms + 7] += (rmsturb[totnbOpts + 7]*rmsturb[totnbOpts + 7]);
       
       // Calculation of vprim (w')
-      rms[totnbOpts + 8] = w - rms[totnbOpts + 4];
-      m_rmsresult[totnbrms + 8] += (rms[totnbOpts + 8]*rms[totnbOpts + 8]);
+      rmsturb[totnbOpts + 8] = w - rmsturb[totnbOpts + 4];
+      m_rmsresult[totnbrms + 8] += (rmsturb[totnbOpts + 8]*rmsturb[totnbOpts + 8]);
       
+      
+      if (m_net)
+      {
       // Calculation of Utotprim (Utot')
-      //rms[7] = std::sqrt(0.5*(rms[5]*rms[5] + rms[6]*rms[6]));
-      rms[totnbOpts + 9] = Utot - rms[totnbOpts + 5];
-      m_rmsresult[totnbrms + 9] += (rms[totnbOpts + 9]*rms[totnbOpts + 9]);
+      rmsturb[totnbOpts + 9] = Utot - rmsturb[totnbOpts + 5];
+      m_rmsresult[totnbrms + 9] += (rmsturb[totnbOpts + 9]*rmsturb[totnbOpts + 9]);
+      }
+       else{
+	totnbOpts -= 1; //we substract so as not to write out of the bound of the vector
+      }
       
       // Calculation of urms 
-      rms[totnbOpts + 10] = std::sqrt(m_rmsresult[totnbrms + 6]/m_nbStep);
+      rmsturb[totnbOpts + 10] = std::sqrt(m_rmsresult[totnbrms + 6]/m_nbStep);
       
       // Calculation of vrms 
-      rms[totnbOpts + 11] = std::sqrt(m_rmsresult[totnbrms + 7]/m_nbStep);
+      rmsturb[totnbOpts + 11] = std::sqrt(m_rmsresult[totnbrms + 7]/m_nbStep);
       
       // Calculation of wrms 
-      rms[totnbOpts + 12] = std::sqrt(m_rmsresult[totnbrms + 8]/m_nbStep);
+      rmsturb[totnbOpts + 12] = std::sqrt(m_rmsresult[totnbrms + 8]/m_nbStep);
       
+      if (m_net)
+      {
       // Calculation of Utotrms 
-      rms[totnbOpts + 13] = std::sqrt(m_rmsresult[totnbrms + 9]/m_nbStep);
+      rmsturb[totnbOpts + 13] = std::sqrt(m_rmsresult[totnbrms + 9]/m_nbStep);
+      }
+       else{
+	totnbOpts -= 1; //we substract so as not to write out of the bound of the vector
+      }
       
       if (m_comp)
       {
       // Turbulence Intensities
       
       // In x-direction
-      rms[totnbOpts + 14] = rms[totnbOpts + 10]/rms[totnbOpts + 2];
+      rmsturb[totnbOpts + 14] = rmsturb[totnbOpts + 10]/rmsturb[totnbOpts + 2];
       
       // In y-direction
-      rms[totnbOpts + 15] = rms[totnbOpts + 11]/rms[totnbOpts + 3];
+      rmsturb[totnbOpts + 15] = rmsturb[totnbOpts + 11]/rmsturb[totnbOpts + 3];
       
       // In z-direction
-      rms[totnbOpts + 16] = rms[totnbOpts + 12]/rms[totnbOpts + 4];
+      rmsturb[totnbOpts + 16] = rmsturb[totnbOpts + 12]/rmsturb[totnbOpts + 4];
       
       // Total
-      rms[totnbOpts + 17] = rms[totnbOpts + 13]/rms[totnbOpts + 5];
+      rmsturb[totnbOpts + 17] = rmsturb[totnbOpts + 13]/rmsturb[totnbOpts + 5];
       
       // Turbulent kinetic energy
-      rms[totnbOpts + 18] = 0.5*(rms[totnbOpts + 10]*rms[totnbOpts + 10]+
-				 rms[totnbOpts + 11]*rms[totnbOpts + 11]+
-				 rms[totnbOpts + 12]*rms[totnbOpts + 12]);
+      rmsturb[totnbOpts + 18] = 0.5*(rmsturb[totnbOpts + 10]*rmsturb[totnbOpts + 10]+
+				     rmsturb[totnbOpts + 11]*rmsturb[totnbOpts + 11]+
+				     rmsturb[totnbOpts + 12]*rmsturb[totnbOpts + 12]);
       }
     }
   }
 }
 
  
+///@Note By default it will save the results in the CFmesh files and in the .plt with the other states values
+/// If it needs to be stored in other file uncomment the below comments
+  
 //     Common::SafePtr<SubSystemStatus> ssys_status = SubSystemStatusStack::getActive();
 //     const CFuint iter = ssys_status->getNbIter();
 // 
@@ -506,14 +613,18 @@ void RMSTurb::computeRMS()
 
 void RMSTurb::unsetup()
 { 
-  DataHandle<CFreal> rms = socket_rms.getDataHandle();
-  rms.resize(0);
+  DataHandle<CFreal> rmsturb = socket_rmsturb.getDataHandle();
+  rmsturb.resize(0);
   m_rmsresult.resize(0);
   
-  DataProcessingCom::unsetup(); // last call setup of parent class
+  // last call setup of parent class
+  DataProcessingCom::unsetup(); 
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+///@Note By default it will save the results in the CFmesh files and in the .plt with the other states values
+/// If it needs to be stored in other file uncomment the below comments
 
 // void RMS::prepareOutputFileRMS()
 // {
@@ -545,6 +656,11 @@ void RMSTurb::unsetup()
 void RMSTurb::configure ( Config::ConfigArgs& args )
 {
   DataProcessingCom::configure( args );
+  
+  if (m_rmsInitSocketName != "Null") {
+    m_dynamicSockets.createSocketSink<CFreal>(m_rmsInitSocketName, true);
+  }
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////
