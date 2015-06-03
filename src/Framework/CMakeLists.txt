@@ -309,7 +309,6 @@ MeshDataInputSource.cxx
 MeshDataInputSource.hh
 MeshDataSourceInterface.cxx
 MeshDataSourceInterface.hh
-MeshElementType.hh
 MeshFormatConverter.cxx
 MeshFormatConverter.hh
 MeshStatistics.cxx

@@ -153,18 +153,19 @@ protected: // member functions
     cf_assert(false);
     return 0;
   }
-
+  
   /// Get the element count for iType less than current type
-  CFuint getNewGlobalElementID(std::vector<Framework::MeshElementType>& elementType,
-    	       CFuint globalElemID)
+  CFuint getNewGlobalElementID
+    (Common::SafePtr<std::vector<Framework::ElementTypeData> > elementType, CFuint globalElemID)
   {
     CFuint count = 0;
-    for (CFuint iType = 0; iType < elementType.size(); ++iType) {
-      if (globalElemID < elementType[iType].elementCount + count) {
-cf_assert((globalElemID - count) < elementType[iType].elementCount);
-return (globalElemID - count);
+    for (CFuint iType = 0; iType < elementType->size(); ++iType) {
+      cf_assert((*elementType)[iType].getNbTotalElems() > 0);
+      if (globalElemID < (*elementType)[iType].getNbTotalElems() + count) {
+	cf_assert((globalElemID - count) < (*elementType)[iType].getNbTotalElems());
+	return (globalElemID - count);
       }
-      count += elementType[iType].elementCount;
+      count += (*elementType)[iType].getNbTotalElems();
     }
     cf_assert(false);
     return 0;

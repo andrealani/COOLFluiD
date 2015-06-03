@@ -22,7 +22,6 @@
 #include "Framework/Storage.hh"
 #include "Framework/NamespaceGroup.hh"
 #include "Framework/NamespaceStack.hh"
-#include "Framework/MeshElementType.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -235,13 +234,6 @@ public: // methods
     m_totalElements = totalElementCount;
   }
 
-  /// Set the total number of mesh element types for all processors
-  void setTotalMeshElementTypes(const std::vector<MeshElementType>& met)
-  {
-    cf_assert(met.size() > 0);
-    m_totalElementTypes = met;
-  }
-
   /// Get the total number of elements for all processors
   std::vector<CFuint> & getTotalElements()
   {
@@ -273,12 +265,6 @@ public: // methods
     return &m_globalTRSGeoIDs;
   }
   
-  /// Get the mesh element types of  the whole mesh
-  std::vector<MeshElementType>& getTotalMeshElementTypes()
-  {
-    return m_totalElementTypes;
-  }
-
   /// Get the info about the TRS's in all processors
   std::vector<std::vector<CFuint> > & getTotalTRSInfo ()
   {
@@ -371,10 +357,7 @@ private: // member data
   
   /// global IDs of the GeometricEntity's in the TRS
   std::vector<std::vector<std::vector<CFuint> > > m_globalTRSGeoIDs;
-
-  /// For each element type, some global infos
-  std::vector<MeshElementType> m_totalElementTypes;
-
+  
   /// For each TRS, TR, the global number of elements
   std::vector<std::vector<CFuint> > m_totalTRSInfo;
   

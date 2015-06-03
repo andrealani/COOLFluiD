@@ -41,6 +41,9 @@ public: // accessors
   /// @return _geoShape
   CFGeoShape::Type getGeoShape() const  {  return _geoShape; }
 
+  /// @return _nbElemsTot
+  CFuint getNbTotalElems() const  {  return _nbElemsTot; }
+  
   /// @return _nbElems
   CFuint getNbElems() const  {  return _nbElems; }
 
@@ -76,7 +79,10 @@ public: // mutators
     _geoShape = geoShape;
     m_nbfaces = LocalConnectionData::getInstance().getNbFacesInShape(_geoShape);
   }
-
+  
+  /// Sets total number of elements
+  void setNbTotalElems(const CFuint nbElemsTot) {  _nbElemsTot = nbElemsTot; }
+  
   /// Sets _nbElems
   void setNbElems(const CFuint nbElems) {  _nbElems = nbElems; }
 
@@ -101,7 +107,9 @@ private: // data
   std::string   _nameShape;
   /// the CFGeoShape::Type corresponding to the shape
   CFGeoShape::Type _geoShape;
-  /// the number of elements with this type int the Mesh
+  /// the total (across processes) number of elements with this type
+  CFuint  _nbElemsTot;
+  /// the local (in current process) number of elements with this type
   CFuint  _nbElems;
   /// the start index on the ordered vector of elements for this type
   CFuint _startIdx;

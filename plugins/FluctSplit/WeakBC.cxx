@@ -99,7 +99,6 @@ void WeakBC::unsetup()
 {
   FluctuationSplitCom::unsetup();
   
-  cout << "WeakBC::unsetup()" << endl; exit(1);
   m_sInterpolator->unsetup();
   
   // allocating data for the temporary local linearized states
@@ -107,7 +106,7 @@ void WeakBC::unsetup()
     deletePtr(m_zStates[i]);
   }
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void WeakBC::setup()

@@ -361,28 +361,29 @@ void ParCFmeshBinaryFileWriter::writeElements(MPI_File* fh)
 			  false, static_cast<CFuint> (getWriteData().getSolutionPolyOrder()));
     
     MPIIOFunctions::writeKeyValue<char>(fh, "\n!ELEM_TYPES ");
-    vector<MeshElementType>& me = MeshDataStack::getActive()->getTotalMeshElementTypes();
-    const CFuint nbElementTypes = me.size();
+    
+    SafePtr<vector<ElementTypeData> > me = MeshDataStack::getActive()->getElementTypeData();
+    const CFuint nbElementTypes = me->size();
     for (CFuint i = 0; i < nbElementTypes; ++i) {
-      MPIIOFunctions::writeKeyValue<char>(fh, me[i].elementName + " ");
+      MPIIOFunctions::writeKeyValue<char>(fh, (*me)[i].getShape() + " ");
     }
     
     MPIIOFunctions::writeKeyValue<char>(fh, "\n!NB_ELEM_PER_TYPE ");
     for (CFuint i = 0; i < nbElementTypes; ++i) {
-      MPI_File_write(*fh, &me[i].elementCount, 1, 
-		     MPIStructDef::getMPIType(&me[i].elementCount), &_status); 
+      CFuint ecount = (*me)[i].getNbTotalElems();
+      MPI_File_write(*fh, &ecount, 1, MPIStructDef::getMPIType(&ecount), &_status); 
     }
     
     MPIIOFunctions::writeKeyValue<char>(fh, "\n!NB_NODES_PER_TYPE ");
     for (CFuint i = 0; i < nbElementTypes; ++i) {
-      MPI_File_write(*fh, &me[i].elementNodes, 1, 
-		     MPIStructDef::getMPIType(&me[i].elementNodes), &_status); 
+      CFuint ncount = (*me)[i].getNbNodes();
+      MPI_File_write(*fh, &ncount, 1, MPIStructDef::getMPIType(&ncount), &_status); 
     }
     
     MPIIOFunctions::writeKeyValue<char>(fh, "\n!NB_STATES_PER_TYPE ");
     for (CFuint i = 0; i < nbElementTypes; ++i) {
-      MPI_File_write(*fh, &me[i].elementStates, 1,
-		     MPIStructDef::getMPIType(&me[i].elementStates), &_status); 
+      CFuint scount = (*me)[i].getNbStates();
+      MPI_File_write(*fh, &scount, 1, MPIStructDef::getMPIType(&scount), &_status); 
     }
   }
   
@@ -410,11 +411,10 @@ void ParCFmeshBinaryFileWriter::writeElementList(MPI_File* fh)
   // wOffset is initialized with current offset
   vector<MPI_Offset> wOffset(_nbWriters, offset); 
   
-  // MeshElementType stores GLOBAL element type data
-  const vector<MeshElementType>& me = MeshDataStack::getActive()->getTotalMeshElementTypes();
+  SafePtr< vector<ElementTypeData> > me = getWriteData().getElementTypeData();
   
   const CFuint nSend = _nbWriters;
-  const CFuint nbElementTypes = me.size();
+  const CFuint nbElementTypes = me->size();
   const CFuint nbLocalElements = getWriteData().getNbElements();
   
   WriteListMap elementList;
@@ -427,8 +427,8 @@ void ParCFmeshBinaryFileWriter::writeElementList(MPI_File* fh)
   CFuint totalSize = 0;
   CFuint totalToSend = 0;
   for (CFuint iType = 0; iType < nbElementTypes; ++iType) {
-    const CFuint nbElementsInType = me[iType].elementCount;
-    const CFuint nodesPlusStates  = me[iType].elementNodes + me[iType].elementStates;
+    const CFuint nbElementsInType = (*me)[iType].getNbTotalElems();
+    const CFuint nodesPlusStates  = (*me)[iType].getNbNodes() + (*me)[iType].getNbStates();
     totalSize += nbElementsInType*nodesPlusStates;
     
     // fill in the writer list
@@ -456,14 +456,11 @@ void ParCFmeshBinaryFileWriter::writeElementList(MPI_File* fh)
   CFLog(DEBUG_MAX,_myRank << " " << CFPrintContainer<vector<CFuint> >
 		(" globalElementIDs  = ", &(*globalElementIDs)) << "\n");
   
-  // ElementTypeData stores LOCAL element type data
-  SafePtr< vector<ElementTypeData> > et = MeshDataStack::getActive()->getElementTypeData();
-  
   // insert in the write list the local IDs of the elements
   // the range ID is automatically determined inside the WriteListMap
   CFuint elemID = 0;
   for (CFuint iType = 0; iType < nbElementTypes; ++iType) {
-    const CFuint nbLocalElementsInType = (*et)[iType].getNbElems();
+    const CFuint nbLocalElementsInType = (*me)[iType].getNbElems();
     for (CFuint iElem = 0; iElem < nbLocalElementsInType; ++iElem, ++elemID) {
       elementList.insertElemLocalID(elemID, (*globalElementIDs)[elemID], iType);
     }
@@ -497,8 +494,8 @@ void ParCFmeshBinaryFileWriter::writeElementList(MPI_File* fh)
   CFuint rangeID = 0;
   MPI_Offset dataSize = 0;
   for (CFuint iType = 0; iType < nbElementTypes; ++iType) {
-    const CFuint nbNodesInType  = me[iType].elementNodes;
-    const CFuint nbStatesInType = me[iType].elementStates;
+    const CFuint nbNodesInType  = (*me)[iType].getNbNodes();
+    const CFuint nbStatesInType = (*me)[iType].getNbStates();
     const CFuint nodesPlusStates = nbNodesInType + nbStatesInType;
     CFuint wSendSize = 0;
     CFuint countElem = 0;
@@ -616,7 +613,7 @@ void ParCFmeshBinaryFileWriter::writeElementList(MPI_File* fh)
     } 
     
     // reset the offset to the end of this type
-    const CFuint nbElementsInType = me[iType].elementCount;
+    const CFuint nbElementsInType = (*me)[iType].getNbTotalElems();
     dataSize += nbElementsInType*nodesPlusStates;
     wOffset.assign(wOffset.size(), _offset[0].elems.first + dataSize*sizeof(CFuint));
   } // end loop on iType

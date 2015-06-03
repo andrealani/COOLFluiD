@@ -8,11 +8,8 @@
 #include <numeric>
 
 #include "ParCFmeshFileWriter.hh"
-#include "Framework/ElementTypeData.hh"
-#include "Framework/PhysicalModel.hh"
-#include "Framework/MeshData.hh"
-#include "Framework/ElementTypeData.hh"
 
+#include "Framework/ElementTypeData.hh"
 #include "Framework/PhysicalModel.hh"
 #include "Framework/MeshData.hh"
 
@@ -344,35 +341,34 @@ void ParCFmeshFileWriter::writeElements(std::ofstream *const fout)
     *fout << "!GEOM_POLYORDER " << static_cast<CFuint> (getWriteData().getGeometricPolyOrder()) << "\n";
     *fout << "!SOL_POLYORDER "  << static_cast<CFuint> (getWriteData().getSolutionPolyOrder()) << "\n";
     *fout << "!ELEM_TYPES ";
-
-    const vector<MeshElementType>& me =
-      MeshDataStack::getActive()->getTotalMeshElementTypes();
-
-    const CFuint nbElementTypes = me.size();
+    
+    SafePtr< vector<ElementTypeData> > me = MeshDataStack::getActive()->getElementTypeData();
+    
+    const CFuint nbElementTypes = me->size();
     for (CFuint i = 0; i < nbElementTypes; ++i) {
-      *fout << me[i].elementName << " ";
+      *fout << (*me)[i].getShape() << " ";
     }
     *fout << "\n";
 
     *fout << "!NB_ELEM_PER_TYPE";
     for (CFuint i = 0; i < nbElementTypes; ++i) {
-      *fout << " " << me[i].elementCount;
+      *fout << " " << (*me)[i].getNbTotalElems();
     }
     *fout << "\n";
 
     *fout << "!NB_NODES_PER_TYPE";
     for (CFuint i = 0; i < nbElementTypes; ++i) {
-      *fout << " " << me[i].elementNodes;
+      *fout << " " << (*me)[i].getNbNodes();
     }
     *fout << "\n";
 
     *fout << "!NB_STATES_PER_TYPE";
     for (CFuint i = 0; i < nbElementTypes; ++i) {
-      *fout << " " << me[i].elementStates;
+      *fout << " " << (*me)[i].getNbStates();
     }
     *fout << "\n";
   }
-
+  
   writeElementList(fout);
 
   CFLogDebugMin( "ParCFmeshFileWriter::writeElements() end\n");
@@ -387,15 +383,14 @@ void ParCFmeshFileWriter::writeElementList(std::ofstream *const fout)
   if (_myRank  == _ioRank) {
     *fout << "!LIST_ELEM " << "\n";
   }
-
-  // MeshElementType stores GLOBAL element type data
-  const vector<MeshElementType>& me =
-    MeshDataStack::getActive()->getTotalMeshElementTypes();
-
+  
+  SafePtr< vector<ElementTypeData> > me =
+    MeshDataStack::getActive()->getElementTypeData();
+  
   const CFuint nSend = _nbProc;
-  const CFuint nbElementTypes = me.size();
+  const CFuint nbElementTypes = me->size();
   const CFuint nbLocalElements = getWriteData().getNbElements();
-
+  
   WriteListMap elementList;
   elementList.reserve(nbElementTypes, nSend, nbLocalElements);
 
@@ -403,9 +398,9 @@ void ParCFmeshFileWriter::writeElementList(std::ofstream *const fout)
   // and the size of each send
   CFuint maxElemSendSize = 0;
   for (CFuint iType = 0; iType < nbElementTypes; ++iType) {
-    const CFuint nbElementsInType = me[iType].elementCount;
-    const CFuint nbNodesInType =  me[iType].elementNodes;
-    const CFuint nbStatesInType =  me[iType].elementStates;
+    const CFuint nbElementsInType = (*me)[iType].getNbTotalElems();
+    const CFuint nbNodesInType =  (*me)[iType].getNbNodes();
+    const CFuint nbStatesInType =  (*me)[iType].getNbStates();
     const CFuint nodesPlusStates = nbNodesInType + nbStatesInType;
     const CFuint maxElemSize = (nbElementsInType/nSend + nbElementsInType%nSend)*nodesPlusStates;
     const CFuint minElemSize = (nbElementsInType/nSend)*nodesPlusStates;
@@ -444,16 +439,12 @@ void ParCFmeshFileWriter::writeElementList(std::ofstream *const fout)
 
   CFLogDebugMin(_myRank << " " << CFPrintContainer<vector<CFuint> >
 		(" globalElementIDs  = ", &(*globalElementIDs)) << "\n");
-
-  // ElementTypeData stores LOCAL element type data
-  SafePtr< vector<ElementTypeData> > et =
-    MeshDataStack::getActive()->getElementTypeData();
-
+  
   // insert in the write list the local IDs of the elements
   // the range ID is automatically determined inside the WriteListMap
   CFuint elemID = 0;
   for (CFuint iType = 0; iType < nbElementTypes; ++iType) {
-    const CFuint nbLocalElementsInType = (*et)[iType].getNbElems();
+    const CFuint nbLocalElementsInType = (*me)[iType].getNbElems();
     for (CFuint iElem = 0; iElem < nbLocalElementsInType; ++iElem, ++elemID) {
       elementList.insertElemLocalID(elemID, (*globalElementIDs)[elemID], iType);
     }
@@ -479,10 +470,10 @@ void ParCFmeshFileWriter::writeElementList(std::ofstream *const fout)
 
   CFuint rangeID = 0;
   for (CFuint iType = 0; iType < nbElementTypes; ++iType) {
-    const CFuint nbNodesInType  = me[iType].elementNodes;
-    const CFuint nbStatesInType = me[iType].elementStates;
+    const CFuint nbNodesInType  = (*me)[iType].getNbNodes();
+    const CFuint nbStatesInType = (*me)[iType].getNbStates();
     const CFuint nodesPlusStates = nbNodesInType + nbStatesInType;
-
+    
     CFuint countElem = 0;
     for (CFuint is = 0; is < nSend; ++is, ++rangeID) {
 

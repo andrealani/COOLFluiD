@@ -17,6 +17,7 @@ namespace COOLFluiD {
 ElementTypeData::ElementTypeData() :
   _nameShape(),
   _geoShape(CFGeoShape::INVALID),
+  _nbElemsTot(0),
   _nbElems(0),
   _startIdx(0),
   _nbNodes(0),

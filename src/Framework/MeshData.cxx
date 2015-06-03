@@ -57,7 +57,6 @@ MeshData::MeshData(const std::string& name) :
   m_globalNodeIDs(),
   m_globalStateIDs(),
   m_globalTRSGeoIDs(),
-  m_totalElementTypes(),
   m_totalTRSInfo(),
   m_totalTRSMap(),
   socket_states("states"),

@@ -15,7 +15,6 @@
 
 #include "Common/BadValueException.hh"
 #include "Framework/PhysicalModel.hh"
-#include "Framework/MeshData.hh"
 #include "Framework/MeshDataBuilder.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/SpaceMethod.hh"
@@ -144,25 +143,19 @@ void ReadCFmesh::execute()
 
   cf_assert(m_data->getNbElements() > 0);
   cf_assert(nbElemTypes > 0);
-
+  
   SafePtr<vector<ElementTypeData> > eData = m_data->getElementTypeData();
   cf_assert(nbElemTypes == eData->size());
-
+  
   // element type info
   vector<CFuint> elementTypeCount(nbElemTypes);
-  /// @todo consider of replacing this with ElementTypeData
-  vector<MeshElementType> me(nbElemTypes);
-
+  
+  // AL: should I reset element type data in MeshData  here??
   for (CFuint iType = 0; iType < nbElemTypes; ++iType) {
     elementTypeCount[iType] = (*eData)[iType].getNbElems();
-    me[iType].elementName   = (*eData)[iType].getShape();
-    me[iType].elementCount  = (*eData)[iType].getNbElems();
-    me[iType].elementNodes  = (*eData)[iType].getNbNodes();
-    me[iType].elementStates = (*eData)[iType].getNbStates();
-    me[iType].elementGeoOrder = (*eData)[iType].getGeoOrder();
-    me[iType].elementSolOrder = (*eData)[iType].getSolOrder();
+    (*eData)[iType].setNbTotalElems((*eData)[iType].getNbElems());
   }
-
+  
   cf_assert(totalNbStates > 0);
   cf_assert(totalNbNodes > 0);
   cf_assert(elementTypeCount.size() > 0);
@@ -176,8 +169,7 @@ void ReadCFmesh::execute()
   MeshDataStack::getActive()->setTotalNodeCount(totalNbNodes);
   MeshDataStack::getActive()->setTotalStateCount(totalNbStates);
   MeshDataStack::getActive()->setTotalElementCount(elementTypeCount);
-  MeshDataStack::getActive()->setTotalMeshElementTypes(me);
-
+  
   // mesh data builder creates data that are IO-dependent
   meshDataBuilder->computeGeoTypeInfo();
   meshDataBuilder->createTopologicalRegionSets();

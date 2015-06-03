@@ -312,20 +312,14 @@ void Extruder2DFVMMPI::extrude()
   
   // set the global info about the element types
   vector<CFuint> elementTypeCount(totNbElemTypes);
-  vector<MeshElementType> me(totNbElemTypes);
   
   for (CFuint iType = 0; iType < totNbElemTypes; ++iType) {
     elementTypeCount[iType] = nbGlobalNodesStates[1]; // (*elementType)[iType].getNbElems();
-    me[iType].elementName   = (*elementType)[iType].getShape();
-    me[iType].elementCount  = nbGlobalNodesStates[1]; // (*elementType)[iType].getNbElems();
-    me[iType].elementNodes  = (*elementType)[iType].getNbNodes();
-    me[iType].elementStates = (*elementType)[iType].getNbStates();
-    me[iType].elementGeoOrder = (*elementType)[iType].getGeoOrder();
-    me[iType].elementSolOrder = (*elementType)[iType].getSolOrder();
+    (*elementType)[iType].setNbTotalElems(nbGlobalNodesStates[1]);
   }
   
   MeshDataStack::getActive()->setTotalElementCount(elementTypeCount);
-  MeshDataStack::getActive()->setTotalMeshElementTypes(me);
+  
   CFuint nbLocalElems = data.getNbElements();
   SafePtr< vector<CFuint> > globalElementIDs = MeshDataStack::getActive()->getGlobalElementIDs();
   globalElementIDs->resize(nbLocalElems);

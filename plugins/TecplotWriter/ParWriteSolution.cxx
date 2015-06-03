@@ -200,11 +200,6 @@ void ParWriteSolution::writeInnerData
     writeHeader(fout, title, datahandle_output);
   }
   
-  // MeshElementType stores GLOBAL element type data
-  const vector<MeshElementType>& me =
-    MeshDataStack::getActive()->getTotalMeshElementTypes();
-  cf_assert(MeshDataStack::getActive()->getElementTypeData()->size() == me.size());
-  
   std::vector<SafePtr<TopologicalRegionSet> > trsList =
     MeshDataStack::getActive()->getTrsList();
   
@@ -239,7 +234,7 @@ void ParWriteSolution::writeInnerData
 	  
 	  // backup the total counts for this element type
 	  tt.oldNbNodesElemsInType[iType].first  = tt.totalNbNodesInType[iType];
-	  tt.oldNbNodesElemsInType[iType].second = me[iType].elementCount;
+	  tt.oldNbNodesElemsInType[iType].second = eType.getNbTotalElems();
 	}
 	
 	// print nodal coordinates and stored node variables
@@ -247,15 +242,15 @@ void ParWriteSolution::writeInnerData
 	
 	if (isNewFile || meshChanged) {
 	  // write element-node connectivity
-	  writeElementList(fout, iType, me[iType].elementNodes,
-			   me[iType].elementCount, eType.getNbElems(),  
+	  writeElementList(fout, iType, eType.getNbNodes(),
+			   eType.getNbTotalElems(), eType.getNbElems(),  
 			   eType.getStartIdx(), eType.getGeoOrder(), trs);
 	}
       }
     } //end if inner cells
   } //end loop over trs
 }
-      
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void ParWriteSolution::setup()
@@ -286,11 +281,10 @@ void ParWriteSolution::setup()
     }
   }  
   
-  const vector<MeshElementType>& me =
-    MeshDataStack::getActive()->getTotalMeshElementTypes();
-  const CFuint nbElementTypes = me.size();
+  SafePtr< vector<ElementTypeData> > me = MeshDataStack::getActive()->getElementTypeData();
+  const CFuint nbElementTypes = me->size();
   cf_assert(nbElementTypes > 0);
-    
+  
   // create TeclotTRSType for the domain interior
   TeclotTRSType* tt = new TeclotTRSType
     (nbElementTypes, MeshDataStack::getActive()->getTrs("InnerCells"));
@@ -333,10 +327,8 @@ void ParWriteSolution:: buildNodeIDMapping()
   
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   
-  // MeshElementType stores GLOBAL element type data
-  const vector<MeshElementType>& me = 
-    MeshDataStack::getActive()->getTotalMeshElementTypes();
-  const CFuint nbElementTypes = me.size();
+  const CFuint nbElementTypes = MeshDataStack::getActive()->getElementTypeData()->size();
+  cf_assert(nbElementTypes > 0);
   
   cleanupNodeIDMapping();
   
@@ -369,8 +361,6 @@ void ParWriteSolution:: buildNodeIDMapping()
       
       CFLog(VERBOSE, "ParWriteSolution::buildNodeIDMapping() for " << trs->getName() << " \n");
       
-      // AL: check if there is an inconsistency between MeshElementType 
-      //     and ElementTypeData storages
       const CFuint nbElemTypes = elementType->size();
       for (CFuint iType = 0; iType < nbElemTypes; ++iType) {
 	ElementTypeData& eType = (*elementType)[iType];
@@ -1286,7 +1276,7 @@ bool ParWriteSolution::hasChangedMesh(const CFuint iType,
   
   CFuint elemCount = 0; 
   if ((tt.trs->hasTag("inner")) && (tt.trs->hasTag("cell"))) {
-    elemCount = MeshDataStack::getActive()->getTotalMeshElementTypes()[iType].elementCount; 
+    elemCount = (*MeshDataStack::getActive()->getElementTypeData())[iType].getNbTotalElems(); 
   }
   else {
     const int iTRS = getGlobalTRSID(tt.trs->getName());
@@ -1489,15 +1479,13 @@ void ParWriteSolution::writeInnerZoneHeader(std::ofstream* fout,
 					    SafePtr<TopologicalRegionSet> trs) 
 {
   SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
-  const vector<MeshElementType>& me =
-    MeshDataStack::getActive()->getTotalMeshElementTypes();
   TeclotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
   
   const string geoType = MapGeoEnt::identifyGeoEntTecplot
     (eType.getNbNodes(), eType.getGeoOrder(), PhysicalModelStack::getActive()->getDim()); 
   
   writeZoneHeader(fout, iType, eType.getShape(), tt.totalNbNodesInType[iType], 
-		  me[iType].elementCount, geoType, "\t", false);
+		  eType.getNbTotalElems(), geoType, "\t", false);
   
   if (getMethodData().getAppendAuxData()) {
     *fout << ", AUXDATA TRS=\"" << trs->getName() << "\""

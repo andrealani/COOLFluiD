@@ -212,11 +212,11 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
   elementListND.reserve(nbElementTypes, nSend, nbLocalElementsND);
   elementListND.fill(totNbNodes, nodesStride, totalToSendND);
   
-  const vector<MeshElementType>& me =
-    MeshDataStack::getActive()->getTotalMeshElementTypes();
+  SafePtr<vector<ElementTypeData> > me =
+    MeshDataStack::getActive()->getElementTypeData();
   
   // fill in the writer list for cell-centered variables
-  const CFuint nbElemsInType = me[iType].elementCount;
+  const CFuint nbElemsInType = (*me)[iType].getNbTotalElems();
   CFuint nbLocalElementsCC = 0;
   CFuint totalToSendCC = 0;
   WriteListMap elementListCC;
@@ -224,7 +224,6 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
     SafePtr<vector<ElementTypeData> > elementType =
       MeshDataStack::getActive()->getElementTypeData(elements->getName());
     ElementTypeData& eType = (*elementType)[iType];
-    cf_assert(elementType->size() == me.size());
     
     nbLocalElementsCC = eType.getNbElems();
     elementListCC.reserve(nbElementTypes, nSend, nbLocalElementsCC);

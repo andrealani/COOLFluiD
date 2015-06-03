@@ -2491,24 +2491,15 @@ void ParCFmeshFileReader::setElements(ElementDataArray<0>& localElem)
 
   // element type info
   vector<CFuint> elementTypeCount(m_totNbElemTypes);
-  // set the global info about the element types
-  vector<MeshElementType> me(m_totNbElemTypes);
-
   for (CFuint iType = 0; iType < m_totNbElemTypes; ++iType) {
-    elementTypeCount[iType] = (*elementType)[iType].getNbElems();
-    me[iType].elementName   = (*elementType)[iType].getShape();
-    me[iType].elementCount  = (*elementType)[iType].getNbElems();
-    me[iType].elementNodes  = (*elementType)[iType].getNbNodes();
-    me[iType].elementStates = (*elementType)[iType].getNbStates();
-    me[iType].elementGeoOrder = (*elementType)[iType].getGeoOrder();
-    me[iType].elementSolOrder = (*elementType)[iType].getSolOrder();
+    elementTypeCount[iType] = (*elementType)[iType].getNbElems();  
+    (*elementType)[iType].setNbTotalElems((*elementType)[iType].getNbElems()); 
   }
-
+  
   // set the total number of nodes, states and elements in the MeshData
   // to make it available later while writing
   MeshDataStack::getActive()->setTotalElementCount(elementTypeCount);
-  MeshDataStack::getActive()->setTotalMeshElementTypes(me);
-
+  
   // here elements are reordered by type
   vector< vector<CFuint> > elemIDPerType(m_totNbElemTypes);
   ElementDataArray<0>::Itr it;
@@ -2594,10 +2585,10 @@ void ParCFmeshFileReader::setElements(ElementDataArray<0>& localElem)
       }
     }
     m_localElemIDs[ne] = localElemID;
-
+    
     // set the global element IDs list
-    (*globalElementIDs)[localElemID] = getNewGlobalElementID(me, it.get(ElementDataArray<0>::GLOBAL_ID));
-
+    (*globalElementIDs)[localElemID] = getNewGlobalElementID(elementType, it.get(ElementDataArray<0>::GLOBAL_ID));
+    
     const CFuint nbNodesInElem = it.get(ElementDataArray<0>::NB_NODES);
     for (CFuint i = 0; i < nbNodesInElem; ++i)
     {
