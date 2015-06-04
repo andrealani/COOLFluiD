@@ -60,7 +60,7 @@ ComputeWallDistanceVector2CCMPI::ComputeWallDistanceVector2CCMPI(const std::stri
 {
   addConfigOptionsTo(this);
   
-  _centroidBased = false;
+  _centroidBased = true;
   setParameter("CentroidBased",&_centroidBased);
 }
     
