@@ -6,14 +6,14 @@
 ## mesh with only tetras, conversion from THOR to CFmesh, second-order 
 ## reconstruction with Venkatakrishnan limiter, supersonic inlet and outlet BC, 
 ## field initialization with analytical function, two subsystems managed by 
-## LoopMaestro demonstrating restart and I/O of extra data (limiter)
+## LoopMaestro demonstrating restart and parallel /O of extra data (limiter)
 ##
 #################################################################################
 ##
 ## Comments begin with "#"
 ## Meta Comments begin with triple "#"
 ##
-### Residual = -1.65097865
+### Residual = -1.6509786
 
 # SubSystem Modules
 Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libBackwardEuler libTHOR2CFmesh 
@@ -55,11 +55,15 @@ Simulator.SubSysA.Euler2D.refLength = 1.0
 
 Simulator.SubSysA.OutputFormat        = Tecplot CFmesh
 
-Simulator.SubSysA.Tecplot.FileName    = jets2DFVM.plt
+Simulator.SubSysA.Tecplot.FileName    = jets2DFVM_out.plt
 Simulator.SubSysA.Tecplot.Data.outputVar = Cons
 Simulator.SubSysA.Tecplot.SaveRate = 400
 Simulator.SubSysA.Tecplot.AppendTime = false
 Simulator.SubSysA.Tecplot.AppendIter = false
+Simulator.SubSysA.Tecplot.Data.DataHandleOutput.CCSocketNames = limiter
+Simulator.SubSysA.Tecplot.Data.DataHandleOutput.CCVariableNames = lim0 lim1 lim2 lim3
+Simulator.SubSysA.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
+Simulator.SubSysA.Tecplot.WriteSol = ParWriteSolutionBlock
 
 Simulator.SubSysA.CFmesh.FileName     = jets2DFVM_EXTRA.CFmesh
 Simulator.SubSysA.CFmesh.SaveRate = 400
@@ -68,7 +72,7 @@ Simulator.SubSysA.CFmesh.AppendIter = false
 # field for extra state-related variables
 Simulator.SubSysA.CFmesh.Data.ExtraStateVarNames = limiter
 Simulator.SubSysA.CFmesh.Data.ExtraStateVarStrides = 4
-#Simulator.SubSysA.CFmesh.WriteSol = ParWriteBinarySolution
+Simulator.SubSysA.CFmesh.WriteSol = ParWriteBinarySolution
 #Simulator.SubSysA.CFmesh.ParWriteBinarySolution.ParCFmeshBinaryFileWriter.NbWriters = 4
 
 Simulator.SubSysA.StopCondition       = MaxNumberSteps
@@ -176,7 +180,7 @@ Simulator.SubSysB.CFmeshFileReader.Data.FileName = jets2DFVM_EXTRA.CFmesh
 Simulator.SubSysB.CFmeshFileReader.Data.ExtraStateVarNames = InitLimiter
 Simulator.SubSysB.CFmeshFileReader.Data.ExtraStateVarTags = limiter
 Simulator.SubSysB.CFmeshFileReader.Data.ExtraStateVarStrides = 4
-#Simulator.SubSysB.CFmeshFileReader.ReadCFmesh = ParReadCFmeshBinary
+Simulator.SubSysB.CFmeshFileReader.ReadCFmesh = ParReadCFmeshBinary
 
 Simulator.SubSysB.LinearSystemSolver = PETSC
 Simulator.SubSysB.LSSNames = BwdEulerLSS

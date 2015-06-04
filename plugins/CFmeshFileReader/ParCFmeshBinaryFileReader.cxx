@@ -1222,9 +1222,6 @@ void ParCFmeshBinaryFileReader::readElemListRank(PartitionerData& pdata,
   
   MPIIOFunctions::readAll("ParCFmeshBinaryFileReader::readElemListRank()", fh, startPos, &buf[0], (CFuint)buf.size(), m_maxBuffSize);
   
-  // CFVec<CFuint> e0(9, &buf[0]); cout   << "element[0] = " << e0 << endl;
-  // CFVec<CFuint> eN(9, &buf[buf.size()-9]); cout << "element[N] = " << eN << endl;
-  
   CFLog(DEBUG_MAX, CFPrintContainer<vector<CFuint> >("buf = ", &buf));
   
   CFuint counter = 0;
@@ -2167,13 +2164,13 @@ void ParCFmeshBinaryFileReader::createStatesAll(const vector<CFreal>& localState
   CFLog(VERBOSE, "ParCFmeshBinaryFileReader::createStatesAll() => nbGhostStates = " << m_ghostStateIDs.size() << "\n");
   
   const CFuint nbLocalStates = m_localStateIDs.size() + m_ghostStateIDs.size();
-  const CFuint nbExtraVars = getReadData().getNbExtraNodalVars();
-  const vector<CFuint>& nodalExtraVarsStrides = *getReadData().getExtraNodalVarStrides();
+  const CFuint nbExtraVars = getReadData().getNbExtraStateVars();
+  const vector<CFuint>& stateExtraVarsStrides = *getReadData().getExtraStateVarStrides();
   
   RealVector extraVars;
   if (nbExtraVars > 0) {
-    const CFuint sizeExtraVars = std::accumulate(nodalExtraVarsStrides.begin(), 
-						 nodalExtraVarsStrides.end(), 0);
+    const CFuint sizeExtraVars = std::accumulate(stateExtraVarsStrides.begin(), 
+						 stateExtraVarsStrides.end(), 0);
     extraVars.resize(sizeExtraVars, 0.);
   }
   
@@ -2316,9 +2313,9 @@ void ParCFmeshBinaryFileReader::createStatesAll(const vector<CFreal>& localState
       getReadData().setInterState(localID, tmpInterState);
     }
     
-    // set the nodal extra variable
+    // set the state extra variable
     if (nbExtraVars > 0) {
-      getReadData().setNodalExtraVar(localID, extraVars);
+      getReadData().setStateExtraVar(localID, extraVars);
     }
     
     // getReadData().setStateLocalToGlobal (localID, globalID);
@@ -2581,6 +2578,8 @@ void ParCFmeshBinaryFileReader::readStateList(MPI_File* fh)
   
   getReadData().prepareStateExtraVars();
   
+  CFLog(VERBOSE, "ParCFmeshBinaryFileReader::readStateList() => nbExtraVars = " << nbExtraVars << "\n");
+  
   bool hasTransformer = false;
   
   // read the state
@@ -2627,6 +2626,8 @@ void ParCFmeshBinaryFileReader::readStateList(MPI_File* fh)
   if (m_hasPastStates) {stateSize += nbEqs;}
   if (m_hasInterStates) {stateSize += nbEqs;}
   if (nbExtraVars > 0) {stateSize += extraVars.size();}
+  
+  CFLog(VERBOSE, "ParCFmeshBinaryFileReader::readStateList() => stateSize = " << stateSize << "\n");
   
   // read "\n" character 
   char c; MPIIOFunctions::readScalar(fh, c);
