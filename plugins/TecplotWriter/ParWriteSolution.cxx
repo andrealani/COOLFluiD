@@ -940,10 +940,19 @@ void ParWriteSolution::writeElementList
   MPI_Offset offset = tt.nodesOffset[iType].second;
   vector<MPI_Offset> wOffset(_nbWriters, offset); 
   
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  // real number of nodes written for this element (can be more than nbNodesInType:
+  // for instance pyramids, prisms and bricks will all have 8 nodes)
+  const CFuint nbNodesInTypeToWrite = 
+    getWriteNbNodesInType(nbNodesInType, geoOrder, dim, isCell);
+  cf_assert(nbNodesInTypeToWrite >= nbNodesInType);
+    
+  const CFuint totalWriteSize = nbElementsInType*nbNodesInTypeToWrite;
+  
   // start element list offset (current position)
   tt.elemsOffset[iType].first = offset;
   // end element list offset
-  tt.elemsOffset[iType].second = tt.elemsOffset[iType].first + totalSize*wordFormatSize;
+  tt.elemsOffset[iType].second = tt.elemsOffset[iType].first + totalWriteSize*wordFormatSize;
   
   CFLog(VERBOSE, "ParWriteSolution::writeElementList() => offsets = [" 
 	<<  tt.elemsOffset[iType].first << ", " << tt.elemsOffset[iType].second << "]\n");
@@ -1033,8 +1042,10 @@ void ParWriteSolution::writeElementList
     // the offsets for all writers with send ID > current must be incremented  
     for (CFuint iw = is+1; iw < wOffset.size(); ++iw) {
       cf_assert(sendSize > 0);
-      wOffset[iw] += sendSize*wordFormatSize;
-      CFLog(DEBUG_MIN, "[" << is << ", " << iw << "] => wOffset = " << wOffset[iw] << ", sendSize = " << sendSize << "\n");
+      // offset must be computed taling into account the real number of element nodes to write
+      wOffset[iw] += (sendSize/nbNodesInType)*nbNodesInTypeToWrite*wordFormatSize;
+      CFLog(DEBUG_MIN, "[" << is << ", " << iw << "] => wOffset = " << wOffset[iw] << ", sendSize = " 
+	    << (sendSize/nbNodesInType)*nbNodesInTypeToWrite << "\n");
     }
     
     //reset the all sendElement list to 0
@@ -1049,8 +1060,6 @@ void ParWriteSolution::writeElementList
 		  (" elementToPrint  = ", &elementToPrint, nbNodesInType) << "\n");
     
   } // end sending loop
-  
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();
   
   // need to distinguish between writing on boundary and not
   // need to be able to handle hybrid case ... (with degenerated quads having node[3] = node[2]) 
@@ -1076,8 +1085,11 @@ void ParWriteSolution::writeElementList
     MPI_Offset maxpos  = 0;
     MPI_Allreduce(&lastpos, &maxpos, 1, MPIStructDef::getMPIOffsetType(), MPI_MAX, wg.comm);
     
-    cf_assert(tt.elemsOffset[iType].second == maxpos);
-    
+    if (tt.elemsOffset[iType].second != maxpos) {
+      CFLog(WARN, "tt.elemsOffset[iType].second != maxpos => " << 
+	    tt.elemsOffset[iType].second  <<  " != " << maxpos << "\n");
+      cf_assert(tt.elemsOffset[iType].second == maxpos);
+    }
     fout->seekp(maxpos);
   }
   
@@ -1089,6 +1101,74 @@ void ParWriteSolution::writeElementList
   CFLog(VERBOSE, "ParWriteSolution::writeElementList() => end\n");
 }
       
+//////////////////////////////////////////////////////////////////////////////
+
+CFuint ParWriteSolution::getWriteNbNodesInType(const CFuint nbNodes,
+					       const CFuint geoOrder,
+					       const CFuint dim, 
+					       const bool isCell)
+{
+  /// @todo only 1st order geometry
+  cf_assert(geoOrder == CFPolyOrder::ORDER1);
+  
+  if (isCell) {
+    switch(dim) {
+      
+    case DIM_2D:
+      return nbNodes;
+      break;
+      
+    case DIM_3D:
+      return (nbNodes > 4) ? 8 : 4;
+      break;
+      
+    default:
+      std::string msg = std::string("Wrong dimension. Can only be 2D or 3D: ") +
+	Common::StringOps::to_str(dim);
+      throw BadValueException(FromHere(),msg);
+    }
+  }
+  else {
+    // case for 2D and 3D faces
+    cf_assert(!isCell);
+    
+    switch(dim) {
+      
+    case DIM_2D:
+      cf_assert(nbNodes == 2);
+      return 2;
+      break;
+      
+    case DIM_3D:
+      switch(nbNodes) {
+	
+      case 3:  // TRIANGLE
+	return 3;
+	break;
+	
+      case 4: // QUADRILATERAL
+	return 4;
+	break;
+	
+      default:
+	std::string msg = std::string("Wrong number of nodes in 3D for face: ") +
+	  Common::StringOps::to_str(nbNodes);
+	throw BadValueException(FromHere(),msg);
+      }
+      break;
+      
+    default:
+      std::string msg = std::string("Wrong dimension. Can only be 2D or 3D: ") +
+	Common::StringOps::to_str(dim);
+      throw BadValueException(FromHere(),msg);
+    }  
+  }
+  
+  // should never get here
+  cf_assert(false);
+  return nbNodes;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 void ParWriteSolution::writeElementConn(ofstream& file,

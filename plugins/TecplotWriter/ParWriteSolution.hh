@@ -185,6 +185,12 @@ public:
 			const CFuint geoOrder,
 			Common::SafePtr<Framework::TopologicalRegionSet> elements);
   
+  /// Get the number of element nodes to write 
+  CFuint getWriteNbNodesInType(const CFuint nbNodes,
+			       const CFuint geoOrder,
+			       const CFuint dim, 
+			       const bool isCell);
+  
   /// Write the connectivity for one element, after having translated the local 
   /// element connectivity (node ordering) from CFmesh to Tecplot format
   void writeElementConn(std::ofstream& file,
