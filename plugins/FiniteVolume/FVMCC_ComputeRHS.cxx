@@ -327,8 +327,10 @@ void FVMCC_ComputeRHS::execute()
 void FVMCC_ComputeRHS::setup()
 {
   CFAUTOTRACE;
-
+  
   CFLog(VERBOSE, "FVMCC_ComputeRHS::setup() START\n");
+  
+  CellCenterFVMCom::setup();
   
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   _flux.resize(nbEqs,0.);

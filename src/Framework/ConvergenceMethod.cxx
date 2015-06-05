@@ -21,6 +21,7 @@
 #include "Framework/ConvergenceMethod.hh"
 #include "Framework/ConvergenceMethodData.hh"
 #include "Framework/SubSystemStatus.hh"
+#include "Framework/NamespaceSwitcher.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -73,8 +74,6 @@ void ConvergenceMethod::registActionListeners()
 ConvergenceMethod::ConvergenceMethod(const std::string& name)
   : Method(name),
     m_lss(),
-    m_statedata(CFNULL),
-    m_nodedata(CFNULL),
     m_stopwatch()
 {
   // define which functions might be called dynamic
@@ -295,14 +294,20 @@ void ConvergenceMethod::syncGlobalDataComputeResidual(const bool computeResidual
 
   const bool isParallel = Common::PE::GetPE().IsParallel();
   Common::Stopwatch<Common::WallTime> syncTimer;
-
+  
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(getNamespace());
+  DataHandle<State*, GLOBAL> statedata = 
+    MeshDataStack::getInstance().getEntryByNamespace(nsp)->getStateDataSocketSink().getDataHandle();
+  DataHandle<Node*, GLOBAL> nodedata = 
+    MeshDataStack::getInstance().getEntryByNamespace(nsp)->getNodeDataSocketSink().getDataHandle();
+  
   // after each update the states have to be syncronized
   if (isParallel)
   {
     syncTimer.start();
-    m_statedata->beginSync ();
+    statedata.beginSync ();
   }
-
+  
   if (computeResidual)
   {
     getConvergenceMethodData()->updateResidual();
@@ -310,7 +315,7 @@ void ConvergenceMethod::syncGlobalDataComputeResidual(const bool computeResidual
 
   if (isParallel)
   {
-    m_statedata->endSync();
+    statedata.endSync();
     syncTimer.stop();
   }
 
@@ -330,13 +335,19 @@ void ConvergenceMethod::syncAllAndComputeResidual(const bool computeResidual)
 
   const bool isParallel = Common::PE::GetPE().IsParallel();
   Common::Stopwatch<Common::WallTime> syncTimer;
-
+  
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(getNamespace());
+  DataHandle<State*, GLOBAL> statedata = 
+    MeshDataStack::getInstance().getEntryByNamespace(nsp)->getStateDataSocketSink().getDataHandle();
+  DataHandle<Node*, GLOBAL> nodedata = 
+    MeshDataStack::getInstance().getEntryByNamespace(nsp)->getNodeDataSocketSink().getDataHandle();
+  
   // after each update the states have to be syncronized
   if (isParallel)
   {
     syncTimer.start();
-    m_statedata->beginSync ();
-    m_nodedata->beginSync ();
+    statedata.beginSync ();
+    nodedata.beginSync ();
   }
 
   if (computeResidual)
@@ -346,8 +357,8 @@ void ConvergenceMethod::syncAllAndComputeResidual(const bool computeResidual)
 
   if (isParallel)
   {
-    m_statedata->endSync();
-    m_nodedata->endSync();
+    statedata.endSync();
+    nodedata.endSync();
     syncTimer.stop();
   }
 

@@ -89,18 +89,6 @@ public: // methods
     return (m_lss.isNotNull());
   }
 
-  /// Set the data handle to the global nodes
-  void setGlobalNodes(DataHandle<Node*, GLOBAL> *const nodedata)
-  {
-    m_nodedata = nodedata;
-  }
-
-  /// Set the data handle to the global states
-  void setGlobalStates(DataHandle<State*, GLOBAL> *const statedata)
-  {
-    m_statedata = statedata;
-  }
-
   /// Run the function defined by the function name
   /// @param func name of the function to run. It should be void function with nor parameters.
   virtual void run_function(const std::string & func)
@@ -173,13 +161,7 @@ private: // member data
 
   /// LinearSystemSolver used to solve the linear system, if one is present
   MultiMethodHandle<LinearSystemSolver> m_lss;
-
-  /// handle to the global states
-  DataHandle<State*,GLOBAL>* m_statedata;
-
-  /// handle to the global nodes
-  DataHandle<Node*,GLOBAL>* m_nodedata;
-
+  
   /// stopwatch to keep the track of the time spent converging
   Common::Stopwatch<Common::WallTime>  m_stopwatch;
 

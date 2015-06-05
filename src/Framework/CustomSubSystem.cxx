@@ -153,7 +153,6 @@ void CustomSubSystem::run()
   }
 
   m_duration.set(0.);
-  setGlobalData();
   Stopwatch<WallTime> stopTimer;
   stopTimer.start();
 

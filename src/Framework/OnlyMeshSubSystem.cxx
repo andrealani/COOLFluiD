@@ -209,7 +209,14 @@ void OnlyMeshSubSystem::buildMeshData()
     PhysicalModelStack::getActive()->getImplementor()->setup();
     NamespaceSwitcher::getInstance().popNamespace();
   }
-
+  
+  // allocate all the mesh data
+  vector <Common::SafePtr<MeshData> > meshDataVector = 
+    MeshDataStack::getInstance().getAllEntries();
+  for(CFuint iMesh = 0; iMesh < meshDataVector.size(); iMesh++) {
+    meshDataVector[iMesh]->reallocate();
+  }
+  
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   CFLog(NOTICE,"Setting up all MeshCreator's\n");
   CFLog(NOTICE,"-------------------------------------------------------------\n");
@@ -267,9 +274,7 @@ void OnlyMeshSubSystem::buildMeshData()
 	m_outputFormat[i]->bindData();
       }
   }
-  
-  vector <Common::SafePtr<MeshData> > meshDataVector = MeshDataStack::getInstance().getAllEntries();
-  
+    
   for(CFuint iMeshData = 0; iMeshData < meshDataVector.size(); iMeshData++)
   {
     bool isNonRoot = false;
@@ -431,42 +436,6 @@ void OnlyMeshSubSystem::run()
   CFLog(VERBOSE, "OnlyMeshSubSystem::run()\n");
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-void OnlyMeshSubSystem::setGlobalData()
-{
-  CFLog(VERBOSE, "OnlyMeshSubSystem::setGlobalData() start\n");
-  
-  const bool isParallel = PE::GetPE().IsParallel ();
-
-  vector <Common::SafePtr<MeshData> > meshDataVector = MeshDataStack::getInstance().getAllEntries();
-
-  DataHandle<State*, GLOBAL>* states = 0;
-  DataHandle<Node*, GLOBAL>* nodes = 0;
-
-  if (isParallel) {
-    for(CFuint iMeshData = 0; iMeshData < meshDataVector.size(); iMeshData++)
-    {
-      const std::string parStateVecName = meshDataVector[iMeshData]->getPrimaryNamespace() + "_states";
-      const std::string parNodeVecName = meshDataVector[iMeshData]->getPrimaryNamespace() + "_nodes";
-
-      states = new DataHandle<State*, GLOBAL>
-        (meshDataVector[iMeshData]->getDataStorage()->getGlobalData<State*>(parStateVecName));
-
-      nodes = new DataHandle<Node*, GLOBAL>
-        (meshDataVector[iMeshData]->getDataStorage()->getGlobalData<Node*>(parNodeVecName));
-
-      // test run
-      states->beginSync();
-      nodes->beginSync();
-      states->endSync();
-      nodes->endSync();
-    }
-  }
-  
-  CFLog(VERBOSE, "OnlyMeshSubSystem::setGlobalData() end\n");
-}
-    
 //////////////////////////////////////////////////////////////////////////////
 
 void OnlyMeshSubSystem::unsetup()

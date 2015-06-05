@@ -116,10 +116,9 @@ void PrePostProcessingSubSystem::run()
   }
 
   m_duration.set(0.);
-  setGlobalData();
   Stopwatch<WallTime> stopTimer;
   stopTimer.start();
-
+  
   // read the interactive parameters
   getInteractiveParamReader()->readFile();
 

@@ -176,10 +176,10 @@ void SubSystem::configureNamespaceSingletons(Config::ConfigArgs& args, Common::S
   Common::SafePtr<MeshData> md = MeshDataStack::getInstance().createUnique(meshDataName);
 
   if (!md->isConfigured()) {
-    md->reallocate();
+    // md->reallocate();
     configureNested(*md,args);
   }
-
+  
   cf_assert(!physicalModelName.empty());
   Common::SafePtr<PhysicalModel> pm = PhysicalModelStack::getInstance().createUnique(physicalModelName);
 

@@ -305,11 +305,18 @@ void StandardSubSystem::buildMeshData()
     PhysicalModelStack::getActive()->getImplementor()->setup();
     NamespaceSwitcher::getInstance().popNamespace();
   }
-
+  
+  // allocate all the mesh data
+  vector <Common::SafePtr<MeshData> > meshDataVector = 
+    MeshDataStack::getInstance().getAllEntries();
+  for(CFuint iMesh = 0; iMesh < meshDataVector.size(); iMesh++) {
+    meshDataVector[iMesh]->reallocate();
+  }
+  
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   CFLog(NOTICE,"Setting up all MeshCreator's\n");
   CFLog(NOTICE,"-------------------------------------------------------------\n");
-
+    
   // finally setup the mesh creators
   for(CFuint iMC=0; iMC < m_meshCreator.size(); iMC++)
   {
@@ -363,105 +370,88 @@ void StandardSubSystem::buildMeshData()
       m_outputFormat[i]->bindData();
     }
   }
-
-  vector <Common::SafePtr<MeshData> > meshDataVector = MeshDataStack::getInstance().getAllEntries();
-
-  for(CFuint iMeshData = 0; iMeshData < meshDataVector.size(); iMeshData++)
-  {
+  
+  for(CFuint iMeshData = 0; iMeshData < meshDataVector.size(); iMeshData++) {
     bool isNonRoot = false;
-    for(CFuint iMC = 0; iMC < m_meshCreator.size(); iMC++)
-    {
+    for(CFuint iMC = 0; iMC < m_meshCreator.size(); iMC++) {
       if(m_meshCreator[iMC]->getNamespace() == meshDataVector[iMeshData]->getPrimaryNamespace())
         isNonRoot = m_meshCreator[iMC]->isNonRootMethod();
     }
-  if(!isNonRoot)
-  {
-//  cf_assert(m_meshCreator[iMeshData]->getNamespace() == meshDataVector[iMeshData]->getPrimaryNamespace());
-  CFLogNotice("Building TRS info for MeshData in Namespace " << meshDataVector[iMeshData]->getPrimaryNamespace() << "\n");
-
-  // === conversion fix ===
-  vector<std::string> & TotalTRSNames =
-    meshDataVector[iMeshData]->getTotalTRSNames ();
-  vector<vector<CFuint> > & TotalTRSInfo =
-    meshDataVector[iMeshData]->getTotalTRSInfo ();
-
-  if (TotalTRSInfo.empty ()) {
-    cf_assert(TotalTRSNames.empty());
-    vector< SafePtr<TopologicalRegionSet> > trsList =
-      meshDataVector[iMeshData]->getTrsList();
-
-    // count in advance the number of writable TRS
-    CFuint sizeTRSToWrite = 0;
-    for (CFuint i = 0; i < trsList.size(); ++i) {
-      if (trsList[i]->hasTag("writable")) {
-        sizeTRSToWrite++;
+    
+    if (!isNonRoot) {
+      //  cf_assert(m_meshCreator[iMeshData]->getNamespace() == meshDataVector[iMeshData]->getPrimaryNamespace());
+      CFLogNotice("Building TRS info for MeshData in Namespace " << meshDataVector[iMeshData]->getPrimaryNamespace() << "\n");
+      
+      // === conversion fix ===
+      vector<string>& TotalTRSNames = meshDataVector[iMeshData]->getTotalTRSNames ();
+      vector<vector<CFuint> >& TotalTRSInfo = meshDataVector[iMeshData]->getTotalTRSInfo ();
+      
+      if (TotalTRSInfo.empty ()) {
+	cf_assert(TotalTRSNames.empty());
+	vector< SafePtr<TopologicalRegionSet> > trsList =
+	  meshDataVector[iMeshData]->getTrsList();
+	
+	// count in advance the number of writable TRS
+	CFuint sizeTRSToWrite = 0;
+	for (CFuint i = 0; i < trsList.size(); ++i) {
+	  if (trsList[i]->hasTag("writable")) {
+	    sizeTRSToWrite++;
+	  }
+	}
+	cf_assert(sizeTRSToWrite < trsList.size());
+	
+	TotalTRSNames.resize(sizeTRSToWrite);
+	TotalTRSInfo.resize(sizeTRSToWrite);
+	
+	CFuint counter = 0;
+	vector< Common::SafePtr<TopologicalRegionSet> >::iterator it;
+	for (it = trsList.begin(); it != trsList.end(); ++it) {
+	  if ((*it)->hasTag("writable")) {
+	    TotalTRSNames[counter] = (*it)->getName();
+	    const CFuint nbTRs = (*it)->getNbTRs();
+	    TotalTRSInfo[counter].resize(nbTRs);
+	    for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
+	      TotalTRSInfo[counter][iTR] = (*(*it))[iTR]->getLocalNbGeoEnts();
+	      CFLog(VERBOSE, "TRS : " << (*it)->getName()
+		    << ", TR : "<< iTR
+		    << ", nbGeos : "
+		    << TotalTRSInfo[counter][iTR] << "\n");
+	    }
+	    counter++;
+	  }
+	}
+	
+	cf_assert(counter == sizeTRSToWrite);
+      }
+      
+      if (PE::GetPE().IsParallel()) {
+	const std::string parStateVecName = meshDataVector[iMeshData]->getPrimaryNamespace() + "_states";
+	const std::string parNodeVecName = meshDataVector[iMeshData]->getPrimaryNamespace() + "_nodes";
+	
+	DataHandle<State*, GLOBAL> states =
+	  meshDataVector[iMeshData]->getDataStorage()->getGlobalData<State*>(parStateVecName);
+	
+	DataHandle<Node*, GLOBAL> nodes =
+	  meshDataVector[iMeshData]->getDataStorage()->getGlobalData<Node*>(parNodeVecName);
+	
+	// AL : this should be activated only in very special occasions
+	// #ifndef NDEBUG
+	//  states.DumpContents ();
+	//  nodes.DumpContents ();
+	//  #endif
+	
+	states.buildMap ();
+	nodes.buildMap ();
+	
+	// #ifndef NDEBUG
+	//  states.DumpInfo ();
+	//  nodes.DumpInfo ();
+	// #endif
       }
     }
-    cf_assert(sizeTRSToWrite < trsList.size());
-
-    TotalTRSNames.resize(sizeTRSToWrite);
-    TotalTRSInfo.resize(sizeTRSToWrite);
-    CFuint counter = 0;
-    vector< Common::SafePtr<TopologicalRegionSet> >::iterator it;
-    for (it = trsList.begin(); it != trsList.end(); ++it)
-    {
-      if ((*it)->hasTag("writable"))
-      {
-        TotalTRSNames[counter] = (*it)->getName();
-        const CFuint nbTRs = (*it)->getNbTRs();
-        TotalTRSInfo[counter].resize(nbTRs);
-        for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
-          TotalTRSInfo[counter][iTR] = (*(*it))[iTR]->getLocalNbGeoEnts();
-          CFLog(VERBOSE, "TRS : " << (*it)->getName()
-                                << ", TR : "<< iTR
-                                << ", nbGeos : "
-                                << TotalTRSInfo[counter][iTR] << "\n");
-        }
-        counter++;
-      }
-    }
-
-    cf_assert(counter == sizeTRSToWrite);
   }
-
-    if (PE::GetPE().IsParallel()) {
-      const std::string parStateVecName = meshDataVector[iMeshData]->getPrimaryNamespace() + "_states";
-      const std::string parNodeVecName = meshDataVector[iMeshData]->getPrimaryNamespace() + "_nodes";
-
-      DataHandle<State*, GLOBAL> states =
-        meshDataVector[iMeshData]->getDataStorage()->getGlobalData<State*>(parStateVecName);
-
-      DataHandle<Node*, GLOBAL> nodes =
-        meshDataVector[iMeshData]->getDataStorage()->getGlobalData<Node*>(parNodeVecName);
-
-      // AL : this should be activated only in very special occasions
-      // #ifndef NDEBUG
-      //  states.DumpContents ();
-      //  nodes.DumpContents ();
-      //  #endif
-
-      states.buildMap ();
-      nodes.buildMap ();
-
-    // #ifndef NDEBUG
-    //  states.DumpInfo ();
-    //  nodes.DumpInfo ();
-    // #endif
-    }
-
-  }
-  }
-  // Conv fix
-  // =================
-
-//   CFout <<  "Mesh Report: -----------------------------------"
-//  << "\nStates   : " << m_MDA->getNbStates()
-//        << "\nNodes    : " << m_MDA->getNbNodes ()
-//  << "\nElements : " << m_MDA->getNbElements()
-//  << "\n------------------------------------------------\n";
-
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void StandardSubSystem::setup()
@@ -476,18 +466,10 @@ void StandardSubSystem::setup()
   cf_assert(!lst.empty());
 
   NspVec::iterator nsp = lst.begin();
-
-//     setEnableNamespaces(false);
-//     vector<SafePtr<PhysicalModel> > PMVec = PhysicalModelStack::getInstance().getAllEntries();
-//     for(CFuint iPM = 0; iPM < PMVec.size(); iPM++)
-//     {
-//       (PMVec[iPM])->getImplementor()->setup();
-//     }
-//     setEnableNamespaces(true);
-
-    //setCommands() needs Trs's => must be exactly here
+  
+  //setCommands() needs Trs's => must be exactly here
   setCommands();
-
+  
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   CFLogInfo("Setting up DataPreProcessing's\n");
   m_dataPreProcessing.apply
@@ -619,7 +601,6 @@ void StandardSubSystem::run()
   }
 
   m_duration.set(0.);
-  setGlobalData();
   Stopwatch<WallTime> stopTimer;
   stopTimer.start();
 
@@ -698,58 +679,6 @@ void StandardSubSystem::run()
   m_duration = subSysStatusVec[0]->readWatchHMS();
   
   dumpStates();
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void StandardSubSystem::setGlobalData()
-{
-
-  const bool isParallel = PE::GetPE().IsParallel ();
-
-  vector <Common::SafePtr<MeshData> > meshDataVector = MeshDataStack::getInstance().getAllEntries();
-
-  for(CFuint iCM=0;iCM <m_convergenceMethod.size();iCM++)
-  {
-    DataHandle<State*, GLOBAL>* states = 0;
-    DataHandle<Node*, GLOBAL>* nodes = 0;
-
-    const std::string parStateVecName = m_convergenceMethod[iCM]->getNamespace() + "_states";
-    const std::string parNodeVecName = m_convergenceMethod[iCM]->getNamespace() + "_nodes";
-
-    if (isParallel) {
-
-      CFuint meshDataID = 0; // initialized to avoid warning
-      bool namespaceFound = false;
-      for(CFuint iMeshData = 0; iMeshData < meshDataVector.size(); iMeshData++)
-      {
-        if(meshDataVector[iMeshData]->getPrimaryNamespace() == m_convergenceMethod[iCM]->getNamespace())
-        {
-          meshDataID = iMeshData;
-          namespaceFound = true;
-        }
-      }
-      cf_assert (namespaceFound == true);
-
-      states = new DataHandle<State*, GLOBAL>
-        (meshDataVector[meshDataID]->getDataStorage()->getGlobalData<State*>(parStateVecName));
-
-      nodes = new DataHandle<Node*, GLOBAL>
-        (meshDataVector[meshDataID]->getDataStorage()->getGlobalData<Node*>(parNodeVecName));
-
-      // test run
-      states->beginSync();
-      nodes->beginSync();
-      states->endSync();
-      nodes->endSync();
-
-    }
-
-    // set the handle to the global states and nodes in the
-    // convergence method
-    m_convergenceMethod[iCM]->setGlobalStates(states);
-    m_convergenceMethod[iCM]->setGlobalNodes(nodes);
-  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

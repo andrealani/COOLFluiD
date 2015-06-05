@@ -90,10 +90,7 @@ protected: // functions
 
   /// write convergence information to stdout
   void writeConvergenceOnScreen();
-
-  /// Set the global data to the convergence methods (for parallel)
-  void setGlobalData();
-
+  
   /// Action which is executed by the ActionLinstener for the "CF_ON_MAESTRO_MODIFYRESTART" Event
   /// @param eModifyRestart the event which provoked this action
   /// @return an Event with a message in its body
