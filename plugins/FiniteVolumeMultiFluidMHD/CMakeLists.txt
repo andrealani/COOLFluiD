@@ -16,6 +16,8 @@ HartmannSourceTerm.cxx
 HartmannSourceTerm.hh
 MirrorWall.cxx
 MirrorWall.hh
+MirrorWallHartmann.cxx
+MirrorWallHartmann.hh
 MirrorWall3D.cxx
 MirrorWall3D.hh
 MultiFluidMHDST.ci
@@ -24,6 +26,8 @@ MultiFluidMHDST.hh
 MultiFluidMHDST3D.ci
 MultiFluidMHDST3D.cxx
 MultiFluidMHDST3D.hh
+MFMHDInterpInitState2D2Fluid.cxx
+MFMHDInterpInitState2D2Fluid.hh
 NoSlipWallIsothermalEIWRhoiViTi.cxx
 NoSlipWallIsothermalEIWRhoiViTi.hh
 NoSlipWallIsothermalPCWRhoiViTi.cxx
@@ -41,6 +45,8 @@ SubInletUVTEIWRhoiViTi.cxx
 SubInletUVTEIWRhoiViTi.hh
 SubInletUVTPCWRhoiViTi.cxx
 SubInletUVTPCWRhoiViTi.hh
+SubOutletPLeake2D.cxx
+SubOutletPLeake2D.hh
 SubOutletPEIWRhoiViTi.cxx
 SubOutletPEIWRhoiViTi.hh
 SubOutletPPCWRhoiViTi.cxx
