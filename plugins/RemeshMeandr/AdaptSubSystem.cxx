@@ -156,7 +156,7 @@ void AdaptSubSystem::run()
 
     // set the handle to the global states in the
     // convergence method
-    m_convergenceMethod[0]->setGlobalStates(states);
+    //  m_convergenceMethod[0]->setGlobalStates(states);
 
     Stopwatch<WallTime> stopTimer;
     stopTimer.start();
