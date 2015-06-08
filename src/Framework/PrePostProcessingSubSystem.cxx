@@ -157,7 +157,7 @@ void PrePostProcessingSubSystem::unsetup()
 
 //////////////////////////////////////////////////////////////////////////////
 
-vector<Method*> PrePostProcessingSubSystem::getMethodList() const
+vector<Method*> PrePostProcessingSubSystem::getMethodList()
 {
   vector<Method*>  mList = StandardSubSystem::getMethodList();
   return mList;

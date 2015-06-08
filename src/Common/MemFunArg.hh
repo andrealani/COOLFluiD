@@ -15,6 +15,20 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
+template <class InputIterator, class Function, class Predicate>
+Function for_each_if(InputIterator first, InputIterator last, Function fn, Predicate pr, bool flag)
+{
+  while (first!=last) {
+    if (pr(*first) == flag) {
+      fn (*first);
+    }
+    ++first;
+  }
+  return fn; 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 /// Class to allow STL algorithms to call member functions on this pointer
 /// This is similar to mem_fun_t from the STL standard
 template < typename TYPE, typename RET , typename ARG >

@@ -103,8 +103,8 @@ protected: // functions
 
   /// Gets a vector with all the Methods this OnlyMeshSubSystem has
   /// @return vector with Method pointers.
-  virtual std::vector<Framework::Method*> getMethodList() const;
-
+  virtual std::vector<Framework::Method*> getMethodList();
+  
   /// Set the Method's collaborators.
   virtual void setCollaborators();
 

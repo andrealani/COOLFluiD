@@ -102,7 +102,23 @@ public: // functions
     cf_assert(m_mList.size() == m_mMap.size());
     return m_mList.size();
   }
-
+  
+  /// Get the beginning
+  TMETHOD** begin()
+  {
+    cf_assert(m_mList.size() == m_mMap.size());
+    cf_assert(m_mList.size() > 0);
+    return &m_mList[0];
+  }
+  
+  /// Get the end
+  TMETHOD** end()
+  {
+    cf_assert(m_mList.size() == m_mMap.size());
+    cf_assert(m_mList.size() > 0);
+    return &m_mList[0] + m_mList.size();
+  }
+  
   /// Add a pointer to a new method to the list
   void addPtr(const std::string& name, Common::SelfRegistPtr<TMETHOD>& met)
   {

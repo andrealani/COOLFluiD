@@ -470,7 +470,7 @@ void OnlyMeshSubSystem::unsetup()
 
 //////////////////////////////////////////////////////////////////////////////
 
-vector<Method*> OnlyMeshSubSystem::getMethodList() const
+vector<Method*> OnlyMeshSubSystem::getMethodList()
 {
   vector<Method*>  mList;
 

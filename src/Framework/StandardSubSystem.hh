@@ -109,8 +109,8 @@ protected: // functions
 
   /// Gets a vector with all the Methods this StandardSubSystem has
   /// @return vector with Method pointers.
-  virtual std::vector<Framework::Method*> getMethodList() const;
-
+  virtual std::vector<Framework::Method*> getMethodList();
+  
   /// Set the Method's collaborators.
   virtual void setCollaborators();
 
@@ -128,6 +128,12 @@ protected: // functions
   
   /// Dump the states to file
   void dumpStates();
+  
+  // struct do_this_wrapper {
+  //   template<typename U> void operator()(U* uptr) {
+  //     uptr->unsetMethod();
+  //   }
+  // };
   
 protected: // data
 

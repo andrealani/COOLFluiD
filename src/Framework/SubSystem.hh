@@ -202,8 +202,8 @@ protected: // helper functions
 
   /// Gets a vector with all the Methods this SubSystem has
   /// @return vector with Method pointers.
-  virtual std::vector<Framework::Method*> getMethodList() const = 0;
-
+  virtual std::vector<Framework::Method*> getMethodList() = 0;
+  
   /// Allocates all sockets in all methods of this SubSystem
   void allocateSockets();
 

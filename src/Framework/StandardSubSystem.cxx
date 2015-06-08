@@ -9,6 +9,7 @@
 #include "Common/CFLog.hh"
 #include "Common/NullPointerException.hh"
 #include "Common/EventHandler.hh"
+#include "Common/MemFunArg.hh"
 
 #include "Environment/FileHandlerOutput.hh"
 #include "Environment/DirPaths.hh"
@@ -37,6 +38,9 @@
 #include "Framework/Namespace.hh"
 #include "Framework/Framework.hh"
 #include "Framework/SimulationStatus.hh"
+
+// #include <boost/mpl/list.hpp>
+// #include <boost/mpl/for_each.hpp> 
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -309,67 +313,44 @@ void StandardSubSystem::buildMeshData()
   // allocate all the mesh data
   vector <Common::SafePtr<MeshData> > meshDataVector = 
     MeshDataStack::getInstance().getAllEntries();
-  for(CFuint iMesh = 0; iMesh < meshDataVector.size(); iMesh++) {
-    meshDataVector[iMesh]->reallocate();
-  }
+  
+  for_each (meshDataVector.begin(), meshDataVector.end(), 
+	    safeptr_mem_fun(&MeshData::reallocate));
   
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   CFLog(NOTICE,"Setting up all MeshCreator's\n");
   CFLog(NOTICE,"-------------------------------------------------------------\n");
-    
+  
   // finally setup the mesh creators
-  for(CFuint iMC=0; iMC < m_meshCreator.size(); iMC++)
-  {
-    if(!m_meshCreator[iMC]->isNonRootMethod())
-    {
-      m_meshCreator[iMC]->setMethod();
-    }
-  }
-
-  /// @TODO Why not FREE the mesh creator here also??????
-
+  Common::for_each_if (m_meshCreator.begin(), m_meshCreator.end(), 
+		       mem_fun(&MeshCreator::setMethod),
+		       mem_fun(&MeshCreator::isNonRootMethod), false);
+  
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   CFLog(NOTICE,"Building MeshData's\n");
   CFLog(NOTICE,"-------------------------------------------------------------\n");
-
-  // Create the CFMeshData for each Namespace
-  for(CFuint iMC=0; iMC < m_meshCreator.size(); iMC++)
-  {
-    if( !m_meshCreator[iMC]->isNonRootMethod() )
-    {
-      m_meshCreator[iMC]->generateMeshData();
-    }
-  }
-
+  
+  Common::for_each_if (m_meshCreator.begin(), m_meshCreator.end(), 
+		       mem_fun(&MeshCreator::generateMeshData),
+		       mem_fun(&MeshCreator::isNonRootMethod), false);
+  
   // Process the CFMeshData to do:
   //  - renumbering
   //  - conversion FVM <-> FEM
-  for(CFuint iMC=0; iMC < m_meshCreator.size(); iMC++)
-  {
-    if(!m_meshCreator[iMC]->isNonRootMethod())
-    {
-      m_meshCreator[iMC]->processMeshData();
-    }
-  }
-
+  Common::for_each_if (m_meshCreator.begin(), m_meshCreator.end(), 
+		       mem_fun(&MeshCreator::processMeshData),
+		       mem_fun(&MeshCreator::isNonRootMethod), false);
+  
   // Use the CFMeshData to build the mesh
-  for(CFuint iMC=0; iMC < m_meshCreator.size(); iMC++)
-  {
-    if(!m_meshCreator[iMC]->isNonRootMethod())
-    {
-      m_meshCreator[iMC]->buildMeshData();
-    }
-  }
-
+  Common::for_each_if (m_meshCreator.begin(), m_meshCreator.end(), 
+		       mem_fun(&MeshCreator::buildMeshData),
+		       mem_fun(&MeshCreator::isNonRootMethod), false);
+  
   /// @todo Creating a MeshDataAdapter for the MeshWriter should be temporary
   ///       get ride of the Adapter, make it work directly with MeshData
-  for (CFuint i = 0; i < m_outputFormat.size(); ++i)
-  {
-    if(!m_outputFormat[i]->isNonRootMethod())
-    {
-      m_outputFormat[i]->bindData();
-    }
-  }
+  Common::for_each_if (m_outputFormat.begin(), m_outputFormat.end(), 
+		       mem_fun(&OutputFormatter::bindData),
+		       mem_fun(&OutputFormatter::isNonRootMethod), false);
   
   for(CFuint iMeshData = 0; iMeshData < meshDataVector.size(); iMeshData++) {
     bool isNonRoot = false;
@@ -668,13 +649,12 @@ void StandardSubSystem::run()
   CFLog(VERBOSE, "StandardSubSystem::run() => m_errorEstimatorMethod.apply()\n");
   // estimate the error one final time
   m_errorEstimatorMethod.apply(mem_fun<void,ErrorEstimatorMethod>(&ErrorEstimatorMethod::estimate));
-
-  for(CFuint i = 0; i < subSysStatusVec.size() ; i++)
-  {
-    subSysStatusVec[i]->stopWatch();
-  }
-  stopTimer.stop ();
-
+  
+  std::for_each (subSysStatusVec.begin(), subSysStatusVec.end(),
+		 safeptr_mem_fun(&SubSystemStatus::stopWatch));
+  
+  stopTimer.stop();
+  
   CFLog(NOTICE, "SubSystem WallTime: " << stopTimer << "s\n");
   m_duration = subSysStatusVec[0]->readWatchHMS();
   
@@ -711,7 +691,10 @@ void StandardSubSystem::unsetup()
 
   bool force = true;
   writeSolution(force);
-
+  
+  // typedef boost::mpl::list<ErrorEstimatorMethod, SpaceMethod> acts;
+  // boost::mpl::for_each<acts>(do_this_wrapper()); 
+  
   CFLog(VERBOSE, "StandardSubSystem::unsetup() => OutputFormatter\n");
   // unset all the methods
   m_outputFormat.apply
@@ -759,50 +742,21 @@ void StandardSubSystem::unsetup()
 
 //////////////////////////////////////////////////////////////////////////////
 
-vector<Method*> StandardSubSystem::getMethodList() const
+vector<Method*> StandardSubSystem::getMethodList()
 {
   vector<Method*>  mList;
-
-  for (CFuint i = 0; i < m_meshCreator.size(); ++i) {
-    mList.push_back(m_meshCreator[i]);
-  }
-
-  for (CFuint i = 0; i < m_couplerMethod.size(); ++i) {
-    mList.push_back(m_couplerMethod[i]);
-  }
-
-  for (CFuint i = 0; i < m_meshAdapterMethod.size(); ++i) {
-    mList.push_back(m_meshAdapterMethod[i]);
-  }
-
-  for (CFuint i = 0; i < m_errorEstimatorMethod.size(); ++i) {
-    mList.push_back(m_errorEstimatorMethod[i]);
-  }
-
-  for (CFuint i = 0; i < m_linearSystemSolver.size(); ++i) {
-    mList.push_back(m_linearSystemSolver[i]);
-  }
-
-  for (CFuint i = 0; i < m_convergenceMethod.size(); ++i) {
-    mList.push_back(m_convergenceMethod[i]);
-  }
-
-  for (CFuint i = 0; i < m_spaceMethod.size(); ++i) {
-    mList.push_back(m_spaceMethod[i]);
-  }
-
-  for (CFuint i = 0; i < m_dataPreProcessing.size(); ++i) {
-    mList.push_back(m_dataPreProcessing[i]);
-  }
-
-  for (CFuint i = 0; i < m_dataPostProcessing.size(); ++i) {
-    mList.push_back(m_dataPostProcessing[i]);
-  }
-
-  for (CFuint i = 0; i < m_outputFormat.size(); ++i) {
-    mList.push_back(m_outputFormat[i]);
-  }
-
+  
+  copy(m_meshCreator.begin(), m_meshCreator.end(), back_inserter(mList));
+  copy(m_couplerMethod.begin(), m_couplerMethod.end(), back_inserter(mList));
+  copy(m_meshAdapterMethod.begin(), m_meshAdapterMethod.end(), back_inserter(mList));
+  copy(m_errorEstimatorMethod.begin(), m_errorEstimatorMethod.end(), back_inserter(mList));
+  copy(m_linearSystemSolver.begin(), m_linearSystemSolver.end(), back_inserter(mList));
+  copy(m_convergenceMethod.begin(), m_convergenceMethod.end(), back_inserter(mList));
+  copy(m_spaceMethod.begin(), m_spaceMethod.end(), back_inserter(mList));
+  copy(m_dataPreProcessing.begin(), m_dataPreProcessing.end(), back_inserter(mList));
+  copy(m_dataPostProcessing.begin(), m_dataPostProcessing.end(), back_inserter(mList));
+  copy(m_outputFormat.begin(), m_outputFormat.end(), back_inserter(mList));
+  
   return mList;
 }
 
@@ -850,27 +804,23 @@ Common::Signal::return_t StandardSubSystem::modifyRestartAction(Common::Signal::
       std::string subsystemName = getName();
       std::string nspName = m_meshCreator[iMC]->getNamespace();
       std::string filename = SimulationStatus::getInstance().getLastOutputFile(subsystemName, nspName).string();
+      
       CFLog(NOTICE,"Restarting from file : " << filename << "\n");
-
-//     CF_DEBUG_OBJ(Environment::DirPaths::getInstance().getWorkingDir().string());
-//     CF_DEBUG_OBJ(Environment::DirPaths::getInstance().getResultsDir().string());
-
-      DirPaths::getInstance().setWorkingDir(
-        DirPaths::getInstance().getResultsDir().string()
-      );
+      
+      DirPaths::getInstance().setWorkingDir(DirPaths::getInstance().getResultsDir().string());
       m_meshCreator[iMC]->modifyFileNameForRestart(filename);
     }
   }
-
+  
   m_initialTime = SimulationStatus::getInstance().getSimulationTime(getName());
   vector< SafePtr<SubSystemStatus> > subSystemStatusVec =
     SubSystemStatusStack::getInstance().getAllEntries();
-
+  
   for(CFuint i=0; i<subSystemStatusVec.size(); ++i)
   {
     subSystemStatusVec[i]->setCurrentTimeDim(m_initialTime);
   }
-
+  
   return Common::Signal::return_t ();
 }
 

@@ -52,8 +52,8 @@ protected: // functions
 
   /// Gets a vector with all the Methods this PrePostProcessingSubSystem has
   /// @return vector with Method pointers.
-  std::vector<Framework::Method*> getMethodList() const;
-
+  std::vector<Framework::Method*> getMethodList();
+  
   /// Set the Method's collaborators.
   void setCollaborators();
 
