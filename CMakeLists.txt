@@ -463,10 +463,10 @@ SET ( ORPHAN_FILE "${COOLFluiD_BINARY_DIR}/OrphanFiles.txt" )
 IF ( EXISTS ${ORPHAN_FILE} ) 
 	FILE ( REMOVE ${ORPHAN_FILE} )
 ENDIF()
-# if orphan files where found, put the list on the file
+# if orphan files were found, put the list on the file
 LIST(LENGTH CF_ORPHAN_FILES CF_LENGTH_ORPHAN_FILES)
 IF (CF_LENGTH_ORPHAN_FILES)
-  LOG ( " !!! WARNING !!! Orphan files where found during the configuration.")
+  LOG ( " !!! WARNING !!! Orphan files were found during the configuration.")
   LOG ( " !!! WARNING !!! Check full list in file ${ORPHAN_FILE} ")
   FOREACH( AFILE ${CF_ORPHAN_FILES} )
     FILE ( APPEND ${ORPHAN_FILE} "${AFILE}\n" )
