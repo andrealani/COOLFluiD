@@ -12,7 +12,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -5.568018
+### Residual = -5.568024
 
 # This is a case at Reynolds=750.000
 
@@ -73,7 +73,7 @@ Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = wallDistance
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = dw
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
-Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
+Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
 
 #Simulator.SubSystem.StopCondition       = MaxNumberSteps
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
