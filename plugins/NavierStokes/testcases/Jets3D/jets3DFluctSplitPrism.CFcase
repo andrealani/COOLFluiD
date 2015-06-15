@@ -1,30 +1,40 @@
-# COOLFluiD CFcase file
+###############################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Residual Distribution Schemes, Euler3D, Forward Euler, CFL analytical law, 
+# mesh with prisms, second-order B (system) scheme, distribution in conservative 
+# variables, supersonic inlet and outlet BC, same node-state connectivity 
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -0.74132034
-
+### Residual = -3.6722533
 #
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = true
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+#CFEnv.AssertDumps          = true
+#CFEnv.ExceptionAborts      = true
+#CFEnv.ExceptionDumps       = true
+#CFEnv.ExceptionOutputs     = true
 
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitNavierStokes libForwardEuler libTHOR2CFmesh
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitNavierStokes libForwardEuler libTHOR2CFmesh
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets3D/
-Simulator.Paths.ResultsDir       = ./
+Simulator.Paths.ResultsDir = ./
 
 Simulator.SubSystem.Default.PhysicalModelType       = Euler3D
-
-
-
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
-
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = jets3Dprism.CFmesh
 Simulator.SubSystem.Tecplot.FileName    = jets3Dprism.plt
-Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 500
 Simulator.SubSystem.CFmesh.SaveRate = 500
 Simulator.SubSystem.Tecplot.AppendTime = false
@@ -32,21 +42,17 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 10
-
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 1000
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 500
 
 #Simulator.SubSystem.StopCondition       = Norm
 #Simulator.SubSystem.Norm.valueNorm      = -10.0
 
 Simulator.SubSystem.Default.listTRS = InnerCells FaceSouth FaceWest FaceNorth FaceEast Top Bottom
+Simulator.SubSystem.Default.sameNodeStateConnectivity = true
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = prism-coarse.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
-Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
@@ -54,7 +60,7 @@ Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function
 Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = min(0.1+(i*0.0025),0.8)
 
 Simulator.SubSystem.SpaceMethod = FluctuationSplit
-Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysN
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysB
 
 Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
 Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Cons
@@ -66,19 +72,21 @@ Simulator.SubSystem.FluctuationSplit.InitNames = InField MachStep
 
 Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells FaceSouth FaceNorth FaceWest FaceEast Top
 Simulator.SubSystem.FluctuationSplit.InField.Vars = x y z
-Simulator.SubSystem.FluctuationSplit.InField.Def = 0.5 \
-          0.0 \
+Simulator.SubSystem.FluctuationSplit.InField.Def = \
+					0.5 \
+					0.0 \
                                         0.0 \
                                         1.67332 \
                                         3.425
 
 Simulator.SubSystem.FluctuationSplit.MachStep.applyTRS = Bottom
 Simulator.SubSystem.FluctuationSplit.MachStep.Vars = x y z
-Simulator.SubSystem.FluctuationSplit.MachStep.Def = if(y>0.5,0.5,1.) \
-                                         0.0 \
-                                         0.0 \
-                                         if(y>0.5,1.67332,2.83972) \
-                                         if(y>0.5,3.425,6.532)
+Simulator.SubSystem.FluctuationSplit.MachStep.Def = \
+					if(y>0.5,0.5,1.) \
+					0.0 \
+					0.0 \
+					if(y>0.5,1.67332,2.83972) \
+					if(y>0.5,3.425,6.532)
 
 Simulator.SubSystem.FluctuationSplit.BcComds = SuperInlet SuperOutlet
 Simulator.SubSystem.FluctuationSplit.BcNames = InJet      OutJet
