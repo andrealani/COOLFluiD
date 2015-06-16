@@ -1,4 +1,9 @@
 LIST ( APPEND FiniteVolumeMHD_files
+AUSMFluxMHD.ci 
+AUSMFluxMHD.cxx 
+AUSMFluxMHD.hh 
+AUSMPWFluxMHD.ci 
+AUSMPWFluxMHD.hh
 FiniteVolumeMHD.hh
 MeshFittingAlgorithmMHD.cxx
 MHD3DCoriolisCentrifugalForcesSourceTerm.hh

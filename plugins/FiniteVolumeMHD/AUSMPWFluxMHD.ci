@@ -1,0 +1,128 @@
+#include "Framework/EquationSetData.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+// This sets the constants that are read by the CFcase. The values below are
+// the default values, used in case they're not set in the CFcase
+template <class UPDATEVAR>
+AUSMPWFluxMHD<UPDATEVAR>::AUSMPWFluxMHD(const std::string& name) :
+  AUSMFluxMHD<UPDATEVAR>(name)
+{
+  this->addConfigOptionsTo(this);
+  m_beta = 1./8.; this->setParameter("beta",&m_beta);		//beta(AUSM+) is normally 1/8
+  m_alpha = 3./16.; this->setParameter("alpha",&m_alpha);	//alpha(AUSM+) is normally 3/16
+  m_Vinf = 10.; this->setParameter("Vinf",&m_Vinf); 		// V(infinite)
+  m_Lref = 0.04; this->setParameter("Lref",&m_Lref);		// L reference = shortest cell length
+  m_nu = 0.0000181; this->setParameter("nu",&m_nu);		// nu, dynamic viscosity
+  m_ChoiceLref = 0; this->setParameter("ChoiceLref",&m_ChoiceLref);// Choice of method to compute Lref
+  m_ChoiceMp = 0; this->setParameter("ChoiceMp", &m_ChoiceMp);	// Choice of method to compute mp
+  m_uco = 1.; this->setParameter("uco", &m_uco);		// cut-off speed
+  m_umax = 340.; this->setParameter("umax", &m_umax);		// upper bound speed
+  m_Ml=0.5; this->setParameter("Ml",&m_Ml);			// limit Mach number for weigthing function of mp
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+AUSMPWFluxMHD<UPDATEVAR>::~AUSMPWFluxMHD()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPWFluxMHD<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFreal >
+    ("Vinf","Vinfinite");
+  options.template addConfigOption< CFreal >
+    ("Lref","reference length, smallest cell size");
+  options.template addConfigOption< CFreal >
+    ("nu","dynamic viscosity");
+  options.template addConfigOption< CFuint >
+    ("ChoiceLref","Choice of method to compute Lref");
+  options.template addConfigOption< CFuint >
+    ("ChoiceMp","Choice of method to compute mp");
+  options.template addConfigOption< CFreal >
+    ("uco","cut-off speed");
+  options.template addConfigOption<CFreal>
+    ("umax","upper bound speed");
+  options.template addConfigOption< CFreal >
+        ("beta"," -1/16 <= beta coefficient <= 1/2.");
+  options.template addConfigOption< CFreal >
+    ("alpha"," -3/4 <= beta coefficient <= 3/16.");
+  options.template addConfigOption< CFreal >
+    ("Ml","M limit weight function");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPWFluxMHD<UPDATEVAR>::computeMassFlux()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  this->computeInterfaceSoundSpeed(); // m_a12
+
+  // calculation of the Mach number for the left and the right states
+  this->m_mL = this->m_unL/this->m_a12;
+  this->m_mR = this->m_unR/this->m_a12;
+  const CFreal mL = this->m_mL;
+  const CFreal mR = this->m_mR;
+
+  const CFreal M4Plus = (std::abs(mL) >= 1.0) ? this->mach1Plus(mL) :
+    this->mach2Plus(mL) + m_beta*pow(mL*mL - 1.0, 2.);
+
+  const CFreal M4Minus = (std::abs(mR) >= 1.0) ? this->mach1Min(mR) :
+    this->mach2Min(mR) - m_beta*pow(mR*mR - 1.0, 2.);
+
+  const CFreal rhoL = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
+
+  // calculation of the Mach number at the interface
+  const CFreal m12 = M4Plus + M4Minus;
+  // calculation of the mass flux at the interface
+  this->m_mflux12 = (m12 > 0.0) ? this->m_a12 * m12 * rhoL : this->m_a12 * m12 * rhoR;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPWFluxMHD<UPDATEVAR>::computePressureFlux()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+
+  // here in AIAA 2003-4116 there is only "m_fa"
+  const CFreal mL = this->m_mL;
+  const CFreal mR = this->m_mR;
+  const CFreal P5Plus = (std::abs(mL) >= 1.0) ? 0.5*(1+ MathFunctions::sign(mL)) :
+    this->mach2Plus(mL)*(2.0-mL) + m_alpha*mL*pow(mL*mL-1., 2.0);
+
+  const CFreal P5Minus = (std::abs(mR) >= 1.0) ? 0.5*(1- MathFunctions::sign(mR)) :
+    -this->mach2Min(mR)*(2.0+mR) - m_alpha*mR*pow(mR*mR-1., 2.0);
+
+  const CFreal pL = (*this->m_lData)[UPDATEVAR::PTERM::P];
+  const CFreal pR = (*this->m_rData)[UPDATEVAR::PTERM::P];
+  // calculation of the pressure flux at the interface
+  this->m_p12 = P5Plus*pL + P5Minus*pR;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
