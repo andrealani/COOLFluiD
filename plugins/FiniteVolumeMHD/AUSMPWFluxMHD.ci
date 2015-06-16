@@ -90,7 +90,7 @@ void AUSMPWFluxMHD<UPDATEVAR>::computeMassFlux()
   // calculation of the Mach number at the interface
   const CFreal m12 = M4Plus + M4Minus;
   // calculation of the mass flux at the interface
-  this->m_mflux12 = (m12 > 0.0) ? this->m_a12 * m12 * rhoL : this->m_a12 * m12 * rhoR;
+  this->m_mflux12 = (m12 > 0.0) ? this->m_a12*m12 * rhoL : this->m_a12 * m12 * rhoR;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -105,10 +105,10 @@ void AUSMPWFluxMHD<UPDATEVAR>::computePressureFlux()
   // here in AIAA 2003-4116 there is only "m_fa"
   const CFreal mL = this->m_mL;
   const CFreal mR = this->m_mR;
-  const CFreal P5Plus = (std::abs(mL) >= 1.0) ? 0.5*(1+ MathFunctions::sign(mL)) :
+  const CFreal P5Plus = (std::abs(mL) >= 1.0) ? 0.5*(1 + MathFunctions::sign(mL)) :
     this->mach2Plus(mL)*(2.0-mL) + m_alpha*mL*pow(mL*mL-1., 2.0);
 
-  const CFreal P5Minus = (std::abs(mR) >= 1.0) ? 0.5*(1- MathFunctions::sign(mR)) :
+  const CFreal P5Minus = (std::abs(mR) >= 1.0) ? 0.5*(1 - MathFunctions::sign(mR)) :
     -this->mach2Min(mR)*(2.0+mR) - m_alpha*mR*pow(mR*mR-1., 2.0);
 
   const CFreal pL = (*this->m_lData)[UPDATEVAR::PTERM::P];

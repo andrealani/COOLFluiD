@@ -46,8 +46,6 @@ AUSMFluxMHD<UPDATEVAR>::AUSMFluxMHD(const std::string& name) :
   m_choiceA12 = 1;
   this->setParameter("choiceA12",&m_choiceA12);
 
-  m_useLiouUpdateCoeff = false;
-  this->setParameter("useLiouUpdateCoeff",&m_useLiouUpdateCoeff);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -64,13 +62,6 @@ void AUSMFluxMHD<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
 {
   options.template addConfigOption< CFuint >
     ("choiceA12","Way of computing the interface sound speed a12.");
-
-  options.template addConfigOption< bool >
-   ("useLiouUpdateCoeff",
-    "Flag to choose Liou's way to compute the update coefficient for imposing positivity.");
-  
-  options.template addConfigOption< bool >
-   ("useMacCormackScaling", "Flag to use the scaling of the numerical dissipation in the Steger-Warming of Maxwell equations.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -157,12 +148,7 @@ void AUSMFluxMHD<UPDATEVAR>::compute(RealVector& result)
     computeMassFluxImpl(result); // m_mflux12
 
     if (!this->getMethodData().isPerturb()) {
-      if (!m_useLiouUpdateCoeff) {
-    computeUpdateCoeff();
-      }
-      else {
-    computeLiouUpdateCoeff();
-      }
+      computeUpdateCoeff();
     }
   }
 }
@@ -204,65 +190,6 @@ void AUSMFluxMHD<UPDATEVAR>::computeUpdateCoeff()
       updateCoeff[rightID*nbEqSS + i] += max(maxEV, 0.)*faceArea;    
     }
   }
-}
-      
-//////////////////////////////////////////////////////////////////////////////
-
-template <class UPDATEVAR>
-void AUSMFluxMHD<UPDATEVAR>::computeLiouUpdateCoeff()
-{
-  //using namespace std;
-  //using namespace COOLFluiD::Framework;
-
-  //CellCenterFVMData& data = this->getMethodData(); 
-  //GeometricEntity& face = *data.getCurrentFace();
-  //const CFreal faceArea = socket_faceAreas.getDataHandle()[face.getID()]/
-    //data.getPolyReconstructor()->nbQPoints();
-  
-  //const EquationSubSysDescriptor& eqSSD = PhysicalModelStack::getActive()->
-    //getEquationSubSysDescriptor();
-  
-  //DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
-  //const CFuint nbEqSS = eqSSD.getTotalNbEqSS();
-  //const CFuint dim = PhysicalModelStack::getActive()->getDim();
-
-  //for (CFuint i = 0; i < nbEqSS; ++i) {
-    // left contribution to update coefficient
-    //const CFuint leftID = face.getState(0)->getLocalID();
-    //m_updateVarSet->computePhysicalData(*face.getState(0), m_pdata);
-    
-    //CFreal vnL = 0.0;
-    //for (CFuint idim = 0; idim < dim; ++idim) {
-      //const CFuint currXX = UPDATEVAR::PTERM::VX + idim; 
-      //vnL += m_pdata[currXX]*m_tempUnitNormal[idim];
-    //}
-    //CFreal maxEVL = vnL + m_pdata[UPDATEVAR::PTERM::A];
-    //const CFreal evMinL = 0.5*(maxEVL - std::abs(maxEVL));
-
-    //CFreal vnR = -vnL;
-    //CFreal maxEVR = vnR + m_pdata[UPDATEVAR::PTERM::A];
-    //const CFreal evPlusR = 0.5*(maxEVR + std::abs(maxEVR));
-    
-    //m_updateVarSet->computePhysicalData(*face.getState(1), m_pdata);
-    //vnL = 0.0;
-    //for (CFuint idim = 0; idim < dim; ++idim) {
-      //const CFuint currXX = UPDATEVAR::PTERM::VX + idim; 
-      //vnL += m_pdata[currXX]*m_tempUnitNormal[idim];
-    //}
-    //maxEVL = vnL + m_pdata[UPDATEVAR::PTERM::A];
-    //const CFreal evPlusL = 0.5*(maxEVL + std::abs(maxEVL));
-    
-    //updateCoeff[leftID*nbEqSS + i] += max(evPlusL - evMinL, 0.)*faceArea;
-    //vnR = -vnL;
-    //maxEVR = vnR + m_pdata[UPDATEVAR::PTERM::A];
-    //const CFreal evMinR = 0.5*(maxEVR - std::abs(maxEVR));
-
-    //if (!face.getState(1)->isGhost()) {
-      // right contribution to update coefficient
-      //const CFuint rightID = face.getState(1)->getLocalID();
-      //updateCoeff[rightID*nbEqSS + i] += max(evPlusR - evMinR, 0.)*faceArea;
-    //}
-  //}
 }
 
 //////////////////////////////////////////////////////////////////////////////

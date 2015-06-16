@@ -99,11 +99,6 @@ protected:
    * Compute the update coefficient in the standard way
    */
   void computeUpdateCoeff();
-
-  /**
-   * Compute the update coefficient in Liou's way from lambda+ and lambda-
-   */
-  void computeLiouUpdateCoeff();
   
   /**
    * Compute the interface sound speed in the 1st way
@@ -241,14 +236,7 @@ protected:
   
    /// user defined coefficient for the calculation method of a12
   CFuint m_choiceA12;
-  
-  /// flag telling if Liou's way of computing the update coeff 
-  /// imposing positivity has to be used
-  bool m_useLiouUpdateCoeff; 
-  
-  /// flag for using the MacCormack scaling in Maxwell equations 
-  /// the default is true
-  bool m_useMacCormackScaling;   
+   
 }; // end of class AUSMFluxMHD
 
 //////////////////////////////////////////////////////////////////////////////
