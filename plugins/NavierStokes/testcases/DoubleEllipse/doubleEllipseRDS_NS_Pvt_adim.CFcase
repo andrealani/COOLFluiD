@@ -3,9 +3,9 @@
 ## This COOLFluiD CFcase file tests: 
 ## 
 ## Residual Distribution Schemes, NavierStokes2D, NewtonMethod, Puvt variables,
-## mesh with P1 triangles, N scheme (system) with linearization & distribution 
-## in symmetrizing variables, implicit super inlet and noslip isothermal wall BCs,
-## equations are solved adimensional
+## mesh with P1 triangles, N scheme (system) with distribution in symmetrizing 
+## riables, implicit super inlet and noslip isothermal wall BCs, equations are 
+## solved adimensional
 ##
 ################################################################################
 #

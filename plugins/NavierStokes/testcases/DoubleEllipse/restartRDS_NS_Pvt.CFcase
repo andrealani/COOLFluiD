@@ -3,7 +3,7 @@
 ## This COOLFluiD CFcase file tests: 
 ## 
 ## Residual Distribution Schemes, NavierStokes2D, NewtonMethod, Puvt variables,
-## mesh with P1 triangles, N scheme (system) with linearization & distribution 
+## mesh with P1 triangles, Bx scheme with Gnoffo sensor (system) with distribution 
 ## in symmetrizing variables, implicit super inlet and noslip isothermal wall BCs,
 ## equations are solved dimensional, converter from Tecplot file. 
 ##
