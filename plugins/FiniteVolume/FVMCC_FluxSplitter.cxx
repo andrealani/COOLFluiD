@@ -30,7 +30,7 @@ void FVMCC_FluxSplitter::defineConfigOptions(Config::OptionList& options)
 
 FVMCC_FluxSplitter::FVMCC_FluxSplitter(const std::string& name) :
   FluxSplitter<CellCenterFVMData>(name),
- _dissipationControlCoeff(1.),
+  _dissipationControlCoeff(1.),
   socket_normals("normals"),  
   socket_faceAreas("faceAreas"),
   socket_updateCoeff("updateCoeff"),
@@ -38,7 +38,8 @@ FVMCC_FluxSplitter::FVMCC_FluxSplitter(const std::string& name) :
   socket_nstates("nstates"),
   socket_states("states"),
   socket_gstates("gstates"),
-  socket_nodes("nodes"),
+  socket_nodes("nodes"), 
+  m_fluxDerivative(),
   _faceArea(0.),
   _firstResidual(0.0),
   _lastResidual(0.0),
@@ -71,6 +72,28 @@ void FVMCC_FluxSplitter::setup()
     cf_assert(_dissipationControlVars.size() > 0);
     // i,r,ri,rl,rmax,cfl
     _dissipationControlInput.resize(_dissipationControlVars.size());
+  }
+  
+  /// build mapping to member functions computing partial derivatives
+  // this list should include all variables with respect to which partial derivatives are needed
+  // this could be made dynamic using functor objects
+  map<string, FluxDerivative> mapVars;
+  mapVars["p"]      = &FVMCC_FluxSplitter::dFdP;
+  mapVars["u"]      = &FVMCC_FluxSplitter::dFdU;
+  mapVars["v"]      = &FVMCC_FluxSplitter::dFdV;
+  mapVars["w"]      = &FVMCC_FluxSplitter::dFdW;
+  mapVars["T"]      = &FVMCC_FluxSplitter::dFdT;
+  mapVars["rho"]    = &FVMCC_FluxSplitter::dFdRho;
+  mapVars["K"]      = &FVMCC_FluxSplitter::dFdK;  
+  mapVars["Omega"]  = &FVMCC_FluxSplitter::dFdK; 
+  mapVars["Nuitil"] = &FVMCC_FluxSplitter::dFdK;
+  
+  // here functions computing flux derivatives are stored in the right order, ready to be applied
+  const vector<string>& updateVars = this->getMethodData().getUpdateVar()->getVarNames();
+  for (CFuint i = 0; i < updateVars.size(); ++i) {
+    if (mapVars.count(updateVars[i]) > 0) {
+      m_fluxDerivative.push_back(mapVars.find(updateVars[i])->second);
+    }
   }
 }
 
@@ -158,7 +181,41 @@ void FVMCC_FluxSplitter::evaluateDissipationControlFunction()
   _dissipationControlFunction.evaluate
     (0, _dissipationControlInput, _dissipationControlCoeff);
 }
-
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+void FVMCC_FluxSplitter::computeLeftJacobian()
+{
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  
+  if (m_fluxDerivative.size() != nbEqs) {  
+    throw Common::NotImplementedException 
+      (FromHere(),"FVMCC_FluxSplitter::computeLeftJacobian()");
+  }
+  
+  for (CFuint iVar = 0; iVar < m_fluxDerivative.size(); ++iVar) {
+    // compute d(F)/d(p) where p is each variable of the update state vector 
+    (this->*m_fluxDerivative[iVar])(LEFT, iVar, &_lFluxJacobian[iVar*nbEqs]);
+  }
+}
+ 
+//////////////////////////////////////////////////////////////////////////////
+      
+void FVMCC_FluxSplitter::computeRightJacobian() 
+{
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  
+  if (m_fluxDerivative.size() != nbEqs) {  
+    throw Common::NotImplementedException 
+      (FromHere(),"FVMCC_FluxSplitter::computeRightJacobian()");
+  }
+  
+  for (CFuint iVar = 0; iVar < m_fluxDerivative.size(); ++iVar) {
+    // compute d(F)/d(p) where p is each variable of the update state vector 
+    (this->*m_fluxDerivative[iVar])(RIGHT, iVar, &_rFluxJacobian[iVar*nbEqs]);
+  }
+}
+ 
 //////////////////////////////////////////////////////////////////////////////
 
 } // namespace FiniteVolume

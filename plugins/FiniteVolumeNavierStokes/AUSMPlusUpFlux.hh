@@ -49,7 +49,7 @@ public:
   {
     AUSMFlux<UPDATEVAR>::configure(args);
   }
-
+  
 protected:
 
   /**
@@ -68,11 +68,38 @@ protected:
     return oldMach;
   }
   
+  /// compute flux derivative with respect to pressure
+  virtual void dFdP(CFuint side, CFuint iVar, CFreal* row);
+  
+  /// compute flux derivative with respect to density
+  virtual void dFdRho(CFuint side, CFuint iVar, CFreal* row);
+  
+  /// compute flux derivative with respect to temperature
+  virtual void dFdT(CFuint side, CFuint iVar, CFreal* row);
+  
+  /// compute flux derivative with respect to velocity u
+  virtual void dFdU(CFuint side, CFuint iVar, CFreal* row);
+  
+  /// compute flux derivative with respect to velocity v
+  virtual void dFdV(CFuint side, CFuint iVar, CFreal* row);
+  
+  /// compute flux derivative with respect to velocity w
+  virtual void dFdW(CFuint side, CFuint iVar, CFreal* row);
+  
+  /// compute flux derivative with respect to k
+  virtual void dFdK(CFuint side, CFuint iVar, CFreal* row);
+  
 private:
   
   /// preconditioning coefficient 
   CFreal m_fa;
   
+  /// P5 plus coefficient 
+  CFreal m_P5Plus;
+  
+  /// P5 minus coefficient 
+  CFreal m_P5Minus;
+    
   /// user defined coefficient for Ku
   CFreal m_coeffKu;
   

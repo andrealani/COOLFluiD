@@ -103,19 +103,13 @@ protected:
   /**
    * Compute the left flux jacobian
    */
-  virtual void computeLeftJacobian()
-  {
-    throw Common::NotImplementedException (FromHere(),"FluxSplitter::computeLeftJacobian()");
-  }
+  virtual void computeLeftJacobian();
   
   /**
    * Compute the right flux jacobian
    */
-  virtual void computeRightJacobian() 
-  {
-    throw Common::NotImplementedException (FromHere(),"FluxSplitter::computeRightJacobian()");
-  }
- 
+  virtual void computeRightJacobian();
+  
   /**
    * Evaluate the dissipation control function
    */
@@ -132,6 +126,29 @@ protected:
     return _dissipationControlCoeff;
   }
 
+protected:
+  
+  /// compute flux derivative with respect to pressure
+  virtual void dFdP(CFuint side, CFuint iVar, CFreal* row) {}
+  
+  /// compute flux derivative with respect to density
+  virtual void dFdRho(CFuint side, CFuint iVar, CFreal* row) {}
+  
+  /// compute flux derivative with respect to temperature
+  virtual void dFdT(CFuint side, CFuint iVar, CFreal* row) {}
+  
+  /// compute flux derivative with respect to velocity u
+  virtual void dFdU(CFuint side, CFuint iVar, CFreal* row) {}
+  
+  /// compute flux derivative with respect to velocity v
+  virtual void dFdV(CFuint side, CFuint iVar, CFreal* row) {}
+  
+  /// compute flux derivative with respect to velocity w
+  virtual void dFdW(CFuint side, CFuint iVar, CFreal* row) {}
+  
+  /// compute flux derivative with respect to k
+  virtual void dFdK(CFuint side, CFuint iVar, CFreal* row) {}
+  
 private:
   
   /// dissipation control coefficient (must be inaccessible by subclasses)
@@ -162,6 +179,12 @@ protected:
   
   /// storage of the nodes
   Framework::DataSocketSink<Framework::Node*,  Framework::GLOBAL> socket_nodes;
+  
+  /// typedef for pointers to member functions for computing jacobians
+  typedef void (FVMCC_FluxSplitter::*FluxDerivative)(CFuint, CFuint, CFreal*);
+  
+  /// array of objects computing flux derivative  
+  std::vector<FluxDerivative> m_fluxDerivative;
   
   /// face area
   CFreal _faceArea;

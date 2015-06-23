@@ -13,7 +13,9 @@ namespace COOLFluiD {
 template <class UPDATEVAR>
 AUSMPlusUpFlux<UPDATEVAR>::AUSMPlusUpFlux(const std::string& name) :
   AUSMFlux<UPDATEVAR>(name),
-  m_fa(0.0)
+  m_fa(0.0),
+  m_P5Plus(0.),
+  m_P5Minus(0.)
 {
   this->addConfigOptionsTo(this);
   m_coeffKu = 0.75;
@@ -85,28 +87,14 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeMassFlux()
   m_fa = mZero * (2.0-mZero);
   cf_assert(m_fa > 0.0);
    
-  const CFreal M4Plus = (std::abs(mL) >= 1.0) ? this->mach1Plus(mL) :
+  const CFreal M4Plus = (std::abs(mL) >= 1.0) ? 
+    this->mach1Plus(mL) :
     this->mach2Plus(mL)*(1.0 - 16.*m_beta*this->mach2Min(mL));
-
-  const CFreal M4Minus = (std::abs(mR) >= 1.0) ? this->mach1Min(mR) :
+  
+  const CFreal M4Minus = (std::abs(mR) >= 1.0) ? 
+    this->mach1Min(mR) :
     this->mach2Min(mR)*(1.0 + 16.*m_beta*this->mach2Plus(mR));
-
-//   CFreal M4Plus = 0.0;
-//   if (std::abs(mL) >= 1.0) {
-//     M4Plus = 0.5 * (mL + std::abs(mL));
-//   }
-//   else {
-//     M4Plus = 0.25*pow(mL + 1.0, 2.0) + beta*pow(mL*mL - 1.0, 2.0);
-//   }
-
-//   CFreal M4Minus = 0.0;
-//   if (std::abs(mR) >= 1.0) {
-//     M4Minus = 0.5 * (mR - std::abs(mR));
-//   }
-//   else {
-//     M4Minus = -0.25*pow(mR - 1.0, 2.0) - beta*pow(mR*mR - 1.0, 2.0);
-//   }
-
+  
   const CFreal rhoL = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
   const CFreal rhoR = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
   const CFreal pL = (*this->m_lData)[UPDATEVAR::PTERM::P];
@@ -114,13 +102,13 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeMassFlux()
   const CFreal rhoa2 = 0.5*(rhoL + rhoR)*this->m_a12*this->m_a12;
   const CFreal mP = (-this->m_coeffKp/m_fa) * max(1.0 - this->m_coeffSigma*mBarSq, 0.0)*
     (pR-pL)/rhoa2;
-
+  
   // calculation of the Mach number at the interface
   const CFreal m12 = M4Plus + M4Minus + mP;
   // calculation of the mass flux at the interface
   this->m_mflux12 = (m12 > 0.0) ? this->m_a12 * m12 * rhoL : this->m_a12 * m12 * rhoR;
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
@@ -133,40 +121,89 @@ void AUSMPlusUpFlux<UPDATEVAR>::computePressureFlux()
   const CFreal alpha = (3.0/16.0) * (-4.0 + 5.0*m_fa*m_fa);
   const CFreal mL = this->m_mL;
   const CFreal mR = this->m_mR;
-  const CFreal P5Plus = (std::abs(mL) >= 1.0) ? this->mach1Plus(mL)/mL :
+  m_P5Plus = (std::abs(mL) >= 1.0) ? 
+    this->mach1Plus(mL)/mL :
     this->mach2Plus(mL)*((2.0-mL)-16.*alpha*mL*this->mach2Min(mL));
-
-  const CFreal P5Minus = (std::abs(mR) >= 1.0) ? this->mach1Min(mR)/mR :
-    this->mach2Min(mR)*((-2.0-mR)+16.*alpha*mR*this->mach2Plus(mR));
-   
-  // CFreal P5Plus = 0.0;
-//   if (std::abs(mL) >= 1.0) {
-//     P5Plus = 0.5 * (mL + std::abs(mL))/mL;
-//   }
-//   else {
-//     P5Plus = 0.25*pow(mL + 1.0, 2.0)*(2.0-mL) + alpha*mL*pow(mL*mL - 1.0, 2.0);
-//   }
   
-//   // CFreal P5Minus = getP5Min(mR);
-//   CFreal P5Minus = 0.0;
-//   if (std::abs(mR) >= 1.0) {
-//     P5Minus = 0.5 * (mR - std::abs(mR))/mR;
-//   }
-//   else {
-//     P5Minus = 0.25*pow(mR - 1.0, 2.0)*(2.0+mR) - alpha*mR*pow(mR*mR - 1.0, 2.0);
-//   }
+  m_P5Minus = (std::abs(mR) >= 1.0) ? 
+    this->mach1Min(mR)/mR :
+    this->mach2Min(mR)*((-2.0-mR)+16.*alpha*mR*this->mach2Plus(mR));
   
   const CFreal rhoL = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
   const CFreal rhoR = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
   const CFreal pL = (*this->m_lData)[UPDATEVAR::PTERM::P];
   const CFreal pR = (*this->m_rData)[UPDATEVAR::PTERM::P];
-  const CFreal pU = -this->m_coeffKu * P5Plus * P5Minus *
+  const CFreal pU = -this->m_coeffKu * m_P5Plus * m_P5Minus *
     (rhoL + rhoR) * m_fa * this->m_a12*(this->m_unR-this->m_unL);
-
+  
   // calculation of the pressure flux at the interface
-  this->m_p12 = P5Plus*pL + P5Minus*pR + pU;
+  this->m_p12 = m_P5Plus*pL + m_P5Minus*pR + pU;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::dFdP(CFuint side, CFuint iVar, CFreal* row)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
 }
 
+//////////////////////////////////////////////////////////////////////////////
+      
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::dFdRho(CFuint side, CFuint iVar, CFreal* row)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+}
+ 
+//////////////////////////////////////////////////////////////////////////////
+   
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::dFdT(CFuint side, CFuint iVar, CFreal* row)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+   
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::dFdU(CFuint side, CFuint iVar, CFreal* row)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+   
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::dFdV(CFuint side, CFuint iVar, CFreal* row)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+  
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::dFdW(CFuint side, CFuint iVar, CFreal* row)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+}
+ 
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::dFdK(CFuint side, CFuint iVar, CFreal* row)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+}
+ 
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace FiniteVolume
