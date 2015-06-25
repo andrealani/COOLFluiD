@@ -1,5 +1,6 @@
 #include "Environment/ObjectProvider.hh"
 #include "MathTools/MathConsts.hh"
+#include "Framework/MeshData.hh"
 #include "LUSGSMethod/ComputeL2NormLUSGS.hh"
 #include "LUSGSMethod/LUSGSMethod.hh"
 
@@ -92,9 +93,11 @@ void ComputeL2NormLUSGS::addStatesSetContribution()
 
 RealVector ComputeL2NormLUSGS::compute ()
 {
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  
   for(m_var_itr = 0; m_var_itr < m_residuals.size(); ++m_var_itr)
   {
-    const CFreal globalValue = m_gr.GetGlobalValue ();
+    const CFreal globalValue = m_gr.GetGlobalValue (nsp);
     if(globalValue > 0.)
     {
       m_residuals[m_var_itr] = log10(sqrt(globalValue));

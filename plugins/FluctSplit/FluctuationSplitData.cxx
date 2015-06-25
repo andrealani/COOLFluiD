@@ -253,9 +253,10 @@ void FluctuationSplitData::configureTransformers( Config::ConfigArgs& args )
   CFAUTOTRACE;
 
   std::string name = getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  
   Common::SafePtr<MatrixTransformer::PROVIDER> matTransProv = CFNULL;
 
   //--------------------------------------------------------------------------------------------
@@ -502,9 +503,10 @@ void FluctuationSplitData::configureLinearizer( Config::ConfigArgs& args )
   CFAUTOTRACE;
 
   std::string name = getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp =
+    NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  
   m_linearizerStr = physModel->getConvectiveName()
                                     + "Linear"
                                     + m_linearVarStr;
@@ -617,7 +619,8 @@ void FluctuationSplitData::configureVarSets( Config::ConfigArgs& args )
   CFAUTOTRACE;
 
   std::string name = getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
 
   CFLogDebugMed("Configuring Distribute VarSet\n");
@@ -718,9 +721,10 @@ CFuint FluctuationSplitData::getBlockSeparator() const
 {
 
   std::string name = getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  
   if (m_rhsSysSplitter->getName() != "Null" && m_scalarSplitterStr != "Null") {
     return m_distribVar->getBlockSeparator();
   }

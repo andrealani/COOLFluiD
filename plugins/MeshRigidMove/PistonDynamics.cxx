@@ -171,11 +171,15 @@ void PistonDynamics::execute()
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
+
 void PistonDynamics::WritePistonData()
-{
-// only the first processor writes Piston Data
-  PE::GetPE().setBarrier();
-    if (PE::GetPE().GetRank() == 0) {   
+{ 
+  const std::string nsp = getMethodData().getNamespace();
+  
+  // only the first processor writes Piston Data
+  PE::GetPE().setBarrier(nsp);
+
+  if (PE::GetPE().GetRank(nsp) == 0) {   
    CFreal PistL = _totalDisplacement - Min_piston;
    CFreal PistR = PistL+L_piston;
    const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
@@ -193,51 +197,54 @@ void PistonDynamics::WritePistonData()
     }
       fout << " " << endl;
 }
- PE::GetPE().setBarrier();
+  PE::GetPE().setBarrier(nsp);
 }
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
+
 void PistonDynamics::WriteSpaceTimeData(const CFreal& Xpostion,
   				        const CFreal& LogP,
-                                              CFuint& Imax, 
-                                              CFuint& nbface, 
-                                       std::string filename)  
-
+					CFuint& Imax, 
+					CFuint& nbface, 
+					std::string filename)  
+  
 {
-       const  CFreal m_saveRate = 3;
-       const CFreal Time = SubSystemStatusStack::getActive()->getCurrentTimeDim();
-       const CFuint nbiter = SubSystemStatusStack::getActive()->getNbIter();
-
-       long Jmax = static_cast<CFuint>(nbiter)+1;
-              ofstream fout(filename.c_str(),ios::app); 
-        //    ofstream fout(filename.c_str(),ios_base::app); 
-       if ((nbiter == 0) && (nbface <1)){
-             // ofstream fout(filename.c_str(),ios::trunc); 
-     	fout << "TITLE = Space-Time-Diagram.plt" << endl;
-        fout << "VARIABLES  =  \"Position\" \"Time\" \"LogP\"  " << endl;
-        fout << "ZONE  T= \"SLUG-0\" "<< endl;
-        fout << "I=" << Imax  << ","<< "\n";
-        fout << "J=" << Jmax << "      ,"<< "\n";
-        fout << "K=" << 1 <<"," <<"\n";
-        fout << "F=POINT   "<< "\n";
-        fout.precision(14);
-        fout << Xpostion   << "  "   << Time << "  " << LogP << " " << endl;
-        }
-       else {
-        fout.precision(14); 
-        fout << Xpostion   << "  "   << Time << "  " << LogP << " " << endl;
-   	 }
-        //fout.close();
-       //if (nbface == Imax-1){
-       //if (nbF == Imax-1){
-       if ((nbiter >=0) && (nbface ==0)){
-        fstream fout(filename.c_str());
-        fout.seekp(99,std::ios::beg);
-        fout << Jmax;
-       // fout.close();
-      }
-     
+  const  CFreal m_saveRate = 3;
+  const CFreal Time = SubSystemStatusStack::getActive()->getCurrentTimeDim();
+  const CFuint nbiter = SubSystemStatusStack::getActive()->getNbIter();
+  
+  long Jmax = static_cast<CFuint>(nbiter)+1;
+  ofstream fout(filename.c_str(),ios::app); 
+  //    ofstream fout(filename.c_str(),ios_base::app); 
+  if ((nbiter == 0) && (nbface <1)){
+    // ofstream fout(filename.c_str(),ios::trunc); 
+    fout << "TITLE = Space-Time-Diagram.plt" << endl;
+    fout << "VARIABLES  =  \"Position\" \"Time\" \"LogP\"  " << endl;
+    fout << "ZONE  T= \"SLUG-0\" "<< endl;
+    fout << "I=" << Imax  << ","<< "\n";
+    fout << "J=" << Jmax << "      ,"<< "\n";
+    fout << "K=" << 1 <<"," <<"\n";
+    fout << "F=POINT   "<< "\n";
+    fout.precision(14);
+    fout << Xpostion   << "  "   << Time << "  " << LogP << " " << endl;
+  }
+  else {
+    fout.precision(14); 
+    fout << Xpostion   << "  "   << Time << "  " << LogP << " " << endl;
+  }
+  //fout.close();
+  //if (nbface == Imax-1){
+  //if (nbF == Imax-1){
+  if ((nbiter >=0) && (nbface ==0)){
+    fstream fout(filename.c_str());
+    fout.seekp(99,std::ios::beg);
+    fout << Jmax;
+    // fout.close();
+  }
 }
+      
 ////////////////////////////////////////////////////////////////////////////////////////////////
+
 CFreal PistonDynamics::getAcceleration()
 {
 //Get the pressure at the bac of the piston
@@ -276,106 +283,107 @@ CFreal PistonDynamics::getAcceleration()
 //////////////////////////////////////////////////////////////////////////////
 CFreal PistonDynamics::getdeltaP()
 {
- 
-      CFuint count = 0; 
-      CFuint count1 = 0;
-     // we assume we are dealing with FiniteVolume
-     //Loop over the TRS's and add `the "TRSName" + "-boundaryNormals" datasocketsink to the _dynamicSockets
-    vector<SafePtr<TopologicalRegionSet> >&  trsList = getTrsList();
-     for (CFuint iTRS = 0; iTRS < trsList.size(); ++iTRS) { 
+  const std::string nsp = getMethodData().getNamespace();
 
-         SafePtr<TopologicalRegionSet> currTrs = trsList[iTRS];
-         // create locally 
-         const std::string trsName = currTrs->getName(); 
-
-         SafePtr<FaceTrsGeoBuilder> geoBuilderPtr = _faceTrsGeoBuilder.getGeoBuilder();
-         geoBuilderPtr->setDataSockets(socket_states, socket_gstates, socket_nodes);
-         FaceTrsGeoBuilder::GeoData& geoData = _faceTrsGeoBuilder.getDataGE();
-         geoData.trs = trsList[iTRS];
-  
-    ///   Number of face in TRS on the partition or Total ?????????????????? 
-         CFuint nbFaces = trsList[iTRS]->getLocalNbGeoEnts();
-         //cout << "nbFaces Local" << nbFaces  << endl;
-       //const CFuint nbFacesG = trsList[iTRS]->getGlobalNbGeoEnts();
-        CFuint nbFacesG = 0;
-        
-        CFreal av_perssure = 0;
-        CFreal  Total_av_perssure = 0;
-         // cout << "nbace" << nbFaces << endl;
-        for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
- 
-        // build ths current face
-        geoData.idx = iFace;
-        GeometricEntity *const currFace = _faceTrsGeoBuilder.buildGE();
-        const CFuint faceID = currFace->getID();
+  CFuint count = 0; 
+  CFuint count1 = 0;
+  // we assume we are dealing with FiniteVolume
+  //Loop over the TRS's and add `the "TRSName" + "-boundaryNormals" datasocketsink to the _dynamicSockets
+  vector<SafePtr<TopologicalRegionSet> >&  trsList = getTrsList();
+  for (CFuint iTRS = 0; iTRS < trsList.size(); ++iTRS) { 
     
-        const vector<Node*>& nodesInFace = *currFace->getNodes();
-        const State& lState = *currFace->getState(0);
-        const State& rState = *currFace->getState(1);
-        const Node& lNode = lState.getCoordinates();
-        const Node& rNode = rState.getCoordinates();
-                     
-        //av_perssure = lState[0];
-        if (lState[0]>0){
+    SafePtr<TopologicalRegionSet> currTrs = trsList[iTRS];
+    // create locally 
+    const std::string trsName = currTrs->getName(); 
+    
+    SafePtr<FaceTrsGeoBuilder> geoBuilderPtr = _faceTrsGeoBuilder.getGeoBuilder();
+    geoBuilderPtr->setDataSockets(socket_states, socket_gstates, socket_nodes);
+    FaceTrsGeoBuilder::GeoData& geoData = _faceTrsGeoBuilder.getDataGE();
+    geoData.trs = trsList[iTRS];
+    
+    ///   Number of face in TRS on the partition or Total ?????????????????? 
+    CFuint nbFaces = trsList[iTRS]->getLocalNbGeoEnts();
+    //cout << "nbFaces Local" << nbFaces  << endl;
+    //const CFuint nbFacesG = trsList[iTRS]->getGlobalNbGeoEnts();
+    CFuint nbFacesG = 0;
+    
+    CFreal av_perssure = 0;
+    CFreal  Total_av_perssure = 0;
+    // cout << "nbace" << nbFaces << endl;
+    for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+      
+      // build ths current face
+      geoData.idx = iFace;
+      GeometricEntity *const currFace = _faceTrsGeoBuilder.buildGE();
+      const CFuint faceID = currFace->getID();
+      
+      const vector<Node*>& nodesInFace = *currFace->getNodes();
+      const State& lState = *currFace->getState(0);
+      const State& rState = *currFace->getState(1);
+      const Node& lNode = lState.getCoordinates();
+      const Node& rNode = rState.getCoordinates();
+      
+      //av_perssure = lState[0];
+      if (lState[0]>0){
         av_perssure += lState[0];
-        }
-        else{
+      }
+      else{
         av_perssure = 0.;
-         }
-         
- // if divide by save rate is integer then it is tim,e to save
-//if (!(SubSystemStatusStack::getActive()->getNbIter() % m_saveRate))
+      }
+      
+      // if divide by save rate is integer then it is tim,e to save
+      //if (!(SubSystemStatusStack::getActive()->getNbIter() % m_saveRate))
       //  if ((iTRS > trsList.size()-3) && (currFace->getState(0)->isParUpdatable())&& (lState[0]>0)) {
-        if ((iTRS > trsList.size()-3) && (lState[0]>0)) {
-         const  CFreal LogP = std::log(lState[0]);
-         const  CFreal Xposition = lNode[0];
-         CFreal PistL = _totalDisplacement; // - Min_piston;
-         //if (Xposition<=PistL){
-         if (iTRS == 2){
-          std::string NameL = "Space-Time-Diagram_Left_" + Common::StringOps::to_str(PE::GetPE().GetRank()) + ".plt";   
+      if ((iTRS > trsList.size()-3) && (lState[0]>0)) {
+	const  CFreal LogP = std::log(lState[0]);
+	const  CFreal Xposition = lNode[0];
+	CFreal PistL = _totalDisplacement; // - Min_piston;
+	//if (Xposition<=PistL){
+	if (iTRS == 2){
+          std::string NameL = "Space-Time-Diagram_Left_" + Common::StringOps::to_str(PE::GetPE().GetRank(nsp)) + ".plt";   
           WriteSpaceTimeData(Xposition,LogP,nbFaces,count,NameL);
-         count++;        
- 	   }
-         else{   
-          std::string NameR = "Space-Time-Diagram_Right_" + Common::StringOps::to_str(PE::GetPE().GetRank()) + ".plt";   
-          WriteSpaceTimeData(Xposition,LogP,nbFaces,count1,NameR);
-           count1++;        
-           }
-           
-        }  
-        // release the face
+	  count++;        
+	}
+	else{   
+	  std::string NameR = "Space-Time-Diagram_Right_" + Common::StringOps::to_str(PE::GetPE().GetRank(nsp)) + ".plt";   
+	  WriteSpaceTimeData(Xposition,LogP,nbFaces,count1,NameR);
+	  count1++;        
+	}
+	
+      }  
+      // release the face
         _faceTrsGeoBuilder.releaseGE();
-        }
-       
-      if (iTRS < trsList.size()-1) {
-       if (PE::GetPE().GetProcessorCount() > 1) {
-        MPI_Allreduce(&av_perssure, &Total_av_perssure, 1, MPI_DOUBLE, MPI_SUM,PE::GetPE().GetCommunicator());  
-       MPI_Allreduce(&nbFaces, &nbFacesG, 1, MPIStructDef::getMPIType(&nbFaces), MPI_SUM,PE::GetPE().GetCommunicator());  
-           }
-       else {
-          Total_av_perssure = av_perssure;
-          nbFacesG = nbFaces;  
-         }
-       if (iTRS==1){
-       //   Total_av_perssure = av_perssure;
-        // cout << "nbFaces TRS>0" << nbFaces << endl;
-       //_Pfront = Total_av_perssure/1.;
-       _Pfront = Total_av_perssure/nbFacesG;
-        cout <<  trsName  << _Pfront << endl; 
-        }
-       if (iTRS == 0) {
-        // Total_av_perssure = av_perssure;
-      //   cout << "nbFaces" << nbFaces << endl;
-       //_Pback =  Total_av_perssure/1.;
-       _Pback =  Total_av_perssure/nbFacesG;
-        cout <<  trsName << _Pback <<endl; 
-       }
     }
- }     
-       CFreal deltaP = _Pback - _Pfront;
-       return deltaP;  
+    
+    if (iTRS < trsList.size()-1) {
+      if (PE::GetPE().GetProcessorCount(nsp) > 1) {
+	MPI_Allreduce(&av_perssure, &Total_av_perssure, 1, MPI_DOUBLE, MPI_SUM,PE::GetPE().GetCommunicator(nsp));  
+	MPI_Allreduce(&nbFaces, &nbFacesG, 1, MPIStructDef::getMPIType(&nbFaces), MPI_SUM,PE::GetPE().GetCommunicator(nsp));  
+      }
+      else {
+	Total_av_perssure = av_perssure;
+	nbFacesG = nbFaces;  
+      }
+      if (iTRS==1){
+	//   Total_av_perssure = av_perssure;
+        // cout << "nbFaces TRS>0" << nbFaces << endl;
+	//_Pfront = Total_av_perssure/1.;
+	_Pfront = Total_av_perssure/nbFacesG;
+        cout <<  trsName  << _Pfront << endl; 
+      }
+      if (iTRS == 0) {
+	// Total_av_perssure = av_perssure;
+	//   cout << "nbFaces" << nbFaces << endl;
+	//_Pback =  Total_av_perssure/1.;
+	_Pback =  Total_av_perssure/nbFacesG;
+	cout <<  trsName << _Pback <<endl; 
+      }
+    }
+  }     
+  CFreal deltaP = _Pback - _Pfront;
+  return deltaP;  
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void PistonDynamics::setup()

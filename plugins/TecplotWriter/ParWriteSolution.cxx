@@ -21,7 +21,6 @@
 #include "Framework/PhysicalModel.hh"
 #include "Framework/ConvectiveVarSet.hh"
 #include "Framework/MethodCommandProvider.hh"
-#include "Framework/NamespaceSwitcher.hh"
 #include "Framework/DataHandleOutput.hh"
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/WriteListMap.hh"
@@ -104,7 +103,7 @@ void ParWriteSolution::defineConfigOptions(Config::OptionList& options)
 void ParWriteSolution::execute()
 {
   CFAUTOTRACE;
-  
+ 
   const TeclotTRSType& tt = *_mapTrsName2TecplotData.find("InnerCells");
   if (hasChangedMesh(tt)) {
     buildNodeIDMapping();
@@ -160,7 +159,8 @@ void ParWriteSolution::writeData(const boost::filesystem::path& filepath,
   (this->*fun)(filepath, flag, title, file); 
   
   if (_isWriterRank) {
-    PE::Group& wg = PE::getGroup("Writers");
+    const string writerName = getMethodData().getNamespace() + "_Writers";
+    Group& wg = PE::GetPE().getGroup(writerName);
     MPI_Barrier(wg.comm);
     fhandle->close();
   }
@@ -707,7 +707,8 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
   
   State tempState;
   
-  PE::Group& wg = PE::getGroup("Writers");
+  const string writerName = getMethodData().getNamespace() + "_Writers";
+  Group& wg = PE::GetPE().getGroup(writerName);
   
   WriteListMap elementList;
   elementList.reserve(nbElementTypes, nSend, nbLocalElements);
@@ -980,7 +981,9 @@ void ParWriteSolution::writeElementList
   vector<CFuint> sendElements(maxElemSendSize, 0);
   vector<CFuint> elementToPrint(maxElemSendSize, 0);
     
-  PE::Group& wg = PE::getGroup("Writers");
+  const string writerName = getMethodData().getNamespace() + "_Writers";
+  Group& wg = PE::GetPE().getGroup(writerName);
+  
   CFint wRank = -1; 
   CFuint rangeID = 0;
   CFuint wSendSize = 0;

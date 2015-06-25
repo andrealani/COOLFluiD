@@ -104,7 +104,8 @@ void StdSetup::configure ( Config::ConfigArgs& args )
 
   //Loop over the TRS's and add the "TRSName" + "-boundaryNormals" datasocketsink to the m_dynamicSockets
   const std::string name = getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<MeshData> meshData = MeshDataStack::getInstance().getEntryByNamespace(nsp);
 
   vector<std::string> trsList = meshData->getTRSNameList();

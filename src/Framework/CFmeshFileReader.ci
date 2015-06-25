@@ -43,7 +43,9 @@ template <class DATA>
 void CFmeshFileReader<DATA>::setMapString2Readers()
 {
   using namespace std;
-
+  
+  CFLogDebugMin( "CFmeshFileReader<DATA>::setMapString2Readers() start\n");
+  
   m_mapString2Reader["!COOLFLUID_VERSION"]     = &CFmeshFileReader<DATA>::readCFVersion;
   m_mapString2Reader["!COOLFLUID_SVNVERSION"]  = &CFmeshFileReader<DATA>::readSvnVersion;
   m_mapString2Reader["!CFMESH_FORMAT_VERSION"] = &CFmeshFileReader<DATA>::readCFmeshVersion;
@@ -74,6 +76,8 @@ void CFmeshFileReader<DATA>::setMapString2Readers()
   m_mapString2Reader["!NB_NODES_PER_TYPE"]  = &CFmeshFileReader<DATA>::readNbNodesPerType;
   m_mapString2Reader["!NB_STATES_PER_TYPE"] = &CFmeshFileReader<DATA>::readNbStatesPerType;
   m_mapString2Reader["!LIST_ELEM"]          = &CFmeshFileReader<DATA>::readElementList;
+  
+  CFLogDebugMin( "CFmeshFileReader<DATA>::setMapString2Readers() end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -117,16 +117,17 @@ void ICPplasmaFieldComputingBC<BASE,ST>::setup()
   cf_assert(m_physicalData.size() > 0);
 	  
   const CFuint nbCellsInProc = this->socket_states.getDataHandle().size();
-  const CFuint nbProc = PE::GetPE().GetProcessorCount();
+  const std::string nsp = this->getMethodData().getNamespace(); 
+  const CFuint nbProc = PE::GetPE().GetProcessorCount(nsp);
   m_nbStatesInProc.resize(nbProc, 0);
   
   if (nbProc > 1) {
 #ifdef CF_HAVE_MPI
     vector<CFuint> nbCellsInProcVec(nbProc, 0);
-    nbCellsInProcVec[PE::GetPE().GetRank()] = nbCellsInProc;
+    nbCellsInProcVec[PE::GetPE().GetRank(nsp)] = nbCellsInProc;
     
     MPI_Allreduce(&nbCellsInProcVec[0], &m_nbStatesInProc[0], nbProc, MPIStructDef::getMPIType(&nbCellsInProcVec[0]), MPI_MAX,
-		  PE::GetPE().GetCommunicator());
+		  PE::GetPE().GetCommunicator(nsp));
 #endif
   }
   else {
@@ -263,9 +264,10 @@ void ICPplasmaFieldComputingBC<BASE,ST>::preProcess()
   const CFreal frequency = m_srcTerm->getFreqMHz() * 1000000.; 
   const CFreal permeability = m_srcTerm->getPermeability();
   
+  const std::string nsp = this->getMethodData().getNamespace(); 
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
-  const CFuint nbProc = PE::GetPE().GetProcessorCount();
-  const CFuint rank   = PE::GetPE().GetRank();
+  const CFuint nbProc = PE::GetPE().GetProcessorCount(nsp);
+  const CFuint rank   = PE::GetPE().GetRank(nsp);
   
   // cells E contribution sum
   m_EpR_inGhostCell_sum = 0.;
@@ -299,7 +301,7 @@ void ICPplasmaFieldComputingBC<BASE,ST>::preProcess()
     
 #ifdef CF_HAVE_MPI  
     MPIStructDef::buildMPIStruct(&nbUpdatables, &m_cellCentersCoord[0], &m_currentInCells[0], ln, ms);
-    MPI_Bcast(ms.start, 1, ms.type, root, PE::GetPE().GetCommunicator());
+    MPI_Bcast(ms.start, 1, ms.type, root, PE::GetPE().GetCommunicator(nsp));
 #endif
     
     const CFuint totalNbBCFaces = m_mapGhostState2ID.size();

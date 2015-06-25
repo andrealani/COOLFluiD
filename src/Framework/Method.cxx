@@ -12,6 +12,7 @@
 #include "Framework/ConsistencyException.hh"
 #include "Framework/NamespaceSwitcher.hh"
 #include "Framework/MethodData.hh"
+#include "Framework/SubSystemStatus.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -92,7 +93,8 @@ void Method::configure ( Config::ConfigArgs& args )
   }
   else
   {
-    std::vector<Common::SafePtr<Namespace> > allNsp = NamespaceSwitcher::getInstance().getAllNamespaces();
+    std::vector<Common::SafePtr<Namespace> > allNsp = 
+      NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName()).getAllNamespaces();
     std::string defaultNamespace = allNsp[0]->getName();
 
     setParentNamespace(defaultNamespace);
@@ -538,8 +540,9 @@ std::vector<Common::SafePtr<CommandGroup> > Method::getCommandGroups()
 void Method::pushNamespace()
 {
   CFAUTOTRACE;
-
-  NamespaceSwitcher::getInstance().pushNamespace(getNamespace());
+  
+  NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName()).
+    pushNamespace(getNamespace());
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -548,7 +551,8 @@ void Method::popNamespace()
 {
   CFAUTOTRACE;
 
-  SafePtr<Namespace> ptr = NamespaceSwitcher::getInstance().popNamespace();
+  SafePtr<Namespace> ptr = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).popNamespace();
   cf_assert(ptr->getName() == getNamespace());
 }
 

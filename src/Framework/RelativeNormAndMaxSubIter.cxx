@@ -84,13 +84,14 @@ bool RelativeNormAndMaxSubIter::isAchieved(const ConvergenceStatus& status)
 
   const CFuint start = 0; // first residual comes after first iteration
   const CFuint first = 1; // first residual comes after first iteration
-
-  const std::string nspName = NamespaceSwitcher::getInstance().getCurrentNamespace()->getName();
-  const std::string subSysName = SubSystemStatusStack::getActive()->getSubSystemName();
-  const std::string residualName = "COUPLING_" + m_interfaceName + "_" + m_trsName + "_" + nspName + "_" + subSysName +"_" + m_dataType + "_DATA";
-
-if(m_nspName == nspName){
-
+  
+  const std::string subSysName = SubSystemStatusStack::getCurrentName();
+  const std::string nspName = NamespaceSwitcher::getInstance(subSysName).getCurrentNamespace()->getName();
+  const std::string residualName = 
+    "COUPLING_" + m_interfaceName + "_" + m_trsName + "_" + nspName + "_" + subSysName +"_" + m_dataType + "_DATA";
+  
+  if(m_nspName == nspName){
+    
   CFout << "Looking at residual : " << residualName << "\n";
 
   const CFreal res  = SimulationStatus::getInstance().getCouplingResidual(residualName);

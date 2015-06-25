@@ -120,9 +120,13 @@ void ParadeRadiator::setup()
   m_inFileHandle  = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
   m_outFileHandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
   
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  
   // create a m_localDirName-P# directory for the current process
   // cp parade executable and database inside the m_localDirName-P# directory 
-  m_paradeDir = m_localDirName + "_" + m_radPhysicsPtr->getTRSname() +"-P" + StringOps::to_str(PE::GetPE().GetRank());
+  m_paradeDir = m_localDirName + "_" + m_radPhysicsPtr->getTRSname() + 
+    "-P" + StringOps::to_str(PE::GetPE().GetRank(nsp));
+  
   boost::filesystem::path paradeDir(m_paradeDir);
   
   boost::filesystem::path grid("grid.flo");
@@ -157,11 +161,9 @@ void ParadeRadiator::setup()
       m_molecularSpecies[moleculeIDs[i]] = true;
     }
   }
-
-
+  
   // if this is a parallel simulation, only ONE process at a time sets the library
-  runSerial<void, ParadeRadiator, &ParadeRadiator::setLibrarySequentially>(this);
-
+  runSerial<void, ParadeRadiator, &ParadeRadiator::setLibrarySequentially>(this, nsp);
   
   //get the statesID used for this Radiator
   m_radPhysicsPtr->getCellStateIDs( m_statesID );
@@ -182,7 +184,7 @@ void ParadeRadiator::setLibrarySequentially()
     CFLog(NOTICE, "ParadeLibrary::libpath NOT SET\n");
     abort();
   }
-
+  
   if (!m_reuseProperties) {
     // create a m_localDirName-P# directory for the current process
     // cp parade executable and database inside the m_localDirName-P# directory
@@ -193,13 +195,11 @@ void ParadeRadiator::setLibrarySequentially()
     std::string command3   = "cp -R " + m_libPath + "/Data " + m_paradeDir;
     Common::OSystem::getInstance().executeCommand(command3);
   }
-
+  
   // all the following can fail if the format of the file parade.con changes
   // initialize some private data in this class (all processors, one by one, must run this)
-
-
 }
-
+  
 //////////////////////////////////////////////////////////////////////////////
             
 void ParadeRadiator::unsetup()
@@ -237,7 +237,8 @@ void ParadeRadiator::setupSpectra(CFreal wavMin, CFreal wavMax)
     CFLog(INFO,"ParadeLibrary::runLibraryInParallel() took " << stp << "s\n");
   }
   
-  PE::GetPE().setBarrier();
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  PE::GetPE().setBarrier(nsp);
   
   // read in the radiative properties from parade.rad
   readLocalRadCoeff();
@@ -249,8 +250,9 @@ void ParadeRadiator::setupSpectra(CFreal wavMin, CFreal wavMax)
       
 void ParadeRadiator::updateWavRange(CFreal wavMin, CFreal wavMax)
 {
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
 
-  if (PE::GetPE().GetRank() == 0) {
+  if (PE::GetPE().GetRank(nsp) == 0) {
     // all the following can fail if the format of the file parade.con changes
 
     CFLog(INFO, "ParadeLibrary: computing wavelength range [" << wavMin << ", " << wavMax << "]\n");
@@ -296,7 +298,7 @@ void ParadeRadiator::updateWavRange(CFreal wavMin, CFreal wavMax)
     fin.close();
     fout.close();
   }
-  PE::GetPE().setBarrier();
+  PE::GetPE().setBarrier(nsp);
   
   // each processor copies the newly updated parade.con to its own directory
   std::string command   = "cp parade.con " + m_paradeDir;

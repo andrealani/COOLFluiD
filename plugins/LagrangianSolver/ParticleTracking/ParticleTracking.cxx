@@ -108,14 +108,16 @@ void ParticleTracking::setFaceTypes(MathTools::CFMat<CFint> & wallTypes, std::ve
 
   ownerCellRank.getSharedEntries();
   ownerCellLocalID.getSharedEntries();
-
+  
+  
   const CFuint nbCells = cellsData.trs->getLocalNbGeoEnts();
-
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  
   //vector<CFuint> ownerCellRank(nbCells,m_myProcessRank);
-  CFuint myProcessRank = PE::GetPE().GetRank();
+  CFuint myProcessRank = PE::GetPE().GetRank(nsp);
   ownerCellRank.resize(nbCells,myProcessRank);
   ownerCellLocalID.resize(nbCells);
-
+  
   //fill with the local iD's
   for(CFuint i=0; i<nbCells; ++i){
     cellsData.idx = i;

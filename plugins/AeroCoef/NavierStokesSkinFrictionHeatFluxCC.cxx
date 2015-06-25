@@ -287,11 +287,12 @@ void NavierStokesSkinFrictionHeatFluxCC::computeTauWall()
 //////////////////////////////////////////////////////////////////////////////
 
 void NavierStokesSkinFrictionHeatFluxCC::prepareOutputFileWall()
-{
-  PE::GetPE().setBarrier();
+{ 
+  const std::string nsp = getMethodData().getNamespace();
+  PE::GetPE().setBarrier(nsp);
   
   // only the first processor writes the header of the output file 
-  if (PE::GetPE().GetRank () == 0) {
+  if (PE::GetPE().GetRank (nsp) == 0) {
     SafePtr<TopologicalRegionSet> currTrs = this->getCurrentTRS();
     boost::filesystem::path file = Environment::DirPaths::getInstance().getResultsDir() /
       boost::filesystem::path(this->m_nameOutputFileWall + currTrs->getName());
@@ -312,18 +313,19 @@ void NavierStokesSkinFrictionHeatFluxCC::prepareOutputFileWall()
     fout.close();
   } 
   
-  PE::GetPE().setBarrier();
+  PE::GetPE().setBarrier(nsp);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void NavierStokesSkinFrictionHeatFluxCC::updateOutputFileWall()
 {  
-  PE::GetPE().setBarrier();
+  const std::string nsp = getMethodData().getNamespace();
+  PE::GetPE().setBarrier(nsp);
   
   // all processors will write their own data one after the other 
-  for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
-    if (i == PE::GetPE().GetRank ()) {
+  for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(nsp); ++i) {
+    if (i == PE::GetPE().GetRank (nsp)) {
       if (getCurrentTRS()->getLocalNbGeoEnts() > 0) {
 	SafePtr<TopologicalRegionSet> currTrs = getCurrentTRS();
 	boost::filesystem::path file = Environment::DirPaths::getInstance().getResultsDir() /
@@ -381,7 +383,7 @@ void NavierStokesSkinFrictionHeatFluxCC::updateOutputFileWall()
       }
     }
     
-    PE::GetPE().setBarrier();
+    PE::GetPE().setBarrier(nsp);
   }
 }
 

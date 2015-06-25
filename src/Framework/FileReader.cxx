@@ -41,7 +41,9 @@ FileReader::~FileReader()
 void FileReader::readFromFile(const boost::filesystem::path& filepath)
 {
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE, "FileReader::readFromFile() => start\n");
+  
   const CFuint MAXLINESINFILE = std::numeric_limits<CFuint>::max()-1;
 
   m_readCount = 0;
@@ -63,14 +65,16 @@ void FileReader::readFromFile(const boost::filesystem::path& filepath)
 				  "\nSee void FileReader::readFromFile for more info\n");
 
     } while (keepOnReading);
-
+    
     fhandle->close();
 
     m_readCount++;
-
+    
   } while (m_readAgain);
-
+  
   finish();
+  
+  CFLog(VERBOSE, "FileReader::readFromFile() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

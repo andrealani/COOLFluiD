@@ -169,14 +169,18 @@ private: // class definitions
     MPI_Comm _comm;
     
   public:
-    FaceMPIStruct() : FaceStruct() { 
+    
+    FaceMPIStruct() : FaceStruct() 
+    { 
       CFuint dim = Framework::PhysicalModelStack::getActive()->getDim();
       ln[0] = 1;     // first block is localFaceID --> 1 element
       ln[1] = 1;     // second block is globalFaceID --> 1 element
       ln[2] = dim;   // third block is Face coordinates --> "dim" elementsbuild(); 
       _centreCoordinates.resize(dim);
-      _comm = Common::PE::GetPE().GetCommunicator();
-      Common::MPIStructDef::buildMPIStruct(&_localFaceID, &_globalFaceID, &_centreCoordinates[0],     ln, ms);
+      
+      const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+      _comm = Common::PE::GetPE().GetCommunicator(nsp);
+      Common::MPIStructDef::buildMPIStruct(&_localFaceID, &_globalFaceID, &_centreCoordinates[0], ln, ms);
     }
     
     void broadcast(const CFuint& iP) {

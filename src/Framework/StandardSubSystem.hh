@@ -129,13 +129,7 @@ protected: // functions
   /// Dump the states to file
   void dumpStates();
   
-  // struct do_this_wrapper {
-  //   template<typename U> void operator()(U* uptr) {
-  //     uptr->unsetMethod();
-  //   }
-  // };
-  
-protected: // data
+ protected: // data
 
   /// Duration of the simulation of this SubSystem
   Common::HourMinSec m_duration;

@@ -91,8 +91,9 @@ void ReadBase::configure ( Config::ConfigArgs& args )
 void ReadBase::correctStates()
 {
   string stateSolutionFile = getMethodData().getStateSolutionFile();
+  
   if (stateSolutionFile != "Null") {
-    const CFuint rank = PE::GetPE().GetRank();
+    const CFuint rank = PE::GetPE().GetRank("Default");
     string infile = stateSolutionFile + ".P" + StringOps::to_str(rank);
     
     ifstream fin(infile.c_str());

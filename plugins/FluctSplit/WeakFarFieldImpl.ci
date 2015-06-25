@@ -212,15 +212,17 @@ void WeakFarFieldImpl<WEAKBCTYPE>::configure ( Config::ConfigArgs& args )
     m_inputVarStr = m_updateVarStr;
   }
 
-  std::string name = WeakFarFieldImpl<WEAKBCTYPE>::getMethodData().getNamespace();
-
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  const std::string name = WeakFarFieldImpl<WEAKBCTYPE>::getMethodData().getNamespace();
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
-  std::string provider = VarSetTransformer::getProviderName(physModel->getConvectiveName(), m_inputVarStr, m_updateVarStr);
-
-  m_inputToUpdateVar = Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider)->create(physModel->getImplementor());
-
+  
+  const std::string provider = VarSetTransformer::getProviderName
+    (physModel->getConvectiveName(), m_inputVarStr, m_updateVarStr);
+  
+  m_inputToUpdateVar = Environment::Factory<VarSetTransformer>::getInstance().
+    getProvider(provider)->create(physModel->getImplementor());
+  
   cf_assert(m_inputToUpdateVar.isNotNull());
 
   // create the transformer from Update to Solution variables

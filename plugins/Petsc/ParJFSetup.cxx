@@ -131,9 +131,12 @@ void ParJFSetup::setMatrix(const CFuint localSize,
 
   ctx->bkpStates.resize(nbStates*nbEqs);
   ctx->rhsVec = &getMethodData().getRhsVector();
-
-  cout << Common::PE::GetPE().GetRank() << " matrix localSize = " << localSize << ", globalSize = " << globalSize << endl;
-
+  
+  const std::string nsp = getMethodData().getNamespace();
+  
+  CFLog(VERBOSE, "ParJFSetup::setMatrix() => P" <<  Common::PE::GetPE().GetRank(nsp) << " matrix localSize = " 
+	<< localSize << ", globalSize = " << globalSize << "\n");
+  
   // create a parallel Jacobian-Free matrix
   mat.createParJFMat(PETSC_COMM_WORLD,
                      localSize *nbEqs,
@@ -142,7 +145,7 @@ void ParJFSetup::setMatrix(const CFuint localSize,
                      globalSize *nbEqs,
                      (void*)(ctx),
                      "JFMatrix");
-
+  
   // if one would like to use matrix preconditioner
   if(ctx->differentPreconditionerMatrix) {
     getMethodData().getCollaborator<SpaceMethod>()->getSpaceMethodData()->setFillPreconditionerMatrix(true);
@@ -153,12 +156,12 @@ void ParJFSetup::setMatrix(const CFuint localSize,
     // ghost neighbors (out of diagonal submatrix non zero entries)
     std::valarray<CFint> outDiagNonZero(nbStates);
     outDiagNonZero = 0;
-
+    
     SelfRegistPtr<GlobalJacobianSparsity> sparsity = getMethodData().getCollaborator<SpaceMethod>()->createJacobianSparsity();
     
     sparsity->setDataSockets(socket_states, socket_nodes, socket_bStatesNeighbors);
     sparsity->computeNNz(allNonZero, outDiagNonZero);
-
+    
     std::valarray<CFint> allNonZeroUp(localSize);
     CFuint countUp = 0;
     for (CFuint i = 0; i < nbStates; ++i) {
@@ -210,9 +213,11 @@ void ParJFSetup::setVectors(const CFuint localSize,
              globalSize*nbEqs,"rhs");
   sol.create(PETSC_COMM_WORLD, localSize*nbEqs,
              globalSize*nbEqs,"Solution");
-
-  cout << Common::PE::GetPE().GetRank() << " vector localSize = " << localSize << ", globalSize = " << globalSize << endl;
-
+  
+  const std::string nsp = getMethodData().getNamespace();
+  CFLog(VERBOSE, "ParJFSetup::setVectors() => P" << Common::PE::GetPE().GetRank(nsp) << 
+	" vector localSize = " << localSize << ", globalSize = " << globalSize << "\n");
+  
   // initialize the two vectors
   sol.initialize(PETSC_COMM_WORLD, 1.0);
   rhs.initialize(PETSC_COMM_WORLD, 0.0);

@@ -68,20 +68,12 @@ void FarFieldEulerChar2D::setGhostState(GeometricEntity *const face)
    // if a file is present, interpolate p,u,v,T from file
    SafePtr<StateInterpolator> interp = getStateInterpolator();
    if (interp->isNotNull()) { 
-     const CFreal sInner = std::sqrt(innerState->getCoordinates()[XX]*
-				     innerState->getCoordinates()[XX] + 
-				     innerState->getCoordinates()[YY]*
-				     innerState->getCoordinates()[YY]);
-     const CFreal sGhost = std::sqrt(ghostState->getCoordinates()[XX]*
-				     ghostState->getCoordinates()[XX] + 
-				     ghostState->getCoordinates()[YY]*
-				     ghostState->getCoordinates()[YY]);
+     const CFreal yCoord = 0.5*(innerState->getCoordinates()[YY] +
+				ghostState->getCoordinates()[YY]);
      
-     // compute curvilinear coordinate 
-     const CFreal sCoord = 0.5*(sInner+sGhost);
      for (CFuint i = 0; i < m_tstate->size(); ++i) {
        // interpolated state value in input variables
-       interp->interpolate(i, sCoord, (*m_tstate)[i]);
+       interp->interpolate(i, yCoord, (*m_tstate)[i]);
      }
      *m_bstate = *m_inputToUpdateVar->transform(m_tstate);
      _varSet->computePhysicalData(*m_bstate, _pdata);
@@ -94,9 +86,53 @@ void FarFieldEulerChar2D::setGhostState(GeometricEntity *const face)
      cf_assert(_temperature > 0.);
      
      CFLog(DEBUG_MIN, "FarFieldEulerChar2D::setGhostState() => s, [p u v T] = " 
-	   << sCoord << ", [" << _pressure << ", " << _uInf << ", " 
+	   << yCoord << ", [" << _pressure << ", " << _uInf << ", " 
 	   << _vInf << ", " << _temperature << "]\n");
+     
+     // static int count = 0; 
+     // if (SubSystemStatusStack::getActive()->getNbIter() == 0) {
+     //   ofstream* fout;
+     //   if (++count == 1) {
+     // 	 fout = new ofstream ("ff.dat");
+     // 	 *fout << "VARIABLES  =  \"y\" \"p\" \"u\" \"v\" \"T\"\n";
+     //   }
+     //   else  {
+     // 	 fout = new ofstream ("ff.dat", ios::app);
+     //   }
+     //   *fout << yCoord << " " << _pressure << " " << _uInf << " " << _vInf << " " << _temperature << "\n";   
+     //   delete fout;
+     // } 
+     // if (SubSystemStatusStack::getActive()->getNbIter() == 1) {
+     //   cout << "FarFieldEulerChar2D::setGhostState() => TEST!!!!" << endl;
+     //   cout << "nbFaces processed = " << count << endl;
+     //   exit(1);
+     // }
    }
+   
+   /// test
+   // const CFreal unInf = _uInf*nx + _vInf*ny;
+   // const CFreal MInf = unInf/sqrt(gamma*R*_temperature);
+   // // CFLog(INFO, "FaceID = " << face->getID() << " at y[" << 
+   // // 	 0.5*(innerState->getCoordinates()[YY] + ghostState->getCoordinates()[YY]) << 
+   // // 	 "] => MInf = " << MInf << "\n");
+   
+   // (*ghostState)[1] = 2.*_uInf        - (*innerState)[1];
+   // (*ghostState)[2] = 2.*_vInf        - (*innerState)[2];
+   // (*ghostState)[3] = 2.*_temperature - (*innerState)[3];
+   // if (-MInf >= 1.) {
+   //   // cout << "MInf is SUPERSONIC > 1\n";
+   //   (*ghostState)[0] = 2.*_pressure    - (*innerState)[0];
+   // }
+   // else {
+   //   if (!(-MInf < 1. && -MInf > 0.)) {
+   //     CFLog(WARN, "## STRANGE : MInf is " << MInf << "\n");
+   //     // cf_assert(-MInf < 1. && -MInf > 0.);
+   //   }
+   //   // cout << "MInf is SUBSONIC   < 1\n";
+   //   (*ghostState)[0] = (*innerState)[0];
+   // }
+   // return;
+   /// end test
    
    const CFreal u = _dataInnerState[EulerTerm::VX];
    const CFreal v = _dataInnerState[EulerTerm::VY];
@@ -117,7 +153,7 @@ void FarFieldEulerChar2D::setGhostState(GeometricEntity *const face)
    // depending on the sign and magnitude of the local Mach number,
    // number of variables to be specified are determined
 
-  // supersonic outlet case
+   // supersonic outlet case
    if (machInner >= 1.0) {
      (*ghostState)[0] = (*innerState)[0];
      (*ghostState)[1] = (*innerState)[1];

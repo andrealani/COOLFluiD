@@ -3,7 +3,6 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include <mpi.h>
 #include "Common/MPI/MPIStructDef.hh"
 #include "LagrangianSolverModule.hh"
 #include "ParticleTracking/ParticleTracking.hh"
@@ -45,26 +44,27 @@ public:
    */
    ~LagrangianSolver();
 
-   inline void newParticle(Particle<UserData> particle){
-      m_particle = particle;
-      m_particleTracking.newParticle(m_particle.commonData);
+  inline void newParticle(Particle<UserData> particle)
+  {
+    m_particle = particle;
+    m_particleTracking.newParticle(m_particle.commonData);
   }
-
-   inline void setupSendBufferSize(CFuint sendBufferSize)
-   {
-     try
-     {
-         m_sendBufferSize = sendBufferSize;
-         m_sendBuffer.reserve(m_sendBufferSize);
-     } 
-     catch (std::bad_alloc& ba)
-     {
-       std::cerr << "bad_alloc caught: " << ba.what() << '\n';
-     }
-   }
-   inline void newDirection(RealVector direction){ m_particleTracking.newDirection(direction);}
-
-   inline void trackingStep(){ m_particleTracking.trackingStep(); }
+  
+  inline void setupSendBufferSize(CFuint sendBufferSize)
+  {
+    try {
+      m_sendBuffer.reset(new SendBuffer<Particle<UserData> >());
+      m_sendBufferSize = sendBufferSize;
+      m_sendBuffer->reserve(m_sendBufferSize);
+    } 
+    catch (std::bad_alloc& ba) {
+      std::cerr << "bad_alloc caught: " << ba.what() << '\n';
+    }
+  }
+  
+  inline void newDirection(RealVector direction){ m_particleTracking.newDirection(direction);}
+  
+  inline void trackingStep(){ m_particleTracking.trackingStep(); }
 
    inline void getExitPoint(RealVector &exitPoint){ m_particleTracking.getExitPoint(exitPoint); }
 
@@ -133,9 +133,9 @@ private:
   PARTICLE_TRACKING m_particleTracking;
 
   MathTools::CFMat<CFint> m_wallTypes;
-
-  SendBuffer<Particle<UserData> > m_sendBuffer;
-
+  
+  std::auto_ptr<SendBuffer<Particle<UserData> > > m_sendBuffer;
+  
   CFuint m_sendBufferSize;
 
 };
@@ -149,36 +149,40 @@ LagrangianSolver<UserData,PARTICLE_TRACKING>::LagrangianSolver(const std::string
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
 template<typename UserData, class PARTICLE_TRACKING>
 LagrangianSolver<UserData,PARTICLE_TRACKING>::~LagrangianSolver()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-template<typename UserData, class PARTICLE_TRACKING>
-void LagrangianSolver<UserData, PARTICLE_TRACKING>::bufferCommitParticle(CFuint faceID){
-    static CFint rank = Common::PE::GetPE().GetRank();
-    cf_assert(m_wallTypes(faceID,0) == ParticleTracking::COMP_DOMAIN_FACE );
-    cf_assert(m_wallTypes(faceID,2) != rank );
 
-    static Particle<UserData> sendParticle;
-    getParticle(sendParticle);
-    CFuint processRank = m_wallTypes(faceID,2);
-    //CFLog(INFO, "processRank: "<<processRank<<"\n");
-    sendParticle.commonData.cellID = m_wallTypes(faceID,3);
-    m_sendBuffer.push_back(sendParticle, processRank );
+template<typename UserData, class PARTICLE_TRACKING>
+void LagrangianSolver<UserData, PARTICLE_TRACKING>::bufferCommitParticle(CFuint faceID)
+{
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  
+  static CFint rank = Common::PE::GetPE().GetRank(nsp);
+  cf_assert(m_wallTypes(faceID,0) == ParticleTracking::COMP_DOMAIN_FACE );
+  cf_assert(m_wallTypes(faceID,2) != rank );
+  
+  static Particle<UserData> sendParticle;
+  getParticle(sendParticle);
+  CFuint processRank = m_wallTypes(faceID,2);
+  //CFLog(INFO, "processRank: "<<processRank<<"\n");
+  sendParticle.commonData.cellID = m_wallTypes(faceID,3);
+  m_sendBuffer->push_back(sendParticle, processRank );
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 template<typename UserData, class PARTICLE_TRACKING>
 bool LagrangianSolver<UserData,PARTICLE_TRACKING>::sincronizeParticles(std::vector< Particle<UserData> >&particleBuffer,
-                                                     bool isLastPhoton)
+								       bool isLastPhoton)
 {
-    return m_sendBuffer.sincronize(particleBuffer, isLastPhoton);
+  return m_sendBuffer->sincronize(particleBuffer, isLastPhoton);
 }
-
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 template<typename UserData, class PARTICLE_TRACKING>
@@ -221,7 +225,7 @@ void LagrangianSolver<UserData,PARTICLE_TRACKING>::setupParticleDatatype(MPI_Dat
     // commit new datatype
     MPI_Type_commit( &m_particleDataType );
     
-    m_sendBuffer.setMPIdatatype(m_particleDataType);
+    m_sendBuffer->setMPIdatatype(m_particleDataType);
 }
 
 //////////////////////////////////////////////////////////////////////////////

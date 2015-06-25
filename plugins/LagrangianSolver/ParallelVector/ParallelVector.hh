@@ -2,6 +2,7 @@
 #define COOLFluiD_RadiativeTransfer_ParallelVector_hh
 
 #include "Framework/SocketBundleSetter.hh"
+#include "Framework/MeshData.hh"
 #include <vector>
 #include "LagrangianSolver/LagrangianSolverModule.hh"
 #include "Common/MPI/MPIStructDef.hh"
@@ -62,13 +63,15 @@ private:
 
 
 template<typename T>
-void ParallelVector<T>::sincronizeAdd(){
-  if( Common::PE::GetPE().GetProcessorCount() == 1 ) {
-  	return;
+void ParallelVector<T>::sincronizeAdd()
+{
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  if( Common::PE::GetPE().GetProcessorCount(nsp) == 1 ) {
+    return;
   }
-
+  
   if ( !m_isSetup ){
-     getSharedEntries(); 
+    getSharedEntries(); 
   }
 
   std::vector<CFuint> sendBuffer( m_sendVectorOverlapLocalIDs.size() );
@@ -90,9 +93,11 @@ void ParallelVector<T>::sincronizeAdd(){
 }
 
 template<typename T>
-void ParallelVector<T>::sincronizeAssign(){
-  if(  Common::PE::GetPE().GetProcessorCount() == 1 ){
-  	return;
+void ParallelVector<T>::sincronizeAssign()
+{
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  if(  Common::PE::GetPE().GetProcessorCount(nsp) == 1 ){
+    return;
   }
 
  if ( !m_isSetup ){
@@ -116,17 +121,19 @@ void ParallelVector<T>::sincronizeAssign(){
 }
 
 template<typename T>
-void ParallelVector<T>::getSharedEntries(){
-  if(  Common::PE::GetPE().GetProcessorCount() == 1) {
-	return;
+void ParallelVector<T>::getSharedEntries()
+{
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  if(  Common::PE::GetPE().GetProcessorCount(nsp) == 1) {
+    return;
   }
-
+  
   m_isSetup = true;
   // MPI parameters
-  m_myProcessRank = Common::PE::GetPE().GetRank();
-  m_nbProcesses   = Common::PE::GetPE().GetProcessorCount();
-  m_comm          = Common::PE::GetPE().GetCommunicator();
-
+  m_myProcessRank = Common::PE::GetPE().GetRank(nsp);
+  m_nbProcesses   = Common::PE::GetPE().GetProcessorCount(nsp);
+  m_comm          = Common::PE::GetPE().GetCommunicator(nsp);
+  
   m_sendVectorOverlapRankDisps.resize(m_nbProcesses,0);
   m_recvVectorOverlapRankDisps.resize(m_nbProcesses,0);
 

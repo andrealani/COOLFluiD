@@ -252,20 +252,21 @@ void LorentzForceSourceTerm<ST>::execute()
   
   //
   // ---------------------------------------[ some messages ]
+  const std::string nsp = this->getMethodData().getNamespace();
   if( m_srcTerm->extraVerboseRate() != 0 ) 
     if(!( iter % m_srcTerm->extraVerboseRate() )) {
       if (m_averageInNodeStrategy == 1)
-	if(PE::GetPE().GetRank() == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF using 1/distance-based average to compute Ev in nodes)\n");}
+	if(PE::GetPE().GetRank(nsp) == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF using 1/distance-based average to compute Ev in nodes)\n");}
       if (m_averageInNodeStrategy == 2)
-	if(PE::GetPE().GetRank() == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF using volume-based average to compute Ev in nodes)\n");}
+	if(PE::GetPE().GetRank(nsp) == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF using volume-based average to compute Ev in nodes)\n");}
       if (m_averageInNodeStrategy == 0)
-	if(PE::GetPE().GetRank() == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF using Ev explicitly computed in nodes)\n");}
+	if(PE::GetPE().GetRank(nsp) == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF using Ev explicitly computed in nodes)\n");}
       if (m_FaceCenterComputationMethod == 0)
-	if(PE::GetPE().GetRank() == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF computes FaceCenter values using average between nodes)\n");}
+	if(PE::GetPE().GetRank(nsp) == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF computes FaceCenter values using average between nodes)\n");}
       if (m_FaceCenterComputationMethod == 2)
-	if(PE::GetPE().GetRank() == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF computes FaceCenter values using distance-based average between cell centers)\n");}
+	if(PE::GetPE().GetRank(nsp) == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF computes FaceCenter values using distance-based average between cell centers)\n");}
       if (m_FaceCenterComputationMethod == 1)
-	if(PE::GetPE().GetRank() == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF computes FaceCenter values using distance-based diamond-shape computational stencil)\n");}
+	if(PE::GetPE().GetRank(nsp) == 0) {CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => (LF computes FaceCenter values using distance-based diamond-shape computational stencil)\n");}
     } 
   
   /// @TODO VP: have to be done parallel
@@ -608,7 +609,7 @@ void LorentzForceSourceTerm<ST>::execute()
     // PUT HERE TECPLOT STUFF /////////////////
     if(!(iter % m_srcTerm->outputFileEM_SaveRate())) 
     {
-      if(PE::GetPE().GetRank() == 0) {
+      if(PE::GetPE().GetRank(nsp) == 0) {
         CFLog(VERBOSE, "LorentzForceSourceTerm<ST>::execute() => Writing Lorentz Force to " << m_srcTerm->outputFileEM() << "\n");
       }
 

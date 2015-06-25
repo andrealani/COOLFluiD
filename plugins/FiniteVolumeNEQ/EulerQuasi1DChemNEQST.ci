@@ -1,6 +1,5 @@
 #include "Framework/PhysicalChemicalLibrary.hh"
-#include "Common/CFLog.hh"
-#include "Common/PE.hh"
+#include "Common/PEFunctions.hh"
 
 #include "Framework/GeometricEntity.hh"
 #include "Common/NoSuchValueException.hh"
@@ -105,22 +104,10 @@ void EulerQuasi1DChemNEQST<UPDATEVAR>::setup()
 
   _omegaTv.resize(nbTv);  
   _dhe.resize(3+nbTv);
-
+  
   // read the files with dAdX
-  if (PE::GetPE().IsParallel()) {
-    PE::GetPE().setBarrier();
-    
-    for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
-      if (i == PE::GetPE().GetRank ()) {
-	readInputFile();
-      }
-      
-      PE::GetPE().setBarrier();
-    }
-  }
-  else {
-    readInputFile();
-  }	
+  const std::string nsp = this->getMethodData().getNamespace();
+  runSerial<void, EulerQuasi1DChemNEQST<UPDATEVAR>, &EulerQuasi1DChemNEQST<UPDATEVAR>::readInputFile>(this, nsp);
 }
 
 //////////////////////////////////////////////////////////////////////////////

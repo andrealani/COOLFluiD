@@ -4,149 +4,167 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef PEINTERFACEMPI_HH
-#define PEINTERFACEMPI_HH
+#ifndef COOLFluiD_Common_PEInterfaceMPI_hh
+#define COOLFluiD_Common_PEInterfaceMPI_hh
 
 #include <list>
+#include <map>
 
-#include <mpi.h>
-
+#include "Common/Group.hh"
 #include "Common/PEInterface.hh"
 #include "Common/NonCopyable.hh"
-#include "Common/MPI/MPIDataTypeHandler.hh"
+#include "Common/CFLog.hh"
+#include "Common/MPI/MPIHelper.hh"
+
+//////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD  {
-    namespace Common {
 
-       class MPIInitObject;
+  namespace Common {
 
+    class MPIInitObject;
+   
+//////////////////////////////////////////////////////////////////////////////
 
 /// Parallel Environment interface for MPI
 /// Cannot be in the MPI namespace because it is a specialization of
 /// a class in the Common namespace
 template <>
-class Common_API PEInterface<PM_MPI>
-  : public PEInterfaceBase,
-    public Common::NonCopyable < PEInterface<PM_MPI> >
+class Common_API PEInterface<PM_MPI> : public PEInterfaceBase,
+				       public Common::NonCopyable < PEInterface<PM_MPI> >
 {
-  private:
-    MPI_Comm Comm;
-    MPIDataTypeHandler DataTypeHandler;
-
-    typedef std::list<MPIInitObject *> InitContainerType;
-    std::list<MPIInitObject *> InitList_;
-    bool InitOK_;
-    bool StopCalled_;
-
-    public:
-   /// constructor
-   ///    Needs argc, args because of MPI
-  PEInterface (int * argc, char *** args, MPI_Comm UsedCom = MPI_COMM_WORLD);
-
-   /// Destructor
-   ~PEInterface ();
-
-    /// Set the barrier
-    void setBarrier()  {   MPI_Barrier(GetCommunicator());  }
-
-   /// Returns the total number of execution contexts in
-   /// the universum (not the big one of course, but the
-   /// cluster-one ;-) )
-  inline unsigned int GetProcessorCount () const;
-
-   /// Return the ID of this processor (between 0 and GetProcessorCount)
-  inline unsigned int GetRank () const;
-
-
-   /// Return true if this is a parallel simulation in some way
-  inline bool IsParallel () const;
-
-   /// return true if the model is capable of multiple cpu's
-  inline bool IsParallelCapable () const;
-
-   /// return the name of the model
-  inline std::string GetName () const;
-
-   /// init- en finalize functions
-   /// The object will be freed by the PE (should
-   /// become a ModulePointer)
+ public:
+  
+  /// Constructor (needs argc, args because of MPI)
+  PEInterface (int * argc, char *** args);
+  
+  /// Destructor
+  ~PEInterface ();
+  
+  /// Returns the total number of execution contexts in
+  /// the universum (not the big one of course, but the
+  /// cluster-one ;-) )
+  unsigned int GetProcessorCount (const std::string nspaceName) const
+  {
+    CFLog(DEBUG_MIN, "PEInterface<PM_MPI>::GetProcessorCount() => start\n");
+    int nproc = 0;
+    Common::CheckMPIStatus(MPI_Comm_size (GetCommunicator(nspaceName), &nproc));
+    cf_assert(nproc > 0); 
+    CFLog(DEBUG_MIN, "PEInterface<PM_MPI>::GetProcessorCount() => end\n");
+    return static_cast<unsigned int>(nproc);
+  }
+  
+  /// Return the ID of this processor (between 0 and GetProcessorCount)
+  unsigned int GetRank (const std::string nspaceName) const
+  {
+    CFLog(DEBUG_MIN, "PEInterface<PM_MPI>::GetRank() => start\n");
+    int rank = -1; 
+    Common::CheckMPIStatus(MPI_Comm_rank (GetCommunicator(nspaceName), &rank));
+    cf_assert(rank >= 0);
+    CFLog(DEBUG_MIN, "PEInterface<PM_MPI>::GetRank() => end\n");
+    return static_cast<unsigned int>(rank);
+  }
+  
+  /// advance communication
+  /// This function should be called from time to time when there are
+  /// overlapping
+  /// communication requests (beginSync() is called but not endSync() )
+  /// in orde to give the hardware/implementation a change to advance the
+  /// communication.
+  void AdvanceCommunication (const std::string nspaceName)
+  {
+    CFLog(DEBUG_MIN, "PEInterface<PM_MPI>::AdvanceCommunication() => start\n");
+    int Flag = 0;
+    MPI_Comm comm = GetCommunicator(nspaceName);
+    Common::CheckMPIStatus(MPI_Iprobe (MPI_ANY_SOURCE, MPI_ANY_TAG, 
+				       comm, &Flag, MPI_STATUS_IGNORE));
+    CFLog(DEBUG_MIN, "PEInterface<PM_MPI>::AdvanceCommunication() => end\n");
+  }
+  
+  /// Return true if this is a parallel simulation in some way
+  bool IsParallel() const 
+  { 
+    CFLog(DEBUG_MIN, "PEInterface<PM_MPI>::IsParallel() => start\n"); 
+    return (GetProcessorCount(std::string("Default")) > 1);
+  }
+  
+  /// return true if the model is capable of multiple cpu's
+  bool IsParallelCapable () const {return true;}
+  
+  /// return the name of the model
+  std::string GetName () const {return "MPI";}
+  
+  /// init- en finalize functions
+  /// The object will be freed by the PE (should
+  /// become a ModulePointer)
   void RegisterInitObject (MPIInitObject * Obj);
-
-   /// advance communication
-   /// This function should be called from time to time when there are
-   /// overlapping
-   /// communication requests (beginSync() is called but not endSync() )
-   /// in orde to give the hardware/implementation a change to advance the
-   /// communication.
-  inline void AdvanceCommunication ();
-
-   /// Return the communicator to be used
-   /// (for now we always work in MPI_COMM_WORLD, but this could change
-  inline MPI_Comm GetCommunicator () const;
-protected:
-
+  
+  /// Set the barrier
+  void setBarrier(const std::string nspaceName)  
+  {
+    CFLog(DEBUG_MIN, "PEInterface<PM_MPI>::setBarrier() => start\n");
+    MPI_Comm comm = GetCommunicator(nspaceName);  
+    Common::CheckMPIStatus(MPI_Barrier(comm));
+    CFLog(DEBUG_MIN, "PEInterface<PM_MPI>::setBarrier() => end\n");
+  }
+  
+  /// @return the communicator corresponding to the giving namespace name
+  MPI_Comm GetCommunicator (const std::string nspaceName) const
+  {
+    CFLog(DEBUG_MIN, "PEInterface<PM_MPI>::GetCommunicator()\n");
+    // if there are no groups, only the default exists 
+    if (m_groups.size() == 0 || nspaceName == "Default" || m_groups.count(nspaceName) == 0) {
+	return MPI_COMM_WORLD;
+    }
+    return m_groups.find(nspaceName)->second->comm;
+  }
+  
+  /// @return group corresponding to given global rank
+  std::string getGroupName(int rank) {return m_rank2Group.find(rank)->second;}
+  
+  /// @return the group data corresponding to given name
+  Group& getGroup(const std::string name) {return *m_groups.find(name)->second;}
+  
+  /// create MPI group 
+  /// @param ranks          list of the ranks belonging to this group
+  /// @param mapRank2Group  flag telling whether to build a reverse 
+  ///                       rank-group mapping (each rank MUST be 
+  ///                       associated to a unique group)
+  void createGroup(const std::string name,
+		   const std::vector<int>& ranks, 
+		   const bool mapRank2Group); 
+ 
+ private: // functions
+  
   void CallInitFunctions ();
   void CallDoneFunctions ();
   void CallInitFunction (MPIInitObject * M) const;
   void CallDoneFunction (MPIInitObject * M) const;
-
-private:
-  MPI_Errhandler ErrHandler_;
-
+  
+  /// clear all groups 
+  void clearGroups();
+  
+ private: // member data
+  
+  typedef std::list<MPIInitObject*> InitContainerType;
+  InitContainerType InitList_;
+  
+  bool InitOK_;
+  bool StopCalled_;
+  
+  /// name of the object
+  std::map<int,std::string> m_rank2Group;
+  
+  /// list of groups
+  std::map<std::string, Group*> m_groups; 
 };
-
+    
 //////////////////////////////////////////////////////////////////////////////
-
-inline void PEInterface<PM_MPI>::AdvanceCommunication ()
-{
-    int Flag;
-    MPI_Iprobe (MPI_ANY_SOURCE, MPI_ANY_TAG, GetCommunicator(), &Flag,
-    MPI_STATUS_IGNORE);
-}
-
-inline MPI_Comm PEInterface<PM_MPI>::GetCommunicator () const
-{
-    return MPI_COMM_WORLD;
-}
-
-inline bool PEInterface<PM_MPI>::IsParallelCapable () const
-{
-    return true;
-}
-
-inline std::string PEInterface<PM_MPI>::GetName () const
-{
-    return "MPI";
-}
-
-unsigned int PEInterface<PM_MPI>::GetProcessorCount () const
-{
-    int Size;
-    MPI_Comm_size (Comm, &Size);
-    return static_cast<unsigned>(Size);
-}
-
-unsigned int PEInterface<PM_MPI>::GetRank () const
-{
-    static int Rank = -1;
-    if (Rank != -1)
-return Rank;
-
-    MPI_Comm_rank (Comm, &Rank);
-    return static_cast<unsigned int>(Rank);
-}
-
-bool PEInterface<PM_MPI>::IsParallel () const
-{
-    return (GetProcessorCount() > 1);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
+    
   } // Common
-
+  
 } // COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif
+#endif // COOLFluiD_Common_PEInterfaceMPI_hh

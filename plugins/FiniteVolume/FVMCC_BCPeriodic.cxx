@@ -270,9 +270,11 @@ void BCPeriodic::setup()
 
 void BCPeriodic::setupMPI() 
 {
-  _nbProcesses = PE::GetPE().GetProcessorCount();
-  _rank = PE::GetPE().GetRank();
-  _comm = PE::GetPE().GetCommunicator();
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  
+  _nbProcesses = PE::GetPE().GetProcessorCount(nsp);
+  _rank = PE::GetPE().GetRank(nsp);
+  _comm = PE::GetPE().GetCommunicator(nsp);
   _nbFacesPerProcess.resize(_nbProcesses,0);
   _periodicState = new Framework::State;
   _periodicState->resize(_nE);

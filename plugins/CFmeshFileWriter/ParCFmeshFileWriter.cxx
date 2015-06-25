@@ -58,11 +58,6 @@ ParCFmeshFileWriter::ParCFmeshFileWriter() :
   _writeData()
 {
   addConfigOptionsTo(this);
-  
-  _comm   = PE::GetPE().GetCommunicator();
-  _myRank = PE::GetPE().GetRank();
-  _nbProc = PE::GetPE().GetProcessorCount();
-  cf_assert(_nbProc > 0);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -86,6 +81,13 @@ void ParCFmeshFileWriter::writeToFile(const boost::filesystem::path& filepath)
   
   // reset to 0 the new file flag
   _isNewFile = 0;
+  
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  
+  _comm   = PE::GetPE().GetCommunicator(nsp);
+  _myRank = PE::GetPE().GetRank(nsp);
+  _nbProc = PE::GetPE().GetProcessorCount(nsp);
+  cf_assert(_nbProc > 0);
   
   // AL: the processor with less elements is chosen as the master IO node
   // this can avoid memory "explosion" on master node in cases for which 

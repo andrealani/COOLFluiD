@@ -126,15 +126,16 @@ void SuperInletInterpImpl::setup()
 
   m_variables.resize(PhysicalModelStack::getActive()->getDim());
 
-  std::cout << "Ready to fill table";
+  const std::string nsp = getMethodData().getNamespace();
+  
   if (m_infile != "") {
     if (Common::PE::GetPE().IsParallel()) {
-      Common::PE::GetPE().setBarrier();
-      for (CFuint p = 0; p < Common::PE::GetPE().GetProcessorCount(); ++p) {
-		if (p == Common::PE::GetPE().GetRank ()) {
-		  fillTable();
-		}
-		Common::PE::GetPE().setBarrier();
+      Common::PE::GetPE().setBarrier(nsp);
+      for (CFuint p = 0; p < Common::PE::GetPE().GetProcessorCount(nsp); ++p) {
+	if (p == Common::PE::GetPE().GetRank(nsp)) {
+	  fillTable();
+	}
+	Common::PE::GetPE().setBarrier(nsp);
       }
     }
     else {
@@ -142,10 +143,8 @@ void SuperInletInterpImpl::setup()
     }
   }
   else {
-    std::cout << "WARNING: SuperInletInterp::setup() => filename not specified!" << std::endl;
+    CFLog(WARN, "WARNING: SuperInletInterp::setup() => filename not specified!\n");
   }
-  std::cout << "table filled!\n";
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -304,8 +303,9 @@ void SuperInletInterpImpl::executeOnTrs()
 void SuperInletInterpImpl::fillTable()
 {
   boost::filesystem::path filepath = Environment::DirPaths::getInstance().getWorkingDir() / m_infile;
-
-  Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
+  
+  Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle = 
+    Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
   std::ifstream& fin = fhandle->open(filepath);
   
   std::string variables;
@@ -341,10 +341,7 @@ void SuperInletInterpImpl::fillTable()
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
-
+      
     } // namespace FluctSplit
-
-
-
+  
 } // namespace COOLFluiD

@@ -148,7 +148,9 @@ void WriteSolutionHO::writeToFileStream(std::ofstream& fout)
 
   std::vector<SafePtr<TopologicalRegionSet> > trsList =
     MeshDataStack::getActive()->getTrsList();
-
+  
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace(); 
+  
   for(CFuint iTrs= 0; iTrs < trsList.size(); ++iTrs)
   {
     SafePtr<TopologicalRegionSet> trs = trsList[iTrs];
@@ -228,13 +230,13 @@ void WriteSolutionHO::writeToFileStream(std::ofstream& fout)
           // one zone per element type per cpu
           // therefore the title is dependent on those parameters
           fout << "ZONE "
-               << "  T=\"P" << PE::GetPE().GetRank()<< " ZONE" << iType << " " << eType.getShape() <<"\""
+               << "  T=\"P" << PE::GetPE().GetRank(nsp)<< " ZONE" << iType << " " << eType.getShape() <<"\""
                << ", N=" << all_states_in_type.size()
                << ", E=" << nbCellsInType * m_mapgeoent.computeNbSubEntities(geoinfo)
                << ", DATAPACKING=POINT"
                << ", ZONETYPE=" << m_mapgeoent.identifyGeoEnt(geoinfo);
           if (getMethodData().getAppendAuxData())
-            fout << ", AUXDATA CPU=\"" << PE::GetPE().GetRank() << "\""
+            fout << ", AUXDATA CPU=\"" << PE::GetPE().GetRank(nsp) << "\""
                  << ", AUXDATA TRS=\"" << trs->getName() << "\""
                  << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
                  << ", AUXDATA ElementType=\"" << eType.getShape() << "\""

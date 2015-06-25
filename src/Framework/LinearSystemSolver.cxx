@@ -8,6 +8,7 @@
 #include "Framework/PhysicalModel.hh"
 #include "Framework/NamespaceSwitcher.hh"
 #include "Framework/LSSData.hh"
+#include "Framework/SubSystemStatus.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -95,9 +96,10 @@ void LinearSystemSolver::configure ( Config::ConfigArgs& args )
   Method::configure(args);
 
   std::string name = getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  
   const CFuint totalNbEqs = physModel->getNbEq();
   m_nbSysEquations = totalNbEqs;
   m_maskArray.resize(totalNbEqs);

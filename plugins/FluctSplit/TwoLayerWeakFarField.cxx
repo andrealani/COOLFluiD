@@ -122,9 +122,10 @@ void TwoLayerWeakFarField::configure ( Config::ConfigArgs& args )
   TwoLayerWeakBC2D::configure(args);
 
   std::string name = getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  
   _updateVarStr = getMethodData().getUpdateVarStr();
 
   // create the transformer from input to update variables

@@ -4,11 +4,10 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-
-
 #include "SpaceMethodData.hh"
 #include "Framework/ConvergenceMethod.hh"
 #include "Framework/NamespaceSwitcher.hh"
+#include "Framework/SubSystemStatus.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -82,7 +81,8 @@ void SpaceMethodData::configure ( Config::ConfigArgs& args )
   CFLog(VERBOSE, "SpaceMethodData::configure() => after MethodData::configure()\n");
   
   std::string name = getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
   
   CFLog(VERBOSE, "SpaceMethodData::configure() => Configuring Update VarSet\n");

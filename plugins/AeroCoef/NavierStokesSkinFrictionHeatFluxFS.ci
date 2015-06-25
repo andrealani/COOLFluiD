@@ -428,8 +428,9 @@ void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::writeSurfaceFiles()
   using namespace COOLFluiD::Common;
   
   const string fileTRS = _outputFile + "-" + getCurrentTRS()->getName();
+  const std::string nsp = this->getMethodData().getNamespace();
   
-  if (PE::GetPE().GetRank() == 0) {  
+  if (PE::GetPE().GetRank(nsp) == 0) {  
     cout << "NavierStokesSkinFrictionHeatFluxFS::writeSurfaceFiles() for " << getCurrentTRS()->getName() << "\n";
     // preparation of the output
     boost::filesystem::path file = Environment::DirPaths::getInstance().getResultsDir() /
@@ -440,14 +441,14 @@ void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::writeSurfaceFiles()
       Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
     ofstream& fout = fhandle->open(file);
     fout << "TITLE = HeatFlux SkinFriction" << "\n";
-//     fout << "VARIABLES = x y z P T rho Cp heatF skinF Stanton" << "\n";
+    //     fout << "VARIABLES = x y z P T rho Cp heatF skinF Stanton" << "\n";
     fout << "VARIABLES = x0 x1 x2 P T rho Cp heatF skinF Stanton" << "\n";
     
     //closing the file
     fhandle->close();
   }
   
-  PE::GetPE().setBarrier();
+  PE::GetPE().setBarrier(nsp);
   
   SafePtr<GeometricEntityPool<StdTrsGeoBuilder> >
     faceBuilder = getMethodData().getStdTrsGeoBuilder();
@@ -458,8 +459,8 @@ void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::writeSurfaceFiles()
   const CFuint nbTrsFaces = getCurrentTRS()->getLocalNbGeoEnts();
   
   // all processors will write their own data one after the other 
-  for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
-    if (i == PE::GetPE().GetRank ()) {
+  for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(nsp); ++i) {
+    if (i == PE::GetPE().GetRank (nsp)) {
       if (nbTrsFaces > 0) {
 	// preparation of the output
 	boost::filesystem::path file = Environment::DirPaths::getInstance().getResultsDir() /
@@ -488,7 +489,7 @@ void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::writeSurfaceFiles()
       }
     }
     
-    PE::GetPE().setBarrier();
+    PE::GetPE().setBarrier(nsp);
   }  
 }
       
@@ -523,11 +524,12 @@ void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::computeSurfaceResiduals()
   cf_assert(_valuesMatL2.size() > 0);
   
   bool writeFile = false;
+  const std::string nsp = this->getMethodData().getNamespace();
   if (currTrs->getName() == getTrsList().back()->getName()) {
 #ifdef CF_HAVE_MPI
     _l2Norm = 0.0;
     const CFuint count = _l2Norm.size() - 3;
-    MPI_Comm comm = PE::GetPE().GetCommunicator();
+    MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
     MPI_Allreduce(&_valuesMatL2[3], &_l2Norm[3], count, MPI_DOUBLE, MPI_SUM, comm);
     _valuesMatL2 = _l2Norm;
 #endif
@@ -537,7 +539,7 @@ void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::computeSurfaceResiduals()
     writeFile = true;
   }
   
-  if (PE::GetPE().GetRank() == 0 && writeFile) {  
+  if (PE::GetPE().GetRank(nsp) == 0 && writeFile) {  
     // // preparation of the output
     boost::filesystem::path file = Environment::DirPaths::getInstance().getResultsDir() /
       boost::filesystem::path(_outputFileConv);
@@ -571,7 +573,7 @@ void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::computeSurfaceResiduals()
     fhandle->close();
   } 
   
-  PE::GetPE().setBarrier();
+  PE::GetPE().setBarrier(nsp);
 }
   
 //////////////////////////////////////////////////////////////////////////////
@@ -759,7 +761,8 @@ void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::prepareOutputFileAero()
   CFAUTOTRACE;
   
   //Writing the title
-  if (PE::GetPE().GetRank() == 0) {  
+  const std::string nsp = this->getMethodData().getNamespace();
+  if (PE::GetPE().GetRank(nsp) == 0) {  
     // preparation of the output
     boost::filesystem::path file = DirPaths::getInstance().getResultsDir() /
       boost::filesystem::path(_outputFileAero);
@@ -777,7 +780,7 @@ void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::prepareOutputFileAero()
     fhandle->close();
   }
   
-  PE::GetPE().setBarrier();
+  PE::GetPE().setBarrier(nsp);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -794,7 +797,8 @@ void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::updateOutputFileAero()
   CFAUTOTRACE;
   
   //Writing the title
-  if (PE::GetPE().GetRank() == 0) {  
+  const std::string nsp = this->getMethodData().getNamespace();
+  if (PE::GetPE().GetRank(nsp) == 0) {  
     // preparation of the output
     boost::filesystem::path file = DirPaths::getInstance().getResultsDir() / boost::filesystem::path(_outputFileAero);
     SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
@@ -821,7 +825,7 @@ void NavierStokesSkinFrictionHeatFluxFS<UPDATEVAR>::updateOutputFileAero()
     fhandle->close();
   }
   
-  PE::GetPE().setBarrier();
+  PE::GetPE().setBarrier(nsp);
 }
 
 

@@ -179,7 +179,8 @@ void WriteSolutionBlockDG::writeToFileStream(std::ofstream& fout)
 // // }
 //   }
 
-
+  const std::string nsp = getMethodData().getNamespace();
+  
   for(CFuint iTrs= 0; iTrs < trsList.size(); ++iTrs)
   {
     SafePtr<TopologicalRegionSet> trs = trsList[iTrs];
@@ -262,18 +263,18 @@ void WriteSolutionBlockDG::writeToFileStream(std::ofstream& fout)
           // one zone per element type per cpu
           // therefore the title is dependent on those parameters
           fout << "ZONE "
-               << "  T=\"P" << PE::GetPE().GetRank()<< " ZONE" << iType << " " << eType.getShape() <<"\""
+               << "  T=\"P" << PE::GetPE().GetRank(nsp)<< " ZONE" << iType << " " << eType.getShape() <<"\""
                << ", N=" << all_nodes_in_type.size()
                << ", E=" << nbsubcells
-//                << ", DATAPACKING=BLOCK"
-//                << ", ZONETYPE=" << m_mapgeoent.identifyGeoEnt(geoinfo)
+	    //                << ", DATAPACKING=BLOCK"
+	    //                << ", ZONETYPE=" << m_mapgeoent.identifyGeoEnt(geoinfo)
                << ", F=FEPOINT"
                << ", ET=" << MapGeoEnt::identifyGeoEntTecplot
                              (eType.getNbNodes(),
                               eType.getGeoOrder(),
                               PhysicalModelStack::getActive()->getDim());
                if (getMethodData().getAppendAuxData())
-                 fout << ", AUXDATA CPU=\"" << PE::GetPE().GetRank() << "\""
+                 fout << ", AUXDATA CPU=\"" << PE::GetPE().GetRank(nsp) << "\""
                       << ", AUXDATA TRS=\"" << trs->getName() << "\""
                       << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
                       << ", AUXDATA ElementType=\"" << eType.getShape() << "\""

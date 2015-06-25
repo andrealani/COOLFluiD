@@ -4,20 +4,18 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_Common_MPI_DataHandleMPI_hh
-#define COOLFluiD_Common_MPI_DataHandleMPI_hh
+#ifndef COOLFluiD_Framework_DataHandleMPI_hh
+#define COOLFluiD_Framework_DataHandleMPI_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Common/PE.hh"
 #include "Common/ParallelException.hh"
-
 #include "Common/Stopwatch.hh"
 
 #include "Framework/GlobalCommTypes.hh"
 #include "Framework/GlobalTypeTrait.hh"
 #include "Framework/DataHandle.hh"
-#include "Framework/DataHandleInternal.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -92,26 +90,22 @@ public:
   /// Add a ghost point
   CFuint addGhostPoint (CFuint GlobalIndex)
   {
-    if (!Common::PE::GetPE().IsParallel())
-        throw Common::ParallelException (FromHere(),"using addGhostPoint in "
-      "a non-parallel run (in a parallel build)!");
-
-    CFLogDebugMax( "Adding ghost for global " << GlobalIndex << "\n");
+    if (!Common::PE::GetPE().IsParallel()) {
+      throw Common::ParallelException
+	(FromHere(),"DataHandle<MPI>:addGhostPoint() => using addGhostPoint in serial run\n");
+    }
+    CFLogDebugMax("DataHandle<MPI>::addGhostPoint() for global ID = " << GlobalIndex << "\n");
     return _globalPtr->AddGhostPoint (GlobalIndex);
   }
-
-  /// Returns the list of ghost nodes (by processor rank) to be sent to
-  /// another processor
-  const std::vector< std::vector< CFuint > >&
-  getGhostSendList() const
+  
+  /// Returns the list of ghost nodes (by rank) to be sent to another processor
+  const std::vector<std::vector<CFuint> >& getGhostSendList() const
   {
     return _globalPtr->GetGhostSendList();
   }
   
-  /// Returns the list of ghost nodes (by processor rank) to be received
-  /// from another processor
-  const std::vector< std::vector< CFuint > >&
-  getGhostReceiveList() const
+  /// Returns the list of ghost nodes (by rank) to be received from another processor
+  const std::vector<std::vector<CFuint > >& getGhostReceiveList() const
   {
     return _globalPtr->GetGhostReceiveList();
   }
@@ -144,7 +138,7 @@ public:
     timer.start ();
     _globalPtr->BuildGhostMap ();
     timer.stop();
-    CFLog(VERBOSE, "DataHandle<MPI>: BuildGhostMap " << timer.read() << "s\n");
+    CFLog(VERBOSE, "DataHandle<MPI>::buildMap() " << timer.read() << "s\n");
   }
 
   /// This function returns the global (cross-processes) size of
@@ -175,23 +169,28 @@ public:
     cf_assert(_globalPtr != NULL);
     _globalPtr->EndSync ();
   }
-
-  void reserve (CFuint Size, CFuint elementSize)
+  
+  /// allocate memory dynamically before insertion 
+  void reserve (const CFuint Size, 
+		const CFuint elementSize, 
+		const std::string& nspaceName)
   {
-    CFLogDebugMin( "DataHandle: reserve called (" << Size << ")");
-    _globalPtr->reserve (Size, elementSize);
+    CFLogDebugMin( "DataHandle<MPI>::reserve() with size=" << Size << "\n");
+    _globalPtr->reserve (Size, elementSize, nspaceName);
   }
 
+  /// dump the contents of this array
   void DumpContents ()
   {
     _globalPtr->DumpContents ();
   }
-
+  
+  /// dump useful info about the global arrays
   void DumpInfo ()
   {
-    CFLog(NOTICE, "DataHandle info dump for " << _globalPtr << "\n");
-    CFLog(NOTICE, "  * LocalSize = " << _globalPtr->GetLocalSize () << "\n");
-    CFLog(NOTICE, "  * GhostSize = " << _globalPtr->GetGhostSize () << "\n");
+    CFLog(VERBOSE, "DataHandle<MPI>::DumpInfo() => ptr = " << _globalPtr << "\n");
+    CFLog(VERBOSE, "DataHandle<MPI>::DumpInfo() => localSize = " << _globalPtr->GetLocalSize () << "\n");
+    CFLog(VERBOSE, "DataHandle<MPI>::DumpInfo() => ghostSize = " << _globalPtr->GetGhostSize () << "\n");
     // _globalPtr->DumpInternalData ();
   }
   
@@ -211,4 +210,4 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Common_MPI_DataHandleMPI_hh
+#endif // COOLFluiD_Framework_DataHandleMPI_hh

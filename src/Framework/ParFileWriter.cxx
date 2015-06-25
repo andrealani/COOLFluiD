@@ -5,6 +5,7 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 #include "Framework/ParFileWriter.hh"
+#include "Framework/MeshData.hh"
 #include "Common/PE.hh"
 #include "Common/CFPrintContainer.hh"
 #include "Environment/CFEnvVars.hh"
@@ -39,11 +40,6 @@ ParFileWriter::ParFileWriter() :
   _fileList(),
   _mapFileToStartNodeList()
 {
-  _comm   = PE::GetPE().GetCommunicator();
-  _myRank = PE::GetPE().GetRank();
-  _nbProc = PE::GetPE().GetProcessorCount();
-  cf_assert(_nbProc > 0);
-  
   _nbWriters = 1;
   _maxBuffSize = 2147479200;
 }
@@ -59,7 +55,19 @@ ParFileWriter::~ParFileWriter()
 void ParFileWriter::setWriterGroup()
 {
   CFAUTOTRACE;
+ 
+  CFLog(VERBOSE, "ParFileWriter::setWriterGroup() => start\n");
+
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
   
+  // AL: should I put "Default" here??
+  _comm   = PE::GetPE().GetCommunicator(nsp);
+  _myRank = PE::GetPE().GetRank(nsp);
+  _nbProc = PE::GetPE().GetProcessorCount(nsp);
+  cf_assert(_nbProc > 0);
+  
+  CFLog(VERBOSE, "1 ParFileWriter::setWriterGroup() => start\n");
+
   // the number of writers can be either customized by each derived 
   // algorithm or uniquely defined fixed for all algorithms 
   // by setting CFEnv.NbWriters
@@ -67,6 +75,8 @@ void ParFileWriter::setWriterGroup()
     _nbWriters =  CFEnv::getInstance().getVars()->NbWriters;
   }
   
+  CFLog(VERBOSE, "2 ParFileWriter::setWriterGroup() => start\n");
+
   if (_nbWriters > _nbProc) {
     CFLog(WARN, "ParFileWriter::setWriterGroup() => _nbWriters > _nbProc, therefore they are set equal!\n");
     _nbWriters = _nbProc;
@@ -92,7 +102,6 @@ void ParFileWriter::setWriterGroup()
 	first = false;
       }
     }
-    // PE::createGroup(ranks, true);
     
     // the first rank in each group will be the master process
     writerRanks[i] = ranks[0];
@@ -102,7 +111,8 @@ void ParFileWriter::setWriterGroup()
   }
   
   // create the writers group
-  PE::createGroup("Writers",writerRanks, false);
+  const string writerName = nsp + "_Writers";
+  PE::GetPE().createGroup(writerName, writerRanks, false);
   
   CFLog(VERBOSE, "ParFileWriter::setWriterGroup() => " << 
 	CFPrintContainer<vector<int> >(" writerRanks  = ",  &writerRanks) << "\n");  
@@ -115,6 +125,8 @@ void ParFileWriter::setWriterGroup()
   
   // create an info object
   // MPI_Info_create(&_info);
+  
+  CFLog(VERBOSE, "ParFileWriter::setWriterGroup() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

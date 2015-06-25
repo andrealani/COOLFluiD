@@ -134,9 +134,10 @@ void UpdateMesh::moveMeshNodes()
   cf_assert(nodes.size() == otherNodes.size());
 
   std::string name = getMethodData().getOtherNamespace();
-  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> otherPhysModel = PhysicalModelStack::getInstance().getEntryByNamespace(otherNsp);
-
+  
   cf_assert(otherPhysModel->getDim() == PhysicalModelStack::getActive()->getNbEq());
 
   for(CFuint iNode = 0; iNode < otherNodes.size(); ++iNode)

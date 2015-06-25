@@ -14,6 +14,7 @@
 #include "Framework/TrsGeoWithNodesBuilder.hh"
 #include "Framework/PhysicalModel.hh"
 #include "Framework/ElementDataArray.hh"
+#include "Framework/SubSystemStatus.hh"
 #include "Common/PE.hh"
 #include "Common/CFMultiMap.hh"
 
@@ -114,7 +115,8 @@ void BaseSetupFVMCC<BASE>::configure ( Config::ConfigArgs& args )
   // Loop over the TRS's and add the "TRSName" + "-boundaryNormals" datasocketsink 
   // to the m_dynamicSockets
   const std::string name = this->getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<MeshData> meshData = MeshDataStack::getInstance().getEntryByNamespace(nsp);
   
   vector<std::string> trsList = meshData->getTRSNameList();
@@ -504,9 +506,12 @@ void BaseSetupFVMCC<BASE>::assignPartitionFaceGlobalGhostStateIDS()
   
   // compute the maximum sizes for the number of partition cells and their description data
   vector<CFuint> maxNbPartitionCellsAndSize(2, 0);
-  const CFuint nbPr = PE::GetPE().GetProcessorCount();
-  MPI_Comm comm = PE::GetPE().GetCommunicator();
-  const CFuint rank = PE::GetPE().GetRank();
+  
+  const std::string nsp = this->getMethodData().getNamespace();
+  
+  const CFuint nbPr = PE::GetPE().GetProcessorCount(nsp);
+  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+  const CFuint rank = PE::GetPE().GetRank(nsp);
   MPI_Allreduce(&nbPartitionCellsAndSize[0], &maxNbPartitionCellsAndSize[0], 2, 
 		MPIStructDef::getMPIType(&nbPartitionCellsAndSize[0]), MPI_MAX, comm);
   assert(maxNbPartitionCellsAndSize[0] > 0);

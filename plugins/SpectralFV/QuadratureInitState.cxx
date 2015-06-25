@@ -115,7 +115,8 @@ void QuadratureInitState::configure ( Config::ConfigArgs& args )
   // get the physical model that we are dealing with
   // to pass it to the variable transformer
   std::string namespc = getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(namespc);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(namespc);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
 
   // get the name of the update variable set

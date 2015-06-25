@@ -219,7 +219,11 @@ protected: // helper functions
 
   /// Sets the Parent Namespace in the Methods Sockets
   void setParentNamespaceInMethodSockets();
-
+  
+  /// fill in the array holding group ranks 
+  void fillGroupRanks(const std::string rankString, 
+		      std::vector<int>& granks);
+  
   /// Set the Method's collaborators.
   virtual void setCollaborators() = 0;
 
@@ -232,7 +236,11 @@ private: // member data
 
   /// names of the namespaces of this SubSystem
   std::vector<std::string> m_namespaces;
-
+  
+  /// ranks associated to each namespace in the form
+  /// START0:END0 START1:END1 etc.
+  std::vector<std::string> m_ranks;
+  
   /// indicates to create null methods
   bool m_has_null_methods;
 

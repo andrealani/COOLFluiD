@@ -55,7 +55,7 @@
 
 #cmakedefine CF_HAVE_CXX_EXPLICIT_TEMPLATES
 
-#cmakedefine CF_HAVE_MPI            // MPI support
+// #cmakedefine CF_HAVE_MPI            // MPI support
 #cmakedefine CF_HAVE_FUNCTION_DEF   // check existence of __FUNCTION__ definition by compiler
 #cmakedefine CF_HAVE_ALLOC_MMAP     // supports mmap
 #cmakedefine CF_HAVE_VSNPRINTF      // supports vsnprintf function

@@ -89,14 +89,15 @@ void UnsteadyWeakSubOutletEuler2DConsImpl::configure ( Config::ConfigArgs& args 
     throw; // retrow the exception to signal the error to the user
   }
 
-  std::string name = getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  const std::string name = getMethodData().getNamespace();
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
-  std::string varSetName = "Euler2DCons";
+  
+  const std::string varSetName = "Euler2DCons";
   m_varSet.reset((Environment::Factory<ConvectiveVarSet>::getInstance().getProvider(varSetName)->
-    create(physModel->getImplementor()->getConvectiveTerm())).d_castTo<Physics::NavierStokes::Euler2DCons>());
-
+		  create(physModel->getImplementor()->getConvectiveTerm())).d_castTo<Physics::NavierStokes::Euler2DCons>());
+  
   cf_assert(m_varSet.isNotNull());
 
 }

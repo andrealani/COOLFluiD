@@ -16,6 +16,8 @@
 #endif // CF_HAVE_VALGRIND
 
 #include "Common/EventHandler.hh"
+#include "Common/PE.hh"
+#include "Common/CFPrintContainer.hh"
 #include "Framework/SubSystem.hh"
 #include "Framework/Method.hh"
 #include "Framework/NumericalCommand.hh"
@@ -31,7 +33,6 @@
 
 using namespace std;
 using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Common;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -43,13 +44,15 @@ namespace COOLFluiD {
 
 void SubSystem::defineConfigOptions(Config::OptionList& options)
 {
-   options.addConfigOption< bool >("CreateNullMethods","Methods that where not configured are created Null.");
-   options.addConfigOption< std::vector<std::string> >("Namespaces","Namespaces to be created in this SubSystem.");
+  options.addConfigOption< bool >("CreateNullMethods","Methods that where not configured are created Null.");
+  options.addConfigOption< std::vector<string> >("Namespaces","Namespaces to be created in this SubSystem.");
+  options.addConfigOption< std::vector<string> >
+  ("Ranks","MPI ranks for each namespace (starting from 0) in the form START0:END0 START1:END1 etc.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-SubSystem::SubSystem(const std::string& name)
+SubSystem::SubSystem(const string& name)
   : ConfigObject(name),
     m_namespaces(),
     m_has_null_methods(true),
@@ -59,7 +62,8 @@ SubSystem::SubSystem(const std::string& name)
 
   setParameter("CreateNullMethods",&m_has_null_methods);
   setParameter("Namespaces",&m_namespaces);
-
+  setParameter("Ranks",&m_ranks);
+  
   m_int_param_reader = new InteractiveParamReader("InteractiveParamReader");
 }
 
@@ -79,7 +83,8 @@ SubSystem::~SubSystem()
   SubSystemStatusStack::getInstance().deleteAllEntries();
 
   // delete all the namespaces
-  NamespaceSwitcher::getInstance().deleteAllNamespaces();
+  NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).deleteAllNamespaces();
 
   deletePtr( m_int_param_reader );
 }
@@ -91,21 +96,58 @@ void SubSystem::configureNamespaces(Config::ConfigArgs& args)
   CFAUTOTRACE;
 
   // configure just one namespace if none has been explicitly defined
-  if (m_namespaces.empty())
+  if (m_namespaces.empty())  
   {
-    std::string name = "Default";
+    const string name = "Default";
     m_namespaces.push_back(name);
-    Common::SafePtr<Namespace> ptr = NamespaceSwitcher::getInstance().createUniqueNamespace(name);
+    Common::SafePtr<Namespace> ptr = NamespaceSwitcher::getInstance
+      (SubSystemStatusStack::getCurrentName()).createUniqueNamespace(name);
     configureNested(*ptr,args);
+  
+    // -----------------------------------------------------------//
+    // AL: in order to enable multiple groups, each subsystem     //
+    //     must define namespaces with unique names and different //
+    //     from "Default" explicitly in the CFcase file           //
+    // -----------------------------------------------------------//
+    
+    // The following can be enabled only if <subsystem name + namespace> 
+    // is used as key for PE::GetPE() functions instead of namespace 
+    // (e.g. "SubSyA.Default") 
+    
+    // PE::createGroup(name, granks, true);
   }
   // or configure the whole list that was defined
   else
   {
-    std::vector<std::string>::iterator itr = m_namespaces.begin();
-    for(; itr != m_namespaces.end(); ++itr)
+    CFuint counter = 0; 
+    std::vector<string>::iterator itr = m_namespaces.begin();
+    for(; itr != m_namespaces.end(); ++itr, ++counter)
     {
-      Common::SafePtr<Namespace> ptr = NamespaceSwitcher::getInstance().createUniqueNamespace(*itr);
+      Common::SafePtr<Namespace> ptr = NamespaceSwitcher::getInstance
+	(SubSystemStatusStack::getCurrentName()).createUniqueNamespace(*itr);
       configureNested(*ptr,args);
+      
+      if (m_ranks.size() > 0 && (*itr != "Default")) {
+	cf_assert(m_ranks.size() == m_namespaces.size());
+	
+	// -----------------------------------------------------------//
+	// AL: in order to enable multiple groups, each subsystem     //
+	//     must define namespaces with unique names and different //
+	//     from "Default" explicitly in the CFcase file           //
+	// -----------------------------------------------------------//
+	
+	// The following can be enabled only if <subsystem name + namespace> 
+	// is used as key for PE::GetPE() functions instead of namespace 
+	// (e.g. "SubSyA.Default") 
+	
+	// create corresponding MPI group
+	vector<int> granks;
+	fillGroupRanks(m_ranks[counter], granks);
+	PE::GetPE().createGroup(*itr, granks, true);
+	
+        const string msg = "Ranks for group [" +  *itr + "] = ";
+	CFLog(VERBOSE, CFPrintContainer<vector<int> >(msg, &granks));
+      }
     }
   }
 }
@@ -117,7 +159,8 @@ void SubSystem::configureSingletons( Config::ConfigArgs& args )
   CFAUTOTRACE;
 
   typedef std::vector<Common::SafePtr<Namespace> > NspVec;
-  NspVec lst = NamespaceSwitcher::getInstance().getAllNamespaces();
+  NspVec lst = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getAllNamespaces();
 
   cf_assert(!lst.empty());
 
@@ -135,7 +178,8 @@ void SubSystem::configureSingletons( Config::ConfigArgs& args )
 
   // Push the Default namespace into the stack
   setEnableNamespaces(true);
-  NamespaceSwitcher::getInstance().pushNamespace((*lst.begin())->getName());
+  NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).pushNamespace((*lst.begin())->getName());
   setEnableNamespaces(false);
 }
 
@@ -143,12 +187,11 @@ void SubSystem::configureSingletons( Config::ConfigArgs& args )
 
 void SubSystem::setEnableNamespaces(const bool enable)
 {
-
-  NamespaceSwitcher::getInstance().setEnabled(enable);
+  NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).setEnabled(enable);
   MeshDataStack::getInstance().setEnabled(enable);
   PhysicalModelStack::getInstance().setEnabled(enable);
   SubSystemStatusStack::getInstance().setEnabled(enable);
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -159,10 +202,10 @@ void SubSystem::configureNamespaceSingletons(Config::ConfigArgs& args, Common::S
 
   cf_assert(nsp.isNotNull());
 
-  const std::string meshDataName      = nsp->getMeshDataName();
-  const std::string physicalModelName = nsp->getPhysicalModelName();
-  const std::string physicalModelType = nsp->getPhysicalModelType();
-  const std::string sysStatusName     = nsp->getSubSystemStatusName();
+  const string meshDataName      = nsp->getMeshDataName();
+  const string physicalModelName = nsp->getPhysicalModelName();
+  const string physicalModelType = nsp->getPhysicalModelType();
+  const string sysStatusName     = nsp->getSubSystemStatusName();
 
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   CFLog(NOTICE,"Setting Namespace : " << nsp->getName() << "\n");
@@ -339,7 +382,7 @@ void SubSystem::registActionListeners()
   
   Common::SafePtr<EventHandler> event_handler = Environment::CFEnv::getInstance().getEventHandler();
   
-  const std::string ssname = SubSystemStatusStack::getCurrentName();   
+  const string ssname = SubSystemStatusStack::getCurrentName();   
   event_handler->addListener(event_handler->key(ssname, "CF_ON_MAESTRO_PLUGSOCKETS"),
 			     this,&SubSystem::allocateAllSocketsAction);
   event_handler->addListener(event_handler->key(ssname, "CF_ON_MAESTRO_BUILDMESHDATA"), 
@@ -454,6 +497,23 @@ void SubSystem::setParentNamespaceInMethodSockets()
            mem_fun(&Method::setSocketNamespaces));
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+void SubSystem::fillGroupRanks(const string rankString, vector<int>& granks)
+{
+  // ranks are in the form START:END
+  vector<string> ranks = StringOps::getWords(rankString, ':');
+  cf_assert(ranks.size() == 2);
+  const CFuint start = StringOps::from_str<CFuint>(ranks[0]);
+  const CFuint end   = StringOps::from_str<CFuint>(ranks[1]);
+  const CFuint gsize = end-start+1; 
+  
+  granks.resize(gsize);
+  for (CFuint r = 0; r < gsize; ++r) {
+    granks[r] = start+r;
+  }
+}
+    
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace Framework

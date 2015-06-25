@@ -71,7 +71,8 @@ void ImposedMovementPrepare::configure ( Config::ConfigArgs& args )
   BasePrepare::configure(args);
 
   std::string name = getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
 
   const CFuint nbDim = physModel->getDim();

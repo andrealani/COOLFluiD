@@ -241,9 +241,10 @@ void MeshFittingAlgorithm<MODEL>::computeSpringTruncationData()
   accumulator_t maxQuantileAcc(quantile_probability = m_maxPercentile);
   accumulator_set<double, stats<tag::mean> > meanAcc;
 
-  const int nbProcesses = Common::PE::GetPE().GetProcessorCount();
-  const int processRank = Common::PE::GetPE().GetRank();
-  MPI_Comm communicator = Common::PE::GetPE().GetCommunicator(); 
+  const std::string nsp = this->getMethodData().getNamespace();
+  const int nbProcesses = Common::PE::GetPE().GetProcessorCount(nsp);
+  const int processRank = Common::PE::GetPE().GetRank(nsp);
+  MPI_Comm communicator = Common::PE::GetPE().GetCommunicator(nsp); 
   
   //Limit the size of the receiving buffer on processor 0
   const CFuint sizeSendBuffer = std::ceil(1000./static_cast<CFreal>(nbProcesses)) + 1;

@@ -9,6 +9,8 @@
 #include "Framework/GeometricEntityRegister.hh"
 #include "Framework/BaseGeometricEntityProvider.hh"
 #include "Framework/NamespaceSwitcher.hh"
+#include "Framework/SubSystemStatus.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
@@ -47,8 +49,9 @@ void StdTrsGeoBuilder::setupInNamespace(const std::string& namespaceName)
 {
   cf_assert ( !_isSetup );
   
-
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(namespaceName);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(namespaceName);
+  
   _states = MeshDataStack::getInstance().getEntryByNamespace(nsp)->
     getStateDataSocketSink().getDataHandle();
   

@@ -82,10 +82,13 @@ PeriodicBC3DMPIeqY::needsSockets()
 void PeriodicBC3DMPIeqY::setup()
 {
   FluctuationSplitCom::setup();
-  CFuint nP = PE::GetPE().GetProcessorCount();
-  CFuint myP = PE::GetPE().GetRank();
-
-  _comm = PE::GetPE().GetCommunicator();
+  
+  const std::string nsp = getMethodData().getNamespace();
+  
+  CFuint nP = PE::GetPE().GetProcessorCount(nsp);
+  CFuint myP = PE::GetPE().GetRank(nsp);
+  
+  _comm = PE::GetPE().GetCommunicator(nsp);
   _my_nP = myP;
   _n_P = nP;
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();

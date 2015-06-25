@@ -9,15 +9,11 @@
 #include "Common/OldLookupTable.hh"
 #include "Framework/PhysicalModel.hh"
 
-using namespace COOLFluiD::Framework;                                                                                                                         
-
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
-
-
-    namespace FluctSplit {
+  namespace FluctSplit {
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -75,6 +71,7 @@ template < typename WEAKBCTYPE >
 void WeakFarFieldInterpImpl<WEAKBCTYPE>::setup()
 {
   using namespace COOLFluiD::Framework;
+  
   WEAKBCTYPE::setup();
 
   m_dimState = new State();
@@ -92,16 +89,17 @@ void WeakFarFieldInterpImpl<WEAKBCTYPE>::setup()
 
   m_gstateCons = new State();
   m_stateCons  = new State();
-
-  std::cout << "Ready to fill table";
+  
+  const std::string nsp = this->getMethodData().getNamespace();
+  
   if (m_infile != "") {
     if (Common::PE::GetPE().IsParallel()) {
-      Common::PE::GetPE().setBarrier();
-      for (CFuint p = 0; p < Common::PE::GetPE().GetProcessorCount(); ++p) {
-	if (p == Common::PE::GetPE().GetRank ()) {
+      Common::PE::GetPE().setBarrier(nsp);
+      for (CFuint p = 0; p < Common::PE::GetPE().GetProcessorCount(nsp); ++p) {
+	if (p == Common::PE::GetPE().GetRank(nsp)) {
 	  fillTable();
 	}
-	Common::PE::GetPE().setBarrier();
+	Common::PE::GetPE().setBarrier(nsp);
       }
     }
     else {
@@ -109,11 +107,8 @@ void WeakFarFieldInterpImpl<WEAKBCTYPE>::setup()
     }
   }
   else {
-    std::cout << "WARNING: SuperInletInterp::setup() => filename not specified!" << std::endl;
+    CFLog(WARN, "WARNING: SuperInletInterp::setup() => filename not specified!\n");
   }
-
-  std::cout << "table filled!\n";
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -133,10 +128,10 @@ void WeakFarFieldInterpImpl<WEAKBCTYPE>::unsetup()
 //////////////////////////////////////////////////////////////////////////////
 
 template < typename WEAKBCTYPE >
-void WeakFarFieldInterpImpl<WEAKBCTYPE>::computeFluxAndJacob(
-										 std::vector<Framework::State*>& states,
-			                             RealVector& flux,
-			                             RealMatrix& fluxJacob)
+void WeakFarFieldInterpImpl<WEAKBCTYPE>::computeFluxAndJacob
+(std::vector<Framework::State*>& states,
+ RealVector& flux,
+ RealMatrix& fluxJacob)
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
@@ -361,23 +356,22 @@ void WeakFarFieldInterpImpl<WEAKBCTYPE>::computeFluxAndJacob(
 template < typename WEAKBCTYPE >
 void WeakFarFieldInterpImpl<WEAKBCTYPE>::configure ( Config::ConfigArgs& args )
 { 
-  std::cout << "configure ( Config::ConfigArgs& args )\n";
   using namespace COOLFluiD::Framework;
+  
   WEAKBCTYPE::configure(args);
-
+  
   m_updateVarStr = WeakFarFieldInterpImpl<WEAKBCTYPE>::getMethodData().getUpdateVarStr();
-  std::cout << "m_updateVarStr = " << m_updateVarStr << "\n";
-
+  
   // create the transformer from input to update variables
   if (m_inputVarStr == "Null") {
     m_inputVarStr = m_updateVarStr;
   }
-
+  
   std::string name = WeakFarFieldInterpImpl<WEAKBCTYPE>::getMethodData().getNamespace();
-
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  
   std::string provider = VarSetTransformer::getProviderName(physModel->getConvectiveName(), m_inputVarStr, m_updateVarStr);
 
   m_inputToUpdateVar = Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider)->create(physModel->getImplementor());
@@ -392,8 +386,7 @@ void WeakFarFieldInterpImpl<WEAKBCTYPE>::configure ( Config::ConfigArgs& args )
   m_updateToSolutionVar = Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider2)->create(physModel->getImplementor());
 
   cf_assert(m_updateToSolutionVar.isNotNull());
-
-
+  
   // m_vFunction.setFunctions(m_functions);
   // m_vFunction.setVariables(m_vars);
   // try
@@ -405,8 +398,6 @@ void WeakFarFieldInterpImpl<WEAKBCTYPE>::configure ( Config::ConfigArgs& args )
   //   CFout << e.what() << "\n";
   //   throw; // retrow the exception to signal the error to the user
   // }
-
-  std::cout << "exit --- configure ( Config::ConfigArgs& args )\n";
 }
 
 
@@ -424,10 +415,11 @@ void WeakFarFieldInterpImpl<WEAKBCTYPE>::fillTable()
   // read the first line with the variables names
   getline(fin, variables);
   CFuint nbPoints = 0;
-  fin >> nbPoints; std::cout << "nbPoints = " << nbPoints << "\n";
+  fin >> nbPoints; 
+  CFLog(VERBOSE, "WeakFarFieldInterpImpl<WEAKBCTYPE>::fillTable() => nbPoints = " << nbPoints << "\n");
   
   // allocate the look up tables
-  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
   m_lookupState.resize(nbEqs);
   for (CFuint i = 0; i < nbEqs; ++i) {
     m_lookupState[i] = new Common::LookUpTable<CFreal, CFreal>(nbPoints);
@@ -453,13 +445,8 @@ void WeakFarFieldInterpImpl<WEAKBCTYPE>::fillTable()
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
-
-
-
+    
 } // namespace FluctSplit
-
-
 
 } // namespace COOLFluiD
 

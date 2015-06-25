@@ -12,7 +12,7 @@
 #include <mpi.h>
 #include <string>
 
-#include "Common/PE.hh"
+#include "Common/Group.hh"
 #include "Common/CFLog.hh"
 #include "Common/StringOps.hh"
 #include "Common/MPI/MPIStructDef.hh"
@@ -69,17 +69,18 @@ public:
   static void writeAll(const std::string& name, MPI_File* fh, 
 		       MPI_Offset offset, T* buf, 
 		       const CFuint bufSize, 
-		       int maxBuffSize) 
+		       int maxBuffSize,
+		       int myRank,
+		       const Group& wgroup) 
   {
     using namespace COOLFluiD::Common; 
     
-    PE::Group& wgroup = PE::getGroup(std::string("Writers"));
+    // there have to be different writers, one per namespace
     const CFuint maxSendSize = maxBuffSize/sizeof(T);
     MPI_Offset maxOffset = offset + bufSize*sizeof(T);
     CFLog(VERBOSE, "maxOffset   = " << maxOffset << "\n");
     CFLog(VERBOSE, "maxSendSize = " << maxSendSize << "\n");
     
-    int myRank = PE::GetPE().GetRank();
     CFuint bufID = 0;
     CFuint bufLeft = bufSize;
     CFuint totBufLeft = bufLeft;
@@ -119,7 +120,8 @@ public:
   
   /// Test a buffer to check if it can be read correctly
   template <typename T>
-  static void testBuff(const std::string& name, MPI_Offset offset, T* buf, const CFuint bufSize) 
+  static void testBuff(const std::string& name, MPI_Offset offset, T* buf, 
+		       const CFuint bufSize, const Group& wgroup) 
   {
     using namespace COOLFluiD::Common; 
     
@@ -127,7 +129,6 @@ public:
     
     // a new file testIO.file is created
     // data are first written then read back and compared with original buffer
-    PE::Group& wgroup = PE::getGroup(std::string("Writers"));
     MPI_File fhh;
     MPI_File* fh = &fhh;
     
@@ -175,7 +176,9 @@ public:
   
   /// Read a buffer using all cores
   template <typename T>
-  static void readAll(const std::string& name, MPI_File* fh, MPI_Offset offset, T* buf, const CFuint bufSize, int maxBuffSize)
+  static void readAll(const std::string& name, MPI_File* fh, MPI_Offset offset, 
+		      T* buf, const CFuint bufSize, int maxBuffSize, 
+		      MPI_Comm comm, int myRank)
   {
     const CFuint maxSendSize = maxBuffSize/sizeof(T);
     MPI_Offset maxOffset = offset + bufSize*sizeof(T);
@@ -184,8 +187,6 @@ public:
     CFuint totBufLeft = bufLeft;
     MPI_Offset bufOff = offset;
     MPI_Status status;
-    MPI_Comm comm = PE::GetPE().GetCommunicator();
-    int myRank = PE::GetPE().GetRank();
     
     do {
       const CFuint nbBuf =  bufLeft/maxSendSize;

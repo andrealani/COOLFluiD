@@ -104,7 +104,7 @@ void SpecialSuperInlet::configure ( Config::ConfigArgs& args )
   const std::string name = getMethodData().getNamespace();
 
   Common::SafePtr<Namespace> nsp =
-    NamespaceSwitcher::getInstance().getNamespace(name);
+    NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName()).getNamespace(name);
 
   Common::SafePtr<PhysicalModel> physModel =
     PhysicalModelStack::getInstance().getEntryByNamespace(nsp);

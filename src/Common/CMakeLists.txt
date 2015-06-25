@@ -25,6 +25,7 @@ FailedAssertionException.hh
 FloatingPointException.hh
 Fortran.hh
 GlobalReduce.hh
+Group.hh
 MemoryAllocator.hh
 MemoryAllocatorNormal.cxx
 MemoryAllocatorNormal.hh
@@ -149,13 +150,6 @@ IF (CF_HAVE_MPI)
     MPI/GlobalReduceMPI.hh
     MPI/MPICommPattern.hh
     MPI/MPIError.hh
-    MPI/MPIDataType.cxx
-    MPI/MPIDataTypeHandler.cxx
-    MPI/MPIDataTypeHandler.hh
-    MPI/MPIDataType.hh
-    MPI/MPIDataTypeRegistrar_Helper.cxx
-    MPI/MPIDataTypeRegistrar_Helper.hh
-    MPI/MPIDataTypeRegistrar.hh
     MPI/MPIException.hh
     MPI/MPIHelper.cxx
     MPI/MPIHelper.hh

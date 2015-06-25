@@ -1,6 +1,4 @@
-#include "Common/CFLog.hh"
-#include "Common/PE.hh"
-
+#include "Common/PEFunctions.hh"
 #include "Framework/GeometricEntity.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/EquationSetData.hh"
@@ -73,24 +71,11 @@ void Quasi1DEuler<EULERVAR>::setup()
     _uID.resize(1);
     _uID[0] = 1;
   }
-
-  // read the files with dAdX
-  if (PE::GetPE().IsParallel()) {
-    PE::GetPE().setBarrier();
-
-    for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
-      if (i == PE::GetPE().GetRank ()) {
-	readInputFile();
-      }
-
-      PE::GetPE().setBarrier();
-    }
-  }
-  else {
-    readInputFile();
-  }
+  
+  const std::string nsp = getMethodData().getNamespace();
+  runSerial<void, Quasi1DEuler<EULERVAR>, &Quasi1DEuler<EULERVAR>::readInputFile>(this, nsp);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 template <class EULERVAR>

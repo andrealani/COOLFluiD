@@ -274,9 +274,17 @@ void MeshData::createElementTypeData(const std::string trsName)
 void MeshData::allocateSockets()
 {
   CFAUTOTRACE;
+  
+  CFLog(VERBOSE, "MeshData::allocateSockets() => start\n");
+  
+  // AL: the namespace could be an input of this function
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  
   // allocate the State's and the Node's
-  socket_states.allocate(this->getDataStorage());
-  socket_nodes.allocate(this->getDataStorage());
+  socket_states.allocate(this->getDataStorage(), nsp);
+  socket_nodes.allocate(this->getDataStorage(), nsp);
+  
+  CFLog(VERBOSE, "MeshData::allocateSockets() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -284,9 +292,14 @@ void MeshData::allocateSockets()
 void MeshData::deallocateSockets()
 {
   CFAUTOTRACE;
+  
+  CFLog(VERBOSE, "MeshData::deallocateSockets() => start\n");
+  
   // deallocate the State's and the Node's
   socket_states.deallocate();
   socket_nodes.deallocate();
+  
+  CFLog(VERBOSE, "MeshData::deallocateSockets() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

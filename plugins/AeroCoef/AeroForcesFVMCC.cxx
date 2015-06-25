@@ -250,10 +250,11 @@ void AeroForcesFVMCC::setup()
   cf_always_assert(m_uInf > 0.);
   cf_always_assert(m_rhoInf > 0.);
   cf_always_assert(m_pInf > 0.);
-
+  
+  const std::string nsp = this->getMethodData().getNamespace();
   if (m_gravityCenter.size() == 0) {
     m_gravityCenter.resize(dim, 0.0);
-    if (PE::GetPE().GetRank() == 0) {
+    if (PE::GetPE().GetRank(nsp) == 0) {
       cout << "#### WATCH OUT: gravity center not specified !!! assuming X=0 #####" << endl;
     }
   }
@@ -314,7 +315,8 @@ void AeroForcesFVMCC::computeWetSurface()
   }
   
   // sum all the contributions on this TRS from all processors
-  MPI_Allreduce(&wSurface, &m_wetSurface, 1, MPI_DOUBLE, MPI_SUM, PE::GetPE().GetCommunicator());     
+  const std::string nsp = this->getMethodData().getNamespace();
+  MPI_Allreduce(&wSurface, &m_wetSurface, 1, MPI_DOUBLE, MPI_SUM, PE::GetPE().GetCommunicator(nsp));     
   
   cf_always_assert(m_wetSurface > 0.0);
 }
@@ -386,10 +388,11 @@ void AeroForcesFVMCC::executeOnTrs()
 {
   CFAUTOTRACE;
   
-  if (PE::GetPE().GetRank() == 0) {
+  const std::string nsp = this->getMethodData().getNamespace();
+  if (PE::GetPE().GetRank(nsp) == 0) {
     CFLog(VERBOSE, "AeroForcesFVMCC::executeOnTrs() START\n");
   }
-	
+  
   //  CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
 
   // compute the value of the angle
@@ -478,7 +481,7 @@ void AeroForcesFVMCC::executeOnTrs()
   reorderOutputFileWall();
   computeSurfaceResiduals(); 
   
-  if (PE::GetPE().GetRank() == 0) {
+  if (PE::GetPE().GetRank(nsp) == 0) {
     CFLog(VERBOSE, "AeroForcesFVMCC::executeOnTrs() END\n");
   }
 }
@@ -639,7 +642,8 @@ void AeroForcesFVMCC::prepareOutputFileAero()
 {
   CFAUTOTRACE;
   
-  if (PE::GetPE().GetRank() == 0 && !m_outputFileAeroPrepared) {
+  const std::string nsp = this->getMethodData().getNamespace();
+  if (PE::GetPE().GetRank(nsp) == 0 && !m_outputFileAeroPrepared) {
     // preparation of the output
     boost::filesystem::path file = Environment::DirPaths::getInstance().getResultsDir() /
       boost::filesystem::path(m_nameOutputFileAero);
@@ -698,10 +702,12 @@ void AeroForcesFVMCC::updateOutputFileAero()
     dragFaeroFxyzMxyz[counter] = m_xyzMoment[i];  
   } 
   
-  // here processes must all get here 
-  MPI_Allreduce(&dragFaeroFxyzMxyz[0], &outputData[0], sizeData, MPI_DOUBLE, MPI_SUM, PE::GetPE().GetCommunicator());    
+  // here processes must all get here
+  const std::string nsp = this->getMethodData().getNamespace();
+  MPI_Allreduce(&dragFaeroFxyzMxyz[0], &outputData[0], sizeData, 
+		MPI_DOUBLE, MPI_SUM, PE::GetPE().GetCommunicator(nsp));    
   
-  if (PE::GetPE().GetRank() == 0) { 
+  if (PE::GetPE().GetRank(nsp) == 0) { 
     // preparation of the output 
     boost::filesystem::path file = Environment::DirPaths::getInstance().getResultsDir() / 
       boost::filesystem::path(m_nameOutputFileAero); 
@@ -750,12 +756,14 @@ void AeroForcesFVMCC::computeSurfaceResiduals()
   
   cf_assert(m_valuesMatL2.size() > 0);
   
+  const std::string nsp = this->getMethodData().getNamespace();
+  
   bool writeFile = false;
   if (currTrs->getName() == getTrsList().back()->getName()) {
 #ifdef CF_HAVE_MPI
     m_l2Norm = 0.0;
     const CFuint count = m_l2Norm.size();
-    MPI_Comm comm = PE::GetPE().GetCommunicator();
+    MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
     MPI_Allreduce(&m_valuesMatL2[0], &m_l2Norm[0], count, MPI_DOUBLE, MPI_SUM, comm);
     m_valuesMatL2 = m_l2Norm;
 #endif
@@ -765,7 +773,7 @@ void AeroForcesFVMCC::computeSurfaceResiduals()
     writeFile = true;
   }
   
-  if (PE::GetPE().GetRank() == 0 && writeFile) {  
+  if (PE::GetPE().GetRank(nsp) == 0 && writeFile) {  
     // // preparation of the output
     boost::filesystem::path file = Environment::DirPaths::getInstance().getResultsDir() /
       boost::filesystem::path(_outputFileConv);
@@ -806,7 +814,7 @@ void AeroForcesFVMCC::computeSurfaceResiduals()
     fhandle->close();
   } 
   
-  PE::GetPE().setBarrier();
+  PE::GetPE().setBarrier(nsp);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -884,7 +892,8 @@ void AeroForcesFVMCC::reorderOutputFileWall()
     vector<vector<CFreal> > m(nbVars);
     
     // read the file
-    if (PE::GetPE().GetRank() == 0) {
+    const std::string nsp = this->getMethodData().getNamespace();
+    if (PE::GetPE().GetRank(nsp) == 0) {
       Common::SelfRegistPtr<Environment::FileHandlerInput> fhandleIn =
 	Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
       ifstream& fin = fhandleIn->open(file);
@@ -914,7 +923,7 @@ void AeroForcesFVMCC::reorderOutputFileWall()
     prepareOutputFileWall();
     
     // write te reordered solution data   
-    if (PE::GetPE().GetRank() == 0) {
+    if (PE::GetPE().GetRank(nsp) == 0) {
       SelfRegistPtr<Environment::FileHandlerOutput> fhandleOut =
 	Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
       

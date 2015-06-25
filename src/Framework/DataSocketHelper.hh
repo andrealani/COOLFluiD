@@ -40,8 +40,10 @@ class CreateDataHandle<TYPE, LOCAL> {
 public:
 
   /// Computational constructor
-  CreateDataHandle(Common::SafePtr<DataStorage>& ds, std::string name,
-    CFuint size, DataHandle<TYPE, LOCAL>& handle)
+  CreateDataHandle(Common::SafePtr<DataStorage>& ds, 
+		   const std::string& name,
+		   const std::string& nspaceName,
+		   const CFuint size, DataHandle<TYPE, LOCAL>& handle)
   {
     handle = ds->createData<TYPE>(name,size);
   }
@@ -59,14 +61,16 @@ template <typename TYPE>
 class CreateDataHandle<TYPE, GLOBAL> {
 public:
   /// Computational constructor
-  CreateDataHandle(Common::SafePtr<DataStorage>& ds, std::string name,
-    CFuint size, DataHandle<TYPE, GLOBAL>& handle)
+  CreateDataHandle(Common::SafePtr<DataStorage>& ds, 
+		   const std::string& name, 
+		   const std::string& nspaceName, 
+		   const CFuint size, DataHandle<TYPE, GLOBAL>& handle)
   {
     typedef typename Framework::GlobalTypeTrait<TYPE>::GTYPE GTYPE;
-    handle = ds->createGlobalData<TYPE>(name, size, GTYPE());
+    handle = ds->createGlobalData<TYPE>(name, nspaceName, size, GTYPE());
   }
 };
-
+  
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -92,7 +96,7 @@ template <typename TYPE>
 class DeleteDataHandle<TYPE, LOCAL> {
 public:
   /// Computational constructor
-  DeleteDataHandle(Common::SafePtr<DataStorage>& ds, std::string name)
+  DeleteDataHandle(Common::SafePtr<DataStorage>& ds, const std::string& name)
   {
     ds->deleteData<TYPE>(name);
     ds = CFNULL;
@@ -111,7 +115,7 @@ template <typename TYPE>
 class DeleteDataHandle<TYPE, GLOBAL> {
 public:
   /// Computational constructor
-  DeleteDataHandle(Common::SafePtr<DataStorage>& ds, std::string name)
+  DeleteDataHandle(Common::SafePtr<DataStorage>& ds, const std::string& name)
   {
     ds->deleteGlobalData<TYPE>(name);
     ds = CFNULL;

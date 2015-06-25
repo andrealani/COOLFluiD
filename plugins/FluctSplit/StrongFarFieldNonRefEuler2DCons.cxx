@@ -553,15 +553,16 @@ void StrongFarFieldNonRefEuler2DCons::executeOnTrs()
 void StrongFarFieldNonRefEuler2DCons::configure ( Config::ConfigArgs& args )
 {
   FluctuationSplitCom::configure(args);
-
-  std::string name = getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  
+  const std::string name = getMethodData().getNamespace();
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
 
-  std::string varSetName = "Euler2DCons";
+  const std::string varSetName = "Euler2DCons";
   _varSet.reset((Environment::Factory<ConvectiveVarSet>::getInstance().getProvider(varSetName)->
-    create(physModel->getImplementor()->getConvectiveTerm())).d_castTo<Physics::NavierStokes::Euler2DCons>());
-
+		 create(physModel->getImplementor()->getConvectiveTerm())).d_castTo<Physics::NavierStokes::Euler2DCons>());
+  
   cf_assert(_varSet.isNotNull());
   
     m_var_values.resize(m_vars_inflow.size());

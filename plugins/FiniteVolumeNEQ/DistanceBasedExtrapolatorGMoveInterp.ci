@@ -114,7 +114,8 @@ void DistanceBasedExtrapolatorGMoveInterp<BASE>::setup()
   BASE::setup();
   
   const std::string name = this->getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
   // create the transformer from input to update variables
   if (m_inputVarStr == "Null") {

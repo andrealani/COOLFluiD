@@ -74,9 +74,10 @@ void SubOutletEuler2DPuvtMisMPI::setup()
 
 void SubOutletEuler2DPuvtMisMPI::preProcess()
 {
-  _nP = PE::GetPE().GetProcessorCount();
-  _myP = PE::GetPE().GetRank();
-  _comm = PE::GetPE().GetCommunicator();
+  const std::string nsp = getMethodData().getNamespace();
+  _nP = PE::GetPE().GetProcessorCount(nsp);
+  _myP = PE::GetPE().GetRank(nsp);
+  _comm = PE::GetPE().GetCommunicator(nsp);
   
   //find the average pressure on the cells along the outlet boundary
   SafePtr<TopologicalRegionSet> trs = getCurrentTRS();

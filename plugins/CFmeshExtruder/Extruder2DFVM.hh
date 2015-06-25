@@ -89,7 +89,7 @@ public:
    * @param fileName name of the file to convert
    */
   void convert(const boost::filesystem::path& fromFilepath,
-         const boost::filesystem::path& filepath);
+	       const boost::filesystem::path& filepath);
 
   /**
    * Configures this object.

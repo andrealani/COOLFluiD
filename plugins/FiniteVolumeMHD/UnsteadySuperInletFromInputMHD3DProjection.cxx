@@ -297,16 +297,17 @@ void UnsteadySuperInletFromInputMHD3DProjection::configure ( Config::ConfigArgs&
 
 void UnsteadySuperInletFromInputMHD3DProjection::preProcess()
 {
+  const std::string nsp = getMethodData().getNamespace();
   if (_flagReadInputFile == 1) { 
     // if this is a parallel simulation, only ONE process at a time reads the file !!!
     if (PE::GetPE().IsParallel()) { 
-      PE::GetPE().setBarrier(); 
-      for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) { 
-	if (i == PE::GetPE().GetRank ()) { 
+      PE::GetPE().setBarrier(nsp); 
+      for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(nsp); ++i) { 
+	if (i == PE::GetPE().GetRank (nsp)) { 
 	  (_useTimeInterpolation) ? readInputFile() : readInputFileNoInterpolation(); 
 	} 
 	
-	PE::GetPE().setBarrier(); 
+	PE::GetPE().setBarrier(nsp); 
       } 
     } 
     else { 
@@ -316,7 +317,7 @@ void UnsteadySuperInletFromInputMHD3DProjection::preProcess()
     _flagReadInputFile = 0;
     
     // only master process manipulates file
-    if ( PE::GetPE().GetRank () == 0) {
+    if ( PE::GetPE().GetRank (nsp) == 0) {
       // AL this will fail in general !! change this !!!
       const string activateFlag = "Simulator.SubSystem.CellCenterFVM.Inlet.readInputFileFlag = 0";
       const string inputFile = "06042000.inter";

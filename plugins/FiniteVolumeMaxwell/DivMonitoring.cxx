@@ -512,27 +512,29 @@ void DivMonitoring::execute()
   CFdouble totalSumDivE2 = 0.0;  
   CFdouble totalTotalVolume = 0.0;  
   
-  if (PE::GetPE().GetProcessorCount() > 1) {
+  const std::string nsp = this->getMethodData().getNamespace();
+  
+  if (PE::GetPE().GetProcessorCount(nsp) > 1) {
 
 #ifdef CF_HAVE_MPI
 	MPI_Allreduce(&TESumTheoryNorm2, &totalTESumTheoryNorm2, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+		      PE::GetPE().GetCommunicator(nsp));
 	MPI_Allreduce(&TESumDifferenceNorm2, &totalTESumDifferenceNorm2, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+		      PE::GetPE().GetCommunicator(nsp));
 	MPI_Allreduce(&TMSumTheoryNorm2, &totalTMSumTheoryNorm2, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+		      PE::GetPE().GetCommunicator(nsp));
 	MPI_Allreduce(&TMSumDifferenceNorm2, &totalTMSumDifferenceNorm2, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+		      PE::GetPE().GetCommunicator(nsp));
 	MPI_Allreduce(&fullSumTheoryNorm2, &totalfullSumTheoryNorm, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+		      PE::GetPE().GetCommunicator(nsp));
 	MPI_Allreduce(&fullSumDifferenceNorm2, &totalfullSumDifferenceNorm2, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+		      PE::GetPE().GetCommunicator(nsp));
 	MPI_Allreduce(&SumDivB2, &totalSumDivB2, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+		      PE::GetPE().GetCommunicator(nsp));
 	MPI_Allreduce(&SumDivE2, &totalSumDivE2, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+		      PE::GetPE().GetCommunicator(nsp));
 	MPI_Allreduce(&TotalVolume, &totalTotalVolume, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+		      PE::GetPE().GetCommunicator(nsp));
 	
 	TESumTheoryNorm2 = totalTESumTheoryNorm2;
 	TESumDifferenceNorm2 = totalTESumDifferenceNorm2;
@@ -1198,14 +1200,15 @@ void DivMonitoring::computeCylindricalComponents()
 boost::filesystem::path DivMonitoring::constructFilename()
 {
   const bool isParallel = PE::GetPE().IsParallel ();
-
+  const std::string nsp = this->getMethodData().getNamespace();
+  
   if (isParallel) {
     std::ostringstream fname;
     fname << boost::filesystem::basename(boost::filesystem::path(m_nameOutputFileDivMonitoring))
-          << "-" << PE::GetPE().GetRank()
+          << "-" << PE::GetPE().GetRank("Default")
           << boost::filesystem::extension(boost::filesystem::path(m_nameOutputFileDivMonitoring));
   }
-
+  
   CFout << "Writing Electric and Magnetic Field Divergence to : " << m_nameOutputFileDivMonitoring << "\n";
   return boost::filesystem::path(m_nameOutputFileDivMonitoring);
 }

@@ -4,17 +4,17 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_Common_DebugFunctions_hh
-#define COOLFluiD_Common_DebugFunctions_hh
+#ifndef COOLFluiD_Common_Group_hh
+#define COOLFluiD_Common_Group_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
 #ifdef CF_HAVE_MPI
 #include <mpi.h>
+#include "MPI/MPIHelper.hh"
 #endif
 
-#include <iostream>
-#include "Common/PE.hh"
+#include <vector>
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -24,22 +24,37 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// pause and prompt for input user till the specified character is given
-template <int NUM>
-static void DEBUG_CONDITIONAL_PAUSE(char stop = '$')
-{
-  static char in; 
-  if (PE::GetPE().GetRank("Default") == 0) {
-    std::cout << "DEBUG_CONDITIONAL_PAUSE: input a character different from \"" << stop << "\" to stop again \n";
-    if (in != stop) {std::cin >> in;}
+/// Class holding MPI group information
+/// @author Andrea Lani
+class Group {
+public:
+
+  /// default constructor
+  Group() {}
+  
+  /// destructor
+  ~Group() 
+  {
+#ifdef CF_HAVE_MPI
+    CheckMPIStatus(MPI_Group_free(&group));
+#endif
   }
   
+  // global MPI ranks associated to this group
+  std::vector<int> globalRanks;
+  
+  // MPI ranks within the group
+  std::vector<int> groupRanks; 
+  
 #ifdef CF_HAVE_MPI
-  char tmp = in; 
-  MPI_Bcast(&tmp, 1, MPI_CHAR, 0, PE::GetPE().GetCommunicator("Default"));
-  in = tmp;
+  // group object 
+  MPI_Group group;
+  
+  // group communicator 
+  MPI_Comm comm;
 #endif
-}
+  
+}; // end class Group
       
 //////////////////////////////////////////////////////////////////////////////
 
@@ -49,4 +64,4 @@ static void DEBUG_CONDITIONAL_PAUSE(char stop = '$')
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Common_DebugFunctions_hh
+#endif // COOLFluiD_Common_PE_hh

@@ -53,7 +53,8 @@ void StdSetup::execute()
   ///@todo this has to be done for the subsystem
 
   std::string name = getMethodData().getOtherNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<SubSystemStatus> otherSubSystemStatus = SubSystemStatusStack::getInstance().getEntryByNamespace(nsp);
 
   otherSubSystemStatus->setMovingMesh(true);

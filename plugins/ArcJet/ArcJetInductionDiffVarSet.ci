@@ -65,7 +65,7 @@ RealVector& ArcJetInductionDiffVarSet<BASEVS, ST>::getFlux
   const CFuint nbEqs  = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
   const CFuint eqSSID = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getEqSS();
   const CFuint totalNbEqs = this->_flux.size();
-      
+  
   // AL: not generic this assumes [p v T] variables !!!    
   CFreal Tdim = values[this->_TID];
   cf_assert(this->_TID > 0);  
@@ -74,14 +74,13 @@ RealVector& ArcJetInductionDiffVarSet<BASEVS, ST>::getFlux
   /* Access the mutation library to get sigma*/
   CFreal* tVec = CFNULL;
   const CFreal sigma = m_library->sigma(Tdim, pdim, tVec);
-  const CFreal pi = 3.14159265358979323846;
-  const CFreal mu = 4.0*pi*1E-7;
+  const CFreal pi = MathTools::MathConsts::CFrealPi();
+  const CFreal mu = 4.0*pi*1e-7;
   const CFreal oneovermusigma = 1.0/(mu*sigma);
   const CFreal nx = normal[XX];
   const CFreal ny = normal[YY];
   const CFreal nz = (dim < DIM_3D) ? 0. : normal[ZZ];
-  
-  
+    
   // here it is assumed that you don't derive from this class (for the moment is
   // a reasonable assumption)
   // if more than 2 or all the equations are considered
@@ -92,18 +91,18 @@ RealVector& ArcJetInductionDiffVarSet<BASEVS, ST>::getFlux
   // if only the last two equations or all the equations are considered
   if ((nbEqs == 4 && eqSSID == 1) || nbEqs == totalNbEqs) {
     const RealVector& gradBx = *gradients[totalNbEqs - 4];
-     const RealVector& gradBy = *gradients[totalNbEqs - 3];
-     const RealVector& gradBz = *gradients[totalNbEqs - 2];
-        
-     this->_flux[totalNbEqs -4] = oneovermusigma*(gradBy[XX] -gradBx[YY])*ny + (gradBz[XX] - gradBx[ZZ])*nz;
-     this->_flux[totalNbEqs -3] = oneovermusigma*(gradBx[YY] -gradBy[XX])*nx + (gradBz[YY] - gradBy[ZZ])*nz;
-     this->_flux[totalNbEqs -2] = oneovermusigma*(gradBx[ZZ] -gradBz[XX])*nx + (gradBy[ZZ] - gradBz[YY])*ny;
-     this->_flux[totalNbEqs -1] = 0.0;
-   }
-     
+    const RealVector& gradBy = *gradients[totalNbEqs - 3];
+    const RealVector& gradBz = *gradients[totalNbEqs - 2];
+    
+    this->_flux[totalNbEqs -4] = oneovermusigma*(gradBy[XX] -gradBx[YY])*ny + (gradBz[XX] - gradBx[ZZ])*nz;
+    this->_flux[totalNbEqs -3] = oneovermusigma*(gradBx[YY] -gradBy[XX])*nx + (gradBz[YY] - gradBy[ZZ])*nz;
+    this->_flux[totalNbEqs -2] = oneovermusigma*(gradBx[ZZ] -gradBz[XX])*nx + (gradBy[ZZ] - gradBz[YY])*ny;
+    this->_flux[totalNbEqs -1] = 0.0;
+  }
+  
   return this->_flux;
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename BASEVS, typename ST>

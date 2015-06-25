@@ -24,6 +24,7 @@
 #include "Framework/MeshData.hh"
 #include "Framework/VarSetTransformer.hh"
 #include "Framework/MeshPartitioner.hh"
+#include "Framework/SubSystemStatus.hh"
 
 #include "CFmeshFileReader/ParCFmeshBinaryFileReader.hh"
 
@@ -790,8 +791,9 @@ void ParCFmeshBinaryFileReader::readElemListRank(PartitionerData& pdata,
   
   CFLog(VERBOSE, "ParCFmeshBinaryFileReader::readElemListRank() => elements read in position [" << offset + 1 << ", " << endPos << "]\n");
   CFLog(VERBOSE, "P[" << m_myRank << "] reads " << localElemSize  << " elements starting from position " << startPos << "\n");
-    
-  MPIIOFunctions::readAll("ParCFmeshBinaryFileReader::readElemListRank()", fh, startPos, &buf[0], (CFuint)buf.size(), m_maxBuffSize);
+  
+  MPIIOFunctions::readAll("ParCFmeshBinaryFileReader::readElemListRank()", fh, startPos, &buf[0], 
+			  (CFuint)buf.size(), m_maxBuffSize, m_comm, m_myRank);
   
   CFLog(DEBUG_MAX, CFPrintContainer<vector<CFuint> >("buf = ", &buf));
   
@@ -1519,14 +1521,14 @@ void ParCFmeshBinaryFileReader::readNodeList(MPI_File* fh)
   
   const CFuint nbLocalNodes = m_localNodeIDs.size() + m_ghostNodeIDs.size();
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
-  const std::string parNodeVecName = MeshDataStack::getActive()->
-    getPrimaryNamespace() +"_nodes";
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  const std::string parNodeVecName = nsp + "_nodes";
   
   DataHandle<Node*,GLOBAL> nodes = MeshDataStack::getActive()->getDataStorage()->
     getGlobalData<Node*>(parNodeVecName);
   
   cf_assert(nbLocalNodes > 0);
-  nodes.reserve(nbLocalNodes, dim*sizeof(CFreal));
+  nodes.reserve(nbLocalNodes, dim*sizeof(CFreal), nsp);
   getReadData().resizeNodes(nbLocalNodes);
   
   sort(m_localNodeIDs.begin(), m_localNodeIDs.end());
@@ -1592,7 +1594,8 @@ void ParCFmeshBinaryFileReader::readNodeList(MPI_File* fh)
   CFLog(VERBOSE, "ParCFmeshBinaryFileReader::readNodeList() => nodes read in position [" << startPos << 
 	", " << startPos + sizeRead*sizeof(CFreal) << "]\n");
   
-  MPIIOFunctions::readAll("ParCFmeshBinaryFileReader::readNodeList()", fh, startPos, &buf[0], (CFuint)sizeRead, m_maxBuffSize);
+  MPIIOFunctions::readAll("ParCFmeshBinaryFileReader::readNodeList()", fh, startPos, &buf[0], 
+			  (CFuint)sizeRead, m_maxBuffSize, m_comm, m_myRank);
   
   vector<CFreal> localNodesData(m_localNodeIDs.size()*nodeSize);
   getLocalData(buf, ranges, m_localNodeIDs, nodeSize, localNodesData);
@@ -2104,14 +2107,14 @@ void ParCFmeshBinaryFileReader::readStateList(MPI_File* fh)
   
   const CFuint nbLocalStates = m_localStateIDs.size() + m_ghostStateIDs.size();
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-  const std::string parStateVecName = MeshDataStack::getActive()->
-    getPrimaryNamespace() + "_states";
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  const std::string parStateVecName = nsp + "_states";
   
   DataHandle<State*,GLOBAL> states = MeshDataStack::getActive()->getDataStorage()->
     getGlobalData<State*>(parStateVecName);
   
   cf_assert(nbLocalStates > 0);
-  states.reserve(nbLocalStates, nbEqs*sizeof(CFreal));
+  states.reserve(nbLocalStates, nbEqs*sizeof(CFreal), nsp);
   getReadData().resizeStates(nbLocalStates);
   
   sort(m_localStateIDs.begin(), m_localStateIDs.end());
@@ -2161,7 +2164,8 @@ void ParCFmeshBinaryFileReader::readStateList(MPI_File* fh)
     
     // configure the variable transformer
     std::string name = MeshDataStack::getActive()->getPrimaryNamespace();
-    SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+    SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+      (SubSystemStatusStack::getCurrentName()).getNamespace(name);
     SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
     SafePtr<VarSetTransformer::PROVIDER> vecTransProv = CFNULL;
     
@@ -2226,7 +2230,8 @@ void ParCFmeshBinaryFileReader::readStateList(MPI_File* fh)
     CFLog(VERBOSE, "ParCFmeshBinaryFileReader::readStateList() => states read in position [" << startPos << 
 	  ", " << startPos + sizeRead*sizeof(CFreal) << "]\n");
     
-    MPIIOFunctions::readAll("ParCFmeshBinaryFileReader::readStateList()", fh, startPos, &buf[0], (CFuint)sizeRead, m_maxBuffSize);
+    MPIIOFunctions::readAll("ParCFmeshBinaryFileReader::readStateList()", fh, startPos, &buf[0], 
+			    (CFuint)sizeRead, m_maxBuffSize, m_comm, m_myRank);
     getLocalData(buf, ranges, m_localStateIDs, stateSize, localStatesData);
     
     if (m_ghostStateIDs.size() > 0) {

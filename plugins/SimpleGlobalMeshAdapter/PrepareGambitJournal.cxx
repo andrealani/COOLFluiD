@@ -16,7 +16,7 @@
 #include "Environment/FileHandlerInput.hh"
 #include "Environment/FileHandlerOutput.hh"
 #include "Environment/DirPaths.hh"
-#include "Common/PE.hh"
+#include "Common/PEFunctions.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -115,9 +115,10 @@ void PrepareGambitJournal::execute()
   CFAUTOTRACE;
 
   const std::string otherNameSpace = getMethodData().getOtherNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(otherNameSpace);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(otherNameSpace);
   Common::SafePtr<SubSystemStatus> subsystemStatus = SubSystemStatusStack::getInstance().getEntryByNamespace(nsp);
-
+  
   _variables[0] = subsystemStatus->getCurrentTimeDim();
 
   //Evaluate the value of each of the gambit parameters
@@ -127,20 +128,7 @@ void PrepareGambitJournal::execute()
   //check if parameter is in the line
   //if it is, replace it by his value
   //Write the new journal file
-  if (PE::GetPE().IsParallel()) {
-
-    PE::GetPE().setBarrier();
-
-    if (PE::GetPE().GetRank () == 0) {
-      readWriteFile();
-    }
-
-    PE::GetPE().setBarrier();
-  }
-  else{
-    readWriteFile();
-  }
-
+  runSerial<void, PrepareGambitJournal, &PrepareGambitJournal::readWriteFile>(this, otherNameSpace);
 }
 
 //////////////////////////////////////////////////////////////////////////////

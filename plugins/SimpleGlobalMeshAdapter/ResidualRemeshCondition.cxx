@@ -57,11 +57,11 @@ void ResidualRemeshCondition::execute()
   CFAUTOTRACE;
 
   const std::string otherNamespace = getMethodData().getOtherNamespace();
-  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance().getNamespace(otherNamespace);
-
-  const CFreal residual =
-    SubSystemStatusStack::getInstance().getEntryByNamespace(otherNsp)->getResidual();
-
+  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(otherNamespace);
+  const CFreal residual = SubSystemStatusStack::getInstance().
+    getEntryByNamespace(otherNsp)->getResidual();
+  
   if(residual < _minValue) getMethodData().setNeedRemeshing(true);
   else getMethodData().setNeedRemeshing(false);
 

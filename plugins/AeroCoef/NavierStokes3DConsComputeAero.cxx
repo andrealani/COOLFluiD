@@ -301,8 +301,9 @@ bool nodeComparator(CFuint* a, CFuint* b) {
 
 void NavierStokes3DConsComputeAero::executeOnTrs()
 {
-  /// AL: this needs to be dapted to work with "long long int"
-
+  /// AL: this needs to be adapted to work with "long long int"
+  const std::string nsp = getMethodData().getNamespace();
+  
   CFAUTOTRACE;
   CFuint currtrsid=getCurrentTrsID();
   Common::SafePtr<Common::ConnectivityTable<CFuint> > g2n=getCurrentTRS()->getGeo2NodesConn();
@@ -347,7 +348,7 @@ void NavierStokes3DConsComputeAero::executeOnTrs()
   // the very first time initialize
   //    bool m_isOverlapInitialized;
   //    std::vector<bool> m_overlapFilter;
-  if (PE::GetPE().GetProcessorCount()==1)
+  if (PE::GetPE().GetProcessorCount(nsp)==1)
   {
     // fast exit on serial
     if (!m_trsdata[currtrsid].m_isOverlapInitialized)
@@ -365,7 +366,7 @@ void NavierStokes3DConsComputeAero::executeOnTrs()
     StdTrsGeoBuilder::GeoData& geoDataFace = geoBuilderFace.getDataGE();
     geoDataFace.trs = getCurrentTRS();
     CFuint nbFaces = getCurrentTRS()->getLocalNbGeoEnts();
-    const CFuint irank=PE::GetPE().GetRank();
+    const CFuint irank=PE::GetPE().GetRank(nsp);
 
     // the sorter data, one item is: nbnodes + node gids + process number + face local id
     std::vector<CFuint> rproc(0);
@@ -389,14 +390,14 @@ void NavierStokes3DConsComputeAero::executeOnTrs()
     }
 
     // collect, prepare and sort
-    std::vector<int> nb(PE::GetPE().GetProcessorCount(),0);
+    std::vector<int> nb(PE::GetPE().GetProcessorCount(nsp),0);
     int nbproc=(int)rproc.size();
-    MPI_Gather(&nbproc, 1, MPI_INT, &nb[0], 1, MPI_INT, 0, PE::GetPE().GetCommunicator());
+    MPI_Gather(&nbproc, 1, MPI_INT, &nb[0], 1, MPI_INT, 0, PE::GetPE().GetCommunicator(nsp));
     int totnb=std::accumulate(nb.begin(),nb.end(),0);
     if (irank==0) rglob.resize(totnb);
-    std::vector<int> displs(PE::GetPE().GetProcessorCount(),0);
+    std::vector<int> displs(PE::GetPE().GetProcessorCount(nsp),0);
     for(int i=1; i<(const int)displs.size(); i++) displs[i]=displs[i-1]+nb[i-1];
-    MPI_Gatherv(&rproc[0],nbproc,MPI_INT,&rglob[0],&nb[0], &displs[0],MPI_INT,0, PE::GetPE().GetCommunicator());
+    MPI_Gatherv(&rproc[0],nbproc,MPI_INT,&rglob[0],&nb[0], &displs[0],MPI_INT,0, PE::GetPE().GetCommunicator(nsp));
     std::vector<CFuint*> pglob(0);
     int npglob=0;
     for(int i=0; i<totnb; i+=rglob[i]+3) ++npglob;
@@ -423,13 +424,13 @@ void NavierStokes3DConsComputeAero::executeOnTrs()
     for(int i=0; i<(const int)(dup.size()); ++i) duplid.push_back(dup[i].second);
 
     // distribute back from process 0
-    nb.assign(PE::GetPE().GetProcessorCount(),0);
+    nb.assign(PE::GetPE().GetProcessorCount(nsp),0);
     for (int i=0; i<(const int)dup.size(); i++) nb[dup[i].first]++;
-    displs.assign(PE::GetPE().GetProcessorCount(),0);
+    displs.assign(PE::GetPE().GetProcessorCount(nsp),0);
     for(int i=1; i<(const int)displs.size(); i++) displs[i]=displs[i-1]+nb[i-1];
-    MPI_Scatter(&nb[0], 1, MPI_INT, &nbproc, 1, MPI_INT, 0, PE::GetPE().GetCommunicator());
+    MPI_Scatter(&nb[0], 1, MPI_INT, &nbproc, 1, MPI_INT, 0, PE::GetPE().GetCommunicator(nsp));
     std::vector<int> localdup(nbproc,0);
-    MPI_Scatterv(&duplid[0],&nb[0],&displs[0],MPI_INT,&localdup[0],nbproc,MPI_INT,0, PE::GetPE().GetCommunicator());
+    MPI_Scatterv(&duplid[0],&nb[0],&displs[0],MPI_INT,&localdup[0],nbproc,MPI_INT,0, PE::GetPE().GetCommunicator(nsp));
 
     // finally mark duplicates as false
     m_trsdata[currtrsid].m_overlapFilter.assign(nbFaces,true);
@@ -442,7 +443,7 @@ void NavierStokes3DConsComputeAero::executeOnTrs()
       if (m_trsdata[currtrsid].m_overlapFilter[i])
         ++nLocalUpdatableFace;
     int nUpdatableFace=0;
-    MPI_Allreduce(&nLocalUpdatableFace,  &nUpdatableFace,  1, MPI_INT, MPI_SUM, PE::GetPE().GetCommunicator());
+    MPI_Allreduce(&nLocalUpdatableFace,  &nUpdatableFace,  1, MPI_INT, MPI_SUM, PE::GetPE().GetCommunicator(nsp));
     CFLog(WARN,"Number of wall TRS's faces after filtering: " << nUpdatableFace << "\n" );
     m_trsdata[currtrsid].m_nUpdatableFaces=nLocalUpdatableFace;
   }
@@ -604,8 +605,11 @@ RealVector NavierStokes3DConsComputeAero::computeForceAndMoment(COOLFluiD::Frame
 void NavierStokes3DConsComputeAero::computeWall( bool saveWall, bool saveAero)
 {
   CFAUTOTRACE;
-  const CFuint irank=PE::GetPE().GetRank();
-  const CFuint nproc=PE::GetPE().GetProcessorCount();
+  
+  const std::string nsp = getMethodData().getNamespace();
+  
+  const CFuint irank=PE::GetPE().GetRank(nsp);
+  const CFuint nproc=PE::GetPE().GetProcessorCount(nsp);
   const bool writeWall=(saveWall)&&(getCurrentTRS()->getLocalNbGeoEnts()!=0);
   const bool writeAero=(saveAero)&&(irank==0);
   CFuint currtrsid=getCurrentTrsID();
@@ -642,9 +646,9 @@ void NavierStokes3DConsComputeAero::computeWall( bool saveWall, bool saveAero)
   RealVector sumFMfric(0.,2*DIM_3D);
   RealVector sumFMpres(0.,2*DIM_3D);
   RealVector sumFMtotal(0.,2*DIM_3D);
-
+    
   for(CFuint iProc=0; iProc<nproc; ++iProc){
-    MPI_Barrier( PE::GetPE().GetCommunicator());
+    MPI_Barrier( PE::GetPE().GetCommunicator(nsp));
     if(iProc==irank){
 
       // loop on the faces
@@ -834,15 +838,15 @@ void NavierStokes3DConsComputeAero::computeWall( bool saveWall, bool saveAero)
         fhandle->close();
       }
 
-      MPI_Barrier( PE::GetPE().GetCommunicator());
+      MPI_Barrier( PE::GetPE().GetCommunicator(nsp));
     }
   }
 
 
   // compute sum and convert to coefficients
-  MPI_Allreduce(&sumFMfric[0],  &m_sumFMfric[0],  2*DIM_3D, MPI_DOUBLE, MPI_SUM, PE::GetPE().GetCommunicator());
-  MPI_Allreduce(&sumFMpres[0],  &m_sumFMpres[0],  2*DIM_3D, MPI_DOUBLE, MPI_SUM, PE::GetPE().GetCommunicator());
-  MPI_Allreduce(&sumFMtotal[0], &m_sumFMtotal[0], 2*DIM_3D, MPI_DOUBLE, MPI_SUM, PE::GetPE().GetCommunicator());
+  MPI_Allreduce(&sumFMfric[0],  &m_sumFMfric[0],  2*DIM_3D, MPI_DOUBLE, MPI_SUM, PE::GetPE().GetCommunicator(nsp));
+  MPI_Allreduce(&sumFMpres[0],  &m_sumFMpres[0],  2*DIM_3D, MPI_DOUBLE, MPI_SUM, PE::GetPE().GetCommunicator(nsp));
+  MPI_Allreduce(&sumFMtotal[0], &m_sumFMtotal[0], 2*DIM_3D, MPI_DOUBLE, MPI_SUM, PE::GetPE().GetCommunicator(nsp));
   m_sumFMpres /=0.5*m_rhoInf*m_uInf*m_uInf*m_Aref;
   m_sumFMpres[3] /=m_Lref;
   m_sumFMpres[4] /=m_Lref;

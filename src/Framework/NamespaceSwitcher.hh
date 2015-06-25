@@ -31,10 +31,10 @@ namespace COOLFluiD {
 /// @author Tiago Quintino
 class Framework_API NamespaceSwitcher : public Common::NonCopyable<NamespaceSwitcher> {
 public:
-
+  
   /// Returns the instance of the NamespaceSwither Singleton
-  static NamespaceSwitcher& getInstance();
-
+  static NamespaceSwitcher& getInstance(const std::string& subSystemName);
+  
   /// Creates a Namespace with a unique name and puts it on the internal
   ///  storage
   /// @param name the name of the Namespace to create

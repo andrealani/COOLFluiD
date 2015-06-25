@@ -66,21 +66,23 @@ void GambitMeshGenerator::execute()
   //Run mesh generation using the journal file created in the prepare phase
   std::string startGambit;
   startGambit = "gambit -inp " + _journalFile;
-
+  
+  const std::string nsp = getMethodData().getNamespace();
+  
   if (PE::GetPE().IsParallel()) {
 
-    PE::GetPE().setBarrier();
+    PE::GetPE().setBarrier(nsp);
 
-    if (PE::GetPE().GetRank () == 0) {
+    if (PE::GetPE().GetRank (nsp) == 0) {
       Common::OSystem::getInstance().executeCommand(startGambit);
     }
 
-    PE::GetPE().setBarrier();
+    PE::GetPE().setBarrier(nsp);
   }
   else{
     Common::OSystem::getInstance().executeCommand(startGambit);
   }
-
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////

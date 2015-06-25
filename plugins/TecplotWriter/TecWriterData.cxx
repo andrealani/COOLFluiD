@@ -14,6 +14,7 @@
 #include "Framework/NamespaceSwitcher.hh"
 #include "Framework/SpaceMethod.hh"
 #include "Framework/SpaceMethodData.hh"
+#include "Framework/SubSystemStatus.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -97,7 +98,8 @@ void TecWriterData::configure ( Config::ConfigArgs& args )
   // get the physical model -------------------------------------------
   
   std::string name = getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
   
   std::string provider_base = (physModel->getConvectiveName() != "Null") ? physModel->getConvectiveName() : physModel->getDiffusiveName() ;

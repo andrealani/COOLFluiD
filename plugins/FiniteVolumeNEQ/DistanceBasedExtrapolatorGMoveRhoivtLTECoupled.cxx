@@ -90,9 +90,10 @@ void DistanceBasedExtrapolatorGMoveRhoivtLTECoupled::configure ( Config::ConfigA
   DistanceBasedExtrapolatorGMoveRhoivtLTE::configure(args);
 
   const std::string nameSpace = getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(nameSpace);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(nameSpace);
   Common::SafePtr<SubSystemStatus> subsystemStatus = SubSystemStatusStack::getInstance().getEntryByNamespace(nsp);
-
+  
   const std::string currentSubSystem = subsystemStatus->getSubSystemName();
 
   cf_assert(_interfaceNames.size() == _trsName.size());

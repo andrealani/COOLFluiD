@@ -23,6 +23,7 @@
 #include "Framework/MeshData.hh"
 #include "Framework/VarSetTransformer.hh"
 #include "Framework/MeshPartitioner.hh"
+#include "Framework/SubSystemStatus.hh"
 
 #include "CFmeshFileReader/ParCFmeshFileReader.hh"
 
@@ -181,9 +182,11 @@ void ParCFmeshFileReader::configureTRSMerging()
 
 void ParCFmeshFileReader::setup()
 {
-  m_comm   = PE::GetPE().GetCommunicator();
-  m_myRank = PE::GetPE().GetRank();
-  m_nbProc = PE::GetPE().GetProcessorCount();
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  
+  m_comm   = PE::GetPE().GetCommunicator(nsp);
+  m_myRank = PE::GetPE().GetRank(nsp);
+  m_nbProc = PE::GetPE().GetProcessorCount(nsp);
   
   // each processor allocates the elmdist array with size==m_nbProc+1
   m_nbElemPerProc.resize(m_nbProc);
@@ -756,19 +759,19 @@ void ParCFmeshFileReader::readNodeList(ifstream& fin)
 
   const CFuint nbLocalNodes = m_localNodeIDs.size() + m_ghostNodeIDs.size();
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
-  const std::string parNodeVecName = MeshDataStack::getActive()->
-    getPrimaryNamespace() +"_nodes";
-
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  const std::string parNodeVecName = nsp + "_nodes";
+  
   DataHandle<Node*,GLOBAL> nodes = MeshDataStack::getActive()->getDataStorage()->
     getGlobalData<Node*>(parNodeVecName);
-
+  
   cf_assert(nbLocalNodes > 0);
-  nodes.reserve(nbLocalNodes, dim*sizeof(CFreal));
+  nodes.reserve(nbLocalNodes, dim*sizeof(CFreal), nsp);
   getReadData().resizeNodes(nbLocalNodes);
-
+  
   sort(m_localNodeIDs.begin(), m_localNodeIDs.end());
   sort(m_ghostNodeIDs.begin(), m_ghostNodeIDs.end());
-
+  
   RealVector tmpNode(0.0, dim);
   RealVector tmpPastNode(0.0, dim);
   RealVector tmpInterNode(0.0, dim);
@@ -951,16 +954,16 @@ void ParCFmeshFileReader::readStateList(ifstream& fin)
 
   const CFuint nbLocalStates = m_localStateIDs.size() + m_ghostStateIDs.size();
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-  const std::string parStateVecName = MeshDataStack::getActive()->
-    getPrimaryNamespace() + "_states";
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  const std::string parStateVecName = nsp + "_states";
   
   DataHandle<State*,GLOBAL> states = MeshDataStack::getActive()->getDataStorage()->
     getGlobalData<State*>(parStateVecName);
-
+  
   cf_assert(nbLocalStates > 0);
-  states.reserve(nbLocalStates, nbEqs*sizeof(CFreal));
+  states.reserve(nbLocalStates, nbEqs*sizeof(CFreal), nsp);
   getReadData().resizeStates(nbLocalStates);
-
+  
   sort(m_localStateIDs.begin(), m_localStateIDs.end());
   sort(m_ghostStateIDs.begin(), m_ghostStateIDs.end());
 
@@ -1015,8 +1018,9 @@ void ParCFmeshFileReader::readStateList(ifstream& fin)
       }
 
     // configure the variable transformer
-    std::string name = MeshDataStack::getActive()->getPrimaryNamespace();
-    SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+    const std::string name = MeshDataStack::getActive()->getPrimaryNamespace();
+    SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+      (SubSystemStatusStack::getCurrentName()).getNamespace(name);
     SafePtr<PhysicalModel> physModel =
       PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
 

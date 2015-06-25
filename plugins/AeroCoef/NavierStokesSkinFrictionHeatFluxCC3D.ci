@@ -145,11 +145,12 @@ void NavierStokesSkinFrictionHeatFluxCC3D<BASE>::updateOutputFileWall()
   
   CFAUTOTRACE;
   
-  PE::GetPE().setBarrier();
+  const std::string nsp = this->getMethodData().getNamespace();
+  PE::GetPE().setBarrier(nsp);
   
   // all processors will write their own data one after the other 
-  for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
-    if (i == PE::GetPE().GetRank ()) {
+  for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(nsp); ++i) {
+    if (i == PE::GetPE().GetRank(nsp)) {
       
       SafePtr<TopologicalRegionSet> currTrs = this->getCurrentTRS();
       if (currTrs->getLocalNbGeoEnts() > 0) {
@@ -182,7 +183,7 @@ void NavierStokesSkinFrictionHeatFluxCC3D<BASE>::updateOutputFileWall()
 	// one zone per element type per cpu
 	// therefore the title is dependent on those parameters
 	fout << "ZONE "
-	     << "  T=\"P" << PE::GetPE().GetRank()<< " ZONE" << 0 << " " << shape <<"\""
+	     << "  T=\"P" << PE::GetPE().GetRank("Default")<< " ZONE" << 0 << " " << shape <<"\""
 	     << ", N=" << trsNodes->size()
 	     << ", E=" << nbTrsFaces
 	     << ", DATAPACKING=BLOCK"
@@ -247,7 +248,7 @@ void NavierStokesSkinFrictionHeatFluxCC3D<BASE>::updateOutputFileWall()
       }
     }
     
-    PE::GetPE().setBarrier();
+    PE::GetPE().setBarrier(nsp);
   }
 }  
 

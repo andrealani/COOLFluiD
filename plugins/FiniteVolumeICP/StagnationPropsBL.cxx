@@ -96,10 +96,12 @@ StagnationPropsBL::needsSockets()
 void StagnationPropsBL::setup()
 {
   CFAUTOTRACE;
+  
+  const std::string nsp = this->getMethodData().getNamespace();
   const CFreal TOL=1e-8;
-  const CFuint irank=PE::GetPE().GetRank();
-  const CFuint nproc=PE::GetPE().GetProcessorCount();
-
+  const CFuint irank=PE::GetPE().GetRank(nsp);
+  const CFuint nproc=PE::GetPE().GetProcessorCount(nsp);
+  
   CFout << "Setup: ComputingBL stagnation properties.\n";
 
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
@@ -133,16 +135,16 @@ void StagnationPropsBL::setup()
     for(int iNode=0; iNode<(const int)currCell.nbNodes(); ++iNode)
       if (std::abs((*(currCell.getNode(iNode)->getData()))[1])<TOL)
         xmax=(*(currCell.getNode(iNode)->getData()))[0]>xmax?(*(currCell.getNode(iNode)->getData()))[0]:xmax;
-
+    
     geoBuilder.releaseGE();
   }
-
+  
   // xmax global
   CFreal buf=xmax;
   xmax=0.;
-  MPI_Allreduce(&buf,&xmax,1,MPI_DOUBLE,MPI_MAX,PE::GetPE().GetCommunicator());
+  MPI_Allreduce(&buf,&xmax,1,MPI_DOUBLE,MPI_MAX,PE::GetPE().GetCommunicator(nsp));
   m_xmax=xmax;
-
+  
   // transform
   for(int i=0; i<(const int)m_localstagnationline.size(); ++i)
     m_localstagnationline[i].first=xmax-m_localstagnationline[i].first;
@@ -152,7 +154,7 @@ void StagnationPropsBL::setup()
   int nirank=(int)m_localstagnationline.size();
   m_nrcv.reserve(nproc); // to avoid segfault when no nodes on process
   if (irank==0) m_nrcv.resize(nproc,0);
-  MPI_Gather(&nirank, 1, MPI_INT, &m_nrcv[0], 1, MPI_INT, 0, PE::GetPE().GetCommunicator());
+  MPI_Gather(&nirank, 1, MPI_INT, &m_nrcv[0], 1, MPI_INT, 0, PE::GetPE().GetCommunicator(nsp));
   int sumelms=0;
   m_dspl.reserve(nproc); // to avoid segfault when no nodes on process
   if (irank==0) {
@@ -171,8 +173,9 @@ void StagnationPropsBL::setup()
   std::vector<CFreal> transcoord(nirank);
   for (int i=0; i<nirank; ++i) transcoord[i]=m_localstagnationline[i].first;
   std::vector<CFreal> rcvcoord(sumelms);
-  MPI_Gatherv(&transcoord[0],nirank, MPI_DOUBLE, &rcvcoord[0] ,&m_nrcv[0], &m_dspl[0], MPI_DOUBLE,0,PE::GetPE().GetCommunicator());
-
+  MPI_Gatherv(&transcoord[0],nirank, MPI_DOUBLE, &rcvcoord[0] ,&m_nrcv[0], &m_dspl[0], 
+	      MPI_DOUBLE,0,PE::GetPE().GetCommunicator(nsp));
+  
   if (irank==0) {
     m_globalstagnationline.reserve(sumelms);
     for(int i=0; i<sumelms; ++i)
@@ -186,10 +189,11 @@ void StagnationPropsBL::setup()
 void StagnationPropsBL::execute()
 {
   CFAUTOTRACE;
-
-  const CFuint irank=PE::GetPE().GetRank();
+  
+  const std::string nsp = this->getMethodData().getNamespace();
+  const CFuint irank=PE::GetPE().GetRank(nsp);
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
-
+  
   // fill local vectors with x and y component of velocity
   std::vector<CFreal> plocal(m_localstagnationline.size());
   std::vector<CFreal> ulocal(m_localstagnationline.size());
@@ -222,13 +226,13 @@ void StagnationPropsBL::execute()
   std::vector<CFreal> tglobal(m_globalstagnationline.size());
   std::vector<CFreal> yglobal(m_globalstagnationline.size());
   std::vector<CFreal> dvdyglobal(m_globalstagnationline.size());
-  MPI_Gatherv(&plocal[0],(int)plocal.size(), MPI_DOUBLE, &pg[0] ,&m_nrcv[0], &m_dspl[0], MPI_DOUBLE,0,PE::GetPE().GetCommunicator());
-  MPI_Gatherv(&ulocal[0],(int)ulocal.size(), MPI_DOUBLE, &ug[0] ,&m_nrcv[0], &m_dspl[0], MPI_DOUBLE,0,PE::GetPE().GetCommunicator());
-  MPI_Gatherv(&vlocal[0],(int)vlocal.size(), MPI_DOUBLE, &vg[0] ,&m_nrcv[0], &m_dspl[0], MPI_DOUBLE,0,PE::GetPE().GetCommunicator());
-  MPI_Gatherv(&tlocal[0],(int)tlocal.size(), MPI_DOUBLE, &tg[0] ,&m_nrcv[0], &m_dspl[0], MPI_DOUBLE,0,PE::GetPE().GetCommunicator());
-  MPI_Gatherv(&ylocal[0],(int)ylocal.size(), MPI_DOUBLE, &yg[0] ,&m_nrcv[0], &m_dspl[0], MPI_DOUBLE,0,PE::GetPE().GetCommunicator());
-  MPI_Gatherv(&dvdylocal[0],(int)dvdylocal.size(), MPI_DOUBLE, &dvdyg[0] ,&m_nrcv[0], &m_dspl[0], MPI_DOUBLE,0,PE::GetPE().GetCommunicator());
-
+  MPI_Gatherv(&plocal[0],(int)plocal.size(), MPI_DOUBLE, &pg[0] ,&m_nrcv[0], &m_dspl[0], MPI_DOUBLE,0,PE::GetPE().GetCommunicator(nsp));
+  MPI_Gatherv(&ulocal[0],(int)ulocal.size(), MPI_DOUBLE, &ug[0] ,&m_nrcv[0], &m_dspl[0], MPI_DOUBLE,0,PE::GetPE().GetCommunicator(nsp));
+  MPI_Gatherv(&vlocal[0],(int)vlocal.size(), MPI_DOUBLE, &vg[0] ,&m_nrcv[0], &m_dspl[0], MPI_DOUBLE,0,PE::GetPE().GetCommunicator(nsp));
+  MPI_Gatherv(&tlocal[0],(int)tlocal.size(), MPI_DOUBLE, &tg[0] ,&m_nrcv[0], &m_dspl[0], MPI_DOUBLE,0,PE::GetPE().GetCommunicator(nsp));
+  MPI_Gatherv(&ylocal[0],(int)ylocal.size(), MPI_DOUBLE, &yg[0] ,&m_nrcv[0], &m_dspl[0], MPI_DOUBLE,0,PE::GetPE().GetCommunicator(nsp));
+  MPI_Gatherv(&dvdylocal[0],(int)dvdylocal.size(), MPI_DOUBLE, &dvdyg[0] ,&m_nrcv[0], &m_dspl[0], MPI_DOUBLE,0,PE::GetPE().GetCommunicator(nsp));
+  
   // move to ordered by X
   if (irank==0){
     for (int i=0; i<(const int)m_globalstagnationline.size(); ++i){
@@ -279,23 +283,25 @@ void StagnationPropsBL::execute()
   // Calculation of the enthalpy at the 
 
   if (irank==0)
-  {
+  { 
+    RealMatrix m(3,3);
+    RealMatrix invm(3,3);
+    RealVector a(3);
+    RealVector f(3);
+    MathTools::MatrixInverterT<3> inverter;
+    
     // skipping first 5 points, because BL may be oscillatory
     for(int i=5; i<(const int)(d2vdydx.size()-5); ++i)
       if ((d2vdydx[i]-d2vdydx[i-1]<=0.)&&(d2vdydx[i+1]-d2vdydx[i]>0.))
       {
-        // a2*x*x+a1*x+a0=0
-        RealMatrix m(3,3);
-        RealMatrix invm(3,3);
-        RealVector a(3);
-        RealVector f(3);
-        m(0,0)=1.; m(0,1)=m_globalstagnationline[i-1].first; m(0,2)=m(0,1)*m(0,1);
+	// a2*x*x+a1*x+a0=0
+	m(0,0)=1.; m(0,1)=m_globalstagnationline[i-1].first; m(0,2)=m(0,1)*m(0,1);
         m(1,0)=1.; m(1,1)=m_globalstagnationline[i].first;   m(1,2)=m(1,1)*m(1,1);
         m(2,0)=1.; m(2,1)=m_globalstagnationline[i+1].first; m(2,2)=m(2,1)*m(2,1);
         f[0]=d2vdydx[i-1];
         f[1]=d2vdydx[i];
         f[2]=d2vdydx[i+1];
-        MathTools::MatrixInverterT<3> inverter;
+        
         inverter.invert(m, invm);
         a=invm*f;
 

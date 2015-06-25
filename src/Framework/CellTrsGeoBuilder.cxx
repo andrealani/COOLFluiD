@@ -13,6 +13,7 @@
 #include "Framework/LocalConnectionData.hh"
 #include "Framework/MapGeoToTrsAndIdx.hh"
 #include "Framework/NamespaceSwitcher.hh"
+#include "Framework/SubSystemStatus.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -168,8 +169,9 @@ void CellTrsGeoBuilder::setup()
 void CellTrsGeoBuilder::setupInNamespace(const std::string& namespaceName)
 {
 
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(namespaceName);
-
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(namespaceName);
+  
   _mapGeoToTrs = MeshDataStack::getInstance().getEntryByNamespace(nsp)->getMapGeoToTrs("MapFacesToTrs");
   _cellFaces = MeshDataStack::getInstance().getEntryByNamespace(nsp)->getConnectivity("cellFaces");
 

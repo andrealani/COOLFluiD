@@ -4,8 +4,8 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_Parallel_PE_hh
-#define COOLFluiD_Parallel_PE_hh
+#ifndef COOLFluiD_Common_PE_hh
+#define COOLFluiD_Common_PE_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -27,108 +27,34 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This class controls the Parallel environment
+/// This class controls the Common environment
+/// @author Dries Kimpe
 class Common_API PE {
 public:
-
-    /// Initialise the PE
-    static void InitPE (int * argc, char *** args);
-    /// Checks if the PE is initialized
-    static bool IsInitialised ();
-    /// Return a reference to the current PE
-    static PEInterface<>& GetPE ();
-    /// Free the PE
-    static void DonePE ();
   
-#ifdef CF_HAVE_MPI
-    /// Spawns processes on different host machines.
-    /// @param count Number of processes to spawn.
-    /// @param hosts Host list. Should be formatted as for -host option for mpirun
-    /// (comma-separated items, without spaces - i.e. "host1,host2,host3"). May
-    /// be null or empty (local host is used in these cases).
-    /// @return Returns a MPI intercommunicator to allow the current process
-    /// to communicate with created processes.
-    /// @todo return a null comm or throw an exception on error (spawn failure,
-    /// MPI env not initialized, count not valid...)
-    static MPI_Comm spawn(unsigned int count, const char * hosts = CFNULL);
-#endif
-    
-    /// Sets current process status.
-    /// @param status New status
-    static void setCurrentStatus(WorkerStatus::Type status);
-    
-    /// Gives the current process status.
-    /// @return Returns the current process status
-    static WorkerStatus::Type getCurrentStatus();
-    
-#ifdef CF_HAVE_MPI
-     /// definition of class holding MPI group information
-   class Group {
-   public:
-     
-     /// default constructor
-     Group() {}
-     
-     /// destructor
-     ~Group() {MPI_Group_free(&group);}
-     
-     std::vector<int> globalRanks;
-     std::vector<int> groupRanks; 
-     MPI_Group group;
-     MPI_Comm comm;
-   };
-   
-   /// @return group corresponding to given global rank
-   static std::string getGroupName(int rank) {return m_rank2Group.find(rank)->second;}
-   
-   /// @return the group data corresponding to given name
-   static Group& getGroup(const std::string name) {return *m_groups.find(name)->second;}
-   
-   /// create MPI group 
-   /// @param ranks          list of the ranks belonging to this group
-   /// @param mapRank2Group  flag telling whether to build a reverse 
-   ///                       rank-group mapping (each rank MUST be associated 
-   ///                       to a unique group)
-   static void createGroup(const std::string name,
-			   const std::vector<int>& ranks, 
-			   const bool mapRank2Group); 
-   
-   /// clear a group 
-   /// @pre cannot be called from ~PE() because static PE object is destroyed 
-   ///      after MPI_finalize(): it would try to double delete MPI_group's otherwise 
-   // static void clearGroups() {
-   //   for (CFuint i = 0; i < m_groups.size(); ++i) { 
-   //     delete m_groups[i]; 
-   //   } 
-   // }
-#endif
+  /// Initialise the PE
+  static void InitPE (int* argc, char*** args);
+  
+  /// Checks if the PE is initialized
+  static bool IsInitialised ();
+  
+  /// Return a reference to the current PE
+  static PEInterface<>& GetPE ();
+  
+  /// Free the PE
+  static void DonePE ();
+  
+ private:
+  
+  /// the current PE
+  static PEInterface<>* m_curr_PE;
+  
+  /// Flag to keep track of Common Enviroment Initialized
+  /// Note: cannot rely on m_curr_PE pointer because objects held by the enviroment
+  ///       could not then check for initialization. An egg and chicken problem,
+  ///       that appeared when using CFLog on the destructors of PEInterface related objects.
+  static bool m_is_init;
        
-private:
-   
-   /// the current PE
-   static PEInterface<> * m_curr_PE;
-   
-   /// Flag to keep track of Parallel Enviroment Initialized
-   /// Note: cannot rely on m_curr_PE pointer because objects held by the enviroment
-   ///       could not then check for initialization. An egg and chicken problem,
-   ///       that appeared when using CFLog on the destructors of PEInterface related objects.
-   static bool m_is_init;
-    
-    /// Path to the executable used to run the workers
-    static char* m_command_workers;
-    
-    /// Current status. 
-    /// Default value is @c #NOT_RUNNING.
-    static WorkerStatus::Type m_current_status;
-    
-#ifdef CF_HAVE_MPI
-    /// name of the object
-    static std::map<int,std::string> m_rank2Group;
-    
-    /// list of groups
-    static std::map<std::string, Group*> m_groups; 
-#endif
-    
 }; // end class PE
 
 //////////////////////////////////////////////////////////////////////////////
@@ -137,4 +63,4 @@ private:
 
 } // COOLFluiD
 
-#endif // COOLFluiD_Parallel_PE_hh
+#endif // COOLFluiD_Common_PE_hh

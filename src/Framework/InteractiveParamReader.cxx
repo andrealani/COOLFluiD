@@ -83,15 +83,15 @@ void InteractiveParamReader::readFile()
     if (PE::GetPE().IsParallel())
     {
 
-      PE::GetPE().setBarrier();
+      PE::GetPE().setBarrier("Default");
 
-      for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i)
+      for (CFuint i = 0; i < PE::GetPE().GetProcessorCount("Default"); ++i)
       {
-	      if (i == PE::GetPE().GetRank ())
-	      {
-	         readFileSequentially();
-	      }
-      	PE::GetPE().setBarrier();
+	if (i == PE::GetPE().GetRank ("Default"))
+        {
+	    readFileSequentially();
+	  }
+      	PE::GetPE().setBarrier("Default");
       }
     }
     else

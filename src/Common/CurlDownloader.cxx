@@ -74,26 +74,23 @@ int CurlDownloader::progress_func( class FileHandle * fh,
 void CurlDownloader::download ( const std::string& url, const std::string& filepath )
 {
   // downloader works serially on the processor with rank == 0
-  if (PE::GetPE().IsParallel())
-  {
+  if (PE::GetPE().IsParallel()) {
     // all processes come here
-    PE::GetPE().setBarrier();
-
+    PE::GetPE().setBarrier("Default");
+    
     // only rank 0 downloads
-    if (PE::GetPE().GetRank() == 0)
-    {
+    if (PE::GetPE().GetRank("Default") == 0) {
       do_download(url,filepath);
     }
-
+    
     // all processes come here
-    PE::GetPE().setBarrier();
+    PE::GetPE().setBarrier("Default");
   }
-  else
-  {
+  else {
     do_download(url,filepath);
   }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void CurlDownloader::do_download ( const std::string& url, const std::string& filepath )

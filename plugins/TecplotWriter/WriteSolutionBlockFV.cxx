@@ -158,16 +158,15 @@ void WriteSolutionBlockFV::writeToFileStream(std::ofstream& fout)
   // stored as arrays of State*, RealVector* or RealVector
   // but they are always used as arrays of RealVector*
   ProxyDofIterator<RealVector>& nodalStates = *nstatesProxy[0];
-
-
-
+ 
   const CFuint dim   = m_dimension;
   const CFuint nbEqs = m_nbEqs;
   const CFreal refL  = m_refLenght;
 
   write_tecplot_header(fout);
 
-
+  const std::string nsp = getMethodData().getNamespace();
+  
   RealVector output_dimensional_state(nbEqs);
   RealVector coordinates(dim);
   RealVector extra_values; // size will be set in the VarSet
@@ -252,14 +251,14 @@ void WriteSolutionBlockFV::writeToFileStream(std::ofstream& fout)
           // one zone per element type per cpu
           // therefore the title is dependent on those parameters
           fout << "ZONE "
-               << "  T=\"P" << PE::GetPE().GetRank()<< " ZONE" << iType << " " << eType.getShape() <<"\""
+               << "  T=\"P" << PE::GetPE().GetRank(nsp)<< " ZONE" << iType << " " << eType.getShape() <<"\""
                << ", STRANDID=1, SOLUTIONTIME=" << solutiontime
                << ", N=" << all_nodes_in_type.size()
                << ", E=" << nbsubcells
                << ", DATAPACKING=BLOCK" << std::flush;
           fout << ", ZONETYPE=" << m_mapgeoent.identifyGeoEnt(geoinfo);
           if (getMethodData().getAppendAuxData())
-            fout << ", AUXDATA CPU=\"" << PE::GetPE().GetRank() << "\""
+            fout << ", AUXDATA CPU=\"" << PE::GetPE().GetRank(nsp) << "\""
                  << ", AUXDATA TRS=\"" << trs->getName() << "\""
                  << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
                  << ", AUXDATA ElementType=\"" << eType.getShape() << "\""

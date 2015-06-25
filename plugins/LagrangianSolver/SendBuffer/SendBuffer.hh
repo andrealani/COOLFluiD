@@ -42,9 +42,11 @@ SendBuffer<T>::SendBuffer():
   m_sendCounts(),
   m_sendBufferOrdered()
 {
-    m_comm = Common::PE::GetPE().GetCommunicator();
-    m_nbProcesses= Common::PE::GetPE().GetProcessorCount();
-    m_sendCounts.resize(m_nbProcesses);
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  
+  m_comm = Common::PE::GetPE().GetCommunicator(nsp);
+  m_nbProcesses= Common::PE::GetPE().GetProcessorCount(nsp);
+  m_sendCounts.resize(m_nbProcesses);
 }
 
 template<typename T>

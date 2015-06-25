@@ -6,6 +6,7 @@
 
 #include "Framework/NamespaceMember.hh"
 #include "Framework/NamespaceSwitcher.hh"
+#include "Framework/SubSystemStatus.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -61,7 +62,8 @@ void NamespaceMember::setNamespace(const std::string& name)
 
 Common::SafePtr<Namespace> NamespaceMember::getNamespacePtr() const
 {
-  return NamespaceSwitcher::getInstance().getNamespace(m_namespace);
+  return NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(m_namespace);
 }
 
 //////////////////////////////////////////////////////////////////////////////

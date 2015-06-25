@@ -46,7 +46,6 @@
 #include "Common/PE.hh"
 #include "Common/ArrayAllocator.hh"
 #include "Common/CFLog.hh"
-#include "Common/MPI/MPIDataTypeHandler.hh"
 #include "Common/MPI/ParVectorException.hh"
 #include "Common/MPI/MPIException.hh"
 #include "Common/MPI/MPIHelper.hh"
@@ -311,8 +310,9 @@ public: // funcions
 
   /// Constructor.
   /// WARNING: Size parameter is IGNORED!
-  MPICommPattern (DATA* data, const T& Init, CFuint Size, CFuint ESize = 0);
-
+  MPICommPattern (const std::string nspaceName, DATA* data, 
+		  const T& Init, CFuint Size, CFuint ESize = 0);
+  
   /// Destructor
   /// Before destructing the class, DoneMPI should be called
   ~MPICommPattern ();
@@ -401,7 +401,7 @@ public: // funcions
   void DumpContents ();
   
   /// Initialize MPI functions
-  void InitMPI ();
+  void InitMPI (const std::string nspaceName);
   
   /// Free MPI resources
   void DoneMPI ();
@@ -409,7 +409,8 @@ public: // funcions
   /// Make sure we can have up to capacity elements
   /// before needing to allocate
   /// (and possible invalidate pointers & references)
-  void reserve (IndexType capacity, CFuint elementSize);
+  void reserve (IndexType capacity, CFuint elementSize,
+		const std::string nspaceName);
 
   /// Returns true if the given local index is a ghost element
   inline bool IsGhost (IndexType LocalID) const;
@@ -494,8 +495,8 @@ void MPICommPattern<DATA>::BuildCGlobalLocal (std::vector<IndexType> & Ghosts)
   CFuint StartID;
 
   // Prefix scan
-  MPI_Scan (const_cast<CFuint*>(&LocalOwned),
-	    &StartID, 1,  MPIStructDef::getMPIType(&StartID),
+  MPI_Scan (const_cast<CFuint*>(&LocalOwned), 
+	    &StartID, 1, MPIStructDef::getMPIType(&StartID),
 	    MPI_SUM, _Communicator);
   
   // Correct for exclusive scan
@@ -589,10 +590,10 @@ void MPICommPattern<DATA>::BuildCGlobal ()
        ++Round)
     {
       Common::CheckMPIStatus(MPI_Isend (&SendBuf[0], SendBuf[0]+1,
-					MPIDataTypeHandler::GetType<IndexType>(),
+					MPIStructDef::getMPIType(&SendBuf[0]),
 					SendTo, Round, _Communicator, &SendRequest));
       Common::CheckMPIStatus(MPI_Irecv (&ReceiveBuf[0], ReceiveBuf.size(),
-					MPIDataTypeHandler::GetType<IndexType>(),
+					MPIStructDef::getMPIType(&ReceiveBuf[0]),
 					ReceiveFrom, Round, _Communicator, &ReceiveRequest));
       
       Common::CheckMPIStatus(MPI_Wait (&ReceiveRequest, MPI_STATUS_IGNORE));
@@ -992,21 +993,20 @@ void MPICommPattern<DATA>::BuildCGlobal ()
         }
       
       // Send ghost points
-      for (int i=0; i<_CommSize; i++)
-        {
-    if (i==_CommRank)
-      continue;
-
-    IndexType j=0;
-    for (typename std::vector<IndexType>::const_iterator iter=_GhostSendList[i].begin();
-         iter!=_GhostSendList[i].end (); iter++)
-      SendStorage[j++]=NormalIndex(_MetaData(*iter).GlobalIndex);
-
-    Common::CheckMPIStatus(MPI_Send (SendStorage, _GhostSendList[i].size(),
-           MPIDataTypeHandler::GetType<IndexType>(), i,
-           _MPI_TAG_BUILDGHOSTMAP, _Communicator));
-        }
-
+      for (int i=0; i<_CommSize; i++) {
+	if (i==_CommRank) continue;
+	
+	IndexType j=0;
+	for (typename std::vector<IndexType>::const_iterator iter = _GhostSendList[i].begin();
+	     iter!=_GhostSendList[i].end (); iter++) {
+	  SendStorage[j++]=NormalIndex(_MetaData(*iter).GlobalIndex);
+	}
+	
+	Common::CheckMPIStatus(MPI_Send (SendStorage, _GhostSendList[i].size(),
+					 MPIStructDef::getMPIType(SendStorage), i,
+					 _MPI_TAG_BUILDGHOSTMAP, _Communicator));
+      }
+      
       // Wait receives
       while (true)
         {
@@ -1023,7 +1023,7 @@ void MPICommPattern<DATA>::BuildCGlobal ()
     cf_assert (Requests[Current]==MPI_REQUEST_NULL);
     
     IndexType Aantal = 0;
-    MPI_Get_count (&Status, MPIDataTypeHandler::GetType<IndexType>(), (int*) &Aantal);
+    MPI_Get_count (&Status, MPIStructDef::getMPIType(&Aantal), (int*) &Aantal);
     
     if (Aantal > _GhostSize) {
       CFLog(WARN, "MPICommPattern<DATA>::Sync_BuildReceiveList() => Aantal > _GhostSize : " 
@@ -1189,7 +1189,8 @@ void MPICommPattern<DATA>::BuildCGlobal ()
     *==============================================================*/
     template <typename DATA>
     inline void MPICommPattern<DATA>::reserve (IndexType reservesize,
-					       CFuint elementSize)
+					       CFuint elementSize,
+					       const std::string nspaceName)
     {      
       CFLog ( DEBUG_MIN, "MPICommPattern<DATA>::reserve() => _InitMPIOK  = " << _InitMPIOK << "\n" );
       CFLog ( DEBUG_MIN, "MPICommPattern<DATA>::reserve() => elementSize = " << elementSize << "\n" );
@@ -1206,7 +1207,7 @@ void MPICommPattern<DATA>::BuildCGlobal ()
 	
         cf_assert(_ElementSize == 0);
         _ElementSize = elementSize;
-	InitMPI();
+	InitMPI(nspaceName);
       }
       
       if (reservesize <= m_data->size())
@@ -1557,14 +1558,15 @@ typename MPICommPattern<DATA>::IndexType MPICommPattern<DATA>::AllocNext ()
 
       IndexType Total = 0;
       IndexType Local = GetLocalSize();
-
-      Common::CheckMPIStatus(MPI_Allreduce (&Local, &Total, 1,
-            MPIDataTypeHandler::GetType<IndexType>(), MPI_SUM,
-            _Communicator));
-
+      
+      Common::CheckMPIStatus(MPI_Allreduce 
+			     (&Local, &Total, 1, 
+			      MPIStructDef::getMPIType(&Local), MPI_SUM,
+			      _Communicator));
+      
       return Total;
     }
-
+      
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -1590,61 +1592,57 @@ typename MPICommPattern<DATA>::IndexType MPICommPattern<DATA>::AllocNext ()
       CFLogDebugMin( "MPICommPattern<DATA>::DoneMPI\n");
     }
 
-
 //////////////////////////////////////////////////////////////////////////////
-
-
-    template <typename DATA>
-    void MPICommPattern<DATA>::InitMPI ()
-    {
-      //TODO: set errhandler: MPI_Comm_set_errhandler / MPI_Errhandler_set
-      //
-      // No need for error checking, default MPI error handling = abort
-      //
-      // get the communicator
-      _Communicator = PE::GetPE().GetCommunicator();
-
-      cf_assert (_InitMPIOK == false);
-      _InitMPIOK = true;
-
-      MPI_Comm_rank (_Communicator, &_CommRank);
-      MPI_Comm_size (_Communicator, &_CommSize);
-
-      _GhostSendList.resize (_CommSize);
-      _GhostReceiveList.resize (_CommSize);
-      _SendTypes.resize (_CommSize);
-      _ReceiveTypes.resize (_CommSize);
-      _ReceiveRequests.resize (_CommSize);
-      _SendRequests.resize (_CommSize);
-
-      for (int i=0; i<_CommSize; i++)
-        {
+      
+template <typename DATA>
+void MPICommPattern<DATA>::InitMPI (const std::string nspaceName)
+{
+  //TODO: set errhandler: MPI_Comm_set_errhandler / MPI_Errhandler_set
+  //
+  // No need for error checking, default MPI error handling = abort
+  //
+  // get the communicator
+  _Communicator = PE::GetPE().GetCommunicator(nspaceName);
+  
+  cf_assert (_InitMPIOK == false);
+  _InitMPIOK = true;
+  
+  MPI_Comm_rank (_Communicator, &_CommRank);
+  MPI_Comm_size (_Communicator, &_CommSize);
+  
+  _GhostSendList.resize (_CommSize);
+  _GhostReceiveList.resize (_CommSize);
+  _SendTypes.resize (_CommSize);
+  _ReceiveTypes.resize (_CommSize);
+  _ReceiveRequests.resize (_CommSize);
+  _SendRequests.resize (_CommSize);
+  
+  for (int i=0; i<_CommSize; i++) {
     _SendTypes[i]=_ReceiveTypes[i]=MPI_DATATYPE_NULL;
     _ReceiveRequests[i]=MPI_REQUEST_NULL;
     _SendRequests[i]=MPI_REQUEST_NULL;
-        }
-
-      // Need to set the basic type
-      if (_ElementSize != sizeof (T))
-        {
+  }
+  
+  // Need to set the basic type
+  if (_ElementSize != sizeof (T)) {
     // We have to provide our own...
     // TODO: !!! this can cause trouble !!!
     MPI_Type_contiguous (_ElementSize, MPI_BYTE, &_BasicType);
     MPI_Type_commit (&_BasicType);
-        }
-      else
-        {
+  }
+  else {
+    T dummy = T();
 #ifdef HAVE_MPI_TYPE_DUP
-    MPI_Type_dup (MPIDataTypeHandler::GetType<T>(), &_BasicType);
+    MPI_Type_dup (MPIStructDef::getMPIType(&dummy), &_BasicType);
     MPI_Type_commit (&_BasicType);
 #else
-    _BasicType = MPIDataTypeHandler::GetType<T>();
+    _BasicType = MPIStructDef::getMPIType(&dummy);
 #endif
-        }
+  }
+  
+  CFLogDebugMin( "MPICommPattern<DATA>::InitMPI\n");
+}
       
-      CFLogDebugMin( "MPICommPattern<DATA>::InitMPI\n");
-    }
-
 //////////////////////////////////////////////////////////////////////////////
       
 template <typename DATA>
@@ -1656,13 +1654,14 @@ MPICommPattern<DATA>::~MPICommPattern ()
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename DATA>
-MPICommPattern<DATA>::MPICommPattern (DATA* data, const T & Init, CFuint Size, CFuint ESize)
+MPICommPattern<DATA>::MPICommPattern (const std::string nspaceName, 
+				      DATA* data, const T & Init, CFuint Size, CFuint ESize)
   : _ElementSize(ESize), _LocalSize(0), _GhostSize(0),
     _NextFree(_NO_MORE_FREE), m_data(data), _MetaData(DataType(), 0),
     _IsIndexed(false), _InitMPIOK(false), _CGlobalValid(false)
 {
   if (ESize > 0) {
-    InitMPI ();
+    InitMPI (nspaceName);
   }
 }
 

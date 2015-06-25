@@ -123,9 +123,11 @@ CFreal ComputeL2Norm::GR_GetLocalValue () const
 
 RealVector ComputeL2Norm::compute ()
 {
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+
   for(m_var_itr = 0; m_var_itr < m_residuals.size(); m_var_itr++)
   {
-    const CFreal globalValue = m_gr.GetGlobalValue ();
+    const CFreal globalValue = m_gr.GetGlobalValue (nsp);
     if(globalValue > 0.)
     {
       m_residuals[m_var_itr] = log10(sqrt(globalValue));

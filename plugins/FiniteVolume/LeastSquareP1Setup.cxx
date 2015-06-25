@@ -53,9 +53,10 @@ void LeastSquareP1Setup::configure ( Config::ConfigArgs& args )
   StdSetup::configure(args);
 
   const std::string name = getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<MeshData> meshData = MeshDataStack::getInstance().getEntryByNamespace(nsp);
-
+  
   // set the number of overlap layers to two for parallel runs
   if (PE::GetPE().IsParallel()) {
     meshData->setNbOverlapLayers(2);

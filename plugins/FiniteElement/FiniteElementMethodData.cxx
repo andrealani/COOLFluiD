@@ -176,10 +176,11 @@ void FiniteElementMethodData::configure ( Config::ConfigArgs& args )
 void FiniteElementMethodData::configureTerms ( Config::ConfigArgs& args )
 {
 
-  std::string name = getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  const std::string name = getNamespace();
+  Common::SafePtr<Namespace> nsp = 
+    NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  
   //by default we dont have convection
   ///@todo change this when we will start using ConvTerms!!
   std::string convectiveTermStr = "NullConvectiveTerm";
@@ -313,9 +314,10 @@ void FiniteElementMethodData::configureVarSets ( Config::ConfigArgs& args )
   /// @todo Framework::VarSet is not a ConfigObject. should it be?
 
   std::string name = getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  
 //   // Update VarSet
 //   CFLog(INFO,"Configuring Convective VarSet: " <<_updateVarStr<<" \n");
 //   _updateVar.reset(Environment::Factory<VarSet>::getInstance().getProvider(_updateVarStr)->

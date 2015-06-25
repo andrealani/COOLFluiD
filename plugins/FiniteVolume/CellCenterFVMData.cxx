@@ -273,10 +273,10 @@ void CellCenterFVMData::configureDiffusiveFluxComputer ( Config::ConfigArgs& arg
 
   std::string name = getNamespace();
   Common::SafePtr<Namespace> nsp =
-    NamespaceSwitcher::getInstance().getNamespace(name);
+    NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel =
     PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  
   if (_derivComputerStr == "Null") {
     if (physModel->getDim() >= 2) {
       const std::string dim = (physModel->getDim() == 2) ? "2D" : "3D";
@@ -453,7 +453,7 @@ void CellCenterFVMData::configureVarSetTransformers ( Config::ConfigArgs& args )
 {
   std::string name = getNamespace();
   Common::SafePtr<Namespace> nsp =
-    NamespaceSwitcher::getInstance().getNamespace(name);
+    NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel =
     PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
 
@@ -563,13 +563,13 @@ void CellCenterFVMData::configureJacobianLinearizer( Config::ConfigArgs& args )
 {
   std::string name = getNamespace();
   Common::SafePtr<Namespace> nsp =
-    NamespaceSwitcher::getInstance().getNamespace(name);
+    NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel =
     PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
   
   std::string linearizerName = physModel->getConvectiveName() + "Linear" + _linearVarStr;
   
-  CFLog(INFO, "FVMCC_FluxSplitter::setup() => linearizerName = "
+  CFLog(VERBOSE, "CellCenterFVMData::configureJacobianLinearizer() => linearizerName = "
         << linearizerName << "\n");
   
   SafePtr<JacobianLinearizer::PROVIDER> jacobLinearProv = CFNULL;

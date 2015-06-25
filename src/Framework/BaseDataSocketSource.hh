@@ -38,8 +38,8 @@ public:
   virtual ~BaseDataSocketSource();
 
   /// Allocation of the DataHandle in this DataSocket
-  virtual void allocate(Common::SafePtr<DataStorage> storage) = 0;
-
+  virtual void allocate(Common::SafePtr<DataStorage> storage, const std::string& nspaceName) = 0;
+  
   /// Deallocation of the DataHandle in this DataSocket
   virtual void deallocate() = 0;
   

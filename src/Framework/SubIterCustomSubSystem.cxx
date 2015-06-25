@@ -210,10 +210,11 @@ void SubIterCustomSubSystem::run()
     {
 
       /// @todo all this should go into the ConvergenceStatus
-      for(CFuint i = 0; i<NamespaceSwitcher::getInstance().getAllNamespaces().size();i++)
+      NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
+      for(CFuint i = 0; i< nsw.getAllNamespaces().size();i++)
       {
-        const std::string nspName = NamespaceSwitcher::getInstance().getAllNamespaces()[i]->getName();
-        NamespaceSwitcher::getInstance().pushNamespace(nspName);
+        const std::string nspName = nsw.getAllNamespaces()[i]->getName();
+        nsw.pushNamespace(nspName);
         Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
 
         subSysStatus->setSubIter(iSub);
@@ -225,17 +226,17 @@ void SubIterCustomSubSystem::run()
           _endSubIteration = true;
         }
 
-        NamespaceSwitcher::getInstance().popNamespace();
+	nsw.popNamespace();
       }
 
       if(_endSubIteration == true){
-        for(CFuint i = 0; i<NamespaceSwitcher::getInstance().getAllNamespaces().size();i++)
+        for(CFuint i = 0; i< nsw.getAllNamespaces().size();i++)
         {
-          const std::string nspName = NamespaceSwitcher::getInstance().getAllNamespaces()[i]->getName();
-          NamespaceSwitcher::getInstance().pushNamespace(nspName);
+          const std::string nspName = nsw.getAllNamespaces()[i]->getName();
+          nsw.pushNamespace(nspName);
           Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
           subSysStatus->setIsSubIterationLastStep(true);
-          NamespaceSwitcher::getInstance().popNamespace();
+          nsw.popNamespace();
         }
       }
 

@@ -48,6 +48,7 @@ Simulator.SubSystem.StopCondition       = Norm
 Simulator.SubSystem.Norm.valueNorm      = -10.0
 
 Simulator.SubSystem.Default.listTRS = InnerCells SuperInlet SuperOutlet
+#Simulator.SubSystem.Default.sameNodeStateConnectivity = true
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2D.CFmesh

@@ -6,6 +6,7 @@
 #include "Framework/DataHandle.hh"
 #include "Common/BadValueException.hh"
 #include "Common/FilesystemException.hh"
+#include "Common/PEFunctions.hh"
 #include "MHD/MHD3DProjectionPolytropicVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -445,24 +446,12 @@ void MHD3DProjectionPolytropicInitStatePFSS::setup()
 
         _nameBeginPFSSDataFile = _varSet->getNameBeginPFSSCoeffFile();
         _nameEndPFSSDataFile = _varSet->getNameEndPFSSCoeffFile();
-
+	
         // if this is a parallel simulation, only ONE process at a time reads the file
-        if (PE::GetPE().IsParallel()) {
-
-                PE::GetPE().setBarrier();
-
-                for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
-                        if (i == PE::GetPE().GetRank ()) {
-                                readInputFile();
-                        }
-
-                        PE::GetPE().setBarrier();
-                }
-        }
-        else {
-                readInputFile();
-        }
-
+	const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+	runSerial<void, MHD3DProjectionPolytropicInitStatePFSS, 
+		  &MHD3DProjectionPolytropicInitStatePFSS::readInputFile>(this, nsp);
+	
   	SafePtr<TopologicalRegionSet> trs = getCurrentTRS();
   	const CFuint nbTrsFaces = trs->getLocalNbGeoEnts();
 

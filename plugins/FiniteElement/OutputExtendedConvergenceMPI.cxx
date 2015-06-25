@@ -90,8 +90,9 @@ OutputExtendedConvergenceMPI::needsSockets()
 void OutputExtendedConvergenceMPI::setup()
 {
   CFAUTOTRACE;
-
-  if (PE::GetPE().GetRank() == 0) {
+  
+  const std::string nsp = getMethodData().getNamespace();
+  if (PE::GetPE().GetRank(nsp) == 0) {
     prepareOutputFile();
   }
 }
@@ -165,29 +166,25 @@ void OutputExtendedConvergenceMPI::computeExtraValues()
   {
     _averageState[iEq] /= nbStates;
   }
-
-  MPI_Reduce(&_minValues[0], &_minValuesGlobal[0], nbEqs,
-     MPI_DOUBLE, MPI_MIN, 0, PE::GetPE().GetCommunicator());
-
-  MPI_Reduce(&_maxValues[0], &_maxValuesGlobal[0], nbEqs,
-     MPI_DOUBLE, MPI_MAX, 0, PE::GetPE().GetCommunicator());
-
-  MPI_Reduce(&_averageState[0], &_averageStateGlobal[0], nbEqs,
-     MPI_DOUBLE, MPI_SUM, 0, PE::GetPE().GetCommunicator());
-
-
-CFout <<"Out\n";
-  if (PE::GetPE().GetRank() == 0) {
-CFout <<"Averaging\n";
-    for(CFuint iEq=0; iEq < nbEqs; ++iEq)
-    {
-      _averageStateGlobal[iEq] /= PE::GetPE().GetProcessorCount();
+  
+  const std::string nsp = getMethodData().getNamespace();
+  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+  
+  MPI_Reduce(&_minValues[0], &_minValuesGlobal[0], nbEqs, MPI_DOUBLE, MPI_MIN, 0, comm);
+  MPI_Reduce(&_maxValues[0], &_maxValuesGlobal[0], nbEqs, MPI_DOUBLE, MPI_MAX, 0, comm);
+  MPI_Reduce(&_averageState[0], &_averageStateGlobal[0], nbEqs, MPI_DOUBLE, MPI_SUM, 0, comm);
+  
+  CFout <<"Out\n";
+  if (PE::GetPE().GetRank(nsp) == 0) {
+    CFout <<"Averaging\n";
+    for(CFuint iEq=0; iEq < nbEqs; ++iEq) {
+      _averageStateGlobal[iEq] /= PE::GetPE().GetProcessorCount(nsp);
     }
   }
-
+  
   // Output to file the coefficients
-  if (PE::GetPE().GetRank() == 0) {
-CFout <<"Writing to file\n";
+  if (PE::GetPE().GetRank(nsp) == 0) {
+    CFout <<"Writing to file\n";
     updateOutputFile();
   }
 }

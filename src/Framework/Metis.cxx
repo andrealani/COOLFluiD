@@ -8,7 +8,6 @@
 
 #include "Common/MPI/Metis.hh"
 #include "Common/Stopwatch.hh"
-#include "Common/MPI/MPIDataTypeHandler.hh"
 #include "Common/CFLog.hh"
 #include "Common/SwapEmpty.hh"
 #include "Environment/ObjectProvider.hh"

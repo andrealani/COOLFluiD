@@ -134,9 +134,10 @@ void FVMCC_PseudoSteadyTimeRhs::execute()
   }
 
 #ifdef CF_HAVE_MPI
+  const std::string nsp = getMethodData().getNamespace();
   CFreal totalMinDt = 1e10;
   MPI_Datatype MPI_CFREAL = Common::MPIStructDef::getMPIType(&totalMinDt);
-  MPI_Allreduce(&minDt, &totalMinDt, 1, MPI_CFREAL, MPI_MIN, PE::GetPE().GetCommunicator());
+  MPI_Allreduce(&minDt, &totalMinDt, 1, MPI_CFREAL, MPI_MIN, PE::GetPE().GetCommunicator(nsp));
   cf_assert(totalMinDt <= minDt);
   minDt = totalMinDt;
 #endif

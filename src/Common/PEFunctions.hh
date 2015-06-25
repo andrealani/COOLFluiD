@@ -20,15 +20,15 @@ namespace COOLFluiD {
 /// run serial a pointer to member function taking no arguments
 /// @author Andrea Lani
 template<typename R, typename C, R(C::*M)()>
-static void runSerial(C* obj) 
+static void runSerial(C* obj, const std::string& nspaceName) 
 {
   if (PE::GetPE().IsParallel()) {
-    PE::GetPE().setBarrier();
-    for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
-      if (i == PE::GetPE().GetRank ()) {
+    PE::GetPE().setBarrier(nspaceName);
+    for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(nspaceName); ++i) {
+      if (i == PE::GetPE().GetRank (nspaceName)) {
 	(obj->*M)();
       }
-      PE::GetPE().setBarrier();
+      PE::GetPE().setBarrier(nspaceName);
     }
   }
   else {
@@ -41,45 +41,44 @@ static void runSerial(C* obj)
 /// run serial a pointer to member function with arity = 1
 /// @author Andrea Lani
 template<typename R, typename A1, typename C, R(C::*M)(A1)>
-void runSerial(C* obj, A1 arg1) 
+static void runSerial(C* obj, A1 arg1, const std::string& nspaceName)
 {
   if (PE::GetPE().IsParallel()) {
-    PE::GetPE().setBarrier();
-    
-    for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
-      if (i == PE::GetPE().GetRank ()) {
+    PE::GetPE().setBarrier(nspaceName);
+    for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(nspaceName); ++i) {
+      if (i == PE::GetPE().GetRank (nspaceName)) {
 	(obj->*M)(arg1);
-      }
-      PE::GetPE().setBarrier();
+      }	
+      PE::GetPE().setBarrier(nspaceName);
     }
   }
   else {
     (obj->*M)(arg1);
   }
 }
- 
+      
 //////////////////////////////////////////////////////////////////////////////
        
 /// run serial a pointer to member function with arity = 2
 /// @author Andrea Lani
 template<typename R, typename A1, typename A2, typename C, R(C::*M)(A1, A2)>
-void runSerial(C* obj, A1 arg1, A2 arg2) 
+static void runSerial(C* obj, A1 arg1, A2 arg2, const std::string& nspaceName) 
 {
   if (PE::GetPE().IsParallel()) {
-    PE::GetPE().setBarrier();
+    PE::GetPE().setBarrier(nspaceName);
     
-    for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
-      if (i == PE::GetPE().GetRank ()) {
+    for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(nspaceName); ++i) {
+      if (i == PE::GetPE().GetRank (nspaceName)) {
 	(obj->*M)(arg1, arg2);
       }
-      PE::GetPE().setBarrier();
+      PE::GetPE().setBarrier(nspaceName);
     }
   }
   else {
     (obj->*M)(arg1, arg2);
   }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
   } // Common

@@ -167,7 +167,7 @@ void DataBroker::registerSource ( BaseDataSocketSource* source )
         CFLog(VERBOSE, "DataBroker: allocating source [" << dump_socket (source) << "]\n" );
 // std::cout << " +++ >>> allocating source [" << dump_socket (source) << "]\n";
 
-        source->allocate( (*meshData)->getDataStorage() );
+        source->allocate( (*meshData)->getDataStorage(), source->getNamespace() );
       }
   }
 

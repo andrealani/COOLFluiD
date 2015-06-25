@@ -39,8 +39,8 @@ public:
   DataHandle<TYPE,STORAGETYPE> getDataHandle() { cf_assert ( isAllocated() ) ; return m_handle;  }
   
   /// Allocation of the DataHandle in this DataSocket
-  void allocate (Common::SafePtr<DataStorage> storage);
-
+  void allocate (Common::SafePtr<DataStorage> storage, const std::string& nspaceName);
+  
   /// Deallocation of the DataHandle in this DataSocket
   void deallocate ();
   
@@ -48,7 +48,7 @@ public:
   bool isAllocated () const { return m_storage.isNotNull(); }
   
 private:
-
+  
   /// access to the datahandle on the datastorage
   DataHandle<TYPE,STORAGETYPE> m_handle;
 
@@ -103,13 +103,15 @@ DataSocketSource<TYPE,STORAGETYPE>::~DataSocketSource()
 //////////////////////////////////////////////////////////////////////////////
 
 template < typename TYPE , typename STORAGETYPE>
-void DataSocketSource<TYPE,STORAGETYPE>::allocate(Common::SafePtr<DataStorage> storage)
+void DataSocketSource<TYPE,STORAGETYPE>::allocate(Common::SafePtr<DataStorage> storage,
+						  const std::string& nspaceName)
 {
   deallocate();
   m_storage = storage;
 
   // creates an empty data storage
-  CreateDataHandle<TYPE, STORAGETYPE>(m_storage, getDataSocketFullStorageName(), (CFuint)(0), m_handle);
+  CreateDataHandle<TYPE, STORAGETYPE>(m_storage, getDataSocketFullStorageName(), 
+				      nspaceName, (CFuint)(0), m_handle);
 }
 
 //////////////////////////////////////////////////////////////////////////////

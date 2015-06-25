@@ -129,12 +129,15 @@ template <typename DATA>
 void CFmeshBinaryFileWriter<DATA>::writeToFileStream
 (const boost::filesystem::path& filepath)
 {
+  using namespace std;
   using namespace COOLFluiD::Common;
   
   CFLog(VERBOSE,  "CFmeshBinaryFileWriter<DATA>::writeToFileStream() start\n");
   
-  const std::string groupName = "Writers";
-  PE::Group& wg = PE::getGroup(groupName);
+  const string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  const string writerName = nsp + "_Writers";
+  Group& wg = PE::GetPE().getGroup(writerName);
+  
   char* fileName = const_cast<char*>(filepath.string().c_str()); 
   
   // all writers open the file for the second or more time
@@ -455,8 +458,9 @@ void CFmeshBinaryFileWriter<DATA>::writeElementList(MPI_File* fh)
   
   CFLog(VERBOSE, "countstates.size() = " << countstates.size() << "\n");
   
-  const string groupName = "Writers";
-  PE::Group& wg = PE::getGroup(groupName);
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  const string writerName = nsp + "_Writers";
+  Group& wg = PE::GetPE().getGroup(writerName);
   
   CFLog(VERBOSE,  "wg.globalRanks.size() = " << wg.globalRanks.size() << "\n");
   
@@ -571,7 +575,7 @@ void CFmeshBinaryFileWriter<DATA>::writeElementList(MPI_File* fh)
       cf_assert(wRank < wOffset.size()); 
       
       MPIIOFunctions::writeAll("CFmeshBinaryFileWriter<DATA>::writeElementList()", fh, 
-			       wOffset[wRank], &elementToPrint[0], wSendSize, _maxBuffSize);
+			       wOffset[wRank], &elementToPrint[0], wSendSize, _maxBuffSize, _myRank, wg);
       
       // test  
       // cf_assert(elementToPrint.size() == wSendSize);
@@ -688,9 +692,10 @@ void CFmeshBinaryFileWriter<DATA>::writeNodeList(MPI_File* fh)
   // wOffset is initialized with current offset
   vector<MPI_Offset> wOffset(_nbWriters, offset); 
   
-  const string groupName = "Writers";
-  PE::Group& wg = PE::getGroup(groupName);
-  
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  const string writerName = nsp + "_Writers";
+  Group& wg = PE::GetPE().getGroup(writerName);
+    
   if (_isWriterRank) {
     MPI_Barrier(wg.comm);
   }
@@ -845,7 +850,7 @@ void CFmeshBinaryFileWriter<DATA>::writeNodeList(MPI_File* fh)
     // MPIStructDef::getMPIType(&elementToPrint[0]), &_status); 
     
     MPIIOFunctions::writeAll("CFmeshBinaryFileWriter<DATA>::writeNodeList()", fh, 
-			     wOffset[wRank], &elementToPrint[0], wSendSize, _maxBuffSize);
+			     wOffset[wRank], &elementToPrint[0], wSendSize, _maxBuffSize, _myRank, wg);
   }
   
   //reset the all sendElement list to 0
@@ -885,10 +890,9 @@ void CFmeshBinaryFileWriter<DATA>::writeStateList(MPI_File* fh)
     MPIIOFunctions::writeKeyValue<char>(fh, "\n");
   }
   
-  const string groupName = "Writers";
-  PE::Group& wg = PE::getGroup(groupName);
-  
-  CFuint totalToSend = 0;
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  const string writerName = nsp + "_Writers";
+  Group& wg = PE::GetPE().getGroup(writerName);
   
   MPI_Offset offset;
   MPI_File_get_position(*fh, &offset);
@@ -1062,7 +1066,7 @@ void CFmeshBinaryFileWriter<DATA>::writeStateList(MPI_File* fh)
       // MPIStructDef::getMPIType(&elementToPrint[0]), &_status); 
       
       MPIIOFunctions::writeAll("CFmeshBinaryFileWriter<DATA>::writeStateList()", fh,
-			       wOffset[wRank], &elementToPrint[0], wSendSize, _maxBuffSize);
+			       wOffset[wRank], &elementToPrint[0], wSendSize, _maxBuffSize, _myRank, wg);
     }
     
     //reset the all sendElement list to 0
@@ -1100,7 +1104,7 @@ void CFmeshBinaryFileWriter<DATA>::writeGeoList(CFuint iTRS, MPI_File* fh)
   
   const string nameTRS = MeshDataStack::getActive()->getTotalTRSNames()[iTRS];
   CFLog(VERBOSE, "CFmeshBinaryFileWriter<DATA>::writeGeoList() for TRS named = " << nameTRS << "\n");
-  const bool is2DTrs = (nameTRS != "Periodic" && nameTRS != "Top" && nameTRS != "Bottom");
+  // const bool is2DTrs = (nameTRS != "Periodic" && nameTRS != "Top" && nameTRS != "Bottom");
   
   const CFuint nbTRsInTRS = (*globalGeoIDS)[iTRS].size();
   CFLog(VERBOSE, "nbTRsInTRS = " << nbTRsInTRS << "\n");
@@ -1156,9 +1160,10 @@ void CFmeshBinaryFileWriter<DATA>::writeGeoList(CFuint iTRS, MPI_File* fh)
   MPI_Bcast(&offset, 1, MPIStructDef::getMPIOffsetType(), _ioRank, _comm);
   // wOffset is initialized with current offset
   vector<MPI_Offset> wOffset(_nbWriters, offset); 
-  
-  const string groupName = "Writers";
-  PE::Group& wg = PE::getGroup(groupName);
+
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  const string writerName = nsp + "_Writers";
+  Group& wg = PE::GetPE().getGroup(writerName);
   
   if (_isWriterRank) {
     MPI_Barrier(wg.comm);
@@ -1351,7 +1356,7 @@ void CFmeshBinaryFileWriter<DATA>::writeGeoList(CFuint iTRS, MPI_File* fh)
       //MPIStructDef::getMPIType(&elementToPrint[0]), &_status); 
       
       MPIIOFunctions::writeAll("CFmeshBinaryFileWriter<DATA>::writeGeoList()", fh, 
-			       wOffset[wRank], &elementToPrint[0], wSendSize, _maxBuffSize);
+			       wOffset[wRank], &elementToPrint[0], wSendSize, _maxBuffSize, _myRank, wg);
       
       // note here we are writing some components that could be = -1
       // this will have to be taken into account in the parallel reader 

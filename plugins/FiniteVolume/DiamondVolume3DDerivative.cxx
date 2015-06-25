@@ -529,7 +529,7 @@ void DiamondVolume3DDerivative::compute2PyramidVolume
     
     const CFuint MAXCOUNT = 100;
     if (count < MAXCOUNT) {
-      const string filename = "trouble_cell.plt-" + StringOps::to_str(PE::GetPE().GetRank()); 
+      const string filename = "trouble_cell.plt-" + StringOps::to_str(PE::GetPE().GetRank("Default")); 
       // write a TECPLOT file with : face nodes, L/R nodes, face normal (translated to L), left cell nodes  
       ofstream fout(filename.c_str(), ios::app);
       

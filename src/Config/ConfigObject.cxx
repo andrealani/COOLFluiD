@@ -108,7 +108,7 @@ void ConfigObject::configure ( Config::ConfigArgs& args )
 
   CFuint rank = 0;
   if ( Common::PE::IsInitialised() )
-    rank = Common::PE::GetPE().GetRank();
+    rank = Common::PE::GetPE().GetRank("Default");
   if ( rank == 0 )
   {
     ofstream configdbg ( "config-debug-info.log" ,ios_base::app);
@@ -333,7 +333,7 @@ void ConfigObject::processParentArgs ( ConfigArgs& args )
 
   CFuint rank = 0;
   if ( Common::PE::IsInitialised() )
-    rank = Common::PE::GetPE().GetRank();
+    rank = Common::PE::GetPE().GetRank("Default");
 
   // only rak 0 writes the configuration file
   if ( rank == 0) {

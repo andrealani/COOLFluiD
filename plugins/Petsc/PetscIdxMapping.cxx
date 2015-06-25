@@ -8,6 +8,7 @@
 
 #include "Common/CFMap.hh"
 #include "Common/PE.hh"
+#include "Framework/MeshData.hh"
 
 #include "Petsc/PetscIdxMapping.hh"
 
@@ -37,12 +38,13 @@ void PetscIdxMapping::computeMapping(std::valarray<CFuint>& localToPetscIDs,
   // owned
   isNonLocalRow.resize(nbPoints);
   isNonLocalRow = false;
-
-  const CFuint currRank = Common::PE::GetPE().GetRank();
-  const CFuint nbProcesses = Common::PE::GetPE().GetProcessorCount();
+  
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  const CFuint currRank = Common::PE::GetPE().GetRank(nsp);
+  const CFuint nbProcesses = Common::PE::GetPE().GetProcessorCount(nsp);
   cf_assert(currRank < nbProcesses);
   cf_assert(_updatablesPerRank.size() == nbProcesses);
-
+  
   // compute the start global
   std::valarray<CFuint> startPetscID(nbProcesses);
   startPetscID = 0;

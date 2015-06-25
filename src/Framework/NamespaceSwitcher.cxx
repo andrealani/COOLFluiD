@@ -17,14 +17,19 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-NamespaceSwitcher& NamespaceSwitcher::getInstance()
+NamespaceSwitcher& NamespaceSwitcher::getInstance(const std::string& subSystemName)
 {
-  static NamespaceSwitcher nsw;
-  return nsw;
+  // somebody will have to delete those entries
+  static Common::GeneralStorage<NamespaceSwitcher> nsmap;
+  if (nsmap.checkEntry(subSystemName)) {return *nsmap.getEntry(subSystemName);}
+  
+  // add a new namespace if none corresponds to the given subsystem name
+  nsmap.addEntry(subSystemName, new NamespaceSwitcher());
+  return *nsmap.getEntry(subSystemName);
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
-
+    
 NamespaceSwitcher::NamespaceSwitcher() :
 m_isEnabled(false)
 {

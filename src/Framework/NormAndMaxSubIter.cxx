@@ -64,8 +64,9 @@ bool NormAndMaxSubIter::IsGlobal () const
 
 bool NormAndMaxSubIter::isAchieved(const ConvergenceStatus& status)
 {
-  const std::string currentNspName = NamespaceSwitcher::getInstance().getCurrentNamespace()->getName();
-
+  const std::string currentNspName = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getCurrentNamespace()->getName();
+  
   if(m_nspName == currentNspName){
     const CFreal res  = SubSystemStatusStack::getActive()->getResidual();
     const CFuint subIter = SubSystemStatusStack::getActive()->getSubIter();

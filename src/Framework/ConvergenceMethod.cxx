@@ -295,7 +295,8 @@ void ConvergenceMethod::syncGlobalDataComputeResidual(const bool computeResidual
   const bool isParallel = Common::PE::GetPE().IsParallel();
   Common::Stopwatch<Common::WallTime> syncTimer;
   
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(getNamespace());
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(getNamespace());
   DataHandle<State*, GLOBAL> statedata = 
     MeshDataStack::getInstance().getEntryByNamespace(nsp)->getStateDataSocketSink().getDataHandle();
   DataHandle<Node*, GLOBAL> nodedata = 
@@ -336,7 +337,8 @@ void ConvergenceMethod::syncAllAndComputeResidual(const bool computeResidual)
   const bool isParallel = Common::PE::GetPE().IsParallel();
   Common::Stopwatch<Common::WallTime> syncTimer;
   
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(getNamespace());
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(getNamespace());
   DataHandle<State*, GLOBAL> statedata = 
     MeshDataStack::getInstance().getEntryByNamespace(nsp)->getStateDataSocketSink().getDataHandle();
   DataHandle<Node*, GLOBAL> nodedata = 
@@ -388,12 +390,12 @@ void ConvergenceMethod::writeOnScreen()
     //    out.setf(ios::scientific,ios::floatfield);
 
     // print subsystem status name
-    if(subSysStatus->getName() != "SubSystemStatus")
-    {
-      out << "SubSystemStatus: ";
-      out <<  subSysStatus->getName() << " ";
+    if(subSysStatus->getName() != "SubSystemStatus") {
+      out << "[ ";
+      out.width(25);
+      out <<  subSysStatus->getName() << "] ";
     }
-
+    
     // Print number of iterations
     out << "Iter: ";
     out.width(6);
@@ -443,9 +445,11 @@ void ConvergenceMethod::writeOnScreen()
 
 bool ConvergenceMethod::hasToUpdateConv()
 {
-  return !m_onlyP0 || ( m_onlyP0 && (Common::PE::GetPE().GetRank() == 0) );
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  // AL: should we use "Default" here to avoid I/O troubles
+  return !m_onlyP0 || ( m_onlyP0 && (Common::PE::GetPE().GetRank(nsp) == 0) );
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace Framework

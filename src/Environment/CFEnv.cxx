@@ -106,7 +106,7 @@ CFEnv::CFEnv() : Config::ConfigObject("CFEnv"),
 void CFEnv::configure ( Config::ConfigArgs& args )
 {
   // set the number of writers for parallel I/O
-  m_env_vars->NbWriters = PE::GetPE().GetProcessorCount();
+  m_env_vars->NbWriters = PE::GetPE().GetProcessorCount("Default");
   
   ConfigObject::configure(args);
   
@@ -362,7 +362,7 @@ void CFEnv::initiate ( int argc, char** argv )
   CFLog(VERBOSE, "Initializing Parallel Environment : \n");
   COOLFluiD::Common::PE::InitPE(&argc, &argv);
   
-  if (Common::PE::GetPE().GetRank() == 0) {
+  if (Common::PE::GetPE().GetRank("Default") == 0) {
     CFLog(INFO, "-------------------------------------------------------------\n");
     CFLog(INFO, "COOLFluiD Environment\n");
     CFLog(INFO, "-------------------------------------------------------------\n");
@@ -376,13 +376,13 @@ void CFEnv::initiate ( int argc, char** argv )
   m_env_vars->InitArgs.first  = argc;
   m_env_vars->InitArgs.second = argv;
   
-  if (Common::PE::GetPE().GetRank() == 0) {
+  if (Common::PE::GetPE().GetRank("Default") == 0) {
     CFLog(VERBOSE, "Initializing Hook Modules ...\n");
   }
   
   initiateModules();
   
-  if (Common::PE::GetPE().GetRank() == 0) {
+  if (Common::PE::GetPE().GetRank("Default") == 0) {
     CFLog(INFO, "-------------------------------------------------------------\n");
   }
 }
@@ -429,12 +429,10 @@ void CFEnv::terminate()
 
 CFuint CFEnv::getCPURank()
 {
-  if (Common::PE::IsInitialised())
-  {
-    return Common::PE::GetPE().GetRank();
+  if (Common::PE::IsInitialised()) {
+    return Common::PE::GetPE().GetRank("Default");
   }
-  else
-  {
+  else {
     return 0;
   }
 }

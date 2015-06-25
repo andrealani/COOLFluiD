@@ -426,16 +426,18 @@ vector<SafePtr<BaseDataSocketSource> > RadiativeTransferMonteCarlo<PARTICLE_TRAC
 }
 
 /////////////////////////////////////////////////////////////////////////////
+
 template<class PARTICLE_TRACKING>
 void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::setup()
-{
-
+{  
+  const std::string nsp = getMethodData().getNamespace();
+  
   // MPI parameters
-  m_myProcessRank = PE::GetPE().GetRank();
-  m_nbProcesses = PE::GetPE().GetProcessorCount();
-  m_comm = PE::GetPE().GetCommunicator();
+  m_myProcessRank = PE::GetPE().GetRank(nsp);
+  m_nbProcesses = PE::GetPE().GetProcessorCount(nsp);
+  m_comm = PE::GetPE().GetCommunicator(nsp);
   MPIError::getInstance().init(m_comm, m_myProcessRank);
-
+  
   // set dimensions
   m_dim = PhysicalModelStack::getActive()->getDim();
   m_dim2=(m_isAxi? 3 : m_dim);

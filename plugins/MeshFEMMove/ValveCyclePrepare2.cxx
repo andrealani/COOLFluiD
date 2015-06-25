@@ -95,9 +95,10 @@ void ValveCyclePrepare2::configure ( Config::ConfigArgs& args )
   BasePrepare::configure(args);
 
   std::string name = getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  
   const std::string socketNameValve = "boundaryMovement_" + _trsNameValve;
   const std::string socketNameAxis = "boundaryMovement_" + _trsNameSymmetry;
   _sockets.createSocketSource<RealVector>(socketNameValve);

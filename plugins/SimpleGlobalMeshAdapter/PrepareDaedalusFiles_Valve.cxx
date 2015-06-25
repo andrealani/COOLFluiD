@@ -17,6 +17,7 @@
 #include "Environment/FileHandlerOutput.hh"
 #include "Environment/DirPaths.hh"
 #include "Common/PE.hh"
+#include "Common/PEFunctions.hh"
 #include "MathTools/MathConsts.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -86,22 +87,10 @@ void PrepareDaedalusFiles_Valve::setup()
 void PrepareDaedalusFiles_Valve::execute()
 {
   CFAUTOTRACE;
-
-  //Write the new daedalus files
-  if (PE::GetPE().IsParallel()) {
-
-    PE::GetPE().setBarrier();
-
-    if (PE::GetPE().GetRank () == 0) {
-      readWriteFile();
-    }
-
-    PE::GetPE().setBarrier();
-  }
-  else{
-    readWriteFile();
-  }
-
+  
+  //Write the new daedalus files 
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  runSerial<void, PrepareDaedalusFiles_Valve, &PrepareDaedalusFiles_Valve::readWriteFile>(this, nsp);
 }
 
 //////////////////////////////////////////////////////////////////////////////

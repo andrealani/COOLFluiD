@@ -200,14 +200,18 @@ void OnlyMeshSubSystem::buildMeshData()
 
   // loop on all namespaces and setup the models in each of them
   typedef std::vector<Common::SafePtr<Namespace> > NspVec;
-  NspVec lst = NamespaceSwitcher::getInstance().getAllNamespaces();
+  NspVec lst = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getAllNamespaces();
   cf_assert(!lst.empty()); // there should be some models
+  
   NspVec::iterator nsp = lst.begin();
   for(; nsp != lst.end(); ++nsp)
   {
-    NamespaceSwitcher::getInstance().pushNamespace((*nsp)->getName());
+    NamespaceSwitcher::getInstance
+      (SubSystemStatusStack::getCurrentName()).pushNamespace((*nsp)->getName());
     PhysicalModelStack::getActive()->getImplementor()->setup();
-    NamespaceSwitcher::getInstance().popNamespace();
+    NamespaceSwitcher::getInstance
+      (SubSystemStatusStack::getCurrentName()).popNamespace();
   }
   
   // allocate all the mesh data
@@ -373,11 +377,10 @@ void OnlyMeshSubSystem::setup()
   cf_assert(isConfigured());
 
   typedef std::vector<Common::SafePtr<Namespace> > NspVec;
-  NspVec lst =
-    NamespaceSwitcher::getInstance().getAllNamespaces();
-
+  NspVec lst = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getAllNamespaces();
   cf_assert(!lst.empty());
-
+  
   NspVec::iterator nsp = lst.begin();
 
   //setCommands() needs Trs's => must be exactly here
@@ -629,9 +632,9 @@ void OnlyMeshSubSystem::configurePhysicalModel ( Config::ConfigArgs& args )
   CFLog(VERBOSE, "OnlyMeshSubSystem::configurePhysicalModel() start\n");
  
   typedef std::vector<Common::SafePtr<Namespace> > NspVec;
-  NspVec lst =
-    NamespaceSwitcher::getInstance().getAllNamespaces();
-
+  NspVec lst = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getAllNamespaces();
+  
   cf_assert(!lst.empty());
 
   NspVec::iterator nsp = lst.begin();

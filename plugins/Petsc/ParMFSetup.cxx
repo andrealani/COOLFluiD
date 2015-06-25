@@ -104,21 +104,23 @@ void ParMFSetup::setMatrix(const CFuint localSize,
   
   ctx->petscData = &getMethodData();
   
-  cout << Common::PE::GetPE().GetRank() << " matrix localSize = " << localSize << ", globalSize = " << globalSize << endl;
+  const std::string nsp = getMethodData().getNamespace();
+  CFLog(VERBOSE, "ParMFSetup::setMatrix() => P" << Common::PE::GetPE().GetRank(nsp) << 
+	" matrix localSize = " << localSize << ", globalSize = " << globalSize << "\n");
   
   // creates a parallel Jacobian-Free matrix
   jfMat.createParJFMat(PETSC_COMM_WORLD,
-                     localSize *nbEqs,
-                     localSize *nbEqs,
-                     globalSize *nbEqs,
-                     globalSize *nbEqs,
-                     (void*)(ctx),
-                     "JFMatrix");
+		       localSize *nbEqs,
+		       localSize *nbEqs,
+		       globalSize *nbEqs,
+		       globalSize *nbEqs,
+		       (void*)(ctx),
+		       "JFMatrix");
   
   // all non zero entries
   std::valarray<CFint> allNonZero(nbStates);
   allNonZero = 0;
-
+  
   // ghost neighbors (out of diagonal submatrix non zero entries)
   std::valarray<CFint> outDiagNonZero(nbStates);
   outDiagNonZero = 0;

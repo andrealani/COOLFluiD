@@ -178,9 +178,10 @@ void SimpleMeshAdapter::remeshImpl()
   CFAUTOTRACE;
 
   const std::string otherNameSpace = _data->getOtherNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(otherNameSpace);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(otherNameSpace);
   Common::SafePtr<SubSystemStatus> subsystemStatus = SubSystemStatusStack::getInstance().getEntryByNamespace(nsp);
-
+  
   _remeshCondition->execute();
   CFout <<" Need remeshing ?? : "<< _data->isNeedRemeshing() <<"\n";
 

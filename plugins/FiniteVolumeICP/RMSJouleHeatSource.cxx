@@ -344,20 +344,20 @@ void RMSJouleHeatSource::execute()
 
     m_geoBuilder.releaseGE();
   }
-
+  
+  const std::string nsp = this->getMethodData().getNamespace(); 
   /// @TODO AL: temporary solution ....
   CFdouble totalPower = 0.0;
-  if (PE::GetPE().GetProcessorCount() > 1) {
-
+  if (PE::GetPE().GetProcessorCount(nsp) > 1) {
 #ifdef CF_HAVE_MPI
     MPI_Allreduce(&actualPower, &totalPower, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+		  PE::GetPE().GetCommunicator(nsp));
 #endif
   }
   else {
     totalPower = actualPower;
   }
-
+  
   // parameter rescaling the electric current
   m_rescaleElCurrent = sqrt(m_desiredPowerkW*1000./totalPower);
 
@@ -394,10 +394,10 @@ boost::filesystem::path RMSJouleHeatSource::constructFilename()
   if (isParallel) {
     std::ostringstream fname;
     fname << boost::filesystem::basename(boost::filesystem::path(m_nameOutputFileEMField))
-          << "-" << PE::GetPE().GetRank()
+          << "-" << PE::GetPE().GetRank("Default")
           << boost::filesystem::extension(boost::filesystem::path(m_nameOutputFileEMField));
   }
-
+  
   CFLog(VERBOSE, "RMSJouleHeatSource::constructFilename() => Writing Electromagnetic Field to : " << m_nameOutputFileEMField << "\n");
   return boost::filesystem::path(m_nameOutputFileEMField);
 }

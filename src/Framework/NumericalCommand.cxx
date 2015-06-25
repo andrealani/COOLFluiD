@@ -130,7 +130,7 @@ void NumericalCommand::allocateCommandSockets()
                       << " Command: " << getName()
                       << "\n");
 
-        (*srcItr)->allocate((*meshData)->getDataStorage());
+        (*srcItr)->allocate((*meshData)->getDataStorage(), (*srcItr)->getNamespace());
       }
     }
   }

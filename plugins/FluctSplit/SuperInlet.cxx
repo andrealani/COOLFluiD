@@ -223,11 +223,12 @@ void SuperInlet::configure ( Config::ConfigArgs& args )
   }
 
   std::string name = getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
   std::string provider = VarSetTransformer::getProviderName
     (physModel->getNameImplementor(),
-    _inputVarStr, _updateVarStr);
+     _inputVarStr, _updateVarStr);
 
   _inputToUpdateVar = Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider)
     ->create(physModel->getImplementor());

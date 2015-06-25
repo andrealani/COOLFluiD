@@ -5,12 +5,13 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 #include "ParaViewWriter/ParaViewWriter.hh"
-#include "ParaWriterData.hh"
+#include "ParaViewWriter/ParaWriterData.hh"
 #include "Framework/PhysicalModel.hh"
 #include "Common/CFLog.hh"
 #include "Framework/ConvectiveVarSet.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/NamespaceSwitcher.hh"
+#include "Framework/SubSystemStatus.hh"
 #include "Common/NotImplementedException.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -81,9 +82,10 @@ void ParaWriterData::configure ( Config::ConfigArgs& args )
   OutputFormatterData::configure(args);
 
   std::string name = getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  
   std::string provider = "Null";
   if (m_updateVarStr != "Null") {
     provider = (physModel->getConvectiveName() != "Null") ?

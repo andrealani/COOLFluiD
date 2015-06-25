@@ -60,7 +60,7 @@ template <int N>
 void RoeFluxT<N>::configure ( Config::ConfigArgs& args )
 {
   FVMCC_FluxSplitter::configure(args);
-  CFLog(INFO, " +++ DiffCoeff = " << getReductionCoeff() << " \n");
+  CFLog(VERBOSE, "RoeFlux::configure() => DiffCoeff = " << getReductionCoeff() << " \n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

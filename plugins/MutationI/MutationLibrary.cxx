@@ -8,7 +8,8 @@
 #include "Common/BadValueException.hh"
 #include "Environment/DirPaths.hh"
 #include "Common/Stopwatch.hh"
-#include "Common/PE.hh"
+#include "Common/PEFunctions.hh"
+#include "Framework/MeshData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -521,23 +522,10 @@ void MutationLibrary::setup()
 {
   // if this is a parallel simulation, only ONE process at a time
   // sets the library
-  if (PE::GetPE().IsParallel()) {
-
-    PE::GetPE().setBarrier();
-
-    for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
-      if (i == PE::GetPE().GetRank ()) {
-        setLibrarySequentially();
-      }
-
-      PE::GetPE().setBarrier();
-    }
-  }
-  else {
-    setLibrarySequentially();
-  }
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  runSerial<void, MutationLibrary, &MutationLibrary::setLibrarySequentially>(this, nsp);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrary:: setLibrarySequentially()

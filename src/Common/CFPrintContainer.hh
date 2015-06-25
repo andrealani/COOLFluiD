@@ -51,7 +51,7 @@ public:
   /// Overloading of streaming operator
   friend std::ostream& operator<< (std::ostream& out, const CFPrintContainer<ARRAY>& a)
   {
-    out << "P" << Common::PE::GetPE().GetRank() << " => " << a.m_name << " ";
+    out << "P" << Common::PE::GetPE().GetRank("Default") << " => " << a.m_name << " ";
     CFuint n = 0;
     typename ARRAY::const_iterator it;
     for (it = a.m_v->begin(); it != a.m_v->end(); ++it, ++n) {

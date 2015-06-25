@@ -7,6 +7,7 @@
 #include "Framework/Framework.hh"
 #include "Framework/LookupInterpolator.hh"
 #include "Framework/PhysicalModel.hh"
+#include "Framework/MeshData.hh"
 #include "Common/NotImplementedException.hh"
 #include "Common/PE.hh"
 #include "Common/SwapEmpty.hh"
@@ -66,16 +67,18 @@ void LookupInterpolator::setup()
 {
   CFAUTOTRACE;
   
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  
   StateInterpolator::setup(); 
   
   if (m_infile != "") {
     if (PE::GetPE().IsParallel()) {
-      PE::GetPE().setBarrier();
-      for (CFuint p = 0; p < PE::GetPE().GetProcessorCount(); ++p) {
-	if (p == PE::GetPE().GetRank ()) {
+      PE::GetPE().setBarrier(nsp);
+      for (CFuint p = 0; p < PE::GetPE().GetProcessorCount(nsp); ++p) {
+	if (p == PE::GetPE().GetRank (nsp)) {
 	  fillTable();
 	}
-	PE::GetPE().setBarrier();
+	PE::GetPE().setBarrier(nsp);
       }
     }
     else {

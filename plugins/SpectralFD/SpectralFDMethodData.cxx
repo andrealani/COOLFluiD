@@ -490,10 +490,10 @@ void SpectralFDMethodData::setup()
   
   // create the transformer from update to solution variables ----------------
   std::string name = getNamespace();
-  Common::SafePtr<Namespace> nsp =
-  NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel =
-  PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
+    PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
   
   Common::SafePtr<VarSetTransformer::PROVIDER> vecTransProv = CFNULL;
   

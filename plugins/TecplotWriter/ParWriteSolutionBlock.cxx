@@ -21,7 +21,6 @@
 #include "Framework/PhysicalModel.hh"
 #include "Framework/ConvectiveVarSet.hh"
 #include "Framework/MethodCommandProvider.hh"
-#include "Framework/NamespaceSwitcher.hh"
 #include "Framework/DataHandleOutput.hh"
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/WriteListMap.hh"
@@ -202,7 +201,8 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
   if (nbExtraVars > 0) extraValues.resize(nbExtraVars);
   State tempState;
   
-  PE::Group& wg = PE::getGroup("Writers");
+  const string writerName = getMethodData().getNamespace() + "_Writers";
+  Group& wg = PE::GetPE().getGroup(writerName);
   
   // fill in the writer list for nodal variables
   const CFuint totNbNodes = tt.totalNbNodesInType[iType];

@@ -271,7 +271,12 @@ FIND_PACKAGE(GSL)             # GNU Scientific Library
 # MPI 
 IF (CF_ENABLE_MPI)  
 FIND_PACKAGE(MPI)
-ENDIF()
+# if mpi was found add it to the include path if needed
+IF   (CF_HAVE_MPI AND NOT CF_HAVE_MPI_COMPILER)
+  INCLUDE_DIRECTORIES(${MPI_INCLUDE_DIR})
+  ADD_DEFINITIONS  ( -DCF_HAVE_MPI )
+ENDIF ()
+ENDIF ()
 
 # mutation++
 IF ( CF_ENABLE_MUTATIONPP )
@@ -309,11 +314,6 @@ ENDIF()
 #include the generated config file
 ADD_DEFINITIONS  ( -DCF_HAVE_CONFIG_H )
 INCLUDE_DIRECTORIES ( ${COOLFluiD_BINARY_DIR} )
-
-# if mpi was found add it to the include path if needed
-IF   (CF_HAVE_MPI AND NOT CF_HAVE_MPI_COMPILER)
-  INCLUDE_DIRECTORIES(${MPI_INCLUDE_DIR})
-ENDIF ()
 
 # check for subversion support
 INCLUDE(CheckSvnVersion)

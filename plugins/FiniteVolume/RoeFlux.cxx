@@ -74,7 +74,7 @@ RoeFlux::~RoeFlux()
 void RoeFlux::configure ( Config::ConfigArgs& args )
 {
   FVMCC_FluxSplitter::configure(args);
-  CFLog(INFO, " +++ DiffCoeff = " << getReductionCoeff() << " \n");
+  CFLog(VERBOSE, "RoeFlux::configure() => DiffCoeff = " << getReductionCoeff() << " \n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

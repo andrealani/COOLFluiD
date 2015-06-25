@@ -208,9 +208,10 @@ void CoupledSuperInlet_NodalFVMCC::configure ( Config::ConfigArgs& args )
   }
 
   const std::string nameSpace = getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(nameSpace);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(nameSpace);
   Common::SafePtr<SubSystemStatus> subsystemStatus = SubSystemStatusStack::getInstance().getEntryByNamespace(nsp);
-
+  
   const std::string currentSubSystem = subsystemStatus->getSubSystemName();
   const std::vector<std::string>& trsNames = getTrsNames();
 

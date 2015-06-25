@@ -14,6 +14,8 @@
 ### Residual = -4.1525189
 #
 
+#CFEnv.OnlyCPU0Writes = false
+
 # Simulation Modules
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libPetscI libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libForwardEuler libAeroCoefFVM libCFmeshExtruder
 
@@ -32,7 +34,6 @@ Simulator.SubSystem.NavierStokes3D.ConvTerm.machInf = 0.35
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = flatPlate3D_sol.CFmesh
 Simulator.SubSystem.Tecplot.FileName    = flatPlate3D_sol.plt
-Simulator.SubSystem.Tecplot.Data.updateVar = Pvt
 Simulator.SubSystem.Tecplot.SaveRate = 50
 Simulator.SubSystem.CFmesh.SaveRate = 50
 Simulator.SubSystem.Tecplot.AppendTime = false
@@ -50,9 +51,9 @@ Simulator.SubSystem.Default.listTRS = InnerFaces SlipWall NoSlipWall Inlet Outle
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = flatPlate3D.CFmesh
+
 Simulator.SubSystem.CFmeshFileReader.ReadCFmesh = ParReadCFmeshBinary
 Simulator.SubSystem.CFmeshFileReader.ParReadCFmeshBinary.ParCFmeshFileReader.ParMetis.NCommonNodes = 4
-Simulator.SubSystem.CFmeshFileReader.ParReadCFmeshBinary.ParCFmeshFileReader.NbOverlapLayers = 2
 Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = flatPlateQD.CFmesh
 Simulator.SubSystem.CFmeshFileReader.convertFrom = Extruder2DFVMMPI
 Simulator.SubSystem.CFmeshFileReader.Extruder2DFVMMPI.NbLayers = 10

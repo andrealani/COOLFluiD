@@ -179,8 +179,8 @@ void UpdateSol::execute()
     
   // This vector will temporally contain the ID of any vector considered not valid.
   std::vector<CFuint> badStatesIDs;
-   
-  string fileName = "unphysical_states.plt" + StringOps::to_str(PE::GetPE().GetRank());
+  
+  string fileName = "unphysical_states.plt" + StringOps::to_str(PE::GetPE().GetRank("Default"));
   // Name of the file where to store invalid states in.
   boost::filesystem::path filepath (fileName.c_str());
   

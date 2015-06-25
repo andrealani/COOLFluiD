@@ -6,25 +6,24 @@
 
 #include <sstream>
 
-#include "Common/MPI/MPIDataTypeHandler.hh"
-
 #include "Common/Stopwatch.hh"
 #include "Common/SwapEmpty.hh"
-
 #include "Common/CFLog.hh"
 #include "Environment/ObjectProvider.hh"
-
 #include "Framework/Framework.hh"
 #include "Framework/ParMetis.hh"
-
+#include "Framework/MeshData.hh"
 #include "Framework/PartitionerPeriodicTools.hh"
 
 /////////////////////////////////////////////////////////////////////////////
 
-namespace COOLFluiD {
-    namespace Framework {
-
 using namespace COOLFluiD::Common;
+
+/////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+    namespace Framework {
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -126,7 +125,9 @@ void ParMetis::doPartition(PartitionerData& pData)
       locmaxidx = (pData.elemNode[i] > locmaxidx) ? pData.elemNode[i] : locmaxidx;
     }
     
-    MPI_Allreduce(&locmaxidx,&totmaxidx,1,MPI_INT,MPI_SUM,PE::GetPE().GetCommunicator());
+    const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+    
+    MPI_Allreduce(&locmaxidx,&totmaxidx,1,MPI_INT,MPI_SUM,PE::GetPE().GetCommunicator(nsp));
     PartitionerPeriodicTools::meldNodes(totmaxidx+1,
 					idx1,
 					idx0,

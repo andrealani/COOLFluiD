@@ -280,11 +280,13 @@ void Dilatation_NavierStokes3Dcons::prepareOutputFileDilatation()
 void Dilatation_NavierStokes3Dcons::configure ( Config::ConfigArgs& args )
 {
   DataProcessingCom::configure( args );
-  std::string name = getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
 
+  const std::string name = getMethodData().getNamespace();
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
+  
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-  std::string varSetName = "Euler3DCons";
+  const std::string varSetName = "Euler3DCons";
   m_varSet.reset((Environment::Factory<ConvectiveVarSet>::getInstance().getProvider(varSetName)->
     create(physModel->getImplementor()->getConvectiveTerm())).d_castTo<Physics::NavierStokes::Euler3DCons>());
 

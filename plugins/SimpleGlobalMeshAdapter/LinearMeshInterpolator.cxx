@@ -113,10 +113,11 @@ void LinearMeshInterpolator::setup()
   _interpolatedState.resize(nbEqs);
 
   std::string name = getMethodData().getOtherNamespace();
-  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   const CFuint maxNbNodesInCell =
     MeshDataStack::getInstance().getEntryByNamespace(otherNsp)->Statistics().getMaxNbNodesInCell();
-
+  
   _shapeFunctions.resize(maxNbNodesInCell);
 }
 
@@ -185,8 +186,9 @@ void LinearMeshInterpolator::BoxClassification()
 
   const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
   std::string otherNamespace = getMethodData().getOtherNamespace();
-  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance().getNamespace(otherNamespace);
-
+  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(otherNamespace);
+  
   Common::SafePtr<TopologicalRegionSet> cells =
     MeshDataStack::getInstance().getEntryByNamespace(otherNsp)->getTrs("InnerCells");
 
@@ -261,8 +263,9 @@ void LinearMeshInterpolator::SearchInBoxes()
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
 
   std::string name = getMethodData().getOtherNamespace();
-  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance().getNamespace(name);
-
+  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
+  
   Common::SafePtr<TopologicalRegionSet> cells =
     MeshDataStack::getInstance().getEntryByNamespace(otherNsp)->getTrs("InnerCells");
 
@@ -337,8 +340,9 @@ cf_assert(false);
 ///@todo compute using the projection on the nearest face
 
   std::string name = getMethodData().getOtherNamespace();
-  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance().getNamespace(name);
-
+  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
+  
   std::vector< Common::SafePtr<TopologicalRegionSet> > trsList =
     MeshDataStack::getInstance().getEntryByNamespace(otherNsp)->getTrsList();
 

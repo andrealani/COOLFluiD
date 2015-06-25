@@ -12,6 +12,7 @@
 // must come first because petsc gets confused with some definitions of boost
 #include <boost/filesystem/path.hpp>
 #include "Common/PE.hh"
+#include "Framework/MeshData.hh"
 #include "petscvec.h"
 #include "petscmat.h"
 #include "petscksp.h"
@@ -22,9 +23,9 @@
 
 #ifndef NDEBUG
 #ifndef CF_HAVE_CUDA // this is for petsc-dev
-#define CF_CHKERRCONTINUE(n) if (n) {PetscError(Common::PE::GetPE().GetCommunicator(),__LINE__,__FUNCT__,__FILE__,__SDIR__,n,(PetscErrorType)0," ");}
+#define CF_CHKERRCONTINUE(n) if (n) {PetscError(Common::PE::GetPE().GetCommunicator(Framework::MeshDataStack::getActive()->getPrimaryNamespace()),__LINE__,__FUNCT__,__FILE__,__SDIR__,n,(PetscErrorType)0," ");}
 #else
-#define CF_CHKERRCONTINUE(n) if (n) {PetscError(Common::PE::GetPE().GetCommunicator(),__LINE__,__FUNCT__,__FILE__,n,(PetscErrorType)0," ");}
+#define CF_CHKERRCONTINUE(n) if (n) {PetscError(Common::PE::GetPE().GetCommunicator(Framework::MeshDataStack::getActive()->getPrimaryNamespace()),__LINE__,__FUNCT__,__FILE__,n,(PetscErrorType)0," ");}
 #endif
 #else
 #define CF_CHKERRCONTINUE(n) { n; }

@@ -138,26 +138,26 @@ void CFmeshReader::buildMeshDataImpl()
 void CFmeshReader::convertFormat()
 {
   CFAUTOTRACE;
-
+  
   // build the MeshFormatConverter to perform the conversion
   Common::SelfRegistPtr<MeshFormatConverter> converter =
     Factory<MeshFormatConverter>::getInstance().getProvider(m_converterStr)->create(m_converterStr);
   configureNested ( converter.getPtr(), m_stored_args );
   
+  const std::string nsp = getMethodData()->getNamespace();
+  
   // ensure the converter works serially only on the processor with rank 0
   // if it is not enabled to work in parallel
   if (PE::GetPE().IsParallel() && !converter->isParallel()) {
-    PE::GetPE().setBarrier();
-    
-    if (PE::GetPE().GetRank() == 0) { convert(converter); }
-    
-    PE::GetPE().setBarrier();
+    PE::GetPE().setBarrier(nsp);
+    if (PE::GetPE().GetRank(nsp) == 0) { convert(converter); }
+    PE::GetPE().setBarrier(nsp);
   }
-  else {
+  else { 
     convert(converter);
   }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
       
 void CFmeshReader::convert(Common::SelfRegistPtr<MeshFormatConverter> converter)

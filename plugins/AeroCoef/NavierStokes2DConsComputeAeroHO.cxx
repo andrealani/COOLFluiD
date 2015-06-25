@@ -967,23 +967,24 @@ void NavierStokes2DConsComputeAeroHO::computeAero()
   total_momentum_f = 0.0;
   total_momentum = 0.0;
 
-  if (PE::GetPE().GetProcessorCount() > 1) {
+  const std::string nsp = getMethodData().getNamespace();
+  if (PE::GetPE().GetProcessorCount(nsp) > 1) {
 
 #ifdef CF_HAVE_MPI
   MPI_Allreduce(&actual_lift, &total_lift, 1, MPI_DOUBLE, MPI_SUM,
-        PE::GetPE().GetCommunicator());
+        PE::GetPE().GetCommunicator(nsp));
   MPI_Allreduce(&actual_drag_p, &total_drag_p, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+      PE::GetPE().GetCommunicator(nsp));
   MPI_Allreduce(&actual_drag_f, &total_drag_f, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+      PE::GetPE().GetCommunicator(nsp));
   MPI_Allreduce(&actual_drag, &total_drag, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+      PE::GetPE().GetCommunicator(nsp));
   MPI_Allreduce(&actual_momentum_p, &total_momentum_p, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+      PE::GetPE().GetCommunicator(nsp));
   MPI_Allreduce(&actual_momentum_f, &total_momentum_f, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+      PE::GetPE().GetCommunicator(nsp));
   MPI_Allreduce(&actual_momentum, &total_momentum, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+      PE::GetPE().GetCommunicator(nsp));
 #endif
   }
   else {

@@ -243,7 +243,8 @@ void RMSJouleHeatSourceCoupling<ST>::setup()
     // m_electricCurrent is a string. I need m_elCurrent values!
     sTc(m_electricCurrent,m_elCurrent[0],m_elCurrent[1]);
     
-    if (PE::GetPE().GetRank() == 0) {
+    const std::string nsp = this->getMethodData().getNamespace();
+    if (PE::GetPE().GetRank(nsp) == 0) {
       cout << "elCurrent RE: " << m_elCurrent[0] << "  elCurrent IM: " << m_elCurrent[1] << "\n"; // "+++++++++++++++++++++++++\n";
     }
 
@@ -529,19 +530,20 @@ void RMSJouleHeatSourceCoupling<ST>::execute()
   	     
   //
   // ---------------------------------------[ some messages ]
+  const std::string nsp = this->getMethodData().getNamespace();
   if( m_srcTerm->extraVerboseRate() != 0 )
   if(!( iter % m_srcTerm->extraVerboseRate() )) {
     if (m_srcTerm->pegaseApproximation() && (iter % 10 == 0))
-         if (PE::GetPE().GetRank() == 0) {  
-	   cout << " (Using pegase el conductivity)\n";
-	 }
+      if (PE::GetPE().GetRank(nsp) == 0) {  
+	cout << " (Using pegase el conductivity)\n";
+      }
     if (m_srcTerm->use2DModel()) {
-      if (PE::GetPE().GetRank() == 0) {
+      if (PE::GetPE().GetRank(nsp) == 0) {
 	cout << " (Using 2D model for the EM field)\n";
       }
     }
     else {
-      if (PE::GetPE().GetRank() == 0) {
+      if (PE::GetPE().GetRank(nsp) == 0) {
 	cout << " (Using 1D model for the EM field, with xMax = " << m_srcTerm->xMaxUsing1DModel() << ")\n";
       }
     }
@@ -680,11 +682,11 @@ void RMSJouleHeatSourceCoupling<ST>::execute()
 
   /// @TODO AL: temporary solution ....
   CFdouble totalPower = 0.0;
-  if (PE::GetPE().GetProcessorCount() > 1) {
+  if (PE::GetPE().GetProcessorCount(nsp) > 1) {
   
 #ifdef CF_HAVE_MPI
     MPI_Allreduce(&actualPower, &totalPower, 1, MPI_DOUBLE, MPI_SUM,
-      PE::GetPE().GetCommunicator());
+		  PE::GetPE().GetCommunicator(nsp));
 #endif
   }
   else {
@@ -700,7 +702,7 @@ void RMSJouleHeatSourceCoupling<ST>::execute()
   m_rescaleElCurrent = std::sqrt(m_desiredPowerkW*1000./totalPower);
     
   // output on screen
-  if (PE::GetPE().GetRank() == 0) {
+  if (PE::GetPE().GetRank(nsp) == 0) {
     CFLog(INFO, "RMSJouleHeatSourceCoupling::prepareElConductivity() => sqrt( 1000*desiredPower [" << 
 	  m_desiredPowerkW << "] / totalPower [" << totalPower << "] ) = el_current [" << 
 	  m_rescaleElCurrent << "]\n");
@@ -730,9 +732,9 @@ void RMSJouleHeatSourceCoupling<ST>::execute()
   {
     string rootfileEM = m_srcTerm->outputFileEM();
     StringOps::subst(string(".plt"),string("-P"),rootfileEM);
-    const string outfileEM  = rootfileEM + StringOps::to_str(PE::GetPE().GetRank()) + ".plt";
+    const string outfileEM  = rootfileEM + StringOps::to_str(PE::GetPE().GetRank("Default")) + ".plt";
     
-    if (PE::GetPE().GetRank() == 0) {
+    if (PE::GetPE().GetRank(nsp) == 0) {
       CFLog(VERBOSE, "RMSJouleHeatSourceCoupling<ST>::execute() => Writing Electromagnetic Field to " << outfileEM << "\n");
     }
     

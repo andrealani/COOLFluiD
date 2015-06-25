@@ -79,9 +79,10 @@ void ComputeWallDistanceVector2CCMPI::setup()
   ComputeWallDistance::setup();
   
 #ifdef CF_HAVE_MPI
-  m_comm   = PE::GetPE().GetCommunicator();
-  m_myRank = PE::GetPE().GetRank();
-  m_nbProc = PE::GetPE().GetProcessorCount();
+  const std::string nsp = this->getMethodData().getNamespace();
+  m_comm   = PE::GetPE().GetCommunicator(nsp);
+  m_myRank = PE::GetPE().GetRank(nsp);
+  m_nbProc = PE::GetPE().GetProcessorCount(nsp);
 #endif
   
   // initialize the wall distance

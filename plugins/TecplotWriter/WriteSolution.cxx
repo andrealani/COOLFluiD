@@ -1022,8 +1022,9 @@ void WriteSolution::writeToFileStream(std::ofstream& fout)
   RealVector dimState(nbEqs);
   RealVector extraValues; // size will be set in the VarSet
   State tempState;
-
-
+  
+  const std::string nsp = getMethodData().getNamespace();
+  
   std::vector<SafePtr<TopologicalRegionSet> > trsList =
     MeshDataStack::getActive()->getTrsList();
 
@@ -1091,7 +1092,7 @@ void WriteSolution::writeToFileStream(std::ofstream& fout)
           // print zone header
           // one sone per element type
           fout << "ZONE "
-               << "  T=\"P" << PE::GetPE().GetRank()<< " ZONE" << iType << " " << eType.getShape() <<"\""
+               << "  T=\"P" << PE::GetPE().GetRank(nsp)<< " ZONE" << iType << " " << eType.getShape() <<"\""
                << ", N=" << nodesInType.size()
                << ", E=" << nbCellsInType
                << ", F=FEPOINT"
@@ -1101,7 +1102,7 @@ void WriteSolution::writeToFileStream(std::ofstream& fout)
                               PhysicalModelStack::getActive()->getDim()) << flush;
           fout << ", SOLUTIONTIME=" << subSysStatus->getCurrentTimeDim()  << flush;
           if (getMethodData().getAppendAuxData())
-            fout << ", AUXDATA CPU=\"" << PE::GetPE().GetRank() << "\""
+            fout << ", AUXDATA CPU=\"" << PE::GetPE().GetRank(nsp) << "\""
                  << ", AUXDATA TRS=\"" << trs->getName() << "\""
                  << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
                  << ", AUXDATA ElementType=\"" << eType.getShape() << "\""

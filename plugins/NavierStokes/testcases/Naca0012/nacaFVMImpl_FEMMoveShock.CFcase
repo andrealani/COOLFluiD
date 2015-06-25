@@ -24,13 +24,13 @@ Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWrite
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Naca0012/
-Simulator.Paths.ResultsDir       = ./
+Simulator.Paths.ResultsDir = ./
 
 #
 #Define the 2 meshdata's
 #
 Simulator.SubSystem.Namespaces = FlowNamespace MeshNamespace
-
+#Simulator.SubSystem.Ranks = 0:3 4:7
 #
 #Define the meshdata for the flow solver
 #

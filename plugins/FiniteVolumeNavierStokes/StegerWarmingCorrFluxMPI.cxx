@@ -119,30 +119,31 @@ void StegerWarmingCorrFluxMPI::buildFaceBCData()
   vector<std::string> pName(1, std::string("InnerFaces"));
   CFuint localNbLayersToAdd = accumulate(nbLayersToAdd.begin(), nbLayersToAdd.end(),0);
   CFuint globalNbLayersToAdd = 0;
-
-  CFLogDebugMin("P" << PE::GetPE().GetRank()
-    << " has globalNbLayersToAdd = " << globalNbLayersToAdd << "\n");
-
+  
+  const std::string nsp = this->getMethodData().getNamespace();
+  CFLogDebugMin("P" << PE::GetPE().GetRank(nsp)
+		<< " has globalNbLayersToAdd = " << globalNbLayersToAdd << "\n");
+  
   MPI_Allreduce(&localNbLayersToAdd, &globalNbLayersToAdd,
-    1, MPIStructDef::getMPIType(&localNbLayersToAdd),MPI_MAX,PE::GetPE().GetCommunicator());
+    1, MPIStructDef::getMPIType(&localNbLayersToAdd),MPI_MAX,PE::GetPE().GetCommunicator(nsp));
 
   while (globalNbLayersToAdd > 0) {
     processBFaces(pName,
-      mapGlobalIDToLocalFaceID,
-      isPartitionFace,
-      faceToConsider,
-      nbLayersToAdd,
-      globalCellIDs);
-
+		  mapGlobalIDToLocalFaceID,
+		  isPartitionFace,
+		  faceToConsider,
+		  nbLayersToAdd,
+		  globalCellIDs);
+    
     localNbLayersToAdd = accumulate(nbLayersToAdd.begin(), nbLayersToAdd.end(),0);
-
+    
     MPI_Allreduce(&localNbLayersToAdd, &globalNbLayersToAdd,
-      1, MPIStructDef::getMPIType(&localNbLayersToAdd),MPI_MAX,PE::GetPE().GetCommunicator());
+		  1, MPIStructDef::getMPIType(&localNbLayersToAdd),MPI_MAX,PE::GetPE().GetCommunicator(nsp));
   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
+      
 void StegerWarmingCorrFluxMPI::processBFaces
 (const vector<std::string>& trsNames,
  CFMultiMap<CFuint,CFuint>& mapGlobalIDToLocalFaceID,
@@ -153,6 +154,7 @@ void StegerWarmingCorrFluxMPI::processBFaces
 {
   typedef CFMultiMap<CFuint, CFuint>::MapIterator MapIterator;
   DataHandle<Node*, GLOBAL> nodes = socket_nodes.getDataHandle();
+  const std::string nsp = this->getMethodData().getNamespace();
   
   PartitionFaceData sendData;
   // in the first loop only wall faces are processed
@@ -212,8 +214,8 @@ void StegerWarmingCorrFluxMPI::processBFaces
   
   // in this second phase, we communicate the data of the partition faces
   // from which the layers will "grow" again
-  const CFuint nbProc = PE::GetPE().GetProcessorCount();
-  const CFuint myRank = PE::GetPE().GetRank();
+  const CFuint nbProc = PE::GetPE().GetProcessorCount(nsp);
+  const CFuint myRank = PE::GetPE().GetRank(nsp);
   cf_assert(nbLocalInFaces > 0);
   
   for (CFuint root = 0; root < nbProc; ++root) {
@@ -226,7 +228,8 @@ void StegerWarmingCorrFluxMPI::processBFaces
     
     // make the other processors know the size of the data to distribute
     // from the current processor
-    MPI_Bcast(&sizeData[0], 2, MPIStructDef::getMPIType(&sizeData[0]), root, PE::GetPE().GetCommunicator());
+    MPI_Bcast(&sizeData[0], 2, MPIStructDef::getMPIType(&sizeData[0]), 
+	      root, PE::GetPE().GetCommunicator(nsp));
     
     if (sizeData[0] > 0) {
       if (root != myRank) {
@@ -244,14 +247,14 @@ void StegerWarmingCorrFluxMPI::processBFaces
 	(&recvData.nodeIDs[0], &recvData.nbFaceNodes[0],
 	 &recvData.globalCellIDs[0], &recvData.nbLayersToAdd[0],
 	 lnn, ms);
-      MPI_Bcast(ms.start, 1, ms.type, root, PE::GetPE().GetCommunicator());
+      MPI_Bcast(ms.start, 1, ms.type, root, PE::GetPE().GetCommunicator(nsp));
       
       // discard the data sent by root to itself
       if (root != myRank) {
 	// if the data correspond to local partition faces build the layer data
 	const CFuint nbFacesToCheck = recvData.nbFaceNodes.size();
-	CFLogDebugMin("P" << PE::GetPE().GetRank() << ", nbFacesToCheck = " << nbFacesToCheck << "\n");
-	CFLogDebugMin("P" << PE::GetPE().GetRank() << ", nbLocalInFaces = " << nbLocalInFaces << "\n");
+	CFLogDebugMin("P" << PE::GetPE().GetRank(nsp) << ", nbFacesToCheck = " << nbFacesToCheck << "\n");
+	CFLogDebugMin("P" << PE::GetPE().GetRank(nsp) << ", nbLocalInFaces = " << nbLocalInFaces << "\n");
 	
 	CFuint countNodes = 0;
 	for (CFuint iFace = 0; iFace < nbFacesToCheck; ++iFace) {
@@ -278,7 +281,7 @@ void StegerWarmingCorrFluxMPI::processBFaces
 	      }
 	      
 	      if (countMatchingNodes == nbPNodes) {
-		CFLogDebugMin("P" << PE::GetPE().GetRank() << ", matching face " << trsFaceID << "\n");
+		CFLogDebugMin("P" << PE::GetPE().GetRank(nsp) << ", matching face " << trsFaceID << "\n");
 		// the partition face received corresponds to an internal face in this processor
 		// store the ID of the matching face and the number of layers to add
 		faceToConsider[trsFaceID] = true;
@@ -310,10 +313,11 @@ void StegerWarmingCorrFluxMPI::scanLayers(SafePtr<TopologicalRegionSet> wallTRS,
   FaceTrsGeoBuilder::GeoData& faceData = _faceBuilder.getDataGE();
   faceData.trs = wallTRS;
   CellTrsGeoBuilder::GeoData& cellData = _cellBuilder.getDataGE();
-
-  std::string fileName = std::string("blFaces-") + StringOps::to_str(PE::GetPE().GetRank()) + std::string(".dat");
+  
+  std::string fileName = std::string("blFaces-") + 
+    StringOps::to_str(PE::GetPE().GetRank("Default")) + std::string(".dat");
   ofstream fout(fileName.c_str(),ios_base::app);
-
+  
   const bool isInnerFace = (wallTRS->getName() == "InnerFaces");
 
   CFuint cellID = 0;

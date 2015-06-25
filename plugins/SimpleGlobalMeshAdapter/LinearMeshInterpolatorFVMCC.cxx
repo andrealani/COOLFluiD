@@ -94,8 +94,9 @@ void LinearMeshInterpolatorFVMCC::BoxClassification()
 
   const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
   std::string otherNamespace = getMethodData().getOtherNamespace();
-  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance().getNamespace(otherNamespace);
-
+  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(otherNamespace);
+  
   Common::SafePtr<TopologicalRegionSet> cells =
     MeshDataStack::getInstance().getEntryByNamespace(otherNsp)->getTrs("InnerCells");
 
@@ -175,7 +176,8 @@ void LinearMeshInterpolatorFVMCC::SearchInBoxes()
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
 
   std::string name = getMethodData().getOtherNamespace();
-  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
 
   Common::SafePtr<TopologicalRegionSet> cells =
     MeshDataStack::getInstance().getEntryByNamespace(otherNsp)->getTrs("InnerCells");
@@ -265,8 +267,9 @@ void LinearMeshInterpolatorFVMCC::computeClosestValue()
 ///@todo compute using the projection on the nearest face
 
   std::string name = getMethodData().getOtherNamespace();
-  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance().getNamespace(name);
-
+  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
+  
   std::vector< Common::SafePtr<TopologicalRegionSet> > trsList =
     MeshDataStack::getInstance().getEntryByNamespace(otherNsp)->getTrsList();
 

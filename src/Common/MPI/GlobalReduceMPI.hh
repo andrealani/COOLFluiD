@@ -4,22 +4,19 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef GLOBALREDUCEMPI_HH
-#define GLOBALREDUCEMPI_HH
+#ifndef COOLFluiD_Common_GlobalReduceMPI_hh
+#define COOLFluiD_Common_GlobalReduceMPI_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
-
 #include "Common/COOLFluiD.hh"
-
-#include <mpi.h>
-
 #include "Common/MPI/MPIInitObject.hh"
 #include "Common/PE.hh"
 #include "Common/NonCopyable.hh"
 #include "Common/GlobalReduce.hh"
-#include "Common/MPI/MPIDataTypeHandler.hh"
 #include "Common/MPI/MPIException.hh"
+
+//////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
     namespace Common {
@@ -43,103 +40,102 @@ template <typename PROVIDER>
 class GlobalReduce<PROVIDER, Common::PM_MPI> : public Common::NonCopyable <GlobalReduce<PROVIDER, Common::PM_MPI> >
 {
 public:
-
-    typedef typename PROVIDER::GR_RESULTTYPE RESULTTYPE;
-
-
-    GlobalReduce (const PROVIDER & P);
-    ~GlobalReduce ();
-
-    /// Return the accumulated global result
-    /// WARNING: Global!!
-    RESULTTYPE GetGlobalValue () const;
-
+  
+  typedef typename PROVIDER::GR_RESULTTYPE RESULTTYPE;
+  
+  GlobalReduce (const PROVIDER & P);
+  ~GlobalReduce ();
+  
+  /// Return the accumulated global result
+  /// WARNING: Global!!
+  RESULTTYPE GetGlobalValue (const std::string& nspaceName) const;
+  
 private: // functions
 
-    /// The actual function called by MPI
-    static void CombineMPI (void * A, void * B, int * len, MPI_Datatype *
-    Datatype);
-
-    /// Register our function
-    void Register ();
-
-    /// Unregister the function
-    void UnRegister ();
-
+  /// The actual function called by MPI
+  static void CombineMPI (void * A, void * B, int * len, MPI_Datatype *
+			  Datatype);
+  
+  /// Register our function
+  void Register ();
+  
+  /// Unregister the function
+  void UnRegister ();
+  
 private: // variables
-
-    /// Forward
-    class RegisterHelper;
-
-    const PROVIDER & Provider_;
-
-    static RegisterHelper * Helper_;
-
-    /// Nested helper class
-    class RegisterHelper : public Common::NonCopyable<RegisterHelper>, public Common::MPIInitObject
+  
+  /// Forward
+  class RegisterHelper;
+  
+  const PROVIDER & Provider_;
+  
+  static RegisterHelper * Helper_;
+  
+  /// Nested helper class
+  class RegisterHelper : public Common::NonCopyable<RegisterHelper>, public Common::MPIInitObject
+  {
+  public:
+    RegisterHelper () : UserCount_(0), OperationHandle_(MPI_OP_NULL),  Registered_(false) {}
+    
+    virtual ~RegisterHelper ()
     {
-    public:
-      RegisterHelper () : UserCount_(0), OperationHandle_(MPI_OP_NULL),  Registered_(false) {}
-
-      virtual ~RegisterHelper ()
-      {
-          if (Registered_)
-          throw Common::MPIException (FromHere(), "GlobalReduce: RegisterHelper: "
-        "destructor called before MPI_Done was called on "
-        "this object!\n");
-          if (UserCount_)
-          throw Common::MPIException (FromHere(), "GlobalReduce: RegisterHelper: "
-        "destructor called on this object while our parent "
-        "GlobalReduce object is still using the function!\n");
-      }
-
-      virtual void MPI_Init (MPI_Comm  Communicator)
-      {
-          // For now always assume commutating operations
-          MPI_Op_create (CombineMPI, true, &OperationHandle_);
-          Registered_=true;
-      }
-
-      virtual void MPI_Done ()
-      {
-          if (!Registered_)
-              throw Common::MPIException (FromHere(), "MPI_Done called before MPI_Init!!\n");
-          if (UserCount_)
-              throw Common::MPIException (FromHere(), "GlobalReduce: RegisterHelper: "
-                    "destructor called on this object while our parent "
-                    "GlobalReduce object is still using the function!\n");
-
-          MPI_Op_free (&OperationHandle_);
-          Registered_=false;
-      }
-
-      bool IsRegistered () const  {  return Registered_; }
-
-      void RegisterUser () { ++UserCount_; }
-
-      void UnRegisterUser ()
-      {
-          cf_assert (UserCount_>0);
-          --UserCount_;
-      }
-
-      MPI_Op GetOperation ()
-      {
-          if (!Registered_)
-          throw Common::MPIException
-              (FromHere(), "GlobalReduce::RegisterHelper: GetOperation called"
-            " before the PE called MPI_Init!\n");
-          return OperationHandle_;
-      }
-
-
-          private:
-            unsigned int UserCount_;
-            MPI_Op OperationHandle_;
-            bool Registered_;
-
-      }; // class RegisterHelper
-
+      if (Registered_)
+	throw Common::MPIException (FromHere(), "GlobalReduce: RegisterHelper: "
+				    "destructor called before MPI_Done was called on "
+				    "this object!\n");
+      if (UserCount_)
+	throw Common::MPIException (FromHere(), "GlobalReduce: RegisterHelper: "
+				    "destructor called on this object while our parent "
+				    "GlobalReduce object is still using the function!\n");
+    }
+    
+    virtual void MPI_Init (MPI_Comm  Communicator)
+    {
+      // For now always assume commutating operations
+      MPI_Op_create (CombineMPI, true, &OperationHandle_);
+      Registered_=true;
+    }
+    
+    virtual void MPI_Done ()
+    {
+      if (!Registered_)
+	throw Common::MPIException (FromHere(), "MPI_Done called before MPI_Init!!\n");
+      if (UserCount_)
+	throw Common::MPIException (FromHere(), "GlobalReduce: RegisterHelper: "
+				    "destructor called on this object while our parent "
+				    "GlobalReduce object is still using the function!\n");
+      
+      MPI_Op_free (&OperationHandle_);
+      Registered_=false;
+    }
+    
+    bool IsRegistered () const  {  return Registered_; }
+    
+    void RegisterUser () { ++UserCount_; }
+    
+    void UnRegisterUser ()
+    {
+      cf_assert (UserCount_>0);
+      --UserCount_;
+    }
+    
+    MPI_Op GetOperation ()
+    {
+      if (!Registered_)
+	throw Common::MPIException
+	  (FromHere(), "GlobalReduce::RegisterHelper: GetOperation called"
+	   " before the PE called MPI_Init!\n");
+      return OperationHandle_;
+    }
+    
+    
+  private:
+    unsigned int UserCount_;
+    MPI_Op OperationHandle_;
+    bool Registered_;
+    
+  }; // class RegisterHelper
+  
 }; // class GlobalReduce
 
 //////////////////////////////////////////////////////////////////////////////
@@ -150,16 +146,19 @@ typename GlobalReduce<PROVIDER,Common::PM_MPI>::RegisterHelper *
 
 template <typename PROVIDER>
 typename GlobalReduce<PROVIDER, Common::PM_MPI>::RESULTTYPE
-GlobalReduce<PROVIDER, Common::PM_MPI>::GetGlobalValue () const
+GlobalReduce<PROVIDER, Common::PM_MPI>::GetGlobalValue (const std::string& nspaceName) const
 {
-    RESULTTYPE SendBuf = Provider_.GR_GetLocalValue ();
-    RESULTTYPE ReceiveBuf;
-    MPI_Allreduce (&SendBuf, &ReceiveBuf, 1,
-    Common::MPIDataTypeHandler::GetType<RESULTTYPE>(),
-    Helper_->GetOperation (), Common::PE::GetPE().GetCommunicator());
-    return ReceiveBuf;
+  RESULTTYPE SendBuf = Provider_.GR_GetLocalValue ();
+  RESULTTYPE ReceiveBuf;
+  MPI_Allreduce (&SendBuf, &ReceiveBuf, 1,
+		 Common::MPIStructDef::getMPIType(&SendBuf),
+		 Helper_->GetOperation (), 
+		 Common::PE::GetPE().GetCommunicator(nspaceName));
+  return ReceiveBuf;
 }
-
+   
+//////////////////////////////////////////////////////////////////////////////
+   
 template <typename PROVIDER>
 void GlobalReduce<PROVIDER, Common::PM_MPI>::CombineMPI (void * a, void * b, int * len, MPI_Datatype * datatype)
 {
@@ -175,6 +174,8 @@ void GlobalReduce<PROVIDER, Common::PM_MPI>::CombineMPI (void * a, void * b, int
     S2 = R;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+   
 template <typename PROVIDER>
 GlobalReduce<PROVIDER, Common::PM_MPI>::GlobalReduce (const PROVIDER & P) : Provider_(P)
 {
@@ -187,6 +188,8 @@ GlobalReduce<PROVIDER, Common::PM_MPI>::~GlobalReduce ()
     UnRegister ();
 }
 
+//////////////////////////////////////////////////////////////////////////////
+   
 template <typename PROVIDER>
 void GlobalReduce<PROVIDER, Common::PM_MPI>::Register ()
 {
@@ -201,6 +204,8 @@ void GlobalReduce<PROVIDER, Common::PM_MPI>::Register ()
     Helper_->RegisterUser ();
 }
 
+//////////////////////////////////////////////////////////////////////////////
+   
 template <typename PROVIDER>
 void GlobalReduce<PROVIDER, Common::PM_MPI>::UnRegister ()
 {
@@ -280,17 +285,6 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////
 
-/*
-template <>
-void GlobalReduceOperationMPI<GRO_SUM, MPI_INT> (int * S, int * D, int Count)
-{
-    MPI_Allreduce (S, D, Count, MPI_INT, MPI_SUM,
-    Common::PE::GetPE().GetCommunicator());
-}*/
-
-//////////////////////////////////////////////////////////////////////////////
-
-
 /// Default (non MPI specialized)
 /// GlobalReduceOperation for PE PM_MPI
 template <typename TAGCLASS, typename BASETYPE>
@@ -309,4 +303,6 @@ public:
     }
 }
 
-#endif
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Common_GlobalReduceMPI_hh

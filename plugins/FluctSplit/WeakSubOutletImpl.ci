@@ -214,7 +214,8 @@ std::cout << "Configuring ...\n";
 
   std::string name = WeakSubOutletImpl<WEAKBCTYPE>::getMethodData().getNamespace();
 
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
 
   std::string provider = VarSetTransformer::getProviderName(physModel->getConvectiveName(), m_inputVarStr, m_updateVarStr);

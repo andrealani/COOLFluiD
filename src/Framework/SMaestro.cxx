@@ -90,7 +90,7 @@ Common::Signal::return_t SMaestro::control ( Common::Signal::arg_t input )
     
     CFout << "#\n###### STARTING SUBSYSTEM [" << *subSysName << "] ######\n#\n";
     event_handler->call_signal (event_handler->key("", "CF_ON_MAESTRO_BUILDSUBSYSTEM"), msg );
-
+    
     CFout << "#\n###### CONFIG PHASE #################\n#\n";
     event_handler->call_signal (event_handler->key("", "CF_ON_MAESTRO_CONFIGSUBSYSTEM"), msg );
 

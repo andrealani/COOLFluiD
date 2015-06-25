@@ -215,9 +215,10 @@ void StructMechComputeStress::configure ( Config::ConfigArgs& args )
   DataProcessingCom::configure(args);
 
   std::string name = getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  
   _varSet.reset((Environment::Factory<DiffusiveVarSet>::getInstance().getProvider("StructMech2DDiffusiveDisp")->
                   create("StructMech2DDiffusiveDisp", physModel->getImplementor())).d_castTo<Physics::StructMech::StructMech2DDiffusiveDisp>());
 

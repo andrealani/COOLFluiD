@@ -61,12 +61,15 @@ Periodic3DturboMPI::~Periodic3DturboMPI()
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
 void Periodic3DturboMPI::setup()
 {
+  const std::string nsp = getMethodData().getNamespace();
+  
   // MPI parameters
-  CFuint nP = PE::GetPE().GetProcessorCount();
-  CFuint myP = PE::GetPE().GetRank();
-  _comm = PE::GetPE().GetCommunicator();
+  CFuint nP = PE::GetPE().GetProcessorCount(nsp);
+  CFuint myP = PE::GetPE().GetRank(nsp);
+  _comm = PE::GetPE().GetCommunicator(nsp);
   _my_nP = myP;
   _n_P = nP;
 

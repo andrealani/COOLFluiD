@@ -12,9 +12,7 @@
 #include "Common/BadValueException.hh"
 #include "Common/SafePtr.hh"
 #include "Common/MPI/MPIStructDef.hh"
-#include "Framework/TopologicalRegionSet.hh"
-#include "Framework/State.hh"
-#include "Framework/DataHandle.hh"
+#include "Framework/MeshData.hh"
 #include "Framework/PartitionerPeriodicTools.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -35,16 +33,22 @@ void PartitionerPeriodicTools::writePeriodicInfo(const int ndim,
 						 std::vector<CFreal> &coord1)
 {
   // get numbers
-  std::vector<int> ngidx0(Common::PE::GetPE().GetProcessorCount());
-  std::vector<int> ngidx1(Common::PE::GetPE().GetProcessorCount());
-  std::vector<int> displs0(Common::PE::GetPE().GetProcessorCount(),0);
-  std::vector<int> displs1(Common::PE::GetPE().GetProcessorCount(),0);
+  
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  const unsigned nproc = Common::PE::GetPE().GetProcessorCount(nsp);
+  MPI_Comm comm = Common::PE::GetPE().GetCommunicator(nsp);
+  
+  std::vector<int> ngidx0(nproc);
+  std::vector<int> ngidx1(nproc);
+  std::vector<int> displs0(nproc,0);
+  std::vector<int> displs1(nproc,0);
   int iprocsend0=gidx0.size();
   int iprocsend1=gidx1.size();
+  
   MPI_Gather(&iprocsend0,1,Common::MPIStructDef::getMPIType(&iprocsend0),
-	     &ngidx0[0],1,Common::MPIStructDef::getMPIType(&ngidx0[0]),0,Common::PE::GetPE().GetCommunicator());
+	     &ngidx0[0],1,Common::MPIStructDef::getMPIType(&ngidx0[0]),0,comm);
   MPI_Gather(&iprocsend1,1,Common::MPIStructDef::getMPIType(&iprocsend1),
-	     &ngidx1[0],1,Common::MPIStructDef::getMPIType(&ngidx1[0]),0,Common::PE::GetPE().GetCommunicator());
+	     &ngidx1[0],1,Common::MPIStructDef::getMPIType(&ngidx1[0]),0,comm);
   for(unsigned int i=1; i<ngidx0.size(); ++i) displs0[i]=displs0[i-1]+ngidx0[i-1];
   for(unsigned int i=1; i<ngidx1.size(); ++i) displs1[i]=displs1[i-1]+ngidx1[i-1];
   const int totgidx0=displs0[displs0.size()-1]+ngidx0[ngidx0.size()-1];
@@ -53,26 +57,26 @@ void PartitionerPeriodicTools::writePeriodicInfo(const int ndim,
   // collect gidx to process 0
   std::vector<int> allgidx0;
   std::vector<int> allgidx1;
-  if (Common::PE::GetPE().GetRank()==0) allgidx0.resize(totgidx0);
-  if (Common::PE::GetPE().GetRank()==0) allgidx1.resize(totgidx1);
+  if (Common::PE::GetPE().GetRank(nsp)==0) allgidx0.resize(totgidx0);
+  if (Common::PE::GetPE().GetRank(nsp)==0) allgidx1.resize(totgidx1);
   MPI_Gatherv(&gidx0[0],gidx0.size(),Common::MPIStructDef::getMPIType(&gidx0[0]),
-	      &allgidx0[0],&ngidx0[0],&displs0[0],Common::MPIStructDef::getMPIType(&allgidx0[0]),0,Common::PE::GetPE().GetCommunicator());
+	      &allgidx0[0],&ngidx0[0],&displs0[0],Common::MPIStructDef::getMPIType(&allgidx0[0]),0,comm);
   MPI_Gatherv(&gidx1[0],gidx1.size(),Common::MPIStructDef::getMPIType(&gidx1[0]),
-	      &allgidx1[0],&ngidx1[0],&displs1[0],Common::MPIStructDef::getMPIType(&allgidx1[0]),0,Common::PE::GetPE().GetCommunicator());
+	      &allgidx1[0],&ngidx1[0],&displs1[0],Common::MPIStructDef::getMPIType(&allgidx1[0]),0,comm);
   
   // collect coord to process 0
   for(unsigned int i=0; i<ngidx0.size(); ++i) { ngidx0[i]*=ndim; displs0[i]*=ndim; }
   for(unsigned int i=0; i<ngidx1.size(); ++i) { ngidx1[i]*=ndim; displs1[i]*=ndim; }
   std::vector<CFreal> allcoord0;
   std::vector<CFreal> allcoord1;
-  if (Common::PE::GetPE().GetRank()==0) allcoord0.resize(totgidx0*ndim);
-  if (Common::PE::GetPE().GetRank()==0) allcoord1.resize(totgidx1*ndim);
+  if (Common::PE::GetPE().GetRank(nsp)==0) allcoord0.resize(totgidx0*ndim);
+  if (Common::PE::GetPE().GetRank(nsp)==0) allcoord1.resize(totgidx1*ndim);
 
   MPI_Datatype MPI_CFREAL = Common::MPIStructDef::getMPIType(&allcoord0[0]);
-  MPI_Gatherv(&coord0[0],coord0.size(),MPI_CFREAL,&allcoord0[0],&ngidx0[0],&displs0[0],MPI_CFREAL,0,Common::PE::GetPE().GetCommunicator());
-  MPI_Gatherv(&coord1[0],coord1.size(),MPI_CFREAL,&allcoord1[0],&ngidx1[0],&displs1[0],MPI_CFREAL,0,Common::PE::GetPE().GetCommunicator());
+  MPI_Gatherv(&coord0[0],coord0.size(),MPI_CFREAL,&allcoord0[0],&ngidx0[0],&displs0[0],MPI_CFREAL,0,comm);
+  MPI_Gatherv(&coord1[0],coord1.size(),MPI_CFREAL,&allcoord1[0],&ngidx1[0],&displs1[0],MPI_CFREAL,0,comm);
   
-  if (Common::PE::GetPE().GetRank()==0)
+  if (Common::PE::GetPE().GetRank(nsp)==0)
   {
     // sort the darn thing and remove duplicates
     std::vector< PeriodicInfoItem > sv0=fillPeriodicInfoItemVector(ndim,allgidx0,allcoord0);
@@ -109,9 +113,9 @@ void PartitionerPeriodicTools::writePeriodicInfo(const int ndim,
     f.flush();
     f.close();
   }
-
+  
   // others should wait for process 0 to catch up with the writing
-  Common::PE::GetPE().setBarrier();
+  Common::PE::GetPE().setBarrier(nsp);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -152,7 +156,10 @@ void PartitionerPeriodicTools::fixPeriodicEdges(const int numproc, const int num
 						std::vector<PartitionerData::IndexT>& elemNode)
 {
   if (node0.size()!=node1.size()) throw Common::BadValueException(FromHere(),"Sizes of node0 and node1 does not match.");
-
+  
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  MPI_Comm comm = Common::PE::GetPE().GetCommunicator(nsp);
+  
   // requires TWO! fuckin global vector of ints because allreduce sux reusing the buffer
   std::vector<int> pernodinfo(numtotalnodes,numproc+1);
   std::vector<int> pernodinfo2(numtotalnodes,numproc+1);
@@ -167,7 +174,7 @@ void PartitionerPeriodicTools::fixPeriodicEdges(const int numproc, const int num
 
   // making sure the nodes on the perbcs are to be put on the same rank
   pernodinfo2.assign(pernodinfo.begin(),pernodinfo.end());
-  MPI_Allreduce( &pernodinfo2[0], &pernodinfo[0], (int)pernodinfo.size(), MPI_INT, MPI_MIN, Common::PE::GetPE().GetCommunicator());
+  MPI_Allreduce( &pernodinfo2[0], &pernodinfo[0], (int)pernodinfo.size(), MPI_INT, MPI_MIN, comm);
   pernodinfo2.clear();
   pernodinfo2.reserve(0);
 

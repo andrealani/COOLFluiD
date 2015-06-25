@@ -7,6 +7,7 @@
 #include "Petsc/PetscHeaders.hh" // must come before any header
 
 #include "Common/PE.hh"
+#include "Framework/MeshData.hh"
 #include "Petsc/PetscVector.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -127,15 +128,15 @@ void PetscVector::printToScreen() const
 
 void PetscVector::printToFile(const char* fileName) const
 {
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  
   PetscViewer viewer;
-  CF_CHKERRCONTINUE( PetscViewerASCIIOpen(Common::PE::GetPE().GetCommunicator(),
-                                     fileName,
-                                     &viewer) );
+  CF_CHKERRCONTINUE( PetscViewerASCIIOpen(Common::PE::GetPE().GetCommunicator(nsp),
+					  fileName,
+					  &viewer) );
   CF_CHKERRCONTINUE( VecView(m_vec, viewer) );
-
-
+  
   CF_CHKERRCONTINUE( PetscViewerDestroy(&viewer) );
-
 }
 
 //////////////////////////////////////////////////////////////////////////////

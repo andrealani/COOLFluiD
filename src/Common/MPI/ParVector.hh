@@ -44,8 +44,10 @@ public: // functions
   
   /// Constructor.
   /// WARNING: Size parameter is IGNORED!
-  ParVector (const T& Init, size_t Size, size_t ESize = 0) : 
-    m_data(Init, Size, ESize), m_pattern(&m_data, Init, Size, ESize) {}
+  ParVector (const std::string& nspaceName, 
+	     const T& Init, size_t Size, size_t ESize = 0) : 
+    m_data(Init, Size, ESize), 
+    m_pattern(nspaceName, &m_data, Init, Size, ESize) {}
   
   /// Destructor
   /// Before destructing the class, DoneMPI should be called
@@ -82,7 +84,9 @@ public: // functions
   /// Make sure we can have up to capacity elements
   /// before needing to allocate
   /// (and possible invalidate pointers & references)
-  void reserve (size_t capacity, size_t elementSize) {m_pattern.reserve(capacity, elementSize);}
+  void reserve (size_t capacity, size_t elementSize, 
+		const std::string& nspaceName) 
+  {m_pattern.reserve(capacity, elementSize, nspaceName);}
   
   /// begin the synchronization
   void BeginSync() {m_pattern.BeginSync();}

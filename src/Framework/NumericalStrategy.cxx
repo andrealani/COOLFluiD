@@ -66,7 +66,7 @@ void NumericalStrategy::configureNestedSockets( Config::ConfigArgs& args )
 void NumericalStrategy::allocateStrategySockets()
 {
   CFAUTOTRACE;
-
+    
   typedef vector<Common::SafePtr<BaseDataSocketSource> > VecSock;
   VecSock providedSockets = providesSockets();
 
@@ -92,12 +92,13 @@ void NumericalStrategy::allocateStrategySockets()
                       << " Type: " << (*srcItr)->getDataSocketType()
                       << " Strategy: " << getName()
                       << "\n");
-
-        (*srcItr)->allocate((*meshData)->getDataStorage());
+	
+        (*srcItr)->allocate((*meshData)->getDataStorage(), 
+			    (*srcItr)->getNamespace());
       }
     }
   }
-
+  
   // check if any socket was not allocated
   VecSock::iterator srcItr = providedSockets.begin();
   for (; srcItr != providedSockets.end(); ++srcItr)

@@ -51,7 +51,7 @@ PathAppender::appendParallel(const boost::filesystem::path& fpath) const
 
   ostringstream add;
   if (m_appendParallelFlag) {
-    add << "-P" << PE::GetPE().GetRank();
+    add << "-P" << PE::GetPE().GetRank("Default");
   }
 
   return fpath.branch_path() / ( basename(fpath) + add.str() + extension(fpath) );

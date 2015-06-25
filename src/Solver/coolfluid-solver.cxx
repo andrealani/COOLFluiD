@@ -196,13 +196,14 @@ int main(int argc, char** argv)
     
     // build the environment
     CFEnv& cf_env = CFEnv::getInstance();
+    
     // initiate the environemnt
     cf_env.initiate(argc, argv);
     
     //////////////////////////////////////////////////////////////////
     // removes the config-p*.log
     // only processor 0 does it while the others wait
-    PE::GetPE().setBarrier();
+    PE::GetPE().setBarrier("Default");
     if ( cf_env.getCPURank() == 0 )
     {
       CFLog(VERBOSE, "Removing previous config logs\n");
@@ -227,7 +228,7 @@ int main(int argc, char** argv)
 	}
       }
     }
-    PE::GetPE().setBarrier();
+    PE::GetPE().setBarrier("Default");
     
     //////////////////////////////////////////////////////////////////
     

@@ -7,6 +7,7 @@
 #ifndef COOLFluiD_Common_PEInterface_hh
 #define COOLFluiD_Common_PEInterface_hh
 
+#include "Common/Group.hh"
 #include "Common/PM.hh"
 #include "Common/NotImplementedException.hh"
 
@@ -20,6 +21,7 @@ namespace COOLFluiD {
 
 /// Interface for the Parallel environment
 /// @see PE
+/// @author Dries Kimpe
 template <typename PARMODEL = Common::PM_CUR>  class PEInterface;
 
 /// Base class for the PEInterface
@@ -36,7 +38,7 @@ public:
 
   /// Return the ID of this processor (between 0 and GetProcessorCount)
   unsigned int GetRank () const;
-
+  
   /// Set the barrier
   void setBarrier();
 
@@ -55,6 +57,21 @@ public:
   /// This function should be called periodically to help advance
   /// pending communication requests.
   void AdvanceCommunication ();
+  
+  /// @return group corresponding to given global rank
+  std::string getGroupName(int rank) {return "Default";}
+  
+  /// @return the group data corresponding to given name
+  Group& getGroup(const std::string name) {Group g; return g;}
+  
+  /// create MPI group 
+  /// @param ranks          list of the ranks belonging to this group
+  /// @param mapRank2Group  flag telling whether to build a reverse 
+  ///                       rank-group mapping (each rank MUST be 
+  ///                       associated to a unique group)
+  void createGroup(const std::string name,
+		   const std::vector<int>& ranks, 
+		   const bool mapRank2Group) {}
   
 }; // end class PEInterface
       

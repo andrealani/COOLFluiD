@@ -68,9 +68,9 @@ public:
   /// @param init Object of type Type that initializes ALL entries of storage
   /// @return the pointer to the created storage
   template <class TYPE> DataHandle<TYPE, GLOBAL> createGlobalData
-  (const std::string & name, CFuint size,
-  const typename Framework::GlobalTypeTrait<TYPE>::GTYPE& init);
-
+    (const std::string & name, const std::string& nspaceName, CFuint size,
+     const typename Framework::GlobalTypeTrait<TYPE>::GTYPE& init);
+  
   /// Creates and initializes local data dynamically
   /// @param name std::string identifier for the storage
   /// @param size size of storage
@@ -333,8 +333,8 @@ DataHandle<TYPE,GLOBAL> DataStorage::getGlobalData (const std::string & name)
 
 template <class TYPE>
 DataHandle<TYPE,GLOBAL> DataStorage::createGlobalData
-(const std::string & name, CFuint size,
- const typename Framework::GlobalTypeTrait<TYPE>::GTYPE & init)
+(const std::string & name, const std::string& nspaceName, 
+ CFuint size, const typename Framework::GlobalTypeTrait<TYPE>::GTYPE & init)
 {
   typedef typename Framework::GlobalTypeTrait<TYPE>::GTYPE GTYPE;
   typedef typename GLOBAL::template StoragePolicy<GTYPE>::ContainerType GlobalVectorType;
@@ -348,11 +348,11 @@ DataHandle<TYPE,GLOBAL> DataStorage::createGlobalData
   LocalVectorType* vLocal = new LocalVectorType(CFNULL, size);
   const std::string localname  = name + "_local";
   m_dataStorage[localname] = static_cast<void *>(vLocal);
-
-  GlobalVectorType* vGlobal = new GlobalVectorType (init, size);
+  
+  GlobalVectorType* vGlobal = new GlobalVectorType (nspaceName, init, size);
   const std::string globalname = name + "_global";
   m_dataStorage[globalname] = static_cast<void *>(vGlobal);
-
+  
   return DataHandle<TYPE,GLOBAL>(static_cast<void *>(vLocal),static_cast<void *>(vGlobal));
 }
 

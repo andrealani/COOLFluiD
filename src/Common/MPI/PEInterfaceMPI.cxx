@@ -6,9 +6,11 @@
 
 #include "Common/MPI/PEInterfaceMPI.hh"
 #include "Common/MPI/MPIInitObject.hh"
-#include "Common/MPI/MPIHelper.hh"
+#include "Common/MPI/MPIError.hh"
 
-#include "Common/CFLog.hh"
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -19,89 +21,159 @@ namespace COOLFluiD {
 
 static void ThrowMPI (MPI_Comm * Comm, int * Error, ...)
 {
-	DoMPIError (*Error);
+  DoMPIError (*Error);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-PEInterface<PM_MPI>::PEInterface (int * argc, char *** args, MPI_Comm UsedCom)
-    : Comm(UsedCom), DataTypeHandler (UsedCom), InitOK_(false), StopCalled_(false)
+PEInterface<PM_MPI>::PEInterface (int * argc, char *** args)
+  : InitOK_(false), StopCalled_(false)
 {
-    int Ret = MPI_Init (argc, args);
-    if (Ret != MPI_SUCCESS) throw std::string("MPI_Init failed!");
-    InitOK_ = true;
-
-    Common::CheckMPIStatus(MPI_Errhandler_create (ThrowMPI, &ErrHandler_));
-    Common::CheckMPIStatus(MPI_Errhandler_set (Comm, ErrHandler_));
-
-    DataTypeHandler.InitTypes ();
-
-    CallInitFunctions ();
+  CheckMPIStatus(MPI_Init (argc, args));
+  
+  InitOK_ = true;
+  
+  CallInitFunctions ();
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 PEInterface<PM_MPI>::~PEInterface ()
 {
-    CallDoneFunctions ();
-
-    DataTypeHandler.DoneTypes ();
-
-    MPI_Finalize ();
-    InitOK_=false;
-}
-
-void PEInterface<PM_MPI>::CallInitFunctions ()
-{
-    CFLogDebugMin( "PEInterface<PM_MPI>::CallInitFunctions()\n");
-    cf_assert (!StopCalled_);
-    InitContainerType::iterator Cur = InitList_.begin();
-    while (Cur != InitList_.end())
-    {
-	CallInitFunction (*Cur);
-	++Cur;
-    }
-}
-
-void PEInterface<PM_MPI>::CallDoneFunctions ()
-{
-    CFLogDebugMin( "PEInterface<PM_MPI>::CallDoneFunctions ()\n");
-    InitContainerType::iterator Cur = InitList_.begin();
-    while (Cur != InitList_.end())
-    {
-	CallDoneFunction (*Cur);
-	++Cur;
-    }
-    StopCalled_ = true;
-    // Clear the list
-    InitList_.clear ();
-}
-
-void PEInterface<PM_MPI>::CallInitFunction (MPIInitObject * NewObj) const
-{
-    CFLogDebugMin( "Calling MPI_Init on " << NewObj << "\n");
-    NewObj->MPI_Init (GetCommunicator());
-}
-void PEInterface<PM_MPI>::CallDoneFunction (MPIInitObject * NewObj) const
-{
-    CFLogDebugMin( "Calling MPI_Done on " << NewObj << "\n");
-    NewObj->MPI_Done ();
-}
-
-void PEInterface<PM_MPI>::RegisterInitObject (MPIInitObject * NewObj)
-{
-    cf_assert (!StopCalled_);
-
-    InitList_.push_back (NewObj);
-
-    if (InitOK_)
-    {
-	/// Initialization is already started, so we can call init immediately
-	CallInitFunction (InitList_.back());
-    }
+  CallDoneFunctions ();
+  
+  clearGroups();
+  
+  CheckMPIStatus(MPI_Finalize());
+  
+  InitOK_=false;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
+void PEInterface<PM_MPI>::CallInitFunctions ()
+{
+  CFLogDebugMin( "PEInterface<PM_MPI>::CallInitFunctions()\n");
+  cf_assert (!StopCalled_);
+  InitContainerType::iterator Cur = InitList_.begin();
+  while (Cur != InitList_.end()) {
+    CallInitFunction (*Cur);
+    ++Cur;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void PEInterface<PM_MPI>::CallDoneFunctions ()
+{
+  CFLogDebugMin( "PEInterface<PM_MPI>::CallDoneFunctions ()\n");
+  InitContainerType::iterator Cur = InitList_.begin();
+  while (Cur != InitList_.end()) {
+    CallDoneFunction (*Cur);
+    ++Cur;
+  }
+  StopCalled_ = true;
+  // Clear the list
+  InitList_.clear ();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void PEInterface<PM_MPI>::CallInitFunction (MPIInitObject * NewObj) const
+{
+  // AL: check this, I'm not sure if "Default" should be used here 
+  CFLogDebugMin( "Calling MPI_Init on " << NewObj << "\n");
+  NewObj->MPI_Init (GetCommunicator(std::string("Default")));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void PEInterface<PM_MPI>::CallDoneFunction (MPIInitObject * NewObj) const
+{
+  CFLogDebugMin( "Calling MPI_Done on " << NewObj << "\n");
+  NewObj->MPI_Done ();
+}
+//////////////////////////////////////////////////////////////////////////////
+      
+void PEInterface<PM_MPI>::RegisterInitObject (MPIInitObject * NewObj)
+{
+  cf_assert (!StopCalled_);
+  
+  InitList_.push_back (NewObj);
+  
+  if (InitOK_) {
+    /// Initialization is already started, so we can call init immediately
+    CallInitFunction (InitList_.back());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void PEInterface<PM_MPI>::createGroup(const std::string name, 
+				      const std::vector<int>& ranks, 
+				      const bool mapRank2Group) 
+{
+  CFLog(INFO, "PEInterface<PM_MPI>::createGroup [" << name << "] => start\n");
+  
+  if (m_groups.count(name) == 0) {
+    const CFuint nranks = ranks.size();
+    cf_assert(nranks > 0);
+    
+    Group* g = new Group();
+    g->globalRanks.resize(nranks);
+    
+    CFLog(VERBOSE, "PEInterface<PM_MPI>::createGroup() => inserting ranks \t");
+    for (CFuint i = 0; i < nranks; ++i) {
+      g->globalRanks[i] = ranks[i];
+      CFLog(VERBOSE, " " << ranks[i] << "\t");
+      if (mapRank2Group) {
+	m_rank2Group.insert(std::make_pair(ranks[i], name));
+      }
+    }
+    CFLog(VERBOSE, "\n");
+    
+    g->groupRanks.resize(nranks);
+    
+    MPI_Group allGroup; 
+    MPIError::getInstance().check
+      ("MPI_Comm_group", "PEInterface<PM_MPI>::createGroup()", MPI_Comm_group(MPI_COMM_WORLD, &allGroup)); 
+    
+    int rank = 0;
+    MPIError::getInstance().check
+      ("MPI_Comm_rank", "PEInterface<PM_MPI>::createGroup()", MPI_Comm_rank(MPI_COMM_WORLD, &rank)); 
+    
+    MPIError::getInstance().check
+      ("MPI_Group_incl", "PEInterface<PM_MPI>::createGroup()", MPI_Group_incl(allGroup, nranks, &g->globalRanks[0], &g->group));
+    
+    MPIError::getInstance().check
+      ("MPI_Comm_create", "PEInterface<PM_MPI>::createGroup()", MPI_Comm_create(MPI_COMM_WORLD, g->group, &g->comm));
+    
+    // assign the group ranks corresponding to the given global ranks 
+    MPIError::getInstance().check
+      ("MPI_Group_translate_ranks", "PEInterface<PM_MPI>::createGroup()", 
+       MPI_Group_translate_ranks(allGroup, nranks, &g->globalRanks[0], g->group, &g->groupRanks[0])); 
+    
+    m_groups.insert(std::make_pair(name, g));
+  }
+  else {
+    CFLog(WARN, "WARNING: PEInterface<PM_MPI>::createGroup() => group " << name << " already created!\n");
+  } 
+  
+  CFLog(INFO, "PEInterface<PM_MPI>::createGroup() [" << name << "] => end\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+void PEInterface<PM_MPI>::clearGroups()
+{
+  /// @pre cannot be called from ~PE() because static PE object is destroyed 
+  ///      after MPI_finalize(): it would try to double delete MPI_group's otherwise 
+  for (map<string,Group*>::iterator itr = m_groups.begin(); itr != m_groups.end(); ++itr) {
+    delete itr->second;
+  } 
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+  
     }
 }

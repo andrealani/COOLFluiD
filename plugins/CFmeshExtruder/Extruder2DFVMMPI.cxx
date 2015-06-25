@@ -8,6 +8,7 @@
 
 #include "Common/BadValueException.hh"
 #include "Common/Stopwatch.hh"
+#include "Common/PEFunctions.hh"
 #include "Environment/DirPaths.hh"
 #include "Environment/ObjectProvider.hh"
 #include "CFmeshExtruder/Extruder2DFVMMPI.hh"
@@ -89,11 +90,6 @@ Extruder2DFVMMPI::Extruder2DFVMMPI(const std::string& name)
   
   _periodic = false;
   setParameter("Periodic",&_periodic);
-    
-  _comm   = PE::GetPE().GetCommunicator();
-  _myRank = PE::GetPE().GetRank();
-  _nbProc = PE::GetPE().GetProcessorCount();
-  cf_assert(_nbProc > 0);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -137,38 +133,6 @@ void Extruder2DFVMMPI::configure ( Config::ConfigArgs& args )
   cf_assert(_nbLayers > 0);
   if (!(std::abs(_zSize) > 0.0))
     throw BadValueException (FromHere(),"Extruder2DFVMMPI received zero extruding size");
-  
-  // size of dz  
-  _zDelta = _zSize / _nbLayers;
-  
-  // number of layers in each processor
-  const CFuint minNbLayers = _nbLayers/_nbProc;
-  const CFuint maxNbLayers = minNbLayers + _nbLayers%_nbProc;
-  _nbLayersLocal = (_myRank < _nbProc-1) ? minNbLayers : maxNbLayers;
-    
-  // compute the starting z for this processor
-  _zStartLocal = 0.;
-  for (CFuint i = 0; i < _myRank; ++i) {
-    _zStartLocal += minNbLayers*_zDelta;
-  }
-  
-  // sanity check
-  CFreal ztot = 0.;
-  CFuint nbLayers = 0;
-  for (CFuint i = 0; i < _nbProc; ++i) {
-    ztot +=  (i < _nbProc-1) ? minNbLayers*_zDelta : maxNbLayers*_zDelta;
-    nbLayers += (i < _nbProc-1) ? minNbLayers : maxNbLayers;
-  }
-  cf_assert(nbLayers == _nbLayers);
-  
-  if (_split) {
-    for (CFuint i=0;i < _newTetras.size();++i){
-      _newTetras[i].resize(4);
-    }
-    for (CFuint i=0;i < _newTriag.size();++i){
-      _newTriag[i].resize(3);
-    }
-  }
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -192,15 +156,61 @@ void Extruder2DFVMMPI::convert(const boost::filesystem::path& fromFilepath,
   
   Common::Stopwatch<WallTime> stp;
   stp.start();
+  
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
 
-  // each processor reads the origin 2D CFmesh
-  PE::GetPE().setBarrier();
-  for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
-    if (i == PE::GetPE().GetRank ()) {
-      _reader.readFromFile(fromFilepath);
-    }
-    PE::GetPE().setBarrier();
+  CFLog(VERBOSE, "Extruder2DFVMMPI::convert() nsp = " << nsp << " \n");
+  
+  _comm   = PE::GetPE().GetCommunicator(nsp);
+  _myRank = PE::GetPE().GetRank(nsp);
+  _nbProc = PE::GetPE().GetProcessorCount(nsp);
+  cf_assert(_nbProc > 0);
+  
+  CFLog(VERBOSE, "Extruder2DFVMMPI::convert() _myRank = " << _myRank << " \n");
+  CFLog(VERBOSE, "Extruder2DFVMMPI::convert() _nbProc = " << _nbProc << " \n");
+  
+  // number of layers in each processor
+  const CFuint minNbLayers = _nbLayers/_nbProc;
+  const CFuint maxNbLayers = minNbLayers + _nbLayers%_nbProc;
+  
+  CFLog(VERBOSE, "Extruder2DFVMMPI::convert() => _nbLayers   = " << _nbLayers << "\n");
+  CFLog(VERBOSE, "Extruder2DFVMMPI::convert() => minNbLayers = " << minNbLayers << "\n");
+  CFLog(VERBOSE, "Extruder2DFVMMPI::convert() => maxNbLayers = " << maxNbLayers << "\n");
+  
+  _nbLayersLocal = (_myRank < _nbProc-1) ? minNbLayers : maxNbLayers;
+  cf_assert(_nbLayersLocal > 0);
+
+  // size of dz  
+  _zDelta = _zSize / _nbLayers;
+  // compute the starting z for this processor
+  _zStartLocal = 0.;
+  for (CFuint i = 0; i < _myRank; ++i) {
+    _zStartLocal += minNbLayers*_zDelta;
   }
+  
+  // sanity check
+  CFreal ztot = 0.;
+  CFuint nbLayers = 0;
+  for (CFuint i = 0; i < _nbProc; ++i) {
+    ztot +=  (i < _nbProc-1) ? minNbLayers*_zDelta : maxNbLayers*_zDelta;
+    nbLayers += (i < _nbProc-1) ? minNbLayers : maxNbLayers;
+  }
+  cf_assert(nbLayers == _nbLayers);
+  
+  if (_split) {
+    for (CFuint i=0;i < _newTetras.size();++i){
+      _newTetras[i].resize(4);
+    }
+    for (CFuint i=0;i < _newTriag.size();++i){
+      _newTriag[i].resize(3);
+    }
+  }
+    
+  // each processor reads the origin 2D CFmesh
+  runSerial<void, const boost::filesystem::path&, FileReader, &FileReader::readFromFile>
+    (&_reader, fromFilepath, nsp);
+  
+  // _reader.readFromFile(fromFilepath);
   
   // transforms the data by extruding in z coordinate
   extrude();
@@ -275,7 +285,7 @@ void Extruder2DFVMMPI::extrude()
   }
   
   //if(isHybrid) reorderElementNodeState();
-  
+    
   vector<CFuint> nbGlobalNodesStates(2, (CFuint)0);
   vector<CFuint> nbLocalNodesStates(2, (CFuint)0);
   nbLocalNodesStates[0] = nbGlobalNodesStates[0] = nodes->size()/data.getDimension();
@@ -354,14 +364,19 @@ void Extruder2DFVMMPI::extrude()
   SafePtr<vector<vector<vector<CFuint> > > > trsGlobalIDs = MeshDataStack::getActive()->getGlobalTRSGeoIDs();
   
   for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
+    cf_assert(iTRS < (*data.getNbGeomEntsPerTR()).size());
     const string nameTRS = (*data.getNameTRS())[iTRS];
+    CFLog(VERBOSE, "Extruder2DFVMMPI::extrude() => nameTRS = " << nameTRS << "\n");
     MeshDataStack::getActive()->getTotalTRSNames()[iTRS] = nameTRS;
     const bool is2DTrs = (nameTRS != "Periodic" && nameTRS != "Top" && nameTRS != "Bottom");
     
     const CFuint nbTRs = (*data.getNbGeomEntsPerTR())[iTRS].size();
     for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
+      cf_assert(iTR < (*data.getNbGeomEntsPerTR())[iTRS].size());
       const CFuint nbGeos = (*data.getNbGeomEntsPerTR())[iTRS][iTR];
       if (is2DTrs) {
+	cf_assert(_nbLayersLocal > 0);
+	cf_assert(nbGeos > 0);
 	const CFuint nbGeos2D = nbGeos/_nbLayersLocal;
 	trs[iTRS].push_back(nbGeos2D*_nbLayers);
       }
@@ -878,9 +893,11 @@ void Extruder2DFVMMPI::createAnotherLayer()
     }
   }
   
-  data.setNbElements(newNbElements);
+  data.setNbElements(newNbElements); 
+  
+  CFLog(VERBOSE, "Extruder2DFVMMPI created layer (" << _iLayer << ") \n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 // void Extruder2DFVMMPI::reorderElementNodeState()

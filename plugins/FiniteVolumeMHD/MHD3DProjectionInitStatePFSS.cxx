@@ -2,6 +2,7 @@
 
 #include "FiniteVolumeMHD/MHD3DProjectionInitStatePFSS.hh"
 #include "Common/CFLog.hh"
+#include "Common/PEFunctions.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/DataHandle.hh"
 #include "Common/BadValueException.hh"
@@ -464,28 +465,16 @@ void MHD3DProjectionInitStatePFSS::setup()
         _nameBeginPFSSDataFile = _varSet->getNameBeginPFSSCoeffFile();
         _nameEndPFSSDataFile = _varSet->getNameEndPFSSCoeffFile();
    
-  	// if this is a parallel simulation, only ONE process at a time reads the file
-  	if (PE::GetPE().IsParallel()) {
-    
-    		PE::GetPE().setBarrier();
-
-    		for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
-      			if (i == PE::GetPE().GetRank ()) {
-        			readInputFile();
-      			}
-      
-      			PE::GetPE().setBarrier();
-    		}
-  	}
-  	else {
-    		readInputFile();
-  	}
-
+	// if this is a parallel simulation, only ONE process at a time reads the file
+  	const std::string nsp = this->getMethodData().getNamespace();
+	runSerial<void, MHD3DProjectionInitStatePFSS, 
+		  &MHD3DProjectionInitStatePFSS::readInputFile>(this, nsp);
+	
 	SafePtr<TopologicalRegionSet> trs = getCurrentTRS();
         const CFuint nbTrsFaces = trs->getLocalNbGeoEnts();
 
         CFout << "PFSS magnetic field is computed for " << trs->getName() << " on " << nbTrsFaces << " faces\n";
-
+	
         DataHandle<std::vector<CFreal> > BPFSS = socket_BPFSS.getDataHandle();
         BPFSS.resize(MeshDataStack::getActive()->Statistics().getNbFaces());
 

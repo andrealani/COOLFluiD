@@ -10,6 +10,7 @@
 #include "Framework/PhysicalModel.hh"
 #include "Framework/NamespaceSwitcher.hh"
 #include "Framework/Framework.hh"
+#include "Framework/SubSystemStatus.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -72,9 +73,10 @@ void DataProcessingData::configure ( Config::ConfigArgs& args )
   MethodData::configure(args);
 
   std::string name = getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  
   std::string provider = "Null";
   if (_updateVarStr != "Null") {
     provider = (physModel->getConvectiveName() != "Null") ?

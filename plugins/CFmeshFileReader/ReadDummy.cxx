@@ -54,10 +54,13 @@ void ReadDummy::configure ( Config::ConfigArgs& args )
 
 void ReadDummy::execute()
 {
+  const std::string nsp = this->getMethodData().getNamespace();
+  
   DataHandle<State*,GLOBAL> states = socket_states.getDataHandle(); 
-  states.reserve(1, PhysicalModelStack::getActive()->getNbEq()*sizeof(CFreal));
+  states.reserve(1, PhysicalModelStack::getActive()->getNbEq()*sizeof(CFreal), nsp);
+  
   DataHandle<Node*,GLOBAL> nodes = socket_nodes.getDataHandle();
-  nodes.reserve(1, PhysicalModelStack::getActive()->getDim()*sizeof(CFreal));
+  nodes.reserve(1, PhysicalModelStack::getActive()->getDim()*sizeof(CFreal), nsp);
 }
       
 //////////////////////////////////////////////////////////////////////////////

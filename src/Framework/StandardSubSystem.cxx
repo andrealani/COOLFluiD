@@ -168,27 +168,18 @@ void StandardSubSystem::configure ( Config::ConfigArgs& args )
   CFAUTOTRACE;
 
   SubSystem::configure(args);
-
-  /// @note KVDA: does this belong here? It is also done in the setup phase, which seems more appropriate...
-  /// @todo here we should have vectors of initialTime... ??????
-//   vector< SafePtr<SubSystemStatus> > subSystemStatusVec =
-//     SubSystemStatusStack::getInstance().getAllEntries();
-//
-//   for(CFuint i=0;i<subSystemStatusVec.size();i++){
-//     subSystemStatusVec[i]->setCurrentTime(m_initialTime);
-//   }
-
+  
   // set the physical model
   configurePhysicalModel(args);
-
+  
   // builds a stop condition
   Common::SafePtr<StopCondition::PROVIDER> stopCondProv =
     Environment::Factory<StopCondition>::getInstance().getProvider(m_stopConditionStr);
   SelfRegistPtr<StopCondition> stopCondition =
     stopCondProv->create(stopCondProv->getName());
-
+  
   configureNested ( stopCondition.getPtr(), args );
-
+  
   // Give the stopcondition to the StopConditionController
   // StopConditionController::Create makes a new StopConditionController
   // object, adapted to the current PE mode
@@ -199,13 +190,13 @@ void StandardSubSystem::configure ( Config::ConfigArgs& args )
 
   // builds MeshAdapterMethod
   configureMultiMethod<MeshAdapterMethod>(args,m_meshAdapterMethod);
-
+  
   // builds CouplerMethod
   configureCouplerMethod(args,m_couplerMethod);
 
   // builds SpaceMethod
   configureMultiMethod<SpaceMethod>(args,m_spaceMethod);
-
+  
   // builds ErrorEstimatorMethod
   configureMultiMethod<ErrorEstimatorMethod>(args,m_errorEstimatorMethod);
 
@@ -217,16 +208,16 @@ void StandardSubSystem::configure ( Config::ConfigArgs& args )
 
   // builds DataPreProcessing
   configureMultiMethod<DataProcessingMethod>(args,m_dataPreProcessing);
-
+  
   // builds DataPostProcessing
   configureMultiMethod<DataProcessingMethod>(args,m_dataPostProcessing);
-
+  
   // builds OutputFormatter
   configureMultiMethod<OutputFormatter>(args,m_outputFormat);
-
+  
   // set collaborators
   setCollaborators();
-
+  
   setParentNamespaceInMethodSockets(); // after this all the namespaces are set
   setEnableNamespaces(true);
   setNonRootMethods();
@@ -260,11 +251,11 @@ void StandardSubSystem::configureCouplerMethod(Config::ConfigArgs& args, MultiMe
                        (&CouplerMethod::getInfoFromOtherSubSystem));
 
   // !!! continue the configuration !!!
-  for ( CFuint i = 0; i < m_couplerMethod.size();  ++i)
+  for ( CFuint i = 0; i < m_couplerMethod.size();  ++i) {
     m_couplerMethod[i]->postConfigure(args);
-
+  }
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void StandardSubSystem::allocateAllSockets()
@@ -272,10 +263,10 @@ void StandardSubSystem::allocateAllSockets()
   CFAUTOTRACE;
 
   SubSystem::allocateAllSockets();
-
+  
   // complement here the plugging of sockets and linking methods
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void StandardSubSystem::deallocateAllSockets()
@@ -300,14 +291,15 @@ void StandardSubSystem::buildMeshData()
 
   // loop on all namespaces and setup the models in each of them
   typedef std::vector<Common::SafePtr<Namespace> > NspVec;
-  NspVec lst = NamespaceSwitcher::getInstance().getAllNamespaces();
+  NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
+  NspVec lst = nsw.getAllNamespaces();
   cf_assert(!lst.empty()); // there should be some models
   NspVec::iterator nsp = lst.begin();
   for(; nsp != lst.end(); ++nsp)
   {
-    NamespaceSwitcher::getInstance().pushNamespace((*nsp)->getName());
+    nsw.pushNamespace((*nsp)->getName());
     PhysicalModelStack::getActive()->getImplementor()->setup();
-    NamespaceSwitcher::getInstance().popNamespace();
+    nsw.popNamespace();
   }
   
   // allocate all the mesh data
@@ -442,11 +434,6 @@ void StandardSubSystem::setup()
   cf_assert(isConfigured());
 
   typedef std::vector<Common::SafePtr<Namespace> > NspVec;
-  NspVec lst = NamespaceSwitcher::getInstance().getAllNamespaces();
-
-  cf_assert(!lst.empty());
-
-  NspVec::iterator nsp = lst.begin();
   
   //setCommands() needs Trs's => must be exactly here
   setCommands();
@@ -658,7 +645,7 @@ void StandardSubSystem::run()
   CFLog(NOTICE, "SubSystem WallTime: " << stopTimer << "s\n");
   m_duration = subSysStatusVec[0]->readWatchHMS();
   
-  dumpStates();
+  // dumpStates();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -677,23 +664,19 @@ void StandardSubSystem::unsetup()
      totalResidual += subSysStatusVec[i]->getResidual();
 
   cf_assert(isConfigured());
-
-  CFout << "Total Number Iter: " << subSysStatus->getNbIter()
+  
+  CFLog(INFO, "Total Number Iter: " << subSysStatus->getNbIter()
         << " Reached Residual: " << totalResidual
-        << " and took: " << m_duration.str() << "\n";
-
+        << " and took: " << m_duration.str() << "\n");
+  
   ofstream fres;
   fres.open ("residual.dat");
-  if(fres.is_open())
-  {
+  if(fres.is_open()) {
     fres << totalResidual << std::endl;
   }
-
+  
   bool force = true;
   writeSolution(force);
-  
-  // typedef boost::mpl::list<ErrorEstimatorMethod, SpaceMethod> acts;
-  // boost::mpl::for_each<acts>(do_this_wrapper()); 
   
   CFLog(VERBOSE, "StandardSubSystem::unsetup() => OutputFormatter\n");
   // unset all the methods
@@ -832,39 +815,43 @@ void StandardSubSystem::setCollaborators()
 
   CFLog(VERBOSE,"Setting collaborators for all Methods \n");
 
-  CFLog(DEBUG_MIN,"Setting ConvergenceMethod collaborators for MeshAdapterMethods \n");
+  CFLog(VERBOSE,"Setting ConvergenceMethod collaborators for MeshAdapterMethods \n");
   SubSystem::setCollaborators<MeshAdapterMethod, ConvergenceMethod>(m_meshAdapterMethod, m_convergenceMethod);
 
-  CFLog(DEBUG_MIN,"Setting OutputFormatter collaborators for MeshAdapterMethods \n");
+  CFLog(VERBOSE,"Setting OutputFormatter collaborators for MeshAdapterMethods \n");
   SubSystem::setCollaborators<MeshAdapterMethod, OutputFormatter>(m_meshAdapterMethod, m_outputFormat);
 
-  CFLog(DEBUG_MIN,"Setting MeshCreator collaborators for MeshAdapterMethods \n");
+  CFLog(VERBOSE,"Setting MeshCreator collaborators for MeshAdapterMethods \n");
   SubSystem::setCollaborators<MeshAdapterMethod, MeshCreator>(m_meshAdapterMethod, m_meshCreator);
 
-  CFLog(DEBUG_MIN,"Setting SpaceMethod collaborators for MeshAdapterMethods \n");
+  CFLog(VERBOSE,"Setting SpaceMethod collaborators for MeshAdapterMethods \n");
   SubSystem::setCollaborators<MeshAdapterMethod, SpaceMethod>(m_meshAdapterMethod, m_spaceMethod);
 
-  CFLog(DEBUG_MIN,"Setting LinearSystemSolver collaborators for ConvergenceMethods \n");
+  CFLog(VERBOSE,"Setting LinearSystemSolver collaborators for ConvergenceMethods \n");
   SubSystem::setCollaborators<ConvergenceMethod, LinearSystemSolver>(m_convergenceMethod, m_linearSystemSolver);
   
-  CFLog(DEBUG_MIN,"Setting SpaceMethod collaborators for ConvergenceMethods \n");
+  CFLog(VERBOSE,"Setting SpaceMethod collaborators for ConvergenceMethods \n");
   SubSystem::setCollaborators<ConvergenceMethod, SpaceMethod>(m_convergenceMethod, m_spaceMethod);
   
-  CFLog(DEBUG_MIN,"Setting LinearSystemSolver collaborators for SpaceMethods \n");
+  CFLog(VERBOSE,"Setting LinearSystemSolver collaborators for SpaceMethods \n");
   SubSystem::setCollaborators<SpaceMethod, LinearSystemSolver>(m_spaceMethod, m_linearSystemSolver);
 
-  CFLog(DEBUG_MIN,"Setting ConvergenceMethods collaborators for SpaceMethods \n");
+  CFLog(VERBOSE,"Setting ConvergenceMethods collaborators for SpaceMethods \n");
   SubSystem::setCollaborators<SpaceMethod, ConvergenceMethod>(m_spaceMethod, m_convergenceMethod);
 
+  CFLog(VERBOSE,"Setting ConvergenceMethods collaborators for DataProcessingMethod (PRE) \n");
   SubSystem::setCollaborators<DataProcessingMethod, ConvergenceMethod>(m_dataPreProcessing, m_convergenceMethod);
-
+  
+  CFLog(VERBOSE,"Setting ConvergenceMethods collaborators for DataProcessingMethod (POST) \n");
   SubSystem::setCollaborators<DataProcessingMethod, ConvergenceMethod>(m_dataPostProcessing, m_convergenceMethod);
   
+  CFLog(VERBOSE,"Setting LinearSystemSolver collaborators for DataProcessingMethod (PRE) \n");
   SubSystem::setCollaborators<DataProcessingMethod, LinearSystemSolver>(m_dataPreProcessing, m_linearSystemSolver);
   
+  CFLog(VERBOSE,"Setting LinearSystemSolver collaborators for DataProcessingMethod (POST) \n");
   SubSystem::setCollaborators<DataProcessingMethod, LinearSystemSolver>(m_dataPostProcessing, m_linearSystemSolver);
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void StandardSubSystem::writeSolution(const bool force_write )
@@ -883,7 +870,7 @@ void StandardSubSystem::writeSolution(const bool force_write )
         m_outputFormat[i]->write();
         m_outputFormat[i]->close();
         stopTimer.stop();
-        CFout << "Writing took " << stopTimer << "s\n";
+        CFLog(INFO, "Writing took " << stopTimer << "s\n");
       }
     }
   }
@@ -895,9 +882,9 @@ void StandardSubSystem::configurePhysicalModel ( Config::ConfigArgs& args )
 {
 
   typedef std::vector<Common::SafePtr<Namespace> > NspVec;
-  NspVec lst =
-    NamespaceSwitcher::getInstance().getAllNamespaces();
-
+  NspVec lst = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getAllNamespaces();
+  
   cf_assert(!lst.empty());
 
   NspVec::iterator nsp = lst.begin();
@@ -932,7 +919,7 @@ void StandardSubSystem::configurePhysicalModel ( Config::ConfigArgs& args )
     PhysicalModelStack::getInstance().getEntry(physicalModelName)->setEquationSubSysDescriptor(0,nbEqs,0);
   }
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void StandardSubSystem::writeConvergenceOnScreen()
@@ -954,7 +941,7 @@ void StandardSubSystem::dumpStates()
     const string fileName = "states.mesh-" + StringOps::to_str(iMeshData);
     
     // only rank 0 creates the file
-    if (PE::GetPE().GetRank() == 0) {
+    if (PE::GetPE().GetRank("Default") == 0) {
       ofstream file(fileName.c_str());
       // write out the states size
       file << states.size() << endl;
@@ -962,7 +949,7 @@ void StandardSubSystem::dumpStates()
     }
     
     // be sure that all processes are ok
-    PE::GetPE().setBarrier();
+    PE::GetPE().setBarrier("Default");
     
     // ofstream fout(fileName.c_str(), ios::app);
     // Tamas: put here your algorithm to serialize the data (assume 1 mesh <==> 1 file)

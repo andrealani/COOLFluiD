@@ -4,7 +4,7 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#include "Common/PE.hh"
+#include "Common/PEFunctions.hh"
 #include "Common/SelfRegistPtr.hh"
 #include "Environment/DirPaths.hh"
 
@@ -77,28 +77,13 @@ void SimpleRefiner::execute()
 
   path fromfile = Environment::DirPaths::getInstance().getWorkingDir() / path ( _filename );
   path tofile   = Environment::DirPaths::getInstance().getWorkingDir() / path ( outputFileName );
-
+  
   // refiner works serially on the processor with rank == 0
-  if (PE::GetPE().IsParallel())
-  {
-    PE::GetPE().setBarrier();
-
-    if (PE::GetPE().GetRank() == 0) {
-
-      refiner->convert(fromfile, tofile);
-    }
-
-    PE::GetPE().setBarrier();
-  }
-  else
-  {
-    cf_assert(!PE::GetPE().IsParallel());
-
-    refiner->convert(fromfile, tofile);
-  }
-
+  const std::string nsp = getMethodData().getNamespace();
+  runSerial<void, const path&, const path&, MeshFormatConverter, &MeshFormatConverter::convert>
+    (&(*refiner), fromfile, tofile, nsp);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void SimpleRefiner::configure ( Config::ConfigArgs& args )

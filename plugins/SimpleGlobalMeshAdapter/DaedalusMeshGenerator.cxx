@@ -48,21 +48,23 @@ void DaedalusMeshGenerator::execute()
   //Run mesh generation using the startfile and cfg and pts files created in the prepare phase
   std::string startDaedalus;
   startDaedalus = "./dae";
-
+  
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  
   if (PE::GetPE().IsParallel()) {
-
-    PE::GetPE().setBarrier();
-
-    if (PE::GetPE().GetRank () == 0) {
+    
+    PE::GetPE().setBarrier(nsp);
+    
+    if (PE::GetPE().GetRank (nsp) == 0) {
       Common::OSystem::getInstance().executeCommand(startDaedalus);
     }
-
-    PE::GetPE().setBarrier();
+    
+    PE::GetPE().setBarrier(nsp);
   }
   else{
     Common::OSystem::getInstance().executeCommand(startDaedalus);
   }
-
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////

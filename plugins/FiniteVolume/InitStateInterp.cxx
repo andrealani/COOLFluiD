@@ -126,7 +126,7 @@ void InitStateInterp::setup()
   
   const std::string name = getMethodData().getNamespace();
   Common::SafePtr<Namespace> nsp =
-    NamespaceSwitcher::getInstance().getNamespace(name);
+    NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel =
     PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
   
@@ -146,15 +146,15 @@ void InitStateInterp::setup()
   
   m_tstate = new State();
   m_bstate = new State();
-
+  
   if (m_infile != "") {
     if (PE::GetPE().IsParallel()) {
-      PE::GetPE().setBarrier();
-      for (CFuint p = 0; p < PE::GetPE().GetProcessorCount(); ++p) {
-	if (p == PE::GetPE().GetRank ()) {
+      PE::GetPE().setBarrier(name);
+      for (CFuint p = 0; p < PE::GetPE().GetProcessorCount(name); ++p) {
+	if (p == PE::GetPE().GetRank(name)) {
 	  fillTable();
 	}
-	PE::GetPE().setBarrier();
+	PE::GetPE().setBarrier(name);
       }
     }
     else {

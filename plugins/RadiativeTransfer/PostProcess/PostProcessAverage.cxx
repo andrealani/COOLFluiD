@@ -184,12 +184,12 @@ void PostProcessAverage::runPostProcess(DataHandle<CFreal> dataVector){
     m_cellBuilder.releaseGE();
   }
 
-
-  CFuint nbProcesses = PE::GetPE().GetProcessorCount();
-  MPI_Comm comm = PE::GetPE().GetCommunicator();
-  CFuint myProcessRank = PE::GetPE().GetRank();
-
-
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  
+  CFuint nbProcesses = PE::GetPE().GetProcessorCount(nsp);
+  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+  CFuint myProcessRank = PE::GetPE().GetRank(nsp);
+  
   //send all tuples to process 0 to be stored in a common file
   vector<int> nbsElems, disps;
   
