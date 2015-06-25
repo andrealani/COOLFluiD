@@ -15,7 +15,8 @@ namespace COOLFluiD {
 // Setup
 void DataStorage::setupCommonNodes(const vector<vector<CFuint> >& sNodes, const vector<vector<CFuint> >& rNodes)
 {
-  cf_assert(commNodes.size() == PE::GetPE().GetProcessorCount());
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  cf_assert(commNodes.size() == PE::GetPE().GetProcessorCount(nsp));
   // Setup CommonNodes container
   for(CFuint i=0; i<commNodes.size(); ++i)
   {
@@ -43,12 +44,13 @@ bool DataStorage::IsCommon(CFuint inode, CFuint procrank)
 //////////////////////////////////////////////////////////////////////////////
 void DataStorage::ResizeData(const CFuint noNodes)
 {
-  commNodes.resize( PE::GetPE().GetProcessorCount() ); // CommonNodes
-  part1.resize( noNodes, PE::GetPE().GetRank() ); // Most of nodes belong to process
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  commNodes.resize( PE::GetPE().GetProcessorCount(nsp) ); // CommonNodes
+  part1.resize( noNodes, PE::GetPE().GetRank(nsp) ); // Most of nodes belong to process
   part2.resize( noNodes, 0); // this will be set after ParMETIS is run
   globNumNode.resize(noNodes);
-  cellSend.resize( PE::GetPE().GetProcessorCount() );
-  nodeSend.resize( PE::GetPE().GetProcessorCount() );
+  cellSend.resize( PE::GetPE().GetProcessorCount(nsp) );
+  nodeSend.resize( PE::GetPE().GetProcessorCount(nsp) );
   m_intData.resize(3); // for nodes [0], cells [1], states [2] - int
   m_douData.resize(3); // for nodes [0], cells [1], states [2] - double
 }
@@ -80,8 +82,13 @@ void DataStorage::ExecuteMPIcomm()
 //////////////////////////////////////////////////////////////////////////////
 void DataStorage::MakeListsOfKnownNodes()
 {
-  for( CFuint p=0; p<PE::GetPE().GetProcessorCount(); ++p ) if(p != PE::GetPE().GetRank() )
-    knownNodes.insert(knownNodes.end(), CommonNodes()[p].begin(), CommonNodes()[p].end());
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  
+  for( CFuint p=0; p<PE::GetPE().GetProcessorCount(nsp); ++p ) {
+    if(p != PE::GetPE().GetRank(nsp) )
+      knownNodes.insert(knownNodes.end(), CommonNodes()[p].begin(), CommonNodes()[p].end());
+  }
+  
   // rewrite KnownNodes() into global names
   for(CFuint i=0; i<knownNodes.size(); ++i)
     knownNodes[i] = GlobId()[ knownNodes[i] ]; // put glob num instead of local num
@@ -128,13 +135,15 @@ void DataStorage::AddNewState(const vector<double>& stateVec)
 //////////////////////////////////////////////////////////////////////////////
 void DataStorage::MakeNewMeshElements(const CFuint dim, const CFuint statesize)
 {
+  
   CFuint nodesPerCell;  // how many nodes makes one cell - SIMPLEX!!
   if(dim == 2)  nodesPerCell = 3;
   else if(dim == 3) nodesPerCell = 4;
   else if(dim != 2 || dim !=3) throw Common::ParallelException (FromHere(),"Dimension Problem while creating new cells!!");
 
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
   // add new cells
-  for(CFuint p=0; p<PE::GetPE().GetProcessorCount(); ++p) if( p != PE::GetPE().GetRank() )// through processes that communicated
+  for(CFuint p=0; p<PE::GetPE().GetProcessorCount(nsp); ++p) if( p != PE::GetPE().GetRank(nsp) )// through processes that communicated
   {
     // for now cell has no double type data association
     cf_assert( m_douData[1].GetReciData()[p].empty() );
@@ -153,7 +162,7 @@ void DataStorage::MakeNewMeshElements(const CFuint dim, const CFuint statesize)
   }
   
   // add new nodes
-  for(CFuint p=0; p<PE::GetPE().GetProcessorCount(); ++p) if( p != PE::GetPE().GetRank() )// through processes that communicated
+  for(CFuint p=0; p<PE::GetPE().GetProcessorCount(nsp); ++p) if( p != PE::GetPE().GetRank(nsp) )// through processes that communicated
   {
     // since pop_back is used I am coping in reverse direction than it is stored!!
     CFuint Part2; // part2CFuint CFGlobId; // coolfluid global id

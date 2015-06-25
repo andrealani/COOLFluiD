@@ -3,7 +3,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "Common/GlobalReduce.hh"
+#include "Framework/GlobalReduce.hh"
 
 #include "LUSGSMethod/ComputeNormLUSGS.hh"
 
@@ -63,8 +63,8 @@ public:
 protected: // data
 
   /// object to perform the global reduce
-  Common::GlobalReduce<ComputeL2NormLUSGS> m_gr;
-
+  Framework::GlobalReduce<ComputeL2NormLUSGS> m_gr;
+  
   /// socket for rhs of current set of states
   Framework::DataSocketSink< CFreal > socket_rhsCurrStatesSet;
 

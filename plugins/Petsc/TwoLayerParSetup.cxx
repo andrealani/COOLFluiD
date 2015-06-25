@@ -128,9 +128,11 @@ void TwoLayerParSetup::setMatrix(const CFuint localSize,
   const CFuint globalNbRows  = 2 * globalSize * nbEqs;
   const CFuint globalNbCols  = globalNbRows;
 
+  const string nsp = getMethodData().getNamespace();
+  
   // create a sequential sparse matrix in block compressed row
   // format
-  mat.createParBAIJ(PETSC_COMM_WORLD,
+  mat.createParBAIJ(PE::GetPE().GetCommunicator(nsp),
                     blockSize,
                     localNbRows,
                     localNbCols,
@@ -144,22 +146,23 @@ void TwoLayerParSetup::setMatrix(const CFuint localSize,
 //////////////////////////////////////////////////////////////////////////////
 
 void TwoLayerParSetup::setVectors(const CFuint localSize,
-                             const CFuint globalSize)
+				  const CFuint globalSize)
 {
   const CFuint nbEqs = getMethodData().getNbSysEquations();
   const CFuint localVecSize  = 2 * localSize  * nbEqs;
   const CFuint globalVecSize = 2 * globalSize * nbEqs;
-
+  const string nsp = getMethodData().getNamespace();
+ 
   PetscVector& sol = getMethodData().getSolVector();
   PetscVector& rhs = getMethodData().getRhsVector();
-
+  
   // create the solution and the rhs vectors
-  rhs.create(PETSC_COMM_WORLD, localVecSize, globalVecSize,"Rhs");
-  sol.create(PETSC_COMM_WORLD, localVecSize, globalVecSize,"Solution");
-
+  rhs.create(PE::GetPE().GetCommunicator(nsp), localVecSize, globalVecSize,"Rhs");
+  sol.create(PE::GetPE().GetCommunicator(nsp), localVecSize, globalVecSize,"Solution");
+  
   // initialize the two vectors
-  sol.initialize(PETSC_COMM_WORLD, 1.0);
-  rhs.initialize(PETSC_COMM_WORLD, 0.0);
+  sol.initialize(PE::GetPE().GetCommunicator(nsp), 1.0);
+  rhs.initialize(PE::GetPE().GetCommunicator(nsp), 0.0);
 }
 
 //////////////////////////////////////////////////////////////////////////////

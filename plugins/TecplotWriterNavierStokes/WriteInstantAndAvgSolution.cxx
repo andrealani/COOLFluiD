@@ -202,7 +202,7 @@ void WriteInstantAndAvgSolution::writeToFileStream(std::ofstream& fout)
   fpath = boost::filesystem::change_extension(fpath, std::string(".plt"));
   ostringstream add;
   if (PE::GetPE().IsParallel()) {
-    add << "-P" << PE::GetPE().GetRank();
+    add << "-P" << PE::GetPE().GetRank(getMethodData().getNamespace());
   }
   fpath = fpath.branch_path() / ( basename(fpath) + add.str() + extension(fpath) );
   Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandleAvg =
@@ -319,15 +319,16 @@ void WriteInstantAndAvgSolution::writeToFileStream(std::ofstream& fout)
           }
           localToTypeID.sortKeys();
 
+	  const std::string nsp = getMethodData().getNamespace();
           // print zone header (for current instanteneous and averaged solution)
           // one zone per element type
           fout << "ZONE "
-               << "  T=\"P" << PE::GetPE().GetRank()<< " ZONE" << iType << " " << eType.getShape() <<"\""
+               << "  T=\"P" << PE::GetPE().GetRank(nsp)<< " ZONE" << iType << " " << eType.getShape() <<"\""
                << ", N=" << nodesInType.size()
                << ", E=" << nbCellsInType
                << ", F=FEPOINT"
                << ", ET=" << MapGeoEnt::identifyGeoEntTecplot(eType.getNbNodes(),eType.getGeoOrder(),dim)
-               << ", AUXDATA CPU=\"" << PE::GetPE().GetRank() << "\""
+               << ", AUXDATA CPU=\"" << PE::GetPE().GetRank(nsp) << "\""
                << ", AUXDATA TRS=\"" << trs->getName() << "\""
                << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
                << ", AUXDATA ElementType=\"" << eType.getShape() << "\""
@@ -336,12 +337,12 @@ void WriteInstantAndAvgSolution::writeToFileStream(std::ofstream& fout)
               << "\n";
 
           foutAvg << "ZONE "
-                  << "  T=\"P" << PE::GetPE().GetRank()<< " ZONE" << iType << " " << eType.getShape() <<"\""
+                  << "  T=\"P" << PE::GetPE().GetRank(nsp)<< " ZONE" << iType << " " << eType.getShape() <<"\""
                   << ", N=" << nodesInType.size()
                   << ", E=" << nbCellsInType
                   << ", F=FEPOINT"
                   << ", ET=" << MapGeoEnt::identifyGeoEntTecplot(eType.getNbNodes(),eType.getGeoOrder(),dim)
-                  << ", AUXDATA CPU=\"" << PE::GetPE().GetRank() << "\""
+                  << ", AUXDATA CPU=\"" << PE::GetPE().GetRank(nsp) << "\""
                   << ", AUXDATA TRS=\"" << trs->getName() << "\""
                   << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
                   << ", AUXDATA ElementType=\"" << eType.getShape() << "\""
@@ -542,9 +543,10 @@ void WriteInstantAndAvgSolution::configure ( Config::ConfigArgs& args )
   // get the physical model that we are dealing with
   // to pass it to the variable transformer
   std::string namespc = getMethodData().getNamespace();
-  SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(namespc);
+  SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(namespc);
   SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  
   // create the transformer from update to primitive variables
   std::string provider =
       VarSetTransformer::getProviderName(physModel->getConvectiveName(), m_updateVarStr, "Prim");

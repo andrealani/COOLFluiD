@@ -101,9 +101,10 @@ void BaseSetup::setKSP()
   // Creation of the linear solver context
   PC& pc = getMethodData().getPreconditioner();
   KSP& ksp = getMethodData().getKSP();
-
+  const string nsp = getMethodData().getNamespace();
+  
   int ierr = 0;
-  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);
+  ierr = KSPCreate(PE::GetPE().GetCommunicator(nsp),&ksp);
   CHKERRCONTINUE(ierr);
   
   // set the pointer to the preconditioner
@@ -154,19 +155,20 @@ void BaseSetup::setVectors(const CFuint localSize,
   PetscVector& rhs = getMethodData().getRhsVector();
 
   const CFuint nbEqs = getMethodData().getNbSysEquations();
-
+  const string nsp = getMethodData().getNamespace();
+  
   // create the solution and the rhs vectors
   rhs.setGPU(getMethodData().useGPU());
-  rhs.create(PETSC_COMM_WORLD, localSize*nbEqs,
+  rhs.create(PE::GetPE().GetCommunicator(nsp), localSize*nbEqs,
              globalSize*nbEqs,"rhs");
   
   sol.setGPU(getMethodData().useGPU());
-  sol.create(PETSC_COMM_WORLD, localSize*nbEqs,
+  sol.create(PE::GetPE().GetCommunicator(nsp), localSize*nbEqs,
              globalSize*nbEqs,"Solution");
   
   // initialize the two vectors
-  sol.initialize(PETSC_COMM_WORLD,1.0);
-  rhs.initialize(PETSC_COMM_WORLD,0.0);
+  sol.initialize(PE::GetPE().GetCommunicator(nsp),1.0);
+  rhs.initialize(PE::GetPE().GetCommunicator(nsp),0.0);
 }
       
 //////////////////////////////////////////////////////////////////////////////

@@ -257,10 +257,10 @@ void ArcJetPhiOutlet<BASE>::preProcess()
   m_sigmaIntegral = localSigmaIntegral;
 #ifdef CF_HAVE_MPI
   MPI_Allreduce(&localSigmaIntegral, &m_sigmaIntegral, 1, MPI_DOUBLE, MPI_SUM, 
-		PE::GetPE().GetCommunicator());
+		PE::GetPE().GetCommunicator(this->getMethodData().getNamespace()));
 #endif
   cf_assert(m_sigmaIntegral > 0.);
-//   std::cout << "Outlet::sigmaIntegral = " << m_sigmaIntegral <<"\n";
+  //   std::cout << "Outlet::sigmaIntegral = " << m_sigmaIntegral <<"\n";
 }
  
 //////////////////////////////////////////////////////////////////////////////

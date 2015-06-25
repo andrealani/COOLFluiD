@@ -59,8 +59,11 @@ void StdSetup::execute()
     // MPI_Fint casting is possible) and set ghost send/receive lists
     m_sparallel_struct& y = getMethodData().getParamsParallel();
 
-    y.icomm = static_cast< int >(MPI_Comm_c2f(MPI_COMM_WORLD));
-
+    const std::string nsp = getMethodData().getNamespace();
+    MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+    
+    y.icomm = static_cast< int >(MPI_Comm_c2f(comm));
+    
     setParallelVector( states.getGhostSendList(),L2S,nbEqs,
       y.nshalo,y.npsnd,y.iranksnd,y.ipts,y.isndlist );
     setParallelVector( states.getGhostReceiveList(),L2S,nbEqs,
@@ -82,16 +85,18 @@ void StdSetup::execute()
   getMethodData().setNbStates(nbStates,nbLocal,nbGlobal);
   getMethodData().getLocalToGlobalMapping().createMapping(L2S,ghosts);
 
-
+  const std::string nsp = getMethodData().getNamespace();
+  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+  
   // setup vectors
   SAMGLSSVector& sol = getMethodData().getSolVector();
-  sol.create(MPI_COMM_WORLD,nbStates*nbEqs,nbGlobal*nbEqs,"sol");
-  sol.initialize(MPI_COMM_WORLD,1.);
+  sol.create(comm,nbStates*nbEqs,nbGlobal*nbEqs,"sol");
+  sol.initialize(comm,1.);
 
   SAMGLSSVector& rhs = getMethodData().getRhsVector();
-  rhs.create(MPI_COMM_WORLD,nbStates*nbEqs,nbGlobal*nbEqs,"rhs");
-  rhs.initialize(MPI_COMM_WORLD,0.);
-
+  rhs.create(comm,nbStates*nbEqs,nbGlobal*nbEqs,"rhs");
+  rhs.initialize(comm,0.);
+  
   /* setup matrix: get matrix structure and change its mapping from local to
    samg (size of nnz can change, *= nbEqs) */
   std::vector< CFint > nnz(nbStates);

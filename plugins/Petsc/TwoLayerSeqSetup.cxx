@@ -122,14 +122,15 @@ void TwoLayerSeqSetup::setVectors(const CFuint localSize,
 
   PetscVector& sol = getMethodData().getSolVector();
   PetscVector& rhs = getMethodData().getRhsVector();
-
+  const std::string nsp = getMethodData().getNamespace();
+  
   // create the solution and the rhs vectors
-  sol.create(PETSC_COMM_WORLD, vecSize, vecSize, "Solution");
-  rhs.create(PETSC_COMM_WORLD, vecSize, vecSize, "rhs");
+  sol.create(PE::GetPE().GetCommunicator(nsp), vecSize, vecSize, "Solution");
+  rhs.create(PE::GetPE().GetCommunicator(nsp), vecSize, vecSize, "rhs");
 
   // initialize the two vectors
-  sol.initialize(PETSC_COMM_WORLD, 1.0);
-  rhs.initialize(PETSC_COMM_WORLD, 0.0);
+  sol.initialize(PE::GetPE().GetCommunicator(nsp), 1.0);
+  rhs.initialize(PE::GetPE().GetCommunicator(nsp), 0.0);
 }
 
 //////////////////////////////////////////////////////////////////////////////

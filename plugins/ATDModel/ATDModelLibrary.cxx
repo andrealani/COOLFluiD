@@ -4,10 +4,11 @@
 #include "Environment/ObjectProvider.hh"
 #include "Common/BadValueException.hh"
 #include "Framework/PhysicalModel.hh"
+#include "Framework/MeshData.hh"
 #include "Common/Stopwatch.hh"
 #include "Environment/DirPaths.hh"
 #include "Common/OSystem.hh"
-#include "Common/PE.hh"
+#include "Common/PEFunctions.hh"
 #include "Common/StringOps.hh"
 
 #include <fstream>
@@ -134,22 +135,8 @@ void ATDModelLibrary::setup()
 
   // if this is a parallel simulation, only ONE process at a time
   // sets the library
-  if (PE::GetPE().IsParallel()) {
-
-    PE::GetPE().setBarrier();
-
-    for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
-
-      if (i == PE::GetPE().GetRank ()) {
-        setLibrary();
-      }
-
-      PE::GetPE().setBarrier();
-    }
-  }
-  else {
-    setLibrary();
-  }
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  runSerial<void, ATDModelLibrary, &ATDModelLibrary::setLibrary>(this, nsp);
 }
 
 //////////////////////////////////////////////////////////////////////////////

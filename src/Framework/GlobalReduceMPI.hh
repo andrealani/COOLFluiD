@@ -4,22 +4,24 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_Common_GlobalReduceMPI_hh
-#define COOLFluiD_Common_GlobalReduceMPI_hh
+#ifndef COOLFluiD_Framework_GlobalReduceMPI_hh
+#define COOLFluiD_Framework_GlobalReduceMPI_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Common/COOLFluiD.hh"
-#include "Common/MPI/MPIInitObject.hh"
 #include "Common/PE.hh"
 #include "Common/NonCopyable.hh"
-#include "Common/GlobalReduce.hh"
+#include "Common/MPI/MPIInitObject.hh"
 #include "Common/MPI/MPIException.hh"
+#include "Common/MPI/MPIStructDef.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/GlobalReduce.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-    namespace Common {
+    namespace Framework {
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -271,9 +273,10 @@ public:
 
     GlobalReduceOperationMPIHelper (BASETYPE * S, BASETYPE * D, unsigned int Count)
       : Source_(S), Dest_(D), Count_(Count), Reduce_(*this) {}
-
-    void GetGlobalValue (BASETYPE * Dest) {  *Dest = Reduce_.GetGlobalValue (); }
-
+  
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  void GetGlobalValue (BASETYPE * Dest) {  *Dest = Reduce_.GetGlobalValue (nsp); }
+  
 private:
     const BASETYPE * Source_;
     BASETYPE * Dest_;
@@ -305,4 +308,4 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Common_GlobalReduceMPI_hh
+#endif // COOLFluiD_Framework_GlobalReduceMPI_hh

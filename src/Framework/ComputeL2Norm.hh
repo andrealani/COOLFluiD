@@ -9,8 +9,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "Common/GlobalReduce.hh"
-
+#include "Framework/GlobalReduce.hh"
 #include "Framework/ComputeNorm.hh"
 #include "Framework/DataSocketSink.hh"
 #include "Framework/State.hh"
@@ -68,7 +67,7 @@ public: // functions
 private: // data
 
   /// object to perform the global reduce
-  Common::GlobalReduce<ComputeL2Norm> m_gr;
+  Framework::GlobalReduce<ComputeL2Norm> m_gr;
   /// The set of data sockets to be used by the strategy
   Framework::DynamicDataSocketSet<> sockets_norm;
   /// socket for states

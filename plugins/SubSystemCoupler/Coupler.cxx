@@ -1,4 +1,5 @@
 #include "Common/FilesystemException.hh"
+#include "Common/PEFunctions.hh"
 #include "Environment/SingleBehaviorFactory.hh"
 #include "Environment/FileHandlerInput.hh"
 #include "Environment/FileHandlerOutput.hh"
@@ -323,13 +324,15 @@ void Coupler::setInfoToOtherSubSystem()
   CFAUTOTRACE;
 
   m_fullConfigure++;
-
+  
+  const std::string nameSpace = getNamespace();
+    Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+      (SubSystemStatusStack::getCurrentName()).getNamespace(nameSpace);
+  
   /// @todo this will be substituted by a communication stream
   const bool isParallel = Common::PE::GetPE().IsParallel();
-  if((!isParallel) || ((isParallel) && (Common::PE::GetPE().GetRank() == 0)))
+  if((!isParallel) || ((isParallel) && (Common::PE::GetPE().GetRank(nameSpace) == 0)))
   {
-    const std::string nameSpace = getNamespace();
-    Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(nameSpace);
     Common::SafePtr<SubSystemStatus> subsystemStatus = SubSystemStatusStack::getInstance().getEntryByNamespace(nsp);
     Common::SafePtr<PhysicalModel> physicalModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
     const std::string currentSubSystem = subsystemStatus->getSubSystemName();
@@ -376,23 +379,9 @@ void Coupler::getInfoFromOtherSubSystem()
 {
   CFAUTOTRACE;
   m_fullConfigure++;
-
-  const bool isParallel = Common::PE::GetPE().IsParallel();
-  if(isParallel)
-  {
-    Common::PE::GetPE().setBarrier();
-
-    for (CFuint i = 0; i < Common::PE::GetPE().GetProcessorCount(); ++i) {
-      if (i == Common::PE::GetPE().GetRank()) {
-        readInfoFromOtherSubSystem();
-      }
-      Common::PE::GetPE().setBarrier();
-    }
-  }
-  else
-  {
-    readInfoFromOtherSubSystem();
-  }
+  
+  const std::string nsp = getMethodData()->getNamespace();  
+  runSerial<void, Coupler, &Coupler::readInfoFromOtherSubSystem>(this, nsp);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -486,13 +475,11 @@ void Coupler::preProcessReadImpl()
 {
   CFAUTOTRACE;
   cf_assert(isConfigured());
-
-  const bool isParallel = Common::PE::GetPE().IsParallel();
-  if(isParallel)
-  {
-    Common::PE::GetPE().setBarrier();
+  
+  if(Common::PE::GetPE().IsParallel()){
+    Common::PE::GetPE().setBarrier(getMethodData()->getNamespace());
   }
-
+  
   // preprocess interfaces
   for(CFuint i = 0; i < m_preProcessRead.size(); ++i) {
     cf_assert(m_preProcessRead[i].isNotNull());
@@ -522,11 +509,11 @@ void Coupler::meshMatchingReadImpl()
 {
   CFAUTOTRACE;
   cf_assert(isConfigured());
-
-  const bool isParallel = Common::PE::GetPE().IsParallel();
-  if(isParallel)
+  
+  const std::string nsp = getMethodData()->getNamespace();
+  if (Common::PE::GetPE().IsParallel())
   {
-    Common::PE::GetPE().setBarrier();
+    Common::PE::GetPE().setBarrier(nsp);
   }
 
   // match interface meshes
@@ -560,11 +547,12 @@ void Coupler::dataTransferReadImpl()
   cf_assert(isSetup());
   cf_assert(isConfigured());
 
+  const std::string nameSpace = getMethodData()->getNamespace();
   const bool isParallel = Common::PE::GetPE().IsParallel();
   if(isParallel)
-  {
-    Common::PE::GetPE().setBarrier();
-  }
+ {
+   Common::PE::GetPE().setBarrier(nameSpace);
+ }
 
   const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
   for(CFuint i = 0; i < m_interfacesRead.size(); ++i) {

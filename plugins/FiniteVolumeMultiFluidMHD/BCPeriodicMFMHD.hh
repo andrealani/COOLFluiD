@@ -172,7 +172,9 @@ private: // class definitions
       ln[1] = 1;     // second block is globalFaceID --> 1 element
       ln[2] = dim;   // third block is Face coordinates --> "dim" elementsbuild(); 
       _centreCoordinates.resize(dim);
-      _comm = Common::PE::GetPE().GetCommunicator();
+
+      const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+      _comm = Common::PE::GetPE().GetCommunicator(nsp);
       Common::MPIStructDef::buildMPIStruct(&_localFaceID, &_globalFaceID, &_centreCoordinates[0],     ln, ms);
     }
     

@@ -4,6 +4,7 @@
 #include "Environment/ObjectProvider.hh"
 #include "Common/BadValueException.hh"
 #include "Framework/PhysicalModel.hh"
+#include "Framework/MeshData.hh"
 #include "Common/Stopwatch.hh"
 #include "Environment/DirPaths.hh"
 #include "Common/OSystem.hh"
@@ -190,28 +191,30 @@ void NitrogenNASALibrary::configure ( Config::ConfigArgs& args )
 
 void NitrogenNASALibrary::setup()
 {
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  
   // if this is a parallel simulation, only ONE process at a time
   // sets the library
   if (PE::GetPE().IsParallel()) {
-
-    PE::GetPE().setBarrier();
-
-    if (PE::GetPE().GetRank() == 0) {
-       copyDataFiles();
-     }
     
-    PE::GetPE().setBarrier();
-
-    for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(); ++i) {
-
-     if (i == PE::GetPE().GetRank ()) {
+    PE::GetPE().setBarrier(nsp);
+    
+    if (PE::GetPE().GetRank(nsp) == 0) {
+      copyDataFiles();
+    }
+    
+    PE::GetPE().setBarrier(nsp);
+    
+    for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(nsp); ++i) {
+      
+      if (i == PE::GetPE().GetRank (nsp)) {
         setLibrarySequentially();
       }
-
-      PE::GetPE().setBarrier();
+      
+      PE::GetPE().setBarrier(nsp);
     }
-  
-    if (PE::GetPE().GetRank() == 0) {
+    
+    if (PE::GetPE().GetRank(nsp) == 0) {
       deleteDataFiles();
     }
   }

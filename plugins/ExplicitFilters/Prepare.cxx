@@ -207,10 +207,12 @@ void Prepare::writeBadFiltersToFileStream(std::ofstream& fout, std::ofstream& lo
             }
             localToTypeID.sortKeys();
             
+	    const std::string nsp = getMethodData().getNamespace();
+	    
             // print zone header
             // one sone per element type
             fout << "ZONE "
-            << "  T=\"P" << Common::PE::GetPE().GetRank()<< " good filters " << iType << " " << eType.getShape() <<"\""
+            << "  T=\"P" << Common::PE::GetPE().GetRank(nsp)<< " good filters " << iType << " " << eType.getShape() <<"\""
             << ", N=" << goodCellNodes.size()  // ---> not known
             << ", E=" << nbGoodCells  // ---> not known
             << ", F=FEPOINT"
@@ -218,7 +220,7 @@ void Prepare::writeBadFiltersToFileStream(std::ofstream& fout, std::ofstream& lo
             (eType.getNbNodes(),
              eType.getGeoOrder(),
              Framework::PhysicalModelStack::getActive()->getDim())
-            << ", AUXDATA CPU=\"" << Common::PE::GetPE().GetRank() << "\""
+            << ", AUXDATA CPU=\"" << Common::PE::GetPE().GetRank(nsp) << "\""
             << "\n";
             zoneCounter++;
             
@@ -329,11 +331,13 @@ void Prepare::writeBadFiltersToFileStream(std::ofstream& fout, std::ofstream& lo
               localToTypeID.insert(badCellNodes[i],i + 1);
             }
             localToTypeID.sortKeys();
+	    
+	    const std::string nsp = getMethodData().getNamespace();
             
-            // print zone header
+	    // print zone header
             // one sone per element type
             fout << "ZONE "
-            << "  T=\"P" << Common::PE::GetPE().GetRank()<< " bad filters " << iType << " " << eType.getShape() <<"\""
+            << "  T=\"P" << Common::PE::GetPE().GetRank(nsp)<< " bad filters " << iType << " " << eType.getShape() <<"\""
             << ", N=" << badCellNodes.size()  // ---> not known
             << ", E=" << nbBadCells  // ---> not known
             << ", F=FEPOINT"
@@ -341,7 +345,7 @@ void Prepare::writeBadFiltersToFileStream(std::ofstream& fout, std::ofstream& lo
             (eType.getNbNodes(),
              eType.getGeoOrder(),
              Framework::PhysicalModelStack::getActive()->getDim())
-            << ", AUXDATA CPU=\"" << Common::PE::GetPE().GetRank() << "\""
+            << ", AUXDATA CPU=\"" << Common::PE::GetPE().GetRank(nsp) << "\""
             << "\n";
             zoneCounter++;
             

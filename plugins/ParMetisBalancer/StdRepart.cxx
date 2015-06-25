@@ -139,44 +139,47 @@ void StdRepart::globalNumNode()
     myNodes -= m_nodes.getGhostReceiveList()[i].size();        // each node that is send from outside is foreign
   }
   
-  // MPI Send / Recive data struct
-  vector<int> nodenum(PE::GetPE().GetProcessorCount(), myNodes);
-  vector<int> in(PE::GetPE().GetProcessorCount(), 0);
+  const std::string nsp = getMethodData().getNamespace();
 
+  // MPI Send / Recive data struct
+  vector<int> nodenum(PE::GetPE().GetProcessorCount(nsp), myNodes);
+  vector<int> in(PE::GetPE().GetProcessorCount(nsp), 0);
+  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+  
   // MPI comunication...
-  MPI_Alltoall(&nodenum[0], 1,MPI_INT,&in[0],1,MPI_INT,MPI_COMM_WORLD);
+  MPI_Alltoall(&nodenum[0], 1,MPI_INT,&in[0],1,MPI_INT,comm);
   // ... Done, record.
-  dataStorage.vtxdist.resize(PE::GetPE().GetProcessorCount()+1);
+  dataStorage.vtxdist.resize(PE::GetPE().GetProcessorCount(nsp)+1);
   dataStorage.vtxdist[0]=0;
   dataStorage.xadj.resize(myNodes+1);
   dataStorage.xadj[0] = 0;
-  for(CFuint i=1,n1=0; i<PE::GetPE().GetProcessorCount()+1; ++i) 
+  for(CFuint i=1,n1=0; i<PE::GetPE().GetProcessorCount(nsp)+1; ++i) 
   {
     n1+=in[i-1];
     dataStorage.vtxdist[i]=n1;
   }
   // Assigning global numbers to my m_nodes...
   CFuint tmp_num = 0;
-  for(CFuint i=0; i<m_nodes.size(); ++i) if(dataStorage.Part1()[i] == PE::GetPE().GetRank())
+  for(CFuint i=0; i<m_nodes.size(); ++i) if(dataStorage.Part1()[i] == PE::GetPE().GetRank(nsp))
   {
-    dataStorage.GlobId()[i] = dataStorage.vtxdist[PE::GetPE().GetRank()] + tmp_num;
+    dataStorage.GlobId()[i] = dataStorage.vtxdist[PE::GetPE().GetRank(nsp)] + tmp_num;
     ++tmp_num;
   }
   //MPI session -----------
   commMPIstruct<CFuint> myGlobalId; // MPI data struct
   // feed data
-  for(CFuint i=0; i<PE::GetPE().GetProcessorCount(); ++i)
+  for(CFuint i=0; i<PE::GetPE().GetProcessorCount(nsp); ++i)
     for(CFuint j=0; j<m_nodes.getGhostSendList()[i].size(); ++j)
       myGlobalId.AddSendElem(i, dataStorage.GlobId()[ m_nodes.getGhostSendList()[i][j] ]);
   //Set recive sizes
   //myGlobalId.SetSizeRecivBuf() // -- the recive size is known -> communication unnecessary
-  for(CFuint i=0; i<PE::GetPE().GetProcessorCount(); ++i)
+  for(CFuint i=0; i<PE::GetPE().GetProcessorCount(nsp); ++i)
     myGlobalId.GetReciData()[i].resize( m_nodes.getGhostReceiveList()[i].size() );
   // MPI communication...
   myGlobalId.MPIcommunicate();
   
   // Apply global names...
-  for(CFuint i=0; i<PE::GetPE().GetProcessorCount(); ++i)
+  for(CFuint i=0; i<PE::GetPE().GetProcessorCount(nsp); ++i)
     for(CFuint j=0; j<myGlobalId.GetReciData()[i].size(); ++j)
       dataStorage.GlobId()[ m_nodes.getGhostReceiveList()[i][j] ] = myGlobalId.GetReciData()[i][j]; // global names of send m_nodes
   //myGlobalId.MPIraport(); // will cause a lot of output :)
@@ -187,13 +190,14 @@ void StdRepart::globalNumNode()
 void StdRepart::setupCSR()
 {
   vector<vector<CFuint> > tmp_kon(m_nodes.size()); //for storing conectivity of each node, i'th node has a list o neighbours
+  const std::string nsp = getMethodData().getNamespace();
   
   // Loop through all cells...
   for(CFuint icell=0; icell < m_cells->getLocalNbGeoEnts(); ++icell) // through all m_cells
   {
     for(CFuint inode=0; inode < m_cells->getNbNodesInGeo(icell); ++inode) // through m_nodes of a cell
     {
-      if(dataStorage.Part1()[m_cells->getNodeID(icell,inode)] != PE::GetPE().GetRank())
+      if(dataStorage.Part1()[m_cells->getNodeID(icell,inode)] != PE::GetPE().GetRank(nsp))
         continue; // if node is not owned by the proces, than skip it...
       for(CFuint jnode=0; jnode < m_cells->getNbNodesInGeo(icell); ++jnode)
         if(jnode != inode) // only the other m_nodes
@@ -233,16 +237,17 @@ void StdRepart::callParMetisAdaptiveRepart()
 {
   CFAUTOTRACE;
   
+  const std::string nsp = getMethodData().getNamespace();
   // number of owned m_nodes
-  CFuint myNodes = dataStorage.vtxdist[PE::GetPE().GetRank()+1] - dataStorage.vtxdist[PE::GetPE().GetRank()];
+  CFuint myNodes = dataStorage.vtxdist[PE::GetPE().GetRank(nsp)+1] - dataStorage.vtxdist[PE::GetPE().GetRank(nsp)];
 
-  MPI_Comm comm = PE::GetPE().GetCommunicator();   // Do wywolania ParMETIS'a
+  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);   // Do wywolania ParMETIS'a
   
   // ParMETIS flags and options  -- see ParMETIS documentation
   PartitionerData::IndexT wgtflag = 0;                 // 0 for no weights(vwgt and adjwgt=NULL), 2 weight on vertices only(adjwgt=NULL)
   PartitionerData::IndexT numflag = 0;                 // 0 for C style array numbering
   PartitionerData::IndexT ncon    = 0;                 // no of weights for each vertex
-  PartitionerData::IndexT nparts  = PE::GetPE().GetProcessorCount(); // number of subdomains - processes
+  PartitionerData::IndexT nparts  = PE::GetPE().GetProcessorCount(nsp); // number of subdomains - processes
   
   PartitionerData::RealT itr = 1000;
   
@@ -264,7 +269,7 @@ void StdRepart::callParMetisAdaptiveRepart()
   }
   
   ///HACK:: introduce waights for testing -- to be removed later!! 
-    wgtflag=2;  // 0 for no weights(vwgt and adjwgt=NULL), 2 weight on vertices only(adjwgt=NULL)
+  wgtflag=2;  // 0 for no weights(vwgt and adjwgt=NULL), 2 weight on vertices only(adjwgt=NULL)
     ncon   =1;  // no of weights for each vertex
     
     tpwgts = new PartitionerData::RealT[ncon*nparts];
@@ -276,11 +281,11 @@ void StdRepart::callParMetisAdaptiveRepart()
     vwgt = new PartitionerData::IndexT[myNodes];
     for(CFuint i=0; i<(myNodes); ++i) vwgt[i]=1;
 
-      if(PE::GetPE().GetRank()==0)
+      if(PE::GetPE().GetRank(nsp)==0)
         for(CFuint i=0; i<(myNodes); ++i) vwgt[i]=3;
-      if(PE::GetPE().GetRank()==1)
+      if(PE::GetPE().GetRank(nsp)==1)
         for(CFuint i=0; i<(myNodes); ++i) vwgt[i]=10;
-      if(PE::GetPE().GetRank()==2)
+      if(PE::GetPE().GetRank(nsp)==2)
         for(CFuint i=0; i<(myNodes); ++i) vwgt[i]=5;
   /// /////////////////////////////////////////////////////////////
 
@@ -291,13 +296,13 @@ void StdRepart::callParMetisAdaptiveRepart()
         &wgtflag, &numflag, &ncon, &nparts, tpwgts, ubvec, &itr, options, &edgecut, part, &comm);
   
   CFuint i1=0;
-  for(CFuint i=0; i<m_nodes.size(); ++i) if( dataStorage.Part1()[i] == PE::GetPE().GetRank() )
+  for(CFuint i=0; i<m_nodes.size(); ++i) if( dataStorage.Part1()[i] == PE::GetPE().GetRank(nsp) )
   {
     //cout<<part[i1]<<" ";
     dataStorage.Part2()[i]=part[i1]; //ustawienie nowego podzialu w wezlach pomijajac obce wezly
     i1+=1;
   }
-  //cout<<" myNodes:"<<PE::GetPE().GetRank()<<" "<<myNodes<<" "<<i1<<endl;
+  //cout<<" myNodes:"<<PE::GetPE().GetRank(nsp)<<" "<<myNodes<<" "<<i1<<endl;
   delete [] part;
   delete [] vwgt;
   delete [] tpwgts;
@@ -312,19 +317,20 @@ void StdRepart::UpdateInterfacePart2()
 {
   //MPI session
   commMPIstruct<CFuint> interfPartMPI; // MPI data struct
+  const std::string nsp = getMethodData().getNamespace();
   // feed data
-  for(CFuint i=0; i<PE::GetPE().GetProcessorCount(); ++i)
+  for(CFuint i=0; i<PE::GetPE().GetProcessorCount(nsp); ++i)
     for(CFuint j=0; j<m_nodes.getGhostSendList()[i].size(); ++j)
       interfPartMPI.AddSendElem(i, dataStorage.Part2()[ m_nodes.getGhostSendList()[i][j] ]);
   //Set recive sizes
   //myGlobalId.SetSizeRecivBuf() // -- the recive size is known -> communication unnecessary
-  for(CFuint i=0; i<PE::GetPE().GetProcessorCount(); ++i)
+  for(CFuint i=0; i<PE::GetPE().GetProcessorCount(nsp); ++i)
     interfPartMPI.GetReciData()[i].resize( m_nodes.getGhostReceiveList()[i].size() );
   // MPI communication...
   interfPartMPI.MPIcommunicate();
   
   // Apply part2 to interface nodes
-  for(CFuint i=0; i<PE::GetPE().GetProcessorCount(); ++i)
+  for(CFuint i=0; i<PE::GetPE().GetProcessorCount(nsp); ++i)
     for(CFuint j=0; j<m_nodes.getGhostReceiveList()[i].size(); ++j)
       dataStorage.Part2()[ m_nodes.getGhostReceiveList()[i][j] ] = interfPartMPI.GetReciData()[i][j]; // global names of send m_nodes
 }
@@ -348,13 +354,14 @@ void StdRepart::SelectCellsToSend()
   //    and cell ownership is (I hope :-) well defined.
   /// Above should, assure proper mesh reconstruction!
   
+  const std::string nsp = getMethodData().getNamespace();
   for(CFuint icell=0; icell < m_cells->getLocalNbGeoEnts(); ++icell) // through all m_cells - decisions are made for each cell
   {
     bool my_to_decide = true; // is process an owner?
-    CFuint destination_proces = PE::GetPE().GetProcessorCount(); // to the youngest process, (highest rank number)
+    CFuint destination_proces = PE::GetPE().GetProcessorCount(nsp); // to the youngest process, (highest rank number)
     for(CFuint inode=0; inode < m_cells->getNbNodesInGeo(icell); ++inode) // through m_nodes composing a cell
     {
-      if( dataStorage.Part1()[m_cells->getNodeID(icell,inode)] < PE::GetPE().GetRank() ) // if there is a node from older process
+      if( dataStorage.Part1()[m_cells->getNodeID(icell,inode)] < PE::GetPE().GetRank(nsp) ) // if there is a node from older process
       {           //  node part                          <          //  processor rank  => the cell is own by someone else!!
         dataStorage.GhostCell().push_back(icell); // record cell as a foreign cell
         my_to_decide = false;                     // mark cell as foreign
@@ -362,7 +369,7 @@ void StdRepart::SelectCellsToSend()
       }
       destination_proces = min(destination_proces, dataStorage.Part2()[m_cells->getNodeID(icell,inode)]); // where to?
     }
-    if( my_to_decide && destination_proces != PE::GetPE().GetRank() )
+    if( my_to_decide && destination_proces != PE::GetPE().GetRank(nsp) )
     {
       dataStorage.CellsToSend()[destination_proces].push_back(icell);  // sign to send
     }
@@ -378,8 +385,9 @@ void StdRepart::SelectNodesToSend()
   // A process sends all nodes necessary for the cell creation, commNodes container is chacked if the target process is aware of the node.
   // It might still happen that a node allready known to a process is sended, or that more than one process sends it,
   // due to that it will be nessecary to correct for that.
-  
-  for(CFuint iproc=0; iproc<PE::GetPE().GetProcessorCount(); ++iproc) // through all processes
+
+  const std::string nsp = getMethodData().getNamespace();
+  for(CFuint iproc=0; iproc<PE::GetPE().GetProcessorCount(nsp); ++iproc) // through all processes
   if(dataStorage.CellsToSend()[iproc].size() > 0)  // only if CellsToSend() not empty
   {
     for(CFuint iscell=0; iscell<dataStorage.CellsToSend()[iproc].size(); ++iscell) // through CellsToSend() collection for iproc
@@ -398,7 +406,8 @@ void StdRepart::SelectNodesToSend()
 /// Preperes send recive structures for future MPI comuniation, send struct are filled with data
 void StdRepart::PrepereMPIcommStruct()
 {
-  for(CFuint proc=0; proc<PE::GetPE().GetProcessorCount(); ++proc) if(proc != PE::GetPE().GetRank()) // through all but me
+  const std::string nsp = getMethodData().getNamespace();
+  for(CFuint proc=0; proc<PE::GetPE().GetProcessorCount(nsp); ++proc) if(proc != PE::GetPE().GetRank(nsp)) // through all but me
   {
     // nodes & states
     for(CFuint inode=0; inode < dataStorage.NodesToSend()[proc].size(); ++inode)
@@ -438,8 +447,10 @@ void StdRepart::PrepereToUpdate()
 {
   dataStorage.MakeListsOfKnownNodes();// List of nodes that could be doubled is made
   
+  const std::string nsp = getMethodData().getNamespace();
+
   // assume all sendCells for deletion - have been sent and are not mine
-  for( CFuint p=0; p<PE::GetPE().GetProcessorCount(); ++p ) if(p != PE::GetPE().GetRank() )
+  for( CFuint p=0; p<PE::GetPE().GetProcessorCount(nsp); ++p ) if(p != PE::GetPE().GetRank(nsp) )
     dataStorage.DelCellCol().insert(dataStorage.DelCellCol().end(), dataStorage.CellsToSend()[p].begin(), dataStorage.CellsToSend()[p].end());
   
   // Do a ghost cell container for lookup, cheack weather a cell is to be removed
@@ -449,11 +460,11 @@ void StdRepart::PrepereToUpdate()
     bool toBeDeleted = true; // is the cell to be removed?
     for(CFuint inode=0; inode < m_cells->getNbNodesInGeo( dataStorage.GhostCell()[ icell ] ); ++inode) // through m_nodes composing a cell
     {
-      if( dataStorage.Part2()[m_cells->getNodeID(dataStorage.GhostCell()[icell],inode)] == PE::GetPE().GetRank() ) // if cell has a node that is mine
+      if( dataStorage.Part2()[m_cells->getNodeID(dataStorage.GhostCell()[icell],inode)] == PE::GetPE().GetRank(nsp) ) // if cell has a node that is mine
       {           //  node part2                         <          //  processor rank  => the cell is my
         toBeDeleted = false; // it could be mine so do not delete
       }
-      else if( dataStorage.Part2()[m_cells->getNodeID(dataStorage.GhostCell()[icell],inode)] < PE::GetPE().GetRank() )// if cell has a node that is from older process
+      else if( dataStorage.Part2()[m_cells->getNodeID(dataStorage.GhostCell()[icell],inode)] < PE::GetPE().GetRank(nsp) )// if cell has a node that is from older process
       {
         toBeDeleted = true; //it belongs to older process so it does not belong to me!!
         break;
@@ -658,7 +669,7 @@ void StdRepart::DoWriteTecAfterSendRecive(boost::filesystem::path& path)
     else if(DIM == 3)
       of<<", F=FEPOINT, ET=TETRAHEDRON"<<endl;
     // the saved ones
-    //cout<<" aa "<<PE::GetPE().GetRank()<<" aa "<<iPrintNode<<endl;
+    //cout<<" aa "<<PE::GetPE().GetRank(nsp)<<" aa "<<iPrintNode<<endl;
     for(CFuint i=0; i < m_nodes.size(); ++i) // through oryginal nodes
     if( binary_search( toBeSavedNodesGlobalId.begin(), toBeSavedNodesGlobalId.end(), dataStorage.GlobId()[i] ) ) // if global id of a node node will be needed
     {
@@ -667,7 +678,7 @@ void StdRepart::DoWriteTecAfterSendRecive(boost::filesystem::path& path)
       //cout<<i<<" ";
     }
     // recived nodes
-    //cout<<endl<<" aa "<<PE::GetPE().GetRank()<<" aa "<<dataStorage.newNodeVec.size()<<endl;
+    //cout<<endl<<" aa "<<PE::GetPE().GetRank(nsp)<<" aa "<<dataStorage.newNodeVec.size()<<endl;
     for(CFuint i=0; i<dataStorage.newNodeVec.size(); ++i)
     {
       for(CFuint j=0; j<dataStorage.newNodeVec[i].GetPosition().size(); ++j)

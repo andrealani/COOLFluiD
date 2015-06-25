@@ -154,7 +154,7 @@ void System::execute()
   // sum of nodes in all partitions
   CFuint LNnode = h_nodes.size();
   CFuint SNnode = 0;
-  Common::GlobalReduceOperation< Common::GRO_SUM >(&LNnode,&SNnode);
+  Framework::GlobalReduceOperation< GRO_SUM >(&LNnode,&SNnode);
   const CFreal Nnode = (CFreal) SNnode;
   const CFreal eps = MathTools::MathConsts::CFrealEps();
 
@@ -205,7 +205,7 @@ void System::execute()
         const double r = fabs(h_rhs(n,e,Neqns));
         r2 += r*r;
       }
-    Common::GlobalReduceOperation< Common::GRO_SUM >(&r2,&r2);
+    GlobalReduceOperation< GRO_SUM >(&r2,&r2);
     d.m_logl2_rhs[e] = log10(sqrt(r2/Nnode)+eps);
   }
   ver("update residual norm (of equations).");
@@ -236,7 +236,7 @@ void System::execute()
         const double r = fabs(h_rhs(n,e,Neqns));
         r2 += r*r;
       }
-    Common::GlobalReduceOperation< Common::GRO_SUM >(&r2,&r2);
+    GlobalReduceOperation< GRO_SUM >(&r2,&r2);
     d.m_logl2_states[e] = log10(sqrt(r2/Nnode)+eps);
   }
   ver("update solution error norm (of variables).");

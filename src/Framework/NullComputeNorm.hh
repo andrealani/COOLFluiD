@@ -11,7 +11,7 @@
 
 #include "ComputeNorm.hh"
 #include "Common/CFLog.hh"
-#include "Common/GlobalReduce.hh"
+#include "Framework/GlobalReduce.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -51,8 +51,8 @@ public:
 
 private:
 
-  Common::GlobalReduce<NullComputeNorm> _gr;
-
+  Framework::GlobalReduce<NullComputeNorm> _gr;
+  
 }; // end of class NullComputeNorm
 
 //////////////////////////////////////////////////////////////////////////////

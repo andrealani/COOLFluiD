@@ -65,7 +65,8 @@ void BaseBC::configure ( Config::ConfigArgs& args )
   // giving defaults for "Def" and "Vars"
   std::vector< std::string > varnames=getMethodData().getUpdateVar()->getVarNames();
   if (m_vars.size()==0) {
-    Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace( getMethodData().getNamespace() );
+    Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+      (SubSystemStatusStack::getCurrentName()).getNamespace( getMethodData().getNamespace() );
     Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
     const CFuint nbdim = physModel->getDim();
     if ( nbdim > DIM_0D ) m_vars.push_back ( "x" );

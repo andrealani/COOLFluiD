@@ -78,7 +78,7 @@ void StdWriteDataTransfer::configure ( Config::ConfigArgs& args )
   InterfaceList interfaces = getMethodData().getInterfaces();
 
   try {
-
+    const std::string nsp = getMethodData().getNamespace();
   InterfaceList::iterator itr = interfaces.begin();
   for(; itr != interfaces.end(); ++itr) {
 
@@ -89,7 +89,7 @@ void StdWriteDataTransfer::configure ( Config::ConfigArgs& args )
 
       const std::string interfaceName = (*itr)->getName();
 
-      for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(); ++iProc)
+      for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(nsp); ++iProc)
       {
         const vector<std::string> otherTrsNames = getMethodData().getCoupledSubSystemsTRSNames(interfaceName);
         for (CFuint i=0; i< otherTrsNames.size(); ++i)
@@ -119,8 +119,9 @@ void StdWriteDataTransfer::configure ( Config::ConfigArgs& args )
 void StdWriteDataTransfer::execute()
 {
   CFAUTOTRACE;
-
-  for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(); ++iProc) {
+  
+  const std::string nsp = getMethodData().getNamespace();
+  for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(nsp); ++iProc) {
     executeWrite(iProc);
   }
 

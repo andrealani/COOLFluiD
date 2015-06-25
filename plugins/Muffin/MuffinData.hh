@@ -5,7 +5,7 @@
 
 #include "Common/COOLFluiD.hh"
 #include "Common/PE.hh"
-#include "Common/GlobalReduce.hh"
+#include "Framework/GlobalReduce.hh"
 #include "Common/ConnectivityTable.hh"
 #include "Common/BadValueException.hh"
 #include "Framework/MultiMethodHandle.hh"

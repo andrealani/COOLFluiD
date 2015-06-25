@@ -123,56 +123,58 @@ void ParJFSetupGMRESR::setIdxMapping()
 void ParJFSetupGMRESR::setMatrix(const CFuint localSize,
                            const CFuint globalSize)
 {
-	CFAUTOTRACE;
-	
-	DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
-	DataHandle < CFreal > rhs  = socket_rhs.getDataHandle();
-	
-	const CFuint nbStates = states.size();
-	const CFuint nbEqs = getMethodData().getNbSysEquations();
-	PetscMatrix& mat = getMethodData().getMatrix();
-	
-   // set the data in the context 
-	JFContext* ctx = getMethodData().getJFContext();
-	
-	ctx->states = &socket_states;
-	ctx->rhs = &socket_rhs;
-	ctx->spaceMethod = getMethodData().getCollaborator<SpaceMethod>();
-	ctx->eps = _epsilon;
-	ctx->bkpStates.resize(nbStates*nbEqs);
-	ctx->rhsVec = &getMethodData().getRhsVector();
-	
-   // create a parallel Jacobian-Free matrix
-	mat.createParJFMat(PETSC_COMM_WORLD,
-	                   localSize *nbEqs,
-	                   localSize *nbEqs,
-	                   globalSize *nbEqs,
-	                   globalSize *nbEqs,
-	                   (void*)(ctx),
-	                   "JFMatrix");
+  CFAUTOTRACE;
+  
+  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+  DataHandle < CFreal > rhs  = socket_rhs.getDataHandle();
+  
+  const CFuint nbStates = states.size();
+  const CFuint nbEqs = getMethodData().getNbSysEquations();
+  PetscMatrix& mat = getMethodData().getMatrix();
+  
+  // set the data in the context 
+  JFContext* ctx = getMethodData().getJFContext();
+  
+  ctx->states = &socket_states;
+  ctx->rhs = &socket_rhs;
+  ctx->spaceMethod = getMethodData().getCollaborator<SpaceMethod>();
+  ctx->eps = _epsilon;
+  ctx->bkpStates.resize(nbStates*nbEqs);
+  ctx->rhsVec = &getMethodData().getRhsVector();
+  
+  const string nsp = getMethodData().getNamespace();
+  // create a parallel Jacobian-Free matrix
+  mat.createParJFMat(PE::GetPE().GetCommunicator(nsp),
+		     localSize *nbEqs,
+		     localSize *nbEqs,
+		     globalSize *nbEqs,
+		     globalSize *nbEqs,
+		     (void*)(ctx),
+		     "JFMatrix");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void ParJFSetupGMRESR::setVectors(const CFuint localSize,
-                            const CFuint globalSize)
+				  const CFuint globalSize)
 {
-	CFAUTOTRACE;
-	
-	PetscVector& sol = getMethodData().getSolVector();
-	PetscVector& rhs = getMethodData().getRhsVector();
-	
-	const CFuint nbEqs = getMethodData().getNbSysEquations();
-	
-   // create the solution and the rhs vectors
-	rhs.create(PETSC_COMM_WORLD, localSize*nbEqs,
-	           globalSize*nbEqs,"rhs");
-	sol.create(PETSC_COMM_WORLD, localSize*nbEqs,
-	           globalSize*nbEqs,"Solution");
-	
-   // initialize the two vectors
-	sol.initialize(PETSC_COMM_WORLD,1.0);
-	rhs.initialize(PETSC_COMM_WORLD,0.0);
+  CFAUTOTRACE;
+  
+  PetscVector& sol = getMethodData().getSolVector();
+  PetscVector& rhs = getMethodData().getRhsVector();
+  
+  const CFuint nbEqs = getMethodData().getNbSysEquations();
+  const string nsp = getMethodData().getNamespace();
+  
+  // create the solution and the rhs vectors
+  rhs.create(PE::GetPE().GetCommunicator(nsp), localSize*nbEqs,
+	     globalSize*nbEqs,"rhs");
+  sol.create(PE::GetPE().GetCommunicator(nsp), localSize*nbEqs,
+	     globalSize*nbEqs,"Solution");
+  
+  // initialize the two vectors
+  sol.initialize(PE::GetPE().GetCommunicator(nsp),1.0);
+  rhs.initialize(PE::GetPE().GetCommunicator(nsp),0.0);
 }
 
 //////////////////////////////////////////////////////////////////////////////

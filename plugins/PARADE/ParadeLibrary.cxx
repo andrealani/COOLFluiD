@@ -135,9 +135,11 @@ void ParadeLibrary::setup()
   m_inFileHandle  = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
   m_outFileHandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
   
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  
   // create a m_localDirName-P# directory for the current process
   // cp parade executable and database inside the m_localDirName-P# directory 
-  m_paradeDir = m_localDirName + "-P" + StringOps::to_str(PE::GetPE().GetRank());
+  m_paradeDir = m_localDirName + "-P" + StringOps::to_str(PE::GetPE().GetRank(nsp));
   boost::filesystem::path paradeDir(m_paradeDir);
   
   boost::filesystem::path grid("grid.flo");
@@ -184,7 +186,7 @@ void ParadeLibrary::setup()
   }
   
   // if this is a parallel simulation, only ONE process at a time sets the library
-  runSerial<void, ParadeLibrary, &ParadeLibrary::setLibrarySequentially>(this); 
+  runSerial<void, ParadeLibrary, &ParadeLibrary::setLibrarySequentially>(this, nsp); 
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -1122,7 +1124,8 @@ void ParadeLibrary::computeProperties(ProxyDofIterator<CFreal>* pstates,
     CFLog(INFO,"ParadeLibrary::runLibraryInParallel() took " << stp << "s\n");
   }
   
-  PE::GetPE().setBarrier();
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  PE::GetPE().setBarrier(nsp);
   
   // read in the radiative properties from parade.rad
   readLocalRadCoeff(data); 
@@ -1134,7 +1137,8 @@ void ParadeLibrary::computeProperties(ProxyDofIterator<CFreal>* pstates,
       
 void ParadeLibrary::updateWavRange(CFuint iWavRange)
 {
-  if (PE::GetPE().GetRank() == 0) {
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  if (PE::GetPE().GetRank(nsp) == 0) {
     // all the following can fail if the format of the file parade.con changes
     CFreal minWav = getMinWavelength();
     CFreal maxWav = getMaxWavelength();
@@ -1187,7 +1191,7 @@ void ParadeLibrary::updateWavRange(CFuint iWavRange)
     fin.close();
     fout.close();
   }
-  PE::GetPE().setBarrier();
+  PE::GetPE().setBarrier(nsp);
   
   // each processor copies the newly updated parade.con to its own directory
   std::string command   = "cp parade.con " + m_paradeDir;

@@ -4,15 +4,17 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_Common_GlobalReduceNone_hh
-#define COOLFluiD_Common_GlobalReduceNone_hh
+#ifndef COOLFluiD_Framework_GlobalReduceNone_hh
+#define COOLFluiD_Framework_GlobalReduceNone_hh
 
 #include "Common/PM.hh"
 #include "Common/NonCopyable.hh"
-#include "Common/GlobalReduce.hh"
+#include "Framework/GlobalReduce.hh"
+
+//////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-    namespace Common {
+    namespace Framework {
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -25,9 +27,9 @@ public:
 
   typedef typename PROVIDER::GR_RESULTTYPE RESULTTYPE;
 
-  inline GlobalReduce (const PROVIDER & P);
-  inline ~GlobalReduce ();
-  inline RESULTTYPE GetGlobalValue () const;
+  GlobalReduce (const PROVIDER & P);
+  ~GlobalReduce ();
+  RESULTTYPE GetGlobalValue () const;
 
 private:
   const PROVIDER & _provider;
@@ -36,22 +38,24 @@ private:
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename PROVIDER>
-GlobalReduce<PROVIDER,Common::PM_SERIAL>::GlobalReduce (const PROVIDER & S)
+inline GlobalReduce<PROVIDER,Common::PM_SERIAL>::GlobalReduce (const PROVIDER & S)
   : _provider(S)
 {
 }
 
 template <typename PROVIDER>
-GlobalReduce<PROVIDER,Common::PM_SERIAL>::~GlobalReduce ()
+inline GlobalReduce<PROVIDER,Common::PM_SERIAL>::~GlobalReduce ()
 {
 }
 
 template <typename PROVIDER>
 typename GlobalReduce<PROVIDER,Common::PM_SERIAL>::RESULTTYPE
-GlobalReduce<PROVIDER,Common::PM_SERIAL>::GetGlobalValue () const
+inline GlobalReduce<PROVIDER,Common::PM_SERIAL>::GetGlobalValue () const
 {
-    return _provider.GR_GetLocalValue ();
+  return _provider.GR_GetLocalValue ();
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 /// GlobalReduceOperation for PE PM_SERIAL:
 ///   for all operations, just copy Source to Dest
@@ -69,7 +73,8 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////
 
-  } // namespace Common
+  } // namespace Framework
+
 } // namespace COOLFluiD
 
-#endif // COOLFluiD_Common_GlobalReduceNone_hh
+#endif // COOLFluiD_Framework_GlobalReduceNone_hh

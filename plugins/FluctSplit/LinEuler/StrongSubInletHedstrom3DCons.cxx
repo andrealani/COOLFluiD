@@ -162,7 +162,8 @@ void StrongSubInletHedstrom3DCons::configure( Config::ConfigArgs& args)
   FluctuationSplitCom::configure(args);
 
   std::string name = getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
 
   std::string varSetName = "LinEuler3DCons";

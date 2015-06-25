@@ -212,6 +212,8 @@ GlobalJacobianSparsity.cxx
 GlobalJacobianSparsity.hh
 GlobalMaxNumberStepsCriteria.cxx
 GlobalMaxNumberStepsCriteria.hh
+GlobalReduce.hh
+GlobalReduceSERIAL.hh
 GlobalStopCriteria.cxx
 GlobalStopCriteria.hh
 GlobalTypeTrait.hh
@@ -562,7 +564,8 @@ IF(CF_HAVE_MPI)
 
   LIST ( APPEND Framework_files
          DataHandleMPI.hh
-         MeshPartitioner.hh
+         GlobalReduceMPI.hh
+	 MeshPartitioner.hh
          MeshPartitioner.cxx
 	 ParFileWriter.cxx
 	 ParFileWriter.hh

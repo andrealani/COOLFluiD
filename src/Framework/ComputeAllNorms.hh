@@ -9,8 +9,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "Common/GlobalReduce.hh"
-
+#include "Framework/GlobalReduce.hh"
 #include "Framework/ComputeNorm.hh"
 #include "Framework/DataSocketSink.hh"
 #include "Framework/State.hh"
@@ -56,7 +55,7 @@ public: // functions
 private: // data
 
   /// object to perform the global reduce
-  Common::GlobalReduce<ComputeAllNorms> m_gr;
+  Framework::GlobalReduce<ComputeAllNorms> m_gr;
   /// socket for rhs
   Framework::DataSocketSink< CFreal> socket_rhs;
   /// socket for states

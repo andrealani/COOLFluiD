@@ -459,8 +459,10 @@ void StdSetup::setWallDistance(const std::vector< SafePtr< TopologicalRegionSet 
         GlobalReduceOperation< GRO_MAX >(&z,&z);
       }
 
+      const std::string nsp = getMethodData().getNamespace();
+      
       // for each wall
-      PE::GetPE().setBarrier();
+      PE::GetPE().setBarrier(nsp);
       double dis = 1.e99;
       int    o = -1;
       for (CFuint i=0; i<walls.size(); ++i) {
@@ -479,7 +481,7 @@ void StdSetup::setWallDistance(const std::vector< SafePtr< TopologicalRegionSet 
 
       }
 
-      PE::GetPE().setBarrier();
+      PE::GetPE().setBarrier(nsp);
       GlobalReduceOperation< GRO_MIN >(&dis,&dis);
       if (localID>0) {
         h_mn_walldistance[localID] = dis;

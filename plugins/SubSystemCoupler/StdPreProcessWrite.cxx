@@ -112,8 +112,10 @@ void StdPreProcessWrite::configure ( Config::ConfigArgs& args )
 void StdPreProcessWrite::executeOnTrs()
 {
   CFAUTOTRACE;
-// CFout << "Execute PreProcessWrite BEGIN\n";
-  for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(); ++iProc) {
+  // CFout << "Execute PreProcessWrite BEGIN\n";
+  
+  const std::string nsp = getMethodData().getNamespace();
+  for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(nsp); ++iProc) {
     executeWriteOnTrs(iProc);
   }
 // CFout << "Execute PreProcessWrite END\n";
@@ -499,9 +501,10 @@ void StdPreProcessWrite::writeFile(const std::string& socketName)
   DataHandle<RealVector> interfaceCoord =
     _sockets.getSocketSource<RealVector>(socketName)->getDataHandle();
 
+  const std::string nsp = getMethodData().getNamespace();
   std::string fileName = socketName;
   const bool isParallel = Common::PE::GetPE().IsParallel();
-  if(isParallel) fileName += ".P" + StringOps::to_str(Common::PE::GetPE().GetRank());
+  if(isParallel) fileName += ".P" + StringOps::to_str(Common::PE::GetPE().GetRank(nsp));
 
   boost::filesystem::path nameOutputFile =
     Environment::DirPaths::getInstance().getResultsDir() / boost::filesystem::path(fileName);

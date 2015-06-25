@@ -278,8 +278,10 @@ void UpdateSol::execute()
   CFreal invalue = value;
   value=0.;
   
-  MPI_Datatype MPI_CFREAL = Common::MPIStructDef::getMPIType(&value);
-  MPI_Allreduce(&invalue,&value,1,MPI_CFREAL,MPI_SUM,MPI_COMM_WORLD); // THIS IS A HACK, DO IT PROPERLY!!!
+  const std::string nsp = getMethodData().getNamespace();
+  
+  MPI_Allreduce(&invalue,&value,1, Common::MPIStructDef::getMPIType(&value),
+		MPI_SUM, PE::GetPE().GetCommunicator(nsp)); // THIS IS A HACK, DO IT PROPERLY!!!
   
   //    CF_DEBUG_OBJ(value);
   value = log10(sqrt(value));

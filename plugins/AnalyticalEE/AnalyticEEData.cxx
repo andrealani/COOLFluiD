@@ -1,13 +1,12 @@
 #include "Framework/MethodCommandProvider.hh"
 #include "Common/BadValueException.hh"
-#include "Framework/NamespaceSwitcher.hh"
 #include "Framework/SubSystemStatus.hh"
-
+#include "Framework/NamespaceSwitcher.hh"
 #include "AnalyticalEE/AnalyticalEE.hh"
 #include "AnalyticalEE/AnalyticEEData.hh"
 
 #include "Framework/PhysicalModel.hh"
-#include "Framework/NamespaceSwitcher.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace COOLFluiD::Framework;
@@ -51,10 +50,13 @@ AnalyticEEData::~AnalyticEEData()
 void AnalyticEEData::configure ( Config::ConfigArgs& args )
 {
   MethodData::configure(args);
+  
   std::string name = getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
-  Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
+  Common::SafePtr<PhysicalModel> physModel = 
+    PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
+  
   std::string provider = "Null";
   if (m_updateVarStr != "Null") {
     provider = (physModel->getConvectiveName() != "Null") ?
@@ -96,9 +98,6 @@ void AnalyticEEData::configure ( Config::ConfigArgs& args )
 //     throw BadValueException (FromHere(), msg.str() );
 //   }
 }
-
-//////////////////////////////////////////////////////////////////////////////
-
 
 //////////////////////////////////////////////////////////////////////////////
 

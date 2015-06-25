@@ -97,9 +97,10 @@ void SubSysCouplerData::configure ( Config::ConfigArgs& args )
   CouplerData::configure(args);
 
   std::string name = getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  
   cf_assert(_isGeometryNonMatching.size() == _nonMatchingGeometryRotation.size());
   cf_assert(physModel->getDim() * _nonMatchingGeometryRotation.size() == _nonMatchingGeometryVector.size());
 
@@ -302,7 +303,7 @@ vector<std::string> SubSysCouplerData::getThisCoupledAcceptedName(const std::str
 
     if(Common::PE::GetPE().IsParallel())
     {
-      const CFuint iProcLocal = Common::PE::GetPE().GetRank();
+      const CFuint iProcLocal = Common::PE::GetPE().GetRank(getNamespace());
       //accepted by processor
       _tempStringVector[iType] += ".P" + StringOps::to_str(iProcessor);
       //data from processor
@@ -341,7 +342,8 @@ std::string SubSysCouplerData::getThisCoupledAcceptedName(const std::string& int
   std::string name = thisNameBuilder(interfaceName, trs, coordType,dataType);
   if(Common::PE::GetPE().IsParallel())
   {
-    const CFuint iProcLocal = Common::PE::GetPE().GetRank();
+     const std::string nsp = getNamespace();
+     const CFuint iProcLocal = Common::PE::GetPE().GetRank(nsp);
     //accepted by processor
     name += ".P" + StringOps::to_str(iProcessor);
     //data from processor
@@ -379,7 +381,7 @@ vector<std::string> SubSysCouplerData::getOtherCoupledAcceptedName(const std::st
 
     if(Common::PE::GetPE().IsParallel())
     {
-      const CFuint iProcLocal = Common::PE::GetPE().GetRank();
+      const CFuint iProcLocal = Common::PE::GetPE().GetRank(getNamespace());
       //accepted by processor
       _tempStringVector[iType] += ".P" + StringOps::to_str(iProcLocal);
       //data from processor
@@ -401,7 +403,7 @@ std::string SubSysCouplerData::getOtherCoupledAcceptedName(const std::string& in
   std::string name = otherNameBuilder(interfaceName, trs, coordType,dataType);
   if(Common::PE::GetPE().IsParallel())
   {
-    const CFuint iProcLocal = Common::PE::GetPE().GetRank();
+    const CFuint iProcLocal = Common::PE::GetPE().GetRank(getNamespace());
     //accepted by processor
     name += ".P" + StringOps::to_str(iProcLocal);
     //data from processor
@@ -443,7 +445,7 @@ vector<std::string> SubSysCouplerData::getThisCoupledDataName(const std::string&
 
     if(Common::PE::GetPE().IsParallel())
     {
-      const CFuint iProcLocal = Common::PE::GetPE().GetRank();
+      const CFuint iProcLocal = Common::PE::GetPE().GetRank(getNamespace());
       //accepted by processor
       _tempStringVector[iType] += ".P" + StringOps::to_str(iProcessor);
       //data from processor
@@ -464,9 +466,8 @@ std::string SubSysCouplerData::getThisCoupledDataName(const std::string& interfa
 {
   const std::string dataType = "DATA";
   std::string name = thisNameBuilder(interfaceName, trs, coordType,dataType);
-  if(Common::PE::GetPE().IsParallel())
-  {
-    const CFuint iProcLocal = Common::PE::GetPE().GetRank();
+  if(Common::PE::GetPE().IsParallel()) {
+    const CFuint iProcLocal = Common::PE::GetPE().GetRank(getNamespace());
     //accepted by processor
     name += ".P" + StringOps::to_str(iProcessor);
     //data from processor
@@ -501,8 +502,8 @@ vector<std::string> SubSysCouplerData::getOtherCoupledDataName(const std::string
   {
     _tempStringVector[iType] = otherNameBuilder(interfaceName, trs, (_coupledSubSystemsCoordType[idx])[iType],dataType);
     if(Common::PE::GetPE().IsParallel())
-    {
-      const CFuint iProcLocal = Common::PE::GetPE().GetRank();
+      {
+      const CFuint iProcLocal = Common::PE::GetPE().GetRank(getNamespace());
       //accepted by processor
       _tempStringVector[iType] += ".P" + StringOps::to_str(iProcLocal);
       //data from processor
@@ -524,7 +525,7 @@ std::string SubSysCouplerData::getOtherCoupledDataName(const std::string& interf
   std::string name = otherNameBuilder(interfaceName, trs, coordType,dataType);
   if(Common::PE::GetPE().IsParallel())
   {
-    const CFuint iProcLocal = Common::PE::GetPE().GetRank();
+    const CFuint iProcLocal = Common::PE::GetPE().GetRank(getNamespace());
     //accepted by processor
     name += ".P" + StringOps::to_str(iProcLocal);
     //data from processor
@@ -591,10 +592,12 @@ std::string SubSysCouplerData::thisNameBuilder(const std::string& interface,
                                       const std::string& type)
 {
   const std::string nameSpace = getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(nameSpace);
+  
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(nameSpace);
   Common::SafePtr<SubSystemStatus> subSys = SubSystemStatusStack::getInstance().getEntryByNamespace(nsp);
   const std::string subsystem = subSys->getSubSystemName();
-
+  
   return "COUPLING_" + interface + "_" + trs + "_" + nameSpace + "_" + subsystem + "_" + coordType + "_" + type;
 }
 

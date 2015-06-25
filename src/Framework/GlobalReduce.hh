@@ -4,8 +4,8 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_Parallel_GlobalReduce_hh
-#define COOLFluiD_Parallel_GlobalReduce_hh
+#ifndef COOLFluiD_Framework_GlobalReduce_hh
+#define COOLFluiD_Framework_GlobalReduce_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -15,7 +15,7 @@
 
 namespace COOLFluiD {
 
-  namespace Common {
+  namespace Framework {
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -45,24 +45,23 @@ template <typename TAGCLASS, typename BASETYPE>
 inline void GlobalReduceOperation (BASETYPE * Source, BASETYPE * Dest,
 unsigned int Count = 1)
 {
-    GlobalReduceOperationHelper<TAGCLASS, BASETYPE>::DoReduce(Source, Dest, Count);
+  GlobalReduceOperationHelper<TAGCLASS, BASETYPE>::DoReduce(Source, Dest, Count);
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
-  } // namespace Common
+    
+  } // namespace Framework
 
 } // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////
 
 #ifdef CF_HAVE_MPI
-#  include "Common/MPI/GlobalReduceMPI.hh"
+#  include "Framework/GlobalReduceMPI.hh"
 #else
-#  include "Common/SERIAL/GlobalReduceSERIAL.hh"
+#  include "Framework/GlobalReduceSERIAL.hh"
 #endif // CF_HAVE_MPI
 
 //////////////////////////////////////////////////////////////////////////////
 
-
-#endif // COOLFluiD_Parallel_GlobalReduce_hh
+#endif // COOLFluiD_Framework_GlobalReduce_hh

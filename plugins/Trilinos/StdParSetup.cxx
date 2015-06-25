@@ -133,10 +133,13 @@ void StdParSetup::setMapping()
     }
   }
 
+  const std::string nsp = getMethodData().getNamespace();
+  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+  
 // FOR TESTING PURPOSES
 //  char filename[10];
 //  int rank;
-//  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+//  MPI_Comm_rank(comm, &rank);
 //  sprintf(&filename[0], "stateID%d", rank);
 //  ofstream file(filename);
 //  file << "nbEqs = " << nbEqs << "\n";
@@ -169,17 +172,17 @@ void StdParSetup::setMapping()
     getData<CFreal>("statedata");
 
   /// @todo remove this
-MPI_Barrier(MPI_COMM_WORLD);
+MPI_Barrier(comm);
   CFLog(VERBOSE, "***********StdParSetup::setMapping() 1 : nbProcessors = " << Common::PE::GetPE().GetProcessorCount() << "\n" );
   vector<CFuint> nbUpdatablesPerRank = statedata.getNbUpdatablesPerRank();
 
-MPI_Barrier(MPI_COMM_WORLD);
+MPI_Barrier(comm);
   CFLog(VERBOSE, "***********StdParSetup::setMapping() 2 : nbProcessors = " << Common::PE::GetPE().GetProcessorCount() << "\n" );
   const vector< vector<CFuint> >& updatablesPerRank =
       statedata.setAndGetUpdatablesListPerRank();
 
   // store all the state global IDs
-MPI_Barrier(MPI_COMM_WORLD);
+MPI_Barrier(comm);
   CFLog(VERBOSE, "***********StdParSetup::setMapping() 3 : nbProcessors = " << Common::PE::GetPE().GetProcessorCount() << "\n" );
   vector<CFuint> stateGlobalIDs(nbStates);
   vector<bool> isGhostVec(nbStates);
@@ -188,18 +191,18 @@ MPI_Barrier(MPI_COMM_WORLD);
     isGhostVec[i] = !states[i]->isParUpdatable();
   }
 
-MPI_Barrier(MPI_COMM_WORLD);
+MPI_Barrier(comm);
   CFLog(VERBOSE, "***********StdParSetup::setMapping() 4 : nbProcessors = " << Common::PE::GetPE().GetProcessorCount() << "\n" );
   TrilinosIdxMapping trilinosIdxMapping(updatablesPerRank,
                                   stateGlobalIDs,
                                   isGhostVec);
 
   // create the mapping global IDs to global Trilinos IDs
-MPI_Barrier(MPI_COMM_WORLD);
+MPI_Barrier(comm);
   CFLog(VERBOSE, "***********StdParSetup::setMapping() 5 : nbProcessors = " << Common::PE::GetPE().GetProcessorCount() << "\n" );
   LSSIdxMapping::getInstance().createParallel(trilinosIdxMapping);
 
-MPI_Barrier(MPI_COMM_WORLD);
+MPI_Barrier(comm);
   CFLog(VERBOSE, "***********StdParSetup::setMapping() 6 : nbProcessors = " << Common::PE::GetPE().GetProcessorCount() << "\n" );
   int nbMyUnknowns = 0;
   int *myGlobalUnknowns = new int[nbEqs * nbStates];
@@ -270,24 +273,26 @@ void StdParSetup::setMatrix()
   //CFout << "nbEqs = " << nbEqs << "\n";
   //CFout << "nbMyUnknowns = " << nbMyUnknowns << "\n";
   cf_assert((int)(nbMyStates*nbEqs) == (int)(nbMyUnknowns));
-
+  
+  const std::string nsp = getMethodData().getNamespace();
+  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+  
   // allocation of the matrix
   TrilinosMatrix* mat = getMethodData().getMatrix();
   mat->setEpetraMap(map);
-  mat->createParBAIJ(MPI_COMM_WORLD,
-                    nbEqs,
-                    nbMyUnknowns,
-                    nbMyUnknowns,
-                    nbGlobalUnknowns,
-                    nbGlobalUnknowns,
-                    0, dnnz,
-                    0, onnz,
-                    "Jacobian");
-
+  mat->createParBAIJ(comm,
+		     nbEqs,
+		     nbMyUnknowns,
+		     nbMyUnknowns,
+		     nbGlobalUnknowns,
+		     nbGlobalUnknowns,
+		     0, dnnz,
+		     0, onnz,
+		     "Jacobian");
+  
   // deallocation
   delete[] dnnz;
   delete[] onnz;
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -298,18 +303,21 @@ void StdParSetup::setVectors()
   Epetra_Map *map = getMethodData().getEpetraMap();
   int nbMyUnknowns = map->NumMyElements();
   int nbGlobalUnknowns = map->NumGlobalElements();
-
+  
+  const std::string nsp = getMethodData().getNamespace();
+  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+  
   // solution vector
   TrilinosVector* sol = getMethodData().getSolVector();
   sol->setEpetraMap(map);
-  sol->create(MPI_COMM_WORLD, nbMyUnknowns, nbGlobalUnknowns, "solution");
-  sol->initialize(MPI_COMM_WORLD, 0.0);
+  sol->create(comm, nbMyUnknowns, nbGlobalUnknowns, "solution");
+  sol->initialize(comm, 0.0);
 
   // rhs vector
   TrilinosVector* rhs = getMethodData().getRhsVector();
   rhs->setEpetraMap(map);
-  rhs->create(MPI_COMM_WORLD, nbMyUnknowns, nbGlobalUnknowns, "rhs");
-  rhs->initialize(MPI_COMM_WORLD, 0.0);
+  rhs->create(comm, nbMyUnknowns, nbGlobalUnknowns, "rhs");
+  rhs->initialize(comm, 0.0);
 }
 
 //////////////////////////////////////////////////////////////////////////////

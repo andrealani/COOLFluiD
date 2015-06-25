@@ -81,7 +81,7 @@ void StdMeshMatcherWrite2::configure ( Config::ConfigArgs& args )
   InterfaceList interfaces = getMethodData().getInterfaces();
 
   try {
-
+    const std::string nsp = getMethodData().getNamespace();
   InterfaceList::iterator itr = interfaces.begin();
   for(; itr != interfaces.end(); ++itr) {
 
@@ -91,8 +91,8 @@ void StdMeshMatcherWrite2::configure ( Config::ConfigArgs& args )
     if(count(comNames.begin(),comNames.end(),getName()) != 0) {
 
       const std::string interfaceName = (*itr)->getName();
-
-      for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(); ++iProc)
+      
+      for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(nsp); ++iProc)
       {
         const vector<std::string> otherTrsNames = getMethodData().getCoupledSubSystemsTRSNames(interfaceName);
         for (CFuint iTRS=0; iTRS< otherTrsNames.size(); ++iTRS)
@@ -127,8 +127,9 @@ void StdMeshMatcherWrite2::configure ( Config::ConfigArgs& args )
 void StdMeshMatcherWrite2::execute()
 {
   CFAUTOTRACE;
-
-  for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(); ++iProc) {
+  
+  const std::string nsp = getMethodData().getNamespace();
+  for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(nsp); ++iProc) {
     executeWrite(iProc);
   }
 }

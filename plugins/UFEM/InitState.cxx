@@ -61,9 +61,10 @@ void InitState::configure ( Config::ConfigArgs& args )
 
   UFEMSolverCom::configure(args);
 
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace( getMethodData().getNamespace() );
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace( getMethodData().getNamespace() );
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
-
+  
   const CFuint nbdim = physModel->getDim();
 
   std::vector<std::string> vars;

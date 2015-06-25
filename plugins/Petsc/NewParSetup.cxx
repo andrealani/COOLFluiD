@@ -146,11 +146,12 @@ void NewParSetup::setMatrix(const CFuint localSize,
   }
   
   PetscMatrix& mat = getMethodData().getMatrix();
+  const string nsp = getMethodData().getNamespace();
   
   // create a parallel sparse matrix in block compressed row format
   mat.setGPU(getMethodData().useGPU());
   mat.setAIJ(getMethodData().useAIJ());
-  mat.createParBAIJ(PETSC_COMM_WORLD,
+  mat.createParBAIJ(PE::GetPE().GetCommunicator(nsp),
                     nbEqs,
                     localSize*nbEqs,
                     localSize*nbEqs,

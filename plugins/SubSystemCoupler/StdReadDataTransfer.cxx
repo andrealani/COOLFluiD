@@ -162,8 +162,9 @@ void StdReadDataTransfer::setup()
 void StdReadDataTransfer::execute()
 {
   CFAUTOTRACE;
-
-  for (_iProc = 0; _iProc < Common::PE::GetPE().GetProcessorCount(); ++_iProc)
+  
+  const std::string nsp = getMethodData().getNamespace();
+  for (_iProc = 0; _iProc < Common::PE::GetPE().GetProcessorCount(nsp); ++_iProc)
   {
     executeRead();
   }
@@ -461,9 +462,10 @@ void StdReadDataTransfer::readFromDataHandle(const std::string dataHandleName)
   const std::string otherNamespace = getMethodData().getCoupledNameSpaceName(_interfaceName);
   const std::string datahandleName = otherNamespace + "_" + dataHandleName;
 
-  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance().getNamespace(otherNamespace);
+  Common::SafePtr<Namespace> otherNsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(otherNamespace);
   Common::SafePtr<MeshData> otherMeshData = MeshDataStack::getInstance().getEntryByNamespace(otherNsp);
-
+  
   DataHandle< RealVector> otherInterfaceData =
        otherMeshData->getDataStorage()->getData<RealVector>(datahandleName);
 
@@ -586,7 +588,8 @@ void StdReadDataTransfer::prepareNormFile(const std::string dataHandleName)
   SimulationStatus::getInstance().addCouplingResidualNames(dataHandleName);
   CFout <<"Adding residual name: " << dataHandleName <<"\n";
 
-  if (PE::GetPE().GetRank() == 0) {
+  const std::string nsp = getMethodData().getNamespace();
+  if (PE::GetPE().GetRank(nsp) == 0) {
 
     boost::filesystem::path fname =
       Environment::DirPaths::getInstance().getResultsDir() / ("Convergence_" + dataHandleName + ".plt");
@@ -655,7 +658,9 @@ void StdReadDataTransfer::computeNorm(const std::string dataHandleName)
       maxDelta[iVar] = std::max(diff,maxDelta[iVar]);
     }
   }
-
+  
+  const std::string nsp = getMethodData().getNamespace();
+  
   /// @TODO temporary solution ....
   RealVector totalMaxDelta(nbVars);
   RealVector totalDelta(nbVars);
@@ -663,15 +668,15 @@ void StdReadDataTransfer::computeNorm(const std::string dataHandleName)
   {
     CFdouble tempDelta = 0.0;
     CFdouble tempMaxDelta = 0.0;
-    if (PE::GetPE().GetProcessorCount() > 1) {
+    if (PE::GetPE().GetProcessorCount(nsp) > 1) {
       CFdouble actualMaxDelta  = maxDelta[iVar];
       CFdouble actualDelta     = delta[iVar];
 #ifdef CF_HAVE_MPI
       MPI_Allreduce(&actualDelta, &tempDelta, 1, MPI_DOUBLE, MPI_SUM,
-		  PE::GetPE().GetCommunicator());
+		  PE::GetPE().GetCommunicator(nsp));
 
       MPI_Allreduce(&actualMaxDelta, &tempMaxDelta, 1, MPI_DOUBLE, MPI_MAX,
-		  PE::GetPE().GetCommunicator());
+		  PE::GetPE().GetCommunicator(nsp));
 #endif
     }
     else {
@@ -681,10 +686,9 @@ void StdReadDataTransfer::computeNorm(const std::string dataHandleName)
     totalMaxDelta[iVar] = tempMaxDelta;
     totalDelta[iVar] = tempDelta;
   }
-
-
+  
   CFreal L2norm = 0.;
-  if (PE::GetPE().GetRank() == 0) {
+  if (PE::GetPE().GetRank(nsp) == 0) {
 
     boost::filesystem::path fname =
       Environment::DirPaths::getInstance().getResultsDir() / ("Convergence_" + dataHandleName + ".plt");

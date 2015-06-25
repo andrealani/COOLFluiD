@@ -142,7 +142,8 @@ void Loop::setup()
   // set convergence file, with headers for iteration, time, variable,
   // equation indices and loop name
   m_cvg_file = d.getFilename("convergence.txt");
-  if (!PE::GetPE().GetRank()) {
+  const std::string nsp = getMethodData().getNamespace();
+  if (!PE::GetPE().GetRank(nsp)) {
     std::ofstream o(m_cvg_file.c_str(),std::ios::trunc);
     o << 'i' << '\t'
       << 't' << '\t'
@@ -218,7 +219,8 @@ void Loop::execute()
 
 bool Loop::finish(CFuint i, CFreal t, const std::vector< CFreal >& logl2_states, const std::vector< CFreal >& logl2_rhs)
 {
-  PE::GetPE().setBarrier();
+  const std::string nsp = getMethodData().getNamespace();
+  PE::GetPE().setBarrier(nsp);
 
   // calculate average of convergence norms
   CFreal logl2 = 0.;
@@ -240,7 +242,7 @@ bool Loop::finish(CFuint i, CFreal t, const std::vector< CFreal >& logl2_states,
 
   // only if all tribal elders approve
   GlobalReduceOperation< GRO_MIN >(&yes,&yes);
-  PE::GetPE().setBarrier();
+  PE::GetPE().setBarrier(nsp);
 
   return (yes>0);
 }
@@ -263,8 +265,10 @@ std::string Loop::getStatus(CFuint i, CFreal t, const std::vector< CFreal >& log
 
 void Loop::writeConvergence(CFuint i, CFreal t, const std::vector< CFreal >& logl2_states, const std::vector< CFreal >& logl2_rhs)
 {
-  PE::GetPE().setBarrier();
-  if (!PE::GetPE().GetRank()) {
+  const std::string nsp = getMethodData().getNamespace();
+
+  PE::GetPE().setBarrier(nsp);
+  if (!PE::GetPE().GetRank(nsp)) {
     std::ofstream o(m_cvg_file.c_str(),std::ios::app);
     o << i << '\t'
       << t << '\t'
@@ -276,7 +280,7 @@ void Loop::writeConvergence(CFuint i, CFreal t, const std::vector< CFreal >& log
     o << std::endl;
     o.close();
   }
-  PE::GetPE().setBarrier();
+  PE::GetPE().setBarrier(nsp);
 }
 
 //////////////////////////////////////////////////////////////////////////////

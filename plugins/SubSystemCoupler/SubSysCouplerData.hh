@@ -297,7 +297,7 @@ typedef std::vector< std::vector<CoupledInterface> > CoupledInterfaces;
                                            const CFuint& iProc)
   {
     const CFuint idx = _coupledInterfacesMap.find(coupledInterfaceName);
-    const CFuint nbProcessors = Common::PE::GetPE().GetProcessorCount();
+    const CFuint nbProcessors = Common::PE::GetPE().GetProcessorCount(getNamespace());
     const CFuint idx2 = (nbProcessors*iType) + iProc;
     return &((_coupledInterfaces[idx])[otherTRSidx])[idx2];
   }
@@ -319,7 +319,7 @@ typedef std::vector< std::vector<CoupledInterface> > CoupledInterfaces;
     for (CFuint iInter=0;iInter < _coupledInterfaces.size();iInter++)
     {
       const CFuint nbOtherTRS = _coupledSubSystemsTRSNames[iInter].size();
-      const CFuint nbProcessors = Common::PE::GetPE().GetProcessorCount();
+      const CFuint nbProcessors = Common::PE::GetPE().GetProcessorCount(getNamespace());
       _coupledInterfaces[iInter].resize(_coupledSubSystemsTRSNames[iInter].size());
 
       for (CFuint iTRS=0;iTRS < nbOtherTRS;iTRS++)

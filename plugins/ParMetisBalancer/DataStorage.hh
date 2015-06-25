@@ -10,6 +10,7 @@
 #include "Common/MPI/MPIStructDef.hh"
 #include "Common/ParallelException.hh"
 #include "Framework/PartitionerData.hh"
+#include "Framework/MeshData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -212,22 +213,24 @@ private: // members
 template <typename TYPE>
 inline void commMPIstruct<TYPE>::Init()
 {
-  m_MPISend.resize(PE::GetPE().GetProcessorCount());
-  m_MPIReci.resize(PE::GetPE().GetProcessorCount());
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  m_MPISend.resize(PE::GetPE().GetProcessorCount(nsp));
+  m_MPIReci.resize(PE::GetPE().GetProcessorCount(nsp));
 }
 
 template <typename TYPE>
 inline void commMPIstruct<TYPE>::SetSizeRecivBuf()
 {
-  vector<CFuint> out(PE::GetPE().GetProcessorCount(), 0);
-  vector<CFuint> in (PE::GetPE().GetProcessorCount(), 0);
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  vector<CFuint> out(PE::GetPE().GetProcessorCount(nsp), 0);
+  vector<CFuint> in (PE::GetPE().GetProcessorCount(nsp), 0);
   
-  for(CFuint i=0; i<PE::GetPE().GetProcessorCount(); ++i)
+  for(CFuint i=0; i<PE::GetPE().GetProcessorCount(nsp); ++i)
     out[i] = m_MPISend[i].size();
   
-  MPI_Alltoall(&(out[0]) , 1, MPI_INT, &(in[0]) , 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Alltoall(&(out[0]) , 1, MPI_INT, &(in[0]) , 1, MPI_INT, PE::GetPE().GetCommunicator(nsp));
   
-  for(CFuint i=0; i<PE::GetPE().GetProcessorCount(); ++i)
+  for(CFuint i=0; i<PE::GetPE().GetProcessorCount(nsp); ++i)
     m_MPIReci[i].resize( in[i] );
 }
 
@@ -240,25 +243,27 @@ inline void commMPIstruct<TYPE>::MPIcommunicate()
 template <>
 inline void commMPIstruct<CFuint>::MPIcommunicate()
 {
-  vector<MPI_Request>	tabreqs(  2*PE::GetPE().GetProcessorCount() );
-  vector<MPI_Status>	tabstats( 2*PE::GetPE().GetProcessorCount() );
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  vector<MPI_Request>	tabreqs(  2*PE::GetPE().GetProcessorCount(nsp) );
+  vector<MPI_Status>	tabstats( 2*PE::GetPE().GetProcessorCount(nsp) );
   int tag = 1;
   int licznik=0;
   //----------------- recive
-  for(CFuint p=0; p<PE::GetPE().GetProcessorCount(); ++p) 
-    if(p!=PE::GetPE().GetRank() && m_MPIReci[p].size() > 0)
+  for(CFuint p=0; p<PE::GetPE().GetProcessorCount(nsp); ++p) 
+    if(p!=PE::GetPE().GetRank(nsp) && m_MPIReci[p].size() > 0)
     { 
       MPI_Irecv( &m_MPIReci[p][0], m_MPIReci[p].size(), 
-	Common::MPIStructDef::getMPIType(&m_MPIReci[p][0]), p, tag, PE::GetPE().GetCommunicator(), &tabreqs[licznik]);
+	Common::MPIStructDef::getMPIType(&m_MPIReci[p][0]), p, tag, 
+		 PE::GetPE().GetCommunicator(nsp), &tabreqs[licznik]);
       ++licznik;
     }
   // ----------------  send
-  for(CFuint p=0; p<PE::GetPE().GetProcessorCount(); ++p) 
-    if(p!=PE::GetPE().GetRank() && m_MPISend[p].size() > 0)
-    {
-      //cout<<mProcId<<": pSize["<<p<<"]="<<pSize[p]<<" pSizeIn[p]"<<pSizeIn[p]<<endl;
+  for(CFuint p=0; p<PE::GetPE().GetProcessorCount(nsp); ++p) 
+    if(p!=PE::GetPE().GetRank(nsp) && m_MPISend[p].size() > 0)
+      {
+	//cout<<mProcId<<": pSize["<<p<<"]="<<pSize[p]<<" pSizeIn[p]"<<pSizeIn[p]<<endl;
       MPI_Isend(&m_MPISend[p][0], m_MPISend[p].size(), 
-	Common::MPIStructDef::getMPIType(&m_MPISend[p][0]), p, tag, PE::GetPE().GetCommunicator(), &tabreqs[licznik]); //wysylam id
+	Common::MPIStructDef::getMPIType(&m_MPISend[p][0]), p, tag, PE::GetPE().GetCommunicator(nsp), &tabreqs[licznik]); //wysylam id
       ++licznik;
     }
   MPI_Waitall( licznik, &tabreqs[0], &tabstats[0]);
@@ -267,23 +272,24 @@ inline void commMPIstruct<CFuint>::MPIcommunicate()
 template <>
 inline void commMPIstruct<CFdouble>::MPIcommunicate()
 {
-  vector<MPI_Request>	tabreqs(  2*PE::GetPE().GetProcessorCount() );
-  vector<MPI_Status>	tabstats( 2*PE::GetPE().GetProcessorCount() );
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  vector<MPI_Request>	tabreqs(  2*PE::GetPE().GetProcessorCount(nsp) );
+  vector<MPI_Status>	tabstats( 2*PE::GetPE().GetProcessorCount(nsp) );
   int tag = 1;
   int licznik=0;
   //----------------- recive
-  for(CFuint p=0; p<PE::GetPE().GetProcessorCount(); ++p) 
-    if(p!=PE::GetPE().GetRank() && m_MPIReci[p].size() > 0)
-    { 
-      MPI_Irecv( &m_MPIReci[p][0], m_MPIReci[p].size(), MPI_DOUBLE, p, tag, PE::GetPE().GetCommunicator(), &tabreqs[licznik]);
+  for(CFuint p=0; p<PE::GetPE().GetProcessorCount(nsp); ++p) 
+    if(p!=PE::GetPE().GetRank(nsp) && m_MPIReci[p].size() > 0)
+      { 
+      MPI_Irecv( &m_MPIReci[p][0], m_MPIReci[p].size(), MPI_DOUBLE, p, tag, PE::GetPE().GetCommunicator(nsp), &tabreqs[licznik]);
       ++licznik;
     }
   // ----------------  send
-  for(CFuint p=0; p<PE::GetPE().GetProcessorCount(); ++p) 
-    if(p!=PE::GetPE().GetRank() && m_MPISend[p].size() > 0)
+  for(CFuint p=0; p<PE::GetPE().GetProcessorCount(nsp); ++p) 
+    if(p!=PE::GetPE().GetRank(nsp) && m_MPISend[p].size() > 0)
     {
       //cout<<mProcId<<": pSize["<<p<<"]="<<pSize[p]<<" pSizeIn[p]"<<pSizeIn[p]<<endl;
-      MPI_Isend(&m_MPISend[p][0], m_MPISend[p].size(), MPI_DOUBLE, p, tag, PE::GetPE().GetCommunicator(), &tabreqs[licznik]); //wysylam id
+      MPI_Isend(&m_MPISend[p][0], m_MPISend[p].size(), MPI_DOUBLE, p, tag, PE::GetPE().GetCommunicator(nsp), &tabreqs[licznik]); //wysylam id
       ++licznik;
     }
   MPI_Waitall( licznik, &tabreqs[0], &tabstats[0]);
@@ -292,8 +298,8 @@ inline void commMPIstruct<CFdouble>::MPIcommunicate()
 template <typename TYPE>
 inline void commMPIstruct<TYPE>::MPIraport()
 {
-  cout<<"My rank is: "<<PE::GetPE().GetRank()<<endl;
-  for(CFuint p=0; p<PE::GetPE().GetProcessorCount(); ++p)
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  for(CFuint p=0; p<PE::GetPE().GetProcessorCount(nsp); ++p)
   {
     cout<<"To "<<p<<" I have sent "<<m_MPISend[p].size()<<" elements: "<<endl;
     for(CFuint i=0; i<m_MPISend[p].size(); ++i)
@@ -301,13 +307,13 @@ inline void commMPIstruct<TYPE>::MPIraport()
     cout<<endl;
   }
   
-  for(CFuint p=0; p<PE::GetPE().GetProcessorCount(); ++p)
-  {
+  for(CFuint p=0; p<PE::GetPE().GetProcessorCount(nsp); ++p)
+    {
     cout<<"From "<<p<<" I have recived "<<m_MPIReci[p].size()<<" elements: "<<endl;
     for(CFuint i=0; i<m_MPIReci[p].size(); ++i)
       cout<<m_MPIReci[p][i]<<" ";
     cout<<endl;
-  }
+    }
 }
   }
 }

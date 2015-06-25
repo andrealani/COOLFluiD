@@ -71,7 +71,7 @@ void StdPreProcessRead::configure ( Config::ConfigArgs& args )
   InterfaceList interfaces = getMethodData().getInterfaces();
 
   try {
-
+    const std::string nsp = getMethodData().getNamespace();
   InterfaceList::iterator itr = interfaces.begin();
   for(; itr != interfaces.end(); ++itr) {
 
@@ -84,7 +84,7 @@ CF_DEBUG_POINT;
 
       const std::string interfaceName = (*itr)->getName();
 
-      for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(); ++iProc)
+      for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(nsp); ++iProc)
       {
         const vector<std::string> otherTrsNames = getMethodData().getCoupledSubSystemsTRSNames(interfaceName);
         for (CFuint iTRS = 0; iTRS < otherTrsNames.size(); ++iTRS)
@@ -125,29 +125,29 @@ void StdPreProcessRead::executeOnTrs()
 {
   CFAUTOTRACE;
   CFLog(VERBOSE, "Reading Coordinates of coupled coordinates for TRS" <<getCurrentTRS()->getName() << "\n");
-// CFout << "Execute PreProcessRead BEGIN\n";
+  
+  const std::string nsp = getMethodData().getNamespace();
   const bool isParallel = Common::PE::GetPE().IsParallel();
   if(isParallel)
   {
-    Common::PE::GetPE().setBarrier();
-
-    for (CFuint i = 0; i < Common::PE::GetPE().GetProcessorCount(); ++i)
+    Common::PE::GetPE().setBarrier(nsp);
+    
+    for (CFuint i = 0; i < Common::PE::GetPE().GetProcessorCount(nsp); ++i)
     {
-      if (i == Common::PE::GetPE().GetRank())
+      if (i == Common::PE::GetPE().GetRank(nsp))
       {
-        for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(); ++iProc)
+        for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(nsp); ++iProc)
         {
           executeReadOnTrs(iProc);
         }
       }
-      Common::PE::GetPE().setBarrier();
+      Common::PE::GetPE().setBarrier(nsp);
     }
   }
   else
   {
     executeReadOnTrs(0);
   }
-// CFout << "Execute PreProcessRead END\n";
 }
 
 //////////////////////////////////////////////////////////////////////////////

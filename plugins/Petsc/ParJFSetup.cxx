@@ -138,7 +138,7 @@ void ParJFSetup::setMatrix(const CFuint localSize,
 	<< localSize << ", globalSize = " << globalSize << "\n");
   
   // create a parallel Jacobian-Free matrix
-  mat.createParJFMat(PETSC_COMM_WORLD,
+  mat.createParJFMat(PE::GetPE().GetCommunicator(nsp),
                      localSize *nbEqs,
                      localSize *nbEqs,
                      globalSize *nbEqs,
@@ -175,7 +175,7 @@ void ParJFSetup::setMatrix(const CFuint localSize,
     // create a parallel sparse matrix in block compressed row format
     if(!getMethodData().useBlockPreconditionerMatrix()) {
       cout << "Using different preconditioner with ParBAIJ matrix" << endl;
-      precondMat.createParBAIJ(PETSC_COMM_WORLD,
+      precondMat.createParBAIJ(PE::GetPE().GetCommunicator(nsp),
                                nbEqs,
                                localSize*nbEqs,
                                localSize*nbEqs,
@@ -207,20 +207,20 @@ void ParJFSetup::setVectors(const CFuint localSize,
   PetscVector& rhs = getMethodData().getRhsVector();
 
   const CFuint nbEqs = getMethodData().getNbSysEquations();
-
+  const string nsp = getMethodData().getNamespace();
+  
   // create the solution and the rhs vectors
-  rhs.create(PETSC_COMM_WORLD, localSize*nbEqs,
+  rhs.create(PE::GetPE().GetCommunicator(nsp), localSize*nbEqs,
              globalSize*nbEqs,"rhs");
-  sol.create(PETSC_COMM_WORLD, localSize*nbEqs,
+  sol.create(PE::GetPE().GetCommunicator(nsp), localSize*nbEqs,
              globalSize*nbEqs,"Solution");
   
-  const std::string nsp = getMethodData().getNamespace();
   CFLog(VERBOSE, "ParJFSetup::setVectors() => P" << Common::PE::GetPE().GetRank(nsp) << 
 	" vector localSize = " << localSize << ", globalSize = " << globalSize << "\n");
   
   // initialize the two vectors
-  sol.initialize(PETSC_COMM_WORLD, 1.0);
-  rhs.initialize(PETSC_COMM_WORLD, 0.0);
+  sol.initialize(PE::GetPE().GetCommunicator(nsp), 1.0);
+  rhs.initialize(PE::GetPE().GetCommunicator(nsp), 0.0);
 }
 
 //////////////////////////////////////////////////////////////////////////////

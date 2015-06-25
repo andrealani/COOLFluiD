@@ -602,11 +602,13 @@ void StencilComputer::writeToFileStream(std::ofstream& fout)
               localToTypeID.insert(goodCellNodes[i],i + 1);
             }
             localToTypeID.sortKeys();
+	    
+            const std::string nsp = getMethodData().getNamespace();
             
-            // print zone header
+	    // print zone header
             // one sone per element type
             fout << "ZONE "
-            << "  T=\"P" << Common::PE::GetPE().GetRank()<< " good filters " << iType << " " << eType.getShape() <<"\""
+            << "  T=\"P" << Common::PE::GetPE().GetRank(nsp) << " good filters " << iType << " " << eType.getShape() <<"\""
             << ", N=" << goodCellNodes.size()  // ---> not known
             << ", E=" << nbGoodCells  // ---> not known
             << ", F=FEPOINT"
@@ -614,7 +616,7 @@ void StencilComputer::writeToFileStream(std::ofstream& fout)
             (eType.getNbNodes(),
              eType.getGeoOrder(),
              Framework::PhysicalModelStack::getActive()->getDim())
-            << ", AUXDATA CPU=\"" << Common::PE::GetPE().GetRank() << "\""
+            << ", AUXDATA CPU=\"" << Common::PE::GetPE().GetRank(nsp) << "\""
             << "\n";
             zoneCounter++;
             
@@ -733,11 +735,13 @@ void StencilComputer::writeToFileStream(std::ofstream& fout)
                 localToTypeID.insert(badCellNodes[i],i + 1);
               }
               localToTypeID.sortKeys();
-            
+              
+	      const std::string nsp = getMethodData().getNamespace();
+	      
               // print zone header
               // one sone per element type
               fout << "ZONE "
-              << "  T=\"P" << Common::PE::GetPE().GetRank()<< " filterstencils " << iType << " " << eType.getShape() <<"\""
+		   << "  T=\"P" << Common::PE::GetPE().GetRank(nsp)<< " filterstencils " << iType << " " << eType.getShape() <<"\""
               << ", N=" << badCellNodes.size()  // ---> not known
               << ", E=" << nbBadCells  // ---> not known
               << ", F=FEPOINT"
@@ -745,7 +749,7 @@ void StencilComputer::writeToFileStream(std::ofstream& fout)
               (eType.getNbNodes(),
                eType.getGeoOrder(),
                Framework::PhysicalModelStack::getActive()->getDim())
-              << ", AUXDATA CPU=\"" << Common::PE::GetPE().GetRank() << "\""
+              << ", AUXDATA CPU=\"" << Common::PE::GetPE().GetRank(nsp) << "\""
               << "\n";
               zoneCounter++;
             
@@ -860,10 +864,12 @@ void StencilComputer::writeToFileStream(std::ofstream& fout)
               }
               localToTypeID.sortKeys();
             
+	      const std::string nsp = getMethodData().getNamespace();
+	      
               // print zone header
               // one sone per element type
               fout << "ZONE "
-              << "  T=\"P" << Common::PE::GetPE().GetRank()<< " filterstencilcentres " << iType << " " << eType.getShape() <<"\""
+              << "  T=\"P" << Common::PE::GetPE().GetRank(nsp)<< " filterstencilcentres " << iType << " " << eType.getShape() <<"\""
               << ", N=" << badCellNodes.size()  // ---> not known
               << ", E=" << nbBadCells  // ---> not known
               << ", F=FEPOINT"
@@ -871,7 +877,7 @@ void StencilComputer::writeToFileStream(std::ofstream& fout)
               (eType.getNbNodes(),
                eType.getGeoOrder(),
                Framework::PhysicalModelStack::getActive()->getDim())
-              << ", AUXDATA CPU=\"" << Common::PE::GetPE().GetRank() << "\""
+              << ", AUXDATA CPU=\"" << Common::PE::GetPE().GetRank(nsp) << "\""
               << "\n";
               zoneCounter++;
             

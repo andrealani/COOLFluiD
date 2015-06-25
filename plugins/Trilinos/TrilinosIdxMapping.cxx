@@ -18,7 +18,6 @@ using namespace COOLFluiD::Common;
 #endif
 #define linefile printf("Line %u in file %s.\n",__LINE__,__FILE__);fflush(stdout); //MPI_Barrier(MPI_COMM_WORLD);
 
-
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {

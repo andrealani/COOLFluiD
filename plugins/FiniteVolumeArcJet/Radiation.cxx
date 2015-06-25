@@ -966,9 +966,9 @@ void Radiation::getAdvanceOrderMPI()
   } //end for for directions
   cout<<"End of advance order calculation \n";
   
-  cout << "on Processor " << PE::GetPE().GetRank() << endl;
+  cout << "Radiation::getAdvanceOrderMPI() => WAITING on Processor " << 
+    PE::GetPE().GetRank(getMethodData().getNamespace()) << endl;
   for(;;){}
-  
 }
 
 //////////////////////////////////////////////////////////////////////////////

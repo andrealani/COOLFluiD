@@ -436,11 +436,15 @@ void StdSetup::setWallNearestSegment()
   for (CFuint i = 0; i != nbInnerStates; ++i) {
     wallNearestDistanceState[i] = 0.;
   }
+  
+  const string nsp = getMethodData().getNamespace();
+  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+  
   if (bndTrs!=0) {
     // calculating boundary segments centroids
     CFuint nbBndGeoEnt=bndTrs->getLocalNbGeoEnts();
     CFuint nbBndGeoEntAll=0;
-    MPI_Allreduce(&nbBndGeoEnt,&nbBndGeoEntAll,1,MPIStructDef::getMPIType(&nbBndGeoEnt), MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&nbBndGeoEnt,&nbBndGeoEntAll,1,MPIStructDef::getMPIType(&nbBndGeoEnt), MPI_SUM, comm);
     std::vector<CFreal> bndCentroidsX(nbBndGeoEntAll,0.);
     std::vector<CFreal> bndCentroidsY(nbBndGeoEntAll,0.);
     std::vector<CFreal> bndCentroidsZ(nbBndGeoEntAll,0.);
@@ -465,40 +469,22 @@ void StdSetup::setWallNearestSegment()
       geoBuilder->releaseGE();
     }
 
-    int *nbBndGeos=new int[PE::GetPE().GetProcessorCount()];
-    int *dispBndGeos=new int[PE::GetPE().GetProcessorCount()];
-    MPI_Allgather(&nbBndGeoEnt,1,MPI_INT,nbBndGeos,1,MPI_INT,MPI_COMM_WORLD);
+    int *nbBndGeos=new int[PE::GetPE().GetProcessorCount(nsp)];
+    int *dispBndGeos=new int[PE::GetPE().GetProcessorCount(nsp)];
+    MPI_Allgather(&nbBndGeoEnt,1,MPI_INT,nbBndGeos,1,MPI_INT,comm);
     dispBndGeos[0]=0;
-    for (int i=1; i<PE::GetPE().GetProcessorCount(); i++) dispBndGeos[i]=dispBndGeos[i-1]+nbBndGeos[i-1];
-/*
-cout << "proccount=" << PE::GetPE().GetProcessorCount() << "\n" << flush;
+    for (int i=1; i<PE::GetPE().GetProcessorCount(nsp); i++) dispBndGeos[i]=dispBndGeos[i-1]+nbBndGeos[i-1];
 
-for (int i=1; i<PE::GetPE().GetProcessorCount(); i++) cout << nbBndGeos[i] << " " <<  dispBndGeos[i] << "\n" << flush;
-
-{ CFuint count=nbBndGeoEnt;
-cout << "\nbndCentroidsX(" << count << "): \n";
-for (CFuint i=0; i<count; i++) 
-  cout << (bndCentroidsX)[i] << " ";
-cout << "\n" << flush;}
-*/
-    MPI_Allgatherv(&bndCentroidsX[0],nbBndGeoEnt,MPI_DOUBLE,&bndCentroidsX[0],nbBndGeos,dispBndGeos,MPI_DOUBLE,MPI_COMM_WORLD);
-    MPI_Allgatherv(&bndCentroidsY[0],nbBndGeoEnt,MPI_DOUBLE,&bndCentroidsY[0],nbBndGeos,dispBndGeos,MPI_DOUBLE,MPI_COMM_WORLD);
-    MPI_Allgatherv(&bndCentroidsZ[0],nbBndGeoEnt,MPI_DOUBLE,&bndCentroidsZ[0],nbBndGeos,dispBndGeos,MPI_DOUBLE,MPI_COMM_WORLD);
-    MPI_Allgatherv(&bndNormalsX[0],  nbBndGeoEnt,MPI_DOUBLE,&bndNormalsX[0],  nbBndGeos,dispBndGeos,MPI_DOUBLE,MPI_COMM_WORLD);
-    MPI_Allgatherv(&bndNormalsY[0],  nbBndGeoEnt,MPI_DOUBLE,&bndNormalsY[0],  nbBndGeos,dispBndGeos,MPI_DOUBLE,MPI_COMM_WORLD);
-    MPI_Allgatherv(&bndNormalsZ[0],  nbBndGeoEnt,MPI_DOUBLE,&bndNormalsZ[0],  nbBndGeos,dispBndGeos,MPI_DOUBLE,MPI_COMM_WORLD);
-/*
-{ CFuint count=bndCentroidsX.size();
-cout << "\nbndCentroidsX(" << count << "): \n";
-for (CFuint i=0; i<count; i++) 
-  cout << (bndCentroidsX)[i] << " ";
-cout << "\n" << flush;}
-*/
+    MPI_Allgatherv(&bndCentroidsX[0],nbBndGeoEnt,MPI_DOUBLE,&bndCentroidsX[0],nbBndGeos,dispBndGeos,MPI_DOUBLE,comm);
+    MPI_Allgatherv(&bndCentroidsY[0],nbBndGeoEnt,MPI_DOUBLE,&bndCentroidsY[0],nbBndGeos,dispBndGeos,MPI_DOUBLE,comm);
+    MPI_Allgatherv(&bndCentroidsZ[0],nbBndGeoEnt,MPI_DOUBLE,&bndCentroidsZ[0],nbBndGeos,dispBndGeos,MPI_DOUBLE,comm);
+    MPI_Allgatherv(&bndNormalsX[0],  nbBndGeoEnt,MPI_DOUBLE,&bndNormalsX[0],  nbBndGeos,dispBndGeos,MPI_DOUBLE,comm);
+    MPI_Allgatherv(&bndNormalsY[0],  nbBndGeoEnt,MPI_DOUBLE,&bndNormalsY[0],  nbBndGeos,dispBndGeos,MPI_DOUBLE,comm);
+    MPI_Allgatherv(&bndNormalsZ[0],  nbBndGeoEnt,MPI_DOUBLE,&bndNormalsZ[0],  nbBndGeos,dispBndGeos,MPI_DOUBLE,comm);
+    
     delete []nbBndGeos;
     delete []dispBndGeos;
-
-
-
+    
     // brute-force loop for identifying bnd cell for all cells
     wallNearestSegment.resize(nbInnerGeoEnt);
     wallNearestDistance.resize(nbInnerGeoEnt);
@@ -583,7 +569,6 @@ cout << "\n" << flush;}
 
 //////////////////////////////////////////////////////////////////////////////
 
-//////////////////////////////////////////////////////////////////////////////
 void StdSetup::readWallDistanceFromFile()
 {
 
@@ -598,18 +583,17 @@ void StdSetup::readWallDistanceFromFile()
 //   const CFuint nbInnerGeoEnt=innerTrs->getLocalNbGeoEnts();
   const CFuint nbInnerStates=innerTrs->getNbStatesInTrs();
   
-  
-  
-  
+  const string nsp = getMethodData().getNamespace();
+  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
   
    int irank, nrank;
-   MPI_Comm_size(MPI_COMM_WORLD,&nrank);
-   MPI_Comm_rank(MPI_COMM_WORLD,&irank);
+   MPI_Comm_size(comm,&nrank);
+   MPI_Comm_rank(comm,&irank);
    if(!irank) cout<< "Reading Wall Distance.. " << nbInnerStates <<endl;
 
    
    int GlobNbNodes = 0;
-   MPI_Allreduce((void*)&nbInnerStates,(void*)&GlobNbNodes,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+   MPI_Allreduce((void*)&nbInnerStates,(void*)&GlobNbNodes,1,MPI_INT,MPI_SUM,comm);
    vector< CFreal > WallDistVec(GlobNbNodes);
    
    //soket..

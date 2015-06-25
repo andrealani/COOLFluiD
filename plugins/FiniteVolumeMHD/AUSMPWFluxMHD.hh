@@ -41,17 +41,6 @@ public:
    */
   static void defineConfigOptions(Config::OptionList& options);
   
-  /**
-   * Configure the data from the supplied arguments.
-   * @param args configuration arguments
-   */
-  virtual void configure ( Config::ConfigArgs& args );
-  
-  /**
-   * Set up private data
-   */
-  virtual void setup();
-
 protected:
   
   /**

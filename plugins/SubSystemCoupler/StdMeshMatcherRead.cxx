@@ -126,9 +126,9 @@ void StdMeshMatcherRead::execute()
 {
 
   CFAUTOTRACE;
-
+  const std::string nsp = getMethodData().getNamespace();
   //Here no need for barrier because each processor reads different files
-  for (_iProc = 0; _iProc < Common::PE::GetPE().GetProcessorCount(); ++_iProc) {
+  for (_iProc = 0; _iProc < Common::PE::GetPE().GetProcessorCount(nsp); ++_iProc) {
     executeRead();
   }
 

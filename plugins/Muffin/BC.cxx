@@ -1,5 +1,5 @@
 
-#include "Common/GlobalReduce.hh"
+#include "Framework/GlobalReduce.hh"
 #include "Muffin/System.hh"
 #include "Muffin/BC.hh"
 

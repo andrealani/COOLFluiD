@@ -272,10 +272,11 @@ void MuffinData::synchronise()
   CFAUTOTRACE;
   DataHandle< State*,GLOBAL > h_states = MeshDataStack::getActive()->getStateDataSocketSink().getDataHandle();
 
-  PE::GetPE().setBarrier();
+  const std::string nsp = getNamespace();
+  PE::GetPE().setBarrier(nsp);
   h_states.beginSync();
   h_states.endSync();
-  PE::GetPE().setBarrier();
+  PE::GetPE().setBarrier(nsp);
 }
 
 //////////////////////////////////////////////////////////////////////////////

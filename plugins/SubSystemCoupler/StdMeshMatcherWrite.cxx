@@ -69,7 +69,7 @@ void StdMeshMatcherWrite::configure ( Config::ConfigArgs& args )
   InterfaceList interfaces = getMethodData().getInterfaces();
 
   try {
-
+    const std::string nsp = getMethodData().getNamespace();
   InterfaceList::iterator itr = interfaces.begin();
   for(; itr != interfaces.end(); ++itr) {
 
@@ -80,7 +80,7 @@ void StdMeshMatcherWrite::configure ( Config::ConfigArgs& args )
 
       const std::string interfaceName = (*itr)->getName();
 
-      for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(); ++iProc)
+      for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(nsp); ++iProc)
       {
         const vector<std::string> otherTrsNames = getMethodData().getCoupledSubSystemsTRSNames(interfaceName);
         for (CFuint iTRS=0; iTRS< otherTrsNames.size(); ++iTRS)
@@ -115,8 +115,9 @@ void StdMeshMatcherWrite::configure ( Config::ConfigArgs& args )
 void StdMeshMatcherWrite::execute()
 {
   CFAUTOTRACE;
-
-  for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(); ++iProc) {
+  
+  const std::string nsp = getMethodData().getNamespace();
+  for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(nsp); ++iProc) {
     executeWrite(iProc);
   }
 }

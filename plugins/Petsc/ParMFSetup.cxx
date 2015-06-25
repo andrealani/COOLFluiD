@@ -109,7 +109,7 @@ void ParMFSetup::setMatrix(const CFuint localSize,
 	" matrix localSize = " << localSize << ", globalSize = " << globalSize << "\n");
   
   // creates a parallel Jacobian-Free matrix
-  jfMat.createParJFMat(PETSC_COMM_WORLD,
+  jfMat.createParJFMat(PE::GetPE().GetCommunicator(nsp),
 		       localSize *nbEqs,
 		       localSize *nbEqs,
 		       globalSize *nbEqs,
@@ -143,15 +143,15 @@ void ParMFSetup::setMatrix(const CFuint localSize,
   }
 
   // creates a parallel preconditioner sparse matrix in block compressed row format
-  precMat.createParBAIJ(PETSC_COMM_WORLD,
-                    nbEqs,
-                    localSize*nbEqs,
-                    localSize*nbEqs,
-                    globalSize*nbEqs,
-                    globalSize*nbEqs,
-                    0, &allNonZeroUp[0],
-                    0, &outDiagNonZeroUp[0],
-                    "PreconditionerMatrix");
+  precMat.createParBAIJ(PE::GetPE().GetCommunicator(nsp),
+			nbEqs,
+			localSize*nbEqs,
+			localSize*nbEqs,
+			globalSize*nbEqs,
+			globalSize*nbEqs,
+			0, &allNonZeroUp[0],
+			0, &outDiagNonZeroUp[0],
+			"PreconditionerMatrix");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -165,14 +165,15 @@ void ParMFSetup::setVectors(const CFuint localSize,
   PetscVector& rhs = getMethodData().getRhsVector();
 
   const CFuint nbEqs = getMethodData().getNbSysEquations();
+  const std::string nsp = getMethodData().getNamespace();
   
   // create the solution and the rhs vectors
-  rhs.create(PETSC_COMM_WORLD, localSize*nbEqs, globalSize*nbEqs,"rhs");
-  sol.create(PETSC_COMM_WORLD, localSize*nbEqs, globalSize*nbEqs,"Solution");
+  rhs.create(PE::GetPE().GetCommunicator(nsp), localSize*nbEqs, globalSize*nbEqs,"rhs");
+  sol.create(PE::GetPE().GetCommunicator(nsp), localSize*nbEqs, globalSize*nbEqs,"Solution");
   
   // initialize the two vectors
-  sol.initialize(PETSC_COMM_WORLD,1.0);
-  rhs.initialize(PETSC_COMM_WORLD,0.0);
+  sol.initialize(PE::GetPE().GetCommunicator(nsp),1.0);
+  rhs.initialize(PE::GetPE().GetCommunicator(nsp),0.0);
 }
 
 //////////////////////////////////////////////////////////////////////////////

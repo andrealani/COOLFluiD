@@ -56,13 +56,17 @@ void StdSetup::execute()
   // to compile without MPI (as seen in from Framework/LSSVector.hh)  
   const MPI_Comm MPI_COMM_WORLD = 0;
 #endif
+  
+  const std::string nsp = getMethodData().getNamespace();
+  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+  
   PardisoVector& sol = d.getSolVector();
   PardisoVector& rhs = d.getRhsVector();
-  sol.create(MPI_COMM_WORLD,nbStates*nbEqs,nbStates*nbEqs,"sol");
-  rhs.create(MPI_COMM_WORLD,nbStates*nbEqs,nbStates*nbEqs,"rhs");
-  sol.initialize(MPI_COMM_WORLD,0.);
-  rhs.initialize(MPI_COMM_WORLD,0.);
-
+  sol.create(comm,nbStates*nbEqs,nbStates*nbEqs,"sol");
+  rhs.create(comm,nbStates*nbEqs,nbStates*nbEqs,"rhs");
+  sol.initialize(comm,0.);
+  rhs.initialize(comm,0.);
+  
   // setup system matrix
   std::vector< CFint > nnz(nbStates);
   std::vector< std::vector< CFuint > > nz(nbStates);

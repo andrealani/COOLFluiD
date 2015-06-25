@@ -143,7 +143,7 @@ void SystemFlow::execute()
     for (CFuint n=0; n<h_nodes.size(); ++n)
       if (h_nodes[n]->isParUpdatable())
         m_T0 += h_mn_volume[n] * (*h_states[n])[m_iv_temp];
-    Common::GlobalReduceOperation< Common::GRO_SUM >(&m_T0,&m_T0);
+    Framework::GlobalReduceOperation< GRO_SUM >(&m_T0,&m_T0);
     m_T0 /= d.m_volume;
     log("To = " + StringOps::StringOps::to_str(m_T0));
     ver("calculate bulk temperature.");
@@ -166,8 +166,8 @@ void SystemFlow::execute()
       vmax_s = std::max(vmax_s,MathTools::MathFunctions::innerProd(v,v));
     }
     vmax_s = std::max(sqrt(vmax_s),PhysicalConstants::_eps);
-    Common::GlobalReduceOperation< Common::GRO_MAX >(&vmax_s,&vmax_s);
-
+    Framework::GlobalReduceOperation< GRO_MAX >(&vmax_s,&vmax_s);
+    
     // choose one
     const bool solution = (r[0]<PhysicalConstants::_eps);
     log( "Vmax (f/s) = " + StringOps::StringOps::to_str(vmax_f) + " / " +

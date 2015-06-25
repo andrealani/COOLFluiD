@@ -24,7 +24,6 @@ Exception.hh
 FailedAssertionException.hh
 FloatingPointException.hh
 Fortran.hh
-GlobalReduce.hh
 Group.hh
 MemoryAllocator.hh
 MemoryAllocatorNormal.cxx
@@ -147,7 +146,6 @@ IF (CF_HAVE_MPI)
     MPI/CommIteratorBase.hh
     MPI/CommPattern.cxx
     MPI/CommPattern.hh
-    MPI/GlobalReduceMPI.hh
     MPI/MPICommPattern.hh
     MPI/MPIError.hh
     MPI/MPIException.hh
@@ -169,7 +167,6 @@ ENDIF()
 # SERIAL PE
 IF(NOT CF_HAVE_MPI)
   LIST(APPEND Common_files
-    SERIAL/GlobalReduceSERIAL.hh
     SERIAL/PEInterfaceSERIAL.hh
     SERIAL/PEInterfaceSERIAL.cxx
   )

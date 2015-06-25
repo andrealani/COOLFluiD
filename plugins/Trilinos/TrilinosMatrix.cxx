@@ -261,15 +261,18 @@ void TrilinosMatrix::set1DPoisson(const Epetra_Map *map) {
 
   _map = map;
 
+  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+  
   // communication
   int nbProcessors, myRank;
-  MPI_Comm_size(MPI_COMM_WORLD, &nbProcessors);
-  MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-
+  MPI_Comm_size(comm, &nbProcessors);
+  MPI_Comm_rank(comm, &myRank);
+  
   int sendbuf[2] = {_map->GID(0), _map->GID(_map->NumMyElements()-1)};
   int *recvbuf = new int[2*nbProcessors];
-  MPI_Allgather(sendbuf, 2, MPI_INT, recvbuf, 2, MPI_INT, MPI_COMM_WORLD);
-
+  MPI_Allgather(sendbuf, 2, MPI_INT, recvbuf, 2, MPI_INT, comm);
+  
   _mat = new Epetra_CrsMatrix(Copy, *map, 3);
 
   int     gcid[3], grid;

@@ -261,9 +261,10 @@ CFuint matches(0);
 
 void BCPeriodicMFMHD::setupMPI() 
 {
-  _nbProcesses = PE::GetPE().GetProcessorCount();
-  _rank = PE::GetPE().GetRank();
-  _comm = PE::GetPE().GetCommunicator();
+  const std::string nsp = getMethodData().getNamespace();
+  _nbProcesses = PE::GetPE().GetProcessorCount(nsp);
+  _rank = PE::GetPE().GetRank(nsp);
+  _comm = PE::GetPE().GetCommunicator(nsp);
   _nbFacesPerProcess.resize(_nbProcesses,0);
   _periodicState = new Framework::State;
   _periodicState->resize(_nE);
