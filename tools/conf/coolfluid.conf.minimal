@@ -27,3 +27,23 @@ lib_Framework = on
 lib_ShapeFunctions = on
 lib_AnalyticalModel = on
 
+# those are optional and not available on the public repository
+lib_Mutation2OLD  = off
+lib_Mutation2OLDI = off
+lib_Mutation2     = off
+lib_Mutation2I    = off
+lib_Mutation      = off
+lib_MutationI     = off
+
+# you can define your own build modes to be used with ./prepare.pl --build=...
+# (cpuoptim and newoptim in the examples below)
+
+#cpuoptim_buildtype  = OPTIM
+#cpuoptim_cflags     = -march=pentium
+#cpuoptim_cxxflags   = -march=pentium
+#cpuoptim_fflags     = -march=pentium
+
+#newoptim_cflags  = -O3 -Wall
+#newoptim_flags   = -O3 -Wall
+#newoptim_fflags  = -O3 -Wall
+
