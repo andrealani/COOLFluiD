@@ -1,0 +1,265 @@
+################################################################################
+## 
+## This COOLFluiD CFcase file tests: 
+## 
+## Finite Volume, Euler2D, Backward Euler, CFL given by user-defined function,
+## mesh with only tetras, conversion from THOR to CFmesh, second-order 
+## reconstruction with Venkatakrishnan limiter, supersonic inlet and outlet BC, 
+## field initialization with analytical function, two subsystems managed by 
+## LoopMaestro demonstrating restart and parallel /O of extra data (limiter)
+##
+#################################################################################
+##
+## Comments begin with "#"
+## Meta Comments begin with triple "#"
+##
+### Residual = -1.6509786
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libBackwardEuler libTHOR2CFmesh 
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = true
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+#CFEnv.ExceptionAborts      = true
+CFEnv.ExceptionDumps       = true
+CFEnv.ExceptionOutputs     = true
+CFEnv.RegistSignalHandlers = false
+#CFEnv.TraceToStdOut = true
+#CFEnv.TraceActive = true
+CFEnv.NbWriters = 1
+CFEnv.OnlyCPU0Writes = false
+
+######## TEST CONFIGURATION
+#CFEnv.ErrorOnUnusedConfig = true
+
+# NOTE: this testcase works also if the following 3 lines are commented out
+Maestro = LoopMaestro
+LoopMaestro.GlobalStopCriteria = GlobalMaxNumberSteps
+LoopMaestro.GlobalMaxNumberSteps.nbSteps = 1
+#LoopMaestro.AppendIter = true
+#LoopMaestro.RestartFromPreviousSolution = true
+
+Simulator.SubSystems = SubSysA SubSysB
+Simulator.SubSystemTypes = StandardSubSystem StandardSubSystem
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets2D/
+Simulator.Paths.ResultsDir = plugins/NavierStokes/testcases/Jets2D/
+
+### SubSystem A
+Simulator.SubSysA.Namespaces = Name1
+Simulator.SubSysA.Ranks = 0:1
+Simulator.SubSysA.Name1.MeshData = FlowMeshData1
+Simulator.SubSysA.Name1.SubSystemStatus = FlowSubSystemStatus1
+Simulator.SubSysA.Name1.PhysicalModelType = Euler2D
+Simulator.SubSysA.Euler2D.refValues = 1. 2.83972 2.83972 6.532
+Simulator.SubSysA.Euler2D.refLength = 1.0
+
+Simulator.SubSysA.OutputFormat        = Tecplot CFmesh
+
+Simulator.SubSysA.Tecplot.FileName    = jets2DFVM_out.plt
+Simulator.SubSysA.Tecplot.Data.outputVar = Cons
+Simulator.SubSysA.Tecplot.SaveRate = 400
+Simulator.SubSysA.Tecplot.AppendTime = false
+Simulator.SubSysA.Tecplot.AppendIter = false
+Simulator.SubSysA.Tecplot.Data.DataHandleOutput.CCSocketNames = limiter
+Simulator.SubSysA.Tecplot.Data.DataHandleOutput.CCVariableNames = lim0 lim1 lim2 lim3
+Simulator.SubSysA.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
+Simulator.SubSysA.Tecplot.WriteSol = ParWriteSolutionBlock
+Simulator.SubSysA.Tecplot.Namespace = Name1
+
+Simulator.SubSysA.CFmesh.FileName = jets2DFVM_EXTRA.CFmesh
+Simulator.SubSysA.CFmesh.SaveRate = 400
+Simulator.SubSysA.CFmesh.AppendTime = false
+Simulator.SubSysA.CFmesh.AppendIter = false
+# field for extra state-related variables
+Simulator.SubSysA.CFmesh.Data.ExtraStateVarNames = limiter
+Simulator.SubSysA.CFmesh.Data.ExtraStateVarStrides = 4
+Simulator.SubSysA.CFmesh.WriteSol = ParWriteBinarySolution
+Simulator.SubSysA.CFmesh.Namespace = Name1
+
+Simulator.SubSysA.StopCondition       = MaxNumberSteps
+Simulator.SubSysA.MaxNumberSteps.nbSteps = 4
+
+#Simulator.SubSysA.StopCondition       = Norm
+#Simulator.SubSysA.Norm.valueNorm      = -4.0
+
+Simulator.SubSysA.FlowMeshData1.listTRS = SuperInlet SuperOutlet
+Simulator.SubSysA.FlowMeshData1.Namespaces = Name1
+
+Simulator.SubSysA.MeshCreator = CFmeshFileReader
+Simulator.SubSysA.CFmeshFileReader.Namespace = Name1
+Simulator.SubSysA.CFmeshFileReader.Data.FileName = jets2DFVM.CFmesh
+Simulator.SubSysA.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+Simulator.SubSysA.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
+Simulator.SubSysA.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSysA.LinearSystemSolver = PETSC
+Simulator.SubSysA.LSSNames = BwdEulerLSS
+Simulator.SubSysA.BwdEulerLSS.Data.PCType = PCASM
+Simulator.SubSysA.BwdEulerLSS.Data.KSPType = KSPGMRES
+Simulator.SubSysA.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSysA.BwdEulerLSS.Namespace = Name1
+
+Simulator.SubSysA.ConvergenceMethod = BwdEuler
+Simulator.SubSysA.BwdEuler.Data.CFL.ComputeCFL = Function
+Simulator.SubSysA.BwdEuler.Data.CFL.Function.Def = min(100000000.,30.0*10^(i-1))
+Simulator.SubSysA.BwdEuler.Data.Norm = L2
+Simulator.SubSysA.BwdEuler.Data.L2.MonitoredVarID = 0
+Simulator.SubSysA.BwdEuler.Data.L2.ComputedVarID = 0 2 3
+Simulator.SubSysA.BwdEuler.Namespace = Name1
+
+Simulator.SubSysA.SpaceMethod = CellCenterFVM
+Simulator.SubSysA.CellCenterFVM.Namespace = Name1
+Simulator.SubSysA.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSysA.CellCenterFVM.ComputeTimeRHS = StdTimeRhs
+
+Simulator.SubSysA.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSysA.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSysA.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSysA.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSysA.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSysA.CellCenterFVM.Data.FluxSplitter = Roe
+Simulator.SubSysA.CellCenterFVM.Data.UpdateVar  = Cons
+Simulator.SubSysA.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSysA.CellCenterFVM.Data.LinearVar   = Roe
+
+Simulator.SubSysA.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSysA.CellCenterFVM.Data.LinearLS2D.limitRes = -1.7
+Simulator.SubSysA.CellCenterFVM.Data.Limiter = Venktn2D
+#Simulator.SubSysA.CellCenterFVM.Data.Limiter = BarthJesp2D
+Simulator.SubSysA.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+
+Simulator.SubSysA.CellCenterFVM.InitComds = InitState
+Simulator.SubSysA.CellCenterFVM.InitNames = InField
+
+Simulator.SubSysA.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSysA.CellCenterFVM.InField.Vars = x y
+Simulator.SubSysA.CellCenterFVM.InField.Def = if(y>0.5,0.5,1.) \
+                                         if(y>0.5,1.67332,2.83972) \
+                                         0.0 \
+                                         if(y>0.5,3.425,6.532)
+
+Simulator.SubSysA.CellCenterFVM.BcComds = SpecialSuperInletFVMCC SuperOutletFVMCC
+Simulator.SubSysA.CellCenterFVM.BcNames = Jet1        Jet2
+
+Simulator.SubSysA.CellCenterFVM.Jet1.applyTRS = SuperInlet
+Simulator.SubSysA.CellCenterFVM.Jet1.Vars = x y i t
+Simulator.SubSysA.CellCenterFVM.Jet1.Def =  if(y>0.5,0.5,1.) \
+                                        if(y>0.5,1.67332,2.83972) \
+                                        0.0 \
+                                        if(y>0.5,3.425,6.532)
+
+Simulator.SubSysA.CellCenterFVM.Jet2.applyTRS = SuperOutlet
+
+### SubSystem B
+Simulator.SubSysB.Namespaces = Name2
+Simulator.SubSysB.Ranks = 2:3
+
+Simulator.SubSysB.Name2.MeshData = FlowMeshData2
+Simulator.SubSysB.Name2.SubSystemStatus = FlowSubSystemStatus2
+Simulator.SubSysB.FlowMeshData2.listTRS = SuperInlet SuperOutlet
+Simulator.SubSysB.FlowMeshData2.Namespaces = Name2
+
+Simulator.SubSysB.Name2.PhysicalModelType       = Euler2D
+Simulator.SubSysB.Euler2D.refValues = 1. 2.83972 2.83972 6.532
+Simulator.SubSysB.Euler2D.refLength = 1.0
+
+Simulator.SubSysB.OutputFormat        = Tecplot CFmesh
+
+Simulator.SubSysB.Tecplot.FileName    = jets2DFVM.plt
+Simulator.SubSysB.Tecplot.Data.outputVar = Cons
+Simulator.SubSysB.Tecplot.SaveRate = 400
+Simulator.SubSysB.Tecplot.AppendTime = false
+Simulator.SubSysB.Tecplot.AppendIter = false
+Simulator.SubSysB.Tecplot.Namespace = Name2
+
+Simulator.SubSysB.CFmesh.FileName     = jets2DFVM.CFmesh
+Simulator.SubSysB.CFmesh.SaveRate = 400
+Simulator.SubSysB.CFmesh.AppendTime = false
+Simulator.SubSysB.CFmesh.AppendIter = false
+# field for extra state-related variables
+Simulator.SubSysB.CFmesh.Data.ExtraStateVarNames = limiter
+Simulator.SubSysB.CFmesh.Data.ExtraStateVarStrides = 4
+Simulator.SubSysB.CFmesh.Namespace = Name2
+
+Simulator.SubSysB.StopCondition       = MaxNumberSteps
+Simulator.SubSysB.MaxNumberSteps.nbSteps = 5
+
+#Simulator.SubSysB.StopCondition       = Norm
+#Simulator.SubSysB.Norm.valueNorm      = -4.0
+
+Simulator.SubSysB.MeshCreator = CFmeshFileReader
+Simulator.SubSysB.CFmeshFileReader.Data.FileName = jets2DFVM_EXTRA.CFmesh
+Simulator.SubSysB.CFmeshFileReader.Data.ExtraStateVarNames = InitLimiter
+Simulator.SubSysB.CFmeshFileReader.Data.ExtraStateVarTags = limiter
+Simulator.SubSysB.CFmeshFileReader.Data.ExtraStateVarStrides = 4
+Simulator.SubSysB.CFmeshFileReader.ReadCFmesh = ParReadCFmeshBinary
+Simulator.SubSysB.CFmeshFileReader.Namespace = Name2
+
+Simulator.SubSysB.LinearSystemSolver = PETSC
+Simulator.SubSysB.LSSNames = BwdEulerLSS
+Simulator.SubSysB.BwdEulerLSS.Data.PCType = PCASM
+Simulator.SubSysB.BwdEulerLSS.Data.KSPType = KSPGMRES
+Simulator.SubSysB.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSysB.BwdEulerLSS.Namespace = Name2
+
+Simulator.SubSysB.ConvergenceMethod = BwdEuler
+Simulator.SubSysB.BwdEuler.Data.CFL.Value = 3000000.0
+Simulator.SubSysB.BwdEuler.Data.CFL.ComputeCFL = Function
+Simulator.SubSysB.BwdEuler.Data.CFL.Function.Def = min(100000000.,300000.*10^(i-1))
+Simulator.SubSysB.BwdEuler.Data.Norm = L2
+Simulator.SubSysB.BwdEuler.Data.L2.MonitoredVarID = 0
+Simulator.SubSysB.BwdEuler.Data.L2.ComputedVarID = 0 2 3
+Simulator.SubSysB.BwdEuler.Namespace = Name2
+
+Simulator.SubSysB.SpaceMethod = CellCenterFVM
+Simulator.SubSysB.CellCenterFVM.Namespace = Name2
+Simulator.SubSysB.CellCenterFVM.Restart = true
+Simulator.SubSysB.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSysB.CellCenterFVM.ComputeTimeRHS = StdTimeRhs
+
+Simulator.SubSysB.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSysB.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSysB.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSysB.CellCenterFVM.Setup1.InitLimiterSocket = InitLimiter
+Simulator.SubSysB.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSysB.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSysB.CellCenterFVM.Data.FluxSplitter = Roe
+Simulator.SubSysB.CellCenterFVM.Data.UpdateVar  = Cons
+Simulator.SubSysB.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSysB.CellCenterFVM.Data.LinearVar   = Roe
+
+Simulator.SubSysB.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSysB.CellCenterFVM.Data.LinearLS2D.limitRes = -1.7
+Simulator.SubSysB.CellCenterFVM.Data.Limiter = Venktn2D
+#Simulator.SubSysB.CellCenterFVM.Data.Limiter = BarthJesp2D
+Simulator.SubSysB.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+
+Simulator.SubSysB.CellCenterFVM.InitComds = InitState
+Simulator.SubSysB.CellCenterFVM.InitNames = InField
+
+Simulator.SubSysB.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSysB.CellCenterFVM.InField.Vars = x y
+Simulator.SubSysB.CellCenterFVM.InField.Def = if(y>0.5,0.5,1.) \
+                                         if(y>0.5,1.67332,2.83972) \
+                                         0.0 \
+                                         if(y>0.5,3.425,6.532)
+
+Simulator.SubSysB.CellCenterFVM.BcComds = SpecialSuperInletFVMCC SuperOutletFVMCC
+Simulator.SubSysB.CellCenterFVM.BcNames = Jet1        Jet2
+
+Simulator.SubSysB.CellCenterFVM.Jet1.applyTRS = SuperInlet
+Simulator.SubSysB.CellCenterFVM.Jet1.Vars = x y i t
+Simulator.SubSysB.CellCenterFVM.Jet1.Def =  if(y>0.5,0.5,1.) \
+                                        if(y>0.5,1.67332,2.83972) \
+                                        0.0 \
+                                        if(y>0.5,3.425,6.532)
+
+Simulator.SubSysB.CellCenterFVM.Jet2.applyTRS = SuperOutlet
