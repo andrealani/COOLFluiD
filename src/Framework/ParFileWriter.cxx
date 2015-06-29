@@ -112,7 +112,7 @@ void ParFileWriter::setWriterGroup()
   
   // create the writers group
   const string writerName = nsp + "_Writers";
-  PE::GetPE().createGroup(writerName, writerRanks, false);
+  PE::GetPE().createGroup(nsp, writerName, writerRanks, false);
   
   CFLog(VERBOSE, "ParFileWriter::setWriterGroup() => " << 
 	CFPrintContainer<vector<int> >(" writerRanks  = ",  &writerRanks) << "\n");  

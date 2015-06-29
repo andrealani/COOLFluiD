@@ -99,7 +99,10 @@ public: // functions
 
   /// Access the existing sub systems names in the Simulator
   std::vector< std::string > getSubSystemNames() const;
-
+  
+  /// Tell if the given rank belongs to the given subsystem 
+  bool isSubSystemRank(const CFuint rank, const std::string& subSystemName) const;
+  
 protected: // functions
 
   /// Processes the argument list from the configuration arguments
@@ -126,8 +129,8 @@ protected: // functions
   /// Configures this Simulator.
   /// Sets up the data for this Object.
   virtual void configure ( Config::ConfigArgs& args );
-
-private: // data
+    
+ private: // data
 
   /// Module loader
   Environment::ModuleLoader m_moduleLoader;
@@ -139,9 +142,17 @@ private: // data
   Common::SelfRegistPtr<SubSystem> m_subSys;
   /// Simulation configuration arguments
   Config::ConfigArgs m_sim_args;
+  
+  /// map the subsystem names to the corresponding ranks
+  std::map<std::string, std::string> m_mapSS2Ranks;
+  
   /// Paths object
   Common::SharedPtr<SimulatorPaths> m_paths;
-
+  
+  /// ranks associated to each namespace in the form
+  /// START0:END0 START1:END1 etc.
+  std::vector<std::string> m_ranksString;
+  
 }; // class Simulator
 
 //////////////////////////////////////////////////////////////////////////////

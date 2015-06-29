@@ -69,7 +69,8 @@ public:
   /// @param mapRank2Group  flag telling whether to build a reverse 
   ///                       rank-group mapping (each rank MUST be 
   ///                       associated to a unique group)
-  void createGroup(const std::string name,
+  void createGroup(const std::string nsp,
+		   const std::string name,
 		   const std::vector<int>& ranks, 
 		   const bool mapRank2Group) {}
   

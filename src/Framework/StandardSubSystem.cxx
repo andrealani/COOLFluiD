@@ -39,9 +39,6 @@
 #include "Framework/Framework.hh"
 #include "Framework/SimulationStatus.hh"
 
-// #include <boost/mpl/list.hpp>
-// #include <boost/mpl/for_each.hpp> 
-
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;

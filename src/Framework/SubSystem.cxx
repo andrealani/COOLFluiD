@@ -114,7 +114,7 @@ void SubSystem::configureNamespaces(Config::ConfigArgs& args)
     // is used as key for PE::GetPE() functions instead of namespace 
     // (e.g. "SubSyA.Default") 
     
-    // PE::createGroup(name, granks, true);
+    // PE::createGroup(name, name, granks, true);
   }
   // or configure the whole list that was defined
   else
@@ -143,7 +143,7 @@ void SubSystem::configureNamespaces(Config::ConfigArgs& args)
 	// create corresponding MPI group
 	vector<int> granks;
 	fillGroupRanks(m_ranks[counter], granks);
-	PE::GetPE().createGroup(*itr, granks, true);
+	PE::GetPE().createGroup(*itr, *itr, granks, true);
 	
         const string msg = "Ranks for group [" +  *itr + "] = ";
 	CFLog(VERBOSE, CFPrintContainer<vector<int> >(msg, &granks));

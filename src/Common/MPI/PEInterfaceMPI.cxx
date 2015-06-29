@@ -109,7 +109,8 @@ void PEInterface<PM_MPI>::RegisterInitObject (MPIInitObject * NewObj)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void PEInterface<PM_MPI>::createGroup(const std::string name, 
+void PEInterface<PM_MPI>::createGroup(const std::string nsp, 
+				      const std::string name, 
 				      const std::vector<int>& ranks, 
 				      const bool mapRank2Group) 
 {
@@ -136,17 +137,17 @@ void PEInterface<PM_MPI>::createGroup(const std::string name,
     
     MPI_Group allGroup; 
     MPIError::getInstance().check
-      ("MPI_Comm_group", "PEInterface<PM_MPI>::createGroup()", MPI_Comm_group(MPI_COMM_WORLD, &allGroup)); 
+      ("MPI_Comm_group", "PEInterface<PM_MPI>::createGroup()", MPI_Comm_group(GetCommunicator(nsp), &allGroup)); 
     
     int rank = 0;
     MPIError::getInstance().check
-      ("MPI_Comm_rank", "PEInterface<PM_MPI>::createGroup()", MPI_Comm_rank(MPI_COMM_WORLD, &rank)); 
+      ("MPI_Comm_rank", "PEInterface<PM_MPI>::createGroup()", MPI_Comm_rank(GetCommunicator(nsp), &rank)); 
     
     MPIError::getInstance().check
       ("MPI_Group_incl", "PEInterface<PM_MPI>::createGroup()", MPI_Group_incl(allGroup, nranks, &g->globalRanks[0], &g->group));
     
     MPIError::getInstance().check
-      ("MPI_Comm_create", "PEInterface<PM_MPI>::createGroup()", MPI_Comm_create(MPI_COMM_WORLD, g->group, &g->comm));
+      ("MPI_Comm_create", "PEInterface<PM_MPI>::createGroup()", MPI_Comm_create(GetCommunicator(nsp), g->group, &g->comm));
     
     // assign the group ranks corresponding to the given global ranks 
     MPIError::getInstance().check

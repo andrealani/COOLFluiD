@@ -126,14 +126,17 @@ class Common_API PEInterface<PM_MPI> : public PEInterfaceBase,
   Group& getGroup(const std::string name) {return *m_groups.find(name)->second;}
   
   /// create MPI group 
+  /// @param nsp            name of the corresponding namespace
+  /// @param name           name of the group to create
   /// @param ranks          list of the ranks belonging to this group
   /// @param mapRank2Group  flag telling whether to build a reverse 
   ///                       rank-group mapping (each rank MUST be 
   ///                       associated to a unique group)
-  void createGroup(const std::string name,
+  void createGroup(const std::string nsp,
+		   const std::string name,
 		   const std::vector<int>& ranks, 
 		   const bool mapRank2Group); 
- 
+  
  private: // functions
   
   void CallInitFunctions ();

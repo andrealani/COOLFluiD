@@ -4,24 +4,23 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#include "Common/PE.hh"
-
+#include "Common/PEFunctions.hh"
 #include "Common/FilesystemException.hh"
-#include "Environment/FileHandlerInput.hh"
 
 #include "Config/ConfigFileReader.hh"
 #include "Config/ConfigFacility.hh"
 
+#include "Environment/FileHandlerInput.hh"
 #include "Environment/SingleBehaviorFactory.hh"
 #include "Environment/DirPaths.hh"
 
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/InteractiveParamReader.hh"
+#include "Framework/MeshData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
-using namespace COOLFluiD::Common;
 using namespace COOLFluiD::Common;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -73,34 +72,18 @@ void InteractiveParamReader::readFile()
 
   // skip if no file is set
   if ( m_filename.empty() ) return;
-
-  CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
-
+  
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+  
   if ( !(iter % m_read_rate) )
   {
     // to read in parallel: all the processes must stop and read from the master process's file
     // if this is a parallel simulation, only ONE process at a time reads the file
-    if (PE::GetPE().IsParallel())
-    {
-
-      PE::GetPE().setBarrier("Default");
-
-      for (CFuint i = 0; i < PE::GetPE().GetProcessorCount("Default"); ++i)
-      {
-	if (i == PE::GetPE().GetRank ("Default"))
-        {
-	    readFileSequentially();
-	  }
-      	PE::GetPE().setBarrier("Default");
-      }
-    }
-    else
-    {
-      readFileSequentially();
-    }
+    const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+    runSerial<void, InteractiveParamReader, &InteractiveParamReader::readFileSequentially>(this, nsp);
   }
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void InteractiveParamReader::readFileSequentially()

@@ -9,6 +9,7 @@
 
 #include "Common/EventHandler.hh"
 #include "Common/FilesystemException.hh"
+#include "Common/StringOps.hh"
 
 #include "Config/ConfigOptionException.hh"
 
@@ -19,6 +20,7 @@
 
 #include "Framework/Simulator.hh"
 #include "Framework/SubSystem.hh"
+#include "Framework/SubSystemStatus.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -81,10 +83,13 @@ void SimulatorPaths::configure ( Config::ConfigArgs& args )
 
 void Simulator::defineConfigOptions(Config::OptionList& options)
 {
-   options.addConfigOption< std::vector<std::string> >("SubSystems","The SubSystems present in this simulation.");
-   options.addConfigOption< std::vector<std::string> >("SubSystemTypes","The type of the SubSystems present in this simulation.");
+  options.addConfigOption< std::vector<std::string> >("SubSystems","The SubSystems present in this simulation.");
+  options.addConfigOption< std::vector<std::string> >("SubSystemTypes","The type of the SubSystems present in this simulation."); 
+  options.addConfigOption< std::vector<std::string> >
+    ("SubSystemRanks",
+     "MPI ranks (starting from 0) given in arrays whose entries have the form START0:END0;START1:END1;... for each subsystem.");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 Simulator::Simulator(const std::string& name) :
@@ -93,7 +98,8 @@ Simulator::Simulator(const std::string& name) :
   m_subSystemNames(),
   m_subSystemTypes(),
   m_subSys(),
-  m_sim_args()
+  m_sim_args(),
+  m_mapSS2Ranks()
 {
   CFAUTOTRACE;
 
@@ -102,10 +108,13 @@ Simulator::Simulator(const std::string& name) :
 
   m_subSystemNames.push_back("SubSystem");
   setParameter("SubSystems",&m_subSystemNames);
-
+  
   m_subSystemTypes.push_back("StandardSubSystem");
   setParameter("SubSystemTypes",&m_subSystemTypes);
-
+  
+  m_ranksString = vector<string>();
+  setParameter("SubSystemRanks",&m_ranksString);
+  
   m_paths.reset( new SimulatorPaths("Paths") );
 }
 
@@ -171,24 +180,35 @@ void Simulator::configure ( Config::ConfigArgs& args )
 
   CFLog(NOTICE,"Configuration of Simulator\n");
   ConfigObject::configure(args);
-
+  
   CFLog(NOTICE,"-------------------------------------------------------------\n");
 
   configureNested ( m_paths.getPtr(), args );
-
+  
   CFLog(NOTICE,"-------------------------------------------------------------\n");
-
+  
   // configure ModuleLoader must be after dir config
   // and before all other configs
   CFLog(NOTICE,"-------------------------------------------------------------\n");
-
+  
   CFLog(NOTICE,"Loading external modules\n");
   configureNested ( m_moduleLoader, args );
   m_moduleLoader.loadExternalModules();
   CFLog(NOTICE,"Initiating environment of loaded modules\n");
   Environment::CFEnv::getInstance().initiateModules();
-
+  
   CFLog(NOTICE,"-------------------------------------------------------------\n");
+  
+  if (m_ranksString.empty()) {
+    const CFuint nbRanks = PE::GetPE().GetProcessorCount("Default");
+    const string startEnd = "0:" + StringOps::to_str(nbRanks-1);
+    m_ranksString.resize(m_subSystemNames.size(), startEnd);
+  }
+  
+  cf_assert(m_subSystemNames.size() == m_ranksString.size());
+  for (CFuint i = 0; i < m_subSystemNames.size(); ++i) {
+    m_mapSS2Ranks[m_subSystemNames[i]] = m_ranksString[i];
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -217,7 +237,7 @@ Common::Signal::return_t Simulator::buildSubSystem(Common::Signal::arg_t eBuild)
 
   Common::SafePtr<SubSystem::PROVIDER> prov = Environment::Factory<SubSystem>::getInstance().getProvider(subSystemType);
   cf_assert(prov.isNotNull());
-
+  
   m_subSys.reset(prov->create(subSystemName));
   return Common::Signal::return_t ();
 }
@@ -245,25 +265,25 @@ Common::Signal::return_t Simulator::configSubSystem(Common::Signal::arg_t eConfi
   CFAUTOTRACE;
 
   cf_assert(m_subSys.isNotNull());
-
+  
   Config::ConfigArgs local_args = m_sim_args;
-
+  
   configureNested ( m_subSys.getPtr(), local_args );
-
+  
   if ( local_args.size() > 0 ) // some configurations where not used
   {
     std::string msg ( "Unused User Configuration Arguments:\n" );
     msg += local_args.str();
     CFLog ( WARN , "WARNING : " << msg << "\n" );
-
+    
     if ( CFEnv::getInstance().getVars()->ErrorOnUnusedConfig ) {
       throw Config::ConfigOptionException ( FromHere(), msg );
     }
   }
-
+  
   return Common::Signal::return_t ();
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 std::vector< std::string > Simulator::getSubSystemNames() const
@@ -278,6 +298,25 @@ std::vector< std::string > Simulator::getSubSystemTypes() const
   return m_subSystemTypes;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+bool Simulator::isSubSystemRank(const CFuint rank, const string& subSystemName) const
+{
+  const string rankString = m_mapSS2Ranks.find(subSystemName)->second;
+  // format is START0:END0;START1:END1;... etc. for each subsystem
+  vector<string> ranksGroups = StringOps::getWords(rankString, ';');
+  for (CFuint g = 0; g < ranksGroups.size(); ++g) {
+    vector<string> rankList = StringOps::getWords(ranksGroups[g], ':');
+    cf_assert(rankList.size() == 2);
+    const CFuint start = StringOps::from_str<CFuint>(rankList[0]);
+    const CFuint end   = StringOps::from_str<CFuint>(rankList[1]);
+    CFLog(DEBUG_MIN, "Simulator::isSubSystemRank() => ranksGroups[" << g << "] = " 
+	  << ranksGroups[g] << ", start:end = " << start << ":" << end << "\n");
+    if (rank >= start && rank <= end) return true;
+  }
+  return false;
+}
+    
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace Framework

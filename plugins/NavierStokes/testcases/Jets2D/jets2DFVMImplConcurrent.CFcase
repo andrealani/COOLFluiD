@@ -45,6 +45,7 @@ LoopMaestro.GlobalMaxNumberSteps.nbSteps = 1
 
 Simulator.SubSystems = SubSysA SubSysB
 Simulator.SubSystemTypes = StandardSubSystem StandardSubSystem
+Simulator.SubSystemRanks = 0:3 4:7
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets2D/
@@ -52,9 +53,12 @@ Simulator.Paths.ResultsDir = plugins/NavierStokes/testcases/Jets2D/
 
 ### SubSystem A
 Simulator.SubSysA.Namespaces = Name1
-Simulator.SubSysA.Ranks = 0:1
+Simulator.SubSysA.Ranks = 0:3
 Simulator.SubSysA.Name1.MeshData = FlowMeshData1
 Simulator.SubSysA.Name1.SubSystemStatus = FlowSubSystemStatus1
+Simulator.SubSysA.FlowMeshData1.listTRS = SuperInlet SuperOutlet
+Simulator.SubSysA.FlowMeshData1.Namespaces = Name1
+
 Simulator.SubSysA.Name1.PhysicalModelType = Euler2D
 Simulator.SubSysA.Euler2D.refValues = 1. 2.83972 2.83972 6.532
 Simulator.SubSysA.Euler2D.refLength = 1.0
@@ -72,7 +76,7 @@ Simulator.SubSysA.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
 Simulator.SubSysA.Tecplot.WriteSol = ParWriteSolutionBlock
 Simulator.SubSysA.Tecplot.Namespace = Name1
 
-Simulator.SubSysA.CFmesh.FileName = jets2DFVM_EXTRA.CFmesh
+Simulator.SubSysA.CFmesh.FileName = jets2DFVM_EXTRA_out.CFmesh
 Simulator.SubSysA.CFmesh.SaveRate = 400
 Simulator.SubSysA.CFmesh.AppendTime = false
 Simulator.SubSysA.CFmesh.AppendIter = false
@@ -87,9 +91,6 @@ Simulator.SubSysA.MaxNumberSteps.nbSteps = 4
 
 #Simulator.SubSysA.StopCondition       = Norm
 #Simulator.SubSysA.Norm.valueNorm      = -4.0
-
-Simulator.SubSysA.FlowMeshData1.listTRS = SuperInlet SuperOutlet
-Simulator.SubSysA.FlowMeshData1.Namespaces = Name1
 
 Simulator.SubSysA.MeshCreator = CFmeshFileReader
 Simulator.SubSysA.CFmeshFileReader.Namespace = Name1
@@ -159,27 +160,26 @@ Simulator.SubSysA.CellCenterFVM.Jet2.applyTRS = SuperOutlet
 
 ### SubSystem B
 Simulator.SubSysB.Namespaces = Name2
-Simulator.SubSysB.Ranks = 2:3
-
+Simulator.SubSysB.Ranks = 4:7
 Simulator.SubSysB.Name2.MeshData = FlowMeshData2
 Simulator.SubSysB.Name2.SubSystemStatus = FlowSubSystemStatus2
 Simulator.SubSysB.FlowMeshData2.listTRS = SuperInlet SuperOutlet
 Simulator.SubSysB.FlowMeshData2.Namespaces = Name2
 
-Simulator.SubSysB.Name2.PhysicalModelType       = Euler2D
+Simulator.SubSysB.Name2.PhysicalModelType = Euler2D
 Simulator.SubSysB.Euler2D.refValues = 1. 2.83972 2.83972 6.532
 Simulator.SubSysB.Euler2D.refLength = 1.0
 
 Simulator.SubSysB.OutputFormat        = Tecplot CFmesh
 
-Simulator.SubSysB.Tecplot.FileName    = jets2DFVM.plt
+Simulator.SubSysB.Tecplot.FileName    = jets2DFVM_out_2.plt
 Simulator.SubSysB.Tecplot.Data.outputVar = Cons
 Simulator.SubSysB.Tecplot.SaveRate = 400
 Simulator.SubSysB.Tecplot.AppendTime = false
 Simulator.SubSysB.Tecplot.AppendIter = false
 Simulator.SubSysB.Tecplot.Namespace = Name2
 
-Simulator.SubSysB.CFmesh.FileName     = jets2DFVM.CFmesh
+Simulator.SubSysB.CFmesh.FileName     = jets2DFVM_out_2.CFmesh
 Simulator.SubSysB.CFmesh.SaveRate = 400
 Simulator.SubSysB.CFmesh.AppendTime = false
 Simulator.SubSysB.CFmesh.AppendIter = false
@@ -195,7 +195,7 @@ Simulator.SubSysB.MaxNumberSteps.nbSteps = 5
 #Simulator.SubSysB.Norm.valueNorm      = -4.0
 
 Simulator.SubSysB.MeshCreator = CFmeshFileReader
-Simulator.SubSysB.CFmeshFileReader.Data.FileName = jets2DFVM_EXTRA.CFmesh
+Simulator.SubSysB.CFmeshFileReader.Data.FileName = jets2DFVM_EXTRA_in.CFmesh
 Simulator.SubSysB.CFmeshFileReader.Data.ExtraStateVarNames = InitLimiter
 Simulator.SubSysB.CFmeshFileReader.Data.ExtraStateVarTags = limiter
 Simulator.SubSysB.CFmeshFileReader.Data.ExtraStateVarStrides = 4
