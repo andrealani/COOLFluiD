@@ -109,12 +109,7 @@ public:
   /// @param name std::string identifier for the storage
   /// @return true if exists
   bool checkData(const std::string& name);
-
-  /// Checks if a storage exists.
-  /// @param name std::string identifier for the storage
-  /// @return true if exists
-  bool checkGlobalData (const std::string& name);
-
+  
   /// Dumps the contents of the DataStorage to a string
   std::string dump () const;
 

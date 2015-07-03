@@ -114,20 +114,31 @@ class Common_API PEInterface<PM_MPI> : public PEInterfaceBase,
     CFLog(DEBUG_MIN, "PEInterface<PM_MPI>::GetCommunicator()\n");
     // if there are no groups, only the default exists 
     if (m_groups.size() == 0 || nspaceName == "Default" || m_groups.count(nspaceName) == 0) {
-	return MPI_COMM_WORLD;
+      return MPI_COMM_WORLD;
     }
     return m_groups.find(nspaceName)->second->comm;
   }
   
   /// @return group corresponding to given global rank
-  std::string getGroupName(int rank) {return m_rank2Group.find(rank)->second;}
+  std::string getGroupName(int rank) 
+  {
+    if (m_rank2Group.count(rank) == 0) {
+      CFLog(ERROR, "PEInterfaceMPI::getGroupName() for rank " << rank << "not found!\n");
+      abort();
+    }
+    return m_rank2Group.find(rank)->second;
+  }
   
   /// @return the group data corresponding to given name
-  Group& getGroup(const std::string name) {return *m_groups.find(name)->second;}
+  Group& getGroup(const std::string name) 
+  {
+    cf_assert(m_groups.count(name) > 0); 
+    return *m_groups.find(name)->second;
+  }
   
   /// create MPI group 
-  /// @param nsp            name of the corresponding namespace
-  /// @param name           name of the group to create
+  /// @param nsp            namespace name
+  /// @param name           group name (may be different from namespace)
   /// @param ranks          list of the ranks belonging to this group
   /// @param mapRank2Group  flag telling whether to build a reverse 
   ///                       rank-group mapping (each rank MUST be 
@@ -136,6 +147,16 @@ class Common_API PEInterface<PM_MPI> : public PEInterfaceBase,
 		   const std::string name,
 		   const std::vector<int>& ranks, 
 		   const bool mapRank2Group); 
+  
+  /// check if a given rank belongs to the specified group
+  /// @param rank       rank to be checked for
+  /// @param groupName  name of the group  which may (or not) contain the rank
+  bool isRankInGroup(const int rank, const std::string groupName) 
+  {
+    if (groupName == "Default" || m_groups.count(groupName) == 0) return true;
+    const Group& g = getGroup(groupName);
+    return std::binary_search(g.globalRanks.begin(), g.globalRanks.end(), rank);
+  }
   
  private: // functions
   

@@ -67,8 +67,8 @@ WriteSolution::WriteSolution(const std::string& name) : ParaWriterCom(name),
 
 void WriteSolution::execute()
 {
-  CFout << "Writing solution to: " << getMethodData().getFilename().string() << "\n";
-
+  CFLog(INFO, "Writing solution to: " << getMethodData().getFilename().string() << "\n");
+  
   if(m_fileFormatStr == "ASCII")
   {
     writeToFile(getMethodData().getFilename());

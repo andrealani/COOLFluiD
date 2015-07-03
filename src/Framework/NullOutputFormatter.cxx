@@ -89,13 +89,6 @@ std::string NullOutputFormatter::getFormatExtension() const
 
 //////////////////////////////////////////////////////////////////////////////
 
-void NullOutputFormatter::bindDataImpl()
-{
-  CFLog(VERBOSE,"NullOutputFormatter::bindDataImpl() called!" << "\n");
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
   } // namespace Framework
 
 } // namespace COOLFluiD

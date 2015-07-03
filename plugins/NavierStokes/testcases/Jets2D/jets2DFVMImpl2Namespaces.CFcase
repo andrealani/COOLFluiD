@@ -1,0 +1,262 @@
+################################################################################
+## 
+## This COOLFluiD CFcase file tests: 
+## 
+## Finite Volume, Euler2D, Backward Euler, CFL given by user-defined function,
+## mesh with only tetras, restart from CFmesh file, second-order 
+## reconstruction with Venkatakrishnan limiter, supersonic inlet and outlet BC, 
+## two namespaces solving the same PDE system concurrently on two MPI groups.
+##
+#################################################################################
+##
+## Comments begin with "#"
+## Meta Comments begin with triple "#"
+##
+### Residual = -0.474377
+
+CFEnv.OnlyCPU0Writes = false
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libBackwardEuler libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets2D/
+Simulator.Paths.ResultsDir = ./
+
+#
+#Define the 2 meshdata's
+#
+Simulator.SubSystem.Namespaces = FlowNamespace EMNamespace
+Simulator.SubSystem.Ranks = 0:3 4:7
+#
+#Define the meshdata for the flow solver
+#
+Simulator.SubSystem.FlowNamespace.MeshData = FlowMeshData
+Simulator.SubSystem.FlowNamespace.SubSystemStatus = FlowSubSystemStatus
+Simulator.SubSystem.FlowNamespace.PhysicalModelType = Euler2D
+Simulator.SubSystem.FlowNamespace.PhysicalModelName = FlowPM
+Simulator.SubSystem.FlowPM.refValues = 1. 2.83972 2.83972 6.532
+Simulator.SubSystem.FlowPM.refLength = 1.0
+
+#
+#Define the meshdata for the EM field
+#
+Simulator.SubSystem.EMNamespace.MeshData = EMMeshData
+Simulator.SubSystem.EMNamespace.SubSystemStatus = EMSubSystemStatus
+Simulator.SubSystem.EMNamespace.PhysicalModelType = Euler2D
+Simulator.SubSystem.EMNamespace.PhysicalModelName = EMPM
+Simulator.SubSystem.EMPM.refValues = 1. 2.83972 2.83972 6.532
+Simulator.SubSystem.EMPM.refLength = 1.0
+
+#
+#Define the meshdata details for the flow
+#
+Simulator.SubSystem.FlowMeshData.listTRS = SuperInlet SuperOutlet
+Simulator.SubSystem.FlowMeshData.Namespaces = FlowNamespace
+
+#
+#Define the meshdata details for the mesh movement
+#
+Simulator.SubSystem.EMMeshData.listTRS = SuperInlet SuperOutlet
+Simulator.SubSystem.EMMeshData.Namespaces = EMNamespace
+
+#
+#Define the output formatters
+#
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh Tecplot CFmesh
+Simulator.SubSystem.OutputFormatNames   = Tecplot1 CFmesh1 Tecplot2 CFmesh2
+
+Simulator.SubSystem.CFmesh1.Namespace = FlowNamespace
+Simulator.SubSystem.CFmesh1.FileName = flow.CFmesh
+Simulator.SubSystem.CFmesh1.Data.CollaboratorNames = Flow
+Simulator.SubSystem.CFmesh1.SaveRate = 10
+Simulator.SubSystem.CFmesh1.AppendIter = false
+
+Simulator.SubSystem.Tecplot1.Namespace = FlowNamespace
+Simulator.SubSystem.Tecplot1.FileName = flow.plt
+Simulator.SubSystem.Tecplot1.Data.CollaboratorNames = Flow
+Simulator.SubSystem.Tecplot1.SaveRate = 10
+Simulator.SubSystem.Tecplot1.AppendIter = false
+
+Simulator.SubSystem.CFmesh2.Namespace = EMNamespace
+Simulator.SubSystem.CFmesh2.FileName = EM.CFmesh
+Simulator.SubSystem.CFmesh2.Data.CollaboratorNames = EM
+Simulator.SubSystem.CFmesh2.SaveRate = 10
+Simulator.SubSystem.CFmesh2.AppendIter = false
+
+Simulator.SubSystem.Tecplot2.Namespace = EMNamespace
+Simulator.SubSystem.Tecplot2.FileName = EM.plt
+Simulator.SubSystem.Tecplot2.Data.CollaboratorNames = EM
+Simulator.SubSystem.Tecplot2.SaveRate = 10
+Simulator.SubSystem.Tecplot2.AppendIter = false
+
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 5
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 200.
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+#
+#Define the mesh creators
+#
+Simulator.SubSystem.MeshCreator = CFmeshFileReader CFmeshFileReader
+Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader1 CFmeshFileReader2
+
+Simulator.SubSystem.CFmeshFileReader1.Namespace = FlowNamespace
+Simulator.SubSystem.CFmeshFileReader1.Data.FileName = jets1.CFmesh
+Simulator.SubSystem.CFmeshFileReader1.Data.CollaboratorNames = Flow
+
+Simulator.SubSystem.CFmeshFileReader2.Namespace = EMNamespace
+Simulator.SubSystem.CFmeshFileReader2.Data.FileName = jets2.CFmesh
+Simulator.SubSystem.CFmeshFileReader2.Data.CollaboratorNames = EM
+
+#
+#Define the convergence methods
+#
+
+Simulator.SubSystem.ConvergenceMethod = BwdEuler BwdEuler
+Simulator.SubSystem.ConvergenceMethodNames = FlowIterator EMIterator
+
+Simulator.SubSystem.FlowIterator.Namespace = FlowNamespace
+Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.FlowIterator.Data.CFL.Function.Def = min(100000000.,30.0*10^(i-1))
+Simulator.SubSystem.FlowIterator.Data.Norm = L2
+Simulator.SubSystem.FlowIterator.Data.L2.MonitoredVarID = 0
+Simulator.SubSystem.FlowIterator.Data.L2.ComputedVarID = 0 2 3
+Simulator.SubSystem.FlowIterator.Data.CollaboratorNames = Flow FlowLSS
+
+Simulator.SubSystem.EMIterator.Namespace = EMNamespace
+Simulator.SubSystem.EMIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.EMIterator.Data.CFL.Function.Def = min(100000000.,30.0*10^(i-1))
+Simulator.SubSystem.EMIterator.Data.Norm = L2
+Simulator.SubSystem.EMIterator.Data.L2.MonitoredVarID = 0
+Simulator.SubSystem.EMIterator.Data.L2.ComputedVarID = 0 2 3
+#Simulator.SubSystem.EMIterator.InitCom = ResetSystem
+#Simulator.SubSystem.EMIterator.Data.PrintHistory = false
+Simulator.SubSystem.EMIterator.Data.CollaboratorNames = EM EMLSS
+
+#
+#Define the LinearSystemSolver
+#
+Simulator.SubSystem.LinearSystemSolver = PETSC PETSC
+Simulator.SubSystem.LSSNames = FlowLSS EMLSS
+
+Simulator.SubSystem.FlowLSS.Data.CollaboratorNames = Flow
+Simulator.SubSystem.FlowLSS.Namespace = FlowNamespace
+Simulator.SubSystem.FlowLSS.Data.PCType = PCASM
+Simulator.SubSystem.FlowLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.FlowLSS.Data.Output = false
+Simulator.SubSystem.FlowLSS.Data.MaxIter = 500
+
+Simulator.SubSystem.EMLSS.Data.CollaboratorNames = EM
+Simulator.SubSystem.EMLSS.Namespace = EMNamespace
+Simulator.SubSystem.EMLSS.Data.PCType = PCASM
+Simulator.SubSystem.EMLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.EMLSS.Data.Output = false
+Simulator.SubSystem.EMLSS.Data.MaxIter = 500
+# Simulator.SubSystem.EMLSS.Data.RelativeTolerance = 1e-10
+
+#
+#Define the Space Method
+#
+Simulator.SubSystem.SpaceMethod = CellCenterFVM CellCenterFVM
+Simulator.SubSystem.SpaceMethodNames = Flow EM
+
+#
+# Space Method for solving the flow + BCs
+#
+Simulator.SubSystem.Flow.Namespace = FlowNamespace
+Simulator.SubSystem.Flow.Data.CollaboratorNames = FlowLSS FlowIterator
+
+Simulator.SubSystem.Flow.Restart = false
+Simulator.SubSystem.Flow.ComputeRHS = NumJacob
+Simulator.SubSystem.Flow.ComputeTimeRHS = StdTimeRhs
+
+Simulator.SubSystem.Flow.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.Flow.SetupNames = Setup1
+Simulator.SubSystem.Flow.Setup1.stencil = FaceVertex
+Simulator.SubSystem.Flow.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.Flow.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.Flow.Data.FluxSplitter = Roe
+Simulator.SubSystem.Flow.Data.UpdateVar  = Cons
+Simulator.SubSystem.Flow.Data.SolutionVar = Cons
+Simulator.SubSystem.Flow.Data.LinearVar   = Roe
+
+Simulator.SubSystem.Flow.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.Flow.Data.LinearLS2D.limitRes = -1.7
+Simulator.SubSystem.Flow.Data.Limiter = Venktn2D
+#Simulator.SubSystem.Flow.Data.Limiter = BarthJesp2D
+Simulator.SubSystem.Flow.Data.Venktn2D.coeffEps = 1.0
+
+Simulator.SubSystem.Flow.InitComds = InitState
+Simulator.SubSystem.Flow.InitNames = InField
+
+Simulator.SubSystem.Flow.InField.applyTRS = InnerFaces
+Simulator.SubSystem.Flow.InField.Vars = x y
+Simulator.SubSystem.Flow.InField.Def = if(y>0.5,0.5,1.) \
+                                         if(y>0.5,1.67332,2.83972) \
+                                         0.0 \
+                                         if(y>0.5,3.425,6.532)
+
+Simulator.SubSystem.Flow.BcComds = SuperInletFVMCC SuperOutletFVMCC
+Simulator.SubSystem.Flow.BcNames = Jet1        Jet2
+
+Simulator.SubSystem.Flow.Jet1.applyTRS = SuperInlet
+Simulator.SubSystem.Flow.Jet1.Vars = x y
+Simulator.SubSystem.Flow.Jet1.Def =  if(y>0.5,0.5,1.) \
+                                        if(y>0.5,1.67332,2.83972) \
+                                        0.0 \
+                                        if(y>0.5,3.425,6.532)
+
+Simulator.SubSystem.Flow.Jet2.applyTRS = SuperOutlet
+
+#
+# Space Method for solving EM + BCs
+#
+Simulator.SubSystem.EM.Namespace = EMNamespace
+Simulator.SubSystem.EM.Data.CollaboratorNames = EMLSS EMIterator
+
+Simulator.SubSystem.EM.Restart = false
+Simulator.SubSystem.EM.ComputeRHS = NumJacob
+Simulator.SubSystem.EM.ComputeTimeRHS = StdTimeRhs
+
+Simulator.SubSystem.EM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.EM.SetupNames = Setup1
+Simulator.SubSystem.EM.Setup1.stencil = FaceVertex
+Simulator.SubSystem.EM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.EM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.EM.Data.FluxSplitter = Roe
+Simulator.SubSystem.EM.Data.UpdateVar  = Cons
+Simulator.SubSystem.EM.Data.SolutionVar = Cons
+Simulator.SubSystem.EM.Data.LinearVar   = Roe
+
+Simulator.SubSystem.EM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.EM.Data.LinearLS2D.limitRes = -1.7
+Simulator.SubSystem.EM.Data.Limiter = Venktn2D
+#Simulator.SubSystem.EM.Data.Limiter = BarthJesp2D
+Simulator.SubSystem.EM.Data.Venktn2D.coeffEps = 1.0
+
+Simulator.SubSystem.EM.InitComds = InitState
+Simulator.SubSystem.EM.InitNames = InField
+
+Simulator.SubSystem.EM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.EM.InField.Vars = x y
+Simulator.SubSystem.EM.InField.Def = if(y>0.5,0.5,1.) \
+                                         if(y>0.5,1.67332,2.83972) \
+                                         0.0 \
+                                         if(y>0.5,3.425,6.532)
+
+Simulator.SubSystem.EM.BcComds = SuperInletFVMCC SuperOutletFVMCC
+Simulator.SubSystem.EM.BcNames = Jet1        Jet2
+
+Simulator.SubSystem.EM.Jet1.applyTRS = SuperInlet
+Simulator.SubSystem.EM.Jet1.Vars = x y
+Simulator.SubSystem.EM.Jet1.Def =  if(y>0.5,0.5,1.) \
+                                        if(y>0.5,1.67332,2.83972) \
+                                        0.0 \
+                                        if(y>0.5,3.425,6.532)
+
+Simulator.SubSystem.EM.Jet2.applyTRS = SuperOutlet

@@ -11,7 +11,6 @@
 #include "Framework/MeshData.hh"
 #include "Framework/MultiMethodHandle.hh"
 #include "Framework/MeshCreator.hh"
-#include "Framework/OutputFormatter.hh"
 #include "Common/ProcessInfo.hh"
 #include "Common/OSystem.hh"
 #include "Common/PE.hh"
@@ -86,13 +85,6 @@ void StdMeshReader::buildMeshData()
   meshCreator[0]->buildMeshData();
   
   CFLog(NOTICE,"Memory Usage after building mesh: " << Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n");
-
-  /// @todo Creating a MeshDataAdapter for the MeshWriter should be temporary
-  ///       get ride of the Adapter, make it work directly with MeshData
-  MultiMethodHandle<OutputFormatter> outputFormat = getMethodData().getOutputFormatter();
-  cf_assert(outputFormat.size() == 1);
-
-  outputFormat[0]->bindData();
 
   vector <Common::SafePtr<MeshData> > meshDataVector = MeshDataStack::getInstance().getAllEntries();
 

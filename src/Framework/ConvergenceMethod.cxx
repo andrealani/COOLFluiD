@@ -28,7 +28,6 @@
 using namespace std;
 using namespace boost::filesystem;
 using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Common;
 using namespace COOLFluiD::Environment;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -117,6 +116,13 @@ ConvergenceMethod::~ConvergenceMethod()
 
 //////////////////////////////////////////////////////////////////////////////
 
+std::string ConvergenceMethod::getFileName(const std::string name) const
+{
+  return name + "." + getMethodData()->getNamespace();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void ConvergenceMethod::configure ( Config::ConfigArgs& args )
 {
   CFAUTOTRACE;
@@ -166,11 +172,17 @@ void ConvergenceMethod::setMethodImpl()
 {
   CFAUTOTRACE;
 
-  if ( hasToUpdateConv() ) prepareConvergenceFile();
+  CFLog(VERBOSE, "ConvergenceMethod::setMethodImpl() => start\n");
+
+  if ( hasToUpdateConv() ) {
+    prepareConvergenceFile();
+  }
 
   m_stopwatch.reset();
 
   SubSystemStatusStack::getActive()->adimensionalizeTimeData();
+
+  CFLog(VERBOSE, "ConvergenceMethod::setMethodImpl() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -184,10 +196,10 @@ void ConvergenceMethod::unsetMethodImpl()
 
 void ConvergenceMethod::prepareConvergenceFile()
 {
-  path fpath = m_nameConvergenceFile;
+  path fpath = getFileName(m_nameConvergenceFile);
   fpath = Environment::DirPaths::getInstance().getResultsDir() /
-          Framework::PathAppender::getInstance().appendParallel( fpath );
-
+    Framework::PathAppender::getInstance().appendParallel( fpath );
+  
   SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
   ofstream& convergenceFile = fhandle->open(fpath);
 
@@ -205,7 +217,7 @@ void ConvergenceMethod::prepareConvergenceFile()
   fhandle->close();
   
   if (m_outputSpaceResidual) {
-    path fpath = m_nameSpaceResidualFile;
+    path fpath = getFileName(m_nameSpaceResidualFile);
     fpath = Environment::DirPaths::getInstance().getResultsDir() /
             Framework::PathAppender::getInstance().appendParallel( fpath );
 
@@ -214,7 +226,7 @@ void ConvergenceMethod::prepareConvergenceFile()
 
     spaceResidualFile << "TITLE  =  Space Residual of SubSystem" << "\n";
     spaceResidualFile << "VARIABLES = Iter";
-
+    
     SafePtr<Framework::ComputeNorm> norm_computer = getConvergenceMethodData()->getNormComputer();
     for(CFuint iVar = 0; iVar < norm_computer->getComputedNormVarIDs().size(); iVar++)
     {
@@ -239,7 +251,7 @@ void ConvergenceMethod::updateConvergenceFile()
 
   if(!(subSysStatus->getNbIter() % m_convRate))
   {
-    path fpath = m_nameConvergenceFile;
+    path fpath = getFileName(m_nameConvergenceFile);
     fpath = Environment::DirPaths::getInstance().getResultsDir() /
             Framework::PathAppender::getInstance().appendParallel( fpath );
 
@@ -260,7 +272,7 @@ void ConvergenceMethod::updateConvergenceFile()
   if (outputSpaceResidual()) {
     if(!(subSysStatus->getNbIter() % m_convRate))
     {
-      path fpath = m_nameSpaceResidualFile;
+      path fpath = getFileName(m_nameSpaceResidualFile);
       fpath = Environment::DirPaths::getInstance().getResultsDir() /
               Framework::PathAppender::getInstance().appendParallel( fpath );
 

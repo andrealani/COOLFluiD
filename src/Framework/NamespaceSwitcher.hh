@@ -65,11 +65,14 @@ public:
   /// Gets the list of Namespace's in this SubSystem
   /// @return vector with pointers to all Namespace's
   std::vector<Common::SafePtr<Namespace> > getAllNamespaces();
-
+  
   /// Set the flag to say that the objects of
   /// the stack can be accessed
   void setEnabled(bool isEnabled);
-
+  
+  /// Get the name of the given object belonging to the namespace
+  std::string getName(std::const_mem_fun_t<std::string, Namespace> fun);
+  
 private:
 
   /// Default constructor without arguments

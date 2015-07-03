@@ -8,6 +8,7 @@
 #include "Framework/MeshData.hh"
 #include "Framework/PhysicalModel.hh"
 #include "Framework/SubSystemStatus.hh"
+#include "Common/PE.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -152,6 +153,25 @@ void NamespaceSwitcher::setEnabled(bool isEnabled)
 
 //////////////////////////////////////////////////////////////////////////////
 
+std::string NamespaceSwitcher::getName
+(std::const_mem_fun_t<std::string, Namespace> fun) 
+{
+  typedef std::vector<Common::SafePtr<Namespace> > NspVec;
+  NspVec lst = getAllNamespaces();
+  cf_assert(!lst.empty());
+  const int rank = Common::PE::GetPE().GetRank("Default");
+  for(NspVec::iterator nsp = lst.begin(); nsp != lst.end(); ++nsp) {
+    const std::string nspaceName = (*nsp)->getName();
+    if (Common::PE::GetPE().isRankInGroup(rank, nspaceName)) {
+      return fun(&*(*nsp)); // Namespace* from SafePtr<Namespace>
+    }
+  }
+  cf_assert(false);
+  return "";
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+ 
   } // namespace COOLFluiD
 
 } // namespace Framework

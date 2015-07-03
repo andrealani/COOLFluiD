@@ -23,7 +23,6 @@
 #include "Common/NullPointerException.hh"
 #include "Environment/DirPaths.hh"
 #include "Environment/ObjectProvider.hh"
-#include "Framework/MeshDataAdapter.hh"
 #include "Framework/MeshCreator.hh"
 #include "Common/Stopwatch.hh"
 

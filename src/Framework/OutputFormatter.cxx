@@ -11,6 +11,7 @@
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/SimulationStatus.hh"
 #include "Framework/PathAppender.hh"
+#include "Framework/NamespaceSwitcher.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -142,21 +143,6 @@ void OutputFormatter::computeFullOutputName()
     
 //////////////////////////////////////////////////////////////////////////////
 
-void OutputFormatter::bindData()
-{
-  CFAUTOTRACE;
-
-  cf_assert(isConfigured());
-
-  pushNamespace();
-
-  bindDataImpl();
-
-  popNamespace();
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 void OutputFormatter::open()
 {
   CFAUTOTRACE;
@@ -213,8 +199,13 @@ bool OutputFormatter::isSaveNow( const bool force_write )
   // no save rate means never save must return before divide by zero
   if (m_saveRate == 0) return false;
   
+  NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
+  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName));
+  SafePtr<SubSystemStatus> currSSS = SubSystemStatusStack::getInstance().getEntry(sssName);
+  cf_assert(currSSS.isNotNull());
+  
   // if divide by save rate is integer then it is time to save
-  if (!(SubSystemStatusStack::getActive()->getNbIter() % m_saveRate)) {
+  if (!(currSSS->getNbIter() % m_saveRate)) {
     return true;
   }
   else {

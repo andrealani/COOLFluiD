@@ -35,7 +35,6 @@ namespace COOLFluiD {
     class State;
     class MapGeoToTrsAndIdx;
     class MeshDataStack;
-    class MeshDataAdapter;
     class DomainModel;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -283,15 +282,6 @@ public: // methods
     return m_trsList;
   }
 
-  /// Get the MeshDataAdapter
-  Common::SafePtr<MeshDataAdapter> getMeshDataAdapter();
-
-  /// Allocate the MeshDataAdapter
-  Common::SafePtr<MeshDataAdapter> allocateMeshDataAdapter();
-
-  /// Deallocate the MeshDataAdapter
-  void deallocateMeshDataAdapter();
-
   /// Default destructor
   ~MeshData();
 
@@ -370,9 +360,6 @@ private: // member data
   /// socket for Node's
   Framework::DataSocketSource<Framework::Node*, Framework::GLOBAL> socket_nodes;
 
-  /// For the meshwriter
-  std::auto_ptr<MeshDataAdapter> m_MDA;
-  
   /// list of the names of the TRS
   std::vector<std::string> m_trsList;
   
@@ -399,9 +386,9 @@ public:
 protected: // helper functions from NamespaceStack
 
   /// Gets the name of the MeshData from the Namespace
-  /// @param nsp the Namespace from where to get te object name
+  /// @param nsp the Namespace from where to get the object name
   std::string getObjectName(const Common::SafePtr<Namespace>& nsp) const;
-
+  
   /// Creates a MeshData with the supplied name
   /// @param name of the MeshData
   MeshData * createObject(const std::string& name);

@@ -186,7 +186,7 @@ protected: // functions
   CFuint m_initialIter;
 
   ///flag to force stopping the run()
-  bool m_forcedStop;
+  int m_forcedStop;
 
 }; // class StandardSubSystem
 

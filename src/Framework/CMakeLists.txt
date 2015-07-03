@@ -302,7 +302,6 @@ MeshCreator.cxx
 MeshCreatorData.cxx
 MeshCreatorData.hh
 MeshCreator.hh
-MeshDataAdapter.hh
 MeshDataBuilder.cxx
 MeshDataBuilder.hh
 MeshData.cxx

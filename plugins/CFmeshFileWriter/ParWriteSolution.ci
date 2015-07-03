@@ -129,7 +129,7 @@ void ParWriteSolution<WRITER>::execute()
   // Write the File
   _writer.writeToFile(getMethodData().getFilename());
   
-  CFout << "Writing solution to: " << getMethodData().getFilename().string() << "\n";
+  CFLog(INFO, "Writing solution to: " << getMethodData().getFilename().string() << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

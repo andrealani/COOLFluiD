@@ -59,8 +59,15 @@ public: // functions
   /// arguments) to all the methods in the list.
   void apply (std::mem_fun_t<void,TMETHOD> fun, CFint ns=-1)
   {
+    const int rank = Common::PE::GetPE().GetRank("Default");
     const CFint nsize =  (ns < 0) ? m_mList.size() : ns;
-    std::for_each (&m_mList[0], &m_mList[0]+nsize, fun);
+    for (CFuint i = 0; i < nsize; ++i) {
+      if (Common::PE::GetPE().isRankInGroup(rank, m_mList[i]->getNamespace())) {
+         CFLog(VERBOSE, "MultiMethodTuple::apply() => rank [" << rank << 
+                "], group ["<< m_mList[i]->getNamespace() << "], method [" << m_mList[i]->getName() << "]\n");
+        fun(m_mList[i]);
+      }
+    }
   }
   
   /// Apply given void action (pointer to member function with 1
@@ -68,18 +75,30 @@ public: // functions
   template <class ARG>
   void apply (std::mem_fun1_t<void, TMETHOD, ARG> fun, ARG arg, CFint ns=-1)
   {
+    const int rank = Common::PE::GetPE().GetRank("Default");
     const CFint nsize =  (ns < 0) ? m_mList.size() : ns;
-    std::for_each (&m_mList[0], &m_mList[0]+nsize,
-		   std::bind2nd<std::mem_fun1_t<void, TMETHOD, ARG> >
-		   (fun, arg));
+    for (CFuint i = 0; i < nsize; ++i) {
+      if (Common::PE::GetPE().isRankInGroup(rank, m_mList[i]->getNamespace())) {
+         CFLog(VERBOSE, "MultiMethodTuple::apply() => rank [" << rank << 
+                "], group ["<< m_mList[i]->getNamespace() << "], method [" << m_mList[i]->getName() << "]\n");
+        (std::bind2nd<std::mem_fun1_t<void, TMETHOD, ARG> >(fun, arg)) (m_mList[i]);
+      }
+    }  
   }
   
   /// Apply given void action (pointer to member function with 0
   /// arguments) to all the methods in the list.
   void apply (Method::root_mem_fun_t<void,TMETHOD> fun, CFint ns=-1)
   {
+    const int rank = Common::PE::GetPE().GetRank("Default");
     const CFint nsize =  (ns < 0) ? m_mList.size() : ns;
-    std::for_each (&m_mList[0], &m_mList[0]+nsize, fun);
+    for (CFuint i = 0; i < nsize; ++i) {
+      if (Common::PE::GetPE().isRankInGroup(rank, m_mList[i]->getNamespace())) {
+         CFLog(VERBOSE, "MultiMethodTuple::apply() => rank [" << rank << 
+                "], group ["<< m_mList[i]->getNamespace() << "], method [" << m_mList[i]->getName() << "]\n");
+        fun(m_mList[i]);
+      }
+    }
   }
   
   /// Overloading of the idx operator

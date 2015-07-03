@@ -60,7 +60,7 @@ WriteSolution1D::WriteSolution1D(const std::string& name) :
 
 void WriteSolution1D::execute()
 {
-  CFout << "Writing solution to: " << getMethodData().getFilename().string() << "\n";
+  CFLog(INFO, "Writing solution to: " << getMethodData().getFilename().string() << "\n");
   writeToFile(getMethodData().getFilename());
 }
 

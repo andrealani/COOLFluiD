@@ -44,14 +44,6 @@ public:
   /// Returns the extension of the files of this format
   std::string getFormatExtension() const;
 
-  /// Set the data to be written.
-  /// To make the writer free the internal data structure,
-  /// call this with a null pointer.
-  void bindDataImpl ()
-  {
-    // nothing to do here
-  }
-
 protected: // abstract interface implementations
 
   /// Gets the Data aggregator of this method

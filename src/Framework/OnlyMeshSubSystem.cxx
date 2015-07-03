@@ -269,16 +269,6 @@ void OnlyMeshSubSystem::buildMeshData()
     }
   }
 
-  /// @todo Creating a MeshDataAdapter for the MeshWriter should be temporary
-  ///       get ride of the Adapter, make it work directly with MeshData
-  for (CFuint i = 0; i < m_outputFormat.size(); ++i)
-  {
-    if(!m_outputFormat[i]->isNonRootMethod())
-      {
-	m_outputFormat[i]->bindData();
-      }
-  }
-    
   for(CFuint iMeshData = 0; iMeshData < meshDataVector.size(); iMeshData++)
   {
     bool isNonRoot = false;

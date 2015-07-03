@@ -103,10 +103,10 @@ void WriteSolutionDG::execute()
 
   // Write the File
   m_writer.writeToFile(getMethodData().getFilename());
-
-  CFout << "Writing solution to: " << getMethodData().getFilename().string() << "\n";
+  
+  CFLog(INFO, "Writing solution to: " << getMethodData().getFilename().string() << "\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 std::vector<Common::SafePtr<BaseDataSocketSink> >

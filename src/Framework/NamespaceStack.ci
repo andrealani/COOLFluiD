@@ -44,6 +44,14 @@ void NamespaceStack<TYPE>::deleteAllEntries()
 //////////////////////////////////////////////////////////////////////////////
 
 template < typename TYPE >
+void NamespaceStack<TYPE>::deleteEntry(const std::string name)
+{
+  m_storage.deleteEntry(name); 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename TYPE >
 std::vector<Common::SafePtr<TYPE> >
 NamespaceStack<TYPE>::getAllEntries()
 {

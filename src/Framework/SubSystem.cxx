@@ -78,6 +78,30 @@ SubSystem::~SubSystem()
 
   // delete all the MeshDatas
   MeshDataStack::getInstance().deleteAllEntries();
+  
+  // typedef std::vector<Common::SafePtr<Namespace> > NspVec;
+  // NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
+  // NspVec lst = nsw.getAllNamespaces();
+  // cf_assert(!lst.empty()); // there should be some models
+  // const int rank = Common::PE::GetPE().GetRank("Default");
+  // SafePtr<MeshData> currMD = CFNULL;
+  // string mdName = "";
+  // for(NspVec::iterator nsp = lst.begin(); nsp != lst.end(); ++nsp)
+  // {
+  //   const string nspaceName = (*nsp)->getName();
+  //   if (PE::GetPE().isRankInGroup(rank, nspaceName)) {
+  //    mdName = (*nsp)->getMeshDataName();
+  //    break;
+  //   }
+  // }
+
+  // vector <Common::SafePtr<MeshData> > meshDataVector = MeshDataStack::getInstance().getAllEntries();
+  // for (CFuint iMeshData = 0; iMeshData < meshDataVector.size(); iMeshData++) {
+  //   if (meshDataVector[iMeshData]->getName() == mdName) {
+  //     MeshDataStack::getInstance().deleteEntry(mdName);
+  //     break; 
+  //   } 
+  // }
 
   // delete all the SubSystemStatus
   SubSystemStatusStack::getInstance().deleteAllEntries();
@@ -338,39 +362,38 @@ void SubSystem::putStrategiesFromMethod(Method* const mtd, SubSystem::NStrategyV
 void SubSystem::setCommands()
 {
   CFAUTOTRACE;
-
-//   std::pair< NCommandVec_t , NStrategyVec_t > allCommandsStrategies = getAllCommandsAndStrategies();
-
+  
   vector<Method*> allMethods = getMethodList();
-
   vector<Method*>::iterator mitr = allMethods.begin();
-  for ( ; mitr != allMethods.end(); ++mitr )
-  {
+  for ( ; mitr != allMethods.end(); ++mitr) {
     (*mitr)->setCommandGroups();
   }
 
-  vector <Common::SafePtr<MeshData> > meshDataVector  = MeshDataStack::getInstance().getAllEntries();
-
+  vector <Common::SafePtr<MeshData> > meshDataVector = 
+    MeshDataStack::getInstance().getAllEntries();
+  
   // loop on all mesh datas
+  const int rank = PE::GetPE().GetRank("Default");
   vector <Common::SafePtr<MeshData> >::iterator mdata_itr = meshDataVector.begin();
   for( ; mdata_itr != meshDataVector.end(); ++mdata_itr)
   {
     Common::SafePtr<MeshData> mdata = *mdata_itr;
-    vector< SafePtr<TopologicalRegionSet> > meshDataTRS = mdata->getTrsList();
-
-    vector< SafePtr<NumericalCommand> > meshDataNamespaceCommands; // all commands in the namespace of this mesh data
-
-    // loop on all methods
-    vector<Method*>::iterator mitr = allMethods.begin();
-    for ( ; mitr != allMethods.end(); ++mitr )
-    {
-      if( mdata->match ( (*mitr)->getNamespace() ) )
-        putCommandsFromMethod( *mitr, meshDataNamespaceCommands );
+    if (PE::GetPE().isRankInGroup(rank, mdata->getPrimaryNamespace())) {
+      vector< SafePtr<TopologicalRegionSet> > meshDataTRS = mdata->getTrsList();
+      // all commands in the namespace of this mesh data
+      vector< SafePtr<NumericalCommand> > meshDataNamespaceCommands;
+      
+      // loop on all methods
+      vector<Method*>::iterator mitr = allMethods.begin();
+      for ( ; mitr != allMethods.end(); ++mitr) {
+	if( mdata->match ( (*mitr)->getNamespace() ) )
+	  putCommandsFromMethod( *mitr, meshDataNamespaceCommands );
+      }
+      
+      // in this MeshData set the TRSs pointers in the commands
+      CommandsToTRSMapper mapper ( meshDataNamespaceCommands, meshDataTRS );
+      mapper.mapComsToTrs();
     }
-
-    // in this MeshData set the TRSs pointers in the commands
-    CommandsToTRSMapper mapper ( meshDataNamespaceCommands, meshDataTRS );
-    mapper.mapComsToTrs();
   }
 }
 

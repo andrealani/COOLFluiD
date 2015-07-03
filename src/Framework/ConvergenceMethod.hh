@@ -148,8 +148,11 @@ protected: // functions
 
   /// Declares which functions can be called dynamically
   virtual void build_dynamic_functions();
-
-protected: // member data
+  
+  /// @return the convergence file name
+  std::string getFileName(const std::string name) const;
+  
+ protected: // member data
 
   /// configuration string for the StopCondition
   std::string m_stopConditionStr;

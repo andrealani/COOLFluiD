@@ -9,7 +9,6 @@
 #include "Framework/State.hh"
 #include "Framework/GeometricEntityRegister.hh"
 #include "Framework/MapGeoToTrsAndIdx.hh"
-#include "Framework/MeshDataAdapter.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/DomainModel.hh"
 
@@ -60,8 +59,7 @@ MeshData::MeshData(const std::string& name) :
   m_totalTRSInfo(),
   m_totalTRSMap(),
   socket_states("states"),
-  socket_nodes("nodes"),
-  m_MDA(CFNULL)
+  socket_nodes("nodes")
 {
   CFAUTOTRACE;
   addConfigOptionsTo(this);
@@ -211,31 +209,31 @@ std::vector< Common::SafePtr<TopologicalRegionSet> > MeshData::getFilteredTrsLis
 void MeshData::deallocate()
 {
   deallocateSockets();
-
+    
   if (m_allocated)
   {
     deletePtr(m_dataStorage);
     deletePtr(m_elementType);
-    deallocateMeshDataAdapter();
-
+        
     for(CFuint i=0; i<m_groupElementTypeMap.size(); ++i){
       deletePtr(m_groupElementTypeMap[i]);
     }
     m_groupElementTypeMap.clear();
-
+    
     // the TRSs are owned by this storage
-    m_trsStorage.deleteAllEntries();
+    m_trsStorage.deleteAllEntries();  
+        
     // these maps are not owned by this storage
     m_mapGeoToTrsStorage.removeAllEntries();
-
+    
     Statistics().reset();
-
+    
     m_allocated = false;
   }
-
+  
   /// GeometricEntityRegistry should be a member of MeshData
   /// Not a Singleton
-  GeometricEntityRegister::getInstance().clear();
+  GeometricEntityRegister::getInstance().clear(); 
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -256,7 +254,6 @@ void MeshData::reallocate()
 
     Statistics().reset();
 
-    allocateMeshDataAdapter();
     m_allocated = true;
   }
 }
@@ -500,31 +497,6 @@ DataSocketSink<Framework::Node*, Framework::GLOBAL> MeshData::getNodeDataSocketS
 DataSocketSink<Framework::State*, Framework::GLOBAL> MeshData::getStateDataSocketSink()
 {
   return socket_states;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-Common::SafePtr<MeshDataAdapter> MeshData::getMeshDataAdapter()
-{
-  return m_MDA.get();
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-Common::SafePtr<MeshDataAdapter> MeshData::allocateMeshDataAdapter()
-{
-  m_MDA.reset(new MeshDataAdapter());
-  return m_MDA.get();
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void MeshData::deallocateMeshDataAdapter()
-{
-  if(m_MDA.get()!= CFNULL)
-  {
-    m_MDA.reset(CFNULL);
-  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

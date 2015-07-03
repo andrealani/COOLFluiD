@@ -86,7 +86,7 @@ void StandardSubSystem::defineConfigOptions(Config::OptionList& options)
    options.addConfigOption< std::string >("StopCondition","The stop condition to control the iteration procedure.");
    options.addConfigOption< CFuint >("InitialIter","Initial Iteration Number.");
    options.addConfigOption< CFreal >("InitialTime","Initial Physical Time of the SubSystem.");
-   options.addConfigOption< bool, Config::DynamicOption<> >("StopSimulation","Flag to force an immediate stop of the simulation.");
+   options.addConfigOption< int, Config::DynamicOption<> >("StopSimulation","Flag to force an immediate stop of the simulation.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -147,7 +147,7 @@ StandardSubSystem::StandardSubSystem(const std::string& name)
   m_initialIter = 0;
   setParameter("InitialIter",&m_initialIter);
 
-  m_forcedStop = false;
+  m_forcedStop = 0;
   setParameter("StopSimulation",&m_forcedStop);
 }
 
@@ -242,11 +242,11 @@ void StandardSubSystem::configureCouplerMethod(Config::ConfigArgs& args, MultiMe
 
   //Exchange Info between Namespaces
   m_couplerMethod.apply(mem_fun<void,CouplerMethod>
-                       (&CouplerMethod::setInfoToOtherSubSystem));
-
+			(&CouplerMethod::setInfoToOtherSubSystem));
+  
   m_couplerMethod.apply(mem_fun<void,CouplerMethod>
-                       (&CouplerMethod::getInfoFromOtherSubSystem));
-
+			(&CouplerMethod::getInfoFromOtherSubSystem));
+  
   // !!! continue the configuration !!!
   for ( CFuint i = 0; i < m_couplerMethod.size();  ++i) {
     m_couplerMethod[i]->postConfigure(args);
@@ -291,8 +291,8 @@ void StandardSubSystem::buildMeshData()
   NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
   NspVec lst = nsw.getAllNamespaces();
   cf_assert(!lst.empty()); // there should be some models
-  NspVec::iterator nsp = lst.begin();
-  for(; nsp != lst.end(); ++nsp)
+  
+  for(NspVec::iterator nsp = lst.begin(); nsp != lst.end(); ++nsp)
   {
     nsw.pushNamespace((*nsp)->getName());
     PhysicalModelStack::getActive()->getImplementor()->setup();
@@ -335,91 +335,89 @@ void StandardSubSystem::buildMeshData()
 		       mem_fun(&MeshCreator::buildMeshData),
 		       mem_fun(&MeshCreator::isNonRootMethod), false);
   
-  /// @todo Creating a MeshDataAdapter for the MeshWriter should be temporary
-  ///       get ride of the Adapter, make it work directly with MeshData
-  Common::for_each_if (m_outputFormat.begin(), m_outputFormat.end(), 
-		       mem_fun(&OutputFormatter::bindData),
-		       mem_fun(&OutputFormatter::isNonRootMethod), false);
+  
+  const int rank = PE::GetPE().GetRank("Default");
   
   for(CFuint iMeshData = 0; iMeshData < meshDataVector.size(); iMeshData++) {
+    SafePtr<MeshData> currMeshData = meshDataVector[iMeshData];
     bool isNonRoot = false;
     for(CFuint iMC = 0; iMC < m_meshCreator.size(); iMC++) {
-      if(m_meshCreator[iMC]->getNamespace() == meshDataVector[iMeshData]->getPrimaryNamespace())
+      if(m_meshCreator[iMC]->getNamespace() == currMeshData->getPrimaryNamespace())
         isNonRoot = m_meshCreator[iMC]->isNonRootMethod();
     }
     
     if (!isNonRoot) {
-      //  cf_assert(m_meshCreator[iMeshData]->getNamespace() == meshDataVector[iMeshData]->getPrimaryNamespace());
-      CFLogNotice("Building TRS info for MeshData in Namespace " << meshDataVector[iMeshData]->getPrimaryNamespace() << "\n");
-      
-      // === conversion fix ===
-      vector<string>& TotalTRSNames = meshDataVector[iMeshData]->getTotalTRSNames ();
-      vector<vector<CFuint> >& TotalTRSInfo = meshDataVector[iMeshData]->getTotalTRSInfo ();
-      
-      if (TotalTRSInfo.empty ()) {
-	cf_assert(TotalTRSNames.empty());
-	vector< SafePtr<TopologicalRegionSet> > trsList =
-	  meshDataVector[iMeshData]->getTrsList();
+      // AL: does this work if the same mesh is shared by different namespaces??
+      if (PE::GetPE().isRankInGroup(rank, currMeshData->getPrimaryNamespace())) {
+	CFLogNotice("Building TRS info for MeshData in Namespace " << currMeshData->getPrimaryNamespace() << "\n");
+	// === conversion fix ===
+	vector<string>& TotalTRSNames = currMeshData->getTotalTRSNames ();
+	vector<vector<CFuint> >& TotalTRSInfo = currMeshData->getTotalTRSInfo ();
 	
-	// count in advance the number of writable TRS
-	CFuint sizeTRSToWrite = 0;
-	for (CFuint i = 0; i < trsList.size(); ++i) {
-	  if (trsList[i]->hasTag("writable")) {
-	    sizeTRSToWrite++;
-	  }
-	}
-	cf_assert(sizeTRSToWrite < trsList.size());
-	
-	TotalTRSNames.resize(sizeTRSToWrite);
-	TotalTRSInfo.resize(sizeTRSToWrite);
-	
-	CFuint counter = 0;
-	vector< Common::SafePtr<TopologicalRegionSet> >::iterator it;
-	for (it = trsList.begin(); it != trsList.end(); ++it) {
-	  if ((*it)->hasTag("writable")) {
-	    TotalTRSNames[counter] = (*it)->getName();
-	    const CFuint nbTRs = (*it)->getNbTRs();
-	    TotalTRSInfo[counter].resize(nbTRs);
-	    for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
-	      TotalTRSInfo[counter][iTR] = (*(*it))[iTR]->getLocalNbGeoEnts();
-	      CFLog(VERBOSE, "TRS : " << (*it)->getName()
-		    << ", TR : "<< iTR
-		    << ", nbGeos : "
-		    << TotalTRSInfo[counter][iTR] << "\n");
+	if (TotalTRSInfo.empty ()) {
+	  cf_assert(TotalTRSNames.empty());
+	  vector< SafePtr<TopologicalRegionSet> > trsList = currMeshData->getTrsList();
+	  
+	  // count in advance the number of writable TRS
+	  CFuint sizeTRSToWrite = 0;
+	  for (CFuint i = 0; i < trsList.size(); ++i) {
+	    if (trsList[i]->hasTag("writable")) {
+	      sizeTRSToWrite++;
 	    }
-	    counter++;
 	  }
+	  cf_assert(sizeTRSToWrite < trsList.size());
+	  
+	  TotalTRSNames.resize(sizeTRSToWrite);
+	  TotalTRSInfo.resize(sizeTRSToWrite);
+	  
+	  CFuint counter = 0;
+	  vector< Common::SafePtr<TopologicalRegionSet> >::iterator it;
+	  for (it = trsList.begin(); it != trsList.end(); ++it) {
+	    if ((*it)->hasTag("writable")) {
+	      TotalTRSNames[counter] = (*it)->getName();
+	      const CFuint nbTRs = (*it)->getNbTRs();
+	      TotalTRSInfo[counter].resize(nbTRs);
+	      for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
+		TotalTRSInfo[counter][iTR] = (*(*it))[iTR]->getLocalNbGeoEnts();
+		CFLog(VERBOSE, "TRS : " << (*it)->getName()
+		      << ", TR : "<< iTR
+		      << ", nbGeos : "
+		      << TotalTRSInfo[counter][iTR] << "\n");
+	      }
+	      counter++;
+	    }
+	  }
+	  
+	  cf_assert(counter == sizeTRSToWrite);
 	}
 	
-	cf_assert(counter == sizeTRSToWrite);
-      }
-      
-      if (PE::GetPE().IsParallel()) {
-	const std::string parStateVecName = meshDataVector[iMeshData]->getPrimaryNamespace() + "_states";
-	const std::string parNodeVecName = meshDataVector[iMeshData]->getPrimaryNamespace() + "_nodes";
-	
-	DataHandle<State*, GLOBAL> states =
-	  meshDataVector[iMeshData]->getDataStorage()->getGlobalData<State*>(parStateVecName);
-	
-	DataHandle<Node*, GLOBAL> nodes =
-	  meshDataVector[iMeshData]->getDataStorage()->getGlobalData<Node*>(parNodeVecName);
-	
-	// AL : this should be activated only in very special occasions
-	// #ifndef NDEBUG
-	//  states.DumpContents ();
-	//  nodes.DumpContents ();
-	//  #endif
-	
-	states.buildMap ();
-	nodes.buildMap ();
-	
-	// #ifndef NDEBUG
-	//  states.DumpInfo ();
-	//  nodes.DumpInfo ();
-	// #endif
+	if (PE::GetPE().IsParallel()) {
+	  const std::string parStateVecName = currMeshData->getPrimaryNamespace() + "_states";
+	  const std::string parNodeVecName = currMeshData->getPrimaryNamespace() + "_nodes";
+	  
+	  DataHandle<State*, GLOBAL> states =
+	    currMeshData->getDataStorage()->getGlobalData<State*>(parStateVecName);
+	  
+	  DataHandle<Node*, GLOBAL> nodes =
+	    currMeshData->getDataStorage()->getGlobalData<Node*>(parNodeVecName);
+	  
+	  // AL : this should be activated only in very special occasions
+	  // #ifndef NDEBUG
+	  //  states.DumpContents ();
+	  //  nodes.DumpContents ();
+	  //  #endif
+	  
+	  states.buildMap ();
+	  nodes.buildMap ();
+	  
+	  // #ifndef NDEBUG
+	  //  states.DumpInfo ();
+	  //  nodes.DumpInfo ();
+	  // #endif
+	}
       }
     }
-  }
+  } 
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -429,8 +427,6 @@ void StandardSubSystem::setup()
   CFAUTOTRACE;
 
   cf_assert(isConfigured());
-
-  typedef std::vector<Common::SafePtr<Namespace> > NspVec;
   
   //setCommands() needs Trs's => must be exactly here
   setCommands();
@@ -439,7 +435,7 @@ void StandardSubSystem::setup()
   CFLogInfo("Setting up DataPreProcessing's\n");
   m_dataPreProcessing.apply
     (mem_fun<void,DataProcessingMethod>(&DataProcessingMethod::setMethod));
-
+  
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   CFLogInfo("Setting up MeshAdapterMethod's\n");
   m_meshAdapterMethod.apply
@@ -449,22 +445,22 @@ void StandardSubSystem::setup()
   CFLogInfo("Setting up ConvergenceMethod's\n");
   m_convergenceMethod.apply
     (mem_fun<void,ConvergenceMethod>(&ConvergenceMethod::setMethod));
-
+  
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   CFLogInfo("Setting up LinearSystemSolver's\n");
   m_linearSystemSolver.apply
     (mem_fun<void,LinearSystemSolver>(&LinearSystemSolver::setMethod));
-
+  
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   CFLogInfo("Setting up SpaceMethod's\n");
   m_spaceMethod.apply
     (mem_fun<void,SpaceMethod>(&SpaceMethod::setMethod));
-
+  
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   CFLogInfo("Setting up ErrorEstimatorMethod's\n");
   m_errorEstimatorMethod.apply
     (mem_fun<void,ErrorEstimatorMethod>(&ErrorEstimatorMethod::setMethod));
-
+  
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   CFLogInfo("Setting up CouplerMethod's\n");
   setCouplerMethod();
@@ -478,7 +474,7 @@ void StandardSubSystem::setup()
   CFLogInfo("Setting up OutputFormatter's\n");
   m_outputFormat.apply
     (root_mem_fun<void,OutputFormatter>(&OutputFormatter::setMethod));
-    
+
   vector <Common::SafePtr<SubSystemStatus> > subSysStatusVec =
     SubSystemStatusStack::getInstance().getAllEntries();
 
@@ -490,8 +486,13 @@ void StandardSubSystem::setup()
     subSysStatusVec[i]->resetResidual();
   }
   
+  NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
+  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName));
+  SafePtr<SubSystemStatus> currSSS = SubSystemStatusStack::getInstance().getEntry(sssName);
+  cf_assert(currSSS.isNotNull());
   
-  SubSystemStatusStack::getActive()->setSetup(true);
+  currSSS->setSetup(true);
+  // SubSystemStatusStack::getActive()->setSetup(true);
   
   CFLog(VERBOSE, "StandardSubSystem::setup() => m_dataPreProcessing.apply()\n");
   // pre-process the data
@@ -505,12 +506,12 @@ void StandardSubSystem::setup()
   CFLogInfo("Initializing solution\n");
   
   m_spaceMethod.apply(mem_fun<void,SpaceMethod>(&SpaceMethod::initializeSolution));
-  
+ 
   CFLogInfo("Writing initial solution ... \n");
-  bool force = true;
-  writeSolution(force);
+  writeSolution(true);
   
-  SubSystemStatusStack::getActive()->setSetup(false);
+  currSSS->setSetup(false);
+  // SubSystemStatusStack::getActive()->setSetup(false);
   
   CFLog(NOTICE,"-------------------------------------------------------------\n");
 }
@@ -519,7 +520,6 @@ void StandardSubSystem::setup()
 
 void StandardSubSystem::setCouplerMethod()
 {
-
   m_couplerMethod.apply
       (mem_fun<void,CouplerMethod>(&CouplerMethod::setMethod));
 
@@ -551,12 +551,13 @@ void StandardSubSystem::run()
   CFAUTOTRACE;
 
   cf_assert(isConfigured());
-  m_forcedStop = false;
-
-  std::vector <Common::SafePtr<SubSystemStatus> > subSysStatusVec =  SubSystemStatusStack::getInstance().getAllEntries();
+  m_forcedStop = (int)false;
+    
+  std::vector <Common::SafePtr<SubSystemStatus> > subSysStatusVec =  
+    SubSystemStatusStack::getInstance().getAllEntries();
+  
   ///@todo this should not be here!!
-  for(CFuint i = 0; i<subSysStatusVec.size();i++)
-  {
+  for (CFuint i = 0; i < subSysStatusVec.size(); i++) {
     // reset to 0 (or Initial Value) the number of iterations and the residual
     subSysStatusVec[i]->setNbIter(m_initialIter);
     subSysStatusVec[i]->setCurrentTimeDim(m_initialTime);
@@ -564,7 +565,12 @@ void StandardSubSystem::run()
     subSysStatusVec[i]->resetResidual();
     subSysStatusVec[i]->startWatch();
   }
-
+  
+  NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
+  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName));
+  SafePtr<SubSystemStatus> currSSS = SubSystemStatusStack::getInstance().getEntry(sssName);
+  cf_assert(currSSS.isNotNull());
+  
   m_duration.set(0.);
   Stopwatch<WallTime> stopTimer;
   stopTimer.start();
@@ -573,11 +579,11 @@ void StandardSubSystem::run()
   // here, write the data to the other subsystems
   m_couplerMethod.apply(mem_fun<void,CouplerMethod>(&CouplerMethod::dataTransferWrite));
 
-  for ( ; (!m_stopCondControler->isAchieved(SubSystemStatusStack::getActive()->getConvergenceStatus())) && (!m_forcedStop); ) {
-
+  for ( ; (!m_stopCondControler->isAchieved(currSSS->getConvergenceStatus())) && (!m_forcedStop); ) {
+    
     // read the interactive parameters
     getInteractiveParamReader()->readFile();
-
+    
     CFLog(VERBOSE, "StandardSubSystem::run() => m_dataPreProcessing.apply()\n");
     // pre-process the data
     m_dataPreProcessing.apply(mem_fun<void,DataProcessingMethod>
@@ -629,7 +635,7 @@ void StandardSubSystem::run()
     writeSolution(dontforce);
 
   } // end for convergence loop
-  
+ 
   CFLog(VERBOSE, "StandardSubSystem::run() => m_errorEstimatorMethod.apply()\n");
   // estimate the error one final time
   m_errorEstimatorMethod.apply(mem_fun<void,ErrorEstimatorMethod>(&ErrorEstimatorMethod::estimate));
@@ -641,7 +647,7 @@ void StandardSubSystem::run()
   
   CFLog(NOTICE, "SubSystem WallTime: " << stopTimer << "s\n");
   m_duration = subSysStatusVec[0]->readWatchHMS();
-  
+ 
   // dumpStates();
 }
 
@@ -650,9 +656,13 @@ void StandardSubSystem::run()
 void StandardSubSystem::unsetup()
 {
   CFAUTOTRACE;
+  NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
+  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName));
+  SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getInstance().getEntry(sssName);
+  cf_assert(subSysStatus.isNotNull());
   
-  Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
-
+  // Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
+  
   vector <Common::SafePtr<SubSystemStatus> > subSysStatusVec =
     SubSystemStatusStack::getInstance().getAllEntries();
 
@@ -666,11 +676,11 @@ void StandardSubSystem::unsetup()
         << " Reached Residual: " << totalResidual
         << " and took: " << m_duration.str() << "\n");
   
-  ofstream fres;
-  fres.open ("residual.dat");
-  if(fres.is_open()) {
+  /*ofstream fres;
+    fres.open ("residual.dat");
+    if(fres.is_open()) {
     fres << totalResidual << std::endl;
-  }
+    }*/
   
   bool force = true;
   writeSolution(force);
@@ -709,7 +719,6 @@ void StandardSubSystem::unsetup()
     (root_mem_fun<void,MeshCreator>(&MeshCreator::unsetMethod));
   
   CFLog(VERBOSE, "StandardSubSystem::unsetup() => DataProcessingMethod (preprocessing)\n");
-  /// @TODO AL: check if this breaks something in 3D postprocessing
   m_dataPreProcessing.apply
     (mem_fun<void,DataProcessingMethod>(&DataProcessingMethod::unsetMethod));
   
@@ -765,7 +774,7 @@ Common::Signal::return_t StandardSubSystem::afterRemeshingAction(Common::Signal:
 {
   CFAUTOTRACE;
 
-  m_forcedStop = true;
+  m_forcedStop = (int)true;
   SimulationStatus::getInstance().setRestart(true);
 
   return Common::Signal::return_t ();
@@ -855,9 +864,11 @@ void StandardSubSystem::writeSolution(const bool force_write )
 {
   CFAUTOTRACE;
 
-  for (unsigned int i = 0; i < m_outputFormat.size(); ++i)
+  const int rank = Common::PE::GetPE().GetRank("Default");
+  for (CFuint i = 0; i < m_outputFormat.size(); ++i)
   {
-    if(!m_outputFormat[i]->isNonRootMethod())
+    if (PE::GetPE().isRankInGroup(rank, m_outputFormat[i]->getNamespace()) && 
+       (!m_outputFormat[i]->isNonRootMethod()))
     {
       if(m_outputFormat[i]->isSaveNow( force_write ) )
       {

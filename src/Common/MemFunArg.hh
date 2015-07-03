@@ -9,6 +9,10 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
+#include "Common/PE.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
 namespace COOLFluiD {
 
   namespace Common {
@@ -19,8 +23,12 @@ template <class InputIterator, class Function, class Predicate>
 Function for_each_if(InputIterator first, InputIterator last, Function fn, Predicate pr, bool flag)
 {
   while (first!=last) {
-    if (pr(*first) == flag) {
-      fn (*first);
+    if (pr(*first) == flag) { 
+      // here you need the global rank
+      const int rank = PE::GetPE().GetRank("Default");
+      if (PE::GetPE().isRankInGroup(rank, (*first)->getNamespace())) {
+	fn (*first);
+      }
     }
     ++first;
   }

@@ -65,8 +65,8 @@ WriteSolutionHighOrder::WriteSolutionHighOrder(const std::string& name) : ParaWr
 
 void WriteSolutionHighOrder::execute()
 {
-  CFout << "Writing solution to: " << getMethodData().getFilename().string() << "\n";
-
+  CFLog(INFO, "Writing solution to: " << getMethodData().getFilename().string() << "\n");
+  
   if(m_fileFormatStr == "ASCII")
   {
     writeToFile(getMethodData().getFilename());

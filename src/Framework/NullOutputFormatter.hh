@@ -36,11 +36,6 @@ public:
   /// @return std::string with extension ".null"
   std::string getFormatExtension() const;
 
-  /// Set the data to be written.
-  /// To make the writer free the internal data structure,
-  /// call this with a null pointer.
-  void bindDataImpl();
-
   /// Checks if this object is a Null object.
   /// Since this is NullSpaceMethod
   /// @return true

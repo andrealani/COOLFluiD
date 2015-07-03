@@ -78,13 +78,7 @@ public: // methods
 
   /// Sets the output file name
   void setOutputFileName(const std::string filename);
-
-  /// Set the data to be written.
-  /// To make the writer free the internal data structure,
-  /// call this with a null pointer.
-  /// @todo to be removed in the future as it will link directly to MeshData
-  void bindData ();
-
+  
   /// Run the function defined by the function name
   /// @param func name of the function to run. It should be void function with nor parameters.
   virtual void run_function(const std::string & func)
@@ -104,13 +98,6 @@ protected: // functions
   virtual void build_dynamic_functions();
 
 protected: // abstract interface implementations
-
-  /// Set the data to be written.
-  /// To make the writer free the internal data structure,
-  /// call this with a null pointer.
-  /// @todo to be removed in the future as it will link directly to MeshData
-  /// This is the abstract function that the concrete methods must implement.
-  virtual void bindDataImpl() = 0;
 
   /// Opens the file for writing.
   /// This is the abstract function that the concrete methods must implement.

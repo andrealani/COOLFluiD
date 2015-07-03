@@ -11,6 +11,7 @@
 
 #include "Common/StringOps.hh"
 #include "Common/SafePtr.hh"
+#include "Common/PE.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -47,29 +48,38 @@ public:
 
   /// Clear the object
   void clear() { std::vector<TMETHOD*>().swap(_mList); }
-
+  
   /// Add method in the list
   void addMethod(TMETHOD *const method) { _mList.push_back(method);  }
-
+  
   /// Apply given void action (pointer to member function with 0
   /// arguments) to all the methods in the list.
   void apply (std::mem_fun_t<void,TMETHOD> fun, CFint ns=-1)
   {
+    const int rank = Common::PE::GetPE().GetRank("Default");
     const CFint nsize =  (ns < 0) ? _mList.size() : ns;
-    std::for_each (&_mList[0], &_mList[0]+nsize, fun);
+    for (CFuint i = 0; i < nsize; ++i) {
+      if (Common::PE::GetPE().isRankInGroup(rank, _mList[i]->getNamespace())) {
+        fun(_mList[i]);
+      }
+    }
   }
-
+  
   /// Apply given void action (pointer to member function with 1
   /// argument) to all the methods in the list.
   template <class ARG>
   void apply (std::mem_fun1_t<void, TMETHOD, ARG> fun, ARG arg, CFint ns=-1)
   {
+    const int rank = Common::PE::GetPE().GetRank("Default");
     const CFint nsize =  (ns < 0) ? _mList.size() : ns;
-    std::for_each (&_mList[0], &_mList[0]+nsize,
-		   std::bind2nd<std::mem_fun1_t<void, TMETHOD, ARG> >
-		   (fun, arg));
+    for (CFuint i = 0; i < nsize; ++i) {
+      if (Common::PE::GetPE().isRankInGroup(rank, _mList[i]->getNamespace())) {
+	(std::bind2nd<std::mem_fun1_t<void, TMETHOD, ARG> >
+	 (fun, arg))(_mList[i]);
+      }
+    }
   }
-
+  
   /// Overloading of the idx operator
   Common::SafePtr<TMETHOD> operator[] (CFuint i) const
   {

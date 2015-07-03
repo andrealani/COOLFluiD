@@ -80,7 +80,7 @@ WriteSolutionHighOrder::WriteSolutionHighOrder(const std::string& name) : TecWri
 
 void WriteSolutionHighOrder::execute()
 {
-  CFout << "Writing solution to: " << getMethodData().getFilename().string() << "\n";
+  CFLog(INFO, "Writing solution to: " << getMethodData().getFilename().string() << "\n");
 
   if(_fileFormatStr == "ASCII"){
     writeToFile(getMethodData().getFilename());
@@ -93,8 +93,8 @@ void WriteSolutionHighOrder::execute()
     ///this is slow and NOT portable but at least, it takes less space
     writeToFile("tmp");
     std::string transformFile = "$TECHOME/bin/preplot tmp " + getMethodData().getFilename().string();
-    CFout << transformFile << "\n";
-
+    CFLog(INFO, transformFile << "\n");
+    
     OSystem::getInstance().executeCommand(transformFile);
 
 //     writeToBinaryFile();

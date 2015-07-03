@@ -64,6 +64,9 @@ public: // methods
 
   /// Deletes all entries in the Stack and Storage
   void deleteAllEntries();
+ 
+  /// Deletes all entries in the Stack and Storage
+  void deleteEntry(const std::string name);
 
   /// Gets all entries in the Stack
   std::vector<Common::SafePtr<TYPE> > getAllEntries();

@@ -326,7 +326,7 @@ int main(int argc, char** argv)
     // maestro takes control of simulation
     maestro->call_signal ( "control", msg );
 
-    CFreal totalResidual = 0.;
+    /* CFreal totalResidual = 0.;
     ifstream fres;
     fres.open ("residual.dat");
     if(fres.is_open())
@@ -344,7 +344,7 @@ int main(int argc, char** argv)
 	    << "Percent diff      [" << tolerance << "%]\n\n");
 
       return_value = tolerance > options.tolerance ? 1 : 0;
-    }
+    }*/
 
     // deallocate Simulator
     sim.release();

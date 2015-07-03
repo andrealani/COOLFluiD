@@ -114,7 +114,7 @@ void PEInterface<PM_MPI>::createGroup(const std::string nsp,
 				      const std::vector<int>& ranks, 
 				      const bool mapRank2Group) 
 {
-  CFLog(INFO, "PEInterface<PM_MPI>::createGroup [" << name << "] => start\n");
+  CFLog(VERBOSE, "PEInterface<PM_MPI>::createGroup [" << name << "] => start\n");
   
   if (m_groups.count(name) == 0) {
     const CFuint nranks = ranks.size();
@@ -155,12 +155,16 @@ void PEInterface<PM_MPI>::createGroup(const std::string nsp,
        MPI_Group_translate_ranks(allGroup, nranks, &g->globalRanks[0], g->group, &g->groupRanks[0])); 
     
     m_groups.insert(std::make_pair(name, g));
+  
+    // sort the ranks if they are not already sorted
+    std::sort(g->globalRanks.begin(), g->globalRanks.end());
+    std::sort(g->groupRanks.begin(), g->groupRanks.end());
   }
   else {
     CFLog(WARN, "WARNING: PEInterface<PM_MPI>::createGroup() => group " << name << " already created!\n");
   } 
   
-  CFLog(INFO, "PEInterface<PM_MPI>::createGroup() [" << name << "] => end\n");
+  CFLog(VERBOSE, "PEInterface<PM_MPI>::createGroup() [" << name << "] => end\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////

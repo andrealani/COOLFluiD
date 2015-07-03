@@ -98,7 +98,9 @@ public:
   /// Computational constructor
   DeleteDataHandle(Common::SafePtr<DataStorage>& ds, const std::string& name)
   {
-    ds->deleteData<TYPE>(name);
+    if (ds->checkData(name)) {
+      ds->deleteData<TYPE>(name);
+    }
     ds = CFNULL;
   }
 };
@@ -117,7 +119,9 @@ public:
   /// Computational constructor
   DeleteDataHandle(Common::SafePtr<DataStorage>& ds, const std::string& name)
   {
-    ds->deleteGlobalData<TYPE>(name);
+    if (ds->checkData(name)) {
+      ds->deleteGlobalData<TYPE>(name);
+    }
     ds = CFNULL;
   }
 };

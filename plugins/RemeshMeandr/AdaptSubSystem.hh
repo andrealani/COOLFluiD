@@ -27,8 +27,6 @@ namespace COOLFluiD {
     class ComputeNorm;
     class ComputeCFL;
     class LinearSystemSolver;
-    class MeshDataAdapter;
-
 }
 
   namespace Numerics {

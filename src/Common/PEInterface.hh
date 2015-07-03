@@ -65,6 +65,8 @@ public:
   Group& getGroup(const std::string name) {Group g; return g;}
   
   /// create MPI group 
+  /// @param nsp            namespace name
+  /// @param name           group name (may be different from namespace)
   /// @param ranks          list of the ranks belonging to this group
   /// @param mapRank2Group  flag telling whether to build a reverse 
   ///                       rank-group mapping (each rank MUST be 
@@ -73,6 +75,11 @@ public:
 		   const std::string name,
 		   const std::vector<int>& ranks, 
 		   const bool mapRank2Group) {}
+  
+  /// check if a given rank belongs to the specified group
+  /// @param rank       rank to be checked for
+  /// @param groupName  name of the group  which may (or not) contain the rank
+  bool isRankInGroup(const int rank, const std::string groupName) {return true;}
   
 }; // end class PEInterface
       
