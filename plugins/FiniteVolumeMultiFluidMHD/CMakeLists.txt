@@ -1,4 +1,6 @@
 LIST ( APPEND FiniteVolumeMultiFluidMHD_files
+AtmosphereProps.cxx
+AtmosphereProps.hh
 AUSMFluxMultiFluid.ci
 AUSMFluxMultiFluid.cxx
 AUSMFluxMultiFluid.hh
