@@ -83,7 +83,7 @@ public:
   /**
    * Configures this object with supplied arguments.
    */
-  virtual void configure ( Config::ConfigArgs& args );
+  virtual void configure(Config::ConfigArgs& args);
 
   /**
    * Returns the DataSocket's that this command needs as sources
@@ -105,30 +105,82 @@ private:
   void createNodalConnectivity();
 
   /**
-   * Determine and register locked nodes
+   * Find boundary nodes
    */
-  void determineLockedNodes();
-  
+  void findBoundaryNodes();
+
   /**
-   * Compute nodal gradient of the monitor variable
+   * Compute the normals for the nodes moving in the boundary
    */
-  RealVector computeNodalGradient(const Framework::Node* node);
-  
+  void computeMovingInBoundaryNodeNormals(); 
+
   /**
-   * Compute the spring constants for each edge
+   * create a mapping from the moving in boundary node ID node to faceID
+   */
+  std::vector<std::set<CFuint> > getMapMovingInBoundaryNodeID2FaceID();
+ 
+  /**
+   * Compute the spring max, min and average spring stiffness
    */
   void computeSpringTruncationData();
  
+    /**
+   * computes the spring constant between two nodes
+   */
+  CFreal computeSpringConstant(const Framework::Node* const firstNode, 
+                               const Framework::Node* const secondNode) ;
+  
   /**
    * truncates the spring constant
    */
   CFreal truncateSpringConstant(CFreal springConstant); 
 
+
   /**
    * Solve Linear System
    */
   void solveLinearSystem();
-  
+ 
+  /**
+   * resize linear system matrix and rhs to solve for the states
+   */
+  void resizeSystemSolverToStateData();
+
+  /**
+   * resize linear system matrix and rhs to solve for the nodes 
+   */
+  void resizeSystemSolverToNodalData();
+
+  /**
+   * assemble the linear system
+   */
+  void assembleLinearSystem();
+ 
+  /**
+  * Queries if the node moves in the boundary
+  */
+  bool isNodeMovingInBoundary(Framework::Node* node);
+
+  /**
+   * assemble the system lines for a node moving in along the boundary
+   */
+  void assembleMovingInBoundaryNode(const Framework::Node* node);
+
+  /**
+  * Queries if the node is locked 
+  */
+  bool isNodeLocked(Framework::Node* node);
+ 
+  /**
+   * assemble the system lines for a locked Node
+   */
+  void assembleLockedNode(const Framework::Node* node);
+
+  /**
+   * assemble the system lines for an inner Node
+   */
+  void assembleInnerNode(const Framework::Node* node);
+ 
   /**
    * Update nodes with new positions
    */
@@ -139,27 +191,6 @@ private:
    */
   void triggerRecomputeMeshData();
   
- /**
-  * Queries if the node is locked 
-  */
-  bool isNodeLocked(const Framework::Node* node);
-
-  /**
-   * fills the rhs of the linear system
-   */ 
-  void fillSpringsRightHandSide();
-
-  /**
-   * fills the coefficient matrix of the linear system
-   */
-  void fillSpringsMatrix();
-
-  /**
-   * computes the spring constant between two nodes
-   */
-  CFreal computeSpringConstant(const Framework::Node* const firstNode, 
-                               const Framework::Node* const secondNode) ;
-
 private: //data
 
   /// the socket to the data handle of the state's
@@ -173,6 +204,9 @@ private: //data
   
   /// the socket to the data handle of the nodal state's
   Framework::DataSocketSink<Framework::State*> socket_gstates;
+
+  /// the socket to the data handle of the nodal state's
+  Framework::DataSocketSink<CFreal> socket_normals;
   
   /// storage of the RHS
   Framework::DataSocketSink<CFreal> socket_rhs;
@@ -185,6 +219,7 @@ private: //data
   
   /// builder of geometric entities
   Framework::GeometricEntityPool<Framework::CellTrsGeoBuilder> m_geoBuilder;
+  Framework::GeometricEntityPool<Framework::FaceTrsGeoBuilder> m_faceTRSBuilder;
   
   // accumulator for LSSMatrix
   // std::auto_ptr<Framework::BlockAccumulator> m_acc;
@@ -197,6 +232,10 @@ private: //data
   
   /// Step for mesh adaptation
   CFreal m_meshAcceleration;
+
+  CFreal m_ratioBoundaryToInnerEquilibriumSpringLength;
+
+  std::vector<std::string> m_unlockedBoundaryTRSs;
   
   /// Monitor variable string
   std::string m_monitorVar;
@@ -204,8 +243,14 @@ private: //data
   /// Monitor variable ID)
   CFuint m_monitorVarID;
 
+  ///Equilibrium spring length 
+  CFreal m_equilibriumSpringLength;
+
   /// Set of Boundary Nodes
-  std::set<CFuint> m_boundaryNodes;
+  std::set<Framework::Node*> m_boundaryNodes;
+
+  /// Map node ID to normal vector
+  std::map<CFuint, RealVector> m_mapNodeIDNormal;
 
   //Storage for the truncation data of the springs
   SpringTrucationData m_springTruncationData;
