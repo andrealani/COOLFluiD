@@ -274,8 +274,11 @@ public:
     GlobalReduceOperationMPIHelper (BASETYPE * S, BASETYPE * D, unsigned int Count)
       : Source_(S), Dest_(D), Count_(Count), Reduce_(*this) {}
   
-  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
-  void GetGlobalValue (BASETYPE * Dest) {  *Dest = Reduce_.GetGlobalValue (nsp); }
+  void GetGlobalValue (BASETYPE * Dest) 
+  {
+    const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+    *Dest = Reduce_.GetGlobalValue (nsp); 
+  }
   
 private:
     const BASETYPE * Source_;
