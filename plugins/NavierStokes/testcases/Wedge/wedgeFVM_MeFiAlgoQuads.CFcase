@@ -101,7 +101,7 @@ Simulator.SubSystem.DataPostProcessing          = DataProcessing
 Simulator.SubSystem.DataPostProcessingNames     = MeFiAlgo
 Simulator.SubSystem.MeFiAlgo.Comds              = MeshFittingAlgorithmNS
 Simulator.SubSystem.MeFiAlgo.Data.CollaboratorNames = MeshAlgoLSS
-Simulator.SubSystem.MeFiAlgo.ProcessRate        = 60
+Simulator.SubSystem.MeFiAlgo.ProcessRate        = 10
 Simulator.SubSystem.MeFiAlgo.SkipFirstIteration = true
 Simulator.SubSystem.MeFiAlgo.StopIter           = 1500
 Simulator.SubSystem.MeFiAlgo.Names              = MeshFitting
@@ -109,7 +109,7 @@ Simulator.SubSystem.MeFiAlgo.Data.updateVar     = Cons
  
 Simulator.SubSystem.MeFiAlgo.MeshFitting.minPercentile    = 0.65
 Simulator.SubSystem.MeFiAlgo.MeshFitting.maxPercentile    = 0.8
-Simulator.SubSystem.MeFiAlgo.MeshFitting.meshAcceleration = 10.
+Simulator.SubSystem.MeFiAlgo.MeshFitting.meshAcceleration = 0.1
 Simulator.SubSystem.MeFiAlgo.MeshFitting.monitorVar       = rho
 
 Simulator.SubSystem.CellCenterFVM.AfterMeshUpdateCom = StdMeshFittingUpdate

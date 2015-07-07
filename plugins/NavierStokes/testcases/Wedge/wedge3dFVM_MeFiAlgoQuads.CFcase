@@ -2,7 +2,7 @@
 # 
 # This COOLFluiD CFcase file tests: 
 # 
-# Finite Volume, Euler2D, Forward Euler, mesh with triangles, converter from 
+# Finite Volume, Euler3D, Forward Euler, mesh with triangles, converter from 
 # THOR to CFmesh, second-order reconstruction with Venkatakhrisnan limiter, 
 # supersonic inlet and outlet, slip wall BC, mesh fitting algorithm 
 #
@@ -14,34 +14,25 @@
 ### Residual = -4.00014829
 
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libForwardEuler libPetscI libTHOR2CFmesh
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libForwardEuler libPetscI libCFmeshExtruder
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Wedge/
 Simulator.Paths.ResultsDir       = ./
 
-Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
+Simulator.SubSystem.Default.PhysicalModelType       = Euler3D
 
 Simulator.SubSystem.OutputFormat      = Tecplot CFmesh
-Simulator.SubSystem.CFmesh.FileName   = wedge.CFmesh
+Simulator.SubSystem.CFmesh.FileName   = wedge3dFVM.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate   = 100
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
 Simulator.SubSystem.Tecplot.FileName       = wedgeFVM.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Cons
-Simulator.SubSystem.Tecplot.SaveRate       = 100
+Simulator.SubSystem.Tecplot.SaveRate       = 10
 Simulator.SubSystem.Tecplot.AppendTime     = false
 Simulator.SubSystem.Tecplot.AppendIter     = true
-
-#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = shockSensor pressure #dPdX dPdY
-#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = shockSensor pressure #dPdY dPdY
-#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1
-#Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
-#Simulator.SubSystem.Tecplot.WriteSolutionBlockFV.NodalOutputVar = true
-
-#Simulator.SubSystem.StopCondition       = MaxNumberSteps
-#Simulator.SubSystem.MaxNumberSteps.nbSteps = 200
 
 Simulator.SubSystem.StopCondition       = Norm
 Simulator.SubSystem.Norm.valueNorm      = -4.0
@@ -56,16 +47,25 @@ Simulator.SubSystem.MeshAlgoLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.MeshAlgoLSS.Data.MatOrderingType = MATORDERING_RCM
 Simulator.SubSystem.MeshAlgoLSS.Data.MaxIter = 1000
 Simulator.SubSystem.MeshAlgoLSS.Data.SaveSystemToFile = false
-Simulator.SubSystem.MeshAlgoLSS.MaskEquationIDs = 0 1
+Simulator.SubSystem.MeshAlgoLSS.MaskEquationIDs = 0 1 2
 Simulator.SubSystem.MeshAlgoLSS.Data.NbKrylovSpaces = 50
 
-Simulator.SubSystem.Default.listTRS = InnerFaces SlipWall SuperInlet SuperOutlet
+Simulator.SubSystem.Default.listTRS = InnerFaces SlipWall SuperInlet SuperOutlet Top Bottom
+
+#Simulator.SubSystem.MeshCreator = CFmeshFileReader
+#Simulator.SubSystem.CFmeshFileReader.Data.FileName = wedge3dQuads.CFmesh
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+#Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+#Simulator.SubSystem.CFmeshFileReader.GambitCFmesh.SolutionOrder = P0
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = wedge.CFmesh
-Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
-Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
-Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = wedge3dQuads.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = wedge2dQuads.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Extruder2DFVM
+Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.NbLayers = 20
+Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.ExtrudeSize = 1.
+Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.Split = false
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.Value = 1.0
@@ -73,7 +73,7 @@ Simulator.SubSystem.FwdEuler.UpdateSol = StdUpdateSol
 Simulator.SubSystem.FwdEuler.StdUpdateSol.ClipResidual = false 
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
-Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlus2D
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlus3D
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar   = Cons
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
@@ -83,28 +83,32 @@ Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
 Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
 Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
-Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.2
-Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
-Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS3D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.limitRes = -1.2
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn3D
+Simulator.SubSystem.CellCenterFVM.Data.Venktn3D.coeffEps = 1.0
 
 Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField
 
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
-Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
-Simulator.SubSystem.CellCenterFVM.InField.Def = 1. 2.366431913 0.0 5.3
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y z 
+Simulator.SubSystem.CellCenterFVM.InField.Def = 1. 2.366431913 0.0 0.0 5.3
 
-Simulator.SubSystem.CellCenterFVM.BcComds = MirrorEuler2DFVMCC SuperInletFVMCC SuperOutletFVMCC
-Simulator.SubSystem.CellCenterFVM.BcNames = Wall Inlet Outlet
+Simulator.SubSystem.CellCenterFVM.BcComds = MirrorEuler3DFVMCC MirrorEuler3DFVMCC MirrorEuler3DFVMCC SuperInletFVMCC SuperOutletFVMCC 
+Simulator.SubSystem.CellCenterFVM.BcNames = BcWall BcTop BcBottom BcInlet BcOutlet 
 
-Simulator.SubSystem.CellCenterFVM.Wall.applyTRS = SlipWall
+Simulator.SubSystem.CellCenterFVM.BcWall.applyTRS = SlipWall
 
-Simulator.SubSystem.CellCenterFVM.Inlet.applyTRS = SuperInlet
-Simulator.SubSystem.CellCenterFVM.Inlet.Vars = x y
-Simulator.SubSystem.CellCenterFVM.Inlet.Def = 1. 2.366431913 0.0 5.3
+Simulator.SubSystem.CellCenterFVM.BcTop.applyTRS = Top 
 
-Simulator.SubSystem.CellCenterFVM.Outlet.applyTRS = SuperOutlet
+Simulator.SubSystem.CellCenterFVM.BcBottom.applyTRS = Bottom 
+
+Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS = SuperInlet
+Simulator.SubSystem.CellCenterFVM.BcInlet.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.BcInlet.Def = 1. 2.366431913 0.0 0.0 5.3
+
+Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS = SuperOutlet
 
 Simulator.SubSystem.DataPostProcessing          = DataProcessing
 Simulator.SubSystem.DataPostProcessingNames     = MeFiAlgo
@@ -120,7 +124,6 @@ Simulator.SubSystem.MeFiAlgo.MeshFitting.minPercentile    = 0.30
 Simulator.SubSystem.MeFiAlgo.MeshFitting.maxPercentile    = 0.55
 Simulator.SubSystem.MeFiAlgo.MeshFitting.meshAcceleration = 0.05
 Simulator.SubSystem.MeFiAlgo.MeshFitting.monitorVar       = rho
-Simulator.SubSystem.MeFiAlgo.MeshFitting.equilibriumSpringLength = 2e-4
-Simulator.SubSystem.MeFiAlgo.MeshFitting.unlockedBoundaryTRSs = SuperOutlet SuperInlet #SlipWall
-Simulator.SubSystem.MeFiAlgo.MeshFitting.ratioBoundaryToInnerEquilibriumSpringLength = 0.1
+Simulator.SubSystem.MeFiAlgo.MeshFitting.equilibriumSpringLength = 1e-3
+
 Simulator.SubSystem.CellCenterFVM.AfterMeshUpdateCom = StdMeshFittingUpdate

@@ -35,7 +35,7 @@ Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWrite
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Wedge/
-Simulator.Paths.ResultsDir       = ./
+Simulator.Paths.ResultsDir = ./
 
 Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
 
