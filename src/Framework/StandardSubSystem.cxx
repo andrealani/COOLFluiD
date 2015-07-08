@@ -4,6 +4,10 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
+#ifdef CF_HAVE_MPI
+#include "Common/MPI/MPIStructDef.hh"
+#endif
+
 #include "Common/PE.hh"
 
 #include "Common/CFLog.hh"
@@ -492,7 +496,6 @@ void StandardSubSystem::setup()
   cf_assert(currSSS.isNotNull());
   
   currSSS->setSetup(true);
-  // SubSystemStatusStack::getActive()->setSetup(true);
   
   CFLog(VERBOSE, "StandardSubSystem::setup() => m_dataPreProcessing.apply()\n");
   // pre-process the data
@@ -506,12 +509,11 @@ void StandardSubSystem::setup()
   CFLogInfo("Initializing solution\n");
   
   m_spaceMethod.apply(mem_fun<void,SpaceMethod>(&SpaceMethod::initializeSolution));
- 
+  
   CFLogInfo("Writing initial solution ... \n");
   writeSolution(true);
   
   currSSS->setSetup(false);
-  // SubSystemStatusStack::getActive()->setSetup(false);
   
   CFLog(NOTICE,"-------------------------------------------------------------\n");
 }
@@ -661,26 +663,26 @@ void StandardSubSystem::unsetup()
   SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getInstance().getEntry(sssName);
   cf_assert(subSysStatus.isNotNull());
   
-  // Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
-  
   vector <Common::SafePtr<SubSystemStatus> > subSysStatusVec =
     SubSystemStatusStack::getInstance().getAllEntries();
-
+  
   CFreal totalResidual = 0.;
-  for(CFuint i=0; i<subSysStatusVec.size(); ++i)
-     totalResidual += subSysStatusVec[i]->getResidual();
-
-  cf_assert(isConfigured());
+  for(CFuint i=0; i<subSysStatusVec.size(); ++i) {
+    totalResidual += subSysStatusVec[i]->getResidual();
+  }
   
   CFLog(INFO, "Total Number Iter: " << subSysStatus->getNbIter()
         << " Reached Residual: " << totalResidual
         << " and took: " << m_duration.str() << "\n");
+ 
+#ifdef CF_HAVE_MPI
+  // AL: the following needs to be generalized for regression testing
+  // for now, only rank 0 writes the residual file even in concurrent simulations 
+  MPI_Bcast(&totalResidual, 1, MPIStructDef::getMPIType(&totalResidual), 0, PE::GetPE().GetCommunicator("Default")); 
+#endif
   
-  /*ofstream fres;
-    fres.open ("residual.dat");
-    if(fres.is_open()) {
-    fres << totalResidual << std::endl;
-    }*/
+  cf_assert(std::abs(totalResidual) > 0.);
+  SimulationStatus::getInstance().getLastResidual() = totalResidual;
   
   bool force = true;
   writeSolution(force);

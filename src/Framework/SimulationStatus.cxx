@@ -26,6 +26,7 @@ SimulationStatus::SimulationStatus() :
   m_currentTime(0.),
   m_appendIter(false),
   m_restart(false),
+  m_lastResidual(0.),
   m_residual(),
   m_couplingResiduals(0),
   m_couplingResidualNames(CFNULL),

@@ -240,24 +240,13 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     const CFreal Cv2 = 0.7;// these two parameters are used for the modified Stilda
     const CFreal Cv3 = 0.9; ///@see Allmaras, S. R., Johnson, F. T., and Spalart, P. R., "Modifications and Clarifications for the Implementation 
     ///of the Spalart-Allmaras Turbulence Model," ICCFD7-1902, 7th International Conference on Computational Fluid Dynamics, Big Island, Hawaii, 9-13 July 2012. 
-    
-    //const CFreal Cv2 = 5.0; this comes from the model SA - fv3 which is not recomended
-    //unused // const CFreal Ct1 = 1.0;
-    //unused // const CFreal Ct2 = 2.0;
-    //unused // const CFreal Ct3 = 1.2;
-    //unused // const CFreal Ct4 = 0.5;
-
-/*
-    //Clip the distance from the cell to the closest wall
-    CFreal d = avDist;
-    d = max(d,1.e-10);
-*/
-	  // it calls the function of the RANS or for the DES modes
-	 _d = this->getDistance(element);
 
     ///Original definition of the vorticity (can be negative):
          const CFreal fv1 = Qsi*Qsi*Qsi / (Qsi*Qsi*Qsi + Cv1*Cv1*Cv1);
          const CFreal fv2 = 1. - ( Qsi /(1. + (Qsi * fv1)));
+	 
+    /// Calculation of the NIUturbulent
+	 NIUturbulent = fv1*NIUtilda;
 	 
 	 const CFreal dw = SA3DSourceTerm::getDistance(element);
 	 
@@ -361,6 +350,9 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     //D := Destruction term
     //T := extra trip term
     
+     // it calls the function of the RANS or for the DES modes
+	 _d = this->getDistance(element);
+    
     const CFreal adimCoef = _diffVarSet->getModel().getCoeffTau();
     
     const CFreal P = Cb1 * Stilda * NIUtilda; // production term
@@ -417,8 +409,8 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
 CFreal SA3DSourceTerm::getDistance (Framework::GeometricEntity *const element)
 {
   //Set the physical data for the cell considered
-    State *const currState = element->getState(0); // what we take from this the rho/P or the first cell/BC
-  
+    State *const currState = element->getState(0); 
+    
   CFreal d = _wallDistance[currState->getLocalID()];
     d = max(d,1.e-10);
     

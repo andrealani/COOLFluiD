@@ -4,7 +4,7 @@
 # Meta Comments begin with triple "#"
 #
 # This testcase verifies the MonteCarlo algorithm for the case of a 2D axisymmetric medium between two concentric spheres
-### Residual = -2.
+### Residual = -10.9429
 #
 #
 ############################################################################

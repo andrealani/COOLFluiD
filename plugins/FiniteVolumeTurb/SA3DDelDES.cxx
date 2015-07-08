@@ -99,6 +99,20 @@ CFreal SA3DDelDES::getDistance (Framework::GeometricEntity *const element)
     
     const CFreal d = m_WallDistance - m_delayingFun*(std::max( 0.0 , (m_WallDistance - m_SubLenScale) ) );
     
+    // Added to print the switch function
+    
+    //Set the physical data for the cell considered
+    State *const currState = element->getState(0); 
+    
+    DataHandle< CFreal> SGS = socket_length_scale.getDataHandle();
+    
+    SGS[currState->getLocalID()] = d;
+    
+    DataHandle< CFreal> m_switch_function = socket_switch_function.getDataHandle();
+    
+      m_switch_function[currState->getLocalID()] = m_delayingFun;
+    
+    
     return d;
       
 }

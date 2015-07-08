@@ -52,11 +52,10 @@ void Euler2DSourceTerm::setup()
   ComputeSourceTermFVMCC::setup();
 
   _temp.resize(PhysicalModelStack::getActive()->getNbEq());
-
-  cf_assert(_varSet.isNotNull());
   
   _varSet = getMethodData().getUpdateVar().d_castTo<Euler2DVarSet>();
-  _varSet->getModel()->resizePhysicalData(_physicalData);
+  cf_assert(_varSet.isNotNull());
+  _varSet->getModel()->resizePhysicalData(_physicalData); 
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -87,7 +86,8 @@ void Euler2DSourceTerm::computeSource(Framework::GeometricEntity *const element,
   
   /// @todo check if this should be with or without sign !!!!!
   const CFreal avRadius = (currState.getCoordinates())[1];
-  source *= -1./avRadius*volumes[element->getID()];
+  source *= -1./avRadius*volumes[element->getID()]; 
+  CFLog(DEBUG_MAX, "Euler2DSourceTerm::computeSource() => source = " << source << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

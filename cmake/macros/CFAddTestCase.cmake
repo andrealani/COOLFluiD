@@ -201,9 +201,9 @@ function( cf_add_case )
 #MESSAGE(INFO "***CASE*** WORKDIR=|${CFtestWorkdir}|")
 
     # additional options
-    list(APPEND _TEST_COMMAND "--tolerance" "5" )
+    # tolerance is set to "0.1%"
+    list(APPEND _TEST_COMMAND "--tolerance" "0.1" )
     list(APPEND _TEST_COMMAND "--bdir" "${COOLFluiD_SOURCE_DIR}" )
-#    list(APPEND _TEST_COMMAND "--bdir" "${COOLFluiD_BINARY_DIR}" )
     list(APPEND _TEST_COMMAND "--ldir" "${COOLFluiD_BINARY_DIR}/dso" )
 
   endif( _TEST_BUILDS )
@@ -255,7 +255,6 @@ function( cf_add_case )
     endif()
   endif()
 
-#MESSAGE(FATAL_ERROR "BASTA")
 endfunction( )
 
 ##############################################################################

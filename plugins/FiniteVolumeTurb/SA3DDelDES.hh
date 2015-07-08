@@ -62,7 +62,8 @@ public:
   {
     SA3DDES97 ::computeSource( element, source, jacobian);
   }
-   
+  
+
 protected:  
   
   // method that should override the DES97 method

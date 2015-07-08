@@ -11,7 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -5.0909793
+### Residual = -4.0003372
 #
 
 # SubSystem Modules
@@ -32,7 +32,6 @@ Simulator.SubSystem.NavierStokes3D.ConvTerm.machInf = 0.2
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = cyl3D_viscous_Re40.CFmesh
 Simulator.SubSystem.Tecplot.FileName    = cyl3D_viscous_Re40.plt
-Simulator.SubSystem.Tecplot.Data.updateVar = Pvt
 Simulator.SubSystem.Tecplot.SaveRate = 100
 Simulator.SubSystem.CFmesh.SaveRate = 100
 Simulator.SubSystem.Tecplot.AppendTime = false
@@ -44,7 +43,7 @@ Simulator.SubSystem.CFmesh.AppendIter = false
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
 
 Simulator.SubSystem.StopCondition       = Norm
-Simulator.SubSystem.Norm.valueNorm      = -5.0
+Simulator.SubSystem.Norm.valueNorm      = -4.0
 
 Simulator.SubSystem.Default.listTRS = Cylinder Farfield Top Bottom
 
@@ -79,7 +78,7 @@ Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
 
 Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
 Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
-Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
 Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 

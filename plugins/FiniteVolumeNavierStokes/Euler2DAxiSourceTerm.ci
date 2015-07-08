@@ -19,7 +19,7 @@ Euler2DAxiSourceTerm<UPDATEVAR>::Euler2DAxiSourceTerm(const std::string& name) :
   _varSet(CFNULL),
   _temp(),
   _physicalData(),
-  _sID()
+  _sID(2)
 {
   addConfigOptionsTo(this);
   setParameter("sID",&_sID);
@@ -38,7 +38,7 @@ template <class UPDATEVAR>
 void Euler2DAxiSourceTerm<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
 {
   options.template addConfigOption< CFuint >
-    ("sID","ID of the equation which has a source term != 0.");
+    ("sID","ID of the equation which has a source term != 0 (sID=2 by default).");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -47,7 +47,9 @@ template <class UPDATEVAR>
 void Euler2DAxiSourceTerm<UPDATEVAR>::setup()
 {
   ComputeSourceTermFVMCC::setup();
-
+  
+  CFLog(VERBOSE, "Euler2DAxiSourceTerm::setup() => sID = " << _sID << "\n"); 
+  
   _temp.resize(Framework::PhysicalModelStack::getActive()->getNbEq()); 
   
   _varSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
@@ -76,7 +78,9 @@ void Euler2DAxiSourceTerm<UPDATEVAR>::computeSource(Framework::GeometricEntity *
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
   
   source = 0.0;
+  CFLog(DEBUG_MAX, "Euler2DAxiSourceTerm::computeSource() => P = " << _physicalData[EulerTerm::P] << "\n");
   source[_sID] = _physicalData[EulerTerm::P]*volumes[element->getID()];
+  CFLog(DEBUG_MAX, "Euler2DAxiSourceTerm::computeSource() => source = " << source << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

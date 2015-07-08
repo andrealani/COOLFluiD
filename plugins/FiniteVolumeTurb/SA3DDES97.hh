@@ -4,6 +4,8 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "FiniteVolumeTurb/SA3DSourceTerm.hh" 
+#include "Framework/DataSocketSource.hh"
+#include "Framework/DataSocketSink.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -63,6 +65,12 @@ public:
     SA3DSourceTerm ::computeSource( element, source, jacobian);
   }
   
+   /**
+      Returns the DataSocket's that this command provides as sources
+      @return a vector of SafePtr with the DataSockets
+   */
+  virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > providesSockets();
+  
 protected:  
   
   // method that should override the RANS method
@@ -72,6 +80,15 @@ protected:
   ///@return the Subgrid length-scale for the DES modes multiplying by the DES constant
   virtual CFreal getSubLenScale (Framework::GeometricEntity *const element);
   
+
+protected: // data
+
+  /// socket for Subgrid length scale
+  Framework::DataSocketSource<CFreal> socket_length_scale;  
+  
+  /// socket for switch function
+  Framework::DataSocketSource<CFreal> socket_switch_function; 
+
 }; // end of class SA3DDES97
 
 //////////////////////////////////////////////////////////////////////////////

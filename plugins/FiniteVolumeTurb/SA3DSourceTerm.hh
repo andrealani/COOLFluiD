@@ -101,7 +101,7 @@ protected: //methods
   ///@return the turbulent kinematic viscosity
   virtual CFreal getTurbViscosity()
   {
-    return NIUtilda;
+    return NIUturbulent;
   };
   
 protected: // data
@@ -140,6 +140,7 @@ private:
   // turbulent and laminar viscosity
   CFreal NIUtilda;
   CFreal NIU;
+  CFreal NIUturbulent;
   
   // this variable is flag for the SA - comp model
   bool _CompTerm;

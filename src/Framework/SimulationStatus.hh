@@ -46,6 +46,9 @@ public:
     return m_residual;
   }
 
+  /// Get residual for regression testing
+  CFreal& getLastResidual() {return m_lastResidual;}
+  
 //////////////////////////////////////////////////////////////////////////////
 //
 //   Coupling Residual related functions
@@ -209,6 +212,9 @@ private:
   ///flag: should the subsystem restart from the previous iteration
   bool m_restart;
 
+  /// the residual for the regression testing
+  CFreal m_lastResidual;
+  
   /// the Simulation residual number stored
   std::vector<CFreal> m_residual;
 

@@ -4,7 +4,7 @@
 # Meta Comments begin with triple "#"
 #
 # This testcase verifies the MonteCarlo algorithm for the case of a 3D medium between two concentric spheres
-### Residual = -4.
+### Residual = 2.04274
 #
 #
 ############################################################################

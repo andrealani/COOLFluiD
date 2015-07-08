@@ -8,14 +8,15 @@
 #include <fstream>
 
 #include "boost/filesystem/operations.hpp" // includes boost/filesystem/path.hpp
-#include "boost/filesystem/fstream.hpp"    // ditto
-#include "boost/regex.hpp"                 // ditto
+#include "boost/filesystem/fstream.hpp"    
+#include "boost/regex.hpp"                 
 
 #include "Common/Exception.hh"
 #include "Common/OSystem.hh"
 #include "Common/ProcessInfo.hh"
 #include "Common/PE.hh"
 #include "Common/StringOps.hh"
+#include "Common/BadValueException.hh"
 
 #include "Config/ConfigObject.hh"
 #include "Config/ConfigFileReader.hh"
@@ -27,6 +28,7 @@
 #include "Environment/DirPaths.hh"
 #include "Environment/Factory.hh"
 
+#include "Framework/SimulationStatus.hh"
 #include "Framework/Simulator.hh"
 #include "Framework/Maestro.hh"
 #include "Framework/SubSystemStatus.hh"
@@ -325,53 +327,52 @@ int main(int argc, char** argv)
 
     // maestro takes control of simulation
     maestro->call_signal ( "control", msg );
-
-    /* CFreal totalResidual = 0.;
-    ifstream fres;
-    fres.open ("residual.dat");
-    if(fres.is_open())
-    {
-      fres >> totalResidual;
-    }
-
-    const CFreal tolerance = std::abs(options.residual - totalResidual) * 100.0 / options.residual;
-
-    if ( options.residual != MathConsts::CFrealMax())
-    {
-      CFLog(VERBOSE, "\n"
+    
+    // if a target residual has been set in the CFcase file, run the following test
+    if ( options.residual != MathConsts::CFrealMax()) {
+      const CFreal totalResidual = SimulationStatus::getInstance().getLastResidual();
+      cf_assert(std::abs(totalResidual) > 0.);
+      const CFreal tolerance = std::abs(options.residual - totalResidual) * 100.0 / std::abs(options.residual);
+      
+      CFLog(INFO, "\n"
 	    << "Target   residual [" << options.residual << "]\n"
 	    << "Achieved residual [" << totalResidual << "]\n"
+	    << "Target  diff      [" << options.tolerance << "%]\n"
 	    << "Percent diff      [" << tolerance << "%]\n\n");
-
-      return_value = tolerance > options.tolerance ? 1 : 0;
-    }*/
-
+      
+      // test succeed if the tolerance is smaller than the threshold one
+      return_value = (tolerance > options.tolerance) ? 1 : 0;
+      
+      if (return_value == 1) {
+	const string msg = "Test failed with a " + StringOps::to_str(tolerance) + 
+	  "% error (max allowed is " + StringOps::to_str(options.tolerance) + "%)";
+	throw Common::BadValueException(FromHere(), msg);
+      }
+    }
+    
     // deallocate Simulator
     sim.release();
     // deallocate Maestro
     maestro.release();
-
+    
     // unsetup the runtime environment
     cf_env.unsetup();
     // terminate the runtime environment
     cf_env.terminate();
-
   }
-  catch ( std::exception& e )
-  {
+  catch ( std::exception& e ) {
     cerr << e.what() << endl;
-    cerr << "Aborting ... " << endl;
+    cerr << "Exception thrown: Aborting ..." << endl;
     return_value = 1;
   }
-  catch (...)
-  {
+  catch (...) {
     cerr << "Unknown exception thrown and not caught !!!" << endl;
     cerr << "Aborting ... " << endl;
     return_value = 1;
   }
-
+  
   CFLog(VERBOSE, "Exit value " << return_value << "\n");
   if (options.waitend) cin.get();
-
+  
   return return_value;
 }
