@@ -162,7 +162,7 @@ void AtmosphereProps::setup()
 
 void AtmosphereProps::execute()
 {
-  cout <<"AtmosphereProps::computing properties \n";
+  CFout <<"AtmosphereProps::computing properties \n";
   CFAUTOTRACE;
   
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
