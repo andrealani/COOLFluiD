@@ -26,7 +26,7 @@ void EulerTerm::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal > ("pRef","static pressure reference value.");
   options.addConfigOption< CFreal > ("machInf","Mach infinity.");
   options.addConfigOption< CFreal > ("uInf","Free stream velocity.");
-  options.addConfigOption< CFreal >("p0Inf","Thermodynamic pressure infinity value.");
+  options.addConfigOption< CFreal, Config::DynamicOption<> >("p0Inf","Thermodynamic pressure infinity value.");
   
   // @TODO AL: find a better solution to this
   options.addConfigOption< CFreal >("p0InfComp","Thermodynamic pressure infinity value (compressible case).");
