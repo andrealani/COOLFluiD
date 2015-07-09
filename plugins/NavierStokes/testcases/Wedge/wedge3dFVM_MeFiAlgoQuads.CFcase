@@ -30,7 +30,7 @@ Simulator.SubSystem.CFmesh.AppendIter = false
 
 Simulator.SubSystem.Tecplot.FileName       = wedgeFVM.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Cons
-Simulator.SubSystem.Tecplot.SaveRate       = 10
+Simulator.SubSystem.Tecplot.SaveRate       = 100
 Simulator.SubSystem.Tecplot.AppendTime     = false
 Simulator.SubSystem.Tecplot.AppendIter     = true
 
@@ -69,6 +69,9 @@ Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.Value = 1.0
+#Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = if(i<100,1.,if(i<200,2.,min(1000.,cfl*1.1)))
+S
 Simulator.SubSystem.FwdEuler.UpdateSol = StdUpdateSol
 Simulator.SubSystem.FwdEuler.StdUpdateSol.ClipResidual = false 
 
