@@ -52,26 +52,19 @@ Simulator.SubSystem.MeshAlgoLSS.Data.NbKrylovSpaces = 50
 
 Simulator.SubSystem.Default.listTRS = InnerFaces SlipWall SuperInlet SuperOutlet Top Bottom
 
-#Simulator.SubSystem.MeshCreator = CFmeshFileReader
-#Simulator.SubSystem.CFmeshFileReader.Data.FileName = wedge3dQuads.CFmesh
-#Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
-#Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
-#Simulator.SubSystem.CFmeshFileReader.GambitCFmesh.SolutionOrder = P0
-
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = wedge3dQuads.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = wedge2dQuads.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = wedge2dQuadsIN.CFmesh
 Simulator.SubSystem.CFmeshFileReader.convertFrom = Extruder2DFVM
 Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.NbLayers = 20
 Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.ExtrudeSize = 1.
 Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.Split = false
-Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 4
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.Value = 1.0
 #Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function
 #Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = if(i<100,1.,if(i<200,2.,min(1000.,cfl*1.1)))
-S
 Simulator.SubSystem.FwdEuler.UpdateSol = StdUpdateSol
 Simulator.SubSystem.FwdEuler.StdUpdateSol.ClipResidual = false 
 
