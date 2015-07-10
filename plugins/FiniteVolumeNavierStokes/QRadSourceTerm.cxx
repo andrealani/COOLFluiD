@@ -27,7 +27,7 @@ MethodStrategyProvider<QRadSourceTerm,
 		       CellCenterFVMData, 
 		       ComputeSourceTerm<CellCenterFVMData>, 
 		       FiniteVolumeNavierStokesModule>
-qradSourceFVMCCProvider("QRad");
+qradSourceFVMCCProvider("QRadST");
       
 //////////////////////////////////////////////////////////////////////////////
 
