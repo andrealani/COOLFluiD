@@ -128,6 +128,8 @@ NoSlipWallIsothermalNSPvtSimple.cxx
 OsherFlux2D.hh
 OsherFlux2D.ci
 OsherFlux.cxx
+QRadSourceTerm.cxx
+QRadSourceTerm.hh
 Quasi1DEuler.cxx
 Quasi1DEuler.ci
 Quasi1DEuler.hh
