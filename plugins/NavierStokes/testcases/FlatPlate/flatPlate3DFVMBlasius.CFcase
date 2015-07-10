@@ -51,7 +51,6 @@ Simulator.SubSystem.Default.listTRS = InnerFaces SlipWall NoSlipWall Inlet Outle
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = flatPlate3D.CFmesh
-
 Simulator.SubSystem.CFmeshFileReader.ReadCFmesh = ParReadCFmeshBinary
 Simulator.SubSystem.CFmeshFileReader.ParReadCFmeshBinary.ParCFmeshFileReader.ParMetis.NCommonNodes = 4
 Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = flatPlateQD.CFmesh
