@@ -1,0 +1,56 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace ArcJet {
+
+//////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+ArcJetLTEPvtToCons<BASE>::ArcJetLTEPvtToCons
+(Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  BASE(model)
+{
+  cf_assert(model.isNotNull());
+}
+      
+//////////////////////////////////////////////////////////////////////
+      
+template <typename BASE>
+ArcJetLTEPvtToCons<BASE>::~ArcJetLTEPvtToCons()
+{
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void ArcJetLTEPvtToCons<BASE>::transform(const Framework::State& state, Framework::State& result)
+{
+  BASE::transform(state, result);
+  
+  const CFuint start = result.size()-1; 
+  result[start] = state[start];
+}
+
+//////////////////////////////////////////////////////////////////////
+     
+template <typename BASE>
+void ArcJetLTEPvtToCons<BASE>::transformFromRef(const RealVector& data, 
+					     Framework::State& result)
+{
+  BASE::transformFromRef(data, result);
+  
+  const CFuint starts = result.size()-1;
+  const CFuint startd = data.size()-1;
+  result[starts] = data[startd];
+}
+
+//////////////////////////////////////////////////////////////////////
+
+    } // namespace ArcJet
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////

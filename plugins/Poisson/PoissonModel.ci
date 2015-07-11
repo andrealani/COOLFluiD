@@ -1,0 +1,146 @@
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "Common/BadValueException.hh"
+
+//////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace Poisson {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void PoissonModel<DIM>::defineConfigOptions(Config::OptionList& options)
+{
+//Add options here
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+PoissonModel<DIM>::PoissonModel(const std::string& name)
+  : Framework::ConvectionDiffusionReactionPM
+<PoissonConvTerm, PoissonDiffTerm, PoissonReacTerm>(name)
+{
+  addConfigOptionsTo(this);
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+PoissonModel<DIM>::~PoissonModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint PoissonModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint PoissonModel<DIM>::getNbEquations() const
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string PoissonModel<DIM>::getConvectiveName() const
+{
+  if (DIM == 2) return "PoissonConv2D";
+  return "PoissonConv3D";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string PoissonModel<DIM>::getDiffusiveName() const
+{
+  return getTypeName();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>	
+std::string PoissonModel<DIM>::getSourceName() const
+{	
+  return getTypeName();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void PoissonModel<DIM>::setReferenceValues()
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  
+  SafePtr<PoissonConvTerm> convTerm = getConvTerm();
+  SafePtr<PoissonDiffTerm> diffTerm = getDiffTerm();
+  SafePtr<PoissonReacTerm> sourceTerm = getSrcTerm();
+  
+  // reference values for the convective part
+  RealVector& refDataConv = convTerm->getReferencePhysicalData();
+  // reference values for the diffusive part
+  RealVector& refDataDiff = diffTerm->getReferencePhysicalData();
+  // reference values for the reaction part
+  RealVector& refDataSource = sourceTerm->getReferencePhysicalData();
+  
+  // if reference values
+  // have not been specified set all the ref values to 1.
+  refDataConv = 1.0;
+  refDataDiff = 1.0;
+  refDataSource = 1.0;
+  _isAdimensional = false;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void PoissonModel<DIM>::setReferenceTime()
+{
+  // RealVector& refDataConv = getConvTerm()->getReferencePhysicalData();
+  _refTime = 1.; // getRefLength()/refDataConv[EulerTerm::V];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void PoissonModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  using namespace COOLFluiD::Framework;
+  
+  ConvectionDiffusionReactionPM
+    <PoissonConvTerm, PoissonDiffTerm, PoissonReacTerm>::configure(args);
+
+  cf_assert(getDimension() > 0);
+  cf_assert(getNbEquations() > 0);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(getDimension());
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace Poisson
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

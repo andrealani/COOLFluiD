@@ -1,0 +1,63 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace ArcJet {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void ArcJetInductionTerm<BASE>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFreal, Config::DynamicOption<> >
+    ("refSpeed","Reference speed for projection scheme.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+ArcJetInductionTerm<BASE>::ArcJetInductionTerm(const std::string& name)
+  : BASE(name)
+{
+  this->addConfigOptionsTo(this);
+ 
+  m_refSpeed = 1.0;
+  this->setParameter("refSpeed",&m_refSpeed);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+ArcJetInductionTerm<BASE>::~ArcJetInductionTerm()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void ArcJetInductionTerm<BASE>::configure ( Config::ConfigArgs& args )
+{
+  BASE::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void ArcJetInductionTerm<BASE>::setupPhysicalData()
+{
+  // resize the physical data
+  cf_assert(getDataSize() > 0);
+  
+  this->resizePhysicalData(this->m_physicalData);
+  this->resizePhysicalData(this->m_refPhysicalData);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace ArcJet 
+
+} // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
