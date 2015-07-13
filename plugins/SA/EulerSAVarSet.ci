@@ -76,11 +76,6 @@ void EulerSAVarSet<BASE, SGROUP>::computePhysicalData(const Framework::State& st
   BASE::computePhysicalData(state, data);
   
   const CFreal Nutil = state[m_startNutil]; 
-  
-  // AL: is this needed? also P,T have to change if they are not variables
-  // data[NavierStokes::EulerTerm::H] += k;
-  // data[NavierStokes::EulerTerm::E] += k;
-  
   const CFuint iNutil = this->getModel()->getFirstScalarVar(SGROUP);
   data[iNutil] = Nutil;
 }
@@ -152,14 +147,10 @@ void EulerSAVarSet<BASE, SGROUP>::setDimensionalValuesPlusExtraValues
     m_tmpResult[i] = result[i];
   }
   
-  //   if (result.size() < state.size()) {
-  //     result.resize(oldSize+2);
-  //   }
-  
   for (CFuint i = 0; i < oldSize; ++i) {
     result[i] = m_tmpResult[i];
   }
-    
+  
   computePhysicalData(state, m_pdataNutil);
   
   const RealVector& refData = this->getModel()->getReferencePhysicalData();

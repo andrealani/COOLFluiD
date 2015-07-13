@@ -1,4 +1,6 @@
 LIST ( APPEND LTE_files
+EulerPvtLTEToCons.cxx
+EulerPvtLTEToCons.hh
 Euler2DConsToPrvtLTEInRef.cxx
 Euler2DConsToPrvtLTEInRef.hh
 Euler2DLTEDemixCons.cxx
@@ -17,8 +19,6 @@ Euler2DPrvtLTEToConsInRef.cxx
 Euler2DPrvtLTEToConsInRef.hh
 Euler2DPuvtLTE.cxx
 Euler2DPuvtLTE.hh
-Euler2DPuvtLTEToCons.cxx
-Euler2DPuvtLTEToCons.hh
 Euler2DPuvtLTEToConsInPuvtLTE.cxx
 Euler2DPuvtLTEToConsInPuvtLTE.hh
 Euler2DPuvtLTEToRoe.cxx
@@ -33,8 +33,6 @@ Euler3DLTEDemixPvtToCons.cxx
 Euler3DLTEDemixPvtToCons.hh
 Euler3DPvtLTE.cxx
 Euler3DPvtLTE.hh
-Euler3DPvtLTEToCons.cxx
-Euler3DPvtLTEToCons.hh
 EulerLTEDemix.ci
 EulerLTEDemix.cxx
 EulerLTEDemix.hh

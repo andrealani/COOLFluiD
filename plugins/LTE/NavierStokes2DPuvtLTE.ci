@@ -125,7 +125,7 @@ CFreal NavierStokes2DPuvtLTE<CTERM>::getDensity(const RealVector& state)
 template <typename CTERM>
 CFreal NavierStokes2DPuvtLTE<CTERM>::
 getThermConductivity(const RealVector& state,
-				     const CFreal& dynViscosity)
+		     const CFreal& dynViscosity)
 {
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Physics::NavierStokes;
@@ -164,8 +164,8 @@ void NavierStokes2DPuvtLTE<CTERM>::setComposition
 {
   using namespace COOLFluiD::Framework;
 
-  CFLog(VERBOSE, "NavierStokes2DPuvtLTE::setComposition() => START\n");
-	
+  CFLog(DEBUG_MAX, "NavierStokes2DPuvtLTE::setComposition() => START\n");
+  
   // this is to avoid useless expensive re-computations
   useBackUpValues(false);
   setBackUpValues(false);

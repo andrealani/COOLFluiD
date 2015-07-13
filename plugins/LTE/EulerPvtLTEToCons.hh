@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Physics_NavierStokes_Euler3DPvtToCons_hh
-#define COOLFluiD_Physics_NavierStokes_Euler3DPvtToCons_hh
+#ifndef COOLFluiD_Physics_LTE_EulerPvtLTEToCons_hh
+#define COOLFluiD_Physics_LTE_EulerPvtLTEToCons_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -10,54 +10,62 @@
 namespace COOLFluiD {
 
   namespace Physics {
-
+    
     namespace NavierStokes {
-
       class EulerTerm;
-
+    }
+    
+    namespace LTE {
+      
 //////////////////////////////////////////////////////////////////////////////
 
 /**
  * This class represents a transformer of variables from primitive
- * [p u v T] to conservative variables
+ * [p v T] to conservative variables
  *
  * @author Andrea Lani
  *
  */
-class Euler3DPvtToCons : public Framework::VarSetTransformer {
+class EulerPvtLTEToCons : public Framework::VarSetTransformer {
 public:
 
   /**
    * Default constructor without arguments
    */
-  Euler3DPvtToCons(Common::SafePtr<Framework::PhysicalModelImpl> model);
+  EulerPvtLTEToCons(Common::SafePtr<Framework::PhysicalModelImpl> model);
 
   /**
    * Default destructor
    */
-  ~Euler3DPvtToCons();
+  virtual ~EulerPvtLTEToCons();
 
   /**
    * Transform a state into another one
    */
-  void transform(const Framework::State& state, Framework::State& result);
+  virtual void transform(const Framework::State& state, Framework::State& result);
   
   /**
    * Transform a state into another one from reference precomputed
    * values (physical data)associated to the given state
    */
-  void transformFromRef(const RealVector& data, Framework::State& result);
+  virtual void transformFromRef(const RealVector& data, Framework::State& result);
   
-private:
+protected:
 
   /// acquaintance of the PhysicalModel
-  Common::SafePtr<EulerTerm> _model;
-
-}; // end of class Euler3DPvtToCons
+  Common::SafePtr<NavierStokes::EulerTerm> _model;
+  
+  /// density
+  CFreal m_rho;
+  
+  /// array storing density enthalpy energy
+  RealVector _dhe;
+  
+}; // end of class EulerPvtLTEToCons
 
 //////////////////////////////////////////////////////////////////////////////
 
-    } // namespace NavierStokes
+    } // namespace LTE
 
   } // namespace Physics
 
@@ -65,4 +73,4 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Physics_NavierStokes_Euler3DPvtToCons_hh
+#endif // COOLFluiD_Physics_LTE_EulerPvtLTEToCons_hh

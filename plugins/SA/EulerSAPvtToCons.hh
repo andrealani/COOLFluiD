@@ -1,9 +1,11 @@
-#ifndef COOLFluiD_Physics_LTE_Euler3DPvtLTEToCons_hh
-#define COOLFluiD_Physics_LTE_Euler3DPvtLTEToCons_hh
+#ifndef COOLFluiD_Physics_SA_EulerSAPvtToCons_hh
+#define COOLFluiD_Physics_SA_EulerSAPvtToCons_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Framework/VarSetTransformer.hh"
+#include "Framework/MultiScalarTerm.hh"
+#include "NavierStokes/EulerTerm.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -11,33 +13,35 @@ namespace COOLFluiD {
 
   namespace Physics {
 
-    namespace NavierStokes {
-      class EulerTerm;
-    }
-    
-    namespace LTE {
-      
+    namespace SA {
+
 //////////////////////////////////////////////////////////////////////////////
 
 /**
  * This class represents a transformer of variables from primitive
- * [p u v T] to conservative variables
+ * [p u v w T Nuitil] to conservative variables [rho rhoU rhoV rhoW rhoE rhoNuitil]
  *
- * @author Andrea Lani
+ * @author Joao Pinto
+ * @author Thomas Wuilbaut
+ * @modified Christos Gkoudesnes
+ * @modified Andrea Lani
  *
  */
-class Euler3DPvtLTEToCons : public Framework::VarSetTransformer {
+template <typename BASE>
+class EulerSAPvtToCons : public BASE {
 public:
 
+  typedef Framework::MultiScalarTerm<NavierStokes::EulerTerm> EulerSATerm;
+  
   /**
-   * Default constructor without arguments
+   * Constructor
    */
-  Euler3DPvtLTEToCons(Common::SafePtr<Framework::PhysicalModelImpl> model);
-
+  EulerSAPvtToCons(Common::SafePtr<Framework::PhysicalModelImpl> model);
+  
   /**
    * Default destructor
    */
-  virtual ~Euler3DPvtLTEToCons();
+  virtual ~EulerSAPvtToCons();
   
   /**
    * Transform a state into another one
@@ -51,18 +55,15 @@ public:
   virtual void transformFromRef(const RealVector& data, Framework::State& result);
   
 private:
-
+  
   /// acquaintance of the PhysicalModel
-  Common::SafePtr<NavierStokes::EulerTerm> _model;
+  Common::SafePtr<EulerSATerm> m_modelSA;
   
-  /// array storing density enthalpy energy
-  RealVector _dhe;
-  
-}; // end of class Euler3DPvtLTEToCons
+}; // end of class EulerSAPvtToCons
 
 //////////////////////////////////////////////////////////////////////////////
 
-    } // namespace LTE
+    } // namespace SA
 
   } // namespace Physics
 
@@ -70,4 +71,8 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Physics_LTE_Euler3DPvtLTEToCons_hh
+#include "SA/EulerSAPvtToCons.ci"
+
+//////////////////////////////////////////////////////////////////////////////
+
+#endif // COOLFluiD_Physics_SA_EulerSAPvtToCons_hh

@@ -1,0 +1,65 @@
+#include "Framework/PhysicalModel.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::MathTools;
+using namespace COOLFluiD::Physics::NavierStokes;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace SA {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+EulerSAPvtToCons<BASE>::EulerSAPvtToCons
+(Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  BASE(model), 
+  m_modelSA(model->getConvectiveTerm().template d_castTo<MultiScalarTerm<EulerTerm> >())
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+EulerSAPvtToCons<BASE>::~EulerSAPvtToCons()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void EulerSAPvtToCons<BASE>::transform(const State& state, State& result)
+{
+  BASE::transform(state, result);
+  
+  const CFuint KID = PhysicalModelStack::getActive()->getDim() + 2;
+  result[KID] = this->m_rho*state[KID];
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>
+void EulerSAPvtToCons<BASE>::transformFromRef(const RealVector& data, State& result)
+{
+  BASE::transformFromRef(data, result);
+  const CFuint iNutil = m_modelSA->getFirstScalarVar(0);
+  const CFuint KID = PhysicalModelStack::getActive()->getDim() + 2;
+  result[KID] = this->m_rho*data[iNutil];
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace SA
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

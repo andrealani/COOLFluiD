@@ -135,7 +135,7 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     //Set the physical data for the cell considered
     State *const currState = element->getState(0); // what we take from this the rho/P or the first cell/BC
     _varSet->computePhysicalData(*currState, _physicalData);
-
+    
     //fill in the nodal states
     const CFreal R = _varSet->getModel()->getR();
 
@@ -147,19 +147,19 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     CFreal dRhodX = 0.0;
     CFreal dRhodY = 0.0;
     CFreal dRhodZ = 0.0; 
-	   dVdX = 0.0;
-	   dUdY = 0.0;
-	   dUdZ = 0.0; 
-	   dWdX = 0.0; 
-	   dVdZ = 0.0; 
-	   dWdY = 0.0; 
+    _dVdX = 0.0;
+    _dUdY = 0.0;
+    _dUdZ = 0.0; 
+    _dWdX = 0.0; 
+    _dVdZ = 0.0; 
+    _dWdY = 0.0; 
     
     // these terms are added for the comp model
-	   dUdX = 0.0; 
-	   dVdY = 0.0; 
-	   dWdZ = 0.0; 
+    _dUdX = 0.0; 
+    _dVdY = 0.0; 
+    _dWdZ = 0.0; 
     
-    if (this->m_useGradientLS && this->m_gradientsExist) { // what does this check
+    if (this->m_useGradientLS && this->m_gradientsExist) {
       const CFuint pID = 0;
       const CFuint uID = 1;
       const CFuint vID = 2;
@@ -171,35 +171,30 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
       dNutildX = this->m_ux[start+NutilID]; 
       dNutildY = this->m_uy[start+NutilID];
       dNutildZ = this->m_uz[start+NutilID]; 
-      dVdX = this->m_ux[start+vID];
-      dUdY = this->m_uy[start+uID];
-      dUdZ = this->m_uz[start+uID]; 
-      dWdX = this->m_ux[start+wID]; 
-      dVdZ = this->m_uz[start+vID]; 
-      dWdY = this->m_uy[start+wID]; 
+      _dVdX = this->m_ux[start+vID];
+      _dUdY = this->m_uy[start+uID];
+      _dUdZ = this->m_uz[start+uID]; 
+      _dWdX = this->m_ux[start+wID]; 
+      _dVdZ = this->m_uz[start+vID]; 
+      _dWdY = this->m_uy[start+wID]; 
       
       // these terms are added for the comp model
-      dUdX = this->m_ux[start+uID]; 
-      dVdY = this->m_uy[start+vID]; 
-      dWdZ = this->m_uz[start+wID]; 
+      _dUdX = this->m_ux[start+uID]; 
+      _dVdY = this->m_uy[start+vID]; 
+      _dWdZ = this->m_uz[start+wID]; 
       
       // AL: here we assume to have one single species
       // p=rho*R*T  =>  dP=dRho*R*T+rho*R*dT  =>  dRho=(dP-rho*R*dT)/(R*T)
-      //const CFreal avRho = _physicalData[EulerTerm::RHO]; // which rho should I use <------------------------------------
       const CFreal avRhoR = _physicalData[EulerTerm::RHO]*R;
       const CFreal RT = R*_physicalData[EulerTerm::T];
       dRhodX = (this->m_ux[start+pID] - avRhoR*this->m_ux[start+TID])/RT; // calculation of the grad(rho)
       dRhodY = (this->m_uy[start+pID] - avRhoR*this->m_uy[start+TID])/RT;
-      dRhodZ = (this->m_uz[start+pID] - avRhoR*this->m_uz[start+TID])/RT; // I add this !!!!!!!!!!!!!!
+      dRhodZ = (this->m_uz[start+pID] - avRhoR*this->m_uz[start+TID])/RT;
     } 
     else { 
-     {
-  CFLog(INFO, "Only implemented for Least Square Reconstructor \n");
-  throw Common::NotImplementedException (FromHere(),"For !(this->m_useGradientLS && this->m_gradientsExist) not implemented...");
-  
-}
+      CFLog(INFO, "Only implemented for Least Square Reconstructor \n");
+      throw Common::NotImplementedException (FromHere(),"For !(this->m_useGradientLS && this->m_gradientsExist) not implemented...");
     }
-    
     
     const CFuint iNutil = _varSet->getModel()->getFirstScalarVar(0);
     
@@ -212,21 +207,21 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     
     const CFreal mu = _diffVarSet->getLaminarDynViscosityFromGradientVars(_avState);
     const CFreal rho = _diffVarSet->getDensity(_avState);
-    NIU = mu / rho;
-    NIUtilda = _avState[5];
+    _NIU = mu / rho;
+    _NIUtilda = _avState[5];
     
     //make sure we don't have negative values of niutilda
     ///@Attention CG: According to Spalart "cliping updates prevents the convergence of discrete PDE residuals and hampers efforts
     //to quantify discrete truncation and solution errors"
     ///@see Allmaras, S. R., Johnson, F. T., and Spalart, P. R., "Modifications and Clarifications for the Implementation 
     ///of the Spalart-Allmaras Turbulence Model," ICCFD7-1902, 7th International Conference on Computational Fluid Dynamics, Big Island, Hawaii, 9-13 July 2012. 
-    NIUtilda = max(0.,NIUtilda); // to avoid this use of the SA-negative model. See the above paper.
-
+    _NIUtilda = max(0.,_NIUtilda); // to avoid this use of the SA-negative model. See the above paper.
+    
     // To prevent division by zero (see Ashford, G., An Unstructured Grid
     // Generation and Adaptive Solution Technique for High-Reynolds-Number Compressible Flows, Ph.D. Thesis, University of Michigan 1996.)
     // Page 155
-    CFreal Qsi = NIUtilda / NIU;
-
+    CFreal Qsi = _NIUtilda / _NIU;
+    
     //constants of the SA turbulence model:
     const CFreal Cb1 = 0.1355;
     const CFreal Cb2 = 0.622;
@@ -240,41 +235,41 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     const CFreal Cv2 = 0.7;// these two parameters are used for the modified Stilda
     const CFreal Cv3 = 0.9; ///@see Allmaras, S. R., Johnson, F. T., and Spalart, P. R., "Modifications and Clarifications for the Implementation 
     ///of the Spalart-Allmaras Turbulence Model," ICCFD7-1902, 7th International Conference on Computational Fluid Dynamics, Big Island, Hawaii, 9-13 July 2012. 
-
+    
     ///Original definition of the vorticity (can be negative):
-         const CFreal fv1 = Qsi*Qsi*Qsi / (Qsi*Qsi*Qsi + Cv1*Cv1*Cv1);
-         const CFreal fv2 = 1. - ( Qsi /(1. + (Qsi * fv1)));
-	 
+    const CFreal fv1 = Qsi*Qsi*Qsi / (Qsi*Qsi*Qsi + Cv1*Cv1*Cv1);
+    const CFreal fv2 = 1. - ( Qsi /(1. + (Qsi * fv1)));
+    
     /// Calculation of the NIUturbulent
-	 NIUturbulent = fv1*NIUtilda;
-	 
-	 const CFreal dw = SA3DSourceTerm::getDistance(element);
-	 
-	 const CFreal Nitiloverkapa2d2 = NIUtilda/( kappa*kappa*dw*dw);
-
-	 //const CFreal Nitiloverkapa2d2 = NIUtilda/( kappa*kappa*_d*_d);
-	 
-         const CFreal S = std::sqrt((dVdX - dUdY)*(dVdX - dUdY) + 
-				    (dUdZ - dWdX)*(dUdZ - dWdX) +
-				    (dVdZ - dWdY)*(dVdZ - dWdY)); // definition of the 3D vorticity magnitude
-	 
-	 const CFreal Soverbar = Nitiloverkapa2d2*fv2;
-	 
-	 CFreal Stilda = 0.; // definition and initialization of Stilda
-	 
-	 //Preventing Negative Values of Modified Vorticity Stilda
-	 ///@see Allmaras, S. R., Johnson, F. T., and Spalart, P. R., "Modifications and Clarifications for the Implementation 
-	 ///of the Spalart-Allmaras Turbulence Model," ICCFD7-1902, 7th International Conference on Computational Fluid Dynamics, Big Island, Hawaii, 9-13 July 2012.
-	 if (Soverbar >= -(Cv2*S))
-	 {
-	     Stilda = S + Soverbar;
-	 }
-	 
-	 else
-	 {
-	     Stilda = S + (S*(Cv2*Cv2*S + Cv3*Soverbar))/((Cv3 - 2.0*Cv2)*S - Soverbar);
-	 }
-	 
+    _NIUturbulent = fv1*_NIUtilda;
+    
+    const CFreal dw = SA3DSourceTerm::getDistance(element);
+    
+    const CFreal Nitiloverkapa2d2 = _NIUtilda/( kappa*kappa*dw*dw);
+    
+    //const CFreal Nitiloverkapa2d2 = _NIUtilda/( kappa*kappa*_d*_d);
+    
+    const CFreal S = std::sqrt((_dVdX - _dUdY)*(_dVdX - _dUdY) + 
+			       (_dUdZ - _dWdX)*(_dUdZ - _dWdX) +
+			       (_dVdZ - _dWdY)*(_dVdZ - _dWdY)); // definition of the 3D vorticity magnitude
+    
+    const CFreal Soverbar = Nitiloverkapa2d2*fv2;
+    
+    CFreal Stilda = 0.; // definition and initialization of Stilda
+    
+    //Preventing Negative Values of Modified Vorticity Stilda
+    ///@see Allmaras, S. R., Johnson, F. T., and Spalart, P. R., "Modifications and Clarifications for the Implementation 
+    ///of the Spalart-Allmaras Turbulence Model," ICCFD7-1902, 7th International Conference on Computational Fluid Dynamics, Big Island, Hawaii, 9-13 July 2012.
+    if (Soverbar >= -(Cv2*S))
+      {
+	Stilda = S + Soverbar;
+      }
+    
+    else
+      {
+	Stilda = S + (S*(Cv2*Cv2*S + Cv3*Soverbar))/((Cv3 - 2.0*Cv2)*S - Soverbar);
+      }
+    
     //Clip the vorticity
     //     Stilda = max(Stilda,1.e-10);
     
@@ -287,7 +282,7 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     //const CFreal fv2 = pow((1. + (Qsi/Cv2)),-3);
     //const CFreal fv3 = ((1. + (Qsi * fv1))*(1. - fv2))/Qsi; <------------------------------------
     //const CFreal S = fabs(dVdX - dUdY);
-    //const CFreal Stilda = (S * fv3) + (( NIUtilda/( kappa*kappa*d*d)) * fv2);
+    //const CFreal Stilda = (S * fv3) + (( _NIUtilda/( kappa*kappa*d*d)) * fv2);
     
     const CFreal rlim = 10.0; // definition of the first SA model
     
@@ -329,18 +324,18 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     
     /*
     const CFreal positivePart1 = _diffVarSet->getModel().getCoeffTau() * ( Cb2 / sigma ) * (pow(dKdX,2) + pow(dKdY,2));
-    const CFreal positivePart2 = Cb1 * ( 1. - ft2 ) * Stilda * NIUtilda;
+    const CFreal positivePart2 = Cb1 * ( 1. - ft2 ) * Stilda * _NIUtilda;
     const CFreal positivePart3 = (1./_diffVarSet->getModel().getCoeffTau()) * ft1 * pow(DU,2);
     const CFreal positivePart = (positivePart1 + positivePart2 + positivePart3)*rho;
     */
 
     /*
-    const CFreal negativePart1 = - _diffVarSet->getModel().getCoeffTau() * ( Cw1 * fw ) * ((NIUtilda*NIUtilda) / (d*d));
-    const CFreal negativePart2 = _diffVarSet->getModel().getCoeffTau() * ((Cb1/(kappa*kappa))*ft2) * ((NIUtilda*NIUtilda) / (d*d));
+    const CFreal negativePart1 = - _diffVarSet->getModel().getCoeffTau() * ( Cw1 * fw ) * ((_NIUtilda*_NIUtilda) / (d*d));
+    const CFreal negativePart2 = _diffVarSet->getModel().getCoeffTau() * ((Cb1/(kappa*kappa))*ft2) * ((_NIUtilda*_NIUtilda) / (d*d));
     CFreal negativePart = (negativePart1 + negativePart2) * rho;
     
     // correction for the introduction of rho in the convective flux : G
-    const CFreal G = ( 1. / sigma ) * (NIU + NIUtilda) * ( dKdX + dKdY ) * ( dRhodX + dRhodY );
+    const CFreal G = ( 1. / sigma ) * (NIU + _NIUtilda) * ( dKdX + dKdY ) * ( dRhodX + dRhodY );
     const CFreal adimCoef = _diffVarSet->getModel().getCoeffTau();
     negativePart -= G*adimCoef;
     */
@@ -355,9 +350,9 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     
     const CFreal adimCoef = _diffVarSet->getModel().getCoeffTau();
     
-    const CFreal P = Cb1 * Stilda * NIUtilda; // production term
+    const CFreal P = Cb1 * Stilda * _NIUtilda; // production term
     
-    CFreal D = adimCoef * ( Cw1 * fw ) * ((NIUtilda*NIUtilda) / (_d*_d)); // destruction term
+    CFreal D = adimCoef * ( Cw1 * fw ) * ((_NIUtilda*_NIUtilda) / (_d*_d)); // destruction term
     
     // tranform the model into SA - noft2 - comp by adding the extra destruction term
     // It improves the performance of the model in compressible mixing layers
@@ -368,7 +363,7 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
       
       const CFreal spSound = _physicalData[EulerTerm::A];
       
-      const CFreal extraDest = (C5*NIUtilda*NIUtilda/(spSound*spSound))*(SA3DSourceTerm::compSumOfVelocityGrads());
+      const CFreal extraDest = (C5*_NIUtilda*_NIUtilda/(spSound*spSound))*(SA3DSourceTerm::compSumOfVelocityGrads());
       
       D += extraDest;
     }
@@ -376,7 +371,7 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
     const CFreal nonConsDiffTerm = adimCoef * ( Cb2 / sigma ) * (pow(dNutildX,2) + pow(dNutildY,2) + pow(dNutildZ,2));
     
     // correction for the introduction of rho in the convective flux : G
-    const CFreal G = adimCoef * ( 1. / sigma ) * (NIU + NIUtilda) * ( dNutildX + dNutildY + dNutildZ ) * ( dRhodX + dRhodY + dRhodZ );
+    const CFreal G = adimCoef * ( 1. / sigma ) * (_NIU + _NIUtilda) * ( dNutildX + dNutildY + dNutildZ ) * ( dRhodX + dRhodY + dRhodZ );
     
     const CFreal negativePart = - (D * rho + G);
     const CFreal positivePart = (P + nonConsDiffTerm )*rho;
@@ -404,7 +399,6 @@ void SA3DSourceTerm::computeSource(Framework::GeometricEntity *const element,
 
 ///////////////////////////////////////////////////////////////////////////////
 
-
 ///@Attention CG: this method should be overrided from the DES models
 CFreal SA3DSourceTerm::getDistance (Framework::GeometricEntity *const element)
 {
@@ -421,14 +415,11 @@ CFreal SA3DSourceTerm::getDistance (Framework::GeometricEntity *const element)
 
 // CG: this method compute the sum of the velocity gradients. It is needed for the comp model
 // and for the DDES nad IDDES modes
- CFreal SA3DSourceTerm::compSumOfVelocityGrads ()
+CFreal SA3DSourceTerm::compSumOfVelocityGrads ()
 {
-  
-  CFreal Sum = (dUdX*dUdX + dVdX*dVdX + dWdX*dWdX +
-		dUdY*dUdY + dVdY*dVdY + dWdY*dWdY + 
-		dUdZ*dUdZ + dVdZ*dVdZ + dWdZ*dWdZ );
-  
-  return Sum;
+  return  (_dUdX*_dUdX + _dVdX*_dVdX + _dWdX*_dWdX +
+	   _dUdY*_dUdY + _dVdY*_dVdY + _dWdY*_dWdY + 
+	   _dUdZ*_dUdZ + _dVdZ*_dVdZ + _dWdZ*_dWdZ );
 }
 
 //////////////////////////////////////////////////////////////////////////////

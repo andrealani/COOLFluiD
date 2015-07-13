@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Physics_NavierStokes_Euler1DPvtToCons_hh
-#define COOLFluiD_Physics_NavierStokes_Euler1DPvtToCons_hh
+#ifndef COOLFluiD_Physics_NavierStokes_EulerPvtToCons_hh
+#define COOLFluiD_Physics_NavierStokes_EulerPvtToCons_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -19,42 +19,45 @@ namespace COOLFluiD {
 
 /**
  * This class represents a transformer of variables from primitive
- * [p u T] to conservative variables
+ * [p v T] to conservative variables
  *
- * @author Alessandro Munafo'
+ * @author Andrea Lani
  *
  */
-class Euler1DPvtToCons : public Framework::VarSetTransformer {
+class EulerPvtToCons : public Framework::VarSetTransformer {
 public:
 
   /**
    * Default constructor without arguments
    */
-  Euler1DPvtToCons(Common::SafePtr<Framework::PhysicalModelImpl> model);
+  EulerPvtToCons(Common::SafePtr<Framework::PhysicalModelImpl> model);
 
   /**
    * Default destructor
    */
-  ~Euler1DPvtToCons();
+  virtual ~EulerPvtToCons();
   
   /**
    * Transform a state into another one
    */
-  void transform(const Framework::State& state, Framework::State& result);
+  virtual void transform(const Framework::State& state, Framework::State& result);
   
   /**
    * Transform a state into another one from reference precomputed
    * values (physical data)associated to the given state
    */
-  void transformFromRef(const RealVector& data, Framework::State& result);
+  virtual void transformFromRef(const RealVector& data, Framework::State& result);
   
-private:
-
+protected:
+  
   /// acquaintance of the PhysicalModel
   Common::SafePtr<EulerTerm> _model;
-
-}; // end of class Euler1DPvtToCons
-
+  
+  /// density
+  CFreal m_rho;
+  
+}; // end of class EulerPvtToCons
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace NavierStokes
@@ -65,4 +68,4 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Physics_NavierStokes_Euler1DPvtToCons_hh
+#endif // COOLFluiD_Physics_NavierStokes_EulerPvtToCons_hh

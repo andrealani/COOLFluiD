@@ -1,5 +1,5 @@
 #include "LTE.hh"
-#include "Euler2DPuvtLTEToCons.hh"
+#include "EulerPvtLTEToCons.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Framework/PhysicalChemicalLibrary.hh"
 #include "NavierStokes/EulerTerm.hh"
@@ -21,62 +21,81 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-Environment::ObjectProvider<Euler2DPuvtLTEToCons, VarSetTransformer, LTEModule, 1> euler2DPuvtLTEToConsProvider("Euler2DPuvtLTEToCons");
+Environment::ObjectProvider<EulerPvtLTEToCons, VarSetTransformer, LTEModule, 1> 
+euler1DPvtLTEToConsProvider("Euler1DPvtLTEToCons");
+
+Environment::ObjectProvider<EulerPvtLTEToCons, VarSetTransformer, LTEModule, 1> 
+euler2DPuvtLTEToConsProvider("Euler2DPuvtLTEToCons");
+
+Environment::ObjectProvider<EulerPvtLTEToCons, VarSetTransformer, LTEModule, 1> 
+euler3DPvtLTEToConsProvider("Euler3DPvtLTEToCons");
 
 //////////////////////////////////////////////////////////////////////////////
 
-Euler2DPuvtLTEToCons::Euler2DPuvtLTEToCons(Common::SafePtr<Framework::PhysicalModelImpl> model) :
+EulerPvtLTEToCons::EulerPvtLTEToCons(Common::SafePtr<Framework::PhysicalModelImpl> model) :
   VarSetTransformer(model),
-  _model(model->getConvectiveTerm().d_castTo<EulerTerm>()),
+  _model(model->getConvectiveTerm().d_castTo<EulerTerm>()), 
+  m_rho(0.),
   _dhe(3)
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-Euler2DPuvtLTEToCons::~Euler2DPuvtLTEToCons()
+EulerPvtLTEToCons::~EulerPvtLTEToCons()
 {
 }
       
 //////////////////////////////////////////////////////////////////////////////
 
-void Euler2DPuvtLTEToCons::transform(const State& state, State& result)
+void EulerPvtLTEToCons::transform(const State& state, State& result)
 {
   const RealVector& refData = _model->getReferencePhysicalData();
-
-  const CFreal u = state[1];
-  const CFreal v = state[2];
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint TID = dim+1;
+  
   CFreal p = _model->getPressureFromState(state[0]);
-  CFreal T = state[3];
+  CFreal T = state[TID];
   CFreal pdim = p*refData[EulerTerm::P];
   CFreal Tdim = T*_model->getTempRef();
-
+  
   static Common::SafePtr<PhysicalChemicalLibrary> library =
     PhysicalModelStack::getActive()->getImplementor()->
     getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
-
+  
   // set the composition
   library->setComposition(Tdim,pdim);
-  library->setDensityEnthalpyEnergy(Tdim,pdim,_dhe);
-  const CFreal rho = _dhe[0]/refData[EulerTerm::RHO];
-  const CFreal V2 = u*u + v*v;
-
-  result[0] = rho;
-  result[1] = rho*u;
-  result[2] = rho*v;
-  result[3] = rho*(_dhe[2]/refData[EulerTerm::H] + 0.5*V2);
+  library->setDensityEnthalpyEnergy(Tdim, pdim,_dhe);
+  
+  m_rho = _dhe[0]/refData[EulerTerm::RHO];
+  result[0] = m_rho;
+  
+  CFreal V2 = 0.;
+  for (CFuint i=0; i < dim; ++i) {
+    const CFuint uID = i+1;
+    const CFreal u = state[uID];
+    result[uID] = m_rho*u; 
+    V2 += u*u;
+  }
+  
+  result[TID] = m_rho*(_dhe[2]/refData[EulerTerm::H] + 0.5*V2);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
-void Euler2DPuvtLTEToCons::transformFromRef(const RealVector& data, State& result)
+void EulerPvtLTEToCons::transformFromRef(const RealVector& data, State& result)
 {
-  const CFreal rho = data[EulerTerm::RHO];
-
-  result[0] = rho;
-  result[1] = rho*data[EulerTerm::VX];
-  result[2] = rho*data[EulerTerm::VY];
-  result[3] = rho*data[EulerTerm::E];
+  m_rho = data[EulerTerm::RHO];
+  result[0] = m_rho; 
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  for (CFuint i=0; i < dim; ++i) {
+    result[i+1] = m_rho*data[EulerTerm::VX+i];
+  }
+  
+  const CFuint TID = dim+1;
+  result[TID] = m_rho*data[EulerTerm::E];
 }
 
 //////////////////////////////////////////////////////////////////////////////

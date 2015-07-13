@@ -94,14 +94,14 @@ protected: //methods
   ///@return the laminar kinematic viscosity
   virtual CFreal getLamViscosity()
   {
-    return NIU;
+    return _NIU;
   };
   
   //CG: this method ia added so as for the DDES and IDDES modes to have access
   ///@return the turbulent kinematic viscosity
   virtual CFreal getTurbViscosity()
   {
-    return NIUturbulent;
+    return _NIUturbulent;
   };
   
 protected: // data
@@ -138,9 +138,9 @@ protected: // data
 private:
   
   // turbulent and laminar viscosity
-  CFreal NIUtilda;
-  CFreal NIU;
-  CFreal NIUturbulent;
+  CFreal _NIUtilda;
+  CFreal _NIU;
+  CFreal _NIUturbulent;
   
   // this variable is flag for the SA - comp model
   bool _CompTerm;
@@ -149,18 +149,18 @@ private:
   CFreal _d;
   
   // gradients of velocities
-  CFreal dVdX ;
-  CFreal dUdY ;
-  CFreal dUdZ ; 
-  CFreal dWdX ; 
-  CFreal dVdZ ; 
-  CFreal dWdY ; 
-    
+  CFreal _dVdX ;
+  CFreal _dUdY ;
+  CFreal _dUdZ ; 
+  CFreal _dWdX ; 
+  CFreal _dVdZ ; 
+  CFreal _dWdY ; 
+  
   // these terms are added for the comp model
-  CFreal dUdX ; 
-  CFreal dVdY ;
-  CFreal dWdZ;
-
+  CFreal _dUdX ; 
+  CFreal _dVdY ;
+  CFreal _dWdZ;
+  
 }; // end of class SA3DSourceTerm
 
 //////////////////////////////////////////////////////////////////////////////

@@ -5,10 +5,10 @@ DynamicViscosityLaw.cxx
 DynamicViscosityLaw.hh
 EntropyConvVarSet.ci
 EntropyConvVarSet.hh
+EulerPvtToCons.cxx
+EulerPvtToCons.hh
 Euler1DPvt.cxx
 Euler1DPvt.hh
-Euler1DPvtToCons.cxx
-Euler1DPvtToCons.hh
 Euler1DCons.cxx
 Euler1DCons.hh
 Euler1DConsToRoe.cxx
@@ -81,8 +81,6 @@ Euler2DPuvt.cxx
 Euler2DPuvt.hh
 Euler2DPuvtIncompToPuvt.cxx
 Euler2DPuvtIncompToPuvt.hh
-Euler2DPuvtToCons.cxx
-Euler2DPuvtToCons.hh
 Euler2DPuvtToConsInPuvt.cxx
 Euler2DPuvtToConsInPuvt.hh
 Euler2DPuvtToConsInRef.cxx
@@ -148,8 +146,6 @@ Euler3DPrim.cxx
 Euler3DPvt.cxx
 Euler3DPvt.ci
 Euler3DPvt.hh
-Euler3DPvtToCons.cxx
-Euler3DPvtToCons.hh
 Euler3DPvtToConsInPvt.cxx
 Euler3DPvtToConsInPvt.hh
 Euler3DPvtToRoe.cxx

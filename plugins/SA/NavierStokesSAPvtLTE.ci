@@ -1,0 +1,141 @@
+#include "NavierStokes/EulerTerm.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace SA {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>      
+NavierStokesSAPvtLTE<BASE>::NavierStokesSAPvtLTE
+(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model) : 
+  NavierStokesSAPvt<BASE>(name, model),
+  m_library(CFNULL), 
+  m_tempX()
+{ 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+NavierStokesSAPvtLTE<BASE>::~NavierStokesSAPvtLTE()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+CFreal NavierStokesSAPvtLTE<BASE>::getLaminarDynViscosityFromGradientVars(const RealVector& state)
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  CFreal Tdim = this->_eulerModel->getTempRef()*state[this->_TID];
+  CFreal pdim =  this->_eulerModel->getPressureFromState(state[0])*
+    (this->_eulerModel->getReferencePhysicalData())[EulerTerm::P];
+  return m_library->eta(Tdim, pdim, CFNULL) /
+    (this->getModel().getReferencePhysicalData())[NavierStokes::NSTurbTerm::MU]; ///@return mu
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+    
+template <typename BASE> 
+CFreal NavierStokesSAPvtLTE<BASE>::getThermConductivity(const RealVector& state,
+							const CFreal& dynViscosity)
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  CFreal Tdim = this->_eulerModel->getTempRef()*state[this->_TID];
+  CFreal pdim =  this->_eulerModel->getPressureFromState(state[0])*
+    (this->_eulerModel->getReferencePhysicalData())[EulerTerm::P];
+  return m_library->lambdaEQ(Tdim,pdim) /
+    (this->getModel().getReferencePhysicalData())[NavierStokes::NSTurbTerm::LAMBDA];
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+  
+template <typename BASE> 
+CFreal NavierStokesSAPvtLTE<BASE>::getDensity(const RealVector& state)
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  CFreal Tdim   = this->_eulerModel->getTempRef()*state[this->_TID];
+  CFreal pdim   = this->_eulerModel->getPressureFromState(state[0])*
+    (this->_eulerModel->getReferencePhysicalData())[EulerTerm::P];
+  const CFreal rhoRef = (this->_eulerModel->getReferencePhysicalData())[EulerTerm::RHO];
+  return m_library->density(Tdim,pdim)/rhoRef;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+      
+template <typename BASE> 
+void NavierStokesSAPvtLTE<BASE>::setup() ///@!!! there is no unsetup
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::Common;
+  
+  // call  the parent setup()
+  NavierStokesSAPvt<BASE>::setup();
+  
+  m_library = PhysicalModelStack::getActive()->getImplementor()->
+    template getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  cf_assert(m_library.isNotNull());
+  
+  m_tempX.resize(m_library->getNbSpecies());
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+void NavierStokesSAPvtLTE<BASE>::setComposition(const RealVector& state,
+						const bool isPerturb,
+						const CFuint iVar)
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  CFLog(DEBUG_MAX, "NavierStokesSAPvtLTE::setComposition() => START\n");
+  
+  // this is to avoid useless expensive re-computations
+  this->useBackUpValues(false);
+  this->setBackUpValues(false);
+  
+  if (isPerturb && (iVar != 0 && iVar != this->_TID)) {
+    this->useBackUpValues(true);
+  }
+  else if (isPerturb && (iVar == 0 || iVar == this->_TID)) {
+    CFreal Tdim   = this->_eulerModel->getTempRef()*state[this->_TID];
+    CFreal pdim   = this->_eulerModel->getPressureFromState(state[0])*
+      (this->_eulerModel->getReferencePhysicalData())[EulerTerm::P];
+    m_library->setComposition(Tdim,pdim);
+  }
+  else if (!isPerturb) {
+    CFreal Tdim   = this->_eulerModel->getTempRef()*state[this->_TID];
+    CFreal pdim   = this->_eulerModel->getPressureFromState(state[0])*
+      (this->_eulerModel->getReferencePhysicalData())[EulerTerm::P];
+    m_library->setComposition(Tdim,pdim,&m_tempX);  
+    // set and store the back up values only if an unperturbed flux
+    // is computed
+    this->setBackUpValues(true); 
+  }
+  
+  CFLog(DEBUG_MAX, "NavierStokesSAPvtLTE::setComposition() => END\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace SA
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
