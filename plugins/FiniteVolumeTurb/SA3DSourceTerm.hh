@@ -81,6 +81,11 @@ public:
 		     RealVector& source,
 		     RealMatrix& jacobian);
   
+protected:
+  
+  /// compute the density spatial derivatives when LS gradients cannot be used
+  virtual void computeDRhoDX(Framework::GeometricEntity *const element);
+  
 protected: //methods
   
   ///@return the distance to the wall
@@ -113,26 +118,23 @@ protected: // data
   Common::SafePtr<Physics::SA::NavierStokes3DSA> _diffVarSet;
   
   /// vector to store temporary result
-  RealVector _temp;
-
-  /// average State
-  RealVector _avState;
+  RealVector _avStateFace;
 
   /// Euler physical data
   RealVector _physicalData;
-
+  
+  /// Euler physical data
+  RealVector _physicalDataFace;
+  
   /// handle to the reconstructed nodal states
   Framework::DataHandle< RealVector> _nstates;
 
   /// handle to the wall distance
   Framework::DataHandle< CFreal> _wallDistance;
-
-  /// array of temporary values
-  RealMatrix _values;
   
   /// unperturbed Positive Part
   CFreal _unperturbedPositivePart;
-
+  
   CFreal _unperturbedNegativePart;
   
 private:
@@ -142,11 +144,13 @@ private:
   CFreal _NIU;
   CFreal _NIUturbulent;
   
-  // this variable is flag for the SA - comp model
-  bool _CompTerm;
-  
   // distance to the wall
   CFreal _d;
+  
+  // gradients of density 
+  CFreal _dRhodX;
+  CFreal _dRhodY;
+  CFreal _dRhodZ; 
   
   // gradients of velocities
   CFreal _dVdX ;
@@ -160,6 +164,12 @@ private:
   CFreal _dUdX ; 
   CFreal _dVdY ;
   CFreal _dWdZ;
+  
+  // this variable is flag for the SA - comp model
+  bool _CompTerm;
+  
+  // tell if a perface un-reactive gas is assumed
+  bool _isPerfectGas;
   
 }; // end of class SA3DSourceTerm
 
