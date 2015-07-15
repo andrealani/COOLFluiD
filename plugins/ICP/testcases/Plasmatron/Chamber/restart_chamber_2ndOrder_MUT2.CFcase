@@ -1,14 +1,37 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, ICPLTE2D, NewtonIterator using two weakly coupled systems 
+# (fluid and electric field), mesh with quads, second-order reconstruction with
+# limiter, Rhie Chow flux for incompressible flows, subsonic inlet and outlet, 
+# isothermal noslip wall, PETSc, computation of Lorentz force and Joule heating 
+# source terms for ICP, Mutation2.0.0 for air mixtures in LTE, 
+# restart from a solution on a full torch+chamber+probe configuration, parallel 
+# TECPLOT writer in block format (including output for electric conductivity)   
+#
+################################################################################
+#
 # COOLFluiD Startfile
 # Comments begin with "#"
 
 # This testcases verifies the simulation of torch + chamber + probe at 100kW
-
-### Residual = -1.3592156
-# -3.0362587
-
+### Residual = -2.0518403
 
 #######TEST CONFIGURATION
 CFEnv.ErrorOnUnusedConfig = true
+#CFEnv.ExceptionLogLevel    = 1000
+#CFEnv.DoAssertions         = true
+#CFEnv.AssertionDumps       = true
+#CFEnv.AssertionThrows      = true
+#CFEnv.AssertThrows         = true
+#CFEnv.AssertDumps          = true
+#CFEnv.ExceptionAborts      = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
+#CFEnv.RegistSignalHandlers = false
+#CFEnv.TraceToStdOut = true
+#CFEnv.TraceActive = true
 
 # Simulation Modules
 Simulator.Modules.Libs = libPetscI libTecplotWriter libNavierStokes libMutation2OLD libMutation2OLDI libLTE libICP libFiniteVolume libFiniteVolumeNavierStokes libFiniteVolumeICP libNewtonMethod libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
@@ -26,6 +49,7 @@ Simulator.SubSystem.ICPLTE2D.ConvTerm.uInf = 666.
 Simulator.SubSystem.ICPLTE2D.ConvTerm.p0Inf = 1500.
 
 ###### EM Field MODEL ##
+
 Simulator.SubSystem.ICPLTE2D.SourceTerm.Use2DModel = true
 #Simulator.SubSystem.ICPLTE2D.SourceTerm.xMaxUsing1DModel = 0.486
 #Simulator.SubSystem.ICPLTE2D.SourceTerm.Use2DModel = false
@@ -39,40 +63,34 @@ Simulator.SubSystem.ICPLTE2D.SourceTerm.Freq = 0.37
 
 ###### CHEMICAL LIBRARY ##
 Simulator.SubSystem.ICPLTE2D.PropertyLibrary = Mutation2OLD
-Simulator.SubSystem.ICPLTE2D.Mutation2OLD.mixtureName = argon3
-#Simulator.SubSystem.ICPLTE2D.Mutation2OLD.mixtureName = air11
+#Simulator.SubSystem.ICPLTE2D.Mutation2OLD.mixtureName = argon3
+Simulator.SubSystem.ICPLTE2D.Mutation2OLD.mixtureName = air11
 Simulator.SubSystem.ICPLTE2D.Mutation2OLD.thermCondAlgo = Direct
 
-#Simulator.SubSystem.ConvergenceFile = ./convergence.plt
-
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
-Simulator.SubSystem.CFmesh.FileName     = chamber_out-rest-bis.CFmesh
+Simulator.SubSystem.CFmesh.FileName     = chamber_MUT2.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate     = 5 
-Simulator.SubSystem.Tecplot.FileName    = chamber_out-rest-bis.plt
+Simulator.SubSystem.Tecplot.FileName    = chamber_MUT2.plt
 Simulator.SubSystem.Tecplot.SaveRate    = 5 
 Simulator.SubSystem.Tecplot.Data.outputVar = Puvt
 Simulator.SubSystem.Tecplot.Data.printExtraValues = true
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Symmetry
 #Wall_torch_in
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = elCondField
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = sigma
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
+Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
 
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 3
+#Simulator.SubSystem.StopCondition          = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 3
 
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -2.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -2.0
 
 Simulator.SubSystem.Default.listTRS = InnerFaces Symmetry Wall_torch_up Wall_torch_in Inlet Outlet Wall_ch Outlet_up Wall_probe
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = chamber_out-rest-bis-P0.CFmesh.2nd
-#chamber_out-rest.CFmesh
-#Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
-#Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
-#Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
-#Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1000
-
-#Simulator.SubSystem.CFmeshFileReader.Data.UseInitValues = 0 0 0 0 1 1 
-#Simulator.SubSystem.CFmeshFileReader.Data.InitValues = 0. 0. 0. 0. 0. 0. 
 
 Simulator.SubSystem.LinearSystemSolver = PETSC PETSC
 Simulator.SubSystem.LSSNames = NSLSS ELSS
@@ -80,10 +98,11 @@ Simulator.SubSystem.LSSNames = NSLSS ELSS
 Simulator.SubSystem.NSLSS.Data.PCType = PCASM
 Simulator.SubSystem.NSLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.NSLSS.Data.MatOrderingType = MATORDERING_RCM
-Simulator.SubSystem.NSLSS.Data.MaxIter = 1000
+Simulator.SubSystem.NSLSS.Data.MaxIter = 20000
 #Simulator.SubSystem.NSLSS.Data.SaveSystemToFile = true
 Simulator.SubSystem.NSLSS.MaskEquationIDs = 0 1 2 3
-Simulator.SubSystem.NSLSS.Data.NbKrylovSpaces = 50
+#Simulator.SubSystem.NSLSS.Data.NbKrylovSpaces = 250
+Simulator.SubSystem.NSLSS.Data.RelativeTolerance = 1e-4
 
 Simulator.SubSystem.ELSS.Data.PCType = PCASM
 Simulator.SubSystem.ELSS.Data.KSPType = KSPGMRES
@@ -105,23 +124,20 @@ Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation = .3 .3 .3 .3 1. 1.
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 0
 
 ############################################################################## CFL ###
-#Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 296.382
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function 
 #Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = min(1000,cfl*1.005)
 
-Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
-Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
-Simulator.SubSystem.InteractiveParamReader.FileName = plugins/ICP/testcases/Plasmatron/Chamber/torch.inter
-Simulator.SubSystem.InteractiveParamReader.readRate = 5
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 10000.
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
+#Simulator.SubSystem.InteractiveParamReader.FileName = plugins/ICP/testcases/Plasmatron/Chamber/torch.inter
+#Simulator.SubSystem.InteractiveParamReader.readRate = 5
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 Simulator.SubSystem.CellCenterFVM.Restart = true
 Simulator.SubSystem.CellCenterFVM.Data.CollaboratorNames = NSLSS ELSS
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobCoupling
-Simulator.SubSystem.CellCenterFVM.NumJacobCoupling.FreezeDiffCoeff = false
-#
-#Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobFastCoupling
-#Simulator.SubSystem.CellCenterFVM.NumJacobFastCoupling.FreezeDiffCoeff = false
+Simulator.SubSystem.CellCenterFVM.NumJacobCoupling.FreezeDiffCoeff = true
 Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhsCoupling
 Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhsCoupling.annullDiagValue = 0 1
 #Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhsCoupling.useGlobalDT = true
@@ -256,5 +272,3 @@ Simulator.SubSystem.DataProcessing.LorentzForce.FaceCenterComputationMethod = 1
 ##  1: LorentzForce compute Ev usign distance-based average 
 ##  2: LorentzForce computes Ev in the original way, usign volume-based average
 Simulator.SubSystem.DataProcessing.LorentzForce.AverageInNodeStrategy = 0
-
-CFEnv.RegistSignalHandlers = false
