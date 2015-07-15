@@ -37,8 +37,8 @@ public:
    * the variable name and its position in the
    * physical data
    */
-  enum {MU=0, LAMBDA=1, RE=2};
-
+  enum {MU=0, LAMBDA=1, RE=2, END=3};
+  
   /**
    * Constructor without arguments
    */

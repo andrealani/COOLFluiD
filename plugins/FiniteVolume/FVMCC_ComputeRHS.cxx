@@ -296,7 +296,9 @@ void FVMCC_ComputeRHS::execute()
 	  // compute the contribution to the RHS
 	  updateRHS();
 	  // source term jacobians are only computed while processing internal faces 
+	  CFLog(DEBUG_MIN, "FVMCC_ComputeRHS::execute() => before computeRHSJacobian()\n");
 	  computeRHSJacobian();
+	  CFLog(DEBUG_MIN, "FVMCC_ComputeRHS::execute() => after computeRHSJacobian()\n");
 	}
 	
 	geoBuilder->releaseGE(); 
@@ -307,9 +309,9 @@ void FVMCC_ComputeRHS::execute()
   finalizeComputationRHS();
   
   
-//   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-//   DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
-//   DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
+  //   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  //   DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
+  //   DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
 //   for (CFuint iState = 0; iState < states.size(); ++iState) {
 //     for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
 //       cout.precision(14); cout.setf(ios::scientific,ios::floatfield); cout << rhs(iState, iEq, nbEqs) << " ";

@@ -5,7 +5,7 @@
 
 #include "NavierStokes/EulerTerm.hh"
 #include "NavierStokes/NSTerm.hh"
-#include "ArcJet/ArcJetReactionTerm.hh"
+#include "ArcJet/ArcJetTerm.hh"
 #include "Framework/MultiScalarTerm.hh"
 #include "Framework/ConvectionDiffusionReactionPM.hh"
 
@@ -30,7 +30,7 @@ template <int DIM>
 class ArcJetLTEPhysicalModel :
 	public Framework::ConvectionDiffusionReactionPM
 	<Framework::MultiScalarTerm<NavierStokes::EulerTerm>,
-	 NavierStokes::NSTerm, ArcJetReactionTerm<Framework::BaseTerm> > {
+	 ArcJetTerm<NavierStokes::NSTerm>, ArcJetTerm<Framework::BaseTerm> > {
 public:
   
    /**

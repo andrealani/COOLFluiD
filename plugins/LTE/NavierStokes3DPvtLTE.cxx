@@ -152,17 +152,27 @@ void NavierStokes3DPvtLTE::setComposition(const RealVector& state,
   // this is to avoid useless expensive re-computations
   useBackUpValues(false);
   setBackUpValues(false);
-
-  if (isPerturb && (iVar == 1 || iVar == 2 || iVar == 3)) {
-    useBackUpValues(true);
-  }
-  else if (isPerturb && (iVar == 0 || iVar == 4)) {
-    _library->resetComposition(_tempX);
+  
+  CFLog(DEBUG_MAX, "NavierStokes3DPvtLTE::setComposition() => iVar = " << iVar << ", isPerturb = " << isPerturb << "\n");
+  
+  const bool isPT = (iVar == 0 || iVar == 4);
+  if (isPerturb) {
+    if (!isPT) {
+      useBackUpValues(true);
+    }
+    else {
+      /// @todo test if it is possible to use it like this
+      // _library->resetComposition(_tempX);
+      CFreal Tdim = _eulerModel->getTempRef()*state[4];
+      CFreal pdim = _eulerModel->getPressureFromState(state[0])*
+	(_eulerModel->getReferencePhysicalData())[EulerTerm::P];
+      _library->setComposition(Tdim,pdim);
+    }
   }
   else if (!isPerturb) {
     CFreal Tdim = _eulerModel->getTempRef()*state[4];
     CFreal pdim = _eulerModel->getPressureFromState(state[0])*
-    (_eulerModel->getReferencePhysicalData())[EulerTerm::P];
+      (_eulerModel->getReferencePhysicalData())[EulerTerm::P];
     _library->setComposition(Tdim,pdim,&_tempX);
     // set and store the back up values only if an unperturbed flux
     // is computed

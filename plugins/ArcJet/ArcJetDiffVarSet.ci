@@ -1,5 +1,7 @@
 #include "Framework/PhysicalChemicalLibrary.hh"
 #include "NavierStokes/EulerTerm.hh"
+#include "NavierStokes/NSTerm.hh"
+#include "ArcJet/ArcJetTerm.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -11,29 +13,30 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename BASEVS, typename ST>
-ArcJetDiffVarSet<BASEVS, ST>::ArcJetDiffVarSet
+template <typename BASEVS>
+ArcJetDiffVarSet<BASEVS>::ArcJetDiffVarSet
 (const std::string& name,
  Common::SafePtr<Framework::PhysicalModelImpl> model) :
   BASEVS(name, model),
-  m_arcJetReactionTerm(model->getSourceTerm().d_castTo<ST>()),
   m_library(CFNULL),
-  _eulerModelLTE(model->getConvectiveTerm().template d_castTo<NavierStokes::EulerTerm>())
+  m_eulerModelLTE(model->getConvectiveTerm().template d_castTo<NavierStokes::EulerTerm>()),
+  m_diffModel(model->getDiffusiveTerm().template d_castTo<ArcJetTerm<NavierStokes::NSTerm> >()),
+  m_sigmaCoeff(0.)
 {
   this->addVarName("Phi");
 }
       
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename BASEVS, typename ST>
-ArcJetDiffVarSet<BASEVS, ST>::~ArcJetDiffVarSet()
+template <typename BASEVS>
+ArcJetDiffVarSet<BASEVS>::~ArcJetDiffVarSet()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename BASEVS, typename ST>
-void ArcJetDiffVarSet<BASEVS, ST>::setup()
+template <typename BASEVS>
+void ArcJetDiffVarSet<BASEVS>::setup()
 {
   BASEVS::setup();
     
@@ -45,8 +48,8 @@ void ArcJetDiffVarSet<BASEVS, ST>::setup()
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename BASEVS, typename ST>
-RealVector& ArcJetDiffVarSet<BASEVS, ST>::getFlux
+template <typename BASEVS>
+RealVector& ArcJetDiffVarSet<BASEVS>::getFlux
 (const RealVector& values,
  const std::vector<RealVector*>& gradients,
  const RealVector& normal,
@@ -54,37 +57,33 @@ RealVector& ArcJetDiffVarSet<BASEVS, ST>::getFlux
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
-	
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
   const CFuint nbEqs =
     PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
-
+  
   // here it is assumed that you don't derive from this class (for the moment is
   // a reasonable assumption)
   const CFuint totalNbEqs = this->_flux.size();
-  // if more than 2 or all the equations equations are considered
+  
+  CFLog(DEBUG_MAX, "ArcJetDiffVarSet::getFlux() => " << 
+	"nbEqs = " <<  nbEqs << ", totalNbEqs = " << totalNbEqs << ")\n");
+  
+  // if more than 1 or all the equations equations are considered
   if (nbEqs > 1 || nbEqs == totalNbEqs) {
     BASEVS::getFlux(values,gradients,normal,radius);
   }
   
+  if (nbEqs == 1)  {
+    ArcJetDiffVarSet<BASEVS>::computeTransportProperties(values, gradients, normal);
+    // if nbEqs==totalNbEqs computeTransportProperties() has been already called by BASEVS::getFlux()
+  }
+  
   // if only the last two equations or all the equations are considered
   if (nbEqs == 1 || nbEqs == totalNbEqs) {
-    // AL: not generic this assumes [p v T] variables !!!    
-    CFreal Tdim = values[this->_TID];
-    cf_assert(Tdim > 0.01);
-    cf_assert(this->_TID > 0);  
-    CFreal pdim = _eulerModelLTE->getPressureFromState(values[0]);
-    cf_assert(pdim > 0.01);
-    /* Access the mutation library to get sigma*/
-    CFreal* tVec = CFNULL;
-    const CFreal sigma = m_library->sigma(Tdim, pdim, tVec);
-    //     CFout <<"DiffVarSet::T     = " << Tdim <<"\n";
-    //     CFout <<"DiffVarSet::p     = " << pdim <<"\n";    
-    //     CFout <<"DiffVarSet::sigma = "<< sigma <<"\n";
-    //    const CFreal sigma = 490; 							//WATCH OUT: only for debugging purposes
-    //     const CFreal mu = m_library->eta(Tdim, pdim, tVec);				//WATCH OUT: only for debugging purposes
-    //     const CFreal density = m_library->density(Tdim,pdim);			//WATCH OUT: only for debugging purposes
-    //     cout << "DynViscosity = " << mu << endl;					//WATCH OUT: only for debugging purposes
-    //     cout << "Density      = " << density << endl;				//WATCH OUT: only for debugging purposes
+    const RealVector& nsData = m_diffModel->getPhysicalData();
+    cf_assert(ArcJetTerm<NSTerm>::SIGMA < nsData.size());
+    cf_assert(nsData[ArcJetTerm<NSTerm>::SIGMA] > 0.);
     const CFuint phiID = totalNbEqs - 1;
     const RealVector& gradPhi = *gradients[phiID];
     const CFuint dim    = PhysicalModelStack::getActive()->getDim(); 
@@ -92,7 +91,9 @@ RealVector& ArcJetDiffVarSet<BASEVS, ST>::getFlux
     this->_flux[phiID] = 0.0;
     // AL: double check the sign
     for (CFuint i = 0; i < dim ; ++i) {
-      this->_flux[phiID] += sigma*gradPhi[i]*normal[i];
+      // this modification allows sigma to be frozen during flux jacobian 
+      // computation possibly improving the overall stability
+      this->_flux[phiID] += nsData[ArcJetTerm<NSTerm>::SIGMA]*gradPhi[i]*normal[i];
     }
   }
   
@@ -101,13 +102,74 @@ RealVector& ArcJetDiffVarSet<BASEVS, ST>::getFlux
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename BASEVS, typename ST>
-CFreal ArcJetDiffVarSet<BASEVS, ST>::getCurrUpdateDiffCoeff(CFuint iEqSS)
+template <typename BASEVS>
+CFreal ArcJetDiffVarSet<BASEVS>::getCurrUpdateDiffCoeff(CFuint iEqSS)
 {
   if (iEqSS == 0) {
     return BASEVS::getCurrUpdateDiffCoeff(iEqSS);
   }
   return 0.0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASEVS>
+void ArcJetDiffVarSet<BASEVS>::computeTransportProperties
+(const RealVector& state,
+ const std::vector<RealVector*>& gradients,
+ const RealVector& normal)
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  const CFuint nbEqs =
+    PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
+  
+  // here it is assumed that you don't derive from this class (for the moment is
+  // a reasonable assumption)
+  const CFuint totalNbEqs = this->_flux.size();
+  
+  CFLog(DEBUG_MAX, "ArcJetDiffVarSet::computeTransportProperties() => " << 
+	"nbEqs = " <<  nbEqs << ", totalNbEqs = " << totalNbEqs << ")\n");
+  
+  // if more than 1 or all the equations equations are considered
+  if (nbEqs > 1 || nbEqs == totalNbEqs) {
+    BASEVS::computeTransportProperties(state, gradients, normal);
+  }
+  
+  // if only the last two equations or all the equations are considered
+  if (nbEqs == 1 || nbEqs == totalNbEqs) {
+    // this modification allows sigma to be frozen during flux jacobian 
+    // computation possibly improving the overall stability
+    RealVector& nsData = m_diffModel->getPhysicalData();
+    
+    CFLog(DEBUG_MAX, "ArcJetDiffVarSet::computeTransportProperties() => " << 
+	  "_useBackUpValues = "   << this->_useBackUpValues << 
+	  ", _freezeDiffCoeff = " << this->_freezeDiffCoeff << 
+	  ", _setBackUpValues = " << this->_setBackUpValues << "\n");
+    
+    if (this->_useBackUpValues || this->_freezeDiffCoeff) {
+      CFLog(DEBUG_MAX, "ArcJetDiffVarSet::computeTransportProperties() => " << 
+	    "reusing SIGMA = " << m_sigmaCoeff << "\n");
+      nsData[ArcJetTerm<NSTerm>::SIGMA] = m_sigmaCoeff ;
+    }
+    else {
+      CFreal Tdim = state[this->_TID];
+      cf_assert(Tdim > 0.01);
+      cf_assert(this->_TID > 0);  
+      CFreal pdim = m_eulerModelLTE->getPressureFromState(state[0]);
+      cf_assert(pdim > 0.01);
+      /* Access the mutation library to get sigma*/
+      CFreal* tVec = CFNULL; // this would not work with multi-temperature NEQ
+      nsData[ArcJetTerm<NSTerm>::SIGMA] = m_library->sigma(Tdim, pdim, tVec);
+      
+      if (this->_setBackUpValues) {
+	m_sigmaCoeff = nsData[ArcJetTerm<NSTerm>::SIGMA];
+	CFLog(DEBUG_MAX, "ArcJetDiffVarSet::computeTransportProperties() => " << 
+	      "backed up SIGMA = " << m_sigmaCoeff << "\n");
+      }
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

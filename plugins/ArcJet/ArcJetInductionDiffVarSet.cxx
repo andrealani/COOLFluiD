@@ -1,6 +1,6 @@
 #include "ArcJet/ArcJet.hh"
 #include "ArcJet/ArcJetInductionDiffVarSet.hh"
-#include "ArcJet/ArcJetReactionTerm.hh"
+#include "ArcJet/ArcJetTerm.hh"
 #include "ArcJet/ArcJetInductionTerm.hh"
 #include "LTE/NavierStokes2DPuvtLTE.hh"
 #include "LTE/NavierStokes3DPvtLTE.hh"
@@ -30,28 +30,28 @@ namespace COOLFluiD {
       
 Environment::ObjectProvider<ArcJetInductionDiffVarSet
 			    <NavierStokes2DPuvtLTE<ArcJetInductionTerm<EulerTerm> >, 
-			     ArcJetReactionTerm<Framework::BaseTerm> >, 
+			     ArcJetTerm<Framework::BaseTerm> >, 
 			    DiffusiveVarSet, 
 			    ArcJetModule, 2> 
 arcJet2DPuvtLTEDiffProvider("ArcJet2DPuvtLTE");
 
 Environment::ObjectProvider<ArcJetInductionDiffVarSet
 			    <NavierStokes3DPvtLTE, 
-			    ArcJetReactionTerm<Framework::BaseTerm> >,
+			    ArcJetTerm<Framework::BaseTerm> >,
                             DiffusiveVarSet, 
                             ArcJetModule, 2> 
 arcJet3DPvtLTEDiffProvider("ArcJet3DPvtLTE");
 
 Environment::ObjectProvider<ArcJetInductionDiffVarSet
 			    <NavierStokes2DPuvt, 
-			     ArcJetReactionTerm<Framework::BaseTerm> >, 
+			     ArcJetTerm<Framework::BaseTerm> >, 
 			    DiffusiveVarSet, 
 			    ArcJetModule, 2> 
 arcJet2DPuvtDiffProvider("ArcJet2DPuvt");
 
 Environment::ObjectProvider<ArcJetInductionDiffVarSet
 			    <NavierStokes3DPvt, 
-			    ArcJetReactionTerm<Framework::BaseTerm> >,
+			    ArcJetTerm<Framework::BaseTerm> >,
                             DiffusiveVarSet, 
                             ArcJetModule, 2> 
 arcJet3DPvtDiffProvider("ArcJet3DPvt");

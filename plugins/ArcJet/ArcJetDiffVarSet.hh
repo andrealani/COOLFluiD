@@ -17,9 +17,11 @@ namespace COOLFluiD {
     
     namespace NavierStokes {
       class EulerTerm;
+      class NSTerm;
     }
     
     namespace ArcJet {
+      template <typename BASE> class ArcJetTerm;
       
 //////////////////////////////////////////////////////////////////////////////
 
@@ -29,7 +31,7 @@ namespace COOLFluiD {
    *
    * @author Andrea Lani
    */
-template <typename BASEVS, typename ST>
+template <typename BASEVS>
 class ArcJetDiffVarSet : public BASEVS {
 public: // classes
 
@@ -73,17 +75,25 @@ public: // classes
    * @param iEqSS equation subsystem index
    */
   virtual CFreal getCurrUpdateDiffCoeff(CFuint iEqSS);
-
+  
+  /// Compute the transport properties
+  virtual void computeTransportProperties(const RealVector& state,
+					  const std::vector<RealVector*>& gradients,
+					  const RealVector& normal);
+  
 private:
   
-  /// reaction term
-  Common::SafePtr<ST> m_arcJetReactionTerm;
-
   /// pointer to the physical chemical library
   Common::SafePtr<Framework::PhysicalChemicalLibrary> m_library;
- 
+  
   /// convective model
-  Common::SafePtr<NavierStokes::EulerTerm> _eulerModelLTE;
+  Common::SafePtr<NavierStokes::EulerTerm> m_eulerModelLTE;
+  
+  /// diffusive model
+  Common::SafePtr<ArcJetTerm<NavierStokes::NSTerm> > m_diffModel;
+  
+  /// frozen value of sigma
+  CFreal m_sigmaCoeff;
   
 }; // end of class ArcJetDiffVarSet
 

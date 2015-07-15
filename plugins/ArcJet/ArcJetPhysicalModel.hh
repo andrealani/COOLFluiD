@@ -5,7 +5,7 @@
 
 #include "NavierStokes/EulerTerm.hh"
 #include "NavierStokes/NSTerm.hh"
-#include "ArcJet/ArcJetReactionTerm.hh"
+#include "ArcJet/ArcJetTerm.hh"
 #include "ArcJet/ArcJetInductionTerm.hh"
 #include "Framework/ConvectionDiffusionReactionPM.hh"
 
@@ -28,7 +28,7 @@ namespace COOLFluiD {
 template <int DIM>
 class ArcJetPhysicalModel : public Framework::ConvectionDiffusionReactionPM<
   ArcJetInductionTerm<NavierStokes::EulerTerm>, NavierStokes::NSTerm, 
-  ArcJetReactionTerm<Framework::BaseTerm> > {
+  ArcJetTerm<Framework::BaseTerm> > {
 
 public:
   

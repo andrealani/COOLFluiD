@@ -10,7 +10,7 @@ template <int DIM>
 ArcJetLTEPhysicalModel<DIM>::ArcJetLTEPhysicalModel(const std::string& name)
   : Framework::ConvectionDiffusionReactionPM
 <Framework::MultiScalarTerm<NavierStokes::EulerTerm>,
- NavierStokes::NSTerm, ArcJetReactionTerm<Framework::BaseTerm> >(name)
+ ArcJetTerm<NavierStokes::NSTerm>, ArcJetTerm<Framework::BaseTerm> >(name)
 {
 }	
 
@@ -58,11 +58,11 @@ void ArcJetLTEPhysicalModel<DIM>::setReferenceValues()
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Physics::NavierStokes;
-
+  
   SafePtr<MultiScalarTerm<EulerTerm> > convTerm = getConvTerm();
-  SafePtr<NSTerm> diffTerm = getDiffTerm();
-  SafePtr<ArcJetReactionTerm<BaseTerm> > srcTerm = getSrcTerm();
-
+  SafePtr<ArcJetTerm<NSTerm> > diffTerm = getDiffTerm();
+  SafePtr<ArcJetTerm<BaseTerm> > srcTerm = getSrcTerm();
+  
   // reference values for the convective part
   RealVector& refDataConv = convTerm->getReferencePhysicalData();
   // reference values for the diffusive part
@@ -104,9 +104,9 @@ void ArcJetLTEPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
 {
   Framework::ConvectionDiffusionReactionPM
     <Framework::MultiScalarTerm<NavierStokes::EulerTerm>,
-    NavierStokes::NSTerm,
-    ArcJetReactionTerm<Framework::BaseTerm> >::configure(args);
-    			      
+     ArcJetTerm<NavierStokes::NSTerm>,
+     ArcJetTerm<Framework::BaseTerm> >::configure(args);
+  
   cf_assert(getDimension() > 0);
   cf_assert(getNbEquations() > 0);
 

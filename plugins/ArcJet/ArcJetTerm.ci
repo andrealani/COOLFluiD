@@ -7,34 +7,30 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename BASE>
-void ArcJetReactionTerm<BASE>::defineConfigOptions(Config::OptionList& options)
+void ArcJetTerm<BASE>::defineConfigOptions(Config::OptionList& options)
 {
-  options.template addConfigOption< CFreal >("Permeability","Permeability of the free space.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename BASE>
-ArcJetReactionTerm<BASE>::ArcJetReactionTerm(const std::string& name) :
+ArcJetTerm<BASE>::ArcJetTerm(const std::string& name) :
   BASE(name)
 {
-  this->addConfigOptionsTo(this);
-  
-  m_permeability = 0.;
-  this->setParameter("Permeability",&m_permeability);
+  //  this->addConfigOptionsTo(this);
 }
       
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename BASE>
-ArcJetReactionTerm<BASE>::~ArcJetReactionTerm()
+ArcJetTerm<BASE>::~ArcJetTerm()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename BASE>
-void ArcJetReactionTerm<BASE>::configure ( Config::ConfigArgs& args )
+void ArcJetTerm<BASE>::configure ( Config::ConfigArgs& args )
 {
   BASE::configure(args);
 }
@@ -42,7 +38,7 @@ void ArcJetReactionTerm<BASE>::configure ( Config::ConfigArgs& args )
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename BASE>
-void ArcJetReactionTerm<BASE>::resizePhysicalData(RealVector& physicalData)
+void ArcJetTerm<BASE>::resizePhysicalData(RealVector& physicalData)
 {
   // resize the physical data
   cf_assert(getDataSize() > 0);
@@ -52,7 +48,7 @@ void ArcJetReactionTerm<BASE>::resizePhysicalData(RealVector& physicalData)
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename BASE>
-void ArcJetReactionTerm<BASE>::setupPhysicalData()
+void ArcJetTerm<BASE>::setupPhysicalData()
 {
   cf_assert(getDataSize() > 0);
 

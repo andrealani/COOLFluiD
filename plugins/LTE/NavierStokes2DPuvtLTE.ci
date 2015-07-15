@@ -169,36 +169,33 @@ void NavierStokes2DPuvtLTE<CTERM>::setComposition
   // this is to avoid useless expensive re-computations
   useBackUpValues(false);
   setBackUpValues(false);
-
-  if (isPerturb && (iVar == 1 || iVar == 2)) {
-    useBackUpValues(true);
-  }
-  else if (isPerturb && (iVar == 0 || iVar == 3)) {
-    /// @todo test if it is possible to use it like this
-    //      	_library->resetComposition(_tempX);
-    
-    CFreal Tdim   = _eulerModel->getTempRef()*state[3];
-    CFreal pdim   =  _eulerModel->getPressureFromState(state[0])*
-      (_eulerModel->getReferencePhysicalData())[CTERM::P];
-    CFLog(DEBUG_MAX, "NavierStokes2DPuvtLTE::setComposition() => before isPerturb setComposition()\n");
-    _library->setComposition(Tdim,pdim);
-    CFLog(DEBUG_MAX, "NavierStokes2DPuvtLTE::setComposition() => after isPerturb setComposition()\n");
+  
+  const bool isPT = (iVar == 0 || iVar == 3);
+  if (isPerturb) {
+    if (!isPT) {
+      useBackUpValues(true);
+    }
+    else {
+      /// @todo test if it is possible to use it like this
+      //      	_library->resetComposition(_tempX);
+      CFreal Tdim = _eulerModel->getTempRef()*state[3];
+      CFreal pdim = _eulerModel->getPressureFromState(state[0])*
+	(_eulerModel->getReferencePhysicalData())[CTERM::P];
+      _library->setComposition(Tdim,pdim);
+    }
   }
   else if (!isPerturb) {
-    CFreal Tdim   = _eulerModel->getTempRef()*state[3];
-    CFreal pdim   =  _eulerModel->getPressureFromState(state[0])*
+    CFreal Tdim  = _eulerModel->getTempRef()*state[3];
+    CFreal pdim  =  _eulerModel->getPressureFromState(state[0])*
       (_eulerModel->getReferencePhysicalData())[CTERM::P];
-    
-    CFLog(DEBUG_MAX, "NavierStokes2DPuvtLTE::setComposition() => before setComposition()\n");
     _library->setComposition(Tdim,pdim,&_tempX);  
-    CFLog(DEBUG_MAX, "NavierStokes2DPuvtLTE::setComposition() => after setComposition()\n");
     // set and store the back up values only if an unperturbed flux
     // is computed
     setBackUpValues(true); 
   }
   CFLog(DEBUG_MAX, "NavierStokes2DPuvtLTE::setComposition() => END\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename CTERM>

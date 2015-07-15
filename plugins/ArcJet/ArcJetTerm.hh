@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Physics_ArcJet_ArcJetReactionTerm_hh
-#define COOLFluiD_Physics_ArcJet_ArcJetReactionTerm_hh
+#ifndef COOLFluiD_Physics_ArcJet_ArcJetTerm_hh
+#define COOLFluiD_Physics_ArcJet_ArcJetTerm_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -21,7 +21,7 @@ namespace COOLFluiD {
  * @author Andrea Lani
  */
 template <typename BASE>
-class ArcJetReactionTerm : public BASE {
+class ArcJetTerm : public BASE {
 public:
 
   /**
@@ -29,7 +29,7 @@ public:
    * @param options a OptionList where to add the Option's
    */
   static void defineConfigOptions(Config::OptionList& options);
-
+  
   /**
    * Enumerator defining the mapping between
    * the variable name and its position in the
@@ -37,19 +37,18 @@ public:
    *
    * The data are:
    * SIGMA - electric conductivity
-   * MU0 - permeability of free space
    */
-  enum {SIGMA=0, MU0=1};
-
+  enum {SIGMA=BASE::END};
+  
   /**
    * Constructor without arguments
    */
-  ArcJetReactionTerm(const std::string& name);
-
+  ArcJetTerm(const std::string& name);
+  
   /**
    * Default destructor
    */
-  virtual ~ArcJetReactionTerm();
+  virtual ~ArcJetTerm();
 
   /**
    * Set physical data
@@ -66,15 +65,7 @@ public:
    */
   virtual CFuint getDataSize() const 
   {
-    return BASE::getDataSize() + 2;
-  }
-  
-  /**
-   * Get the permeability of free space
-   */
-  CFreal getPermeability() const
-  {
-    return m_permeability;
+    return BASE::getDataSize() + 1;
   }
   
   /**
@@ -88,15 +79,10 @@ public:
    */
   static std::string getName() 
   {
-    return "ArcJetReactionTerm";
+    return "ArcJetTerm";
   }
-  
-protected:
-  
-  /// permeability of the free space
-  CFreal m_permeability;
-
-}; // end of class ArcJetReactionTerm
+    
+}; // end of class ArcJetTerm
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -108,8 +94,8 @@ protected:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "ArcJet/ArcJetReactionTerm.ci"
+#include "ArcJet/ArcJetTerm.ci"
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Physics_ArcJet_ArcJetReactionTerm_hh
+#endif // COOLFluiD_Physics_ArcJet_ArcJetTerm_hh

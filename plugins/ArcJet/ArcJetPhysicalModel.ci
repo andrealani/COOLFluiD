@@ -11,7 +11,7 @@ ArcJetPhysicalModel<DIM>::ArcJetPhysicalModel(const std::string& name)
   : Framework::ConvectionDiffusionReactionPM<
   ArcJetInductionTerm<NavierStokes::EulerTerm>, 
   NavierStokes::NSTerm, 
-  ArcJetReactionTerm<Framework::BaseTerm> >(name)
+  ArcJetTerm<Framework::BaseTerm> >(name)
 {
 }	
 
@@ -58,7 +58,7 @@ void ArcJetPhysicalModel<DIM>::setReferenceValues()
 
   SafePtr<ArcJetInductionTerm<EulerTerm> > convTerm = getConvTerm();
   SafePtr<NSTerm> diffTerm = getDiffTerm();
-  SafePtr<ArcJetReactionTerm<BaseTerm> > srcTerm = getSrcTerm();
+  SafePtr<ArcJetTerm<BaseTerm> > srcTerm = getSrcTerm();
 
   // reference values for the convective part
   RealVector& refDataConv = convTerm->getReferencePhysicalData();
@@ -101,7 +101,7 @@ void ArcJetPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
 {
   Framework::ConvectionDiffusionReactionPM<
   ArcJetInductionTerm<NavierStokes::EulerTerm>, NavierStokes::NSTerm, 
-  ArcJetReactionTerm<Framework::BaseTerm> >::configure(args);
+  ArcJetTerm<Framework::BaseTerm> >::configure(args);
   
   cf_assert(getDimension() > 0);
   cf_assert(getNbEquations() > 0);

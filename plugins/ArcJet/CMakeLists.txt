@@ -26,8 +26,8 @@ ArcJetLTEPvtToCons.cxx
 ArcJetPhysicalModel.hh
 ArcJetPhysicalModel.ci
 ArcJetPhysicalModel.cxx
-ArcJetReactionTerm.hh
-ArcJetReactionTerm.ci
+ArcJetTerm.hh
+ArcJetTerm.ci
 EulerArcJetPhysicalModel.hh
 EulerArcJetPhysicalModel.ci
 )

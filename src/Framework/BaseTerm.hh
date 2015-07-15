@@ -27,9 +27,12 @@ namespace COOLFluiD {
 /// @author Andrea Lani
 class Framework_API BaseTerm : public Common::NonCopyable<BaseTerm>,
 			       public Config::ConfigObject {
-
-public:
-
+  
+ public:
+  
+  /// enumerator 
+  enum {END=0};
+  
   /// Constructor without arguments
   BaseTerm(const std::string& name) :
     ConfigObject(name),

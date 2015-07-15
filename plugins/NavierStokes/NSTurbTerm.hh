@@ -29,8 +29,8 @@ public:
    * the variable name and its position in the
    * physical data
    */
-  enum {MUT=3};
-
+  enum {MUT=3, END=4};
+  
   /**
    * Constructor without arguments
    */
