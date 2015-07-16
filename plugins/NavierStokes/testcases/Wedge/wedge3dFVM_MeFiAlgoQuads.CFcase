@@ -20,7 +20,7 @@ Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWrite
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Wedge/
 Simulator.Paths.ResultsDir       = ./
 
-Simulator.SubSystem.Default.PhysicalModelType       = Euler3D
+Simulator.SubSystem.Default.PhysicalModelType = Euler3D
 
 Simulator.SubSystem.OutputFormat      = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName   = wedge3dFVM.CFmesh
@@ -119,7 +119,10 @@ Simulator.SubSystem.MeFiAlgo.Data.updateVar     = Cons
 Simulator.SubSystem.MeFiAlgo.MeshFitting.minPercentile    = 0.30
 Simulator.SubSystem.MeFiAlgo.MeshFitting.maxPercentile    = 0.55
 Simulator.SubSystem.MeFiAlgo.MeshFitting.meshAcceleration = 0.05
-Simulator.SubSystem.MeFiAlgo.MeshFitting.monitorVar       = rho
+Simulator.SubSystem.MeFiAlgo.MeshFitting.monitorVarID     = 0
 Simulator.SubSystem.MeFiAlgo.MeshFitting.equilibriumSpringLength = 1e-3
+Simulator.SubSystem.MeFiAlgo.MeshFitting.ratioBoundaryToInnerEquilibriumSpringLength = 0.1
+
+Simulator.SubSystem.MeFiAlgo.MeshFitting.unlockedBoundaryTRSs = SuperOutlet SuperInlet SlipWall Top Bottom
 
 Simulator.SubSystem.CellCenterFVM.AfterMeshUpdateCom = StdMeshFittingUpdate
