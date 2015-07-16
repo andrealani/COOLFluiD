@@ -82,12 +82,7 @@ computeSource(Framework::GeometricEntity *const element, RealVector& source)
     DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
 
     // is not perturbed because it is computed in command, here is got just data handle
-    source[3] = rmsJouleHeatSource[elemID];
-
-    #ifdef DEBUG
-      CFout <<"source (in RMSJouleHeatSourceTerm) = " << source << "\n"; 
-    #endif
-    source *= volumes[elemID];
+    source[3] = rmsJouleHeatSource[elemID]*volumes[elemID];
 
     #ifdef DEBUG
       CFout <<"source * volumes (in RMSJouleHeatSourceTerm) = " << source << "\n"; 
