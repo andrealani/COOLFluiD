@@ -233,7 +233,7 @@ Simulator.SubSystem.CellCenterFVM.InitNames = InField
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
 Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
 Simulator.SubSystem.CellCenterFVM.InField.Def =\
-						18e-4((x*1e-6-1.)/0.2)*(y*1e-6+0.4)*exp(-(y*1e-6+0.4)^2/0.4)*3.183095e-6*exp(-(x*1e-6-1.)^2*(18^2*1e-8)*(exp(-(y*1e-6+0.4)^2/0.4))^2/(2e-8))\
+						18e-4*((x*1e-6-1.)/0.2)*(y*1e-6+0.4)*exp(-(y*1e-6+0.4)^2/0.4)*3.183095e-6*exp(-(x*1e-6-1.)^2*(18^2*1e-8)*(exp(-(y*1e-6+0.4)^2/0.4))^2/(2e-8))\
 						18e-4*exp(-(y*1e-6+0.4)^2/0.4)*3.183095e-6*exp(-((x*1e-6-1.)^2*(18^2*1e-8)*(exp(-(y*1e-6+0.3)^2/0.4))^2)/(2e-8))\
 						0.\
 						0.\
