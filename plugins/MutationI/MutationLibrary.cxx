@@ -522,8 +522,7 @@ void MutationLibrary::setup()
 {
   // if this is a parallel simulation, only ONE process at a time
   // sets the library
-  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
-  runSerial<void, MutationLibrary, &MutationLibrary::setLibrarySequentially>(this, nsp);
+  setLibrarySequentially();
 }
       
 //////////////////////////////////////////////////////////////////////////////

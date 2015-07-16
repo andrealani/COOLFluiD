@@ -8,7 +8,6 @@
 #include "Common/Stopwatch.hh"
 #include "Environment/DirPaths.hh"
 #include "Common/OSystem.hh"
-#include "Common/PEFunctions.hh"
 #include "Common/StringOps.hh"
 
 #include <fstream>
@@ -135,8 +134,7 @@ void ATDModelLibrary::setup()
 
   // if this is a parallel simulation, only ONE process at a time
   // sets the library
-  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
-  runSerial<void, ATDModelLibrary, &ATDModelLibrary::setLibrary>(this, nsp);
+  setLibrary();
 }
 
 //////////////////////////////////////////////////////////////////////////////

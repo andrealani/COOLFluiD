@@ -129,6 +129,9 @@ protected: // functions
   /// Dump the states to file
   void dumpStates();
   
+  // setup all physical models in the different namespaces
+  void setupPhysicalModels();
+  
  protected: // data
 
   /// Duration of the simulation of this SubSystem

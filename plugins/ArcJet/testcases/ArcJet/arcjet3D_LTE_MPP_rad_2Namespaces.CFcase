@@ -1,0 +1,428 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+# This testcases verifies the simulation of torch + chamber + probe at 100kW
+
+### Residual = -1.3592156
+
+###############################################################################
+# Assertion For Debugging
+
+# this will always fail when mesh converters (Gambit, Gmesh, etc.) are activated, 
+# so must be commented out when all other errors are gone 
+#CFEnv.ErrorOnUnusedConfig = true
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = true
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionAborts      = false
+CFEnv.ExceptionOutputs     = false
+#CFEnv.RegistSignalHandlers = true
+#CFEnv.TraceToStdOut = true
+#CFEnv.TraceActive = true
+CFEnv.OnlyCPU0Writes = false
+
+###############################################################################
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPhysicalModelDummy libForwardEuler libPetscI libTecplotWriter libNavierStokes libMutationppI libLTE libArcJet libFiniteVolume libFiniteVolumeNavierStokes libFiniteVolumeArcJet libNewtonMethod libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
+#libMutation2OLD libMutation2OLDI
+
+# Simulation Parameters
+Simulator.Paths.WorkingDir = ./
+Simulator.Paths.ResultsDir = ./RESULTS_LTE_MPP_rad_2sys
+
+Simulator.SubSystem.Namespaces = Flow Rad
+Simulator.SubSystem.Ranks = 0:7 8:8
+
+Simulator.SubSystem.InteractiveParamReader.FileName = ./arcjet2Namespaces.inter
+Simulator.SubSystem.InteractiveParamReader.readRate = 5
+
+###############################################################################
+
+#
+## Define meshdata, physical model, subsystem status for Flow solver
+#
+###################
+## Meshdata
+###################
+Simulator.SubSystem.Flow.SubSystemStatus = FlowSubSystemStatus
+Simulator.SubSystem.Flow.MeshData = FlowMeshData
+Simulator.SubSystem.FlowMeshData.Namespaces = Flow
+Simulator.SubSystem.FlowMeshData.listTRS = Inlet Outlet Wall Electrode1 Electrode2 Electrode3 Electrode4 Electrode5 Electrode6 Electrode7 Electrode8 InterElectrode
+
+###################
+## Physical model
+###################
+Simulator.SubSystem.Flow.PhysicalModelType = ArcJetLTE3D
+Simulator.SubSystem.Flow.PhysicalModelName = FlowPM
+Simulator.SubSystem.FlowPM.refValues = 1013250. 100. 100. 100. 4000. 100.0
+Simulator.SubSystem.FlowPM.refLength = 1.0
+#Simulator.SubSystem.FlowPM.PropertyLibrary = Mutation2OLD
+#Simulator.SubSystem.FlowPM.Mutation2OLD.mixtureName = air11
+
+Simulator.SubSystem.FlowPM.PropertyLibrary = Mutationpp
+Simulator.SubSystem.FlowPM.Mutationpp.mixtureName = air11
+
+#
+## Define meshdata, physical model, subsystem status for Radiation solver
+#
+###################
+## Meshdata
+###################
+Simulator.SubSystem.Rad.SubSystemStatus = RadSubSystemStatus
+Simulator.SubSystem.Rad.MeshData = RadMeshData
+Simulator.SubSystem.RadMeshData.Namespaces = Rad
+Simulator.SubSystem.RadMeshData.listTRS = Inlet Outlet Wall Electrode1 Electrode2 Electrode3 Electrode4 Electrode5 Electrode6 Electrode7 Electrode8 InterElectrode
+
+###################
+## Physical model
+###################
+Simulator.SubSystem.Rad.PhysicalModelType = PhysicalModelDummy
+Simulator.SubSystem.Rad.PhysicalModelName = RadPM
+Simulator.SubSystem.RadPM.Dimensions = 3
+Simulator.SubSystem.RadPM.Equations = p T
+#Simulator.SubSystem.RadPM.refValues = 1. 1.
+
+###################
+## Input
+###################
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader CFmeshFileReader
+Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader1 CFmeshFileReader2
+
+Simulator.SubSystem.CFmeshFileReader1.Namespace = Flow
+Simulator.SubSystem.CFmeshFileReader1.Data.FileName = SOL
+#Simulator.SubSystem.CFmeshFileReader1.convertFrom = Gambit2CFmesh
+#Simulator.SubSystem.CFmeshFileReader1.Gambit2CFmesh.Discontinuous = true
+#Simulator.SubSystem.CFmeshFileReader1.Gambit2CFmesh.SolutionOrder = P0
+#Simulator.SubSystem.CFmeshFileReader1.Data.ScalingFactor = 1
+Simulator.SubSystem.CFmeshFileReader1.Data.CollaboratorNames = FlowSM
+Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 4
+
+Simulator.SubSystem.CFmeshFileReader2.Namespace = Rad
+Simulator.SubSystem.CFmeshFileReader2.Data.FileName = ./ArcJet3D.CFmesh
+Simulator.SubSystem.CFmeshFileReader2.Data.CollaboratorNames = RadSM
+Simulator.SubSystem.CFmeshFileReader2.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 4
+
+###################
+## Output
+###################
+Simulator.SubSystem.OutputFormat      = Tecplot CFmesh Tecplot
+Simulator.SubSystem.OutputFormatNames = Tecplot1 CFmesh1 Tecplot2
+
+## flow output ##
+Simulator.SubSystem.CFmesh1.Namespace = Flow
+Simulator.SubSystem.CFmesh1.FileName = arcjet_flow.CFmesh
+Simulator.SubSystem.CFmesh1.SaveRate = 100
+Simulator.SubSystem.CFmesh1.AppendIter = false
+Simulator.SubSystem.CFmesh1.Data.CollaboratorNames = FlowSM
+
+Simulator.SubSystem.Tecplot1.Namespace = Flow
+Simulator.SubSystem.Tecplot1.FileName = arcjet_flow.plt
+Simulator.SubSystem.Tecplot1.SaveRate = 100
+Simulator.SubSystem.Tecplot1.Data.outputVar = Pvt
+Simulator.SubSystem.Tecplot1.Data.printExtraValues = true
+#Simulator.SubSystem.Tecplot1.Data.SurfaceTRS = Wall Electrode1
+#Inlet Outlet Wall Electrode
+#Simulator.SubSystem.Tecplot1.AppendIter = false
+Simulator.SubSystem.Tecplot1.Data.DataHandleOutput.CCSocketNames = Jx Jy Jz #sigma
+Simulator.SubSystem.Tecplot1.Data.DataHandleOutput.CCVariableNames = Jx Jy Jz #sigma
+Simulator.SubSystem.Tecplot1.Data.DataHandleOutput.CCBlockSize = 1 1 1 #1
+# parallel writer for block format can be very slow (to be used only when really needed)
+#Simulator.SubSystem.Tecplot1.WriteSol = ParWriteSolutionBlock
+Simulator.SubSystem.Tecplot1.WriteSol = WriteSolutionBlockFV
+Simulator.SubSystem.Tecplot1.Data.CollaboratorNames = FlowSM 
+
+## radiation output ##
+Simulator.SubSystem.Tecplot2.Namespace = Rad
+Simulator.SubSystem.Tecplot2.FileName = arcjet_rad.plt
+Simulator.SubSystem.Tecplot2.SaveRate = 100
+Simulator.SubSystem.Tecplot2.AppendIter = false
+#Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.CCSocketNames = qrad
+#Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.CCVariableNames = qrad
+#Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.CCBlockSize = 1
+#Simulator.SubSystem.Tecplot2.WriteSol = ParWriteSolutionBlock
+Simulator.SubSystem.Tecplot2.Data.CollaboratorNames = RadSM
+
+###################
+## Stop condition
+###################
+
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+###################
+## Linear system
+###################
+Simulator.SubSystem.LinearSystemSolver = PETSC PETSC Null
+Simulator.SubSystem.LSSNames           = NSLSS ELSS RadLSS
+
+Simulator.SubSystem.NSLSS.Namespace = Flow
+Simulator.SubSystem.NSLSS.Data.PCType  = PCASM
+Simulator.SubSystem.NSLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NSLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NSLSS.Data.MaxIter = 1000
+Simulator.SubSystem.NSLSS.MaskEquationIDs = 0 1 2 3 4
+#Simulator.SubSystem.NSLSS.Data.NbKrylovSpaces = 50
+Simulator.SubSystem.NSLSS.Data.RelativeTolerance = 1e-4
+Simulator.SubSystem.NSLSS.Data.CollaboratorNames = FlowSM
+
+Simulator.SubSystem.ELSS.Namespace = Flow
+Simulator.SubSystem.ELSS.Data.PCType = PCASM
+#Simulator.SubSystem.ELSS.Data.PCType = PCGAMG
+#Simulator.SubSystem.ELSS.Data.UseAIJ = true
+Simulator.SubSystem.ELSS.Data.KSPType = KSPGMRES
+#Simulator.SubSystem.ELSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.ELSS.Data.MaxIter = 1000
+#Simulator.SubSystem.ELSS.Data.SaveSystemToFile = true
+Simulator.SubSystem.ELSS.MaskEquationIDs = 5
+Simulator.SubSystem.ELSS.Data.NbKrylovSpaces = 80
+Simulator.SubSystem.ELSS.Data.RelativeTolerance = 1e-4
+Simulator.SubSystem.ELSS.Data.CollaboratorNames = FlowSM
+
+Simulator.SubSystem.RadLSS.Namespace = Rad
+			
+###################
+## Time integrator
+###################
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator FwdEuler #Null
+Simulator.SubSystem.ConvergenceMethodNames = FlowIterator RadIterator
+
+Simulator.SubSystem.FlowIterator.Namespace = Flow
+Simulator.SubSystem.FlowIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.FlowIterator.ConvRate = 1
+Simulator.SubSystem.FlowIterator.ShowRate = 1
+Simulator.SubSystem.FlowIterator.Data.FilterState = Max
+Simulator.SubSystem.FlowIterator.Data.Max.maskIDs = 1 0 0 0 1 0
+Simulator.SubSystem.FlowIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0.
+#Simulator.SubSystem.FlowIterator.Data.L2.ComputedVarID = 0
+Simulator.SubSystem.FlowIterator.Data.L2.MonitoredVarID = 0
+## CFL definition ##
+#Simulator.SubSystem.FlowIterator.Data.CFL.Value = 296.382
+#Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Function 
+#Simulator.SubSystem.FlowIterator.Data.CFL.Function.Def = if(i<1000,1.0,min(1000.,cfl*1.005))
+#Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.FlowIterator.Data.CFL.Interactive.CFL = 1.0
+Simulator.SubSystem.FlowIterator.Data.CFL.Value = 0.1
+Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = SER
+Simulator.SubSystem.FlowIterator.Data.CFL.SER.coeffCFL = 1.001
+Simulator.SubSystem.FlowIterator.Data.CFL.SER.maxCFL = 1000
+Simulator.SubSystem.FlowIterator.Data.CFL.SER.LimitCFL = 4
+Simulator.SubSystem.FlowIterator.Data.CFL.SER.Tol = false
+Simulator.SubSystem.FlowIterator.Data.MaxSteps = 10
+Simulator.SubSystem.FlowIterator.Data.CollaboratorNames = FlowSM NSLSS ELSS
+
+Simulator.SubSystem.RadIterator.Namespace = Rad
+#Simulator.SubSystem.RadIterator.Data.CollaboratorNames = RadLSS
+
+###################
+## Space Method
+###################
+Simulator.SubSystem.SpaceMethod = CellCenterFVM CellCenterFVM
+Simulator.SubSystem.SpaceMethodNames = FlowSM RadSM
+
+Simulator.SubSystem.RadSM.Namespace = Rad
+Simulator.SubSystem.RadSM.Data.CollaboratorNames = RadLSS RadIterator
+Simulator.SubSystem.RadSM.ComputeRHS = Null
+
+Simulator.SubSystem.FlowSM.Namespace = Flow
+Simulator.SubSystem.FlowSM.Restart = true
+Simulator.SubSystem.FlowSM.Data.CollaboratorNames = NSLSS ELSS FlowIterator
+Simulator.SubSystem.FlowSM.ComputeRHS = NumJacobCoupling
+Simulator.SubSystem.FlowSM.NumJacobCoupling.FreezeDiffCoeff = true #false 
+Simulator.SubSystem.FlowSM.ComputeTimeRHS = PseudoSteadyTimeRhsCoupling
+Simulator.SubSystem.FlowSM.PseudoSteadyTimeRhsCoupling.annullDiagValue = 0 1
+#Simulator.SubSystem.FlowSM.PseudoSteadyTimeRhsCoupling.useGlobalDT = true
+
+#incompressible case
+#Simulator.SubSystem.FlowPM.ConvTerm.p0Inf = 100000.
+#Simulator.SubSystem.FlowSM.Data.FluxSplitter = RhieChow3D
+#Simulator.SubSystem.FlowSM.Data.RhieChow3D.PressStab = false
+#Simulator.SubSystem.FlowSM.Data.RhieChow3D.PressDissipScale = 1.
+
+Simulator.SubSystem.FlowSM.Data.FluxSplitter = AUSMPlusUp3D
+Simulator.SubSystem.FlowSM.Data.AUSMPlusUp3D.choiceA12 = 1
+Simulator.SubSystem.FlowSM.Data.AUSMPlusUp3D.machInf = 0.1
+Simulator.SubSystem.FlowSM.Data.UpdateVar  = Pvt
+Simulator.SubSystem.FlowSM.Data.SolutionVar = Cons
+
+## diffusive flux
+Simulator.SubSystem.FlowSM.Data.DiffusiveVar = Pvt
+Simulator.SubSystem.FlowSM.Data.DiffusiveFlux = NavierStokesCoupling
+Simulator.SubSystem.FlowSM.Data.DerivativeStrategy = Corrected3D
+
+## extrapolator from cell centers to vertices
+Simulator.SubSystem.FlowSM.Data.NodalExtrapolation = DistanceBasedGMoveMultiTRS
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.TrsPriorityList = Wall Electrode1 Inlet Outlet Electrode2 Electrode3 Electrode4 Electrode5 Electrode6 Electrode7 Electrode8 InterElectrode
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.TRSName = Wall Electrode1 Electrode2 Electrode3 Electrode4 Electrode5 Electrode6 Electrode7 Electrode8 InterElectrode
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Wall.ValuesIdx = 1 2 3 4 
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Wall.Values = 0. 0. 0. 10500.
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Electrode2.ValuesIdx = 1 2 3 4 
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Electrode2.Values = 0. 0. 0. 10500.
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Electrode3.ValuesIdx = 1 2 3 4 
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Electrode3.Values = 0. 0. 0. 10500.
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Electrode4.ValuesIdx = 1 2 3 4 
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Electrode4.Values = 0. 0. 0. 10500.
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Electrode5.ValuesIdx = 1 2 3 4 
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Electrode5.Values = 0. 0. 0. 10500.
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Electrode6.ValuesIdx = 1 2 3 4 
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Electrode6.Values = 0. 0. 0. 10500.
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Electrode7.ValuesIdx = 1 2 3 4 
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Electrode7.Values = 0. 0. 0. 10500.
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Electrode8.ValuesIdx = 1 2 3 4 
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Electrode8.Values = 0. 0. 0. 10500.
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.InterElectrode.ValuesIdx = 1 2 3 4 
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.InterElectrode.Values = 0. 0. 0. 10500.
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Electrode1.ValuesIdx = 1 2 3 4 5
+Simulator.SubSystem.FlowSM.Data.DistanceBasedGMoveMultiTRS.Electrode1.Values = 0. 0. 0. 10500. 0.
+
+## Source Term
+Simulator.SubSystem.FlowSM.Data.SourceTerm = ArcJetPhiST
+Simulator.SubSystem.FlowSM.Data.ArcJetPhiST.Bfield  = 0.0 0.0 0.0
+Simulator.SubSystem.FlowSM.Data.ArcJetPhiST.ElectrodeX = 0.1
+Simulator.SubSystem.FlowSM.Data.ArcJetPhiST.ElectrodeRadius = 0.015
+Simulator.SubSystem.FlowSM.Data.ArcJetPhiST.ImposedCurrent = 0.0 # 1200.
+
+## Second-order reconstruction
+Simulator.SubSystem.FlowSM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.FlowSM.SetupNames = Setup1
+Simulator.SubSystem.FlowSM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.FlowSM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.FlowSM.UnSetupNames = UnSetup1
+Simulator.SubSystem.FlowSM.Data.PolyRec = LinearLS3D
+Simulator.SubSystem.FlowSM.Data.LinearLS3D.limitRes = -15.
+Simulator.SubSystem.FlowSM.Data.Limiter = Venktn3D
+Simulator.SubSystem.FlowSM.Data.Venktn3D.coeffEps = 1.0
+#Simulator.SubSystem.FlowSM.Data.Venktn3D.useNodalExtrapolationStencil = false
+# second order can be activated by setting gradientFactor to 1. in the interactive file
+Simulator.SubSystem.FlowSM.Data.LinearLS3D.gradientFactor = 1.
+
+## Initial Conditions
+Simulator.SubSystem.FlowSM.InitComds = InitStateAddVar
+Simulator.SubSystem.FlowSM.InitNames = InField
+Simulator.SubSystem.FlowSM.InField.applyTRS = InnerFaces
+# initial variables
+Simulator.SubSystem.FlowSM.InField.InitVars = x y z
+# full set of variables
+Simulator.SubSystem.FlowSM.InField.Vars = x y z r det a 
+# x y z do not need definition, but r does
+Simulator.SubSystem.FlowSM.InField.InitDef = \
+					sqrt(y^2+z^2) \
+					0.015^2 \
+					-9500 					
+
+					#0.015^2*0.0075-0.015*0.0075^2 \
+					#(500-10000)*0.0075-(8000-10000)*0.015 \
+					#(8000-10000)*0.015^2-(500-10000)*0.0075^2
+
+Simulator.SubSystem.FlowSM.InField.Def = \
+					1215900.\
+					35.\
+					0.\
+					0.\
+					10500.\
+					0.
+
+Simulator.SubSystem.FlowSM.BcComds = \
+			ArcJetPhiInsulatedWallFVMCC \
+			ArcJetPhiElectrodeFVMCC \
+			ArcJetPhiOutlet3DFVMCC \
+			ArcJetPhiInletFVMCC \ 
+			ArcJetPhiInsulatedWallFVMCC \
+			ArcJetPhiInsulatedWallFVMCC \
+			ArcJetPhiInsulatedWallFVMCC \
+			ArcJetPhiInsulatedWallFVMCC \
+			ArcJetPhiInsulatedWallFVMCC \
+			ArcJetPhiInsulatedWallFVMCC \
+			ArcJetPhiInsulatedWallFVMCC \
+			ArcJetPhiInsulatedWallFVMCC
+
+#ArcJetPhiInletMassFlowFVMCC
+#ArcJetPhiInletFVMCC   
+
+Simulator.SubSystem.FlowSM.BcNames = \
+			Wall Electrode1 Outlet Inlet Electrode2 Electrode3 Electrode4 Electrode5 Electrode6 Electrode7 Electrode8 InterElectrode
+
+
+## Boundary Conditions
+Simulator.SubSystem.FlowSM.Outlet.applyTRS = Outlet
+Simulator.SubSystem.FlowSM.Outlet.P = 1215900.
+Simulator.SubSystem.FlowSM.Outlet.ZeroGradientFlags = 0 1 1 1 1 0
+Simulator.SubSystem.FlowSM.Outlet.ImposedCurrent = 1 # 1200.
+Simulator.SubSystem.FlowSM.Outlet.Vars = i
+Simulator.SubSystem.FlowSM.Outlet.Def = 1600. #i/10
+
+Simulator.SubSystem.FlowSM.Wall.applyTRS = Wall
+Simulator.SubSystem.FlowSM.Wall.TWall = 10500.
+Simulator.SubSystem.FlowSM.Wall.ZeroGradientFlags = 1 0 0 0 0 1
+
+Simulator.SubSystem.FlowSM.Electrode1.applyTRS = Electrode1
+Simulator.SubSystem.FlowSM.Electrode1.TWall = 10500.
+Simulator.SubSystem.FlowSM.Electrode1.ZeroGradientFlags = 1 0 0 0 0 0
+
+Simulator.SubSystem.FlowSM.Inlet.applyTRS = Inlet
+Simulator.SubSystem.FlowSM.Inlet.Def = 35. 0. 0. 10500.
+#-9500./(0.015^2)*(y^2+z^2)+10000.
+#Simulator.SubSystem.FlowSM.Inlet.ZeroGradientFlags = 1 0 0 0 0 1
+#Simulator.SubSystem.FlowSM.Inlet.MassFlow = 40.
+#Simulator.SubSystem.FlowSM.Inlet.T = 500.
+#Simulator.SubSystem.FlowSM.Inlet.InletRadii = 0.015 0.
+Simulator.SubSystem.FlowSM.Inlet.ZeroGradientFlags = 1 0 0 0 0 1
+
+Simulator.SubSystem.FlowSM.Electrode2.applyTRS = Electrode2
+Simulator.SubSystem.FlowSM.Electrode2.TWall = 10500.
+Simulator.SubSystem.FlowSM.Electrode2.ZeroGradientFlags = 1 0 0 0 0 1
+
+Simulator.SubSystem.FlowSM.Electrode3.applyTRS = Electrode3
+Simulator.SubSystem.FlowSM.Electrode3.TWall = 10500.
+Simulator.SubSystem.FlowSM.Electrode3.ZeroGradientFlags = 1 0 0 0 0 1
+
+Simulator.SubSystem.FlowSM.Electrode4.applyTRS = Electrode4
+Simulator.SubSystem.FlowSM.Electrode4.TWall = 10500.
+Simulator.SubSystem.FlowSM.Electrode4.ZeroGradientFlags = 1 0 0 0 0 1
+
+Simulator.SubSystem.FlowSM.Electrode5.applyTRS = Electrode5
+Simulator.SubSystem.FlowSM.Electrode5.TWall = 10500.
+Simulator.SubSystem.FlowSM.Electrode5.ZeroGradientFlags = 1 0 0 0 0 1
+
+Simulator.SubSystem.FlowSM.Electrode6.applyTRS = Electrode6
+Simulator.SubSystem.FlowSM.Electrode6.TWall = 10500.
+Simulator.SubSystem.FlowSM.Electrode6.ZeroGradientFlags = 1 0 0 0 0 1
+
+Simulator.SubSystem.FlowSM.Electrode7.applyTRS = Electrode7
+Simulator.SubSystem.FlowSM.Electrode7.TWall = 10500.
+Simulator.SubSystem.FlowSM.Electrode7.ZeroGradientFlags = 1 0 0 0 0 1
+
+Simulator.SubSystem.FlowSM.Electrode8.applyTRS = Electrode8
+Simulator.SubSystem.FlowSM.Electrode8.TWall = 10500.
+Simulator.SubSystem.FlowSM.Electrode8.ZeroGradientFlags = 1 0 0 0 0 1
+
+Simulator.SubSystem.FlowSM.InterElectrode.applyTRS = InterElectrode
+Simulator.SubSystem.FlowSM.InterElectrode.TWall = 10500.
+Simulator.SubSystem.FlowSM.InterElectrode.ZeroGradientFlags = 1 0 0 0 0 1
+
+###################
+## Data Processing
+###################
+Simulator.SubSystem.DataPreProcessing = DataProcessing
+Simulator.SubSystem.DataPreProcessingNames = RadProcessing
+
+Simulator.SubSystem.RadProcessing.Namespace = Rad
+Simulator.SubSystem.RadProcessing.Data.CollaboratorNames = RadSM
+Simulator.SubSystem.RadProcessing.Data.updateVar = Prim
+Simulator.SubSystem.RadProcessing.Comds = Radiation
+Simulator.SubSystem.RadProcessing.Names = Radiation
+Simulator.SubSystem.RadProcessing.Radiation.nDirs = 24
+Simulator.SubSystem.RadProcessing.Radiation.UseExponentialMethod = true
+#Simulator.SubSystem.RadProcessing.Radiation.DirName = ./
+Simulator.SubSystem.RadProcessing.Radiation.BinTabName = air-100Bands.dat #air-100Bins.dat
+Simulator.SubSystem.RadProcessing.Radiation.OutTabName = air-100Bands.out #air-100Bins.out
+Simulator.SubSystem.RadProcessing.ProcessRate = 1

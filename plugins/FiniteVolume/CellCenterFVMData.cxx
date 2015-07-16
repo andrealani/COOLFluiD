@@ -102,7 +102,7 @@ CellCenterFVMData::CellCenterFVMData(Common::SafePtr<Framework::Method> owner) :
   setParameter("DerivativeStrategy",&_derivComputerStr);
   _derivComputerStr = "Null";
   
-  _polyRecStr = "Null";
+  _polyRecStr = "Constant";
   setParameter("PolyRec",&_polyRecStr);
 
   _limiterStr = "Null";
@@ -277,7 +277,7 @@ void CellCenterFVMData::configureDiffusiveFluxComputer ( Config::ConfigArgs& arg
   Common::SafePtr<PhysicalModel> physModel =
     PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
   
-  if (_derivComputerStr == "Null") {
+  if (_derivComputerStr == "Null" && _fluxSplitterStr != "Null") {
     if (physModel->getDim() >= 2) {
       const std::string dim = (physModel->getDim() == 2) ? "2D" : "3D";
       _derivComputerStr = "DiamondVolume" + dim;

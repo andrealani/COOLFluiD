@@ -144,9 +144,10 @@ void SubSystem::configureNamespaces(Config::ConfigArgs& args)
   else
   {
     CFuint counter = 0; 
+    CFuint nbRanks = 0;
     std::vector<string>::iterator itr = m_namespaces.begin();
-    for(; itr != m_namespaces.end(); ++itr, ++counter)
-    {
+    vector<int> subSystemRanks;
+    for(; itr != m_namespaces.end(); ++itr, ++counter) {
       Common::SafePtr<Namespace> ptr = NamespaceSwitcher::getInstance
 	(SubSystemStatusStack::getCurrentName()).createUniqueNamespace(*itr);
       configureNested(*ptr,args);
@@ -169,13 +170,29 @@ void SubSystem::configureNamespaces(Config::ConfigArgs& args)
 	fillGroupRanks(m_ranks[counter], granks);
 	PE::GetPE().createGroup(*itr, *itr, granks, true);
 	
+	copy(granks.begin(), granks.end(), back_inserter(subSystemRanks));
+	nbRanks += granks.size();
+	
         const string msg = "Ranks for group [" +  *itr + "] = ";
 	CFLog(VERBOSE, CFPrintContainer<vector<int> >(msg, &granks));
       }
     }
+    
+    cf_assert(subSystemRanks.size() == nbRanks);
+    
+    // build a group, subset of MPI_COMM_WORLD corresponding to all ranks involved in this subsystem
+    if (nbRanks == 0) {
+       const CFuint nbProc = PE::GetPE().GetProcessorCount("Default");  
+       subSystemRanks.resize(nbProc);
+       for (CFuint r = 0; r < nbProc; ++r) {
+        subSystemRanks[r] = r;
+       }
+    }
+
+    PE::GetPE().createGroup("Default", SubSystemStatusStack::getCurrentName(), subSystemRanks, true);
   }
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void SubSystem::configureSingletons( Config::ConfigArgs& args )

@@ -8,7 +8,6 @@
 #include "Common/Stopwatch.hh"
 #include "Environment/DirPaths.hh"
 #include "Common/OSystem.hh"
-#include "Common/PE.hh"
 #include "Common/StringOps.hh"
 #include <fstream>
 
@@ -79,26 +78,15 @@ void MutationLibrarypp::configure ( Config::ConfigArgs& args )
 
 void MutationLibrarypp::setup()
 {    
+  CFLog(VERBOSE, "MutationLibrarypp::setup() => start\n"); 
+  
   Framework::PhysicalChemicalLibrary::setup();
   
   // if this is a parallel simulation, only ONE process at a time
   // sets the library
-  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  setLibrarySequentially2();
   
-  if (PE::GetPE().IsParallel()) {
-    PE::GetPE().setBarrier(nsp);
-    
-    for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(nsp); ++i) {
-      if (i == PE::GetPE().GetRank (nsp)) {
-        setLibrarySequentially2();
-      }
-      
-      PE::GetPE().setBarrier(nsp);
-    }
-  }
-  else {
-    setLibrarySequentially2();
-  }
+  CFLog(VERBOSE, "MutationLibrarypp::setup() => end\n"); 
 }
       
 //////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,8 @@
+Simulator.SubSystem.FlowIterator.Data.CFL.SER.coeffCFL = 1.001
+Simulator.SubSystem.FlowIterator.Data.CFL.SER.maxCFL = 1000
+Simulator.SubSystem.FlowIterator.Data.CFL.SER.LimitCFL = 1
+Simulator.SubSystem.FlowIterator.Data.CFL.SER.Tol = false
+Simulator.SubSystem.Norm.valueNorm  = -5.0
+Simulator.SubSystem.FlowSM.Data.LinearLS3D.limitRes = -15.0
+# second order can be activated by setting gradientFactor to 1.
+Simulator.SubSystem.FlowSM.Data.LinearLS3D.gradientFactor = 1.

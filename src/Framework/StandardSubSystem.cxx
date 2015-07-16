@@ -8,7 +8,7 @@
 #include "Common/MPI/MPIStructDef.hh"
 #endif
 
-#include "Common/PE.hh"
+#include "Common/PEFunctions.hh"
 
 #include "Common/CFLog.hh"
 #include "Common/NullPointerException.hh"
@@ -167,7 +167,9 @@ StandardSubSystem::~StandardSubSystem()
 void StandardSubSystem::configure ( Config::ConfigArgs& args )
 {
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE, "StandardSubSystem::configure() => start\n");
+  
   SubSystem::configure(args);
   
   // set the physical model
@@ -222,6 +224,8 @@ void StandardSubSystem::configure ( Config::ConfigArgs& args )
   setParentNamespaceInMethodSockets(); // after this all the namespaces are set
   setEnableNamespaces(true);
   setNonRootMethods();
+  
+  CFLog(VERBOSE, "StandardSubSystem::configure() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -229,19 +233,25 @@ void StandardSubSystem::configure ( Config::ConfigArgs& args )
 void StandardSubSystem::setNonRootMethods()
 {
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE, "StandardSubSystem::setNonRootMethods() => start\n");
+  
   std::vector< Common::SafePtr<Method> > all_methods =
     MethodRegistry::getInstance().getAllMethods();
 
   std::for_each (all_methods.begin(),
                  all_methods.end(),
                  Common::safeptr_mem_fun(&Method::setNonRootMethods));
+  
+  CFLog(VERBOSE, "StandardSubSystem::setNonRootMethods() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void StandardSubSystem::configureCouplerMethod(Config::ConfigArgs& args, MultiMethodTuple<Framework::CouplerMethod>& couplerMethod)
 {
+  CFLog(VERBOSE, "StandardSubSystem::configureCouplerMethod() => start\n");
+  
   configureMultiMethod<CouplerMethod>(args, m_couplerMethod);
 
   //Exchange Info between Namespaces
@@ -254,7 +264,9 @@ void StandardSubSystem::configureCouplerMethod(Config::ConfigArgs& args, MultiMe
   // !!! continue the configuration !!!
   for ( CFuint i = 0; i < m_couplerMethod.size();  ++i) {
     m_couplerMethod[i]->postConfigure(args);
-  }
+  } 
+  
+  CFLog(VERBOSE, "StandardSubSystem::configureCouplerMethod() => end\n");
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -262,10 +274,13 @@ void StandardSubSystem::configureCouplerMethod(Config::ConfigArgs& args, MultiMe
 void StandardSubSystem::allocateAllSockets()
 {
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE, "StandardSubSystem::allocateAllSockets() => start\n");
+  
   SubSystem::allocateAllSockets();
   
   // complement here the plugging of sockets and linking methods
+  CFLog(VERBOSE, "StandardSubSystem::allocateAllSockets() => end\n");
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -273,35 +288,33 @@ void StandardSubSystem::allocateAllSockets()
 void StandardSubSystem::deallocateAllSockets()
 {
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE, "StandardSubSystem::deallocateAllSockets() => start\n");
+  
   // complement here the unplugging of sockets and unlinking methods
 
   SubSystem::deallocateAllSockets();
+  
+  CFLog(VERBOSE, "StandardSubSystem::deallocateAllSockets() => end\n");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void StandardSubSystem::buildMeshData()
 {
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE, "StandardSubSystem::buildMeshData() => start\n");
+  
   // first setup the physical models
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   CFLog(NOTICE,"Setting up all PhysicalModel's\n\n");
   CFLog(NOTICE,"-------------------------------------------------------------\n");
-
-  // loop on all namespaces and setup the models in each of them
-  typedef std::vector<Common::SafePtr<Namespace> > NspVec;
-  NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
-  NspVec lst = nsw.getAllNamespaces();
-  cf_assert(!lst.empty()); // there should be some models
   
-  for(NspVec::iterator nsp = lst.begin(); nsp != lst.end(); ++nsp)
-  {
-    nsw.pushNamespace((*nsp)->getName());
-    PhysicalModelStack::getActive()->getImplementor()->setup();
-    nsw.popNamespace();
-  }
+  const string ssGroupName = SubSystemStatusStack::getCurrentName();
+  runSerial<void, StandardSubSystem, &StandardSubSystem::setupPhysicalModels>(this, ssGroupName);
+  
+  CFLog(VERBOSE, "StandardSubSystem::buildMeshData() => PhysicalModel's have been setup\n");
   
   // allocate all the mesh data
   vector <Common::SafePtr<MeshData> > meshDataVector = 
@@ -421,7 +434,9 @@ void StandardSubSystem::buildMeshData()
 	}
       }
     }
-  } 
+  }
+  
+  CFLog(VERBOSE, "StandardSubSystem::buildMeshData() => end\n");
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -517,7 +532,7 @@ void StandardSubSystem::setup()
   
   CFLog(NOTICE,"-------------------------------------------------------------\n");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void StandardSubSystem::setCouplerMethod()
@@ -551,10 +566,10 @@ void StandardSubSystem::setCouplerMethod()
 void StandardSubSystem::run()
 {
   CFAUTOTRACE;
-
+  
   cf_assert(isConfigured());
   m_forcedStop = (int)false;
-    
+  
   std::vector <Common::SafePtr<SubSystemStatus> > subSysStatusVec =  
     SubSystemStatusStack::getInstance().getAllEntries();
   
@@ -580,11 +595,17 @@ void StandardSubSystem::run()
   // Transfer of the data for the subsystems coupling
   // here, write the data to the other subsystems
   m_couplerMethod.apply(mem_fun<void,CouplerMethod>(&CouplerMethod::dataTransferWrite));
-
+  
+  // PE::GetPE().setBarrier(SubSystemStatusStack::getCurrentName());
+  
+  const string ssGroupName = SubSystemStatusStack::getCurrentName();
   for ( ; (!m_stopCondControler->isAchieved(currSSS->getConvergenceStatus())) && (!m_forcedStop); ) {
     
     // read the interactive parameters
-    getInteractiveParamReader()->readFile();
+    runSerial<void, InteractiveParamReader, &InteractiveParamReader::readFile>
+      (&*getInteractiveParamReader(), ssGroupName);
+    
+    // getInteractiveParamReader()->readFile();
     
     CFLog(VERBOSE, "StandardSubSystem::run() => m_dataPreProcessing.apply()\n");
     // pre-process the data
@@ -635,9 +656,9 @@ void StandardSubSystem::run()
     // write solution to file
     bool dontforce = false;
     writeSolution(dontforce);
-
+    
   } // end for convergence loop
- 
+  
   CFLog(VERBOSE, "StandardSubSystem::run() => m_errorEstimatorMethod.apply()\n");
   // estimate the error one final time
   m_errorEstimatorMethod.apply(mem_fun<void,ErrorEstimatorMethod>(&ErrorEstimatorMethod::estimate));
@@ -658,6 +679,9 @@ void StandardSubSystem::run()
 void StandardSubSystem::unsetup()
 {
   CFAUTOTRACE;
+  
+  PE::GetPE().setBarrier(SubSystemStatusStack::getCurrentName());
+  
   NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
   const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName));
   SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getInstance().getEntry(sssName);
@@ -681,7 +705,6 @@ void StandardSubSystem::unsetup()
   MPI_Bcast(&totalResidual, 1, MPIStructDef::getMPIType(&totalResidual), 0, PE::GetPE().GetCommunicator("Default")); 
 #endif
   
-  cf_assert(std::abs(totalResidual) > 0.);
   SimulationStatus::getInstance().getLastResidual() = totalResidual;
   
   bool force = true;
@@ -968,6 +991,28 @@ void StandardSubSystem::dumpStates()
     // for (CFuint i = 0; i < states.size(); ++i) {
     //  fout << *states[i] << endl;
     // }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+    
+void StandardSubSystem::setupPhysicalModels()
+{
+  typedef std::vector<Common::SafePtr<Namespace> > NspVec;
+  NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
+  NspVec lst = nsw.getAllNamespaces();
+  cf_assert(!lst.empty()); // there should be some models
+  
+  for(NspVec::iterator nsp = lst.begin(); nsp != lst.end(); ++nsp) {
+    nsw.pushNamespace((*nsp)->getName());
+    CFLog(VERBOSE, "Before setting  model [" << PhysicalModelStack::getActive()->getName() 
+	  << "] in nsp [" <<  (*nsp)->getName() << "]\n");
+    
+    PhysicalModelStack::getActive()->getImplementor()->setup();
+    
+    CFLog(VERBOSE, "After setting  model [" << PhysicalModelStack::getActive()->getName() 
+	  << "] in nsp [" <<  (*nsp)->getName() << "]\n"); 
+    nsw.popNamespace();
   }
 }
 

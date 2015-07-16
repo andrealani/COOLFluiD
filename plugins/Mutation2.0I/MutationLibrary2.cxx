@@ -473,38 +473,13 @@ void MutationLibrary2::configure ( Config::ConfigArgs& args )
 
 void MutationLibrary2::setup()
 {
-  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
-  
+  PhysicalChemicalLibrary::setup();
+ 
   // if this is a parallel simulation, only ONE process at a time
   // sets the library
-  if (PE::GetPE().IsParallel()) {
-    
-    PE::GetPE().setBarrier(nsp);
-
-    if (PE::GetPE().GetRank(nsp) == 0) {
-       copyDataFiles();
-     }
-    
-    PE::GetPE().setBarrier(nsp);
-
-    for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(nsp); ++i) {
-
-      if (i == PE::GetPE().GetRank(nsp)) {
-        setLibrarySequentially();
-      }
-
-      PE::GetPE().setBarrier(nsp);
-    }
-  
-    if (PE::GetPE().GetRank(nsp) == 0) {
-      deleteDataFiles();
-    }
-  }
-  else {
-    copyDataFiles();
-    setLibrarySequentially();
-    deleteDataFiles();
-  }
+  copyDataFiles();
+  setLibrarySequentially();
+  deleteDataFiles();
 }
 
 //////////////////////////////////////////////////////////////////////////////

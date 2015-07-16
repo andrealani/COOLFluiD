@@ -22,7 +22,7 @@ Environment::ObjectProvider<
     PhysicalModelImpl,
     DummyModule,
     1 >
-  dummyModelProvider("PhysicalModelDummy");
+dummyModelProvider("PhysicalModelDummy");
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -62,17 +62,16 @@ void PhysicalModelDummy::configure ( Config::ConfigArgs& args )
   // update number of equations per state
   m_var = m_varnames.size();
   getConvectiveTerm().d_castTo< DummyTerm >()->setVarNames(m_varnames);
-
+  
   // check if dimensions are an acceptable value
   const CFDim d = (CFDim) m_dim;
   if (d!=DIM_0D && d!=DIM_1D && d!=DIM_2D && d!=DIM_3D) {
-    const std::string& msg(
-      "PhysicalModelDummy::configure( . ): number of dimensions is not 0-3" );
-    CFLog(ERROR,msg << "\n");
+    const std::string msg("PhysicalModelDummy::configure( . ): number of dimensions is not 0-3" );
+    CFLog(ERROR, msg << "\n");
     throw Common::BadValueException(FromHere(),msg);
   }
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void PhysicalModelDummy::setReferenceValues()

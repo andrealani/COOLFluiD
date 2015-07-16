@@ -82,16 +82,10 @@ public:
   void getAdvanceOrder(); 
   
   /**
-   * Compute the advance order depending on the option selected (parallel version) 
-   */  
-  void getAdvanceOrderMPI(); 
-  
-   /**
    * Compute the advance order depending on the option selected 
    */  
-   void getFieldOppacities(CFuint ib);
-  
-  
+  void getFieldOppacities(CFuint ib);
+    
   /**
    * Reads the binary file containing the opacities as function of the temperature, pressure
    * and wavelength  

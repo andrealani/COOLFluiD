@@ -75,12 +75,10 @@ void InteractiveParamReader::readFile()
   
   const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
   
-  if ( !(iter % m_read_rate) )
-  {
+  if ( !(iter % m_read_rate) ) {
     // to read in parallel: all the processes must stop and read from the master process's file
     // if this is a parallel simulation, only ONE process at a time reads the file
-    const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
-    runSerial<void, InteractiveParamReader, &InteractiveParamReader::readFileSequentially>(this, nsp);
+    readFileSequentially();
   }
 }
     

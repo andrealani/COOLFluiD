@@ -182,23 +182,23 @@ void Radiation::setup()
 {
   CFAUTOTRACE;
   
-  // Setting up the file containing the binary table with opacities
+  CFLog(VERBOSE, "Radiation::setup() => start\n");
   
-  std::cout <<"Radiation::setup() => Before setting the directory\n";
-  std::cout <<"Radiation::setup() => m_dirName      = "<< m_dirName <<"\n"; 
-  std::cout <<"Radiation::setup() => m_binTabName = "<< m_binTabName <<"\n";
+  const std::string nsp = getMethodData().getNamespace();
+  cf_assert(PE::GetPE().GetProcessorCount(nsp) == 1);
+  
+  // Setting up the file containing the binary table with opacities
+  CFLog(VERBOSE, "Radiation::setup() => m_dirName = "<< m_dirName <<"\n"); 
+  CFLog(VERBOSE, "Radiation::setup() => m_binTabName = "<< m_binTabName <<"\n");
   
   m_inFileHandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
   m_binTableFile = m_dirName / boost::filesystem::path(m_binTabName);
   
-  std::cout <<"Radiation::setup() => m_binTableFile = "<< m_binTableFile <<"\n";
-  
-  std::cout <<"Radiation::setup() => After setting the directory\n";
+  CFLog(VERBOSE, "Radiation::setup() => m_binTableFile = "<< m_binTableFile <<"\n");
   
   // Check to force an allowed number of directions
-  if ((m_nDirs != 8) && (m_nDirs != 24) && (m_nDirs != 48) &&
-    (m_nDirs != 80)) {
-    std::cout << "Radiation::setup() => This ndirs is not allowed. 8 directions is chosen \n";
+  if ((m_nDirs != 8) && (m_nDirs != 24) && (m_nDirs != 48) && (m_nDirs != 80)) {
+    CFLog(WARN, "Radiation::setup() => This ndirs is not allowed. 8 directions is chosen \n");
     m_nDirs = 8;
   } 
   
@@ -206,18 +206,18 @@ void Radiation::setup()
   readOpacities();
   
   //Comments for debugging
-//   CFreal p  = 1;
-//   CFuint ib = 0;
+  //   CFreal p  = 1;
+  //   CFuint ib = 0;
   
-//   CFuint stop = 1;
-//   
-//   for (CFuint i = 0; i < 152; ++i){
-//     tableInterpolate(T[i], p, ib, val1, val2);
-//     std::cout << i <<"\t\t"<< T[i] <<"\t\t"<< p <<"\t\t"<< val1 <<"\t\t"<< val2 <<"\n";
-//     //if (stop == 1){break;}
-//   }
-//   
-//   cf_assert(stop == 0);
+  //   CFuint stop = 1;
+  //   
+  //   for (CFuint i = 0; i < 152; ++i){
+  //     tableInterpolate(T[i], p, ib, val1, val2);
+  //     std::cout << i <<"\t\t"<< T[i] <<"\t\t"<< p <<"\t\t"<< val1 <<"\t\t"<< val2 <<"\n";
+  //     //if (stop == 1){break;}
+  //   }
+  //   
+  //   cf_assert(stop == 0);
   
   const CFuint DIM = 3;
   
@@ -306,16 +306,21 @@ void Radiation::setup()
   m_qrAv.resize(m_Nr);
   m_divqAv.resize(m_Nr);
   m_qrAv   = 0;
-  m_divqAv = 0;
+  m_divqAv = 0;  
+  
+  CFLog(VERBOSE, "Radiation::setup() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void Radiation::getDirections()
 {
-  CFLog(DEBUG_MIN, "Radiation::getDirections() => Before computing the directions\n");
-  CFreal pi = MathTools::MathConsts::CFrealPi();
-  //std::cout << "Number of Directions = " << m_nDirs << "\n";
+  CFLog(DEBUG_MIN, "Radiation::getDirections() => start\n");
+  
+  const CFreal pi = MathTools::MathConsts::CFrealPi();
+  
+  CFLog(VERBOSE, "Radiation::getDirections() => Number of Directions = " << m_nDirs << "\n");
+  
   switch(m_nDirs) {
   case 8:
     m_weight[0] = 4.*pi/m_nDirs;
@@ -369,8 +374,8 @@ void Radiation::getDirections()
       CFuint n = (p+2) % 3;
 
       if (p == 0 || m_dirs[dirType][0] != m_dirs[dirType][1] ||
-	    m_dirs[dirType][1] != m_dirs[dirType][2] || m_dirs[dirType][2] != m_dirs[dirType][0]) {
-        CFLog(DEBUG_MIN, "Case1::dirTypes = " << dirType <<"\n");
+	  m_dirs[dirType][1] != m_dirs[dirType][2] || m_dirs[dirType][2] != m_dirs[dirType][0]) {
+        CFLog(VERBOSE, "Case1::dirTypes = " << dirType <<"\n");
 	CFLog(DEBUG_MIN, "l = " << l << "m = " << m << "n = " << n  <<"\n");
 	for (int i = 0; i <= 1; i++) {
 	  for (int j = 0; j <= 1; j++) {
@@ -382,10 +387,9 @@ void Radiation::getDirections()
 		m_dirs[d][0] = std::pow(-1.,i)*m_dirs[dirType][l];
 		m_dirs[d][1] = std::pow(-1.,j)*m_dirs[dirType][m];
 		m_dirs[d][2] = std::pow(-1.,k)*m_dirs[dirType][n];
-		cout<<"Case1::dirTypes = " << dirType <<"\n";
-		cout<< "l = " << l << " m = " << m << " n = " << n  <<"\n";
-		cout<< "d = " << d <<"\n";
-		cout<< "dirs[" << d <<"] = ("<<  m_dirs[d][0] <<", " << m_dirs[d][1] <<", "<<m_dirs[d][2]<<")\n";
+		CFLog(DEBUG_MIN, "l = " << l << " m = " << m << " n = " << n  <<"\n");
+		CFLog(DEBUG_MIN, "d = " << d <<"\n");
+		CFLog(DEBUG_MIN, "dirs[" << d <<"] = ("<<  m_dirs[d][0] <<", " << m_dirs[d][1] <<", "<<m_dirs[d][2]<<")\n");
 	      }
 	    }
 	  }
@@ -393,7 +397,7 @@ void Radiation::getDirections()
       }     
       if (m_dirs[dirType][0] != m_dirs[dirType][1] && m_dirs[dirType][1] != m_dirs[dirType][2] 
 	  && m_dirs[dirType][2] != m_dirs[dirType][0]) {
-	CFLog(DEBUG_MIN, "Case2::dirTypes = " << dirType <<"\n");
+	CFLog(VERBOSE, "Case2::dirTypes = " << dirType <<"\n");
 	CFLog(DEBUG_MIN, "l = " << l << "m = " << m << "n = " << n  <<"\n");
 	for (int i = 0; i <= 1; i++) {
 	  for (int j = 0; j <= 1; j++) {
@@ -404,23 +408,22 @@ void Radiation::getDirections()
 	      m_dirs[d][0] = std::pow(-1.,i)*m_dirs[dirType][l];
 	      m_dirs[d][1] = std::pow(-1.,j)*m_dirs[dirType][m];
 	      m_dirs[d][2] = std::pow(-1.,k)*m_dirs[dirType][n];
-	      cout<<"Case2::dirTypes = " << dirType <<"\n";
-	      cout<< "l = " << l << " m = " << m << " n = " << n  <<"\n";
-	      cout<< "d = " << d <<"\n";
-	      cout<< "dirs[" << d <<"] = ("<<  m_dirs[d][0] <<", " << m_dirs[d][1] <<", "<<m_dirs[d][2]<<")\n";
+	      CFLog(DEBUG_MIN, "l = " << l << " m = " << m << " n = " << n  <<"\n");
+	      CFLog(DEBUG_MIN, "d = " << d <<"\n");
+	      CFLog(DEBUG_MIN, "dirs[" << d <<"] = ("<<  m_dirs[d][0] <<", " << m_dirs[d][1] <<", "<<m_dirs[d][2]<<")\n");
 	    }
 	  }
 	}
       }          
     }
   }
+  
   // Printing the Directions for debugging
   for (CFuint dir = 0; dir < m_nDirTypes; dir++) {
     CFLog(DEBUG_MIN, "Direction[" << dir <<"] = (" << m_dirs[dir][0] <<", " << m_dirs[dir][1] <<", " << m_dirs[dir][2] <<")\n");
-    //cout << "Direction[" << dir <<"] = (" << m_dirs[dir][0] <<", " << m_dirs[dir][1] <<", " << m_dirs[dir][2] <<")\n";
   }
   
-  CFLog(DEBUG_MIN, "Radiation::getDirections() => After computing the directions\n");
+  CFLog(DEBUG_MIN, "Radiation::getDirections() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -428,9 +431,14 @@ void Radiation::getDirections()
 void Radiation::execute()
 {
   CFAUTOTRACE;
+  
+  CFLog(VERBOSE, "Radiation::execute() => start\n");
+  
+  const std::string nsp = this->getMethodData().getNamespace();
+  cf_assert(PE::GetPE().GetProcessorCount(nsp) == 1);
+  
   DataHandle<CFint> isOutward = socket_isOutward.getDataHandle();
   DataHandle<CFreal> normals = socket_normals.getDataHandle();
-  
   DataHandle<CFreal> CellID = socket_CellID.getDataHandle();
   DataHandle<CFreal> divQ   = socket_divq.getDataHandle();
   DataHandle<CFreal> qx = socket_qx.getDataHandle();
@@ -456,17 +464,13 @@ void Radiation::execute()
   // Call the function to get the directions
   getDirections();
   getAdvanceOrder();
-  // getAdvanceOrderMPI();
   
   m_q[0] = 0.0;
   m_q[1] = 0.0;
   m_q[2] = 0.0;  
   m_divq = 0.0;
   m_II   = 0.0;
-  
-  cout <<"weight = "<< m_weight <<"\n";
-  
-  
+    
   for(CFuint ib = 0; ib < m_nbBins; ib++){
     //cout<<"bin = " << ib << endl;
     getFieldOppacities(ib);
@@ -596,8 +600,8 @@ void Radiation::execute()
       }  
       //cout<<"m_divq[1000] = "<< m_divq[1000] <<"\n";
     }
-    cout <<"ib = \t"<< ib <<"\n";
-
+    
+    CFLog(VERBOSE, "Radiation::execute() => ib = " << ib << "\n");
   }
   
   for (CFuint iCell = 0; iCell < nbCells; iCell++) {
@@ -611,10 +615,12 @@ void Radiation::execute()
   //std::cout << "m_q[0] = " << m_q[0] <<"\n\n";
   //std::cout << "m_q[1] = " << m_q[1] <<"\n\n";
   //std::cout << "m_q[2] = " << m_q[2] <<"\n\n";
-
+  
   if(m_radialData){
     writeRadialData();
-  }
+  } 
+  
+  CFLog(VERBOSE, "Radiation::execute() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -746,9 +752,9 @@ void Radiation::getAdvanceOrder()
   
   CFLog(DEBUG_MIN, "Radiation::execute() => Computing order of advance. Before the loop over the directions\n");
   
-  directions_loop:
+ directions_loop:
   for (CFuint d = 0; d < m_nDirs; d++){
-    CFLog(INFO, "Direction number =" << d <<"\n");
+    CFLog(INFO, "Radiation::execute() => Direction number [" << d <<"]\n");
     CFuint mLast = 0;
     CFuint m = 0;
     CFuint stage = 1;
@@ -824,199 +830,96 @@ void Radiation::getAdvanceOrder()
 	  std::cout << "Try rotating in z. Introduce an angle in degrees\n";
 	  std::cout << "Psi = \n";
 	  std::cin >> zAngleRotation;
-	
+	  
 	  xAngleRotation *= 3.141592654/180;
 	  yAngleRotation *= 3.141592654/180;
 	  zAngleRotation *= 3.141592654/180;
 	
 	  for(CFuint dirs = 0; dirs < m_nDirs; dirs++){
 	    //Rotating over x
-	    CFreal rot0 = m_dirs[dirs][0];
-	    CFreal rot1 = m_dirs[dirs][1]*std::cos(xAngleRotation) - m_dirs[dirs][2]*std::sin(xAngleRotation);
-	    CFreal rot2 = m_dirs[dirs][1]*std::sin(xAngleRotation) + m_dirs[dirs][2]*std::cos(xAngleRotation);
+	    const CFreal rot0 = m_dirs[dirs][0];
+	    const CFreal rot1 = m_dirs[dirs][1]*std::cos(xAngleRotation) - m_dirs[dirs][2]*std::sin(xAngleRotation);
+	    const CFreal rot2 = m_dirs[dirs][1]*std::sin(xAngleRotation) + m_dirs[dirs][2]*std::cos(xAngleRotation);
 	    //Rotating over y
-	    CFreal rot3 = rot0*std::cos(yAngleRotation) + rot2*std::sin(yAngleRotation);
-	    CFreal rot4 = rot1;
-	    CFreal rot5 = -rot0*std::sin(yAngleRotation) + rot2*std::cos(yAngleRotation);
+	    const CFreal rot3 = rot0*std::cos(yAngleRotation) + rot2*std::sin(yAngleRotation);
+	    const CFreal rot4 = rot1;
+	    const CFreal rot5 = -rot0*std::sin(yAngleRotation) + rot2*std::cos(yAngleRotation);
 	    //Rotating over z
-	    CFreal rot6 = rot3*std::cos(zAngleRotation) - rot4*std::sin(zAngleRotation);
-	    CFreal rot7 = rot3*std::sin(zAngleRotation) + rot4*std::cos(zAngleRotation);
-	    CFreal rot8 = rot5;
-	  
+	    const CFreal rot6 = rot3*std::cos(zAngleRotation) - rot4*std::sin(zAngleRotation);
+	    const CFreal rot7 = rot3*std::sin(zAngleRotation) + rot4*std::cos(zAngleRotation);
+	    const CFreal rot8 = rot5;
+	    
 	    m_dirs[dirs][0] = rot6;
 	    m_dirs[dirs][1] = rot7;
 	    m_dirs[dirs][2] = rot8;
-	    cout<< "dirs[" << dirs <<"] = ("<<  m_dirs[dirs][0] <<", " << m_dirs[dirs][1] <<", "<<m_dirs[dirs][2]<<")\n";
+	    CFLog(VERBOSE, "dirs[" << dirs <<"] = ("<<  m_dirs[dirs][0] <<", " << m_dirs[dirs][1] <<", "<<m_dirs[dirs][2]<<")\n");
 	  }
 	  goto directions_loop;
-	  CFLog(INFO, "No cell added to advance list. Problem with mesh\n");
+	  CFLog(ERROR, "Radiation::execute() => No cell added to advance list. Problem with mesh\n");
 	  cf_assert(m != mLast);
       }
       m_advanceOrder[d][m - 1] = - m_advanceOrder[d][m - 1];
       m_sdone = m_cdone;
       
-      //      CFLog(INFO, "m  "<< m << " \n");
-      CFLog(INFO, "End of the "<< stage << " stage \n");
+      CFLog(VERBOSE, "Radiation::execute() => m  "<< m << " \n");
+      CFLog(VERBOSE, "Radiation::execute() => End of the "<< stage << " stage \n");
       
       ++stage;
     }// end of the loop over the STAGES
     //Printing advanceOrder for debug porpuses
-    CFLog(DEBUG_MIN, "m_advanceOrder["<< d <<"] = " << m_advanceOrder[d] <<"\n");  
+    CFLog(DEBUG_MIN, "Radiation::getAdvanceOrder() => m_advanceOrder["<< d <<"] = " << m_advanceOrder[d] <<"\n");  
   } //end for for directions
-  cout<<"End of advance order calculation \n";
+  
+  CFLog(VERBOSE, "Radiation::getAdvanceOrder() => end\n");
 }
-
-//////////////////////////////////////////////////////////////////////////////
-
-void Radiation::getAdvanceOrderMPI()
-{
-  // The order of advance calculation begins here
-  DataHandle<CFint> isOutward = socket_isOutward.getDataHandle();
-  DataHandle<CFreal> normals = socket_normals.getDataHandle();
-  DataHandle<CFreal> CellID = socket_CellID.getDataHandle();
-  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
-  DataHandle<Framework::State*> gstates = socket_gstates.getDataHandle();
-  DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
-  
-  Common::SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells"); 
-  CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
-  geoData.trs = cells;
-  m_geoBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
-  
-  const CFuint nbCells = cells->getLocalNbGeoEnts();
-  const CFuint DIM = PhysicalModelStack::getActive()->getDim();
-  cf_assert(DIM == DIM_3D);
-    
-  // Only for debugging purposes one can change the direction here
-  //   m_dirs[0][0] = 1;
-  //   m_dirs[0][1] = 0;
-  //   m_dirs[0][2] = 0;
-  
-  CFLog(DEBUG_MIN, "Radiation::execute() => Computing order of advance. Before the loop over the directions\n");
-  for (CFuint d = 0; d < m_nDirs; d++){
-    CFLog(INFO, "Direction number =" << d <<"\n");
-    CFuint mLast = 0;
-    CFuint m = 0;
-    CFuint stage = 1;
-    // Initializing the sdone and cdone for each direction
-    m_sdone.assign(nbCells, false);
-    m_cdone.assign(nbCells, false);
-    
-    while (m < nbCells) { //The loop over the cells begins
-      mLast = m;	  //Checking to see if it counts all the cells
-      for (CFuint iCell = 0; iCell < nbCells; iCell++) {
-	// 	std::cout<<"iCell = " << iCell <<"\n";
-	// if the cell is parallel updatable means that all its faces will not be partition faces (something less to check), 
-	// since there should be two surrounding layers of cells before reaching the actual partition faces
-	if ((!m_sdone[iCell]) && states[iCell]->isParUpdatable()) { 
-	  geoData.idx = iCell;
-	  GeometricEntity* currCell = m_geoBuilder.buildGE();
-	  const CFuint elemID = currCell->getState(0)->getLocalID();	
-	  const vector<GeometricEntity*>& faces = *currCell->getNeighborGeos();
-	  const CFuint nbFaces = faces.size();
-	  	  
-	  for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
-	    // 	    std::cout<<"iFace = " << iFace <<"\n";
-	    const GeometricEntity *const face = currCell->getNeighborGeo(iFace);
-	    const CFuint faceID = face->getID();
-	    const CFuint startID = faceID*DIM;
-	    
-	    const CFreal factor = (static_cast<CFuint>(isOutward[faceID]) != elemID) ? -1. : 1.;
-	    for (CFuint dir = 0; dir < DIM; ++dir) {
-	      m_normal[dir] = normals[startID+dir]*factor;
-	    }
-	    
-	    const CFreal dotMult = m_normal[XX]*m_dirs[d][XX] + m_normal[YY]*m_dirs[d][YY] + m_normal[ZZ]*m_dirs[d][ZZ];
-	    
-	    State *const neighborState = (currCell->getState(0) == face->getState(0)) ? face->getState(1) : face->getState(0);
-	    const CFuint neighborID = neighborState->getLocalID();
-	    const bool neighborIsSdone =  m_sdone[neighborID] || neighborState->isGhost(); // AL: this could lead to a very subtle BUG
-	    // first check if it is a ghost, otherwise it could fail if m_sdone for the neighborID of the ghost was already set to "true" and this is not a ghost
-	    // ghosts have local IDs but they restart from 0 up to the maximum number of ghosts 
-	    // const bool neighborIsSdone =  neighborState->isGhost() || m_sdone[neighborID]; 
-	    
-	    //If the dot product is negative and the neighbor is not done, it skips the cell and continue the loop
-	    if (dotMult < 0. && neighborIsSdone == false) {goto cell_loop;}
-	  }// end loop over the FACES
-	  
-	  m_advanceOrder[d][m] = iCell;
-	  CellID[iCell] = stage;
-	  m += 1;
-	  m_cdone[elemID] = true;
-	}// end if(Cell is not done)
-	
-        cell_loop:
-	m_geoBuilder.releaseGE();
-      }// end of the loop over the CELLS
       
-      CFLog(DEBUG_MIN, "m_advanceOrder["<< d <<"] = " << m_advanceOrder[d] << "\n");
-      if (m == mLast) {		//Check that it wrote a cell in the current stage
-	CFLog(INFO, "No cell added to advance list. Problem with mesh\n");
-       	cf_assert(m != mLast); // overlap cells are ignored therefore this assertion could be failing  
-      }
-
-      cf_assert(m-1 < m_advanceOrder[d].size());
-      m_advanceOrder[d][m - 1] = - m_advanceOrder[d][m - 1];
-      m_sdone = m_cdone;
-      CFLog(INFO, "End of the "<< stage << " stage \n");
-      ++stage;
-    }// end of the loop over the STAGES
-    //Printing advanceOrder for debug porpuses
-    CFLog(DEBUG_MIN, "m_advanceOrder["<< d <<"] = " << m_advanceOrder[d] <<"\n");  
-  } //end for for directions
-  cout<<"End of advance order calculation \n";
-  
-  cout << "Radiation::getAdvanceOrderMPI() => WAITING on Processor " << 
-    PE::GetPE().GetRank(getMethodData().getNamespace()) << endl;
-  for(;;){}
-}
-
 //////////////////////////////////////////////////////////////////////////////
 
 void Radiation::readOpacities()
 {
-  std::cout <<"Radiation::setup() => Before opening the binary File\n";
+  CFLog(VERBOSE, "Radiation::readOpacities() => start\n");
+  
   fstream& is = m_inFileHandle->openBinary(m_binTableFile);
-    
-    // the three first numbers are #bins, #Temps, #pressures
-    vector<double> data(3);
-    is.read((char*)&data[0], 3*sizeof(double));
-    
-    m_nbBins  = ((int) data[0]);
-    m_nbTemp  = ((int) data[1]);
-    m_nbPress = ((int) data[2]);
-    
-    vector<double> Pressures(m_nbPress);
-    is.read((char*)&Pressures[0], m_nbPress*sizeof(double));
-    
-    vector<double> Temperatures(m_nbTemp);
-    is.read((char*)&Temperatures[0], m_nbTemp*sizeof(double));
-    
-    // in the table there are 143 zeros 
-    vector<double> Zeros(143);
-    is.read((char*)&Zeros[0], 143*sizeof(double));
-    
-    // Reading the table: for each pressure
-    // each bin: value1(Temp1) value2(Temp1) ... value1(TempN) value2(TempN)
-    vector< vector<double> > bins(m_nbPress*m_nbBins,vector<double>(2*m_nbTemp)); //initialize  
-    for (CFuint ib =0; ib < m_nbPress*m_nbBins; ++ib){
-      is.read((char*)&bins[ib][0], 2*m_nbTemp*sizeof(double));
-    }  
-    
-    double end;
-    is.read((char*)&end, sizeof(double));
-    
-    // Verifying that the last number is zero, so the table is finished
-    cf_assert(int(end) == 0);
-    
-    is.close();
+  
+  // the three first numbers are #bins, #Temps, #pressures
+  vector<double> data(3);
+  is.read((char*)&data[0], 3*sizeof(double));
+  
+  m_nbBins  = ((int) data[0]);
+  m_nbTemp  = ((int) data[1]);
+  m_nbPress = ((int) data[2]);
+  
+  vector<double> Pressures(m_nbPress);
+  is.read((char*)&Pressures[0], m_nbPress*sizeof(double));
+  
+  vector<double> Temperatures(m_nbTemp);
+  is.read((char*)&Temperatures[0], m_nbTemp*sizeof(double));
+  
+  // in the table there are 143 zeros 
+  vector<double> Zeros(143);
+  is.read((char*)&Zeros[0], 143*sizeof(double));
+  
+  // Reading the table: for each pressure
+  // each bin: value1(Temp1) value2(Temp1) ... value1(TempN) value2(TempN)
+  vector< vector<double> > bins(m_nbPress*m_nbBins,vector<double>(2*m_nbTemp)); //initialize  
+  for (CFuint ib =0; ib < m_nbPress*m_nbBins; ++ib){
+    is.read((char*)&bins[ib][0], 2*m_nbTemp*sizeof(double));
+  }  
+  
+  double end;
+  is.read((char*)&end, sizeof(double));
+  
+  // Verifying that the last number is zero, so the table is finished
+  cf_assert(int(end) == 0);
+  
+  is.close();
   //}
-  std::cout <<"Radiation::setup() => After closing the binary File\n";
+  CFLog(VERBOSE, "Radiation::readOpacities() => After closing the binary File\n");
   
   // Storing the opacities and the radiative source into memory
   m_opacities.resize(m_nbPress*m_nbBins*m_nbTemp);
   m_radSource.resize(m_nbPress*m_nbBins*m_nbTemp);
-    
+  
   // Setting up the temperature and pressure tables
   m_Ttable.resize(m_nbTemp);
   m_Ptable.resize(m_nbPress);
@@ -1032,14 +935,14 @@ void Radiation::readOpacities()
   for(CFuint it = 0; it < m_nbTemp; ++it){
     m_Ttable[it] = Temperatures[it];
   }
-  std::cout <<"\n";
+  
   for(CFuint ip = 0; ip < m_nbPress; ++ip){
     m_Ptable[ip] = Pressures[ip];
   }
- 
-  // Writting the table into a file
+  
+  // Writing the table into a file
   if(m_writeToFile){
-    std::cout <<"Radiation::setup() => Writting file \n";
+    CFLog(VERBOSE, "Radiation::readOpacities() => Writing file \n");
     boost::filesystem::path file = m_dirName / boost::filesystem::path(m_outTabName);
     file = Framework::PathAppender::getInstance().appendParallel( file );
     
@@ -1076,6 +979,8 @@ void Radiation::readOpacities()
     }
     fhandle->close();     
   }
+  
+  CFLog(VERBOSE, "Radiation::readOpacities() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -491,9 +491,14 @@ void CellCenterFVM::setMethodImpl()
   // dynamic_cast to FVM_ComputeRHS command to be able to set the
   FVMCC_ComputeRHS *const compRHS = dynamic_cast<FVMCC_ComputeRHS*>
     (_computeSpaceRHS.getPtr());
-
-  // add the bc commands in the computeResidual
-  compRHS->setBCList(_bcs);
+  
+  if (compRHS != CFNULL) {
+    // add the bc commands in the computeResidual
+    compRHS->setBCList(_bcs);
+  }
+  else {
+    CFLog(WARN, "CellCenterFVM::setMethodImpl() => failed cast to \"FVMCC_ComputeRHS*\"\n");
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

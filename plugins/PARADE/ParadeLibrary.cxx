@@ -186,6 +186,7 @@ void ParadeLibrary::setup()
   }
   
   // if this is a parallel simulation, only ONE process at a time sets the library
+  // ######## AL: this could fail with concurrent simulations!!! ##########
   runSerial<void, ParadeLibrary, &ParadeLibrary::setLibrarySequentially>(this, nsp); 
 }
       

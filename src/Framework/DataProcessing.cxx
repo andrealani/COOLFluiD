@@ -124,7 +124,6 @@ void DataProcessing::processDataImpl()
       {
 	//if((SubSystemStatusStack::getActive()->getNbIter() == 0) || ((SubSystemStatusStack::getActive()->getNbIter()-1) % m_processRate == 0))
 	//if(!(SubSystemStatusStack::getActive()->getNbIter() % m_processRate == 0) || (SubSystemStatusStack::getActive()->getNbIter() == 0))
-	cf_assert(isConvergenceMethodSet());
 	
 	CFLog(VERBOSE, "DataProcessing::processDataImpl() => SpaceMethod->extrapolateStatesToNodes()\n");
 	// set the nodal states at first
