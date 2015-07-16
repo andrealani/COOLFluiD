@@ -120,7 +120,7 @@ void Euler2DNEQPivtTvToCons::transform(const State& state, State& result)
     const CFuint nbTe = library->getNbTe();
     const CFuint nbTvH = nbTv - nbTe; 
     
-    // data stores the moleculare vibrational energy multiplied 
+    // data stores the molecular vibrational energy multiplied 
     // by the molecules mass fractions
     if (nbTvH != 0) {
       for(CFuint i = 0; i < nbTvH; ++i) {
