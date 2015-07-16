@@ -15,6 +15,9 @@
 #include <boost/accumulators/statistics/mean.hpp>
 
 #include <iostream>
+#include <limits>
+
+#include "FiniteVolume/CellCenterFVM.hh"
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -32,6 +35,7 @@ void MeshFittingAlgorithm<MODEL>::defineConfigOptions(Config::OptionList& option
   options.template addConfigOption< CFreal >("maxPercentile","Percentile for maximum spring value");
   options.template addConfigOption< CFreal >("meshAcceleration","How fast the mesh moves in mesh steps");
   options.template addConfigOption< std::string >("monitorVar","Monitor variable for mesh adaptation");
+  options.template addConfigOption< CFuint >("monitorVarID","Monitor variable ID for mesh adaptation");
   options.template addConfigOption< CFreal >("equilibriumSpringLength","Length of spring for equilibrium");
   options.template addConfigOption< CFreal >("ratioBoundaryToInnerEquilibriumSpringLength","ratio between the equilibrium length of a Boundary spring to an Inner spring");
   options.template addConfigOption< std::vector<std::string> >("unlockedBoundaryTRSs","TRS's to be unlocked");
@@ -62,6 +66,9 @@ MeshFittingAlgorithm<MODEL>::MeshFittingAlgorithm(const std::string& name) :
   m_meshAcceleration = 0.1;  
   this->setParameter("meshAcceleration", &m_meshAcceleration);
 
+  m_monitorVarID = std::numeric_limits<CFuint>::max();
+  this->setParameter("monitorVarID", &m_monitorVarID);
+ 
   m_monitorVar = "rho";
   this->setParameter("monitorVar", &m_monitorVar);
   
@@ -152,15 +159,17 @@ void MeshFittingAlgorithm<MODEL>::setup()
   m_faceTRSBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
 
   getMethodData().getUpdateVarSet()->setup();
+
+  if(m_monitorVarID == std::numeric_limits<CFuint>::max()){
+    /// create mapping between monitor variable and its model
+    std::map<std::string, CFuint> variables;
+    variables["rho"] = MODEL::PTERM::RHO;
+    variables["p"] = MODEL::PTERM::P;
  
-  /// create mapping between monitor variable and its model
-  std::map<std::string, CFuint> variables;
-  variables["rho"] = MODEL::PTERM::RHO;
-  variables["p"] = MODEL::PTERM::P;
-  
-  std::map<std::string, CFuint>::iterator it = variables.find(m_monitorVar);
-  cf_assert(it != variables.end());
-  m_monitorVarID = it->second;
+    std::map<std::string, CFuint>::iterator it = variables.find(m_monitorVar);
+    cf_assert(it != variables.end());
+    m_monitorVarID = it->second;
+  }
   
   createNodalConnectivity();
   findBoundaryNodes();
@@ -410,6 +419,10 @@ void MeshFittingAlgorithm<MODEL>::computeSpringTruncationData()
   MPI_Bcast(&m_springTruncationData.minLimit, 1, MPI_DOUBLE, 0, communicator);
   MPI_Bcast(&m_springTruncationData.maxLimit, 1, MPI_DOUBLE, 0, communicator);
   MPI_Bcast(&m_springTruncationData.mean    , 1, MPI_DOUBLE, 0, communicator);
+
+  CFLog(VERBOSE, "MeshFittingAlgorithm: Spring min limit: "<<m_springTruncationData.minLimit 
+              << "; Spring max limit: "  <<  m_springTruncationData.maxLimit 
+              << "; Spring mean Value: " << m_springTruncationData.mean << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
