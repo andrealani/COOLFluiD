@@ -74,6 +74,9 @@ private: // data
   
   /// temperature ID
   CFuint m_TID;
+
+  /// relaxation factor
+  CFreal m_relaxationFactor;
   
 }; // end of class QRadSourceTerm
 
