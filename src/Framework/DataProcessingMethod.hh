@@ -133,7 +133,10 @@ protected: // member data
   /// Rate to process the data.
   CFuint  m_processRate;
 
-  /// Iteration at which to stop the processing
+  /// Iteration at which processing starts
+  CFuint  m_startIter;
+
+  /// Iteration at which processing stops
   CFuint  m_stopIter;
   
 private: // member data

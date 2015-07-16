@@ -24,7 +24,8 @@ namespace COOLFluiD {
 void DataProcessingMethod::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< CFuint, Config::DynamicOption<> >("ProcessRate","Rate to process the data."); 
-  options.addConfigOption< CFuint, Config::DynamicOption<> >("StopIter","Iteration at which stopping processing.");
+  options.addConfigOption< CFuint, Config::DynamicOption<> >("StartIter","Iteration at which processing starts.");
+  options.addConfigOption< CFuint, Config::DynamicOption<> >("StopIter", "Iteration to stop processing stops.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -62,8 +63,10 @@ DataProcessingMethod::DataProcessingMethod(const std::string& name)
   // by default the data processing is run once -> processRate=infinity
   m_processRate = numeric_limits<CFuint>::max();
   setParameter("ProcessRate",&m_processRate);
-  
-  // by default the data processing is run once -> processRate=infinity
+
+  m_startIter = 0;
+  setParameter("StartIter",&m_startIter);
+
   m_stopIter = numeric_limits<CFuint>::max();
   setParameter("StopIter",&m_stopIter);
 }
@@ -94,7 +97,8 @@ void DataProcessingMethod::processData()
 
   pushNamespace();
   
-  if (SubSystemStatusStack::getActive()->getNbIter() < m_stopIter) {
+  if (SubSystemStatusStack::getActive()->getNbIter() < m_stopIter 
+      && SubSystemStatusStack::getActive()->getNbIter() >= m_startIter ) {
     processDataImpl();
   }
   
