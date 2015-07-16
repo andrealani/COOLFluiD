@@ -285,9 +285,9 @@ void ThermNEQST<UPDATEVAR>::computeSource
     // conservation equation only in case of ionized mixtures)
     if (this->_hasRadiationCoupling) {
       cf_assert(elemID < this->_qrad.size()); 
-      source[TID] = - this->_radRelaxationFactor*this->_qrad[elemID]*coeffv;
+      source[TID] = (1.-this->_radRelaxationFactor)*source[TID] + this->_radRelaxationFactor*this->_qrad[elemID]*coeffv;
       if (this->_library->presenceElectron()) {
-        source[TED] -= this->_radRelaxationFactor*this->_qrad[elemID]*coeffv;   
+        source[TED] += (1.-this->_radRelaxationFactor)*source[TID] + this->_radRelaxationFactor*this->_qrad[elemID]*coeffv;   
       } 
     }
 
