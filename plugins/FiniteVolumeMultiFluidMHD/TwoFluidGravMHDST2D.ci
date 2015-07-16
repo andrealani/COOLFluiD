@@ -244,7 +244,7 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
       CFreal GammaIon_i = - _GammaIon_n;
       CFreal GammaRec_n = - _GammaRec_i;
       const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-      const CFreal mn = 1.6726e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+      const CFreal mn = 1.6735e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
       CFreal collMomentumSource_ix = _collMomentumSource[0];
       CFreal collMomentumSource_iy = _collMomentumSource[1];
       CFreal collMomentumSource_nx = _collMomentumSource[2];
@@ -349,7 +349,7 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeMassReactionsEnergySourceTerm()
   //Molecular Masses
   //const CFreal me = 9.1094e-31;              // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
   const CFreal mi = 1.6726e-27;              // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mn = 1.6726e-27;              // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn = 1.6735e-27;              // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
   
   //electron properties
   const CFreal ne = rhoi/mi;		   	// Electrically neutral, i.e. ne = ni
@@ -458,7 +458,7 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeCollisionalMomentumEnergy()
   
   // particle mass 
   const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mn = 1.6726e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings  
+  const CFreal mn = 1.6735e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings  
   
   // particles per volume
   const CFreal ni = rhoi/mi;
@@ -466,7 +466,8 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeCollisionalMomentumEnergy()
   
   //parameters
   const CFreal m_in = mi*mn/(mi + mn);
-  const CFreal Sigma_in = 1.41e-19;		//collisional cross-section m2 [Leake]
+  const CFreal Sigma_in = 1.41e-18;		//collisional cross-section m2 [Jovo Vranjes, MNRS 2014]
+//  const CFreal Sigma_in = 1.41e-19;		//collisional cross-section m2 [Leake]
   const CFreal T_in = (Ti + Tn)/2;
   const CFreal kB = Framework::PhysicalConsts::Boltzmann(); // Boltzmann constant
   const CFreal pi = MathTools::MathConsts::CFrealPi(); //Pi number
@@ -524,7 +525,7 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSpitzerResistivity()
   //data
   // particle mass
   const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mn = 1.6726e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn = 1.6735e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
   const CFreal me = 9.1093829140e-31;
   const CFreal kB = Framework::PhysicalConsts::Boltzmann(); // Boltzmann constant
   const CFreal e_charge = 1.60217656535e-19; //Electron's charge
@@ -536,7 +537,7 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSpitzerResistivity()
   const CFreal ne = ni;
 
   // electron-neutral collision frequency
-  const CFreal Sigma_en   = 1e-19;
+  const CFreal Sigma_en   = 1e-18; //YM: changed to better agree with Jovo's cross-sections
   const CFreal pi         = MathTools::MathConsts::CFrealPi(); //Pi number  
   const CFreal m_en       = me*mn/(me + mn); 
   const CFreal T_en       = (Ti + Tn)/2;
