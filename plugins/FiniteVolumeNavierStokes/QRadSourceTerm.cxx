@@ -82,7 +82,7 @@ void QRadSourceTerm::computeSource(Framework::GeometricEntity *const element,
   const CFuint cellID = element->getID();
   State *const currState = element->getState(0);
   const CFreal r = (getMethodData().isAxisymmetric()) ? currState->getCoordinates()[YY] : 1.0;
-  source[m_TID] += source[m_TID]*(1.-m_relaxationFactor) + m_relaxationFactor*qrad[cellID]*volumes[cellID]*r;
+  source[m_TID] = source[m_TID]*(1.-m_relaxationFactor) + m_relaxationFactor*qrad[cellID]*volumes[cellID]*r;
   CFLog(DEBUG_MAX, "QRadSourceTerm::computeSource() => source = " << source << "\n");
   CFLog(DEBUG_MAX, "QRadSourceTerm::computeSource() => m_relaxationFactor  = " << m_relaxationFactor << "\n");
 
