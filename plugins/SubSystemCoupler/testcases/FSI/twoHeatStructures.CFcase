@@ -22,7 +22,7 @@ Simulator.SubSysA.RunSequence = SubSystemCouplerBody1:dataTransferRead \
                                 SubSystemCouplerBody2:dataTransferWrite
 
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libFiniteElement libHeat libLoopMaestro libNewtonMethod libSubSystemCoupler libSubSystemCouplerHeat libTHOR2CFmesh  libFiniteElementHeat
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libFiniteElement libHeat libNewtonMethod libSubSystemCoupler libSubSystemCouplerHeat libTHOR2CFmesh  libFiniteElementHeat
 
 Simulator.Paths.WorkingDir = plugins/SubSystemCoupler/testcases/FSI/
 Simulator.Paths.ResultsDir       = ./

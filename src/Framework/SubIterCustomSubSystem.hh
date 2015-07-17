@@ -9,7 +9,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "Framework/StandardSubSystem.hh"
+#include "Framework/CustomSubSystem.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -23,7 +23,7 @@ namespace COOLFluiD {
 /// that allows to run a customized subsystem with subiterations
 /// @author Thomas Wuilbaut
 
-class Framework_API SubIterCustomSubSystem : public StandardSubSystem {
+class Framework_API SubIterCustomSubSystem : public CustomSubSystem {
 public: // functions
 
   /// Defines the Config Option's of this class
@@ -43,15 +43,12 @@ public: // functions
   virtual void configure( Config::ConfigArgs& args );
 
   /// Run (Process) Phase. All the big number crunching work goes here.
-  void run();
+  virtual void run();
 
   /// Run one function of the sequence
-  void runSequenceID(const CFuint ID);
+  virtual void runSequenceID(const CFuint ID);
 
-private: // data
-
-  /// collection of strings used to describe the sequence of commands to run
-  std::vector<std::string> m_runSequenceStr;
+protected: // data
 
   ///flag for stopping the subIter loop
   bool _endSubIteration;

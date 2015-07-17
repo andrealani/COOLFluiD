@@ -41,14 +41,15 @@ public: // functions
   virtual void run();
 
   /// Run one function of the sequence
-  void runSequenceID(const CFuint ID);
-
-private: // function
-
+  virtual void runSequenceID(const CFuint ID);
+  
+ protected: // function
+  
   /// Helper function to run the functionwith the method passed
-  void executeMethodFunction (const std::string& method_name, const std::string& function_name);
-
-private: // data
+  void executeMethodFunction (const std::string& method_name,
+			      const std::string& function_name);
+  
+protected: // data
 
   /// collection of strings used to describe the sequence of commands to run
   std::vector<std::string> m_runSequenceStr;

@@ -6,7 +6,8 @@
 ## mesh with only tetras, conversion from THOR to CFmesh, second-order 
 ## reconstruction with Venkatakrishnan limiter, supersonic inlet and outlet BC, 
 ## field initialization with analytical function, two subsystems managed by 
-## LoopMaestro demonstrating restart and parallel /O of extra data (limiter)
+## LoopMaestro demonstrating restart and parallel /O of extra data (limiter),
+## CustomSubsystem is used with just one action
 ##
 #################################################################################
 ##
@@ -44,8 +45,9 @@ LoopMaestro.GlobalMaxNumberSteps.nbSteps = 1
 #LoopMaestro.RestartFromPreviousSolution = true
 
 Simulator.SubSystems = SubSysA SubSysB
-Simulator.SubSystemTypes = StandardSubSystem StandardSubSystem
+Simulator.SubSystemTypes = CustomSubSystem StandardSubSystem
 Simulator.SubSystemRanks = 0:3 4:7
+Simulator.SubSysA.RunSequence = BwdEuler:takeStep
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets2D/

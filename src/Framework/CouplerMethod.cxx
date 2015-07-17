@@ -96,20 +96,20 @@ void CouplerMethod::postConfigure( Config::ConfigArgs& args)
 void CouplerMethod::preProcessWrite()
 {
   CFAUTOTRACE;
-
+  
   CFLog(NOTICE,"-------------------------------------------------------------\n");
-  CFLog(NOTICE,"Writting coordinates of CouplerMethod [" << getName() << "]\n");
+  CFLog(NOTICE,"Writing coordinates of CouplerMethod [" << getName() << "]\n");
   cf_assert(isConfigured());
   cf_assert(isSetup());
-
+  
   pushNamespace();
-
+  
   preProcessWriteImpl();
-
+  
   popNamespace();
   CFLog(NOTICE,"-------------------------------------------------------------\n");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void CouplerMethod::preProcessRead()

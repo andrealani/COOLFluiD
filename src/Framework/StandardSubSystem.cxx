@@ -248,7 +248,8 @@ void StandardSubSystem::setNonRootMethods()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void StandardSubSystem::configureCouplerMethod(Config::ConfigArgs& args, MultiMethodTuple<Framework::CouplerMethod>& couplerMethod)
+void StandardSubSystem::configureCouplerMethod
+(Config::ConfigArgs& args, MultiMethodTuple<Framework::CouplerMethod>& couplerMethod)
 {
   CFLog(VERBOSE, "StandardSubSystem::configureCouplerMethod() => start\n");
   
@@ -605,8 +606,6 @@ void StandardSubSystem::run()
     runSerial<void, InteractiveParamReader, &InteractiveParamReader::readFile>
       (&*getInteractiveParamReader(), ssGroupName);
     
-    // getInteractiveParamReader()->readFile();
-    
     CFLog(VERBOSE, "StandardSubSystem::run() => m_dataPreProcessing.apply()\n");
     // pre-process the data
     m_dataPreProcessing.apply(mem_fun<void,DataProcessingMethod>
@@ -632,11 +631,11 @@ void StandardSubSystem::run()
     // estimate errors
     m_errorEstimatorMethod.apply(mem_fun<void,ErrorEstimatorMethod>
                                   (&ErrorEstimatorMethod::estimate));
-
+    
     CFLog(VERBOSE, "StandardSubSystem::run() => m_dataPostProcessing.apply()\n");
     // post-process the data
     m_dataPostProcessing.apply(mem_fun<void,DataProcessingMethod>
-                          (&DataProcessingMethod::processData));
+			       (&DataProcessingMethod::processData));
     
     CFLog(VERBOSE, "StandardSubSystem::run() => m_couplerMethod.apply()\n");
     // Transfer of the data for the subsystems coupling

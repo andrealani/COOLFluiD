@@ -22,6 +22,7 @@
 #include "Framework/Framework.hh"
 #include "Framework/NamespaceSwitcher.hh"
 #include "Framework/SubIterCustomSubSystem.hh"
+#include "Common/PEFunctions.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -46,7 +47,6 @@ subIterCustomSubSystemProvider("SubIterCustomSubSystem");
 
 void SubIterCustomSubSystem::defineConfigOptions(Config::OptionList& options)
 {
-  options.addConfigOption< std::vector<std::string> >("RunSequence","Sequence for running.");
   options.addConfigOption< CFuint >("NbSubIterations","Number of SubIterations.");
   options.addConfigOption< std::string >("SubIterStopCondition","The stop condition to control the subIteration procedure.");
   options.addConfigOption< std::string >("SubIterStopConditionName","The name to assign to the stop condition to control the subIteration procedure.");
@@ -56,10 +56,9 @@ void SubIterCustomSubSystem::defineConfigOptions(Config::OptionList& options)
 //////////////////////////////////////////////////////////////////////////////
 
 SubIterCustomSubSystem::SubIterCustomSubSystem(const std::string& name)
-  : StandardSubSystem(name),
-  _endSubIteration(false)
+  : CustomSubSystem(name),
+    _endSubIteration(false)
 {
-
   addConfigOptionsTo(this);
 
   m_runSequenceStr = std::vector<std::string>();
@@ -73,7 +72,6 @@ SubIterCustomSubSystem::SubIterCustomSubSystem(const std::string& name)
 
   m_subIterStopConditionNameStr = "SubIterMaxNumberSteps";
   setParameter("SubIterStopConditionName",&m_subIterStopConditionNameStr);
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -89,8 +87,8 @@ void SubIterCustomSubSystem::configure ( Config::ConfigArgs& args )
 {
   CFAUTOTRACE;
 
-  StandardSubSystem::configure(args);
-
+  CustomSubSystem::configure(args);
+  
   // builds a stop condition
   Common::SafePtr<StopCondition::PROVIDER> stopCondProv =
     Environment::Factory<StopCondition>::getInstance().getProvider(m_subIterStopConditionStr);
@@ -103,26 +101,23 @@ void SubIterCustomSubSystem::configure ( Config::ConfigArgs& args )
   // StopConditionController::Create makes a new StopConditionController
   // object, adapted to the current PE mode
   m_subIterStopCondControler.reset(StopConditionController::Create(subIterStopCondition));
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void SubIterCustomSubSystem::runSequenceID(const CFuint ID)
 {
-
   CFAUTOTRACE;
 
-// std::cout << "Sequence: " << m_runSequenceStr[ID] << std::endl;
-  CFchar separator = QualifiedName::separator();
+  const CFchar separator = QualifiedName::separator();
   const CFuint size = StringOps::getWords(m_runSequenceStr[ID],separator).size();
   cf_assert(size > 1);
-
+  
   if(size == 2)
   {
     const std::string methodName = StringOps::getWords(m_runSequenceStr[ID],separator)[0];
     const std::string functionName = StringOps::getWords(m_runSequenceStr[ID],separator)[1];
-    MethodRegistry::getInstance().getMethod(methodName)->run_function(functionName);
+    executeMethodFunction(methodName, functionName);
   }
 
   // Loop over one method function
@@ -131,12 +126,12 @@ void SubIterCustomSubSystem::runSequenceID(const CFuint ID)
     const std::string methodName = StringOps::getWords(m_runSequenceStr[ID],separator)[0];
     const std::string functionName = StringOps::getWords(m_runSequenceStr[ID],separator)[1];
     const CFuint functionIter = Common::StringOps::from_str<CFuint>(StringOps::getWords(m_runSequenceStr[ID],separator)[2]);
-    //for subitrating you can only do one iter
+    
+    // for subitrating you can only do one iter
     cf_assert(functionIter == 1);
-    Common::SafePtr<Framework::Method> method = MethodRegistry::getInstance().getMethod(methodName);
     for(CFuint iRun = 0; iRun < functionIter; iRun++)
     {
-      method->run_function(functionName);
+      executeMethodFunction(methodName, functionName);
     }
   }
 
@@ -162,14 +157,10 @@ void SubIterCustomSubSystem::runSequenceID(const CFuint ID)
     {
       for(CFuint iMtd = 0; iMtd < nbMethods; iMtd++)
       {
-        Common::SafePtr<Framework::Method> method =
-          MethodRegistry::getInstance().getMethod(methodName[iMtd]);
-
-        method->run_function(functionName[iMtd]);
+         executeMethodFunction(methodName[iMtd],functionName[iMtd]);
       }
     }
   }
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -193,7 +184,12 @@ void SubIterCustomSubSystem::run()
 
     subSysStatusVec[i]->startWatch();
   }
-
+  
+  NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
+  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName));
+  SafePtr<SubSystemStatus> currSSS = SubSystemStatusStack::getInstance().getEntry(sssName);
+  cf_assert(currSSS.isNotNull());
+  
   m_duration.set(0.);
   Stopwatch<WallTime> stopTimer;
   stopTimer.start();
@@ -203,35 +199,34 @@ void SubIterCustomSubSystem::run()
   m_couplerMethod.apply(mem_fun<void,CouplerMethod>
                       (&CouplerMethod::dataTransferWrite));
 
-  for ( ; !m_stopCondControler->isAchieved(SubSystemStatusStack::getActive()->getConvergenceStatus()); )
-  {
+  const string ssGroupName = SubSystemStatusStack::getCurrentName();
+  for ( ; (!m_stopCondControler->isAchieved(currSSS->getConvergenceStatus())) && (!m_forcedStop); ) {
+    
     _endSubIteration = false;
-    for(CFuint iSub=0;!_endSubIteration;++iSub)
-    {
-
+    for(CFuint iSub=0;!_endSubIteration;++iSub) {
+      
       /// @todo all this should go into the ConvergenceStatus
       NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
-      for(CFuint i = 0; i< nsw.getAllNamespaces().size();i++)
-      {
-        const std::string nspName = nsw.getAllNamespaces()[i]->getName();
+      for(CFuint i = 0; i< nsw.getAllNamespaces().size();i++) {
+	
+	const std::string nspName = nsw.getAllNamespaces()[i]->getName();
         nsw.pushNamespace(nspName);
         Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
-
+	
         subSysStatus->setSubIter(iSub);
         subSysStatus->setIsSubIterationLastStep(false);
-
+	
         //if stopCond is achieved in any namespace...
         if(m_subIterStopCondControler->isAchieved(SubSystemStatusStack::getActive()->getConvergenceStatus())){
           subSysStatus->setIsSubIterationLastStep(true);
           _endSubIteration = true;
         }
-
+	
 	nsw.popNamespace();
       }
-
+      
       if(_endSubIteration == true){
-        for(CFuint i = 0; i< nsw.getAllNamespaces().size();i++)
-        {
+        for(CFuint i = 0; i< nsw.getAllNamespaces().size();i++) {
           const std::string nspName = nsw.getAllNamespaces()[i]->getName();
           nsw.pushNamespace(nspName);
           Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
@@ -241,28 +236,29 @@ void SubIterCustomSubSystem::run()
       }
 
       // read the interactive parameters
-      getInteractiveParamReader()->readFile();
-
+      runSerial<void, InteractiveParamReader, &InteractiveParamReader::readFile>
+	(&*getInteractiveParamReader(), ssGroupName);
+      
       for(CFuint i=0;i < m_runSequenceStr.size();i++){
         runSequenceID(i);
       }
 
       writeConvergenceOnScreen();
-
+      
       // write solution to file
       writeSolution(false);
-
+      
     } //end for the subiteration loop
-
+    
   } // end for convergence loop
-
+  
     // estimate the error one final time
-    m_errorEstimatorMethod.apply(mem_fun<void,ErrorEstimatorMethod>(&ErrorEstimatorMethod::estimate));
-
+  m_errorEstimatorMethod.apply(mem_fun<void,ErrorEstimatorMethod>(&ErrorEstimatorMethod::estimate));
+  
   for(CFuint i = 0; i<subSysStatusVec.size();i++){
     subSysStatusVec[i]->stopWatch();
   }
-
+  
   stopTimer.stop ();
 
   CFLog(NOTICE, "SubSystem WallTime: " << stopTimer << "s\n");

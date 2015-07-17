@@ -21,7 +21,7 @@ Simulator.LoopMaestro.RestartFromPreviousSolution = true
 Simulator.LoopMaestro.InitialFiles = CouplingStartFiles/Jets2DFVM/*
 
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libForwardEuler libGambit2CFmesh libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFiniteVolume libNavierStokes libLinearAdv libLoopMaestro libSubSystemCoupler
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libForwardEuler libGambit2CFmesh libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFiniteVolume libNavierStokes libLinearAdv libSubSystemCoupler
 
 Simulator.Paths.WorkingDir = plugins/SubSystemCoupler/testcases/FSI/
 Simulator.Paths.ResultsDir       = ./

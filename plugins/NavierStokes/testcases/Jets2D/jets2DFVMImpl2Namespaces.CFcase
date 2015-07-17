@@ -26,6 +26,11 @@ Simulator.Paths.ResultsDir = ./
 #
 #Define the 2 meshdata's
 #
+
+Simulator.SubSystems = SubSystem
+Simulator.SubSystemTypes = CustomSubSystem
+Simulator.SubSystem.RunSequence = FlowIterator:takeStep EMIterator:takeStep
+
 Simulator.SubSystem.Namespaces = FlowNamespace EMNamespace
 Simulator.SubSystem.Ranks = 0:3 4:7
 #

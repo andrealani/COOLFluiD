@@ -446,9 +446,9 @@ void ConvergenceMethod::writeOnScreen()
     out.setf( std::ios::fixed, std:: ios::floatfield );
     //out.setf( std::ios::left );
     out << "Mem: " << Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n";
-
-    CFout << out.str() << CFendl;
-
+    
+    CFLog(INFO, out.str() << "\n");
+    
     popNamespace();
   }
 }
