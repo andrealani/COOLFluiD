@@ -42,9 +42,6 @@ ChemNEQST<UPDATEVAR>::ChemNEQST(const std::string& name) :
   
   _uvID = std::vector<CFuint>();
   setParameter("uvIDs", &_uvID);
-
-  _radRelaxationFactor = 1.0;
-  setParameter("RadRelaxationFactor", &_radRelaxationFactor);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -64,9 +61,6 @@ void ChemNEQST<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
 
   options.template addConfigOption< std::vector<CFuint> >
     ("uvIDs", "IDs of u and v components");
-
-  options.template addConfigOption< CFreal, Config::DynamicOption<> >
-    ("RadRelaxationFactor", "Relaxation factor for qrad");
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -34,7 +34,6 @@ qradSourceFVMCCProvider("QRadST");
 void QRadSourceTerm::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< CFuint > ("TID", "Temperature ID");
-  options.addConfigOption< CFreal > ("RadRelaxationFactor", "Radiation Relaxation Factor");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -47,10 +46,6 @@ QRadSourceTerm::QRadSourceTerm(const std::string& name) :
   
   m_TID = 0;
   setParameter("TID", &m_TID);
-
-  m_relaxationFactor = 1.;
-  setParameter("RadRelaxationFactor", &m_relaxationFactor);
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -82,10 +77,9 @@ void QRadSourceTerm::computeSource(Framework::GeometricEntity *const element,
   const CFuint cellID = element->getID();
   State *const currState = element->getState(0);
   const CFreal r = (getMethodData().isAxisymmetric()) ? currState->getCoordinates()[YY] : 1.0;
-  source[m_TID] = source[m_TID]*(1.-m_relaxationFactor) + m_relaxationFactor*qrad[cellID]*volumes[cellID]*r;
   CFLog(DEBUG_MAX, "QRadSourceTerm::computeSource() => source = " << source << "\n");
-  CFLog(DEBUG_MAX, "QRadSourceTerm::computeSource() => m_relaxationFactor  = " << m_relaxationFactor << "\n");
-
+  source[m_TID] = qrad[cellID]*volumes[cellID]*r;
+  CFLog(DEBUG_MAX, "QRadSourceTerm::computeSource() => source = " << source << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

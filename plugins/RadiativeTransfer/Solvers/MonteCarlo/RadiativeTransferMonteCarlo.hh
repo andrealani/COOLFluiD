@@ -258,6 +258,8 @@ private:
   CFuint  m_iphoton_cell_fix, m_istate_cell_fix;
   CFuint  m_iphoton_face_fix, m_igState_face_fix;
 
+  CFreal m_relaxationFactor;
+
   bool getFacePhotonData(Photon &ray);
 }; // end of class RadiativeTransferMonteCarlo
 
@@ -303,21 +305,20 @@ using namespace COOLFluiD::Common;
 using namespace COOLFluiD::Numerics::FiniteVolume;
 using namespace COOLFluiD::LagrangianSolver;
 
-
 namespace COOLFluiD {
 
 namespace RadiativeTransfer {
 
-
 template<class PARTICLE_TRACKING>
 void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::defineConfigOptions(Config::OptionList& options)
 {
-  options.addConfigOption< CFuint >("numberOfRays","number of rays sent by each elemet.");
+  options.addConfigOption< CFuint >("numberOfRays","number of rays sent by each element.");
   options.addConfigOption< CFuint >("MaxNbVisitedCells","Maximum number of visited cells.");
   options.addConfigOption< bool >("Axi","True if it is an axisymmetric simulation.");
   options.addConfigOption< string >("PostProcessName","Name of the post process routine");
-  options.addConfigOption< CFuint >("sendBufferSize","Size of the buffer for comunication");
-  options.addConfigOption< CFuint >("nbRaysCycle","Number of rays to emmint before communication step");
+  options.addConfigOption< CFuint >("sendBufferSize","Size of the buffer for communication");
+  options.addConfigOption< CFuint >("nbRaysCycle","Number of rays to emit before communication step");
+  options.addConfigOption< CFreal >("relaxationFactor","Relaxation Factor");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -359,6 +360,9 @@ RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::RadiativeTransferMonteCarlo(cons
 
   m_nbRaysCycle = m_sendBufferSize / 2;
   setParameter("nbRaysCycle", &m_nbRaysCycle);
+
+  m_relaxationFactor = 1.;
+  setParameter("relaxationFactor", &m_relaxationFactor);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -560,7 +564,6 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getTotalEnergy(){
 
     m_ghostStateRadPower.resize(nbGhostStates);
     m_nbPhotonsGhostState.resize(nbGhostStates);
-
 
     //CFreal nbPhotons = nbStates ;//* m_nbRaysElem / m_radiation->getNumberLoops();
     //cout<<"nbPhotons: "<< nbPhotons <<endl;
@@ -803,7 +806,7 @@ bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getFacePhotonData(Photon &r
       //const CFuint cellID = cell->getID();
       ray.commonData.cellID = cellID;
 
-      ray.userData.energyFraction= m_ghostStateRadPower[m_igState_face_fix]/CFreal(m_nbPhotonsGhostState[ m_igState_face_fix ]);
+      ray.userData.energyFraction= m_ghostStateRadPower[m_igState_face_fix]/CFreal(m_nbPhotonsGhostState[m_igState_face_fix]);
 
       //m_cellBuilder.releaseGE();
       ++m_iphoton_face_fix;
@@ -899,8 +902,8 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
     bool isLastPhoton = (toGenerateCellPhotons + toGenerateWallPhotons == 0);
     done = m_lagrangianSolver.sincronizeParticles(photonStack, isLastPhoton);
 
-    CFLog(INFO,"Received "<<photonStack.size()<< " photons and has generated "<< nbCellPhotons <<" photons\n");
-    CFLog(INFO,"Number of photons left: "<< toGenerateCellPhotons <<"\n");
+    CFLog(VERBOSE,"Received "<<photonStack.size()<< " photons and has generated "<< nbCellPhotons <<" photons\n");
+    CFLog(VERBOSE,"Number of photons left: "<< toGenerateCellPhotons <<"\n");
   }
   delete progressBar;
 
@@ -1032,7 +1035,6 @@ CFuint RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::rayTracing(Photon& beam)
         //CFuint stateID = m_lagrangianSolver.getWallGhotsStateId(exitFaceID);
         CFuint ghostStateID = m_lagrangianSolver.getWallGhotsStateId(exitFaceID);
 
-
         const CFreal wallK = m_radiation->getWallDistPtr(ghostStateID)
             ->getRadiatorPtr()->getAbsorption( beamData.wavelength, entryDirection );
 
@@ -1103,8 +1105,7 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
 
   DataHandle<CFreal> gasRadiativeHeatSource = socket_qrad.getDataHandle();
-
-
+  
   m_stateInRadPowers.sincronizeAssign();
   m_stateRadPower.sincronizeAssign();
   //fill qrad socket (loop states)
@@ -1113,8 +1114,8 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
       CFreal volume = volumes[istate];
       volume *= (m_isAxi ? 6.283185307179586*(*states[istate]).getCoordinates()[YY] : 1.);
       //gasRadiativeHeatSource[istate] = (- m_stateInRadPowers[istate] + m_stateRadPower[istate]) / volume ;
-      gasRadiativeHeatSource[istate] = (m_stateInRadPowers[istate]-m_stateRadPower[istate] ) / volume;
-
+      gasRadiativeHeatSource[istate] = (1.-m_relaxationFactor)*gasRadiativeHeatSource[istate] + 
+                                       m_relaxationFactor*(m_stateInRadPowers[istate]-m_stateRadPower[istate])/volume;
       //cout<<"state: "<<m_stateInRadPowers[istate]<<
       //	      ' '<< m_stateRadPower[istate]<<' '<<gasRadiativeHeatSource[istate]<<endl;
     
