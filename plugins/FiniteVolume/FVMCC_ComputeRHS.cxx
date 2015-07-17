@@ -539,73 +539,54 @@ void FVMCC_ComputeRHS::computeSourceTerm()
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   
   // debugging -------------------------------------//
-  /*static vector<RealVector> st(cellFlag.size());   
-    static RealVector rr(cellFlag.size());  
-    static CFuint count = 0;
-    if (count == 0) {
-    for (CFuint i = 0; i < st.size(); ++i) { 
-    st[i].resize(nbEqs);
-    st[i] = 0.0;
-    }
-    rr = 0.0;    
-    }*/
-  
-  // debugging -------------------------------------//
   
   for (CFuint iCell = 0; iCell < 2; ++iCell) { 
-    if (!_currFace->getState(iCell)->isGhost()) {
-      const CFuint cellID  = _currFace->getState(iCell)->getLocalID();
-      _sourceJacobOnCell[iCell] = false;
-      
-      if (!cellFlag[cellID]) {
-	GeometricEntity *const currCell = _currFace->getNeighborGeo(iCell);
+
+    if (_currFace->getState(iCell)->isGhost()){ 
+      continue;
+    }
+
+    const CFuint cellID  = _currFace->getState(iCell)->getLocalID();
+    _sourceJacobOnCell[iCell] = false;
+
+    if (cellFlag[cellID] ){ 
+      continue;
+    }
+
+	  GeometricEntity *const currCell = _currFace->getNeighborGeo(iCell);
+	  CFreal invR = 1.0;
+	  if (getMethodData().isAxisymmetric()) {
+	    invR /= std::abs(currCell->getState(0)->getCoordinates()[YY]);
+	  }
 	
-	CFreal invR = 1.0;
-	if (getMethodData().isAxisymmetric()) {
-	  invR /= std::abs(currCell->getState(0)->getCoordinates()[YY]);
-	}
-	
-	for (CFuint i = 0; i < _stAnJacobIDs.size(); ++i) { 
-	  const CFuint ist = _stAnJacobIDs[i]; 
-	  (*_stComputers)[ist]->setAnalyticalJacob(true);
-	  RealVector& source = _source[iCell][ist]; 
-	  (*_stComputers)[ist]->computeSource(currCell, source, _sourceJacobian[iCell][ist]); 
-          
-	  for (CFuint iEq = 0; iEq < nbEqs; ++iEq) { 
-	    rhs(cellID, iEq, nbEqs) += getResFactor()*source[iEq]*invR; 
+	  for (CFuint i = 0; i < _stAnJacobIDs.size(); ++i) { 
+	    const CFuint ist = _stAnJacobIDs[i]; 
+	    (*_stComputers)[ist]->setAnalyticalJacob(true);
+	    RealVector& source = _source[iCell][ist]; 
+      source = 0.;
+	    (*_stComputers)[ist]->computeSource(currCell, source, _sourceJacobian[iCell][ist]); 
+            
+	    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) { 
+	      rhs(cellID, iEq, nbEqs) += getResFactor()*source[iEq]*invR; 
+	    }
+	    
+	    (*_stComputers)[ist]->setAnalyticalJacob(false);
 	  }
 	  
-	  (*_stComputers)[ist]->setAnalyticalJacob(false);
-	}
-	
-	for (CFuint i = 0; i < _stNumJacobIDs.size(); ++i) {  
-          const CFuint ist = _stNumJacobIDs[i];
-          RealVector& source = _source[iCell][ist];  
-	  (*_stComputers)[ist]->computeSource(currCell, source, _sourceJacobian[iCell][ist]);  
-	 
-          CFLog(DEBUG_MED, "FVMCC_ComputeRHS::computeSourceTerm() => source = " << source << "\n"); 
-	  for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {  
-	    rhs(cellID, iEq, nbEqs) += getResFactor()*source[iEq]*invR;  
-          }  
+	  for (CFuint i = 0; i < _stNumJacobIDs.size(); ++i) {  
+      const CFuint ist = _stNumJacobIDs[i];
+      RealVector& source = _source[iCell][ist];  
+	    (*_stComputers)[ist]->computeSource(currCell, source, _sourceJacobian[iCell][ist]);  
+	   
+      CFLog(DEBUG_MED, "FVMCC_ComputeRHS::computeSourceTerm() => source = " << source << "\n"); 
+	    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {  
+	      rhs(cellID, iEq, nbEqs) += getResFactor()*source[iEq]*invR;  
+      }  
 	  
-	  ////////////////////////////////
-	  //	  st[cellID] = source; rr[cellID] = std::abs(currCell->getState(0)->getCoordinates()[YY]); count++;
-	  // ---------------------------//
-        }
-	
-	cellFlag[cellID] = true;
-	_sourceJacobOnCell[iCell]= true;
-      }
+	    cellFlag[cellID] = true;
+	    _sourceJacobOnCell[iCell]= true;
     }
   }
-  
-  /*  if (count == st.size()) {
-      for (CFuint i = 0; i < st.size(); ++i) {
-      cout.precision(16); cout << rr[i] << ", " << i << " => " << st[i] << endl; 
-      }
-      static CFuint num = 0;
-      cout << st.size() << ", COUNT = "  << num++ << endl; abort();
-      }*/
   
   CFTRACEEND;
 }
