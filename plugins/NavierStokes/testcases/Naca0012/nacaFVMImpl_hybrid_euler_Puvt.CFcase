@@ -102,6 +102,9 @@ Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
 #Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 0.1
 #Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
 
+# with gradientFactor = 0. you get a first order scheme
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+
 Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
