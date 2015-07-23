@@ -1,14 +1,20 @@
-# COOLFluiD CFcase file
+################################################################################
+## 
+## This COOLFluiD CFcase file tests: 
+## 
+## Finite Volume, Euler2D, NewtonIterator, hybrid mesh (triangles and quads), 
+## converter from DPL to CFmesh, analytical function as CFL law, second-order 
+## reconstruction, far field and slip wall BCs, parallel TECPLOT writer in 
+## nodal format (default)
+##
+#################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
 ### Residual = 0.71910308
 
-#
-
-CFEnv.TraceActive = true
-
+#CFEnv.TraceActive = true
 
 # SubSystem Modules
 Simulator.Modules.Libs = libPetscI libTecplotWriter libCFmeshFileWriter libCFmeshFileReader libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libNewtonMethod libTHOR2CFmesh

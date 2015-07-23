@@ -13,8 +13,8 @@ CFenv.AssertionDumps=true
 
 Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libTecplot2CFmesh libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libGambit2CFmesh libForwardEuler libPetscI  libTecplotWriter libAeroCoefFVM libAeroCoefFVMNEQ 
 #Simulation Parameters
-Simulator.Paths.WorkingDir       = plugins/NavierStokes/testcases/LongShotProbe
-Simulator.Paths.ResultsDir       = ./
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/LongShotProbe
+Simulator.Paths.ResultsDir = ./
 
 Simulator.SubSystem.InteractiveParamReader.FileName = plugins/NavierStokes/testcases/LongShotProbe/blunt.inter
 Simulator.SubSystem.InteractiveParamReader.readRate = 10
@@ -22,7 +22,6 @@ Simulator.SubSystem.InteractiveParamReader.readRate = 10
 #we solve dimensional
 Simulator.SubSystem.Default.PhysicalModelType     = NavierStokes2D
 Simulator.SubSystem.NavierStokes2D.refValues =  180000. 2500. 300. 2500. #p u v T
-
 Simulator.SubSystem.NavierStokes2D.refLength = 1.0
 
 #Simulator.SubSystem.SubSystemStatus.TimeStep = 1e-7
@@ -42,14 +41,14 @@ Simulator.SubSystem.Tecplot.SaveRate    = 1000.
 #Simulator.SubSystem.Tecplot.AppendTime = false
 #Simulator.SubSystem.Tecplot.AppendIter = true
 
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
 
 #Simulator.SubSystem.StopCondition   = MaxTime
 #Simulator.SubSystem.MaxTime.maxTime = 0.018
 
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -4.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -4.0
 
 Simulator.SubSystem.Default.listTRS = InnerFaces  NoSlipWall Symmetry Inlet Outlet
 
@@ -136,8 +135,6 @@ Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
 Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
 Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
-
-#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
 
 ## second order: uncomment this
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
@@ -232,7 +229,6 @@ Simulator.SubSystem.CellCenterFVM.NSWall.applyTRS = NoSlipWall
 Simulator.SubSystem.CellCenterFVM.NSWall.TWall = 300.
 
 Simulator.SubSystem.CellCenterFVM.Mirror.applyTRS = Symmetry
-Simulator.SubSystem.CellCenterFVM.Mirror.VelocityIDs = 1 2
 Simulator.SubSystem.CellCenterFVM.Mirror.ZeroGradientFlags = 1 0 0 1
 
 ########################### Inlet Conditions ##########################
