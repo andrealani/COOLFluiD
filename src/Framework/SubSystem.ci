@@ -109,8 +109,7 @@ void SubSystem::setCollaborators(MultiMethodTuple<METHOD>& method,
           (method[i]->getMethodData()->getCollaboratorQNames(), collaborator, mmh);
       }
       catch (Common::NoSuchValueException& ex){
-        CFLog(WARN, "WARNING: SubSystem::setCollaborators() => " << ex.what() << "\n");
-	// throw;
+        CFLog(WARN, "\nWARNING: SubSystem::setCollaborators() => " << ex.what() << "\n");
       }
       method[i]->setCollaborator(mmh);
       }
@@ -165,23 +164,27 @@ void SubSystem::setMatchingCollaborators(const std::vector<QualifiedName>& names
                                          MultiMethodTuple<COLLAB>& collab,
                                          MultiMethodHandle<COLLAB>& cList)
 {
+  CFLog(VERBOSE, "SubSystem::setMatchingCollaborators() => names.size() = " << names.size() 
+	<< ", collab.size() = " << collab.size() << "\n");
+  
   std::vector<QualifiedName>::const_iterator itr = names.begin();
   for (; itr != names.end(); ++itr)
   {
-    CFLog(DEBUG_MIN, "QName " << itr->str() << " try match :");
+    CFLog(VERBOSE, "QName " << itr->str() << " try to match :");
     for (CFuint iCollab = 0; iCollab < collab.size(); ++iCollab)
     {
-      CFLog(DEBUG_MIN,  " " << collab[iCollab]->getName());
+      CFLog(VERBOSE,  " " << collab[iCollab]->getName());
       if(collab[iCollab]->getName() == itr->getName())
       {
-        CFLog(DEBUG_MIN,  "(*)");
+        CFLog(VERBOSE,  "(*)");
         cList.addMethod(collab[iCollab]);
       }
     }
-    CFLog(DEBUG_MIN, "\n");
+    CFLog(VERBOSE, "\n");
   }
-
-  if ( cList.size() == 0 )
+  
+  CFLog(VERBOSE, "SubSystem::setMatchingCollaborators() => cList.size() = " << cList.size() << "\n");
+  if ( names.size() > 0 && cList.size() == 0 )
   {
     throw Common::NoSuchValueException (FromHere(),"No match found for a " + COLLAB::getClassName());
   }
