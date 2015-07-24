@@ -8,7 +8,7 @@ Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTe
 
 # Simulator Parameters
 Simulator.Paths.WorkingDir = plugins/MHD/testcases/CoronalExpansion/
-Simulator.Paths.ResultsDir = plugins/MHD/testcases/CoronalExpansion/
+Simulator.Paths.ResultsDir = ./RESULTS
 
 Simulator.SubSystem.Default.PhysicalModelType       = MHD3DProjection
 Simulator.SubSystem.MHD3DProjection.ConvTerm.gamma = 1.666666667
@@ -17,7 +17,7 @@ Simulator.SubSystem.MHD3DProjection.ConvTerm.refSpeed = 1.0
 #Simulator.SubSystem.MHD3DProjection.ConvTerm.dissipCoeff = 1.0 
 #Simulator.SubSystem.MHD3DProjection.ConvTerm.correctionType = Mixed
 
-Simulator.SubSystem.MHD3DProjection.ConvTerm.PFSSCoeffFileName = /data1/andrea/CF2/plugins/MHD/testcases/CoronalExpansion/PFSSCoeffFile 
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.PFSSCoeffFileName = plugins/MHD/testcases/CoronalExpansion/PFSSCoeffFile 
 #Simulator.SubSystem.MHD3DProjection.ConvTerm.mass =
 #Simulator.SubSystem.MHD3DProjection.ConvTerm.nbLModes =
 #Simulator.SubSystem.MHD3DProjection.ConvTerm.nbMModes =
@@ -88,7 +88,6 @@ Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Cons
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = MHDConsACAST MHD3DProjectionGravityST MHD3DProjectionCoriolisCentrifugalForcesST
 
-#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS3D
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.limitRes = -1.2
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.gradientFactor = 0.
