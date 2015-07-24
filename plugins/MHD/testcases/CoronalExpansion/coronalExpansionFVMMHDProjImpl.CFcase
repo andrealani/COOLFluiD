@@ -6,7 +6,7 @@ Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTe
 
 # Simulator Parameters
 Simulator.Paths.WorkingDir = plugins/MHD/testcases/CoronalExpansion/
-Simulator.Paths.ResultsDir = plugins/MHD/testcases/CoronalExpansion/
+Simulator.Paths.ResultsDir = ./RESULTS
 
 Simulator.SubSystem.Default.PhysicalModelType       = MHD3DProjection
 Simulator.SubSystem.MHD3DProjection.ConvTerm.gamma = 1.666666667
@@ -31,16 +31,13 @@ Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = coronalExpansionFVMMHD1stProjImpl.CFmesh
 Simulator.SubSystem.Tecplot.FileName    = coronalExpansionFVMMHD1stProjImpl.plt
 Simulator.SubSystem.Tecplot.Data.printExtraValues = true
-Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.Data.outputVar = Prim
 Simulator.SubSystem.Tecplot.SaveRate = 25
 Simulator.SubSystem.CFmesh.SaveRate = 25
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
-
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 1
 
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
 Simulator.SubSystem.MaxNumberSteps.nbSteps = 0 
@@ -53,8 +50,6 @@ Simulator.SubSystem.Default.listTRS = InnerCells Photosphere SuperOutlet
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 #Simulator.SubSystem.CFmeshFileReader.Data.FileName = CORONALEXPANSION_Hexa250k.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = CoronalExpansion33k.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.builderName = FVMCC
-Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
@@ -88,7 +83,6 @@ Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = LaxFried
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Cons
-Simulator.SubSystem.CellCenterFVM.Data.hasSourceTerm = true
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = MHDConsACAST MHD3DProjectionGravityST MHD3DProjectionCoriolisCentrifugalForcesST
 
 Simulator.SubSystem.CellCenterFVM.Data.IntegratorQuadrature = GaussLegendre
@@ -127,8 +121,7 @@ Simulator.SubSystem.CellCenterFVM.InOutlet.refPhi = 0.0
 Simulator.SubSystem.CellCenterFVM.BcComds = MirrorMHD3DProjectionPhotosphereFVMCC \
         SuperOutletMHD3DProjectionFVMCC
 
-Simulator.SubSystem.CellCenterFVM.BcNames = Wall \
-              Outlet
+Simulator.SubSystem.CellCenterFVM.BcNames = Wall Outlet
 
 Simulator.SubSystem.CellCenterFVM.Wall.applyTRS = Photosphere 
 #Simulator.SubSystem.CellCenterFVM.Wall.rhoFixed = 

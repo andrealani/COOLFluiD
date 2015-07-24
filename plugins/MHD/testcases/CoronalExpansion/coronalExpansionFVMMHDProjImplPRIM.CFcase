@@ -12,7 +12,6 @@ Simulator.Paths.ResultsDir = ./RESULTS
 
 Simulator.SubSystem.Default.PhysicalModelType       = MHD3DProjection
 Simulator.SubSystem.MHD3DProjection.ConvTerm.gamma = 1.666666667
-
 Simulator.SubSystem.MHD3DProjection.ConvTerm.refSpeed = 1.0 
 #Simulator.SubSystem.MHD3DProjection.ConvTerm.dissipCoeff = 1.0 
 #Simulator.SubSystem.MHD3DProjection.ConvTerm.correctionType = Mixed
