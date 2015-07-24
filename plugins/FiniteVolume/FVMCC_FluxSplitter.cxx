@@ -44,6 +44,7 @@ FVMCC_FluxSplitter::FVMCC_FluxSplitter(const std::string& name) :
   _firstResidual(0.0),
   _lastResidual(0.0),
   _maxResidual(0.0),
+  _tmpJacobMatrix(),
   _dissipationControlInput(),
   _dissipationControlFunction()
 {
@@ -67,6 +68,9 @@ FVMCC_FluxSplitter::~FVMCC_FluxSplitter()
 void FVMCC_FluxSplitter::setup()
 {
   FluxSplitter<CellCenterFVMData>::setup();
+  
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  _tmpJacobMatrix.resize(nbEqs, nbEqs, 0.);
   
   if (_dissipationControlDef != "") {
     cf_assert(_dissipationControlVars.size() > 0);
@@ -101,14 +105,20 @@ void FVMCC_FluxSplitter::setup()
       
 void FVMCC_FluxSplitter::computeFlux(RealVector& result)
 {
-  const CFuint faceID = getMethodData().getCurrentFace()->getID();
+  SafePtr<GeometricEntity> currFace = getMethodData().getCurrentFace();
+  const CFuint faceID = currFace->getID();
   _faceArea = socket_faceAreas.getDataHandle()[faceID];
   
   // integrate the flux computed at the quadrature points
-  (!getMethodData().useAnalyticalConvJacob()) ? 
-    integrateFluxOnly(result) : integrateFluxAndJacob(result);
+  if (!getMethodData().useAnalyticalConvJacob()) {
+    integrateFluxOnly(result);
+  } 
+  else {
+    const bool isBFace =  currFace->getState(1)->isGhost();
+    (!isBFace) ? integrateFluxAndJacob(result) : integrateFluxOnly(result);
+  }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
  
 void FVMCC_FluxSplitter::configure ( Config::ConfigArgs& args )
@@ -193,10 +203,13 @@ void FVMCC_FluxSplitter::computeLeftJacobian()
       (FromHere(),"FVMCC_FluxSplitter::computeLeftJacobian()");
   }
   
+  _tmpJacobMatrix = 0.;
   for (CFuint iVar = 0; iVar < m_fluxDerivative.size(); ++iVar) {
     // compute d(F)/d(p) where p is each variable of the update state vector 
-    (this->*m_fluxDerivative[iVar])(LEFT, iVar, &_lFluxJacobian[iVar*nbEqs]);
+    // this corresponds to a column in the jacobian matrix 
+    (this->*m_fluxDerivative[iVar])(LEFT, iVar, &_tmpJacobMatrix[iVar*nbEqs]);
   }
+  _tmpJacobMatrix.transpose(_lFluxJacobian);
 }
  
 //////////////////////////////////////////////////////////////////////////////
@@ -210,15 +223,17 @@ void FVMCC_FluxSplitter::computeRightJacobian()
       (FromHere(),"FVMCC_FluxSplitter::computeRightJacobian()");
   }
   
+  _tmpJacobMatrix = 0.;
   for (CFuint iVar = 0; iVar < m_fluxDerivative.size(); ++iVar) {
     // compute d(F)/d(p) where p is each variable of the update state vector 
-    (this->*m_fluxDerivative[iVar])(RIGHT, iVar, &_rFluxJacobian[iVar*nbEqs]);
-  }
+    (this->*m_fluxDerivative[iVar])(RIGHT, iVar, &_tmpJacobMatrix[iVar*nbEqs]);
+  } 
+  _tmpJacobMatrix.transpose(_rFluxJacobian);
 }
  
 //////////////////////////////////////////////////////////////////////////////
-
-} // namespace FiniteVolume
+      
+    } // namespace FiniteVolume
 
 } // namespace Numerics
 

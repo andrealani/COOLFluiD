@@ -668,61 +668,61 @@ void AUSMFlux<UPDATEVAR>::computeSoundSpeed5()
       
 //////////////////////////////////////////////////////////////////////////////
 
-template <class UPDATEVAR>
-void AUSMFlux<UPDATEVAR>::computeLeftJacobian()
-{  
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Common;
+// template <class UPDATEVAR>
+// void AUSMFlux<UPDATEVAR>::computeLeftJacobian()
+// {  
+//   using namespace std;
+//   using namespace COOLFluiD::Framework;
+//   using namespace COOLFluiD::Common;
   
-  CellCenterFVMData& data = this->getMethodData(); 
-  GeometricEntity& face = *data.getCurrentFace();
-  State *const leftState = face.getState(LEFT);
-  RealVector& pData = PhysicalModelStack::getActive()->getImplementor()->
-    getConvectiveTerm()->getPhysicalData();
-  getMethodData().getUpdateVar()->computePhysicalData(*leftState, pData);
-  getMethodData().getSolutionVar()->computeProjectedJacobian(data.getUnitNormal(), _jacob); 
-  _jLeft = 0.5*(_jacob + _absJacob);
+//   CellCenterFVMData& data = this->getMethodData(); 
+//   GeometricEntity& face = *data.getCurrentFace();
+//   State *const leftState = face.getState(LEFT);
+//   RealVector& pData = PhysicalModelStack::getActive()->getImplementor()->
+//     getConvectiveTerm()->getPhysicalData();
+//   getMethodData().getUpdateVar()->computePhysicalData(*leftState, pData);
+//   getMethodData().getSolutionVar()->computeProjectedJacobian(data.getUnitNormal(), _jacob); 
+//   _jLeft = 0.5*(_jacob + _absJacob);
   
-  // computeTransformMatrix(leftState);
-  // _lFluxJacobian = _jLeft*_jacobDummy;
+//   // computeTransformMatrix(leftState);
+//   // _lFluxJacobian = _jLeft*_jacobDummy;
   
-  SafePtr<VarSetMatrixTransformer>  vs = 
-    getMethodData().getUpdateToSolutionInUpdateMatTrans();
-  vs->setMatrix(*leftState);
-  const RealMatrix& dUdP = *vs->getMatrix();  
-  _lFluxJacobian = _jLeft*dUdP;
-}
+//   SafePtr<VarSetMatrixTransformer>  vs = 
+//     getMethodData().getUpdateToSolutionInUpdateMatTrans();
+//   vs->setMatrix(*leftState);
+//   const RealMatrix& dUdP = *vs->getMatrix();  
+//   _lFluxJacobian = _jLeft*dUdP;
+// }
       
-//////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////
 
-template <class UPDATEVAR>
-void AUSMFlux<UPDATEVAR>::computeRightJacobian()
-{ 
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Common;
+// template <class UPDATEVAR>
+// void AUSMFlux<UPDATEVAR>::computeRightJacobian()
+// { 
+//   using namespace std;
+//   using namespace COOLFluiD::Framework;
+//   using namespace COOLFluiD::Common;
   
-  CellCenterFVMData& data = this->getMethodData(); 
-  GeometricEntity& face = *data.getCurrentFace();
-  State *const rightState = face.getState(RIGHT);
-  RealVector& pData = PhysicalModelStack::getActive()->getImplementor()->
-    getConvectiveTerm()->getPhysicalData();
-  getMethodData().getUpdateVar()->computePhysicalData(*rightState, pData);
-  getMethodData().getSolutionVar()->computeProjectedJacobian(data.getUnitNormal(), _jacob);
-  _jRight = 0.5*(_jacob - _absJacob);
+//   CellCenterFVMData& data = this->getMethodData(); 
+//   GeometricEntity& face = *data.getCurrentFace();
+//   State *const rightState = face.getState(RIGHT);
+//   RealVector& pData = PhysicalModelStack::getActive()->getImplementor()->
+//     getConvectiveTerm()->getPhysicalData();
+//   getMethodData().getUpdateVar()->computePhysicalData(*rightState, pData);
+//   getMethodData().getSolutionVar()->computeProjectedJacobian(data.getUnitNormal(), _jacob);
+//   _jRight = 0.5*(_jacob - _absJacob);
   
-  // computeTransformMatrix(rightState);
-  //_rFluxJacobian = _jRight*_jacobDummy;
+//   // computeTransformMatrix(rightState);
+//   //_rFluxJacobian = _jRight*_jacobDummy;
   
-  SafePtr<VarSetMatrixTransformer>  vs = 
-    getMethodData().getUpdateToSolutionInUpdateMatTrans();
-  vs->setMatrix(*rightState);
-  const RealMatrix& dUdP = *vs->getMatrix();
-  _rFluxJacobian = _jRight*dUdP;
-}
+//   SafePtr<VarSetMatrixTransformer>  vs = 
+//     getMethodData().getUpdateToSolutionInUpdateMatTrans();
+//   vs->setMatrix(*rightState);
+//   const RealMatrix& dUdP = *vs->getMatrix();
+//   _rFluxJacobian = _jRight*dUdP;
+// }
       
-//////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
 void AUSMFlux<UPDATEVAR>::computeLinearizedAbsJacob()
@@ -730,26 +730,26 @@ void AUSMFlux<UPDATEVAR>::computeLinearizedAbsJacob()
   using namespace std;
   using namespace COOLFluiD::Framework;
   
-  CellCenterFVMData& data = this->getMethodData(); 
+  // CellCenterFVMData& data = this->getMethodData(); 
   
-  // linearization in update states
-  _statesLR[0] = &data.getPolyReconstructor()->getCurrLeftState();
-  _statesLR[1] = &data.getPolyReconstructor()->getCurrRightState();
+  // // linearization in update states
+  // _statesLR[0] = &data.getPolyReconstructor()->getCurrLeftState();
+  // _statesLR[1] = &data.getPolyReconstructor()->getCurrRightState();
   
-  getMethodData().getJacobianLinearizer()->linearize(_statesLR);
+  // getMethodData().getJacobianLinearizer()->linearize(_statesLR);
   
-  // set the eigenvectors and eigenvalues of the linearized jacobian
-  getMethodData().getSolutionVar()->computeEigenValuesVectors(_rightEv,
-							      _leftEv,
-							      _eValues,
-							      data.getUnitNormal());
+  // // set the eigenvectors and eigenvalues of the linearized jacobian
+  // getMethodData().getSolutionVar()->computeEigenValuesVectors(_rightEv,
+  // 							      _leftEv,
+  // 							      _eValues,
+  // 							      data.getUnitNormal());
   
-  // set the abs of the  eigen values (the implementation of this
-  // function change if there are entropy or carbuncle fixes)
-  _absEvalues = abs(_eValues);
+  // // set the abs of the  eigen values (the implementation of this
+  // // function change if there are entropy or carbuncle fixes)
+  // _absEvalues = abs(_eValues);
   
-  // abs of the jacobian
-  _absJacob = _rightEv*(_absEvalues*_leftEv);
+  // // abs of the jacobian
+  // _absJacob = _rightEv*(_absEvalues*_leftEv);
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -66,12 +66,12 @@ public:
   /**
    * Compute the left flux jacobian
    */
-  virtual void computeLeftJacobian();
+  // virtual void computeLeftJacobian();
   
   /**
    * Compute the right flux jacobian
    */
-  virtual void computeRightJacobian();
+  // virtual void computeRightJacobian();
   
 protected:
     

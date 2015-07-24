@@ -198,6 +198,9 @@ protected:
   /// storage of the maximum residual reached until now
   CFreal _maxResidual;
   
+  /// temporary jacobian matrix
+  RealMatrix _tmpJacobMatrix;
+  
   /// input array (i,r,ri,rl,rmax,cfl) for the dissipation control function
   RealVector _dissipationControlInput;
   
