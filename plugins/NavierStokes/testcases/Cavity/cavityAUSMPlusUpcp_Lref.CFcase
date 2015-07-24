@@ -12,7 +12,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.00174
+### Residual = -9.0428186
 #
 
 # Simulation Modules
@@ -48,7 +48,7 @@ Simulator.SubSystem.CFmesh.AppendIter = false
 
 # directories
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Cavity/
-Simulator.Paths.ResultsDir = ./Re1000			#######################################################CHANGE PATH
+Simulator.Paths.ResultsDir = ./RESULTS_Re1000
 
 #####################################################################
 #########################  STOP conditions  #########################
@@ -59,7 +59,7 @@ Simulator.Paths.ResultsDir = ./Re1000			########################################
 
 ##after residue drop
 Simulator.SubSystem.StopCondition       = Norm
-Simulator.SubSystem.Norm.valueNorm      = -6.0
+Simulator.SubSystem.Norm.valueNorm      = -9.0
 
 #####################################################################
 ################  Importing the mesh from GAMBIT    #################
@@ -105,7 +105,7 @@ Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 ##  CFL function
 Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 150.0
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function 
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<500,150,if(i<1000,250,if(i<1250,350,if(i<1500,450,500))))
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<100,150,min(cfl*1.1,1e12))
 # monitored residual variable for convergence
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 2
 # computed residual variable(s)
@@ -151,12 +151,12 @@ Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
 
 # only if you have shock (transonic/supersonic Mach's)
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -2.
-Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
-Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -2.
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
 
 # this interactive parameter determines if the solution accuracy is first (=0) or second order (1)
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 0.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
 
 #####################################################################
 ############################ INITIALISATION  ########################
@@ -185,4 +185,4 @@ Simulator.SubSystem.CellCenterFVM.inlet.applyTRS = top
 Simulator.SubSystem.CellCenterFVM.inlet.Vx = 1.
 Simulator.SubSystem.CellCenterFVM.inlet.Vy = 0.
 Simulator.SubSystem.CellCenterFVM.inlet.T = 293.
-
+Simulator.SubSystem.CellCenterFVM.inlet.ZeroGradientFlags = 1 0 0 0
