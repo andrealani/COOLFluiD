@@ -1,0 +1,3 @@
+Simulator.SubSystem.Norm.valueNorm  = -15
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -15.0
+Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 2000

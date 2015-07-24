@@ -1,3 +1,4 @@
+cf_add_case( MPI 8       CASEDIR Cavity   PCASE cavityAUSMPlusUpcp_Lref.CFcase CASEFILES cavity_CF_v2.neu )
 cf_add_case( MPI 8       CASEDIR Cylinder PCASE cyl_Pg_M15_FVM_1st2nd.CFcase CASEFILES cyl_Pg_M15.plt cyl_Pg_M15.surf.plt )
 cf_add_case( MPI 8       CASEDIR Cylinder PCASE cyl3DFVMImplPuvt_Reynolds_40.CFcase CASEFILES cylinder_2D_quad.CFmesh )
 cf_add_case( MPI 8       CASEDIR DoubleEllipse PCASE doubleEllipseRDS_NS_Pvt_adim.CFcase CASEFILES doubleEllipseNS_RDS.CFmesh )

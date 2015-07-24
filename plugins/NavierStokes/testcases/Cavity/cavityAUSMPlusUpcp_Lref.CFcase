@@ -1,0 +1,188 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, NavierStokes2D, NewtonIterator, quads mesh, 
+# converter from Gambit to CFmesh, analytical function as CFL law, second-order 
+# reconstruction, subsonic inlet and slip wall BCs, dimensional [p u v T] variables,
+# AUSM+up with central dissipation
+#
+################################################################################
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -6.00174
+#
+
+# Simulation Modules
+Simulator.Modules.Libs = libPetscI libTecplotWriter libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libNewtonMethod libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
+
+#CFEnv.ErrorOnUnusedConfig = true
+
+Simulator.SubSystem.Default.PhysicalModelType   = NavierStokes2D
+Simulator.SubSystem.NavierStokes2D.refValues    = 101325. 1. 1. 293.
+Simulator.SubSystem.NavierStokes2D.refLength    = 1.0
+
+#### constant dynamic viscosity in Pa*s(if commented, Sutherland is used)
+Simulator.SubSystem.NavierStokes2D.DiffTerm.ViscosityLaw = Constant
+Simulator.SubSystem.NavierStokes2D.DiffTerm.Constant.Value = 0.0012041		#Re1000
+
+####################################################################
+####################  OUTPUT FILE SPECS  ###########################
+####################################################################
+#which boundary to save separately
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = wall
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+#file names
+Simulator.SubSystem.CFmesh.FileName     = cavity.CFmesh
+Simulator.SubSystem.Tecplot.FileName    = cavity.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = Puvt
+#save rates
+Simulator.SubSystem.Tecplot.SaveRate = 50
+Simulator.SubSystem.CFmesh.SaveRate = 50
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = false	
+
+# directories
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Cavity/
+Simulator.Paths.ResultsDir = ./Re1000			#######################################################CHANGE PATH
+
+#####################################################################
+#########################  STOP conditions  #########################
+#####################################################################
+##after number of steps
+#Simulator.SubSystem.StopCondition          = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+
+##after residue drop
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -6.0
+
+#####################################################################
+################  Importing the mesh from GAMBIT    #################
+#####################################################################
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+#which file to read? (this should be the .neu file)
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./cavity_CF_v2.CFmesh
+#if the mesh was created in mm, add next line to have it in meters
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1000
+#list of boundary names (include Innerfaces)
+Simulator.SubSystem.Default.listTRS = InnerFaces wall top
+
+#####################################################################
+############### Reading the previous solution   #####################
+#####################################################################
+
+#Simulator.SubSystem.MeshCreator = CFmeshFileReader
+#Simulator.SubSystem.CellCenterFVM.Restart = true
+
+#Simulator.SubSystem.Default.listTRS = InnerFaces inlet outlet wall top
+#Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./NS_AUSMplusup_10ms/bump-P0.CFmesh	
+
+##########################################
+### Pseudo-time solver                 ###
+##########################################
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+#Simulator.SubSystem.NewtonIterator.ShowRate = 10
+#####################################################################
+############################ CFL settings ###########################
+#####################################################################
+
+##  CFL function
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 150.0
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function 
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<500,150,if(i<1000,250,if(i<1250,350,if(i<1500,450,500))))
+# monitored residual variable for convergence
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 2
+# computed residual variable(s)
+#Simulator.SubSystem.NewtonIterator.Data.L2.ComputedVarID = 2
+
+#####################################################################
+########################  FINITE VOLUME SOLVER  #####################
+#####################################################################
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUp_MpW
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp_MpW.choiceA12 = 1 # 5 only for NEQ
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp_MpW.machInf = 0.01
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp_MpW.Lref = 0.001		#is only used if ChoiceLref=0		#######################CHANGE VALUE
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp_MpW.nu = 0.0012041		#dynamic viscosity in Pa.s
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp_MpW.Vinf = 1. 		#is only used if ChoiceMp=3			
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp_MpW.ChoiceLref = 2		#0=use Lref, 1 =use face length, 2=use min(centerdistance, face length)
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp_MpW.ChoiceMp = 4		#0=switched off, 1=local speed, 2=abs(local speed), 3=Vinf, 4=bounded  
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp_MpW.uco = 0.0002		#is only used if ChoiceMp=4
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp_MpW.umax = 320.		#is only used if ChoiceMp=4
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp_MpW.Ml = 0.2			#Limit for mach in weighting function for mp
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Puvt
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Puvt
+
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+# this can improve robustness sometimes
+Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+#Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff = true
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+#############################################################
+####    Polynomial reconstruction (linear here)           ###
+#############################################################
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+
+# only if you have shock (transonic/supersonic Mach's)
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -2.
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+
+# this interactive parameter determines if the solution accuracy is first (=0) or second order (1)
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 0.
+
+#####################################################################
+############################ INITIALISATION  ########################
+#####################################################################
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 101325. 1. 0. 293.
+
+#####################################################################
+########################  BOUNDARY CONDITIONS  ######################
+#####################################################################
+Simulator.SubSystem.CellCenterFVM.BcComds = NoSlipWallAdiabaticNSPvtFVMCC \ 
+                                SubInletEuler2DPuvtUVTFVMCC 
+
+Simulator.SubSystem.CellCenterFVM.BcNames = \
+					wall \
+					inlet 
+
+Simulator.SubSystem.CellCenterFVM.wall.applyTRS = wall
+#Simulator.SubSystem.CellCenterFVM.wall.TWall = 293.
+Simulator.SubSystem.CellCenterFVM.wall.ZeroGradientFlags = 1 0 0 1 
+
+Simulator.SubSystem.CellCenterFVM.inlet.applyTRS = top
+Simulator.SubSystem.CellCenterFVM.inlet.Vx = 1.
+Simulator.SubSystem.CellCenterFVM.inlet.Vy = 0.
+Simulator.SubSystem.CellCenterFVM.inlet.T = 293.
+
