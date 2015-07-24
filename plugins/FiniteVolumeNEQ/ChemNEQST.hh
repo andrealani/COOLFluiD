@@ -145,6 +145,10 @@ protected: // data
   
   /// vector of IDs for u and v components
   std::vector<CFuint> _uvID;
+
+  /// relaxation factor for radiation coupling
+  CFreal _radRelaxationFactor;	
+  
 }; // end of class ChemNEQST
 
 //////////////////////////////////////////////////////////////////////////////
