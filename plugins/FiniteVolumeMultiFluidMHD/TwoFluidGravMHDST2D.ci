@@ -57,6 +57,9 @@ TwoFluidGravMHDST2D<UPDATEVAR>::TwoFluidGravMHDST2D(const std::string& name) :
 
   _gravityTerms = true;
   setParameter("GravityTerms",&_gravityTerms);
+
+  _correctedChemistry = true;
+  setParameter("CorrectedChemistry",&_correctedChemistry);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -95,6 +98,8 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::defineConfigOptions(Config::OptionList& opt
      ("CollisionalTerms", "flag to set Collisional terms");
  options.template addConfigOption< bool >
      ("GravityTerms", "flag to set Gravity terms");
+ options.template addConfigOption< bool >
+     ("CorrectedChemistry", "flag to set Corrected chemistry");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -287,7 +292,7 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
       const CFreal emEnergy = _J[XX]*_Etotal[XX] + _J[YY]*_Etotal[YY] + _J[ZZ]*_Etotal[ZZ];
       CFreal collWorki = _collMomentumSource[0]*ui + _collMomentumSource[1]*vi;
       CFreal collWorkn = _collMomentumSource[2]*un + _collMomentumSource[3]*vn;
-      CFreal EnergyIon = 13.6*1.60217657e-19;							//13.6eV to J
+      CFreal EnergyIon = 0;//13.6*1.60217657e-19; Changed need to be checked						//13.6eV to J
       CFreal kinEnerRec_n = 0.5*GammaRec_n*mi*(ui*ui + vi*vi);
       CFreal kinEnerIon_i = 0.5*GammaIon_i*mn*(un*un + vn*vn);
       CFreal kinEnerIon_e = GammaIon_i*EnergyIon;
@@ -319,12 +324,13 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
       source[15] = collWorkn + _collEnergySource[1] + _ReactEnergySource[1] - kinEnerIon_i + kinEnerRec_n + gravityEnergySource_n; //Neutrals Energy
 
       // Write the sockets
-      if (!this->getMethodData().isPerturb()) { // Condition to avoid writing when the source is perturbed
-        if(currState->isParUpdatable()) { // Condition to write only once the partition cells
-        GammaIon[elemID] = _GammaIon_n;
-        GammaRec[elemID] = _GammaRec_i;
-        }
-      }
+      //if (!this->getMethodData().isPerturb()) { // Condition to avoid writing when the source is perturbed
+        //if(currState->isParUpdatable()) { // Condition to write only once the partition cells
+        GammaIon[elemID] = GammaIon_i;//gravityMomentumSource_nx;
+        //CFout <<"GammaIon_i = " << _GammaIon_n <<"\n";
+        GammaRec[elemID] = GammaRec_n; //gravityMomentumSource_ny;
+        //}
+      //}
   }
   source *= volumes[elemID];
 }
@@ -361,20 +367,44 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeMassReactionsEnergySourceTerm()
   
   // IONIZATION
   //constants Related to ionization frequency from [Leake]
-  const CFreal A = 2.91e-14;
-  const CFreal X = 0.232;
-  const CFreal psiIonOvTe = 13.6/Te;
-  const CFreal K = 0.39;
-  
-  const CFreal nuIon = ne*A/(X + psiIonOvTe)*std::pow(psiIonOvTe, K)*std::exp(-psiIonOvTe);  // Ionization freq.
+
+  CFreal nuIon = 0.;
+
+//  if(_correctedChemistry) {
+    const CFreal factor = 0.6;
+    const CFreal beta = 158000*factor/Ti;
+    const CFreal I = 2.34e-14*std::pow(beta,-0.5)*std::exp(-beta);
+
+    nuIon = ne*I;
+//    CFout<< std::setprecision(9) <<"nuIon = "<< nuIon <<"\n";
+//  }
+//  else {
+//    const CFreal A = 2.91e-14;
+//    const CFreal X = 0.232;
+//    const CFreal psiIonOvTe = 13.6/Te;
+//    const CFreal K = 0.39;
+
+//    nuIon = ne*A/(X + psiIonOvTe)*std::pow(psiIonOvTe, K)*std::exp(-psiIonOvTe);  // Ionization freq.
+//    CFout <<"nuIon = "<< nuIon <<"\n";
+//  }
   _GammaIon_n = -nn*nuIon;
-  
+
   // RECOMBINATION
+  CFreal nuRec = 0.;
   //constant related to recombination
-  const CFreal B = 2.6e-19;
-  const CFreal nuRec = ne/std::sqrt(Te)*B;
+//    if(_correctedChemistry) {
+    //const CFreal factor = 0.6;
+    //const CFreal beta = 158000*factor/Ti;
+    const CFreal R = 5.20e-20*std::pow(beta,0.5)*(0.4288 + 0.5*std::log(beta) + 0.4698*std::pow(beta,-1/3));
+
+    nuRec = ne*R;
+//  }
+//  else {
+//    const CFreal B = 2.6e-19;
+//    nuRec = ne/std::sqrt(Te)*B;
+//  }
   _GammaRec_i = -ni*nuRec;
-  
+
   ///TOTAL (particles/m3)
   const CFreal ionsParticlesRate     = (-_GammaIon_n + _GammaRec_i);
   const CFreal neutralsParticlesRate = (_GammaIon_n - _GammaRec_i);
@@ -466,8 +496,8 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeCollisionalMomentumEnergy()
   
   //parameters
   const CFreal m_in = mi*mn/(mi + mn);
-  const CFreal Sigma_in = 1.41e-18;		//collisional cross-section m2 [Jovo Vranjes, MNRS 2014]
-//  const CFreal Sigma_in = 1.41e-19;		//collisional cross-section m2 [Leake]
+  //const CFreal Sigma_in = 1.41e-19;		//collisional cross-section m2 [Leake]
+  const CFreal Sigma_in = 1.16e-18;
   const CFreal T_in = (Ti + Tn)/2;
   const CFreal kB = Framework::PhysicalConsts::Boltzmann(); // Boltzmann constant
   const CFreal pi = MathTools::MathConsts::CFrealPi(); //Pi number
