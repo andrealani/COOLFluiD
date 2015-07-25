@@ -310,22 +310,44 @@ void AtmosphereProps::computeChemFreqs(const Framework::State* currState,
   //Neutrals and ions properties
   const CFreal nn = rhon/mn;			// neutral particle per unit volume
   const CFreal ni = ne;			        // ion particle per unit volume
-
   // IONIZATION
   //constants Related to ionization frequency from [Leake]
-  const CFreal A = 2.91e-14;
-  const CFreal X = 0.232;
-  const CFreal psiIonOvTe = 13.6/Te;
-  const CFreal K = 0.39;
 
-  nu_Ion = ne*A/(X + psiIonOvTe)*std::pow(psiIonOvTe, K)*std::exp(-psiIonOvTe);  // Ionization freq.
+  nu_Ion = 0.;
+  //bool correctedChemistry = true; //TODO: To be added as option
+
+  //if(correctedChemistry) {
+    const CFreal factor = 0.6;
+    const CFreal beta = 158000*factor/Te;
+    const CFreal I = 2.34e-14*std::pow(beta,-0.5)*std::exp(-beta);
+
+    nu_Ion = ne*I;
+//  }
+//  else {
+//    const CFreal A = 2.91e-14;
+//    const CFreal X = 0.232;
+//    const CFreal psiIonOvTe = 13.6/Te;
+//    const CFreal K = 0.39;
+
+//    nu_Ion = ne*A/(X + psiIonOvTe)*std::pow(psiIonOvTe, K)*std::exp(-psiIonOvTe);  // Ionization freq.
+//  }
   const CFreal GammaIon_n = -nn*nu_Ion;
 
   // RECOMBINATION
+  nu_Rec = 0.;
   //constant related to recombination
-  const CFreal B = 2.6e-19;
-  nu_Rec = ne/std::sqrt(Te)*B;
-  const CFreal GammaRec_i = -ni*nu_Rec;
+//  if(correctedChemistry) {
+//    const CFreal factor = 0.6;
+//    const CFreal beta = 158000*factor/Te;
+    const CFreal R = 5.20e-20*std::pow(beta,0.5)*(0.4288 + 0.5*std::log(beta) + 0.4698*std::pow(beta,-1/3));
+
+    nu_Rec = ne*R;
+//  }
+//  else {
+//    const CFreal B = 2.6e-19;
+//    nu_Rec = ne/std::sqrt(Te)*B;
+//  }
+ const CFreal GammaRec_i = -ni*nu_Rec;
 
   ///TOTAL (particles/m3)
   ionsIonizRate     = -GammaIon_n;

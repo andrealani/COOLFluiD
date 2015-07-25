@@ -78,13 +78,13 @@ public:
   RealVector _dataGhostState;
 
   /// total temperature
-  CFreal     _tTotal;
+  std::vector<CFreal>     _tTotal;
 
   /// total pressure
-  CFreal     _pTotal;
+  std::vector<CFreal>     _pTotal;
 
   /// alpha
-  CFreal     _alpha;
+  std::vector<CFreal>     _alpha;
 
 }; // end of class SubInletTtPtAlphaEIWRhoiViTi
 

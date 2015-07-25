@@ -36,9 +36,9 @@ MethodCommandProvider<SubInletTtPtAlphaEIWRhoiViTi, CellCenterFVMData, FiniteVol
 
 void SubInletTtPtAlphaEIWRhoiViTi::defineConfigOptions(Config::OptionList& options)
 {
-   options.addConfigOption< CFreal >("Ttot","total temperature");
-   options.addConfigOption< CFreal >("Ptot","total pressure");
-   options.addConfigOption< CFreal >("alpha","alpha");
+   options.addConfigOption< std::vector<CFreal> >("Ttot","total temperature");
+   options.addConfigOption< std::vector<CFreal> >("Ptot","total pressure");
+   options.addConfigOption< std::vector<CFreal> >("alpha","alpha");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -50,13 +50,13 @@ SubInletTtPtAlphaEIWRhoiViTi::SubInletTtPtAlphaEIWRhoiViTi(const std::string& na
   _dataGhostState()
 {
    addConfigOptionsTo(this);
-  _tTotal = 0.0;
+  _tTotal = std::vector<CFreal>();
    setParameter("Ttot",&_tTotal);
 
-   _pTotal = 0.0;
+   _pTotal = std::vector<CFreal>();
    setParameter("Ptot",&_pTotal);
 
-   _alpha = 0.0;
+   _alpha = std::vector<CFreal>();
    setParameter("alpha",&_alpha);
 }
 
@@ -116,65 +116,157 @@ void SubInletTtPtAlphaEIWRhoiViTi::setGhostState(GeometricEntity *const face)
     const CFreal gamma = _varSet->getModel()->getGamma();
     const CFreal gammaDivGammaMinus1 = gamma/(gamma - 1.0);
 
-    for (CFuint ie = 0; ie < nbSpecies; ++ie) {
-        const CFreal m_air = _varSet->getModel()->getMolecularMass1();
-        const CFreal K_B = PhysicalConsts::Boltzmann();
-        const CFreal Rgas = K_B/m_air;				// ions gas constant
+    cf_assert(_tTotal.size() == nbSpecies);
+    cf_assert(_pTotal.size() == nbSpecies);
 
-        const CFreal uxi = (_dataInnerState)[firstVelocity + 2*ie];
-        const CFreal uyi = (_dataInnerState)[firstVelocity + 2*ie + 1];
-        const CFreal Ui = std::sqrt(uxi*uxi + uyi*uyi);
-        const CFreal rhoi = (_dataInnerState)[endEM]*(_dataInnerState)[firstSpecies + ie];
-        const CFreal Ti = (_dataInnerState)[firstTemperature + 4*ie];
-        const CFreal pi = rhoi*Rgas*Ti;
-        const CFreal ai = (_dataInnerState)[firstTemperature + 4*ie + 2];
-        const CFreal Mi = Ui/ai;
-        const CFreal coeff = 1 + 0.5*(gamma - 1)*Mi*Mi;
-        const CFreal Ttoti = Ti*coeff;
-        //const CFreal coeff2 = (1 + gamma*Mi*Mi);
-        const CFreal Ptoti = pi + 0.5*rhoi*Ui*Ui;
-        const CFreal tgAlphai = uyi/uxi;
+//    for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+//        const CFreal m_air = _varSet->getModel()->getMolecularMass1();
+//        const CFreal K_B = PhysicalConsts::Boltzmann();
+//        const CFreal Rgas = K_B/m_air;				// ions gas constant
 
-        const CFreal Ttotg = 2*_tTotal - Ttoti;
-        const CFreal Ptotg = 2*_pTotal - Ptoti;
-        const CFreal tgAlphag = 2*tan(_alpha) - tgAlphai;
-        const CFreal Mg = Mi;
-        const CFreal Tg = Ttotg/(1 + 0.5*(gamma - 1)*Mg*Mg);
-        const CFreal pg = Ptotg/(1 + gamma*Mg*Mg);
-        const CFreal rhog = pg/(Rgas*Tg);
-        const CFreal uxg = Mg*std::sqrt(gamma*Rgas*Tg/(1 + tgAlphag*tgAlphag));
-        const CFreal uyg = tgAlphag*uxg;
-        const CFreal UgUg = uxg*uxg + uyg*uyg;
-        const CFreal Hg = (gamma/(gamma - 1)*pg + 0.5*rhog*UgUg)/rhog;
-        const CFreal Ag = sqrt(gamma*pg/rhog);
+//        const CFreal uxi = (_dataInnerState)[firstVelocity + 2*ie];
+//        const CFreal uyi = (_dataInnerState)[firstVelocity + 2*ie + 1];
+//        const CFreal Ui = std::sqrt(uxi*uxi + uyi*uyi);
+//        const CFreal rhoi = (_dataInnerState)[endEM]*(_dataInnerState)[firstSpecies + ie];
+//        const CFreal Ti = (_dataInnerState)[firstTemperature + 4*ie];
+//        const CFreal pi = rhoi*Rgas*Ti;
+//        const CFreal ai = (_dataInnerState)[firstTemperature + 4*ie + 2];
+//        const CFreal Mi = Ui/ai;
+//        const CFreal coeff = 1 + 0.5*(gamma - 1)*Mi*Mi;
+//        const CFreal Ttoti = Ti*coeff;
+//        //const CFreal coeff2 = (1 + gamma*Mi*Mi);
+//        const CFreal Ptoti = pi + 0.5*rhoi*Ui*Ui;
+//        const CFreal tgAlphai = uyi/uxi;
+
+//        const CFreal Ttotg = 2*_tTotal - Ttoti;
+//        const CFreal Ptotg = 2*_pTotal - Ptoti;
+//        const CFreal tgAlphag = 2*tan(_alpha) - tgAlphai;
+//        const CFreal Mg = Mi;
+//        const CFreal Tg = Ttotg/(1 + 0.5*(gamma - 1)*Mg*Mg);
+//        const CFreal pg = Ptotg/(1 + gamma*Mg*Mg);
+//        const CFreal rhog = pg/(Rgas*Tg);
+//        const CFreal uxg = Mg*std::sqrt(gamma*Rgas*Tg/(1 + tgAlphag*tgAlphag));
+//        const CFreal uyg = tgAlphag*uxg;
+//        const CFreal UgUg = uxg*uxg + uyg*uyg;
+//        const CFreal Hg = (gamma/(gamma - 1)*pg + 0.5*rhog*UgUg)/rhog;
+//        const CFreal Ag = sqrt(gamma*pg/rhog)
+
+//        (_dataGhostState)[endEM] = rhog;
+//        (_dataGhostState)[firstSpecies + ie] = 1; //Only one species;
+//        (_dataGhostState)[firstVelocity + 2*ie] = uxg;
+//        (_dataGhostState)[firstVelocity + 2*ie + 1] = uyg;
+//        (_dataGhostState)[firstTemperature + 4*ie] = Tg;
+//        (_dataGhostState)[firstTemperature + 4*ie + 1] = pg;
+//        (_dataGhostState)[firstTemperature + 4*ie + 2] = Ag;
+//        (_dataGhostState)[firstTemperature + 4*ie + 3] = Hg;
+//    }
+
+    const bool isLeake = _varSet->getModel()->isLeake();
+
+  if (isLeake) {
+    //cout <<"Entering the Leake's value \n";
+    //cout <<"options: \n";
+    //cout <<"Pressure    = "<< _pTotal[0] <<", "<<_pTotal[1] <<"\n";
+    //cout <<"Temperature = "<< _tTotal[0] <<", "<<_tTotal[1] <<"\n";
+    //cout <<"Alpha       = "<< _alpha[0] <<", "<<_alpha[1] <<"\n";
+
+    const CFreal m_electron = _varSet->getModel()->getMolecularMass1();
+    const CFreal m_neutral = _varSet->getModel()->getMolecularMass2();
+    const CFreal m_ion = _varSet->getModel()->getMolecularMass3();
+    const CFreal K_B = PhysicalConsts::Boltzmann();
+    const CFreal Rplasma = 2*K_B/m_ion;				// ions gas constant
+    const CFreal Rneutral = K_B/m_neutral;
+
+    const CFreal uxi = (_dataInnerState)[firstVelocity];
+    const CFreal uyi = (_dataInnerState)[firstVelocity + 1];
+    const CFreal uxn = (_dataInnerState)[firstVelocity + 2];
+    const CFreal uyn = (_dataInnerState)[firstVelocity + 3];
+    const CFreal Ui = std::sqrt(uxi*uxi + uyi*uyi);
+    const CFreal Un = std::sqrt(uxn*uxn + uyn*uyn);
+    const CFreal rhoi = (_dataInnerState)[endEM]*(_dataInnerState)[firstSpecies];
+    const CFreal rhon = (_dataInnerState)[endEM]*(_dataInnerState)[firstSpecies + 1];
+    const CFreal Ti = (_dataInnerState)[firstTemperature];
+    const CFreal Tn = (_dataInnerState)[firstTemperature + 4];
+    const CFreal pi = rhoi*Rplasma*Ti;
+    const CFreal pn = rhon*Rneutral*Tn;
+    const CFreal ai = (_dataInnerState)[firstTemperature + 2];
+    const CFreal an = (_dataInnerState)[firstTemperature + 6];
+    const CFreal Mi = Ui/ai;
+    const CFreal Mn = Un/an;
+    const CFreal coeffi = 1 + 0.5*(gamma - 1)*Mi*Mi;
+    const CFreal coeffn = 1 + 0.5*(gamma - 1)*Mn*Mn;
+    const CFreal coeffPow_i = pow(coeffi, gamma/(gamma - 1));
+    const CFreal coeffPow_n = pow(coeffn, gamma/(gamma - 1));
+    const CFreal Ttoti = Ti*coeffi;
+    const CFreal Ttotn = Tn*coeffn;
+    //const CFreal coeff2 = (1 + gamma*Mi*Mi);
+    const CFreal Ptoti = pi*coeffPow_i;
+    const CFreal Ptotn = pn*coeffPow_n;
+    CFreal tgAlphai = 0.;
+    CFreal tgAlphan = 0.;
+    if(uxi != 0.){tgAlphai = uyi/uxi;}
+    if(uxn != 0.){tgAlphan = uyn/uxn;}
+
+    const CFreal Ttotg_i = 2*_tTotal[0] - Ttoti;
+    const CFreal Ptotg_i = 2*_pTotal[0] - Ptoti;
+
+    const CFreal Ttotg_n = 2*_tTotal[1] - Ttotn;
+    const CFreal Ptotg_n = 2*_pTotal[1] - Ptotn;
+
+    const CFreal tgAlphag_i = 2*tan(_alpha[0]) - tgAlphai;
+    const CFreal tgAlphag_n = 2*tan(_alpha[1]) - tgAlphan;
 
 
-	//cout <<"m_air = " << m_air <<"\n";
-        //cout <<"K_B = " << K_B <<"\n";
-        //cout <<"Rgas = " << Rgas <<"\n";
-        //cout <<"Ttotg " << Ttotg <<"\n";
-        //cout <<"CFreal Ptotg = " << Ptotg <<"\n";
-        //cout <<"tgAlphag = " << tgAlphag <<"\n";
-        //cout <<"Mg = " << Mg <<"\n";
-        //cout <<"Tg = " << Tg <<"\n";
-        //cout <<"pg = " << pg <<"\n";
-        //cout <<"rhog = " << rhog <<"\n";
-        //cout <<"uxg = " << uxg <<"\n";
-        //cout <<"uyg = " << uyg <<"\n";
-        //cout <<"UgUg = " << UgUg <<"\n";
-        //cout <<"Hg = " << Hg <<"\n";
-        //cout <<"Ag = " << Ag <<"\n";
+    const CFreal Mg_i = Mi;
+    const CFreal Mg_n = Mn;
+    const CFreal Tg_i = Ttotg_i/coeffi;
+    const CFreal pg_i = Ptotg_i/coeffPow_i;
+    const CFreal Tg_n = Ttotg_n/coeffn;
+    const CFreal pg_n = Ptotg_n/coeffPow_n;
+    const CFreal rhog_i = pg_i/(Rplasma*Tg_i);
+    const CFreal rhog_n = pg_n/(Rneutral*Tg_n);
+    const CFreal rhog_total = rhog_i + rhog_n;
 
-        (_dataGhostState)[endEM] = rhog;
-        (_dataGhostState)[firstSpecies + ie] = 1; //Only one species;
-        (_dataGhostState)[firstVelocity + 2*ie] = uxg;
-        (_dataGhostState)[firstVelocity + 2*ie + 1] = uyg;
-        (_dataGhostState)[firstTemperature + 4*ie] = Tg;
-        (_dataGhostState)[firstTemperature + 4*ie + 1] = pg;
-        (_dataGhostState)[firstTemperature + 4*ie + 2] = Ag;
-        (_dataGhostState)[firstTemperature + 4*ie + 3] = Hg;
-    }
+    //cout<<"tgAlphai   = "<< tgAlphai<<"\n";
+    //cout<<"Mg_i       = "<< Mg_i<<"\n";
+    //cout<<"Rplasma    = "<< Rplasma<<"\n";
+    //cout<<"tgAlphag_i = "<< tgAlphag_i<<"\n";
+
+    const CFreal uxg_i = Mg_i*std::sqrt(gamma*Rplasma*Tg_i/(1 + tgAlphag_i*tgAlphag_i));
+    const CFreal uyg_i = tgAlphag_i*uxg_i;
+    const CFreal uxg_n = Mg_n*std::sqrt(gamma*Rneutral*Tg_n/(1 + tgAlphag_n*tgAlphag_n));
+    const CFreal uyg_n = tgAlphag_n*uxg_n;
+
+    const CFreal UgUg_i = uxg_i*uxg_i + uyg_i*uyg_i;
+    const CFreal UgUg_n = uxg_n*uxg_n + uyg_n*uyg_n;
+    const CFreal Hg_i = (gamma/(gamma - 1)*pg_i + 0.5*rhog_i*UgUg_i)/rhog_i;
+    const CFreal Hg_n = (gamma/(gamma - 1)*pg_n + 0.5*rhog_n*UgUg_n)/rhog_n;
+    const CFreal Ag_i = sqrt(gamma*pg_i/rhog_i);
+    const CFreal Ag_n = sqrt(gamma*pg_n/rhog_n);
+
+    (_dataGhostState)[endEM]            = rhog_total;
+    (_dataGhostState)[firstSpecies]     = rhog_i/rhog_total;
+    (_dataGhostState)[firstSpecies + 1] = rhog_n/rhog_total;
+
+    (_dataGhostState)[firstVelocity]     = uxg_i;
+    (_dataGhostState)[firstVelocity + 1] = uyg_i;
+    (_dataGhostState)[firstVelocity + 2] = uxg_n;
+    (_dataGhostState)[firstVelocity + 3] = uxg_n;
+    (_dataGhostState)[firstTemperature]     = Tg_i;
+    (_dataGhostState)[firstTemperature + 1] = pg_i;
+    (_dataGhostState)[firstTemperature + 2] = Ag_i;
+    (_dataGhostState)[firstTemperature + 3] = Hg_i;
+    (_dataGhostState)[firstTemperature + 4] = Tg_n;
+    (_dataGhostState)[firstTemperature + 5] = pg_n;
+    (_dataGhostState)[firstTemperature + 6] = Ag_n;
+    (_dataGhostState)[firstTemperature + 7] = Hg_n;
     _varSet->computeStateFromPhysicalData(_dataGhostState, *ghostState);
+  }
+
+  //for(CFuint i = endEM; i < firstTemperature + 8; i++)
+  //{
+    //cout<<"dataGhost["<<i<<"] = "<<(_dataGhostState)[i] <<"\n";
+  //}
 
 
 //    (_dataGhostState)[endEM] = (_dataInnerState)[endEM]; 							//RHO

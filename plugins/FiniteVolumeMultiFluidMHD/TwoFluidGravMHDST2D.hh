@@ -198,6 +198,9 @@ private:
   /// flag for gravity terms
   bool _gravityTerms;
 
+  ///flag for corrected chemistry
+  bool _correctedChemistry;
+
 }; // end of class TwoFluidGravMHDST2D
 
 //////////////////////////////////////////////////////////////////////////////
