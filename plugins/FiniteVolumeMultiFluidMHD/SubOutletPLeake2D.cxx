@@ -163,23 +163,33 @@ void SubOutletPLeake2D::setGhostState(GeometricEntity *const face)
   for (CFuint i = 0 ; i < nbSpecies; i++){
     (*ghostState)[endEM + nbSpecies + 2*i] = (*innerState)[endEM + nbSpecies + 2*i];
     (*ghostState)[endEM + nbSpecies + 2*i + 1] = (*innerState)[endEM + nbSpecies + 2*i + 1];
-    (*ghostState)[endEM + nbSpecies + 2*nbSpecies + i] = (*innerState)[endEM + nbSpecies + 2*nbSpecies + i];
   }
 
-  const CFreal mi = 1.6726e-27;              // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mn = 1.6726e-27;              // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+  //set the temperatures
+  (*ghostState)[endEM + 3*nbSpecies] = (*innerState)[endEM + 3*nbSpecies];
+  (*ghostState)[endEM + 3*nbSpecies + 1] = (*innerState)[endEM + 3*nbSpecies + 1];
+
+  //cout <<"Inner Cells: Ti = " << (*innerState)[endEM + 3*nbSpecies] <<"\t Tn = " << (*innerState)[endEM + 3*nbSpecies + 1] <<"\n";
+
+  const CFreal mi = 1.6726e-27;                             // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn = 1.6726e-27;                             // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
   const CFreal kB = Framework::PhysicalConsts::Boltzmann(); // Boltzmann constant
 
   const CFreal Rie = 2*kB/mi;
   const CFreal Rn = kB/mn;
   const CFreal Pie = _Pi[0]; //pressure of ions+electrons
-  const CFreal Pn = _Pi[1]; //pressure of neutrals
+  const CFreal Pn = _Pi[1];  //pressure of neutrals
   const CFreal Ti = (*ghostState)[endEM + 3*nbSpecies];
   const CFreal Tn = (*ghostState)[endEM + 3*nbSpecies + 1];
   const CFreal rhoi = Pie/(Rie*Ti);
   const CFreal rhon = Pn/(Rn*Tn);
   (*ghostState)[endEM]     = rhoi;
   (*ghostState)[endEM + 1] = rhon;
+
+
+  //cout <<"Inner Cells: rhoi = " << (*innerState)[endEM] <<"\t rhon = " << (*innerState)[endEM + 1] <<"\n";
+  //cout <<"Ghost Cells: rhoi = " << (*ghostState)[endEM] <<"\t rhon = " << (*ghostState)[endEM + 1] <<"\n";
+
 
 }
 
