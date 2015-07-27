@@ -383,7 +383,7 @@ void StandardSubSystem::buildMeshData()
 	      sizeTRSToWrite++;
 	    }
 	  }
-	  cf_assert(sizeTRSToWrite < trsList.size());
+	  cf_assert(sizeTRSToWrite <= trsList.size());
 	  
 	  TotalTRSNames.resize(sizeTRSToWrite);
 	  TotalTRSInfo.resize(sizeTRSToWrite);
@@ -409,7 +409,8 @@ void StandardSubSystem::buildMeshData()
 	  cf_assert(counter == sizeTRSToWrite);
 	}
 	
-	if (PE::GetPE().IsParallel()) {
+	if (PE::GetPE().IsParallel() && 
+	    (currMeshData->getNbNodes() > 0 && currMeshData->getNbStates() > 0)) {
 	  const std::string parStateVecName = currMeshData->getPrimaryNamespace() + "_states";
 	  const std::string parNodeVecName = currMeshData->getPrimaryNamespace() + "_nodes";
 	  

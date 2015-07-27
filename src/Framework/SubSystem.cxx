@@ -168,28 +168,36 @@ void SubSystem::configureNamespaces(Config::ConfigArgs& args)
 	// create corresponding MPI group
 	vector<int> granks;
 	fillGroupRanks(m_ranks[counter], granks);
+	CFLog(VERBOSE, "SubSystem::configureNamespaces() => before creating group " << *itr << "\n");
+	const string msg = "Ranks for group [" +  *itr + "] = ";
+	CFLog(VERBOSE, CFPrintContainer<vector<int> >(msg, &granks));
 	PE::GetPE().createGroup(*itr, *itr, granks, true);
-	
+	CFLog(VERBOSE, "SubSystem::configureNamespaces() => after  creating group " << *itr << "\n");
 	copy(granks.begin(), granks.end(), back_inserter(subSystemRanks));
 	nbRanks += granks.size();
-	
-        const string msg = "Ranks for group [" +  *itr + "] = ";
-	CFLog(VERBOSE, CFPrintContainer<vector<int> >(msg, &granks));
       }
     }
     
-    cf_assert(subSystemRanks.size() == nbRanks);
+    
+    // make a unique list of all the ranks used in this subsystem
+    vector<int> subSystemRanksUnique;
+    
+    if (nbRanks > 0) {
+      sort(subSystemRanks.begin(), subSystemRanks.end());
+      unique_copy(subSystemRanks.begin(), subSystemRanks.end(), back_inserter(subSystemRanksUnique));
+      cf_assert(subSystemRanksUnique.size() <= PE::GetPE().GetProcessorCount("Default"));
+    }
     
     // build a group, subset of MPI_COMM_WORLD corresponding to all ranks involved in this subsystem
     if (nbRanks == 0) {
-       const CFuint nbProc = PE::GetPE().GetProcessorCount("Default");  
-       subSystemRanks.resize(nbProc);
-       for (CFuint r = 0; r < nbProc; ++r) {
-        subSystemRanks[r] = r;
-       }
+      const CFuint nbProc = PE::GetPE().GetProcessorCount("Default");  
+      subSystemRanksUnique.resize(nbProc);
+      for (CFuint r = 0; r < nbProc; ++r) {
+        subSystemRanksUnique[r] = r;
+      }
     }
-
-    PE::GetPE().createGroup("Default", SubSystemStatusStack::getCurrentName(), subSystemRanks, true);
+    
+    PE::GetPE().createGroup("Default", SubSystemStatusStack::getCurrentName(), subSystemRanksUnique, true); 
   }
 }
     

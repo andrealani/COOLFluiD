@@ -427,7 +427,7 @@ public:
     CFuint idx = _coupledInterfacesMap.find(interfaceName);
     return _nonMatchingGeometryRotation[idx];
   }
-
+  
   /**
    * Get the interface translation vector to match it with the other interface
    */
@@ -436,16 +436,15 @@ public:
     // here we store all the vectors for the different interfaces in one large vector...
     const CFuint idx = _coupledInterfacesMap.find(interfaceName);
     const CFuint dim = Framework::PhysicalModelStack::getActive()->getDim();
-    RealVector vector(dim);
-    CFuint init = idx*dim;
-
+    const CFuint init = idx*dim;
+    
     ///@todo Not the most efficient!!!
-    for(CFuint i=0;i<dim;++i)
-    {
-      vector[i] = _nonMatchingGeometryVector[init+i];
+    RealVector array(dim);
+    for(CFuint i=0;i<dim;++i) {
+      array[i] = _nonMatchingGeometryVector[init+i];
     }
-
-    return vector;
+    
+    return array;
   }
 
   /**
@@ -455,11 +454,6 @@ public:
   {
     return &_coupledInterfacesMap;
   }
-
-  /**
-   * Configures the variables transfomers
-   */
-  void configureVariablesTransformers( Config::ConfigArgs& args );
 
   /**
    * Get the type of coord being transfered
@@ -522,7 +516,7 @@ public:
    */
   static std::string getClassName()
   {
-    return "Coupler";
+    return "ConcurrentCouplerData";
   }
 
   /**

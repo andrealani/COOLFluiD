@@ -99,12 +99,9 @@ void ConcurrentCouplerData::configure ( Config::ConfigArgs& args )
   {
   _nonMatchingGeometryRotation[j] *= (MathTools::MathConsts::CFrealPi()/180.);
   }
-
-  ///Configure the Variable Transformers
-  configureVariablesTransformers(args);
-
+  
   ///Configure the coordinates type
-  cf_assert(_coordTypeStr.size()!=0.);
+  /* cf_assert(_coordTypeStr.size()!=0.);
   _coordType.resize(_coordTypeStr.size());
   for(CFuint i = 0; i< _coordTypeStr.size(); i++)
   {
@@ -139,7 +136,7 @@ void ConcurrentCouplerData::configure ( Config::ConfigArgs& args )
         (_coordType[i])[1] = "States";
       }
     }
-  }
+    }*/
 }
 
 //////////////////////////////////////////////////////////////////////////////

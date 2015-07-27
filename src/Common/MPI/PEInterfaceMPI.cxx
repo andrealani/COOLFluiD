@@ -126,7 +126,7 @@ void PEInterface<PM_MPI>::createGroup(const std::string nsp,
     CFLog(VERBOSE, "PEInterface<PM_MPI>::createGroup() => inserting ranks \t");
     for (CFuint i = 0; i < nranks; ++i) {
       g->globalRanks[i] = ranks[i];
-      CFLog(VERBOSE, " " << ranks[i] << "\t");
+      CFLog(VERBOSE, " " << ranks[i] << " ");
       if (mapRank2Group) {
 	m_rank2Group.insert(std::make_pair(ranks[i], name));
       }
