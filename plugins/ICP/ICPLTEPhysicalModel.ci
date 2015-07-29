@@ -71,8 +71,8 @@ void ICPLTEPhysicalModel<DIM>::setReferenceValues()
   RealVector& refDataSrc = srcTerm->getReferencePhysicalData();
 
   // override the reference values for Euler data starting from
-  CFout << "WATCH OUT: Equations will be solved dimensionally." << "\n";
-
+  CFLog(NOTICE, "WATCH OUT: Equations will be solved dimensionally." << "\n");
+  
   refDataConv = 1.0;
   refDataDiff = 1.0;
   refDataSrc  = 1.0;

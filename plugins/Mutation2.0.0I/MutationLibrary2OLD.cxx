@@ -480,8 +480,6 @@ void MutationLibrary2OLD::copyDataFiles()
     m_libPath = baseDir + "/plugins/Mutation2.0.0I/";
   }
   
-  cout << "m_libPath  =  " << m_libPath << endl;
-
   ofstream fout("mutation.in");
   fout << _mixtureName << endl;
   fout << _reactionName << endl;
@@ -493,14 +491,14 @@ void MutationLibrary2OLD::copyDataFiles()
 
   std::string command2 = "echo $PWD";
   Common::OSystem::getInstance().executeCommand(command2);
-
-  CFout << "MutationLibrary::executing " << command1 << "\n";
-  CFout << "MutationLibrary::libpath     = "  << m_libPath << "\n";
-  CFout << "MutationLibrary::mixtureName = "  << _mixtureName << "\n";
-  CFout << "MutationLibrary::reactionName = " << _reactionName << "\n";
-  CFout << "MutationLibrary::transfName = " << _transfName << "\n";
-  CFout << "MutationLibrary::thermoDir = " << _thermoDir << "\n";
-
+  
+  CFLog(INFO, "MutationLibrary::executing " << command1 << "\n");
+  CFLog(INFO, "MutationLibrary::libpath     = "  << m_libPath << "\n");
+  CFLog(INFO, "MutationLibrary::mixtureName = "  << _mixtureName << "\n");
+  CFLog(INFO, "MutationLibrary::reactionName = " << _reactionName << "\n");
+  CFLog(INFO, "MutationLibrary::transfName = " << _transfName << "\n");
+  CFLog(INFO, "MutationLibrary::thermoDir = " << _thermoDir << "\n");
+  
   try {
     if (_mixtureName == "") {
       throw Common::BadValueException (FromHere(), "Mixture name not set!!!");

@@ -115,8 +115,11 @@ void MutationLibrarypp::setLibrarySequentially2()
   for (CFint i = 0; i < _NS; ++i) {
     m_charge[i] = m_gasMixture->speciesCharge(i);
   }
+  
+  _Rgas = Mutation::RU;
+  cf_assert(_Rgas > 0.);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrarypp::unsetup()
@@ -205,8 +208,10 @@ void MutationLibrarypp::setComposition(CFdouble& temp,
       (*x)[i] = xm[i];
     }
   }
+    
+  m_gasMixture->convert<X_TO_Y>(xm, &m_y[0]);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrarypp::setDensityEnthalpyEnergy(CFdouble& temp,

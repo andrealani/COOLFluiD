@@ -102,15 +102,15 @@ public:
     * @pre it assumes that the mass fractions
     *      have been already set
     */
-    CFdouble getMMass() const
-   {
-     CFdouble tmpMass = 0.0;
-     for(CFint is = 0; is < _NS; ++is) {
-       tmpMass += m_y[is]/m_molarmassp[is];
-     }
-     return 1./tmpMass;
-   }
-
+  CFdouble getMMass() const
+  {
+    CFdouble tmpMass = 0.0;
+    for(CFint is = 0; is < _NS; ++is) {
+      tmpMass += m_y[is]/m_molarmassp[is];
+    }
+    return 1./tmpMass;
+  }
+  
    /**
     * Set the constant of gases in J/(Kg*K)
     */

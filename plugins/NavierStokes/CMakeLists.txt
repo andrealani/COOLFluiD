@@ -79,8 +79,6 @@ Euler2DPrimToRoe.cxx
 Euler2DPrimToRoe.hh
 Euler2DPuvt.cxx
 Euler2DPuvt.hh
-Euler2DPuvtIncompToPuvt.cxx
-Euler2DPuvtIncompToPuvt.hh
 Euler2DPuvtToConsInPuvt.cxx
 Euler2DPuvtToConsInPuvt.hh
 Euler2DPuvtToConsInRef.cxx

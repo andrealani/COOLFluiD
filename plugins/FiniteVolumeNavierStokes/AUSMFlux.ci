@@ -123,13 +123,14 @@ void AUSMFlux<UPDATEVAR>::compute(RealVector& result)
   }
   
   CFLog(DEBUG_MIN, "AUSMFlux::compute() START\n");
-      
+  
   const EquationSubSysDescriptor& eqSSD = PhysicalModelStack::getActive()->
     getEquationSubSysDescriptor();
   const CFuint nbEqs = eqSSD.getNbEqsSS();
   const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFuint iEqSS = eqSSD.getEqSS();
-  
+  const vector<bool>& maskArray = m_updateVarSet->getMaskVariableArray();
+     
   // AL: this may fail in general cases other than ICP!
   //     Here we are assuming that there is fluid + something else
   //     In a weakly coupled simulation you must enter here only when the fluid is active
@@ -179,7 +180,7 @@ void AUSMFlux<UPDATEVAR>::compute(RealVector& result)
       computePressureFlux();   // m_p12
       computeMassFluxImpl(eulerID, nbEulerEqs, eulerVarIDs, result); // m_mflux12
     }
-        
+    
     //  the following applies only if we are dealing with multi-scalar cases 
     if (totalNbEqs > nbEulerEqs) {
       // this works properly with MultiScalarVarSet but not with just EulerVarSet
@@ -188,16 +189,19 @@ void AUSMFlux<UPDATEVAR>::compute(RealVector& result)
       // const vector<CFuint>& eqSSIDs = eqSSD.getEqVarPatterns()[iEqSS];   
       // assert(eqSSIDs.size() == nbEqs);
       
+      CFLog(DEBUG_MIN, "AUSMFlux::compute() => nbEqsData = " << nbEqsData << "\n");
+      
       // loop over the multi-scalar equation set data
       for (CFuint i = 0; i < nbEqsData; ++i) {
 	const CFuint nbVars = m_updateVarSet->getModel()->getNbScalarVars(i);
 	const CFuint firstVar = m_updateVarSet->getModel()->getFirstScalarVar(i);
 	const vector<CFuint>& varIDs = eqsData[i].getEqSetVarIDs();
-	const vector<bool>& maskArray = m_updateVarSet->getMaskVariableArray();
+	CFLog(DEBUG_MIN, "AUSMFlux::compute() => nbVars = " << nbVars << 
+	      ", varIDs.size() = " << varIDs.size() << "\n");
 	
 	// exclude case where MultiScalarVarSet is not present
 	if (varIDs.size() == nbVars) {
-	  CFLog(DEBUG_MAX, "AUSMFlux::compute() => nbVars = " << nbVars 
+	  CFLog(DEBUG_MIN, "AUSMFlux::compute() => nbVars = " << nbVars 
 		<< ", firstVar = " << firstVar << ", " 
 		<< Common::CFPrintContainer<const vector<CFuint> >("varIDs  = ", &varIDs));
 	  
@@ -205,6 +209,7 @@ void AUSMFlux<UPDATEVAR>::compute(RealVector& result)
 	  for (CFuint ie = 0; ie < nbVars; ++ie) {
 	    const CFuint maID = varIDs[ie];
 	    if (maskArray[maID]) { 
+	      CFLog(DEBUG_MIN, "varIDs[" << ie << "] = " <<  varIDs[ie] << "\n");
 	      result[maID] = m_mflux12*(*upwindData)[firstVar + ie];
 	    }
 	  }
@@ -234,14 +239,20 @@ void AUSMFlux<UPDATEVAR>::compute(RealVector& result)
     }
   }
   
+  // sanity enforcement
+  cf_assert(maskArray.size() == totalNbEqs);
+  for (CFuint i = 0; i < maskArray.size(); ++i) {
+    if (!maskArray[i]) {result[i] = 0.;}
+  }
+  
   CFLog(DEBUG_MAX, "AUSMFlux::compute() => L data " << *m_lData << "\n");
   CFLog(DEBUG_MAX, "AUSMFlux::compute() => R data " << *m_rData << "\n");
-  CFLog(DEBUG_MAX, "AUSMFlux::compute() => isPerturb " << getMethodData().isPerturb() 
-	<< ", iVar = " << getMethodData().iPerturbVar() << ", flux = " << result << "\n");
-    
+  CFLog(DEBUG_MIN, "AUSMFlux::compute() => isPerturb " << getMethodData().isPerturb() 
+	<< ", iVar = " << getMethodData().iPerturbVar() << ", flux = " << result << "\n\n");
+  
   CFLog(DEBUG_MIN, "AUSMFlux::compute() END\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
@@ -303,6 +314,8 @@ void AUSMFlux<UPDATEVAR>::computeDecoupled(RealVector& result)
   //  the following applies only if we are dealing with multi-scalar cases 
   cf_assert(totalNbEqs > nbEulerEqs);
   
+  const vector<bool>& maskArray = m_updateVarSet->getMaskVariableArray();
+  
   if (nbEqs == totalNbEqs || iEqSS > 0) {
     // this works properly with MultiScalarVarSet but not with just EulerVarSet
     const vector<EquationSetData>& eqsData = UPDATEVAR::getEqSetData();
@@ -314,7 +327,6 @@ void AUSMFlux<UPDATEVAR>::computeDecoupled(RealVector& result)
 	const CFuint nbVars = m_updateVarSet->getModel()->getNbScalarVars(i);
 	const CFuint firstVar = m_updateVarSet->getModel()->getFirstScalarVar(i);
 	const vector<CFuint>& varIDs = eqsData[i].getEqSetVarIDs();
-	const vector<bool>& maskArray = m_updateVarSet->getMaskVariableArray();
 	
 	// exclude case where MultiScalarVarSet is not present
 	if (varIDs.size() == nbVars) {
@@ -362,7 +374,13 @@ void AUSMFlux<UPDATEVAR>::computeDecoupled(RealVector& result)
   CFLog(DEBUG_MAX, "AUSMFlux::computeDecoupled() => R data " << *m_rData << "\n");
   CFLog(DEBUG_MAX, "AUSMFlux::computeDecoupled() => isPerturb " << getMethodData().isPerturb() 
 	<< ", iVar = " << getMethodData().iPerturbVar() << ", flux = " << result << "\n");
-    
+     // sanity enforcement
+  
+  cf_assert(maskArray.size() == totalNbEqs);
+  for (CFuint i = 0; i < maskArray.size(); ++i) {
+    if (!maskArray[i]) {result[i] = 0.;}
+  }
+  
   CFLog(DEBUG_MIN, "AUSMFlux::computeDecoupled() END\n");
 }
 

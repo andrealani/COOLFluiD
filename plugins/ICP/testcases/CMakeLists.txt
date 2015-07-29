@@ -2,6 +2,7 @@ cf_add_case( MPI 8 CASEDIR Plasmatron/Chamber PCASE restart_chamber_2ndOrder_Mut
 cf_add_case( MPI 8 CASEDIR Plasmatron/Chamber PCASE restart_chamber_2ndOrder_MUT2.CFcase CASEFILES chamber_out-rest-bis-P0.CFmesh.2nd )
 cf_add_case( MPI 8 CASEDIR Plasmatron/Chamber PCASE restart_chamber_2ndOrder_MUT2_coupled.CFcase CASEFILES chamber_out-rest-bis-P0.CFmesh.2nd )
 cf_add_case( MPI 8 CASEDIR Plasmatron/Chamber PCASE restart_chamber_2ndOrder_AUSM.CFcase CASEFILES chamber_out-rest-bis-P0.CFmesh.2nd )
+cf_add_case( MPI 8 CASEDIR Plasmatron/Chamber PCASE restart_chamber_2ndOrder_AUSM_coupled.CFcase CASEFILES chamber_out-rest-bis-P0.CFmesh.2nd ) 
 #cf_add_case( MPI default PCASE Air11_30kW8GPerSecAdiabatInCoupling/torchNSFVMLTEdPuvtQJCouplingFirstStrategy.CFcase )
 #cf_add_case( MPI default PCASE Argon10kW8GPerSecAdiabatInCoupling/torchNSFVMLTEdPuvtQJCouplingFirstStrategy.CFcase )
 #cf_add_case( MPI default PCASE ArgonTorch10kW8G/torchNSFVMLTEdPuvtQJ.CFcase )

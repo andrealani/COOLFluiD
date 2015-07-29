@@ -2,7 +2,7 @@
 # 
 # This COOLFluiD CFcase file tests: 
 # 
-# Finite Volume, ICPLTE2D, NewtonIterator filling one fully-coupled system 
+# Finite Volume, ICPLTE2D, NewtonIterator solving one fully-coupled system 
 # (fluid + electric field), mesh with quads, second-order reconstruction with
 # limiter, Rhie Chow flux for incompressible flows, subsonic inlet and outlet, 
 # isothermal noslip wall, PETSc, computation of Lorentz force and Joule heating 
@@ -16,7 +16,7 @@
 # Comments begin with "#"
 
 # This testcases verifies the simulation of torch + chamber + probe at 100kW
-### Residual = -3.00329
+### Residual = -1.5554035
 
 #######TEST CONFIGURATION
 CFEnv.ErrorOnUnusedConfig = true
@@ -38,7 +38,7 @@ Simulator.Modules.Libs = libPetscI libTecplotWriter libNavierStokes libMutation2
 
 # Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/ICP/testcases/Plasmatron/Chamber
-Simulator.Paths.ResultsDir = ./OUTPUT_chamber
+Simulator.Paths.ResultsDir = ./OUTPUT_chamber_MUT2_coupled
 
 ###### ICP PHYSICAL MODEL ##
 Simulator.SubSystem.Default.PhysicalModelType = ICPLTE2D
@@ -81,11 +81,11 @@ Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = sigma
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
 Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
 
-#Simulator.SubSystem.StopCondition          = MaxNumberSteps
-#Simulator.SubSystem.MaxNumberSteps.nbSteps = 3
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 50
 
-Simulator.SubSystem.StopCondition       = Norm
-Simulator.SubSystem.Norm.valueNorm      = -3.0
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -4.0
 
 Simulator.SubSystem.Default.listTRS = InnerFaces Symmetry Wall_torch_up Wall_torch_in Inlet Outlet Wall_ch Outlet_up Wall_probe
 
@@ -97,7 +97,7 @@ Simulator.SubSystem.LSSNames = NSLSS
 Simulator.SubSystem.NSLSS.Data.PCType = PCASM
 Simulator.SubSystem.NSLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.NSLSS.Data.MatOrderingType = MATORDERING_RCM
-Simulator.SubSystem.NSLSS.Data.MaxIter = 20000
+Simulator.SubSystem.NSLSS.Data.MaxIter = 3000
 Simulator.SubSystem.NSLSS.Data.NbKrylovSpaces = 80
 Simulator.SubSystem.NSLSS.Data.RelativeTolerance = 1e-4
 
@@ -190,7 +190,7 @@ Simulator.SubSystem.CellCenterFVM.BcComds = EpComputingNoSlipWallIsothermalICPPv
                                             MirrorICPFVMCC \
                                             EpComputingNoSlipWallIsothermalICPPvtFVMCC \
                                             EpComputingSubInletICP2DPuvtUVTFVMCC \
-                                            EpComputingSuperOutletICP2DPuvtFVMCC \
+                                            EpComputingSubOutletICP2DPuvtFVMCC \
                                             EpComputingNoSlipWallIsothermalICPPvtFVMCC \
                                             EpComputingSubOutletICP2DPuvtFVMCC \
                                             EpComputingNoSlipWallIsothermalICPPvtFVMCC
@@ -231,9 +231,12 @@ Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS = Inlet
 Simulator.SubSystem.CellCenterFVM.BcInlet.MassFlow = 16.
 Simulator.SubSystem.CellCenterFVM.BcInlet.T = 350.
 Simulator.SubSystem.CellCenterFVM.BcInlet.InletRadii = .075 .08
+# this is different from the default
+Simulator.SubSystem.CellCenterFVM.BcInlet.UseOld = false
 
 Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS = Outlet
-Simulator.SubSystem.CellCenterFVM.BcOutlet.ZeroGradientFlags = 1 1 1 1 1 1
+Simulator.SubSystem.CellCenterFVM.BcOutlet.P = 0.0
+Simulator.SubSystem.CellCenterFVM.BcOutlet.ZeroGradientFlags = 0 1 1 1 1 1
 
 Simulator.SubSystem.DataPreProcessing = DataProcessing
 Simulator.SubSystem.DataProcessing.Data.updateVar = Puvt

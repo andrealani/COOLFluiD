@@ -2,14 +2,13 @@
 # 
 # This COOLFluiD CFcase file tests: 
 # 
-# Finite Volume, ICPLTE2D, NewtonIterator using two weakly coupled systems 
-# (fluid and electric field), mesh with quads, second-order reconstruction with
-# limiter, Rhie Chow flux for incompressible flows, subsonic inlet and outlet, 
-# isothermal noslip wall, PETSc using >200 Krylov spaces, computation of Lorentz 
-# force and Joule heating source terms for ICP, Mutation++ for air mixtures in LTE, 
-# restart from a solution on a full torch+chamber+probe configuration (previously 
-# computed with old Mutation F77), parallel TECPLOT writer in block format (including
-# output for electric conductivity)   
+# Finite Volume, ICPLTE2D, NewtonIterator solving one fully-coupled system 
+# (fluid + electric field), mesh with quads, second-order reconstruction with
+# limiter, AUSM+up flux for compressible flows, subsonic inlet and outlet, 
+# isothermal noslip wall, PETSc, computation of Lorentz force and Joule heating 
+# source terms for ICP, Mutation2.0.0 for air mixtures in LTE, 
+# restart from a solution on a full torch+chamber+probe configuration, parallel 
+# TECPLOT writer in block format (including output for electric conductivity)   
 #
 ################################################################################
 #
@@ -17,8 +16,7 @@
 # Comments begin with "#"
 
 # This testcases verifies the simulation of torch + chamber + probe at 100kW
-# 8 processors
-### Residual = -1.0019156
+### Residual = -3.8757554
 
 #######TEST CONFIGURATION
 CFEnv.ErrorOnUnusedConfig = true
@@ -36,19 +34,19 @@ CFEnv.ExceptionOutputs     = false
 #CFEnv.TraceActive = true
 
 # Simulation Modules
-Simulator.Modules.Libs = libPetscI libTecplotWriter libNavierStokes libMutationppI libLTE libICP libFiniteVolume libFiniteVolumeNavierStokes libFiniteVolumeICP libNewtonMethod libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
+Simulator.Modules.Libs = libPetscI libTecplotWriter libNavierStokes libMutation2OLD libMutation2OLDI libLTE libICP libFiniteVolume libFiniteVolumeNavierStokes libFiniteVolumeICP libNewtonMethod libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
 
 # Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/ICP/testcases/Plasmatron/Chamber
-Simulator.Paths.ResultsDir = ./OUTPUT_chamber
+Simulator.Paths.ResultsDir = ./OUTPUT_chamber_MUT2_AUSM_coupled
 
 ###### ICP PHYSICAL MODEL ##
 Simulator.SubSystem.Default.PhysicalModelType = ICPLTE2D
-Simulator.SubSystem.ICPLTE2D.refValues = 1. 666. 666. 1500. 0.01 0.01 
+Simulator.SubSystem.ICPLTE2D.refValues = 1500. 666. 666. 1500. 0.01 0.01 
 Simulator.SubSystem.ICPLTE2D.refLength = 1.
 
-Simulator.SubSystem.ICPLTE2D.ConvTerm.uInf = 666.
-Simulator.SubSystem.ICPLTE2D.ConvTerm.p0Inf = 1500.
+# needed in case p=0 somewhere
+Simulator.SubSystem.ICPLTE2D.ConvTerm.p0InfComp = 1500.
 
 ###### EM Field MODEL ##
 
@@ -64,14 +62,15 @@ Simulator.SubSystem.ICPLTE2D.SourceTerm.Freq = 0.37
 #Simulator.SubSystem.ICPLTE2D.SourceTerm.OutputFileSaveRate = 5
 
 ###### CHEMICAL LIBRARY ##
-Simulator.SubSystem.ICPLTE2D.PropertyLibrary = Mutationpp
-Simulator.SubSystem.ICPLTE2D.Mutationpp.mixtureName = air11
-#air11nasa9
+Simulator.SubSystem.ICPLTE2D.PropertyLibrary = Mutation2OLD
+#Simulator.SubSystem.ICPLTE2D.Mutation2OLD.mixtureName = argon3
+Simulator.SubSystem.ICPLTE2D.Mutation2OLD.mixtureName = air11
+Simulator.SubSystem.ICPLTE2D.Mutation2OLD.thermCondAlgo = Direct
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
-Simulator.SubSystem.CFmesh.FileName     = chamber_out-rest-bis.CFmesh
+Simulator.SubSystem.CFmesh.FileName     = chamber_MUT2_AUSM_coupled.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate     = 5 
-Simulator.SubSystem.Tecplot.FileName    = chamber_out-rest-bis.plt
+Simulator.SubSystem.Tecplot.FileName    = chamber_MUT2_AUSM_coupled.plt
 Simulator.SubSystem.Tecplot.SaveRate    = 5 
 Simulator.SubSystem.Tecplot.Data.outputVar = Puvt
 Simulator.SubSystem.Tecplot.Data.printExtraValues = true
@@ -82,85 +81,66 @@ Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = sigma
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
 Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
 
-#Simulator.SubSystem.StopCondition          = MaxNumberSteps
-#Simulator.SubSystem.MaxNumberSteps.nbSteps = 3
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 50
 
-Simulator.SubSystem.StopCondition       = Norm
-Simulator.SubSystem.Norm.valueNorm      = -1.0
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -4.0
 
 Simulator.SubSystem.Default.listTRS = InnerFaces Symmetry Wall_torch_up Wall_torch_in Inlet Outlet Wall_ch Outlet_up Wall_probe
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = chamber_out-rest-bis-P0.CFmesh.2nd
-#chamber_out-rest.CFmesh
-#Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
-#Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
-#Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
-#Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1000
-#Simulator.SubSystem.CFmeshFileReader.Data.UseInitValues = 0 0 0 0 1 1 
-#Simulator.SubSystem.CFmeshFileReader.Data.InitValues = 0. 0. 0. 0. 0. 0. 
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.InputToUpdate = ICPLTE2DdPuvtToPuvt
 
-Simulator.SubSystem.LinearSystemSolver = PETSC PETSC
-Simulator.SubSystem.LSSNames = NSLSS ELSS
-
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NSLSS
 Simulator.SubSystem.NSLSS.Data.PCType = PCASM
 Simulator.SubSystem.NSLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.NSLSS.Data.MatOrderingType = MATORDERING_RCM
-Simulator.SubSystem.NSLSS.Data.MaxIter = 20000
-#Simulator.SubSystem.NSLSS.Data.SaveSystemToFile = true
-Simulator.SubSystem.NSLSS.MaskEquationIDs = 0 1 2 3
-Simulator.SubSystem.NSLSS.Data.NbKrylovSpaces = 250
+Simulator.SubSystem.NSLSS.Data.MaxIter = 3000
+Simulator.SubSystem.NSLSS.Data.NbKrylovSpaces = 80
 Simulator.SubSystem.NSLSS.Data.RelativeTolerance = 1e-4
-
-Simulator.SubSystem.ELSS.Data.PCType = PCASM
-Simulator.SubSystem.ELSS.Data.KSPType = KSPGMRES
-Simulator.SubSystem.ELSS.Data.MatOrderingType = MATORDERING_RCM
-Simulator.SubSystem.ELSS.Data.MaxIter = 100
-#Simulator.SubSystem.ELSS.Data.SaveSystemToFile = true
-Simulator.SubSystem.ELSS.MaskEquationIDs = 4 5
-Simulator.SubSystem.ELSS.Data.NbKrylovSpaces = 80
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
 Simulator.SubSystem.NewtonIterator.ConvRate = 1
 Simulator.SubSystem.NewtonIterator.ShowRate = 1
+#Simulator.SubSystem.NewtonIterator.Data.Norm = -3.0
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
 #Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs = 0 0 0 1 0 0
 #Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0.
-Simulator.SubSystem.NewtonIterator.Data.CollaboratorNames = NSLSS ELSS
-Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation = .3 .3 .3 .3 1. 1. 
+Simulator.SubSystem.NewtonIterator.Data.CollaboratorNames = NSLSS
+#Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation = .3 .3 .3 .3 1. 1. 
 #Simulator.SubSystem.NewtonIterator.Data.L2.ComputedVarID = 0
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 0
 
 ############################################################################## CFL ###
-#Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 296.382
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 10000.
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function 
 #Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = min(1000,cfl*1.005)
-
-Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
-Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
-Simulator.SubSystem.InteractiveParamReader.FileName = plugins/ICP/testcases/Plasmatron/Chamber/torch.inter
-Simulator.SubSystem.InteractiveParamReader.readRate = 5
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
+#Simulator.SubSystem.InteractiveParamReader.FileName = plugins/ICP/testcases/Plasmatron/Chamber/torch.inter
+#Simulator.SubSystem.InteractiveParamReader.readRate = 5
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 Simulator.SubSystem.CellCenterFVM.Restart = true
-Simulator.SubSystem.CellCenterFVM.Data.CollaboratorNames = NSLSS ELSS
-Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobCoupling
-Simulator.SubSystem.CellCenterFVM.NumJacobCoupling.FreezeDiffCoeff = false
-#
-#Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobFastCoupling
-#Simulator.SubSystem.CellCenterFVM.NumJacobFastCoupling.FreezeDiffCoeff = false
-Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhsCoupling
-Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhsCoupling.annullDiagValue = 0 1
-#Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhsCoupling.useGlobalDT = true
+Simulator.SubSystem.CellCenterFVM.Data.CollaboratorNames = NSLSS
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff = true
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.zeroDiagValue = 0 0 0 0 1 1
+#Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.useGlobalDT = true
 
-Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = RhieChow2D
-Simulator.SubSystem.CellCenterFVM.Data.RhieChow2D.PressStab = false
-Simulator.SubSystem.CellCenterFVM.Data.RhieChow2D.PressDissipScale = 1.
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUp2D
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp2D.choiceA12 = 1
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp2D.machInf = 0.1
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Puvt
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 
 Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Puvt
-Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokesCoupling
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
 
 Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMoveMultiTRS
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.TrsPriorityList = \
@@ -189,12 +169,9 @@ Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Inlet.Values =
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Wall_probe.ValuesIdx = 1 2 3
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Wall_probe.Values = 0. 0. 350.
 
-
 Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = \
 	NavierStokes2DAxiST ICPInductionEquationST RMSJouleHeatST LorentzForceAlternativeST
-
-#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
 
 Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
 Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
@@ -211,7 +188,7 @@ Simulator.SubSystem.CellCenterFVM.BcComds = EpComputingNoSlipWallIsothermalICPPv
                                             MirrorICPFVMCC \
                                             EpComputingNoSlipWallIsothermalICPPvtFVMCC \
                                             EpComputingSubInletICP2DPuvtUVTFVMCC \
-                                            EpComputingSuperOutletICP2DPuvtFVMCC \
+                                            EpComputingSubOutletICP2DPuvtFVMCC \
                                             EpComputingNoSlipWallIsothermalICPPvtFVMCC \
                                             EpComputingSubOutletICP2DPuvtFVMCC \
                                             EpComputingNoSlipWallIsothermalICPPvtFVMCC
@@ -226,7 +203,7 @@ Simulator.SubSystem.CellCenterFVM.BcNames = BcTorchWallUp \
                                             BcChamberWallProbe
 
 Simulator.SubSystem.CellCenterFVM.BcOutletUp.applyTRS = Outlet_up
-Simulator.SubSystem.CellCenterFVM.BcOutletUp.P = 0.0
+Simulator.SubSystem.CellCenterFVM.BcOutletUp.P = 1500.0
 Simulator.SubSystem.CellCenterFVM.BcOutletUp.ZeroGradientFlags = 0 1 1 1 1 1
 
 Simulator.SubSystem.CellCenterFVM.BcChamberWallFront.applyTRS = Wall_ch
@@ -252,11 +229,13 @@ Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS = Inlet
 Simulator.SubSystem.CellCenterFVM.BcInlet.MassFlow = 16.
 Simulator.SubSystem.CellCenterFVM.BcInlet.T = 350.
 Simulator.SubSystem.CellCenterFVM.BcInlet.InletRadii = .075 .08
-# this is different from the default but uses a more consistent implementation 
-Simulator.SubSystem.CellCenterFVM.BcInlet.UseOld = false
+# this is different from the default
+#Simulator.SubSystem.CellCenterFVM.BcInlet.UseOld = false
+Simulator.SubSystem.CellCenterFVM.BcInlet.ZeroGradientFlags = 1 0 0 0 1 1
 
 Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS = Outlet
-Simulator.SubSystem.CellCenterFVM.BcOutlet.ZeroGradientFlags = 1 1 1 1 1 1
+Simulator.SubSystem.CellCenterFVM.BcOutlet.P = 1500.0
+Simulator.SubSystem.CellCenterFVM.BcOutlet.ZeroGradientFlags = 0 1 1 1 1 1
 
 Simulator.SubSystem.DataPreProcessing = DataProcessing
 Simulator.SubSystem.DataProcessing.Data.updateVar = Puvt

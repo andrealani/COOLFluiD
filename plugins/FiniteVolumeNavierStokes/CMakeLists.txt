@@ -163,7 +163,6 @@ SubInletEuler3DUVT.hh
 SubInletEuler3DTtPtAlpha.hh
 SubInletEuler2DPuvtUVT.hh
 SubInletEuler2DPuvtUVTInterp.hh
-SubInletEuler2DPuvtUVTLTE.hh
 SubOutletEuler1D.cxx
 SubOutletEuler2D.cxx
 SubOutletEuler3D.cxx
@@ -182,10 +181,7 @@ SubInletEuler2DUVT.cxx
 SubInletEuler3DUVT.cxx
 SubInletEuler2DTtPtAlpha.cxx
 SubInletEuler3DTtPtAlpha.cxx
-SubInletEuler2DPuvtUVTLTE.cxx
 SubInletEuler2DPuvtUVT.cxx
-SubInletEulerPvtVTLTE.hh
-SubInletEulerPvtVTLTE.cxx
 SubOutletEuler2DPuvtPis.hh
 SubOutletEuler2DPuvtPis.cxx
 SubOutletEuler2DPuvtMis.hh

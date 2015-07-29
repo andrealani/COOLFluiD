@@ -158,6 +158,15 @@ void ConcurrentCouplerMethod::configure ( Config::ConfigArgs& args )
   
   m_fullConfigure = 1;
   
+  cf_assert (m_coupledNamespacesStr.size() > 0);
+  
+  if (m_coupledSubSystemsStr.size() == 0) {
+    const string ssname = SubSystemStatusStack::getCurrentName();
+    m_coupledSubSystemsStr.resize(m_coupledNamespacesStr.size(), ssname);
+  }
+  
+  cf_assert (m_coupledNamespacesStr.size() == m_coupledSubSystemsStr.size());
+  
   // Check size of configuration parameters
   // cf_assert(m_preProcessWriteStr.size()   == m_preProcessWriteNameStr.size());
   // cf_assert(m_preProcessReadStr.size()    == m_preProcessReadNameStr.size());

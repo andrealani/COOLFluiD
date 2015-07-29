@@ -16,8 +16,7 @@
 # Comments begin with "#"
 
 # This testcases verifies the simulation of torch + chamber + probe at 100kW
-
-### Residual = -3.9803006
+### Residual = -3.9198463
 
 #######TEST CONFIGURATION
 CFEnv.ErrorOnUnusedConfig = true
@@ -39,7 +38,7 @@ Simulator.Modules.Libs = libPetscI libTecplotWriter libNavierStokes libMutation2
 
 # Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/ICP/testcases/Plasmatron/Chamber
-Simulator.Paths.ResultsDir = ./OUTPUT_chamber_AUSM
+Simulator.Paths.ResultsDir = ./OUTPUT_chamber_MUT2_AUSM
 
 ###### ICP PHYSICAL MODEL ##
 Simulator.SubSystem.Default.PhysicalModelType = ICPLTE2D
@@ -100,10 +99,11 @@ Simulator.SubSystem.LSSNames = NSLSS ELSS
 Simulator.SubSystem.NSLSS.Data.PCType = PCASM
 Simulator.SubSystem.NSLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.NSLSS.Data.MatOrderingType = MATORDERING_RCM
-Simulator.SubSystem.NSLSS.Data.MaxIter = 1000
+Simulator.SubSystem.NSLSS.Data.MaxIter = 3000
 #Simulator.SubSystem.NSLSS.Data.SaveSystemToFile = true
 Simulator.SubSystem.NSLSS.MaskEquationIDs = 0 1 2 3
-Simulator.SubSystem.NSLSS.Data.NbKrylovSpaces = 50
+Simulator.SubSystem.NSLSS.Data.NbKrylovSpaces = 80
+Simulator.SubSystem.NSLSS.Data.RelativeTolerance = 1e-4
 
 Simulator.SubSystem.ELSS.Data.PCType = PCASM
 Simulator.SubSystem.ELSS.Data.KSPType = KSPGMRES
@@ -125,11 +125,10 @@ Simulator.SubSystem.NewtonIterator.Data.CollaboratorNames = NSLSS ELSS
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 0
 
 ############################################################################## CFL ###
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 10000.
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function 
 #Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = min(1000,cfl*1.005)
-
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
-Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 10000.
 #Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
 #Simulator.SubSystem.InteractiveParamReader.FileName = plugins/ICP/testcases/Plasmatron/Chamber/torch.inter
 #Simulator.SubSystem.InteractiveParamReader.readRate = 5
@@ -150,9 +149,8 @@ Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Puvt
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 
 Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Puvt
-#### change this everywhere else ##########################################
 Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokesCoupling
-###########################################################################
+
 Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMoveMultiTRS
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.TrsPriorityList = \
 	Wall_torch_up Symmetry Wall_torch_in Inlet Outlet Wall_ch Outlet_up Wall_probe
@@ -180,7 +178,6 @@ Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Inlet.Values =
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Wall_probe.ValuesIdx = 1 2 3
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Wall_probe.Values = 0. 0. 350.
 
-
 Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = \
 	NavierStokes2DAxiST ICPInductionEquationST RMSJouleHeatST LorentzForceAlternativeST
@@ -200,7 +197,7 @@ Simulator.SubSystem.CellCenterFVM.BcComds = EpComputingNoSlipWallIsothermalICPPv
                                             MirrorICPFVMCC \
                                             EpComputingNoSlipWallIsothermalICPPvtFVMCC \
                                             EpComputingSubInletICP2DPuvtUVTFVMCC \
-                                            EpComputingSuperOutletICP2DPuvtFVMCC \
+                                            EpComputingSubOutletICP2DPuvtFVMCC \
                                             EpComputingNoSlipWallIsothermalICPPvtFVMCC \
                                             EpComputingSubOutletICP2DPuvtFVMCC \
                                             EpComputingNoSlipWallIsothermalICPPvtFVMCC
@@ -241,9 +238,12 @@ Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS = Inlet
 Simulator.SubSystem.CellCenterFVM.BcInlet.MassFlow = 16.
 Simulator.SubSystem.CellCenterFVM.BcInlet.T = 350.
 Simulator.SubSystem.CellCenterFVM.BcInlet.InletRadii = .075 .08
+# this is different from the default
+#Simulator.SubSystem.CellCenterFVM.BcInlet.UseOld = false
 
 Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS = Outlet
-Simulator.SubSystem.CellCenterFVM.BcOutlet.ZeroGradientFlags = 1 1 1 1 1 1
+Simulator.SubSystem.CellCenterFVM.BcOutlet.P = 1500.0
+Simulator.SubSystem.CellCenterFVM.BcOutlet.ZeroGradientFlags = 0 1 1 1 1 1
 
 Simulator.SubSystem.DataPreProcessing = DataProcessing
 Simulator.SubSystem.DataProcessing.Data.updateVar = Puvt

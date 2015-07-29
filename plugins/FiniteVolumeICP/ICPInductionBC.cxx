@@ -3,7 +3,7 @@
 #include "FiniteVolumeNavierStokes/NoSlipWallIsothermalNSvt.hh"
 #include "FiniteVolumeNavierStokes/NoSlipWallIsothermalNSPvt.hh"
 #include "FiniteVolume/MirrorVelocity.hh"
-#include "FiniteVolumeNavierStokes/SubInletEuler2DPuvtUVTLTE.hh"
+#include "FiniteVolumeNavierStokes/SubInletEulerPvtVTLTE.hh"
 #include "FiniteVolumeNavierStokes/SubOutletEulerPvt.hh"
 #include "FiniteVolume/SuperOutlet.hh"
 #include "Framework/MethodCommandProvider.hh"
@@ -48,7 +48,7 @@ MethodCommandProvider<ICPInductionBC<SuperOutlet>,
 		      FiniteVolumeICPModule> 
 superOutletICP2DPuvtFVMCCProvider("SuperOutletICP2DPuvtFVMCC");
 
-MethodCommandProvider<ICPInductionBC<SubInletEuler2DPuvtUVTLTE>,
+MethodCommandProvider<ICPInductionBC<SubInletEulerPvtVTLTE>,
 		      CellCenterFVMData, 
 		      FiniteVolumeICPModule> 
 subInletICP2DPuvtUVTFVMCCProvider("SubInletICP2DPuvtUVTFVMCC");

@@ -66,32 +66,32 @@ void SubInletEulerPvtVTLTE::setGhostState(GeometricEntity *const face)
     _bCoord = (innerState->getCoordinates() +
                ghostState->getCoordinates());
     _bCoord *= 0.5;
-    
+
     // (*ghostState) = 2*bcState - (*innerState)
     _vFunction.evaluate(_bCoord, _inletData);
-    
+
     _inletData[1] /= m_varSet->getModel()->getTempRef();
   }
   else {
-    _inletData[0] = _massFlow;
-    _inletData[1] = _temperature;
+   _inletData[0] = _massFlow;
+   _inletData[1] = _temperature;
   }
   
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const CFuint TID = dim+1;
-  (*ghostState)[0] = (*innerState)[0];
-  (*ghostState)[1] = (*innerState)[1];
-  (*ghostState)[2] = (*innerState)[2];
-  if (dim == DIM_3D) {
-    (*ghostState)[3] = (*innerState)[3];
-  }
-  (*ghostState)[TID] = _inletData[1];
-  
-  m_varSet->computePhysicalData(*ghostState, _dataInnerState);
-  
   const CFreal area = MathTools::MathConsts::CFrealPi()*(_inletRadii[1]*_inletRadii[1] - _inletRadii[0]*_inletRadii[0]);
   
-  if (m_useOld) {
+  if (m_useOld) { 
+    (*ghostState)[0] = (*innerState)[0];
+    (*ghostState)[1] = (*innerState)[1];
+    (*ghostState)[2] = (*innerState)[2];
+    if (dim == DIM_3D) {
+      (*ghostState)[3] = (*innerState)[3];
+    }
+    (*ghostState)[TID] = _inletData[1];
+    
+    m_varSet->computePhysicalData(*ghostState, _dataInnerState);
+    
     const CFreal rho = _dataInnerState[EulerTerm::RHO];
     // 0.001 is conversion from cm^2 to m^2
     const CFreal uInf = .001*_inletData[0]/(area*rho);
@@ -101,19 +101,25 @@ void SubInletEulerPvtVTLTE::setGhostState(GeometricEntity *const face)
     (*ghostState)[2] = 0.;
     if (dim == DIM_3D) {(*ghostState)[3] = 0.;}
     (*ghostState)[TID] = _inletData[1];
+    
+    CFLog(DEBUG_MIN, "SubInletEulerPvtVTLTE::setGhostState() => OLD ghost = " <<  *ghostState << "\n");
   }
   else {
+    m_varSet->computePhysicalData(*innerState, _dataInnerState);
+    
     const CFreal pInner = _dataInnerState[EulerTerm::P];
     const CFreal Tinlet = _inletData[1];
     const CFreal RovM   = m_library->getRgas()/m_library->getMMass();
-    const CFreal rho    = m_varSet->getModel()->getPressureFromState(pInner)/(RovM*Tinlet);
+    const CFreal rhoB    = m_varSet->getModel()->getPressureFromState(pInner)/(RovM*Tinlet);
     // 0.001 is conversion from cm^2 to m^2
-    const CFreal uInf   = .001*_inletData[0]/(area*rho);
+    const CFreal uInfB   = .001*_inletData[0]/(area*rhoB);
     
     (*ghostState)[0] = (*innerState)[0];
-    (*ghostState)[1] = 2.*uInf - (*innerState)[1];
-    (*ghostState)[2] = 0.;
-    if (dim == DIM_3D) {(*ghostState)[3] = 0.;}
+    (*ghostState)[1] = 2.*uInfB - (*innerState)[1];
+    (*ghostState)[2] = - (*innerState)[2];
+    if (dim == DIM_3D) {
+      (*ghostState)[3] = - (*innerState)[3];
+    }
     (*ghostState)[TID] = _inletData[1]; 
     const CFreal Tin = 2.*Tinlet - (*innerState)[TID];
     if (Tin > 0.) {
@@ -121,10 +127,11 @@ void SubInletEulerPvtVTLTE::setGhostState(GeometricEntity *const face)
     }
     else {
       CFLog(VERBOSE, "SubInletEulerPvtVTLTE::setGhostState() => ghost T <= 0 => T = " << Tin << "\n");
-    }  
+    }
+    CFLog(DEBUG_MIN, "SubInletEulerPvtVTLTE::setGhostState() => NEW ghost = " <<  *ghostState << "\n"); 
   }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
       
 void SubInletEulerPvtVTLTE::setup()
