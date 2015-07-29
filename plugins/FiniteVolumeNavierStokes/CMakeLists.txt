@@ -141,6 +141,9 @@ RhieChowFluxBlended.hh
 RhieChowFluxALE.ci
 RhieChowFluxALE.cxx
 RhieChowFluxALE.hh
+SubBCTurb.ci
+SubBCTurb.cxx
+SubBCTurb.hh
 SubOutletRiga.cxx
 SubOutletRiga.ci
 SubOutletRiga.hh

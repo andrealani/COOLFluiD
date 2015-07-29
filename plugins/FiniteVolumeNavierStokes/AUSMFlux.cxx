@@ -18,10 +18,13 @@
 #include "NavierStokes/Euler2DPuvt.hh"
 #include "NavierStokes/Euler3DPvt.hh"
 
+#include "LTE/Euler3DPvtLTE.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Physics::NavierStokes;
+using namespace COOLFluiD::Physics::LTE;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -96,6 +99,12 @@ MethodStrategyProvider<AUSMPlusUpFlux <MultiScalarVarSet<Euler3DPvt<Euler3DVarSe
                        FluxSplitter<CellCenterFVMData>,
 		       FiniteVolumeNavierStokesModule>
 ausmPlusUpTurb3dProvider("AUSMPlusUpTurb3D");
+
+MethodStrategyProvider<AUSMPlusUpFlux <MultiScalarVarSet<Euler3DPvtLTE> >,
+		       CellCenterFVMData,
+                       FluxSplitter<CellCenterFVMData>,
+		       FiniteVolumeNavierStokesModule>
+ausmPlusUpTurb3dLTEProvider("AUSMPlusUpTurb3DLTE");
 
 // VDH's variants 
 MethodStrategyProvider<AUSMLowMlimit<Euler2DVarSet>,

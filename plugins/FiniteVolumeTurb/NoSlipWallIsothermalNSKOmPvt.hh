@@ -42,22 +42,21 @@ public:
   /**
    * Default destructor
    */
-  ~NoSlipWallIsothermalNSKOmPvt();
+  virtual ~NoSlipWallIsothermalNSKOmPvt();
 
   /**
    * Set up private data and data of the aggregated classes
    * in this command before processing phase
    */
-  void setup();
+  virtual void setup();
 
   /**
    * Apply boundary condition on the given face
    */
-  void setGhostState(Framework::GeometricEntity *const face);
-
-
- protected:
-
+  virtual void setGhostState(Framework::GeometricEntity *const face);
+  
+protected:
+  
   /**
    * Apply boundary condition on the given ghost state
    * @param innerState state vector associated to the internal cell
@@ -66,32 +65,17 @@ public:
    */
   virtual void setGhostStateImpl(const Framework::State& innerState,
 				 Framework::State& ghostState);
-
-  /**
-   * Reposition the node if any of the given ghostState values is < 0
-   */
-  void repositionNode(const CFreal& innerValue, CFreal& ghostValue);
-
-  /**
-   * This function makes a linear interpolation between the values in the
-   * inner state and the ghost state ones
-   */
-  void linearInterpolate(const CFreal& innerValue, const CFreal& wallValue, CFreal& ghostValue)
-  {
-    ghostValue = innerValue - (innerValue - wallValue)*(m_drXiXg/m_drXiXw);
-  }
-
- private:
+private:
 
   /// physical model convective variable set
   Common::SafePtr<CVARSET> _varSetTurb;
 
   /// physical model diffusive variable set
   Common::SafePtr<DVARSET> _diffVarTurb;
-
+  
   /// X-component of a velocity vector of the wall
   CFreal _xWallVelocity;
-
+  
   /// Y-component of a velocity vector of the wall
   CFreal _yWallVelocity;
 

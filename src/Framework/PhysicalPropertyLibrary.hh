@@ -38,8 +38,7 @@ public: // typedefs
 
   typedef Environment::ConcreteProvider<PhysicalPropertyLibrary,1> PROVIDER;
   typedef const std::string& ARG1;
-
-public: // functions
+ public: // functions
   
   /**
    * Defines the Config Option's of this class

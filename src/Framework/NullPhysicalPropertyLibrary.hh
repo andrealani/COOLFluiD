@@ -36,7 +36,14 @@ public:
 
   /// Unsetups the data of the library
   void unsetup();
-
+  
+  /// Checks if this object is a Null object.
+  /// By default is always false, except for
+  /// the concrete Null types that should implement
+  /// it as returning true.
+  /// @return true if Null and false otherwise
+  virtual bool isNull() const {return true;}
+  
 }; // end of class NullPhysicalPropertyLibrary
 
 //////////////////////////////////////////////////////////////////////////////

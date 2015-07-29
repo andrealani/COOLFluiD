@@ -24,7 +24,8 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider<SubInletEulerPvtVTLTE, CellCenterFVMData, FiniteVolumeNavierStokesModule>
+MethodCommandProvider<SubInletEulerPvtVTLTE, CellCenterFVMData, 
+		      FiniteVolumeNavierStokesModule>
 subInletEulerPvtVTLTEFVMCCProvider("SubInletEulerPvtVTLTEFVMCC");
 
 //////////////////////////////////////////////////////////////////////////////
@@ -59,14 +60,13 @@ void SubInletEulerPvtVTLTE::setGhostState(GeometricEntity *const face)
 {
   State *const innerState = face->getState(0);
   State *const ghostState = face->getState(1);
-    
+  
+  // coordinate of the boundary point
+  _bCoord = (innerState->getCoordinates() + ghostState->getCoordinates());
+  _bCoord *= 0.5;
+  
   if(_useFunction)
   {
-    // coordinate of the boundary point
-    _bCoord = (innerState->getCoordinates() +
-               ghostState->getCoordinates());
-    _bCoord *= 0.5;
-
     // (*ghostState) = 2*bcState - (*innerState)
     _vFunction.evaluate(_bCoord, _inletData);
 
@@ -79,9 +79,11 @@ void SubInletEulerPvtVTLTE::setGhostState(GeometricEntity *const face)
   
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const CFuint TID = dim+1;
-  const CFreal area = MathTools::MathConsts::CFrealPi()*(_inletRadii[1]*_inletRadii[1] - _inletRadii[0]*_inletRadii[0]);
+  const CFreal area = getArea();
+  cf_assert(area > 0.);
   
   if (m_useOld) { 
+    cf_assert(_radialInjection == false);
     (*ghostState)[0] = (*innerState)[0];
     (*ghostState)[1] = (*innerState)[1];
     (*ghostState)[2] = (*innerState)[2];
@@ -115,11 +117,48 @@ void SubInletEulerPvtVTLTE::setGhostState(GeometricEntity *const face)
     const CFreal uInfB   = .001*_inletData[0]/(area*rhoB);
     
     (*ghostState)[0] = (*innerState)[0];
-    (*ghostState)[1] = 2.*uInfB - (*innerState)[1];
-    (*ghostState)[2] = - (*innerState)[2];
-    if (dim == DIM_3D) {
-      (*ghostState)[3] = - (*innerState)[3];
+    
+    if (!_radialInjection) {
+      (*ghostState)[1] = 2.*uInfB - (*innerState)[1];
+      (*ghostState)[2] = - (*innerState)[2];
+      if (dim == DIM_3D) {
+	(*ghostState)[3] = - (*innerState)[3];
+      }
     }
+    else {
+      // we assume: 
+      // 1- injection velocity radial in the (y,z) plane, therefore Vx=0
+      // 2- plane (y,z) centered in (*,0,0)
+      (*ghostState)[1] = - (*innerState)[1];
+      
+      if (std::abs(_bCoord[ZZ]) < 1e-14) {
+	(*ghostState)[2] = 2.*(-MathFunctions::sign(_bCoord[YY]))*uInfB - (*innerState)[2];
+	(*ghostState)[3] =  - (*innerState)[3];
+      }
+      else if (std::abs(_bCoord[YY]) < 1e-14) {
+	(*ghostState)[2] = - (*innerState)[2];
+	(*ghostState)[3] = 2.*(-MathFunctions::sign(_bCoord[ZZ]))*uInfB - (*innerState)[3];
+      }
+      else {
+	const CFreal tgTheta = _bCoord[ZZ]/_bCoord[YY];
+	const CFreal Vy = (-MathFunctions::sign(_bCoord[YY]))*uInfB/std::sqrt(1.+ tgTheta*tgTheta);
+	const CFreal Vz = (-MathFunctions::sign(_bCoord[ZZ]))*std::abs(Vy*tgTheta);
+	
+	cf_assert(Vy*_bCoord[YY] < 0.);
+	cf_assert(Vz*_bCoord[ZZ] < 0.);
+	cf_assert(std::abs(sqrt(Vy*Vy + Vz*Vz)-uInfB) < 1e-7);
+	
+	CFLog(DEBUG_MIN, "SubInletEulerPvtVTLTE::setGhostState() => (y,z) = (" 
+	      << _bCoord[YY] << ", " <<  _bCoord[ZZ] << "), (Vy, Vz) = (" << Vy << ", " << Vz << "\n");
+	
+	// ofstream file("V.dat", ios::app);
+	// file << _bCoord[YY] << " " <<  _bCoord[ZZ] << " " << Vy << " " << Vz << "\n";
+	
+	(*ghostState)[2] = 2.*Vy - (*innerState)[2];
+	(*ghostState)[3] = 2.*Vz - (*innerState)[3];
+      }
+    }
+    
     (*ghostState)[TID] = _inletData[1]; 
     const CFreal Tin = 2.*Tinlet - (*innerState)[TID];
     if (Tin > 0.) {

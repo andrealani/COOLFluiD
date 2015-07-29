@@ -30,7 +30,7 @@ namespace COOLFluiD {
    * given for mass flow and temperature
    *
    * @author Radek Honzatko
-   *
+   * @author Andrea Lani
    */
 class SubInletEulerPvtVTLTE : public SubInletEulerFunc {
 public:
@@ -61,9 +61,9 @@ public:
    * Apply boundary condition on the given face
    */
   virtual void setGhostState(Framework::GeometricEntity *const face);
-
- private: // data
-
+  
+private: // data
+  
   /// physical model var set
   Common::SafePtr<Physics::NavierStokes::EulerVarSet> m_varSet;
   

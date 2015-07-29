@@ -1,0 +1,94 @@
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename UPDATEVS, bool INLET>
+void SubBCTurb<BASE, UPDATEVS, INLET>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< std::vector<CFreal> >
+    ("TurbVars","Freestream K, Omega (or similar) values");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename UPDATEVS, bool INLET>
+SubBCTurb<BASE, UPDATEVS, INLET>::SubBCTurb(const std::string& name) :
+  BASE(name)
+{
+  this->addConfigOptionsTo(this);
+  
+  m_turbVars = std::vector<CFreal>();
+  this->setParameter("TurbVars",&m_turbVars);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename UPDATEVS, bool INLET>
+SubBCTurb<BASE, UPDATEVS, INLET>::~SubBCTurb()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename UPDATEVS, bool INLET>
+void SubBCTurb<BASE, UPDATEVS, INLET>::setGhostState(Framework::GeometricEntity *const face)
+{
+  using namespace COOLFluiD::Framework;
+  
+  BASE::setGhostState(face);
+  
+  State& innerState = *face->getState(0);
+  State& ghostState = *face->getState(1);
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbTurbVars = m_varSetTurb->getModel()->getNbScalarVars(0);
+  // we assume that k, omega, etc. are the last variables 
+  const CFuint KID = dim + 2;
+  for(CFuint iTurb = 0; iTurb < nbTurbVars; iTurb++) {
+    const CFuint idx = KID + iTurb;
+    ghostState[idx] = (INLET)? 2.0*m_turbVars[iTurb] - innerState[idx] : innerState[idx];
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, typename UPDATEVS, bool INLET>
+void SubBCTurb<BASE, UPDATEVS, INLET>::setup()
+{
+  CFAUTOTRACE;
+  
+  BASE::setup();
+  
+  m_varSetTurb = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVS>();
+  cf_assert(m_varSetTurb.isNotNull());
+  
+  //Check that the initial values for the turbulent variables have been set
+  const CFuint nbTurbVars = m_varSetTurb->getModel()->getNbScalarVars(0);
+  cf_assert(nbTurbVars > 0);
+  
+  if (INLET) {
+    cf_assert(m_turbVars.size() == nbTurbVars);
+  }
+  else {
+    m_turbVars.resize(nbTurbVars, 0.);
+  }
+  
+  const CFuint firstScalarVar = m_varSetTurb->getModel()->getFirstScalarVar(0);
+  const CFuint nbScalarVars = m_varSetTurb->getModel()->getNbScalarVars(0);
+  const RealVector& refValues = m_varSetTurb->getModel()->getReferencePhysicalData();
+  for(CFuint iVar=0; iVar < nbScalarVars ;iVar++) {
+    m_turbVars[iVar] /= refValues[firstScalarVar + iVar];
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD

@@ -106,6 +106,7 @@ void ComputeWallDistanceVector2CCMPI::execute()
   
   // this has only to be run at setup for now
   CFLog(VERBOSE, "ComputeWallDistanceVector2CCMPI::execute() START\n");
+  CFLog(INFO, "ComputeWallDistanceVector2CCMPI::execute() => Computing distance to the wall ...\n");
   
   Stopwatch<WallTime> stp;
   stp.start();
@@ -262,7 +263,7 @@ void ComputeWallDistanceVector2CCMPI::execute()
     printToFile();
   }  
   
-  CFLog(INFO,"ComputeWallDistanceVector2CCMPI::execute() : computing distance to the wall took " << stp.read() << "s\n");
+  CFLog(INFO, "ComputeWallDistanceVector2CCMPI::execute() => took " << stp.read() << "s\n");
   CFLog(VERBOSE, "ComputeWallDistanceVector2CCMPI::execute() END\n");
 }
     

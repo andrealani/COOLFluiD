@@ -57,6 +57,18 @@ public:
    */
   virtual void setGhostState(Framework::GeometricEntity *const face) = 0;
   
+protected: // functions
+  
+  /// @return the area of the injector
+  CFreal getArea() const
+  {
+    if (_inletRadii.size() == 2) {
+      return MathTools::MathConsts::CFrealPi()*(_inletRadii[1]*_inletRadii[1] - _inletRadii[0]*_inletRadii[0]);
+    }
+    cf_assert(_inletRadii.size() == 1 && _width > 0. && _nbRings > 0);
+    return 2.* MathTools::MathConsts::CFrealPi()*_inletRadii[0]*_width*(CFreal)_nbRings;
+  }
+  
 protected: // data
   
   /// physical model data
@@ -70,13 +82,19 @@ protected: // data
 
   /// storage for the temporary boundary point coordinates
   RealVector                               _bCoord;
-
+  
   /// mass flow
   CFreal                                   _massFlow;
 
   /// static temperature
   CFreal                                   _temperature;
-
+  
+  /// width of the inlet injector surface in 3D
+  CFreal                                   _width;
+  
+  /// number of rings of the inlet injector surface in 3D
+  CFuint                                   _nbRings;
+  
   /// a vector of radii of the torch inlet
   std::vector<CFreal>                      _inletRadii;
 
@@ -88,6 +106,10 @@ protected: // data
 
   /// the VectorialFunction to use
   Framework::VectorialFunction             _vFunction;
+  
+  /// flag telling if to inject radially (in 3D)
+  bool             _radialInjection;
+
 }; // end of class SubInletEulerFunc
 
 //////////////////////////////////////////////////////////////////////////////
