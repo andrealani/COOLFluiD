@@ -212,8 +212,9 @@ void CurrentCondition::preProcess()
 
   m_sigmaIntegral = localSigmaIntegral;
 #ifdef CF_HAVE_MPI
+  const std::string nsp = this->getMethodData().getNamespace();
   MPI_Allreduce(&localSigmaIntegral, &m_sigmaIntegral, 1, MPI_DOUBLE, MPI_SUM,
-        PE::GetPE().GetCommunicator());
+        PE::GetPE().GetCommunicator(nsp));
 #endif
   cf_assert(m_sigmaIntegral > 0.);
 //   std::cout << "Outlet::sigmaIntegral = " << m_sigmaIntegral <<"\n";
