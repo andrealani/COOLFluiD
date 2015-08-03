@@ -142,7 +142,6 @@ RhieChowFluxALE.ci
 RhieChowFluxALE.cxx
 RhieChowFluxALE.hh
 SubBCTurb.ci
-SubBCTurb.cxx
 SubBCTurb.hh
 SubOutletRiga.cxx
 SubOutletRiga.ci
@@ -268,5 +267,17 @@ ENDIF(CF_HAVE_MPI)
 LIST ( APPEND FiniteVolumeNavierStokes_cflibs Framework FiniteVolume NavierStokes )
 
 CF_ADD_PLUGIN_LIBRARY ( FiniteVolumeNavierStokes )
+
+##############################################################################
+
+LIST ( APPEND FiniteVolumeLTE_files
+AUSMFluxLTE.cxx
+FiniteVolumeLTE.hh
+SubBCTurbLTE.cxx
+)
+
+LIST ( APPEND FiniteVolumeLTE Framework FiniteVolume NavierStokes LTE )
+
+CF_ADD_PLUGIN_LIBRARY ( FiniteVolumeLTE )
 
 CF_WARN_ORPHAN_FILES()

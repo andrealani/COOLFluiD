@@ -1,4 +1,4 @@
-#include "FiniteVolumeNavierStokes/FiniteVolumeNavierStokes.hh"
+#include "FiniteVolumeNavierStokes/FiniteVolumeLTE.hh"
 #include "FiniteVolumeNavierStokes/SubBCTurb.hh"
 #include "FiniteVolumeNavierStokes/SubInletEulerPvtVTLTE.hh"
 #include "FiniteVolumeNavierStokes/SubInletEulerPvtVT.hh"
@@ -28,13 +28,13 @@ namespace COOLFluiD {
 MethodCommandProvider<SubBCTurb
 		      <SubInletEulerPvtVTLTE, MultiScalarVarSet<Euler2DPuvtLTE>, true>, 
 		      CellCenterFVMData, 
-		      FiniteVolumeNavierStokesModule> 
+		      FiniteVolumeLTEModule> 
 subInletTurb2DMassFlowLTEFVMCCProvider("SubInletTurb2DMassFlowLTEFVMCC");
 
 MethodCommandProvider<SubBCTurb
 		      <SubInletEulerPvtVTLTE, MultiScalarVarSet<Euler3DPvtLTE>, true>, 
 		      CellCenterFVMData, 
-		      FiniteVolumeNavierStokesModule> 
+		      FiniteVolumeLTEModule> 
 subInletTurb3DMassFlowLTEFVMCCProvider("SubInletTurb3DMassFlowLTEFVMCC");
 
 // inlet with given velocity, temperature
@@ -42,14 +42,14 @@ MethodCommandProvider<SubBCTurb
 		      <SubInletEulerPvtVT<MultiScalarVarSet<Euler2DPuvtLTE> >, 
 		       MultiScalarVarSet<Euler2DPuvtLTE>, true>, 
 		      CellCenterFVMData, 
-		      FiniteVolumeNavierStokesModule> 
+		      FiniteVolumeLTEModule> 
 subInletTurb2DUVTLTEFVMCCProvider("SubInletTurb2DVTLTEFVMCC");
       
 MethodCommandProvider<SubBCTurb
 		      <SubInletEulerPvtVT<MultiScalarVarSet<Euler3DPvtLTE> >, 
 		       MultiScalarVarSet<Euler3DPvtLTE>, true>, 
 		      CellCenterFVMData, 
-		      FiniteVolumeNavierStokesModule> 
+		      FiniteVolumeLTEModule> 
 subInletTurb3DVTLTEFVMCCProvider("SubInletTurb3DVTLTEFVMCC");
       
 // outlet with given presssure
@@ -57,7 +57,7 @@ MethodCommandProvider<SubBCTurb
 		      <SubOutletEulerPvt<MultiScalarVarSet<Euler3DPvtLTE> >, 
 		       MultiScalarVarSet<Euler3DPvtLTE>, false>, 
 		      CellCenterFVMData, 
-		      FiniteVolumeNavierStokesModule> 
+		      FiniteVolumeLTEModule> 
 subOutletTurb3DVTLTEFVMCCProvider("SubOutletTurb3DVTLTEFVMCC");
       
 //////////////////////////////////////////////////////////////////////////////
