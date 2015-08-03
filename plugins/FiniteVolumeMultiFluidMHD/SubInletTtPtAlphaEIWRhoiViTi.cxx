@@ -160,9 +160,10 @@ void SubInletTtPtAlphaEIWRhoiViTi::setGhostState(GeometricEntity *const face)
 //        (_dataGhostState)[firstTemperature + 4*ie + 2] = Ag;
 //        (_dataGhostState)[firstTemperature + 4*ie + 3] = Hg;
 //    }
-
-    const bool isLeake = _varSet->getModel()->isLeake();
-
+    
+    //     const bool isLeake = _varSet->getModel()->isLeake();
+    const bool isLeake = true;
+    
   if (isLeake) {
     //cout <<"Entering the Leake's value \n";
     //cout <<"options: \n";
