@@ -17,8 +17,6 @@ ArcJetPhiST.cxx
 ArcJetPhiST.hh
 CurrentProps.cxx
 CurrentProps.hh
-Radiation.cxx
-Radiation.hh
 FiniteVolumeArcJet.hh
 )
 

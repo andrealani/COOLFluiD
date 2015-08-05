@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Numerics_FiniteVolumeArcJet_Radiation_hh
-#define COOLFluiD_Numerics_FiniteVolumeArcJet_Radiation_hh
+#ifndef COOLFluiD_Numerics_FiniteVolumeRadiation_Radiation_hh
+#define COOLFluiD_Numerics_FiniteVolumeRadiation_Radiation_hh
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -25,15 +25,14 @@ namespace COOLFluiD {
 
   namespace Numerics {
 
-    namespace FiniteVolumeArcJet {
+    namespace FiniteVolumeRadiation {
 
 //////////////////////////////////////////////////////////////////////////
 
 /**
- * This class compute the radiative heat transfer for the Arcjet module
+ * This class compute the radiative heat transfer using a Finite Volume algorithm
  *
- * @author Alan Wray (written into C++ by Alejandro Alvarez)
- *
+ * @author Alejandro Alvarez (C++ version of Alan Wray's algorithm)
  */
 class Radiation : public Framework::DataProcessingCom {
 public:
@@ -287,7 +286,7 @@ private: //data
 
 //////////////////////////////////////////////////////////////////////////////
 
-    } // namespace FiniteVolumeArcJet
+    } // namespace FiniteVolumeRadiation
 
   } // namespace Numerics
 
@@ -295,7 +294,7 @@ private: //data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Numerics_FiniteVolumeArcJet_Radiation_hh
+#endif // COOLFluiD_Numerics_FiniteVolumeRadiation_Radiation_hh
 
 
 

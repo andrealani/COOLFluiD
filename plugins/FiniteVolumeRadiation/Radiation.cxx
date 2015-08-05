@@ -22,8 +22,8 @@
 
 #include "FiniteVolume/CellCenterFVM.hh"
 
-#include "FiniteVolumeArcJet/FiniteVolumeArcJet.hh"
-#include "FiniteVolumeArcJet/Radiation.hh"
+#include "FiniteVolumeRadiation/FiniteVolumeRadiation.hh"
+#include "FiniteVolumeRadiation/Radiation.hh"
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -40,11 +40,11 @@ namespace COOLFluiD {
 
   namespace Numerics {
 
-    namespace FiniteVolumeArcJet {
+    namespace FiniteVolumeRadiation {
 
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider<Radiation, DataProcessingData, FiniteVolumeArcJetModule>
+MethodCommandProvider<Radiation, DataProcessingData, FiniteVolumeRadiationModule>
 RadiationProvider("Radiation");
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1132,7 +1132,7 @@ void Radiation::unsetup()
 
 //////////////////////////////////////////////////////////////////////////////
 
-    } // namespace FiniteVolumeArcJet
+    } // namespace FiniteVolumeRadiation
 
   } // namespace Numerics
 
