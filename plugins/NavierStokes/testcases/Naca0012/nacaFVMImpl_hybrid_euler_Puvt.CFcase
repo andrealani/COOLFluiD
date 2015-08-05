@@ -69,7 +69,7 @@ Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
-#Analytic
+
 Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
@@ -103,7 +103,7 @@ Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
 #Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
 
 # with gradientFactor = 0. you get a first order scheme
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 0. 
 
 Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField

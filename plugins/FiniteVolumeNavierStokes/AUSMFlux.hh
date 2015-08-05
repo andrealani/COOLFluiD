@@ -79,9 +79,9 @@ protected:
    * Compute the flux
    */
   virtual void computeMassFluxImpl(const CFuint eulerID,
-				   const CFuint nbEulerEqs,
-				   const std::vector<CFuint>& eulerVarIDs,
-				   RealVector& result);
+           const CFuint nbEulerEqs,
+           const std::vector<CFuint>& eulerVarIDs,
+           RealVector& result);
   
   /**
    * Compute the interface mass flux
@@ -137,7 +137,12 @@ protected:
    * Compute the interface sound speed in the 5th way (this should be chosen for TCNEQ flows)
    */
   void computeSoundSpeed5();
-  
+
+  /**
+   * Compute the interface sound speed in the 6th way to use the analytical jacobian (AUSM+UP)
+   */
+  void computeSoundSpeedForJacobian(); 
+
   /**
    * Applies the function Mach1+(M)
    */
@@ -269,6 +274,9 @@ protected:
   /// flag telling to compute fluxes in a decoupled manner
   bool m_useDecoupled;
   
+  /// sigmoidale parameter
+  CFreal m_coeffSigmoid;
+
 }; // end of class AUSMFlux
 
 //////////////////////////////////////////////////////////////////////////////

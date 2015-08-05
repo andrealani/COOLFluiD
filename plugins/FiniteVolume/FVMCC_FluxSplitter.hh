@@ -145,9 +145,21 @@ protected:
   
   /// compute flux derivative with respect to velocity w
   virtual void dFdW(CFuint side, CFuint iVar, CFreal* row) {}
-  
+    
   /// compute flux derivative with respect to k
   virtual void dFdK(CFuint side, CFuint iVar, CFreal* row) {}
+
+  /// compute flux derivative with respect to rhou
+  virtual void dFdRhoU(CFuint side, CFuint iVar, CFreal* row) {}
+
+      /// compute flux derivative with respect to rhov
+  virtual void dFdRhoV(CFuint side, CFuint iVar, CFreal* row) {}
+
+      /// compute flux derivative with respect to rhow
+  virtual void dFdRhoW(CFuint side, CFuint iVar, CFreal* row) {}
+
+      /// compute flux derivative with respect to rhoE
+  virtual void dFdRhoE(CFuint side, CFuint iVar, CFreal* row) {}
   
 private:
   

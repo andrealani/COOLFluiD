@@ -20,7 +20,7 @@ namespace COOLFluiD {
   namespace MathTools {
 
 //////////////////////////////////////////////////////////////////////////////
-
+// test 
 /// Provides an a set of static functions for various useful operations
 /// @author Andrea Lani
 /// @author Tiago Quintino
@@ -49,7 +49,17 @@ public:
     if (value < 0.0) return -1.0;
     else return 1.0;
   }
-  
+
+  /// Sigmoidal function 
+  /// @param x a real that is the first variable
+  /// @param y a real that is the 2nd variable
+  /// @param K a real wich is the sigmoidal parameter
+  /// @return sig(x,y)
+  static CFreal sigmoid(const CFreal& x,const CFreal& y,const CFreal& K)
+  {
+    return 0.5*(1.0-(1.0+K)*(x-y)/(-std::abs(x-y)-K));
+  }
+
   /**
    * Change the sign of the first argument with the sign
    * of the second argument
@@ -102,9 +112,9 @@ public:
   static CFuint faculty(const CFuint& n)
   {
     if (n<2)
-  		return 1;
-  	else
-  		return (n*faculty(n-1));
+      return 1;
+    else
+      return (n*faculty(n-1));
   }
   
   /// Mixed Product of three vectors
@@ -193,11 +203,11 @@ public:
   /// @pre right-handed orientation is assumed
   template <class T1, class T2, class T3, class T4, class T5>
   static void computeProjectedPoint(const T1& node0, 
-				    const T2& node1, 
-				    const T3& node2, 
-				    const T4& node3, 
-				    T5&  xproj,
-				    CFreal fac = 1.0)
+            const T2& node1, 
+            const T3& node2, 
+            const T4& node3, 
+            T5&  xproj,
+            CFreal fac = 1.0)
   {
     static T5 tnormal(3);
     static T5 v1(3);
@@ -213,10 +223,10 @@ public:
   /// @pre right-handed orientation is assumed
   template <class T1, class T2, class T4, class T5>
   static void computeProjectedPoint(const T2& node0,
-				    const T1& tnormal,
-				    const T4& node3, 
-				    T5&  xproj,
-				    CFreal fac = 1.0)
+            const T1& tnormal,
+            const T4& node3, 
+            T5&  xproj,
+            CFreal fac = 1.0)
   {
     const CFreal t = (innerProd(tnormal,node3) - innerProd(tnormal, node0))/
       innerProd(tnormal, tnormal);
@@ -227,9 +237,9 @@ public:
   /// @pre right-handed orientation is assumed
   template <class T1, class T2, class T3, class T4>
   static CFreal checkPlanarity(const T1& node0, 
-			       const T2& node1, 
-			       const T3& node2, 
-			       const T4& node3)
+             const T2& node1, 
+             const T3& node2, 
+             const T4& node3)
   {
     static T1 v1(3);
     static T1 v2(3);
@@ -242,6 +252,7 @@ public:
     return std::abs(mixedProd(v1,v2,v3,v4));
   }
   
+
 }; // end class MathFunctions
 
 //////////////////////////////////////////////////////////////////////////////

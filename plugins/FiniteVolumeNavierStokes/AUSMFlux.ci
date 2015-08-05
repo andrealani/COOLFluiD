@@ -52,7 +52,10 @@ AUSMFlux<UPDATEVAR>::AUSMFlux(const std::string& name) :
   this->setParameter("useLiouUpdateCoeff",&m_useLiouUpdateCoeff);
   
   m_useDecoupled = false;
-  this->setParameter("useDecoupled",&m_useDecoupled);
+  this->setParameter("useDecoupled",&m_useDecoupled); 
+
+  m_coeffSigmoid = 1e-8; // 1e-16
+  this->setParameter("coeffSigmoid",&m_coeffSigmoid);
 }
       
 /////////////////////////////////////////////////////////////////////////////
@@ -77,6 +80,10 @@ void AUSMFlux<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
   options.template addConfigOption< bool >
     ("useDecoupled",
      "Flag to choose a decoupled algorithm for solving multiple systems.");
+     
+   options.template addConfigOption< CFreal >
+    ("coeffSigmoid",
+     "Coefficient to control the blending of the sigmoidal function.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -96,6 +103,7 @@ void AUSMFlux<UPDATEVAR>::setup()
   m_updateVarSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
   
   const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+
   _rightEv.resize(nbEqs, nbEqs);
   _leftEv.resize(nbEqs, nbEqs);
   _eValues.resize(nbEqs);
@@ -249,6 +257,15 @@ void AUSMFlux<UPDATEVAR>::compute(RealVector& result)
   CFLog(DEBUG_MAX, "AUSMFlux::compute() => R data " << *m_rData << "\n");
   CFLog(DEBUG_MIN, "AUSMFlux::compute() => isPerturb " << getMethodData().isPerturb() 
 	<< ", iVar = " << getMethodData().iPerturbVar() << ", flux = " << result << "\n\n");
+
+
+vector<RealVector>& pdata = getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
+  m_lData = &pdata[LEFT];
+  m_rData = &pdata[RIGHT];
+  CFLog(DEBUG_MED,"## DATA ## rhoL "<< (*m_lData)[UPDATEVAR::PTERM::RHO] << " ## rhoR "<< (*m_lData)[UPDATEVAR::PTERM::RHO] << " ## HL " << (*m_lData)[UPDATEVAR::PTERM::H] << " \n");
+  CFLog(DEBUG_MED,"        ## gammaL  "<< (*m_lData)[UPDATEVAR::PTERM::GAMMA] << " ## gammaL  "<< (*m_lData)[UPDATEVAR::PTERM::GAMMA] << " ## pL " << (*m_lData)[UPDATEVAR::PTERM::P] <<"\n");
+  CFLog(DEBUG_MED,"        ## qnL "<< m_unL << " ## qnR " << m_unR <<"\n");
+  CFLog(DEBUG_MED,"        ## TL " << (*m_lData)[UPDATEVAR::PTERM::T] << "  ## TL " << (*m_lData)[UPDATEVAR::PTERM::T] << "\n");
   
   CFLog(DEBUG_MIN, "AUSMFlux::compute() END\n");
 }
@@ -553,6 +570,9 @@ void AUSMFlux<UPDATEVAR>::computeInterfaceSoundSpeed()
   case 5:
     computeSoundSpeed5();
     break;
+  case 6:
+    computeSoundSpeedForJacobian();
+    break;
   default:
     computeSoundSpeed1();
     break;
@@ -683,63 +703,96 @@ void AUSMFlux<UPDATEVAR>::computeSoundSpeed5()
   const CFreal acRR = aCritRR2/max(sqrt(aCritRR2), -this->m_unR);
   this->m_a12 = min(acLL, acRR);
 }
-      
+
 //////////////////////////////////////////////////////////////////////////////
 
-// template <class UPDATEVAR>
-// void AUSMFlux<UPDATEVAR>::computeLeftJacobian()
-// {  
-//   using namespace std;
-//   using namespace COOLFluiD::Framework;
-//   using namespace COOLFluiD::Common;
-  
-//   CellCenterFVMData& data = this->getMethodData(); 
-//   GeometricEntity& face = *data.getCurrentFace();
-//   State *const leftState = face.getState(LEFT);
-//   RealVector& pData = PhysicalModelStack::getActive()->getImplementor()->
-//     getConvectiveTerm()->getPhysicalData();
-//   getMethodData().getUpdateVar()->computePhysicalData(*leftState, pData);
-//   getMethodData().getSolutionVar()->computeProjectedJacobian(data.getUnitNormal(), _jacob); 
-//   _jLeft = 0.5*(_jacob + _absJacob);
-  
-//   // computeTransformMatrix(leftState);
-//   // _lFluxJacobian = _jLeft*_jacobDummy;
-  
-//   SafePtr<VarSetMatrixTransformer>  vs = 
-//     getMethodData().getUpdateToSolutionInUpdateMatTrans();
-//   vs->setMatrix(*leftState);
-//   const RealMatrix& dUdP = *vs->getMatrix();  
-//   _lFluxJacobian = _jLeft*dUdP;
-// }
-      
-// //////////////////////////////////////////////////////////////////////////////
+template <class UPDATEVAR>
+void AUSMFlux<UPDATEVAR>::computeSoundSpeedForJacobian()
+{
+  using namespace std;
+  using namespace COOLFluiD::MathTools; //importing MathFunctions::sigmoidal
 
-// template <class UPDATEVAR>
-// void AUSMFlux<UPDATEVAR>::computeRightJacobian()
-// { 
-//   using namespace std;
-//   using namespace COOLFluiD::Framework;
-//   using namespace COOLFluiD::Common;
+  // Getting state value
+  const CFreal HL          = (*this->m_lData)[UPDATEVAR::PTERM::H];
+  const CFreal HR          = (*this->m_rData)[UPDATEVAR::PTERM::H];
+  const CFreal gammaL      = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaR      = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
+  const CFreal qnL         = this->m_unL;
+  const CFreal qnR         = this->m_unR;
+  const CFreal Ksig        = this->m_coeffSigmoid;
+
+  const CFreal aCritL       = std::sqrt(2.0*(gammaL-1.0)/(gammaL+1.0)*HL);
+  const CFreal aCritR       = std::sqrt(2.0*(gammaR-1.0)/(gammaR+1.0)*HR);
   
-//   CellCenterFVMData& data = this->getMethodData(); 
-//   GeometricEntity& face = *data.getCurrentFace();
-//   State *const rightState = face.getState(RIGHT);
-//   RealVector& pData = PhysicalModelStack::getActive()->getImplementor()->
-//     getConvectiveTerm()->getPhysicalData();
-//   getMethodData().getUpdateVar()->computePhysicalData(*rightState, pData);
-//   getMethodData().getSolutionVar()->computeProjectedJacobian(data.getUnitNormal(), _jacob);
-//   _jRight = 0.5*(_jacob - _absJacob);
+  const CFreal asigL        = MathFunctions::sigmoid(aCritL,qnL,Ksig)*aCritL + (1.0 - MathFunctions::sigmoid(aCritL,qnL,Ksig))*qnL;
+  const CFreal asigR        = MathFunctions::sigmoid(aCritR,-qnR,Ksig)*aCritR - (1.0 - MathFunctions::sigmoid(aCritR,-qnR,Ksig))*qnR;
   
-//   // computeTransformMatrix(rightState);
-//   //_rFluxJacobian = _jRight*_jacobDummy;
+  const CFreal ahatL        = aCritL*aCritL/std::max(aCritL,qnL); 
+  const CFreal ahatR        = aCritR*aCritR/std::max(aCritR,-qnR); 
+
+  /// da12dVar ---------------------------------------------
+  const CFreal a12 = (1.0 - MathFunctions::sigmoid(ahatL,ahatR,Ksig))*aCritL*aCritL/asigL + MathFunctions::sigmoid(ahatL,ahatR,Ksig)*aCritR*aCritR/asigR;
+
+  m_a12 = a12;
+}  
+
+//////////////////////////////////////////////////////////////////////////////
+
+/*
+template <class UPDATEVAR>
+void AUSMFlux<UPDATEVAR>::computeLeftJacobian()
+{  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  CellCenterFVMData& data = this->getMethodData(); 
+  GeometricEntity& face = *data.getCurrentFace();
+  State *const leftState = face.getState(LEFT);
+  RealVector& pData = PhysicalModelStack::getActive()->getImplementor()->
+    getConvectiveTerm()->getPhysicalData();
+  getMethodData().getUpdateVar()->computePhysicalData(*leftState, pData);
+  getMethodData().getSolutionVar()->computeProjectedJacobian(data.getUnitNormal(), _jacob); 
+  _jLeft = 0.5*(_jacob + _absJacob);
   
-//   SafePtr<VarSetMatrixTransformer>  vs = 
-//     getMethodData().getUpdateToSolutionInUpdateMatTrans();
-//   vs->setMatrix(*rightState);
-//   const RealMatrix& dUdP = *vs->getMatrix();
-//   _rFluxJacobian = _jRight*dUdP;
-// }
-      
+  // computeTransformMatrix(leftState);
+  // _lFluxJacobian = _jLeft*_jacobDummy;
+  
+  SafePtr<VarSetMatrixTransformer>  vs = 
+    getMethodData().getUpdateToSolutionInUpdateMatTrans();
+  vs->setMatrix(*leftState);
+  const RealMatrix& dUdP = *vs->getMatrix();  
+  _lFluxJacobian = _jLeft*dUdP;
+}
+   */   
+// //////////////////////////////////////////////////////////////////////////////
+/*
+template <class UPDATEVAR>
+void AUSMFlux<UPDATEVAR>::computeRightJacobian()
+{ 
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+
+  CellCenterFVMData& data = this->getMethodData(); 
+  GeometricEntity& face = *data.getCurrentFace();
+  State *const rightState = face.getState(RIGHT);
+  RealVector& pData = PhysicalModelStack::getActive()->getImplementor()->
+    getConvectiveTerm()->getPhysicalData();
+  getMethodData().getUpdateVar()->computePhysicalData(*rightState, pData);
+  getMethodData().getSolutionVar()->computeProjectedJacobian(data.getUnitNormal(), _jacob);
+  _jRight = 0.5*(_jacob - _absJacob);
+  
+  // computeTransformMatrix(rightState);
+  //_rFluxJacobian = _jRight*_jacobDummy;
+  
+  SafePtr<VarSetMatrixTransformer>  vs = 
+    getMethodData().getUpdateToSolutionInUpdateMatTrans();
+  vs->setMatrix(*rightState);
+  const RealMatrix& dUdP = *vs->getMatrix();
+  _rFluxJacobian = _jRight*dUdP;
+}
+*/
 // //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
@@ -769,6 +822,7 @@ void AUSMFlux<UPDATEVAR>::computeLinearizedAbsJacob()
   // // abs of the jacobian
   // _absJacob = _rightEv*(_absEvalues*_leftEv);
 }
+
 
 //////////////////////////////////////////////////////////////////////////////
 

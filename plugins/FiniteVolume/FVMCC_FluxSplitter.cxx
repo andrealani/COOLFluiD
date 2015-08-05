@@ -91,6 +91,10 @@ void FVMCC_FluxSplitter::setup()
   mapVars["K"]      = &FVMCC_FluxSplitter::dFdK;  
   mapVars["Omega"]  = &FVMCC_FluxSplitter::dFdK; 
   mapVars["Nuitil"] = &FVMCC_FluxSplitter::dFdK;
+  mapVars["rhoU"]   = &FVMCC_FluxSplitter::dFdRhoU;
+  mapVars["rhoV"]   = &FVMCC_FluxSplitter::dFdRhoV;
+  mapVars["rhoW"]   = &FVMCC_FluxSplitter::dFdRhoW;
+  mapVars["rhoE"]   = &FVMCC_FluxSplitter::dFdRhoE;
   
   // here functions computing flux derivatives are stored in the right order, ready to be applied
   const vector<string>& updateVars = this->getMethodData().getUpdateVar()->getVarNames();

@@ -50,6 +50,10 @@ public:
     AUSMFlux<UPDATEVAR>::configure(args);
   }
   
+  // /*Set up private data*/
+
+  virtual void setup();
+
 protected:
 
   /**
@@ -61,13 +65,30 @@ protected:
    * Compute the interface pressure flux
    */
   virtual void computePressureFlux();
+
+  /**
+   * New function to get data for the analytical Jacobian
+   */
+  virtual void ComputeMassFluxForJacobian();
+  virtual void UpdateCoeffForJacobian();
+  virtual void dUpdateCoeffdVar();
   
+  virtual CFreal getRgas(); //hardcode of the universal gas constant
+
+  virtual CFreal getMMass(); //hardcode of the molecular mass of the gas
+
+  /**
+   * Compute the flux respectively to variable Var
+   */
+  virtual void ComputeFluxDerivativeWithRespectToVariable(CFreal* row,CFuint iVar);
+
+
   /// Correct the given Mach number
   virtual CFreal correctMachInf(CFreal oldMach) const
   {
     return oldMach;
   }
-  
+
   /// compute flux derivative with respect to pressure
   virtual void dFdP(CFuint side, CFuint iVar, CFreal* row);
   
@@ -88,6 +109,18 @@ protected:
   
   /// compute flux derivative with respect to k
   virtual void dFdK(CFuint side, CFuint iVar, CFreal* row);
+
+  /// compute flux derivative with respect to rhoU
+  virtual void dFdRhoU(CFuint side, CFuint iVar, CFreal* row);
+
+  /// compute flux derivative with respect to rhoV
+  virtual void dFdRhoV(CFuint side, CFuint iVar, CFreal* row);
+
+  /// compute flux derivative with respect to rhoW
+  virtual void dFdRhoW(CFuint side, CFuint iVar, CFreal* row);
+
+  /// compute flux derivative with respect to rhoE
+  virtual void dFdRhoE(CFuint side, CFuint iVar, CFreal* row);
   
 private:
   
@@ -114,7 +147,31 @@ private:
   
   /// beta  coefficient
   CFreal m_beta;
-  
+
+  /// conservative's variable vector needed in the jacobian
+  RealVector m_Cons;
+
+  /// derivative of the conservative's variable vector needed in the jacobian
+  RealVector m_dConsdVar;
+
+  /// derivative of the speed (u,v,w) with respect to a certain variable
+  RealVector m_dVLdVar;
+  RealVector m_dVRdVar;
+
+  /// derivative of some variable to compute the Jacobian
+  CFreal m_dqnLdVar;
+  CFreal m_dqnRdVar;
+
+  CFreal m_dhLdVar;
+  CFreal m_dhRdVar;
+
+  CFreal m_drhoLdVar;
+  CFreal m_drhoRdVar;
+
+  CFreal m_dpLdVar;
+  CFreal m_dpRdVar;
+
+
 }; // end of class AUSMPlusUpFlux
 
 //////////////////////////////////////////////////////////////////////////////
