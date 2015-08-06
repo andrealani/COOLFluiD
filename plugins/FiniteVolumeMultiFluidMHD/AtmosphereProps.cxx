@@ -65,8 +65,17 @@ AtmosphereProps::AtmosphereProps(const std::string& name) :
   socket_nuIon("nuIon"),
   socket_nuRec("nuRec"),
   socket_nu_in("nu_in"),
+  socket_jxB_x("jxB_x"),
+  socket_jxB_y("jxB_y"),
+  socket_jxB_z("jxB_z"),
+  socket_jxB("jxB"),
+  socket_Jx("Jx"),
+  socket_Jy("Jy"),
+  socket_Jz("Jz"),
+  socket_Jtot("Jtot"),
   m_gradPi(),
   m_gradPn(),
+  m_curlB(),
   m_normal()
 
 {
@@ -91,6 +100,14 @@ AtmosphereProps::providesSockets()
   result.push_back(&socket_nuIon);
   result.push_back(&socket_nuRec);
   result.push_back(&socket_nu_in);
+  result.push_back(&socket_Jx);
+  result.push_back(&socket_Jy);
+  result.push_back(&socket_Jz);
+  result.push_back(&socket_Jtot);
+  result.push_back(&socket_jxB_x);
+  result.push_back(&socket_jxB_y);
+  result.push_back(&socket_jxB_z);
+  result.push_back(&socket_jxB);
   
   return result;
 }
@@ -146,6 +163,38 @@ void AtmosphereProps::setup()
   nu_in.resize(nbCells);
   nu_in = 0.0;
 
+  DataHandle<CFreal> Jx = socket_Jx.getDataHandle();
+  Jx.resize(nbCells);
+  Jx = 0.0;
+
+  DataHandle<CFreal> Jy = socket_Jy.getDataHandle();
+  Jy.resize(nbCells);
+  Jy = 0.0;
+
+  DataHandle<CFreal> Jz = socket_Jz.getDataHandle();
+  Jz.resize(nbCells);
+  Jz = 0.0;
+
+  DataHandle<CFreal> Jtot = socket_Jtot.getDataHandle();
+  Jtot.resize(nbCells);
+  Jtot = 0.0;
+
+  DataHandle<CFreal> jxB_x = socket_jxB_x.getDataHandle();
+  jxB_x.resize(nbCells);
+  jxB_x = 0.0;
+
+  DataHandle<CFreal> jxB_y = socket_jxB_y.getDataHandle();
+  jxB_y.resize(nbCells);
+  jxB_y = 0.0;
+
+  DataHandle<CFreal> jxB_z = socket_jxB_z.getDataHandle();
+  jxB_z.resize(nbCells);
+  jxB_z = 0.0;
+
+  DataHandle<CFreal> jxB = socket_jxB.getDataHandle();
+  jxB.resize(nbCells);
+  jxB = 0.0;
+
   m_geoBuilder.setup();
 
 // AAL: To add in the future a chemical library to compute this
@@ -155,6 +204,7 @@ void AtmosphereProps::setup()
   
   m_gradPi.resize(DIM, 0.);
   m_gradPn.resize(DIM, 0.);
+  m_curlB.resize(3, 0.);
   m_normal.resize(DIM, 0.);
 }
 
@@ -178,6 +228,15 @@ void AtmosphereProps::execute()
   DataHandle<CFreal> nuIon = socket_nuIon.getDataHandle();
   DataHandle<CFreal> nuRec = socket_nuRec.getDataHandle();
   DataHandle<CFreal> nu_in = socket_nu_in.getDataHandle();
+
+  DataHandle<CFreal> Jx = socket_Jx.getDataHandle();
+  DataHandle<CFreal> Jy = socket_Jy.getDataHandle();
+  DataHandle<CFreal> Jz = socket_Jz.getDataHandle();
+  DataHandle<CFreal> Jtot = socket_Jtot.getDataHandle();
+  DataHandle<CFreal> jxB_x = socket_jxB_x.getDataHandle();
+  DataHandle<CFreal> jxB_y = socket_jxB_y.getDataHandle();
+  DataHandle<CFreal> jxB_z = socket_jxB_z.getDataHandle();
+  DataHandle<CFreal> jxB = socket_jxB.getDataHandle();
   
   const CFuint DIM = 2; //AAL: to generalize to 3D in the future
   
@@ -198,6 +257,7 @@ void AtmosphereProps::execute()
     const CFuint elemID = currCell->getID();
     m_gradPi = 0.;
     m_gradPn = 0.;
+    m_curlB  = 0.;
     
     State *currState = currCell->getState(0);
 
@@ -227,6 +287,9 @@ void AtmosphereProps::execute()
       for (CFuint d = 0; d < DIM; ++d) {
         m_normal[d] = normals[startID+d]*factor;
       }
+      const CFreal nx = m_normal[0];
+      const CFreal ny = m_normal[1];
+      const CFreal nz = 0; //AAL: Default 2D
 
       for (CFuint n = 0; n < nbFaceNodes; ++n) {
         const CFuint nodeID = face->getNode(n)->getLocalID();
@@ -248,17 +311,46 @@ void AtmosphereProps::execute()
           const CFreal PnNodal = getNeutralPressure(rhonNode, TnNode);
 
           m_gradPi[d] += nd*PiNodal*ovNbFaceNodes;
-          m_gradPn[d] += nd*PnNodal*ovNbFaceNodes;
+          m_gradPn[d] += nd*PnNodal*ovNbFaceNodes;  
         } //Loop over the dimension
+        const CFuint BxID = 0;
+        const CFuint ByID = 1;
+        const CFuint BzID = 2;
+
+        const CFreal BxNode = nodalState[BxID];
+        const CFreal ByNode = nodalState[ByID];
+        const CFreal BzNode = nodalState[BzID];
+
+        m_curlB[0] += (-nz*ByNode + ny*BzNode)*ovNbFaceNodes;
+        m_curlB[1] += (-nx*BzNode + nz*BxNode)*ovNbFaceNodes;
+        m_curlB[2] += (-ny*BxNode + nx*ByNode)*ovNbFaceNodes;
+
       } //Loop over the nodes
     } //Loop over the faces
-   
 
     m_gradPi *= ovVolume;
     m_gradPn *= ovVolume;
+    m_curlB  *= ovVolume;
     
     gradPi[iCell] = m_gradPi[1];
     gradPn[iCell] = m_gradPn[1];
+
+    const CFreal ovmu0 = 1./1.2566370614e-6; //mu0 is the magnetic permeability in units [H/m], source Wikipedia
+    const CFreal Bx = (*currState)[0];
+    const CFreal By = (*currState)[1];
+    const CFreal Bz = (*currState)[2];
+
+    Jx[iCell]   = m_curlB[0]*ovmu0;
+    Jy[iCell]   = m_curlB[1]*ovmu0;
+    Jz[iCell]   = m_curlB[2]*ovmu0;
+    Jtot[iCell] = std::sqrt(Jx[iCell]*Jx[iCell] + Jy[iCell]*Jy[iCell]
+                + Jz[iCell]*Jz[iCell]);
+
+    jxB_x[iCell] = Jy[iCell]*Bz - Jz[iCell]*By;
+    jxB_y[iCell] = Jz[iCell]*Bx - Jx[iCell]*Bz;
+    jxB_z[iCell] = Jx[iCell]*By - Jy[iCell]*Bx;
+    jxB[iCell]   = std::sqrt(jxB_x[iCell]*jxB_x[iCell] + jxB_y[iCell]*jxB_y[iCell]
+                + jxB_z[iCell]*jxB_z[iCell]);
 
     nuIon[iCell] = nu_Ion;
     nuRec[iCell] = nu_Rec;
@@ -318,10 +410,11 @@ void AtmosphereProps::computeChemFreqs(const Framework::State* currState,
 
   //if(correctedChemistry) {
     const CFreal factor = 0.6;
-    const CFreal beta = 158000*factor/Te;
+    const CFreal beta = 158000*factor/Ti;
     const CFreal I = 2.34e-14*std::pow(beta,-0.5)*std::exp(-beta);
 
     nu_Ion = ne*I;
+
 //  }
 //  else {
 //    const CFreal A = 2.91e-14;

@@ -151,7 +151,31 @@ private: //data
   
   /// storage of the z-component of Electric Current
   Framework::DataSocketSource <CFreal> socket_nu_in;
+
+  /// storage of Lorenz force
+  Framework::DataSocketSource <CFreal> socket_jxB_x;
+
+  /// storage of Lorenz force
+  Framework::DataSocketSource <CFreal> socket_jxB_y;
+
+  /// storage of Lorenz force
+  Framework::DataSocketSource <CFreal> socket_jxB_z;
+
+  /// storage of Lorenz force
+  Framework::DataSocketSource <CFreal> socket_jxB;
+
+  /// storage of the electric current in x
+  Framework::DataSocketSource <CFreal> socket_Jx;
+
+  /// storage of the electric current in y
+  Framework::DataSocketSource <CFreal> socket_Jy;
   
+  /// storage of the electric current in z
+  Framework::DataSocketSource <CFreal> socket_Jz;
+
+  /// storage of the magnitude of the electric current
+  Framework::DataSocketSource <CFreal> socket_Jtot;
+    
   /// pointer to the physical-chemical library In case in the future we take
   /// the cross-sections from library
   //Common::SafePtr<Framework::PhysicalChemicalLibrary> m_library;
@@ -167,6 +191,9 @@ private: //data
 
   /// gradients of pn
   RealVector m_gradPn;
+
+  /// curl of B
+  RealVector m_curlB;
   
   /// temporary normal to the face
   RealVector m_normal;  
