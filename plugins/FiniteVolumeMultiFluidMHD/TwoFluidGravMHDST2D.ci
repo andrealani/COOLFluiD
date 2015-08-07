@@ -376,7 +376,7 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeMassReactionsEnergySourceTerm()
     const CFreal I = 2.34e-14*std::pow(beta,-0.5)*std::exp(-beta);
 
     nuIon = ne*I;
-//    CFout<< std::setprecision(9) <<"nuIon = "<< nuIon <<"\n";
+    //CFout<< std::setprecision(9) <<"nuIonSource = "<< nuIon <<"\n";
 //  }
 //  else {
 //    const CFreal A = 2.91e-14;
