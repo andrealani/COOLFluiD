@@ -202,18 +202,19 @@ void SubInletUVTEIWRhoiViTi::setGhostState(GeometricEntity *const face)
 
    (*ghostState)[endEM + nbSpecies + 2*i] = 2.*Ui -(*innerState)[endEM + nbSpecies + 2*i];
    (*ghostState)[endEM + nbSpecies + 2*i + 1] = 2.*Vi  -(*innerState)[endEM + nbSpecies + 2*i + 1];
+
 //    cf_assert(Vi == 0.);
    
 //    cf_assert((*ghostState)[endEM + nbSpecies + 2*i + 1] + (*innerState)[endEM + nbSpecies + 2*i + 1] != 0.);
    
-//    std::cout << "SubInletUVTEIWRhoiViTi::setGhostState => (*ghostState) = "<<    (*ghostState)[endEM + nbSpecies + 2*i + 1] <<"\n"; 
-//    std::cout << "SubInletUVTEIWRhoiViTi::setGhostState => (*innerState) = "<<    (*innerState)[endEM + nbSpecies + 2*i + 1] <<"\n"; 
+    //std::cout << "SubInletUVTEIWRhoiViTi::setGhostState => (*ghostState) = "<<    (*ghostState)[endEM + nbSpecies + 2*i + 1] <<"\n";
+    //std::cout << "SubInletUVTEIWRhoiViTi::setGhostState => (*innerState) = "<<    (*innerState)[endEM + nbSpecies + 2*i + 1] <<"\n";
    
  } 
 //   std::cout << "SubInletUVTEIWRhoiViTi::setGhostState after Velocities" <<"\n"; 
  //set the Temperatures
  for (CFuint i = 0 ; i < nbSpecies; i++){
-   const CFreal Ti = _uvT[2*nbSpecies + i];   
+   const CFreal Ti = _uvT[2*nbSpecies + i];
    (*ghostState)[endEM + nbSpecies + 2*nbSpecies + i] = 2.*Ti - (*innerState)[endEM + nbSpecies + 2*nbSpecies + i];
    cf_assert(2.*Ti - (*innerState)[endEM + nbSpecies + 2*nbSpecies + i] > 0.); 
  }  
