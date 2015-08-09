@@ -37,6 +37,7 @@ my @libraries = ( "mpi",
                   "cblas",
                   "google_perftools",
                   "mutationpp",
+		  "plato",
                   "cuda");
 
 # constants
@@ -88,6 +89,7 @@ my %default_options = (
     'withcuda'        => "",
     'withcurl'        => 1,
     'with_mutationpp' => 0,
+    'with_plato'      => 0,
     'withdocs'        => "",
     'mpi_extra_libs'  => "",
     'nofortran'       => "",
@@ -142,6 +144,9 @@ my %default_options = (
     'mutationpp_dir'       => "",
     'mutationpp_librarydir' => "/usr/lib64",
     'mutationpp_includedir' => "/usr/include",
+    'plato_dir'       => "",
+    'plato_librarydir' => "/usr/lib64",
+    'plato_includedir' => "/usr/include",
     'command'              => "",
     'single_precision'     => 0,
     'with_longint'         => 0
@@ -772,6 +777,8 @@ sub setup_deps()
 			"gsl_librarydir",
                         "mutationpp_librarydir",
                         "mutationpp_includedir",
+			"plato_librarydir",
+                        "plato_includedir",
 			"lapack_libraries" );
   
   foreach (@dep_variables) {  add_cmake_option($_); }
@@ -903,6 +910,7 @@ sub setup_cfgoptions()
   setup_option('withcuda',            'CF_ENABLE_CUDA');
   setup_option('withcurl',            'CF_ENABLE_CURL');
   setup_option('with_mutationpp',     'CF_ENABLE_MUTATIONPP');
+  setup_option('with_plato',          'CF_ENABLE_PLATO');
   setup_option('withdocs',            'CF_ENABLE_DOCS');
   setup_option('explicit_templates',  'CF_ENABLE_EXPLICIT_TEMPLATES');
   setup_option('with_testcases',      'CF_ENABLE_TESTCASES');

@@ -285,6 +285,13 @@ FIND_PACKAGE(Mutationpp)    # mutation++ library
 ADD_DEFINITIONS  ( -DCF_HAVE_MUTATIONPP )
 ENDIF()
 
+# PLATO
+IF ( CF_ENABLE_PLATO )
+FIND_PACKAGE(PLATO)    # PLATO library
+# define CF_HAVE_PLATO only if enabled to do so
+ADD_DEFINITIONS  ( -DCF_HAVE_PLATO )
+ENDIF()
+
 # CUDA
 IF ( CF_ENABLE_CUDA )
 FIND_PACKAGE(CUDA)  # CUDA environment
