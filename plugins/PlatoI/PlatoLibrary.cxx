@@ -100,13 +100,17 @@ void PlatoLibrary::setup()
 void PlatoLibrary::setLibrarySequentially()
 { 
   const char* solver = "COOLFluiD";
+  
   const size_t lsolver   = strlen(solver);
   const size_t lmixture  = strlen(_mixtureName.c_str());
   const size_t lreaction = strlen(_reactionName.c_str());
   const size_t ltransfer = strlen(_transfName.c_str());
   
-  const char* basePath = getenv("PLATO_DIR");
-  m_libPath = string(basePath) + "/database"; 
+  if (m_libPath == "") {
+    const char* basePath = getenv("PLATO_DIR");
+    m_libPath = string(basePath) + "/database";
+  }
+  
   const size_t lpath = strlen(m_libPath.c_str());
   
   /*Initialize the library*/
