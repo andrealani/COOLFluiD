@@ -101,6 +101,11 @@ public:
   void computeSpitzerResistivity();
 
  /*
+ * YM: Compute the charge exchange momentum and energy source terms
+ */
+  void computeChargeExchangeTerms();
+
+ /*
  * YM: Compute the gravity momentum and energy source terms
  */
   void computegravityTerms();
@@ -160,6 +165,12 @@ protected: // data
 
   ///YGM: Gravity Energy Source term
   RealVector _gravityEnergySource;
+
+  ///YGM: Vector storing the Charge Exchage Source terms in the Momentum eqn
+  RealVector _chargexMomentumSource;  
+  
+  ///YGM: Vector storing the Charge Exchage Source terms in the Energy eqn
+  RealVector _chargexEnergySource; 
   
   ///Vector storing the Collisional Energy Source term
   RealVector _collEnergySource;  
@@ -194,6 +205,9 @@ private:
 
   /// flag for collisionall terms
   bool _collisionalTerms;
+
+  /// flag for charge exchange terms
+  bool _chargeExchangeTerms;
 
   /// flag for gravity terms
   bool _gravityTerms;
