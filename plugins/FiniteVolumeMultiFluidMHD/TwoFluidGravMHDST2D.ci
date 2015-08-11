@@ -34,9 +34,11 @@ TwoFluidGravMHDST2D<UPDATEVAR>::TwoFluidGravMHDST2D(const std::string& name) :
   _dummyGradients(),
   _massSource(),
   _collMomentumSource(),
+  _collEnergySource(),
+  _chargexMomentumSource(),
+  _chargexEnergySource(),
   _gravityMomentumSource(),
   _gravityEnergySource(),
-  _collEnergySource(),
   _ReactEnergySource(),
   _Btotal(),
   _Etotal()
@@ -51,6 +53,9 @@ TwoFluidGravMHDST2D<UPDATEVAR>::TwoFluidGravMHDST2D(const std::string& name) :
 
   _chemicalReactions = true;
   setParameter("ChemicalReactions",&_chemicalReactions);
+
+  _chargeExchangeTerms = true;
+  setParameter("ChargeExchangeTerms",&_chargeExchangeTerms);
 
   _collisionalTerms = true;
   setParameter("CollisionalTerms",&_collisionalTerms);
@@ -96,6 +101,8 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::defineConfigOptions(Config::OptionList& opt
      ("ChemicalReactions", "flag to set Chemical reactions");
  options.template addConfigOption< bool >
      ("CollisionalTerms", "flag to set Collisional terms");
+options.template addConfigOption< bool >
+     ("ChargeExchangeTerms", "flag to set Charge Exchange terms");
  options.template addConfigOption< bool >
      ("GravityTerms", "flag to set Gravity terms");
  options.template addConfigOption< bool >
@@ -152,7 +159,9 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::setup()
   _J.resize(3);
   _massSource.resize(2);
   _collMomentumSource.resize(4);
-  _gravityMomentumSource.resize(4);
+  _gravityMomentumSource.resize(4);  
+  _chargexMomentumSource.resize(4);
+  _chargexEnergySource.resize(2);
   _gravityEnergySource.resize(2);
   _collEnergySource.resize(2);
   _ReactEnergySource.resize(2);
@@ -220,6 +229,7 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
     // Compute the source terms
     computeMassReactionsEnergySourceTerm();
     computeCollisionalMomentumEnergy();
+    computeChargeExchangeTerms();
     computegravityTerms();
     
     /// FLUID EQUATIONS
@@ -254,7 +264,13 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
       CFreal collMomentumSource_iy = _collMomentumSource[1];
       CFreal collMomentumSource_nx = _collMomentumSource[2];
       CFreal collMomentumSource_ny = _collMomentumSource[3];
-        
+
+     //YGM: added charge exchage terms:
+      CFreal chargexMomentumSource_ix = _chargexMomentumSource[0];
+      CFreal chargexMomentumSource_iy = _chargexMomentumSource[1];      
+      CFreal chargexMomentumSource_nx = _chargexMomentumSource[2];
+      CFreal chargexMomentumSource_ny = _chargexMomentumSource[3];
+     
       //YGM: added gravity terms for momentum equations:
       CFreal gravityMomentumSource_ix = _gravityMomentumSource[0];
       CFreal gravityMomentumSource_iy = _gravityMomentumSource[1];
@@ -272,6 +288,14 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
         collMomentumSource_ny = 0.;
       }
 
+     //YM: for future
+      if (_chargeExchangeTerms == false){
+        chargexMomentumSource_ix = 0.;
+        chargexMomentumSource_iy = 0.;
+        chargexMomentumSource_nx = 0.;
+        chargexMomentumSource_ny = 0.;
+      }
+
       if (_gravityTerms == false){
         gravityMomentumSource_ix = 0.;
         gravityMomentumSource_iy = 0.;
@@ -281,11 +305,11 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
       //cout << "gravityMomentumSource_ny = " << gravityMomentumSource_ny <<"\n";
       //cout << "gravityMomentumSource_iy = " << gravityMomentumSource_iy <<"\n";
 
-      source[10] = emMomentumX + collMomentumSource_ix + GammaIon_i*mi*un - GammaRec_n*mi*ui + gravityMomentumSource_ix; //Ions X momentum
-      source[11] = emMomentumY + collMomentumSource_iy + GammaIon_i*mi*vn - GammaRec_n*mi*vi + gravityMomentumSource_iy; //Ions Y momentum
+      source[10] = emMomentumX + collMomentumSource_ix + chargexMomentumSource_ix + GammaIon_i*mi*un - GammaRec_n*mi*ui + gravityMomentumSource_ix; //Ions X momentum
+      source[11] = emMomentumY + collMomentumSource_iy + chargexMomentumSource_iy + GammaIon_i*mi*vn - GammaRec_n*mi*vi + gravityMomentumSource_iy; //Ions Y momentum
       
-      source[12] = collMomentumSource_nx - GammaIon_i*mi*un + GammaRec_n*mi*ui + gravityMomentumSource_nx; //Neutrals X momentum
-      source[13] = collMomentumSource_ny - GammaIon_i*mi*vn + GammaRec_n*mi*vi + gravityMomentumSource_ny;//Neutrals Y momentum
+      source[12] = collMomentumSource_nx - GammaIon_i*mi*un + chargexMomentumSource_nx + GammaRec_n*mi*ui + gravityMomentumSource_nx; //Neutrals X momentum
+      source[13] = collMomentumSource_ny - GammaIon_i*mi*vn + chargexMomentumSource_ny + GammaRec_n*mi*vi + gravityMomentumSource_ny;//Neutrals Y momentum
          
 
       //ENERGY
@@ -301,6 +325,11 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
       CFreal gravityEnergySource_i = _gravityEnergySource[0]; //ions
       CFreal gravityEnergySource_n = _gravityEnergySource[1]; //neutrals
 
+      //YGM: added work by charge exchane
+      CFreal chargexEnergySource_i = _chargexEnergySource[0]; //ions
+      CFreal chargexEnergySource_n = _chargexEnergySource[1]; //neutrals
+
+
       if (_chemicalReactions == false){
         _ReactEnergySource[0] = 0.;
         _ReactEnergySource[1] = 0.;
@@ -315,13 +344,21 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
         _collEnergySource[1] = 0.;
       }
 
+     //YM: for future
+      if (_chargeExchangeTerms == false){
+        _chargexEnergySource[0] = 0.;
+        _chargexEnergySource[1] = 0.;
+        chargexEnergySource_i = 0.;
+        chargexEnergySource_n = 0.;
+     }
+
       if (_gravityTerms == false){
         gravityEnergySource_i = 0.;
         gravityEnergySource_n = 0.;
       }
 
-      source[14] = emEnergy + collWorki + _collEnergySource[0] + _ReactEnergySource[0] + kinEnerIon_i - kinEnerIon_e - kinEnerRec_n + gravityEnergySource_i; //Ions Energy
-      source[15] = collWorkn + _collEnergySource[1] + _ReactEnergySource[1] - kinEnerIon_i + kinEnerRec_n + gravityEnergySource_n; //Neutrals Energy
+      source[14] = emEnergy + collWorki + _collEnergySource[0] + chargexEnergySource_i + _ReactEnergySource[0] + kinEnerIon_i - kinEnerIon_e - kinEnerRec_n + gravityEnergySource_i; //Ions Energy
+      source[15] = collWorkn + _collEnergySource[1] + chargexEnergySource_n + _ReactEnergySource[1] - kinEnerIon_i + kinEnerRec_n + gravityEnergySource_n; //Neutrals Energy
 
       // Write the sockets
       //if (!this->getMethodData().isPerturb()) { // Condition to avoid writing when the source is perturbed
@@ -523,7 +560,6 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeCollisionalMomentumEnergy()
   _collEnergySource[0] = Qin_i;	  // IONS
   _collEnergySource[1] = -Qin_i;  // NEUTRALS
   
-  
 //   if (std::abs(Qin_i) > 1e6){
 //     std::cout <<"kinEnergin_i = "<< kinEnergin_i <<"\n";
 //     std::cout <<"intEnergin_i = "<< intEnergin_i <<"\n";
@@ -535,6 +571,78 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeCollisionalMomentumEnergy()
 //   }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void TwoFluidGravMHDST2D<UPDATEVAR>::computeChargeExchangeTerms()
+{
+  
+  //YGM: charge exchange terms in the momentum
+  const CFuint firstDensity = _varSet->getModel()->getFirstScalarVar(0);
+  const CFreal firstVelocity = _varSet->getModel()->getFirstScalarVar(1);
+  const CFuint firstTemperature = _varSet->getModel()->getFirstScalarVar(2);
+  
+  // particles density, temperature
+  const CFreal rho = _physicalData[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoi = rho*_physicalData[firstDensity]; 			//ions density
+  const CFreal rhon = rho*_physicalData[firstDensity + 1]; 		//neutrals density
+  
+  const CFreal Ti = _physicalData[firstTemperature];
+  const CFreal Tn = _physicalData[firstTemperature + 4];
+  
+  const CFreal ui = _physicalData[firstVelocity];
+  const CFreal vi = _physicalData[firstVelocity + 1]; 
+  const CFreal un = _physicalData[firstVelocity + 2];
+  const CFreal vn = _physicalData[firstVelocity + 3]; 
+  
+  // particle mass 
+  const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn = 1.6735e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings  
+  
+  // particles per volume
+  const CFreal ni = rhoi/mi;
+  const CFreal nn = rhon/mn;  
+  
+  //parameters
+  const CFreal m_in = mi*mn/(mi + mn);
+  const CFreal T_in = (Ti + Tn)/2;
+  const CFreal kB = Framework::PhysicalConsts::Boltzmann(); // Boltzmann constant
+  const CFreal pi = MathTools::MathConsts::CFrealPi(); //Pi number
+  
+  const CFreal wi = 0.;
+  const CFreal wn = 0.;
+  const CFreal vthi2 = 2.*kB*Ti/(pi*mi);//squared thermal speed of ions
+  const CFreal vthn2 = 2.*kB*Tn/(pi*mn); //squared thermal speed of neutrals
+  const CFreal dvin2 = ui*ui + vi*vi +wi*wi -2.*(ui*un+vi*vn +wi*wn) + 
+                        un*un + vn*vn + wn*wn;//squared velocity difference between "i" and "n" 
+  const CFreal Vcx = std::sqrt(4.*vthi2/pi + 4.*vthn2/pi + dvin2); // units [m/s]
+  const CFreal Sigma_cx0 = 1.12e-18; //in units [m2], see Meier and Shumlak 2012, p.7, Eq. 18  
+  const CFreal Sigma_cx1 = 7.15e-20*std::log(Vcx);//in units [m2], see Meier and Shumlak 2012, p.7, Eq. 18
+  //YGM: put Sigma_cx = std::max(Sigma_cx0,Sigma_cx1) as not clear from Meier's works which one is more relevant (see thesis)
+  const CFreal Sigma_cx = std::max(Sigma_cx0,Sigma_cx1); //units [m2]
+  const CFreal Gammacx = Sigma_cx*ni*nn*Vcx; //units [m-3s-1]
+  const CFreal Rcxin_X = -mi*Sigma_cx*ni*nn*(ui-un)*vthn2/std::sqrt(16.*vthi2/pi + 4.*dvin2 + 9.*pi*vthn2/4.);
+  const CFreal Rcxin_Y = -mi*Sigma_cx*ni*nn*(vi-vn)*vthn2/std::sqrt(16.*vthi2/pi + 4.*dvin2 + 9.*pi*vthn2/4.);
+  const CFreal Rcxni_X = mi*Sigma_cx*ni*nn*(ui-un)*vthi2/std::sqrt(16.*vthn2/pi + 4.*dvin2 + 9.*pi*vthi2/4.);
+  const CFreal Rcxni_Y = mi*Sigma_cx*ni*nn*(vi-vn)*vthi2/std::sqrt(16.*vthn2/pi + 4.*dvin2 + 9.*pi*vthi2/4.);
+
+  ////ions momentum
+  _chargexMomentumSource[0] = Gammacx*mi*(un-ui)+ Rcxin_X - Rcxni_X;
+  _chargexMomentumSource[1] = Gammacx*mi*(vn-vi)+ Rcxin_Y - Rcxni_Y;
+
+  ////neutrals momentum
+  _chargexMomentumSource[2] = -Gammacx*mi*(un-ui) - Rcxin_X + Rcxni_X;
+  _chargexMomentumSource[3] = -Gammacx*mi*(vn-vi) - Rcxin_Y + Rcxni_Y;
+
+
+ //YGM: Source terms for the energy equations:
+  const CFreal Qcxin = (3./4.)*Sigma_cx*mi*ni*nn*vthn2*std::sqrt(4.*vthi2/pi + 64.*vthn2/(9.*pi) + dvin2);
+  const CFreal Qcxni = (3./4.)*Sigma_cx*mi*ni*nn*vthi2*std::sqrt(4.*vthn2/pi + 64.*vthi2/(9.*pi) + dvin2);
+
+  _chargexEnergySource[0] = 0.5*Gammacx*mi*(un*un + vn*vn - ui*ui - vi*vi) + un*Rcxin_X + vn*Rcxin_Y - ui*Rcxni_X - vi*Rcxni_Y + Qcxin - Qcxni;
+  _chargexEnergySource[1] = - 0.5*Gammacx*mi*(un*un + vn*vn - ui*ui - vi*vi) + ui*Rcxni_X + vi*Rcxni_Y - un*Rcxin_X - vn*Rcxin_Y + Qcxni - Qcxni;
+
+}
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
