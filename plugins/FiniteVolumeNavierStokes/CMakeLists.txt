@@ -276,7 +276,7 @@ FiniteVolumeLTE.hh
 SubBCTurbLTE.cxx
 )
 
-LIST ( APPEND FiniteVolumeLTE Framework FiniteVolume NavierStokes LTE )
+LIST ( APPEND FiniteVolumeLTE_cflibs Framework FiniteVolume NavierStokes LTE FiniteVolumeNavierStokes )
 
 CF_ADD_PLUGIN_LIBRARY ( FiniteVolumeLTE )
 

@@ -159,7 +159,7 @@ private: // member data
 
   ///The Setup command to use
   Common::SelfRegistPtr<ConcurrentCouplerCom> m_setup;
-
+  
   ///The PreProcess command to use
   std::vector<Common::SelfRegistPtr<ConcurrentCouplerCom> > m_preProcessRead;
   std::vector<Common::SelfRegistPtr<ConcurrentCouplerCom> > m_preProcessWrite;

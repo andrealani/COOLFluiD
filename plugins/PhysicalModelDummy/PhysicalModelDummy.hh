@@ -24,7 +24,7 @@ public:
   PhysicalModelDummy(const std::string& name);
 
   /// Default destructor
-  ~PhysicalModelDummy();
+  virtual ~PhysicalModelDummy();
 
   /**
    * Defines the Config Option's of this class
@@ -33,31 +33,31 @@ public:
   static void defineConfigOptions(Config::OptionList& options);
 
   /// @return name of the Physical Model type (std::string)
-  std::string getTypeName() const
+  virtual std::string getTypeName() const
   {
     return std::string("PhysicalModelDummy");
   }
 
   /// @return the convective name
-  std::string getConvectiveName() const
+  virtual std::string getConvectiveName() const
   {
     return getTypeName();
   }
 
   /// @return the diffusive name
-  std::string getDiffusiveName() const
+  virtual  std::string getDiffusiveName() const
   {
     return "Null";
   }
-
+  
   /// @return the space dimension of the SubSystem
-  CFuint getDimension() const
+  virtual CFuint getDimension() const
   {
     return m_dim;
   }
 
   /// @return the number of equations of the SubSystem
-  CFuint getNbEquations() const
+  virtual CFuint getNbEquations() const
   {
     return m_var;
   }
@@ -65,19 +65,18 @@ public:
   /// Configures this object by complementing implementation in ConfigObject
   virtual void configure ( Config::ConfigArgs& args );
 
-
 private:  // methods
 
   /// Set reference values
-  void setReferenceValues();
+  virtual void setReferenceValues();
 
   /**
    * Set the reference value for time
    */
-  void setReferenceTime();
+  virtual void setReferenceTime();
 
-private:  // data
-
+protected:  // data
+  
   /// Number of dimensions
   CFuint m_dim;
 

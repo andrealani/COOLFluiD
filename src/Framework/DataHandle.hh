@@ -56,16 +56,18 @@ public:
   /// This function returns the global (cross-processes) size of
   /// the underlying parallel array
   /// @return the global size of the parallel array
-  CFuint getGlobalSize() const {  return this->_ptr->size(); }
+  CFuint getGlobalSize() const 
+  { return (this->_ptr != CFNULL) ? this->_ptr->size() : 0; }
 
   /// This function returns the local size of the underlying parallel array.
   /// Return the same as getGlobalSize, as this has a pure COMTYPE vector.
   /// @return the local size of the parallel array
-  CFuint getLocalSize() const  {   return this->_ptr->size(); }
-
+  CFuint getLocalSize() const
+  { return (this->_ptr != CFNULL) ? this->_ptr->size() : 0; }
+    
   /// This does nothing on a local datahandle
   void beginSync ()  {}
-
+  
   /// This does nothing on a local datahandle
   void endSync () {}
 

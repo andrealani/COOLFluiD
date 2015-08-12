@@ -20,7 +20,7 @@ namespace COOLFluiD {
   namespace MathTools {
 
 //////////////////////////////////////////////////////////////////////////////
-// test 
+
 /// Provides an a set of static functions for various useful operations
 /// @author Andrea Lani
 /// @author Tiago Quintino

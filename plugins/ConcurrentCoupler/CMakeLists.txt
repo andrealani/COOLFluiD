@@ -4,9 +4,11 @@ ConcurrentCouplerMethod.cxx
 ConcurrentCouplerMethod.hh
 ConcurrentCouplerData.cxx
 ConcurrentCouplerData.hh
+StdConcurrentDataTransfer.cxx
+StdConcurrentDataTransfer.hh
 )
 
-LIST ( APPEND ConcurrentCoupler Framework )
+LIST ( APPEND ConcurrentCoupler_cflibs Framework )
 
 CF_ADD_PLUGIN_LIBRARY ( ConcurrentCoupler )
 

@@ -17,12 +17,17 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-Environment::ObjectProvider<
-    DummyPrim,
-    ConvectiveVarSet,
-    DummyModule,
-    1 >
-  dummyPrimProvider("PhysicalModelDummyPrim");
+Environment::ObjectProvider<DummyPrim,
+			    ConvectiveVarSet,
+			    DummyModule,
+			    1 >
+dummyPrimProvider("PhysicalModelDummyPrim");
+
+Environment::ObjectProvider<DummyPrim,
+			    ConvectiveVarSet,
+			    DummyModule,
+			    1 >
+dummyCouplingPrimProvider("CouplingModelDummyPrim");
 
 //////////////////////////////////////////////////////////////////////////////
 

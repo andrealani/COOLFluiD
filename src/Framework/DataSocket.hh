@@ -63,7 +63,13 @@ public: // functions
 
   /// Checks if the supplyed DataSocket matchs this one
   DataBroker::key_t makeID () const;
-
+  
+   /// @return the global size of the underlying data array
+  virtual CFuint getGlobalSize() const = 0;
+  
+  /// @return the local size of the underlying data array
+  virtual CFuint getLocalSize() const = 0;
+  
 protected:
 
   /// Copy construction is not allowed

@@ -67,6 +67,11 @@ public: // functions
   /// @return the global size of the parallel array
   CFuint GetGlobalSize() const {return  m_pattern.GetGlobalSize();}
   
+  /// This function returns the global (cross-processes) size of
+  /// the underlying parallel array
+  /// @return the global size of the parallel array
+  CFuint GetLocalSize() const {return  m_pattern.GetLocalSize();}
+  
   /// Element access (preferred method): 
   /// @param Index   index corresponding to stateID(or nodeID)*stride
   /// Never take the memory location of an element as it

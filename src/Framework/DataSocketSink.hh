@@ -88,6 +88,12 @@ public:
   /// Indicates if this Sink is connected
   bool isConnected () const { return m_source.isNotNull(); }
   
+  /// @return the global size of the underlying data array
+  virtual CFuint getGlobalSize() const {return (m_isEssential) ? m_source->getDataHandle().getGlobalSize() : 0;}
+  
+  /// @return the local size of the underlying data array
+  virtual CFuint getLocalSize() const {return (m_isEssential) ? m_source->getDataHandle().getLocalSize() : 0;}
+  
 private:
   
   /// Check if the socket is connected // this function is critical for performance and it is not inlinable

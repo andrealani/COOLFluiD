@@ -55,9 +55,9 @@ void ConcurrentCouplerMethod::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< vector<string> >("MeshMatchingWriteNames","Names for the configuration of the commands.");
   
   options.addConfigOption< vector<string> >("InterfacesReadNames","Names for the configuration of the commands.");
-  options.addConfigOption< vector<string> >("InterfacesReadComs","dataTransreRead commands.");
+  options.addConfigOption< vector<string> >("InterfacesReadComs","dataTransferRead commands.");
   options.addConfigOption< vector<string> >("InterfacesWriteNames","Names for the configuration of the commands.");
-  options.addConfigOption< vector<string> >("InterfacesWriteComs","dataTransreWrite commands.");
+  options.addConfigOption< vector<string> >("InterfacesWriteComs","dataTransferWrite commands.");
   
   options.addConfigOption< vector<string> >("PostProcessNames","Names for the configuration of the commands.");
   options.addConfigOption< vector<string> >("PostProcessComs","Unsetup commands.");
@@ -84,7 +84,7 @@ ConcurrentCouplerMethod::ConcurrentCouplerMethod(const string& name) :
 {
   addConfigOptionsTo(this);
   m_data.reset(new ConcurrentCouplerData(this));
-  
+    
   m_setupStr = "Null";
   setParameter("SetupCom",&m_setupStr);
   
@@ -173,7 +173,7 @@ void ConcurrentCouplerMethod::configure ( Config::ConfigArgs& args )
   // cf_assert(m_matchMeshesWriteStr.size()  == m_matchMeshesWriteNameStr.size());
   // cf_assert(m_matchMeshesReadStr.size()   == m_matchMeshesReadNameStr.size());
   // cf_assert(m_interfacesReadStr.size()    == m_interfacesReadNameStr.size());
-  // cf_assert(m_interfacesWriteStr.size()   == m_interfacesWriteNameStr.size());
+  cf_assert(m_interfacesWriteStr.size()   == m_interfacesWriteNameStr.size());
   // cf_assert(m_postProcessStr.size()       == m_postProcessNameStr.size());
   // cf_assert(m_coupledSubSystemsStr.size() == m_interfaceNameStr.size());
 
@@ -219,7 +219,7 @@ void ConcurrentCouplerMethod::configure ( Config::ConfigArgs& args )
   // m_matchMeshesRead.resize(m_matchMeshesReadStr.size());
   // m_matchMeshesWrite.resize(m_matchMeshesWriteStr.size());
   // m_interfacesRead.resize(m_interfacesReadStr.size());
-  // m_interfacesWrite.resize(m_interfacesWriteStr.size());
+  m_interfacesWrite.resize(m_interfacesWriteStr.size());
   // m_postProcess.resize(m_postProcessStr.size());
 }
 
@@ -234,8 +234,8 @@ void ConcurrentCouplerMethod::postConfigure( Config::ConfigArgs& args )
   configureCommand<ConcurrentCouplerCom,ConcurrentCouplerData,ConcurrentCouplerComProvider>
     (args, m_setup,m_setupStr,m_setupStr,m_data);
   
-  // // Configure all commands
-  // for(CFuint i = 0; i < m_groups.size(); ++i) {
+  // Configure all commands
+  for(CFuint i = 0; i < m_groups.size(); ++i) {
   //   CFLog(INFO, "ConcurrentCoupler [" << getName() << "] Namespace [" << getNamespace()
   // 	  << "] Data namespace [" << getMethodData()->getNamespace() << "]\n");
   //   CFLog(INFO, "Interface name = "    << m_interfaceNameStr[i] << "\n");
@@ -244,7 +244,7 @@ void ConcurrentCouplerMethod::postConfigure( Config::ConfigArgs& args )
   //   CFLog(INFO, "Mesh Matcher Reader type = " << m_matchMeshesReadStr[i]   << "\n");
   //   CFLog(INFO, "Mesh Matcher Writer type = " << m_matchMeshesWriteStr[i]   << "\n");
   //   CFLog(INFO, "Interface Reader type = " << m_interfacesReadStr[i] << "\n");
-  //   CFLog(INFO, "Interface Writer type = " << m_interfacesWriteStr[i] << "\n");
+  CFLog(INFO, "Interface Writer type = " << m_interfacesWriteStr[i] << "\n");
   //   CFLog(INFO, "PostProcess type = "  << m_postProcessStr[i]   << "\n");
     
   //   CFLog(INFO, "Configuring PreProcess Reader command ["  << m_preProcessReadStr[i]   << "]\n");
@@ -267,9 +267,9 @@ void ConcurrentCouplerMethod::postConfigure( Config::ConfigArgs& args )
   //   configureCommand<ConcurrentCouplerCom,ConcurrentCouplerData,ConcurrentCouplerComProvider>
   //     (args,m_interfacesRead[i],m_interfacesReadStr[i], m_interfacesReadNameStr[i], m_data);
     
-  //   CFLog(INFO, "Configuring Interface Writer command ["  << m_interfacesWriteStr[i]   << "]\n");
-  //   configureCommand<ConcurrentCouplerCom,ConcurrentCouplerData,ConcurrentCouplerComProvider>
-  //     (args,m_interfacesWrite[i],m_interfacesWriteStr[i], m_interfacesWriteNameStr[i], m_data);
+  CFLog(INFO, "Configuring Interface Writer command ["  << m_interfacesWriteStr[i]   << "]\n");
+  configureCommand<ConcurrentCouplerCom,ConcurrentCouplerData,ConcurrentCouplerComProvider>
+    (args,m_interfacesWrite[i],m_interfacesWriteStr[i], m_interfacesWriteNameStr[i], m_data);
     
   //   CFLog(INFO, "Configuring PostProcess command ["  << m_postProcessNameStr[i]   << "]\n");
   //   configureCommand<ConcurrentCouplerCom,ConcurrentCouplerData,ConcurrentCouplerComProvider>
@@ -283,10 +283,10 @@ void ConcurrentCouplerMethod::postConfigure( Config::ConfigArgs& args )
   //   cf_assert(m_matchMeshesWrite[i].isNotNull());
 
   //   cf_assert(m_interfacesRead[i].isNotNull());
-  //   cf_assert(m_interfacesWrite[i].isNotNull());
+  cf_assert(m_interfacesWrite[i].isNotNull());
 
   //   cf_assert(m_postProcess[i].isNotNull());
-  // }
+  }
   
   // // Check that all the commands apply to the same group of TRSs
   // for(CFuint i = 0; i < m_interfacesRead.size(); ++i) {
@@ -473,7 +473,7 @@ void ConcurrentCouplerMethod::setMethodImpl()
   //  cf_assert(m_fullConfigure == 4);
   
   cf_assert(m_setup.isNotNull());
-  // m_setup->execute();
+  m_setup->execute();
   
   setupCommandsAndStrategies();
 }
@@ -580,29 +580,33 @@ void ConcurrentCouplerMethod::dataTransferReadImpl()
 void ConcurrentCouplerMethod::dataTransferWriteImpl()
 {
   CFAUTOTRACE;
-
+  
+  CFLog(INFO, "ConcurrentCouplerMethod::dataTransferWriteImpl() => start\n");
+  
   cf_assert(isSetup());
   cf_assert(isConfigured());
   
   // if () { 
-  const string groupName = getNamespace(); // SubSystemStatusStack::getCurrentName();
+  /*const string groupName = getNamespace(); // SubSystemStatusStack::getCurrentName();
   PE::GetPE().setBarrier(groupName);
-  cout << "ConcurrentCouplerMethod::dataTransferWriteImpl() => P" << PE::GetPE().GetRank(groupName) << "\n"; for (;;) {}
+  cout << "ConcurrentCouplerMethod::dataTransferWriteImpl() => P" << PE::GetPE().GetRank(groupName) << "\n";
+  
+  for (;;) {}*/
   // }
   
   // const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
 
   // ///@todo this should be done only if needed
   // getMethodData()->getCollaborator<SpaceMethod>()->extrapolateStatesToNodes();
+  
+  for(CFuint i = 0; i < m_interfacesWrite.size(); ++i) {
 
-  // for(CFuint i = 0; i < m_interfacesWrite.size(); ++i) {
-  //   cf_assert(m_interfacesWrite[i].isNotNull());
-
-  //   // Execute and save file if needed...
-  //   if((!(iter % m_transferRates[i])) || (iter ==0) ) {
-  //     m_interfacesWrite[i]->execute();
-  //   }
-  // }
+    cf_assert(m_interfacesWrite[i].isNotNull());
+    
+    //   // Execute and save file if needed...
+    //   if((!(iter % m_transferRates[i])) || (iter ==0) ) {
+    m_interfacesWrite[i]->execute();
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

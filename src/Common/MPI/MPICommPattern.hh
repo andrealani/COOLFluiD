@@ -433,13 +433,13 @@ public: // funcions
 
   /// Lookup the global continuous ID of a local element
   inline IndexType LocalToCGlobal (IndexType LocalID) const;
-
-private:
-
+  
   /// Return the local size: This is the number of
   /// locally owned points incremented by the number of ghost points
   /// Local operation.
   size_t size() const {return GetLocalSize() + GetGhostSize();}
+    
+private:
   
   /// (Used by internal functions)
   /// This function is used to inform that the CGlobal map is now

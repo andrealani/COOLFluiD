@@ -30,7 +30,7 @@ namespace COOLFluiD {
 void Method::defineConfigOptions(Config::OptionList& options)
 {
    options.addConfigOption< std::string >("Namespace","Namespace of this Methods.");
-   options.addConfigOption< std::vector<std::string> >("CommandGroups","Names of the CommandGroupds to be created.");
+   options.addConfigOption< std::vector<std::string> >("CommandGroups","Names of the CommandGroups to be created.");
 }
 
 //////////////////////////////////////////////////////////////////////////////

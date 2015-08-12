@@ -18,7 +18,6 @@ using namespace std;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::MathTools;
 using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Common;
 
 //////////////////////////////////////////////////////////////////////////////
 

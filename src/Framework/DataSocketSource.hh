@@ -36,7 +36,7 @@ public:
   virtual ~DataSocketSource();
 
   /// Returns the DataHandle associated with the Socket
-  DataHandle<TYPE,STORAGETYPE> getDataHandle() { cf_assert ( isAllocated() ) ; return m_handle;  }
+  DataHandle<TYPE,STORAGETYPE> getDataHandle() const { cf_assert ( isAllocated() ) ; return m_handle;  }
   
   /// Allocation of the DataHandle in this DataSocket
   void allocate (Common::SafePtr<DataStorage> storage, const std::string& nspaceName);
@@ -46,6 +46,12 @@ public:
   
   /// Checks if this socket has been allocated
   bool isAllocated () const { return m_storage.isNotNull(); }
+  
+  /// @return the global size of the underlying data array
+  virtual CFuint getGlobalSize() const {getDataHandle().getGlobalSize();}
+  
+  /// @return the local size of the underlying data array
+  virtual CFuint getLocalSize() const {getDataHandle().getLocalSize();}
   
 private:
   

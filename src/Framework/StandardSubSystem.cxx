@@ -569,6 +569,8 @@ void StandardSubSystem::run()
 {
   CFAUTOTRACE;
   
+  CFLog(VERBOSE, "StandardSubSystem::run() => start\n");
+  
   cf_assert(isConfigured());
   m_forcedStop = (int)false;
   
@@ -593,7 +595,38 @@ void StandardSubSystem::run()
   m_duration.set(0.);
   Stopwatch<WallTime> stopTimer;
   stopTimer.start();
-
+  
+  // each processor has all the methods and sockets allocated,
+  // but data have size > 0 only in ranks corresponding to the right namespace
+  /*const int rank = Common::PE::GetPE().GetRank("Default");
+  vector<Method*> methodList = getMethodList();
+  for (CFuint i = 0; i < methodList.size(); ++i) {
+    std::vector<Common::SafePtr<DataSocket> > sockets = methodList[i]->getAllSockets();
+    
+    const string nspMethod = methodList[i]->getNamespace();
+    if (PE::GetPE().isRankInGroup(rank, nspMethod)) { 
+      CFLog(INFO, "\n#### " << methodList[i]->getName() << " ####\n");
+      for (CFuint s = 0; s <  sockets.size(); ++s) {
+	const string socketName = sockets[s]->getDataSocketFullStorageName();
+	SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+	  (SubSystemStatusStack::getCurrentName()).getNamespace(nspMethod);
+	SafePtr<MeshData> meshData = MeshDataStack::getInstance().getEntryByNamespace(nsp);
+	SafePtr<DataStorage> ds = meshData->getDataStorage();
+	// need to get the size of the socket from datastorage ...
+	
+	// CFLog(INFO, socketName << " => sizes [local]  = " << sockets[s]->getLocalSize() << "\n");
+	// CFLog(INFO, socketName << " => sizes [global] = " << sockets[s]->getGlobalSize() <<"\n");
+	
+	// CFLog(INFO, socketName << "\n");
+	//  CFLog(INFO,"########### " <<  sockets[s]->getGlobalSize() << "\n");
+	
+        CFLog(INFO, socketName << " => sizes [local,global] = [" << sockets[s]->getLocalSize() << ", " << sockets[s]->getGlobalSize() <<"]\n");
+      }
+    }
+  }
+  
+  for (;;) {}*/
+    
   // Transfer of the data for the subsystems coupling
   // here, write the data to the other subsystems
   m_couplerMethod.apply(mem_fun<void,CouplerMethod>(&CouplerMethod::dataTransferWrite));

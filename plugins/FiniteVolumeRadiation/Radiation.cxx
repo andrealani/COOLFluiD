@@ -765,10 +765,8 @@ void Radiation::getAdvanceOrder()
     while (m < nbCells) { //The loop over the cells begins
       mLast = m;	  //Checking to see if it counts all the cells
       for (CFuint iCell = 0; iCell < nbCells; iCell++) {
-
-	// std::cout<<"iCell = " << iCell <<"\n";
+	CFLog(DEBUG_MAX, "Radiation::execute() => iCell = " << iCell <<"\n");
 	if (m_sdone[iCell] == false) {
-
 	  geoData.idx = iCell;
 	  GeometricEntity* currCell = m_geoBuilder.buildGE();
 	  const CFuint elemID = currCell->getState(0)->getLocalID();	
@@ -812,8 +810,8 @@ void Radiation::getAdvanceOrder()
 	m_geoBuilder.releaseGE();
       }// end of the loop over the CELLS
       
-      CFLog(DEBUG_MIN, "m_advanceOrder["<< d <<"] = " << m_advanceOrder[d] << "\n");
-
+      CFLog(DEBUG_MAX, "m_advanceOrder["<< d <<"] = " << m_advanceOrder[d] << "\n");
+      
       if (m == mLast) {		//Check that it wrote a cell in the current stage
 	  std::cout << "No cell added to advance list in direction number = " << d <<". Problem with mesh.\n";
 	  //cf_assert(m != mLast);

@@ -56,6 +56,25 @@ public: // functions
   }
 
   /// Apply given void action (pointer to member function with 0
+  /// arguments) to the methods in the list that satify the given condition
+  void apply (std::mem_fun_t<void,TMETHOD> fun, 
+	      std::mem_fun_t<bool,TMETHOD> pr, 
+	      bool flag, CFint ns=-1)
+  {
+    const int rank = Common::PE::GetPE().GetRank("Default");
+    const CFint nsize =  (ns < 0) ? m_mList.size() : ns;
+    for (CFuint i = 0; i < nsize; ++i) {
+      if (Common::PE::GetPE().isRankInGroup(rank, m_mList[i]->getNamespace())) {
+	if (pr(m_mList[i]) == flag) {
+	  CFLog(VERBOSE, "MultiMethodTuple::apply() => rank [" << rank << 
+		"], group ["<< m_mList[i]->getNamespace() << "], method [" << m_mList[i]->getName() << "]\n");
+	  fun(m_mList[i]);
+	}
+      }
+    }
+  }
+  
+  /// Apply given void action (pointer to member function with 0
   /// arguments) to all the methods in the list.
   void apply (std::mem_fun_t<void,TMETHOD> fun, CFint ns=-1)
   {

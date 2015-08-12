@@ -1,4 +1,8 @@
 LIST ( APPEND PhysicalModelDummy_files
+CouplingModelDummy.cxx
+CouplingModelDummy.hh
+CouplingModelDummySendToRecv.cxx
+CouplingModelDummySendToRecv.hh
 Dummy.hh
 DummyPrim.cxx
 DummyPrim.hh

@@ -146,14 +146,14 @@ public:
   /// @return the global size of the parallel array
   CFuint getGlobalSize() const
   {
-    return  _globalPtr->GetGlobalSize();
+    return (_globalPtr != CFNULL) ? _globalPtr->GetGlobalSize() : 0;
   }
 
   /// This function returns the local size of the underlying parallel array
   /// @return the local size of the parallel array
   CFuint getLocalSize() const
   {
-    return  _globalPtr->GetLocalSize();
+    return  (_globalPtr != CFNULL) ? _globalPtr->GetLocalSize() : 0;
   }
   
   /// begin the synchronization
