@@ -56,6 +56,21 @@ public:
    * Configures the command.
    */
   virtual void configure ( Config::ConfigArgs& args );
+
+protected: // functions
+  
+  /// @return the DataStorage corresponding to the given namespace
+  Common::SafePtr<Framework::DataStorage> getDataStorage(const std::string& nspName);
+  
+  /// gather data from all processes in namespace nspSend to 1 process in namespace nspRecv
+  /// @param nspSend       namespace from which data are sent (>= 1 rank)
+  /// @param nspRecv       namespace from which data are received (1 rank)
+  /// @param sendSocketStr name of the socket from which data are sent (distributed)
+  /// @param recvSocketStr name of the socket from which data are received (serial)
+  void gatherData(const std::string& nspSend, 
+		  const std::string& nspRecv,
+		  const std::string& sendSocketStr, 
+		  const std::string& recvSocketStr);
   
 protected: // data
   
