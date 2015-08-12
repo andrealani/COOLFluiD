@@ -257,32 +257,32 @@ void StdConcurrentDataTransfer::execute()
 	 MPI_Allreduce(&sendroot, &root, 1, MPIStructDef::getMPIType(&root), MPI_MAX, group.comm));
       cf_assert(root >= 0);
       
-      // MPIStruct sendMS;
-      // int lns[2];
-      // lns[0] = lns[1] = sendcount;
-      // MPIStructDef::buildMPIStruct<CFuint,CFreal>(&sendIDs[0], &sendbuf[0], lns, sendMS);
+      MPIStruct sendMS;
+      int lns[2];
+      lns[0] = lns[1] = sendcount;
+      MPIStructDef::buildMPIStruct<CFuint,CFreal>(&sendIDs[0], &sendbuf[0], lns, sendMS);
       
-      // MPIStruct recvMS;
-      // int lnr[2];
-      // lnr[0] = lnr[1] = totRecvcount;
-      // MPIStructDef::buildMPIStruct<CFuint,CFreal>(&recvIDs[0], &recvbuf[0], lnr, recvMS);
+      MPIStruct recvMS;
+      int lnr[2];
+      lnr[0] = lnr[1] = totRecvcount;
+      MPIStructDef::buildMPIStruct<CFuint,CFreal>(&recvIDs[0], &recvbuf[0], lnr, recvMS);
+      
+      MPIError::getInstance().check
+      	("MPI_Gatherv", "StdConcurrentDataTransfer::execute()", 
+      	 MPI_Gatherv(sendMS.start, 1, sendMS.type, recvMS.start, &recvcounts[0], &displs[0], 
+      		     recvMS.type, root, group.comm));
       
       // MPIError::getInstance().check
       // 	("MPI_Gatherv", "StdConcurrentDataTransfer::execute()", 
-      // 	 MPI_Gatherv(sendMS.start, 1, sendMS.type, recvMS.start, &recvcounts[0], &displs[0], 
-      // 		     recvMS.type, root, group.comm));
+      // 	 MPI_Gatherv(&sendbuf[0], sendcount, MPIStructDef::getMPIType(&sendbuf[0]),
+      // 		     &recvbuf[0], &recvcounts[0], &displs[0], 
+      // 		     MPIStructDef::getMPIType(&sendbuf[0]), root, group.comm));
       
-      MPIError::getInstance().check
-      	("MPI_Gatherv", "StdConcurrentDataTransfer::execute()", 
-      	 MPI_Gatherv(&sendbuf[0], sendcount, MPIStructDef::getMPIType(&sendbuf[0]),
-      		     &recvbuf[0], &recvcounts[0], &displs[0], 
-      		     MPIStructDef::getMPIType(&sendbuf[0]), root, group.comm));
-      
-      MPIError::getInstance().check
-      	("MPI_Gatherv", "StdConcurrentDataTransfer::execute()", 
-      	 MPI_Gatherv(&sendIDs[0], sendcount, MPIStructDef::getMPIType(&sendIDs[0]),
-      		     &recvIDs[0], &recvcounts[0], &displs[0], 
-      		     MPIStructDef::getMPIType(&sendIDs[0]), root, group.comm));
+      // MPIError::getInstance().check
+      // 	("MPI_Gatherv", "StdConcurrentDataTransfer::execute()", 
+      // 	 MPI_Gatherv(&sendIDs[0], sendcount, MPIStructDef::getMPIType(&sendIDs[0]),
+      // 		     &recvIDs[0], &recvcounts[0], &displs[0], 
+      // 		     MPIStructDef::getMPIType(&sendIDs[0]), root, group.comm));
       
       if (grank == root) {
 	// order the received data
