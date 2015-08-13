@@ -150,49 +150,24 @@ private: // helper methods
    * @param lineNb line counter
    */
   void getWordsFromLine(std::ifstream& fin,
-          std::string& line,
-          CFuint&  lineNb,
-          std::vector<std::string>& words);
-
-
+			std::string& line,
+			CFuint&  lineNb,
+			std::vector<std::string>& words);
+  
 private: // member data
-
+  
   ///The Setup command to use
   Common::SelfRegistPtr<ConcurrentCouplerCom> m_setup;
   
-  ///The PreProcess command to use
-  std::vector<Common::SelfRegistPtr<ConcurrentCouplerCom> > m_preProcessRead;
-  std::vector<Common::SelfRegistPtr<ConcurrentCouplerCom> > m_preProcessWrite;
-
-  ///The coupler command to use
-  std::vector<Common::SelfRegistPtr<ConcurrentCouplerCom> > m_matchMeshesRead;
-  std::vector<Common::SelfRegistPtr<ConcurrentCouplerCom> > m_matchMeshesWrite;
-
   ///The command to use for data transfer between the subsystems
   std::vector<Common::SelfRegistPtr<ConcurrentCouplerCom> > m_interfacesRead;
   std::vector<Common::SelfRegistPtr<ConcurrentCouplerCom> > m_interfacesWrite;
-
-  ///The PostProcess command to use
-  std::vector<Common::SelfRegistPtr<ConcurrentCouplerCom> > m_postProcess;
-
+  
+  ///The data to share between ConcurrentCoupler commands
+  Common::SharedPtr<ConcurrentCouplerData> m_data;
+  
   ///The Setup string for configuration
   std::string m_setupStr;
-
-  ///The MeshMatcher string for configuration
-  std::vector<std::string> m_matchMeshesReadStr;
-  std::vector<std::string> m_matchMeshesReadNameStr;
-  std::vector<std::string> m_matchMeshesWriteStr;
-  std::vector<std::string> m_matchMeshesWriteNameStr;
-
-  ///The preProcessing commands for configuration
-  std::vector<std::string> m_preProcessReadStr;
-  std::vector<std::string> m_preProcessReadNameStr;
-  std::vector<std::string> m_preProcessWriteStr;
-  std::vector<std::string> m_preProcessWriteNameStr;
-  
-  ///The postProcessing commands for configuration
-  std::vector<std::string> m_postProcessStr;
-  std::vector<std::string> m_postProcessNameStr;
   
   ///The coupled TRS command types and names
   std::vector<std::string> m_interfacesReadStr;
@@ -200,21 +175,12 @@ private: // member data
   
   std::vector<std::string> m_interfacesWriteStr;
   std::vector<std::string> m_interfacesWriteNameStr;
-
-  ///The names of the interfaces to be coupled
-  std::vector<std::string> m_interfaceNameStr;
   
   ///The names of the subsytems to be coupled with
   std::vector<std::string> m_coupledSubSystemsStr;
   
   ///The names  of the subsytems to be coupled with
   std::vector<std::string> m_coupledNamespacesStr;
-  
-  ///The data to share between ConcurrentCoupler commands
-  Common::SharedPtr<ConcurrentCouplerData> m_data;
-  
-  //Used to check that the method is fully configured (config + setInfo + getInfo + postConfig)
-  CFuint m_fullConfigure;
   
   ///Rate at which the data should be read/written for each of the interfaces
   std::vector<CFuint> m_transferRates;

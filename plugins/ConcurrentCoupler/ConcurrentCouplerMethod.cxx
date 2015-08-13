@@ -44,25 +44,12 @@ void ConcurrentCouplerMethod::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< string >("SetupCom","SetupCommand to run. This command seldomly needs overriding.");
   
-  options.addConfigOption< vector<string> >("PreProcessReadComs","Preprocessing");
-  options.addConfigOption< vector<string> >("PreProcessReadNames","Names for the configuration of the commands.");
-  options.addConfigOption< vector<string> >("PreProcessWriteComs","Preprocessing");
-  options.addConfigOption< vector<string> >("PreProcessWriteNames","Names for the configuration of the commands.");
-  
-  options.addConfigOption< vector<string> >("MeshMatchingReadComs","MeshMatching command.");
-  options.addConfigOption< vector<string> >("MeshMatchingReadNames","Names for the configuration of the commands.");
-  options.addConfigOption< vector<string> >("MeshMatchingWriteComs","MeshMatching command.");
-  options.addConfigOption< vector<string> >("MeshMatchingWriteNames","Names for the configuration of the commands.");
-  
   options.addConfigOption< vector<string> >("InterfacesReadNames","Names for the configuration of the commands.");
   options.addConfigOption< vector<string> >("InterfacesReadComs","dataTransferRead commands.");
+ 
   options.addConfigOption< vector<string> >("InterfacesWriteNames","Names for the configuration of the commands.");
   options.addConfigOption< vector<string> >("InterfacesWriteComs","dataTransferWrite commands.");
   
-  options.addConfigOption< vector<string> >("PostProcessNames","Names for the configuration of the commands.");
-  options.addConfigOption< vector<string> >("PostProcessComs","Unsetup commands.");
-  
-  options.addConfigOption< vector<string> >("InterfacesNames","Names of the interfaces.");
   options.addConfigOption< vector<string> >("CoupledSubSystems","Names of the subsystems to be coupled to.");
   options.addConfigOption< vector<string> >("CoupledNameSpaces","Names of the namespaces of the other subsystems.");
   
@@ -73,45 +60,16 @@ void ConcurrentCouplerMethod::defineConfigOptions(Config::OptionList& options)
 
 ConcurrentCouplerMethod::ConcurrentCouplerMethod(const string& name) :
   CouplerMethod(name),
-  m_preProcessRead(0),
-  m_preProcessWrite(0),
-  m_matchMeshesRead(0),
-  m_matchMeshesWrite(0),
-  m_interfacesRead(0),
-  m_interfacesWrite(0),
-  m_postProcess(0),
-  m_fullConfigure(0)
+  m_setup(),
+  m_interfacesRead(CFNULL),
+  m_interfacesWrite(CFNULL)
 {
   addConfigOptionsTo(this);
+  
   m_data.reset(new ConcurrentCouplerData(this));
-    
+  
   m_setupStr = "Null";
   setParameter("SetupCom",&m_setupStr);
-  
-  m_preProcessReadStr = vector<string>();
-  setParameter("PreProcessReadComs",&m_preProcessReadStr);
-  m_preProcessReadNameStr = vector<string>();
-  setParameter("PreProcessReadNames",&m_preProcessReadNameStr);
-  
-  m_preProcessWriteStr = vector<string>();
-  setParameter("PreProcessWriteComs",&m_preProcessWriteStr);
-  m_preProcessWriteNameStr = vector<string>();
-  setParameter("PreProcessWriteNames",&m_preProcessWriteNameStr);
-  
-  m_matchMeshesReadStr = vector<string>();
-  setParameter("MeshMatchingReadComs",&m_matchMeshesReadStr);
-  m_matchMeshesReadNameStr = vector<string>();
-  setParameter("MeshMatchingReadNames",&m_matchMeshesReadNameStr);
-  
-  m_matchMeshesWriteStr = vector<string>();
-  setParameter("MeshMatchingWriteComs",&m_matchMeshesWriteStr);
-  m_matchMeshesWriteNameStr = vector<string>();
-  setParameter("MeshMatchingWriteNames",&m_matchMeshesWriteNameStr);
-  
-  m_postProcessStr = vector<string>();
-  setParameter("PostProcessComs",&m_postProcessStr);
-  m_postProcessNameStr = vector<string>();
-  setParameter("PostProcessNames",&m_postProcessNameStr);
   
   m_interfacesReadStr = vector<string>();
   setParameter("InterfacesReadComs",&m_interfacesReadStr);
@@ -123,12 +81,8 @@ ConcurrentCouplerMethod::ConcurrentCouplerMethod(const string& name) :
   m_interfacesWriteNameStr = vector<string>();
   setParameter("InterfacesWriteNames",&m_interfacesWriteNameStr);
   
-  m_interfaceNameStr = vector<string>();
-  setParameter("InterfacesNames",&m_interfaceNameStr);
-  
   m_coupledSubSystemsStr = vector<string>();
   setParameter("CoupledSubSystems",&m_coupledSubSystemsStr);
-  
   m_coupledNamespacesStr = vector<string>();
   setParameter("CoupledNameSpaces",&m_coupledNamespacesStr);
   
@@ -155,9 +109,7 @@ Common::SafePtr<MethodData> ConcurrentCouplerMethod::getMethodData() const
 void ConcurrentCouplerMethod::configure ( Config::ConfigArgs& args )
 {
   CouplerMethod::configure(args);
-  
-  m_fullConfigure = 1;
-  
+    
   cf_assert (m_coupledNamespacesStr.size() > 0);
   
   if (m_coupledSubSystemsStr.size() == 0) {
@@ -168,44 +120,13 @@ void ConcurrentCouplerMethod::configure ( Config::ConfigArgs& args )
   cf_assert (m_coupledNamespacesStr.size() == m_coupledSubSystemsStr.size());
   
   // Check size of configuration parameters
-  // cf_assert(m_preProcessWriteStr.size()   == m_preProcessWriteNameStr.size());
-  // cf_assert(m_preProcessReadStr.size()    == m_preProcessReadNameStr.size());
-  // cf_assert(m_matchMeshesWriteStr.size()  == m_matchMeshesWriteNameStr.size());
-  // cf_assert(m_matchMeshesReadStr.size()   == m_matchMeshesReadNameStr.size());
   // cf_assert(m_interfacesReadStr.size()    == m_interfacesReadNameStr.size());
   cf_assert(m_interfacesWriteStr.size()   == m_interfacesWriteNameStr.size());
-  // cf_assert(m_postProcessStr.size()       == m_postProcessNameStr.size());
-  // cf_assert(m_coupledSubSystemsStr.size() == m_interfaceNameStr.size());
-
-  // //Set default value for m_coupledNamespacesStr
-  // if (m_coupledNamespacesStr.size() == 0) {
-  //   m_coupledNamespacesStr.resize(m_coupledSubSystemsStr.size(), "Default");
-  // }
-  // cf_assert(m_coupledNamespacesStr.size() == m_interfaceNameStr.size());
-  
-  // // Set default value for m_transferRates
-  // if(m_transferRates.size() == 0) {
-  //   m_transferRates.resize(m_coupledSubSystemsStr.size(), 1);
-  // }
-  
-  // cf_assert(m_transferRates.size() == m_interfaceNameStr.size());
-  
-  // cf_assert(m_preProcessWriteStr.size()   == m_groups.size());
-  // cf_assert(m_preProcessReadStr.size()    == m_groups.size());
-  // cf_assert(m_matchMeshesWriteStr.size()  == m_groups.size());
-  // cf_assert(m_matchMeshesReadStr.size()   == m_groups.size());
-  // cf_assert(m_interfacesReadStr.size()    == m_groups.size());
-  // cf_assert(m_interfacesWriteStr.size()   == m_groups.size());
-  // cf_assert(m_postProcessStr.size()       == m_groups.size());
-  
-  // cf_assert(m_coupledSubSystemsStr.size() == m_groups.size());
-  // cf_assert(m_coupledNamespacesStr.size() == m_groups.size());
-  // cf_assert(m_transferRates.size()        == m_groups.size());
-
+    
   configureNested ( m_data.getPtr(), args );
-
+  
   // configureInterfaces();
-
+  
   // add configures to the ConcurrentCouplerCom's
   clearComds();
 
@@ -214,78 +135,40 @@ void ConcurrentCouplerMethod::configure ( Config::ConfigArgs& args )
   // m_data->resizeCoupledInterfaces();
   
   // // Resize the vectors of commands
-  // m_preProcessRead.resize(m_preProcessReadStr.size());
-  // m_preProcessWrite.resize(m_preProcessWriteStr.size());
-  // m_matchMeshesRead.resize(m_matchMeshesReadStr.size());
-  // m_matchMeshesWrite.resize(m_matchMeshesWriteStr.size());
-  // m_interfacesRead.resize(m_interfacesReadStr.size());
-  m_interfacesWrite.resize(m_interfacesWriteStr.size());
-  // m_postProcess.resize(m_postProcessStr.size());
+  if (m_interfacesReadStr.size() > 0) {
+    m_interfacesRead.resize(m_interfacesReadStr.size());
+  }
+  
+  if (m_interfacesWriteStr.size() > 0) {
+    m_interfacesWrite.resize(m_interfacesWriteStr.size());
+  }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
-
+      
 void ConcurrentCouplerMethod::postConfigure( Config::ConfigArgs& args )
 {
-  m_fullConfigure++;
-  
-  // m_data->resizeCoupledInterfacesTRS();
-  
   configureCommand<ConcurrentCouplerCom,ConcurrentCouplerData,ConcurrentCouplerComProvider>
     (args, m_setup,m_setupStr,m_setupStr,m_data);
   
+  CFLog(VERBOSE, "ConcurrentCoupler [" << getName() << "] Namespace [" << getNamespace()
+	<< "] Data namespace [" << getMethodData()->getNamespace() << "]\n");
+  
   // Configure all commands
-  for(CFuint i = 0; i < m_groups.size(); ++i) {
-  //   CFLog(INFO, "ConcurrentCoupler [" << getName() << "] Namespace [" << getNamespace()
-  // 	  << "] Data namespace [" << getMethodData()->getNamespace() << "]\n");
-  //   CFLog(INFO, "Interface name = "    << m_interfaceNameStr[i] << "\n");
-  //   CFLog(INFO, "PreProcess Reader type = "   << m_preProcessReadStr[i]    << "\n");
-  //   CFLog(INFO, "PreProcess Writer type = "   << m_preProcessWriteStr[i]    << "\n");
-  //   CFLog(INFO, "Mesh Matcher Reader type = " << m_matchMeshesReadStr[i]   << "\n");
-  //   CFLog(INFO, "Mesh Matcher Writer type = " << m_matchMeshesWriteStr[i]   << "\n");
-  //   CFLog(INFO, "Interface Reader type = " << m_interfacesReadStr[i] << "\n");
-  CFLog(INFO, "Interface Writer type = " << m_interfacesWriteStr[i] << "\n");
-  //   CFLog(INFO, "PostProcess type = "  << m_postProcessStr[i]   << "\n");
-    
-  //   CFLog(INFO, "Configuring PreProcess Reader command ["  << m_preProcessReadStr[i]   << "]\n");
-  //   configureCommand<ConcurrentCouplerCom,ConcurrentCouplerData,ConcurrentCouplerComProvider>
-  //     (args,m_preProcessRead[i],m_preProcessReadStr[i],m_preProcessReadNameStr[i],m_data);
-    
-  //   CFLog(INFO, "Configuring PreProcess Writer command ["  << m_preProcessWriteStr[i]   << "]\n");
-  //   configureCommand<ConcurrentCouplerCom,ConcurrentCouplerData,ConcurrentCouplerComProvider>
-  //     (args,m_preProcessWrite[i],m_preProcessWriteStr[i],m_preProcessWriteNameStr[i],m_data);
-    
-  //   CFLog(INFO, "Configuring Mesh Matcher Reader command ["  << m_matchMeshesReadStr[i]   << "]\n");
-  //   configureCommand<ConcurrentCouplerCom,ConcurrentCouplerData,ConcurrentCouplerComProvider>
-  //     (args,m_matchMeshesRead[i],m_matchMeshesReadStr[i],m_matchMeshesReadNameStr[i],m_data);
-    
-  //   CFLog(INFO, "Configuring Mesh Matcher Writer command ["  << m_matchMeshesWriteStr[i]   << "]\n");
-  //   configureCommand<ConcurrentCouplerCom,ConcurrentCouplerData,ConcurrentCouplerComProvider>
-  //     (args,m_matchMeshesWrite[i],m_matchMeshesWriteStr[i],m_matchMeshesWriteNameStr[i],m_data);
-    
-  //   CFLog(INFO, "Configuring Interface Reader command ["  << m_interfacesReadStr[i]   << "]\n");
-  //   configureCommand<ConcurrentCouplerCom,ConcurrentCouplerData,ConcurrentCouplerComProvider>
-  //     (args,m_interfacesRead[i],m_interfacesReadStr[i], m_interfacesReadNameStr[i], m_data);
-    
-  CFLog(INFO, "Configuring Interface Writer command ["  << m_interfacesWriteStr[i]   << "]\n");
-  configureCommand<ConcurrentCouplerCom,ConcurrentCouplerData,ConcurrentCouplerComProvider>
-    (args,m_interfacesWrite[i],m_interfacesWriteStr[i], m_interfacesWriteNameStr[i], m_data);
-    
-  //   CFLog(INFO, "Configuring PostProcess command ["  << m_postProcessNameStr[i]   << "]\n");
-  //   configureCommand<ConcurrentCouplerCom,ConcurrentCouplerData,ConcurrentCouplerComProvider>
-  //     (args,m_postProcess[i],m_postProcessStr[i],m_postProcessNameStr[i],m_data);
-    
-  //   // Check that configuration was ok
-  //   cf_assert(m_preProcessRead[i].isNotNull());
-  //   cf_assert(m_preProcessWrite[i].isNotNull());
-
-  //   cf_assert(m_matchMeshesRead[i].isNotNull());
-  //   cf_assert(m_matchMeshesWrite[i].isNotNull());
-
-  //   cf_assert(m_interfacesRead[i].isNotNull());
-  cf_assert(m_interfacesWrite[i].isNotNull());
-
-  //   cf_assert(m_postProcess[i].isNotNull());
+  for (CFuint i = 0; i < m_interfacesReadStr.size(); ++i) {
+    CFLog(INFO, "Interface Reader type = " << m_interfacesReadStr[i] << "\n");
+    CFLog(INFO, "Configuring Interface Reader command ["  << m_interfacesReadStr[i]   << "]\n");
+    configureCommand<ConcurrentCouplerCom,ConcurrentCouplerData,ConcurrentCouplerComProvider>
+      (args,m_interfacesRead[i],m_interfacesReadStr[i], m_interfacesReadNameStr[i], m_data);
+    cf_assert(m_interfacesRead[i].isNotNull());
+  }
+  
+  for (CFuint i = 0; i < m_interfacesWriteStr.size(); ++i) {
+    CFLog(INFO, "Interface Writer type = " << m_interfacesWriteStr[i] << "\n");
+    CFLog(INFO, "Configuring Interface Writer command ["  << m_interfacesWriteStr[i]   << "]\n");
+    configureCommand<ConcurrentCouplerCom,ConcurrentCouplerData,ConcurrentCouplerComProvider>
+      (args,m_interfacesWrite[i],m_interfacesWriteStr[i], m_interfacesWriteNameStr[i], m_data);
+    cf_assert(m_interfacesWrite[i].isNotNull());
   }
   
   // // Check that all the commands apply to the same group of TRSs
@@ -330,8 +213,6 @@ void ConcurrentCouplerMethod::configureInterfaces()
 void ConcurrentCouplerMethod::setInfoToOtherSubSystem()
 {
   CFAUTOTRACE;
-
-  m_fullConfigure++;
   
   const string nameSpace = getNamespace();
   Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
@@ -385,8 +266,6 @@ void ConcurrentCouplerMethod::setInfoToOtherSubSystem()
 void ConcurrentCouplerMethod::getInfoFromOtherSubSystem()
 {
   CFAUTOTRACE;
-
-  m_fullConfigure++;
   
   // const string nsp = getMethodData()->getNamespace();  
   // runSerial<void, ConcurrentCoupler, &ConcurrentCouplerMethod::readInfoFromOtherSubSystem>(this, nsp);
@@ -470,7 +349,6 @@ void ConcurrentCouplerMethod::setMethodImpl()
   
   //first check that the method and its commands have been correctly configured
   cf_assert(isConfigured());
-  //  cf_assert(m_fullConfigure == 4);
   
   cf_assert(m_setup.isNotNull());
   m_setup->execute();
@@ -564,15 +442,13 @@ void ConcurrentCouplerMethod::dataTransferReadImpl()
  // }
 
  //  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
- //  for(CFuint i = 0; i < m_interfacesRead.size(); ++i) {
- //    cf_assert(m_interfacesRead[i].isNotNull());
-
- //    // Execute and save file if needed...
- //    if((!(iter % m_transferRates[i])) || (iter ==0) ) {
- //      m_interfacesRead[i]->execute();
- //    }
-
- //  }
+  for(CFuint i = 0; i < m_interfacesRead.size(); ++i) {
+    cf_assert(m_interfacesRead[i].isNotNull());
+    
+    //    // Execute and save file if needed...
+    //    if((!(iter % m_transferRates[i])) || (iter ==0) ) {
+    m_interfacesRead[i]->execute();
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -600,7 +476,6 @@ void ConcurrentCouplerMethod::dataTransferWriteImpl()
   // getMethodData()->getCollaborator<SpaceMethod>()->extrapolateStatesToNodes();
   
   for(CFuint i = 0; i < m_interfacesWrite.size(); ++i) {
-
     cf_assert(m_interfacesWrite[i].isNotNull());
     
     //   // Execute and save file if needed...
@@ -613,31 +488,24 @@ void ConcurrentCouplerMethod::dataTransferWriteImpl()
 
 void ConcurrentCouplerMethod::unsetMethodImpl()
 {
-  // for(CFuint i = 0; i < m_postProcess.size(); ++i)
-  // {
-  //   cf_assert(m_postProcess[i].isNotNull());
-  //   m_postProcess[i]->execute();
-  // }
-
   unsetupCommandsAndStrategies();
 
   CouplerMethod::unsetMethodImpl();
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void ConcurrentCouplerMethod::clearComds()
 {
   CFAUTOTRACE;
-
-  vector<SelfRegistPtr<ConcurrentCouplerCom> >().swap(m_preProcessRead);
-  vector<SelfRegistPtr<ConcurrentCouplerCom> >().swap(m_preProcessWrite);
-  vector<SelfRegistPtr<ConcurrentCouplerCom> >().swap(m_matchMeshesRead);
-  vector<SelfRegistPtr<ConcurrentCouplerCom> >().swap(m_matchMeshesWrite);
-  vector<SelfRegistPtr<ConcurrentCouplerCom> >().swap(m_interfacesRead);
-  vector<SelfRegistPtr<ConcurrentCouplerCom> >().swap(m_interfacesWrite);
-  vector<SelfRegistPtr<ConcurrentCouplerCom> >().swap(m_postProcess);
-
+  
+  if (m_interfacesRead.size() > 0) {
+    vector<SelfRegistPtr<ConcurrentCouplerCom> >().swap(m_interfacesRead);
+  }
+  
+  if (m_interfacesWrite.size() > 0) {
+    vector<SelfRegistPtr<ConcurrentCouplerCom> >().swap(m_interfacesWrite);
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -651,13 +519,13 @@ ConcurrentCouplerMethod::getStrategyList() const
   // for(CFuint i = 0; i < preTrans.size(); ++i) {
   //   result.push_back(preTrans[i].getPtr());
   // }
-
+  
   // vector < Common::SelfRegistPtr<PostVariableTransformer > > postTrans = m_data->getPostVariableTransformers();
   // for(CFuint i = 0; i < postTrans.size(); ++i) {
   //   result.push_back(postTrans[i].getPtr());
   // }
-
- return result;
+  
+  return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////

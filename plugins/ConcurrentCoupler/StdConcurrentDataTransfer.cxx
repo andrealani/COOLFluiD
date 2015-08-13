@@ -41,6 +41,8 @@ void StdConcurrentDataTransfer::defineConfigOptions(Config::OptionList& options)
 {  
   options.addConfigOption< vector<string> >
     ("SocketsSendRecv","Sockets to transfer, for example: Namespace1_send>Namespace2_recv (no space on both sides of \">\".");
+  options.addConfigOption< vector<string> >
+    ("SocketsConnType","Connectivity type for sockets to transfer (State or Node): this is ne1eded to define global IDs.");
 }
   
 //////////////////////////////////////////////////////////////////////////////
@@ -48,12 +50,16 @@ void StdConcurrentDataTransfer::defineConfigOptions(Config::OptionList& options)
 StdConcurrentDataTransfer::StdConcurrentDataTransfer(const std::string& name) :
   ConcurrentCouplerCom(name),
   _sockets(),
-  socket_states("states")
+  socket_states("states"),
+  _global2localIDs()
 {
   addConfigOptionsTo(this);
   
   _socketsSendRecv = vector<string>();
   setParameter("SocketsSendRecv",&_socketsSendRecv);
+  
+  _socketsConnType = vector<string>();
+  setParameter("SocketsConnType",&_socketsConnType);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -67,7 +73,7 @@ StdConcurrentDataTransfer::~StdConcurrentDataTransfer()
 std::vector<Common::SafePtr<BaseDataSocketSink> >
 StdConcurrentDataTransfer::needsSockets()
 {
-  std::vector<Common::SafePtr<BaseDataSocketSink> > result = _sockets.getAllSinkSockets();;
+  std::vector<Common::SafePtr<BaseDataSocketSink> > result = _sockets.getAllSinkSockets();
   result.push_back(&socket_states);
   return result;
 }
@@ -116,6 +122,11 @@ void StdConcurrentDataTransfer::configure ( Config::ConfigArgs& args )
     CFout << e.what() << "\n" << CFendl;
     throw;
   }*/
+  
+  if (_socketsConnType.size() != _socketsSendRecv.size()) {
+    CFLog(ERROR, "StdConcurrentDataTransfer::configure() => SocketsSendRecv.size() must match SocketsConnType.size()\n");
+    cf_assert(_socketsConnType.size() == _socketsSendRecv.size());
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -152,10 +163,10 @@ void StdConcurrentDataTransfer::execute()
     const CFuint nbRanksRecv = groupRecv.globalRanks.size();
     
     if (nbRanksSend > 1 && nbRanksRecv == 1) {
-      gatherData(nspSend, nspRecv, sendSocketStr, recvSocketStr);
+      gatherData(i, nspSend, nspRecv, sendSocketStr, recvSocketStr);
     }
     else if (nbRanksSend == 1 && nbRanksRecv > 1) {
-      // use MPI_Scatterv
+      scatterData(i, nspSend, nspRecv, sendSocketStr, recvSocketStr);
     }
     else if (nbRanksSend > 1 && nbRanksRecv > 1) {
       // use MPI_Alltoallv
@@ -177,19 +188,20 @@ SafePtr<DataStorage> StdConcurrentDataTransfer::getDataStorage(const string& nsp
 
 //////////////////////////////////////////////////////////////////////////////
 
-void StdConcurrentDataTransfer::gatherData(const string& nspSend, 
+void StdConcurrentDataTransfer::gatherData(const CFuint idx,
+					   const string& nspSend, 
 					   const string& nspRecv,
 					   const string& sendSocketStr, 
 					   const string& recvSocketStr)
 {
-  const string couplingNsp = getMethodData().getNamespace();
-  Group& group = PE::GetPE().getGroup(couplingNsp);
+  CFLog(INFO, "StdConcurrentDataTransfer::gatherData() from namespace[" << nspSend 
+	<< "] to namespace [" << nspRecv << "] => start\n");
   
-  // rank in MPI_COMM_WORLD
-  const int rank  = PE::GetPE().GetRank("Default");
+  const string nspCoupling = getMethodData().getNamespace();
+  Group& group = PE::GetPE().getGroup(nspCoupling);
   
-  // rank in group
-  const int grank = PE::GetPE().GetRank(couplingNsp);
+  const int rank  = PE::GetPE().GetRank("Default"); // rank in MPI_COMM_WORLD
+  const int grank = PE::GetPE().GetRank(nspCoupling); // rank in group
   const CFuint nbRanks = group.globalRanks.size();
   
   // number of variables that count for the coupling
@@ -214,7 +226,7 @@ void StdConcurrentDataTransfer::gatherData(const string& nspSend,
 		
     // if my rank belong to the sending socket, gather first the number of elements to send
     SafePtr<DataStorage> ds = getDataStorage(nspSend);
-    CFLog(VERBOSE, "StdConcurrentDataTransfer::execute() => checking socket " << sendSocketStr << "\n");
+    CFLog(VERBOSE, "StdConcurrentDataTransfer::gatherData() => checking socket " << sendSocketStr << "\n");
     const string sendLocal  = sendSocketStr + "_local";
     const string sendGlobal = sendSocketStr + "_global";
     
@@ -252,12 +264,12 @@ void StdConcurrentDataTransfer::gatherData(const string& nspSend,
   }
   
   MPIError::getInstance().check
-    ("MPI_Allreduce", "StdConcurrentDataTransfer::execute()", 
+    ("MPI_Allreduce", "StdConcurrentDataTransfer::gatherData()", 
      MPI_Allreduce(&sendcounts[0], &recvcounts[0], nbRanks,
 		   MPIStructDef::getMPIType(&recvcounts[0]), MPI_MAX, group.comm));
   
   CFLog(DEBUG_MAX, CFPrintContainer<vector<int> >
-	("StdConcurrentDataTransfer::execute() => recvcounts  = ", &recvcounts));
+	("StdConcurrentDataTransfer::gatherData() => recvcounts  = ", &recvcounts));
   
   displs[0] = 0;
   CFuint totRecvcount = recvcounts[0];
@@ -269,51 +281,32 @@ void StdConcurrentDataTransfer::gatherData(const string& nspSend,
   }
   cf_assert(totRecvcount == std::accumulate(recvcounts.begin(), recvcounts.end(),0));
   
-  int root = -1;
-  int sendroot = -1; 
   if (PE::GetPE().isRankInGroup(rank, nspRecv)) {
-    sendroot = PE::GetPE().GetRank(couplingNsp);
     recvbuf.resize(totRecvcount);
     sendIDs.resize(1);
     recvIDs.resize(totRecvcount);
   }
   
-  MPIError::getInstance().check
-    ("MPI_Allreduce", "StdConcurrentDataTransfer::execute()", 
-     MPI_Allreduce(&sendroot, &root, 1, MPIStructDef::getMPIType(&root), MPI_MAX, group.comm));
-  cf_assert(root >= 0);
+  int root = getRootProcess(nspRecv, nspCoupling);
   
-  // MPIStruct sendMS;
-  // int lns[2];
-  // lns[0] = lns[1] = sendcount;
-  // MPIStructDef::buildMPIStruct<CFuint,CFreal>(&sendIDs[0], &sendbuf[0], lns, sendMS);
-      
-  // MPIStruct recvMS;
-  // int lnr[2];
-  // lnr[0] = lnr[1] = totRecvcount;
-  // MPIStructDef::buildMPIStruct<CFuint,CFreal>(&recvIDs[0], &recvbuf[0], lnr, recvMS);
-      
-  // MPIError::getInstance().check
-  // 	("MPI_Gatherv", "StdConcurrentDataTransfer::execute()", 
-  // 	 MPI_Gatherv(sendMS.start, 1, sendMS.type, recvMS.start, &recvcounts[0], &displs[0], 
-  // 		     recvMS.type, root, group.comm));
-      
+  // transfer the actual data
   MPIError::getInstance().check
-    ("MPI_Gatherv", "StdConcurrentDataTransfer::execute()", 
+    ("MPI_Gatherv", "StdConcurrentDataTransfer::gatherData()", 
      MPI_Gatherv(&sendbuf[0], sendcount, MPIStructDef::getMPIType(&sendbuf[0]),
 		 &recvbuf[0], &recvcounts[0], &displs[0], 
 		 MPIStructDef::getMPIType(&sendbuf[0]), root, group.comm));
-      
+  
+  // transfer the global IDs
   MPIError::getInstance().check
-    ("MPI_Gatherv", "StdConcurrentDataTransfer::execute()", 
+    ("MPI_Gatherv", "StdConcurrentDataTransfer::gatherData()", 
      MPI_Gatherv(&sendIDs[0], sendcount, MPIStructDef::getMPIType(&sendIDs[0]),
 		 &recvIDs[0], &recvcounts[0], &displs[0], 
 		 MPIStructDef::getMPIType(&sendIDs[0]), root, group.comm));
-      
+  
   if (grank == root) {
     // order the received data
     SafePtr<DataStorage> ds = getDataStorage(nspRecv);
-    CFLog(VERBOSE, "StdConcurrentDataTransfer::execute() => checking socket " << recvSocketStr << "\n");
+    CFLog(VERBOSE, "StdConcurrentDataTransfer::gatherData() => checking socket " << recvSocketStr << "\n");
     const string recvLocal  = recvSocketStr + "_local";
     const string recvGlobal = recvSocketStr + "_global";
 	
@@ -330,7 +323,8 @@ void StdConcurrentDataTransfer::gatherData(const string& nspSend,
       cf_assert(array.getLocalSize() == array.getGlobalSize());
       cf_assert(array.size() == array.getGlobalSize());
       cf_assert(array.size()*couplingStride == totRecvcount);
-	  
+      
+      // fill in the local array with all gathered data
       CFreal* sarray = array.getGlobalArray()->ptr();
       for (CFuint is = 0; is < totRecvcount; ++is) {
 	cf_assert(is < recvIDs.size());
@@ -338,7 +332,223 @@ void StdConcurrentDataTransfer::gatherData(const string& nspSend,
 	sarray[recvIDs[is]] = recvbuf[is];  
       }
     }
+  } 
+  
+  CFLog(INFO, "StdConcurrentDataTransfer::gatherData() from namespace[" << nspSend 
+	<< "] to namespace [" << nspRecv << "] => end\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+void StdConcurrentDataTransfer::scatterData(const CFuint idx,
+					    const string& nspSend, 
+					    const string& nspRecv,
+					    const string& sendSocketStr, 
+					    const string& recvSocketStr)
+{
+  CFLog(INFO, "StdConcurrentDataTransfer::scatterData() from namespace[" << nspSend 
+	<< "] to namespace [" << nspRecv << "] => start\n");
+  
+  const string nspCoupling = getMethodData().getNamespace();
+  Group& group = PE::GetPE().getGroup(nspCoupling);
+  
+  const int rank  = PE::GetPE().GetRank("Default"); // rank in MPI_COMM_WORLD
+  const int grank = PE::GetPE().GetRank(nspCoupling); // rank in coupling group
+  const CFuint nbRanks = group.globalRanks.size();
+  
+  // number of variables that count for the coupling
+  const CFuint couplingStride = PhysicalModelStack::getActive()->getNbEq();  
+  
+  // SafePtr<VarSetTransformer> sendToRecvTrans = 
+  //   getMethodData().getSendToRecvVecTrans();
+  
+  // build mapping from global to local DOF IDs on the receiving side
+  if (PE::GetPE().isRankInGroup(rank, nspRecv)) {  
+    if (_global2localIDs.size() == 0) {
+      SafePtr<DataStorage> ds = getDataStorage(nspRecv);
+      if (_socketsConnType[idx] == "State") {
+	const string statesStr = nspRecv + "_states";
+	fillMapGlobalToLocal<State*>(ds, statesStr, _global2localIDs);
+      }
+      
+      if (_socketsConnType[idx] == "Node") {
+	const string nodesStr = nspRecv + "_nodes";
+	fillMapGlobalToLocal<Node*>(ds, nodesStr, _global2localIDs);
+      }
+    }
   }
+  
+  vector<CFreal> sendbuf;
+  vector<CFuint> sendIDs;
+  vector<int> sendcounts(nbRanks, 0);
+  vector<int> sendIDcounts(nbRanks, 0);
+  CFreal* dataToSend = CFNULL;
+  
+  // this scatters contributions from one rank in the "send" namespace 
+  // to all ranks belonging to the "recv" namespace
+  if (PE::GetPE().isRankInGroup(rank, nspSend)) {  
+    SafePtr<DataStorage> ds = getDataStorage(nspSend);
+    CFLog(VERBOSE, "StdConcurrentDataTransfer::scatterData() => checking socket " << sendSocketStr << "\n");
+    
+    const string sendLocal  = sendSocketStr + "_local";
+    const string sendGlobal = sendSocketStr + "_global";
+    
+    // local data (CFreal)
+    if (ds->checkData(sendSocketStr)) {
+      DataHandle<CFreal> array = ds->getData<CFreal>(sendSocketStr);
+      CFLog(VERBOSE, "P" << rank << " has socket " << sendSocketStr << "\n"); 
+      dataToSend = &array[0];
+      
+      const CFuint minSize = array.size()/nbRanks;
+      const CFuint maxSize = minSize + array.size()%nbRanks;
+      cf_assert(minSize*(nbRanks-1) + maxSize == array.size());
+      
+      const string statesStr = nspSend + "_states";
+      const string nodesStr = nspSend + "_nodes";
+      DataHandle<State*, GLOBAL> states = ds->getGlobalData<State*>(statesStr);
+      DataHandle<Node*, GLOBAL> nodes = ds->getGlobalData<Node*>(nodesStr);
+      
+      CFuint stride = 0;
+      if (_socketsConnType[idx] == "State") {stride = array.size()/states.size();}
+      if (_socketsConnType[idx] == "Node")  {stride = array.size()/nodes.size();}
+      
+      CFuint sendsum = 0;
+      for (CFuint r = 0; r < nbRanks; ++r) {
+	sendcounts[r]   = (r < nbRanks-1) ? minSize : maxSize; 
+	sendIDcounts[r] = sendcounts[r]/stride;
+	sendsum += sendcounts[r];
+      }
+      cf_assert(sendsum == array.size());
+    }
+    // global data (State*)
+    else if (ds->checkData(sendLocal) && ds->checkData(sendGlobal)) {
+      DataHandle<State*, GLOBAL> array = ds->getGlobalData<State*>(sendSocketStr);
+      CFLog(VERBOSE, "P" << rank << " has socket " << sendSocketStr << " with sizes = [" 
+	    << array.getLocalSize() << ", " << array.getGlobalSize() << "]\n"); 
+      
+      throw NotImplementedException
+	(FromHere(), "StdConcurrentDataTransfer::scatterData() => states/nodes not implemented!");
+    }
+    
+    cf_assert(dataToSend != CFNULL);
+  }
+  
+  int root = getRootProcess(nspSend, nspCoupling);
+  
+  MPIStruct msSizes;
+  int ln[2];
+  ln[0] = ln[1] = nbRanks;
+  MPIStructDef::buildMPIStruct(&sendcounts[0], &sendIDcounts[0], ln, msSizes);
+  
+  MPIError::getInstance().check
+    ("MPI_Bcast", "StdConcurrentDataTransfer::scatterData()", 
+     MPI_Bcast(msSizes.start, 1, msSizes.type, root, group.comm));
+    
+  sendbuf.resize(sendcounts[nbRanks-1]);
+  sendIDs.resize(sendIDcounts[nbRanks-1]);
+  cf_assert(sendbuf.size() > 0);
+  cf_assert(sendIDs.size() > 0);
+  
+  CFuint counter = 0;
+  CFuint countID = 0;
+  for (CFuint r = 0; r < nbRanks; ++r) {
+    const CFuint sendSize = sendcounts[r]; 
+    const CFuint sendIDSize = sendIDcounts[r]; 
+    const CFuint stride = sendSize/sendIDSize;
+    cf_assert(stride >= 1);
+    
+    if (grank == root) {
+      for (CFuint s = 0; s < sendSize; ++s, ++counter) {
+	sendbuf[s] = dataToSend[counter];
+      }
+      
+      SafePtr<DataStorage> ds = getDataStorage(nspSend);
+      if (_socketsConnType[idx] == "State") {
+	const string statesStr = nspSend + "_states";
+	DataHandle<State*, GLOBAL> states = ds->getGlobalData<State*>(statesStr);
+	for (CFuint s = 0; s < sendIDSize; ++s, ++countID) {
+	  sendIDs[s] = states[countID]->getGlobalID(); 
+	}
+      }
+      if (_socketsConnType[idx] == "Node")  {
+	const string nodesStr = nspSend + "_nodes";
+	DataHandle<Node*, GLOBAL> nodes = ds->getGlobalData<Node*>(nodesStr);
+	for (CFuint s = 0; s < sendIDSize; ++s, ++countID) {
+	  sendIDs[s] = nodes[countID]->getGlobalID(); 
+	}
+      }
+    }
+        
+    MPIStruct ms;
+    int ln[2];
+    ln[0] = sendcounts[r];
+    ln[1] = sendIDcounts[r];
+    MPIStructDef::buildMPIStruct<CFreal, CFuint>(&sendbuf[0], &sendIDs[0], ln, ms);
+    
+    MPIError::getInstance().check
+      ("MPI_Bcast", "StdConcurrentDataTransfer::scatterData()", 
+       MPI_Bcast(ms.start, 1, ms.type, root, group.comm));
+    
+    if (grank != root) {
+      //  when current rank finds a globalID, it copies the data in corresponding localID position
+      SafePtr<DataStorage> ds = getDataStorage(nspRecv);
+      const string recvLocal  = recvSocketStr + "_local";
+      const string recvGlobal = recvSocketStr + "_global";
+      
+      // local data (CFreal)
+      CFreal* dataToRecv = CFNULL;
+      if (ds->checkData(recvSocketStr)) {
+	DataHandle<CFreal> array = ds->getData<CFreal>(recvSocketStr);
+	CFLog(VERBOSE, "P" << rank << " has socket " << recvSocketStr << "\n"); 
+	dataToRecv = &array[0];
+      }
+      // global data (State*)
+      else if (ds->checkData(recvLocal) && ds->checkData(recvGlobal)) {
+	DataHandle<State*, GLOBAL> array = ds->getGlobalData<State*>(recvSocketStr);
+	CFLog(VERBOSE, "P" << rank << " has socket " << recvSocketStr << " with sizes = [" 
+	      << array.getLocalSize() << ", " << array.getGlobalSize() << "]\n"); 
+	dataToRecv = array.getGlobalArray()->ptr();
+      }
+      cf_assert(dataToRecv != CFNULL);
+      
+      for (CFuint id = 0; id < sendIDSize; ++id) {
+	bool found = false;
+	const CFuint localID = _global2localIDs.find(sendIDs[id], found);
+	if (found) {
+	  const CFuint startR = localID*stride;
+	  const CFuint startS = id*stride;
+	  for (CFuint n = 0; n < stride; ++n) {
+	    dataToRecv[startR+n] = sendbuf[startS+n];
+	  }
+	}
+      }
+    }
+  }
+  
+   CFLog(INFO, "StdConcurrentDataTransfer::scatterData() from namespace[" << nspSend 
+	<< "] to namespace [" << nspRecv << "] => end\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+int StdConcurrentDataTransfer::getRootProcess(const std::string& nsp, 
+					      const std::string& nspCoupling) const
+{
+  const int rank  = PE::GetPE().GetRank("Default"); // rank in MPI_COMM_WORLD
+  Group& group = PE::GetPE().getGroup(nspCoupling);
+  
+  int root = -1;
+  int sendroot = -1; 
+  if (PE::GetPE().isRankInGroup(rank, nsp)) {
+    sendroot = PE::GetPE().GetRank(nspCoupling);
+  }
+  
+  MPIError::getInstance().check
+    ("MPI_Allreduce", "StdConcurrentDataTransfer::getRootProcess()", 
+     MPI_Allreduce(&sendroot, &root, 1, MPIStructDef::getMPIType(&root), 
+		   MPI_MAX, group.comm));
+  cf_assert(root >= 0);
+  return root;
 }
       
 //////////////////////////////////////////////////////////////////////////////

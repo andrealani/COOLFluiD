@@ -63,14 +63,50 @@ protected: // functions
   Common::SafePtr<Framework::DataStorage> getDataStorage(const std::string& nspName);
   
   /// gather data from all processes in namespace nspSend to 1 process in namespace nspRecv
+  /// @param idx           index of the data transfer
   /// @param nspSend       namespace from which data are sent (>= 1 rank)
   /// @param nspRecv       namespace from which data are received (1 rank)
   /// @param sendSocketStr name of the socket from which data are sent (distributed)
   /// @param recvSocketStr name of the socket from which data are received (serial)
-  void gatherData(const std::string& nspSend, 
+  void gatherData(const CFuint idx,
+		  const std::string& nspSend, 
 		  const std::string& nspRecv,
 		  const std::string& sendSocketStr, 
 		  const std::string& recvSocketStr);
+  
+  /// scatter data from 1 process in namespace nspSend to all processes in namespace nspRecv
+  /// @param idx           index of the data transfer
+  /// @param nspSend       namespace from which data are sent  (1 rank)
+  /// @param nspRecv       namespace from which data are received (>=1 rank)
+  /// @param sendSocketStr name of the socket from which data are sent (serial)
+  /// @param recvSocketStr name of the socket from which data are received (distributed)
+  void scatterData(const CFuint idx,
+		   const std::string& nspSend, 
+		   const std::string& nspRecv,
+		   const std::string& sendSocketStr, 
+		   const std::string& recvSocketStr);
+  
+  /// fill a mapping between global and local IDs
+  /// @param ds            pointer to DataStorage
+  /// @param socketName    name of the socket
+  /// @param global2local  reference to the map object to fill in
+  template <typename T>
+  void fillMapGlobalToLocal(Common::SafePtr<Framework::DataStorage> ds,
+			    const std::string& socketName,  
+			    Common::CFMap<CFuint, CFuint>& global2local)
+  {
+    Framework::DataHandle<T, Framework::GLOBAL> dofs = ds->getGlobalData<T>(socketName);
+    global2local.reserve(dofs.size());
+    for (CFuint i = 0; i < dofs.size(); ++i) {
+      global2local.insert(dofs[i]->getGlobalID(), dofs[i]->getLocalID());
+    }
+    global2local.sortKeys();
+  }
+  
+  /// @return the rank (within nspCoupling) of the root process belonging to namespace nsp
+  /// @param nsp           namespace to which the process belongs
+  /// @param nspCoupling   coupling namespace 
+  int getRootProcess(const std::string& nsp, const std::string& nspCoupling) const;
   
 protected: // data
   
@@ -80,9 +116,15 @@ protected: // data
   /// socket for State's
   Framework::DataSocketSink<Framework::State*, Framework::GLOBAL> socket_states;
   
+  /// mapping from global to local IDs
+  Common::CFMap<CFuint, CFuint> _global2localIDs;
+  
   /// names of the sending and receiving sockets with format:  
   /// "Namespace1_from>Namespace2_to" (no space on both sides of \">\".
   std::vector<std::string> _socketsSendRecv;
+  
+  /// connectvity type for sockets (this is needed for defining global IDs)
+  std::vector<std::string> _socketsConnType;
   
 }; // class StdConcurrentDataTransfer
       
