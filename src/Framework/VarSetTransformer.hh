@@ -30,28 +30,35 @@ namespace COOLFluiD {
 /// @author Andrea Lani
 /// @author Tiago Quintino
 class Framework_API VarSetTransformer : public Common::OwnedObject,
-                           public Common::NullableObject {
-public:
-
+					public Common::NullableObject {
+ public:
+  
   typedef Environment::ConcreteProvider<VarSetTransformer, 1> PROVIDER;
   typedef Common::SafePtr<Framework::PhysicalModelImpl> ARG1;
-
+  
   /// Default constructor without arguments
   VarSetTransformer(Common::SafePtr<Framework::PhysicalModelImpl> model);
-
+  
   /// Default destructor
   virtual ~VarSetTransformer();
-
+  
   /// Set the data to prepare the simulation
   virtual void setup(const CFuint maxNbTransStates);
-
+  
+  /// Transform an array of variables into another one of potentially different length
+  virtual void transform(const RealVector& state, RealVector& result)
+  {
+    throw Common::NotImplementedException(FromHere(), "VarSetTransformer::transform()");
+  }
+  
   /// Transform a set of state vectors into another one
   virtual std::vector<State*>* transform(std::vector<State*> *const  states)
   {
     const CFuint nbStates = states->size();
     for (CFuint iState = 0; iState < nbStates; ++iState) {
       _iState = iState;
-      transform(*(*states)[iState], *_transStateVec[iState]);
+      transform((const Framework::State&)*(*states)[iState], 
+		(Framework::State&)*_transStateVec[iState]);
     }
     return &_transStateVec;
   }
@@ -59,7 +66,7 @@ public:
   /// Transform a state into another one
   virtual State* transform(State* const state)
   {
-    transform(*state, *_transState);
+    transform((const Framework::State&)*state, (Framework::State&)*_transState);
     return _transState;
   }
   

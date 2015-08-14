@@ -40,7 +40,7 @@ CouplingModelDummySendToRecv::~CouplingModelDummySendToRecv()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void CouplingModelDummySendToRecv::transform(const State& state, State& result)
+void CouplingModelDummySendToRecv::transform(const RealVector& state, RealVector& result)
 {
   result = 0.;
   const vector<CFuint>& sendIDs = m_model->getSendIDs();
@@ -52,6 +52,13 @@ void CouplingModelDummySendToRecv::transform(const State& state, State& result)
     cf_assert(sendIDs[i] < state.size());
     result[recvIDs[i]] = state[sendIDs[i]];
   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void CouplingModelDummySendToRecv::transform(const State& state, State& result)
+{
+  transform((const RealVector&)state, (RealVector&)result);
 }
 
 //////////////////////////////////////////////////////////////////////////////

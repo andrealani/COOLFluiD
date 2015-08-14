@@ -11,6 +11,10 @@
 
 namespace COOLFluiD {
 
+  namespace Framework {
+    class VarSetTransformer;
+  }
+  
   namespace Numerics {
 
     namespace ConcurrentCoupler {
@@ -45,18 +49,23 @@ public:
    * Returns the DataSocket's that this command needs as sinks
    * @return a vector of SafePtr with the DataSockets
    */
-  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets();
-
+  virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets();
+  
+  /**
+   * Setup private data
+   */
+  virtual void setup();
+  
   /**
    * Execute Processing actions
    */
-  void execute();
-
+  virtual void execute();
+  
   /**
    * Configures the command.
    */
   virtual void configure ( Config::ConfigArgs& args );
-
+  
 protected: // functions
   
   /// @return the DataStorage corresponding to the given namespace
@@ -68,11 +77,11 @@ protected: // functions
   /// @param nspRecv       namespace from which data are received (1 rank)
   /// @param sendSocketStr name of the socket from which data are sent (distributed)
   /// @param recvSocketStr name of the socket from which data are received (serial)
-  void gatherData(const CFuint idx,
-		  const std::string& nspSend, 
-		  const std::string& nspRecv,
-		  const std::string& sendSocketStr, 
-		  const std::string& recvSocketStr);
+  virtual void gatherData(const CFuint idx,
+			  const std::string& nspSend, 
+			  const std::string& nspRecv,
+			  const std::string& sendSocketStr, 
+			  const std::string& recvSocketStr);
   
   /// scatter data from 1 process in namespace nspSend to all processes in namespace nspRecv
   /// @param idx           index of the data transfer
@@ -80,11 +89,11 @@ protected: // functions
   /// @param nspRecv       namespace from which data are received (>=1 rank)
   /// @param sendSocketStr name of the socket from which data are sent (serial)
   /// @param recvSocketStr name of the socket from which data are received (distributed)
-  void scatterData(const CFuint idx,
-		   const std::string& nspSend, 
-		   const std::string& nspRecv,
-		   const std::string& sendSocketStr, 
-		   const std::string& recvSocketStr);
+  virtual void scatterData(const CFuint idx,
+			   const std::string& nspSend, 
+			   const std::string& nspRecv,
+			   const std::string& sendSocketStr, 
+			   const std::string& recvSocketStr);
   
   /// fill a mapping between global and local IDs
   /// @param ds            pointer to DataStorage
@@ -103,10 +112,57 @@ protected: // functions
     global2local.sortKeys();
   }
   
+  /// fill data to be sent
+  /// @param ds            pointer to DataStorage
+  /// @param dofStr          name of the dof socket
+  /// @param sendcount       size of buffer to send
+  /// @param sendbuf         buffer of data to be sent
+  /// @param sendIDs         buffer od global IDs to be sent
+  /// @param array           local array from which data will be sent
+  template <typename T, typename U>
+  void fillSendData(Common::SafePtr<Framework::DataStorage> ds,
+		    const std::string& dofsStr, 
+		    CFuint& sendcount, std::vector<CFreal>& sendbuf,
+		    std::vector<CFuint>& sendIDs, const U& array)
+  {  
+    Framework::DataHandle<T, Framework::GLOBAL> dofs = ds->getGlobalData<T>(dofsStr);
+    const CFuint stride = array.size()/dofs.size();
+    const CFuint localSize = dofs.getLocalSize();
+    sendcount = localSize*stride;
+    sendbuf.reserve(sendcount); 
+    sendIDs.reserve(sendcount);
+    
+    CFuint counter = 0;
+    for (CFuint ia = 0; ia < dofs.size(); ++ia) {
+      const CFuint globalID = dofs[ia]->getGlobalID();
+      if (dofs[ia]->isParUpdatable()) {
+	for (CFuint s = 0; s < stride; ++s) {
+	  sendbuf.push_back(array[counter+s]);
+	  sendIDs.push_back(globalID*stride+s);
+	}
+      }
+      counter += stride;
+    }
+    cf_assert(counter == array.size());
+  }
+  
   /// @return the rank (within nspCoupling) of the root process belonging to namespace nsp
   /// @param nsp           namespace to which the process belongs
   /// @param nspCoupling   coupling namespace 
   int getRootProcess(const std::string& nsp, const std::string& nspCoupling) const;
+
+protected:
+  
+  /// struct holding some data for controlling the transfer
+  class DataToTrasfer {
+  public:
+    DataToTrasfer() {stride = 0; counts = 0; array = CFNULL;}
+    ~DataToTrasfer() {}
+    
+    CFuint stride;
+    CFuint counts;
+    CFreal* array;
+  };
   
 protected: // data
   
@@ -116,15 +172,24 @@ protected: // data
   /// socket for State's
   Framework::DataSocketSink<Framework::State*, Framework::GLOBAL> socket_states;
   
+  /// vector transformer from send (source) to recv (target) variables
+  std::vector<Common::SelfRegistPtr<Framework::VarSetTransformer> > _sendToRecvVecTrans;
+  
   /// mapping from global to local IDs
   Common::CFMap<CFuint, CFuint> _global2localIDs;
+  
+  /// mapping from global to local IDs
+  Common::CFMap<std::string, DataToTrasfer*> _socketName2data;
   
   /// names of the sending and receiving sockets with format:  
   /// "Namespace1_from>Namespace2_to" (no space on both sides of \">\".
   std::vector<std::string> _socketsSendRecv;
   
-  /// connectvity type for sockets (this is needed for defining global IDs)
+  /// connectivity type for sockets (this is needed for defining global IDs)
   std::vector<std::string> _socketsConnType;
+  
+  /// variables transformers from send to recv variables
+  std::vector<std::string> _sendToRecvVecTransStr;
   
 }; // class StdConcurrentDataTransfer
       

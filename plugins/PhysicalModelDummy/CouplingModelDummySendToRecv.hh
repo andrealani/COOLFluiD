@@ -34,6 +34,9 @@ public:
    * Default destructor
    */
   ~CouplingModelDummySendToRecv();
+   
+  /// Transform an array of variables into another one of potentially different length
+  void transform(const RealVector& state, RealVector& result);
   
   /**
    * Transform a state into another one

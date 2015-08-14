@@ -105,8 +105,8 @@ template<class KEY, class VALUE>
 inline VALUE CFMap<KEY, VALUE>::find(const KEY& aKey, bool& isFound)
 {
   cf_assert(!m_vectorMap.empty());
-  cf_assert(m_sorted);
-
+  if(!m_sorted) { sortKeys(); }
+  
   typename std::vector<std::pair<KEY,VALUE> >::iterator itr =
     std::lower_bound(m_vectorMap.begin(),m_vectorMap.end(),
                      aKey, Compare());

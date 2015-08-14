@@ -50,6 +50,12 @@ public:
     return state;
   }
 
+  /// Transform an array of variables into another one of potentially different length
+  void transform(const RealVector& state, RealVector& result)
+  {
+    copy(state, result);
+  }
+  
   /// Transform a set of state vectors into another one from
   /// reference precomputed values (physical data) associated to the
   /// given states

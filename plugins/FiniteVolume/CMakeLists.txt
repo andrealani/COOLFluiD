@@ -254,6 +254,8 @@ PeriodicY2DMPI.cxx
 PeriodicY2DMPI.hh
 #PolyReconstructorLin.cxx
 #PolyReconstructorLin.hh
+QRadSetup.cxx
+QRadSetup.hh
 ForceSourceTerm.cxx
 ForceSourceTerm.hh
 RoeFluxALEBDF2.cxx

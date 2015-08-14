@@ -8,7 +8,6 @@
 #include "Framework/StdTrsGeoBuilder.hh"
 #include "Framework/FaceTrsGeoBuilder.hh"
 #include "Framework/CouplerData.hh"
-#include "Framework/VarSetTransformer.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -98,16 +97,7 @@ public:
   {
     return _spaceMethod;
   }
-  
-  /**
-   * Get the transformer from send (source) to recv (target) variables
-   */
-  Common::SafePtr<Framework::VarSetTransformer> getSendToRecvVecTrans() const
-  {
-    cf_assert(_sendToRecvVecTrans.isNotNull());
-    return _sendToRecvVecTrans.getPtr();
-  }
-  
+   
 private:
   
   /// builder for standard TRS GeometricEntity's
@@ -118,12 +108,6 @@ private:
   
   /// handle to the space method
   Framework::MultiMethodHandle<Framework::SpaceMethod> _spaceMethod;
-  
-  /// vector transformer from send (source) to recv (target) variables
-  Common::SelfRegistPtr<Framework::VarSetTransformer> _sendToRecvVecTrans;
-  
-  /// Name of the vector transformer from send (source) to recv (target) variables
-  std::string _sendToRecvVecTransStr;
   
 }; // end of class ConcurrentCouplerData
 

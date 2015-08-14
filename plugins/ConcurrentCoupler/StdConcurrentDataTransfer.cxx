@@ -10,6 +10,8 @@
 #include "Framework/MeshData.hh"
 #include "Framework/CommandGroup.hh"
 #include "Framework/NamespaceSwitcher.hh"
+#include "Framework/VarSetTransformer.hh"
+
 #include "ConcurrentCoupler/ConcurrentCouplerData.hh"
 #include "ConcurrentCoupler/ConcurrentCoupler.hh"
 #include "ConcurrentCoupler/StdConcurrentDataTransfer.hh"
@@ -43,15 +45,19 @@ void StdConcurrentDataTransfer::defineConfigOptions(Config::OptionList& options)
     ("SocketsSendRecv","Sockets to transfer, for example: Namespace1_send>Namespace2_recv (no space on both sides of \">\".");
   options.addConfigOption< vector<string> >
     ("SocketsConnType","Connectivity type for sockets to transfer (State or Node): this is ne1eded to define global IDs.");
+  options.addConfigOption< vector<string> >
+    ("SendToRecvVariableTransformer","Variables transformers from send to recv variables.");
 }
-  
+      
 //////////////////////////////////////////////////////////////////////////////
 
 StdConcurrentDataTransfer::StdConcurrentDataTransfer(const std::string& name) :
   ConcurrentCouplerCom(name),
   _sockets(),
   socket_states("states"),
-  _global2localIDs()
+  _sendToRecvVecTrans(),
+  _global2localIDs(),
+  _socketName2data()
 {
   addConfigOptionsTo(this);
   
@@ -60,12 +66,18 @@ StdConcurrentDataTransfer::StdConcurrentDataTransfer(const std::string& name) :
   
   _socketsConnType = vector<string>();
   setParameter("SocketsConnType",&_socketsConnType);
+  
+  _sendToRecvVecTransStr = vector<string>();
+  setParameter("SendToRecvVariableTransformer", &_sendToRecvVecTransStr);
 }
       
 //////////////////////////////////////////////////////////////////////////////
 
 StdConcurrentDataTransfer::~StdConcurrentDataTransfer()
 {
+  for (CFuint i =0 ; i < _socketName2data.size(); ++i) {
+    delete _socketName2data[i];
+  }  
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -83,54 +95,58 @@ StdConcurrentDataTransfer::needsSockets()
 void StdConcurrentDataTransfer::configure ( Config::ConfigArgs& args )
 {
   ConcurrentCouplerCom::configure(args);
-
-  /*typedef std::vector<Common::SafePtr<CommandGroup> > InterfaceList;
-  InterfaceList interfaces = getMethodData().getInterfaces();
-
-  try {
-    const std::string nsp = getMethodData().getNamespace();
-  InterfaceList::iterator itr = interfaces.begin();
-  for(; itr != interfaces.end(); ++itr) {
-
-    const std::vector<std::string>& comNames = (*itr)->getComNames();
-
-    // check if this command applies to this Interface
-    if(count(comNames.begin(),comNames.end(),getName()) != 0) {
-
-      const std::string interfaceName = (*itr)->getName();
-
-      for (CFuint iProc = 0; iProc < Common::PE::GetPE().GetProcessorCount(nsp); ++iProc)
-      {
-        const vector<std::string> otherTrsNames = getMethodData().getCoupledSubSystemsTRSNames(interfaceName);
-        for (CFuint i=0; i< otherTrsNames.size(); ++i)
-        {
-          /// Get the datahandle for the data to be transfered TO THE OTHER SubSystem
-          const std::string otherTrsName = otherTrsNames[i];
-
-          vector<std::string> socketDataNames = getMethodData().getOtherCoupledDataName(interfaceName,otherTrsName,iProc);
-          for(CFuint iType=0;iType < socketDataNames.size();iType++)
-          {
-            _sockets.createSocketSink<RealVector>(socketDataNames[iType]);
-          } // coord types
-        } // other trs
-      } //loop over processors
-    } // if check
-  } // interfaces
-
-  } catch (Exception& e)
-  {
-    CFout << e.what() << "\n" << CFendl;
-    throw;
-  }*/
   
   if (_socketsConnType.size() != _socketsSendRecv.size()) {
-    CFLog(ERROR, "StdConcurrentDataTransfer::configure() => SocketsSendRecv.size() must match SocketsConnType.size()\n");
+    CFLog(ERROR, "StdConcurrentDataTransfer::configure() => SocketsSendRecv.size() != SocketsConnType.size()\n");
     cf_assert(_socketsConnType.size() == _socketsSendRecv.size());
+  }
+  
+  // configure variable transformers
+  const string name = getMethodData().getNamespace();
+  SafePtr<Namespace> nsp = 
+    NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName()).getNamespace(name);
+  SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
+  SafePtr<VarSetTransformer::PROVIDER> vecTransProv = CFNULL;
+  
+  if (_sendToRecvVecTransStr.size() == 0) {
+    _sendToRecvVecTransStr.resize(_socketsSendRecv.size(), "Identity");
+  }
+  _sendToRecvVecTrans.resize(_sendToRecvVecTransStr.size());
+  
+  for (CFuint i = 0; i < _sendToRecvVecTransStr.size(); ++i) {
+    CFLog(VERBOSE, "Configuring VarSet Transformer: " << _sendToRecvVecTransStr[i] << "\n");
+    
+    try {
+      vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
+	(_sendToRecvVecTransStr[i]);
+    }
+    catch (Common::NoSuchValueException& e) {
+      _sendToRecvVecTransStr[i] = "Identity";
+      
+      CFLog(VERBOSE, e.what() << "\n");
+      CFLog(VERBOSE, "Choosing IdentityVarSetTransformer instead ..." << "\n");
+      vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
+	(_sendToRecvVecTransStr[i]);
+    }
+    
+    cf_assert(vecTransProv.isNotNull());  
+    _sendToRecvVecTrans[i].reset(vecTransProv->create(physModel->getImplementor()));
+    cf_assert(_sendToRecvVecTrans[i].getPtr() != CFNULL);
   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
+  
+void StdConcurrentDataTransfer::setup()
+{
+  // set up the variable transformer
+  for (CFuint i = 0; i < _sendToRecvVecTrans.size(); ++i){
+    _sendToRecvVecTrans[i]->setup(1);
+  }
+}
+ 
+//////////////////////////////////////////////////////////////////////////////
+       
 void StdConcurrentDataTransfer::execute()
 {
   CFAUTOTRACE;
@@ -198,17 +214,16 @@ void StdConcurrentDataTransfer::gatherData(const CFuint idx,
 	<< "] to namespace [" << nspRecv << "] => start\n");
   
   const string nspCoupling = getMethodData().getNamespace();
-  Group& group = PE::GetPE().getGroup(nspCoupling);
-  
+  Group& group    = PE::GetPE().getGroup(nspCoupling);
   const int rank  = PE::GetPE().GetRank("Default"); // rank in MPI_COMM_WORLD
   const int grank = PE::GetPE().GetRank(nspCoupling); // rank in group
   const CFuint nbRanks = group.globalRanks.size();
   
   // number of variables that count for the coupling
   const CFuint couplingStride = PhysicalModelStack::getActive()->getNbEq();  
-  
-  SafePtr<VarSetTransformer> sendToRecvTrans = 
-    getMethodData().getSendToRecvVecTrans();
+  cf_assert(idx < _sendToRecvVecTrans.size());
+  SafePtr<VarSetTransformer> sendToRecvTrans = _sendToRecvVecTrans[idx].getPtr();
+  cf_assert(sendToRecvTrans.isNotNull());
   
   CFuint sendcount = 0;
   vector<CFreal> recvbuf;
@@ -234,6 +249,16 @@ void StdConcurrentDataTransfer::gatherData(const CFuint idx,
     if (ds->checkData(sendSocketStr)) {
       DataHandle<CFreal> array = ds->getData<CFreal>(sendSocketStr);
       CFLog(VERBOSE, "P" << rank << " has socket " << sendSocketStr << "\n"); 
+      
+      if (_socketsConnType[idx] == "State") {
+	const string statesStr = nspSend + "_states";
+	fillSendData<State*>(ds, statesStr, sendcount, sendbuf, sendIDs, array);
+      }
+      
+      if (_socketsConnType[idx] == "Node") {
+	const string nodesStr = nspSend + "_nodes";
+	fillSendData<Node*>(ds, nodesStr, sendcount, sendbuf, sendIDs, array);
+      }
     }
     // global data (State*)
     else if (ds->checkData(sendLocal) && ds->checkData(sendGlobal)) {
@@ -246,6 +271,7 @@ void StdConcurrentDataTransfer::gatherData(const CFuint idx,
       
       for (CFuint ia = 0; ia < array.size(); ++ia) {
 	const CFuint globalID = array[ia]->getGlobalID();
+	// only parallel updatable data are communicated
 	if (array[ia]->isParUpdatable()) {
 	  const State *const tState = sendToRecvTrans->transform(array[ia]);
 	  cf_assert(tState->size() == couplingStride);
@@ -256,8 +282,9 @@ void StdConcurrentDataTransfer::gatherData(const CFuint idx,
 	  }
 	}
       }
-      cf_assert(sendbuf.size() == sendcount);
     }
+    
+    cf_assert(sendbuf.size() == sendcount);
     
     // fill in the number of counts to send from this rank
     sendcounts[grank] = sendcount;
@@ -358,10 +385,8 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx,
   
   // number of variables that count for the coupling
   const CFuint couplingStride = PhysicalModelStack::getActive()->getNbEq();  
-  
-  // SafePtr<VarSetTransformer> sendToRecvTrans = 
-  //   getMethodData().getSendToRecvVecTrans();
-  
+  // SafePtr<VarSetTransformer> sendToRecvTrans = _sendToRecvVecTrans[idx].getPtr();
+    
   // build mapping from global to local DOF IDs on the receiving side
   if (PE::GetPE().isRankInGroup(rank, nspRecv)) {  
     if (_global2localIDs.size() == 0) {
@@ -425,9 +450,19 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx,
       DataHandle<State*, GLOBAL> array = ds->getGlobalData<State*>(sendSocketStr);
       CFLog(VERBOSE, "P" << rank << " has socket " << sendSocketStr << " with sizes = [" 
 	    << array.getLocalSize() << ", " << array.getGlobalSize() << "]\n"); 
+      dataToSend = array.getGlobalArray()->ptr();
+      const CFuint stride = PhysicalModelStack::getActive()->getNbEq();
+      const CFuint minSize = array.size()*stride/nbRanks;
+      const CFuint maxSize = minSize + array.size()*stride%nbRanks;
+      cf_assert(minSize*(nbRanks-1) + maxSize == array.size()*stride);
       
-      throw NotImplementedException
-	(FromHere(), "StdConcurrentDataTransfer::scatterData() => states/nodes not implemented!");
+      CFuint sendsum = 0;
+      for (CFuint r = 0; r < nbRanks; ++r) {
+      	sendcounts[r]   = (r < nbRanks-1) ? minSize : maxSize; 
+      	sendIDcounts[r] = sendcounts[r]/stride;
+      	sendsum += sendcounts[r];
+      }
+      cf_assert(sendsum == array.size()*stride);
     }
     
     cf_assert(dataToSend != CFNULL);
@@ -501,6 +536,18 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx,
 	DataHandle<CFreal> array = ds->getData<CFreal>(recvSocketStr);
 	CFLog(VERBOSE, "P" << rank << " has socket " << recvSocketStr << "\n"); 
 	dataToRecv = &array[0];
+	
+	for (CFuint id = 0; id < sendIDSize; ++id) {
+	  bool found = false;
+	  const CFuint localID = _global2localIDs.find(sendIDs[id], found);
+	  if (found) {
+	    const CFuint startR = localID*stride;
+	    const CFuint startS = id*stride;
+	    for (CFuint n = 0; n < stride; ++n) {
+	      dataToRecv[startR+n] = sendbuf[startS+n];
+	    }
+	  }
+	}
       }
       // global data (State*)
       else if (ds->checkData(recvLocal) && ds->checkData(recvGlobal)) {
@@ -508,24 +555,25 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx,
 	CFLog(VERBOSE, "P" << rank << " has socket " << recvSocketStr << " with sizes = [" 
 	      << array.getLocalSize() << ", " << array.getGlobalSize() << "]\n"); 
 	dataToRecv = array.getGlobalArray()->ptr();
+	
+	// need more general transformation mechanism!!!
+	for (CFuint id = 0; id < sendIDSize; ++id) {
+	  bool found = false;
+	  const CFuint localID = _global2localIDs.find(sendIDs[id], found);
+	  if (found) {
+	    const CFuint startR = localID*stride;
+	    const CFuint startS = id*stride;
+	    for (CFuint n = 0; n < stride; ++n) {
+	      dataToRecv[startR+n] = sendbuf[startS+n];
+	    }
+	  }
+	}      
       }
       cf_assert(dataToRecv != CFNULL);
-      
-      for (CFuint id = 0; id < sendIDSize; ++id) {
-	bool found = false;
-	const CFuint localID = _global2localIDs.find(sendIDs[id], found);
-	if (found) {
-	  const CFuint startR = localID*stride;
-	  const CFuint startS = id*stride;
-	  for (CFuint n = 0; n < stride; ++n) {
-	    dataToRecv[startR+n] = sendbuf[startS+n];
-	  }
-	}
-      }
     }
   }
   
-   CFLog(INFO, "StdConcurrentDataTransfer::scatterData() from namespace[" << nspSend 
+  CFLog(INFO, "StdConcurrentDataTransfer::scatterData() from namespace[" << nspSend 
 	<< "] to namespace [" << nspRecv << "] => end\n");
 }
       
@@ -552,7 +600,7 @@ int StdConcurrentDataTransfer::getRootProcess(const std::string& nsp,
 }
       
 //////////////////////////////////////////////////////////////////////////////
-
+      
     } // namespace FluctSplit
 
   } // namespace Numerics
