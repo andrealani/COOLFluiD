@@ -1,0 +1,111 @@
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace ConcurrentCoupler {
+
+//////////////////////////////////////////////////////////////////////////////
+
+ template <typename T>
+ void StdConcurrentDataTransfer::fillMapGlobalToLocal
+ (Common::SafePtr<Framework::DataStorage> ds,
+  const std::string& socketName,  
+  Common::CFMap<CFuint, CFuint>& global2local)
+ {
+   Framework::DataHandle<T, Framework::GLOBAL> dofs = ds->getGlobalData<T>(socketName);
+    global2local.reserve(dofs.size());
+    for (CFuint i = 0; i < dofs.size(); ++i) {
+      global2local.insert(dofs[i]->getGlobalID(), dofs[i]->getLocalID());
+    }
+    global2local.sortKeys();
+ }
+
+//////////////////////////////////////////////////////////////////////////////
+
+ template <typename T, typename U>
+ void StdConcurrentDataTransfer::fillSendDataGather
+ (Common::SafePtr<Framework::VarSetTransformer> vsTrans,
+  Common::SafePtr<Framework::DataStorage> ds,
+  const std::string& dofsStr, 
+  CFuint& sendcount, std::vector<CFreal>& sendbuf,
+  std::vector<CFuint>& sendIDs, U& array, 
+  const CFuint arraySize,
+  bool isDof)
+ {  
+   using namespace COOLFluiD::Framework;
+   
+   DataHandle<T, GLOBAL> dofs = ds->getGlobalData<T>(dofsStr);
+   const CFuint couplingStride = PhysicalModelStack::getActive()->getNbEq();  
+   const CFuint stride = (isDof) ? couplingStride : arraySize/dofs.size();
+   const CFuint localSize = dofs.getLocalSize();
+   sendcount = localSize*stride;
+   sendbuf.reserve(sendcount); 
+   sendIDs.reserve(sendcount);
+   
+   RealVector tState(0., stride);
+   cf_assert(tState.size() > 0);
+   
+   const CFuint stateStride = (isDof) ? dofs[0]->size() : stride;
+   RealVector state(stateStride, static_cast<CFreal*>(NULL));
+   cf_assert(state.size() > 0);
+   
+   CFuint counter = 0;
+   for (CFuint ia = 0; ia < dofs.size(); ++ia) {
+     const CFuint globalID = dofs[ia]->getGlobalID();
+     // only parallel updatable data are communicated
+     if (dofs[ia]->isParUpdatable()) {
+       state.wrap(stateStride, &array[counter]);
+       vsTrans->transform((const RealVector&)state, (RealVector&)tState);
+       for (CFuint s = 0; s < stride; ++s) {
+	 sendbuf.push_back(tState[s]);
+	 sendIDs.push_back(globalID*stride+s);
+       }
+     }
+     counter += stateStride;
+   }
+   cf_assert(counter == arraySize);
+ }
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+template <typename T, typename U>
+void StdConcurrentDataTransfer::fillSendCountsScatter
+(Common::SafePtr<Framework::DataStorage> ds,
+ const std::string& dofsStr, 
+ std::vector<int>& sendcounts,
+ std::vector<int>& sendIDcounts, 
+ U& array, CFuint arraySize,
+ bool isDof)
+{ 
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  
+  const std::string nspCoupling = getMethodData().getNamespace();
+  Group& group = PE::GetPE().getGroup(nspCoupling);
+  const CFuint nbRanks = group.globalRanks.size();
+  
+  DataHandle<T, GLOBAL> dofs = ds->getGlobalData<T>(dofsStr);
+  const CFuint stride  = (isDof) ? 
+    PhysicalModelStack::getActive()->getNbEq() : arraySize/dofs.size();    
+  const CFuint minSize = arraySize/nbRanks;
+  const CFuint maxSize = minSize + arraySize%nbRanks;
+  cf_assert(minSize*(nbRanks-1) + maxSize == arraySize);
+  
+  CFuint sendsum = 0;
+  for (CFuint r = 0; r < nbRanks; ++r) {
+    sendcounts[r]   = (r < nbRanks-1) ? minSize : maxSize; 
+    sendIDcounts[r] = sendcounts[r]/stride;
+    sendsum += sendcounts[r];
+  }
+  cf_assert(sendsum ==  arraySize);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace ConcurrentCoupler
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

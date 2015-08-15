@@ -102,66 +102,68 @@ protected: // functions
   template <typename T>
   void fillMapGlobalToLocal(Common::SafePtr<Framework::DataStorage> ds,
 			    const std::string& socketName,  
-			    Common::CFMap<CFuint, CFuint>& global2local)
-  {
-    Framework::DataHandle<T, Framework::GLOBAL> dofs = ds->getGlobalData<T>(socketName);
-    global2local.reserve(dofs.size());
-    for (CFuint i = 0; i < dofs.size(); ++i) {
-      global2local.insert(dofs[i]->getGlobalID(), dofs[i]->getLocalID());
-    }
-    global2local.sortKeys();
-  }
+			    Common::CFMap<CFuint, CFuint>& global2local);
   
   /// fill data to be sent
-  /// @param ds            pointer to DataStorage
+  /// @param vsTrans         variable transformer
+  /// @param ds              pointer to DataStorage
   /// @param dofStr          name of the dof socket
   /// @param sendcount       size of buffer to send
   /// @param sendbuf         buffer of data to be sent
   /// @param sendIDs         buffer od global IDs to be sent
   /// @param array           local array from which data will be sent
+  /// @param arraySize       size of local array from which data will be sent
+  /// @param isDof           tells if this is the dof array
   template <typename T, typename U>
-  void fillSendData(Common::SafePtr<Framework::DataStorage> ds,
-		    const std::string& dofsStr, 
-		    CFuint& sendcount, std::vector<CFreal>& sendbuf,
-		    std::vector<CFuint>& sendIDs, const U& array)
-  {  
-    Framework::DataHandle<T, Framework::GLOBAL> dofs = ds->getGlobalData<T>(dofsStr);
-    const CFuint stride = array.size()/dofs.size();
-    const CFuint localSize = dofs.getLocalSize();
-    sendcount = localSize*stride;
-    sendbuf.reserve(sendcount); 
-    sendIDs.reserve(sendcount);
-    
-    CFuint counter = 0;
-    for (CFuint ia = 0; ia < dofs.size(); ++ia) {
-      const CFuint globalID = dofs[ia]->getGlobalID();
-      if (dofs[ia]->isParUpdatable()) {
-	for (CFuint s = 0; s < stride; ++s) {
-	  sendbuf.push_back(array[counter+s]);
-	  sendIDs.push_back(globalID*stride+s);
-	}
-      }
-      counter += stride;
-    }
-    cf_assert(counter == array.size());
-  }
+  void fillSendDataGather(Common::SafePtr<Framework::VarSetTransformer> vsTrans,
+			  Common::SafePtr<Framework::DataStorage> ds,
+			  const std::string& dofsStr, 
+			  CFuint& sendcount, std::vector<CFreal>& sendbuf,
+			  std::vector<CFuint>& sendIDs, U& array, 
+			  const CFuint arraySize,
+			  bool isDof);
+  
+  /// fill data to be sent
+  /// @param ds              pointer to DataStorage
+  /// @param dofStr          name of the dof socket
+  /// @param sendcounts      size of buffer to send in each rank
+  /// @param sendIDcounts    size of IDs to send in each rank
+  /// @param array           local array from which data will be sent
+  /// @param arraySize       size of local array from which data will be sent
+  /// @param isDof           tells if this is the dof array
+  template <typename T, typename U>
+  void fillSendCountsScatter(Common::SafePtr<Framework::DataStorage> ds,
+			     const std::string& dofsStr, 
+			     std::vector<int>& sendcounts,
+			     std::vector<int>& sendIDcounts, 
+			     U& array, CFuint arraySize,
+			     bool isDof);
   
   /// @return the rank (within nspCoupling) of the root process belonging to namespace nsp
   /// @param nsp           namespace to which the process belongs
   /// @param nspCoupling   coupling namespace 
   int getRootProcess(const std::string& nsp, const std::string& nspCoupling) const;
-
+  
+  /// add information on the data to transfer
+  /// @param idx  ID of the data socket to transfer
+  void addDataToTransfer(const CFuint idx);
+  
 protected:
   
   /// struct holding some data for controlling the transfer
   class DataToTrasfer {
   public:
-    DataToTrasfer() {stride = 0; counts = 0; array = CFNULL;}
+    DataToTrasfer() 
+    {array = CFNULL; sendStride = recvStride = nbRanksSend = nbRanksRecv = 0;}
+    
     ~DataToTrasfer() {}
     
-    CFuint stride;
-    CFuint counts;
-    CFreal* array;
+    CFreal* array;      // local array (send or recv)
+    CFuint arraySize;   // total size of the local array<CFreal> (send or recv)
+    CFuint sendStride;  // stride for the send socket
+    CFuint recvStride;  // stride for the recv socket  
+    CFuint nbRanksSend; // number of ranks in the send group   
+    CFuint nbRanksRecv; // number of ranks in the recv group
   };
   
 protected: // data
@@ -200,6 +202,10 @@ protected: // data
   } // namespace Numerics
 
 } // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+#include "ConcurrentCoupler/StdConcurrentDataTransfer.ci"
 
 //////////////////////////////////////////////////////////////////////////////
 

@@ -482,15 +482,16 @@ void StandardSubSystem::setup()
   m_errorEstimatorMethod.apply
     (mem_fun<void,ErrorEstimatorMethod>(&ErrorEstimatorMethod::setMethod));
   
-  CFLog(NOTICE,"-------------------------------------------------------------\n");
-  CFLogInfo("Setting up CouplerMethod's\n");
-  setCouplerMethod();
-
+  // AL: recent change here: before this was after setCouplerMethod()
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   CFLogInfo("Setting up DataPostProcessing's\n");
   m_dataPostProcessing.apply
     (mem_fun<void,DataProcessingMethod>(&DataProcessingMethod::setMethod));
-
+  
+  CFLog(NOTICE,"-------------------------------------------------------------\n");
+  CFLogInfo("Setting up CouplerMethod's\n");
+  setCouplerMethod();
+  
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   CFLogInfo("Setting up OutputFormatter's\n");
   m_outputFormat.apply
