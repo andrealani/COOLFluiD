@@ -409,50 +409,19 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx)
     
     if (grank != root) {
       //  when current rank finds a globalID, it copies the data in corresponding localID position
-      SafePtr<DataStorage> ds = getDataStorage(nspRecv);
-      const string recvLocal  = recvSocketStr + "_local";
-      const string recvGlobal = recvSocketStr + "_global";
-      
-      // local data (CFreal)
-      CFreal* dataToRecv = CFNULL;
-      if (ds->checkData(recvSocketStr)) {
-	DataHandle<CFreal> array = ds->getData<CFreal>(recvSocketStr);
-	CFLog(VERBOSE, "P" << rank << " has socket " << recvSocketStr << "\n"); 
-	dataToRecv = &array[0];
-	
-	for (CFuint id = 0; id < sendIDSize; ++id) {
-	  bool found = false;
-	  const CFuint localID = _global2localIDs.find(sendIDs[id], found);
-	  if (found) {
-	    const CFuint startR = localID*stride;
-	    const CFuint startS = id*stride;
-	    for (CFuint n = 0; n < stride; ++n) {
-	      dataToRecv[startR+n] = sendbuf[startS+n];
-	    }
+      CFreal *const dataToRecv = dtt->array;
+      cf_assert(dataToRecv != CFNULL);
+      for (CFuint id = 0; id < sendIDSize; ++id) {
+	bool found = false;
+	const CFuint localID = _global2localIDs.find(sendIDs[id], found);
+	if (found) {
+	  const CFuint startR = localID*stride;
+	  const CFuint startS = id*stride;
+	  for (CFuint n = 0; n < stride; ++n) {
+	    dataToRecv[startR+n] = sendbuf[startS+n];
 	  }
 	}
       }
-      // global data (State*)
-      else if (ds->checkData(recvLocal) && ds->checkData(recvGlobal)) {
-	DataHandle<State*, GLOBAL> array = ds->getGlobalData<State*>(recvSocketStr);
-	CFLog(VERBOSE, "P" << rank << " has socket " << recvSocketStr << " with sizes = [" 
-	      << array.getLocalSize() << ", " << array.getGlobalSize() << "]\n"); 
-	dataToRecv = array.getGlobalArray()->ptr();
-	
-	// need more general transformation mechanism!!!
-	for (CFuint id = 0; id < sendIDSize; ++id) {
-	  bool found = false;
-	  const CFuint localID = _global2localIDs.find(sendIDs[id], found);
-	  if (found) {
-	    const CFuint startR = localID*stride;
-	    const CFuint startS = id*stride;
-	    for (CFuint n = 0; n < stride; ++n) {
-	      dataToRecv[startR+n] = sendbuf[startS+n];
-	    }
-	  }
-	}      
-      }
-      cf_assert(dataToRecv != CFNULL);
     }
   }
   
