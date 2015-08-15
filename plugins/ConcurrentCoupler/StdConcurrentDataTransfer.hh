@@ -68,40 +68,45 @@ public:
   
 protected: // functions
   
+  /// struct holding some data for controlling the transfer
+  class DataToTrasfer {
+  public:
+    DataToTrasfer() 
+    {array = CFNULL; sendStride = recvStride = nbRanksSend = nbRanksRecv = 0;}
+    
+    ~DataToTrasfer() {}
+    
+    CFreal* array;        // local array (send or recv)
+    CFuint arraySize;     // total size of the local array<CFreal> (send or recv)
+    CFuint sendStride;    // stride for the send socket
+    CFuint recvStride;    // stride for the recv socket  
+    CFuint nbRanksSend;   // number of ranks in the send group   
+    CFuint nbRanksRecv;   // number of ranks in the recv group
+    std::string dofsName; // name of the corresponding dofs ("*_states" or "*_nodes")
+    std::string nspSend;      // namespace from which data are sent
+    std::string nspRecv;      // namespace from which data are received
+    std::string sendSocketStr; // name of the socket from which data are sent
+    std::string recvSocketStr; // name of the socket from which data are received 
+  };
+  
   /// @return the DataStorage corresponding to the given namespace
   Common::SafePtr<Framework::DataStorage> getDataStorage(const std::string& nspName);
   
   /// gather data from all processes in namespace nspSend to 1 process in namespace nspRecv
   /// @param idx           index of the data transfer
-  /// @param nspSend       namespace from which data are sent (>= 1 rank)
-  /// @param nspRecv       namespace from which data are received (1 rank)
-  /// @param sendSocketStr name of the socket from which data are sent (distributed)
-  /// @param recvSocketStr name of the socket from which data are received (serial)
-  virtual void gatherData(const CFuint idx,
-			  const std::string& nspSend, 
-			  const std::string& nspRecv,
-			  const std::string& sendSocketStr, 
-			  const std::string& recvSocketStr);
+  virtual void gatherData(const CFuint idx);
   
   /// scatter data from 1 process in namespace nspSend to all processes in namespace nspRecv
   /// @param idx           index of the data transfer
-  /// @param nspSend       namespace from which data are sent  (1 rank)
-  /// @param nspRecv       namespace from which data are received (>=1 rank)
-  /// @param sendSocketStr name of the socket from which data are sent (serial)
-  /// @param recvSocketStr name of the socket from which data are received (distributed)
-  virtual void scatterData(const CFuint idx,
-			   const std::string& nspSend, 
-			   const std::string& nspRecv,
-			   const std::string& sendSocketStr, 
-			   const std::string& recvSocketStr);
+  virtual void scatterData(const CFuint idx);
   
   /// fill a mapping between global and local IDs
   /// @param ds            pointer to DataStorage
   /// @param socketName    name of the socket
   /// @param global2local  reference to the map object to fill in
   template <typename T>
-  void fillMapGlobalToLocal(Common::SafePtr<Framework::DataStorage> ds,
-			    const std::string& socketName,  
+  void fillMapGlobalToLocal(Common::SafePtr<DataToTrasfer> dtt,
+			    Common::SafePtr<Framework::DataStorage> ds,
 			    Common::CFMap<CFuint, CFuint>& global2local);
   
   /// fill data to be sent
@@ -114,14 +119,13 @@ protected: // functions
   /// @param array           local array from which data will be sent
   /// @param arraySize       size of local array from which data will be sent
   /// @param isDof           tells if this is the dof array
-  template <typename T, typename U>
-  void fillSendDataGather(Common::SafePtr<Framework::VarSetTransformer> vsTrans,
+  template <typename T>
+  void fillSendDataGather(Common::SafePtr<DataToTrasfer> dtt,
+			  Common::SafePtr<Framework::VarSetTransformer> vsTrans,
 			  Common::SafePtr<Framework::DataStorage> ds,
-			  const std::string& dofsStr, 
-			  CFuint& sendcount, std::vector<CFreal>& sendbuf,
-			  std::vector<CFuint>& sendIDs, U& array, 
-			  const CFuint arraySize,
-			  bool isDof);
+			  CFuint& sendcount, 
+			  std::vector<CFreal>& sendbuf,
+			  std::vector<CFuint>& sendIDs);
   
   /// fill data to be sent
   /// @param ds              pointer to DataStorage
@@ -131,13 +135,11 @@ protected: // functions
   /// @param array           local array from which data will be sent
   /// @param arraySize       size of local array from which data will be sent
   /// @param isDof           tells if this is the dof array
-  template <typename T, typename U>
-  void fillSendCountsScatter(Common::SafePtr<Framework::DataStorage> ds,
-			     const std::string& dofsStr, 
+  template <typename T>
+  void fillSendCountsScatter(Common::SafePtr<DataToTrasfer> dtt,
+			     Common::SafePtr<Framework::DataStorage> ds,
 			     std::vector<int>& sendcounts,
-			     std::vector<int>& sendIDcounts, 
-			     U& array, CFuint arraySize,
-			     bool isDof);
+			     std::vector<int>& sendIDcounts); 
   
   /// @return the rank (within nspCoupling) of the root process belonging to namespace nsp
   /// @param nsp           namespace to which the process belongs
@@ -147,24 +149,6 @@ protected: // functions
   /// add information on the data to transfer
   /// @param idx  ID of the data socket to transfer
   void addDataToTransfer(const CFuint idx);
-  
-protected:
-  
-  /// struct holding some data for controlling the transfer
-  class DataToTrasfer {
-  public:
-    DataToTrasfer() 
-    {array = CFNULL; sendStride = recvStride = nbRanksSend = nbRanksRecv = 0;}
-    
-    ~DataToTrasfer() {}
-    
-    CFreal* array;      // local array (send or recv)
-    CFuint arraySize;   // total size of the local array<CFreal> (send or recv)
-    CFuint sendStride;  // stride for the send socket
-    CFuint recvStride;  // stride for the recv socket  
-    CFuint nbRanksSend; // number of ranks in the send group   
-    CFuint nbRanksRecv; // number of ranks in the recv group
-  };
   
 protected: // data
   

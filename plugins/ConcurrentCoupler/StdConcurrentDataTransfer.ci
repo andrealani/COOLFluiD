@@ -8,74 +8,70 @@ namespace COOLFluiD {
 
  template <typename T>
  void StdConcurrentDataTransfer::fillMapGlobalToLocal
- (Common::SafePtr<Framework::DataStorage> ds,
-  const std::string& socketName,  
+ (Common::SafePtr<DataToTrasfer> dtt,
+  Common::SafePtr<Framework::DataStorage> ds,
   Common::CFMap<CFuint, CFuint>& global2local)
  {
-   Framework::DataHandle<T, Framework::GLOBAL> dofs = ds->getGlobalData<T>(socketName);
-    global2local.reserve(dofs.size());
-    for (CFuint i = 0; i < dofs.size(); ++i) {
-      global2local.insert(dofs[i]->getGlobalID(), dofs[i]->getLocalID());
-    }
-    global2local.sortKeys();
+   Framework::DataHandle<T, Framework::GLOBAL> dofs = ds->getGlobalData<T>(dtt->dofsName);
+   global2local.reserve(dofs.size());
+   for (CFuint i = 0; i < dofs.size(); ++i) {
+     global2local.insert(dofs[i]->getGlobalID(), dofs[i]->getLocalID());
+   }
+   global2local.sortKeys();
  }
 
 //////////////////////////////////////////////////////////////////////////////
 
- template <typename T, typename U>
+ template <typename T>
  void StdConcurrentDataTransfer::fillSendDataGather
- (Common::SafePtr<Framework::VarSetTransformer> vsTrans,
+ (Common::SafePtr<DataToTrasfer> dtt,
+  Common::SafePtr<Framework::VarSetTransformer> vsTrans,
   Common::SafePtr<Framework::DataStorage> ds,
-  const std::string& dofsStr, 
-  CFuint& sendcount, std::vector<CFreal>& sendbuf,
-  std::vector<CFuint>& sendIDs, U& array, 
-  const CFuint arraySize,
-  bool isDof)
+  CFuint& sendcount, 
+  std::vector<CFreal>& sendbuf,
+  std::vector<CFuint>& sendIDs)
  {  
    using namespace COOLFluiD::Framework;
    
-   DataHandle<T, GLOBAL> dofs = ds->getGlobalData<T>(dofsStr);
-   const CFuint couplingStride = PhysicalModelStack::getActive()->getNbEq();  
-   const CFuint stride = (isDof) ? couplingStride : arraySize/dofs.size();
+   DataHandle<T, GLOBAL> dofs = ds->getGlobalData<T>(dtt->dofsName);
+   const CFuint recvStride = dtt->recvStride;
+   const CFuint sendStride = dtt->sendStride;
    const CFuint localSize = dofs.getLocalSize();
-   sendcount = localSize*stride;
+   sendcount = localSize*dtt->recvStride;
    sendbuf.reserve(sendcount); 
    sendIDs.reserve(sendcount);
    
-   RealVector tState(0., stride);
+   RealVector tState(0., recvStride);
+   RealVector state(sendStride, static_cast<CFreal*>(NULL));
    cf_assert(tState.size() > 0);
-   
-   const CFuint stateStride = (isDof) ? dofs[0]->size() : stride;
-   RealVector state(stateStride, static_cast<CFreal*>(NULL));
    cf_assert(state.size() > 0);
    
+   CFreal* array = dtt->array;
    CFuint counter = 0;
    for (CFuint ia = 0; ia < dofs.size(); ++ia) {
      const CFuint globalID = dofs[ia]->getGlobalID();
      // only parallel updatable data are communicated
      if (dofs[ia]->isParUpdatable()) {
-       state.wrap(stateStride, &array[counter]);
+       state.wrap(sendStride, &array[counter]);
        vsTrans->transform((const RealVector&)state, (RealVector&)tState);
-       for (CFuint s = 0; s < stride; ++s) {
+       for (CFuint s = 0; s < recvStride; ++s) {
 	 sendbuf.push_back(tState[s]);
-	 sendIDs.push_back(globalID*stride+s);
+	 sendIDs.push_back(globalID*recvStride+s);
        }
      }
-     counter += stateStride;
+     counter += sendStride;
    }
-   cf_assert(counter == arraySize);
+   cf_assert(counter == dtt->arraySize);
  }
       
 //////////////////////////////////////////////////////////////////////////////
       
-template <typename T, typename U>
+template <typename T>
 void StdConcurrentDataTransfer::fillSendCountsScatter
-(Common::SafePtr<Framework::DataStorage> ds,
- const std::string& dofsStr, 
+(Common::SafePtr<DataToTrasfer> dtt,
+ Common::SafePtr<Framework::DataStorage> ds,
  std::vector<int>& sendcounts,
- std::vector<int>& sendIDcounts, 
- U& array, CFuint arraySize,
- bool isDof)
+ std::vector<int>& sendIDcounts)
 { 
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::Framework;
@@ -84,22 +80,20 @@ void StdConcurrentDataTransfer::fillSendCountsScatter
   Group& group = PE::GetPE().getGroup(nspCoupling);
   const CFuint nbRanks = group.globalRanks.size();
   
-  DataHandle<T, GLOBAL> dofs = ds->getGlobalData<T>(dofsStr);
-  const CFuint stride  = (isDof) ? 
-    PhysicalModelStack::getActive()->getNbEq() : arraySize/dofs.size();    
-  const CFuint minSize = arraySize/nbRanks;
-  const CFuint maxSize = minSize + arraySize%nbRanks;
-  cf_assert(minSize*(nbRanks-1) + maxSize == arraySize);
+  DataHandle<T, GLOBAL> dofs = ds->getGlobalData<T>(dtt->dofsName);
+  const CFuint minSize = dtt->arraySize/nbRanks;
+  const CFuint maxSize = minSize + dtt->arraySize%nbRanks;
+  cf_assert(minSize*(nbRanks-1) + maxSize == dtt->arraySize);
   
   CFuint sendsum = 0;
   for (CFuint r = 0; r < nbRanks; ++r) {
     sendcounts[r]   = (r < nbRanks-1) ? minSize : maxSize; 
-    sendIDcounts[r] = sendcounts[r]/stride;
+    sendIDcounts[r] = sendcounts[r]/dtt->recvStride; // or dtt->sendStride ?
     sendsum += sendcounts[r];
   }
-  cf_assert(sendsum ==  arraySize);
+  cf_assert(sendsum == dtt->arraySize);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace ConcurrentCoupler
