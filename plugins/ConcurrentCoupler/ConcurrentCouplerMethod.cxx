@@ -53,7 +53,8 @@ void ConcurrentCouplerMethod::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< vector<string> >("CoupledSubSystems","Names of the subsystems to be coupled to.");
   options.addConfigOption< vector<string> >("CoupledNameSpaces","Names of the namespaces of the other subsystems.");
   
-  options.addConfigOption< vector<CFuint> >("TransferRates","Transfer data every X iterations");
+  options.addConfigOption< vector<CFuint> >
+    ("TransferRates","Transfer data every X iterations (the fastest solver is considered).");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -141,6 +142,10 @@ void ConcurrentCouplerMethod::configure ( Config::ConfigArgs& args )
   
   if (m_interfacesWriteStr.size() > 0) {
     m_interfacesWrite.resize(m_interfacesWriteStr.size());
+  }
+  
+  if (m_transferRates.size() == 0) {
+    m_transferRates.resize(1,1);
   }
 }
       
@@ -349,11 +354,11 @@ void ConcurrentCouplerMethod::setMethodImpl()
   
   //first check that the method and its commands have been correctly configured
   cf_assert(isConfigured());
-  
   cf_assert(m_setup.isNotNull());
+    
   m_setup->execute();
   
-  setupCommandsAndStrategies();
+  setupCommandsAndStrategies(); 
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -434,23 +439,18 @@ void ConcurrentCouplerMethod::dataTransferReadImpl()
   cf_assert(isSetup());
   cf_assert(isConfigured());
 
-  // const string nameSpace = getMethodData()->getNamespace();
- //  const bool isParallel = Common::PE::GetPE().IsParallel();
- //  if(isParallel)
- // {
- //   Common::PE::GetPE().setBarrier(nameSpace);
- // }
-
- //  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
-  for(CFuint i = 0; i < m_interfacesRead.size(); ++i) {
-    cf_assert(m_interfacesRead[i].isNotNull());
-    
-    //    // Execute and save file if needed...
-    //    if((!(iter % m_transferRates[i])) || (iter ==0) ) {
-    m_interfacesRead[i]->execute();
+  //  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+  if (isCouplingIter()) {
+    for(CFuint i = 0; i < m_interfacesRead.size(); ++i) {
+      cf_assert(m_interfacesRead[i].isNotNull());
+      
+      //    // Execute and save file if needed...
+      //    if((!(iter % m_transferRates[i])) || (iter ==0) ) {
+      m_interfacesRead[i]->execute();
+    }
   }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void ConcurrentCouplerMethod::dataTransferWriteImpl()
@@ -462,28 +462,22 @@ void ConcurrentCouplerMethod::dataTransferWriteImpl()
   cf_assert(isSetup());
   cf_assert(isConfigured());
   
-  // if () { 
-  /*const string groupName = getNamespace(); // SubSystemStatusStack::getCurrentName();
-  PE::GetPE().setBarrier(groupName);
-  cout << "ConcurrentCouplerMethod::dataTransferWriteImpl() => P" << PE::GetPE().GetRank(groupName) << "\n";
-  
-  for (;;) {}*/
-  // }
-  
-  // const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
-
-  // ///@todo this should be done only if needed
-  // getMethodData()->getCollaborator<SpaceMethod>()->extrapolateStatesToNodes();
-  
-  for(CFuint i = 0; i < m_interfacesWrite.size(); ++i) {
-    cf_assert(m_interfacesWrite[i].isNotNull());
+  if (isCouplingIter()) {
+    // const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+    // ///@todo this should be done only if needed
+    // getMethodData()->getCollaborator<SpaceMethod>()->extrapolateStatesToNodes();
     
-    //   // Execute and save file if needed...
-    //   if((!(iter % m_transferRates[i])) || (iter ==0) ) {
-    m_interfacesWrite[i]->execute();
-  }
+    for(CFuint i = 0; i < m_interfacesWrite.size(); ++i) {
+      cf_assert(m_interfacesWrite[i].isNotNull());
+      //   // Execute and save file if needed...
+      //   if((!(iter % m_transferRates[i])) || (iter ==0) ) {
+      m_interfacesWrite[i]->execute();
+    }
+  } 
+  
+  CFLog(INFO, "ConcurrentCouplerMethod::dataTransferWriteImpl() => end\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void ConcurrentCouplerMethod::unsetMethodImpl()
@@ -540,6 +534,30 @@ void ConcurrentCouplerMethod::getWordsFromLine(ifstream& fin,
   words = Common::StringOps::getWords(line);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+bool ConcurrentCouplerMethod::isCouplingIter() const
+{
+  cf_assert(m_transferRates.size() > 0);
+  cf_assert(m_transferRates[0] > 0);
+  
+  CFuint counter = 0;
+  CFuint maxNbIter = 0;
+  for (CFuint i = 0; i < m_coupledNamespacesStr.size(); ++i) {
+    SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+      (SubSystemStatusStack::getCurrentName()).getNamespace(m_coupledNamespacesStr[i]);
+    SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getInstance().getEntryByNamespace(nsp);
+    cf_assert(subSysStatus.isNotNull());
+    const CFuint nbIter = subSysStatus->getNbIter();
+    maxNbIter = std::max(maxNbIter, nbIter);
+    CFLog(VERBOSE, "In namespace [" << m_coupledNamespacesStr[i]  << "] => iter = "<< nbIter << "\n");
+    if (nbIter > 0) {counter++;}
+  }
+  
+  // execute what follows only if iterations have started in all namespaces
+  return (counter == m_coupledNamespacesStr.size() && maxNbIter%m_transferRates[0] == 0);
+}
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace ConcurrentCoupler 

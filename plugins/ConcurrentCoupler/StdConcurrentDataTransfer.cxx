@@ -143,11 +143,6 @@ void StdConcurrentDataTransfer::setup()
   for (CFuint i = 0; i < _sendToRecvVecTrans.size(); ++i){
     _sendToRecvVecTrans[i]->setup(1);
   }
-  
-  // create a preliminary mapping between sockets names and related data to transfer
-  for (CFuint i = 0; i < _socketsSendRecv.size(); ++i) {
-    addDataToTransfer(i);
-  }
 }
  
 //////////////////////////////////////////////////////////////////////////////
@@ -157,6 +152,15 @@ void StdConcurrentDataTransfer::execute()
   CFAUTOTRACE;
   
   CFLog(VERBOSE, "StdConcurrentDataTransfer::execute() => start\n");
+  
+  // this should go in the setup, but it uses blocking MPI collective calls 
+  // here is less harmful 
+  if (_socketName2data.size() == 0) {
+    // create a preliminary mapping between sockets names and related data to transfer
+    for (CFuint i = 0; i < _socketsSendRecv.size(); ++i) {
+      addDataToTransfer(i);
+    }
+  }
   
   for (CFuint i = 0; i < _socketsSendRecv.size(); ++i) {
     SafePtr<DataToTrasfer> dtt = _socketName2data.find(_socketsSendRecv[i]); 
@@ -221,8 +225,7 @@ void StdConcurrentDataTransfer::gatherData(const CFuint idx)
   vector<int> recvcounts(nbRanks, 0);
   vector<int> sendcounts(nbRanks, 0);
   vector<int> displs(nbRanks, 0);
-  
-  
+    
   // this case gathers contributions from all ranks in the "send" namespace 
   // to a single rank correspoding to the "recv" namespace
   if (PE::GetPE().isRankInGroup(rank, nspSend)) {  
@@ -407,7 +410,15 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx)
       ("MPI_Bcast", "StdConcurrentDataTransfer::scatterData()", 
        MPI_Bcast(ms.start, 1, ms.type, root, group.comm));
     
-    if (grank != root) {
+    if (grank != root) { 
+      cf_assert(idx < _sendToRecvVecTrans.size());
+      SafePtr<VarSetTransformer> sendToRecvTrans = _sendToRecvVecTrans[idx].getPtr();
+      cf_assert(sendToRecvTrans.isNotNull());
+      const CFuint sendStride = dtt->sendStride;
+      const CFuint recvStride = dtt->recvStride;
+      //  cf_assert(recvStride >= stride);
+      RealVector tState(recvStride, static_cast<CFreal*>(NULL));
+      RealVector state(sendStride, static_cast<CFreal*>(NULL));
       //  when current rank finds a globalID, it copies the data in corresponding localID position
       CFreal *const dataToRecv = dtt->array;
       cf_assert(dataToRecv != CFNULL);
@@ -415,11 +426,13 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx)
 	bool found = false;
 	const CFuint localID = _global2localIDs.find(sendIDs[id], found);
 	if (found) {
-	  const CFuint startR = localID*stride;
+	  // here you need a transformer
+	  const CFuint startR = localID*recvStride;
 	  const CFuint startS = id*stride;
-	  for (CFuint n = 0; n < stride; ++n) {
-	    dataToRecv[startR+n] = sendbuf[startS+n];
-	  }
+	  cf_assert(stride == dtt->sendStride);
+	  state.wrap(sendStride, &dataToRecv[startR]);
+	  tState.wrap(recvStride, &sendbuf[startS]);
+	  sendToRecvTrans->transform((const RealVector&)state, (RealVector&)tState);
 	}
       }
     }
@@ -591,6 +604,7 @@ void StdConcurrentDataTransfer::addDataToTransfer(const CFuint idx)
   data->recvStride = sendRecvStridesOut[1];
   cf_assert(data->sendStride > 0);
   cf_assert(data->recvStride > 0);
+  // cf_assert(data->sendStride >= data->recvStride);
   
   _socketName2data.insert(_socketsSendRecv[idx], data);
 }

@@ -154,6 +154,9 @@ private: // helper methods
 			CFuint&  lineNb,
 			std::vector<std::string>& words);
   
+  /// Tell if a coupling step has to be accomplished
+  bool isCouplingIter() const;
+  
 private: // member data
   
   ///The Setup command to use

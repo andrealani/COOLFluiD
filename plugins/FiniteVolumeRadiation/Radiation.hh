@@ -220,16 +220,16 @@ private: //data
   std::vector<bool> m_cdone;
   
   /// Directions 
-  std::vector<RealVector> m_dirs;  
+  RealMatrix m_dirs;  
   
   /// Create the array advance_order, which contains, for each direction (1st index), the list of cells to be advanced.  The list is divided into "stages" that consist of 
   /// a set of cells that can be advanced in parallel.These sets are terminated by a negative entry.  E.g., if there are 8 cells and advance_order(1:8,1) = (1,2,-5,3,4,-8,6,-7), 
   /// then cells (1,2,5) can be done first, and are in fact the boundary cells for direction 1,
   /// then cells (3,4,8) can be done; finally cells (6,7) can be done to complete the sweep in direction 1.
-  std::vector<RealVector> m_advanceOrder;   
+  std::vector<std::vector<int> > m_advanceOrder;   
   
   /// Radiative flux
-  std::vector<RealVector> m_q;
+  RealMatrix m_q;
   
   /// Divergence of dif flux
   RealVector m_divq;

@@ -34,7 +34,7 @@ namespace COOLFluiD {
 /// @author Tiago Quintino
 /// @author Thomas Wuilbaut
 class Framework_API SubSystemStatus : public Common::NonCopyable<SubSystemStatus>,
-                        public Config::ConfigObject {
+				      public Config::ConfigObject {
 
 friend class SubSystemStatusStack;
 

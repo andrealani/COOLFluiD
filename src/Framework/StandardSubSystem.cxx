@@ -540,14 +540,16 @@ void StandardSubSystem::setup()
 
 void StandardSubSystem::setCouplerMethod()
 {
+  CFLog(NOTICE,"-------------------------------------------------------------\n");
+  CFLogInfo("CouplerMethod's setup\n");
   m_couplerMethod.apply
-      (mem_fun<void,CouplerMethod>(&CouplerMethod::setMethod));
-
+    (mem_fun<void,CouplerMethod>(&CouplerMethod::setMethod));
+  
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   CFLogInfo("CouplerMethod's write interface coordinates\n");
   m_couplerMethod.apply
       (mem_fun<void,CouplerMethod>(&CouplerMethod::preProcessWrite));
-
+  
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   CFLogInfo("CouplerMethod's read interface coordinates\n");
   m_couplerMethod.apply
@@ -639,7 +641,7 @@ void StandardSubSystem::run()
     
     // read the interactive parameters
     runSerial<void, InteractiveParamReader, &InteractiveParamReader::readFile>
-      (&*getInteractiveParamReader(), ssGroupName);
+      (&*getInteractiveParamReader(), ssGroupName, false);
     
     CFLog(VERBOSE, "StandardSubSystem::run() => m_dataPreProcessing.apply()\n");
     // pre-process the data

@@ -12,6 +12,7 @@
 
 using namespace std;
 using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
 using namespace COOLFluiD::MathTools;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -125,6 +126,10 @@ void EmptyIterator::unsetMethodImpl()
 void EmptyIterator::takeStepImpl()
 {
   CFAUTOTRACE;
+  
+  SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();;
+  subSysStatus->updateNbIter();
+  subSysStatus->updateTimeStep();
   
   CFLog(VERBOSE, "EmptyConvergenceMethod::takeStepImpl()\n");
 }

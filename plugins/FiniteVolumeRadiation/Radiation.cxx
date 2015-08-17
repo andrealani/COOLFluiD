@@ -3,6 +3,7 @@
 
 #include "Common/PE.hh"
 #include "Common/BadValueException.hh"
+#include "Common/CFPrintContainer.hh"
 
 #include "MathTools/MathConsts.hh"
 
@@ -268,18 +269,13 @@ void Radiation::setup()
     m_cdone[iCell] = false;
   }
   
-  m_dirs.resize(m_nDirs);
+  m_dirs.resize(m_nDirs, 3);
   m_advanceOrder.resize(m_nDirs);
-  m_q.resize(DIM);
+  m_q.resize(nbCells, DIM);
   m_divq.resize(nbCells);
   for (CFuint i = 0; i< m_nDirs; i++) {
-    m_dirs[i].resize(3);
     m_advanceOrder[i].resize(nbCells);
   }
-  for (CFuint dir = 0; dir < DIM; ++dir){
-    m_q[dir].resize(nbCells);
-  }
-  
   m_geoBuilder.setup();
   m_normal.resize(DIM, 0.); 
   
@@ -308,6 +304,16 @@ void Radiation::setup()
   m_qrAv   = 0;
   m_divqAv = 0;  
   
+  Stopwatch<WallTime> stp;
+  
+  stp.start();
+  getDirections();
+  CFLog(INFO, "Radiation::setup() => getDirections() took " << stp.read() << "s\n");
+  
+  stp.start();
+  getAdvanceOrder();
+  CFLog(INFO, "Radiation::setup() => getAdvanceOrder() took " << stp.read() << "s\n");
+  
   CFLog(VERBOSE, "Radiation::setup() => end\n");
 }
 
@@ -321,60 +327,61 @@ void Radiation::getDirections()
   
   CFLog(VERBOSE, "Radiation::getDirections() => Number of Directions = " << m_nDirs << "\n");
   
+  const CFreal overSq3 = 1./std::sqrt(3.);
   switch(m_nDirs) {
   case 8:
     m_weight[0] = 4.*pi/m_nDirs;
-    m_dirs[0][0] = 1./std::sqrt(3.);
-    m_dirs[0][1] = 1./std::sqrt(3.);
-    m_dirs[0][2] = 1./std::sqrt(3.);   
+    m_dirs(0,0) = overSq3;
+    m_dirs(0,1) = overSq3;
+    m_dirs(0,2) = overSq3;
     break;
   case 24:
     m_weight[0] = 4.*pi/m_nDirs;
-    m_dirs[0][0] = 0.2958759;
-    m_dirs[0][1] = 0.2958759;
-    m_dirs[0][2] = 0.9082483;
+    m_dirs(0,0) = 0.2958759;
+    m_dirs(0,1) = 0.2958759;
+    m_dirs(0,2) = 0.9082483;
     break;
   case 48:
     m_weight[0] = 0.1609517;
-    m_dirs[0][0] = 0.1838670;
-    m_dirs[0][1] = 0.1838670;
-    m_dirs[0][2] = 0.9656013;
+    m_dirs(0,0) = 0.1838670;
+    m_dirs(0,1) = 0.1838670;
+    m_dirs(0,2) = 0.9656013;
     m_weight[1] = 0.3626469;
-    m_dirs[1][0] = 0.1838670;
-    m_dirs[1][1] = 0.6950514;
-    m_dirs[1][2] = 0.6950514;
+    m_dirs(1,0) = 0.1838670;
+    m_dirs(1,1) = 0.6950514;
+    m_dirs(1,2) = 0.6950514;
     break;
   case 80:
     m_weight[0] = 0.1712359;
-    m_dirs[0][0] = 0.1422555;
-    m_dirs[0][1] = 0.1422555;
-    m_dirs[0][2] = 0.9795543;
+    m_dirs(0,0) = 0.1422555;
+    m_dirs(0,1) = 0.1422555;
+    m_dirs(0,2) = 0.9795543;
     m_weight[1] = 0.0992284;
-    m_dirs[1][0] = 0.1422555;
-    m_dirs[1][1] = 1./std::sqrt(3.);
-    m_dirs[1][2] = 0.8040087;
+    m_dirs(1,0) = 0.1422555;
+    m_dirs(1,1) = overSq3;
+    m_dirs(1,2) = 0.8040087;
     m_weight[2] = 0.4617179;
-    m_dirs[2][0] = 1./std::sqrt(3.);
-    m_dirs[2][1] = 1./std::sqrt(3.);
-    m_dirs[2][2] = 1./std::sqrt(3.);
+    m_dirs(2,0) = overSq3;
+    m_dirs(2,1) = overSq3;
+    m_dirs(2,2) = overSq3;
     break;
   default:	// nDirs = 8
     m_weight[0] = 4.*pi/m_nDirs;
-    m_dirs[0][0] = 1./std::sqrt(3.);
-    m_dirs[0][1] = 1./std::sqrt(3.);
-    m_dirs[0][2] = 1./std::sqrt(3.);
+    m_dirs(0,0) = overSq3;
+    m_dirs(0,1) = overSq3;
+    m_dirs(0,2) = overSq3;
     break;
   }
   
   CFuint d = m_nDirTypes - 1; //Note that it has been changed, because the counters start at 0
   for (CFuint dirType = 0; dirType < m_nDirTypes; dirType++){
     for (CFuint p = 0; p <= 2; p++){
-      CFuint l = p;	    //Note that it's different because the counter starts at 0
-      CFuint m = (p+1) % 3; //Note a % b is the remainder of the division a/b
-      CFuint n = (p+2) % 3;
-
-      if (p == 0 || m_dirs[dirType][0] != m_dirs[dirType][1] ||
-	  m_dirs[dirType][1] != m_dirs[dirType][2] || m_dirs[dirType][2] != m_dirs[dirType][0]) {
+      const CFuint l = p;	    //Note that it's different because the counter starts at 0
+      const CFuint m = (p+1) % 3; //Note a % b is the remainder of the division a/b
+      const CFuint n = (p+2) % 3;
+      
+      if (p == 0 || m_dirs(dirType,0) != m_dirs(dirType,1) ||
+	  m_dirs(dirType,1) != m_dirs(dirType,2) || m_dirs(dirType,2) != m_dirs(dirType,0)) {
         CFLog(VERBOSE, "Case1::dirTypes = " << dirType <<"\n");
 	CFLog(DEBUG_MIN, "l = " << l << "m = " << m << "n = " << n  <<"\n");
 	for (int i = 0; i <= 1; i++) {
@@ -384,19 +391,19 @@ void Radiation::getDirections()
 		//Note that this is different because the counters are different
 		d += 1;
 		m_weight[d] = m_weight[dirType];
-		m_dirs[d][0] = std::pow(-1.,i)*m_dirs[dirType][l];
-		m_dirs[d][1] = std::pow(-1.,j)*m_dirs[dirType][m];
-		m_dirs[d][2] = std::pow(-1.,k)*m_dirs[dirType][n];
+		m_dirs(d,0) = std::pow(-1.,i)*m_dirs(dirType,l);
+		m_dirs(d,1) = std::pow(-1.,j)*m_dirs(dirType,m);
+		m_dirs(d,2) = std::pow(-1.,k)*m_dirs(dirType,n);
 		CFLog(DEBUG_MIN, "l = " << l << " m = " << m << " n = " << n  <<"\n");
 		CFLog(DEBUG_MIN, "d = " << d <<"\n");
-		CFLog(DEBUG_MIN, "dirs[" << d <<"] = ("<<  m_dirs[d][0] <<", " << m_dirs[d][1] <<", "<<m_dirs[d][2]<<")\n");
+		CFLog(DEBUG_MIN, "dirs[" << d <<"] = ("<<  m_dirs(d,0) <<", " << m_dirs(d,1) <<", "<<m_dirs(d,2)<<")\n");
 	      }
 	    }
 	  }
 	}
       }     
-      if (m_dirs[dirType][0] != m_dirs[dirType][1] && m_dirs[dirType][1] != m_dirs[dirType][2] 
-	  && m_dirs[dirType][2] != m_dirs[dirType][0]) {
+      if (m_dirs(dirType,0) != m_dirs(dirType,1) && m_dirs(dirType,1) != m_dirs(dirType,2) 
+	  && m_dirs(dirType,2) != m_dirs(dirType,0)) {
 	CFLog(VERBOSE, "Case2::dirTypes = " << dirType <<"\n");
 	CFLog(DEBUG_MIN, "l = " << l << "m = " << m << "n = " << n  <<"\n");
 	for (int i = 0; i <= 1; i++) {
@@ -405,12 +412,12 @@ void Radiation::getDirections()
 	      //Note that this is different because the counters are different
 	      d += 1;
 	      m_weight[d] = m_weight[dirType];
-	      m_dirs[d][0] = std::pow(-1.,i)*m_dirs[dirType][l];
-	      m_dirs[d][1] = std::pow(-1.,j)*m_dirs[dirType][m];
-	      m_dirs[d][2] = std::pow(-1.,k)*m_dirs[dirType][n];
+	      m_dirs(d,0) = std::pow(-1.,i)*m_dirs(dirType,l);
+	      m_dirs(d,1) = std::pow(-1.,j)*m_dirs(dirType,m);
+	      m_dirs(d,2) = std::pow(-1.,k)*m_dirs(dirType,n);
 	      CFLog(DEBUG_MIN, "l = " << l << " m = " << m << " n = " << n  <<"\n");
 	      CFLog(DEBUG_MIN, "d = " << d <<"\n");
-	      CFLog(DEBUG_MIN, "dirs[" << d <<"] = ("<<  m_dirs[d][0] <<", " << m_dirs[d][1] <<", "<<m_dirs[d][2]<<")\n");
+	      CFLog(DEBUG_MIN, "dirs[" << d <<"] = ("<<  m_dirs(d,0) <<", " << m_dirs(d,1) <<", "<<m_dirs(d,2)<<")\n");
 	    }
 	  }
 	}
@@ -420,7 +427,7 @@ void Radiation::getDirections()
   
   // Printing the Directions for debugging
   for (CFuint dir = 0; dir < m_nDirTypes; dir++) {
-    CFLog(DEBUG_MIN, "Direction[" << dir <<"] = (" << m_dirs[dir][0] <<", " << m_dirs[dir][1] <<", " << m_dirs[dir][2] <<")\n");
+    CFLog(DEBUG_MIN, "Direction[" << dir <<"] = (" << m_dirs(dir,0) <<", " << m_dirs(dir,1) <<", " << m_dirs(dir,2) <<")\n");
   }
   
   CFLog(DEBUG_MIN, "Radiation::getDirections() => end\n");
@@ -462,12 +469,9 @@ void Radiation::execute()
   
   // Compute the order of advance
   // Call the function to get the directions
-  getDirections();
-  getAdvanceOrder();
   
-  m_q[0] = 0.0;
-  m_q[1] = 0.0;
-  m_q[2] = 0.0;  
+  
+  m_q    = 0.0;
   m_divq = 0.0;
   m_II   = 0.0;
     
@@ -514,7 +518,7 @@ void Radiation::execute()
 	    }
 	    
 	    
-	    CFreal dirDotNA = m_normal[0]*m_dirs[d][0] + m_normal[1]*m_dirs[d][1] + m_normal[2]*m_dirs[d][2]; // The normal includes the area
+	    CFreal dirDotNA = m_normal[0]*m_dirs(d,0) + m_normal[1]*m_dirs(d,1) + m_normal[2]*m_dirs(d,2); // The normal includes the area
 	    
 	    if(dirDotNA < 0.){
 	      dirDotnANeg +=  dirDotNA;
@@ -549,7 +553,8 @@ void Radiation::execute()
 	      m_normal[dir] = normals[startID+dir]*factor;
 	    }
 		
-	    CFreal dirDotNA = m_normal[0]*m_dirs[d][0] + m_normal[1]*m_dirs[d][1] + m_normal[2]*m_dirs[d][2]; // The normal includes the area
+	    const CFreal dirDotNA = 
+	      m_normal[0]*m_dirs(d,0) + m_normal[1]*m_dirs(d,1) + m_normal[2]*m_dirs(d,2); // The normal includes the area
 	    
 	    if(dirDotNA >= 0.){
 	      dirDotnAPos += dirDotNA;
@@ -560,7 +565,7 @@ void Radiation::execute()
 		inDirDotnANeg += m_In[neighborState->getLocalID()]*dirDotNA;
 	      }
 	      else {
-		CFreal boundarySource = m_fieldSource[iCell];
+		const CFreal boundarySource = m_fieldSource[iCell];
 		inDirDotnANeg += boundarySource*dirDotNA;
 	      }
 	    }
@@ -569,9 +574,9 @@ void Radiation::execute()
 	  Ic = m_In[iCell];
 	}
 	
-	m_q[0][iCell] += Ic*m_dirs[d][0]*m_weight[d];
-	m_q[1][iCell] += Ic*m_dirs[d][1]*m_weight[d];
-	m_q[2][iCell] += Ic*m_dirs[d][2]*m_weight[d];
+	m_q(iCell,XX) += Ic*m_dirs(d,0)*m_weight[d];
+	m_q(iCell,YY) += Ic*m_dirs(d,1)*m_weight[d];
+	m_q(iCell,ZZ) += Ic*m_dirs(d,2)*m_weight[d];
 	
 	CFreal inDirDotnA = inDirDotnANeg;
 	for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
@@ -586,7 +591,8 @@ void Radiation::execute()
 	    m_normal[dir] = normals[startID+dir]*factor;
 	  }
 	      
-	  CFreal dirDotNA = m_normal[0]*m_dirs[d][0] + m_normal[1]*m_dirs[d][1] + m_normal[2]*m_dirs[d][2]; // The normal includes the area
+	  const CFreal dirDotNA = 
+	    m_normal[0]*m_dirs(d,0) + m_normal[1]*m_dirs(d,1) + m_normal[2]*m_dirs(d,2); // The normal includes the area
 	  
 	  if(dirDotNA > 0.){
 	    inDirDotnA += m_In[iCell]*dirDotNA;
@@ -607,14 +613,11 @@ void Radiation::execute()
   for (CFuint iCell = 0; iCell < nbCells; iCell++) {
     m_divq[iCell] = m_divq[iCell]/(volumes[iCell]); //converting area from m^3 into cm^3
     divQ[iCell] = m_divq[iCell];
-    qx[iCell] = m_q[0][iCell];
-    qy[iCell] = m_q[1][iCell];
-    qz[iCell] = m_q[2][iCell];
+    qx[iCell] = m_q(iCell,XX);
+    qy[iCell] = m_q(iCell,YY);
+    qz[iCell] = m_q(iCell,ZZ);
   }
   //std::cout << "m_divq = " << m_divq <<"\n\n";
-  //std::cout << "m_q[0] = " << m_q[0] <<"\n\n";
-  //std::cout << "m_q[1] = " << m_q[1] <<"\n\n";
-  //std::cout << "m_q[2] = " << m_q[2] <<"\n\n";
   
   if(m_radialData){
     writeRadialData();
@@ -728,16 +731,15 @@ void Radiation::getAdvanceOrder()
   // The order of advance calculation begins here
   DataHandle<CFint> isOutward = socket_isOutward.getDataHandle();
   DataHandle<CFreal> normals = socket_normals.getDataHandle();
-  
   DataHandle<CFreal> CellID = socket_CellID.getDataHandle();
   
   Common::SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells"); 
   CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
   geoData.trs = cells;
   
-  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
-  DataHandle<Framework::State*> gstates = socket_gstates.getDataHandle();
-  DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
+  DataHandle < State*, GLOBAL > states = socket_states.getDataHandle();
+  DataHandle<State*> gstates = socket_gstates.getDataHandle();
+  DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle();
 
   m_geoBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
   
@@ -746,15 +748,15 @@ void Radiation::getAdvanceOrder()
   cf_assert(DIM == DIM_3D);
   
   // Only for debugging purposes one can change the direction here
-  //   m_dirs[0][0] = 1;
-  //   m_dirs[0][1] = 0;
-  //   m_dirs[0][2] = 0;
+  //   m_dirs(0,0) = 1;
+  //   m_dirs(0,1) = 0;
+  //   m_dirs(0,2) = 0;
   
-  CFLog(DEBUG_MIN, "Radiation::execute() => Computing order of advance. Before the loop over the directions\n");
+  CFLog(DEBUG_MIN, "Radiation::getAdvanceOrder() => Computing order of advance. Before the loop over the directions\n");
   
  directions_loop:
   for (CFuint d = 0; d < m_nDirs; d++){
-    CFLog(INFO, "Radiation::execute() => Direction number [" << d <<"]\n");
+    CFLog(INFO, "Radiation::getAdvanceOrder() => Direction number [" << d <<"]\n");
     CFuint mLast = 0;
     CFuint m = 0;
     CFuint stage = 1;
@@ -765,7 +767,7 @@ void Radiation::getAdvanceOrder()
     while (m < nbCells) { //The loop over the cells begins
       mLast = m;	  //Checking to see if it counts all the cells
       for (CFuint iCell = 0; iCell < nbCells; iCell++) {
-	CFLog(DEBUG_MAX, "Radiation::execute() => iCell = " << iCell <<"\n");
+	CFLog(DEBUG_MAX, "Radiation::getAdvanceOrder() => iCell = " << iCell <<"\n");
 	if (m_sdone[iCell] == false) {
 	  geoData.idx = iCell;
 	  GeometricEntity* currCell = m_geoBuilder.buildGE();
@@ -783,7 +785,7 @@ void Radiation::getAdvanceOrder()
 	      m_normal[dir] = normals[startID+dir]*factor;
 	    }
 	        
-	    const CFreal dotMult = m_normal[XX]*m_dirs[d][XX] + m_normal[YY]*m_dirs[d][YY] + m_normal[ZZ]*m_dirs[d][ZZ];
+	    const CFreal dotMult = m_normal[XX]*m_dirs(d,XX) + m_normal[YY]*m_dirs(d,YY) + m_normal[ZZ]*m_dirs(d,ZZ);
 	    
 	    State *const neighborState = (currCell->getState(0) == face->getState(0)) ? face->getState(1) : face->getState(0);
 	    const CFuint neighborID = neighborState->getLocalID();
@@ -806,11 +808,12 @@ void Radiation::getAdvanceOrder()
 	  m_cdone[elemID] = true;
 	}// end if(Cell is not done)
 	
-        cell_loop:
+      cell_loop:
 	m_geoBuilder.releaseGE();
       }// end of the loop over the CELLS
       
-      CFLog(DEBUG_MAX, "m_advanceOrder["<< d <<"] = " << m_advanceOrder[d] << "\n");
+      const string msg = "m_advanceOrder[" + StringOps::to_str(d) + "] = ";
+      CFLog(DEBUG_MAX, CFPrintContainer<vector<int> >(msg, &m_advanceOrder[d]) << "\n");
       
       if (m == mLast) {		//Check that it wrote a cell in the current stage
 	  std::cout << "No cell added to advance list in direction number = " << d <<". Problem with mesh.\n";
@@ -835,9 +838,9 @@ void Radiation::getAdvanceOrder()
 	
 	  for(CFuint dirs = 0; dirs < m_nDirs; dirs++){
 	    //Rotating over x
-	    const CFreal rot0 = m_dirs[dirs][0];
-	    const CFreal rot1 = m_dirs[dirs][1]*std::cos(xAngleRotation) - m_dirs[dirs][2]*std::sin(xAngleRotation);
-	    const CFreal rot2 = m_dirs[dirs][1]*std::sin(xAngleRotation) + m_dirs[dirs][2]*std::cos(xAngleRotation);
+	    const CFreal rot0 = m_dirs(dirs,0);
+	    const CFreal rot1 = m_dirs(dirs,1)*std::cos(xAngleRotation) - m_dirs(dirs,2)*std::sin(xAngleRotation);
+	    const CFreal rot2 = m_dirs(dirs,1)*std::sin(xAngleRotation) + m_dirs(dirs,2)*std::cos(xAngleRotation);
 	    //Rotating over y
 	    const CFreal rot3 = rot0*std::cos(yAngleRotation) + rot2*std::sin(yAngleRotation);
 	    const CFreal rot4 = rot1;
@@ -847,25 +850,26 @@ void Radiation::getAdvanceOrder()
 	    const CFreal rot7 = rot3*std::sin(zAngleRotation) + rot4*std::cos(zAngleRotation);
 	    const CFreal rot8 = rot5;
 	    
-	    m_dirs[dirs][0] = rot6;
-	    m_dirs[dirs][1] = rot7;
-	    m_dirs[dirs][2] = rot8;
-	    CFLog(VERBOSE, "dirs[" << dirs <<"] = ("<<  m_dirs[dirs][0] <<", " << m_dirs[dirs][1] <<", "<<m_dirs[dirs][2]<<")\n");
+	    m_dirs(dirs,0) = rot6;
+	    m_dirs(dirs,1) = rot7;
+	    m_dirs(dirs,2) = rot8;
+	    CFLog(VERBOSE, "dirs[" << dirs <<"] = ("<<  m_dirs(dirs,0) <<", " << m_dirs(dirs,1) <<", "<<m_dirs(dirs,2)<<")\n");
 	  }
 	  goto directions_loop;
-	  CFLog(ERROR, "Radiation::execute() => No cell added to advance list. Problem with mesh\n");
+	  CFLog(ERROR, "Radiation::getAdvanceOrder() => No cell added to advance list. Problem with mesh\n");
 	  cf_assert(m != mLast);
       }
       m_advanceOrder[d][m - 1] = - m_advanceOrder[d][m - 1];
       m_sdone = m_cdone;
       
-      CFLog(VERBOSE, "Radiation::execute() => m  "<< m << " \n");
-      CFLog(VERBOSE, "Radiation::execute() => End of the "<< stage << " stage \n");
+      CFLog(VERBOSE, "Radiation::getAdvanceOrder() => m  "<< m << " \n");
+      CFLog(VERBOSE, "Radiation::getAdvanceOrder() => End of the "<< stage << " stage\n");
       
       ++stage;
     }// end of the loop over the STAGES
     //Printing advanceOrder for debug porpuses
-    CFLog(DEBUG_MIN, "Radiation::getAdvanceOrder() => m_advanceOrder["<< d <<"] = " << m_advanceOrder[d] <<"\n");  
+    const string msg = "Radiation::getAdvanceOrder() => m_advanceOrder[" + StringOps::to_str(d) + "] = ";
+    CFLog(DEBUG_MIN, CFPrintContainer<vector<int> >(msg, &m_advanceOrder[d]) << "\n");
   } //end for for directions
   
   CFLog(VERBOSE, "Radiation::getAdvanceOrder() => end\n");
@@ -942,7 +946,7 @@ void Radiation::readOpacities()
   if(m_writeToFile){
     CFLog(VERBOSE, "Radiation::readOpacities() => Writing file \n");
     boost::filesystem::path file = m_dirName / boost::filesystem::path(m_outTabName);
-    file = Framework::PathAppender::getInstance().appendParallel( file );
+    file = PathAppender::getInstance().appendParallel( file );
     
     SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
     ofstream& fout = fhandle->open(file);
@@ -970,7 +974,9 @@ void Radiation::readOpacities()
       CFuint beginLoop = m*ip;
       for(CFuint ib = 0; ib < m_nbBins; ++ib){
 	for(CFuint it = 0; it < m_nbTemp; ++it){
-	  fout << ib + 1 <<"\t\t\t\t" << Temperatures[it] <<"\t\t\t\t" << m_opacities[it + ib*m_nbTemp + ip*m_nbBins*m_nbTemp] <<"\t\t\t\t" << m_radSource[it + ib*m_nbTemp + ip*m_nbBins*m_nbTemp] << endl;
+	  fout << ib + 1 <<"\t\t\t\t" << Temperatures[it] <<"\t\t\t\t" 
+	       << m_opacities[it + ib*m_nbTemp + ip*m_nbBins*m_nbTemp] 
+	       <<"\t\t\t\t" << m_radSource[it + ib*m_nbTemp + ip*m_nbBins*m_nbTemp] << endl;
 	}
       }
       m += m_nbBins; 
@@ -1061,7 +1067,7 @@ void Radiation::writeRadialData()
   std::cout<<"Writting radial data for the spherical test case \n";
 
   boost::filesystem::path file = m_dirName / boost::filesystem::path("radialData.plt");
-  file = Framework::PathAppender::getInstance().appendParallel( file );
+  file = PathAppender::getInstance().appendParallel( file );
   
   SelfRegistPtr<Environment::FileHandlerOutput> fhandle = 
     Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
@@ -1076,11 +1082,11 @@ void Radiation::writeRadialData()
   CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
   geoData.trs = cells;
  
-  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+  DataHandle < State*, GLOBAL > states = socket_states.getDataHandle();
   DataHandle<RealVector> nstates = socket_nstates.getDataHandle();
-  DataHandle<Framework::State*> gstates = socket_gstates.getDataHandle();
-  DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
-
+  DataHandle<State*> gstates = socket_gstates.getDataHandle();
+  DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle();
+  
   m_geoBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
   
   const CFuint nbCells = cells->getLocalNbGeoEnts();
@@ -1106,7 +1112,7 @@ void Radiation::writeRadialData()
       if(rCell >= ir*Radius/m_Nr && rCell < (ir + 1)*Radius/m_Nr){
 	nbPoints++;
 	m_divqAv[ir] += m_divq[iCell];
-	m_qrAv[ir]   += (m_q[0][iCell]*x + m_q[1][iCell]*y + m_q[2][iCell]*z)/rCell; //*rCell*rCell; Multiply by r**2 for area-weighted average
+	m_qrAv[ir]   += (m_q(iCell,XX)*x + m_q(iCell,YY)*y + m_q(iCell,ZZ)*z)/rCell; //*rCell*rCell; Multiply by r**2 for area-weighted average
       }
       m_geoBuilder.releaseGE();
     }
