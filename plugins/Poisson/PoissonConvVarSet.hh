@@ -139,9 +139,6 @@ public: // classes
   /// Set the IDs corresponding to the velocity components in a State
   virtual void setStateVelocityIDs (std::vector<CFuint>& velIDs)
   {
-  throw Common::NotImplementedException
-      (FromHere(), "PoissonConvVarSet::setStateVelocityIDs() not implemented");
-
   }
   
   /**

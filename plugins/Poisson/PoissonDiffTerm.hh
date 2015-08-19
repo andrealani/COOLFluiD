@@ -36,7 +36,7 @@ public:
    * the variable name and its position in the
    * physical data
    */
-  enum {PHI=0, SIGMA=1};
+  enum {PHI=0};
   
   /**
    * Constructor without arguments
@@ -53,7 +53,7 @@ public:
    */
   CFuint getDataSize() const
   {
-    return 2;
+    return 1;
   }
   
   /**

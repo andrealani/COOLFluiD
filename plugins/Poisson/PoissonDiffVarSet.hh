@@ -5,7 +5,6 @@
 
 #include "Framework/DiffusiveVarSet.hh"
 #include "Poisson/PoissonDiffTerm.hh"
-#include "Poisson/PoissonConvTerm.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -47,24 +46,55 @@ public: // classes
    * data to store
    */
   virtual void setup();
+  
+  
+  /**
+   * Set the quantities needed to compute gradients (pressure,
+   * velocity, etc.) starting from the states
+   */
+  virtual void setGradientVars(const std::vector<RealVector*>& states,
+                               RealMatrix& values,
+                               const CFuint stateSize) = 0;
 
+  /**
+   * Compute required gradients (pressure, velocity, temperature) starting from the gradients of the states
+   */
+  virtual void setGradientVarGradients(const std::vector<RealVector*>& states,
+                                       const std::vector< std::vector<RealVector*> >& stateGradients,
+                                       std::vector< std::vector<RealVector*> >& gradVarGradients,
+                                       const CFuint stateSize) = 0;
+
+  /**
+   * Compute the gradients of the states starting from gradient variable gradients (pressure, velocity, temperature)
+   */
+  virtual void setStateGradients(const std::vector<RealVector*>& states,
+                                 const std::vector< std::vector<RealVector*> >& gradVarGradients,
+                                 std::vector< std::vector<RealVector*> >& stateGradients,
+                                 const CFuint stateSize) = 0;
+  
+
+  /**
+   * Get the model
+   */
+  PoissonDiffTerm& getModel() {return *_model;}
+  
   /**
    * Get the diffusive flux
    */
   virtual RealVector& getFlux(const RealVector& values,
                               const std::vector<RealVector*>& gradients,
-                              const RealVector& normal,
-                              const CFreal& radius);
+                              const RealVector& normal);
+
 
   /**
    * Get the diffusive flux vector
    */
   virtual RealMatrix& getFlux(const RealVector& values,
-                              const std::vector<RealVector*>& gradients,
-                              const CFreal& radius)
+                              const std::vector<RealVector*>& gradients)
   {
     throw Common::NotImplementedException (FromHere(),"PoissonDiffVarSet::getFlux()");
   }
+
 
   /**
    * Get the current update diffusive coefficient
@@ -72,10 +102,23 @@ public: // classes
    */
   virtual CFreal getCurrUpdateDiffCoeff(CFuint iEqSS);
 
+protected:
+  /// gradient variables
+  RealVector _gradState;
+
+  /**
+   * Set the gradient variables starting from state variables
+   */
+  virtual void setGradientState(const RealVector& state) = 0;
+
+
 private:
 
   /// pointer to the physical chemical library
   Common::SafePtr<Framework::PhysicalChemicalLibrary> m_library;
+
+  /// physical model
+  Common::SafePtr<PoissonDiffTerm> _model;
    
 }; // end of class PoissonDiffVarSet
 

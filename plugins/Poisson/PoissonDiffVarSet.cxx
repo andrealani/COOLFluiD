@@ -32,6 +32,9 @@ void PoissonDiffVarSet::setup()
 {
 
   using namespace COOLFluiD::Framework;
+
+  DiffusiveVarSet::setup();
+  _gradState.resize(PhysicalModelStack::getActive()->getNbEq());
   
   m_library = PhysicalModelStack::getActive()->getImplementor()->
     getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();  
@@ -42,8 +45,7 @@ void PoissonDiffVarSet::setup()
 RealVector& PoissonDiffVarSet::getFlux
 (const RealVector& values,
  const std::vector<RealVector*>& gradients,
- const RealVector& normal,
- const CFreal& radius)
+ const RealVector& normal)
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
@@ -59,17 +61,21 @@ RealVector& PoissonDiffVarSet::getFlux
   //CFreal* tVec = CFNULL;
   //const CFreal sigma = m_library->sigma(Tdim, pdim, tVec);
 
-  const CFreal sigma = 1; //To be changed
+  const CFreal sigma = 1.; //To be changed
   const CFuint phiID = 0;
   const RealVector& gradPhi = *gradients[phiID];
   const CFuint dim    = PhysicalModelStack::getActive()->getDim();
-    
-  _flux[phiID] = 0.0;
+
   // AL: double check the sign
+
+  _flux[phiID] = 0.0;
+
   for (CFuint i = 0; i < dim ; ++i) {
     _flux[phiID] += sigma*gradPhi[i]*normal[i];
+    //cout <<"PoissonDiffVarSet::getFlux; gradPhi["<< i <<"] = "<<gradPhi[i]<<"\n";
   }
   
+  //cout <<"PoissonDiffVarSet::getFlux; _flux["<< phiID <<"] = "<< _flux <<"\n";
   return _flux;
 }
 
@@ -77,8 +83,7 @@ RealVector& PoissonDiffVarSet::getFlux
 
 CFreal PoissonDiffVarSet::getCurrUpdateDiffCoeff(CFuint iEqSS)
 {
-// @TODO: Ask Andrea, is it really 0?
-  return 0.0;
+  return 1.;
 }
 
 //////////////////////////////////////////////////////////////////////////////
