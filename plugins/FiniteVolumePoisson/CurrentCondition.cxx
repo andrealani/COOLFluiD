@@ -5,6 +5,7 @@
 #include "Common/ParserException.hh"
 #include "FiniteVolume/FiniteVolume.hh"
 #include "FiniteVolumePoisson/CurrentCondition.hh"
+#include "Poisson/PoissonConvTerm.hh"
 
 #ifdef CF_HAVE_MPI
 #include <mpi.h>
@@ -34,8 +35,8 @@ MethodCommandProvider<CurrentCondition, CellCenterFVMData, FiniteVolumeModule> C
 void CurrentCondition::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< CFreal, Config::DynamicOption<> >("ImposedCurrent", "Value for the imposed current");
-  options.addConfigOption< std::vector<std::string> >("Def","Definition of the Function.");
-  options.addConfigOption< std::vector<std::string> >("Vars","Definition of the Variables.");
+  //options.addConfigOption< std::vector<std::string> >("Def","Definition of the Function.");
+  //options.addConfigOption< std::vector<std::string> >("Vars","Definition of the Variables.");
   options.addConfigOption< CFreal >("MachineVoltageLimit", "Maximum voltage given by the machine");
 }
 
@@ -54,11 +55,11 @@ CurrentCondition::CurrentCondition(const std::string& name) :
   m_imposedI = 0.;
   setParameter("ImposedCurrent", &m_imposedI);
 
-  _function = std::vector<std::string>();
-  setParameter("Def",&_function);
+  //_function = std::vector<std::string>();
+  //setParameter("Def",&_function);
 
-  _vars = std::vector<std::string>();
-  setParameter("Vars",&_vars);
+  //_vars = std::vector<std::string>();
+  //setParameter("Vars",&_vars);
 
   _machineLimit = 0.;
   setParameter("MachineVoltageLimit", &_machineLimit);
@@ -77,17 +78,16 @@ void CurrentCondition::setup()
 
   FVMCC_BC::setup();
 
-  _vars.resize(PhysicalModelStack::getActive()->getDim() + 1);
+  //_vars.resize(PhysicalModelStack::getActive()->getDim() + 1);
 
   using namespace Framework;
 
   m_library = PhysicalModelStack::getActive()->getImplementor()->
     getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
-  cf_assert (m_library.isNotNull());
+  //cf_assert (m_library.isNotNull());
 
   _iter.resize(1);
   _resultI.resize(1);
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -113,20 +113,20 @@ void CurrentCondition::setGhostState(GeometricEntity *const face)
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::MathTools;
 
-  _vFunction.setFunctions(_function);
-  _vFunction.setVariables(_vars);
-  try {
-    _vFunction.parse();
-  }
-  catch (Common::ParserException& e) {
-    CFout << e.what() << "\n";
-    throw; // retrow the exception to signal the error to the user
-  }
+  //_vFunction.setFunctions(_function);
+  //_vFunction.setVariables(_vars);
+  //try {
+    //_vFunction.parse();
+  //}
+  //catch (Common::ParserException& e) {
+    //CFout << e.what() << "\n";
+    //throw; // retrow the exception to signal the error to the user
+  //}
 
-  _iter = SubSystemStatusStack::getActive()->getNbIter();
+  //_iter = SubSystemStatusStack::getActive()->getNbIter();
 
-  _vFunction.evaluate(_iter, _resultI);
-  m_imposedI = _resultI[0];
+  //_vFunction.evaluate(_iter, _resultI);
+  //m_imposedI = _resultI[0];
 
   // here it is assumed that the ArcJet induction equations are the last ones
   State *const innerState = face->getState(0);
@@ -144,14 +144,14 @@ void CurrentCondition::setGhostState(GeometricEntity *const face)
                                                    innerState->getCoordinates());
   (*ghostState)[0] = dVz*dr + (*innerState)[0]; // AAL: This line is the one imposing the current
 
-  CFreal phiOutlet = ((*ghostState)[0] + (*innerState)[0])/2;
-
-  if(_machineLimit != 0.){ //This option avoids limiting to 0 by mistake
-    CFreal machineVoltage = (-1)*_machineLimit;
-    if(std::abs(phiOutlet) > std::abs(machineVoltage)){
-      (*ghostState)[0] = 2*machineVoltage - (*innerState)[0];
-    }
-  }
+//  CFreal phiOutlet = ((*ghostState)[0] + (*innerState)[0])/2;
+//
+//  if(_machineLimit != 0.){ //This option avoids limiting to 0 by mistake
+//    CFreal machineVoltage = (-1)*_machineLimit;
+//    if(std::abs(phiOutlet) > std::abs(machineVoltage)){
+//      (*ghostState)[0] = 2*machineVoltage - (*innerState)[0];
+//    }
+//  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -163,18 +163,19 @@ void CurrentCondition::preProcess()
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::MathTools;
 
+  //cout<<"Starting pre-process 0 \n";
+
   DataHandle<CFreal> faceAreas   = socket_faceAreas.getDataHandle();
 
   Common::SafePtr<GeometricEntityPool<FaceTrsGeoBuilder> >
-    geoBuilder = getMethodData().getFaceTrsGeoBuilder();
+    geoBuilder = this->getMethodData().getFaceTrsGeoBuilder();
 
   SafePtr<FaceTrsGeoBuilder> geoBuilderPtr = geoBuilder->getGeoBuilder();
-  geoBuilderPtr->setDataSockets(socket_states, socket_gstates, socket_nodes);
+  geoBuilderPtr->setDataSockets(this->socket_states, this->socket_gstates, this->socket_nodes);
 
   FaceTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
   geoData.isBFace = true;
-
-  SafePtr<TopologicalRegionSet> trs = getCurrentTRS();
+  SafePtr<TopologicalRegionSet> trs = this->getCurrentTRS();
   geoData.trs = trs;
 
   //const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
@@ -217,15 +218,17 @@ void CurrentCondition::preProcess()
         PE::GetPE().GetCommunicator(nsp));
 #endif
   cf_assert(m_sigmaIntegral > 0.);
-//   std::cout << "Outlet::sigmaIntegral = " << m_sigmaIntegral <<"\n";
+  //std::cout << "Outlet::sigmaIntegral = " << m_sigmaIntegral <<"\n";
+  //cout<<"Exiting pre-process \n";
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > CurrentCondition::needsSockets()
 {
-
-  std::vector<Common::SafePtr<BaseDataSocketSink> > result;
+  cout<<"CurrentCondition::needsSockets() \n";
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result  = FVMCC_BC::needsSockets();
+  //std::vector<Common::SafePtr<BaseDataSocketSink> > result;
 
   result.push_back(&socket_faceAreas);
   return result;

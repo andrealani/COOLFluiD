@@ -25,6 +25,12 @@ class NeumannCondition : public SuperInlet {
 public:
 
   /**
+   * Defines the Config Option's of this class
+   * @param options a OptionList where to add the Option's
+   */
+  static void defineConfigOptions(Config::OptionList& options);
+
+  /**
    * Constructor
    */
   NeumannCondition(const std::string& name);
@@ -60,6 +66,9 @@ protected: // data
 
   /// storage for the temporary boundary point coordinates
   RealVector _variables;
+
+  /// value at the boundary
+  CFreal _value;
 
 }; // end of class NeumannCondition
 

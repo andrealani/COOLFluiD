@@ -6,10 +6,13 @@ DirichletCondition.hh
 FiniteVolumePoisson.hh
 NeumannCondition.cxx
 NeumannCondition.hh
+PureDiffFlux.ci
+PureDiffFlux.cxx
+PureDiffFlux.hh
 )
 
 LIST ( APPEND FiniteVolumePoisson_requires_mods Poisson FiniteVolume )
-LIST ( APPEND FiniteVolumePoisson_cflibs Framework Poisson FiniteVolume )
+LIST ( APPEND FiniteVolumePoisson_cflibs Framework Poisson FiniteVolume ) 
 
 CF_ADD_PLUGIN_LIBRARY ( FiniteVolumePoisson )
 

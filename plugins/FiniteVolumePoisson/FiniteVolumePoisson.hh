@@ -12,7 +12,7 @@ namespace COOLFluiD {
   namespace Numerics {
 
     /// Classes concerning Poisson (FiniteVolumePoisson)
-    namespace FiniteVolumePoisson {
+    namespace FiniteVolume {
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -46,7 +46,7 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////
 
-    } // namespace FiniteVolumePoisson
+    } // namespace FiniteVolume
 
   } // namespace Numerics
 
