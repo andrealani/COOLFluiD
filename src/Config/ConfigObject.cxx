@@ -452,5 +452,191 @@ void ConfigObject::unregisterFromParent(ConfigObject * config)
 
 //////////////////////////////////////////////////////////////////////////////
 
+void ConfigObject::decryptConfigArgs(Config::ConfigArgs& args)
+{
+  // the purpose here is to add "N" new entries for each key containing "&N"
+  // in their name
+  for (ConfigArgs::const_iterator it = args.begin(); it != args.end(); ++it) {
+    const string key = it->first;
+    const string value = it->second;
+    
+    CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => key=value <" << key << " = " << value <<">\n");
+    
+    // for now, only one "&" in the key is allowed
+    const size_t found = key.find("&");
+    string nstr = "";
+    CFuint nbNsp = 0;
+    bool changeKey = false;
+    if (found != string::npos) {
+      const size_t test1 = key.find(".", found);
+      if (test1 != string::npos) {
+	// case "...AAAAA&N.BBBB.CCCCC = ..."
+	nstr = key.substr(found+1, test1);
+      }
+      else {
+	// case "...AAAAA&N = ..."
+	nstr = key.substr(found+1);
+      }
+      cf_assert(nstr != "");
+      
+      nbNsp = StringOps::from_str<CFuint>(nstr);
+      CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => key <" << key << "> to be repeated " << nbNsp <<"X\n");
+      changeKey = true;
+    }
+    
+    const size_t foundV1 = value.find("&");
+    string nstrV1 = "";
+    CFuint nbNspV1 = 0;
+    bool addNumberToValue = false;
+    if (foundV1 != string::npos) {
+      // case "... = AAAAA&N BBBB&N"
+      nstrV1 = value.substr(foundV1+1);
+      cf_assert(nstrV1 != "");
+      nbNspV1 = StringOps::from_str<CFuint>(nstrV1);
+      cf_assert(nbNspV1 == nbNsp);
+      CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => value <" << value << "> to be repeated " << nbNspV1 <<"X\n");
+      if (nbNspV1 > 0) {addNumberToValue = true;}
+    }
+    
+    const size_t foundV2 = value.find("@");
+    string nstrV2 = "";
+    CFuint nbNspV2 = 0;
+    bool expandWithNb = false;
+    if (foundV2 != string::npos) {
+      // case "... = AAAAA@N BBBB@N"
+      nstrV2 = value.substr(foundV2+1);
+      cf_assert(nstrV2 != "");
+      nbNspV2 = StringOps::from_str<CFuint>(nstrV2);
+      CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => value <" << value << "> to be repeated " << nbNspV2 <<"X\n");
+      if (nbNspV2 > 0) {expandWithNb = true;}
+    }
+    
+    const size_t foundV3 = value.find("~");
+    string nstrV3 = "";
+    CFuint nbNspV3 = 0;
+    bool expandWithoutNb = false;
+    if (foundV3 != string::npos) {
+      // case "... = AAAAA~N BBBB~N"
+      nstrV3 = value.substr(foundV3+1);
+      cf_assert(nstrV3 != "");
+      nbNspV3 = StringOps::from_str<CFuint>(nstrV3);
+      CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => value <" << value << "> to be repeated " << nbNspV3 <<"X\n");
+      if (nbNspV3 > 0) {expandWithoutNb = true;}
+    }
+    
+    if (nbNsp > 0) {
+      CFLog(VERBOSE, "Simulator::modifyConfigArgs() => replacing <" << key << " = " << value << ">\n");
+      
+      for (CFuint i = 0; i < nbNsp; ++i) {  
+	const string ns = StringOps::to_str(i); 
+	string newKey = key;
+	string newValue = value;
+	if (changeKey) {  
+	  const CFuint nbDigits = ((CFuint)std::log10((CFreal)nbNsp))+1;
+	  const string before = key.substr(0, found);
+	  const string after  = key.substr(found+nbDigits+1);
+	  CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => template key <" << before << "?" << after <<">\n");
+	  newKey = before + ns + after;
+	}
+	
+	if (addNumberToValue) {
+	  const CFuint nbDigits = ((CFuint)std::log10((CFreal)nbNspV1))+1;
+	  const string beforeV = value.substr(0, foundV1);
+	  const string afterV  = value.substr(foundV1+nbDigits+1);
+	  CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => template value <" << beforeV << "?" << afterV <<">\n");
+	  newValue = beforeV + ns + afterV;  
+	}
+	
+	if (expandWithNb) {
+	  const CFuint nbDigits = ((CFuint)std::log10((CFreal)nbNspV2))+1;
+	  const string beforeV = value.substr(0, foundV2);
+	  vector<string> listV = StringOps::getWords(beforeV, ' ');
+	  if(listV.size() == 0) {
+	    listV = StringOps::getWords(beforeV, '=');
+	  }
+	  cf_assert(listV.size() > 0);
+	  const string root = listV.back(); 
+	  const string afterV  = value.substr(foundV2+nbDigits+1);
+	  CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => with Nb root?afterV <" << root << "?" << afterV <<">\n");
+	  newValue = beforeV + StringOps::to_str(0);
+	  for (CFuint iv = 1; iv < nbNspV2; ++iv) {
+	    newValue += " " + root + StringOps::to_str(iv);
+	  }
+	  newValue += " " + afterV;  
+	}
+	
+	if (expandWithoutNb) {
+	  const CFuint nbDigits = ((CFuint)std::log10((CFreal)nbNspV3))+1;
+	  const string beforeV = value.substr(0, foundV3);
+	  vector<string> listV = StringOps::getWords(beforeV, ' ');
+	  if(listV.size() == 0) {
+	    listV = StringOps::getWords(beforeV, '=');
+	  }
+	  cf_assert(listV.size() > 0);
+	  const string root = listV.back(); 
+	  const string afterV  = value.substr(foundV3+nbDigits+1);
+	  CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => w/o Nb root?afterV <" << root << "?" << afterV <<">\n");
+	  newValue = beforeV;
+	  for (CFuint iv = 1; iv < nbNspV2; ++iv) {
+	    newValue += " " + root;
+	  }
+	  newValue += " " + afterV;  
+	}
+	
+	// add new entry
+	CFLog(VERBOSE, "Simulator::modifyConfigArgs() => adding <" << newKey << " = " << newValue << ">\n");
+	args[newKey] = newValue;
+      }
+    }
+    else if (nbNsp == 0 && (expandWithNb || expandWithoutNb)) {
+      string newKey = key;
+      string newValue = value;
+      	
+      if (expandWithNb) {
+	const CFuint nbDigits = ((CFuint)std::log10((CFreal)nbNspV2))+1;
+	const string beforeV = value.substr(0, foundV2);
+	vector<string> listV = StringOps::getWords(beforeV, ' ');
+	if(listV.size() == 0) {
+	  listV = StringOps::getWords(beforeV, '=');
+	}
+	cf_assert(listV.size() > 0);
+	const string root = listV.back(); 
+	const string afterV  = value.substr(foundV2+nbDigits+1);
+	CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => with Nb root?afterV <" << root << "?" << afterV <<">\n");
+	newValue = beforeV + StringOps::to_str(0);
+	for (CFuint iv = 1; iv < nbNspV2; ++iv) {
+	  newValue += " " + root + StringOps::to_str(iv);
+	}
+	newValue += " " + afterV;  
+      }
+      
+      if (expandWithoutNb) {
+	const CFuint nbDigits = ((CFuint)std::log10((CFreal)nbNspV3))+1;
+	const string beforeV = value.substr(0, foundV3);
+	vector<string> listV = StringOps::getWords(beforeV, ' ');
+	if(listV.size() == 0) {
+	  listV = StringOps::getWords(beforeV, '=');
+	}
+	cf_assert(listV.size() > 0);
+	const string root = listV.back(); 
+	const string afterV  = value.substr(foundV3+nbDigits+1);
+	CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => w/o Nb root?afterV <" << root << "?" << afterV <<">\n");
+	newValue = beforeV;
+	for (CFuint iv = 1; iv < nbNspV3; ++iv) {
+	  newValue += " " + root;
+	}
+	newValue += " " + afterV;  
+      }
+      
+      // add new entry
+      CFLog(VERBOSE, "Simulator::modifyConfigArgs() => replacing <" << key << " = " << value << ">\n");
+      CFLog(VERBOSE, "Simulator::modifyConfigArgs() => adding    <" << newKey << " = " << newValue << ">\n");
+      args[newKey] = newValue;
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 } // namespace Config
 } // namespace COOLFluiD

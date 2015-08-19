@@ -33,6 +33,7 @@
 
 using namespace std;
 using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Config;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -143,6 +144,47 @@ void SubSystem::configureNamespaces(Config::ConfigArgs& args)
   // or configure the whole list that was defined
   else
   {
+    // initial screening for namespaces to check for "|"
+    // this is a hack which should be fixed in a cleaner way
+    // namespaces can be already multiplied by using the "@" key
+    // the problem is for the ranks ...
+    vector<string> nsp;
+    vector<string> ranks;
+    vector<string> nspMulti;
+    for (CFuint i = 0; i < m_namespaces.size(); ++i) {
+      const size_t found = m_namespaces[i].find("|");
+      if (found != string::npos) {
+	nspMulti.push_back(m_namespaces[i]);
+	vector<string> nsp2N =  StringOps::getWords(m_namespaces[i], '|');
+	const string rootNsp = nsp2N[0];
+	const CFuint nbNsp = StringOps::from_str<CFuint>(nsp2N[1]);
+	vector<string> startEndRank = StringOps::getWords(m_ranks[i], ':');
+	CFuint start = StringOps::from_str<CFuint>(startEndRank[0]);
+	const CFuint end = StringOps::from_str<CFuint>(startEndRank[1]);
+	const CFuint nbRanksPerNsp = nbNsp/(end+1-start);
+	for (CFuint n = 0; n < nbNsp; ++n) {
+	  const string nspPlusN = rootNsp + StringOps::to_str(n);
+	  nsp.push_back(nspPlusN);
+	  const string rankN = StringOps::to_str(start) + ":" + StringOps::to_str(start+nbRanksPerNsp-1);
+	  ranks.push_back(rankN);
+	  start += nbRanksPerNsp;
+	}
+      }
+      else {
+	nsp.push_back(m_namespaces[i]);
+	ranks.push_back(m_ranks[i]);
+      }
+    }
+    
+    if (nsp.size() > m_namespaces.size()) {
+      m_namespaces.resize(nsp.size());
+      m_namespaces = nsp;
+      CFLog(INFO, CFPrintContainer<vector<string> >("Namespaces = ", &m_namespaces) << "\n");
+      m_ranks.resize(ranks.size());
+      m_ranks = ranks;
+      CFLog(INFO, CFPrintContainer<vector<string> >("Ranks = ", &m_ranks) << "\n");
+    }
+    
     CFuint counter = 0; 
     CFuint nbRanks = 0;
     std::vector<string>::iterator itr = m_namespaces.begin();

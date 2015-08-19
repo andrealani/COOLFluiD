@@ -44,7 +44,10 @@ public: // functions
   /// To be extended by derived classes.
   /// @param args is the ConfigArgs with the arguments to be parsed.
   virtual void configure ( ConfigArgs& args );
-
+  
+  /// Modify the configure option map to take into account some special keys
+  virtual void decryptConfigArgs(Config::ConfigArgs& args);
+  
   /// Configures the options for this object with a XML tree
   /// @param args is the XML tree to be parsed.
   virtual void configure_xml ( const std::string& xml_args );

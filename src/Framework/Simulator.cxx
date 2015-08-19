@@ -26,7 +26,10 @@
 
 using namespace std;
 using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Config;
 using namespace COOLFluiD::Environment;
+
+//////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
@@ -69,7 +72,7 @@ void SimulatorPaths::configure ( Config::ConfigArgs& args )
   CFAUTOTRACE;
 
   ConfigObject::configure(args);
-
+    
   Environment::DirPaths& dirpaths = Environment::DirPaths::getInstance();
 
   dirpaths.setWorkingDir(m_working_dir);
@@ -148,20 +151,21 @@ void Simulator::openCaseFile ( const std::string& sCFcaseFile )
   CFAUTOTRACE;
   setConfigFile ( sCFcaseFile );
   configure ( m_sim_args );
+  decryptConfigArgs(m_sim_args);
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void Simulator::processOptions ( Config::ConfigArgs& args )
 {
   CFAUTOTRACE;
-
+  
   processConfigFile ( args );
-
+  
   processParentArgs ( args );
-
+  
   processEnvironmentVariables ( args );
-
+  
   // filter the options that are not for Simulator nested objects
   // avoids errors with unused options for CFEnv
   args.pass_filter ( getNestName() );
@@ -179,6 +183,7 @@ void Simulator::configure ( Config::ConfigArgs& args )
   CFLog(NOTICE,"-------------------------------------------------------------\n");
 
   CFLog(NOTICE,"Configuration of Simulator\n");
+  
   ConfigObject::configure(args);
   
   CFLog(NOTICE,"-------------------------------------------------------------\n");
