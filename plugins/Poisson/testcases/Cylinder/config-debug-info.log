@@ -1,0 +1,701 @@
+### CFEnv
+nb options : 14
+{ OnlyCPU0Writes, CFEnv., Only CPU0 writes to stdout, 1 }
+{ DoAssertions, CFEnv., Turn off assertions dynamically, 1 }
+{ AssertionDumps, CFEnv., If assertions should dump backtraces, 1 }
+{ AssertionThrows, CFEnv., If assertions should throw exceptions instead of aborting code, 1 }
+{ ExceptionOutputs, CFEnv., If exception contructor should output, 1 }
+{ ExceptionDumps, CFEnv., If exception contructor should dump backtrace, 1 }
+{ ExceptionAborts, CFEnv., If exception contructor should abort execution immedietly, 0 }
+{ ExceptionLogLevel, CFEnv., Loglevel for exceptions, 650 }
+{ RegistSignalHandlers, CFEnv., If CPU signal handlers should be registered, 0 }
+{ TraceToStdOut, CFEnv., If Tracing should be sent to stdout also, 0 }
+{ TraceActive, CFEnv., If Tracing should be active, 0 }
+{ VerboseEvents, CFEnv., If Events have verbose output, 0 }
+{ ErrorOnUnusedConfig, CFEnv., Signal error when some user provided config parameters are not used, 0 }
+{ MainLoggerFileName, CFEnv., Name of main log file, output.log }
+
+### SimpleMaestro
+nb options : 3
+{ GlobalStopCriteria, SimpleMaestro., The stop Criteria to control the iteration procedure., GlobalMaxNumberSteps }
+{ RestartFromPreviousSolution, SimpleMaestro., Restart each subsystem from the previous iteration., 0 }
+{ AppendIter, SimpleMaestro., Save each iteration to different Tecplot file with suffix _GlobalIter#., 0 }
+
+### SimpleMaestro.GlobalMaxNumberSteps
+nb options : 1
+{ nbSteps, SimpleMaestro.GlobalMaxNumberSteps., Maximum number of overall steps to perform., 1 }
+
+### Simulator
+nb options : 2
+{ SubSystems, Simulator., The SubSystems present in this simulation., [SubSystem;] }
+{ SubSystemTypes, Simulator., The type of the SubSystems present in this simulation., [StandardSubSystem;] }
+
+### Simulator.Paths
+nb options : 4
+{ ModulesDir, Simulator.Paths., Module directories paths., [] }
+{ WorkingDir, Simulator.Paths., Working directory path., plugins/Poisson/testcases/Cylinder }
+{ ResultsDir, Simulator.Paths., Results directory path., ./RESULTS }
+{ RepositoryURL, Simulator.Paths., URL of repository of remote files, http://coolfluidsrv.vki.ac.be/webfiles/coolfluid/repository/ }
+
+### Simulator.Modules
+nb options : 1
+{ Libs, Simulator.Modules., Module libraries to load., [libPetscI;libTecplotWriter;libFiniteVolume;libFiniteVolumePoisson;libPoisson;libNewtonMethod;libGambit2CFmesh;libCFmeshFileReader;libCFmeshFileWriter;libNavierStokes;] }
+
+### Simulator.SubSystem
+nb options : 26
+{ CreateNullMethods, Simulator.SubSystem., Methods that where not configured are created Null., 1 }
+{ Namespaces, Simulator.SubSystem., Namespaces to be created in this SubSystem., [] }
+{ LinearSystemSolver, Simulator.SubSystem., Self-reg keys of the linear system solvers., [PETSC;] }
+{ MeshAdapterNames, Simulator.SubSystem., Names of the mesh adapter., [] }
+{ DataPostProcessing, Simulator.SubSystem., Self-reg keys of the data postprocessing., [] }
+{ DataPreProcessingNames, Simulator.SubSystem., Names of the data preprocessing., [] }
+{ MeshAdapterMethod, Simulator.SubSystem., Self-reg keys of the mesh adapter., [] }
+{ ConvergenceMethod, Simulator.SubSystem., Self-reg keys of the convergence method., [NewtonIterator;] }
+{ DataPostProcessingNames, Simulator.SubSystem., Names of the data postprocessing., [] }
+{ ErrorEstimatorNames, Simulator.SubSystem., Names of the error estimator., [] }
+{ MeshCreator, Simulator.SubSystem., Self-reg keys of the mesh creator., [CFmeshFileReader;] }
+{ ErrorEstimatorMethod, Simulator.SubSystem., Self-reg keys of the error estimator., [] }
+{ OutputFormat, Simulator.SubSystem., Self-reg keys of the output format., [Tecplot;CFmesh;] }
+{ MeshCreatorNames, Simulator.SubSystem., Names of the mesh creator., [] }
+{ ConvergenceMethodNames, Simulator.SubSystem., Names of the convergence method., [] }
+{ SpaceMethodNames, Simulator.SubSystem., Names of the space method., [] }
+{ CouplerMethod, Simulator.SubSystem., Self-reg keys of the coupler method., [] }
+{ SpaceMethod, Simulator.SubSystem., Self-reg keys of the space method., [CellCenterFVM;] }
+{ LSSNames, Simulator.SubSystem., Names of the linear system solvers., [NSLSS;] }
+{ DataPreProcessing, Simulator.SubSystem., Self-reg keys of the data preprocessing., [] }
+{ OutputFormatNames, Simulator.SubSystem., Names of the output format., [] }
+{ CouplerMethodNames, Simulator.SubSystem., Names of the coupler method., [] }
+{ StopCondition, Simulator.SubSystem., The stop condition to control the iteration procedure., MaxNumberSteps }
+{ InitialIter, Simulator.SubSystem., Initial Iteration Number., 0 }
+{ InitialTime, Simulator.SubSystem., Initial Physical Time of the SubSystem., 0 }
+{ StopSimulation, Simulator.SubSystem., Flag to force an immediate stop of the simulation., 0 }
+
+### Simulator.SubSystem.Default
+nb options : 4
+{ PhysicalModelName, Simulator.SubSystem.Default., Name of PhysicalModel activated by this Namespace.,  }
+{ PhysicalModelType, Simulator.SubSystem.Default., Which PhysicalModel is activated by this Namespace., Poisson3D }
+{ MeshData, Simulator.SubSystem.Default., Which MeshData is activated by this Namespace.,  }
+{ SubSystemStatus, Simulator.SubSystem.Default., Which SusSystemStatus is activated by this Namespace.,  }
+
+### Simulator.SubSystem.Default
+nb options : 4
+{ listTRS, Simulator.SubSystem.Default., List of TRS's to be built., [Outlet;Wall;Inlet;] }
+{ DomainModel, Simulator.SubSystem.Default., Type of domain model to describe the computational domain., Null }
+{ Namespaces, Simulator.SubSystem.Default., List the Namespaces which will be present in this MeshData, [Default;] }
+{ sameNodeStateConnectivity, Simulator.SubSystem.Default., Option to assume the Node and State connectivity to be the same., 0 }
+
+### Simulator.SubSystem.Default.Null
+nb options : 2
+{ MapTopologicalRegions, Simulator.SubSystem.Default.Null., The names of the TRSs and the local index of the TRs, for each TR., [] }
+{ MapTopologicalRegionsCADids, Simulator.SubSystem.Default.Null., Coresponding CAD ids for TRs from MapTopologicalRegions, [] }
+
+### Simulator.SubSystem.Poisson3D
+nb options : 0
+
+### Simulator.SubSystem.SubSystemStatus
+nb options : 4
+{ TimeStepLayers, Simulator.SubSystem.SubSystemStatus., Number of Layers, 1 }
+{ InnerDTRatio, Simulator.SubSystem.SubSystemStatus., Ratio of total timestep for each layer, [] }
+{ ComputeDT, Simulator.SubSystem.SubSystemStatus., DT calculator., Null }
+{ TimeStep, Simulator.SubSystem.SubSystemStatus., TimeStep value at start., -1 }
+
+### Simulator.SubSystem.SubSystemStatus.Null
+nb options : 0
+
+### Simulator.SubSystem.InteractiveParamReader
+nb options : 2
+{ FileName, Simulator.SubSystem.InteractiveParamReader., Name of the file with the interactive parameters., ./arcjet.inter }
+{ readRate, Simulator.SubSystem.InteractiveParamReader., The frequency of reading from the file with the interactive parameters., 5 }
+
+### Simulator.SubSystem.Poisson3D
+nb options : 3
+{ PropertyLibrary, Simulator.SubSystem.Poisson3D., Library computing physical properties., Null }
+{ refValues, Simulator.SubSystem.Poisson3D., Reference values for variable scaling., [1;] }
+{ refLength, Simulator.SubSystem.Poisson3D., Reference length for geometric scaling., 1 }
+
+### Simulator.SubSystem.Poisson3D.Null
+nb options : 1
+{ path, Simulator.SubSystem.Poisson3D.Null., Library path.,  }
+
+### Simulator.SubSystem.Poisson3D.ConvTerm
+nb options : 0
+
+### Simulator.SubSystem.Poisson3D.DiffTerm
+nb options : 0
+
+### Simulator.SubSystem.Poisson3D.SourceTerm
+nb options : 0
+
+### Simulator.SubSystem.MaxNumberSteps
+nb options : 1
+{ nbSteps, Simulator.SubSystem.MaxNumberSteps., Maximum number of steps to compute., 20 }
+
+### Simulator.SubSystem.CFmeshFileReader
+nb options : 7
+{ Namespace, Simulator.SubSystem.CFmeshFileReader., Namespace of this Methods., NULL }
+{ CommandGroups, Simulator.SubSystem.CFmeshFileReader., Names of the CommandGroupds to be created., [] }
+{ SetupCom, Simulator.SubSystem.CFmeshFileReader., SetupCommand to run. This command seldomly needs overriding., StdSetup }
+{ UnSetupCom, Simulator.SubSystem.CFmeshFileReader., UnSetupCommand to run. This command seldomly needs overriding., StdUnSetup }
+{ ReadCFmesh, Simulator.SubSystem.CFmeshFileReader., Command to read the CFmesh. This command seldomly needs overriding., ParReadCFmesh }
+{ convertFrom, Simulator.SubSystem.CFmeshFileReader., Name of format from which to convert to CFmesh., Gambit2CFmesh }
+{ convertBack, Simulator.SubSystem.CFmeshFileReader., Also convert back to the original format. Usefull only for debugging., 0 }
+
+### Simulator.SubSystem.CFmeshFileReader.Data
+nb options : 27
+{ CollaboratorNames, Simulator.SubSystem.CFmeshFileReader.Data., Names of the collaborating Methods., [] }
+{ ScalingFactor, Simulator.SubSystem.CFmeshFileReader.Data., Mesh scaling factor, 1 }
+{ FileName, Simulator.SubSystem.CFmeshFileReader.Data., The file to open, ./Cylinder.CFmesh }
+{ convertFromFile, Simulator.SubSystem.CFmeshFileReader.Data., Name of file in other format to convert From.,  }
+{ TranslationVector, Simulator.SubSystem.CFmeshFileReader.Data., Vector to translate the mesh., [] }
+{ TranslateMesh, Simulator.SubSystem.CFmeshFileReader.Data., Flag to say if the mesh is to be translated., 0 }
+{ AnisotropicScaling, Simulator.SubSystem.CFmeshFileReader.Data., Flag to say if the mesh is to be scaled anisotropicaly., 0 }
+{ ScalingVector, Simulator.SubSystem.CFmeshFileReader.Data., Vector to scale the mesh., [] }
+{ UseInitValues, Simulator.SubSystem.CFmeshFileReader.Data., Specifies which variables will be initialized with the given values., [] }
+{ InitValues, Simulator.SubSystem.CFmeshFileReader.Data., Initial values for the specified variables., [] }
+{ InitValuesIDs, Simulator.SubSystem.CFmeshFileReader.Data., Initial values IDs for the specified variables., [] }
+{ ReadPastStates, Simulator.SubSystem.CFmeshFileReader.Data., Flag to read the 'pastStates' values., 0 }
+{ ReadPastNodes, Simulator.SubSystem.CFmeshFileReader.Data., Flag to read the 'pastNodes' values., 0 }
+{ ReadInterStates, Simulator.SubSystem.CFmeshFileReader.Data., Flag to read the 'interStates' values., 0 }
+{ ReadInterNodes, Simulator.SubSystem.CFmeshFileReader.Data., Flag to read the 'interNodes' values., 0 }
+{ ExtraNodalVarNames, Simulator.SubSystem.CFmeshFileReader.Data., Extra Nodal Data to read from the file., [] }
+{ ExtraStateVarNames, Simulator.SubSystem.CFmeshFileReader.Data., Extra State Data to read from the file., [] }
+{ ExtraVarNames, Simulator.SubSystem.CFmeshFileReader.Data., Extra Data to read from the file., [] }
+{ ExtraNodalVarTags, Simulator.SubSystem.CFmeshFileReader.Data., Tag in CFmesh for extra Nodal Data to read from the file., [] }
+{ ExtraStateVarTags, Simulator.SubSystem.CFmeshFileReader.Data., Tag in CFmesh for extra State Data to read from the file., [] }
+{ ExtraVarTags, Simulator.SubSystem.CFmeshFileReader.Data., Tag in CFmesh for extra Data to read from the file., [] }
+{ ExtraNodalVarStrides, Simulator.SubSystem.CFmeshFileReader.Data., Extra Nodal Data Strides to read from the file., [] }
+{ ExtraStateVarStrides, Simulator.SubSystem.CFmeshFileReader.Data., Extra State Data Strides to read from the file., [] }
+{ ExtraVarStrides, Simulator.SubSystem.CFmeshFileReader.Data., Extra Data Strides to read from the file., [] }
+{ StateScalingValues, Simulator.SubSystem.CFmeshFileReader.Data., Values to scale the state variables., [] }
+{ SolutionFile, Simulator.SubSystem.CFmeshFileReader.Data., Name of solution file from which each processor can read itw own states., Null }
+{ NodeSwitchIDs, Simulator.SubSystem.CFmeshFileReader.Data., IDs for switching the node coordinates, [] }
+
+### Simulator.SubSystem.CFmeshFileReader.StdSetup
+nb options : 2
+{ ComGroup, Simulator.SubSystem.CFmeshFileReader.StdSetup., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CFmeshFileReader.StdSetup., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.CFmeshFileReader.StdUnSetup
+nb options : 2
+{ ComGroup, Simulator.SubSystem.CFmeshFileReader.StdUnSetup., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CFmeshFileReader.StdUnSetup., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh
+nb options : 3
+{ ComGroup, Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh., Names of the TRS's to which this Command applies., [] }
+{ Renumber, Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh., Should we renumber the state ids to reduce the Jacobian matrix bandwith, 0 }
+
+### Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader
+nb options : 4
+{ NbOverlapLayers, Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader., Number of layers of overlap, 1 }
+{ Partitioner, Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader., Mesh partitioner to use, ParMetis }
+{ MergeTRS, Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader., Topological regions sets to be merged, [] }
+{ InputToUpdate, Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader., Transformer from input to update variables, Identity }
+
+### Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis
+nb options : 3
+{ NCommonNodes, Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis., Parmetis parameter for mesh to graph conversion, 2 }
+{ RND, Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis., Random seed to use, 15 }
+{ Options, Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis., Parmetis options parameter, 0 }
+
+### Simulator.SubSystem.Null1
+nb options : 3
+{ Namespace, Simulator.SubSystem.Null1., Namespace of this Methods., NULL }
+{ CommandGroups, Simulator.SubSystem.Null1., Names of the CommandGroupds to be created., [] }
+{ AdaptRate, Simulator.SubSystem.Null1., Rate to adapt the mesh., 1 }
+
+### Simulator.SubSystem.Null2
+nb options : 2
+{ Namespace, Simulator.SubSystem.Null2., Namespace of this Methods., NULL }
+{ CommandGroups, Simulator.SubSystem.Null2., Names of the CommandGroupds to be created., [] }
+
+### Simulator.SubSystem.CellCenterFVM
+nb options : 21
+{ Namespace, Simulator.SubSystem.CellCenterFVM., Namespace of this Methods., NULL }
+{ CommandGroups, Simulator.SubSystem.CellCenterFVM., Names of the CommandGroupds to be created., [] }
+{ Builder, Simulator.SubSystem.CellCenterFVM., Which MeshDataBuilder should be used with the method., FVMCC }
+{ JacobianSparsity, Simulator.SubSystem.CellCenterFVM., Define the Jacobian sparsity that this method produces., FVMCellCentered }
+{ Restart, Simulator.SubSystem.CellCenterFVM., Option to restart the SpaceMethod from the solution provided., 0 }
+{ InitNames, Simulator.SubSystem.CellCenterFVM., Names of the initializing commands., [InField;] }
+{ UnSetupNames, Simulator.SubSystem.CellCenterFVM., Names of the setup commands., [UnSetup1;] }
+{ ComputeTimeRHS, Simulator.SubSystem.CellCenterFVM., Compute time contribution to the right hand side., PseudoSteadyTimeRhs }
+{ SetNodalStatesCom, Simulator.SubSystem.CellCenterFVM., SetNodalStates Command to set the nodal states., StdSetNodalStates }
+{ ComputeRHS, Simulator.SubSystem.CellCenterFVM., Compute right hand side. This command seldomly needs overriding., NumJacob }
+{ UnSetupCom, Simulator.SubSystem.CellCenterFVM., UnSetup Command to run. This command seldomly needs overriding., [LeastSquareP1UnSetup;] }
+{ InitComds, Simulator.SubSystem.CellCenterFVM., Types of the initializing commands., [InitState;] }
+{ SetupCom, Simulator.SubSystem.CellCenterFVM., Setup Command to run. This command seldomly needs overriding., [LeastSquareP1Setup;] }
+{ AfterMeshUpdateCom, Simulator.SubSystem.CellCenterFVM., Command to run after mesh update., Null }
+{ BeforeMeshUpdateCom, Simulator.SubSystem.CellCenterFVM., Command to run before mesh update., Null }
+{ BcComds, Simulator.SubSystem.CellCenterFVM., Types of the boundary conditions commands., [CurrentConditionFVMCC;NeumannConditionFVMCC;DirichletConditionFVMCC;] }
+{ SetupNames, Simulator.SubSystem.CellCenterFVM., Names of the setup commands., [Setup1;] }
+{ BcNames, Simulator.SubSystem.CellCenterFVM., Names for the configuration of the boundary conditions commands., [Outlet;Wall;Inlet;] }
+{ OnlyInitComs, Simulator.SubSystem.CellCenterFVM., Use only init commands to initialize., 0 }
+{ SpaceRHSForGivenCell, Simulator.SubSystem.CellCenterFVM., Command for the computation of the space discretization contibution to RHS for one cell., Null }
+{ TimeRHSForGivenCell, Simulator.SubSystem.CellCenterFVM., Command for the computation of the space discretization contibution to RHS for one cell., Null }
+
+### Simulator.SubSystem.CellCenterFVM.Data
+nb options : 21
+{ CollaboratorNames, Simulator.SubSystem.CellCenterFVM.Data., Names of the collaborating Methods., [NSLSS;] }
+{ SolutionVar, Simulator.SubSystem.CellCenterFVM.Data., Solution variable set., Cons }
+{ UpdateVar, Simulator.SubSystem.CellCenterFVM.Data., VarSet corresponding to Update variables., Cons }
+{ DiffusiveVar, Simulator.SubSystem.CellCenterFVM.Data., Diffusive variable set., Cons }
+{ FreezeSysMatrix, Simulator.SubSystem.CellCenterFVM.Data., Freeze the system matrix in the sub-iterations?, 0 }
+{ Limiter, Simulator.SubSystem.CellCenterFVM.Data., Limiter to be used., Venktn3D }
+{ PolyRec, Simulator.SubSystem.CellCenterFVM.Data., PolyReconstructor to be used., LinearLS3D }
+{ DiffusiveFlux, Simulator.SubSystem.CellCenterFVM.Data., Diffusive flux computer., PureDiffFlux }
+{ EquationFilter, Simulator.SubSystem.CellCenterFVM.Data., Equation filter type(s)., [] }
+{ SourceTerm, Simulator.SubSystem.CellCenterFVM.Data., Source term type(s)., [] }
+{ TRSsWithGhostsOnFace, Simulator.SubSystem.CellCenterFVM.Data., TRSs on which ghost states lay on the face., [] }
+{ DerivativeStrategy, Simulator.SubSystem.CellCenterFVM.Data., Derivative computation strategy., Corrected3D }
+{ LinearVar, Simulator.SubSystem.CellCenterFVM.Data., Linearization variable set., Cons }
+{ NodalExtrapolation, Simulator.SubSystem.CellCenterFVM.Data., Nodal extrapolation strategy., DistanceBased }
+{ isAxisymm, Simulator.SubSystem.CellCenterFVM.Data., Tells if the simulation is axisymmetric., 0 }
+{ GeoDataComputer, Simulator.SubSystem.CellCenterFVM.Data., Computer of geometric data (e.g. normals, volumes)., FVMCC }
+{ FluxSplitter, Simulator.SubSystem.CellCenterFVM.Data., FluxSplitter to compute flux., Null }
+{ UseAnalyticalConvJacob, Simulator.SubSystem.CellCenterFVM.Data., Use the analytical jacobian of convective fluxes, 0 }
+{ ReconstructSolutionVars, Simulator.SubSystem.CellCenterFVM.Data., Reconstruct the solution variables instead of the update ones, 0 }
+{ IntegratorOrder, Simulator.SubSystem.CellCenterFVM.Data., Order of the Integration to be used for numerical quadrature., P1 }
+{ IntegratorQuadrature, Simulator.SubSystem.CellCenterFVM.Data., Type of Quadrature to be used in the Integration., GaussLegendre }
+
+### Simulator.SubSystem.CellCenterFVM.Data.Poisson3DCons
+nb options : 0
+
+### Simulator.SubSystem.CellCenterFVM.Data.Numerical
+nb options : 1
+{ tol, Simulator.SubSystem.CellCenterFVM.Data.Numerical., Tolerance for eps computation., 1e-06 }
+
+### Simulator.SubSystem.CellCenterFVM.Data.FVMCC
+nb options : 0
+
+### Simulator.SubSystem.CellCenterFVM.Data.Null
+nb options : 0
+
+### Simulator.SubSystem.CellCenterFVM.Data.PureDiffFlux
+nb options : 0
+
+### Simulator.SubSystem.CellCenterFVM.Data.Corrected3D
+nb options : 0
+
+### Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D
+nb options : 7
+{ limitIter, Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D., Iteration after which the limiter historical modification is activated., 1000000000 }
+{ limitRes, Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D., Threshold value for limiter historical modification., -15 }
+{ gradientFactor, Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D., Factor to multiply the gradient [0,1]., 1 }
+{ freezeLimiter, Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D., Flag telling if the limiter value must be frozen., 0 }
+{ BcFix, Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D., Fix the BC treatment., 0 }
+{ Vars, Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D., Definition of the Variables., [] }
+{ Def, Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D., Definition of the Functions., [] }
+
+### Simulator.SubSystem.CellCenterFVM.Data.Venktn3D
+nb options : 6
+{ alpha, Simulator.SubSystem.CellCenterFVM.Data.Venktn3D., Coefficient <=1 to tune the limiter., 1 }
+{ useFullStencil, Simulator.SubSystem.CellCenterFVM.Data.Venktn3D., Flag telling if to use the full stencil compute the local extrema., 1 }
+{ useNodalExtrapolationStencil, Simulator.SubSystem.CellCenterFVM.Data.Venktn3D., Flag telling if to use the stencil used for the nodal extrapolation to compute the local extrema., 1 }
+{ magnitudeValues, Simulator.SubSystem.CellCenterFVM.Data.Venktn3D., State values with order of magnitude of solution., [] }
+{ coeffEps, Simulator.SubSystem.CellCenterFVM.Data.Venktn3D., Coefficient for the epsilon., 1 }
+{ length, Simulator.SubSystem.CellCenterFVM.Data.Venktn3D., Characteristic solution length in the smooth flow region., -1 }
+
+### Simulator.SubSystem.CellCenterFVM.Data.DistanceBased
+nb options : 9
+{ TrsPriorityList, Simulator.SubSystem.CellCenterFVM.Data.DistanceBased., list of the names of the TRS defining the priority, [] }
+{ TRSName, Simulator.SubSystem.CellCenterFVM.Data.DistanceBased., Name of the TRSs on which values must be prescribed, [] }
+{ FileNameTw, Simulator.SubSystem.CellCenterFVM.Data.DistanceBased., Name of the file with the temperature distribution,  }
+{ RotationAngle, Simulator.SubSystem.CellCenterFVM.Data.DistanceBased., Rotation angle (in degrees) to apply to the wall distribution coordinates, 0 }
+{ RotationCoordIDs, Simulator.SubSystem.CellCenterFVM.Data.DistanceBased., IDs (must be 2) of the coordinates lying in the rotation plane, [] }
+{ TemperatureID, Simulator.SubSystem.CellCenterFVM.Data.DistanceBased., ID of the temperature in the wall distribution, 0 }
+{ NbClosestPoints, Simulator.SubSystem.CellCenterFVM.Data.DistanceBased., Number of closest points for surface interpolation, 0 }
+{ ExtractCoordXYIDs, Simulator.SubSystem.CellCenterFVM.Data.DistanceBased., IDs corresponding to the x,y coordinate (z=0) for which plane is extracted, [] }
+{ NbIterAdiabatic, Simulator.SubSystem.CellCenterFVM.Data.DistanceBased., Number of iterations to run adiabatic, 0 }
+
+### Simulator.SubSystem.CellCenterFVM.Data.Null
+nb options : 1
+{ StartIter, Simulator.SubSystem.CellCenterFVM.Data.Null., Iteration at which filtering must start., 0 }
+
+### Simulator.SubSystem.CellCenterFVM.Setup1
+nb options : 4
+{ ComGroup, Simulator.SubSystem.CellCenterFVM.Setup1., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CellCenterFVM.Setup1., Names of the TRS's to which this Command applies., [] }
+{ stencil, Simulator.SubSystem.CellCenterFVM.Setup1., stencil type, FaceVertexPlusGhost }
+{ InitLimiterSocket, Simulator.SubSystem.CellCenterFVM.Setup1., name of the input limiter socket, Null }
+
+### Simulator.SubSystem.CellCenterFVM.UnSetup1
+nb options : 2
+{ ComGroup, Simulator.SubSystem.CellCenterFVM.UnSetup1., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CellCenterFVM.UnSetup1., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.CellCenterFVM.StdSetNodalStates
+nb options : 2
+{ ComGroup, Simulator.SubSystem.CellCenterFVM.StdSetNodalStates., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CellCenterFVM.StdSetNodalStates., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.CellCenterFVM.NumJacob
+nb options : 6
+{ ComGroup, Simulator.SubSystem.CellCenterFVM.NumJacob., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CellCenterFVM.NumJacob., Names of the TRS's to which this Command applies., [] }
+{ FreezeDiffCoeff, Simulator.SubSystem.CellCenterFVM.NumJacob., Flag forcing to freeze diffusive coefficients, 0 }
+{ AnalyticDiffJacob, Simulator.SubSystem.CellCenterFVM.NumJacob., Compute analytically the jacobian of the diffusive fluxes, 0 }
+{ FullNodalExtrapolation, Simulator.SubSystem.CellCenterFVM.NumJacob., Extrapolate the solution to nodes consistently (normally it is not necessary), 0 }
+{ useAnalyticalMatrix, Simulator.SubSystem.CellCenterFVM.NumJacob., Flag telling if to use analytical matrix., 1 }
+
+### Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs
+nb options : 5
+{ ComGroup, Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs., Names of the TRS's to which this Command applies., [] }
+{ zeroDiagValue, Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs., Flags telling indicating entries in the matrix diagonal., [] }
+{ useGlobalDT, Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs., Flag telling if to use global DT., 1 }
+{ useAnalyticalMatrix, Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs., Flag telling if to use analytical matrix., 0 }
+
+### Simulator.SubSystem.CellCenterFVM.Null
+nb options : 2
+{ ComGroup, Simulator.SubSystem.CellCenterFVM.Null., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CellCenterFVM.Null., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.CellCenterFVM.Null
+nb options : 2
+{ ComGroup, Simulator.SubSystem.CellCenterFVM.Null., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CellCenterFVM.Null., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.CellCenterFVM.Null
+nb options : 2
+{ ComGroup, Simulator.SubSystem.CellCenterFVM.Null., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CellCenterFVM.Null., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.CellCenterFVM.Null
+nb options : 2
+{ ComGroup, Simulator.SubSystem.CellCenterFVM.Null., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CellCenterFVM.Null., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.CellCenterFVM.InField
+nb options : 6
+{ ComGroup, Simulator.SubSystem.CellCenterFVM.InField., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CellCenterFVM.InField., Names of the TRS's to which this Command applies., [InnerFaces;] }
+{ Vars, Simulator.SubSystem.CellCenterFVM.InField., Definition of the Variables., [x;y;z;] }
+{ Def, Simulator.SubSystem.CellCenterFVM.InField., Definition of the Functions., [x;] }
+{ InputVar, Simulator.SubSystem.CellCenterFVM.InField., Input variables., Null }
+{ AdimensionalValues, Simulator.SubSystem.CellCenterFVM.InField., Flag to input adimensional values., 0 }
+
+### Simulator.SubSystem.CellCenterFVM.Outlet
+nb options : 6
+{ ComGroup, Simulator.SubSystem.CellCenterFVM.Outlet., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CellCenterFVM.Outlet., Names of the TRS's to which this Command applies., [Outlet;] }
+{ ZeroGradientFlags, Simulator.SubSystem.CellCenterFVM.Outlet., Flag specifying constantly extrapolated variables, [0;] }
+{ CoeffMove, Simulator.SubSystem.CellCenterFVM.Outlet., coefficient for the ghost node movement, 2 }
+{ ImposedCurrent, Simulator.SubSystem.CellCenterFVM.Outlet., Value for the imposed current, 0 }
+{ MachineVoltageLimit, Simulator.SubSystem.CellCenterFVM.Outlet., Maximum voltage given by the machine, 0 }
+
+### Simulator.SubSystem.CellCenterFVM.Wall
+nb options : 11
+{ ComGroup, Simulator.SubSystem.CellCenterFVM.Wall., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CellCenterFVM.Wall., Names of the TRS's to which this Command applies., [Wall;] }
+{ ZeroGradientFlags, Simulator.SubSystem.CellCenterFVM.Wall., Flag specifying constantly extrapolated variables, [1;] }
+{ CoeffMove, Simulator.SubSystem.CellCenterFVM.Wall., coefficient for the ghost node movement, 2 }
+{ Vars, Simulator.SubSystem.CellCenterFVM.Wall., Definition of the Variables., [] }
+{ Def, Simulator.SubSystem.CellCenterFVM.Wall., Definition of the Functions., [] }
+{ InputVar, Simulator.SubSystem.CellCenterFVM.Wall., Input variables., Null }
+{ AdimensionalValues, Simulator.SubSystem.CellCenterFVM.Wall., Flag to input adimensional values., 0 }
+{ InteractiveVarIDs, Simulator.SubSystem.CellCenterFVM.Wall., IDs of the variables that will be changed interactively., [] }
+{ InteractiveFactor, Simulator.SubSystem.CellCenterFVM.Wall., Factor to multiply the selected InteractiveVarIDs (should be < 1)., 1 }
+{ Value, Simulator.SubSystem.CellCenterFVM.Wall., Value at the boundary, 0 }
+
+### Simulator.SubSystem.CellCenterFVM.Inlet
+nb options : 11
+{ ComGroup, Simulator.SubSystem.CellCenterFVM.Inlet., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CellCenterFVM.Inlet., Names of the TRS's to which this Command applies., [Inlet;] }
+{ ZeroGradientFlags, Simulator.SubSystem.CellCenterFVM.Inlet., Flag specifying constantly extrapolated variables, [0;] }
+{ CoeffMove, Simulator.SubSystem.CellCenterFVM.Inlet., coefficient for the ghost node movement, 2 }
+{ Vars, Simulator.SubSystem.CellCenterFVM.Inlet., Definition of the Variables., [] }
+{ Def, Simulator.SubSystem.CellCenterFVM.Inlet., Definition of the Functions., [] }
+{ InputVar, Simulator.SubSystem.CellCenterFVM.Inlet., Input variables., Null }
+{ AdimensionalValues, Simulator.SubSystem.CellCenterFVM.Inlet., Flag to input adimensional values., 0 }
+{ InteractiveVarIDs, Simulator.SubSystem.CellCenterFVM.Inlet., IDs of the variables that will be changed interactively., [] }
+{ InteractiveFactor, Simulator.SubSystem.CellCenterFVM.Inlet., Factor to multiply the selected InteractiveVarIDs (should be < 1)., 1 }
+{ Value, Simulator.SubSystem.CellCenterFVM.Inlet., Value at the boundary, 0 }
+
+### Simulator.SubSystem.Null4
+nb options : 3
+{ Namespace, Simulator.SubSystem.Null4., Namespace of this Methods., NULL }
+{ CommandGroups, Simulator.SubSystem.Null4., Names of the CommandGroupds to be created., [] }
+{ EstimateRate, Simulator.SubSystem.Null4., Rate to estimate the error in the solution., 10 }
+
+### Simulator.SubSystem.NSLSS
+nb options : 6
+{ Namespace, Simulator.SubSystem.NSLSS., Namespace of this Methods., NULL }
+{ CommandGroups, Simulator.SubSystem.NSLSS., Names of the CommandGroupds to be created., [] }
+{ MaskEquationIDs, Simulator.SubSystem.NSLSS., IDs of the equations to solve with the current LSS, [0;] }
+{ SetupCom, Simulator.SubSystem.NSLSS., Setup Command to run. This command seldomly needs overriding., Null }
+{ UnSetupCom, Simulator.SubSystem.NSLSS., UnSetup Command to run. This command seldomly needs overriding., Null }
+{ SysSolver, Simulator.SubSystem.NSLSS., Command that solves the linear system., Null }
+
+### Simulator.SubSystem.NSLSS.Data
+nb options : 19
+{ CollaboratorNames, Simulator.SubSystem.NSLSS.Data., Names of the collaborating Methods., [] }
+{ SaveSystemToFile, Simulator.SubSystem.NSLSS.Data., Save files of matrix rhs solution vectors at each solve, 0 }
+{ Output, Simulator.SubSystem.NSLSS.Data., Flag indicating to output or not the solver convergence history., 0 }
+{ MaxIter, Simulator.SubSystem.NSLSS.Data., Maximum number of steps to be taken in the iterative solver., 1000000 }
+{ UseBlockPreconditioner, Simulator.SubSystem.NSLSS.Data., Enables to use block diagonal preconditioner (Dimension of each block is the number of local states on each CPU)., 0 }
+{ UseGPU, Simulator.SubSystem.NSLSS.Data., Enables to run on GPU., 0 }
+{ UseNodeBased, Simulator.SubSystem.NSLSS.Data., Use node-based sparsity and assembly., 0 }
+{ KSPType, Simulator.SubSystem.NSLSS.Data., Krylov solver type., KSPGMRES }
+{ MatOrderingType, Simulator.SubSystem.NSLSS.Data., Mat ordering type., MATORDERING_RCM }
+{ DivergenceTolerance, Simulator.SubSystem.NSLSS.Data., Divergence tolerance for control of iterative solver convergence., 1e+06 }
+{ PCType, Simulator.SubSystem.NSLSS.Data., Preconditioner type., PCASM }
+{ ShowMatrixStructure, Simulator.SubSystem.NSLSS.Data., Display matrix structure in X window., 0 }
+{ RelativeTolerance, Simulator.SubSystem.NSLSS.Data., Relative tolerance for control of iterative solver convergence., 1e-06 }
+{ AbsoluteTolerance, Simulator.SubSystem.NSLSS.Data., Absolute tolerance for control of iterative solver convergence., 1e-30 }
+{ NbKrylovSpaces, Simulator.SubSystem.NSLSS.Data., Number of Krylov spaces., 80 }
+{ ILULevels, Simulator.SubSystem.NSLSS.Data., Levels of fill for the ILU preconditioner (default = 0)., 0 }
+{ ShellPreconditioner, Simulator.SubSystem.NSLSS.Data., Shell preconditioner., Null }
+{ DifferentPreconditionerMatrix, Simulator.SubSystem.NSLSS.Data., Enable/Disable usage of different matrix for preconditioner, 0 }
+{ UseAIJ, Simulator.SubSystem.NSLSS.Data., Tell if AIJ structure must be used insted of BAIJ (default), 0 }
+
+### Simulator.SubSystem.NSLSS.Data.Null
+nb options : 0
+
+### Simulator.SubSystem.NSLSS.NewSeqSetup
+nb options : 2
+{ ComGroup, Simulator.SubSystem.NSLSS.NewSeqSetup., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.NSLSS.NewSeqSetup., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.NSLSS.StdSeqUnSetup
+nb options : 2
+{ ComGroup, Simulator.SubSystem.NSLSS.StdSeqUnSetup., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.NSLSS.StdSeqUnSetup., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.NSLSS.StdSeqSolveSys
+nb options : 2
+{ ComGroup, Simulator.SubSystem.NSLSS.StdSeqSolveSys., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.NSLSS.StdSeqSolveSys., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.NewtonIterator
+nb options : 17
+{ Namespace, Simulator.SubSystem.NewtonIterator., Namespace of this Methods., NULL }
+{ CommandGroups, Simulator.SubSystem.NewtonIterator., Names of the CommandGroupds to be created., [] }
+{ ConvergenceFile, Simulator.SubSystem.NewtonIterator., Name of Convergence File where to write the convergence history., convergence.plt }
+{ SpaceResidualFile, Simulator.SubSystem.NewtonIterator., Name of SpaceResidualFile where to write the spatial residual history., spaceResidual.plt }
+{ OutputSpaceResidual, Simulator.SubSystem.NewtonIterator., Indicate if the Space Residual must be outputted seperately for implicit time marching, 0 }
+{ ConvRate, Simulator.SubSystem.NewtonIterator., Rate to save convergence data to convergence file., 1 }
+{ ScreenOutputPrecision, Simulator.SubSystem.NewtonIterator., Screen Output Precision., 8 }
+{ ShowRate, Simulator.SubSystem.NewtonIterator., Rate to show convergence message to stdout., 1 }
+{ ConvergenceFileOnlyP0, Simulator.SubSystem.NewtonIterator., Indictate if only the processor 0 should write to file., 1 }
+{ StopCondition, Simulator.SubSystem.NewtonIterator., The stop condition to control the iteration procedure., AbsoluteNormAndMaxIter }
+{ SetupCom, Simulator.SubSystem.NewtonIterator., SetupCommand to run., StdSetup }
+{ UpdateSol, Simulator.SubSystem.NewtonIterator., Command to update the solution with computed dU., StdUpdateSol }
+{ InitCom, Simulator.SubSystem.NewtonIterator., Command to perform at beggining of each newton step., Null }
+{ IntermediateCom, Simulator.SubSystem.NewtonIterator., Command to perform between the computation of the Space and Time residual., Null }
+{ PrepareCom, Simulator.SubSystem.NewtonIterator., Command to prepare the solution before the iteration process., StdPrepare }
+{ UnSetupCom, Simulator.SubSystem.NewtonIterator., UnSetupCommand to run., StdUnSetup }
+{ ALEUpdateCom, Simulator.SubSystem.NewtonIterator., Command to perform after takeStep when moving mesh., Null }
+
+### Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter
+nb options : 2
+{ AbsNorm, Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter., Target value of the relative residual norm., -10 }
+{ MaxIter, Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter., Maximum number of iterations to perform., 1 }
+
+### Simulator.SubSystem.NewtonIterator.Data
+nb options : 12
+{ CollaboratorNames, Simulator.SubSystem.NewtonIterator.Data., Names of the collaborating Methods., [] }
+{ NormRes, Simulator.SubSystem.NewtonIterator.Data., Norm type to monitor residual., L2 }
+{ FilterState, Simulator.SubSystem.NewtonIterator.Data., Filter to apply on state variables., Identity }
+{ FilterRHS, Simulator.SubSystem.NewtonIterator.Data., Filter to apply on the RHS., Identity }
+{ DoComputeJacobian, Simulator.SubSystem.NewtonIterator.Data., Flag to tell to compute the jacobian., 1 }
+{ DoUpdateSolution, Simulator.SubSystem.NewtonIterator.Data., Flag to tell to update the solution., 1 }
+{ FreezeJacobian, Simulator.SubSystem.NewtonIterator.Data., Flag to tell to freeze the jacobian during the iterative process., 0 }
+{ NbLSSToSolveAtOnce, Simulator.SubSystem.NewtonIterator.Data., Number of LSS to solve at once in this convergence method., -1 }
+{ Norm, Simulator.SubSystem.NewtonIterator.Data., L2 Norm of dU to reach to stop the newton loop., -4 }
+{ SaveSystemToFile, Simulator.SubSystem.NewtonIterator.Data., Save files of matrix rhs solution vectors at each Newton step, 0 }
+{ PrintHistory, Simulator.SubSystem.NewtonIterator.Data., Print convergence history for each Newton Iterator step, 0 }
+{ MaxSteps, Simulator.SubSystem.NewtonIterator.Data., Maximum steps to perform in the newton loop., [] }
+
+### Simulator.SubSystem.NewtonIterator.Data.CFL
+nb options : 2
+{ Value, Simulator.SubSystem.NewtonIterator.Data.CFL., CFL number (it can be changed interactively)., 1 }
+{ ComputeCFL, Simulator.SubSystem.NewtonIterator.Data.CFL., CFL calculator., Interactive }
+
+### Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive
+nb options : 1
+{ CFL, Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive., Value for the CFL, 1 }
+
+### Simulator.SubSystem.NewtonIterator.Data.L2
+nb options : 4
+{ MonitoredVarID, Simulator.SubSystem.NewtonIterator.Data.L2., ID of the variable whose residual will be monitored., 0 }
+{ ComputedVarID, Simulator.SubSystem.NewtonIterator.Data.L2., IDs of the variables whose residual will be computed., [] }
+{ VectorName, Simulator.SubSystem.NewtonIterator.Data.L2., Name of the vector of which to take the norm., rhs }
+{ Tolerance, Simulator.SubSystem.NewtonIterator.Data.L2., If residual < tolerance residual is set to 0., 0 }
+
+### Simulator.SubSystem.NewtonIterator.Data.Identity
+nb options : 1
+{ maskIDs, Simulator.SubSystem.NewtonIterator.Data.Identity., Flag telling if the current variable has to be filtered., [] }
+
+### Simulator.SubSystem.NewtonIterator.Data.Identity
+nb options : 1
+{ maskIDs, Simulator.SubSystem.NewtonIterator.Data.Identity., Flag telling if the current variable has to be filtered., [] }
+
+### Simulator.SubSystem.NewtonIterator.StdSetup
+nb options : 2
+{ ComGroup, Simulator.SubSystem.NewtonIterator.StdSetup., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.NewtonIterator.StdSetup., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.NewtonIterator.StdUnSetup
+nb options : 2
+{ ComGroup, Simulator.SubSystem.NewtonIterator.StdUnSetup., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.NewtonIterator.StdUnSetup., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.NewtonIterator.StdPrepare
+nb options : 2
+{ ComGroup, Simulator.SubSystem.NewtonIterator.StdPrepare., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.NewtonIterator.StdPrepare., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.NewtonIterator.Null
+nb options : 2
+{ ComGroup, Simulator.SubSystem.NewtonIterator.Null., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.NewtonIterator.Null., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.NewtonIterator.Null
+nb options : 2
+{ ComGroup, Simulator.SubSystem.NewtonIterator.Null., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.NewtonIterator.Null., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.NewtonIterator.StdUpdateSol
+nb options : 4
+{ ComGroup, Simulator.SubSystem.NewtonIterator.StdUpdateSol., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.NewtonIterator.StdUpdateSol., Names of the TRS's to which this Command applies., [] }
+{ Relaxation, Simulator.SubSystem.NewtonIterator.StdUpdateSol., Relaxation factor, [] }
+{ Validate, Simulator.SubSystem.NewtonIterator.StdUpdateSol., Check that each update creates variables with physical meaning, 0 }
+
+### Simulator.SubSystem.NewtonIterator.Null
+nb options : 2
+{ ComGroup, Simulator.SubSystem.NewtonIterator.Null., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.NewtonIterator.Null., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.Null7
+nb options : 4
+{ Namespace, Simulator.SubSystem.Null7., Namespace of this Methods., NULL }
+{ CommandGroups, Simulator.SubSystem.Null7., Names of the CommandGroupds to be created., [] }
+{ ProcessRate, Simulator.SubSystem.Null7., Rate to process the data., 4294967295 }
+{ StopIter, Simulator.SubSystem.Null7., Iteration at which stopping processing., 4294967295 }
+
+### Simulator.SubSystem.Null8
+nb options : 4
+{ Namespace, Simulator.SubSystem.Null8., Namespace of this Methods., NULL }
+{ CommandGroups, Simulator.SubSystem.Null8., Names of the CommandGroupds to be created., [] }
+{ ProcessRate, Simulator.SubSystem.Null8., Rate to process the data., 4294967295 }
+{ StopIter, Simulator.SubSystem.Null8., Iteration at which stopping processing., 4294967295 }
+
+### Simulator.SubSystem.Tecplot
+nb options : 11
+{ Namespace, Simulator.SubSystem.Tecplot., Namespace of this Methods., NULL }
+{ CommandGroups, Simulator.SubSystem.Tecplot., Names of the CommandGroupds to be created., [] }
+{ FileName, Simulator.SubSystem.Tecplot., The name with extension of the file to write the output to., arcjet_out-rest-bis.plt }
+{ SaveRate, Simulator.SubSystem.Tecplot., Rate to intermediate solution to Tecplot file., 1 }
+{ SaveFinal, Simulator.SubSystem.Tecplot., Save again on finishing simulation., 1 }
+{ AppendTime, Simulator.SubSystem.Tecplot., Save each iteration to different file with suffix m_time#., 0 }
+{ AppendIter, Simulator.SubSystem.Tecplot., Save each iteration to different file with suffix m_iter#., 1 }
+{ AppendRank, Simulator.SubSystem.Tecplot., Append the processor rank to the file., 1 }
+{ SetupCom, Simulator.SubSystem.Tecplot., SetupCommand to run. This command seldomly needs overriding., StdSetup }
+{ WriteSol, Simulator.SubSystem.Tecplot., Command to wrtie the solution., WriteSolution }
+{ UnSetupCom, Simulator.SubSystem.Tecplot., UnSetupCommand to run. This command seldomly needs overriding., StdUnSetup }
+
+### Simulator.SubSystem.Tecplot.Data
+nb options : 7
+{ CollaboratorNames, Simulator.SubSystem.Tecplot.Data., Names of the collaborating Methods., [] }
+{ printExtraValues, Simulator.SubSystem.Tecplot.Data., flag telling if to print extra values, 0 }
+{ outputVar, Simulator.SubSystem.Tecplot.Data., output variables set, Cons }
+{ SurfaceTRS, Simulator.SubSystem.Tecplot.Data., List of TRS's to be writen in the surface file., [] }
+{ SurfaceOnly, Simulator.SubSystem.Tecplot.Data., Print only the surface data chosen in SurfaceTRS, 0 }
+{ CoordinatesOnly, Simulator.SubSystem.Tecplot.Data., Print only the coordinates, 0 }
+{ AppendAuxData, Simulator.SubSystem.Tecplot.Data., Boolean switch to append 'AUXDATA' fields in zone headers or not., 0 }
+
+### Simulator.SubSystem.Tecplot.Data.DataHandleOutput
+nb options : 6
+{ SocketNames, Simulator.SubSystem.Tecplot.Data.DataHandleOutput., The names of the sockets to output based on states., [] }
+{ VariableNames, Simulator.SubSystem.Tecplot.Data.DataHandleOutput., The names of the variables., [] }
+{ CCSocketNames, Simulator.SubSystem.Tecplot.Data.DataHandleOutput., The names of the sockets to output cell-centered., [] }
+{ CCVariableNames, Simulator.SubSystem.Tecplot.Data.DataHandleOutput., The names of the variables for cell-centered output., [] }
+{ CCBlockSize, Simulator.SubSystem.Tecplot.Data.DataHandleOutput., The block size for each socket. Default is one., [] }
+{ CCTrs, Simulator.SubSystem.Tecplot.Data.DataHandleOutput., The trs with the cells to output the cell-centered data., [] }
+
+### Simulator.SubSystem.Tecplot.StdSetup
+nb options : 2
+{ ComGroup, Simulator.SubSystem.Tecplot.StdSetup., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.Tecplot.StdSetup., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.Tecplot.StdUnSetup
+nb options : 2
+{ ComGroup, Simulator.SubSystem.Tecplot.StdUnSetup., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.Tecplot.StdUnSetup., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.Tecplot.WriteSolution
+nb options : 3
+{ ComGroup, Simulator.SubSystem.Tecplot.WriteSolution., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.Tecplot.WriteSolution., Names of the TRS's to which this Command applies., [] }
+{ FileFormat, Simulator.SubSystem.Tecplot.WriteSolution., Format to write Tecplot file., ASCII }
+
+### Simulator.SubSystem.CFmesh
+nb options : 11
+{ Namespace, Simulator.SubSystem.CFmesh., Namespace of this Methods., NULL }
+{ CommandGroups, Simulator.SubSystem.CFmesh., Names of the CommandGroupds to be created., [] }
+{ FileName, Simulator.SubSystem.CFmesh., The name with extension of the file to write the output to., arcjet_out-rest-bis.CFmesh }
+{ SaveRate, Simulator.SubSystem.CFmesh., Rate to intermediate solution to Tecplot file., 5 }
+{ SaveFinal, Simulator.SubSystem.CFmesh., Save again on finishing simulation., 1 }
+{ AppendTime, Simulator.SubSystem.CFmesh., Save each iteration to different file with suffix m_time#., 0 }
+{ AppendIter, Simulator.SubSystem.CFmesh., Save each iteration to different file with suffix m_iter#., 0 }
+{ AppendRank, Simulator.SubSystem.CFmesh., Append the processor rank to the file., 1 }
+{ SetupCom, Simulator.SubSystem.CFmesh., SetupCommand to run. This command seldomly needs overriding., StdSetup }
+{ WriteSol, Simulator.SubSystem.CFmesh., Command to wrtie the solution., ParWriteSolution }
+{ UnSetupCom, Simulator.SubSystem.CFmesh., UnSetupCommand to run. This command seldomly needs overriding., StdUnSetup }
+
+### Simulator.SubSystem.CFmesh.Data
+nb options : 11
+{ CollaboratorNames, Simulator.SubSystem.CFmesh.Data., Names of the collaborating Methods., [] }
+{ StorePastStates, Simulator.SubSystem.CFmesh.Data., Flag to store the 'pastStates' values., 0 }
+{ StorePastNodes, Simulator.SubSystem.CFmesh.Data., Flag to store the 'pastNodes' values., 0 }
+{ StoreInterStates, Simulator.SubSystem.CFmesh.Data., Flag to store the 'interStates' values., 0 }
+{ StoreInterNodes, Simulator.SubSystem.CFmesh.Data., Flag to store the 'interNodes' values., 0 }
+{ ExtraNodalVarNames, Simulator.SubSystem.CFmesh.Data., Extra Nodal Data to write to the file., [] }
+{ ExtraStateVarNames, Simulator.SubSystem.CFmesh.Data., Extra State Data to write to the file., [] }
+{ ExtraVarNames, Simulator.SubSystem.CFmesh.Data., Extra Data to write to the file., [] }
+{ ExtraNodalVarStrides, Simulator.SubSystem.CFmesh.Data., Extra Nodal Data Strides to write to the file., [] }
+{ ExtraStateVarStrides, Simulator.SubSystem.CFmesh.Data., Extra State Data Strides to write to the file., [] }
+{ ExtraVarStrides, Simulator.SubSystem.CFmesh.Data., Extra Data Strides to write to the file., [] }
+
+### Simulator.SubSystem.CFmesh.Data.DataHandleOutput
+nb options : 6
+{ SocketNames, Simulator.SubSystem.CFmesh.Data.DataHandleOutput., The names of the sockets to output based on states., [] }
+{ VariableNames, Simulator.SubSystem.CFmesh.Data.DataHandleOutput., The names of the variables., [] }
+{ CCSocketNames, Simulator.SubSystem.CFmesh.Data.DataHandleOutput., The names of the sockets to output cell-centered., [] }
+{ CCVariableNames, Simulator.SubSystem.CFmesh.Data.DataHandleOutput., The names of the variables for cell-centered output., [] }
+{ CCBlockSize, Simulator.SubSystem.CFmesh.Data.DataHandleOutput., The block size for each socket. Default is one., [] }
+{ CCTrs, Simulator.SubSystem.CFmesh.Data.DataHandleOutput., The trs with the cells to output the cell-centered data., [] }
+
+### Simulator.SubSystem.CFmesh.StdSetup
+nb options : 2
+{ ComGroup, Simulator.SubSystem.CFmesh.StdSetup., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CFmesh.StdSetup., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.CFmesh.StdUnSetup
+nb options : 2
+{ ComGroup, Simulator.SubSystem.CFmesh.StdUnSetup., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CFmesh.StdUnSetup., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.CFmesh.ParWriteSolution
+nb options : 2
+{ ComGroup, Simulator.SubSystem.CFmesh.ParWriteSolution., Name of the CommandGroup to which this Command belongs.,  }
+{ applyTRS, Simulator.SubSystem.CFmesh.ParWriteSolution., Names of the TRS's to which this Command applies., [] }
+
+### Simulator.SubSystem.CFmesh.ParWriteSolution.ParCFmeshFileWriter
+nb options : 0
+
+### Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh
+nb options : 2
+{ Discontinuous, Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh., Is the solution space be discontinuous?, 1 }
+{ IgnoreTRS, Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh., Names of the TRS to ignore while converting, [] }
+
+### Simulator.SubSystem.CellCenterFVM.Builder
+nb options : 1
+{ PolynomialType, Simulator.SubSystem.CellCenterFVM.Builder., Polynomial type of the Geometric Entities to be built., Lagrange }
+
+### Simulator.SubSystem.CellCenterFVM.Setup1.FaceVertexPlusGhost
+nb options : 1
+{ TRSNames, Simulator.SubSystem.CellCenterFVM.Setup1.FaceVertexPlusGhost., Names of the TRSs to which the stencil computation is applied, [] }
+

@@ -1,0 +1,24 @@
+<Simulator	tree="object" mode="basic" dynamic="static" >
+<SubSystems	tree="option" type="std::string" mode="advanced" dynamic="static" description="The SubSystems present in this simulation." >
+</SubSystems>
+<SubSystemTypes	tree="option" type="std::string" mode="advanced" dynamic="static" description="The type of the SubSystems present in this simulation." >
+</SubSystemTypes>
+<Modules	tree="object" mode="basic" dynamic="static" >
+<Libs	tree="option" type="std::string" mode="advanced" dynamic="static" description="Module libraries to load." >
+</Libs>
+</Modules>
+<Paths	tree="object" mode="basic" dynamic="static" >
+<ModulesDir	tree="option" type="std::string" mode="advanced" dynamic="static" description="Module directories paths." >
+</ModulesDir>
+<WorkingDir	tree="option" type="std::string" mode="advanced" dynamic="static" description="Working directory path." >
+plugins/Poisson/testcases/Cylinder
+</WorkingDir>
+<ResultsDir	tree="option" type="std::string" mode="advanced" dynamic="static" description="Results directory path." >
+./RESULTS
+</ResultsDir>
+<RepositoryURL	tree="option" type="std::string" mode="advanced" dynamic="static" description="URL of repository of remote files" >
+http://coolfluidsrv.vki.ac.be/webfiles/coolfluid/repository/
+</RepositoryURL>
+</Paths>
+</Simulator>
+
