@@ -485,12 +485,24 @@ void ConfigObject::decryptConfigArgs(Config::ConfigArgs& args)
     }
     
     const size_t foundV1 = value.find("&");
+    const size_t foundV_ = value.find("_");
+    const size_t foundVB = value.find(">");
     string nstrV1 = "";
     CFuint nbNspV1 = 0;
     bool addNumberToValue = false;
     if (foundV1 != string::npos) {
-      // case "... = AAAAA&N BBBB&N"
-      nstrV1 = value.substr(foundV1+1);
+      if (foundV_ == string::npos || foundVB == string::npos) {
+	// case "... = AAAAA&N BBBB&N"
+	nstrV1 = value.substr(foundV1+1);
+      }
+      else if (foundV_ != string::npos && foundVB != string::npos) {
+	// case "... = AAAAA&N_AAAAA>..." or "... = AAAAA_AAAAA>BBBB&N_BBB..."
+	const string part = value.substr(foundV1+1);
+	cf_assert(part != "");
+	vector<string> partV = StringOps::getWords(part, '_');
+	nstrV1 = partV[0];
+      }
+      
       cf_assert(nstrV1 != "");
       nbNspV1 = StringOps::from_str<CFuint>(nstrV1);
       cf_assert(nbNspV1 == nbNsp);
@@ -540,47 +552,98 @@ void ConfigObject::decryptConfigArgs(Config::ConfigArgs& args)
 	}
 	
 	if (addNumberToValue) {
-	  const CFuint nbDigits = ((CFuint)std::log10((CFreal)nbNspV1))+1;
-	  const string beforeV = value.substr(0, foundV1);
-	  const string afterV  = value.substr(foundV1+nbDigits+1);
-	  CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => template value <" << beforeV << "?" << afterV <<">\n");
-	  newValue = beforeV + ns + afterV;  
+	  bool doLoop = true;
+	  string tmp = value;
+	  size_t idx = foundV1;
+	  CFuint nbD = nbNspV1;
+	  do {
+	    const CFuint nbDigits = ((CFuint)std::log10((CFreal)nbD))+1;
+	    const string beforeV = tmp.substr(0, idx);
+	    const string afterV  = tmp.substr(idx+nbDigits+1);
+	    CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => template value <" << beforeV << "?" << afterV <<">\n");
+	    newValue = beforeV + ns + afterV;
+	    
+	    // check for next
+	    idx = newValue.find("&");
+	    if (idx == string::npos) {doLoop = false;}
+	    else {
+	      // case "... = AAAAA&N BBBB&N"
+	      nstrV1 = newValue.substr(idx+1);
+	      cf_assert(nstrV1 != "");
+	      nbD = StringOps::from_str<CFuint>(nstrV1);
+	      cf_assert(nbD == nbNsp);
+	      tmp = newValue;
+	    }
+	  }
+	  while (doLoop);
 	}
 	
 	if (expandWithNb) {
-	  const CFuint nbDigits = ((CFuint)std::log10((CFreal)nbNspV2))+1;
-	  const string beforeV = value.substr(0, foundV2);
-	  vector<string> listV = StringOps::getWords(beforeV, ' ');
-	  if(listV.size() == 0) {
-	    listV = StringOps::getWords(beforeV, '=');
-	  }
-	  cf_assert(listV.size() > 0);
-	  const string root = listV.back(); 
-	  const string afterV  = value.substr(foundV2+nbDigits+1);
-	  CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => with Nb root?afterV <" << root << "?" << afterV <<">\n");
-	  newValue = beforeV + StringOps::to_str(0);
-	  for (CFuint iv = 1; iv < nbNspV2; ++iv) {
-	    newValue += " " + root + StringOps::to_str(iv);
-	  }
-	  newValue += " " + afterV;  
+	  bool doLoop = true;
+	  string tmp = newValue;
+	  size_t idx = foundV2;
+	  CFuint nbD = nbNspV2;
+	  do {
+	    const CFuint nbDigits = ((CFuint)std::log10((CFreal)nbD))+1;
+	    const string beforeV = tmp.substr(0, idx);
+	    vector<string> listV = StringOps::getWords(beforeV, ' ');
+	    if(listV.size() == 0) {
+	      listV = StringOps::getWords(beforeV, '=');
+	    }
+	    cf_assert(listV.size() > 0);
+	    const string root = listV.back(); 
+	    const string afterV  = tmp.substr(idx+nbDigits+1);
+	    CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => with Nb root?afterV <" << root << "?" << afterV <<">\n");
+	    newValue = beforeV + StringOps::to_str(0);
+	    for (CFuint iv = 1; iv < nbNspV2; ++iv) {
+	      newValue += " " + root + StringOps::to_str(iv);
+	    }
+	    newValue += " " + afterV;  
+	    
+	    idx = newValue.find("@");
+	    if (idx == string::npos) {doLoop = false;}
+	    else {
+	      // case "... = AAAAA@N BBBB@N"
+	      nstrV2 = newValue.substr(idx+1);
+	      cf_assert(nstrV2 != "");
+	      nbD = StringOps::from_str<CFuint>(nstrV2);
+	      tmp = newValue;
+	    }
+	  } while (doLoop);
 	}
 	
 	if (expandWithoutNb) {
-	  const CFuint nbDigits = ((CFuint)std::log10((CFreal)nbNspV3))+1;
-	  const string beforeV = value.substr(0, foundV3);
-	  vector<string> listV = StringOps::getWords(beforeV, ' ');
-	  if(listV.size() == 0) {
-	    listV = StringOps::getWords(beforeV, '=');
-	  }
-	  cf_assert(listV.size() > 0);
-	  const string root = listV.back(); 
-	  const string afterV  = value.substr(foundV3+nbDigits+1);
-	  CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => w/o Nb root?afterV <" << root << "?" << afterV <<">\n");
-	  newValue = beforeV;
-	  for (CFuint iv = 1; iv < nbNspV2; ++iv) {
-	    newValue += " " + root;
-	  }
-	  newValue += " " + afterV;  
+	  bool doLoop = true;
+	  string tmp = newValue;
+	  size_t idx = foundV3;
+	  CFuint nbD = nbNspV3;
+	  do {
+	    const CFuint nbDigits = ((CFuint)std::log10((CFreal)nbD))+1;
+	    const string beforeV = value.substr(0, idx);
+	    vector<string> listV = StringOps::getWords(beforeV, ' ');
+	    if(listV.size() == 0) {
+	      listV = StringOps::getWords(beforeV, '=');
+	    }
+	    cf_assert(listV.size() > 0);
+	    const string root = listV.back(); 
+	    const string afterV  = value.substr(idx+nbDigits+1);
+	    CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => w/o Nb root?afterV <" << root << "?" << afterV <<">\n");
+	    newValue = beforeV;
+	    for (CFuint iv = 1; iv < nbD; ++iv) {
+	      newValue += " " + root;
+	    }
+	    newValue += " " + afterV;  
+	    
+	    idx = newValue.find("@");
+	    if (idx == string::npos) {doLoop = false;}
+	    else {
+	      // case "... = AAAAA@N BBBB@N"
+	      nstrV3 = newValue.substr(idx+1);
+	      cf_assert(nstrV3 != "");
+	      nbD = StringOps::from_str<CFuint>(nstrV3);
+	      tmp = newValue;
+	    }
+	  } while (doLoop);
 	}
 	
 	// add new entry
@@ -591,42 +654,74 @@ void ConfigObject::decryptConfigArgs(Config::ConfigArgs& args)
     else if (nbNsp == 0 && (expandWithNb || expandWithoutNb)) {
       string newKey = key;
       string newValue = value;
-      	
-      if (expandWithNb) {
-	const CFuint nbDigits = ((CFuint)std::log10((CFreal)nbNspV2))+1;
-	const string beforeV = value.substr(0, foundV2);
-	vector<string> listV = StringOps::getWords(beforeV, ' ');
-	if(listV.size() == 0) {
-	  listV = StringOps::getWords(beforeV, '=');
-	}
-	cf_assert(listV.size() > 0);
-	const string root = listV.back(); 
-	const string afterV  = value.substr(foundV2+nbDigits+1);
-	CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => with Nb root?afterV <" << root << "?" << afterV <<">\n");
-	newValue = beforeV + StringOps::to_str(0);
-	for (CFuint iv = 1; iv < nbNspV2; ++iv) {
-	  newValue += " " + root + StringOps::to_str(iv);
-	}
-	newValue += " " + afterV;  
-      }
       
-      if (expandWithoutNb) {
-	const CFuint nbDigits = ((CFuint)std::log10((CFreal)nbNspV3))+1;
-	const string beforeV = value.substr(0, foundV3);
-	vector<string> listV = StringOps::getWords(beforeV, ' ');
-	if(listV.size() == 0) {
-	  listV = StringOps::getWords(beforeV, '=');
+      if (expandWithNb) {
+	  bool doLoop = true;
+	  string tmp = newValue;
+	  size_t idx = foundV2;
+	  CFuint nbD = nbNspV2;
+	  do {
+	    const CFuint nbDigits = ((CFuint)std::log10((CFreal)nbD))+1;
+	    const string beforeV = tmp.substr(0, idx);
+	    vector<string> listV = StringOps::getWords(beforeV, ' ');
+	    if(listV.size() == 0) {
+	      listV = StringOps::getWords(beforeV, '=');
+	    }
+	    cf_assert(listV.size() > 0);
+	    const string root = listV.back(); 
+	    const string afterV  = tmp.substr(idx+nbDigits+1);
+	    CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => with Nb root?afterV <" << root << "?" << afterV <<">\n");
+	    newValue = beforeV + StringOps::to_str(0);
+	    for (CFuint iv = 1; iv < nbNspV2; ++iv) {
+	      newValue += " " + root + StringOps::to_str(iv);
+	    }
+	    newValue += " " + afterV;  
+	    
+	    idx = newValue.find("@");
+	    if (idx == string::npos) {doLoop = false;}
+	    else {
+	      // case "... = AAAAA@N BBBB@N"
+	      nstrV2 = newValue.substr(idx+1);
+	      cf_assert(nstrV2 != "");
+	      nbD = StringOps::from_str<CFuint>(nstrV2);
+	      tmp = newValue;
+	    }
+	  } while (doLoop);
 	}
-	cf_assert(listV.size() > 0);
-	const string root = listV.back(); 
-	const string afterV  = value.substr(foundV3+nbDigits+1);
-	CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => w/o Nb root?afterV <" << root << "?" << afterV <<">\n");
-	newValue = beforeV;
-	for (CFuint iv = 1; iv < nbNspV3; ++iv) {
-	  newValue += " " + root;
+	
+	if (expandWithoutNb) {
+	  bool doLoop = true;
+	  string tmp = newValue;
+	  size_t idx = foundV3;
+	  CFuint nbD = nbNspV3;
+	  do {
+	    const CFuint nbDigits = ((CFuint)std::log10((CFreal)nbD))+1;
+	    const string beforeV = value.substr(0, idx);
+	    vector<string> listV = StringOps::getWords(beforeV, ' ');
+	    if(listV.size() == 0) {
+	      listV = StringOps::getWords(beforeV, '=');
+	    }
+	    cf_assert(listV.size() > 0);
+	    const string root = listV.back(); 
+	    const string afterV  = value.substr(idx+nbDigits+1);
+	    CFLog(DEBUG_MIN, "Simulator::modifyConfigArgs() => w/o Nb root?afterV <" << root << "?" << afterV <<">\n");
+	    newValue = beforeV;
+	    for (CFuint iv = 1; iv < nbD; ++iv) {
+	      newValue += " " + root;
+	    }
+	    newValue += " " + afterV;  
+	    
+	    idx = newValue.find("@");
+	    if (idx == string::npos) {doLoop = false;}
+	    else {
+	      // case "... = AAAAA@N BBBB@N"
+	      nstrV3 = newValue.substr(idx+1);
+	      cf_assert(nstrV3 != "");
+	      nbD = StringOps::from_str<CFuint>(nstrV3);
+	      tmp = newValue;
+	    }
+	  } while (doLoop);
 	}
-	newValue += " " + afterV;  
-      }
       
       // add new entry
       CFLog(VERBOSE, "Simulator::modifyConfigArgs() => replacing <" << key << " = " << value << ">\n");
