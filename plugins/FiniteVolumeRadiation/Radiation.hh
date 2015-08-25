@@ -83,8 +83,13 @@ public:
   /**
    * Compute the advance order depending on the option selected 
    */  
-  void getFieldOppacities(CFuint ib);
+  void getFieldOpacities(CFuint ib);
     
+  /**
+   * Compute the advance order depending on the option selected 
+   */  
+  void getFieldOpacities(const CFuint ib, const CFuint iCell);
+  
   /**
    * Reads the binary file containing the opacities as function of the temperature, pressure
    * and wavelength  
@@ -243,6 +248,9 @@ private: //data
   /// option to print the radial q and divQ for the Sphere
   bool m_radialData;
   
+  /// old algorithm just kept for comparison purposes
+  bool m_oldAlgo;
+  
   /// user defined number of points in the radial direction
   CFuint m_Nr;
   
@@ -281,6 +289,24 @@ private: //data
   
   /// Radial average of divQ for a Sphere
   RealVector m_divqAv;  
+  
+  /// constant pressure
+  CFreal m_constantP;
+  
+  /// minimum temparature
+  CFreal m_Tmin;
+  
+  /// maximum temperature
+  CFreal m_Tmax;
+  
+  /// temperature interval
+  CFreal m_deltaT;
+  
+  /// ID of pressure in the state vector
+  CFuint m_PID;
+  
+  /// ID of temperature in the state vector
+  CFuint m_TID;
   
 }; // end of class Radiation
 

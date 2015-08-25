@@ -110,10 +110,31 @@ Radiation::Radiation(const std::string& name) :
   m_radialData = false;
   setParameter("RadialData", &m_radialData);
   
+  m_oldAlgo = true;
+  setParameter("OldAlgorithm", &m_oldAlgo);
+  
   m_Nr = 100;
   setParameter("NbRadialPoints", &m_Nr);
-}
+  
+  m_constantP = -1.; // negative by default to force to give pressure if needed
+  setParameter("ConstantP", &m_constantP);
+  
+  m_Tmin = 1000.;
+  setParameter("Tmin", &m_Tmin);
+  
+  m_Tmax = 12000.;
+  setParameter("Tmax", &m_Tmax);
 
+  m_deltaT = 0.0071;
+  setParameter("DeltaT", &m_deltaT);
+  
+  m_PID = 0;
+  setParameter("PID", &m_PID);
+  
+  m_TID = 4;
+  setParameter("TID", &m_TID);
+}
+      
 //////////////////////////////////////////////////////////////////////////////
 
 Radiation::~Radiation()
@@ -138,10 +159,18 @@ void Radiation::defineConfigOptions(Config::OptionList& options)
     ("UseExponentialMethod","Exponential method for radiation. Explained in ICCFD7-1003");
   options.addConfigOption< bool >
     ("RadialData","radial q and divQ for the sphere case");
+  options.addConfigOption< bool >
+    ("OldAlgorithm","old algorithm (very inefficient) just kept for comparison purposes");
   options.addConfigOption< CFuint >
     ("NbRadialPoints","Number of Radial points in the sphere case");
+  options.addConfigOption< CFreal >("ConstantP","Constant pressure temperature");
+  options.addConfigOption< CFreal >("Tmin","Minimum temperature");
+  options.addConfigOption< CFreal >("Tmax","Maximum temperature");
+  options.addConfigOption< CFreal >("DeltaT","Temperature interval");
+  options.addConfigOption< CFuint >("PID","ID of pressure in the state vector");
+  options.addConfigOption< CFuint >("TID","ID of temperature in the state vector");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 std::vector<Common::SafePtr<BaseDataSocketSource> >
@@ -184,6 +213,10 @@ void Radiation::setup()
   CFAUTOTRACE;
   
   CFLog(VERBOSE, "Radiation::setup() => start\n");
+  
+  cf_assert(m_PID < PhysicalModelStack::getActive()->getNbEq());
+  cf_assert(m_TID < PhysicalModelStack::getActive()->getNbEq());
+  cf_assert(m_PID != m_TID);
   
   const std::string nsp = getMethodData().getNamespace();
   cf_assert(PE::GetPE().GetProcessorCount(nsp) == 1);
@@ -276,7 +309,12 @@ void Radiation::setup()
   for (CFuint i = 0; i< m_nDirs; i++) {
     m_advanceOrder[i].resize(nbCells);
   }
+  
   m_geoBuilder.setup();
+  m_geoBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
+  CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
+  geoData.trs = MeshDataStack::getActive()->getTrs("InnerCells");
+  
   m_normal.resize(DIM, 0.); 
   
   DataHandle<CFreal> CellID = socket_CellID.getDataHandle();
@@ -453,31 +491,27 @@ void Radiation::execute()
   DataHandle<CFreal> qz = socket_qz.getDataHandle();
   DataHandle<CFreal> TempProfile   = socket_TempProfile.getDataHandle();
   
-  Common::SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells"); 
   CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
-  geoData.trs = cells;
+  Common::SafePtr<TopologicalRegionSet> cells = geoData.trs;
   
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
   DataHandle<RealVector> nstates = socket_nstates.getDataHandle();
   DataHandle<Framework::State*> gstates = socket_gstates.getDataHandle();
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
-
-  m_geoBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
   
   const CFuint nbCells = cells->getLocalNbGeoEnts();
   
   // Compute the order of advance
   // Call the function to get the directions
-  
-  
   m_q    = 0.0;
   m_divq = 0.0;
   m_II   = 0.0;
-    
+  
   for(CFuint ib = 0; ib < m_nbBins; ib++){
     //cout<<"bin = " << ib << endl;
-    getFieldOppacities(ib);
+    // old and inefficient, just for comparison purposes
+    if (m_constantP > 0. && m_oldAlgo) {getFieldOpacities(ib);}
     
     for(CFuint d = 0; d < m_nDirs; d++){
       //cout<<"direction = " << d << endl;
@@ -487,13 +521,15 @@ void Radiation::execute()
       //}
       //cout<< endl;
       for (CFuint m = 0; m < nbCells; m++) {
-	
 	CFreal inDirDotnANeg = 0.;
 	CFreal Ic            = 0.;
 	
-	CFuint iCell = std::abs(m_advanceOrder[d][m]);
+	const CFuint iCell = std::abs(m_advanceOrder[d][m]);
 	geoData.idx = iCell;    
 	GeometricEntity* currCell = m_geoBuilder.buildGE();
+	
+	// field opacities built from given p,T
+	if (!m_oldAlgo) {getFieldOpacities(ib, iCell);} 
 	
 	const CFuint elemID = currCell->getState(0)->getLocalID();	
 	const vector<GeometricEntity*>& faces = *currCell->getNeighborGeos();
@@ -628,7 +664,7 @@ void Radiation::execute()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Radiation::getFieldOppacities(CFuint ib)
+void Radiation::getFieldOpacities(CFuint ib)
 {
   if(m_useExponentialMethod){
     m_fieldSource = 0.;
@@ -640,39 +676,33 @@ void Radiation::getFieldOppacities(CFuint ib)
     m_fieldAbV    = 0.;
   }
   
-  //cout <<"Radiation::getFieldOppacities==>entering"<<endl;
+  //cout <<"Radiation::getFieldOpacities==>entering"<<endl;
   
   DataHandle<CFint> isOutward = socket_isOutward.getDataHandle();
   DataHandle<CFreal> normals = socket_normals.getDataHandle();
   
   DataHandle<CFreal> CellID = socket_CellID.getDataHandle();
   DataHandle<CFreal> TempProfile   = socket_TempProfile.getDataHandle();
-  
-  Common::SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells"); 
+ 
   CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
-  geoData.trs = cells;
+  Common::SafePtr<TopologicalRegionSet> cells = geoData.trs;
   
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
   DataHandle<RealVector> nstates = socket_nstates.getDataHandle();
   DataHandle<Framework::State*> gstates = socket_gstates.getDataHandle();
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
-  
-  m_geoBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
-  
+    
   const CFuint nbCells = cells->getLocalNbGeoEnts();
   const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
-  const CFuint phiID = totalNbEqs-1;
-  const CFuint TID = phiID-1;
-  const CFuint pID = 0;
   
   for (CFuint iCell = 0; iCell < nbCells; iCell++) {
     geoData.idx = iCell;    
     GeometricEntity* currCell = m_geoBuilder.buildGE();
     const State *currState = currCell->getState(0); // please note the reference &
     //Get the field pressure and T commented because now we impose a temperature profile
-    //CFreal p = (*currState)[pID];
-    //CFreal T = (*currState)[TID];
+    //CFreal p = (*currState)[m_PID];
+    //CFreal T = (*currState)[m_TID];
     
     //Test temperature profile
     CFreal xPos = currCell->getState(0)->getCoordinates()[XX];
@@ -680,10 +710,10 @@ void Radiation::getFieldOppacities(CFuint ib)
     CFreal zPos = currCell->getState(0)->getCoordinates()[ZZ]; 
     CFreal r    = std::sqrt(xPos*xPos + yPos*yPos + zPos*zPos);
     
-    CFreal p      = 1013250.; //Pressure in Pa
-    CFreal Tmax   = 12000.;//12000;
-    CFreal Tmin   = 1000.;//1000;
-    CFreal deltaT = 0.0071;//0.0071;
+    CFreal p      = m_constantP; //Pressure in Pa
+    CFreal Tmax   = m_Tmax;
+    CFreal Tmin   = m_Tmin;
+    CFreal deltaT = m_deltaT;
     CFreal A      = std::pow(r*0.01/deltaT, 2);
     CFreal rmax   = 1.5;
     CFreal Amax   = std::pow(rmax*0.01/deltaT, 2);
@@ -721,7 +751,7 @@ void Radiation::getFieldOppacities(CFuint ib)
     }
     m_geoBuilder.releaseGE();
   }
-  //cout <<"Radiation::getFieldOppacities==>exiting"<<endl;
+  //cout <<"Radiation::getFieldOpacities==>exiting"<<endl;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -733,15 +763,12 @@ void Radiation::getAdvanceOrder()
   DataHandle<CFreal> normals = socket_normals.getDataHandle();
   DataHandle<CFreal> CellID = socket_CellID.getDataHandle();
   
-  Common::SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells"); 
   CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
-  geoData.trs = cells;
+  Common::SafePtr<TopologicalRegionSet> cells = geoData.trs;
   
   DataHandle < State*, GLOBAL > states = socket_states.getDataHandle();
   DataHandle<State*> gstates = socket_gstates.getDataHandle();
   DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle();
-
-  m_geoBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
   
   const CFuint nbCells = cells->getLocalNbGeoEnts();
   const CFuint DIM = PhysicalModelStack::getActive()->getDim();
@@ -1077,18 +1104,14 @@ void Radiation::writeRadialData()
   outputFile << "VARIABLES = r  qr divq nbPoints\n";
 
   DataHandle<CFreal> CellID = socket_CellID.getDataHandle();
-  
-  Common::SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells"); 
   CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
-  geoData.trs = cells;
+  Common::SafePtr<TopologicalRegionSet> cells = geoData.trs;
  
   DataHandle < State*, GLOBAL > states = socket_states.getDataHandle();
   DataHandle<RealVector> nstates = socket_nstates.getDataHandle();
   DataHandle<State*> gstates = socket_gstates.getDataHandle();
   DataHandle < Node*, GLOBAL > nodes = socket_nodes.getDataHandle();
-  
-  m_geoBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
-  
+    
   const CFuint nbCells = cells->getLocalNbGeoEnts();
   CFuint nbPoints;
   CFreal rCoord;
@@ -1134,6 +1157,86 @@ void Radiation::unsetup()
   CFAUTOTRACE;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+void Radiation::getFieldOpacities(const CFuint ib, const CFuint iCell)
+{
+  m_fieldSource[iCell] = 0.;
+  if(m_useExponentialMethod){
+    m_fieldAbsor[iCell] = 0.;
+  }
+  else{
+    m_fieldAbSrcV[iCell] = 0.;
+    m_fieldAbV[iCell]    = 0.;
+  }
+  
+  DataHandle<CFreal> TempProfile   = socket_TempProfile.getDataHandle();
+  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+  
+  CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
+  Common::SafePtr<TopologicalRegionSet> cells = geoData.trs;
+  const CFuint nbCells = cells->getLocalNbGeoEnts();
+  
+  geoData.idx = iCell;    
+  GeometricEntity* currCell = m_geoBuilder.buildGE();
+  const State *currState = currCell->getState(0); // please note the reference &
+  //Get the field pressure and T commented because now we impose a temperature profile
+  CFreal p = 0.;
+  CFreal T = 0.;
+  if (m_constantP < 0.) {
+    p = (*currState)[m_PID];
+    T = (*currState)[m_TID];
+  }
+  else {
+    cf_assert(m_constantP > 0.);
+    cf_assert(m_Tmax > 0.);
+    cf_assert(m_Tmin > 0.);
+    cf_assert(m_deltaT > 0.);
+    
+    const CFreal r  = currCell->getState(0)->getCoordinates().norm2();
+    p = m_constantP; //Pressure in Pa
+    const CFreal Tmax   = m_Tmax;
+    const CFreal Tmin   = m_Tmin;
+    const CFreal deltaT = m_deltaT;
+    const CFreal A      = std::pow(r*0.01/deltaT, 2);
+    const CFreal rmax   = 1.5;
+    const CFreal Amax   = std::pow(rmax*0.01/deltaT, 2);
+    T = Tmax - (Tmax - Tmin)*(1 - std::exp(-A))/(1 - std::exp(-Amax));
+  }
+  
+  TempProfile[iCell] = T;
+  
+  const CFreal patm   = p/101325.; //converting from Pa to atm
+  CFreal val1 = 0;
+  CFreal val2 = 0;
+  
+  tableInterpolate(T, patm, ib, val1, val2); 
+  
+  if(m_useExponentialMethod){
+    if (val1 <= 1e-30 || val2 <= 1e-30 ){
+      m_fieldSource[iCell] = 1e-30;
+      m_fieldAbsor[iCell]  = 1e-30;
+    }
+    else {
+      m_fieldSource[iCell] = val2/val1;
+      m_fieldAbsor[iCell]  = val1;
+    }
+  }
+  else{
+    if (val1 <= 1e-30 || val2 <= 1e-30 ){
+      m_fieldSource[iCell] = 1e-30;
+      m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volumen converted from m^3 into cm^3
+    }
+    else {
+      m_fieldSource[iCell] = val2/val1;
+      m_fieldAbV[iCell]    = val1*volumes[iCell];
+    }      
+    m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
+  }
+  m_geoBuilder.releaseGE();
+}
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace FiniteVolumeRadiation
