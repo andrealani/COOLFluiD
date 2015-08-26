@@ -83,12 +83,18 @@ public:
   /**
    * Compute the advance order depending on the option selected 
    */  
+  void getAdvanceOrder(const CFuint d, std::vector<int>& advanceOrder); 
+  
+  /**
+   * Compute the advance order depending on the option selected 
+   */  
   void getFieldOpacities(CFuint ib);
     
   /**
    * Compute the advance order depending on the option selected 
    */  
-  void getFieldOpacities(const CFuint ib, const CFuint iCell);
+  void getFieldOpacities(const CFuint ib, const CFuint iCell, 
+			 Framework::GeometricEntity *const currCell);
   
   /**
    * Reads the binary file containing the opacities as function of the temperature, pressure
@@ -126,7 +132,25 @@ public:
   virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets();
 
 private: //function
-
+  
+  /// set the normal corresponding to the given face ID
+  void setFaceNormal(const CFuint faceID, const CFuint elemID) 
+  {
+    Framework::DataHandle<CFreal> normals = socket_normals.getDataHandle();
+    const CFuint startID = faceID*3;
+    const CFreal factor = (static_cast<CFuint>
+			   (socket_isOutward.getDataHandle()[faceID]) != elemID) ? -1. : 1.;
+    for (CFuint dir = 0; dir < 3; ++dir) {
+      m_normal[dir] = normals[startID+dir]*factor;
+    }    
+  }
+  
+  /// get the inner product normal*direction (the normal includes the area)
+  CFreal getDirDotNA(const CFuint d) const
+  {
+    return m_normal[XX]*m_dirs(d,XX) + m_normal[YY]*m_dirs(d,YY) + m_normal[ZZ]*m_dirs(d,ZZ);
+  }	  
+  
 private: //data
 
   /// storage of states
@@ -165,7 +189,7 @@ private: //data
   
   /// storage of the qz
   Framework::DataSocketSource <CFreal> socket_qz;
-//   
+  
   /// storage of the radiative source table. Source[ib](it,ip)
   Framework::DataSocketSource <CFreal> socket_TempProfile; 
   
@@ -202,7 +226,7 @@ private: //data
   /// Exponent for the radiation of oppacity table
   RealVector m_II;
   
-  /// Opactities read from table. Stored as follows:
+  /// Opacities read from table. Stored as follows:
   /// kappa(p0,b0,T0),kappa(p0,b0,T1),...,kappa(p0,b0,Tn),
   /// kappa(p0,b1,T0),kappa(p0,b1,T1),...,kappa(p0,b1,Tn), .... 
   /// kappa(p0,bn,T0),kappa(p0,bn,T1),...,kappa(p0,bn,Tn), ....
@@ -239,11 +263,38 @@ private: //data
   /// Divergence of dif flux
   RealVector m_divq;
   
+  /// Radial average of q vector for a Sphere
+  RealVector m_qrAv;
+  
+  /// Radial average of divQ for a Sphere
+  RealVector m_divqAv;  
+  
   /// Number of directions types
   CFuint m_nDirTypes;   
   
   /// user defined number of directions
   CFuint m_nDirs;
+  
+  /// name of the temporary local directory where Parade is run
+  boost::filesystem::path m_dirName;
+  
+  /// name of the .dat binary table with the opacities
+  std::string m_binTabName;
+  
+  /// File where the table is written
+  std::string m_outTabName;
+  
+  /// Start/end bin to consider
+  std::string m_startEndBinStr;
+  
+  /// Start/end direction to consider
+  std::string m_startEndDirStr;
+  
+  /// bool to write the table in a file
+  bool m_writeToFile;
+  
+  /// Use exponential method
+  bool m_useExponentialMethod;
   
   /// option to print the radial q and divQ for the Sphere
   bool m_radialData;
@@ -253,42 +304,6 @@ private: //data
   
   /// user defined number of points in the radial direction
   CFuint m_Nr;
-  
-  /// name of the temporary local directory where Parade is run
-  boost::filesystem::path m_dirName;
-  
-  /// name of the .dat binary table with the opacities
-  std::string m_binTabName;
-  
-  /// bool to write the table in a file
-  bool m_writeToFile;
-  
-  /// File where the table is written
-  std::string m_outTabName;
-  
-  /// Use exponential method
-  bool m_useExponentialMethod;
-  
-  /// input file handle
-  Common::SelfRegistPtr<Environment::FileHandlerInput> m_inFileHandle;
-  
-  /// opacities file
-  boost::filesystem::path m_binTableFile;
-  
-  /// number of bins
-  CFuint m_nbBins;
-  
-  /// number of Temperatures
-  CFuint m_nbTemp;
-  
-  /// number of pressures
-  CFuint m_nbPress;
-  
-  /// Radial average of q vector for a Sphere
-  RealVector m_qrAv;
-  
-  /// Radial average of divQ for a Sphere
-  RealVector m_divqAv;  
   
   /// constant pressure
   CFreal m_constantP;
@@ -307,6 +322,27 @@ private: //data
   
   /// ID of temperature in the state vector
   CFuint m_TID;
+  
+  /// input file handle
+  Common::SelfRegistPtr<Environment::FileHandlerInput> m_inFileHandle;
+  
+  /// opacities file
+  boost::filesystem::path m_binTableFile;
+  
+  /// start/end bin to consider
+  std::pair<CFuint, CFuint> m_startEndBin;
+  
+  /// start/end direction to consider
+  std::pair<CFuint, CFuint> m_startEndDir;
+  
+  /// number of bins
+  CFuint m_nbBins;
+  
+  /// number of Temperatures
+  CFuint m_nbTemp;
+  
+  /// number of pressures
+  CFuint m_nbPress;
   
 }; // end of class Radiation
 

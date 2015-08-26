@@ -27,7 +27,7 @@
 
 ###############################################################################
 # SubSystem Modules
-Simulator.Modules.Libs = libPetscI libTecplotWriter libNavierStokes libMutation libMutationI libLTE libArcJet libFiniteVolume libFiniteVolumeNavierStokes libFiniteVolumeArcJet libNewtonMethod libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
+Simulator.Modules.Libs = libPetscI libTecplotWriter libNavierStokes libMutation libMutationI libLTE libArcJet libFiniteVolume libFiniteVolumeNavierStokes libFiniteVolumeArcJet libFiniteVolumeRadiation libNewtonMethod libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
 
 # Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/ArcJet/testcases/RadiationSphere
@@ -261,5 +261,5 @@ Simulator.SubSystem.DataProcessing.Radiation.UseExponentialMethod = true
 #Simulator.SubSystem.DataProcessing.Radiation.DirName = ./
 Simulator.SubSystem.DataProcessing.Radiation.BinTabName = air-100Bands.dat #air-100Bins.dat
 Simulator.SubSystem.DataProcessing.Radiation.OutTabName = air-100Bands.out #air-100Bins.out
+Simulator.SubSystem.DataProcessing.Radiation.ConstantP = 1013250 
 Simulator.SubSystem.DataProcessing.ProcessRate = 1
-
