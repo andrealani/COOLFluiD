@@ -554,6 +554,7 @@ void Radiation::execute()
       //cout<< m_advanceOrder[d][m] <<", "; 
       //}
       //cout<< endl;
+      cf_assert(m_advanceOrder[d].size() == nbCells);
       for (CFuint m = 0; m < nbCells; m++) {
 	CFreal inDirDotnANeg = 0.;
 	CFreal Ic            = 0.;
