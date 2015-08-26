@@ -68,11 +68,7 @@ void AUSMPlusUpFlux<UPDATEVAR>::setup()
  
   AUSMFlux<UPDATEVAR>::setup();
 
-  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
-
-  m_Cons.resize(nbEqs);
-  m_dConsdVar.resize(nbEqs);
   m_dVLdVar.resize(nbDim);
   m_dVRdVar.resize(nbDim);
 }
@@ -159,135 +155,15 @@ void AUSMPlusUpFlux<UPDATEVAR>::computePressureFlux()
   this->m_p12 = m_P5Plus*pL + m_P5Minus*pR + pU;
 }
  
-//////////////////////////////////////////////////////////////////////////////
-
-template<class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::ComputeMassFluxForJacobian()
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::MathTools; //using MathFunctions::sigmoidal and MathFunctions::sign 
-
-  // Getting state value
-  const CFreal rhoL = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
-  const CFreal rhoR = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
-  const CFreal pL   = (*this->m_lData)[UPDATEVAR::PTERM::P];
-  const CFreal pR   = (*this->m_rData)[UPDATEVAR::PTERM::P];
-  const CFreal beta = m_beta;
-  const CFreal Ksig = this->m_coeffSigmoid;
-  //Computing specific jacobian terms
-  this->computeSoundSpeedForJacobian();
-
-  const CFreal a12 = this->m_a12;
-  //----------------------------------------------------------------------------
-  // Getting the specific interface Mach Number
-  //----------------------------------------------------------------------------
-
-  const CFreal rho12  = 0.5*(rhoL+rhoR);
-  this->m_mL          = this->m_unL/this->m_a12;
-  this->m_mR          = this->m_unR/this->m_a12;
-  const CFreal ML     = this->m_mL;
-  const CFreal MR     = this->m_mR;
-  const CFreal mBarSq = 0.5*(ML*ML+MR*MR);
-  ///---------------------------------------------------------------------------
-  /// Getting the specific scalling factor
-  ///---------------------------------------------------------------------------
-
-  const CFreal M4Plus = (std::abs(ML) >= 1.0) ? 
-    this->mach1Plus(ML) :
-    this->mach2Plus(ML)*(1.0 - 16.*beta*this->mach2Min(ML));
-  
-  const CFreal M4Minus = (std::abs(MR) >= 1.0) ? 
-    this->mach1Min(MR) :
-    this->mach2Min(MR)*(1.0 + 16.*beta*this->mach2Plus(MR));
-  
-  const CFreal mP    = (-this->m_coeffKp)* MathFunctions::sigmoid(1.0 - this->m_coeffSigma*mBarSq,0.0,Ksig)*(pR-pL)/(rho12*a12*a12);
-  const CFreal M12   =  M4Plus + M4Minus + mP;
-  // Interface Mach number computed ---------------------------------------------
-  
-  const CFreal rhostar = MathFunctions::sigmoid(M12,0.0,Ksig)*rhoL +(1.0-MathFunctions::sigmoid(M12,0.0,Ksig))*rhoR;
-  // Interface density computed -------------------------------------------------
-
-  this->m_mflux12 = M12*a12*rhostar;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-template<class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::UpdateCoeffForJacobian()
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Common;
-  using namespace COOLFluiD::MathTools;
-
-  CFLog(DEBUG_MED,"AUSMPlusUpFlux::UpdateCoeffForJacobian()  START\n");
-
-  const CFuint nbDim  = PhysicalModelStack::getActive()->getDim();
-  const CFreal Ksig   = this->m_coeffSigmoid;
-  ComputeMassFluxForJacobian();
-  const CFreal mdot12 = this->m_mflux12;
-  const CFreal sigmoid = MathFunctions::sigmoid(mdot12,0.0,Ksig);
-
-  (this->m_Cons)[0] = 1.;
-  CFLog(DEBUG_MAX,"  ## Conservative variable for analytical jacobian \n");
-  CFLog(DEBUG_MAX,"  ## Cons = [" << (this->m_Cons)[0] << " ");
-
-  for (CFuint it = 0; it < nbDim ;it++)
-  {
-    (this->m_Cons)[it+1] =  sigmoid*(*this->m_lData)[UPDATEVAR::PTERM::VX+it] + (1.0-sigmoid)*(*this->m_rData)[UPDATEVAR::PTERM::VX+it];
-    CFLog(DEBUG_MAX,(this->m_Cons)[it] << " ");
-  }
-  (this->m_Cons)[nbDim+1] = sigmoid*(*this->m_lData)[UPDATEVAR::PTERM::H] + (1.0-sigmoid)*(*this->m_rData)[UPDATEVAR::PTERM::H];
-  CFLog(DEBUG_MAX,(this->m_Cons)[nbDim+1] << "]\n");
-  CFLog(DEBUG_MAX,"AUSMPlusUpFlux::UpdateCoeffForJacobian()  END\n");
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-template<class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dUpdateCoeffdVar()
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Common;
-  using namespace COOLFluiD::MathTools;
-
-  CFLog(DEBUG_MED,"AUSMPlusUpFlux::dUpdateCoeffdVar()  START\n");
-
-  const CFuint nbDim  = PhysicalModelStack::getActive()->getDim();
-  const CFreal Ksig   = this->m_coeffSigmoid;
-  ComputeMassFluxForJacobian();
-  const CFreal mdot12 = this->m_mflux12;
-  const CFreal sigmoid = MathFunctions::sigmoid(mdot12,0.0,Ksig);
-
-  (m_dConsdVar)[0] = 0.;
-
-  CFLog(DEBUG_MAX,"  ## Derivative of the conservative variable for analytical Jacobian \n");
-  CFLog(DEBUG_MAX,"  ## dConsdVar = [" << (m_dConsdVar)[0] << " ");
-  for (CFuint it = 0; it < nbDim ;it++)
-  {
-    (m_dConsdVar)[it+1] =  sigmoid*(m_dVLdVar[it]) + (1.0-sigmoid)*(m_dVRdVar[it]);
-    CFLog(DEBUG_MAX,(m_dConsdVar)[it] << " ");
-  }
-  (m_dConsdVar)[nbDim+1] = sigmoid*m_dhLdVar + (1.0-sigmoid)*m_dhRdVar;
-    CFLog(DEBUG_MAX,(m_dConsdVar)[nbDim+1] << "]\n");
-
-  CFLog(DEBUG_MAX,"  ## derivative of the velocity \n");
-  CFLog(DEBUG_MAX,"  ## dVLdVar = [ ");for (CFuint it = 0;it < nbDim;it++){CFLog(DEBUG_MAX,m_dVLdVar[it] << " ");}CFLog(DEBUG_MAX,"]\n");
-  CFLog(DEBUG_MAX,"  ## dVRdVar = [ ");for (CFuint it = 0;it < nbDim;it++){CFLog(DEBUG_MAX,m_dVRdVar[it] << " ");}CFLog(DEBUG_MAX,"]\n");
-
-  CFLog(DEBUG_MED,"AUSMPlusUpFlux::dUpdateCoeffdVar()  END\n");
-}
-
 /////////////////////////////////////////////////////////////////////////////
 
 template<class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::ComputeFluxDerivativeWithRespectToVariable(CFreal *row,CFuint iVar)
+void AUSMPlusUpFlux<UPDATEVAR>::ComputedFluxdVar(CFreal *row)
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::MathTools; //importing MathFunctions::sigmoidal and MathFunctions::sign functions
+  CFLog(VERBOSE," AUSMPlusUpFlux::ComputedFluxdVar  START \n");
 
   // Getting state value
   const CFreal rhoL        = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
@@ -307,125 +183,46 @@ void AUSMPlusUpFlux<UPDATEVAR>::ComputeFluxDerivativeWithRespectToVariable(CFrea
   const CFuint nbEq        = PhysicalModelStack::getActive()->getNbEq();
   cf_assert(nbEq==nbDim+2); // Checking that the vector has the right size
 
- /// For debugging : prints all data previously computed
-  CFLog(VERBOSE," AUSMPlusUpFlux::ComputeFluxDerivativeWithRespectToVariable  START \n");
-  CFLog(DEBUG_MED,"## DATA ## rhoL "<< rhoL << " ## rhoR "<< rhoR << " ## HL " << HL << " ## HR "<< HR << " ## MachInf "<< m_machInf << " \n");
-  CFLog(DEBUG_MED,"        ## gammaL  "<< gammaL << " ## gammaR "<< gammaR << " ## pL " << pL << " ## pR "<< pR <<"\n");
-  CFLog(DEBUG_MED,"        ## beta  "<< beta << " ## qnL "<< qnL << " ## qnR " << qnR << " ## Ksig "<< Ksig <<"\n");
-  CFLog(DEBUG_MED,"        ## TL " << (*this->m_lData)[UPDATEVAR::PTERM::T] << " ## TR "  << (*this->m_rData)[UPDATEVAR::PTERM::T] << "\n");
-  for (CFuint it = 0; it < nbDim;it++)
-    CFLog(DEBUG_MED,"## normal[" <<it<<"] " << normal[it] << " ");
-  CFLog(DEBUG_MED,"\n");
-
-  const CFreal dqnLdVar  = m_dqnLdVar;
-  const CFreal dqnRdVar  = m_dqnRdVar;
-  const CFreal dHLdVar   = m_dhLdVar;
-  const CFreal dHRdVar   = m_dhRdVar;
-  const CFreal drhoLdVar = m_drhoLdVar;
-  const CFreal drhoRdVar = m_drhoRdVar;
-  const CFreal dpLdVar   = m_dpLdVar;
-  const CFreal dpRdVar   = m_dpRdVar;
-
-  //Computing specific jacobian terms
-  //specific speed of sound for the jacobian
   this->computeSoundSpeedForJacobian();
   const CFreal a12 = this->m_a12;
 
-  //----------------------------------------------------------------------------
-  // Getting the specific interface Mach Number
-  //----------------------------------------------------------------------------
   const CFreal rho12  = 0.5*(rhoL + rhoR);
   this->m_mL          = this->m_unL/this->m_a12;
   this->m_mR          = this->m_unR/this->m_a12;
   const CFreal ML     = this->m_mL;
   const CFreal MR     = this->m_mR;
-  const CFreal mBarSq = 0.5*(ML*ML + MR*MR);
 
-  ///---------------------------------------------------------------------------
-  /// Getting the specific scalling factor
-  ///---------------------------------------------------------------------------
-  const CFreal mInf  = correctMachInf(this->m_machInf);
-  const CFreal mZero = std::sqrt( std::min (1.0, MathFunctions::sigmoid(mBarSq,mInf*mInf,Ksig)*mBarSq 
-                          + (1.0-MathFunctions::sigmoid(mBarSq,mInf*mInf,Ksig)*mInf*mInf) ) );
-  
+  const CFreal mInf            = correctMachInf(this->m_machInf);
+  const CFreal MBarSq          = 0.5*(ML*ML+MR*MR);
+  const CFreal MinfSq          = mInf*mInf;
+  const CFreal sigMbarsqMinfsq = MathFunctions::sigmoid(MBarSq,MinfSq,Ksig);
+  const CFreal sig2            = sigMbarsqMinfsq*MBarSq + (1.0-sigMbarsqMinfsq )*MinfSq; // max(MBarSq,MinfSq)
+  const CFreal mZero           = std::sqrt( (1-MathFunctions::sigmoid (1.0,sig2,Ksig))*1.0 + MathFunctions::sigmoid(1.0,sig2,Ksig)*sig2); //sqrt(min(1,max(MBarSq,MinfSq)))
   cf_assert(mZero <= 1.0);
 
   const CFreal fa = mZero * (2.0-mZero);
-  /// Scalling factor computed -------------------------------------------------
+  m_fa = fa;
 
   const CFreal M4Plus  = (std::abs(ML) >= 1.0) ? this->mach1Plus(ML) : this->mach2Plus(ML)*(1.0 - 16.*beta*this->mach2Min(ML));
-  const CFreal M4Minus = (std::abs(MR) >= 1.0) ? this->mach1Min(MR) : this->mach2Min(MR)*(1.0 + 16.*beta*this->mach2Plus(MR));
-  const CFreal mP      = -(this->m_coeffKp) * MathFunctions::sigmoid(1.0 - this->m_coeffSigma*mBarSq,0.0,Ksig)*(pR-pL)/(rho12*a12*a12);
-    
-  const CFreal M12 =  M4Plus + M4Minus + mP;
-  // Interface Mach number computed ---------------------------------------------
-
+  const CFreal M4Minus = (std::abs(MR) >= 1.0) ? this->mach1Min(MR)  : this->mach2Min(MR)*(1.0 + 16.*beta*this->mach2Plus(MR));
+  const CFreal mP      = -(this->m_coeffKp) * MathFunctions::sigmoid(1.0 - this->m_coeffSigma*MBarSq,0.0,Ksig)*(pR-pL)/(rho12*a12*a12);
+  const CFreal M12     =  M4Plus + M4Minus + mP;
+  
   const CFreal rhostar = MathFunctions::sigmoid(M12,0.0,Ksig)*rhoL + (1.0-MathFunctions::sigmoid(M12,0.0,Ksig))*rhoR;
-  // Interface density computed -------------------------------------------------
-
   const CFreal mdot12  = M12*a12*rhostar;
-  // New pressure flux for consistency
-  this->m_mflux12 = mdot12;
-
-  const CFreal drho12dVar   = 0.5*(drhoLdVar+ drhoRdVar);
-  const CFreal drhostardVar = MathFunctions::sigmoid(M12,0,Ksig)*drhoLdVar + (1.0 - MathFunctions::sigmoid(M12,0.0,Ksig))*drhoRdVar;
+  this->m_mflux12      = mdot12;
   
-  const CFreal aCritL       = std::sqrt(2.0*(gammaL-1.0)/(gammaL+1.0)*HL);
-  const CFreal aCritR       = std::sqrt(2.0*(gammaR-1.0)/(gammaR+1.0)*HR);
+  const CFreal aCritL  = std::sqrt(2.0*(gammaL-1.0)/(gammaL+1.0)*HL);
+  const CFreal aCritR  = std::sqrt(2.0*(gammaR-1.0)/(gammaR+1.0)*HR);
   
-  const CFreal daCritLdVar  = std::sqrt((gammaL-1.0)/(2.0*HL*(gammaL+1.0)))*dHLdVar;
-  const CFreal daCritRdVar  = std::sqrt((gammaR-1.0)/(2.0*HR*(gammaR+1.0)))*dHRdVar;
+  const CFreal asigL   = MathFunctions::sigmoid(aCritL,qnL,Ksig)*aCritL + (1.0 - MathFunctions::sigmoid(aCritL,qnL,Ksig))*qnL;
+  const CFreal asigR   = MathFunctions::sigmoid(aCritR,-qnR,Ksig)*aCritR - (1.0 - MathFunctions::sigmoid(aCritR,-qnR,Ksig))*qnR;
   
-  const CFreal asigL        = MathFunctions::sigmoid(aCritL,qnL,Ksig)*aCritL + (1.0 - MathFunctions::sigmoid(aCritL,qnL,Ksig))*qnL;
-  const CFreal asigR        = MathFunctions::sigmoid(aCritR,-qnR,Ksig)*aCritR - (1.0 - MathFunctions::sigmoid(aCritR,-qnR,Ksig))*qnR;
+  const CFreal ahatL   = aCritL*aCritL/std::max(aCritL,qnL); 
+  const CFreal ahatR   = aCritR*aCritR/std::max(aCritR,-qnR); 
   
-  const CFreal dasigLdVar   = MathFunctions::sigmoid(aCritL,qnL,Ksig)*daCritLdVar + (1.0 - MathFunctions::sigmoid(aCritL,qnL,Ksig))*dqnLdVar;
-  const CFreal dasigRdVar   = MathFunctions::sigmoid(aCritR,-qnR,Ksig)*daCritRdVar - (1.0 - MathFunctions::sigmoid(aCritR,-qnR,Ksig))*dqnRdVar;
-  
-  const CFreal ahatL        = aCritL*aCritL/std::max(aCritL,qnL); 
-  const CFreal ahatR        = aCritR*aCritR/std::max(aCritR,-qnR); 
-  
-  /// da12dVar ---------------------------------------------
-  const CFreal da12dVar     = (1.0 - MathFunctions::sigmoid(ahatL,ahatR,Ksig))
-                                *(2.0*aCritL/asigL*daCritLdVar - aCritL*aCritL/(asigL*asigL)*dasigLdVar)
-                              + MathFunctions::sigmoid(ahatL,ahatR,Ksig)
-                                *(2.0*aCritR/asigR*daCritRdVar - aCritR*aCritR/(asigR*asigR)*dasigRdVar);
-  
-  const CFreal dMLdVar      = 1.0/a12*dqnLdVar - qnL/(a12*a12)*da12dVar;
-  const CFreal dMRdVar      = 1.0/a12*dqnRdVar - qnR/(a12*a12)*da12dVar;
-  
-  const CFreal dM4PLusdVar  = (std::abs(ML)>=1.0) ? 0.5*(1. + MathFunctions::sign(ML))*dMLdVar : (0.5*(ML+1.) + 4.*beta*ML*(ML*ML-1.))*dMLdVar;
-  const CFreal dM4MinusdVar = (std::abs(MR)>=1.0) ? 0.5*(1. - MathFunctions::sign(MR))*dMRdVar : -(0.5*(MR-1.) + 4.*beta*MR*(MR*MR-1.))*dMRdVar;
-  
-  const CFreal MBarSq       = 0.5*(ML*ML+MR*MR);
-  const CFreal MinfSq       = mInf*mInf;
-  
-  const CFreal dfadVar      = (ML*dMLdVar+MR*dMRdVar) * ((MBarSq > 1.0) ? 0. : MathFunctions::sigmoid(MBarSq,MinfSq,Ksig)*(1.0-std::sqrt(MBarSq))/std::sqrt(MBarSq));
-  
-  const CFreal dMpdVar      = -(this->m_coeffKp)*MathFunctions::sigmoid(1-(this->m_coeffSigma)*MBarSq,0.,Ksig)*(
-                                        (dpRdVar-dpLdVar)/(rho12*a12*a12)
-                                        -(pR-pL)/(rho12*rho12*a12*a12)*drho12dVar
-                                        -2.0*(pR-pL)/(rho12*a12*a12*a12)*da12dVar);
-  /// dM12dVar ---------------------------------------------
-  const CFreal dM12dVar    = dM4PLusdVar + dM4MinusdVar + dMpdVar;
-  
-  const CFreal dmdot12dVar = dM12dVar*a12*rhostar + M12*da12dVar*rhostar + M12*a12*drhostardVar;
-
- /// For debugging : prints all the variables involved in the derivation
-  CFLog(DEBUG_MAX,"## CPT  ## M12 "<< M12 << " ## a12 " << a12 << " ## rhostar " << rhostar << "\n");
-  CFLog(DEBUG_MAX,"        ## ML " << ML << " ## dMLdVar " << dMLdVar << "\n");
-  CFLog(DEBUG_MAX,"        ## MR " << MR << " ## dMRdVar " << dMRdVar << "\n");
-  CFLog(DEBUG_MAX,"        ## dM12dVar "<< dM12dVar << " ## da12dVar " << da12dVar << " ## drhostardVar " << drhostardVar << "\n");
-  CFLog(DEBUG_MAX,"        ## dM4PLusdVar "<< dM4PLusdVar << " ## dM4MinusdVar " << dM4MinusdVar << " ## dmpdVar " << dMpdVar << "\n");
-  CFLog(DEBUG_MAX,"        ## dqnLdVar " << dqnLdVar << " ## dqnRdVar " << dqnRdVar <<"\n");
-  CFLog(DEBUG_MAX,"        ## ahatL "<< ahatL << " ## ahatR "<< ahatR << " ## sigmoid(ahatL,ahatR,Ksig) " << MathFunctions::sigmoid(ahatL,ahatR,Ksig) << "\n");
-  CFLog(DEBUG_MAX,"        ## sigmoid(aCritL,qnL,Ksig) " << MathFunctions::sigmoid(aCritL,qnL,Ksig) << "\n");
-  CFLog(DEBUG_MAX,"        ## sigmoid(aCritR,-qnR,Ksig) " << MathFunctions::sigmoid(aCritR,-qnR,Ksig) << "\n");
-  CFLog(DEBUG_MAX,"        ## aCritL "<< aCritL << " ## daCritLdVar " << daCritLdVar << " ## asigL "<< asigL << " ## dasigLdVar " << dasigLdVar <<"\n");
-  CFLog(DEBUG_MAX,"        ## aCritR "<< aCritR << " ## daCritRdVar " << daCritRdVar << " ## asigR "<< asigR << " ## dasigRdVar " << dasigRdVar <<"\n");
-  
-  const CFreal alpha      = (3.0/16.0) * (-4.0 + 5.0*fa*fa);
-  const CFreal dalphadVar = 15.0/8.0*fa*dfadVar;
+  const CFreal sigmoid = MathFunctions::sigmoid(mdot12,0.0,Ksig);
+  const CFreal alpha   = (3.0/16.0) * (-4.0 + 5.0*fa*fa);
 
   const CFreal P5Plus = (std::abs(ML) >= 1.0) ? 
     this->mach1Plus(ML)/ML :
@@ -442,6 +239,42 @@ void AUSMPlusUpFlux<UPDATEVAR>::ComputeFluxDerivativeWithRespectToVariable(CFrea
 
   this->m_p12 = P5Plus*pL + P5Minus*pR + pu;
 
+  const CFreal drho12dVar   = 0.5*(m_drhoLdVar+ m_drhoRdVar);
+  const CFreal drhostardVar = MathFunctions::sigmoid(M12,0,Ksig)*m_drhoLdVar + (1.0 - MathFunctions::sigmoid(M12,0.0,Ksig))*m_drhoRdVar;
+  
+  const CFreal daCritLdVar  = std::sqrt((gammaL-1.0)/(2.0*HL*(gammaL+1.0)))*m_dhLdVar;
+  const CFreal daCritRdVar  = std::sqrt((gammaR-1.0)/(2.0*HR*(gammaR+1.0)))*m_dhRdVar;
+    
+  const CFreal dasigLdVar   = MathFunctions::sigmoid(aCritL,qnL,Ksig)*daCritLdVar + (1.0 - MathFunctions::sigmoid(aCritL,qnL,Ksig))*m_dqnLdVar;
+  const CFreal dasigRdVar   = MathFunctions::sigmoid(aCritR,-qnR,Ksig)*daCritRdVar - (1.0 - MathFunctions::sigmoid(aCritR,-qnR,Ksig))*m_dqnRdVar;
+    
+  /// da12dVar ---------------------------------------------
+  const CFreal da12dVar     = (1.0 - MathFunctions::sigmoid(ahatL,ahatR,Ksig))
+                                *(2.0*aCritL/asigL*daCritLdVar - aCritL*aCritL/(asigL*asigL)*dasigLdVar)
+                              + MathFunctions::sigmoid(ahatL,ahatR,Ksig)
+                                *(2.0*aCritR/asigR*daCritRdVar - aCritR*aCritR/(asigR*asigR)*dasigRdVar);
+  
+  const CFreal dMLdVar      = 1.0/a12*m_dqnLdVar - qnL/(a12*a12)*da12dVar;
+  const CFreal dMRdVar      = 1.0/a12*m_dqnRdVar - qnR/(a12*a12)*da12dVar;
+  
+  const CFreal dM4PLusdVar  = (std::abs(ML)>=1.0) ? 0.5*(1. + MathFunctions::sign(ML))*dMLdVar : (0.5*(ML+1.) + 4.*beta*ML*(ML*ML-1.))*dMLdVar;
+  const CFreal dM4MinusdVar = (std::abs(MR)>=1.0) ? 0.5*(1. - MathFunctions::sign(MR))*dMRdVar : -(0.5*(MR-1.) + 4.*beta*MR*(MR*MR-1.))*dMRdVar;
+  
+  const CFreal dMBarSqdVar = ML*dMLdVar+MR*dMRdVar;
+  const CFreal dmZerodVar  = 0.5/mZero*sigMbarsqMinfsq*MathFunctions::sigmoid(1.0,sig2,Ksig)*dMBarSqdVar;
+  const CFreal dfadVar     = 2.0*(1.0-mZero)*dmZerodVar;  
+  
+  const CFreal dMpdVar     = -(this->m_coeffKp)*MathFunctions::sigmoid(1-(this->m_coeffSigma)*MBarSq,0.,Ksig)*(
+                                        (m_dpRdVar-m_dpLdVar)/(rho12*a12*a12)
+                                        -(pR-pL)/(rho12*rho12*a12*a12)*drho12dVar
+                                        -2.0*(pR-pL)/(rho12*a12*a12*a12)*da12dVar);
+  /// dM12dVar ---------------------------------------------
+  const CFreal dM12dVar    = dM4PLusdVar + dM4MinusdVar + dMpdVar;
+  
+  const CFreal dmdot12dVar = dM12dVar*a12*rhostar + M12*da12dVar*rhostar + M12*a12*drhostardVar;
+  
+  const CFreal dalphadVar  = 15.0/8.0*fa*dfadVar;
+
   const CFreal dP5PlusdVar = (std::abs(ML) >= 1.0 ) ? 0. :
                             0.5*(10.0*alpha*ML*ML*ML*ML-(1.5+12.0*alpha)*ML*ML+1.5+2.0*alpha)*dMLdVar 
                             + ML*(ML*ML-1)*(ML*ML-1)*dalphadVar;
@@ -455,69 +288,41 @@ void AUSMPlusUpFlux<UPDATEVAR>::ComputeFluxDerivativeWithRespectToVariable(CFrea
                       +P5Plus*P5Minus*drho12dVar*fa*a12*(qnR-qnL)
                       +P5Plus*P5Minus*rho12*dfadVar*a12*(qnR-qnL)
                       +P5Plus*P5Minus*rho12*fa*da12dVar*(qnR-qnL)
-                      +P5Plus*P5Minus*rho12*fa*da12dVar*(dqnRdVar-dqnLdVar));
+                      +P5Plus*P5Minus*rho12*fa*da12dVar*(m_dqnRdVar-m_dqnLdVar));
 
   /// dp12dVar ----------------------------------------------
-  const CFreal dp12dVar = dP5PlusdVar*pL + P5Plus*dpLdVar + dP5MinusdVar*pR + P5Minus*dpRdVar + dpudVar;
+  const CFreal dp12dVar = dP5PlusdVar*pL + P5Plus*m_dpLdVar + dP5MinusdVar*pR + P5Minus*m_dpRdVar + dpudVar;
 
-  cf_assert(nbEq==nbDim+2); // Checking that the vector has the right size
-  RealVector P12(nbEq); 
-  RealVector dP12dVar(nbEq);                        //P12 = (0,p12*nx,...,0);
-
-  dP12dVar[0] = 0.;
-  P12[0]=0.;
-  CFLog(DEBUG_MAX,"  ## Derivative of the pressure term for analytical Jacobian \n");
-  CFLog(DEBUG_MAX,"  ## dP12dVar = [ " << dP12dVar[0] << " ");
-  for (CFuint iDim = 0; iDim < nbDim;iDim++)
+  row[0] = dmdot12dVar; //dmdot12dVar*1+ mdot12*0 + 0
+  for (CFuint iDim = 0; iDim < nbDim; iDim++)
   {
-    dP12dVar[iDim+1] = dp12dVar*normal[iDim];
-    P12[iDim+1] = this->m_p12*normal[iDim];
-    CFLog(DEBUG_MAX,dP12dVar[iDim] << " ");
+    row[iDim+1] = dmdot12dVar*(sigmoid*(*this->m_lData)[UPDATEVAR::PTERM::VX+iDim] + (1.0-sigmoid)*(*this->m_rData)[UPDATEVAR::PTERM::VX+iDim]) 
+                + mdot12*(sigmoid*m_dVLdVar[iDim] + (1.0-sigmoid)*m_dVRdVar[iDim]) + dp12dVar*normal[iDim];    //Final result
   }
-  dP12dVar[nbDim+1] = 0.;
-  P12[nbDim+1] = 0.;
-  CFLog(DEBUG_MAX,dP12dVar[nbDim+1] << "]\n");
+  row[nbEq-1] = dmdot12dVar*( sigmoid*HL+(1.0-sigmoid)*HR ) + mdot12*( sigmoid*m_dhLdVar+(1.0-sigmoid)*m_dhRdVar );
+ 
+  CFLog(VERBOSE," AUSMPlusUpFlux::ComputedFluxdVar  END \n");
 
-  CFLog(DEBUG_MAX,"        ## alpha " << alpha << " ## dalphadVar " << dalphadVar <<"\n");
-  CFLog(DEBUG_MAX,"        ## P5Plus " << P5Plus << " ## dP5PlusdVar " << dP5PlusdVar << "\n");
-  CFLog(DEBUG_MAX,"        ## P5Minus " << P5Minus  << " ## dP5MinusdVar " << dP5MinusdVar  << "\n");
-  CFLog(DEBUG_MAX,"        ## mdot12 " << mdot12  << " ## dmdot12dVar " << dmdot12dVar << "\n");
-  CFLog(DEBUG_MAX,"        ## pu " << pu << " ## dpudVar " << dpudVar <<"\n" );
-
-  CFLog(DEBUG_MIN," ## dFdVar() => isPerturb 1, iVar = "<< iVar <<" , flux = [ ");
-  for (CFuint it = 0;it < nbEq ; it++)
-  {
-    CFLog(DEBUG_MIN,mdot12*(this->m_Cons)[it] + P12[it]<< " ");
-  }
-  CFLog(DEBUG_MIN,"]\n");
-
-  CFLog(DEBUG_MIN," ##              dfluxdVar = [ ");
-  for (CFuint it = 0;it < nbEq ; it++)
-  {
-    row[it] = dmdot12dVar*(this->m_Cons)[it] + mdot12*(m_dConsdVar)[it] + dP12dVar[it];    //Final result
-    CFLog(DEBUG_MIN,row[it] << " ");
-  }
-  CFLog(DEBUG_MIN,"]\n");
-
-  CFLog(VERBOSE," AUSMPlusUpFlux::ComputeFluxDerivativeWithRespectToVariable  END \n");
 }
 
-//////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
 
 template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdP(CFuint side, CFuint iVar, CFreal* row)
+void AUSMPlusUpFlux<UPDATEVAR>::computeJacobianDPvt(CFuint side)
 {
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::MathTools;
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdP  START\n");  
-  CFLog(DEBUG_MED,"  ## side, iVar : " << side << " " << iVar << "\n");
-// Update var : (p,u,v,w,T)
-// dudp = dvdp = dwdp = 0 => dqndp = 0  
-// H = E + p/rho => H = gamma/(gamma-1)Rgas*T/Mmass + V^2/2 => dHdp = 0
-// rho = p*M/(R*T) => drhodP = M/(R*T).
-  const CFreal Mmass  = getMMass();; //Moleculare mass of the gas
-  const CFreal Rgas   = getRgas();   //gas constant
+  using namespace Framework;
+
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDPvt("<<side<<") START\n");  
+
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
+
+  this->_tmpJacobMatrix = 0.;
+
+ // dFdP
+  const CFreal Mmass  = 28.965338E-3; //molecular mass, assuming current fluid is air
+  const CFreal Rgas   = 8.3145; //universal gas constant [J/mol/K] taken from Wolfram Alpha
   const CFreal TL     = (*this->m_lData)[UPDATEVAR::PTERM::T];
   const CFreal TR     = (*this->m_rData)[UPDATEVAR::PTERM::T];
   
@@ -529,39 +334,34 @@ void AUSMPlusUpFlux<UPDATEVAR>::dFdP(CFuint side, CFuint iVar, CFreal* row)
   m_drhoRdVar = (side == LEFT) ? 0. : Mmass/(Rgas*TR);
   m_dpLdVar   = (side == LEFT) ? 1. : 0.;
   m_dpRdVar   = (side == LEFT) ? 0. : 1.;
+  m_dVLdVar   = 0.;
+  m_dVRdVar   = 0.;
 
-  const CFuint nbDim  = PhysicalModelStack::getActive()->getDim();
-  for (CFuint it = 0; it < nbDim ;it++)
-    {
-      m_dVLdVar[it]   = 0.;
-      m_dVRdVar[it]   = 0.;
-    }
+  ComputedFluxdVar(&(this->_tmpJacobMatrix[0]));
+  
+  //dFdU dFdV (dFdW)
+  const RealVector& normal = this->getMethodData().getUnitNormal();
+  m_drhoLdVar = 0.;
+  m_drhoRdVar = 0.;
+  m_dpLdVar   = 0.;
+  m_dpRdVar   = 0.;
 
-  UpdateCoeffForJacobian();
-  dUpdateCoeffdVar();
-  ComputeFluxDerivativeWithRespectToVariable(row,iVar);
-}
- 
-//////////////////////////////////////////////////////////////////////////////
-   
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdT(CFuint side, CFuint iVar, CFreal* row)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::MathTools;
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdT  START\n");  
-  CFLog(DEBUG_MED,"  ## side, iVar : " << side << " " << iVar << "\n");
-// Update var : (p,u,v,w,T)
-// dudT = dvdT = dwdT = 0 => dqndT = 0  
-// H = E + p/rho => H = gamma/(gamma-1)Rgas*T/Mmass + V^2/2 => dHdT = gamma/(gamma-1)Rgas*/Mmass
-// rho = p*M/(R*T) => drhodT = -M*p/(R*T^2).
-  const CFreal Mmass     = getMMass(); //Moleculare mass of the gas
-  const CFreal Rgas      = getRgas();  //gas constant
+  for (CFuint iDim = 0 ; iDim < nbDim ; iDim ++)
+  {
+    m_dqnLdVar      = (side == LEFT) ? normal[iDim] : 0.;
+    m_dqnRdVar      = (side == LEFT) ? 0. : normal[iDim];
+    m_dhLdVar       = (side == LEFT) ?(*this->m_lData)[UPDATEVAR::PTERM::VX+iDim]: 0.;
+    m_dhRdVar       = (side == LEFT) ? 0. : (*this->m_rData)[UPDATEVAR::PTERM::VX+iDim];
+    m_dVLdVar       = 0.;
+    m_dVRdVar       = 0.; 
+    m_dVLdVar[iDim] = (side == LEFT) ? 1. : 0.;
+    m_dVRdVar[iDim] = (side == LEFT) ? 0. : 1.;
+
+    ComputedFluxdVar(&(this->_tmpJacobMatrix[nbEqs*(1+iDim)]));
+  }
+  //dFdT
   const CFreal pL        = (*this->m_lData)[UPDATEVAR::PTERM::P];
   const CFreal pR        = (*this->m_rData)[UPDATEVAR::PTERM::P];
-  const CFreal TL        = (*this->m_lData)[UPDATEVAR::PTERM::T];
-  const CFreal TR        = (*this->m_rData)[UPDATEVAR::PTERM::T];
   const CFreal gammaL    = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
   const CFreal gammaR    = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
 
@@ -573,194 +373,29 @@ void AUSMPlusUpFlux<UPDATEVAR>::dFdT(CFuint side, CFuint iVar, CFreal* row)
   m_drhoRdVar = (side == LEFT) ? 0. : -Mmass*pR/(Rgas*TR*TR);
   m_dpLdVar   = 0.;
   m_dpRdVar   = 0.;
+  m_dVLdVar   = 0.;
+  m_dVRdVar   = 0.;   
 
-  const CFuint nbDim  = PhysicalModelStack::getActive()->getDim();
-  for (CFuint it = 0; it < nbDim ;it++)
-    {
-      m_dVLdVar[it]   = 0.;
-      m_dVRdVar[it]   = 0.;
-    }
+  ComputedFluxdVar(&(this->_tmpJacobMatrix[nbEqs*(nbEqs-1)]));
 
-  UpdateCoeffForJacobian();
-  dUpdateCoeffdVar();
-  ComputeFluxDerivativeWithRespectToVariable(row,iVar);
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdT  END\n");  
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDPvt() END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
-   
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdU(CFuint side, CFuint iVar, CFreal* row)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::MathTools;
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdU  START\n");  
-  CFLog(DEBUG_MED,"  ## side, iVar : " << side << " " << iVar << "\n");
-// Update var : (p,u,v,w,T)
-// dudu= 1.; dvdu = dwdu = 0 => dqndu = nx  
-// H = E + p/rho => H = R*T*gamma/(M*(gamma-1) + V^2/2 => dHdu = u
-// rho = p*M/(R*T) => drhodu =0.
-  const RealVector& normal = this->getMethodData().getUnitNormal();
-  m_dqnLdVar  = (side == LEFT) ? normal[0] : 0.;
-  m_dqnRdVar  = (side == LEFT) ? 0. : normal[0];
-  m_dhLdVar   = (side == LEFT) ?(*this->m_lData)[UPDATEVAR::PTERM::VX]: 0.;
-  m_dhRdVar   = (side == LEFT) ? 0. : (*this->m_rData)[UPDATEVAR::PTERM::VX];
-  m_drhoLdVar = 0.;
-  m_drhoRdVar = 0.;
-  m_dpLdVar   = 0.;
-  m_dpRdVar   = 0.;
-
-  const CFuint nbDim  = PhysicalModelStack::getActive()->getDim();
-  for (CFuint it = 0; it < nbDim ;it++)
-    {
-      m_dVLdVar[it]   = 0.;
-      m_dVRdVar[it]   = 0.;
-    }
-  m_dVLdVar[0]   = (side == LEFT) ? 1. : 0.;
-  m_dVRdVar[0]   = (side == LEFT) ? 0. : 1.;
-
-  UpdateCoeffForJacobian();
-  dUpdateCoeffdVar();
-  ComputeFluxDerivativeWithRespectToVariable(row,iVar);
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdU  END\n");  
-}
-
-//////////////////////////////////////////////////////////////////////////////
-   
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdV(CFuint side, CFuint iVar, CFreal* row)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::MathTools;
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdV  START\n");  
-  CFLog(DEBUG_MED,"  ## side, iVar : " << side << " " << iVar << "\n");
-// Update var : (p,u,v,w,T)
-// dvdv= 1.; dudv = dwdv = 0 => dqndv = ny  
-// H = E + p/rho => H = R*T*gamma/(M*(gamma-1) + V^2/2 => dHdv = v
-// rho = p*M/(R*T) => drhodu =0.
-
-  const RealVector& normal = this->getMethodData().getUnitNormal();
-
-  m_dqnLdVar  = (side == LEFT) ? normal[1] : 0.;
-  m_dqnRdVar  = (side == LEFT) ? 0. : normal[1];
-  m_dhLdVar   = (side == LEFT) ?(*this->m_lData)[UPDATEVAR::PTERM::VY]: 0.;
-  m_dhRdVar   = (side == LEFT) ? 0. : (*this->m_rData)[UPDATEVAR::PTERM::VY];
-  m_drhoLdVar = 0.;
-  m_drhoRdVar = 0.;
-  m_dpLdVar   = 0.;
-  m_dpRdVar   = 0.;
-
-  const CFuint nbDim  = PhysicalModelStack::getActive()->getDim();
-  for (CFuint it = 0; it < nbDim ;it++)
-    {
-      m_dVLdVar[it]   = 0.;
-      m_dVRdVar[it]   = 0.;
-    }
-  m_dVLdVar[1]   = (side == LEFT) ? 1. : 0.;
-  m_dVRdVar[1]   = (side == LEFT) ? 0. : 1.;
-
-  UpdateCoeffForJacobian();
-  dUpdateCoeffdVar();
-  ComputeFluxDerivativeWithRespectToVariable(row,iVar);
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdV  END\n");  
-
-}
-
-//////////////////////////////////////////////////////////////////////////////
-  
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdW(CFuint side, CFuint iVar, CFreal* row)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::MathTools;
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdW  START\n");  
-  CFLog(DEBUG_MED,"  ## side, iVar : " << side << " " << iVar << "\n");
-// Update var : (p,u,v,w,T)
-// dwdw= 1.; dudw = dvdw = 0 => dqndw = nz  
-// H = E + p/rho => H = R*T*gamma/(M*(gamma-1) + V^2/2 => dHdv = w
-// rho = p*M/(R*T) => drhodu =0.
-  const RealVector& normal = this->getMethodData().getUnitNormal();
-
-  m_dqnLdVar  = (side == LEFT) ? normal[2] : 0.;
-  m_dqnRdVar  = (side == LEFT) ? 0. : normal[2];
-  m_dhLdVar   = (side == LEFT) ?(*this->m_lData)[UPDATEVAR::PTERM::VZ]: 0.;
-  m_dhRdVar   = (side == LEFT) ? 0. : (*this->m_rData)[UPDATEVAR::PTERM::VZ];
-  m_drhoLdVar = 0.;
-  m_drhoRdVar = 0.;
-  m_dpLdVar   = 0.;
-  m_dpRdVar   = 0.;
-
-  const CFuint nbDim  = PhysicalModelStack::getActive()->getDim();
-  for (CFuint it = 0; it < nbDim ;it++)
-    {
-      m_dVLdVar[it]   = 0.;
-      m_dVRdVar[it]   = 0.;
-    }
-  m_dVLdVar[2]   = (side == LEFT) ? 1. : 0.;
-  m_dVRdVar[2]   = (side == LEFT) ? 0. : 1.;
-
-  UpdateCoeffForJacobian();
-  dUpdateCoeffdVar();
-  ComputeFluxDerivativeWithRespectToVariable(row,iVar);
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdW  END\n");  
-}
- 
-//////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdK(CFuint side, CFuint iVar, CFreal* row)
+void AUSMPlusUpFlux<UPDATEVAR>::computeJacobianDCons(CFuint side)
 {
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::MathTools;
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdK  START\n");  
-  CFLog(DEBUG_MED,"  ## side, iVar : " << side << " " << iVar << "\n");
-// Update var : ???
-  m_dqnLdVar  = 0.;
-  m_dqnRdVar  = 0.;
-  m_dhLdVar   = 0.;
-  m_dhRdVar   = 0.;
-  m_drhoLdVar = 0.;
-  m_drhoRdVar = 0.;
-  m_dpLdVar   = 0.;
-  m_dpRdVar   = 0.;
+  using namespace Framework;
 
-  const CFuint nbDim  = PhysicalModelStack::getActive()->getDim();
-  for (CFuint it = 0; it < nbDim ;it++)
-    {
-      m_dVLdVar[it]   = 0.;
-      m_dVRdVar[it]   = 0.;
-    }
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDCons("<<side<<") START\n");  
 
-  UpdateCoeffForJacobian();
-  dUpdateCoeffdVar();
-  ComputeFluxDerivativeWithRespectToVariable(row,iVar);
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdK  END\n");  
-}
- 
-//////////////////////////////////////////////////////////////////////////////
-      
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdRho(CFuint side, CFuint iVar, CFreal* row)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::MathTools;	
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdRho  START\n");  
-	CFLog(DEBUG_MED,"  ## side, iVar : " << side << " " << iVar << "\n");
-// Update var : (rho,rhou,rhov,rhow,rhoE)
-// E        = p/(rho*gamma-1) + V^2/2 => 
-// p        = (gamma -1 )(rhoE - 0.5(rhoV)^2/rho) 
-// dpdrho    = 0.5(gamma -1)V^2;
-// u        = rhou/rho  
-// dudrho   = -rhou/rho^2 
-// dqndrho = -(unx+vny+wnz)/rho = -qn/rho
-// H        = E + p/rho => 
-// H        = gamma*rhoE/rho - 0.5*(gamma-1)*(rhoV)^2/rho^2 
-// dHdrho   = -gamma*rhoE/rho^2 +(gamma-1)(rhou^2+rhov^2+rhow^2)/rho^3
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
+    
+  this->_tmpJacobMatrix = 0.;
+
+ // dFdRho
   const CFreal gammaL    = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
   const CFreal gammaR    = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
   const CFreal rhoL      = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
@@ -769,11 +404,9 @@ void AUSMPlusUpFlux<UPDATEVAR>::dFdRho(CFuint side, CFuint iVar, CFreal* row)
   const CFreal ER        = (*this->m_rData)[UPDATEVAR::PTERM::E];
   const CFreal qnL       = this->m_unL;
   const CFreal qnR       = this->m_unR;
-  
+
   m_dqnLdVar  = (side == LEFT) ? -qnL/rhoL : 0.;
   m_dqnRdVar  = (side == LEFT) ? 0. : -qnR/rhoR;
-
-  const CFuint nbDim  = PhysicalModelStack::getActive()->getDim();
 
   CFreal VLsq = 0.;
   CFreal VRsq = 0.;
@@ -795,183 +428,29 @@ void AUSMPlusUpFlux<UPDATEVAR>::dFdRho(CFuint side, CFuint iVar, CFreal* row)
       m_dVRdVar[it]   = (side == LEFT) ? 0. : -(*this->m_rData)[UPDATEVAR::PTERM::VX+it]/rhoR;
     }
 
-  UpdateCoeffForJacobian();
-  dUpdateCoeffdVar();
-  ComputeFluxDerivativeWithRespectToVariable(row,iVar);
-
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdRho  END\n");  
-
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdRhoU(CFuint side, CFuint iVar, CFreal* row)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::MathTools;
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdRhoU  START\n");  
-  CFLog(DEBUG_MED,"  ## side, iVar : " << side << " " << iVar << "\n");
-// Update var : (rho,rhou,rhov,rhow,rhoE)
-// E = p/(rho*gamma-1) + V^2/2  
-// p = (gamma -1 )(rhoE - 0.5(rhoV)^2/rho) 
-// dprhou = -(gamma -1)u;
-// u = rhou/rho => dwdrhou = 1/rho => dqndrhou = nx/rho
-// H = E + p/rho
-// H = gamma*rhoE/rho - 0.5*(gamma-1)*(rhoV)^2/rho^2 
-// dHdrhou = -(gamma-1)u/rho;
-  const RealVector& normal = this->getMethodData().getUnitNormal();
-  const CFreal rhoL        = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
-  const CFreal rhoR        = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
-  const CFreal uL          = (*this->m_lData)[UPDATEVAR::PTERM::VX];
-  const CFreal uR          = (*this->m_rData)[UPDATEVAR::PTERM::VX];
-  const CFreal gammaL      = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
-  const CFreal gammaR      = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
-
-  m_dqnLdVar  = (side == LEFT) ? normal[0]/rhoL: 0.;
-  m_dqnRdVar  = (side == LEFT) ? 0. : normal[0]/rhoR;
-  m_dhLdVar   = (side == LEFT) ? -(gammaL-1.)*uL/rhoL: 0.;
-  m_dhRdVar   = (side == LEFT) ? 0 : -(gammaR-1.)*uR/rhoR;
-  m_drhoLdVar = 0.;
-  m_drhoRdVar = 0.;
-  m_dpLdVar   = (side == LEFT) ? -(gammaL-1.)*uL: 0.;
-  m_dpRdVar   = (side == LEFT) ? 0. : -(gammaR-1.)*uR;
-
-  const CFuint nbDim  = PhysicalModelStack::getActive()->getDim();
-  for (CFuint it = 0; it < nbDim ;it++)
-    {
-      m_dVLdVar[it]   = 0.;
-      m_dVRdVar[it]   = 0.;
-    }
-  m_dVLdVar[0]   = (side == LEFT) ? 1/rhoL : 0.;
-  m_dVRdVar[0]   = (side == LEFT) ? 0. : 1/rhoR;
-
-  UpdateCoeffForJacobian();
-  dUpdateCoeffdVar();
-  ComputeFluxDerivativeWithRespectToVariable(row,iVar);
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdRhoU  END\n");  
-}
- 
-//////////////////////////////////////////////////////////////////////////////
-
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdRhoV(CFuint side, CFuint iVar, CFreal* row)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::MathTools;
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdRhoV  START\n");  
-  CFLog(DEBUG_MED,"  ## side, iVar : " << side << " " << iVar << "\n");
-// Update var : (rho,rhou,rhov,rhow,rhoE)
-// E = p/(rho*gamma-1) + V^2/2 => p = (gamma -1 )(rhoE - 0.5(rhoV)^2/rho^2) => dprhov = -(gamma -1)v/rho;
-// v = rhov/rho => dwdrhoc = 1/rho => dqndrhov = ny/rho
-// H = E + p/rho => H = gamma*rhoE/rho - 0.5*(gamma-1)*(rhoV)^2/rho^2 => dHdrhov = -(gamma-1)v/rho
-  const RealVector& normal = this->getMethodData().getUnitNormal();
-  const CFreal rhoL        = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
-  const CFreal rhoR        = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
-  const CFreal vL          = (*this->m_lData)[UPDATEVAR::PTERM::VY];
-  const CFreal vR          = (*this->m_rData)[UPDATEVAR::PTERM::VY];
-  const CFreal gammaL      = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
-  const CFreal gammaR      = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
+  ComputedFluxdVar(&(this->_tmpJacobMatrix[0]));
   
-  m_dqnLdVar  = (side == LEFT) ? normal[1]/rhoL: 0.;
-  m_dqnRdVar  = (side == LEFT) ? 0. : normal[1]/rhoR;
-  m_dhLdVar   = (side == LEFT) ? -(gammaL-1.)*vL/rhoL: 0.;
-  m_dhRdVar   = (side == LEFT) ? 0 : -(gammaR-1.)*vR/rhoR;
-  m_drhoLdVar = 0.;
-  m_drhoRdVar = 0.;
-  m_dpLdVar   = (side == LEFT) ? -(gammaL-1.)*vL: 0.;
-  m_dpRdVar   = (side == LEFT) ? 0. : -(gammaR-1.)*vR;
-
-  const CFuint nbDim  = PhysicalModelStack::getActive()->getDim();
-  for (CFuint it = 0; it < nbDim ;it++)
-    {
-      m_dVLdVar[it]   = 0.;
-      m_dVRdVar[it]   = 0.;
-    }
-  m_dVLdVar[1]   = (side == LEFT) ? 1/rhoL : 0.;
-  m_dVRdVar[1]   = (side == LEFT) ? 0. : 1/rhoR;
-
-  UpdateCoeffForJacobian();
-  dUpdateCoeffdVar();
-  ComputeFluxDerivativeWithRespectToVariable(row,iVar);
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdRhoV  END\n");  
-
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdRhoW(CFuint side, CFuint iVar, CFreal* row)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::MathTools; 
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdRhoW  START\n");  
-  CFLog(DEBUG_MED,"  ## side, iVar : " << side << " " << iVar << "\n");
-// Update var : (rho,rhou,rhov,rhow,rhoE)
-// E = p/(rho*gamma-1) + V^2/2 => p = (gamma -1 )(rhoE - 0.5(rhoV)^2/rho^2) => dprhow = -(gamma -1)w/rho;
-// w = rhoW/rho => dwdrhoW = 1/rho => dqndrhoW = nz/rho
-// H = E + p/rho =
-// H = gamma*rhoE/rho - 0.5*(gamma-1)*(rhoV)^2/rho^2 
-// dHdrhow = -(gamma-1)w/rho
+  //dFdrhoU dFdrhoV (dFdrhoW)
   const RealVector& normal = this->getMethodData().getUnitNormal();
-  const CFreal rhoL        = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
-  const CFreal rhoR        = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
-  const CFreal wL          = (*this->m_lData)[UPDATEVAR::PTERM::VZ];
-  const CFreal wR          = (*this->m_rData)[UPDATEVAR::PTERM::VZ];
-  const CFreal gammaL      = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
-  const CFreal gammaR      = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
-  
-  m_dqnLdVar  = (side == LEFT) ? normal[2]/rhoL: 0.;
-  m_dqnRdVar  = (side == LEFT) ? 0. : normal[2]/rhoR;
-  m_dhLdVar   = (side == LEFT) ? -(gammaL-1.)*wL/rhoL: 0.;
-  m_dhRdVar   = (side == LEFT) ? 0 : -(gammaR-1.)*wR/rhoR;
   m_drhoLdVar = 0.;
   m_drhoRdVar = 0.;
-  m_dpLdVar   = (side == LEFT) ? -(gammaL-1.)*wL: 0.;
-  m_dpRdVar   = (side == LEFT) ? 0. : -(gammaR-1.)*wR;
 
-  const CFuint nbDim  = PhysicalModelStack::getActive()->getDim();
-  for (CFuint it = 0; it < nbDim ;it++)
-    {
-      m_dVLdVar[it]   = 0.;
-      m_dVRdVar[it]   = 0.;
-    }
-  m_dVLdVar[2]   = (side == LEFT) ? 1/rhoL : 0.;
-  m_dVRdVar[2]   = (side == LEFT) ? 0. : 1/rhoR;
+  for (CFuint iDim = 0 ; iDim < nbDim ; iDim ++)
+  {
+    m_dqnLdVar      = (side == LEFT) ? normal[iDim]/rhoL: 0.;
+    m_dqnRdVar      = (side == LEFT) ? 0. : normal[iDim]/rhoR;
+    m_dhLdVar       = (side == LEFT) ? -(gammaL-1.)*(*this->m_lData)[UPDATEVAR::PTERM::VX+iDim]/rhoL: 0.;
+    m_dhRdVar       = (side == LEFT) ? 0 : -(gammaR-1.)*(*this->m_rData)[UPDATEVAR::PTERM::VX+iDim]/rhoR;
+    m_dpLdVar       = (side == LEFT) ? -(gammaL-1.)*(*this->m_lData)[UPDATEVAR::PTERM::VX+iDim]: 0.;
+    m_dpRdVar       = (side == LEFT) ? 0. : -(gammaR-1.)*(*this->m_rData)[UPDATEVAR::PTERM::VX+iDim];
+    m_dVLdVar       = 0.;
+    m_dVRdVar       = 0.;  
+    m_dVLdVar[iDim] = (side == LEFT) ? 1/rhoL : 0.;
+    m_dVRdVar[iDim] = (side == LEFT) ? 0. : 1/rhoR;
+    ComputedFluxdVar(&(this->_tmpJacobMatrix[nbEqs*(1+iDim)]));
+  }
 
-  UpdateCoeffForJacobian();
-  dUpdateCoeffdVar();
-  ComputeFluxDerivativeWithRespectToVariable(row,iVar);
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdRhoW  END\n");  
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdRhoE(CFuint side, CFuint iVar, CFreal* row)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::MathTools;
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdRhoE  START\n");  
-  CFLog(DEBUG_MED,"  ## side, iVar : " << side << " " << iVar << "\n");
-  const CFreal rhoL = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
-  const CFreal rhoR = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
-  const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
-  const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
-// Update var : (rho,rhou,rhov,rhow,rhoE)
-// E = p/(rho*gamma-1) + V^2/2 
-// p = (gamma -1 )(rhoE - 0.5(rhoV)^2/rho) 
-// dprhoE = gamma-1;
-// u = rhou/rho 
-// dudrhoE = 0. 
-// dqndrhoE = 0
-// H = E + p/rho 
-// H = gamma*rhoE/rho - 0.5*(gamma-1)*(rhoV)^2/rho^2 
-// dHdrhoE = gamma/rho .
+  //dFdrhoE
   m_dqnLdVar  = 0.;
   m_dqnRdVar  = 0.;
   m_dhLdVar   = (side == LEFT) ? gammaL/rhoL : 0.;
@@ -980,40 +459,51 @@ void AUSMPlusUpFlux<UPDATEVAR>::dFdRhoE(CFuint side, CFuint iVar, CFreal* row)
   m_drhoRdVar = 0.;
   m_dpLdVar   = (side == LEFT) ? gammaL-1. : 0.;
   m_dpRdVar   = (side == LEFT) ? 0. : gammaR-1.;
+  m_dVLdVar   = 0.;
+  m_dVRdVar   = 0.;   
 
-  const CFuint nbDim  = PhysicalModelStack::getActive()->getDim();
-  for (CFuint it = 0; it < nbDim ;it++)
-    {
-      m_dVLdVar[it]   = 0.;
-      m_dVRdVar[it]   = 0.;
-    }
+  ComputedFluxdVar(&(this->_tmpJacobMatrix[nbEqs*(nbEqs-1)]));
 
-  UpdateCoeffForJacobian();
-  dUpdateCoeffdVar();
-  ComputeFluxDerivativeWithRespectToVariable(row,iVar);
-  CFLog(VERBOSE,"AUSMPlusUpFlux::dFdRhoE  END\n");  
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDCons() END\n");
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-CFreal AUSMPlusUpFlux<UPDATEVAR>::getRgas()
+void AUSMPlusUpFlux<UPDATEVAR>::computeLeftJacobian()
 {
-  CFreal Rgas;
-  Rgas = 8.3145; //[J/mol/K] taken from wolfram alpha
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::getRgas() => Rgas = "<< Rgas <<"\n");
-  return Rgas;
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeLeftJacobian() START\n");  
+ 
+  const std::string upVar = this->getMethodData().getUpdateVarStr();
+  if (upVar == "Puvt" || upVar == "Pvt") {
+    computeJacobianDPvt(LEFT);
+  }
+  if (upVar == "Cons") {
+    computeJacobianDCons(LEFT);
+  }
+  (this->_tmpJacobMatrix).transpose(this->_lFluxJacobian);
+  
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeLeftJacobian() END\n");  
 }
 
-//////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-CFreal AUSMPlusUpFlux<UPDATEVAR>::getMMass()
+void AUSMPlusUpFlux<UPDATEVAR>::computeRightJacobian()
 {
-  CFreal MMass;
-  MMass = 28.965338E-3; //Assuming current fluid is air
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::getMMass() => Mmass = "<< MMass<<"\n");
-  return MMass;
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeRightJacobian() START\n");  
+  
+  const std::string upVar = this->getMethodData().getUpdateVarStr();
+  if (upVar == "Puvt" || upVar == "Pvt") {
+     computeJacobianDPvt(RIGHT);
+  }
+  if (upVar == "Cons") {
+    computeJacobianDCons(RIGHT);
+  }
+  (this->_tmpJacobMatrix).transpose(this->_rFluxJacobian);
+
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeRightJacobian() END\n");  
 }
 
 //////////////////////////////////////////////////////////////////////////////

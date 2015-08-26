@@ -65,22 +65,11 @@ protected:
    * Compute the interface pressure flux
    */
   virtual void computePressureFlux();
-
-  /**
-   * New function to get data for the analytical Jacobian
-   */
-  virtual void ComputeMassFluxForJacobian();
-  virtual void UpdateCoeffForJacobian();
-  virtual void dUpdateCoeffdVar();
   
-  virtual CFreal getRgas(); //hardcode of the universal gas constant
-
-  virtual CFreal getMMass(); //hardcode of the molecular mass of the gas
-
   /**
    * Compute the flux respectively to variable Var
    */
-  virtual void ComputeFluxDerivativeWithRespectToVariable(CFreal* row,CFuint iVar);
+  virtual void ComputedFluxdVar(CFreal* row);
 
 
   /// Correct the given Mach number
@@ -89,39 +78,18 @@ protected:
     return oldMach;
   }
 
-  /// compute flux derivative with respect to pressure
-  virtual void dFdP(CFuint side, CFuint iVar, CFreal* row);
-  
-  /// compute flux derivative with respect to density
-  virtual void dFdRho(CFuint side, CFuint iVar, CFreal* row);
-  
-  /// compute flux derivative with respect to temperature
-  virtual void dFdT(CFuint side, CFuint iVar, CFreal* row);
-  
-  /// compute flux derivative with respect to velocity u
-  virtual void dFdU(CFuint side, CFuint iVar, CFreal* row);
-  
-  /// compute flux derivative with respect to velocity v
-  virtual void dFdV(CFuint side, CFuint iVar, CFreal* row);
-  
-  /// compute flux derivative with respect to velocity w
-  virtual void dFdW(CFuint side, CFuint iVar, CFreal* row);
-  
-  /// compute flux derivative with respect to k
-  virtual void dFdK(CFuint side, CFuint iVar, CFreal* row);
+  /// Compute the left flux jacobian
+  virtual void computeLeftJacobian();
 
-  /// compute flux derivative with respect to rhoU
-  virtual void dFdRhoU(CFuint side, CFuint iVar, CFreal* row);
+  /// Compute the right flux jacobian
+  virtual void computeRightJacobian();
 
-  /// compute flux derivative with respect to rhoV
-  virtual void dFdRhoV(CFuint side, CFuint iVar, CFreal* row);
+  /// Compute the jacobian with respect to Puvt or PVt variables
+  virtual void computeJacobianDPvt(CFuint side);
 
-  /// compute flux derivative with respect to rhoW
-  virtual void dFdRhoW(CFuint side, CFuint iVar, CFreal* row);
-
-  /// compute flux derivative with respect to rhoE
-  virtual void dFdRhoE(CFuint side, CFuint iVar, CFreal* row);
-  
+  /// Compute the jacobian with respect to cons variables
+  virtual void computeJacobianDCons(CFuint side);
+ 
 private:
   
   /// preconditioning coefficient 
@@ -147,12 +115,6 @@ private:
   
   /// beta  coefficient
   CFreal m_beta;
-
-  /// conservative's variable vector needed in the jacobian
-  RealVector m_Cons;
-
-  /// derivative of the conservative's variable vector needed in the jacobian
-  RealVector m_dConsdVar;
 
   /// derivative of the speed (u,v,w) with respect to a certain variable
   RealVector m_dVLdVar;
