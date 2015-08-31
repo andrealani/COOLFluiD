@@ -52,7 +52,7 @@ public:
   
   // /*Set up private data*/
 
-  virtual void setup();
+  //virtual void setup();
 
 protected:
 
@@ -69,7 +69,7 @@ protected:
   /**
    * Compute the flux respectively to variable Var
    */
-  virtual void ComputedFluxdVar(CFreal* row);
+  virtual void ComputedFluxdVar(CFuint iVar, RealMatrix &JacobMatrix);
 
 
   /// Correct the given Mach number
@@ -85,10 +85,43 @@ protected:
   virtual void computeRightJacobian();
 
   /// Compute the jacobian with respect to Puvt or PVt variables
-  virtual void computeJacobianDPvt(CFuint side);
+  virtual void computeJacobianDPvt(CFuint side, RealMatrix &JacobMatrix);
 
   /// Compute the jacobian with respect to cons variables
-  virtual void computeJacobianDCons(CFuint side);
+  virtual void computeJacobianDCons(CFuint side, RealMatrix &JacobMatrix);
+
+  /// compute flux derivative with respect to pressure
+  void dFdP(CFuint side, CFuint iVar, RealMatrix &JacobMatrix);
+  
+  /// compute flux derivative with respect to density
+  void dFdRho(CFuint side, CFuint iVar, RealMatrix &JacobMatrix);
+  
+  /// compute flux derivative with respect to temperature
+  void dFdT(CFuint side, CFuint iVar, RealMatrix &JacobMatrix);
+  
+  /// compute flux derivative with respect to velocity u
+  void dFdU(CFuint side, CFuint iVar, RealMatrix &JacobMatrix);
+  
+  /// compute flux derivative with respect to velocity v
+  void dFdV(CFuint side, CFuint iVar, RealMatrix &JacobMatrix);
+  
+  /// compute flux derivative with respect to velocity w
+  void dFdW(CFuint side, CFuint iVar, RealMatrix &JacobMatrix);
+    
+  /// compute flux derivative with respect to k
+  void dFdK(CFuint side, CFuint iVar, RealMatrix &JacobMatrix);
+
+  /// compute flux derivative with respect to rhou
+  void dFdRhoU(CFuint side, CFuint iVar, RealMatrix &JacobMatrix);
+
+      /// compute flux derivative with respect to rhov
+  void dFdRhoV(CFuint side, CFuint iVar, RealMatrix &JacobMatrix);
+
+      /// compute flux derivative with respect to rhow
+  void dFdRhoW(CFuint side, CFuint iVar, RealMatrix &JacobMatrix);
+
+      /// compute flux derivative with respect to rhoE
+  void dFdRhoE(CFuint side, CFuint iVar, RealMatrix &JacobMatrix);
  
 private:
   
@@ -117,8 +150,14 @@ private:
   CFreal m_beta;
 
   /// derivative of the speed (u,v,w) with respect to a certain variable
-  RealVector m_dVLdVar;
-  RealVector m_dVRdVar;
+  // RealVector m_dVLdVar;
+  // RealVector m_dVRdVar;
+  CFreal m_duLdVar;
+  CFreal m_duRdVar;
+  CFreal m_dvLdVar;
+  CFreal m_dvRdVar;
+  CFreal m_dwLdVar;
+  CFreal m_dwRdVar;
 
   /// derivative of some variable to compute the Jacobian
   CFreal m_dqnLdVar;

@@ -61,17 +61,17 @@ void AUSMPlusUpFlux<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::setup()
-{
-  using namespace COOLFluiD::Framework;
+// template <class UPDATEVAR>
+// void AUSMPlusUpFlux<UPDATEVAR>::setup()
+// {
+//   using namespace COOLFluiD::Framework;
  
-  AUSMFlux<UPDATEVAR>::setup();
+//   AUSMFlux<UPDATEVAR>::setup();
 
-  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
-  m_dVLdVar.resize(nbDim);
-  m_dVRdVar.resize(nbDim);
-}
+//   const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
+//   m_dVLdVar.resize(nbDim);
+//  m_dVRdVar.resize(nbDim);
+// }
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -92,8 +92,7 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeMassFlux()
   this->m_mR = this->m_unR/this->m_a12;
   const CFreal mL = this->m_mL;
   const CFreal mR = this->m_mR;
-  const CFreal mBarSq = (this->m_unL*this->m_unL + this->m_unR*this->m_unR) /
-    (2.0*this->m_a12*this->m_a12);
+  const CFreal mBarSq = (this->m_unL*this->m_unL + this->m_unR*this->m_unR) / (2.0*this->m_a12*this->m_a12);
 
   const CFreal mInf = correctMachInf(this->m_machInf);
   const CFreal mZero = std::sqrt(std::min(1.0, max(mBarSq,  mInf*mInf)));
@@ -115,8 +114,7 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeMassFlux()
   const CFreal pL = (*this->m_lData)[UPDATEVAR::PTERM::P];
   const CFreal pR = (*this->m_rData)[UPDATEVAR::PTERM::P];
   const CFreal rhoa2 = 0.5*(rhoL + rhoR)*this->m_a12*this->m_a12;
-  const CFreal mP = (-this->m_coeffKp/m_fa) * max(1.0 - this->m_coeffSigma*mBarSq, 0.0)*
-    (pR-pL)/rhoa2;
+  const CFreal mP = (-this->m_coeffKp/m_fa) * max(1.0 - this->m_coeffSigma*mBarSq, 0.0)*(pR-pL)/rhoa2;
   
   // calculation of the Mach number at the interface
   const CFreal m12 = M4Plus + M4Minus + mP;
@@ -158,7 +156,7 @@ void AUSMPlusUpFlux<UPDATEVAR>::computePressureFlux()
 /////////////////////////////////////////////////////////////////////////////
 
 template<class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::ComputedFluxdVar(CFreal *row)
+void AUSMPlusUpFlux<UPDATEVAR>::ComputedFluxdVar(CFuint iVar, RealMatrix& JacobMatrix)
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
@@ -293,39 +291,43 @@ void AUSMPlusUpFlux<UPDATEVAR>::ComputedFluxdVar(CFreal *row)
   /// dp12dVar ----------------------------------------------
   const CFreal dp12dVar = dP5PlusdVar*pL + P5Plus*m_dpLdVar + dP5MinusdVar*pR + P5Minus*m_dpRdVar + dpudVar;
 
-  row[0] = dmdot12dVar; //dmdot12dVar*1+ mdot12*0 + 0
-  for (CFuint iDim = 0; iDim < nbDim; iDim++)
-  {
-    row[iDim+1] = dmdot12dVar*(sigmoid*(*this->m_lData)[UPDATEVAR::PTERM::VX+iDim] + (1.0-sigmoid)*(*this->m_rData)[UPDATEVAR::PTERM::VX+iDim]) 
-                + mdot12*(sigmoid*m_dVLdVar[iDim] + (1.0-sigmoid)*m_dVRdVar[iDim]) + dp12dVar*normal[iDim];    //Final result
-  }
-  row[nbEq-1] = dmdot12dVar*( sigmoid*HL+(1.0-sigmoid)*HR ) + mdot12*( sigmoid*m_dhLdVar+(1.0-sigmoid)*m_dhRdVar );
+  // JacobMatrix(0,iVar) = dmdot12dVar; //dmdot12dVar*1+ mdot12*0 + 0
+  // for (CFuint iDim = 0; iDim < nbDim; iDim++)
+  // {
+  //   JacobMatrix(iDim+1,iVar) = dmdot12dVar*(sigmoid*(*this->m_lData)[UPDATEVAR::PTERM::VX+iDim] + (1.0-sigmoid)*(*this->m_rData)[UPDATEVAR::PTERM::VX+iDim]) 
+  //               + mdot12*(sigmoid*m_dVLdVar[iDim] + (1.0-sigmoid)*m_dVRdVar[iDim]) + dp12dVar*normal[iDim];    //Final result
+  // }
+  // JacobMatrix(nbEq-1,iVar) = dmdot12dVar*( sigmoid*HL+(1.0-sigmoid)*HR ) + mdot12*( sigmoid*m_dhLdVar+(1.0-sigmoid)*m_dhRdVar );
  
+  JacobMatrix(0,iVar) = dmdot12dVar; //dmdot12dVar*1+ mdot12*0 + 0
+  JacobMatrix(1,iVar) = dmdot12dVar*(sigmoid*(*this->m_lData)[UPDATEVAR::PTERM::VX] + (1.0-sigmoid)*(*this->m_rData)[UPDATEVAR::PTERM::VX]) 
+                + mdot12*(sigmoid*m_duLdVar + (1.0-sigmoid)*m_duRdVar) + dp12dVar*normal[0];
+  JacobMatrix(2,iVar) = dmdot12dVar*(sigmoid*(*this->m_lData)[UPDATEVAR::PTERM::VY] + (1.0-sigmoid)*(*this->m_rData)[UPDATEVAR::PTERM::VY]) 
+                + mdot12*(sigmoid*m_dvLdVar + (1.0-sigmoid)*m_dvRdVar) + dp12dVar*normal[1];
+  if (nbDim==3){
+  JacobMatrix(3,iVar) = dmdot12dVar*(sigmoid*(*this->m_lData)[UPDATEVAR::PTERM::VZ] + (1.0-sigmoid)*(*this->m_rData)[UPDATEVAR::PTERM::VZ]) 
+                + mdot12*(sigmoid*m_dwLdVar + (1.0-sigmoid)*m_dwRdVar) + dp12dVar*normal[2];
+  }
+  JacobMatrix(nbEq-1,iVar) = dmdot12dVar*( sigmoid*HL+(1.0-sigmoid)*HR ) + mdot12*( sigmoid*m_dhLdVar+(1.0-sigmoid)*m_dhRdVar );
+
   CFLog(VERBOSE," AUSMPlusUpFlux::ComputedFluxdVar  END \n");
 
 }
 
 /////////////////////////////////////////////////////////////////////////////
 
-
 template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::computeJacobianDPvt(CFuint side)
+void AUSMPlusUpFlux<UPDATEVAR>::dFdP(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
 {
-  using namespace Framework;
-
-  CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDPvt("<<side<<") START\n");  
-
-  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
-
-  this->_tmpJacobMatrix = 0.;
-
- // dFdP
-  const CFreal Mmass  = 28.965338E-3; //molecular mass, assuming current fluid is air
-  const CFreal Rgas   = 8.3145; //universal gas constant [J/mol/K] taken from Wolfram Alpha
-  const CFreal TL     = (*this->m_lData)[UPDATEVAR::PTERM::T];
-  const CFreal TR     = (*this->m_rData)[UPDATEVAR::PTERM::T];
-  
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdP  START\n");
+// Update var : (p,u,v,w,T)
+// dudP = dvdP = dwdP = 0 => dqndP = 0  
+// H = E + p/rho => H = gamma/(gamma-1)Rgas*T/Mmass + V^2/2 => dHdP = 0
+// rho = p*M/(R*T) => drhodP = M*p/(R*TS).
+  const CFreal Mmass = 28.965338E-3; //molecular mass, assuming current fluid is air
+  const CFreal Rgas  = 8.3145; //universal gas constant [J/mol/K] taken from Wolfram Alpha
+  const CFreal TL    = (*this->m_lData)[UPDATEVAR::PTERM::T];
+  const CFreal TR    = (*this->m_rData)[UPDATEVAR::PTERM::T];
   m_dqnLdVar  = 0.;
   m_dqnRdVar  = 0.;
   m_dhLdVar   = 0.;
@@ -334,37 +336,142 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeJacobianDPvt(CFuint side)
   m_drhoRdVar = (side == LEFT) ? 0. : Mmass/(Rgas*TR);
   m_dpLdVar   = (side == LEFT) ? 1. : 0.;
   m_dpRdVar   = (side == LEFT) ? 0. : 1.;
-  m_dVLdVar   = 0.;
-  m_dVRdVar   = 0.;
-
-  ComputedFluxdVar(&(this->_tmpJacobMatrix[0]));
-  
-  //dFdU dFdV (dFdW)
+  // m_dVLdVar   = 0.;
+  // m_dVRdVar   = 0.;
+  m_duRdVar = 0.;
+  m_duLdVar = 0.;
+  m_dvRdVar = 0.;
+  m_dvLdVar = 0.;
+  m_dwRdVar = 0.;
+  m_dwLdVar = 0.;
+  ComputedFluxdVar(iVar,JacobMatrix);
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdP  END\n"); 
+}
+ 
+//////////////////////////////////////////////////////////////////////////////
+   
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::dFdU(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdU  START\n");  
+// Update var : (p,u,v,w,T)
+// dudu= 1.; dvdu = dwdu = 0 => dqndu = nx  
+// H = E + p/rho => H = R*T*gamma/(M*(gamma-1) + V^2/2 => dHdu = u
+// rho = p*M/(R*T) => drhodu =0.
   const RealVector& normal = this->getMethodData().getUnitNormal();
   m_drhoLdVar = 0.;
-  m_drhoRdVar = 0.;
-  m_dpLdVar   = 0.;
-  m_dpRdVar   = 0.;
+  m_drhoRdVar  = 0.;
+  m_dpLdVar    = 0.;
+  m_dpRdVar    = 0.;
+  m_dqnLdVar   = (side == LEFT) ? normal[0] : 0.;
+  m_dqnRdVar   = (side == LEFT) ? 0. : normal[0];
+  m_dhLdVar    = (side == LEFT) ?(*this->m_lData)[UPDATEVAR::PTERM::VX]: 0.;
+  m_dhRdVar    = (side == LEFT) ? 0. : (*this->m_rData)[UPDATEVAR::PTERM::VX];
+  // m_dVLdVar    = 0.;
+  // m_dVRdVar    = 0.; 
+  // m_dVLdVar[0] = (side == LEFT) ? 1. : 0.;
+  // m_dVRdVar[0] = (side == LEFT) ? 0. : 1.;
+  m_duLdVar = (side == LEFT) ? 1. : 0.;
+  m_duRdVar = (side == LEFT) ? 0. : 1.;
+  m_dvLdVar = 0.;
+  m_dvRdVar = 0.;
+  m_dwLdVar = 0.;
+  m_dwRdVar = 0.;
+  ComputedFluxdVar(iVar,JacobMatrix);
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdU  END\n");  
+}
 
-  for (CFuint iDim = 0 ; iDim < nbDim ; iDim ++)
-  {
-    m_dqnLdVar      = (side == LEFT) ? normal[iDim] : 0.;
-    m_dqnRdVar      = (side == LEFT) ? 0. : normal[iDim];
-    m_dhLdVar       = (side == LEFT) ?(*this->m_lData)[UPDATEVAR::PTERM::VX+iDim]: 0.;
-    m_dhRdVar       = (side == LEFT) ? 0. : (*this->m_rData)[UPDATEVAR::PTERM::VX+iDim];
-    m_dVLdVar       = 0.;
-    m_dVRdVar       = 0.; 
-    m_dVLdVar[iDim] = (side == LEFT) ? 1. : 0.;
-    m_dVRdVar[iDim] = (side == LEFT) ? 0. : 1.;
+//////////////////////////////////////////////////////////////////////////////
+   
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::dFdV(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdV  START\n");  
+// Update var : (p,u,v,w,T)
+// dvdv= 1.; dudv = dwdv = 0 => dqndv = ny  
+// H = E + p/rho => H = R*T*gamma/(M*(gamma-1) + V^2/2 => dHdv = v
+// rho = p*M/(R*T) => drhodu =0.
+  const RealVector& normal = this->getMethodData().getUnitNormal();
+  m_drhoLdVar  = 0.;
+  m_drhoRdVar  = 0.;
+  m_dpLdVar    = 0.;
+  m_dpRdVar    = 0.;
+  m_dqnLdVar   = (side == LEFT) ? normal[1]: 0.;
+  m_dqnRdVar   = (side == LEFT) ? 0. : normal[1];
+  m_dhLdVar    = (side == LEFT) ?(*this->m_lData)[UPDATEVAR::PTERM::VY]: 0.;
+  m_dhRdVar    = (side == LEFT) ? 0. : (*this->m_rData)[UPDATEVAR::PTERM::VY];
+  // m_dVLdVar    = 0.;
+  // m_dVRdVar    = 0.; 
+  // m_dVLdVar[1] = (side == LEFT) ? 1. : 0.;
+  // m_dVRdVar[1] = (side == LEFT) ? 0. : 1.;
+  m_duLdVar = 0.;
+  m_duRdVar = 0.;
+  m_dvLdVar = (side == LEFT) ? 1. : 0.;
+  m_dvRdVar = (side == LEFT) ? 0. : 1.;
+  m_dwLdVar = 0.;
+  m_dwRdVar = 0.;
+  ComputedFluxdVar(iVar,JacobMatrix);
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdV  END\n");  
+}
 
-    ComputedFluxdVar(&(this->_tmpJacobMatrix[nbEqs*(1+iDim)]));
-  }
-  //dFdT
-  const CFreal pL        = (*this->m_lData)[UPDATEVAR::PTERM::P];
-  const CFreal pR        = (*this->m_rData)[UPDATEVAR::PTERM::P];
-  const CFreal gammaL    = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
-  const CFreal gammaR    = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
-
+//////////////////////////////////////////////////////////////////////////////
+  
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::dFdW(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdW  START\n");  
+// Update var : (p,u,v,w,T)
+// dwdw= 1.; dudw = dvdw = 0 => dqndw = nz  
+// H = E + p/rho => H = R*T*gamma/(M*(gamma-1) + V^2/2 => dHdv = w
+// rho = p*M/(R*T) => drhodu =0.
+  const RealVector& normal = this->getMethodData().getUnitNormal();
+  m_drhoLdVar  = 0.;
+  m_drhoRdVar  = 0.;
+  m_dpLdVar    = 0.;
+  m_dpRdVar    = 0.;
+  m_dqnLdVar   = (side == LEFT) ? normal[2] : 0.;
+  m_dqnRdVar   = (side == LEFT) ? 0. : normal[2];
+  m_dhLdVar    = (side == LEFT) ?(*this->m_lData)[UPDATEVAR::PTERM::VZ]: 0.;
+  m_dhRdVar    = (side == LEFT) ? 0. : (*this->m_rData)[UPDATEVAR::PTERM::VZ];
+  // m_dVLdVar    = 0.;
+  // m_dVRdVar    = 0.; 
+  // m_dVLdVar[2] = (side == LEFT) ? 1. : 0.;
+  // m_dVRdVar[2] = (side == LEFT) ? 0. : 1.;
+  m_duLdVar = 0.;
+  m_duRdVar = 0.;
+  m_dvLdVar = 0.;
+  m_dvRdVar = 0.;
+  m_dwLdVar = (side == LEFT) ? 1. : 0.;
+  m_dwRdVar = (side == LEFT) ? 0. : 1.;
+  ComputedFluxdVar(iVar,JacobMatrix);
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdW  END\n");  
+}
+ 
+//////////////////////////////////////////////////////////////////////////////
+   
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::dFdT(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
+{
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdT  START\n");
+// Update var : (p,u,v,w,T)
+// dudT = dvdT = dwdT = 0 => dqndT = 0  
+// H = E + p/rho => H = gamma/(gamma-1)Rgas*T/Mmass + V^2/2 => dHdT = gamma/(gamma-1)Rgas*/Mmass
+// rho = p*M/(R*T) => drhodT = -M*p/(R*T^2).
+  const CFreal Mmass  = 28.965338E-3; //molecular mass, assuming current fluid is air
+  const CFreal Rgas   = 8.3145; //universal gas constant [J/mol/K] taken from Wolfram Alpha
+  const CFreal pL     = (*this->m_lData)[UPDATEVAR::PTERM::P];
+  const CFreal pR     = (*this->m_rData)[UPDATEVAR::PTERM::P];
+  const CFreal TL     = (*this->m_lData)[UPDATEVAR::PTERM::T];
+  const CFreal TR     = (*this->m_rData)[UPDATEVAR::PTERM::T];
+  const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
   m_dqnLdVar  = 0.;
   m_dqnRdVar  = 0.;
   m_dhLdVar   = (side == LEFT) ? gammaL*Rgas/(Mmass*(gammaL-1.)) : 0.;
@@ -373,37 +480,73 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeJacobianDPvt(CFuint side)
   m_drhoRdVar = (side == LEFT) ? 0. : -Mmass*pR/(Rgas*TR*TR);
   m_dpLdVar   = 0.;
   m_dpRdVar   = 0.;
-  m_dVLdVar   = 0.;
-  m_dVRdVar   = 0.;   
-
-  ComputedFluxdVar(&(this->_tmpJacobMatrix[nbEqs*(nbEqs-1)]));
-
-  CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDPvt() END\n");
+  // m_dVLdVar   = 0.;
+  // m_dVRdVar   = 0.;
+  m_duLdVar = 0.;
+  m_duRdVar = 0.;
+  m_dvLdVar = 0.;
+  m_dvRdVar = 0.;
+  m_dwLdVar = 0.;
+  m_dwRdVar = 0.;  
+  ComputedFluxdVar(iVar,JacobMatrix);
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdT  END\n");  
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::computeJacobianDCons(CFuint side)
+void AUSMPlusUpFlux<UPDATEVAR>::dFdK(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
 {
-  using namespace Framework;
-
-  CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDCons("<<side<<") START\n");  
-
-  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
-    
-  this->_tmpJacobMatrix = 0.;
-
- // dFdRho
-  const CFreal gammaL    = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
-  const CFreal gammaR    = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
-  const CFreal rhoL      = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
-  const CFreal rhoR      = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
-  const CFreal EL        = (*this->m_lData)[UPDATEVAR::PTERM::E];
-  const CFreal ER        = (*this->m_rData)[UPDATEVAR::PTERM::E];
-  const CFreal qnL       = this->m_unL;
-  const CFreal qnR       = this->m_unR;
+  using namespace std;
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdK  START\n");  
+// Update var : ???
+  m_dqnLdVar  = 0.;
+  m_dqnRdVar  = 0.;
+  m_dhLdVar   = 0.;
+  m_dhRdVar   = 0.;
+  m_drhoLdVar = 0.;
+  m_drhoRdVar = 0.;
+  m_dpLdVar   = 0.;
+  m_dpRdVar   = 0.;
+  // m_dVLdVar   = 0.;
+  // m_dVRdVar   = 0.;
+  m_duLdVar = 0.;
+  m_duRdVar = 0.;
+  m_dvLdVar = 0.;
+  m_dvRdVar = 0.;
+  m_dwLdVar = 0.;
+  m_dwRdVar = 0.;     
+  ComputedFluxdVar(iVar,JacobMatrix);
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdK  END\n");  
+}
+ 
+//////////////////////////////////////////////////////////////////////////////
+      
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::dFdRho(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRho  START\n");  
+// Update var : (rho,rhou,rhov,rhow,rhoE)
+// E        = p/(rho*gamma-1) + V^2/2 => 
+// p        = (gamma -1 )(rhoE - 0.5(rhoV)^2/rho) 
+// dpdrho    = 0.5(gamma -1)V^2;
+// u        = rhou/rho  
+// dudrho   = -rhou/rho^2 
+// dqndrho = -(unx+vny+wnz)/rho = -qn/rho
+// H        = E + p/rho => 
+// H        = gamma*rhoE/rho - 0.5*(gamma-1)*(rhoV)^2/rho^2 
+// dHdrho   = -gamma*rhoE/rho^2 +(gamma-1)(rhou^2+rhov^2+rhow^2)/rho^3
+  const CFuint nbDim  = PhysicalModelStack::getActive()->getDim();
+  const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
+  const CFreal rhoL   = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR   = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
+  const CFreal EL     = (*this->m_lData)[UPDATEVAR::PTERM::E];
+  const CFreal ER     = (*this->m_rData)[UPDATEVAR::PTERM::E];
+  const CFreal qnL    = this->m_unL;
+  const CFreal qnR    = this->m_unR;
 
   m_dqnLdVar  = (side == LEFT) ? -qnL/rhoL : 0.;
   m_dqnRdVar  = (side == LEFT) ? 0. : -qnR/rhoR;
@@ -422,35 +565,166 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeJacobianDCons(CFuint side)
   m_dpLdVar   = (side == LEFT) ? 0.5*(gammaL-1.)*VLsq : 0.;
   m_dpRdVar   = (side == LEFT) ? 0. : 0.5*(gammaR-1.)*VRsq;
 
-  for (CFuint it = 0; it < nbDim ;it++)
-    {
-      m_dVLdVar[it]   = (side == LEFT) ? -(*this->m_lData)[UPDATEVAR::PTERM::VX+it]/rhoL : 0.;
-      m_dVRdVar[it]   = (side == LEFT) ? 0. : -(*this->m_rData)[UPDATEVAR::PTERM::VX+it]/rhoR;
-    }
-
-  ComputedFluxdVar(&(this->_tmpJacobMatrix[0]));
-  
-  //dFdrhoU dFdrhoV (dFdrhoW)
-  const RealVector& normal = this->getMethodData().getUnitNormal();
-  m_drhoLdVar = 0.;
-  m_drhoRdVar = 0.;
-
-  for (CFuint iDim = 0 ; iDim < nbDim ; iDim ++)
-  {
-    m_dqnLdVar      = (side == LEFT) ? normal[iDim]/rhoL: 0.;
-    m_dqnRdVar      = (side == LEFT) ? 0. : normal[iDim]/rhoR;
-    m_dhLdVar       = (side == LEFT) ? -(gammaL-1.)*(*this->m_lData)[UPDATEVAR::PTERM::VX+iDim]/rhoL: 0.;
-    m_dhRdVar       = (side == LEFT) ? 0 : -(gammaR-1.)*(*this->m_rData)[UPDATEVAR::PTERM::VX+iDim]/rhoR;
-    m_dpLdVar       = (side == LEFT) ? -(gammaL-1.)*(*this->m_lData)[UPDATEVAR::PTERM::VX+iDim]: 0.;
-    m_dpRdVar       = (side == LEFT) ? 0. : -(gammaR-1.)*(*this->m_rData)[UPDATEVAR::PTERM::VX+iDim];
-    m_dVLdVar       = 0.;
-    m_dVRdVar       = 0.;  
-    m_dVLdVar[iDim] = (side == LEFT) ? 1/rhoL : 0.;
-    m_dVRdVar[iDim] = (side == LEFT) ? 0. : 1/rhoR;
-    ComputedFluxdVar(&(this->_tmpJacobMatrix[nbEqs*(1+iDim)]));
+  // for (CFuint it = 0; it < nbDim ;it++)
+  //   {
+  //     m_dVLdVar[it]   = (side == LEFT) ? -(*this->m_lData)[UPDATEVAR::PTERM::VX+it]/rhoL : 0.;
+  //     m_dVRdVar[it]   = (side == LEFT) ? 0. : -(*this->m_rData)[UPDATEVAR::PTERM::VX+it]/rhoR;
+  //   }
+  m_duLdVar = (side == LEFT) ? -(*this->m_lData)[UPDATEVAR::PTERM::VX]/rhoL : 0.;
+  m_duRdVar = (side == LEFT) ? 0. : -(*this->m_rData)[UPDATEVAR::PTERM::VX]/rhoR;
+  m_dvLdVar = (side == LEFT) ? -(*this->m_lData)[UPDATEVAR::PTERM::VY]/rhoL : 0.;
+  m_dvRdVar = (side == LEFT) ? 0. : -(*this->m_rData)[UPDATEVAR::PTERM::VY]/rhoR;
+  if ( PhysicalModelStack::getActive()->getDim()==3){
+  m_dwLdVar = (side == LEFT) ? -(*this->m_lData)[UPDATEVAR::PTERM::VZ]/rhoL : 0.;
+  m_dwRdVar = (side == LEFT) ? 0. : -(*this->m_rData)[UPDATEVAR::PTERM::VZ]/rhoR;
   }
+  ComputedFluxdVar(iVar,JacobMatrix);
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRho  END\n");  
 
-  //dFdrhoE
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::dFdRhoU(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRhoU  START\n");  
+// Update var : (rho,rhou,rhov,rhow,rhoE)
+// E = p/(rho*gamma-1) + V^2/2  
+// p = (gamma -1 )(rhoE - 0.5(rhoV)^2/rho) 
+// dprhou = -(gamma -1)u;
+// u = rhou/rho => dwdrhou = 1/rho => dqndrhou = nx/rho
+// H = E + p/rho
+// H = gamma*rhoE/rho - 0.5*(gamma-1)*(rhoV)^2/rho^2 
+// dHdrhou = -(gamma-1)u/rho;
+  const RealVector& normal = this->getMethodData().getUnitNormal();
+  const CFreal rhoL   = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR   = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
+  const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
+  m_drhoLdVar  = 0.;
+  m_drhoRdVar  = 0.;
+  m_dqnLdVar   = (side == LEFT) ? normal[0]/rhoL: 0.;
+  m_dqnRdVar   = (side == LEFT) ? 0. : normal[0]/rhoR;
+  m_dhLdVar    = (side == LEFT) ? -(gammaL-1.)*(*this->m_lData)[UPDATEVAR::PTERM::VX]/rhoL: 0.;
+  m_dhRdVar    = (side == LEFT) ? 0 : -(gammaR-1.)*(*this->m_rData)[UPDATEVAR::PTERM::VX]/rhoR;
+  m_dpLdVar    = (side == LEFT) ? -(gammaL-1.)*(*this->m_lData)[UPDATEVAR::PTERM::VX]: 0.;
+  m_dpRdVar    = (side == LEFT) ? 0. : -(gammaR-1.)*(*this->m_rData)[UPDATEVAR::PTERM::VX];
+  // m_dVLdVar    = 0.;
+  // m_dVRdVar    = 0.;  
+  // m_dVLdVar[0] = (side == LEFT) ? 1/rhoL : 0.;
+  // m_dVRdVar[0] = (side == LEFT) ? 0. : 1/rhoR;
+  m_duLdVar = (side == LEFT) ? 1/rhoL : 0.;
+  m_duRdVar = (side == LEFT) ? 0. : 1/rhoR;
+  m_dvLdVar = 0.;
+  m_dvRdVar = 0.;
+  m_dwLdVar = 0.;
+  m_dwRdVar = 0.; 
+  ComputedFluxdVar(iVar,JacobMatrix);
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRhoU  END\n");  
+}
+ 
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::dFdRhoV(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRhoV  START\n");  
+// Update var : (rho,rhou,rhov,rhow,rhoE)
+// E = p/(rho*gamma-1) + V^2/2 => p = (gamma -1 )(rhoE - 0.5(rhoV)^2/rho^2) => dprhov = -(gamma -1)v/rho;
+// v = rhov/rho => dwdrhoc = 1/rho => dqndrhov = ny/rho
+// H = E + p/rho => H = gamma*rhoE/rho - 0.5*(gamma-1)*(rhoV)^2/rho^2 => dHdrhov = -(gamma-1)v/rho
+  const RealVector& normal = this->getMethodData().getUnitNormal();
+  const CFreal rhoL   = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR   = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
+  const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
+  m_drhoLdVar  = 0.;
+  m_drhoRdVar  = 0.;
+  m_dqnLdVar   = (side == LEFT) ? normal[1]/rhoL: 0.;
+  m_dqnRdVar   = (side == LEFT) ? 0. : normal[1]/rhoR;
+  m_dhLdVar    = (side == LEFT) ? -(gammaL-1.)*(*this->m_lData)[UPDATEVAR::PTERM::VY]/rhoL: 0.;
+  m_dhRdVar    = (side == LEFT) ? 0 : -(gammaR-1.)*(*this->m_rData)[UPDATEVAR::PTERM::VY]/rhoR;
+  m_dpLdVar    = (side == LEFT) ? -(gammaL-1.)*(*this->m_lData)[UPDATEVAR::PTERM::VY]: 0.;
+  m_dpRdVar    = (side == LEFT) ? 0. : -(gammaR-1.)*(*this->m_rData)[UPDATEVAR::PTERM::VY];
+  // m_dVLdVar    = 0.;
+  // m_dVRdVar    = 0.;  
+  // m_dVLdVar[1] = (side == LEFT) ? 1/rhoL : 0.;
+  // m_dVRdVar[1] = (side == LEFT) ? 0. : 1/rhoR;
+  m_duLdVar = 0.;
+  m_duRdVar = 0.;
+  m_dvLdVar = (side == LEFT) ? 1/rhoL : 0.;
+  m_dvRdVar = (side == LEFT) ? 0. : 1/rhoR;
+  m_dwLdVar = 0.;
+  m_dwRdVar = 0.;  
+  ComputedFluxdVar(iVar,JacobMatrix);
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRhoV  END\n");  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::dFdRhoW(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRhoW  START\n");  
+// Update var : (rho,rhou,rhov,rhow,rhoE)
+// E = p/(rho*gamma-1) + V^2/2 => p = (gamma -1 )(rhoE - 0.5(rhoV)^2/rho) => dprhow = -(gamma -1)w;
+// w = rhoW/rho => dwdrhoW = 1/rho => dqndrhoW = nz/rho
+// H = E + p/rho =
+// H = gamma*rhoE/rho - 0.5*(gamma-1)*(rhoV)^2/rho^2 
+// dHdrhow = -(gamma-1)w/rho
+  const RealVector& normal = this->getMethodData().getUnitNormal();
+  const CFreal rhoL   = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR   = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
+  const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
+  m_drhoLdVar  = 0.;
+  m_drhoRdVar  = 0.;
+  m_dqnLdVar   = (side == LEFT) ? normal[2]/rhoL: 0.;
+  m_dqnRdVar   = (side == LEFT) ? 0. : normal[2]/rhoR;
+  m_dhLdVar    = (side == LEFT) ? -(gammaL-1.)*(*this->m_lData)[UPDATEVAR::PTERM::VZ]/rhoL: 0.;
+  m_dhRdVar    = (side == LEFT) ? 0 : -(gammaR-1.)*(*this->m_rData)[UPDATEVAR::PTERM::VZ]/rhoR;
+  m_dpLdVar    = (side == LEFT) ? -(gammaL-1.)*(*this->m_lData)[UPDATEVAR::PTERM::VZ]: 0.;
+  m_dpRdVar    = (side == LEFT) ? 0. : -(gammaR-1.)*(*this->m_rData)[UPDATEVAR::PTERM::VZ];
+  // m_dVLdVar    = 0.;
+  // m_dVRdVar    = 0.;  
+  // m_dVLdVar[2] = (side == LEFT) ? 1/rhoL : 0.;
+  // m_dVRdVar[2] = (side == LEFT) ? 0. : 1/rhoR;
+  m_duLdVar = 0.;
+  m_duRdVar = 0.;
+  m_dvLdVar = 0.;
+  m_dvRdVar = 0.;  
+  m_dwLdVar = (side == LEFT) ? 1/rhoL : 0.;
+  m_dwRdVar = (side == LEFT) ? 0. : 1/rhoR;
+  ComputedFluxdVar(iVar,JacobMatrix);
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRhoW  END\n");  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::dFdRhoE(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
+{
+  using namespace std;
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRhoE  START\n");  
+// Update var : (rho,rhou,rhov,rhow,rhoE)
+// E = p/(rho*gamma-1) + V^2/2 
+// p = (gamma -1 )(rhoE - 0.5(rhoV)^2/rho) 
+// dprhoE = gamma-1;
+// u = rhou/rho dudrhoE = 0. dqndrhoE = 0
+// H = E + p/rho 
+// H = gamma*rhoE/rho - 0.5*(gamma-1)*(rhoV)^2/rho^2 
+// dHdrhoE = gamma/rho .
+  const CFreal rhoL   = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR   = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
+  const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
   m_dqnLdVar  = 0.;
   m_dqnRdVar  = 0.;
   m_dhLdVar   = (side == LEFT) ? gammaL/rhoL : 0.;
@@ -459,10 +733,66 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeJacobianDCons(CFuint side)
   m_drhoRdVar = 0.;
   m_dpLdVar   = (side == LEFT) ? gammaL-1. : 0.;
   m_dpRdVar   = (side == LEFT) ? 0. : gammaR-1.;
-  m_dVLdVar   = 0.;
-  m_dVRdVar   = 0.;   
+  // m_dVLdVar   = 0.;
+  // m_dVRdVar   = 0.;
+  m_duLdVar = 0.;
+  m_duRdVar = 0.;
+  m_dvLdVar = 0.;
+  m_dvRdVar = 0.;  
+  m_dwLdVar = 0.;
+  m_dwRdVar = 0.;    
+  ComputedFluxdVar(iVar,JacobMatrix);
+  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRhoE  END\n");  
+}
 
-  ComputedFluxdVar(&(this->_tmpJacobMatrix[nbEqs*(nbEqs-1)]));
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::computeJacobianDPvt(CFuint side, RealMatrix& JacobMatrix)
+{
+  using namespace Framework;
+
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDPvt("<<side<<") START\n");  
+
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
+
+ // dFdP
+  dFdP(side,0,JacobMatrix);
+  //dFdU dFdV (dFdW)
+  dFdU(side,1,JacobMatrix);
+  dFdV(side,2,JacobMatrix);
+  if (nbDim==3) {
+    dFdW(side,3,JacobMatrix);
+  }
+  //dFdT
+  dFdT(side,nbEqs-1,JacobMatrix);
+
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDPvt() END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::computeJacobianDCons(CFuint side, RealMatrix& JacobMatrix)
+{
+  using namespace Framework;
+
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDCons("<<side<<") START\n");  
+
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
+
+  // dFdRho
+  dFdRho(side,0,JacobMatrix);
+  //dFdRhoU dFdRhoV (dFdRhoW)
+  dFdRhoU(side,1,JacobMatrix);
+  dFdRhoV(side,2,JacobMatrix);
+  if (nbDim==3) {
+    dFdRhoW(side,3,JacobMatrix);
+  }
+  //dFdrhoE
+  dFdRhoE(side,nbEqs-1,JacobMatrix);
 
   CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDCons() END\n");
 
@@ -476,13 +806,14 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeLeftJacobian()
   CFLog(VERBOSE,"AUSMPlusUpFlux::computeLeftJacobian() START\n");  
  
   const std::string upVar = this->getMethodData().getUpdateVarStr();
+
+  RealMatrix& LeftJacobian = this->_lFluxJacobian;
   if (upVar == "Puvt" || upVar == "Pvt") {
-    computeJacobianDPvt(LEFT);
+    computeJacobianDPvt(LEFT,LeftJacobian);
   }
   if (upVar == "Cons") {
-    computeJacobianDCons(LEFT);
+    computeJacobianDCons(LEFT,LeftJacobian);
   }
-  (this->_tmpJacobMatrix).transpose(this->_lFluxJacobian);
   
   CFLog(VERBOSE,"AUSMPlusUpFlux::computeLeftJacobian() END\n");  
 }
@@ -495,13 +826,14 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeRightJacobian()
   CFLog(VERBOSE,"AUSMPlusUpFlux::computeRightJacobian() START\n");  
   
   const std::string upVar = this->getMethodData().getUpdateVarStr();
+  RealMatrix& RightJacobian = this->_rFluxJacobian;
+
   if (upVar == "Puvt" || upVar == "Pvt") {
-     computeJacobianDPvt(RIGHT);
+     computeJacobianDPvt(RIGHT,RightJacobian);
   }
   if (upVar == "Cons") {
-    computeJacobianDCons(RIGHT);
+    computeJacobianDCons(RIGHT,RightJacobian);
   }
-  (this->_tmpJacobMatrix).transpose(this->_rFluxJacobian);
 
   CFLog(VERBOSE,"AUSMPlusUpFlux::computeRightJacobian() END\n");  
 }
