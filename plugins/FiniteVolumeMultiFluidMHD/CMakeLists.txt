@@ -53,6 +53,8 @@ SubOutletPEIWRhoiViTi.cxx
 SubOutletPEIWRhoiViTi.hh
 SubOutletPPCWRhoiViTi.cxx
 SubOutletPPCWRhoiViTi.hh
+SuperOutletLimiter.cxx
+SuperOutletLimiter.hh
 ThreeFluidMHDST2D.ci
 ThreeFluidMHDST2D.cxx
 ThreeFluidMHDST2D.hh
