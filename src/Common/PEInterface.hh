@@ -62,7 +62,7 @@ public:
   std::string getGroupName(int rank) {return "Default";}
   
   /// @return the group data corresponding to given name
-  Group& getGroup(const std::string name) {Group g; return g;}
+  Group getGroup(const std::string name) {Group g; return g;}
   
   /// create MPI group 
   /// @param nsp            namespace name
