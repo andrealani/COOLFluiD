@@ -32,15 +32,15 @@ public:
   ~PEInterfaceBase ();
 
   /// Returns the total number of execution contexts in
-  /// the universum (not the big one of course, but the
+  /// the universe (not the big one of course, but the
   /// cluster-one ;-) )
-  unsigned int GetProcessorCount () const;
+  unsigned int GetProcessorCount(const std::string nspaceName) const;
 
   /// Return the ID of this processor (between 0 and GetProcessorCount)
-  unsigned int GetRank () const;
+  unsigned int GetRank(const std::string nspaceName) const;
   
   /// Set the barrier
-  void setBarrier();
+  void setBarrier(const std::string nspaceName);
 
   /// Return true if this is a parallel simulation in some way
   /// (IMPORTANT: When COOLFluiD was compiled for multiple CPU's
@@ -56,7 +56,7 @@ public:
 
   /// This function should be called periodically to help advance
   /// pending communication requests.
-  void AdvanceCommunication ();
+  void AdvanceCommunication (const std::string nspaceName);
   
   /// @return group corresponding to given global rank
   std::string getGroupName(int rank) {return "Default";}
