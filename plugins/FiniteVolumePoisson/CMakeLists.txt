@@ -6,7 +6,7 @@ DirichletCondition.hh
 FiniteVolumePoisson.hh
 NeumannCondition.cxx
 NeumannCondition.hh
-PureDiffFlux.ci
+#PureDiffFlux.ci
 PureDiffFlux.cxx
 PureDiffFlux.hh
 )
