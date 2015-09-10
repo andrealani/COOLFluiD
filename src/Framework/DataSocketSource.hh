@@ -48,10 +48,10 @@ public:
   bool isAllocated () const { return m_storage.isNotNull(); }
   
   /// @return the global size of the underlying data array
-  virtual CFuint getGlobalSize() const {getDataHandle().getGlobalSize();}
+  virtual CFuint getGlobalSize() const {return getDataHandle().getGlobalSize();}
   
   /// @return the local size of the underlying data array
-  virtual CFuint getLocalSize() const {getDataHandle().getLocalSize();}
+  virtual CFuint getLocalSize() const {return getDataHandle().getLocalSize();}
   
 private:
   
