@@ -2,6 +2,7 @@
 #include "Framework/BaseTerm.hh"
 #include "FiniteVolume/FVMCC_PolyRec.hh"
 #include "MHD/MHDProjectionTerm.hh"
+#include "AUSMPWFluxMHD.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -31,8 +32,6 @@ AUSMFluxMHD<UPDATEVAR>::AUSMFluxMHD(const std::string& name) :
   _rightEv(),
   _leftEv(),
   _eValues(),
-  _absEvalues(),
-  _absJacob(),
   _jRight(),
   _jLeft(),
   _jacob(),
@@ -42,10 +41,8 @@ AUSMFluxMHD<UPDATEVAR>::AUSMFluxMHD(const std::string& name) :
   _statesLR(2)
 {
   addConfigOptionsTo(this);
-
-  m_choiceA12 = 1;
+  m_choiceA12 = 4;
   this->setParameter("choiceA12",&m_choiceA12);
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -81,15 +78,13 @@ void AUSMFluxMHD<UPDATEVAR>::setup()
   m_updateVarSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
   cf_assert(m_updateVarSet.isNotNull());
   
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+//  const CFuint dim = PhysicalModelStack::getActive()->getDim();
   
   // AUSM scheme related data
   const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
   _rightEv.resize(nbEqs, nbEqs);
   _leftEv.resize(nbEqs, nbEqs);
   _eValues.resize(nbEqs);
-  _absEvalues.resize(nbEqs);
-  _absJacob.resize(nbEqs,nbEqs);
   _jRight.resize(nbEqs,nbEqs);
   _jLeft.resize(nbEqs, nbEqs);
   _jacob.resize(nbEqs, nbEqs);
@@ -115,12 +110,9 @@ void AUSMFluxMHD<UPDATEVAR>::compute(RealVector& result)
   vector<RealVector>& pdata = getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
   m_lData = &pdata[LEFT];
   m_rData = &pdata[RIGHT];
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+//  const CFuint dim = PhysicalModelStack::getActive()->getDim();
 
   if (iEqSS == 0 || nbEqs == totalNbEqs) {
-    if (this->getMethodData().useAnalyticalConvJacob()) {
-      computeLinearizedAbsJacob();
-    }
     vector<RealVector>& pdata = getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
     m_lData = &pdata[LEFT];
     m_rData = &pdata[RIGHT];
@@ -132,24 +124,22 @@ void AUSMFluxMHD<UPDATEVAR>::compute(RealVector& result)
 
     m_unL = 0.0;
     m_unR = 0.0;
-    for (CFuint idim = 0; idim < dim; ++idim) {
+    for (CFuint idim = 0; idim < dim; ++idim)
+{
       const CFuint currXX = UPDATEVAR::PTERM::VX + idim;
       m_unL += (*m_lData)[currXX]*normal[idim];
       m_unR += (*m_rData)[currXX]*normal[idim];
-    }
-
+}
     // Compute speed of the mesh at current quadrature point
     // the normal velocities m_unL and m_unR will be modified accordingly
+
     this->computeMeshSpeed();
+    computeInterfaceMach();
+    computeReferences();
+    computeMassFluxImpl(result); // result
 
-    computeMassFlux();              // computes m_mflux12
 
-    computePressureFlux();   // m_p12
-    computeMassFluxImpl(result); // m_mflux12
-
-    if (!this->getMethodData().isPerturb()) {
-      computeUpdateCoeff();
-    }
+    if (!this->getMethodData().isPerturb()) { computeUpdateCoeff(); }
   }
 }
 
@@ -194,9 +184,9 @@ void AUSMFluxMHD<UPDATEVAR>::computeUpdateCoeff()
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <class UPDATEVAR>
-void AUSMFluxMHD<UPDATEVAR>::computeMassFluxImpl(RealVector& result)
-{
+// template <class UPDATEVAR>
+// void AUSMFluxMHD<UPDATEVAR>::computeMassFluxImpl(RealVector& result)
+// {
 //    using namespace std;
 //    using namespace COOLFluiD::Framework;
 
@@ -218,7 +208,7 @@ void AUSMFluxMHD<UPDATEVAR>::computeMassFluxImpl(RealVector& result)
 //        }
 //        result[dim+1] = m_mflux12*(*upwindData)[UPDATEVAR::PTERM::H];
 //    }
-}
+// }
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -242,9 +232,6 @@ void AUSMFluxMHD<UPDATEVAR>::computeInterfaceSoundSpeed()
   case 4:
     computeSoundSpeed4();
     break;
-  case 5:
-    computeSoundSpeed5();
-    break;
   default:
     computeSoundSpeed1();
     break;
@@ -256,24 +243,34 @@ void AUSMFluxMHD<UPDATEVAR>::computeInterfaceSoundSpeed()
 template <class UPDATEVAR>
 void AUSMFluxMHD<UPDATEVAR>::computeSoundSpeed1()
 {
-//  using namespace std;
-//  using namespace COOLFluiD::Framework;
+  using namespace std;
+  using namespace COOLFluiD::Framework;
 
-//  const CFreal hL = (*this->m_lData)[UPDATEVAR::PTERM::H];
-//  const CFreal hR = (*this->m_rData)[UPDATEVAR::PTERM::H];
+  // 1st Way of calculation of the interface speed of sound, a12,
+  // suggested by Liou in his AIAA 2003-4116 paper
+  const CFreal gammaL       = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaMinus1L = gammaL - 1.0;
+  const CFreal gammaR       = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaMinus1R = gammaR - 1.0;
 
-//  // 1st Way of calculation of the interface speed of sound, a12,
-//  // suggested by Liou in his AIAA 2003-4116 paper
-//  const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
-//  const CFreal gammaMinus1L = gammaL - 1.0;
-//  const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
-//  const CFreal gammaMinus1R = gammaR - 1.0;
-//  const CFreal aCritL = sqrt( (2.0*gammaMinus1L/(gammaL+1.0))*hL);
-//  const CFreal aCritR = sqrt( (2.0*gammaMinus1R/(gammaR+1.0))*hR);
+  // Enthalpy
+  const CFreal pL   = (*this->m_lData)[UPDATEVAR::PTERM::P];
+  const CFreal pR   = (*this->m_rData)[UPDATEVAR::PTERM::P];
+  const CFreal rhoL = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
+  const CFreal VL   = (*this->m_lData)[UPDATEVAR::PTERM::V];
+  const CFreal VR   = (*this->m_rData)[UPDATEVAR::PTERM::V];
 
-//  const CFreal acL = (aCritL*aCritL)/max(aCritL, this->m_unL);
-//  const CFreal acR = (aCritR*aCritR)/max(aCritR, -this->m_unR);
-//  this->m_a12 = min(acL, acR);
+  const CFreal hL   = pL/(rhoL*(gammaMinus1L)) + pL/rhoL + 0.5*std::pow(VL, 2.0);
+  const CFreal hR   = pR/(rhoR*(gammaMinus1R)) + pR/rhoR + 0.5*std::pow(VR, 2.0);
+
+  // Critical sound speed
+  const CFreal aCritL = sqrt( (2.0*gammaMinus1L/(gammaL + 1.0))*hL);
+  const CFreal aCritR = sqrt( (2.0*gammaMinus1R/(gammaR + 1.0))*hR);
+
+  const CFreal acL = (aCritL*aCritL)/max(aCritL, this->m_unL);
+  const CFreal acR = (aCritR*aCritR)/max(aCritR, -this->m_unR);
+  this->m_a12      = std::min(acL, acR);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -281,15 +278,15 @@ void AUSMFluxMHD<UPDATEVAR>::computeSoundSpeed1()
 template <class UPDATEVAR>
 void AUSMFluxMHD<UPDATEVAR>::computeSoundSpeed2()
 {
-//  using namespace std;
-//  using namespace COOLFluiD::Framework;
+  using namespace std;
+  using namespace COOLFluiD::Framework;
 
-//  // 2nd Way of calculation of the interface speed of sound, a12,
-//  // by simply taking the arithmetic average of the speeds of sounds
-//  // at the left and right states
-//  const CFreal aL = (*this->m_lData)[UPDATEVAR::PTERM::A];
-//  const CFreal aR = (*this->m_rData)[UPDATEVAR::PTERM::A];
-//  this->m_a12 = 0.5 * (aL+aR);
+  // 2nd Way of calculation of the interface speed of sound, a12,
+  // by simply taking the arithmetic average of the speeds of sounds
+  // at the left and right states
+  const CFreal aL = (*this->m_lData)[UPDATEVAR::PTERM::A];
+  const CFreal aR = (*this->m_rData)[UPDATEVAR::PTERM::A];
+  this->m_a12     = 0.5 * (aL+aR);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -297,15 +294,15 @@ void AUSMFluxMHD<UPDATEVAR>::computeSoundSpeed2()
 template <class UPDATEVAR>
 void AUSMFluxMHD<UPDATEVAR>::computeSoundSpeed3()
 {
-//  using namespace std;
-//  using namespace COOLFluiD::Framework;
+  using namespace std;
+  using namespace COOLFluiD::Framework;
 
-//  // 3rd Way of calculation of the interface speed of sound, a12,
-//  // by simply taking the geometric mean of the speeds of sounds
-//  // at the left and right states
-//  const CFreal aL = (*this->m_lData)[UPDATEVAR::PTERM::A];
-//  const CFreal aR = (*this->m_rData)[UPDATEVAR::PTERM::A];
-//  this->m_a12 = sqrt(aL*aR);
+  // 3rd Way of calculation of the interface speed of sound, a12,
+  // by simply taking the geometric mean of the speeds of sounds
+  // at the left and right states
+  const CFreal aL = (*this->m_lData)[UPDATEVAR::PTERM::A];
+  const CFreal aR = (*this->m_rData)[UPDATEVAR::PTERM::A];
+  this->m_a12     = sqrt(aL*aR);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -313,94 +310,30 @@ void AUSMFluxMHD<UPDATEVAR>::computeSoundSpeed3()
 template <class UPDATEVAR>
 void AUSMFluxMHD<UPDATEVAR>::computeSoundSpeed4()
 {
-//  using namespace std;
-//  using namespace COOLFluiD::Framework;
+  using namespace std;
+  using namespace COOLFluiD::Framework;
 
-//  // Way of calculation of the interface speed of sound, a12,
-//  // in case of TCNEQ suggested by Jin Wook Lee in his PhD thesis
-//  const CFreal kL = 0.5*(*this->m_lData)[UPDATEVAR::PTERM::V]*
-//    (*this->m_lData)[UPDATEVAR::PTERM::V];
-//  const CFreal kR = 0.5*(*this->m_rData)[UPDATEVAR::PTERM::V]*
-//    (*this->m_rData)[UPDATEVAR::PTERM::V];
-//  const CFreal hsL = (*this->m_lData)[UPDATEVAR::PTERM::H]- kL + 0.5*m_unL*m_unL;
-//  const CFreal hsR = (*this->m_rData)[UPDATEVAR::PTERM::H]- kR + 0.5*m_unR*m_unR;
-//  const CFreal Hnormal = 0.5*(hsL + hsR);
-//  const CFreal gammaLL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
-//  const CFreal gammaRR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
-//  const CFreal c1 = (gammaLL-1.)/(gammaLL*m_unR)- (gammaRR-1.)/(gammaRR*m_unL);
-//  const CFreal c2 = (gammaRR+1.)/(gammaRR*m_unL)- (gammaLL+1.)/(gammaLL*m_unR);
-//  const CFreal as = sqrt(2.*Hnormal*std::abs(c1)/std::abs(c2));
-//  this->m_a12 = ((m_unL + m_unR) < 0.0) ? as*as/max(std::abs(m_unR),as) :
-//    as*as/max(std::abs(m_unL),as);
-//  // this->m_a12 = min(as*as/max(std::abs(m_unR),as), as*as/max(std::abs(m_unL),as));
+  const CFreal aL   = (*this->m_lData)[UPDATEVAR::PTERM::A];
+  const CFreal aR   = (*this->m_rData)[UPDATEVAR::PTERM::A];
+  const CFreal BL   = (*this->m_lData)[UPDATEVAR::PTERM::B];
+  const CFreal BR   = (*this->m_rData)[UPDATEVAR::PTERM::B];
+  const CFreal rhoL = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
+  const CFreal KL   = aL*aL + (BL*BL)/rhoL;
+  const CFreal KR   = aR*aR + (BR*BR)/rhoR;
+
+  // Critical sound speed
+  const CFreal acL = sqrt( (1./2.)*(KL + sqrt(KL*KL - 4.*(aL*aL*this->m_BnL*this->m_BnL)/rhoL) ) );
+  const CFreal acR = sqrt( (1./2.)*(KR + sqrt(KR*KR - 4.*(aR*aR*this->m_BnR*this->m_BnR)/rhoR) ) );
+  this->m_a12 = std::min(acL, acR);
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-template <class UPDATEVAR>
-void AUSMFluxMHD<UPDATEVAR>::computeSoundSpeed5()
-{
-//  using namespace std;
-//  using namespace COOLFluiD::Framework;
-
-//  // Way of calculation of the interface speed of sound, a12,
-//  // in case of TCNEQ suggested by Jin Wook Lee in his PhD thesis
-//  // unused //  const CFreal aL = (*this->m_lData)[UPDATEVAR::PTERM::A];
-//  // unused //   const CFreal aR = (*this->m_rData)[UPDATEVAR::PTERM::A];
-
-//  // Way of calculation of the interface speed of sound, a12,
-//  // suggested by Liou in his AIAA 2003-4116 paper but applied to
-//  // NEQ flows (Selmin's lecture)
-//  RealVector& lData = (*this->m_lData);
-//  RealVector& rData = (*this->m_rData);
-
-//  const CFreal eL = lData[UPDATEVAR::PTERM::E] -
-//    0.5*lData[UPDATEVAR::PTERM::V]*lData[UPDATEVAR::PTERM::V];
-//  const CFreal eR = rData[UPDATEVAR::PTERM::E] -
-//    0.5*rData[UPDATEVAR::PTERM::V]*rData[UPDATEVAR::PTERM::V];
-
-//  const CFreal gBarL = 1. + lData[UPDATEVAR::PTERM::P]/
-//    (eL*lData[UPDATEVAR::PTERM::RHO]);
-//  const CFreal gBarMinus1L = lData[UPDATEVAR::PTERM::GAMMA]*(gBarL - 1.0);
-
-//  const CFreal gBarR = 1. + rData[UPDATEVAR::PTERM::P]/
-//    (eR*rData[UPDATEVAR::PTERM::RHO]);
-//  const CFreal gBarMinus1R = rData[UPDATEVAR::PTERM::GAMMA]*(gBarR - 1.0);
-
-//  const CFreal hLL = lData[UPDATEVAR::PTERM::H];
-//  const CFreal hRR = rData[UPDATEVAR::PTERM::H];
-//  const CFreal aCritLL2 = 2.0*gBarMinus1L/(2.*gBarL + gBarMinus1L)*hLL;
-//  const CFreal aCritRR2 = 2.0*gBarMinus1R/(2.*gBarR + gBarMinus1R)*hRR;
-//  const CFreal acLL = aCritLL2/max(sqrt(aCritLL2), this->m_unL);
-//  const CFreal acRR = aCritRR2/max(sqrt(aCritRR2), -this->m_unR);
-//  this->m_a12 = min(acLL, acRR);
-}
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
 void AUSMFluxMHD<UPDATEVAR>::computeLeftJacobian()
 {  
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Common;
-  
-  CellCenterFVMData& data = this->getMethodData(); 
-  GeometricEntity& face = *data.getCurrentFace();
-  State *const leftState = face.getState(LEFT);
-  RealVector& pData = PhysicalModelStack::getActive()->getImplementor()->
-    getConvectiveTerm()->getPhysicalData();
-  getMethodData().getUpdateVar()->computePhysicalData(*leftState, pData);
-  getMethodData().getSolutionVar()->computeProjectedJacobian(data.getUnitNormal(), _jacob); 
-  _jLeft = 0.5*(_jacob + _absJacob);
-  
-  // computeTransformMatrix(leftState);
-  // _lFluxJacobian = _jLeft*_jacobDummy;
-  
-  SafePtr<VarSetMatrixTransformer>  vs = 
-    getMethodData().getUpdateToSolutionInUpdateMatTrans();
-  vs->setMatrix(*leftState);
-  const RealMatrix& dUdP = *vs->getMatrix();  
-  _lFluxJacobian = _jLeft*dUdP;
+  FVMCC_FluxSplitter::computeLeftJacobian();	
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -408,59 +341,9 @@ void AUSMFluxMHD<UPDATEVAR>::computeLeftJacobian()
 template <class UPDATEVAR>
 void AUSMFluxMHD<UPDATEVAR>::computeRightJacobian()
 { 
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Common;
-  
-  CellCenterFVMData& data = this->getMethodData(); 
-  GeometricEntity& face = *data.getCurrentFace();
-  State *const rightState = face.getState(RIGHT);
-  RealVector& pData = PhysicalModelStack::getActive()->getImplementor()->
-    getConvectiveTerm()->getPhysicalData();
-  getMethodData().getUpdateVar()->computePhysicalData(*rightState, pData);
-  getMethodData().getSolutionVar()->computeProjectedJacobian(data.getUnitNormal(), _jacob);
-  _jRight = 0.5*(_jacob - _absJacob);
-  
-  // computeTransformMatrix(rightState);
-  //_rFluxJacobian = _jRight*_jacobDummy;
-  
-  SafePtr<VarSetMatrixTransformer>  vs = 
-    getMethodData().getUpdateToSolutionInUpdateMatTrans();
-  vs->setMatrix(*rightState);
-  const RealMatrix& dUdP = *vs->getMatrix();
-  _rFluxJacobian = _jRight*dUdP;
+  FVMCC_FluxSplitter::computeRightJacobian();
 }
       
-//////////////////////////////////////////////////////////////////////////////
-
-template <class UPDATEVAR>
-void AUSMFluxMHD<UPDATEVAR>::computeLinearizedAbsJacob()
-{  
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  
-  CellCenterFVMData& data = this->getMethodData(); 
-  
-  // linearization in update states
-  _statesLR[0] = &data.getPolyReconstructor()->getCurrLeftState();
-  _statesLR[1] = &data.getPolyReconstructor()->getCurrRightState();
-  
-  getMethodData().getJacobianLinearizer()->linearize(_statesLR);
-  
-  // set the eigenvectors and eigenvalues of the linearized jacobian
-  getMethodData().getSolutionVar()->computeEigenValuesVectors(_rightEv,
-							      _leftEv,
-							      _eValues,
-							      data.getUnitNormal());
-  
-  // set the abs of the  eigen values (the implementation of this
-  // function change if there are entropy or carbuncle fixes)
-  _absEvalues = abs(_eValues);
-  
-  // abs of the jacobian
-  _absJacob = _rightEv*(_absEvalues*_leftEv);
-}
-
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace FiniteVolume

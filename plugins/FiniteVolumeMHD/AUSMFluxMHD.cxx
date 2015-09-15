@@ -2,8 +2,9 @@
 #include "FiniteVolumeMHD/FiniteVolumeMHD.hh"
 #include "MHD/MHD2DProjectionVarSet.hh"
 #include "MHD/MHD3DProjectionVarSet.hh"
+#include "Maxwell/Maxwell2DProjectionVarSet.hh"
+#include "Maxwell/Maxwell3DProjectionVarSet.hh"
 #include "Framework/MethodStrategyProvider.hh"
-
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -27,13 +28,14 @@ MethodStrategyProvider<AUSMPWFluxMHD<MHD2DProjectionVarSet>,
 		       CellCenterFVMData,
                        FluxSplitter<CellCenterFVMData>,
                FiniteVolumeMHDModule>
-aUSMPWFluxMHD2DProvider("AUSMPWFluxMHD2D");
+ausmPWMHD2dProvider("AUSMPWMHD2D");
 
 MethodStrategyProvider<AUSMPWFluxMHD<MHD3DProjectionVarSet>,
 		       CellCenterFVMData,
                        FluxSplitter<CellCenterFVMData>,
                FiniteVolumeMHDModule>
-aUSMPWFluxMHD3DProvider("AUSMPWFluxMHD3D");
+ausmPWMHD3dProvider("AUSMPWMHD3D");
+
 
 //////////////////////////////////////////////////////////////////////////////
 

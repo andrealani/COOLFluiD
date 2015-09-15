@@ -1,7 +1,7 @@
 LIST ( APPEND FiniteVolumeMHD_files
 AUSMFluxMHD.ci 
 AUSMFluxMHD.cxx 
-AUSMFluxMHD.hh 
+AUSMFluxMHD.hh
 AUSMPWFluxMHD.ci 
 AUSMPWFluxMHD.hh
 FiniteVolumeMHD.hh

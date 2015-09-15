@@ -1,4 +1,4 @@
-#include "Framework/EquationSetData.hh"
+#include "AUSMPWFluxMHD.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -9,23 +9,17 @@ namespace COOLFluiD {
     namespace FiniteVolume {
 
 //////////////////////////////////////////////////////////////////////////////
+
 // This sets the constants that are read by the CFcase. The values below are
 // the default values, used in case they're not set in the CFcase
+
 template <class UPDATEVAR>
 AUSMPWFluxMHD<UPDATEVAR>::AUSMPWFluxMHD(const std::string& name) :
   AUSMFluxMHD<UPDATEVAR>(name)
 {
   this->addConfigOptionsTo(this);
-  m_beta = 1./8.; this->setParameter("beta",&m_beta);		//beta(AUSM+) is normally 1/8
-  m_alpha = 3./16.; this->setParameter("alpha",&m_alpha);	//alpha(AUSM+) is normally 3/16
-  m_Vinf = 10.; this->setParameter("Vinf",&m_Vinf); 		// V(infinite)
-  m_Lref = 0.04; this->setParameter("Lref",&m_Lref);		// L reference = shortest cell length
-  m_nu = 0.0000181; this->setParameter("nu",&m_nu);		// nu, dynamic viscosity
-  m_ChoiceLref = 0; this->setParameter("ChoiceLref",&m_ChoiceLref);// Choice of method to compute Lref
-  m_ChoiceMp = 0; this->setParameter("ChoiceMp", &m_ChoiceMp);	// Choice of method to compute mp
-  m_uco = 1.; this->setParameter("uco", &m_uco);		// cut-off speed
-  m_umax = 340.; this->setParameter("umax", &m_umax);		// upper bound speed
-  m_Ml=0.5; this->setParameter("Ml",&m_Ml);			// limit Mach number for weigthing function of mp
+  m_beta = 1./8.; this->setParameter("beta",&m_beta);		//beta from (AUSM+) is normally 1/8
+  m_alpha = 3./16.; this->setParameter("alpha",&m_alpha);	//alpha from (AUSM+) is normally 3/16
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -37,85 +31,336 @@ AUSMPWFluxMHD<UPDATEVAR>::~AUSMPWFluxMHD()
 
 //////////////////////////////////////////////////////////////////////////////
 
+
 template <class UPDATEVAR>
 void AUSMPWFluxMHD<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
 {
   options.template addConfigOption< CFreal >
-    ("Vinf","Vinfinite");
+    ("beta"," -1./16. <= beta coefficient <= 1./2.");
   options.template addConfigOption< CFreal >
-    ("Lref","reference length, smallest cell size");
-  options.template addConfigOption< CFreal >
-    ("nu","dynamic viscosity");
-  options.template addConfigOption< CFuint >
-    ("ChoiceLref","Choice of method to compute Lref");
-  options.template addConfigOption< CFuint >
-    ("ChoiceMp","Choice of method to compute mp");
-  options.template addConfigOption< CFreal >
-    ("uco","cut-off speed");
-  options.template addConfigOption<CFreal>
-    ("umax","upper bound speed");
-  options.template addConfigOption< CFreal >
-        ("beta"," -1/16 <= beta coefficient <= 1/2.");
-  options.template addConfigOption< CFreal >
-    ("alpha"," -3/4 <= beta coefficient <= 3/16.");
-  options.template addConfigOption< CFreal >
-    ("Ml","M limit weight function");
+    ("alpha"," -3./4. <= alpha coefficient <= 3./16.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-void AUSMPWFluxMHD<UPDATEVAR>::computeMassFlux()
+void AUSMPWFluxMHD<UPDATEVAR>::computeInterfaceMach()
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
-
-  this->computeInterfaceSoundSpeed(); // m_a12
-
-  // calculation of the Mach number for the left and the right states
-  this->m_mL = this->m_unL/this->m_a12;
-  this->m_mR = this->m_unR/this->m_a12;
-  const CFreal mL = this->m_mL;
-  const CFreal mR = this->m_mR;
-
-  const CFreal M4Plus = (std::abs(mL) >= 1.0) ? this->mach1Plus(mL) :
-    this->mach2Plus(mL) + m_beta*pow(mL*mL - 1.0, 2.);
-
-  const CFreal M4Minus = (std::abs(mR) >= 1.0) ? this->mach1Min(mR) :
-    this->mach2Min(mR) - m_beta*pow(mR*mR - 1.0, 2.);
-
-  const CFreal rhoL = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
-  const CFreal rhoR = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
-
-  // calculation of the Mach number at the interface
-  const CFreal m12 = M4Plus + M4Minus;
-  // calculation of the mass flux at the interface
-  this->m_mflux12 = (m12 > 0.0) ? this->m_a12*m12 * rhoL : this->m_a12 * m12 * rhoR;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-template <class UPDATEVAR>
-void AUSMPWFluxMHD<UPDATEVAR>::computePressureFlux()
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::MHD;
   using namespace COOLFluiD::MathTools;
 
-  // here in AIAA 2003-4116 there is only "m_fa"
-  const CFreal mL = this->m_mL;
-  const CFreal mR = this->m_mR;
-  const CFreal P5Plus = (std::abs(mL) >= 1.0) ? 0.5*(1 + MathFunctions::sign(mL)) :
-    this->mach2Plus(mL)*(2.0-mL) + m_alpha*mL*pow(mL*mL-1., 2.0);
+    const RealVector& normal = this->getMethodData().getUnitNormal();
+    const CFuint dim = PhysicalModelStack::getActive()->getDim();
 
-  const CFreal P5Minus = (std::abs(mR) >= 1.0) ? 0.5*(1 - MathFunctions::sign(mR)) :
-    -this->mach2Min(mR)*(2.0+mR) - m_alpha*mR*pow(mR*mR-1., 2.0);
+    this->m_BnL = 0.0;
+    this->m_BnR = 0.0;
 
-  const CFreal pL = (*this->m_lData)[UPDATEVAR::PTERM::P];
-  const CFreal pR = (*this->m_rData)[UPDATEVAR::PTERM::P];
-  // calculation of the pressure flux at the interface
-  this->m_p12 = P5Plus*pL + P5Minus*pR;
+    for (CFuint idim = 0; idim < dim; idim++)
+{
+    const CFuint currBXX = UPDATEVAR::PTERM::BX + idim;
+    this->m_BnL += (*this->m_lData)[currBXX]*normal[idim];
+    this->m_BnR += (*this->m_rData)[currBXX]*normal[idim];
 }
+
+    this->computeInterfaceSoundSpeed(); // m_a12
+
+    // calculation of the Mach number for the right and left states
+    this->m_mL = this->m_unL/this->m_a12;
+    this->m_mR = this->m_unR/this->m_a12;
+
+    const CFreal mL = this->m_mL;
+    const CFreal mR = this->m_mR;
+
+    const CFreal M4Plus  = (std::abs(mL) >= 1.0) ? this->mach1Plus(mL) : this->mach2Plus(mL) + m_beta*pow(mL*mL - 1.0, 2.0);
+    const CFreal M4Minus = (std::abs(mR) >= 1.0) ? this->mach1Min(mR)  : this->mach2Min(mR)  - m_beta*pow(mR*mR - 1.0, 2.0);
+    this->m_M4Plus  = M4Plus;
+    this->m_M4Minus = M4Minus;
+
+    // calculation of the Interface Mach number
+    this->m_m12 = M4Plus + M4Minus;
+/*
+    CFLog(VERBOSE,    " \n "
+         <<           "  ########################################################################################## "
+         << " \n " << " ## INTERFACE MACH ## "
+         << " \n " << " ## m_a12     " << this->m_a12
+         << " \n " << " ## m_unR     " << this->m_unR
+         << " \n " << " ## m_unL     " << this->m_unL
+         << " \n " << " ## mR        " << mR
+         << " \n " << " ## mL        " << mL
+         << " \n " << " ## m_M4Minus " << m_M4Minus
+         << " \n " << " ## m_M4Plus  " << m_M4Plus
+         << " \n " << " ########################################################################################## "
+         << " \n " << " ## m_m12     " << this->m_m12
+         << " \n " << " ########################################################################################## " << " \n ");*/
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPWFluxMHD<UPDATEVAR>::computeReferences()
+{
+    using namespace std;
+    using namespace COOLFluiD::Framework;
+    using namespace COOLFluiD::Common;
+    using namespace COOLFluiD::Physics::MHD;
+    using namespace COOLFluiD::MathTools;
+
+//    const vector<RealVector>& pdata = this->getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
+//    const RealVector& (*this->m_lData)  = pdata[LEFT];
+ //   const RealVector& (*this->m_rData) = pdata[RIGHT];
+
+    // Normals, squares and scalars
+
+    const CFreal rhoL   = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
+    const CFreal rhoR   = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
+    const CFreal pL     = (*this->m_lData)[UPDATEVAR::PTERM::P];
+    const CFreal pR     = (*this->m_rData)[UPDATEVAR::PTERM::P];
+    const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
+    const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
+
+    B2L    = 0.0;
+    B2R    = 0.0;
+    VdotBL = 0.0;
+    VdotBR = 0.0;
+    V2L    = 0.0;
+    V2R    = 0.0;
+
+    const CFuint dim = PhysicalModelStack::getActive()->getDim();
+
+    for (CFuint idim = 0; idim < dim; idim++)
+ {
+    VdotBL  += (*this->m_lData)[UPDATEVAR::PTERM::VX + idim]*(*this->m_lData)[UPDATEVAR::PTERM::BX + idim];
+    VdotBR  += (*this->m_rData)[UPDATEVAR::PTERM::VX + idim]*(*this->m_rData)[UPDATEVAR::PTERM::BX + idim];
+    V2L     += (*this->m_lData)[UPDATEVAR::PTERM::VX + idim]*(*this->m_lData)[UPDATEVAR::PTERM::VX + idim];
+    V2R     += (*this->m_rData)[UPDATEVAR::PTERM::VX + idim]*(*this->m_rData)[UPDATEVAR::PTERM::VX + idim];
+ }
+    for (CFuint idim = 0; idim < 3; idim++)
+ {
+    B2L     += (*this->m_lData)[UPDATEVAR::PTERM::BX + idim]*(*this->m_lData)[UPDATEVAR::PTERM::BX + idim];
+    B2R     += (*this->m_rData)[UPDATEVAR::PTERM::BX + idim]*(*this->m_rData)[UPDATEVAR::PTERM::BX + idim];
+ }
+    const CFreal EL = (pL/(gammaL - 1.0)) + 0.5*(rhoL*V2L + B2L);
+    const CFreal ER = (pR/(gammaR - 1.0)) + 0.5*(rhoR*V2R + B2R);
+    const CFreal Bn = 0.5*((this->m_BnL) + (this->m_BnR));
+    this->m_EL      = EL;
+    this->m_ER      = ER;
+    this->m_Bn      = Bn;
+
+    // Pondered Pressure5 numbers depending on Mach numbers of both sides
+
+    const CFreal mL = this->m_mL;
+    const CFreal mR = this->m_mR;
+
+    const CFreal P5Plus  = (std::abs(mL) >= 1.0) ? 0.5*(1 + MathFunctions::sign(mL)) : this->mach2Plus(mL)*(2.0 - mL) + m_alpha*mL*pow(mL*mL - 1.0, 2.0);
+    const CFreal P5Minus = (std::abs(mR) >= 1.0) ? 0.5*(1 - MathFunctions::sign(mR)) : -this->mach2Min(mR)*(2.0 + mR) - m_alpha*mR*pow(mR*mR - 1.0, 2.0);
+    this->m_P5Minus = P5Minus;
+    this->m_P5Plus  = P5Plus;
+
+    // Functions of references fL, fR and wLR
+
+    const CFreal pgL = pL + 0.5*B2L;
+    const CFreal pgR = pR + 0.5*B2R;
+    const CFreal pgS = this->m_P5Plus*pgL + this->m_P5Minus*pgR;
+    this->m_pgL      = pgL;
+    this->m_pgR      = pgR;
+
+    const CFreal fL  = (pgS == 0.0) ? 0.0 : pgL/pgS - 1.0;
+    const CFreal fR  = (pgS == 0.0) ? 0.0 : pgR/pgS - 1.0;
+    const CFreal wLR = 1.0 - std::pow(std::min(pgL/pgR, pgR/pgL), 3.0);
+
+    // Pondered Mach5 numbers depending on Mach4 numbers
+
+    const CFreal M5Plus  = (this->m_m12 >= 0.0) ? this->m_M4Plus + this->m_M4Minus*((1.0 - wLR)*(1.0 + fR) - fL) : this->m_M4Plus*wLR*(1.0 + fL);
+    const CFreal M5Minus = (this->m_m12 >= 0.0) ? this->m_M4Minus*wLR*(1.0 + fR) : this->m_M4Minus + this->m_M4Plus*((1.0 - wLR)*(1.0 + fL) - fR);
+    this->m_M5Minus      = M5Minus;
+    this->m_M5Plus       = M5Plus;
+/*
+CFLog(VERBOSE,    " \n "
+     <<           "  ########################################################################################## "
+     << " \n " << "    REFERENCES    "
+     << " \n " << " ## rhoR          " << rhoR
+     << " \n " << " ## rhoL          " << rhoL
+     << " \n " << " ## pR            " << pR
+     << " \n " << " ## pL            " << pL
+     << " \n " << " ## B2R           " << B2R
+     << " \n " << " ## B2L           " << B2L
+     << " \n " << " ## Bn            " << Bn
+     << " \n " << " ## VdotBR        " << VdotBR
+     << " \n " << " ## VdotBL        " << VdotBL
+     << " \n " << " ## V2R           " << V2R
+     << " \n " << " ## V2L           " << V2L
+     << " \n " << " ## pgR           " << pgR
+     << " \n " << " ## pgL           " << pgL
+     << " \n " << " ## pgS           " << pgS
+     << " \n " << " ## mach2Min(mR)  " << this->mach2Min(mR)
+     << " \n " << " ## mach2Plus(mL) " << this->mach2Plus(mL)
+     << " \n " << " ## fR            " << fR
+     << " \n " << " ## fL            " << fL
+     << " \n " << " ## wLR           " << wLR
+     << " \n " << " ## ER            " << ER
+     << " \n " << " ## EL            " << EL
+     << " \n " << " ########################################################################################## "
+     << " \n " << "    MACH NUMBERS 5"
+     << " \n " << " ## m_P5Minus     " << m_P5Minus
+     << " \n " << " ## m_P5Plus      " << m_P5Plus
+     << " \n " << " ## m_M5Minus     " << m_M5Minus
+     << " \n " << " ## m_M5Plus      " << m_M5Plus
+     << " \n " << " ########################################################################################## " << " \n ");*/
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+template <class UPDATEVAR>
+void AUSMPWFluxMHD<UPDATEVAR>::computeMassFluxImpl(RealVector& result)
+{
+    using namespace std;
+    using namespace COOLFluiD::Framework;
+    using namespace COOLFluiD::Common;
+    using namespace COOLFluiD::Physics::MHD;
+    using namespace COOLFluiD::MathTools;
+
+    // calculation of the parameters
+
+//    const vector<RealVector>& pdata = this->getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
+//    const RealVector& (*this->m_lData)     = pdata[LEFT];
+//    const RealVector& (*this->m_rData)     = pdata[RIGHT];
+
+    const RealVector& normal = this->getMethodData().getUnitNormal();
+    SafePtr<MHDTerm> model   = PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm().d_castTo<MHDTerm>();
+    const CFreal refSpeed    = model->getRefSpeed();
+    const CFreal refSpeedSq  = refSpeed*refSpeed;
+
+     // calculation of the dimensional numerical fluxes at the interface
+
+    const CFreal rhoL  = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
+    const CFreal rhoR  = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
+    const CFreal phiL  = (*this->m_lData)[UPDATEVAR::PTERM::PHI];
+    const CFreal phiR  = (*this->m_rData)[UPDATEVAR::PTERM::PHI];
+
+    const CFuint dim = PhysicalModelStack::getActive()->getDim();
+
+if (dim == 2) {
+
+             result[0] = this->m_a12*(m_M5Plus*rhoL + m_M5Minus*rhoR);
+
+             for (CFuint idim = 0; idim < dim; idim++) {
+
+             result[idim + 1] = this->m_a12*(m_M5Plus*rhoL*(*this->m_lData)[UPDATEVAR::PTERM::VX + idim] +
+                                             m_M5Minus*rhoR*(*this->m_rData)[UPDATEVAR::PTERM::VX + idim]) +
+                                             normal[idim]*(m_P5Plus*m_pgL + m_P5Minus*m_pgR) -
+                                             0.5*m_Bn*((*this->m_lData)[UPDATEVAR::PTERM::BX + idim] +
+                                                       (*this->m_rData)[UPDATEVAR::PTERM::BX + idim]);
+                                                       }
+
+             result[3] = this->m_a12*(m_M5Plus*rhoL*(*this->m_lData)[UPDATEVAR::PTERM::VZ] +
+                                      m_M5Minus*rhoR*(*this->m_rData)[UPDATEVAR::PTERM::VZ]) -
+                            0.5*m_Bn*((*this->m_lData)[UPDATEVAR::PTERM::BZ] +
+                                      (*this->m_rData)[UPDATEVAR::PTERM::BZ]);
+
+      for (CFuint idim = 0; idim < dim; idim++) {
+
+result[idim + dim + 2] = this->m_a12*(m_M5Plus*(*this->m_lData)[UPDATEVAR::PTERM::BX + idim] +
+                                      m_M5Minus*(*this->m_rData)[UPDATEVAR::PTERM::BX + idim]) -
+                                m_Bn*(m_P5Plus*(*this->m_lData)[UPDATEVAR::PTERM::VX + idim] +
+                                      m_P5Minus*(*this->m_rData)[UPDATEVAR::PTERM::VX + idim]) +
+                                      0.5*normal[idim]*(phiL + phiR);
+                                                }
+
+result[6] = this->m_a12*(m_M5Plus*(*this->m_lData)[UPDATEVAR::PTERM::BZ] +
+                         m_M5Minus*(*this->m_rData)[UPDATEVAR::PTERM::BZ]) -
+                   m_Bn*(m_P5Plus*(*this->m_lData)[UPDATEVAR::PTERM::VZ] +
+                         m_P5Minus*(*this->m_rData)[UPDATEVAR::PTERM::VZ]);
+
+result[7] = this->m_a12*(m_M5Plus*(m_EL + m_pgL) + m_M5Minus*(m_ER + m_pgR)) -
+                   m_Bn*(m_P5Plus*VdotBL + m_P5Minus*VdotBR);
+
+result[8] = refSpeedSq*m_Bn;
+            }
+//     result[8] = refSpeedSq*m_Bn*0.00112099824 = refSpeedSq*m_Bn*sqrt(mu0);
+
+else          {
+
+             result[0] = this->m_a12*(m_M5Plus*rhoL + m_M5Minus*rhoR);
+
+             result[7] = this->m_a12*(m_M5Plus*(m_EL + m_pgL) + m_M5Minus*(m_ER + m_pgR)) -
+                                m_Bn*(m_P5Plus*VdotBL + m_P5Minus*VdotBR);
+
+             result[8] = refSpeedSq*m_Bn;
+
+      for (CFuint idim = 0; idim < dim; idim++) {
+
+      result[idim + 1] = this->m_a12*(m_M5Plus*rhoL*(*this->m_lData)[UPDATEVAR::PTERM::VX + idim] +
+                                      m_M5Minus*rhoR*(*this->m_rData)[UPDATEVAR::PTERM::VX + idim]) +
+                                      normal[idim]*(m_P5Plus*m_pgL + m_P5Minus*m_pgR) -
+                                      0.5*m_Bn*((*this->m_lData)[UPDATEVAR::PTERM::BX + idim] +
+                                                (*this->m_rData)[UPDATEVAR::PTERM::BX + idim]);
+
+result[idim + dim + 1] = this->m_a12*(m_M5Plus*(*this->m_lData)[UPDATEVAR::PTERM::BX + idim] +
+                                      m_M5Minus*(*this->m_rData)[UPDATEVAR::PTERM::BX + idim]) -
+                                m_Bn*(m_P5Plus*(*this->m_lData)[UPDATEVAR::PTERM::VX + idim] +
+                                      m_P5Minus*(*this->m_rData)[UPDATEVAR::PTERM::VX + idim]) +
+                                      0.5*normal[idim]*(phiL + phiR); }
+              }
+/*
+     CFLog(VERBOSE,    " \n "
+          <<           "  ########################################################################################## "
+          << " \n " << "    PARAMETERS"
+          << " \n " << " ## rhoR      " << rhoR
+          << " \n " << " ## rhoL      " << rhoL
+          << " \n " << " ## BR        " << BR
+          << " \n " << " ## BL        " << BL
+          << " \n " << " ## B2R       " << B2R
+          << " \n " << " ## B2L       " << B2L
+          << " \n " << " ## dim       " << dim
+          << " \n " << " ########################################################################################## "
+          << " \n " << "    TOTAL FLUX"
+          << " \n " << " ## result    " << result
+          << " \n " << " ########################################################################################## " << " \n ");
+*/
+     CFLog(VERBOSE,     " \n "
+           << " \n " << " RESULTS        "
+           << " \n " << " ## rhoL        " << (*this->m_lData)[UPDATEVAR::PTERM::RHO]
+           << " \n " << " ## rhoR        " << (*this->m_rData)[UPDATEVAR::PTERM::RHO]
+           << " \n " << " ## BxL         " << (*this->m_lData)[UPDATEVAR::PTERM::BX]
+           << " \n " << " ## BxR         " << (*this->m_rData)[UPDATEVAR::PTERM::BX]
+           << " \n " << " ## ByL         " << (*this->m_lData)[UPDATEVAR::PTERM::BY]
+           << " \n " << " ## ByR         " << (*this->m_rData)[UPDATEVAR::PTERM::BY]
+           << " \n " << " ## BzL         " << (*this->m_lData)[UPDATEVAR::PTERM::BZ]
+           << " \n " << " ## BzR         " << (*this->m_rData)[UPDATEVAR::PTERM::BZ]
+           << " \n " << " ## VxL         " << (*this->m_lData)[UPDATEVAR::PTERM::VX]
+           << " \n " << " ## VxR         " << (*this->m_rData)[UPDATEVAR::PTERM::VX]
+           << " \n " << " ## VyL         " << (*this->m_lData)[UPDATEVAR::PTERM::VY]
+           << " \n " << " ## VyR         " << (*this->m_rData)[UPDATEVAR::PTERM::VY]
+           << " \n " << " ## VzL         " << (*this->m_lData)[UPDATEVAR::PTERM::VZ]
+           << " \n " << " ## VzR         " << (*this->m_rData)[UPDATEVAR::PTERM::VZ]
+           << " \n " << " ## m_pgL       " << m_pgL
+           << " \n " << " ## m_pgR       " << m_pgR
+           << " \n " << " ## phiL        " << phiL
+           << " \n " << " ## phiR        " << phiR
+           << " \n " << " ## m_P5Plus    " << m_P5Plus
+           << " \n " << " ## m_P5Minus   " << m_P5Minus
+           << " \n " << " ## VdotBL      " << VdotBL
+           << " \n " << " ## VdotBR      " << VdotBR
+           << " \n " << " ## nx          " << normal[0]
+           << " \n " << " ## ny          " << normal[1]
+           << " \n " << " ## nz          " << normal[2]
+           << " \n " << " ## m_Bn        " << m_Bn
+           << " \n " << " ## m_BnL       " << m_BnL
+           << " \n " << " ## m_BnR       " << m_BnR
+           << " \n " << " ## this->m_a12 " << this->m_a12
+           << " \n " << " ########################################################################################## "
+           << " \n " << "    TOTAL FLUX"
+           << " \n " << " ## result    " << result
+           << " \n " << " ########################################################################################## " << " \n ");
+
+
+};
+
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -126,3 +371,148 @@ void AUSMPWFluxMHD<UPDATEVAR>::computePressureFlux()
 } // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////
+
+//     const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+//     result[nbEqs-2] = this->m_a12*(m_M5Plus*(EL + pL) + m_M5Minus*(ER + pR)) - this->Bn*(m_P5Plus*VdotBL + m_P5Minus*VdotBR);
+//     result[nbEqs-1] = refSpeedSq*this->Bn;
+
+
+//    cout << "rezizednormal " << _normal.resize(PhysicalModelStack::getActive()->getDim()); << endl;
+
+/*
+    const CFreal nz = normal[ZZ];
+    cout << "nz " << nz << endl;
+
+    const CFreal nxL = (*this->m_lData)[normal[0]];
+    const CFreal nxR = (*this->m_rData)[normal[0]];
+
+    const CFreal nyL = (*this->m_lData)[normal[1]];
+    const CFreal nyR = (*this->m_rData)[normal[1]];
+
+    const CFreal nzL = (*this->m_lData)[normal[2]];
+    const CFreal nzR = (*this->m_rData)[normal[2]];
+
+    cout << "nxL " << nxL << endl;
+    cout << "nxR " << nxR << endl;
+    cout << "nyL " << nyL << endl;
+    cout << "nyR " << nyR << endl;
+    cout << "nzL " << nzL << endl;
+    cout << "nzR " << nzR << endl;
+
+    const CFreal VL = (*this->m_lData)[UPDATEVAR::PTERM::V];
+    const CFreal VR = (*this->m_rData)[UPDATEVAR::PTERM::V];
+
+    const CFreal uL = (*this->m_lData)[UPDATEVAR::PTERM::VX];
+    const CFreal uR = (*this->m_rData)[UPDATEVAR::PTERM::VX];
+
+    const CFreal vL = (*this->m_lData)[UPDATEVAR::PTERM::VY];
+    const CFreal vR = (*this->m_rData)[UPDATEVAR::PTERM::VY];
+
+    const CFreal wL = (*this->m_lData)[UPDATEVAR::PTERM::VZ];
+    const CFreal wR = (*this->m_rData)[UPDATEVAR::PTERM::VZ];
+
+    const CFreal B = UPDATEVAR::PTERM::B;
+
+    const CFreal BxL = (*this->m_lData)[UPDATEVAR::PTERM::BX];
+    const CFreal BxR = (*this->m_rData)[UPDATEVAR::PTERM::BX];
+
+    const CFreal ByL = (*this->m_lData)[UPDATEVAR::PTERM::BY];
+    const CFreal ByR = (*this->m_rData)[UPDATEVAR::PTERM::BY];
+
+    const CFreal BzL = (*this->m_lData)[UPDATEVAR::PTERM::BZ];
+    const CFreal BzR = (*this->m_rData)[UPDATEVAR::PTERM::BZ];
+
+*/
+
+// calculation of the mass flux at the interface
+//  General form of the interface mass flux
+//  m_mflux12 = m_a12*(M5Plus*PHIL + M5Minus*PHIR) + m_p12 + 1/2*(PHIBL + PHIBR);
+
+//    result[0] = this->m_a12*(m_M5Plus*rhoL + m_M5Minus*rhoR);
+//x   result[1] = this->m_a12*(m_M5Plus*rhoL*uL + m_M5Minus*rhoR*uR) +
+//                   m_P5Plus*nxL*pL + m_P5Minus*nxR*pR - 0.5*Bn*(BxL + BxR);
+//y   result[2] = this->m_a12*(m_M5Plus*rhoL*vL + m_M5Minus*rhoR*vR) +
+//                   m_P5Plus*nyL*pL + m_P5Minus*nyR*pR - 0.5*Bn*(ByL + ByR);
+//z   result[3] = this->m_a12*(m_M5Plus*rhoL*wL + m_M5Minus*rhoR*wR) +
+//                   m_P5Plus*nzL*pL + m_P5Minus*nzR*pR - 0.5*Bn*(BzL + BzR);
+//x   result[4] = this->m_a12*(m_M5Plus*rhoL*BxL + m_M5Minus*rhoR*BxR) -
+//                   Bn*(m_P5Plus*uL + m_P5Minus*uR) + 0.5*(phiL*nxL + phiR*nxR);
+//y   result[5] = this->m_a12*(m_M5Plus*rhoL*ByL + m_M5Minus*rhoR*ByR) -
+//                   Bn*(m_P5Plus*vL + m_P5Minus*vR) + 0.5*(phiL*nyL + phiR*nyR);
+//z   result[6] = this->m_a12*(m_M5Plus*rhoL*BzL + m_M5Minus*rhoR*BzR) -
+//                   Bn*(m_P5Plus*wL + m_P5Minus*wR) + 0.5*(phiL*nzL + phiR*nzR);
+//    result[7] = this->m_a12*(m_M5Plus*(EL + pL) + m_M5Minus*(ER + pR)) -
+//                   Bn*(m_P5Plus*VdotBL + m_P5Minus*VdotBR);
+//    result[8] = refSpeedSq*Bn;
+//    const CFuint dim = PhysicalModelStack::getActive()->getDim();
+//    const RealVector& normal = this->getMethodData().getUnitNormal();
+//    const RealVector *const upwindData = (m_mflux12 > 0.0) ? m_lData : m_rData;
+
+/*
+if (dim == 2)
+{
+    const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
+    const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
+    const CFreal B2L = BxL*BxL + ByL*ByL;
+    const CFreal B2R = BxR*BxR + ByR*ByR;
+    const CFreal VdotBL = uL*BxL + vL*ByL;
+    const CFreal VdotBR = uR*BxR  + vR*ByR;
+
+    const CFreal EL = pL/(gammaL - 1.0) +
+            0.5*(rhoL*(uL*uL + vL*vL) + B2L);
+    const CFreal ER = pR/(gammaR - 1.0) +
+            0.5*(rhoR*(uR*uR + vR*vR) + B2R);
+
+    result[nbEqs-2] = this->m_a12*(m_M5Plus*(EL + pL) + m_M5Minus*(ER + pR)) -
+    Bn*(m_P5Plus*VdotBL + m_P5Minus*VdotBR);
+}
+else
+{
+    const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
+    const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
+    const CFreal B2L = BxL*BxL + ByL*ByL + BzL*BzL;
+    const CFreal B2R = BxR*BxR + ByR*ByR + BzR*BzR;
+    const CFreal VdotBL = uL*BxL + vL*ByL + wL*BzL;
+    const CFreal VdotBR = uR*BxR  + vR*ByR + wR*BzR;
+
+    const CFreal EL = pL/(gammaL - 1.0) +
+            0.5*(rhoL*(uL*uL + vL*vL + wL*wL) + B2L);
+    const CFreal ER = pR/(gammaR - 1.0) +
+            0.5*(rhoR*(uR*uR + vR*vR + wR*wR) + B2R);
+
+    result[nbEqs-2] = this->m_a12*(m_M5Plus*(EL + pL) + m_M5Minus*(ER + pR)) -
+    Bn*(m_P5Plus*VdotBL + m_P5Minus*VdotBR);
+}
+
+*/
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+//template <class UPDATEVAR>
+//void AUSMPWFluxMHD<UPDATEVAR>::computePressureFlux()
+//{
+//  using namespace std;
+//  using namespace COOLFluiD::Framework;
+//  using namespace COOLFluiD::MathTools;
+
+  // here in AIAA 2003-4116 there is only "m_fa"
+//  const CFreal mL = this->m_mL;
+//  const CFreal mR = this->m_mR;
+
+//  const CFreal P5Plus = (std::abs(mL) >= 1.0) ? 0.5*(1 + MathFunctions::sign(mL)) :
+//    this->mach2Plus(mL)*(2.0 - mL) + m_alpha*mL*pow(mL*mL - 1.0, 2.0);
+
+//  const CFreal P5Minus = (std::abs(mR) >= 1.0) ? 0.5*(1 - MathFunctions::sign(mR)) :
+//   -this->mach2Min(mR)*(2.0 + mR) - m_alpha*mR*pow(mR*mR - 1.0, 2.0);
+
+//  const CFreal pL = (*this->m_lData)[UPDATEVAR::PTERM::P];
+//  const CFreal pR = (*this->m_rData)[UPDATEVAR::PTERM::P];
+
+//  this->m_P5Minus = P5Minus;
+//  this->m_P5Plus = P5Plus;
+
+  // calculation of the pressure flux at the interface
+//   this->m_p12 = P5Plus*pL + P5Minus*pR;
+
+//}

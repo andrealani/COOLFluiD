@@ -20,8 +20,9 @@ namespace COOLFluiD {
 /**
  * This class computes the AUSM flux for MHD equations
  *
- * @author Jean-Cedric Chkair
  * @author Alejandro Alvarez Laguna
+ * @author Jean-Cedric Chkair
+ *
  *
  */
 template <class UPDATEVAR>
@@ -72,59 +73,59 @@ public:
    * Compute the right flux jacobian
    */
   virtual void computeRightJacobian();
-  
+
 protected:
   
   /**
    * Compute the flux
    */
-  virtual void computeMassFluxImpl(RealVector& result);
+  virtual void computeMassFluxImpl(RealVector& result) = 0;
   
-  /**
-   * Compute the interface mass flux
-   */
-  virtual void computeMassFlux() = 0;
-  
+//  /**
+//   * Compute the interface pressure flux
+//   */
+//  virtual void computePressureFlux() = 0;
+
   /**
    * Compute the interface pressure flux
    */
-  virtual void computePressureFlux() = 0;
-   
+  virtual void computeReferences() = 0;
+
+  /**
+   * Compute the interface Mach number
+   */
+  virtual void computeInterfaceMach() = 0;
+
   /**
    * Compute the interface sound speed
    */
   void computeInterfaceSoundSpeed();
-  
+
   /**
    * Compute the update coefficient in the standard way
    */
   void computeUpdateCoeff();
-  
+
   /**
    * Compute the interface sound speed in the 1st way
    */
   void computeSoundSpeed1();
-  
+
   /**
    * Compute the interface sound speed in the 2nd way
    */
   void computeSoundSpeed2();
-  
+
   /**
    * Compute the interface sound speed in the 3rd way
    */
   void computeSoundSpeed3();
-  
+
   /**
    * Compute the interface sound speed in the 4th way
    */
   void computeSoundSpeed4();
-  
-  /**
-   * Compute the interface sound speed in the 5th way (this should be chosen for TCNEQ flows)
-   */
-  void computeSoundSpeed5();
-  
+
   /**
    * Applies the function Mach1+(M)
    */
@@ -156,16 +157,13 @@ protected:
   {
     return -0.25*pow(mach - 1.0, 2.0);
   }
-  
-  /// Compute abs of the linearized flux jacobian
-  void computeLinearizedAbsJacob();
 
 protected:
   
   /// acquaintance of the concrete variable set
   Common::SafePtr<UPDATEVAR> m_updateVarSet;
   
-  /// left data  
+  /// left data
   RealVector* m_lData;
   
   /// right data
@@ -185,6 +183,9 @@ protected:
 
   /// mach number right
   CFreal m_mR;
+  
+  /// mach number at the interface
+  CFreal m_m12;
 
   /// interface mass flux
   CFreal m_mflux12;
@@ -195,7 +196,7 @@ protected:
   /// temporary unit normal
   RealVector m_tempUnitNormal;
   
-  /// array of physical data 
+  /// array of physical data
   RealVector m_pdata;
   
   /// matrix of right eigenvectors
@@ -206,13 +207,7 @@ protected:
 
   /// vector of eigenvalues
   RealVector   _eValues;
-  
-  /// vector of eigenvalues
-  RealVector   _absEvalues;
-
-  /// abs of the jacobian matrix
-  RealMatrix   _absJacob;
-  
+    
   /// right jacobian matrix
   RealMatrix   _jRight;
   
@@ -234,8 +229,15 @@ protected:
   /// vector storing the left and right states of a face
   std::vector<Framework::State*> _statesLR;
   
-   /// user defined coefficient for the calculation method of a12
+  /// user defined coefficient for the calculation method of a12
   CFuint m_choiceA12;
+
+  /// normal component of left magnetic field
+  CFreal m_BnL;
+
+  /// normal component of right magnetic field
+  CFreal m_BnR;
+
    
 }; // end of class AUSMFluxMHD
 
