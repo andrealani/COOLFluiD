@@ -1,7 +1,0 @@
-TITLE  =  Convergence of SubSystem
-VARIABLES = Iter Res[0] CFL PhysTime DT WallTime MemUsage
-1 -8.6628  1 0 -1 1.7932 1.50483e+08
-2 -8.45349  1 0 -1 3.51348 1.58745e+08
-3 -8.41195  1 0 -1 10.6172 1.66408e+08
-4 -8.30083  1 0 -1 12.3456 1.74731e+08
-5 -8.07203  1 0 -1 14.071 1.78213e+08

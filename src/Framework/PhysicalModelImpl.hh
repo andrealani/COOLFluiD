@@ -76,7 +76,10 @@ public:
 
   /// @return the number of equations of the SubSystem
   virtual CFuint getNbEquations() const = 0;
-
+  
+  /// @return the number of equations of the SubSystem
+  bool is2DHalf() const {return m_is2DHalf;}
+  
   /// Check if this state is in a valid state
   virtual bool validate(const State& state) const  {  return true; }
 
@@ -190,7 +193,10 @@ private: // data
 
   /// name of the physical properties library
   std::string _physicalPropLibStr;
-
+  
+  /// flag for telling that the model is 2D and 1/2
+  bool m_is2DHalf;
+  
 }; // end of class PhysicalModelImpl
 
 //////////////////////////////////////////////////////////////////////////////

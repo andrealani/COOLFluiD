@@ -53,9 +53,10 @@ CFuint MultiFluidMHDModel<DIM>::getNbEquations() const
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
   
+  const CFuint dimEff = (this->is2DHalf()) ? DIM_2D : DIM;
   std::valarray<CFuint> v(3);
   v[0] = _nbSpecies;     // y_i
-  v[1] = _nbSpecies*DIM; // u_i, v_i, w_i
+  v[1] = _nbSpecies*dimEff; // u_i, v_i, w_i
   v[2] = _nbSpecies;   // E_i
   
   // strides tell how many entries in the physical data array are needed 
@@ -79,6 +80,7 @@ CFuint MultiFluidMHDModel<DIM>::getNbEquations() const
 template <int DIM>
 std::string MultiFluidMHDModel<DIM>::getConvectiveName() const
 {
+  if (this->is2DHalf()) return "EulerMFMHD2DHalf";
   if (DIM == 2) return "EulerMFMHD2D";
   return "EulerMFMHD3D";
 }

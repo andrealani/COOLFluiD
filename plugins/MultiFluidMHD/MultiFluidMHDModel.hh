@@ -60,7 +60,9 @@ public:
    */
   std::string getTypeName() const
   {
-    return std::string("MultiFluidMHD" +  Common::StringOps::to_str(DIM) + "D");
+    return (this->is2DHalf()) ? 
+      std::string("MultiFluidMHD" +  Common::StringOps::to_str(DIM) + "DHalf") : 
+      std::string("MultiFluidMHD" +  Common::StringOps::to_str(DIM) + "D");
   }
 
   /**

@@ -25,6 +25,7 @@ void PhysicalModelImpl::defineConfigOptions(Config::OptionList& options)
    options.addConfigOption< std::string >("PropertyLibrary","Library computing physical properties.");
    options.addConfigOption< std::vector<CFreal> >("refValues","Reference values for variable scaling.");
    options.addConfigOption< CFreal >("refLength","Reference length for geometric scaling.");
+   options.addConfigOption< bool >("Is2DHalf","Flag telling if the dimension is 2D and 1/2.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -49,8 +50,11 @@ PhysicalModelImpl::PhysicalModelImpl(const std::string& name)
 
   _physicalPropLibStr = "Null";
   setParameter("PropertyLibrary",&_physicalPropLibStr);
+  
+  m_is2DHalf = false;
+  setParameter("Is2DHalf",&m_is2DHalf);
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 PhysicalModelImpl::~PhysicalModelImpl()
