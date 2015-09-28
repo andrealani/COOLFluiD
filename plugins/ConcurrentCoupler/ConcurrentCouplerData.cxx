@@ -3,6 +3,7 @@
 #include "Framework/ConvectiveVarSet.hh"
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/NamespaceSwitcher.hh"
+#include "Framework/MeshData.hh"
 
 #include "ConcurrentCoupler/ConcurrentCoupler.hh"
 #include "ConcurrentCoupler/ConcurrentCouplerData.hh"
@@ -68,6 +69,16 @@ void ConcurrentCouplerData::setup()
   _faceTrsGeoBuilder.setup();
 }
       
+//////////////////////////////////////////////////////////////////////////////
+
+SafePtr<DataStorage> ConcurrentCouplerData::getDataStorage(const string& nspName)
+{
+  SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(nspName);
+  SafePtr<MeshData> meshData = MeshDataStack::getInstance().getEntryByNamespace(nsp);
+  return meshData->getDataStorage();
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace SubSystem

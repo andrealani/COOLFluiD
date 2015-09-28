@@ -24,7 +24,6 @@ namespace COOLFluiD {
    * ConcurrentCouplerCom commands that compose @see ConcurrentCoupler
    *
    * @author Andrea Lani
-   * @author Thomas Wuilbaut
    */
 class ConcurrentCouplerData : public Framework::CouplerData {
 public:
@@ -97,7 +96,10 @@ public:
   {
     return _spaceMethod;
   }
-   
+  
+  /// @return the DataStorage corresponding to the given namespace
+  Common::SafePtr<Framework::DataStorage> getDataStorage(const std::string& nspName);
+  
 private:
   
   /// builder for standard TRS GeometricEntity's

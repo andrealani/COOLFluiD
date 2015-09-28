@@ -3,7 +3,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "ConcurrentCouplerData.hh"
+#include "ConcurrentCoupler/ConcurrentCouplerData.hh"
 #include "Framework/BaseDataSocketSink.hh"
 #include "Framework/DynamicDataSocketSet.hh"
 
@@ -88,10 +88,7 @@ protected: // functions
     std::string sendSocketStr; // name of the socket from which data are sent
     std::string recvSocketStr; // name of the socket from which data are received 
   };
-  
-  /// @return the DataStorage corresponding to the given namespace
-  Common::SafePtr<Framework::DataStorage> getDataStorage(const std::string& nspName);
-  
+    
   /// gather data from all processes in namespace nspSend to 1 process in namespace nspRecv
   /// @param idx           index of the data transfer
   virtual void gatherData(const CFuint idx);

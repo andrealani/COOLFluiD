@@ -184,16 +184,6 @@ void StdConcurrentDataTransfer::execute()
 
 //////////////////////////////////////////////////////////////////////////////
 
-SafePtr<DataStorage> StdConcurrentDataTransfer::getDataStorage(const string& nspName)
-{
-  SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
-    (SubSystemStatusStack::getCurrentName()).getNamespace(nspName);
-  SafePtr<MeshData> meshData = MeshDataStack::getInstance().getEntryByNamespace(nsp);
-  return meshData->getDataStorage();
-}	
-
-//////////////////////////////////////////////////////////////////////////////
-
 void StdConcurrentDataTransfer::gatherData(const CFuint idx)
 {
   SafePtr<DataToTrasfer> dtt = _socketName2data.find(_socketsSendRecv[idx]); 
@@ -232,7 +222,7 @@ void StdConcurrentDataTransfer::gatherData(const CFuint idx)
     recvbuf.resize(1); // dummy in sending ranks
 		
     // if my rank belong to the sending socket, gather first the number of elements to send
-    SafePtr<DataStorage> ds = getDataStorage(nspSend);
+    SafePtr<DataStorage> ds = getMethodData().getDataStorage(nspSend);
     if (_socketsConnType[idx] == "State") {
       fillSendDataGather<State*>(dtt, sendToRecvTrans, ds, sendcount, sendbuf, sendIDs);
     }
@@ -324,7 +314,7 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx)
   // build mapping from global to local DOF IDs on the receiving side
   if (PE::GetPE().isRankInGroup(rank, nspRecv)) {  
     if (_global2localIDs.size() == 0) {
-      SafePtr<DataStorage> ds = getDataStorage(nspRecv);
+      SafePtr<DataStorage> ds = getMethodData().getDataStorage(nspRecv);
       if (_socketsConnType[idx] == "State") {
 	fillMapGlobalToLocal<State*>(dtt, ds, _global2localIDs);
       }
@@ -343,7 +333,7 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx)
   // this scatters contributions from one rank in the "send" namespace 
   // to all ranks belonging to the "recv" namespace
   if (PE::GetPE().isRankInGroup(rank, nspSend)) {  
-    SafePtr<DataStorage> ds = getDataStorage(nspSend);
+    SafePtr<DataStorage> ds = getMethodData().getDataStorage(nspSend);
     if (_socketsConnType[idx] == "State") {
       fillSendCountsScatter<State*>(dtt, ds, sendcounts, sendIDcounts);
     }
@@ -383,7 +373,7 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx)
 	sendbuf[s] = dataToSend[counter];
       }
       
-      SafePtr<DataStorage> ds = getDataStorage(nspSend);
+      SafePtr<DataStorage> ds = getMethodData().getDataStorage(nspSend);
       if (_socketsConnType[idx] == "State") {
 	const string statesStr = nspSend + "_states";
 	DataHandle<State*, GLOBAL> states = ds->getGlobalData<State*>(statesStr);
@@ -430,8 +420,10 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx)
 	  const CFuint startR = localID*recvStride;
 	  const CFuint startS = id*stride;
 	  cf_assert(stride == dtt->sendStride);
-	  state.wrap(sendStride, &dataToRecv[startR]);
-	  tState.wrap(recvStride, &sendbuf[startS]);
+	  // state.wrap(sendStride, &dataToRecv[startR]); // recheck send/recv sizes here (startS instead?)
+	  // tState.wrap(recvStride, &sendbuf[startS]);   // recheck send/recv sizes here (startR instead?)
+	  state.wrap(sendStride, &sendbuf[startS]); 
+	  tState.wrap(recvStride, &dataToRecv[startR]);
 	  sendToRecvTrans->transform((const RealVector&)state, (RealVector&)tState);
 	}
       }
@@ -512,7 +504,7 @@ void StdConcurrentDataTransfer::addDataToTransfer(const CFuint idx)
   
   // send data
   if (PE::GetPE().isRankInGroup(rank, nspSend)) {  
-    SafePtr<DataStorage> ds = getDataStorage(nspSend);
+    SafePtr<DataStorage> ds = getMethodData().getDataStorage(nspSend);
     
     // local data (CFreal)
     if (ds->checkData(sendSocketStr)) {
@@ -550,7 +542,7 @@ void StdConcurrentDataTransfer::addDataToTransfer(const CFuint idx)
   
   // recv data
   if (PE::GetPE().isRankInGroup(rank, nspRecv)) {  
-    SafePtr<DataStorage> ds = getDataStorage(nspRecv);
+    SafePtr<DataStorage> ds = getMethodData().getDataStorage(nspRecv);
     
     // local data (CFreal)
     if (ds->checkData(recvSocketStr)) {
@@ -611,7 +603,7 @@ void StdConcurrentDataTransfer::addDataToTransfer(const CFuint idx)
       
 //////////////////////////////////////////////////////////////////////////////
       
-    } // namespace FluctSplit
+    } // namespace ConcurrentCoupler
 
   } // namespace Numerics
 

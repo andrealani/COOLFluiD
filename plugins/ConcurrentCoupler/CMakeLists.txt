@@ -7,6 +7,8 @@ ConcurrentCouplerData.hh
 StdConcurrentDataTransfer.ci
 StdConcurrentDataTransfer.cxx
 StdConcurrentDataTransfer.hh
+StdConcurrentReduce.cxx
+StdConcurrentReduce.hh
 )
 
 LIST ( APPEND ConcurrentCoupler_cflibs Framework )
