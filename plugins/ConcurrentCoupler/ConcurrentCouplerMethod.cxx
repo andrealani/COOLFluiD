@@ -499,8 +499,8 @@ void ConcurrentCouplerMethod::dataTransferReadImpl()
       m_interfacesRead[i]->execute();
     }
     
-    const string fileName = getStatusFilename();
     if (PE::GetPE().GetRank(getNamespace()) == 0) {
+      const string fileName = getStatusFilename();
       ofstream fout(fileName.c_str());
       // initialize the file with all 0's
       resetStatusFile(&fout, READ);
@@ -530,15 +530,22 @@ void ConcurrentCouplerMethod::dataTransferWriteImpl()
     // ///@todo this should be done only if needed
     // getMethodData()->getCollaborator<SpaceMethod>()->extrapolateStatesToNodes();
     
+    CFLog(INFO, "ConcurrentCouplerMethod::dataTransferWriteImpl() => m_interfacesWrite.size() = " 
+	  << m_interfacesWrite.size() << "\n");
+    
     for(CFuint i = 0; i < m_interfacesWrite.size(); ++i) {
       cf_assert(m_interfacesWrite[i].isNotNull());
       //   // Execute and save file if needed...
       //   if((!(iter % m_transferRates[i])) || (iter ==0) ) {
+      CFLog(INFO, "ConcurrentCouplerMethod::dataTransferWriteImpl() => before executing [" 
+	    << m_interfacesWrite[i]->getName() << "]\n");
       m_interfacesWrite[i]->execute();
+      CFLog(INFO, "ConcurrentCouplerMethod::dataTransferWriteImpl() => after executing [" 
+	    << m_interfacesWrite[i]->getName() << "]\n");
     }
     
-    const string fileName = getStatusFilename();
     if (PE::GetPE().GetRank(getNamespace()) == 0) {
+      const string fileName = getStatusFilename();
       ofstream fout(fileName.c_str());
       // initialize the file with all 0's
       resetStatusFile(&fout, WRITE);
@@ -609,16 +616,35 @@ void ConcurrentCouplerMethod::getWordsFromLine(ifstream& fin,
 
 //////////////////////////////////////////////////////////////////////////////
 
-bool ConcurrentCouplerMethod::isCouplingIter(pair<ifstream*, ofstream*>& file, TypeIO tio)
+bool ConcurrentCouplerMethod::isCouplingIter(pair<ifstream*, ofstream*>& file, 
+					     TypeIO tio)
 {
   cf_assert(m_transferRates.size() == m_coupledNamespacesStr.size());
+  
+  // There is a ASCII file named "status.<CurrentNamespace>", where <CurrentNamespace> 
+  // is returned by ConcurrentCouplerMethod::getNamespace().
+  // In this file a flag (0 or 1) is associated to each coupled namespace (the ones 
+  // user-defined with the "CoupledNameSpaces" option) within <CurrentNamespace> for 
+  // reading (ConcurrentCouplerMethod::dataTransferReadImpl()) and 
+  // writing (ConcurrentCouplerMethod::dataTransferWriteImpl()) coupling phases 
+  //
+  // Examples: case with 3 coupled namespaces (3 flags for reading, 3 flags for writing)
+  // 010010 => only the second namespace is ready (1), so no coupling will occur
+  // 111000 => all 3 namespaces are ready for coupling (only reading phase, no writing)
+  // 000111 => all 3 namespaces are ready for coupling (only writing phase, no reading)
+  // 111111 => all 3 namespaces are ready for coupling (reading and writing phases)
+  //
+  // In each group corresponding to a coupled namespace, the root process will
+  // 1) write only the flag value for its group in the corresponding position
+  // 2) read at once all flags in the file
+  // 3) communicate a flag telling whether to couple to all other ranks in its group
   
   // loop over all coupled namespaces to find the one containing the current rank
   const int rank  = PE::GetPE().GetRank("Default");     // rank in default group
   const CFuint nspSize = m_coupledNamespacesStr.size();
   bool ready = false;
   int nspID = -1;
-  vector<bool> flags(nspSize);
+  vector<char> flags(nspSize);
   const string fileName = getStatusFilename();	
   
   for (CFuint i = 0; i < nspSize; ++i) {
@@ -648,15 +674,7 @@ bool ConcurrentCouplerMethod::isCouplingIter(pair<ifstream*, ofstream*>& file, T
   }
   
   cf_assert(nspID >= 0);
-  
-  // you have one ASCII file named "status.<CurrentNamespace>", where <CurrentNamespace> is returned by getNamespace()
-  // in this file, a flag (0 or 1) is associated to each coupled namespaces within <CurrentNamespace>
-  // For example: 010  if there are three coupled namespaces
-  // In each group corresponding to a coupled namespace, the root process will 
-  // 1) write only the flag value for its group in the corresponding position
-  // 2) read at once all flags in the file
-  // 3) communicate a flag telling whether to couple to all other ranks in its group
-  
+    
   int doCoupling = 1;
   if (m_ioRoot) {
     const long offset = tio*nspSize*sizeof(bool);
@@ -664,8 +682,10 @@ bool ConcurrentCouplerMethod::isCouplingIter(pair<ifstream*, ofstream*>& file, T
     file.first->seekg(offset);
     for (CFuint i = 0; i < nspSize; ++i) {
       (*file.first) >> flags[i];
+      CFLog(VERBOSE, "ConcurrentCouplerMethod::isCouplingIter() on P[" << rank 
+	    << "] at offset [" << offset << "] => flag [" << i << "]=" << flags[i] << "\n");
       // if at least one flag is not "true" then get out
-      if (!flags[i]) {
+      if (flags[i] == '0') {
 	doCoupling = 0;
 	break;
       }
@@ -678,52 +698,11 @@ bool ConcurrentCouplerMethod::isCouplingIter(pair<ifstream*, ofstream*>& file, T
   MPIError::getInstance().check
     ("MPI_Bcast", "ConcurrentCouplerMethod::isCouplingIter()", 
      MPI_Bcast(&doCoupling, 1, MPI_INT, 0, group.comm));
-    
+  
+  CFLog(VERBOSE, "ConcurrentCouplerMethod::isCouplingIter() on P[" << rank 
+	<< "] is ready for coupling? " << doCoupling << "\n");
+  
   return doCoupling;
-  
-  /*  Group& group = PE::GetPE().getGroup(getNamespace());
-  const CFuint nspSize = m_coupledNamespacesStr.size();
-  vector<CFuint> nspIter(nspSize, 0);
-  vector<CFuint> nspIterAll(nspSize, 0);
-  
-  for (CFuint i = 0; i < nspSize; ++i) {
-    SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
-      (SubSystemStatusStack::getCurrentName()).getNamespace(m_coupledNamespacesStr[i]);
-    SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getInstance().getEntryByNamespace(nsp);
-    cf_assert(subSysStatus.isNotNull());
-    // store the number of iterations in each of the namespaces (to be coupled)
-    // this is =0 f the namespace is locally not active
-    nspIter[i] = subSysStatus->getNbIter();
-  }
-  
-  nspIterAll = nspIter;
-  
-  // MPIError::getInstance().check
-  //   ("MPI_Allreduce", "ConcurrentCouplerMethod::isCouplingIter()", 
-  //    MPI_Allreduce(&nspIter[0], &nspIterAll[0], nspSize, 
-  // 		   MPIStructDef::getMPIType(&nspIter[0]), MPI_MAX, group.comm));
-  
-  // MPI_Request mreq;
-  // MPI_Status  msta;
-  
-  // MPIError::getInstance().check
-  //   ("MPI_Iallreduce", "ConcurrentCouplerMethod::isCouplingIter()", 
-  //    MPI_Iallreduce(&nspIter[0], &nspIterAll[0], nspSize, 
-  // 		    MPIStructDef::getMPIType(&nspIter[0]), MPI_MAX, group.comm, mreq));
-  
-  // MPI_Wait(&mreq, &msta);
-  
-  CFuint counter = 0;
-  CFuint maxNbIter = 0;
-  for (CFuint i = 0; i < nspSize; ++i) {
-    const CFuint nbIter = nspIterAll[i];
-    maxNbIter = std::max(maxNbIter, nbIter);
-    CFLog(VERBOSE, "In namespace [" << m_coupledNamespacesStr[i]  << "] => iter = "<< nbIter << "\n");
-    if (nbIter > 0) {counter++;}
-  }
-  
-  // execute what follows only if iterations have started in all namespaces
-  return (counter == m_coupledNamespacesStr.size() && maxNbIter%m_transferRates[0] == 0);*/
 }
       
 //////////////////////////////////////////////////////////////////////////////

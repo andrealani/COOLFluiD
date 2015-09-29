@@ -117,9 +117,9 @@ void StdConcurrentReduce::setup()
     m_operation.resize(m_socketsSendRecv.size(), "SUM");
   }
 }
- 
+      
 //////////////////////////////////////////////////////////////////////////////
-       
+      
 void StdConcurrentReduce::execute()
 {
   CFAUTOTRACE;
@@ -300,6 +300,7 @@ void StdConcurrentReduce::createReduceGroup()
   }
   
   CFLog(VERBOSE, "StdConcurrentReduce::createReduceGroup() => end\n");
+  for (;;) {}
 }
       
 //////////////////////////////////////////////////////////////////////////////
