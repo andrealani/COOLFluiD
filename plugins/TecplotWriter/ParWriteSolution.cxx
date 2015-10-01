@@ -650,6 +650,12 @@ void ParWriteSolution::writeHeader(std::ofstream* fout,
     *fout << "\n";
   }
   
+  if (_isWriterRank) {
+    const string writerName = getMethodData().getNamespace() + "_Writers";
+    Group& wg = PE::GetPE().getGroup(writerName);
+    MPI_Barrier(wg.comm);
+  }
+  
   CFLog(VERBOSE, "ParWriteSolutionBlock::writeHeader() \"" << title << "\" end\n");
 }
  
