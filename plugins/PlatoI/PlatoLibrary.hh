@@ -104,7 +104,7 @@ public:
   {
     CFdouble tmpMass = 0.0;
     for(CFint is = 0; is < _NS; ++is) {
-      tmpMass += m_y[is]/m_molarmassp[is];
+      tmpMass += m_y[is]/m_mm[is];
     }
     return 1./tmpMass;
   }
@@ -115,7 +115,7 @@ public:
     void setRiGas(RealVector& Ri)
    {
      // for(CFint is = 0; is < _NS; ++is) {
-     //   Ri[is] = Mutation::RU/m_molarmassp[is];
+     //   Ri[is] = Mutation::RU/m_mm[is];
      // }
    }
 
@@ -551,7 +551,10 @@ protected:
   /// mass fractions
   RealVector m_y;
   
-  /// molar fractions
+  /// molar fractions (chemical components)
+  RealVector m_Xc;
+
+  /// molar fractions (species)
   RealVector m_x;
   
   /// the nuclear (elemental) mass fractions
@@ -561,7 +564,7 @@ protected:
   RealVector m_xn;
   
   /// species molar masses
-  RealVector m_molarmassp;
+  RealVector m_mm;
   
   /// stores the charge of each species
   RealVector m_charge;
