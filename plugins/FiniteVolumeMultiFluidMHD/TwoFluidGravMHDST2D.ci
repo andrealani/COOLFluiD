@@ -65,6 +65,12 @@ TwoFluidGravMHDST2D<UPDATEVAR>::TwoFluidGravMHDST2D(const std::string& name) :
 
   _correctedChemistry = true;
   setParameter("CorrectedChemistry",&_correctedChemistry);
+
+  _extended = false;
+  setParameter("ExtendedDomain",&_extended);
+
+  _height = 2e6;
+  setParameter("TopHeight",&_height);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -101,12 +107,16 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::defineConfigOptions(Config::OptionList& opt
      ("ChemicalReactions", "flag to set Chemical reactions");
  options.template addConfigOption< bool >
      ("CollisionalTerms", "flag to set Collisional terms");
-options.template addConfigOption< bool >
+ options.template addConfigOption< bool >
      ("ChargeExchangeTerms", "flag to set Charge Exchange terms");
  options.template addConfigOption< bool >
      ("GravityTerms", "flag to set Gravity terms");
  options.template addConfigOption< bool >
      ("CorrectedChemistry", "flag to set Corrected chemistry");
+  options.template addConfigOption< bool >
+     ("ExtendedDomain", "flag to set the extended domain");
+  options.template addConfigOption< CFreal >
+     ("TopHeight", "Height of the top boundary without the extended domain");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -370,6 +380,14 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
       //}
   }
   source *= volumes[elemID];
+
+//Loop to switch off the sources in the extended domain
+if(_extended){
+  if(currState->getCoordinates()[YY] > _height){
+    source = 0.;
+  }
+}
+
 }
 
 //////////////////////////////////////////////////////////////////////////////

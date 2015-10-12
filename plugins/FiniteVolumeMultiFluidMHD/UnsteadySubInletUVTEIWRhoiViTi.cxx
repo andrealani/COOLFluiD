@@ -91,7 +91,7 @@ void UnsteadySubInletUVTEIWRhoiViTi::setup()
   
   const CFuint nbSpecies = _updateVarSet->getModel()->getNbScalarVars(0); 
   
-  _uvT.resize(3*nbSpecies);  
+  _uvT.resize(3*nbSpecies + 3);  
  
 }
 
@@ -147,13 +147,32 @@ void UnsteadySubInletUVTEIWRhoiViTi::setGhostState(GeometricEntity *const face)
   const CFreal en = (*innerState)[3]*nx + (*innerState)[4]*ny;  
 //  const CFreal chi = _varSet->getModel()->getDivECleaningConst();
 
-  (*ghostState)[0] = (*innerState)[0] /*+ 2*bn*nx*/;	//Bx
-  (*ghostState)[1] = (*innerState)[1] /*+ 2*bn*ny*/;	//By
+ if(_useFunction){
+    // coordinate of the boundary point
+    _bCoord = (innerState->getCoordinates() +
+                 ghostState->getCoordinates());
+    _bCoord *= 0.5;
+    
+    const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
+    for(CFuint iDim = 0; iDim < nbDim; iDim++)
+    {
+      _variables[iDim] = _bCoord[iDim];
+    }
+    _variables[PhysicalModelStack::getActive()->getDim()] = SubSystemStatusStack::getActive()->getCurrentTimeDim();
+    _vFunction.evaluate(_variables, _uvT);
+    
+  }
+  
+  const CFreal BxBound = _uvT[3*nbSpecies];
+  const CFreal ByBound = _uvT[3*nbSpecies + 1];
+  const CFreal EzBound = _uvT[3*nbSpecies + 2];
+  (*ghostState)[0] = 2*BxBound - (*innerState)[0] /*+ 2*bn*nx*/;	//Bx
+  (*ghostState)[1] = 2*ByBound - (*innerState)[1] /*+ 2*bn*ny*/;	//By
   (*ghostState)[2] = (*innerState)[2] /*+ 2*bn*nz*/;	//Bz
   (*ghostState)[3] = (*innerState)[3] /*- 2*en*nx*/;	//Ex
   (*ghostState)[4] = (*innerState)[4] /*- 2*en*ny*/;	//Ey
-  (*ghostState)[5] = (*innerState)[5] /*- 2*en*nz*/;	//Ez
-  (*ghostState)[6] = (*innerState)[6];			//Psi
+  (*ghostState)[5] = 2*EzBound - (*innerState)[5] /*- 2*en*nz*/;	//Ez
+  (*ghostState)[6] = -(*innerState)[6];			//Psi
   (*ghostState)[7] = (*innerState)[7];			//Phi
 
 //   std::cout << "UnsteadySubInletUVTEIWRhoiViTi::setGhostState after Maxwell" <<"\n";
@@ -168,26 +187,26 @@ void UnsteadySubInletUVTEIWRhoiViTi::setGhostState(GeometricEntity *const face)
    (*ghostState)[endEM + i] = (*innerState)[endEM + i];
  }
  
- if(_useFunction){
+ //if(_useFunction){
     // coordinate of the boundary point
-   _bCoord = (innerState->getCoordinates() +
-               ghostState->getCoordinates());
-   _bCoord *= 0.5;
+   //_bCoord = (innerState->getCoordinates() +
+   //            ghostState->getCoordinates());
+   //_bCoord *= 0.5;
 
-   const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
-   for(CFuint iDim = 0; iDim < nbDim; iDim++)
-   {
-     _variables[iDim] = _bCoord[iDim];
-   }
-   _variables[PhysicalModelStack::getActive()->getDim()] = SubSystemStatusStack::getActive()->getCurrentTimeDim();
+   //const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
+   //for(CFuint iDim = 0; iDim < nbDim; iDim++)
+   //{
+     //_variables[iDim] = _bCoord[iDim];
+   //}
+   //_variables[PhysicalModelStack::getActive()->getDim()] = SubSystemStatusStack::getActive()->getCurrentTimeDim();
 
-   // (*ghostState) = 2*bcState - (*innerState)
-   _vFunction.evaluate(_variables, _uvT);
+   //// (*ghostState) = 2*bcState - (*innerState)
+   //_vFunction.evaluate(_variables, _uvT);
 
 //    _uvT[0] /= _uvTRef[0];
 //    _uvT[1] /= _uvTRef[1];
 //    _uvT[2] /= _uvTRef[2];
- }
+//}
 //  else {
 //    for (CFuint i = 0 ; i < nbSpecies; i++){
 // 	 const CFreal Ui = _ui[i];

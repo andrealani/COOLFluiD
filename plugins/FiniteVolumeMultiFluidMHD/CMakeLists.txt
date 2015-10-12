@@ -25,6 +25,9 @@ MirrorWall3D.hh
 MultiFluidMHDST.ci
 MultiFluidMHDST.cxx
 MultiFluidMHDST.hh
+MultiFluidMHDSTNoRadiation.ci
+MultiFluidMHDSTNoRadiation.cxx
+MultiFluidMHDSTNoRadiation.hh
 MultiFluidMHDST3D.ci
 MultiFluidMHDST3D.cxx
 MultiFluidMHDST3D.hh

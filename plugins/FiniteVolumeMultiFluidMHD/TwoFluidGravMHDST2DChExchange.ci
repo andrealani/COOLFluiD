@@ -60,6 +60,12 @@ TwoFluidGravMHDST2DChExchange<UPDATEVAR>::TwoFluidGravMHDST2DChExchange(const st
 
   _correctedChemistry = true;
   setParameter("CorrectedChemistry",&_correctedChemistry);
+
+  _extended = false;
+  setParameter("ExtendedDomain",&_extended);
+
+  _height = 2e6;
+  setParameter("TopHeight",&_height);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -100,6 +106,10 @@ void TwoFluidGravMHDST2DChExchange<UPDATEVAR>::defineConfigOptions(Config::Optio
      ("GravityTerms", "flag to set Gravity terms");
  options.template addConfigOption< bool >
      ("CorrectedChemistry", "flag to set Corrected chemistry");
+ options.template addConfigOption< bool >
+     ("ExtendedDomain", "flag to set the extended domain");
+ options.template addConfigOption< CFreal >
+     ("TopHeight", "Height of the top boundary without the extended domain");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -238,8 +248,8 @@ void TwoFluidGravMHDST2DChExchange<UPDATEVAR>::computeSource
       
       //MOMENTUM
       //Ions
-      const CFreal emMomentumX = _J[YY]*_Btotal[ZZ] - _J[ZZ]*_Btotal[YY];		//Electromagnetic momentum X
-      const CFreal emMomentumY = _J[ZZ]*_Btotal[XX] - _J[XX]*_Btotal[ZZ];		//Electromagnetic momentum Y
+      CFreal emMomentumX = _J[YY]*_Btotal[ZZ] - _J[ZZ]*_Btotal[YY];		//Electromagnetic momentum X
+      CFreal emMomentumY = _J[ZZ]*_Btotal[XX] - _J[XX]*_Btotal[ZZ];		//Electromagnetic momentum Y
       
       //const CFuint firstTemperature = _varSet->getModel()->getFirstScalarVar(2);  
       const CFreal ui = _physicalData[firstVelocity];
@@ -280,6 +290,16 @@ void TwoFluidGravMHDST2DChExchange<UPDATEVAR>::computeSource
       }
       //cout << "gravityMomentumSource_ny = " << gravityMomentumSource_ny <<"\n";
       //cout << "gravityMomentumSource_iy = " << gravityMomentumSource_iy <<"\n";
+      if(_extended){
+        if(currState->getCoordinates()[YY] > _height){
+          gravityMomentumSource_ix = 0.;
+          gravityMomentumSource_iy = 0.;
+          gravityMomentumSource_nx = 0.;
+          gravityMomentumSource_ny = 0.;
+          emMomentumX = 0.;
+          emMomentumY = 0.;
+        }
+      } 
 
       source[10] = emMomentumX + collMomentumSource_ix + GammaIon_i*mi*un - GammaRec_n*mi*ui + gravityMomentumSource_ix; //Ions X momentum
       source[11] = emMomentumY + collMomentumSource_iy + GammaIon_i*mi*vn - GammaRec_n*mi*vi + gravityMomentumSource_iy; //Ions Y momentum
@@ -289,7 +309,7 @@ void TwoFluidGravMHDST2DChExchange<UPDATEVAR>::computeSource
          
 
       //ENERGY
-      const CFreal emEnergy = _J[XX]*_Etotal[XX] + _J[YY]*_Etotal[YY] + _J[ZZ]*_Etotal[ZZ];
+      CFreal emEnergy = _J[XX]*_Etotal[XX] + _J[YY]*_Etotal[YY] + _J[ZZ]*_Etotal[ZZ];
       CFreal collWorki = _collMomentumSource[0]*ui + _collMomentumSource[1]*vi;
       CFreal collWorkn = _collMomentumSource[2]*un + _collMomentumSource[3]*vn;
       CFreal EnergyIon = 0;//13.6*1.60217657e-19; Changed need to be checked						//13.6eV to J
@@ -319,7 +339,13 @@ void TwoFluidGravMHDST2DChExchange<UPDATEVAR>::computeSource
         gravityEnergySource_i = 0.;
         gravityEnergySource_n = 0.;
       }
-
+      if(_extended){
+        if(currState->getCoordinates()[YY] > _height){
+          gravityEnergySource_i = 0.;
+          gravityEnergySource_n = 0.;
+          emEnergy = 0.;        
+        }
+      }
       source[14] = emEnergy + collWorki + _collEnergySource[0] + _ReactEnergySource[0] + kinEnerIon_i - kinEnerIon_e - kinEnerRec_n + gravityEnergySource_i; //Ions Energy
       source[15] = collWorkn + _collEnergySource[1] + _ReactEnergySource[1] - kinEnerIon_i + kinEnerRec_n + gravityEnergySource_n; //Neutrals Energy
 

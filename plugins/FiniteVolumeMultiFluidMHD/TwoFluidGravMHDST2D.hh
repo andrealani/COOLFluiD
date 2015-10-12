@@ -215,6 +215,12 @@ private:
   ///flag for corrected chemistry
   bool _correctedChemistry;
 
+  ///flag for switching off the source in the extended domain
+  bool _extended;
+
+  ///height of the top boundary of the physical domain (not extended)
+  CFreal _height;
+
 }; // end of class TwoFluidGravMHDST2D
 
 //////////////////////////////////////////////////////////////////////////////
