@@ -1,0 +1,195 @@
+###############################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, NavierStokes2DNEQ (thermochemical NEQ model for N-N2), 
+# NewtonIterator, mesh with quads, second-order reconstruction with limiter, 
+# AUSM+ flux, noslip wall BC, PETSc, Mutation F77 (version 2.0.0), start from 
+# scratch with artificial BL, postprocessing of wall quantities (e.g. heat flux),
+# parallel wall distance calculation 
+#
+################################################################################
+#
+# This testcases simulates a 2D cylinder corresponding to Hornung's experiment
+#
+### Residual = -5.87665
+
+# Simulator.TraceToStdOut = true
+
+# Simulation Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libNEQ libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeNEQ libGambit2CFmesh libPetscI libMutation2OLD libMutation2OLDI libAeroCoefFVM libAeroCoefFVMNEQ libMeshTools libMeshToolsFVM
+
+# this option helps if you want to check that all the options you set are declared properly (no spelling mistakes)
+# some options (for instance some Gambit or other converter settings) will always fail anyway
+#CFEnv.ErrorOnUnusedConfig = true
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NEQ/testcases/TCNEQ/Hornung
+Simulator.Paths.ResultsDir = ./RESULTS_TCNEQ
+
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/NEQ/testcases/TCNEQ/Hornung/hornung_FVM_visc.inter
+Simulator.SubSystem.InteractiveParamReader.readRate = 10
+
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DNEQ
+Simulator.SubSystem.NavierStokes2DNEQ.refValues = 0.0001952 0.004956 5590. 5590. 1833. 1833.
+Simulator.SubSystem.NavierStokes2DNEQ.refLength = 1.0
+Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary = Mutation2OLD
+Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.mixtureName = nitrogen2
+Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.reactionName = parkN2
+#the solution with "nompelisN2" is totally different
+Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.transfName = airN2
+Simulator.SubSystem.NavierStokes2DNEQ.nbSpecies = 2
+Simulator.SubSystem.NavierStokes2DNEQ.nbEulerEqs = 3
+Simulator.SubSystem.NavierStokes2DNEQ.nbVibEnergyEqs = 1
+Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.dynViscAlgo = CG
+Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.thermCondAlgo = Direct
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+
+Simulator.SubSystem.Tecplot.FileName    = HornungN2.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = RhoivtTv
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Wall
+
+Simulator.SubSystem.CFmesh.FileName  = HornungN2.CFmesh
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.SaveRate = 500
+
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 5000
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -7.0
+
+Simulator.SubSystem.Default.listTRS = Wall Inlet Outlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./jesus0_quad.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1000.
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 200
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 500
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<4200,1.,min(100.,cfl*1.02))
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 4
+#Simulator.SubSystem.NewtonIterator.Data.L2.ComputedVarID = 4
+Simulator.SubSystem.NewtonIterator.Data.FilterState = Max
+Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs = 1 1 0 0 1 1
+Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0.
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+#Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobFast
+Simulator.SubSystem.CellCenterFVM.NumJacobFast.FreezeDiffCoeff = true
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+# new settings for AUSM+ for multi species
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusMS2D 
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusMS2D.choiceA12 = 5
+
+# us mple: new settings for Roe for multi species with Sanders' carbuncle fix
+#Simulator.SubSystem.CellCenterFVM.Data.LinearVar = Cons 
+#Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = RoeTCNEQ2DSA
+#Simulator.SubSystem.CellCenterFVM.Data.RoeTCNEQ2DSA.entropyFixID = 1   #2 or 3 are also possible 
+#Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.noElectronicEnergy = true
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar = RhoivtTv     # variables in which solution is stored and updated 
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons       # conservative variables 
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = RhoivtTv
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = Euler2DCTNEQST
+
+# node extrapolation enforcing strongly the no slip condition on boundary nodes
+### uncomment for LTE at the wall
+Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMoveRhoivt
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveRhoivt.TrsPriorityList = Wall Inlet Outlet
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveRhoivt.TRSName = Wall
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveRhoivt.ValuesIdx = 2 3 4 5
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveRhoivt.Values = 0. 0. 1000. 1000.
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveRhoivt.NbIterAdiabatic = 0
+
+# second order
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 0.
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitIter = 3500
+
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Vars = i
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Def = \
+#	if(i<3000,0.,1.) if(i<3000,0.,1.) if(i<3000,0.,1.) if(i<3000,0.,1.) if(i<3000,0.,1.) if(i<3000,0.,1.)
+Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
+
+# only initialization of internal field here
+# the other boundaries will be initialized by the corresponding BC
+Simulator.SubSystem.CellCenterFVM.InitComds = InitStateD
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y d
+Simulator.SubSystem.CellCenterFVM.InField.Def = \
+	0.0001952 0.004956 if(d>0.004,-5590.,-5590./0.004*d) 0. \
+	if(d>0.004,1833.,(1833.-1000.)/0.004*d+1000.) \
+	if(d>0.004,1833.,(1833.-1000.)/0.004*d+1000.) 
+
+Simulator.SubSystem.CellCenterFVM.BcComds = NoSlipWallIsothermalNSrvtMultiFVMCC SuperInletFVMCC SuperOutletFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = BcWall BcInlet BcOutlet
+
+Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS = Inlet
+Simulator.SubSystem.CellCenterFVM.BcInlet.Vars = x y
+Simulator.SubSystem.CellCenterFVM.BcInlet.Def = 0.0001952 0.004956 -5590. 0. 1833. 1833.
+
+Simulator.SubSystem.CellCenterFVM.BcWall.applyTRS = Wall
+Simulator.SubSystem.CellCenterFVM.BcWall.TWall = 1000.
+
+Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS = Outlet
+Simulator.SubSystem.CellCenterFVM.BcOutlet.ZeroGradientFlags = 1 1 1 1 1 1
+
+# Compute the Wall distance
+Simulator.SubSystem.DataPreProcessing = DataProcessing DataProcessing
+Simulator.SubSystem.DataPreProcessingNames = DataProcessing1 DataProcessing2
+# the following options make sure that the distance to the wall is computed 
+# 1- before initialization
+# 2- not at the first iteration
+# 3- then after every "ProcessRate" iterations 
+Simulator.SubSystem.DataProcessing1.RunAtSetup = true
+Simulator.SubSystem.DataProcessing1.SkipFirstIteration = true
+Simulator.SubSystem.DataProcessing1.ProcessRate = 1000000
+Simulator.SubSystem.DataProcessing1.Comds = ComputeWallDistanceVector2CCMPI
+Simulator.SubSystem.DataProcessing1.Names = WallDistance
+Simulator.SubSystem.DataProcessing1.WallDistance.BoundaryTRS = Wall
+Simulator.SubSystem.DataProcessing1.WallDistance.CentroidBased = true
+
+Simulator.SubSystem.DataProcessing2.ProcessRate = 100
+Simulator.SubSystem.DataProcessing2.Comds = NavierStokesSkinFrictionHeatFluxCCNEQ
+Simulator.SubSystem.DataProcessing2.Names = SkinFriction
+Simulator.SubSystem.DataProcessing2.SkinFriction.applyTRS = Wall
+Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileWall = Hornung_heat.plt
+Simulator.SubSystem.DataProcessing2.SkinFriction.rhoInf = 0.0051512
+Simulator.SubSystem.DataProcessing2.SkinFriction.pInf = 2908.8
+Simulator.SubSystem.DataProcessing2.SkinFriction.uInf = 5590.
+Simulator.SubSystem.DataProcessing2.SkinFriction.TInf = 1833.
+Simulator.SubSystem.DataProcessing2.SkinFriction.UID = 2
+Simulator.SubSystem.DataProcessing2.SkinFriction.VID = 3
+Simulator.SubSystem.DataProcessing2.SkinFriction.TID = 4
