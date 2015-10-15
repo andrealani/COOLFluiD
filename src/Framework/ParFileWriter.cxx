@@ -66,8 +66,6 @@ void ParFileWriter::setWriterGroup()
   _nbProc = PE::GetPE().GetProcessorCount(nsp);
   cf_assert(_nbProc > 0);
   
-  CFLog(VERBOSE, "1 ParFileWriter::setWriterGroup() => start\n");
-
   // the number of writers can be either customized by each derived 
   // algorithm or uniquely defined fixed for all algorithms 
   // by setting CFEnv.NbWriters
@@ -75,8 +73,6 @@ void ParFileWriter::setWriterGroup()
     _nbWriters =  CFEnv::getInstance().getVars()->NbWriters;
   }
   
-  CFLog(VERBOSE, "2 ParFileWriter::setWriterGroup() => start\n");
-
   if (_nbWriters > _nbProc) {
     CFLog(WARN, "ParFileWriter::setWriterGroup() => _nbWriters > _nbProc, therefore they are set equal!\n");
     _nbWriters = _nbProc;

@@ -74,6 +74,15 @@ protected:
   /// create the group of processes for which reduction will be applied
   void createReduceGroup();
   
+  /// @return true if the current rank has to be involved in reduction
+  bool isReductionRank()
+  {
+    const int nspRank  = 
+      Common::PE::GetPE().GetRank(getMethodData().getNamespace());
+    cf_assert(nspRank < m_isReduceRank.size());
+    return (m_isReduceRank[nspRank] == 1); 
+  }
+  
 protected:
   
   /// struct holding some data for controlling the transfer
@@ -109,6 +118,12 @@ protected: // data
   /// mapping from global to local IDs
   Common::CFMap<std::string, MPI_Op> m_nameToMPIOp;
   
+  /// integer flag telling if this is a rank involved in the reduction
+  std::vector<int> m_isReduceRank;
+  
+  /// namespace involved in the reduction to which te current rank belongs
+  std::string m_reduceNsp;
+  
   /// names of the sending and receiving sockets with format:  
   /// "Namespace1_from>Namespace2_to" (no space on both sides of \">\".
   std::vector<std::string> m_socketsSendRecv;
@@ -118,10 +133,7 @@ protected: // data
   
   /// name of operation to be performed on each socket during reduction
   std::vector<std::string> m_operation;
-  
-  /// First/last rank to consider for this algorithm
-  std::string m_allRanks;
-  
+    
 }; // class StdConcurrentReduce
       
 //////////////////////////////////////////////////////////////////////////////

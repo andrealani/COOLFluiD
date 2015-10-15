@@ -155,10 +155,10 @@ void PEInterface<PM_MPI>::createGroup(const std::string nsp,
        MPI_Group_translate_ranks(allGroup, nranks, &g->globalRanks[0], g->group, &g->groupRanks[0])); 
     
     m_groups.insert(std::make_pair(name, g));
-  
-    // sort the ranks if they are not already sorted
-    std::sort(g->globalRanks.begin(), g->globalRanks.end());
-    std::sort(g->groupRanks.begin(), g->groupRanks.end());
+    
+    // sort the ranks if they are not already sorted (AL: why was this needed???)
+    std::sort(g->globalRanks.begin(), g->globalRanks.end()); // AL: recheck this: very tricky
+    std::sort(g->groupRanks.begin(), g->groupRanks.end());   // AL: recheck this: very tricky
   }
   else {
     CFLog(WARN, "WARNING: PEInterface<PM_MPI>::createGroup() => group " << name << " already created!\n");

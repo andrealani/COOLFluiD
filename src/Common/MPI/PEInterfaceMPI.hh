@@ -130,10 +130,16 @@ class Common_API PEInterface<PM_MPI> : public PEInterfaceBase,
   }
   
   /// @return the group data corresponding to given name
-  Group& getGroup(const std::string name) 
+  Group& getGroup(const std::string& name)
   {
-    cf_assert(m_groups.count(name) > 0); 
+    cf_assert(checkGroup(name));
     return *m_groups.find(name)->second;
+  }
+  
+  /// @return a flag telling if the given name corresponds to an existing group
+  bool checkGroup(const std::string& name)
+  {
+    return (m_groups.count(name) > 0);
   }
   
   /// create MPI group 

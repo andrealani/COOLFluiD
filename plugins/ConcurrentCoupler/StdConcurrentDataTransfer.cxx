@@ -295,6 +295,7 @@ void StdConcurrentDataTransfer::gatherData(const CFuint idx)
 
 void StdConcurrentDataTransfer::scatterData(const CFuint idx)
 { 
+  // AL: have to involve only the ranks involved in this scattering
   SafePtr<DataToTrasfer> dtt = _socketName2data.find(_socketsSendRecv[idx]); 
   
   const string nspSend = dtt->nspSend;
