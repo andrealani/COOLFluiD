@@ -528,55 +528,61 @@ private: // helper function
   
 protected:
   
-  /*mixture name*/
+  /*Mixture file name*/
   std::string _mixtureName;
   
-  /*reaction name*/
+  /*Reaction file name*/
   std::string _reactionName;
 
-  /*transfer file name*/
+  /*Transfer file name*/
   std::string _transfName;
   
-  /*number of atomic species*/
-  int _nAt;
+  /*Number of atomic species*/
+  CFint _nAt;
 
-  /*number of molecular species*/
-  int _nMol;
+  /*Number of molecular species*/
+  CFint _nMol;
 
-  /*number of temperatures*/
-  int _nTemp;
+  /*Number of temperatures*/
+  CFint _nTemp;
 
-  /*mass fractions*/
+  /*Mass fractions*/
   RealVector _Yi;
   
-  /*mole fractions (chemical components)*/
+  /*Mole fractions (chemical components)*/
   RealVector _Xc;
 
-  /*mole fractions (species)*/
+  /*Mass fractions (chemical components)*/
+  RealVector _Yc;
+
+  /*Mole fractions (species)*/
   RealVector _Xi;
   
-  /*the nuclear (elemental) mass fractions*/
+  /*Nuclear (elemental) mass fractions*/
   RealVector _Yn;
   
-  /*the nuclear (elemental) molar fractions*/
+  /*Nuclear (elemental) molar fractions*/
   RealVector _Xn;
   
-  /*molar masses*/
+  /*Molar masses*/
   RealVector _mmi;
 
-  /*gas constants*/
+  /*Gas constants*/
   RealVector _Ri;
   
-  /*charges*/
+  /*Charges*/
   RealVector _qi;
 
-  /*enthalpies (working vector)*/
+  /*Enthalpies (working vector)*/
   RealVector _hi;
+ 
+  /*Partial densities*/
+  RealVector _rhoi;
+ 
+  /*Modified diffusion driving forces for Stefan-Maxwell equations (working vector)*/
+  RealVector _dfi;
   
-  /*modified driving forces for the Stefan-Maxwell system solution (working vector)*/
-  RealVector m_df;
-  
-  /*temperatures (working vector)*/
+  /*Temperatures (working vector)*/
   RealVector _tvec;
   
 }; // end of class PlatoLibrary

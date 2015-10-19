@@ -38,7 +38,7 @@ Simulator.Modules.Libs = libPetscI libTecplotWriter libNavierStokes libPlatoI li
 
 # Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/ICP/testcases/Plasmatron/Chamber
-Simulator.Paths.ResultsDir = ./OUTPUT_chamber_MUT2_uncoupled
+Simulator.Paths.ResultsDir = ./OUTPUT_chamber_PLATO_uncoupled
 
 ###### ICP PHYSICAL MODEL ##
 Simulator.SubSystem.Default.PhysicalModelType = ICPLTE2D
@@ -64,7 +64,7 @@ Simulator.SubSystem.ICPLTE2D.SourceTerm.Freq = 0.37
 ###### CHEMICAL LIBRARY ##
 Simulator.SubSystem.ICPLTE2D.PropertyLibrary = Plato
 Simulator.SubSystem.ICPLTE2D.Plato.mixtureName = air11
-#Simulator.SubSystem.ICPLTE2D.Plato.reactionName = empty
+Simulator.SubSystem.ICPLTE2D.Plato.reactionName = empty
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = chamber_Plato.CFmesh
