@@ -24,8 +24,8 @@ namespace COOLFluiD {
  * This class represents the interface for a PlatoLibrary.
  *
  * @author Andrea Lani
- * @author James B. Scoggins
- *
+ * @author Alessandro Munafo'
+ * 
  */
 class PlatoLibrary : public Framework::PhysicalChemicalLibrary {
 public:
@@ -104,28 +104,20 @@ public:
   {
     CFdouble tmpMass = 0.0;
     for(CFint is = 0; is < _NS; ++is) {
-      tmpMass += m_y[is]/m_mm[is];
+      tmpMass += _Yi[is]/_mmi[is];
     }
     return 1./tmpMass;
   }
   
-   /**
-    * Set the constant of gases in J/(Kg*K)
-    */
-    void setRiGas(RealVector& Ri)
-   {
-     // for(CFint is = 0; is < _NS; ++is) {
-     //   Ri[is] = Mutation::RU/m_mm[is];
-     // }
-   }
+  /**
+   * Set the constant of gases [J/(kg*K)]
+   */
+  void setRiGas(RealVector& Ri);
 
-   /**
+  /**
     * Set the IDs of the molecules in the mixture
     */
-   void setMoleculesIDs(std::vector<CFuint>& v)
-   {
-     // throw Common::NotImplementedException(FromHere(),"PlatoLibrary::setMoleculesIDs()");
-   }
+  void setMoleculesIDs(std::vector<CFuint>& v);
   
   /**
    * Calculates the static pressure of the mixture
@@ -173,29 +165,21 @@ public:
    * @param temp temperature
    * @param pressure pressure
    */
-  CFdouble eta(CFdouble& temp, CFdouble& pressure, CFreal* tVec)
-  {
-    return 0.;
-  }
-  
+  CFdouble eta(CFdouble& temp, CFdouble& pressure, CFreal* tVec);
+
   /**
    * Calculates the lambda viscosity, given temperature and pressure
    * @param temp temperature
    * @param pressure pressure
    */
-    CFdouble lambdaEQ(CFdouble& temp, CFdouble& pressure)
-    {
-      return 0;
-    }
+   CFdouble lambdaEQ(CFdouble& temp, CFdouble& pressure);
   
   /**
    * Calculates the electrical conductivity given temperature and pressure
    * @param temp temperature
    * @param pressure pressure
    */
-  CFdouble sigma(CFdouble& temp,
-		 CFdouble& pressure,
-		 CFreal* tVec);
+  CFdouble sigma(CFdouble& temp, CFdouble& pressure, CFreal* tVec);
   
   /**
    * Calculates the specific heat ratio and the speed of sound in
@@ -240,13 +224,13 @@ public:
 		      CFdouble& pressure,
 		      RealVector* x);
   
-     /**
-    * Reset the composition
-    */
-    void resetComposition(const RealVector& x)
+  /**
+   * Reset the composition
+  */
+  void resetComposition(const RealVector& x)
    {
      for (CFint i = 0; i < _NS; ++i) {
-       m_x[i] = x[i];
+       _Xi[i] = x[i];
      }
    }
 
@@ -316,56 +300,56 @@ public:
   CFdouble soundSpeed(CFdouble& temp,
 		      CFdouble& pressure);
   
-     /**
-      * Sets the mole fractions of elements (nucleons) Xn for the Mutation
-      * environment (for variable elemental composition), this function
-      * should be called before getting properties related to the elemental
-      * fractions in case of LTE with Demixing
-      * @param yn the RealVector of the mass fractions of elements
-      */
-      void setElemFractions(const RealVector& yn);
+  /**
+    * Sets the mole fractions of elements (nucleons) Xn for the Mutation
+    * environment (for variable elemental composition), this function
+    * should be called before getting properties related to the elemental
+    * fractions in case of LTE with Demixing
+    * @param yn the RealVector of the mass fractions of elements
+    */
+  void setElemFractions(const RealVector& yn);
   
-   /**
+  /**
     * Sets the mole fractions of elements (nucleons) Xn for the Mutation
     * environment (for variable elemental composition) starting from the given
     * species mass fractions
     * @param yn the RealVector of the mass fractions of species
     */
-    void setElementXFromSpeciesY(const RealVector& ys);
+  void setElementXFromSpeciesY(const RealVector& ys);
 
-   /**
+  /**
     * Sets the species (molar) fractions. This function should be called before getting
     * thermodynamic quantities or transport properties.
     * @param ys the RealVector of the mass fractions of species
     */
-    void setSpeciesFractions(const RealVector& ys);
+  void setSpeciesFractions(const RealVector& ys);
 
-   /**
-    * Sets the electron fractions in the mass composition according to charge
-    * neutrality.
-    * @param ys the RealVector of the mass fractions of species
-    */
-    void setElectronFraction(RealVector& ys);
+  /**
+   * Sets the electron fractions in the mass composition according to charge
+   * neutrality.
+   * @param ys the RealVector of the mass fractions of species
+   */
+  void setElectronFraction(RealVector& ys);
 
-   /**
-    * Gets the species (molar) fractions.
-    * @param ys the RealVector of the mass fractions of species
-    * @param xs the RealVector of the molar fractions of species
-    */
-    void getSpeciesMolarFractions(const RealVector& ys, RealVector& xs);
+  /**
+   * Gets the species (molar) fractions.
+   * @param ys the RealVector of the mass fractions of species
+   * @param xs the RealVector of the molar fractions of species
+   */
+  void getSpeciesMolarFractions(const RealVector& ys, RealVector& xs);
 
-   /**
-    * Gets the species (mass) fractions.
-    * @param xs the RealVector of the molar fractions of species
-    * @param ys the RealVector of the mass fractions of species
-    */
-    void getSpeciesMassFractions(const RealVector& xs, RealVector& ys);
+  /**
+   * Gets the species (mass) fractions.
+   * @param xs the RealVector of the molar fractions of species
+   * @param ys the RealVector of the mass fractions of species
+   */
+  void getSpeciesMassFractions(const RealVector& xs, RealVector& ys);
 
-   /**
+  /**
     * Gets the species mass fractions.
     * @param ys the RealVector of the mass fractions of species
     */
-    void getSpeciesMassFractions(RealVector& ys);
+  void getSpeciesMassFractions(RealVector& ys);
 
   /**
    * Returns the transport coefficients for the diffusive fluxes used in
@@ -380,7 +364,7 @@ public:
    * @param eltdifcoef the elemental thermal demixing coefficients
    *        times mixture density
    */
-   void getTransportCoefs(CFdouble& temp,
+  void getTransportCoefs(CFdouble& temp,
 			 CFdouble& pressure,
 			 CFdouble& lambda,
 			 CFdouble& lambdacor,
@@ -400,7 +384,7 @@ public:
    * @param omega the mass production terms
    * @param jacobian the Jacobian matrix of the mass production terms
    */
-   void getMassProductionTerm(CFdouble& temp,
+  void getMassProductionTerm(CFdouble& temp,
 			     RealVector& tVec,
 			     CFdouble& pressure,
 			     CFdouble& rho,
@@ -460,7 +444,7 @@ public:
    * @param omegav the source term
    * @param jacobian the Jacobian matrix of the mass production terms
    */
-    void getSource(CFdouble& temp,
+   void getSource(CFdouble& temp,
 		 RealVector& tVec,
 		 CFdouble& pressure,
 		 CFdouble& rho,
@@ -478,7 +462,7 @@ public:
    * @param pressure the mixture pressure
    * @param normConcGradients the cell normal gradients of species mass fractions
    */
-   void getRhoUdiff(CFdouble& temp,
+  void getRhoUdiff(CFdouble& temp,
                    CFdouble& pressure,
                    RealVector& normConcGradients,
 		   CFreal* tVec,
@@ -487,14 +471,14 @@ public:
 
   /**
    * Returns the diffusion flux
-   * This function returnm the binary coefficients of Fick
+   * This function returns the binary coefficients of Fick
    * But since they are a diagonal matrix it returns as well a scalar
    * It returns as well the diffusive flux 
    * @param temp the mixture temperature
    * @param pressure the mixture pressure
 
    */
-   void getDij_fick(RealVector& dx,
+  void getDij_fick(RealVector& dx,
 		    CFdouble& pressure,
 		    CFdouble& temperature,
 		    CFreal& Diff_coeff,
@@ -508,14 +492,14 @@ public:
   /**
    * Get the catalycity factor for O
    */
-   void getGammaO(CFreal& m_GO);
+  void getGammaO(CFreal& m_GO);
   
    /**
     * Sets the species (molar) fractions. This function should be called before getting
     * thermodynamic quantities or transport properties.
     * @param xs the RealVector of the molar fractions of species
     */
-   void setSpeciesMolarFractions(const RealVector& xs);
+  void setSpeciesMolarFractions(const RealVector& xs);
 
   
   /**
@@ -530,6 +514,11 @@ public:
 			       RealVector* hsVib,
 			       RealVector* hsEl);
   
+  /*
+   * This function returns the free-electron temperature 
+   */
+  CFdouble get_el_temp(CFdouble& temp, CFreal* tVec);
+
 private: // helper function
   
   /**
@@ -539,39 +528,57 @@ private: // helper function
   
 protected:
   
-  /// mixture name
+  /*mixture name*/
   std::string _mixtureName;
   
-  /// reaction name
+  /*reaction name*/
   std::string _reactionName;
 
-  /// transfer file name
+  /*transfer file name*/
   std::string _transfName;
   
-  /// mass fractions
-  RealVector m_y;
-  
-  /// molar fractions (chemical components)
-  RealVector m_Xc;
+  /*number of atomic species*/
+  int _nAt;
 
-  /// molar fractions (species)
-  RealVector m_x;
+  /*number of molecular species*/
+  int _nMol;
+
+  /*number of temperatures*/
+  int _nTemp;
+
+  /*mass fractions*/
+  RealVector _Yi;
   
-  /// the nuclear (elemental) mass fractions
-  RealVector m_yn;
+  /*mole fractions (chemical components)*/
+  RealVector _Xc;
+
+  /*mole fractions (species)*/
+  RealVector _Xi;
   
-  /// the nuclear (elemental) molar fractions
-  RealVector m_xn;
+  /*the nuclear (elemental) mass fractions*/
+  RealVector _Yn;
   
-  /// species molar masses
-  RealVector m_mm;
+  /*the nuclear (elemental) molar fractions*/
+  RealVector _Xn;
   
-  /// stores the charge of each species
-  RealVector m_charge;
+  /*molar masses*/
+  RealVector _mmi;
+
+  /*gas constants*/
+  RealVector _Ri;
   
-  /// stores the modified driving forces for the Stefan-Maxwell system solution
+  /*charges*/
+  RealVector _qi;
+
+  /*enthalpies (working vector)*/
+  RealVector _hi;
+  
+  /*modified driving forces for the Stefan-Maxwell system solution (working vector)*/
   RealVector m_df;
-    
+  
+  /*temperatures (working vector)*/
+  RealVector _tvec;
+  
 }; // end of class PlatoLibrary
       
 //////////////////////////////////////////////////////////////////////////////
