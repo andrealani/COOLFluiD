@@ -16,11 +16,11 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * This class represents a MultiFluidMHD physical model 3D for primitive
+   * This class represents a MultiFluidMHD physical model 2.5D for primitive
    * variables
    *
    * @author ALejandro Alvarez
-   * 
+   * YM: 2.5D, Oct. 2015
    */
 class DiffMFMHD2DHalfVarSet : public DiffMFMHDVarSet {
 public: // classes
@@ -82,7 +82,7 @@ protected:
   
   
   
-}; // end of class DiffMFMHD3DVarSet
+}; // end of class DiffMFMHD2DHalfVarSet
 
 //////////////////////////////////////////////////////////////////////////////
 

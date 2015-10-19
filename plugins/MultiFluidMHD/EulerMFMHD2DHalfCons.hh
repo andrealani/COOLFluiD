@@ -4,7 +4,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "MultiFluidMHDVarSet.hh"
-#include "Maxwell/Maxwell3DProjectionVarSet.hh"
+#include "Maxwell/Maxwell2DProjectionVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -18,7 +18,7 @@ namespace COOLFluiD {
 
 /**
  * This class represents a multi-fluid
- * Euler physical model 3D for conservative
+ * Euler physical model 2.5D for conservative
  * variables:
  * Bx, By, Bz, Ex, Ey, Ez, Psi, Phi,
  * {rhoi},{rhoiUi, rhoiVi, RhoiW}, {rhoiEi} 
@@ -32,7 +32,7 @@ namespace COOLFluiD {
  * 
  * @author Alejandro Alvarez
  */
-class EulerMFMHD2DHalfCons : public MultiFluidMHDVarSet<Maxwell::Maxwell3DProjectionVarSet> {
+class EulerMFMHD2DHalfCons : public MultiFluidMHDVarSet<Maxwell::Maxwell2DProjectionVarSet> {
 public: // classes
   
   /**
