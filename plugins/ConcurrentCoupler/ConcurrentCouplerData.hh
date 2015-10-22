@@ -100,6 +100,14 @@ public:
   /// @return the DataStorage corresponding to the given namespace
   Common::SafePtr<Framework::DataStorage> getDataStorage(const std::string& nspName);
   
+  /// @return true if the current rank has to be involved in the data transfer
+  bool isActiveRank(const std::vector<int>& flags) const
+  {
+    const int nspRank = Common::PE::GetPE().GetRank(getNamespace());
+    cf_assert(nspRank < flags.size());
+    return (flags[nspRank] == 1); 
+  }
+  
 private:
   
   /// builder for standard TRS GeometricEntity's

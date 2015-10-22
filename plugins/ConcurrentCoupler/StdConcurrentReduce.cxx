@@ -2,10 +2,10 @@
 
 #include "Common/NotImplementedException.hh"
 #include "Common/CFPrintContainer.hh"
+
 #include "Framework/DataHandle.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/MethodCommand.hh"
-#include "Environment/DirPaths.hh"
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/CommandGroup.hh"
@@ -52,13 +52,15 @@ void StdConcurrentReduce::defineConfigOptions(Config::OptionList& options)
 //////////////////////////////////////////////////////////////////////////////
 
 StdConcurrentReduce::StdConcurrentReduce(const std::string& name) :
-  ConcurrentCouplerCom(name),
+  ConcurrentCouplerCom(name),			
+  m_createGroup(true),
   m_sockets(),
   socket_states("states"),
   m_socketName2data(),
   m_nameToMPIOp(),
-  m_isReduceRank(),
-  m_reduceNsp("")
+  m_isTransferRank(),
+  m_recvBuf(),
+  m_reduceNsp()
 {
   addConfigOptionsTo(this);
   
@@ -82,7 +84,9 @@ StdConcurrentReduce::StdConcurrentReduce(const std::string& name) :
 StdConcurrentReduce::~StdConcurrentReduce()
 {
   for (CFuint i =0 ; i < m_socketName2data.size(); ++i) {
-    delete m_socketName2data[i];
+    if (m_socketName2data[i] != CFNULL) {
+      delete m_socketName2data[i];
+    }
   }  
 }
 
@@ -113,6 +117,10 @@ void StdConcurrentReduce::setup()
   if (m_operation.size() != m_socketsSendRecv.size()) {
     m_operation.resize(m_socketsSendRecv.size(), "SUM");
   }
+  
+  cf_assert(m_socketsSendRecv.size() > 0);
+  m_isTransferRank.resize(m_socketsSendRecv.size());
+  m_reduceNsp.resize(m_socketsSendRecv.size());
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -121,53 +129,66 @@ void StdConcurrentReduce::execute()
 {
   CFAUTOTRACE;
   
-  CFLog(INFO, "StdConcurrentReduce::execute() => start\n");
+  CFLog(VERBOSE, "StdConcurrentReduce::execute() => start\n");
   
   // this should go in the setup, but it uses blocking MPI collective calls 
   // here is less harmful 
-  if (m_socketName2data.size() == 0) {
-    createReduceGroup();
-    
-    if (isReductionRank()) {
-      for (CFuint i = 0; i < m_socketsSendRecv.size(); ++i) {
+  if (m_createGroup) {
+    for (CFuint i = 0; i < m_socketsSendRecv.size(); ++i) {
+      createTransferGroup(i);	
+      if (getMethodData().isActiveRank(m_isTransferRank[i])) {
 	addDataToTransfer(i);
       }
     }
+    m_createGroup = false;
   } 
   
-  if (isReductionRank()) {
-    // Commands "live" in their Method's namespace, therefore only ranks belonging to 
-    // nspCoupling (in this case) get here, because all other ranks are filtered out
-    // at the higher level (in the corresponding Method's member function)
-    Group& group = PE::GetPE().getGroup(getName());
-    
-    vector<CFreal> recvBuf;
-    for (CFuint i = 0; i < m_socketsSendRecv.size(); ++i) {
-      SafePtr<DataToTrasfer> dtt = m_socketName2data.find(m_socketsSendRecv[i]); 
-      // note this limits the maximum size to be transferred to an array of size ~2 billion 
-      const CFuint arraySize = dtt->arraySize;
-      recvBuf.resize(arraySize, 0.);
-      
-      CFreal* sendBuf = dtt->array;
-      cf_assert(sendBuf != CFNULL);
-      
-      MPIError::getInstance().check
-	("MPI_Allreduce", "StdConcurrentReduce::execute()", 
-	 MPI_Allreduce(&sendBuf[0], &recvBuf[0], (int)arraySize, 
-		       MPIStructDef::getMPIType(&recvBuf[0]), dtt->operation, group.comm));
-      
-      // overwrite the socket with the total value in each processor
-      for (CFuint s = 0; s < arraySize; ++s) {
-	sendBuf[s] = recvBuf[s];
-      }
+  // Commands "live" in their Method's namespace, therefore only ranks belonging to 
+  // nspCoupling (in this case) get here, because all other ranks are filtered out
+  // at the higher level (in the corresponding Method's member function)
+  
+  for (CFuint i = 0; i < m_socketsSendRecv.size(); ++i) {
+    if (getMethodData().isActiveRank(m_isTransferRank[i])) {
+      reduceData(i);
     }
   }
   
-  CFLog(INFO, "StdConcurrentReduce::execute() => end\n");
+  CFLog(VERBOSE, "StdConcurrentReduce::execute() => end\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
-   
+    
+void StdConcurrentReduce::reduceData(const CFuint idx)
+{
+  SafePtr<DataToTrasfer> dtt = m_socketName2data.find(m_socketsSendRecv[idx]); 
+  Group& group = PE::GetPE().getGroup(dtt->groupName);
+  
+  CFLog(INFO, "StdConcurrentReduce::reduceData() within namespace[" << 
+	dtt->groupName << "] => start\n");
+  
+  // note this limits the maximum size to be transferred to an array of size ~2 billion 
+  const CFuint arraySize = dtt->arraySize;
+  m_recvBuf.resize(arraySize, 0.);
+  
+  CFreal* sendBuf = dtt->array;
+  cf_assert(sendBuf != CFNULL);
+  
+  MPIError::getInstance().check
+    ("MPI_Allreduce", "StdConcurrentReduce::execute()", 
+     MPI_Allreduce(&sendBuf[0], &m_recvBuf[0], (int)arraySize, 
+		   MPIStructDef::getMPIType(&m_recvBuf[0]), dtt->operation, group.comm));
+  
+  // overwrite the socket with the total value in each processor
+  for (CFuint s = 0; s < arraySize; ++s) {
+    sendBuf[s] = m_recvBuf[s];
+  }
+  
+  CFLog(INFO, "StdConcurrentReduce::reduceData() within namespace[" << 
+	dtt->groupName << "] => end\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
  void StdConcurrentReduce::addDataToTransfer(const CFuint idx)
  {
    CFLog(VERBOSE, "StdConcurrentReduce::addDataToTransfer() for [" << idx << "] => start\n");
@@ -176,12 +197,13 @@ void StdConcurrentReduce::execute()
    DataToTrasfer* data = new DataToTrasfer();
    CFuint sendRecvStridesIn = 0;
    
-   // reduction is only applied to ranks belonging to the group whose name is getName()
+   // reduction is only applied to ranks belonging to the corresponding group of processes
    const size_t found1 = m_socketsSendRecv[idx].find(">");
    if (found1 == string::npos) {
      // if the ">" is not found, separate namespace from socket name
      vector<string> nsp2Socket = StringOps::getWords(m_socketsSendRecv[idx], '_');
-     const string nspSend      = m_reduceNsp;
+     cf_assert(idx < m_reduceNsp.size());
+     const string nspSend = m_reduceNsp[idx];
      cf_assert(nspSend != "");
      const string sendSocketStr = nspSend + "_" + nsp2Socket[1];
      const string sendLocal  = sendSocketStr + "_local";
@@ -225,9 +247,11 @@ void StdConcurrentReduce::execute()
      }
      
      CFuint sendRecvStridesOut = 0;
-     Group& group = PE::GetPE().getGroup(getName());
+     const string groupName = getName() + StringOps::to_str(idx); 
+     data->groupName = groupName;
+     Group& group = PE::GetPE().getGroup(groupName);
      
-     cf_assert(isReductionRank());
+     cf_assert(getMethodData().isActiveRank(m_isTransferRank[idx]));
      
      MPIError::getInstance().check
        ("MPI_Allreduce", "StdConcurrentDataTransfer::addDataToTransfer()", 
@@ -253,9 +277,9 @@ void StdConcurrentReduce::execute()
       
 //////////////////////////////////////////////////////////////////////////////
  
-void StdConcurrentReduce::createReduceGroup()
+void StdConcurrentReduce::createTransferGroup(const CFuint idx)
 {
-  CFLog(VERBOSE, "StdConcurrentReduce::createReduceGroup() => start\n");
+  CFLog(VERBOSE, "StdConcurrentReduce::createTransferGroup() => start\n");
   
   const string nspCoupling = getMethodData().getNamespace();
   const Group& nspGroup = PE::GetPE().getGroup(nspCoupling);
@@ -263,12 +287,10 @@ void StdConcurrentReduce::createReduceGroup()
   const int nspRank  = PE::GetPE().GetRank(nspCoupling);
   cf_assert(nspRank < nspRanksSize);
   
-  vector<int> isReduceRank(nspRanksSize, 0); 
-  m_isReduceRank.resize(nspRanksSize, 0);
+  vector<int> isTransferRank(nspRanksSize, 0); 
+  m_isTransferRank[idx].resize(nspRanksSize, 0);
   
-  // AL: we suppose that each socket in m_socketsSendRecv belongs to the same 
-  // namespace, therefore we only test the existence of the first socket name  
-  const string testSocket = m_socketsSendRecv[0]; 
+  const string testSocket = m_socketsSendRecv[idx]; 
   // the socket name must not include ">"
   const size_t found1 = testSocket.find(">"); 
   if (found1 == string::npos) {
@@ -290,39 +312,40 @@ void StdConcurrentReduce::createReduceGroup()
 	// local data (CFreal)
 	if ((ds->checkData(sendSocket) && 
 	     ds->getData<CFreal>(sendSocket).size()>0) ||
-	    
 	    (ds->checkData(sendLocal) && ds->checkData(sendGlobal) && 
 	     ds->getGlobalData<State*>(sendSocket).size()>0)) {
-	  isReduceRank[nspRank] = 1;
-	  m_reduceNsp = nspSend;
+	  isTransferRank[nspRank] = 1;
+	  m_reduceNsp[idx] = nspSend;
 	  break;
 	}
       }
     }
     
     MPIError::getInstance().check
-      ("MPI_Allreduce", "StdConcurrentReduce::createReduceGroup()", 
-       MPI_Allreduce(&isReduceRank[0], &m_isReduceRank[0], nspRanksSize, 
-		     MPIStructDef::getMPIType(&isReduceRank[0]), MPI_MAX, nspGroup.comm));
+      ("MPI_Allreduce", "StdConcurrentReduce::createTransferGroup()", 
+       MPI_Allreduce(&isTransferRank[0], &m_isTransferRank[idx][0], nspRanksSize, 
+		     MPIStructDef::getMPIType(&isTransferRank[0]), MPI_MAX, nspGroup.comm));
     
-    CFLog(VERBOSE, "StdConcurrentReduce::createReduceGroup() => P[" << PE::GetPE().GetRank("Default") 
-	  << "] in \"Default\", P[" << nspRank << "] in " << "\"" << nspCoupling << "\" in(1) or out(0) : " 
-	  << m_isReduceRank[nspRank] << " in \"" << m_reduceNsp << "\"\n");
+    CFLog(VERBOSE, "StdConcurrentReduce::createTransferGroup() => P[" << 
+	  PE::GetPE().GetRank("Default") << "] in \"Default\", P[" << nspRank << "] in " 
+	  << "\"" << nspCoupling << "\" in(1) or out(0) : " 
+	  << m_isTransferRank[idx][nspRank] << " in \"" << m_reduceNsp[idx] << "\"\n");
     
     vector<int> ranks;
     for (int rk = 0; rk < nspRanksSize; ++rk) {
-      if (m_isReduceRank[rk] == 1) {ranks.push_back(rk);}
+      if (m_isTransferRank[idx][rk] == 1) {ranks.push_back(rk);}
     }
     cf_assert(ranks.size() > 0);
     
+    const string groupName = getName() + StringOps::to_str(idx); 
     // here we create a subgroup of the current coupling namespace 
-    PE::GetPE().createGroup(nspCoupling, getName(), ranks, true);
+    PE::GetPE().createGroup(nspCoupling, groupName, ranks, true);
     
-    const string msg = "StdConcurrentReduce::createReduceGroup() => Ranks for group [" + getName() + "] = ";
+    const string msg = "StdConcurrentReduce::createTransferGroup() => Ranks for group [" + groupName + "] = ";
     CFLog(VERBOSE, CFPrintContainer<vector<int> >(msg, &ranks));
   }
   
-  CFLog(VERBOSE, "StdConcurrentReduce::createReduceGroup() => end\n");
+  CFLog(VERBOSE, "StdConcurrentReduce::createTransferGroup() => end\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////

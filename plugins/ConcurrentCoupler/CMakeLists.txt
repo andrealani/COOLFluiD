@@ -4,6 +4,7 @@ ConcurrentCouplerMethod.cxx
 ConcurrentCouplerMethod.hh
 ConcurrentCouplerData.cxx
 ConcurrentCouplerData.hh
+DataToTransfer.hh
 StdConcurrentDataTransfer.ci
 StdConcurrentDataTransfer.cxx
 StdConcurrentDataTransfer.hh

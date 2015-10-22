@@ -3,9 +3,8 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include <mpi.h>
-
 #include "ConcurrentCoupler/ConcurrentCouplerData.hh"
+#include "ConcurrentCoupler/DataToTransfer.hh"
 #include "Framework/BaseDataSocketSink.hh"
 #include "Framework/DynamicDataSocketSet.hh"
 
@@ -72,39 +71,17 @@ protected:
   void addDataToTransfer(const CFuint idx);
   
   /// create the group of processes for which reduction will be applied
-  void createReduceGroup();
+  /// @param idx  ID of the data socket to transfer
+  void createTransferGroup(const CFuint idx);
   
-  /// @return true if the current rank has to be involved in reduction
-  bool isReductionRank()
-  {
-    const int nspRank  = 
-      Common::PE::GetPE().GetRank(getMethodData().getNamespace());
-    cf_assert(nspRank < m_isReduceRank.size());
-    return (m_isReduceRank[nspRank] == 1); 
-  }
-  
-protected:
-  
-  /// struct holding some data for controlling the transfer
-  class DataToTrasfer {
-  public:
-    /// constructor
-    DataToTrasfer() {array = CFNULL; sendStride = nbRanksSend = 0;}
-    
-    ///destructor
-    ~DataToTrasfer() {}
-    
-    CFreal* array;             // local array (send or recv)
-    CFuint arraySize;          // total size of the local array<CFreal> (send or recv)
-    CFuint sendStride;         // stride for the send socket
-    CFuint nbRanksSend;        // number of ranks in the send group   
-    std::string dofsName;      // name of the corresponding dofs ("*_states" or "*_nodes")
-    std::string nspSend;       // namespace from which data are sent
-    std::string sendSocketStr; // name of the socket from which data are sent
-    MPI_Op operation;          // MPI operation to apply
-  };
+  /// reduce the data within the corresponding group of processes
+  /// @param idx  ID of the data socket to transfer
+  void reduceData(const CFuint idx);
   
 protected: // data
+  
+  /// flag telling that the groups have been created
+  bool m_createGroup;
   
   /// the dynamic sockets in this Command
   Framework::DynamicDataSocketSet<> m_sockets;
@@ -117,12 +94,15 @@ protected: // data
   
   /// mapping from global to local IDs
   Common::CFMap<std::string, MPI_Op> m_nameToMPIOp;
+    
+  /// vector storing flags to identify ranks involved in the data transfer
+  std::vector<std::vector<int> > m_isTransferRank;
   
-  /// integer flag telling if this is a rank involved in the reduction
-  std::vector<int> m_isReduceRank;
+  /// array of data to receive from other processes
+  std::vector<CFreal> m_recvBuf;
   
-  /// namespace involved in the reduction to which te current rank belongs
-  std::string m_reduceNsp;
+  /// namespace involved in the reduction to which the current rank belongs
+  std::vector<std::string> m_reduceNsp;
   
   /// names of the sending and receiving sockets with format:  
   /// "Namespace1_from>Namespace2_to" (no space on both sides of \">\".

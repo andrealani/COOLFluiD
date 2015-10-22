@@ -2,10 +2,10 @@
 
 #include "Common/NotImplementedException.hh"
 #include "Common/CFPrintContainer.hh"
+
 #include "Framework/DataHandle.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/MethodCommand.hh"
-#include "Environment/DirPaths.hh"
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/CommandGroup.hh"
@@ -53,9 +53,11 @@ void StdConcurrentDataTransfer::defineConfigOptions(Config::OptionList& options)
 
 StdConcurrentDataTransfer::StdConcurrentDataTransfer(const std::string& name) :
   ConcurrentCouplerCom(name),
+  _createGroup(true),
   _sockets(),
   socket_states("states"),
   _sendToRecvVecTrans(),
+  _isTransferRank(),
   _global2localIDs(),
   _socketName2data()
 {
@@ -76,8 +78,10 @@ StdConcurrentDataTransfer::StdConcurrentDataTransfer(const std::string& name) :
 StdConcurrentDataTransfer::~StdConcurrentDataTransfer()
 {
   for (CFuint i =0 ; i < _socketName2data.size(); ++i) {
-    delete _socketName2data[i];
-  }  
+    if (_socketName2data[i] != CFNULL) {
+      delete _socketName2data[i];
+    }  
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -143,6 +147,9 @@ void StdConcurrentDataTransfer::setup()
   for (CFuint i = 0; i < _sendToRecvVecTrans.size(); ++i){
     _sendToRecvVecTrans[i]->setup(1);
   }
+  
+  cf_assert(_socketsSendRecv.size() > 0);
+  _isTransferRank.resize(_socketsSendRecv.size());
 }
  
 //////////////////////////////////////////////////////////////////////////////
@@ -155,27 +162,33 @@ void StdConcurrentDataTransfer::execute()
   
   // this should go in the setup, but it uses blocking MPI collective calls 
   // here is less harmful 
-  if (_socketName2data.size() == 0) {
+  if (_createGroup) {
     // create a preliminary mapping between sockets names and related data to transfer
     for (CFuint i = 0; i < _socketsSendRecv.size(); ++i) {
-      addDataToTransfer(i);
+      createTransferGroup(i);
+      if (getMethodData().isActiveRank(_isTransferRank[i])) {
+	addDataToTransfer(i);
+      }
     }
+    _createGroup = false;
   }
   
   for (CFuint i = 0; i < _socketsSendRecv.size(); ++i) {
-    SafePtr<DataToTrasfer> dtt = _socketName2data.find(_socketsSendRecv[i]); 
-    const CFuint nbRanksSend = dtt->nbRanksSend;
-    const CFuint nbRanksRecv = dtt->nbRanksRecv;
-    
-    if (nbRanksSend > 1 && nbRanksRecv == 1) {
-      gatherData(i);
-    }
-    else if (nbRanksSend == 1 && nbRanksRecv > 1) {
-      scatterData(i);
-    }
-    else if (nbRanksSend > 1 && nbRanksRecv > 1) {
-      throw NotImplementedException
-	(FromHere(),"StdConcurrentDataTransfer::execute() => (nbRanksSend > 1 && nbRanksRecv > 1)");
+    if (getMethodData().isActiveRank(_isTransferRank[i])) {
+      SafePtr<DataToTrasfer> dtt = _socketName2data.find(_socketsSendRecv[i]); 
+      const CFuint nbRanksSend = dtt->nbRanksSend;
+      const CFuint nbRanksRecv = dtt->nbRanksRecv;
+      
+      if (nbRanksSend > 1 && nbRanksRecv == 1) {
+	gatherData(i);
+      }
+      else if (nbRanksSend == 1 && nbRanksRecv > 1) {
+	scatterData(i);
+      }
+      else if (nbRanksSend > 1 && nbRanksRecv > 1) {
+	throw NotImplementedException
+	  (FromHere(),"StdConcurrentDataTransfer::execute() => (nbRanksSend > 1 && nbRanksRecv > 1)");
+      }
     }
   }
   
@@ -192,7 +205,7 @@ void StdConcurrentDataTransfer::gatherData(const CFuint idx)
   const string nspRecv = dtt->nspRecv;
   const string sendSocketStr = dtt->sendSocketStr;
   const string recvSocketStr = dtt->recvSocketStr;
-  const string nspCoupling = getMethodData().getNamespace();
+  const string nspCoupling   = dtt->groupName;
   
   CFLog(INFO, "StdConcurrentDataTransfer::gatherData() from namespace[" << nspSend 
 	<< "] to namespace [" << nspRecv << "] => start\n");
@@ -271,9 +284,9 @@ void StdConcurrentDataTransfer::gatherData(const CFuint idx)
   
   // transfer the global IDs
   MPIError::getInstance().check
-  ("MPI_Gatherv", "StdConcurrentDataTransfer::gatherData()", 
-   MPI_Gatherv(&sendIDs[0], sendcount, MPIStructDef::getMPIType(&sendIDs[0]),
-	       &recvIDs[0], &recvcounts[0], &displs[0], 
+    ("MPI_Gatherv", "StdConcurrentDataTransfer::gatherData()", 
+     MPI_Gatherv(&sendIDs[0], sendcount, MPIStructDef::getMPIType(&sendIDs[0]),
+		 &recvIDs[0], &recvcounts[0], &displs[0], 
 	       MPIStructDef::getMPIType(&sendIDs[0]), root, group.comm));
   
   if (grank == root) {
@@ -292,7 +305,7 @@ void StdConcurrentDataTransfer::gatherData(const CFuint idx)
 }
       
 //////////////////////////////////////////////////////////////////////////////
-
+      
 void StdConcurrentDataTransfer::scatterData(const CFuint idx)
 { 
   // AL: have to involve only the ranks involved in this scattering
@@ -302,7 +315,7 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx)
   const string nspRecv = dtt->nspRecv;
   const string sendSocketStr = dtt->sendSocketStr;
   const string recvSocketStr = dtt->recvSocketStr;
-  const string nspCoupling = getMethodData().getNamespace();
+  const string nspCoupling = dtt->groupName;
   
   CFLog(INFO, "StdConcurrentDataTransfer::scatterData() from namespace[" << nspSend 
 	<< "] to namespace [" << nspRecv << "] => start\n");
@@ -390,7 +403,7 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx)
 	}
       }
     }
-        
+    
     MPIStruct ms;
     int ln[2];
     ln[0] = sendcounts[r];
@@ -489,11 +502,12 @@ void StdConcurrentDataTransfer::addDataToTransfer(const CFuint idx)
   const int rank  = PE::GetPE().GetRank("Default"); // rank in MPI_COMM_WORLD
   Group& groupSend = PE::GetPE().getGroup(nspSend);
   Group& groupRecv = PE::GetPE().getGroup(nspRecv);
+    
   const string sendLocal  = sendSocketStr + "_local";
   const string sendGlobal = sendSocketStr + "_global";
   const string recvLocal  = recvSocketStr + "_local";
   const string recvGlobal = recvSocketStr + "_global";
-    
+  
   data->nspSend = nspSend;
   data->nspRecv = nspRecv;
   data->sendSocketStr = sendSocketStr;
@@ -583,27 +597,87 @@ void StdConcurrentDataTransfer::addDataToTransfer(const CFuint idx)
       sendRecvStridesIn[1] = array[0]->size();
     }
   }
-  
+    
   vector<CFuint> sendRecvStridesOut(2,0);
-  const string nspCoupling = getMethodData().getNamespace();
-  Group& group = PE::GetPE().getGroup(nspCoupling);
+  const string groupName = getName() + StringOps::to_str(idx);
+  Group& group = PE::GetPE().getGroup(groupName);
   
   MPIError::getInstance().check
-  ("MPI_Allreduce", "StdConcurrentDataTransfer::addDataToTransfer()", 
-   MPI_Allreduce(&sendRecvStridesIn[0], &sendRecvStridesOut[0], 2,
-		 MPIStructDef::getMPIType(&sendRecvStridesIn[0]), MPI_MAX, group.comm));
+    ("MPI_Allreduce", "StdConcurrentDataTransfer::addDataToTransfer()", 
+     MPI_Allreduce(&sendRecvStridesIn[0], &sendRecvStridesOut[0], 2,
+		   MPIStructDef::getMPIType(&sendRecvStridesIn[0]), MPI_MAX, group.comm));
   
   data->sendStride = sendRecvStridesOut[0];
   data->recvStride = sendRecvStridesOut[1];
   cf_assert(data->sendStride > 0);
   cf_assert(data->recvStride > 0);
-  // cf_assert(data->sendStride >= data->recvStride);
+  data->groupName = groupName;
   
+  // this is superfluous if this is not an active rank
   _socketName2data.insert(_socketsSendRecv[idx], data);
 }
       
 //////////////////////////////////////////////////////////////////////////////
       
+void StdConcurrentDataTransfer::createTransferGroup(const CFuint idx)
+{
+  CFLog(VERBOSE, "StdConcurrentDataTransfer::createTransferGroup() => start\n");
+  
+  vector<string> sendRecv = StringOps::getWords(_socketsSendRecv[idx],'>');
+  cf_assert(sendRecv.size() == 2);
+  
+  // namespace_socket (send)
+  const string sendSocketStr = sendRecv[0];
+  vector<string> nspSocketSend = StringOps::getWords(sendSocketStr,'_');
+  cf_assert(nspSocketSend.size() == 2);
+  
+  // namespace_socket (recv)
+  const string recvSocketStr = sendRecv[1];
+  vector<string> nspSocketRecv = StringOps::getWords(recvSocketStr,'_');
+  cf_assert(nspSocketRecv.size() == 2);
+  
+  const string nspSend    = nspSocketSend[0];
+  const string nspRecv    = nspSocketRecv[0];
+  
+  const string nspCoupling = getMethodData().getNamespace();
+  const Group& nspGroup = PE::GetPE().getGroup(nspCoupling);
+  const CFuint nspRanksSize = nspGroup.globalRanks.size();
+  const int nspRank  = PE::GetPE().GetRank(nspCoupling);
+  cf_assert(nspRank < nspRanksSize);
+  
+  vector<int> isTransferRank(nspRanksSize, 0); 
+  _isTransferRank[idx].resize(nspRanksSize, 0);
+  
+  // if the current rank belongs to the send and/or recv group flag it
+  const int rank  = PE::GetPE().GetRank("Default"); // rank in MPI_COMM_WORLD
+  if (PE::GetPE().isRankInGroup(rank, nspSend) || 
+      PE::GetPE().isRankInGroup(rank, nspRecv)) {
+    isTransferRank[nspRank] = 1;
+  }
+  
+  MPIError::getInstance().check
+    ("MPI_Allreduce", "StdConcurrentDataTransfer::createTransferGroup()", 
+     MPI_Allreduce(&isTransferRank[0], &_isTransferRank[idx][0], nspRanksSize, 
+		   MPIStructDef::getMPIType(&isTransferRank[0]), MPI_MAX, nspGroup.comm));
+  
+  vector<int> ranks;
+  for (int rk = 0; rk < nspRanksSize; ++rk) {
+    if (_isTransferRank[idx][rk] == 1) {ranks.push_back(rk);}
+  }
+  cf_assert(ranks.size() > 0);
+  
+  const string groupName = getName() + StringOps::to_str(idx); 
+  // here we create a subgroup of the current coupling namespace 
+  PE::GetPE().createGroup(nspCoupling, groupName, ranks, true);
+  
+  const string msg = "StdConcurrentDataTransfer::createTransferGroup() => Ranks for group [" + groupName + "] = ";
+  CFLog(VERBOSE, CFPrintContainer<vector<int> >(msg, &ranks));
+  
+  CFLog(VERBOSE, "StdConcurrentDataTransfer::createTransferGroup() => end\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+ 
     } // namespace ConcurrentCoupler
 
   } // namespace Numerics

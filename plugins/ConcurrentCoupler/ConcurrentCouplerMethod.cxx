@@ -484,33 +484,36 @@ void ConcurrentCouplerMethod::dataTransferReadImpl()
 {
   CFAUTOTRACE;
   
-  CFLog(INFO, "ConcurrentCouplerMethod::dataTransferReadImpl() => start\n");
+  CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferReadImpl() => start\n");
   
   cf_assert(isSetup());
   cf_assert(isConfigured());
   
-  //  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
   const bool doCoupling = isCouplingIter(m_fileRW, READ);
   if (doCoupling) {
     for(CFuint i = 0; i < m_interfacesRead.size(); ++i) {
       cf_assert(m_interfacesRead[i].isNotNull());
-      // Execute and save file if needed...
-      //    if((!(iter % m_transferRates[i])) || (iter ==0) ) {
       m_interfacesRead[i]->execute();
+      
+      // barrier ensures that at this point all coupled ranks synchronize
+      CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferReadImpl() => before barrier\n");
+      MPI_Barrier(PE::GetPE().getGroup(getNamespace()).comm);
+      CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferReadImpl() => after barrier\n");
     }
     
     if (PE::GetPE().GetRank(getNamespace()) == 0) {
       const string fileName = getStatusFilename();
-      ofstream fout(fileName.c_str());
+      ofstream fout(fileName.c_str(), ios_base::in | ios_base::out);
       // initialize the file with all 0's
       resetStatusFile(&fout, READ);
-    } 
+    }    
     
-    Group& cgroup = PE::GetPE().getGroup(getNamespace());
-    MPI_Barrier(cgroup.comm);
+    CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferReadImpl() => before I/O barrier\n");
+    MPI_Barrier(PE::GetPE().getGroup(getNamespace()).comm);
+    CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferReadImpl() => after I/O barrier\n");
   }
   
-  CFLog(INFO, "ConcurrentCouplerMethod::dataTransferReadImpl() => end\n");
+  CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferReadImpl() => end\n\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -519,41 +522,41 @@ void ConcurrentCouplerMethod::dataTransferWriteImpl()
 {
   CFAUTOTRACE;
   
-  CFLog(INFO, "ConcurrentCouplerMethod::dataTransferWriteImpl() => start\n");
+  CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => start\n");
   
   cf_assert(isSetup());
   cf_assert(isConfigured());
   
   const bool doCoupling = isCouplingIter(m_fileRW, WRITE);
   if (doCoupling) {
-    CFLog(INFO, "ConcurrentCouplerMethod::dataTransferWriteImpl() => m_interfacesWrite.size() = " 
-	  << m_interfacesWrite.size() << "\n");
-    
     for(CFuint i = 0; i < m_interfacesWrite.size(); ++i) {
       cf_assert(m_interfacesWrite[i].isNotNull());
       
-      CFLog(INFO, "ConcurrentCouplerMethod::dataTransferWriteImpl() => before [" 
+      CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => before [" 
 	    << m_interfacesWrite[i]->getName() << "]\n");
       m_interfacesWrite[i]->execute();
-      CFLog(INFO, "ConcurrentCouplerMethod::dataTransferWriteImpl() => after [" 
+      CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => after [" 
 	    << m_interfacesWrite[i]->getName() << "]\n");
       
       // barrier ensures that at this point all coupled ranks synchronize
-      CFLog(INFO, "before barrier\n");
-      Group& cgroup = PE::GetPE().getGroup(getNamespace());
-      MPI_Barrier(cgroup.comm);
-      CFLog(INFO, "after barrier\n");
+      CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => before barrier\n");
+      MPI_Barrier(PE::GetPE().getGroup(getNamespace()).comm);
+      CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => after barrier\n");
     }
     
     if (PE::GetPE().GetRank(getNamespace()) == 0) {
       const string fileName = getStatusFilename();
-      ofstream fout(fileName.c_str());
+      ofstream fout(fileName.c_str(), ios_base::in | ios_base::out);
       // initialize the file with all 0's
       resetStatusFile(&fout, WRITE);
     }   
+    
+    CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => before I/O barrier\n");
+    MPI_Barrier(PE::GetPE().getGroup(getNamespace()).comm);
+    CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => after I/O barrier\n");
   }
   
-  CFLog(INFO, "ConcurrentCouplerMethod::dataTransferWriteImpl() => end\n");
+  CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => end\n\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -640,9 +643,9 @@ bool ConcurrentCouplerMethod::isCouplingIter(pair<ifstream*, ofstream*>& file,
   // loop over all coupled namespaces to find the one containing the current rank
   const int rank  = PE::GetPE().GetRank("Default");     // rank in default group
   const CFuint nspSize = m_coupledNamespacesStr.size();
-  bool ready = false;
+  char ready = '0';
   int nspID = -1;
-  vector<char> flags(nspSize);
+  vector<char> flags(nspSize,'0');
   const string fileName = getStatusFilename();	
   
   for (CFuint i = 0; i < nspSize; ++i) {
@@ -654,16 +657,16 @@ bool ConcurrentCouplerMethod::isCouplingIter(pair<ifstream*, ofstream*>& file,
       cf_assert(subSysStatus.isNotNull());
       nspID = i;
       // store the number of iterations in each of the namespaces (to be coupled)
-      // this is =0 f the namespace is locally not active
+      // this is =0 if the namespace is locally not active
       cf_assert(m_transferRates[i] > 0);
       const CFuint nbIter = subSysStatus->getNbIter();
       if (nbIter%m_transferRates[i] == 0) {
-	ready = true;
+	ready = '1';
 	if (m_ioRoot) {
-	  const long offset = tio*nspSize*sizeof(bool);
+	  const long offset = tio*nspSize*sizeof(char);
 	  file.second->open(fileName.c_str(), ios_base::in | ios_base::out);
-	  file.second->seekp(i*sizeof(bool) + offset);
-	  (*file.second) << ready;
+	  file.second->seekp(i*sizeof(char) + offset);
+	  (*file.second) << (char)ready;
 	  file.second->close();
 	}
 	break;
@@ -675,7 +678,7 @@ bool ConcurrentCouplerMethod::isCouplingIter(pair<ifstream*, ofstream*>& file,
     
   int doCoupling = 1;
   if (m_ioRoot) {
-    const long offset = tio*nspSize*sizeof(bool);
+    const long offset = tio*nspSize*sizeof(char);
     file.first->open(fileName.c_str(), ios_base::in);
     file.first->seekg(offset);
     for (CFuint i = 0; i < nspSize; ++i) {
@@ -697,8 +700,10 @@ bool ConcurrentCouplerMethod::isCouplingIter(pair<ifstream*, ofstream*>& file,
     ("MPI_Bcast", "ConcurrentCouplerMethod::isCouplingIter()", 
      MPI_Bcast(&doCoupling, 1, MPI_INT, 0, group.comm));
   
-  CFLog(VERBOSE, "ConcurrentCouplerMethod::isCouplingIter() on P[" << rank 
-	<< "] is ready for coupling? " << doCoupling << "\n");
+  const string ioMode = (tio == WRITE) ? "WRITE" : "READ";
+  CFLog(INFO, "ConcurrentCouplerMethod::isCouplingIter() on P[" << rank 
+	<< "] is ready for coupling? " << doCoupling << " during " 
+	<< ioMode << "\n");
   
   return doCoupling;
 }

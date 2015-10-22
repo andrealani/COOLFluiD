@@ -144,14 +144,6 @@ void FVMCC_ComputeRHS::execute()
   CFTRACEBEGIN;
  
   CFLog(VERBOSE, "FVMCC_ComputeRHS::execute() START\n");
- 
-  // AL: useful fo debugging
-  // for (CFuint i = 0; i <  socket_gstates.getDataHandle().size(); ++i) {
-  //   std::cout.precision(12); std::cout << "g" << i << " => "<< *socket_gstates.getDataHandle()[i] <<"\n";
-  // }
-  // for (CFuint i = 0; i <  socket_states.getDataHandle().size(); ++i) {
-  //     std::cout.precision(12); std::cout << i << " => "<< *socket_states.getDataHandle()[i] <<"\n";
-  // }
   
   initializeComputationRHS();
   

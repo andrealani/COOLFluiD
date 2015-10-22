@@ -4,6 +4,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "ConcurrentCoupler/ConcurrentCouplerData.hh"
+#include "ConcurrentCoupler/DataToTransfer.hh"
 #include "Framework/BaseDataSocketSink.hh"
 #include "Framework/DynamicDataSocketSet.hh"
 
@@ -67,28 +68,7 @@ public:
   virtual void configure ( Config::ConfigArgs& args );
   
 protected: // functions
-  
-  /// struct holding some data for controlling the transfer
-  class DataToTrasfer {
-  public:
-    DataToTrasfer() 
-    {array = CFNULL; sendStride = recvStride = nbRanksSend = nbRanksRecv = 0;}
-    
-    ~DataToTrasfer() {}
-    
-    CFreal* array;        // local array (send or recv)
-    CFuint arraySize;     // total size of the local array<CFreal> (send or recv)
-    CFuint sendStride;    // stride for the send socket
-    CFuint recvStride;    // stride for the recv socket  
-    CFuint nbRanksSend;   // number of ranks in the send group   
-    CFuint nbRanksRecv;   // number of ranks in the recv group
-    std::string dofsName; // name of the corresponding dofs ("*_states" or "*_nodes")
-    std::string nspSend;      // namespace from which data are sent
-    std::string nspRecv;      // namespace from which data are received
-    std::string sendSocketStr; // name of the socket from which data are sent
-    std::string recvSocketStr; // name of the socket from which data are received 
-  };
-    
+      
   /// gather data from all processes in namespace nspSend to 1 process in namespace nspRecv
   /// @param idx           index of the data transfer
   virtual void gatherData(const CFuint idx);
@@ -147,7 +127,14 @@ protected: // functions
   /// @param idx  ID of the data socket to transfer
   void addDataToTransfer(const CFuint idx);
   
+  /// create the group of processes for which reduction will be applied
+  /// @param idx  ID of the data socket to transfer
+  void createTransferGroup(const CFuint idx);
+  
 protected: // data
+  
+  /// flag telling that the groups have been created
+  bool _createGroup;
   
   /// the dynamic sockets in this Command
   Framework::DynamicDataSocketSet<> _sockets;
@@ -157,6 +144,9 @@ protected: // data
   
   /// vector transformer from send (source) to recv (target) variables
   std::vector<Common::SelfRegistPtr<Framework::VarSetTransformer> > _sendToRecvVecTrans;
+    
+  /// vector storing flags to identify ranks involved in the data transfer
+  std::vector<std::vector<int> > _isTransferRank;
   
   /// mapping from global to local IDs
   Common::CFMap<CFuint, CFuint> _global2localIDs;
