@@ -1,4 +1,6 @@
 cf_add_case( MPI 8 CASEDIR TCNEQ/CateIXV PCASE IXV_CATE_M25_air5_CNEQ.CFcase CASEFILES IXV.inter final12961.CFmesh )
+cf_add_case( MPI 12 CASEDIR TCNEQ/Hornung PCASE hornung_FVM_NS_CNEQ.CFcase CASEFILES HornungN2.CFmesh.2nd jesus0_quad.dbs jesus0_quad.neu )
+cf_add_case( MPI 12 CASEDIR TCNEQ/Hornung PCASE hornung_FVM_NS_TCNEQ.CFcase CASEFILES hornung_FVM_visc.inter jesus0_quad.dbs jesus0_quad.neu )
 
 #cf_add_case( MPI default PCASE CNEQ/Catalicity/Testcase_TCNEQ.CFcase )
 #cf_add_case( MPI default PCASE CNEQ/Catalicity/Test_for_Cyl.CFcase )

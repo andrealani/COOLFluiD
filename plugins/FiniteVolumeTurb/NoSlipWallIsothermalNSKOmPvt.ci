@@ -98,11 +98,14 @@ void NoSlipWallIsothermalNSKOmPvt<CVARSET, DVARSET>::setup()
 template <class CVARSET, class DVARSET>
 void NoSlipWallIsothermalNSKOmPvt<CVARSET, DVARSET>::setGhostState(Framework::GeometricEntity *const face)
 {
+  CFLog(DEBUG_MAX, "NoSlipWallIsothermalNSKOmPvt<CVARSET, DVARSET>::setGhostState() => START\n");
+  
   if (!this->getMethodData().getNodalStatesExtrapolator()->runAdiabatic()) {
     this->computeGhostPosition(face);
   }
   
   setGhostStateImpl(*face->getState(0), *face->getState(1));
+  CFLog(DEBUG_MAX, "NoSlipWallIsothermalNSKOmPvt<CVARSET, DVARSET>::setGhostState() => END\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -115,12 +118,15 @@ void NoSlipWallIsothermalNSKOmPvt<CVARSET, DVARSET>::setGhostStateImpl
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::MathTools;
-
-  // here a fix is needed in order to have always m_ghostK > 0
+  
+  CFLog(DEBUG_MAX, "NoSlipWallIsothermalNSKOmPvt<CVARSET, DVARSET>::setGhostStateImpl() => START\n");
+    
+  // Here a fix is needed in order to have always m_ghostK > 0
   // dynamic relocation of the ghost state: the position of the
   // ghost state is locally changed, and the BC is imposed
   // using a weighted average of ghost state (in the new location)
   // and inner state
+  cf_assert(m_kID < innerState.size());
   const CFreal innerK = innerState[m_kID];
   this->repositionNode(innerK, m_ghostK, m_wallK, m_ghostKMin);
   
@@ -148,14 +154,21 @@ void NoSlipWallIsothermalNSKOmPvt<CVARSET, DVARSET>::setGhostStateImpl
   }
   
   // interpolate the wall temperature
-  this->linearInterpolate(innerState[TID], m_wallT, ghostState[TID]);
-  if (ghostState[TID] < 0.) {
-    CFLog(INFO, "NoSlipWallIsothermalNSKOmPvt::setGhostStateImpl() => ghostT = " << ghostState[TID] << " < 0\n");
-    ghostState[TID] = m_wallT;
+  if (!getMethodData().getNodalStatesExtrapolator()->runAdiabatic()) {
+    this->linearInterpolate(innerState[TID], m_wallT, ghostState[TID]);
+    if (ghostState[TID] < 0.) {
+      CFLog(INFO, "NoSlipWallIsothermalNSKOmPvt::setGhostStateImpl() => ghostT = " << ghostState[TID] << " < 0\n");
+      ghostState[TID] = m_wallT;
+    }
   }
+  else {
+    ghostState[TID] = innerT;
+  }
+  
   ghostState[m_kID] = m_ghostK;
   
   const CFuint nbTurbVars = _varSetTurb->getModel()->getNbScalarVars(0);
+  CFLog(VERBOSE, "nbTurbVars = " << nbTurbVars << "\n");
   if (nbTurbVars == 2){
     // Compute distance to innerstate
     // avoid too small distances
@@ -184,7 +197,9 @@ void NoSlipWallIsothermalNSKOmPvt<CVARSET, DVARSET>::setGhostStateImpl
     if (ghostState[omegaID] < 0.) {
       ghostState[omegaID] = innerState[omegaID];
     }
-  }
+  } 
+  
+  CFLog(DEBUG_MAX, "NoSlipWallIsothermalNSKOmPvt<CVARSET, DVARSET>::setGhostStateImpl() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

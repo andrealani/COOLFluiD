@@ -106,15 +106,17 @@ void ComputeWallDistanceVector2CCMPI::execute()
   
   // this has only to be run at setup for now
   CFLog(VERBOSE, "ComputeWallDistanceVector2CCMPI::execute() START\n");
-  CFLog(INFO, "ComputeWallDistanceVector2CCMPI::execute() => Computing distance to the wall ...\n");
   
-  Stopwatch<WallTime> stp;
-  stp.start();
-    
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   
   // AL: gory fix to use centroid-based algorithm 
   if (_centroidBased && dim == DIM_3D) {execute3D(); return;}
+  
+  CFLog(INFO, "ComputeWallDistanceVector2CCMPI::execute() => Computing distance to the wall ...\n");
+  
+  Stopwatch<WallTime> stp;
+  stp.start();
+  
   RealVector faceCentroidArray(dim);
   m_minStateFaceDistance.resize(socket_states.getDataHandle().size());
   m_minStateFaceDistance = MathTools::MathConsts::CFrealMax();
@@ -259,11 +261,12 @@ void ComputeWallDistanceVector2CCMPI::execute()
     }
   }
   
+  CFLog(INFO, "ComputeWallDistanceVector2CCMPI::execute() => took " << stp.read() << "s\n");
+  
   if (m_nbProc == 1) {
     printToFile();
   }  
   
-  CFLog(INFO, "ComputeWallDistanceVector2CCMPI::execute() => took " << stp.read() << "s\n");
   CFLog(VERBOSE, "ComputeWallDistanceVector2CCMPI::execute() END\n");
 }
     
@@ -272,7 +275,12 @@ void ComputeWallDistanceVector2CCMPI::execute()
 void ComputeWallDistanceVector2CCMPI::execute3D()
 {
   CFAUTOTRACE;
-    
+  
+  CFLog(INFO, "ComputeWallDistanceVector2CCMPI::execute3D() => Computing distance to the wall ...\n");
+  
+  Stopwatch<WallTime> stp;
+  stp.start();
+  
   DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   cf_always_assert(_boundaryTRS.size() > 0);
@@ -285,7 +293,8 @@ void ComputeWallDistanceVector2CCMPI::execute3D()
     
     // loop over all wall boundary TRSs
     for(CFuint iTRS = 0; iTRS < _boundaryTRS.size(); ++iTRS) {  
-      CFLog(VERBOSE, "ComputeWallDistanceVector2CCMPI::execute() Processing TRS named " << _boundaryTRS[iTRS] << "\n");
+      CFLog(VERBOSE, "ComputeWallDistanceVector2CCMPI::execute() => Processing TRS [" 
+	    << _boundaryTRS[iTRS] << "] from P[" << root << "] => START\n");
       
       SafePtr<TopologicalRegionSet> faces = MeshDataStack::getActive()->getTrs(_boundaryTRS[iTRS]);
       
@@ -301,8 +310,9 @@ void ComputeWallDistanceVector2CCMPI::execute3D()
       if (nbLocalTrsFaces > 0) {
 	// trsFaceData stores the coordinates of the wall face centroid
 	const CFuint sizeData = nbLocalTrsFaces*dim;
+	cf_assert(sizeData > 0);
 	trsFaceData.resize(sizeData); 
-		
+	
 	if (m_myRank == root) {
 	  // loop over faces in the current TRS and store connectivity info into TRSFaceDistributeData
 	  CFuint count = 0;
@@ -312,12 +322,14 @@ void ComputeWallDistanceVector2CCMPI::execute3D()
 	    const CFuint nbNodesInFace = faces->getNbNodesInGeo(iFace);
 	    for (CFuint n = 0; n < nbNodesInFace; ++n) {
 	      const CFuint nodeID = faces->getNodeID(iFace, n);
+	      cf_assert(nodeID < nodes.size());
 	      faceCentroid += *nodes[nodeID];
 	    }
 	    const CFreal ovNbNodesInFace = 1./(CFreal)nbNodesInFace;
 	    faceCentroid *= ovNbNodesInFace;
 	    
 	    for (CFuint iDim = 0; iDim < dim; ++iDim, ++count) {
+	      cf_assert(count < trsFaceData.size());
 	      trsFaceData[count] = faceCentroid[iDim];
 	    }
 	  }
@@ -325,6 +337,7 @@ void ComputeWallDistanceVector2CCMPI::execute3D()
 	}
 	
 #ifdef CF_HAVE_MPI
+	cf_assert(trsFaceData.size() > 0);
 	MPI_Bcast(&trsFaceData[0], sizeData, MPI_DOUBLE, root, m_comm);
 	// CFLog(INFO, CFPrintContainer<vector<CFreal> >("trsFaceData    = ", &trsFaceData));
 #endif
@@ -332,9 +345,14 @@ void ComputeWallDistanceVector2CCMPI::execute3D()
 	// compute the distance to the wall starting from broadcast data 
 	computeWallDistance3D(trsFaceData);
       }
+      
+      CFLog(VERBOSE, "ComputeWallDistanceVector2CCMPI::execute() => Processing TRS [" 
+	    << _boundaryTRS[iTRS] << "] from P[" << root << "] => END\n");
     }
   }
   
+  CFLog(INFO, "ComputeWallDistanceVector2CCMPI::execute3D() => took " << stp.read() << "s\n");
+    
   if (m_nbProc == 1) {
     printToFile();
   }
@@ -368,6 +386,7 @@ void ComputeWallDistanceVector2CCMPI::computeWallDistance3D(std::vector<CFreal>&
       minimumDistance = std::min(stateFaceDistance, minimumDistance);
     }
     
+    cf_assert(iState < wallDistance.size());
     wallDistance[iState] = std::min(wallDistance[iState], minimumDistance);
   }
 }

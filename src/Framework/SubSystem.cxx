@@ -172,7 +172,11 @@ void SubSystem::configureNamespaces(Config::ConfigArgs& args)
       }
       else {
 	nsp.push_back(m_namespaces[i]);
-	ranks.push_back(m_ranks[i]);
+	// AL: this gory fix needs more testing
+	if (m_ranks.size() > 0) {
+	  cf_assert(i < m_ranks.size());
+	  ranks.push_back(m_ranks[i]);
+	}
       }
     }
     

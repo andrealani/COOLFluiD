@@ -126,7 +126,7 @@ void NoSlipWallAdiabaticNSTurb<ConvTurbVarSet, DiffTurbVarSet>::setGhostStateImp
   //see article from M-S Liou, A sequel to AUSM: AUSM+, JCP 129 364-382 (1996)
   //Here, the velocity is not the normal velocity because it relates to the u+-a eigen values
   //   CFreal pressureCorrection = sqrt(innerVel*innerVel) * innerDensity * innerSoundSpeed;
-  CFreal wallPressure = innerP;
+  const CFreal wallPressure = innerP;
   //   if(normalVel < 0.) wallPressure += pressureCorrection ;
   //   else wallPressure -= pressureCorrection;
   

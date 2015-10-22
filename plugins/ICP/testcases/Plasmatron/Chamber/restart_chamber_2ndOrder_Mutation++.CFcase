@@ -18,7 +18,7 @@
 
 # This testcases verifies the simulation of torch + chamber + probe at 100kW
 # 8 processors
-### Residual = -1.0019156
+### Residual = -1.0379356
 
 #######TEST CONFIGURATION
 CFEnv.ErrorOnUnusedConfig = true
@@ -83,7 +83,7 @@ Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
 Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
 
 #Simulator.SubSystem.StopCondition          = MaxNumberSteps
-#Simulator.SubSystem.MaxNumberSteps.nbSteps = 3
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
 
 Simulator.SubSystem.StopCondition       = Norm
 Simulator.SubSystem.Norm.valueNorm      = -1.0

@@ -18,7 +18,6 @@ using namespace std;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::MathTools;
 using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Common;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -478,19 +477,19 @@ void MutationLibrary2OLD::copyDataFiles()
     CFLog(NOTICE, "MutationLibrary::libpath set to default" << "\n");
     std::string baseDir = Environment::DirPaths::getInstance().getBaseDir().string();
     m_libPath = baseDir + "/plugins/Mutation2.0.0I/";
-  }
+  } 
   
   ofstream fout("mutation.in");
   fout << _mixtureName << endl;
   fout << _reactionName << endl;
   fout << _transfName << endl;
   fout << _thermoDir << endl;
-
+  
   std::string command1 = "cp -R " + m_libPath + "data .";
   Common::OSystem::getInstance().executeCommand(command1);
-
-  std::string command2 = "echo $PWD";
-  Common::OSystem::getInstance().executeCommand(command2);
+  
+  // std::string command2 = "echo $PWD";
+  // Common::OSystem::getInstance().executeCommand(command2);
   
   CFLog(INFO, "MutationLibrary::executing " << command1 << "\n");
   CFLog(INFO, "MutationLibrary::libpath     = "  << m_libPath << "\n");
@@ -1368,9 +1367,11 @@ void MutationLibrary2OLD::setDensityEnthalpyEnergy(CFdouble& temp,
 						   CFdouble& pressure,
 						   RealVector& dhe)
 {
+  // CFLog(INFO, "MutationLibrarypp::setDensityEnthalpyEnergy() => P = " << pressure << ", T = " << temp << "\n");
+  
   //setComposition must be called before
   CFdouble rho = 0.0;
-
+  
   setDefaultTVarray(temp);
 
   FORTRAN_NAME(enthalpymass)(_WR1,&_LWR1,_WI,&_LWI,&temp,&temp,&temp,_TVARRAY,
@@ -1392,7 +1393,11 @@ void MutationLibrary2OLD::setDensityEnthalpyEnergy(CFdouble& temp,
   }
   
   dhe[0] = rho;
-  dhe[2] = dhe[1] - pressure/rho; 
+  dhe[2] = dhe[1] - pressure/rho;  
+
+  // RealVector m_y(_NS, &_Y[0]);
+  // CFLog(INFO, "MutationLibrarypp::setDensityEnthalpyEnergy() => " << dhe  << ", " <<  m_y << "\n"); 
+  // static int count = 0; if (count++ == 20000) abort();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1621,12 +1626,15 @@ CFdouble MutationLibrary2OLD::density(CFdouble& temp,
 //////////////////////////////////////////////////////////////////////////////
 
 CFdouble MutationLibrary2OLD::pressure(CFdouble& rho,
-            CFdouble& temp,
-            CFreal* tVec)
+				       CFdouble& temp,
+				       CFreal* tVec)
 {
+  //  RealVector m_y(_NS,&_Y[0]);
+  // CFLog(INFO, "MutationLibrarypp::pressure() => rho = " << rho << ", temp = " << temp << ", y = " << m_y << "\n");
+  
   CFdouble p = 0.0;
   if (_NE == 0) {
-  // set the mixture pressure
+    // set the mixture pressure
     FORTRAN_NAME(pressure)(_WR1, &_LWR1, &rho, &temp, _MOLARMASSP, _Y, &p);
   }
   else {
@@ -1635,9 +1643,11 @@ CFdouble MutationLibrary2OLD::pressure(CFdouble& rho,
     // the last entry in the array tVec (whose size is _nbTvib+1)  !! ask Andrea
     CFdouble Te = getTe(temp, tVec);
     FORTRAN_NAME(epressure)(_WR1, &_LWR1, &rho, &temp, &Te, _MOLARMASSP, _Y,
-          &p, &_electronPress);
+			    &p, &_electronPress);
   }
-
+  
+  // CFLog(INFO, "MutationLibrarypp::pressure() => p = " << p << "\n");
+  
   return p;
 }
 
@@ -1886,6 +1896,8 @@ void MutationLibrary2OLD::getMassProductionTerm(CFdouble& temperature,
               RealVector& omega,
               RealMatrix& jacobian)
 {
+  // CFLog(INFO, "MutationLibrarypp::getMassProductionTerm() => P = " << pressure << ", T = " << temperature << "\n");
+  
   if (!_freezeChemistry) {
     // Limit the mass composition of species !!!
     CFdouble YLIM = 1.0e-20;
@@ -1975,8 +1987,9 @@ void MutationLibrary2OLD::getMassProductionTerm(CFdouble& temperature,
       omega[is] = 0.0;
     }
   } 
-   
- }
+  
+  // CFLog(INFO, "MutationLibrarypp::getMassProductionTerm() => omega = " << omega << "\n");
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -2042,7 +2055,7 @@ void MutationLibrary2OLD::getRhoUdiff(CFdouble& temperature,
 
   // Compute the mass diffusion fluxes
   // FORTRAN_NAME(smneutsut)(_WR1, &_LWR1, _WR2, &_LWR2, _XTOL, &ND, _DF, _FIJ, _JDIF);
-
+ 
   CFdouble eamb = 0.;
   if (presenceElectron()) {
     FORTRAN_NAME(smd)(_WR1, &_LWR1, _WR2, &_LWR2, _WI, &_LWI, _XTOL, &temp,
@@ -2056,6 +2069,8 @@ void MutationLibrary2OLD::getRhoUdiff(CFdouble& temperature,
     rhoUdiff[is] = _JDIF[is];
   }
 
+  // CFLog(INFO, "MutationLibrarypp::rhoUdiff() =>  rhoUdiff = " << rhoUdiff << "\n");
+  
 //   if (Te > 4000.) {
 //     cout << "Te = " << Te << endl;
 //     cout << "temp = " << temp << endl;

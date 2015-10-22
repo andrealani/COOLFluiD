@@ -92,8 +92,7 @@ CFreal NavierStokesCNEQVarSet<BASE>::getHeatFlux(const RealVector& state,
   // in this case all quantities are computed
   CFreal avTdim = eulerRefData[EulerTerm::T]*this->_gradState[this->_TID];
   CFreal avpdim = this->_avP*eulerRefData[EulerTerm::P];
-  this->_library->setStateTP(avTdim, avpdim);
- 
+  
   // Getting species total enthalpies
   this->_library->getSpeciesTotEnthalpies(avTdim, this->_avTvibdim, avpdim, this->_hsTot);
   
@@ -142,8 +141,7 @@ void NavierStokesCNEQVarSet<BASE>::computeTransportProperties
   // in this case all quantities are computed
   CFreal avTdim = eulerRefData[EulerTerm::T]*this->_gradState[this->_TID];
   CFreal avpdim = this->_avP*eulerRefData[EulerTerm::P]; 
-  this->_library->setStateTP(avTdim, avpdim);
-
+  
   // Getting species total enthalpies
   this->_library->getSpeciesTotEnthalpies(avTdim, this->_avTvibdim, avpdim, this->_hsTot);
   

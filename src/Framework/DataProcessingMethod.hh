@@ -52,7 +52,10 @@ public: // methods
   /// Configures this Method.
   /// @param args the arguments used for the configuration
   virtual void configure( Config::ConfigArgs& args );
-
+  
+  /// Execute the data processing on the trs
+  bool needsInitialization() {return m_needsInitialization;}
+  
   /// Execute the data processing on the trs
   void processData();
 
@@ -138,6 +141,9 @@ protected: // member data
 
   /// Iteration at which processing stops
   CFuint  m_stopIter;
+  
+  /// Flag telling if this processing needs initialization
+  bool  m_needsInitialization;
   
 private: // member data
 

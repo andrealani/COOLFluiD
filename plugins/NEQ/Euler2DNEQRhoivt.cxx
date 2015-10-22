@@ -198,11 +198,14 @@ void Euler2DNEQRhoivt::setDimensionalValuesPlusExtraValues
   // this has to be done before computing any other thermodynamic quantity !!! 
   _library->setSpeciesFractions(_ye);
   
+  CFreal Tdim = state[getTempID(nbSpecies)]*refData[EulerTerm::T];
+  CFreal* rhoi = &const_cast<State&>(state)[0];
+  _library->setState(rhoi, &Tdim); 
+  
   const CFreal u = result[nbSpecies];
   const CFreal v = result[nbSpecies+1];
   const CFreal V2 = u*u + v*v;
   CFreal rhodim = rho*refData[EulerTerm::RHO];
-  CFreal Tdim = state[getTempID(nbSpecies)]*refData[EulerTerm::T];
   CFreal pdim = _library->pressure(rhodim, Tdim, CFNULL);
   
   _library->setDensityEnthalpyEnergy(Tdim, pdim, _dhe);
@@ -335,7 +338,8 @@ void Euler2DNEQRhoivt::setThermodynamics(CFreal rho,
   data[EulerTerm::RHO] = rho;
   
   if (!_skipEnergyData) {
-    _library->setStateTP(Tdim, pdim);
+    CFreal* rhoi = &const_cast<State&>(state)[0];
+    _library->setState(rhoi, &Tdim);
     _library->setDensityEnthalpyEnergy(Tdim, pdim,_dhe);
     _library->frozenGammaAndSoundSpeed(Tdim, pdim, rhodim,
 				       data[EulerTerm::GAMMA],

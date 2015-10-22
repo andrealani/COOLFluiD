@@ -12,7 +12,7 @@
 #
 # This testcases simulates a 2D cylinder corresponding to Hornung's experiment
 #
-### Residual = -4.0018801
+### Residual = -4.0030455
 
 # Simulator.TraceToStdOut = true
 
@@ -22,6 +22,8 @@ Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWrite
 # this option helps if you want to check that all the options you set are declared properly (no spelling mistakes)
 # some options (for instance some Gambit or other converter settings) will always fail anyway
 #CFEnv.ErrorOnUnusedConfig = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NEQ/testcases/TCNEQ/Hornung
@@ -79,11 +81,13 @@ Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
 Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 200
 Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 500
 Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+#Simulator.SubSystem.NewtonIteratorLSS.Data.ILULevels = 2
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<4200,1.,if(i<5500,2.,min(100.,cfl*1.02)))
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<4200,1.,if(i<5200,2.,min(100.,cfl*1.02))) 
+#if(i<4200,1.,if(i<5500,2.,min(100.,cfl*1.02)))
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 #Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 4

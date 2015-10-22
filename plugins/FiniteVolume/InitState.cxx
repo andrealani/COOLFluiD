@@ -73,18 +73,20 @@ InitState::~InitState()
 //////////////////////////////////////////////////////////////////////////////
 
 void InitState::executeOnTrs()
-{
+{  
+  CFLog(VERBOSE, "InitState::executeOnTrs() => START\n");
+  
   SafePtr<TopologicalRegionSet> trs = getCurrentTRS();
-  CFLogDebugMax( "InitState::executeOnTrs() called for TRS: "
-  << trs->getName() << "\n");
-
+  CFLogDebugMax( "InitState::executeOnTrs() called for TRS: " << trs->getName() << "\n");
+  
   if (trs->getName() != "InnerFaces") {
     throw BadValueException (FromHere(),"InitState not applied to InnerFaces!!!");
   }
-
+  
   // this cannot be used for FV boundary faces because
   // ghost state and inner state could have the same local ID !!!
   SafePtr<vector<CFuint> > trsStates = trs->getStatesInTrs();
+  cf_assert(trsStates->size() > 0);
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
   
   std::vector<CFuint>::iterator itd;
@@ -100,13 +102,15 @@ void InitState::executeOnTrs()
   {
     State dimState;
     for (itd = trsStates->begin(); itd != trsStates->end(); ++itd) {
+      cf_assert((*itd) < states.size());
       State* const currState = states[(*itd)];
       _vFunction.evaluate(currState->getCoordinates(), *_input);
       dimState = *_inputToUpdateVar->transform(_input);
       _varSet->setAdimensionalValues(dimState, *currState);
     }
   }
-
+  
+  CFLog(VERBOSE, "InitState::executeOnTrs() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -173,6 +177,8 @@ void InitState::configure ( Config::ConfigArgs& args )
   
   const std::string provider = VarSetTransformer::getProviderName
     (physModel->getConvectiveName(), _inputVarStr, getMethodData().getUpdateVarStr());
+  
+  CFLog(VERBOSE, "InitState::configure() => provider for _inputToUpdateVar is "<< provider << "\n");
   
   _inputToUpdateVar =
     Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider)->

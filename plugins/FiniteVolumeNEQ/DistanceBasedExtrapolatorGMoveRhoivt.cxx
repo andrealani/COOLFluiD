@@ -163,6 +163,10 @@ void DistanceBasedExtrapolatorGMoveRhoivt::transform(const RealVector& in,
   }
   out[TID] = T;
   
+  // AL: this needs to be fixed for multi-temperature with MUTATION++
+  CFreal* rhoi = &const_cast<RealVector&>(in)[0];
+  if (nbTv == 0) {_library->setState(rhoi, &Tdim);}
+  
   CFreal* tVec = (nbTv == 0) ? CFNULL : &(const_cast<RealVector&>(in).ptr()[TID+1]);
   CFreal pdim = _library->pressure(rhodim, Tdim, tVec);
   for  (CFuint i = 0; i < dim; ++i) {

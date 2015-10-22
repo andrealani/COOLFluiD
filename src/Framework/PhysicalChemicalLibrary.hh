@@ -198,17 +198,18 @@ public:
   {
     return _hasElectrons;
   }
-
-  /// Set the thermodynamic state (temperature and pressure) 
-  virtual void setStateTP(CFdouble temp, CFdouble pressure) {} 
+  
+  /// Set the thermodynamic state (temperature and pressure)
+  /// @param species partial densities
+  /// @param mixture temperature
+  virtual void setState(CFdouble* rhoi, CFdouble* T) {}
   
   /// Calculates the static pressure of the mixture
   /// @param rho  density
   /// @param temp temperature
   virtual CFdouble pressure(CFdouble& rho,
-      CFdouble& temp,
-      CFreal* tVec) = 0;
-  
+			    CFdouble& temp,
+			    CFreal* tVec) = 0;
   
   /// Computes all transport coefficients for TCNEQ case
   virtual void transportCoeffNEQ(CFreal& temp, 

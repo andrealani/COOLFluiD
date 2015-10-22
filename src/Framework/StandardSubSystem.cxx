@@ -935,9 +935,11 @@ void StandardSubSystem::writeSolution(const bool force_write )
       {
         Stopwatch<WallTime> stopTimer;
         stopTimer.start();
+        CFLog(VERBOSE, "StandardSubSystem::writeSolution() => output from [" << m_outputFormat[i]->getName() << "] START\n");
         m_outputFormat[i]->open ();
         m_outputFormat[i]->write();
         m_outputFormat[i]->close();
+        CFLog(VERBOSE, "StandardSubSystem::writeSolution() => output from [" << m_outputFormat[i]->getName() << "] END\n");
         stopTimer.stop();
         CFLog(INFO, "Writing took " << stopTimer << "s\n");
       }

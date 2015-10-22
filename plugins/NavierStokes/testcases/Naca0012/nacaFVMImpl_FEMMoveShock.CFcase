@@ -13,6 +13,19 @@
 #
 ### Residual = -7.66176
 
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = true
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+#CFEnv.ExceptionAborts      = true
+CFEnv.ExceptionDumps       = true
+CFEnv.ExceptionOutputs     = true
+#CFEnv.RegistSignalHandlers = false
+#CFEnv.TraceToStdOut = true
+
+
 Simulator.Maestro = SimpleMaestro
 Simulator.SubSystems = SubSystem
 

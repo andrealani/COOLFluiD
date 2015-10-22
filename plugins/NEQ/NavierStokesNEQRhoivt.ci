@@ -239,7 +239,7 @@ void NavierStokesNEQRhoivt<BASE>::setGradientState(const RealVector& state)
 {
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Physics::NavierStokes;
-
+  
   const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
   CFreal rho = 0.;
   for (CFuint i = 0; i < nbSpecies; ++i) {
@@ -259,6 +259,10 @@ void NavierStokesNEQRhoivt<BASE>::setGradientState(const RealVector& state)
   CFreal rhodim = rho*refData[EulerTerm::RHO];
   CFreal Tdim =  this->_gradState[this->_TID]*refData[EulerTerm::T];
   CFreal* tVec = CFNULL;
+  
+  // set the state from rhoi's and temperature 
+  CFreal* rhoi = &const_cast<RealVector&>(state)[0];
+  this->_library->setState(rhoi, &Tdim);
   
   const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
   if (nbTv > 0) {

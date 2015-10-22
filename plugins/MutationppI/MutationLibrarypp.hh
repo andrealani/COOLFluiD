@@ -73,12 +73,15 @@ public:
    * Get the molar masses
    */
   void getMolarMasses(RealVector& mm);
- 
+  
   /// Set the thermodynamic state (temperature and pressure)
-  virtual void setState(CFdouble temp, CFdouble pressure) 
+  /// @param species partial densities
+  /// @param mixture temperature
+  void setState(CFdouble* rhoi, CFdouble* T) 
   {
-    CFreal tp[2]; tp[0]= temp; tp[1]= pressure;
-    m_gasMixture->setState(&tp[0], &m_y[0]);
+    RealVector rhoiv(_NS,&rhoi[0]);
+    CFLog(DEBUG_MAX, "MutationLibrarypp::setState() => rhoiv = " << rhoiv << ", T = " << *T << "\n");
+    m_gasMixture->setState(rhoi, T, 1);
   }   
   
   /**
@@ -539,14 +542,17 @@ private: // helper function
    */
   void setLibrarySequentially2();
   
-protected:
+  /// enumerator for the state model type 
+  enum StateModelType {LTE=0, CNEQ=1, TCNEQ=2};
   
+protected:
+    
   /// gas mixture pointer
   std::auto_ptr<Mutation::Mixture> m_gasMixture; 
   
-  /// mixture name
-  std::string _mixtureName;
-    
+  /// state model type enumerator 
+  MutationLibrarypp::StateModelType m_smType;
+  
   /// mass fractions
   RealVector m_y;
   
@@ -567,7 +573,13 @@ protected:
   
   /// stores the modified driving forces for the Stefan-Maxwell system solution
   RealVector m_df;
+
+  /// mixture name
+  std::string _mixtureName;
     
+  /// state model name
+  std::string _stateModelName;
+
 }; // end of class MutationLibrarypp
       
 //////////////////////////////////////////////////////////////////////////////

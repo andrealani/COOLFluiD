@@ -26,6 +26,7 @@ void DataProcessingMethod::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFuint, Config::DynamicOption<> >("ProcessRate","Rate to process the data."); 
   options.addConfigOption< CFuint, Config::DynamicOption<> >("StartIter","Iteration at which processing starts.");
   options.addConfigOption< CFuint, Config::DynamicOption<> >("StopIter", "Iteration to stop processing stops.");
+  options.addConfigOption< bool >("NeedsInitialization","Flag telling if this processing needs initialization.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -68,9 +69,12 @@ DataProcessingMethod::DataProcessingMethod(const std::string& name)
   setParameter("StartIter",&m_startIter);
 
   m_stopIter = numeric_limits<CFuint>::max();
-  setParameter("StopIter",&m_stopIter);
-}
+  setParameter("StopIter",&m_stopIter);  
 
+  m_needsInitialization = false;
+  setParameter("NeedsInitialization",&m_needsInitialization);
+}
+    
 //////////////////////////////////////////////////////////////////////////////
 
 DataProcessingMethod::~DataProcessingMethod()

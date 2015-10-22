@@ -24,7 +24,7 @@ Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWrite
 #CFEnv.ErrorOnUnusedConfig = true
 
 # SubSystem Parameters
-Simulator.Paths.WorkingDir = ./
+Simulator.Paths.WorkingDir = plugins/NEQ/testcases/TCNEQ/Hornung
 Simulator.Paths.ResultsDir = ./RESULTS_CNEQ
 
 Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DNEQ
@@ -48,8 +48,10 @@ Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Wall
 Simulator.SubSystem.CFmesh.FileName  = HornungN2.CFmesh
 Simulator.SubSystem.CFmesh.AppendIter = false
 Simulator.SubSystem.CFmesh.SaveRate = 500
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarNames = limiter
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarStrides = 5
 
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
 Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
 
 #Simulator.SubSystem.StopCondition       = Norm
