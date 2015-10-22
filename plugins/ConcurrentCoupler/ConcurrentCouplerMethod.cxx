@@ -385,8 +385,8 @@ void ConcurrentCouplerMethod::setMethodImpl()
     fout.close();
   }
   
-  Group& cgroup = PE::GetPE().getGroup(getNamespace());
-  MPI_Barrier(cgroup.comm);
+  // Group& cgroup = PE::GetPE().getGroup(getNamespace());
+  // MPI_Barrier(cgroup.comm);
   
   // loop over all coupled namespaces to find a root I/O for each one of them 
   const int rank  = PE::GetPE().GetRank("Default");     // rank in default group
