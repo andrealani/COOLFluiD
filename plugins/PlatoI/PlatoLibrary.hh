@@ -528,6 +528,9 @@ private: // helper function
   
 protected:
   
+  /*Path*/
+  std::string _path;
+
   /*Mixture file name*/
   std::string _mixtureName;
   

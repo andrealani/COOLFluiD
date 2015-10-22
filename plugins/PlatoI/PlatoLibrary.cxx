@@ -65,6 +65,9 @@ PlatoLibrary::PlatoLibrary(const std::string& name)
 {
   addConfigOptionsTo(this);
 
+  _path = "empty";
+  setParameter("path",&_path);
+
   _mixtureName = "";
   setParameter("mixtureName",&_mixtureName);
 
@@ -117,17 +120,11 @@ void PlatoLibrary::setLibrarySequentially()
   const size_t lmixture  = strlen(_mixtureName.c_str());
   const size_t lreaction = strlen(_reactionName.c_str());
   const size_t ltransfer = strlen(_transfName.c_str());
-  
-  if (m_libPath == "") {
-    const char* basePath = getenv("PLATO_DIR");
-    m_libPath = string(basePath) + "/database";
-  }
-  
-  const size_t lpath = strlen(m_libPath.c_str());
+  const size_t lpath     = strlen(_path.c_str());
   
   /*Initialize the PLATO library*/
   initializeC(solver, _mixtureName.c_str(), _reactionName.c_str(), _transfName.c_str(), 
-	      m_libPath.c_str(), lsolver, lmixture, lreaction, ltransfer, lpath);
+	      _path.c_str(), lsolver, lmixture, lreaction, ltransfer, lpath);
 
   /*Call PLATO library functions to get parameters about the physical model (e.g. number of species, temperatures)*/
   /*Number of elements (or nuclei)*/

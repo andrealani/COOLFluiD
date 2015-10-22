@@ -63,6 +63,7 @@ Simulator.SubSystem.ICPLTE2D.SourceTerm.Freq = 0.37
 
 ###### CHEMICAL LIBRARY ##
 Simulator.SubSystem.ICPLTE2D.PropertyLibrary = Plato
+Simulator.SubSystem.ICPLTE2D.Plato.path = /home/alessandro/Workspace/COOLFluiD/trunk/plugins/Plato/database 
 Simulator.SubSystem.ICPLTE2D.Plato.mixtureName = air11
 Simulator.SubSystem.ICPLTE2D.Plato.reactionName = empty
 
