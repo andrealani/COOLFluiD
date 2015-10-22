@@ -289,7 +289,7 @@ private: //data
   
   /// Start/end direction to consider
   std::string m_startEndDirStr;
-  
+    
   /// bool to write the table in a file
   bool m_writeToFile;
   

@@ -371,17 +371,17 @@ void Radiation::setup()
   Stopwatch<WallTime> stp;
   
   stp.start();
-  
   getDirections();
   CFLog(INFO, "Radiation::setup() => getDirections() took " << stp.read() << "s\n");
   
   stp.start();
-  
-  // only get advance order for the consisdered directions
+  // only get advance order for the considered directions
   for (CFuint d = startDir; d < endDir; d++){
     cf_assert(m_advanceOrder[d].size() == nbCells);
     getAdvanceOrder(d, m_advanceOrder[d]);
   }
+  
+  // old
   // getAdvanceOrder();
   
   CFLog(INFO, "Radiation::setup() => getAdvanceOrder() took " << stp.read() << "s\n");
@@ -512,7 +512,7 @@ void Radiation::execute()
   CFAUTOTRACE;
   
   CFLog(VERBOSE, "Radiation::execute() => start\n");
-  
+  // /*
   const std::string nsp = this->getMethodData().getNamespace();
   cf_assert(PE::GetPE().GetProcessorCount(nsp) == 1);
   
@@ -561,7 +561,7 @@ void Radiation::execute()
 	
 	const CFuint iCell = std::abs(m_advanceOrder[d][m]);
 	geoData.idx = iCell;    
-	GeometricEntity* currCell = m_geoBuilder.buildGE();
+	GeometricEntity *const currCell = m_geoBuilder.buildGE();
 	
 	// new algorithm (more parallelizable): opacities are computed cell by cell
 	// for a given bin
@@ -596,7 +596,7 @@ void Radiation::execute()
 	  } 
 	  Lc          = volumes[iCell]/(- dirDotnANeg); 
 	  halfExp     = std::exp(-0.5*Lc*m_fieldAbsor[iCell]);
-	  m_In[iCell] = (inDirDotnANeg/dirDotnANeg)*std::pow(halfExp,2) + (1. - std::pow(halfExp,2))*m_fieldSource[iCell];
+	  m_In[iCell] = (inDirDotnANeg/dirDotnANeg)*halfExp*halfExp + (1. - halfExp*halfExp)*m_fieldSource[iCell];
 	  Ic          = (inDirDotnANeg/dirDotnANeg)*halfExp + (1. - halfExp)*m_fieldSource[iCell];
 	}
 	else{
@@ -660,14 +660,16 @@ void Radiation::execute()
   if(m_radialData){
     writeRadialData();
   } 
-  
+  // */
   CFLog(VERBOSE, "Radiation::execute() => end\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void Radiation::getFieldOpacities(CFuint ib)
 {
+  CFLog(VERBOSE, "Radiation::getFieldOpacities() => start\n");
+  
   if(m_useExponentialMethod){
     m_fieldSource = 0.;
     m_fieldAbsor  = 0.;
@@ -678,23 +680,14 @@ void Radiation::getFieldOpacities(CFuint ib)
     m_fieldAbV    = 0.;
   }
   
-  //cout <<"Radiation::getFieldOpacities==>entering"<<endl;
-  
   DataHandle<CFreal> TempProfile    = socket_TempProfile.getDataHandle();
   DataHandle<CFreal> volumes        = socket_volumes.getDataHandle();
   DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
-  
-  // CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
-  // Common::SafePtr<TopologicalRegionSet> cells = geoData.trs;
-  // const CFuint nbCells = cells->getLocalNbGeoEnts();
   
   const CFuint nbCells = states.size();
   const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
   
   for (CFuint iCell = 0; iCell < nbCells; iCell++) {
-    //geoData.idx = iCell;    
-    //GeometricEntity* currCell = m_geoBuilder.buildGE();
-    //const State *currState = currCell->getState(0); // please note the reference &
     const State *currState = states[iCell];
     //Get the field pressure and T commented because now we impose a temperature profile
     CFreal p = 0.;
@@ -752,15 +745,17 @@ void Radiation::getFieldOpacities(CFuint ib)
       }      
       m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
     }
-    // m_geoBuilder.releaseGE();
   }
-  //cout <<"Radiation::getFieldOpacities==>exiting"<<endl;
+  
+  CFLog(VERBOSE, "Radiation::getFieldOpacities() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void Radiation::getAdvanceOrder()
-{
+{ 
+  CFLog(VERBOSE, "Radiation::getAdvanceOrder() => start\n");
+  
   // The order of advance calculation begins here
   DataHandle<CFreal> CellID = socket_CellID.getDataHandle();
   CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
@@ -896,6 +891,8 @@ void Radiation::getAdvanceOrder()
 
 void Radiation::getAdvanceOrder(const CFuint d, vector<int>& advanceOrder)
 {
+  CFLog(VERBOSE, "Radiation::getAdvanceOrder() => start\n");
+  
   // The order of advance calculation begins here
   DataHandle<CFreal> CellID = socket_CellID.getDataHandle();
   CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
