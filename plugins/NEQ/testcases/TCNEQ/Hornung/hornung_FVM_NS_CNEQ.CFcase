@@ -12,7 +12,7 @@
 #
 # This testcases simulates a 2D cylinder corresponding to Hornung's experiment
 #
-### Residual = -4.0030455
+### Residual = -4.0001104
 
 # Simulator.TraceToStdOut = true
 
@@ -136,7 +136,7 @@ Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 0.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
 Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
 Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitIter = 3500
