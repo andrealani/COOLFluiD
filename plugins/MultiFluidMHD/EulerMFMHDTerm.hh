@@ -149,6 +149,11 @@ public:
   {
     return _lightSpeed;
   }
+
+  bool isLeake() const
+  {
+    return _isLeake;
+  }
   
   /**
    * Get index of pressure
@@ -229,6 +234,10 @@ protected:
   
   ///introduced non induced electromagnetic field
   std::vector<CFreal> _nonInducedEMField;  
+
+  /// Flag to use Leake's model in the convective term
+  bool _isLeake;
+
 }; // end of class EulerMFMHDTerm
 
 //////////////////////////////////////////////////////////////////////////////

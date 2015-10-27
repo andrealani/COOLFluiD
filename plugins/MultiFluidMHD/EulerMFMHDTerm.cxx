@@ -28,6 +28,7 @@ void EulerMFMHDTerm::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal > ("molecularMass3", "Molecular mass of third species");
   options.addConfigOption< std::vector<CFreal> >("nonInducedElectromagnetic", "nonInduced Electromagnetic Field");
   options.addConfigOption< CFreal > ("lightSpeedMF", "Speed of light. It can be reduced if it is still bigger than the speed of the fluid");
+  options.addConfigOption< bool > ("IsLeake", "Flag to use  the Leake model in the convective term.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -64,6 +65,9 @@ EulerMFMHDTerm::EulerMFMHDTerm(const std::string& name) :
   
   _nonInducedEMField = std::vector<CFreal>();
   setParameter("nonInducedElectromagnetic",&_nonInducedEMField);
+
+  _isLeake = false;
+  setParameter("IsLeake", &_isLeake);
 }
       
 //////////////////////////////////////////////////////////////////////////////

@@ -75,8 +75,10 @@ void EulerMFMHD3DRhoiViTiToCons::transform(const State& state, State& result)
     result[vID] = rho_i*state[vID];
     result[wID] = rho_i*state[wID];
   }
+
+  const bool isLeake = _model->isLeake();
   
-  if (nbSpecies == 2){
+  if (isLeake){
     //ions
     const CFreal m_p = _model->getMolecularMass3();    
     const CFreal gamma = _model->getGamma();
@@ -182,7 +184,10 @@ void EulerMFMHD3DRhoiViTiToCons::transformFromRef(const RealVector& data, State&
     result[endEM + nbSpecies + dim*ie + 1] = data[firstVelocity + dim*ie + 1]*rho*data[firstSpecies + ie];
     result[endEM + nbSpecies + dim*ie + 2] = data[firstVelocity + dim*ie + 2]*rho*data[firstSpecies + ie];
   }
-  if(nbSpecies == 2){
+
+  const bool isLeake = _model->isLeake();
+
+  if (isLeake){
     const CFuint firstTemperature = _model->getFirstScalarVar(2);
     //ions
     const CFreal m_p = _model->getMolecularMass3();    
@@ -215,7 +220,7 @@ void EulerMFMHD3DRhoiViTiToCons::transformFromRef(const RealVector& data, State&
 //     std::cout << "EulerMFMHD3DRhoiViTiToCons::transformFromRef() => result = "<< result <<"\n";
   }
  
-  else{
+  else {
     //set the energy parameters
     const CFreal gamma = _model->getGamma();
     const CFreal K_gas = _model->getK();

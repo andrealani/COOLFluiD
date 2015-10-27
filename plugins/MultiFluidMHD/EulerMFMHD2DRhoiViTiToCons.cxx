@@ -74,7 +74,9 @@ void EulerMFMHD2DRhoiViTiToCons::transform(const State& state, State& result)
     result[vID] = rho_i*state[vID];
   }
   
-  if (nbSpecies == 2){
+  const bool isLeake = _model->isLeake();
+
+  if (isLeake){
     //ions
     const CFreal m_p = _model->getMolecularMass3();    
     const CFreal gamma = _model->getGamma();
@@ -174,7 +176,9 @@ void EulerMFMHD2DRhoiViTiToCons::transformFromRef(const RealVector& data, State&
     result[endEM + nbSpecies + 2*ie] = data[firstVelocity + 2*ie]*rho*data[firstSpecies + ie];
     result[endEM + nbSpecies + 2*ie + 1] = data[firstVelocity + 2*ie +1]*rho*data[firstSpecies + ie];
   }
-  if(nbSpecies == 2){
+  const bool isLeake = _model->isLeake();
+
+  if (isLeake){
     const CFuint firstTemperature = _model->getFirstScalarVar(2);
     //ions
     const CFreal m_p = _model->getMolecularMass3();    

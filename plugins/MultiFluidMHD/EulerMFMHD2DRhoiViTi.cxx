@@ -158,8 +158,9 @@ void EulerMFMHD2DRhoiViTi::computePhysicalData(const State& state, RealVector& d
   data[PTERM::PHI] = state[7];  
     
    
-  // plasma + neutrals model
-  if(nbSpecies == 2){
+  const bool isLeake = getModel()->isLeake();
+
+  if (isLeake){
     
     //Total density
     CFreal rho = 0.0;

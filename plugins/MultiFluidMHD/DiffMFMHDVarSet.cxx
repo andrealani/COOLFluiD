@@ -124,83 +124,92 @@ void DiffMFMHDVarSet::computeTransportProperties(const RealVector& state,
       }
     }
   }
-  //Preliminar implementation of Braginskii heat Flux in 2D
+  //Implementation of Braginskii heat Flux in 2D
   if(getModel().isBraginskii() == true) {
     if (nbSpecies == 2){
       if (_useBackUpValues || _freezeDiffCoeff) {
-	for (CFuint i = 0; i < nbSpecies; ++i){
-	  diffMFMHDData[i] = m_dynViscCoeff[i];
-	}
-	
-	// AL: here to be commented properly
-	for(CFuint i = 0; i < 8; i++){
-	  diffMFMHDData[nbSpecies + i] = m_thermCondCoeff[i];
-	}
-      }
+        for (CFuint i = 0; i < nbSpecies; ++i){
+          diffMFMHDData[i] = m_dynViscCoeff[i];
+        }
+        // AL: here to be commented properly
+        for(CFuint i = 0; i < 8; i++){
+          diffMFMHDData[nbSpecies + i] = m_thermCondCoeff[i];
+        }
+      } //End of freezeDiffCoeff
       else {		//this is the default case
+        if(dim == DIM_2D){
+          const RealVector& mu = getDynViscosityVec(state, gradients);
+          for (CFuint i = 0; i < nbSpecies; ++i) {
+            diffMFMHDData[i] = mu[i]; 						//reads the dimensional value imposed in the options
+          }
 
-	if(dim == DIM_2D){
-	  const RealVector& mu = getDynViscosityVec(state, gradients);
-	  for (CFuint i = 0; i < nbSpecies; ++i) {
-	    diffMFMHDData[i] = mu[i]; 						//reads the dimensional value imposed in the options
-	  }
+          computeBraginskiiThermConduct(state);             // Compute the Braginskii coeffs.
+          CFreal kappaParallel = _kappaParallel;
+          CFreal kappaPerpendicular = _kappaPerpendicular;
+          CFreal betaWedge = _betaWedge;
+	  
+          //unitary vector in B direction
+          CFreal Bx = state[0];
+          CFreal By = state[1];
+          CFreal B2 = Bx*Bx + By*By;
+          CFreal B = std::sqrt(B2);
 
-	  computeBraginskiiThermConduct(state);
-	  CFreal kappaParallel = _kappaParallel;
-	  CFreal kappaPerpendicular = _kappaPerpendicular;
-	  CFreal betaWedge = _betaWedge;
+          CFreal bx = 0;
+          CFreal by = 0;
 	  
-  // 	std::cout << "kappaParallel      = " << kappaParallel <<"\n";
-  // 	std::cout << "kappaPerpendicular = " << kappaPerpendicular <<"\n";
-  // 	std::cout << "betaWedge          = " << betaWedge <<"\n";
-
+          if (std::abs(B) > 1e-15){//controlling that one doesn't divide by zero
+            bx = Bx/B;
+            by = By/B;
+          }
 	  
-	  //unitary vector in B direction
-	  CFreal Bx = state[0];
-	  CFreal By = state[1];
-	  CFreal B2 = Bx*Bx + By*By;
-	  CFreal B = std::sqrt(B2);
-
-	  CFreal bx = 0;
-	  CFreal by = 0;
+          //matrix
+          CFreal bxx = bx*bx;
+          CFreal bxy = bx*by;
+          CFreal byy = by*by;
 	  
-	  if (std::abs(B) > 1e-15){//controlling that one doesn't divide by zero 
-	    bx = Bx/B;
-	    by = By/B;
-	  }
+          const CFuint endVisc = 2;
+          diffMFMHDData[endVisc + 0] = kappaParallel*bxx;
+          diffMFMHDData[endVisc + 1] = kappaParallel*bxy;
+          diffMFMHDData[endVisc + 2] = kappaParallel*byy;
 	  
-	  //matrix 
-	  CFreal bxx = bx*bx;
-	  CFreal bxy = bx*by;
-	  CFreal byy = by*by;
+          diffMFMHDData[endVisc + 3] = kappaPerpendicular*(1-bxx);
+          diffMFMHDData[endVisc + 4] = -kappaPerpendicular*bxy;
+          diffMFMHDData[endVisc + 5] = kappaPerpendicular*(1-byy);
 	  
-	  const CFuint endVisc = 2;
-	  diffMFMHDData[endVisc + 0] = kappaParallel*bxx;
-	  diffMFMHDData[endVisc + 1] = kappaParallel*bxy;      
-	  diffMFMHDData[endVisc + 2] = kappaParallel*byy;    
+          diffMFMHDData[endVisc + 6] = betaWedge;
 	  
-	  diffMFMHDData[endVisc + 3] = kappaPerpendicular*(1-bxx);
-	  diffMFMHDData[endVisc + 4] = -kappaPerpendicular*bxy;      
-	  diffMFMHDData[endVisc + 5] = kappaPerpendicular*(1-byy); 
+          diffMFMHDData[endVisc + 7] = getThermConductivity(state, mu[1]);		//neutrals' thermal conduction
 	  
-	  diffMFMHDData[endVisc + 6] = betaWedge;
-	  
-	  diffMFMHDData[endVisc + 7] = getThermConductivity(state, mu[1]);		//neutrals' thermal conduction
-	  
-	  //std::cout<<"diffMFMHDData = " << diffMFMHDData <<"\n";
-	}
-	
+          //std::cout<<"diffMFMHDData = " << diffMFMHDData <<"\n";
+        }
       }
       if (_setBackUpValues) {			//To be implenemted
-	for (CFuint i = 0; i < nbSpecies; ++i){
-	  m_dynViscCoeff[i] = diffMFMHDData[i];
-	}
-	for(CFuint i = 0; i < 8; i++){
-	  m_thermCondCoeff[i] = diffMFMHDData[nbSpecies + i];
-	}
+        for (CFuint i = 0; i < nbSpecies; ++i){
+          m_dynViscCoeff[i] = diffMFMHDData[i];
+        }
+        for(CFuint i = 0; i < 8; i++){
+          m_thermCondCoeff[i] = diffMFMHDData[nbSpecies + i];
+        }
       }
-    }
-  }
+    } // End of if nbSpecies==2
+  } // End of if Braginskii==true
+
+  //if(getModel().isExtendedDomain() == true){
+    //const RealVector& mu_0 = getDynViscosityVec(state, gradients);
+    //const RealVector& mu_f = getModel().getIncreasedDynViscosityDim();
+    //const CFreal y_boundary = getModel().getTopHeight();
+    //const CFreal y_0 = getModel().getDampingHeight();
+    //const CFreal Delta_y = std::abs(y_0 - y_boundary)/5;   // It's taken 5 since tanh(5) is almost 1
+    //const CFreal y_coord = (state).getCoordinates()[YY];
+    //for (CFuint i = 0; i < nbSpecies; ++i) {
+      //if(y_coord >= y_boundary){ //If the coordinate of the state is in the extended domain, it increases the viscosity
+        //diffMFMHDData[i] =  0.5*mu_f[i]*std::tanh((y_coord - y_0)/Delta_y) + mu_0[i] - 0.5*mu_f[i]*std::tanh((y_boundary - y_0)/Delta_y); 						//reads the dimensional value imposed in the options
+      //}
+      //else{//If not, it uses the same viscosity
+        //diffMFMHDData[i] = mu_0[i];
+      //}
+    //}
+  //}
 }
 
 //////////////////////////////////////////////////////////////////////////////

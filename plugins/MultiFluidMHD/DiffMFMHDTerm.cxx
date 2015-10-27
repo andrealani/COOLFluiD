@@ -31,7 +31,19 @@ void DiffMFMHDTerm::defineConfigOptions(Config::OptionList& options)
   
   options.addConfigOption<bool>
     ("BraginskiiTransport", "Braginskii Transport properties");
-  
+
+  options.addConfigOption<bool>
+    ("ExtendedDomain", "The viscosity is increased to damp the waves in the extended domain");
+
+  options.addConfigOption<CFreal>
+    ("TopHeight", "Height of the top boundary of the extended domain");
+
+  options.addConfigOption< std::vector<CFreal> >
+    ("IncreasedDynViscosity","Increased Dynamic Viscosity of species in the extended domain.");
+
+  options.addConfigOption<CFreal>
+    ("DampingHeight", "Height of the damping where the viscosity starts being effective of the extended domain");
+
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -40,7 +52,8 @@ DiffMFMHDTerm::DiffMFMHDTerm(const std::string& name) :
   Framework::BaseTerm(name),
   m_dynViscosityVec(),
   m_thermConductivityVec(),
-  _NonInducedEMField()  
+  _NonInducedEMField(),
+  m_IncreasedDynViscosityVec()
 {
   addConfigOptionsTo(this);
   
@@ -59,6 +72,18 @@ DiffMFMHDTerm::DiffMFMHDTerm(const std::string& name) :
   
   m_braginskiiTransport = false;
   setParameter("BraginskiiTransport",&m_braginskiiTransport);
+
+  m_isExtended = false;
+  setParameter("ExtendedDomain",&m_isExtended);
+
+  m_topHeight = 2e6;
+  setParameter("TopHeight",&m_topHeight);
+
+  m_IncreasedDynViscosity = std::vector<CFreal>();
+  setParameter("IncreasedDynViscosity",&m_IncreasedDynViscosity);
+
+  m_y0 = 2.5e6;
+  setParameter("DampingHeight",&m_y0);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -81,6 +106,11 @@ void DiffMFMHDTerm::configure ( Config::ConfigArgs& args )
     m_thermConductivity.resize(m_nbSpecies, 1.0);
   }
   m_thermConductivityVec.resize(m_thermConductivity.size());  
+
+  if(m_isExtended) {
+    m_IncreasedDynViscosity.resize(m_nbSpecies, 1.0);
+    m_IncreasedDynViscosityVec.resize(m_IncreasedDynViscosity.size());
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -95,6 +125,12 @@ void DiffMFMHDTerm::setupPhysicalData()
   for (CFuint i = 0; i < m_nbSpecies; ++i) {
     m_dynViscosityVec[i] = m_dynViscosity[i];
     m_thermConductivityVec[i] = m_thermConductivity[i];   
+  }
+
+  if(m_isExtended) {
+    for (CFuint i = 0; i < m_nbSpecies; ++i) {
+      m_IncreasedDynViscosityVec[i] = m_dynViscosity[i];
+    }
   }
   
   m_physicalData.resize(getDataSize());

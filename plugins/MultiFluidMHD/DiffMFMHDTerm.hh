@@ -48,7 +48,7 @@ public:
   CFuint getDataSize() const
   {
     //to test the Braginskii transport
-    if (m_nbSpecies == 2) {
+    if (m_braginskiiTransport) {
       return 10; 				//2 Viscosities + 7 ThermConductiv (ion) + 1 ThermConductiv (neutral)
     }
     else{
@@ -91,9 +91,24 @@ public:
   virtual CFuint getNbSpecies() const {return m_nbSpecies;}   
   
   /**
-   * @return the number of species
+   * @return is using the braginskii model
   */
-  virtual bool isBraginskii() const {return m_braginskiiTransport;}
+  bool isBraginskii() const {return m_braginskiiTransport;}
+
+  /**
+   * @return is using the braginskii model
+  */
+  bool isExtendedDomain() const {return m_isExtended;}
+
+  /**
+   * @return TopHeight
+  */
+  CFreal getTopHeight() const {return m_topHeight;}
+
+  /**
+   * @return m_y0
+  */
+  CFreal getDampingHeight() const {return m_y0;}
   
   void computeNonInducedEMField(CFreal xCoord, CFreal yCoord);
   
@@ -106,7 +121,10 @@ public:
     return _NonInducedEMField;
   } 
 
-  
+  RealVector& getIncreasedDynViscosityDim()
+  {
+    return m_IncreasedDynViscosityVec;
+  }
 private:
   
   /// dimensional coefficient
@@ -132,7 +150,22 @@ private:
 
   ///introduced non induced electromagnetic field
   std::vector<CFreal> _nonInducedEMField;  
-  
+
+  /// Flag to use extended domain
+  bool m_isExtended;
+
+  /// Height of the upper boundary of the PHYSICAL domain
+  CFreal m_topHeight;
+
+  /// Increased viscosity in the damped domain
+  std::vector<CFreal> m_IncreasedDynViscosity;
+
+  /// dimensional coefficient of extended domain
+  RealVector m_IncreasedDynViscosityVec;
+
+  /// Height of the center of the tanh used to damp the viscosity smoothly
+  CFreal m_y0;
+
 }; // end of class DiffMFMHDTerm
 
 //////////////////////////////////////////////////////////////////////////////
