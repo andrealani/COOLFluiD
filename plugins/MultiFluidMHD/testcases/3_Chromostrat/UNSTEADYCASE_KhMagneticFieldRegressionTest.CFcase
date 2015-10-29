@@ -1,0 +1,344 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+# Case Testing the chromospheric wave propagation
+### Residual = -0.544473
+
+###############################################################################
+# Assertion For Debugging
+
+#CFEnv.ExceptionLogLevel    = 1000
+#CFEnv.DoAssertions         = true
+#CFEnv.AssertionDumps       = true
+#CFEnv.AssertionThrows      = true
+#CFEnv.AssertThrows         = true
+#CFEnv.AssertDumps          = true
+##CFEnv.ExceptionAborts      = true
+#CFEnv.ExceptionDumps       = true
+#CFEnv.ExceptionOutputs     = true
+#CFEnv.RegistSignalHandlers = false
+#CFEnv.TraceToStdOut = true
+#CFEnv.TraceActive = true
+#
+# this will always fail with GAMBIT
+#CFEnv.ErrorOnUnusedConfig = true
+
+
+###############################################################################
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libNavierStokes libMaxwell libMultiFluidMHD libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGambit2CFmesh libForwardEuler libPetscI 
+
+#SubSystem Parameters
+Simulator.Paths.WorkingDir       = /plugins/MultiFluidMHD/testcases/3_Chromostrat
+Simulator.Paths.ResultsDir       = /plugins/MultiFluidMHD/testcases/3_Chromostrat/Test1_KhMagneticField
+
+#SubSystem Parameters
+Simulator.SubSystem.InteractiveParamReader.FileName = /plugins/MultiFluidMHD/testcases/3_Chromostrat/MFinteractive_unsteady.inter
+Simulator.SubSystem.InteractiveParamReader.readRate = 10
+
+
+###############################################################################
+# Physical Model
+# order of the reference values is Bx, By, Bz, Ex, Ey, Ez, Psi, Phi, rhoi, rhon, ui, vi, un, vn, Ti, Tn
+
+Simulator.SubSystem.Default.PhysicalModelType = MultiFluidMHD2D
+Simulator.SubSystem.MultiFluidMHD2D.refValues = 1e-3 1e-3 1e-3 0.02 0.02 0.02 1e-4 1e-3 8.6e-8 1.6e-4 100 20 100 20 7000 7000
+Simulator.SubSystem.MultiFluidMHD2D.refLength = 1.0
+
+# Fluids Properties
+Simulator.SubSystem.MultiFluidMHD2D.nbSpecies = 2
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.molecularMass1 = 9.1093829140e-31 
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.molecularMass2 = 1.6735327160314e-27 
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.molecularMass3 = 1.67262177774e-27
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.gamma = 1.6666666666667
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.nonInducedElectromagnetic = 0. 0. 0. 0. 0. 0.    
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.divBCleaningConst = 1.
+Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.nbSpecies = 2
+Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.dynViscosity = 10e-3 1000e-3 #1e-7 0.7e-4 #10 10 #0.662751793172439e-3 0.662751793172439e-3 #10 10 #in units [Pa*s]
+Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.thermConductivity = 2e-3 0.2 #21.882471906912727 21.882471906912727 #1000 1000
+Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.BraginskiiTransport = true 
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.lightSpeedMax = 3e6 #299792458
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.lightSpeedMF = 3e6 #299792458
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.IsLeake = true
+
+###############################################################################
+# Output
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh 
+
+Simulator.SubSystem.CFmesh.FileName     = Test-sol.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate     = 1000 #1250
+Simulator.SubSystem.CFmesh.AppendTime   = false 
+Simulator.SubSystem.CFmesh.AppendIter   = false
+
+Simulator.SubSystem.Tecplot.FileName    = multiFluid.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = RhoiViTi
+Simulator.SubSystem.Tecplot.SaveRate    = 500 #10000 #1250
+#Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+#Simulator.SubSystem.Tecplot.Data.SurfaceTRS = x0 y0
+Simulator.SubSystem.Tecplot.AppendTime = true #false
+#Simulator.SubSystem.Tecplot.AppendIter = true
+
+# Extra Values from Data Processing
+
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = gradPi gradPn nuIon nuRec nu_in Jx Jy Jz Jtot jxB_x jxB_y jxB_z jxB Resistivity #divB  
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = gradPi gradPn nuIon nuRec nu_in Jx Jy Jz Jtot jxB_x jxB_y jxB_z jxB Resistivity #divB 
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
+
+
+###############################################################################
+# Time Marching
+ 
+#Simulator.SubSystem.SubSystemStatus.InitialTime = 0.052836
+#Simulator.SubSystem.SubSystemStatus.TimeStep = 1.0e-3
+Simulator.SubSystem.SubSystemStatus.ComputeDT = FunctionDT
+Simulator.SubSystem.SubSystemStatus.FunctionDT.Vars = i
+Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = if(i<501,1.e-4,if(i<1001,5e-4,if(i<1501,1.e-3,if(i<2001,5e-3,1e-2))))
+
+# Stop Condition
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 5 
+
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 2
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -20.0
+
+# Linear System
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
+Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 150
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-04
+
+# Explicit
+#Simulator.SubSystem.ConvergenceMethod = FwdEuler
+#Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
+#Simulator.SubSystem.FwddEuler.Data.CFL.ComputeCFL =  Interactive
+
+# Implicit first Order
+#Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+#Simulator.SubSystem.NewtonIterator.UpdateSol = StdUpdateSol
+#Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation= 1.
+
+# CFL definition
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def =\
+#if(i<160,1e4,if(i<250,1e5,if(i<670,1e6,if(i<2690,1e7,1e8))))
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1e4
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
+
+#First order in time
+#Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 30
+#Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 15
+#Simulator.SubSystem.NewtonIterator.Data.FilterState = Max
+#Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs = 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 1
+#Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 10. 10.
+#Simulator.SubSystem.NewtonIterator.Data.Norm = -15
+
+# Implicit Second Order
+Simulator.SubSystem.ConvergenceMethod = BDF2
+Simulator.SubSystem.BDF2.ShowRate = 1
+# CFL definition
+#Simulator.SubSystem.BDF2.Data.CFL.Value = 1.0
+#Simulator.SubSystem.BDF2.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.BDF2.ConvergenceFile = convergence_UnsteadyMagnetosphereACAImplPrim0_85READFROMFILE.plt 
+Simulator.SubSystem.BDF2.Data.MaxSteps = 20
+Simulator.SubSystem.BDF2.Data.L2.MonitoredVarID = 10 # 12 = Vneutral
+Simulator.SubSystem.BDF2.Data.Norm = -0.5
+#Simulator.SubSystem.BDF2.Data.Norm = -2.
+#Simulator.SubSystem.BDF2.Data.PrintHistory = true
+ 
+
+
+###############################################################################
+# Mesh Reader
+Simulator.SubSystem.Default.listTRS = y0 y1 PeriodicX
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./Mesh_2x2_100x1500.CFmesh
+#./Mesh_2x2_200x200.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1e-6
+
+# comment this out to Restart
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
+
+
+###############################################################################
+# Space Method
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+#Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff = true
+
+# First Order Time stepping
+#Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+#Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.zeroDiagValue = 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+#Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.useGlobalDT = false
+
+# second order Time stepping
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhs
+##Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhsLimited
+###Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.TimeLimiter = MinMod
+###Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.MinMod.SlopeRatio = 3.
+Simulator.SubSystem.CellCenterFVM.BDF2TimeRhs.zeroDiagValue = 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0
+
+### second order: uncomment this
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+
+## second order: uncomment this
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 0.5
+
+Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBased
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBased.TrsPriorityList = \
+y0 PeriodicX y1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUpMultiFluid2D
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.useMacCormackScaling = true
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.choiceA12 = 1
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.machInf = 0.1 0.1
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar = RhoiViTi
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = RhoiViTi
+Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
+
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokesMF
+#Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
+
+#Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = MultiFluidMHDST2D
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = TwoFluidGravMHDST2DChExchange
+#Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2DChExchange.electricalResistivity = 0.07544302484745
+Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2DChExchange.GravityTerms = true
+Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2DChExchange.ChemicalReactions = true
+Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2DChExchange.CollisionalTerms = true
+Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2DChExchange.CorrectedChemistry = true
+Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2DChExchange.SpitzerResistivity = true 
+ #0.00382 #0.150886049694899
+#Simulator.SubSystem.CellCenterFVM.Data.MultiFluidMHDST2D.electricalResistivity = 0.07544302484745 #0.00382 #0.150886049694899
+
+###############################################################################
+# Initial Conditions
+#order of species is first ions then neutrals!
+#Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState 
+Simulator.SubSystem.CellCenterFVM.InitNames = InField 
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def =\
+						0.\
+						1.8e-3*exp(-((x-1e6)^2)/(2*(40000^2)))\
+						0.\
+						0.\
+						0.\						
+						0.\
+						0.\
+						0.\
+                       if(y<398e3,(1.6735e-27)*10.^(-2.832785475079908e-013*(y*1e-3)^5+5.977852883001713e-010*(y*1e-3)^4-3.786566517387232e-007*(y*1e-3)^3+9.733782235969860e-005*(y*1e-3)^2-0.020565569998380*(y*1e-3)+20.861001647753444),if(y<1.094527363184080e+006,(1.6735e-27)*10.^(4.523494134476573e-019*(y*1e-3)^7-2.594809056070059e-015*(y*1e-3)^6+6.250211316849979e-012*(y*1e-3)^5-8.126603319433488e-009*(y*1e-3)^4+6.081791731970105e-006*(y*1e-3)^3-0.002573410564984*(y*1e-3)^2+0.558577333309927*(y*1e-3)-30.618825700023685),if(y<1.592039800995025e+006,(1.6735e-27)*10.^(-4.140594909851221e-020*(y*1e-3)^7+4.471908116269837e-016*(y*1e-3)^6-2.007271704534731e-012*(y*1e-3)^5+4.867415885245781e-009*(y*1e-3)^4-6.897552317635694e-006*(y*1e-3)^3+0.005717424842731*(y*1e-3)^2-2.569651421262249*(y*1e-3)+5.013441185615005e+002),(1.6735e-27)*10.^(-2.239684893712833e-013*(y*1e-3)^5+1.958712980009841e-009*(y*1e-3)^4-6.825804482375326e-006*(y*1e-3)^3+0.011851734183174*(y*1e-3)^2-10.257547642371989*(y*1e-3)+3.558587237491116e+003))))\
+                       if(y<398e3,(1.6735e-27)*10.^(6.443494562022385e-014*(y*1e-3)^5-8.630561614020515e-011*(y*1e-3)^4+4.255047954651374e-008*(y*1e-3)^3-1.095613022688500e-005*(y*1e-3)^2-9.974125060932813e-004*(y*1e-3)+23.062153880512739),if(y<1.094527363184080e+006,(1.6735e-27)*10.^(2.841199217162226e-015*(y*1e-3)^5-1.529555555254348e-011*(y*1e-3)^4+3.048007863797447e-008*(y*1e-3)^3-2.731143862689854e-005*(y*1e-3)^2+0.007645698421407*(y*1e-3)+21.805930768705480),if(y<1.592039800995025e+006,(1.6735e-27)*10.^(-2.580161300013330e-015*(y*1e-3)^5+1.842676588487182e-011*(y*1e-3)^4-5.197613291331953e-008*(y*1e-3)^3+7.248916929241559e-005*(y*1e-3)^2-0.052424478841290*(y*1e-3)+36.232533293199801),(1.6735e-27)*10.^(1.212041242989839e-014*(y*1e-3)^5-1.066222624132299e-010*(y*1e-3)^4+3.732295947790998e-007*(y*1e-3)^3-6.500925005347501e-004*(y*1e-3)^2+0.561354176723640*(y*1e-3)-1.722723362791486e+002))))\
+						0.\
+						0.\
+						0.\
+						0.\
+						6430.933-17.272*(y*1e-3)+0.11957*(y*1e-3)^2-0.000561*(y*1e-3)^3+1.42339e-6*(y*1e-3)^4-1.996685e-9*(y*1e-3)^5+1.61992e-12*(y*1e-3)^6-7.5977e-16*(y*1e-3)^7+1.9155e-19*(y*1e-3)^8-2.011e-23*(y*1e-3)^9\ 
+						6430.933-17.272*(y*1e-3)+0.11957*(y*1e-3)^2-0.000561*(y*1e-3)^3+1.42339e-6*(y*1e-3)^4-1.996685e-9*(y*1e-3)^5+1.61992e-12*(y*1e-3)^6-7.5977e-16*(y*1e-3)^7+1.9155e-19*(y*1e-3)^8-2.011e-23*(y*1e-3)^9
+
+#8.6726e-8\
+#1.6735e-4\
+#me = 9.10938188e-31;
+#mi = 1.67262158e-27;
+#mn = 1.6735e-27
+#NB! y in the code is given in meters, hence extra e-3 division in the formula above
+#n_n0(y)*mn=(1.6735327160314e-7)*(1169.082383−5.284*y+0.00191304*y^2+0.00003564*y^3-1.03506964668e−7*y^4+1.4059367e−10*y^5−1.088779654746e−13*y^6+4.918132e−17*y^7−1.20773496676e−20*y^8+1.2471e−24*y^9) 
+#n_e0*me=(1.67262177774e-11)*(6432.86−164.26*y+2.37625*y^2−0.0216905*y^3+0.000132001*z^4−5.6014e−7*y^5+1.71446e−9*y^6−3.87866e−12*y^7+6.59561e−15*y^8−8.51813e−18*y^9+8.39206e−21*y^10−6.29668e−24*y^11+3.56702e−27*y^12−1.49851e−30*y^13+4.52157e−34*y^14−9.25791e−38*y^15+1.15112e−41*y^16−6.5581e−46*y^17)
+#T_i0=6430.933−17.272*y+0.11957*y^2−0.000561*y^3+1.42339e−6*y^4−1.996685e−9*y^5+1.61992e−12*y^6−7.5977e−16*y^7+1.9155e−19*y^8−2.011e−23*y^9
+# Ez: 1e-3/(50000*7.544e-2*1.2566e-6*cosh(y/50000)*cosh(y/50000))+18.935*tanh(y/50000)/(cosh(y/50000)*cosh(y/50000))*1e-3*tanh(y/50000)
+#5.519651866542e-11+2.761328981452e-11/(cosh(y/50000)*cosh(y/50000))\
+#1.104531592580724e-8+6.912363384e-9/(cosh(y/50000)*cosh(y/50000))\
+#-18.935632*tanh(y/50000)/(cosh(y/50000)*cosh(y/50000))\
+#-20.1620763817807*tanh(y/10)/(cosh(y/10)*cosh(y/10))\
+#+2*0.001*1e5*y/(0.5*0.5*1-10)*exp((-x/(4*0.5*1e-5))^2)*exp((-y/(0.5*1e-5))^2)
+#-2*0.001*1e5*x/(16*0.5*0.5*1-10)*exp((-x/(4*0.5*1e-5))^2)*exp((-y/(0.5*1e-5))^2)
+#/(cosh(2*y/1e5)*cosh(2*y/1e5))
+
+#(1.6735327160314e-27)*10.^(1.28708777000400e-24*(y*1e-3)^8-1.17132579154166e-20*(y*1e-3)^7+4.36889576651254e-17*(y*1e-3)^6-8.53178417012874e-14*(y*1e-3)^5+9.15578872201347e-11*(y*1e-3)^4-5.03958194067024e-08*(y*1e-3)^3+1.07752577097269e-05*(y*1e-3)^2-0.00355202971273*(y*1e-3)+23.1154706596723)\
+
+###############################################################################
+# Boundary Conditions
+Simulator.SubSystem.CellCenterFVM.BcComds = UnsteadySubInletUVTEIWRhoiViTiFVMCC  SuperOutletFVMCC SuperOutletFVMCC #SubInletUVTEIWRhoiViTiFVMCC 
+#SubInletUVTEIWRhoiViTiFVMCC
+#BCPeriodicFVMCC 
+#PeriodicY2DMPIFVMCC
+#BCPeriodicMFMHDFVMCC SubOutletPPCWRhoiViTiFVMCC SubOutletPPCWRhoiViTiFVMCC
+#SubInletUVTPCWRhoiViTiFVMCC SubOutletPPCWRhoiViTiFVMCC NoSlipWallIsothermalPCWRhoiViTiFVMCC  
+Simulator.SubSystem.CellCenterFVM.BcNames = Jet1 Jet2 Jet3
+
+# Bottom Condition 
+Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = y0
+Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0
+Simulator.SubSystem.CellCenterFVM.Jet1.Vars = x y t
+#Simulator.SubSystem.CellCenterFVM.Jet1.Def = 0. 0. 500.*cos(2*3.14159265359*t/30e-4)*exp(-((x-1e6)^2)/(2*(40000^2)))  0. 6430.933 6430.933 
+Simulator.SubSystem.CellCenterFVM.Jet1.Def = 0. 0. 0. 500.*sin(2*3.14159265359*t/30)*exp(-((x-1e6)^2)/(2*(40000^2))) 6430.933 6430.933 0. 1.8e-3*exp(-((x-2e6)^2)/(2*(40000^2))) 0. 
+#The Definition is U0 U1 V0 V1 T0 T1
+
+# Bottom Condition 
+Simulator.SubSystem.CellCenterFVM.Jet2.applyTRS = y1
+Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+#Simulator.SubSystem.CellCenterFVM.Jet2.Vars = x y 
+#Simulator.SubSystem.CellCenterFVM.Jet2.Def = 0. 0. 0. 0. 7286.933 7286.933 
+# #The Definition is U0 U1 V0 V1 T0 T1
+
+# Upper Condition
+#NB! pressure of ions is actually ions + electrons = 2 ion pressure 
+#first value is the MHD (ion) pressure
+#second value is for the neutrals
+#Simulator.SubSystem.CellCenterFVM.Jet2.applyTRS = y1
+#Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 0 1 0 0 0 1 1 0 0 0 1 1 1 1 1 1
+#Simulator.SubSystem.CellCenterFVM.Jet2.Vars = x y
+#Simulator.SubSystem.CellCenterFVM.Jet2.Def = 0.005158277648606 0.063445439073456 #0.005349329707134 0.062012003543758 #0.004616070775128 0.063525375804454 #0.007854 0.0099187
+
+#Simulator.SubSystem.CellCenterFVM.Jet3.applyTRS = PeriodicX
+#Simulator.SubSystem.CellCenterFVM.Jet3.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0
+#Simulator.SubSystem.CellCenterFVM.Jet3.Vars = x y
+#Simulator.SubSystem.CellCenterFVM.Jet3.Def = 0. 0. 0. 0. 7200 7200
+
+# Left and Right Conditions
+Simulator.SubSystem.CellCenterFVM.Jet3.applyTRS = PeriodicX
+Simulator.SubSystem.CellCenterFVM.Jet3.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+#Simulator.SubSystem.CellCenterFVM.Jet3.Threshold = 1
+#Simulator.SubSystem.CellCenterFVM.Jet3.TranslationVector = 2e6 0 
+
+
+## Periodic Condition example
+#Simulator.SubSystem.CellCenterFVM.Jet3.applyTRS = Periodic
+#Simulator.SubSystem.CellCenterFVM.Jet3.Threshold = 1e-2
+##Simulator.SubSystem.CellCenterFVM.Jet3.ZeroGradientFlags = 0 0 0 0 0 0 0 0 1 1 0 0 0
+
+
+###############################################################################
+# DataProcessing
+
+Simulator.SubSystem.DataPreProcessing = DataProcessing
+Simulator.SubSystem.DataProcessing.Data.updateVar = RhoiViTi
+Simulator.SubSystem.DataProcessing.Comds = AtmosphereProps #DivMonitoring
+Simulator.SubSystem.DataProcessing.Names = AtmosphereProps #DivMonitoring
+Simulator.SubSystem.DataProcessing.ProcessRate = 1 
+#Simulator.SubSystem.DataProcessing.DivMonitoring.options = ./DivMonitoring.plt
+
