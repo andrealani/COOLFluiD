@@ -603,7 +603,8 @@ void TwoFluidGravMHDST2DChExchange<UPDATEVAR>::computeSpitzerResistivity()
   // electron-ion collision frequency
   const CFreal T_ei       = Ti; //assumed thermal equilibrium
   const CFreal r_debye    = e_charge*e_charge/(4*pi*epsilon*kB*Ti);
-  const CFreal Sigma_ei   = pi*r_debye*r_debye;
+  const CFreal lambda_C   = 10;
+  const CFreal Sigma_ei   = lambda_C*pi*r_debye*r_debye;
   const CFreal m_ei       = me*mi/(me + mi);
   const CFreal nu_ei      = ni*Sigma_ei*std::sqrt(8.*kB*T_ei/(pi*m_ei));
 
