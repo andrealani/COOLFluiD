@@ -107,7 +107,7 @@ void MirrorWall::setGhostState(GeometricEntity *const face)
   for (CFuint i = 0 ; i < nbSpecies; i++){
     CFreal un_i = (*innerState)[endEM + nbSpecies + 2*i]*nx + (*innerState)[endEM + nbSpecies + 2*i + 1]*ny; 
     (*ghostState)[endEM + nbSpecies + 2*i] = (*innerState)[endEM + nbSpecies + 2*i] - 2*un_i*nx;
-    (*ghostState)[endEM + nbSpecies + 2*i + 1] = (*innerState)[endEM + nbSpecies + 2*i + 1] - 2*un_i*ny;   
+    (*ghostState)[endEM + nbSpecies + 2*i + 1] = (*innerState)[endEM + nbSpecies + 2*i + 1] - 2*un_i*ny;
   } 
  
   //set the Temperatures
