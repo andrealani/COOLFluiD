@@ -121,20 +121,27 @@ void SubOutletPEIWRhoiViTi::setGhostState(GeometricEntity *const face)
   const CFuint firstSpecies = _updateVarSet->getModel()->getFirstScalarVar(0);  
   const CFuint firstVelocity = _updateVarSet->getModel()->getFirstScalarVar(1);   
   const CFuint firstTemperature = _updateVarSet->getModel()->getFirstScalarVar(2); 
-  const CFreal gamma = _updateVarSet->getModel()->getGamma(); 
+  const CFreal gamma = _updateVarSet->getModel()->getGamma();
+  const CFreal Boltz = _updateVarSet->getModel()->getK();
+  const CFreal molecularMass1 = _updateVarSet->getModel()->getMolecularMass1();
+  const CFreal molecularMass2 = _updateVarSet->getModel()->getMolecularMass2();
+  const CFreal molecularMass3 = _updateVarSet->getModel()->getMolecularMass3();
+  const CFreal R1 = Boltz/molecularMass1;
+  const CFreal R2 = Boltz/molecularMass2;
+  const CFreal R3 = Boltz/molecularMass3;
   const CFreal gammaDivGammaMinus1 = gamma/(gamma - 1.0);
  
   (_dataGhostState)[endEM] = (_dataInnerState)[endEM]; 							//RHO
   
   for (CFuint ie = 0; ie < nbSpecies; ++ie) {
     const CFreal Pi = _Pi[ie];
-//     cout << "SubOutletPEIWRhoiViTi::setGhostState => Pi = " << Pi << endl;
     (_dataGhostState)[firstSpecies + ie] = (_dataInnerState)[firstSpecies + ie];			//yi
     (_dataGhostState)[firstVelocity + 2*ie] = (_dataInnerState)[firstVelocity + 2*ie];			//Vxi
     (_dataGhostState)[firstVelocity + 2*ie + 1] = (_dataInnerState)[firstVelocity + 2*ie + 1];		//Vyi
     (_dataGhostState)[firstTemperature + 4*ie] = (_dataInnerState)[firstTemperature + 4*ie];		//Ti
     (_dataGhostState)[firstTemperature + 4*ie + 1] = 2*Pi - 
 						    (_dataInnerState)[firstTemperature + 4*ie + 1];	//Pi
+    
     const CFreal Vi2 = (_dataGhostState)[firstVelocity + 2*ie]*(_dataGhostState)[firstVelocity + 2*ie] +
 			(_dataGhostState)[firstVelocity + 2*ie + 1]*(_dataGhostState)[firstVelocity + 2*ie + 1];
     const CFreal rhoi =(_dataGhostState)[endEM]*(_dataGhostState)[firstSpecies + ie];
@@ -144,6 +151,16 @@ void SubOutletPEIWRhoiViTi::setGhostState(GeometricEntity *const face)
 						    gammaDivGammaMinus1*(_dataGhostState)[firstTemperature + 4*ie + 1])/rhoi;	//Hi
   }    
   
+  // Temporary fix to one fluid 
+  (_dataGhostState)[endEM] = (_dataGhostState)[firstTemperature + 1]/(R1*(_dataGhostState)[firstTemperature]);                //RHO is computed with the pressure
+  (_dataGhostState)[firstSpecies] = 1;											      //y = 1
+  const CFreal V2 = (_dataGhostState)[firstVelocity]*(_dataGhostState)[firstVelocity] +
+                      (_dataGhostState)[firstVelocity + 1]*(_dataGhostState)[firstVelocity + 1];			      //Vx and Vy are correct;
+  const CFreal rho =(_dataGhostState)[endEM];										      // we use this rho
+  (_dataGhostState)[firstTemperature + 2] = sqrt(gamma*(_dataGhostState)[firstTemperature + 1]/rho);                         //ai
+  (_dataGhostState)[firstTemperature + 3] = (0.5*rho*V2 +
+                                            gammaDivGammaMinus1*(_dataGhostState)[firstTemperature + 1])/rho;                //Hi
+
   _updateVarSet->computeStateFromPhysicalData(_dataGhostState, *ghostState);  
 }
 
