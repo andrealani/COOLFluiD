@@ -232,7 +232,7 @@ private:
   {
     if (_function != "0") {
       _eval[0] = x; _eval[1] = y; _eval[2] = l; 
-      return _functionParser.Eval(_eval);
+      return _functionParser.Eval(&_eval[0]);
     }
     return _zDelta;
   }

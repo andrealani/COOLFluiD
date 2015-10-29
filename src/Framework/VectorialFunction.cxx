@@ -87,11 +87,11 @@ void VectorialFunction::parse()
   for(CFuint i = 0; i < m_functions.size(); i++) {
 
     FunctionParser* ptr = new FunctionParser();
-
+    
     m_parsers.push_back(ptr);
     CFLogDebugMax("Parsing Function: " << m_functions[i] << " Vars: " << m_vars << "\n");
     ptr->Parse(m_functions[i],m_vars);
-
+    
     if (ptr->ErrorMsg() != 0) {
       std::string msg("ParseError in VectorialFunction::parse(): ");
       msg += std::string(ptr->ErrorMsg());
@@ -100,7 +100,7 @@ void VectorialFunction::parse()
       throw Common::ParserException (FromHere(),msg);
     }
   }
-
+  
   m_result.resize(m_functions.size());
   m_isParsed = true;
 }
@@ -118,7 +118,7 @@ void VectorialFunction::evaluate(const RealVector& varValue,
 
   // evaluate and store the functions line by line in the vector
   for(CFuint i = 0; i < m_parsers.size(); i++) {
-    value[i] = m_parsers[i]->Eval(varValue);
+    value[i] = m_parsers[i]->Eval(&const_cast<RealVector&>(varValue)[0]);
   }
 }
 
@@ -131,7 +131,7 @@ void VectorialFunction::evaluate(CFuint iVar, const RealVector& varValue,
   cf_assert(iVar < m_parsers.size());
 
   // evaluate and store the functions line by line in the vector
-  value = m_parsers[iVar]->Eval(varValue);
+  value = m_parsers[iVar]->Eval(&const_cast<RealVector&>(varValue)[0]);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -143,9 +143,9 @@ RealVector& VectorialFunction::operator()(const RealVector& varValue)
 
   // evaluate and store the functions line by line in the vector
   for(CFuint i = 0; i < m_parsers.size(); i++) {
-    m_result[i] = m_parsers[i]->Eval(varValue);
+    m_result[i] = m_parsers[i]->Eval(&const_cast<RealVector&>(varValue)[0]);
   }
-
+  
   return m_result;
 }
 

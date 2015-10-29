@@ -397,9 +397,9 @@ void AeroForcesFVMCC::executeOnTrs()
 
   // compute the value of the angle
   m_eval[0] = SubSystemStatusStack::getActive()->getCurrentTime();
-  m_alphadeg = m_functionAlphaParser.Eval(m_eval);
-  m_betadeg  = m_functionBetaParser.Eval(m_eval);
-
+  m_alphadeg = m_functionAlphaParser.Eval(&m_eval[0]);
+  m_betadeg  = m_functionBetaParser.Eval(&m_eval[0]);
+  
   // transform into Radiants
   m_alpha = m_alphadeg*MathTools::MathConsts::CFrealPi()/180;
   m_beta  = m_betadeg*MathTools::MathConsts::CFrealPi()/180;

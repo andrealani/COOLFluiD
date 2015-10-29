@@ -87,7 +87,7 @@ void TwoLayerSuperInlet::executeOnTrs()
     State *const intState = interStates[stateID];
     // find if we should apply the BC to this node
     if (m_checkCondition) {
-      const CFreal applyBCvalue = m_condition.Eval(state->getCoordinates());
+      const CFreal applyBCvalue = m_condition.Eval(&state->getCoordinates()[0]);
       applyBC = ((!isUpdated[stateID]) && (applyBCvalue > 0.0));
     }
     else {

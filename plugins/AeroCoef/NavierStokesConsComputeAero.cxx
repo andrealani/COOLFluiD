@@ -598,9 +598,9 @@ void NavierStokesConsComputeAero::computeAero()
 
   // Compute the value of m_alpha
   m_eval[0] = SubSystemStatusStack::getActive()->getCurrentTime();
-  m_alphadeg = m_alpha_func_parser.Eval(m_eval);
-  m_betadeg = m_beta_func_parser.Eval(m_eval);
-
+  m_alphadeg = m_alpha_func_parser.Eval(&m_eval[0]);
+  m_betadeg = m_beta_func_parser.Eval(&m_eval[0]);
+  
   // Transform into Radiants
   const CFreal alpharad = m_alphadeg*MathTools::MathConsts::CFrealPi()/180;
   const CFreal betarad  = m_betadeg*MathTools::MathConsts::CFrealPi()/180;

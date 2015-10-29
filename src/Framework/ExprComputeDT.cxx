@@ -82,7 +82,7 @@ void ExprComputeDT::operator() ()
   }
 
   if (nbIter > 1) {
-    const CFreal DTnumber = _functionParser.Eval(_eval);// this is a dimensional time step!
+    const CFreal DTnumber = _functionParser.Eval(&_eval[0]);// this is a dimensional time step!
     cf_assert(std::abs(DTnumber) > MathTools::MathConsts::CFrealEps());
     SubSystemStatusStack::getActive()->setDTDim(DTnumber);
     if (SubSystemStatusStack::getActive()->getTimeStepLayers() > 1){

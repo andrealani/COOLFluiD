@@ -33,8 +33,8 @@ InverterDiag.hh
 LUInverter.cxx
 MathChecks.hh
 MathTools.hh
-FunctionParser.hh
-FunctionParser.cxx
+#FunctionParser.hh
+#FunctionParser.cxx
 MatrixIntersect.cxx
 MatrixEigenSolver.cxx
 JacobiEigenSolver.hh
@@ -56,6 +56,13 @@ MacrosET.hh
 CFVec.hh
 LeastSquaresSolver.cxx
 LeastSquaresSolver.hh
+# Function Parser (v4.5.2) from http://warp.povusers.org/FunctionParser/
+FParser/fparser.cc
+#FParser/fparser_gmpint.hh
+FParser/fparser.hh
+#FParser/fparser_mpfr.hh
+FParser/fpconfig.hh
+FParser/fpoptimizer.cc
 )
 
 LIST ( APPEND MathTools_cflibs Common )

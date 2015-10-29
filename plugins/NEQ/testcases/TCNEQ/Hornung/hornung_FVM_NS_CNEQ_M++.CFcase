@@ -22,6 +22,8 @@ Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWrite
 # this option helps if you want to check that all the options you set are declared properly (no spelling mistakes)
 # some options (for instance some Gambit or other converter settings) will always fail anyway
 #CFEnv.ErrorOnUnusedConfig = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NEQ/testcases/TCNEQ/Hornung
@@ -51,11 +53,12 @@ Simulator.SubSystem.CFmesh.SaveRate = 500
 Simulator.SubSystem.CFmesh.Data.ExtraStateVarNames = limiter
 Simulator.SubSystem.CFmesh.Data.ExtraStateVarStrides = 5
 
-Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
+#Simulator.SubSystem.StopCondition          = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
 
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -7.0
+Simulator.SubSystem.StopCondition       = Norm
+# the heat flux needs valueNorm = -7.0 to converge
+Simulator.SubSystem.Norm.valueNorm      = -4.0
 
 Simulator.SubSystem.Default.listTRS = Wall Inlet Outlet
 
@@ -78,7 +81,7 @@ Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<4200,1.,if(i<5500,2.,min(100.,cfl*1.02)))
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<4200,1.,if(i<5200,2.,min(100.,cfl*1.02))) 
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 #Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 4

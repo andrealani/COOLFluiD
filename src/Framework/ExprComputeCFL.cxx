@@ -80,7 +80,7 @@ void ExprComputeCFL::operator() (const ConvergenceStatus& cstatus)
   }
 
   //   if (cstatus.iter > 1) {
-  const CFreal CFLnumber = _functionParser.Eval(_eval);
+  const CFreal CFLnumber = _functionParser.Eval(&_eval[0]);
   CFLog(VERBOSE, "ExprComputeCFL::operator() => _eval = " << _eval 
 	<< ", CFLnumber = " << CFLnumber << "\n");
   cf_assert(std::abs(CFLnumber) > MathTools::MathConsts::CFrealEps());

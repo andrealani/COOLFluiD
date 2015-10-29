@@ -893,7 +893,7 @@ void NavierStokes3DConsComputeAeroHO::computeAero()
   }
   // Compute the value of m_alpha
   m_eval[0] = SubSystemStatusStack::getActive()->getCurrentTime();
-  m_alphadeg = m_functionParser.Eval(m_eval);
+  m_alphadeg = m_functionParser.Eval(&m_eval[0]);
   // Transform into Radiants
   m_alpharad = m_alphadeg*MathTools::MathConsts::CFrealPi()/180;
   // adimensionalize Cp, Cm and Cf

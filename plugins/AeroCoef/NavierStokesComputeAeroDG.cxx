@@ -217,7 +217,7 @@ void NavierStokesComputeAeroDG::executeOnTrs()
 
   // compute the value of the angle
   m_eval[0] = SubSystemStatusStack::getActive()->getCurrentTime();
-  m_alphadeg = m_functionParser.Eval(m_eval);
+  m_alphadeg = m_functionParser.Eval(&m_eval[0]);
 
   // transform into Radiants
   m_alpharad = m_alphadeg*MathTools::MathConsts::CFrealPi()/180;

@@ -167,10 +167,10 @@ void CustomLimiter::limitOnFace(const RealVector& rLeft,
   CFuint currID = 0;
   for (CFuint iVar = 0; iVar < nbEquations; ++iVar) {
     _gradRatio[0] = rLeft[iVar];
-    limiterValue[currID++] = min(_functionParser.Eval(_gradRatio),1.0);
+    limiterValue[currID++] = min(_functionParser.Eval(&_gradRatio[0]),1.0);
       
     _gradRatio[0] = rRight[iVar];
-    limiterValue[currID++] = min(_functionParser.Eval(_gradRatio),1.0);
+    limiterValue[currID++] = min(_functionParser.Eval(&_gradRatio[0]),1.0);
   }
 }
 
@@ -179,7 +179,7 @@ void CustomLimiter::limitOnFace(const RealVector& rLeft,
 void CustomLimiter::limitScalar(CFreal r, CFreal& limiterValue)
 {
   _gradRatio[0] = r;
-  limiterValue = min(_functionParser.Eval(_gradRatio),1.0);
+  limiterValue = min(_functionParser.Eval(&_gradRatio[0]),1.0);
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -933,7 +933,7 @@ void NavierStokes2DConsComputeAeroHO::computeAero()
   }
   // Compute the value of m_alpha
   m_eval[0] = SubSystemStatusStack::getActive()->getCurrentTime();
-  m_alphadeg = m_functionParser.Eval(m_eval);
+  m_alphadeg = m_functionParser.Eval(&m_eval[0]);
   // Transform into Radiants
   m_alpharad = m_alphadeg*MathTools::MathConsts::CFrealPi()/180;
   // adimensionalize Cp, Cm and Cf
@@ -943,7 +943,7 @@ void NavierStokes2DConsComputeAeroHO::computeAero()
     Cf /=  (0.5 * m_rhoInf * m_uInf * m_uInf);
     Cmf /= (0.5 * m_rhoInf * m_uInf * m_uInf*refLength) ;
   }
-
+  
   // project Cp
   actual_lift = (sin(m_alpharad)*(Cp[XX] + Cf[XX]) + cos(m_alpharad)*(Cp[YY] + Cf[YY])) / refLength;
   actual_drag_p = (cos(m_alpharad)*Cp[XX] - sin(m_alpharad)*Cp[YY]) / refLength;

@@ -111,11 +111,11 @@ void CustomLimiter1D::limit(const vector<vector<Node*> >& coord,
 	
         if (_deltaMin > 0.0) {
 	  _gradRatio[0] = deltaPlusMax/_deltaMin; 
-	  psi = _functionParser.Eval(_gradRatio);
+	  psi = _functionParser.Eval(&_gradRatio[0]);
 	}
 	if (_deltaMin < 0.0) {
 	  _gradRatio[0] = deltaPlusMin/_deltaMin;
-	  psi = _functionParser.Eval(_gradRatio);
+	  psi = _functionParser.Eval(&_gradRatio[0]);
 	}
         psimin = min(psi, psimin);
       }

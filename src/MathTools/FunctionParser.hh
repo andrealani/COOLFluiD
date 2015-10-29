@@ -10,6 +10,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "MathTools/RealVector.hh"
+#include "MathTools/FParser/fparser.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -19,129 +20,19 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This class represents a parser for analytical functions.
-/// Function parser v2.22 by Warp
-/// Parses and evaluates the given function with the given variable values.
-/// @author  Warp
-class MathTools_API FunctionParser {
-public:
+/// This class represents a simple interface to the Warp's function parser 
+/// @see website http://warp.povusers.org/FunctionParser/
+/// @author Andrea Lani
 
-    /// Constructor
-    FunctionParser();
+class MathTools_API FunctionParser: public FunctionParserBase<double> {};
+class MathTools_API FunctionParser_f: public FunctionParserBase<float> {};
+class MathTools_API FunctionParser_ld: public FunctionParserBase<long double> {};
+class MathTools_API FunctionParser_li: public FunctionParserBase<long> {};
 
-    /// Destructor
-    ~FunctionParser();
-
-    /// missing documentation
-    /// @param Function missing documentation
-    /// @param Vars missing documentation
-    /// @return missing documentation
-    int Parse(const std::string& Function, const std::string& Vars);
-
-    /// missing documentation
-    /// @return missing documentation
-    const char* ErrorMsg(void) const;
-
-    /// missing documentation
-    /// @param Vars missing documentation
-    /// @return missing documentation
-    double Eval(const RealVector& Vars);
-
-    /// missing documentation
-    /// @return missing documentation
-    inline int EvalError(void) const { return EvalErrorType; }
-
-private:
-
-  /// Missing docs
-  int varAmount;
-
-  /// Missing docs
-  int ParseErrorType;
-
-  /// Missing docs
-  int EvalErrorType;
-
-  /// Missing docs
-  typedef std::map<std::string, unsigned> VarMap_t;
-  VarMap_t Variables;
-
-  /// missing documentation
-  struct MathTools_API CompiledCode
-  {
-    CompiledCode();
-    CompiledCode(const CompiledCode&);
-    ~CompiledCode();
-
-        unsigned* ByteCode;
-        unsigned ByteCodeSize;
-        double* Immed;
-        unsigned ImmedSize;
-        double* Stack;
-        unsigned StackSize, StackPtr;
-        bool thisIsACopy;
-    } Comp;
-
-  /// missing documentation
-  /// @return missing documentation
-  VarMap_t::const_iterator FindVariable(const char*);
-
-  /// missing documentation
-  /// @return missing documentation
-  int CheckSyntax(const char*);
-
-  /// missing documentation
-  /// @return missing documentation
-  bool Compile(const char*);
-
-  /// missing documentation
-  /// @return missing documentation
-  bool IsVariable(int);
-
-  /// missing documentation
-  void AddCompiledByte(unsigned);
-
-  /// missing documentation
-  /// @return missing documentation
-  int CompileIf(const char*, int);
-
-  /// missing documentation
-  /// @return missing documentation
-  int CompileElement(const char*, int);
-
-  /// missing documentation
-  /// @return missing documentation
-  int CompilePow(const char*, int);
-
-  /// missing documentation
-  /// @return missing documentation
-  int CompileMult(const char*, int);
-
-  /// missing documentation
-  /// @return missing documentation
-  int CompileAddition(const char*, int);
-
-  /// missing documentation
-  /// @return missing documentation
-  int CompileComparison(const char*, int);
-
-  /// missing documentation
-  /// @return missing documentation
-  int CompileAnd(const char*, int);
-
-  /// missing documentation
-  /// @return missing documentation
-  int CompileOr(const char*, int);
-
-  /// missing documentation
-  /// @return missing documentation
-  int CompileExpression(const char*, int, bool=false);
-
-  /// missing documentation
-  /// @return missing documentation
-  FunctionParser(const FunctionParser&);
-
-}; // end class FunctionParser
+#include <complex>
+class MathTools_API FunctionParser_cd: public FunctionParserBase<std::complex<double> > {};
+class MathTools_API FunctionParser_cf: public FunctionParserBase<std::complex<float> > {};
+class MathTools_API FunctionParser_cld: public FunctionParserBase<std::complex<long double> > {};
 
 //////////////////////////////////////////////////////////////////////////////
 
