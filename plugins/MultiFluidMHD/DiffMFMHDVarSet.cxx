@@ -119,8 +119,8 @@ void DiffMFMHDVarSet::computeTransportProperties(const RealVector& state,
     
     if (_setBackUpValues) {
       for (CFuint i = 0; i < nbSpecies; ++i){
-	m_dynViscCoeff[i] = diffMFMHDData[i];
-	m_thermCondCoeff[i] = diffMFMHDData[nbSpecies+i];
+        m_dynViscCoeff[i] = diffMFMHDData[i];
+        m_thermCondCoeff[i] = diffMFMHDData[nbSpecies+i];
       }
     }
   }
@@ -179,8 +179,6 @@ void DiffMFMHDVarSet::computeTransportProperties(const RealVector& state,
           diffMFMHDData[endVisc + 6] = betaWedge;
 	  
           diffMFMHDData[endVisc + 7] = getThermConductivity(state, mu[1]);		//neutrals' thermal conduction
-	  
-          //std::cout<<"diffMFMHDData = " << diffMFMHDData <<"\n";
         }
       }
       if (_setBackUpValues) {			//To be implenemted
@@ -194,6 +192,7 @@ void DiffMFMHDVarSet::computeTransportProperties(const RealVector& state,
     } // End of if nbSpecies==2
   } // End of if Braginskii==true
 
+  /// Implementation to increase the value of the viscosity in the extended domain
   //if(getModel().isExtendedDomain() == true){
     //const RealVector& mu_0 = getDynViscosityVec(state, gradients);
     //const RealVector& mu_f = getModel().getIncreasedDynViscosityDim();
@@ -313,9 +312,9 @@ RealVector& DiffMFMHDVarSet::getHeatFlux(const RealVector& state,
 	_heatFlux[1] = (-m_lambda[1]*(MathFunctions::innerProd(gradT,normal)));
       }
       if(dim == DIM_3D){
-	for (CFuint i = 0; i < nbSpecies; ++i) {	
-	  std::cout<<"DiffMFMHDVarSet::getHeatFlux ==> Braginskii 3D not implemented";
-	}
+        for (CFuint i = 0; i < nbSpecies; ++i) {
+          std::cout<<"DiffMFMHDVarSet::getHeatFlux ==> Braginskii 3D not implemented";
+        }
       }
     }
   }
@@ -351,14 +350,7 @@ void DiffMFMHDVarSet::computeBraginskiiThermConduct(const RealVector& state){
   CFreal n_i     = rho_i/m_i;				//[m-3]
   CFreal c       = m_eulerModel->getLightSpeed();				//[m/s]
   CFreal eCharge = 1.60217656535e-19;			//[C]
-  CFreal kBoltz = 1.6e-12;				//[erg/eV]
-  
-//   std::cout<<"\n";
-//   std::cout<<"Ion's Input Flow properties \n";
-//   std::cout<<"T_i   = " << T_i <<"\n";
-//   std::cout<<"rho_i = " << rho_i <<"\n";
-//   std::cout<<"n_i   = " << n_i <<"\n";
-  
+  CFreal kBoltz = 1.6e-12;				//[erg/eV]  
   
   //Conversion to cgs system
   Bnorm *= 1e4;						//[gauss]
@@ -371,11 +363,6 @@ void DiffMFMHDVarSet::computeBraginskiiThermConduct(const RealVector& state){
   
   CFreal n_e = n_i; 
   CFreal T_e = T_i;
-  
-//   std::cout<<"T_i[cgs]     = " << T_i <<"\n";
-//   std::cout<<"eCharge[cgs] = " << eCharge <<"\n";
-//   std::cout<<"n_i[cgs]     = " << n_i <<"\n";
-//   std::cout<<"B[cgs]      = " << Bnorm <<"\n";
   
   //General parameters
   CFreal lambda = 23 - 0.5*std::log(n_i) + 1.5*std::log(T_i); /*23.4 - 1.15*std::log(n_i) + 3.45*std::log(T_i);*/
@@ -395,15 +382,12 @@ void DiffMFMHDVarSet::computeBraginskiiThermConduct(const RealVector& state){
   _kappaParallel = (3.906*tau_i/m_i + 3.1616*tau_e/m_e)*n_i*kBoltz*kBoltz*T_i; 
   _kappaPerpendicular = (((2*std::pow(chi_i, 2)+ 2.645)/Delta_i)*(tau_i/m_i) + ((4.664*std::pow(chi_e, 2)+ 11.92)/Delta_e)*(tau_e/m_e))*n_i*kBoltz*kBoltz*T_i;
   _betaWedge = (chi_e*(3/2*std::pow(chi_e, 2) + 3.053)/Delta_e)*n_e*kBoltz*kBoltz*T_e;
-  //std::cout<<"kappaParallel[cgs]  = "<< _kappaParallel      <<"\n";
-  //std::cout<<"kappaPerpendi[cgs]  = "<< _kappaPerpendicular <<"\n";
+
   //Conversion into S.I. units
   _kappaParallel *= 1/(1e5);//sure about this
   _kappaPerpendicular *= 1/(1e5);//sure about this
   _betaWedge *= 1/(1e5); //Not sure about this
   
-  //std::cout<<"kappaParallel[W/mK] = "<< _kappaParallel      <<"\n";
-  //std::cout<<"kappaPerpendi[W/mK] = "<< _kappaPerpendicular <<"\n";
 //   
 //   std::cout<<"\n";
 //   std::cout<<"Ion's Properties in cgs \n";

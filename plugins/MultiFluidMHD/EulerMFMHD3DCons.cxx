@@ -139,20 +139,7 @@ void EulerMFMHD3DCons::computePhysicalData(const State& state, RealVector& data)
   const CFuint endEM = 8;
   const CFuint firstSpecies = getModel()->getFirstScalarVar(0);  
   const CFuint firstVelocity = getModel()->getFirstScalarVar(1);   
-  const CFuint firstTemperature = getModel()->getFirstScalarVar(2); 
- 
-///Used for debugging 
-//   std::cout << "NbSpecies = "<< nbSpecies << "\n";
-//   std::cout << "NbMomentum = "<< nbMomentum << "\n";
-//   std::cout << "NbEnergyEqs = "<< nbEnergyEqs << "\n"; 
-//   std::cout << "BxID = "<< BxID << "\n";   
-//   std::cout << "ExID = "<< ExID << "\n"; 
-//   std::cout << "FirstMfMhdID = "<< FirstMfMhdID << "\n";   
-//   std::cout << "firstSpecies = "<< firstSpecies << "\n";
-//   std::cout << "firstVelocity = "<< firstVelocity << "\n";
-//   std::cout << "firstTemperature = "<< firstTemperature << "\n"; 
-  
-  
+  const CFuint firstTemperature = getModel()->getFirstScalarVar(2);  
   
   data[PTERM::BX] = state[0];
   data[PTERM::BY] = state[1]; 

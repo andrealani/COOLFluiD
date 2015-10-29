@@ -137,19 +137,6 @@ void EulerMFMHD2DCons::computePhysicalData(const State& state, RealVector& data)
   const CFuint firstSpecies = getModel()->getFirstScalarVar(0);  
   const CFuint firstVelocity = getModel()->getFirstScalarVar(1);   
   const CFuint firstTemperature = getModel()->getFirstScalarVar(2); 
- 
-///Used for debugging 
-//   std::cout << "NbSpecies = "<< nbSpecies << "\n";
-//   std::cout << "NbMomentum = "<< nbMomentum << "\n";
-//   std::cout << "NbEnergyEqs = "<< nbEnergyEqs << "\n"; 
-//   std::cout << "BxID = "<< BxID << "\n";   
-//   std::cout << "ExID = "<< ExID << "\n"; 
-//   std::cout << "FirstMfMhdID = "<< FirstMfMhdID << "\n";   
-//   std::cout << "firstSpecies = "<< firstSpecies << "\n";
-//   std::cout << "firstVelocity = "<< firstVelocity << "\n";
-//   std::cout << "firstTemperature = "<< firstTemperature << "\n"; 
-  
-  
   
   data[PTERM::BX] = state[0];
   data[PTERM::BY] = state[1]; 
@@ -184,20 +171,17 @@ void EulerMFMHD2DCons::computePhysicalData(const State& state, RealVector& data)
   
   
   //set the species mass fraction
-//   const CFuint firstSpecies = getModel()->getFirstScalarVar(0);
   for (CFuint ie = 0; ie < nbSpecies; ++ie) {
     const CFreal rhoi = state[endEM + ie];
     data[firstSpecies + ie] = rhoi*ovRho;
-  //set the species velocities in 2D 
-//   const CFuint firstVelocity = getModel()->getFirstScalarVar(1);  
+    //set the species velocities in 2D
     const CFreal ui = state[endEM + nbSpecies + 2*ie]/rhoi;
     const CFreal vi = state[endEM + nbSpecies + 2*ie + 1]/rhoi;
     data[firstVelocity + 2*ie] = ui;
     data[firstVelocity + 2*ie + 1] = vi;
  
-  //set the energy physical data  
-  const CFuint firstTemperature = getModel()->getFirstScalarVar(2);
-    
+    //set the energy physical data
+    const CFuint firstTemperature = getModel()->getFirstScalarVar(2);
     
     const CFreal mi = _m_i[ie];    
     const CFreal V2 = ui*ui + vi*vi;
@@ -210,21 +194,11 @@ void EulerMFMHD2DCons::computePhysicalData(const State& state, RealVector& data)
     data[firstTemperature + 4*ie + 1] = Ti*R_gas*rhoi;//pressure
     data[firstTemperature + 4*ie + 2] = sqrt(gamma*R_gas*Ti);//sound speed
     data[firstTemperature + 4*ie + 3] = 0.5*V2 + c_p*Ti;//total enthaply of species i   
-    
-//     std::cout << "firstTemperature = "<< firstTemperature <<"\n";    
-//     std::cout << "firstTemperature + 4*ie + 3 = "<< firstTemperature + 4*ie + 3 <<"\n";
- 
-    
-///OLD IMPLEMENTATION    
-//     data[firstTemperature + 4*ie] = (1/(state[ie]*c_v))*(state[nbSpecies + 2*nbSpecies + ie] - 0.5*state[ie]*V2);//Temperature
-//     data[firstTemperature + 4*ie + 1] = data[firstTemperature + 4*ie]*R_gas* data[PTERM::RHO]*data[firstSpecies + ie];//pressure
-//     data[firstTemperature + 4*ie + 2] = sqrt(gamma*R_gas*data[firstTemperature + 4*ie]);//sound speed
-//     data[firstTemperature + 4*ie + 3] = 0.5*V2 + c_p*data[firstTemperature + 4*ie];//enthaply 
   }    
-  cout << "EulerMFMHD2DCons::computePhysicalData" << endl;
-  for (CFuint ie = 0; ie < firstTemperature + 4*nbSpecies; ++ie) {
-    cout << "data["<< ie <<"] = "<< data[ie] << endl;
-  }
+  //cout << "EulerMFMHD2DCons::computePhysicalData" << endl;
+  //for (CFuint ie = 0; ie < firstTemperature + 4*nbSpecies; ++ie) {
+    //cout << "data["<< ie <<"] = "<< data[ie] << endl;
+  //}
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -272,7 +246,7 @@ void EulerMFMHD2DCons::computeStateFromPhysicalData(const RealVector& data,
   _m_i[1] = m_n;
   _m_i[2] = m_p;
  
- //set the Energies
+  //set the Energies
   const CFuint firstTemperature = getModel()->getFirstScalarVar(2);
   for (CFuint ie = 0; ie < nbSpecies; ++ie) {
     const CFreal V2 = data[firstVelocity + 2*ie]*data[firstVelocity + 2*ie] + data[firstVelocity + 2*ie + 1]*data[firstVelocity + 2*ie + 1];
@@ -282,10 +256,10 @@ void EulerMFMHD2DCons::computeStateFromPhysicalData(const RealVector& data,
     
     state[endEM + nbSpecies + 2*nbSpecies + ie] = data[firstSpecies + ie]*rho*(c_v*data[firstTemperature + 4*ie] + 0.5*V2);
   } 
-  cout << "EulerMFMHD2DCons::computeStateFromPhysicalData" << endl;
-  for (CFuint ie = 0; ie < endEM + 3*nbSpecies; ++ie) {
-    cout << "state["<< ie <<"] = "<< state[ie] << endl;
-  }      
+  //cout << "EulerMFMHD2DCons::computeStateFromPhysicalData" << endl;
+  //for (CFuint ie = 0; ie < endEM + 3*nbSpecies; ++ie) {
+    //cout << "state["<< ie <<"] = "<< state[ie] << endl;
+  //}
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -344,7 +318,7 @@ void EulerMFMHD2DCons::computePerturbedPhysicalData(const Framework::State& stat
 
 bool EulerMFMHD2DCons::isValid(const RealVector& data)
 {
- //  bool correct = true;
+//  bool correct = true;
 //   enum index {RHO, RHOU,RHOV,RHOE};
 
 //   const CFreal rho = data[RHO];

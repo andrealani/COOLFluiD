@@ -114,13 +114,7 @@ void EulerMFMHDTerm::computeNonInducedEMField(CFreal xCoord, CFreal yCoord)
 {
   for (CFuint i = 0; i < 6; i++){
     _NonInducedEMField[i] = _nonInducedEMField[i];
-  }
-     
-//   _NonInducedEMField[0] = 0.1; //Dimensional NonInduced BX Component
-//   _NonInducedEMField[1] = 0; //Dimensional NonInduced BY Component
-//   _NonInducedEMField[2] = 0; //Dimensional NonInduced BZ Component  
-//   _NonInducedEMField[3] = 0; //Dimensional NonInduced EX Component  
-//   _NonInducedEMField[4] = 0; //Dimensional NonInduced EY Component  
+  } 
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -59,7 +59,7 @@ private:
   Common::SafePtr<EulerMFMHDTerm> _model;
 
   /// Array with the particle mass of the species
-  RealVector			   _m_i;  
+  RealVector   _m_i;
 }; // end of class EulerMFMHD2DConsToRhoiViTi
 
 //////////////////////////////////////////////////////////////////////////////

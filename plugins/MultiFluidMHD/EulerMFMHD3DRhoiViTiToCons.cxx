@@ -138,8 +138,6 @@ void EulerMFMHD3DRhoiViTiToCons::transform(const State& state, State& result)
       const CFreal c_p = (gamma/(gamma-1))*(K_gas/_m_i[ie]);
       const CFreal R_gas = K_gas/_m_i[ie];
       const CFreal c_v = c_p - R_gas;  
-      
-  //     std::cout << "EulerMFMHD3DRhoiViTiToCons::transform -> endEM + 3*nbSpecies + ie" << endEM + 3*nbSpecies + ie <<"\n";
 
       result[endEM + nbSpecies + nbMomentum + ie] = state[endEM + ie]*(c_v*state[endEM + (1 + dim)*nbSpecies + ie] + 0.5*V2); 
       

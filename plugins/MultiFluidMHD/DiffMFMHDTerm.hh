@@ -16,7 +16,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represents the interface for a MultiFluidMHDModel.
+ * This class represents the interface for a Diffusive model for the MultifluidMHD.
  *
  * @author Andrea Lani
  * @author Alejandro Alvarez

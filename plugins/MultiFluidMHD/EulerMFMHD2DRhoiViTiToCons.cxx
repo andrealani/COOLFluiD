@@ -107,7 +107,6 @@ void EulerMFMHD2DRhoiViTiToCons::transform(const State& state, State& result)
     const CFuint TnID = TiID + 1;
     
     result[TnID] = state[endEM + 1]*(Cv_n*state[TnID] + 0.5*V2_n);
-//     std::cout << "EulerMFMHD2DRhoiViTiToCons::transform() => result = "<< result <<"\n";
     
   }
   else{
@@ -117,14 +116,11 @@ void EulerMFMHD2DRhoiViTiToCons::transform(const State& state, State& result)
     const CFreal m_e = _model->getMolecularMass1();
     const CFreal m_n = _model->getMolecularMass2();
     const CFreal m_p = _model->getMolecularMass3(); 
-    
-  //   set the molar masses of the species (should be changed in the future)
 
+    // Set RhoiEi = Rhoi*(Cv*Ti + 0.5*V²)
     _m_i[0] = m_e;
     _m_i[1] = m_n;
     _m_i[2] = m_p;  
-    
-  //   Set RhoiEi = Rhoi*(Cv*Ti + 0.5*V²)
     
     for (CFuint ie = 0; ie < nbSpecies; ++ie) {
     
@@ -132,11 +128,8 @@ void EulerMFMHD2DRhoiViTiToCons::transform(const State& state, State& result)
       const CFreal c_p = (gamma/(gamma-1))*(K_gas/_m_i[ie]);
       const CFreal R_gas = K_gas/_m_i[ie];
       const CFreal c_v = c_p - R_gas;  
-      
-  //     std::cout << "EulerMFMHD2DRhoiViTiToCons::transform -> endEM + 3*nbSpecies + ie" << endEM + 3*nbSpecies + ie <<"\n";
 
-      result[endEM + nbSpecies + nbMomentum + ie] = state[endEM + ie]*(c_v*state[endEM + 3*nbSpecies + ie] + 0.5*V2); 
-      
+      result[endEM + nbSpecies + nbMomentum + ie] = state[endEM + ie]*(c_v*state[endEM + 3*nbSpecies + ie] + 0.5*V2);
     }
   }
 }
@@ -206,10 +199,9 @@ void EulerMFMHD2DRhoiViTiToCons::transformFromRef(const RealVector& data, State&
     const CFreal V2_n = u_n*u_n + v_n*v_n;
     
     result[endEM + 3*nbSpecies + 1] = data[firstSpecies + 1]*rho*(Cv_n*data[firstTemperature + 4] + 0.5*V2_n);
-//     std::cout << "EulerMFMHD2DRhoiViTiToCons::transformFromRef() => result = "<< result <<"\n";
   }
  
-  else{
+  else {
     //set the energy parameters
     const CFreal gamma = _model->getGamma();
     const CFreal K_gas = _model->getK();

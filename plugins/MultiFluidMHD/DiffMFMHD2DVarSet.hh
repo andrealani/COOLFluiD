@@ -16,7 +16,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * This class represents a MultiFluidMHD physical model 2D for primitive
+   * This class represents a Diffusive Var Set in 2D for primitive
    * variables
    *
    * @author ALejandro Alvarez

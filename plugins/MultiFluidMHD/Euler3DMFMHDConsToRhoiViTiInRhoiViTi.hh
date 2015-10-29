@@ -19,7 +19,7 @@ namespace COOLFluiD {
 
 /**
  * This class represents a transformer of variables from conservative
- * to primitive [p u v T] starting from primitive variables
+ * to primitive [Rhoi ui vi Ti] starting from primitive variables
  *
  * @author Alejandro Alvarez
  *

@@ -88,43 +88,6 @@ void DiffMFMHD2DRhoiViTi::setGradientVars(const vector<RealVector*>& states,
   }
 }
 
-// {
-//   const CFuint nbStates = stateSize;
-//   const CFuint nbSpecies = m_eulerModel->getNbScalarVars(0);
-//   const CFuint endEM = 8;
-//   const CFreal K_gas = m_eulerModel->getK();
-//   const CFreal gamma = m_eulerModel->getGamma();
-//   m_m_i[0] = m_eulerModel->getMolecularMass1();
-//   m_m_i[1] = m_eulerModel->getMolecularMass2();
-//   m_m_i[2] = m_eulerModel->getMolecularMass3();
-//   
-//   cf_assert(values.nbRows() == PhysicalModelStack::getActive()->getNbEq());
-//   
-//   for (CFuint i = 0; i < nbStates; ++i) {
-//     
-//     const RealVector& state = *states[i];
-//     
-//     for (CFuint ie = 0; ie < nbSpecies; ++ie) {
-//       
-//       const CFreal mass = m_m_i[ie];
-//       const CFreal R = K_gas/mass; 
-//       const CFreal c_p = (gamma/(gamma-1))*R;
-//       const CFreal c_v = c_p - R;
-//     
-//       const CFreal rhoi = state[endEM + ie];
-//       const CFreal ui = state[endEM + nbSpecies + 2*ie];
-//       const CFreal vi = state[endEM + nbSpecies + 2*ie + 1];
-//       const CFreal V2 = ui*ui + vi*vi;
-//       const CFreal Ti = state[endEM + 3*nbSpecies + ie];
-//     
-//        values(endEM + nbSpecies + 2*ie,i) = ui;					//U-component of ie species
-//        values(endEM + nbSpecies + 2*ie + 1,i) = vi;				//V-component of ie species
-//        values(endEM + nbSpecies + 2*nbSpecies + ie,i) = Ti;		//Temperature of ie species
-//        values(endEM + ie,i) = R*rhoi*Ti;			//pressure = R*rhoi*T
-//     }
-//   }
-// }
-
 //////////////////////////////////////////////////////////////////////////////
 
 void DiffMFMHD2DRhoiViTi::setGradientVarGradients(const vector<RealVector*>& states,
@@ -209,37 +172,7 @@ CFreal DiffMFMHD2DRhoiViTi::getDensity(const RealVector& state)
 void DiffMFMHD2DRhoiViTi::setGradientState(const RealVector& state)
 {
   cf_assert(_gradState.size() == state.size());
-//   const CFuint endEM = 8;
-//   const CFuint nbSpecies = m_eulerModel->getNbScalarVars(0);
-//   const CFuint nbMomentum   = m_eulerModel->getNbScalarVars(1);
-//   const CFuint nbEnergyEqs  = m_eulerModel->getNbScalarVars(2);
-//   const CFuint totalNbEqs = nbSpecies + nbMomentum + nbEnergyEqs + 8;
-  
-//   const CFreal K_gas = m_eulerModel->getK();
-//   const CFreal gamma = m_eulerModel->getGamma();
-//   m_m_i[0] = m_eulerModel->getMolecularMass1();
-//   m_m_i[1] = m_eulerModel->getMolecularMass2();
-//   m_m_i[2] = m_eulerModel->getMolecularMass3();
-  
-//   for (CFuint i = 0; i< totalNbEqs; ++i) {
-    
-//     const CFreal mass = m_m_i[i];
-//     const CFreal R = K_gas/mass; 
-//     const CFreal c_p = (gamma/(gamma-1))*R;
-//     const CFreal c_v = c_p - R;
-//     
-//     const CFreal rhoi = state[i];
-//     const CFreal ui = state[nbSpecies + 2*i]/rhoi;
-//     const CFreal vi = state[nbSpecies + 2*i + 1]/rhoi;
-//     const CFreal V2 = ui*ui + vi*vi;
-//     const CFreal Ti = (1/(state[i]*c_v))*(state[nbSpecies + 2*nbSpecies + i] - 0.5*state[i]*V2);
-//     
-//     _gradState[i] = rhoi*R*Ti;						//Pressure
-//     _gradState[nbSpecies + i] = ui;					//U-component
-//     _gradState[nbSpecies + 2*i] = vi;					//V-component
-//     _gradState[3*nbSpecies + i] = Ti;					//Temperature
   _gradState = state;
-//   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
