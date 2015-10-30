@@ -103,6 +103,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::setup()
   cf_assert(m_updateVarSet.isNotNull());
   
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
   const CFuint nbSpecies = m_updateVarSet->getModel()->getNbScalarVars(0);
   
   // AUSM scheme related data
@@ -130,8 +131,14 @@ void AUSMFluxMultiFluid<UPDATEVAR>::setup()
   _Aplus.resize(8,8);
   _Aminus.resize(8,8);  
   _resultEM.resize(8);
-  _psi_l.resize(nbSpecies + dim*nbSpecies + nbSpecies);
-  _psi_r.resize(nbSpecies + dim*nbSpecies + nbSpecies);
+  if(is2DHalf){
+    _psi_l.resize(nbSpecies + 3*nbSpecies + nbSpecies);
+    _psi_r.resize(nbSpecies + 3*nbSpecies + nbSpecies);
+  }
+  else {
+    _psi_l.resize(nbSpecies + dim*nbSpecies + nbSpecies);
+    _psi_r.resize(nbSpecies + dim*nbSpecies + nbSpecies);
+  }
   _m_i.resize(3);
 }
 
@@ -152,6 +159,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::compute(RealVector& result)
   m_lData = &pdata[LEFT];
   m_rData = &pdata[RIGHT];
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
   
   if (nbEqs == totalNbEqs || iEqSS == 1) {
     if (this->getMethodData().useAnalyticalConvJacob()) {
@@ -172,12 +180,9 @@ void AUSMFluxMultiFluid<UPDATEVAR>::compute(RealVector& result)
       m_unL[ie] = 0.0;
       m_unR[ie] = 0.0;
       for (CFuint idim = 0; idim < dim; ++idim) {
-	const CFuint currXX = firstVelocity + dim*ie + idim; ///this would work only in 2D and 3D
-	  m_unL[ie] += (*m_lData)[currXX]*normal[idim];
-	  m_unR[ie] += (*m_rData)[currXX]*normal[idim];
-// 	  cout << "AUSMFluxMultiFluid<UPDATEVAR>::compute ==> idim   = " << idim <<"\n";
-// 	  cout << "AUSMFluxMultiFluid<UPDATEVAR>::compute ==> currXX = " << currXX <<"\n";
-// 	  cout << "AUSMFluxMultiFluid<UPDATEVAR>::compute ==> normal["<< idim <<"] = " << normal[idim] <<"\n";
+        const CFuint currXX = firstVelocity + dim*ie + idim; ///this would work only in 2D and 3D and 2.5 since nz = 0
+        m_unL[ie] += (*m_lData)[currXX]*normal[idim];
+        m_unR[ie] += (*m_rData)[currXX]*normal[idim];
       }
     }
     
@@ -345,6 +350,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMassFluxImpl(RealVector& result)
   using namespace COOLFluiD::Framework;
   
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
   const RealVector& normal = this->getMethodData().getUnitNormal();
   const CFuint nbSpecies = m_updateVarSet->getModel()->getNbScalarVars(0);
   const CFuint firstVelocity = m_updateVarSet->getModel()->getFirstScalarVar(1); 
@@ -352,7 +358,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMassFluxImpl(RealVector& result)
   const CFuint endEM = 8; 
   
   // calculation of the dimensional numerical fluxes at the interface
-  if (m_mflux12 > 0.0) {
+  if (m_mflux12 > 0.0) { // LEFT VASE
 
     for (CFuint ie = 0; ie < nbSpecies; ++ie) {
       
@@ -360,76 +366,55 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMassFluxImpl(RealVector& result)
       result[endEM + ie] = m_mflux12[ie];
       
       //loop to set the velocities inside Psi
-//       cout << "AUSMFluxMultiFluid::computeMassFluxImpl => START LEFT\n";      
       for (CFuint i = 0; i < dim; ++i) {
-// 	cout << "AUSMFluxMultiFluid::computeMassFluxImpl => i = " << i <<"\n";
-// 	cout << "AUSMFluxMultiFluid::computeMassFluxImpl => nbSpecies + ie*dim + i     = " << nbSpecies + ie*dim + i <<"\n";
-// 	cout << "AUSMFluxMultiFluid::computeMassFluxImpl => firstVelocity + ie*dim + i = " << firstVelocity + ie*dim + i <<"\n";		
-	_psi_l[nbSpecies + ie*dim + i] =  (*this->m_lData)[firstVelocity + ie*dim + i];
-	result[endEM + nbSpecies + ie*dim + i] = m_mflux12[ie]*_psi_l[nbSpecies + ie*dim + i] + m_p12[ie]*normal[i];
+        _psi_l[nbSpecies + ie*dim + i] =  (*this->m_lData)[firstVelocity + ie*dim + i];
+        result[endEM + nbSpecies + ie*dim + i] = m_mflux12[ie]*_psi_l[nbSpecies + ie*dim + i] + m_p12[ie]*normal[i];
       }
-      /// ONLY FOR DEBUGGING      
-//       _psi_l[nbSpecies + ie*dim + 0] = (*this->m_lData)[firstVelocity + ie*dim + 0];
-//       _psi_l[nbSpecies + ie*dim + 1] = (*this->m_lData)[firstVelocity + ie*dim + 1];
-//       result[endEM + nbSpecies + ie*dim + 0] = m_mflux12[ie]*_psi_l[nbSpecies + ie*dim + 0] + m_p12[ie]*normal[0];
-//       result[endEM + nbSpecies + ie*dim + 1] = m_mflux12[ie]*_psi_l[nbSpecies + ie*dim + 1] + m_p12[ie]*normal[1];
-      
+      if(is2DHalf) {
+          CFreal nz = 0;
+          _psi_l[nbSpecies + ie*3 + 2] =  (*this->m_lData)[firstVelocity + ie*3 + 2];
+          result[endEM + nbSpecies + ie*3 + 2] = m_mflux12[ie]*_psi_l[nbSpecies + ie*3 + 2] + m_p12[ie]*nz;
+      }
       //enthalpy
-      _psi_l[nbSpecies + nbSpecies*dim + ie] = (*this->m_lData)[firstTemperature + 4*ie + 3];     
-      result[endEM + nbSpecies + nbSpecies*dim + ie] = m_mflux12[ie]*_psi_l[nbSpecies + nbSpecies*dim + ie];
-    }   
+      if(!is2DHalf) { //Default case
+        _psi_l[nbSpecies + nbSpecies*dim + ie] = (*this->m_lData)[firstTemperature + 4*ie + 3];
+        result[endEM + nbSpecies + nbSpecies*dim + ie] = m_mflux12[ie]*_psi_l[nbSpecies + nbSpecies*dim + ie];
+      }
+      else { // when it is 2D half
+        _psi_l[nbSpecies + nbSpecies*3 + ie] = (*this->m_lData)[firstTemperature + 4*ie + 3];
+        result[endEM + nbSpecies + nbSpecies*3 + ie] = m_mflux12[ie]*_psi_l[nbSpecies + nbSpecies*3 + ie];
+      }
+    }
   }
   
-  else {
-    
-//     cout << "AUSMFluxMultiFluid::computeMassFluxImpl => START RIGHT\n";
-    
+  else { // RIGHT CASE
+        
     for (CFuint ie = 0; ie < nbSpecies; ++ie) {
       
       _psi_r[ie] = 1;      
       result[endEM + ie] = m_mflux12[ie];
       
       //loop to set the velocities inside Psi
-//       cout << "AUSMFluxMultiFluid::computeMassFluxImpl => START RIGHT\n";
       for (CFuint i = 0; i < dim; ++i) {	
-// 	cout << "AUSMFluxMultiFluid::computeMassFluxImpl => i                      = " << i <<"\n";
-// 	cout << "AUSMFluxMultiFluid::computeMassFluxImpl => nbSpecies + ie*dim + i = " << nbSpecies + ie*dim + i <<"\n";
-// 	cout << "AUSMFluxMultiFluid::computeMassFluxImpl => firstVelocity + ie*dim + i = " << firstVelocity + ie*dim + i <<"\n";		
-	_psi_r[nbSpecies + ie*dim + i] =  (*this->m_rData)[firstVelocity + ie*dim + i];
-	result[endEM + nbSpecies + ie*dim + i] = m_mflux12[ie]*_psi_r[nbSpecies + ie*dim + i] + m_p12[ie]*normal[i];
+        _psi_r[nbSpecies + ie*dim + i] =  (*this->m_rData)[firstVelocity + ie*dim + i];
+        result[endEM + nbSpecies + ie*dim + i] = m_mflux12[ie]*_psi_r[nbSpecies + ie*dim + i] + m_p12[ie]*normal[i];
       }
-      /// ONLY FOR DEBUGGING       
-//       _psi_r[nbSpecies + ie*dim + 0] = (*this->m_rData)[firstVelocity + ie*dim + 0];
-//       _psi_r[nbSpecies + ie*dim + 1] = (*this->m_rData)[firstVelocity + ie*dim + 1];
-//       result[endEM + nbSpecies + ie*dim + 0] = m_mflux12[ie]*_psi_r[nbSpecies + ie*dim + 0] + m_p12[ie]*normal[0];
-//       result[endEM + nbSpecies + ie*dim + 1] = m_mflux12[ie]*_psi_r[nbSpecies + ie*dim + 1] + m_p12[ie]*normal[1];      
-      
+      if(is2DHalf) {
+          CFreal nz = 0;
+          _psi_r[nbSpecies + ie*3 + 2] =  (*this->m_rData)[firstVelocity + ie*3 + 2];
+          result[endEM + nbSpecies + ie*3 + 2] = m_mflux12[ie]*_psi_r[nbSpecies + ie*3 + 2] + m_p12[ie]*nz;
+      }
       //total enthalpy
-      _psi_r[nbSpecies + nbSpecies*dim + ie] = (*this->m_rData)[firstTemperature + 4*ie + 3];     
-      result[endEM + nbSpecies + nbSpecies*dim + ie] = m_mflux12[ie]*_psi_r[nbSpecies + nbSpecies*dim + ie] ;
-    
-    }
-//     if (_psi_r[nbSpecies + 1] > 1 ) {
-      
-//       cout << "AUSMFluxMultiFluid::computeMassFluxImpl=> Vx_R                = "<< _psi_r[nbSpecies] <<"\n";     
-//       cout << "AUSMFluxMultiFluid::computeMassFluxImpl=> Vy_R                = "<< _psi_r[nbSpecies + 1] <<"\n";
-//       cout << "AUSMFluxMultiFluid::computeMassFluxImpl=> m_p12               = "<< m_p12[0] <<"\n";
-//       cout << "AUSMFluxMultiFluid::computeMassFluxImpl=> normal[XX]          = "<< normal[0] <<"\n"; 
-//       cout << "AUSMFluxMultiFluid::computeMassFluxImpl=> normal[YY]          = "<< normal[1] <<"\n";
-//       cout << "AUSMFluxMultiFluid::computeMassFluxImpl=> NumericalXMomFlux_R = "<< result[endEM + 1] <<"\n";
-//       cout << "AUSMFluxMultiFluid::computeMassFluxImpl=> NumericalYMomFlux_R = "<< result[endEM + 2] <<"\n";
-
-      
-//     }   
-    
+      if(!is2DHalf) { //Default case
+        _psi_r[nbSpecies + nbSpecies*dim + ie] = (*this->m_rData)[firstTemperature + 4*ie + 3];
+        result[endEM + nbSpecies + nbSpecies*dim + ie] = m_mflux12[ie]*_psi_r[nbSpecies + nbSpecies*dim + ie] ;
+      }
+      else { // when it is 2D half
+        _psi_r[nbSpecies + nbSpecies*3 + ie] = (*this->m_rData)[firstTemperature + 4*ie + 3];
+        result[endEM + nbSpecies + nbSpecies*3 + ie] = m_mflux12[ie]*_psi_r[nbSpecies + nbSpecies*3 + ie] ;
+      }
+    }         
   } 
-//   std::cout << "numericalMassFlux = "<< result[endEM] <<"\n";
-//   std::cout << "numericalXMomFlux = "<< result[endEM + 1] <<"\n";
-//     cout << "AUSMFluxMultiFluid::computeMassFluxImpl=> NumericalXMomFlux = "<< result[endEM + 1] <<"\n";
-//     cout << "AUSMFluxMultiFluid::computeMassFluxImpl=> NumericalYMomFlux = "<< result[endEM + 2] <<"\n";
-
-//   std::cout << "numericalEnergyFlux = "<< result[endEM + 3] <<"\n";
- 
 }
 
 
@@ -552,6 +537,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeSoundSpeed4()
 //   const CFuint firstSpecies = m_updateVarSet->getModel()->getFirstScalarVar(0);
   const CFuint firstVelocity = m_updateVarSet->getModel()->getFirstScalarVar(1);  
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
   const CFuint firstTemperature = m_updateVarSet->getModel()->getFirstScalarVar(2);
   const CFreal gamma = m_updateVarSet->getModel()->getGamma();
   
@@ -563,6 +549,10 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeSoundSpeed4()
     for (CFuint i = 0; i < dim; ++i){      
       V2L = V2L + (*this->m_lData)[firstVelocity + dim*ie + i]*(*this->m_lData)[firstVelocity + dim*ie + i];
       V2R = V2R + (*this->m_rData)[firstVelocity + dim*ie + i]*(*this->m_rData)[firstVelocity + dim*ie + i];
+    }
+    if (is2DHalf) { // summing the z component in case of 2D Half
+      V2L = V2L + (*this->m_lData)[firstVelocity + 3*ie + 2]*(*this->m_lData)[firstVelocity + 3*ie + 2];
+      V2R = V2R + (*this->m_rData)[firstVelocity + 3*ie + 2]*(*this->m_rData)[firstVelocity + 3*ie + 2];
     }
     
     const CFreal kL = 0.5*V2L;
@@ -1071,15 +1061,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAminus()
     _Aminus(7,5) = normal[2]; 
     _Aminus(7,6) = 0; 
     _Aminus(7,7) = -chi;  
-  }
-  
-//  std::cout<<"Aminus = "<<  _Aminus(0,0) <<"\t\t "<<  _Aminus(0,1) <<"\t\t " <<  _Aminus(0,2) <<"\t\t "<<  _Aminus(0,3) <<"\t\t"<<  _Aminus(0,4) <<"\t\t "<<  _Aminus(0,5) <<"\n";
-//  std::cout<<"        "<<  _Aminus(1,0) <<"\t\t "<<  _Aminus(1,1) <<"\t\t " <<  _Aminus(1,2) <<"\t\t "<<  _Aminus(1,3) <<"\t\t"<<  _Aminus(1,4) <<"\t\t "<<  _Aminus(1,5) <<"\n";
-//  std::cout<<"        "<<  _Aminus(2,0) <<"\t\t "<<  _Aminus(2,1) <<"\t\t " <<  _Aminus(2,2) <<"\t\t "<<  _Aminus(2,3) <<"\t\t"<<  _Aminus(2,4) <<"\t\t "<<  _Aminus(2,5) <<"\n";
-//  std::cout<<"        "<<  _Aminus(3,0) <<"\t\t "<<  _Aminus(3,1) <<"\t\t " <<  _Aminus(3,2) <<"\t\t "<<  _Aminus(3,3) <<"\t\t"<<  _Aminus(3,4) <<"\t\t "<<  _Aminus(3,5) <<"\n";
-//  std::cout<<"        "<<  _Aminus(4,0) <<"\t\t "<<  _Aminus(4,1) <<"\t\t " <<  _Aminus(4,2) <<"\t\t "<<  _Aminus(4,3) <<"\t\t"<<  _Aminus(4,4) <<"\t\t "<<  _Aminus(4,5) <<"\n";
-//  std::cout<<"        "<<  _Aminus(5,0) <<"\t\t "<<  _Aminus(5,1) <<"\t\t " <<  _Aminus(5,2) <<"\t\t "<<  _Aminus(5,3) <<"\t\t"<<  _Aminus(5,4) <<"\t\t "<<  _Aminus(5,5) <<"\n"; 
-  
+  }  
 }
 
 
