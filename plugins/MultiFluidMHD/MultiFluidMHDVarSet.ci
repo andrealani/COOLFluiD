@@ -188,6 +188,7 @@ void MultiFluidMHDVarSet<BASE>::computeEigenValues(const RealVector& pdata,
   const CFuint nbEqs = eqSS.getNbEqsSS();  				
   const CFuint iEqSS = eqSS.getEqSS();
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
   
 
   if (nbEqs == totalNbEqs || iEqSS == 0) {
@@ -213,7 +214,7 @@ void MultiFluidMHDVarSet<BASE>::computeEigenValues(const RealVector& pdata,
     const CFuint firstVelocity = this->getModel()->getFirstScalarVar(1);
     const CFuint firstTemperature = this->getModel()->getFirstScalarVar(2);
     const CFuint endEM = 8;
-    if (dim == 2){    
+    if (dim == 2 && !is2DHalf){
       
       const CFreal nx = normals[XX];
       const CFreal ny = normals[YY];  
@@ -230,11 +231,13 @@ void MultiFluidMHDVarSet<BASE>::computeEigenValues(const RealVector& pdata,
 	result[endEM + 3*nbSpecies + i] = un_i - a_i;    
       } 
     }
-    else if (dim == 3){    
+    else if (dim == 3 || is2DHalf){
 
     const CFreal nx = normals[XX];
     const CFreal ny = normals[YY];  
-    const CFreal nz = normals[ZZ];
+    CFreal nz = 0.;
+
+    (is2DHalf) ? nz = 0 : nz = normals[ZZ];
     
       for (CFuint i = 0; i < nbSpecies; ++i) {  
 	const CFreal a_i = pdata[firstTemperature + 4*i + 2];				//i species
@@ -269,6 +272,7 @@ void MultiFluidMHDVarSet<BASE>::computeFlux (const RealVector& pdata, const Real
   const CFuint iEqSS = eqSS.getEqSS();
   CFuint dim = PhysicalModelStack::getActive()->getDim();
   const CFuint endEM = 8; 
+  const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
   
   if (nbEqs == totalNbEqs || iEqSS == 0) {
     const CFreal gamma = getModel()->getDivBCleaningConst();
@@ -276,7 +280,7 @@ void MultiFluidMHDVarSet<BASE>::computeFlux (const RealVector& pdata, const Real
     const CFreal chi = getModel()->getDivECleaningConst();
 
 
-    if (dim == 2){    
+    if (dim == 2 && !is2DHalf){
 
       const CFreal nx = normals[XX];
       const CFreal ny = normals[YY];
@@ -289,10 +293,12 @@ void MultiFluidMHDVarSet<BASE>::computeFlux (const RealVector& pdata, const Real
       this->_fluxArray[6] = (pdata[PTERM::BX]*nx + pdata[PTERM::BY]*ny)*ce*ce;
       this->_fluxArray[7] = pdata[PTERM::EX]*nx + pdata[PTERM::EY]*ny;  
     }
-    if (dim == 3){  
+    if (dim == 3 || is2DHalf){
       const CFreal nx = normals[XX];
       const CFreal ny = normals[YY];
-      const CFreal nz = normals[ZZ];
+      CFreal nz = 0;
+
+      (is2DHalf) ? nz = 0 : nz = normals[ZZ];
 
 
       this->_fluxArray[0] = gamma*gamma*pdata[PTERM::PSI]*nx + pdata[PTERM::EZ]*ny - pdata[PTERM::EY]*nz ;
@@ -320,7 +326,7 @@ void MultiFluidMHDVarSet<BASE>::computeFlux (const RealVector& pdata, const Real
     //const vector<CFuint>& varIDsVelocities = eqSetVelocities.getEqSetVarIDs();  
   
 
-    if (dim == 2){    
+    if (dim == 2 && !is2DHalf){
 
       const CFreal nx = normals[XX];
       const CFreal ny = normals[YY]; 
@@ -342,11 +348,13 @@ void MultiFluidMHDVarSet<BASE>::computeFlux (const RealVector& pdata, const Real
 	this->_fluxArray[endEM + nbSpecies + nbSpecies*dim + i] = rho_i*un_i*H_i;
       }  
     }
-    else if (dim == 3){
+    else if (dim == 3 || is2DHalf){
 	
       const CFreal nx = normals[XX];
       const CFreal ny = normals[YY];
-      const CFreal nz = normals[ZZ];
+      CFreal nz = 0;
+
+      (is2DHalf) ? nz = 0 : nz = normals[ZZ];
 	  
       for (CFuint i = 0; i < nbSpecies; ++i) {  
 	const CFreal rho_i = pdata[PTERM::RHO]*pdata[firstSpecies + i];				//i species
@@ -383,6 +391,7 @@ void MultiFluidMHDVarSet<BASE>::computeStateFlux (const RealVector& pdata)
     
 //   const CFuint totalNbEqSS = eqSS.getNbEqsSS();
   CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
 
   std::cout << "MultiFluidMHDVarSet<BASE>::computeStateFlux" <<"\n";
   
@@ -408,7 +417,7 @@ void MultiFluidMHDVarSet<BASE>::computeStateFlux (const RealVector& pdata)
   const CFuint endEM = 8;
 
   
-  if (dim == 2){  
+  if (dim == 2 && !is2DHalf){
     
     if (nbEqs == totalNbEqs || iEqSS == 0) {
     
@@ -465,7 +474,7 @@ void MultiFluidMHDVarSet<BASE>::computeStateFlux (const RealVector& pdata)
       }
     }
   }
-  else if (dim == 3){
+  else if (dim == 3 || is2DHalf){
     if (nbEqs == totalNbEqs || iEqSS == 0) {
       this->_physFlux(0,XX) = gamma*gamma*pdata[PTERM::PSI];
       this->_physFlux(0,YY) = pdata[PTERM::EZ];

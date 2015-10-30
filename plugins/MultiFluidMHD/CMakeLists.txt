@@ -2,6 +2,10 @@ LIST ( APPEND MultiFluidMHD_files
 MultiFluidMHD.hh
 EulerMFMHDTerm.cxx
 EulerMFMHDTerm.hh
+DiffMFMHD2DHalfRhoiViTi.cxx
+DiffMFMHD2DHalfRhoiViTi.hh
+DiffMFMHD2DHalfVarSet.cxx
+DiffMFMHD2DHalfVarSet.hh
 DiffMFMHD2DRhoiViTi.hh
 DiffMFMHD2DRhoiViTi.cxx
 DiffMFMHD2DVarSet.hh
@@ -14,6 +18,8 @@ DiffMFMHDTerm.cxx
 DiffMFMHDTerm.hh
 DiffMFMHDVarSet.cxx
 DiffMFMHDVarSet.hh
+Euler2DHalfMFMHDConsToRhoiViTiInRhoiViTi.cxx
+Euler2DHalfMFMHDConsToRhoiViTiInRhoiViTi.hh
 Euler2DMFMHDConsToRhoiViTiInRhoiViTi.cxx
 Euler2DMFMHDConsToRhoiViTiInRhoiViTi.hh
 EulerMFMHD2DCons.cxx
@@ -22,6 +28,14 @@ EulerMFMHD2DRhoiViTi.cxx
 EulerMFMHD2DRhoiViTi.hh
 EulerMFMHD2DConsToRhoiViTi.cxx
 EulerMFMHD2DConsToRhoiViTi.hh
+EulerMFMHD2DHalfCons.cxx
+EulerMFMHD2DHalfCons.hh
+EulerMFMHD2DHalfConsToRhoiViTi.cxx
+EulerMFMHD2DHalfConsToRhoiViTi.hh
+EulerMFMHD2DHalfRhoiViTi.cxx
+EulerMFMHD2DHalfRhoiViTi.hh
+EulerMFMHD2DHalfRhoiViTiToCons.cxx
+EulerMFMHD2DHalfRhoiViTiToCons.hh
 EulerMFMHD2DRhoiViTiToCons.cxx
 EulerMFMHD2DRhoiViTiToCons.hh
 EulerMFMHD3DRhoiViTi.cxx
@@ -48,4 +62,4 @@ LIST ( APPEND MultiFluidMHD_requires_mods Maxwell )
 
 CF_ADD_PLUGIN_LIBRARY ( MultiFluidMHD )
 CF_WARN_ORPHAN_FILES()
-#ADD_SUBDIRECTORY ( testcases )
+ADD_SUBDIRECTORY ( testcases )

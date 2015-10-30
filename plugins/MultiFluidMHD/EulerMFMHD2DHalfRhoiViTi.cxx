@@ -232,26 +232,7 @@ void EulerMFMHD2DHalfRhoiViTi::computePhysicalData(const State& state, RealVecto
     data[firstTemperature + 4] = T_n;				//Temperature
     data[firstTemperature + 4 + 1] = T_n*R_n*rho_n;		//pressure
     data[firstTemperature + 4 + 2] = sqrt(gamma*R_n*T_n);	//sound speed
-    data[firstTemperature + 4 + 3] = 0.5*V2_n + Cp_n*T_n;	//total enthalpy of species i 
-//     if(std::abs(data[firstVelocity + 1]) > 200){  
-//       std::cout << "EulerMFMHD2DHalfRhoiViTi::computePhysicalData \n";
-  //     for (CFuint ie = 0; ie < firstTemperature + 4*nbSpecies; ++ie) {
-  //       if(data[firstVelocity + 1] > 1000){
-  // 	std::cout << "------------ BAD --------------\n";
-  //       }
-//       CFuint ie = firstTemperature + 1;
-//       std::cout <<"pressure_p = "<< data[ie] << "\n";
-//       std::cout <<"\t R_p     = " << R_i << "\n";
-//       std::cout <<"\t rho_i   = "<< rho_i << "\n";
-//       std::cout <<"\t T_i     = "<<  T_i << "\n";
-//       ie = firstTemperature + 5;
-//       std::cout <<"pressure_n  = "<< data[ie] << "\n";
-//       std::cout <<"\t R_n     = " << R_n << "\n";
-//       std::cout <<"\t rho_n   = "<< rho_n << "\n";
-//       std::cout <<"\t T_n     = "<<  T_n << "\n";
-  //     }
-//     }
-    
+    data[firstTemperature + 4 + 3] = 0.5*V2_n + Cp_n*T_n;	//total enthalpy of species i     
   }
   
   else{

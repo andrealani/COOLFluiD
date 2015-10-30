@@ -170,8 +170,8 @@ RealVector& DiffMFMHD2DHalfVarSet::getFlux(const RealVector& state,
   const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();	// Maxwell's Eqs.+ Multifluid NavierStokes Eqs.
   const CFuint nbEqs = eqSS.getNbEqsSS();  				
   const CFuint iEqSS = eqSS.getEqSS();  
-  const CFreal normalzz = 0.
- if (nbEqs == totalNbEqs || iEqSS == 0) {
+  const CFreal normalzz = 0.;
+  if (nbEqs == totalNbEqs || iEqSS == 0) {
     const CFuint endEM = 8;
     for (CFuint i = 0; i < endEM; ++i){
      _flux[i] = 0;
