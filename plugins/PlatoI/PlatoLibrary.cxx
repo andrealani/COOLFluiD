@@ -52,6 +52,7 @@ PlatoLibrary::PlatoLibrary(const std::string& name)
     _Xc(),
     _Yc(),
     _Xi(),
+    _Xitol(),
     _Yi(),
     _Xn(),
     _Yn(),
@@ -61,6 +62,10 @@ PlatoLibrary::PlatoLibrary(const std::string& name)
     _qi(),
     _rhoi(),
     _tvec(),
+    _lambdavec(),
+    _prodterm(),
+    _Di(),
+    _Dij(),
     _dfi()
 {
   addConfigOptionsTo(this);
@@ -92,7 +97,7 @@ void PlatoLibrary::configure ( Config::ConfigArgs& args )
 }
 
 //////////////////////////////////////////////////////////////////////////////
-/*
+/*!
  * This function takes care of the initialization of the PLATO library
  */
 void PlatoLibrary::setup()
@@ -109,7 +114,7 @@ void PlatoLibrary::setup()
 }
  
 ////////////////////////////////////////////////////////////////////////////// 
-/*
+/*!
  * This function initializes the PLATO library
  */
 void PlatoLibrary::setLibrarySequentially()
@@ -142,6 +147,7 @@ void PlatoLibrary::setLibrarySequentially()
 
   /*Allocate working arrays*/
   _Xi.resize(_NS);
+  _Xitol.resize(_NS);
   _Yi.resize(_NS);
   _Xc.resize(get_nb_comp());
   _Yc.resize(get_nb_comp());
@@ -152,8 +158,12 @@ void PlatoLibrary::setLibrarySequentially()
   _Ri.resize(_NS);
   _qi.resize(_NS);
   _rhoi.resize(_NS);
+  _Di.resize(_NS);
+  _Dij.resize((get_nb_comp())*((get_nb_comp()) + 1)/2);
   _dfi.resize(_NS);
   _tvec.resize(_nTemp);
+  _lambdavec.resize(_nTemp);
+  _prodterm.resize(_NS + _nTemp);
 
   /*Call PLATO library functions to get molar mass, gas constant and charge arrays*/
   /*Molar masses [kg/mol]*/
@@ -170,7 +180,7 @@ void PlatoLibrary::setLibrarySequentially()
 }
  
 //////////////////////////////////////////////////////////////////////////////     
-/*
+/*!
  * This function shuts down the PLATO library and frees the memory allocated for local arrays
  */
 void PlatoLibrary::unsetup()
@@ -182,6 +192,7 @@ void PlatoLibrary::unsetup()
 
     /*Deallocate working arrays*/
     _Xi.resize(0);
+    _Xitol.resize(0);
     _Yi.resize(0);
     _Xc.resize(0);
     _Yc.resize(0);
@@ -192,15 +203,19 @@ void PlatoLibrary::unsetup()
     _Ri.resize(0);
     _qi.resize(0);
     _rhoi.resize(0);
+    _Di.resize(0);
+    _Dij.resize(0);
     _dfi.resize(0);
     _tvec.resize(0);
+    _lambdavec.resize(0); 
+    _prodterm.resize(0);
 
     Framework::PhysicalChemicalLibrary::unsetup();
   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
-/*
+/*!
  * This function selects the free-electron temperature
  */     
 CFdouble PlatoLibrary::get_el_temp(CFdouble &temp, CFreal* tVec) {
@@ -212,9 +227,31 @@ CFdouble PlatoLibrary::get_el_temp(CFdouble &temp, CFreal* tVec) {
 
  return Te;
 }
+
+//////////////////////////////////////////////////////////////////////////////
+/*!
+ * This function applies a small tolerance on the mole fractions by ensuring that the 
+ * sum of mole fractions is still equal to one.
+ */
+void PlatoLibrary::comp_tol(RealVector& X, RealVector& Xtol) {
+ 
+  CFreal tol = 1.e-12;
+  CFreal sum_X = 0.;
+
+  for (CFint i = 0;i < _NS;i++) {
+    Xtol[i]  = X[i] + tol;
+    sum_X   += Xtol[i];
+  }
+   
+  sum_X = 1./sum_X;
+  for (CFint i = 0;i < _NS;i++) {
+    Xtol[i] *= sum_X;
+  }
+
+}
     
 ////////////////////////////////////////////////////////////////////////////// 
-/*
+/*!
  * This functions returns the specific gas constants [J/(kg*K)]
  */
 void PlatoLibrary::setRiGas(RealVector& Ri)
@@ -236,7 +273,7 @@ void PlatoLibrary::getMolarMasses(RealVector& mm)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-/*
+/*!
  * This function returns the molecular species IDs
  */
 void PlatoLibrary::setMoleculesIDs(std::vector<CFuint>& v)
@@ -256,20 +293,31 @@ void PlatoLibrary::setMoleculesIDs(std::vector<CFuint>& v)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-/*
+/*!
  * This function returns the dynamic viscosity given the pressure and the
  * temperatures (the mole fractions are stored in the vector "_Xi" which has 
  * to be filled before invoking this function)
  */
 CFdouble PlatoLibrary::eta(CFdouble& temp, CFdouble& pressure, CFreal* tVec)
 {
-  cout << "PLATO interface STOP::eta\n";
-  throw NotImplementedException(FromHere(),"PlatoLibrary::eta()");
-  return 0.;
+  /*Heavy-particle and free-electron temperatures*/
+  CFdouble Th = temp;
+  CFdouble Te = get_el_temp(temp, tVec);
+  
+  /*Electron mole fraction*/
+  CFdouble Xe = _Xi[0];
+ 
+  /*Compute number density*/
+  CFdouble nd = get_nb_density(&pressure, &Th, &Te, &Xe);
+
+  /*Compute dynamic viscosity*/
+  CFdouble eta = get_dyn_vis(&nd, &Th, &Te, &_Xi[0]);
+
+  return eta;
 }
 
 //////////////////////////////////////////////////////////////////////////////
-/*
+/*!
  * This function returns the equilibrium totoal thermal conductivity given the pressure and the
  * temperature (the mole fractions are stored in the vector "_Xi" which has 
  * to be filled before invoking this function)
@@ -282,12 +330,24 @@ CFdouble PlatoLibrary::lambdaEQ(CFdouble& temp, CFdouble& pressure)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-CFdouble PlatoLibrary::lambdaNEQ(CFdouble& temperature,
-				 CFdouble& pressure)
+/*!
+ * This function returns the thermal conductivity (the mole fractions
+ * are stored in the vector "_Xi" which has to be filled before invoking this function)
+ */
+CFdouble PlatoLibrary::lambdaNEQ(CFdouble& temp, CFdouble& pressure)
 {
-  cout << "PLATO interface STOPL:: lambdaNEQ\n"; 
-  throw NotImplementedException(FromHere(),"PlatoLibrary::lambdaNEQ()");
-  return 0.;
+  /*Temperature vector*/
+  for (CFint i = 0;i < _nTemp;i++) {
+    _tvec[i] = temp;
+  }
+
+  /*Number density*/
+  CFdouble nd = pressure/(UKB*temp);
+
+  /*Compute thermal conductivity*/
+  get_lambda_vec(&nd, &_Xi[0], &_tvec[0], &_lambdavec[0]);
+
+  return (_lambdavec[0]);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -302,7 +362,7 @@ void PlatoLibrary::lambdaVibNEQ(CFreal& temperature,
 }
 
 //////////////////////////////////////////////////////////////////////////////
-/*
+/*!
  * This function returns the electrical conductivity given the pressure and the
  * temperatures (the mole fractions are stored in the vector "_Xi" which has 
  * to be filled before invoking this function)
@@ -320,13 +380,13 @@ CFdouble PlatoLibrary::sigma(CFdouble& temp, CFdouble& pressure, CFreal* tVec)
   CFdouble nd = get_nb_density(&pressure, &Th, &Te, &Xe);
 
   /*Compute electrical conductivity*/
-  CFdouble sigma = compute_sigma_e(&nd, &Th, &Te, &_Xi[0]);
+  CFdouble sigma = get_sigma_e(&nd, &Th, &Te, &_Xi[0]);
 
   return sigma;
 }
 
 ////////////////////////////////////////////////////////////////////////////// 
-/*
+/*!
  * This function returns the equilibrium speed of sound and specific heat ratio
  * (the mole fractions are stored in the vector "_Xi" which has to be filled 
  * before invoking this function)
@@ -337,7 +397,7 @@ void PlatoLibrary::gammaAndSoundSpeed(CFdouble& temp, CFdouble& pressure, CFdoub
 }
 
 //////////////////////////////////////////////////////////////////////////////      
-/*
+/*!
  * This function returns the frozen speed of sound and the specific heat ratio 
  * (the mole fractions are stored in the vector "_Xi" which has to be filled before invoking this functio)
  */
@@ -359,7 +419,7 @@ void PlatoLibrary::frozenGammaAndSoundSpeed(CFdouble& temp, CFdouble& pressure, 
 }
       
 //////////////////////////////////////////////////////////////////////////////
-/*
+/*!
  * This function returns the equilibrium speed of sound given the pressure and the temperature
  * (the mole fractions are stored in the vector "_Xi" which has to be filled before invoking this function)
  */      
@@ -374,7 +434,7 @@ CFdouble PlatoLibrary::soundSpeed(CFdouble& temp, CFdouble& pressure)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-/*
+/*!
  * This function returns the equilibrium chemical composition given the pressure and 
  * temperature (the mole and mass fractions computed here are stored in the arrays 
  * "_Xi" and "_Yi" which have to be filled before calling this function) 
@@ -404,7 +464,7 @@ void PlatoLibrary::setComposition(CFdouble& temp, CFdouble& pressure, RealVector
 }
  
 //////////////////////////////////////////////////////////////////////////////     
-/*
+/*!
  * This function returns the gas density, specific enthalpy and energy given 
  * temperature and pressure (the mole fractions are stored in vector "_Xi" which 
  * has to be filled before calling this function)
@@ -445,7 +505,7 @@ void PlatoLibrary::setDensityEnthalpyEnergy(CFdouble& temp,
 }
 
 //////////////////////////////////////////////////////////////////////////////      
-/*
+/*!
  * This function returns the density given the pressure and temperatures (the mole fractions 
  * are stored in vector "_Xi" which has to be filled before calling this function)
  */
@@ -468,7 +528,7 @@ CFdouble PlatoLibrary::density(CFdouble& temp, CFdouble& pressure, CFreal* tVec)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-/*
+/*!
  * This function returns the gas pressure given the density and the temperatures
  * (note that the component mass fractions "_Yc" vector has to be filled before calling this function)
  */
@@ -547,7 +607,7 @@ CFdouble PlatoLibrary::enthalpy(CFdouble& temp,
  }
 
 //////////////////////////////////////////////////////////////////////////////
-/*
+/*!
  * This function fills the mass and mole fractions working vectors "_Yi, "_Yc", "_Xi" and "_Xc", which are 
  * used in other function calls, given the (species) mass fractions "ys" 
  */
@@ -604,27 +664,38 @@ void PlatoLibrary::getSpeciesMassFractions(RealVector& ys)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-void PlatoLibrary::getMassProductionTerm(CFdouble& temperature,
-					 RealVector& tVec,
-					 CFdouble& pressure,
-					 CFdouble& rho,
-					 const RealVector& ys,
-					 bool flagJac,
-					 RealVector& omega,
-					 RealMatrix& jacobian)
+/*! 
+ * This function returns the mass production terms given the density, the mass fractions and 
+ * the temperature  
+ */
+void PlatoLibrary::getMassProductionTerm(CFdouble& temp, RealVector& tVec, CFdouble& pressure,
+					 CFdouble& rho, const RealVector& ys, bool flagJac, RealVector& omega, RealMatrix& jacobian)
 {
+  const CFint ndim = 0;
+
   /*Partial densities*/
+  for (CFint i = 0;i < _NS;i++) {
+    _rhoi[i] = rho*ys[i];
+  }
 
   /*Temperature vector*/
+  _tvec[0] = temp;
+  for (CFint i = 1;i < _nTemp;i++) {
+    _tvec[i] = tVec[i - 1];
+  }
 
   /*Compute source term*/
-  cout << "PLATO interface STOP:: getMassProductionTerm\n";
-  throw NotImplementedException(FromHere(),"PlatoLibrary::getMassProductionTerm()");
-   // RealVector& yss = const_cast<RealVector&>(ys);
-   // CFreal tp[2]; tp[0]= temperature; tp[1]= pressure;
-   // m_gasMixture->setState(&tp[0], &yss[0]);
-   // m_gasMixture->netProductionRates(&omega[0]);
-  // TODO: Need to figure out how to do the Jacobian later
+  source(&_rhoi[0], &_tvec[0], &_prodterm[0], ndim);
+
+  for (CFint i = 0;i < _NS;i++) {
+    omega[i] = _prodterm[i];
+  }
+
+  if (flagJac) {
+    cout << "Analytical source term Jacobian not tested yet!";
+    cout << "PLATO interface STOP:: getMassProductionTerm\n";
+    throw NotImplementedException(FromHere(),"PlatoLibrary::getMassProductionTerm()");
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -649,34 +720,44 @@ void PlatoLibrary::getSource(CFdouble& temperature,
 }
       
 //////////////////////////////////////////////////////////////////////////////
-void PlatoLibrary::getRhoUdiff(CFdouble& temperature,
-			       CFdouble& pressure,
-			       RealVector& normConcGradients,
-			       CFreal* tVec,
-			       RealVector& rhoUdiff,
-			       bool fast)
+/*!
+ * This function computes the mass diffusion fluxes given the temperature, the pressure and the mass fraction 
+ * gradients (note that the species mole and mass fraction , "_Xi" and "_Yi" vectors, have to be filled before calling this function)
+ */
+void PlatoLibrary::getRhoUdiff(CFdouble& temp, CFdouble& pressure, RealVector& normConcGradients, CFreal* tVec, RealVector& rhoUdiff, bool fast)
 {
-  cout << "PLATO interface STOP:: getRhoUDiff\n";  
-  throw NotImplementedException(FromHere(),"PlatoLibrary::getRhoUdiff()");
-  // // Set driving forces as gradients of molar fractions
-  // CFreal MMass = m_gasMixture->mixtureMw();
-  // CFreal normMMassGradient = 0.0;
-  // for (CFint is = 0; is < _NS; ++is) {
-  //   normMMassGradient += normConcGradients[is] / m_molarmassp[is];
-  // }
-  // normMMassGradient *= -MMass*MMass;
+  /*Heavy particle and free-electron temperatures*/
+  CFdouble Th = temp;
+  CFdouble Te = get_el_temp(temp, tVec);
+
+  /*Electron mole fraction*/
+  CFdouble Xe = _Xi[0];
+
+  /*Compute number and mass densities*/
+  CFdouble nd  = get_nb_density(&pressure, &Th, &Te, &Xe);
+  CFdouble rho = get_density(&nd, &_Xi[0]);
+
+  /*Compute binary diffusion coefficients*/
+  get_bin_diff_coeff(&Th, &Te, &nd, &_Xi[0], &_Dij[0]);
+
+  /*Diffusion driving forces (gradients of mole fractions*/
+  CFreal mm = 0.0;
+  CFreal normMMassGradient = 0.0;
+  for (CFint is = 0; is < _NS; ++is) {
+    mm += _Xi[is]*_mmi[is];
+    normMMassGradient += normConcGradients[is]/_mmi[is];
+  }
+  normMMassGradient *= -(mm*mm);
   
-  // for (CFint is = 0; is < _NS; ++is) {
-  //   m_df[is] = (MMass*normConcGradients[is] + _Yi[is]*normMMassGradient) / m_molarmassp[is];
-  // }
+  for (CFint is = 0; is < _NS; ++is) {
+    _dfi[is] = (mm*normConcGradients[is] + _Yi[is]*normMMassGradient)/_mmi[is];
+  }
   
-  // double E = 0.0;
-  // m_gasMixture->stefanMaxwell(&m_df[0], &rhoUdiff[0], E);
-  
-  // CFreal density = m_gasMixture->density();
-  // for (CFint is = 0; is < _NS; ++is) {
-  //   rhoUdiff[is] *= _Yi[is]*density;
-  // }
+  /*Apply tolerance on mole fractions (this step is mandatory for stability)*/
+  comp_tol(_Xi, _Xitol);
+
+  /*Compute mass diffusion fluxes (solve the Stefan-Maxwell equations)*/
+  get_species_diff_flux(&Th, &Te, &rho, &_Xitol[0], &_Dij[0], &_dfi[0], &rhoUdiff[0]);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -714,6 +795,9 @@ void PlatoLibrary::setSpeciesMolarFractions(const RealVector& xs)
  }
       
 //////////////////////////////////////////////////////////////////////////////
+/*!
+ * This function returns the species total, vibrational and electronic enthaloies givenn the temperatures 
+ */
 void PlatoLibrary::getSpeciesTotEnthalpies(CFdouble& temp,
 				           RealVector& tVec,
 					   CFdouble& pressure,
@@ -721,18 +805,21 @@ void PlatoLibrary::getSpeciesTotEnthalpies(CFdouble& temp,
 					   RealVector* hsVib,
 					   RealVector* hsEl)
 {
-  cout << "PLATO interface STOP:: getSpeciesTotEnthalpies\n";
-  throw NotImplementedException(FromHere(),"PlatoLibrary::getSpeciesTotEnthalpies()");
-  // CFreal* hv = (hsVib != CFNULL) ? &(*hsVib)[0] : CFNULL;
-  // CFreal* he = (hsEl  != CFNULL) ?  &(*hsEl)[0] : CFNULL;
-  // m_gasMixture->speciesHOverRT(&hsTot[0], CFNULL, CFNULL, hv, he);
-  // const CFreal RT = _Rgas*temp;
-  // for (CFuint i = 0; i < _NS; ++i) {
-  //   const CFreal k = RT/m_molarmassp[i];
-  //   hsTot[i] *= k;
-  //   if (hsVib != CFNULL) {hsVib[i] *= k;}
-  //   if (hsEl != CFNULL) {hsEl[i]  *= k;}
-  // }
+  /*Set temperature vector*/
+  _tvec[0] = temp;
+  for (CFint i = 1; i < _nTemp; ++i) {
+    _tvec[i] = tVec[i - 1];
+  }
+
+  /*Species total enthalpies*/
+  species_enthalpy(&_tvec[0], &hsTot[0]);
+
+  /*THIS FUNCTION NEEDS TO RESTRUCTED FOR THERMO-CHEMICAL NON-EQUILIBRIUM CASES*/
+  if (_nTemp > 1) {
+     cout << "PLATO interface STOP:: getSpeciesTotEnthalpies\n";
+     cout << "Thermal non-equilibrium case not implemented yet\n";
+     throw NotImplementedException(FromHere(),"PlatoLibrary::getSpeciesTotEnthalpies()");
+  }
 }
       
 //////////////////////////////////////////////////////////////////////////////

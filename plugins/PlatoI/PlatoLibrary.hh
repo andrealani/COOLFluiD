@@ -79,6 +79,11 @@ public:
   {
   }   
   
+  /*! 
+   * Apply tolerance on mole fractions
+   */
+  void comp_tol(RealVector& X, RealVector& Xtol);
+
   /**
    * Compute and get the electron pressure
    */
@@ -257,9 +262,7 @@ public:
    * @param temp temperature
    * @param pressure pressure
    */
-  void setDensityEnthalpyEnergy(CFdouble& temp,
-  				CFdouble& pressure,
-				RealVector& dhe);
+  void setDensityEnthalpyEnergy(CFdouble& temp, CFdouble& pressure, RealVector& dhe);
   
   /**
    * Calculates the density given temperature and pressure.
@@ -268,9 +271,7 @@ public:
    * @param temp temperature
    * @param pressure pressure
    */
-  CFdouble density(CFdouble& temp,
-		   CFdouble& pressure,
-		   CFreal* tVec);
+  CFdouble density(CFdouble& temp, CFdouble& pressure, CFreal* tVec);
   
   /**
    * Calculates the internal energy at given temperature
@@ -278,8 +279,7 @@ public:
    * @param temp temperature
    * @param pressure pressure
    */
-  CFdouble energy(CFdouble& temp,
-		  CFdouble& pressure);
+  CFdouble energy(CFdouble& temp, CFdouble& pressure);
   
   /**
    * Calculates the energy in LTE conditions
@@ -288,8 +288,7 @@ public:
    * @param pressure  pressure
    * @param intEnergy computed internal energy
    */
-  CFdouble enthalpy(CFdouble& temp,
-		    CFdouble& pressure);
+  CFdouble enthalpy(CFdouble& temp, CFdouble& pressure);
   
   /**
    * Calculates the speed of sound in
@@ -297,8 +296,7 @@ public:
    * @param temp temperature
    * @param pressure pressure
    */
-  CFdouble soundSpeed(CFdouble& temp,
-		      CFdouble& pressure);
+  CFdouble soundSpeed(CFdouble& temp, CFdouble& pressure);
   
   /**
     * Sets the mole fractions of elements (nucleons) Xn for the Mutation
@@ -560,6 +558,9 @@ protected:
 
   /*Mole fractions (species)*/
   RealVector _Xi;
+
+  /*Mole fractions (species; used only for assembly of Stefan-Maxwell equations)*/
+  RealVector _Xitol;
   
   /*Nuclear (elemental) mass fractions*/
   RealVector _Yn;
@@ -581,13 +582,25 @@ protected:
  
   /*Partial densities*/
   RealVector _rhoi;
- 
+
+  /*Average diffusion coefficients*/
+  RealVector _Di;
+
+  /*Diffusion coefficient matrix*/
+  RealVector _Dij; 
+
   /*Modified diffusion driving forces for Stefan-Maxwell equations (working vector)*/
   RealVector _dfi;
   
   /*Temperatures (working vector)*/
   RealVector _tvec;
+
+  /*Thermal conductivity vector*/
+  RealVector _lambdavec;
   
+  /*Production term*/
+  RealVector _prodterm;
+
 }; // end of class PlatoLibrary
       
 //////////////////////////////////////////////////////////////////////////////
