@@ -126,7 +126,10 @@ protected: // abstract interface implementations
    * @see Method::setMethod()
    */
   virtual void setMethodImpl();
-
+  
+  /// Finalize the coupling
+  virtual void finalizeImpl();
+  
 private: // helper methods
 
   /**
@@ -157,7 +160,7 @@ private: // helper methods
 			std::vector<std::string>& words);
   
   /// Definition of an enumerator for I/O
-  enum TypeIO {READ=0, WRITE=1};
+  enum TypeIO {READ=0, WRITE=1, END=2};
   
   /// Tell if a coupling step has to be accomplished
   bool isCouplingIter(std::pair<std::ifstream*, std::ofstream*>& file, 
@@ -169,10 +172,17 @@ private: // helper methods
   void resetStatusFile(std::ofstream* fout, TypeIO tio) 
   {
     const CFuint start = tio*m_coupledNamespacesStr.size();
-    const CFuint end = (tio+1)*m_coupledNamespacesStr.size();
-    CFLog(INFO, "start/end = " << start << "/" << end << "\n");
     fout->seekp(start);
-    for (CFuint f = start; f < end; ++f) {(*fout) << (bool)0;}
+    if (tio < END) {
+      const CFuint end = (tio+1)*m_coupledNamespacesStr.size();
+      CFLog(DEBUG_MIN, "ConcurrentCouplerMethod::resetStatusFile() => start/end = " 
+	    << start << "/" << end << "\n");
+      for (CFuint f = start; f < end; ++f) {(*fout) << '0';}
+    }
+    else {
+      cf_assert(tio == END);
+      (*fout) << '0';
+    }
   }
   
   /// @return the status filename for this coupling namespace

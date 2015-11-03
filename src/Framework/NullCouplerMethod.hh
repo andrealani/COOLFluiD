@@ -74,6 +74,9 @@ protected: // abstract interface implementations
   /// @see Method::setMethod()
   virtual void setMethodImpl();
 
+  /// Finalize the coupling
+  virtual void finalizeImpl();
+  
 }; // end NullCouplerMethod
 
 //////////////////////////////////////////////////////////////////////////////

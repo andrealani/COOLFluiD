@@ -232,7 +232,7 @@ protected: // helper functions
   void setCollaborators(MultiMethodTuple<METHOD>& method,
                         MultiMethodTuple<COLLAB>& collaborator);
 
-private: // member data
+ private: // member data
 
   /// names of the namespaces of this SubSystem
   std::vector<std::string> m_namespaces;

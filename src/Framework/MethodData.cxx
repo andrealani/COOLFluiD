@@ -43,19 +43,23 @@ MethodData::~MethodData()
 void MethodData::configure ( Config::ConfigArgs& args )
 {
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE, "MethodData::configure() for " << getName() << " => start\n");
   ConfigObject::configure(args);
   CollaboratorAccess::process();
+  CFLog(VERBOSE, "MethodData::configure() for " << getName() << " => end\n");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void MethodData::setup()
 {
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE, "MethodData::setup() for " << getName() << " => start\n");
   SetupObject::setup();
   CollaboratorAccess::setup();
+  CFLog(VERBOSE, "MethodData::setup() for " << getName() << " => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -63,11 +67,13 @@ void MethodData::setup()
 void MethodData::unsetup()
 {
   CFAUTOTRACE;
-
-  CollaboratorAccess::setup(); 
+  
+  CFLog(VERBOSE, "MethodData::unsetup() for " << getName() << " => start\n");
+  CollaboratorAccess::unsetup(); 
   SetupObject::unsetup();
+  CFLog(VERBOSE, "MethodData::unsetup() for " << getName() << " => end\n");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace Framework

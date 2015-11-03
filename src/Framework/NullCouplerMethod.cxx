@@ -101,6 +101,13 @@ void NullCouplerMethod::dataTransferWriteImpl()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void NullCouplerMethod::finalizeImpl()
+{
+  CFLogDebugMed("NullCouplerMethod::finalizeImpl() called!" << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
   } // namespace Framework
 
 } // namespace COOLFluiD

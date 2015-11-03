@@ -28,6 +28,7 @@ void CouplerMethod::build_dynamic_functions()
   add_dynamic_function("meshMatchingRead",&CouplerMethod::meshMatchingRead);
   add_dynamic_function("dataTransferRead",&CouplerMethod::dataTransferRead);
   add_dynamic_function("dataTransferWrite",&CouplerMethod::dataTransferWrite);
+  add_dynamic_function("finalize",&CouplerMethod::finalize);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -196,6 +197,22 @@ void CouplerMethod::dataTransferWrite()
 
   dataTransferWriteImpl();
 
+  popNamespace();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void CouplerMethod::finalize()
+{
+  CFAUTOTRACE;
+
+  cf_assert(isConfigured());
+  cf_assert(isSetup());
+
+  pushNamespace();
+  
+  finalizeImpl();
+  
   popNamespace();
 }
 

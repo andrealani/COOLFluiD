@@ -200,7 +200,7 @@ bool OutputFormatter::isSaveNow( const bool force_write )
   if (m_saveRate == 0) return false;
   
   NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
-  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName));
+  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName), true);
   SafePtr<SubSystemStatus> currSSS = SubSystemStatusStack::getInstance().getEntry(sssName);
   cf_assert(currSSS.isNotNull());
   

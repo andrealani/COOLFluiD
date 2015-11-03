@@ -6,6 +6,7 @@
 
 #include "Common/SetupObject.hh"
 #include "Common/SetupException.hh"
+#include "Common/CFLog.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -45,9 +46,12 @@ void SetupObject::setup()
 
 void SetupObject::unsetup()
 {
-  if (!m_setup)
+  CFLog(VERBOSE, "SetupObject::unsetup() => start\n");
+  if (!m_setup) {
     throw SetupException (FromHere(),"Trying to unsetup object without calling setup first.");
+  }
   m_setup = false;
+  CFLog(VERBOSE, "SetupObject::unsetup() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

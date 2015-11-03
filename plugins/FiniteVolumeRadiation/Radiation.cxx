@@ -88,12 +88,12 @@ Radiation::Radiation(const std::string& name) :
   m_divq(),
   m_qrAv(),
   m_divqAv(),
-  m_nDirTypes()
+  m_nbDirTypes()
 {
   addConfigOptionsTo(this);
   
-  m_nDirs = 8;
-  this->setParameter("nDirs",&m_nDirs);
+  m_nbDirs = 8;
+  this->setParameter("nDirs",&m_nbDirs);
   
   m_dirName = Environment::DirPaths::getInstance().getWorkingDir();
   setParameter("DirName", &m_dirName);
@@ -103,12 +103,6 @@ Radiation::Radiation(const std::string& name) :
   
   m_outTabName = "air-100.out";
   setParameter("OutTabName", &m_outTabName);
-  
-  m_startEndBinStr = "";
-  setParameter("StartEndBin", &m_startEndBinStr);
-  
-  m_startEndDirStr = "";
-  setParameter("StartEndDir", &m_startEndDirStr);
   
   m_writeToFile = true;
   setParameter("WriteToFile", &m_writeToFile);
@@ -142,6 +136,12 @@ Radiation::Radiation(const std::string& name) :
   
   m_TID = 4;
   setParameter("TID", &m_TID);
+  
+  m_nbThreads = 1;
+  setParameter("NbThreads", &m_nbThreads);
+  
+  m_threadID = 0;
+  setParameter("ThreadID", &m_threadID);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -164,10 +164,6 @@ void Radiation::defineConfigOptions(Config::OptionList& options)
     ("WriteToFile","Writing the table in ASCII");   
   options.addConfigOption< string >
     ("OutTabName","Name of the output file");    
-  options.addConfigOption< string >
-    ("StartEndBin","First and last bin to consider");
-  options.addConfigOption< string >
-    ("StartEndDir","First and last direction to consider");
   options.addConfigOption< bool >
     ("UseExponentialMethod","Exponential method for radiation. Explained in ICCFD7-1003");
   options.addConfigOption< bool >
@@ -182,6 +178,8 @@ void Radiation::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("DeltaT","Temperature interval");
   options.addConfigOption< CFuint >("PID","ID of pressure in the state vector");
   options.addConfigOption< CFuint >("TID","ID of temperature in the state vector");
+  options.addConfigOption< CFuint >("NbThreads","Number of threads/CPUs in which the algorithm has to be split.");
+  options.addConfigOption< CFuint >("ThreadID","ID of the current thread within the parallel algorithm.");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -226,6 +224,8 @@ void Radiation::setup()
   CFAUTOTRACE;
   
   CFLog(VERBOSE, "Radiation::setup() => start\n");
+  CFLog(VERBOSE, "Radiation::setup() => [threadID / nbThreads] = [" 
+	<< m_threadID << " / " << m_nbThreads << "]\n");
   
   cf_assert(m_PID < PhysicalModelStack::getActive()->getNbEq());
   cf_assert(m_TID < PhysicalModelStack::getActive()->getNbEq());
@@ -244,48 +244,37 @@ void Radiation::setup()
   CFLog(VERBOSE, "Radiation::setup() => m_binTableFile = "<< m_binTableFile <<"\n");
   
   // Check to force an allowed number of directions
-  if ((m_nDirs != 8) && (m_nDirs != 24) && (m_nDirs != 48) && (m_nDirs != 80)) {
+  if ((m_nbDirs != 8) && (m_nbDirs != 24) && (m_nbDirs != 48) && (m_nbDirs != 80)) {
     CFLog(WARN, "Radiation::setup() => This ndirs is not allowed. 8 directions is chosen \n");
-    m_nDirs = 8;
+    m_nbDirs = 8;
   } 
   
   // Reading the table
   readOpacities();
   
-  // set the start/end bins for this process
-  if (m_startEndBinStr == "") { 
-    m_startEndBin.first  = 0;
-    m_startEndBin.second = m_nbBins-1;
-  }
-  else {
-    vector<string> startEnd = StringOps::getWords(m_startEndBinStr, ':');
-    m_startEndBin.first  = StringOps::from_str<CFuint>(startEnd[0]);
-    m_startEndBin.second = StringOps::from_str<CFuint>(startEnd[1]);
-  }
-  
   const CFuint DIM = 3;
   
   // Selecting the # of direction types depending on the option
-  switch(m_nDirs) {
+  switch(m_nbDirs) {
   case 8:     
-    m_nDirTypes = 1;
+    m_nbDirTypes = 1;
     break;
   case 24:
-    m_nDirTypes = 1;    
+    m_nbDirTypes = 1;    
     break;
   case 48:
-    m_nDirTypes = 2;
+    m_nbDirTypes = 2;
     break;
   case 80:
-    m_nDirTypes = 3;
+    m_nbDirTypes = 3;
     break;
   default:		//Case nDirs == 8
-    m_nDirTypes = 1;    
+    m_nbDirTypes = 1;    
     break;
   }
   
   //Resizing the vectors
-  m_weight.resize(m_nDirs);
+  m_weight.resize(m_nbDirs);
   
   // Get number of cells
   Common::SafePtr<Common::ConnectivityTable<CFuint> > cells =
@@ -312,25 +301,70 @@ void Radiation::setup()
     m_cdone[iCell] = false;
   }
   
-  // set the start and end directions for this process
-  if (m_startEndDirStr == "") { 
+  // m_nbThreads, m_threadID
+  cf_assert(m_nbDirs > 0);
+  cf_assert(m_nbBins > 0);
+  
+  // set the start/end bins for this process
+  if (m_nbThreads == 1) { 
     m_startEndDir.first  = 0;
-    m_startEndDir.second = m_nDirs-1;
+    m_startEndBin.first  = 0;
+    m_startEndDir.second = m_nbDirs-1;
+    m_startEndBin.second = m_nbBins-1;
   }
   else {
-    vector<string> startEnd = StringOps::getWords(m_startEndDirStr, ':');
-    m_startEndDir.first  = StringOps::from_str<CFuint>(startEnd[0]);
-    m_startEndDir.second = StringOps::from_str<CFuint>(startEnd[1]);
+    const CFuint nbBinDir     = m_nbBins*m_nbDirs; 
+    const CFuint minNbThreadsPerProc = nbBinDir/m_nbThreads;
+    const CFuint maxNbThreadsPerProc = minNbThreadsPerProc + nbBinDir%m_nbThreads;
+    cf_assert(minNbThreadsPerProc > 0);
+    // same direction has same meshdata structure, therefore if you have 
+    // m_nbThreads <= m_nbDirs it is more scalable to split by direction 
+    const CFuint startThread = m_threadID*minNbThreadsPerProc;
+    const CFuint nbThreadsPerProc = (m_threadID < m_nbThreads-1) ? 
+      minNbThreadsPerProc : maxNbThreadsPerProc; 
+    const CFuint endThread = startThread + nbThreadsPerProc;
+    
+    CFLog(VERBOSE, "Radiation::setup() => nbBins, nbDirs   = [" << m_nbBins << ", " << m_nbDirs << "]\n");
+    CFLog(VERBOSE, "Radiation::setup() => startThread      = [" << startThread << "]\n");
+    CFLog(VERBOSE, "Radiation::setup() => endThread        = [" << endThread << "]\n");
+    CFLog(VERBOSE, "Radiation::setup() => nbThreadsPerProc = [" << nbThreadsPerProc << "]\n");
+    
+    // suppose you sweep all entries while walking row-wise through 
+    // a matrix (b,d) of size m_nbBins*m_nbDirs, consider the corresponding 
+    // (b_start,d_start) and (b_end,d_end) points
+    m_startEndDir.first = startThread%m_nbDirs; 
+    m_startEndBin.first = startThread/m_nbDirs;
+    m_startEndDir.second = (endThread-1)%m_nbDirs;
+    m_startEndBin.second = (endThread-1)/m_nbDirs;
   }
   
-  m_dirs.resize(m_nDirs, 3);
-  m_advanceOrder.resize(m_nDirs);
+  const CFuint startBin = m_startEndBin.first;
+  const CFuint endBin   = m_startEndBin.second+1;
+  cf_assert(endBin <= m_nbBins);
+  const CFuint startDir = m_startEndDir.first;
+  const CFuint endDir   = m_startEndDir.second+1;
+  cf_assert(endDir <= m_nbDirs);
+  
+  CFLog(INFO, "Radiation::setup() => start/end Bin = [" << startBin << ", " << endBin << "]\n");
+  CFLog(INFO, "Radiation::setup() => start/end Dir = [" << startDir << ", " << endDir << "]\n");
+  CFLog(INFO, "Radiation::setup() => full (Bin, Dir) list: \n");
+  
+  for(CFuint ib = startBin; ib < endBin; ++ib) {
+    const CFuint dStart = (ib != startBin) ? 0 : startDir;
+    const CFuint dEnd   = (ib != m_startEndBin.second) ? m_nbDirs : endDir;
+    for (CFuint d = dStart; d < dEnd; ++d) {
+      CFLog(VERBOSE, "(" << ib << ", " << d <<"), ");
+    }
+    CFLog(VERBOSE, "\n");
+  }
+  CFLog(VERBOSE, "\n");
+  
+  m_dirs.resize(m_nbDirs, 3);
+  m_advanceOrder.resize(m_nbDirs);
   m_q.resize(nbCells, DIM);
   m_divq.resize(nbCells);
   
-  const CFuint startDir = m_startEndDir.first;
-  const CFuint endDir   = m_startEndDir.second+1;
-  cf_assert(endDir <= m_nDirs);
+  cf_assert(endDir <= m_nbDirs);
   // resize only the rows corresponding to considered directions 
   for (CFuint i = startDir; i< endDir; i++) {
     m_advanceOrder[i].resize(nbCells);
@@ -397,18 +431,18 @@ void Radiation::getDirections()
   
   const CFreal pi = MathTools::MathConsts::CFrealPi();
   
-  CFLog(VERBOSE, "Radiation::getDirections() => Number of Directions = " << m_nDirs << "\n");
+  CFLog(VERBOSE, "Radiation::getDirections() => Number of Directions = " << m_nbDirs << "\n");
   
   const CFreal overSq3 = 1./std::sqrt(3.);
-  switch(m_nDirs) {
+  switch(m_nbDirs) {
   case 8:
-    m_weight[0] = 4.*pi/m_nDirs;
+    m_weight[0] = 4.*pi/m_nbDirs;
     m_dirs(0,0) = overSq3;
     m_dirs(0,1) = overSq3;
     m_dirs(0,2) = overSq3;
     break;
   case 24:
-    m_weight[0] = 4.*pi/m_nDirs;
+    m_weight[0] = 4.*pi/m_nbDirs;
     m_dirs(0,0) = 0.2958759;
     m_dirs(0,1) = 0.2958759;
     m_dirs(0,2) = 0.9082483;
@@ -438,15 +472,15 @@ void Radiation::getDirections()
     m_dirs(2,2) = overSq3;
     break;
   default:	// nDirs = 8
-    m_weight[0] = 4.*pi/m_nDirs;
+    m_weight[0] = 4.*pi/m_nbDirs;
     m_dirs(0,0) = overSq3;
     m_dirs(0,1) = overSq3;
     m_dirs(0,2) = overSq3;
     break;
   }
   
-  CFuint d = m_nDirTypes - 1; //Note that it has been changed, because the counters start at 0
-  for (CFuint dirType = 0; dirType < m_nDirTypes; dirType++){
+  CFuint d = m_nbDirTypes - 1; //Note that it has been changed, because the counters start at 0
+  for (CFuint dirType = 0; dirType < m_nbDirTypes; dirType++){
     for (CFuint p = 0; p <= 2; p++){
       const CFuint l = p;	    //Note that it's different because the counter starts at 0
       const CFuint m = (p+1) % 3; //Note a % b is the remainder of the division a/b
@@ -498,7 +532,7 @@ void Radiation::getDirections()
   }
   
   // Printing the Directions for debugging
-  for (CFuint dir = 0; dir < m_nDirTypes; dir++) {
+  for (CFuint dir = 0; dir < m_nbDirTypes; dir++) {
     CFLog(DEBUG_MIN, "Direction[" << dir <<"] = (" << m_dirs(dir,0) <<", " << m_dirs(dir,1) <<", " << m_dirs(dir,2) <<")\n");
   }
   
@@ -512,7 +546,7 @@ void Radiation::execute()
   CFAUTOTRACE;
   
   CFLog(VERBOSE, "Radiation::execute() => start\n");
-  // /*
+  
   const std::string nsp = this->getMethodData().getNamespace();
   cf_assert(PE::GetPE().GetProcessorCount(nsp) == 1);
   
@@ -540,17 +574,19 @@ void Radiation::execute()
   cf_assert(endBin <= m_nbBins);
   const CFuint startDir = m_startEndDir.first;
   const CFuint endDir   = m_startEndDir.second+1;
-  cf_assert(endDir <= m_nDirs);
-  
-  for(CFuint ib = startBin; ib < endBin; ++ib) {
-    CFLog(VERBOSE, "Radiation::execute() => bin [" << ib << "]\n");
+  cf_assert(endDir <= m_nbDirs);
+      
+   for(CFuint ib = startBin; ib < endBin; ++ib) {
+   CFLog(VERBOSE, "Radiation::execute() => bin [" << ib << "]\n");
     // old algorithm: opacities are computed for all cells (all at once) 
     // for a given bin
     if (m_oldAlgo) {getFieldOpacities(ib);}
     
-    for(CFuint d = startDir; d < endDir; ++d) {
-      CFLog(VERBOSE, "Radiation::execute() => dir [" << d << "]\n");
-      //for (CFuint m = 0; m < nbCells; m++) {
+     const CFuint dStart = (ib != startBin) ? 0 : startDir;
+     const CFuint dEnd   = (ib != m_startEndBin.second) ? m_nbDirs : endDir;
+     for (CFuint d = dStart; d < dEnd; ++d) {
+     CFLog(VERBOSE, "Radiation::execute() => dir [" << d << "]\n");
+     //for (CFuint m = 0; m < nbCells; m++) {
       //cout<< m_advanceOrder[d][m] <<", "; 
       //}
       //cout<< endl;
@@ -657,10 +693,10 @@ void Radiation::execute()
     qz[iCell] = m_q(iCell,ZZ);
   }
   
-  if(m_radialData){
+  if (m_radialData){
     writeRadialData();
   } 
-  // */
+  
   CFLog(VERBOSE, "Radiation::execute() => end\n");
 }
       
@@ -774,7 +810,7 @@ void Radiation::getAdvanceOrder()
   CFLog(DEBUG_MIN, "Radiation::getAdvanceOrder() => Computing order of advance. Before the loop over the directions\n");
   
  directions_loop:
-  for (CFuint d = 0; d < m_nDirs; d++){
+  for (CFuint d = 0; d < m_nbDirs; d++){
     CFLog(INFO, "Radiation::getAdvanceOrder() => Direction number [" << d <<"]\n");
     CFuint mLast = 0;
     CFuint m = 0;
@@ -848,7 +884,7 @@ void Radiation::getAdvanceOrder()
 	  yAngleRotation *= pi/180;
 	  zAngleRotation *= pi/180;
 	  
-	  for(CFuint dirs = 0; dirs < m_nDirs; dirs++){
+	  for(CFuint dirs = 0; dirs < m_nbDirs; dirs++){
 	    //Rotating over x
 	    const CFreal rot0 = m_dirs(dirs,0);
 	    const CFreal rot1 = m_dirs(dirs,1)*std::cos(xAngleRotation) - m_dirs(dirs,2)*std::sin(xAngleRotation);
@@ -977,7 +1013,7 @@ void Radiation::getAdvanceOrder(const CFuint d, vector<int>& advanceOrder)
       yAngleRotation *= pi/180;
       zAngleRotation *= pi/180;
       
-      for(CFuint dirs = 0; dirs < m_nDirs; dirs++){
+      for(CFuint dirs = 0; dirs < m_nbDirs; dirs++){
 	//Rotating over x
 	const CFreal rot0 = m_dirs(dirs,0);
 	const CFreal rot1 = m_dirs(dirs,1)*std::cos(xAngleRotation) - m_dirs(dirs,2)*std::sin(xAngleRotation);

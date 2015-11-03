@@ -71,7 +71,13 @@ public:
   void setEnabled(bool isEnabled);
   
   /// Get the name of the given object belonging to the namespace
-  std::string getName(std::const_mem_fun_t<std::string, Namespace> fun);
+  /// @param filterCoupling  flag telling whether to discard coupling namespaces
+  std::string getName(std::const_mem_fun_t<std::string, Namespace> fun,
+		      bool filterCoupling);
+  
+  /// Get the ID corresponding to the namespace 
+  /// @param filterCoupling  flag telling whether to discard coupling namespaces
+  CFuint getID(const bool filterCoupling);
   
 private:
 

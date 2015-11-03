@@ -132,7 +132,10 @@ class Common_API PEInterface<PM_MPI> : public PEInterfaceBase,
   /// @return the group data corresponding to given name
   Group& getGroup(const std::string& name)
   {
-    cf_assert(checkGroup(name));
+    if (!checkGroup(name)) {
+      CFLog(ERROR, "PEInterfaceMPI::getGroup() => [" << name << "] does not exist!\n");
+      cf_assert(checkGroup(name));
+    }
     return *m_groups.find(name)->second;
   }
   

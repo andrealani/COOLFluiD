@@ -154,22 +154,60 @@ void NamespaceSwitcher::setEnabled(bool isEnabled)
 //////////////////////////////////////////////////////////////////////////////
 
 std::string NamespaceSwitcher::getName
-(std::const_mem_fun_t<std::string, Namespace> fun) 
+(std::const_mem_fun_t<std::string, Namespace> fun, const bool filterCoupling) 
 {
   typedef std::vector<Common::SafePtr<Namespace> > NspVec;
   NspVec lst = getAllNamespaces();
+  
   cf_assert(!lst.empty());
   const int rank = Common::PE::GetPE().GetRank("Default");
   for(NspVec::iterator nsp = lst.begin(); nsp != lst.end(); ++nsp) {
     const std::string nspaceName = (*nsp)->getName();
     if (Common::PE::GetPE().isRankInGroup(rank, nspaceName)) {
-      return fun(&*(*nsp)); // Namespace* from SafePtr<Namespace>
+      if (!filterCoupling) {
+	return fun(&*(*nsp)); // Namespace* from SafePtr<Namespace>
+      }
+      else {
+	cf_assert(filterCoupling);
+	if (!(*nsp)->isForCoupling()) {
+	  return fun(&*(*nsp)); // Namespace* from SafePtr<Namespace>
+	}
+      }
     }
   }
   cf_assert(false);
   return "";
 }
     
+//////////////////////////////////////////////////////////////////////////////
+ 
+CFuint NamespaceSwitcher::getID(const bool filterCoupling)
+{
+  typedef std::vector<Common::SafePtr<Namespace> > NspVec;
+  NspVec lst = getAllNamespaces();
+  
+  cf_assert(!lst.empty());
+  const int rank = Common::PE::GetPE().GetRank("Default");
+  
+  CFuint idx = 0;
+  for(NspVec::iterator nsp = lst.begin(); nsp != lst.end(); ++nsp, ++idx) {
+    const std::string nspaceName = (*nsp)->getName();
+    if (Common::PE::GetPE().isRankInGroup(rank, nspaceName)) {
+      if (!filterCoupling) {
+	return idx;
+      }
+      else {
+	cf_assert(filterCoupling);
+	if (!(*nsp)->isForCoupling()) {
+	  return idx; // Namespace* from SafePtr<Namespace>
+	}
+      }
+    }
+  }
+  
+  return 0;
+}
+
 //////////////////////////////////////////////////////////////////////////////
  
   } // namespace COOLFluiD

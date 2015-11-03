@@ -20,6 +20,7 @@ void Namespace::defineConfigOptions(Config::OptionList& options)
    options.addConfigOption< std::string >("PhysicalModelType","Which PhysicalModel is activated by this Namespace.");
    options.addConfigOption< std::string >("MeshData","Which MeshData is activated by this Namespace.");
    options.addConfigOption< std::string >("SubSystemStatus","Which SusSystemStatus is activated by this Namespace.");
+   options.addConfigOption< bool >("IsForCoupling","Flag indicating that the namespace has to be used for coupling (Default: false).");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -32,12 +33,14 @@ Namespace::Namespace(const std::string& name) :
   m_SubSystemStatusName()
 {
    addConfigOptionsTo(this);
+   
    setParameter("MeshData",&m_MeshDataName);
-
    setParameter("PhysicalModelName",&m_PhysicalModelName);
    setParameter("PhysicalModelType",&m_PhysicalModelType);
-
-   setParameter("SubSystemStatus",&m_SubSystemStatusName);
+   setParameter("SubSystemStatus",&m_SubSystemStatusName); 
+   
+   m_isForCoupling = false;
+   setParameter("IsForCoupling",&m_isForCoupling);
 }
 
 //////////////////////////////////////////////////////////////////////////////

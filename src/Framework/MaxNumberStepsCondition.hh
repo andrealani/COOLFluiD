@@ -43,11 +43,11 @@ public: // methods
   /// should stop
   virtual bool isAchieved (const ConvergenceStatus& status) ;
 
-private: // data
-
+ private: // data
+  
   // maximum number of steps to perform
-  CFuint _maxNbSteps;
-
+  std::vector<CFuint> _maxNbSteps;
+  
 }; // end of class MaxNumberStepsCondition
 
 //////////////////////////////////////////////////////////////////////////////

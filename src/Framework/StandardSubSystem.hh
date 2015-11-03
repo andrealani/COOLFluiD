@@ -33,7 +33,8 @@ namespace COOLFluiD {
     class ComputeCFL;
     class LinearSystemSolver;
     class StopConditionController;
-
+    class SubSystemStatus;
+    
 //////////////////////////////////////////////////////////////////////////////
 
 /// A StandardSubSystem is a concrete implementation of the SubSystem.
@@ -129,14 +130,23 @@ protected: // functions
   /// Dump the states to file
   void dumpStates();
   
-  // setup all physical models in the different namespaces
+  /// setup all physical models in the different namespaces
   void setupPhysicalModels();
+ 
+  /// tell if to keep on iterating
+  bool iterate(Common::SafePtr<Framework::SubSystemStatus> currSSS);
   
  protected: // data
-
+    
   /// Duration of the simulation of this SubSystem
   Common::HourMinSec m_duration;
 
+  /// Array of flags to be sent
+  std::vector<int> m_sendFlags;
+  
+  /// Array of flags to be received
+  std::vector<int> m_recvFlags;
+  
   /// the simulation will be a is restart?
   bool m_restart;
 
@@ -178,7 +188,7 @@ protected: // functions
 
   /// Output formatter
   MultiMethodTuple<OutputFormatter> m_outputFormat;
-
+  
   /// The StopConditionController
   std::auto_ptr<StopConditionController> m_stopCondControler;
 

@@ -4,12 +4,15 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-
-
 #include "Framework/MaxNumberStepsCondition.hh"
 #include "Framework/SubSystemStatus.hh"
-#include "Environment/ObjectProvider.hh"
 #include "Framework/Framework.hh"
+#include "Framework/NamespaceSwitcher.hh"
+#include "Environment/ObjectProvider.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -20,25 +23,25 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 Environment::ObjectProvider<MaxNumberStepsCondition,
-	       StopCondition,
-               FrameworkLib,
-	       1>
+			    StopCondition,
+			    FrameworkLib,
+			    1>
 maxNbStepsConditionProvider("MaxNumberSteps");
 
 //////////////////////////////////////////////////////////////////////////////
 
 void MaxNumberStepsCondition::defineConfigOptions(Config::OptionList& options)
 {
-   options.addConfigOption< CFuint >("nbSteps","Maximum number of steps to compute.");
+  options.addConfigOption< vector<CFuint> >("nbSteps","Maximum number of steps to compute.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 MaxNumberStepsCondition::MaxNumberStepsCondition(const std::string& name)
- : StopCondition(name)
+  : StopCondition(name)
 {
   addConfigOptionsTo(this);
-  _maxNbSteps = 100;
+  _maxNbSteps = vector<CFuint>();
   setParameter("nbSteps",&_maxNbSteps);
 }
 
@@ -59,7 +62,29 @@ bool MaxNumberStepsCondition::IsGlobal () const
 
 bool MaxNumberStepsCondition::isAchieved (const ConvergenceStatus& status)
 {
-  return status.iter >= _maxNbSteps;
+  NamespaceSwitcher& nsw = 
+    NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
+  const CFuint nbNsp = nsw.getAllNamespaces().size();
+  
+  if (_maxNbSteps.size() < nbNsp) {
+    if (_maxNbSteps.size() == 0) {
+      _maxNbSteps.resize(nbNsp, 100);
+    }
+    else if (_maxNbSteps.size() == 1) {
+      const CFuint value = _maxNbSteps[0];
+      _maxNbSteps.resize(nbNsp, value);
+    }
+    else {
+      CFLog(ERROR, "MaxNumberStepsCondition::isAchieved() needs one entry per Namespace for option \"nbSteps\"\n");
+      abort();
+    }
+  }
+  cf_assert(_maxNbSteps.size() == nbNsp);
+  
+  const CFuint namespaceID = nsw.getID(true);
+  cf_assert(namespaceID < _maxNbSteps.size());
+  
+  return status.iter >= _maxNbSteps[namespaceID];
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -157,7 +157,7 @@ void CustomSubSystem::run()
   }
   
   NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
-  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName));
+  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName), true);
   SafePtr<SubSystemStatus> currSSS = SubSystemStatusStack::getInstance().getEntry(sssName);
   cf_assert(currSSS.isNotNull());
   

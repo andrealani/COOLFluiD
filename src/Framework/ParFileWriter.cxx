@@ -112,19 +112,10 @@ void ParFileWriter::setWriterGroup()
   
   CFLog(VERBOSE, "ParFileWriter::setWriterGroup() => " << 
 	CFPrintContainer<vector<int> >(" writerRanks  = ",  &writerRanks) << "\n");  
-  
-  // if (_myRank == 0) {
-  //   for (CFuint i = 0; i < _nbProc; ++i) {
-  //     cout << "rank [" << i << "] in group " << PE::getGroupName(i) << endl;
-  //   }
-  // }
-  
-  // create an info object
-  // MPI_Info_create(&_info);
-  
+    
   CFLog(VERBOSE, "ParFileWriter::setWriterGroup() => end\n");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace Framework

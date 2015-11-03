@@ -81,6 +81,10 @@ public: // methods
   /// @post pushs and pops the Namespace to which this Method belongs
   void dataTransferWrite();
 
+  /// Finalize the coupling procedure
+  /// @post pushs and pops the Namespace to which this Method belongs
+  void finalize();
+
   /// Run the function defined by the function name
   /// @param func name of the function to run. It should be void function with nor parameters.
   virtual void run_function(const std::string & func)
@@ -127,6 +131,10 @@ protected: // abstract interface implementations
   /// Reads the data from the Coupled SubSystems
   /// This is the abstract function that the concrete methods must implement.
   virtual void dataTransferReadImpl() = 0;
+  
+  /// Finalize the coupling
+  /// This is the abstract function that the concrete methods must implement.
+  virtual void finalizeImpl() = 0;
 
 protected: // functions
 

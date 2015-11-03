@@ -148,7 +148,7 @@ void FwdEuler::takeStepImpl()
   CFAUTOTRACE;
 
   Common::SafePtr<SubSystemStatus> subSysStatus =
-    SubSystemStatusStack::getActive();;
+    SubSystemStatusStack::getActive();
 
   subSysStatus->updateNbIter();
   subSysStatus->updateTimeStep();

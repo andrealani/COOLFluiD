@@ -382,12 +382,10 @@ void ConcurrentCouplerMethod::setMethodImpl()
     // initialize the file with all 0's
     resetStatusFile(&fout, READ);
     resetStatusFile(&fout, WRITE);
-    fout.close();
+    resetStatusFile(&fout, END);
+    fout.close(); 
   }
-  
-  // Group& cgroup = PE::GetPE().getGroup(getNamespace());
-  // MPI_Barrier(cgroup.comm);
-  
+    
   // loop over all coupled namespaces to find a root I/O for each one of them 
   const int rank  = PE::GetPE().GetRank("Default");     // rank in default group
   const CFuint nspSize = m_coupledNamespacesStr.size();
@@ -563,9 +561,10 @@ void ConcurrentCouplerMethod::dataTransferWriteImpl()
 
 void ConcurrentCouplerMethod::unsetMethodImpl()
 {
+  CFLog(VERBOSE, "ConcurrentCouplerMethod::unsetMethodImpl() => start\n");
   unsetupCommandsAndStrategies();
-
   CouplerMethod::unsetMethodImpl();
+  CFLog(VERBOSE, "ConcurrentCouplerMethod::unsetMethodImpl() => end\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -643,7 +642,6 @@ bool ConcurrentCouplerMethod::isCouplingIter(pair<ifstream*, ofstream*>& file,
   // loop over all coupled namespaces to find the one containing the current rank
   const int rank  = PE::GetPE().GetRank("Default");     // rank in default group
   const CFuint nspSize = m_coupledNamespacesStr.size();
-  char ready = '0';
   int nspID = -1;
   vector<char> flags(nspSize,'0');
   const string fileName = getStatusFilename();	
@@ -652,21 +650,18 @@ bool ConcurrentCouplerMethod::isCouplingIter(pair<ifstream*, ofstream*>& file,
     if (PE::GetPE().isRankInGroup(rank, m_coupledNamespacesStr[i])) { 
       SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
 	(SubSystemStatusStack::getCurrentName()).getNamespace(m_coupledNamespacesStr[i]);
-      SafePtr<SubSystemStatus> subSysStatus = 
-	SubSystemStatusStack::getInstance().getEntryByNamespace(nsp);
-      cf_assert(subSysStatus.isNotNull());
+      SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getInstance().getEntryByNamespace(nsp);
       nspID = i;
       // store the number of iterations in each of the namespaces (to be coupled)
       // this is =0 if the namespace is locally not active
       cf_assert(m_transferRates[i] > 0);
       const CFuint nbIter = subSysStatus->getNbIter();
       if (nbIter%m_transferRates[i] == 0) {
-	ready = '1';
 	if (m_ioRoot) {
 	  const long offset = tio*nspSize*sizeof(char);
 	  file.second->open(fileName.c_str(), ios_base::in | ios_base::out);
 	  file.second->seekp(i*sizeof(char) + offset);
-	  (*file.second) << (char)ready;
+	  (*file.second) << '1'; // '1' means READY for coupling!
 	  file.second->close();
 	}
 	break;
@@ -675,22 +670,37 @@ bool ConcurrentCouplerMethod::isCouplingIter(pair<ifstream*, ofstream*>& file,
   }
   
   cf_assert(nspID >= 0);
-    
+  
   int doCoupling = 1;
+  char end = '0';
   if (m_ioRoot) {
-    const long offset = tio*nspSize*sizeof(char);
     file.first->open(fileName.c_str(), ios_base::in);
-    file.first->seekg(offset);
-    for (CFuint i = 0; i < nspSize; ++i) {
-      (*file.first) >> flags[i];
-      CFLog(VERBOSE, "ConcurrentCouplerMethod::isCouplingIter() on P[" << rank 
-	    << "] at offset [" << offset << "] => flag [" << i << "]=" << flags[i] << "\n");
-      // if at least one flag is not "true" then get out
-      if (flags[i] == '0') {
-	doCoupling = 0;
-	break;
+    
+    // first read the end of the file (pilot flag)
+    const long offsetEnd = 2*nspSize*sizeof(char);
+    file.first->seekg(offsetEnd);
+    (*file.first) >> end;
+    
+    CFLog(VERBOSE, "ConcurrentCouplerMethod::isCouplingIter() => pilot flag = " << end << "\n");
+    
+    if (end == '0') { 
+      const long offset = tio*nspSize*sizeof(char);
+      file.first->seekg(offset);
+      for (CFuint i = 0; i < nspSize; ++i) {
+	(*file.first) >> flags[i];
+	CFLog(VERBOSE, "ConcurrentCouplerMethod::isCouplingIter() on P[" << rank 
+	      << "] at offset [" << offset << "] => flag [" << i << "]=" << flags[i] << "\n");
+	// if at least one flag is not "true" then get out
+	if (flags[i] == '0') {
+	  doCoupling = 0;
+	  break;
+	}
       }
     }
+    else {
+      doCoupling = 0;
+    }
+    
     file.first->close();
   }
   
@@ -701,11 +711,48 @@ bool ConcurrentCouplerMethod::isCouplingIter(pair<ifstream*, ofstream*>& file,
      MPI_Bcast(&doCoupling, 1, MPI_INT, 0, group.comm));
   
   const string ioMode = (tio == WRITE) ? "WRITE" : "READ";
-  CFLog(INFO, "ConcurrentCouplerMethod::isCouplingIter() on P[" << rank 
-	<< "] is ready for coupling? " << doCoupling << " during " 
-	<< ioMode << "\n");
+  
+  if (doCoupling == 1) {
+    CFLog(INFO, "ConcurrentCouplerMethod::isCouplingIter() on P[" << rank 
+	  << "] is ready for coupling? " << doCoupling << " during " 
+	  << ioMode << "\n");
+  }
   
   return doCoupling;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+void ConcurrentCouplerMethod::finalizeImpl() 
+{
+  CFLog(VERBOSE, "ConcurrentCouplerMethod::finalizeImpl() => start\n");
+  
+  // AL: maybe in this case, any processor should be allowed to I/O, not only designated ones
+  // so that the first rank of the current namespace that gets to call finalizeImpl()
+  // cleans up the path for all others
+  
+  if (m_ioRoot) {
+    const int rank  = PE::GetPE().GetRank("Default");     // rank in default group
+    const CFuint nspSize = m_coupledNamespacesStr.size();
+    
+    // if the current rank is found and has I/O privileges within its namespace,  
+    // then flag off the entries corresponding to its namespace, so that coupling 
+    // will be disabled from now on  
+    for (CFuint i = 0; i < nspSize; ++i) {
+      if (PE::GetPE().isRankInGroup(rank, m_coupledNamespacesStr[i])) { 
+	const string fileName = getStatusFilename();	
+	pair<ifstream*, ofstream*>& file = m_fileRW;
+	file.second->open(fileName.c_str(), ios_base::in | ios_base::out);
+	const long offsetEnd = 2*nspSize*sizeof(char);
+	file.second->seekp(offsetEnd);
+	(*file.second) << '1'; // '1' means that no coupling will be executed anymore
+	file.second->close();
+      	break;
+      }
+    }
+  }
+  
+  CFLog(VERBOSE, "ConcurrentCouplerMethod::finalizeImpl() => end\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////

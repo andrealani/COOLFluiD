@@ -64,13 +64,15 @@ void ConcurrentCouplerData::configure ( Config::ConfigArgs& args )
 
 void ConcurrentCouplerData::setup()
 {
+  CouplerData::setup();
+  
   // set up the GeometricEntity builders
   _stdTrsGeoBuilder.setup();
   _faceTrsGeoBuilder.setup();
 }
       
 //////////////////////////////////////////////////////////////////////////////
-
+      
 SafePtr<DataStorage> ConcurrentCouplerData::getDataStorage(const string& nspName)
 {
   SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance

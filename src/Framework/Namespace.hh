@@ -69,9 +69,10 @@ public:
   /// Gets the SubSystemStatus name associated to this Namespace
   /// @return name of SubSystemStatus
   std::string getSubSystemStatusName() const;
-
-protected: // helper functions
-
+  
+  /// @return the flag indicating if this namespace has to be used for coupling
+  bool isForCoupling() const {return m_isForCoupling;}
+  
 private: // member data
 
   /// MeshData to be activated by this Namespace
@@ -85,7 +86,10 @@ private: // member data
 
   /// SubSystemStatus to be activated by this Namespace
   std::string m_SubSystemStatusName;
-
+  
+  /// flag indicating that the namespace has to be used for coupling purposes
+  bool m_isForCoupling;
+  
 }; // end of class Namespace
 
 //////////////////////////////////////////////////////////////////////////////

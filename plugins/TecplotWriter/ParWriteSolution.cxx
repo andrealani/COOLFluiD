@@ -104,6 +104,8 @@ void ParWriteSolution::execute()
 {
   CFAUTOTRACE;
  
+  CFLog(VERBOSE, "ParWriteSolution::execute() => start\n");
+  
   const TeclotTRSType& tt = *_mapTrsName2TecplotData.find("InnerCells");
   if (hasChangedMesh(tt)) {
     buildNodeIDMapping();
@@ -122,6 +124,8 @@ void ParWriteSolution::execute()
       writeData(bpath, _isNewBFile, string("Boundary data"), &ParWriteSolution::writeBoundaryData);
     }
   }
+  
+  CFLog(VERBOSE, "ParWriteSolution::execute() => end\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -131,6 +135,8 @@ void ParWriteSolution::writeData(const boost::filesystem::path& filepath,
 				 const std::string title, 
 				 WriterFun fun)
 {
+  CFLog(VERBOSE, "ParWriteSolution::writeData() [" << title << "] => start\n");
+  
   // reset to 0 the new file flag
   flag = false;
   ofstream* file = CFNULL;
@@ -164,6 +170,8 @@ void ParWriteSolution::writeData(const boost::filesystem::path& filepath,
     MPI_Barrier(wg.comm);
     fhandle->close();
   }
+  
+  CFLog(VERBOSE, "ParWriteSolution::writeData() [" << title << "] => end\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -190,6 +198,7 @@ void ParWriteSolution::writeInnerData
 {
   CFAUTOTRACE;
   
+  CFLog(VERBOSE, "ParWriteSolution::writeInnerData() [" << title << "] => start\n");
   CFLog(INFO, "Writing solution to " << filepath.string() << "\n");
   
   SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
@@ -249,6 +258,8 @@ void ParWriteSolution::writeInnerData
       }
     } //end if inner cells
   } //end loop over trs
+  
+  CFLog(VERBOSE, "ParWriteSolution::writeInnerData() [" << title << "] => end\n");
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -1416,6 +1427,8 @@ void ParWriteSolution::storeMappings(SafePtr<TopologicalRegionSet> trs,
 				     const CFuint endIdx,
 				     vector<bool>& foundGlobalID)
 {
+  CFLog(VERBOSE, "ParWriteSolution::storeMappings() => start\n");
+  
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   
   TeclotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
@@ -1517,7 +1530,9 @@ void ParWriteSolution::storeMappings(SafePtr<TopologicalRegionSet> trs,
   
   cf_assert(countMatching == nodesInType.size());
   
-  tt.mapNodeID2NodeIDByEType[iType]->sortKeys();
+  tt.mapNodeID2NodeIDByEType[iType]->sortKeys(); 
+  
+  CFLog(VERBOSE, "ParWriteSolution::storeMappings() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

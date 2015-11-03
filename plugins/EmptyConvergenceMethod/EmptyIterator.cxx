@@ -127,13 +127,14 @@ void EmptyIterator::takeStepImpl()
 {
   CFAUTOTRACE;
   
-  SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();;
+  SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
   subSysStatus->updateNbIter();
   subSysStatus->updateTimeStep();
+  subSysStatus->updateCurrentTime();
   
-  CFLog(VERBOSE, "EmptyConvergenceMethod::takeStepImpl()\n");
+  CFLog(VERBOSE, "EmptyIterator::takeStepImpl() => iter = " << subSysStatus->getNbIter() << "\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace EmptyConvergenceMethod

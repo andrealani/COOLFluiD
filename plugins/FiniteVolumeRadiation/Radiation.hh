@@ -270,10 +270,10 @@ private: //data
   RealVector m_divqAv;  
   
   /// Number of directions types
-  CFuint m_nDirTypes;   
+  CFuint m_nbDirTypes;   
   
   /// user defined number of directions
-  CFuint m_nDirs;
+  CFuint m_nbDirs;
   
   /// name of the temporary local directory where Parade is run
   boost::filesystem::path m_dirName;
@@ -284,12 +284,6 @@ private: //data
   /// File where the table is written
   std::string m_outTabName;
   
-  /// Start/end bin to consider
-  std::string m_startEndBinStr;
-  
-  /// Start/end direction to consider
-  std::string m_startEndDirStr;
-    
   /// bool to write the table in a file
   bool m_writeToFile;
   
@@ -343,6 +337,12 @@ private: //data
   
   /// number of pressures
   CFuint m_nbPress;
+  
+  /// total number of threads/CPUs in which the algorithm has to be split
+  CFuint m_nbThreads;
+  
+  /// ID of the thread/CPU within the parallel algorithm
+  CFuint m_threadID;
   
 }; // end of class Radiation
 

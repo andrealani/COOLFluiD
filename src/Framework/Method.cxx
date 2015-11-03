@@ -58,11 +58,11 @@ Method::Method(const std::string& name)
 
 Method::~Method()
 {
-  if (isSetup())
-     unsetMethod();
-
-  for(CFuint i = 0; i < m_groups.size(); ++i)
-  {
+  if (isSetup()) {
+    unsetMethod();
+  }
+  
+  for(CFuint i = 0; i < m_groups.size(); ++i) {
     deletePtr(m_groups[i]);
   }
 }
@@ -83,8 +83,10 @@ void Method::configure ( Config::ConfigArgs& args )
 {
   CFAUTOTRACE;
 
+  CFLog(VERBOSE, "Method::configure() for [" << getName() << "] => start\n");
+  
   ConfigObject::configure(args);
-
+  
   // configuring the socket namespace to which it belongs
   // this has precedence over the parent socket namespace
   if( m_namespace != NamespaceMember::defaultNamespace() )
@@ -109,32 +111,38 @@ void Method::configure ( Config::ConfigArgs& args )
   }
 
   configureCommandGroups ( args );
+  
+  CFLog(VERBOSE, "Method::configure() for [" << getName() << "] => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void Method::configureCommandGroups ( Config::ConfigArgs& args )
 {
+  CFAUTOTRACE;
+  
+  CFLog(VERBOSE, "Method::configureCommandGroups() for [" << getName() << "] => start\n");
+  
   // configure the CommandGroups of this Method
   m_groups.resize(m_groupNames.size());
 
   CFLog(VERBOSE,"Method: " << getName() << " Number of CommandGroups: " << m_groups.size() << "\n");
 
-  for (CFuint i = 0; i < m_groups.size(); ++i)
-  {
+  for (CFuint i = 0; i < m_groups.size(); ++i) {
     m_groups[i] = new CommandGroup(m_groupNames[i]);
     configureNested(m_groups[i], args);
   }
+  
+  CFLog(VERBOSE, "Method::configureCommandGroups() for [" << getName() << "] => end\n");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void Method::setMethod()
 {
   CFAUTOTRACE;
 
-  CFLog(VERBOSE,"-------------------------------------------------------------\n");
-  CFLog(VERBOSE,"Setup Method [" << getName() << "]\n");
+  CFLog(VERBOSE, "Method::setMethod() for [" << getName() << "] => start\n");
   
   cf_assert(isConfigured());
   cf_assert(!isSetup());
@@ -157,6 +165,8 @@ void Method::setMethod()
   this->setMethodImpl();
 
   popNamespace();
+  
+  CFLog(VERBOSE, "Method::setMethod() for [" << getName() << "] => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -164,31 +174,29 @@ void Method::setMethod()
 void Method::unsetMethod()
 {
   CFAUTOTRACE;
-
-  CFLog(VERBOSE,"-------------------------------------------------------------\n");
-  CFLog(VERBOSE,"Unsetup Method [" << getName() << "]\n");
-
+  
+  CFLog(VERBOSE, "Method::unsetMethod() for [" << getName() << "] => start\n");
+  
   cf_assert(isConfigured());
   cf_assert(isSetup());
 
   pushNamespace();
-
-
+  
   // unsetup derived classes
   this->unsetMethodImpl();
-
+  
   // unsetup method shared data
   Common::SafePtr<Framework::MethodData> mdata = getMethodData();
-  if ( mdata.isNotNull() )
-  {
+  if ( mdata.isNotNull() ) {
     mdata->unsetup();
   }
-
-
+  
   // unsetup parent class
   SetupObject::unsetup();
-
-  popNamespace();
+  
+  popNamespace(); 
+  
+  CFLog(VERBOSE, "Method::unsetMethod() for [" << getName() << "] => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -210,7 +218,9 @@ Method::resetup ( Common::Signal::arg_t input )
 void Method::setupCommandsAndStrategies()
 {
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE, "Method::setupCommandsAndStrategies() for [" << getName() << "] => start\n");
+  
   vector< SafePtr<NumericalCommand> > commands = getCommandList();
   vector< SafePtr<NumericalCommand> >::iterator comItr;
   for (comItr = commands.begin(); comItr != commands.end(); ++comItr)
@@ -234,6 +244,8 @@ void Method::setupCommandsAndStrategies()
     if (!st->isSetup()) st->setup();
     CFLog(VERBOSE,"Strategy name : " << (*strtItr)->getName() << " END\n");
   }
+  
+  CFLog(VERBOSE, "Method::setupCommandsAndStrategies() for [" << getName() << "] => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -241,7 +253,9 @@ void Method::setupCommandsAndStrategies()
 void Method::unsetupCommandsAndStrategies()
 {
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE, "Method::unsetupCommandsAndStrategies() for [" << getName() << "] => start\n");
+  
   vector< SafePtr<NumericalCommand> > commands = getCommandList();
   vector< SafePtr<NumericalCommand> >::iterator comItr;
   for (comItr = commands.begin(); comItr != commands.end(); ++comItr)
@@ -263,6 +277,8 @@ void Method::unsetupCommandsAndStrategies()
     CFLog(DEBUG_MIN,"Strategy name : " << (*strtItr)->getName() << "\n");
     if (st->isSetup()) st->unsetup();
   }
+  
+  CFLog(VERBOSE, "Method::unsetupCommandsAndStrategies() for [" << getName() << "] => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -270,6 +286,8 @@ void Method::unsetupCommandsAndStrategies()
 void Method::setCommandGroups()
 {
    CFAUTOTRACE;
+
+   CFLog(VERBOSE, "Method::setCommandGroups() for [" << getName() << "] => start\n");
 
    cf_assert(isConfigured());
 
@@ -322,7 +340,9 @@ void Method::setCommandGroups()
         (*comItr)->setCommandGroup(m_groups[i]);
         }
     }
-  }
+  } 
+  
+  CFLog(VERBOSE, "Method::setCommandGroups() for [" << getName() << "] => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -510,6 +510,8 @@ void ParWriteSolutionBlock::writeZoneHeader(std::ofstream* fout,
 					    const string& end,
 					    const bool isBoundary) 
 {
+  CFLog(VERBOSE, "ParWriteSolutionBlock::writeZoneHeader() => start\n");
+  
   *fout << "ZONE "
 	<< "  T= \"ZONE" << iType << " " << geoShape <<"\""
 	<< ", N=" << std::noshowpos << nbNodesInType
@@ -581,6 +583,8 @@ void ParWriteSolutionBlock::writeZoneHeader(std::ofstream* fout,
   }
   
   *fout << ")" << end;
+  
+  CFLog(VERBOSE, "ParWriteSolutionBlock::writeZoneHeader() => end\n");
 }
     
 //////////////////////////////////////////////////////////////////////////////

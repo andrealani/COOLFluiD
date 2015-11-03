@@ -97,7 +97,9 @@ void StandardSubSystem::defineConfigOptions(Config::OptionList& options)
 
 StandardSubSystem::StandardSubSystem(const std::string& name)
   : SubSystem(name),
-    m_duration()
+    m_duration(),
+    m_sendFlags(),
+    m_recvFlags()
 {
    addConfigOptionsTo(this);
    registActionListeners();
@@ -509,7 +511,7 @@ void StandardSubSystem::setup()
   }
   
   NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
-  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName));
+  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName), true);
   SafePtr<SubSystemStatus> currSSS = SubSystemStatusStack::getInstance().getEntry(sssName);
   cf_assert(currSSS.isNotNull());
   
@@ -532,6 +534,14 @@ void StandardSubSystem::setup()
   writeSolution(true);
   
   currSSS->setSetup(false);
+  
+#ifdef CF_HAVE_MPI
+  const string ssGroupName = SubSystemStatusStack::getCurrentName();
+  Group& group             = PE::GetPE().getGroup(ssGroupName);
+  const CFuint nbRanks = group.globalRanks.size();
+  m_sendFlags.resize(nbRanks, 0);
+  m_recvFlags.resize(nbRanks, 0);
+#endif
   
   CFLog(NOTICE,"-------------------------------------------------------------\n");
 }
@@ -591,7 +601,7 @@ void StandardSubSystem::run()
   }
   
   NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
-  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName));
+  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName), true);
   SafePtr<SubSystemStatus> currSSS = SubSystemStatusStack::getInstance().getEntry(sssName);
   cf_assert(currSSS.isNotNull());
   
@@ -633,11 +643,12 @@ void StandardSubSystem::run()
   // Transfer of the data for the subsystems coupling
   // here, write the data to the other subsystems
   m_couplerMethod.apply(mem_fun<void,CouplerMethod>(&CouplerMethod::dataTransferWrite));
-  
-  // PE::GetPE().setBarrier(SubSystemStatusStack::getCurrentName());
-  
+    
   const string ssGroupName = SubSystemStatusStack::getCurrentName();
-  for ( ; (!m_stopCondControler->isAchieved(currSSS->getConvergenceStatus())) && (!m_forcedStop); ) {
+  
+  CFLog(VERBOSE, "StandardSubSystem::run() => ssGroupName = " << ssGroupName << "\n");
+  
+  for ( ; iterate(currSSS); ) {
     
     // read the interactive parameters
     runSerial<void, InteractiveParamReader, &InteractiveParamReader::readFile>
@@ -695,6 +706,9 @@ void StandardSubSystem::run()
     
   } // end for convergence loop
   
+  // finalize the coupling
+  m_couplerMethod.apply(mem_fun<void,CouplerMethod>(&CouplerMethod::finalize));
+  
   CFLog(VERBOSE, "StandardSubSystem::run() => m_errorEstimatorMethod.apply()\n");
   // estimate the error one final time
   m_errorEstimatorMethod.apply(mem_fun<void,ErrorEstimatorMethod>(&ErrorEstimatorMethod::estimate));
@@ -716,10 +730,8 @@ void StandardSubSystem::unsetup()
 {
   CFAUTOTRACE;
   
-  PE::GetPE().setBarrier(SubSystemStatusStack::getCurrentName());
-  
   NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
-  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName));
+  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName), true);
   SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getInstance().getEntry(sssName);
   cf_assert(subSysStatus.isNotNull());
   
@@ -734,14 +746,21 @@ void StandardSubSystem::unsetup()
   CFLog(INFO, "Total Number Iter: " << subSysStatus->getNbIter()
         << " Reached Residual: " << totalResidual
         << " and took: " << m_duration.str() << "\n");
- 
+  
 #ifdef CF_HAVE_MPI
   // AL: the following needs to be generalized for regression testing
   // for now, only rank 0 writes the residual file even in concurrent simulations 
+  CFLog(VERBOSE, "StandardSubSystem::unsetup() => before MPI_Bcast\n"); 
   MPI_Bcast(&totalResidual, 1, MPIStructDef::getMPIType(&totalResidual), 0, PE::GetPE().GetCommunicator("Default")); 
+  // AL: for this critical point, the following might work better in certain situations ...
+  // const string activeNamespace = nsw.getName(mem_fun<string,Namespace>(&Namespace::getName), true);
+  // Group& group    = PE::GetPE().getGroup(activeNamespace);
+  // MPI_Bcast(&totalResidual, 1, MPIStructDef::getMPIType(&totalResidual), 0, group.comm); 
+  CFLog(VERBOSE, "StandardSubSystem::unsetup() => after MPI_Bcast\n"); 
 #endif
   
   SimulationStatus::getInstance().getLastResidual() = totalResidual;
+  CFLog(VERBOSE, "StandardSubSystem::unsetup() => totalResidual = " << totalResidual << "\n");
   
   bool force = true;
   writeSolution(force);
@@ -786,7 +805,7 @@ void StandardSubSystem::unsetup()
   CFLog(VERBOSE, "StandardSubSystem::unsetup() => DataProcessingMethod (postprocessing)\n");
   m_dataPostProcessing.apply
     (mem_fun<void,DataProcessingMethod>(&DataProcessingMethod::unsetMethod));
-  
+      
   CFLog(NOTICE,"-------------------------------------------------------------\n");
 }
 
@@ -1054,6 +1073,185 @@ void StandardSubSystem::setupPhysicalModels()
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+bool StandardSubSystem::iterate(SafePtr<SubSystemStatus> currSSS)
+{
+  const bool stopSimulation = m_stopCondControler->isAchieved(currSSS->getConvergenceStatus());
+    
+  /*
+#ifdef CF_HAVE_MPI
+  const string ssGroupName = SubSystemStatusStack::getCurrentName();
+  Group& group    = PE::GetPE().getGroup(ssGroupName);
+  const int grank = PE::GetPE().GetRank(ssGroupName); // rank in group
+  const CFuint nbRanks = group.globalRanks.size();
+  cf_assert(grank < nbRanks);
+  
+  MPI_Status status;
+  MPI_Request request = MPI_REQUEST_NULL;
+  
+  // set the current
+  m_sendFlags[grank] = 1;
+  
+  MPIError::getInstance().check
+    ("MPI_Iallreduce", "StandardSubSystem::iterate()",
+     MPI_Iallreduce(&m_sendFlags[0], &m_recvFlags[0], nbRanks,
+		    MPI_INT, MPI_MAX, group.comm, &request));
+  
+  MPIError::getInstance().check
+    ("MPI_Wait", "StandardSubSystem::iterate()", MPI_Wait (&request, &status));
+  
+  // if the stop condition is met in at least one rank (associated to one or more other 
+  // namespaces), ask every other rank to stop the simulation
+  for (CFuint i = 0; i < nbRanks; ++i) {
+    if (m_recvFlags[i] == 1) {
+      m_forcedStop = true;
+      break;
+    }
+  }
+#endif
+  // */
+   
+  
+  /*#ifdef CF_HAVE_MPI
+  const string ssGroupName = SubSystemStatusStack::getCurrentName();
+  Group& group    = PE::GetPE().getGroup(ssGroupName);
+  const int grank = PE::GetPE().GetRank(ssGroupName); // rank in group
+  const CFuint nbRanks = group.globalRanks.size();
+  cf_assert(grank < nbRanks);
+  
+  int recvFlag = -1;
+  
+  if (grank > 0) {
+    MPI_Status statusS;
+    vector<MPI_Request> requestS(nbRanks, MPI_REQUEST_NULL);
+    int tagS = grank;
+    
+    int sendFlag = (int) stopSimulation;
+    
+    MPIError::getInstance().check
+      ("MPI_Isend", "StandardSubSystem::iterate()",
+       MPI_Isend (&sendFlag, 1, MPI_INT, 0, tagS, group.comm, &requestS[grank]));
+    
+    CFLog(VERBOSE, "StandardSubSystem::iterate() => grank>0 has sent request\n");
+    
+    MPIError::getInstance().check
+      ("MPI_Wait (1)", "StandardSubSystem::iterate()", MPI_Wait (&requestS[grank], &statusS));
+    
+    // MPI_Status statusR;
+    // vector<MPI_Request> requestR(nbRanks, MPI_REQUEST_NULL);
+    // int tagR = nbRanks+grank;
+    
+    // MPIError::getInstance().check
+    //   ("MPI_Irecv", "StandardSubSystem::iterate()",
+    //    MPI_Irecv (&recvFlag, 1, MPI_INT, 0, tagR, group.comm, &requestR[grank]));
+    
+    // MPIError::getInstance().check
+    //   ("MPI_Wait (2)", "StandardSubSystem::iterate()", MPI_Wait (&requestR[grank], &statusR));
+    
+    // // set the forced stop flag equal to the received flag
+    // m_forcedStop == (bool)recvFlag;
+  }
+  else if (grank == 0) {
+    MPI_Status statusS;
+    vector<MPI_Request> requestS(nbRanks, MPI_REQUEST_NULL);
+    
+    for (CFuint root = 1; root < nbRanks; ++root) {
+      int tagS = root;
+      MPIError::getInstance().check
+	("MPI_Irecv", "StandardSubSystem::iterate()",
+	 MPI_Irecv (&m_recvFlags[root], 1, MPI_INT, root, tagS, group.comm, &requestS[root]));
+      
+      CFLog(VERBOSE, "StandardSubSystem::iterate() => grank=0 has received request\n");
+      
+      MPIError::getInstance().check
+	("MPI_Wait (1)", "StandardSubSystem::iterate()", MPI_Wait (&requestS[root], &statusS));
+    }
+    
+    // if the stop condition is met in at least one rank (associated to one or more other 
+    // namespaces), ask every other rank to stop the simulation
+    for (CFuint i = 1; i < nbRanks; ++i) {
+      if (m_recvFlags[i] == 1) {
+	m_forcedStop = true;
+	break;
+      }
+    }
+    
+    if (stopSimulation) {m_forcedStop = true;}
+    
+    // // flag telling if the simulation has to be stopped
+    // const int sendFlag = (m_forcedStop) ? 1 : 0;
+    // MPI_Status statusR;
+    // vector<MPI_Request> requestR(nbRanks, MPI_REQUEST_NULL);
+    
+    // for (CFuint root = 1; root < nbRanks; ++root) {
+    //   int tagR = nbRanks+root;
+    //   MPIError::getInstance().check
+    // 	("MPI_Isend", "StandardSubSystem::iterate()",
+    // 	 MPI_Isend (&sendFlag, 1, MPI_INT, root, tagR, group.comm, &requestR[root]));
+    
+    //   MPIError::getInstance().check
+    // 	("MPI_Wait (2)", "StandardSubSystem::iterate()", MPI_Wait (&requestR[root], &statusR));
+    // }
+  }
+  
+  CFLog(VERBOSE, "StandardSubSystem::iterate() => A\n");
+  MPI_Request request = MPI_REQUEST_NULL;
+  MPI_Status status;
+  int sendFlag = (m_forcedStop) ? 1 : 0;
+  
+  MPIError::getInstance().check
+    ("MPI_Ibcast", "StandardSubSystem::iterate()",
+     MPI_Ibcast(&sendFlag, 1, MPI_INT, 0, group.comm, &request));
+  
+  MPIError::getInstance().check
+    ("MPI_Wait", "StandardSubSystem::iterate()", MPI_Wait (&request, &status));
+  
+  // set the forced stop flag equal to the received flag
+  m_forcedStop == (bool)sendFlag;
+  
+  CFLog(VERBOSE, "StandardSubSystem::iterate() => B\n");
+  
+  /*
+
+  
+  if (grank == 0) {
+    const int sendFlag = (m_forcedStop) ? 1 : 0;
+    MPI_Status statusR;
+    vector<MPI_Request> requestR(nbRanks, MPI_REQUEST_NULL);
+    
+    for (CFuint root = 1; root < nbRanks; ++root) {
+      int tagR = nbRanks+root;
+      MPIError::getInstance().check
+    	("MPI_Isend", "StandardSubSystem::iterate()",
+    	 MPI_Isend (&sendFlag, 1, MPI_INT, root, tagR, group.comm, &requestR[root]));
+      
+      MPIError::getInstance().check
+    	("MPI_Wait (2)", "StandardSubSystem::iterate()", MPI_Wait (&requestR[root], &statusR));
+    }
+  }
+  else if (grank > 0) {
+    MPI_Status statusR;
+    vector<MPI_Request> requestR(nbRanks, MPI_REQUEST_NULL);
+    int tagR = nbRanks+grank;
+    
+    MPIError::getInstance().check
+      ("MPI_Irecv", "StandardSubSystem::iterate()",
+       MPI_Irecv (&recvFlag, 1, MPI_INT, 0, tagR, group.comm, &requestR[grank]));
+    
+    MPIError::getInstance().check
+      ("MPI_Wait (2)", "StandardSubSystem::iterate()", MPI_Wait (&requestR[grank], &statusR));
+    
+    // set the forced stop flag equal to the received flag
+    m_forcedStop == (bool)recvFlag;
+  }
+  //*/
+  // #endif
+  
+
+  return ((!stopSimulation) && (!m_forcedStop));
+}
+    
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace Framework

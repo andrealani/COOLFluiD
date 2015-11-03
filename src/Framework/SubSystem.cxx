@@ -140,10 +140,19 @@ void SubSystem::configureNamespaces(Config::ConfigArgs& args)
     // (e.g. "SubSyA.Default") 
     
     // PE::createGroup(name, name, granks, true);
+    
+    // make a unique list of all the ranks used in this subsystem
+    vector<int> subSystemRanksUnique;
+    const CFuint nbProc = PE::GetPE().GetProcessorCount("Default");  
+    subSystemRanksUnique.resize(nbProc);
+    for (CFuint r = 0; r < nbProc; ++r) {
+      subSystemRanksUnique[r] = r;
+    }
+    
+    PE::GetPE().createGroup("Default", SubSystemStatusStack::getCurrentName(), subSystemRanksUnique, true); 
   }
   // or configure the whole list that was defined
-  else
-  {
+  else {
     // initial screening for namespaces to check for "|"
     // this is a hack which should be fixed in a cleaner way
     // namespaces can be already multiplied by using the "@" key
