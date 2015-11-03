@@ -31,9 +31,9 @@ Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DNEQ
 Simulator.SubSystem.NavierStokes2DNEQ.refValues = 0.0001952 0.004956 5590. 5590. 1833.
 Simulator.SubSystem.NavierStokes2DNEQ.refLength = 1.0
 Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary = Plato
-Simulator.SubSystem.NavierStokes2DNEQ.Plato.path = /home/alessandro/Workspace/COOLFluiD/trunk/plugins/Plato/database
-Simulator.SubSystem.NavierStokes2DNEQ.Plato.mixtureName = nitrogen2_nasa_park
-Simulator.SubSystem.NavierStokes2DNEQ.Plato.reactionName = nitrogen2
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.path = /home/amunafo/Workspace/COOLFluiD/trunk/plugins/Plato/database
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.mixtureName = nitrogen2
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.reactionName = parkN2
 #the solution with "nompelisN2" is totally different
 Simulator.SubSystem.NavierStokes2DNEQ.Plato.transfName = empty
 Simulator.SubSystem.NavierStokes2DNEQ.nbSpecies = 2
@@ -84,7 +84,7 @@ Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<4200,1.,if(i<5500,2.,min(100.,cfl*1.02)))
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<4200,1.,if(i<5200,2.,min(100.,cfl*1.02)))
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 #Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 4
@@ -148,12 +148,10 @@ Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
 Simulator.SubSystem.CellCenterFVM.InitComds = InitStateD
 Simulator.SubSystem.CellCenterFVM.InitNames = InField
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
-Simulator.SubSystem.CellCenterFVM.InField.Vars = x y Rhoivt
-#Simulator.SubSystem.CellCenterFVM.InField.Def = \
-#	0.0001952 0.004956 if(d>0.004,-5590.,-5590./0.004*d) 0. \
-#	if(d>0.004,1833.,(1833.-1000.)/0.004*d+1000.)
-
-Simulator.SubSystem.CellCenterFVM.InField.Def = 0.0001952 0.004956 -5590. 0. 1833
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y d
+Simulator.SubSystem.CellCenterFVM.InField.Def = \
+	0.0001952 0.004956 if(d>0.004,-5590.,-5590./0.004*d) 0. \
+	if(d>0.004,1833.,(1833.-1000.)/0.004*d+1000.)
 
 Simulator.SubSystem.CellCenterFVM.BcComds = NoSlipWallIsothermalNSrvtMultiFVMCC SuperInletFVMCC SuperOutletFVMCC
 Simulator.SubSystem.CellCenterFVM.BcNames = BcWall BcInlet BcOutlet

@@ -39,7 +39,7 @@ Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.reactionName = parkN2
 Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.transfName = airN2cneq
 Simulator.SubSystem.NavierStokes2DNEQ.nbSpecies = 2
 Simulator.SubSystem.NavierStokes2DNEQ.nbEulerEqs = 3
-Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.dynViscAlgo = CG
+Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.dynViscAlgo = Direct
 Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.thermCondAlgo = Direct
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh

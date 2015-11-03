@@ -1930,6 +1930,7 @@ void MutationLibrary2OLD::getMassProductionTerm(CFdouble& temperature,
     for (int is = 0; is < _NS; ++is) {
       omega[is] = _factorOmega*_OMEGA[is];
     }
+
     // Assembling Jacobian matrix of the source term corresponding to
     // primitive variables: rho_i, u, v,( w,) T, (Tv, Te)
 
@@ -1987,7 +1988,7 @@ void MutationLibrary2OLD::getMassProductionTerm(CFdouble& temperature,
       omega[is] = 0.0;
     }
   } 
-  
+ 
   // CFLog(INFO, "MutationLibrarypp::getMassProductionTerm() => omega = " << omega << "\n");
 }
 
@@ -2063,10 +2064,6 @@ void MutationLibrary2OLD::getRhoUdiff(CFdouble& temperature,
   }
   else {
     FORTRAN_NAME(smneutd)(_WR1, &_LWR1, _WR2, &_LWR2, _XTOL, &ND, _DF, _FIJ, _JDIF);
-  }
-
-  for (int is = 0; is < _NS; ++is) {
-    rhoUdiff[is] = _JDIF[is];
   }
 
   // CFLog(INFO, "MutationLibrarypp::rhoUdiff() =>  rhoUdiff = " << rhoUdiff << "\n");

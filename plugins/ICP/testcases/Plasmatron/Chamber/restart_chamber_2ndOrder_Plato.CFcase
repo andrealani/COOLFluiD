@@ -37,7 +37,8 @@ CFEnv.ExceptionOutputs     = false
 Simulator.Modules.Libs = libPetscI libTecplotWriter libNavierStokes libPlatoI libLTE libICP libFiniteVolume libFiniteVolumeNavierStokes libFiniteVolumeICP libNewtonMethod libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
 
 # Simulation Parameters
-Simulator.Paths.WorkingDir = plugins/ICP/testcases/Plasmatron/Chamber
+Simulator.Paths.WorkingDir = ./
+#./plugins/ICP/testcases/Plasmatron/Chamber
 Simulator.Paths.ResultsDir = ./OUTPUT_chamber_PLATO_uncoupled
 
 ###### ICP PHYSICAL MODEL ##
@@ -63,7 +64,7 @@ Simulator.SubSystem.ICPLTE2D.SourceTerm.Freq = 0.37
 
 ###### CHEMICAL LIBRARY ##
 Simulator.SubSystem.ICPLTE2D.PropertyLibrary = Plato
-Simulator.SubSystem.ICPLTE2D.Plato.path = /home/alessandro/Workspace/COOLFluiD/trunk/plugins/Plato/database 
+Simulator.SubSystem.ICPLTE2D.Plato.path = /home/amunafo/Workspace/COOLFluiD/trunk/plugins/Plato/database 
 Simulator.SubSystem.ICPLTE2D.Plato.mixtureName = air11
 Simulator.SubSystem.ICPLTE2D.Plato.reactionName = empty
 

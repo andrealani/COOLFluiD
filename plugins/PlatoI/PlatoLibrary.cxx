@@ -312,7 +312,7 @@ CFdouble PlatoLibrary::eta(CFdouble& temp, CFdouble& pressure, CFreal* tVec)
 
   /*Compute dynamic viscosity*/
   CFdouble eta = get_dyn_vis(&nd, &Th, &Te, &_Xi[0]);
-
+  
   return eta;
 }
 
@@ -735,10 +735,9 @@ void PlatoLibrary::getRhoUdiff(CFdouble& temp, CFdouble& pressure, RealVector& n
 
   /*Compute number and mass densities*/
   CFdouble nd  = get_nb_density(&pressure, &Th, &Te, &Xe);
-  CFdouble rho = get_density(&nd, &_Xi[0]);
 
   /*Compute binary diffusion coefficients*/
-  get_bin_diff_coeff(&Th, &Te, &nd, &_Xi[0], &_Dij[0]);
+  get_bin_diff_coeff(&nd, &Th, &Te, &_Xi[0], &_Dij[0]);
 
   /*Diffusion driving forces (gradients of mole fractions*/
   CFreal mm = 0.0;
@@ -757,7 +756,7 @@ void PlatoLibrary::getRhoUdiff(CFdouble& temp, CFdouble& pressure, RealVector& n
   comp_tol(_Xi, _Xitol);
 
   /*Compute mass diffusion fluxes (solve the Stefan-Maxwell equations)*/
-  get_species_diff_flux(&Th, &Te, &rho, &_Xitol[0], &_Dij[0], &_dfi[0], &rhoUdiff[0]);
+  get_species_diff_flux(&Th, &Te, &nd, &_Xitol[0], &_Dij[0], &_dfi[0], &rhoUdiff[0]);
 }
 
 //////////////////////////////////////////////////////////////////////////////
