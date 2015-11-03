@@ -53,7 +53,8 @@ CFuint MultiFluidMHDModel<DIM>::getNbEquations() const
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
   
-  const CFuint dimEff = (this->is2DHalf()) ? DIM_2D : DIM;
+  const CFuint TwoDHalfDim = 3;
+  const CFuint dimEff = (this->is2DHalf()) ? TwoDHalfDim : DIM;
   std::valarray<CFuint> v(3);
   v[0] = _nbSpecies;     // y_i
   v[1] = _nbSpecies*dimEff; // u_i, v_i, w_i
@@ -72,6 +73,7 @@ CFuint MultiFluidMHDModel<DIM>::getNbEquations() const
   getConvTerm()->setNbScalarVars(v, &strides);
   
   const CFreal nbBEEqs = 8; // equations for Ex,Ey,Ez,Bx,By,Bz,Phi(E),Psi(B)
+  std::cout << "MultiFluidMHDModel<DIM>::getNbEquations() = "<< nbBEEqs + v.sum() <<"\n";
   return nbBEEqs + v.sum();
 }
 
