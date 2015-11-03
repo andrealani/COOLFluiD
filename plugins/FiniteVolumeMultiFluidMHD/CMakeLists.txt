@@ -13,6 +13,9 @@ GEMMHDST3D.hh
 GEMMHDST3DTwoFluid.ci
 GEMMHDST3DTwoFluid.cxx
 GEMMHDST3DTwoFluid.hh
+GEMMHDST2DHalfTwoFluid.ci
+GEMMHDST2DHalfTwoFluid.cxx
+GEMMHDST2DHalfTwoFluid.hh
 HartmannSourceTerm.ci
 HartmannSourceTerm.cxx
 HartmannSourceTerm.hh
@@ -40,6 +43,8 @@ NoSlipWallIsothermalPCWRhoiViTi.hh
 NSFluxMultiFluid.cxx
 PerfectConductingWall.cxx
 PerfectConductingWall.hh
+PerfectConductingWall2DHalf.cxx
+PerfectConductingWall2DHalf.hh
 PerfectConductingWall3D.cxx
 PerfectConductingWall3D.hh
 BCPeriodicMFMHD.cxx

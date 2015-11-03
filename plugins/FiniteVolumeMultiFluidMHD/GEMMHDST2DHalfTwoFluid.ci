@@ -240,6 +240,9 @@ void GEMMHDST2DHalfTwoFluid<UPDATEVAR>::computeSource
   }
   // AAL: Don't forget to multiply by the volume!!!!!
   source *= volumes[elemID];
+  for (CFuint i = 0; i < source.size(); i++) {
+    CFLog(VERBOSE, "GEMMHDST2DHalfTwoFluid:: source [" << i <<"] = " << source[i] << "\n");
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
