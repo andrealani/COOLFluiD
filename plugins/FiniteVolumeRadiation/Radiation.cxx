@@ -142,6 +142,9 @@ Radiation::Radiation(const std::string& name) :
   
   m_threadID = 0;
   setParameter("ThreadID", &m_threadID);
+  
+  m_emptyRun = false;
+  setParameter("EmptyRun", &m_emptyRun);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -179,7 +182,8 @@ void Radiation::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFuint >("PID","ID of pressure in the state vector");
   options.addConfigOption< CFuint >("TID","ID of temperature in the state vector");
   options.addConfigOption< CFuint >("NbThreads","Number of threads/CPUs in which the algorithm has to be split.");
-  options.addConfigOption< CFuint >("ThreadID","ID of the current thread within the parallel algorithm.");
+  options.addConfigOption< CFuint >("ThreadID","ID of the current thread within the parallel algorithm."); 
+  options.addConfigOption< bool >("EmptyRun","Run without actually solving anything, just for testing purposes.");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -409,10 +413,13 @@ void Radiation::setup()
   CFLog(INFO, "Radiation::setup() => getDirections() took " << stp.read() << "s\n");
   
   stp.start();
-  // only get advance order for the considered directions
-  for (CFuint d = startDir; d < endDir; d++){
-    cf_assert(m_advanceOrder[d].size() == nbCells);
-    getAdvanceOrder(d, m_advanceOrder[d]);
+  
+  if (!m_emptyRun) {
+    // only get advance order for the considered directions
+    for (CFuint d = startDir; d < endDir; d++){
+      cf_assert(m_advanceOrder[d].size() == nbCells);
+      getAdvanceOrder(d, m_advanceOrder[d]);
+    }
   }
   
   // old
@@ -546,6 +553,8 @@ void Radiation::execute()
   CFAUTOTRACE;
   
   CFLog(VERBOSE, "Radiation::execute() => start\n");
+  
+  if (!m_emptyRun) {
   
   const std::string nsp = this->getMethodData().getNamespace();
   cf_assert(PE::GetPE().GetProcessorCount(nsp) == 1);
@@ -696,6 +705,8 @@ void Radiation::execute()
   if (m_radialData){
     writeRadialData();
   } 
+  
+  }
   
   CFLog(VERBOSE, "Radiation::execute() => end\n");
 }

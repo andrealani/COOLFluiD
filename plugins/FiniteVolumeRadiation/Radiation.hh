@@ -344,6 +344,9 @@ private: //data
   /// ID of the thread/CPU within the parallel algorithm
   CFuint m_threadID;
   
+  /// flag telling to run without solving anything, just for testing
+  bool m_emptyRun;
+  
 }; // end of class Radiation
 
 //////////////////////////////////////////////////////////////////////////////
