@@ -24,7 +24,6 @@ namespace COOLFluiD {
 /// @see website http://warp.povusers.org/FunctionParser/
 /// @author Andrea Lani
 
-class MathTools_API FunctionParser: public FunctionParserBase<double> {};
 class MathTools_API FunctionParser_f: public FunctionParserBase<float> {};
 class MathTools_API FunctionParser_ld: public FunctionParserBase<long double> {};
 class MathTools_API FunctionParser_li: public FunctionParserBase<long> {};
@@ -59,10 +58,10 @@ static double Radius3D(const double* x)
 
 // @author Andrea Lani
 
-class DerivedParser: public FunctionParser
-{
+class MathTools_API FunctionParser: public FunctionParserBase<double> {
 public:
-  DerivedParser() : FunctionParser()
+  /// default constructor
+  FunctionParser() : FunctionParserBase<double>()
   {
     AddConstant("pi", 3.14159265358979323846);
     AddConstant("e", 2.71828182845904523536);

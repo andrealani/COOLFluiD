@@ -222,10 +222,17 @@ void CRD_SplitStrategy::setCurrentCell()
     m_statesBkp[iState] = (*ddata.states)[iState];
   }
   getMethodData().getLinearizer()->setUpdateStates(&m_statesBkp);
-
+  
   ddata.tStates = computeConsistentStates(ddata.states);
+  
+  // set the coordinates in the consistent transformed states
+  for (CFuint iState = 0; iState < nbCellStates; ++iState) {
+    Node *const node = (*ddata.states)[iState]->getNodePtr();
+    cf_assert(node != CFNULL);
+    (*ddata.tStates)[iState]->setSpaceCoordinates(node);
+  }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void CRD_SplitStrategy::unsetup()
