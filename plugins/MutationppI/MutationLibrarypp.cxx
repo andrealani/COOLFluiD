@@ -231,14 +231,15 @@ void MutationLibrarypp::setDensityEnthalpyEnergy(CFdouble& temp,
 	<< pressure << ", T = " << temp << "\n");
   
   dhe[0] = m_gasMixture->density();
-  dhe[1] = m_gasMixture->mixtureHMass() - m_gasMixture->mixtureHMass(298.15);
+  dhe[1] = m_gasMixture->mixtureHMass();
+  
+  //  CFreal rhoiv[2]; rhoiv[0] = 0; rhoiv[1] = dhe[0];
+  //  setState(&rhoiv[0], &temp);
+  //  dhe[1] -= m_gasMixture->mixtureHMass(0.0000000001);
+  
   dhe[2] = dhe[1]-pressure/dhe[0];
-
-  // CFLog(INFO, "MutationLibrarypp::setDensityEnthalpyEnergy() => Hmass = " << m_gasMixture->mixtureHMass() << "\n");
-  // CFLog(INFO, "MutationLibrarypp::setDensityEnthalpyEnergy() => Hmass = " << m_gasMixture->mixtureHMass(298.15) << "\n");
-  // abort(); 
- 
-  CFLog(DEBUG_MAX, "MutationLibrarypp::setDensityEnthalpyEnergy() => " << dhe << ", " <<  m_y << "\n");
+  
+  CFLog(DEBUG_MAX, "MutationLibrarypp::setDensityEnthalpyEnergy()          => " << dhe << ", " <<  m_y << "\n");
   // static int count = 0; if (count++ == 20000) abort(); 
 }
       
