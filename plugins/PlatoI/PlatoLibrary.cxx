@@ -235,16 +235,16 @@ CFdouble PlatoLibrary::get_el_temp(CFdouble &temp, CFreal* tVec) {
  */
 void PlatoLibrary::comp_tol(RealVector& X, RealVector& Xtol) {
  
-  CFreal tol = 1.e-12;
-  CFreal sum_X = 0.;
+  CFdouble tol = 1.e-12;
+  CFdouble sum_X = 0.;
 
-  for (CFint i = 0;i < _NS;i++) {
+  for (CFint i = 0; i < _NS; ++i ) {
     Xtol[i]  = X[i] + tol;
     sum_X   += Xtol[i];
   }
    
   sum_X = 1./sum_X;
-  for (CFint i = 0;i < _NS;i++) {
+  for (CFint i = 0; i < _NS; ++i) {
     Xtol[i] *= sum_X;
   }
 
@@ -337,7 +337,7 @@ CFdouble PlatoLibrary::lambdaEQ(CFdouble& temp, CFdouble& pressure)
 CFdouble PlatoLibrary::lambdaNEQ(CFdouble& temp, CFdouble& pressure)
 {
   /*Temperature vector*/
-  for (CFint i = 0;i < _nTemp;i++) {
+  for (CFint i = 0; i < _nTemp; ++i) {
     _tvec[i] = temp;
   }
 
@@ -540,8 +540,8 @@ CFdouble PlatoLibrary::pressure(CFdouble& rho, CFdouble& temp, CFreal* tVec)
   
   /*Compute pressure (note that we multiply by the density since the PLATO function
    *assumes as input arguments the partial densities of the chemical components)*/
-  CFdouble pressure = rho*get_pressure(&Th, &Te, &_Yc[0]);
-  
+  CFdouble pressure = rho*(get_pressure(&Th, &Te, &_Yc[0]));
+
   return pressure;
 }
 
@@ -674,20 +674,20 @@ void PlatoLibrary::getMassProductionTerm(CFdouble& temp, RealVector& tVec, CFdou
   const CFint ndim = 0;
 
   /*Partial densities*/
-  for (CFint i = 0;i < _NS;i++) {
+  for (CFint i = 0; i < _NS; ++i) {
     _rhoi[i] = rho*ys[i];
   }
 
   /*Temperature vector*/
   _tvec[0] = temp;
-  for (CFint i = 1;i < _nTemp;i++) {
+  for (CFint i = 1; i < _nTemp; ++i) {
     _tvec[i] = tVec[i - 1];
   }
 
   /*Compute source term*/
   source(&_rhoi[0], &_tvec[0], &_prodterm[0], ndim);
 
-  for (CFint i = 0;i < _NS;i++) {
+  for (CFint i = 0; i < _NS ; ++i) {
     omega[i] = _prodterm[i];
   }
 
@@ -733,24 +733,30 @@ void PlatoLibrary::getRhoUdiff(CFdouble& temp, CFdouble& pressure, RealVector& n
   /*Electron mole fraction*/
   CFdouble Xe = _Xi[0];
 
-  /*Compute number and mass densities*/
-  CFdouble nd  = get_nb_density(&pressure, &Th, &Te, &Xe);
+  /*Compute number density*/
+  CFdouble nd = get_nb_density(&pressure, &Th, &Te, &Xe);
 
   /*Compute binary diffusion coefficients*/
   get_bin_diff_coeff(&nd, &Th, &Te, &_Xi[0], &_Dij[0]);
 
   /*Diffusion driving forces (gradients of mole fractions*/
-  CFreal mm = 0.0;
-  CFreal normMMassGradient = 0.0;
-  for (CFint is = 0; is < _NS; ++is) {
-    mm += _Xi[is]*_mmi[is];
-    normMMassGradient += normConcGradients[is]/_mmi[is];
-  }
-  normMMassGradient *= -(mm*mm);
+  if (!fast) {
+    CFdouble mm = 0.0;
+    CFdouble normMMassGradient = 0.0;
+    for (CFint is = 0; is < _NS; ++is) {
+        mm += _Xi[is]*_mmi[is];
+        normMMassGradient += normConcGradients[is]/_mmi[is];
+    }
+    normMMassGradient *= -(mm*mm);
   
-  for (CFint is = 0; is < _NS; ++is) {
-    _dfi[is] = (mm*normConcGradients[is] + _Yi[is]*normMMassGradient)/_mmi[is];
-  }
+    for (CFint is = 0; is < _NS; ++is) {
+      _dfi[is] = (mm*normConcGradients[is] + _Yi[is]*normMMassGradient)/_mmi[is];
+    }
+  } else {
+    for (CFint is = 0; is < _NS; ++is) {
+      _dfi[is] = normConcGradients[is];
+    }
+  } 
   
   /*Apply tolerance on mole fractions (this step is mandatory for stability)*/
   comp_tol(_Xi, _Xitol);
@@ -795,7 +801,7 @@ void PlatoLibrary::setSpeciesMolarFractions(const RealVector& xs)
       
 //////////////////////////////////////////////////////////////////////////////
 /*!
- * This function returns the species total, vibrational and electronic enthaloies givenn the temperatures 
+ * This function returns the species total, vibrational and electronic enthlpies given the temperatures 
  */
 void PlatoLibrary::getSpeciesTotEnthalpies(CFdouble& temp,
 				           RealVector& tVec,

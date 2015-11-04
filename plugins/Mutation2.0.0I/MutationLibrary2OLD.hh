@@ -111,9 +111,8 @@ public:
   }
 
   /**
-   * Get the translational-rotational cv
-   * @pre it assumes that the mass fractions
-   *      have been already set
+   * Get the mixture molar mass 
+   * @pre it assumes that the mass fractionshave been already set
    */
   CFdouble getMMass() const
   {

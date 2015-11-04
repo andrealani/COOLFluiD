@@ -4,7 +4,7 @@
 # 
 # Finite Volume, NavierStokes2DNEQ (chemical NEQ model for N-N2), 
 # NewtonIterator, mesh with quads, second-order reconstruction with limiter, 
-# AUSM+ flux, noslip wall BC, PETSc, Plato F77 (version 2.0.0), start from 
+# AUSM+ flux, noslip wall BC, PETSc, Plato (version 1.0), start from 
 # scratch with artificial BL, postprocessing of wall quantities (e.g. heat flux),
 # parallel wall distance calculation 
 #
@@ -22,6 +22,8 @@ Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWrite
 # this option helps if you want to check that all the options you set are declared properly (no spelling mistakes)
 # some options (for instance some Gambit or other converter settings) will always fail anyway
 #CFEnv.ErrorOnUnusedConfig = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NEQ/testcases/TCNEQ/Hornung
@@ -31,7 +33,7 @@ Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DNEQ
 Simulator.SubSystem.NavierStokes2DNEQ.refValues = 0.0001952 0.004956 5590. 5590. 1833.
 Simulator.SubSystem.NavierStokes2DNEQ.refLength = 1.0
 Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary = Plato
-Simulator.SubSystem.NavierStokes2DNEQ.Plato.path = /home/amunafo/Workspace/COOLFluiD/trunk/plugins/Plato/database
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.path = /home/amunafo/Workspace/COOLFluiD/trunk/plugins/Plato/database_Hornung
 Simulator.SubSystem.NavierStokes2DNEQ.Plato.mixtureName = nitrogen2
 Simulator.SubSystem.NavierStokes2DNEQ.Plato.reactionName = parkN2
 #the solution with "nompelisN2" is totally different
@@ -80,11 +82,12 @@ Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
 Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 200
 Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 500
 Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+#Simulator.SubSystem.NewtonIteratorLSS.Data.ILULevels = 2
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<4200,1.,if(i<5200,2.,min(100.,cfl*1.02)))
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<4200,1.,if(i<5500,2.,min(100.,cfl*1.02)))
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 #Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 4
@@ -133,7 +136,7 @@ Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 0.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
 Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
 Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitIter = 3500

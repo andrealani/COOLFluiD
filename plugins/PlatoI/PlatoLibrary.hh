@@ -89,22 +89,20 @@ public:
    */
   CFdouble electronPressure(CFreal rhoE, CFreal tempE);
   
-   /**
-    * Get the translational-rotational cv
-    * @pre it assumes that the mass fractions
-    *      have been already set
-    */
-    CFdouble getCvTr() const
-   {
-     throw Common::NotImplementedException(FromHere(),"PlatoLibrary::getCvTr()");
-     return 0.;
-   }
+  /*!
+   * Get the translational-rotational cv
+   * @pre it assumes that the mass fractions have been already set
+   */
+  CFdouble getCvTr() const
+  {
+    throw Common::NotImplementedException(FromHere(),"PlatoLibrary::getCvTr()");
+    return 0.;
+  }
 
-   /**
-    * Get the translational-rotational cv
-    * @pre it assumes that the mass fractions
-    *      have been already set
-    */
+  /*!
+   * Get the mixture molar mass
+   * @pre it assumes that the mass fractions have been already set
+   */
   CFdouble getMMass() const
   {
     CFdouble tmpMass = 0.0;
@@ -114,17 +112,17 @@ public:
     return 1./tmpMass;
   }
   
-  /**
+  /*!
    * Set the constant of gases [J/(kg*K)]
    */
   void setRiGas(RealVector& Ri);
 
-  /**
+  /*!
     * Set the IDs of the molecules in the mixture
     */
   void setMoleculesIDs(std::vector<CFuint>& v);
   
-  /**
+  /*!
    * Calculates the static pressure of the mixture
    * @param rho  density
    * @param temp temperature
@@ -145,7 +143,7 @@ public:
 			 RealVector& rhoUdiff);
   
   
-  /**
+  /*!
    * Calculates the thermal conductivity by conjugate gradient method method
    * given temperature and pressure
    * @param temp temperature
@@ -153,40 +151,37 @@ public:
    */
   CFdouble lambdaNEQ(CFdouble& temp, CFdouble& pressure);
   
-  /**
+  /*!
    * Calculates the thermal conductivity by conjugate gradient method method
    * given temperature and pressure
    * @param temp temperature
    * @param pressure pressure
    */
-   void lambdaVibNEQ(CFreal& temp,
-		    RealVector& tVec,
-		    CFdouble& pressure,
-		     CFreal& lambdaTrRo,
-		     RealVector& lambdaInt);
+   void lambdaVibNEQ(CFreal& temp, RealVector& tVec, CFdouble& pressure,
+		     CFreal& lambdaTrRo, RealVector& lambdaInt);
   
-  /**
+  /*!
    * Calculates the dynamic viscosity, given temperature and pressure
    * @param temp temperature
    * @param pressure pressure
    */
   CFdouble eta(CFdouble& temp, CFdouble& pressure, CFreal* tVec);
 
-  /**
+  /*!
    * Calculates the lambda viscosity, given temperature and pressure
    * @param temp temperature
    * @param pressure pressure
    */
    CFdouble lambdaEQ(CFdouble& temp, CFdouble& pressure);
   
-  /**
+  /*!
    * Calculates the electrical conductivity given temperature and pressure
    * @param temp temperature
    * @param pressure pressure
    */
   CFdouble sigma(CFdouble& temp, CFdouble& pressure, CFreal* tVec);
   
-  /**
+  /*!
    * Calculates the specific heat ratio and the speed of sound in
    * thermal equilibrium.
    * @param temp temperature
@@ -195,13 +190,10 @@ public:
    * @param gamma specific heat ratio
    * @param soundSpeed speed
    */
-  void gammaAndSoundSpeed(CFdouble& temp,
-			  CFdouble& pressure,
-			  CFdouble& rho,
-			  CFdouble& gamma,
-			  CFdouble& soundSpeed);
+  void gammaAndSoundSpeed(CFdouble& temp, CFdouble& pressure,
+			  CFdouble& rho, CFdouble& gamma, CFdouble& soundSpeed);
   
-  /**
+  /*!
    * Calculates the specific heat ratio and the speed of sound in
    * thermal equilibrium.
    * @param temp temperature
@@ -210,14 +202,11 @@ public:
    * @param gamma specific heat ratio
    * @param soundSpeed speed
    */
-  void frozenGammaAndSoundSpeed(CFdouble& temp,
-				CFdouble& pressure,
-				CFdouble& rho,
-				CFdouble& gamma,
-				CFdouble& soundSpeed,
-				RealVector* tVec);
+  void frozenGammaAndSoundSpeed(CFdouble& temp, CFdouble& pressure,
+				CFdouble& rho, CFdouble& gamma,
+				CFdouble& soundSpeed, RealVector* tVec);
   
-  /**
+  /*!
    * Calculates the composition given temperature and pressure.
    * @param temp temperature
    * @param pressure pressure
@@ -225,13 +214,11 @@ public:
    * @pre this function ALWAYS computes the composition
    *      (no lookup table based results...)
    */
-  void setComposition(CFdouble& temp,
-		      CFdouble& pressure,
-		      RealVector* x);
+  void setComposition(CFdouble& temp, CFdouble& pressure, RealVector* x);
   
-  /**
+  /*!
    * Reset the composition
-  */
+   */
   void resetComposition(const RealVector& x)
    {
      for (CFint i = 0; i < _NS; ++i) {
@@ -239,7 +226,7 @@ public:
      }
    }
 
-  /**
+  /*!
    * Calculates the density, the enthalpy and the internal energy
    * This function is supplied for convenience, as it calls
    * density with electron temperature equal to temperature.
@@ -249,13 +236,9 @@ public:
    * @param dhe array with density, enthalpy, energy. vibrational energies
    * @param storeExtraData  flag telling if extra data have to be stored
    */
-   void setDensityEnthalpyEnergy(CFdouble& temp,
-				 RealVector& tVec,
-				 CFdouble& pressure,
-				 RealVector& dhe,
-				 bool storeExtraData = false);
+  void setDensityEnthalpyEnergy(CFdouble& temp, RealVector& tVec, CFdouble& pressure, RealVector& dhe, bool storeExtraData = false);
   
-  /**
+  /*!
    * Calculates the density, the enthalpy and the internal energy
    * This function is supplied for convenience, as it calls
    * density with electron temperature equal to temperature.
@@ -264,7 +247,7 @@ public:
    */
   void setDensityEnthalpyEnergy(CFdouble& temp, CFdouble& pressure, RealVector& dhe);
   
-  /**
+  /*!
    * Calculates the density given temperature and pressure.
    * This function is supplied for convinience, as it calls
    * density with electron temperature equal to temperature.
@@ -273,7 +256,7 @@ public:
    */
   CFdouble density(CFdouble& temp, CFdouble& pressure, CFreal* tVec);
   
-  /**
+  /*!
    * Calculates the internal energy at given temperature
    * and pressure.
    * @param temp temperature
@@ -281,7 +264,7 @@ public:
    */
   CFdouble energy(CFdouble& temp, CFdouble& pressure);
   
-  /**
+  /*!
    * Calculates the energy in LTE conditions
    * at given temperature and pressure.
    * @param temp      temperature
@@ -290,7 +273,7 @@ public:
    */
   CFdouble enthalpy(CFdouble& temp, CFdouble& pressure);
   
-  /**
+  /*!
    * Calculates the speed of sound in
    * thermal equilibrium.
    * @param temp temperature
@@ -298,7 +281,7 @@ public:
    */
   CFdouble soundSpeed(CFdouble& temp, CFdouble& pressure);
   
-  /**
+  /*!
     * Sets the mole fractions of elements (nucleons) Xn for the Mutation
     * environment (for variable elemental composition), this function
     * should be called before getting properties related to the elemental
@@ -307,7 +290,7 @@ public:
     */
   void setElemFractions(const RealVector& yn);
   
-  /**
+  /*!
     * Sets the mole fractions of elements (nucleons) Xn for the Mutation
     * environment (for variable elemental composition) starting from the given
     * species mass fractions
@@ -315,41 +298,41 @@ public:
     */
   void setElementXFromSpeciesY(const RealVector& ys);
 
-  /**
+  /*!
     * Sets the species (molar) fractions. This function should be called before getting
     * thermodynamic quantities or transport properties.
     * @param ys the RealVector of the mass fractions of species
     */
   void setSpeciesFractions(const RealVector& ys);
 
-  /**
+  /*!
    * Sets the electron fractions in the mass composition according to charge
    * neutrality.
    * @param ys the RealVector of the mass fractions of species
    */
   void setElectronFraction(RealVector& ys);
 
-  /**
+  /*!
    * Gets the species (molar) fractions.
    * @param ys the RealVector of the mass fractions of species
    * @param xs the RealVector of the molar fractions of species
    */
   void getSpeciesMolarFractions(const RealVector& ys, RealVector& xs);
 
-  /**
+  /*!
    * Gets the species (mass) fractions.
    * @param xs the RealVector of the molar fractions of species
    * @param ys the RealVector of the mass fractions of species
    */
   void getSpeciesMassFractions(const RealVector& xs, RealVector& ys);
 
-  /**
+  /*!
     * Gets the species mass fractions.
     * @param ys the RealVector of the mass fractions of species
     */
   void getSpeciesMassFractions(RealVector& ys);
 
-  /**
+  /*!
    * Returns the transport coefficients for the diffusive fluxes used in
    * computations with LTE and Demixing
    * @param temp the mixture temperature
@@ -370,7 +353,7 @@ public:
 			 RealMatrix& eldifcoef,
 			 RealVector& eltdifcoef);
   
-  /**
+  /*!
    * Returns the mass production/destruction terms [kg m^-3 s^-1] in CHEMICAL
    * NONEQUILIBRIUM based on Arrhenius's formula.
    * The analytical Jacobian matrix of the mass production terms can also be
@@ -382,16 +365,12 @@ public:
    * @param omega the mass production terms
    * @param jacobian the Jacobian matrix of the mass production terms
    */
-  void getMassProductionTerm(CFdouble& temp,
-			     RealVector& tVec,
-			     CFdouble& pressure,
-			     CFdouble& rho,
-			     const RealVector& ys,
-			     bool flagJac,
-			     RealVector& omega,
-                             RealMatrix& jacobian);
+  void getMassProductionTerm(CFdouble& temp, RealVector& tVec,
+			     CFdouble& pressure, CFdouble& rho,
+			     const RealVector& ys, bool flagJac,
+			     RealVector& omega, RealMatrix& jacobian);
   
-  /**
+  /*!
    * Returns the source term for the vibrational relaxation with VT transfer
    * @param temp the mixture temperature
    * @param tVec the vibrational temperature
@@ -399,14 +378,11 @@ public:
    * @param rho the mixture density
    * @param omegav the source term
    */
-   void getSourceTermVT(CFdouble& temp,
-		       RealVector& tVec,
-		       CFdouble& pressure,
-		       CFdouble& rho,
-		       RealVector& omegav,
-		       CFdouble& omegaRad);
+   void getSourceTermVT(CFdouble& temp, RealVector& tVec,
+		       CFdouble& pressure, CFdouble& rho,
+		       RealVector& omegav, CFdouble& omegaRad);
   
-  /**
+  /*!
    * Returns the source terms species continuity equations, 
    * vibrational energy conservation equation and 
    * free electron-electronic conservation equation
@@ -426,7 +402,7 @@ public:
 		   bool flagJac,
 		   CFdouble& omegaEE);
   
-   /**
+   /*!
    * Returns the source terms species continuity equations, 
    * vibrational energy conservation equation and 
    * free electron-electronic conservation equation.
@@ -453,28 +429,24 @@ public:
                  CFdouble& omegaRad,
                  RealMatrix& jacobian);
 
-  /**
+  /*!
    * Returns the diffusion velocities of species multiplied by the species
    * densities for nonequilibrium computations
    * @param temp the mixture temperature
    * @param pressure the mixture pressure
    * @param normConcGradients the cell normal gradients of species mass fractions
    */
-  void getRhoUdiff(CFdouble& temp,
-                   CFdouble& pressure,
-                   RealVector& normConcGradients,
-		   CFreal* tVec,
-                   RealVector& rhoUdiff,
-		   bool fast);
+  void getRhoUdiff(CFdouble& temp, CFdouble& pressure,
+                   RealVector& normConcGradients, CFreal* tVec,
+                   RealVector& rhoUdiff, bool fast);
 
-  /**
+  /*!
    * Returns the diffusion flux
    * This function returns the binary coefficients of Fick
    * But since they are a diagonal matrix it returns as well a scalar
    * It returns as well the diffusive flux 
    * @param temp the mixture temperature
    * @param pressure the mixture pressure
-
    */
   void getDij_fick(RealVector& dx,
 		    CFdouble& pressure,
@@ -482,17 +454,17 @@ public:
 		    CFreal& Diff_coeff,
 		    RealMatrix& Dij,
 		    RealVector& rhoUdiff);
-  /**
+  /*!
    ** Get the catalycity factor for N
    */
   void getGammaN(CFreal& m_GN);
   
-  /**
+  /*!
    * Get the catalycity factor for O
    */
   void getGammaO(CFreal& m_GO);
   
-   /**
+   /*!
     * Sets the species (molar) fractions. This function should be called before getting
     * thermodynamic quantities or transport properties.
     * @param xs the RealVector of the molar fractions of species
@@ -500,7 +472,7 @@ public:
   void setSpeciesMolarFractions(const RealVector& xs);
 
   
-  /**
+  /*!
    * Returns the total enthalpies per unit mass of species
    * @param temp the mixture temperature
    * @param pressure the mixture pressure
@@ -519,7 +491,7 @@ public:
 
 private: // helper function
   
-  /**
+  /*!
    * Set up the library sequentially
    */
   void setLibrarySequentially();

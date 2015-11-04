@@ -2066,6 +2066,10 @@ void MutationLibrary2OLD::getRhoUdiff(CFdouble& temperature,
     FORTRAN_NAME(smneutd)(_WR1, &_LWR1, _WR2, &_LWR2, _XTOL, &ND, _DF, _FIJ, _JDIF);
   }
 
+  for (CFint is = 0; is < _NS; ++is) {
+    rhoUdiff[is] = _JDIF[is]; 
+  }
+
   // CFLog(INFO, "MutationLibrarypp::rhoUdiff() =>  rhoUdiff = " << rhoUdiff << "\n");
   
 //   if (Te > 4000.) {
