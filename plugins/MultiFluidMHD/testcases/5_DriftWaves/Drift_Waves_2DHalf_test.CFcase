@@ -215,7 +215,7 @@ Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 #Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokesMF
 #Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
 
-#Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = GEMMHDST2DHalfTwoFluid
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = GEMMHDST2DHalfTwoFluid
 #Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2DChExchange.electricalResistivity = 0.07544302484745 
  #0.00382 #0.150886049694899
 #Simulator.SubSystem.CellCenterFVM.Data.MultiFluidMHDST2D.electricalResistivity = 0.07544302484745 #0.00382 #0.150886049694899
