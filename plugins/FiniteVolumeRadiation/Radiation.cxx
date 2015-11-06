@@ -143,6 +143,9 @@ Radiation::Radiation(const std::string& name) :
   m_threadID = 0;
   setParameter("ThreadID", &m_threadID);
   
+  m_loopOverBins = true;
+  setParameter("LoopOverBins", &m_loopOverBins);
+  
   m_emptyRun = false;
   setParameter("EmptyRun", &m_emptyRun);
 }
@@ -183,6 +186,7 @@ void Radiation::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFuint >("TID","ID of temperature in the state vector");
   options.addConfigOption< CFuint >("NbThreads","Number of threads/CPUs in which the algorithm has to be split.");
   options.addConfigOption< CFuint >("ThreadID","ID of the current thread within the parallel algorithm."); 
+  options.addConfigOption< bool >("LoopOverBins","Loop over bins and then over directions (do the opposite if =false).");
   options.addConfigOption< bool >("EmptyRun","Run without actually solving anything, just for testing purposes.");
 }
       
@@ -321,6 +325,7 @@ void Radiation::setup()
     const CFuint minNbThreadsPerProc = nbBinDir/m_nbThreads;
     const CFuint maxNbThreadsPerProc = minNbThreadsPerProc + nbBinDir%m_nbThreads;
     cf_assert(minNbThreadsPerProc > 0);
+    
     // same direction has same meshdata structure, therefore if you have 
     // m_nbThreads <= m_nbDirs it is more scalable to split by direction 
     const CFuint startThread = m_threadID*minNbThreadsPerProc;
@@ -333,13 +338,24 @@ void Radiation::setup()
     CFLog(VERBOSE, "Radiation::setup() => endThread        = [" << endThread << "]\n");
     CFLog(VERBOSE, "Radiation::setup() => nbThreadsPerProc = [" << nbThreadsPerProc << "]\n");
     
-    // suppose you sweep all entries while walking row-wise through 
-    // a matrix (b,d) of size m_nbBins*m_nbDirs, consider the corresponding 
-    // (b_start,d_start) and (b_end,d_end) points
-    m_startEndDir.first = startThread%m_nbDirs; 
-    m_startEndBin.first = startThread/m_nbDirs;
-    m_startEndDir.second = (endThread-1)%m_nbDirs;
-    m_startEndBin.second = (endThread-1)/m_nbDirs;
+    if (m_loopOverBins) {
+      // suppose you sweep all entries while walking row-wise through 
+      // a matrix (b,d) of size m_nbBins*m_nbDirs, consider the corresponding 
+      // (b_start,d_start) and (b_end,d_end) points
+      m_startEndDir.first = startThread%m_nbDirs; 
+      m_startEndBin.first = startThread/m_nbDirs;
+      m_startEndDir.second = (endThread-1)%m_nbDirs;
+      m_startEndBin.second = (endThread-1)/m_nbDirs;
+    }
+    else {
+      // suppose you sweep all entries while walking row-wise through 
+      // a matrix (d,b) of size m_nbDirs*m_nbBins, consider the corresponding 
+      // (d_start,b_start) and (d_end,b_end) points
+      m_startEndDir.first = startThread/m_nbBins; 
+      m_startEndBin.first = startThread%m_nbBins;
+      m_startEndDir.second = (endThread-1)/m_nbBins;
+      m_startEndBin.second = (endThread-1)%m_nbBins;
+    }
   }
   
   const CFuint startBin = m_startEndBin.first;
@@ -348,20 +364,37 @@ void Radiation::setup()
   const CFuint startDir = m_startEndDir.first;
   const CFuint endDir   = m_startEndDir.second+1;
   cf_assert(endDir <= m_nbDirs);
-  
-  CFLog(INFO, "Radiation::setup() => start/end Bin = [" << startBin << ", " << endBin << "]\n");
-  CFLog(INFO, "Radiation::setup() => start/end Dir = [" << startDir << ", " << endDir << "]\n");
-  CFLog(INFO, "Radiation::setup() => full (Bin, Dir) list: \n");
-  
-  for(CFuint ib = startBin; ib < endBin; ++ib) {
-    const CFuint dStart = (ib != startBin) ? 0 : startDir;
-    const CFuint dEnd   = (ib != m_startEndBin.second) ? m_nbDirs : endDir;
-    for (CFuint d = dStart; d < dEnd; ++d) {
-      CFLog(VERBOSE, "(" << ib << ", " << d <<"), ");
+
+  if (m_loopOverBins) {
+    CFLog(INFO, "Radiation::setup() => start/end Bin = [" << startBin << ", " << endBin << "]\n");
+    CFLog(INFO, "Radiation::setup() => start/end Dir = [" << startDir << ", " << endDir << "]\n");
+    CFLog(INFO, "Radiation::setup() => full (Bin, Dir) list: \n");
+    
+    for(CFuint ib = startBin; ib < endBin; ++ib) {
+      const CFuint dStart = (ib != startBin) ? 0 : startDir;
+      const CFuint dEnd   = (ib != m_startEndBin.second) ? m_nbDirs : endDir;
+      for (CFuint d = dStart; d < dEnd; ++d) {
+	CFLog(INFO, "(" << ib << ", " << d <<"), ");
+      }
+      CFLog(INFO, "\n");
     }
-    CFLog(VERBOSE, "\n");
+    CFLog(INFO, "\n");
   }
-  CFLog(VERBOSE, "\n");
+  else {
+    CFLog(INFO, "Radiation::setup() => start/end Dir = [" << startDir << ", " << endDir << "]\n");
+    CFLog(INFO, "Radiation::setup() => start/end Bin = [" << startBin << ", " << endBin << "]\n");
+    CFLog(INFO, "Radiation::setup() => full (Dir, Bin) list: \n");
+    
+    for(CFuint d = startDir; d < endDir; ++d) {
+      const CFuint bStart = (d != startDir) ? 0 : startBin;
+      const CFuint bEnd   = (d != m_startEndDir.second) ? m_nbBins : endBin;
+      for (CFuint ib = bStart; ib < bEnd; ++ib) {
+	CFLog(INFO, "(" << d << ", " << ib <<"), ");
+      }
+      CFLog(INFO, "\n");
+    }
+    CFLog(INFO, "\n");
+  }
   
   m_dirs.resize(m_nbDirs, 3);
   m_advanceOrder.resize(m_nbDirs);
@@ -547,7 +580,7 @@ void Radiation::getDirections()
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
+      
 void Radiation::execute()
 {
   CFAUTOTRACE;
@@ -555,157 +588,67 @@ void Radiation::execute()
   CFLog(VERBOSE, "Radiation::execute() => start\n");
   
   if (!m_emptyRun) {
-  
-  const std::string nsp = this->getMethodData().getNamespace();
-  cf_assert(PE::GetPE().GetProcessorCount(nsp) == 1);
-  
-  DataHandle<CFreal> divQ = socket_divq.getDataHandle();
-  DataHandle<CFreal> qx   = socket_qx.getDataHandle();
-  DataHandle<CFreal> qy   = socket_qy.getDataHandle();
-  DataHandle<CFreal> qz   = socket_qz.getDataHandle();
-  
-  CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
-  Common::SafePtr<TopologicalRegionSet> cells = geoData.trs;
-  
-  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
-  
-  const CFuint nbCells = cells->getLocalNbGeoEnts();
-  const CFuint DIM = DIM_3D;
-  
-  // Compute the order of advance
-  // Call the function to get the directions
-  m_q    = 0.0;
-  m_divq = 0.0;
-  m_II   = 0.0;
-  
-  const CFuint startBin = m_startEndBin.first;
-  const CFuint endBin   = m_startEndBin.second+1;
-  cf_assert(endBin <= m_nbBins);
-  const CFuint startDir = m_startEndDir.first;
-  const CFuint endDir   = m_startEndDir.second+1;
-  cf_assert(endDir <= m_nbDirs);
-      
-   for(CFuint ib = startBin; ib < endBin; ++ib) {
-   CFLog(VERBOSE, "Radiation::execute() => bin [" << ib << "]\n");
-    // old algorithm: opacities are computed for all cells (all at once) 
-    // for a given bin
-    if (m_oldAlgo) {getFieldOpacities(ib);}
+    // only one CPU allow for namespace => the mesh has not been partitioned
+    cf_assert(PE::GetPE().GetProcessorCount(getMethodData().getNamespace()) == 1);
     
-     const CFuint dStart = (ib != startBin) ? 0 : startDir;
-     const CFuint dEnd   = (ib != m_startEndBin.second) ? m_nbDirs : endDir;
-     for (CFuint d = dStart; d < dEnd; ++d) {
-     CFLog(VERBOSE, "Radiation::execute() => dir [" << d << "]\n");
-     //for (CFuint m = 0; m < nbCells; m++) {
-      //cout<< m_advanceOrder[d][m] <<", "; 
-      //}
-      //cout<< endl;
-      cf_assert(m_advanceOrder[d].size() == nbCells);
-      for (CFuint m = 0; m < nbCells; m++) {
-	CFreal inDirDotnANeg = 0.;
-	CFreal Ic            = 0.;
-	
-	const CFuint iCell = std::abs(m_advanceOrder[d][m]);
-	geoData.idx = iCell;    
-	GeometricEntity *const currCell = m_geoBuilder.buildGE();
-	
-	// new algorithm (more parallelizable): opacities are computed cell by cell
-	// for a given bin
-	if (!m_oldAlgo) {getFieldOpacities(ib, iCell, currCell);} 
-	
-	const CFuint elemID = currCell->getState(0)->getLocalID();	
-	const vector<GeometricEntity*>& faces = *currCell->getNeighborGeos();
-	const CFuint nbFaces = faces.size();
-	
-	if(m_useExponentialMethod){
-	  inDirDotnANeg = 0.;
-	  CFreal dirDotnANeg = 0;
-	  CFreal Lc      = 0;
-	  CFreal halfExp = 0;
-	  
-	  for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
-	    const GeometricEntity *const face = currCell->getNeighborGeo(iFace);
-	    setFaceNormal(face->getID(), elemID);
-	    const CFreal dirDotNA = getDirDotNA(d);
-	    
-	    if(dirDotNA < 0.){
-	      dirDotnANeg +=  dirDotNA;
-	      State *const neighborState = (currCell->getState(0) == face->getState(0)) ? face->getState(1) : face->getState(0);
-	      if(neighborState->isGhost() == false){
-		inDirDotnANeg += m_In[neighborState->getLocalID()]*dirDotNA;
-	      }
-	      else {
-		const CFreal boundarySource = m_fieldSource[iCell];
-		inDirDotnANeg += boundarySource*dirDotNA;
-	      }
-	    }
-	  } 
-	  Lc          = volumes[iCell]/(- dirDotnANeg); 
-	  halfExp     = std::exp(-0.5*Lc*m_fieldAbsor[iCell]);
-	  m_In[iCell] = (inDirDotnANeg/dirDotnANeg)*halfExp*halfExp + (1. - halfExp*halfExp)*m_fieldSource[iCell];
-	  Ic          = (inDirDotnANeg/dirDotnANeg)*halfExp + (1. - halfExp)*m_fieldSource[iCell];
+    // Compute the order of advance
+    // Call the function to get the directions
+    m_q    = 0.0;
+    m_divq = 0.0;
+    m_II   = 0.0;
+    
+    const CFuint startBin = m_startEndBin.first;
+    const CFuint endBin   = m_startEndBin.second+1;
+    cf_assert(endBin <= m_nbBins);
+    const CFuint startDir = m_startEndDir.first;
+    const CFuint endDir   = m_startEndDir.second+1;
+    cf_assert(endDir <= m_nbDirs);
+    
+    if (m_loopOverBins) {
+      for(CFuint ib = startBin; ib < endBin; ++ib) {
+	CFLog(VERBOSE, "Radiation::execute() => bin [" << ib << "]\n");
+	// old algorithm: opacities computed for all cells at once for a given bin
+	if (m_oldAlgo) {getFieldOpacities(ib);}
+	const CFuint dStart = (ib != startBin) ? 0 : startDir;
+	const CFuint dEnd = (ib != m_startEndBin.second)? m_nbDirs : endDir;
+	for (CFuint d = dStart; d < dEnd; ++d) {
+	  computeQ(ib,d);
 	}
-	else{
-	  CFreal dirDotnAPos = 0;
-	  for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
-	    const GeometricEntity *const face = currCell->getNeighborGeo(iFace);
-	    setFaceNormal(face->getID(), elemID);
-	    const CFreal dirDotNA = getDirDotNA(d);
-	    
-	    if(dirDotNA >= 0.){
-	      dirDotnAPos += dirDotNA;
-	    }
-	    else {
-	      State *const neighborState = (currCell->getState(0) == face->getState(0)) ? face->getState(1) : face->getState(0);
-	      if(neighborState->isGhost() == false){
-		inDirDotnANeg += m_In[neighborState->getLocalID()]*dirDotNA;
-	      }
-	      else {
-		const CFreal boundarySource = m_fieldSource[iCell];
-		inDirDotnANeg += boundarySource*dirDotNA;
-	      }
-	    }
-	  } 
-	  m_In[iCell] = (m_fieldAbSrcV[iCell] - inDirDotnANeg)/(m_fieldAbV[iCell] + dirDotnAPos);
-	  Ic = m_In[iCell];
+      }
+    }
+    else {
+      for (CFuint d = startDir; d < endDir; ++d) {
+	CFLog(VERBOSE, "Radiation::execute() => dir [" << d << "]\n");
+	const CFuint bStart = (d != startDir) ? 0 : startBin;
+	const CFuint bEnd   = (d != m_startEndDir.second) ? m_nbBins : endBin;
+	for(CFuint ib = startBin; ib < endBin; ++ib) {
+	  CFLog(VERBOSE, "Radiation::execute() => bin [" << ib << "]\n");
+	  // old algorithm: opacities computed for all cells at once for a given bin
+	  if (m_oldAlgo) {getFieldOpacities(ib);}
+	  computeQ(ib,d);
 	}
-	
-	m_q(iCell,XX) += Ic*m_dirs(d,0)*m_weight[d];
-	m_q(iCell,YY) += Ic*m_dirs(d,1)*m_weight[d];
-	m_q(iCell,ZZ) += Ic*m_dirs(d,2)*m_weight[d];
-	
-	CFreal inDirDotnA = inDirDotnANeg;
-	for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
-	  const GeometricEntity *const face = currCell->getNeighborGeo(iFace);
-	  setFaceNormal(face->getID(), elemID);
-	  const CFreal dirDotNA = getDirDotNA(d); 
-	  
-	  if(dirDotNA > 0.){
-	    inDirDotnA += m_In[iCell]*dirDotNA;
-	  }
-	}
-	
-	m_divq[iCell] += inDirDotnA*m_weight[d];
-	m_II[iCell]   += Ic*m_weight[d];
-	
-	m_geoBuilder.releaseGE();
-      }  
+      }
     }
     
-    CFLog(VERBOSE, "Radiation::execute() => ib = " << ib << "\n");
-  }
-  
-  for (CFuint iCell = 0; iCell < nbCells; iCell++) {
-    m_divq[iCell] = m_divq[iCell]/(volumes[iCell]); //converting area from m^3 into cm^3
-    divQ[iCell] = m_divq[iCell];
-    qx[iCell] = m_q(iCell,XX);
-    qy[iCell] = m_q(iCell,YY);
-    qz[iCell] = m_q(iCell,ZZ);
-  }
-  
-  if (m_radialData){
-    writeRadialData();
-  } 
-  
+    DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+    DataHandle<CFreal> divQ = socket_divq.getDataHandle();
+    DataHandle<CFreal> qx   = socket_qx.getDataHandle();
+    DataHandle<CFreal> qy   = socket_qy.getDataHandle();
+    DataHandle<CFreal> qz   = socket_qz.getDataHandle();
+    
+    SafePtr<TopologicalRegionSet> cells = m_geoBuilder.getDataGE().trs;
+    const CFuint nbCells = cells->getLocalNbGeoEnts();
+    for (CFuint iCell = 0; iCell < nbCells; iCell++) {
+      m_divq[iCell] = m_divq[iCell]/(volumes[iCell]); //converting area from m^3 into cm^3
+      divQ[iCell] = m_divq[iCell];
+      qx[iCell] = m_q(iCell,XX);
+      qy[iCell] = m_q(iCell,YY);
+      qz[iCell] = m_q(iCell,ZZ);
+    }
+    
+    if (m_radialData){
+      writeRadialData();
+    } 
   }
   
   CFLog(VERBOSE, "Radiation::execute() => end\n");
@@ -950,7 +893,6 @@ void Radiation::getAdvanceOrder(const CFuint d, vector<int>& advanceOrder)
   const CFuint DIM = PhysicalModelStack::getActive()->getDim();
   cf_assert(DIM == DIM_3D);
   
-  CFLog(DEBUG_MIN, "Radiation::getAdvanceOrder() => Computing order of advance. Before the loop over the directions\n");
   CFLog(INFO, "Radiation::getAdvanceOrder() => Direction number [" << d <<"]\n");
   
   CFuint mLast = 0;
@@ -974,8 +916,7 @@ void Radiation::getAdvanceOrder(const CFuint d, vector<int>& advanceOrder)
 	for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
 	  const GeometricEntity *const face = currCell->getNeighborGeo(iFace);
 	  setFaceNormal(face->getID(), elemID);
-	  const CFreal dotMult = m_normal[XX]*m_dirs(d,XX) + m_normal[YY]*m_dirs(d,YY) + m_normal[ZZ]*m_dirs(d,ZZ);
-	  
+	  const CFreal dotMult = getDirDotNA(d);
 	  State *const neighborState = (currCell->getState(0) == face->getState(0)) ? face->getState(1) : face->getState(0);
 	  const CFuint neighborID = neighborState->getLocalID();
 	  const bool neighborIsSdone =  m_sdone[neighborID] || neighborState->isGhost(); // AL: this could lead to a very subtle BUG
@@ -1390,6 +1331,116 @@ void Radiation::getFieldOpacities(const CFuint ib, const CFuint iCell,
       
 //////////////////////////////////////////////////////////////////////////////
 
+void Radiation::computeQ(const CFuint ib, const CFuint d)
+{      
+  CFLog(VERBOSE, "Radiation::computeQ() in (bin, dir) = ("
+	<< ib << ", " << d << ") => start\n");
+  
+  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+  CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
+  SafePtr<TopologicalRegionSet> cells = geoData.trs;
+  const CFuint nbCells = cells->getLocalNbGeoEnts();
+  cf_assert(m_advanceOrder[d].size() == nbCells);
+  
+  for (CFuint m = 0; m < nbCells; m++) {
+    CFreal inDirDotnANeg = 0.;
+    CFreal Ic            = 0.;
+    
+    // allocate the cell entity
+    const CFuint iCell = std::abs(m_advanceOrder[d][m]);
+    geoData.idx = iCell;    
+    GeometricEntity *const currCell = m_geoBuilder.buildGE();
+    
+    // new algorithm (more parallelizable): opacities are computed cell by cell
+    // for a given bin
+    if (!m_oldAlgo) {getFieldOpacities(ib, iCell, currCell);} 
+    
+    const CFuint elemID = currCell->getState(0)->getLocalID();	
+    const vector<GeometricEntity*>& faces = *currCell->getNeighborGeos();
+    const CFuint nbFaces = faces.size();
+    
+    if(m_useExponentialMethod){
+      inDirDotnANeg = 0.;
+      CFreal dirDotnANeg = 0;
+      CFreal Lc      = 0;
+      CFreal halfExp = 0;
+      
+      for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+	const GeometricEntity *const face = currCell->getNeighborGeo(iFace);
+	setFaceNormal(face->getID(), elemID);
+	const CFreal dirDotNA = getDirDotNA(d);
+	
+	if(dirDotNA < 0.) {
+	  dirDotnANeg += dirDotNA;
+	  State *const neighborState = (currCell->getState(0) == face->getState(0)) ? 
+	    face->getState(1) : face->getState(0);
+	  if(neighborState->isGhost() == false){
+	    inDirDotnANeg += m_In[neighborState->getLocalID()]*dirDotNA;
+	  }
+	  else {
+	    const CFreal boundarySource = m_fieldSource[iCell];
+	    inDirDotnANeg += boundarySource*dirDotNA;
+	  }
+	}
+      } 
+      Lc          = volumes[iCell]/(- dirDotnANeg); 
+      halfExp     = std::exp(-0.5*Lc*m_fieldAbsor[iCell]);
+      m_In[iCell] = (inDirDotnANeg/dirDotnANeg)*halfExp*halfExp + (1. - halfExp*halfExp)*m_fieldSource[iCell];
+      Ic          = (inDirDotnANeg/dirDotnANeg)*halfExp + (1. - halfExp)*m_fieldSource[iCell];
+    }
+    else{
+      CFreal dirDotnAPos = 0;
+      for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+	const GeometricEntity *const face = currCell->getNeighborGeo(iFace);
+	setFaceNormal(face->getID(), elemID);
+	const CFreal dirDotNA = getDirDotNA(d);
+	
+	if (dirDotNA >= 0.){
+	  dirDotnAPos += dirDotNA;
+	}
+	else {
+	  State *const neighborState = (currCell->getState(0) == face->getState(0)) ? face->getState(1) : face->getState(0);
+	  if (neighborState->isGhost() == false){
+	    inDirDotnANeg += m_In[neighborState->getLocalID()]*dirDotNA;
+	  }
+	  else {
+	    const CFreal boundarySource = m_fieldSource[iCell];
+	    inDirDotnANeg += boundarySource*dirDotNA;
+	  }
+	}
+      } 
+      m_In[iCell] = (m_fieldAbSrcV[iCell] - inDirDotnANeg)/(m_fieldAbV[iCell] + dirDotnAPos);
+      Ic = m_In[iCell];
+    }
+    
+    m_q(iCell,XX) += Ic*m_dirs(d,0)*m_weight[d];
+    m_q(iCell,YY) += Ic*m_dirs(d,1)*m_weight[d];
+    m_q(iCell,ZZ) += Ic*m_dirs(d,2)*m_weight[d];
+    
+    CFreal inDirDotnA = inDirDotnANeg;
+    for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+      const GeometricEntity *const face = currCell->getNeighborGeo(iFace);
+      setFaceNormal(face->getID(), elemID);
+      const CFreal dirDotNA = getDirDotNA(d); 
+      
+      if (dirDotNA > 0.){
+	inDirDotnA += m_In[iCell]*dirDotNA;
+      }
+    }
+    
+    m_divq[iCell] += inDirDotnA*m_weight[d];
+    m_II[iCell]   += Ic*m_weight[d];
+    
+    // deallocate the cell entity
+    m_geoBuilder.releaseGE();
+  }  
+  
+  CFLog(VERBOSE, "Radiation::computeQ() in (bin, dir) = ("
+	<< ib << ", " << d << ") => end\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+  
     } // namespace FiniteVolumeRadiation
 
   } // namespace Numerics

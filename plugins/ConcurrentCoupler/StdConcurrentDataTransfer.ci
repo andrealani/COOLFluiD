@@ -76,9 +76,13 @@ void StdConcurrentDataTransfer::fillSendCountsScatter
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::Framework;
   
-  const std::string nspCoupling = getMethodData().getNamespace();
+  const std::string nspCoupling = dtt->groupName;
   Group& group = PE::GetPE().getGroup(nspCoupling);
   const CFuint nbRanks = group.globalRanks.size();
+  
+  CFLog(VERBOSE, "StdConcurrentDataTransfer::fillSendCountsScatter() => " 
+	<< "in scatter namespace [" <<  nspCoupling << "] => nbRanks = "
+	<< nbRanks << "\n");
   
   DataHandle<T, GLOBAL> dofs = ds->getGlobalData<T>(dtt->dofsName);
   const CFuint minSize = dtt->arraySize/nbRanks;

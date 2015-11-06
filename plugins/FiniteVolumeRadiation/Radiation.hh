@@ -151,6 +151,11 @@ private: //function
     return m_normal[XX]*m_dirs(d,XX) + m_normal[YY]*m_dirs(d,YY) + m_normal[ZZ]*m_dirs(d,ZZ);
   }	  
   
+  /// compute the radiative heat flux
+  /// @param ib  ID of the bin
+  /// @param d   ID of the direction
+  void computeQ(const CFuint ib, const CFuint d);
+  
 private: //data
 
   /// storage of states
@@ -343,6 +348,9 @@ private: //data
   
   /// ID of the thread/CPU within the parallel algorithm
   CFuint m_threadID;
+  
+  /// flag telling to run a loop over bins and then over directions (or the opposite)
+  bool m_loopOverBins;
   
   /// flag telling to run without solving anything, just for testing
   bool m_emptyRun;

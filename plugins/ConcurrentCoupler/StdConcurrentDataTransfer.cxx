@@ -176,6 +176,7 @@ void StdConcurrentDataTransfer::execute()
   for (CFuint i = 0; i < _socketsSendRecv.size(); ++i) {
     if (getMethodData().isActiveRank(_isTransferRank[i])) {
       SafePtr<DataToTrasfer> dtt = _socketName2data.find(_socketsSendRecv[i]); 
+      cf_assert(dtt.isNotNull());
       const CFuint nbRanksSend = dtt->nbRanksSend;
       const CFuint nbRanksRecv = dtt->nbRanksRecv;
       
@@ -183,13 +184,22 @@ void StdConcurrentDataTransfer::execute()
 	gatherData(i);
       }
       else if (nbRanksSend == 1 && nbRanksRecv > 1) {
+	// CFLog(VERBOSE, "StdConcurrentDataTransfer::execute() => before scatterData()\n");
 	scatterData(i);
+	// CFLog(VERBOSE, "StdConcurrentDataTransfer::execute() => after scatterData()\n");
       }
       else if (nbRanksSend > 1 && nbRanksRecv > 1) {
 	throw NotImplementedException
 	  (FromHere(),"StdConcurrentDataTransfer::execute() => (nbRanksSend > 1 && nbRanksRecv > 1)");
       }
     }
+    
+    // every process involved in the enclosing couping method needs to wait and synchronize 
+    // after each communication operation is accomplished, since the next operation might 
+    // involve some of the same ranks 
+    CFLog(VERBOSE, "StdConcurrentDataTransfer::execute() => before barrier\n");
+    MPI_Barrier(PE::GetPE().getGroup(getMethodData().getNamespace()).comm);
+    CFLog(VERBOSE, "StdConcurrentDataTransfer::execute() => after barrier\n");
   }
   
   CFLog(VERBOSE, "StdConcurrentDataTransfer::execute() => end\n");
@@ -310,6 +320,7 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx)
 { 
   // AL: have to involve only the ranks involved in this scattering
   SafePtr<DataToTrasfer> dtt = _socketName2data.find(_socketsSendRecv[idx]); 
+  cf_assert(dtt.isNotNull());
   
   const string nspSend = dtt->nspSend;
   const string nspRecv = dtt->nspRecv;
@@ -318,57 +329,79 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx)
   const string nspCoupling = dtt->groupName;
   
   CFLog(INFO, "StdConcurrentDataTransfer::scatterData() from namespace[" << nspSend 
-	<< "] to namespace [" << nspRecv << "] => start\n");
+	<< "] to namespace [" << nspRecv << "] within namespace [" << nspCoupling << "] => start\n");
   
   Group& group = PE::GetPE().getGroup(nspCoupling);
   const int rank  = PE::GetPE().GetRank("Default"); // rank in MPI_COMM_WORLD
   const int grank = PE::GetPE().GetRank(nspCoupling); // rank in coupling group
   const CFuint nbRanks = group.globalRanks.size();
-    
+  cf_assert(nbRanks > 0);
+  
   // build mapping from global to local DOF IDs on the receiving side
+  bool foundRank = false;
+  
   if (PE::GetPE().isRankInGroup(rank, nspRecv)) {  
+    CFLog(VERBOSE, "StdConcurrentDataTransfer::scatterData() nspRecv                = " << nspRecv << "\n");
+    CFLog(VERBOSE, "StdConcurrentDataTransfer::scatterData() global2localIDs.size() = " << _global2localIDs.size() << "\n");
+    
     if (_global2localIDs.size() == 0) {
       SafePtr<DataStorage> ds = getMethodData().getDataStorage(nspRecv);
+      cf_assert(ds.isNotNull());
+      cf_assert(idx < _socketsConnType.size());
       if (_socketsConnType[idx] == "State") {
+	CFLog(VERBOSE, "StdConcurrentDataTransfer::scatterData() State\n");
 	fillMapGlobalToLocal<State*>(dtt, ds, _global2localIDs);
       }
       
       if (_socketsConnType[idx] == "Node") {
+	CFLog(VERBOSE, "StdConcurrentDataTransfer::scatterData() Node\n");
 	fillMapGlobalToLocal<Node*>(dtt, ds, _global2localIDs);
       }
     }
+    foundRank = true;
   }
   
-  vector<CFreal> sendbuf;
-  vector<CFuint> sendIDs;
   vector<int> sendcounts(nbRanks, 0);
   vector<int> sendIDcounts(nbRanks, 0);
+  cf_assert(sendcounts.size() > 0);
+  cf_assert(sendIDcounts.size() > 0);
   
   // this scatters contributions from one rank in the "send" namespace 
   // to all ranks belonging to the "recv" namespace
   if (PE::GetPE().isRankInGroup(rank, nspSend)) {  
+    CFLog(VERBOSE, "StdConcurrentDataTransfer::scatterData() nspSend                = " << nspSend << "\n");
+    CFLog(VERBOSE, "StdConcurrentDataTransfer::scatterData() global2localIDs.size() = " << _global2localIDs.size() << "\n");
+    
     SafePtr<DataStorage> ds = getMethodData().getDataStorage(nspSend);
+    cf_assert(ds.isNotNull());
+    cf_assert(idx < _socketsConnType.size());
     if (_socketsConnType[idx] == "State") {
+      CFLog(VERBOSE, "StdConcurrentDataTransfer::scatterData() State\n");
       fillSendCountsScatter<State*>(dtt, ds, sendcounts, sendIDcounts);
     }
     if (_socketsConnType[idx] == "Node")  {
+      CFLog(VERBOSE, "StdConcurrentDataTransfer::scatterData() Node\n");
       fillSendCountsScatter<Node*>(dtt, ds, sendcounts, sendIDcounts);
     }
+    foundRank = true;
   }
+  cf_assert(foundRank);
   
   int root = getRootProcess(nspSend, nspCoupling);
+  cf_assert(root >=0 );
+  CFLog(VERBOSE, "StdConcurrentDataTransfer::scatterData() root = " << root << "\n");
   
   MPIStruct msSizes;
   int ln[2];
   ln[0] = ln[1] = nbRanks;
-  MPIStructDef::buildMPIStruct(&sendcounts[0], &sendIDcounts[0], ln, msSizes);
+  MPIStructDef::buildMPIStruct(&sendcounts[0],&sendIDcounts[0],ln,msSizes);
   
   MPIError::getInstance().check
     ("MPI_Bcast", "StdConcurrentDataTransfer::scatterData()", 
      MPI_Bcast(msSizes.start, 1, msSizes.type, root, group.comm));
-    
-  sendbuf.resize(sendcounts[nbRanks-1]);
-  sendIDs.resize(sendIDcounts[nbRanks-1]);
+  
+  vector<CFreal> sendbuf(sendcounts[nbRanks-1]);
+  vector<CFuint> sendIDs(sendIDcounts[nbRanks-1]);
   cf_assert(sendbuf.size() > 0);
   cf_assert(sendIDs.size() > 0);
   
@@ -384,31 +417,37 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx)
       CFreal *const dataToSend = dtt->array;
       cf_assert(dataToSend != CFNULL);
       for (CFuint s = 0; s < sendSize; ++s, ++counter) {
+	cf_assert(s < sendbuf.size());
 	sendbuf[s] = dataToSend[counter];
       }
       
       SafePtr<DataStorage> ds = getMethodData().getDataStorage(nspSend);
+      cf_assert(ds.isNotNull());
       if (_socketsConnType[idx] == "State") {
-	const string statesStr = nspSend + "_states";
-	DataHandle<State*, GLOBAL> states = ds->getGlobalData<State*>(statesStr);
+	const string sStr = nspSend + "_states";
+	DataHandle<State*,GLOBAL> states = ds->getGlobalData<State*>(sStr);
 	for (CFuint s = 0; s < sendIDSize; ++s, ++countID) {
+	  cf_assert(countID < states.size());
+	  cf_assert(s < sendIDs.size());
 	  sendIDs[s] = states[countID]->getGlobalID(); 
 	}
       }
       if (_socketsConnType[idx] == "Node")  {
-	const string nodesStr = nspSend + "_nodes";
-	DataHandle<Node*, GLOBAL> nodes = ds->getGlobalData<Node*>(nodesStr);
+	const string nStr = nspSend + "_nodes";
+	DataHandle<Node*, GLOBAL> nodes = ds->getGlobalData<Node*>(nStr);
 	for (CFuint s = 0; s < sendIDSize; ++s, ++countID) {
+	  cf_assert(countID < nodes.size());
+	  cf_assert(s < sendIDs.size());
 	  sendIDs[s] = nodes[countID]->getGlobalID(); 
 	}
       }
     }
     
     MPIStruct ms;
-    int ln[2];
-    ln[0] = sendcounts[r];
-    ln[1] = sendIDcounts[r];
-    MPIStructDef::buildMPIStruct<CFreal, CFuint>(&sendbuf[0], &sendIDs[0], ln, ms);
+    int lnn[2];
+    lnn[0] = sendcounts[r];
+    lnn[1] = sendIDcounts[r];
+    MPIStructDef::buildMPIStruct<CFreal, CFuint>(&sendbuf[0], &sendIDs[0], lnn, ms);
     
     MPIError::getInstance().check
       ("MPI_Bcast", "StdConcurrentDataTransfer::scatterData()", 
@@ -445,7 +484,7 @@ void StdConcurrentDataTransfer::scatterData(const CFuint idx)
   }
   
   CFLog(INFO, "StdConcurrentDataTransfer::scatterData() from namespace[" << nspSend 
-	<< "] to namespace [" << nspRecv << "] => end\n");
+	<< "] to namespace [" << nspRecv << "] within namespace [" << nspCoupling << "] => end\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -459,7 +498,11 @@ int StdConcurrentDataTransfer::getRootProcess(const std::string& nsp,
   int root = -1;
   int sendroot = -1; 
   if (PE::GetPE().isRankInGroup(rank, nsp)) {
+    CFLog(VERBOSE, "StdConcurrentDataTransfer::getRootProcess() => global " 
+	  << "rank = " << rank << " found in namespace [" << nsp << "]\n");
     sendroot = PE::GetPE().GetRank(nspCoupling);
+    CFLog(VERBOSE, "StdConcurrentDataTransfer::getRootProcess() => group " 
+	  << "rank = " << sendroot << " in namespace [" << nspCoupling << "]\n");
   }
   
   MPIError::getInstance().check
