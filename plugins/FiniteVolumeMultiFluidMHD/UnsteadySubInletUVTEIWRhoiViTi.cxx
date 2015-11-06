@@ -166,12 +166,12 @@ void UnsteadySubInletUVTEIWRhoiViTi::setGhostState(GeometricEntity *const face)
   const CFreal BxBound = _uvT[3*nbSpecies];
   const CFreal ByBound = _uvT[3*nbSpecies + 1];
   const CFreal EzBound = _uvT[3*nbSpecies + 2];
-  (*ghostState)[0] = 2*BxBound - (*innerState)[0] /*+ 2*bn*nx*/;	//Bx
+  (*ghostState)[0] = (*innerState)[0] /*+ 2*bn*nx*/;	//Bx is harcoded to be extrapolated from inside
   (*ghostState)[1] = 2*ByBound - (*innerState)[1] /*+ 2*bn*ny*/;	//By
   (*ghostState)[2] = (*innerState)[2] /*+ 2*bn*nz*/;	//Bz
   (*ghostState)[3] = (*innerState)[3] /*- 2*en*nx*/;	//Ex
   (*ghostState)[4] = (*innerState)[4] /*- 2*en*ny*/;	//Ey
-  (*ghostState)[5] = 2*EzBound - (*innerState)[5] /*- 2*en*nz*/;	//Ez
+  (*ghostState)[5] = (*innerState)[5] /*- 2*en*nz*/;	//Ez is harcoded to be extrapolated from inside
   (*ghostState)[6] = -(*innerState)[6];			//Psi
   (*ghostState)[7] = (*innerState)[7];			//Phi
 

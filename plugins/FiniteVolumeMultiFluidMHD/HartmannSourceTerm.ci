@@ -112,6 +112,7 @@ void HartmannSourceTerm<UPDATEVAR>::computeSource
 //   RealVector& refData = _varSet->getModel()->getReferencePhysicalData();
    
   const CFuint firstVelocity = term->getFirstScalarVar(1); 
+  const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
  
   State *const currState = (*states)[0]; 
 
@@ -127,40 +128,64 @@ void HartmannSourceTerm<UPDATEVAR>::computeSource
  
 //   std::cout <<"HartmannSourceTerm::computeSource. _NonInducedEMField = "<< _NonInducedEMField <<"\n";
   
+  if(!is2DHalf) {
+    //Set the velocities
+    const CFreal u = _physicalData[firstVelocity];
+    const CFreal v = _physicalData[firstVelocity + 1];
+    const CFreal omega = _electricalConductivity;
+    //const CFreal ovEpsilon = 1./term->getPermittivity(); OLD way of getting the permittivity
+    const CFreal c_e = term->getLightSpeed();
+    const CFreal mu0 = term->getPermeability();
+    const CFreal ovEpsilon = c_e*c_e*mu0;
   
-  //Set the velocities
-  const CFreal u = _physicalData[firstVelocity];
-  const CFreal v = _physicalData[firstVelocity + 1]; 
-//   std::cout <<"HartmannSourceTerm::computeSource. u = "<< u <<"\n";
-//   std::cout <<"HartmannSourceTerm::computeSource. v = "<< v <<"\n";  
-  
-  const CFreal omega = _electricalConductivity;
-  //const CFreal ovEpsilon = 1./term->getPermittivity(); OLD way of getting the permittivity
-  const CFreal c_e = term->getLightSpeed();
-  const CFreal mu0 = term->getPermeability();
-  const CFreal ovEpsilon = c_e*c_e*mu0;
-  
-//   std::cout <<"HartmannSourceTerm::computeSource. epsilon = "<< epsilon <<"\n";
-  
-  const CFreal Jx = omega*(ExTotal + v*BzTotal);
-  const CFreal Jy = omega*(EyTotal - u*BzTotal);  
-  const CFreal Jz = omega*(EzTotal + u*ByTotal - v*BxTotal);  
+    const CFreal Jx = omega*(ExTotal + v*BzTotal);
+    const CFreal Jy = omega*(EyTotal - u*BzTotal);
+    const CFreal Jz = omega*(EzTotal + u*ByTotal - v*BxTotal);
     
-  source[0] = 0;			//x-Faraday's Law
-  source[1] = 0;			//y-Faraday's Law
-  source[2] = 0;			//z-Faraday's Law
-  source[3] = - ovEpsilon*Jx;			//x-Ampere's Law
-  source[4] = - ovEpsilon*Jy;			//y-Ampere's Law
-  source[5] = - ovEpsilon*Jz;  		//z-Ampere's Law
-  source[6] = 0;			//y-Ampere's Law
-  source[7] = 0;  		//z-Ampere's Law  
+    source[0] = 0;			//x-Faraday's Law
+    source[1] = 0;			//y-Faraday's Law
+    source[2] = 0;			//z-Faraday's Law
+    source[3] = - ovEpsilon*Jx;			//x-Ampere's Law
+    source[4] = - ovEpsilon*Jy;			//y-Ampere's Law
+    source[5] = - ovEpsilon*Jz;  		//z-Ampere's Law
+    source[6] = 0;			//y-Ampere's Law
+    source[7] = 0;  		//z-Ampere's Law
   
-  source[8] = 0;		//Continuity equation
-  source[9] = Jy*BzTotal -Jz*ByTotal;			//x-momentum equation  
-  source[10] = Jz*BxTotal -Jx*BzTotal;			//y-momentum equation
-  source[11] = Jx*ExTotal + Jy*EyTotal + Jz*EzTotal;	//Total Energy
-  // Total Energy old version (Jy*BxTotal -Jz*ByTotal)*u + (Jy*BxTotal -Jz*ByTotal)*v + (1/omega)*(Jx*Jx + Jy*Jy);			//Total Energy
-  
+    source[8] = 0;		//Continuity equation
+    source[9] = Jy*BzTotal -Jz*ByTotal;			//x-momentum equation
+    source[10] = Jz*BxTotal -Jx*BzTotal;			//y-momentum equation
+    source[11] = Jx*ExTotal + Jy*EyTotal + Jz*EzTotal;	//Total Energy
+    // Total Energy old version (Jy*BxTotal -Jz*ByTotal)*u + (Jy*BxTotal -Jz*ByTotal)*v + (1/omega)*(Jx*Jx + Jy*Jy);			//Total Energy
+  }
+  if(is2DHalf) {
+    //Set the velocities
+    const CFreal u = _physicalData[firstVelocity];
+    const CFreal v = _physicalData[firstVelocity + 1];
+    const CFreal w = _physicalData[firstVelocity + 2];
+    const CFreal omega = _electricalConductivity;
+    //const CFreal ovEpsilon = 1./term->getPermittivity(); OLD way of getting the permittivity
+    const CFreal c_e = term->getLightSpeed();
+    const CFreal mu0 = term->getPermeability();
+    const CFreal ovEpsilon = c_e*c_e*mu0;
+    const CFreal Jx = omega*(ExTotal + v*BzTotal - w*ByTotal);
+    const CFreal Jy = omega*(EyTotal + w*BxTotal - u*BzTotal);
+    const CFreal Jz = omega*(EzTotal + u*ByTotal - v*BxTotal);
+
+    source[0] = 0;                      //x-Faraday's Law
+    source[1] = 0;                      //y-Faraday's Law
+    source[2] = 0;                      //z-Faraday's Law
+    source[3] = - ovEpsilon*Jx;			//x-Ampere's Law
+    source[4] = - ovEpsilon*Jy;			//y-Ampere's Law
+    source[5] = - ovEpsilon*Jz;  		//z-Ampere's Law
+    source[6] = 0;                      //y-Ampere's Law
+    source[7] = 0;                      //z-Ampere's Law
+
+    source[8] = 0;                                      //Continuity equation
+    source[9] = Jy*BzTotal -Jz*ByTotal;                 //x-momentum equation
+    source[10] = Jz*BxTotal -Jx*BzTotal;                //y-momentum equation
+    source[11] = Jx*ByTotal -Jy*BxTotal;                //z-momentum equation
+    source[12] = Jx*ExTotal + Jy*EyTotal + Jz*EzTotal;	//Total Energy
+  }
   source *= volumes[elemID];
   
   CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm BX = " << source[0] <<"\n");
@@ -174,27 +199,13 @@ void HartmannSourceTerm<UPDATEVAR>::computeSource
   CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm mass = " << source[8] <<"\n");  
   CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm X-mom = " << source[9] <<"\n");  
   CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm Y-mom = " << source[10] <<"\n");
-  CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm Energy = " << source[11] <<"\n");
-  
-  
-//   if (v > 1) {
-//     cout << "HartmannSourceTerm::computeSource --> sourceTerm X-mom = " << source[9] <<"\n";  
-//     cout << "HartmannSourceTerm::computeSource --> sourceTerm Y-mom = " << source[10] <<"\n";  
-//   }
-//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm BX     = " << source[0] <<"\n";
-//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm BY     = " << source[1] <<"\n";
-//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm BZ     = " << source[2] <<"\n"; 
-//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm EX     = " << source[3] <<"\n"; 
-//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm EY     = " << source[4] <<"\n";
-//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm EZ     = " << source[5] <<"\n";
-//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm PSI    = " << source[6] <<"\n";
-//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm PHI    = " << source[7] <<"\n";  
-//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm mass   = " << source[8]  <<"\n";  
-//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm X-mom  = " << source[9]  <<"\n";  
-//      cout <<"HartmannSourceTerm::computeSource --> sourceTerm Y-mom       = " << source[10] <<"\n";
-
-//   cout <<"HartmannSourceTerm::computeSource --> sourceTerm Energy = " << source[11] <<"\n";  
- 
+  if (!is2DHalf) {
+    CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm Energy = " << source[11] <<"\n");
+  }
+  if (is2DHalf) {
+    CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm Z-mom = " << source[11] <<"\n");
+    CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> sourceTerm Energy = " << source[12] <<"\n");
+  }
   CFLog(VERBOSE,"HartmannSourceTerm::computeSource --> NonInduced Field = " << _NonInducedEMField << "\n");
 
 }
