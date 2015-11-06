@@ -1,7 +1,7 @@
 # COOLFluiD Startfile
 # Comments begin with "#"
 # Case Testing the chromospheric wave propagation
-### Residual = -3.22811
+### Residual = -3.37651
 
 ###############################################################################
 # Assertion For Debugging
@@ -77,14 +77,14 @@ Simulator.SubSystem.Tecplot.SaveRate    = 500 #10000 #1250
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = y0 y1 PeriodicX
 Simulator.SubSystem.Tecplot.AppendTime = true #false
 #Simulator.SubSystem.Tecplot.AppendIter = true
-#Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
+Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
 
 # Extra Values from Data Processing
 
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = gradPi gradPn nuIon nuRec nu_in Jx Jy Jz Jtot jxB_x jxB_y jxB_z jxB Resistivity #divB  
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = gradPi gradPn nuIon nuRec nu_in Jx Jy Jz Jtot jxB_x jxB_y jxB_z jxB Resistivity #divB 
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
+#Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
 
 
 ###############################################################################
@@ -295,7 +295,7 @@ Simulator.SubSystem.CellCenterFVM.BcNames = Jet1 Jet2 Jet3
 
 # Bottom Condition 
 Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = y0
-Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0
+Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 1 0 1 1 1 1 1 1 1 1 0 0 0 0 0 0
 Simulator.SubSystem.CellCenterFVM.Jet1.Vars = x y t
 #Simulator.SubSystem.CellCenterFVM.Jet1.Def = 0. 0. 500.*cos(2*3.14159265359*t/30e-4)*exp(-((x-1e6)^2)/(2*(40000^2)))  0. 6430.933 6430.933 
 Simulator.SubSystem.CellCenterFVM.Jet1.Def = 0. 0. 0. 500.*sin(2*3.14159265359*t/30)*exp(-((x-2e6)^2)/(2*(40000^2))) 6430.933 6430.933 0. 1.8e-3*exp(-((x-2e6)^2)/(2*(40000^2))) 0. 
