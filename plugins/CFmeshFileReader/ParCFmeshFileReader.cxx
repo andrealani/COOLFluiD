@@ -2559,13 +2559,14 @@ void ParCFmeshFileReader::setElements(ElementDataArray<0>& localElem)
   m_localElemIDs.resize(nbLocalElems);
   ne = 0;
   boost::progress_display* progressBar = NULL;
-  if (m_myRank == 0) {
+  const CFuint globalRank = PE::GetPE().GetRank("Default");
+  if (globalRank == 0) {
     progressBar = new boost::progress_display( localElem.getNbElements() );
   }
   
   for (it = localElem.begin(); it != localElem.end(); ++it, ++ne)
   {
-    if (m_myRank == 0) { 
+    if (globalRank == 0) {
       ++(*progressBar);
     }
     
