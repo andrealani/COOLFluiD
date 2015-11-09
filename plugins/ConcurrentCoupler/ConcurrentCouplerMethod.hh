@@ -228,6 +228,9 @@ private: // member data
   ///Rate at which the data should be read/written for each of the interfaces
   std::vector<CFuint> m_transferRates;
   
+  ///Flag telling if to skip the first coupling iteration
+  bool m_skipFirstCouplingIter;
+  
 }; // end of class ConcurrentCouplerMethod
 
 //////////////////////////////////////////////////////////////////////////////

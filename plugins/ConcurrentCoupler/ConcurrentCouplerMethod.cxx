@@ -55,6 +55,7 @@ void ConcurrentCouplerMethod::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< vector<string> >("CoupledNameSpaces","Names of the namespaces of the other subsystems.");
   
   options.addConfigOption< vector<CFuint> >("TransferRates","Transfer data every X iterations for each namespace.");
+  options.addConfigOption<bool>("SkipFirstCouplingIter","Skip the coupling during the first iteration.");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -90,7 +91,10 @@ ConcurrentCouplerMethod::ConcurrentCouplerMethod(const string& name) :
   setParameter("CoupledNameSpaces",&m_coupledNamespacesStr);
   
   m_transferRates = vector<CFuint>();
-  setParameter("TransferRates",&m_transferRates);
+  setParameter("TransferRates",&m_transferRates); 
+  
+  m_skipFirstCouplingIter = false;
+  setParameter("SkipFirstCouplingIter",&m_skipFirstCouplingIter);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -148,7 +152,7 @@ void ConcurrentCouplerMethod::configure ( Config::ConfigArgs& args )
   if (m_interfacesWriteStr.size() > 0) {
     m_interfacesWrite.resize(m_interfacesWriteStr.size());
   }
-  
+    
   if (m_transferRates.size() != m_coupledNamespacesStr.size()) {
     if (m_transferRates.size() == 0) {
       CFLog(WARN, "ConcurrentCouplerMethod::configure() => m_transferRates=1 for all namespaces\n");
@@ -656,6 +660,7 @@ bool ConcurrentCouplerMethod::isCouplingIter(pair<ifstream*, ofstream*>& file,
       // this is =0 if the namespace is locally not active
       cf_assert(m_transferRates[i] > 0);
       const CFuint nbIter = subSysStatus->getNbIter();
+      if (nbIter == 0 && m_skipFirstCouplingIter) break;
       if (nbIter%m_transferRates[i] == 0) {
 	if (m_ioRoot) {
 	  const long offset = tio*nspSize*sizeof(char);
