@@ -61,6 +61,7 @@ PlatoLibrary::PlatoLibrary(const std::string& name)
     _hi(),
     _qi(),
     _rhoi(),
+    _rhoe(),
     _tvec(),
     _lambdavec(),
     _prodterm(),
@@ -158,6 +159,7 @@ void PlatoLibrary::setLibrarySequentially()
   _Ri.resize(_NS);
   _qi.resize(_NS);
   _rhoi.resize(_NS);
+  _rhoe.resize(_nTemp);
   _Di.resize(_NS);
   _Dij.resize((get_nb_comp())*((get_nb_comp()) + 1)/2);
   _dfi.resize(_NS);
@@ -203,6 +205,7 @@ void PlatoLibrary::unsetup()
     _Ri.resize(0);
     _qi.resize(0);
     _rhoi.resize(0);
+    _rhoe.resize(0);
     _Di.resize(0);
     _Dij.resize(0);
     _dfi.resize(0);
@@ -494,14 +497,50 @@ void PlatoLibrary::setDensityEnthalpyEnergy(CFdouble& temp, CFdouble& pressure, 
 }
 
 //////////////////////////////////////////////////////////////////////////////
+/*!
+ * This function returns the gas density, specific enthalpy and energy, and the specific 
+ * non-equilibrium energies given temperature and pressure (the mole fractions are stored in vector "_Xi" which 
+ * has to be filled before calling this function)
+ */
 void PlatoLibrary::setDensityEnthalpyEnergy(CFdouble& temp,
 					    RealVector& tVec,
 					    CFdouble& pressure,
 					    RealVector& dhe,
 					    bool storeExtraData)
 {
-  cout << "PLATO interface STOP:: setDensityEnthalpyEnergy\n";
-  throw NotImplementedException(FromHere(),"PlatoLibrary::setDensityEnthalpyEnergy()");
+  /*Heavy-particle and free-electron temperatures*/
+  CFdouble Th = temp;
+  CFdouble Te = get_el_temp(temp, &tVec[0]);
+ 
+  /*Electron mole fraction*/
+  CFdouble Xe = _Xi[0];
+
+  /*Compute number  and mass densities*/
+  CFdouble nd  = get_nb_density(&pressure, &Th, &Te, &Xe);
+  CFdouble rho = get_density(&nd, &_Xi[0]);
+
+  /*Set temperature vector*/
+  _tvec[0] = Th;
+  for (CFint i = 1; i < _nTemp; ++i) {
+    _tvec[i] = tVec[i - 1]; 
+  }
+
+  /*Compute energy densities. By passing the mass fractions we obtain quantities per unit mass*/
+  get_energy_densities(&_Yi[0], &_tvec[0], &_rhoe[0]);
+  CFdouble et = _rhoe[0];
+
+  /*Density, mixture enthalpy and specific energy, and non-equilibrium energies*/
+  dhe[0] = rho;
+  dhe[1] = et + pressure/rho;
+  dhe[2] = et;
+  for (CFint i = 1; i < _nTemp; ++i) {
+    dhe[2 + i] = _rhoe[i];
+  }
+
+  if (storeExtraData) {
+     cout << "Extra data not available:: PlatoLibrary::setDensityEnthalpyEnergy()\n";
+     throw NotImplementedException(FromHere(),"PlatoLibrary::setDensityEnthalpyEnergy()");
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////      

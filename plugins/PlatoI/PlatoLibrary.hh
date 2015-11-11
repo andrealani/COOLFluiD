@@ -555,6 +555,9 @@ protected:
   /*Partial densities*/
   RealVector _rhoi;
 
+  /*Energy densities*/
+  RealVector _rhoe;
+
   /*Average diffusion coefficients*/
   RealVector _Di;
 
