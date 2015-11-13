@@ -37,5 +37,18 @@ LIST ( APPEND ArcJet_cflibs Common MathTools Framework NavierStokes LTE )
 
 CF_ADD_PLUGIN_LIBRARY ( ArcJet )
 
+LIST ( APPEND ArcJetSALTE_files
+ArcJetSALTE.hh
+ArcJetSALTEConvVarSet.cxx
+ArcJetSALTEDiffVarSet.cxx
+ArcJetSALTEPhysicalModel.cxx
+ArcJetSALTEPvtToCons.cxx
+)
+
+LIST ( APPEND ArcJetSALTE_requires_mods NavierStokes LTE ArcJet SA SALTE )
+LIST ( APPEND ArcJetSALTE_cflibs Common MathTools Framework NavierStokes LTE SA SALTE )
+
+CF_ADD_PLUGIN_LIBRARY ( ArcJetSALTE )
+
 CF_WARN_ORPHAN_FILES()
 #ADD_SUBDIRECTORY ( testcases )

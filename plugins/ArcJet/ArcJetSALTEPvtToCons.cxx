@@ -1,9 +1,8 @@
-#include "ArcJet/ArcJet.hh"
+#include "ArcJet/ArcJetSALTE.hh"
 #include "ArcJet/ArcJetLTEPvtToCons.hh"
-#include "Framework/PhysicalModel.hh"
 #include "Environment/ObjectProvider.hh"
-#include "Framework/PhysicalChemicalLibrary.hh"
 #include "LTE/EulerPvtLTEToCons.hh"
+#include "SA/EulerSAPvtToCons.hh"
 
 //////////////////////////////////////////////////////////////////////
 
@@ -12,6 +11,7 @@ using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::MathTools;
 using namespace COOLFluiD::Physics::NavierStokes;
 using namespace COOLFluiD::Physics::LTE;
+using namespace COOLFluiD::Physics::SA;
 
 //////////////////////////////////////////////////////////////////////
 
@@ -23,12 +23,14 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////
 
-// reactive gas in LTE 
-Environment::ObjectProvider<ArcJetLTEPvtToCons<EulerPvtLTEToCons>, VarSetTransformer, ArcJetModule,1>
-arcJetLTE2DPuvtToConsProvider("ArcJetLTE2DPuvtToCons");
+// reactive gas in LTE with SA
+Environment::ObjectProvider<ArcJetLTEPvtToCons<EulerSAPvtToCons<EulerPvtLTEToCons> >, 
+			    VarSetTransformer, ArcJetSALTEModule,1>
+arcJetSALTE2DPuvtToConsProvider("ArcJetSALTE2DPuvtToCons");
 
-Environment::ObjectProvider<ArcJetLTEPvtToCons<EulerPvtLTEToCons>, VarSetTransformer, ArcJetModule,1>
-arcJetLTE3DPvtToConsProvider("ArcJetLTE3DPvtToCons");
+Environment::ObjectProvider<ArcJetLTEPvtToCons<EulerSAPvtToCons<EulerPvtLTEToCons> >, 
+			    VarSetTransformer, ArcJetSALTEModule,1>
+arcJetSALTE3DPvtToConsProvider("ArcJetSALTE3DPvtToCons");
 
 //////////////////////////////////////////////////////////////////////
 

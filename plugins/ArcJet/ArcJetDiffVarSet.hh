@@ -14,10 +14,8 @@ namespace COOLFluiD {
   }
 
   namespace Physics {
-    
     namespace NavierStokes {
       class EulerTerm;
-      class NSTerm;
     }
     
     namespace ArcJet {
@@ -90,7 +88,7 @@ private:
   Common::SafePtr<NavierStokes::EulerTerm> m_eulerModelLTE;
   
   /// diffusive model
-  Common::SafePtr<ArcJetTerm<NavierStokes::NSTerm> > m_diffModel;
+  Common::SafePtr<ArcJetTerm<typename BASEVS::DTERM> > m_diffModel;
   
   /// frozen value of sigma
   CFreal m_sigmaCoeff;

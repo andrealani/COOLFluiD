@@ -27,7 +27,7 @@ namespace COOLFluiD {
    */
 template <typename BASE, int SGROUP>
 class NavierStokesSAVarSet : public NavierStokes::NavierStokesTurbVarSet<BASE, SGROUP> {
-
+  
 public: // classes
   
   typedef Framework::MultiScalarTerm<NavierStokes::EulerTerm> EulerSATerm;

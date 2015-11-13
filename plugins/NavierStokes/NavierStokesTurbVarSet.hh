@@ -29,7 +29,9 @@ namespace COOLFluiD {
 template <typename BASE, int SGROUP>
 class NavierStokesTurbVarSet : public BASE {
 public: // classes
-
+  
+  typedef NSTurbTerm DTERM; 
+  
   /**
    * Constructor
    * @see NavierStokes

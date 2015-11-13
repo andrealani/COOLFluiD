@@ -77,7 +77,7 @@ void Venktn2D::configure ( Config::ConfigArgs& args )
 void Venktn2D::setup()
 {
   if (_length <= 0.) {
-    CFout << "WARNING: Venktn2D::configure() => using default reference length\n";
+    CFLog(VERBOSE, "WARNING: Venktn2D::configure() => using default reference length\n");
     _length = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
   }
   
@@ -86,14 +86,14 @@ void Venktn2D::setup()
     PhysicalModelStack::getActive()->getImplementor()->getRefStateValues();
   
   if (_magnitudeValues.size() < nbEqs) {
-    CFout << "WARNING: Venktn2D::configure() => using default reference state values\n";
+    CFLog(VERBOSE, "WARNING: Venktn2D::configure() => using default reference state values\n");
     _magnitudeValues.resize(nbEqs);
     for (CFuint i = 0; i< nbEqs; ++i) {
       _magnitudeValues[i] = refValues[i]; 
     }
   }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void Venktn2D::limit(const vector<vector<Node*> >& coord,

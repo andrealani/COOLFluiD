@@ -44,9 +44,12 @@ private:
 
   /// a string holding the function definition
   std::string _function;
-
+  
+  /// ID of the subsystem to consider for the CFL calculation
+  CFuint _subSystemID;
+  
 }; // end of class DetermineCFL
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace Framework

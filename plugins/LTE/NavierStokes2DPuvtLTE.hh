@@ -30,7 +30,7 @@ class NavierStokes2DPuvtLTE : public NavierStokes::NavierStokes2DVarSet {
 public: // classes
 
   typedef CTERM CONVTERM;
-
+  
   /**
    * Constructor
    * @see NavierStokes2D

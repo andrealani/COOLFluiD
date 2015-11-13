@@ -10,6 +10,8 @@
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/Framework.hh"
 #include "Framework/MeshData.hh"
+#include "Framework/EquationSubSysDescriptor.hh"
+#include "Framework/PhysicalModel.hh"
 #include "Common/BadValueException.hh"
 #include "MathTools/MathConsts.hh"
 
@@ -35,18 +37,22 @@ determineCFLProvider("Determine");
 
 void DetermineCFL::defineConfigOptions(Config::OptionList& options)
 {
-   options.addConfigOption< std::string >("Def","Definition of the Function.");
+  options.addConfigOption< std::string >("Def","Definition of the Function.");
+  options.addConfigOption< CFuint >("SubSystemID","ID of the subsystem to consider for the CFL calculation.");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 DetermineCFL::DetermineCFL(const std::string& name) :
   ComputeCFL(name)
 {
-   addConfigOptionsTo(this);
-
-   _function = "1.0";
-   setParameter("Def",&_function);
+  addConfigOptionsTo(this);
+  
+  _function = "1.0";
+  setParameter("Def",&_function);
+  
+  _subSystemID = 0;
+  setParameter("SubSystemID",&_subSystemID);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -78,12 +84,21 @@ void DetermineCFL::operator() (const ConvergenceStatus& m_cstatus)
   CFreal maxCFL = 0.;
   CFreal minCFL = MathTools::MathConsts::CFrealMax();
   CFreal avgCFL = 0.;
-
-  const CFuint nbStates = updateCoeff.size();
+  
+  const EquationSubSysDescriptor& eqSSD = PhysicalModelStack::getActive()->
+    getEquationSubSysDescriptor();
+  
+  const CFuint nbLSS = eqSSD.getTotalNbEqSS();
+  const CFuint iLSS = _subSystemID;
+  CFLog(VERBOSE, "DetermineCFL::operator() => nbLSS = "<< nbLSS << ", iLSS = "<< iLSS << "\n");
+  
+  const CFuint nbStates = volumes.size();
   for(CFuint iState = 0; iState < nbStates; iState++)
   {
-    const CFreal stateCFL = updateCoeff[iState]*timestep/volumes[iState];
-
+    const CFuint idx = iState*nbLSS + iLSS;
+    cf_assert(idx < updateCoeff.size());
+    const CFreal stateCFL = updateCoeff[idx]*timestep/volumes[iState];
+    
     maxCFL = max(stateCFL, maxCFL);
     minCFL = min(stateCFL, minCFL);
     avgCFL += stateCFL;

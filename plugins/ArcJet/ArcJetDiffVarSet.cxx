@@ -26,7 +26,7 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
       
-Environment::ObjectProvider<ArcJetDiffVarSet<NavierStokes2DPuvtLTE<MultiScalarTerm<EulerTerm> > >, 
+Environment::ObjectProvider<ArcJetDiffVarSet< NavierStokes2DPuvtLTE<MultiScalarTerm<EulerTerm> > >, 
 			    DiffusiveVarSet, 
 			    ArcJetModule, 2> 
 arcJetLTE2DPuvtDiffProvider("ArcJetLTE2DPuvt");

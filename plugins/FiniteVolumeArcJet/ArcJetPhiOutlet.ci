@@ -130,7 +130,13 @@ void ArcJetPhiOutlet<BASE>::setGhostState
          
     // AL: this is not general, change for NEQ
     const CFuint pID = 0;
-    const CFuint TID = totalNbEqs - 2;
+    CFuint TID = totalNbEqs - 2;
+    // case with RANS/SA
+    const CFuint dim = PhysicalModelStack::getActive()->getDim();
+    if ((totalNbEqs == 7 && dim == DIM_3D) || (totalNbEqs == 6 && dim == DIM_2D)) {
+      TID = totalNbEqs - 3;
+    }
+    
     CFreal pdim = eulerTerm->getPressureFromState(0.5*((*innerState)[pID] + (*ghostState)[pID]));
     cf_assert(pdim > 0.01);
     CFreal Tdim = 0.5*((*innerState)[TID] + (*ghostState)[TID]);
@@ -225,7 +231,12 @@ void ArcJetPhiOutlet<BASE>::preProcess()
   
   // AL: this is not general, change for NEQ
   const CFuint pID = 0;
-  const CFuint TID = nbEqs - 2;
+  CFuint TID = nbEqs - 2;
+  // case with RANS/SA
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  if ((nbEqs == 7 && dim == DIM_3D) || (nbEqs == 6 && dim == DIM_2D)) {
+    TID = nbEqs - 3;
+  }
   
   m_sigmaIntegral = 0.;
   CFreal localSigmaIntegral = 0.;

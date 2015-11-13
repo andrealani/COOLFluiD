@@ -4,7 +4,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Framework/DiffusiveVarSet.hh"
-#include "NSTerm.hh"
+#include "NavierStokes/NSTerm.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -23,7 +23,9 @@ namespace COOLFluiD {
    */
 class NavierStokesVarSet : public Framework::DiffusiveVarSet {
 public: // classes
-
+  
+  typedef NSTerm DTERM;
+  
   /**
    * Constructor
    * @see NavierStokes

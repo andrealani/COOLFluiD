@@ -1,6 +1,5 @@
 #include "Framework/PhysicalChemicalLibrary.hh"
 #include "NavierStokes/EulerTerm.hh"
-#include "NavierStokes/NSTerm.hh"
 #include "ArcJet/ArcJetTerm.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -20,7 +19,7 @@ ArcJetDiffVarSet<BASEVS>::ArcJetDiffVarSet
   BASEVS(name, model),
   m_library(CFNULL),
   m_eulerModelLTE(model->getConvectiveTerm().template d_castTo<NavierStokes::EulerTerm>()),
-  m_diffModel(model->getDiffusiveTerm().template d_castTo<ArcJetTerm<NavierStokes::NSTerm> >()),
+  m_diffModel(model->getDiffusiveTerm().template d_castTo<ArcJetTerm<typename BASEVS::DTERM> >()),
   m_sigmaCoeff(0.)
 {
   this->addVarName("Phi");
@@ -82,8 +81,8 @@ RealVector& ArcJetDiffVarSet<BASEVS>::getFlux
   // if only the last two equations or all the equations are considered
   if (nbEqs == 1 || nbEqs == totalNbEqs) {
     const RealVector& nsData = m_diffModel->getPhysicalData();
-    cf_assert(ArcJetTerm<NSTerm>::SIGMA < nsData.size());
-    cf_assert(nsData[ArcJetTerm<NSTerm>::SIGMA] > 0.);
+    cf_assert(ArcJetTerm<typename BASEVS::DTERM>::SIGMA < nsData.size());
+    cf_assert(nsData[ArcJetTerm<typename BASEVS::DTERM>::SIGMA] > 0.);
     const CFuint phiID = totalNbEqs - 1;
     const RealVector& gradPhi = *gradients[phiID];
     const CFuint dim    = PhysicalModelStack::getActive()->getDim(); 
@@ -93,7 +92,7 @@ RealVector& ArcJetDiffVarSet<BASEVS>::getFlux
     for (CFuint i = 0; i < dim ; ++i) {
       // this modification allows sigma to be frozen during flux jacobian 
       // computation possibly improving the overall stability
-      this->_flux[phiID] += nsData[ArcJetTerm<NSTerm>::SIGMA]*gradPhi[i]*normal[i];
+      this->_flux[phiID] += nsData[ArcJetTerm<typename BASEVS::DTERM>::SIGMA]*gradPhi[i]*normal[i];
     }
   }
   
@@ -151,7 +150,7 @@ void ArcJetDiffVarSet<BASEVS>::computeTransportProperties
     if (this->_useBackUpValues || this->_freezeDiffCoeff) {
       CFLog(DEBUG_MAX, "ArcJetDiffVarSet::computeTransportProperties() => " << 
 	    "reusing SIGMA = " << m_sigmaCoeff << "\n");
-      nsData[ArcJetTerm<NSTerm>::SIGMA] = m_sigmaCoeff ;
+      nsData[ArcJetTerm<typename BASEVS::DTERM>::SIGMA] = m_sigmaCoeff ;
     }
     else {
       CFreal Tdim = state[this->_TID];
@@ -161,10 +160,10 @@ void ArcJetDiffVarSet<BASEVS>::computeTransportProperties
       cf_assert(pdim > 0.01);
       /* Access the mutation library to get sigma*/
       CFreal* tVec = CFNULL; // this would not work with multi-temperature NEQ
-      nsData[ArcJetTerm<NSTerm>::SIGMA] = m_library->sigma(Tdim, pdim, tVec);
+      nsData[ArcJetTerm<typename BASEVS::DTERM>::SIGMA] = m_library->sigma(Tdim, pdim, tVec);
       
       if (this->_setBackUpValues) {
-	m_sigmaCoeff = nsData[ArcJetTerm<NSTerm>::SIGMA];
+	m_sigmaCoeff = nsData[ArcJetTerm<typename BASEVS::DTERM>::SIGMA];
 	CFLog(DEBUG_MAX, "ArcJetDiffVarSet::computeTransportProperties() => " << 
 	      "backed up SIGMA = " << m_sigmaCoeff << "\n");
       }

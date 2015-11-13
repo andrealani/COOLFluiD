@@ -3,10 +3,8 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "NavierStokes/EulerTerm.hh"
-#include "NavierStokes/NSTerm.hh"
 #include "ArcJet/ArcJetTerm.hh"
-#include "Framework/MultiScalarTerm.hh"
+#include "Framework/BaseTerm.hh"
 #include "Framework/ConvectionDiffusionReactionPM.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -25,17 +23,21 @@ namespace COOLFluiD {
  * @author Andrea Lani
  *
  */
-
-template <int DIM>
-class ArcJetLTEPhysicalModel :
+template <typename CTERM, typename DTERM, int DIM>
+class ArcJetLTEPhysicalModel : 
 	public Framework::ConvectionDiffusionReactionPM
-	<Framework::MultiScalarTerm<NavierStokes::EulerTerm>,
-	 ArcJetTerm<NavierStokes::NSTerm>, ArcJetTerm<Framework::BaseTerm> > {
+<CTERM, ArcJetTerm<DTERM>, ArcJetTerm<Framework::BaseTerm> > {
 public:
   
-   /**
-    * Constructor without arguments
-    */
+  /**
+   * Defines the Config Option's of this class
+   * @param options a OptionList where to add the Option's
+   */
+  static void defineConfigOptions(Config::OptionList& options);
+  
+  /**
+   * Constructor without arguments
+   */
   ArcJetLTEPhysicalModel(const std::string& name);
 
   /**
@@ -55,9 +57,15 @@ public:
    */
   virtual std::string getTypeName() const
   {
+    if (getNbEquations() == DIM+4) {
+      CFLog(VERBOSE, "ArcJetLTEPhysicalModel::getTypeName() => ArcJetSALTE\n");
+      return std::string("ArcJetSALTE" + Common::StringOps::to_str(DIM) + "D");
+    } 
+    cf_assert(getNbEquations() == DIM+3);
+    CFLog(VERBOSE, "ArcJetLTEPhysicalModel::getTypeName() => ArcJetLTE\n");
     return std::string("ArcJetLTE" + Common::StringOps::to_str(DIM) + "D");
   }
-
+  
   /**
    * Get the convective name
    */
@@ -97,7 +105,12 @@ public:
    * adimensionalizaton, if needed
    */
   virtual void setReferenceValues();
-
+  
+private:
+  
+  /// number of turbulence equations
+  CFuint m_nbTurbEqs;
+  
 }; // end of class ArcJetLTEPhysicalModel
 
 //////////////////////////////////////////////////////////////////////////////

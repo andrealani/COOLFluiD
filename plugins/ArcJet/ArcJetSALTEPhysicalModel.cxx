@@ -1,6 +1,6 @@
-#include "ArcJet/ArcJet.hh"
+#include "ArcJet/ArcJetSALTE.hh"
 #include "ArcJet/ArcJetLTEPhysicalModel.hh"
-#include "NavierStokes/NSTerm.hh"
+#include "NavierStokes/NSTurbTerm.hh"
 #include "NavierStokes/EulerTerm.hh"
 #include "Framework/MultiScalarTerm.hh"
 #include "Environment/ObjectProvider.hh"
@@ -23,21 +23,13 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-ObjectProvider<ArcJetLTEPhysicalModel<MultiScalarTerm<EulerTerm>, NSTerm, DIM_2D>, 
-	       PhysicalModelImpl, ArcJetModule, 1>
-arcJetLTE2DProvider("ArcJetLTE2D");
+ObjectProvider<ArcJetLTEPhysicalModel<MultiScalarTerm<EulerTerm>, NSTurbTerm, DIM_2D>, 
+	       PhysicalModelImpl, ArcJetSALTEModule, 1>
+arcJetSALTE2DProvider("ArcJetSALTE2D");
 
-ObjectProvider<ArcJetLTEPhysicalModel<MultiScalarTerm<EulerTerm>, NSTerm, DIM_3D>, 
-	       PhysicalModelImpl, ArcJetModule, 1>
-arcJetLTE3DProvider("ArcJetLTE3D");
-
-ObjectProvider<ArcJetLTEPhysicalModel<MultiScalarTerm<EulerTerm>, NSTerm, DIM_2D>, 
-	       PhysicalModelImpl, ArcJetModule, 1>
-arcJetPG2DProvider("ArcJetPG2D");
-
-ObjectProvider<ArcJetLTEPhysicalModel<MultiScalarTerm<EulerTerm>, NSTerm, DIM_3D>, 
-	       PhysicalModelImpl, ArcJetModule, 1>
-arcJetPG3DProvider("ArcJetPG3D");
+ObjectProvider<ArcJetLTEPhysicalModel<MultiScalarTerm<EulerTerm>, NSTurbTerm, DIM_3D>, 
+	       PhysicalModelImpl, ArcJetSALTEModule, 1>
+arcJetSALTE3DProvider("ArcJetSALTE3D");
 
 //////////////////////////////////////////////////////////////////////////////
 

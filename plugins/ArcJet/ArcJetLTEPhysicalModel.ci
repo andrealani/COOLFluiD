@@ -1,3 +1,7 @@
+#include <valarray>
+
+//////////////////////////////////////////////////////////////////////////////
+
 namespace COOLFluiD {
 
   namespace Physics {
@@ -6,62 +10,81 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <int DIM>
-ArcJetLTEPhysicalModel<DIM>::ArcJetLTEPhysicalModel(const std::string& name)
-  : Framework::ConvectionDiffusionReactionPM
-<Framework::MultiScalarTerm<NavierStokes::EulerTerm>,
- ArcJetTerm<NavierStokes::NSTerm>, ArcJetTerm<Framework::BaseTerm> >(name)
+template <typename CTERM, typename DTERM, int DIM>
+void ArcJetLTEPhysicalModel<CTERM, DTERM, DIM>::defineConfigOptions(Config::OptionList& options)
 {
+  options.template addConfigOption< CFuint >
+    ("nbTurbEqs","Number of turbulent equations.");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename CTERM, typename DTERM, int DIM>
+ArcJetLTEPhysicalModel<CTERM, DTERM, DIM>::
+ArcJetLTEPhysicalModel(const std::string& name)
+  : Framework::ConvectionDiffusionReactionPM
+    <CTERM, ArcJetTerm<DTERM>, ArcJetTerm<Framework::BaseTerm> >(name)
+{
+  this->addConfigOptionsTo(this);
+  
+  m_nbTurbEqs = 0;
+  this->setParameter("nbTurbEqs",&m_nbTurbEqs);
 }	
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <int DIM>
-ArcJetLTEPhysicalModel<DIM>::~ArcJetLTEPhysicalModel()
+template <typename CTERM, typename DTERM, int DIM>
+ArcJetLTEPhysicalModel<CTERM, DTERM, DIM>::~ArcJetLTEPhysicalModel()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <int DIM>
-CFuint ArcJetLTEPhysicalModel<DIM>::getDimension() const
+template <typename CTERM, typename DTERM, int DIM>
+CFuint ArcJetLTEPhysicalModel<CTERM, DTERM, DIM>::getDimension() const
 {
   return DIM;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <int DIM>
-CFuint ArcJetLTEPhysicalModel<DIM>::getNbEquations() const
+template <typename CTERM, typename DTERM, int DIM>
+CFuint ArcJetLTEPhysicalModel<CTERM, DTERM, DIM>::getNbEquations() const
 {
   // set the number of induction equations
-  std::valarray<CFuint> v(1);
-  v[0] = 1;
-  getConvTerm()->setNbScalarVars(v);
-
-  return DIM+2+1; // one charge conservation equation
+  std::valarray<CFuint> v;
+  if (m_nbTurbEqs > 0) {
+    v.resize(2);
+    v[0] = m_nbTurbEqs; 
+    v[1] = 1;
+  }
+  else {
+    v.resize(1);
+    v[0] = 1;
+  }
+  this->getConvTerm()->setNbScalarVars(v);
+  return DIM+2+1+m_nbTurbEqs; // one charge conservation equation
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <int DIM>
-std::string ArcJetLTEPhysicalModel<DIM>::getConvectiveName() const
+template <typename CTERM, typename DTERM, int DIM>
+std::string ArcJetLTEPhysicalModel<CTERM, DTERM, DIM>::getConvectiveName() const
 {
-  return "ArcJetLTE" + Common::StringOps::to_str(DIM) + "D";
+  return this->getTypeName();
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <int DIM>
-void ArcJetLTEPhysicalModel<DIM>::setReferenceValues()
+template <typename CTERM, typename DTERM, int DIM>
+void ArcJetLTEPhysicalModel<CTERM, DTERM, DIM>::setReferenceValues()
 {
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Physics::NavierStokes;
   
-  SafePtr<MultiScalarTerm<EulerTerm> > convTerm = getConvTerm();
-  SafePtr<ArcJetTerm<NSTerm> > diffTerm = getDiffTerm();
-  SafePtr<ArcJetTerm<BaseTerm> > srcTerm = getSrcTerm();
+  SafePtr<CTERM> convTerm = this->getConvTerm();
+  SafePtr<ArcJetTerm<DTERM> > diffTerm = this->getDiffTerm();
+  SafePtr<ArcJetTerm<BaseTerm> > srcTerm = this->getSrcTerm();
   
   // reference values for the convective part
   RealVector& refDataConv = convTerm->getReferencePhysicalData();
@@ -91,29 +114,27 @@ void ArcJetLTEPhysicalModel<DIM>::setReferenceValues()
   // scaling coefficient for the energy equation
   diffTerm->setCoeffQ(1.0);
 
-  _isAdimensional = false;
-
-  CFLog(NOTICE, "dynViscosityRef     = " << refDataDiff[NSTerm::MU]     << "\n");
-  CFLog(NOTICE, "thermConductivity   = " << refDataDiff[NSTerm::LAMBDA] << "\n");
+  this->_isAdimensional = false;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <int DIM>
-void ArcJetLTEPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
+template <typename CTERM, typename DTERM, int DIM>
+void ArcJetLTEPhysicalModel<CTERM, DTERM, DIM>::configure 
+( Config::ConfigArgs& args )
 {
-  Framework::ConvectionDiffusionReactionPM
-    <Framework::MultiScalarTerm<NavierStokes::EulerTerm>,
-     ArcJetTerm<NavierStokes::NSTerm>,
-     ArcJetTerm<Framework::BaseTerm> >::configure(args);
+  using namespace COOLFluiD::Framework;
+  
+  ConvectionDiffusionReactionPM
+    <CTERM, ArcJetTerm<DTERM>, ArcJetTerm<BaseTerm> >::configure(args);
   
   cf_assert(getDimension() > 0);
   cf_assert(getNbEquations() > 0);
-
+  
   // allocate jacobians
-  _jacobians = std::vector<RealMatrix>(DIM);
+  this->_jacobians = std::vector<RealMatrix>(DIM);
   for (CFuint i = 0; i < getDimension(); ++i) {
-    _jacobians[i].resize(getNbEquations(), getNbEquations());
+    this->_jacobians[i].resize(getNbEquations(), getNbEquations());
   }
 }
 

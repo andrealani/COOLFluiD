@@ -42,23 +42,26 @@ void ArcJetPhiElectrode<BASE>::setGhostState
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::MathTools;
+ 
+  CFLog(DEBUG_MAX, "ArcJetPhiElectrode<BASE>::setGhostState() => start\n");
   
   const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFuint lastEq = totalNbEqs - 1;
   const CFuint nbEqs = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
   const CFuint eqSSID = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getEqSS();
-  
+    
   if (nbEqs != 1 || (nbEqs == 1 && eqSSID == 0) || nbEqs == totalNbEqs) {
     BASE::setGhostState(face);
   }
-  
+    
   // here it is assumed that the ArcJet induction equations are the last ones 
   if ((nbEqs == 1 && eqSSID == 1) || nbEqs == totalNbEqs) {
-//     cout << "ArcJetPhiElectrode<BASE>::setGhostState => lastEq =" << lastEq <<"\n";
     State *const innerState = face->getState(0);
     State *const ghostState = face->getState(1);
     (*ghostState)[lastEq] =  -(*innerState)[lastEq];
   }
+  
+  CFLog(DEBUG_MAX, "ArcJetPhiElectrode<BASE>::setGhostState() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

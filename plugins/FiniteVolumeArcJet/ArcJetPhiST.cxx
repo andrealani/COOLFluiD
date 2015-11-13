@@ -192,6 +192,7 @@ void ArcJetPhiST::computeSource
     getEquationSubSysDescriptor();
   const CFuint nbEqs = eqSSD.getNbEqsSS();
   const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
   cf_assert(nbEqs <= totalNbEqs);
   cf_assert(nbEqs > 0);
   
@@ -201,7 +202,6 @@ void ArcJetPhiST::computeSource
   // this is needed for coupling
   if (eqSSD.getEqSS() == 1 || nbEqs == totalNbEqs) {
     CFLog(DEBUG_MIN, "ArcJetPhiST::computeSource() START\n");
-    const CFuint dim = PhysicalModelStack::getActive()->getDim();
     const CFuint elemID = element->getID();
     DataHandle<CFreal> LorentzForce = socket_LorentzForce.getDataHandle();
     DataHandle<CFreal> Jx = socket_Jx.getDataHandle();
@@ -232,7 +232,13 @@ void ArcJetPhiST::computeSource
     
     // AL: change this for NEQ
     const CFuint phiID = totalNbEqs-1;
-    const CFuint TID = phiID-1;
+    CFuint TID = phiID-1;
+    const CFuint dim = PhysicalModelStack::getActive()->getDim();
+    if ((totalNbEqs == 7 && dim == DIM_3D) || (totalNbEqs == 6 && dim == DIM_2D)) {
+      TID = totalNbEqs - 3;
+      cf_assert(TID == phiID-2);
+    }
+    
     const CFuint pID = 0;
     
     // compute the gradients of B by applying Green Gauss in the cell volume

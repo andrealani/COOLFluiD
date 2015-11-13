@@ -21,9 +21,6 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 Environment::ObjectProvider<EulerSAPvtToCons<EulerPvtLTEToCons>, VarSetTransformer, SALTEModule, 1> 
-euler1DSAPvtLTEToConsProvider("Euler1DSAPvtLTEToCons");
-
-Environment::ObjectProvider<EulerSAPvtToCons<EulerPvtLTEToCons>, VarSetTransformer, SALTEModule, 1> 
 euler2DSAPuvtLTEToConsProvider("Euler2DSAPuvtLTEToCons");
 
 Environment::ObjectProvider<EulerSAPvtToCons<EulerPvtLTEToCons>, VarSetTransformer, SALTEModule, 1> 
