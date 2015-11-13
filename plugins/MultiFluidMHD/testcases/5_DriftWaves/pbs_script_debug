@@ -1,6 +1,6 @@
 #!/bin/bash -l
 #PBS -S /bin/csh
-#PBS -N CF_test69_Khomenko_driver
+#PBS -N CF_drift_waves_test
 #PBS -l walltime=00:10:00
 #PBS -l qos=debugging
 #PBS -A lp_sidc
