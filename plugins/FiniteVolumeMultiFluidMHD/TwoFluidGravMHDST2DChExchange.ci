@@ -343,7 +343,7 @@ void TwoFluidGravMHDST2DChExchange<UPDATEVAR>::computeSource
         if(currState->getCoordinates()[YY] > _height){
           gravityEnergySource_i = 0.;
           gravityEnergySource_n = 0.;
-          emEnergy = 0.;        
+          //emEnergy = 0.;        
         }
       }
       source[14] = emEnergy + collWorki + _collEnergySource[0] + _ReactEnergySource[0] + kinEnerIon_i - kinEnerIon_e - kinEnerRec_n + gravityEnergySource_i; //Ions Energy
