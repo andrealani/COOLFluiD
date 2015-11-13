@@ -8,4 +8,4 @@ module load intel/2014a
 
 cd $PBS_O_WORKDIR
 
-mpirun -np 10 ./coolfluid-solver --scase ./Drift_Waves_2DHalf_test.CFcase.CFcase  > CF_Drift_waves
+mpirun -np 10 ./coolfluid-solver --scase ./Drift_Waves_2DHalf_test.CFcase  > CF_Drift_waves
