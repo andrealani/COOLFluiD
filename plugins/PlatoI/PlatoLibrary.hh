@@ -509,7 +509,7 @@ protected:
 
   /*Transfer file name*/
   std::string _transfName;
-  
+
   /*Number of atomic species*/
   CFint _nAt;
 
@@ -518,6 +518,15 @@ protected:
 
   /*Number of temperatures*/
   CFint _nTemp;
+
+  /*Number of dimensions*/
+  CFint _nDim;
+
+  /*Number of governing equations*/
+  CFint _nEqs;
+
+  /* Molecule IDs*/
+  std::vector<CFuint> _molIDs;
 
   /*Mass fractions*/
   RealVector _Yi;
@@ -551,6 +560,12 @@ protected:
 
   /*Enthalpies (working vector)*/
   RealVector _hi;
+
+  /*Vibrational enthalpies (working vector)*/
+  RealVector _hiVib;
+
+  /*Electronic enthalpies (working vector)*/
+  RealVector _hiEl;
  
   /*Partial densities*/
   RealVector _rhoi;
@@ -575,6 +590,9 @@ protected:
   
   /*Production term*/
   RealVector _prodterm;
+
+  /*Production term Jacobian*/
+  RealMatrix _jprodterm;
 
 }; // end of class PlatoLibrary
       

@@ -59,12 +59,16 @@ PlatoLibrary::PlatoLibrary(const std::string& name)
     _mmi(),
     _Ri(),
     _hi(),
+    _molIDs(),
+    _hiVib(),
+    _hiEl(),
     _qi(),
     _rhoi(),
     _rhoe(),
     _tvec(),
     _lambdavec(),
     _prodterm(),
+    _jprodterm(),
     _Di(),
     _Dij(),
     _dfi()
@@ -146,6 +150,12 @@ void PlatoLibrary::setLibrarySequentially()
   _nbTvib = get_nb_vib_temp();
   _nbTe   = get_nb_el_temp();
 
+  /*Number of dimensions*/
+  _nDim = PhysicalModelStack::getActive()->getDim();
+
+  /*Number of governing equations*/
+  _nEqs = _NS + _nDim + _nTemp;
+
   /*Allocate working arrays*/
   _Xi.resize(_NS);
   _Xitol.resize(_NS);
@@ -154,7 +164,10 @@ void PlatoLibrary::setLibrarySequentially()
   _Yc.resize(get_nb_comp());
   _Xn.resize(_NC);
   _Yn.resize(_NC);
+  _molIDs.resize(_NS);
   _hi.resize(_NS);
+  _hiVib.resize(_NS);
+  _hiEl.resize(_NS);
   _mmi.resize(_NS);
   _Ri.resize(_NS);
   _qi.resize(_NS);
@@ -165,9 +178,10 @@ void PlatoLibrary::setLibrarySequentially()
   _dfi.resize(_NS);
   _tvec.resize(_nTemp);
   _lambdavec.resize(_nTemp);
-  _prodterm.resize(_NS + _nTemp);
+  _prodterm.resize(_nEqs);
+  _jprodterm.resize(_nEqs,_nEqs);
 
-  /*Call PLATO library functions to get molar mass, gas constant and charge arrays*/
+  /*Call PLATO library functions/subroutines to get molar mass, gas constant, charge and molecule IDs arrays*/
   /*Molar masses [kg/mol]*/
   get_mi(&_mmi[0]);
  
@@ -177,8 +191,19 @@ void PlatoLibrary::setLibrarySequentially()
   /*Charges*/ 
   get_qi(&_qi[0]);
   
-  /*Universla gas constant [J/(mol*K)]*/
+  /*Molecular IDs*/
+  get_mol_ids(&_molIDs[0]);
+
+  /*Subtract 1 to be consistent with C/C++ arrays*/
+  for (CFint i = 0; i < _nMol; ++i) {
+     _molIDs[i] -= 1;
+  } 
+
+  /*Universal gas constant [J/(mol*K)]*/
    _Rgas = URU;
+
+  /*Set flag to indicate is the mixture is neutral or ionized*/
+  _hasElectrons = (get_nb_e() == 1) ? true : false;
 }
  
 //////////////////////////////////////////////////////////////////////////////     
@@ -201,6 +226,9 @@ void PlatoLibrary::unsetup()
     _Xn.resize(0);
     _Yn.resize(0);
     _hi.resize(0);
+    _molIDs.resize(0);
+    _hiVib.resize(0);
+    _hiEl.resize(0);
     _mmi.resize(0);
     _Ri.resize(0);
     _qi.resize(0);
@@ -212,6 +240,7 @@ void PlatoLibrary::unsetup()
     _tvec.resize(0);
     _lambdavec.resize(0); 
     _prodterm.resize(0);
+    _jprodterm.resize(0,0);
 
     Framework::PhysicalChemicalLibrary::unsetup();
   }
@@ -284,12 +313,8 @@ void PlatoLibrary::setMoleculesIDs(std::vector<CFuint>& v)
  if (_nMol > 0) {
    v.reserve(_nMol);
 
-   /*Get molecular IDS (FORTRAN array)*/
-   get_mol_ids(&v[0]);
-
-   /*Subtract 1 to be consistent with C/C++ arrays*/
    for (CFint i = 0; i < _nMol; ++i) {
-     v[i] -= 1;
+     v.push_back(_molIDs[i]);
    }
 
  }
@@ -354,14 +379,35 @@ CFdouble PlatoLibrary::lambdaNEQ(CFdouble& temp, CFdouble& pressure)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-void PlatoLibrary::lambdaVibNEQ(CFreal& temperature,
-				RealVector& tVec,
-				CFdouble& pressure,
-				CFreal& lambdaTrRo,
-				RealVector& lambdaInt)
+/*!
+ * This function returns the thermal conductivity components (the mole fractions
+ * are stored in the vector "_Xi" which has to be filled before invoking this function)
+ */
+void PlatoLibrary::lambdaVibNEQ(CFreal& temp, RealVector& tVec,  CFdouble& pressure, CFreal& lambdaTrRo, RealVector& lambdaInt)
 {
-  cout << "PLATO interface STOP:: lambdaVibNEQ\n";
-  throw NotImplementedException(FromHere(),"PlatoLibrary::lambdaVibNEQ()");
+  /*Heavy-particle and free-electron temperatures*/
+  CFdouble Th = temp;
+  CFdouble Te = tVec[_nTemp - 2];
+
+  /*Set temperature vector*/
+  _tvec[0] = Th;
+  for (CFint i = 1; i < _nTemp; ++i) {
+    _tvec[i] = tVec[i - 1]; 
+  }
+ 
+  /*Electron mole fraction*/
+  CFdouble Xe = _Xi[0];
+
+  /*Compute number density*/
+  CFdouble nd = get_nb_density(&pressure, &Th, &Te, &Xe);
+
+  /*Compute thermal conductivity components*/
+  get_lambda_vec(&nd, &_Xi[0], &_tvec[0], &_lambdavec[0]);
+
+  lambdaTrRo = _lambdavec[0];
+  for (CFint i = 1; i < _nTemp; ++i) {
+    lambdaInt[i - 1] = _lambdavec[i];
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -708,10 +754,9 @@ void PlatoLibrary::getSpeciesMassFractions(RealVector& ys)
  * the temperature  
  */
 void PlatoLibrary::getMassProductionTerm(CFdouble& temp, RealVector& tVec, CFdouble& pressure,
-					 CFdouble& rho, const RealVector& ys, bool flagJac, RealVector& omega, RealMatrix& jacobian)
+					 CFdouble& rho, const RealVector& ys, bool flagJac,  
+                                         RealVector& omega, RealMatrix& jacobian)
 {
-  const CFint ndim = 0;
-
   /*Partial densities*/
   for (CFint i = 0; i < _NS; ++i) {
     _rhoi[i] = rho*ys[i];
@@ -723,39 +768,85 @@ void PlatoLibrary::getMassProductionTerm(CFdouble& temp, RealVector& tVec, CFdou
     _tvec[i] = tVec[i - 1];
   }
 
-  /*Compute source term*/
-  source(&_rhoi[0], &_tvec[0], &_prodterm[0], ndim);
+  /*Compute source term and the related Jacobian with respect to natural variables*/
+  if (flagJac) {
 
+    source_jac(&_nDim, &_rhoi[0], &_tvec[0], &_prodterm[0], &_jprodterm[0]);
+
+    /*Transpose matrix (Fortran stores arrays by columns, C/C++ by rows)*/
+    for (CFint i = 0; i < _nEqs; ++i) {
+      for (CFint j = 0; j < _nEqs; ++j) {
+        jacobian(i,j) = _jprodterm(j,i);
+      }
+    }
+
+  /*Compute source term only*/  
+  } else {
+
+    source(&_nDim, &_rhoi[0], &_tvec[0], &_prodterm[0]); 
+
+  }
+
+  /*Fill the arrays as used by COOLFluiD*/
+  /*Mass production terms*/
   for (CFint i = 0; i < _NS ; ++i) {
     omega[i] = _prodterm[i];
   }
 
-  if (flagJac) {
-    cout << "Analytical source term Jacobian not tested yet!";
-    cout << "PLATO interface STOP:: getMassProductionTerm\n";
-    throw NotImplementedException(FromHere(),"PlatoLibrary::getMassProductionTerm()");
-  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
-void PlatoLibrary::getSource(CFdouble& temperature,
-		             RealVector& tVec,
-			     CFdouble& pressure,
-			     CFdouble& rho,
-			     const RealVector& ys,
-			     bool flagJac,
-			     RealVector& omega,
-			     RealVector& omegav,
-			     CFdouble& omegaRad,
-			     RealMatrix& jacobian)   
+/*! 
+ * This function returns the mass production and energy transfer terms given the density, the mass fractions and 
+ * the temperature  
+ */
+void PlatoLibrary::getSource(CFdouble& temp, RealVector& tVec, CFdouble& pressure, CFdouble& rho,
+			     const RealVector& ys, bool flagJac, RealVector& omega,
+			     RealVector& omegav, CFdouble& omegaRad, RealMatrix& jacobian)   
   
 {
-  cout << "PLATO interface STOP:: getSource\n";
-  throw NotImplementedException(FromHere(),"PlatoLibrary::getSource()");
-   // RealVector& yss = const_cast<RealVector&>(ys);
-   // CFreal tp[2]; tp[0]= temperature; tp[1]= pressure;
-   // m_gasMixture->setState(&tp[0], &yss[0]);
-   // m_gasMixture->netProductionRates(&omega[0]);
+  /*Partial densities*/
+  for (CFint i = 0; i < _NS; ++i) {
+    _rhoi[i] = rho*ys[i];
+  }
+
+  /*Temperature vector*/
+  _tvec[0] = temp;
+  for (CFint i = 1; i < _nTemp; ++i) {
+    _tvec[i] = tVec[i - 1];
+  }
+
+  /*Compute source term and the related Jacobian with respect to natural variables*/ 
+  if (flagJac) {
+
+    source_jac(&_nDim, &_rhoi[0], &_tvec[0], &_prodterm[0], &_jprodterm[0]);
+
+    /*Transpose matrix (Fortran stores arrays by columns, C/C++ by rows)*/
+    for (CFint i = 0; i < _nEqs; ++i) {
+      for (CFint j = 0; j < _nEqs; ++j) {
+        jacobian(i,j) = _jprodterm(j,i);
+      }
+    }
+
+  /*Compute source term only*/ 
+  } else {
+
+    source(&_nDim, &_rhoi[0], &_tvec[0], &_prodterm[0]);
+
+  }
+
+  /*Fill the arrays as used by COOLFluiD*/
+  /*Mass production terms*/
+  for (CFint i = 0; i < _NS ; ++i) {
+    omega[i] = _prodterm[i];
+  }
+
+  /*Energy transfer terms*/
+  omegaRad = _prodterm[_NS + _nDim];
+  for (CFint i = 0; i < (_nTemp - 1); i++) {
+    omegav[i] = _prodterm[_NS + _nDim + 1 + i];
+  }
+
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -840,7 +931,8 @@ void PlatoLibrary::setSpeciesMolarFractions(const RealVector& xs)
       
 //////////////////////////////////////////////////////////////////////////////
 /*!
- * This function returns the species total, vibrational and electronic enthlpies given the temperatures 
+ * This function returns the species total, vibrational and electronic enthalpies given the temperatures.
+ * Note that the entahlpy of free-electrons is also stored in array hsEl
  */
 void PlatoLibrary::getSpeciesTotEnthalpies(CFdouble& temp,
 				           RealVector& tVec,
@@ -855,14 +947,28 @@ void PlatoLibrary::getSpeciesTotEnthalpies(CFdouble& temp,
     _tvec[i] = tVec[i - 1];
   }
 
-  /*Species total enthalpies*/
-  species_enthalpy(&_tvec[0], &hsTot[0]);
-
-  /*THIS FUNCTION NEEDS TO RESTRUCTED FOR THERMO-CHEMICAL NON-EQUILIBRIUM CASES*/
+  /* Thermo-chemical non-equilibrium case*/
   if (_nTemp > 1) {
-     cout << "PLATO interface STOP:: getSpeciesTotEnthalpies\n";
-     cout << "Thermal non-equilibrium case not implemented yet\n";
-     throw NotImplementedException(FromHere(),"PlatoLibrary::getSpeciesTotEnthalpies()");
+
+     /*Total enthalpies*/
+     species_tot_vib_el_enthalpy(&_tvec[0], &hsTot[0], &_hiVib[0], &_hiEl[0]);
+
+     /*Vibrational energies*/
+     for (CFint i = 0; i < _nMol; ++i) {
+       (*hsVib)[i] = _hiVib[_molIDs[i]];
+     }
+
+     /*Free-electron/electronic energies*/
+     for (CFint i = 0; i < _NS; ++i) {
+       (*hsEl)[i] = _hiEl[i];
+     }
+     
+  /*Chemical non-equilibrium case*/
+  } else {
+
+    /*Species total enthalpies*/
+    species_enthalpy(&_tvec[0], &hsTot[0]);
+
   }
 }
       
