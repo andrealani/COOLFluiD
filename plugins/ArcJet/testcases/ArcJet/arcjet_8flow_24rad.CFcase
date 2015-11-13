@@ -465,7 +465,11 @@ Simulator.SubSystem.ProcessingRad&24.ProcessRate = 1
 # here we need to find a way to write expression
 Simulator.SubSystem.ProcessingRad&24.Radiation1.NbThreads = 24
 Simulator.SubSystem.ProcessingRad&24.Radiation1.ThreadID  = &24 
-#Simulator.SubSystem.ProcessingRad&24.Radiation1.LoopOverBins = false
+# if the following is "false" with 24 directions and 100 bins you have:
+# a matrix nbDirections*nbBins => with 24 CPUs, each CPU gets 1 direction and 100 bins
+# if the following is "true" with 24 directions and 100 bins you have:
+# a matrix nbBins*nbDirections => with 100 CPUs, each CPU gets 1 bin and 24 directions 
+Simulator.SubSystem.ProcessingRad&24.Radiation1.LoopOverBins = false
 
 # fictitious coupling model
 Simulator.SubSystem.FlowRad.SubSystemStatus = FlowRadSubSystemStatus
@@ -486,6 +490,8 @@ Simulator.SubSystem.ConcurrentCoupler.Namespace = FlowRad
 Simulator.SubSystem.ConcurrentCoupler.CoupledNameSpaces = Flow Rad@24
 Simulator.SubSystem.ConcurrentCoupler.CoupledSubSystems = SubSystem SubSystem~24
 Simulator.SubSystem.ConcurrentCoupler.TransferRates = 10 1~24
+# new option to test
+Simulator.SubSystem.ConcurrentCoupler.SkipFirstCouplingIter = true
 
 Simulator.SubSystem.ConcurrentCoupler.InterfacesReadComs  = StdConcurrentDataTransfer~24
 Simulator.SubSystem.ConcurrentCoupler.InterfacesReadNames = FlowToRad@24
