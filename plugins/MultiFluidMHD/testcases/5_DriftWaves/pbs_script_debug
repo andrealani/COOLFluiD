@@ -1,0 +1,11 @@
+#!/bin/bash -l
+#PBS -S /bin/csh
+#PBS -N CF_test69_Khomenko_driver
+#PBS -l walltime=00:10:00
+#PBS -l qos=debugging
+#PBS -A lp_sidc
+module load intel/2014a
+
+cd $PBS_O_WORKDIR
+
+mpirun -np 10 ./coolfluid-solver --scase ./Drift_Waves_2DHalf_test.CFcase.CFcase  > CF_Drift_waves
