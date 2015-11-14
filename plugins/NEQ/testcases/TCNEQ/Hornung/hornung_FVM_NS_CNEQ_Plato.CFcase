@@ -33,7 +33,7 @@ Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DNEQ
 Simulator.SubSystem.NavierStokes2DNEQ.refValues = 0.0001952 0.004956 5590. 5590. 1833.
 Simulator.SubSystem.NavierStokes2DNEQ.refLength = 1.0
 Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary = Plato
-Simulator.SubSystem.NavierStokes2DNEQ.Plato.path = /home/alessandro/Workspace/COOLFluiD/trunk/plugins/Plato/database_Hornung
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.path = /home/amunafo/Workspace/neqplasma/database_Hornung
 Simulator.SubSystem.NavierStokes2DNEQ.Plato.mixtureName = nitrogen2
 Simulator.SubSystem.NavierStokes2DNEQ.Plato.reactionName = parkN2
 #the solution with "nompelisN2" is totally different

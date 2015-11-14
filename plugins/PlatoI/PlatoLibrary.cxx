@@ -145,7 +145,7 @@ void PlatoLibrary::setLibrarySequentially()
   _nAt  = get_nb_at_species();
   _nMol = get_nb_mol_species();
 
-  /*Number of temperatures (total, vibrationa, free-electron-electronic)*/
+  /*Number of temperatures (total, vibrationa;, free-electron-electronic)*/
   _nTemp  = get_nb_temp();
   _nbTvib = get_nb_vib_temp();
   _nbTe   = get_nb_el_temp();
