@@ -1851,7 +1851,7 @@ void ParCFmeshBinaryFileReader::createStatesAll(const vector<CFreal>& localState
       }
       
       for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
-	if (!m_useInitValues[iEq]) {
+	if (!m_useInitValues[iEq] && iEq < m_originalNbEqs) {
 	  tmpState[iEq] = readState[iEq];
 	}
 	else {

@@ -293,6 +293,8 @@ MaxNumberSubIterCondition.cxx
 MaxNumberSubIterCondition.hh
 MaxTimeCondition.cxx
 MaxTimeCondition.hh
+MaxTimeNumberStepsCondition.cxx
+MaxTimeNumberStepsCondition.hh
 MeshAdapterData.cxx
 MeshAdapterData.hh
 MeshAdapterMethod.cxx

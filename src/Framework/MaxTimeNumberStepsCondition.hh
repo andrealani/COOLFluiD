@@ -4,12 +4,12 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_MaxNumberStepsCondition_hh
-#define COOLFluiD_MaxNumberStepsCondition_hh
+#ifndef COOLFluiD_MaxTimeNumberStepsCondition_hh
+#define COOLFluiD_MaxTimeNumberStepsCondition_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "Framework/StopCondition.hh"
+#include "Framework/MaxNumberStepsCondition.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -22,7 +22,7 @@ namespace COOLFluiD {
   /// This class represents the stop condition dictated by a maximum
   /// number of iterations
   /// @author Andrea Lani
-class Framework_API MaxNumberStepsCondition : public StopCondition {
+class Framework_API MaxTimeNumberStepsCondition : public MaxNumberStepsCondition {
 public: // methods
 
   /// Defines the Config Option's of this class
@@ -31,10 +31,10 @@ public: // methods
 
   /// Default constructor without arguments
   /// @see StopCondition()
-  MaxNumberStepsCondition(const std::string& name);
+  MaxTimeNumberStepsCondition(const std::string& name);
   
   /// Default destructor
-  virtual ~MaxNumberStepsCondition();
+  ~MaxTimeNumberStepsCondition();
   
   /// returns true if we have to evaluate the stopcondition on all CPU domains.
   virtual bool IsGlobal () const ;
@@ -42,13 +42,13 @@ public: // methods
   /// Take the combined value from all CPU's and decide if the simulation
   /// should stop
   virtual bool isAchieved (const ConvergenceStatus& status) ;
-
+  
  private: // data
   
-  // maximum number of steps to perform
-  std::vector<CFuint> _maxNbSteps;
+  /// maximum physical (dimensional!) time of the SubSystem
+  CFreal m_maxTime;
   
-}; // end of class MaxNumberStepsCondition
+}; // end of class MaxTimeNumberStepsCondition
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -58,4 +58,4 @@ public: // methods
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_MaxNumberStepsCondition_hh
+#endif // COOLFluiD_MaxTimeNumberStepsCondition_hh

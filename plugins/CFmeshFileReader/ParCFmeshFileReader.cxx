@@ -1049,13 +1049,13 @@ void ParCFmeshFileReader::readStateList(ifstream& fin)
 
     m_inputToUpdateVecTrans->setup(1);
   }
-
+  
   CFuint countLocals = 0;
   for (CFuint iState = 0; iState < m_totNbStates; ++iState)
   {
     // read the state
     if (isWithSolution) 
-    {
+    {      
       // no init values were used
       if (m_useInitValues.size() == 0)
       {
@@ -1090,8 +1090,7 @@ void ParCFmeshFileReader::readStateList(ifstream& fin)
       
       // using init values
       else {
-	
-        cf_assert(m_useInitValues.size() == nbEqs);
+	cf_assert(m_useInitValues.size() == nbEqs);
 	fin >> readState;
 	
 	if (m_hasPastStates) {
@@ -1106,24 +1105,28 @@ void ParCFmeshFileReader::readStateList(ifstream& fin)
 	  fin >> extraVars;
 	}
 	
-	
 	for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
-	  if (!m_useInitValues[iEq]) {
+	  if (!m_useInitValues[iEq] && iEq < m_originalNbEqs) {
+	    cf_assert(iEq < tmpState.size());
 	    tmpState[iEq] = readState[iEq];
 	  }
           else {
-	    // here we use all initial values or all initial values IDs
+	    // user must specify either all initial values or values IDs, NOT BOTH
 	    cf_assert(m_initValues.size() != m_initValuesIDs.size());
-            if (m_initValues.size() > 0) {
+	    
+	    if (m_initValues.size() > 0) {
               cf_assert(m_initValuesIDs.size() == 0);
+	      cf_assert(iEq < tmpState.size());
+	      cf_assert(iEq < m_initValues.size());
               tmpState[iEq] = m_initValues[iEq];
             }
 	    
             if (m_initValuesIDs.size() > 0) {
+	      cf_assert(m_initValues.size() == 0);
 	      const CFuint currID = m_initValuesIDs[iEq];
 	      // if the current ID is >= nbEqs set this variable to 0.0
 	      tmpState[iEq] = (currID < m_originalNbEqs) ? readState[currID] : 0.0;
-            }
+	    }
           }
         }
 	
@@ -1243,7 +1246,7 @@ void ParCFmeshFileReader::emptyStateListRead(ifstream& fin)
 
 
   for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
-    if (!m_useInitValues[iEq]) {
+    if (!m_useInitValues[iEq] && iEq < m_originalNbEqs) {
       tmpState[iEq] = readState[iEq];
     }
     else {

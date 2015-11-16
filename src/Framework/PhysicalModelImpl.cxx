@@ -73,7 +73,7 @@ void PhysicalModelImpl::configure ( Config::ConfigArgs& args )
   _refStateValues.resize(nbEqs);
 
   if(_refStateValues.size() != _refStateValuesConf.size()) {
-    CFout << "WARNING: reference values not set !!!" << "\n";
+    CFLog(VERBOSE, "WARNING: reference values not set !!!" << "\n");
     _refStateValues = 1.0;
   }
   else {
