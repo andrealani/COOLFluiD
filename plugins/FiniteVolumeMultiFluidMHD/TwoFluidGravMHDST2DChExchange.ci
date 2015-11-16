@@ -42,7 +42,7 @@ TwoFluidGravMHDST2DChExchange<UPDATEVAR>::TwoFluidGravMHDST2DChExchange(const st
   _Etotal()
 {
   addConfigOptionsTo(this);
-  //Test  
+  
   _electricalResistivity = 0.150886049694899;
   setParameter("electricalResistivity",&_electricalResistivity);
 
