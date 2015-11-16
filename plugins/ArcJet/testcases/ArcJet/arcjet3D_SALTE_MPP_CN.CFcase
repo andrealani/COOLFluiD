@@ -28,7 +28,7 @@ CFEnv.ExceptionOutputs     = false
 
 ###############################################################################
 # SubSystem Modules
-Simulator.Modules.Libs = libPetscI libTecplotWriter libNavierStokes libMutationppI libLTE libArcJet libArcJetSALTE libFiniteVolume libFiniteVolumeNavierStokes libFiniteVolumeArcJet libNewtonMethod libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
+Simulator.Modules.Libs = libPetscI libTecplotWriter libNavierStokes libMutationppI libLTE libArcJet libArcJetSALTE libFiniteVolume libFiniteVolumeNavierStokes libFiniteVolumeArcJet libMeshTools libMeshToolsFVM libNewtonMethod libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
 #libMutation2OLD
 
 # Simulation Parameters
@@ -82,17 +82,18 @@ Simulator.SubSystem.NSLSS.Data.PCType  = PCASM
 #Simulator.SubSystem.NSLSS.Data.PCType  = PCGAMG
 Simulator.SubSystem.NSLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.NSLSS.Data.MatOrderingType = MATORDERING_RCM
-Simulator.SubSystem.NSLSS.Data.MaxIter = 1000
+Simulator.SubSystem.NSLSS.Data.MaxIter = 300
 #Simulator.SubSystem.NSLSS.Data.SaveSystemToFile = true
 Simulator.SubSystem.NSLSS.MaskEquationIDs = 0 1 2 3 4 5
 #Simulator.SubSystem.NSLSS.Data.NbKrylovSpaces = 50
 Simulator.SubSystem.NSLSS.Data.RelativeTolerance = 1e-4
 
 Simulator.SubSystem.ELSS.Data.PCType = PCASM
+# use algebraic multigrid as preconditioner
 #Simulator.SubSystem.ELSS.Data.PCType = PCGAMG
 #Simulator.SubSystem.ELSS.Data.UseAIJ = true
+#Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
 Simulator.SubSystem.ELSS.Data.KSPType = KSPGMRES
-#Simulator.SubSystem.ELSS.Data.MatOrderingType = MATORDERING_RCM
 Simulator.SubSystem.ELSS.Data.MaxIter = 1000
 #Simulator.SubSystem.ELSS.Data.SaveSystemToFile = true
 Simulator.SubSystem.ELSS.MaskEquationIDs = 6
@@ -100,18 +101,16 @@ Simulator.SubSystem.ELSS.Data.NbKrylovSpaces = 80
 Simulator.SubSystem.ELSS.Data.RelativeTolerance = 1e-4
 
 # Time Marching
-
 #Stop Condition
 #Simulator.SubSystem.StopCondition       = MaxNumberSteps
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 50
 
 Simulator.SubSystem.StopCondition   = MaxTime
-Simulator.SubSystem.MaxTime.maxTime = 4.
-Simulator.SubSystem.SubSystemStatus.TimeStep = 0.0025
+Simulator.SubSystem.MaxTime.maxTime = 1.
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.0000025
 
 Simulator.SubSystem.ConvergenceMethod = CrankNicholson
 Simulator.SubSystem.CrankNicholson.ShowRate = 1
-Simulator.SubSystem.CrankNicholson.Data.CFL.Value = 1.0
 Simulator.SubSystem.CrankNicholson.Data.CFL.ComputeCFL = Determine
 Simulator.SubSystem.CrankNicholson.Data.CFL.Determine.SubSystemID = 0
 Simulator.SubSystem.CrankNicholson.Data.MaxSteps = 15
@@ -130,7 +129,12 @@ Simulator.SubSystem.Default.listTRS = \
 	Inlet Outlet Wall Electrode1 Electrode2 Electrode3 Electrode4 Electrode5 Electrode6 Electrode7 Electrode8 InterElectrode
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./ArcJet3D.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./SOL
+#./ArcJet3D.CFmesh
+#Simulator.SubSystem.CFmeshFileReader.Data.InitValuesIDs = 0 1 2 3 4 1000 5
+#Simulator.SubSystem.CFmeshFileReader.Data.UseInitValues = 0 0 0 0 0 1 0
+#Simulator.SubSystem.CFmeshFileReader.Data.InitValues = 0 0 0 0 0 0.000002 0 
+#
 #./anode.CFmesh
 #Simulator.SubSystem.CFmeshFileReader.Data.FileName = SOL
 #cylinder.CFmesh
@@ -166,12 +170,14 @@ Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected3D
 # extrapolator from cell centers to vertices
 Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMoveMultiTRS
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.TrsPriorityList = \
-	Wall Electrode1 Inlet Outlet Electrode2 Electrode3 Electrode4 Electrode5 Electrode6 Electrode7 Electrode8 InterElectrode
+	Inlet Wall Electrode1 Electrode2 Electrode3 Electrode4 Electrode5 Electrode6 Electrode7 Electrode8 InterElectrode Outlet
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.TRSName = \
-	Wall Electrode1 Electrode2 Electrode3 Electrode4 Electrode5 Electrode6 Electrode7 Electrode8 InterElectrode
-Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Wall.ValuesIdx = 1 2 3 4 5 
+	Inlet Wall Electrode1 Electrode2 Electrode3 Electrode4 Electrode5 Electrode6 Electrode7 Electrode8
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Inlet.ValuesIdx = 1 2 3 4 5
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Inlet.Values = 0. 0. 0. 10500. 1e-10
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Wall.ValuesIdx = 1 2 3 4 5
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Wall.Values = 0. 0. 0. 10500. 1e-10
-Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Electrode2.ValuesIdx = 1 2 3 4 5 
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Electrode2.ValuesIdx = 1 2 3 4 5
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Electrode2.Values = 0. 0. 0. 10500. 1e-10
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Electrode3.ValuesIdx = 1 2 3 4 5
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Electrode3.Values = 0. 0. 0. 10500. 1e-10
@@ -185,15 +191,15 @@ Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Electrode7.Val
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Electrode7.Values = 0. 0. 0. 10500. 1e-10
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Electrode8.ValuesIdx = 1 2 3 4 5
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Electrode8.Values = 0. 0. 0. 10500. 1e-10
-Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.InterElectrode.ValuesIdx = 1 2 3 4 5 
-Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.InterElectrode.Values = 0. 0. 0. 10500. 1e-10
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Electrode1.ValuesIdx = 1 2 3 4 5 6
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Electrode1.Values = 0. 0. 0. 10500. 1e-10 0.
 
-# Source Term
-Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = ArcJetPhiST
-
-# source term options to follow ....
+## Source Term
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = SA3DSourceTerm ArcJetPhiST
+Simulator.SubSystem.CellCenterFVM.Data.SA3DSourceTerm.UseGradientLS = true
+Simulator.SubSystem.CellCenterFVM.Data.SA3DSourceTerm.IsPerfectGas = false
+#Simulator.SubSystem.CellCenterFVM.Data.SA3DSourceTerm.CompressibilityCorrectionTerm = true
+#
 Simulator.SubSystem.CellCenterFVM.Data.ArcJetPhiST.Bfield  = 0.0 0.0 0.0
 Simulator.SubSystem.CellCenterFVM.Data.ArcJetPhiST.ElectrodeX = 0.1
 Simulator.SubSystem.CellCenterFVM.Data.ArcJetPhiST.ElectrodeRadius = 0.015
@@ -244,7 +250,6 @@ Simulator.SubSystem.CellCenterFVM.Outlet.Def = 1600. #i/10
 
 Simulator.SubSystem.CellCenterFVM.Wall.applyTRS = \
 	Wall Electrode2 Electrode3 Electrode4 Electrode5 Electrode6 Electrode7 Electrode8 Inlet
-#	Wall Electrode1 Electrode2 Electrode3 Electrode4 Electrode5 Electrode6 Electrode7 Electrode8 Inlet
 Simulator.SubSystem.CellCenterFVM.Wall.TWall = 10500.
 Simulator.SubSystem.CellCenterFVM.Wall.KWall = 1e-10
 Simulator.SubSystem.CellCenterFVM.Wall.ZeroGradientFlags = 1 0 0 0 0 0 1
@@ -265,3 +270,15 @@ Simulator.SubSystem.CellCenterFVM.Inlet.ZeroGradientFlags = 1 0 0 0 0 0 0
 Simulator.SubSystem.CellCenterFVM.Inlet.UseOld = false
 Simulator.SubSystem.CellCenterFVM.Inlet.RadialInjection = true
 
+Simulator.SubSystem.DataPreProcessing = DataProcessing
+Simulator.SubSystem.DataPreProcessingNames = DataProcessing1
+Simulator.SubSystem.DataProcessing1.Comds = ComputeWallDistanceVector2CCMPI
+Simulator.SubSystem.DataProcessing1.Names = WallDistance
+Simulator.SubSystem.DataProcessing1.WallDistance.BoundaryTRS = \
+        Inlet Wall Electrode1 Electrode2 Electrode3 Electrode4 Electrode5 Electrode6 Electrode7 Electrode8
+#Simulator.SubSystem.DataProcessing1.WallDistance.OutputFile = distances.dat
+Simulator.SubSystem.DataProcessing1.RunAtSetup = true
+Simulator.SubSystem.DataProcessing1.SkipFirstIteration = true
+Simulator.SubSystem.DataProcessing1.ProcessRate = 10000000000
+Simulator.SubSystem.DataProcessing1.WallDistance.CentroidBased = true
+#
