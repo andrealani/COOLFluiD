@@ -75,6 +75,8 @@ TwoFluidGravMHDST2DChExchange.hh
 ThreeFluidMHDST3D.ci
 ThreeFluidMHDST3D.cxx
 ThreeFluidMHDST3D.hh
+UnsteadySubInletUVTEIWRhoiViTiCanopy.cxx
+UnsteadySubInletUVTEIWRhoiViTiCanopy.hh
 UnsteadySubInletUVTEIWRhoiViTi.cxx
 UnsteadySubInletUVTEIWRhoiViTi.hh
 #SubOutletPPCWRhoiViTi3D.cxx
