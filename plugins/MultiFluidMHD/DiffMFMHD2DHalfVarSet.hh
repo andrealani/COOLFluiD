@@ -21,6 +21,7 @@ namespace COOLFluiD {
    *
    * @author ALejandro Alvarez
    * YM: 2.5D, Oct. 2015
+   * To be carefully checked before usage!!
    */
 class DiffMFMHD2DHalfVarSet : public DiffMFMHDVarSet {
 public: // classes
