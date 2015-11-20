@@ -155,7 +155,7 @@ Simulator.SubSystem.Default.listTRS = y0 y1 PeriodicX # x0 x1
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./Mesh_2x2_200x200.CFmesh
 #./Mesh_2x2_400x1500.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1e-3 # You divide the size of the box by this number 
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1e-2 # You divide the size of the box by this number 
 
 # comment this out to Restart
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
@@ -237,8 +237,8 @@ Simulator.SubSystem.CellCenterFVM.InField.Def =\
 						0.\
 						0.\
 						0.\
-						9.1093829140e-31*1e15\
-                                                1.67262177774e-27*1e15\
+						9.1093829140e-31*1e15*(1-0.764*tanh((y-1e4)/5e3))\
+                                                1.67262177774e-27*1e15*(1-0.764*tanh((y-1e4)/5e3))\
 						0.\
 						0.\
 						0.\
@@ -248,8 +248,8 @@ Simulator.SubSystem.CellCenterFVM.InField.Def =\
                                                 1e6\ 
 						1e6
 
-#                                                9.1093829140e-31*1e15*(1+tanh((x-1e3)))\
-#                                                1.67262177774e-27*1e15*(1+tanh((x-1e3)))\
+#
+#
 ###############################################################################
 # Boundary Conditions
 Simulator.SubSystem.CellCenterFVM.BcComds = PerfectConductingWall2DHalfFVMCC PerfectConductingWall2DHalfFVMCC PerfectConductingWall2DHalfFVMCC #PerfectConductingWall2DHalfFVMCC PeriodicBCFVMCC 
