@@ -717,25 +717,25 @@ void PlatoLibrary::setSpeciesFractions(const RealVector& ys)
 }
 
 //////////////////////////////////////////////////////////////////////////////
+/*!
+ * This function computes the mole fractions given the mass fractions
+ */
 void PlatoLibrary::getSpeciesMolarFractions(const RealVector& ys, RealVector& xs)
 {
   RealVector& yss = const_cast<RealVector&>(ys);
 
   mass_to_mole_fractions(&yss[0], &xs[0]);
-
-  cout << "PLATO interface STOP:: getSpeciesMolarFractions\n";
-  throw NotImplementedException(FromHere(),"PlatoLibrary::getSpeciesMolarFractions()");
 }
       
 //////////////////////////////////////////////////////////////////////////////
+/*!
+ * This function computes the mass fractions given the mole fractions
+ */
 void PlatoLibrary::getSpeciesMassFractions(const RealVector& xs, RealVector& ys)
 {
   RealVector& xss = const_cast<RealVector&>(xs);
 
   mole_to_mass_fractions(&xss[0], &ys[0]);
-
-  cout << "PLATO interface STOP:: getSpeciesMassFractions\n";
-  throw NotImplementedException(FromHere(),"PlatoLibrary::getSpeciesMassFractions()");
 }
 
 ////////////////////////////////////////////////////////////////////////////////

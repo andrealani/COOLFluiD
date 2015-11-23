@@ -45,7 +45,7 @@ Simulator.SubSystem.NavierStokes2DNEQ.refValues = \
 	1e-6 1e-6 0.000031666 1e-6 0.000031666 7188.34 7188.34 205.73 
 Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary = Mutation2OLD
 # path to the installation of MUTATION (must be consistent)
-#Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.path = /home/esa/coolfluid_AMOD_Modules/Mutation2.0.0I/
+Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.path = /home/munafo/Workspace/COOLFluiD/trunk/plugins/Mutation2.0.0I/
 
 # mixture file to be used in Mutation2OLD.path/data/mixture
 Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.mixtureName = air5
@@ -75,12 +75,12 @@ Simulator.SubSystem.Tecplot.SaveRate              = 100
 Simulator.SubSystem.Tecplot.AppendIter = false  # this appends the iteration number to the TECPLOT files
 
 # stop the simulation wfter a certain number of iterations
-Simulator.SubSystem.StopCondition = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 20
+#Simulator.SubSystem.StopCondition = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 20
 
 # stop the simulation when a certain residual norm is reached
-#Simulator.SubSystem.StopCondition  = Norm
-#Simulator.SubSystem.Norm.valueNorm = -3.0
+Simulator.SubSystem.StopCondition  = Norm
+Simulator.SubSystem.Norm.valueNorm = -3.0
 
 # name of the boundary patches in the mesh file (must be consistent)
 Simulator.SubSystem.Default.listTRS = wall Cate1 Cate2 sym inlet outlet
