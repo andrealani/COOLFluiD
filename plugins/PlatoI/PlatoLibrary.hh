@@ -533,6 +533,9 @@ protected:
   /* Molecule IDs*/
   std::vector<CFuint> _molIDs;
 
+  /*Tolerance on mole fractions*/
+  CFdouble _Xtol;
+
   /*Mass fractions*/
   RealVector _Yi;
   

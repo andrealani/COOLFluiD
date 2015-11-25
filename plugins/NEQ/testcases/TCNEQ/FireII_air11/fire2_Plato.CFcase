@@ -14,7 +14,7 @@ CFEnv.ExceptionOutputs = false
 #CFEnv.TraceToStdOut = true
 
 # Simulation Modules
-Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libNEQ libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeNEQ libGmsh2CFmesh libGambit2CFmesh libPetscI libMutation2OLD libMutation2OLDI libAeroCoefFVM libAeroCoefFVMNEQ
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libNEQ libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeNEQ libGmsh2CFmesh libGambit2CFmesh libPetscI libPlatoI libAeroCoefFVM libAeroCoefFVMNEQ
 
 # relative path to working directory
 Simulator.Paths.WorkingDir = plugins/NEQ/testcases/TCNEQ/FireII_air11
@@ -31,19 +31,20 @@ Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DNEQ
 Simulator.SubSystem.NavierStokes2DNEQ.refValues = \
 1e-12 1e-6 1e-6 0.00059826 1e-6 0.00018174 1e-6 1e-6 1e-6 1e-6 1e-6 10480. 10480. 276. 276.
 
-Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary = Mutation2OLD
-Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.mixtureName = air11
-Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.reactionName = parkair93
-Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.path = /home/munafo/Workspace/COOLFluiD/trunk/plugins/Mutation2.0.0I/
-Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.transfName = air11
-Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.TminFix = 100.
-Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.dynViscAlgo = CG
-Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.thermCondAlgo = Direct
+Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary = Plato
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.mixtureName = air11
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.reactionName = air11_park93
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.transfName = TTv
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.path = /home/munafo/Workspace/neqplasma/database
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.Xtol = 1.e-10
+#Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.TminFix = 100.
+#Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.dynViscAlgo = CG
+#Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.thermCondAlgo = Direct
 Simulator.SubSystem.NavierStokes2DNEQ.nbSpecies = 11
 Simulator.SubSystem.NavierStokes2DNEQ.nbEulerEqs = 3
 Simulator.SubSystem.NavierStokes2DNEQ.nbVibEnergyEqs = 1
-Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.includeElectronicEnergy = true
-Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.electrEnergyID = 0
+#Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.includeElectronicEnergy = true
+#Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.electrEnergyID = 0
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = fire2.CFmesh
@@ -71,7 +72,7 @@ Simulator.SubSystem.CFmesh.AppendIter = true
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
 
 Simulator.SubSystem.StopCondition       = Norm
-Simulator.SubSystem.Norm.valueNorm      = -7.0
+Simulator.SubSystem.Norm.valueNorm      = -3.0
 
 Simulator.SubSystem.Default.listTRS = Wall Symmetry Inlet Outlet
 
@@ -161,6 +162,7 @@ Simulator.SubSystem.CFmesh.Data.ExtraStateVarStrides = 15
 
 Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = NavierStokes2DTCNEQAxiST Euler2DCTNEQST
+#Simulator.SubSystem.CellCenterFVM.Data.Euler2DCTNEQST.UseAnalyticalJacob = true
 Simulator.SubSystem.CellCenterFVM.Data.NavierStokes2DTCNEQAxiST.uvIDs = 11 12
 Simulator.SubSystem.CellCenterFVM.Data.NavierStokes2DTCNEQAxiST.UseGradientLS = true
 #Simulator.SubSystem.CellCenterFVM.Data.Euler2DCTNEQST.RadRelaxationFactor = 1.0

@@ -1,14 +1,11 @@
 # how often wall heat flux is computed
-Simulator.SubSystem.DataProcessing3.ProcessRate = 50
+Simulator.SubSystem.DataProcessing3.ProcessRate = 100
 #increase when the convergence drops
-Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 0.9
-# first order: gradientFactor=0, second order: gradientFactor=1 
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.0
-# freezing of the limiter 
-# set to +8 once the convergence stalls 
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 0.5 
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.0
 # or control number of iterations at which limiter will be "frozen"
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitIter = 6000
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitIter = 6000
 #Simulator.SubSystem.CellCenterFVM.Data.Euler2DCTNEQST.RadRelaxationFactor = 1.
 # number of iterations to run with adiabatic wall to improve stability at the beginning and
 # let the shock detach faster

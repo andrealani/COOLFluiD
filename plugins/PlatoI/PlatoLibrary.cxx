@@ -43,6 +43,7 @@ void PlatoLibrary::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("mixtureName","Name of the mixture.");
   options.addConfigOption< std::string >("reactionName","Name of the reaction.");
   options.addConfigOption< std::string >("transfName","Name of the transfer file.");
+  options.addConfigOption< CFdouble >("Xtol","Tolerance on mole fraction for transport properties.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -78,7 +79,7 @@ PlatoLibrary::PlatoLibrary(const std::string& name)
   _path = "empty";
   setParameter("path",&_path);
 
-  _mixtureName = "";
+  _mixtureName = "empty";
   setParameter("mixtureName",&_mixtureName);
 
   _reactionName = "empty";
@@ -86,6 +87,9 @@ PlatoLibrary::PlatoLibrary(const std::string& name)
   
   _transfName = "empty";
   setParameter("transfName",&_transfName);
+
+  _Xtol = 1.e-12;
+  setParameter("Xtol",&_Xtol);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -150,6 +154,12 @@ void PlatoLibrary::setLibrarySequentially()
   _nbTvib = get_nb_vib_temp();
   _nbTe   = get_nb_el_temp();
 
+  /*Free-electron energy ID (C/C++ array)*/
+  _electrEnergyID = 0;
+  if (getNbTe() == 1) {
+    _electrEnergyID = _nbTvib;
+  }
+
   /*Number of dimensions*/
   _nDim = PhysicalModelStack::getActive()->getDim();
 
@@ -204,6 +214,9 @@ void PlatoLibrary::setLibrarySequentially()
 
   /*Set flag to indicate is the mixture is neutral or ionized*/
   _hasElectrons = (get_nb_e() == 1) ? true : false;
+
+  /*Set tolerance on mole fractions (for transport properties)*/
+  set_Xtol(&_Xtol);
 }
  
 //////////////////////////////////////////////////////////////////////////////     
@@ -267,11 +280,10 @@ CFdouble PlatoLibrary::get_el_temp(CFdouble &temp, CFreal* tVec) {
  */
 void PlatoLibrary::comp_tol(RealVector& X, RealVector& Xtol) {
  
-  CFdouble tol = 1.e-12;
   CFdouble sum_X = 0.;
 
   for (CFint i = 0; i < _NS; ++i ) {
-    Xtol[i]  = X[i] + tol;
+    Xtol[i]  = X[i] + _Xtol;
     sum_X   += Xtol[i];
   }
    
@@ -279,7 +291,6 @@ void PlatoLibrary::comp_tol(RealVector& X, RealVector& Xtol) {
   for (CFint i = 0; i < _NS; ++i) {
     Xtol[i] *= sum_X;
   }
-
 }
     
 ////////////////////////////////////////////////////////////////////////////// 
@@ -702,7 +713,7 @@ void PlatoLibrary::setSpeciesFractions(const RealVector& ys)
   for (CFint is = 0; is < _NS; ++is) {
     _Yi[is] = ys[is];
     /*Fix application*/
-    if (_Yi[is] < 0.0) _Yi[is] = 1.e-12;
+    if (_Yi[is] < 0.0) _Yi[is] = 0.0;
        cf_assert(_Yi[is] < 1.1);
   }
 
@@ -962,7 +973,7 @@ void PlatoLibrary::getSpeciesTotEnthalpies(CFdouble& temp,
      for (CFint i = 0; i < _NS; ++i) {
        (*hsEl)[i] = _hiEl[i];
      }
-     
+ 
   /*Chemical non-equilibrium case*/
   } else {
 

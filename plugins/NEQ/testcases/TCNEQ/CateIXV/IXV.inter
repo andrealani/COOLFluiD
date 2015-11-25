@@ -1,5 +1,5 @@
 # increase progressively up to a maximum of 1000.
-#Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1000.
+Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.
 # set the following parameter to 100 once the convergence history starts oscillating around same values
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitIter = 1000
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
