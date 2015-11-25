@@ -92,8 +92,8 @@ void StdParSolveSys::execute()
   // assemble the rhs vector
   rhsVec.assembly();
   
+  const CFuint nbIter = SubSystemStatusStack::getActive()->getNbIter();
   if (getMethodData().getSaveRate() > 0) {
-    const CFuint nbIter = SubSystemStatusStack::getActive()->getNbIter();
     if (getMethodData().isSaveSystemToFile() || (nbIter%getMethodData().getSaveRate() == 0)) { 
       const string mFile = "mat-iter" + StringOps::to_str(nbIter) + ".dat";
       mat.printToFile(mFile.c_str());
@@ -126,7 +126,9 @@ void StdParSolveSys::execute()
   ierr = KSPGetIterationNumber(ksp, &iter);
   CHKERRCONTINUE(ierr);
   
-  CFLog(INFO, "KSP convergence reached at iteration: " << iter << "\n");
+  if (nbIter%getMethodData().getKSPConvergenceShowRate() == 0) {
+    CFLog(INFO, "KSP convergence reached at iteration: " << iter << "\n");
+  }
   
   solVec.copy(&rhs[0], &_upLocalIDs[0], vecSize);
 }

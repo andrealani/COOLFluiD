@@ -1,0 +1,145 @@
+###############################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, Euler2DNEQ (chemical NEQ model for N-N2), 
+# NewtonIterator, mesh with quads, second-order reconstruction with limiter, 
+# AUSM+ flux, noslip wall BC, PETSc, Mutation++  
+#
+################################################################################
+#
+# This testcases simulates a 2D cylinder corresponding to Hornung's experiment
+#
+### Residual = -3.0001
+
+# Simulator.TraceToStdOut = true
+
+# Simulation Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libNEQ libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeNEQ libGambit2CFmesh libPetscI libMutationppI libAeroCoefFVM libAeroCoefFVMNEQ libMeshTools libMeshToolsFVM
+
+# this option helps if you want to check that all the options you set are declared properly (no spelling mistakes)
+# some options (for instance some Gambit or other converter settings) will always fail anyway
+#CFEnv.ErrorOnUnusedConfig = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NEQ/testcases/TCNEQ/Hornung
+Simulator.Paths.ResultsDir = ./RESULTS_CNEQ_EULER_MPP
+
+Simulator.SubSystem.Default.PhysicalModelType = Euler2DNEQ
+Simulator.SubSystem.Euler2DNEQ.refValues = 0.004956 0.004956 5590. 5590. 1833.
+Simulator.SubSystem.Euler2DNEQ.refLength = 1.0
+Simulator.SubSystem.Euler2DNEQ.PropertyLibrary = Mutationpp
+Simulator.SubSystem.Euler2DNEQ.Mutationpp.mixtureName = N2_neut
+Simulator.SubSystem.Euler2DNEQ.Mutationpp.StateModelName = ChemNonEq1T
+#Simulator.SubSystem.Euler2DNEQ.Mutationpp.freezeChemistry = true
+Simulator.SubSystem.Euler2DNEQ.nbSpecies = 2
+Simulator.SubSystem.Euler2DNEQ.nbEulerEqs = 3
+
+Simulator.SubSystem.OutputFormat        = CFmesh Tecplot
+
+Simulator.SubSystem.Tecplot.FileName    = HornungN2.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = Rhoivt
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot.SaveRate = 2000
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Wall
+
+Simulator.SubSystem.CFmesh.FileName  = HornungN2.CFmesh
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.SaveRate = 2000
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarNames = limiter
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarStrides = 5
+
+#Simulator.SubSystem.StopCondition          = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 100
+
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -3.0
+
+Simulator.SubSystem.Default.listTRS = Wall Inlet Outlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./coarse.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1000.
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 200
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 500
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPShowRate = 100
+#Simulator.SubSystem.NewtonIteratorLSS.Data.ILULevels = 2
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = \
+	if(i<1000,0.5,if(i<3500,1.,if(i<12000.,min(10.,cfl*1.02),min(50.,cfl*1.02))))
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 4
+#Simulator.SubSystem.NewtonIterator.Data.L2.ComputedVarID = 4
+Simulator.SubSystem.NewtonIterator.Data.FilterState = Max
+Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs = 1 1 0 0 1
+Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0. 0. 0. 0. 0.
+Simulator.SubSystem.NewtonIterator.ShowRate = 100
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+#Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+# new settings for AUSM+ for multi species
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusMS2D 
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusMS2D.choiceA12 = 5
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar = Rhoivt     # variables in which solution is stored and updated 
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons       # conservative variables 
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = Euler2DCNEQST
+#Simulator.SubSystem.CellCenterFVM.Data.Euler2DCNEQST.UseAnalyticalJacob = true
+
+# second order
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitIter = 1500
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Vars = i
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Def = \
+#	if(i<3000,0.,1.) if(i<3000,0.,1.) if(i<3000,0.,1.) if(i<3000,0.,1.) if(i<3000,0.,1.) if(i<3000,0.,1.)
+
+# only initialization of internal field here
+# the other boundaries will be initialized by the corresponding BC
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 0.0001952 0.004956 -5590. 0. 1833.
+
+Simulator.SubSystem.CellCenterFVM.BcComds = MirrorVelocityFVMCC SuperInletFVMCC SuperOutletFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = BcWall BcInlet BcOutlet
+
+Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS = Inlet
+Simulator.SubSystem.CellCenterFVM.BcInlet.Vars = x y
+Simulator.SubSystem.CellCenterFVM.BcInlet.Def = 0.0001952 0.004956 -5590. 0. 1833.
+
+Simulator.SubSystem.CellCenterFVM.BcWall.applyTRS = Wall
+Simulator.SubSystem.CellCenterFVM.BcWall.ZeroGradientFlags = 1 1 0 0 1
+
+Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS = Outlet
+Simulator.SubSystem.CellCenterFVM.BcOutlet.ZeroGradientFlags = 1 1 1 1 1
+

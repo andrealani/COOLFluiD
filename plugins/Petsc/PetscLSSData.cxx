@@ -40,11 +40,12 @@ void PetscLSSData::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("AbsoluteTolerance","Absolute tolerance for control of iterative solver convergence.");
   options.addConfigOption< CFuint >("NbKrylovSpaces","Number of Krylov spaces.");
   options.addConfigOption< CFuint >("ILULevels","Levels of fill for the ILU preconditioner (default = 0).");
+  options.addConfigOption< CFuint >("KSPShowRate", "Rate telling how often KSP convergence is shown");
   options.addConfigOption< string >("ShellPreconditioner","Shell preconditioner.");
   options.addConfigOption< bool >("DifferentPreconditionerMatrix", "Enable/Disable usage of different matrix for preconditioner");
   options.addConfigOption< bool >("UseAIJ", "Tell if AIJ structure must be used insted of BAIJ (default)");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 PetscLSSData::PetscLSSData(SafePtr<std::valarray<bool> > maskArray,
@@ -67,7 +68,10 @@ PetscLSSData::PetscLSSData(SafePtr<std::valarray<bool> > maskArray,
 
   _ilulevels = 0;
   setParameter("ILULevels",&_ilulevels);
-
+  
+  _kspConvergenceShowRate = 1;
+  setParameter("KSPShowRate",& _kspConvergenceShowRate);
+  
   _pcTypeStr = "PCILU";
   setParameter("PCType",&_pcTypeStr);
 

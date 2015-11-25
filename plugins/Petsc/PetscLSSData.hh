@@ -214,7 +214,14 @@ public:
     return _showMatrixStructure;
   }
 
-
+  /**
+   * KSP convergence show rate
+   */
+  CFuint getKSPConvergenceShowRate() const
+  {
+    return _kspConvergenceShowRate;
+  }
+  
   /**
    * Gets the number of krylov subspaces
    */
@@ -282,7 +289,10 @@ private:
 
   /// Number of levels of fill for the ILU preconditioner
   CFuint _ilulevels;
-
+  
+  /// KSP convergence show rate
+  CFuint _kspConvergenceShowRate;
+  
   /// Preconditioner type
   std::string _pcTypeStr;
 
@@ -312,7 +322,7 @@ private:
 
   /// Use the AIJ structure instead of BAIJ
   bool _useAIJ;
-
+    
 }; // end of class PetscLSSData
 
 //////////////////////////////////////////////////////////////////////////////
