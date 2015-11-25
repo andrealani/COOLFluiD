@@ -92,15 +92,18 @@ void StdParSolveSys::execute()
   // assemble the rhs vector
   rhsVec.assembly();
   
-  // cout << "PETSC MAT" << endl;
-  // mat.printToFile("matrix.dat");
-  // mat.printToScreen();
-  
-  // cout << "\n\n PETSC VEC" << endl;
-  // rhsVec.printToFile("vector.dat");
-  // rhsVec.printToScreen();
-  
-  // if (getMethodData().getNbSysEquations() ==14) rhsVec.printToScreen();
+  if (getMethodData().getSaveRate() > 0) {
+    const CFuint nbIter = SubSystemStatusStack::getActive()->getNbIter();
+    if (getMethodData().isSaveSystemToFile() || (nbIter%getMethodData().getSaveRate() == 0)) { 
+      const string mFile = "mat-iter" + StringOps::to_str(nbIter) + ".dat";
+      mat.printToFile(mFile.c_str());
+      // mat.printToScreen();
+      
+      const string vFile = "rhs-iter" + StringOps::to_str(nbIter) + ".dat";
+      rhsVec.printToFile(vFile.c_str());
+      // rhsVec.printToScreen();
+    }
+  }
   
   CFuint ierr = KSPSetOperators
     (ksp,mat.getMat(), mat.getMat(),DIFFERENT_NONZERO_PATTERN);
@@ -122,10 +125,9 @@ void StdParSolveSys::execute()
   CFint iter = 0;
   ierr = KSPGetIterationNumber(ksp, &iter);
   CHKERRCONTINUE(ierr);
-
-  CFLog(INFO, "KSP convergence reached at iteration: " <<
-        iter << "\n");
-
+  
+  CFLog(INFO, "KSP convergence reached at iteration: " << iter << "\n");
+  
   solVec.copy(&rhs[0], &_upLocalIDs[0], vecSize);
 }
 

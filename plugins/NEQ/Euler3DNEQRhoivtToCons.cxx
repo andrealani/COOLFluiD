@@ -66,14 +66,17 @@ void Euler3DNEQRhoivtToCons::transform(const State& state, State& result)
   }
   _ye /= rho;
   
+  const RealVector& refData =  _model->getReferencePhysicalData();
+  CFreal rhoDim = rho*refData[EulerTerm::RHO];
+  CFreal T = state[nbSpecies + 2];
+  CFreal Tdim = T*refData[EulerTerm::T];
+  CFreal* rhoi = &const_cast<State&>(state)[0];
+  library->setState(rhoi, &Tdim);
+  
   // set the current species fractions in the thermodynamic library
   // this has to be done right here, before computing any other thermodynamic quantity !!! 
   library->setSpeciesFractions(_ye);
   
-  const RealVector& refData =  _model->getReferencePhysicalData();
-  CFreal rhoDim = rho*refData[EulerTerm::RHO];
-  CFreal T = state[nbSpecies + 3];
-  CFreal Tdim = T*refData[EulerTerm::T];
   CFreal pdim = library->pressure(rhoDim, Tdim, CFNULL);
   const CFreal u = state[nbSpecies];
   const CFreal v = state[nbSpecies + 1];

@@ -122,6 +122,11 @@ public:
     */
   void setMoleculesIDs(std::vector<CFuint>& v);
   
+  /// Set the thermodynamic state (temperature and pressure)
+  /// @param species partial densities
+  /// @param mixture temperature
+  virtual void setState(CFdouble* rhoi, CFdouble* T) {}
+  
   /*!
    * Calculates the static pressure of the mixture
    * @param rho  density

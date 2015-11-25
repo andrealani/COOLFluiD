@@ -702,6 +702,8 @@ void AUSMFlux<UPDATEVAR>::computeSoundSpeed5()
   const CFreal acLL = aCritLL2/max(sqrt(aCritLL2), this->m_unL);
   const CFreal acRR = aCritRR2/max(sqrt(aCritRR2), -this->m_unR);
   this->m_a12 = min(acLL, acRR);
+  
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => a12 " << this->m_a12 << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

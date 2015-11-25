@@ -79,8 +79,8 @@ public:
   /// @param mixture temperature
   void setState(CFdouble* rhoi, CFdouble* T) 
   {
-    RealVector rhoiv(_NS,&rhoi[0]);
-    CFLog(DEBUG_MAX, "MutationLibrarypp::setState() => rhoiv = " << rhoiv << ", T = " << *T << "\n");
+    RealVector rhoiv(_NS, &rhoi[0]);
+    CFLog(DEBUG_MAX, "MutationLibrarypp::setState() => rhoiv = " << rhoiv << ", T = " << *T << "\n"); 
     m_gasMixture->setState(rhoi, T, 1);
   }   
   
@@ -117,12 +117,14 @@ public:
    /**
     * Set the constant of gases in J/(Kg*K)
     */
-    void setRiGas(RealVector& Ri)
-   {
-     for(CFint is = 0; is < _NS; ++is) {
-       Ri[is] = Mutation::RU/m_molarmassp[is];
-     }
-   }
+  void setRiGas(RealVector& Ri)
+  {
+    assert(Ri.size() == (CFuint)_NS);
+    cf_assert(m_molarmassp.size() == (CFuint)_NS);
+    for(CFint is = 0; is < _NS; ++is) {
+      Ri[is] = Mutation::RU/m_molarmassp[is];
+    }
+  }
 
    /**
     * Set the IDs of the molecules in the mixture
@@ -180,7 +182,9 @@ public:
    */
   CFdouble eta(CFdouble& temp, CFdouble& pressure, CFreal* tVec)
   {
-    return m_gasMixture->viscosity();
+    const CFreal mu = m_gasMixture->viscosity();
+    CFLog(DEBUG_MAX, "Mutation::eta() => mu = " << mu << "\n");
+    return mu;
   }
   
   /**
@@ -536,12 +540,7 @@ public:
 			       RealVector* hsEl);
   
 private: // helper function
-  
-  /**
-   * Set up the library sequentially
-   */
-  void setLibrarySequentially2();
-  
+    
   /// enumerator for the state model type 
   enum StateModelType {LTE=0, CNEQ=1, TCNEQ=2};
   

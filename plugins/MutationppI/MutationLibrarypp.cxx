@@ -82,17 +82,6 @@ void MutationLibrarypp::setup()
   
   Framework::PhysicalChemicalLibrary::setup();
   
-  // if this is a parallel simulation, only ONE process at a time
-  // sets the library
-  setLibrarySequentially2();
-  
-  CFLog(VERBOSE, "MutationLibrarypp::setup() => end\n"); 
-}
-      
-//////////////////////////////////////////////////////////////////////////////
-
-void MutationLibrarypp::setLibrarySequentially2()
-{ 
   Mutation::MixtureOptions mo(_mixtureName);
   
   mo.setStateModel(_stateModelName);
@@ -125,15 +114,21 @@ void MutationLibrarypp::setLibrarySequentially2()
   
   _Rgas = Mutation::RU;
   cf_assert(_Rgas > 0.);
+    
+  CFLog(VERBOSE, "MutationLibrarypp::setup() => end\n"); 
 }
       
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrarypp::unsetup()
 {
+  CFLog(VERBOSE, "MutationLibrarypp::unsetup() => start\n"); 
+  
   if(isSetup()) {
     Framework::PhysicalChemicalLibrary::unsetup();
   }
+  
+  CFLog(VERBOSE, "MutationLibrarypp::unsetup() => start\n"); 
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -141,7 +136,9 @@ void MutationLibrarypp::unsetup()
 CFdouble MutationLibrarypp::lambdaNEQ(CFdouble& temperature,
 				      CFdouble& pressure)
 {
-  return m_gasMixture->frozenThermalConductivity();
+  const CFreal k = m_gasMixture->frozenThermalConductivity();
+  CFLog(DEBUG_MAX, "Mutation::lambdaNEQ() => k = " << k << "\n");
+  return k;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -178,19 +175,28 @@ void MutationLibrarypp::gammaAndSoundSpeed(CFdouble& temp,
 {
   gamma = m_gasMixture->mixtureEquilibriumGamma();
   soundSpeed = m_gasMixture->equilibriumSoundSpeed();
+  
+  CFLog(DEBUG_MAX, "Mutation::gammaAndSoundSpeed() => [t,p,rho] = [" 
+	<< temp << ", "  << pressure << ", " << rho <<  "] => gamma = " 
+	<< gamma << ", soundSpeed = " << soundSpeed << "\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrarypp::frozenGammaAndSoundSpeed(CFdouble& temp,
-						CFdouble& pressure,
-						CFdouble& rho,
-						CFdouble& gamma,
-						CFdouble& soundSpeed,
-						RealVector* tVec)
+						 CFdouble& pressure,
+						 CFdouble& rho,
+						 CFdouble& gamma,
+						 CFdouble& soundSpeed,
+						 RealVector* tVec)
 {
   gamma = m_gasMixture->mixtureFrozenGamma();
-  soundSpeed = m_gasMixture->frozenSoundSpeed();
+  // soundSpeed = m_gasMixture->frozenSoundSpeed();
+  soundSpeed = std::sqrt(gamma*pressure/rho); 
+  
+  CFLog(DEBUG_MAX, "Mutation::gammaAndSoundSpeed() => [t,p,rho] = [" 
+	<< temp << ", "  << pressure << ", " << rho <<  "] => gamma = " 
+	<< gamma << ", soundSpeed = " << soundSpeed << "\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -219,6 +225,8 @@ void MutationLibrarypp::setComposition(CFdouble& temp,
   }
     
   m_gasMixture->convert<X_TO_Y>(xm, &m_y[0]);
+  
+  CFLog(DEBUG_MAX, "Mutation::setComposition() => m_y = " << m_y << "\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -227,19 +235,28 @@ void MutationLibrarypp::setDensityEnthalpyEnergy(CFdouble& temp,
 						 CFdouble& pressure,
 						 RealVector& dhe)
 {
-  CFLog(DEBUG_MAX, "MutationLibrarypp::setDensityEnthalpyEnergy() => P = " 
+  CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => P = " 
 	<< pressure << ", T = " << temp << "\n");
   
   dhe[0] = m_gasMixture->density();
   dhe[1] = m_gasMixture->mixtureHMass();
   
-  //  CFreal rhoiv[2]; rhoiv[0] = 0; rhoiv[1] = dhe[0];
-  //  setState(&rhoiv[0], &temp);
-  //  dhe[1] -= m_gasMixture->mixtureHMass(0.0000000001);
+  // CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => H NEW = " << dhe[1] << "\n");
+  
+  // // gory fix for backward compatibility with Mutation F77
+  // RealVector rhoivBkp(_NS); rhoivBkp = dhe[0]*m_y;
+  // RealVector rhoiv(0.,_NS); 
+  // if (_NS == 2) {rhoiv[1] = dhe[0];} // N2
+  // if (_NS == 5) {rhoiv[3] = dhe[0]*0.79; rhoiv[4] = dhe[0]*0.21;} // air5
+  // setState(&rhoiv[0], &temp);
+  // dhe[1] -= m_gasMixture->mixtureHMass(0.0000000001);
+  // setState(&rhoivBkp[0], &temp);
+  
+  // CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => H OLD = " << dhe[1] << "\n"); 
   
   dhe[2] = dhe[1]-pressure/dhe[0];
   
-  CFLog(DEBUG_MAX, "MutationLibrarypp::setDensityEnthalpyEnergy()          => " << dhe << ", " <<  m_y << "\n");
+  CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => " << dhe << ", " <<  m_y << "\n");
   // static int count = 0; if (count++ == 20000) abort(); 
 }
       
@@ -270,13 +287,23 @@ CFdouble MutationLibrarypp::pressure(CFdouble& rho,
 				     CFdouble& temp,
 				     CFreal* tVec)
 {
-  const CFreal p = m_gasMixture->pressure(temp, rho, &m_y[0]);
+  CFLog(DEBUG_MAX, "Mutation::pressure() => rho = " << rho << ", T = " << temp 
+	<< ", y = " << m_y << "\n");
+  
+  // const CFreal p = m_gasMixture->pressure(temp, rho, &m_y[0]);
+  const CFreal p = m_gasMixture->P();
+  if (p <= 0.) {
+    CFLog(INFO, "Mutation::pressure() => p = " << p << " with rho = " << rho 
+	  << ", T = " << temp << ", y = " << m_y << "\n");
+  }
   cf_assert(p>0.);
+  
+  CFLog(DEBUG_MAX, "Mutation::pressure() => " << p << "\n");
   return p;
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
+      
 CFdouble MutationLibrarypp::electronPressure(CFreal rhoE,
 					     CFreal tempE)
 {
@@ -349,6 +376,8 @@ CFdouble MutationLibrarypp::enthalpy(CFdouble& temp,
 
    yEl *= m_molarmassp[0]; // 1st species: electron
    ys[0] = yEl; // overwrite electron mass fraction
+   
+   CFLog(DEBUG_MAX, "Mutation::setElectronFraction() => " << ys[0] << "\n");
  }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -365,24 +394,28 @@ void MutationLibrarypp::setSpeciesFractions(const RealVector& ys)
     if (m_y[is] < 0.0) m_y[is] = 0.0;
     cf_assert(m_y[is] < 1.1);
   }
+    
+  CFLog(DEBUG_MAX, "Mutation::setSpeciesFractions() => " << m_y << "\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
 
- void MutationLibrarypp::getSpeciesMolarFractions
- (const RealVector& ys, RealVector& xs)
- {
-    RealVector& yss = const_cast<RealVector&>(ys);
-     m_gasMixture->convert<Y_TO_X>(&yss[0], &xs[0]);
- }
+void MutationLibrarypp::getSpeciesMolarFractions
+(const RealVector& ys, RealVector& xs)
+{
+  RealVector& yss = const_cast<RealVector&>(ys);
+  m_gasMixture->convert<Y_TO_X>(&yss[0], &xs[0]);
+  CFLog(DEBUG_MAX, "Mutation::getSpeciesMolarFractions() => " << xs << "\n");
+}
       
 //////////////////////////////////////////////////////////////////////////////
 
  void MutationLibrarypp::getSpeciesMassFractions
  (const RealVector& xs, RealVector& ys)
  {
-    RealVector& xss = const_cast<RealVector&>(xs);
-    m_gasMixture->convert<X_TO_Y>(&xss[0], &ys[0]);
+   RealVector& xss = const_cast<RealVector&>(xs);
+   m_gasMixture->convert<X_TO_Y>(&xss[0], &ys[0]);
+   CFLog(DEBUG_MAX, "Mutation::getSpeciesMolarFractions() => " << ys << "\n");
  }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -392,7 +425,7 @@ void MutationLibrarypp::setSpeciesFractions(const RealVector& ys)
    for (CFint is = 0; is < _NS; ++is) {
      ys[is] = m_y[is];
    }
-   std::cout << "getSpeciesMassFractions() WAS CALLED!!!!" << std::endl;
+   CFLog(DEBUG_MAX, "Mutation::getSpeciesMolarFractions() => " << ys << "\n");
  }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -419,14 +452,20 @@ void MutationLibrarypp::getMassProductionTerm(CFdouble& temperature,
 					      RealVector& omega,
 					      RealMatrix& jacobian)
 {
-  // CFLog(INFO, "MutationLibrarypp::getMassProductionTerm() => P = " 
+  // CFLog(DEBUG_MAX, "MutationLibrarypp::getMassProductionTerm() => P = " 
   // << pressure << ", T = " << temperature << "\n");
   
   // we assume setState() already called before
-  m_gasMixture->netProductionRates(&omega[0]);
+  if (!_freezeChemistry) {
+    m_gasMixture->netProductionRates(&omega[0]);
+  } 
+  else {
+    omega = 0.;
+  }
   
-  // CFLog(INFO, "MutationLibrarypp::getMassProductionTerm() => omega = " << omega << "\n");
+  CFLog(DEBUG_MAX, "Mutation::getMassProductionTerm() => omega = " << omega << "\n\n");
   
+  //  static int count = 0; if (count++ == 1000) exit(1);
   // TODO: Need to figure out how to do the Jacobian later
 }
       
@@ -468,19 +507,21 @@ void MutationLibrarypp::getRhoUdiff(CFdouble& temperature,
   for (CFint is = 0; is < _NS; ++is) {
     m_df[is] = (MMass*normConcGradients[is] + m_y[is]*normMMassGradient) / m_molarmassp[is];
   }
-    
+  
   CFreal E = 0.0;
   m_gasMixture->stefanMaxwell(&m_df[0], &rhoUdiff[0], E);
   
-  // CFLog(INFO, "MutationLibrarypp::rhoUdiff() =>  rhoUdiff = " << rhoUdiff << "\n");
+  // CFLog(DEBUG_MAX, "Mutation::rhoUdiff() =>  rhoUdiff = " << rhoUdiff << "\n");
   
   const CFreal density = m_gasMixture->density();
-      
-  // CFLog(INFO, "MutationLibrarypp::rhoUdiff() =>  rho = " << density << "\n");
+  
+  // CFLog(DEBUG_MAX, "Mutation::rhoUdiff() =>  rho = " << density << "\n");
   
   for (CFint is = 0; is < _NS; ++is) {
-  rhoUdiff[is] *= m_y[is]*density;
+    rhoUdiff[is] *= m_y[is]*density;
   }
+  
+  CFLog(DEBUG_MAX, "Mutation::rhoUdiff() => rhoUdiff = " << rhoUdiff << "\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -524,13 +565,12 @@ void MutationLibrarypp::getSpeciesTotEnthalpies(CFdouble& temp,
 						RealVector* hsVib,
 						RealVector* hsEl)
 {
-  // CFLog(INFO, "MutationLibrarypp::getSpeciesTotEnthalpies()\n");
+  // CFLog(DEBUG_MAX, "Mutation::getSpeciesTotEnthalpies()\n");
   
   // recheck this with 2-temperature
   CFreal* hv = (hsVib != CFNULL) ? &(*hsVib)[0] : CFNULL;
   CFreal* he = (hsEl  != CFNULL) ?  &(*hsEl)[0] : CFNULL;
   m_gasMixture->speciesHOverRT(&hsTot[0], CFNULL, CFNULL, hv, he); 
-  // CFLog(INFO, "MutationLibrarypp::getSpeciesTotEnthalpies() => hsTot = " << hsTot << "\n");
   
   const CFreal RT = _Rgas*temp;
   for (CFuint i = 0; i < _NS; ++i) {
@@ -539,6 +579,8 @@ void MutationLibrarypp::getSpeciesTotEnthalpies(CFdouble& temp,
     if (hsVib != CFNULL) {hsVib[i] *= k;}
     if (hsEl != CFNULL) {hsEl[i]  *= k;}
   }
+  
+  CFLog(DEBUG_MAX, "Mutation::getSpeciesTotEnthalpies() => hsTot = " << hsTot << "\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -563,6 +605,8 @@ void MutationLibrarypp::getMolarMasses(RealVector& mm)
   for (CFint i = 0; i < _NS; ++i) {
     mm[i] = m_molarmassp[i];
   }
+  
+  CFLog(DEBUG_MAX, "Mutation::getMolarMasses() => " << mm << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

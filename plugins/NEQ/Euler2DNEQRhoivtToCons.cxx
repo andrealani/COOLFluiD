@@ -64,15 +64,18 @@ void Euler2DNEQRhoivtToCons::transform(const State& state, State& result)
     _ye[ie] = state[ie];
   }
   _ye /= rho;
-
-  // set the current species fractions in the thermodynamic library
-  // this has to be done right here, before computing any other thermodynamic quantity !!!
-  library->setSpeciesFractions(_ye);
-
+  
   const RealVector& refData =  _model->getReferencePhysicalData();
   CFreal rhoDim = rho*refData[EulerTerm::RHO];
   CFreal T = state[nbSpecies + 2];
   CFreal Tdim = T*refData[EulerTerm::T];
+  CFreal* rhoi = &const_cast<State&>(state)[0];
+  library->setState(rhoi, &Tdim);
+  
+  // set the current species fractions in the thermodynamic library
+  // this has to be done right here, before computing any other thermodynamic quantity !!!
+  library->setSpeciesFractions(_ye);
+  
   CFreal pdim = library->pressure(rhoDim, Tdim, CFNULL);
   const CFreal u = state[nbSpecies];
   const CFreal v = state[nbSpecies + 1];
@@ -90,10 +93,10 @@ void Euler2DNEQRhoivtToCons::transformFromRef(const RealVector& data, State& res
   const CFuint nbSpecies = _model->getNbScalarVars(0);
   const CFuint firstSpecies = _model->getFirstScalarVar(0);
   const CFreal rho = data[EulerTerm::RHO];
-//   const EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
-// unused //  const CFuint iEqSS = eqSS.getEqSS();
-// unused // const CFuint nbEqSS = eqSS.getTotalNbEqSS();
-
+  //   const EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
+  // unused //  const CFuint iEqSS = eqSS.getEqSS();
+  // unused // const CFuint nbEqSS = eqSS.getTotalNbEqSS();
+  
   // partial densities
   for(CFuint ie = 0; ie < nbSpecies; ++ie){
     result[ie] = rho*data[firstSpecies + ie];

@@ -12,7 +12,7 @@
 #
 # This testcases simulates a 2D cylinder corresponding to Hornung's experiment
 #
-### Residual = -7.0057882
+### Residual = -4.0033056
 
 # Simulator.TraceToStdOut = true
 
@@ -54,7 +54,7 @@ Simulator.SubSystem.CFmesh.Data.ExtraStateVarNames = limiter
 Simulator.SubSystem.CFmesh.Data.ExtraStateVarStrides = 5
 
 #Simulator.SubSystem.StopCondition          = MaxNumberSteps
-#Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 6000
 
 Simulator.SubSystem.StopCondition       = Norm
 # the heat flux needs valueNorm = -7.0 to converge
@@ -77,11 +77,12 @@ Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
 Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 200
 Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 500
 Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+#Simulator.SubSystem.NewtonIteratorLSS.Data.ILULevels = 2
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<4200,1.,if(i<5200,2.,min(100.,cfl*1.02))) 
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<4000,1.,if(i<6000,2.,min(100.,cfl*1.02))) 
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 #Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 4
@@ -130,10 +131,10 @@ Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 0.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
 Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
 Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitIter = 3500
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitIter = 3000 #3500
 
 #Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Vars = i
 #Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Def = \

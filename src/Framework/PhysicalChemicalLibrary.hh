@@ -202,7 +202,7 @@ public:
   /// Set the thermodynamic state (temperature and pressure)
   /// @param species partial densities
   /// @param mixture temperature
-  virtual void setState(CFdouble* rhoi, CFdouble* T) {}
+  virtual void setState(CFdouble* rhoi, CFdouble* T) = 0;
   
   /// Calculates the static pressure of the mixture
   /// @param rho  density

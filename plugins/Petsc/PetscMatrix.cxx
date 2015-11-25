@@ -276,12 +276,15 @@ void PetscMatrix::printToFile(const char* fileName) const
   PetscViewer viewer;
   CF_CHKERRCONTINUE(MatAssemblyBegin(m_mat,MAT_FINAL_ASSEMBLY));
   CF_CHKERRCONTINUE(MatAssemblyEnd(m_mat,MAT_FINAL_ASSEMBLY));
-  CF_CHKERRCONTINUE(PetscViewerASCIIOpen(PETSC_COMM_SELF,fileName,&viewer));
+  
+  const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  CF_CHKERRCONTINUE(PetscViewerASCIIOpen(Common::PE::GetPE().GetCommunicator(nsp),fileName,&viewer));
   CF_CHKERRCONTINUE(PetscViewerSetType(viewer,PETSCVIEWERASCII));
-  CF_CHKERRCONTINUE(PetscViewerSetFormat(viewer,PETSC_VIEWER_ASCII_MATLAB));
-  // PETSC_VIEWER_ASCII_COMMON, PETSC_VIEWER_ASCII_INDEX
+  CF_CHKERRCONTINUE(PetscViewerSetFormat(viewer, PETSC_VIEWER_ASCII_MATRIXMARKET));
+  // PETSC_VIEWER_ASCII_COMMON, PETSC_VIEWER_ASCII_INDEX, PETSC_VIEWER_ASCII_MATLAB
   CF_CHKERRCONTINUE(MatView(m_mat, viewer));
   CF_CHKERRCONTINUE(PetscViewerDestroy(&viewer));
+  
 /*
   CF_CHKERRCONTINUE(PetscViewerHDF5Open(PETSC_COMM_SELF,fileName,FILE_MODE_WRITE,&viewer));
   CF_CHKERRCONTINUE(MatView(m_mat, viewer));

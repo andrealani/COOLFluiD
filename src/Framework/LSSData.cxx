@@ -22,12 +22,13 @@ namespace COOLFluiD {
 
 void LSSData::defineConfigOptions(Config::OptionList& options)
 {
-   options.addConfigOption< bool >("SaveSystemToFile","Save files of matrix rhs solution vectors at each solve");
-   options.addConfigOption< bool >("Output","Flag indicating to output or not the solver convergence history.");
-   options.addConfigOption< CFuint , Config::DynamicOption<> >("MaxIter","Maximum number of steps to be taken in the iterative solver.");
-   options.addConfigOption< bool >("UseBlockPreconditioner","Enables to use block diagonal preconditioner (Dimension of each block is the number of local states on each CPU).");
-   options.addConfigOption< bool >("UseGPU","Enables to run on GPU.");
-   options.addConfigOption< bool >("UseNodeBased","Use node-based sparsity and assembly.");
+  options.addConfigOption< CFuint , Config::DynamicOption<> >("MaxIter","Maximum number of steps to be taken in the iterative solver.");
+  options.addConfigOption< CFuint , Config::DynamicOption<> >("SaveRate","Save rate to write matrix and vector to file.");
+  options.addConfigOption< bool >("SaveSystemToFile","Save files of matrix rhs solution vectors at each solve");
+  options.addConfigOption< bool >("Output","Flag indicating to output or not the solver convergence history.");
+  options.addConfigOption< bool >("UseBlockPreconditioner","Enables to use block diagonal preconditioner (Dimension of each block is the number of local states on each CPU).");
+  options.addConfigOption< bool >("UseGPU","Enables to run on GPU.");
+  options.addConfigOption< bool >("UseNodeBased","Use node-based sparsity and assembly.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -45,13 +46,16 @@ LSSData::LSSData(SafePtr<std::valarray<bool> > maskArray,
 
   m_maxIter = 50;
   setParameter("MaxIter",&m_maxIter);
-
+  
+  m_saveRate = 0;
+  setParameter("SaveRate",&m_saveRate);
+  
   m_isOutput = false;
   setParameter("Output",&m_isOutput);
-
+  
   m_saveSystemToFile = false;
   setParameter("SaveSystemToFile",&m_saveSystemToFile);
-
+  
   _useBlockPreconditionerMatrix = false;
   setParameter("UseBlockPreconditioner", &_useBlockPreconditionerMatrix);
   

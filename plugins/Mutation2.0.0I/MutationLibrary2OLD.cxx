@@ -930,7 +930,9 @@ CFdouble MutationLibrary2OLD::etaD(CFdouble& temperature,
   //A. Heavy particles properties
   //Eucken corrections for internal energy (no inelastic collisions)
   FORTRAN_NAME(etad)(_WR1, &_LWR1, _WR2, &_LWR2, _XTOL, &eta);
-
+  
+  // CFLog(DEBUG_MAX, "Mutation::etaD() => mu = " << eta << "\n");
+  
   return eta;
 }
 
@@ -1065,7 +1067,8 @@ CFdouble MutationLibrary2OLD::lambdaNEQ(CFdouble& temperature,
   }
 
   lambdaTot = lambdaInth + lambdaTh + lambdaTe;
-
+  
+  CFLog(DEBUG_MAX, "Mutation::lambdaNEQ() => k = " << lambdaTot << "\n");
   return lambdaTot;
 }
 
@@ -1215,7 +1218,8 @@ CFdouble MutationLibrary2OLD::etaCG(CFdouble& temperature,
   //A. Heavy particles properties
   //Eucken corrections for internal energy (no inelastic collisions)
   FORTRAN_NAME(etacg)(_WR1, &_LWR1, _WR2, &_LWR2, _XTOL, &eta);
-
+  
+  // CFLog(DEBUG_MAX, "Mutation::etaCG() => mu = " << eta << "\n");
   return eta;
 }
 
@@ -1245,69 +1249,68 @@ CFdouble MutationLibrary2OLD::sigma(CFdouble& temp,   //electrical conductivity
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrary2OLD::gammaAndSoundSpeed(CFdouble& temp,
-           CFdouble& pressure,
-           CFdouble& rho,
-           CFdouble& gamma,
-           CFdouble& soundSpeed)
+					     CFdouble& pressure,
+					     CFdouble& rho,
+					     CFdouble& gamma,
+					     CFdouble& soundSpeed)
 {
   // compute the ratio of the mixture frozen specific heat in thermal equilibrium
   CFdouble drhodp = 0.0;
   CFdouble eps = 0.1;
   FORTRAN_NAME(equigamma)(_WR1, &_LWR1, _WI, &_LWI, &temp, &pressure,
         &rho, _Xn, _X, &eps, &gamma, &drhodp);
-  soundSpeed = sqrt(gamma/drhodp);
+  soundSpeed = sqrt(gamma/drhodp); 
+  
+  CFLog(DEBUG_MAX, "Mutation::gammaAndSoundSpeed() => [t,p,rho] = [" 
+	<< temp << ", "  << pressure << ", " << rho <<  "] => gamma = " 
+	<< gamma << ", soundSpeed = " << soundSpeed << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrary2OLD::frozenGammaAndSoundSpeed(CFdouble& temp,
-                 CFdouble& pressure,
-                 CFdouble& rho,
-                 CFdouble& gamma,
-                 CFdouble& soundSpeed,
-                 RealVector* tVec)
+						   CFdouble& pressure,
+						   CFdouble& rho,
+						   CFdouble& gamma,
+						   CFdouble& soundSpeed,
+						   RealVector* tVec)
 {
   // compute the ratio of the mixture frozen specific heat in thermal equilibrium
-  // if (tVec == CFNULL) {
-//     FORTRAN_NAME(frozengammafast)(_WR1, &_LWR1, _WI, &_LWI, &temp, &pressure,
-//    				  _X, &_EPS, &gamma);
-//   }
-//   else { 
-//      setTVarray(*tVec);
-//      CFdouble Te = getTe(temp,&(*tVec)[0]);
   
-//      FORTRAN_NAME(frozengammaneqfast)(_WR1, &_LWR1, _WI, &_LWI, &temp,
-//  				     &Te, _TVARRAY, &pressure, _X, &_EPS, &gamma);
-//    }
-//    soundSpeed = sqrt(gamma*pressure/rho); 
-  
-  // cout << "(1) a,g = " <<  soundSpeed << ", "  << gamma << endl; 
-  
-  if (getNbTe() == 0) {
-    CFreal numBeta = 0.;
-    CFreal denBeta = 0.;
-    const int start = (presenceElectron()) ? 1 : 0;
-    for (int i = start; i < _NS; ++i) {
-      const CFreal sigmai = _Y[i]/_MOLARMASSP[i];
-      numBeta += sigmai;
-      denBeta += sigmai*_atomicityCoeff[i];
-    }
+  // if (getNbTe() == 0) {
+  //   // CFreal numBeta = 0.;
+  //   // CFreal denBeta = 0.;
+  //   // const int start = (presenceElectron()) ? 1 : 0;
+  //   // for (int i = start; i < _NS; ++i) {
+  //   //   const CFreal sigmai = _Y[i]/_MOLARMASSP[i];
+  //   //   numBeta += sigmai;
+  //   //   denBeta += sigmai*_atomicityCoeff[i];
+  //   // }
     
-    gamma = 1 + numBeta/denBeta;
+  //   // gamma = 1 + numBeta/denBeta;
+    
+  //   cout << "temp = " << temp << endl;
+  //   FORTRAN_NAME(frozengamma)(_WR1, &_LWR1, _WI, &_LWI, &temp,
+  // 			      &pressure, _X, &_EPS, &gamma);
+  // }
+  
+  if (tVec == CFNULL) {
+    FORTRAN_NAME(frozengammafast)(_WR1, &_LWR1, _WI, &_LWI, &temp, &pressure,
+				  _X, &_EPS, &gamma);
   }
   else {
     setTVarray(*tVec);
     CFdouble Te = getTe(temp,&(*tVec)[0]);
-    
     FORTRAN_NAME(frozengammaneqfast)(_WR1, &_LWR1, _WI, &_LWI, &temp,
 				     &Te, _TVARRAY, &pressure, _X, &_EPS, &gamma);
   }
-  
   soundSpeed = std::sqrt(gamma*pressure/rho); 
   
-  //cout << "(2) a,g = " <<  soundSpeed << ", "  << gamma << endl; 
+  CFLog(DEBUG_MAX, "Mutation::gammaAndSoundSpeed() => [t,p,rho] = [" 
+	<< temp << ", "  << pressure << ", " << rho <<  "] => gamma = " 
+	<< gamma << ", soundSpeed = " << soundSpeed << "\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 CFdouble MutationLibrary2OLD::soundSpeed(CFdouble& temp,
@@ -1358,7 +1361,7 @@ void MutationLibrary2OLD::setComposition(CFdouble& temp,
   
   for (int is = 0; is < _NS; ++is) {
     _Y[is] /= massTot;
-  }
+  } 
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1367,7 +1370,8 @@ void MutationLibrary2OLD::setDensityEnthalpyEnergy(CFdouble& temp,
 						   CFdouble& pressure,
 						   RealVector& dhe)
 {
-  // CFLog(INFO, "MutationLibrarypp::setDensityEnthalpyEnergy() => P = " << pressure << ", T = " << temp << "\n");
+  CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => P = " 
+	<< pressure << ", T = " << temp << "\n");
   
   //setComposition must be called before
   CFdouble rho = 0.0;
@@ -1394,19 +1398,19 @@ void MutationLibrary2OLD::setDensityEnthalpyEnergy(CFdouble& temp,
   
   dhe[0] = rho;
   dhe[2] = dhe[1] - pressure/rho;  
-
-  // RealVector m_y(_NS, &_Y[0]);
-  // CFLog(INFO, "MutationLibrarypp::setDensityEnthalpyEnergy() => " << dhe  << ", " <<  m_y << "\n"); 
-  // static int count = 0; if (count++ == 20000) abort();
+  
+  RealVector m_y(_NS, &_Y[0]);
+  CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => " << dhe << ", " <<  m_y << "\n");
+  //static int count = 0; if (count++ == 20000) abort();
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
-
+      
 void MutationLibrary2OLD::setDensityEnthalpyEnergy(CFdouble& temp,
-            RealVector& tVec,
-            CFdouble& pressure,
-            RealVector& dhe,
-            bool storeExtraData)
+						   RealVector& tVec,
+						   CFdouble& pressure,
+						   RealVector& dhe,
+						   bool storeExtraData)
 {
   CFdouble rho = 0.0;
   CFreal Te = 0.0;
@@ -1630,7 +1634,7 @@ CFdouble MutationLibrary2OLD::pressure(CFdouble& rho,
 				       CFreal* tVec)
 {
   //  RealVector m_y(_NS,&_Y[0]);
-  // CFLog(INFO, "MutationLibrarypp::pressure() => rho = " << rho << ", temp = " << temp << ", y = " << m_y << "\n");
+  // CFLog(DEBUG_MAX, "MutationLibrarypp::pressure() => rho = " << rho << ", temp = " << temp << ", y = " << m_y << "\n");
   
   CFdouble p = 0.0;
   if (_NE == 0) {
@@ -1646,7 +1650,7 @@ CFdouble MutationLibrary2OLD::pressure(CFdouble& rho,
 			    &p, &_electronPress);
   }
   
-  // CFLog(INFO, "MutationLibrarypp::pressure() => p = " << p << "\n");
+  CFLog(DEBUG_MAX, "Mutation::pressure() => " << p << "\n");
   
   return p;
 }
@@ -1794,6 +1798,8 @@ void MutationLibrary2OLD::setSpeciesFractions(const RealVector& ys)
 
   // Fills X according to Y
   FORTRAN_NAME(specmasstomolfrac)(_WR1, &_LWR1, _WI, &_LWI, _Y, _X);
+  
+  CFLog(DEBUG_MAX, "Mutation::setSpeciesFractions() => " << ys << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1896,7 +1902,7 @@ void MutationLibrary2OLD::getMassProductionTerm(CFdouble& temperature,
               RealVector& omega,
               RealMatrix& jacobian)
 {
-  // CFLog(INFO, "MutationLibrarypp::getMassProductionTerm() => P = " << pressure << ", T = " << temperature << "\n");
+  // CFLog(DEBUG_MAX, "MutationLibrarypp::getMassProductionTerm() => P = " << pressure << ", T = " << temperature << "\n");
   
   if (!_freezeChemistry) {
     // Limit the mass composition of species !!!
@@ -1988,8 +1994,10 @@ void MutationLibrary2OLD::getMassProductionTerm(CFdouble& temperature,
       omega[is] = 0.0;
     }
   } 
- 
-  // CFLog(INFO, "MutationLibrarypp::getMassProductionTerm() => omega = " << omega << "\n");
+  
+  CFLog(DEBUG_MAX, "Mutation::getMassProductionTerm() => omega = " << omega << "\n\n"); 
+  
+  // static int count = 0; if (count++ == 1000) exit(1);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2069,8 +2077,10 @@ void MutationLibrary2OLD::getRhoUdiff(CFdouble& temperature,
   for (CFint is = 0; is < _NS; ++is) {
     rhoUdiff[is] = _JDIF[is]; 
   }
-
-  // CFLog(INFO, "MutationLibrarypp::rhoUdiff() =>  rhoUdiff = " << rhoUdiff << "\n");
+  
+  CFLog(DEBUG_MAX, "Mutation::rhoUdiff() => rhoUdiff = " << rhoUdiff << "\n");
+  
+  // CFLog(DEBUG_MAX, "MutationLibrarypp::rhoUdiff() =>  rhoUdiff = " << rhoUdiff << "\n");
   
 //   if (Te > 4000.) {
 //     cout << "Te = " << Te << endl;
@@ -2187,11 +2197,11 @@ void MutationLibrary2OLD::setSpeciesMolarFractions(const RealVector& xs)
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrary2OLD::getSpeciesTotEnthalpies(CFdouble& temp,
-                 RealVector& tVec,
-                 CFdouble& pressure,
-                 RealVector& hsTot,
-                 RealVector* hsVib,
-                 RealVector* hsEl)
+						  RealVector& tVec,
+						  CFdouble& pressure,
+						  RealVector& hsTot,
+						  RealVector* hsVib,
+						  RealVector* hsEl)
 {
 
   if (tVec.size()== 0) {
@@ -2244,6 +2254,8 @@ void MutationLibrary2OLD::getSpeciesTotEnthalpies(CFdouble& temp,
       (*hsEl)[0] = _HTRANS[0]/_MOLARMASSP[0];
     }
   }
+  
+  CFLog(DEBUG_MAX, "Mutation::getSpeciesTotEnthalpies() => hsTot = " << hsTot << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

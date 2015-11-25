@@ -83,6 +83,12 @@ public: // functions
     return m_maxIter;
   }
 
+  /// Gets the save rate to write matrix and vector to file
+  CFuint getSaveRate() const
+  {
+    return m_saveRate;
+  }
+
   /// Returns if the convergence history of the solver should be outputed
   bool isOutput() const
   {
@@ -131,10 +137,13 @@ public: // functions
 
   /// maximum number of iterations for iterative solver
   CFuint m_maxIter;
-
+  
+  /// save rate to write matrix and vector to file
+  CFuint m_saveRate;
+  
   /// write output
   bool m_isOutput;
-
+  
   /// save system to file
   bool m_saveSystemToFile;
   

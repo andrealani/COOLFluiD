@@ -1302,17 +1302,22 @@ void MutationLibrary2::frozenGammaAndSoundSpeed(CFdouble& temp,
   
   // cout << "(1) a,g = " <<  soundSpeed << ", "  << gamma << endl; 
   
-  if (getNbTe() == 0) {
-    CFreal numBeta = 0.;
-    CFreal denBeta = 0.;
-    const int start = (presenceElectron()) ? 1 : 0;
-    for (int i = start; i < _NS; ++i) {
-      const CFreal sigmai = _Y[i]/_MOLARMASSP[i];
-      numBeta += sigmai;
-      denBeta += sigmai*_atomicityCoeff[i];
-    }
+  // if (getNbTe() == 0) {
+  //   CFreal numBeta = 0.;
+  //   CFreal denBeta = 0.;
+  //   const int start = (presenceElectron()) ? 1 : 0;
+  //   for (int i = start; i < _NS; ++i) {
+  //     const CFreal sigmai = _Y[i]/_MOLARMASSP[i];
+  //     numBeta += sigmai;
+  //     denBeta += sigmai*_atomicityCoeff[i];
+  //   }
     
-    gamma = 1 + numBeta/denBeta;
+  //   gamma = 1 + numBeta/denBeta;
+  // } 
+  
+  if (tVec == CFNULL) {
+    FORTRAN_NAME(frozengammafast)(_WR1, &_LWR1, _WI, &_LWI, &temp, &pressure,
+				  _X, &_EPS, &gamma);
   }
   else {
     setTVarray(*tVec);

@@ -12,7 +12,7 @@
 #
 # This testcases simulates a 2D cylinder corresponding to Hornung's experiment
 #
-### Residual = -5.87665
+### Residual = -5.8017255
 
 # Simulator.TraceToStdOut = true
 
@@ -80,6 +80,7 @@ Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
 Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 200
 Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 500
 Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+#Simulator.SubSystem.NewtonIteratorLSS.Data.SaveRate = 500
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1

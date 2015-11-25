@@ -231,11 +231,12 @@ void Euler3DNEQRhoivt::setDimensionalValuesPlusExtraValues
   CFreal a = 0.0;
   _library->frozenGammaAndSoundSpeed(Tdim,pdim,rhodim, gamma, a, CFNULL);
   
-  extra.resize(4);
+  extra.resize(5);
   extra[0] = rhodim;
   extra[1] = _dhe[1] + 0.5*V2;
   extra[2] = sqrt(V2)/a;
-  extra[3] = pdim;
+  extra[3] = pdim; 
+  extra[4] = gamma;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -244,12 +245,13 @@ vector<std::string> Euler3DNEQRhoivt::getExtraVarNames() const
 {
   cf_assert(_library.isNotNull());
 
-  vector<std::string> names(4);
+  vector<std::string> names(5);
   names[0] = "rho";
   names[1] = "H";
   names[2] = "M";
   names[3] = "p";
-
+  names[4] = "gamma";
+  
   return names;
 }
 
@@ -343,27 +345,27 @@ void Euler3DNEQRhoivt::setThermodynamics(CFreal rho,
   CFreal rhodim = rho*refData[EulerTerm::RHO];
   CFreal T = state[getTempID(nbSpecies)];
   CFreal Tdim = T*refData[EulerTerm::T];
+  CFreal* rhoi = &const_cast<State&>(state)[0];
+  _library->setState(rhoi, &Tdim);
+  
   CFreal pdim = _library->pressure(rhodim, Tdim, CFNULL);
-  CFreal p = pdim/refData[EulerTerm::P];
-
+  const CFreal p = (pdim - getModel()->getPressInf())/refData[EulerTerm::P];
+  
   // unused //  const EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
   // unused //  const CFuint iEqSS = eqSS.getEqSS();
   // unused //  const CFuint nbEqSS = eqSS.getTotalNbEqSS();
-
-  data[EulerTerm::P] = p;
+  
+  data[EulerTerm::P] = p; // dp in the case of incompressible flow
   data[EulerTerm::T] = T;
   data[EulerTerm::RHO] = rho;
 
   if (!_skipEnergyData) {
-    CFreal* rhoi = &const_cast<State&>(state)[0];
-    _library->setState(rhoi, &Tdim);
     _library->setDensityEnthalpyEnergy(Tdim, pdim,_dhe);
     _library->frozenGammaAndSoundSpeed(Tdim, pdim, rhodim,
-				       data[EulerTerm::GAMMA],
-				       data[EulerTerm::A], CFNULL);
+				 data[EulerTerm::GAMMA],
+				 data[EulerTerm::A], CFNULL);
     
     const CFreal V2 = data[EulerTerm::V]*data[EulerTerm::V];
-    const RealVector& refData = getModel()->getReferencePhysicalData();
     data[EulerTerm::H] = _dhe[1]/refData[EulerTerm::H] + 0.5*V2;
     data[EulerTerm::E] = _dhe[2]/refData[EulerTerm::H] + 0.5*V2;
   }
