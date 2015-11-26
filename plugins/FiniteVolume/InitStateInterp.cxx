@@ -110,6 +110,7 @@ void InitStateInterp::executeOnTrs()
 	// interpolated state value in input variables
 	(*m_tstate)[i] = m_lookupState[i]->get(yCoord);
       }
+      CFLog(DEBUG_MIN, "InitStateInterp::executeOnTrs() => m_tstate = " << *m_tstate << "\n");
       dimState = *m_inputInterpToUpdateVar->transform(m_tstate);
       //  }
       //       else {
@@ -196,9 +197,10 @@ void InitStateInterp::fillTable()
   } 
   
   // nbEqs + "y" AL: hardcoded here
-  CFreal ycoord;
-  CFreal tmpVar;
+  CFreal ycoord = 0.;
+  CFreal tmpVar = 0.;
   for (CFuint ip = 0; ip < nbPoints; ++ip) {
+    fin >> ycoord;
     for (CFuint i = 0; i < nbEqs; ++i) {
       fin >> tmpVar;
       m_lookupState[i]->insert(ycoord, tmpVar);
