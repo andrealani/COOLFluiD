@@ -6,6 +6,9 @@
 #include "Framework/MethodCommandProvider.hh"
 #include "Common/BadValueException.hh"
 #include "Framework/NamespaceSwitcher.hh"
+#include "Environment/DirPaths.hh"
+#include "Environment/FileHandlerInput.hh"
+#include "Environment/SingleBehaviorFactory.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -62,10 +65,12 @@ InitStateInterp::~InitStateInterp()
 
 void InitStateInterp::executeOnTrs()
 {
+  CFLog(VERBOSE, "InitStateInterp::executeOnTrs() => start\n");
+  
   SafePtr<TopologicalRegionSet> trs = getCurrentTRS();
   CFLogDebugMax( "InitStateInterp::executeOnTrs() called for TRS: "
   << trs->getName() << "\n");
-
+  
   if (trs->getName() != "InnerFaces") {
     throw BadValueException (FromHere(),"InitStateInterp not applied to InnerFaces!!!");
   }
@@ -104,7 +109,7 @@ void InitStateInterp::executeOnTrs()
       for (CFuint i = 0; i < nbEqs; ++i) {
 	// interpolated state value in input variables
 	(*m_tstate)[i] = m_lookupState[i]->get(yCoord);
-      } 
+      }
       dimState = *m_inputInterpToUpdateVar->transform(m_tstate);
       //  }
       //       else {
@@ -114,6 +119,7 @@ void InitStateInterp::executeOnTrs()
       _varSet->setAdimensionalValues(dimState, *currState);
     }
   }
+  CFLog(VERBOSE, "InitStateInterp::executeOnTrs() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -170,7 +176,12 @@ void InitStateInterp::setup()
 
 void InitStateInterp::fillTable()
 {
-  ifstream fin(m_infile.c_str());
+  boost::filesystem::path filepath = Environment::DirPaths::getInstance().
+    getWorkingDir() / m_infile;
+  Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle =
+    Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
+  ifstream& fin = fhandle->open(filepath);
+  
   string variables;
   // read the first line with the variables names
   getline(fin,variables);
@@ -188,7 +199,6 @@ void InitStateInterp::fillTable()
   CFreal ycoord;
   CFreal tmpVar;
   for (CFuint ip = 0; ip < nbPoints; ++ip) {
-    fin >> ycoord;
     for (CFuint i = 0; i < nbEqs; ++i) {
       fin >> tmpVar;
       m_lookupState[i]->insert(ycoord, tmpVar);
