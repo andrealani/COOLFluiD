@@ -9,7 +9,9 @@
 
 # ICP conditions in NEQ
 
-#CFEnv.ErrorOnUnusedConfig = true
+CFEnv.ErrorOnUnusedConfig = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
 
 # Simulation Modules
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libNEQ libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeNEQ libGambit2CFmesh libPetscI libMutation2OLD libMutation2OLDI libAeroCoefFVM libAeroCoefFVMNEQ
@@ -52,11 +54,11 @@ Simulator.SubSystem.Tecplot.Data.SurfaceTRS = OutletLeft # Inlet #OutletLeft #In
 Simulator.SubSystem.Tecplot.SaveRate = 100
 #Simulator.SubSystem.Tecplot.AppendIter = true
 
-Simulator.SubSystem.StopCondition = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
+#Simulator.SubSystem.StopCondition = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
 
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -4.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -4.0
 
 Simulator.SubSystem.Default.listTRS = IsoWall CatWall Symmetry Inlet OutletUp OutletLeft
 
@@ -199,6 +201,8 @@ Simulator.SubSystem.CellCenterFVM.WallCat.Vars = x y
 Simulator.SubSystem.CellCenterFVM.WallCat.GammaN_O = \
                                 if(x<0.076,0.008,if(x<0.136,0.7,0.008)) \
                                 if(x<0.076,0.008,if(x<0.136,0.7,0.008))
+# new entry
+#Simulator.SubSystem.CellCenterFVM.WallCat.UseStefanMaxwell = true
 
 #Simulator.SubSystem.CellCenterFVM.WallCat.OldVersion = false
 #radiative equilibrium
@@ -209,10 +213,12 @@ Simulator.SubSystem.CellCenterFVM.WallCat.MaxRadEqDTwall = 100.
 Simulator.SubSystem.CellCenterFVM.WallCat.DistantBodyTemp = 0.
 
 Simulator.SubSystem.CellCenterFVM.SInlet.applyTRS = Inlet
-Simulator.SubSystem.CellCenterFVM.SInlet.InputFileName = inlet.dat
 Simulator.SubSystem.CellCenterFVM.SInlet.InputVar = RhovtXi
 #Simulator.SubSystem.CellCenterFVM.SInlet.YiVTTv = 0. 0. 0. 0.015187214 0. 0.004613586 0. 0. 0. 0. 0. 20. 0. 350. 350.
 #Simulator.SubSystem.CellCenterFVM.SInlet.BlowVelocity = 50.
+Simulator.SubSystem.CellCenterFVM.SInlet.StateInterpolator = Lookup
+Simulator.SubSystem.CellCenterFVM.SInlet.Lookup.InputFileName = ./inlet.dat
+
 
 Simulator.SubSystem.CellCenterFVM.Mirror.applyTRS = Symmetry
 Simulator.SubSystem.CellCenterFVM.Mirror.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 0 0 1 1
