@@ -326,7 +326,7 @@ CFdouble MutationLibrarypp::enthalpy(CFdouble& temp,
 				     CFdouble& pressure)
 {
   m_gasMixture->setState(&pressure, &temp, 1);
-  return m_gasMixture->mixtureHMass() - m_gasMixture->mixtureHMass(298.15);
+  return m_gasMixture->mixtureHMass();// - m_gasMixture->mixtureHMass(298.15);
 }
       
 //////////////////////////////////////////////////////////////////////////////
