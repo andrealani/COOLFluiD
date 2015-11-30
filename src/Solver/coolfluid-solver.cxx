@@ -214,12 +214,12 @@ int main(int argc, char** argv)
       for( ; ditr != dir_end; ++ditr )
       {
 
-#ifdef CF_HAVE_BOOST_1_54
-	std::string filename = (ditr->path()).filename().native();
-#endif
 #ifdef CF_HAVE_BOOST_1_42
 	std::string filename = ditr->filename();
+#else
+	std::string filename = (ditr->path()).filename().native();
 #endif
+
 	bool is_config = StringOps::startsWith(filename, "config") && StringOps::endsWith(filename, ".log"); 
 	bool is_output = StringOps::endsWith(filename, "-output.log"); 
 	
