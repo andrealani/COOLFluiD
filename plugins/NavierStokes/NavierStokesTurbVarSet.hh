@@ -95,6 +95,11 @@ protected:
     throw Common::NotImplementedException (FromHere(),"NavierStokesTurbVarSet::setGradientState()");
   }
   
+  /**
+   * Get number of turbulent variables
+   */
+  virtual CFuint getNbTurbVars() const {return 1;}
+  
 protected:
   
   /// physical model

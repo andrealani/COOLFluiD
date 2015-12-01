@@ -172,7 +172,17 @@ public: // classes
     const CFreal FMt = (Mt*Mt - Mt0*Mt0) * H;
     return betaStarIncomp * (1. + (ksiStar * FMt));
   }
-
+  
+  /**
+   * Get number of turbulent variables
+   */
+  virtual CFuint getNbTurbVars() const 
+  {
+    const CFuint nbTurbVars = _eulerModel->getNbScalarVars(SGROUP);
+    cf_assert(nbTurbVars == 2);
+    return nbTurbVars;
+  }
+  
 protected :
 
   /**

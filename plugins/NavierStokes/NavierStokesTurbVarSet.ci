@@ -105,9 +105,14 @@ void NavierStokesTurbVarSet<BASE, SGROUP>::computeStressTensor(const RealVector&
     const RealVector& gradW = *gradients[this->_wID];
     divTerm = gradW[ZZ];
   }
-    
-  const CFreal avK = state[_kID];
-  const CFreal twoThirdRhoK = this->_twoThird*this->getDensity(state)*avK;
+  
+  CFreal twoThirdRhoK = 0.;
+  if (getNbTurbVars() > 1) {
+    // Spalart-Allmaras case
+    const CFreal avK = state[_kID];
+    twoThirdRhoK = this->_twoThird*this->getDensity(state)*avK;
+  }
+  
   const RealVector& nsData = getModel().getPhysicalData();
   const CFreal coeffTauMu = getModel().getCoeffTau()*(nsData[NSTurbTerm::MU] + nsData[NSTurbTerm::MUT]);
   const RealVector& gradU = *gradients[this->_uID];
