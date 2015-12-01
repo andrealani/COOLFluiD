@@ -17,7 +17,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-MultiFluidMHDSTNoRadiation<UPDATEVAR>::MultiFluidMHDSTNoRadiation(const std::string& name) :
+MultiFluidMHDSTRadiation<UPDATEVAR>::MultiFluidMHDSTRadiation(const std::string& name) :
   ComputeSourceTermFVMCC(name),
   _varSet(CFNULL),
   _nstates(CFNULL),
@@ -51,7 +51,7 @@ MultiFluidMHDSTNoRadiation<UPDATEVAR>::MultiFluidMHDSTNoRadiation(const std::str
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-MultiFluidMHDSTNoRadiation<UPDATEVAR>::~MultiFluidMHDSTNoRadiation()
+MultiFluidMHDSTRadiation<UPDATEVAR>::~MultiFluidMHDSTRadiation()
 {
 }
 
@@ -59,7 +59,7 @@ MultiFluidMHDSTNoRadiation<UPDATEVAR>::~MultiFluidMHDSTNoRadiation()
 
 template <class UPDATEVAR>
 std::vector<Common::SafePtr<Framework::BaseDataSocketSource> >
-MultiFluidMHDSTNoRadiation<UPDATEVAR>::providesSockets()
+MultiFluidMHDSTRadiation<UPDATEVAR>::providesSockets()
 {
   std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > result = 
     ComputeSourceTermFVMCC::providesSockets();
@@ -72,7 +72,7 @@ MultiFluidMHDSTNoRadiation<UPDATEVAR>::providesSockets()
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-void MultiFluidMHDSTNoRadiation<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+void MultiFluidMHDSTRadiation<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
 {
   options.template addConfigOption< CFreal >
      ("electricalResistivity", "electrical Resistivity used in Ohm's law");
@@ -83,7 +83,7 @@ void MultiFluidMHDSTNoRadiation<UPDATEVAR>::defineConfigOptions(Config::OptionLi
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-void MultiFluidMHDSTNoRadiation<UPDATEVAR>::setup()
+void MultiFluidMHDSTRadiation<UPDATEVAR>::setup()
 {
   using namespace std;
   using namespace COOLFluiD::Common;
@@ -139,7 +139,7 @@ void MultiFluidMHDSTNoRadiation<UPDATEVAR>::setup()
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-void MultiFluidMHDSTNoRadiation<UPDATEVAR>::computeSource
+void MultiFluidMHDSTRadiation<UPDATEVAR>::computeSource
 (Framework::GeometricEntity *const element, RealVector& source, RealMatrix& jacobian)
 {
   using namespace std;
@@ -189,13 +189,15 @@ void MultiFluidMHDSTNoRadiation<UPDATEVAR>::computeSource
     source[5] = -_J[ZZ]*ovEpsilon;  	//z-Ampere's Law
     source[6] = 0;			//y-Ampere's Law
     source[7] = 0;  			//z-Ampere's Law  
-    //   std::cout<<"MultiFluidMHDSTNoRadiation::computeSource -> permittivity = "<< term->getPermittivity() <<"\n";
+    //   std::cout<<"MultiFluidMHDSTRadiation::computeSource -> permittivity = "<< term->getPermittivity() <<"\n";
   }
   
   if (nbEqs == totalNbEqs || iEqSS == 1) {
     // Compute the source terms
     computeMassReactionsEnergySourceTerm();
     computeCollisionalMomentumEnergy();
+    _Qrad = 0;
+    computeRadiationTerm(); // Computes the radiative cooling as described in Goodman et al. 2012.
     
     /// FLUID EQUATIONS
     //CONTINUITY
@@ -239,7 +241,7 @@ void MultiFluidMHDSTNoRadiation<UPDATEVAR>::computeSource
       const CFreal kinEnerIon_e = 0.; //GammaIon_i*EnergyIon; This term is switched off since represents the radiative cooling due to radiative recombination
       
       source[14] = emEnergy + collWorki + _collEnergySource[0] + _ReactEnergySource[0] + kinEnerIon_i - kinEnerIon_e - kinEnerRec_n; //Ions Energy
-      source[15] = collWorkn + _collEnergySource[1] + _ReactEnergySource[1] - kinEnerIon_i + kinEnerRec_n; //Neutrals Energy
+      source[15] = collWorkn + _collEnergySource[1] + _ReactEnergySource[1] - kinEnerIon_i + kinEnerRec_n - _Qrad; //Neutrals Energy
       
       // Write the sockets
       if (!this->getMethodData().isPerturb()) { // Condition to avoid writing when the source is perturbed
@@ -255,7 +257,7 @@ void MultiFluidMHDSTNoRadiation<UPDATEVAR>::computeSource
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-void MultiFluidMHDSTNoRadiation<UPDATEVAR>::computeMassReactionsEnergySourceTerm()
+void MultiFluidMHDSTRadiation<UPDATEVAR>::computeMassReactionsEnergySourceTerm()
 {
   _GammaIon_n = 0.;
   _GammaRec_i = 0.;
@@ -320,7 +322,7 @@ void MultiFluidMHDSTNoRadiation<UPDATEVAR>::computeMassReactionsEnergySourceTerm
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-void MultiFluidMHDSTNoRadiation<UPDATEVAR>::computeElectricCurrent()
+void MultiFluidMHDSTRadiation<UPDATEVAR>::computeElectricCurrent()
 {
   const CFreal firstVelocity = _varSet->getModel()->getFirstScalarVar(1);
   
@@ -359,7 +361,7 @@ void MultiFluidMHDSTNoRadiation<UPDATEVAR>::computeElectricCurrent()
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-void MultiFluidMHDSTNoRadiation<UPDATEVAR>::computeCollisionalMomentumEnergy()
+void MultiFluidMHDSTRadiation<UPDATEVAR>::computeCollisionalMomentumEnergy()
 {
   const CFuint firstDensity = _varSet->getModel()->getFirstScalarVar(0);
   const CFreal firstVelocity = _varSet->getModel()->getFirstScalarVar(1);
@@ -419,7 +421,7 @@ void MultiFluidMHDSTNoRadiation<UPDATEVAR>::computeCollisionalMomentumEnergy()
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-void MultiFluidMHDSTNoRadiation<UPDATEVAR>::computeSpitzerResistivity()
+void MultiFluidMHDSTRadiation<UPDATEVAR>::computeSpitzerResistivity()
 {
   const CFuint firstDensity = _varSet->getModel()->getFirstScalarVar(0);
   const CFreal firstVelocity = _varSet->getModel()->getFirstScalarVar(1);
@@ -464,6 +466,48 @@ void MultiFluidMHDSTNoRadiation<UPDATEVAR>::computeSpitzerResistivity()
   _electricalResistivity = me*ne*(nu_en + nu_ei)/(e_charge*e_charge*ne*ne);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void MultiFluidMHDSTRadiation<UPDATEVAR>::computeRadiationTerm()
+{
+  const CFuint firstDensity = _varSet->getModel()->getFirstScalarVar(0);
+  const CFreal firstVelocity = _varSet->getModel()->getFirstScalarVar(1);
+  const CFuint firstTemperature = _varSet->getModel()->getFirstScalarVar(2);
+
+  const CFreal kB = Framework::PhysicalConsts::Boltzmann(); // Boltzmann constant
+  const CFreal e_charge = 1.60217656535e-19; //Electron's charge
+  const CFreal E1 = 3.54; //eV
+  const CFreal E2 = 8.28; //eV
+  const CFreal gamma1 = 0.15e-3;
+  const CFreal gamma2 = 0.065;
+  const CFreal CETimesconst = 1.6022e-12*8.63e-6; //erg/eV
+
+  // particles density, temperature
+  const CFreal rho = _physicalData[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoi = rho*_physicalData[firstDensity];                  //ions density
+  const CFreal rhon = rho*_physicalData[firstDensity + 1];              //neutrals density
+
+  const CFreal Ti = _physicalData[firstTemperature];
+  const CFreal Tn = _physicalData[firstTemperature + 4];
+  
+  const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn = 1.6726e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+
+  // particles per volume
+  const CFreal ni = rhoi/mi*1e-6; //in cm-3
+  const CFreal nn = rhon/mn*1e-6; //in cm-3
+  const CFreal ne = ni; //in cm-3
+
+  const CFreal sum1 = E1*gamma1*std::exp(-e_charge*E1/(kB*Tn));
+  const CFreal sum2 = E2*gamma2*std::exp(-e_charge*E2/(kB*Tn));
+
+  const CFreal sum = sum1 + sum2;
+  const CFreal R_T = CETimesconst*sum/std::sqrt(Tn);
+
+  _Qrad = ne*(nn + ni)*R_T; //in erg/cm3s
+  _Qrad = _Qrad/10; //in J/m3s
+}
 
 //////////////////////////////////////////////////////////////////////////////
 

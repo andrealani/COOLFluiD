@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Numerics_FiniteVolume_MultiFluidMHDSTNoRadiation_hh
-#define COOLFluiD_Numerics_FiniteVolume_MultiFluidMHDSTNoRadiation_hh
+#ifndef COOLFluiD_Numerics_FiniteVolume_MultiFluidMHDSTRadiation_hh
+#define COOLFluiD_Numerics_FiniteVolume_MultiFluidMHDSTRadiation_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -26,12 +26,15 @@ namespace COOLFluiD {
 /**
  * This class represents a Source term for MultiFluid considering 2 fluids: plasma + neutrals
  * variables
+ * The radiative cooling term is added to the neutrals because it considers two excited states of the neutral H molecule
+ * The expression is taken from:
+ * M. Goodman and P. Judge (2012) ApJ 751:75 (13pp)
  *
  * @author Alejandro Alvarez
  *
  */
 template <class UPDATEVAR>
-class MultiFluidMHDSTNoRadiation : public ComputeSourceTermFVMCC {
+class MultiFluidMHDSTRadiation : public ComputeSourceTermFVMCC {
 
 public:
 
@@ -39,12 +42,12 @@ public:
    * Constructor
    * @see ComputeSourceTermFVMCC
    */
-  MultiFluidMHDSTNoRadiation(const std::string& name);
+  MultiFluidMHDSTRadiation(const std::string& name);
 
   /**
    * Default destructor
    */
-  virtual ~MultiFluidMHDSTNoRadiation();
+  virtual ~MultiFluidMHDSTRadiation();
 
   /**
    * Defines the Config Option's of this class
@@ -100,6 +103,10 @@ public:
  *     */
   void computeSpitzerResistivity();
 
+  /**
+ * Compute the Optically thin radiation
+ */
+  void computeRadiationTerm();
   
 protected: // data
   
@@ -172,6 +179,8 @@ protected: // data
   ///Spitzer resistivity
   CFreal SpitzerRes;
 
+  ///RadiativeFlux is added to the neutral fluid
+  CFreal _Qrad;
 private:
 
   /// Electrical conductivity
@@ -180,7 +189,7 @@ private:
   /// Using Spitzer resistivity
   bool _isSpitzer;
   
-}; // end of class MultiFluidMHDSTNoRadiation
+}; // end of class MultiFluidMHDSTRadiation
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -192,8 +201,8 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "MultiFluidMHDSTNoRadiation.ci"
+#include "MultiFluidMHDSTRadiation.ci"
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Numerics_FiniteVolume_MultiFluidMHDSTNoRadiation_hh
+#endif // COOLFluiD_Numerics_FiniteVolume_MultiFluidMHDSTRadiation_hh
