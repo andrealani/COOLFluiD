@@ -71,6 +71,11 @@ public:
   /// physical model var set
   Common::SafePtr<Physics::MultiFluidMHD::MultiFluidMHDVarSet<Physics::Maxwell::Maxwell2DProjectionVarSet> > _updateVarSet;
   
+  /// electron density
+  CFreal     _rhoe;
+
+  /// ions density
+  CFreal    _rhoi;
     
 }; // end of class DriftWaveInlet
 

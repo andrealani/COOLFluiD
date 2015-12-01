@@ -32,6 +32,8 @@ MethodCommandProvider<DriftWaveInlet, CellCenterFVMData, FiniteVolumeMultiFluidM
 
 void DriftWaveInlet::defineConfigOptions(Config::OptionList& options)
 {
+  options.addConfigOption< CFreal >("Rhoe","Mass density of electrons");
+  options.addConfigOption< CFreal >("Rhoi","Mass density of ions");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -41,6 +43,12 @@ DriftWaveInlet::DriftWaveInlet
   FVMCC_BC(name),
   _updateVarSet(CFNULL)
 {
+  addConfigOptionsTo(this);
+  _rhoe = 1e-15;
+  setParameter("Rhoe",&_rhoe);
+
+  _rhoi = 1e-12;
+  setParameter("Rhoi",&_rhoi);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -85,7 +93,8 @@ void DriftWaveInlet::setGhostState(GeometricEntity *const face)
   const CFreal bn = (*innerState)[0]*nx + (*innerState)[1]*ny;
   const CFreal en = (*innerState)[3]*nx + (*innerState)[4]*ny;  
 //  const CFreal chi = _varSet->getModel()->getDivECleaningConst();
-
+  
+  // Perfectly Conducting wall for EM field 
   (*ghostState)[0] = (*innerState)[0] - 2*bn*nx;	//Bx
   (*ghostState)[1] = (*innerState)[1] - 2*bn*ny;	//By
   (*ghostState)[2] = (*innerState)[2] - 2*bn*nz;	//Bz
@@ -95,20 +104,21 @@ void DriftWaveInlet::setGhostState(GeometricEntity *const face)
   (*ghostState)[6] = (*innerState)[6];			//Psi
   (*ghostState)[7] = -(*innerState)[7];			//Phi
   
-///MultiFluidMHD mirror Condition in 2D
+///MultiFluidMHD mirror Condition in 2DHalf
   const CFuint endEM = 8;
- 
   //set the densities
-  for (CFuint i = 0 ; i < nbSpecies; i++){
-    (*ghostState)[endEM + i] = (*innerState)[endEM + i];
-  }
+  (*ghostState)[8] = 2*_rhoe - (*innerState)[8];                 //rhoe
+  (*ghostState)[9] = 2*_rhoi - (*innerState)[9];                 //rhoi
+  //for (CFuint i = 0 ; i < nbSpecies; i++){
+    //(*ghostState)[endEM + i] =  (*innerState)[endEM + i];
+  //}
  
   //set the Velocities
   for (CFuint i = 0 ; i < nbSpecies; i++){
     CFreal un_i = (*innerState)[endEM + nbSpecies + 3*i]*nx + (*innerState)[endEM + nbSpecies + 3*i + 1]*ny;
-    (*ghostState)[endEM + nbSpecies + 3*i] = (*innerState)[endEM + nbSpecies + 3*i] - 2*un_i*nx;
-    (*ghostState)[endEM + nbSpecies + 3*i + 1] = (*innerState)[endEM + nbSpecies + 3*i + 1] - 2*un_i*ny;
-    (*ghostState)[endEM + nbSpecies + 3*i + 2] = (*innerState)[endEM + nbSpecies + 3*i + 2] ;
+    (*ghostState)[endEM + nbSpecies + 3*i] = (*innerState)[endEM + nbSpecies + 3*i] - 2*un_i*nx; 		// x-velocity
+    (*ghostState)[endEM + nbSpecies + 3*i + 1] = (*innerState)[endEM + nbSpecies + 3*i + 1] - 2*un_i*ny; 	//y-velocity
+    (*ghostState)[endEM + nbSpecies + 3*i + 2] = (*innerState)[endEM + nbSpecies + 3*i + 2] ; 			// z-velocity
   } 
  
   //set the Temperatures

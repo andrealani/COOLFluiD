@@ -247,8 +247,8 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     const CFreal emEnergye = qe*(rhoe/me)*(ue*_Etotal[XX] + ve*_Etotal[YY] + we*_Etotal[ZZ]); //electrons
     const CFreal emEnergyi = qi*(rhoi/mi)*(ui*_Etotal[XX] + vi*_Etotal[YY] + wi*_Etotal[ZZ]); //ions
 
-    source[16] = emEnergye; //Electrons Energy Source terms
-    source[17] = emEnergyi; //Ions Energy
+    source[16] = emEnergye + emMomentumXe*ue + emMomentumYe*ve + emMomentumZe*we; //Electrons Energy Source terms
+    source[17] = emEnergyi + emMomentumXi*ui + emMomentumYi*vi + emMomentumZi*wi; //Ions Energy
 
     // AAL: Write the sockets
     //if (!this->getMethodData().isPerturb()) { // Condition to avoid writing when the source is perturbed
