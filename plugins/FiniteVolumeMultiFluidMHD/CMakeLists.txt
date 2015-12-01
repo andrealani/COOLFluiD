@@ -6,6 +6,9 @@ AUSMFluxMultiFluid.cxx
 AUSMFluxMultiFluid.hh
 AUSMPlusUpFluxMultiFluid.ci
 AUSMPlusUpFluxMultiFluid.hh
+DriftWaves2DHalfTwoFluid.ci
+DriftWaves2DHalfTwoFluid.cxx
+DriftWaves2DHalfTwoFluid.hh
 FiniteVolumeMultiFluidMHD.hh
 GEMMHDST3D.ci
 GEMMHDST3D.cxx
