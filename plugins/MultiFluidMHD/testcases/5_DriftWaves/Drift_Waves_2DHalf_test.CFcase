@@ -155,7 +155,7 @@ Simulator.SubSystem.Default.listTRS = y0 y1 PeriodicX # x0 x1
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./Mesh_2x2_200x200.CFmesh
 #./Mesh_2x2_400x1500.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1e-2 # You divide the size of the box by this number 
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 2e-4 # You divide the size of the box by this number 
 
 # comment this out to Restart
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
@@ -215,11 +215,8 @@ Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 #Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokesMF
 #Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
 
-Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = GEMMHDST2DHalfTwoFluid
-#Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2DChExchange.electricalResistivity = 0.07544302484745 
- #0.00382 #0.150886049694899
-#Simulator.SubSystem.CellCenterFVM.Data.MultiFluidMHDST2D.electricalResistivity = 0.07544302484745 #0.00382 #0.150886049694899
-
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = DriftWaves2DHalfTwoFluid
+ 
 ###############################################################################
 # Initial Conditions
 #order of species is first electrons then of ions!
@@ -252,32 +249,28 @@ Simulator.SubSystem.CellCenterFVM.InField.Def =\
 #
 ###############################################################################
 # Boundary Conditions
-Simulator.SubSystem.CellCenterFVM.BcComds = PerfectConductingWall2DHalfFVMCC PerfectConductingWall2DHalfFVMCC PeriodicY2DMPIFVMCC #PerfectConductingWall2DHalfFVMCC #PerfectConductingWall2DHalfFVMCC PeriodicBCFVMCC 
-Simulator.SubSystem.CellCenterFVM.BcNames = Jet1 Jet2 Jet3 #Jet4
+Simulator.SubSystem.CellCenterFVM.BcComds = DriftWaveInletFVMCC DriftWaveInletFVMCC PeriodicY2DMPIFVMCC #PerfectConductingWall2DHalfFVMCC #PerfectConductingWall2DHalfFVMCC PeriodicBCFVMCC 
+Simulator.SubSystem.CellCenterFVM.BcNames = Jet1 Jet2 Jet3 
 
 # Bottom Condition 
 Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = y0
-Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 1 0 1 0 1 0 1 0 1 1 0 1 1 0 1 1 1 1 
+Simulator.SubSystem.CellCenterFVM.Jet1.Rhoe = 1.58185989380575e-015
+Simulator.SubSystem.CellCenterFVM.Jet1.Rhoi = 2.90453627066948e-012
+Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 1 0 1 0 1 0 1 0 0 0 1 0 1 1 0 1 1 1 
 
 # Upper Condition
 Simulator.SubSystem.CellCenterFVM.Jet2.applyTRS = y1
-Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 1 0 1 0 1 0 1 0 1 1 0 1 1 0 1 1 1 1 
+Simulator.SubSystem.CellCenterFVM.Jet2.Rhoe = 9.109382914e-016
+Simulator.SubSystem.CellCenterFVM.Jet2.Rhoi = 1.67262177774e-012
+Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 1 0 1 0 1 0 1 0 0 0 1 0 1 1 0 1 1 1 
 
 # Left Condition 
 Simulator.SubSystem.CellCenterFVM.Jet3.applyTRS = PeriodicX #x0
-Simulator.SubSystem.CellCenterFVM.Jet3.ZeroGradientFlags = 1 0 1 0 1 0 1 0 1 1 0 1 1 0 1 1 1 1 
 Simulator.SubSystem.CellCenterFVM.Jet3.Threshold = 1e-4
 
 # Right Condition
 #Simulator.SubSystem.CellCenterFVM.Jet4.applyTRS = x1
 #Simulator.SubSystem.CellCenterFVM.Jet4.ZeroGradientFlags = 1 0 1 0 1 0 1 0 1 1 0 1 1 0 1 1 1 1 
-
-## Periodic Condition example
-#Simulator.SubSystem.CellCenterFVM.Jet3.applyTRS = PeriodicX
-##Simulator.SubSystem.CellCenterFVM.Jet4.TranslationVector = 1843416.75e-6 0. 0.
-#Simulator.SubSystem.CellCenterFVM.Jet3.Threshold = 1e-4
-##Simulator.SubSystem.CellCenterFVM.Jet3.ZeroGradientFlags = 0 0 0 0 0 0 0 0 1 1 0 0 0
-
 
 ###############################################################################
 # DataProcessing
