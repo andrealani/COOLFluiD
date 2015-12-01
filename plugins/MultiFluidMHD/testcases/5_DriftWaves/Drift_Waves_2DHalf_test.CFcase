@@ -1,6 +1,6 @@
 # COOLFluiD Startfile
 # Comments begin with "#"
-# Test
+# Test Nataly
 ###############################################################################
 # Assertion For Debugging
 
@@ -91,7 +91,7 @@ Simulator.SubSystem.Tecplot.AppendIter = true
 
 # Stop Condition
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 100
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
 
 #Simulator.SubSystem.StopCondition   = MaxTime
 #Simulator.SubSystem.MaxTime.maxTime = 800
