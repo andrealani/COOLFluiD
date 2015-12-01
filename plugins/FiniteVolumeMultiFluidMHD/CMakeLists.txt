@@ -6,6 +6,8 @@ AUSMFluxMultiFluid.cxx
 AUSMFluxMultiFluid.hh
 AUSMPlusUpFluxMultiFluid.ci
 AUSMPlusUpFluxMultiFluid.hh
+DriftWaveInlet.cxx
+DriftWaveInlet.hh
 DriftWaves2DHalfTwoFluid.ci
 DriftWaves2DHalfTwoFluid.cxx
 DriftWaves2DHalfTwoFluid.hh
@@ -34,6 +36,9 @@ MultiFluidMHDST.hh
 MultiFluidMHDSTNoRadiation.ci
 MultiFluidMHDSTNoRadiation.cxx
 MultiFluidMHDSTNoRadiation.hh
+MultiFluidMHDSTRadiation.ci
+MultiFluidMHDSTRadiation.cxx
+MultiFluidMHDSTRadiation.hh
 MultiFluidMHDST3D.ci
 MultiFluidMHDST3D.cxx
 MultiFluidMHDST3D.hh
