@@ -1,3 +1,3 @@
-Simulator.SubSystem.SubSystemStatus.TimeStep = 1.0e-6
+Simulator.SubSystem.SubSystemStatus.TimeStep = 1.0e-3
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -20.0

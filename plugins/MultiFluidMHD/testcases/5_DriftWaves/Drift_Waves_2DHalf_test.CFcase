@@ -39,7 +39,7 @@ Simulator.SubSystem.InteractiveParamReader.readRate = 10
 # order of the reference values is Bx, By, Bz, Ex, Ey, Ez, Psi, Phi, rhoe, rhoi, ue, ve, we, ui, vi, wi, Te, Ti
 
 Simulator.SubSystem.Default.PhysicalModelType = MultiFluidMHD2D #You choose between 2D and 3D
-Simulator.SubSystem.MultiFluidMHD2D.refValues = 1e-2 1e-2 1e-2 0.02 0.02 0.02 1e-4 1e-3 9.1e-16 1.7e-12 300 1000 300 300 1000 300 1000000 1000000 # Characteristic value of the solution for the computation of the numerical Jacobian of the convective Flux
+Simulator.SubSystem.MultiFluidMHD2D.refValues = 1e-12 1e-12 1e-2 1e-6 1e-6 1e-6 1e-4 1e-3 9.1e-16 1.7e-12 300 1000 300 300 1000 300 1000000 1000000 # Characteristic value of the solution for the computation of the numerical Jacobian of the convective Flux
 Simulator.SubSystem.MultiFluidMHD2D.refLength = 1.0 # Not changed
 Simulator.SubSystem.MultiFluidMHD2D.Is2DHalf = true # true for 2.5D
 
