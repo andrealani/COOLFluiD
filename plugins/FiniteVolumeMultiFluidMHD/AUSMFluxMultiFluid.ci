@@ -364,22 +364,33 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMassFluxImpl(RealVector& result)
   const CFuint endEM = 8; 
   
   // calculation of the dimensional numerical fluxes at the interface
-  if (m_mflux12 > 0.0) { // LEFT VASE
+  if (m_mflux12 > 0.0) { // LEFT CASE
 
     for (CFuint ie = 0; ie < nbSpecies; ++ie) {
-      
+
       _psi_l[ie] = 1;      
       result[endEM + ie] = m_mflux12[ie];
       
       //loop to set the velocities inside Psi
-      for (CFuint i = 0; i < dim; ++i) {
-        _psi_l[nbSpecies + ie*dim + i] =  (*this->m_lData)[firstVelocity + ie*dim + i];
-        result[endEM + nbSpecies + ie*dim + i] = m_mflux12[ie]*_psi_l[nbSpecies + ie*dim + i] + m_p12[ie]*normal[i];
+      if(!is2DHalf) {
+        for (CFuint i = 0; i < dim; ++i) {
+          _psi_l[nbSpecies + ie*dim + i] =  (*this->m_lData)[firstVelocity + ie*dim + i];
+          result[endEM + nbSpecies + ie*dim + i] = m_mflux12[ie]*_psi_l[nbSpecies + ie*dim + i] + m_p12[ie]*normal[i];
+        }
       }
-      if(is2DHalf) {
-          CFreal nz = 0;
-          _psi_l[nbSpecies + ie*3 + 2] =  (*this->m_lData)[firstVelocity + ie*3 + 2];
-          result[endEM + nbSpecies + ie*3 + 2] = m_mflux12[ie]*_psi_l[nbSpecies + ie*3 + 2] + m_p12[ie]*nz;
+      else {
+        const CFuint dim2DHalf = 3;
+        for (CFuint i = 0; i < dim2DHalf; ++i) {
+          if( i != 2) { // x,y-direction
+            _psi_l[nbSpecies + ie*dim2DHalf + i] =  (*this->m_lData)[firstVelocity + ie*dim2DHalf + i];
+            result[endEM + nbSpecies + ie*dim2DHalf + i] = m_mflux12[ie]*_psi_l[nbSpecies + ie*dim2DHalf + i] + m_p12[ie]*normal[i];
+          }
+          else { // z-direction
+            CFreal nz = 0;
+            _psi_l[nbSpecies + ie*dim2DHalf + i] =  (*this->m_lData)[firstVelocity + ie*dim2DHalf + i];
+            result[endEM + nbSpecies + ie*dim2DHalf + i] = m_mflux12[ie]*_psi_l[nbSpecies + ie*dim2DHalf + i] + m_p12[ie]*nz;
+          }
+        }
       }
       //enthalpy
       if(!is2DHalf) { //Default case
@@ -401,14 +412,25 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMassFluxImpl(RealVector& result)
       result[endEM + ie] = m_mflux12[ie];
       
       //loop to set the velocities inside Psi
-      for (CFuint i = 0; i < dim; ++i) {	
-        _psi_r[nbSpecies + ie*dim + i] =  (*this->m_rData)[firstVelocity + ie*dim + i];
-        result[endEM + nbSpecies + ie*dim + i] = m_mflux12[ie]*_psi_r[nbSpecies + ie*dim + i] + m_p12[ie]*normal[i];
+      if(!is2DHalf) {
+        for (CFuint i = 0; i < dim; ++i) {
+          _psi_r[nbSpecies + ie*dim + i] =  (*this->m_rData)[firstVelocity + ie*dim + i];
+          result[endEM + nbSpecies + ie*dim + i] = m_mflux12[ie]*_psi_r[nbSpecies + ie*dim + i] + m_p12[ie]*normal[i];
+        }
       }
-      if(is2DHalf) {
-          CFreal nz = 0;
-          _psi_r[nbSpecies + ie*3 + 2] =  (*this->m_rData)[firstVelocity + ie*3 + 2];
-          result[endEM + nbSpecies + ie*3 + 2] = m_mflux12[ie]*_psi_r[nbSpecies + ie*3 + 2] + m_p12[ie]*nz;
+      else {
+        const CFuint dim2DHalf = 3;
+        for (CFuint i = 0; i < dim2DHalf; ++i) {
+          if( i != 2) { // x,y-direction
+            _psi_r[nbSpecies + ie*dim2DHalf + i] =  (*this->m_rData)[firstVelocity + ie*dim2DHalf + i];
+            result[endEM + nbSpecies + ie*dim2DHalf + i] = m_mflux12[ie]*_psi_r[nbSpecies + ie*dim2DHalf + i] + m_p12[ie]*normal[i];
+          }
+          else { // z-direction
+            CFreal nz = 0;
+            _psi_r[nbSpecies + ie*dim2DHalf + i] =  (*this->m_rData)[firstVelocity + ie*dim2DHalf + i];
+            result[endEM + nbSpecies + ie*dim2DHalf + i] = m_mflux12[ie]*_psi_r[nbSpecies + ie*dim2DHalf + i] + m_p12[ie]*nz;
+          }
+        }
       }
       //total enthalpy
       if(!is2DHalf) { //Default case
