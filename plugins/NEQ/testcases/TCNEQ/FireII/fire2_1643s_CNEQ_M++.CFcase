@@ -40,7 +40,7 @@ Simulator.SubSystem.NavierStokes2DNEQ.refValues = \
 1e-12 1e-6 1e-6 1e-6 1e-6 1e-6 0.00059826 1e-6 0.00018174 1e-6 1e-6 10480. 10480. 276. 276.
 
 Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary = Mutationpp
-Simulator.SubSystem.NavierStokes2DNEQ.Mutationpp.mixtureName = air11nasa9_new
+Simulator.SubSystem.NavierStokes2DNEQ.Mutationpp.mixtureName = air11nasa9
 #air11
 Simulator.SubSystem.NavierStokes2DNEQ.Mutationpp.StateModelName = ChemNonEq1T
 Simulator.SubSystem.NavierStokes2DNEQ.nbSpecies = 11
