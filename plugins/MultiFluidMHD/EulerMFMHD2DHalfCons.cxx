@@ -140,19 +140,13 @@ void EulerMFMHD2DHalfCons::computePhysicalData(const State& state, RealVector& d
   const CFuint firstSpecies = getModel()->getFirstScalarVar(0);  
   const CFuint firstVelocity = getModel()->getFirstScalarVar(1);   
   const CFuint firstTemperature = getModel()->getFirstScalarVar(2); 
+
+  const bool isLeake = getModel()->isLeake();
+
+  // plasma + neutrals model
+  if(isLeake){ std::cout<<"EulerMFMHD2DHalfCons::computePhysicalData NOT IMPLEMENTED \n";}
  
-///Used for debugging 
-//   std::cout << "NbSpecies = "<< nbSpecies << "\n";
-//   std::cout << "NbMomentum = "<< nbMomentum << "\n";
-//   std::cout << "NbEnergyEqs = "<< nbEnergyEqs << "\n"; 
-//   std::cout << "BxID = "<< BxID << "\n";   
-//   std::cout << "ExID = "<< ExID << "\n"; 
-//   std::cout << "FirstMfMhdID = "<< FirstMfMhdID << "\n";   
-//   std::cout << "firstSpecies = "<< firstSpecies << "\n";
-//   std::cout << "firstVelocity = "<< firstVelocity << "\n";
-//   std::cout << "firstTemperature = "<< firstTemperature << "\n"; 
-  
-  
+///Used for debugging     
   
   data[PTERM::BX] = state[0];
   data[PTERM::BY] = state[1]; 
@@ -187,12 +181,10 @@ void EulerMFMHD2DHalfCons::computePhysicalData(const State& state, RealVector& d
   
   
   //set the species mass fraction
-//   const CFuint firstSpecies = getModel()->getFirstScalarVar(0);
   for (CFuint ie = 0; ie < nbSpecies; ++ie) {
     const CFreal rhoi = state[endEM + ie];
     data[firstSpecies + ie] = rhoi*ovRho;
   //set the species velocities in 2.5D 
-//   const CFuint firstVelocity = getModel()->getFirstScalarVar(1); 
     const CFuint dim = 3;
     const CFreal ui = state[endEM + nbSpecies + dim*ie]/rhoi;
     const CFreal vi = state[endEM + nbSpecies + dim*ie + 1]/rhoi;
@@ -202,8 +194,7 @@ void EulerMFMHD2DHalfCons::computePhysicalData(const State& state, RealVector& d
     data[firstVelocity + dim*ie + 2] = wi;
  
   //set the energy physical data  
-  const CFuint firstTemperature = getModel()->getFirstScalarVar(2);
-    
+  const CFuint firstTemperature = getModel()->getFirstScalarVar(2);  
     
     const CFreal mi = _m_i[ie];    
     const CFreal V2 = ui*ui + vi*vi + wi*wi;
@@ -216,16 +207,7 @@ void EulerMFMHD2DHalfCons::computePhysicalData(const State& state, RealVector& d
     data[firstTemperature + 4*ie + 1] = Ti*R_gas*rhoi;//pressure
     data[firstTemperature + 4*ie + 2] = sqrt(gamma*R_gas*Ti);//sound speed
     data[firstTemperature + 4*ie + 3] = 0.5*V2 + c_p*Ti;//total enthaply of species i   
-    
-//     std::cout << "firstTemperature = "<< firstTemperature <<"\n";    
-//     std::cout << "firstTemperature + 4*ie + 3 = "<< firstTemperature + 4*ie + 3 <<"\n";
- 
-    
-///OLD IMPLEMENTATION    
-//     data[firstTemperature + 4*ie] = (1/(state[ie]*c_v))*(state[nbSpecies + 2*nbSpecies + ie] - 0.5*state[ie]*V2);//Temperature
-//     data[firstTemperature + 4*ie + 1] = data[firstTemperature + 4*ie]*R_gas* data[PTERM::RHO]*data[firstSpecies + ie];//pressure
-//     data[firstTemperature + 4*ie + 2] = sqrt(gamma*R_gas*data[firstTemperature + 4*ie]);//sound speed
-//     data[firstTemperature + 4*ie + 3] = 0.5*V2 + c_p*data[firstTemperature + 4*ie];//enthaply 
+     
   }    
   cout << "EulerMFMHD2DHalfCons::computePhysicalData" << endl;
   for (CFuint ie = 0; ie < firstTemperature + 4*nbSpecies; ++ie) {
@@ -238,7 +220,12 @@ void EulerMFMHD2DHalfCons::computePhysicalData(const State& state, RealVector& d
 void EulerMFMHD2DHalfCons::computeStateFromPhysicalData(const RealVector& data,
 					       State& state)
 {
-   
+
+  const bool isLeake = getModel()->isLeake();
+
+  // plasma + neutrals model
+  if(isLeake){ std::cout<<"EulerMFMHD2DHalfCons::computePhysicalData NOT IMPLEMENTED \n";}
+
   const CFuint nbSpecies    = getModel()->getNbScalarVars(0);
   const CFuint endEM = 8;  
   

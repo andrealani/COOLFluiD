@@ -139,7 +139,14 @@ void EulerMFMHD3DCons::computePhysicalData(const State& state, RealVector& data)
   const CFuint endEM = 8;
   const CFuint firstSpecies = getModel()->getFirstScalarVar(0);  
   const CFuint firstVelocity = getModel()->getFirstScalarVar(1);   
-  const CFuint firstTemperature = getModel()->getFirstScalarVar(2);  
+  const CFuint firstTemperature = getModel()->getFirstScalarVar(2); 
+
+  const bool isLeake = getModel()->isLeake();
+
+  // plasma + neutrals model
+  if(isLeake){ std::cout<<"EulerMFMHD3DCons::computePhysicalData NOT IMPLEMENTED \n";}
+ 
+///Used for debugging     
   
   data[PTERM::BX] = state[0];
   data[PTERM::BY] = state[1]; 
@@ -225,7 +232,12 @@ void EulerMFMHD3DCons::computePhysicalData(const State& state, RealVector& data)
 void EulerMFMHD3DCons::computeStateFromPhysicalData(const RealVector& data,
 					       State& state)
 {
-   
+
+  const bool isLeake = getModel()->isLeake();
+
+  // plasma + neutrals model
+  if(isLeake){ std::cout<<"EulerMFMHD3DCons::computePhysicalData NOT IMPLEMENTED \n";}
+
   const CFuint nbSpecies    = getModel()->getNbScalarVars(0);
   const CFuint endEM = 8;  
   

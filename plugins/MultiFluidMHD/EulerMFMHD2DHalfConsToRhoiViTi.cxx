@@ -72,8 +72,11 @@ void EulerMFMHD2DHalfConsToRhoiViTi::transform(const State& state, State& result
     result[endEM + nbSpecies + dim*ie + 2] = state[endEM + nbSpecies + dim*ie + 2]/state[endEM + ie];
   }
   
+  const bool isLeake = _model->isLeake();
+
   // plasma + neutrals model
-  if (nbSpecies == 2){
+  if(isLeake){
+
     //ions
     //set the energy parameters
     const CFreal gamma = _model->getGamma();	// gamma = 5/3
