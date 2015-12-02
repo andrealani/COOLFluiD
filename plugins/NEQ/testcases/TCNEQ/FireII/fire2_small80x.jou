@@ -1,0 +1,24 @@
+/ Journal File for GAMBIT 2.4.6, Database 2.4.4, lnamd64 SP2007051420
+/ Identifier "fire2_small"
+/ File opened for append Mon Nov 23 17:28:18 2015.
+undo begingroup
+edge delete "edge.13" keepsettings onlymesh
+edge mesh "edge.13" successive ratio1 0.94 ratio2 1.15 intervals 80
+undo endgroup
+undo begingroup
+edge delete "edge.11" keepsettings onlymesh
+edge mesh "edge.11" successive ratio1 1.15 ratio2 0.94 intervals 100
+undo endgroup
+undo begingroup
+edge delete "edge.11" keepsettings onlymesh
+edge mesh "edge.11" successive ratio1 1.15 ratio2 0.94 intervals 80
+undo endgroup
+undo begingroup
+edge delete "edge.6" keepsettings onlymesh
+edge mesh "edge.6" successive ratio1 0.94 ratio2 1.15 intervals 80
+undo endgroup
+face mesh "face.2" "face.1" map
+save name \
+  "/data/lani/COOLFluiD_GITHUB/trunk/plugins/NEQ/testcases/TCNEQ/FireII/fire2_small80x.dbs"
+export gambit "fire2_small80x.neu"
+/ File closed at Mon Nov 23 17:30:59 2015, 0.85 cpu second(s), 4815104 maximum memory.
