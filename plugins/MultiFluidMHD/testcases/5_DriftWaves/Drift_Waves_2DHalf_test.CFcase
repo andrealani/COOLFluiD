@@ -51,7 +51,7 @@ Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.molecularMass2 = 1.67262177774e-27 
 Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.gamma = 1.6666666666667 	#adabatic constant of (both) fluid 
 Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.nonInducedElectromagnetic = 0. 0. 0. 0. 0. 0. # Bx By Bz Ex Ey Ez   
 Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.divBCleaningConst = 1.
-Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.divECleaningConst = 1.
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.divECleaningConst = 1
 #Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.nbSpecies = 2
 #Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.dynViscosity = 0. 0.
 #Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.thermConductivity = 0. 0.
@@ -73,7 +73,7 @@ Simulator.SubSystem.CFmesh.AppendIter   = false
 Simulator.SubSystem.Tecplot.FileName    = multiFluid.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = RhoiViTi
 Simulator.SubSystem.Tecplot.SaveRate    = 1 #10 #1250
-Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
+#Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
 #Simulator.SubSystem.Tecplot.Data.printExtraValues = true
 #Simulator.SubSystem.Tecplot.Data.SurfaceTRS = x0 y0
 Simulator.SubSystem.Tecplot.AppendTime = true #false
@@ -105,7 +105,7 @@ Simulator.SubSystem.LSSNames = NewtonIteratorLSS
 Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
 Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
-Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 100
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
 Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 150
 Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
 
@@ -180,7 +180,7 @@ Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhs
 #Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhsLimited
 ##Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.TimeLimiter = MinMod
 ##Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.MinMod.SlopeRatio = 3.
-Simulator.SubSystem.CellCenterFVM.BDF2TimeRhs.zeroDiagValue = 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 0 0 0 
+#Simulator.SubSystem.CellCenterFVM.BDF2TimeRhs.zeroDiagValue = 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 0 0 0 
 
 ### second order: uncomment this
 Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
