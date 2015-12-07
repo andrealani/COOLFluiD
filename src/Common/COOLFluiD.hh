@@ -22,6 +22,12 @@
 #include "Common/DemangledTypeID.hh"
 #include "Common/PtrAlloc.hh"
 
+/// macro to impose exiting after a certain number of iterations
+#define EXIT_AT(__exitIter__) {static int count = 0; if (count++ == __exitIter__) exit(1);}
+
+  /// macro to impose aborting after a certain number of iterations
+#define ABORT_AT(__exitIter__) {static int count = 0; if (count++ == __exitIter__) abort();}
+
 //////////////////////////////////////////////////////////////////////////////
 
 /// Definition of COOLFluiD namespace.
@@ -70,6 +76,9 @@ namespace COOLFluiD {
 
   /// class to be used to define a default type
   class NOTYPE {};
+ 
+  /// function to reset to 0 a certain input variable
+  template <typename T> static void RESET_TO_ZERO(T& input) {input = 0;}
   
 //////////////////////////////////////////////////////////////////////////////
 

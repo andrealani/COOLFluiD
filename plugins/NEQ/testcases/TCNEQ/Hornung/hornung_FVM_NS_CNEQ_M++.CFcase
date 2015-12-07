@@ -12,7 +12,7 @@
 #
 # This testcases simulates a 2D cylinder corresponding to Hornung's experiment
 #
-### Residual = -4.0033056
+### Residual = -4.0035976
 
 # Simulator.TraceToStdOut = true
 
@@ -35,6 +35,7 @@ Simulator.SubSystem.NavierStokes2DNEQ.refLength = 1.0
 Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary = Mutationpp
 Simulator.SubSystem.NavierStokes2DNEQ.Mutationpp.mixtureName = N2_neut
 Simulator.SubSystem.NavierStokes2DNEQ.Mutationpp.StateModelName = ChemNonEq1T
+Simulator.SubSystem.NavierStokes2DNEQ.Mutationpp.ShiftH0 = true 
 Simulator.SubSystem.NavierStokes2DNEQ.nbSpecies = 2
 Simulator.SubSystem.NavierStokes2DNEQ.nbEulerEqs = 3
 
@@ -82,7 +83,8 @@ Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<4000,1.,if(i<6000,2.,min(100.,cfl*1.02))) 
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<4200,1.,if(i<5500,2.,min(100.,cfl*1.02))) 
+#if(i<4000,1.,if(i<6000,2.,min(100.,cfl*1.02))) 
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 #Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 4
@@ -134,7 +136,8 @@ Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
 Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
 Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitIter = 3000 #3500
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitIter = 3500
+# 3000
 
 #Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Vars = i
 #Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Def = \

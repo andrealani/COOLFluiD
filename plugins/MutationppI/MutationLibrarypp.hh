@@ -182,7 +182,8 @@ public:
    */
   CFdouble eta(CFdouble& temp, CFdouble& pressure, CFreal* tVec)
   {
-    const CFreal mu = m_gasMixture->viscosity();
+    CFreal mu = m_gasMixture->viscosity();
+    // RESET_TO_ZERO(mu);
     CFLog(DEBUG_MAX, "Mutation::eta() => mu = " << mu << "\n");
     return mu;
   }
@@ -552,6 +553,12 @@ protected:
   /// state model type enumerator 
   MutationLibrarypp::StateModelType m_smType;
   
+  /// mixture formation enthalphy at T=0K
+  CFreal m_H0;
+  
+  /// species formation enthalphy at T=0K
+  RealVector m_vecH0;
+  
   /// mass fractions
   RealVector m_y;
   
@@ -572,13 +579,22 @@ protected:
   
   /// stores the modified driving forces for the Stefan-Maxwell system solution
   RealVector m_df;
-
+  
+  /// backup of the partial densities
+  RealVector m_rhoivBkp;
+  
+  /// partial densities
+  RealVector m_rhoiv;
+  
   /// mixture name
   std::string _mixtureName;
     
   /// state model name
   std::string _stateModelName;
 
+  /// shift the formation enthalpy to have H(T=0K)=0
+  bool m_shiftHO;
+  
 }; // end of class MutationLibrarypp
       
 //////////////////////////////////////////////////////////////////////////////
