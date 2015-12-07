@@ -1,7 +1,0 @@
-***************************PARADE REPOSITORY ENTRY******************************
-
-This directory contains the input and output data for PARADE v1.5. This
-comprises seven directories, each containing the output files outdat and
-par_res.dat, and the input file parade.con, alongside other files as dictated by
-the individual case. These cases are: atomic, comple, contin, fireii, molec, 
-nlin, and noneq. Further details can be found in the PARADE user manual.
