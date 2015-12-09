@@ -8,6 +8,8 @@ AUSMPlusUpFluxMultiFluid.ci
 AUSMPlusUpFluxMultiFluid.hh
 DriftWaveInlet.cxx
 DriftWaveInlet.hh
+DriftWaveUnsteadyInlet.cxx
+DriftWaveUnsteadyInlet.hh
 DriftWaves2DHalfTwoFluid.ci
 DriftWaves2DHalfTwoFluid.cxx
 DriftWaves2DHalfTwoFluid.hh
