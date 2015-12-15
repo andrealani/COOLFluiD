@@ -226,7 +226,7 @@ SET ( Boost_FIND_VERSION_MAJOR  "1"  )
 SET ( Boost_FIND_VERSION_MINOR  "42" )
 SET ( Boost_FIND_VERSION_PATCH  "0"  )
 # older cmakes dont have these versions
-SET ( Boost_ADDITIONAL_VERSIONS "1.54" "1.54.0" "1.42" "1.42.0" "1.41" "1.41.0"  "1.40" "1.40.0" "1.39" "1.39.0" )
+SET ( Boost_ADDITIONAL_VERSIONS  "1.59" "1.59.0" "1.54" "1.54.0" "1.42" "1.42.0" "1.41" "1.41.0"  "1.40" "1.40.0" "1.39" "1.39.0" )
 # components to search for
 LIST ( APPEND CF_Boost_COMPONENTS thread filesystem system regex unit_test_framework )
 
@@ -236,7 +236,9 @@ LOG ( "Boost include path [${Boost_INCLUDE_DIR}]" )
 LOG ( "Boost lib version  [${Boost_LIB_VERSION}]" )
 LOG ( "Boost libraries    [${Boost_LIBRARIES}]" )
 
-IF (${Boost_LIB_VERSION} STREQUAL "1_54" )
+IF (${Boost_LIB_VERSION} STREQUAL "1_59" )
+ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_59 )
+ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_54" )
 ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_54 )
 ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_42")
 ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_42 )
