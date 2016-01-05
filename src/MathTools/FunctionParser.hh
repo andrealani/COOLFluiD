@@ -48,6 +48,12 @@ static double Radius3D(const double* x)
 {
   return std::sqrt(x[0]*x[0] + x[1]*x[1] + x[2]*x[2]);
 }
+
+/// Random function with positive numbers from [0,1]
+static double Rand(const double*)
+{
+    return drand48();
+} 
     
 //----------------------------------------------------------------------------//
 
@@ -68,6 +74,7 @@ public:
     AddConstant("Rair", 287.046);
     AddFunction("R2", Radius2D, 2);
     AddFunction("R3", Radius3D, 3);
+    AddFunction("rand", Rand, 0);
   }
 };
 
