@@ -80,7 +80,7 @@ void EulerMFMHD2DHalfRhoiViTiToCons::transform(const State& state, State& result
   
   if (isLeake){
     //ions
-    const CFreal m_p = _model->getMolecularMass3();    
+    const CFreal m_p = _model->getMolecularMass1();    
     const CFreal gamma = _model->getGamma();
     const CFreal K_B = PhysicalConsts::Boltzmann(); 
     
@@ -118,9 +118,9 @@ void EulerMFMHD2DHalfRhoiViTiToCons::transform(const State& state, State& result
     //set the energy parameters
     const CFreal gamma = _model->getGamma();
     const CFreal K_gas = _model->getK();
-    const CFreal m_e = _model->getMolecularMass1();
+    const CFreal m_e = _model->getMolecularMass3();
     const CFreal m_n = _model->getMolecularMass2();
-    const CFreal m_p = _model->getMolecularMass3(); 
+    const CFreal m_p = _model->getMolecularMass1(); 
     const CFuint dim = 3;
     
   //   set the molar masses of the species (should be changed in the future)
@@ -188,7 +188,7 @@ void EulerMFMHD2DHalfRhoiViTiToCons::transformFromRef(const RealVector& data, St
   if (isLeake){
     const CFuint firstTemperature = _model->getFirstScalarVar(2);
     //ions
-    const CFreal m_p = _model->getMolecularMass3();    
+    const CFreal m_p = _model->getMolecularMass1();    
     const CFreal gamma = _model->getGamma();
     const CFreal K_B = _model->getK(); 
     
@@ -222,9 +222,9 @@ void EulerMFMHD2DHalfRhoiViTiToCons::transformFromRef(const RealVector& data, St
     //set the energy parameters
     const CFreal gamma = _model->getGamma();
     const CFreal K_gas = _model->getK();
-    const CFreal m_e = _model->getMolecularMass1();
+    const CFreal m_e = _model->getMolecularMass3();
     const CFreal m_n = _model->getMolecularMass2();
-    const CFreal m_p = _model->getMolecularMass3(); 
+    const CFreal m_p = _model->getMolecularMass1(); 
     const CFuint firstTemperature = _model->getFirstScalarVar(2);
     
     //set the molar masses of the species (should be changed in the future)

@@ -141,9 +141,9 @@ void EulerMFMHD2DHalfRhoiViTi::computePhysicalData(const State& state, RealVecto
   const CFuint firstVelocity = getModel()->getFirstScalarVar(1);   
   const CFuint firstTemperature = getModel()->getFirstScalarVar(2); 
   
-  const CFreal m_e = getModel()->getMolecularMass1();
+  const CFreal m_e = getModel()->getMolecularMass3();
   const CFreal m_n = getModel()->getMolecularMass2();
-  const CFreal m_p = getModel()->getMolecularMass3(); 
+  const CFreal m_p = getModel()->getMolecularMass1(); 
   
   //set the molar masses of the species (should be changed in the future)
   _m_i[0] = m_e;
@@ -244,9 +244,9 @@ void EulerMFMHD2DHalfRhoiViTi::computePhysicalData(const State& state, RealVecto
     //set the energy parameters
     const CFreal gamma = getModel()->getGamma();
     const CFreal K_gas = PhysicalConsts::Boltzmann();
-    const CFreal m_e = getModel()->getMolecularMass1();
+    const CFreal m_e = getModel()->getMolecularMass3();
     const CFreal m_n = getModel()->getMolecularMass2();
-    const CFreal m_p = getModel()->getMolecularMass3(); 
+    const CFreal m_p = getModel()->getMolecularMass1(); 
     
     //set the molar masses of the species (should be changed in the future)
     _m_i[0] = m_e;

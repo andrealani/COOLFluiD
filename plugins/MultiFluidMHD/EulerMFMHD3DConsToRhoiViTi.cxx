@@ -80,7 +80,7 @@ void EulerMFMHD3DConsToRhoiViTi::transform(const State& state, State& result)
     const CFreal gamma = _model->getGamma();	// gamma = 5/3
     const CFreal K_B = _model->getK();		// Boltzmann constant
     
-    const CFreal m_p = _model->getMolecularMass3();
+    const CFreal m_p = _model->getMolecularMass1();
     
     const CFreal R_i = K_B/m_p;				// ions gas constant
     const CFreal R_p = 2*R_i;				// Plasma gas constant (ions + electrons)
@@ -113,9 +113,9 @@ void EulerMFMHD3DConsToRhoiViTi::transform(const State& state, State& result)
     //set the energy parameters
     const CFreal gamma = _model->getGamma();
     const CFreal K_gas = _model->getK();
-    const CFreal m_e = _model->getMolecularMass1();
+    const CFreal m_e = _model->getMolecularMass3();
     const CFreal m_n = _model->getMolecularMass2();
-    const CFreal m_p = _model->getMolecularMass3(); 
+    const CFreal m_p = _model->getMolecularMass1(); 
     
     //set the molar masses of the species (should be changed in the future)
 
