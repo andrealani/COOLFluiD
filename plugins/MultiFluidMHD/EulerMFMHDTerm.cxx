@@ -1,6 +1,7 @@
 #include "Config/BiggerThanZero.hh"
 #include "MultiFluidMHD/EulerMFMHDTerm.hh"
 #include "MathTools/MathConsts.hh"
+#include "Framework/PhysicalConsts.hh"
 #include "MultiFluidMHDModel.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -45,22 +46,22 @@ EulerMFMHDTerm::EulerMFMHDTerm(const std::string& name) :
   _omega = 0.;
   setParameter("Omega",&_omega);
   
-  _K = 1.3806505e-23;			//Boltzman's constant [J/K]
+  _K = Framework::PhysicalConsts::Boltzmann();			//Boltzman's constant [J/K]
   
-  _epsilon = 8.854187817e-12;		//Permittivity of free space [F/m]
+  _epsilon = Framework::PhysicalConsts::VacuumPermittivity();   //Permittivity of free space [F/m]
   
-  _mu = 4*MathTools::MathConsts::CFrealPi()*1e-7;
+  _mu = Framework::PhysicalConsts::VacuumPermeability();        /// Magnetic permeability in vacuum [Volt·s/(Ampere·m)]
   
-  _lightSpeed = 299792458;		//light Speed m/s
+  _lightSpeed = Framework::PhysicalConsts::LightSpeed();		//light Speed m/s
   setParameter("lightSpeedMF",&_lightSpeed);
   
-  _molecularMass1 = 9.1094e-31;		// Electron's mass [kg] source:Standart Handbook for Electrical Engineerings   
+  _molecularMass1 = Framework::PhysicalConsts::ElectronMass();		// Electron's mass [kg] source:Standart Handbook for Electrical Engineerings   
   setParameter("molecularMass1",&_molecularMass1);  
   
-  _molecularMass2 = 1.6726e-27;		// Proton's mass [kg] source:Standart Handbook for Electrical Engineerings 
+  _molecularMass2 = Framework::PhysicalConsts::HydrogenMass();		// Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings 
   setParameter("molecularMass2",&_molecularMass2);  
   
-  _molecularMass3 = 1.6726e-27;		// Neutral's mass [kg/mol] equal to proton's mass   
+  _molecularMass3 = Framework::PhysicalConsts::ProtonMass();		// Proton's mass [kg/mol] equal to proton's mass   
   setParameter("molecularMass3",&_molecularMass3);
   
   _nonInducedEMField = std::vector<CFreal>();

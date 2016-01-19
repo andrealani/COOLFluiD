@@ -1,5 +1,6 @@
 #include "DiffMFMHDVarSet.hh"
 #include "EulerMFMHDTerm.hh"
+#include "Framework/PhysicalConsts.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -345,12 +346,12 @@ void DiffMFMHDVarSet::computeBraginskiiThermConduct(const RealVector& state){
   const CFuint rhoiID = endEM;
   CFreal T_i     = state[TiID];				//[K]
   CFreal rho_i   = state[rhoiID];			//[kg/m3]
-  CFreal m_i     = 1.67262177774e-27;			//[kg]
-  CFreal m_e     = 9.109382914e-31;			//[kg]
+  CFreal m_i     = m_eulerModel->getMolecularMass3();	//[kg]
+  CFreal m_e     = m_eulerModel->getMolecularMass1();	//[kg]
   CFreal n_i     = rho_i/m_i;				//[m-3]
-  CFreal c       = m_eulerModel->getLightSpeed();				//[m/s]
-  CFreal eCharge = 1.60217656535e-19;			//[C]
-  CFreal kBoltz = 1.6e-12;				//[erg/eV]  
+  CFreal c       = m_eulerModel->getLightSpeed();	//[m/s]
+  CFreal eCharge = Framework::PhysicalConsts::ElectronCharge();	//[C]
+  CFreal kBoltz = 1.380648813e-16*11604.5052;				//[erg/eV]  
   
   //Conversion to cgs system
   Bnorm *= 1e4;						//[gauss]
