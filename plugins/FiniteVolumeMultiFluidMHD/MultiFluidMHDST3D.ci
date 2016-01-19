@@ -214,8 +214,8 @@ void MultiFluidMHDST3D<UPDATEVAR>::computeSource
       const CFreal wn = _physicalData[firstVelocity + 5];
       const CFreal GammaIon_i = - _GammaIon_n;
       const CFreal GammaRec_n = - _GammaRec_i;
-      const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-      const CFreal mn = 1.6726e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+      const CFreal mi = _varSet->getModel()->getMolecularMass3();  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+      const CFreal mn = _varSet->getModel()->getMolecularMass2();  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
       const CFreal collMomentumSource_ix = _collMomentumSource[0];
       const CFreal collMomentumSource_iy = _collMomentumSource[1];
       const CFreal collMomentumSource_iz = _collMomentumSource[2];
@@ -312,9 +312,9 @@ void MultiFluidMHDST3D<UPDATEVAR>::computeMassReactionsEnergySourceTerm()
   const CFreal Tn   = _physicalData[firstTemperature + 4];      // neutrals Temperature
   
   //Molecular Masses
-  //const CFreal me = 9.1094e-31;              // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mi = 1.6726e-27;              // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mn = 1.6726e-27;              // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+  //const CFreal me = _varSet->getModel()->getMolecularMass1();;              // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mi = _varSet->getModel()->getMolecularMass3();              // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn = _varSet->getModel()->getMolecularMass2();              // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
   
   //electron properties
   const CFreal ne = rhoi/mi;		   	// Electrically neutral, i.e. ne = ni
@@ -431,8 +431,8 @@ void MultiFluidMHDST3D<UPDATEVAR>::computeCollisionalMomentumEnergy()
   const CFreal wn = _physicalData[firstVelocity + 5];
   
   // particle mass 
-  const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mn = 1.6726e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings  
+  const CFreal mi = _varSet->getModel()->getMolecularMass3();  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn = _varSet->getModel()->getMolecularMass2();  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
   
   // particles per volume
   const CFreal ni = rhoi/mi;

@@ -218,8 +218,8 @@ void MultiFluidMHDSTRadiation<UPDATEVAR>::computeSource
       const CFreal vn = _physicalData[firstVelocity + 3];  
       const CFreal GammaIon_i = - _GammaIon_n;
       const CFreal GammaRec_n = - _GammaRec_i;
-      const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-      const CFreal mn = 1.6726e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+      const CFreal mi = _varSet->getModel()->getMolecularMass3();  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+      const CFreal mn = _varSet->getModel()->getMolecularMass2();  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
       const CFreal collMomentumSource_ix = _collMomentumSource[0];
       const CFreal collMomentumSource_iy = _collMomentumSource[1];
       const CFreal collMomentumSource_nx = _collMomentumSource[2];
@@ -272,9 +272,9 @@ void MultiFluidMHDSTRadiation<UPDATEVAR>::computeMassReactionsEnergySourceTerm()
   const CFreal Tn   = _physicalData[firstTemperature + 4];      // neutrals Temperature
   
   //Molecular Masses
-  //const CFreal me = 9.1094e-31;              // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mi = 1.6726e-27;              // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mn = 1.6726e-27;              // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+  //const CFreal me = _varSet->getModel()->getMolecularMass1();;              // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mi = _varSet->getModel()->getMolecularMass3();              // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn = _varSet->getModel()->getMolecularMass2();              // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
   
   //electron properties
   const CFreal ne = rhoi/mi;		   	// Electrically neutral, i.e. ne = ni
@@ -381,8 +381,8 @@ void MultiFluidMHDSTRadiation<UPDATEVAR>::computeCollisionalMomentumEnergy()
   const CFreal vn = _physicalData[firstVelocity + 3]; 
   
   // particle mass 
-  const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mn = 1.6726e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings  
+  const CFreal mi = _varSet->getModel()->getMolecularMass3();  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn = _varSet->getModel()->getMolecularMass2();  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
   
   // particles per volume
   const CFreal ni = rhoi/mi;
@@ -437,12 +437,12 @@ void MultiFluidMHDSTRadiation<UPDATEVAR>::computeSpitzerResistivity()
 
   //data
   // particle mass
-  const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mn = 1.6726e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal me = 9.1093829140e-31;
+  const CFreal mi = _varSet->getModel()->getMolecularMass3();  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn = _varSet->getModel()->getMolecularMass2();  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal me = _varSet->getModel()->getMolecularMass1();
   const CFreal kB = Framework::PhysicalConsts::Boltzmann(); // Boltzmann constant
-  const CFreal e_charge = 1.60217656535e-19; //Electron's charge
-  const CFreal epsilon  = 8.8542e-12; 
+  const CFreal e_charge = Framework::PhysicalConsts::ElectronCharge(); //Electron's charge
+  const CFreal epsilon  = Framework::PhysicalConsts::VacuumPermittivity();
 
   // particles per volume
   const CFreal ni = rhoi/mi;
@@ -491,8 +491,8 @@ void MultiFluidMHDSTRadiation<UPDATEVAR>::computeRadiationTerm()
   const CFreal Ti = _physicalData[firstTemperature];
   const CFreal Tn = _physicalData[firstTemperature + 4];
   
-  const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mn = 1.6726e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mi = _varSet->getModel()->getMolecularMass3();  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn = _varSet->getModel()->getMolecularMass2();  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
 
   // particles per volume
   const CFreal ni = rhoi/mi*1e-6; //in cm-3

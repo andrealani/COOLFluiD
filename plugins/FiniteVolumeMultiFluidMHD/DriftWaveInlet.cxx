@@ -104,7 +104,7 @@ void DriftWaveInlet::setGhostState(GeometricEntity *const face)
   (*ghostState)[6] = (*innerState)[6];			//Psi
   (*ghostState)[7] = -(*innerState)[7];			//Phi
   
-///MultiFluidMHD mirror Condition in 2DHalf
+///MultiFluidMHD mirror Condition in 2DHalf with imposed density
   const CFuint endEM = 8;
   //set the densities
   (*ghostState)[8] = 2*_rhoe - (*innerState)[8];                 //rhoe

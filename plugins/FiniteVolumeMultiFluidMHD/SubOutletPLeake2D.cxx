@@ -171,8 +171,8 @@ void SubOutletPLeake2D::setGhostState(GeometricEntity *const face)
 
   //cout <<"Inner Cells: Ti = " << (*innerState)[endEM + 3*nbSpecies] <<"\t Tn = " << (*innerState)[endEM + 3*nbSpecies + 1] <<"\n";
 
-  const CFreal mi = 1.6726e-27;                             // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mn = 1.6726e-27;                             // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mi = _updateVarSet->getModel()->getMolecularMass3(); // Proton's mass [kg] 
+  const CFreal mn =  _updateVarSet->getModel()->getMolecularMass2(); // Neutral's mass [kg] 
   const CFreal kB = Framework::PhysicalConsts::Boltzmann(); // Boltzmann constant
 
   const CFreal Rie = 2*kB/mi;

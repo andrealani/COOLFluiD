@@ -392,8 +392,8 @@ void AtmosphereProps::computeChemFreqs(const Framework::State* currState,
 
   //Molecular Masses
   //const CFreal me = 9.1094e-31;              // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mi = 1.6726e-27;              // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mn = 1.6726e-27;              // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mi = Framework::PhysicalConsts::ProtonMass();              // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn = Framework::PhysicalConsts::HydrogenMass();              // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
 
   //electron properties
   const CFreal ne = rhoi/mi;		   	// Electrically neutral, i.e. ne = ni
@@ -460,12 +460,12 @@ void AtmosphereProps::computeCollFreqs(const Framework::State* currState,
 
   //data
   // particle mass
-  const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mn = 1.6726e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal me = 9.1093829140e-31;
+  const CFreal mi = Framework::PhysicalConsts::ProtonMass();  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn = Framework::PhysicalConsts::HydrogenMass();  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal me = Framework::PhysicalConsts::ElectronMass();
   const CFreal kB = Framework::PhysicalConsts::Boltzmann(); // Boltzmann constant
-  const CFreal e_charge = 1.60217656535e-19; //Electron's charge
-  const CFreal epsilon  = 8.8542e-12;
+  const CFreal e_charge = Framework::PhysicalConsts::ElectronCharge(); //Electron's charge
+  const CFreal epsilon  = Framework::PhysicalConsts::VacuumPermittivity();
 
   // particles per volume
   const CFreal ni = rhoi/mi;

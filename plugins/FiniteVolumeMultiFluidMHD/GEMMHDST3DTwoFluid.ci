@@ -156,10 +156,10 @@ void GEMMHDST3DTwoFluid<UPDATEVAR>::computeSource
   _Btotal = 0;
   computeEMField();
   const CFuint firstDensity = _varSet->getModel()->getFirstScalarVar(0);
-  const CFreal qe = 1.60217657e-19*(-1);                       // charge of electrons in Coulombs
+  const CFreal qe = Framework::PhysicalConsts::ElectronCharge()*(-1);                       // charge of electrons in Coulombs
   const CFreal qi = qe*(-1);                                    // charge of ions in Coulombs
-  const CFreal mi = 1.6726e-27;                            // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal me = mi/25;                           // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mi = _varSet->getModel()->getMolecularMass2();                            // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal me = _varSet->getModel()->getMolecularMass1();                           // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
   const CFreal rho = _physicalData[UPDATEVAR::PTERM::RHO];
   const CFreal rhoe = rho*_physicalData[firstDensity]; 	   //electrons density
   const CFreal rhoi = rho*_physicalData[firstDensity + 1]; //ions density

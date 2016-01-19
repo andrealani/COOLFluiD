@@ -158,8 +158,8 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
   const CFuint firstDensity = _varSet->getModel()->getFirstScalarVar(0);
   const CFreal qe = 1.60217657e-19*(-1);                       // charge of electrons in Coulombs
   const CFreal qi = qe*(-1);                                    // charge of ions in Coulombs
-  const CFreal mi = 1.6726217777e-27;                            // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal me = 9.1093829140e-31;                // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mi = _varSet->getModel()->getMolecularMass2();                            // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal me = _varSet->getModel()->getMolecularMass1();                // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
   const CFreal rho = _physicalData[UPDATEVAR::PTERM::RHO];
   const CFreal rhoe = rho*_physicalData[firstDensity]; 	   //electrons density
   const CFreal rhoi = rho*_physicalData[firstDensity + 1]; //ions density
@@ -229,12 +229,12 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     const CFreal const_i = mi*ni*nu_i; //for collisional term of electrons
     
     //momentum equations
-    const CFreal emMomentumXe = qe*ne*(_Etotal[XX] + ve*_Btotal[ZZ] - we*_Btotal[YY])- const_e*(ue);	//Electromagnetic momentum for electrons in X
-    const CFreal emMomentumXi = qi*ni*(_Etotal[XX] + vi*_Btotal[ZZ] - wi*_Btotal[YY])- const_i*(ui);	//Electromagnetic momentum for ions in X
-    const CFreal emMomentumYe = qe*ne*(_Etotal[YY] + we*_Btotal[XX] - ue*_Btotal[ZZ])- const_e*(ve);	//Electromagnetic momentum for electrons in Y
-    const CFreal emMomentumYi = qi*ni*(_Etotal[YY] + wi*_Btotal[XX] - ui*_Btotal[ZZ])- const_i*(vi);	//Electromagnetic momentum for ions in Y
-    const CFreal emMomentumZe = qe*ne*(_Etotal[ZZ] + ue*_Btotal[YY] - ve*_Btotal[XX])- const_e*(we);	//Electromagnetic momentum for electrons in Z
-    const CFreal emMomentumZi = qi*ni*(_Etotal[ZZ] + ui*_Btotal[YY] - vi*_Btotal[XX])- const_i*(wi);	//Electromagnetic momentum for ions in Z
+    const CFreal emMomentumXe = qe*ne*(_Etotal[XX] + ve*_Btotal[ZZ] - we*_Btotal[YY]) - const_e*ue;	//Electromagnetic momentum for electrons in X
+    const CFreal emMomentumXi = qi*ni*(_Etotal[XX] + vi*_Btotal[ZZ] - wi*_Btotal[YY]) - const_i*ui;	//Electromagnetic momentum for ions in X
+    const CFreal emMomentumYe = qe*ne*(_Etotal[YY] + we*_Btotal[XX] - ue*_Btotal[ZZ]) - const_e*ve;	//Electromagnetic momentum for electrons in Y
+    const CFreal emMomentumYi = qi*ni*(_Etotal[YY] + wi*_Btotal[XX] - ui*_Btotal[ZZ]) - const_i*vi;	//Electromagnetic momentum for ions in Y
+    const CFreal emMomentumZe = qe*ne*(_Etotal[ZZ] + ue*_Btotal[YY] - ve*_Btotal[XX]) - const_e*we;	//Electromagnetic momentum for electrons in Z
+    const CFreal emMomentumZi = qi*ni*(_Etotal[ZZ] + ui*_Btotal[YY] - vi*_Btotal[XX]) - const_i*wi;	//Electromagnetic momentum for ions in Z
 
     source[10] = emMomentumXe;   //Electrons X momentum
     source[11] = emMomentumYe;   //Electrons Y momentum
@@ -246,11 +246,11 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
 
       
     //AAL: ENERGY
-//    const CFreal emEnergye = qe*(rhoe/me)*(ue*_Etotal[XX] + ve*_Etotal[YY] + we*_Etotal[ZZ]); //electrons
-//    const CFreal emEnergyi = qi*(rhoi/mi)*(ui*_Etotal[XX] + vi*_Etotal[YY] + wi*_Etotal[ZZ]); //ions
+    const CFreal emEnergye = qe*(rhoe/me)*(ue*_Etotal[XX] + ve*_Etotal[YY] + we*_Etotal[ZZ]); //electrons
+    const CFreal emEnergyi = qi*(rhoi/mi)*(ui*_Etotal[XX] + vi*_Etotal[YY] + wi*_Etotal[ZZ]); //ions
 
-    source[16] = emMomentumXe*ue + emMomentumYe*ve + emMomentumZe*we; //Electrons Energy Source terms
-    source[17] = emMomentumXi*ui + emMomentumYi*vi + emMomentumZi*wi; //Ions Energy
+    source[16] = emEnergye + emMomentumXe*ue + emMomentumYe*ve + emMomentumZe*we; //Electrons Energy Source terms
+    source[17] = emEnergyi + emMomentumXi*ui + emMomentumYi*vi + emMomentumZi*wi; //Ions Energy
 
     // AAL: Write the sockets
     //if (!this->getMethodData().isPerturb()) { // Condition to avoid writing when the source is perturbed

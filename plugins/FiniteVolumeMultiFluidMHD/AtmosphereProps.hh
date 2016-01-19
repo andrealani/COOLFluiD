@@ -60,14 +60,14 @@ public:
    * Get Ions Pressure
    */
   CFreal getIonPressure(const CFreal rhoi, const CFreal Ti)
-  { return rhoi*Framework::PhysicalConsts::Boltzmann()/1.6726e-27*Ti; }
+  { return rhoi*Framework::PhysicalConsts::Boltzmann()/Framework::PhysicalConsts::ProtonMass()*Ti; }
 
 
   /**
    * Get Neutrals Pressure
    */
   CFreal getNeutralPressure(const CFreal rhon, const CFreal Tn)
-  { return rhon*Framework::PhysicalConsts::Boltzmann()/1.6726e-27*Tn; }
+  { return rhon*Framework::PhysicalConsts::Boltzmann()/Framework::PhysicalConsts::HydrogenMass()*Tn; }
 
 
   /**

@@ -210,10 +210,10 @@ void ThreeFluidMHDST2D<UPDATEVAR>::computeSource
   computegravityTerms();
   //YGM: common variables
     const CFuint firstDensity = _varSet->getModel()->getFirstScalarVar(0);
-    const CFreal qe = 1.60217657e-19 ;//× 10-19 ;//charge of electrons in Coulombs
+    const CFreal qe = Framework::PhysicalConsts::ElectronCharge()*(-1) ;//× 10-19 ;//charge of electrons in Coulombs
     const CFreal qi = qe;//charge of ions in Coulombs
-    const CFreal me = 9.10934e-31;// Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
-    const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+    const CFreal me =  _varSet->getModel()->getMolecularMass1();// Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
+    const CFreal mi =  _varSet->getModel()->getMolecularMass2();  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
     const CFreal rho = _physicalData[UPDATEVAR::PTERM::RHO];
     const CFreal rhoe = rho*_physicalData[firstDensity]; 	//electrons density
     const CFreal rhoi = rho*_physicalData[firstDensity + 1]; 	//ions density
@@ -277,9 +277,9 @@ void ThreeFluidMHDST2D<UPDATEVAR>::computeSource
       const CFreal GammaRec_n = - _GammaRec_i;
  
        //// particle mass
-      const CFreal me = 9.1094e-31;// Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
-      const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-      const CFreal mn = 1.6735e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+      const CFreal me =  _varSet->getModel()->getMolecularMass1();// Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
+      const CFreal mi =  _varSet->getModel()->getMolecularMass2();  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+      const CFreal mn =  _varSet->getModel()->getMolecularMass3();  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
       // Collisional terms Rin, Ren, Rie
       const CFreal collMomentumSource_ex = _collMomentumSource[0];
       const CFreal collMomentumSource_ey = _collMomentumSource[1];      
@@ -389,9 +389,9 @@ void ThreeFluidMHDST2D<UPDATEVAR>::computeMassReactionsEnergySourceTerm()
   
 
   ////Molecular Masses
-  const CFreal me = 9.1094e-31;              // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mi = 1.6726e-27;              // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mn = 1.6735e-27;              // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal me =  _varSet->getModel()->getMolecularMass1();              // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mi =  _varSet->getModel()->getMolecularMass2();              // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn =  _varSet->getModel()->getMolecularMass3();              // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
   
   ////electron properties
   const CFreal ne = rhoe/me;		   	// Electricolly neutral, i.e. ne = ni
@@ -485,9 +485,9 @@ void ThreeFluidMHDST2D<UPDATEVAR>::computeElectricCurrent()
   const CFreal rhoi = rho*_physicalData[firstDensity + 1]; 	//ions density
   const CFreal rhon = rho*_physicalData[firstDensity + 2];  
   
-  const CFreal me = 9.1094e-31;  // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mn = 1.6735e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal me =  _varSet->getModel()->getMolecularMass1();  // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mi =  _varSet->getModel()->getMolecularMass2();  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn =  _varSet->getModel()->getMolecularMass3();  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
 
  //YGM: check if we want to use the velocities to calculate the current, as this would mean Jz=0 in the 2D case! 
   const CFreal we = 0.; //get the vertical velocities from 2.5D or 3D
@@ -539,9 +539,9 @@ void ThreeFluidMHDST2D<UPDATEVAR>::computeCollisionalMomentumEnergy()
   const CFreal wn = 0.;
   
   //// particle mass
-  const CFreal me = 9.10934e-31;  // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mi = 1.6726e-27;  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
-  const CFreal mn = 1.6735e-27;  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal me =  _varSet->getModel()->getMolecularMass1();  // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mi =  _varSet->getModel()->getMolecularMass2();  // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal mn =  _varSet->getModel()->getMolecularMass3();  // Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings
   
   //// particles per volume
   const CFreal ne = rhoe/me;
