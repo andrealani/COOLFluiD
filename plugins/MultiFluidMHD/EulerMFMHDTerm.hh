@@ -153,9 +153,9 @@ public:
   bool isLeake() const
   {
     return _isLeake;
-  }  
-
-/**
+  }
+  
+  /**
    * Get index of pressure
    */
   //static CFuint getPressureTerm()//should be removed?

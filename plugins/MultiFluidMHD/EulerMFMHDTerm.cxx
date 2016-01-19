@@ -54,13 +54,13 @@ EulerMFMHDTerm::EulerMFMHDTerm(const std::string& name) :
   _lightSpeed = 299792458;		//light Speed m/s
   setParameter("lightSpeedMF",&_lightSpeed);
   
-  _molecularMass1 = 1.67262177774e-27;		// Proton's mass [kg] (Wikipedia)    
+  _molecularMass1 = 9.1094e-31;		// Electron's mass [kg] source:Standart Handbook for Electrical Engineerings   
   setParameter("molecularMass1",&_molecularMass1);  
   
-  _molecularMass2 = 1.67262177774e-27+9.1093821545e-31;		// Neutral's mass [kg] source:Standart Handbook for Electrical Engineerings 
+  _molecularMass2 = 1.6726e-27;		// Proton's mass [kg] source:Standart Handbook for Electrical Engineerings 
   setParameter("molecularMass2",&_molecularMass2);  
   
-  _molecularMass3 = 9.1093821545e-31;		// Electron's mass [kg/mol] (Wikipedia)   
+  _molecularMass3 = 1.6726e-27;		// Neutral's mass [kg/mol] equal to proton's mass   
   setParameter("molecularMass3",&_molecularMass3);
   
   _nonInducedEMField = std::vector<CFreal>();

@@ -160,9 +160,9 @@ void EulerMFMHD2DCons::computePhysicalData(const State& state, RealVector& data)
   //set the energy parameters
   const CFreal gamma = getModel()->getGamma();
   const CFreal K_gas = getModel()->getK();
-  const CFreal m_p = getModel()->getMolecularMass1();
+  const CFreal m_e = getModel()->getMolecularMass1();
   const CFreal m_n = getModel()->getMolecularMass2();
-  const CFreal m_e = getModel()->getMolecularMass3(); 
+  const CFreal m_p = getModel()->getMolecularMass3(); 
   
   //set the molar masses of the species (should be changed in the future)
   _m_i[0] = m_e;
@@ -237,9 +237,9 @@ void EulerMFMHD2DCons::computeStateFromPhysicalData(const RealVector& data,
   //set the energy parameters
   const CFreal gamma = getModel()->getGamma();
   const CFreal K_gas = getModel()->getK();
-  const CFreal m_p = getModel()->getMolecularMass1();
+  const CFreal m_e = getModel()->getMolecularMass1();
   const CFreal m_n = getModel()->getMolecularMass2();
-  const CFreal m_e = getModel()->getMolecularMass3(); 
+  const CFreal m_p = getModel()->getMolecularMass3(); 
   
   //set the molar masses of the species (should be changed in the future)
   _m_i[0] = m_e;
