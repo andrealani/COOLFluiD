@@ -47,6 +47,20 @@ public:
   /// Magnetic permeability in vacuum [Volt·s/(Ampere·m)]
   static CFreal VacuumPermeability() {return 4.*MathTools::MathConsts::CFrealPi()*1e-7;} 
   
+  /// Magnetic permittivity in vacuum [F/m]
+  static CFreal VacuumPermittivity() {return 1/(LightSpeed()*LightSpeed()*VacuumPermeability());}
+  
+  /// Electron's mass [Kg]
+  static CFreal ElectronMass() {return 9.1093821545e-31;} 
+
+  /// Proton's mass [Kg]
+  static CFreal ProtonMass() {return 1.67262177774e-27;}
+  
+  /// Hydrogen's mass [Kg]
+  static CFreal HydrogenMass() {return 1.67262177774e-27+9.1093821545e-31;}
+
+  /// Hydrogen's mass [C]
+  static CFreal ElectronCharge() {return 1.602176620898e-19;}
 };
     
 //////////////////////////////////////////////////////////////////////////////
