@@ -41,6 +41,9 @@ MultiFluidMHDSTNoRadiation.hh
 MultiFluidMHDSTRadiation.ci
 MultiFluidMHDSTRadiation.cxx
 MultiFluidMHDSTRadiation.hh
+MultiFluidMHDSTRadiationEquil.ci
+MultiFluidMHDSTRadiationEquil.cxx
+MultiFluidMHDSTRadiationEquil.hh
 MultiFluidMHDST3D.ci
 MultiFluidMHDST3D.cxx
 MultiFluidMHDST3D.hh
