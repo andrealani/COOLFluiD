@@ -81,6 +81,9 @@ void MultiFluidMHDSTRadiationEquil<UPDATEVAR>::defineConfigOptions(Config::Optio
      ("electricalResistivity", "electrical Resistivity used in Ohm's law");
  options.template addConfigOption< bool >
      ("SpitzerResistivity", "flag to set Spitzer collisional Resistivity");
+ options.template addConfigOption< CFreal >
+     ("IonizationDegree", "Ionization degree in % to compute initial field");
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -511,33 +514,33 @@ void MultiFluidMHDSTRadiationEquil<UPDATEVAR>::computeRadiationTerm(CFreal Xcoor
   _Qrad = ne*(nn + ni)*R_T; //in erg/cm3s
   _Qrad = _Qrad/10; //in J/m3s
 
-  CFreal ni0 = 0, nn0 = 0, T0 = 0; //Initialization of the initial density
+  CFreal rhoi0 = 0, rhon0 = 0, T0 = 0; //Initialization of the initial density
 
 
   // Compute Initial Field
   if (_Psi == 0.5){
-    ni0 = 5.54711281856400e-11+2.30802207945312e-11/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
-    nn0 = 1.10447664139961e-08+4.59546534921645e-09/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
+    rhoi0 = 5.54711281856400e-11+2.30802207945312e-11/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
+    rhon0 = 1.10447664139961e-08+4.59546534921645e-09/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
     T0   = 1.03905526366550e4;
   }
   else if (_Psi == 1){
-    ni0 = 1.10393037281645e-10+4.39654277763386e-11/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
-    nn0 = 1.09348627728787e-08+4.35494784203301e-09/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
+    rhoi0 = 1.10393037281645e-10+4.39654277763386e-11/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
+    rhon0 = 1.09348627728787e-08+4.35494784203301e-09/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
     T0   = 1.08553039035294e4;
   }
   else if (_Psi == 5){
-    ni0 = 5.30937941210351e-10+1.89212238940549e-10/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
-    nn0 = 1.00933148923355e-08+3.59699045948228e-09/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
+    rhoi0 = 5.30937941210351e-10+1.89212238940549e-10/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
+    rhon0 = 1.00933148923355e-08+3.59699045948228e-09/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
     T0   = 1.21312665118486e4;
   }
   else if (_Psi == 10){
-    ni0 = 1.01360879686016e-09+3.42123251017519e-10/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
-    nn0 = 9.12744743852168e-09+3.08078619762549e-09/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
+    rhoi0 = 1.01360879686016e-09+3.42123251017519e-10/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
+    rhon0 = 9.12744743852168e-09+3.08078619762549e-09/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
     T0   = 1.28085328931629e4;
   }
   else if (_Psi == 50){
-    ni0 = 3.71656558849425e-09+1.05044620844262e-09/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
-    nn0 = 3.71858969717350e-09+1.05101830040143e-09/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
+    rhoi0 = 3.71656558849425e-09+1.05044620844262e-09/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
+    rhon0 = 3.71858969717350e-09+1.05101830040143e-09/(cosh(Ycoord/50000)*cosh(Ycoord/50000));
     T0   = 1.52960604324096e4;
   }
   else {
@@ -547,10 +550,10 @@ void MultiFluidMHDSTRadiationEquil<UPDATEVAR>::computeRadiationTerm(CFreal Xcoor
   // Compute the effective cooling due to the initial field
 
   // particles per volume in cgs
-  ni0 = ni0*1e-6; //in cm-3
-  nn0 = nn0*1e-6; //in cm-3
+  CFreal ni0 = rhoi0/mi*1e-6; //in cm-3
+  CFreal nn0 = rhon0/mn*1e-6; //in cm-3
   cf_assert(nn0 > 0.);
-  cf_assert(ni0 > 0.);
+  cf_assert(rhoi0 > 0.);
   cf_assert(T0  > 0.);
   const CFreal ne0 = ni0; //in cm-3
 
