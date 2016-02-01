@@ -186,7 +186,8 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     const CFreal c_e = term->getLightSpeed();
     const CFreal mu0 = term->getPermeability();
     const CFreal ovEpsilon = c_e*c_e*mu0;
- 
+    
+
     source[0] = 0.;              //x-Faraday's Law
     source[1] = 0.;          	//y-Faraday's Law
     source[2] = 0.;          	//z-Faraday's Law
@@ -229,15 +230,16 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     const CFreal c_e = term->getLightSpeed();
     const CFreal mu0 = term->getPermeability();
     const CFreal ovEpsilon = c_e*c_e*mu0; 
-    const CFreal r_di = std::sqrt(ovEpsilon*kB*Ti/(ni*qe*qe)); //Debye length of ions [m]
-    const CFreal r_de = std::sqrt(ovEpsilon*kB*Te/(ne*qe*qe)); //Debye length of electrons [m]
+    const CFreal Epsilon0 = 1/ovEpsilon;	
+    const CFreal r_di = std::sqrt(Epsilon0*kB*Ti/(ni*qe*qe)); //Debye length of ions [m]
+    const CFreal r_de = std::sqrt(Epsilon0*kB*Te/(ne*qe*qe)); //Debye length of electrons [m]
     const CFreal r_deb = r_de*r_di/(std::sqrt(r_de*r_de + r_di*r_di)); //Debye length for plasma with several species
-    const CFreal b0 = std::abs(qe*qi)/(4*pi*ovEpsilon)/(3*kB*(Te+Ti));
+    const CFreal b0 = std::abs(qe*qi)/(4*pi*Epsilon0)/(3*kB*(Te+Ti));
     const CFreal L_ie = std::log(r_deb/b0);
-    const CFreal nu_ie = 4*std::sqrt(2*pi/mi)*std::pow(std::abs(qe*qi)/(4*pi*ovEpsilon),2)*ne*L_ie/(std::pow(3*kB*Ti+kB*Te*mi/me,1.5)); //electron collision frequency for collisions with electrons
-    const CFreal nu_ei = 4*std::sqrt(2*pi/me)*std::pow(std::abs(qe*qi)/(4*pi*ovEpsilon),2)*ni*L_ie/(std::pow(3*kB*Te+kB*Ti*me/mi,1.5)); //ion collision frequency for collisions with ions
-    const CFreal const_e = me*ne*nu_ie; //for collisional term of electrons
-    const CFreal const_i = mi*ni*nu_ei; //for collisional term of ions
+    const CFreal nu_ie = 4*std::sqrt(2*pi/mi)*std::pow(std::abs(qe*qi)/(4*pi*Epsilon0),2)*ne*L_ie/3*(std::pow(kB*Ti+kB*Te*mi/me,1.5)); //ion collision frequency for collisions with electrons (target)
+    const CFreal nu_ei = 4*std::sqrt(2*pi/me)*std::pow(std::abs(qe*qi)/(4*pi*Epsilon0),2)*ni*L_ie/3*(std::pow(kB*Te+kB*Ti*me/mi,1.5)); //electron collision frequency for collisions with ions (target)
+    const CFreal const_e = me*ne*nu_ei; //for collisional term of electrons
+    const CFreal const_i = mi*ni*nu_ie; //for collisional term of ions
     
     //momentum equations
     const CFreal emMomentumXe = qe*ne*(_Etotal[XX] + ve*_Btotal[ZZ] - we*_Btotal[YY]) - const_e*ue;	//Electromagnetic momentum for electrons in X
