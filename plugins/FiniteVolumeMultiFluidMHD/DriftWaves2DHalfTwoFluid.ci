@@ -211,22 +211,33 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     CFreal Ti = _physicalData[firstTemperature + 4];
     
     //electron, ion properties
-    const CFreal ne = rhoe/me;		   	// number density electrons
-    const CFreal ni = rhoi/mi;		   	// number density ions
-    Te = Te/11604.50520;		// electrons temperature in eV. 
-    Ti = Ti/11604.50520;		// ions temperature in eV. 
+    const CFreal ne = rhoe/me;		   	// number density electrons [m^-3]
+    const CFreal ni = rhoi/mi;		   	// number density ions [m^-3]
+    const CFreal ne_cgs = ne*1e-6; // number density electrons for cgs unit use [cm^-3]
+    const CFreal ni_cgs = ni*1e-6; // number density ions for cgs unit use [cm^-3]
+    const CFreal Te_cgs = Te/11604.50520;		// electrons temperature in eV. 
+    const CFreal Ti_cgs = Ti/11604.50520;		// ions temperature in eV. 
     const CFreal kB = Framework::PhysicalConsts::Boltzmann(); // Boltzmann constant
     const CFreal pi = MathTools::MathConsts::CFrealPi(); //Pi number
   
     //to calculate collision Frequency
-    const CFreal Debye_i = std::sqrt(kB*Ti/(4*pi*ni*qe*qe)); //Debye length of ions
-    const CFreal C_log_i = std::log(12*pi*ni*std::pow(Debye_i,3)); //Coulomb logarithm of ions, should be ~6.8
-    const CFreal Debye_e = std::sqrt(kB*Te/(4*pi*ne*qe*qe)); //Debye length of electrons
-    const CFreal C_log_e = std::log(12*pi*ne*std::pow(Debye_e,3)); //Coulomb logarithm of electrons, should be ~13.6
-    const CFreal nu_i = 4.8e-8*ni*std::pow(Ti,-1.5)*C_log_i; //ion collision frequency
-    const CFreal nu_e = 2.91e-6*ne*std::pow(Te,-1.5)*C_log_e; //electron collision frequency
-    const CFreal const_e = me*ne*nu_e; //for collisional term of electrons
-    const CFreal const_i = mi*ni*nu_i; //for collisional term of electrons
+//    const CFreal Debye = std::sqrt(kB*Te_cgs/(4*pi*ne_cgs*qe*qe)); //Debye length  - assumes Te=Ti and ne=ni
+//    const CFreal C_log = std::log(12*pi*ne_cgs*std::pow(Debye,3)); //Coulomb logarithm - assumes Te=Ti and ne=ni
+//    const CFreal nu_i = 4.8e-8*ni*std::pow(Ti,-1.5)*C_log; //ion collision frequency - assumes Te=Ti and ne=ni
+//    const CFreal nu_e = 2.91e-6*ne*std::pow(Te,-1.5)*C_log; //electron collision frequency - assumes Te=Ti and ne=ni
+
+    const CFreal c_e = term->getLightSpeed();
+    const CFreal mu0 = term->getPermeability();
+    const CFreal ovEpsilon = c_e*c_e*mu0; 
+    const CFreal r_di = std::sqrt(ovEpsilon*kB*Ti/(ni*qe*qe)); //Debye length of ions [m]
+    const CFreal r_de = std::sqrt(ovEpsilon*kB*Te/(ne*qe*qe)); //Debye length of electrons [m]
+    const CFreal r_deb = r_de*r_di/(std::sqrt(r_de*r_de + r_di*r_di)); //Debye length for plasma with several species
+    const CFreal b0 = std::abs(qe*qi)/(4*pi*ovEpsilon)/(3*kB*(Te+Ti));
+    const CFreal L_ie = std::log(r_deb/b0);
+    const CFreal nu_ie = 4*std::sqrt(2*pi/mi)*std::pow(std::abs(qe*qi)/(4*pi*ovEpsilon),2)*ne*L_ie/(std::pow(3*kB*Ti+kB*Te*mi/me,1.5)); //electron collision frequency for collisions with electrons
+    const CFreal nu_ei = 4*std::sqrt(2*pi/me)*std::pow(std::abs(qe*qi)/(4*pi*ovEpsilon),2)*ni*L_ie/(std::pow(3*kB*Te+kB*Ti*me/mi,1.5)); //ion collision frequency for collisions with ions
+    const CFreal const_e = me*ne*nu_ie; //for collisional term of electrons
+    const CFreal const_i = mi*ni*nu_ei; //for collisional term of ions
     
     //momentum equations
     const CFreal emMomentumXe = qe*ne*(_Etotal[XX] + ve*_Btotal[ZZ] - we*_Btotal[YY]) - const_e*ue;	//Electromagnetic momentum for electrons in X
