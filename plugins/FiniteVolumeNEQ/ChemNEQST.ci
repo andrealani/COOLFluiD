@@ -195,9 +195,11 @@ void ChemNEQST<UPDATEVAR>::computeSource
     setVibTemperature(_physicalData, *currState, _tvDim);
     _tvDim *= refData[UPDATEVAR::PTERM::T];
     
-    CFLog(DEBUG_MAX, "ChemNEQST::computeSource() => T = " << Tdim << ", p = " << pdim << ", rho = " << rhodim << ", Tv = " << _tvDim << "\n");
-    CFLog(DEBUG_MAX, "ChemNEQST::computeSource() => ys = " << _ys << "\n");
-    cf_assert(_ys.sum() > 0.9999 && _ys.sum() < 1.0001);
+    CFLog(DEBUG_MAX, "ChemNEQST::computeSource() => T = " << Tdim << ", p = " << pdim 
+	  << ", rho = " << rhodim << ", Tv = " << _tvDim
+	  << ", ys = [" << _ys << "], ys.sum() = " << _ys.sum() << "\n");
+    
+    cf_assert(_ys.sum() > 0.99 && _ys.sum() < 1.0001);
     
     // compute the mass production/destruction term
     _library->getMassProductionTerm(Tdim, _tvDim,

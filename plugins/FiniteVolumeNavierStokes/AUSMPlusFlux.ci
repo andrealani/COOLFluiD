@@ -71,6 +71,8 @@ void AUSMPlusFlux<UPDATEVAR>::computeMassFlux()
   const CFreal m12 = M4Plus + M4Minus;
   // calculation of the mass flux at the interface
   this->m_mflux12 = (m12 > 0.0) ? this->m_a12 * m12 * rhoL : this->m_a12 * m12 * rhoR;
+  
+  CFLog(DEBUG_MAX, "AUSMPlusFlux<UPDATEVAR>::computePressureFlux() => m_mflux12 = " << this->m_mflux12 << "\n");
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -95,6 +97,8 @@ void AUSMPlusFlux<UPDATEVAR>::computePressureFlux()
   const CFreal pR = (*this->m_rData)[UPDATEVAR::PTERM::P];
   // calculation of the pressure flux at the interface
   this->m_p12 = P5Plus*pL + P5Minus*pR;
+  
+  CFLog(DEBUG_MAX, "AUSMPlusFlux<UPDATEVAR>::computePressureFlux() => m_p12 = " << this->m_p12 << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -66,6 +66,7 @@ Simulator.SubSystem.ICPLTE2D.SourceTerm.Freq = 0.37
 ###### CHEMICAL LIBRARY ##
 Simulator.SubSystem.ICPLTE2D.PropertyLibrary = Mutationpp
 Simulator.SubSystem.ICPLTE2D.Mutationpp.mixtureName = air11
+Simulator.SubSystem.ICPLTE2D.Mutationpp.ShiftH0 = false
 #air11nasa9
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh

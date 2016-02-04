@@ -54,6 +54,8 @@ SubInletInterpYiVTTv::SubInletInterpYiVTTv(const std::string& name) :
   
   m_blowVelocity = 0.;
   setParameter("BlowVelocity",&m_blowVelocity);
+  
+  this->m_sInterpolatorStr = "Lookup";
 }
       
 //////////////////////////////////////////////////////////////////////////////

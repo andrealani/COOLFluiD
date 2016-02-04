@@ -447,8 +447,8 @@ void MutationLibrary2OLD::configure ( Config::ConfigArgs& args )
 {
   PhysicalChemicalLibrary::configure(args);
   
-  CFLog(NOTICE, "GammaN = " << _GammaN << "\n");
-  CFLog(NOTICE, "GammaO = " << _GammaO << "\n");
+  CFLog(VERBOSE, "MutationLibrary2OLD::configure() => GammaN = " << _GammaN << "\n");
+  CFLog(VERBOSE, "MutationLibrary2OLD::configure() => GammaO = " << _GammaO << "\n");
   
   if (_lambdaAlgoStr == "CG") _lambdaAlgo = LAMBDACG;
   if (_lambdaAlgoStr == "Direct") _lambdaAlgo = LAMBDAD;
@@ -1068,6 +1068,8 @@ CFdouble MutationLibrary2OLD::lambdaNEQ(CFdouble& temperature,
 
   lambdaTot = lambdaInth + lambdaTh + lambdaTe;
   
+  // RESET_TO_ZERO(lambdaTot);
+  
   CFLog(DEBUG_MAX, "Mutation::lambdaNEQ() => k = " << lambdaTot << "\n");
   return lambdaTot;
 }
@@ -1219,7 +1221,8 @@ CFdouble MutationLibrary2OLD::etaCG(CFdouble& temperature,
   //Eucken corrections for internal energy (no inelastic collisions)
   FORTRAN_NAME(etacg)(_WR1, &_LWR1, _WR2, &_LWR2, _XTOL, &eta);
   
-  // CFLog(DEBUG_MAX, "Mutation::etaCG() => mu = " << eta << "\n");
+  // RESET_TO_ZERO(eta);
+  CFLog(DEBUG_MAX, "Mutation::etaCG() => mu = " << eta << "\n");
   return eta;
 }
 
@@ -2078,18 +2081,11 @@ void MutationLibrary2OLD::getRhoUdiff(CFdouble& temperature,
     rhoUdiff[is] = _JDIF[is]; 
   }
   
-  CFLog(DEBUG_MAX, "Mutation::rhoUdiff() => rhoUdiff = " << rhoUdiff << "\n");
-  
-  // CFLog(DEBUG_MAX, "MutationLibrarypp::rhoUdiff() =>  rhoUdiff = " << rhoUdiff << "\n");
-  
-//   if (Te > 4000.) {
-//     cout << "Te = " << Te << endl;
-//     cout << "temp = " << temp << endl;
-//     cout << "rhoU = " << rhoUdiff << endl;
-//     abort();
-//   }
+  // RESET_TO_ZERO(rhoUdiff);
+  CFLog(DEBUG_MAX, "Mutation::rhoUdiff() => rhoUdiff = " << rhoUdiff << "\n"); 
+  //  EXIT_AT(1000);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrary2OLD::getDij_fick(RealVector& dx,
