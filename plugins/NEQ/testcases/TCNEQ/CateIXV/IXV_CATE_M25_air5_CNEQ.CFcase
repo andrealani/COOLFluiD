@@ -21,6 +21,19 @@
 CFEnv.ErrorOnUnusedConfig = true
 #CFEnv.ExceptionLogLevel = 200
 #CFEnv.ExceptionDumps = true
+#######TEST CONFIGURATION
+#CFEnv.ErrorOnUnusedConfig = true
+CFEnv.ExceptionLogLevel    = 1000
+##CFEnv.DoAssertions         = true
+##CFEnv.AssertionDumps       = true
+##CFEnv.AssertionThrows      = true
+##CFEnv.AssertThrows         = true
+##CFEnv.AssertDumps          = true
+##CFEnv.ExceptionAborts      = true
+CFEnv.ExceptionDumps       = true
+CFEnv.ExceptionOutputs     = true
+#
+
 
 # Simulation Modules
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libNEQ libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeNEQ libGambit2CFmesh libPetscI libMutation2OLD libMutation2OLDI libAeroCoefFVM libAeroCoefFVMNEQ
