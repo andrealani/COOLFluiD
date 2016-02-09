@@ -180,7 +180,7 @@ protected: // data
   Framework::DataHandle<RealVector> _nstates;  
   
   /// socket for storing the Ionization Rate
-  //Framework::DataSocketSource<CFreal> socket_GammaIon;
+  Framework::DataSocketSource<CFreal> socket_Qtot;
   
   /// socket for storing the Ionization Rate
   //Framework::DataSocketSource<CFreal> socket_GammaRec;  

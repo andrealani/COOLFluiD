@@ -21,7 +21,7 @@ DriftWaves2DHalfTwoFluid<UPDATEVAR>::DriftWaves2DHalfTwoFluid(const std::string&
   ComputeSourceTermFVMCC(name),
   _varSet(CFNULL),
   _nstates(CFNULL),
-  //socket_GammaIon("GammaIon"),
+  socket_Qtot("Qtot"),
   //socket_GammaRec("GammaRec"),
   _physicalData(),
   _temp(),
@@ -51,7 +51,7 @@ DriftWaves2DHalfTwoFluid<UPDATEVAR>::providesSockets()
   std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > result = 
     ComputeSourceTermFVMCC::providesSockets();
   // AAL: Example2
-  //result.push_back(&socket_GammaIon);
+  result.push_back(&socket_Qtot);
   //result.push_back(&socket_GammaRec);
 
   return result;
@@ -97,15 +97,15 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::setup()
   // AAL: Here you need to resize ALL the member variables that are defined in the .hh to be a Vector
   //************************************************************
   // Example3: the socket GammaIon resized to nbCells and initialized to 0
-  //Common::SafePtr<Common::ConnectivityTable<CFuint> > cells =
-  //  MeshDataStack::getActive()->getConnectivity("cellStates_InnerCells");
-  //const CFuint nbCells = cells->nbRows();
-  //socket_GammaIon.getDataHandle().resize(nbCells);
+  Common::SafePtr<Common::ConnectivityTable<CFuint> > cells =
+    MeshDataStack::getActive()->getConnectivity("cellStates_InnerCells");
+  const CFuint nbCells = cells->nbRows();
+  socket_Qtot.getDataHandle().resize(nbCells);
   //socket_GammaRec.getDataHandle().resize(nbCells);
-  //DataHandle<CFreal> GammaIon = socket_GammaIon.getDataHandle();
+  DataHandle<CFreal> ChargePrint = socket_Qtot.getDataHandle();
   //DataHandle<CFreal> GammaRec = socket_GammaRec.getDataHandle();
-  //GammaIon.resize(nbCells);
-  //GammaIon = 0;
+  ChargePrint.resize(nbCells);
+  ChargePrint = 0;
   //GammaRec.resize(nbCells);
   //GammaRec = 0;
   
@@ -132,7 +132,7 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
   const CFuint elemID = element->getID();
 
   //AAL: Declaring in this function the sockets of the GammaIon and GammaRec
-  //DataHandle<CFreal> GammaIon = socket_GammaIon.getDataHandle();
+  DataHandle<CFreal> ChargePrint = socket_Qtot.getDataHandle();
   //DataHandle<CFreal> GammaRec = socket_GammaRec.getDataHandle();
   
   cf_assert(states->size() == 1);
@@ -143,6 +143,7 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
   _NonInducedEMField = _varSet->getModel()->getNonInducedEMField
     (currState->getCoordinates()[XX], currState->getCoordinates()[YY]);
   
+  //std::cout << "Bz = " << _NonInducedEMField[ZZ] <<"\n"; 
   //   RealVector& refData = _varSet->getModel()->getReferencePhysicalData();
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
   
@@ -155,15 +156,20 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
   _Etotal = 0;
   _Btotal = 0;
   computeEMField();
+  //std::cout <<"After computing Bz = " << _Btotal[ZZ] << std::endl;
   const CFuint firstDensity = _varSet->getModel()->getFirstScalarVar(0);
-  const CFreal qe = 1.60217657e-19*(-1);                       // charge of electrons in Coulombs
+  const CFreal qe = Framework::PhysicalConsts::ElectronCharge()*(-1);                       // charge of electrons in Coulombs
   const CFreal qi = qe*(-1);                                    // charge of ions in Coulombs
   const CFreal mi = _varSet->getModel()->getMolecularMass2();                            // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
   const CFreal me = _varSet->getModel()->getMolecularMass1();                // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
   const CFreal rho = _physicalData[UPDATEVAR::PTERM::RHO];
   const CFreal rhoe = rho*_physicalData[firstDensity]; 	   //electrons density
   const CFreal rhoi = rho*_physicalData[firstDensity + 1]; //ions density
+  //std::cout << "rho  = " << rho  << "\n";
+  //std::cout << "rhoe = " << rhoe << "\n";
+  //std::cout << "rhoi = " << rhoi << std::endl;
   const CFreal Qtot = qe*rhoe/me + qi*rhoi/mi;
+  //std::cout << "Qtot = " << Qtot << std::endl;
   const CFuint firstVelocity = _varSet->getModel()->getFirstScalarVar(1);
   const CFreal ue = _physicalData[firstVelocity];
   const CFreal ve = _physicalData[firstVelocity + 1];
@@ -268,7 +274,7 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     // AAL: Write the sockets
     //if (!this->getMethodData().isPerturb()) { // Condition to avoid writing when the source is perturbed
       //if(currState->isParUpdatable()) { // Condition to write only once the partition cells
-        //GammaIon[elemID] = _GammaIon_n;
+        ChargePrint[elemID] = Qtot;
         //GammaRec[elemID] = _GammaRec_i;
       //}
     //}
