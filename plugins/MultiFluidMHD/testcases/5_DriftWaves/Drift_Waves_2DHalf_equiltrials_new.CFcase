@@ -52,7 +52,7 @@ Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.molecularMass2 = 1.6726217777e-27 #
 Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.gamma = 1.6666666666667 	#adabatic constant of (both) fluid 
 Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.nonInducedElectromagnetic = 0. 0. 0.1 0. 0. 0. # Bx By Bz Ex Ey Ez   
 Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.divBCleaningConst = 1.
-Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.divECleaningConst = 1
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.divECleaningConst = 1.
 #Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.nbSpecies = 2
 #Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.dynViscosity = 0. 0.
 #Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.thermConductivity = 0. 0.
@@ -263,9 +263,9 @@ Simulator.SubSystem.CellCenterFVM.BcNames = Jet1 Jet2 Jet3
 
 # Bottom Condition 
 Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = y0
-Simulator.SubSystem.CellCenterFVM.Jet1.Rhoe = 9.1093829140e-016 ##1.809518670e-015 ##9.1093829140e-016 ##-> original=1.58185989380575e-015 ##!!! Write in the exact number into this field!
-Simulator.SubSystem.CellCenterFVM.Jet1.Rhoi = 1.6726217777e-012 ##3.3225525403e-012 ##1.6726217777e-012 ##-> original = 2.90453627066948e-012 ##!!! Write in the exact number into this field!
-Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 1 0 1 0 1 0 1 0 0 0 1 0 1 1 0 1 1 1 
+Simulator.SubSystem.CellCenterFVM.Jet1.Rhoe = 9.1093821545e-16 ##1.809518670e-015 ##9.1093829140e-016 ##-> original=1.58185989380575e-015 ##!!! Write in the exact number into this field!
+Simulator.SubSystem.CellCenterFVM.Jet1.Rhoi = 1.67262177774e-12 ##1.6726217777e-012 ##-> original = 2.90453627066948e-012 ##!!! Write in the exact number into this field!
+Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 1 0 1 0 1 0 1 1 0 0 1 0 1 1 0 1 1 1 
 #Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 0 0 1 1 1 0 1 0 1 1 1 1 1 1 1 1 1 1 
 #Simulator.SubSystem.CellCenterFVM.Jet1.Vars = x y t
 
@@ -273,9 +273,9 @@ Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 1 0 1 0 1 0 1 0 0 0 1
 
 # Upper Condition
 Simulator.SubSystem.CellCenterFVM.Jet2.applyTRS = y1
-Simulator.SubSystem.CellCenterFVM.Jet2.Rhoe = 9.1093829140e-016 ##8.98503783e-016  ##9.1093829140e-016 ##-> original=9.109382914e-016  ###!!! Write in the exact number into this field!
-Simulator.SubSystem.CellCenterFVM.Jet2.Rhoi = 1.6726217777e-012 ##1.64993076e-012 ##1.6726217777e-012 ##-> original =1.67262177774e-012 ##!!! Write in the exact number into this field!
-Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 1 0 1 0 1 0 1 0 0 0 1 0 1 1 0 1 1 1
+Simulator.SubSystem.CellCenterFVM.Jet2.Rhoe = 9.1093821545e-16 ##8.98503783e-016  ##9.1093829140e-016 ##-> original=9.109382914e-016  ###!!! Write in the exact number into this field!
+Simulator.SubSystem.CellCenterFVM.Jet2.Rhoi = 1.67262177774e-012 ##1.64993076e-012 ##1.6726217777e-012 ##-> original =1.67262177774e-012 ##!!! Write in the exact number into this field!
+Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 1 0 1 0 1 0 1 1 0 0 1 0 1 1 0 1 1 1
 #Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 0 0 1 1 1 0 1 0 1 1 1 1 1 1 1 1 1 1
 
 # Left Condition 
