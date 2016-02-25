@@ -8,6 +8,7 @@
 #
 
 #CFEnv.ErrorOnUnusedConfig = true
+#CFEnv.OnlyCPU0Writes = false
 
 # Simulator Modules
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libMHD libFiniteVolume libFiniteVolumeMHD libForwardEuler  libTHOR2CFmesh
@@ -23,23 +24,23 @@ Simulator.SubSystem.MHD2DProjection.ConvTerm.refSpeed = 3.0
 #Simulator.SubSystem.MHD2DProjection.ConvTerm.dissipCoeff = 3.0
 #Simulator.SubSystem.MHD2DProjection.ConvTerm.correctionType = Mixed
 
-Simulator.SubSystem.InteractiveParamReader.readRate = 15
-Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MHD/testcases/Nozzle/nozzle.inter
+#Simulator.SubSystem.InteractiveParamReader.readRate = 15
+#Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MHD/testcases/Nozzle/nozzle.inter
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = nozzleFVMMHD1stProj.CFmesh
 Simulator.SubSystem.Tecplot.FileName    = nozzleFVMMHD1stProj.plt
-Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+#Simulator.SubSystem.Tecplot.Data.printExtraValues = true
 Simulator.SubSystem.Tecplot.Data.outputVar = Cons
-Simulator.SubSystem.Tecplot.SaveRate = 100
-Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.Tecplot.SaveRate = 1000
+Simulator.SubSystem.CFmesh.SaveRate = 1000
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 30
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10000
 
 #Simulator.SubSystem.StopCondition       = Norm
 #Simulator.SubSystem.Norm.valueNorm      = -6.0
@@ -53,7 +54,8 @@ Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-#Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.5
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.5
+Simulator.SubSystem.FwdEuler.ShowRate = 100
 Simulator.SubSystem.FwdEuler.ConvergenceFile = convergence_nozzleFVMMHD1stProj.plt
 Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Interactive
 Simulator.SubSystem.FwdEuler.Data.L2.ComputedVarID = 0
@@ -68,6 +70,7 @@ Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 
 Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = LaxFried
 #Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = MHD2DProjectionConsRoe
+Simulator.SubSystem.CellCenterFVM.Data.LaxFried.DiffCoeffDef = if(i<1500,1.,0.3) 
 
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
@@ -76,7 +79,8 @@ Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = MHDConsACAST
 
 #Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.14
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes  = -2.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitIter = 2000
 Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
 #Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.freezeLimiter = true
 #Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D

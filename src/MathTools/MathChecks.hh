@@ -112,6 +112,16 @@ public:
   {
     return (boost::math::isnan)(x);
   }
+#else
+ /// Function to check if a CFreal number is either minus or plus INF
+  /// @param x
+  /// @return true if x is finite
+  static bool isInf(const CFreal& x) {return false;}
+
+  /// Function to check if a CFreal number is a NaN (Not a Number)
+  /// @param x
+  /// @return true if x is a NaN
+  static bool isNaN(const CFreal& x) {return false;}
 #endif
 
   /// Function to check if a CFreal number is zero or very close.

@@ -127,14 +127,14 @@ PetscErrorCode BSORPcApply(PC pc, Vec x, Vec y)
   }
 
   CF_CHKERRCONTINUE(VecGetArray(x, &xArray));
-#if PETSC_VERSION_MINOR==4
+#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6
   CFuint blockSize = 1; 
   CF_CHKERRCONTINUE(VecCreateSeqWithArray(PETSC_COMM_SELF, blockSize, localSize, xArray, &xLocal));
 #else
   CF_CHKERRCONTINUE(VecCreateSeqWithArray(PETSC_COMM_SELF, localSize, xArray, &xLocal));
 #endif
   CF_CHKERRCONTINUE(VecGetArray(y, &yArray));
-#if PETSC_VERSION_MINOR==4
+#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6
   CF_CHKERRCONTINUE(VecCreateSeqWithArray(PETSC_COMM_SELF, blockSize, localSize, yArray, &yLocal));
 #else
   CF_CHKERRCONTINUE(VecCreateSeqWithArray(PETSC_COMM_SELF, localSize, yArray, &yLocal));

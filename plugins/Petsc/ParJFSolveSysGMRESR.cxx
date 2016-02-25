@@ -98,12 +98,14 @@ void ParJFSolveSysGMRESR::execute()
 		rhsVec.setValue(_upStatesGlobalIDs[i], rhs[_upLocalIDs[i]]);
 	}
 	
-   // assemble the rhs vector
+	// assemble the rhs vector
 	rhsVec.assembly();
-	
-	CFuint ierr = KSPSetOperators
-		(ksp,mat.getMat(), mat.getMat(),DIFFERENT_NONZERO_PATTERN);
-	
+
+#if PETSC_VERSION_MINOR==6	
+	CFuint ierr = KSPSetOperators(ksp,mat.getMat(), mat.getMat());
+#else
+	CFuint ierr = KSPSetOperators(ksp,mat.getMat(), mat.getMat(),DIFFERENT_NONZERO_PATTERN);
+#endif	
 	ierr = KSPSetUp(ksp);
 	CHKERRCONTINUE(ierr);
 	

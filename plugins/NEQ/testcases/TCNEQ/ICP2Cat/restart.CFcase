@@ -81,9 +81,9 @@ Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
 Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 50.0
-#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
-Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<100,50.,min(1000.,cfl*1.02))
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<100,50.,min(1000.,cfl*1.02))
 
 #Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation = 0.5
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 13
@@ -93,7 +93,7 @@ Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs = 1 1 1 1 1 1 1 1 1 1 1 0 0 
 Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
-Simulator.SubSystem.CellCenterFVM.Restart = true
+#Simulator.SubSystem.CellCenterFVM.Restart = true
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobFast
 Simulator.SubSystem.CellCenterFVM.NumJacobFast.FreezeDiffCoeff = true
 Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs

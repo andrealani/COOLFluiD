@@ -511,7 +511,7 @@ void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::exec
     socket_states.getDataHandle().getGlobalArray()->put(); 
     m_ghostStates.put();
      
-    CFLog(INFO, "FVMCC_ComputeRHSCell::execute() => CPU-->GPU data transfer took " << timer.elapsed() << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeRHSCell::execute() => CPU-->GPU data transfer took " << timer.elapsed() << " s\n");
     timer.start();
     
     ConfigOptionPtr<POLYREC, NOTYPE, GPU> dcor(pr);
@@ -551,7 +551,7 @@ void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::exec
        m_neighborTypes.ptrDev(),
        m_cellConn.ptrDev());
     
-    CFLog(INFO, "FVMCC_ComputeRHSCell::execute() => computeGradientsKernel took " << timer.elapsed() << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeRHSCell::execute() => computeGradientsKernel took " << timer.elapsed() << " s\n");
     
     timer.start();
     
@@ -582,7 +582,7 @@ void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::exec
        m_neighborTypes.ptrDev(),
        m_cellConn.ptrDev());
     
-    CFLog(INFO, "FVMCC_ComputeRHSCell::execute() => computeLimiterKernel took " << timer.elapsed() << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeRHSCell::execute() => computeLimiterKernel took " << timer.elapsed() << " s\n");
     
     timer.start();
     
@@ -614,12 +614,12 @@ void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::exec
        m_neighborTypes.ptrDev(),
        m_cellConn.ptrDev());
     
-    CFLog(INFO, "FVMCC_ComputeRHSCell::execute() => computeFluxKernel took " << timer.elapsed() << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeRHSCell::execute() => computeFluxKernel took " << timer.elapsed() << " s\n");
     
     timer.start();
     rhs.getLocalArray()->get();
     updateCoeff.getLocalArray()->get();
-    CFLog(INFO, "FVMCC_ComputeRHSCell::execute() => GPU-->CPU data transfer took " << timer.elapsed() << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeRHSCell::execute() => GPU-->CPU data transfer took " << timer.elapsed() << " s\n");
   }
   else {
     // AL: useful fo debugging

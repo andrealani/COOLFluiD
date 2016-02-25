@@ -6,8 +6,6 @@
 #include "FiniteVolume/FVMCC_BC.hh"
 #include "FiniteVolume/DerivativeComputer.hh"
 
-#define CFABORT(amax) static int count = 0; if (++count > amax) abort()
-
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
@@ -275,7 +273,9 @@ void FVMCC_ComputeRHS::execute()
 	    _flux -= _dFlux;
 	  }
 	  
-	  //cout.precision(12);cout << currTrs->getName() << " C+D flux = " << _flux << endl; // CFABORT(1);
+	  // cout.precision(12);cout << "["<< iFace << "] in " << currTrs->getName() << " C+D flux = " << _flux << endl; 
+	  // EXIT_AT(1);
+	  
 	  CFLogDebugMed("flux = " <<  _flux  << "\n");
 	  
 	  // compute the source term

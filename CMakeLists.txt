@@ -103,6 +103,9 @@ SET ( CF_SOURCE_EXTENSIONS cxx cpp cc c f for f77 f90 )
 
 # option to add CUDA support
 IF ( CF_ENABLE_CUDA )
+  # the following is needed by .../share/cmake-2.8/Modules/CMakeDetermineCUDACompiler.cmake 
+  SET ( CMAKE_PLATFORM_ROOT_BIN "${CMAKE_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION}")
+  MESSAGE ("CMAKE_PLATFORM_ROOT_BIN : ${CMAKE_PLATFORM_ROOT_BIN}")
   ENABLE_LANGUAGE(CUDA)
   LIST ( APPEND CF_SOURCE_EXTENSIONS cu )
 ENDIF()
@@ -353,6 +356,28 @@ LOG ( "Plugin's Configuration ")
 LOG ( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++" )
 ##############################################################################
 
+# check existence of Mutation* libraries and set corresponding environmental variables
+IF (EXISTS "${COOLFluiD_SOURCE_DIR}/plugins/Mutation") 
+  SET(CF_HAVE_MUTATION1 1 CACHE BOOL "Found Mutation library")
+  LOG ( "${COOLFluiD_SOURCE_DIR}/plugins/Mutation exists" )
+ELSE()
+  SET(CF_HAVE_MUTATION1 0 CACHE BOOL "Not found Mutation library")
+ENDIF()
+
+IF (EXISTS "${COOLFluiD_SOURCE_DIR}/plugins/Mutation2.0") 
+  SET(CF_HAVE_MUTATION2 1 CACHE BOOL "Found Mutation2 library")
+  LOG ( "${COOLFluiD_SOURCE_DIR}/plugins/Mutation2.0 exists" )
+ELSE()
+  SET(CF_HAVE_MUTATION2 0 CACHE BOOL "Not found Mutation2 library")
+ENDIF()
+
+IF (EXISTS "${COOLFluiD_SOURCE_DIR}/plugins/Mutation2.0.0") 
+  SET(CF_HAVE_MUTATION2OLD 1 CACHE BOOL "Found Mutation2OLD library")
+  LOG ( "${COOLFluiD_SOURCE_DIR}/plugins/Mutation2.0.0 exists" )
+ELSE()
+  SET(CF_HAVE_MUTATION2OLD 0 CACHE BOOL "Not found Mutation2OLD library")
+ENDIF()
+
 # local plugins
 INCLUDE_DIRECTORIES( ${COOLFluiD_SOURCE_DIR}/plugins )
 ADD_SUBDIRECTORY ( plugins )
@@ -454,7 +479,8 @@ LOG ( " Assertions            : [${CF_ENABLE_ASSERTIONS}]")
 LOG ( " Tracing               : [${CF_ENABLE_TRACE}]")
 LOG ( " Static libs           : [${CF_ENABLE_STATIC}]")
 LOG ( " Profiling             : [${CF_ENABLE_PROFILING}]")
-LOG ( " long unsigned int     : [${CF_HAVE_LONG}]")
+LOG ( " long int              : [${CF_HAVE_LONG}]")
+LOG ( " long long int         : [${CF_HAVE_LLONG}]")
 LOG ( " CURL enabled          : [${CF_ENABLE_CURL}]")
 LOG ( " CUDA enabled          : [${CF_ENABLE_CUDA}]")
 IF(CF_ENABLE_PROFILING)

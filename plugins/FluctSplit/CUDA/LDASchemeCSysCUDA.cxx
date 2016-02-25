@@ -72,10 +72,10 @@ void LDASchemeCSysCUDA::setup()
 
 void LDASchemeCSysCUDA::unsetup()
 {
-  CudaEnv::freeArray(dev_a);
-  CudaEnv::freeArray(dev_b);
-  CudaEnv::freeArray(dev_c);
-  CudaEnv::freeArray(dev_d);
+  CudaEnv::free(dev_a);
+  CudaEnv::free(dev_b);
+  CudaEnv::free(dev_c);
+  CudaEnv::free(dev_d);
   
   RDS_SplitterSys::unsetup();
 }
@@ -117,7 +117,7 @@ void LDASchemeCSysCUDA::distribute(vector<RealVector>& residual)
 
 void LDASchemeCSysCUDA::distributePart(vector<RealVector>& residual)
 {
-  RealSliceVector::setSize(_nbEquations);
+/*  RealSliceVector::setSize(_nbEquations);
 
   _sumKplus = *_kPlus[0];
   for (CFuint iState = 1; iState < _nbStatesInCell; ++iState) {
@@ -132,7 +132,7 @@ void LDASchemeCSysCUDA::distributePart(vector<RealVector>& residual)
   for (CFuint iState = 0; iState < _nbStatesInCell; ++iState) {
     residual[iState].slice(_firstVarID) =
       (*_kPlus[iState]) * _uTemp.slice(0);
-  }
+  }*/
 }
 
 //////////////////////////////////////////////////////////////////////////////

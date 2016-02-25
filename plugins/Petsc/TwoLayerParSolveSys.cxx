@@ -106,14 +106,18 @@ CFout << "State i: " << i << "  - upStatesGlobalIDs: " << _upStatesGlobalIDs[2*i
   // assemble the rhs vector
   rhsVec.assembly();
 
+#if PETSC_VERSION_MINOR==6
+  CFuint ierr = KSPSetOperators(ksp, mat.getMat(), mat.getMat());
+#else
   CFuint ierr = KSPSetOperators(ksp,
                                 mat.getMat(),
                                 mat.getMat(),
                                 DIFFERENT_NONZERO_PATTERN);
+#endif
   CHKERRCONTINUE(ierr);
-
+  
   // PetscLogInfo(mat.getMat(), "MATRIX memory allocation");
-
+  
   ierr = KSPSetUp(ksp);
   CHKERRCONTINUE(ierr);
 

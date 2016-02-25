@@ -82,7 +82,7 @@ protected:
   Common::SafePtr<Framework::LinearSystemSolver> m_lss;
   
   /// storage of the block jacobian matrices
-  CudaEnv::CudaVector<CFuint, CudaEnv::MallocHostAlloc> m_blockStart;
+  CudaEnv::CudaVector<CFuint, CudaEnv::MallocHostAlloc<CFuint> > m_blockStart;
   
   /// number of cells per set (=block of cells to compute on device at once)  
   std::vector<CFuint> m_nbCellsInKernel;

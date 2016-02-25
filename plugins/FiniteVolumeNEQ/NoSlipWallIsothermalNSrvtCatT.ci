@@ -242,7 +242,7 @@ void NoSlipWallIsothermalNSrvtCatT<MODEL>::setGhostStateImpl
       }
     
       if (m_xw.sum() >=  MAX_COMPOSITION_SUM) { 
-	cout << "m_xw.sum() = " << m_xw.sum() << ", epsMax = " << epsMax << endl;
+	CFLog(VERBOSE, "NoSlipWallIsothermalNSrvtCatT::setGhostStateImpl() => m_xw.sum() = " << m_xw.sum() << ", epsMax = " << epsMax << "\n");
 	
 	// AL: gory fix here!!! 
 	m_xw = m_xwBkp;

@@ -63,12 +63,14 @@ void PetscMatrix::createSeqBAIJ(const CFuint blockSize,
   if (m_useGPU || _isAIJ) {
 #ifdef CF_HAVE_CUDA
     if (m_useGPU) {CF_CHKERRCONTINUE(MatSetType(m_mat, MATSEQAIJCUSP));}
+    CFLog(DEBUG_MIN, "PetscMatrix::createSeqBAIJ() => use GPU \n" );
 #endif   
     if (_isAIJ) {CF_CHKERRCONTINUE(MatSetType(m_mat, MATSEQAIJ));}
         
-#if PETSC_VERSION_MINOR==4
+#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6
     CF_CHKERRCONTINUE(MatSetBlockSize(m_mat, blockSize));
     CF_CHKERRCONTINUE(MatSeqAIJSetPreallocation(m_mat, nz, nnz));
+    CFLog(DEBUG_MIN, "PetscMatrix::createSeqBAIJ() => MatSeqAIJSetPreallocation() \n" );
 #else
     CF_CHKERRCONTINUE(MatSeqAIJSetPreallocation(m_mat, nz, nnz)); 
     CF_CHKERRCONTINUE(MatSetBlockSize(m_mat, blockSize));
@@ -76,7 +78,7 @@ void PetscMatrix::createSeqBAIJ(const CFuint blockSize,
   }
   else {
     CF_CHKERRCONTINUE(MatSetType(m_mat, MATSEQBAIJ));
-#if PETSC_VERSION_MINOR==4
+#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6
     CF_CHKERRCONTINUE(MatSetBlockSize(m_mat, blockSize));
 #endif
     CF_CHKERRCONTINUE(MatSeqBAIJSetPreallocation(m_mat, blockSize, nz, nnz));
@@ -120,7 +122,7 @@ void PetscMatrix::createParAIJ(MPI_Comm comm,
                                const CFint* onnz,
                                const char* name)
 {
- #if PETSC_VERSION_MINOR==4 
+ #if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6
    CF_CHKERRCONTINUE(MatCreateAIJ(comm, m, n, M, N, dnz, dnnz,  onz, onnz, &m_mat));
 #else
   CF_CHKERRCONTINUE(MatCreateMPIAIJ(comm, m, n, M, N, dnz, dnnz,  onz, onnz, &m_mat));
@@ -155,7 +157,7 @@ void PetscMatrix::createParBAIJ(MPI_Comm comm,
 #endif
     if (_isAIJ) {CF_CHKERRCONTINUE(MatSetType(m_mat, MATMPIAIJ));}
     
-#if PETSC_VERSION_MINOR==4
+#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6
     CF_CHKERRCONTINUE(MatSetBlockSize(m_mat, blockSize));
     CF_CHKERRCONTINUE(MatMPIAIJSetPreallocation(m_mat, dnz, dnnz, onz, onnz));
 #else
@@ -165,7 +167,7 @@ void PetscMatrix::createParBAIJ(MPI_Comm comm,
   }
   else {
     CF_CHKERRCONTINUE(MatSetType(m_mat, MATMPIBAIJ));
-#if PETSC_VERSION_MINOR==4
+#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6
     CF_CHKERRCONTINUE(MatSetBlockSize(m_mat, blockSize));
 #endif
     CF_CHKERRCONTINUE(MatMPIBAIJSetPreallocation(m_mat, blockSize, dnz, dnnz, onz, onnz));
@@ -207,14 +209,16 @@ void PetscMatrix::createParJFMat(MPI_Comm comm,
 
 void PetscMatrix::setValues(const Framework::BlockAccumulator& acc)
 {
+  CFLog(DEBUG_MIN, "PetscMatrix::setValues()\n");
   CF_CHKERRCONTINUE( MatSetValuesBlocked(m_mat,acc.getM(),&acc.getIM()[0],acc.getN(),&acc.getIN()[0],
-					 const_cast<Framework::BlockAccumulator&>(acc).getPtr(), INSERT_VALUES) );
+    const_cast<Framework::BlockAccumulator&>(acc).getPtr(), INSERT_VALUES) );
 }
       
 //////////////////////////////////////////////////////////////////////////////
 
 void PetscMatrix::addValues(const Framework::BlockAccumulator& acc)
 {
+  CFLog(DEBUG_MIN, "PetscMatrix::addValues()\n");
   CF_CHKERRCONTINUE( MatSetValuesBlocked(m_mat,acc.getM(),&acc.getIM()[0],acc.getN(),&acc.getIN()[0],
 					 const_cast<Framework::BlockAccumulator&>(acc).getPtr(), ADD_VALUES) );
 }

@@ -68,16 +68,20 @@ void PetscVector::create(MPI_Comm comm,
 
 #ifdef CF_HAVE_MPI
 void PetscVector::initialize(MPI_Comm comm,
-           const PetscScalar value)
+			     const PetscScalar value)
 {
   cf_assert(m_toBeDestroyed == true);
 
   // check if random initialization is chosen
   PetscBool flg;
   
-  CF_CHKERRCONTINUE( PetscOptionsHasName
-    (PETSC_NULL,"-random_exact_sol",&flg) );
-
+  // AL: this needs to be checked for PETSC 3.6.3
+#if PETSC_VERSION_MINOR==6
+  flg = PETSC_FALSE;
+#else
+  CF_CHKERRCONTINUE( PetscOptionsHasName(PETSC_NULL,"-random_exact_sol",&flg) );
+#endif
+  
   if (flg) {
     PetscRandom rctx;
     CF_CHKERRCONTINUE( PetscRandomCreate(comm, &rctx) );

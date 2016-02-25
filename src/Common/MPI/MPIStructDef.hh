@@ -57,6 +57,7 @@ MPIDTYPE(float,MPI_FLOAT)
 MPIDTYPE(int,MPI_INT)
 MPIDTYPE(unsigned int,MPI_UNSIGNED)
 MPIDTYPE(long unsigned int,MPI_UNSIGNED_LONG)
+MPIDTYPE(long int,MPI_LONG)
 MPIDTYPE(long long int, MPI_LONG_LONG_INT)
 MPIDTYPE(char,MPI_CHAR)
 
@@ -78,11 +79,11 @@ MPIDTYPE(char,MPI_CHAR)
     MPI_Aint address;
     displacements[0] = 0;
 
-    MPI_Address(t1,&startAddress);
-    MPI_Address(t2,&address);
+    MPI_Get_address(t1,&startAddress);
+    MPI_Get_address(t2,&address);
     displacements[1] = address - startAddress;
 
-    MPI_Type_struct(N, blockLengths, displacements, typelist, &obj.type);
+    MPI_Type_create_struct(N, blockLengths, displacements, typelist, &obj.type);
     MPI_Type_commit(&obj.type);
     obj.start = t1;
   }
@@ -104,14 +105,14 @@ MPIDTYPE(char,MPI_CHAR)
     MPI_Aint address;
     displacements[0] = 0;
 
-    MPI_Address(t1,&startAddress);
-    MPI_Address(t2,&address);
+    MPI_Get_address(t1,&startAddress);
+    MPI_Get_address(t2,&address);
     displacements[1] = address - startAddress;
 
-    MPI_Address(t3,&address);
+    MPI_Get_address(t3,&address);
     displacements[2] = address - startAddress;
 
-    MPI_Type_struct(N, blockLengths, displacements, typelist, &obj.type);
+    MPI_Type_create_struct(N, blockLengths, displacements, typelist, &obj.type);
     MPI_Type_commit(&obj.type);
     obj.start = t1;
   }
@@ -134,17 +135,17 @@ MPIDTYPE(char,MPI_CHAR)
     MPI_Aint address;
     displacements[0] = 0;
 
-    MPI_Address(t1,&startAddress);
-    MPI_Address(t2,&address);
+    MPI_Get_address(t1,&startAddress);
+    MPI_Get_address(t2,&address);
     displacements[1] = address - startAddress;
 
-    MPI_Address(t3,&address);
+    MPI_Get_address(t3,&address);
     displacements[2] = address - startAddress;
 
-    MPI_Address(t4,&address);
+    MPI_Get_address(t4,&address);
     displacements[3] = address - startAddress;
 
-    MPI_Type_struct(N, blockLengths, displacements, typelist, &obj.type);
+    MPI_Type_create_struct(N, blockLengths, displacements, typelist, &obj.type);
     MPI_Type_commit(&obj.type);
     obj.start = t1;
   }
@@ -171,20 +172,20 @@ MPIDTYPE(char,MPI_CHAR)
     MPI_Aint address;
     displacements[0] = 0;
 
-    MPI_Address(t1,&startAddress);
-    MPI_Address(t2,&address);
+    MPI_Get_address(t1,&startAddress);
+    MPI_Get_address(t2,&address);
     displacements[1] = address - startAddress;
 
-    MPI_Address(t3,&address);
+    MPI_Get_address(t3,&address);
     displacements[2] = address - startAddress;
 
-    MPI_Address(t4,&address);
+    MPI_Get_address(t4,&address);
     displacements[3] = address - startAddress;
 
-    MPI_Address(t5,&address);
+    MPI_Get_address(t5,&address);
     displacements[4] = address - startAddress;
 
-    MPI_Type_struct(N, blockLengths, displacements, typelist, &obj.type);
+    MPI_Type_create_struct(N, blockLengths, displacements, typelist, &obj.type);
     MPI_Type_commit(&obj.type);
     obj.start = t1;
   }
@@ -212,23 +213,23 @@ MPIDTYPE(char,MPI_CHAR)
     MPI_Aint address;
     displacements[0] = 0;
 
-    MPI_Address(t1,&startAddress);
-    MPI_Address(t2,&address);
+    MPI_Get_address(t1,&startAddress);
+    MPI_Get_address(t2,&address);
     displacements[1] = address - startAddress;
 
-    MPI_Address(t3,&address);
+    MPI_Get_address(t3,&address);
     displacements[2] = address - startAddress;
 
-    MPI_Address(t4,&address);
+    MPI_Get_address(t4,&address);
     displacements[3] = address - startAddress;
 
-    MPI_Address(t5,&address);
+    MPI_Get_address(t5,&address);
     displacements[4] = address - startAddress;
 
-    MPI_Address(t6,&address);
+    MPI_Get_address(t6,&address);
     displacements[5] = address - startAddress;
-
-    MPI_Type_struct(N, blockLengths, displacements, typelist, &obj.type);
+    
+    MPI_Type_create_struct(N, blockLengths, displacements, typelist, &obj.type);
     MPI_Type_commit(&obj.type);
     obj.start = t1;
   }

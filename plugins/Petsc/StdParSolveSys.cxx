@@ -105,8 +105,12 @@ void StdParSolveSys::execute()
     }
   }
   
+#if PETSC_VERSION_MINOR==6
+  CFuint ierr = KSPSetOperators(ksp, mat.getMat(), mat.getMat());
+#else
   CFuint ierr = KSPSetOperators
-    (ksp,mat.getMat(), mat.getMat(),DIFFERENT_NONZERO_PATTERN);
+    (ksp, mat.getMat(), mat.getMat(),DIFFERENT_NONZERO_PATTERN);
+#endif
   
   //This is to allow viewing the matrix structure in X windows
   //Works only if Petsc is compiled with X

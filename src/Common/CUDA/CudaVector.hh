@@ -329,7 +329,8 @@ protected:
 /// This class implements a slice array for a CudaVector.
 ///
 /// @author Andrea Lani 
-template <typename T, template <typename T1 = T> class ALLOC = PinnedHostAlloc> 
+//template <typename T, template <class T1 = T> class ALLOC = PinnedHostAlloc> 
+template<class T, class ALLOC = PinnedHostAlloc<T> > 
 class CudaVectorSlice {
   
   typedef CudaVectorSlice<T, ALLOC> SELF;   
@@ -391,7 +392,8 @@ private:
 /// This class implements a CudaVector with default pinned allocator.
 ///
 /// @author Andrea Lani  
-template <typename T, template <typename T1 = T> class ALLOC = PinnedHostAlloc> 
+//template <typename T, template <class T1 = T> class ALLOC = PinnedHostAlloc> 
+template<class T, class ALLOC = PinnedHostAlloc<T> > 
 class CudaVector {
   
   typedef CudaVector<T, ALLOC> SELF;   
@@ -538,7 +540,8 @@ public:
 private:
   
   /// allocator
-  ALLOC<T> m_alloc;
+  // ALLOC<T> m_alloc;
+  ALLOC m_alloc;
   
   /// allocator
   size_t m_stride;
@@ -560,7 +563,7 @@ template <typename ARRAY, TransferType TT> class CudaCopy {};
 ///
 /// @author Andrea Lani
 template <typename T> 
-class CudaCopy<CudaVectorSlice<T, PinnedHostAlloc>, TO_GPU > {
+class CudaCopy<CudaVectorSlice<T, PinnedHostAlloc<T> >, TO_GPU > {
 public:
   CudaCopy(T* out, T* in, size_t ns, cudaStream_t* cs) 
   {
@@ -576,7 +579,7 @@ public:
 ///
 /// @author Andrea Lani
 template <typename T> 
-class CudaCopy<CudaVectorSlice<T, PinnedHostAlloc>, FROM_GPU > {
+class CudaCopy<CudaVectorSlice<T, PinnedHostAlloc<T> >, FROM_GPU > {
 public:
   CudaCopy(T* out, T* in, size_t ns, cudaStream_t* cs) 
   {

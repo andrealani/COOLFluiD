@@ -37,7 +37,7 @@ public:
   {
     m_comm = comm;
     m_rank = rank;
-    m_errorCode = MPI_Errhandler_set(comm, MPI_ERRORS_RETURN);
+    m_errorCode = MPI_Comm_set_errhandler(comm, MPI_ERRORS_RETURN);
   }
   
   /// check the sanity of the MPI call

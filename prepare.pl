@@ -149,7 +149,8 @@ my %default_options = (
     'plato_includedir' => "/usr/include",
     'command'              => "",
     'single_precision'     => 0,
-    'with_longint'         => 0
+    'with_longint'         => 0,
+    'with_llongint'        => 0,
 );
 
 # add skip default skip options
@@ -925,6 +926,7 @@ sub setup_cfgoptions()
   setup_option('warnings',            'CF_ENABLE_WARNINGS');
   setup_option('single_precision',    'CF_PRECISION_SINGLE');
   setup_option('with_longint',        'CF_ENABLE_LONG');
+  setup_option('with_llongint',       'CF_ENABLE_LLONG');
 }
 
 #==========================================================================

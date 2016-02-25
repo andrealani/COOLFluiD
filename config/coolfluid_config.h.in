@@ -73,6 +73,9 @@
 #cmakedefine CF_TIME_WITH_SYS_TIME  // time header setting
 #cmakedefine CF_HAVE_CURL           // curl support
 #cmakedefine CF_HAVE_CUDA           // CUDA support
+#cmakedefine CF_HAVE_MUTATION1      // Mutation support
+#cmakedefine CF_HAVE_MUTATION2      // Mutation2 support
+#cmakedefine CF_HAVE_MUTATION2OLD   // Mutation2OLD support
 
 // Package options
 #cmakedefine CF_HAVE_GOOGLE_PERFTOOLS
@@ -93,6 +96,7 @@
   #endif
 #endif
 
-#cmakedefine CF_HAVE_LONG           // long unsigned int support
+#cmakedefine CF_HAVE_LONG           // long int support
+#cmakedefine CF_HAVE_LLONG          // long long int support
 
 #endif // !COOLFluiD_CFconfig_hh

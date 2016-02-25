@@ -50,10 +50,10 @@ void CudaDeviceManager::configure ( Config::ConfigArgs& args )
   // for the moment we assume one device
   int count = 0; 
   int dev   = -1;
-  int rank = Common::PE::GetPE().GetRank();
+  int rank = Common::PE::GetPE().GetRank("Default");
   cudaGetDeviceCount(&count);
  
-  const CFuint nbProc = Common::PE::GetPE().GetProcessorCount(); 
+  const CFuint nbProc = Common::PE::GetPE().GetProcessorCount("Default"); 
   if (nbProc > 1) {
     dev = rank % count;
     cfassert(dev >= 0); 

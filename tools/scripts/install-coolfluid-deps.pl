@@ -105,7 +105,8 @@ my %packages = (  #  version   default install priority      function
     "dateshift"  => [ "1.0",    'off',  'off', $priority++,  sub { install_gnu("dateshift") } ],
     "curl"       => [ "7.19.7", 'off' ,  'off', $priority++,  \&install_curl ],
     "libfaketime"=> [ "0.8",    'off',  'off', $priority++,  \&install_libfaketime ],
-    "boost"      => [ "1_54_0", 'on' ,  'off', $priority++,  \&install_boost ],
+    "boost"      => [ "1_59_0", 'on' ,  'off', $priority++,  \&install_boost ],
+#    "boost"      => [ "1_54_0", 'on' ,  'off', $priority++,  \&install_boost ],
 #   "openmpi"    => [ "1.4.2",  'off',  'off', $priority++,  \&install_openmpi ],
     "openmpi"    => [ "1.6.5",  'off',  'off', $priority++,  \&install_openmpi ],
 #    "mpich"      => [ "3.1b1",'off',  'off', $priority++,  \&install_mpich ],    	
@@ -119,7 +120,9 @@ my %packages = (  #  version   default install priority      function
     "subversion" => [ "1.4.3",  'off',  'off', $priority++,  \&install_subversion ],
     "trilinos"   => [ "10.10.2",'off',  'off', $priority++,  \&install_trilinos ],
 #    "petsc"      => [ "3.2-p6",'on',  'off', $priority++,  \&install_petsc ], 
-    "petsc"      => [ "3.4.2",'on',  'off', $priority++,  \&install_petsc ], 
+#    "petsc"      => [ "3.4.2",'on',  'off', $priority++,  \&install_petsc ], 
+#    "petsc"      => [ "3.6.3-dev",'on',  'off', $priority++,  \&install_petsc ],
+    "petsc"      => [ "3.6.3",'on',  'off', $priority++,  \&install_petsc ], 
     "gmsh"       => [ "1.60.1", 'off',  'off', $priority++,  sub { install_gnu("gmsh") } ],
     "ccache"     => [ "2.4",    'off',  'off', $priority++,  sub { install_gnu("ccache") } ],
     "distcc"     => [ "2.18.3", 'off',  'off', $priority++,  sub { install_gnu("distcc") } ],
@@ -1250,11 +1253,35 @@ sub install_petsc ()
       print my_colored("Installing PETSc with CUDA support\n", $HEADINGCOLOR);
       # set paths for CUDA bin and libraries
       $install_dir = "$opt_install_mpi_dir/petsc_cuda";
+       if ($opt_petsc_dir) {
+         # set the installation directory to the one specified by the user if any 
+         $install_dir = "$opt_petsc_dir";
+       }
+
       $opt_cuda_bin = "$opt_cuda_dir/bin/nvcc";
       $opt_with_cuda = 1;
       run_command_or_die("export PATH=$opt_cuda_dir/bin:\\\$PATH");
       run_command_or_die("export LD_LIBRARY_PATH=/usr/lib64:$opt_cuda_dir/lib64:/usr/lib64/nvidia:\\\$LD_LIBRARY_PATH");
-      
+     
+      if ($version eq "3.6.3") {
+         # download and unpack compatible cusp source files
+         my $cusp_name = "cusp-v0.4.0.zip";
+         my $cusp_file = "$opt_tmp_dir/$cusp_name";
+         if ( not -e $cusp_file ) { download_file("$opt_dwnldsrc/$cusp_name") }; 
+         run_command_or_die("cp $cusp_file .");
+         run_command_or_die("cp $cusp_name $opt_install_dir/ ; cd $opt_install_dir ; unzip $cusp_name ; rm -f $cusp_name ; cd -");
+           
+         # configuration options for enabling GPU support 
+       #  $cuda_support = "--with-cudac=$opt_cuda_bin --with-cuda-dir=$opt_cuda_dir --with-cuda=1 --with-cusp=1 --with-cusp-dir=$opt_install_dir --with-thrust=1 --with-precision=double --with-clanguage=c --with-cuda-arch=sm_13"
+
+         # gory fixes to fix inclusions paths for cups and thrust     
+         run_command_or_die("cp -R $opt_install_dir/cusp-v0.4.0/cusp $opt_install_dir/include");
+         run_command_or_die("cp -R $opt_cuda_dir/include/thrust $opt_install_dir/include/cusp");
+
+         $cuda_support = "--with-cudac=$opt_cuda_bin --with-cuda-dir=$opt_cuda_dir --with-cuda=1 --with-cusp=1 --with-cusp-dir=$opt_install_dir/cusp-v0.4.0 --with-thrust=1 --with-thrust-dir=$opt_cuda_dir --with-precision=double --with-clanguage=c --with-cuda-arch=sm_30"
+      } 
+      else {
+
       # download and unpack compatible thrust source files
       my $thrust_name = "thrust-1.4.0.zip";
       my $thrust_file = "$opt_tmp_dir/$thrust_name";
@@ -1266,9 +1293,10 @@ sub install_petsc ()
       my $cusp_file = "$opt_tmp_dir/$cusp_name";
       if ( not -e $cusp_file ) { download_file("$opt_dwnldsrc/$cusp_name") };
       run_command_or_die("cp $cusp_name $opt_install_dir/ ; cd $opt_install_dir ; unzip $cusp_name ; rm -f $cusp_name ; cd -");
-     
+   
       # configuration options for enabling GPU support 
       $cuda_support = "--with-cudac=$opt_cuda_bin --with-cuda-dir=$opt_cuda_dir --with-cuda=1 --with-cusp=1 --with-thrust=1 --with-thrust-dir=$opt_install_dir --with-cusp-dir=$opt_install_dir"
+      }
     }
     
     # update the petsc installation directory
@@ -1287,8 +1315,12 @@ sub install_petsc ()
   if ($version eq "3.2-p6") {
    run_command_or_die("./configure --prefix=$install_dir $wdebug COPTFLAGS='-O3 ' FOPTFLAGS='-O3 ' --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 --with-shared-libraries=1 --with-dynamic-loading=1 --with-c++-support $cuda_support --PETSC_ARCH=$petsc_arch");
    run_command_or_die("make $opt_makeopts");
-  } 
-   else {
+  }
+  elsif ($version eq "3.6.3") {
+    run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 COPTFLAGS='-O3 ' FOPTFLAGS='-O3 ' --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 --with-shared-libraries=1 $cuda_support --PETSC_ARCH=$petsc_arch");
+   run_command_or_die("make");
+  }
+  else {
    run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 COPTFLAGS='-O3 ' FOPTFLAGS='-O3 ' --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 --with-shared-libraries=1 --with-dynamic-loading=1 $cuda_support --PETSC_ARCH=$petsc_arch");
    run_command_or_die("make");
   }
@@ -1503,7 +1535,7 @@ sub install_boost()
       }    
     
     my $boostmpiopt=" --without-mpi ";
-    unless ($opt_nompi) {
+    unless ($opt_nompi or $version  eq "1_59_0") {
       $boostmpiopt=" --with-mpi cxxflags=-DBOOST_MPI_HOMOGENEOUS ";
       open  (USERCONFIGJAM, ">>./tools/build/v2/user-config.jam") || die("Cannot Open File ./tools/build/v2/user-config.jam") ;
       print  USERCONFIGJAM <<ZZZ;
@@ -1523,7 +1555,7 @@ ZZZ
 	run_command_or_die("./tools/jam/src/bin.$boost_arch/bjam --prefix=$opt_install_dir $opt_makeopts --with-test --with-thread --with-iostreams --with-filesystem --with-system --with-regex --with-date_time --with-program_options $boostmpiopt toolset=$toolset threading=multi variant=release stage install");
       }
     
-    if ($version  eq "1_54_0") 
+    if ($version  eq "1_54_0" or $version  eq "1_59_0") 
       {
 	run_command_or_die("./bootstrap.sh --prefix=$opt_install_dir -with-libraries=test,thread,iostreams,filesystem,system,regex,date_time toolset=$toolset threading=multi variant=release stage");
 	run_command_or_die("./b2 install");

@@ -255,19 +255,19 @@ void AUSMFlux<UPDATEVAR>::compute(RealVector& result)
   
   CFLog(DEBUG_MAX, "AUSMFlux::compute() => L data " << *m_lData << "\n");
   CFLog(DEBUG_MAX, "AUSMFlux::compute() => R data " << *m_rData << "\n");
-  CFLog(DEBUG_MIN, "AUSMFlux::compute() => isPerturb " << getMethodData().isPerturb() 
+  CFLog(DEBUG_MAX, "AUSMFlux::compute() => isPerturb " << getMethodData().isPerturb() 
 	<< ", iVar = " << getMethodData().iPerturbVar() << ", flux = " << result << "\n\n");
 
 
 vector<RealVector>& pdata = getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
   m_lData = &pdata[LEFT];
   m_rData = &pdata[RIGHT];
-  CFLog(DEBUG_MED,"## DATA ## rhoL "<< (*m_lData)[UPDATEVAR::PTERM::RHO] << " ## rhoR "<< (*m_lData)[UPDATEVAR::PTERM::RHO] << " ## HL " << (*m_lData)[UPDATEVAR::PTERM::H] << " \n");
-  CFLog(DEBUG_MED,"        ## gammaL  "<< (*m_lData)[UPDATEVAR::PTERM::GAMMA] << " ## gammaL  "<< (*m_lData)[UPDATEVAR::PTERM::GAMMA] << " ## pL " << (*m_lData)[UPDATEVAR::PTERM::P] <<"\n");
-  CFLog(DEBUG_MED,"        ## qnL "<< m_unL << " ## qnR " << m_unR <<"\n");
-  CFLog(DEBUG_MED,"        ## TL " << (*m_lData)[UPDATEVAR::PTERM::T] << "  ## TL " << (*m_lData)[UPDATEVAR::PTERM::T] << "\n");
+  CFLog(DEBUG_MAX,"## DATA ## rhoL "<< (*m_lData)[UPDATEVAR::PTERM::RHO] << " ## rhoR "<< (*m_lData)[UPDATEVAR::PTERM::RHO] << " ## HL " << (*m_lData)[UPDATEVAR::PTERM::H] << " \n");
+  CFLog(DEBUG_MAX,"        ## gammaL  "<< (*m_lData)[UPDATEVAR::PTERM::GAMMA] << " ## gammaL  "<< (*m_lData)[UPDATEVAR::PTERM::GAMMA] << " ## pL " << (*m_lData)[UPDATEVAR::PTERM::P] <<"\n");
+  CFLog(DEBUG_MAX,"        ## qnL "<< m_unL << " ## qnR " << m_unR <<"\n");
+  CFLog(DEBUG_MAX,"        ## TL " << (*m_lData)[UPDATEVAR::PTERM::T] << "  ## TL " << (*m_lData)[UPDATEVAR::PTERM::T] << "\n");
   
-  CFLog(DEBUG_MIN, "AUSMFlux::compute() END\n");
+  CFLog(DEBUG_MAX, "AUSMFlux::compute() END\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -681,29 +681,53 @@ void AUSMFlux<UPDATEVAR>::computeSoundSpeed5()
   // NEQ flows (Selmin's lecture)
   RealVector& lData = (*this->m_lData);
   RealVector& rData = (*this->m_rData);
-
+  
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => lData " << lData << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => rData " << rData << "\n");
+  
   const CFreal eL = lData[UPDATEVAR::PTERM::E] -
     0.5*lData[UPDATEVAR::PTERM::V]*lData[UPDATEVAR::PTERM::V];
   const CFreal eR = rData[UPDATEVAR::PTERM::E] -
     0.5*rData[UPDATEVAR::PTERM::V]*rData[UPDATEVAR::PTERM::V];
 
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => eL " << eL << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => eR " << eR << "\n");
+  
   const CFreal gBarL = 1. + lData[UPDATEVAR::PTERM::P]/
     (eL*lData[UPDATEVAR::PTERM::RHO]);
   const CFreal gBarMinus1L = lData[UPDATEVAR::PTERM::GAMMA]*(gBarL - 1.0);
 
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => gBarL " << gBarL << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => gBarMinus1L " << gBarMinus1L << "\n");
+  
   const CFreal gBarR = 1. + rData[UPDATEVAR::PTERM::P]/
     (eR*rData[UPDATEVAR::PTERM::RHO]);
   const CFreal gBarMinus1R = rData[UPDATEVAR::PTERM::GAMMA]*(gBarR - 1.0);
 
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => gBarR " << gBarR << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => gBarMinus1R " << gBarMinus1R << "\n");
+  
   const CFreal hLL = lData[UPDATEVAR::PTERM::H];
-  const CFreal hRR = rData[UPDATEVAR::PTERM::H];
+  const CFreal hRR = rData[UPDATEVAR::PTERM::H]; 
+  
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => hLL " << hLL << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => hRR " << hRR << "\n");
+  
   const CFreal aCritLL2 = 2.0*gBarMinus1L/(2.*gBarL + gBarMinus1L)*hLL;
-  const CFreal aCritRR2 = 2.0*gBarMinus1R/(2.*gBarR + gBarMinus1R)*hRR;
+  const CFreal aCritRR2 = 2.0*gBarMinus1R/(2.*gBarR + gBarMinus1R)*hRR; 
+  
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => aCritLL2 " << aCritLL2 << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => aCritRR2 " << aCritRR2 << "\n");
+  
   const CFreal acLL = aCritLL2/max(sqrt(aCritLL2), this->m_unL);
   const CFreal acRR = aCritRR2/max(sqrt(aCritRR2), -this->m_unR);
+  
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => acLL " << acLL << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => acRR " << acRR << "\n");
+  
   this->m_a12 = min(acLL, acRR);
   
-  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => a12 " << this->m_a12 << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => a12 " << this->m_a12 << "\n"); // EXIT_AT(1);
 }
 
 //////////////////////////////////////////////////////////////////////////////

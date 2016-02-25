@@ -42,7 +42,7 @@ function( cf_add_case )
   SET( _BUILD_CASEDIR  ${CMAKE_CURRENT_BINARY_DIR}/${_PAR_CASEDIR} )
  
   # create testcase folder  
-  FILE(MAKE_DIRECTORY [${_BUILD_CASEDIR}])
+  FILE(MAKE_DIRECTORY "${_BUILD_CASEDIR}")
 
   # copy all needed files into the testcase folder   
   FOREACH( ACFG ${_PAR_CASEFILES} )

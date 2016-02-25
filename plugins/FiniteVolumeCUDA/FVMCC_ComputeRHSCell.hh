@@ -121,23 +121,23 @@ protected:
   /// in [cellID*5+2] - number of cell faces
   /// in [cellID*5+3] - cell geoshape
   /// in [cellID*5+4] - number of active cell faces (partition faces are excluded)  
-  CudaEnv::CudaVector<CFuint, CudaEnv::MallocHostAlloc> m_cellInfo;
+  CudaEnv::CudaVector<CFuint, CudaEnv::MallocHostAlloc<CFuint> > m_cellInfo;
   
   /// stencil connectivity for cellID: 
   /// starts at m_cellInfo[cellID*5]
   /// its size is given by m_cellInfo[cellID*5+1]
   /// first m_cellInfo[cellID*5+2] are faces
-  CudaEnv::CudaVector<CFuint, CudaEnv::MallocHostAlloc> m_cellStencil;
+  CudaEnv::CudaVector<CFuint, CudaEnv::MallocHostAlloc<CFuint> > m_cellStencil;
   
   /// storage of flags for neighbors (1: internal, 0:partition, <0: boundary)
   /// starts at m_cellInfo[cellID*5]
   /// its size is given by m_cellInfo[cellID*5+1]
   /// first m_cellInfo[cellID*5+2] are faces
-  CudaEnv::CudaVector<CFint, CudaEnv::MallocHostAlloc> m_neighborTypes;
+  CudaEnv::CudaVector<CFint, CudaEnv::MallocHostAlloc<CFint> > m_neighborTypes;
   
   // cell connectivity
-  CudaEnv::CudaVector<Framework::CellConn, CudaEnv::MallocHostAlloc> m_cellConn;
-    
+  CudaEnv::CudaVector<Framework::CellConn, CudaEnv::MallocHostAlloc<Framework::CellConn> > m_cellConn;
+  
   /// number of blocks in x 
   CFuint m_nbBlocksPerGridX;
   

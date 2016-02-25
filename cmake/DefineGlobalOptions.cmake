@@ -10,9 +10,14 @@ ENDIF ()
 
 # use of long unsigned integers
 IF( CF_ENABLE_LONG )
-  OPTION(CF_HAVE_LONG   "CFuint is set to long unsigned int" ON )
+  OPTION(CF_HAVE_LONG   "CFuint is set to long int" ON )
 ELSE ()
-  OPTION(CF_HAVE_LONG   "CFuint is set to long unsigned int" OFF )
+  OPTION(CF_HAVE_LONG   "CFuint is not set to long int" OFF )
+ENDIF() 
+IF( CF_ENABLE_LLONG )
+  OPTION(CF_HAVE_LLONG   "CFuint is set to long long int" ON )
+ELSE ()
+  OPTION(CF_HAVE_LLONG   "CFuint is not set to long long int" OFF )
 ENDIF() 
 
 # precision real numbers

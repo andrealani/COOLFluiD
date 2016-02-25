@@ -89,10 +89,14 @@ void ParMFSolveSys::execute()
 
   // assemble the rhs vector
   rhsVec.assembly();
-
+  
+#if PETSC_VERSION_MINOR==6
+  CFuint ierr = KSPSetOperators(ksp, jfMat.getMat(), precMat.getMat());
+#else
   // once you use a Petsc matrix as preconditioner matrix, you can choose standard preconditioners from Petsc 
   CFuint ierr = KSPSetOperators(ksp, jfMat.getMat(), precMat.getMat(), DIFFERENT_NONZERO_PATTERN);
-
+#endif
+  
   ierr = KSPSetUp(ksp);
   CHKERRCONTINUE(ierr);
   precMat.getMat();

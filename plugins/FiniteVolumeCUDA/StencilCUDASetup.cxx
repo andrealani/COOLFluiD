@@ -8,17 +8,17 @@
 #include "Framework/DofDataHandleIterator.hh"
 #include "Framework/GeometricEntity.hh"
 #include "Framework/NamespaceSwitcher.hh"
-
-#include "FiniteVolume/FiniteVolume.hh"
-#include "FiniteVolumeCUDA/StencilCUDASetup.hh"
-#include "FiniteVolume/ComputeFaceNormalsFVMCC.hh"
-#include "FiniteVolume/ComputeDummyStates.hh"
-#include "FiniteVolume/ComputeStencil.hh"
-
+#include "Framework/ComputeFaceNormalsFVMCC.hh"
+#include "Framework/ComputeDummyStates.hh"
 #include "Framework/GeometricEntityPool.hh"
 #include "Framework/FaceTrsGeoBuilder.hh"
 #include "Framework/CellTrsGeoBuilder.hh"
 #include "Framework/ElementDataArray.hh"
+#include "Framework/SubSystemStatus.hh"
+
+#include "FiniteVolume/FiniteVolume.hh"
+#include "FiniteVolume/ComputeStencil.hh"
+
 #include "Common/PE.hh"
 #include "Common/CFMultiMap.hh"
 
@@ -27,6 +27,7 @@
 #include "Common/MPI/MPIStructDef.hh"
 #endif
 
+#include "FiniteVolumeCUDA/StencilCUDASetup.hh"
 #include "FiniteVolumeCUDA/FiniteVolumeCUDA.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -127,7 +128,8 @@ void StencilCUDASetup::configure ( Config::ConfigArgs& args )
   //Loop over the TRS's and add the "TRSName" + "-boundaryNormals" datasocketsink to the _dynamicSockets
   
   std::string name = getMethodData().getNamespace();
-  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance().getNamespace(name);
+  const string ssName = SubSystemStatusStack::getCurrentName();
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance(ssName).getNamespace(name);
   Common::SafePtr<MeshData> meshData = MeshDataStack::getInstance().getEntryByNamespace(nsp);
   
   vector<std::string> trsList = meshData->getTRSNameList();
@@ -442,9 +444,11 @@ void StencilCUDASetup::assignPartitionFaceGlobalGhostStateIDS()
   
   // compute the maximum sizes for the number of partition cells and their description data
   vector<CFuint> maxNbPartitionCellsAndSize(2, 0);
-  const CFuint nbPr = PE::GetPE().GetProcessorCount();
-  MPI_Comm comm = PE::GetPE().GetCommunicator();
-  const CFuint rank = PE::GetPE().GetRank();
+  
+  const std::string nsp = this->getMethodData().getNamespace();
+  const CFuint nbPr = PE::GetPE().GetProcessorCount(nsp);
+  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+  const CFuint rank = PE::GetPE().GetRank(nsp);
   MPI_Allreduce(&nbPartitionCellsAndSize[0], &maxNbPartitionCellsAndSize[0], 2, 
                 MPIStructDef::getMPIType(&nbPartitionCellsAndSize[0]), MPI_MAX, comm);
   assert(maxNbPartitionCellsAndSize[0] > 0);

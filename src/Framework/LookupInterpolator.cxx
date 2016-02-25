@@ -138,14 +138,17 @@ void LookupInterpolator::fillTable()
   } 
   
   // nbEqs + "y" AL: hardcoded here
-  CFreal ycoord;
-  CFreal tmpVar;
+  CFreal ycoord = 0.;
+  CFreal tmpVar = 0.;
   for (CFuint ip = 0; ip < nbPoints; ++ip) {
     fin >> ycoord;
+    CFLog(DEBUG_MAX, "LookupInterpolator::fillTable() => " << ycoord << " ");
     for (CFuint i = 0; i < nbEqs; ++i) {
       fin >> tmpVar;
       m_lookupState[i]->insert(ycoord, tmpVar);
+      CFLog(DEBUG_MAX, tmpVar << " ");
     }
+    CFLog(DEBUG_MAX, "\n");
   }
   
   // sort the data 

@@ -115,21 +115,34 @@ void ParJFSolveSys::execute()
     if(!getMethodData().useBlockPreconditionerMatrix()) {
       //cout << "\n\n\n Setting up J-F different preconditioner matrix ParBAIJ with Petsc preconditioner \n\n\n";
       precondMat.finalAssembly();
+      
+#if PETSC_VERSION_MINOR==6
+      CF_CHKERRCONTINUE(KSPSetOperators(ksp, mat.getMat(), precondMat.getMat()));
+#else
       CF_CHKERRCONTINUE(KSPSetOperators(ksp, mat.getMat(), precondMat.getMat(), DIFFERENT_NONZERO_PATTERN));
+#endif	   
     }
     else {
       //cout << "\n\n\n Setting up J-F different preconditioner matrix with Shell preconditioner \n\n\n";
       precondMat.finalAssembly();
+#if PETSC_VERSION_MINOR==6
+      CF_CHKERRCONTINUE(KSPSetOperators(ksp, mat.getMat(), mat.getMat()));
+#else
       CF_CHKERRCONTINUE(KSPSetOperators(ksp, mat.getMat(), mat.getMat(), DIFFERENT_NONZERO_PATTERN));
+#endif
       getMethodData().getShellPreconditioner()->computeBeforeSolving();
     }
   }
   else {
     //cout << "\n\n\n Setting up J-F with Shell preconditioner or without preconditioner\n\n\n" ;
+#if PETSC_VERSION_MINOR==6
+    CF_CHKERRCONTINUE(KSPSetOperators(ksp, mat.getMat(), mat.getMat()));
+#else
     CF_CHKERRCONTINUE(KSPSetOperators(ksp, mat.getMat(), mat.getMat(), DIFFERENT_NONZERO_PATTERN));
+#endif
     getMethodData().getShellPreconditioner()->computeBeforeSolving();
   }
-
+  
   CF_CHKERRCONTINUE(KSPSetUp(ksp));
 
   void* ctx;
