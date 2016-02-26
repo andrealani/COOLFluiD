@@ -594,7 +594,7 @@ void TwoFluidGravMHDST2DChExchange<UPDATEVAR>::computeSpitzerResistivity()
   const CFreal ne = ni;
 
   // electron-neutral collision frequency
-  const CFreal Sigma_en   = 1e-18; //YM: changed to better agree with Jovo's cross-sections
+  const CFreal Sigma_en   = 3e-19; //YM: changed to better agree with Jovo's cross-sections
   const CFreal pi         = MathTools::MathConsts::CFrealPi(); //Pi number  
   const CFreal m_en       = me*mn/(me + mn); 
   const CFreal T_en       = (Ti + Tn)/2;
