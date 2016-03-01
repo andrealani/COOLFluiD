@@ -1,3 +1,7 @@
+IF ( CF_ENABLE_PLATO AND NOT CF_ENABLE_LONG )
+cf_add_case( MPI 12 CASEDIR TCNEQ/Hornung PCASE hornung_FVM_NS_CNEQ_Plato.CFcase CASEFILES hornung_FVM_visc.inter jesus0_quad.neu )
+cf_add_case( MPI 12 CASEDIR TCNEQ/Hornung PCASE hornung_FVM_NS_TCNEQ_Plato.CFcase CASEFILES hornung_FVM_visc.inter jesus0_quad.neu )
+ENDIF()
 cf_add_case( MPI 8  CASEDIR TCNEQ/CateIXV PCASE IXV_CATE_M25_air5_CNEQ.CFcase CASEFILES IXV.inter final12961.CFmesh )
 cf_add_case( MPI 12 CASEDIR TCNEQ/Hornung PCASE hornung_FVM_NS_CNEQ.CFcase CASEFILES HornungN2.CFmesh.2nd jesus0_quad.dbs jesus0_quad.neu )
 cf_add_case( MPI 12 CASEDIR TCNEQ/Hornung PCASE hornung_FVM_NS_CNEQ_M++.CFcase CASEFILES hornung_FVM_visc.inter jesus0_quad.neu )

@@ -12,7 +12,7 @@
 #
 # This testcases simulates a 2D cylinder corresponding to Hornung's experiment
 #
-### Residual = -4.0018801
+### Residual = -4.4590759
 
 # Simulator.TraceToStdOut = true
 
@@ -33,7 +33,7 @@ Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DNEQ
 Simulator.SubSystem.NavierStokes2DNEQ.refValues = 0.0001952 0.004956 5590. 5590. 1833.
 Simulator.SubSystem.NavierStokes2DNEQ.refLength = 1.0
 Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary = Plato
-Simulator.SubSystem.NavierStokes2DNEQ.Plato.path = /home/amunafo/Workspace/neqplasma/database_Hornung
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.path = database_Hornung
 Simulator.SubSystem.NavierStokes2DNEQ.Plato.mixtureName = nitrogen2
 Simulator.SubSystem.NavierStokes2DNEQ.Plato.reactionName = parkN2
 #the solution with "nompelisN2" is totally different
@@ -117,7 +117,7 @@ Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons       # conservative v
 Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Rhoivt
 Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = Euler2DCNEQST
-Simulator.SubSystem.CellCenterFVM.Data.Euler2DCNEQST.UseAnalyticalJacob = true
+#Simulator.SubSystem.CellCenterFVM.Data.Euler2DCNEQST.UseAnalyticalJacob = true
 
 # node extrapolation enforcing strongly the no slip condition on boundary nodes
 ### uncomment for LTE at the wall

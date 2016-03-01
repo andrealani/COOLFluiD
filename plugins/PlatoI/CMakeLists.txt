@@ -1,4 +1,4 @@
-IF ( CF_ENABLE_PLATO )
+IF ( CF_ENABLE_PLATO AND NOT CF_ENABLE_LONG )
    LIST ( APPEND PlatoI_files
    Plato.hh
    PlatoLibrary.hh

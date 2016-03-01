@@ -12,7 +12,7 @@
 #
 # This testcases simulates a 2D cylinder corresponding to Hornung's experiment
 #
-### Residual = -4.0018801
+### Residual = -4.0040442
 
 # Simulator.TraceToStdOut = true
 
@@ -33,7 +33,7 @@ Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DNEQ
 Simulator.SubSystem.NavierStokes2DNEQ.refValues = 0.0001952 0.004956 5590. 5590. 1833. 1833.
 Simulator.SubSystem.NavierStokes2DNEQ.refLength = 1.0
 Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary = Plato
-Simulator.SubSystem.NavierStokes2DNEQ.Plato.path = /home/munafo/Workspace/neqplasma/database_Hornung
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.path = database_Hornung
 Simulator.SubSystem.NavierStokes2DNEQ.Plato.mixtureName = nitrogen2
 Simulator.SubSystem.NavierStokes2DNEQ.Plato.reactionName = parkN2
 #the solution with "nompelisN2" is totally different
