@@ -92,6 +92,8 @@ UnsteadySubInletUVTEIWRhoiViTiCanopy.cxx
 UnsteadySubInletUVTEIWRhoiViTiCanopy.hh
 UnsteadySubInletUVTEIWRhoiViTi.cxx
 UnsteadySubInletUVTEIWRhoiViTi.hh
+UnsteadySubInletYUVTEIWRhoiViTi.cxx
+UnsteadySubInletYUVTEIWRhoiViTi.hh
 #SubOutletPPCWRhoiViTi3D.cxx
 #SubOutletPPCWRhoiViTi3D.hh
 )
