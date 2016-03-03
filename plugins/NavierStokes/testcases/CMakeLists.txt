@@ -17,6 +17,7 @@ cf_add_case( MPI 8       CASEDIR Jets2D PCASE jets2DFVMImplAUSMAnalytic.CFcase C
 cf_add_case( MPI 8       CASEDIR Jets3D PCASE jets3DFVM_in.CFcase CASEFILES jets3DFVM_binary.CFmesh )
 cf_add_case( MPI default CASEDIR Jets3D PCASE jets3DFVM_out.CFcase CASEFILES jets2DFVM.CFmesh )
 cf_add_case( MPI default CASEDIR Jets3D PCASE jets3DFVMImpl.CFcase CASEFILES jets3Dcoarse.thor jets3Dcoarse.SP )
+cf_add_case( MPI default CASEDIR Jets3D PCASE jets3DFVMImplAUSMAnalytic.CFcase CASEFILES jets3Dcoarse.thor jets3Dcoarse.SP )
 cf_add_case( MPI 8       CASEDIR Jets3D PCASE jets3DFluctSplitPrism.CFcase CASEFILES prism-coarse.CFmesh )
 cf_add_case( MPI 1       CASEDIR Wedge  PCASE wedgeFluctSplit.CFcase CASEFILES wedge.thor wedge.SP )
 cf_add_case( MPI 8       CASEDIR Wedge  PCASE wedgeFluctSplitHOCRD_Bx_imp.CFcase CASEFILES wedge-1_15-P2.CFmesh )
