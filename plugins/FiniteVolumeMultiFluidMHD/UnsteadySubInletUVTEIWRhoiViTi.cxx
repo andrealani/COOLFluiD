@@ -1,6 +1,7 @@
 #include "FiniteVolumeMultiFluidMHD/FiniteVolumeMultiFluidMHD.hh"
 #include "FiniteVolumeMultiFluidMHD/UnsteadySubInletUVTEIWRhoiViTi.hh"
 #include "Framework/MethodCommandProvider.hh"
+#include "Framework/PhysicalConsts.hh"
 #include "MultiFluidMHD/DiffMFMHD2DVarSet.hh"
 #include "MultiFluidMHD/MultiFluidMHDVarSet.hh"
 #include "MultiFluidMHD/EulerMFMHDTerm.hh"
@@ -88,7 +89,9 @@ void UnsteadySubInletUVTEIWRhoiViTi::setup()
   _variables.resize(PhysicalModelStack::getActive()->getDim() + 1);
   
   _updateVarSet = getMethodData().getUpdateVar().d_castTo<MultiFluidMHDVarSet<Maxwell2DProjectionVarSet> >();
-  
+
+  _updateVarSet->getModel()->resizePhysicalData(_physicalData);  
+
   const CFuint nbSpecies = _updateVarSet->getModel()->getNbScalarVars(0); 
   
   _uvT.resize(3*nbSpecies + 3);  
@@ -127,7 +130,9 @@ void UnsteadySubInletUVTEIWRhoiViTi::setGhostState(GeometricEntity *const face)
   State *const innerState = face->getState(0);
   State *const ghostState = face->getState(1);
   
-  
+  // compute the physical data
+  _updateVarSet->computePhysicalData(*innerState, _physicalData); 
+ 
   ///Maxwell Equations Perfectly Conducting Wall Condition
 //   std::cout << "UnsteadySubInletUVTEIWRhoiViTi::setGhostState before assignment" <<"\n";
   const CFuint faceID = face->getID();
@@ -182,42 +187,47 @@ void UnsteadySubInletUVTEIWRhoiViTi::setGhostState(GeometricEntity *const face)
  // if ghostT < 0  then the inner value is set
  const CFuint endEM = 8;
  
- //set the densities
- for (CFuint i = 0 ; i < nbSpecies; i++){
-   (*ghostState)[endEM + i] = (*innerState)[endEM + i];
+ //previous set for the densities - gives wrong pressure at the boundary
+// for (CFuint i = 0 ; i < nbSpecies; i++){
+//   (*ghostState)[endEM + i] = (*innerState)[endEM + i];
+// }
+
+ const CFreal m_e = _updateVarSet->getModel()->getMolecularMass1();
+ const CFreal m_n = _updateVarSet->getModel()->getMolecularMass2();
+ const CFreal m_p = _updateVarSet->getModel()->getMolecularMass3();
+ 
+ // AL: gory fix here: assume 2-fluid with protons and neutrals
+ // This needs to be generalized by AAL  
+ RealVector mi(nbSpecies); 
+ if (nbSpecies == 2 && _updateVarSet->getModel()->isLeake()) {
+   mi[0] = m_p; mi[1] = m_n;
+ }
+ else {
+   CFLog(ERROR, "UnsteadySubInletUVTEIWRhoiViTi::setGhostState() => only implemented for Leake model!");
+   abort();
  }
  
- //if(_useFunction){
-    // coordinate of the boundary point
-   //_bCoord = (innerState->getCoordinates() +
-   //            ghostState->getCoordinates());
-   //_bCoord *= 0.5;
-
-   //const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
-   //for(CFuint iDim = 0; iDim < nbDim; iDim++)
-   //{
-     //_variables[iDim] = _bCoord[iDim];
-   //}
-   //_variables[PhysicalModelStack::getActive()->getDim()] = SubSystemStatusStack::getActive()->getCurrentTimeDim();
-
-   //// (*ghostState) = 2*bcState - (*innerState)
-   //_vFunction.evaluate(_variables, _uvT);
-
-//    _uvT[0] /= _uvTRef[0];
-//    _uvT[1] /= _uvTRef[1];
-//    _uvT[2] /= _uvTRef[2];
-//}
-//  else {
-//    for (CFuint i = 0 ; i < nbSpecies; i++){
-// 	 const CFreal Ui = _ui[i];
-// 	 const CFreal Vi = _vi[i];
-// 	 const CFreal Ti = _Ti[i];
-//      _uvT[i] = Ui;
-//      _uvT[nbSpecies + i] = Vi;
-//      _uvT[2*nbSpecies + i] = Ti;
-//    }
-//  }
+ // new: set the temperatures and densities
+// const CFreal rhoInner = _physicalData[EulerMFMHDTerm::RHO];
+ const CFuint firstTemperature = _updateVarSet->getModel()->getFirstScalarVar(2);
+ for (CFuint i = 0 ; i < nbSpecies; i++){
+   const CFreal Ti = _uvT[2*nbSpecies + i];
+   const CFreal rhoiGhost = _uvT[i];
+   const CFreal Tighost = 2.*Ti - (*innerState)[endEM + 3*nbSpecies + i];
+   (*ghostState)[endEM + 3*nbSpecies + i] = Tighost;
+   cf_assert(2.*Ti - (*innerState)[endEM + 3*nbSpecies + i] > 0.); 
+   
+   //const CFreal yiInner  = (*innerState)[endEM + i]/rhoInner;
+   //const CFreal yiGhost  = 2.*_uvT[i] - yiInner;
+   //we want p_i ghost = p_i inner, so we set the density
+   const CFreal piGhost  = _physicalData[firstTemperature + i*4 + 1];  // imposing Pghost = Pinner
+   const CFreal R_gas = PhysicalConsts::Boltzmann()/mi[i];
+   //const CFreal rhoGhost = piGhost/(yiGhost*R_gas*Tighost);
+   (*ghostState)[endEM + i] = piGhost/(R_gas*Tighost); // imposing rho_g = p_g/RT_g
+ }
  
+
+
  //set the Velocities
  for (CFuint i = 0 ; i < nbSpecies; i++){
    const CFreal Ui = _uvT[i];
@@ -238,11 +248,11 @@ void UnsteadySubInletUVTEIWRhoiViTi::setGhostState(GeometricEntity *const face)
  } 
 //   std::cout << "UnsteadySubInletUVTEIWRhoiViTi::setGhostState after Velocities" <<"\n";
  //set the Temperatures
- for (CFuint i = 0 ; i < nbSpecies; i++){
-   const CFreal Ti = _uvT[2*nbSpecies + i];
-   (*ghostState)[endEM + nbSpecies + 2*nbSpecies + i] = 2.*Ti - (*innerState)[endEM + nbSpecies + 2*nbSpecies + i];
-   cf_assert(2.*Ti - (*innerState)[endEM + nbSpecies + 2*nbSpecies + i] > 0.); 
- }  
+ //for (CFuint i = 0 ; i < nbSpecies; i++){
+ //  const CFreal Ti = _uvT[2*nbSpecies + i];
+ //  (*ghostState)[endEM + nbSpecies + 2*nbSpecies + i] = 2.*Ti - (*innerState)[endEM + nbSpecies + 2*nbSpecies + i];
+ //  cf_assert(2.*Ti - (*innerState)[endEM + nbSpecies + 2*nbSpecies + i] > 0.); 
+ //}  
 }
 
 //////////////////////////////////////////////////////////////////////////////

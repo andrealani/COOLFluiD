@@ -101,7 +101,10 @@ public:
   
   /// storage for the temporary boundary point coordinates
   RealVector _bCoord; 
-  
+
+   /// physical data array
+  RealVector _physicalData; 
+
   /// a vector of string to hold the functions
   std::vector<std::string> _functions;
 
