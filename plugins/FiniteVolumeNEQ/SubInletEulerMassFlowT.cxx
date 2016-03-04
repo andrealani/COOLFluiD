@@ -164,13 +164,20 @@ void SubInletEulerMassFlowT::setGhostState(GeometricEntity *const face)
     const CFreal uInf = .001*_inletData[0]/(area*rho); // mass flow is given in g/s instead of Kg/s
     cf_assert(uInf > 0.);
     
+    const CFreal rhoG = 2.*rho - _dataInnerState[EulerTerm::RHO];    
+    // cout << "rhoG vs rho => " << rhoG << " - " << rho << endl;   
+
     CFreal sumY = 0.;
     const CFuint startSpecies = m_term->getFirstScalarVar(0);
     for (CFuint i = 0; i < nbSpecies; ++i) {
       const CFreal yi = 2.*m_yi[i] - _dataInnerState[startSpecies+i];
       sumY += yi;
-      (*ghostState)[i] = rho*yi; // rho_i
+     
+    //   cout << i << " => " << rho*yi << " - " << rhoG*yi << "\n";  
+    //  (*ghostState)[i] = rho*yi; // rho_i
+      (*ghostState)[i] = rhoG*yi; // rho_i
     } 
+
     // sanity check: sum(y_i)=1
     cf_assert(sumY > 0.9999 && sumY < 1.0001);
     

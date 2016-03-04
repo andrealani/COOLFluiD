@@ -1,0 +1,5 @@
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 0.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -8.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitIter = 10000
+Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 80.0
+Simulator.SubSystem.Norm.valueNorm = -4.0
