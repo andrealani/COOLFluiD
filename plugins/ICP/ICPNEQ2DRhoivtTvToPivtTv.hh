@@ -1,9 +1,9 @@
-#ifndef COOLFluiD_Physics_ICP_ICPNEQ2DRhoivtTvToCons_hh
-#define COOLFluiD_Physics_ICP_ICPNEQ2DRhoivtTvToCons_hh
+#ifndef COOLFluiD_Physics_ICP_ICPNEQ2DRhoivtTvToPivtTv_hh
+#define COOLFluiD_Physics_ICP_ICPNEQ2DRhoivtTvToPivtTv_hh
 
 //////////////////////////////////////////////////////////////////////
 
-#include "NEQ/Euler2DNEQRhoivtTvToCons.hh"
+#include "NEQ/Euler2DNEQRhoivtTvToPivtTv.hh"
 
 //////////////////////////////////////////////////////////////////////
 
@@ -17,11 +17,11 @@ namespace COOLFluiD {
 
 /**
  * This class represents a transformer of variables from
- * [rho_i u v T Tv] to conservative variables
+ * [rho_i u v T Tv] to [p_i u v T Tv] variables
  *
  * @author Andrea Lani
  */
-class ICPNEQ2DRhoivtTvToCons : public NEQ::Euler2DNEQRhoivtTvToCons {
+class ICPNEQ2DRhoivtTvToPivtTv : public NEQ::Euler2DNEQRhoivtTvToPivtTv {
 public:
   
   typedef Framework::MultiScalarTerm<Physics::NavierStokes::EulerTerm> PTERM;
@@ -29,12 +29,12 @@ public:
   /**
    * Default constructor without arguments
    */
-  ICPNEQ2DRhoivtTvToCons(Common::SafePtr<Framework::PhysicalModelImpl> model);
+  ICPNEQ2DRhoivtTvToPivtTv(Common::SafePtr<Framework::PhysicalModelImpl> model);
 
   /**
    * Default destructor
    */
-  virtual ~ICPNEQ2DRhoivtTvToCons();
+  virtual ~ICPNEQ2DRhoivtTvToPivtTv();
 
   /**
    * Transform a set of state vectors into another one
@@ -47,7 +47,7 @@ public:
    */
   virtual void transformFromRef(const RealVector& data, Framework::State& result);
     
-}; // end of class ICPNEQ2DRhoivtTvToCons
+}; // end of class ICPNEQ2DRhoivtTvToPivtTv
 
 //////////////////////////////////////////////////////////////////////
 
@@ -59,4 +59,4 @@ public:
 
 //////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Physics_ICP_ICPNEQ2DRhoivtTvToCons_hh
+#endif // COOLFluiD_Physics_ICP_ICPNEQ2DRhoivtTvToPivtTv_hh

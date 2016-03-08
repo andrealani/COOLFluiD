@@ -16,6 +16,7 @@ NoSlipWallIsothermalNSrvt<MODEL>::
 NoSlipWallIsothermalNSrvt(const std::string& name) :
   NoSlipWallIsothermalNSvt<MODEL>(name),
   m_library(CFNULL),
+  m_stateHasPartialDensities(true),
   m_nbSpecies(0),
   m_nbTv(0),
   m_ghostTTvib(),
@@ -53,6 +54,14 @@ void NoSlipWallIsothermalNSrvt<MODEL>::setup()
 
   cf_assert(m_ghostTTvib.size() > 0);
   cf_assert(m_innerTTvib.size() > 0);
+  
+  const std::vector<std::string>& varNames = this->getMethodData().getUpdateVar()->getVarNames();
+  if ((int) std::count(varNames.begin(), varNames.end(), "rho0") > 0) {
+    m_stateHasPartialDensities = true;
+  }
+  else if ((int) std::count(varNames.begin(), varNames.end(), "p0") > 0) {
+    m_stateHasPartialDensities = false;
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -103,14 +112,20 @@ void NoSlipWallIsothermalNSrvt<MODEL>::setGhostStateImpl
 	}
 	else {
 	  if (i < this->m_nbSpecies) { 
-	    // rho_i_ghost = rho_i_in * T_in / T_ghost
-	    // @TODO AL: check if the m_factor is needed here !!!
-	    // if there is Te, adiabatic condition is set on it
-	    if (nbTe == 1 && i == 0) {
-	      ghostState[0] = innerState[0];
+	    if (m_stateHasPartialDensities) {
+	      // rho_i_ghost = rho_i_in * T_in / T_ghost
+	      // @TODO AL: check if the m_factor is needed here !!!
+	      // if there is Te, adiabatic condition is set on it
+	      if (nbTe == 1 && i == 0) {
+		ghostState[0] = innerState[0];
+	      }
+	      else {
+		ghostState[i] = innerState[i]*ratioT;
+	      }
 	    }
 	    else {
-	      ghostState[i] = innerState[i]*ratioT;
+	      // partial pressure are constant through the boundary
+	      ghostState[i] = innerState[i];
 	    }
 	  }
 	  

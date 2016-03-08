@@ -60,17 +60,7 @@ void DistanceBasedExtrapolatorGMovePivt::setup()
   
   _Rspecies.resize(nbSpecies);
   _library->setRiGas(_Rspecies);
-    
   _RTYovM.resize(nbSpecies);
-
- //  RealVector rhoi(1e-6, nbSpecies);
-//   rhoi[0] = 1e-18;
-//   rhoi[3] = 0.0198008;
-//   rhoi[5] = 0.0198008;
-//   RealVector prod(nbSpecies);
-//   prod = (rhoi*_Rspecies)*350.;
-//   cout << "_Rspecies = " << _Rspecies << endl; 
-//   cout << "p_i = " << prod << endl; abort();
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -133,14 +123,14 @@ void DistanceBasedExtrapolatorGMovePivt::transformBack(RealVector& nstate)
   
   // transform [y_i v p] into [p_i v T Tv_i] variables, T and Tv_i
   // are already known because they are strongly imposed
-  
+
   const CFuint nbSpecies = _library->getNbSpecies();
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const CFuint TID = nbSpecies + dim;
-  
+
   // T can be imposed or coming from the radiative equilibrium condition
   CFreal T = 0.0;
-  if (!_radEquilibrium || _doNotApplyRadEq[_currNodeID]) {
+  if ((!_radEquilibrium || _doNotApplyRadEq[_currNodeID]) && !runAdiabatic()) {
     if (!_nodalValuesIDFlags[TID]) {
       T = _wValues[dim];
     }
@@ -167,7 +157,7 @@ void DistanceBasedExtrapolatorGMovePivt::transformBack(RealVector& nstate)
   for (CFuint ie = 0; ie < nbSpecies; ++ie) {
     _ys[ie] = nstate[ie]; // reconstructed mass fractions
   }
-  
+
   // set the current species fractions in the thermodynamic library
   // this has to be done right here, before computing any other
   // thermodynamic quantity !!!
@@ -181,7 +171,7 @@ void DistanceBasedExtrapolatorGMovePivt::transformBack(RealVector& nstate)
     const CFreal Ti = (ie > 0) ? T : Te;
     nstate[ie] = max(0.0, rho*_ys[ie]*_Rspecies[ie]*Ti);
   }
-  
+
   // velocity components and temperature are simply overridden
   for (CFuint i = 0; i < _wValuesIdx.size(); ++i) {
     if (_wValuesIdx[i] < TID)  {
@@ -232,7 +222,7 @@ void DistanceBasedExtrapolatorGMovePivt::setSpeciesVariables(RealVector& nstate)
     nstate[i] = rho*_ys[i]*_Rspecies[i]*Ti;
   }
 }
-      
+
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace FiniteVolume

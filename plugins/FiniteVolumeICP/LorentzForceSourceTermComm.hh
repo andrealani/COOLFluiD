@@ -19,10 +19,6 @@ namespace COOLFluiD {
     namespace FiniteVolumeICP 
     {
       class VectorPotential;
-    }
-    
-    namespace FiniteVolumeICP {
-
 
 //////////////////////////////////////////////////////////////////////////
 

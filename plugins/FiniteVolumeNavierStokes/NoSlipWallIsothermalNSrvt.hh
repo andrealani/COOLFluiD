@@ -64,6 +64,9 @@ protected:
   /// physico-chemical library
   Common::SafePtr<Framework::PhysicalChemicalLibrary> m_library;
   
+  /// flag telling if the state has partial densities
+  bool m_stateHasPartialDensities;
+  
   /// number of species
   CFuint m_nbSpecies;
   

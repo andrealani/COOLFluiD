@@ -31,10 +31,14 @@ ICPNEQ2DPuvtToRhoivtTv.hh
 ICPNEQ2DPuvtToRhoivtTv.cxx
 ICPNEQ2DPivtTvToCons.hh
 ICPNEQ2DPivtTvToCons.cxx
+ICPNEQ2DPivtTvToRhoivtTv.hh
+ICPNEQ2DPivtTvToRhoivtTv.cxx
 ICPNEQ2DRhoivtToCons.hh
 ICPNEQ2DRhoivtToCons.cxx
 ICPNEQ2DRhoivtTvToCons.hh
 ICPNEQ2DRhoivtTvToCons.cxx
+ICPNEQ2DRhoivtTvToPivtTv.hh
+ICPNEQ2DRhoivtTvToPivtTv.cxx
 ICPNEQInductionDiffVarSet.cxx
 ICPNEQInductionConvVarSet.cxx
 ICPNEQPhysicalModel.hh

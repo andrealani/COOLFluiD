@@ -136,8 +136,7 @@ void NavierStokesNEQPivt<BASE>::setup()
 
   const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
   const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
-  this->_flux.resize(3 + nbSpecies + nbTv);
-
+  
   // set the variable IDs inside the state vector
   for (CFuint is = 0; is < nbSpecies; ++is) {
     this->_yID[is] = is;

@@ -1,3 +1,4 @@
+cf_add_case( MPI 12 CASEDIR TorchNEQ PCASE torch_air11_PLATO_2nd_Pivt.CFcase CASEFILES torch_PLATO_2nd.inter restart_30000Pa_1st.CFmesh )
 cf_add_case( MPI 12 CASEDIR TorchNEQ PCASE torch_air11_PLATO.CFcase CASEFILES torch_PLATO.inter restart_cfl80.CFmesh )
 cf_add_case( MPI 8 CASEDIR Plasmatron/Chamber PCASE restart_chamber_2ndOrder_Mutation++.CFcase CASEFILES torch.inter chamber_out-rest-bis-P0.CFmesh.2nd )
 cf_add_case( MPI 8 CASEDIR Plasmatron/Chamber PCASE restart_chamber_2ndOrder_MUT2.CFcase CASEFILES chamber_out-rest-bis-P0.CFmesh.2nd )

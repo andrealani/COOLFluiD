@@ -41,6 +41,8 @@ Euler2DNEQPivtTv.hh
 Euler2DNEQPivtTv.cxx
 Euler2DNEQPivtTvToCons.hh
 Euler2DNEQPivtTvToCons.cxx
+Euler2DNEQPivtTvToRhoivtTv.hh
+Euler2DNEQPivtTvToRhoivtTv.cxx
 Euler2DNEQPuvtToRhoivtTv.hh
 Euler2DNEQPuvtToRhoivtTv.cxx
 Euler2DNEQPvty.cxx
@@ -61,6 +63,8 @@ Euler2DNEQRhoivtTvToConsInRef.cxx
 Euler2DNEQRhoivtTvToConsInRef.hh
 Euler2DNEQRhoivtTvToConsInRhoivtTv.cxx
 Euler2DNEQRhoivtTvToConsInRhoivtTv.hh
+Euler2DNEQRhoivtTvToPivtTv.cxx
+Euler2DNEQRhoivtTvToPivtTv.hh
 Euler2DNEQRhoivtTvToRoeVinokur.cxx
 Euler2DNEQRhoivtTvToRoeVinokur.hh
 Euler2DNEQRhovtXiToPivtTv.cxx
