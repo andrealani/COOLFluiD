@@ -212,7 +212,7 @@ void UnsteadySubInletUVTEIWRhoiViTi::setGhostState(GeometricEntity *const face)
  const CFuint firstTemperature = _updateVarSet->getModel()->getFirstScalarVar(2);
  for (CFuint i = 0 ; i < nbSpecies; i++){
    const CFreal Ti = _uvT[2*nbSpecies + i];
-   const CFreal rhoiGhost = _uvT[i];
+//   const CFreal rhoiGhost = _uvT[i];
    const CFreal Tighost = 2.*Ti - (*innerState)[endEM + 3*nbSpecies + i];
    (*ghostState)[endEM + 3*nbSpecies + i] = Tighost;
    cf_assert(2.*Ti - (*innerState)[endEM + 3*nbSpecies + i] > 0.); 
@@ -223,9 +223,15 @@ void UnsteadySubInletUVTEIWRhoiViTi::setGhostState(GeometricEntity *const face)
    const CFreal piGhost  = _physicalData[firstTemperature + i*4 + 1];  // imposing Pghost = Pinner
    const CFreal R_gas = PhysicalConsts::Boltzmann()/mi[i];
    //const CFreal rhoGhost = piGhost/(yiGhost*R_gas*Tighost);
-   (*ghostState)[endEM + i] = piGhost/(R_gas*Tighost); // imposing rho_g = p_g/RT_g
- }
- 
+   if(i == 0){(*ghostState)[endEM + i] = piGhost/(2*R_gas*Tighost);}
+   else{   (*ghostState)[endEM + i] = piGhost/(R_gas*Tighost);} // imposing rho_g = p_g/RT_g
+//   std::cout << "Ti = " << Ti <<"\n";
+//   std::cout << "Tighost = " << Tighost <<"\n";
+//   std::cout << "rhoiGhost = " << (*ghostState)[endEM + i] <<"\n";
+//   std::cout << "rhoiInner = " << (*innerState)[endEM + i] <<"\n";
+//   std::cout << "piGhost = " << piGhost << "\n";
+}
+//   abort(); 
 
 
  //set the Velocities
