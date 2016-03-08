@@ -22,8 +22,10 @@ TwoFluidGravMHDST2D<UPDATEVAR>::TwoFluidGravMHDST2D(const std::string& name) :
   _varSet(CFNULL),
   _nstates(CFNULL),
   //_isOutward(CFNULL),
-  socket_GammaIon("GammaIon"),
-  socket_GammaRec("GammaRec"),
+  socket_gradPyIon("gradPyIon"),
+  socket_gradPyNeutral("gradPyNeutral"),
+  socket_gradPxIon("gradPxIon"),
+  socket_gradPxNeutral("gradPxNeutral"),
   _ys(),
   _physicalData(),
   _temp(),
@@ -88,8 +90,10 @@ TwoFluidGravMHDST2D<UPDATEVAR>::providesSockets()
 {
   std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > result = 
     ComputeSourceTermFVMCC::providesSockets();
-  result.push_back(&socket_GammaIon);
-  result.push_back(&socket_GammaRec);
+  result.push_back(&socket_gradPyIon);
+  result.push_back(&socket_gradPyNeutral);
+  result.push_back(&socket_gradPxIon);
+  result.push_back(&socket_gradPxNeutral);
 
   return result;
 }
@@ -146,15 +150,23 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::setup()
   Common::SafePtr<Common::ConnectivityTable<CFuint> > cells =
     MeshDataStack::getActive()->getConnectivity("cellStates_InnerCells");
   const CFuint nbCells = cells->nbRows();
-  socket_GammaIon.getDataHandle().resize(nbCells);
-  socket_GammaRec.getDataHandle().resize(nbCells);
+  socket_gradPyIon.getDataHandle().resize(nbCells);
+  socket_gradPyNeutral.getDataHandle().resize(nbCells);
+  socket_gradPxIon.getDataHandle().resize(nbCells);
+  socket_gradPxNeutral.getDataHandle().resize(nbCells);
   
-  DataHandle<CFreal> GammaIon = socket_GammaIon.getDataHandle();
-  DataHandle<CFreal> GammaRec = socket_GammaRec.getDataHandle();
-  GammaIon.resize(nbCells);
-  GammaIon = 0;
-  GammaRec.resize(nbCells);
-  GammaRec = 0;  
+  DataHandle<CFreal> gradPyIon     = socket_gradPyIon.getDataHandle();
+  DataHandle<CFreal> gradPyNeutral = socket_gradPyNeutral.getDataHandle();
+  DataHandle<CFreal> gradPxIon     = socket_gradPxIon.getDataHandle();
+  DataHandle<CFreal> gradPxNeutral = socket_gradPxNeutral.getDataHandle();
+  gradPyIon.resize(nbCells);
+  gradPyIon = 0;
+  gradPyNeutral.resize(nbCells);
+  gradPyNeutral = 0;
+  gradPxIon.resize(nbCells);
+  gradPxIon = 0;
+  gradPxNeutral.resize(nbCells);
+  gradPxNeutral = 0;
 
   _temp.resize(PhysicalModelStack::getActive()->getNbEq());
 
@@ -193,14 +205,16 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
   SafePtr<typename UPDATEVAR::PTERM> term = _varSet->getModel();
   const vector<State*>* const states = element->getStates();
   const CFuint elemID = element->getID();
-  DataHandle<CFreal> GammaIon = socket_GammaIon.getDataHandle();
-  DataHandle<CFreal> GammaRec = socket_GammaRec.getDataHandle();
-  
+  DataHandle<CFreal> gradPyIon     = socket_gradPyIon.getDataHandle();
+  DataHandle<CFreal> gradPyNeutral = socket_gradPyNeutral.getDataHandle();
+  DataHandle<CFreal> gradPxIon     = socket_gradPxIon.getDataHandle();
+  DataHandle<CFreal> gradPxNeutral = socket_gradPxNeutral.getDataHandle();
+
   cf_assert(states->size() == 1);
   
   const CFuint firstVelocity = term->getFirstScalarVar(1); 
  
-  State *const currState = (*states)[0];   
+  State *const currState = (*states)[0]; 
   _varSet->computePhysicalData(*(*states)[0], _physicalData);
   _NonInducedEMField = _varSet->getModel()->getNonInducedEMField
     (currState->getCoordinates()[XX], currState->getCoordinates()[YY]);
@@ -261,7 +275,7 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
       const CFreal emMomentumX = _J[YY]*_Btotal[ZZ] - _J[ZZ]*_Btotal[YY];		//Electromagnetic momentum X
       const CFreal emMomentumY = _J[ZZ]*_Btotal[XX] - _J[XX]*_Btotal[ZZ];		//Electromagnetic momentum Y
       
-      //const CFuint firstTemperature = _varSet->getModel()->getFirstScalarVar(2);  
+      const CFuint firstTemperature = _varSet->getModel()->getFirstScalarVar(2);  
       const CFreal ui = _physicalData[firstVelocity];
       const CFreal vi = _physicalData[firstVelocity + 1]; 
       const CFreal un = _physicalData[firstVelocity + 2];
@@ -286,7 +300,43 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
       CFreal gravityMomentumSource_iy = _gravityMomentumSource[1];
       CFreal gravityMomentumSource_nx = _gravityMomentumSource[2];
       CFreal gravityMomentumSource_ny = _gravityMomentumSource[3];
+     
+      // Computation of the gradients for printing pressure gradient in the result
+      // ID for the physical data and the gradients
+      //const CFuint firstSpecies = _varSet->getModel()->getFirstScalarVar(0);
+      const CFuint rhoiID = 8;
+      const CFuint rhonID = 9;
+      const CFuint TiID   = 14;
+      const CFuint TnID   = 15;
+      const CFuint gradrhoiID = elemID*totalNbEqs + rhoiID;
+      const CFuint gradrhonID = elemID*totalNbEqs + rhonID;
+      const CFuint gradTiID = elemID*totalNbEqs + TiID;
+      const CFuint gradTnID = elemID*totalNbEqs + TnID;
+      /// Physical data needed for the pressure
+      const CFreal rho  = _physicalData[UPDATEVAR::PTERM::RHO];
+      const CFreal rhoi = rho*_physicalData[rhoiID];          // ions density
+      const CFreal rhon = rho*_physicalData[rhonID];      // neutrals density
+      const CFreal Ti   = _physicalData[firstTemperature];          // ions Temperature
+      const CFreal Tn   = _physicalData[firstTemperature + 4];      // neutrals Temperature
 
+      const CFreal gradxRhoi = this->m_ux[gradrhoiID];
+      const CFreal gradxRhon = this->m_ux[gradrhonID];
+      const CFreal gradxTi = this->m_ux[gradTiID];
+      const CFreal gradxTn = this->m_ux[gradTnID];
+      const CFreal gradyRhoi = this->m_uy[gradrhoiID];
+      const CFreal gradyRhon = this->m_uy[gradrhonID];
+      const CFreal gradyTi = this->m_uy[gradTiID];
+      const CFreal gradyTn = this->m_uy[gradTnID];
+      const CFreal kB = Framework::PhysicalConsts::Boltzmann();
+      const CFreal Rgasi = kB/mi;
+      const CFreal Rgasn = kB/mn;
+      //Result of gradients
+      const CFreal gradxPi = 2*Rgasi*(gradxRhoi*Ti + rhoi*gradxTi);
+      //Pi = 2*rho*yi*R*Ti
+      const CFreal gradxPn = Rgasn*(gradxRhon*Tn + rhon*gradxTn);
+      const CFreal gradyPi = 2*Rgasi*(gradyRhoi*Ti + rhoi*gradyTi);
+      //Pi = 2*rho*yi*R*Ti
+      const CFreal gradyPn = Rgasn*(gradyRhon*Tn + rhon*gradyTn);
       if (_chemicalReactions == false){
         GammaIon_i = 0.;
         GammaRec_n = 0.;
@@ -339,7 +389,6 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
       CFreal chargexEnergySource_i = _chargexEnergySource[0]; //ions
       CFreal chargexEnergySource_n = _chargexEnergySource[1]; //neutrals
 
-
       if (_chemicalReactions == false){
         _ReactEnergySource[0] = 0.;
         _ReactEnergySource[1] = 0.;
@@ -373,9 +422,10 @@ void TwoFluidGravMHDST2D<UPDATEVAR>::computeSource
       // Write the sockets
       //if (!this->getMethodData().isPerturb()) { // Condition to avoid writing when the source is perturbed
         //if(currState->isParUpdatable()) { // Condition to write only once the partition cells
-        GammaIon[elemID] = GammaIon_i;//gravityMomentumSource_nx;
-        //CFout <<"GammaIon_i = " << _GammaIon_n <<"\n";
-        GammaRec[elemID] = GammaRec_n; //gravityMomentumSource_ny;
+      gradPyIon[elemID] = gradyPi;
+      gradPyNeutral[elemID] = gradyPn;
+      gradPxIon[elemID] = gradxPi;
+      gradPxNeutral[elemID] = gradxPn;
         //}
       //}
   }

@@ -121,6 +121,19 @@ protected: // data
   
   /// socket for storing the Ionization Rate
   Framework::DataSocketSource<CFreal> socket_GammaRec;  
+
+  /// socket for storing the pressure gradient in y
+  Framework::DataSocketSource<CFreal> socket_gradPyIon;
+  
+  /// socket for storing the pressure gradient in y
+  Framework::DataSocketSource<CFreal> socket_gradPyNeutral;
+
+  /// socket for storing the pressure gradient in x
+  Framework::DataSocketSource<CFreal> socket_gradPxIon;
+
+  /// socket for storing the pressure gradient in x
+  Framework::DataSocketSource<CFreal> socket_gradPxNeutral;
+
     
   /// pointer to the physical-chemical library
   //Common::SafePtr<Framework::PhysicalChemicalLibrary> _library;
