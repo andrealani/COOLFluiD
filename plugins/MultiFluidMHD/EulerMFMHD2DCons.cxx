@@ -195,10 +195,6 @@ void EulerMFMHD2DCons::computePhysicalData(const State& state, RealVector& data)
     data[firstTemperature + 4*ie + 2] = sqrt(gamma*R_gas*Ti);//sound speed
     data[firstTemperature + 4*ie + 3] = 0.5*V2 + c_p*Ti;//total enthaply of species i   
   }    
-  //cout << "EulerMFMHD2DCons::computePhysicalData" << endl;
-  //for (CFuint ie = 0; ie < firstTemperature + 4*nbSpecies; ++ie) {
-    //cout << "data["<< ie <<"] = "<< data[ie] << endl;
-  //}
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -256,10 +252,6 @@ void EulerMFMHD2DCons::computeStateFromPhysicalData(const RealVector& data,
     
     state[endEM + nbSpecies + 2*nbSpecies + ie] = data[firstSpecies + ie]*rho*(c_v*data[firstTemperature + 4*ie] + 0.5*V2);
   } 
-  //cout << "EulerMFMHD2DCons::computeStateFromPhysicalData" << endl;
-  //for (CFuint ie = 0; ie < endEM + 3*nbSpecies; ++ie) {
-    //cout << "state["<< ie <<"] = "<< state[ie] << endl;
-  //}
 }
 
 //////////////////////////////////////////////////////////////////////////////

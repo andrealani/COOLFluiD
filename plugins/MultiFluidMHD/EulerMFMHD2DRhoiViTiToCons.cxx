@@ -124,7 +124,7 @@ void EulerMFMHD2DRhoiViTiToCons::transform(const State& state, State& result)
     
     for (CFuint ie = 0; ie < nbSpecies; ++ie) {
     
-      const CFreal V2 = state[nbSpecies + 2*ie]*state[nbSpecies + 2*ie] + state[nbSpecies + 2*ie + 1]*state[nbSpecies + 2*ie + 1];
+      const CFreal V2 = state[endEM + nbSpecies + 2*ie]*state[endEM + nbSpecies + 2*ie] + state[endEM + nbSpecies + 2*ie + 1]*state[endEM + nbSpecies + 2*ie + 1];
       const CFreal c_p = (gamma/(gamma-1))*(K_gas/_m_i[ie]);
       const CFreal R_gas = K_gas/_m_i[ie];
       const CFreal c_v = c_p - R_gas;  
