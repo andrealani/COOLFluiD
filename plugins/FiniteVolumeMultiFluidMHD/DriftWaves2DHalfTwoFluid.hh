@@ -179,9 +179,14 @@ protected: // data
   /// handle to nodal states
   Framework::DataHandle<RealVector> _nstates;  
   
-  /// socket for storing the Ionization Rate
+  /// socket for storing the Charge
   Framework::DataSocketSource<CFreal> socket_Qtot;
   
+  /// socket for storing the Pressure gradient for the ions in y direction
+  Framework::DataSocketSource<CFreal> socket_GradPyi;
+  
+  /// socket for storing the Pressure gradient for the elects in y direction
+  Framework::DataSocketSource<CFreal> socket_GradPye;
   /// socket for storing the Ionization Rate
   //Framework::DataSocketSource<CFreal> socket_GammaRec;  
     
