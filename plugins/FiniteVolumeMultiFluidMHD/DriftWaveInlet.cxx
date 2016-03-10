@@ -102,28 +102,28 @@ void DriftWaveInlet::setGhostState(GeometricEntity *const face)
   (*ghostState)[4] = -(*innerState)[4] + 2*en*ny;	//Ey
   (*ghostState)[5] = -(*innerState)[5] + 2*en*nz;	//Ez
   (*ghostState)[6] = (*innerState)[6];			//Psi
-  (*ghostState)[7] = (*innerState)[7];			//Phi
+  (*ghostState)[7] = -(*innerState)[7];			//Phi
   
 ///MultiFluidMHD mirror Condition in 2DHalf with imposed density
   const CFuint endEM = 8;
   //set the densities
-  (*ghostState)[8] = 2*_rhoe - (*innerState)[8];                 //rhoe
-  (*ghostState)[9] = 2*_rhoi - (*innerState)[9];                 //rhoi
-  //for (CFuint i = 0 ; i < nbSpecies; i++){
-    //(*ghostState)[endEM + i] =  (*innerState)[endEM + i];
-  //}
+//  (*ghostState)[8] = 2*_rhoe - (*innerState)[8];                 //rhoe
+//  (*ghostState)[9] = 2*_rhoi - (*innerState)[9];                 //rhoi
+  for (CFuint i = 0 ; i < nbSpecies; i++){
+    (*ghostState)[endEM + i] =  (*innerState)[endEM + i];  // no density gradient at boundary
+  }
  
   //set the Velocities
-  for (CFuint i = 0 ; i < nbSpecies; i++){
-    CFreal un_i = (*innerState)[endEM + nbSpecies + 3*i]*nx + (*innerState)[endEM + nbSpecies + 3*i + 1]*ny;
-    (*ghostState)[endEM + nbSpecies + 3*i] = (*innerState)[endEM + nbSpecies + 3*i] - 2*un_i*nx; 		// x-velocity
-    (*ghostState)[endEM + nbSpecies + 3*i + 1] = (*innerState)[endEM + nbSpecies + 3*i + 1] - 2*un_i*ny; 	//y-velocity
-    (*ghostState)[endEM + nbSpecies + 3*i + 2] = (*innerState)[endEM + nbSpecies + 3*i + 2] ; 			// z-velocity
-  } 
+ for (CFuint i = 0 ; i < nbSpecies; i++){
+CFreal un_i = (*innerState)[endEM + nbSpecies + 3*i]*nx + (*innerState)[endEM + nbSpecies + 3*i + 1]*ny;
+	(*ghostState)[endEM + nbSpecies + 3*i] = (*innerState)[endEM + nbSpecies + 3*i]; //- 2*un_i*nx; 		// x-velocity
+	(*ghostState)[endEM + nbSpecies + 3*i + 1] = (*innerState)[endEM + nbSpecies + 3*i + 1] - 2*un_i*ny; 	//y-velocity
+	(*ghostState)[endEM + nbSpecies + 3*i + 2] = (*innerState)[endEM + nbSpecies + 3*i + 2] ; 			// z-velocity
+ } 
  
   //set the Temperatures
   for (CFuint i = 0 ; i < nbSpecies; i++){
-    (*ghostState)[endEM + nbSpecies + 3*nbSpecies + i] = (*innerState)[endEM + nbSpecies + 3*nbSpecies + i];
+    (*ghostState)[endEM + nbSpecies + 3*nbSpecies + i] = (*innerState)[endEM + nbSpecies + 3*nbSpecies + i]; //no temperature gradient at boundary
     //cf_assert((*innerState)[endEM + nbSpecies + 3*nbSpecies + i] > 0.);
   } 
 }
