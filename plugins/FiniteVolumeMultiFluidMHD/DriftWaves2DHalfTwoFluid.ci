@@ -22,7 +22,8 @@ DriftWaves2DHalfTwoFluid<UPDATEVAR>::DriftWaves2DHalfTwoFluid(const std::string&
   _varSet(CFNULL),
   _nstates(CFNULL),
   socket_Qtot("Qtot"),
-  //socket_GammaRec("GammaRec"),
+  socket_GradPyi("GradPyi"),
+  socket_GradPye("GradPye"),
   _physicalData(),
   _temp(),
   _states(),
@@ -52,8 +53,8 @@ DriftWaves2DHalfTwoFluid<UPDATEVAR>::providesSockets()
     ComputeSourceTermFVMCC::providesSockets();
   // AAL: Example2
   result.push_back(&socket_Qtot);
-  //result.push_back(&socket_GammaRec);
-
+  result.push_back(&socket_GradPyi);
+  result.push_back(&socket_GradPye);
   return result;
 }
 
@@ -101,13 +102,19 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::setup()
     MeshDataStack::getActive()->getConnectivity("cellStates_InnerCells");
   const CFuint nbCells = cells->nbRows();
   socket_Qtot.getDataHandle().resize(nbCells);
-  //socket_GammaRec.getDataHandle().resize(nbCells);
+  socket_GradPyi.getDataHandle().resize(nbCells);
+  socket_GradPye.getDataHandle().resize(nbCells);
+
   DataHandle<CFreal> ChargePrint = socket_Qtot.getDataHandle();
-  //DataHandle<CFreal> GammaRec = socket_GammaRec.getDataHandle();
+  DataHandle<CFreal> GradPyiPrint = socket_GradPyi.getDataHandle();
+  DataHandle<CFreal> GradPyePrint = socket_GradPye.getDataHandle();
+
   ChargePrint.resize(nbCells);
   ChargePrint = 0;
-  //GammaRec.resize(nbCells);
-  //GammaRec = 0;
+  GradPyiPrint.resize(nbCells);
+  GradPyiPrint = 0;
+  GradPyePrint.resize(nbCells);
+  GradPyePrint = 0;
   
   //Example4: Here I resize the vectors defined in the .hh
   _NonInducedEMField.resize(6);
@@ -131,8 +138,10 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
   const vector<State*>* const states = element->getStates();
   const CFuint elemID = element->getID();
 
-  //AAL: Declaring in this function the sockets of the GammaIon and GammaRec
+  //AAL: Declaring in this function the sockets 
   DataHandle<CFreal> ChargePrint = socket_Qtot.getDataHandle();
+  DataHandle<CFreal> GradPyiPrint = socket_GradPyi.getDataHandle();
+  DataHandle<CFreal> GradPyePrint = socket_GradPye.getDataHandle();
   //DataHandle<CFreal> GammaRec = socket_GammaRec.getDataHandle();
   
   cf_assert(states->size() == 1);
@@ -157,6 +166,8 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
   _Btotal = 0;
   computeEMField();
   //std::cout <<"After computing Bz = " << _Btotal[ZZ] << std::endl;
+//Physical constants:
+  const CFreal kB = Framework::PhysicalConsts::Boltzmann(); 
   const CFuint firstDensity = _varSet->getModel()->getFirstScalarVar(0);
   const CFreal qe = Framework::PhysicalConsts::ElectronCharge()*(-1);                       // charge of electrons in Coulombs
   const CFreal qi = qe*(-1);                                    // charge of ions in Coulombs
@@ -185,8 +196,12 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
   const CFreal Jx = qe*(rhoe/me)*ue + qi*(rhoi/mi)*ui;
   const CFreal Jy = qe*(rhoe/me)*ve + qi*(rhoi/mi)*vi;
   const CFreal Jz = qe*(rhoe/me)*we + qi*(rhoi/mi)*wi;
+//  std::cout <<"Jx= " <<Jx <<"\n";
+//  std::cout <<"ue= " <<ue <<"\n";
+//  std::cout <<"ui= " <<ui <<"\n";
+//  abort();
 
-  //AAL: Here goes the source of Maxwell equations
+//AAL: Here goes the source of Maxwell equations
   if (nbEqs == totalNbEqs || iEqSS == 0) {
     /// MAXWELL
     const CFreal c_e = term->getLightSpeed();
@@ -214,9 +229,32 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
       
     //AAL: MOMENTUM
     const CFuint firstTemperature = _varSet->getModel()->getFirstScalarVar(2);
-    CFreal Te = _physicalData[firstTemperature];
-    CFreal Ti = _physicalData[firstTemperature + 4];
+    CFreal Te = _physicalData[firstTemperature]; //electron temperature
+    CFreal Ti = _physicalData[firstTemperature + 4]; //ion temperature
     
+
+    //Compute gradients NO
+    // Computation of the gradients for printing pressure gradient in the result
+       // ID for the physical data and the gradients
+       const CFuint firstSpecies =_varSet->getModel()->getFirstScalarVar(0);
+       const CFuint rhoeID = 8;
+       const CFuint rhoiID = 9;
+       const CFuint TeID   = 16;
+       const CFuint TiID   = 17;
+       const CFuint gradrhoeID = elemID*totalNbEqs + rhoeID;
+       const CFuint gradrhoiID = elemID*totalNbEqs + rhoiID;
+       const CFuint gradTeID = elemID*totalNbEqs + TeID;
+       const CFuint gradTiID = elemID*totalNbEqs + TiID;
+       const CFreal gradRhoe = this->m_uy[gradrhoeID];
+       const CFreal gradRhoi = this->m_uy[gradrhoiID];
+       const CFreal gradTe = this->m_uy[gradTeID];
+       const CFreal gradTi = this->m_uy[gradTiID];
+
+       const CFreal Rgasi = kB/mi;
+       const CFreal Rgase = kB/me;
+       const CFreal GradPyi = Rgasi*(gradRhoi*Ti + rhoi*gradTi);
+       const CFreal GradPye = Rgase*(gradRhoe*Te + rhoe*gradTe );
+
     //electron, ion properties
     const CFreal ne = rhoe/me;		   	// number density electrons [m^-3]
     const CFreal ni = rhoi/mi;		   	// number density ions [m^-3]
@@ -224,7 +262,6 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     const CFreal ni_cgs = ni*1e-6; // number density ions for cgs unit use [cm^-3]
     const CFreal Te_cgs = Te/11604.50520;		// electrons temperature in eV. 
     const CFreal Ti_cgs = Ti/11604.50520;		// ions temperature in eV. 
-    const CFreal kB = Framework::PhysicalConsts::Boltzmann(); // Boltzmann constant
     const CFreal pi = MathTools::MathConsts::CFrealPi(); //Pi number
     const CFreal Epsilon0 = Framework::PhysicalConsts::VacuumPermittivity();
 //    std::cout << "Epsilon0 from physconst= " <<Epsilon0 <<"\n";
@@ -246,18 +283,23 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     const CFreal nu_ei = 4*std::sqrt(2*pi/me)*std::pow(std::abs(qe*qi)/(4*pi*Epsilon0),2)*ni*L_ie/(3*(std::pow(kB*Te+kB*Ti*me/mi,1.5))); //electron collision frequency for collisions with ions (target)
 //    std::cout <<"coll freq_e = "<< nu_ei << "\n";
 //    std::cout <<"coll freq_i = "<< nu_ie << "\n";
-    const CFreal const_e = me*ne*nu_ei; //for collisional term of electrons
-    const CFreal const_i = mi*ni*nu_ie; //for collisional term of ions
+    const CFreal const_e = 0.;//me*ne*nu_ei; //for collisional term of electrons
+    const CFreal const_i = 0.;//mi*ni*nu_ie; //for collisional term of ions
 //    std::cout <<"const_e = "<< const_e << "\n";
 //    std::cout <<"const_i = "<< const_i << "\n";
 
-    //momentum equations
-    const CFreal emMomentumXe = qe*ne*(_Etotal[XX] + ve*_Btotal[ZZ] - we*_Btotal[YY]) - const_e*ue;	//Electromagnetic momentum for electrons in X
-    const CFreal emMomentumXi = qi*ni*(_Etotal[XX] + vi*_Btotal[ZZ] - wi*_Btotal[YY]) - const_i*ui;	//Electromagnetic momentum for ions in X
-    const CFreal emMomentumYe = qe*ne*(_Etotal[YY] + we*_Btotal[XX] - ue*_Btotal[ZZ]) - const_e*ve;	//Electromagnetic momentum for electrons in Y
-    const CFreal emMomentumYi = qi*ni*(_Etotal[YY] + wi*_Btotal[XX] - ui*_Btotal[ZZ]) - const_i*vi;	//Electromagnetic momentum for ions in Y
-    const CFreal emMomentumZe = qe*ne*(_Etotal[ZZ] + ue*_Btotal[YY] - ve*_Btotal[XX]) - const_e*we;	//Electromagnetic momentum for electrons in Z
-    const CFreal emMomentumZi = qi*ni*(_Etotal[ZZ] + ui*_Btotal[YY] - vi*_Btotal[XX]) - const_i*wi;	//Electromagnetic momentum for ions in Z
+    //momentum equations - NO removed const
+    CFreal emMomentumXe = qe*ne*(_Etotal[XX] + ve*_Btotal[ZZ] - we*_Btotal[YY]) - const_e*ue;	//Electromagnetic momentum for electrons in X
+    CFreal emMomentumXi = qi*ni*(_Etotal[XX] + vi*_Btotal[ZZ] - wi*_Btotal[YY]) - const_i*ui;	//Electromagnetic momentum for ions in X
+    CFreal emMomentumYe = qe*ne*(_Etotal[YY] + we*_Btotal[XX] - ue*_Btotal[ZZ]) - const_e*ve;	//Electromagnetic momentum for electrons in Y
+    CFreal emMomentumYi = qi*ni*(_Etotal[YY] + wi*_Btotal[XX] - ui*_Btotal[ZZ]) - const_i*vi;	//Electromagnetic momentum for ions in Y
+    CFreal emMomentumZe = qe*ne*(_Etotal[ZZ] + ue*_Btotal[YY] - ve*_Btotal[XX]) - const_e*we;	//Electromagnetic momentum for electrons in Z
+    CFreal emMomentumZi = qi*ni*(_Etotal[ZZ] + ui*_Btotal[YY] - vi*_Btotal[XX]) - const_i*wi;	//Electromagnetic momentum for ions in Z
+//    std::cout <<"qe = "<< qe << "\n";
+//    std::cout <<"qi = "<< qi << "\n";
+//    std::cout <<"ne = "<< ne << "\n";
+//    std::cout <<"ni = "<< ni << "\n";
+//     abort();
 
     source[10] = emMomentumXe;   //Electrons X momentum
     source[11] = emMomentumYe;   //Electrons Y momentum
@@ -279,7 +321,9 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     //if (!this->getMethodData().isPerturb()) { // Condition to avoid writing when the source is perturbed
       //if(currState->isParUpdatable()) { // Condition to write only once the partition cells
         ChargePrint[elemID] = Qtot;
-        //GammaRec[elemID] = _GammaRec_i;
+        GradPyiPrint[elemID] = GradPyi; //gradTi;
+        GradPyePrint[elemID] = GradPye; //gradTe;
+//GammaRec[elemID] = _GammaRec_i;
       //}
     //}
   }
