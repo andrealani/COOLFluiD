@@ -209,13 +209,13 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     const CFreal ovEpsilon = c_e*c_e*mu0;
 //    std::cout << "1/Epsilon0= " <<ovEpsilon <<"\n";  
 
-    source[0] = 0.;              //x-Faraday's Law
+    source[0] = 0.;             //x-Faraday's Law
     source[1] = 0.;          	//y-Faraday's Law
     source[2] = 0.;          	//z-Faraday's Law
     source[3] = -Jx*ovEpsilon;	//x-Ampere's Law
     source[4] = -Jy*ovEpsilon;	//y-Ampere's Law
     source[5] = -Jz*ovEpsilon;  //z-Ampere's Law
-    source[6] = 0.;			    //divB
+    source[6] = 0.;		//divB
     source[7] = Qtot*ovEpsilon; //divE
   }
   
@@ -264,7 +264,7 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     const CFreal Ti_cgs = Ti/11604.50520;		// ions temperature in eV. 
     const CFreal pi = MathTools::MathConsts::CFrealPi(); //Pi number
     const CFreal Epsilon0 = Framework::PhysicalConsts::VacuumPermittivity();
-//    std::cout << "Epsilon0 from physconst= " <<Epsilon0 <<"\n";
+
     //to calculate collision Frequency
 
 //    const CFreal Debye = std::sqrt(kB*Te_cgs/(4*pi*ne_cgs*qe*qe)); //Debye length  - assumes Te=Ti and ne=ni
@@ -314,8 +314,8 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     const CFreal emEnergye = qe*(rhoe/me)*(ue*_Etotal[XX] + ve*_Etotal[YY] + we*_Etotal[ZZ]); //electrons
     const CFreal emEnergyi = qi*(rhoi/mi)*(ui*_Etotal[XX] + vi*_Etotal[YY] + wi*_Etotal[ZZ]); //ions
 
-    source[16] = emEnergye + emMomentumXe*ue + emMomentumYe*ve + emMomentumZe*we; //Electrons Energy Source terms
-    source[17] = emEnergyi + emMomentumXi*ui + emMomentumYi*vi + emMomentumZi*wi; //Ions Energy
+    source[16] = emEnergye; // + emMomentumXe*ue + emMomentumYe*ve + emMomentumZe*we; //Electrons Energy Source terms
+    source[17] = emEnergyi; // + emMomentumXi*ui + emMomentumYi*vi + emMomentumZi*wi; //Ions Energy
 
     // AAL: Write the sockets
     //if (!this->getMethodData().isPerturb()) { // Condition to avoid writing when the source is perturbed
