@@ -107,25 +107,28 @@ void DriftWaveInlet::setGhostState(GeometricEntity *const face)
 ///MultiFluidMHD mirror Condition in 2DHalf with imposed density
   const CFuint endEM = 8;
   //set the densities
-//  (*ghostState)[8] = 2*_rhoe - (*innerState)[8];                 //rhoe
-//  (*ghostState)[9] = 2*_rhoi - (*innerState)[9];                 //rhoi
-  for (CFuint i = 0 ; i < nbSpecies; i++){
-    (*ghostState)[endEM + i] =  (*innerState)[endEM + i];  // no density gradient at boundary
-  }
+  (*ghostState)[8] = _rhoe; // 2*_rhoe - (*innerState)[8];                //rhoe
+  (*ghostState)[9] = _rhoi; //2*_rhoi - (*innerState)[9];                 //rhoi
+//  for (CFuint i = 0 ; i < nbSpecies; i++){
+//    (*ghostState)[endEM + i] =  (*innerState)[endEM + i];  // no density gradient at boundary
+//  }
  
   //set the Velocities
  for (CFuint i = 0 ; i < nbSpecies; i++){
 CFreal un_i = (*innerState)[endEM + nbSpecies + 3*i]*nx + (*innerState)[endEM + nbSpecies + 3*i + 1]*ny;
 	(*ghostState)[endEM + nbSpecies + 3*i] = (*innerState)[endEM + nbSpecies + 3*i]; //- 2*un_i*nx; 		// x-velocity
-	(*ghostState)[endEM + nbSpecies + 3*i + 1] = (*innerState)[endEM + nbSpecies + 3*i + 1] - 2*un_i*ny; 	//y-velocity
+	(*ghostState)[endEM + nbSpecies + 3*i + 1] = (*innerState)[endEM + nbSpecies + 3*i + 1];// - 2*un_i*ny; 	//y-velocity
 	(*ghostState)[endEM + nbSpecies + 3*i + 2] = (*innerState)[endEM + nbSpecies + 3*i + 2] ; 			// z-velocity
  } 
  
   //set the Temperatures
   for (CFuint i = 0 ; i < nbSpecies; i++){
     (*ghostState)[endEM + nbSpecies + 3*nbSpecies + i] = (*innerState)[endEM + nbSpecies + 3*nbSpecies + i]; //no temperature gradient at boundary
-    //cf_assert((*innerState)[endEM + nbSpecies + 3*nbSpecies + i] > 0.);
-  } 
+  }
+//    (*ghostState)[endEM + nbSpecies + 3*nbSpecies + i] = 2*_rhoe-(*innerState)[endEM + nbSpecies + 3*nbSpecies + i]; //with temperature gradient at boundary
+//    (*ghostState)[endEM + nbSpecies + 3*nbSpecies + i] = 2*_rhoi-(*innerState)[endEM + nbSpecies + 3*nbSpecies + i]; //Ti
+//cf_assert((*innerState)[endEM + nbSpecies + 3*nbSpecies + i] > 0.);
+ 	
 }
 
 //////////////////////////////////////////////////////////////////////////////
