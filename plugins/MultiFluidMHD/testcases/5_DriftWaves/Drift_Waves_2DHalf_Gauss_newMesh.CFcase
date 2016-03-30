@@ -155,7 +155,7 @@ Simulator.SubSystem.BDF2.Data.Norm = 2 ##-2 #in log scale
 
 ###############################################################################
 # Mesh Reader
-Simulator.SubSystem.Default.listTRS = PeriodicX PeridiX # x0 x1
+Simulator.SubSystem.Default.listTRS = PeriodicX PeriodicY # x0 x1
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./Mesh_1x1_200x200.CFmesh
@@ -238,12 +238,12 @@ Simulator.SubSystem.CellCenterFVM.InField.Def =\
 						0.\
 						0.\
 						0.\
-						9.1093821545e-31*1.e15*exp(-((y-0.5*250.)*(y-0.5*250.))/(2.*50.*50.)\
-                                                9.1093821545e-31*1.e15*exp(-((y-0.5*250.)*(y-0.5*250.))/(2.*50.*50.)\
+						9.1093821545e-31*1.e15*exp(-((y-0.5*250.)*(y-0.5*250.)))/(2.*50.*50.)\
+                                                9.1093821545e-31*1.e15*exp(-((y-0.5*250.)*(y-0.5*250.)))/(2.*50.*50.)\
 						-(y-0.5*250.)/(50.*50.)*1.38065042e-23*1.e6/1.602176620898e-19/0.01\
 						0.\
 						0.\
-                                                (y-0.5*250.)/(50.*50.))*1.38065042e-23*1.e6/1.602176620898e-19/0.01\
+                                                (y-0.5*250.)/(50.*50.)*1.38065042e-23*1.e6/1.602176620898e-19/0.01\
 						0.\
 						0.\
                                                 1.e6\ 
