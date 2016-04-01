@@ -1,12 +1,9 @@
 LIST ( APPEND FiniteVolumePoisson_files
 CurrentCondition.cxx
 CurrentCondition.hh
-DirichletCondition.cxx
-DirichletCondition.hh
 FiniteVolumePoisson.hh
 NeumannCondition.cxx
 NeumannCondition.hh
-#PureDiffFlux.ci
 PureDiffFlux.cxx
 PureDiffFlux.hh
 )

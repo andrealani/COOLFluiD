@@ -21,8 +21,12 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider<SuperInlet, CellCenterFVMData, FiniteVolumeModule> superInletFVMCCProvider("SuperInletFVMCC");
+MethodCommandProvider<SuperInlet, CellCenterFVMData, FiniteVolumeModule> 
+superInletFVMCCProvider("SuperInletFVMCC");
 
+MethodCommandProvider<SuperInlet, CellCenterFVMData, FiniteVolumeModule> 
+dirichletConditionFVMCCProvider("DirichletConditionFVMCC");
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void SuperInlet::defineConfigOptions(Config::OptionList& options)

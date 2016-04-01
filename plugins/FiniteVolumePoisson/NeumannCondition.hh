@@ -28,7 +28,7 @@ public:
    * Defines the Config Option's of this class
    * @param options a OptionList where to add the Option's
    */
-  static void defineConfigOptions(Config::OptionList& options);
+  // static void defineConfigOptions(Config::OptionList& options);
 
   /**
    * Constructor
@@ -53,11 +53,6 @@ public:
   virtual void unsetup();
 
   /**
-   * Configures the command.
-   */
-  virtual void configure ( Config::ConfigArgs& args );
-
-  /**
    * Apply boundary condition on the given face
    */
   void setGhostState(Framework::GeometricEntity *const face);
@@ -66,7 +61,10 @@ protected: // data
 
   /// storage for the temporary boundary point coordinates
   RealVector _variables;
-
+  
+/// direction vector for RL
+  RealVector _eRL;
+  
   /// value at the boundary
   CFreal _value;
 

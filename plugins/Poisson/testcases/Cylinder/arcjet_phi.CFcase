@@ -47,7 +47,7 @@ Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 #Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Inlet Outlet Wall #Electrode
 
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 20
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
 
 #Simulator.SubSystem.StopCondition       = Norm
 #Simulator.SubSystem.Norm.valueNorm      = -5.0
@@ -88,28 +88,16 @@ Simulator.SubSystem.NewtonIterator.ShowRate = 1
 #Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs = 0 
 #Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0. 
 #Simulator.SubSystem.NewtonIterator.Data.CollaboratorNames = NSLSS 
-#Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation = 1. 
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 0
 Simulator.SubSystem.NewtonIterator.Data.Norm = -4
-
-############################################################################## CFL ###
-#Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 296.382
-#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function 
-#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<1000,1.0,min(1000.,cfl*1.005))
-
-Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
-Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
-Simulator.SubSystem.InteractiveParamReader.FileName = plugins/Poisson/testcases/Cylinder/arcjet.inter
-Simulator.SubSystem.InteractiveParamReader.readRate = 5
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 #Simulator.SubSystem.CellCenterFVM.Restart = true
 Simulator.SubSystem.CellCenterFVM.Data.CollaboratorNames = NSLSS
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
 Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff = false
-Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs #PseudoSteadyTimeRhsCoupling
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
 Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.zeroDiagValue = 1
-Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.useGlobalDT = true
 
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
@@ -125,11 +113,7 @@ Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
 Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS3D
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.limitRes = -15.
 
-Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Cons
-
-#Simulator.SubSystem.CellCenterFVM.Restart = true
 Simulator.SubSystem.CellCenterFVM.InitComds = InitState 
 Simulator.SubSystem.CellCenterFVM.InitNames = InField 
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
@@ -138,24 +122,22 @@ Simulator.SubSystem.CellCenterFVM.InField.Def = x
 
 Simulator.SubSystem.CellCenterFVM.BcComds = NeumannConditionFVMCC NeumannConditionFVMCC DirichletConditionFVMCC 
 #DirichletConditionFVMCC NeumannConditionFVMCC DirichletConditionFVMCC
-# NeumannConditionFVMCC NeumannConditionFVMCC DirichletConditionFVMCC 
 #CurrentConditionFVMCC NeumannConditionFVMCC DirichletConditionFVMCC 
 Simulator.SubSystem.CellCenterFVM.BcNames = Outlet Wall Inlet
 
 Simulator.SubSystem.CellCenterFVM.Outlet.applyTRS = Outlet
 #Simulator.SubSystem.CellCenterFVM.Outlet.ImposedCurrent = 1000.
-Simulator.SubSystem.CellCenterFVM.Outlet.ZeroGradientFlags = 1
-Simulator.SubSystem.CellCenterFVM.Outlet.Value = -1.
-#Simulator.SubSystem.CellCenterFVM.Outlet.ZeroGradientFlags = 1
-#Simulator.SubSystem.CellCenterFVM.Outlet.Value = -1.
+Simulator.SubSystem.CellCenterFVM.Outlet.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.Outlet.Def = -1.
+Simulator.SubSystem.CellCenterFVM.Outlet.ZeroGradientFlags = 0.
 
 Simulator.SubSystem.CellCenterFVM.Wall.applyTRS = Wall
-#Simulator.SubSystem.CellCenterFVM.Wall.Vars = x y z
-Simulator.SubSystem.CellCenterFVM.Wall.Value = 0.
+Simulator.SubSystem.CellCenterFVM.Wall.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.Wall.Def = 0.
 Simulator.SubSystem.CellCenterFVM.Wall.ZeroGradientFlags = 1 
 
 Simulator.SubSystem.CellCenterFVM.Inlet.applyTRS = Inlet
-#Simulator.SubSystem.CellCenterFVM.Inlet.Vars = x y z
-Simulator.SubSystem.CellCenterFVM.Inlet.Value = 0.
+Simulator.SubSystem.CellCenterFVM.Inlet.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.Inlet.Def = 0.
 Simulator.SubSystem.CellCenterFVM.Inlet.ZeroGradientFlags = 0
 

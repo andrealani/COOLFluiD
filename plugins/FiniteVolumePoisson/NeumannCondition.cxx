@@ -24,31 +24,19 @@ MethodCommandProvider<NeumannCondition, CellCenterFVMData, FiniteVolumeModule> N
 
 //////////////////////////////////////////////////////////////////////////////
 
-void NeumannCondition::defineConfigOptions(Config::OptionList& options)
-{
-
-options.addConfigOption< CFreal >("Value", "Value at the boundary");
-
-//  options.addConfigOption< std::vector<std::string> >("Def","Definition of the Function.");
-//  options.addConfigOption< std::vector<std::string> >("Vars","Definition of the Variables.");
-
-}
+// void NeumannCondition::defineConfigOptions(Config::OptionList& options)
+// {
+//   options.addConfigOption< CFreal >("Value", "Value at the boundary");
+// }
 
 //////////////////////////////////////////////////////////////////////////////
+
 NeumannCondition::NeumannCondition(const std::string& name) :
   SuperInlet(name),
-  _variables()
+  _variables(),
+  _eRL()
 {
-  addConfigOptionsTo(this);
-
-  _value = 0.;
-  setParameter("Value", &_value);
-
-//  _function = std::vector<std::string>();
-//  setParameter("Def",&_function);
-
-//  _variables = std::vector<std::string>();
-//  setParameter("Vars",&_variables);
+  // addConfigOptionsTo(this);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -61,11 +49,11 @@ NeumannCondition::~NeumannCondition()
 
 void NeumannCondition::setup()
 {
-
   SuperInlet::setup();
-
-  _variables.resize(PhysicalModelStack::getActive()->getDim() + 1);
-
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  _variables.resize(dim + 1);
+  _eRL.resize(dim);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -77,55 +65,61 @@ void NeumannCondition::unsetup()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void NeumannCondition::configure ( Config::ConfigArgs& args )
-{
-  SuperInlet::configure(args);
-
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 void NeumannCondition::setGhostState(GeometricEntity *const face)
 {
-  //cout<<"NeumannCondition::setGhostState \n";
+  CFLog(DEBUG_MIN, "NeumannCondition::setGhostState() => START\n");
+  
   State *const innerState = face->getState(0);
   State *const ghostState = face->getState(1);
+  Node& nodeI = innerState->getCoordinates();
+  Node& nodeG = ghostState->getCoordinates();
   
-   const CFuint faceID = face->getID();
-   const CFuint startID = faceID*PhysicalModelStack::getActive()->getDim();
-   
-   DataHandle<CFreal> normals = socket_normals.getDataHandle();
   // distance for the computation of the gradient
-  const CFreal dr = MathFunctions::getDistance(ghostState->getCoordinates(),
-                                                  innerState->getCoordinates());
+  const CFreal dr = MathFunctions::getDistance(nodeI, nodeG);
+  cf_assert(dr > 0.);
+  _eRL = (nodeG - nodeI)/dr;
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint faceID = face->getID();
+  const CFuint startID = faceID*dim;
+  DataHandle< CFreal> normals   = socket_normals.getDataHandle();
+  DataHandle< CFreal> faceAreas = socket_faceAreas.getDataHandle();
+  RealVector normalPtr(dim, &normals[startID]);
+  CFreal eDotN = MathFunctions::innerProd(_eRL, normalPtr);
+  cf_assert(faceAreas[faceID] > 0.);
+  eDotN /= faceAreas[faceID];
 
-//  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
-//  for(CFuint iDim = 0; iDim < nbDim; iDim++)
-//  {
-//    _variables[iDim] = _bCoord[iDim];
-//  }
-//  _variables[PhysicalModelStack::getActive()->getDim()] = SubSystemStatusStack::getActive()->getCurrentTimeDim();
-
-//  //Evaluate the function
-//  _vFunction.evaluate(_variables,*_input);
-
-//   *ghostState = *_inputToUpdateVar->transform(_input);
-//   *ghostState *= 2;
-//   *ghostState -= *innerState;
-
-   (*ghostState)[0] = (*innerState)[0] + dr*_value;
-
-/// Dirichlet Condition Implementation
-  //Set the state value
-//  if (_inputAdimensionalValues){
-//    *ghostState = *_inputToUpdateVar->transform(_input);
-//    *ghostState *= 2;
-//    *ghostState -= *innerState;
-//  }
-//  else{
-//    *_dimState = *_inputToUpdateVar->transform(_input);
-//    _varSet->setAdimensionalValues(*_dimState, *ghostState);
-//  }
+  const bool hasIter = (_vars.size() == dim + 1);
+  // coordinate of the boundary point
+  _bCoord = (nodeI + nodeG);
+  _bCoord *= 0.5;
+  
+  cf_assert(_input->size() == 1);
+  if (!hasIter) {
+    //Evaluate the function
+    _vFunction.evaluate(_bCoord,*_input);
+  }
+  else {
+    // [x,y,z] and iteration are fed to the evaluate function
+    for (CFuint i = 0; i < dim; ++i) {
+      _xyzIter[i] = _bCoord[i]; 
+    }
+    _xyzIter[dim] = SubSystemStatusStack::getActive()->getNbIter();
+    
+    //Evaluate the function
+    _vFunction.evaluate(_xyzIter,*_input);
+  }
+  
+  CFLog(DEBUG_MIN, "NeumannCondition::setGhostState() => eDotN = " << eDotN << "\n");
+  
+  const CFreal gradient = (*_input)[0];
+  (*ghostState)[0] = (*innerState)[0] + dr*gradient/eDotN;
+  
+  CFLog(DEBUG_MIN, "NeumannCondition::setGhostState() => xG / xI = " 
+	<< ghostState->getCoordinates()  << " / " << innerState->getCoordinates() 
+	<< ", grad = " << ((*ghostState)[0] - (*innerState)[0])/dr*eDotN << " == " << (*_input)[0] <<"?\n");
+  
+  CFLog(DEBUG_MIN, "NeumannCondition::setGhostState() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

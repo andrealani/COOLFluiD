@@ -34,25 +34,25 @@ public:
   /// Set the solution variable set
   void setSolutionVarSet(Common::SafePtr<Framework::ConvectiveVarSet> solutionVarSet)
   {
-    CFout << "NullFluxSplitter::setSolutionVarSet() called!" << "\n";
+    CFLog(DEBUG_MIN, "NullFluxSplitter::setSolutionVarSet() called!" << "\n");
   }
 
   /// Set the update variable set
   void setUpdateVarSet(Common::SafePtr<Framework::ConvectiveVarSet> updateVarSet)
   {
-    CFout << "NullFluxSplitter::setUpdateVarSet() called!" << "\n";
+   CFLog(DEBUG_MIN, "NullFluxSplitter::setUpdateVarSet() called!" << "\n");
   }
 
   /// Set the diffusive variable set
   void setDiffusiveVarSet(Common::SafePtr<Framework::DiffusiveVarSet> diffusiveVarSet)
   {
-    CFout << "NullFluxSplitter::setDiffusiveVarSet() called!" << "\n";
+   CFLog(DEBUG_MIN, "NullFluxSplitter::setDiffusiveVarSet() called!" << "\n");
   }
 
   /// Compute the flux in the current face
   void computeFlux(RealVector& result)
   {
-    CFout << "NullFluxSplitter::computeFlux() called!" << "\n";
+    CFLog(DEBUG_MIN, "NullFluxSplitter::computeFlux() called!" << "\n");
   }
 
 }; // end of class NullFluxSplitter

@@ -14,6 +14,7 @@ FVMCC_BaseBC<BASE>::FVMCC_BaseBC(const std::string& name) :
   m_sInterpolator(),
   _putGhostsOnFace(false),
   socket_normals("normals"),
+  socket_faceAreas("faceAreas"),
   socket_states("states"),
   socket_gstates("gstates"),
   socket_nodes("nodes"),
@@ -189,6 +190,7 @@ FVMCC_BaseBC<BASE>::needsSockets()
   std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result;
 
   result.push_back(&socket_normals);
+  result.push_back(&socket_faceAreas);
   result.push_back(&socket_states);
   result.push_back(&socket_gstates);
   result.push_back(&socket_nodes);

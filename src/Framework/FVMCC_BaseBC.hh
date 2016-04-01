@@ -206,6 +206,9 @@ protected: // data
   /// handle to the face normals
   Framework::DataSocketSink< CFreal> socket_normals;
 
+  /// handle to the face areas
+  Framework::DataSocketSink< CFreal> socket_faceAreas;
+
   /// storage of the states
   Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > socket_states;
 
