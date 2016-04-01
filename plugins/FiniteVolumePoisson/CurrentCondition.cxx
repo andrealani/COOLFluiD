@@ -37,7 +37,6 @@ void CurrentCondition::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal, Config::DynamicOption<> >("ImposedCurrent", "Value for the imposed current");
   //options.addConfigOption< std::vector<std::string> >("Def","Definition of the Function.");
   //options.addConfigOption< std::vector<std::string> >("Vars","Definition of the Variables.");
-  options.addConfigOption< CFreal >("MachineVoltageLimit", "Maximum voltage given by the machine");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -60,9 +59,6 @@ CurrentCondition::CurrentCondition(const std::string& name) :
 
   //_vars = std::vector<std::string>();
   //setParameter("Vars",&_vars);
-
-  _machineLimit = 0.;
-  setParameter("MachineVoltageLimit", &_machineLimit);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -134,24 +130,14 @@ void CurrentCondition::setGhostState(GeometricEntity *const face)
 
   //m_library->setComposition(Tdim, pdim, CFNULL);
 
-  const CFreal sigma = 1; //m_library->sigma(Tdim, pdim, tVec);
+  const CFreal sigma = 1.; //m_library->sigma(Tdim, pdim, tVec);
   cf_assert(sigma > 0.);
-
   cf_assert(m_sigmaIntegral > 0.);
 
   const CFreal dVz = -m_imposedI/m_sigmaIntegral;
   const CFreal dr = MathFunctions::getDistance(ghostState->getCoordinates(),
                                                    innerState->getCoordinates());
   (*ghostState)[0] = dVz*dr + (*innerState)[0]; // AAL: This line is the one imposing the current
-
-//  CFreal phiOutlet = ((*ghostState)[0] + (*innerState)[0])/2;
-//
-//  if(_machineLimit != 0.){ //This option avoids limiting to 0 by mistake
-//    CFreal machineVoltage = (-1)*_machineLimit;
-//    if(std::abs(phiOutlet) > std::abs(machineVoltage)){
-//      (*ghostState)[0] = 2*machineVoltage - (*innerState)[0];
-//    }
-//  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -162,8 +148,6 @@ void CurrentCondition::preProcess()
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::MathTools;
-
-  //cout<<"Starting pre-process 0 \n";
 
   DataHandle<CFreal> faceAreas   = socket_faceAreas.getDataHandle();
 
@@ -218,8 +202,8 @@ void CurrentCondition::preProcess()
         PE::GetPE().GetCommunicator(nsp));
 #endif
   cf_assert(m_sigmaIntegral > 0.);
-  //std::cout << "Outlet::sigmaIntegral = " << m_sigmaIntegral <<"\n";
-  //cout<<"Exiting pre-process \n";
+
+  CFLog(DEBUG_MIN, "CurrentCondition::sigmaIntegral = " << m_sigmaIntegral <<"\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

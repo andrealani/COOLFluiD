@@ -98,9 +98,6 @@ protected: // data
   /// imposed current
   CFreal m_imposedI;
   
-  /// Limit in voltage given by the machine
-  CFreal _machineLimit;
-  
   /// CFL function of iteration
   Framework::VectorialFunction _vFunction;
 
