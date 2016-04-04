@@ -142,6 +142,8 @@ Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS3D
 
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = SA3DSourceTerm
 Simulator.SubSystem.CellCenterFVM.Data.SA3DSourceTerm.UseGradientLS = true
+#Simulator.SubSystem.CellCenterFVM.Data.SA3DSourceTerm.UseAnalyticalJacob = true
+
 #Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = SA3DDES97
 #Simulator.SubSystem.CellCenterFVM.Data.SA3DDES97.UseGradientLS = true
 #Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = SA3DDelDES
