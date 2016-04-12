@@ -17,3 +17,6 @@ LIST ( APPEND PhysicalModelDummy_cflibs Framework )
 
 CF_ADD_PLUGIN_LIBRARY ( PhysicalModelDummy )
 CF_WARN_ORPHAN_FILES()
+
+#ADD_SUBDIRECTORY ( testcases )
+

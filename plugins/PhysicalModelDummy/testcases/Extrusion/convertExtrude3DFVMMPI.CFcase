@@ -1,0 +1,87 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+# COOLFluiD Startfile
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -1.5830387
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = true
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+CFEnv.ExceptionDumps       = true
+CFEnv.ExceptionOutputs     = true
+CFEnv.RegistSignalHandlers = false
+CFEnv.TraceToStdOut = true
+CFEnv.TraceActive = true
+CFEnv.OnlyCPU0Writes = false
+
+# This tests the configuration file: it gives error if some options are wrong
+# This always fails with converters (THOR2CFmesh, Gambit2CFmesh, etc.): 
+# deactivate the option in those cases 
+# CFEnv.ErrorOnUnusedConfig = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileReader libCFmeshExtruder libPhysicalModelDummy libGambit2CFmesh  
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = ./
+Simulator.Paths.ResultsDir = ./OUTPUT
+
+#Maestro = LoopMaestro
+#LoopMaestro.GlobalStopCriteria = GlobalMaxNumberSteps
+#LoopMaestro.GlobalMaxNumberSteps.nbSteps = 1
+#LoopMaestro.AppendIter = true
+#LoopMaestro.RestartFromPreviousSolution = true
+
+Simulator.SubSystems = SubSysA SubSysB
+Simulator.SubSystemTypes = OnlyMeshSubSystem OnlyMeshSubSystem
+
+###########################################
+# SubSystem A creates the 2D CFmesh
+###########################################
+
+Simulator.SubSysA.Default.PhysicalModelType  = PhysicalModelDummy
+Simulator.SubSysA.PhysicalModelDummy.Dimensions = 2
+
+Simulator.SubSysA.Default.listTRS = y0 y1 x0 x1
+
+Simulator.SubSysA.MeshCreator = CFmeshFileReader
+Simulator.SubSysA.CFmeshFileReader.Data.FileName = 2DFullDomainCoarse.CFmesh
+Simulator.SubSysA.CFmeshFileReader.convertFrom = Gambit2CFmesh
+Simulator.SubSysA.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSysA.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSysA.CFmeshFileReader.ReadCFmesh = Dummy
+
+Simulator.SubSysA.SpaceMethod = Null
+Simulator.SubSysA.Null.Builder = FVMCC
+
+###########################################
+# SubSystem B extrudes the 2D CFmesh to 3D
+###########################################
+
+Simulator.SubSysB.Default.PhysicalModelType  = PhysicalModelDummy
+
+Simulator.SubSysB.Default.listTRS = y0 y1 x0 x1 Top Bottom
+
+Simulator.SubSysB.MeshCreator = CFmeshFileReader
+Simulator.SubSysB.CFmeshFileReader.Data.FileName = Extruded.CFmesh
+Simulator.SubSysB.CFmeshFileReader.Data.convertFromFile = 2DFullDomainCoarse.CFmesh
+Simulator.SubSysB.CFmeshFileReader.convertFrom = Extruder2DFVMMPI
+Simulator.SubSysB.CFmeshFileReader.Extruder2DFVMMPI.NbLayers = 16
+Simulator.SubSysB.CFmeshFileReader.Extruder2DFVMMPI.ExtrudeSize = 250000.
+Simulator.SubSysB.CFmeshFileReader.Extruder2DFVMMPI.Split = false
+Simulator.SubSysB.CFmeshFileReader.Extruder2DFVMMPI.CFmeshBinaryFileWriter.NbWriters = 16
+Simulator.SubSysB.CFmeshFileReader.ReadCFmesh = Dummy
+
+Simulator.SubSysB.SpaceMethod = Null
+Simulator.SubSysB.Null.Builder = FVMCC
+
+
