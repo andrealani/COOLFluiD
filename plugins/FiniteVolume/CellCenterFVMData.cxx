@@ -38,7 +38,8 @@ void CellCenterFVMData::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::vector<std::string> >("TRSsWithGhostsOnFace","TRSs on which ghost states lay on the face."); 
   options.addConfigOption< std::vector<std::string> >("TRSsWithNoBC","TRSs for which no BC must be applied.");
   options.addConfigOption< std::string >("DerivativeStrategy","Derivative computation strategy.");
-  options.addConfigOption< std::string >("LinearVar","Linearization variable set.");
+  options.addConfigOption< std::string >("LinearVar","Linearization variable set."); 
+  options.addConfigOption< std::string >("ReconstrVar","Reconstruction variable set.");
   options.addConfigOption< std::string >("NodalExtrapolation","Nodal extrapolation strategy.");
   options.addConfigOption< bool >("isAxisymm","Tells if the simulation is axisymmetric.");
   options.addConfigOption< std::string >("GeoDataComputer","Computer of geometric data (e.g. normals, volumes).");
@@ -68,7 +69,9 @@ CellCenterFVMData::CellCenterFVMData(Common::SafePtr<Framework::Method> owner) :
   _solToUpdateInUpdateMatTrans(),
   _updateToSolutionInUpdateMatTrans(),
   _updateToSolutionVecTrans(),
-  _solutionToLinearVecTrans(),
+  _solutionToLinearVecTrans(), 
+  _updateToReconstrVecTrans(),
+  _reconstrToUpdateVecTrans(),
   _linearizer(),
   _faceTrsGeoBuilder(),
   _faceCellTrsGeoBuilder(),
@@ -86,9 +89,12 @@ CellCenterFVMData::CellCenterFVMData(Common::SafePtr<Framework::Method> owner) :
 
   _updateVarStr = "Prim";
   _solutionVarStr = "Prim";
-
+  
   _linearVarStr = "Null";
   setParameter("LinearVar",&_linearVarStr);
+   
+  _reconstructVarStr = "Null";
+  setParameter("ReconstrVar",&_reconstructVarStr);
   
   _geoDataComputerStr = "FVMCC";
   setParameter("GeoDataComputer",&_geoDataComputerStr);
@@ -166,6 +172,10 @@ void CellCenterFVMData::configure ( Config::ConfigArgs& args )
   // default value for the linear variables is the update variables
   if (_linearVarStr == "Null") {
     _linearVarStr = _updateVarStr;
+  }
+  
+  if (_reconstructVarStr == "Null") {
+    _reconstructVarStr = _updateVarStr;
   }
   
   CFLog(INFO,"CellCenterFVM: configureGeoDataComputer()\n");
@@ -555,6 +565,54 @@ void CellCenterFVMData::configureVarSetTransformers ( Config::ConfigArgs& args )
   cf_assert(vecTransProv.isNotNull());
   _solutionToLinearVecTrans.reset(vecTransProv->create(physModel->getImplementor()));
   cf_assert(_solutionToLinearVecTrans.getPtr() != CFNULL);
+  
+  std::string updateToReconstructVecTransStr =
+    VarSetTransformer::getProviderName
+    (physModel->getConvectiveName(), _updateVarStr, _reconstructVarStr);
+  
+  CFLog(VERBOSE, "Configuring VarSet Transformer: " <<
+	updateToReconstructVecTransStr << "\n");
+  
+  try {
+    vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
+      (updateToReconstructVecTransStr);
+  }
+  catch (Common::NoSuchValueException& e) {
+    updateToReconstructVecTransStr = "Identity";
+    
+    CFLog(VERBOSE, e.what() << "\n");
+    CFLog(VERBOSE, "Choosing IdentityVarSetTransformer instead ..." << "\n");
+    vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
+      (updateToReconstructVecTransStr);
+  }
+
+  cf_assert(vecTransProv.isNotNull());
+  _updateToReconstrVecTrans.reset(vecTransProv->create(physModel->getImplementor()));
+  cf_assert(_updateToReconstrVecTrans.getPtr() != CFNULL);
+  
+  std::string reconstructToUpdateVecTransStr =
+    VarSetTransformer::getProviderName
+    (physModel->getConvectiveName(), _reconstructVarStr, _updateVarStr);
+  
+  CFLog(VERBOSE, "Configuring VarSet Transformer: " <<
+	reconstructToUpdateVecTransStr << "\n");
+  
+  try {
+    vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
+      (reconstructToUpdateVecTransStr);
+  }
+  catch (Common::NoSuchValueException& e) {
+    reconstructToUpdateVecTransStr = "Identity";
+    
+    CFLog(VERBOSE, e.what() << "\n");
+    CFLog(VERBOSE, "Choosing IdentityVarSetTransformer instead ..." << "\n");
+    vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
+      (reconstructToUpdateVecTransStr);
+  }
+
+  cf_assert(vecTransProv.isNotNull());
+  _reconstrToUpdateVecTrans.reset(vecTransProv->create(physModel->getImplementor()));
+  cf_assert(_reconstrToUpdateVecTrans.getPtr() != CFNULL);
 }
       
 //////////////////////////////////////////////////////////////////////////////

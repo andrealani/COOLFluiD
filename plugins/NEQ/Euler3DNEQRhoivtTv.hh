@@ -99,6 +99,12 @@ public: // classes
    */
   virtual void computePressureDerivatives(const Framework::State& state, RealVector& dp);
   
+  /**
+   * Checks validity of data
+   * @pre data is assumed to be of number of equations size
+   */
+  virtual bool isValid(const RealVector& data);
+  
 protected:
   
  /**

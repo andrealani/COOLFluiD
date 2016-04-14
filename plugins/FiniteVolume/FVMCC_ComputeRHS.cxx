@@ -375,9 +375,12 @@ void FVMCC_ComputeRHS::setup()
   _stNumJacobIDs.reserve(nbSourceTermsNumJacob); 
   _stAnJacobIDs.reserve(nbSourceTermsAnJacob); 
   for (CFuint i = 0; i < nbSourceTerms; ++i) { 
+    CFLog(DEBUG_MIN, "FVMCC_ComputeRHS::setup() => useAnalyticalJacob() for [" << 
+	  i << "] => " << ((*_stComputers)[i]->useAnalyticalJacob()) << "\n"); 
     ((*_stComputers)[i]->useAnalyticalJacob()) ?  
       _stAnJacobIDs.push_back(i) : _stNumJacobIDs.push_back(i); 
   } 
+  CFLog(DEBUG_MIN, "FVMCC_ComputeRHS::setup() => _stAnJacobIDs.size() = " << _stAnJacobIDs.size() << "\n");
   
   _tempUnitNormal.resize(PhysicalModelStack::getActive()->getDim(), 0.);
   _fluxSplitter = getMethodData().getFluxSplitter();
@@ -396,7 +399,9 @@ void FVMCC_ComputeRHS::setup()
   _solutionToUpdateMatTrans->setup(2);
   _updateToSolutionVecTrans->setup(2);
   
-  getMethodData().getSolutionToLinearVecTrans()->setup(2);
+  getMethodData().getSolutionToLinearVecTrans()->setup(2); 
+  getMethodData().getUpdateToReconstructionVecTrans()->setup(2);
+  getMethodData().getReconstructionToUpdateVecTrans()->setup(2);
   getMethodData().getUpdateToSolutionInUpdateMatTrans()->setup(2);
   getMethodData().getJacobianLinearizer()->setMaxNbStates(2);
   
@@ -545,38 +550,41 @@ void FVMCC_ComputeRHS::computeSourceTerm()
       continue;
     }
 
-	  GeometricEntity *const currCell = _currFace->getNeighborGeo(iCell);
-	  CFreal invR = 1.0;
-	  if (getMethodData().isAxisymmetric()) {
-	    invR /= std::abs(currCell->getState(0)->getCoordinates()[YY]);
-	  }
-	
-	  for (CFuint i = 0; i < _stAnJacobIDs.size(); ++i) { 
-	    const CFuint ist = _stAnJacobIDs[i]; 
-	    (*_stComputers)[ist]->setAnalyticalJacob(true);
-	    RealVector& source = _source[iCell][ist]; 
+    GeometricEntity *const currCell = _currFace->getNeighborGeo(iCell);
+    CFreal invR = 1.0;
+    if (getMethodData().isAxisymmetric()) {
+      invR /= std::abs(currCell->getState(0)->getCoordinates()[YY]);
+    }
+    
+    for (CFuint i = 0; i < _stAnJacobIDs.size(); ++i) { 
+      const CFuint ist = _stAnJacobIDs[i]; 
+      (*_stComputers)[ist]->setAnalyticalJacob(true);
+      RealVector& source = _source[iCell][ist]; 
       source = 0.;
-	    (*_stComputers)[ist]->computeSource(currCell, source, _sourceJacobian[iCell][ist]); 
-            
-	    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) { 
-	      rhs(cellID, iEq, nbEqs) += getResFactor()*source[iEq]*invR; 
-	    }
-	    
-	    (*_stComputers)[ist]->setAnalyticalJacob(false);
-	  }
-	  
-	  for (CFuint i = 0; i < _stNumJacobIDs.size(); ++i) {  
+      (*_stComputers)[ist]->computeSource(currCell, source, _sourceJacobian[iCell][ist]); 
+      
+      CFLog(DEBUG_MED, "FVMCC_ComputeRHS::computeSourceTerm() => source = " << source << "\n"); 
+      for (CFuint iEq = 0; iEq < nbEqs; ++iEq) { 
+	rhs(cellID, iEq, nbEqs) += getResFactor()*source[iEq]*invR; 
+      }
+      
+      (*_stComputers)[ist]->setAnalyticalJacob(false);
+      _sourceJacobOnCell[iCell]= true;
+    }
+    
+    for (CFuint i = 0; i < _stNumJacobIDs.size(); ++i) {  
       const CFuint ist = _stNumJacobIDs[i];
       RealVector& source = _source[iCell][ist];  
-	    (*_stComputers)[ist]->computeSource(currCell, source, _sourceJacobian[iCell][ist]);  
-	   
+      source = 0.;
+      (*_stComputers)[ist]->computeSource(currCell, source, _sourceJacobian[iCell][ist]);  
+      
       CFLog(DEBUG_MED, "FVMCC_ComputeRHS::computeSourceTerm() => source = " << source << "\n"); 
-	    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {  
-	      rhs(cellID, iEq, nbEqs) += getResFactor()*source[iEq]*invR;  
+      for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {  
+	rhs(cellID, iEq, nbEqs) += getResFactor()*source[iEq]*invR;  
       }  
-	  
-	    cellFlag[cellID] = true;
-	    _sourceJacobOnCell[iCell]= true;
+      
+      cellFlag[cellID] = true;
+      _sourceJacobOnCell[iCell]= true;
     }
   }
   

@@ -128,6 +128,12 @@ public: // classes
   /// Set the IDs corresponding to the velocity components in a State
   virtual void setStateVelocityIDs (std::vector<CFuint>& velIDs);
   
+  /**
+   * Checks validity of data
+   * @pre data is assumed to be of number of equations size
+   */
+  virtual bool isValid(const RealVector& data);
+  
 protected:
   
   /**

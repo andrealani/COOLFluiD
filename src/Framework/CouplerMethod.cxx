@@ -98,8 +98,8 @@ void CouplerMethod::preProcessWrite()
 {
   CFAUTOTRACE;
   
-  CFLog(NOTICE,"-------------------------------------------------------------\n");
-  CFLog(NOTICE,"Writing coordinates of CouplerMethod [" << getName() << "]\n");
+  CFLog(VERBOSE,"-------------------------------------------------------------\n");
+  CFLog(VERBOSE,"Writing coordinates of CouplerMethod [" << getName() << "]\n");
   cf_assert(isConfigured());
   cf_assert(isSetup());
   
@@ -108,7 +108,7 @@ void CouplerMethod::preProcessWrite()
   preProcessWriteImpl();
   
   popNamespace();
-  CFLog(NOTICE,"-------------------------------------------------------------\n");
+  CFLog(VERBOSE,"-------------------------------------------------------------\n");
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -117,8 +117,8 @@ void CouplerMethod::preProcessRead()
 {
   CFAUTOTRACE;
 
-  CFLog(NOTICE,"-------------------------------------------------------------\n");
-  CFLog(NOTICE,"Reading coordinates of CouplerMethod [" << getName() << "]\n");
+  CFLog(VERBOSE,"-------------------------------------------------------------\n");
+  CFLog(VERBOSE,"Reading coordinates of CouplerMethod [" << getName() << "]\n");
   cf_assert(isConfigured());
   cf_assert(isSetup());
 
@@ -127,7 +127,7 @@ void CouplerMethod::preProcessRead()
   preProcessReadImpl();
 
   popNamespace();
-  CFLog(NOTICE,"-------------------------------------------------------------\n");
+  CFLog(VERBOSE,"-------------------------------------------------------------\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -136,8 +136,8 @@ void CouplerMethod::meshMatchingWrite()
 {
   CFAUTOTRACE;
 
-  CFLog(NOTICE,"-------------------------------------------------------------\n");
-  CFLog(NOTICE,"Mesh matching of CouplerMethod [" << getName() << "]\n");
+  CFLog(VERBOSE,"-------------------------------------------------------------\n");
+  CFLog(VERBOSE,"Mesh matching of CouplerMethod [" << getName() << "]\n");
   cf_assert(isConfigured());
   cf_assert(isSetup());
 
@@ -146,7 +146,7 @@ void CouplerMethod::meshMatchingWrite()
   meshMatchingWriteImpl();
 
   popNamespace();
-  CFLog(NOTICE,"-------------------------------------------------------------\n");
+  CFLog(VERBOSE,"-------------------------------------------------------------\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -155,8 +155,8 @@ void CouplerMethod::meshMatchingRead()
 {
   CFAUTOTRACE;
 
-  CFLog(NOTICE,"-------------------------------------------------------------\n");
-  CFLog(NOTICE,"Reading matched mesh of CouplerMethod [" << getName() << "]\n");
+  CFLog(VERBOSE,"-------------------------------------------------------------\n");
+  CFLog(VERBOSE,"Reading matched mesh of CouplerMethod [" << getName() << "]\n");
   cf_assert(isConfigured());
   cf_assert(isSetup());
 
@@ -165,7 +165,7 @@ void CouplerMethod::meshMatchingRead()
   meshMatchingReadImpl();
 
   popNamespace();
-  CFLog(NOTICE,"-------------------------------------------------------------\n");
+  CFLog(VERBOSE,"-------------------------------------------------------------\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

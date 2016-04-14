@@ -397,6 +397,27 @@ void Euler3DNEQRhoivt::setStateVelocityIDs (std::vector<CFuint>& velIDs)
 
 //////////////////////////////////////////////////////////////////////////////
 
+bool Euler3DNEQRhoivt::isValid(const RealVector& data)
+{
+  const CFuint nbSpecies = getModel()->getNbScalarVars(0);
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    if (data[i] < 0.) {
+      CFLog(VERBOSE, "Euler3DNEQRhoivt::isValid() => rho_" << i << " = " << data[i] << " < 0 !\n");
+      return false;
+    }
+  }
+  
+  const CFreal T = data[nbSpecies+3];
+  if (T < 1e-8) {
+    CFLog(VERBOSE, "Euler3DNEQRhoivt::isValid() => T = " << T << " < 0!\n");
+    return false;
+  }
+  
+  return true;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
     } // namespace NEQ
 
   } // namespace Physics

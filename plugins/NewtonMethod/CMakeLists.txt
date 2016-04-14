@@ -129,6 +129,8 @@ CrankNichLimIntermediate.hh
 CrankNichLimIntermediate.cxx
 CrankNichLimPrepare.hh
 CrankNichLimPrepare.cxx
+UpdateSolFVMCC.cxx
+UpdateSolFVMCC.hh
 )
 
 LIST ( APPEND NewtonMethodFVM_requires_mods FiniteVolume )

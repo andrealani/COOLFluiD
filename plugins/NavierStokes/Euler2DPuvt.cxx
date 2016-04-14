@@ -161,13 +161,17 @@ void Euler2DPuvt::computePressureDerivatives(const Framework::State& state,
 
 bool Euler2DPuvt::isValid(const RealVector& data)
 {
-  enum index {P, Ux, Uy, temp};
-  const CFreal gamma = getModel()->getGamma();
-  const CFreal p = data[P];
-  const CFreal T = data[temp];
-  const CFreal a = sqrt(gamma*getModel()->getR()*T);
+  enum index {press, Ux, Uy, temp};
   
-  if( ( p < 0.) || (T < 0.) || (a < 0.) ){
+  const CFreal p = data[press]; 
+  if (p < 0.) {
+    CFLog(VERBOSE, "Euler2DPuvt::isValid() => p < 0!\n");
+    return false;
+  }
+  
+  const CFreal T = data[temp];
+  if (T < 1e-8) {
+    CFLog(VERBOSE, "Euler2DPuvt::isValid() => T < 0!\n");
     return false;
   }
   

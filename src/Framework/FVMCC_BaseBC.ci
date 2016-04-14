@@ -89,8 +89,8 @@ void FVMCC_BaseBC<BASE>::setup()
   
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   if(_zeroGradient.size() > 0 && _zeroGradient.size() != nbEqs) {
-    CFout << "WARNING: FVMCC_BaseBC " << this->getName() << " has zero gradient flags not properly set\n";
-    CFout << "WARNING: FVMCC_BaseBC " << this->getName() << " sets all zero gradient flags=false\n";
+    CFLog(VERBOSE, "WARNING: FVMCC_BaseBC " << this->getName() << " has zero gradient flags not properly set\n");
+    CFLog(VERBOSE, "WARNING: FVMCC_BaseBC " << this->getName() << " sets all zero gradient flags=false\n");
   }
   
   if(_zeroGradient.size() == 0) {
@@ -98,11 +98,11 @@ void FVMCC_BaseBC<BASE>::setup()
     _zeroGradient.assign(nbEqs, false);
   }
   
-  CFout << "TRS " << this->getName() << " has zero gradient flags = ";
+  CFLog(VERBOSE, "TRS " << this->getName() << " has zero gradient flags = ");
   for (CFuint i = 0; i < _zeroGradient.size(); ++i) {
-    CFout << _zeroGradient[i] << " ";
+    CFLog(VERBOSE, _zeroGradient[i] << " ");
   }
-  CFout << "\n";
+  CFLog(VERBOSE, "\n");
   
   const CFuint dim = PhysicalModelStack::getActive()->getDim(); 
   m_faceMidPoint.resize(dim);

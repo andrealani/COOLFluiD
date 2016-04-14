@@ -93,7 +93,7 @@ Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs = 1 1 1 1 1 1 1 1 1 1 1 0 0 
 Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
-#Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.Restart = true
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobFast
 Simulator.SubSystem.CellCenterFVM.NumJacobFast.FreezeDiffCoeff = true
 Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs

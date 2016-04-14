@@ -42,14 +42,14 @@ NullComputeDiffusiveTerm::~NullComputeDiffusiveTerm()
 
 void NullComputeDiffusiveTerm::setDiffusiveVarSet(SafePtr<DiffusiveVarSet> diffVar)
 {
-  CFLog(VERBOSE, "Calling NullComputeDiffusiveTerm::setDiffusiveVarSet()" << "\n");
+  CFLog(DEBUG_MIN, "Calling NullComputeDiffusiveTerm::setDiffusiveVarSet()" << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void NullComputeDiffusiveTerm::setUpdateVarSet(SafePtr<ConvectiveVarSet> updateVar)
 {
-  CFLog(VERBOSE, "Calling NullComputeDiffusiveTerm::setUpdateVarSet()" << "\n");
+  CFLog(DEBUG_MIN, "Calling NullComputeDiffusiveTerm::setUpdateVarSet()" << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -58,7 +58,7 @@ void NullComputeDiffusiveTerm::computeDiffusiveTerm
 (GeometricEntity *const geo, vector<RealVector>& result,
  const bool updateCoeff)
 {
-  CFLog(VERBOSE, "Calling NullComputeDiffusiveTerm::computeTerm()" <<
+  CFLog(DEBUG_MIN, "Calling NullComputeDiffusiveTerm::computeTerm()" <<
 	"\n");
 }
 
@@ -66,7 +66,7 @@ void NullComputeDiffusiveTerm::computeDiffusiveTerm
 
 void NullComputeDiffusiveTerm::setup()
 {
-  CFLog(VERBOSE, "Calling NullComputeDiffusiveTerm::setup()" << "\n");
+  CFLog(DEBUG_MIN, "Calling NullComputeDiffusiveTerm::setup()" << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

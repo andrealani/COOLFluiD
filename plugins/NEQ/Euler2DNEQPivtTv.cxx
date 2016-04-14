@@ -305,76 +305,29 @@ void Euler2DNEQPivtTv::computePressureDerivatives(const Framework::State& state,
 
 bool Euler2DNEQPivtTv::isValid(const RealVector& data)
 {
-  bool correct = true;
-
   const CFuint nbSpecies = getModel()->getNbScalarVars(0);
-  //These are indices!
-  //  const CFuint Ux = nbSpecies;
-  // const CFuint Uy = nbSpecies+1;
-  const CFuint temp = nbSpecies+2;
-  const CFuint tempVib = nbSpecies+3;
-
-  //These are the actual values:
-  const CFreal T = data[temp];
-  const CFreal Tv = data[tempVib];
-  //
-  
-  RealVector molecularMasses(nbSpecies);
-  _library->getMolarMasses(molecularMasses);
-
-  vector<CFuint> moleculeIDs;
-  _library->setMoleculesIDs(moleculeIDs);
-
-  vector<bool> flag(nbSpecies, false);
-  for (CFuint i = 0; i < moleculeIDs.size(); ++i) {
-    flag[moleculeIDs[i]] = true;
-  }
-
-  RealVector fCoeff(nbSpecies);
   for (CFuint i = 0; i < nbSpecies; ++i) {
-    fCoeff[i] = (flag[i]) ? 2.5 : 1.5;
-  }
-
-  const CFreal Rgas = _library->getRgas();
-
-  CFreal denom = 0.;
-  CFreal riovermi  = 0.;
-  for (CFuint i = 0; i < nbSpecies; ++i) {
-    riovermi += data[i]/molecularMasses[i];
-    const CFreal yOvM = data[i]/molecularMasses[i];
-    denom += yOvM*((Rgas*fCoeff[i]));
-  }
-
-  //Compute sound speed:
-  CFreal numBeta = 0.;
-  CFreal denBeta = 0.;
-  for (CFuint i = 0; i < nbSpecies; ++i) {
-    const CFreal sigmai = data[i]/molecularMasses[i];
-    numBeta += sigmai;
-    denBeta += sigmai*fCoeff[i];
-  }
-
-  const CFreal beta = numBeta/denBeta;
-  
-  CFreal  rho = 0.;
-  // Set the species:
-  for (CFuint ie = 0; ie < nbSpecies; ++ie){
-    rho += data[ie];
-    if( data[ie] < 0. ){
-      return correct = false;
+    if (data[i] < 0.) {
+      CFLog(VERBOSE, "Euler2DNEQPivtTv::isValid() => p_" << i << " = " << data[i] << " < 0 !\n");
+      return false;
     }
   }
-
-  const CFreal p = Rgas*riovermi*T;
-  const CFreal a = std::sqrt((1+beta)*p/rho);
-
-  if( (p < 0.) || (T < 0.) || (Tv < 0.) || (a < 0.) ){
-  return correct = false;
+  
+  const CFreal T  = data[nbSpecies+2];
+  if (T < 1e-8) {
+    CFLog(INFO, "Euler2DNEQPivtTv::isValid() => T = " << T << " < 0!\n");
+    return false;
   }
-
-  return correct;
+  
+  const CFreal Tv = data[nbSpecies+3];
+  if (Tv < 1e-8) {
+    CFLog(INFO, "Euler2DNEQPivtTv::isValid() => Tv = " << Tv << " < 0!\n");
+    return false;
+  }
+  
+  return true;
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
    
 CFreal Euler2DNEQPivtTv::getTe(const Framework::State& state)
@@ -390,7 +343,7 @@ CFreal Euler2DNEQPivtTv::getTe(const Framework::State& state)
   const CFreal Te = _library->getTe(T, &_tvDim[0]);
   CFLog(DEBUG_MIN, "Euler2DNEQPivtTv::getTe() => Te=" << Te << "\n"); 
   cf_assert(Te > 0.);
-
+  
   return Te;
 }
 

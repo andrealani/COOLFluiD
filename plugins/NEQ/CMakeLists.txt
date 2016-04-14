@@ -45,6 +45,8 @@ Euler2DNEQPivtTvToRhoivtTv.hh
 Euler2DNEQPivtTvToRhoivtTv.cxx
 Euler2DNEQPuvtToRhoivtTv.hh
 Euler2DNEQPuvtToRhoivtTv.cxx
+Euler2DNEQPuvtToPivtTv.hh
+Euler2DNEQPuvtToPivtTv.cxx
 Euler2DNEQPvty.cxx
 Euler2DNEQPvty.hh
 Euler2DNEQPvtyToCons.cxx

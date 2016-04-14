@@ -222,7 +222,7 @@ public:
   /// Returns true if the state doesn't have unphysical values
   /// Default is to do no check and return true.
   /// Derived classes should implement the checks dependent on the concrete physics
-  virtual bool isValid ( const RealVector& state )  {   return true;  }
+  virtual bool isValid (const RealVector& state)  {return true;}
   
   /// Set the IDs corresponding to the velocity components in a State
   virtual void setStateVelocityIDs (std::vector<CFuint>& velIDs) = 0;

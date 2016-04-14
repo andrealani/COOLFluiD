@@ -117,6 +117,12 @@ public: // classes
   virtual void computeStateFromPhysicalData(const RealVector& data,
 					    Framework::State& state);
   
+  /**
+   * Checks validity of data
+   * @pre data is assumed to be of number of equations size
+   */
+  virtual bool isValid(const RealVector& data);
+  
 protected:
   
   /**
@@ -138,12 +144,6 @@ protected:
    * Compute the pressure derivative
    */
   virtual void computePressureDerivatives(const Framework::State& state, RealVector& dp);
-  
-  /**
-   * Checks validity of data
-   * @pre data is assumed to be of number of equations size
-   */
-  bool isValid(const RealVector& data);
   
   /// Set the IDs corresponding to the velocity components in a State
   virtual void setStateVelocityIDs (std::vector<CFuint>& velIDs);

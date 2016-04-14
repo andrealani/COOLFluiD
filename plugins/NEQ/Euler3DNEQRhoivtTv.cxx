@@ -282,6 +282,33 @@ void Euler3DNEQRhoivtTv::computePressureDerivatives(const Framework::State& stat
 
 //////////////////////////////////////////////////////////////////////////////
 
+bool Euler3DNEQRhoivtTv::isValid(const RealVector& data)
+{
+  const CFuint nbSpecies = getModel()->getNbScalarVars(0);
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    if (data[i] < 0.) {
+      CFLog(VERBOSE, "Euler3DNEQRhoivtTv::isValid() => rho_" << i << " = " << data[i] << " < 0 !\n");
+      return false;
+    }
+  }
+  
+  const CFreal T  = data[nbSpecies+3];
+  if (T < 1e-8) {
+    CFLog(VERBOSE, "Euler3DNEQRhoivtTv::isValid() => T = " << T << " < 0!\n");
+    return false;
+  }
+  
+  const CFreal Tv = data[nbSpecies+4];
+  if (Tv < 1e-8) {
+    CFLog(VERBOSE, "Euler3DNEQRhoivtTv::isValid() => Tv = " << Tv << " < 0!\n");
+    return false;
+  }
+  
+  return true;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
     } // namespace NEQ
 
   } // namespace Physics

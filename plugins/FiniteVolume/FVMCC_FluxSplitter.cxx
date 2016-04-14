@@ -201,7 +201,7 @@ void FVMCC_FluxSplitter::evaluateDissipationControlFunction()
 void FVMCC_FluxSplitter::computeLeftJacobian()
 {
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-  
+
   if (m_fluxDerivative.size() != nbEqs) {  
     throw Common::NotImplementedException 
       (FromHere(),"FVMCC_FluxSplitter::computeLeftJacobian()");
@@ -214,6 +214,7 @@ void FVMCC_FluxSplitter::computeLeftJacobian()
     (this->*m_fluxDerivative[iVar])(LEFT, iVar, &_tmpJacobMatrix[iVar*nbEqs]);
   }
   _tmpJacobMatrix.transpose(_lFluxJacobian);
+  CFLog(DEBUG_MIN, "FVMCC_FluxSplitter::computeLeftJacobian() => _lFluxJacobian = " <<_tmpJacobMatrix << "\n");
 }
  
 //////////////////////////////////////////////////////////////////////////////
@@ -233,6 +234,7 @@ void FVMCC_FluxSplitter::computeRightJacobian()
     (this->*m_fluxDerivative[iVar])(RIGHT, iVar, &_tmpJacobMatrix[iVar*nbEqs]);
   } 
   _tmpJacobMatrix.transpose(_rFluxJacobian);
+  CFLog(DEBUG_MIN, "FVMCC_FluxSplitter::computeLeftJacobian() => _rFluxJacobian = " <<_tmpJacobMatrix << "\n");
 }
  
 //////////////////////////////////////////////////////////////////////////////

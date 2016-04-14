@@ -4,13 +4,12 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_Numerics_NewtonMethod_StdUpdateSol_hh
-#define COOLFluiD_Numerics_NewtonMethod_StdUpdateSol_hh
+#ifndef COOLFluiD_Numerics_NewtonMethod_UpdateSolFVMCC_hh
+#define COOLFluiD_Numerics_NewtonMethod_UpdateSolFVMCC_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "NewtonIteratorData.hh"
-#include "Framework/DataSocketSink.hh"
+#include "NewtonMethod/StdUpdateSol.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -24,7 +23,7 @@ namespace COOLFluiD {
 
   /// This class represents a NumericalCommand action to be
   /// sent to Domain to be executed in order to setup the MeshData.
-class StdUpdateSol : public NewtonIteratorCom {
+class UpdateSolFVMCC : public StdUpdateSol {
 public:
 
   /// Defines the Config Option's of this class
@@ -32,54 +31,35 @@ public:
   static void defineConfigOptions(Config::OptionList& options);
 
   /// Constructor.
-  explicit StdUpdateSol(const std::string& name);
+  explicit UpdateSolFVMCC(const std::string& name);
 
   /// Destructor.
-  virtual ~StdUpdateSol()
+  virtual ~UpdateSolFVMCC()
   {
   }
 
   /// Set up private data and data of the aggregated classes
   /// in this command before processing phase
   virtual void setup();
-
-  /// Execute Processing actions
-  virtual void execute();
-
+  
   /// Returns the DataSocket's that this command needs as sinks
   /// @return a vector of SafePtr with the DataSockets
   virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets();
   
-  /// Returns the DataSocket's that this command needs as sources
-  /// @return a vector of SafePtr with the DataSockets
-  virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > providesSockets();
-  
 protected:
   
   /// Correct the given unphysical state
-  virtual void correctUnphysicalStates(const std::vector<CFuint>& badStatesIDs) {} 
+  virtual void correctUnphysicalStates(const std::vector<CFuint>& badStatesIDs);
   
 protected:
-
-  /// handle to states
-  Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > socket_states;
-
-  /// handle to rhs
-  Framework::DataSocketSink<CFreal> socket_rhs;
-
-  /// handle to update coefficient
-  Framework::DataSocketSink<CFreal> socket_updateCoeff;
-
-  /// handle to invalid states
-  Framework::DataSocketSource<CFreal> socket_invalidStates;
-
-  /// the relaxation parameter vector
-  std::vector<CFreal> m_alpha;
   
-  /// Check that each update creates variables with physical meaning
-  bool m_validate;
+  /// storage for the stencil via pointers to neighbors
+  Framework::DataSocketSink<std::vector<Framework::State*> > socket_stencil;
+  
+  /// corrected state
+  RealVector m_correctedState;
 
-}; // class StdUpdateSol
+}; // class UpdateSolFVMCC
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -91,4 +71,4 @@ protected:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Numerics_NewtonMethod_StdUpdateSol_hh
+#endif // COOLFluiD_Numerics_NewtonMethod_UpdateSolFVMCC_hh

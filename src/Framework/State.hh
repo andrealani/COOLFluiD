@@ -87,6 +87,13 @@ public:
     _coordinate = coordinate;
   }
 
+  /// Reset the space coordinates of the state
+  /// @post coordinate == CFNULL
+  void resetSpaceCoordinates()
+  {
+    _coordinate = CFNULL;
+  }
+
   /// Get the coordinates
   Node& getCoordinates() const
   {

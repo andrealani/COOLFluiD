@@ -3,9 +3,7 @@
 
 //////////////////////////////////////////////////////////////////////
 
-#include "Framework/VarSetTransformer.hh"
-#include "Framework/MultiScalarTerm.hh"
-#include "NavierStokes/EulerTerm.hh"
+#include "NEQ/Euler2DNEQPuvtToPivtTv.hh"
 
 //////////////////////////////////////////////////////////////////////
 
@@ -19,11 +17,11 @@ namespace COOLFluiD {
 
 /**
  * This class represents a transformer of variables from
- * [p_i u v T Tv] to conservative variables
+ * [p u v t] to [p_i u v T Tv] variables
  *
  * @author Andrea Lani
  */
-class ICPNEQ2DPvtToPivtTv : public Framework::VarSetTransformer {
+class ICPNEQ2DPvtToPivtTv : public NEQ::Euler2DNEQPuvtToPivtTv {
 public:
   
   typedef Framework::MultiScalarTerm<NavierStokes::EulerTerm> NEQTerm;
@@ -47,24 +45,10 @@ public:
    * Transform a state into another one from reference precomputed
    * values (physical data)associated to the given state
    */
-  void transformFromRef(const RealVector& data, Framework::State& result)
+  virtual void transformFromRef(const RealVector& data, Framework::State& result)
   {
-    throw Common::NotImplementedException (FromHere(),"Euler2DNEQPuvtToRhoivtTv::transformFromRef()");
+    throw Common::NotImplementedException (FromHere(),"Euler2DNEQPvtToPivtTv::transformFromRef()");
   }
-           
-private:
-  
-  /// acquaintance of the model
-  Common::SafePtr<NEQTerm> _model;
-    
-  /// Vector storing the elemental composition
-  RealVector _ye;
-
-  /// Vector storing the elemental composition
-  RealVector _xe;
-  
-  /// Vector storing the species masses
-  RealVector _masses;
   
 }; // end of class ICPNEQ2DPvtToPivtTv
 

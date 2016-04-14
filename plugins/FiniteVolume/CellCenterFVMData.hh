@@ -219,7 +219,15 @@ public:
   {
     return _linearVarStr;
   }
-
+  
+  /**
+   * Get the reconstruction variables name
+   */
+  std::string getReconstructVarStr() const
+  {
+    return _reconstructVarStr;
+  }
+  
   /**
    * Get the matrix transformer from solution to update variables
    * starting from update variables
@@ -261,8 +269,28 @@ public:
   {
     cf_assert(_updateToSolutionVecTrans.isNotNull());
     return _updateToSolutionVecTrans.getPtr();
+  } 
+  
+  /**
+   * Get the vector transformer from update to reconstruction variables
+   */
+  Common::SafePtr<Framework::VarSetTransformer>
+  getUpdateToReconstructionVecTrans() const
+  {
+    cf_assert(_updateToReconstrVecTrans.isNotNull());
+    return _updateToReconstrVecTrans.getPtr();
   }
-
+  
+  /**
+   * Get the vector transformer from reconstruction to update variables
+   */
+  Common::SafePtr<Framework::VarSetTransformer>
+  getReconstructionToUpdateVecTrans() const
+  {
+    cf_assert(_reconstrToUpdateVecTrans.isNotNull());
+    return _reconstrToUpdateVecTrans.getPtr();
+  }
+  
   /**
    * Sets the ConvergenceMethod for this SpaceMethod to use
    * @pre the pointer to ConvergenceMethod is not constant to
@@ -542,7 +570,13 @@ private:
   
   /// Vector transformer from solution to linear variables
   Common::SelfRegistPtr<Framework::VarSetTransformer> _solutionToLinearVecTrans;
-
+  
+  /// Vector transformer from update to reconstruction variables
+  Common::SelfRegistPtr<Framework::VarSetTransformer> _updateToReconstrVecTrans;
+  
+  /// Vector transformer from reconstruction to update variables
+  Common::SelfRegistPtr<Framework::VarSetTransformer> _reconstrToUpdateVecTrans;
+  
   /// jacobian linearizer
   Common::SelfRegistPtr<Framework::JacobianLinearizer> _linearizer;
   
@@ -581,7 +615,10 @@ private:
 
   /// linearizazion variable set name
   std::string _linearVarStr;
-
+  
+  /// reconstruction variable set name
+  std::string _reconstructVarStr;
+  
   /// string for the configuration of the geometric data computer
   std::string _geoDataComputerStr;
 

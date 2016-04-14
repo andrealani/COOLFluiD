@@ -177,13 +177,17 @@ bool Euler3DPvt<BASE>::isValid(const RealVector& data)
 {
   using namespace COOLFluiD::Framework;
   
-  enum index {P, Ux, Uy, Uz, temp};
-  const CFreal gamma = this->getModel()->getGamma();
-  const CFreal p = data[P];
-  const CFreal T = data[temp];
-  const CFreal a = sqrt(gamma*this->getModel()->getR()*T);
+  enum index {press, Ux, Uy, Uz, temp};
   
-  if( ( p < 0.) || (T < 0.) || (a < 0.) ){
+  const CFreal p = data[press]; 
+  if (p < 0.) {
+    CFLog(VERBOSE, "Euler3DPvt::isValid() => p < 0!\n");
+    return false;
+  }
+  
+  const CFreal T = data[temp];
+  if (T < 1e-8) {
+    CFLog(VERBOSE, "Euler3DPvt::isValid() => T < 0!\n");
     return false;
   }
   

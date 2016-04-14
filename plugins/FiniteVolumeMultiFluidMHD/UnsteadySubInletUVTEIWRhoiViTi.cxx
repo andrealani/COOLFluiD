@@ -6,7 +6,6 @@
 #include "MultiFluidMHD/MultiFluidMHDVarSet.hh"
 #include "MultiFluidMHD/EulerMFMHDTerm.hh"
 #include "Maxwell/Maxwell2DProjectionVarSet.hh"
-// #include "Framework/MeshData.hh"
   
 //////////////////////////////////////////////////////////////////////////////
 
@@ -28,17 +27,15 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider<UnsteadySubInletUVTEIWRhoiViTi, CellCenterFVMData, FiniteVolumeMultiFluidMHDModule> UnsteadySubInletUVTEIWRhoiViTiFVMCCProvider("UnsteadySubInletUVTEIWRhoiViTiFVMCC");
+MethodCommandProvider<UnsteadySubInletUVTEIWRhoiViTi, CellCenterFVMData, FiniteVolumeMultiFluidMHDModule> 
+UnsteadySubInletUVTEIWRhoiViTiFVMCCProvider("UnsteadySubInletUVTEIWRhoiViTiFVMCC");
                                         
 //////////////////////////////////////////////////////////////////////////////
 
 void UnsteadySubInletUVTEIWRhoiViTi::defineConfigOptions(Config::OptionList& options)
 {
-//    options.addConfigOption< std::vector<CFreal> >("Vx","x velocity of the species");
-//    options.addConfigOption< std::vector<CFreal> >("Vy","y velocity of the species");
-//    options.addConfigOption< std::vector<CFreal> >("T","static temperature of the species");
-   options.addConfigOption< std::vector<std::string> >("Vars","Definition of the Variables.");
-   options.addConfigOption< std::vector<std::string> >("Def","Definition of the Functions.");      
+  options.addConfigOption< std::vector<std::string> >("Vars","Definition of the Variables.");
+  options.addConfigOption< std::vector<std::string> >("Def","Definition of the Functions.");      
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -53,18 +50,9 @@ UnsteadySubInletUVTEIWRhoiViTi::UnsteadySubInletUVTEIWRhoiViTi
 {
    addConfigOptionsTo(this);
    
-//    _ui = std::vector<CFreal>();
-//    setParameter("Vx",&_ui);
-//    
-//    _vi = std::vector<CFreal>();
-//    setParameter("Vy",&_vi);
-//    
-//    _Ti = std::vector<CFreal>();
-//    setParameter("Ti",&_Ti);
-   
    _functions = std::vector<std::string>();
    setParameter("Def",&_functions);
-
+   
    _vars = std::vector<std::string>();
    setParameter("Vars",&_vars);   
 }
@@ -81,9 +69,6 @@ void UnsteadySubInletUVTEIWRhoiViTi::setup()
 {
   FVMCC_BC::setup();
   
-//   cout << "UnsteadySubInletUVTEIWRhoiViTi::setup" << endl;
-  
-  
   _bCoord.resize(PhysicalModelStack::getActive()->getDim());
   
   _variables.resize(PhysicalModelStack::getActive()->getDim() + 1);
@@ -95,7 +80,6 @@ void UnsteadySubInletUVTEIWRhoiViTi::setup()
   const CFuint nbSpecies = _updateVarSet->getModel()->getNbScalarVars(0); 
   
   _uvT.resize(3*nbSpecies + 3);  
- 
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -106,19 +90,19 @@ void UnsteadySubInletUVTEIWRhoiViTi::configure ( Config::ConfigArgs& args )
 
   FVMCC_BC::configure(args);
 
-//   if(!_functions.empty())
+  //   if(!_functions.empty())
 //     {
-    _vFunction.setFunctions(_functions);
-    _vFunction.setVariables(_vars);
-    try {
-      _vFunction.parse();
-      _useFunction = true;
-    }
-    catch (Common::ParserException& e) {
-      CFout << e.what() << "\n";
-      throw; // retrow the exception to signal the error to the user
-    }
-//   }
+  _vFunction.setFunctions(_functions);
+  _vFunction.setVariables(_vars);
+  try {
+    _vFunction.parse();
+    _useFunction = true;
+  }
+  catch (Common::ParserException& e) {
+    CFout << e.what() << "\n";
+    throw; // retrow the exception to signal the error to the user
+  }
+  //   }
 }
 
 //////////////////////////////////////////////////////////////////////////////

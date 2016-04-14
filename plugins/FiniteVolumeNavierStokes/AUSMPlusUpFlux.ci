@@ -61,11 +61,12 @@ void AUSMPlusUpFlux<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
 
 //////////////////////////////////////////////////////////////////////////////
 
+
 // template <class UPDATEVAR>
 // void AUSMPlusUpFlux<UPDATEVAR>::setup()
 // {
 //   using namespace COOLFluiD::Framework;
- 
+
 //   AUSMFlux<UPDATEVAR>::setup();
 
 //   const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
@@ -80,13 +81,13 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeMassFlux()
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
-  
+
   if (m_machInf <= 0.) {
     cout << "AUSMPlusUpFlux requires machInf > 0.!!: change your input file!!" << endl;
   }
-  
+
   this->computeInterfaceSoundSpeed(); // m_a12
-  
+
   // calculation of the Mach number for the left and the right states
   this->m_mL = this->m_unL/this->m_a12;
   this->m_mR = this->m_unR/this->m_a12;
@@ -100,28 +101,28 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeMassFlux()
 
   m_fa = mZero * (2.0-mZero);
   cf_assert(m_fa > 0.0);
-   
-  const CFreal M4Plus = (std::abs(mL) >= 1.0) ? 
+
+  const CFreal M4Plus = (std::abs(mL) >= 1.0) ?
     this->mach1Plus(mL) :
     this->mach2Plus(mL)*(1.0 - 16.*m_beta*this->mach2Min(mL));
-  
-  const CFreal M4Minus = (std::abs(mR) >= 1.0) ? 
+
+  const CFreal M4Minus = (std::abs(mR) >= 1.0) ?
     this->mach1Min(mR) :
     this->mach2Min(mR)*(1.0 + 16.*m_beta*this->mach2Plus(mR));
-  
+
   const CFreal rhoL = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
   const CFreal rhoR = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
   const CFreal pL = (*this->m_lData)[UPDATEVAR::PTERM::P];
   const CFreal pR = (*this->m_rData)[UPDATEVAR::PTERM::P];
   const CFreal rhoa2 = 0.5*(rhoL + rhoR)*this->m_a12*this->m_a12;
   const CFreal mP = (-this->m_coeffKp/m_fa) * max(1.0 - this->m_coeffSigma*mBarSq, 0.0)*(pR-pL)/rhoa2;
-  
+
   // calculation of the Mach number at the interface
   const CFreal m12 = M4Plus + M4Minus + mP;
   // calculation of the mass flux at the interface
   this->m_mflux12 = (m12 > 0.0) ? this->m_a12 * m12 * rhoL : this->m_a12 * m12 * rhoR;
 }
-      
+
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
@@ -134,48 +135,60 @@ void AUSMPlusUpFlux<UPDATEVAR>::computePressureFlux()
   const CFreal alpha = (3.0/16.0) * (-4.0 + 5.0*m_fa*m_fa);
   const CFreal mL = this->m_mL;
   const CFreal mR = this->m_mR;
-  m_P5Plus = (std::abs(mL) >= 1.0) ? 
+  m_P5Plus = (std::abs(mL) >= 1.0) ?
     this->mach1Plus(mL)/mL :
     this->mach2Plus(mL)*((2.0-mL)-16.*alpha*mL*this->mach2Min(mL));
-  
-  m_P5Minus = (std::abs(mR) >= 1.0) ? 
+
+  m_P5Minus = (std::abs(mR) >= 1.0) ?
     this->mach1Min(mR)/mR :
     this->mach2Min(mR)*((-2.0-mR)+16.*alpha*mR*this->mach2Plus(mR));
-  
+
   const CFreal rhoL = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
   const CFreal rhoR = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
   const CFreal pL   = (*this->m_lData)[UPDATEVAR::PTERM::P];
   const CFreal pR   = (*this->m_rData)[UPDATEVAR::PTERM::P];
   const CFreal pU   = -this->m_coeffKu * m_P5Plus * m_P5Minus *
     (rhoL + rhoR) * m_fa * this->m_a12*(this->m_unR-this->m_unL);
-  
+
   // calculation of the pressure flux at the interface
   this->m_p12 = m_P5Plus*pL + m_P5Minus*pR + pU;
 }
- 
+
 /////////////////////////////////////////////////////////////////////////////
 
 template<class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::ComputedFluxdVar(CFuint iVar, RealMatrix& JacobMatrix)
+void AUSMPlusUpFlux<UPDATEVAR>::ComputedFluxdPvt(CFuint side, RealMatrix& JacobMatrix) // Change it in .hh and not only
+
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::MathTools; //importing MathFunctions::sigmoidal and MathFunctions::sign functions
-  CFLog(VERBOSE," AUSMPlusUpFlux::ComputedFluxdVar  START \n");
+  CFLog(DEBUG_MIN," AUSMPlusUpFlux::ComputedFluxdPvt  START \n");
 
   // Getting state value
   const CFreal rhoL        = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
   const CFreal rhoR        = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
   const CFreal HL          = (*this->m_lData)[UPDATEVAR::PTERM::H];
   const CFreal HR          = (*this->m_rData)[UPDATEVAR::PTERM::H];
+  const CFreal TL          = (*this->m_lData)[UPDATEVAR::PTERM::T];
+  const CFreal TR          = (*this->m_rData)[UPDATEVAR::PTERM::T];
   const CFreal gammaL      = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
   const CFreal gammaR      = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
   const CFreal pL          = (*this->m_lData)[UPDATEVAR::PTERM::P];
   const CFreal pR          = (*this->m_rData)[UPDATEVAR::PTERM::P];
+  const CFreal UL          = (*this->m_lData)[UPDATEVAR::PTERM::VX];
+  const CFreal UR          = (*this->m_rData)[UPDATEVAR::PTERM::VX];
+  const CFreal VL          = (*this->m_lData)[UPDATEVAR::PTERM::VY];
+  const CFreal VR          = (*this->m_rData)[UPDATEVAR::PTERM::VY];
+  const CFreal WL          = (*this->m_lData)[UPDATEVAR::PTERM::VZ];
+  const CFreal WR          = (*this->m_rData)[UPDATEVAR::PTERM::VZ];
+  const CFreal Mmass       = 28.965338E-3; //molecular mass, assuming current fluid is air
+  const CFreal Rgas        = 8.3145; //universal gas constant [J/mol/K] taken from Wolfram Alpha
   const CFreal beta        = m_beta;
   const CFreal qnL         = this->m_unL;
   const CFreal qnR         = this->m_unR;
   const CFreal Ksig        = this->m_coeffSigmoid;
+  const CFreal sigma       = this->m_coeffSigma;
   const RealVector& normal = this->getMethodData().getUnitNormal();
   const CFuint nbDim       = PhysicalModelStack::getActive()->getDim();
   const CFuint nbEq        = PhysicalModelStack::getActive()->getNbEq();
@@ -193,41 +206,57 @@ void AUSMPlusUpFlux<UPDATEVAR>::ComputedFluxdVar(CFuint iVar, RealMatrix& JacobM
   const CFreal mInf            = correctMachInf(this->m_machInf);
   const CFreal MBarSq          = 0.5*(ML*ML+MR*MR);
   const CFreal MinfSq          = mInf*mInf;
+
   const CFreal sigMbarsqMinfsq = MathFunctions::sigmoid(MBarSq,MinfSq,Ksig);
   const CFreal sig2            = sigMbarsqMinfsq*MBarSq + (1.0-sigMbarsqMinfsq )*MinfSq; // max(MBarSq,MinfSq)
-  const CFreal mZero           = std::sqrt( (1-MathFunctions::sigmoid (1.0,sig2,Ksig))*1.0 + MathFunctions::sigmoid(1.0,sig2,Ksig)*sig2); //sqrt(min(1,max(MBarSq,MinfSq)))
+  const CFreal MZeroSig        = MathFunctions::sigmoid (1.0,sig2,Ksig);
+  const CFreal mZero           = std::sqrt( (1-MZeroSig)*1.0 + MZeroSig*sig2); //sqrt(min(1,max(MBarSq,MinfSq)))
   cf_assert(mZero <= 1.0);
-
-  const CFreal fa = mZero * (2.0-mZero);
+  const CFreal fa      = mZero * (2.0-mZero);
   m_fa = fa;
+
+  const CFreal sigmaMBarSq = 1.0 - sigma*MBarSq;
+  const CFreal mPSig       = MathFunctions::sigmoid(sigmaMBarSq,0.0,Ksig);
+  const CFreal dMpCon      = -(this->m_coeffKp) * mPSig;
 
   const CFreal M4Plus  = (std::abs(ML) >= 1.0) ? this->mach1Plus(ML) : this->mach2Plus(ML)*(1.0 - 16.*beta*this->mach2Min(ML));
   const CFreal M4Minus = (std::abs(MR) >= 1.0) ? this->mach1Min(MR)  : this->mach2Min(MR)*(1.0 + 16.*beta*this->mach2Plus(MR));
-  const CFreal mP      = -(this->m_coeffKp) * MathFunctions::sigmoid(1.0 - this->m_coeffSigma*MBarSq,0.0,Ksig)*(pR-pL)/(rho12*a12*a12);
+
+  const CFreal mP      = -(this->m_coeffKp) * mPSig * sigmaMBarSq * (pR-pL) / (fa*rho12*a12*a12); 
   const CFreal M12     =  M4Plus + M4Minus + mP;
-  
-  const CFreal rhostar = MathFunctions::sigmoid(M12,0.0,Ksig)*rhoL + (1.0-MathFunctions::sigmoid(M12,0.0,Ksig))*rhoR;
+
+  const CFreal sigrho    = MathFunctions::sigmoid(M12,0.0,Ksig);
+  const CFreal Onesigrho = (1.0 - sigrho);
+
+  const CFreal rhostar = sigrho*rhoL + Onesigrho*rhoR;
   const CFreal mdot12  = M12*a12*rhostar;
   this->m_mflux12      = mdot12;
-  
+
   const CFreal aCritL  = std::sqrt(2.0*(gammaL-1.0)/(gammaL+1.0)*HL);
   const CFreal aCritR  = std::sqrt(2.0*(gammaR-1.0)/(gammaR+1.0)*HR);
-  
-  const CFreal asigL   = MathFunctions::sigmoid(aCritL,qnL,Ksig)*aCritL + (1.0 - MathFunctions::sigmoid(aCritL,qnL,Ksig))*qnL;
-  const CFreal asigR   = MathFunctions::sigmoid(aCritR,-qnR,Ksig)*aCritR - (1.0 - MathFunctions::sigmoid(aCritR,-qnR,Ksig))*qnR;
-  
-  const CFreal ahatL   = aCritL*aCritL/std::max(aCritL,qnL); 
-  const CFreal ahatR   = aCritR*aCritR/std::max(aCritR,-qnR); 
-  
-  const CFreal sigmoid = MathFunctions::sigmoid(mdot12,0.0,Ksig);
-  const CFreal alpha   = (3.0/16.0) * (-4.0 + 5.0*fa*fa);
 
-  const CFreal P5Plus = (std::abs(ML) >= 1.0) ? 
+  const CFreal aCritLsig    =  MathFunctions::sigmoid(aCritL,qnL,Ksig);
+  const CFreal OneaCritLsig = (1.0 - aCritLsig);
+  const CFreal aCritRsig    =  MathFunctions::sigmoid(aCritR,-qnR,Ksig);
+  const CFreal OneaCritRsig = -(1.0 - aCritRsig);
+
+  const CFreal asigL   = aCritLsig*aCritL + (1.0 - aCritLsig)*qnL;
+  const CFreal asigR   = aCritRsig*aCritR - (1.0 - aCritRsig)*qnR;
+
+  const CFreal ahatL   = aCritL*aCritL/std::max(aCritL,qnL);
+  const CFreal ahatR   = aCritR*aCritR/std::max(aCritR,-qnR);
+
+
+  const CFreal sigmoid    = MathFunctions::sigmoid(mdot12,0.0,Ksig);
+  const CFreal Onesigmoid = (1.0-sigmoid);
+  const CFreal alpha      = (3.0/16.0) * (-4.0 + 5.0*fa*fa);
+
+  const CFreal P5Plus = (std::abs(ML) >= 1.0) ?
     this->mach1Plus(ML)/ML :
     this->mach2Plus(ML)*((2.0-ML)-16.*alpha*ML*this->mach2Min(ML));
   m_P5Plus = P5Plus;
 
-  const CFreal P5Minus = (std::abs(MR) >= 1.0) ? 
+  const CFreal P5Minus = (std::abs(MR) >= 1.0) ?
     this->mach1Min(MR)/MR :
     this->mach2Min(MR)*((-2.0-MR)+16.*alpha*MR*this->mach2Plus(MR));
   m_P5Minus = P5Minus;
@@ -237,536 +266,953 @@ void AUSMPlusUpFlux<UPDATEVAR>::ComputedFluxdVar(CFuint iVar, RealMatrix& JacobM
 
   this->m_p12 = P5Plus*pL + P5Minus*pR + pu;
 
-  const CFreal drho12dVar   = 0.5*(m_drhoLdVar+ m_drhoRdVar);
-  const CFreal drhostardVar = MathFunctions::sigmoid(M12,0,Ksig)*m_drhoLdVar + (1.0 - MathFunctions::sigmoid(M12,0.0,Ksig))*m_drhoRdVar;
-  
-  const CFreal daCritLdVar  = std::sqrt((gammaL-1.0)/(2.0*HL*(gammaL+1.0)))*m_dhLdVar;
-  const CFreal daCritRdVar  = std::sqrt((gammaR-1.0)/(2.0*HR*(gammaR+1.0)))*m_dhRdVar;
-    
-  const CFreal dasigLdVar   = MathFunctions::sigmoid(aCritL,qnL,Ksig)*daCritLdVar + (1.0 - MathFunctions::sigmoid(aCritL,qnL,Ksig))*m_dqnLdVar;
-  const CFreal dasigRdVar   = MathFunctions::sigmoid(aCritR,-qnR,Ksig)*daCritRdVar - (1.0 - MathFunctions::sigmoid(aCritR,-qnR,Ksig))*m_dqnRdVar;
-    
-  /// da12dVar ---------------------------------------------
-  const CFreal da12dVar     = (1.0 - MathFunctions::sigmoid(ahatL,ahatR,Ksig))
-                                *(2.0*aCritL/asigL*daCritLdVar - aCritL*aCritL/(asigL*asigL)*dasigLdVar)
-                              + MathFunctions::sigmoid(ahatL,ahatR,Ksig)
-                                *(2.0*aCritR/asigR*daCritRdVar - aCritR*aCritR/(asigR*asigR)*dasigRdVar);
-  
-  const CFreal dMLdVar      = 1.0/a12*m_dqnLdVar - qnL/(a12*a12)*da12dVar;
-  const CFreal dMRdVar      = 1.0/a12*m_dqnRdVar - qnR/(a12*a12)*da12dVar;
-  
-  const CFreal dM4PLusdVar  = (std::abs(ML)>=1.0) ? 0.5*(1. + MathFunctions::sign(ML))*dMLdVar : (0.5*(ML+1.) + 4.*beta*ML*(ML*ML-1.))*dMLdVar;
-  const CFreal dM4MinusdVar = (std::abs(MR)>=1.0) ? 0.5*(1. - MathFunctions::sign(MR))*dMRdVar : -(0.5*(MR-1.) + 4.*beta*MR*(MR*MR-1.))*dMRdVar;
-  
-  const CFreal dMBarSqdVar = ML*dMLdVar+MR*dMRdVar;
-  const CFreal dmZerodVar  = 0.5/mZero*sigMbarsqMinfsq*MathFunctions::sigmoid(1.0,sig2,Ksig)*dMBarSqdVar;
-  const CFreal dfadVar     = 2.0*(1.0-mZero)*dmZerodVar;  
-  
-  const CFreal dMpdVar     = -(this->m_coeffKp)*MathFunctions::sigmoid(1-(this->m_coeffSigma)*MBarSq,0.,Ksig)*(
-                                        (m_dpRdVar-m_dpLdVar)/(rho12*a12*a12)
-                                        -(pR-pL)/(rho12*rho12*a12*a12)*drho12dVar
-                                        -2.0*(pR-pL)/(rho12*a12*a12*a12)*da12dVar);
-  /// dM12dVar ---------------------------------------------
-  const CFreal dM12dVar    = dM4PLusdVar + dM4MinusdVar + dMpdVar;
-  
-  const CFreal dmdot12dVar = dM12dVar*a12*rhostar + M12*da12dVar*rhostar + M12*a12*drhostardVar;
-  
-  const CFreal dalphadVar  = 15.0/8.0*fa*dfadVar;
+  // global constants
+  const CFreal rhoa2       = fa*rho12*a12*a12;
+  const CFreal prho2a2     = -(pR - pL)/(fa*rho12*rho12*a12*a12);
+  const CFreal prhoa3      = -2.0*(pR - pL)/(fa*rho12*a12*a12*a12);
+  const CFreal prhoa2fa    = -(pR - pL)/(fa*fa*rho12*a12*a12);
 
-  const CFreal dP5PlusdVar = (std::abs(ML) >= 1.0 ) ? 0. :
-                            0.5*(10.0*alpha*ML*ML*ML*ML-(1.5+12.0*alpha)*ML*ML+1.5+2.0*alpha)*dMLdVar 
-                            + ML*(ML*ML-1)*(ML*ML-1)*dalphadVar;
-  const CFreal dP5MinusdVar = (std::abs(MR) >=1.0 ) ? 0. :
-                            -0.5*(10.0*alpha*MR*MR*MR*MR-(1.5+12.0*alpha)*MR*MR+1.5+2.0*alpha)*dMRdVar 
-                            - MR*(MR*MR-1)*(MR*MR-1)*dalphadVar;
+  const CFreal daCritLconst = std::sqrt((gammaL-1.0)/(2.0*(gammaL+1.0)*HL)); 
+  const CFreal daCritRconst = std::sqrt((gammaR-1.0)/(2.0*(gammaR+1.0)*HR)); 
+  const CFreal dahatCon1L   = 2.0*aCritL/asigL;
+  const CFreal dahatCon1R   = 2.0*aCritR/asigR;
+  const CFreal dahatCon2L   = - aCritL*aCritL/(asigL*asigL);
+  const CFreal dahatCon2R   = - aCritR*aCritR/(asigR*asigR);
+  const CFreal dahatSig     = MathFunctions::sigmoid(ahatL,ahatR,Ksig);
+  const CFreal OnedahatSig  = (1.0 - dahatSig);
 
-  const CFreal dpudVar = 0.5*this->m_coeffKu*(
-                       dP5PlusdVar*P5Minus*rho12*fa*a12*(qnR-qnL)
-                      +P5Plus*dP5MinusdVar*rho12*fa*a12*(qnR-qnL)
-                      +P5Plus*P5Minus*drho12dVar*fa*a12*(qnR-qnL)
-                      +P5Plus*P5Minus*rho12*dfadVar*a12*(qnR-qnL)
-                      +P5Plus*P5Minus*rho12*fa*da12dVar*(qnR-qnL)
-                      +P5Plus*P5Minus*rho12*fa*da12dVar*(m_dqnRdVar-m_dqnLdVar));
+  const CFreal dMCon        = 1.0/a12;
+  const CFreal dMConL       = - qnL/(a12*a12);
+  const CFreal dMConR       = - qnR/(a12*a12);
+  
+  const CFreal dmZeroCon    = 0.5/mZero*sigMbarsqMinfsq*MZeroSig*sigmaMBarSq;
+  const CFreal dfaCon       = 2.0*(1.0-mZero);
 
-  /// dp12dVar ----------------------------------------------
-  const CFreal dp12dVar = dP5PlusdVar*pL + P5Plus*m_dpLdVar + dP5MinusdVar*pR + P5Minus*m_dpRdVar + dpudVar;
+  const CFreal dM4Lsign     = MathFunctions::sign(ML);
+  const CFreal dM4Rsign     = MathFunctions::sign(MR);
+  const CFreal OnedM4Lsign  = 0.5*(1. + dM4Lsign);
+  const CFreal OnedM4Rsign  = 0.5*(1. - dM4Rsign);
+  const CFreal dM4Lsuper    = (0.5*(ML+1.) + 4.*beta*ML*(ML*ML-1.));
+  const CFreal dM4Rsuper    = -(0.5*(MR-1.) + 4.*beta*MR*(MR*MR-1.));
 
-  // JacobMatrix(0,iVar) = dmdot12dVar; //dmdot12dVar*1+ mdot12*0 + 0
-  // for (CFuint iDim = 0; iDim < nbDim; iDim++)
-  // {
-  //   JacobMatrix(iDim+1,iVar) = dmdot12dVar*(sigmoid*(*this->m_lData)[UPDATEVAR::PTERM::VX+iDim] + (1.0-sigmoid)*(*this->m_rData)[UPDATEVAR::PTERM::VX+iDim]) 
-  //               + mdot12*(sigmoid*m_dVLdVar[iDim] + (1.0-sigmoid)*m_dVRdVar[iDim]) + dp12dVar*normal[iDim];    //Final result
-  // }
-  // JacobMatrix(nbEq-1,iVar) = dmdot12dVar*( sigmoid*HL+(1.0-sigmoid)*HR ) + mdot12*( sigmoid*m_dhLdVar+(1.0-sigmoid)*m_dhRdVar );
- 
-  JacobMatrix(0,iVar) = dmdot12dVar; //dmdot12dVar*1+ mdot12*0 + 0
-  JacobMatrix(1,iVar) = dmdot12dVar*(sigmoid*(*this->m_lData)[UPDATEVAR::PTERM::VX] + (1.0-sigmoid)*(*this->m_rData)[UPDATEVAR::PTERM::VX]) 
-                + mdot12*(sigmoid*m_duLdVar + (1.0-sigmoid)*m_duRdVar) + dp12dVar*normal[0];
-  JacobMatrix(2,iVar) = dmdot12dVar*(sigmoid*(*this->m_lData)[UPDATEVAR::PTERM::VY] + (1.0-sigmoid)*(*this->m_rData)[UPDATEVAR::PTERM::VY]) 
-                + mdot12*(sigmoid*m_dvLdVar + (1.0-sigmoid)*m_dvRdVar) + dp12dVar*normal[1];
+  const CFreal a12rhostar   = a12*rhostar;  
+  const CFreal M12a12       = M12*a12;
+  const CFreal M12rhostar   = M12*rhostar;
+
+  const CFreal dalphaCon    = 15.0/8.0*fa;
+
+  const CFreal dP5Lconst1   = 0.5*(10.0*alpha*ML*ML*ML*ML-(1.5+12.0*alpha)*ML*ML+1.5+2.0*alpha);
+  const CFreal dP5Rconst1   = -0.5*(10.0*alpha*MR*MR*MR*MR-(1.5+12.0*alpha)*MR*MR+1.5+2.0*alpha);
+  const CFreal dP5Lconst2   = ML*(ML*ML-1)*(ML*ML-1);
+  const CFreal dP5Rconst2   = -MR*(MR*MR-1)*(MR*MR-1);
+
+  const CFreal pudP5Plus    = P5Minus * rho12 * fa * a12 * (qnR-qnL); 
+  const CFreal pudP5Minus   = P5Plus * rho12 * fa * a12 * (qnR-qnL);
+  const CFreal pudrho12     = P5Plus * P5Minus * fa * a12 * (qnR-qnL);
+  const CFreal pudfa        = P5Plus * P5Minus * rho12 * a12 * (qnR-qnL);
+  const CFreal puda12       = P5Plus * P5Minus * rho12 * fa * (qnR-qnL);
+  const CFreal pudqn        = P5Plus * P5Minus * rho12 * fa ; // dadVar in Payen
+  const CFreal dpuCon       = 0.5*this->m_coeffKu;
+
+  const CFreal Usigmoid     = sigmoid*UL + Onesigmoid*UR;
+  const CFreal Vsigmoid     = sigmoid*VL + Onesigmoid*VR;
+  const CFreal Wsigmoid     = sigmoid*WL + Onesigmoid*WR;
+  const CFreal Hsigmoid     = sigmoid*HL + Onesigmoid*HR;
+
+  // dFdp
+  const CFreal drhoLdp      = (side == LEFT) ? Mmass/(Rgas*TL) : 0.;
+  const CFreal drhoRdp      = (side == LEFT) ? 0. : Mmass/(Rgas*TR);
+  const CFreal dpLdp        = (side == LEFT) ? 1. : 0.;
+  const CFreal dpRdp        = (side == LEFT) ? 0. : 1.;
+  const CFreal dhLdp        = (side == LEFT) ? -gammaL*pL/((gammaL-1)*rhoL*rhoL) : 0.;
+  const CFreal dhRdp        = (side == LEFT) ? 0. : -gammaR*pR/((gammaR-1)*rhoR*rhoR);  
+
+  const CFreal drho12dp     = 0.5*(drhoLdp+ drhoRdp);
+  const CFreal drhostardp   = sigrho*drhoLdp + Onesigrho*drhoRdp;
+
+
+  const CFreal daCritLdp    = daCritLconst * dhLdp;
+  const CFreal daCritRdp    = daCritRconst * dhRdp;
+
+  const CFreal dasigLdp     = aCritLsig*daCritLdp;
+  const CFreal dasigRdp     = aCritRsig*daCritRdp;
+
+  const CFreal dahatLdp     = (dahatCon1L*daCritLdp + dahatCon2L*dasigLdp);
+  const CFreal dahatRdp     = (dahatCon1R*daCritRdp + dahatCon2R*dasigRdp);
+
+  const CFreal da12dp       = OnedahatSig*dahatLdp + dahatSig*dahatRdp; // da12dp
+
+  const CFreal dMLdp        = dMConL*da12dp;
+  const CFreal dMRdp        = dMConR*da12dp;
+
+  const CFreal dMBarSqdp    = ML*dMLdp+MR*dMRdp;
+  const CFreal dmZerodp     = dmZeroCon*dMBarSqdp;  
+  const CFreal dfadp        = dfaCon*dmZerodp;
+
+  const CFreal dM4PLusdp    = (std::abs(ML)>=1.0) ? OnedM4Lsign*dMLdp : dM4Lsuper*dMLdp;
+  const CFreal dM4Minusdp   = (std::abs(MR)>=1.0) ? OnedM4Rsign*dMRdp : dM4Rsuper*dMRdp;
+
+  const CFreal dMpdpdp      = (dpRdp - dpLdp)/rhoa2;
+  const CFreal dMpdpdrho    = prho2a2*drho12dp;
+  const CFreal dMpdpda      = prhoa3*da12dp;
+  const CFreal dMpdpdfa     = prhoa2fa*dfadp;
+  const CFreal dMpdp        = dMpCon*(dMpdpdp + dMpdpdrho + dMpdpda + dMpdpdfa);
+
+  const CFreal dM12dp       = dM4PLusdp + dM4Minusdp + dMpdp; // dM12dp
+
+  const CFreal dmdot12dp    = dM12dp*a12rhostar +M12a12*drhostardp + M12rhostar*da12dp; // dmot12dp
+
+  const CFreal dalphadp     = dalphaCon*dfadp;
+
+  const CFreal dP5Plusdp    = (std::abs(ML) >= 1.0 ) ? 0. : dP5Lconst1*dMLdp + dP5Lconst2*dalphadp;
+  const CFreal dP5Minusdp   = (std::abs(MR) >= 1.0 ) ? 0. : dP5Rconst1*dMRdp + dP5Rconst2*dalphadp;
+
+  const CFreal dpudpdP5Plus  = pudP5Plus * dP5Plusdp;
+  const CFreal dpudpdP5Minus = pudP5Minus * dP5Minusdp;
+  const CFreal dpudpdrho     = pudrho12 * drho12dp;
+  const CFreal dpudpdfa      = pudfa * dfadp;
+  const CFreal dpudpda       = puda12 * da12dp;
+  const CFreal dpudpdqn      = 0.0;
+
+  const CFreal dpudp         = dpuCon*(dpudpdP5Plus + dpudpdP5Minus + dpudpdrho + dpudpdfa + dpudpda + dpudpdqn);
+
+
+  const CFreal dp12dp        = dP5Plusdp*pL + P5Plus*dpLdp + dP5Minusdp*pR + P5Minus*dpRdp + dpudp; // dp12dp
+
+
+
+  JacobMatrix(0,0)          = dmdot12dp; //???????
+  JacobMatrix(1,0)          = dmdot12dp*Usigmoid + dp12dp*normal[0];
+
+  JacobMatrix(2,0)          = dmdot12dp*Vsigmoid + dp12dp*normal[1];
+
   if (nbDim==3){
-  JacobMatrix(3,iVar) = dmdot12dVar*(sigmoid*(*this->m_lData)[UPDATEVAR::PTERM::VZ] + (1.0-sigmoid)*(*this->m_rData)[UPDATEVAR::PTERM::VZ]) 
-                + mdot12*(sigmoid*m_dwLdVar + (1.0-sigmoid)*m_dwRdVar) + dp12dVar*normal[2];
+  JacobMatrix(3,0)          = dmdot12dp*Wsigmoid + dp12dp*normal[2];
   }
-  JacobMatrix(nbEq-1,iVar) = dmdot12dVar*( sigmoid*HL+(1.0-sigmoid)*HR ) + mdot12*( sigmoid*m_dhLdVar+(1.0-sigmoid)*m_dhRdVar );
 
-  CFLog(VERBOSE," AUSMPlusUpFlux::ComputedFluxdVar  END \n");
+  JacobMatrix(nbEq-1,0)     = dmdot12dp*Hsigmoid;
 
+
+  // dFdu
+  const CFreal dqnLdu       = (side == LEFT) ? normal[0] : 0.;
+  const CFreal dqnRdu       = (side == LEFT) ? 0. : normal[0];
+  const CFreal dhLdu        = (side == LEFT) ? UL: 0.;
+  const CFreal dhRdu        = (side == LEFT) ? 0. : UR;
+  const CFreal duLdu        = (side == LEFT) ? 1. : 0.;
+  const CFreal duRdu        = (side == LEFT) ? 0. : 1.;
+
+
+
+  const CFreal daCritLdu    = daCritLconst * dhLdu;
+  const CFreal daCritRdu    = daCritRconst * dhRdu;
+
+  const CFreal dasigLdu     = aCritLsig*daCritLdu + OneaCritLsig*dqnLdu;
+  const CFreal dasigRdu     = aCritRsig*daCritRdu + OneaCritRsig*dqnRdu;
+
+  const CFreal dahatLdu     = (dahatCon1L*daCritLdu + dahatCon2L*dasigLdu);
+  const CFreal dahatRdu     = (dahatCon1R*daCritRdu + dahatCon2R*dasigRdu);
+
+  const CFreal da12du       = OnedahatSig*dahatLdu + dahatSig*dahatRdu; // da12du
+
+  const CFreal dMLdu        = dMCon*dqnLdu + dMConL*da12du;
+  const CFreal dMRdu        = dMCon*dqnRdu + dMConR*da12du;
+
+  const CFreal dMBarSqdu    = ML*dMLdu+MR*dMRdu;
+  const CFreal dmZerodu     = dmZeroCon*dMBarSqdu;  
+  const CFreal dfadu        = dfaCon*dmZerodu;
+
+  const CFreal dM4PLusdu    = (std::abs(ML)>=1.0) ? OnedM4Lsign*dMLdu : dM4Lsuper*dMLdu;
+  const CFreal dM4Minusdu   = (std::abs(MR)>=1.0) ? OnedM4Rsign*dMRdu : dM4Rsuper*dMRdu;
+
+  const CFreal dMpduda      = prhoa3*da12du;
+  const CFreal dMpdudfa     = prhoa2fa*dfadu;
+  const CFreal dMpdu        = dMpCon*(dMpduda + dMpdudfa);
+
+  const CFreal dM12du       = dM4PLusdu + dM4Minusdu + dMpdu; // dM12du
+
+  const CFreal dmdot12du    = dM12du*a12rhostar + M12rhostar*da12du; //drho12du=0 drhostardu=0 -- dmot12du
+
+  const CFreal dalphadu     = dalphaCon*dfadu;
+
+  const CFreal dP5Plusdu    = (std::abs(ML) >= 1.0 ) ? 0. : dP5Lconst1*dMLdu + dP5Lconst2*dalphadu;
+  const CFreal dP5Minusdu   = (std::abs(MR) >= 1.0 ) ? 0. : dP5Rconst1*dMRdu + dP5Rconst2*dalphadu;
+
+  const CFreal dpududP5Plus  = pudP5Plus * dP5Plusdu;
+  const CFreal dpududP5Minus = pudP5Minus * dP5Minusdu;
+  const CFreal dpududrho     = 0.0; // drho12du=0
+  const CFreal dpududfa      = pudfa * dfadu;
+  const CFreal dpududa       = puda12 * da12du;
+  const CFreal dpududqn      = pudqn * da12du * (dqnRdu-dqnLdu);
+
+  const CFreal dpudu         = dpuCon*(dpududP5Plus + dpududP5Minus + dpududrho + dpududfa + dpududa + dpududqn);
+
+  const CFreal dp12du        = dP5Plusdu*pL + dP5Minusdu*pR + dpudu; // dpRdu=dpLdu=0 -- dp12du
+
+  JacobMatrix(0,1)        = dmdot12du; //dmdot12dVar*1+ mdot12*0 + 0
+  JacobMatrix(1,1)        = dmdot12du*Usigmoid + mdot12*(sigmoid*duLdu + Onesigmoid*duRdu) + dp12du*normal[0];
+  JacobMatrix(2,1)        = dmdot12du*Vsigmoid + dp12du*normal[1];
+
+  if (nbDim==3)  {
+  JacobMatrix(3,1)        = dmdot12du*Wsigmoid + dp12du*normal[2];
+}
+
+  JacobMatrix(nbEq-1,1)   = dmdot12du*Hsigmoid + mdot12*(sigmoid*dhLdu + Onesigmoid*dhRdu);
+
+
+
+  // dFdv
+  const CFreal dqnLdv        = (side == LEFT) ? normal[1] : 0.;
+  const CFreal dqnRdv        = (side == LEFT) ? 0. : normal[1];
+  const CFreal dhLdv         = (side == LEFT) ? VL : 0.;
+  const CFreal dhRdv         = (side == LEFT) ? 0. : VR;
+  const CFreal dvLdv         = (side == LEFT) ? 1. : 0.;
+  const CFreal dvRdv         = (side == LEFT) ? 0. : 1.;
+
+
+
+  const CFreal daCritLdv     = daCritLconst * dhLdv;
+  const CFreal daCritRdv     = daCritRconst * dhRdv;
+
+  const CFreal dasigLdv      = aCritLsig*daCritLdv + OneaCritLsig*dqnLdv;
+  const CFreal dasigRdv      = aCritRsig*daCritRdv + OneaCritRsig*dqnRdv;
+
+  const CFreal dahatLdv      = (dahatCon1L*daCritLdv + dahatCon2L*dasigLdv);
+  const CFreal dahatRdv      = (dahatCon1R*daCritRdv + dahatCon2R*dasigRdv);
+
+  const CFreal da12dv        = OnedahatSig*dahatLdv + dahatSig*dahatRdv; // da12dv
+
+  const CFreal dMLdv         = dMCon*dqnLdv + dMConL*da12dv;
+  const CFreal dMRdv         = dMCon*dqnRdv + dMConR*da12dv;
+
+  const CFreal dMBarSqdv     = ML*dMLdv+MR*dMRdv;  
+  const CFreal dmZerodv      = dmZeroCon*dMBarSqdv;
+  const CFreal dfadv         = dfaCon*dmZerodv;
+
+  const CFreal dM4PLusdv     = (std::abs(ML)>=1.0) ? OnedM4Lsign*dMLdv : dM4Lsuper*dMLdv;
+  const CFreal dM4Minusdv    = (std::abs(MR)>=1.0) ? OnedM4Rsign*dMRdv : dM4Rsuper*dMRdv;
+
+  const CFreal dMpdvda       = prhoa3*da12dv;
+  const CFreal dMpdvdfa      = prhoa2fa*dfadv;
+  const CFreal dMpdv         = dMpCon*(dMpdvda + dMpdvdfa);
+
+  const CFreal dM12dv        = dM4PLusdv + dM4Minusdv + dMpdv; // dM12dv
+
+  const CFreal dmdot12dv     = dM12dv*a12rhostar + M12rhostar*da12dv; //drho12du=0 drhostardu=0 -- dmdot12dv
+
+  const CFreal dalphadv      = dalphaCon*dfadv;
+
+  const CFreal dP5Plusdv     = (std::abs(ML) >= 1.0 ) ? 0. : dP5Lconst1*dMLdv + dP5Lconst2*dalphadv;
+  const CFreal dP5Minusdv    = (std::abs(MR) >= 1.0 ) ? 0. : dP5Rconst1*dMRdv + dP5Rconst2*dalphadv;
+
+  const CFreal dpudvdP5Plus  = pudP5Plus * dP5Plusdv;              
+  const CFreal dpudvdP5Minus = pudP5Minus * dP5Minusdv;
+  const CFreal dpudvdrho     = 0.0; // drho12du=0
+  const CFreal dpudvdfa      = pudfa * dfadv;
+  const CFreal dpudvda       = puda12 * da12dv;
+  const CFreal dpudvdqn      = pudqn * da12dv * (dqnRdv-dqnLdv);
+
+  const CFreal dpudv         = dpuCon*(dpudvdP5Plus + dpudvdP5Minus + dpudvdrho + dpudvdfa + dpudvda + dpudvdqn);
+
+  const CFreal dp12dv        = dP5Plusdv*pL + dP5Minusdv*pR + dpudv; // dpRdv=dpLdv=0 -- dp12dv
+
+  JacobMatrix(0,2)        = dmdot12dv; //dmdot12dVar*1+ mdot12*0 + 0
+  JacobMatrix(1,2)        = dmdot12dv*Usigmoid + dp12dv*normal[0];
+  JacobMatrix(2,2)        = dmdot12dv*Vsigmoid + mdot12*(sigmoid*dvLdv + Onesigmoid*dvRdv) +dp12dv*normal[1];
+
+  if (nbDim==3)  {
+  JacobMatrix(3,2)        = dmdot12dv*Wsigmoid + dp12dv*normal[2];
+}
+
+  JacobMatrix(nbEq-1,2)   = dmdot12dv*Hsigmoid + mdot12*(sigmoid*dhLdv + Onesigmoid*dhRdv);
+
+
+
+  // dFdw
+  if (nbDim==3) {
+
+  const CFreal dqnLdw   = (side == LEFT) ? normal[2] : 0.;
+  const CFreal dqnRdw   = (side == LEFT) ? 0. : normal[2];
+  const CFreal dhLdw    = (side == LEFT) ? WL : 0.;
+  const CFreal dhRdw    = (side == LEFT) ? 0. : WR;
+  const CFreal dwLdw    = (side == LEFT) ? 1. : 0.;
+  const CFreal dwRdw    = (side == LEFT) ? 0. : 1.;
+
+
+
+  const CFreal daCritLdw     = daCritLconst * dhLdw;
+  const CFreal daCritRdw     = daCritRconst * dhRdw;
+
+  const CFreal dasigLdw      = aCritLsig*daCritLdw + OneaCritLsig*dqnLdw;
+  const CFreal dasigRdw      = aCritRsig*daCritRdw + OneaCritRsig*dqnRdw;
+
+  const CFreal dahatLdw      = (dahatCon1L*daCritLdw + dahatCon2L*dasigLdw);
+  const CFreal dahatRdw      = (dahatCon1R*daCritRdw + dahatCon2R*dasigRdw);
+
+  const CFreal da12dw        = OnedahatSig*dahatLdw + dahatSig*dahatRdw; // da12dw
+
+  const CFreal dMLdw         = dMCon*dqnLdw + dMConL*da12dw;
+  const CFreal dMRdw         = dMCon*dqnRdw + dMConR*da12dw;
+ 
+  const CFreal dMBarSqdw     = ML*dMLdw+MR*dMRdw;  
+  const CFreal dmZerodw      = dmZeroCon*dMBarSqdw;
+  const CFreal dfadw         = dfaCon*dmZerodw;
+
+  const CFreal dM4PLusdw     = (std::abs(ML)>=1.0) ? OnedM4Lsign*dMLdw : dM4Lsuper*dMLdw;
+  const CFreal dM4Minusdw    = (std::abs(MR)>=1.0) ? OnedM4Rsign*dMRdw : dM4Rsuper*dMRdw;
+
+  const CFreal dMpdwda       = prhoa3*da12dw;
+  const CFreal dMpdwdfa      = prhoa2fa*dfadw;
+  const CFreal dMpdw         = dMpCon*(dMpdwda + dMpdwdfa);
+
+  const CFreal dM12dw        = dM4PLusdw + dM4Minusdw + dMpdw; // dM12dw
+
+  const CFreal dmdot12dw     = dM12dw*a12rhostar + M12rhostar*da12dw; //drho12du=0 drhostardu=0 --dmdot12dw
+
+  const CFreal dalphadw      = dalphaCon*dfadw;
+
+  const CFreal dP5Plusdw     = (std::abs(ML) >= 1.0 ) ? 0. : dP5Lconst1*dMLdw + dP5Lconst2*dalphadw;
+  const CFreal dP5Minusdw    = (std::abs(MR) >= 1.0 ) ? 0. : dP5Rconst1*dMRdw + dP5Rconst2*dalphadw;
+
+  const CFreal dpudwdP5Plus  = pudP5Plus * dP5Plusdw;   
+  const CFreal dpudwdP5Minus = pudP5Minus * dP5Minusdw;
+  const CFreal dpudwdrho     = 0.0; // drho12dw=0
+  const CFreal dpudwdfa      = pudfa * dfadw;
+  const CFreal dpudwda       = puda12 * da12dw;
+  const CFreal dpudwdqn      = pudqn * da12dw * (dqnRdw-dqnLdw);
+
+  const CFreal dpudw         = dpuCon*(dpudwdP5Plus + dpudwdP5Minus + dpudwdrho + dpudwdfa + dpudwda + dpudwdqn);
+
+  const CFreal dp12dw        = dP5Plusdw*pL + dP5Minusdw*pR + dpudw; // dpRdw=dpLdw=0 -- dp12dw
+
+  JacobMatrix(0,3)        = dmdot12dw; //dmdot12dVar*1+ mdot12*0 + 0
+  JacobMatrix(1,3)        = dmdot12dw*Usigmoid + dp12dw*normal[0];
+  JacobMatrix(2,3)        = dmdot12dw*Vsigmoid + dp12dw*normal[1];
+
+  if (nbDim==3)  {
+  JacobMatrix(3,3)        = dmdot12dw*Wsigmoid + mdot12*(sigmoid*dwLdw + Onesigmoid*dwRdw) + dp12dw*normal[2];
+}
+
+  JacobMatrix(nbEq-1,3)   = dmdot12dw*Hsigmoid + mdot12*(sigmoid*dhLdw + Onesigmoid*dhRdw);
+
+
+} 
+
+  // dFdT
+  const CFreal drhoLdT  = (side == LEFT) ? -Mmass*pL/(Rgas*TL*TL) : 0.;
+  const CFreal drhoRdT  = (side == LEFT) ? 0. : -Mmass*pR/(Rgas*TR*TR);
+  const CFreal dhLdT    = (side == LEFT) ? gammaL/(rhoL*(gammaL-1)) : 0.;
+  const CFreal dhRdT    = (side == LEFT) ? 0. : gammaR/(rhoR*(gammaR-1));
+
+
+
+  const CFreal drho12dT     = 0.5*(drhoLdT+ drhoRdT);
+  const CFreal drhostardT   = sigrho*drhoLdT + Onesigrho*drhoRdT;
+
+  const CFreal daCritLdT    = daCritLconst * dhLdT;
+  const CFreal daCritRdT    = daCritRconst * dhRdT;
+
+  const CFreal dasigLdT     = aCritLsig*daCritLdT;
+  const CFreal dasigRdT     = aCritRsig*daCritRdT;
+
+  const CFreal dahatLdT     = (dahatCon1L*daCritLdT + dahatCon2L*dasigLdT);
+  const CFreal dahatRdT     = (dahatCon1R*daCritRdT + dahatCon2R*dasigRdT);
+
+  const CFreal da12dT       = OnedahatSig*dahatLdT + dahatSig*dahatRdT; // da12dT
+
+  const CFreal dMLdT        = dMConL*da12dT;
+  const CFreal dMRdT        = dMConR*da12dT;
+
+  const CFreal dMBarSqdT    = ML*dMLdT+MR*dMRdT;  
+  const CFreal dmZerodT     = dmZeroCon*dMBarSqdT;
+  const CFreal dfadT        = dfaCon*dmZerodT;
+
+  const CFreal dM4PLusdT    = (std::abs(ML)>=1.0) ? OnedM4Lsign*dMLdT : dM4Lsuper*dMLdT;
+  const CFreal dM4MinusdT   = (std::abs(MR)>=1.0) ? OnedM4Rsign*dMRdT : dM4Rsuper*dMRdT;
+
+  const CFreal dMpdTda      = prhoa3*da12dT;
+  const CFreal dMpdTdfa     = prhoa2fa*dfadT;
+  const CFreal dMpdT        = dMpCon*(dMpdTda + dMpdTdfa);
+
+  const CFreal dM12dT       = dM4PLusdT + dM4MinusdT + dMpdT; // dM12dT
+
+  const CFreal dmdot12dT    = dM12dT*a12rhostar + M12rhostar*da12dT + M12a12*drhostardT; // dmdot12dT    
+
+  const CFreal dalphadT     = dalphaCon*dfadT;
+
+  const CFreal dP5PlusdT    = (std::abs(ML) >= 1.0 ) ? 0. : dP5Lconst1*dMLdT + dP5Lconst2*dalphadT;
+  const CFreal dP5MinusdT   = (std::abs(MR) >= 1.0 ) ? 0. : dP5Rconst1*dMRdT + dP5Rconst2*dalphadT;
+
+  const CFreal dpudTdP5Plus  = pudP5Plus * dP5PlusdT;       
+  const CFreal dpudTdP5Minus = pudP5Minus * dP5MinusdT;
+  const CFreal dpudTdrho     = pudrho12 * drho12dT;
+  const CFreal dpudTdfa      = pudfa * dfadT;
+  const CFreal dpudTda       = puda12 * da12dT;
+  const CFreal dpudTdqn      = 0.0; // dqndT=0
+
+  const CFreal dpudT         = dpuCon*(dpudTdP5Plus + dpudTdP5Minus + dpudTdrho + dpudTdfa + dpudTda + dpudTdqn);
+
+  const CFreal dp12dT        = dP5PlusdT*pL + dP5MinusdT*pR + dpudT; // dp12dT
+
+
+  JacobMatrix(0,nbEq-1)        = dmdot12dT;
+  JacobMatrix(1,nbEq-1)        = dmdot12dT*Usigmoid + dp12dT*normal[0];
+  JacobMatrix(2,nbEq-1)        = dmdot12dT*Vsigmoid + dp12dT*normal[1];
+
+  if (nbDim==3)  {
+  JacobMatrix(3,nbEq-1)        = dmdot12dT*Wsigmoid + dp12dT*normal[2];
+}
+
+  JacobMatrix(nbEq-1,nbEq-1)   = dmdot12dT*Hsigmoid + mdot12*(sigmoid*dhLdT + Onesigmoid*dhRdT);
+
+
+  CFLog(DEBUG_MIN," AUSMPlusUpFlux::ComputedFluxdPvt  END \n");
+}
+
+
+/////////////////////////////////////////////////////////////////////////////
+
+template<class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::ComputedFluxdCons(CFuint side, RealMatrix& JacobMatrix) // ?????????????????? For Conservative set
+
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools; //importing MathFunctions::sigmoidal and MathFunctions::sign functions
+  CFLog(DEBUG_MIN," AUSMPlusUpFlux::ComputedFluxdCons  START \n");
+
+  // Getting state value
+  const CFreal rhoL        = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR        = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
+  const CFreal HL          = (*this->m_lData)[UPDATEVAR::PTERM::H];
+  const CFreal HR          = (*this->m_rData)[UPDATEVAR::PTERM::H];
+  const CFreal EL          = (*this->m_lData)[UPDATEVAR::PTERM::E];
+  const CFreal ER          = (*this->m_rData)[UPDATEVAR::PTERM::E];
+  const CFreal gammaL      = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaR      = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
+  const CFreal pL          = (*this->m_lData)[UPDATEVAR::PTERM::P];
+  const CFreal pR          = (*this->m_rData)[UPDATEVAR::PTERM::P];
+  const CFreal UL          = (*this->m_lData)[UPDATEVAR::PTERM::VX];
+  const CFreal UR          = (*this->m_rData)[UPDATEVAR::PTERM::VX];
+  const CFreal VL          = (*this->m_lData)[UPDATEVAR::PTERM::VY];
+  const CFreal VR          = (*this->m_rData)[UPDATEVAR::PTERM::VY];
+  const CFreal WL          = (*this->m_lData)[UPDATEVAR::PTERM::VZ];
+  const CFreal WR          = (*this->m_rData)[UPDATEVAR::PTERM::VZ];
+  const CFreal beta        = m_beta;
+  const CFreal qnL         = this->m_unL;
+  const CFreal qnR         = this->m_unR;
+  const CFreal Ksig        = this->m_coeffSigmoid;
+  const CFreal sigma       = this->m_coeffSigma;
+  const RealVector& normal = this->getMethodData().getUnitNormal();
+  const CFuint nbDim       = PhysicalModelStack::getActive()->getDim();
+  const CFuint nbEq        = PhysicalModelStack::getActive()->getNbEq();
+  cf_assert(nbEq==nbDim+2); // Checking that the vector has the right size
+
+  
+  this->computeSoundSpeedForJacobian();
+  const CFreal a12 = this->m_a12;
+
+  const CFreal rho12  = 0.5*(rhoL + rhoR);
+  this->m_mL          = this->m_unL/this->m_a12;
+  this->m_mR          = this->m_unR/this->m_a12;
+  const CFreal ML     = this->m_mL;
+  const CFreal MR     = this->m_mR;
+
+  const CFreal mInf    = correctMachInf(this->m_machInf);
+  const CFreal MBarSq  = 0.5*(ML*ML+MR*MR);
+  const CFreal MinfSq  = mInf*mInf;
+
+  const CFreal sigMbarsqMinfsq = MathFunctions::sigmoid(MBarSq,MinfSq,Ksig);
+  const CFreal sig2            = sigMbarsqMinfsq*MBarSq + (1.0-sigMbarsqMinfsq )*MinfSq; // max(MBarSq,MinfSq)
+  const CFreal MZeroSig        = MathFunctions::sigmoid (1.0,sig2,Ksig);
+  const CFreal mZero           = std::sqrt( (1-MZeroSig)*1.0 + MZeroSig*sig2); //sqrt(min(1,max(MBarSq,MinfSq)))
+  cf_assert(mZero <= 1.0);
+  const CFreal fa      = mZero * (2.0-mZero);
+  m_fa = fa;
+
+  const CFreal sigmaMBarSq = 1.0 - sigma*MBarSq;
+  const CFreal mPSig       = MathFunctions::sigmoid(sigmaMBarSq,0.0,Ksig);
+  const CFreal dMpCon      = -(this->m_coeffKp) * mPSig;
+
+  const CFreal M4Plus  = (std::abs(ML) >= 1.0) ? this->mach1Plus(ML) : this->mach2Plus(ML)*(1.0 - 16.*beta*this->mach2Min(ML));
+  const CFreal M4Minus = (std::abs(MR) >= 1.0) ? this->mach1Min(MR)  : this->mach2Min(MR)*(1.0 + 16.*beta*this->mach2Plus(MR));
+
+  const CFreal mP      = -(this->m_coeffKp) * mPSig * (pR-pL) / (rho12*a12*a12); 
+  const CFreal M12     =  M4Plus + M4Minus + mP;
+
+  const CFreal sigrho    = MathFunctions::sigmoid(M12,0.0,Ksig);
+  const CFreal Onesigrho = (1.0 - sigrho);
+
+  const CFreal rhostar = sigrho*rhoL + Onesigrho*rhoR;
+  const CFreal mdot12  = M12*a12*rhostar;
+  this->m_mflux12      = mdot12;
+
+  const CFreal aCritL  = std::sqrt(2.0*(gammaL-1.0)/(gammaL+1.0)*HL);
+  const CFreal aCritR  = std::sqrt(2.0*(gammaR-1.0)/(gammaR+1.0)*HR);
+
+  const CFreal aCritLsig    =  MathFunctions::sigmoid(aCritL,qnL,Ksig);
+  const CFreal OneaCritLsig = (1.0 - aCritLsig);
+  const CFreal aCritRsig    =  MathFunctions::sigmoid(aCritR,-qnR,Ksig);
+  const CFreal OneaCritRsig = -(1.0 - aCritRsig);
+
+  const CFreal asigL   = aCritLsig*aCritL + (1.0 - aCritLsig)*qnL;
+  const CFreal asigR   = aCritRsig*aCritR - (1.0 - aCritRsig)*qnR;
+
+  const CFreal ahatL   = aCritL*aCritL/std::max(aCritL,qnL);
+  const CFreal ahatR   = aCritR*aCritR/std::max(aCritR,-qnR);
+
+
+  const CFreal sigmoid    = MathFunctions::sigmoid(mdot12,0.0,Ksig);
+  const CFreal Onesigmoid = (1.0-sigmoid);
+  const CFreal alpha      = (3.0/16.0) * (-4.0 + 5.0*fa*fa);
+
+  const CFreal P5Plus = (std::abs(ML) >= 1.0) ?
+    this->mach1Plus(ML)/ML :
+    this->mach2Plus(ML)*((2.0-ML)-16.*alpha*ML*this->mach2Min(ML));
+  m_P5Plus = P5Plus;
+
+  const CFreal P5Minus = (std::abs(MR) >= 1.0) ?
+    this->mach1Min(MR)/MR :
+    this->mach2Min(MR)*((-2.0-MR)+16.*alpha*MR*this->mach2Plus(MR));
+  m_P5Minus = P5Minus;
+
+  // new pressure interface for consistency
+  const CFreal pu = 0.5*this->m_coeffKu*P5Plus*P5Minus*rho12*fa*a12*(qnR-qnL);
+
+  this->m_p12 = P5Plus*pL + P5Minus*pR + pu;
+
+  // global constants
+  const CFreal rhoa2       = rho12*a12*a12;
+  const CFreal prho2a2     = (pR - pL)/(rho12*rho12*a12*a12);
+  const CFreal prhoa3      = -2.0*(pR - pL)/(rho12*a12*a12*a12);
+
+  const CFreal daCritLconst = std::sqrt((gammaL-1.0)/(2.0*(gammaL+1.0)*HL)); 
+  const CFreal daCritRconst = std::sqrt((gammaR-1.0)/(2.0*(gammaR+1.0)*HR)); 
+  const CFreal dahatCon1L   = 2.0*aCritL/asigL;
+  const CFreal dahatCon1R   = 2.0*aCritR/asigR;
+  const CFreal dahatCon2L   = - aCritL*aCritL/(asigL*asigL);
+  const CFreal dahatCon2R   = - aCritR*aCritR/(asigR*asigR);
+  const CFreal dahatSig     = MathFunctions::sigmoid(ahatL,ahatR,Ksig);
+  const CFreal OnedahatSig  = (1.0 - dahatSig);
+
+  const CFreal dMCon        = 1.0/a12;
+  const CFreal dMConL       = - qnL/(a12*a12);
+  const CFreal dMConR       = - qnR/(a12*a12);
+  
+  const CFreal dmZeroCon    = 0.5/mZero*sigMbarsqMinfsq*MZeroSig; 
+  const CFreal dfaCon       = 2.0*(1.0-mZero);
+
+  const CFreal dM4Lsign     = MathFunctions::sign(ML);
+  const CFreal dM4Rsign     = MathFunctions::sign(MR);
+  const CFreal OnedM4Lsign  = 0.5*(1. + dM4Lsign);
+  const CFreal OnedM4Rsign  = 0.5*(1. - dM4Rsign);
+  const CFreal dM4Lsuper    = (0.5*(ML+1.) + 4.*beta*ML*(ML*ML-1.));
+  const CFreal dM4Rsuper    = -(0.5*(MR-1.) + 4.*beta*MR*(MR*MR-1.));
+  
+  const CFreal a12rhostar   = a12*rhostar;  
+  const CFreal M12a12       = M12*a12;
+  const CFreal M12rhostar   = M12*rhostar;
+
+  const CFreal dalphaCon    = 15.0/8.0*fa;
+
+  const CFreal dP5Lconst1   = 0.5*(10.0*alpha*ML*ML*ML*ML-(1.5+12.0*alpha)*ML*ML+1.5+2.0*alpha);
+  const CFreal dP5Rconst1   = -0.5*(10.0*alpha*MR*MR*MR*MR-(1.5+12.0*alpha)*MR*MR+1.5+2.0*alpha);
+  const CFreal dP5Lconst2   = ML*(ML*ML-1)*(ML*ML-1);
+  const CFreal dP5Rconst2   = -MR*(MR*MR-1)*(MR*MR-1);
+
+  const CFreal pudP5Plus    = P5Minus * rho12 * fa * a12 * (qnR-qnL); 
+  const CFreal pudP5Minus   = P5Plus * rho12 * fa * a12 * (qnR-qnL);
+  const CFreal pudrho12     = P5Plus * P5Minus * fa * a12 * (qnR-qnL);
+  const CFreal pudfa        = P5Plus * P5Minus * rho12 * a12 * (qnR-qnL);
+  const CFreal puda12       = P5Plus * P5Minus * rho12 * fa * (qnR-qnL);
+  const CFreal pudqn        = P5Plus * P5Minus * rho12 * fa; // dadVar in Payen
+  const CFreal dpuCon       = 0.5*this->m_coeffKu;
+
+  const CFreal Usigmoid     = sigmoid*UL + Onesigmoid*UR;
+  const CFreal Vsigmoid     = sigmoid*VL + Onesigmoid*VR;
+  const CFreal Wsigmoid     = sigmoid*WL + Onesigmoid*WR;
+  const CFreal Hsigmoid     = sigmoid*HL + Onesigmoid*HR;
+  // dFdrho
+  const CFreal dqnLdrho     = (side == LEFT) ? -qnL/rhoL : 0.;
+  const CFreal dqnRdrho     = (side == LEFT) ? 0. : -qnR/rhoR;
+
+  CFreal VLsqrho;
+  CFreal VRsqrho;
+
+  if ( nbDim==3)
+  {
+  VLsqrho      = UL*UL + VL*VL + WL*WL;
+  VRsqrho      = UR*UR + VR*VR + WR*WR;
+  }
+  else
+  {
+  VLsqrho      = UL*UL + VL*VL;
+  VRsqrho      = UR*UR + VR*VR;
+  }
+
+  const CFreal dhLdrho      = (side == LEFT) ? -gammaL*EL/rhoL + (gammaL-1.)*VLsqrho/rhoL : 0.;
+  const CFreal dhRdrho      = (side == LEFT) ? 0. : -gammaR*ER/rhoR + (gammaR-1.)*VRsqrho/rhoR;
+  const CFreal drhoLdrho    = (side == LEFT) ? 1. : 0.;
+  const CFreal drhoRdrho    = (side == LEFT) ? 0. : 1.;
+  const CFreal dpLdrho      = (side == LEFT) ? 0.5*(gammaL-1.)*VLsqrho : 0.;
+  const CFreal dpRdrho      = (side == LEFT) ? 0. : 0.5*(gammaR-1.)*VRsqrho;
+
+  const CFreal duLdrho      = (side == LEFT) ? -UL/rhoL : 0.;
+  const CFreal duRdrho      = (side == LEFT) ? 0. : -UR/rhoR;
+  const CFreal dvLdrho      = (side == LEFT) ? -VL/rhoL : 0.;
+  const CFreal dvRdrho      = (side == LEFT) ? 0. : -VR/rhoR;
+
+  CFreal dwLdrho;
+  CFreal dwRdrho;
+
+  if ( nbDim==3)
+  {
+  dwLdrho      = (side == LEFT) ? -WL/rhoL : 0.;
+  dwRdrho      = (side == LEFT) ? 0. : -WR/rhoR;
+  }
+  else
+  {
+  dwLdrho      = 0.;
+  dwRdrho      = 0.;
+  }
+
+  const CFreal drho12drho   = 0.5*(drhoLdrho+ drhoRdrho);
+  const CFreal drhostardrho = sigrho*drhoLdrho + Onesigrho*drhoRdrho;
+
+  const CFreal daCritLdrho  = daCritLconst * dhLdrho;
+  const CFreal daCritRdrho  = daCritRconst * dhRdrho;
+
+  const CFreal dasigLdrho   = aCritLsig*daCritLdrho + OneaCritLsig*dqnLdrho;
+  const CFreal dasigRdrho   = aCritRsig*daCritRdrho + OneaCritRsig*dqnRdrho;
+
+  const CFreal dahatLdrho   = (dahatCon1L*daCritLdrho + dahatCon2L*dasigLdrho);
+  const CFreal dahatRdrho   = (dahatCon1R*daCritRdrho + dahatCon2R*dasigRdrho);
+
+  const CFreal da12drho     = OnedahatSig*dahatLdrho + dahatSig*dahatRdrho; // da12drho
+
+  const CFreal dMLdrho      = dMCon*dqnLdrho + dMConL*da12drho;
+  const CFreal dMRdrho      = dMCon*dqnRdrho + dMConR*da12drho;
+
+  const CFreal dMBarSqdrho  = ML*dMLdrho+MR*dMRdrho;
+  const CFreal dmZerodrho   = dmZeroCon*dMBarSqdrho; 
+  const CFreal dfadrho      = dfaCon*dmZerodrho;
+
+  const CFreal dM4PLusdrho  = (std::abs(ML)>=1.0) ? OnedM4Lsign*dMLdrho : dM4Lsuper*dMLdrho;
+  const CFreal dM4Minusdrho = (std::abs(MR)>=1.0) ? OnedM4Rsign*dMRdrho : dM4Rsuper*dMRdrho;
+
+  const CFreal dMpdrhodp    = (dpRdrho - dpLdrho)/rhoa2;
+  const CFreal dMpdrhodrho  = prho2a2*drho12drho;
+  const CFreal dMpdrhoda    = prhoa3*da12drho;
+  const CFreal dMpdrho      = dMpCon*(dMpdrhodp + dMpdrhodrho + dMpdrhoda);
+
+  const CFreal dM12drho     = dM4PLusdrho + dM4Minusdrho + dMpdrho; // dM12drho
+
+  const CFreal dmdot12drho  = dM12drho*a12rhostar + M12rhostar*da12drho + M12a12*drhostardrho; // dmot12du
+
+  const CFreal dalphadrho   = dalphaCon*dfadrho; 
+
+  const CFreal dP5Plusdrho  = (std::abs(ML) >= 1.0 ) ? 0. : dP5Lconst1*dMLdrho + dP5Lconst2*dalphadrho;
+  const CFreal dP5Minusdrho = (std::abs(MR) >= 1.0 ) ? 0. : dP5Rconst1*dMRdrho + dP5Rconst2*dalphadrho;
+
+  const CFreal dpudrhodP5Plus  = pudP5Plus * dP5Plusdrho; 
+  const CFreal dpudrhodP5Minus = pudP5Minus * dP5Minusdrho;
+  const CFreal dpudrhodrho     = pudrho12 * drho12drho;
+  const CFreal dpudrhodfa      = pudfa * dfadrho;
+  const CFreal dpudrhoda       = puda12 * da12drho;
+  const CFreal dpudrhodqn      = pudqn * da12drho * (dqnRdrho-dqnLdrho);
+
+  const CFreal dpudrho      = dpuCon*(dpudrhodP5Plus + dpudrhodP5Minus + dpudrhodrho + dpudrhodfa + dpudrhoda + dpudrhodqn);
+
+  const CFreal dp12drho     = dP5Plusdrho*pL + P5Plus*dpLdrho + dP5Minusdrho*pR + P5Minus*dpRdrho + dpudrho; // dp12du
+
+
+  JacobMatrix(0,0)         = dmdot12drho;
+  JacobMatrix(1,0)         = dmdot12drho*Usigmoid + mdot12*(sigmoid*duLdrho + Onesigmoid*duRdrho) + dp12drho*normal[0];
+  JacobMatrix(2,0)         = dmdot12drho*Vsigmoid + mdot12*(sigmoid*dvLdrho + Onesigmoid*dvRdrho) + dp12drho*normal[1];
+
+  if (nbDim==3){
+  JacobMatrix(3,0)         = dmdot12drho*Wsigmoid + mdot12*(sigmoid*dwLdrho + Onesigmoid*dwRdrho) + dp12drho*normal[2];
+}
+  JacobMatrix(nbEq-1,0)    = dmdot12drho*Hsigmoid + mdot12*(sigmoid*dhLdrho + Onesigmoid*dhRdrho);
+
+
+  // dFdrhoU
+  const CFreal dqnLdrhoU   = (side == LEFT) ? normal[0]/rhoL: 0.;
+  const CFreal dqnRdrhoU   = (side == LEFT) ? 0. : normal[0]/rhoR;
+  const CFreal dhLdrhoU    = (side == LEFT) ? -(gammaL-1.)*UL/rhoL: 0.;
+  const CFreal dhRdrhoU    = (side == LEFT) ? 0 : -(gammaR-1.)*UR/rhoR;
+  const CFreal dpLdrhoU    = (side == LEFT) ? -(gammaL-1.)*UL: 0.;
+  const CFreal dpRdrhoU    = (side == LEFT) ? 0. : -(gammaR-1.)*UR;
+  const CFreal duLdrhoU    = (side == LEFT) ? 1/rhoL : 0.;
+  const CFreal duRdrhoU    = (side == LEFT) ? 0. : 1/rhoR;
+
+
+
+  const CFreal daCritLdrhoU = daCritLconst * dhLdrhoU;
+  const CFreal daCritRdrhoU = daCritRconst * dhRdrhoU;
+
+  const CFreal dasigLdrhoU  = aCritLsig*daCritLdrhoU + OneaCritLsig*dqnLdrhoU;
+  const CFreal dasigRdrhoU  = aCritRsig*daCritRdrhoU + OneaCritRsig*dqnRdrhoU;
+
+  const CFreal dahatLdrhoU  = (dahatCon1L*daCritLdrhoU + dahatCon2L*dasigLdrhoU);
+  const CFreal dahatRdrhoU  = (dahatCon1R*daCritRdrhoU + dahatCon2R*dasigRdrhoU);
+
+  const CFreal da12drhoU    = OnedahatSig*dahatLdrhoU + dahatSig*dahatRdrhoU; // da12drhoU
+
+  const CFreal dMLdrhoU     = dMCon*dqnLdrhoU + dMConL*da12drhoU;
+  const CFreal dMRdrhoU     = dMCon*dqnRdrhoU + dMConR*da12drhoU;
+
+  const CFreal dMBarSqdrhoU = ML*dMLdrhoU+MR*dMRdrhoU;  
+  const CFreal dmZerodrhoU  = dmZeroCon*dMBarSqdrhoU;
+  const CFreal dfadrhoU     = dfaCon*dmZerodrhoU;
+
+  const CFreal dM4PLusdrhoU  = (std::abs(ML)>=1.0) ? OnedM4Lsign*dMLdrhoU : dM4Lsuper*dMLdrhoU;
+  const CFreal dM4MinusdrhoU = (std::abs(MR)>=1.0) ? OnedM4Rsign*dMRdrhoU : dM4Rsuper*dMRdrhoU;
+
+  const CFreal dMpdrhoUdp   = (dpRdrhoU - dpLdrhoU)/rhoa2;
+  const CFreal dMpdrhoUda   = prhoa3*da12drhoU;
+  const CFreal dMpdrhoU     = dMpCon*(dMpdrhoUdp + dMpdrhoUda);
+
+  const CFreal dM12drhoU    = dM4PLusdrhoU + dM4MinusdrhoU + dMpdrhoU; // dM12drhoU
+
+  const CFreal dmdot12drhoU = dM12drhoU*a12rhostar + M12rhostar*da12drhoU; //drho12drhoU=0 drhostardrhoU=0 -- dmot12drhoU
+
+  const CFreal dalphadrhoU  = dalphaCon*dfadrhoU; 
+
+  const CFreal dP5PlusdrhoU  = (std::abs(ML) >= 1.0 ) ? 0. : dP5Lconst1*dMLdrhoU + dP5Lconst2*dalphadrhoU;
+  const CFreal dP5MinusdrhoU = (std::abs(MR) >= 1.0 ) ? 0. : dP5Rconst1*dMRdrhoU + dP5Rconst2*dalphadrhoU;
+
+  const CFreal dpudrhoUdP5Plus  = pudP5Plus * dP5PlusdrhoU; 
+  const CFreal dpudrhoUdP5Minus = pudP5Minus * dP5MinusdrhoU;
+  const CFreal dpudrhoUdfa      = pudfa * dfadrhoU;
+  const CFreal dpudrhoUda       = puda12 * da12drhoU;
+  const CFreal dpudrhoUdqn      = pudqn * da12drhoU * (dqnRdrhoU-dqnLdrhoU);
+
+  const CFreal dpudrhoU     = dpuCon*(dpudrhoUdP5Plus + dpudrhoUdP5Minus + dpudrhoUdfa + dpudrhoUda + dpudrhoUdqn);
+
+  const CFreal dp12drhoU    = dP5PlusdrhoU*pL + P5Plus*dpLdrhoU + dP5MinusdrhoU*pR + P5Minus*dpRdrhoU + dpudrhoU; // dp12drhoU
+
+  JacobMatrix(0,1)   = dmdot12drhoU; //dmdot12dVar*1+ mdot12*0 + 0
+  JacobMatrix(1,1)   = dmdot12drhoU*Usigmoid + mdot12*(sigmoid*duLdrhoU + Onesigmoid*duRdrhoU) + dp12drhoU*normal[0];
+  JacobMatrix(2,1)   = dmdot12drhoU*Vsigmoid + dp12drhoU*normal[1];
+
+  if (nbDim==3)  {
+  JacobMatrix(3,1)   = dmdot12drhoU*Wsigmoid + dp12drhoU*normal[2];
+}
+  JacobMatrix(nbEq-1,1)   = dmdot12drhoU*Hsigmoid + mdot12*(sigmoid*dhLdrhoU + Onesigmoid*dhRdrhoU);
+
+
+
+  // dFdrhoV
+  const CFreal dqnLdrhoV   = (side == LEFT) ? normal[1]/rhoL: 0.;
+  const CFreal dqnRdrhoV   = (side == LEFT) ? 0. : normal[1]/rhoR;
+  const CFreal dhLdrhoV    = (side == LEFT) ? -(gammaL-1.)*VL/rhoL: 0.;
+  const CFreal dhRdrhoV    = (side == LEFT) ? 0 : -(gammaR-1.)*VR/rhoR;
+  const CFreal dpLdrhoV    = (side == LEFT) ? -(gammaL-1.)*VL: 0.;
+  const CFreal dpRdrhoV    = (side == LEFT) ? 0. : -(gammaR-1.)*VR;
+  const CFreal dvLdrhoV    = (side == LEFT) ? 1/rhoL : 0.;
+  const CFreal dvRdrhoV    = (side == LEFT) ? 0. : 1/rhoR;
+
+
+
+  const CFreal daCritLdrhoV = daCritLconst * dhLdrhoV;
+  const CFreal daCritRdrhoV = daCritRconst * dhRdrhoV;
+
+  const CFreal dasigLdrhoV  = aCritLsig*daCritLdrhoV + OneaCritLsig*dqnLdrhoV;
+  const CFreal dasigRdrhoV  = aCritRsig*daCritRdrhoV + OneaCritRsig*dqnRdrhoV;
+
+  const CFreal dahatLdrhoV  = (dahatCon1L*daCritLdrhoV + dahatCon2L*dasigLdrhoV);
+  const CFreal dahatRdrhoV  = (dahatCon1R*daCritRdrhoV + dahatCon2R*dasigRdrhoV);
+
+  const CFreal da12drhoV    = OnedahatSig*dahatLdrhoV + dahatSig*dahatRdrhoV; // da12drhoV
+
+  const CFreal dMLdrhoV     = dMCon*dqnLdrhoV + dMConL*da12drhoV;
+  const CFreal dMRdrhoV     = dMCon*dqnRdrhoV + dMConR*da12drhoV;
+
+  const CFreal dMBarSqdrhoV = ML*dMLdrhoV+MR*dMRdrhoV;  
+  const CFreal dmZerodrhoV  = dmZeroCon*dMBarSqdrhoV;
+  const CFreal dfadrhoV     = dfaCon*dmZerodrhoV;
+
+  const CFreal dM4PLusdrhoV  = (std::abs(ML)>=1.0) ? OnedM4Lsign*dMLdrhoV : dM4Lsuper*dMLdrhoV;
+  const CFreal dM4MinusdrhoV = (std::abs(MR)>=1.0) ? OnedM4Rsign*dMRdrhoV : dM4Rsuper*dMRdrhoV;
+
+  const CFreal dMpdrhoVdp   = (dpRdrhoV - dpLdrhoV)/rhoa2;
+  const CFreal dMpdrhoVda   = prhoa3*da12drhoV;
+  const CFreal dMpdrhoV     = dMpCon*(dMpdrhoVdp + dMpdrhoVda);
+
+  const CFreal dM12drhoV    = dM4PLusdrhoV + dM4MinusdrhoV + dMpdrhoV; // dM12drhoV
+
+  const CFreal dmdot12drhoV = dM12drhoV*a12rhostar + M12rhostar*da12drhoV; //drho12drhoV=0 drhostardrhoV=0 -- dmot12drhoV
+
+  const CFreal dalphadrhoV  = dalphaCon*dfadrhoV;
+
+  const CFreal dP5PlusdrhoV  = (std::abs(ML) >= 1.0 ) ? 0. : dP5Lconst1*dMLdrhoV + dP5Lconst2*dalphadrhoV;
+  const CFreal dP5MinusdrhoV = (std::abs(MR) >= 1.0 ) ? 0. : dP5Rconst1*dMRdrhoV + dP5Rconst2*dalphadrhoV;
+
+  const CFreal dpudrhoVdP5Plus  = pudP5Plus * dP5PlusdrhoV; 
+  const CFreal dpudrhoVdP5Minus = pudP5Minus * dP5MinusdrhoV;
+  const CFreal dpudrhoVdfa      = pudfa * dfadrhoV;
+  const CFreal dpudrhoVda       = puda12 * da12drhoV;
+  const CFreal dpudrhoVdqn      = pudqn * da12drhoV * (dqnRdrhoV-dqnLdrhoV);
+
+  const CFreal dpudrhoV     = dpuCon*(dpudrhoVdP5Plus + dpudrhoVdP5Minus + dpudrhoVdfa + dpudrhoVda + dpudrhoVdqn);
+
+  const CFreal dp12drhoV    = dP5PlusdrhoV*pL + P5Plus*dpLdrhoV + dP5MinusdrhoV*pR + P5Minus*dpRdrhoV + dpudrhoV; // dp12drhoV
+
+  JacobMatrix(0,2)   = dmdot12drhoV; //dmdot12dVar*1+ mdot12*0 + 0
+  JacobMatrix(1,2)   = dmdot12drhoV*Usigmoid + dp12drhoV*normal[0];
+  JacobMatrix(2,2)   = dmdot12drhoV*Vsigmoid + mdot12*(sigmoid*dvLdrhoV + Onesigmoid*dvRdrhoV) + dp12drhoV*normal[1];
+
+  if (nbDim==3)  {
+  JacobMatrix(3,2)   = dmdot12drhoV*Wsigmoid + dp12drhoV*normal[2];
+}
+  JacobMatrix(nbEq-1,2)   = dmdot12drhoV*Hsigmoid + mdot12*(sigmoid*dhLdrhoV + Onesigmoid*dhRdrhoV);
+
+
+
+  // dFdw
+  if (nbDim==3) {
+
+  const CFreal dqnLdrhoW   = (side == LEFT) ? normal[2]/rhoL: 0.;
+  const CFreal dqnRdrhoW   = (side == LEFT) ? 0. : normal[2]/rhoR;
+  const CFreal dhLdrhoW    = (side == LEFT) ? -(gammaL-1.)*WL/rhoL: 0.;
+  const CFreal dhRdrhoW    = (side == LEFT) ? 0 : -(gammaR-1.)*WR/rhoR;
+  const CFreal dpLdrhoW    = (side == LEFT) ? -(gammaL-1.)*WL: 0.;
+  const CFreal dpRdrhoW    = (side == LEFT) ? 0. : -(gammaR-1.)*WR;
+  const CFreal dwLdrhoW    = (side == LEFT) ? 1/rhoL : 0.;
+  const CFreal dwRdrhoW    = (side == LEFT) ? 0. : 1/rhoR;
+
+
+
+  const CFreal daCritLdrhoW = daCritLconst * dhLdrhoW;
+  const CFreal daCritRdrhoW = daCritRconst * dhRdrhoW;
+
+  const CFreal dasigLdrhoW  = aCritLsig*daCritLdrhoW + OneaCritLsig*dqnLdrhoW;
+  const CFreal dasigRdrhoW  = aCritRsig*daCritRdrhoW + OneaCritRsig*dqnRdrhoW;
+
+  const CFreal dahatLdrhoW  = (dahatCon1L*daCritLdrhoW + dahatCon2L*dasigLdrhoW);
+  const CFreal dahatRdrhoW  = (dahatCon1R*daCritRdrhoW + dahatCon2R*dasigRdrhoW);
+
+  const CFreal da12drhoW    = OnedahatSig*dahatLdrhoW + dahatSig*dahatRdrhoW; // da12drhoV
+
+  const CFreal dMLdrhoW     = dMCon*dqnLdrhoW + dMConL*da12drhoW;
+  const CFreal dMRdrhoW     = dMCon*dqnRdrhoW + dMConR*da12drhoW;
+
+  const CFreal dMBarSqdrhoW = ML*dMLdrhoW+MR*dMRdrhoW;  
+  const CFreal dmZerodrhoW  = dmZeroCon*dMBarSqdrhoW;
+  const CFreal dfadrhoW     = dfaCon*dmZerodrhoW;
+
+  const CFreal dM4PLusdrhoW  = (std::abs(ML)>=1.0) ? OnedM4Lsign*dMLdrhoW : dM4Lsuper*dMLdrhoW;
+  const CFreal dM4MinusdrhoW = (std::abs(MR)>=1.0) ? OnedM4Rsign*dMRdrhoW : dM4Rsuper*dMRdrhoW;
+
+  const CFreal dMpdrhoWdp   = (dpRdrhoW - dpLdrhoW)/rhoa2;
+  const CFreal dMpdrhoWda   = prhoa3*da12drhoW;
+  const CFreal dMpdrhoW     = dMpCon*(dMpdrhoWdp + dMpdrhoWda);
+
+  const CFreal dM12drhoW    = dM4PLusdrhoW + dM4MinusdrhoW + dMpdrhoW; // dM12drhoW
+
+  const CFreal dmdot12drhoW = dM12drhoW*a12rhostar + M12rhostar*da12drhoW; //drho12drhoW=0 drhostardrhoW=0 -- dmot12drhoW
+
+  const CFreal dalphadrhoW  = dalphaCon*dfadrhoW;
+
+  const CFreal dP5PlusdrhoW  = (std::abs(ML) >= 1.0 ) ? 0. : dP5Lconst1*dMLdrhoW + dP5Lconst2*dalphadrhoW;
+  const CFreal dP5MinusdrhoW = (std::abs(MR) >= 1.0 ) ? 0. : dP5Rconst1*dMRdrhoW + dP5Rconst2*dalphadrhoW;
+
+  const CFreal dpudrhoWdP5Plus  = pudP5Plus * dP5PlusdrhoW; 
+  const CFreal dpudrhoWdP5Minus = pudP5Minus * dP5MinusdrhoW;
+  const CFreal dpudrhoWdfa      = pudfa * dfadrhoW;
+  const CFreal dpudrhoWda       = puda12 * da12drhoW;
+  const CFreal dpudrhoWdqn      = pudqn * da12drhoW * (dqnRdrhoW-dqnLdrhoW);
+
+  const CFreal dpudrhoW     = dpuCon*(dpudrhoWdP5Plus + dpudrhoWdP5Minus + dpudrhoWdfa + dpudrhoWda + dpudrhoWdqn);
+
+  const CFreal dp12drhoW    = dP5PlusdrhoW*pL + P5Plus*dpLdrhoW + dP5MinusdrhoW*pR + P5Minus*dpRdrhoW + dpudrhoW; // dp12drhoW
+
+  JacobMatrix(0,3)   = dmdot12drhoW; //dmdot12dVar*1+ mdot12*0 + 0
+  JacobMatrix(1,3)   = dmdot12drhoW*Usigmoid + dp12drhoW*normal[0];
+  JacobMatrix(2,3)   = dmdot12drhoW*Vsigmoid + dp12drhoW*normal[1];
+
+  if (nbDim==3)  {
+  JacobMatrix(3,3)   = dmdot12drhoV*Wsigmoid + mdot12*(sigmoid*dwLdrhoW + Onesigmoid*dwRdrhoW) + dp12drhoW*normal[2];
+}
+  JacobMatrix(nbEq-1,3)   = dmdot12drhoW*Hsigmoid + mdot12*(sigmoid*dhLdrhoW + Onesigmoid*dhRdrhoW);
+
+}
+
+  // dFdrhoE
+  const CFreal dhLdrhoE     = (side == LEFT) ? gammaL/rhoL : 0.;
+  const CFreal dhRdrhoE     = (side == LEFT) ? 0. : gammaR/rhoR;
+  const CFreal dpLdrhoE     = (side == LEFT) ? gammaL-1. : 0.;
+  const CFreal dpRdrhoE     = (side == LEFT) ? 0. : gammaR-1.;
+
+
+
+  const CFreal daCritLdrhoE  = daCritLconst * dhLdrhoE;
+  const CFreal daCritRdrhoE  = daCritRconst * dhRdrhoE;
+
+  const CFreal dasigLdrhoE   = aCritLsig*daCritLdrhoE;
+  const CFreal dasigRdrhoE   = aCritRsig*daCritRdrhoE;
+
+  const CFreal dahatLdrhoE   = (dahatCon1L*daCritLdrhoE + dahatCon2L*dasigLdrhoE);
+  const CFreal dahatRdrhoE   = (dahatCon1R*daCritRdrhoE + dahatCon2R*dasigRdrhoE);
+
+  const CFreal da12drhoE     = OnedahatSig*dahatLdrhoE + dahatSig*dahatRdrhoE; // da12drhoE
+
+  const CFreal dMLdrhoE      = dMConL*da12drhoE;
+  const CFreal dMRdrhoE      = dMConR*da12drhoE;
+
+  const CFreal dMBarSqdrhoE  = ML*dMLdrhoE+MR*dMRdrhoE;  
+  const CFreal dmZerodrhoE   = dmZeroCon*dMBarSqdrhoE;
+  const CFreal dfadrhoE      = dfaCon*dmZerodrhoE;
+
+  const CFreal dM4PLusdrhoE  = (std::abs(ML)>=1.0) ? OnedM4Lsign*dMLdrhoE : dM4Lsuper*dMLdrhoE;
+  const CFreal dM4MinusdrhoE = (std::abs(MR)>=1.0) ? OnedM4Rsign*dMRdrhoE : dM4Rsuper*dMRdrhoE;
+
+  const CFreal dMpdrhoEdp    = (dpRdrhoE - dpLdrhoE)/rhoa2;
+  const CFreal dMpdrhoEda    = prhoa3*da12drhoE;
+  const CFreal dMpdrhoE      = dMpCon*(dMpdrhoEdp + dMpdrhoEda);
+
+  const CFreal dM12drhoE     = dM4PLusdrhoE + dM4MinusdrhoE + dMpdrhoE; // dM12drhoE
+
+  const CFreal dmdot12drhoE  = dM12drhoE*a12rhostar + M12rhostar*da12drhoE; // drho12drhoE=0 drhostardrhoE=0 --dmdot12drhoE
+
+  const CFreal dalphadrhoE   = dalphaCon*dfadrhoE;
+
+  const CFreal dP5PlusdrhoE  = (std::abs(ML) >= 1.0 ) ? 0. : dP5Lconst1*dMLdrhoE + dP5Lconst2*dalphadrhoE;
+  const CFreal dP5MinusdrhoE = (std::abs(MR) >= 1.0 ) ? 0. : dP5Rconst1*dMRdrhoE + dP5Rconst2*dalphadrhoE;
+
+  const CFreal dpudrhoEdP5Plus  = pudP5Plus * dP5PlusdrhoE; 
+  const CFreal dpudrhoEdP5Minus = pudP5Minus * dP5MinusdrhoE;
+  const CFreal dpudrhoEdfa      = pudfa * dfadrhoE;
+  const CFreal dpudrhoEda       = puda12 * da12drhoE;
+
+  const CFreal dpudrhoE     = dpuCon*(dpudrhoEdP5Plus + dpudrhoEdP5Minus + dpudrhoEdfa + dpudrhoEda);
+
+  const CFreal dp12drhoE    = dP5PlusdrhoE*pL + P5Plus*dpLdrhoE + dP5MinusdrhoE*pR + P5Minus*dpRdrhoE + dpudrhoE; // dp12drhoE
+
+
+  JacobMatrix(0,nbEq-1)        = dmdot12drhoE;
+  JacobMatrix(1,nbEq-1)        = dmdot12drhoE*Usigmoid + dp12drhoE*normal[0];
+  JacobMatrix(2,nbEq-1)        = dmdot12drhoE*Vsigmoid + dp12drhoE*normal[1];
+
+  if (nbDim==3)  {
+  JacobMatrix(3,nbEq-1)        = dmdot12drhoE*Wsigmoid + dp12drhoE*normal[2];
+}
+  JacobMatrix(nbEq-1,nbEq-1)   = dmdot12drhoE*Hsigmoid + mdot12*(sigmoid*dhLdrhoE + Onesigmoid*dhRdrhoE);
+  
+  
+  CFLog(DEBUG_MIN," AUSMPlusUpFlux::ComputedFluxdCons  END \n");
 }
 
 /////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdP(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
-{
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdP  START\n");
-// Update var : (p,u,v,w,T)
-// dudP = dvdP = dwdP = 0 => dqndP = 0  
-// H = E + p/rho => H = gamma/(gamma-1)Rgas*T/Mmass + V^2/2 => dHdP = 0
-// rho = p*M/(R*T) => drhodP = M*p/(R*TS).
-  const CFreal Mmass = 28.965338E-3; //molecular mass, assuming current fluid is air
-  const CFreal Rgas  = 8.3145; //universal gas constant [J/mol/K] taken from Wolfram Alpha
-  const CFreal TL    = (*this->m_lData)[UPDATEVAR::PTERM::T];
-  const CFreal TR    = (*this->m_rData)[UPDATEVAR::PTERM::T];
-  m_dqnLdVar  = 0.;
-  m_dqnRdVar  = 0.;
-  m_dhLdVar   = 0.;
-  m_dhRdVar   = 0.;
-  m_drhoLdVar = (side == LEFT) ? Mmass/(Rgas*TL) : 0.;
-  m_drhoRdVar = (side == LEFT) ? 0. : Mmass/(Rgas*TR);
-  m_dpLdVar   = (side == LEFT) ? 1. : 0.;
-  m_dpRdVar   = (side == LEFT) ? 0. : 1.;
-  // m_dVLdVar   = 0.;
-  // m_dVRdVar   = 0.;
-  m_duRdVar = 0.;
-  m_duLdVar = 0.;
-  m_dvRdVar = 0.;
-  m_dvLdVar = 0.;
-  m_dwRdVar = 0.;
-  m_dwLdVar = 0.;
-  ComputedFluxdVar(iVar,JacobMatrix);
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdP  END\n"); 
-}
- 
-//////////////////////////////////////////////////////////////////////////////
-   
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdU(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdU  START\n");  
-// Update var : (p,u,v,w,T)
-// dudu= 1.; dvdu = dwdu = 0 => dqndu = nx  
-// H = E + p/rho => H = R*T*gamma/(M*(gamma-1) + V^2/2 => dHdu = u
-// rho = p*M/(R*T) => drhodu =0.
-  const RealVector& normal = this->getMethodData().getUnitNormal();
-  m_drhoLdVar = 0.;
-  m_drhoRdVar  = 0.;
-  m_dpLdVar    = 0.;
-  m_dpRdVar    = 0.;
-  m_dqnLdVar   = (side == LEFT) ? normal[0] : 0.;
-  m_dqnRdVar   = (side == LEFT) ? 0. : normal[0];
-  m_dhLdVar    = (side == LEFT) ?(*this->m_lData)[UPDATEVAR::PTERM::VX]: 0.;
-  m_dhRdVar    = (side == LEFT) ? 0. : (*this->m_rData)[UPDATEVAR::PTERM::VX];
-  // m_dVLdVar    = 0.;
-  // m_dVRdVar    = 0.; 
-  // m_dVLdVar[0] = (side == LEFT) ? 1. : 0.;
-  // m_dVRdVar[0] = (side == LEFT) ? 0. : 1.;
-  m_duLdVar = (side == LEFT) ? 1. : 0.;
-  m_duRdVar = (side == LEFT) ? 0. : 1.;
-  m_dvLdVar = 0.;
-  m_dvRdVar = 0.;
-  m_dwLdVar = 0.;
-  m_dwRdVar = 0.;
-  ComputedFluxdVar(iVar,JacobMatrix);
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdU  END\n");  
-}
-
-//////////////////////////////////////////////////////////////////////////////
-   
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdV(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::MathTools;
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdV  START\n");  
-// Update var : (p,u,v,w,T)
-// dvdv= 1.; dudv = dwdv = 0 => dqndv = ny  
-// H = E + p/rho => H = R*T*gamma/(M*(gamma-1) + V^2/2 => dHdv = v
-// rho = p*M/(R*T) => drhodu =0.
-  const RealVector& normal = this->getMethodData().getUnitNormal();
-  m_drhoLdVar  = 0.;
-  m_drhoRdVar  = 0.;
-  m_dpLdVar    = 0.;
-  m_dpRdVar    = 0.;
-  m_dqnLdVar   = (side == LEFT) ? normal[1]: 0.;
-  m_dqnRdVar   = (side == LEFT) ? 0. : normal[1];
-  m_dhLdVar    = (side == LEFT) ?(*this->m_lData)[UPDATEVAR::PTERM::VY]: 0.;
-  m_dhRdVar    = (side == LEFT) ? 0. : (*this->m_rData)[UPDATEVAR::PTERM::VY];
-  // m_dVLdVar    = 0.;
-  // m_dVRdVar    = 0.; 
-  // m_dVLdVar[1] = (side == LEFT) ? 1. : 0.;
-  // m_dVRdVar[1] = (side == LEFT) ? 0. : 1.;
-  m_duLdVar = 0.;
-  m_duRdVar = 0.;
-  m_dvLdVar = (side == LEFT) ? 1. : 0.;
-  m_dvRdVar = (side == LEFT) ? 0. : 1.;
-  m_dwLdVar = 0.;
-  m_dwRdVar = 0.;
-  ComputedFluxdVar(iVar,JacobMatrix);
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdV  END\n");  
-}
-
-//////////////////////////////////////////////////////////////////////////////
-  
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdW(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdW  START\n");  
-// Update var : (p,u,v,w,T)
-// dwdw= 1.; dudw = dvdw = 0 => dqndw = nz  
-// H = E + p/rho => H = R*T*gamma/(M*(gamma-1) + V^2/2 => dHdv = w
-// rho = p*M/(R*T) => drhodu =0.
-  const RealVector& normal = this->getMethodData().getUnitNormal();
-  m_drhoLdVar  = 0.;
-  m_drhoRdVar  = 0.;
-  m_dpLdVar    = 0.;
-  m_dpRdVar    = 0.;
-  m_dqnLdVar   = (side == LEFT) ? normal[2] : 0.;
-  m_dqnRdVar   = (side == LEFT) ? 0. : normal[2];
-  m_dhLdVar    = (side == LEFT) ?(*this->m_lData)[UPDATEVAR::PTERM::VZ]: 0.;
-  m_dhRdVar    = (side == LEFT) ? 0. : (*this->m_rData)[UPDATEVAR::PTERM::VZ];
-  // m_dVLdVar    = 0.;
-  // m_dVRdVar    = 0.; 
-  // m_dVLdVar[2] = (side == LEFT) ? 1. : 0.;
-  // m_dVRdVar[2] = (side == LEFT) ? 0. : 1.;
-  m_duLdVar = 0.;
-  m_duRdVar = 0.;
-  m_dvLdVar = 0.;
-  m_dvRdVar = 0.;
-  m_dwLdVar = (side == LEFT) ? 1. : 0.;
-  m_dwRdVar = (side == LEFT) ? 0. : 1.;
-  ComputedFluxdVar(iVar,JacobMatrix);
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdW  END\n");  
-}
- 
-//////////////////////////////////////////////////////////////////////////////
-   
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdT(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
-{
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdT  START\n");
-// Update var : (p,u,v,w,T)
-// dudT = dvdT = dwdT = 0 => dqndT = 0  
-// H = E + p/rho => H = gamma/(gamma-1)Rgas*T/Mmass + V^2/2 => dHdT = gamma/(gamma-1)Rgas*/Mmass
-// rho = p*M/(R*T) => drhodT = -M*p/(R*T^2).
-  const CFreal Mmass  = 28.965338E-3; //molecular mass, assuming current fluid is air
-  const CFreal Rgas   = 8.3145; //universal gas constant [J/mol/K] taken from Wolfram Alpha
-  const CFreal pL     = (*this->m_lData)[UPDATEVAR::PTERM::P];
-  const CFreal pR     = (*this->m_rData)[UPDATEVAR::PTERM::P];
-  const CFreal TL     = (*this->m_lData)[UPDATEVAR::PTERM::T];
-  const CFreal TR     = (*this->m_rData)[UPDATEVAR::PTERM::T];
-  const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
-  const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
-  m_dqnLdVar  = 0.;
-  m_dqnRdVar  = 0.;
-  m_dhLdVar   = (side == LEFT) ? gammaL*Rgas/(Mmass*(gammaL-1.)) : 0.;
-  m_dhRdVar   = (side == LEFT) ? 0. : gammaR*Rgas/(Mmass*(gammaR-1.));
-  m_drhoLdVar = (side == LEFT) ? -Mmass*pL/(Rgas*TL*TL) : 0.;
-  m_drhoRdVar = (side == LEFT) ? 0. : -Mmass*pR/(Rgas*TR*TR);
-  m_dpLdVar   = 0.;
-  m_dpRdVar   = 0.;
-  // m_dVLdVar   = 0.;
-  // m_dVRdVar   = 0.;
-  m_duLdVar = 0.;
-  m_duRdVar = 0.;
-  m_dvLdVar = 0.;
-  m_dvRdVar = 0.;
-  m_dwLdVar = 0.;
-  m_dwRdVar = 0.;  
-  ComputedFluxdVar(iVar,JacobMatrix);
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdT  END\n");  
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdK(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
-{
-  using namespace std;
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdK  START\n");  
-// Update var : ???
-  m_dqnLdVar  = 0.;
-  m_dqnRdVar  = 0.;
-  m_dhLdVar   = 0.;
-  m_dhRdVar   = 0.;
-  m_drhoLdVar = 0.;
-  m_drhoRdVar = 0.;
-  m_dpLdVar   = 0.;
-  m_dpRdVar   = 0.;
-  // m_dVLdVar   = 0.;
-  // m_dVRdVar   = 0.;
-  m_duLdVar = 0.;
-  m_duRdVar = 0.;
-  m_dvLdVar = 0.;
-  m_dvRdVar = 0.;
-  m_dwLdVar = 0.;
-  m_dwRdVar = 0.;     
-  ComputedFluxdVar(iVar,JacobMatrix);
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdK  END\n");  
-}
- 
-//////////////////////////////////////////////////////////////////////////////
-      
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdRho(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRho  START\n");  
-// Update var : (rho,rhou,rhov,rhow,rhoE)
-// E        = p/(rho*gamma-1) + V^2/2 => 
-// p        = (gamma -1 )(rhoE - 0.5(rhoV)^2/rho) 
-// dpdrho    = 0.5(gamma -1)V^2;
-// u        = rhou/rho  
-// dudrho   = -rhou/rho^2 
-// dqndrho = -(unx+vny+wnz)/rho = -qn/rho
-// H        = E + p/rho => 
-// H        = gamma*rhoE/rho - 0.5*(gamma-1)*(rhoV)^2/rho^2 
-// dHdrho   = -gamma*rhoE/rho^2 +(gamma-1)(rhou^2+rhov^2+rhow^2)/rho^3
-  const CFuint nbDim  = PhysicalModelStack::getActive()->getDim();
-  const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
-  const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
-  const CFreal rhoL   = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
-  const CFreal rhoR   = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
-  const CFreal EL     = (*this->m_lData)[UPDATEVAR::PTERM::E];
-  const CFreal ER     = (*this->m_rData)[UPDATEVAR::PTERM::E];
-  const CFreal qnL    = this->m_unL;
-  const CFreal qnR    = this->m_unR;
-
-  m_dqnLdVar  = (side == LEFT) ? -qnL/rhoL : 0.;
-  m_dqnRdVar  = (side == LEFT) ? 0. : -qnR/rhoR;
-
-  CFreal VLsq = 0.;
-  CFreal VRsq = 0.;
-  for (CFuint it = 0; it < nbDim ;it++)
-    {
-      VLsq = VLsq + (*this->m_lData)[UPDATEVAR::PTERM::VX+it]*(*this->m_lData)[UPDATEVAR::PTERM::VX+it]; // 2D : uL*uL+vL*vL  3D : uL*uL+vL*vL+wL*wL
-      VRsq = VRsq + (*this->m_rData)[UPDATEVAR::PTERM::VX+it]*(*this->m_rData)[UPDATEVAR::PTERM::VX+it]; // 2D : uR*uR+vR*vR  3D : uR*uR+vR*vR+wR*wR
-    }
-  m_dhLdVar   = (side == LEFT) ? -gammaL*EL/rhoL + (gammaL-1.)*VLsq/rhoL : 0.;
-  m_dhRdVar   = (side == LEFT) ? 0. :-gammaR*ER/rhoR + (gammaR-1.)*VRsq/rhoR;
-  m_drhoLdVar = (side == LEFT) ? 1. : 0.;
-  m_drhoRdVar = (side == LEFT) ? 0. : 1.;
-  m_dpLdVar   = (side == LEFT) ? 0.5*(gammaL-1.)*VLsq : 0.;
-  m_dpRdVar   = (side == LEFT) ? 0. : 0.5*(gammaR-1.)*VRsq;
-
-  // for (CFuint it = 0; it < nbDim ;it++)
-  //   {
-  //     m_dVLdVar[it]   = (side == LEFT) ? -(*this->m_lData)[UPDATEVAR::PTERM::VX+it]/rhoL : 0.;
-  //     m_dVRdVar[it]   = (side == LEFT) ? 0. : -(*this->m_rData)[UPDATEVAR::PTERM::VX+it]/rhoR;
-  //   }
-  m_duLdVar = (side == LEFT) ? -(*this->m_lData)[UPDATEVAR::PTERM::VX]/rhoL : 0.;
-  m_duRdVar = (side == LEFT) ? 0. : -(*this->m_rData)[UPDATEVAR::PTERM::VX]/rhoR;
-  m_dvLdVar = (side == LEFT) ? -(*this->m_lData)[UPDATEVAR::PTERM::VY]/rhoL : 0.;
-  m_dvRdVar = (side == LEFT) ? 0. : -(*this->m_rData)[UPDATEVAR::PTERM::VY]/rhoR;
-  if ( PhysicalModelStack::getActive()->getDim()==3){
-  m_dwLdVar = (side == LEFT) ? -(*this->m_lData)[UPDATEVAR::PTERM::VZ]/rhoL : 0.;
-  m_dwRdVar = (side == LEFT) ? 0. : -(*this->m_rData)[UPDATEVAR::PTERM::VZ]/rhoR;
-  }
-  ComputedFluxdVar(iVar,JacobMatrix);
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRho  END\n");  
-
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdRhoU(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRhoU  START\n");  
-// Update var : (rho,rhou,rhov,rhow,rhoE)
-// E = p/(rho*gamma-1) + V^2/2  
-// p = (gamma -1 )(rhoE - 0.5(rhoV)^2/rho) 
-// dprhou = -(gamma -1)u;
-// u = rhou/rho => dwdrhou = 1/rho => dqndrhou = nx/rho
-// H = E + p/rho
-// H = gamma*rhoE/rho - 0.5*(gamma-1)*(rhoV)^2/rho^2 
-// dHdrhou = -(gamma-1)u/rho;
-  const RealVector& normal = this->getMethodData().getUnitNormal();
-  const CFreal rhoL   = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
-  const CFreal rhoR   = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
-  const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
-  const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
-  m_drhoLdVar  = 0.;
-  m_drhoRdVar  = 0.;
-  m_dqnLdVar   = (side == LEFT) ? normal[0]/rhoL: 0.;
-  m_dqnRdVar   = (side == LEFT) ? 0. : normal[0]/rhoR;
-  m_dhLdVar    = (side == LEFT) ? -(gammaL-1.)*(*this->m_lData)[UPDATEVAR::PTERM::VX]/rhoL: 0.;
-  m_dhRdVar    = (side == LEFT) ? 0 : -(gammaR-1.)*(*this->m_rData)[UPDATEVAR::PTERM::VX]/rhoR;
-  m_dpLdVar    = (side == LEFT) ? -(gammaL-1.)*(*this->m_lData)[UPDATEVAR::PTERM::VX]: 0.;
-  m_dpRdVar    = (side == LEFT) ? 0. : -(gammaR-1.)*(*this->m_rData)[UPDATEVAR::PTERM::VX];
-  // m_dVLdVar    = 0.;
-  // m_dVRdVar    = 0.;  
-  // m_dVLdVar[0] = (side == LEFT) ? 1/rhoL : 0.;
-  // m_dVRdVar[0] = (side == LEFT) ? 0. : 1/rhoR;
-  m_duLdVar = (side == LEFT) ? 1/rhoL : 0.;
-  m_duRdVar = (side == LEFT) ? 0. : 1/rhoR;
-  m_dvLdVar = 0.;
-  m_dvRdVar = 0.;
-  m_dwLdVar = 0.;
-  m_dwRdVar = 0.; 
-  ComputedFluxdVar(iVar,JacobMatrix);
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRhoU  END\n");  
-}
- 
-//////////////////////////////////////////////////////////////////////////////
-
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdRhoV(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRhoV  START\n");  
-// Update var : (rho,rhou,rhov,rhow,rhoE)
-// E = p/(rho*gamma-1) + V^2/2 => p = (gamma -1 )(rhoE - 0.5(rhoV)^2/rho^2) => dprhov = -(gamma -1)v/rho;
-// v = rhov/rho => dwdrhoc = 1/rho => dqndrhov = ny/rho
-// H = E + p/rho => H = gamma*rhoE/rho - 0.5*(gamma-1)*(rhoV)^2/rho^2 => dHdrhov = -(gamma-1)v/rho
-  const RealVector& normal = this->getMethodData().getUnitNormal();
-  const CFreal rhoL   = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
-  const CFreal rhoR   = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
-  const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
-  const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
-  m_drhoLdVar  = 0.;
-  m_drhoRdVar  = 0.;
-  m_dqnLdVar   = (side == LEFT) ? normal[1]/rhoL: 0.;
-  m_dqnRdVar   = (side == LEFT) ? 0. : normal[1]/rhoR;
-  m_dhLdVar    = (side == LEFT) ? -(gammaL-1.)*(*this->m_lData)[UPDATEVAR::PTERM::VY]/rhoL: 0.;
-  m_dhRdVar    = (side == LEFT) ? 0 : -(gammaR-1.)*(*this->m_rData)[UPDATEVAR::PTERM::VY]/rhoR;
-  m_dpLdVar    = (side == LEFT) ? -(gammaL-1.)*(*this->m_lData)[UPDATEVAR::PTERM::VY]: 0.;
-  m_dpRdVar    = (side == LEFT) ? 0. : -(gammaR-1.)*(*this->m_rData)[UPDATEVAR::PTERM::VY];
-  // m_dVLdVar    = 0.;
-  // m_dVRdVar    = 0.;  
-  // m_dVLdVar[1] = (side == LEFT) ? 1/rhoL : 0.;
-  // m_dVRdVar[1] = (side == LEFT) ? 0. : 1/rhoR;
-  m_duLdVar = 0.;
-  m_duRdVar = 0.;
-  m_dvLdVar = (side == LEFT) ? 1/rhoL : 0.;
-  m_dvRdVar = (side == LEFT) ? 0. : 1/rhoR;
-  m_dwLdVar = 0.;
-  m_dwRdVar = 0.;  
-  ComputedFluxdVar(iVar,JacobMatrix);
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRhoV  END\n");  
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdRhoW(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRhoW  START\n");  
-// Update var : (rho,rhou,rhov,rhow,rhoE)
-// E = p/(rho*gamma-1) + V^2/2 => p = (gamma -1 )(rhoE - 0.5(rhoV)^2/rho) => dprhow = -(gamma -1)w;
-// w = rhoW/rho => dwdrhoW = 1/rho => dqndrhoW = nz/rho
-// H = E + p/rho =
-// H = gamma*rhoE/rho - 0.5*(gamma-1)*(rhoV)^2/rho^2 
-// dHdrhow = -(gamma-1)w/rho
-  const RealVector& normal = this->getMethodData().getUnitNormal();
-  const CFreal rhoL   = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
-  const CFreal rhoR   = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
-  const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
-  const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
-  m_drhoLdVar  = 0.;
-  m_drhoRdVar  = 0.;
-  m_dqnLdVar   = (side == LEFT) ? normal[2]/rhoL: 0.;
-  m_dqnRdVar   = (side == LEFT) ? 0. : normal[2]/rhoR;
-  m_dhLdVar    = (side == LEFT) ? -(gammaL-1.)*(*this->m_lData)[UPDATEVAR::PTERM::VZ]/rhoL: 0.;
-  m_dhRdVar    = (side == LEFT) ? 0 : -(gammaR-1.)*(*this->m_rData)[UPDATEVAR::PTERM::VZ]/rhoR;
-  m_dpLdVar    = (side == LEFT) ? -(gammaL-1.)*(*this->m_lData)[UPDATEVAR::PTERM::VZ]: 0.;
-  m_dpRdVar    = (side == LEFT) ? 0. : -(gammaR-1.)*(*this->m_rData)[UPDATEVAR::PTERM::VZ];
-  // m_dVLdVar    = 0.;
-  // m_dVRdVar    = 0.;  
-  // m_dVLdVar[2] = (side == LEFT) ? 1/rhoL : 0.;
-  // m_dVRdVar[2] = (side == LEFT) ? 0. : 1/rhoR;
-  m_duLdVar = 0.;
-  m_duRdVar = 0.;
-  m_dvLdVar = 0.;
-  m_dvRdVar = 0.;  
-  m_dwLdVar = (side == LEFT) ? 1/rhoL : 0.;
-  m_dwRdVar = (side == LEFT) ? 0. : 1/rhoR;
-  ComputedFluxdVar(iVar,JacobMatrix);
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRhoW  END\n");  
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::dFdRhoE(CFuint side, CFuint iVar, RealMatrix& JacobMatrix)
-{
-  using namespace std;
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRhoE  START\n");  
-// Update var : (rho,rhou,rhov,rhow,rhoE)
-// E = p/(rho*gamma-1) + V^2/2 
-// p = (gamma -1 )(rhoE - 0.5(rhoV)^2/rho) 
-// dprhoE = gamma-1;
-// u = rhou/rho dudrhoE = 0. dqndrhoE = 0
-// H = E + p/rho 
-// H = gamma*rhoE/rho - 0.5*(gamma-1)*(rhoV)^2/rho^2 
-// dHdrhoE = gamma/rho .
-  const CFreal rhoL   = (*this->m_lData)[UPDATEVAR::PTERM::RHO];
-  const CFreal rhoR   = (*this->m_rData)[UPDATEVAR::PTERM::RHO];
-  const CFreal gammaL = (*this->m_lData)[UPDATEVAR::PTERM::GAMMA];
-  const CFreal gammaR = (*this->m_rData)[UPDATEVAR::PTERM::GAMMA];
-  m_dqnLdVar  = 0.;
-  m_dqnRdVar  = 0.;
-  m_dhLdVar   = (side == LEFT) ? gammaL/rhoL : 0.;
-  m_dhRdVar   = (side == LEFT) ? 0. : gammaR/rhoR;
-  m_drhoLdVar = 0.;
-  m_drhoRdVar = 0.;
-  m_dpLdVar   = (side == LEFT) ? gammaL-1. : 0.;
-  m_dpRdVar   = (side == LEFT) ? 0. : gammaR-1.;
-  // m_dVLdVar   = 0.;
-  // m_dVRdVar   = 0.;
-  m_duLdVar = 0.;
-  m_duRdVar = 0.;
-  m_dvLdVar = 0.;
-  m_dvRdVar = 0.;  
-  m_dwLdVar = 0.;
-  m_dwRdVar = 0.;    
-  ComputedFluxdVar(iVar,JacobMatrix);
-  CFLog(DEBUG_MIN,"AUSMPlusUpFlux::dFdRhoE  END\n");  
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::computeJacobianDPvt(CFuint side, RealMatrix& JacobMatrix)
+void AUSMPlusUpFlux<UPDATEVAR>::computeJacobianDPvt(CFuint side, RealMatrix& JacobMatrix) // Change it in .hh and not only
 {
   using namespace Framework;
 
-  CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDPvt("<<side<<") START\n");  
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDPvt("<<side<<") START\n");
 
-  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
-
- // dFdP
-  dFdP(side,0,JacobMatrix);
-  //dFdU dFdV (dFdW)
-  dFdU(side,1,JacobMatrix);
-  dFdV(side,2,JacobMatrix);
-  if (nbDim==3) {
-    dFdW(side,3,JacobMatrix);
-  }
-  //dFdT
-  dFdT(side,nbEqs-1,JacobMatrix);
+  ComputedFluxdPvt(side, JacobMatrix);
 
   CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDPvt() END\n");
 }
@@ -774,25 +1220,13 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeJacobianDPvt(CFuint side, RealMatrix& Jac
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-void AUSMPlusUpFlux<UPDATEVAR>::computeJacobianDCons(CFuint side, RealMatrix& JacobMatrix)
+void AUSMPlusUpFlux<UPDATEVAR>::computeJacobianDCons(CFuint side, RealMatrix& JacobMatrix) // Change it in .hh and not only
 {
   using namespace Framework;
 
-  CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDCons("<<side<<") START\n");  
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDCons("<<side<<") START\n");
 
-  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-  const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
-
-  // dFdRho
-  dFdRho(side,0,JacobMatrix);
-  //dFdRhoU dFdRhoV (dFdRhoW)
-  dFdRhoU(side,1,JacobMatrix);
-  dFdRhoV(side,2,JacobMatrix);
-  if (nbDim==3) {
-    dFdRhoW(side,3,JacobMatrix);
-  }
-  //dFdrhoE
-  dFdRhoE(side,nbEqs-1,JacobMatrix);
+  ComputedFluxdCons(side, JacobMatrix);
 
   CFLog(VERBOSE,"AUSMPlusUpFlux::computeJacobianDCons() END\n");
 
@@ -803,8 +1237,8 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeJacobianDCons(CFuint side, RealMatrix& Ja
 template <class UPDATEVAR>
 void AUSMPlusUpFlux<UPDATEVAR>::computeLeftJacobian()
 {
-  CFLog(VERBOSE,"AUSMPlusUpFlux::computeLeftJacobian() START\n");  
- 
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeLeftJacobian() START\n");
+
   const std::string upVar = this->getMethodData().getUpdateVarStr();
 
   RealMatrix& LeftJacobian = this->_lFluxJacobian;
@@ -815,7 +1249,7 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeLeftJacobian()
     computeJacobianDCons(LEFT,LeftJacobian);
   }
   
-  CFLog(VERBOSE,"AUSMPlusUpFlux::computeLeftJacobian() END\n");  
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeLeftJacobian() END\n");
 }
 
 // //////////////////////////////////////////////////////////////////////////////
@@ -823,8 +1257,8 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeLeftJacobian()
 template <class UPDATEVAR>
 void AUSMPlusUpFlux<UPDATEVAR>::computeRightJacobian()
 {
-  CFLog(VERBOSE,"AUSMPlusUpFlux::computeRightJacobian() START\n");  
-  
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeRightJacobian() START\n");
+
   const std::string upVar = this->getMethodData().getUpdateVarStr();
   RealMatrix& RightJacobian = this->_rFluxJacobian;
 
@@ -834,8 +1268,8 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeRightJacobian()
   if (upVar == "Cons") {
     computeJacobianDCons(RIGHT,RightJacobian);
   }
-
-  CFLog(VERBOSE,"AUSMPlusUpFlux::computeRightJacobian() END\n");  
+  
+  CFLog(VERBOSE,"AUSMPlusUpFlux::computeRightJacobian() END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -847,3 +1281,5 @@ void AUSMPlusUpFlux<UPDATEVAR>::computeRightJacobian()
 } // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////
+
+

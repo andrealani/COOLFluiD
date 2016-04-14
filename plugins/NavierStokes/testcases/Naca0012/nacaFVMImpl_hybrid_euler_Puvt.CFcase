@@ -68,7 +68,8 @@ Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.AbsNorm = -5.0
 Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
-Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob 
+#Analytic
 
 Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
 

@@ -92,12 +92,13 @@ public: // classes
    * Compute the pressure derivative
    */
   virtual void computePressureDerivatives(const Framework::State& state, RealVector& dp);
+  
   /**
    * Checks validity of data
    * @pre data is assumed to be of number of equations size
    */
-   bool isValid(const RealVector& data);
-    
+  virtual bool isValid(const RealVector& data);
+  
 protected:
   
   /**
@@ -120,7 +121,7 @@ protected:
   std::vector<CFuint> _moleculesIDs;
   
 }; // end of class Euler2DNEQPivtTv
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace NEQ

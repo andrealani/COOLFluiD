@@ -17,7 +17,7 @@ namespace COOLFluiD {
 
 /**
  * This class represents a transformer of variables from
- * [p u v t] [rho_i u v T Tv] to conservative variables
+ * [p u v t] to [rho_i u v T Tv] variables
  *
  * @author Andrea Lani
  */

@@ -5,8 +5,6 @@
 
 #include "Framework/VectorialFunction.hh"
 #include "FiniteVolume/FVMCC_BC.hh"
-#include "Common/BadValueException.hh"
-
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -38,7 +36,6 @@ namespace COOLFluiD {
    * @author Alejandro Alvarez
    *
    */
-
 class UnsteadySubInletUVTEIWRhoiViTi : public FVMCC_BC {
 
 public: 
@@ -87,15 +84,6 @@ public:
   /// physical model var set
   Common::SafePtr<Physics::MultiFluidMHD::MultiFluidMHDVarSet<Physics::Maxwell::Maxwell2DProjectionVarSet> > _updateVarSet;
   
-//   ///x velocity of the Species
-//   std::vector<CFreal> _ui;  
-//   
-//   ///y velocity of the Species
-//   std::vector<CFreal> _vi;
-//   
-//   /// temperatures at Inlet
-//   std::vector<CFreal> _Ti;
-
   /// Vector for coordinates + time
   RealVector _variables;
   

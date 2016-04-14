@@ -73,7 +73,13 @@ void RD_SplitStrategy::computeFluctuation(vector<RealVector>& residual)
     }    
   }
 
-  
+   // AL: this is a gory fix, in the long term Nodes' life should be independent from States'
+   if (ddata.tStates != ddata.states) {
+   const CFuint nbCellStates = ddata.states->size();
+   for (CFuint iState = 0; iState < nbCellStates; ++iState) {
+      (*ddata.tStates)[iState]->resetSpaceCoordinates();
+    }
+   }  
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -83,14 +89,16 @@ void RD_SplitStrategy::setCurrentCell()
   DistributionData& ddata = getMethodData().getDistributionData();
   getMethodData().getLinearizer()->setUpdateStates(ddata.states);
   ddata.tStates = computeConsistentStates(ddata.states);
-  
+
   // set the coordinates in the consistent transformed states
-  const CFuint nbCellStates = ddata.states->size();
-  for (CFuint iState = 0; iState < nbCellStates; ++iState) {
+  if (ddata.tStates != ddata.states) {
+   const CFuint nbCellStates = ddata.states->size();
+   for (CFuint iState = 0; iState < nbCellStates; ++iState) {
     Node *const node = (*ddata.states)[iState]->getNodePtr();
     cf_assert(node != CFNULL);
     (*ddata.tStates)[iState]->setSpaceCoordinates(node);
   }
+ }  
 }
       
 //////////////////////////////////////////////////////////////////////////////

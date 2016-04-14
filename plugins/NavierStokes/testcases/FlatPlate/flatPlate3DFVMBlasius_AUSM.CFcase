@@ -5,13 +5,14 @@
 # Finite Volume, NavierStokes3D, Backward Euler, parallel CFmesh extruder from 
 # 2D to 3D with parallel binary writer, mesh with hexa, second-order reconstruction 
 # without limiter, subsonic inlet and outlet, adiabatic noslip wall, AUSM+up scheme
+# with analytical jacobian
 #
 ################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -4.0035616
+### Residual = -4.0415643
 #
 
 #CFEnv.OnlyCPU0Writes = false

@@ -24,8 +24,8 @@ VarSetMatrixTransformer::VarSetMatrixTransformer(Common::SafePtr<Framework::Phys
   _isIdentityTransformation(false),
   _transMatrix(),
   _transVec(),
-  _transVecVec(0),
-  _transVecVecMulti(0)
+  _transVecVec(),
+  _transVecVecMulti()
 {
 }
 

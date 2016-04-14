@@ -62,7 +62,8 @@ StdUpdateSol::StdUpdateSol(const std::string& name) :
   NewtonIteratorCom(name),
   socket_states("states"),
   socket_rhs("rhs"),
-  socket_updateCoeff("updateCoeff")
+  socket_updateCoeff("updateCoeff"),
+  socket_invalidStates("invalidStates")
 {
   addConfigOptionsTo(this);
    
@@ -77,8 +78,13 @@ StdUpdateSol::StdUpdateSol(const std::string& name) :
 
 void StdUpdateSol::setup()
 {
+  const CFuint nbStates = socket_states.getDataHandle().size();
+
+  if (m_validate) {
+    socket_invalidStates.getDataHandle().resize(nbStates);
+  }
+  
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
- 
   if (m_alpha.size() == 0) {
     m_alpha.resize(nbEqs);
     for (CFuint i = 0; i < nbEqs; ++i) {
@@ -170,12 +176,26 @@ void StdUpdateSol::execute()
       {
         badStatesIDs.push_back( iState );
       }
-
     } // for all states
   } // if validate
 
-  if ( badStatesIDs.size() > 0 )
+  if (badStatesIDs.size() > 0)
   {
+    cf_assert(m_validate);
+    // sort the invalid states in order to be able to search later on 
+    sort(badStatesIDs.begin(), badStatesIDs.end());
+    
+    DataHandle<CFreal> invalidStates = socket_invalidStates.getDataHandle();
+    cf_assert(invalidStates.size() == states_size);
+    invalidStates = 0.;
+    for (CFuint i = 0; i < badStatesIDs.size(); ++i) {
+      invalidStates[badStatesIDs[i]] = 1.;
+    }
+    
+    CFLog(VERBOSE, "StdUpdateSol::execute() => [" << badStatesIDs.size() << "] invalid states detected\n");
+    // correct all unphysical states 
+    correctUnphysicalStates(badStatesIDs);
+    
     ///Gets the global iteration
     CFuint cur_global_iter = SubSystemStatusStack::getActive()->getNbIter();
     ///Gets the Newton method procedure iteration
@@ -246,6 +266,15 @@ vector<SafePtr<BaseDataSocketSink> > StdUpdateSol::needsSockets()
   result.push_back(&socket_rhs);
   result.push_back(&socket_updateCoeff);
   
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+vector<SafePtr<BaseDataSocketSource> > StdUpdateSol::providesSockets()
+{
+  vector<SafePtr<BaseDataSocketSource> > result;
+  result.push_back(&socket_invalidStates);
   return result;
 }
 

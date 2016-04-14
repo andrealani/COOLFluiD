@@ -22,7 +22,7 @@ VarSetTransformer::VarSetTransformer(Common::SafePtr<Framework::PhysicalModelImp
   _localStateID(0),
   _extraValues(CFNULL),
   _transState(CFNULL),
-  _transStateVec(0)
+  _transStateVec()
 {
 }
 
@@ -30,13 +30,20 @@ VarSetTransformer::VarSetTransformer(Common::SafePtr<Framework::PhysicalModelImp
 
 VarSetTransformer::~VarSetTransformer()
 {
+  CFLog(VERBOSE, "VarSetTransformer::~VarSetTransformer() => START\n");
+  
   deletePtr(_transState);
-
+  
+  CFLog(VERBOSE, "VarSetTransformer::~VarSetTransformer() => size = " << _transStateVec.size()  << "\n");
+  
   for (CFuint i = 0; i < _transStateVec.size(); ++i) {
-    deletePtr(_transStateVec[i]);
+    CFLog(VERBOSE, "VarSetTransformer::~VarSetTransformer() => B[" << i<< "] IN\n");
+    deletePtr(_transStateVec[i]); 
+    CFLog(VERBOSE, "VarSetTransformer::~VarSetTransformer() => B[" << i<< "] OUT\n");
   }
+  CFLog(VERBOSE, "VarSetTransformer::~VarSetTransformer() => END\n");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void VarSetTransformer::setup(const CFuint maxNbTransStates)
