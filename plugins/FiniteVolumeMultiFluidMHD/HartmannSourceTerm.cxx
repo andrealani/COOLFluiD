@@ -35,7 +35,7 @@ hartmannSourceTerm2DProvider("HartmannSourceTerm2D");
 // 		       CellCenterFVMData,
 // 		       Framework::ComputeSourceTerm<CellCenterFVMData>,
 // 		       FiniteVolumeMultiFluidMHDModule>
-// hartmannSourceTerm3DProvider("HartmannSourceTerm3D");
+// HartmannSourceTermProvider("HartmannSourceTerm");
 
 //////////////////////////////////////////////////////////////////////////////
 

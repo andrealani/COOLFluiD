@@ -281,6 +281,9 @@ protected:
   
    /// user defined coefficient for the calculation method of a12
   CFuint m_choiceA12;
+
+  /// Coeff for numerical viscosity
+  CFreal m_coeff;
   
   /// flag telling if Liou's way of computing the update coeff 
   /// imposing positivity has to be used

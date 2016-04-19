@@ -60,6 +60,9 @@ AUSMFluxMultiFluid<UPDATEVAR>::AUSMFluxMultiFluid(const std::string& name) :
   
   m_useMacCormackScaling = true;
   this->setParameter("useMacCormackScaling",&m_useMacCormackScaling);
+
+  m_coeff = 1.;
+  this->setParameter("Coeff",&m_coeff);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -83,6 +86,10 @@ void AUSMFluxMultiFluid<UPDATEVAR>::defineConfigOptions(Config::OptionList& opti
   
   options.template addConfigOption< bool >
    ("useMacCormackScaling", "Flag to use the scaling of the numerical dissipation in the Steger-Warming of Maxwell equations.");
+
+  options.template addConfigOption< CFreal >
+    ("Coeff","Coeff for numerical viscosity in the div cleaning");
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -229,24 +236,44 @@ void AUSMFluxMultiFluid<UPDATEVAR>::compute(RealVector& result)
     computeUpdateCoeff();
   }
   
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux BX = " << result[0] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux BY = " << result[1] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux BZ = " << result[2] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux EX = " << result[3] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux EY = " << result[4] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux EZ = " << result[5] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux PSI = " << result[6] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux PHI = " << result[7] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux mass = " << result[8] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux mass = " << result[9] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << result[10] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << result[11] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux z-mom = " << result[12] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << result[13] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << result[14] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux z-mom = " << result[15] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << result[16] << "\n");
-     CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << result[17] << "\n");
+  if(is2DHalf){
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux BX = " << result[0] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux BY = " << result[1] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux BZ = " << result[2] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux EX = " << result[3] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux EY = " << result[4] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux EZ = " << result[5] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux PSI = " << result[6] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux PHI = " << result[7] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux mass = " << result[8] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux mass = " << result[9] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << result[10] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << result[11] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux z-mom = " << result[12] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << result[13] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << result[14] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux z-mom = " << result[15] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << result[16] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << result[17] << "\n");
+  }
+  else{
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux BX = " << result[0] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux BY = " << result[1] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux BZ = " << result[2] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux EX = " << result[3] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux EY = " << result[4] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux EZ = " << result[5] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux PSI = " << result[6] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux PHI = " << result[7] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux mass = " << result[8] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux mass = " << result[9] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << result[10] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << result[11] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << result[12] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << result[13] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << result[14] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << result[15] << "\n");
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -402,6 +429,11 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMassFluxImpl(RealVector& result)
         result[endEM + nbSpecies + nbSpecies*3 + ie] = m_mflux12[ie]*_psi_l[nbSpecies + nbSpecies*3 + ie];
       }
     }
+    //if(!getMethodData().isPerturb()) {
+      //cout <<"Left case: \n";
+      //cout <<"result = " << result;
+      //cout <<"\n";
+    //}
   }
   
   else { // RIGHT CASE
@@ -441,7 +473,12 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMassFluxImpl(RealVector& result)
         _psi_r[nbSpecies + nbSpecies*3 + ie] = (*this->m_rData)[firstTemperature + 4*ie + 3];
         result[endEM + nbSpecies + nbSpecies*3 + ie] = m_mflux12[ie]*_psi_r[nbSpecies + nbSpecies*3 + ie] ;
       }
-    }         
+    }
+    //if(!getMethodData().isPerturb()) {
+      //cout <<"Right case: \n";
+      //cout <<"result = " << result; 
+      //cout <<"\n";        
+    //}
   } 
 }
 
@@ -758,17 +795,18 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAplus()
   const CFreal gamma = m_updateVarSet->getModel()->getDivBCleaningConst();	//DivB cleaning technique constant
   const CFreal chi = m_updateVarSet->getModel()->getDivECleaningConst();
   const CFreal c_e = m_updateVarSet->getModel()->getLightSpeed();//speed of light
-  CFreal factor1;
-  CFreal factor2;
+  CFreal factor1, factor2, factor3;
   
   
   if(m_useMacCormackScaling){
     factor1 = 1;
     factor2 = c_e*c_e;
+    factor3 = m_coeff*c_e*c_e;
   }
   else{
     factor1 = c_e;
-    factor2 = c_e;    
+    factor2 = c_e;
+    factor3 = c_e;
   }
   
   if(dim == 2){
@@ -831,8 +869,8 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAplus()
     _Aplus(6,2) = 0;
     _Aplus(6,3) = 0;
     _Aplus(6,4) = 0;
-    _Aplus(6,5) = 0; 
-    _Aplus(6,6) = gamma*factor2; //flag 
+    _Aplus(6,5) = 0;  
+    _Aplus(6,6) = gamma*factor3;
     _Aplus(6,7) = 0;
     
     _Aplus(7,0) = 0;
@@ -931,17 +969,18 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAminus()
   const CFreal gamma = m_updateVarSet->getModel()->getDivBCleaningConst();	//DivB cleaning technique constant
   const CFreal chi = m_updateVarSet->getModel()->getDivECleaningConst();
   const CFreal c_e = m_updateVarSet->getModel()->getLightSpeed();//speed of light
-  CFreal factor1;
-  CFreal factor2;
+  CFreal factor1, factor2, factor3;
   
   
   if(m_useMacCormackScaling){
     factor1 = 1;
     factor2 = c_e*c_e;
+    factor3 = m_coeff*c_e*c_e;
   }
   else{
     factor1 = c_e;
-    factor2 = c_e;    
+    factor2 = c_e;
+    factor3 = c_e;
   }
 
   if(dim == 2){
@@ -1004,8 +1043,8 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAminus()
     _Aminus(6,2) = 0;
     _Aminus(6,3) = 0;
     _Aminus(6,4) = 0;
-    _Aminus(6,5) = 0; 
-    _Aminus(6,6) = -gamma*factor2; //flag 
+    _Aminus(6,5) = 0;
+    _Aminus(6,6) = -gamma*factor3;
     _Aminus(6,7) = 0;
     
     _Aminus(7,0) = 0;

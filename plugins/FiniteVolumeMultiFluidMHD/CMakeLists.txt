@@ -23,6 +23,8 @@ GEMMHDST3DTwoFluid.hh
 GEMMHDST2DHalfTwoFluid.ci
 GEMMHDST2DHalfTwoFluid.cxx
 GEMMHDST2DHalfTwoFluid.hh
+GridConvergence.cxx
+GridConvergence.hh
 HartmannSourceTerm.ci
 HartmannSourceTerm.cxx
 HartmannSourceTerm.hh
