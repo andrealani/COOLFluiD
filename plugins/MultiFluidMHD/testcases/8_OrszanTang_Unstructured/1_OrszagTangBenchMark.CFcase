@@ -258,13 +258,13 @@ Simulator.SubSystem.CellCenterFVM.BcNames = Jet1 Jet2
 Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = PeriodicY
 #Simulator.SubSystem.CellCenterFVM.Jet1.TranslationVector = 0. 628.3185307179586 
 Simulator.SubSystem.CellCenterFVM.Jet1.Threshold = 1e-4
-Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 0 0 0 0 0 0 0 0 0 0 0 0
+Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1
 
 # PeriodicX 
 Simulator.SubSystem.CellCenterFVM.Jet2.applyTRS = PeriodicX
 #Simulator.SubSystem.CellCenterFVM.Jet2.TranslationVector = 628.3185307179586 0.
 Simulator.SubSystem.CellCenterFVM.Jet2.Threshold = 1e-4
-Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 0 0 0 0 0 0 0 0 0 0 0 0
+Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1
 ###############################################################################
 # DataProcessing
 
