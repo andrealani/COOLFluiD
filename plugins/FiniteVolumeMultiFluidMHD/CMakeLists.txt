@@ -100,8 +100,8 @@ UnsteadySubInletYUVTEIWRhoiViTi.hh
 #SubOutletPPCWRhoiViTi3D.hh
 )
 
-LIST ( APPEND FiniteVolumeMultiFluidMHD_requires_mods NavierStokes Maxwell MultiFluidMHD FiniteVolume FiniteVolumeNavierStokes )
-LIST ( APPEND FiniteVolumeMultiFluidMHD_cflibs NavierStokes Maxwell MultiFluidMHD FiniteVolume FiniteVolumeNavierStokes )
+LIST ( APPEND FiniteVolumeMultiFluidMHD_requires_mods NavierStokes TecplotWriter Maxwell MultiFluidMHD FiniteVolume FiniteVolumeNavierStokes )
+LIST ( APPEND FiniteVolumeMultiFluidMHD_cflibs NavierStokes Maxwell TecplotWriter MultiFluidMHD FiniteVolume FiniteVolumeNavierStokes )
 
 CF_ADD_PLUGIN_LIBRARY ( FiniteVolumeMultiFluidMHD )
 
