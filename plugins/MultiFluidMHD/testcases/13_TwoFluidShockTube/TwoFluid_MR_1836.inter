@@ -1,0 +1,6 @@
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1000
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.0000333333333 #0.03925 #3.1415926535e-4 #1.5707963267948e-3 #3.1415926535e-3 #0.00785 #0.003925 #1.0429e-6 #6.7025e-4 #1.3405e-3
+#Simulator.SubSystem.Tecplot.SaveRate    = 1
+#Simulator.SubSystem.Tecplot.SaveRate    = 1
