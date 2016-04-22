@@ -216,13 +216,9 @@ protected: // data
   
   ///Vector storing the total electric Field
   RealVector _Etotal;
-  
-  ///rate of particles of neutrals created in ionization per unit vol
-  //CFreal _GammaIon_n;
-  
-  ///rate of particles of ions created in recombination per unit vol
-  //CFreal _GammaRec_i;
- 
+
+  /// Option to change the electric charge
+  CFreal _electricCharge;
 private:
 
   //options here

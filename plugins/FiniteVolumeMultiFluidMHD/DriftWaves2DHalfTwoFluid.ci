@@ -34,6 +34,9 @@ DriftWaves2DHalfTwoFluid<UPDATEVAR>::DriftWaves2DHalfTwoFluid(const std::string&
   _Etotal()
 {
   addConfigOptionsTo(this);
+
+  _electricCharge = Framework::PhysicalConsts::ElectronCharge();
+  setParameter("ElectricCharge",&_electricCharge);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -63,7 +66,8 @@ DriftWaves2DHalfTwoFluid<UPDATEVAR>::providesSockets()
 template <class UPDATEVAR>
 void DriftWaves2DHalfTwoFluid<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
 {
-
+  options.template addConfigOption< CFreal >
+     ("ElectricCharge", "electric Charge of species");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -169,7 +173,7 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
 //Physical constants:
   const CFreal kB = Framework::PhysicalConsts::Boltzmann(); 
   const CFuint firstDensity = _varSet->getModel()->getFirstScalarVar(0);
-  const CFreal qe = Framework::PhysicalConsts::ElectronCharge()*(-1);                       // charge of electrons in Coulombs
+  const CFreal qe = _electricCharge*(-1);                        // charge of electrons in Coulombs
   const CFreal qi = qe*(-1);                                    // charge of ions in Coulombs
   const CFreal mi = _varSet->getModel()->getMolecularMass2();                            // Proton's mass [kg] source:Standart Handbook for Electrical Engineerings
   const CFreal me = _varSet->getModel()->getMolecularMass1();                // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
