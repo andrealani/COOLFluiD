@@ -1,7 +1,7 @@
 # COOLFluiD Startfile
 # Comments begin with "#"
 # Case Testing the chromospheric wave propagation
-### Residual = -0.544473
+### Residual = -2.73925
 
 ###############################################################################
 # Assertion For Debugging
@@ -80,10 +80,10 @@ Simulator.SubSystem.Tecplot.AppendTime = true #false
 
 # Extra Values from Data Processing
 
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = gradPi gradPn nuIon nuRec nu_in Jx Jy Jz Jtot jxB_x jxB_y jxB_z jxB Resistivity #divB  
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = gradPi gradPn nuIon nuRec nu_in Jx Jy Jz Jtot jxB_x jxB_y jxB_z jxB Resistivity #divB 
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = gradPyIon gradPyNeutral gradPxIon gradPxNeutral   
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = gradPyIon gradPyNeutral gradPxIon gradPxNeutral
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1 1 1
+#Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
 
 
 ###############################################################################
@@ -224,13 +224,13 @@ Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokesMF
 #Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
 
 #Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = MultiFluidMHDST2D
-Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = TwoFluidGravMHDST2DChExchange
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = TwoFluidGravMHDST
 #Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2DChExchange.electricalResistivity = 0.07544302484745
-Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2DChExchange.GravityTerms = true
-Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2DChExchange.ChemicalReactions = true
-Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2DChExchange.CollisionalTerms = true
-Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2DChExchange.CorrectedChemistry = true
-Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2DChExchange.SpitzerResistivity = true 
+Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2D.GravityTerms = true
+Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2D.ChemicalReactions = true
+Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2D.CollisionalTerms = true
+Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2D.CorrectedChemistry = true
+Simulator.SubSystem.CellCenterFVM.Data.TwoFluidGravMHDST2D.SpitzerResistivity = true 
  #0.00382 #0.150886049694899
 #Simulator.SubSystem.CellCenterFVM.Data.MultiFluidMHDST2D.electricalResistivity = 0.07544302484745 #0.00382 #0.150886049694899
 
@@ -335,10 +335,9 @@ Simulator.SubSystem.CellCenterFVM.Jet3.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1
 ###############################################################################
 # DataProcessing
 
-Simulator.SubSystem.DataPreProcessing = DataProcessing
-Simulator.SubSystem.DataProcessing.Data.updateVar = RhoiViTi
-Simulator.SubSystem.DataProcessing.Comds = AtmosphereProps #DivMonitoring
-Simulator.SubSystem.DataProcessing.Names = AtmosphereProps #DivMonitoring
-Simulator.SubSystem.DataProcessing.ProcessRate = 1 
-#Simulator.SubSystem.DataProcessing.DivMonitoring.options = ./DivMonitoring.plt
+#Simulator.SubSystem.DataPreProcessing = DataProcessing
+#Simulator.SubSystem.DataProcessing.Data.updateVar = RhoiViTi
+#Simulator.SubSystem.DataProcessing.Comds = AtmosphereProps #DivMonitoring
+#Simulator.SubSystem.DataProcessing.Names = AtmosphereProps #DivMonitoring
+#Simulator.SubSystem.DataProcessing.ProcessRate = 1 
 
