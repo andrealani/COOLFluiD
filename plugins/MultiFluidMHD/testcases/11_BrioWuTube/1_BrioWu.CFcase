@@ -226,7 +226,6 @@ Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
 
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = HartmannSourceTerm2D
 Simulator.SubSystem.CellCenterFVM.Data.HartmannSourceTerm2D.electricalConductivity = 7.95774715482e10 #7.95774715482e14 #5e6 #1256.6370614359
-Simulator.SubSystem.CellCenterFVM.Data.HartmannSourceTerm2D.OrszagConductivity = true #false
 
 ###############################################################################
 # Initial Conditions
