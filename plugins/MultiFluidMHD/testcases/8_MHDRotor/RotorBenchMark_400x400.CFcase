@@ -29,11 +29,11 @@
 Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libNavierStokes libMaxwell libMultiFluidMHD libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGambit2CFmesh libForwardEuler libPetscI 
 
 #SubSystem Parameters
-Simulator.Paths.WorkingDir       = ./
+Simulator.Paths.WorkingDir       = plugins/MultiFluidMHD/testcases/8_MHDRotor
 Simulator.Paths.ResultsDir       = ./RESULTS_MHDRotor
 
 #SubSystem Parameters
-Simulator.SubSystem.InteractiveParamReader.FileName = ./rotor.inter
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MultiFluidMHD/testcases/8_MHDRotor/rotor.inter
 Simulator.SubSystem.InteractiveParamReader.readRate = 1000
 
 
