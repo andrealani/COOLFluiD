@@ -29,11 +29,11 @@
 Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libNavierStokes libMaxwell libMultiFluidMHD libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGambit2CFmesh libForwardEuler libPetscI 
 
 #SubSystem Parameters
-Simulator.Paths.WorkingDir       = ./
-Simulator.Paths.ResultsDir       = ./GEMchallenge_New
+Simulator.Paths.WorkingDir       = /plugins/MultiFluidMHD/testcases/5_GEMchallenge
+Simulator.Paths.ResultsDir       = plugins/MultiFluidMHD/testcases/5_GEMchallenge/GEMchallenge_New
 
 #SubSystem Parameters
-Simulator.SubSystem.InteractiveParamReader.FileName = ./gem_test.inter
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MultiFluidMHD/testcases/5_GEMchallenge/gem_test.inter
 Simulator.SubSystem.InteractiveParamReader.readRate = 10
 
 
@@ -172,7 +172,7 @@ Simulator.SubSystem.CFmeshFileReader.Data.FileName = mesh2D_512x256Periodic.CFme
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
-Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 4
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
 
 
 ###############################################################################

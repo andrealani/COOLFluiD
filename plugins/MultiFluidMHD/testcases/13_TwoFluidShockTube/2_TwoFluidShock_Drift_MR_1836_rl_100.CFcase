@@ -171,7 +171,7 @@ Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 0.01
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
-Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 4
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
 
 
 ###############################################################################
@@ -222,8 +222,8 @@ Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 #Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokesMF
 #Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
 
-#Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = DriftWaves2DHalfTwoFluid
-#Simulator.SubSystem.CellCenterFVM.Data.DriftWaves2DHalfTwoFluid = 7.95774715482e10 #7.95774715482e14 #5e6 #1256.6370614359
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = DriftWaves2DHalfTwoFluid
+Simulator.SubSystem.CellCenterFVM.Data.DriftWaves2DHalfTwoFluid.ElectricCharge = 1.49208242546e-25 #7.95774715482e14 #5e6 #1256.6370614359
 #Simulator.SubSystem.CellCenterFVM.Data.DriftWaves2DHalfTwoFluid = true #false
 
 ###############################################################################

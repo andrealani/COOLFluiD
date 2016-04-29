@@ -51,7 +51,7 @@ Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.IsLeake = false
 #Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.gamma = 1.6666666666667 #Default 5/3
 Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.nonInducedElectromagnetic = 0. 0. 0. 0. 0. 0.
 Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.divBCleaningConst = 1.
-Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.divECleaningConst = 1.
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.divECleaningConst = 10.
 #Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.nbSpecies = 1
 #Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.dynViscosity = 1000. 
 #Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.thermConductivity = 8254.39760724 
@@ -72,7 +72,7 @@ Simulator.SubSystem.CFmesh.AppendIter   = false
 
 Simulator.SubSystem.Tecplot.FileName    = multiFluid.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = RhoiViTi
-Simulator.SubSystem.Tecplot.SaveRate    = 10 #1250
+Simulator.SubSystem.Tecplot.SaveRate    = 100 #1250
 #Simulator.SubSystem.Tecplot.Data.printExtraValues = true
 #Simulator.SubSystem.Tecplot.Data.SurfaceTRS = x0 y0
 Simulator.SubSystem.Tecplot.AppendTime = true
@@ -171,7 +171,7 @@ Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 0.01
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
-Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 4
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
 
 
 ###############################################################################
