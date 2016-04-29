@@ -34,7 +34,6 @@ void MeshFittingAlgorithm<MODEL>::defineConfigOptions(Config::OptionList& option
   options.template addConfigOption< CFreal >("minPercentile","Percentile for minimum spring value");
   options.template addConfigOption< CFreal >("maxPercentile","Percentile for maximum spring value");
   options.template addConfigOption< CFreal >("meshAcceleration","How fast the mesh moves in mesh steps");
-  options.template addConfigOption< std::string >("monitorVar","Monitor variable for mesh adaptation");
   options.template addConfigOption< CFuint >("monitorVarID","Monitor variable ID for mesh adaptation");
   options.template addConfigOption< CFreal >("equilibriumSpringLength","Length of spring for equilibrium");
   options.template addConfigOption< CFreal >("ratioBoundaryToInnerEquilibriumSpringLength","ratio between the equilibrium length of a Boundary spring to an Inner spring");
@@ -68,10 +67,7 @@ MeshFittingAlgorithm<MODEL>::MeshFittingAlgorithm(const std::string& name) :
 
   m_monitorVarID = std::numeric_limits<CFuint>::max();
   this->setParameter("monitorVarID", &m_monitorVarID);
- 
-  m_monitorVar = "rho";
-  this->setParameter("monitorVar", &m_monitorVar);
-  
+   
   m_equilibriumSpringLength = 0.;
   this->setParameter("equilibriumSpringLength", &m_equilibriumSpringLength);
 
@@ -159,16 +155,11 @@ void MeshFittingAlgorithm<MODEL>::setup()
   m_faceTRSBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
 
   getMethodData().getUpdateVarSet()->setup();
-
-  if(m_monitorVarID == std::numeric_limits<CFuint>::max()){
-    /// create mapping between monitor variable and its model
-    std::map<std::string, CFuint> variables;
-    variables["rho"] = MODEL::PTERM::RHO;
-    variables["p"] = MODEL::PTERM::P;
- 
-    std::map<std::string, CFuint>::iterator it = variables.find(m_monitorVar);
-    cf_assert(it != variables.end());
-    m_monitorVarID = it->second;
+  
+  if (m_monitorVarID == std::numeric_limits<CFuint>::max() || 
+      m_monitorVarID > PhysicalModelStack::getActive()->getNbEq()) {
+    CFLog(WARN, "MeshFittingAlgorithm::setup() => monitorVarID not specified or invalid: will be set to 0");
+    m_monitorVarID = 0;
   }
   
   createNodalConnectivity();
@@ -328,8 +319,7 @@ void MeshFittingAlgorithm<MODEL>::execute()
   resizeSystemSolverToStateData();
   triggerRecomputeMeshData();
   
-  
-  CFLog(VERBOSE, "MeshFittingAlgorithm::execute() => end \n");
+  CFLog(INFO, "MeshFittingAlgorithm::execute() => end \n");
 }
       
 //////////////////////////////////////////////////////////////////////////////

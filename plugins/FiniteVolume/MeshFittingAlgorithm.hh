@@ -237,12 +237,9 @@ private: //data
 
   std::vector<std::string> m_unlockedBoundaryTRSs;
   
-  /// Monitor variable string
-  std::string m_monitorVar;
-  
   /// Monitor variable ID)
   CFuint m_monitorVarID;
-
+  
   ///Equilibrium spring length 
   CFreal m_equilibriumSpringLength;
 

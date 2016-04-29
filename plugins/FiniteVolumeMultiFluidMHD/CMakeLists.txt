@@ -28,6 +28,7 @@ GridConvergence.hh
 HartmannSourceTerm.ci
 HartmannSourceTerm.cxx
 HartmannSourceTerm.hh
+MeshFittingAlgorithmMultiFluidMHD.cxx
 MirrorWall.cxx
 MirrorWall.hh
 MirrorWallHartmann.cxx

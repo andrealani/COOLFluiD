@@ -150,8 +150,9 @@ void BDF2::takeStepImpl()
     CFLog(VERBOSE, "BDF2::takeStep(): solving the linear system\n");
     
     // solve the linear system
-    getLinearSystemSolver().apply(mem_fun(&LinearSystemSolver::solveSys));
-
+    getLinearSystemSolver().apply(mem_fun(&LinearSystemSolver::solveSys),
+				  m_data->getNbLSSToSolveAtOnce());
+    
     CFLog(VERBOSE, "BDF2::takeStep(): updating the solution\n");
 
     CFLog(VERBOSE, "BDF2::takeStep(): updating the solution\n");

@@ -116,8 +116,9 @@ void CrankNicholson::takeStepImpl()
     getMethodData()->getCollaborator<SpaceMethod>()->computeTimeResidual(1.0);
 
     // solve the linear system
-    getLinearSystemSolver().apply(mem_fun(&LinearSystemSolver::solveSys));
-
+    getLinearSystemSolver().apply(mem_fun(&LinearSystemSolver::solveSys),
+				  m_data->getNbLSSToSolveAtOnce());
+    
     // update the solution
     m_updateSol->execute();
 
