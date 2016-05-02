@@ -11,7 +11,6 @@
 #define TECEND  tecend
 
 #define round2(X)  ((X) >= 0 ? ((LgIndex)(X+0.49)) : ((LgIndex)(X-0.49)))
-#define Version 6.3
 
 typedef long int LgIndex;
 

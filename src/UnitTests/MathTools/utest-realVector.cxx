@@ -11,7 +11,12 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
+#ifdef CF_HAVE_BOOST_1_59
+#include <boost/test/tools/floating_point_comparison.hpp>
+#else
 #include <boost/test/floating_point_comparison.hpp>
+#endif
+
 #include <boost/test/unit_test.hpp>
 
 #include "MathTools/RealVector.hh"
@@ -22,8 +27,13 @@ using namespace COOLFluiD;
 using namespace COOLFluiD::MathTools;
 
 using namespace boost::unit_test;
+#ifdef CF_HAVE_BOOST_1_59
+using boost::math::fpc::close_at_tolerance;
+using boost::math::fpc::percent_tolerance;
+#else
 using boost::test_tools::close_at_tolerance;
 using boost::test_tools::percent_tolerance;
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 
