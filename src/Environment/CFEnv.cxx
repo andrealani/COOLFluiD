@@ -125,14 +125,14 @@ void CFEnv::configure ( Config::ConfigArgs& args )
   CFLog(VERBOSE, "OK\n");
 
   // clean the config.log file
-  boost::filesystem::path fileconfig =
+ /* boost::filesystem::path fileconfig =
     Environment::DirPaths::getInstance().getResultsDir() / boost::filesystem::path("config.log");
 
   SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
   std::ofstream& fout = fhandle->open(fileconfig,std::ios_base::trunc);
 
   fout << "CONFIG LOG:" << "\n";
-  fhandle->close();
+  fhandle->close();*/
 }
 
 //////////////////////////////////////////////////////////////////////////////
