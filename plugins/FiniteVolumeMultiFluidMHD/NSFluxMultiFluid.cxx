@@ -1,5 +1,5 @@
 #include "Framework/MethodStrategyProvider.hh"
-#include "FiniteVolumeNavierStokes/NSFluxCoupling.hh"
+#include "FiniteVolume/NSFluxCoupling.hh"
 #include "FiniteVolumeMultiFluidMHD/FiniteVolumeMultiFluidMHD.hh"
 #include "MultiFluidMHD/DiffMFMHDVarSet.hh"
 

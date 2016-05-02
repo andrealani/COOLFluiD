@@ -1,5 +1,5 @@
 #include "Framework/MethodStrategyProvider.hh"
-#include "FiniteVolumeNavierStokes/NSFlux.hh"
+#include "FiniteVolume/NSFlux.hh"
 #include "FiniteVolumeNavierStokes/FiniteVolumeNavierStokes.hh"
 #include "NavierStokes/NavierStokesVarSet.hh"
 

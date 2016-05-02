@@ -87,8 +87,6 @@ NavierStokes2DAxiSourceTerm.ci
 NavierStokesChannelSourceTerm.hh
 NavierStokesChannelSourceTerm.ci
 NavierStokesChannelSourceTerm.cxx
-NSFlux.hh
-NSFluxCoupling.hh
 NoSlipWallAdiabaticNS2D.hh
 NoSlipWallAdiabaticNS3D.hh
 NoSlipWallIsothermalNSPvtSimple.hh
@@ -112,9 +110,7 @@ NoSlipWallAdiabaticNSTurb.ci
 NoSlipWallAdiabaticNSTurb.cxx
 NoSlipWallAdiabaticNSTurb.hh
 NavierStokes2DAxiSourceTerm.cxx
-NSFlux.ci
 NSFlux.cxx
-NSFluxCoupling.ci
 NSFluxCoupling.cxx
 NSFluxAndJacob.hh
 NSFluxAndJacob.cxx

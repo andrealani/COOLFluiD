@@ -220,6 +220,10 @@ MinMod2TimeLimiter.cxx
 MinMod2TimeLimiter.hh
 MUSCLPolyRec.hh
 MUSCLPolyRec.cxx
+NSFlux.hh
+NSFlux.ci
+NSFluxCoupling.hh
+NSFluxCoupling.ci
 WMUSCLPolyRec.hh
 WMUSCLPolyRec.cxx
 MUSCLSetup.hh
