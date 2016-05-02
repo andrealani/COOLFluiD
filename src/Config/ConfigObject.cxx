@@ -106,7 +106,7 @@ void ConfigObject::configure ( Config::ConfigArgs& args )
 #ifndef NDEBUG
   std::string debug_info = m_options.debugInfo();
 
-  CFuint rank = 0;
+/*  CFuint rank = 0;
   if ( Common::PE::IsInitialised() )
     rank = Common::PE::GetPE().GetRank("Default");
   if ( rank == 0 )
@@ -115,6 +115,8 @@ void ConfigObject::configure ( Config::ConfigArgs& args )
     configdbg << "### " << getNestName() << "\n";
     configdbg << debug_info << "\n";
   }
+ */
+  //   MPI_Barrier(MPI_COMM_WORLD); // PE is not initialised yet
 #endif
 
   // remove the base name form all options
@@ -129,7 +131,7 @@ void ConfigObject::configureDynamic ( ConfigArgs& args )
   // prepend to each option the basename so they can be matched
   m_options.setHierarchyOptions ( basename );
 
-  // do dynamic configuration
+  // do dynamic configuaation
   bool dynamic = true;
   m_options.processArgs ( args, dynamic );
 
@@ -331,7 +333,7 @@ void ConfigObject::processParentArgs ( ConfigArgs& args )
   // write the config log file
   /// @todo add this in XML CFcase format
 
-  CFuint rank = 0;
+ /*  CFuint rank = 0;
   if ( Common::PE::IsInitialised() )
     rank = Common::PE::GetPE().GetRank("Default");
 
@@ -344,6 +346,8 @@ void ConfigObject::processParentArgs ( ConfigArgs& args )
     confOut << procargs.first.str();
     confOut.close();
   }
+*/
+  // MPI_Barrier(MPI_COMM_WORLD); // PE is not initialised yet
 }
 
 //////////////////////////////////////////////////////////////////////////////
