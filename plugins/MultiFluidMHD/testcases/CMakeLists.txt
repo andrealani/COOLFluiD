@@ -5,6 +5,7 @@ cf_add_case( MPI        8       CASEDIR 4_ChromostratExtended   PCASE UNSTEADYCA
 #cf_add_case( MPI        16      CASEDIR 5_GEMchallenge		PCASE 1_GEMChallengeRegressionTest_2DHalf.CFcase   CASEFILES mesh2D_512x256Periodic.CFmesh gem_test.inter )
 cf_add_case( MPI        1       CASEDIR 6_OrszagTang		PCASE OrszagTangBenchMark.CFcase		   CASEFILES mesh2D_2pix2pi_200x200.neu orszag.inter )
 cf_add_case( MPI        8       CASEDIR 8_MHDRotor		PCASE RotorBenchMark_400x400.CFcase		   CASEFILES Mesh_2x2_400x400.neu rotor.inter )
+cf_add_case( MPI        8       CASEDIR 8_MHDRotor              PCASE RotorBenchMark_MeFiAlgo.CFcase               CASEFILES rotor_100x100_quad.neu ) 
 cf_add_case( MPI        8       CASEDIR 9_VortexAccuracy	PCASE VortexBenchMark_25x25.CFcase		   CASEFILES Mesh_10x10_50x50.neu vortex.inter )
 cf_add_case( MPI        1       CASEDIR 10_SodTube		PCASE 1_SodTube.CFcase				   CASEFILES shockTube_1x6e-3_600x4.neu sodTube.inter )
 #cf_add_case( MPI        1       CASEDIR 11_BrioWuTube		PCASE 1_BrioWu.CFcase				   CASEFILES shockTube_1x6e-3_600x4.neu BrioWu.inter )
