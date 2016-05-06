@@ -210,7 +210,7 @@ int  TECINI(
     }
 
 
-  WriteN(HeadFile[NewFile],"6.3");
+  WriteN(HeadFile[NewFile],6.3);
 
   WriteS(HeadFile[NewFile],Title);
 
