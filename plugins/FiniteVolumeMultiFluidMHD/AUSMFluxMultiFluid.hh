@@ -193,7 +193,7 @@ protected:
   RealVector* m_rData;
   
   /// interface sound speed
-  RealVector m_a12;
+  RealVector m_a12Vec;
   
   /// mach number left
   RealVector m_mL;

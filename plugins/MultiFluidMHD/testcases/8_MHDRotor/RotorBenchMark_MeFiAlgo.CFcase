@@ -10,9 +10,8 @@
 #
 # Comments begin with "#"
 #
-### Residual = -1.15169
+### Residual = -1.0922628
 #
-
 ###############################################################################
 # Assertion For Debugging
 
@@ -39,7 +38,7 @@ Simulator.Modules.Libs = libShapeFunctions libCFmeshFileReader libCFmeshFileWrit
 
 #SubSystem Parameters
 Simulator.Paths.WorkingDir       = plugins/MultiFluidMHD/testcases/8_MHDRotor
-Simulator.Paths.ResultsDir       = ./RESULTS_MHDRotor_MeFiAlgo
+Simulator.Paths.ResultsDir       = ./RESULTS_MHDRotor_MeFiAlgo_split
 
 #SubSystem Parameters
 #Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MultiFluidMHD/testcases/8_MHDRotor/rotor.inter
@@ -153,7 +152,8 @@ Simulator.SubSystem.BDF2.Data.NbLSSToSolveAtOnce = 1
 Simulator.SubSystem.Default.listTRS = PeriodicY PeriodicX #z0 z1 #
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = rotor_100x100_quad.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = rotor_100x100_split.CFmesh
+#rotor_100x100_quad.CFmesh
 #rotor_200x200_split.CFmesh
 #rotor_100x100_split.CFmesh
 #rotor_100x100_triag.CFmesh
@@ -267,7 +267,7 @@ Simulator.SubSystem.MeFiAlgo.Comds              = MeshFittingAlgorithmMFMHD2D
 Simulator.SubSystem.MeFiAlgo.Data.CollaboratorNames = MeshAlgoLSS
 Simulator.SubSystem.MeFiAlgo.ProcessRate        = 1
 Simulator.SubSystem.MeFiAlgo.SkipFirstIteration = true
-Simulator.SubSystem.MeFiAlgo.StopIter           = 20000 # 200 modified
+Simulator.SubSystem.MeFiAlgo.StopIter           = 200 # 200 modified
 Simulator.SubSystem.MeFiAlgo.Names              = MeshFitting
 Simulator.SubSystem.MeFiAlgo.Data.updateVar     = RhoiViTi
  

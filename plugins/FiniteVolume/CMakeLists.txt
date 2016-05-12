@@ -1,4 +1,6 @@
 LIST ( APPEND FiniteVolume_files
+AUSMFluxALE.ci
+AUSMFluxALE.hh
 BarthJesp.cxx
 BarthJesp.hh
 BDF2ALEPrepare.cxx

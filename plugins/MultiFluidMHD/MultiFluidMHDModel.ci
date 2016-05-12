@@ -73,10 +73,10 @@ CFuint MultiFluidMHDModel<DIM>::getNbEquations() const
   getConvTerm()->setNbScalarVars(v, &strides);
   
   const CFreal nbBEEqs = 8; // equations for Ex,Ey,Ez,Bx,By,Bz,Phi(E),Psi(B)
-  std::cout << "MultiFluidMHDModel<DIM>::getNbEquations() = "<< nbBEEqs + v.sum() <<"\n";
+  CFLog(VERBOSE, "MultiFluidMHDModel<DIM>::getNbEquations() = "<< nbBEEqs + v.sum() <<"\n");
   return nbBEEqs + v.sum();
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 template <int DIM>

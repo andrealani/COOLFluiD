@@ -32,7 +32,7 @@ CFEnv.OnlyCPU0Writes = false
 Simulator.Modules.Libs = libCFmeshFileReader libCFmeshExtruder libPhysicalModelDummy libGambit2CFmesh  
 
 # SubSystem Parameters
-Simulator.Paths.WorkingDir = ./
+Simulator.Paths.WorkingDir = plugins/PhysicalModelDummy/testcases/Extrusion
 Simulator.Paths.ResultsDir = ./OUTPUT
 
 #Maestro = LoopMaestro

@@ -26,11 +26,11 @@
 Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libNavierStokes libMaxwell libMultiFluidMHD libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGambit2CFmesh libForwardEuler libPetscI 
 
 #SubSystem Parameters
-Simulator.Paths.WorkingDir       = ./
+Simulator.Paths.WorkingDir       = plugins/MultiFluidMHD/testcases/6_OrszagTang
 Simulator.Paths.ResultsDir       = ./RESULTS_unstr
 
 #SubSystem Parameters
-Simulator.SubSystem.InteractiveParamReader.FileName = ./orszag_unstr.inter
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MultiFluidMHD/testcases/6_OrszagTang/orszag_unstr.inter
 Simulator.SubSystem.InteractiveParamReader.readRate = 1000
 
 
@@ -250,21 +250,22 @@ Simulator.SubSystem.CellCenterFVM.InField.Def =\
 # Boundary Conditions
 Simulator.SubSystem.CellCenterFVM.BcComds = PeriodicX2DMPIFVMCC PeriodicY2DMPIFVMCC
 #	PeriodicX2DFVMCC PeriodicY2DFVMCC 
-#	PeriodicX2DMPIFVMCC PeriodicY2DMPIFVMCC
 #       BCPeriodicFVMCC BCPeriodicFVMCC
 Simulator.SubSystem.CellCenterFVM.BcNames = Jet1 Jet2   
 
 # PeriodicY 
 Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = PeriodicY
-#Simulator.SubSystem.CellCenterFVM.Jet1.TranslationVector = 0. 628.3185307179586 
 Simulator.SubSystem.CellCenterFVM.Jet1.Threshold = 1e-4
-Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1
+Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 0 0 0 0 0 0 0 0 0 0 0 0 
+#Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1
+#Simulator.SubSystem.CellCenterFVM.Jet1.TranslationVector = 0. 628.3185307179586
 
 # PeriodicX 
 Simulator.SubSystem.CellCenterFVM.Jet2.applyTRS = PeriodicX
-#Simulator.SubSystem.CellCenterFVM.Jet2.TranslationVector = 628.3185307179586 0.
 Simulator.SubSystem.CellCenterFVM.Jet2.Threshold = 1e-4
-Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1
+Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 0 0 0 0 0 0 0 0 0 0 0 0
+#Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1
+#Simulator.SubSystem.CellCenterFVM.Jet2.TranslationVector = 628.3185307179586 0.
 ###############################################################################
 # DataProcessing
 

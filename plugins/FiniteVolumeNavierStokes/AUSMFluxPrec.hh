@@ -41,10 +41,7 @@ protected:
   /**
    * Compute the flux
    */
-  virtual void computeMassFluxImpl(const CFuint eulerID,
-				   const CFuint nbEulerEqs,
-				   const std::vector<CFuint>& eulerVarIDs,
-				   RealVector& result);
+  virtual void computeMassFluxImpl(RealVector& result);
   
 protected:
   

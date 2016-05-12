@@ -1,51 +1,50 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, Euler2D, CrankNicholson, mesh with triangles, converter from 
+# THOR to CFmesh, second-order reconstruction with Venkatakhrisnan limiter, 
+# unsteady slip wall BC, rigid mesh deformation algorithm, ALE 
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -14.599454
-
-#
+### Residual = -8.021719
 
 # SubSystem Modules
 Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libTHOR2CFmesh libMeshRigidMove
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Piston2D/
-#Simulator.Paths.WorkingDir = ./
-Simulator.Paths.ResultsDir = ./
+Simulator.Paths.ResultsDir = ./RESULTS_Piston2DFVM
 
-Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
+Simulator.SubSystem.Default.PhysicalModelType = Euler2D
 #Simulator.SubSystem.Euler2D.pRef = 101325.
 #Simulator.SubSystem.Euler2D.tempRef = 293.
 
-
 Simulator.SubSystem.SubSystemStatus.TimeStep = 0.1
-
-
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = piston2DFVMALE.CFmesh
 Simulator.SubSystem.Tecplot.FileName    = piston2DFVM.plt
-Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 1
 Simulator.SubSystem.CFmesh.SaveRate = 1
-Simulator.SubSystem.Tecplot.AppendTime = false
-Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendTime = true
+Simulator.SubSystem.CFmesh.AppendTime = true
 Simulator.SubSystem.Tecplot.AppendIter = true
 Simulator.SubSystem.CFmesh.AppendIter = true
 
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 1
 Simulator.SubSystem.InitialTime         = 0.
 Simulator.SubSystem.InitialIter         = 0
 
-#Simulator.SubSystem.StopCondition   = MaxTime
-#Simulator.SubSystem.MaxTime.maxTime = 4.
+Simulator.SubSystem.StopCondition   = MaxTime
+Simulator.SubSystem.MaxTime.maxTime = 4.
 
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 4
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 4
 
 #Simulator.SubSystem.StopCondition       = Norm
 #Simulator.SubSystem.Norm.valueNorm      = -10.0
@@ -65,8 +64,8 @@ Simulator.SubSystem.CrankNicholson.Data.CFL.Value = 10.0
 Simulator.SubSystem.CrankNicholson.ALEUpdateCom = ALE_FVMGeometricAverage
 Simulator.SubSystem.CrankNicholson.UpdateSol = StdUpdateSol
 Simulator.SubSystem.CrankNicholson.StdUpdateSol.Relaxation = 1.
-Simulator.SubSystem.CrankNicholson.Data.MaxSteps = 10
-#Simulator.SubSystem.CrankNicholson.Data.Norm = -8.0
+Simulator.SubSystem.CrankNicholson.Data.MaxSteps = 50
+Simulator.SubSystem.CrankNicholson.Data.Norm = -8.0
 Simulator.SubSystem.CrankNicholson.Data.PrintHistory = true
 
 Simulator.SubSystem.MeshAdapterMethod = RigidMove
@@ -79,8 +78,7 @@ Simulator.SubSystem.RigidMove.UpdateMeshCom = Piston
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = CrankNicholsonLSS
-#Simulator.SubSystem.CrankNicholsonLSS.Data.PCType = PCASM
-Simulator.SubSystem.CrankNicholsonLSS.Data.PCType = PCILU
+Simulator.SubSystem.CrankNicholsonLSS.Data.PCType = PCASM
 Simulator.SubSystem.CrankNicholsonLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.CrankNicholsonLSS.Data.MatOrderingType = MATORDERING_RCM
 
@@ -90,12 +88,10 @@ Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = ALETimeRhs
 Simulator.SubSystem.CellCenterFVM.ALETimeRhs.useGlobalDT = false
 Simulator.SubSystem.CellCenterFVM.ALETimeRhs.useAnalyticalMatrix = false
 
-#Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup StdALESetup
-Simulator.SubSystem.CellCenterFVM.SetupCom = StdSetup StdALESetup
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup StdALESetup
 Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1 Setup2
-#Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertex
-#Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup StdALEUnSetup
-Simulator.SubSystem.CellCenterFVM.UnSetupCom = StdUnSetup StdALEUnSetup
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup StdALEUnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1 UnSetup2
 Simulator.SubSystem.CellCenterFVM.BeforeMeshUpdateCom = StdALEPrepare
 Simulator.SubSystem.CellCenterFVM.AfterMeshUpdateCom = StdALEUpdate
@@ -105,12 +101,11 @@ Simulator.SubSystem.CellCenterFVM.Data.UpdateVar   = Cons
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
 
-Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
-#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
-#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.7
-#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.7
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
 #Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
-#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
 
 Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField

@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Numerics_FiniteVolume_AUSMFluxALE_hh
-#define COOLFluiD_Numerics_FiniteVolume_AUSMFluxALE_hh
+#ifndef COOLFluiD_Numerics_FiniteVolume_AUSMFluxMultiFluidALE_hh
+#define COOLFluiD_Numerics_FiniteVolume_AUSMFluxMultiFluidALE_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -24,18 +24,18 @@ namespace COOLFluiD {
  *
  */
 template <class BASE>
-class AUSMFluxALE : public BASE {
+class AUSMFluxMultiFluidALE : public BASE {
 public: // classes
   
   /**
    * Constructor
    */
-  AUSMFluxALE(const std::string& name);
+  AUSMFluxMultiFluidALE(const std::string& name);
   
   /**
    * Default destructor
    */
-  virtual ~AUSMFluxALE();
+  virtual ~AUSMFluxMultiFluidALE();
   
   /**
    * Set up private data to prepare the simulation
@@ -56,18 +56,15 @@ public: // classes
 protected:
 
   /// Correct the given Mach number
-  CFreal correctMachInf(CFreal oldMach) const
-  {
-    return oldMach - m_vgn/this->m_a12;
-  }
+  // CFreal correctMachInf(CFreal oldMach) const
+  // {
+  //  return oldMach - m_vgn/this->m_a12;
+  // }
   
   /**
    * Compute the flux
    */
-  virtual void computeMassFluxImpl(const CFuint eulerID,
-				   const CFuint nbEulerEqs,
-				   const std::vector<CFuint>& eulerVarIDs,
-				   RealVector& result);
+  virtual void computeMassFluxImpl(RealVector& result);
   
 private:
   
@@ -83,7 +80,7 @@ private:
   /// mesh speed
   RealVector m_meshSpeed;
   
-}; // end of class AUSMFluxALE
+}; // end of class AUSMFluxMultiFluidALE
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -95,8 +92,8 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "AUSMFluxALE.ci"
+#include "AUSMFluxMultiFluidALE.ci"
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Numerics_FiniteVolume_AUSMFluxALE_hh
+#endif // COOLFluiD_Numerics_FiniteVolume_AUSMFluxMultiFluidALE_hh

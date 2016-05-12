@@ -101,7 +101,7 @@ void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::computeMassFlux()
     }
   }
   
-  this->computeInterfaceSoundSpeed(); // m_a12[] 
+  this->computeInterfaceSoundSpeed(); // m_a12Vec[] 
   
   const CFuint firstSpecies = this->m_updateVarSet->getModel()->getFirstScalarVar(0);
   const CFuint firstTemperature = this->m_updateVarSet->getModel()->getFirstScalarVar(2);
@@ -109,8 +109,8 @@ void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::computeMassFlux()
   // calculation of the Mach number for the left and the right states
   
   for (CFuint ie = 0; ie < nbSpecies; ++ie) {  
-    this->m_mL[ie] = this->m_unL[ie]/this->m_a12[ie];
-    this->m_mR[ie] = this->m_unR[ie]/this->m_a12[ie];
+    this->m_mL[ie] = this->m_unL[ie]/this->m_a12Vec[ie];
+    this->m_mR[ie] = this->m_unR[ie]/this->m_a12Vec[ie];
     const CFreal mL = this->m_mL[ie];
     const CFreal mR = this->m_mR[ie];
     const CFreal mBarSq = 0.5*(mL*mL + mR*mR);
@@ -148,16 +148,16 @@ void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::computeMassFlux()
     const CFreal rhoR = (*this->m_rData)[UPDATEVAR::PTERM::RHO]*(*this->m_rData)[firstSpecies + ie];
     const CFreal pL = (*this->m_lData)[firstTemperature + 4*ie + 1];
     const CFreal pR = (*this->m_rData)[firstTemperature + 4*ie + 1];
-    const CFreal rhoa2 = 0.5*(rhoL + rhoR)*this->m_a12[ie]*this->m_a12[ie];
+    const CFreal rhoa2 = 0.5*(rhoL + rhoR)*this->m_a12Vec[ie]*this->m_a12Vec[ie];
     const CFreal mP = (-this->m_coeffKp/m_fa) * max(1.0 - this->m_coeffSigma*mBarSq, 0.0)*
       (pR-pL)/rhoa2;
 
     // calculation of the Mach number at the interface
     const CFreal m12 = M4Plus + M4Minus + mP;
     // calculation of the mass flux at the interface
-    this->m_mflux12[ie] = (m12 > 0.0) ? this->m_a12[ie] * m12 * rhoL : this->m_a12[ie] * m12 * rhoR;   
+    this->m_mflux12[ie] = (m12 > 0.0) ? this->m_a12Vec[ie] * m12 * rhoL : this->m_a12Vec[ie] * m12 * rhoR;   
     
-//     cout << "AUSMPlusUpFluxMultiFluid InterfaceSoundSpeed = "<< this->m_a12[ie] << endl;
+//     cout << "AUSMPlusUpFluxMultiFluid InterfaceSoundSpeed = "<< this->m_a12Vec[ie] << endl;
 //   cout << "AUSMPlusUpFluxMultiFluid rhoL = "<< rhoL << endl;
 //   cout << "AUSMPlusUpFluxMultiFluid InterfaceSoundSpeed = "<< a12 << endl;
 //   cout << "AUSMPlusUpFluxMultiFluid UPDATEVAR::PTERM::RHO = "<< UPDATEVAR::PTERM::RHO<< endl;
@@ -214,7 +214,7 @@ void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::computePressureFlux()
     const CFreal pL = (*this->m_lData)[firstTemperature + 4*ie + 1];
     const CFreal pR = (*this->m_rData)[firstTemperature + 4*ie + 1];
     const CFreal pU = -this->m_coeffKu * P5Plus * P5Minus *
-      (rhoL + rhoR) * m_fa * this->m_a12[ie]*(this->m_unR[ie]-this->m_unL[ie]);
+      (rhoL + rhoR) * m_fa * this->m_a12Vec[ie]*(this->m_unR[ie]-this->m_unL[ie]);
 
   // calculation of the pressure flux at the interface
     this->m_p12[ie] = P5Plus*pL + P5Minus*pR + pU;

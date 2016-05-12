@@ -27,14 +27,14 @@ AUSMFluxPrec<UPDATEVAR>::~AUSMFluxPrec()
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-void AUSMFluxPrec<UPDATEVAR>::computeMassFluxImpl(const CFuint eulerID,
-                 			          const CFuint nbEulerEqs,
-					          const std::vector<CFuint>& eulerVarIDs,
-                                                  RealVector& result)
+void AUSMFluxPrec<UPDATEVAR>::computeMassFluxImpl(RealVector& result)
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
-
+  
+  const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
+  const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
+  const CFuint nbEulerEqs = eulerVarIDs.size() ;
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const RealVector& normal = this->getMethodData().getUnitNormal();
   

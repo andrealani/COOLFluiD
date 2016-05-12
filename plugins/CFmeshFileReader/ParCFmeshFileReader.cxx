@@ -2052,11 +2052,11 @@ void ParCFmeshFileReader::moveElementData(ElementDataArray<0>& localElem,
   
   /// @todo here is a possible place to do optimization
   /// if memory or speed problems arise
-  vector<bool> isLocalNode(m_totNbNodes, false);
-  vector<bool> isLocalState(m_totNbStates, false);
+  set<CFuint> isLocalNode;
+  set<CFuint> isLocalState;
   vector<CFuint> localNodeIDs;
   vector<CFuint> localStateIDs;
-
+  
   // each processor builds an initial list of local node and state IDs
   setIsLocalNodeState(localElem, isLocalNode, isLocalState, localNodeIDs, localStateIDs);
     
@@ -2146,11 +2146,11 @@ void ParCFmeshFileReader::moveElementData(ElementDataArray<0>& localElem,
       
       const CFuint nbNewLocalNodeIDs = newLocalNodeIDs.size();
       for (CFuint in = 0; in < nbNewLocalNodeIDs; ++in) {
-	isLocalNode[newLocalNodeIDs[in]] = false;
+	isLocalNode.erase(newLocalNodeIDs[in]);
       }
       const CFuint nbNewLocalStateIDs = newLocalStateIDs.size();
       for (CFuint in = 0; in < nbNewLocalStateIDs; ++in) {
-	isLocalState[newLocalStateIDs[in]] = false;
+	isLocalState.erase(newLocalStateIDs[in]);
       }
     }
   }
@@ -2186,7 +2186,7 @@ void ParCFmeshFileReader::moveElementData(ElementDataArray<0>& localElem,
       m_localNodeIDs.push_back(nodeID);
     }
     else {
-      isLocalNode[nodeID] = false;
+      isLocalNode.erase(nodeID);
     }
   }
 
@@ -2198,7 +2198,7 @@ void ParCFmeshFileReader::moveElementData(ElementDataArray<0>& localElem,
       m_localStateIDs.push_back(stateID);
     }
     else {
-      isLocalState[stateID] = false; 
+      isLocalState.erase(stateID);
     }
   }
     
@@ -2231,8 +2231,8 @@ void ParCFmeshFileReader::sortPartVec(const vector<CFuint>& globalElemIDs,
 //////////////////////////////////////////////////////////////////////////////
 
 void ParCFmeshFileReader::setIsLocalNodeState(ElementDataArray<0>& elem,
-					      vector<bool>& isLocalNode,
-					      vector<bool>& isLocalState,
+					      set<CFuint>& isLocalNode,
+					      set<CFuint>& isLocalState,
 					      vector<CFuint>& localNodeIDs,
 					      vector<CFuint>& localStateIDs)
 {
@@ -2258,11 +2258,11 @@ void ParCFmeshFileReader::setIsLocalNodeState(ElementDataArray<0>& elem,
     
     for (CFuint in = 0; in < nbNodesInElem; ++in) { 
       const CFuint nodeID = itr.getNode(in);
-      cf_assert(nodeID < isLocalNode.size());
+      cf_assert(nodeID < m_totNbNodes);
       if (m_nbProc == 1) {ncounter[nodeID]++;}
       // if (itr.getState(0) == 0) cout << nodeID << " ";   
-      if (!isLocalNode[nodeID]) {
-	isLocalNode[nodeID] = true;
+      if (isLocalNode.count(nodeID) == 0) {
+	isLocalNode.insert(nodeID);
 	countn++;
       }
     }
@@ -2270,11 +2270,11 @@ void ParCFmeshFileReader::setIsLocalNodeState(ElementDataArray<0>& elem,
     
     const CFuint nbStatesInElem = itr.get(ElementDataArray<0>::NB_STATES);
     for (CFuint is = 0; is < nbStatesInElem; ++is) {
-      const CFuint stateID = itr.getState(is);
+      const CFuint stateID = itr.getState(is); 
       if (m_nbProc == 1) {scounter[stateID]++;}
-      cf_assert(stateID < isLocalState.size());
-      if (!isLocalState[stateID]) {
-	isLocalState[stateID] = true;
+      cf_assert(stateID < m_totNbStates);
+      if (isLocalState.count(stateID) == 0) {
+	isLocalState.insert(stateID);
 	counts++;
       }
     }
@@ -2306,16 +2306,13 @@ void ParCFmeshFileReader::setIsLocalNodeState(ElementDataArray<0>& elem,
     if (exitLoop) exit(1);
   }*/
   
-  for (CFuint i = 0; i < m_totNbNodes; ++i) {
-    if (isLocalNode[i]) {
-      localNodeIDs.push_back(i);
-    }
+  for (set<CFuint>::const_iterator it=isLocalNode.begin(); 
+       it != isLocalNode.end(); ++it) {
+    localNodeIDs.push_back(*it);
   }
-  
-  for (CFuint i = 0; i < m_totNbStates; ++i) {
-    if (isLocalState[i]) {
-      localStateIDs.push_back(i);
-    }
+  for (set<CFuint>::const_iterator it=isLocalState.begin(); 
+       it != isLocalState.end(); ++it) {
+    localStateIDs.push_back(*it);
   }
 }
 
@@ -2325,8 +2322,8 @@ void ParCFmeshFileReader::updateIsLocalNodeState
 (CFuint root,
  ElementDataArray<0>& elem,
  ElementDataArray<0>& overlapElem,
- vector<bool>& isLocalNode,
- vector<bool>& isLocalState,
+ set<CFuint>& isLocalNode,
+ set<CFuint>& isLocalState,
  vector<CFuint>& ghostNodeIDs,
  vector<CFuint>& ghostStateIDs,
  vector<CFuint>& newLocalNodeIDs,
@@ -2350,7 +2347,7 @@ void ParCFmeshFileReader::updateIsLocalNodeState
 	// if the node is marked as local but is broadcast by
 	// a process of lower ranking, the node is marked as
 	// ghost in this process
-	if (isLocalNode[nodeID]) {
+	if (isLocalNode.count(nodeID) > 0) {
 	  if (root < m_myRank && nOverlap == 1) {
 	    cf_assert(nOverlap == 1);
 	    ghostNodeIDs.push_back(nodeID);
@@ -2371,7 +2368,7 @@ void ParCFmeshFileReader::updateIsLocalNodeState
 	// if the state is marked as local but is broadcast by
 	// a process of lower ranking, the state is marked as
 	// ghost in this process
-	if (isLocalState[stateID]) {
+	if (isLocalState.count(stateID) > 0) {
 	  if (root < m_myRank && nOverlap == 1) {
 	    cf_assert(nOverlap == 1);
 	    ghostStateIDs.push_back(stateID);
@@ -2391,7 +2388,7 @@ void ParCFmeshFileReader::updateIsLocalNodeState
 	const CFuint nbNodesInElem = itr.get(ElementDataArray<0>::NB_NODES);
 	for (CFuint in = 0; in < nbNodesInElem; ++in) {
 	  const CFuint nodeID = itr.getNode(in);
-	  if (!isLocalNode[nodeID]) {
+	  if (isLocalNode.count(nodeID) == 0) {
 	    ghostNodeIDs.push_back(nodeID);
 	    
 	    // if the number of layers of overlap is not reached
@@ -2406,7 +2403,7 @@ void ParCFmeshFileReader::updateIsLocalNodeState
 	const CFuint nbStatesInElem = itr.get(ElementDataArray<0>::NB_STATES);
 	for (CFuint is = 0; is < nbStatesInElem; ++is) {
 	  const CFuint stateID = itr.getState(is);
-	  if (!isLocalState[stateID]) {
+	  if (isLocalState.count(stateID) == 0) {
 	    ghostStateIDs.push_back(stateID);
 	    
 	    // if the number of layers of overlap is not reached
@@ -2422,12 +2419,12 @@ void ParCFmeshFileReader::updateIsLocalNodeState
   
   const CFuint nbNewLocalNodeIDs = newLocalNodeIDs.size();
   for (CFuint in = 0; in < nbNewLocalNodeIDs; ++in) {
-    isLocalNode[newLocalNodeIDs[in]] = true;
+    isLocalNode.insert(newLocalNodeIDs[in]);
   }
-
+  
   const CFuint nbNewLocalStateIDs = newLocalStateIDs.size();
   for (CFuint in = 0; in < nbNewLocalStateIDs; ++in) {
-    isLocalState[newLocalStateIDs[in]] = true;
+    isLocalState.insert(newLocalStateIDs[in]);
   }
 }
 

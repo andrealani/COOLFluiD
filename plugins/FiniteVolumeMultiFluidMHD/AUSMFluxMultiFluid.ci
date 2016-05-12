@@ -20,7 +20,7 @@ AUSMFluxMultiFluid<UPDATEVAR>::AUSMFluxMultiFluid(const std::string& name) :
   m_updateVarSet(CFNULL),
   m_lData(CFNULL),
   m_rData(CFNULL),
-  m_a12(),
+  m_a12Vec(),
   m_mL(),
   m_mR(),
   m_unL(),
@@ -115,7 +115,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::setup()
   
   // AUSM scheme related data
   const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
-  m_a12.resize(nbSpecies);
+  m_a12Vec.resize(nbSpecies);
   m_p12.resize(nbSpecies);
   m_mflux12.resize(nbSpecies);
   m_unL.resize(nbSpecies);
@@ -516,7 +516,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeInterfaceSoundSpeed()
 {
   // the user must choose one of the following 3 ways of calculation of the
   // interface speed of sound, a12
-  this->m_a12 = 0.0;
+  this->m_a12Vec = 0.0;
   switch(this->m_choiceA12) {
   case 1:
     computeSoundSpeed1();
@@ -565,10 +565,10 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeSoundSpeed1()
 
     const CFreal acL = (aCritL*aCritL)/max(aCritL, this->m_unL[ie]);
     const CFreal acR = (aCritR*aCritR)/max(aCritR, -this->m_unR[ie]);
-    this->m_a12[ie] = min(acL, acR);		      //Array with the speed of sound of the different species
+    this->m_a12Vec[ie] = min(acL, acR);		      //Array with the speed of sound of the different species
     //cout << "AUSMFluxMultiFluid::computeSoundSpeed1() \n";
     //cout << "ie = "<< ie <<"\n";
-    //cout << "a12 = " << this->m_a12[ie] <<"\n";
+    //cout << "a12 = " << this->m_a12Vec[ie] <<"\n";
   }
 }
 
@@ -590,10 +590,10 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeSoundSpeed2()
   for (CFuint ie = 0; ie < nbSpecies; ++ie){  
     const CFreal aL = (*this->m_lData)[firstTemperature + 4*ie + 2];
     const CFreal aR = (*this->m_rData)[firstTemperature + 4*ie + 2];
-    this->m_a12[ie] = 0.5 * (aL + aR);
+    this->m_a12Vec[ie] = 0.5 * (aL + aR);
     //cout << "AUSMFluxMultiFluid::computeSoundSpeed2() \n";
     //cout << "ie = "<< ie <<"\n";
-    //cout << "a12 = " << this->m_a12[ie] <<"\n";
+    //cout << "a12 = " << this->m_a12Vec[ie] <<"\n";
   }
 }
 
@@ -615,7 +615,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeSoundSpeed3()
   for (CFuint ie = 0; ie < nbSpecies; ++ie){  
     const CFreal aL = (*this->m_lData)[firstTemperature + 4*ie + 2];
     const CFreal aR = (*this->m_rData)[firstTemperature + 4*ie + 2];
-    this->m_a12[ie] = sqrt(aL*aR);
+    this->m_a12Vec[ie] = sqrt(aL*aR);
   }
 }
 
@@ -660,9 +660,9 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeSoundSpeed4()
     const CFreal c1 = (gamma-1.)/(gamma*m_unR[ie])- (gamma-1.)/(gamma*m_unL[ie]);
     const CFreal c2 = (gamma+1.)/(gamma*m_unL[ie])- (gamma+1.)/(gamma*m_unR[ie]);
     const CFreal as = sqrt(2.*Hnormal*std::abs(c1)/std::abs(c2));
-    this->m_a12[ie] = ((m_unL[ie] + m_unR[ie]) < 0.0) ? as*as/max(std::abs(m_unR[ie]),as) :
+    this->m_a12Vec[ie] = ((m_unL[ie] + m_unR[ie]) < 0.0) ? as*as/max(std::abs(m_unR[ie]),as) :
       as*as/max(std::abs(m_unL[ie]),as);
-    // this->m_a12 = min(as*as/max(std::abs(m_unR),as), as*as/max(std::abs(m_unL),as));
+    // this->m_a12Vec = min(as*as/max(std::abs(m_unR),as), as*as/max(std::abs(m_unL),as));
   }
 }
 
@@ -724,7 +724,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeSoundSpeed5()
     const CFreal aCritRR2 = 2.0*gBarMinus1R/(2.*gBarR + gBarMinus1R)*hRR;
     const CFreal acLL = aCritLL2/max(sqrt(aCritLL2), this->m_unL[ie]);
     const CFreal acRR = aCritRR2/max(sqrt(aCritRR2), -this->m_unR[ie]);
-    this->m_a12[ie] = min(acLL, acRR);
+    this->m_a12Vec[ie] = min(acLL, acRR);
   }
 }
       

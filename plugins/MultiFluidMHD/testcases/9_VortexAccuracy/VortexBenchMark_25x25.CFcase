@@ -1,7 +1,7 @@
 # COOLFluiD Startfile
 # Comments begin with "#"
 #
-### Residual = -2.25132
+### Residual = -2.1477149
 #
 ###############################################################################
 # Assertion For Debugging
@@ -13,8 +13,8 @@
 #CFEnv.AssertThrows         = true
 #CFEnv.AssertDumps          = true
 ##CFEnv.ExceptionAborts      = true
-#CFEnv.ExceptionDumps       = true
-#CFEnv.ExceptionOutputs     = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
 #CFEnv.RegistSignalHandlers = false
 #CFEnv.TraceToStdOut = true
 #CFEnv.TraceActive = true

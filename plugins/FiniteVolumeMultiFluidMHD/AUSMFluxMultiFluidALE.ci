@@ -1,5 +1,6 @@
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/Node.hh"
+#include "Framework/EquationSetData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -12,7 +13,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 template <class BASE>
-AUSMFluxALE<BASE>::AUSMFluxALE(const std::string& name) :
+AUSMFluxMultiFluidALE<BASE>::AUSMFluxMultiFluidALE(const std::string& name) :
   BASE(name),
   socket_pastNodes("pastNodes"),
   socket_futureNodes("futureNodes"),
@@ -24,14 +25,14 @@ AUSMFluxALE<BASE>::AUSMFluxALE(const std::string& name) :
 //////////////////////////////////////////////////////////////////////////////
 
 template <class BASE>
-AUSMFluxALE<BASE>::~AUSMFluxALE()
+AUSMFluxMultiFluidALE<BASE>::~AUSMFluxMultiFluidALE()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 template <class BASE>
-void AUSMFluxALE<BASE>::setup()
+void AUSMFluxMultiFluidALE<BASE>::setup()
 {
   BASE::setup();
   
@@ -41,7 +42,7 @@ void AUSMFluxALE<BASE>::setup()
 //////////////////////////////////////////////////////////////////////////////
 
 template <class BASE>
-void AUSMFluxALE<BASE>::computeMeshSpeed()
+void AUSMFluxMultiFluidALE<BASE>::computeMeshSpeed()
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
@@ -90,7 +91,7 @@ void AUSMFluxALE<BASE>::computeMeshSpeed()
 //////////////////////////////////////////////////////////////////////////////
 
 template <class BASE>
-std::vector<Common::SafePtr<Framework::BaseDataSocketSink> >  AUSMFluxALE<BASE>::needsSockets()
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> >  AUSMFluxMultiFluidALE<BASE>::needsSockets()
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
@@ -107,23 +108,18 @@ std::vector<Common::SafePtr<Framework::BaseDataSocketSink> >  AUSMFluxALE<BASE>:
 //////////////////////////////////////////////////////////////////////////////
 
 template <class BASE>
-void AUSMFluxALE<BASE>::computeMassFluxImpl(const CFuint eulerID,
-					    const CFuint nbEulerEqs,
-					    const std::vector<CFuint>& eulerVarIDs,
-					    RealVector& result)
+void AUSMFluxMultiFluidALE<BASE>::computeMassFluxImpl(RealVector& result)
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
   
-  BASE::computeMassFluxImpl(eulerID, nbEulerEqs, eulerVarIDs, result);
+  BASE::computeMassFluxImpl(result);
   
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
-  // calculation of the dimensional numerical fluxes at the interface
-  if (nbEulerEqs == dim+1) {
-    result[eulerVarIDs[dim]] += this->m_p12*m_vgn;
-  }
-  else {
-    result[dim+1] += this->m_p12*m_vgn;
+  const CFuint endEM = 8; 
+  const CFuint nbSpecies = this->m_updateVarSet->getModel()->getNbScalarVars(0);
+  for (CFuint ie = 0; ie < nbSpecies; ++ie) {  
+    result[endEM + nbSpecies + nbSpecies*dim + ie] += this->m_p12[ie]*m_vgn;
   }
 }
 

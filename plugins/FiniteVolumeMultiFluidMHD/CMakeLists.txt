@@ -4,6 +4,8 @@ AtmosphereProps.hh
 AUSMFluxMultiFluid.ci
 AUSMFluxMultiFluid.cxx
 AUSMFluxMultiFluid.hh
+AUSMFluxMultiFluidALE.ci
+AUSMFluxMultiFluidALE.hh
 AUSMPlusUpFluxMultiFluid.ci
 AUSMPlusUpFluxMultiFluid.hh
 DriftWaveInlet.cxx

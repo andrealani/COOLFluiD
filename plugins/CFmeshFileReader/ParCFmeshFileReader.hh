@@ -363,8 +363,8 @@ protected: // member functions
   
   /// Set the array telling if nodes and states are local or not
   void setIsLocalNodeState(Framework::ElementDataArray<0>& localElem,
-			   std::vector<bool>& isLocalNode,
-			   std::vector<bool>& isLocalState,
+			   std::set<CFuint>& isLocalNode,
+			   std::set<CFuint>& isLocalState,
 			   std::vector<CFuint>& localNodeIDs,
 			   std::vector<CFuint>& localStateIDs);
   
@@ -372,8 +372,8 @@ protected: // member functions
   void updateIsLocalNodeState(CFuint root,
 			      Framework::ElementDataArray<0>& elem,
 			      Framework::ElementDataArray<0>& overlapElem,
-			      std::vector<bool>& isLocalNode,
-			      std::vector<bool>& isLocalState,
+			      std::set<CFuint>& isLocalNode,
+			      std::set<CFuint>& isLocalState,
 			      std::vector<CFuint>& ghostNodeIDs,
 			      std::vector<CFuint>& ghostStateIDs,
 			      std::vector<CFuint>& newLocalNodeIDs,

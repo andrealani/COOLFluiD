@@ -35,7 +35,7 @@ Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWrite
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Wedge/
-Simulator.Paths.ResultsDir = ./
+Simulator.Paths.ResultsDir = ./WEDGE
 
 Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
 
@@ -47,7 +47,7 @@ Simulator.SubSystem.CFmesh.AppendIter = false
 
 Simulator.SubSystem.Tecplot.FileName    = wedgeFVM.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Cons
-Simulator.SubSystem.Tecplot.SaveRate = 60
+Simulator.SubSystem.Tecplot.SaveRate = 10
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = true
 #Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = shockSensor pressure #dPdX dPdY
@@ -149,7 +149,7 @@ Simulator.SubSystem.MeFiAlgo.Data.updateVar     = Cons
 Simulator.SubSystem.MeFiAlgo.MeshFitting.minPercentile    = 0.30
 Simulator.SubSystem.MeFiAlgo.MeshFitting.maxPercentile    = 0.55
 Simulator.SubSystem.MeFiAlgo.MeshFitting.meshAcceleration = 0.05
-Simulator.SubSystem.MeFiAlgo.MeshFitting.monitorVar       = rho
+Simulator.SubSystem.MeFiAlgo.MeshFitting.monitorVarID     = 0
 Simulator.SubSystem.MeFiAlgo.MeshFitting.equilibriumSpringLength = 2e-4
 Simulator.SubSystem.MeFiAlgo.MeshFitting.unlockedBoundaryTRSs = SuperOutlet SuperInlet SlipWall
 Simulator.SubSystem.MeFiAlgo.MeshFitting.ratioBoundaryToInnerEquilibriumSpringLength = 0.1

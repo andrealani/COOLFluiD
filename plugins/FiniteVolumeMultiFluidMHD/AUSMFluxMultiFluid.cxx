@@ -4,6 +4,7 @@
 #include "Maxwell/Maxwell3DProjectionVarSet.hh"
 #include "Framework/MethodStrategyProvider.hh"
 #include "FiniteVolumeMultiFluidMHD/FiniteVolumeMultiFluidMHD.hh"
+#include "FiniteVolumeMultiFluidMHD/AUSMFluxMultiFluidALE.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -34,6 +35,20 @@ MethodStrategyProvider<AUSMPlusUpFluxMultiFluid<MultiFluidMHDVarSet<Maxwell3DPro
                        FluxSplitter<CellCenterFVMData>,
 		       FiniteVolumeMultiFluidMHDModule>
 ausmPlusUp3DMultiFluidProvider("AUSMPlusUpMultiFluid3D");
+
+/// AUSM+up ALE
+
+MethodStrategyProvider< AUSMFluxMultiFluidALE<AUSMPlusUpFluxMultiFluid<MultiFluidMHDVarSet<Maxwell2DProjectionVarSet> > >,
+		       CellCenterFVMData,
+                       FluxSplitter<CellCenterFVMData>,
+		       FiniteVolumeMultiFluidMHDModule>
+ausmPlusUp2DALEMultiFluidProvider("AUSMPlusUpMultiFluid2DALE");
+
+MethodStrategyProvider< AUSMFluxMultiFluidALE<AUSMPlusUpFluxMultiFluid<MultiFluidMHDVarSet<Maxwell3DProjectionVarSet> > >,
+		       CellCenterFVMData,
+                       FluxSplitter<CellCenterFVMData>,
+		       FiniteVolumeMultiFluidMHDModule>
+ausmPlusUp3DALEMultiFluidProvider("AUSMPlusUpMultiFluid3DALE");
 
 //////////////////////////////////////////////////////////////////////////////
 

@@ -1,7 +1,5 @@
 LIST ( APPEND FiniteVolumeNavierStokes_files
-AUSMFluxALE.ci
 AUSMFluxALE.cxx
-AUSMFluxALE.hh
 AUSMFlux.hh
 AUSMFlux.ci
 AUSMFlux.cxx

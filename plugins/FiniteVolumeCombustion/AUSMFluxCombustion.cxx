@@ -2,7 +2,7 @@
 
 #include "FiniteVolumeNavierStokes/AUSMPlusFlux.hh"
 #include "FiniteVolumeNavierStokes/AUSMPlusUpFlux.hh"
-#include "FiniteVolumeNavierStokes/AUSMFluxALE.hh"
+#include "FiniteVolume/AUSMFluxALE.hh"
 
 #include "FiniteVolumeCombustion/FiniteVolumeCombustion.hh"
 

@@ -27,6 +27,7 @@ namespace COOLFluiD {
 template <class UPDATEVAR>
 class AUSMFlux : public FVMCC_FluxSplitter {
 public:
+  typedef UPDATEVAR UPVAR;
   
   /**
    * Constructor
@@ -78,10 +79,7 @@ protected:
   /**
    * Compute the flux
    */
-  virtual void computeMassFluxImpl(const CFuint eulerID,
-           const CFuint nbEulerEqs,
-           const std::vector<CFuint>& eulerVarIDs,
-           RealVector& result);
+  virtual void computeMassFluxImpl(RealVector& result);
   
   /**
    * Compute the interface mass flux

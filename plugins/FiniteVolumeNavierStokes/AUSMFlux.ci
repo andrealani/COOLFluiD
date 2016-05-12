@@ -172,12 +172,7 @@ void AUSMFlux<UPDATEVAR>::compute(RealVector& result)
     computeMassFlux();              // computes m_mflux12
     computeIncompCorrectionTerm();  // computes m_mincomp
     
-    // here there could be the current number of equations if we want
-    // different eigenvalues for each set of equations
-    const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
-    const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
-    const CFuint nbEulerEqs = eulerVarIDs.size() ;
-    const CFuint eulerID = eulerEqSet.getEqSetID();
+    
  
     // pressure terms are only needed for the Euler momentum equations
     // they are computed only if all the equation system is considered or
@@ -186,8 +181,12 @@ void AUSMFlux<UPDATEVAR>::compute(RealVector& result)
     // subsystem of equations is != nbEulerEqs species equations (3 or 4 in 2D)
     if (nbEqs == totalNbEqs || eqSSD.getEqSS() == 0) {
       computePressureFlux();   // m_p12
-      computeMassFluxImpl(eulerID, nbEulerEqs, eulerVarIDs, result); // m_mflux12
+      computeMassFluxImpl(result); // m_mflux12
     }
+    
+    const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
+    const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
+    const CFuint nbEulerEqs = eulerVarIDs.size();
     
     //  the following applies only if we are dealing with multi-scalar cases 
     if (totalNbEqs > nbEulerEqs) {
@@ -313,20 +312,19 @@ void AUSMFlux<UPDATEVAR>::computeDecoupled(RealVector& result)
   computeMassFlux();              // computes m_mflux12
   computeIncompCorrectionTerm();  // computes m_mincomp
   
-  // here there could be the current number of equations if we want
-  // different eigenvalues for each set of equations
-  const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
-  const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
-  const CFuint nbEulerEqs = eulerVarIDs.size() ;
-  const CFuint eulerID = eulerEqSet.getEqSetID();
-  
   // pressure terms are only needed for the Euler momentum equations
   // they are computed only if all the equation system is considered or
   // if only the Euler equations are considered
   if (nbEqs == totalNbEqs || eqSSD.getEqSS() == 0) {
     computePressureFlux();   // m_p12
-    computeMassFluxImpl(eulerID, nbEulerEqs, eulerVarIDs, result); // m_mflux12
+    computeMassFluxImpl(result); // m_mflux12
   }
+  // here there could be the current number of equations if we want
+  // different eigenvalues for each set of equations
+  const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
+  const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
+  const CFuint nbEulerEqs = eulerVarIDs.size() ;
+  // const CFuint eulerID = eulerEqSet.getEqSetID();
   
   //  the following applies only if we are dealing with multi-scalar cases 
   cf_assert(totalNbEqs > nbEulerEqs);
@@ -497,14 +495,17 @@ void AUSMFlux<UPDATEVAR>::computeLiouUpdateCoeff()
 //////////////////////////////////////////////////////////////////////////////
 
 template <class UPDATEVAR>
-void AUSMFlux<UPDATEVAR>::computeMassFluxImpl(const CFuint eulerID,
-					      const CFuint nbEulerEqs,
-					      const std::vector<CFuint>& eulerVarIDs,
-					      RealVector& result)
+void AUSMFlux<UPDATEVAR>::computeMassFluxImpl(RealVector& result)
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
   
+  // here there could be the current number of equations if we want
+  // different eigenvalues for each set of equations
+  const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
+  const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
+  const CFuint nbEulerEqs = eulerVarIDs.size() ;
+  const CFuint eulerID = eulerEqSet.getEqSetID();
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const RealVector& normal = this->getMethodData().getUnitNormal();
   const RealVector *const upwindData = (m_mflux12 > 0.0) ? m_lData : m_rData;
