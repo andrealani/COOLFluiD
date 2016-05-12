@@ -13,6 +13,21 @@
 #
 ### Residual = -8.021719
 
+CFEnv.DoAssertions = true
+CFEnv.AssertionDumps = true
+CFEnv.AssertionThrows = false
+CFEnv.ExceptionOutputs = false
+CFEnv.ExceptionDumps = false
+CFEnv.ExceptionAborts=true
+#CFEnv.OnlyCPU0Writes=true
+CFEnv.RegistSignalHandlers=true
+CFEnv.VerboseEvents=true
+#CFEnv.ErrorOnUnusedConfig=true
+CFEnv.TraceToStdOut=true
+CFEnv.TraceActive=true
+#  CFEnv.MainLoggerFileName=true
+CFEnv.ExceptionLogLevel=1000
+
 # SubSystem Modules
 Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libTHOR2CFmesh libMeshRigidMove
 
