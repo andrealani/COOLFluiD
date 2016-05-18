@@ -78,15 +78,19 @@ void StdALESetup::execute()
     for (CFuint i = 0; i < nbNodes; ++i) {
       pastNodes[i] = new Node();
       pastNodes[i]->setIsOnMesh(false);
+      // initialization of future nodes
+      *pastNodes[i] = *nodes[i];
     }
   }
-
+  
   futureNodes.resize(nbNodes);
   for (CFuint i = 0; i < nbNodes; ++i) {
     futureNodes[i] = new Node();
     futureNodes[i]->setIsOnMesh(false);
+    // initialization of future nodes
+    *futureNodes[i] = *nodes[i];
   }
-
+  
   // Create the storage for the volume at time n (pastVolume)
   pastVolumes.resize(states.size());
   if(!foundPastNodes)

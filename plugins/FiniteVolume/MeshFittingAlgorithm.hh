@@ -43,7 +43,6 @@ struct SpringTrucationData{
  * @author Francisco Moreira Huhn
  *
  */
-template <typename MODEL>
 class MeshFittingAlgorithm : public Framework::DataProcessingCom {
 public:
 
@@ -264,10 +263,6 @@ private: //data
   } // namespace Numerics
 
 } // namespace COOLFluiD
-
-//////////////////////////////////////////////////////////////////////////////
-
-#include "FiniteVolume/MeshFittingAlgorithm.ci"
 
 //////////////////////////////////////////////////////////////////////////////
 

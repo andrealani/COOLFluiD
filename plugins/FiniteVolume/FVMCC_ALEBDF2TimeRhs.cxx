@@ -73,11 +73,12 @@ void FVMCC_ALEBDF2TimeRhs::computeNumericalTransMatrix(const CFuint iState)
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
     const CFreal dU = _tempState[iEq]*_diagValue - (*tPastState)[iEq]*_pastDiagValue;
-    rhs(iState, iEq, nbEqs) -= dU*(1.+ resFactor) - resFactor*pastTimeRhs(iState, iEq, nbEqs);
+    rhs(iState, iEq, nbEqs) -= (!_zeroDiagValue[iEq]) ? 
+      dU*(1.+ resFactor) - resFactor*pastTimeRhs(iState, iEq, nbEqs) : 0.0;
+
     if((SubSystemStatusStack::getActive()->isLastStep())
-    && (SubSystemStatusStack::getActive()->isSubIterationLastStep()))
-    {
-     pastTimeRhs(iState, iEq, nbEqs) = dU;
+       && (SubSystemStatusStack::getActive()->isSubIterationLastStep())) {
+      pastTimeRhs(iState, iEq, nbEqs) = (!_zeroDiagValue[iEq]) ? dU : 0.0;
     }
   }
   
@@ -97,8 +98,10 @@ void FVMCC_ALEBDF2TimeRhs::computeNumericalTransMatrix(const CFuint iState)
                                        tempPertState,
                                        _fluxDiff);
 
-    _fluxDiff *= _diagValue*(1.+ resFactor);
-
+    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+      _fluxDiff[iEq] *= (!_zeroDiagValue[iEq]) ? _diagValue*(1.+ resFactor) : 0.0;
+    }
+    
     _acc->addValues(0, 0, iVar, &_fluxDiff[0]);
     // restore the unperturbed value
     _numericalJacob->restore((*currState)[iVar]);
@@ -134,8 +137,12 @@ void FVMCC_ALEBDF2TimeRhs::computeAnalyticalTransMatrix(const CFuint iState)
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
     const CFreal dU = tempState[iEq] * _diagValue - tPastState[iEq] * _pastDiagValue;
-    rhs(iState, iEq, nbEqs) -= dU*(1.+ resFactor) - resFactor*pastTimeRhs(iState, iEq, nbEqs);
-    if(SubSystemStatusStack::getActive()->isLastStep()) pastTimeRhs(iState, iEq, nbEqs) = dU;
+    rhs(iState, iEq, nbEqs) -= (!_zeroDiagValue[iEq]) ? 
+      dU*(1.+ resFactor) - resFactor*pastTimeRhs(iState, iEq, nbEqs) : 0.0;
+    
+    if(SubSystemStatusStack::getActive()->isLastStep()) {
+      pastTimeRhs(iState, iEq, nbEqs) = (!_zeroDiagValue[iEq]) ? dU : 0.0;
+    }
   }
   
   if(getMethodData().doComputeJacobian()) {
@@ -147,8 +154,10 @@ void FVMCC_ALEBDF2TimeRhs::computeAnalyticalTransMatrix(const CFuint iState)
   
   for (CFuint iVar = 0; iVar < nbEqs; ++iVar) {
     for (CFuint jVar = 0; jVar < nbEqs; ++jVar) {
-      const CFreal value = matrix(iVar,jVar)*_diagValue*(1. + resFactor);
-      _acc->addValue(0, 0, iVar, jVar, value);
+      if (!_zeroDiagValue[jVar]) {
+	const CFreal value = matrix(iVar,jVar)*_diagValue*(1. + resFactor);
+	_acc->addValue(0, 0, iVar, jVar, value);
+      }
     }
   }
  
@@ -172,6 +181,8 @@ FVMCC_ALEBDF2TimeRhs::needsSockets()
 
   return result;
 }
+
+
 
 //////////////////////////////////////////////////////////////////////////////
 

@@ -125,7 +125,7 @@ void FVMCC_ALETimeRhs::computeNumericalTransMatrix(const CFuint iState)
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
     const CFreal dU = _tempState[iEq]*_diagValue - (*tPastState)[iEq]*_pastDiagValue;
-    rhs(iState, iEq, nbEqs) -= dU*resFactor;
+    rhs(iState, iEq, nbEqs) -= (!_zeroDiagValue[iEq]) ? dU*resFactor : 0.0;
   }
 
   if ((!getMethodData().isSysMatrixFrozen()) && getMethodData().doComputeJacobian()) {
@@ -143,9 +143,11 @@ void FVMCC_ALETimeRhs::computeNumericalTransMatrix(const CFuint iState)
       _numericalJacob->computeDerivative(_tempState,
                                          tempPertState,
                                          _fluxDiff);
-
-      _fluxDiff *= _diagValue*resFactor;
-
+      
+      for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+	_fluxDiff[iEq] *= (!_zeroDiagValue[iEq]) ? _diagValue*resFactor : 0.0;
+      }
+      
       _acc->addValues(0, 0, iVar, &_fluxDiff[0]);
       // restore the unperturbed value
       _numericalJacob->restore((*currState)[iVar]);
@@ -181,7 +183,7 @@ void FVMCC_ALETimeRhs::computeAnalyticalTransMatrix(const CFuint iState)
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
     const CFreal dU = tempState[iEq] * _diagValue - tPastState[iEq] * _pastDiagValue;
-    rhs(iState, iEq, nbEqs) -= dU*resFactor;
+    rhs(iState, iEq, nbEqs) -= (!_zeroDiagValue[iEq]) ? dU*resFactor : 0.0;
   }
 
   if ((!getMethodData().isSysMatrixFrozen()) && getMethodData().doComputeJacobian()) {
@@ -193,8 +195,10 @@ void FVMCC_ALETimeRhs::computeAnalyticalTransMatrix(const CFuint iState)
 
     for (CFuint iVar = 0; iVar < nbEqs; ++iVar) {
       for (CFuint jVar = 0; jVar < nbEqs; ++jVar) {
-        const CFreal value = matrix(iVar,jVar)*_diagValue*resFactor;
-        _acc->addValue(0, 0, iVar, jVar, value);
+        if (!_zeroDiagValue[jVar]) {
+	  const CFreal value = matrix(iVar,jVar)*_diagValue*resFactor;
+	  _acc->addValue(0, 0, iVar, jVar, value);
+	}
       }
     }
 

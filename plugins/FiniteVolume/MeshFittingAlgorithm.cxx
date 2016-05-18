@@ -8,6 +8,7 @@
 #include "Framework/MeshData.hh"
 #include "Framework/LSSMatrix.hh"
 #include "Framework/LSSVector.hh"
+#include "Framework/MethodCommandProvider.hh"
 
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
@@ -17,7 +18,15 @@
 #include <iostream>
 #include <limits>
 
+#include "FiniteVolume/FiniteVolume.hh"
 #include "FiniteVolume/CellCenterFVM.hh"
+#include "FiniteVolume/MeshFittingAlgorithm.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -28,22 +37,27 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::defineConfigOptions(Config::OptionList& options)
+MethodCommandProvider<MeshFittingAlgorithm, 
+		      DataProcessingData, 
+		      FiniteVolumeModule>
+meshFittingAlgorithmProvider("MeshFittingAlgorithm");
+
+//////////////////////////////////////////////////////////////////////////////
+
+void MeshFittingAlgorithm::defineConfigOptions(Config::OptionList& options)
 {
-  options.template addConfigOption< CFreal >("minPercentile","Percentile for minimum spring value");
-  options.template addConfigOption< CFreal >("maxPercentile","Percentile for maximum spring value");
-  options.template addConfigOption< CFreal >("meshAcceleration","How fast the mesh moves in mesh steps");
-  options.template addConfigOption< CFuint >("monitorVarID","Monitor variable ID for mesh adaptation");
-  options.template addConfigOption< CFreal >("equilibriumSpringLength","Length of spring for equilibrium");
-  options.template addConfigOption< CFreal >("ratioBoundaryToInnerEquilibriumSpringLength","ratio between the equilibrium length of a Boundary spring to an Inner spring");
-  options.template addConfigOption< std::vector<std::string> >("unlockedBoundaryTRSs","TRS's to be unlocked");
+  options.addConfigOption< CFreal >("minPercentile","Percentile for minimum spring value");
+  options.addConfigOption< CFreal >("maxPercentile","Percentile for maximum spring value");
+  options.addConfigOption< CFreal >("meshAcceleration","How fast the mesh moves in mesh steps");
+  options.addConfigOption< CFuint >("monitorVarID","Monitor variable ID for mesh adaptation");
+  options.addConfigOption< CFreal >("equilibriumSpringLength","Length of spring for equilibrium");
+  options.addConfigOption< CFreal >("ratioBoundaryToInnerEquilibriumSpringLength","ratio between the equilibrium length of a Boundary spring to an Inner spring");
+  options.addConfigOption< std::vector<std::string> >("unlockedBoundaryTRSs","TRS's to be unlocked");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-MeshFittingAlgorithm<MODEL>::MeshFittingAlgorithm(const std::string& name) :
+MeshFittingAlgorithm::MeshFittingAlgorithm(const std::string& name) :
   Framework::DataProcessingCom(name),
   socket_nodes("nodes"),
   socket_states("states"),
@@ -78,15 +92,14 @@ MeshFittingAlgorithm<MODEL>::MeshFittingAlgorithm(const std::string& name) :
 }
 
 //////////////////////////////////////////////////////////////////////////////
-template <typename MODEL>
-MeshFittingAlgorithm<MODEL>::~MeshFittingAlgorithm()
+
+MeshFittingAlgorithm::~MeshFittingAlgorithm()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
- 
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::configure(Config::ConfigArgs& args)
+
+void MeshFittingAlgorithm::configure(Config::ConfigArgs& args)
 {
   CFAUTOTRACE;
 
@@ -100,9 +113,8 @@ void MeshFittingAlgorithm<MODEL>::configure(Config::ConfigArgs& args)
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
 std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > 
-MeshFittingAlgorithm<MODEL>::needsSockets()
+MeshFittingAlgorithm::needsSockets()
 {
   std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result;
   
@@ -118,9 +130,8 @@ MeshFittingAlgorithm<MODEL>::needsSockets()
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
 std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > 
-MeshFittingAlgorithm<MODEL>::providesSockets()
+MeshFittingAlgorithm::providesSockets()
 {
   std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > result;
   return result;
@@ -128,21 +139,23 @@ MeshFittingAlgorithm<MODEL>::providesSockets()
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::setup()
+void MeshFittingAlgorithm::setup()
 {
   CFAUTOTRACE;
 
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::MathTools;
   
+  // AL: this might be useless ... (@see MeshRigidMove/StdSetup.cxx)
+  SubSystemStatusStack::getActive()->setMovingMesh(true);
+  
   // get the linear system associated to this object and set it up
   const std::string name = getMethodData().getNamespace();
-  m_lss = getMethodData().template getCollaborator<LinearSystemSolver>(name);  
+  m_lss = getMethodData().getCollaborator<LinearSystemSolver>(name);  
   
   CFLog(VERBOSE, "MeshFittingAlgorithm::setup() => LSS is " << m_lss->getName() << "\n");
   
-  Common::SafePtr<Framework::SpaceMethod> spaceMethod = getMethodData().template getCollaborator<SpaceMethod>();
+  Common::SafePtr<Framework::SpaceMethod> spaceMethod = getMethodData().getCollaborator<SpaceMethod>();
   Common::SafePtr<CellCenterFVM> fvmcc = spaceMethod.d_castTo<CellCenterFVM>();
   cf_assert(fvmcc.isNotNull());
   m_fvmccData = fvmcc->getData();
@@ -169,16 +182,14 @@ void MeshFittingAlgorithm<MODEL>::setup()
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::unsetup()
+void MeshFittingAlgorithm::unsetup()
 {
   CFAUTOTRACE;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::createNodalConnectivity()
+void MeshFittingAlgorithm::createNodalConnectivity()
 {
   m_edgeGraph.setNodeDataSocket(socket_nodes);
   m_edgeGraph.computeConnectivity(); 
@@ -186,8 +197,7 @@ void MeshFittingAlgorithm<MODEL>::createNodalConnectivity()
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::findBoundaryNodes()
+void MeshFittingAlgorithm::findBoundaryNodes()
 {
   CFAUTOTRACE;
   CFLogDebugMin("MeshFittingAlgorithm::createConnectivity()" << "\n");
@@ -221,20 +231,19 @@ void MeshFittingAlgorithm<MODEL>::findBoundaryNodes()
 
 //////////////////////////////////////////////////////////////////////////////
    
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::computeMovingInBoundaryNodeNormals()
+void MeshFittingAlgorithm::computeMovingInBoundaryNodeNormals()
 {
   CFAUTOTRACE;
   const CFuint nbDim = Framework::PhysicalModelStack::getActive()->getDim();
   Framework::DataHandle<CFreal> normals = socket_normals.getDataHandle(); 
   std::vector<std::set<CFuint> > mapNodeID2BoundaryFaceIDs = getMapMovingInBoundaryNodeID2FaceID();
   std::set<Framework::Node*>::iterator it;
+  RealVector normal1(nbDim), normal2(nbDim);
   for(CFuint iNodeID=0; iNodeID<mapNodeID2BoundaryFaceIDs.size(); ++iNodeID){
     //Check if all normals of the connected faces are collinear up to a certain tolerance
     //that means check if the dot product of the normals are bellow that tolerance
     if(mapNodeID2BoundaryFaceIDs[iNodeID].size()>=nbDim){
       std::set<CFuint>& connectedFaceIds = mapNodeID2BoundaryFaceIDs[iNodeID];
-      RealVector normal1(nbDim), normal2(nbDim);
       bool areNormalsCollinear  = true;
       std::set<CFuint>::iterator itFaceID1, itFaceID2;
       for(itFaceID1=connectedFaceIds.begin(); itFaceID1!=connectedFaceIds.end(); ++itFaceID1){
@@ -245,7 +254,7 @@ void MeshFittingAlgorithm<MODEL>::computeMovingInBoundaryNodeNormals()
               normal2[iDim] = normals[(*itFaceID2)*nbDim+iDim];
             }
             normal1.normalize(); normal2.normalize();
-            CFreal cosAngle = MathTools::MathFunctions::innerProd(normal1, normal2);
+            const CFreal cosAngle = MathTools::MathFunctions::innerProd(normal1, normal2);
             areNormalsCollinear &= (1.- std::abs(cosAngle)< 1e-5);
           }
         }
@@ -271,8 +280,7 @@ void MeshFittingAlgorithm<MODEL>::computeMovingInBoundaryNodeNormals()
 
 //////////////////////////////////////////////////////////////////////////////
  
-template <typename MODEL>
-std::vector<std::set<CFuint> > MeshFittingAlgorithm<MODEL>::getMapMovingInBoundaryNodeID2FaceID()
+std::vector<std::set<CFuint> > MeshFittingAlgorithm::getMapMovingInBoundaryNodeID2FaceID()
 {
   CFAUTOTRACE;
   CFLogDebugMin("MeshFittingAlgorithm::computeNodes2BoundaryNormals()" << "\n");
@@ -306,8 +314,7 @@ std::vector<std::set<CFuint> > MeshFittingAlgorithm<MODEL>::getMapMovingInBounda
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::execute()
+void MeshFittingAlgorithm::execute()
 {
   CFAUTOTRACE;
   CFLog(VERBOSE, "MeshFittingAlgorithm::execute() => start \n");
@@ -324,8 +331,7 @@ void MeshFittingAlgorithm<MODEL>::execute()
       
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::computeSpringTruncationData() 
+void MeshFittingAlgorithm::computeSpringTruncationData() 
 {
   //This method computes the average, min and max spring constants through a user defined quantile
   //The P^2 algorithm was used to compute the quantiles using the BOOST statistical accumulators
@@ -417,8 +423,7 @@ void MeshFittingAlgorithm<MODEL>::computeSpringTruncationData()
 
 //////////////////////////////////////////////////////////////////////////////
   
-template <typename MODEL>
-CFreal MeshFittingAlgorithm<MODEL>::computeSpringConstant(const Framework::Node* const firstNode, 
+CFreal MeshFittingAlgorithm::computeSpringConstant(const Framework::Node* const firstNode, 
                                                           const Framework::Node* const secondNode) 
 {
   CFAUTOTRACE;
@@ -430,8 +435,7 @@ CFreal MeshFittingAlgorithm<MODEL>::computeSpringConstant(const Framework::Node*
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-CFreal MeshFittingAlgorithm<MODEL>::truncateSpringConstant(const CFreal springConstant){
+CFreal MeshFittingAlgorithm::truncateSpringConstant(const CFreal springConstant){
   const CFreal maxLimit = m_springTruncationData.maxLimit;
   const CFreal minLimit = m_springTruncationData.minLimit;
   const CFreal mean     = m_springTruncationData.mean;
@@ -442,16 +446,14 @@ CFreal MeshFittingAlgorithm<MODEL>::truncateSpringConstant(const CFreal springCo
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::solveLinearSystem(){
+void MeshFittingAlgorithm::solveLinearSystem(){
   assembleLinearSystem();
   m_lss->solveSys();
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::resizeSystemSolverToNodalData(){
+void MeshFittingAlgorithm::resizeSystemSolverToNodalData(){
   Framework::DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
   Framework::DataHandle<Framework::State*, Framework::GLOBAL> states = socket_states.getDataHandle();
   Framework::DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
@@ -464,8 +466,7 @@ void MeshFittingAlgorithm<MODEL>::resizeSystemSolverToNodalData(){
 } 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::resizeSystemSolverToStateData(){
+void MeshFittingAlgorithm::resizeSystemSolverToStateData(){
   Framework::DataHandle<Framework::State*, Framework::GLOBAL> states = socket_states.getDataHandle();
   Framework::DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
   const CFuint totalNbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
@@ -474,8 +475,7 @@ void MeshFittingAlgorithm<MODEL>::resizeSystemSolverToStateData(){
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::assembleLinearSystem(){
+void MeshFittingAlgorithm::assembleLinearSystem(){
   CFAUTOTRACE;
   CFLog(VERBOSE, "MeshFittingAlgorithm::assembleLinearSystem()\n");
 
@@ -504,15 +504,13 @@ void MeshFittingAlgorithm<MODEL>::assembleLinearSystem(){
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-bool MeshFittingAlgorithm<MODEL>::isNodeMovingInBoundary(Framework::Node* node){
+bool MeshFittingAlgorithm::isNodeMovingInBoundary(Framework::Node* node){
   return (m_mapNodeIDNormal.find(node->getLocalID()) != m_mapNodeIDNormal.end());
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::assembleMovingInBoundaryNode(const Framework::Node* node){
+void MeshFittingAlgorithm::assembleMovingInBoundaryNode(const Framework::Node* node){
   Framework::DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
   Framework::DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
   Common::SafePtr<Framework::LSSMatrix> jacobMatrix = m_lss->getMatrix();
@@ -586,8 +584,7 @@ void MeshFittingAlgorithm<MODEL>::assembleMovingInBoundaryNode(const Framework::
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-bool MeshFittingAlgorithm<MODEL>::isNodeLocked(Framework::Node* node)
+bool MeshFittingAlgorithm::isNodeLocked(Framework::Node* node)
 {
   const bool isBoundary = m_boundaryNodes.find(node) != m_boundaryNodes.end();
   return (isBoundary);
@@ -595,8 +592,7 @@ bool MeshFittingAlgorithm<MODEL>::isNodeLocked(Framework::Node* node)
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::assembleLockedNode(const Framework::Node* node){
+void MeshFittingAlgorithm::assembleLockedNode(const Framework::Node* node){
 
   Framework::DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
   Framework::DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
@@ -618,8 +614,7 @@ void MeshFittingAlgorithm<MODEL>::assembleLockedNode(const Framework::Node* node
 
 //////////////////////////////////////////////////////////////////////////////
  
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::assembleInnerNode(const Framework::Node* node){
+void MeshFittingAlgorithm::assembleInnerNode(const Framework::Node* node){
   Framework::DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
   Framework::DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
   Common::SafePtr<Framework::LSSMatrix> jacobMatrix = m_lss->getMatrix();
@@ -657,9 +652,7 @@ void MeshFittingAlgorithm<MODEL>::assembleInnerNode(const Framework::Node* node)
 
 //////////////////////////////////////////////////////////////////////////////
 
- 
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::updateNodePositions() {
+void MeshFittingAlgorithm::updateNodePositions() {
   CFAUTOTRACE;
   CFLog(VERBOSE, "MeshFittingAlgorithm::updateNodePositions()\n");
   
@@ -684,8 +677,7 @@ void MeshFittingAlgorithm<MODEL>::updateNodePositions() {
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename MODEL>
-void MeshFittingAlgorithm<MODEL>::triggerRecomputeMeshData() {
+void MeshFittingAlgorithm::triggerRecomputeMeshData() {
   std::string msg;
   Common::SafePtr<Common::EventHandler> event_handler = Environment::CFEnv::getInstance().getEventHandler();
   const std::string ssname = Framework::SubSystemStatusStack::getCurrentName();   

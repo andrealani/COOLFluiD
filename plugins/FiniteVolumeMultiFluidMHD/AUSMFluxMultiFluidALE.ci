@@ -49,6 +49,7 @@ void AUSMFluxMultiFluidALE<BASE>::computeMeshSpeed()
   
   // Compute the meshSpeed
   const CFreal dt = Framework::SubSystemStatusStack::getActive()->getDT();
+  cf_assert(dt > 0.);
   
   CellCenterFVMData& data = this->getMethodData(); 
   Framework::GeometricEntity *const geo = data.getCurrentFace();
@@ -69,10 +70,25 @@ void AUSMFluxMultiFluidALE<BASE>::computeMeshSpeed()
     for(CFuint iDim = 0; iDim < dim; iDim++){
       m_meshSpeed[iDim] += shapeFunction[iNode] * (*(futureNodes[nodeID]))[iDim];
       m_meshSpeed[iDim] -= shapeFunction[iNode] * (*(pastNodes[nodeID]))[iDim];
+      // cout << "future = " <<(*(futureNodes[nodeID]))[iDim] <<endl;
+      // cout << "past   =" <<(*(pastNodes[nodeID]))[iDim] << endl;
     }
   }
   
   m_meshSpeed /= dt;
+  
+  /*if (m_meshSpeed.norm2() > 0.) {
+    cout << "meshSpeed = " <<m_meshSpeed <<endl;
+    for(CFuint iNode = 0; iNode < nbNodes; iNode++) {
+      const CFuint nodeID = (geo->getNode(iNode))->getLocalID();
+      for(CFuint iDim = 0; iDim < dim; iDim++){
+	cout << "SF = " <<shapeFunction[iNode] <<endl;
+	cout << "future = " <<(*(futureNodes[nodeID]))[iDim] <<endl;
+	cout << "past   =" <<(*(pastNodes[nodeID]))[iDim] << endl;
+      }
+    }
+    exit(1);
+    }*/
   
   // CFout << "Meshspeed: " << _meshSpeed <<"\n";
   //Compute vg*n

@@ -42,7 +42,6 @@ void ALE_FVMGeometricAverage::execute()
   for (CFuint i=0; i < nodes.size();++i){
     *nodes[i] = *futureNodes[i];
   }
-
 }
 
 //////////////////////////////////////////////////////////////////////////////

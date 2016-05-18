@@ -5,7 +5,6 @@ AUSMFluxMHD.hh
 AUSMPWFluxMHD.ci 
 AUSMPWFluxMHD.hh
 FiniteVolumeMHD.hh
-MeshFittingAlgorithmMHD.cxx
 MHD3DCoriolisCentrifugalForcesSourceTerm.hh
 MHD3DProjectionCoriolisCentrifugalForcesSourceTerm.hh
 MHD3DProjectionPolytropicCoriolisCentrifugalForcesSourceTerm.hh

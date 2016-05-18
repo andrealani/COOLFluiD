@@ -93,7 +93,6 @@ SubOutletEuler2DYiPuvt.cxx
 SubOutletEuler2DYiPuvt.hh
 FarField2DYiPuvt.cxx
 FarField2DYiPuvt.hh
-MeshFittingAlgorithmNEQ.cxx
 )
 
 LIST ( APPEND FiniteVolumeNEQ_cflibs FiniteVolume FiniteVolumeNavierStokes NavierStokes NEQ )

@@ -75,7 +75,6 @@ LaxFriedFluxMultiSpecies.hh
 LaxFriedNSvtFlux.hh
 LaxFriedNSvtFlux.cxx
 LaxFriedFluxMultiSpecies.cxx
-MeshFittingAlgorithmNS.cxx
 MirrorEuler2D.hh
 MirrorEuler3D.hh
 MirrorEuler2D.cxx

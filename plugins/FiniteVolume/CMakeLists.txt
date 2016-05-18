@@ -210,7 +210,7 @@ LeastSquareP1UnSetup.cxx
 LeastSquareP1UnSetup.hh
 MCTimeLimiter.cxx
 MCTimeLimiter.hh
-MeshFittingAlgorithm.ci
+MeshFittingAlgorithm.cxx
 MeshFittingAlgorithm.hh
 MinModTimeLimiter.cxx
 MinModTimeLimiter.hh
