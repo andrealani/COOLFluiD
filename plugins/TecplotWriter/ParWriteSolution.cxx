@@ -1623,7 +1623,9 @@ void ParWriteSolution::writeZoneHeader(std::ofstream* fout,
 	<< ", SOLUTIONTIME=";
   fout->precision(14);  
   fout->setf(ios::scientific,ios::floatfield);
-  *fout << SubSystemStatusStack::getActive()->getCurrentTimeDim() << end;
+  const CFreal timeDim = SubSystemStatusStack::getActive()->getCurrentTimeDim();
+  const CFreal nbIter  = (CFreal)SubSystemStatusStack::getActive()->getNbIter();
+  *fout << ((timeDim > 0.) ? timeDim : nbIter) << end;
 }
     
 //////////////////////////////////////////////////////////////////////////////
