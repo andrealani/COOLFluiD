@@ -157,15 +157,6 @@ void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::computeMassFlux()
     // calculation of the mass flux at the interface
     this->m_mflux12[ie] = (m12 > 0.0) ? this->m_a12Vec[ie] * m12 * rhoL : this->m_a12Vec[ie] * m12 * rhoR;   
     
-//     cout << "AUSMPlusUpFluxMultiFluid InterfaceSoundSpeed = "<< this->m_a12Vec[ie] << endl;
-//   cout << "AUSMPlusUpFluxMultiFluid rhoL = "<< rhoL << endl;
-//   cout << "AUSMPlusUpFluxMultiFluid InterfaceSoundSpeed = "<< a12 << endl;
-//   cout << "AUSMPlusUpFluxMultiFluid UPDATEVAR::PTERM::RHO = "<< UPDATEVAR::PTERM::RHO<< endl;
-//   cout << "AUSMPlusUpFluxMultiFluid RHO = "<< (*this->m_lData)[UPDATEVAR::PTERM::RHO]<< endl;
-//   cout << "AUSMPlusUpFluxMultiFluid RHOi = "<< (*this->m_lData)[firstSpecies + ie] << endl;
-  
- 
- 
   }
 }
 //////////////////////////////////////////////////////////////////////////////
@@ -218,6 +209,10 @@ void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::computePressureFlux()
 
   // calculation of the pressure flux at the interface
     this->m_p12[ie] = P5Plus*pL + P5Minus*pR + pU;
+
+//    cout << "PressureFlux ie = "<< ie << endl;
+//    cout << "PressureFlux m_p12[ie] = "<< this->m_p12[ie] << endl;
+
   }
 }
 //////////////////////////////////////////////////////////////////////////////
