@@ -307,7 +307,7 @@ void HartmannSourceTerm<UPDATEVAR>::computeSource
       source[11] = Jx*ExTotal + Jy*EyTotal + JzCurl*(v*BxTotal - u*ByTotal);	//Total Energy
     }
   }
-  if (_isResistive == true && nbEqs == totalNbEqs || iEqSS == 1) {
+  if (_isResistive == true && (nbEqs == totalNbEqs || iEqSS == 1)) {
     if(is2DHalf) {
       source[8] = 0;                                      //Continuity equation
       source[9] = Jy*BzTotal -Jz*ByTotal;                 //x-momentum equation
