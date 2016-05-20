@@ -140,7 +140,7 @@ void EulerMFMHD2DHalfRhoiViTi::computePhysicalData(const State& state, RealVecto
   const CFuint firstSpecies = getModel()->getFirstScalarVar(0);  
   const CFuint firstVelocity = getModel()->getFirstScalarVar(1);   
   const CFuint firstTemperature = getModel()->getFirstScalarVar(2); 
-  
+ 
   const CFreal m_e = getModel()->getMolecularMass1();
   const CFreal m_n = getModel()->getMolecularMass2();
   const CFreal m_p = getModel()->getMolecularMass3(); 
@@ -258,7 +258,7 @@ void EulerMFMHD2DHalfRhoiViTi::computePhysicalData(const State& state, RealVecto
     for (CFuint ie = 0; ie < nbSpecies; ++ie) {
       const CFreal rhoi = state[endEM + ie];
       data[firstSpecies + ie] = rhoi*ovRho;
-    //set the species velocities in 2.5D 
+     //set the species velocities in 2.5D 
       const CFuint dim = 3;
       const CFreal ui = state[endEM + nbSpecies + dim*ie];
       const CFreal vi = state[endEM + nbSpecies + dim*ie + 1];
@@ -283,7 +283,9 @@ void EulerMFMHD2DHalfRhoiViTi::computePhysicalData(const State& state, RealVecto
       data[firstTemperature + 4*ie + 1] = Ti*R_gas*rhoi;//pressure
       data[firstTemperature + 4*ie + 2] = sqrt(gamma*R_gas*Ti);//sound speed
       data[firstTemperature + 4*ie + 3] = 0.5*V2 + c_p*Ti;//total enthaply of species i   
-      
+      //cout << "ie = "<< ie <<"\n";
+      //cout << "V2 = "<< V2 <<"\n";
+      //cout << "Ti = "<< Ti <<"\n";
     }
   }
   CFLog(VERBOSE,"EulerMFMHD2DHalfRhoiViTi::computePhysicalData" << "\n");
@@ -335,6 +337,10 @@ void EulerMFMHD2DHalfRhoiViTi::computeStateFromPhysicalData(const RealVector& da
     
     state[endEM + nbSpecies + dim*nbSpecies + ie] = data[firstTemperature + 4*ie];
   }  
+  CFLog(DEBUG_MAX,"EulerMFMHD2DRhoiViTi::computeStateFromPhysicalData" << "\n");
+  for (CFuint ie = 0; ie < endEM + 5*nbSpecies; ++ie) {
+     CFLog(VERBOSE,"state["<< ie <<"] = "<< state[ie] << "\n");
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
