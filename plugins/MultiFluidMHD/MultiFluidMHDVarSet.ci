@@ -369,11 +369,12 @@ void MultiFluidMHDVarSet<BASE>::computeFlux (const RealVector& pdata, const Real
 	//const CFreal T_i = pdata[firstTemperature + 4*i];      
 	const CFreal H_i = pdata[firstTemperature + 4*i + 3];      
 	
-	this->_fluxArray[i] = rhoVn_i;	
-	this->_fluxArray[nbSpecies + i*dim] = rhoVn_i*u_i +  P_i*nx;
-	this->_fluxArray[nbSpecies + i*dim + 1] = rhoVn_i*v_i + P_i*ny;
-	this->_fluxArray[nbSpecies + i*dim + 2] = rhoVn_i*w_i + P_i*nz;
-	this->_fluxArray[nbSpecies + nbSpecies*dim + i] = rho_i*un_i*H_i;      
+        this->_fluxArray[endEM + i] = rhoVn_i;
+        this->_fluxArray[endEM + nbSpecies + i*dim] = rhoVn_i*u_i +  P_i*nx;
+        this->_fluxArray[endEM + nbSpecies + i*dim + 1] = rhoVn_i*v_i + P_i*ny;
+        this->_fluxArray[endEM + nbSpecies + i*dim + 2] = rhoVn_i*w_i + P_i*nz;
+        this->_fluxArray[endEM + nbSpecies + nbSpecies*dim + i] = rho_i*un_i*H_i;
+	cout <<"Entering Function \n";
       }
     }
   }
@@ -531,25 +532,25 @@ void MultiFluidMHDVarSet<BASE>::computeStateFlux (const RealVector& pdata)
   //       const CFreal T_i = pdata[firstTemperature + 4*i];      
 	const CFreal H_i = pdata[firstTemperature + 4*i + 3];     
 	
-	this->_physFlux(i,XX) = rhoU_i;
-	this->_physFlux(i,YY) = rhoV_i;
-	this->_physFlux(i,ZZ) = rhoW_i;      
+        this->_physFlux(endEM + i,XX) = rhoU_i;
+        this->_physFlux(endEM + i,YY) = rhoV_i;
+        this->_physFlux(endEM + i,ZZ) = rhoW_i;
 	
-	this->_physFlux(nbSpecies + i*dim,XX) = P_i + rhoUU_i;
-	this->_physFlux(nbSpecies + i*dim,YY) = rhoUV_i;
-	this->_physFlux(nbSpecies + i*dim,ZZ) = rhoUW_i;
+        this->_physFlux(endEM + nbSpecies + i*dim,XX) = P_i + rhoUU_i;
+        this->_physFlux(endEM + nbSpecies + i*dim,YY) = rhoUV_i;
+        this->_physFlux(endEM + nbSpecies + i*dim,ZZ) = rhoUW_i;
 	
-	this->_physFlux(nbSpecies + i*dim + 1,XX) = rhoUV_i;
-	this->_physFlux(nbSpecies + i*dim + 1,YY) = P_i + rhoVV_i;      
-	this->_physFlux(nbSpecies + i*dim + 1,ZZ) = rhoVW_i;
+        this->_physFlux(endEM + nbSpecies + i*dim + 1,XX) = rhoUV_i;
+        this->_physFlux(endEM + nbSpecies + i*dim + 1,YY) = P_i + rhoVV_i;
+        this->_physFlux(endEM + nbSpecies + i*dim + 1,ZZ) = rhoVW_i;
 	
-	this->_physFlux(nbSpecies + i*dim + 2,XX) = rhoUW_i;
-	this->_physFlux(nbSpecies + i*dim + 2,YY) = rhoVW_i;      
-	this->_physFlux(nbSpecies + i*dim + 2,ZZ) = P_i + rhoWW_i;
+        this->_physFlux(endEM + nbSpecies + i*dim + 2,XX) = rhoUW_i;
+        this->_physFlux(endEM + nbSpecies + i*dim + 2,YY) = rhoVW_i;
+        this->_physFlux(endEM + nbSpecies + i*dim + 2,ZZ) = P_i + rhoWW_i;
 	
-	this->_physFlux(nbSpecies + nbSpecies*dim + i,XX) = rho_i*u_i*H_i;
-	this->_physFlux(nbSpecies + nbSpecies*dim + i,YY) = rho_i*v_i*H_i;      
-	this->_physFlux(nbSpecies + nbSpecies*dim + i,ZZ) = rho_i*w_i*H_i; 
+        this->_physFlux(endEM + nbSpecies + nbSpecies*dim + i,XX) = rho_i*u_i*H_i;
+        this->_physFlux(endEM + nbSpecies + nbSpecies*dim + i,YY) = rho_i*v_i*H_i;
+        this->_physFlux(endEM + nbSpecies + nbSpecies*dim + i,ZZ) = rho_i*w_i*H_i;
       }
     }
   }      
