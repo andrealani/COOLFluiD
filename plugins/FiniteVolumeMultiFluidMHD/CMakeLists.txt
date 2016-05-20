@@ -15,6 +15,9 @@ DriftWaveUnsteadyInlet.hh
 DriftWaves2DHalfTwoFluid.ci
 DriftWaves2DHalfTwoFluid.cxx
 DriftWaves2DHalfTwoFluid.hh
+DriftWaves2DHalfThreeFluid.ci
+DriftWaves2DHalfThreeFluid.cxx
+DriftWaves2DHalfThreeFluid.hh
 FiniteVolumeMultiFluidMHD.hh
 GEMMHDST3D.ci
 GEMMHDST3D.cxx
@@ -96,8 +99,8 @@ UnsteadySubInletUVTEIWRhoiViTiCanopy.cxx
 UnsteadySubInletUVTEIWRhoiViTiCanopy.hh
 UnsteadySubInletUVTEIWRhoiViTi.cxx
 UnsteadySubInletUVTEIWRhoiViTi.hh
-UnsteadySubInletYUVTEIWRhoiViTi.cxx
-UnsteadySubInletYUVTEIWRhoiViTi.hh
+#UnsteadySubInletYUVTEIWRhoiViTi.cxx
+#UnsteadySubInletYUVTEIWRhoiViTi.hh
 #SubOutletPPCWRhoiViTi3D.cxx
 #SubOutletPPCWRhoiViTi3D.hh
 )
