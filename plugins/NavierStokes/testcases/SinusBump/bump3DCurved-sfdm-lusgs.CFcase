@@ -1,10 +1,16 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# P2-P2 Spectral Finite Difference, Euler3D, LU-SGS, mesh with hexahedra, 
+# converter from Gmsh to CFmesh, Roe scheme, subsonic inlet and outlet, mirror BCs 
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -3.49289
-
+### Residual = -5.9915149
 
 #CFEnv.TraceToStdOut = true
 
@@ -67,7 +73,7 @@ Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 
 # choose which builder we use
 Simulator.SubSystem.SpectralFDMethod.Builder = MeshUpgrade
-Simulator.SubSystem.SpectralFDMethod.Builder.PolynomialOrder = P2
+Simulator.SubSystem.SpectralFDMethod.MeshUpgrade.PolynomialOrder = P2
 Simulator.SubSystem.SpectralFDMethod.SpaceRHSJacobCom = DiagBlockJacob
 Simulator.SubSystem.SpectralFDMethod.TimeRHSJacobCom  = PseudoSteadyTimeDiagBlockJacob
 Simulator.SubSystem.SpectralFDMethod.SpaceRHSForGivenCell = RhsInGivenCell

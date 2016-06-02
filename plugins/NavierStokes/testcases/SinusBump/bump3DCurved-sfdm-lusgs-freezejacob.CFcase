@@ -1,10 +1,17 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# P2-P2 Spectral Finite Difference, Euler3D, LU-SGS with diagonal block freezing, 
+# mesh with hexahedra, converter from Gmsh to CFmesh, Roe scheme, subsonic inlet 
+# and outlet, mirror BCs, Paraview writer, High-Order Tecplot writer 
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -3.90369
-
+### Residual = -4.82353
 
 #CFEnv.TraceToStdOut = true
 
@@ -39,7 +46,7 @@ Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.Tecplot.FileName    = bump3D-sfdm-solP2P2.plt
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 1
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
@@ -74,7 +81,7 @@ Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 
 # choose which builder we use
 Simulator.SubSystem.SpectralFDMethod.Builder = MeshUpgrade
-Simulator.SubSystem.SpectralFDMethod.Builder.PolynomialOrder = P2
+Simulator.SubSystem.SpectralFDMethod.MeshUpgrade.PolynomialOrder = P2
 Simulator.SubSystem.SpectralFDMethod.SpaceRHSJacobCom = DiagBlockJacob
 Simulator.SubSystem.SpectralFDMethod.TimeRHSJacobCom  = PseudoSteadyTimeDiagBlockJacob
 Simulator.SubSystem.SpectralFDMethod.SpaceRHSForGivenCell = RhsInGivenCell

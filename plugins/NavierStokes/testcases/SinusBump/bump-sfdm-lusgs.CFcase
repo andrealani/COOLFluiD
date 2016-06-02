@@ -1,13 +1,24 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Spectral Finite Difference, Euler2D, LU-SGS with diagonal block jacobian, 
+# mesh with quads, converter from Gmsh to CFmesh, second-order Roe scheme, 
+# subsonic inlet and outlet, mirror BCs 
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-# Residual = -7.335
-
+# Residual = -6.3265519
 
 #CFEnv.TraceToStdOut = true
 
+#CFEnv.TraceToStdOut = true
+###### TEST CONFIGURATION
+#CFEnv.ErrorOnUnusedConfig = true
+#
 # SubSystem Modules
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libGmsh2CFmesh libParaViewWriter libNavierStokes libSpectralFD libSpectralFDNavierStokes libLUSGSMethod
 
@@ -17,7 +28,10 @@ Simulator.Paths.ResultsDir = ./
 
 Simulator.SubSystem.Default.PhysicalModelType = Euler2D
 Simulator.SubSystem.Euler2D.refValues = 1.0 0.591607978 0.591607978 2.675
-Simulator.SubSystem.Euler2D.refLength = 1.0
+Simulator.SubSystem.Euler2D. = 1.0
+Simulator.SubSystem.Euler2D.ConvTerm.pRef = 1.
+Simulator.SubSystem.Euler2D.ConvTerm.tempRef = 0.003483762
+Simulator.SubSystem.Euler2D.ConvTerm.machInf = 0.5
 
 Simulator.SubSystem.OutputFormat        = ParaView CFmesh
 
@@ -35,7 +49,7 @@ Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
 Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 100
-Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -4
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
 
 Simulator.SubSystem.ConvergenceMethod = NonlinearLUSGSIterator
 Simulator.SubSystem.NonlinearLUSGSIterator.ConvergenceFile = convergence-lusgs.plt
@@ -49,7 +63,8 @@ Simulator.SubSystem.NonlinearLUSGSIterator.Data.NormRes = L2LUSGS
 Simulator.SubSystem.NonlinearLUSGSIterator.Data.PrintHistory = true
 Simulator.SubSystem.NonlinearLUSGSIterator.Data.CFL.Value = 0.5
 Simulator.SubSystem.NonlinearLUSGSIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NonlinearLUSGSIterator.Data.CFL.Function.Def = min(100,0.5*2.0^max(i-10,0))
+Simulator.SubSystem.NonlinearLUSGSIterator.Data.CFL.Function.Def = min(100.,cfl*1.2)
+#min(100.,0.5*2.0^max(i-10,0))
 
 Simulator.SubSystem.SpaceMethod = SpectralFDMethod
 
@@ -64,7 +79,7 @@ Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 # choose which builder we use
 #Simulator.SubSystem.SpectralFDMethod.Builder = StdBuilder
 Simulator.SubSystem.SpectralFDMethod.Builder = MeshUpgrade
-Simulator.SubSystem.SpectralFDMethod.Builder.PolynomialOrder = P1
+Simulator.SubSystem.SpectralFDMethod.MeshUpgrade.PolynomialOrder = P1
 Simulator.SubSystem.SpectralFDMethod.SpaceRHSJacobCom = DiagBlockJacob
 Simulator.SubSystem.SpectralFDMethod.TimeRHSJacobCom  = PseudoSteadyTimeDiagBlockJacob
 Simulator.SubSystem.SpectralFDMethod.SpaceRHSForGivenCell = RhsInGivenCell

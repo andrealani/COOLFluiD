@@ -1,10 +1,17 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# P2-P2 Spectral Finite Difference, Euler3D, LU-SGS with jacobian freezing, mesh 
+# with hexahedra, converter from Gmsh to CFmesh, Lax Friedrichs scheme, subsonic 
+# inlet and outlet, mirror BCs, Paraview writer 
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -2.44581
-
+### Residual = -5.3790917
 
 #CFEnv.TraceToStdOut = true
 
@@ -38,7 +45,7 @@ Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
-Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 25
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 100
 Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
 
 Simulator.SubSystem.ConvergenceMethod = NonlinearLUSGSIteratorComputDiagJacob
@@ -67,7 +74,7 @@ Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 
 # choose which builder we use
 Simulator.SubSystem.SpectralFDMethod.Builder = MeshUpgrade
-Simulator.SubSystem.SpectralFDMethod.Builder.PolynomialOrder = P2
+Simulator.SubSystem.SpectralFDMethod.MeshUpgrade.PolynomialOrder = P2
 Simulator.SubSystem.SpectralFDMethod.SpaceRHSJacobCom = Null
 Simulator.SubSystem.SpectralFDMethod.TimeRHSJacobCom  = Null
 Simulator.SubSystem.SpectralFDMethod.SpaceRHSForGivenCell = RhsInGivenCell
