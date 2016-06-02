@@ -97,9 +97,9 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
 void StdSetup::execute()
 {
   CFAUTOTRACE;
-
-  CFLog(INFO,"\n\nStdSetup::execute\n\n");
-
+  
+  CFLog(VERBOSE,"StdSetup::execute() => START\n");
+  
   // number of equations
   const CFuint nbrEqs = PhysicalModelStack::getActive()->getNbEq();
 
@@ -238,7 +238,9 @@ void StdSetup::execute()
 
   // set maxNbStatesData  (must be setup after volume-, face- and boundarytermcomputers!!!)
  /// @todo broken after release 2009.3
-//   PhysicalModelStack::getActive()->getImplementor()->setMaxNbStatesData(getMethodData().getMaxNbrStatesData());
+  //   PhysicalModelStack::getActive()->getImplementor()->setMaxNbStatesData(getMethodData().getMaxNbrStatesData()); 
+  
+  CFLog(VERBOSE,"StdSetup::execute() => END\n");
 }
 
 /////////////////////////////////////////////////////////////////////////////

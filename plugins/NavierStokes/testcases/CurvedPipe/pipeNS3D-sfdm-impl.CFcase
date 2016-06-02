@@ -1,13 +1,21 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# P3-P2 Spectral Finite Difference, NavierStokes3D, Backward Euler, mesh with 
+# hexahedra, subsonic inlet and outlet, noslip wall BCs, Paraview writer 
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -3.77862
-
+### Residual = -1.395245
 
 #CFEnv.TraceToStdOut = true
-
+###### TEST CONFIGURATION
+#CFEnv.ErrorOnUnusedConfig = true
+#
 # SubSystem Modules
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libGmsh2CFmesh libParaViewWriter libNavierStokes libSpectralFD libSpectralFDNavierStokes libBackwardEuler libPetscI
 
@@ -40,8 +48,9 @@ Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
-Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 2
-Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 10
+# this is norm drop RELATIVE to the starting residual (example: if you start at -4 you will stop at -7)
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6.
 
 Simulator.SubSystem.ConvergenceMethod = BwdEuler
 Simulator.SubSystem.BwdEuler.Data.CFL.Value = 0.5
@@ -64,13 +73,15 @@ Simulator.SubSystem.SpaceMethod = SpectralFDMethod
 Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet Wall
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
+# this mesh is too coarse, so parallelization cannot work
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = pipeCurved.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = SpectralFDMethod
 Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 4
 
 # choose which builder we use
 Simulator.SubSystem.SpectralFDMethod.Builder = MeshUpgrade
-Simulator.SubSystem.SpectralFDMethod.Builder.PolynomialOrder = P3
+Simulator.SubSystem.SpectralFDMethod.MeshUpgrade.PolynomialOrder = P3
 Simulator.SubSystem.SpectralFDMethod.SpaceRHSJacobCom = RHSJacob
 Simulator.SubSystem.SpectralFDMethod.TimeRHSJacobCom  = StdTimeRHSJacob
 Simulator.SubSystem.SpectralFDMethod.ExtrapolateCom = Null

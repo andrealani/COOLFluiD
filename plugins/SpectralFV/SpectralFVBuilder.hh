@@ -34,7 +34,7 @@ public: // functions
   /**
    * Destructor
    */
-  ~SpectralFVBuilder();
+ virtual ~SpectralFVBuilder();
 
   /**
    * Releases temporary memory used in building the mesh

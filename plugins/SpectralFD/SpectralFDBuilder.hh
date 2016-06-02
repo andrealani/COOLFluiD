@@ -34,16 +34,16 @@ public: // functions
   /**
    * Destructor
    */
-  ~SpectralFDBuilder();
-
+  virtual ~SpectralFDBuilder();
+  
   /**
    * Releases temporary memory used in building the mesh
    */
   virtual void releaseMemory();
-
+  
   /// Configures this object from the supplied arguments
   virtual void configure ( Config::ConfigArgs& args );
-
+  
   /**
    * Computes the data for the element types
    * This function overides the one in MeshDataBuilder

@@ -341,13 +341,12 @@ Common::SelfRegistPtr<MeshDataBuilder> SpaceMethod::createMeshBuilder()
 
   Common::SelfRegistPtr<MeshDataBuilder> ptr =
     Environment::Factory<MeshDataBuilder>::getInstance().
-    getProvider(m_builder)->create("Builder");
-
+    getProvider(m_builder)->create(m_builder);
+  
   configureNested ( ptr.getPtr(), m_stored_args );
-
   return ptr;
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 Common::SelfRegistPtr<GlobalJacobianSparsity> SpaceMethod::createJacobianSparsity()

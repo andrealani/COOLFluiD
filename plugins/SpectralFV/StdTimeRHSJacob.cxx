@@ -64,6 +64,8 @@ void StdTimeRHSJacob::execute()
 {
   CFAUTOTRACE;
 
+  CFLog(VERBOSE, "StdTimeRHSJacob::execute() => START\n");
+
   SafePtr<LSSMatrix> jacobMatrix = m_lss->getMatrix();
 
   DataHandle< CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
@@ -87,6 +89,8 @@ void StdTimeRHSJacob::execute()
   const CFuint nbrElemTypes = elemType->size();
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
   {
+    CFLog(DEBUG_MAX, "iElemType = " << iElemType << "\n");
+
     // get start and end indexes for this type of element
     const CFuint startIdx = (*elemType)[iElemType].getStartIdx();
     const CFuint endIdx   = (*elemType)[iElemType].getEndIdx();
@@ -100,6 +104,7 @@ void StdTimeRHSJacob::execute()
     // add the diagonal entries in the jacobian (updateCoeff/CFL)
     for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
     {
+      CFLog(DEBUG_MAX, "elemIdx = " << elemIdx << "\n");
       // build the GeometricEntity
       geoData.idx = elemIdx;
       GeometricEntity* cell = m_cellBuilder->buildGE();
@@ -107,8 +112,8 @@ void StdTimeRHSJacob::execute()
       // get the states in this cell
       vector< State* >* cellStates = cell->getStates();
 
-      if ((*cellStates)[0]->isParUpdatable())
-      {
+     if ((*cellStates)[0]->isParUpdatable())
+    {
         // get first state ID
         const CFuint firstStateID = (*cellStates)[0]->getLocalID();
 
@@ -119,9 +124,9 @@ void StdTimeRHSJacob::execute()
         const CFuint nbrCVs = cellStates->size();
         for (CFuint iCV = 0; iCV < nbrCVs; ++iCV)
         {
+          CFLog(DEBUG_MAX, "iCV = " << iCV << "\n");      
           // compute diagonal value
           const CFreal diagValue = updateCoeffDivCFL*(*m_volFracCVs)[iCV];
-
           const CFuint stateID = (*cellStates)[iCV]->getLocalID();
           CFuint globalID = idxMapping.getColID(stateID)*m_nbrEqs;
 
@@ -133,12 +138,14 @@ void StdTimeRHSJacob::execute()
             }
           }
         }
-      }
+     }
 
       //release the GeometricEntity
       m_cellBuilder->releaseGE();
     }
   }
+
+  CFLog(VERBOSE, "StdTimeRHSJacob::execute() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

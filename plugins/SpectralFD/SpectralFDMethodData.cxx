@@ -516,8 +516,8 @@ void SpectralFDMethodData::setup()
     vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
     (updateToSolutionVecTransStr);
   }
-  CFLog(INFO, "SpectralFDMethodData::setup() => updateToSolutionVarName = " << updateToSolutionVecTransStr << "\n");
-
+  CFLog(VERBOSE, "SpectralFDMethodData::setup() => updateToSolutionVarName = " << updateToSolutionVecTransStr << "\n");
+  
   cf_assert(vecTransProv.isNotNull());
   m_updateToSolutionVecTrans.reset(vecTransProv->create(physModel->getImplementor()));
   cf_assert(m_updateToSolutionVecTrans.isNotNull());

@@ -4106,8 +4106,8 @@ void TetraSpectralFVElementData::setPolyGonQuadrilateralDecomposition(const vect
 void TetraSpectralFVElementData::createFaceOutputPntCellMappedCoords()
 {
   // number of points on a face
-  CFuint nbrFacePnts;
-  CFreal dKsi;
+  CFuint nbrFacePnts = 0;
+  CFreal dKsi = 0.;
   if (m_polyOrder == CFPolyOrder::ORDER0)
   {
     nbrFacePnts = 2;
@@ -4118,16 +4118,19 @@ void TetraSpectralFVElementData::createFaceOutputPntCellMappedCoords()
     nbrFacePnts = m_polyOrder + 1;
     dKsi = 2.0/m_polyOrder;
   }
+  cf_assert(nbrFacePnts > 0);
+  cf_assert(dKsi > 0.);
 
+  RealVector mapCoord(2);
   // face mapped coordinates of uniform distribution of points
-  m_faceOutputPntFaceMappedCoords.resize(0);
+  m_faceOutputPntFaceMappedCoords.clear();
+  cf_assert(m_faceOutputPntFaceMappedCoords.size() == 0);
   CFreal ksi = 0.0;
   for (CFuint iKsi = 0; iKsi < m_polyOrder+1; ++iKsi)
   {
     CFreal eta = 0.0;
     for (CFuint iEta = 0; iEta < m_polyOrder+1-iKsi; ++iEta)
     {
-      RealVector mapCoord(2);
       mapCoord[KSI] = ksi;
       mapCoord[ETA] = eta;
       m_faceOutputPntFaceMappedCoords.push_back(mapCoord);
@@ -4135,18 +4138,24 @@ void TetraSpectralFVElementData::createFaceOutputPntCellMappedCoords()
     }
     ksi += dKsi;
   }
-
+  
   // compute cell mapped coordinates for distribution on each face
   const CFuint nbrCellFaces = getNbrSVFaces();
+  cf_assert(nbrCellFaces > 0);
+  
   m_faceOutputPntCellMappedCoords.resize(nbrCellFaces);
   for (CFuint iFace = 0; iFace < nbrCellFaces; ++iFace)
   {
     // current face node coordinates
     const vector<RealVector>& faceNodeCoords = m_svFaceNodeCoords[iFace];
-    m_faceOutputPntCellMappedCoords[iFace].resize(0);
+    m_faceOutputPntCellMappedCoords[iFace].clear();
     for (CFuint iPnt = 0; iPnt < nbrFacePnts; ++iPnt)
     {
+      cf_assert(m_faceOutputPntFaceMappedCoords.size() > 0);
+      cf_assert(iPnt < m_faceOutputPntFaceMappedCoords.size());
+      cf_assert(KSI < m_faceOutputPntFaceMappedCoords[iPnt].size());
       const CFreal fun0 = m_faceOutputPntFaceMappedCoords[iPnt][KSI];
+      cf_assert(ETA < m_faceOutputPntFaceMappedCoords[iPnt].size());
       const CFreal fun1 = m_faceOutputPntFaceMappedCoords[iPnt][ETA];
       const CFreal fun2 = 1 - fun0 - fun1;
       m_faceOutputPntCellMappedCoords[iFace].push_back(fun0*faceNodeCoords[0]+fun1*faceNodeCoords[1]+fun2*faceNodeCoords[2]);
