@@ -262,64 +262,73 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     //electron, ion properties
     const CFreal ne = rhoe/me;		   	// number density electrons [m^-3]
     const CFreal ni = rhoi/mi;		   	// number density ions [m^-3]
-    const CFreal ne_cgs = ne*1e-6; // number density electrons for cgs unit use [cm^-3]
-    const CFreal ni_cgs = ni*1e-6; // number density ions for cgs unit use [cm^-3]
-    const CFreal Te_cgs = Te/11604.50520;		// electrons temperature in eV. 
-    const CFreal Ti_cgs = Ti/11604.50520;		// ions temperature in eV. 
     const CFreal pi = MathTools::MathConsts::CFrealPi(); //Pi number
     const CFreal Epsilon0 = Framework::PhysicalConsts::VacuumPermittivity();
-
+    //std::cout <<"Epsilon0e = "<<Epsilon0<< "\n";
     //to calculate collision Frequency
-
-//    const CFreal Debye = std::sqrt(kB*Te_cgs/(4*pi*ne_cgs*qe*qe)); //Debye length  - assumes Te=Ti and ne=ni
-//    const CFreal C_log = std::log(12*pi*ne_cgs*std::pow(Debye,3)); //Coulomb logarithm - assumes Te=Ti and ne=ni
-//    const CFreal nu_i = 4.8e-8*ni*std::pow(Ti,-1.5)*C_log; //ion collision frequency - assumes Te=Ti and ne=ni
-//    const CFreal nu_e = 2.91e-6*ne*std::pow(Te,-1.5)*C_log; //electron collision frequency - assumes Te=Ti and ne=ni   
-
     const CFreal r_di = std::sqrt(Epsilon0*kB*Ti/(ni*qe*qe)); //Debye length of ions [m]
     const CFreal r_de = std::sqrt(Epsilon0*kB*Te/(ne*qe*qe)); //Debye length of electrons [m]
     const CFreal r_deb = r_de*r_di/(std::sqrt(r_de*r_de + r_di*r_di)); //Debye length for plasma with several species
-//    std::cout <<"Debye length= " <<r_deb <<"\n";
-    const CFreal b0 = std::abs(qe*qi)/(4*pi*Epsilon0)/(3*kB*(Te+Ti));
-    const CFreal L_ie = std::log(r_deb/b0);
-//    std::cout << "Coulomb log= " << L_ie << "\n";
-    const CFreal nu_ie = 4*std::sqrt(2*pi/mi)*std::pow(std::abs(qe*qi)/(4*pi*Epsilon0),2)*ne*L_ie/(3*(std::pow(kB*Ti+kB*Te*mi/me,1.5))); //ion collision frequency for collisions with electrons (target)
-    const CFreal nu_ei = 4*std::sqrt(2*pi/me)*std::pow(std::abs(qe*qi)/(4*pi*Epsilon0),2)*ni*L_ie/(3*(std::pow(kB*Te+kB*Ti*me/mi,1.5))); //electron collision frequency for collisions with ions (target)
-//    std::cout <<"coll freq_e = "<< nu_ei << "\n";
-//    std::cout <<"coll freq_i = "<< nu_ie << "\n";
-    const CFreal const_e = 0.;//me*ne*nu_ei; //for collisional term of electrons
-    const CFreal const_i = 0.;//mi*ni*nu_ie; //for collisional term of ions
-//    std::cout <<"const_e = "<< const_e << "\n";
-//    std::cout <<"const_i = "<< const_i << "\n";
 
+    // Collisional terms (Alex' way)
+    // General terms
+    const CFreal gamma_e = me/(kB*Te); 
+    const CFreal gamma_i = mi/(kB*Ti);
+    const CFreal mu_ie   = mi*me/(mi + me);
+    const CFreal gamma_ie   = gamma_i*gamma_e/(gamma_i + gamma_e);
+
+    // Coulomb Collisions
+    const CFreal Debye_minusTwo = ne*qe*qe/(Epsilon0*kB*Te) + ni*qi*qi/(Epsilon0*kB*Ti); 
+    const CFreal Debye = std::sqrt(1/Debye_minusTwo);
+    const CFreal Lambda_ie = 12*pi*Epsilon0/std::abs(qe*qi)*mu_ie/gamma_ie*Debye;
+    const CFreal C_log = std::log(Lambda_ie); //Coulomb logarithm 
+    const CFreal tau_minusOne_ie = 16*std::sqrt(pi)/3*ne*std::pow(gamma_ie/2,3./2.)*std::pow(qi*qe/(4*pi*Epsilon0*mu_ie),2.)*C_log;//ion collision frequency for collisions with electrons (target)
+    const CFreal tau_minusOne_ei = 16*std::sqrt(pi)/3*ni*std::pow(gamma_ie/2,3./2.)*std::pow(qi*qe/(4*pi*Epsilon0*mu_ie),2.)*C_log;//electron collision frequency for collisions with ions (target)
+    //std::cout <<"coll freq_e = "<< tau_minusOne_ie << "\n";
+    //std::cout <<"coll freq_i = "<< tau_minusOne_ei << "\n";
+    //abort();
     //momentum equations - NO removed const
-    CFreal emMomentumXe = qe*ne*(_Etotal[XX] + ve*_Btotal[ZZ] - we*_Btotal[YY]) - const_e*ue;	//Electromagnetic momentum for electrons in X
-    CFreal emMomentumXi = qi*ni*(_Etotal[XX] + vi*_Btotal[ZZ] - wi*_Btotal[YY]) - const_i*ui;	//Electromagnetic momentum for ions in X
-    CFreal emMomentumYe = qe*ne*(_Etotal[YY] + we*_Btotal[XX] - ue*_Btotal[ZZ]) - const_e*ve;	//Electromagnetic momentum for electrons in Y
-    CFreal emMomentumYi = qi*ni*(_Etotal[YY] + wi*_Btotal[XX] - ui*_Btotal[ZZ]) - const_i*vi;	//Electromagnetic momentum for ions in Y
-    CFreal emMomentumZe = qe*ne*(_Etotal[ZZ] + ue*_Btotal[YY] - ve*_Btotal[XX]) - const_e*we;	//Electromagnetic momentum for electrons in Z
-    CFreal emMomentumZi = qi*ni*(_Etotal[ZZ] + ui*_Btotal[YY] - vi*_Btotal[XX]) - const_i*wi;	//Electromagnetic momentum for ions in Z
-//    std::cout <<"qe = "<< qe << "\n";
-//    std::cout <<"qi = "<< qi << "\n";
-//    std::cout <<"ne = "<< ne << "\n";
-//    std::cout <<"ni = "<< ni << "\n";
-//     abort();
+    CFreal emMomentumXe = qe*ne*(_Etotal[XX] + ve*_Btotal[ZZ] - we*_Btotal[YY]);	//Electromagnetic momentum for electrons in X
+    CFreal emMomentumXi = qi*ni*(_Etotal[XX] + vi*_Btotal[ZZ] - wi*_Btotal[YY]);	//Electromagnetic momentum for ions in X
+    CFreal emMomentumYe = qe*ne*(_Etotal[YY] + we*_Btotal[XX] - ue*_Btotal[ZZ]);	//Electromagnetic momentum for electrons in Y
+    CFreal emMomentumYi = qi*ni*(_Etotal[YY] + wi*_Btotal[XX] - ui*_Btotal[ZZ]);	//Electromagnetic momentum for ions in Y
+    CFreal emMomentumZe = qe*ne*(_Etotal[ZZ] + ue*_Btotal[YY] - ve*_Btotal[XX]);	//Electromagnetic momentum for electrons in Z
+    CFreal emMomentumZi = qi*ni*(_Etotal[ZZ] + ui*_Btotal[YY] - vi*_Btotal[XX]);	//Electromagnetic momentum for ions in Z
 
-    source[10] = emMomentumXe;   //Electrons X momentum
-    source[11] = emMomentumYe;   //Electrons Y momentum
-    source[12] = emMomentumZe;   //Electrons Z momentum
+    //collisional momentum:
+    const CFreal collMomentumXe = -(ne*mu_ie*tau_minusOne_ei*(ue - ui));
+    const CFreal collMomentumYe = -(ne*mu_ie*tau_minusOne_ei*(ve - vi));
+    const CFreal collMomentumZe = -(ne*mu_ie*tau_minusOne_ei*(we - wi));
+    const CFreal collMomentumXi = -(ni*mu_ie*tau_minusOne_ie*(ui - ue));
+    const CFreal collMomentumYi = -(ni*mu_ie*tau_minusOne_ie*(vi - ve));
+    const CFreal collMomentumZi = -(ni*mu_ie*tau_minusOne_ie*(wi - we));
+   	
+    source[10] = emMomentumXe + collMomentumXe;   //Electrons X momentum
+    source[11] = emMomentumYe + collMomentumYe;   //Electrons Y momentum
+    source[12] = emMomentumZe + collMomentumZe;   //Electrons Z momentum
 
-    source[13] = emMomentumXi;   //Ions X momentum
-    source[14] = emMomentumYi;   //Ions Y momentum
-    source[15] = emMomentumZi;   //Ions Z momentum
+    source[13] = emMomentumXi + collMomentumXi;   //Ions X momentum
+    source[14] = emMomentumYi + collMomentumYi;   //Ions Y momentum
+    source[15] = emMomentumZi + collMomentumZi;   //Ions Z momentum
 
       
     //AAL: ENERGY
+    // Computation of hydrodynamic pressure
+    const CFreal u = (rhoe*ue + rhoi*ui)/rho; 
+    const CFreal v = (rhoe*ve + rhoi*vi)/rho; 
+    const CFreal w = (rhoe*we + rhoi*wi)/rho;
+
+    const CFreal workColle = (ue - ui)*collMomentumXe + (ve - vi)*collMomentumYe + (we - wi)*collMomentumZe;
+    const CFreal workColli = (ui - ue)*collMomentumXi + (vi - ve)*collMomentumYi + (wi - we)*collMomentumZi;
+
+    const CFreal heatColle = -3*kB*ne*(mu_ie/(me + mi))*tau_minusOne_ei*(Te - Ti);
+    const CFreal heatColli = -3*kB*ni*(mu_ie/(me + mi))*tau_minusOne_ie*(Ti - Te);
+
     const CFreal emEnergye = qe*(rhoe/me)*(ue*_Etotal[XX] + ve*_Etotal[YY] + we*_Etotal[ZZ]); //electrons
     const CFreal emEnergyi = qi*(rhoi/mi)*(ui*_Etotal[XX] + vi*_Etotal[YY] + wi*_Etotal[ZZ]); //ions
 
-    source[16] = emEnergye; // + emMomentumXe*ue + emMomentumYe*ve + emMomentumZe*we; //Electrons Energy Source terms
-    source[17] = emEnergyi; // + emMomentumXi*ui + emMomentumYi*vi + emMomentumZi*wi; //Ions Energy
+    source[16] = emEnergye + workColle + heatColle; //Electrons Energy Source terms
+    source[17] = emEnergyi + workColli + heatColli; //Ions Energy
 
     // AAL: Write the sockets
     //if (!this->getMethodData().isPerturb()) { // Condition to avoid writing when the source is perturbed
