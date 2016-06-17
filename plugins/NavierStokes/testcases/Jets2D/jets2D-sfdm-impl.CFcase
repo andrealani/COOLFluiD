@@ -21,11 +21,11 @@ Simulator.SubSystem.Euler2D.refLength = 1.0
 
 Simulator.SubSystem.OutputFormat        = ParaView #CFmesh
 
-Simulator.SubSystem.CFmesh.FileName     = jets2D-sfdm-solP1.CFmesh
-Simulator.SubSystem.CFmesh.SaveRate = 10
-Simulator.SubSystem.CFmesh.AppendTime = false
-Simulator.SubSystem.CFmesh.AppendIter = false
-Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+#Simulator.SubSystem.CFmesh.FileName     = jets2D-sfdm-solP1.CFmesh
+#Simulator.SubSystem.CFmesh.SaveRate = 10
+#Simulator.SubSystem.CFmesh.AppendTime = false
+#Simulator.SubSystem.CFmesh.AppendIter = false
+#Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
 
 Simulator.SubSystem.ParaView.FileName    = jets2D-sfdm-solP2TVB.vtu
 Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
@@ -35,7 +35,7 @@ Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
-Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 15
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 200
 Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
 
 Simulator.SubSystem.ConvergenceMethod = BwdEuler
@@ -65,10 +65,11 @@ Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = SpectralFDMethod
 Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
 Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+#Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2
 
 # choose which builder we use
 Simulator.SubSystem.SpectralFDMethod.Builder = MeshUpgrade
-Simulator.SubSystem.SpectralFDMethod.Builder.PolynomialOrder = P2
+Simulator.SubSystem.SpectralFDMethod.MeshUpgrade.PolynomialOrder = P2
 Simulator.SubSystem.SpectralFDMethod.SpaceRHSJacobCom = RHSJacob
 Simulator.SubSystem.SpectralFDMethod.TimeRHSJacobCom  = StdTimeRHSJacob
 Simulator.SubSystem.SpectralFDMethod.ExtrapolateCom = Null
