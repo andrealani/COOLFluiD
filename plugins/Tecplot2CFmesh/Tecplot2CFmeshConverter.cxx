@@ -167,46 +167,67 @@ void Tecplot2CFmeshConverter::readZone(ifstream& fin,
     getTecplotWordsFromLine(fin, line, countl, words); // ZONE Description
   }
   CFLog(VERBOSE, CFPrintContainer<vector<string> >("line = ", &words) << "\n");
-  
+
   bool foundN = false;
   bool foundE = false;
   bool foundET = false;
-  string tmpStr = "";
-  for (CFuint i = 0; i < words.size(); ++i) {
-    if (words[i].find("N=") != string::npos) {
-      getValueString(string("N="), words[i], tmpStr);
-      const CFuint nbN = StringOps::from_str<CFuint>(tmpStr);
-      nbNodes = (nbN > 0) ? nbN : nbNodes;
-      foundN = true;
-    }
-    else if (words[i].find("Nodes=") != string::npos) {
-      getValueString(string("Nodes="), words[i], tmpStr);
-      const CFuint nbN = StringOps::from_str<CFuint>(tmpStr);
-      nbNodes = (nbN > 0) ? nbN : nbNodes;
-      foundN = true;
-    }
-    else if (words[i].find("ZONETYPE=") != string::npos) {
-      getValueString(string("ZONETYPE="), words[i], cellType);
-      foundET = true;
-    }
-    else if (words[i].find("E=") != string::npos) {
-      getValueString(string("E="), words[i], tmpStr);
-      const CFuint nbC = StringOps::from_str<CFuint>(tmpStr);
-      nbElems = (nbC > 0) ? nbC : nbElems;
-      foundE = true;
-    }
-    else if (words[i].find("Elements=") != string::npos) {
-      getValueString(string("Elements="), words[i], tmpStr);
-      const CFuint nbC = StringOps::from_str<CFuint>(tmpStr);
-      nbElems = (nbC > 0) ? nbC : nbElems;
-      foundE = true;
-    }
-    else if (words[i].find("ET=") != string::npos) {
-      getValueString(string("ET="), words[i], cellType);
-      foundET = true;
-    }
+  
+  while (!foundN || !foundE || !foundET) {
+    string tmpStr = "";
+    for (CFuint i = 0; i < words.size(); ++i) {
+      if (words[i].find("N=") != string::npos) {
+	getValueString(string("N="), words[i], tmpStr);
+	const CFuint nbN = StringOps::from_str<CFuint>(tmpStr);
+	nbNodes = (nbN > 0) ? nbN : nbNodes;
+	foundN = true;
+      }
+      else if (words[i].find("Nodes=") != string::npos) {
+	getValueString(string("Nodes="), words[i], tmpStr);
+	const CFuint nbN = StringOps::from_str<CFuint>(tmpStr);
+	nbNodes = (nbN > 0) ? nbN : nbNodes;
+	foundN = true;
+      }
+      else if (words[i].find("ZONETYPE=") != string::npos) {
+	getValueString(string("ZONETYPE="), words[i], cellType);
+	foundET = true;
+      }
+      else if (words[i].find("E=") != string::npos) {
+	getValueString(string("E="), words[i], tmpStr);
+	const CFuint nbC = StringOps::from_str<CFuint>(tmpStr);
+	nbElems = (nbC > 0) ? nbC : nbElems;
+	foundE = true;
+      }
+      else if (words[i].find("Elements=") != string::npos) {
+	getValueString(string("Elements="), words[i], tmpStr);
+	const CFuint nbC = StringOps::from_str<CFuint>(tmpStr);
+	nbElems = (nbC > 0) ? nbC : nbElems;
+	foundE = true;
+      }
+      else if (words[i].find("ET=") != string::npos) {
+	getValueString(string("ET="), words[i], cellType);
+	foundET = true;
+      }
+      
+      if (foundN && foundE && foundET) break; 
+    } 
     
-    if (foundN && foundE && foundET) break;
+    if (foundN && foundE && foundET) break; 
+    getTecplotWordsFromLine(fin, line, countl, words); // ZONE Description
+  }
+  
+  // at this point in the file, you could have
+  // DATAPACKING=POINT
+  // DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )
+  // in that case, read it and jump to the useful data
+  long startData = fin.tellg();
+  getTecplotWordsFromLine(fin, line, countl, words);
+  if (line.find("DATAPACKING=") != string::npos) {
+    startData = fin.tellg();
+    getTecplotWordsFromLine(fin, line, countl, words);
+  }
+  //  if the line contains "DT=" read it, otherwise go back because this is data to be stored 
+  if (line.find("DT=") == string::npos) {
+    fin.seekg(startData);
   }
   
   m_dimension = max(m_dimension, getDim(cellType));
@@ -715,7 +736,7 @@ void Tecplot2CFmeshConverter::readVariables(ifstream& fin,
 					    vector<string>& words, 
 					    vector<string>& vars)
 {
-  getTecplotWordsFromLine(fin, line, lineNb, words); // VARIABLES
+  /* getTecplotWordsFromLine(fin, line, lineNb, words); // VARIABLES
   
   CFLog(VERBOSE, "VARIABLES = ");
   for (CFuint i = 0; i < words.size(); ++i) {
@@ -726,7 +747,28 @@ void Tecplot2CFmeshConverter::readVariables(ifstream& fin,
       vars.push_back(words[i]);
     }
   }
+  CFLog(VERBOSE, "\n");*/
+  
+  long startZone = fin.tellg();
+  getTecplotWordsFromLine(fin, line, lineNb, words); // VARIABLES
+  
+  while (line.find("ZONE") == string::npos) {
+    for (CFuint i = 0; i < words.size(); ++i) {
+      if (words[i].find('=')==string::npos && words[i].find("VARIABLES")==string::npos) {
+	CFLog(VERBOSE, words[i] << " ");
+	// store all the variable names
+	vars.push_back(words[i]);
+      }
+    }
+    
+    startZone = fin.tellg(); 
+    getTecplotWordsFromLine(fin, line, lineNb, words); // VARIABLES
+  }
   CFLog(VERBOSE, "\n");
+  
+  // we are assuming that the first "ZONE" comes right after the list of variables
+  // set ifstream pointer to the position right before "ZONE"
+  fin.seekg(startZone);
 }
       
 //////////////////////////////////////////////////////////////////////////////
