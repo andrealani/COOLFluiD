@@ -68,7 +68,7 @@ Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SurfaceTRS = 1 2 3 4
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = "p" "u" "v" "T" 
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.NbElementTypes = 1
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = false
-
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
 # Safety practice: generate scaled up meshes w/ gambit and reescale
 # them back before running. When restarting comment out the scaling factor,
 # otherwise a twice scaled grid is obtained.

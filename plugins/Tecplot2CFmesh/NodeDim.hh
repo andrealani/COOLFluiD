@@ -10,6 +10,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Common/COOLFluiD.hh"
+#include "MathTools/MathChecks.hh"
 #include <cassert>
 
 //////////////////////////////////////////////////////////////////////////////
@@ -77,9 +78,13 @@ public:
   /// Overloading of the operator != for comparison
   friend bool operator!= (const NodeDim<3>& n1, const NodeDim<3>& n2)
   {
-    return ((n1._x[XX] != n2._x[XX]) ||
-	    (n1._x[YY] != n2._x[YY]) ||
-	    (n1._x[ZZ] != n2._x[ZZ]));
+    // return ((n1._x[XX] != n2._x[XX]) ||
+    // 	    (n1._x[YY] != n2._x[YY]) ||
+    // 	    (n1._x[ZZ] != n2._x[ZZ]));
+    
+    return (MathTools::MathChecks::isNotEqual(n1._x[XX], n2._x[XX]) ||
+	    MathTools::MathChecks::isNotEqual(n1._x[YY], n2._x[YY]) ||
+	    MathTools::MathChecks::isNotEqual(n1._x[ZZ], n2._x[ZZ]));
   }
   
   /// Overloading of the operator == for comparison
@@ -93,8 +98,7 @@ public:
   {
     assert(n._x != CFNULL);
     using namespace std;
-    
-    out << setw(16) << fixed << setprecision(8)
+    out << setw(22) << fixed << setprecision(14)
 	<< n._x[XX] << " " << n._x[YY] << " " << n._x[ZZ] << "\n";
     return out;
   }
@@ -107,9 +111,19 @@ public:
     return _x[iDim];
   }
   
+  /// Overloading of the stream operator[]
+  CFreal& operator[] (CFuint iDim)
+  {
+    assert(_x != CFNULL);
+    return _x[iDim];
+  }
+  
+  /// @return the size of this array
+  CFuint size() const {return 3;}
+  
 private:
   CFreal* _x;
-
+  
 }; // end class NodeDim
 
 //////////////////////////////////////////////////////////////////////////////
@@ -157,7 +171,9 @@ public:
   /// Overloading of the operator != for comparison
   friend bool operator!= (const NodeDim<2>& n1, const NodeDim<2>& n2)
   {
-    return ((n1._x[XX] != n2._x[XX]) || (n1._x[YY] != n2._x[YY]));
+    // return ((n1._x[XX] != n2._x[XX]) || (n1._x[YY] != n2._x[YY]));
+    return (MathTools::MathChecks::isNotEqual(n1._x[XX], n2._x[XX]) || 
+	    MathTools::MathChecks::isNotEqual(n1._x[YY], n2._x[YY]));
   }
   
   /// Overloading of the operator == for comparison
@@ -171,7 +187,8 @@ public:
   {
     assert(n._x != CFNULL);
     using namespace std;
-    out << setw(16) << fixed << setprecision(8) << n._x[XX] << " " << n._x[YY] << "\n";
+    out << setw(22) << fixed << setprecision(14) 
+	<< n._x[XX] << " " << n._x[YY] << "\n";
     return out;
   }
   
@@ -182,6 +199,16 @@ public:
     assert(_x != CFNULL);
     return _x[iDim];
   }
+  
+  /// Overloading of the stream operator[]
+  CFreal& operator[] (CFuint iDim)
+  {
+    assert(_x != CFNULL);
+    return _x[iDim];
+  }
+  
+  /// @return the size of this array
+  CFuint size() const {return 2;}
   
 private:
   CFreal* _x;

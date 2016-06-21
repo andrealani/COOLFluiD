@@ -5,7 +5,6 @@
 #
 ### Residual = -14.4201
 
-
 # CFEnv.TraceToStdOut = true
 
 # SubSystem Modules
@@ -17,17 +16,13 @@ Simulator.Paths.ResultsDir = ./
 
 Simulator.SubSystem.Default.PhysicalModelType = Euler3D
 
-
-
-
-
 Simulator.SubSystem.OutputFormat        = Tecplot #CFmesh
 
-Simulator.SubSystem.CFmesh.FileName     = jets3d-sfvm-sol.CFmesh
-Simulator.SubSystem.CFmesh.SaveRate = 500
-Simulator.SubSystem.CFmesh.AppendTime = false
-Simulator.SubSystem.CFmesh.AppendIter = false
-Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+#Simulator.SubSystem.CFmesh.FileName     = jets3d-sfvm-sol.CFmesh
+#Simulator.SubSystem.CFmesh.SaveRate = 500
+#Simulator.SubSystem.CFmesh.AppendTime = false
+#Simulator.SubSystem.CFmesh.AppendIter = false
+#Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
 
 Simulator.SubSystem.Tecplot.FileName    = jets3d-sfvm-sol.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons

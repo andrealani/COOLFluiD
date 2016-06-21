@@ -108,7 +108,7 @@ Simulator.SubSystem.CellCenterFVM.Outlet.applyTRS = SuperOutlet
 
 Simulator.SubSystem.DataPostProcessing          = DataProcessing
 Simulator.SubSystem.DataPostProcessingNames     = MeFiAlgo
-Simulator.SubSystem.MeFiAlgo.Comds              = MeshFittingAlgorithmNS
+Simulator.SubSystem.MeFiAlgo.Comds              = MeshFittingAlgorithm
 Simulator.SubSystem.MeFiAlgo.Data.CollaboratorNames = MeshAlgoLSS
 Simulator.SubSystem.MeFiAlgo.ProcessRate        = 10
 Simulator.SubSystem.MeFiAlgo.SkipFirstIteration = true

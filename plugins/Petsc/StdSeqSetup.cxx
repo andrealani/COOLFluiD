@@ -82,6 +82,8 @@ void StdSeqSetup::setMatrix(const CFuint localSize,
   const CFuint nbStates = (!useNodeBased) ? states.size() : nodes.size();
   const CFuint nbEqs = getMethodData().getNbSysEquations();
   
+  CFLog(VERBOSE, "StdSeqSetup::setMatrix() => useNodeBased[" << useNodeBased << "], nbEqs[" << nbEqs << "]\n");
+  
   // all non zero entries (block matrix format is not supported on GPU)
   std::valarray<CFint> allNonZero(nbStates);
   allNonZero = 0;

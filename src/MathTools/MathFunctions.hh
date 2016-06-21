@@ -103,6 +103,23 @@ public:
     return std::sqrt(dist);
   }
 
+  /// Calculate the squared euclidean distance between two "points"
+  /// (Node, State, RealVector, ...)
+  /// @pre T1 and T2 must have the overloading of the operator[] implemented
+  template <class T1, class T2>
+  static CFreal getSquaredDistance(const T1& n1, const T2& n2)
+  {
+    cf_assert(n1.size() == n2.size());
+    
+    CFreal dist = 0.;
+    const CFuint size =  n1.size();
+    for (CFuint i = 0; i < size; ++i) {
+      const CFreal diff = n1[i] - n2[i];
+      dist += diff*diff;
+    }
+    return dist;
+  }
+  
   /**
    * Calculate the faculty
    *
@@ -252,7 +269,29 @@ public:
     return std::abs(mixedProd(v1,v2,v3,v4));
   }
   
-
+  /// Reduce the precision for a flowting number
+  template <class T1, class T2>
+  static void reducePrecision(T1& array, const T2 eps)
+  {
+    const CFuint ns = array.size();
+    for (CFuint i = 0; i < ns; ++i) {
+      const long modif = (long)(array[i]/eps);
+      array[i] = modif*eps;
+    }
+  }
+  
+  /// Round up the precision with the given tolerance
+  template <class T1, class T2>
+  static void roundUpPrecision(T1& array, const T2 eps)
+  {
+    const CFuint ns = array.size();
+    for (CFuint i = 0; i < ns; ++i) {
+      // const long modif = (long)(array[i]/eps);
+      // array[i] = modif*eps;
+      array[i] = std::floor(array[i] / eps + 0.5) * eps;
+    }
+  }
+  
 }; // end class MathFunctions
 
 //////////////////////////////////////////////////////////////////////////////

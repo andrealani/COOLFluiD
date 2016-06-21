@@ -99,6 +99,8 @@ void NewParSetup::setMatrix(const CFuint localSize,
   const CFuint nbStates = (!useNodeBased) ? states.size() : nodes.size();
   const CFuint nbEqs = getMethodData().getNbSysEquations();
   
+  CFLog(VERBOSE, "NewParSetup::setMatrix() => useNodeBased[" << useNodeBased << "], nbEqs[" << nbEqs << "]\n");
+  
   // all non zero entries
   std::valarray<CFint> allNonZero(nbStates);
   allNonZero = 0;

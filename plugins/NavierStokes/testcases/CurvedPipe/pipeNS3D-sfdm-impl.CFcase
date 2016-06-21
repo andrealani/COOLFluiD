@@ -2,8 +2,9 @@
 # 
 # This COOLFluiD CFcase file tests: 
 # 
-# P3-P2 Spectral Finite Difference, NavierStokes3D, Backward Euler, mesh with 
-# hexahedra, subsonic inlet and outlet, noslip wall BCs, Paraview writer 
+# P2-P3 Spectral Finite Difference, NavierStokes3D, Backward Euler, mesh with 
+# hexahedra, conversion from Gmsh, subsonic inlet and outlet, noslip wall BCs, 
+# Paraview writer  
 #
 ################################################################################
 #

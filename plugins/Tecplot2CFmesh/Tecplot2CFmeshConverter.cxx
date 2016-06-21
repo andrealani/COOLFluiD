@@ -60,6 +60,12 @@ void Tecplot2CFmeshConverter::defineConfigOptions(Config::OptionList& options)
   
   options.addConfigOption< CFuint >
     ("NbElementTypes","Number of element types.");
+  
+  options.addConfigOption< CFuint >
+    ("Precision","Number of digits to be considered for nodal coordinates matching.");
+  
+  options.addConfigOption< bool >
+    ("HasAllSurfFile","Flag telling if a TECPLOT file *.allsurf.plt including all boundaries is given.");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -82,6 +88,12 @@ Tecplot2CFmeshConverter::Tecplot2CFmeshConverter (const std::string& name)
   
   m_nbElemTypes = 1;
   setParameter("NbElementTypes", &m_nbElemTypes);
+  
+  m_precision = 8;
+  setParameter("Precision", &m_precision); 
+  
+  m_hasAllSurfFile = false;
+  setParameter("HasAllSurfFile", &m_hasAllSurfFile);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -167,8 +179,24 @@ void Tecplot2CFmeshConverter::readZone(ifstream& fin,
       nbNodes = (nbN > 0) ? nbN : nbNodes;
       foundN = true;
     }
+    else if (words[i].find("Nodes=") != string::npos) {
+      getValueString(string("Nodes="), words[i], tmpStr);
+      const CFuint nbN = StringOps::from_str<CFuint>(tmpStr);
+      nbNodes = (nbN > 0) ? nbN : nbNodes;
+      foundN = true;
+    }
+    else if (words[i].find("ZONETYPE=") != string::npos) {
+      getValueString(string("ZONETYPE="), words[i], cellType);
+      foundET = true;
+    }
     else if (words[i].find("E=") != string::npos) {
       getValueString(string("E="), words[i], tmpStr);
+      const CFuint nbC = StringOps::from_str<CFuint>(tmpStr);
+      nbElems = (nbC > 0) ? nbC : nbElems;
+      foundE = true;
+    }
+    else if (words[i].find("Elements=") != string::npos) {
+      getValueString(string("Elements="), words[i], tmpStr);
       const CFuint nbC = StringOps::from_str<CFuint>(tmpStr);
       nbElems = (nbC > 0) ? nbC : nbElems;
       foundE = true;
@@ -303,7 +331,7 @@ void Tecplot2CFmeshConverter::writeContinuousTrsData(ofstream& fout)
   if (m_dimension == DIM_2D) {renumberTRSData<2>();}
   if (m_dimension == DIM_3D) {renumberTRSData<3>();}
   
-  const CFuint startTRS = m_nbElemTypes;
+  const CFuint startTRS = (m_hasAllSurfFile) ? m_nbElemTypes+1 : m_nbElemTypes;
   const CFuint nbTRSs = m_elementType.size() - startTRS;
   fout << "!NB_TRSs " << nbTRSs << "\n";
 
@@ -349,7 +377,7 @@ void Tecplot2CFmeshConverter::writeDiscontinuousTrsData(ofstream& fout)
   
   CFLog(VERBOSE, "Tecplot2CFmeshConverter::writeDiscontinuousTrsData() 2\n");
   
-  const CFuint startTRS = m_nbElemTypes;
+  const CFuint startTRS = (m_hasAllSurfFile) ? m_nbElemTypes+1 : m_nbElemTypes;
   const CFuint nbTRSs = m_elementType.size() - startTRS;
   fout << "!NB_TRSs " << nbTRSs << "\n";
   
@@ -407,7 +435,16 @@ void Tecplot2CFmeshConverter::readFiles(const boost::filesystem::path& filepath)
     CFLog(VERBOSE, CFPrintContainer<vector<string> >("surfaces to be read = ", &m_surfaceTRS) <<  "\n");
     
     readTecplotFile(m_nbElemTypes, filepath, getOriginExtension(), false);
+    CFLog(VERBOSE, "Tecplot2CFmeshConverter::readFiles() 1 => m_elementType.size() = " << m_elementType.size() << "\n");
+    
+    if (m_hasAllSurfFile) {
+      CFLog(INFO, "Tecplot2CFmeshConverter::readFiles() => reading .allsurf.plt\n");
+      readTecplotFile(1, filepath, ".allsurf.plt", true);
+    }
+    CFLog(VERBOSE, "Tecplot2CFmeshConverter::readFiles() 2 => m_elementType.size() = " << m_elementType.size() << "\n");
+    
     readTecplotFile(m_surfaceTRS.size(), filepath, ".surf.plt", true);
+    CFLog(VERBOSE, "Tecplot2CFmeshConverter::readFiles() 3 => m_elementType.size() = " << m_elementType.size() << "\n");
   }
   catch (Common::Exception& e) {
     CFout << e.what() << "\n";
@@ -627,17 +664,18 @@ void Tecplot2CFmeshConverter::writeDiscontinuousStates(ofstream& fout)
 
 CFuint Tecplot2CFmeshConverter::getNbNodesInCell(const std::string& etype) const
 {
-  if (etype == "LINESEG") {
+  if (etype == "LINESEG" || etype == "FELineseg") {
     return 2;
   }
-  else if (etype == "TRIANGLE") {
+  else if (etype == "TRIANGLE" || etype == "FETriangle") {
     return 3;
   }
-  else if (etype == "QUADRILATERAL" || etype == "TETRAHEDRON") {
+  else if (etype == "QUADRILATERAL" || etype == "TETRAHEDRON" || 
+	   etype == "FEQuadrilateral" || etype == "FETetrahedron") {
     return 4;
   }
-  //  else if (etype == "BRICK") {
-  // AL: note prysm and pyramids are not supported
+  //  else if (etype == "BRICK" || etype == "FEBrick") {
+  // AL: note prysm, pyramids, FEPOLYGON, FEPOLYHEDRON not supported
   return 8;
 }
 
@@ -645,15 +683,16 @@ CFuint Tecplot2CFmeshConverter::getNbNodesInCell(const std::string& etype) const
 
 CFuint Tecplot2CFmeshConverter::getDim(const std::string& etype) const
 {
-  if (etype == "LINESEG") {
+  if (etype == "LINESEG" || etype == "FELineseg") {
     return DIM_1D;
   }
-  else if (etype == "TRIANGLE" || etype == "QUADRILATERAL") {
+  else if (etype == "TRIANGLE" || etype == "QUADRILATERAL" || 
+	   etype == "FETriangle" || etype == "FEQuadrilateral") {
     return DIM_2D;
   }
   return DIM_3D;
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void Tecplot2CFmeshConverter::getValueString(const std::string& key, 
@@ -703,7 +742,7 @@ void Tecplot2CFmeshConverter::buildBFaceNeighbors()
   
   // zonesID=[0,startTRS) are cells
   // boundary TRS data start at zoneID=startTRS
-  const CFuint startTRS = m_nbElemTypes;
+  const CFuint startTRS = (m_hasAllSurfFile) ? m_nbElemTypes+1 : m_nbElemTypes;
   const CFuint nbTRSs = m_elementType.size() - startTRS;
   
   //count the number of boundary faces
@@ -745,7 +784,7 @@ void Tecplot2CFmeshConverter::buildBFaceNeighbors()
       if (isBNode[nodeID]) {
 	bool foundNode = false;
 	pair<MapIterator, MapIterator> faces = mapBNode2BFace.find(nodeID, foundNode);
-	assert(foundNode);
+	cf_assert(foundNode);
 	
 	if (foundNode) {
 	  // loop over all faces containing nodeID
@@ -756,10 +795,10 @@ void Tecplot2CFmeshConverter::buildBFaceNeighbors()
 	    
 	    const CFuint trsID  = faceInMapItr->second.first;
 	    const CFuint faceID = faceInMapItr->second.second;
-	    assert(trsID > 0);
+	    cf_assert(trsID > 0);
 	    SafePtr<ElementTypeTecplot> currTRS = m_elementType[trsID];
 	    
-	    // proceed only if the neihbor hasn't been set yet
+	    // proceed only if the neighbor hasn't been set yet
 	    if (currTRS->getNeighborID(faceID) == -1) {
 	      const CFuint nbENodes =  currTRS->getNbNodesPerElem(); 
 	      CFuint count = 0;

@@ -137,7 +137,7 @@ Simulator.SubSystem.BDF2.ShowRate = 1
 #Simulator.SubSystem.BDF2.Data.CFL.ComputeCFL = Interactive
 #Simulator.SubSystem.BDF2.ConvergenceFile = convergence_UnsteadyMagnetosphereACAImplPrim0_85READFROMFILE.plt 
 
-Simulator.SubSystem.BDF2.Data.MaxSteps = 100 
+Simulator.SubSystem.BDF2.Data.MaxSteps = 100
 Simulator.SubSystem.BDF2.Data.L2.MonitoredVarID = 11  #11 
 Simulator.SubSystem.BDF2.Data.Norm = -1.
 #Simulator.SubSystem.BDF2.Data.FilterState = Max
@@ -176,13 +176,9 @@ Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
 
-# First Order Time stepping
-#Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
-#Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.zeroDiagValue = 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0
-#Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.useGlobalDT = true 
-
 # second order Time stepping
 #Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhs
+#Simulator.SubSystem.CellCenterFVM.BDF2TimeRhs.zeroDiagValue = 0 0 0 0 0 0 1 0 0 0 0 0  
 Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhsLimited
 Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.TimeLimiter = MinMod
 Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.MinMod.SlopeRatio = 3.
@@ -263,7 +259,7 @@ Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1
 
 Simulator.SubSystem.DataPostProcessing          = DataProcessing
 Simulator.SubSystem.DataPostProcessingNames     = MeFiAlgo
-Simulator.SubSystem.MeFiAlgo.Comds              = MeshFittingAlgorithmMFMHD2D
+Simulator.SubSystem.MeFiAlgo.Comds              = MeshFittingAlgorithm
 Simulator.SubSystem.MeFiAlgo.Data.CollaboratorNames = MeshAlgoLSS
 Simulator.SubSystem.MeFiAlgo.ProcessRate        = 1
 Simulator.SubSystem.MeFiAlgo.SkipFirstIteration = true
