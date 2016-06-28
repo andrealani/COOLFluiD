@@ -471,6 +471,12 @@ void StagnationPropsBL::execute()
     // The pressure 
     CFdouble p=p_delta;
     CFdouble pinf;
+    // Zuheyr June 27, 2016 Stagnation pressure and temperature
+    CFdouble pstag,tstag,pstag_abs;
+    pstag     = pglobal[0];
+    tstag     = tglobal[0];
+    pstag_abs = pstag;
+    
     // This pressure is "dp" if the flow is incompressible, one must get the absolute pressure
     
     SafePtr<EulerTerm> model = getMethodData().getUpdateVarSet().d_castTo<EulerVarSet>()->getModel();
@@ -479,7 +485,8 @@ void StagnationPropsBL::execute()
         p=model->getPressureFromState(p_delta);
         // Get also the pressure at infinity
         pinf = model->getPressInf();
-        CFout << " Incompressible dp at boundary layer edge point delta [Pa]............. :" << p_delta << "\n";
+        CFLog(INFO, " Incompressible dp at boundary layer edge point delta [Pa]............. :" << p_delta << "\n");
+        pstag_abs = model->getPressureFromState(pstag);
     }
     else
     {
@@ -487,8 +494,11 @@ void StagnationPropsBL::execute()
         pinf = model->getPressInfComp();
     }
 
-    CFout << " The pressure at infinity [Pa]..................................... : " << pinf << "\n"
-          << " The pressure at boundary layer edge point delta [Pa].............. : " << p    << "\n";
+    CFLog(INFO, " The pressure      at infinity [Pa]..................................... : " << pinf      << "\n"
+          << " The pressure      at boundary layer edge point delta [Pa].............. : " << p         << "\n"
+          << " The temperature   at stagnation point                [K]............... : " << tstag     << "\n"
+          << " The pressure      at stagnation point                [Pa].............. : " << pstag     << "\n"
+          << " The abs. pressure at stagnation point                [Pa].............. : " << pstag_abs << "\n\n\n");
         
     SafePtr<PhysicalChemicalLibrary> library =  PhysicalModelStack::getActive()->getImplementor()->
         getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
@@ -574,13 +584,19 @@ void StagnationPropsBL::execute()
           << "\n  iDudxMax.............:  " << iDudxMax
           << "\n  du/dx max........... :  " << dudxMax
           << "\n  U at du/dx max...... :  " << uAtDudxMax
+          << "\n  p at  U at du/dx max...... :  " << uAtDudxMax
           << "\n\n"
           << "\n  Thermodynamic variables evaluated at p="<< p<< "[Pa] and T=" << T << "[K]"
           << "\n  mu[Pa-s] ............:  " << eta
           << "\n  lambda[W/m-K]........:  " << lambda
           << "\n  sigma[s/m]...........:  " << sigma
-          << "\n  Rho[kg/m^3]sigma[s/m]...........:  " << density
-          << "\n  H  [J/kg].......................:  " << enthalpyTt << "\n\n\n" ;
+          << "\n  Rho[kg/m^3]..........:  " << density
+          << "\n  H  [J/kg]............:  " << enthalpyTt << "\n" ;
+    fout2 << " The pressure      at infinity [Pa]..................................... : " << pinf      << "\n"
+          << " The pressure      at boundary layer edge point delta [Pa].............. : " << p         << "\n"
+          << " The temperature   at stagnation point                [K]............... : " << tstag     << "\n"
+          << " The pressure      at stagnation point                [Pa].............. : " << pstag     << "\n"
+          << " The abs. pressure at stagnation point                [Pa].............. : " << pstag_abs << "\n\n\n";
         
 
     // Additional chemistry information for the moment test
@@ -602,7 +618,7 @@ void StagnationPropsBL::execute()
 
     fhandle2->close();
     
-    CFout << "\n\nStagnationPropsBL:  "
+    CFLog(INFO, "\n\nStagnationPropsBL:  "
           << "\n  ndp1.................:  " << ndp1
           << "\n  ndp2.................:  " << ndp2
           << "\n  ndp3.................:  " << ndp3
@@ -630,15 +646,15 @@ void StagnationPropsBL::execute()
           << "\n  mu[Pa-s] ............:  " << eta
           << "\n  lambda[W/m-K]........:  " << lambda
           << "\n  sigma[s/m]...........:  " << sigma
-          << "\n  Rho[kg/m^3]sigma[s/m]...........:  " << density
-          << "\n  H  [J/kg].......................:  " << enthalpyTt
-          << "\n\n";
+          << "\n  Rho[kg/m^3]..........:  " << density
+          << "\n  H  [J/kg]............:  " << enthalpyTt
+          << "\n\n");
 
-    CFout << legendStr  << "\n";
+    CFLog(INFO, legendStr  << "\n");
     for (CFuint i=0;  i < ys.size() ; i++) {
-        CFout  << scientific << " " << ys[i] << " ";
+        CFLog(INFO, scientific << " " << ys[i] << " ");
     }
-    CFout << "\n\n\n\n";;
+    CFLog(INFO, "\n\n\n\n");
 
     
   }
