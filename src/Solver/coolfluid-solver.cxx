@@ -304,11 +304,11 @@ int main(int argc, char** argv)
     
 //////////////////////////////////////////////////////////////////
 // dumps the tree.xml
-    std::string sim_xmltree = sim->getTreeXML();
+   /* std::string sim_xmltree = sim->getTreeXML();
     ofstream xml;
     xml.open ("tree.xml");
     xml << sim_xmltree << std::endl;
-    xml.close();
+    xml.close();*/
 //////////////////////////////////////////////////////////////////
 
     // maestro will manage this simulation
