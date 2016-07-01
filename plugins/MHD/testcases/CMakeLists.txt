@@ -19,6 +19,7 @@
 #cf_add_case( MPI default PCASE Jets2D/jets2DFVMMHDProjImpl.CFcase )
 #cf_add_case( MPI default PCASE Jets2D/jets2DMHDFluctSplitCRD.CFcase )
 #cf_add_case( MPI default PCASE Jets2D/jets2DMHDProjFluctSplitCRD.CFcase )
+cf_add_case( MPI 8 CASEDIR SolarWind PCASE solarwind_interpolFromTecplot.CFcase CASEFILES solarwind_tet_fine.neu solarwind_tet_coarse.plt )
 IF (CF_HAVE_CUDA)
 cf_add_case( MPI 1 CASEDIR Nozzle PCASE nozzleFVMMHDProjCUDA.CFcase CASEFILES nozzle.thor nozzle.SP )
 cf_add_case( MPI 1 CASEDIR Nozzle PCASE nozzleFVMMHDProjImplCUDA.CFcase CASEFILES nozzle.thor nozzle.SP )

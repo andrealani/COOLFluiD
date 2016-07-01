@@ -186,7 +186,10 @@ private: // helper functions
    * Get the space dimension
    */
   CFuint getDim(const std::string& etype) const;
-
+  
+  /// Interpolate Tecplot solution from donor to target mesh
+  void interpolateTecplotSolution(const boost::filesystem::path& meshFile);
+  
 private: // helper functions
 
   /// @return the number of states in the type according to the order of the solution
@@ -222,6 +225,12 @@ private: // helper functions
 			 const std::vector<CFreal>& allTRSNodes,
 			 const std::vector<CFuint>& allTRSNodeIDs);
   
+  /// Gets the name of the donor file for interpolation
+  boost::filesystem::path getInterpolateFromFileName() const
+  {
+    return m_interpolateFromFileName;
+  }
+
 private: // data
   
   /// dimension of the mesh
@@ -248,6 +257,9 @@ private: // data
   
   /// tells if a TECPLOT file *.allsurf.plt including all boundaries is given
   bool m_hasAllSurfFile;
+  
+  /// The name of the file from which to interpolate
+  std::string m_interpolateFromFileName;
   
 }; // end class Tecplot2CFmeshConverter
 

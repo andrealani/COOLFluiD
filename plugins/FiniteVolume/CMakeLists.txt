@@ -365,16 +365,8 @@ LIST ( APPEND FiniteVolume_includedirs ${MPI_INCLUDE_DIR} ${CUDA_INCLUDE_DIR} )
 LIST ( APPEND FiniteVolume_libs ${CUDA_LIBRARIES} )
 ENDIF ()
 
-LIST ( APPEND FiniteVolume_cflibs Framework )
+LIST ( APPEND FiniteVolume_cflibs Framework ShapeFunctions )
 
 CF_ADD_PLUGIN_LIBRARY ( FiniteVolume )
-
-#############################################################################
-
-#IF(CF_HAVE_CUDA)
-#ADD_SUBDIRECTORY (CUDA)
-#ENDIF()
-
-#############################################################################
 
 CF_WARN_ORPHAN_FILES()

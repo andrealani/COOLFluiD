@@ -520,7 +520,7 @@ StrongSymmetryPlaneImpl.cxx
 StrongSymmetryPlaneImpl.hh
 )
 
-LIST ( APPEND FluctSplit_cflibs Framework  )
+LIST ( APPEND FluctSplit_cflibs Framework ShapeFunctions )
 
 IF ( CF_HAVE_MPI )   
   IF ( CF_HAVE_PARMETIS )

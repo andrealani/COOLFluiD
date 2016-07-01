@@ -12,6 +12,7 @@
 #include "Common/Stopwatch.hh"
 #include "Common/CFPrintContainer.hh"
 #include "Common/CFMultiMap.hh"
+#include "Common/OSystem.hh"
 #include "Environment/FileHandlerInput.hh"
 #include "Environment/FileHandlerOutput.hh"
 #include "Environment/DirPaths.hh"
@@ -66,6 +67,8 @@ void Tecplot2CFmeshConverter::defineConfigOptions(Config::OptionList& options)
   
   options.addConfigOption< bool >
     ("HasAllSurfFile","Flag telling if a TECPLOT file *.allsurf.plt including all boundaries is given.");
+  
+  options.addConfigOption< std::string >("InterpolateFrom","The donor file for interpolation");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -93,7 +96,10 @@ Tecplot2CFmeshConverter::Tecplot2CFmeshConverter (const std::string& name)
   setParameter("Precision", &m_precision); 
   
   m_hasAllSurfFile = false;
-  setParameter("HasAllSurfFile", &m_hasAllSurfFile);
+  setParameter("HasAllSurfFile", &m_hasAllSurfFile); 
+  
+  m_interpolateFromFileName = "";
+  setParameter("InterpolateFrom", &m_interpolateFromFileName);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -109,7 +115,16 @@ Tecplot2CFmeshConverter::~Tecplot2CFmeshConverter()
 
 void Tecplot2CFmeshConverter::configure ( Config::ConfigArgs& args )
 {
-  MeshFormatConverter::configure(args);
+  MeshFormatConverter::configure(args);  
+  
+  if (m_interpolateFromFileName.empty() && !m_hasAllSurfFile)
+  {
+    throw Common::NoSuchValueException 
+      (FromHere(),"Tecplot2CFmeshConverter::configure() => .InterpolateFrom and .HasAllSurfFile not specified\n");
+  }
+    
+  boost::filesystem::path fp (m_interpolateFromFileName);
+  m_interpolateFromFileName = fp.string();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -126,14 +141,14 @@ void Tecplot2CFmeshConverter::readTecplotFile(CFuint nbZones,
 					      bool isBoundary) 
 {
   using namespace boost::filesystem;
-  
+    
   // read the cells
   string line = "";
   CFuint countl = 0;
   vector<string> words;
   SelfRegistPtr<FileHandlerInput> fhandle = SingleBehaviorFactory<FileHandlerInput>::getInstance().create();
-  
   path meshFile = change_extension(filepath, extension);
+  
   ifstream& fin = fhandle->open(meshFile);
   getTecplotWordsFromLine(fin, line, countl, words); // TITLE
   
@@ -454,6 +469,12 @@ void Tecplot2CFmeshConverter::readFiles(const boost::filesystem::path& filepath)
     }
     
     CFLog(VERBOSE, CFPrintContainer<vector<string> >("surfaces to be read = ", &m_surfaceTRS) <<  "\n");
+    
+    // if a donor .plt file is specified, then a Tecplot macro interpolates the solution
+    // and writes out all the boundaries of the interpolated mesh in .allsurf.plt file 
+    if (!m_interpolateFromFileName.empty()) {
+      interpolateTecplotSolution(filepath);
+    }
     
     readTecplotFile(m_nbElemTypes, filepath, getOriginExtension(), false);
     CFLog(VERBOSE, "Tecplot2CFmeshConverter::readFiles() 1 => m_elementType.size() = " << m_elementType.size() << "\n");
@@ -872,6 +893,108 @@ void Tecplot2CFmeshConverter::buildBFaceNeighbors()
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem::path& filepath)
+{
+  using namespace boost::filesystem;
+  
+  CFLog(INFO, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => START\n");
+  
+  path meshFile = change_extension(filepath, getOriginExtension());
+  
+  SelfRegistPtr<FileHandlerOutput> fhandle = SingleBehaviorFactory<FileHandlerOutput>::getInstance().create();
+  
+  // string macroFileName = "interpolate.mcr";
+  // path macroFile = DirPaths::getInstance().getWorkingDir()/macroFileName;
+  // ofstream& fout = fhandle->open(macroFile);
+  ofstream fout("interpolate.mcr");
+  
+  fout << "#!MC 1200\n";
+  fout << "# Created by Tecplot 360 build 12.0.0.3454\n";
+  fout << "$!VarSet |MFBD| = '" << DirPaths::getInstance().getWorkingDir().string() << "'\n";  
+  fout << "$!READDATASET  '\"|MFBD|/" << m_interpolateFromFileName << "\" '\n";
+  fout << "  READDATAOPTION = NEW\n";
+  fout << "  RESETSTYLE = YES\n";
+  fout << "  INCLUDETEXT = NO\n";
+  fout << "  INCLUDEGEOM = NO\n";
+  fout << "  INCLUDECUSTOMLABELS = NO\n";
+  fout << "  VARLOADMODE = BYNAME\n";
+  fout << "  ASSIGNSTRANDIDS = YES\n";
+  fout << "  INITIALPLOTTYPE = CARTESIAN3D\n";
+  fout << "  VARNAMELIST = '";
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  for (CFuint i = 0 ; i < dim; ++i) {
+    fout << "\"x" << i << "\" ";
+  }
+  for (CFuint i = 0 ; i < m_readVars.size(); ++i) {
+    fout << m_readVars[i];
+    if (i < m_readVars.size()-1) fout << " ";
+  }
+  fout << "'\n";
+  
+  fout << "$!READDATASET  '\"|MFBD|/" << meshFile.filename().string() << "\" '\n";
+  fout << "  READDATAOPTION = APPEND\n";
+  fout << "  RESETSTYLE = NO\n";
+  fout << "  INCLUDETEXT = NO\n";
+  fout << "  INCLUDEGEOM = NO\n";
+  fout << "  INCLUDECUSTOMLABELS = NO\n";
+  fout << "  VARLOADMODE = BYNAME\n";
+  fout << "  ASSIGNSTRANDIDS = YES\n";
+  fout << "  INITIALPLOTTYPE = CARTESIAN" << dim << "D\n"; // AL" check this for 2D
+  fout << "  VARNAMELIST = '";
+  for (CFuint i = 0 ; i < dim; ++i) {
+    fout << "\"x" << i << "\" ";
+  }
+  for (CFuint i = 0 ; i < m_readVars.size(); ++i) {
+    fout << m_readVars[i];
+    if (i < m_readVars.size()-1) fout << " ";
+  }
+  fout << "'\n";
+  fout << "$!INVERSEDISTINTERPOLATE\n"; 
+  fout << "  SOURCEZONES =  [1]\n";
+  fout << "  DESTINATIONZONE = 2\n";
+  fout << "  VARLIST =  [" << dim+1 << "-" << dim+m_readVars.size() << "]\n";
+  fout << "  INVDISTEXPONENT = 3.5\n";
+  fout << "  INVDISTMINRADIUS = 0\n";
+  fout << "  INTERPPTSELECTION = OCTANTNPOINTS\n";
+  fout << "  INTERPNPOINTS = 8\n";
+  fout << "$!CREATEFEBOUNDARY\n";
+  fout << "  SOURCEZONE = 2\n";
+  fout << "  REMOVEBLANKEDSURFACES = NO\n";
+  fout << "$!WRITEDATASET  \"|MFBD|/" << meshFile.filename().string() << "\"\n";
+  fout << "  INCLUDETEXT = NO\n";
+  fout << "  INCLUDEGEOM = NO\n";
+  fout << "  INCLUDECUSTOMLABELS = NO\n";
+  fout << "  ASSOCIATELAYOUTWITHDATAFILE = NO\n";
+  fout << "  ZONELIST =  [2]\n";
+  fout << "  BINARY = NO\n";
+  fout << "  USEPOINTFORMAT = YES\n";
+  fout << "  PRECISION = 9\n";
+  fout << "  TECPLOTVERSIONTOWRITE = TECPLOTCURRENT\n";
+
+  path allSurfFile = change_extension(filepath, "allsurf.plt");
+  fout << "$!WRITEDATASET  \"|MFBD|/" << allSurfFile.filename().string() << "\"\n";
+  fout << "  INCLUDETEXT = NO\n";
+  fout << "  INCLUDEGEOM = NO\n";
+  fout << "  INCLUDECUSTOMLABELS = NO\n";
+  fout << "  ASSOCIATELAYOUTWITHDATAFILE = NO\n";
+  fout << "  ZONELIST =  [3]\n";
+  fout << "  BINARY = NO\n";
+  fout << "  USEPOINTFORMAT = YES\n";
+  fout << "  PRECISION = 9\n";
+  fout << "  TECPLOTVERSIONTOWRITE = TECPLOTCURRENT\n";
+  fout << "$!RemoveVar |MFBD|\n";
+  fout << "$!QUIT\n";
+  fout.close();
+  
+  // this suppose to have access to tec360 executable
+  const string batchcommand = "tec360 -b -p interpolate.mcr";
+  Common::OSystem::getInstance().executeCommand(batchcommand);
+  
+  CFLog(INFO, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => END\n");
+}
+      
 //////////////////////////////////////////////////////////////////////////////
 
 } // namespace Tecplot2CFmesh

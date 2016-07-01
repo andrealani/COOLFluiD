@@ -124,7 +124,7 @@ LIST( APPEND FiniteElement_files
     )
 ENDIF(CF_HAVE_MPI)
 
-LIST ( APPEND FiniteElement_cflibs Framework )
+LIST ( APPEND FiniteElement_cflibs Framework ShapeFunctions )
 
 CF_ADD_PLUGIN_LIBRARY ( FiniteElement )
 

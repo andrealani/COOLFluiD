@@ -9,7 +9,7 @@ PureDiffFlux.hh
 )
 
 LIST ( APPEND FiniteVolumePoisson_requires_mods Poisson FiniteVolume )
-LIST ( APPEND FiniteVolumePoisson_cflibs Framework Poisson FiniteVolume ) 
+LIST ( APPEND FiniteVolumePoisson_cflibs Framework ShapeFunctions Poisson FiniteVolume ) 
 
 CF_ADD_PLUGIN_LIBRARY ( FiniteVolumePoisson )
 
