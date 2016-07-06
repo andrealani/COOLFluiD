@@ -196,7 +196,8 @@ private: // helper functions
   CFuint getNbStatesInType(const CFuint& typeID);
 
   // get the value string corresponding to the given key
-  void getValueString(const std::string& key, const std::string& in, std::string& out) const;
+  void getValueString(const std::string& key, const std::string& in, 
+		      const std::string& next, std::string& out) const;
   
   // read the variables information
   void readVariables(std::ifstream& fin, std::string& line, 
@@ -293,6 +294,7 @@ void Tecplot2CFmeshConverter::renumberTRSData()
       cf_assert(e < elements->getNbElems());
       cf_assert(iNode < nbNodesPerElem);
       const CFuint nodeID = (*elements)(e, iNode);
+      CFLog(DEBUG_MAX, "(e, iNode) = (" << e << ", " << iNode << ") => nodeID = " << nodeID << "\n");
       if (nodeID >= elements->getNbNodes()) {
 	CFLog(ERROR, "Tecplot2CFmeshConverter::renumberTRSData() => nodeID > nbNodes :" << nodeID << " >= " << elements->getNbNodes() << "\n");
 	cf_assert(nodeID < elements->getNbNodes());

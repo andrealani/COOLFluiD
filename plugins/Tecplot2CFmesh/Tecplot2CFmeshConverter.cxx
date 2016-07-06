@@ -119,10 +119,12 @@ void Tecplot2CFmeshConverter::configure ( Config::ConfigArgs& args )
   
   if (m_interpolateFromFileName.empty() && !m_hasAllSurfFile)
   {
-    throw Common::NoSuchValueException 
-      (FromHere(),"Tecplot2CFmeshConverter::configure() => .InterpolateFrom and .HasAllSurfFile not specified\n");
+    CFLog(WARN, "Tecplot2CFmeshConverter::configure() => no interpolation is requested\n");
   }
-    
+  
+  // enforce flag to be true if a donor file for interpolation is specified
+  if (!m_interpolateFromFileName.empty()) {m_hasAllSurfFile = true;}
+  
   boost::filesystem::path fp (m_interpolateFromFileName);
   m_interpolateFromFileName = fp.string();
 }
@@ -190,36 +192,51 @@ void Tecplot2CFmeshConverter::readZone(ifstream& fin,
   while (!foundN || !foundE || !foundET) {
     string tmpStr = "";
     for (CFuint i = 0; i < words.size(); ++i) {
+      CFLog(VERBOSE, "Tecplot2CFmeshConverter::readZone() => current word is [" << words[i] << "]\n");
+      string nextWord = (i < words.size()-1) ? words[i+1] : "";
       if (words[i].find("N=") != string::npos) {
-	getValueString(string("N="), words[i], tmpStr);
+	getValueString(string("N="), words[i], nextWord, tmpStr);
 	const CFuint nbN = StringOps::from_str<CFuint>(tmpStr);
 	nbNodes = (nbN > 0) ? nbN : nbNodes;
 	foundN = true;
       }
       else if (words[i].find("Nodes=") != string::npos) {
-	getValueString(string("Nodes="), words[i], tmpStr);
+	getValueString(string("Nodes="), words[i], nextWord, tmpStr);
 	const CFuint nbN = StringOps::from_str<CFuint>(tmpStr);
 	nbNodes = (nbN > 0) ? nbN : nbNodes;
 	foundN = true;
       }
+      else if (words[i].find("NODES=") != string::npos) {
+        CFLog(INFO, "NODES= found in word [" << words[i] << "]\n");
+	getValueString(string("NODES="), words[i], nextWord, tmpStr);
+        const CFuint nbN = StringOps::from_str<CFuint>(tmpStr);
+        nbNodes = (nbN > 0) ? nbN : nbNodes;
+        foundN = true;
+      }
       else if (words[i].find("ZONETYPE=") != string::npos) {
-	getValueString(string("ZONETYPE="), words[i], cellType);
+	getValueString(string("ZONETYPE="), words[i], nextWord, cellType);
 	foundET = true;
       }
       else if (words[i].find("E=") != string::npos) {
-	getValueString(string("E="), words[i], tmpStr);
+	getValueString(string("E="), words[i], nextWord, tmpStr);
 	const CFuint nbC = StringOps::from_str<CFuint>(tmpStr);
 	nbElems = (nbC > 0) ? nbC : nbElems;
 	foundE = true;
       }
       else if (words[i].find("Elements=") != string::npos) {
-	getValueString(string("Elements="), words[i], tmpStr);
+	getValueString(string("Elements="), words[i], nextWord, tmpStr);
 	const CFuint nbC = StringOps::from_str<CFuint>(tmpStr);
 	nbElems = (nbC > 0) ? nbC : nbElems;
 	foundE = true;
       }
+      else if (words[i].find("ELEMENTS=") != string::npos) {
+        getValueString(string("ELEMENTS="), words[i], nextWord, tmpStr);
+        const CFuint nbC = StringOps::from_str<CFuint>(tmpStr);
+        nbElems = (nbC > 0) ? nbC : nbElems;
+        foundE = true;
+      }
       else if (words[i].find("ET=") != string::npos) {
-	getValueString(string("ET="), words[i], cellType);
+	getValueString(string("ET="), words[i], nextWord, cellType);
 	foundET = true;
       }
       
@@ -326,7 +343,7 @@ void Tecplot2CFmeshConverter::readZone(ifstream& fin,
       fin >> (*elements)(i,n);
       if ((*elements)(i,n) > elements->getNbNodes()) {
 	CFLog(WARN, (*elements)(i,n) << " > " << elements->getNbNodes() << "\n");
-	assert((*elements)(i,n) < elements->getNbNodes());
+	cf_assert((*elements)(i,n) < elements->getNbNodes());
       }
     }
   }
@@ -480,7 +497,7 @@ void Tecplot2CFmeshConverter::readFiles(const boost::filesystem::path& filepath)
     CFLog(VERBOSE, "Tecplot2CFmeshConverter::readFiles() 1 => m_elementType.size() = " << m_elementType.size() << "\n");
     
     if (m_hasAllSurfFile) {
-      CFLog(INFO, "Tecplot2CFmeshConverter::readFiles() => reading .allsurf.plt\n");
+      CFLog(VERBOSE, "Tecplot2CFmeshConverter::readFiles() => reading .allsurf.plt\n");
       readTecplotFile(1, filepath, ".allsurf.plt", true);
     }
     CFLog(VERBOSE, "Tecplot2CFmeshConverter::readFiles() 2 => m_elementType.size() = " << m_elementType.size() << "\n");
@@ -706,14 +723,15 @@ void Tecplot2CFmeshConverter::writeDiscontinuousStates(ofstream& fout)
 
 CFuint Tecplot2CFmeshConverter::getNbNodesInCell(const std::string& etype) const
 {
-  if (etype == "LINESEG" || etype == "FELineseg") {
+  if (etype == "LINESEG" || etype == "FELineseg" || etype == "FELINESEG") {
     return 2;
   }
-  else if (etype == "TRIANGLE" || etype == "FETriangle") {
+  else if (etype == "TRIANGLE" || etype == "FETriangle" || etype == "FETRIANGLE" ) {
     return 3;
   }
   else if (etype == "QUADRILATERAL" || etype == "TETRAHEDRON" || 
-	   etype == "FEQuadrilateral" || etype == "FETetrahedron") {
+	   etype == "FEQuadrilateral" || etype == "FETetrahedron" || 
+	   etype == "FEQUADRILATERAL" || etype == "FETETRAHEDRON") {
     return 4;
   }
   //  else if (etype == "BRICK" || etype == "FEBrick") {
@@ -725,11 +743,12 @@ CFuint Tecplot2CFmeshConverter::getNbNodesInCell(const std::string& etype) const
 
 CFuint Tecplot2CFmeshConverter::getDim(const std::string& etype) const
 {
-  if (etype == "LINESEG" || etype == "FELineseg") {
+  if (etype == "LINESEG" || etype == "FELineseg" || etype == "FELINESEG") {
     return DIM_1D;
   }
   else if (etype == "TRIANGLE" || etype == "QUADRILATERAL" || 
-	   etype == "FETriangle" || etype == "FEQuadrilateral") {
+	   etype == "FETriangle" || etype == "FEQuadrilateral" ||
+	   etype == "FETRIANGLE" || etype == "FEQUADRILATERAL") {
     return DIM_2D;
   }
   return DIM_3D;
@@ -738,17 +757,42 @@ CFuint Tecplot2CFmeshConverter::getDim(const std::string& etype) const
 //////////////////////////////////////////////////////////////////////////////
 
 void Tecplot2CFmeshConverter::getValueString(const std::string& key, 
-					     const std::string& in, 
+					     const std::string& in,
+					     const std::string& next,
 					     std::string& out) const
 {
-  const size_t pos = in.find(key);
-  if (pos != std::string::npos) {
-    const size_t posComma = in.find(",");
-    const size_t length = min(in.size()-key.size(), posComma-key.size());
-    out = in.substr(pos+key.size(), length);
+  // if the given key does not coincide with the full word
+  const string commaKey = "," + key;
+  if (key != in && commaKey != in) {
+    CFLog(VERBOSE, "Tecplot2CFmeshConverter::getValueString() => key = [" <<  key << "] != [" << in << "]\n");
+    const size_t pos = in.find(key);
+    if (pos != std::string::npos) {
+      const size_t posComma = in.find(",");
+      size_t length = 0;
+      if (posComma > pos) {
+	length = min(in.size()-key.size(), posComma-key.size());
+      }
+      else {
+	// this tackles badly formatted cases, e.g. [F=FEPOINT,ET=TRIANGLE] where [ET=] is the key
+	length = in.size()-pos-key.size();
+      }
+      out = in.substr(pos+key.size(), length);
+    }
+    CFLog(VERBOSE, "Tecplot2CFmeshConverter::getValueString() => out = [" <<  out << "]\n");
+  }
+  else {
+    CFLog(VERBOSE, "Tecplot2CFmeshConverter::getValueString() => key = [" <<  key << "] = [" << in << "]\n");
+    // if the given key coincides with the full word
+    // the next word gives the value
+    cf_assert(next != "");
+    // if there is a "," it can only be at the end of the string
+    // this should tackle cases like " ,N=   3000," or ", N= 3000 ," or ", N= 3000,"  
+    const size_t length = (next.find(",") == std::string::npos) ? next.size() : next.size()-1;
+    out = next.substr(0, length);
+    CFLog(VERBOSE, "Tecplot2CFmeshConverter::getValueString() => out = [" <<  out << "]\n");
   }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
  
 void Tecplot2CFmeshConverter::readVariables(ifstream& fin,
@@ -756,33 +800,23 @@ void Tecplot2CFmeshConverter::readVariables(ifstream& fin,
 					    CFuint&  lineNb,
 					    vector<string>& words, 
 					    vector<string>& vars)
-{
-  /* getTecplotWordsFromLine(fin, line, lineNb, words); // VARIABLES
-  
-  CFLog(VERBOSE, "VARIABLES = ");
-  for (CFuint i = 0; i < words.size(); ++i) {
-    if (words[i].find('=')==string::npos && words[i].find("VARIABLES")==string::npos) {
-      CFLog(VERBOSE, words[i] << " ");
-      
-      // store all the variable names
-      vars.push_back(words[i]);
-    }
-  }
-  CFLog(VERBOSE, "\n");*/
-  
+{  
   long startZone = fin.tellg();
   getTecplotWordsFromLine(fin, line, lineNb, words); // VARIABLES
   
   while (line.find("ZONE") == string::npos) {
-    for (CFuint i = 0; i < words.size(); ++i) {
-      if (words[i].find('=')==string::npos && words[i].find("VARIABLES")==string::npos) {
-	CFLog(VERBOSE, words[i] << " ");
-	// store all the variable names
-	vars.push_back(words[i]);
+    // skip line if the keyword "FILETYPE" is found
+    if (line.find("FILETYPE") == string::npos) {
+      for (CFuint i = 0; i < words.size(); ++i) {
+	if (words[i].find('=')==string::npos && words[i].find("VARIABLES")==string::npos) {
+	  CFLog(VERBOSE, "detected variable named <" << words[i] << "> ");
+	  // store all the variable names
+	  vars.push_back(words[i]);
+	}
       }
+      
+      startZone = fin.tellg(); 
     }
-    
-    startZone = fin.tellg(); 
     getTecplotWordsFromLine(fin, line, lineNb, words); // VARIABLES
   }
   CFLog(VERBOSE, "\n");
@@ -901,6 +935,9 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   
   CFLog(INFO, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => START\n");
   
+  Stopwatch<WallTime> stp;
+  stp.start();
+  
   path meshFile = change_extension(filepath, getOriginExtension());
   
   SelfRegistPtr<FileHandlerOutput> fhandle = SingleBehaviorFactory<FileHandlerOutput>::getInstance().create();
@@ -992,7 +1029,7 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   const string batchcommand = "tec360 -b -p interpolate.mcr";
   Common::OSystem::getInstance().executeCommand(batchcommand);
   
-  CFLog(INFO, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => END\n");
+  CFLog(INFO,"Tecplot2CFmeshConverter::interpolateTecplotSolution() took " << stp.read() << "s\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
