@@ -207,7 +207,6 @@ void Tecplot2CFmeshConverter::readZone(ifstream& fin,
 	foundN = true;
       }
       else if (words[i].find("NODES=") != string::npos) {
-        CFLog(INFO, "NODES= found in word [" << words[i] << "]\n");
 	getValueString(string("NODES="), words[i], nextWord, tmpStr);
         const CFuint nbN = StringOps::from_str<CFuint>(tmpStr);
         nbNodes = (nbN > 0) ? nbN : nbNodes;
