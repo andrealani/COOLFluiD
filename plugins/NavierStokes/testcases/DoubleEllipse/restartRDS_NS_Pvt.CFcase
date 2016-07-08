@@ -12,7 +12,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -4.1855335
+### Residual = -4.3578141
 
 # Simulation Modules
 Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes libFluctSplit libFluctSplitSystem libNewtonMethod libFluctSplitNavierStokes libForwardEuler libTecplot2CFmesh
@@ -67,8 +67,7 @@ Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<50,1000.,cfl*1.02)
-#if(i<100,10.,if(i<400,min(1000.,cfl*1.02),if(i<600,min(cfl*1.03,1000),min(cfl*1.03,1e6))))
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<50,1000.,cfl*1.02^2)
 
 Simulator.SubSystem.SpaceMethod = FluctuationSplit
 Simulator.SubSystem.FluctuationSplit.Restart = true

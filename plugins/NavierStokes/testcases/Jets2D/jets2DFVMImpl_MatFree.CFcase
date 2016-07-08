@@ -13,7 +13,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -5.0166856
+### Residual = -5.0050213
 #
 
 ####### TEST CONFIGURATION
@@ -69,7 +69,7 @@ Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-2
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<5,10.,min(1e10,cfl*1.5))
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<5,10.,min(1e10,cfl*1.5^2))
 Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
 
 ############# this flag is important ######################

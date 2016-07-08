@@ -12,7 +12,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.0767933 
+### Residual = -6.077025
 #
 # Simulator Modules
 Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libMHD libFiniteVolume libFiniteVolumeMHD libBackwardEuler  libTHOR2CFmesh
@@ -58,7 +58,7 @@ Simulator.SubSystem.ConvergenceMethod = BwdEuler
 Simulator.SubSystem.BwdEuler.ConvergenceFile = convergence_wedgeFVMMHD1stProjImpl.plt
 Simulator.SubSystem.BwdEuler.Data.CFL.Value = 10.
 Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = if(i<10,10.,min(10000.,cfl*1.1))
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = if(i<10,10.,min(10000.,cfl*1.1*1.1))
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = BwdEulerLSS

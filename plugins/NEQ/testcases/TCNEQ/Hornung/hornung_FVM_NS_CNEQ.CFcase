@@ -12,7 +12,7 @@
 #
 # This testcases simulates a 2D cylinder corresponding to Hornung's experiment
 #
-### Residual = -4.0018121
+### Residual = -4.0054895
 
 # Simulator.TraceToStdOut = true
 
@@ -89,7 +89,7 @@ Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<4200,1.,if(i<5500,2.,min(100.,cfl*1.02))) 
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<4200,1.,if(i<5500,2.,min(100.,cfl*1.02^2.))) 
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 #Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 4

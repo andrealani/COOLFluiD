@@ -15,7 +15,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.16048876
+### Residual = -6.7725661
 #
 
 # Simulation Modules
@@ -88,7 +88,7 @@ Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
 Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = \
-	if(i<300,1.,if(i<350,min(1000.,cfl*1.03),if(i<600,0.7,if(i<1400,1.2,if(i<1600,2.,if(i<1800,3.5,min(1000.,cfl*1.02)))))))
+	if(i<300,1.,if(i<350,min(1000.,cfl*1.03^2),if(i<600,0.7,if(i<1400,1.2,if(i<1600,2.,if(i<1800,3.5,min(1000.,cfl*1.02^2)))))))
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 #Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
 

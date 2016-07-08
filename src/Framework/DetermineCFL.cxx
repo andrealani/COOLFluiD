@@ -70,7 +70,7 @@ void DetermineCFL::operator() (const ConvergenceStatus& m_cstatus)
   std::string datahandleName = nsp + "_updateCoeff";
   DataHandle<CFreal> updateCoeff =
     MeshDataStack::getActive()->getDataStorage()->getData<CFreal>(datahandleName);
-
+  
   datahandleName = nsp + "_volumes";
   DataHandle<CFreal> volumes =
     MeshDataStack::getActive()->getDataStorage()->getData<CFreal>(datahandleName);

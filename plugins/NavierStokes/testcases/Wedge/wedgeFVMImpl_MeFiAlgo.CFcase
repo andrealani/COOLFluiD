@@ -11,7 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -4.0446139
+### Residual = -4.0446031
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -87,7 +87,7 @@ Simulator.SubSystem.CellCenterFVM.Data.CollaboratorNames = BwdEulerLSS
 Simulator.SubSystem.ConvergenceMethod = BwdEuler
 Simulator.SubSystem.BwdEuler.Data.CFL.Value = 1.0
 Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = if(i<100,5.,if(i<200,10.,min(1000.,cfl*1.1)))
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = if(i<100,5.,if(i<200,10.,min(1000.,cfl*1.1^2)))
 Simulator.SubSystem.BwdEuler.Data.Norm = L2
 Simulator.SubSystem.BwdEuler.Data.L2.MonitoredVarID = 0
 Simulator.SubSystem.BwdEuler.Data.L2.ComputedVarID = 0 2 3

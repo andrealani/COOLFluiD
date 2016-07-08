@@ -11,7 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -4.0003372
+### Residual = -4.0988382
 #
 
 # SubSystem Modules
@@ -68,7 +68,7 @@ Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1e6
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<30,1e6,min(1e10,cfl*2.))
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<30,1e6,min(1e10,cfl*4))
 Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM

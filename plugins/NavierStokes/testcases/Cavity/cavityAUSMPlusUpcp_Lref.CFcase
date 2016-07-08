@@ -12,7 +12,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -9.0428186
+### Residual = -9.0137361
 #
 
 # Simulation Modules
@@ -105,7 +105,7 @@ Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 ##  CFL function
 Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 150.0
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function 
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<100,150,min(cfl*1.1,1e12))
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<100,150,min(cfl*1.1^2,1e12))
 # monitored residual variable for convergence
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 2
 # computed residual variable(s)

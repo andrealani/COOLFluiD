@@ -163,7 +163,7 @@ void NewtonIterator::prepare()
   {
     subSysStatus->updateNbIter();
     subSysStatus->updateTimeStep();
-    getConvergenceMethodData()->getCFL()->update();
+    //    getConvergenceMethodData()->getCFL()->update();
   }
   
   // prepare to take a time step

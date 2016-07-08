@@ -549,6 +549,11 @@ void SpectralFDMethod::computeSpaceResidualImpl(CFreal factor)
 
   // divide by volume/Jacobian determinant
   m_divideRHSByCellVol->execute();
+
+  // compute dynamically the CFL
+  if (m_data->doComputeJacobian()) {
+      m_data->getCFL()->update();
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////

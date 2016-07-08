@@ -131,11 +131,11 @@ void BwdEuler::takeStepImpl()
   {
     SubSystemStatusStack::getActive()->updateNbIter();
     SubSystemStatusStack::getActive()->updateTimeStep();
-    getConvergenceMethodData()->getCFL()->update();
-
+    // getConvergenceMethodData()->getCFL()->update();
+    
     getMethodData()->getCollaborator<SpaceMethod>()->prepareComputation();
   }
-
+  
   Common::Stopwatch<Common::WallTime> timer;
   timer.restart();
 

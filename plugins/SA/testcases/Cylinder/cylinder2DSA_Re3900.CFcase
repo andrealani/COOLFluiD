@@ -11,7 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -4.0622182
+### Residual = -4.0055045
 
 #CFEnv.ExceptionLogLevel    = 1000
 #CFEnv.DoAssertions         = true
@@ -105,7 +105,7 @@ Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<10,1000.,min(1e9,cfl*1.2)) 
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<10,1000.,min(1e9,cfl*1.2^2)) 
 Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
 Simulator.SubSystem.NewtonIterator.Data.PrintHistory = false
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 0
