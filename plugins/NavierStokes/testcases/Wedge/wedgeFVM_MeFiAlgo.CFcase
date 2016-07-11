@@ -18,7 +18,7 @@ Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWrite
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Wedge/
-Simulator.Paths.ResultsDir       = ./
+Simulator.Paths.ResultsDir = ./RESULTS_WEDGE
 
 Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
 
@@ -59,7 +59,7 @@ Simulator.SubSystem.MeshAlgoLSS.Data.SaveSystemToFile = false
 Simulator.SubSystem.MeshAlgoLSS.MaskEquationIDs = 0 1
 Simulator.SubSystem.MeshAlgoLSS.Data.NbKrylovSpaces = 50
 
-Simulator.SubSystem.Default.listTRS = InnerFaces SlipWall SuperInlet SuperOutlet
+Simulator.SubSystem.Default.listTRS = SlipWall SuperInlet SuperOutlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = wedge.CFmesh
