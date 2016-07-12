@@ -70,7 +70,12 @@ public:
     
   /// physical model var set
   Common::SafePtr<Physics::MultiFluidMHD::MultiFluidMHDVarSet<Physics::Maxwell::Maxwell2DProjectionVarSet> > _updateVarSet;
-  
+
+  /// Flag to impose an isothermal wall
+  bool _isIsothermal;
+
+  /// Temperatures of the wall
+  std::vector<CFreal> _T;  
     
 }; // end of class PerfectConductingWall2DHalf
 

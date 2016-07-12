@@ -32,6 +32,8 @@ MethodCommandProvider<PerfectConductingWall2DHalf, CellCenterFVMData, FiniteVolu
 
 void PerfectConductingWall2DHalf::defineConfigOptions(Config::OptionList& options)
 {
+   options.addConfigOption< std::vector<CFreal> >("T","Temperature");
+   options.addConfigOption< bool > ("IsIsothermal", "Flag for isothermal wall");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -39,8 +41,17 @@ void PerfectConductingWall2DHalf::defineConfigOptions(Config::OptionList& option
 PerfectConductingWall2DHalf::PerfectConductingWall2DHalf
 (const std::string& name) :
   FVMCC_BC(name),
+  _T(),
   _updateVarSet(CFNULL)
 {
+   addConfigOptionsTo(this);
+
+   _T = std::vector<CFreal>();
+   setParameter("T",&_T);
+
+  _isIsothermal = false;
+  setParameter("IsIsothermal",&_isIsothermal);
+
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -56,6 +67,9 @@ void PerfectConductingWall2DHalf::setup()
   FVMCC_BC::setup();
   
   _updateVarSet = getMethodData().getUpdateVar().d_castTo<MultiFluidMHDVarSet<Maxwell2DProjectionVarSet> >();
+  const CFuint nbSpecies = _updateVarSet->getModel()->getNbScalarVars(0);
+
+  _T.resize(nbSpecies);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -82,18 +96,27 @@ void PerfectConductingWall2DHalf::setGhostState(GeometricEntity *const face)
 
   cf_assert(_updateVarSet.isNotNull());
   
-  const CFreal bn = (*innerState)[0]*nx + (*innerState)[1]*ny;
-  const CFreal en = (*innerState)[3]*nx + (*innerState)[4]*ny;  
+//  const CFreal q0 = 1.49208242546e-21;
+//  const CFreal me = _updateVarSet->getModel()->getMolecularMass1();
+//  const CFreal mi = _updateVarSet->getModel()->getMolecularMass2();
+//  const CFreal ni_ghost = (*innerState)[8 + 1]/mi;
+//  const CFreal ne_ghost = (*innerState)[8]/me; //assuming charge neutrality
+//  const CFreal mu0 = _updateVarSet->getModel()->getPermeability();
+//  const CFreal c_e = _updateVarSet->getModel()->getLightSpeed();
+//  const CFreal ovEpsilon = c_e*c_e*mu0;
+//  const CFreal EfieldBound = q0*(ni_ghost - ne_ghost)*ovEpsilon;
+  const CFreal bn = (*innerState)[0]*nx + (*innerState)[1]*ny; 
+  const CFreal en = (*innerState)[3]*nx + (*innerState)[4]*ny; 
 //  const CFreal chi = _varSet->getModel()->getDivECleaningConst();
 
   (*ghostState)[0] = (*innerState)[0] - 2*bn*nx;	//Bx
   (*ghostState)[1] = (*innerState)[1] - 2*bn*ny;	//By
   (*ghostState)[2] = (*innerState)[2] - 2*bn*nz;	//Bz
-  (*ghostState)[3] = -(*innerState)[3] + 2*en*nx;	//Ex
-  (*ghostState)[4] = -(*innerState)[4] + 2*en*ny;	//Ey
-  (*ghostState)[5] = -(*innerState)[5] + 2*en*nz;	//Ez
+  (*ghostState)[3] = -(*innerState)[3] + 2*en*nx; 	//Ex
+  (*ghostState)[4] = -(*innerState)[4] + 2*en*ny; 	//Ey
+  (*ghostState)[5] = -(*innerState)[5] + 2*en*nz; 	//Ez
   (*ghostState)[6] = (*innerState)[6];			//Psi
-  (*ghostState)[7] = -(*innerState)[7];			//Phi
+  (*ghostState)[7] = (*innerState)[7];			//Phi
   
 ///MultiFluidMHD mirror Condition in 2D
   const CFuint endEM = 8;
@@ -102,6 +125,13 @@ void PerfectConductingWall2DHalf::setGhostState(GeometricEntity *const face)
   for (CFuint i = 0 ; i < nbSpecies; i++){
     (*ghostState)[endEM + i] = (*innerState)[endEM + i];
   }
+
+  //const CFreal me = _updateVarSet->getModel()->getMolecularMass1();
+  //const CFreal mi = _updateVarSet->getModel()->getMolecularMass2();
+  //(*ghostState)[endEM + 1] = (*innerState)[endEM + 1]; //ions
+  //const CFreal ni_ghost = (*ghostState)[endEM + 1]/mi;
+  //const CFreal ne_bound = ni_ghost; //assuming charge neutrality
+  //(*ghostState)[endEM] = 2*ne_bound*me - (*innerState)[endEM];  // electrons
  
   //set the Velocities
   for (CFuint i = 0 ; i < nbSpecies; i++){
@@ -111,11 +141,19 @@ void PerfectConductingWall2DHalf::setGhostState(GeometricEntity *const face)
     (*ghostState)[endEM + nbSpecies + 3*i + 2] = (*innerState)[endEM + nbSpecies + 3*i + 2] ;
   } 
  
-  //set the Temperatures
-  for (CFuint i = 0 ; i < nbSpecies; i++){
-    (*ghostState)[endEM + nbSpecies + 3*nbSpecies + i] = (*innerState)[endEM + nbSpecies + 3*nbSpecies + i];
-    //cf_assert((*innerState)[endEM + nbSpecies + 3*nbSpecies + i] > 0.);
+  if(!_isIsothermal) {
+    //set the Temperatures
+    for (CFuint i = 0 ; i < nbSpecies; i++){
+      (*ghostState)[endEM + nbSpecies + 3*nbSpecies + i] = (*innerState)[endEM + nbSpecies + 3*nbSpecies + i];
+      //cf_assert((*innerState)[endEM + nbSpecies + 3*nbSpecies + i] > 0.);
+    }
   } 
+  else {
+    for (CFuint i = 0 ; i < nbSpecies; i++){
+      (*ghostState)[endEM + nbSpecies + 3*nbSpecies + i] = 2*_T[i] - (*innerState)[endEM + nbSpecies + 3*nbSpecies + i];
+      cf_assert((*innerState)[endEM + nbSpecies + 3*nbSpecies + i] > 0.);
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
