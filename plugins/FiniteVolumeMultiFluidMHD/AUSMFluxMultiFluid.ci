@@ -287,13 +287,9 @@ void AUSMFluxMultiFluid<UPDATEVAR>::compute(RealVector& result)
    CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux PSI = " << result[6] << "\n");
    CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux PHI = " << result[7] << "\n");
    CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux mass = " << result[8] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux mass = " << result[9] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << result[10] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << result[11] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << result[12] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << result[13] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << result[14] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << result[15] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << result[9] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << result[10] << "\n");
+   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << result[11] << "\n");
   }
 }
 
@@ -827,18 +823,20 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAplus()
   const CFreal gamma = m_updateVarSet->getModel()->getDivBCleaningConst();	//DivB cleaning technique constant
   const CFreal chi = m_updateVarSet->getModel()->getDivECleaningConst();
   const CFreal c_e = m_updateVarSet->getModel()->getLightSpeed();//speed of light
-  CFreal factor1, factor2, factor3;
+  CFreal factor1, factor2, factor3, factor4;
   
   
   if(m_useMacCormackScaling){
-    factor1 = 1;
+    factor1 = 1.;
     factor2 = c_e*c_e;
     factor3 = m_coeff*c_e*c_e;
+    factor4 = m_coeff;
   }
   else{
     factor1 = c_e;
     factor2 = c_e;
     factor3 = c_e;
+    factor4 = c_e;
   }
   
   if(dim == 2){
@@ -912,30 +910,30 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAplus()
     _Aplus(7,4) = normal[1];
     _Aplus(7,5) = 0; 
     _Aplus(7,6) = 0; 
-    _Aplus(7,7) = chi*factor1; //flag2  
+    _Aplus(7,7) = chi*factor4; //flag2  
   }
   if(dim == 3){
-    _Aplus(0,0) = (1 + normal[0]*normal[0]*(gamma - 1));
-    _Aplus(0,1) = (gamma - 1)*normal[0]*normal[1];
-    _Aplus(0,2) = (gamma - 1)*normal[0]*normal[2];
+    _Aplus(0,0) = (1 + normal[0]*normal[0]*(gamma - 1))*factor1;
+    _Aplus(0,1) = (gamma - 1)*normal[0]*normal[1]*factor1;
+    _Aplus(0,2) = (gamma - 1)*normal[0]*normal[2]*factor1;
     _Aplus(0,3) = 0;
     _Aplus(0,4) = -normal[2];
     _Aplus(0,5) = normal[1];
     _Aplus(0,6) = gamma*gamma*normal[0]; 
     _Aplus(0,7) = 0; 
 
-    _Aplus(1,0) = (gamma - 1)*normal[0]*normal[1];
-    _Aplus(1,1) = (1 + normal[1]*normal[1]*(gamma - 1));
-    _Aplus(1,2) = (gamma - 1)*normal[1]*normal[2];
+    _Aplus(1,0) = (gamma - 1)*normal[0]*normal[1]*factor1;
+    _Aplus(1,1) = (1 + normal[1]*normal[1]*(gamma - 1))*factor1;
+    _Aplus(1,2) = (gamma - 1)*normal[1]*normal[2]*factor1;
     _Aplus(1,3) = normal[2];
     _Aplus(1,4) = 0;
     _Aplus(1,5) = -normal[0];
     _Aplus(1,6) = gamma*gamma*normal[1]; 
     _Aplus(1,7) = 0; 
 
-    _Aplus(2,0) = (gamma - 1)*normal[0]*normal[2];
-    _Aplus(2,1) = (gamma - 1)*normal[1]*normal[2];
-    _Aplus(2,2) = (1 + normal[2]*normal[2]*(gamma - 1));
+    _Aplus(2,0) = (gamma - 1)*normal[0]*normal[2]*factor1;
+    _Aplus(2,1) = (gamma - 1)*normal[1]*normal[2]*factor1;
+    _Aplus(2,2) = (1 + normal[2]*normal[2]*(gamma - 1))*factor1;
     _Aplus(2,3) = -normal[1];
     _Aplus(2,4) = normal[0];
     _Aplus(2,5) = 0;
@@ -945,27 +943,27 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAplus()
     _Aplus(3,0) = 0; 
     _Aplus(3,1) = normal[2]*c_e*c_e; 
     _Aplus(3,2) = -normal[1]*c_e*c_e;
-    _Aplus(3,3) = (1 + normal[0]*normal[0]*(chi - 1))*c_e*c_e;
-    _Aplus(3,4) = (chi - 1)*normal[0]*normal[1]*c_e*c_e;
-    _Aplus(3,5) = (chi - 1)*normal[0]*normal[2]*c_e*c_e; 
+    _Aplus(3,3) = (1 + normal[0]*normal[0]*(chi - 1))*factor2;
+    _Aplus(3,4) = (chi - 1)*normal[0]*normal[1]*factor2;
+    _Aplus(3,5) = (chi - 1)*normal[0]*normal[2]*factor2; 
     _Aplus(3,6) = 0; 
     _Aplus(3,7) = chi*chi*normal[0]*c_e*c_e;
 
     _Aplus(4,0) = -normal[2]*c_e*c_e;
     _Aplus(4,1) = 0;
     _Aplus(4,2) = normal[0]*c_e*c_e;
-    _Aplus(4,3) = (chi - 1)*normal[0]*normal[1]*c_e*c_e;
-    _Aplus(4,4) = (1 + normal[1]*normal[1]*(chi - 1))*c_e*c_e;
-    _Aplus(4,5) = (chi - 1)*normal[1]*normal[2]*c_e*c_e;
+    _Aplus(4,3) = (chi - 1)*normal[0]*normal[1]*factor2;
+    _Aplus(4,4) = (1 + normal[1]*normal[1]*(chi - 1))*factor2;
+    _Aplus(4,5) = (chi - 1)*normal[1]*normal[2]*factor2;
     _Aplus(4,6) = 0; 
     _Aplus(4,7) = chi*chi*normal[1]*c_e*c_e; 
 
     _Aplus(5,0) = normal[1]*c_e*c_e;
     _Aplus(5,1) = -normal[0]*c_e*c_e;
     _Aplus(5,2) = 0;
-    _Aplus(5,3) = (chi - 1)*normal[0]*normal[2]*c_e*c_e;
-    _Aplus(5,4) = (chi - 1)*normal[1]*normal[2]*c_e*c_e;
-    _Aplus(5,5) = (1 + normal[2]*normal[2]*(chi - 1))*c_e*c_e;
+    _Aplus(5,3) = (chi - 1)*normal[0]*normal[2]*factor2;
+    _Aplus(5,4) = (chi - 1)*normal[1]*normal[2]*factor2;
+    _Aplus(5,5) = (1 + normal[2]*normal[2]*(chi - 1))*factor2;
     _Aplus(5,6) = 0; 
     _Aplus(5,7) = chi*chi*normal[2]*c_e*c_e; 
     
@@ -975,7 +973,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAplus()
     _Aplus(6,3) = 0;
     _Aplus(6,4) = 0;
     _Aplus(6,5) = 0; 
-    _Aplus(6,6) = gamma*c_e*c_e; 
+    _Aplus(6,6) = gamma*factor3; 
     _Aplus(6,7) = 0;
     
     _Aplus(7,0) = 0;
@@ -985,7 +983,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAplus()
     _Aplus(7,4) = normal[1];
     _Aplus(7,5) = normal[2]; 
     _Aplus(7,6) = 0; 
-    _Aplus(7,7) = chi;
+    _Aplus(7,7) = chi*factor4;
   }
 }
 //////////////////////////////////////////////////////////////////////////////
@@ -1001,18 +999,20 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAminus()
   const CFreal gamma = m_updateVarSet->getModel()->getDivBCleaningConst();	//DivB cleaning technique constant
   const CFreal chi = m_updateVarSet->getModel()->getDivECleaningConst();
   const CFreal c_e = m_updateVarSet->getModel()->getLightSpeed();//speed of light
-  CFreal factor1, factor2, factor3;
+  CFreal factor1, factor2, factor3, factor4;
   
   
   if(m_useMacCormackScaling){
-    factor1 = 1;
+    factor1 = 1.;
     factor2 = c_e*c_e;
     factor3 = m_coeff*c_e*c_e;
+    factor4 = m_coeff;
   }
   else{
     factor1 = c_e;
     factor2 = c_e;
     factor3 = c_e;
+    factor4 = c_e;
   }
 
   if(dim == 2){
@@ -1036,7 +1036,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAminus()
 
     _Aminus(2,0) = 0;
     _Aminus(2,1) = 0;
-    _Aminus(2,2) = factor1; //flag2
+    _Aminus(2,2) = -1*factor1; //flag2
     _Aminus(2,3) = -normal[1];
     _Aminus(2,4) = normal[0];
     _Aminus(2,5) = 0;
@@ -1086,30 +1086,30 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAminus()
     _Aminus(7,4) = normal[1];
     _Aminus(7,5) = 0; 
     _Aminus(7,6) = 0; 
-    _Aminus(7,7) = -chi*factor1; //flag2  
+    _Aminus(7,7) = -chi*factor4; //flag2  
   }
   if(dim == 3){
-    _Aminus(0,0) = -(1 + normal[0]*normal[0]*(gamma - 1));
-    _Aminus(0,1) = -(gamma - 1)*normal[0]*normal[1];
-    _Aminus(0,2) = -(gamma - 1)*normal[0]*normal[2];
+    _Aminus(0,0) = -(1 + normal[0]*normal[0]*(gamma - 1))*factor1;
+    _Aminus(0,1) = -(gamma - 1)*normal[0]*normal[1]*factor1;
+    _Aminus(0,2) = -(gamma - 1)*normal[0]*normal[2]*factor1;
     _Aminus(0,3) = 0;
     _Aminus(0,4) = -normal[2];
     _Aminus(0,5) = normal[1];
     _Aminus(0,6) = gamma*gamma*normal[0]; 
     _Aminus(0,7) = 0; 
 
-    _Aminus(1,0) = -(gamma - 1)*normal[0]*normal[1];
-    _Aminus(1,1) = -(1 + normal[1]*normal[1]*(gamma - 1));
-    _Aminus(1,2) = -(gamma - 1)*normal[1]*normal[2];
+    _Aminus(1,0) = -(gamma - 1)*normal[0]*normal[1]*factor1;
+    _Aminus(1,1) = -(1 + normal[1]*normal[1]*(gamma - 1))*factor1;
+    _Aminus(1,2) = -(gamma - 1)*normal[1]*normal[2]*factor1;
     _Aminus(1,3) = normal[2];
     _Aminus(1,4) = 0;
     _Aminus(1,5) = -normal[0];
     _Aminus(1,6) = gamma*gamma*normal[1]; 
     _Aminus(1,7) = 0; 
 
-    _Aminus(2,0) = -(gamma - 1)*normal[0]*normal[2];
-    _Aminus(2,1) = -(gamma - 1)*normal[1]*normal[2];
-    _Aminus(2,2) = -(1 + normal[2]*normal[2]*(gamma - 1));
+    _Aminus(2,0) = -(gamma - 1)*normal[0]*normal[2]*factor1;
+    _Aminus(2,1) = -(gamma - 1)*normal[1]*normal[2]*factor1;
+    _Aminus(2,2) = -(1 + normal[2]*normal[2]*(gamma - 1))*factor1;
     _Aminus(2,3) = -normal[1];
     _Aminus(2,4) = normal[0];
     _Aminus(2,5) = 0;
@@ -1119,27 +1119,27 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAminus()
     _Aminus(3,0) = 0; 
     _Aminus(3,1) = normal[2]*c_e*c_e; 
     _Aminus(3,2) = -normal[1]*c_e*c_e;
-    _Aminus(3,3) = -(1 + normal[0]*normal[0]*(chi - 1))*c_e*c_e;
-    _Aminus(3,4) = -(chi - 1)*normal[0]*normal[1]*c_e*c_e;
-    _Aminus(3,5) = -(chi - 1)*normal[0]*normal[2]*c_e*c_e; 
+    _Aminus(3,3) = -(1 + normal[0]*normal[0]*(chi - 1))*factor2;
+    _Aminus(3,4) = -(chi - 1)*normal[0]*normal[1]*factor2;
+    _Aminus(3,5) = -(chi - 1)*normal[0]*normal[2]*factor2; 
     _Aminus(3,6) = 0; 
     _Aminus(3,7) = chi*chi*normal[0]*c_e*c_e;
 
     _Aminus(4,0) = -normal[2]*c_e*c_e;
     _Aminus(4,1) = 0;
     _Aminus(4,2) = normal[0]*c_e*c_e;
-    _Aminus(4,3) = -(chi - 1)*normal[0]*normal[1]*c_e*c_e;
-    _Aminus(4,4) = -(1 + normal[1]*normal[1]*(chi - 1))*c_e*c_e;
-    _Aminus(4,5) = -(chi - 1)*normal[1]*normal[2]*c_e*c_e;
+    _Aminus(4,3) = -(chi - 1)*normal[0]*normal[1]*factor2;
+    _Aminus(4,4) = -(1 + normal[1]*normal[1]*(chi - 1))*factor2;
+    _Aminus(4,5) = -(chi - 1)*normal[1]*normal[2]*factor2;
     _Aminus(4,6) = 0; 
     _Aminus(4,7) = chi*chi*normal[1]*c_e*c_e; 
 
     _Aminus(5,0) = normal[1]*c_e*c_e;
     _Aminus(5,1) = -normal[0]*c_e*c_e;
     _Aminus(5,2) = 0;
-    _Aminus(5,3) = -(chi - 1)*normal[0]*normal[2]*c_e*c_e;
-    _Aminus(5,4) = -(chi - 1)*normal[1]*normal[2]*c_e*c_e;
-    _Aminus(5,5) = -(1 + normal[2]*normal[2]*(chi - 1))*c_e*c_e;
+    _Aminus(5,3) = -(chi - 1)*normal[0]*normal[2]*factor2;
+    _Aminus(5,4) = -(chi - 1)*normal[1]*normal[2]*factor2;
+    _Aminus(5,5) = -(1 + normal[2]*normal[2]*(chi - 1))*factor2;
     _Aminus(5,6) = 0; 
     _Aminus(5,7) = chi*chi*normal[2]*c_e*c_e; 
     
@@ -1149,7 +1149,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAminus()
     _Aminus(6,3) = 0;
     _Aminus(6,4) = 0;
     _Aminus(6,5) = 0; 
-    _Aminus(6,6) = -gamma*c_e*c_e; 
+    _Aminus(6,6) = -gamma*factor3; 
     _Aminus(6,7) = 0;
     
     _Aminus(7,0) = 0;
@@ -1159,7 +1159,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAminus()
     _Aminus(7,4) = normal[1];
     _Aminus(7,5) = normal[2]; 
     _Aminus(7,6) = 0; 
-    _Aminus(7,7) = -chi;  
+    _Aminus(7,7) = -chi*factor4;  
   }  
 }
 
