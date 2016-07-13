@@ -210,6 +210,12 @@ private: //data
   /// storage of the RHS
   Framework::DataSocketSink<CFreal> socket_rhs;
   
+  /// socket for the wallDistance storage
+  Framework::DataSocketSink<CFreal> socket_wallDistance;
+  
+  /// data handle cashed for efficiency  reasons
+  Framework::DataHandle<CFreal> m_wallDistance;
+  
   /// pointer to the linear system solver
   Common::SafePtr<Framework::LinearSystemSolver> m_lss;
   

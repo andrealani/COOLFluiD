@@ -64,7 +64,9 @@ MeshFittingAlgorithm::MeshFittingAlgorithm(const std::string& name) :
   socket_nstates("nstates"),
   socket_gstates("gstates"),
   socket_normals("normals"),
-  socket_rhs("rhs"),
+  socket_rhs("rhs"), 
+  socket_wallDistance("wallDistance",false),
+  m_wallDistance(CFNULL),
   m_lss(CFNULL),
   m_fvmccData(CFNULL)
 {
@@ -124,6 +126,7 @@ MeshFittingAlgorithm::needsSockets()
   result.push_back(&socket_gstates);
   result.push_back(&socket_normals);
   result.push_back(&socket_rhs);
+  result.push_back(&socket_wallDistance);
   
   return result;
 }
@@ -173,6 +176,17 @@ void MeshFittingAlgorithm::setup()
       m_monitorVarID > PhysicalModelStack::getActive()->getNbEq()) {
     CFLog(WARN, "MeshFittingAlgorithm::setup() => monitorVarID not specified or invalid: will be set to 0");
     m_monitorVarID = 0;
+  }
+  
+  const std::string namespaceName = MeshDataStack::getActive()->getPrimaryNamespace();
+  const string wallDistanceDataHandleName = namespaceName + "_wallDistance";
+  const bool wallDistanceExists = MeshDataStack::getActive()->
+    getDataStorage()->checkData(wallDistanceDataHandleName);
+  if (wallDistanceExists) {
+    m_wallDistance = MeshDataStack::getActive()->getDataStorage()->
+      getData<CFreal>(wallDistanceDataHandleName);
+    cf_assert(m_wallDistance.getLocalArray() != CFNULL);
+    cf_assert(m_wallDistance.size() > 0);
   }
   
   createNodalConnectivity();
