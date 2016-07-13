@@ -1479,7 +1479,14 @@ sub install_boost()
   print my_colored("Installing $pack\n",$HEADINGCOLOR);
 
   safe_chdir($opt_tmp_dir);
-  if ( not -e "$pack.tar.bz2" ) { download_file("$opt_dwnldsrc/$pack.tar.bz2"); }
+  # if ( not -e "$pack.tar.bz2" ) { download_file("$opt_dwnldsrc/$pack.tar.bz2"); }
+
+  if ( not -e "$pack.tar.bz2" ) {
+    my $mversion = $version;
+    $mversion =~ s/_/./g;
+    print my_colored("Downloading $pack\n with version $mversion",$HEADINGCOLOR);
+    run_command_or_die("wget http://vorboss.dl.sourceforge.net/project/boost/boost/$mversion/$pack.tar.bz2");
+  }
 
   unless ($opt_fetchonly)
   {
