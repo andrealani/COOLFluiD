@@ -220,7 +220,7 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     source[4] = -Jy*ovEpsilon;	//y-Ampere's Law
     source[5] = -Jz*ovEpsilon;  //z-Ampere's Law
     source[6] = 0.;		//divB
-    source[7] = Qtot*ovEpsilon; //divE
+    source[7] = 0; //Qtot*ovEpsilon; //divE
   }
   
   //AAL: Here the source for three-fluid continuity, momentum and energy equations
@@ -263,8 +263,10 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     const CFreal ne = rhoe/me;		   	// number density electrons [m^-3]
     const CFreal ni = rhoi/mi;		   	// number density ions [m^-3]
     const CFreal pi = MathTools::MathConsts::CFrealPi(); //Pi number
+    const CFreal c_e = term->getLightSpeed();
+    const CFreal mu0 = term->getPermeability();
     const CFreal Epsilon0 = Framework::PhysicalConsts::VacuumPermittivity();
-    //std::cout <<"Epsilon0e = "<<Epsilon0<< "\n";
+    //std::cout <<"Epsilon0e = "<<Epsilon0<< "\n"; const CFreal Epsilon0 = 1/c_e*c_e*mu0  ; //
     //to calculate collision Frequency
     const CFreal r_di = std::sqrt(Epsilon0*kB*Ti/(ni*qe*qe)); //Debye length of ions [m]
     const CFreal r_de = std::sqrt(Epsilon0*kB*Te/(ne*qe*qe)); //Debye length of electrons [m]
@@ -318,10 +320,10 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     const CFreal v = (rhoe*ve + rhoi*vi)/rho; 
     const CFreal w = (rhoe*we + rhoi*wi)/rho;
 
-    const CFreal workColle = (ue - ui)*collMomentumXe + (ve - vi)*collMomentumYe + (we - wi)*collMomentumZe;
+    const CFreal workColle = (ue - ui)*collMomentumXe + (ve - vi)*collMomentumYe + (we - wi)*collMomentumZe; //Joule heating
     const CFreal workColli = (ui - ue)*collMomentumXi + (vi - ve)*collMomentumYi + (wi - we)*collMomentumZi;
 
-    const CFreal heatColle = -3*kB*ne*(mu_ie/(me + mi))*tau_minusOne_ei*(Te - Ti);
+    const CFreal heatColle = -3*kB*ne*(mu_ie/(me + mi))*tau_minusOne_ei*(Te - Ti); // collisional energy transfer
     const CFreal heatColli = -3*kB*ni*(mu_ie/(me + mi))*tau_minusOne_ie*(Ti - Te);
 
     const CFreal emEnergye = qe*(rhoe/me)*(ue*_Etotal[XX] + ve*_Etotal[YY] + we*_Etotal[ZZ]); //electrons
