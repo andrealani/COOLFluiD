@@ -44,10 +44,10 @@ DriftWaveInlet::DriftWaveInlet
   _updateVarSet(CFNULL)
 {
   addConfigOptionsTo(this);
-  _rhoe = 1e-15;
+  //_rhoe = 1e-15;
   setParameter("Rhoe",&_rhoe);
 
-  _rhoi = 1e-12;
+  //_rhoi = 1e-12;
   setParameter("Rhoi",&_rhoi);
 }
       
@@ -116,8 +116,8 @@ void DriftWaveInlet::setGhostState(GeometricEntity *const face)
   //set the Velocities
  for (CFuint i = 0 ; i < nbSpecies; i++){
 CFreal un_i = (*innerState)[endEM + nbSpecies + 3*i]*nx + (*innerState)[endEM + nbSpecies + 3*i + 1]*ny;
-	(*ghostState)[endEM + nbSpecies + 3*i] = (*innerState)[endEM + nbSpecies + 3*i]; //- 2*un_i*nx; 		// x-velocity
-	(*ghostState)[endEM + nbSpecies + 3*i + 1] = (*innerState)[endEM + nbSpecies + 3*i + 1];// - 2*un_i*ny; 	//y-velocity
+	(*ghostState)[endEM + nbSpecies + 3*i] = (*innerState)[endEM + nbSpecies + 3*i]- 2*un_i*nx; 		// x-velocity
+	(*ghostState)[endEM + nbSpecies + 3*i + 1] = (*innerState)[endEM + nbSpecies + 3*i + 1]-2*un_i*ny; 	//y-velocity
 	(*ghostState)[endEM + nbSpecies + 3*i + 2] = (*innerState)[endEM + nbSpecies + 3*i + 2] ; 			// z-velocity
  } 
  
@@ -125,10 +125,13 @@ CFreal un_i = (*innerState)[endEM + nbSpecies + 3*i]*nx + (*innerState)[endEM + 
   for (CFuint i = 0 ; i < nbSpecies; i++){
     (*ghostState)[endEM + nbSpecies + 3*nbSpecies + i] = (*innerState)[endEM + nbSpecies + 3*nbSpecies + i]; //no temperature gradient at boundary
   }
+
 //    (*ghostState)[endEM + nbSpecies + 3*nbSpecies + i] = 2*_rhoe-(*innerState)[endEM + nbSpecies + 3*nbSpecies + i]; //with temperature gradient at boundary
 //    (*ghostState)[endEM + nbSpecies + 3*nbSpecies + i] = 2*_rhoi-(*innerState)[endEM + nbSpecies + 3*nbSpecies + i]; //Ti
 //cf_assert((*innerState)[endEM + nbSpecies + 3*nbSpecies + i] > 0.);
- 	
+//      (*ghostState)[endEM + nbSpecies + 3*nbSpecies + i] = -(*innerState)[8]/(*ghostState)[8] * (*innerState)[endEM + nbSpecies + 3*nbSpecies + i]; //electron temperature such that p at wall =0
+//      (*ghostState)[endEM + nbSpecies + 3*nbSpecies + i] = -(*innerState)[9]/(*ghostState)[9] * (*innerState)[endEM + nbSpecies + 3*nbSpecies + i]; //ion temperature such that p at wall =0
+//  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
