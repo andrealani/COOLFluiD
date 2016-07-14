@@ -48,10 +48,15 @@ Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 
 Simulator.SubSystem.Tecplot.FileName    = DConeFVM.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = RhoivtTv
-Simulator.SubSystem.Tecplot.Data.printExtraValues = true
 Simulator.SubSystem.Tecplot.SaveRate = 1
 Simulator.SubSystem.Tecplot.AppendIter = true
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Side0 Side3 Side2 Side1
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = wallDistance
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = wdistance
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
+#Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock 
+#WriteSolutionBlockFV
 
 Simulator.SubSystem.CFmesh.FileName  = DConeFVM.CFmesh
 Simulator.SubSystem.CFmesh.AppendIter = false
