@@ -1,4 +1,4 @@
-cf_add_case( MPI 8       CASEDIR Cavity   PCASE cavityAUSMPlusUpcp_Lref.CFcase CASEFILES cavity_CF_v2.neu )
+cf_add_case( MPI 8       CASEDIR Cavity PCASE cavityAUSMPlusUpcp_Lref.CFcase CASEFILES cavity_CF_v2.neu )
 cf_add_case( MPI 1       CASEDIR CurvedPipe PCASE pipeNS3D-sfdm-impl.CFcase CASEFILES pipeCurved.msh pipeCurved.SP )
 cf_add_case( MPI 8       CASEDIR Cylinder PCASE cyl_Pg_M15_FVM_1st2nd.CFcase CASEFILES cyl_Pg_M15.plt cyl_Pg_M15.surf.plt )
 cf_add_case( MPI 8       CASEDIR Cylinder PCASE cyl3DFVMImplPuvt_Reynolds_40.CFcase CASEFILES cylinder_2D_quad.CFmesh )
@@ -6,6 +6,7 @@ cf_add_case( MPI 8       CASEDIR DoubleEllipse PCASE doubleEllipseRDS_NS_Pvt_adi
 cf_add_case( MPI 8       CASEDIR DoubleEllipse PCASE restartRDS_NS_Pvt.CFcase CASEFILES restartRDS.plt restartRDS.surf.plt )
 cf_add_case( MPI default CASEDIR FlatPlate PCASE flatPlateFVMBlasius.CFcase CASEFILES flatPlateQD.CFmesh )
 cf_add_case( MPI default CASEDIR FlatPlate PCASE flatPlate3DFVMBlasius.CFcase CASEFILES flatPlateQD.CFmesh )
+cf_add_case( MPI 8       CASEDIR Hemisphere PCASE hemisphereN.CFcase CASEFILES hemisphere.plt hemisphere.surf.plt )
 cf_add_case( MPI 8       CASEDIR Jets2D PCASE jets2DFVMImpl2Namespaces.CFcase CASEFILES jets1.CFmesh jets2.CFmesh )
 cf_add_case( MPI 8       CASEDIR Jets2D PCASE jets2DFVMImplConcurrent.CFcase CASEFILES jets2DFVM.thor jets2DFVM.SP jets2DFVM_EXTRA_in.CFmesh )
 cf_add_case( MPI default CASEDIR Jets2D PCASE jets2DFluctSplit.CFcase CASEFILES jets2D.thor jets2D.SP )
