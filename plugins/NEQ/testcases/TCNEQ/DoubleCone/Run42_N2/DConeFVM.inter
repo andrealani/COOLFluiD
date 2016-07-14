@@ -1,0 +1,2 @@
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitIter = 5000
+Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
