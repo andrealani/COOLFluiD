@@ -8,14 +8,14 @@
 # M15 over cylinder, supersonic inlet and outlet, slip wall, PETSc, Roe with 
 # carbuncle fix from Sanders et al., converter from Tecplot file, restart 
 # from vertex-centered solution computed with first-order Residual Distribution 
-# schemes
+# schemes, mesh fitting algorithm 
 #
 ################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -9.1422964
+### Residual = -9.0402972
 
 # Simulation Modules
 Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libTecplot2CFmesh
@@ -27,7 +27,7 @@ CFEnv.AssertionDumps      = true
 
 # Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Cylinder
-Simulator.Paths.ResultsDir = ./RESULTS_Cylinder_1st2nd
+Simulator.Paths.ResultsDir = ./RESULTS_Cylinder_1st2nd_MeFiAlgo
 
 Simulator.SubSystem.Default.PhysicalModelType = Euler2D
 Simulator.SubSystem.Euler2D.refValues = 50. 5102.611 5102.61 288.0
@@ -36,15 +36,15 @@ Simulator.SubSystem.Euler2D.refLength = 1.0
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 
 Simulator.SubSystem.CFmesh.FileName     = cyl_Pg_FVM-out.CFmesh
-Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.CFmesh.SaveRate = 100
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
 Simulator.SubSystem.Tecplot.FileName    = cyl_Pg_FVM-out.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Puvt
-Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.Tecplot.SaveRate = 100
 Simulator.SubSystem.Tecplot.AppendTime = false
-Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.Tecplot.AppendIter = true
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = 1 2 3 4
 
 #Simulator.SubSystem.StopCondition          = MaxNumberSteps
@@ -74,8 +74,9 @@ Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
 #Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1000.
 
 # ---------------------------------------------------------------------------------------- #
-Simulator.SubSystem.LinearSystemSolver = PETSC
-Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.LinearSystemSolver = PETSC PETSC
+Simulator.SubSystem.LSSNames = MeshAlgoLSS NewtonIteratorLSS
+
 Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
 Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
@@ -83,11 +84,25 @@ Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
 Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
 Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
 
+Simulator.SubSystem.MeshAlgoLSS.Data.PCType = PCASM
+Simulator.SubSystem.MeshAlgoLSS.Data.KSPType = KSPGMRES 
+Simulator.SubSystem.MeshAlgoLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.MeshAlgoLSS.Data.MaxIter = 1000
+Simulator.SubSystem.MeshAlgoLSS.Data.SaveSystemToFile = false
+Simulator.SubSystem.MeshAlgoLSS.MaskEquationIDs = 0 1
+Simulator.SubSystem.MeshAlgoLSS.Data.NbKrylovSpaces = 50
+Simulator.SubSystem.MeshAlgoLSS.Data.UseNodeBased = true
+
+# this could be replace by some flag n the individual system
+Simulator.SubSystem.NewtonIterator.Data.NbLSSToSolveAtOnce = 1
+Simulator.SubSystem.NewtonIterator.Data.CollaboratorNames = NewtonIteratorLSS
+Simulator.SubSystem.CellCenterFVM.Data.CollaboratorNames = NewtonIteratorLSS
+
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
 Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = \
-	if(i<300,1.,if(i<345,min(1000.,cfl*1.03^2),if(i<600,0.7,if(i<1400,1.2,if(i<1600,2.,if(i<1800,3.5,min(1000.,cfl*1.02^2)))))))
+	if(i<300,1.,if(i<350,min(1000.,cfl*1.03^2),if(i<600,0.7,if(i<1400,1.2,if(i<1600,2.,if(i<1800,3.5,min(1000.,cfl*1.02^2)))))))
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 #Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
 
@@ -116,7 +131,7 @@ Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 0.
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Vars = i
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Def = \
-	if(i<345,0.,1.) if(i<345,0.,1.) if(i<345,0.,1.) if(i<345,0.,1.)
+	if(i<350,0.,1.) if(i<350,0.,1.) if(i<350,0.,1.) if(i<350,0.,1.)
 
 Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
 Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
@@ -148,3 +163,24 @@ Simulator.SubSystem.CellCenterFVM.BcOutlet.ZeroGradientFlags = 1 1 1 1
 # TRS named "4" must be discarded when applying BCs 
 # in reality, we should apply a far field condition on it
 #Simulator.SubSystem.CellCenterFVM.Data.TRSsWithNoBC = 4
+
+Simulator.SubSystem.DataPostProcessing          = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames     = MeFiAlgo
+Simulator.SubSystem.MeFiAlgo.Comds              = MeshFittingAlgorithm
+Simulator.SubSystem.MeFiAlgo.Data.CollaboratorNames = MeshAlgoLSS
+Simulator.SubSystem.MeFiAlgo.ProcessRate        = 10
+Simulator.SubSystem.MeFiAlgo.SkipFirstIteration = true
+Simulator.SubSystem.MeFiAlgo.StartIter          = 100
+Simulator.SubSystem.MeFiAlgo.StopIter           = 2000
+Simulator.SubSystem.MeFiAlgo.Names              = MeshFitting
+Simulator.SubSystem.MeFiAlgo.Data.updateVar     = Cons
+ 
+Simulator.SubSystem.MeFiAlgo.MeshFitting.minPercentile    = 0.30
+Simulator.SubSystem.MeFiAlgo.MeshFitting.maxPercentile    = 0.55
+Simulator.SubSystem.MeFiAlgo.MeshFitting.meshAcceleration = 0.05
+Simulator.SubSystem.MeFiAlgo.MeshFitting.monitorVarID     = 0
+Simulator.SubSystem.MeFiAlgo.MeshFitting.equilibriumSpringLength = 2e-4
+Simulator.SubSystem.MeFiAlgo.MeshFitting.unlockedBoundaryTRSs = 1 2 3 4
+Simulator.SubSystem.MeFiAlgo.MeshFitting.ratioBoundaryToInnerEquilibriumSpringLength = 0.1
+
+Simulator.SubSystem.CellCenterFVM.AfterMeshUpdateCom = StdMeshFittingUpdate
