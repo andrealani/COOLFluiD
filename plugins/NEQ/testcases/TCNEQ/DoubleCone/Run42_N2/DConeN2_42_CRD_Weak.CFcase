@@ -3,22 +3,20 @@
 #
 ### Residual = 3.8738741
 
-#
+CFEnv.ErrorOnUnusedConfig = true
 
 # SubSystem Modules
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libMutation libMutationI libNEQ libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitSpaceTime libFluctSplitNavierStokes libNewtonMethod libTHOR2CFmesh libPetscI libGambit2CFmesh libFluctSplit libFluctSplitScalar libFluctSplitSystem libFluctSplitNEQ libAeroCoefFS
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NEQ/testcases/TCNEQ/DoubleCone/Run42_N2/
-Simulator.Paths.ResultsDir       = ./
+Simulator.Paths.ResultsDir = ./
 
-#Simulator.SubSystem.InteractiveParamReader.FileName = ./DCone.inter
-#Simulator.SubSystem.InteractiveParamReader.readRate = 10
-#CFEnv.ExceptionLogLevel = 200
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/NEQ/testcases/TCNEQ/DoubleCone/Run42_N2/DCone.inter
+Simulator.SubSystem.InteractiveParamReader.readRate = 10
 
 Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DNEQ
-Simulator.SubSystem.NavierStokes2DNEQ.refValues = \
-0.001468 0.001468 3849.3 3849.3 268.7 3160.
+Simulator.SubSystem.NavierStokes2DNEQ.refValues = 0.001468 0.001468 3849.3 3849.3 268.7 3160.
 #1e-18 1e-18 1e-12 1e-12 1e-12 1e-12
 #1e-12 1e-12 1e-12 1e-12 1e-12 1e-12
 
@@ -38,7 +36,7 @@ Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.Tecplot.FileName    = DConeN2.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = RhoivtTv
 Simulator.SubSystem.Tecplot.Data.printExtraValues = true
-Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Side0
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Side0 Side3 Side2 Side1
 Simulator.SubSystem.Tecplot.SaveRate = 50
 Simulator.SubSystem.Tecplot.AppendIter = false
 
@@ -47,12 +45,12 @@ Simulator.SubSystem.CFmesh.AppendIter = false
 Simulator.SubSystem.CFmesh.SaveRate = 50
 
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
 
 #Simulator.SubSystem.StopCondition       = Norm
 #Simulator.SubSystem.Norm.valueNorm      = -3.0
 
-Simulator.SubSystem.Default.listTRS = InnerCells Side0 Side3 Side2 Side1
+Simulator.SubSystem.Default.listTRS = Side0 Side3 Side2 Side1
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = DConeN2-P0-CRD_BX_2.CFmesh
@@ -96,16 +94,16 @@ Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
 Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = RhoivtTv
 Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Cons
 Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Cons
-#Cons
 #RhoivtTv
 Simulator.SubSystem.FluctuationSplit.Data.IntegratorQuadrature = GaussLegendre
 Simulator.SubSystem.FluctuationSplit.Data.IntegratorOrder = P3
 
 Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysBCxMS
-Simulator.SubSystem.FluctuationSplit.Data.SysBCxMS.Delta  = 0.52
-Simulator.SubSystem.FluctuationSplit.Data.SysBCxMS.Length = 0.2
-Simulator.SubSystem.FluctuationSplit.Data.SysBCxMS.Speed  = 3900.
-Simulator.SubSystem.FluctuationSplit.Data.SysBCxMS.VarName = rho
+Simulator.SubSystem.FluctuationSplit.Data.SysBCxMS.Shockdetector = Gnoffo
+#Simulator.SubSystem.FluctuationSplit.Data.SysBCxMS.Delta  = 0.52
+#Simulator.SubSystem.FluctuationSplit.Data.SysBCxMS.Length = 0.2
+#Simulator.SubSystem.FluctuationSplit.Data.SysBCxMS.Speed  = 3900.
+#Simulator.SubSystem.FluctuationSplit.Data.SysBCxMS.VarName = rho
 
 # LRD settings
 #Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysN
