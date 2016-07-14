@@ -9,6 +9,7 @@
 #include "Framework/LSSMatrix.hh"
 #include "Framework/LSSVector.hh"
 #include "Framework/MethodCommandProvider.hh"
+#include "Framework/BaseTerm.hh"
 
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
@@ -49,7 +50,8 @@ void MeshFittingAlgorithm::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("minPercentile","Percentile for minimum spring value");
   options.addConfigOption< CFreal >("maxPercentile","Percentile for maximum spring value");
   options.addConfigOption< CFreal >("meshAcceleration","How fast the mesh moves in mesh steps");
-  options.addConfigOption< CFuint >("monitorVarID","Monitor variable ID for mesh adaptation");
+  options.addConfigOption< CFuint >("monitorVarID","Monitor variable ID (from State) for mesh adaptation");
+  options.addConfigOption< CFuint >("monitorPhysVarID","Monitor physical variable ID (from physical data) for mesh adaptation");
   options.addConfigOption< CFreal >("equilibriumSpringLength","Length of spring for equilibrium");
   options.addConfigOption< CFreal >("ratioBoundaryToInnerEquilibriumSpringLength","ratio between the equilibrium length of a Boundary spring to an Inner spring");
   options.addConfigOption< std::vector<std::string> >("unlockedBoundaryTRSs","TRS's to be unlocked");
@@ -68,7 +70,10 @@ MeshFittingAlgorithm::MeshFittingAlgorithm(const std::string& name) :
   socket_wallDistance("wallDistance",false),
   m_wallDistance(CFNULL),
   m_lss(CFNULL),
-  m_fvmccData(CFNULL)
+  m_fvmccData(CFNULL),
+  m_geoBuilder(),
+  m_faceTRSBuilder(),
+  m_pdata()
 {
   this->addConfigOptionsTo(this);
   
@@ -83,7 +88,10 @@ MeshFittingAlgorithm::MeshFittingAlgorithm(const std::string& name) :
 
   m_monitorVarID = std::numeric_limits<CFuint>::max();
   this->setParameter("monitorVarID", &m_monitorVarID);
-   
+  
+  m_monitorPhysVarID = std::numeric_limits<CFuint>::max();
+  this->setParameter("monitorPhysVarID", &m_monitorPhysVarID);
+  
   m_equilibriumSpringLength = 0.;
   this->setParameter("equilibriumSpringLength", &m_equilibriumSpringLength);
 
@@ -172,10 +180,23 @@ void MeshFittingAlgorithm::setup()
 
   getMethodData().getUpdateVarSet()->setup();
   
+  // resize the physical data array
+  PhysicalModelStack::getActive()->getImplementor()->
+    getConvectiveTerm()->resizePhysicalData(m_pdata);
+  
+  m_state.reset(new State());
+  
   if (m_monitorVarID == std::numeric_limits<CFuint>::max() || 
       m_monitorVarID > PhysicalModelStack::getActive()->getNbEq()) {
-    CFLog(WARN, "MeshFittingAlgorithm::setup() => monitorVarID not specified or invalid: will be set to 0");
+    CFLog(WARN, "MeshFittingAlgorithm::setup() => monitorVarID not specified or invalid: will be set to 0\n");
     m_monitorVarID = 0;
+  }
+  
+  if (m_monitorPhysVarID != std::numeric_limits<CFuint>::max() && 
+      m_monitorPhysVarID >= m_pdata.size()) {
+    CFLog(WARN, "MeshFittingAlgorithm::setup() => monitorPhysVarID not valid: monitorVarID will be used instead\n");
+    // m_monitorPhysVarID is reset to default
+    m_monitorPhysVarID = std::numeric_limits<CFuint>::max();
   }
   
   const std::string namespaceName = MeshDataStack::getActive()->getPrimaryNamespace();
@@ -434,7 +455,7 @@ void MeshFittingAlgorithm::computeSpringTruncationData()
               << "; Spring max limit: "  <<  m_springTruncationData.maxLimit 
               << "; Spring mean Value: " << m_springTruncationData.mean << "\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
   
 CFreal MeshFittingAlgorithm::computeSpringConstant(const Framework::Node* const firstNode, 
@@ -442,9 +463,22 @@ CFreal MeshFittingAlgorithm::computeSpringConstant(const Framework::Node* const 
 {
   CFAUTOTRACE;
   Framework::DataHandle<RealVector> nodalStates = socket_nstates.getDataHandle();
-  CFreal firstNodeValue  = nodalStates[firstNode->getLocalID()] [m_monitorVarID];
-  CFreal secondNodeValue = nodalStates[secondNode->getLocalID()][m_monitorVarID];
-  return std::abs(secondNodeValue-firstNodeValue);
+  
+  if (m_monitorPhysVarID == std::numeric_limits<CFuint>::max()) {
+    const CFreal firstNodeValue  = nodalStates[firstNode->getLocalID()] [m_monitorVarID];
+    const CFreal secondNodeValue = nodalStates[secondNode->getLocalID()][m_monitorVarID];
+    return std::abs(secondNodeValue - firstNodeValue);
+  }
+  
+  cf_assert(m_monitorPhysVarID < m_pdata.size());
+  // physical data arrays are computed on-the-fly from given nodal states 
+  m_state->copyData(nodalStates[firstNode->getLocalID()]);
+  getMethodData().getUpdateVarSet()->computePhysicalData(*m_state, m_pdata);
+  const CFreal firstNodeValue  = m_pdata[m_monitorPhysVarID];
+  m_state->copyData(nodalStates[secondNode->getLocalID()]);
+  getMethodData().getUpdateVarSet()->computePhysicalData(*m_state, m_pdata);
+  const CFreal secondNodeValue  = m_pdata[m_monitorPhysVarID];
+  return std::abs(secondNodeValue - firstNodeValue);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -696,6 +730,22 @@ void MeshFittingAlgorithm::triggerRecomputeMeshData() {
   Common::SafePtr<Common::EventHandler> event_handler = Environment::CFEnv::getInstance().getEventHandler();
   const std::string ssname = Framework::SubSystemStatusStack::getCurrentName();   
   event_handler->call_signal (event_handler->key(ssname, "CF_ON_MESHADAPTER_AFTERMESHUPDATE"), msg );
+
+  /*cout << "A0" << endl;
+  event_handler->call_signal (event_handler->key(ssname, "CF_ON_MAESTRO_UNSETUP"), msg );
+  //cout << "A1" << endl;
+ // event_handler->call_signal (event_handler->key(ssname, "CF_ON_MAESTRO_UNPLUGSOCKETS"), msg );
+  //cout << "A2" << endl;
+  // event_handler->call_signal (event_handler->key("", "CF_ON_MAESTRO_DESTROYSUBSYSTEM"), msg ); 
+ // cout << "A3" << endl;
+  // event_handler->call_signal (event_handler->key("", "CF_ON_MAESTRO_BUILDSUBSYSTEM"), msg );     
+ //cout << "A4" << endl;
+  // event_handler->call_signal (event_handler->key(ssname, "CF_ON_MAESTRO_PLUGSOCKETS"), msg );
+  cout << "A5" << endl;
+  event_handler->call_signal (event_handler->key(ssname, "CF_ON_MAESTRO_BUILDMESHDATA"), msg );
+  cout << "A6" << endl;
+  event_handler->call_signal (event_handler->key(ssname, "CF_ON_MAESTRO_SETUP"), msg );
+  cout << "A7" << endl;*/
 }
       
 //////////////////////////////////////////////////////////////////////////////

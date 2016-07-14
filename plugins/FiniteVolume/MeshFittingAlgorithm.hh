@@ -226,8 +226,11 @@ private: //data
   Framework::GeometricEntityPool<Framework::CellTrsGeoBuilder> m_geoBuilder;
   Framework::GeometricEntityPool<Framework::FaceTrsGeoBuilder> m_faceTRSBuilder;
   
-  // accumulator for LSSMatrix
-  // std::auto_ptr<Framework::BlockAccumulator> m_acc;
+  // physical data array
+  RealVector m_pdata; 
+  
+  // dummy state vector
+  std::auto_ptr<Framework::State> m_state; 
   
   /// Minimum percentile limit for spring constants
   CFreal m_minPercentile;
@@ -242,8 +245,11 @@ private: //data
 
   std::vector<std::string> m_unlockedBoundaryTRSs;
   
-  /// Monitor variable ID)
+  /// Monitor variable ID from State
   CFuint m_monitorVarID;
+  
+  /// Monitor variable ID from physical data
+  CFuint m_monitorPhysVarID;
   
   ///Equilibrium spring length 
   CFreal m_equilibriumSpringLength;
