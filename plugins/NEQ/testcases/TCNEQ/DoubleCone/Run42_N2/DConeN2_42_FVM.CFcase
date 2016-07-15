@@ -245,7 +245,11 @@ Simulator.SubSystem.MeFiAlgo.Data.updateVar     = RhoivtTv
 Simulator.SubSystem.MeFiAlgo.MeshFitting.minPercentile    = 0.30
 Simulator.SubSystem.MeFiAlgo.MeshFitting.maxPercentile    = 0.55
 Simulator.SubSystem.MeFiAlgo.MeshFitting.meshAcceleration = 0.05
+
+# RHO_N=0, RHO_N2=1, VX=2, VY=3, T=4, TV=5
 Simulator.SubSystem.MeFiAlgo.MeshFitting.monitorVarID     = 5
+# if monitorPhysVarID is specified, it prevails over monitorVarID
+# RHO=0, P=1, H=2, E=3, A=4, T=5, V=6, VX=7, VY=8, VZ=9 (there are more but we can ignore them)
 Simulator.SubSystem.MeFiAlgo.MeshFitting.monitorPhysVarID = 0
 Simulator.SubSystem.MeFiAlgo.MeshFitting.equilibriumSpringLength = 2e-4
 #Simulator.SubSystem.MeFiAlgo.MeshFitting.unlockedBoundaryTRSs =  Side1 # Side2 Side3 #Side0
