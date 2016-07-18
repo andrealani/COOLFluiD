@@ -1,9 +1,12 @@
-#ifndef COOLFluiD_Numerics_FiniteVolume_PerfectConductingWall_hh
-#define COOLFluiD_Numerics_FiniteVolume_PerfectConductingWall_hh
+#ifndef COOLFluiD_Numerics_FiniteVolume_SuperOutletPhi_hh
+#define COOLFluiD_Numerics_FiniteVolume_SuperOutletPhi_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
+#include "Framework/VectorialFunction.hh"
 #include "FiniteVolume/FVMCC_BC.hh"
+#include "Common/BadValueException.hh"
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -29,13 +32,14 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * This class represents a No Slip condition imposing the temperatures at the wall. 
-   * Perfectly conducting condition for Maxwell equations
+   * This class represents a Subsonic Outlet imposing the Velocity and Temperature
+   * Maxwell Equations: Perfectly Conducting Wall Condition
    * 
    * @author Alejandro Alvarez
    *
    */
-class PerfectConductingWall : public FVMCC_BC { 
+
+class SuperOutletPhi : public FVMCC_BC { 
 
 public: 
 
@@ -48,12 +52,18 @@ public:
   /**
    * Constructor
    */
-  PerfectConductingWall(const std::string& name);
+  SuperOutletPhi(const std::string& name);
   
   /**
    * Default destructor
    */
-  ~PerfectConductingWall();
+  ~SuperOutletPhi();
+  
+  /**
+   * Configures the command.
+   */
+  void configure ( Config::ConfigArgs& args );
+  
   
   /**
    * Set up private data and data of the aggregated classes 
@@ -66,22 +76,22 @@ public:
    */
   void setGhostState(Framework::GeometricEntity *const face);
 
- private:
-    
+ protected:
+  
   /// physical model var set
   Common::SafePtr<Physics::MultiFluidMHD::MultiFluidMHDVarSet<Physics::Maxwell::Maxwell2DProjectionVarSet> > _updateVarSet;
 
-  /// Flag to impose an isothermal wall
-  bool _isIsothermal;
+  /// Pressure for electrons when subsonic
+  CFreal _pElec;
 
-  /// Temperatures of the wall
-  std::vector<CFreal> _T;  
+  /// Option to have subsonic outlet
+  bool _isSubsonic;
     
-}; // end of class PerfectConductingWall
+}; // end of class SuperOutletPhi
 
 //////////////////////////////////////////////////////////////////////////////
 
- } // namespace FiniteVolume
+    } // namespace FiniteVolume
 
   } // namespace Numerics
 
@@ -89,4 +99,4 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Numerics_FiniteVolume_PerfectConductingWall_hh
+#endif // COOLFluiD_Numerics_FiniteVolume_SuperOutletPhi_hh

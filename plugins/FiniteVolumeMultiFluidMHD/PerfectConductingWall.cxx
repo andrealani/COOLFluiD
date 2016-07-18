@@ -32,6 +32,8 @@ MethodCommandProvider<PerfectConductingWall, CellCenterFVMData, FiniteVolumeMult
 
 void PerfectConductingWall::defineConfigOptions(Config::OptionList& options)
 {
+   options.addConfigOption< std::vector<CFreal> >("T","Temperature");
+   options.addConfigOption< bool > ("IsIsothermal", "Flag for isothermal wall");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -41,6 +43,13 @@ PerfectConductingWall::PerfectConductingWall
   FVMCC_BC(name),
   _updateVarSet(CFNULL)
 {
+   addConfigOptionsTo(this);
+
+   _T = std::vector<CFreal>();
+   setParameter("T",&_T);
+
+  _isIsothermal = false;
+  setParameter("IsIsothermal",&_isIsothermal);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -93,7 +102,7 @@ void PerfectConductingWall::setGhostState(GeometricEntity *const face)
   (*ghostState)[4] = -(*innerState)[4] + 2*en*ny;	//Ey
   (*ghostState)[5] = -(*innerState)[5] + 2*en*nz;	//Ez
   (*ghostState)[6] = (*innerState)[6];			//Psi
-  (*ghostState)[7] = -(*innerState)[7];			//Phi
+  (*ghostState)[7] = (*innerState)[7];			//Phi
   
 ///MultiFluidMHD mirror Condition in 2D
   const CFuint endEM = 8;
@@ -110,10 +119,18 @@ void PerfectConductingWall::setGhostState(GeometricEntity *const face)
     (*ghostState)[endEM + nbSpecies + 2*i + 1] = (*innerState)[endEM + nbSpecies + 2*i + 1] - 2*un_i*ny;   
   } 
  
-  //set the Temperatures
-  for (CFuint i = 0 ; i < nbSpecies; i++){
-    (*ghostState)[endEM + nbSpecies + 2*nbSpecies + i] = (*innerState)[endEM + nbSpecies + 2*nbSpecies + i];
-    cf_assert((*innerState)[endEM + nbSpecies + 2*nbSpecies + i] > 0.); 
+  if(!_isIsothermal) { 
+    //set the Temperatures
+    for (CFuint i = 0 ; i < nbSpecies; i++){
+      (*ghostState)[endEM + nbSpecies + 2*nbSpecies + i] = (*innerState)[endEM + nbSpecies + 2*nbSpecies + i];
+      cf_assert((*innerState)[endEM + nbSpecies + 2*nbSpecies + i] > 0.); 
+    }
+  }
+  else {
+    for (CFuint i = 0 ; i < nbSpecies; i++){
+      (*ghostState)[endEM + nbSpecies + 2*nbSpecies + i] = 2*_T[i] - (*innerState)[endEM + nbSpecies + 2*nbSpecies + i];
+      cf_assert((*innerState)[endEM + nbSpecies + 2*nbSpecies + i] > 0.);
+    }
   } 
 }
 

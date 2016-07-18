@@ -18,6 +18,9 @@ DriftWaves2DHalfTwoFluid.hh
 DriftWaves2DHalfThreeFluid.ci
 DriftWaves2DHalfThreeFluid.cxx
 DriftWaves2DHalfThreeFluid.hh
+DriftWaves3DTwoFluid.cxx
+DriftWaves3DTwoFluid.ci
+DriftWaves3DTwoFluid.hh
 FiniteVolumeMultiFluidMHD.hh
 GEMMHDST3D.ci
 GEMMHDST3D.cxx
@@ -33,6 +36,8 @@ GridConvergence.hh
 HartmannSourceTerm.ci
 HartmannSourceTerm.cxx
 HartmannSourceTerm.hh
+MagnetosphericWall.cxx
+MagnetosphericWall.hh
 MirrorWall.cxx
 MirrorWall.hh
 MirrorWallHartmann.cxx
@@ -81,6 +86,12 @@ SubOutletPEIWRhoiViTi.cxx
 SubOutletPEIWRhoiViTi.hh
 SubOutletPPCWRhoiViTi.cxx
 SubOutletPPCWRhoiViTi.hh
+SuperInletPhi.cxx
+SuperInletPhi.hh
+SuperInletPhi3D.cxx
+SuperInletPhi3D.hh
+SuperOutletPhi.cxx
+SuperOutletPhi.hh
 SuperOutletLimiter.cxx
 SuperOutletLimiter.hh
 ThreeFluidMHDST2D.ci

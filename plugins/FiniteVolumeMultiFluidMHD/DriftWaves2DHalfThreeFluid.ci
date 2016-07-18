@@ -163,8 +163,18 @@ void DriftWaves2DHalfThreeFluid<UPDATEVAR>::computeSource
   //
   State *const currState = (*states)[0];
   _varSet->computePhysicalData(*(*states)[0], _physicalData);
-  _NonInducedEMField = _varSet->getModel()->getNonInducedEMField
-    (currState->getCoordinates()[XX], currState->getCoordinates()[YY]);
+
+  const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
+  if(is2DHalf || PhysicalModelStack::getActive()->getDim() == 2)
+  {
+    _NonInducedEMField = _varSet->getModel()->getNonInducedEMField
+      (currState->getCoordinates()[XX], currState->getCoordinates()[YY],0.); //The third component is null
+  }
+  else
+  {
+    _NonInducedEMField = _varSet->getModel()->getNonInducedEMField
+      (currState->getCoordinates()[XX], currState->getCoordinates()[YY], currState->getCoordinates()[ZZ]); //The third component is null
+  }
   
   //std::cout << "Bz = " << _NonInducedEMField[ZZ] <<"\n"; 
   //   RealVector& refData = _varSet->getModel()->getReferencePhysicalData();

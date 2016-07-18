@@ -91,12 +91,21 @@ protected: // data
   /// handle to outward normal
   Framework::DataHandle<CFint> _isOutward;
   
-  /// socket for storing the Ionization Rate
+  /// socket for storing the divergence of magnetic field
   Framework::DataSocketSource<CFreal> socket_divB;
   
-  /// socket for storing the Ionization Rate
+  /// socket for storing the Current
   Framework::DataSocketSource<CFreal> socket_Current;
-    
+
+  /// socket for storing the Bx potential
+  Framework::DataSocketSource<CFreal> socket_BxPotential;
+ 
+  /// socket for storing the By potential
+  Framework::DataSocketSource<CFreal> socket_ByPotential;
+
+  /// socket for storing the Bz potential
+  Framework::DataSocketSource<CFreal> socket_BzPotential;
+
   /// array to store the mass fractions
   RealVector _ys;
   
@@ -140,6 +149,9 @@ private:
 
   /// gradient of By
   RealVector _gradBy;
+
+ /// gradient of Bz
+ RealVector _gradBz;
 
 }; // end of class HartmannSourceTerm
 

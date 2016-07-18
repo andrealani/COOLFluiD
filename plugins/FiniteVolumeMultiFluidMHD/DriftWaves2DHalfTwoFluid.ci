@@ -37,6 +37,9 @@ DriftWaves2DHalfTwoFluid<UPDATEVAR>::DriftWaves2DHalfTwoFluid(const std::string&
 
   _electricCharge = Framework::PhysicalConsts::ElectronCharge();
   setParameter("ElectricCharge",&_electricCharge);
+
+  _isCollisional = true;
+  setParameter("isCollisional",&_isCollisional);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -68,6 +71,9 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::defineConfigOptions(Config::OptionList
 {
   options.template addConfigOption< CFreal >
      ("ElectricCharge", "electric Charge of species");
+
+  options.template addConfigOption< bool >
+     ("isCollisional", "Flag to switch on collisions");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -153,9 +159,18 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
   //
   State *const currState = (*states)[0];
   _varSet->computePhysicalData(*(*states)[0], _physicalData);
-  _NonInducedEMField = _varSet->getModel()->getNonInducedEMField
-    (currState->getCoordinates()[XX], currState->getCoordinates()[YY]);
-  
+   const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
+  if(is2DHalf || PhysicalModelStack::getActive()->getDim() == 2) 
+  {
+    _NonInducedEMField = _varSet->getModel()->getNonInducedEMField
+      (currState->getCoordinates()[XX], currState->getCoordinates()[YY],0.);
+  }
+  else
+  {
+    _NonInducedEMField = _varSet->getModel()->getNonInducedEMField
+      (currState->getCoordinates()[XX], currState->getCoordinates()[YY], currState->getCoordinates()[ZZ]);
+  }
+ 
   //std::cout << "Bz = " << _NonInducedEMField[ZZ] <<"\n"; 
   //   RealVector& refData = _varSet->getModel()->getReferencePhysicalData();
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
@@ -184,7 +199,6 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
   //std::cout << "rhoe = " << rhoe << "\n";
   //std::cout << "rhoi = " << rhoi << std::endl;
   const CFreal Qtot = qe*rhoe/me + qi*rhoi/mi;
-  //std::cout << "Qtot = " << Qtot << std::endl;
   const CFuint firstVelocity = _varSet->getModel()->getFirstScalarVar(1);
   const CFreal ue = _physicalData[firstVelocity];
   const CFreal ve = _physicalData[firstVelocity + 1];
@@ -220,7 +234,7 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     source[4] = -Jy*ovEpsilon;	//y-Ampere's Law
     source[5] = -Jz*ovEpsilon;  //z-Ampere's Law
     source[6] = 0.;		//divB
-    source[7] = 0; //Qtot*ovEpsilon; //divE
+    source[7] = Qtot*ovEpsilon; //divE
   }
   
   //AAL: Here the source for three-fluid continuity, momentum and energy equations
@@ -304,14 +318,25 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
     const CFreal collMomentumXi = -(ni*mu_ie*tau_minusOne_ie*(ui - ue));
     const CFreal collMomentumYi = -(ni*mu_ie*tau_minusOne_ie*(vi - ve));
     const CFreal collMomentumZi = -(ni*mu_ie*tau_minusOne_ie*(wi - we));
-   	
-    source[10] = emMomentumXe + collMomentumXe;   //Electrons X momentum
-    source[11] = emMomentumYe + collMomentumYe;   //Electrons Y momentum
-    source[12] = emMomentumZe + collMomentumZe;   //Electrons Z momentum
+   
+    if(_isCollisional) {	
+      source[10] = emMomentumXe + collMomentumXe;   //Electrons X momentum
+      source[11] = emMomentumYe + collMomentumYe;   //Electrons Y momentum
+      source[12] = emMomentumZe + collMomentumZe;   //Electrons Z momentum
 
-    source[13] = emMomentumXi + collMomentumXi;   //Ions X momentum
-    source[14] = emMomentumYi + collMomentumYi;   //Ions Y momentum
-    source[15] = emMomentumZi + collMomentumZi;   //Ions Z momentum
+      source[13] = emMomentumXi + collMomentumXi;   //Ions X momentum
+      source[14] = emMomentumYi + collMomentumYi;   //Ions Y momentum
+      source[15] = emMomentumZi + collMomentumZi;   //Ions Z momentum
+    }
+    else { 
+      source[10] = emMomentumXe;   //Electrons X momentum
+      source[11] = emMomentumYe;   //Electrons Y momentum
+      source[12] = emMomentumZe;   //Electrons Z momentum
+
+      source[13] = emMomentumXi;   //Ions X momentum
+      source[14] = emMomentumYi;   //Ions Y momentum
+      source[15] = emMomentumZi;   //Ions Z momentum    
+    }
 
       
     //AAL: ENERGY
@@ -328,9 +353,15 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
 
     const CFreal emEnergye = qe*(rhoe/me)*(ue*_Etotal[XX] + ve*_Etotal[YY] + we*_Etotal[ZZ]); //electrons
     const CFreal emEnergyi = qi*(rhoi/mi)*(ui*_Etotal[XX] + vi*_Etotal[YY] + wi*_Etotal[ZZ]); //ions
-
-    source[16] = emEnergye + workColle + heatColle; //Electrons Energy Source terms
-    source[17] = emEnergyi + workColli + heatColli; //Ions Energy
+    
+    if(_isCollisional) {
+      source[16] = emEnergye + workColle + heatColle; //Electrons Energy Source terms
+      source[17] = emEnergyi + workColli + heatColli; //Ions Energy
+    }
+    else {
+      source[16] = emEnergye;
+      source[17] = emEnergyi;
+    }
 
     // AAL: Write the sockets
     //if (!this->getMethodData().isPerturb()) { // Condition to avoid writing when the source is perturbed

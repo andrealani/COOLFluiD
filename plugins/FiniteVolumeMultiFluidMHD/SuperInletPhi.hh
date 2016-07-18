@@ -1,9 +1,12 @@
-#ifndef COOLFluiD_Numerics_FiniteVolume_PerfectConductingWall_hh
-#define COOLFluiD_Numerics_FiniteVolume_PerfectConductingWall_hh
+#ifndef COOLFluiD_Numerics_FiniteVolume_SuperInletPhi_hh
+#define COOLFluiD_Numerics_FiniteVolume_SuperInletPhi_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
+#include "Framework/VectorialFunction.hh"
 #include "FiniteVolume/FVMCC_BC.hh"
+#include "Common/BadValueException.hh"
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -29,13 +32,14 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * This class represents a No Slip condition imposing the temperatures at the wall. 
-   * Perfectly conducting condition for Maxwell equations
+   * This class represents a Subsonic Inlet imposing the Velocity and Temperature
+   * Maxwell Equations: Perfectly Conducting Wall Condition
    * 
    * @author Alejandro Alvarez
    *
    */
-class PerfectConductingWall : public FVMCC_BC { 
+
+class SuperInletPhi : public FVMCC_BC { 
 
 public: 
 
@@ -48,12 +52,18 @@ public:
   /**
    * Constructor
    */
-  PerfectConductingWall(const std::string& name);
+  SuperInletPhi(const std::string& name);
   
   /**
    * Default destructor
    */
-  ~PerfectConductingWall();
+  ~SuperInletPhi();
+  
+  /**
+   * Configures the command.
+   */
+  void configure ( Config::ConfigArgs& args );
+  
   
   /**
    * Set up private data and data of the aggregated classes 
@@ -66,22 +76,40 @@ public:
    */
   void setGhostState(Framework::GeometricEntity *const face);
 
- private:
+ protected:
+  
+  /// array for temporary variables
+  RealVector _variables;
+  
+  /// checks if an function is used in the inlet
+  bool _useFunction;
     
   /// physical model var set
   Common::SafePtr<Physics::MultiFluidMHD::MultiFluidMHDVarSet<Physics::Maxwell::Maxwell2DProjectionVarSet> > _updateVarSet;
+  
+  /// storage for the temporary boundary point coordinates
+  RealVector _bCoord; 
+  
+  /// a vector of string to hold the functions
+  std::vector<std::string> _functions;
 
-  /// Flag to impose an isothermal wall
-  bool _isIsothermal;
+  /// a vector of string to hold the functions
+  std::vector<std::string> _vars;
 
-  /// Temperatures of the wall
-  std::vector<CFreal> _T;  
+  /// the VectorialFunction to use
+  Framework::VectorialFunction _vFunction;    
     
-}; // end of class PerfectConductingWall
+  /// option to change to Silver Muller in EM field
+  bool _silverMuller;
+
+  /// The electrons are subsonic
+  bool _isSubsonic;
+
+}; // end of class SuperInletPhi
 
 //////////////////////////////////////////////////////////////////////////////
 
- } // namespace FiniteVolume
+    } // namespace FiniteVolume
 
   } // namespace Numerics
 
@@ -89,4 +117,4 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Numerics_FiniteVolume_PerfectConductingWall_hh
+#endif // COOLFluiD_Numerics_FiniteVolume_SuperInletPhi_hh

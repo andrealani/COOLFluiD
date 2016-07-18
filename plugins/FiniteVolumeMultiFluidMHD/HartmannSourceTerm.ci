@@ -24,6 +24,9 @@ HartmannSourceTerm<UPDATEVAR>::HartmannSourceTerm(const std::string& name) :
   _isOutward(CFNULL),
   socket_divB("divB"),
   socket_Current("Current"),
+  socket_BxPotential("BxPotential"),
+  socket_ByPotential("ByPotential"),
+  socket_BzPotential("BzPotential"),
   _ys(),
   _physicalData(),
   _temp(),
@@ -35,7 +38,8 @@ HartmannSourceTerm<UPDATEVAR>::HartmannSourceTerm(const std::string& name) :
   _dataLeftState(),
   _dataRightState(),
   _gradBx(),
-  _gradBy()
+  _gradBy(),
+  _gradBz()
 {
   addConfigOptionsTo(this);
   
@@ -63,6 +67,9 @@ HartmannSourceTerm<UPDATEVAR>::providesSockets()
     ComputeSourceTermFVMCC::providesSockets();
   result.push_back(&socket_divB);
   result.push_back(&socket_Current);
+  result.push_back(&socket_BxPotential);
+  result.push_back(&socket_ByPotential);
+  result.push_back(&socket_BzPotential);
 
   return result;
 }
@@ -88,7 +95,8 @@ void HartmannSourceTerm<UPDATEVAR>::setup()
   using namespace COOLFluiD::Framework;
   
   ComputeSourceTermFVMCC::setup();
-  
+ 
+  const CFuint dim = PhysicalModelStack::getActive()->getDim(); 
   _varSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
   _varSet->getModel()->resizePhysicalData(_physicalData);
   _varSet->getModel()->resizePhysicalData(_dataLeftState);
@@ -110,13 +118,23 @@ void HartmannSourceTerm<UPDATEVAR>::setup()
   socket_divB.getDataHandle().resize(nbCells);
   socket_Current.getDataHandle().resize(nbCells);
   
-  DataHandle<CFreal> divB = socket_divB.getDataHandle();
-  DataHandle<CFreal> Current = socket_Current.getDataHandle();
+  DataHandle<CFreal> divB        = socket_divB.getDataHandle();
+  DataHandle<CFreal> Current     = socket_Current.getDataHandle();
+  DataHandle<CFreal> BxPotential = socket_BxPotential.getDataHandle();  
+  DataHandle<CFreal> ByPotential = socket_ByPotential.getDataHandle();
+  DataHandle<CFreal> BzPotential = socket_BzPotential.getDataHandle();
   divB.resize(nbCells);
   divB = 0;
   Current.resize(nbCells);
   Current = 0;
+  BxPotential.resize(nbCells);
+  BxPotential = 0.;
+  ByPotential.resize(nbCells);
+  ByPotential = 0.;
+  BzPotential.resize(nbCells);
+  BzPotential = 0.;
 
+  
   _temp.resize(PhysicalModelStack::getActive()->getNbEq());
 
   const CFuint maxNbNodesIn2DCV = 4;
@@ -128,18 +146,12 @@ void HartmannSourceTerm<UPDATEVAR>::setup()
   
   _NonInducedEMField.resize(6);
   _J.resize(3);
-  _gradBx.resize(2,0.);
-  _gradBy.resize(2,0.);
-//  _massSource.resize(2);
-//  _collMomentumSource.resize(4);
-//  _gravityMomentumSource.resize(4);
-//  _chargexMomentumSource.resize(4);
-//  _chargexEnergySource.resize(2);
-//  _gravityEnergySource.resize(2);
-//  _collEnergySource.resize(2);
-//  _ReactEnergySource.resize(2);
-//  _Btotal.resize(3);
-//  _Etotal.resize(3);
+  _gradBx.resize(dim,0.);
+  _gradBy.resize(dim,0.);
+  if(dim == 3)
+  {
+    _gradBz.resize(dim,0.);
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -158,6 +170,11 @@ void HartmannSourceTerm<UPDATEVAR>::computeSource
   const CFuint elemID = element->getID();
   DataHandle<CFreal> divB = socket_divB.getDataHandle();
   DataHandle<CFreal> Current = socket_Current.getDataHandle();
+  DataHandle<CFreal> BxPotential = socket_BxPotential.getDataHandle();
+  DataHandle<CFreal> ByPotential = socket_ByPotential.getDataHandle();
+  DataHandle<CFreal> BzPotential = socket_BzPotential.getDataHandle();
+
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
   
   cf_assert(states->size() == 1);
@@ -166,15 +183,25 @@ void HartmannSourceTerm<UPDATEVAR>::computeSource
  
   State *const currState = (*states)[0]; 
   _varSet->computePhysicalData(*(*states)[0], _physicalData);
-  _NonInducedEMField = _varSet->getModel()->getNonInducedEMField
-    (currState->getCoordinates()[XX], currState->getCoordinates()[YY]);
-
+  
+  if(is2DHalf || PhysicalModelStack::getActive()->getDim() == 2)
+  {
+    _NonInducedEMField = _varSet->getModel()->getNonInducedEMField
+      (currState->getCoordinates()[XX], currState->getCoordinates()[YY],0.); //The third component is null
+  }
+  else
+  {
+    _NonInducedEMField = _varSet->getModel()->getNonInducedEMField
+      (currState->getCoordinates()[XX], currState->getCoordinates()[YY], currState->getCoordinates()[ZZ]); 
+  }
   const CFreal BxTotal = _physicalData[UPDATEVAR::PTERM::BX] + _NonInducedEMField[0];
   const CFreal ByTotal = _physicalData[UPDATEVAR::PTERM::BY] + _NonInducedEMField[1];
   const CFreal BzTotal = _physicalData[UPDATEVAR::PTERM::BZ] + _NonInducedEMField[2];
   const CFreal ExTotal = _physicalData[UPDATEVAR::PTERM::EX] + _NonInducedEMField[3];
   const CFreal EyTotal = _physicalData[UPDATEVAR::PTERM::EY] + _NonInducedEMField[4];
   const CFreal EzTotal = _physicalData[UPDATEVAR::PTERM::EZ] + _NonInducedEMField[5];
+
+  //cout <<"NonInduced EM Field = "<< _NonInducedEMField << endl;
 
   //   RealVector& refData = _varSet->getModel()->getReferencePhysicalData();
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
@@ -189,16 +216,27 @@ void HartmannSourceTerm<UPDATEVAR>::computeSource
   //Set the velocities
   const CFreal u = _physicalData[firstVelocity];
   const CFreal v = _physicalData[firstVelocity + 1];
+  CFreal w = 0.;
+  if(dim == 3 || is2DHalf == true){ w = _physicalData[firstVelocity + 2];}
   const CFreal omega = _electricalConductivity;
   //const CFreal ovEpsilon = 1./term->getPermittivity(); OLD way of getting the permittivity
   const CFreal c_e = term->getLightSpeed();
   const CFreal mu0 = term->getPermeability();
   const CFreal ovEpsilon = c_e*c_e*mu0;
-
-  const CFreal Jx = omega*(ExTotal + v*BzTotal);
-  const CFreal Jy = omega*(EyTotal - u*BzTotal);
-  const CFreal Jz = omega*(EzTotal + u*ByTotal - v*BxTotal);
-
+  CFreal Jx = 0., Jy = 0., Jz = 0.;
+  
+  if(dim == 2) 
+  {
+    Jx = omega*(ExTotal + v*BzTotal);
+    Jy = omega*(EyTotal - u*BzTotal);
+    Jz = omega*(EzTotal + u*ByTotal - v*BxTotal);
+  }
+  if(dim == 3 || is2DHalf == true)
+  {
+    Jx = omega*(ExTotal + v*BzTotal - w*ByTotal);
+    Jy = omega*(EyTotal + w*BxTotal - u*BzTotal);
+    Jz = omega*(EzTotal + u*ByTotal - v*BxTotal);  
+  }
   CFreal JzCurl = 0.;
 
       cf_assert(states->size() == 1);
@@ -267,32 +305,43 @@ void HartmannSourceTerm<UPDATEVAR>::computeSource
 //        curlB += -ny*faceAvBx + nx*faceAvBy;
 //      }
 
+// computing gradients for divB
       const CFuint BxID = 0;
       const CFuint ByID = 1;
+      const CFuint BzID = 2;
       const CFuint gradBxID = elemID*totalNbEqs + BxID;
       const CFuint gradByID = elemID*totalNbEqs + ByID;
+      const CFuint gradBzID = elemID*totalNbEqs + BzID;
       _gradBx[XX] = this->m_ux[gradBxID];
       _gradBx[YY] = this->m_uy[gradBxID];
+
       _gradBy[XX] = this->m_ux[gradByID];
       _gradBy[YY] = this->m_uy[gradByID];
 
-      curlB = _gradBy[XX] - _gradBx[YY];
+      if(dim == 3)
+      {
+        _gradBx[ZZ] = this->m_uz[gradBxID];
+        _gradBy[ZZ] = this->m_uz[gradByID];
 
-      JzCurl = curlB/mu0;
-  //}
-    
+        _gradBz[XX] = this->m_ux[gradBzID];
+        _gradBz[YY] = this->m_uy[gradBzID];
+        _gradBz[ZZ] = this->m_uz[gradBzID];
+      }
+   
   if (nbEqs == totalNbEqs || iEqSS == 0) {
-    source[0] = 0;			//x-Faraday's Law
-    source[1] = 0;			//y-Faraday's Law
-    source[2] = 0;			//z-Faraday's Law
+    source[0] = 0.;			//x-Faraday's Law
+    source[1] = 0.;			//y-Faraday's Law
+    source[2] = 0.;			//z-Faraday's Law
     source[3] = - ovEpsilon*Jx;			//x-Ampere's Law
     source[4] = - ovEpsilon*Jy;			//y-Ampere's Law
     source[5] = - ovEpsilon*Jz;  		//z-Ampere's Law
-    source[6] = 0;			//y-Ampere's Law
-    source[7] = 0;  		//z-Ampere's Law
+    source[6] = 0.;			//y-Ampere's Law
+    source[7] = 0.;  		//z-Ampere's Law
   }
   
   if (nbEqs == totalNbEqs || iEqSS == 1) {
+    curlB = _gradBy[XX] - _gradBx[YY];
+    JzCurl = curlB/mu0;
     if(is2DHalf) {
       source[8] = 0;                                    //Continuity equation
       source[9] = Jy*BzTotal -JzCurl*ByTotal;			//x-momentum equation
@@ -300,7 +349,24 @@ void HartmannSourceTerm<UPDATEVAR>::computeSource
       source[11] = Jx*ByTotal - Jy*ByTotal;          //z-momentum equation
       source[12] = Jx*ExTotal + Jy*EyTotal + JzCurl*(v*BxTotal - u*ByTotal);	//Total Energy
     }
-    else {
+    if(dim == 3)
+    {
+      Jx = (_gradBz[YY] - _gradBy[ZZ])/mu0;
+      Jy = (_gradBx[ZZ] - _gradBz[XX])/mu0;
+      Jz = (_gradBy[XX] - _gradBx[YY])/mu0;
+
+      CFreal Ex = -(v*BzTotal - w*ByTotal);
+      CFreal Ey = -(w*BxTotal - u*BzTotal);
+      CFreal Ez = -(u*ByTotal - v*BxTotal);
+
+
+      source[8]  = 0.;                                      //Continuity equation
+      source[9]  = Jy*BzTotal - Jz*ByTotal;                //x-momentum equation
+      source[10] = Jz*BxTotal - Jx*BzTotal;          	  //y-momentum equation
+      source[11] = Jx*ByTotal - Jy*ByTotal;          	  //z-momentum equation
+      source[12] = Jx*Ex + Jy*Ey + Jz*Ez;  //Total Energy
+    }
+    if(dim == 2) {
       source[8] = 0;                                  //Continuity equation
       source[9] = Jy*BzTotal -JzCurl*ByTotal;			//x-momentum equation
       source[10] = JzCurl*BxTotal -Jx*BzTotal;		//y-momentum equation
@@ -308,7 +374,7 @@ void HartmannSourceTerm<UPDATEVAR>::computeSource
     }
   }
   if (_isResistive == true && (nbEqs == totalNbEqs || iEqSS == 1)) {
-    if(is2DHalf) {
+    if(is2DHalf || dim ==3 ) {
       source[8] = 0;                                      //Continuity equation
       source[9] = Jy*BzTotal -Jz*ByTotal;                 //x-momentum equation
       source[10] = Jz*BxTotal -Jx*BzTotal;                //y-momentum equation
@@ -325,7 +391,11 @@ void HartmannSourceTerm<UPDATEVAR>::computeSource
   source *= volumes[elemID];
   divB[elemID] = _gradBx[XX] + _gradBy[YY];
   Current[elemID] = curlB/mu0;
+  BxPotential[elemID] = _NonInducedEMField[0];
+  ByPotential[elemID] = _NonInducedEMField[1];
+  BzPotential[elemID] = _NonInducedEMField[2];
 
+  //cout << "source = "<< source << endl;
 }
 
 //////////////////////////////////////////////////////////////////////////////

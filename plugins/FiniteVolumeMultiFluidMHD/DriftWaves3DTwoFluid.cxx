@@ -1,7 +1,6 @@
-#include "FiniteVolumeMultiFluidMHD/HartmannSourceTerm.hh"
+#include "FiniteVolumeMultiFluidMHD/DriftWaves3DTwoFluid.hh"
 #include "FiniteVolumeMultiFluidMHD/FiniteVolumeMultiFluidMHD.hh"
 #include "Framework/MethodStrategyProvider.hh"
-#include "Maxwell/Maxwell2DProjectionVarSet.hh"
 #include "Maxwell/Maxwell3DProjectionVarSet.hh"
 #include "MultiFluidMHD/MultiFluidMHDVarSet.hh"
 #include "Framework/MethodStrategyProvider.hh"
@@ -25,17 +24,12 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-MethodStrategyProvider<HartmannSourceTerm<MultiFluidMHDVarSet<Maxwell2DProjectionVarSet> >,
+MethodStrategyProvider<DriftWaves3DTwoFluid<MultiFluidMHDVarSet<Maxwell3DProjectionVarSet> >,
 		       CellCenterFVMData,
 		       Framework::ComputeSourceTerm<CellCenterFVMData>,
 		       FiniteVolumeMultiFluidMHDModule>
-hartmannSourceTerm2DProvider("HartmannSourceTerm2D");
-
-MethodStrategyProvider<HartmannSourceTerm<MultiFluidMHDVarSet<Maxwell3DProjectionVarSet> >,
- 		       CellCenterFVMData,
- 		       Framework::ComputeSourceTerm<CellCenterFVMData>,
- 		       FiniteVolumeMultiFluidMHDModule>
- HartmannSourceTerm3DProvider("HartmannSourceTerm3D");
+DriftWaves3DTwoFluidProvider("DriftWaves3DTwoFluid"); //This word is used for the CFcase (check the source term)
+//example: Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = DriftWaves3DTwoFluid
 
 //////////////////////////////////////////////////////////////////////////////
 

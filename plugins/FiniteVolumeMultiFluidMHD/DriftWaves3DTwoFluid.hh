@@ -3,9 +3,9 @@
 // Title: Template to create a Source term in multi-fluid MHD module
 //
 // Description: This class is composed of three files:
-//   1.- DriftWaves2DHalfTwoFluid.hh: Is the header. Only declaration of the methods (functions) and members (variables used inside the class).
-//   2.- DriftWaves2DHalfTwoFluid.cxx: Only implemented the provider of the class. It is used to be refered in the .CFcase file.
-//   3.- DriftWaves2DHalfTwoFluid.ci: Is the main implementation in here.
+//   1.- DriftWaves3DTwoFluid.hh: Is the header. Only declaration of the methods (functions) and members (variables used inside the class).
+//   2.- DriftWaves3DTwoFluid.cxx: Only implemented the provider of the class. It is used to be refered in the .CFcase file.
+//   3.- DriftWaves3DTwoFluid.ci: Is the main implementation in here.
 //
 //  This class implements a source term. In CoolFluid, we solve equations of the form:
 //
@@ -83,8 +83,8 @@
 
 
 
-#ifndef COOLFluiD_Numerics_FiniteVolume_DriftWaves2DHalfTwoFluid_hh
-#define COOLFluiD_Numerics_FiniteVolume_DriftWaves2DHalfTwoFluid_hh
+#ifndef COOLFluiD_Numerics_FiniteVolume_DriftWaves3DTwoFluid_hh
+#define COOLFluiD_Numerics_FiniteVolume_DriftWaves3DTwoFluid_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -116,7 +116,7 @@ namespace COOLFluiD {
  *
  */
 template <class UPDATEVAR>
-class DriftWaves2DHalfTwoFluid : public ComputeSourceTermFVMCC {
+class DriftWaves3DTwoFluid : public ComputeSourceTermFVMCC {
 
 public:
 
@@ -124,12 +124,12 @@ public:
    * Constructor
    * @see ComputeSourceTermFVMCC
    */
-  DriftWaves2DHalfTwoFluid(const std::string& name);
+  DriftWaves3DTwoFluid(const std::string& name);
 
   /**
    * Default destructor
    */
-  virtual ~DriftWaves2DHalfTwoFluid();
+  virtual ~DriftWaves3DTwoFluid();
 
   /**
    * Defines the Config Option's of this class
@@ -219,14 +219,11 @@ protected: // data
 
   /// Option to change the electric charge
   CFreal _electricCharge;
-
-  /// Option to switch-on collisions
-  CFreal _isCollisional;
 private:
 
   //options here
   
-}; // end of class DriftWaves2DHalfTwoFluid
+}; // end of class DriftWaves3DTwoFluid
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -238,8 +235,8 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "DriftWaves2DHalfTwoFluid.ci"
+#include "DriftWaves3DTwoFluid.ci"
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Numerics_FiniteVolume_DriftWaves2DHalfTwoFluid_hh
+#endif // COOLFluiD_Numerics_FiniteVolume_DriftWaves3DTwoFluid_hh

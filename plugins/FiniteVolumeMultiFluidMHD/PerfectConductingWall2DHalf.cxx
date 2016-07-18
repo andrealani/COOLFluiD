@@ -112,9 +112,9 @@ void PerfectConductingWall2DHalf::setGhostState(GeometricEntity *const face)
   (*ghostState)[0] = (*innerState)[0] - 2*bn*nx;	//Bx
   (*ghostState)[1] = (*innerState)[1] - 2*bn*ny;	//By
   (*ghostState)[2] = (*innerState)[2] - 2*bn*nz;	//Bz
-  (*ghostState)[3] = -(*innerState)[3] + 2*en*nx; 	//Ex
-  (*ghostState)[4] = -(*innerState)[4] + 2*en*ny; 	//Ey
-  (*ghostState)[5] = -(*innerState)[5] + 2*en*nz; 	//Ez
+  (*ghostState)[3] = (*innerState)[3] - 2*en*nx; 	//Ex
+  (*ghostState)[4] = (*innerState)[4] - 2*en*ny; 	//Ey
+  (*ghostState)[5] = (*innerState)[5] - 2*en*nz; 	//Ez
   (*ghostState)[6] = (*innerState)[6];			//Psi
   (*ghostState)[7] = (*innerState)[7];			//Phi
   
@@ -128,10 +128,10 @@ void PerfectConductingWall2DHalf::setGhostState(GeometricEntity *const face)
 
   //const CFreal me = _updateVarSet->getModel()->getMolecularMass1();
   //const CFreal mi = _updateVarSet->getModel()->getMolecularMass2();
-  //(*ghostState)[endEM + 1] = (*innerState)[endEM + 1]; //ions
-  //const CFreal ni_ghost = (*ghostState)[endEM + 1]/mi;
-  //const CFreal ne_bound = ni_ghost; //assuming charge neutrality
-  //(*ghostState)[endEM] = 2*ne_bound*me - (*innerState)[endEM];  // electrons
+  //(*ghostState)[endEM] = (*innerState)[endEM]; //electrons
+  //const CFreal ne_ghost = (*ghostState)[endEM]/me;
+  //const CFreal ni_bound = ne_ghost; //assuming charge neutrality
+  //(*ghostState)[endEM + 1] = 2*ni_bound*mi - (*innerState)[endEM + 1];  // ions
  
   //set the Velocities
   for (CFuint i = 0 ; i < nbSpecies; i++){
