@@ -2,6 +2,7 @@
 #include "MultiFluidMHD/EulerMFMHDTerm.hh"
 #include "MathTools/MathConsts.hh"
 #include "Framework/PhysicalConsts.hh"
+#include "Framework/SubSystemStatus.hh"
 #include "MultiFluidMHDModel.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -30,12 +31,15 @@ void EulerMFMHDTerm::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::vector<CFreal> >("nonInducedElectromagnetic", "nonInduced Electromagnetic Field");
   options.addConfigOption< CFreal > ("lightSpeedMF", "Speed of light. It can be reduced if it is still bigger than the speed of the fluid");
   options.addConfigOption< bool > ("IsLeake", "Flag to use  the Leake model in the convective term.");
+  options.addConfigOption< std::vector<std::string> >("Vars","Definition of the Variables.");
+  options.addConfigOption< std::vector<std::string> >("DefEMField","Definition of the Functions.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 EulerMFMHDTerm::EulerMFMHDTerm(const std::string& name) : 
   Maxwell::MaxwellProjectionTerm(name),
+  _useFunction(false),
   _NonInducedEMField()
 { 
   addConfigOptionsTo(this);
@@ -69,6 +73,12 @@ EulerMFMHDTerm::EulerMFMHDTerm(const std::string& name) :
 
   _isLeake = false;
   setParameter("IsLeake", &_isLeake);
+
+  _functions = std::vector<std::string>();
+  setParameter("DefEMField",&_functions);
+
+  _vars = std::vector<std::string>();
+  setParameter("Vars",&_vars);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -84,9 +94,10 @@ void EulerMFMHDTerm::configure ( Config::ConfigArgs& args )
   Maxwell::MaxwellProjectionTerm::configure(args);
   
   _NonInducedEMField.resize(6);
-  
+
   // conversion to radiants/sec
   _omega *= (2.*MathTools::MathConsts::CFrealPi()/60.);
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -96,7 +107,23 @@ void EulerMFMHDTerm::resizePhysicalData(RealVector& physicalData)
   // resize the physical data
   cf_assert(getDataSize() > 0);
   physicalData.resize(getDataSize());
-}
+
+  //configuring the function with the electromagnetic field
+  _variables.resize(Framework::PhysicalModelStack::getActive()->getDim() + 1);
+  if(!_functions.empty())
+  {
+    _vFunction.setFunctions(_functions);
+    _vFunction.setVariables(_vars);
+    try {
+      _vFunction.parse();
+      _useFunction = true;
+    }
+    catch (Common::ParserException& e) {
+      CFout << e.what() << "\n";
+      throw; // retrow the exception to signal the error to the user
+    }
+  }
+}  
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -111,11 +138,30 @@ void EulerMFMHDTerm::setupPhysicalData()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void EulerMFMHDTerm::computeNonInducedEMField(CFreal xCoord, CFreal yCoord)
+void EulerMFMHDTerm::computeNonInducedEMField(CFreal xCoord, CFreal yCoord, CFreal zCoord)
 {
-  for (CFuint i = 0; i < 6; i++){
-    _NonInducedEMField[i] = _nonInducedEMField[i];
-  } 
+  if(!_useFunction){
+    for (CFuint i = 0; i < 6; i++){
+      _NonInducedEMField[i] = _nonInducedEMField[i];
+    }
+  }
+  if(_useFunction){
+    //const CFuint nbDim = PhysicalModelStack::getActive()->getDim();
+    if(Framework::PhysicalModelStack::getActive()->getDim() == 2) //both 2D and 2.5D
+    {
+      _variables[0] = xCoord;
+      _variables[1] = yCoord;
+    }
+    else // in 3D case
+    {
+      _variables[0] = xCoord;
+      _variables[1] = yCoord;
+      _variables[2] = zCoord; 
+    } 
+    
+    _variables[Framework::PhysicalModelStack::getActive()->getDim()] = Framework::SubSystemStatusStack::getActive()->getCurrentTimeDim();
+    _vFunction.evaluate(_variables, _NonInducedEMField);
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -53,7 +53,6 @@ EulerMFMHD3DCons::EulerMFMHD3DCons(Common::SafePtr<BaseTerm> term) :
     names[endEM + ie] = "rho" + StringOps::to_str(ie);
   }
 
-  
   for (CFuint ie = 0; ie < nbSpecies; ++ie) {
     names[endEM + nbSpecies + dim*ie]     = "rhoU" + StringOps::to_str(ie);
     names[endEM + nbSpecies + dim*ie + 1] = "rhoV" + StringOps::to_str(ie);
@@ -181,7 +180,6 @@ void EulerMFMHD3DCons::computePhysicalData(const State& state, RealVector& data)
   
   
   //set the species mass fraction
-//   const CFuint firstSpecies = getModel()->getFirstScalarVar(0);
   for (CFuint ie = 0; ie < nbSpecies; ++ie) {
     const CFreal rhoi = state[endEM + ie];
     data[firstSpecies + ie] = rhoi*ovRho;
@@ -210,21 +208,7 @@ void EulerMFMHD3DCons::computePhysicalData(const State& state, RealVector& data)
     data[firstTemperature + 4*ie + 1] = Ti*R_gas*rhoi;//pressure
     data[firstTemperature + 4*ie + 2] = sqrt(gamma*R_gas*Ti);//sound speed
     data[firstTemperature + 4*ie + 3] = 0.5*V2 + c_p*Ti;//total enthaply of species i   
-    
-//     std::cout << "firstTemperature = "<< firstTemperature <<"\n";    
-//     std::cout << "firstTemperature + 4*ie + 3 = "<< firstTemperature + 4*ie + 3 <<"\n";
- 
-    
-///OLD IMPLEMENTATION    
-//     data[firstTemperature + 4*ie] = (1/(state[ie]*c_v))*(state[nbSpecies + 2*nbSpecies + ie] - 0.5*state[ie]*V2);//Temperature
-//     data[firstTemperature + 4*ie + 1] = data[firstTemperature + 4*ie]*R_gas* data[PTERM::RHO]*data[firstSpecies + ie];//pressure
-//     data[firstTemperature + 4*ie + 2] = sqrt(gamma*R_gas*data[firstTemperature + 4*ie]);//sound speed
-//     data[firstTemperature + 4*ie + 3] = 0.5*V2 + c_p*data[firstTemperature + 4*ie];//enthaply 
   }    
-  cout << "EulerMFMHD3DCons::computePhysicalData" << endl;
-  for (CFuint ie = 0; ie < firstTemperature + 4*nbSpecies; ++ie) {
-    cout << "data["<< ie <<"] = "<< data[ie] << endl;
-  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -288,11 +272,7 @@ void EulerMFMHD3DCons::computeStateFromPhysicalData(const RealVector& data,
     const CFreal c_v = c_p - R_gas;
     
     state[endEM + nbSpecies + dim*nbSpecies + ie] = data[firstSpecies + ie]*rho*(c_v*data[firstTemperature + 4*ie] + 0.5*V2);
-  } 
-  cout << "EulerMFMHD3DCons::computeStateFromPhysicalData" << endl;
-  for (CFuint ie = 0; ie < endEM + 3*nbSpecies; ++ie) {
-    cout << "state["<< ie <<"] = "<< state[ie] << endl;
-  }      
+  }       
 }
 
 //////////////////////////////////////////////////////////////////////////////

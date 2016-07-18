@@ -4,6 +4,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Maxwell/MaxwellProjectionTerm.hh"
+#include "Framework/VectorialFunction.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -188,14 +189,14 @@ public:
    /**
    * Compute the Non Induced Electromagnetic field
    */
-  void computeNonInducedEMField(CFreal xCoord, CFreal yCoord);
+  void computeNonInducedEMField(CFreal xCoord, CFreal yCoord, CFreal zCoord);
 
   /**
    * Get the magnetic dipole field and dipole moment values
    */
-  RealVector& getNonInducedEMField(CFreal x, CFreal y)
+  RealVector& getNonInducedEMField(CFreal x, CFreal y, CFreal z)
   {
-    computeNonInducedEMField(x,y);
+    computeNonInducedEMField(x,y,z);
     return _NonInducedEMField;
   }
 
@@ -228,6 +229,9 @@ protected:
   
   ///Speed of light
   CFreal _lightSpeed;
+
+  /// checks if an function is used for the electromagnetic field
+  bool _useFunction;
   
   /// Non Induced part of Electromagnetic field
   RealVector _NonInducedEMField;
@@ -237,6 +241,18 @@ protected:
 
   /// Flag to use Leake's model in the convective term
   bool _isLeake;
+
+  /// Vector for coordinates + time
+  RealVector _variables;
+
+  /// a vector of string to hold the functions
+  std::vector<std::string> _functions;
+
+  /// a vector of string to hold the functions
+  std::vector<std::string> _vars;
+
+  /// the VectorialFunction to use
+  Framework::VectorialFunction _vFunction;
 
 }; // end of class EulerMFMHDTerm
 
