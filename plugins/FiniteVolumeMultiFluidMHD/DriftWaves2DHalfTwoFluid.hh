@@ -221,7 +221,7 @@ protected: // data
   CFreal _electricCharge;
 
   /// Option to switch-on collisions
-  CFreal _isCollisional;
+  bool _isCollisional;
 private:
 
   //options here
