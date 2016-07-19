@@ -167,37 +167,37 @@ void BxSchemeSys<BASE,MODEL>::computeBlendingCoeff()
       
       theta *= _length/(vol*dim*_deltaVar*_speed);
     }
-
-	else if (_sh_detector == "Gnoffo"){
-
+    
+    else if (_sh_detector == "Gnoffo"){
+      
       upVar->computePhysicalData(*(*states)[0], _pData);
       CFreal var_min = _pData[_varID];
       CFreal var_Max = _pData[_varID];
       
       for (CFuint i = 1; i < nbStates; ++i) {
-            upVar->computePhysicalData(*(*states)[i], _pData);
-            var_min = std::min(_pData[_varID], var_min);
-            var_Max = std::max(_pData[_varID], var_Max);
+	upVar->computePhysicalData(*(*states)[i], _pData);
+	var_min = std::min(_pData[_varID], var_min);
+	var_Max = std::max(_pData[_varID], var_Max);
       }
-
-      CFreal phi = var_Max/var_min;
-
+      
+      // CFLog(INFO, "var_min / var_max = " << var_min << " / " << var_Max << "\n");
+      
+      const CFreal phi = var_Max/var_min;
       const CFreal phi_min = 2.;
       const CFreal phi_Max = 3.;
       
       const CFreal z = (phi_Max - phi)/(phi_Max - phi_min);
       const CFreal Z = std::min(1., std::max(0., z));
       const CFreal arg = Z*MathTools::MathConsts::CFrealPi();
-
-      theta = 1 - 0.5*(1. - std::cos(arg) );
-
-//       std::cout << "1.theta = " << theta << std::endl;
-
-      theta = std::sqrt(theta/h);
-//       std::cout << "2.theta = " << theta << std::endl;
       
+      theta = 1 - 0.5*(1. - std::cos(arg) );
+      
+      //       std::cout << "1.theta = " << theta << std::endl;
+      
+      theta = std::sqrt(theta/h);
+      //       std::cout << "2.theta = " << theta << std::endl;
     }
-
+    
     else if (_sh_detector == "Ducros"){
 	  assert (dim == DIM_2D);
                   
