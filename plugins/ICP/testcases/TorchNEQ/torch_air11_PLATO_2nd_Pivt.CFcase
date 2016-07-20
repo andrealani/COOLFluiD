@@ -31,7 +31,7 @@ CFEnv.RegistSignalHandlers = false
 #CFEnv.TraceActive = true
 
 ####### TEST CONFIGURATION
-CFEnv.ErrorOnUnusedConfig = true
+#CFEnv.ErrorOnUnusedConfig = true
 
 # Simulation Modules
 Simulator.Modules.Libs = libPetscI libTecplotWriter libNavierStokes libPlatoI libLTE libNEQ libICP libICPNEQ libFiniteVolume libFiniteVolumeNavierStokes libFiniteVolumeNEQ libFiniteVolumeICP libFiniteVolumeICPNEQ libNewtonMethod libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
