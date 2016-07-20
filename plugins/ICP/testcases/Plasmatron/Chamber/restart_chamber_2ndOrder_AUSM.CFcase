@@ -19,7 +19,7 @@
 ### Residual = -3.9198463
 
 #######TEST CONFIGURATION
-CFEnv.ErrorOnUnusedConfig = true
+#CFEnv.ErrorOnUnusedConfig = true
 #CFEnv.ExceptionLogLevel    = 1000
 #CFEnv.DoAssertions         = true
 #CFEnv.AssertionDumps       = true
