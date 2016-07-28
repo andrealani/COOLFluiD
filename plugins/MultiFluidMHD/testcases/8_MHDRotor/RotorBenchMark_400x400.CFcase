@@ -1,7 +1,7 @@
 # COOLFluiD Startfile
 # Comments begin with "#"
 #
-### Residual = -1.1441609
+### Residual = -1.14417
 #
 
 ###############################################################################
@@ -215,7 +215,7 @@ Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUpMultiFluid2D
 Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.choiceA12 = 1 
 Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.machInf = 1. #0.0125
 Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.useMacCormackScaling = true
-Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.Coeff = 1e4
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.Coeff = 1e6
 #Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.sigma = 0.25
 
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar = RhoiViTi
