@@ -968,8 +968,14 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
     if (i < m_readVars.size()-1) fout << " ";
   }
   fout << "'\n";
-  
+
+#ifdef CF_HAVE_BOOST_1_59
   fout << "$!READDATASET  '\"|MFBD|/" << meshFile.filename().string() << "\" '\n";
+#else
+  CFLog(ERROR, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => you need BOOST version >= 1.59 for this!\n");
+  exit(1);
+#endif
+  
   fout << "  READDATAOPTION = APPEND\n";
   fout << "  RESETSTYLE = NO\n";
   fout << "  INCLUDETEXT = NO\n";
@@ -998,7 +1004,14 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   fout << "$!CREATEFEBOUNDARY\n";
   fout << "  SOURCEZONE = 2\n";
   fout << "  REMOVEBLANKEDSURFACES = NO\n";
+
+#ifdef CF_HAVE_BOOST_1_59
   fout << "$!WRITEDATASET  \"|MFBD|/" << meshFile.filename().string() << "\"\n";
+#else
+  CFLog(ERROR, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => you need BOOST version >= 1.59 for this!\n");
+  exit(1);
+#endif
+
   fout << "  INCLUDETEXT = NO\n";
   fout << "  INCLUDEGEOM = NO\n";
   fout << "  INCLUDECUSTOMLABELS = NO\n";
@@ -1010,7 +1023,14 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   fout << "  TECPLOTVERSIONTOWRITE = TECPLOTCURRENT\n";
 
   path allSurfFile = change_extension(filepath, "allsurf.plt");
+  
+#ifdef CF_HAVE_BOOST_1_59
   fout << "$!WRITEDATASET  \"|MFBD|/" << allSurfFile.filename().string() << "\"\n";
+#else
+  CFLog(ERROR, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => you need BOOST version >= 1.59 for this!\n");
+  exit(1);
+#endif
+
   fout << "  INCLUDETEXT = NO\n";
   fout << "  INCLUDEGEOM = NO\n";
   fout << "  INCLUDECUSTOMLABELS = NO\n";
