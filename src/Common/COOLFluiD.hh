@@ -51,7 +51,8 @@ namespace COOLFluiD {
   typedef long int      CFint;
   /// typedef for unsigned int
   typedef long int      CFuint;
-#elif CF_HAVE_LLONG 
+#else
+#ifdef CF_HAVE_LLONG 
   /// typedef for int
   typedef long long int      CFint;
   /// typedef for unsigned int
@@ -61,6 +62,7 @@ namespace COOLFluiD {
   typedef int                CFint;
   /// typedef for unsigned int
   typedef unsigned int       CFuint;
+#endif
 #endif
   
   /// typedef for char
