@@ -405,9 +405,9 @@ void DriftWaves2DHalfThreeFluid<UPDATEVAR>::computeSource
     const CFreal v = (rhoe*ve + rhoi*vi + rhon*vn)/rho; 
     const CFreal w = (rhoe*we + rhoi*wi + rhon*wn)/rho;
 
-    const CFreal workColle = (ue - u)*collMomentumXe + (ve - v)*collMomentumYe + (we - w)*collMomentumZe;
-    const CFreal workColli = (ui - u)*collMomentumXi + (vi - v)*collMomentumYi + (wi - w)*collMomentumZi;
-    const CFreal workColln = (un - u)*collMomentumXn + (vn - v)*collMomentumYn + (wn - w)*collMomentumZn;
+    const CFreal workColle = ue*collMomentumXe + ve*collMomentumYe + we*collMomentumZe;
+    const CFreal workColli = ui*collMomentumXi + vi*collMomentumYi + wi*collMomentumZi;
+    const CFreal workColln = un*collMomentumXn + vn*collMomentumYn + wn*collMomentumZn;
 
     const CFreal heatColle = -3*kB*ne*(mu_ie/(me + mi))*tau_minusOne_ei*(Te - Ti) - 3*kB*ne*(mu_ne/(mn + me))*tau_minusOne_en*(Te - Tn);
     const CFreal heatColli = -3*kB*ni*(mu_ie/(me + mi))*tau_minusOne_ie*(Ti - Te) - 3*kB*ni*(mu_in/(mn + mi))*tau_minusOne_in*(Ti - Tn);
