@@ -343,7 +343,7 @@ void DriftWaves2DHalfThreeFluid<UPDATEVAR>::computeSource
 
 
     // Collisions with neutrals
-    const CFreal v_ie = std::sqrt(8/(pi*gamma_ie));
+    //const CFreal v_ie = std::sqrt(8/(pi*gamma_ie));
     const CFreal v_in = std::sqrt(8/(pi*gamma_in));
     const CFreal v_ne = std::sqrt(8/(pi*gamma_ne));
     const CFreal tau_minusOne_in = 4./3.*nn*v_in*_Qin; 
@@ -401,9 +401,20 @@ void DriftWaves2DHalfThreeFluid<UPDATEVAR>::computeSource
       
     //AAL: ENERGY
     // Computation of hydrodynamic pressure
-    const CFreal u = (rhoe*ue + rhoi*ui + rhon*un)/rho; 
-    const CFreal v = (rhoe*ve + rhoi*vi + rhon*vn)/rho; 
-    const CFreal w = (rhoe*we + rhoi*wi + rhon*wn)/rho;
+    //const CFreal u = (rhoe*ue + rhoi*ui + rhon*un)/rho; 
+    //const CFreal v = (rhoe*ve + rhoi*vi + rhon*vn)/rho; 
+    //const CFreal w = (rhoe*we + rhoi*wi + rhon*wn)/rho;
+
+    const CFreal Re_ei_coeff = ne*mu_ie*tau_minusOne_ei;
+    const CFreal Ri_ei_coeff = ni*mu_ie*tau_minusOne_ie; 
+    const CFreal Re_en_coeff = ne*mu_ne*tau_minusOne_en;
+    const CFreal Rn_en_coeff = nn*mu_ne*tau_minusOne_ne;
+    const CFreal Ri_in_coeff = ni*mu_in*tau_minusOne_in;
+    const CFreal Rn_ni_coeff = nn*mu_in*tau_minusOne_ni;
+
+    const CFreal heatWorke = 0.5*Re_ei_coeff*((ue - ui)*(ue - ui) + (ve - vi)*(ve - vi) + (we - wi)*(we - wi)) + 0.5*Re_en_coeff*((ue - un)*(ue - un) + (ve - vn)*(ve - vn) + (we - wn)*(we - wn));
+    const CFreal heatWorki = 0.5*Ri_ei_coeff*((ue - ui)*(ue - ui) + (ve - vi)*(ve - vi) + (we - wi)*(we - wi)) + 0.5*Ri_in_coeff*((ui - un)*(ui - un) + (vi - vn)*(vi - vn) + (wi - wn)*(wi - wn));
+    const CFreal heatWorkn = 0.5*Rn_en_coeff*((ue - un)*(ue - un) + (ve - vn)*(ve - vn) + (we - wn)*(we - wn)) + 0.5*Rn_ni_coeff*((ui - un)*(ui - un) + (vi - vn)*(vi - vn) + (wi - wn)*(wi - wn));
 
     const CFreal workColle = ue*collMomentumXe + ve*collMomentumYe + we*collMomentumZe;
     const CFreal workColli = ui*collMomentumXi + vi*collMomentumYi + wi*collMomentumZi;
@@ -416,9 +427,9 @@ void DriftWaves2DHalfThreeFluid<UPDATEVAR>::computeSource
     const CFreal emEnergye = qe*(rhoe/me)*(ue*_Etotal[XX] + ve*_Etotal[YY] + we*_Etotal[ZZ]); //electrons
     const CFreal emEnergyi = qi*(rhoi/mi)*(ui*_Etotal[XX] + vi*_Etotal[YY] + wi*_Etotal[ZZ]); //ions
 
-    source[20] = emEnergye + workColle + heatColle; //Electrons Energy Source terms
-    source[21] = emEnergyi + workColli + heatColli; //Ions Energy
-    source[22] = workColln + heatColln; 	    //Neutrals Energy
+    source[20] = emEnergye + workColle + heatColle + heatWorke; //Electrons Energy Source terms
+    source[21] = emEnergyi + workColli + heatColli + heatWorki; //Ions Energy
+    source[22] = workColln + heatColln + heatWorkn;             //Neutrals Energy
 
     // AAL: Write the sockets
     //if (!this->getMethodData().isPerturb()) { // Condition to avoid writing when the source is perturbed
