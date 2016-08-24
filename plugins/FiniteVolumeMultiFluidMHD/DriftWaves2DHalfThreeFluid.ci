@@ -43,6 +43,10 @@ DriftWaves2DHalfThreeFluid<UPDATEVAR>::DriftWaves2DHalfThreeFluid(const std::str
 
   _Qin = 1.41e-19;
   setParameter("Qin",&_Qin);
+
+  _chemicalReactions = false;
+  setParameter("ChemicalReactions",&_chemicalReactions);
+
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -78,6 +82,8 @@ void DriftWaves2DHalfThreeFluid<UPDATEVAR>::defineConfigOptions(Config::OptionLi
      ("Qen", "Cross section electron-neutral");
   options.template addConfigOption< CFreal >
      ("Qin", "Cross section ion-neutral");
+  options.template addConfigOption< bool >
+     ("ChemicalReactions", "with chemical reactions");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -246,21 +252,51 @@ void DriftWaves2DHalfThreeFluid<UPDATEVAR>::computeSource
   }
   
   //AAL: Here the source for three-fluid continuity, momentum and energy equations
-  if (nbEqs == totalNbEqs || iEqSS == 1) {    
-    //AAL: The following should be changed for the 3 Fluid case
-    /// FLUID EQUATIONS
-    //AAL: CONTINUITY
-    source[8] = 0.;					// Electrons continuity equation
-    source[9] = 0.;					// Ions continuity equation
-    source[10] = 0.;					// Ions continuity equation
-      
-    //AAL: MOMENTUM
+  if (nbEqs == totalNbEqs || iEqSS == 1) {   
+    //electron, ion properties
+    const CFreal ne = rhoe/me;                  // number density electrons [m^-3]
+    const CFreal ni = rhoi/mi;                  // number density ions [m^-3]
+    const CFreal nn = rhon/mn;                  // number density neutrals [m^-3]
     const CFuint firstTemperature = _varSet->getModel()->getFirstScalarVar(2);
     CFreal Te = _physicalData[firstTemperature]; //electron temperature
     CFreal Ti = _physicalData[firstTemperature + 4]; //ion temperature
     CFreal Tn = _physicalData[firstTemperature + 8]; //ion temperature
     
+    // CHEMICAL REACTIONS
+    // IONIZATION
+    //constants Related to ionization frequency from [Leake]
+    const CFreal TeStar = Te/11604.50520;             // electrons temperature in eV.
+    const CFreal A = 2.91e-14;
+    const CFreal X = 0.232;
+    const CFreal psiIonOvTe = 13.6/TeStar;
+    const CFreal K = 0.39; 
+    const CFreal nuIon = ne*A/(X + psiIonOvTe)*std::pow(psiIonOvTe, K)*std::exp(-psiIonOvTe);  // Ionization freq.
+    const CFreal GammaIon_n = -nn*nuIon;
+    const CFreal GammaIon_i = -GammaIon_n;
+    // RECOMBINATION
+    //constant related to recombination
+    const CFreal B = 2.6e-19;
+    const CFreal nuRec = ne/std::sqrt(TeStar)*B;
+    const CFreal GammaRec_i = -ni*nuRec;
+    const CFreal GammaRec_n = -GammaRec_i;
+    ///TOTAL (particles/m3)
+    CFreal ionsParticlesRate     = 0.;
+    CFreal elecParticlesRate     = 0.;
+    CFreal neutralsParticlesRate = 0.;
+    if(_chemicalReactions){
+      ionsParticlesRate     = (-GammaIon_n + GammaRec_i);
+      elecParticlesRate     = (-GammaIon_n + GammaRec_i);
+      neutralsParticlesRate = (GammaIon_n - GammaRec_i);
+    }
 
+    //AAL: The following should be changed for the 3 Fluid case
+    /// FLUID EQUATIONS
+    //AAL: CONTINUITY
+    source[8] = me*elecParticlesRate;					// Electrons continuity equation
+    source[9] = mi*ionsParticlesRate;					// Ions continuity equation
+    source[10] = mn*neutralsParticlesRate;					// Ions continuity equation
+
+    //AAL: MOMENTUM  
     //Compute gradients NO
     // Computation of the gradients for printing pressure gradient in the result
        // ID for the physical data and the gradients
@@ -283,10 +319,6 @@ void DriftWaves2DHalfThreeFluid<UPDATEVAR>::computeSource
        const CFreal GradPyi = Rgasi*(gradRhoi*Ti + rhoi*gradTi);
        const CFreal GradPye = Rgase*(gradRhoe*Te + rhoe*gradTe );
 
-    //electron, ion properties
-    const CFreal ne = rhoe/me;		   	// number density electrons [m^-3]
-    const CFreal ni = rhoi/mi;		   	// number density ions [m^-3]
-    const CFreal nn = rhon/mn;			// number density neutrals [m^-3]
     //const CFreal ne_cgs = ne*1e-6; // number density electrons for cgs unit use [cm^-3]
     //const CFreal ni_cgs = ni*1e-6; // number density ions for cgs unit use [cm^-3]
     //const CFreal Te_cgs = Te/11604.50520;		// electrons temperature in eV.
@@ -378,7 +410,7 @@ void DriftWaves2DHalfThreeFluid<UPDATEVAR>::computeSource
     //cout <<"collMomentumYn = "<< collMomentumYn <<"\n";
     //cout <<"collMomentumZn = "<< collMomentumZn <<"\n";
 
-    //momentum equations - NO removed const
+    //momentum equations 
     CFreal emMomentumXe = qe*ne*(_Etotal[XX] + ve*_Btotal[ZZ] - we*_Btotal[YY]);	//Electromagnetic momentum for electrons in X
     CFreal emMomentumXi = qi*ni*(_Etotal[XX] + vi*_Btotal[ZZ] - wi*_Btotal[YY]);	//Electromagnetic momentum for ions in X
     CFreal emMomentumYe = qe*ne*(_Etotal[YY] + we*_Btotal[XX] - ue*_Btotal[ZZ]);	//Electromagnetic momentum for electrons in Y
@@ -386,17 +418,40 @@ void DriftWaves2DHalfThreeFluid<UPDATEVAR>::computeSource
     CFreal emMomentumZe = qe*ne*(_Etotal[ZZ] + ue*_Btotal[YY] - ve*_Btotal[XX]);	//Electromagnetic momentum for electrons in Z
     CFreal emMomentumZi = qi*ni*(_Etotal[ZZ] + ui*_Btotal[YY] - vi*_Btotal[XX]);	//Electromagnetic momentum for ions in Z
 
-    source[11] = emMomentumXe + collMomentumXe;   //Electrons X momentum
-    source[12] = emMomentumYe + collMomentumYe;   //Electrons Y momentum
-    source[13] = emMomentumZe + collMomentumZe;   //Electrons Z momentum
+    //Momentum due to reactions
+    CFreal reacMomentumXe = 0.;
+    CFreal reacMomentumYe = 0.;
+    CFreal reacMomentumZe = 0.;
+    CFreal reacMomentumXi = 0.;
+    CFreal reacMomentumYi = 0.;
+    CFreal reacMomentumZi = 0.;
+    CFreal reacMomentumXn = 0.;
+    CFreal reacMomentumYn = 0.;
+    CFreal reacMomentumZn = 0.;
 
-    source[14] = emMomentumXi + collMomentumXi;   //Ions X momentum
-    source[15] = emMomentumYi + collMomentumYi;   //Ions Y momentum
-    source[16] = emMomentumZi + collMomentumZi;   //Ions Z momentum
+    if(_chemicalReactions) { 
+      reacMomentumXe = GammaIon_i*me*un - GammaRec_n*me*ue;  
+      reacMomentumYe = GammaIon_i*me*vn - GammaRec_n*me*ve;
+      reacMomentumZe = GammaIon_i*me*wn - GammaRec_n*me*we;
+      reacMomentumXi = GammaIon_i*mi*un - GammaRec_n*mi*ui;
+      reacMomentumYi = GammaIon_i*mi*vn - GammaRec_n*mi*vi;
+      reacMomentumZi = GammaIon_i*mi*wn - GammaRec_n*mi*wi;
+      reacMomentumXn = GammaRec_n*(mi*ui + me*ue) - GammaIon_i*mn*un;
+      reacMomentumYn = GammaRec_n*(mi*vi + me*ve) - GammaIon_i*mn*vn;
+      reacMomentumZn = GammaRec_n*(mi*wi + me*we) - GammaIon_i*mn*wn;
+    }
+    
+    source[11] = emMomentumXe + collMomentumXe + reacMomentumXe;   //Electrons X momentum
+    source[12] = emMomentumYe + collMomentumYe + reacMomentumYe;   //Electrons Y momentum
+    source[13] = emMomentumZe + collMomentumZe + reacMomentumZe;   //Electrons Z momentum
 
-    source[17] = collMomentumXn;   //Neutrals X momentum
-    source[18] = collMomentumYn;   //Neutrals Y momentum
-    source[19] = collMomentumZn;   //Neutrals Z momentum
+    source[14] = emMomentumXi + collMomentumXi + reacMomentumXi;   //Ions X momentum
+    source[15] = emMomentumYi + collMomentumYi + reacMomentumYi;   //Ions Y momentum
+    source[16] = emMomentumZi + collMomentumZi + reacMomentumZi;   //Ions Z momentum
+
+    source[17] = collMomentumXn + reacMomentumXn;   //Neutrals X momentum
+    source[18] = collMomentumYn + reacMomentumYn;   //Neutrals Y momentum
+    source[19] = collMomentumZn + reacMomentumZn;   //Neutrals Z momentum
 
       
     //AAL: ENERGY
@@ -427,9 +482,25 @@ void DriftWaves2DHalfThreeFluid<UPDATEVAR>::computeSource
     const CFreal emEnergye = qe*(rhoe/me)*(ue*_Etotal[XX] + ve*_Etotal[YY] + we*_Etotal[ZZ]); //electrons
     const CFreal emEnergyi = qi*(rhoi/mi)*(ui*_Etotal[XX] + vi*_Etotal[YY] + wi*_Etotal[ZZ]); //ions
 
-    source[20] = emEnergye + workColle + heatColle + heatWorke; //Electrons Energy Source terms
-    source[21] = emEnergyi + workColli + heatColli + heatWorki; //Ions Energy
-    source[22] = workColln + heatColln + heatWorkn;             //Neutrals Energy
+    //Energy due to reactions
+    CFreal ReacEnergye = 0.;
+    CFreal ReacEnergyi = 0.;
+    CFreal ReacEnergyn = 0.;
+    const CFreal Ue2 = ue*ue + ve*ve + we*we;
+    const CFreal Ui2 = ui*ui + vi*vi + wi*wi;
+    const CFreal Un2 = un*un + vn*vn + wn*wn;
+    if(_chemicalReactions){
+      const CFreal QRec_i = -1.5*GammaRec_n*kB*Tn;
+      const CFreal QIon_n = -1.5*GammaIon_i*kB*Ti;
+      const CFreal QRec_e = -1.5*GammaRec_n*kB*Tn; 
+      ReacEnergye = me/mn*(0.5*GammaIon_i*mn*Un2 + QIon_n) - 0.5*GammaRec_n*me*Ue2 - QRec_e;
+      ReacEnergyi = mi/mn*(0.5*GammaIon_i*mn*Un2 + QIon_n) - 0.5*GammaRec_n*mi*Ui2 - QRec_i;
+      ReacEnergyn = GammaRec_n*(0.5*mi*Ui2 + 0.5*me*Ue2) + QRec_i + QRec_e - (0.5*GammaIon_i*mn*Un2 + QIon_n); 
+    } 
+
+    source[20] = emEnergye + workColle + heatColle + heatWorke + ReacEnergye; //Electrons Energy Source terms
+    source[21] = emEnergyi + workColli + heatColli + heatWorki + ReacEnergyi; //Ions Energy
+    source[22] = workColln + heatColln + heatWorkn + ReacEnergyn;             //Neutrals Energy
 
     // AAL: Write the sockets
     //if (!this->getMethodData().isPerturb()) { // Condition to avoid writing when the source is perturbed
