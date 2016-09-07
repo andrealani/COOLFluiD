@@ -44,8 +44,8 @@ Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.Tecplot.FileName    = HornungN2.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Rhoivt
 Simulator.SubSystem.Tecplot.Data.printExtraValues = true
-Simulator.SubSystem.Tecplot.SaveRate = 100
-Simulator.SubSystem.Tecplot.AppendIter = false #true
+Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Wall
 
 Simulator.SubSystem.CFmesh.FileName  = HornungN2.CFmesh
@@ -54,12 +54,12 @@ Simulator.SubSystem.CFmesh.SaveRate = 500
 Simulator.SubSystem.CFmesh.Data.ExtraStateVarNames = limiter
 Simulator.SubSystem.CFmesh.Data.ExtraStateVarStrides = 5
 
-#Simulator.SubSystem.StopCondition          = MaxNumberSteps
-#Simulator.SubSystem.MaxNumberSteps.nbSteps = 6000
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 11
 
-Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.StopCondition       = Norm
 # the heat flux needs valueNorm = -7.0 to converge
-Simulator.SubSystem.Norm.valueNorm      = -7.0
+#Simulator.SubSystem.Norm.valueNorm      = -7.0
 
 Simulator.SubSystem.Default.listTRS = Wall Inlet Outlet
 
@@ -223,10 +223,10 @@ Simulator.SubSystem.DataPostProcessing          = DataProcessing
 Simulator.SubSystem.DataPostProcessingNames     = MeFiAlgo
 Simulator.SubSystem.MeFiAlgo.Comds              = MeshFittingAlgorithm
 Simulator.SubSystem.MeFiAlgo.Data.CollaboratorNames = MeshAlgoLSS
-Simulator.SubSystem.MeFiAlgo.ProcessRate        = 100
+Simulator.SubSystem.MeFiAlgo.ProcessRate        = 10
 Simulator.SubSystem.MeFiAlgo.SkipFirstIteration = true
-Simulator.SubSystem.MeFiAlgo.StartIter          = 100
-Simulator.SubSystem.MeFiAlgo.StopIter           = 900
+Simulator.SubSystem.MeFiAlgo.StartIter          = 10
+Simulator.SubSystem.MeFiAlgo.StopIter           = 1000
 Simulator.SubSystem.MeFiAlgo.Names              = MeshFitting
 Simulator.SubSystem.MeFiAlgo.Data.updateVar     = Rhoivt
  
@@ -236,7 +236,7 @@ Simulator.SubSystem.MeFiAlgo.MeshFitting.meshAcceleration = 0.05
 Simulator.SubSystem.MeFiAlgo.MeshFitting.monitorVarID     = 4
 Simulator.SubSystem.MeFiAlgo.MeshFitting.monitorPhysVarID = 1
 Simulator.SubSystem.MeFiAlgo.MeshFitting.equilibriumSpringLength = 2e-4
-Simulator.SubSystem.MeFiAlgo.MeshFitting.unlockedBoundaryTRSs = Outlet Inlet #Wall
+Simulator.SubSystem.MeFiAlgo.MeshFitting.unlockedBoundaryTRSs = Outlet #Inlet #Wall
 Simulator.SubSystem.MeFiAlgo.MeshFitting.ratioBoundaryToInnerEquilibriumSpringLength = 0.1
 
 Simulator.SubSystem.CellCenterFVM.AfterMeshUpdateCom = StdMeshFittingUpdate
