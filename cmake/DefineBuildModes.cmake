@@ -110,7 +110,8 @@ IF(UNIX)
    LIST ( APPEND CF_Fortran_FLAGS_CUDA "-O3 -g -fPIC" )
    #LIST ( APPEND CF_CUDAC_FLAGS_CUDA   "-O3 -g -arch sm_20 -Xcompiler -fPIC" )
    LIST ( APPEND CF_CUDAC_FLAGS_CUDA   "-O3 -g -arch=sm_30 -Xcompiler -fPIC -Xcompiler ${CF_FOMP_FLAG}" )  
-
+   LIST ( APPEND CMAKE_CXX_LINK_FLAGS  "-Xlinker -lgomp" )
+ 
 #   SET(CMAKE_SHARED_LIBRARY_Fortran_FLAGS "-fPIC")  
 #   SET(CMAKE_SHARED_LIBRARY_C_FLAGS "-Xcompiler -fPIC")        
 #   SET(CMAKE_SHARED_LIBRARY_CXX_FLAGS "-Xcompiler -fPIC")      
