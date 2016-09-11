@@ -87,6 +87,7 @@ my %default_options = (
     'withbuildtype'   => 1,
     'withmpi'         => "",
     'withcuda'        => 0,
+    'withomp'	      => 0,
     'withcurl'        => 1,
     'with_mutationpp' => 0,
     'with_plato'      => 0,
@@ -909,6 +910,7 @@ sub setup_cfgoptions()
   setup_option('nofortran',           'CF_SKIP_FORTRAN');
   setup_option('withmpi',             'CF_ENABLE_MPI');
   setup_option('withcuda',            'CF_ENABLE_CUDA');
+  setup_option('withomp',             'CF_ENABLE_OMP');
   setup_option('withcurl',            'CF_ENABLE_CURL');
   setup_option('with_mutationpp',     'CF_ENABLE_MUTATIONPP');
   setup_option('with_plato',          'CF_ENABLE_PLATO');
