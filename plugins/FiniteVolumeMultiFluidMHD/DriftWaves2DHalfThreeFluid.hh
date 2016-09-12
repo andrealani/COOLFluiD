@@ -230,6 +230,7 @@ protected: // data
 private:
 
   //options here
+  bool _chemicalReactions;
   
 }; // end of class DriftWaves2DHalfThreeFluid
 
