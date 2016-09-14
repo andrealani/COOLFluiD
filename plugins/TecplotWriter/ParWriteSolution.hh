@@ -55,9 +55,12 @@ public:
   /// Destructor.
   virtual ~ParWriteSolution();
   
-    /// Set up private data
+  /// Set up private data
   virtual void setup();
-
+  
+  /// Unsetup private data
+  virtual void unsetup();
+  
   /// Returns the DataSocket's that this command needs as sinks
   /// @return a vector of SafePtr with the DataSockets
   virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets();

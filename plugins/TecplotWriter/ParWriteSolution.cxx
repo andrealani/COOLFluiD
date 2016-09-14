@@ -317,12 +317,26 @@ void ParWriteSolution::setup()
       
 //////////////////////////////////////////////////////////////////////////////
  
+void ParWriteSolution::unsetup()
+{
+  CFAUTOTRACE;
+  
+  // cleanupNodeIDMapping();
+  // _mapGlobal2LocalNodeID.clear();
+  
+  TecWriterCom::unsetup(); 
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
 void ParWriteSolution:: cleanupNodeIDMapping()
 {  
   CFAUTOTRACE;
   
-  for (CFuint i = 0; i < _mapTrsName2TecplotData.size(); ++i) {
-    _mapTrsName2TecplotData[i]->cleanupMappings();
+  if (_mapTrsName2TecplotData.size() > 0) {
+    for (CFuint i = 0; i < _mapTrsName2TecplotData.size(); ++i) {
+      _mapTrsName2TecplotData[i]->cleanupMappings();
+    }
   }
   
   _mapGlobal2LocalNodeID.clear();

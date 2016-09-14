@@ -9,6 +9,7 @@
 
 namespace COOLFluiD {
     namespace Common  {
+
 //////////////////////////////////////////////////////////////////////////////
 
 /// Really free storage associated with a vector
@@ -16,10 +17,9 @@ namespace COOLFluiD {
 template <typename T>
 inline void SwapEmpty (T & E)
 {
-    T().swap (E);
-//    std::swap(E, T());
+  if (E.size() > 0) {T().swap(E);}
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
     }
 }

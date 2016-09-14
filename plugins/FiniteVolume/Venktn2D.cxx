@@ -76,6 +76,8 @@ void Venktn2D::configure ( Config::ConfigArgs& args )
 
 void Venktn2D::setup()
 {
+  Limiter<CellCenterFVMData>::setup();
+  
   if (_length <= 0.) {
     CFLog(VERBOSE, "WARNING: Venktn2D::configure() => using default reference length\n");
     _length = PhysicalModelStack::getActive()->getImplementor()->getRefLength();

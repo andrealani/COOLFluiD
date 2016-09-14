@@ -189,7 +189,7 @@ void OnlyMeshSubSystem::deallocateAllSockets()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void OnlyMeshSubSystem::buildMeshData()
+void OnlyMeshSubSystem::buildPhysicalModel()
 {
   CFAUTOTRACE;
 
@@ -213,6 +213,13 @@ void OnlyMeshSubSystem::buildMeshData()
     NamespaceSwitcher::getInstance
       (SubSystemStatusStack::getCurrentName()).popNamespace();
   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void OnlyMeshSubSystem::buildMeshData()
+{
+  CFAUTOTRACE;
   
   // allocate all the mesh data
   vector <Common::SafePtr<MeshData> > meshDataVector = 

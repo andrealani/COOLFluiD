@@ -62,13 +62,15 @@ public:
    */
   virtual void setup()
   {
+    Framework::MethodStrategy<CellCenterFVMData>::setup();
+    
     _gradientsJacob.resize(2); // left and right states
     _gradientsJacob[0].resize
       (Framework::PhysicalModelStack::getActive()->getDim());
     _gradientsJacob[1].resize
       (Framework::PhysicalModelStack::getActive()->getDim());
   }
-
+  
   /**
    * Compute the gradients
    */

@@ -93,9 +93,14 @@ public: // functions
 
   /// Building MeshData Phase.
   /// @see MeshData
-  /// @pre allocateAllSockets() as been called
+  /// @pre allocateAllSockets() has been called
   virtual void buildMeshData() = 0;
-
+  
+  /// Building Physical Model Phase.
+  /// @see PhysicalModel
+  /// @pre allocateAllSockets() has been called
+  virtual void buildPhysicalModel() = 0;
+  
   /// Run / Process Phase.
   /// All the big number crunching work goes here.
   /// @pre setup() as been called
@@ -143,6 +148,11 @@ protected: // helper functions
   /// @return an Event with a message in its body
   virtual Common::Signal::return_t buildMeshDataAction(Common::Signal::arg_t eBuild);
 
+  /// Action which is executed by the ActionLinstener for the "CF_ON_MAESTRO_BUILDPHYSICALMODEL" Event
+  /// @param eSetup the event which provoked this action
+  /// @return an Event with a message in its body
+  virtual Common::Signal::return_t buildPhysicalModelAction(Common::Signal::arg_t eBuild);
+  
   /// Action which is executed by the ActionLinstener for the "CF_ON_MAESTRO_SETUP" Event
   /// @param eSetup the event which provoked this action
   /// @return an Event with a message in its body

@@ -87,6 +87,18 @@ void FVMCC_PolyRec::setup()
 }
       
 //////////////////////////////////////////////////////////////////////////////
+
+void FVMCC_PolyRec::unsetup()
+{
+  for (CFuint iFace = 0; iFace < _quadPointCoord.size(); ++iFace) {
+    deletePtr(_quadPointCoord[iFace][0]);
+  }
+  SwapEmpty(_quadPointCoord);
+  
+  PolyReconstructor<CellCenterFVMData>::unsetup();
+}
+
+//////////////////////////////////////////////////////////////////////////////
       
 void FVMCC_PolyRec::prepareReconstruction()
 {

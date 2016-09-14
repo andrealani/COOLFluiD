@@ -63,6 +63,9 @@ public: // functions
   /// Building MeshData Phase.
   void buildMeshData();
 
+  /// Building Physical Model Phase.
+  virtual void buildPhysicalModel();
+  
   /// Setup Phase. Setup parameters of the OnlyMeshSubSystem.
   /// @see MeshData
   virtual void setup();

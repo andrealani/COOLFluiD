@@ -62,7 +62,7 @@ void BDF2::prepare()
   {
     subSysStatus->updateNbIter();
     subSysStatus->updateTimeStep();
-    getConvergenceMethodData()->getCFL()->update();
+    // getConvergenceMethodData()->getCFL()->update();
   }
   
   // prepare to take a time step
@@ -115,9 +115,6 @@ void BDF2::takeStepImpl()
   {
     *cvgst = subSysStatus->getConvergenceStatus();
     
-    // add if 
-    // getConvergenceMethodData()->getCFL()->update(cvgst.get());
-
     CFLog(VERBOSE, "BDF2::takeStep(): preparing Computation\n");
     
     // prepare the computation of the residuals
@@ -134,8 +131,11 @@ void BDF2::takeStepImpl()
     CFLog(VERBOSE, "BDF2::takeStep(): computing Space Residual\n");
     // compute the steady space residual
     getMethodData()->getCollaborator<SpaceMethod>()->computeSpaceResidual(theta);
-    // add if
-    // getConvergenceMethodData()->getCFL()->update(cvgst.get());
+    
+    if ( m_data->getDoComputeJacobFlag()) {
+      getConvergenceMethodData()->getCFL()->update(cvgst.get());
+    }
+    
     CFLog(VERBOSE, "BDF2::takeStep(): computing space residual norm\n");
     
     // The norm of the space residual will only be computed if the flag 

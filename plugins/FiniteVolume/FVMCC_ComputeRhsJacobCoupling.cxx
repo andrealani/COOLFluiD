@@ -565,10 +565,7 @@ void FVMCC_ComputeRhsJacobCoupling::finalizeComputationRHS()
   
   // reset the equation subsystem descriptor
   PhysicalModelStack::getActive()->resetEquationSubSysDescriptor();
-  
-  // compute dynamically the CFL
-  getMethodData().getCFL()->update();
-}
+}  
 
 //////////////////////////////////////////////////////////////////////////////
  

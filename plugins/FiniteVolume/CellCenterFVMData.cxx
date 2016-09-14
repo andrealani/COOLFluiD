@@ -670,14 +670,17 @@ void CellCenterFVMData::setup()
 //////////////////////////////////////////////////////////////////////////////
       
 void CellCenterFVMData::unsetup()
-{
+{  
   SpaceMethodData::unsetup(); 
   
   _faceTrsGeoBuilder.unsetup();
+  _faceCellTrsGeoBuilder.unsetup();
   _cellTrsGeoBuilder.unsetup();
   _geoWithNodesBuilder.unsetup();
+  
+  _volumeIntegrator.unsetup();
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
       
 CFuint CellCenterFVMData::getOppositeIFace(CFuint iFace, CFuint dim,

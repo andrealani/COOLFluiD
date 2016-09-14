@@ -23,7 +23,7 @@ Simulator.Paths.ResultsDir = ./RESULTS_WEDGE
 Simulator.SubSystem.Default.PhysicalModelType       = Euler2D
 
 Simulator.SubSystem.OutputFormat      = Tecplot CFmesh
-Simulator.SubSystem.CFmesh.FileName   = wedge.CFmesh
+Simulator.SubSystem.CFmesh.FileName   = wedgeFVM.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate   = 100
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false

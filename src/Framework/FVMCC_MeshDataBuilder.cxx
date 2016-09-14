@@ -71,7 +71,7 @@ FVMCC_MeshDataBuilder::~FVMCC_MeshDataBuilder()
 void FVMCC_MeshDataBuilder::releaseMemory()
 {
   MeshDataBuilder::releaseMemory();
-
+  
   SwapEmpty(m_bGeoType);
   SwapEmpty(m_bLocalGeoIDs);
   SwapEmpty(m_faceNodeElement);
@@ -94,26 +94,36 @@ void FVMCC_MeshDataBuilder::createTopologicalRegionSets()
 
   // first create the cells and the renumber them
   // as if it would be a cell-vertex mesh
+  CFLog(VERBOSE, "FVMCC_MeshDataBuilder::createTopologicalRegionSets() => 1\n");
   createInnerCells();
+ 
+  CFLog(VERBOSE, "FVMCC_MeshDataBuilder::createTopologicalRegionSets() => 2\n");
   renumberCells();
-
+  
+  CFLog(VERBOSE, "FVMCC_MeshDataBuilder::createTopologicalRegionSets() => 3\n");
   // put the coordinates in the states
   setCoordInCellStates();
-
+  
+  CFLog(VERBOSE, "FVMCC_MeshDataBuilder::createTopologicalRegionSets() => 4\n");
   // create the cell-face connectivity
   createCellFaces();
-
+  
+  CFLog(VERBOSE, "FVMCC_MeshDataBuilder::createTopologicalRegionSets() => 5\n");
   // create the inner faces TRS
   createInnerFacesTRS();
-
+  
+  CFLog(VERBOSE, "FVMCC_MeshDataBuilder::createTopologicalRegionSets() => 6\n");
   // create all the boundary faces TRSs
   createBoundaryFacesTRS();
-
+  
+  CFLog(VERBOSE, "FVMCC_MeshDataBuilder::createTopologicalRegionSets() => 7\n");
   // set the mappping allowing to get Face info from TRS
   // by geometric entity local (in the processor) ID
   setMapGeoToTrs();
+  
+  CFLog(VERBOSE, "FVMCC_MeshDataBuilder::createTopologicalRegionSets() => 8\n");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void FVMCC_MeshDataBuilder::createCellFaces()
@@ -372,7 +382,10 @@ void FVMCC_MeshDataBuilder::createInnerFacesTRS()
   ConnTable* innerFaceStates = new ConnTable(m_nbInFacesNodes);
 
   std::valarray<CFint> idxState(-1, m_nbFaces);
-
+  
+  if (m_inGeoTypes != CFNULL) {deletePtr(m_inGeoTypes);}
+  if (m_inLocalGeoIDs != CFNULL) {deletePtr(m_inLocalGeoIDs);}
+  
   m_inGeoTypes = new vector<CFuint>(nbInnerFaces);
   m_inLocalGeoIDs = new vector<CFuint>(nbInnerFaces);
   m_bGeoType.resize(nbBPlusPartitionFaces);
@@ -1068,7 +1081,8 @@ void FVMCC_MeshDataBuilder::setMapGeoToTrs()
 
 void FVMCC_MeshDataBuilder::renumberCells()
 {
-  CFout << "FVMCC_MeshDataBuilder::renumberCells()\n";
+  CFLog(VERBOSE, "FVMCC_MeshDataBuilder::renumberCells() => START\n");
+  
   SafePtr<TopologicalRegionSet> cells =
     MeshDataStack::getActive()->getTrs("InnerCells");
 
@@ -1084,16 +1098,16 @@ void FVMCC_MeshDataBuilder::renumberCells()
       doRenumber = false;
       break;
     }
-  }
-
+  } 
+  
+  CFLog(INFO, "nbCells = " << nbCells << ", nbStates = " << states.size() << "\n");
+  
   if (doRenumber) {
     // build a mapping global cellID to local cellID
     CFMap<CFuint, CFuint> mapGlobalToLocalCellID;
     mapGlobalToLocalCellID.reserve(nbCells);
-
-    CFout << "nbCells = " << nbCells << ", nbStates = " << states.size() << "\n";
     cf_assert(nbCells == states.size());
-
+    
     for (CFuint i = 0; i < nbCells; ++i) {
       mapGlobalToLocalCellID.insert(cells->getGlobalGeoID(i),i);
     }
@@ -1125,26 +1139,14 @@ void FVMCC_MeshDataBuilder::renumberCells()
     for (CFuint i = 0; i < nbCells; ++i) {
       const CFuint globalStateID = states[cells->getStateID(i,0)]->getGlobalID();
       if (globalStateID != cells->getGlobalGeoID(i)) {
-	CFout << "ERROR: globalStateID " << globalStateID
-	      << " != globalCellID " << cells->getGlobalGeoID(i) << "\n";
+	CFLog(ERROR, "ERROR: globalStateID " << globalStateID
+	      << " != globalCellID " << cells->getGlobalGeoID(i) << "\n");
 	abort();
       }
     }
   }
 
-  //   DataHandle < Framework::Node*, Framework::GLOBAL > nodes =
-  //      MeshDataStack::getActive()->getNodeDataSocketSink().getDataHandle();
-  //   for (CFuint i = 0; i < ptrTRS->getLocalNbGeoEnts(); ++i) {
-  //     CFout << "CELLID = " << (*cellLocalIDs)[i] << "\t\t" << (*cellGlobalIDs)[i] << "\n";
-  //     CFout << "stateID = " << ptrTRS->getStateID(i,0) << "\t\t"
-  // 	  << states[ptrTRS->getStateID(i,0)]-getGlobalID() << "\n";
-  //     CFout << "nodeID = " << ptrTRS->getNodeID(i,0)
-  // 	  << "\t" << ptrTRS->getNodeID(i,1)
-  // 	  << "\t" << ptrTRS->getNodeID(i,2) << "\t\t"
-  // 	  << nodes[ptrTRS->getNodeID(i,0)]->getGlobalID()
-  // 	  << "\t" << nodes[ptrTRS->getNodeID(i,1)]->getGlobalID()
-  // 	  << "\t" << nodes[ptrTRS->getNodeID(i,2)]->getGlobalID() << "\n";
-  //   }
+  CFLog(VERBOSE, "FVMCC_MeshDataBuilder::renumberCells() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

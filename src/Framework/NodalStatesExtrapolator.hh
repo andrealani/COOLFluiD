@@ -62,7 +62,12 @@ public:
   /**
    * Set up private data needed by the computation
    */
-  virtual void setup();
+  virtual void setup(); 
+  
+  /**
+   * Unsetup private data needed by the computation
+   */
+  virtual void unsetup();
 
   /**
    * Extrapolate the solution in all mesh nodes
@@ -235,7 +240,7 @@ protected:
 
   // reverse mapping between a local node ID and local node ID inside a specific TRS
   MapTrsNodeIDs _mapNodeID2TrsNodeID;
-
+  
   /// map the boundary TRS names with a unique TRS ID
   Common::CFMap<std::string, CFint> _mapTrsNameToID;
   

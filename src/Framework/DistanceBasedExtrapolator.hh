@@ -37,8 +37,13 @@ public:
   /**
    * Set up private data needed by the computation
    */
-  virtual void setup();
+  virtual void setup(); 
 
+  /**
+   * Unsetup private data needed by the computation
+   */
+  virtual void unsetup();
+  
   /**
    * Extrapolate the solution in all mesh nodes
    */

@@ -9,7 +9,7 @@
 #endif
 
 #include "Common/PEFunctions.hh"
-
+#include "Common/SwapEmpty.hh"
 #include "Common/CFLog.hh"
 #include "Common/NullPointerException.hh"
 #include "Common/EventHandler.hh"
@@ -303,11 +303,11 @@ void StandardSubSystem::deallocateAllSockets()
     
 //////////////////////////////////////////////////////////////////////////////
 
-void StandardSubSystem::buildMeshData()
+void StandardSubSystem::buildPhysicalModel()
 {
   CFAUTOTRACE;
   
-  CFLog(VERBOSE, "StandardSubSystem::buildMeshData() => start\n");
+  CFLog(VERBOSE, "StandardSubSystem::buildPhysicalModel() => start\n");
   
   // first setup the physical models
   CFLog(NOTICE,"-------------------------------------------------------------\n");
@@ -317,7 +317,16 @@ void StandardSubSystem::buildMeshData()
   const string ssGroupName = SubSystemStatusStack::getCurrentName();
   runSerial<void, StandardSubSystem, &StandardSubSystem::setupPhysicalModels>(this, ssGroupName);
   
-  CFLog(VERBOSE, "StandardSubSystem::buildMeshData() => PhysicalModel's have been setup\n");
+  CFLog(VERBOSE, "StandardSubSystem::buildPhysicalModel() => end\n");
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
+void StandardSubSystem::buildMeshData()
+{
+  CFAUTOTRACE;
+  
+  CFLog(VERBOSE, "StandardSubSystem::buildMeshData() => start\n");
   
   // allocate all the mesh data
   vector <Common::SafePtr<MeshData> > meshDataVector = 
@@ -343,21 +352,35 @@ void StandardSubSystem::buildMeshData()
 		       mem_fun(&MeshCreator::generateMeshData),
 		       mem_fun(&MeshCreator::isNonRootMethod), false);
   
-  // Process the CFMeshData to do:
+  // Process MeshData to do:
   //  - renumbering
   //  - conversion FVM <-> FEM
   Common::for_each_if (m_meshCreator.begin(), m_meshCreator.end(), 
 		       mem_fun(&MeshCreator::processMeshData),
 		       mem_fun(&MeshCreator::isNonRootMethod), false);
   
-  // Use the CFMeshData to build the mesh
+  // Use MeshData to build the mesh
   Common::for_each_if (m_meshCreator.begin(), m_meshCreator.end(), 
 		       mem_fun(&MeshCreator::buildMeshData),
 		       mem_fun(&MeshCreator::isNonRootMethod), false);
   
+  // set up MeshData that are global across partitions 
+  setGlobalMeshData();
+  
+  m_meshCreator.apply
+    (root_mem_fun<void,MeshCreator>(&MeshCreator::unsetMethod));
+  
+  CFLog(VERBOSE, "StandardSubSystem::buildMeshData() => end\n");
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+    
+void StandardSubSystem::setGlobalMeshData()
+{
+  vector <Common::SafePtr<MeshData> > meshDataVector = 
+    MeshDataStack::getInstance().getAllEntries();
   
   const int rank = PE::GetPE().GetRank("Default");
-  
   for(CFuint iMeshData = 0; iMeshData < meshDataVector.size(); iMeshData++) {
     SafePtr<MeshData> currMeshData = meshDataVector[iMeshData];
     bool isNonRoot = false;
@@ -373,10 +396,10 @@ void StandardSubSystem::buildMeshData()
 	// === conversion fix ===
 	vector<string>& TotalTRSNames = currMeshData->getTotalTRSNames ();
 	vector<vector<CFuint> >& TotalTRSInfo = currMeshData->getTotalTRSInfo ();
+	vector< SafePtr<TopologicalRegionSet> > trsList = currMeshData->getTrsList();
 	
 	if (TotalTRSInfo.empty ()) {
 	  cf_assert(TotalTRSNames.empty());
-	  vector< SafePtr<TopologicalRegionSet> > trsList = currMeshData->getTrsList();
 	  
 	  // count in advance the number of writable TRS
 	  CFuint sizeTRSToWrite = 0;
@@ -391,13 +414,14 @@ void StandardSubSystem::buildMeshData()
 	  TotalTRSInfo.resize(sizeTRSToWrite);
 	  
 	  CFuint counter = 0;
-	  vector< Common::SafePtr<TopologicalRegionSet> >::iterator it;
+	  vector< SafePtr<TopologicalRegionSet> >::iterator it;
 	  for (it = trsList.begin(); it != trsList.end(); ++it) {
 	    if ((*it)->hasTag("writable")) {
 	      TotalTRSNames[counter] = (*it)->getName();
 	      const CFuint nbTRs = (*it)->getNbTRs();
 	      TotalTRSInfo[counter].resize(nbTRs);
 	      for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
+		// we make sure that the number of boundary faces is always updated
 		TotalTRSInfo[counter][iTR] = (*(*it))[iTR]->getLocalNbGeoEnts();
 		CFLog(VERBOSE, "TRS : " << (*it)->getName()
 		      << ", TR : "<< iTR
@@ -439,8 +463,6 @@ void StandardSubSystem::buildMeshData()
       }
     }
   }
-  
-  CFLog(VERBOSE, "StandardSubSystem::buildMeshData() => end\n");
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -695,7 +717,7 @@ void StandardSubSystem::run()
     // Mesh adaptation (connectivity is NOT preserved)
     m_meshAdapterMethod.apply(mem_fun<void,MeshAdapterMethod>
                               (&MeshAdapterMethod::remesh));
-    
+
     CFLog(VERBOSE, "StandardSubSystem::run() => writeConvergenceOnScreen()\n");
     writeConvergenceOnScreen();
     
@@ -704,6 +726,9 @@ void StandardSubSystem::run()
     bool dontforce = false;
     writeSolution(dontforce);
     
+    // unsetup();
+    // buildMeshData();
+    // setup(); 
   } // end for convergence loop
   
   // finalize the coupling
@@ -795,8 +820,8 @@ void StandardSubSystem::unsetup()
     (mem_fun<void,CouplerMethod>(&CouplerMethod::unsetMethod));
   
   CFLog(VERBOSE, "StandardSubSystem::unsetup() => MeshCreator\n");
-  m_meshCreator.apply
-    (root_mem_fun<void,MeshCreator>(&MeshCreator::unsetMethod));
+  // m_meshCreator.apply
+  //  (root_mem_fun<void,MeshCreator>(&MeshCreator::unsetMethod));
   
   CFLog(VERBOSE, "StandardSubSystem::unsetup() => DataProcessingMethod (preprocessing)\n");
   m_dataPreProcessing.apply

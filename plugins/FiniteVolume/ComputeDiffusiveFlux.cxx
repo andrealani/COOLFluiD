@@ -61,9 +61,11 @@ vector<SafePtr<BaseDataSocketSink> > ComputeDiffusiveFlux::needsSockets()
 
 void ComputeDiffusiveFlux::setup()
 {
+  ComputeFlux<CellCenterFVMData>::setup();
+  
   _lFluxJacobian.resize(PhysicalModelStack::getActive()->getNbEq(),
 			PhysicalModelStack::getActive()->getNbEq());
-
+  
   _rFluxJacobian.resize(PhysicalModelStack::getActive()->getNbEq(),
 			PhysicalModelStack::getActive()->getNbEq());
 }

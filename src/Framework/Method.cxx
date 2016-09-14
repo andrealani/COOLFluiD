@@ -273,9 +273,15 @@ void Method::unsetupCommandsAndStrategies()
   {
     Common::SafePtr<Framework::NumericalStrategy> st = (*strtItr);
     cf_assert(st.isNotNull());
-
-    CFLog(DEBUG_MIN,"Strategy name : " << (*strtItr)->getName() << "\n");
-    if (st->isSetup()) st->unsetup();
+    
+    CFLog(VERBOSE, "Method::unsetupCommandsAndStrategies() for Strategy [" << (*strtItr)->getName() << "] \n");
+    if (st->isSetup()) {
+      st->unsetup();
+    }
+    else {
+      CFLog(WARN, "Method::unsetupCommandsAndStrategies() => Strategy [" << (*strtItr)->getName() 
+	    << "] is NOT properly setup()\n");
+    }
   }
   
   CFLog(VERBOSE, "Method::unsetupCommandsAndStrategies() for [" << getName() << "] => end\n");

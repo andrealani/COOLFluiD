@@ -58,9 +58,9 @@ void CrankNicholson::takeStepImpl()
   if(subSysStatus->isSubIterationFirstStep()){
     subSysStatus->updateNbIter();
     subSysStatus->updateTimeStep();
-    getConvergenceMethodData()->getCFL()->update();
+    //    getConvergenceMethodData()->getCFL()->update();
   }
-
+  
   // do a prepare step, usually backing up the solution to
   // pastStates
   CFLogDebugMed( "CrankNicholson::takeStep(): calling Prepare step\n");
@@ -97,24 +97,39 @@ void CrankNicholson::takeStepImpl()
   subSysStatus->resetResidual();
   subSysStatus->setFirstStep(true);
   subSysStatus->setLastStep(false);
-
+  
+  // We use this convergence status to be able to change the CFL in the pseudo-time
+  // iterations in unsteady
+  std::auto_ptr<Framework::ConvergenceStatus> cvgst(new Framework::ConvergenceStatus);
+  
   // sweeps to solve the nonlinear system
   for(CFuint k = 0; !m_data->isAchieved(); ++k) {
-
+    *cvgst = subSysStatus->getConvergenceStatus();
+    
     // prepare the computation of the residuals
     getMethodData()->getCollaborator<SpaceMethod>()->prepareComputation();
-
+    
+    // this will make the solvers compute the jacobian only during the first iteration at each time step
+    (m_data->freezeJacobian() && k > 1) ? m_data->setDoComputeJacobFlag(false) : m_data->setDoComputeJacobFlag(true);
+    
+    // this is needed for cases like jacobian free
+    getMethodData()->getCollaborator<SpaceMethod>()->setComputeJacobianFlag( m_data->getDoComputeJacobFlag() );
+    
     // compute the steady space residual
     m_init->execute(); /// @note KVDA: what does this init command do? It's Null by default and it's not present with BDF2...
+    
     getMethodData()->getCollaborator<SpaceMethod>()->computeSpaceResidual(0.5);
-
+    if (m_data->getDoComputeJacobFlag()) {
+      getConvergenceMethodData()->getCFL()->update(cvgst.get());
+    }
+    
     // execute intermediate step (add 0.5*rhs^n)
     m_intermediate->execute();
-
+    
     // RHS will be changed here (from steady to pseudoSteady)
     // including the time contribution
     getMethodData()->getCollaborator<SpaceMethod>()->computeTimeResidual(1.0);
-
+    
     // solve the linear system
     getLinearSystemSolver().apply(mem_fun(&LinearSystemSolver::solveSys),
 				  m_data->getNbLSSToSolveAtOnce());

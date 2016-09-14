@@ -37,7 +37,11 @@ public:
   /// Set up some private data needed
   /// for the simulation
   void setup();
-
+  
+  /// Unsetup some private data needed
+  /// for the simulation
+  void unsetup();
+  
   /// Configures the command.
   void configure ( Config::ConfigArgs& args );
 

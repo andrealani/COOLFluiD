@@ -140,11 +140,6 @@ public:
 	     Framework::GeometricEntity* const cell,
 	     CFreal* limiterValue);
   
-  /**
-   * Set up the private data
-   */
-  void setup() {}
-  
 private:
   
   /// storage for the stencil via pointers to neighbors

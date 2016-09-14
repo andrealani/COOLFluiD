@@ -197,11 +197,11 @@ void ComputeRhsJacob::executeOnTrs()
   // Because if it is unsteady we want that it is done in the takeStepImpl
   // This is not done in unsteady because then, we can not change the CFL in the 
   // pseudo-time iterations
-  bool isUnsteady(false);
+  /*bool isUnsteady(false);
   if(SubSystemStatusStack::getActive()->getDT() > 0.) isUnsteady = true;
   if (!isUnsteady){
     fsmdata.getCFL()->update();
-  }
+  }*/
 }
 
 //////////////////////////////////////////////////////////////////////////////

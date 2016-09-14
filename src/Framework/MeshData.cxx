@@ -404,6 +404,10 @@ MeshData::getConnectivity(const std::string& name)
 void MeshData::storeConnectivity(const std::string& name, MeshData::ConnTable
 *const conn)
 {
+  // cleanup the entry if it already exists
+  if (m_connectivityStorage.checkEntry(name)) {
+    m_connectivityStorage.deleteEntry(name);
+  }
   m_connectivityStorage.addEntry(name,conn);
 }
 
@@ -425,6 +429,10 @@ void MeshData::deleteConnectivity(const std::string& name)
 
 void MeshData::addTrs(TopologicalRegionSet * trs)
 {
+  // cleanup the entry if it already exists
+  if (m_trsStorage.checkEntry(trs->getName())) {
+    m_trsStorage.deleteEntry(trs->getName());
+  }
   m_trsStorage.addEntry(trs->getName(),trs);
 }
 
@@ -433,9 +441,13 @@ void MeshData::addTrs(TopologicalRegionSet * trs)
 void MeshData::storeMapGeoToTrs(const std::string& name,
                                 MapGeoToTrsAndIdx *const mapG)
 {
+  // cleanup the entry if it already exists
+  if (m_mapGeoToTrsStorage.checkEntry(name)) {
+    m_mapGeoToTrsStorage.deleteEntry(name);
+  }
   m_mapGeoToTrsStorage.addEntry(name,mapG);
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void MeshData::removeMapGeoToTrs(const std::string& name)

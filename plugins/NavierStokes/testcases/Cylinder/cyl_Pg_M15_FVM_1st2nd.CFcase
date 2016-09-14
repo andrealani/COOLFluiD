@@ -15,7 +15,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -9.1422964
+### Residual = -9.1615
 
 # Simulation Modules
 Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libTecplot2CFmesh
@@ -36,13 +36,13 @@ Simulator.SubSystem.Euler2D.refLength = 1.0
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 
 Simulator.SubSystem.CFmesh.FileName     = cyl_Pg_FVM-out.CFmesh
-Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.CFmesh.SaveRate = 500
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
 Simulator.SubSystem.Tecplot.FileName    = cyl_Pg_FVM-out.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Puvt
-Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.Tecplot.SaveRate = 500
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = 1 2 3 4
@@ -82,8 +82,10 @@ Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
 #Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 50
 Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
 Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+#Simulator.SubSystem.NewtonIteratorLSS.Data.KSPShowRate = 20
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+#Simulator.SubSystem.NewtonIterator.ShowRate = 20
 Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
 Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = \

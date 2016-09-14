@@ -49,6 +49,7 @@ public: // methods
   /// Set up private data to prepare the simulation
   virtual void setup()
   {
+    ComputeFlux<METHODDATA>::setup();
     _lFluxJacobian.resize(PhysicalModelStack::getActive()->getNbEq(), PhysicalModelStack::getActive()->getNbEq());
     _rFluxJacobian.resize(PhysicalModelStack::getActive()->getNbEq(), PhysicalModelStack::getActive()->getNbEq());
   }

@@ -228,11 +228,12 @@ void Euler2DNEQRhoivtTv::setDimensionalValuesPlusExtraValues
   CFreal a = 0.0;
   _library->frozenGammaAndSoundSpeed(Tdim,pdim,rhodim, gamma, a, &_tvDim);
     
-  extra.resize(4);
+  extra.resize(5);
   extra[0] = rho*refData[EulerTerm::RHO];
   extra[1] = _dhe[1] + 0.5*V2;
   extra[2] = sqrt(V2)/a;
   extra[3] = pdim;
+  extra[4] = gamma;
 }
 
 //////////////////////////////////////////////////////////////////////////////

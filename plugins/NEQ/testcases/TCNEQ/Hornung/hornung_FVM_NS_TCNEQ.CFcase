@@ -12,7 +12,7 @@
 #
 # This testcases simulates a 2D cylinder corresponding to Hornung's experiment
 #
-### Residual = -5.8422347
+### Residual = -5.46657
 
 # Simulator.TraceToStdOut = true
 

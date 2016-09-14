@@ -50,6 +50,8 @@ template < typename METHODDATA>
 void FVMCCGeoDataComputer<METHODDATA>::setup()
 {
   CFAUTOTRACE;
+  GeoDataComputer<METHODDATA>::setup();
+  
   CFLog(VERBOSE, "FVMCCGeoDataComputer<METHODDATA>::setup()\n");
 }
 
@@ -82,9 +84,10 @@ template < typename METHODDATA>
 void FVMCCGeoDataComputer<METHODDATA>::unsetup()
 {
   CFAUTOTRACE;
+  GeoDataComputer<METHODDATA>::unsetup();
   CFLog(VERBOSE, "FVMCCGeoDataComputer<METHODDATA>::unsetup()\n");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 template < typename METHODDATA>

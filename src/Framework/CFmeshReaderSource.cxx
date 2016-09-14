@@ -85,13 +85,23 @@ void CFmeshReaderSource::setDataSockets(DataSocketSink<State*,GLOBAL> statesSock
 
 void CFmeshReaderSource::resizeNodes(const CFuint nbNodes)
 {
-  cf_assert(socket_nodes.getDataHandle().size() == 0);
+  if (socket_nodes.getDataHandle().size() > 0) {
+    const CFuint nbNodes = socket_nodes.getDataHandle().size();
+    for (CFuint i = 0; i < nbNodes; ++i) {
+      deletePtr(socket_nodes.getDataHandle()[i]);
+    }
+    // here resizing to 0 can lead to seg fault with some compilers
+    socket_nodes.getDataHandle().resize(1);
+  }
+  
+  cf_assert(socket_nodes.getDataHandle().size() == 0 || 
+	    socket_nodes.getDataHandle().size() == 1 );
   socket_nodes.getDataHandle().resize(nbNodes);
   IndexList<Node>::getList().reset();
   cf_assert(socket_nodes.getDataHandle().size() == nbNodes);
   _NodeLocalToGlobal.resize (nbNodes);
   _NodeOwnership.resize(nbNodes);
-
+  
   //Resize the pastNodes Datahandle
   if(_storePastNodes){
     std::string socketName = "pastNodes";
@@ -136,7 +146,17 @@ void CFmeshReaderSource::resizeNodes(const CFuint nbNodes)
 
 void CFmeshReaderSource::resizeStates(const CFuint nbStates)
 {
-  cf_assert(socket_states.getDataHandle().size() == 0);
+  if (socket_states.getDataHandle().size() > 0) {
+    const CFuint nbStates = socket_states.getDataHandle().size();
+    for (CFuint i = 0; i < nbStates; ++i) {
+      deletePtr(socket_states.getDataHandle()[i]);
+    }
+    // here resizing to 0 can lead to seg fault with some compilers
+    socket_states.getDataHandle().resize(1);
+  }
+  
+  cf_assert(socket_states.getDataHandle().size() == 0 ||
+	    socket_states.getDataHandle().size() == 1);
   socket_states.getDataHandle().resize(nbStates);
   IndexList<State>::getList().reset();
   cf_assert(socket_states.getDataHandle().size() == nbStates);
@@ -415,7 +435,7 @@ void CFmeshReaderSource::setState(const CFuint stateID, const RealVector& value)
 State* CFmeshReaderSource::createState(const CFuint stateID, const RealVector& value)
 {
   cf_assert(stateID < socket_states.getDataHandle().size());
-
+  
   const bool Ghost = false;
 
   State* statePtr;
@@ -425,13 +445,14 @@ State* CFmeshReaderSource::createState(const CFuint stateID, const RealVector& v
   else {
     statePtr = new State();
   }
-
+  
   statePtr->setGhost(Ghost);
+  
   socket_states.getDataHandle()[stateID] = statePtr;
   IndexList<State>::getList().createID(statePtr);
   return statePtr;
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void CFmeshReaderSource::setState(const CFuint stateID, CFreal * Mem, const RealVector& D, bool IsUpdatable)
@@ -447,14 +468,18 @@ State* CFmeshReaderSource::createState(const CFuint stateID, CFreal * Mem, const
 
   const bool Ghost = false;
 
-/// TODO: change this
+  /// TODO: change this
   State* statePtr = new State (Mem);
 
   statePtr->setGhost(Ghost);
 
   statePtr->setParUpdatable(IsUpdatable);
+  
   socket_states.getDataHandle()[stateID] = statePtr;
-
+  
+  CFLog(DEBUG_MAX, stateID << "CFmeshReaderSource::createState() => socket_states.size() " 
+	<< socket_states.getDataHandle().size() << " \n"); 
+  
   // This assumed the mesh would have the same state size ha
   //  cf_assert (statePtr->size()==D.size());
 
@@ -467,6 +492,9 @@ State* CFmeshReaderSource::createState(const CFuint stateID, CFreal * Mem, const
   }
 
   IndexList<State>::getList().createID(statePtr);
+  CFLog(DEBUG_MAX, "CFmeshReaderSource::createState() => IndexList<State>::getList().size() "
+	<< IndexList<State>::getList().size() << " \n");
+  
   return statePtr;
 }
 

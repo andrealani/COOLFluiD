@@ -48,12 +48,14 @@ public: // functions
 
 private: // data
 
-  /// CFmesh file reader
-  READER m_reader;
-
+  /// stored configuration arguments
+  /// @todo this should be avoided and removed.
+  ///       It is currently only a quick fix for delayed configuration of an object (MeshFormatConverter)
+  Config::ConfigArgs m_stored_args;
+  
   /// user option to renumber the states
   bool m_renumber;
-
+  
 }; // class ParReadCFmesh
 
 //////////////////////////////////////////////////////////////////////////////

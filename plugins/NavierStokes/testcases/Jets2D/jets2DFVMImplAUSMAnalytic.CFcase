@@ -14,8 +14,6 @@
 # Meta Comments begin with triple "#"
 #
 ### Residual = -4.0001057
-#-4.00865
-#
 
 # SubSystem Modules
 Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libFiniteVolumeNavierStokes libBackwardEuler libTHOR2CFmesh

@@ -448,11 +448,6 @@ void FVMCC_ComputeRhsJacob::finalizeComputationRHS()
 {
   // reset the flag for freezing the transport properties
   _diffVar->setFreezeCoeff(false);
-  
-  // compute dynamically the CFL
-  if (getMethodData().doComputeJacobian()) {
-    getMethodData().getCFL()->update();
-  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

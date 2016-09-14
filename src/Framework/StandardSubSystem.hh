@@ -69,7 +69,10 @@ public: // functions
 
   /// Building MeshData Phase.
   void buildMeshData();
-
+  
+  /// Building Physical Model Phase.
+  virtual void buildPhysicalModel();
+  
   /// Setup Phase. Setup parameters of the StandardSubSystem.
   /// @see MeshData
   virtual void setup();
@@ -88,7 +91,10 @@ public: // functions
   void registActionListeners();
 
 protected: // functions
-
+  
+  /// Set up MeshData that are global across partitions
+  void setGlobalMeshData();
+  
   /// Update the Convergence History
   void updateConvergenceFile(const CFuint nbIter);
 

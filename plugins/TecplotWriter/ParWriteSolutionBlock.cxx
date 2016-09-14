@@ -142,6 +142,8 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
       }
     }
     
+    CFLog(VERBOSE, "ParWriteSolutionBlock::writeNodeList() => 1 totNbVarsCC = " << totNbVarsCC << ", totNbVarsND = " << totNbVarsND << "\n");
+    
     // data handles are ignored at the boundary
     if (!isBoundary) {
       // nodal data handle variables 
@@ -150,15 +152,19 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
       for (CFuint i = 0; i < datahandle_output->getVarNames().size(); ++i) {
 	isVarNodal.push_back(true);
       }
+      CFLog(VERBOSE, "ParWriteSolutionBlock::writeNodeList() => 2 totNbVarsCC = " << totNbVarsCC << ", totNbVarsND = " << totNbVarsND << "\n");
       
       // cell-centered data handle variables 
       if (!m_onlyNodal) {
 	totNbVarsCC += datahandle_output->getCCVarNames().size();
       }
+      CFLog(VERBOSE, "ParWriteSolutionBlock::writeNodeList() => 3 totNbVarsCC = " << totNbVarsCC << ", totNbVarsND = " << totNbVarsND << "\n");
+      
       cf_assert(datahandle_output->getCCVarNames().size() == m_ccvars.size()); 
       for (CFuint i = 0; i < datahandle_output->getCCVarNames().size(); ++i) {
 	isVarNodal.push_back(false);
       }
+      CFLog(VERBOSE, "ParWriteSolutionBlock::writeNodeList() => 4 totNbVarsCC = " << totNbVarsCC << ", totNbVarsND = " << totNbVarsND << "\n");
     }
   }
   cf_assert(totNbVarsND >= dim); // at least coordinates are printed in nodal mode
@@ -286,6 +292,12 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
   const CFuint endNbDHNDVars = endNbExtraVars + nbDHNDVars;
   const CFuint endNbDHCCVars = endNbDHNDVars + nbDHCCVars;
   
+  CFLog(VERBOSE, "ParWriteSolutionBlock::writeNodeList() => endNbEqs       = " << endNbEqs << "\n"); 
+  CFLog(VERBOSE, "ParWriteSolutionBlock::writeNodeList() => endNbExtraVars = " << endNbExtraVars << "\n"); 
+  CFLog(VERBOSE, "ParWriteSolutionBlock::writeNodeList() => endNbDHNDVars  = " << endNbDHNDVars << "\n");
+  CFLog(VERBOSE, "ParWriteSolutionBlock::writeNodeList() => endNbDHCCVars  = " << endNbDHCCVars << "\n");
+  CFLog(VERBOSE, "ParWriteSolutionBlock::writeNodeList() => totNbVars      = " << totNbVars << "\n"); 
+  
   if (!m_onlyNodal) {
     cf_assert((!isBoundary && endNbDHCCVars == totNbVars) || 
 	      (isBoundary && endNbExtraVars == totNbVars));
@@ -299,6 +311,7 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
     
     cf_assert(iVar < isVarNodal.size());
     const bool isNodal = isVarNodal[iVar]; 
+    CFLog(VERBOSE, "ParWriteSolutionBlock::writeNodeList() => isNodal[" << iVar << "] = " << isNodal << " \n"); 
     
     // if the output has to be NODAL, discard CC variables
     if (!m_onlyNodal || (m_onlyNodal && isNodal)) {
@@ -389,7 +402,8 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
 		  const State& currState = *states[dofID];
 		  outputVarSet->setDimensionalValuesPlusExtraValues(currState, dimState, extraValues);
 		  cf_assert(isend < sendElements.size());
-		  sendElements[isend++] = extraValues[iVar-endNbEqs];
+		  cf_assert(iVar-endNbEqs < extraValues.size());
+		  sendElements[isend++] = extraValues[iVar-endNbEqs]; 
 		}
 		
 		if (nbDHCCVars > 0 && iVar >= endNbDHNDVars) {

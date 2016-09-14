@@ -138,6 +138,7 @@ Common::Signal::return_t LMaestro::control ( Common::Signal::arg_t input )
 	}
 	
 	CFout << "#\n###### BUILD PHASE ##################\n#\n";
+	event_handler->call_signal (event_handler->key(currSubsysName, "CF_ON_MAESTRO_BUILDPHYSICALMODEL"), msg );
 	event_handler->call_signal (event_handler->key(currSubsysName, "CF_ON_MAESTRO_BUILDMESHDATA"), msg );
 	
 	CFout << "#\n###### SETUP PHASE ##################\n#\n";

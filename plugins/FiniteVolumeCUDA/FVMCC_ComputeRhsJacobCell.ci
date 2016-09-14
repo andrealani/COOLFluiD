@@ -305,14 +305,7 @@ void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>:
 { 
   using namespace COOLFluiD::Framework;
   
-  CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::finalizeComputationRHS() START\n");
-  
-  // compute dynamically the CFL
-  if (this->getMethodData().doComputeJacobian()) {
-    this->getMethodData().getCFL()->update();
-  }
-  
-  CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::finalizeComputationRHS() END\n");
+  CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::finalizeComputationRHS()\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////

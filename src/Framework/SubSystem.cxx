@@ -488,6 +488,8 @@ void SubSystem::registActionListeners()
   const string ssname = SubSystemStatusStack::getCurrentName();   
   event_handler->addListener(event_handler->key(ssname, "CF_ON_MAESTRO_PLUGSOCKETS"),
 			     this,&SubSystem::allocateAllSocketsAction);
+  event_handler->addListener(event_handler->key(ssname, "CF_ON_MAESTRO_BUILDPHYSICALMODEL"), 
+			     this,&SubSystem::buildPhysicalModelAction);
   event_handler->addListener(event_handler->key(ssname, "CF_ON_MAESTRO_BUILDMESHDATA"), 
 			     this,&SubSystem::buildMeshDataAction);
   event_handler->addListener(event_handler->key(ssname, "CF_ON_MAESTRO_SETUP"),
@@ -516,6 +518,14 @@ Common::Signal::return_t SubSystem::deallocateAllSocketsAction(Common::Signal::a
   return Common::Signal::return_t ();
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+Common::Signal::return_t SubSystem::buildPhysicalModelAction(Common::Signal::arg_t eBuild)
+{
+  buildPhysicalModel();
+  return Common::Signal::return_t ();
+}
+    
 //////////////////////////////////////////////////////////////////////////////
 
 Common::Signal::return_t SubSystem::buildMeshDataAction(Common::Signal::arg_t eBuild)

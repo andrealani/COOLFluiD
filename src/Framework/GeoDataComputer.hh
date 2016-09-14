@@ -44,13 +44,19 @@ public:
   virtual ~GeoDataComputer();
 
   /// Set private data that will be used during the computation
-  virtual void setup() = 0;
+  virtual void setup() 
+  {
+    Framework::MethodStrategy<METHODDATA>::setup();
+  }
   
   /// Compute the geometric data and fill pre-allocated data arrays 
   virtual void compute() = 0;
    
   /// Unsetup private data
-  virtual void unsetup() = 0;
+  virtual void unsetup()
+  {
+    Framework::MethodStrategy<METHODDATA>::unsetup();
+  }
   
   /// Compute the nodes at intermediate time for the cell centers
   virtual void modifyOffMeshNodes() = 0;

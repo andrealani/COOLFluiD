@@ -59,7 +59,7 @@ void Venktn3D::limit(const vector<vector<Node*> >& coord,
   const CFreal maxAllowableLimiterFunctionValue = 1.094;
   
   for(CFuint iVar = 0; iVar < nbEquations; ++iVar) {
-
+    
     CFreal min0 = (*state)[iVar];
     CFreal max0 = (*state)[iVar];
     CFreal avgDistance = 0.0;

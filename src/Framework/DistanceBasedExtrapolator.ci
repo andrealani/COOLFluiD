@@ -3,6 +3,7 @@
 #include "Framework/State.hh"
 #include "Common/ProcessInfo.hh"
 #include "Common/OSystem.hh"
+#include "Common/SwapEmpty.hh"
 #include "Environment/SingleBehaviorFactory.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -143,6 +144,17 @@ void DistanceBasedExtrapolator<DATA>::extrapolate()
   // reset to 0 the nodal states
   nodalStates[this->_currNodeID] = 0.;
   applyInner();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DATA>
+void DistanceBasedExtrapolator<DATA>::unsetup()
+{
+  Framework::NodalStatesExtrapolator<DATA>::unsetup();
+  
+  Common::SwapEmpty(_weights);
+  Common::SwapEmpty(_weightsStorage);
 }
 
 //////////////////////////////////////////////////////////////////////////////

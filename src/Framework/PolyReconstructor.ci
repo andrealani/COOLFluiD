@@ -13,6 +13,7 @@
 
 #include "Framework/VolumeIntegrator.hh"
 #include "Framework/MeshData.hh"
+#include "Common/SwapEmpty.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -90,7 +91,29 @@ void PolyReconstructor<METHODDATA>::setup()
 {
   CFAUTOTRACE;
   
+  MethodStrategy<METHODDATA>::setup();
+  
   allocateReconstructionData();
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA >
+void PolyReconstructor<METHODDATA>::unsetup()
+{
+  CFAUTOTRACE;
+  
+  for (CFuint i = 0; i < _extrapCoord.size(); ++i) {
+    deletePtr(_extrapCoord[i]);
+  }
+  Common::SwapEmpty(_extrapCoord);
+  
+  for (CFuint i = 0; i < _extrapValues.size(); ++i) {
+    deletePtr(_extrapValues[i]);
+  }
+  Common::SwapEmpty(_extrapValues);
+  
+  MethodStrategy<METHODDATA>::unsetup();
 }
     
 //////////////////////////////////////////////////////////////////////////////

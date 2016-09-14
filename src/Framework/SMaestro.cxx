@@ -98,8 +98,9 @@ Common::Signal::return_t SMaestro::control ( Common::Signal::arg_t input )
     event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_PLUGSOCKETS"), msg );
 
     CFout << "#\n###### BUILD PHASE ##################\n#\n";
+    event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_BUILDPHYSICALMODEL"), msg );
     event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_BUILDMESHDATA"), msg );
-
+    
     CFout << "#\n###### SETUP PHASE ##################\n#\n";
     event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_SETUP"), msg );
 

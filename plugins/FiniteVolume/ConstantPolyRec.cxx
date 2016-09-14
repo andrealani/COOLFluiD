@@ -28,8 +28,7 @@ constantPolyRecProvider("Constant");
 //////////////////////////////////////////////////////////////////////////////
 
 ConstantPolyRec::ConstantPolyRec(const std::string& name) :
-  FVMCC_PolyRec(name),
-  _faceCoord(CFNULL)
+  FVMCC_PolyRec(name)
 {
 }
 
@@ -37,7 +36,6 @@ ConstantPolyRec::ConstantPolyRec(const std::string& name) :
 
 ConstantPolyRec::~ConstantPolyRec()
 {
-  deletePtr(_faceCoord);
 }
       
 //////////////////////////////////////////////////////////////////////////////

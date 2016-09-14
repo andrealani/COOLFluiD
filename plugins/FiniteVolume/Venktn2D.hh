@@ -79,7 +79,7 @@ public:
    * Set up the private data
    */
   virtual void setup();
-
+  
 protected:
   
   /**

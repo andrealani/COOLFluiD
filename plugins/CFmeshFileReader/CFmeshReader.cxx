@@ -139,10 +139,18 @@ void CFmeshReader::convertFormat()
 {
   CFAUTOTRACE;
   
+  CFLog(VERBOSE, "CFmeshReader::convertFormat() => start\n");
+  
   // build the MeshFormatConverter to perform the conversion
+  
+  // AL: this trick is necessary because otherwise the corresponding Converter
+  // options will be removed from the args after this delayed configuration
+  // originalArgs != m_stored_args after a call to configureNested() 
+  // To be investigated whether this is a bug...
+  Config::ConfigArgs originalArgs = m_stored_args;
   Common::SelfRegistPtr<MeshFormatConverter> converter =
     Factory<MeshFormatConverter>::getInstance().getProvider(m_converterStr)->create(m_converterStr);
-  configureNested ( converter.getPtr(), m_stored_args );
+  configureNested ( converter.getPtr(), originalArgs );
   
   const std::string nsp = getMethodData()->getNamespace();
   
@@ -156,6 +164,8 @@ void CFmeshReader::convertFormat()
   else { 
     convert(converter);
   }
+  
+  CFLog(VERBOSE, "CFmeshReader::convertFormat() => end\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////

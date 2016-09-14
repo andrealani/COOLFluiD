@@ -45,8 +45,17 @@ public:
   virtual ~Limiter();
 
   /// Set private data that will be used during the computation
-  virtual void setup() = 0;
-
+  virtual void setup() 
+  {
+    Framework::MethodStrategy<METHODDATA>::setup(); 
+  }
+  
+  /// Unsetup private data that will be used during the computation
+  virtual void unsetup() 
+  {
+    Framework::MethodStrategy<METHODDATA>::unsetup(); 
+  }
+  
   /// Compute the flux in the current face
   /// @post in limiterValue you put the value of the limiter for
   ///       each variable

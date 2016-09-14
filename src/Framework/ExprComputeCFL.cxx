@@ -78,7 +78,7 @@ void ExprComputeCFL::operator() (const ConvergenceStatus& cstatus)
   if(_maxResidual < currResidual) {
     _maxResidual = currResidual;
   }
-
+  
   //   if (cstatus.iter > 1) {
   const CFreal CFLnumber = _functionParser.Eval(&_eval[0]);
   CFLog(VERBOSE, "ExprComputeCFL::operator() => _eval = " << _eval 

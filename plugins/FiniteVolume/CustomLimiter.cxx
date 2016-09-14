@@ -155,8 +155,9 @@ void CustomLimiter::configure ( Config::ConfigArgs& args )
 
 void CustomLimiter::setup()
 {
+  Limiter<CellCenterFVMData>::setup();
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void CustomLimiter::limitOnFace(const RealVector& rLeft, 

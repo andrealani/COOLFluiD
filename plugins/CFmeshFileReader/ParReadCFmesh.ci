@@ -39,9 +39,9 @@ void ParReadCFmesh<READER>::defineConfigOptions(Config::OptionList& options)
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename READER>
-ParReadCFmesh<READER>::ParReadCFmesh(const std::string& name) :
+ParReadCFmesh<READER>::ParReadCFmesh(const std::string& name) : 
   ReadBase(name),
-  m_reader()
+  m_stored_args()
 {
   this->addConfigOptionsTo(this);
 
@@ -62,10 +62,10 @@ template <typename READER>
 void ParReadCFmesh<READER>::configure ( Config::ConfigArgs& args )
 {
   ReadBase::configure(args);
-
-  CFLog ( NOTICE, " Renumber : " << m_renumber << "\n" );
-
-  this->configureNested(&m_reader, args);
+  CFLog ( VERBOSE, "ParReadCFmesh<READER>::configure() => Renumber : " << m_renumber << "\n" );
+  
+  // args map is stored in order to allow delayed configuration for the READER
+  m_stored_args = args; 
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -78,7 +78,11 @@ void ParReadCFmesh<READER>::execute()
   using namespace std;
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
-
+  
+  READER m_reader;
+  
+  this->configureNested(&m_reader, m_stored_args);
+  
   m_data->setDataSockets(socket_states, socket_nodes, &m_sockets);
   m_data->setPastDataStorageFlags(this->getMethodData().readPastNodes(),
                                   this->getMethodData().readPastStates() );
@@ -229,7 +233,6 @@ void ParReadCFmesh<READER>::execute()
   // deallocate the unnecessary memory
   m_data->releaseMemory();
   meshDataBuilder->releaseMemory();
-
 }
 
 //////////////////////////////////////////////////////////////////////////////

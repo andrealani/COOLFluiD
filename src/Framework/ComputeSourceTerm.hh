@@ -71,8 +71,18 @@ public:
 
   /// Set up private data and data of the aggregated classes
   /// in this command before processing phase
-  virtual void setup() = 0;
-    
+  virtual void setup() 
+  {
+    MethodStrategy<METHODDATA>::setup();
+  } 
+  
+  /// Set up private data and data of the aggregated classes
+  /// in this command before processing phase
+  virtual void unsetup() 
+  {
+    MethodStrategy<METHODDATA>::unsetup();
+  }
+  
   /// Configure the object
   virtual void configure ( Config::ConfigArgs& args )
   {

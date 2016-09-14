@@ -402,12 +402,17 @@ void computeFluxCPU(typename SCHEME::BASE::template DeviceConfigOptions<NOTYPE>*
   
   CFreal midFaceCoord[PHYS::DIM*PHYS::DIM*2];
   CudaEnv::CFVec<CFreal,PHYS::NBEQS> tmpLimiter;
-  
+
+  // const CFuint nThr = omp_get_num_procs();
+//#pragma omp parallel num_threads(12)
+//{
+ // #pragma omp for 
   // compute the cell-based gradients
   for (CFuint cellID = 0; cellID < nbCells; ++cellID) {
     CellData::Itr cell = cells.getItr(cellID);
     polyRec.computeGradients(&states[cellID*PHYS::NBEQS], &centerNodes[cellID*PHYS::DIM], &kd, &cell);
   }
+//}
   
   // compute the cell based limiter
   // for (CFuint cellID = 0; cellID < nbCells; ++cellID) {

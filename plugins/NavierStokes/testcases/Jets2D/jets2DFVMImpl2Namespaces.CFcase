@@ -12,7 +12,7 @@
 ## Comments begin with "#"
 ## Meta Comments begin with triple "#"
 ##
-### Residual = -0.474377
+### Residual =  -0.474377
 
 CFEnv.OnlyCPU0Writes = false
 

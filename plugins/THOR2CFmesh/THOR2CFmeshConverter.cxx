@@ -927,6 +927,8 @@ void THOR2CFmeshConverter::writeContinuousElements(ofstream& fout)
 {
   CFAUTOTRACE;
 
+  CFLog(VERBOSE, "THOR2CFmeshConverter::writeContinuousElements() => start\n");
+  
   const CFuint nbNotUpdatableNodes  = 0;
   const CFuint nbNotUpdatableStates = 0;
 
@@ -989,6 +991,8 @@ void THOR2CFmeshConverter::writeContinuousElements(ofstream& fout)
       fout << "\n";
     }
   }
+  
+  CFLog(VERBOSE, "THOR2CFmeshConverter::writeContinuousElements() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1029,6 +1033,8 @@ void THOR2CFmeshConverter::writeDiscontinuousElements(ofstream& fout)
 {
   CFAUTOTRACE;
 
+  CFLog(VERBOSE, "THOR2CFmeshConverter::writeDiscontinuousElements() => start\n");
+  
   // this is here for backward compatibility
   // these numbers are always zero
   const CFuint nbNotUpdatableNodes  = 0;
@@ -1132,8 +1138,10 @@ void THOR2CFmeshConverter::writeDiscontinuousElements(ofstream& fout)
 
     } // loop cells
   } // loop element types
+  
+  CFLog(VERBOSE, "THOR2CFmeshConverter::writeDiscontinuousElements() => end\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 CFuint THOR2CFmeshConverter::getNbStatesInType(const CFuint& typeID)

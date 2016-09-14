@@ -163,7 +163,7 @@ void NewtonIterator::prepare()
   {
     subSysStatus->updateNbIter();
     subSysStatus->updateTimeStep();
-    //    getConvergenceMethodData()->getCFL()->update();
+//    getConvergenceMethodData()->getCFL()->update();
   }
   
   // prepare to take a time step
@@ -209,9 +209,6 @@ void NewtonIterator::takeStepImpl()
     subSysStatus->setFirstStep( k == 1 );
     subSysStatus->setMaxDT(MathTools::MathConsts::CFrealMax());
     
-    CFLog(VERBOSE, "NewtonIterator::takeStep(): before first update CFL\n");
-    getConvergenceMethodData()->getCFL()->update(cvgst.get());
-    
     m_init->execute();
     CFLog(VERBOSE, "NewtonIterator::takeStep(): preparing Computation\n");
     getMethodData()->getCollaborator<SpaceMethod>()->prepareComputation();
@@ -228,7 +225,10 @@ void NewtonIterator::takeStepImpl()
     getMethodData()->getCollaborator<SpaceMethod>()->computeSpaceResidual(1.0);
     
     CFLog(VERBOSE, "NewtonIterator::takeStep(): before second update CFL\n");
-    getConvergenceMethodData()->getCFL()->update(cvgst.get());
+    
+    if (m_data->getDoComputeJacobFlag()) {
+      getConvergenceMethodData()->getCFL()->update(cvgst.get());
+    }
     
     // do an intermediate step, useful for some special types of temporal discretization
     CFLog(VERBOSE, "NewtonIterator::takeStep(): calling Intermediate step\n");

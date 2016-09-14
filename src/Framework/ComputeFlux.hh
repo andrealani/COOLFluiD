@@ -53,8 +53,11 @@ public:
   }
   
   /// Set up private data to prepare the simulation
-  virtual void setup() = 0;
-
+  virtual void setup() 
+  {
+    Framework::MethodStrategy<METHODDATA>::setup();
+  }
+  
   /// Returns the DataSocket's that this numerical strategy needs as sinks
   /// @return a vector of SafePtr with the DataSockets
   virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets()

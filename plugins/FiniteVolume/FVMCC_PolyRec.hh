@@ -49,6 +49,11 @@ public:
    * Set private data that will be used during the computation
    */
   virtual void setup();
+  
+  /**
+   * Unsetup private data that will be used during the computation
+   */
+  virtual void unsetup();
 
   /**
    * Update the weights when nodes are moving

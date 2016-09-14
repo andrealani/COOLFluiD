@@ -46,17 +46,23 @@ public: // functions
   /// WARNING: Size parameter is IGNORED!
   ParVector (const std::string& nspaceName, 
 	     const T& Init, size_t Size, size_t ESize = 0) : 
-    m_data(Init, Size, ESize), 
-    m_pattern(nspaceName, &m_data, Init, Size, ESize) {}
-  
+    m_data(Init, Size, ESize),
+    m_namespace(nspaceName),
+    m_init(Init), m_size(Size), m_esize(ESize), m_pattern(CFNULL)
+  {     
+  }
+    
   /// Destructor
   /// Before destructing the class, DoneMPI should be called
-  ~ParVector() {}
+  ~ParVector() 
+  {
+    deletePtr(m_pattern);
+  }
   
   /// Return the local size: This is the number of
   /// locally owned points incremented by the number of ghost points
   /// Local operation.
-  CFuint size() const {return m_pattern.size();}
+  CFuint size() const {return m_pattern->size();}
   
   /// Returns the total local size (same as size())
   /// Local operation.
@@ -65,12 +71,12 @@ public: // functions
   /// This function returns the global (cross-processes) size of
   /// the underlying parallel array
   /// @return the global size of the parallel array
-  CFuint GetGlobalSize() const {return  m_pattern.GetGlobalSize();}
+  CFuint GetGlobalSize() const {return  m_pattern->GetGlobalSize();}
   
   /// This function returns the global (cross-processes) size of
   /// the underlying parallel array
   /// @return the global size of the parallel array
-  CFuint GetLocalSize() const {return  m_pattern.GetLocalSize();}
+  CFuint GetLocalSize() const {return  m_pattern->GetLocalSize();}
   
   /// Element access (preferred method): 
   /// @param Index   index corresponding to stateID(or nodeID)*stride
@@ -91,50 +97,54 @@ public: // functions
   /// (and possible invalidate pointers & references)
   void reserve (size_t capacity, size_t elementSize, 
 		const std::string& nspaceName) 
-  {m_pattern.reserve(capacity, elementSize, nspaceName);}
+  {
+    if (m_pattern != CFNULL) {deletePtr(m_pattern);}
+    m_pattern = new CPATTERN(m_namespace, &m_data, m_init, m_size, m_esize); 
+    m_pattern->reserve(capacity, elementSize, nspaceName);
+  }
   
   /// begin the synchronization
-  void BeginSync() {m_pattern.BeginSync();}
+  void BeginSync() {m_pattern->BeginSync();}
   
   /// end the synchronization
-  void EndSync() { m_pattern.EndSync();}
+  void EndSync() { m_pattern->EndSync();}
   
   /// Build Sync table
-  void BuildGhostMap () { m_pattern.BuildGhostMap();}
+  void BuildGhostMap () { m_pattern->BuildGhostMap();}
   
   /// Returns the list of ghost nodes (by processor rank) to be sent to
   /// another processor
   const std::vector< std::vector< CFuint > >& GetGhostSendList() const
-  {return m_pattern.GetGhostSendList();}
+  {return m_pattern->GetGhostSendList();}
 
   /// Returns the list of ghost nodes (by processor rank) to be received
   /// from another processor
   const std::vector< std::vector< CFuint > >& GetGhostReceiveList() const
-  {return m_pattern.GetGhostReceiveList();}
+  {return m_pattern->GetGhostReceiveList();}
   
   /// Build a continuous global mapping.
   /// Should be called after all points are added,
   /// and after buildMap is called
   /// This function uses indexes if available
-  void BuildCGlobal() {m_pattern.BuildCGlobal();}
+  void BuildCGlobal() {m_pattern->BuildCGlobal();}
   
   /// free the continuos global mapping.
-  void DestroyIndex() {m_pattern.DestroyIndex();}
+  void DestroyIndex() {m_pattern->DestroyIndex();}
   
   /// Lookup the global continuous ID of a local element
-  CFuint LocalToCGlobal (CFuint localID) const {return m_pattern.LocalToCGlobal(localID);}
+  CFuint LocalToCGlobal (CFuint localID) const {return m_pattern->LocalToCGlobal(localID);}
   
   /// Insert a new ghost point
   /// Local operation.
   /// For now, NO Add operations are allowed after
   /// BuildGhostMap is called.
-  IndexType AddGhostPoint (IndexType GlobalIndex) {return m_pattern.AddGhostPoint(GlobalIndex);}
+  IndexType AddGhostPoint (IndexType GlobalIndex) {return m_pattern->AddGhostPoint(GlobalIndex);}
   
   /// Insert new local point
   /// Local operation.
   /// For now, NO add operations are allowed after
   /// BuildGhostMap is called.
-  IndexType AddLocalPoint (IndexType GlobalIndex) {return m_pattern.AddLocalPoint(GlobalIndex);}
+  IndexType AddLocalPoint (IndexType GlobalIndex) {return m_pattern->AddLocalPoint(GlobalIndex);}
   
   /// Get array 
   Common::SafePtr<ARRAY> getPtr() {return &m_data;}
@@ -144,9 +154,20 @@ private: // functions
   /// This stores the actual element data
   ARRAY m_data;
   
-  /// communication pattern
-  CPATTERN m_pattern;
+  /// namespace
+  std::string m_namespace;
   
+  /// initial value
+  T m_init; 
+
+  /// size
+  size_t m_size;
+  
+  /// element size
+  size_t m_esize;
+    
+  /// communication pattern
+  CPATTERN* m_pattern;
 };
       
 //////////////////////////////////////////////////////////////////////////////

@@ -507,17 +507,16 @@ void MeshDataBuilder::setCoordInCellStates()
   std::vector< Common::SafePtr<TopologicalRegionSet> > cells = MeshDataStack::getActive()->getTrsList();
   for(CFuint iTrs=0; iTrs < cells.size(); ++iTrs)
   {
-
-    if(cells[iTrs]->hasTag("inner")){
-//       cf_assert(getNbElements() == cells[iTrs]->getLocalNbGeoEnts());
-
+    if(cells[iTrs]->hasTag("inner") && cells[iTrs]->getName() != "InnerFaces"){
+      //       cf_assert(getNbElements() == cells[iTrs]->getLocalNbGeoEnts());
+      
       // get element type data
       SafePtr<vector<ElementTypeData> > elementType =
         MeshDataStack::getActive()->getElementTypeData(cells[iTrs]->getName());
 
-      CFuint nbElemTypes = getNbElementTypes();
+      const CFuint nbElemTypes = getNbElementTypes();
       cf_assert(nbElemTypes == elementType->size());
-
+      
       // loop over the element types
       CFuint elemID = 0;
       for (CFuint iType = 0; iType < nbElemTypes; ++iType) {

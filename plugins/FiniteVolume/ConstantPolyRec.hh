@@ -66,11 +66,6 @@ private: // helper function
    */
   void extrapolateImpl(Framework::GeometricEntity* const face,
 		       CFuint iVar, CFuint leftOrRight);
-private:
-  
-  /// storage for temporary interpolated coordinates
-  /// in the (face) quadrature points
-  Framework::Node* _faceCoord;
   
 }; // end of class ConstantPolyRec
 

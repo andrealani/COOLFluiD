@@ -75,7 +75,7 @@ ComputeWallDistance::providesSockets()
   std::vector<Common::SafePtr<BaseDataSocketSource> > result;
 
   result.push_back(&socket_wallDistance);
-
+  
   return result;
 }
 

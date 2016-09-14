@@ -15,7 +15,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -9.0402972
+### Residual = -9.050491
 
 # Simulation Modules
 Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libTecplot2CFmesh
