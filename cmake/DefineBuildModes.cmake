@@ -102,7 +102,7 @@ ENDIF()
 
 IF(CF_ENABLE_OMP AND CF_ENABLE_CUDA)
    LIST ( APPEND CMAKE_CXX_LINK_FLAGS  "-Xlinker -lgomp" )
-ENDIF(CF_ENABLE_OMP)
+ENDIF()
 
 IF(UNIX)
    # LIST ( APPEND CF_C_FLAGS_CUDA       "-O2 -g -arch sm_20 -Xcompiler -fPIC" )
