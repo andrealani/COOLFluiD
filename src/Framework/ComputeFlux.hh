@@ -72,6 +72,9 @@ public:
   /// Gets the Class name
   static std::string getClassName() {  return "ComputeFlux"; }
   
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
 private: // methods
 
   /// Private Copy Constructor

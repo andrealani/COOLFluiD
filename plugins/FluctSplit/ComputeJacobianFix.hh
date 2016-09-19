@@ -36,7 +36,10 @@ public:
   static std::string getClassName()
   {
     return "ComputeJacobianFix";
-  }
+  } 
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
 
   /// Configure the object
   virtual void configure ( Config::ConfigArgs& args )

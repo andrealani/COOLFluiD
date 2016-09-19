@@ -74,6 +74,9 @@ public:
     return "ShellPreconditioner";
   }
   
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
 }; // end of class ShellPreconditioner
 
 //////////////////////////////////////////////////////////////////////////////

@@ -274,12 +274,12 @@ void Method::unsetupCommandsAndStrategies()
     Common::SafePtr<Framework::NumericalStrategy> st = (*strtItr);
     cf_assert(st.isNotNull());
     
-    CFLog(VERBOSE, "Method::unsetupCommandsAndStrategies() for Strategy [" << (*strtItr)->getName() << "] \n");
+    CFLog(VERBOSE, "Method::unsetupCommandsAndStrategies() for Strategy [" << (*strtItr)->getPolymorphicTypeName() << ", " << (*strtItr)->getName() << "] \n");
     if (st->isSetup()) {
       st->unsetup();
     }
     else {
-      CFLog(WARN, "Method::unsetupCommandsAndStrategies() => Strategy [" << (*strtItr)->getName() 
+      CFLog(WARN, "Method::unsetupCommandsAndStrategies() => Strategy [" << (*strtItr)->getPolymorphicTypeName() << ", " << (*strtItr)->getName() 
 	    << "] is NOT properly setup()\n");
     }
   }

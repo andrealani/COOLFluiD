@@ -71,7 +71,10 @@ public: // functions
   {
     return "StateInterpolator";
   }
-  
+
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+
 protected:
   
 }; // end of class StateInterpolator

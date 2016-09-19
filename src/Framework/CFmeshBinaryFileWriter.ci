@@ -140,6 +140,9 @@ void CFmeshBinaryFileWriter<DATA>::writeToFileStream
   
   char* fileName = const_cast<char*>(filepath.string().c_str()); 
   
+  CFLog(VERBOSE, "fileName = " << filepath.string() << "\n");
+  CFLog(VERBOSE, "wg.globalRanks.size() = " << wg.globalRanks.size() << "\n");
+  CFLog(VERBOSE, "wg.groupRanks.size() = " << wg.groupRanks.size() << "\n");  
   // all writers open the file for the second or more time
   if (_isWriterRank) {
     MPI_File_open(wg.comm, fileName, MPI_MODE_RDWR | MPI_MODE_CREATE, MPI_INFO_NULL, &_fh); 

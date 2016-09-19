@@ -80,6 +80,9 @@ public:
   /// Gets the Class name
   static std::string getClassName() {return "GeoDataComputer";}
 
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+
 protected:
 
   /// Private Copy Constructor

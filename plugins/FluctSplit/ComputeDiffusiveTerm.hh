@@ -104,7 +104,10 @@ public:
   {
     return "ComputeDiffusiveTerm";
   }
- 
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
   virtual void computePicardDiffJacob(Framework::GeometricEntity *const cell,std::vector<RealMatrix*>& _diffjacob) 
   {
     throw Common::NotImplementedException(FromHere(),"ComputeDiffusiveTerm::computePicardDiffJacob()");

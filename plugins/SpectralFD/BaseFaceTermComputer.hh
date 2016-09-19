@@ -50,7 +50,10 @@ public:  // methods
   {
     return "BaseFaceTermComputer";
   }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
   /**
    * Returns the DataSocket's that this command needs as sinks
    * @return a vector of SafePtr with the DataSockets

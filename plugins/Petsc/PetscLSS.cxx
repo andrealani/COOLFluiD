@@ -183,6 +183,8 @@ void PetscLSS::setMethodImpl()
 
   m_solveSys->setup();
   m_unSetup->setup();
+  
+  m_data->getShellPreconditioner()->setup();
 }
 
 //////////////////////////////////////////////////////////////////////////////

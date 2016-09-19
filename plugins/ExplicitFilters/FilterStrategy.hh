@@ -89,7 +89,10 @@ public: // functions
   {
     return "FilterStrategy";
   }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
   /**
    * Get info about the filter
    */

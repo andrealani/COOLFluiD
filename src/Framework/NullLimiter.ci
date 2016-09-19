@@ -19,9 +19,19 @@ namespace COOLFluiD {
 template < typename METHODDATA>
 void NullLimiter<METHODDATA>::setup()
 {
+  Limiter<METHODDATA>::setup();
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+template < typename METHODDATA>
+void NullLimiter<METHODDATA>::unsetup()
+{
+  Limiter<METHODDATA>::unsetup();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 template < typename METHODDATA>
 void NullLimiter<METHODDATA>::limit
 (const std::vector<std::vector<Node*> >& coord,

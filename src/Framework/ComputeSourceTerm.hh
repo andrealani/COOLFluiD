@@ -131,7 +131,10 @@ public:
   {
     return "ComputeSourceTerm";
   }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
 protected:
 
   /// Tells if the source term is being perturbed

@@ -62,7 +62,10 @@ public: // methods
 
   /// Gets the Class name
   static std::string getClassName() { return "FluctuationSplitStrategy"; }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
 protected: // methods
   
   /// Compute the physical data in the states

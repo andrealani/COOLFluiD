@@ -62,7 +62,10 @@ public:  // methods
   {
     return "FaceDiffusiveFluxBR2Approach";
   }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
   /// Setup private data
   virtual void setup();
 

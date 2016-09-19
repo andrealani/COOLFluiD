@@ -81,6 +81,9 @@ public:
   /// Gets the Class name
   static std::string getClassName() { return "NumericalStrategy"; }
 
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() = 0;
+  
 }; // class NumericalStrategy
 
 //////////////////////////////////////////////////////////////////////////////

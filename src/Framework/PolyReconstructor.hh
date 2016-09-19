@@ -99,6 +99,9 @@ public: // functions
     return "PolyReconstructor";
   }
   
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
   /// Restore the back up values corresponding to the given variable ID
   /// AL: don't make this function virtual: the profiler indicates that
   /// the high call frequency makes this function expensive if it is

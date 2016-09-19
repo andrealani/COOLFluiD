@@ -69,7 +69,10 @@ public: // methods
   {
     return "ComputeResidualStrategy";
   }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
   /**
    * Set up private data and data
    */

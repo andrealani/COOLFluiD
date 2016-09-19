@@ -52,7 +52,6 @@ FVMCC_PseudoSteadyTimeRhs::FVMCC_PseudoSteadyTimeRhs
 (const std::string& name) :
   FVMCC_StdComputeTimeRhs(name),
   _numericalJacob(CFNULL),
-  socket_rhs("rhs"),
   socket_pastStates("pastStates"),
   socket_volumes("volumes"),
   _updateToSolutionVecTrans(CFNULL),
@@ -290,7 +289,6 @@ FVMCC_PseudoSteadyTimeRhs::needsSockets()
   vector<SafePtr<BaseDataSocketSink> > result =
     FVMCC_StdComputeTimeRhs::needsSockets();
 
-  result.push_back(&socket_rhs);
   result.push_back(&socket_pastStates);
   result.push_back(&socket_volumes);
 

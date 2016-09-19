@@ -105,6 +105,9 @@ public:
     return "StencilComputer";
   }
   
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
   bool mustPrecompute() { return m_precompute;}
   
   CFuint nbStencilsToCompute();

@@ -45,7 +45,10 @@ public:  // methods
   {
     return "BaseBndFaceTermComputer";
   }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
   virtual std::string getType() = 0;
 
   /**

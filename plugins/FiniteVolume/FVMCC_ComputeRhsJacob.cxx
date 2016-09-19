@@ -171,7 +171,7 @@ void FVMCC_ComputeRhsJacob::computeBothJacobTerms()
   // add the values in the jacobian matrix
   _lss->getMatrix()->addValues(*_acc);
   
-  //_acc->print();
+  // _acc->print(); EXIT_AT(1);
   
   // reset to zero the entries in the block accumulator
   _acc->reset(); 

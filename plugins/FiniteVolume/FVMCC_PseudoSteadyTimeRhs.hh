@@ -78,9 +78,6 @@ protected: // data
 
   /// pointer to the linear system solver
   Common::SafePtr<Framework::NumericalJacobian> _numericalJacob;
-
-  /// storage of the rhs
-  Framework::DataSocketSink< CFreal> socket_rhs;
   
   /// storage of the past states
   Framework::DataSocketSink< Framework::State*> socket_pastStates;

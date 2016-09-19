@@ -43,7 +43,10 @@ public: // methods
 
   /// Gets the Class name
   static std::string getClassName() { return "ComputeJacobStrategy"; }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
   /// Set up private data and data
   virtual void setup();
 

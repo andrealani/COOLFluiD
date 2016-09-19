@@ -78,7 +78,10 @@ public:
   {
     return "ComputeDiffusiveTerm";
   }
-
+ 
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
 protected:
 
   /// Diffusive Integrable Entity

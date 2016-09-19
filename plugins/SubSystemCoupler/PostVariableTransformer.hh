@@ -129,7 +129,10 @@ public:
   {
     return "PostVariableTransformer ";
   }
-
+ 
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
 protected: // data
 
   /// transformed vector

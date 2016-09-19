@@ -64,7 +64,10 @@ class FluctSplit_API ArtificialDiffusionStrategy : public FluctuationSplitStrat 
 
   /// Gets the Class name
   static std::string getClassName() { return "ArtificialDiffusionStrategy";  }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
   void setIdx(const CFuint& value)  { m_idx = value; };
 
 protected: // methods

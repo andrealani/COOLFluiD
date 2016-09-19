@@ -84,7 +84,10 @@ public:
   {
     return "FEMIntegrableEntity";
   }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
 protected:
 
   Common::SafePtr<LocalElementData> _localElemData;

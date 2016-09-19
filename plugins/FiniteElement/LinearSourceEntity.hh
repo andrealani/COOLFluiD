@@ -90,6 +90,9 @@ public:
   {
     return "LinearSourceEntity";
   }
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
 
 protected:
 

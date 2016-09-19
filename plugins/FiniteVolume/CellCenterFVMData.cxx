@@ -294,6 +294,8 @@ void CellCenterFVMData::configureDiffusiveFluxComputer ( Config::ConfigArgs& arg
     }
   }
 
+  if (_diffusiveFluxStr == "Null") {_derivComputerStr = "Null";}
+
   CFLog(DEBUG_MED,"configuringDerivativeComputer()\n");
   CFLog(DEBUG_MED,"DerivativeComputer: " << _derivComputerStr << "\n");
 

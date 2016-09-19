@@ -68,7 +68,10 @@ public:
   {
     return "ComputeConvectiveTerm";
   }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
 protected:
 
   /// Convective Integrable Entity

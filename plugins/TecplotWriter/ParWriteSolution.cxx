@@ -106,11 +106,11 @@ void ParWriteSolution::execute()
  
   CFLog(VERBOSE, "ParWriteSolution::execute() => start\n");
   
-  const TeclotTRSType& tt = *_mapTrsName2TecplotData.find("InnerCells");
+  const TecplotTRSType& tt = *_mapTrsName2TecplotData.find("InnerCells");
   if (hasChangedMesh(tt)) {
     buildNodeIDMapping();
   }
-  
+    
   if (_fileFormatStr == "ASCII") {    
     const boost::filesystem::path cfgpath = getMethodData().getFilename();
     if (!getMethodData().onlySurface()) {
@@ -218,7 +218,7 @@ void ParWriteSolution::writeInnerData
     if ((trs->hasTag("inner")) && (trs->hasTag("cell"))) {
       SafePtr<vector<ElementTypeData> > elementType =
 	MeshDataStack::getActive()->getElementTypeData(trs->getName());
-      TeclotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
+      TecplotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
       
       // loop over the element types
       // and create a zone in the tecplot file
@@ -296,16 +296,16 @@ void ParWriteSolution::setup()
   const CFuint nbElementTypes = me->size();
   cf_assert(nbElementTypes > 0);
   
-  // create TeclotTRSType for the domain interior
-  TeclotTRSType* tt = new TeclotTRSType
+  // create TecplotTRSType for the domain interior
+  TecplotTRSType* tt = new TecplotTRSType
     (nbElementTypes, MeshDataStack::getActive()->getTrs("InnerCells"));
   _mapTrsName2TecplotData.insert("InnerCells", tt);
   
-  // create TeclotTRSType for the domain boundaries
+  // create TecplotTRSType for the domain boundaries
   const vector<string>& surfTRS = getMethodData().getSurfaceTRSsToWrite();
   for(CFuint iTrs = 0; iTrs < surfTRS.size(); ++iTrs) {
     SafePtr<TopologicalRegionSet> trs = MeshDataStack::getActive()->getTrs(surfTRS[iTrs]);
-    TeclotTRSType* tb = new TeclotTRSType(trs->getNbTRs(), trs);
+    TecplotTRSType* tb = new TecplotTRSType(trs->getNbTRs(), trs);
     _mapTrsName2TecplotData.insert(surfTRS[iTrs], tb);
   }
   _mapTrsName2TecplotData.sortKeys();
@@ -337,9 +337,11 @@ void ParWriteSolution:: cleanupNodeIDMapping()
     for (CFuint i = 0; i < _mapTrsName2TecplotData.size(); ++i) {
       _mapTrsName2TecplotData[i]->cleanupMappings();
     }
+    //_mapTrsName2TecplotData.clear();
   }
   
   _mapGlobal2LocalNodeID.clear();
+  cf_assert(_mapGlobal2LocalNodeID.size() == 0);
 }  
       
 //////////////////////////////////////////////////////////////////////////////
@@ -485,7 +487,7 @@ void ParWriteSolution::writeBoundaryData(const boost::filesystem::path& filepath
     const int iTRS = getGlobalTRSID(trs->getName());
     cf_assert(iTRS >= 0);
     
-    TeclotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
+    TecplotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
     
     const CFuint nbTRs = trs->getNbTRs(); 
     cf_assert(nbTRs > 0);
@@ -725,7 +727,7 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
   // RealVector but they are used as arrays of RealVector*)
   ProxyDofIterator<RealVector>& nodalStates = *nstatesProxy[0];
   
-  TeclotTRSType& tt = *_mapTrsName2TecplotData.find(elements->getName());
+  TecplotTRSType& tt = *_mapTrsName2TecplotData.find(elements->getName());
   
   const CFuint nSend = _nbWriters;
   const CFuint nbElementTypes = 1; // just nodes
@@ -948,7 +950,7 @@ void ParWriteSolution::writeElementList
   const CFuint nSend = _nbWriters;
   const CFuint nbElementTypes = 1; // one element type at a time
   
-  TeclotTRSType& tt = *_mapTrsName2TecplotData.find(elements->getName());
+  TecplotTRSType& tt = *_mapTrsName2TecplotData.find(elements->getName());
   const bool isCell = elements->hasTag("cell");
   
   WriteListMap elementList;
@@ -1358,7 +1360,7 @@ void ParWriteSolution::writeElementConn(ofstream& file,
 
 //////////////////////////////////////////////////////////////////////////////
       
-bool ParWriteSolution::hasChangedMesh(const TeclotTRSType& tt) const
+bool ParWriteSolution::hasChangedMesh(const TecplotTRSType& tt) const
 {
   CFAUTOTRACE;
   
@@ -1369,6 +1371,7 @@ bool ParWriteSolution::hasChangedMesh(const TeclotTRSType& tt) const
       return true;
     }
   }
+  
   CFLog(VERBOSE, "ParWriteSolution::hasChangedMesh() => false\n");
   return false;
 }
@@ -1376,7 +1379,7 @@ bool ParWriteSolution::hasChangedMesh(const TeclotTRSType& tt) const
 //////////////////////////////////////////////////////////////////////////////
 
 bool ParWriteSolution::hasChangedMesh(const CFuint iType, 
-				      const TeclotTRSType& tt) const
+				      const TecplotTRSType& tt) const
 {
   CFAUTOTRACE;
   
@@ -1389,8 +1392,9 @@ bool ParWriteSolution::hasChangedMesh(const CFuint iType,
   }
   
   CFuint elemCount = 0; 
+  cf_assert(tt.trs.isNotNull());
   if ((tt.trs->hasTag("inner")) && (tt.trs->hasTag("cell"))) {
-    elemCount = (*MeshDataStack::getActive()->getElementTypeData())[iType].getNbTotalElems(); 
+    elemCount = (*MeshDataStack::getActive()->getElementTypeData())[iType].getNbTotalElems();
   }
   else {
     const int iTRS = getGlobalTRSID(tt.trs->getName());
@@ -1412,15 +1416,17 @@ bool ParWriteSolution::hasChangedMesh(const CFuint iType,
 int ParWriteSolution::getGlobalTRSID(const string& name) const
 {
   const vector<string>& trsNames = MeshDataStack::getActive()->getTotalTRSNames();
+  cf_assert(trsNames.size() > 0);
   for (int i = 0; i < (int)trsNames.size(); ++i) {
     if (trsNames[i] == name) return i;
   }
+  CFLog(ERROR, "ParWriteSolution::getGlobalTRSID() => NOT FOUND name = " << name << "\n");
   return -1;
 }
       
 //////////////////////////////////////////////////////////////////////////////
  
-void ParWriteSolution::TeclotTRSType::cleanupMappings() 
+void ParWriteSolution::TecplotTRSType::cleanupMappings() 
 {
   for (CFuint i = 0; i < nodesInType.size(); ++i) {
     vector<CFuint>().swap(nodesInType[i]);
@@ -1445,7 +1451,8 @@ void ParWriteSolution::storeMappings(SafePtr<TopologicalRegionSet> trs,
   
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   
-  TeclotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
+  TecplotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
+  cf_assert(iType < tt.nodesInType.size());
   vector<CFuint>& nodesInType = tt.nodesInType[iType];
   const bool isCell = trs->hasTag("cell");
   SafePtr<TopologicalRegion> tr = (isCell) ? CFNULL : (*trs)[iType];
@@ -1523,6 +1530,7 @@ void ParWriteSolution::storeMappings(SafePtr<TopologicalRegionSet> trs,
     }
   }
   
+  cf_assert(iType < tt.mapNodeID2NodeIDByEType.size());
   tt.mapNodeID2NodeIDByEType[iType] = new CFMap<CFuint, CFuint>(nodesInType.size());
   
   // create mapping between global IDs belonging to the current processor
@@ -1540,10 +1548,11 @@ void ParWriteSolution::storeMappings(SafePtr<TopologicalRegionSet> trs,
     }
   }
   
+  cf_assert(iType < tt.totalNbNodesInType.size());
   tt.totalNbNodesInType[iType] = etypeNodeID+1;
   
   cf_assert(countMatching == nodesInType.size());
-  
+  cf_assert(iType < tt.mapNodeID2NodeIDByEType.size());
   tt.mapNodeID2NodeIDByEType[iType]->sortKeys(); 
   
   CFLog(VERBOSE, "ParWriteSolution::storeMappings() => end\n");
@@ -1551,7 +1560,7 @@ void ParWriteSolution::storeMappings(SafePtr<TopologicalRegionSet> trs,
 
 //////////////////////////////////////////////////////////////////////////////
 
-ParWriteSolution::TeclotTRSType::TeclotTRSType
+ParWriteSolution::TecplotTRSType::TecplotTRSType
 (const CFuint nbElementTypes, SafePtr<TopologicalRegionSet> in) 
 {
   trs = in;
@@ -1584,7 +1593,7 @@ ParWriteSolution::TeclotTRSType::TeclotTRSType
       
 //////////////////////////////////////////////////////////////////////////////
 
-ParWriteSolution::TeclotTRSType::~TeclotTRSType() 
+ParWriteSolution::TecplotTRSType::~TecplotTRSType() 
 {
   cleanupMappings();
 }
@@ -1597,7 +1606,7 @@ void ParWriteSolution::writeInnerZoneHeader(std::ofstream* fout,
 					    SafePtr<TopologicalRegionSet> trs) 
 {
   SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
-  TeclotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
+  TecplotTRSType& tt = *_mapTrsName2TecplotData.find(trs->getName());
   
   const string geoType = MapGeoEnt::identifyGeoEntTecplot
     (eType.getNbNodes(), eType.getGeoOrder(), PhysicalModelStack::getActive()->getDim()); 

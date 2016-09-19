@@ -51,7 +51,10 @@ public: // functions
   {
     return "CoordinateLinker";
   }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
   virtual Framework::Node& getCoordinates(const CFuint& idx, const bool isGhost = false) const = 0;
   virtual Framework::Node& getCoordinates(const Common::SafePtr<FilterStencil>& stencil, const CFuint& idx) const = 0;
   

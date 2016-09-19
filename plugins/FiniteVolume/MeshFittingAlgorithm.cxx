@@ -157,6 +157,8 @@ void MeshFittingAlgorithm::setup()
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::MathTools;
   
+  DataProcessingCom::setup();
+  
   // AL: this might be useless ... (@see MeshRigidMove/StdSetup.cxx)
   SubSystemStatusStack::getActive()->setMovingMesh(true);
   
@@ -220,8 +222,13 @@ void MeshFittingAlgorithm::setup()
 void MeshFittingAlgorithm::unsetup()
 {
   CFAUTOTRACE;
-}
 
+  m_geoBuilder.unsetup();
+  m_faceTRSBuilder.unsetup();
+  
+  Framework::DataProcessingCom::unsetup();
+}
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void MeshFittingAlgorithm::createNodalConnectivity()

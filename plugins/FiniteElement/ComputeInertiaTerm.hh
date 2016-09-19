@@ -86,7 +86,9 @@ public:
     return "ComputeInertiaTerm";
   }
 
-
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
 protected:
 
   /// Inertia Integrable Entity

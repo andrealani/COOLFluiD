@@ -68,6 +68,9 @@ public: // functions
   /// Gets the Class name
   static std::string getClassName() { return "DataHandleOutput"; }
 
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+    
   /// Outputs the names of the variables
   virtual void printVarNames (std::ostream& out) const ;
 

@@ -66,6 +66,8 @@ void ComputeSourceTermFVMCC::configure ( Config::ConfigArgs& args )
   
 void ComputeSourceTermFVMCC::setup()
 {
+  ComputeSourceTerm<CellCenterFVMData>::setup();
+  
   // set the IDs corresponding to the velocity components
   getMethodData().getUpdateVar()->setStateVelocityIDs(m_velIDs);
   

@@ -104,7 +104,10 @@ public:
   {
     return "NodalStatesExtrapolator";
   }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
   /**
    * Gets list of state neighbors for a given node
    */

@@ -48,7 +48,10 @@ public:  // methods
   {
     return "BaseVolTermComputer";
   }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
   /// set the current cell
   void setCurrentCell(Framework::GeometricEntity* cell)
   {

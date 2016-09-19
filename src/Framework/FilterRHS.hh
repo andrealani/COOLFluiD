@@ -51,7 +51,10 @@ public: // functions
   
   /// Gets the Class name
   static std::string getClassName() { return "FilterRHS"; }
-  
+
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+
 protected: // data
 
   /// array of flags telling if the variables must be filtered

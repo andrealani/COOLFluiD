@@ -415,6 +415,7 @@ void ParCFmeshBinaryFileWriter::writeElementList(MPI_File* fh)
   
   const CFuint nSend = _nbWriters;
   const CFuint nbElementTypes = me->size();
+  cf_assert(nbElementTypes > 0);
   const CFuint nbLocalElements = getWriteData().getNbElements();
   
   WriteListMap elementList;
@@ -493,10 +494,13 @@ void ParCFmeshBinaryFileWriter::writeElementList(MPI_File* fh)
   const string writerName = nsp + "_Writers";
   Group& wg = PE::GetPE().getGroup(writerName);
   
+  CFLog(VERBOSE,  "wg.globalRanks.size() = " << wg.globalRanks.size() << "\n");
+  
   CFint wRank = -1; 
   CFuint rangeID = 0;
   MPI_Offset dataSize = 0;
   for (CFuint iType = 0; iType < nbElementTypes; ++iType) {
+    cf_assert(iType < me->size());
     const CFuint nbNodesInType  = (*me)[iType].getNbNodes();
     const CFuint nbStatesInType = (*me)[iType].getNbStates();
     const CFuint nodesPlusStates = nbNodesInType + nbStatesInType;
@@ -718,6 +722,7 @@ void ParCFmeshBinaryFileWriter::writeNodeList(MPI_File* fh)
   const string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
   const string writerName = nsp + "_Writers";
   Group& wg = PE::GetPE().getGroup(writerName);
+    
   if (_isWriterRank) {
     MPI_Barrier(wg.comm);
   }
@@ -1386,6 +1391,7 @@ void ParCFmeshBinaryFileWriter::writeEndFile(MPI_File* fh)
   if (_myRank == _ioRank) {
     MPI_Offset offset;
     MPI_File_get_position(*fh, &offset);
+    cf_always_assert(offset > 0);
     CFLog(VERBOSE, _myRank << " END FILE offset is " << offset << "\n");
     MPIIOFunctions::MPIIOFunctions::writeKeyValue<char>(fh, "\n!END");
   }

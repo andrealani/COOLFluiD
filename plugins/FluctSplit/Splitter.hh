@@ -33,7 +33,10 @@ public:
 
   /// @returns the class name as a string
   static std::string getClassName() { return "Splitter"; }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
   /// Configures the object
   virtual void configure ( Config::ConfigArgs& args );
 

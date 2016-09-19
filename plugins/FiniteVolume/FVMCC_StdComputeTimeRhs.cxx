@@ -34,7 +34,8 @@ FVMCC_StdComputeTimeRhs::FVMCC_StdComputeTimeRhs(const std::string& name) :
   CellCenterFVMCom(name),
   _lss(CFNULL),
   socket_states("states"),
-  socket_updateCoeff("updateCoeff")
+  socket_updateCoeff("updateCoeff"),
+  socket_rhs("rhs") 
 {
   addConfigOptionsTo(this);
   
@@ -125,7 +126,8 @@ FVMCC_StdComputeTimeRhs::needsSockets()
 
   result.push_back(&socket_states);
   result.push_back(&socket_updateCoeff);
-
+  result.push_back(&socket_rhs);
+ 
   return result;
 }
 

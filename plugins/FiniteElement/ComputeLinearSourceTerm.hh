@@ -89,7 +89,10 @@ public:
   {
     return "ComputeLinearSourceTerm";
   }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
 protected:
 
   /// Source Integrable Entity

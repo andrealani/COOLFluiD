@@ -44,7 +44,7 @@ NullDerivativeComputer::~NullDerivativeComputer()
 
 void NullDerivativeComputer::setup()
 {
- 
+  DerivativeComputer::setup();
 }
 
 //////////////////////////////////////////////////////////////////////////////

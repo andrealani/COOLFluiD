@@ -70,6 +70,9 @@ protected:
   /// storage of the update coefficients
   Framework::DataSocketSink<CFreal> socket_updateCoeff;
   
+  /// storage of the rhs
+  Framework::DataSocketSink< CFreal> socket_rhs;
+  
   /// array of flags to annull some entries in the matrix diagonal 
   std::vector<bool> _zeroDiagValue;
   

@@ -89,7 +89,10 @@ public: // methods
   {
     return "InertiaEntity";
   }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
 protected: // data
 
   /// Inertia Variable Set

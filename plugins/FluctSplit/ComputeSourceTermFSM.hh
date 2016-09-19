@@ -78,7 +78,10 @@ public:
   {
     return "FluctSplit::ComputeSourceTermFSM";
   }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
   /// Returns the DataSocket's that this command needs as sinks
   /// @return a vector of SafePtr with the DataSockets
   virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets()

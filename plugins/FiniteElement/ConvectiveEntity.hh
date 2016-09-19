@@ -70,7 +70,10 @@ public: // methods
   {
     return "ConvectiveEntity";
   }
-
+ 
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
 protected: // data
 
   /// Convective Variable Set

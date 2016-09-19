@@ -39,12 +39,14 @@ public:
   /// Set up private data to prepare the simulation
   virtual void setup()
   {  
+    Framework::EquationFilter<METHODDATA>::setup();
     CFLog(VERBOSE,  "NullEquationFilter::setup() called!\n");
   }
   
   /// Unsetup up private data to prepare the simulation
   virtual void unsetup()
-  {  
+  { 
+    Framework::EquationFilter<METHODDATA>::unsetup();
     CFLog(VERBOSE,  "NullEquationFilter::unsetup() called!\n");
   }
   

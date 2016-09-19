@@ -196,7 +196,7 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
   // RealVector but they are used as arrays of RealVector*)
   ProxyDofIterator<RealVector>& nodalStates = *nstatesProxy[0];
   
-  TeclotTRSType& tt = *_mapTrsName2TecplotData.find(elements->getName());
+  TecplotTRSType& tt = *_mapTrsName2TecplotData.find(elements->getName());
   
   const CFuint nSend = _nbWriters;
   const CFuint nbElementTypes = 1; // just nodes

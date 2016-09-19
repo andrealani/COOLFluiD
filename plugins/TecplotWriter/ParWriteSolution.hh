@@ -81,14 +81,14 @@ public:
     (const boost::filesystem::path&, const bool, const std::string, std::ofstream*);
   
   /// This class stores indexes and offsets useful for the writing TRS data 
-  class TeclotTRSType {
+  class TecplotTRSType {
   public:
     /// Constructor
-    TeclotTRSType(const CFuint nbElementTypes, 
+    TecplotTRSType(const CFuint nbElementTypes, 
 		  Common::SafePtr<Framework::TopologicalRegionSet> in);
     
     /// Destructor
-    ~TeclotTRSType();
+    ~TecplotTRSType();
     
     /// Clean up mappings
     void cleanupMappings();
@@ -207,11 +207,11 @@ public:
   const std::string getWriterName() const;
   
   /// Tell if the mesh has changed 
-  bool hasChangedMesh(const TeclotTRSType& tt) const;    
+  bool hasChangedMesh(const TecplotTRSType& tt) const;    
   
   /// Tell if the mesh has changed for a certain mesh type
   /// @param iType  ID for the mesh type
-  bool hasChangedMesh(const CFuint iType, const TeclotTRSType& tt) const;    
+  bool hasChangedMesh(const CFuint iType, const TecplotTRSType& tt) const;    
   
   /// Return the TRS ID corresponding to the given TRS name in the global storage
   int getGlobalTRSID(const std::string& name) const;
@@ -239,8 +239,8 @@ protected:
   /// socket for State Proxy
   Framework::DataSocketSink<Framework::ProxyDofIterator<RealVector>*> socket_nstatesProxy;
   
-  /// array of TeclotTRSType
-  Common::CFMap<std::string, TeclotTRSType*> _mapTrsName2TecplotData;
+  /// array of TecplotTRSType
+  Common::CFMap<std::string, TecplotTRSType*> _mapTrsName2TecplotData;
   
   /// mapping global nodeIDs to local nodeIDs
   Common::CFMap<CFuint, CFuint> _mapGlobal2LocalNodeID;

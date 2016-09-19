@@ -78,7 +78,10 @@ public: // functions
   {
     return "ComputeNorm";
   }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return getClassName();}
+  
 protected:
 
   /// index of the varID in the m_compute_var_id vector

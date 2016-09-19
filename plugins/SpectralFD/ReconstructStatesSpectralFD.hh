@@ -38,7 +38,10 @@ public:  // methods
   {
     return "ReconstructStatesSpectralFD";
   }
-
+  
+  /// Gets the polymorphic type name
+  virtual std::string getPolymorphicTypeName() {return "ReconstructStatesSpectralFD";}
+  
   /// Set up private data and data
   virtual void setup();
 

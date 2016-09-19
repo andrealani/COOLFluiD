@@ -46,6 +46,9 @@ public:
   /// Set private data that will be used during the computation
   void setup();
 
+  /// Unsetup private data that will be used during the computation
+  void unsetup();
+
   /// Compute the flux in the current face
   /// @post in limiterValue you put the value of the limiter for
   ///       each variable

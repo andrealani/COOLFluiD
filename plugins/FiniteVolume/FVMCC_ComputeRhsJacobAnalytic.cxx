@@ -94,7 +94,7 @@ void FVMCC_ComputeRhsJacobAnalytic::computeBothJacobTerms()
     noaxiBothJacobTerms(*convJacobL, *convJacobR) : 
     axiBothJacobTerms(*convJacobL, *convJacobR); 
   
-  // _acc->print();
+   // _acc->print(); EXIT_AT(1);
   
   // add the values in the jacobian matrix
   _lss->getMatrix()->addValues(*_acc);
