@@ -1,7 +1,8 @@
 #######################################################
 ### DEBUG mode
 IF(CF_ENABLE_OMP)
-   SET ( CF_FOMP_FLAG "-fopenmp")
+ SET ( CF_FOMP_FLAG "-fopenmp")
+ ADD_DEFINITIONS  ( -DCF_HAVE_OMP )
 ENDIF(CF_ENABLE_OMP)
 
 IF(UNIX)
