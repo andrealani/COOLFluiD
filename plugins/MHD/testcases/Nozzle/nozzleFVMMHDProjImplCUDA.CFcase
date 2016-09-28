@@ -79,6 +79,9 @@ Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
 #Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 1
 #Simulator.SubSystem.BwdEulerLSS.Data.Output = true
+#Simulator.SubSystem.BwdEulerLSS.Data.UseAIJ = true
+#Simulator.SubSystem.BwdEulerLSS.Data.SaveSystemToFile = true
+#Simulator.SubSystem.BwdEulerLSS.Data.SaveRate = 1
 
 ####### GPU ########
 Simulator.SubSystem.BwdEulerLSS.Data.UseGPU = true
@@ -94,7 +97,7 @@ Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = StdTimeRhs
 #Simulator.SubSystem.CellCenterFVM.NumJacobLaxFriedMHD2DCons.NbCellsPerBlock = 16
 #
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellNumJacobLaxFriedMHD2DCons
-Simulator.SubSystem.CellCenterFVM.CellNumJacobLaxFriedMHD2DCons.OnGPU = true
+Simulator.SubSystem.CellCenterFVM.CellNumJacobLaxFriedMHD2DCons.OnGPU = true #false
 Simulator.SubSystem.CellCenterFVM.CellNumJacobLaxFriedMHD2DCons.NbCellsPerBlock = 16
 
 Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
