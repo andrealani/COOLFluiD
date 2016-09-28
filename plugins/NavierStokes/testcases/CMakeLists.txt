@@ -8,6 +8,7 @@ cf_add_case( MPI 8       CASEDIR DoubleEllipse PCASE restartRDS_NS_Pvt.CFcase CA
 cf_add_case( MPI default CASEDIR FlatPlate PCASE flatPlateFVMBlasius.CFcase CASEFILES flatPlateQD.CFmesh )
 cf_add_case( MPI default CASEDIR FlatPlate PCASE flatPlate3DFVMBlasius.CFcase CASEFILES flatPlateQD.CFmesh )
 cf_add_case( MPI 8       CASEDIR Hemisphere PCASE hemisphereN.CFcase CASEFILES hemisphere.plt hemisphere.surf.plt )
+cf_add_case( MPI 8       CASEDIR Hemisphere PCASE hemisphereN_pvt.CFcase CASEFILES hemisphere.plt hemisphere.surf.plt )
 cf_add_case( MPI 8       CASEDIR Jets2D PCASE jets2DFVMImpl2Namespaces.CFcase CASEFILES jets1.CFmesh jets2.CFmesh )
 cf_add_case( MPI 8       CASEDIR Jets2D PCASE jets2DFVMImplConcurrent.CFcase CASEFILES jets2DFVM.thor jets2DFVM.SP jets2DFVM_EXTRA_in.CFmesh )
 cf_add_case( MPI default CASEDIR Jets2D PCASE jets2DFluctSplit.CFcase CASEFILES jets2D.thor jets2D.SP )

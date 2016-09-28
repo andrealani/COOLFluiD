@@ -11,7 +11,7 @@
 #
 # Comments begin with "#"
 #
-### Residual = -8.0429343
+### Residual = -5.1048144
 #
 # T=290, p=1000, rho=0.012012973, M=10, u=3413.805442611, rhoE = 72499.9997
 
@@ -46,7 +46,7 @@ Simulator.SubSystem.CFmesh.AppendIter = false
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 30
 
 Simulator.SubSystem.StopCondition       = Norm
-Simulator.SubSystem.Norm.valueNorm      = -8.0
+Simulator.SubSystem.Norm.valueNorm      = -5.
 
 Simulator.SubSystem.Default.listTRS = 1 2 3 4
 
