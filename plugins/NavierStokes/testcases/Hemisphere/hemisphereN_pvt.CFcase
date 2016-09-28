@@ -1,0 +1,142 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Residual Distribution Schemes, Euler3D, NewtonMethod, mesh with tetrahedra, 
+# converter from Tecplot to CFmesh, first-order scheme N (system) with distribution 
+# in conservative variables, Picard jacobian, implicit supersonic inlet and outlet, 
+# slip wall BCs, CFL function law, [p u v w T] variables  
+#
+################################################################################
+#
+# Comments begin with "#"
+#
+### Residual = -8.0429343
+#
+# T=290, p=1000, rho=0.012012973, M=10, u=3413.805442611, rhoE = 72499.9997
+
+# for using [p v T] variables you need "libNewtonMethod"
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNewtonMethod libNavierStokes libFluctSplit libFluctSplitSystem libFluctSplitNavierStokes libTecplot2CFmesh libPetscI
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Hemisphere
+Simulator.Paths.ResultsDir = ./RESULTS_HEMISPHERE_N
+
+Simulator.SubSystem.Default.PhysicalModelType = Euler3D
+# here you need to put free stream p,u,v,w,T
+Simulator.SubSystem.Euler3D.refValues = 1000. 3413.8 3413.8 3413.8 290.
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+
+Simulator.SubSystem.Tecplot.FileName    = hemi.plt
+# Pvt variables instead of Cons to output the solution field
+Simulator.SubSystem.Tecplot.Data.outputVar = Pvt
+Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+# here you need to specify all the TRS's
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = 1 2 3 4
+
+Simulator.SubSystem.CFmesh.FileName     = hemi.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 30
+
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -8.0
+
+Simulator.SubSystem.Default.listTRS = 1 2 3 4
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = hemisphere.CFmesh
+# Converting from Tecplot mesh
+# # file.plt and file.surf.plt must be both present
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Tecplot2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Discontinuous = false
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SolutionOrder = P1
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.HasBlockFormat = false
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SurfaceTRS = 1 2 3 4
+#Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = "Z(1)" "Z(2)" "Z(3)" "Z(4)" "Z(5)" 
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.NbElementTypes = 1
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = true
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
+# # Safety practice: generate scaled up meshes w/ gambit and rescale
+# # them back before running. When restarting comment out the scaling factor,
+# # otherwise a twice scaled grid is obtained.
+# #Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1000.
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
+
+# NewtonIterator instead of BwdEuler  
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<10,1.,min(300.,cfl*1.1))
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = BwdEulerLSS
+#Simulator.SubSystem.BwdEulerLSS.Data.Output = true
+Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
+Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.BwdEulerLSS.Data.NbKrylovSpaces = 30
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.ComputeRHS = RhsJacob
+# "PseudoSteadyTimeRhs" instead of "StdTimeRhs"
+Simulator.SubSystem.FluctuationSplit.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+#Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Picard
+Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
+Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = SysN
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+# Pvt variables instead of Cons as UpdateVar
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar  = Pvt
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar = Cons
+Simulator.SubSystem.FluctuationSplit.Data.LinearVar  = Roe
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField MachStep
+
+# initial field in Pvt instead of in Cons variables 
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.InField.Def = \
+					1000. \
+                                        341.3805442611 \
+                                        0.0 \
+                                        0.0 \
+                                        290.
+
+# initial field in Pvt instead of in Cons variables 
+Simulator.SubSystem.FluctuationSplit.MachStep.applyTRS = 2 3
+Simulator.SubSystem.FluctuationSplit.MachStep.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.MachStep.Def = \
+                                        1000. \
+                                        3413.805442611 \
+                                        0.0 \
+                                        0.0 \
+                                        290.
+
+Simulator.SubSystem.FluctuationSplit.BcComds = SuperInletImpl WeakSlipWallEuler3DImpl SuperOutlet
+Simulator.SubSystem.FluctuationSplit.BcNames = Inlet Wall Outlet
+
+# inlet conditions in Pvt instead of in Cons variables 
+Simulator.SubSystem.FluctuationSplit.Inlet.applyTRS = 2 3
+Simulator.SubSystem.FluctuationSplit.Inlet.Vars = x y z
+Simulator.SubSystem.FluctuationSplit.Inlet.Def = \
+                                        1000. \
+                                        3413.805442611 \
+                                        0.0 \
+                                        0.0 \
+                                        290.
+
+Simulator.SubSystem.FluctuationSplit.Wall.applyTRS = 1
+Simulator.SubSystem.FluctuationSplit.Wall.alpha = 1.
+
+Simulator.SubSystem.FluctuationSplit.Outlet.applyTRS = 4
+
+
+
