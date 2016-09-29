@@ -60,13 +60,17 @@ void PetscMatrix::createSeqBAIJ(const CFuint blockSize,
   CF_CHKERRCONTINUE(MatCreate(PETSC_COMM_SELF, &m_mat));
   CF_CHKERRCONTINUE(MatSetSizes(m_mat, m, n, m, n));
   
-  if (m_useGPU || _isAIJ) {
+  if (_isAIJ) {
 #ifdef CF_HAVE_CUDA
-    if (m_useGPU) {CF_CHKERRCONTINUE(MatSetType(m_mat, MATSEQAIJCUSP));}
-    CFLog(DEBUG_MIN, "PetscMatrix::createSeqBAIJ() => use GPU \n" );
+    if (m_useGPU) {
+      CF_CHKERRCONTINUE(MatSetType(m_mat, MATSEQAIJCUSP));
+    }
+    else 
 #endif   
-    if (_isAIJ) {CF_CHKERRCONTINUE(MatSetType(m_mat, MATSEQAIJ));}
-        
+      {CF_CHKERRCONTINUE(MatSetType(m_mat, MATSEQAIJ));}
+
+    CFLog(VERBOSE, "PetscMatrix::createSeqAIJ() on GPU["<< m_useGPU << "]\n" );   
+ 
 #if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6
     CF_CHKERRCONTINUE(MatSetBlockSize(m_mat, blockSize));
     CF_CHKERRCONTINUE(MatSeqAIJSetPreallocation(m_mat, nz, nnz));
@@ -151,11 +155,16 @@ void PetscMatrix::createParBAIJ(MPI_Comm comm,
   CF_CHKERRCONTINUE(MatCreate(comm, &m_mat));
   CF_CHKERRCONTINUE(MatSetSizes(m_mat, m, n, M, N));
 
-  if (m_useGPU || _isAIJ) {
+  if (_isAIJ) {
 #ifdef CF_HAVE_CUDA
-    if (m_useGPU) {CF_CHKERRCONTINUE(MatSetType(m_mat, MATMPIAIJCUSP));}
+    if (m_useGPU) {
+      CF_CHKERRCONTINUE(MatSetType(m_mat, MATMPIAIJCUSP));
+    }
+    else
 #endif
-    if (_isAIJ) {CF_CHKERRCONTINUE(MatSetType(m_mat, MATMPIAIJ));}
+      {CF_CHKERRCONTINUE(MatSetType(m_mat, MATMPIAIJ));}
+
+    CFLog(VERBOSE, "PetscMatrix::createParAIJ() on GPU["<< m_useGPU << "]\n" );
     
 #if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6
     CF_CHKERRCONTINUE(MatSetBlockSize(m_mat, blockSize));

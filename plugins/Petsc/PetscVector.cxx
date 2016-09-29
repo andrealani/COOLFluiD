@@ -47,15 +47,12 @@ void PetscVector::create(MPI_Comm comm,
   if (m_useGPU) {
     CF_CHKERRCONTINUE( VecSetType(m_vec, VECCUSP) ); 
   }
-  else {
-    CF_CHKERRCONTINUE( VecSetType(m_vec, VECMPI) );
-  }
-#else
-  CF_CHKERRCONTINUE( VecSetType(m_vec, VECMPI) );
-#endif 
+  else
+#endif
+    {CF_CHKERRCONTINUE( VecSetType(m_vec, VECMPI) );}
   
   CF_CHKERRCONTINUE( VecSetSizes(m_vec, m, M) );
-
+  
   CF_CHKERRCONTINUE( VecSetFromOptions(m_vec) );
 
   CF_CHKERRCONTINUE( PetscObjectSetName((PetscObject) m_vec, name) );

@@ -143,8 +143,11 @@ void PetscLSSData::configure ( Config::ConfigArgs& args )
 void PetscLSSData::setup()
 {
   LSSData::setup();
+  
+  // whenever GPU are used, AIJ must be activated (Block AIJ is not supported)
+  if (useGPU()) {_useAIJ = true;}
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void PetscLSSData::unsetup()
