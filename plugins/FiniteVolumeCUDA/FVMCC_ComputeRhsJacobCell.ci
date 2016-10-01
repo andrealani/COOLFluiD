@@ -166,10 +166,12 @@ void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>:
     
     cf_assert(startCellID  == nbCells-1);
     cf_assert(startEntryID == fullMatrixSize);
-    
-    CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::setup() => uses maxSizeJacobEntries < fullMatrixSize => " 
-	  << maxSizeJacobEntries << " < " << fullMatrixSize << "\n");
-    cf_assert(maxSizeJacobEntries < fullMatrixSize);
+
+    if (maxSizeJacobEntries > fullMatrixSize) {
+      CFLog(ERROR, "ERROR!! FVMCC_ComputeRhsJacobCell::setup() => uses maxSizeJacobEntries < fullMatrixSize => "
+          << maxSizeJacobEntries << " >= " << fullMatrixSize << "\n"); 
+      cf_assert(maxSizeJacobEntries <= fullMatrixSize);
+    }
     
     // m_blockJacobians is allocated with the maximum possible size needed by a single kernel
     m_blockJacobians.resize(maxSizeJacobEntries);
