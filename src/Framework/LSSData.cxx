@@ -24,6 +24,7 @@ void LSSData::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< CFuint , Config::DynamicOption<> >("MaxIter","Maximum number of steps to be taken in the iterative solver.");
   options.addConfigOption< CFuint , Config::DynamicOption<> >("SaveRate","Save rate to write matrix and vector to file.");
+  options.addConfigOption< CFuint , Config::DynamicOption<> >("PreconditionerRate","Rate at which recomputing the preconditioner.");
   options.addConfigOption< bool >("SaveSystemToFile","Save files of matrix rhs solution vectors at each solve");
   options.addConfigOption< bool >("Output","Flag indicating to output or not the solver convergence history.");
   options.addConfigOption< bool >("UseBlockPreconditioner","Enables to use block diagonal preconditioner (Dimension of each block is the number of local states on each CPU).");
@@ -49,6 +50,9 @@ LSSData::LSSData(SafePtr<std::valarray<bool> > maskArray,
   
   m_saveRate = 0;
   setParameter("SaveRate",&m_saveRate);
+
+  m_preconditionerRate = 1; 
+  setParameter("PreconditionerRate", &m_preconditionerRate);
   
   m_isOutput = false;
   setParameter("Output",&m_isOutput);

@@ -38,7 +38,7 @@ public: // functions
 	  Common::SafePtr<Method> owner);
   
   /// Destructor.
-  ~LSSData();
+  virtual ~LSSData();
 
   /// Configure the data from the supplied arguments.
   /// @param args configuration arguments
@@ -87,6 +87,12 @@ public: // functions
   CFuint getSaveRate() const
   {
     return m_saveRate;
+  }
+
+  /// Gets the rate at which preconditioner must be recomputed
+  CFuint getPreconditionerRate() const
+  {
+    return m_preconditionerRate;  
   }
 
   /// Returns if the convergence history of the solver should be outputed
@@ -140,7 +146,10 @@ public: // functions
   
   /// save rate to write matrix and vector to file
   CFuint m_saveRate;
-  
+
+  /// rate at which preconditioner must be recomputed 
+  CFuint m_preconditionerRate;
+ 
   /// write output
   bool m_isOutput;
   
