@@ -107,13 +107,13 @@ protected:
   Common::SafePtr< Common::ConnectivityTable<CFuint> > m_cellNodes;
   
   /// storage of the cell centers (AL: temporary solution) 
-  CudaEnv::CudaVector<CFreal> m_centerNodes;
+  Framework::LocalArray<CFreal>::TYPE m_centerNodes;
   
   /// storage of the ghost states (AL: temporary solution) 
-  CudaEnv::CudaVector<CFreal> m_ghostStates;
+  Framework::LocalArray<CFreal>::TYPE m_ghostStates;
   
   /// storage of the ghost nodes (AL: temporary solution) 
-  CudaEnv::CudaVector<CFreal> m_ghostNodes;
+  Framework::LocalArray<CFreal>::TYPE m_ghostNodes;
   
   /// storage of useful cell info: 
   /// in [cellID*5+0] - ptr to corresponding stencil
@@ -121,22 +121,22 @@ protected:
   /// in [cellID*5+2] - number of cell faces
   /// in [cellID*5+3] - cell geoshape
   /// in [cellID*5+4] - number of active cell faces (partition faces are excluded)  
-  CudaEnv::CudaVector<CFuint, CudaEnv::MallocHostAlloc<CFuint> > m_cellInfo;
+  Framework::LocalArray<CFuint>::MALLOC_TYPE m_cellInfo;
   
   /// stencil connectivity for cellID: 
   /// starts at m_cellInfo[cellID*5]
   /// its size is given by m_cellInfo[cellID*5+1]
   /// first m_cellInfo[cellID*5+2] are faces
-  CudaEnv::CudaVector<CFuint, CudaEnv::MallocHostAlloc<CFuint> > m_cellStencil;
+  Framework::LocalArray<CFuint>::MALLOC_TYPE m_cellStencil;
   
   /// storage of flags for neighbors (1: internal, 0:partition, <0: boundary)
   /// starts at m_cellInfo[cellID*5]
   /// its size is given by m_cellInfo[cellID*5+1]
   /// first m_cellInfo[cellID*5+2] are faces
-  CudaEnv::CudaVector<CFint, CudaEnv::MallocHostAlloc<CFint> > m_neighborTypes;
+  Framework::LocalArray<CFint>::MALLOC_TYPE m_neighborTypes;
   
   // cell connectivity
-  CudaEnv::CudaVector<Framework::CellConn, CudaEnv::MallocHostAlloc<Framework::CellConn> > m_cellConn;
+  Framework::LocalArray<Framework::CellConn>::MALLOC_TYPE m_cellConn;
   
   /// number of blocks in x 
   CFuint m_nbBlocksPerGridX;
@@ -146,7 +146,10 @@ protected:
   
   /// number of cells per block
   CFuint m_nbCellsPerBlock;
-  
+
+  /// number of OpenMP threads
+  CFuint m_nbThreadsOMP;
+   
   /// flag telling to solve on GPU
   bool m_onGPU;
   

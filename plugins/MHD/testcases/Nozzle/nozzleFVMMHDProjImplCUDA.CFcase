@@ -13,7 +13,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -3.1100305
+### Residual = -3.0726817
 
 #CFEnv.ErrorOnUnusedConfig = true
 #CFEnv.OnlyCPU0Writes = false
@@ -86,6 +86,7 @@ Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
 ####### GPU ########
 Simulator.SubSystem.BwdEulerLSS.Data.UseGPU = true
 Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
+Simulator.SubSystem.BwdEulerLSS.Data.PreconditionerRate = 10
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 #Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobMHD
@@ -97,7 +98,7 @@ Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = StdTimeRhs
 #Simulator.SubSystem.CellCenterFVM.NumJacobLaxFriedMHD2DCons.NbCellsPerBlock = 16
 #
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellNumJacobLaxFriedMHD2DCons
-Simulator.SubSystem.CellCenterFVM.CellNumJacobLaxFriedMHD2DCons.OnGPU = true #false
+Simulator.SubSystem.CellCenterFVM.CellNumJacobLaxFriedMHD2DCons.OnGPU = true
 Simulator.SubSystem.CellCenterFVM.CellNumJacobLaxFriedMHD2DCons.NbCellsPerBlock = 16
 
 Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup

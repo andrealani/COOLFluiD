@@ -18,7 +18,6 @@
 #include "Petsc/Petsc.hh"
 #include "Petsc/StdParSolveSys.hh"
 
-
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
@@ -104,8 +103,18 @@ void StdParSolveSys::execute()
       // rhsVec.printToScreen();
     }
   }
-  
-#if PETSC_VERSION_MINOR==6
+ 
+  // reuse te preconditioner
+#if PETSC_VERSION_MINOR==7
+  PetscBool reusePC = ((nbIter-1)%getMethodData().getPreconditionerRate() == 0) ?
+     PETSC_FALSE : PETSC_TRUE;
+  CFLog(VERBOSE, "StdParSolveSys::execute() => reusePC [" << reusePC <<"]\n");
+  CHKERRCONTINUE(KSPSetReusePreconditioner(ksp,reusePC));
+  PC& pc = getMethodData().getPreconditioner();
+  CHKERRCONTINUE(PCSetReusePreconditioner(pc,reusePC));
+#endif
+ 
+#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7
   CFuint ierr = KSPSetOperators(ksp, mat.getMat(), mat.getMat());
 #else
   CFuint ierr = KSPSetOperators
@@ -122,6 +131,20 @@ void StdParSolveSys::execute()
 
   ierr = KSPSetUp(ksp);
   CHKERRCONTINUE(ierr);
+
+#if PETSC_VERSION_MINOR==7
+  if (getMethodData().getPCType()==PCBJACOBI && getMethodData().useGPU()) {
+    PetscInt its,nlocal,first;
+    KSP* subksp;
+    PC   subpc;  
+    PC& pc = getMethodData().getPreconditioner();
+    PCBJacobiGetSubKSP(pc,&nlocal,&first,&subksp);
+    for (CFuint i=0; i<nlocal; i++) {
+      KSPGetPC(subksp[i],&subpc);
+      PCSetType(subpc,PCILU);
+    }
+  }
+#endif
 
   ierr = KSPSolve(ksp, rhsVec.getVec(), solVec.getVec());
   CHKERRCONTINUE(ierr);

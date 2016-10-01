@@ -102,6 +102,30 @@ typedef LocalStlVector LOCAL;
 
 //////////////////////////////////////////////////////////////////////////////
 
+#ifdef CF_HAVE_CUDA
+#define HPCVEC(stype) CudaEnv::CudaVector<stype>
+#define HPCVECMALLOC(stype) CudaEnv::CudaVector<stype, CudaEnv::MallocHostAlloc<stype> >
+#else
+#define HPCVEC(stype) std::vector<stype>
+#define HPCVECMALLOC(stype) std::vector<stype>
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+    
+template <typename ETYPE>
+class LocalArray {
+public:
+#ifdef CF_HAVE_CUDA
+  typedef CudaEnv::CudaVector<ETYPE> TYPE;
+  typedef CudaEnv::CudaVector<ETYPE, CudaEnv::MallocHostAlloc<ETYPE> > MALLOC_TYPE;
+#else
+  typedef std::vector<ETYPE> TYPE;
+  typedef std::vector<ETYPE> MALLOC_TYPE;
+#endif
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
     } // namespace Framework
 
 } //  namespace COOLFluiD

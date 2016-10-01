@@ -74,7 +74,7 @@ Simulator.SubSystem.FwdEuler.Data.L2.ComputedVarID = 0
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellLaxFriedMHD2DCons
-Simulator.SubSystem.CellCenterFVM.CellLaxFriedMHD2DCons.OnGPU = false #true #false # true
+Simulator.SubSystem.CellCenterFVM.CellLaxFriedMHD2DCons.OnGPU = true #false # true
 #Simulator.SubSystem.CellCenterFVM.CellLaxFriedMHD2DCons.NbCellsPerBlock = 16
 
 Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup

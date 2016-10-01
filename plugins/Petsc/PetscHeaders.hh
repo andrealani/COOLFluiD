@@ -23,7 +23,7 @@
 
 #ifndef NDEBUG
 #ifndef CF_HAVE_CUDA // this is for petsc-dev
-#if PETSC_VERSION_MINOR==6
+#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7
 #define CF_CHKERRCONTINUE(n) if (n) {PetscError(Common::PE::GetPE().GetCommunicator(Framework::MeshDataStack::getActive()->getPrimaryNamespace()),__LINE__,__FUNCT__,__FILE__,n,(PetscErrorType)0," ");}
 #else
 #define CF_CHKERRCONTINUE(n) if (n) {PetscError(Common::PE::GetPE().GetCommunicator(Framework::MeshDataStack::getActive()->getPrimaryNamespace()),__LINE__,__FUNCT__,__FILE__,__SDIR__,n,(PetscErrorType)0," ");}

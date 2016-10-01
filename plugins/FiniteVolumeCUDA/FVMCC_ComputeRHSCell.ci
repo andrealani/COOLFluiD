@@ -3,8 +3,10 @@
 #include "Framework/CellConn.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/MathTypes.hh"
+
+#ifdef CF_HAVE_CUDA
 #include "Common/CUDA/CudaDeviceManager.hh"
-#include "Common/CUDA/CFVec.hh"
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -37,11 +39,14 @@ FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::FVMCC_Com
 {
   this->addConfigOptionsTo(this);
   
-  m_onGPU = false;
-  setParameter("OnGPU",&m_onGPU);
-  
   m_nbCellsPerBlock = 1;
   setParameter("NbCellsPerBlock",&m_nbCellsPerBlock);
+
+  m_nbThreadsOMP = 12;
+  setParameter("NbThreadsOMP",&m_nbThreadsOMP);
+  
+  m_onGPU = false;
+  setParameter("OnGPU",&m_onGPU);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -64,8 +69,9 @@ void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::unse
 template <typename SCHEME, typename PHYSICS, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
 void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::defineConfigOptions(Config::OptionList& options)
 {
-  options.template addConfigOption< bool > ("OnGPU", "Flag telling to solve on GPU");
   options.template addConfigOption< CFuint > ("NbCellsPerBlock", "Number of cells per block");
+  options.template addConfigOption< CFuint > ("NbThreadsOMP", "Number of OMP threads");
+  options.template addConfigOption< bool > ("OnGPU", "Flag telling to solve on GPU");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -371,15 +377,18 @@ void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::setu
   
   // set the sizes of the grid to launch on the Framework::DEVICE
   const CFuint nbActualBlocks = nbCells/m_nbCellsPerBlock;
+
+#ifdef CF_HAVE_CUDA
   m_nbBlocksPerGridX = std::min(nbActualBlocks, (CFuint)CudaEnv::CudaDeviceManager::getInstance().getNBlocks());
   m_nbBlocksPerGridY = static_cast<CFuint>(std::max((CFreal)1., std::ceil((CFreal)nbActualBlocks/
 									  (CFreal)m_nbBlocksPerGridX)));
   CFLog(INFO, "FVMCC_ComputeRHSCell::setup() => Kernel grid sizes: <<< [" << 
 	m_nbBlocksPerGridX << " - " << m_nbBlocksPerGridY << "], " << 
 	CudaEnv::CudaDeviceManager::getInstance().getNThreads() << ">>>\n");
-  cout << m_nbBlocksPerGridX*m_nbBlocksPerGridY  << " >= " << nbCells/m_nbCellsPerBlock << endl;
+  CFLog(INFO, m_nbBlocksPerGridX*m_nbBlocksPerGridY  << " >= " << nbCells/m_nbCellsPerBlock << "\n");
   cf_assert(m_nbBlocksPerGridX*m_nbBlocksPerGridY >= nbCells/m_nbCellsPerBlock);
-  
+#endif
+
   CFLog(VERBOSE, "FVMCC_ComputeRHSCell::setup() END\n");
 }
       

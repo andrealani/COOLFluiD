@@ -65,7 +65,10 @@ public:
     
     /// Overloading of the operator++
     HOST_DEVICE void operator++() {m_cellID++; m_startc+=5; m_starts = m_cd->cellInfo[m_startc];}
-    
+   
+    /// Overloading of the operator--
+    HOST_DEVICE void operator--() {m_cellID--; m_startc-=5; m_starts = m_cd->cellInfo[m_startc];}
+ 
     /// Overloading of the ==
     HOST_DEVICE bool operator== (const Itr& other) {return (m_cellID == other.m_cellID);}
     

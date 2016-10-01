@@ -361,7 +361,8 @@ __global__ void computeFluxKernel(typename SCHEME::BASE::template DeviceConfigOp
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename SCHEME, typename POLYREC, typename LIMITER>
-void computeFluxCPU(typename SCHEME::BASE::template DeviceConfigOptions<NOTYPE>* dcof,
+void computeFluxCPU(CFuint nbThreadsOMP,
+		    typename SCHEME::BASE::template DeviceConfigOptions<NOTYPE>* dcof,
 		    typename POLYREC::BASE::template DeviceConfigOptions<NOTYPE>* dcor,
 		    typename LIMITER::BASE::template DeviceConfigOptions<NOTYPE>* dcol,
 		    typename SCHEME::MODEL::PTERM::template DeviceConfigOptions<NOTYPE>* dcop,
@@ -388,11 +389,14 @@ void computeFluxCPU(typename SCHEME::BASE::template DeviceConfigOptions<NOTYPE>*
 { 
   typedef typename SCHEME::MODEL PHYS;
   
-  FluxData<PHYS> fd; fd.initialize();
+  FluxData<PHYS> fd;
+#ifndef CF_HAVE_OMP  
+  fd.initialize();
   FluxData<PHYS>* currFd = &fd;
   cf_assert(currFd != CFNULL);
-  SCHEME fluxScheme(dcof);
+#endif
   POLYREC polyRec(dcor);
+  SCHEME fluxScheme(dcof);
   LIMITER limt(dcol);
   PHYS pmodel(dcop);
   
@@ -403,27 +407,43 @@ void computeFluxCPU(typename SCHEME::BASE::template DeviceConfigOptions<NOTYPE>*
   CFreal midFaceCoord[PHYS::DIM*PHYS::DIM*2];
   CudaEnv::CFVec<CFreal,PHYS::NBEQS> tmpLimiter;
 
-  // const CFuint nThr = omp_get_num_procs();
-//#pragma omp parallel num_threads(12)
-//{
- // #pragma omp for 
+#ifdef CF_HAVE_OMP
+  //const CFuint nThr = omp_get_num_procs();
+  // omp_set_num_threads(nbThreadsOMP);
+#pragma omp num_thread(nbThreadsOMP) parallel private(polyRec) private(fd)
+{
+  #pragma omp for
+#endif 
   // compute the cell-based gradients
   for (CFuint cellID = 0; cellID < nbCells; ++cellID) {
+#ifdef CF_HAVE_OMP
+    fd.initialize();
+    FluxData<PHYS>* currFd = &fd;
+    cf_assert(currFd != CFNULL);
+#endif 
     CellData::Itr cell = cells.getItr(cellID);
     polyRec.computeGradients(&states[cellID*PHYS::NBEQS], &centerNodes[cellID*PHYS::DIM], &kd, &cell);
   }
-//}
-  
-  // compute the cell based limiter
-  // for (CFuint cellID = 0; cellID < nbCells; ++cellID) {
-  for (CellData::Itr cell = cells.begin(); cell <= cells.end(); ++cell) {
+#ifdef CF_HAVE_OMP
+}
+#endif
+
+#ifdef CF_HAVE_OMP  
+#pragma omp num_thread(nbThreadsOMP) parallel private(limt) private(kd)
+{
+  #pragma omp for
+#endif 
+  // compute the cell based limiter 
+  for (CFuint cellID = 0; cellID < nbCells; ++cellID) {
+  // for (CellData::Itr cell = cells.begin(); cell <= cells.end(); ++cell) {
+    CellData::Itr cell = cells.getItr(cellID);
     // compute all cell quadrature points at once (size of this array is overestimated)
     const CFuint nbFacesInCell = cell.getNbFacesInCell();
     for (CFuint f = 0; f < nbFacesInCell; ++f) { 
       computeFaceCentroid<PHYS>(&cell, f, nodes, &midFaceCoord[f*PHYS::DIM]);
     }
     
-    const CFuint cellID = cell.getCellID();
+    //   const CFuint cellID = cell.getCellID();
     if (dcor->currRes > dcor->limitRes && (dcor->limitIter > 0 && dcor->currIter < dcor->limitIter)) {	
       // compute cell-based limiter
       limt.limit(&kd, &cell, &midFaceCoord[0], &limiter[cellID*PHYS::NBEQS]);
@@ -439,15 +459,28 @@ void computeFluxCPU(typename SCHEME::BASE::template DeviceConfigOptions<NOTYPE>*
       }
     }
   }
-  
+#ifdef CF_HAVE_OMP
+}
+
+#pragma omp num_thread(nbThreadsOMP) parallel private(fd) private(kd) private(fluxScheme) private(pmodel)
+{
+  #pragma omp for
+#endif 
   // compute the fluxes
-  for (CellData::Itr cell = cells.begin(); cell <= cells.end(); ++cell) {
+  for (CFuint cellID = 0; cellID < nbCells; ++cellID) {
+  //  for (CellData::Itr cell = cells.begin(); cell <= cells.end(); ++cell) {
+#ifdef CF_HAVE_OMP
+    fd.initialize();
+    FluxData<PHYS>* currFd = &fd;
+    cf_assert(currFd != CFNULL);
+#endif
     // reset the rhs and update coefficients to 0
-    const CFuint cellID = cell.getCellID();
+   // const CFuint cellID = cell.getCellID();
     CudaEnv::CFVecSlice<CFreal,PHYS::NBEQS> res(&rhs[cellID*PHYS::NBEQS]);
     res = 0.;
     updateCoeff[cellID] = 0.;
-    
+
+    CellData::Itr cell = cells.getItr(cellID);   
     const CFuint nbFacesInCell = cell.getNbActiveFacesInCell();
     for (CFuint f = 0; f < nbFacesInCell; ++f) { 
       const CFint stype = cell.getNeighborType(f);
@@ -474,6 +507,9 @@ void computeFluxCPU(typename SCHEME::BASE::template DeviceConfigOptions<NOTYPE>*
       }
     }
   }
+#ifdef CF_HAVE_OMP
+} 
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -503,11 +539,16 @@ void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::exec
   SafePtr<typename PHYSICS::PTERM> phys = PhysicalModelStack::getActive()->getImplementor()->
     getConvectiveTerm().d_castTo<typename PHYSICS::PTERM>();
   
+#ifdef CF_HAVE_CUDA
   typedef typename SCHEME::template DeviceFunc<GPU, PHYSICS> FluxScheme;  
+#else
+  typedef typename SCHEME::template DeviceFunc<CPU, PHYSICS> FluxScheme;
+#endif
   typedef typename POLYREC::template DeviceFunc<PHYSICS> PolyRec;  
   typedef typename LIMITER::template DeviceFunc<PHYSICS> Limiter;  
   
   if (m_onGPU) {
+#ifdef CF_HAVE_CUDA
 
     CudaEnv::CudaTimer& timer = CudaEnv::CudaTimer::getInstance();
     timer.start();
@@ -625,7 +666,9 @@ void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::exec
     rhs.getLocalArray()->get();
     updateCoeff.getLocalArray()->get();
     CFLog(VERBOSE, "FVMCC_ComputeRHSCell::execute() => GPU-->CPU data transfer took " << timer.elapsed() << " s\n");
-  }
+
+#endif
+}
   else {
     // AL: useful fo debugging
     // for (CFuint i = 0; i <  m_ghostStates.size()/9; ++i) {
@@ -645,7 +688,8 @@ void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::exec
     ConfigOptionPtr<typename PHYSICS::PTERM> dcop(phys);
     
     computeFluxCPU<FluxScheme, PolyRec, Limiter>
-      (dcof.getPtr(),
+      (m_nbThreadsOMP,
+       dcof.getPtr(),
        dcor.getPtr(),
        dcol.getPtr(),
        dcop.getPtr(),
