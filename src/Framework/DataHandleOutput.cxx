@@ -28,6 +28,7 @@ void DataHandleOutput::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::vector<std::string> >("CCVariableNames","The names of the variables for cell-centered output.");
   options.addConfigOption< std::vector<CFuint> >     ("CCBlockSize","The block size for each socket. Default is one.");
   options.addConfigOption< std::vector<std::string> >("CCTrs","The trs with the cells to output the cell-centered data.");
+  options.addConfigOption< bool >("isNodal","Tells if the variables to print are nodal.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -36,6 +37,7 @@ DataHandleOutput::DataHandleOutput(const std::string& name) :
   NumericalStrategy(name),
   NamespaceMember(),
   socket_states("states"),
+  socket_nodes("nodes"),
   m_cached_datahandles(false)
 {
   addConfigOptionsTo(this);
@@ -59,6 +61,9 @@ DataHandleOutput::DataHandleOutput(const std::string& name) :
 
   m_ccblocksize = std::vector<CFuint> ();
   setParameter("CCBlockSize",&m_ccblocksize);
+  
+  m_isNodal = false;
+  setParameter("isNodal",&m_isNodal);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -94,12 +99,10 @@ void DataHandleOutput::configure ( Config::ConfigArgs& args )
 void DataHandleOutput::setupStateVars()
 {
   CFAUTOTRACE;
+  
   // setup of the state based data output
-
-  DataHandle <Framework::State*, Framework::GLOBAL> states =
-    socket_states.getDataHandle();
-
-  CFuint nbstates = states.size();
+  const CFuint nbDofs = (!m_isNodal) ? 
+    socket_states.getDataHandle().size() : socket_nodes.getDataHandle().size();
   m_nbvars.clear();
 
   CFuint total_nbvars = 0;
@@ -118,26 +121,30 @@ void DataHandleOutput::setupStateVars()
       m_sockets.getSocketSink<CFreal>(*it);
 
     DataHandle<CFreal> dh = this_socket->getDataHandle();
-
-    CFuint nbvars = dh.size() / nbstates;
+    
+    CFuint nbvars = dh.size() / nbDofs;
     m_nbvars.push_back(nbvars);
-
+    
     total_nbvars += nbvars;
-
+    
     if ( fill_varnames )
     {
-      if (nbvars == 1)
+      if (nbvars == 1) {
         m_varnames.push_back( *it );
-      else
-        for ( CFuint iv = 0; iv < nbvars; ++iv)
+      }
+      else {
+        for ( CFuint iv = 0; iv < nbvars; ++iv) {
           m_varnames.push_back( *it + Common::StringOps::to_str(iv) );
+	}
+      }
     }
   }
-
+  
   // check the total nb of variables matches the total nb of variable names
-  if ( total_nbvars !=  m_varnames.size() )
+  if ( total_nbvars !=  m_varnames.size() ) {
+    CFLog(ERROR, "total_nbvars [" << total_nbvars<< "] !=  m_varnames.size() [" << m_varnames.size()<< "] \n");
     throw BadValueException (FromHere(),"Number of variable names does not match number of variables");
-
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -450,9 +457,8 @@ DataHandleOutput::needsSockets()
 {
 
   std::vector<Common::SafePtr<BaseDataSocketSink> > result = m_sockets.getAllSinkSockets();
-
   result.push_back(&socket_states);
-
+  result.push_back(&socket_nodes);
   return result;
 }
 

@@ -127,6 +127,9 @@ private: // data
   /// socket for State's
   Framework::DataSocketSink<Framework::State*, Framework::GLOBAL> socket_states;
 
+  /// socket for Node's
+  Framework::DataSocketSink<Framework::Node*, Framework::GLOBAL> socket_nodes;
+
   /// the dynamic sockets to access the data to output
   Framework::DynamicDataSocketSet<> m_sockets;
 
@@ -173,7 +176,10 @@ private: // data
   /// this is usefull to circunvent the existence of subcells
   /// in that case set this value to the maximum number of subcells
   std::vector< CFuint > m_ccblocksize;
-
+  
+  /// flag telling if the variables are nodal
+  bool m_isNodal;
+  
 }; // end of class DataHandleOutput
 
 //////////////////////////////////////////////////////////////////////////////

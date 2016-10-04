@@ -191,7 +191,10 @@ private:
   void triggerRecomputeMeshData();
   
 private: //data
-
+  
+  /// the socket to the data handle of the nodal stiffness
+  Framework::DataSocketSource < CFreal > socket_stiffness;
+  
   /// the socket to the data handle of the state's
   Framework::DataSocketSink < Framework::Node* , Framework::GLOBAL > socket_nodes;
   

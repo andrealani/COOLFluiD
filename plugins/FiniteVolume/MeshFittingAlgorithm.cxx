@@ -61,6 +61,7 @@ void MeshFittingAlgorithm::defineConfigOptions(Config::OptionList& options)
 
 MeshFittingAlgorithm::MeshFittingAlgorithm(const std::string& name) :
   Framework::DataProcessingCom(name),
+  socket_stiffness("stiffness"),
   socket_nodes("nodes"),
   socket_states("states"),
   socket_nstates("nstates"),
@@ -145,6 +146,7 @@ std::vector<Common::SafePtr<Framework::BaseDataSocketSource> >
 MeshFittingAlgorithm::providesSockets()
 {
   std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > result;
+  result.push_back(&socket_stiffness);
   return result;
 }
 
@@ -158,6 +160,11 @@ void MeshFittingAlgorithm::setup()
   using namespace COOLFluiD::MathTools;
   
   DataProcessingCom::setup();
+  
+  // resize and initialize the storage of the nodal stiffness
+  DataHandle<CFreal> stiffness = socket_stiffness.getDataHandle();
+  stiffness.resize(socket_nodes.getDataHandle().size());
+  stiffness = 0.;
   
   // AL: this might be useless ... (@see MeshRigidMove/StdSetup.cxx)
   SubSystemStatusStack::getActive()->setMovingMesh(true);
