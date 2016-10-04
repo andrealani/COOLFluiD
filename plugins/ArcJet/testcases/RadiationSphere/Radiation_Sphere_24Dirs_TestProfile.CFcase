@@ -252,7 +252,7 @@ Simulator.SubSystem.CellCenterFVM.Wall.ZeroGradientFlags = 1 0 0 0 0 1
 ###############################################################################
 # Data Processing
 
-Simulator.SubSystem.DataPreProcessing = DataProcessing
+Simulator.SubSystem.DataPostProcessing = DataProcessing
 Simulator.SubSystem.DataProcessing.Data.updateVar = Pvt
 Simulator.SubSystem.DataProcessing.Comds = Radiation 
 Simulator.SubSystem.DataProcessing.Names = Radiation
@@ -263,3 +263,4 @@ Simulator.SubSystem.DataProcessing.Radiation.BinTabName = air-100Bands.dat #air-
 Simulator.SubSystem.DataProcessing.Radiation.OutTabName = air-100Bands.out #air-100Bins.out
 Simulator.SubSystem.DataProcessing.Radiation.ConstantP = 1013250 
 Simulator.SubSystem.DataProcessing.ProcessRate = 1
+#Simulator.SubSystem.DataProcessing.RunAtSetup = true
