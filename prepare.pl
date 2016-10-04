@@ -91,6 +91,8 @@ my %default_options = (
     'withcurl'        => 1,
     'with_mutationpp' => 0,
     'with_plato'      => 0,
+    'with_paralution' => 0,
+    'paralution_dir'  => "", 
     'withdocs'        => "",
     'mpi_extra_libs'  => "",
     'nofortran'       => "",
@@ -765,6 +767,7 @@ sub setup_deps()
   # dependency variables
   my @dep_variables = ( "boost_includedir",
 			"boost_librarydir",
+                        "paralution_dir",
 			"petsc_dir",
 			"plas_dir",
 			"pardiso_include_dir",
@@ -914,6 +917,7 @@ sub setup_cfgoptions()
   setup_option('withcurl',            'CF_ENABLE_CURL');
   setup_option('with_mutationpp',     'CF_ENABLE_MUTATIONPP');
   setup_option('with_plato',          'CF_ENABLE_PLATO');
+  setup_option('with_paralution',     'CF_ENABLE_PARALUTION'); 
   setup_option('withdocs',            'CF_ENABLE_DOCS');
   setup_option('explicit_templates',  'CF_ENABLE_EXPLICIT_TEMPLATES');
   setup_option('with_testcases',      'CF_ENABLE_TESTCASES');
