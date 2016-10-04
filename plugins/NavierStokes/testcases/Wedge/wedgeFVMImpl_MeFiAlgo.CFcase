@@ -50,11 +50,15 @@ Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 10
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = true
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.SocketNames   = stiffness
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.VariableNames = kstiff
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.isNodal = true
 #Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = shockSensor pressure #dPdX dPdY
 #Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = shockSensor pressure #dPdY dPdY
 #Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1
 #Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
 #Simulator.SubSystem.Tecplot.WriteSolutionBlockFV.NodalOutputVar = true
+
 
 #Simulator.SubSystem.StopCondition       = MaxNumberSteps
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 200
