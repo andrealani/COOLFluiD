@@ -4,8 +4,8 @@ LIST ( APPEND ParalutionI_files
 StdSetup.cxx
 StdSetup.hh
 Paralution.hh
-#ParalutionIdxMapping.cxx
-#ParalutionIdxMapping.hh
+ParalutionIdxMapping.cxx
+ParalutionIdxMapping.hh
 ParalutionLSS.cxx
 ParalutionLSS.hh
 ParalutionLSSData.cxx
@@ -14,8 +14,8 @@ ParalutionMatrix.cxx
 ParalutionMatrix.hh
 ParalutionVector.cxx
 ParalutionVector.hh
-#SeqSolveSys.cxx
-#SeqSolveSys.hh
+StdSolveSys.cxx
+StdSolveSys.hh
 )
 
 LIST ( APPEND ParalutionI_includedirs ${MPI_INCLUDE_DIR} ${PARALUTION_INCLUDE_DIR} )

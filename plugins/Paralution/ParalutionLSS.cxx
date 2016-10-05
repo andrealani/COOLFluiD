@@ -62,7 +62,7 @@ ParalutionLSS::ParalutionLSS(const std::string& name)
   m_unSetupStr = "Null";
   setParameter("UnSetupCom",&m_unSetupStr);
 
-  m_solveSysStr = "Null";
+  m_solveSysStr = "StdSolveSys";
   setParameter("SysSolver",&m_solveSysStr);
 }
 
