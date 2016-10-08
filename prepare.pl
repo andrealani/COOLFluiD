@@ -83,10 +83,11 @@ my %default_options = (
     'cc'              => "",
     'cxx'             => "",
     'fc'              => "",
-    'cudac'            => "",
+    'cudac'           => "",
     'withbuildtype'   => 1,
     'withmpi'         => "",
     'withcuda'        => 0,
+    'withviennacl'    => 0,
     'withomp'	      => 0,
     'withcurl'        => 1,
     'with_mutationpp' => 0,
@@ -913,6 +914,7 @@ sub setup_cfgoptions()
   setup_option('nofortran',           'CF_SKIP_FORTRAN');
   setup_option('withmpi',             'CF_ENABLE_MPI');
   setup_option('withcuda',            'CF_ENABLE_CUDA');
+  setup_option('withviennacl',        'CF_ENABLE_VIENNACL');
   setup_option('withomp',             'CF_ENABLE_OMP');
   setup_option('withcurl',            'CF_ENABLE_CURL');
   setup_option('with_mutationpp',     'CF_ENABLE_MUTATIONPP');

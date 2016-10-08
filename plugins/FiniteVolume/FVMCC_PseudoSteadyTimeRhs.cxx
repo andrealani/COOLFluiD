@@ -164,7 +164,7 @@ void FVMCC_PseudoSteadyTimeRhs::execute()
   }
   
 #ifdef CF_HAVE_CUDA  
-  CFLog(INFO, "FVMCC_StdComputeTimeRhs::execute() took " << timer.elapsed() << " s\n");
+  CFLog(VERBOSE, "FVMCC_PseudoSteadyTimeRhs::execute() took " << timer.elapsed() << " s\n");
 #endif
 }
       

@@ -59,6 +59,10 @@ void PetscOptions::setPCTypes()
   _pcType["PCGASM"] = PCGASM;
   _pcType["PCKSP"] = PCKSP;
   _pcType["PCGAMG"] = PCGAMG;
+#ifdef CF_HAVE_VIENNACL
+  _pcType["PCSAVIENNACL"] = PCSAVIENNACL;
+  _pcType["PCCHOWILUVIENNACL"] = PCCHOWILUVIENNACL;
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////

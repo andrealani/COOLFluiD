@@ -63,7 +63,11 @@ void PetscMatrix::createSeqBAIJ(const CFuint blockSize,
   if (_isAIJ) {
 #ifdef CF_HAVE_CUDA
     if (m_useGPU) {
+#ifdef CF_HAVE_VIENNACL
+     CF_CHKERRCONTINUE(MatSetType(m_mat, MATSEQAIJVIENNACL));
+#else
       CF_CHKERRCONTINUE(MatSetType(m_mat, MATSEQAIJCUSP));
+#endif
     }
     else 
 #endif   

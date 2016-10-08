@@ -45,8 +45,12 @@ void PetscVector::create(MPI_Comm comm,
   
 #ifdef CF_HAVE_CUDA
   if (m_useGPU) {
+#ifdef CF_HAVE_VIENNACL
+    CF_CHKERRCONTINUE( VecSetType(m_vec, VECVIENNACL) );
+#else
     CF_CHKERRCONTINUE( VecSetType(m_vec, VECCUSP) ); 
-  }
+#endif 
+ }
   else
 #endif
     {CF_CHKERRCONTINUE( VecSetType(m_vec, VECMPI) );}
