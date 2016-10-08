@@ -38,6 +38,7 @@ my $opt_genconf       = 0;
 my $opt_debug         = "1";
 my $opt_int64         = "0";
 my $opt_cuda_dir      = "";
+my $opt_viennacl      = "0";
 my $opt_nompi         = 0;
 my $opt_mpi           = "openmpi";
 my $opt_mpi_dir       = "";
@@ -123,6 +124,8 @@ my %packages = (  #  version   default install priority      function
 #    "petsc"      => [ "3.4.2",'on',  'off', $priority++,  \&install_petsc ], 
 #    "petsc"      => [ "3.6.3-dev",'on',  'off', $priority++,  \&install_petsc ],
     "petsc"      => [ "3.6.3",'on',  'off', $priority++,  \&install_petsc ], 
+#    "petsc"      => [ "3.7.3a",'on',  'off', $priority++,  \&install_petsc ],
+#    "petsc"      => [ "3.7.3-next",'on',  'off', $priority++,  \&install_petsc ],
     "gmsh"       => [ "1.60.1", 'off',  'off', $priority++,  sub { install_gnu("gmsh") } ],
     "ccache"     => [ "2.4",    'off',  'off', $priority++,  sub { install_gnu("ccache") } ],
     "distcc"     => [ "2.18.3", 'off',  'off', $priority++,  sub { install_gnu("distcc") } ],
@@ -144,6 +147,7 @@ sub parse_commandline() # Parse command line
         'genconf'               => \$opt_genconf,
         'debug=s'               => \$opt_debug,
         'int64=s'               => \$opt_int64,
+        'viennacl=s'            => \$opt_viennacl,
 	'nompi'                 => \$opt_nompi,
         'many-mpi'              => \$opt_many_mpi,
         'mpi=s'                 => \$opt_mpi,
@@ -1247,7 +1251,8 @@ sub install_petsc ()
     if ($opt_int64 eq 1) {
        $use_int64 = "--with-64-bit-indices";
     } 
-    
+   
+    my $wviennacl = "";
     my $cuda_support = "";
     if ($opt_cuda_dir) {
       print my_colored("Installing PETSc with CUDA support\n", $HEADINGCOLOR);
@@ -1263,23 +1268,25 @@ sub install_petsc ()
       run_command_or_die("export PATH=$opt_cuda_dir/bin:\\\$PATH");
       run_command_or_die("export LD_LIBRARY_PATH=/usr/lib64:$opt_cuda_dir/lib64:/usr/lib64/nvidia:\\\$LD_LIBRARY_PATH");
      
-      if ($version eq "3.6.3") {
-         # download and unpack compatible cusp source files
-         my $cusp_name = "cusp-v0.4.0.zip";
-         my $cusp_file = "$opt_tmp_dir/$cusp_name";
-         if ( not -e $cusp_file ) { download_file("$opt_dwnldsrc/$cusp_name") }; 
-         run_command_or_die("cp $cusp_file .");
-         run_command_or_die("cp $cusp_name $opt_install_dir/ ; cd $opt_install_dir ; unzip $cusp_name ; rm -f $cusp_name ; cd -");
-           
-         # configuration options for enabling GPU support 
-       #  $cuda_support = "--with-cudac=$opt_cuda_bin --with-cuda-dir=$opt_cuda_dir --with-cuda=1 --with-cusp=1 --with-cusp-dir=$opt_install_dir --with-thrust=1 --with-precision=double --with-clanguage=c --with-cuda-arch=sm_13"
-
+      if ($version eq "3.6.3" or $version eq "3.7.3a" or $version eq "3.7.3-next" ) {
+         if ($opt_viennacl eq "0") {
+           # download and unpack compatible cusp source files
+           my $cusp_name = "cusp-v0.4.0.zip";
+           my $cusp_file = "$opt_tmp_dir/$cusp_name";
+           if ( not -e $cusp_file ) { download_file("$opt_dwnldsrc/$cusp_name") }; 
+           run_command_or_die("cp $cusp_file .");
+           run_command_or_die("cp $cusp_name $opt_install_dir/ ; cd $opt_install_dir ; unzip $cusp_name ; rm -f $cusp_name ; cd -");
+         
          # gory fixes to fix inclusions paths for cups and thrust     
          run_command_or_die("cp -R $opt_install_dir/cusp-v0.4.0/cusp $opt_install_dir/include");
          run_command_or_die("cp -R $opt_cuda_dir/include/thrust $opt_install_dir/include/cusp");
-
-         $cuda_support = "--with-cudac=$opt_cuda_bin --with-cuda-dir=$opt_cuda_dir --with-cuda=1 --with-cusp=1 --with-cusp-dir=$opt_install_dir/cusp-v0.4.0 --with-thrust=1 --with-thrust-dir=$opt_cuda_dir --with-precision=double --with-clanguage=c --with-cuda-arch=sm_30"
-      } 
+         $cuda_support = "--with-cudac=$opt_cuda_bin --with-cuda-dir=$opt_cuda_dir --with-cuda=1 --with-cusp=1 --with-cusp-dir=$opt_install_dir/cusp-v0.4.0 --with-thrust=1 --with-thrust-dir=$opt_cuda_dir --with-precision=double --with-clanguage=c --with-cuda-arch=sm_30";
+        }
+       else  {
+        $wviennacl = "--download-viennacl --with-opencl-include=/usr/local/cuda-6.5/targets/x86_64-linux/include --with-opencl-lib=/usr/local/cuda-6.5/targets/x86_64-linux/lib/libOpenCL.so --with-openmp=1";
+        $cuda_support = "--with-cudac=$opt_cuda_bin --with-cuda-dir=$opt_cuda_dir --with-cuda=1 --with-precision=double --with-clanguage=c --with-cuda-arch=sm_30";
+       } 
+     } 
       else {
 
       # download and unpack compatible thrust source files
@@ -1316,8 +1323,21 @@ sub install_petsc ()
    run_command_or_die("./configure --prefix=$install_dir $wdebug COPTFLAGS='-O3 ' FOPTFLAGS='-O3 ' --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 --with-shared-libraries=1 --with-dynamic-loading=1 --with-c++-support $cuda_support --PETSC_ARCH=$petsc_arch");
    run_command_or_die("make $opt_makeopts");
   }
-  elsif ($version eq "3.6.3") {
-    run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 COPTFLAGS='-O3 ' FOPTFLAGS='-O3 ' --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 --with-shared-libraries=1 $cuda_support --PETSC_ARCH=$petsc_arch");
+  elsif ($version eq "3.6.3" or $version eq "3.7.3a" or $version eq "3.7.3-next" ) {
+    my $FFLAGS = "-O3 ";
+    my $F90FLAGS ="-O3 ";
+    my $CFLAGS ="-O3 "; 
+    my $CXXFLAGS ="-O3 ";
+    my $FOPTFLAGS ="-O3 ";
+    my $COPTFLAGS ="-O3 ";
+    my $CXXOPTFLAGS ="-O3 ";
+
+   if ($wdebug eq "--with-debugging=0") { 
+    run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 FFLAGS=$FFLAGS F90FLAGS=$F90FLAGS CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS CXXOPTFLAGS=$CXXOPTFLAGS COPTFLAGS=$COPTFLAGS FOPTFLAGS=$FOPTFLAGS --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 --with-shared-libraries=1 $wviennacl $cuda_support --PETSC_ARCH=$petsc_arch");
+   }
+   else {
+     run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 --with-shared-libraries=1 $cuda_support --PETSC_ARCH=$petsc_arch");
+   }
    run_command_or_die("make");
   }
   else {
