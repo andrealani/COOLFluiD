@@ -9,4 +9,4 @@ cf_add_case( MPI        8       CASEDIR 8_MHDRotor              PCASE RotorBench
 cf_add_case( MPI        8       CASEDIR 9_VortexAccuracy	PCASE VortexBenchMark_25x25.CFcase		   CASEFILES Mesh_10x10_25x25.neu vortex.inter )
 cf_add_case( MPI        1       CASEDIR 10_SodTube		PCASE 1_SodTube.CFcase				   CASEFILES shockTube_1x6e-3_600x4.neu sodTube.inter )
 #cf_add_case( MPI        1       CASEDIR 11_BrioWuTube		PCASE 1_BrioWu.CFcase				   CASEFILES shockTube_1x6e-3_600x4.neu BrioWu.inter )
-cf_add_case( MPI	1	CASEDIR 13_TwoFluidShockTube		PCASE 2_TwoFluidShock_Drift_MR_1836_rl_100Benchmark.CFcase  		CASEFILES TwoFluid_MR_1836.inter shockTube_1x6e-3_600x4.neu ) 
+cf_add_case( MPI	1	CASEDIR 13_TwoFluidShockTube	PCASE 2_TwoFluidShock_Drift_MR_1836_rl_100_CUDA.CFcase CASEFILES TwoFluid_MR_1836.inter shockTube_1x6e-3_600x4.neu ) 

@@ -21,10 +21,8 @@
 #CFEnv.ErrorOnUnusedConfig = true
 
 
-#This case tests the GP-enabled RHS computation with a source term
+#This case tests the GPU-enabled RHS computation with a source term
 ### Residual = -1.01338
-
-
 
 ###############################################################################
 # SubSystem Modules
