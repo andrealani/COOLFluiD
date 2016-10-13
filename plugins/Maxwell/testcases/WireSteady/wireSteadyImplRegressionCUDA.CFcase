@@ -3,9 +3,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-# Residual = -15.6997
-# Parallel = off
-#
+# Residual = -16.375201
 #
 #CFEnv.ErrorOnUnusedConfig = true
 #CFEnv.TraceToStdOut = true

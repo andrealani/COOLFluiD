@@ -3,7 +3,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-# Residual = -4.7780569
+# Residual = -16.751472
 # Parallel = off
 #
 #
@@ -39,7 +39,7 @@ Simulator.SubSystem.CFmesh.SaveRate = 50
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 5
 
 Simulator.SubSystem.StopCondition       = Norm
-Simulator.SubSystem.Norm.valueNorm      = -20.0
+Simulator.SubSystem.Norm.valueNorm      = -16.0
 
 Simulator.SubSystem.Default.listTRS = Inlet Outlet
 
