@@ -5,6 +5,10 @@
 
 #include "Framework/BaseTerm.hh"
 
+#ifdef CF_HAVE_CUDA
+#include "Common/CUDA/CudaEnv.hh"
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -25,6 +29,34 @@ namespace COOLFluiD {
 class DiffMFMHDTerm : public Framework::BaseTerm {
   
 public:
+
+#ifdef CF_HAVE_CUDA
+    
+   //Nested class defining local options
+   template <typename P = NOTYPE >  
+   class DeviceConfigOptions{
+   public:
+       //Constructor
+       HOST_DEVICE DeviceConfigOptions() {}
+       //Destructor
+       HOST_DEVICE virtual ~DeviceConfigOptions() {}
+
+       //Initialize with another DeviceConfigOption object
+       HOST_DEVICE void init(DeviceConfigOptions<P> *const in){}
+       
+    };
+      
+    //For now, there is no need to copy the variables to de GPU (04/08)    
+
+
+    //Copy the configuration to the protected variables (CPU)
+    void copyConfigOptions(DeviceConfigOptions<NOTYPE>* dco){}
+
+       //Copy the local configuration to the DEVICE
+    void copyConfigOptionsToDevice(DeviceConfigOptions<NOTYPE>* dco){}
+
+#endif
+
 
   /**
    * Defines the Config Option's of this class

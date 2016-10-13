@@ -71,7 +71,7 @@ void ExprComputeCFL::operator() (const ConvergenceStatus& cstatus)
   _eval[3] = _lastResidual;
   _eval[4] = _maxResidual;
   _eval[5] = _cfl->getCFLValue();
-    
+  
   const CFreal currResidual = SubSystemStatusStack::getActive()->getResidual();
 
   _lastResidual = currResidual;
@@ -84,7 +84,7 @@ void ExprComputeCFL::operator() (const ConvergenceStatus& cstatus)
   CFLog(VERBOSE, "ExprComputeCFL::operator() => _eval = " << _eval 
 	<< ", CFLnumber = " << CFLnumber << "\n");
   cf_assert(std::abs(CFLnumber) > MathTools::MathConsts::CFrealEps());
-  _cfl->setCFLValue(CFLnumber); 
+  _cfl->setCFLValue(CFLnumber);
   // }
 }
 

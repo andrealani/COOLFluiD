@@ -64,7 +64,8 @@ public:
   ConfigOptionPtr(Common::SafePtr<T> obj)
   {
     // allocate data pointer on device
-    CudaEnv::allocDev(m_dco, 1); 
+    CudaEnv::allocDev(m_dco, 1);
+   
     // copy the configurable data to the device
     obj->copyConfigOptionsToDevice(m_dco);
   }

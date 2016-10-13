@@ -5,6 +5,10 @@
 
 #include "Framework/BaseTerm.hh"
 
+#ifdef CF_HAVE_CUDA
+#include "Common/CUDA/CudaEnv.hh"
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -21,12 +25,98 @@ namespace COOLFluiD {
  *
  * @author Andrea Lani
  * @author Alejandro Alvarez Laguna
- *
+ * @author Isaac Alonso
  */
 class ConvMaxwellTerm : public Framework::BaseTerm {
 public:
   
+
+#ifdef CF_HAVE_CUDA
+    
+   //Nested class defining local options
+   template <typename P = NOTYPE >   //Need to ask about this
+   class DeviceConfigOptions{
+   public:
+       //Constructor
+       HOST_DEVICE DeviceConfigOptions() {}
+       //Destructor
+       HOST_DEVICE virtual ~DeviceConfigOptions() {}
+
+       //Initialize with another DeviceConfigOption object
+       HOST_DEVICE void init(DeviceConfigOptions<P> *const in){
+          //CFLog(NOTICE, "HOST_DEVICE ConvMaxwellTerm::DeviceConfigOptions::init(); \n");
+          divBCleaningConst 	= in->divBCleaningConst;
+	  divECleaningConst 	= in->divECleaningConst;
+	  divBAdimCleaningConst = in->divBAdimCleaningConst;
+	  LightSpeed 		= in->LightSpeed;
+	  electronMass 		= in->electronMass;
+	  electronCharge	= in->electronCharge;
+	  protonMass 		= in->protonMass;
+	  neutralMass 		= in->neutralMass;
+	  solarGravity 		= in->solarGravity;
+
+       }
+       
+       //This following variables will be at the device
+       CFreal	divBCleaningConst;
   
+       /// adimensional parameter necessary for the hyperbolic 
+       ///divE cleaning technique
+       CFreal	divECleaningConst;  
+  
+       /// adimensional parameter necessary for the hyperbolic 
+       ///divB cleaning technique
+       CFreal	divBAdimCleaningConst;   
+  
+       CFreal	LightSpeed;
+       CFreal	electronMass;
+       CFreal	electronCharge;
+       CFreal	protonMass;
+       CFreal	neutralMass;
+       CFreal	solarGravity;
+    };
+      
+
+    //Copy the configuration to the protected variables (CPU)
+    void copyConfigOptions(DeviceConfigOptions<NOTYPE>* dco)
+    {
+
+	  dco->divBCleaningConst = _divBCleaningConst;
+	  dco->divECleaningConst = _divECleaningConst;
+	  dco->divBAdimCleaningConst = _divBAdimCleaningConst;	 
+	  dco->LightSpeed = _LightSpeed;	 
+	  dco->electronMass = _electronMass; 
+	  dco->protonMass = _protonMass; 
+	  dco->neutralMass = _neutralMass;
+	  dco->solarGravity = _solarGravity;
+    
+    }
+
+       //Copy the local configuration to the DEVICE
+    void copyConfigOptionsToDevice(DeviceConfigOptions<NOTYPE>* dco)
+    {
+          CudaEnv::copyHost2Dev(&dco->divBCleaningConst, &_divBCleaningConst, 1);
+          CudaEnv::copyHost2Dev(&dco->divECleaningConst, &_divECleaningConst, 1);
+          CudaEnv::copyHost2Dev(&dco->divBAdimCleaningConst, &_divBAdimCleaningConst, 1);
+          CudaEnv::copyHost2Dev(&dco->LightSpeed, &_LightSpeed, 1);
+          CudaEnv::copyHost2Dev(&dco->electronMass, &_electronMass, 1);
+          CudaEnv::copyHost2Dev(&dco->protonMass, &_protonMass, 1);
+          CudaEnv::copyHost2Dev(&dco->neutralMass, &_neutralMass, 1);
+          CudaEnv::copyHost2Dev(&dco->solarGravity, &_solarGravity, 1);
+  
+    }
+
+
+
+
+#endif
+
+
+
+//End of the new code
+
+
+
    /**
    * Defines the Config Option's of this class
    * @param options a OptionList where to add the Option's
@@ -203,7 +293,6 @@ protected:
   ///divB cleaning technique
   
   CFreal            _divBCleaningConst;
-  
   /// adimensional parameter necessary for the hyperbolic 
   ///divE cleaning technique
   CFreal            _divECleaningConst;  

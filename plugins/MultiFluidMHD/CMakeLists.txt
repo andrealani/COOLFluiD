@@ -57,6 +57,19 @@ ReacMFMHDTerm.cxx
 ReacMFMHDTerm.hh
 )
 
+
+IF (CF_HAVE_CUDA) 
+   LIST ( APPEND MultiFluidMHD_files
+MultiFluidMHD2DHalfTwoSpeciesVarSetT.hh 
+EulerMFMHD2DHalfConsT.hh                                                                                        
+EulerMFMHD2DHalfConsToRhoiViTiT.hh                                                                            
+EulerMFMHD2DHalfRhoiViTiT.hh                                                                                    
+EulerMFMHD2DHalfRhoiViTiToConsT.hh  
+) 
+ENDIF ()
+
+
+
 LIST ( APPEND MultiFluidMHD_cflibs Framework Maxwell )
 LIST ( APPEND MultiFluidMHD_requires_mods Maxwell )
 

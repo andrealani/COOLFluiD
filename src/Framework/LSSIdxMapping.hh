@@ -63,10 +63,11 @@ public:
   void createMapping(const std::valarray<CFuint>& globalIDs,
       const std::valarray<bool>& isNonLocalRow)
   {
+    
     const CFuint nbPoints = globalIDs.size();
     _localToLSSIDs.resize(nbPoints);
     _localToLSSIDs = globalIDs;
-
+ //   CFLog(NOTICE,"createMapping size " << nbPoints << "\n");
     // in the sequential case all rows are locally owned
     _isNonLocalRow.resize(nbPoints);
     _isNonLocalRow = isNonLocalRow;
@@ -86,7 +87,9 @@ public:
   /// Get the LSS global ID corresponding to the given local ID
   CFuint getColID(CFuint localID) const
   {
+ //   CFLog(NOTICE,"GetCol: localID " << localID << " localToLSSIDs.size() " << _localToLSSIDs.size());
     cf_assert(localID < _localToLSSIDs.size());
+ //   CFLog(NOTICE," LSSID " << _localToLSSIDs[localID] << " \n");
     return _localToLSSIDs[localID];
   }
 
@@ -94,15 +97,19 @@ public:
   /// and number of equations
   CFuint getColID(CFuint localID, CFuint nbEqs) const
   {
+  //  CFLog(NOTICE,"GetCol: localID " << localID << " localToLSSIDs.size() " << _localToLSSIDs.size());
     cf_assert(localID < _localToLSSIDs.size());
+  //  CFLog(NOTICE," LSSID " << _localToLSSIDs[localID] << " \n");
     return _localToLSSIDs[localID]*nbEqs;
   }
 
   /// Get the LSS global ID corresponding to the given local ID
   CFint getRowID(CFuint localID) const
   {
+  //  CFLog(NOTICE,"GetRow1: localID " << localID << " localToLSSIDs.size() " << _localToLSSIDs.size());
     cf_assert(localID < _localToLSSIDs.size());
     if (!_isNonLocalRow[localID]) {
+  //    CFLog(NOTICE," LSSID " << _localToLSSIDs[localID] << " \n");
       return _localToLSSIDs[localID];
     }
     return -1;
@@ -112,9 +119,11 @@ public:
   /// and number of equations
   CFint getRowID(CFuint localID, CFuint nbEqs) const
   {
+  //  CFLog(NOTICE,"GetRow2: localID " << localID << " localToLSSIDs.size() " << _localToLSSIDs.size());
     cf_assert(localID < _localToLSSIDs.size());
     if (!_isNonLocalRow[localID]) {
       return _localToLSSIDs[localID]*nbEqs;
+  //    CFLog(NOTICE," LSSID " << _localToLSSIDs[localID] << " \n");
     }
     return -1;
   }

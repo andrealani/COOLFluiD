@@ -85,6 +85,13 @@ protected: // data
   
   /// socket for rhs
   Framework::DataSocketSink<CFreal> socket_rhs;
+
+
+ /// socket for bStatesNeighbors
+  /// It is a list of the neighbor states for the boundary states.
+  /// It will be useful to avoid very expensive jacobian matrix
+  /// reallocations when applying strong boundary condition
+  Framework::DataSocketSink<std::valarray<Framework::State*> > socket_bStatesNeighbors;
   
 }; // class Setup
 

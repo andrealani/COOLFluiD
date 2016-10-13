@@ -56,20 +56,31 @@ StdSolveSys::~StdSolveSys()
 
 void StdSolveSys::execute()
 {
+  using namespace paralution;
   CFAUTOTRACE;
+
+  CFLog(NOTICE, "StdSolveSys::execute() \n");
+
+Stopwatch<WallTime> stopTimer;
+stopTimer.start();
+
+
+   DataHandle< CFreal> rhs = socket_rhs.getDataHandle();
+   cf_assert(_upLocalIDs.size() == _upStatesGlobalIDs.size());
+   const CFuint vecSize = _upLocalIDs.size();
+   const CFuint nbEqs = getMethodData().getNbSysEquations();
   
-  // DataHandle< CFreal> rhs = socket_rhs.getDataHandle();
-//   cf_assert(_upLocalIDs.size() == _upStatesGlobalIDs.size());
-//   const CFuint vecSize = _upLocalIDs.size();
-  
-//   ParalutionMatrix& mat = getMethodData().getMatrix();
-//   ParalutionVector& rhsVec = getMethodData().getRhsVector();
-//   ParalutionVector& solVec = getMethodData().getSolVector();
+   ParalutionMatrix& mat = getMethodData().getMatrix();       //Add vecsize to constructor!!
+   ParalutionVector& rhsVec = getMethodData().getRhsVector();
+   ParalutionVector& solVec = getMethodData().getSolVector();
 //   KSP& ksp = getMethodData().getKSP();
 
-//   // assemble the matrix
-//   mat.finalAssembly();
+   // assemble the matrix in the HOST
+   mat.finalAssembly(rhs.size());
 
+   CFLog(NOTICE, "StdSolveSys::execute() ==> Matrix assembled! \n");
+  // mat.convertToCSR();
+  // CFLog(NOTICE, "StdSolveSys::execute() ==> Matrix converted to CSR! \n");
 //   // after the first iteration freeze the non zero structure
 //   // of the matrix
 //   if (SubSystemStatusStack::getActive()->getNbIter() == 1) {
@@ -79,15 +90,100 @@ void StdSolveSys::execute()
 //   // the rhs is copied into the ParalutionVector for the rhs
 //   // _upStatesGlobalIDs[i] is different from _upLocalIDs[i]
 //   // in case multiple LSS are used
-//   for (CFuint i = 0; i < vecSize; ++i) {
-//     // cout << "nbSysEq = " << nbEqs << ", upLocalIDs = " << _upLocalIDs[i]
-//     // 	 << ", upStatesGlobalIDs = " << _upStatesGlobalIDs[i] << endl;
-//     rhsVec.setValue(_upStatesGlobalIDs[i], rhs[_upLocalIDs[i]]);
-//   }
+    rhsVec.setSize(vecSize);
+    for (CFuint i = 0; i < vecSize; ++i) {
+    //  cout << "nbSysEq = " << nbEqs << ", upLocalIDs = " << _upLocalIDs[i]
+    //  	 << ", upStatesGlobalIDs = " << _upStatesGlobalIDs[i] << endl;
+      rhsVec.setValue(_upStatesGlobalIDs[i], rhs[_upLocalIDs[i]]);
+    }
 
-//   // assemble the rhs vector
-//   rhsVec.assembly();
+//   // assemble the rhs vector in HOST
+    rhsVec.Assembly();
+    CFLog(NOTICE, "StdSolveSys::execute() ==> RHS assembled! \n");
+
+
+    solVec.setSize(vecSize);
+    solVec.setValue(0.0);
+    solVec.Assembly();
+
+    CFLog(NOTICE, "StdSolveSys::execute() ==> Solution vector assembled! \n");
+
+    //If useGPU==true   ERROR!!
+//      mat.moveToGPU();
+//      rhsVec.moveToGPU();
+//      solVec.moveToGPU();
+    //endif
+
+    //CFLog(NOTICE, "StdSolveSys::execute() ==> moveToGPU succesful! \n");
+
+
+    //Configure LSS and preconditioner using CFcase parameters:
+
+// Linear Solver
+GMRES<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal > ls;
+//preconditioner
+ILU<LocalMatrix<CFreal>,LocalVector<CFreal>,CFreal> p;
+  p.Set(0);
+   CFLog(NOTICE, "StdSolveSys::execute() ==> configuring ls succesful! \n");
+    //End configure   
+    
+mat.AssignToSolver(ls);   //Not really beautiful way to do it
+
+//   ls.SetOperator(mat.getMatrix()); //run-time fatal error: no copy constructor
+   ls.SetPreconditioner(p);
   
+//rhsVec.printToFile("RHS.txt");
+mat.printToFile("matrix.mtx");
+ls.Build();
+ls.Verbose(2) ;
+   CFLog(NOTICE, "StdSolveSys::execute() ==> Build() succesful! \n");
+   CFLog(NOTICE, "StdSolveSys::execute() ==> START SOLVING <== \n \n");
+rhsVec.Solve(ls, solVec.getVecPtr());
+//ls.Solve(rhsVec.getVec(), solVec.getVecPtr());   //run-time fatal error: no copy constructor
+   CFLog(NOTICE, "\n StdSolveSys::execute() ==> Solved!! \n");
+ls.Clear();
+
+
+//solVec.printToFile("Sol.txt");
+  solVec.copy2(&rhs[0], &_upLocalIDs[0], vecSize);
+  //mat.resetToZeroEntries(); //needed?
+
+cout << "StdSolveSys::execute() took " << stopTimer << "s\n";
+/*
+x.Allocate("x", mat.get_ncol());
+x.Zeros();
+
+mat.info();
+mat.WriteFileMTX("matrix.mtx");
+
+// Linear Solver
+GMRES<LocalMatrix<double>, LocalVector<double>, double > ls;
+//preconditioner
+ILU<LocalMatrix<double>,LocalVector<double>,double> p;
+  p.Set(0);
+
+ls.SetOperator(mat);
+ ls.SetPreconditioner(p);
+
+ls.Build();
+ls.Verbose(2) ;
+
+ls.Solve(rhs, &x);
+
+ls.Clear();
+
+x.MoveToHost();
+for(int counter=0;counter<6;counter++)printf(" x[%i]=%f \n",counter,x[counter]);
+
+*/
+
+
+
+
+
+
+
+
 //   const CFuint nbIter = SubSystemStatusStack::getActive()->getNbIter();
 //   if (getMethodData().getSaveRate() > 0) {
 //     if (getMethodData().isSaveSystemToFile() || (nbIter%getMethodData().getSaveRate() == 0)) { 

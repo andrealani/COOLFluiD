@@ -10,6 +10,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Environment/ModuleRegister.hh"
+#include <paralution.hpp>
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -49,12 +50,20 @@ public:
   /**
    * Initiates the Paralution environment
    */
-  //virtual void initiate();
+   virtual void initiate() 
+   {
+     Environment::ModuleRegister<ParalutionModule>::initiate();
+     paralution::init_paralution();
+   }
 
   /**
    * Terminates the Paralution environment
    */
-  //virtual void terminate();
+  virtual void terminate()
+  {
+    Environment::ModuleRegister<ParalutionModule>::terminate();
+    paralution::stop_paralution();
+  }
 
 }; // end ParalutionModule
 

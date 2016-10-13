@@ -18,7 +18,9 @@ namespace COOLFluiD {
 
 ParalutionVector::ParalutionVector() :
   Framework::LSSVector(),
-  m_toBeDestroyed(false)
+  m_toBeDestroyed(false),
+  m_onLocalVector(false),
+  _size(0)
 {
 }
 
@@ -93,6 +95,8 @@ void ParalutionVector::printToScreen() const
 
 void ParalutionVector::printToFile(const char* fileName) const
 {
+
+  m_vec.WriteFileASCII(fileName);
   // const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
   
   // ParalutionViewer viewer;

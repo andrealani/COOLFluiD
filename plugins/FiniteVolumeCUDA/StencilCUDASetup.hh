@@ -107,7 +107,7 @@ protected:
   /// this state list has ownership on the states
   Framework::DataSocketSource<Framework::State*> socket_gstates;
   
-  /// storage of the cell volumes (to be removed)
+  /// storage of the cell volumes
   Framework::DataSocketSource<CFreal> socket_volumes;
   
   /// Storage of the limiters

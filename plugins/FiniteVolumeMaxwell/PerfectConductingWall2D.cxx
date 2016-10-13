@@ -2,6 +2,7 @@
 #include "PerfectConductingWall2D.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Maxwell/Maxwell2DVarSet.hh"
+#include "Maxwell/Maxwell2DProjectionVarSetT.hh"
 #include "Framework/MeshData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -45,7 +46,7 @@ void PerfectConductingWall2D::setup()
 {
   FVMCC_BC::setup();
   
-  _varSet = getMethodData().getUpdateVar().d_castTo<Maxwell2DVarSet>();
+  _varSet = getMethodData().getUpdateVar().d_castTo<Maxwell2DVarSet>();  //Maxwell2DVarSet
   _varSet->getModel()->resizePhysicalData(_dataInnerState);
   _varSet->getModel()->resizePhysicalData(_dataGhostState);
 }

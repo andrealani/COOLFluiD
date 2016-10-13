@@ -131,9 +131,17 @@ void StegerWarmingMaxwellProjection2D<UPDATEVAR>::compute(RealVector& result)
   
   computeMatrixAplus();
   computeMatrixAminus();  
-  
+ 
+
+//      printf("EMfield_l = %.12f \t %.12f \t %.12f \t %.12f \t %.12f \t %.12f \n %.12f \t %.12f \n", _EMField_l[0], _EMField_l[1], _EMField_l[2], _EMField_l[3], _EMField_l[4], _EMField_l[5], _EMField_l[6], _EMField_l[7]);
+//      printf("EMfield_r = %.12f \t %.12f \t %.12f \t %.12f \t %.12f \t %.12f \n %.12f \t %.12f \n \n", _EMField_r[0], _EMField_r[1], _EMField_r[2], _EMField_r[3], _EMField_r[4], _EMField_r[5], _EMField_r[6], _EMField_r[7]);
+
+
+ 
     result = 0.5*_Aplus*_EMField_l + 0.5*_Aminus*_EMField_r; 
-//     std::cout<<"result = "<<  result[0] <<"\t\t "<<  result[1] <<"\t\t " <<  result[2] <<"\t\t "<<  result[3] <<"\t\t"<<  result[4] <<"\t\t "<<  result[5]<<"\t\t"<<  result[6]<<"\t\t" << result[7]<<"\n";
+   // result[6] = 0.0;
+   //  std::cout<<"flux = "<<  result[0] <<"\t "<<  result[1] <<"\t " <<  result[2] <<"\t "<<  result[3] <<"\t"<<  result[4] <<"\t "<<  result[5]<<"\t"<<  result[6]<<"\t" << result[7]<<"\n";
+//printf("flux 0: %e \t 1: %e \t 2: %e \t 3: %e \t 4: %e \t 5: %e \t 6: %.12f \t 7: %e \n -- \n", result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7]);
 
      
   if (!this->getMethodData().isPerturb()) {
@@ -154,8 +162,8 @@ void StegerWarmingMaxwellProjection2D<UPDATEVAR>::computeMatrixAplus()
   const CFreal c_e = m_updateVarSet->getModel()->getLightSpeed();//speed of light
   
   
-//   cout<<"gamma = "<< gamma <<"\n";
-//   cout<<"chi = "<< chi <<"\n";
+ //  cout<<"gamma = "<< gamma <<"\n";
+ //  cout<<"chi = "<< chi <<"\n";
   
   
   _Aplus(0,0) = (normal[1]*normal[1] + gamma*normal[0]*normal[0])*c_e;

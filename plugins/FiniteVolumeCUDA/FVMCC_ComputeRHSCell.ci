@@ -332,7 +332,7 @@ void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::setu
       cf_assert(i*dim+d < m_centerNodes.size());
       m_centerNodes[i*dim+d] = coord[d];
     }
-  }
+  } //This creates a 3*nbCells long array which contains all the coordinates of the cell centers
   
   // copy locally the ghost states
   DataHandle < Framework::State* > gstates = socket_gstates.getDataHandle();

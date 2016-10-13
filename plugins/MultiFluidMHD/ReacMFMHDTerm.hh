@@ -5,6 +5,10 @@
 
 #include "Framework/BaseTerm.hh"
 
+#ifdef CF_HAVE_CUDA
+#include "Common/CUDA/CudaEnv.hh"
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -24,6 +28,38 @@ namespace COOLFluiD {
  */
 class ReacMFMHDTerm : public Framework::BaseTerm {
 public:
+
+
+#ifdef CF_HAVE_CUDA
+    
+   //Nested class defining local options
+   template <typename P = NOTYPE >  
+   class DeviceConfigOptions{
+   public:
+       //Constructor
+       HOST_DEVICE DeviceConfigOptions() {}
+       //Destructor
+       HOST_DEVICE virtual ~DeviceConfigOptions() {}
+
+       //Initialize with another DeviceConfigOption object
+       HOST_DEVICE void init(DeviceConfigOptions<P> *const in){}
+       
+    };
+      
+    //Por ahora no he visto nada que haga falta copiar el GPU (04/08)    
+
+
+    //Copy the configuration to the protected variables (CPU)
+    void copyConfigOptions(DeviceConfigOptions<NOTYPE>* dco){}
+
+       //Copy the local configuration to the DEVICE
+    void copyConfigOptionsToDevice(DeviceConfigOptions<NOTYPE>* dco){}
+
+#endif
+
+
+
+
 
   /**
    * Enumerator defining the mapping between

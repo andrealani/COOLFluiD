@@ -14,7 +14,7 @@
 Simulator.Modules.Libs =  libCFmeshFileWriter libCFmeshFileReader libNewtonMethod libPetscI libTecplotWriter libMaxwell libForwardEuler libFiniteVolume libGambit2CFmesh libFiniteVolumeMaxwell 
 
 # SubSystem Parameters
-Simulator.Paths.WorkingDir = ./
+Simulator.Paths.WorkingDir = plugins/Maxwell/testcases/FullPlaneWave/FullPlaneWaveChi0/
 #plugins/Maxwell/testcases/WireSteady/
 Simulator.Paths.ResultsDir = ./RESULTS_FullPlane_DimensionalProj_SWProj_chi_0_2nd_SuperInlet_SilverMuller_parallel
 

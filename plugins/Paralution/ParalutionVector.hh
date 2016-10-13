@@ -65,6 +65,16 @@ public: // functions
     // CF_CHKERRCONTINUE(VecAssemblyBegin(m_vec));
   }
 
+   /**
+   * Assemble the vector
+   */
+  void Assembly()
+  {
+     CFLog(NOTICE, "Assembling array, size " << _size << "\n");
+     m_vec.SetDataPtr(&_val, "LocalVector", _size);
+  }
+
+
   /**
    * Finish to assemble the vector
    */
@@ -93,9 +103,17 @@ public: // functions
    * @param idx index in the vector
    * @param value value to be set
    */
+
+  void setSize(const CFint size)
+  {
+     _size = size;
+     _val = new CFreal[size];
+  }
+
   void setValue(const CFint idx, const CFreal value)
   {
-    // CF_CHKERRCONTINUE(VecSetValue(m_vec, idx, value, INSERT_VALUES));
+    _val[idx] = value;
+ //   std::cout << "_val[" << idx << " of "<< _size <<"] = " << value << "\n";
   }
 
   /**
@@ -104,7 +122,11 @@ public: // functions
    */
   void setValue(const CFreal value)
   {
-    // CF_CHKERRCONTINUE(VecSet(m_vec, value));
+    if (m_onLocalVector) {
+       m_vec.SetValues(value);
+    }else{
+       for (CFuint i=0; i<_size; i++){ _val[i]=value;}
+    }
   }
 
   /**
@@ -165,7 +187,7 @@ public: // functions
     // CFint size = 0;
     // CF_CHKERRCONTINUE(VecGetLocalSize(m_vec, &size));
     // return static_cast<CFuint>(size);
-    return 0;
+    return _size;
   }
 
   /**
@@ -176,7 +198,7 @@ public: // functions
     // CFint size = 0;
     // CF_CHKERRCONTINUE(VecGetSize(m_vec, &size));
     // return static_cast<CFuint>(size);
-    return 0;
+    return _size;
   }
 
   /**
@@ -201,13 +223,24 @@ public: // functions
             CFint *const localIDs,
             const CFuint size) const
   {
-    // CFreal* array = CFNULL;
-    // CF_CHKERRCONTINUE(VecGetArray(m_vec, &array));
-    // for (CFuint i = 0; i < size; ++i) {
-    //   other[localIDs[i]] = array[i];
-    // }
+  //  copy2(other,localIDs,size);
+  //passing ‘const COOLFluiD::Paralution::ParalutionVector’ as ‘this’ argument of ‘void COOLFluiD::Paralution::ParalutionVector::copy2(COOLFluiD::CFreal*, COOLFluiD::CFint*, COOLFluiD::CFuint)’ discards qualifiers [-fpermissive]
+  //The same if I put the code inside copy2 here... it has to be with the const declaration of the function I think, but that can not be changed
+  }
+
+void copy2(CFreal *const other,
+            CFint *const localIDs,
+            const CFuint size)
+  {
+    CFreal* array = NULL;
+    m_vec.LeaveDataPtr(&array); //Get a pointer from the vector data and FREE the vector object. 
+    for (CFuint i = 0; i < size; ++i) {
+       other[localIDs[i]] = array[i];
+    }
     // CF_CHKERRCONTINUE(VecRestoreArray(m_vec, &array));
   }
+
+
 
   /**
    * Copy the raw data of this Vector to a given array
@@ -233,10 +266,40 @@ public: // functions
      // VecGetArray(m_vec, &array);
    }
 
+  void moveToGPU(){
+    m_vec.MoveToAccelerator();
+  }
+
+  paralution::LocalVector<CFreal> getVec(){
+    return m_vec;
+  }
+
+  paralution::LocalVector<CFreal>* getVecPtr(){
+    paralution::LocalVector<CFreal>* Ptr = &m_vec;
+    return Ptr;
+  }
+
+
+  paralution::LocalVector<CFreal>& getVecAdr(){
+    paralution::LocalVector<CFreal>& ref = m_vec;
+    return ref;
+  }
+
+  void Solve(paralution::Solver< paralution::LocalMatrix<CFreal>, paralution::LocalVector<CFreal>, CFreal >& ls,
+                      paralution::LocalVector<CFreal>* x ){
+    ls.Solve(m_vec, x);
+  }
+
 private: // data
   
   /// tell if the vector has been destroyed
   bool m_toBeDestroyed;
+  bool m_onLocalVector; //tell if the vector data is inside m_vec
+
+  CFreal* _val;
+  CFuint _size;
+
+  paralution::LocalVector<CFreal> m_vec;
   
 }; // end of class ParalutionVector
 

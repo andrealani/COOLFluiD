@@ -61,6 +61,9 @@ void StdParSolveSys::execute()
 {
   CFAUTOTRACE;
   
+Stopwatch<WallTime> stopTimer;
+stopTimer.start();
+
   DataHandle< CFreal> rhs = socket_rhs.getDataHandle();
   cf_assert(_upLocalIDs.size() == _upStatesGlobalIDs.size());
   const CFuint vecSize = _upLocalIDs.size();
@@ -91,6 +94,12 @@ void StdParSolveSys::execute()
   // assemble the rhs vector
   rhsVec.assembly();
   
+
+//mat.printToFile("matPETSC.txt");
+//rhsVec.printToFile("rhsPETSC.txt");
+
+
+
   const CFuint nbIter = SubSystemStatusStack::getActive()->getNbIter();
   if (getMethodData().getSaveRate() > 0) {
     if (getMethodData().isSaveSystemToFile() || (nbIter%getMethodData().getSaveRate() == 0)) { 
@@ -149,6 +158,13 @@ void StdParSolveSys::execute()
   ierr = KSPSolve(ksp, rhsVec.getVec(), solVec.getVec());
   CHKERRCONTINUE(ierr);
 
+
+
+//solVec.printToFile("solPETSC.txt");
+
+
+
+
   CFint iter = 0;
   ierr = KSPGetIterationNumber(ksp, &iter);
   CHKERRCONTINUE(ierr);
@@ -158,6 +174,7 @@ void StdParSolveSys::execute()
   }
   
   solVec.copy(&rhs[0], &_upLocalIDs[0], vecSize);
+  cout << "StdSolveSys::execute() took " << stopTimer << "s\n";
 }
 
 //////////////////////////////////////////////////////////////////////////////

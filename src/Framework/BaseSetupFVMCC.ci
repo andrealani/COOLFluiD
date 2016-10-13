@@ -219,7 +219,8 @@ void BaseSetupFVMCC<BASE>::execute()
   
   //store the boundaryNormals
   storeBoundaryNormals(); 
-  
+
+ 
   // assign global IDs to partition face ghost states
   if (PE::GetPE().IsParallel()) {assignPartitionFaceGlobalGhostStateIDS();}
   
@@ -364,7 +365,7 @@ void BaseSetupFVMCC<BASE>::computeCellVolumes()
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::MathTools;
   using namespace COOLFluiD::Common;
-  
+  CFLog(VERBOSE, "BaseSetupFVMCC<BASE>::computeCellVolumes() \n"); 
   CFAUTOTRACE;
 
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
@@ -385,7 +386,7 @@ void BaseSetupFVMCC<BASE>::computeCellVolumes()
     geoData.idx = iElem;
     GeometricEntity *const cell = geoBuilder->buildGE();
     volumes[iElem] = cell->computeVolume();
-    
+    CFLog(VERBOSE, "volumes[" << iElem << "] = " << volumes[iElem] << " \n");
     if (volumes[iElem] < 0.0)
     {
       countNegativeVol++;
@@ -405,7 +406,7 @@ void BaseSetupFVMCC<BASE>::computeCellVolumes()
       volumes[iElem] = 0.0;
     }
 
-    //   cf_assert(volumes[iElem] > 0.);
+    cf_assert(volumes[iElem] > 0.);
 
     //release the GeometricEntity
     geoBuilder->releaseGE();

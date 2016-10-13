@@ -140,6 +140,15 @@ void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>:
     const CFuint nThreads = CudaEnv::CudaDeviceManager::getInstance().getNThreads();
     // minimum number of kernel calls to assemble the full RHS + jacobian
     const CFuint sizeb = (blocksPerGrid+(m_nbKernelBlocks-1))/m_nbKernelBlocks;
+
+    CFuint NbBlocks = CudaEnv::CudaDeviceManager::getInstance().getNBlocks();
+    printf("nbCells = %d \n", nbCells);
+    printf("NBlocks = %d \n", NbBlocks);
+    printf("blocksPerGrid = %d \n", blocksPerGrid);
+    printf("nThreads = %d \n", nThreads);
+    printf("sizeb = %d \n", sizeb);
+
+
     // array storing the max number of cells whose RHS+jacobian will be computed in each kernel  
     m_nbCellsInKernel.resize(sizeb,nThreads*m_nbKernelBlocks);
     
@@ -149,6 +158,7 @@ void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>:
     CFuint maxSizeJacobEntries = 0;
     CFuint startCellID = 0;
     CFuint startEntryID = 0;
+    printf("nbKernels = %d \n", nbKernels);
     for (CFuint s = 0; s < nbKernels; ++s) {
       const CFuint maxCellID = (s < nbKernels-1) ? startCellID + m_nbCellsInKernel[s] : nbCells-1;
       cf_assert(maxCellID < m_blockStart.size());
@@ -162,8 +172,9 @@ void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>:
       m_blockStartKernelCellID[s] = startCellID;
       startCellID = maxCellID;
       startEntryID += delta;
+      printf("s = %d  \t maxSizeJacobEntries = %d  \n", s, maxSizeJacobEntries);
     }
-    
+
     cf_assert(startCellID  == nbCells-1);
     cf_assert(startEntryID == fullMatrixSize);
 
@@ -172,6 +183,10 @@ void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>:
           << maxSizeJacobEntries << " >= " << fullMatrixSize << "\n"); 
       cf_assert(maxSizeJacobEntries <= fullMatrixSize);
     }
+    
+    CFLog(NOTICE, "FVMCC_ComputeRhsJacobCell::setup() => uses maxSizeJacobEntries < fullMatrixSize => " 
+	  << maxSizeJacobEntries << " < " << fullMatrixSize << "\n");
+    cf_assert(maxSizeJacobEntries < fullMatrixSize);
     
     // m_blockJacobians is allocated with the maximum possible size needed by a single kernel
     m_blockJacobians.resize(maxSizeJacobEntries);
@@ -235,7 +250,7 @@ void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>:
   auto_ptr<BlockAccumulator> acc(m_lss->createBlockAccumulator(nbRows0, 1, nbEqs, start));
   const CFuint nbCells = this->socket_states.getDataHandle().size(); 
   
-  cf_assert(kernelID < m_blockStartKernelCellID.size());
+  //cf_assert(kernelID < m_blockStartKernelCellID.size());
   const CFuint startCellID = m_blockStartKernelCellID[kernelID];
   
   const CFuint nbKernels = m_nbCellsInKernel.size();
@@ -307,7 +322,16 @@ void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>:
 { 
   using namespace COOLFluiD::Framework;
   
-  CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::finalizeComputationRHS()\n");
+  CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::finalizeComputationRHS() START\n");
+  
+  //m_lss->getMatrix()->printToFile("matCUDA.txt");
+
+  // compute dynamically the CFL
+  if (this->getMethodData().doComputeJacobian()) {
+    this->getMethodData().getCFL()->update();
+  }
+  
+  CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::finalizeComputationRHS() END\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////

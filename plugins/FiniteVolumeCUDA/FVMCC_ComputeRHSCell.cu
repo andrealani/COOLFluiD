@@ -22,8 +22,21 @@
 #include "MHD/MHD3DProjectionPrimT.hh"
 #include "MHD/MHDProjectionPrimToConsT.hh"
 #include "FiniteVolumeMHD/LaxFriedFluxTanaka.hh"
-#include "MHD/MHD2DProjectionVarSet.hh"
+#include "MHD/MHD2DProjectionVarSet.hh"   
 #include "MHD/MHD3DProjectionVarSet.hh"
+
+#include "Maxwell/Maxwell2DProjectionVarSet.hh"
+#include "Maxwell/Maxwell2DProjectionConsT.hh"
+#include "FiniteVolumeMaxwell/StegerWarmingMaxwellProjection2D.hh"
+
+#include "MultiFluidMHD/MultiFluidMHDVarSet.hh"
+#include "MultiFluidMHD/EulerMFMHD2DHalfConsT.hh"
+#include "MultiFluidMHD/EulerMFMHD2DHalfRhoiViTiT.hh"
+#include "MultiFluidMHD/EulerMFMHD2DHalfRhoiViTiToConsT.hh"
+#include "MultiFluidMHD/EulerMFMHD2DHalfConsToRhoiViTiT.hh"
+#include "FiniteVolumeMultiFluidMHD/AUSMPlusUpFluxMultiFluid.hh"
+#include "FiniteVolumeMultiFluidMHD/AUSMFluxMultiFluid.hh"
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -31,6 +44,8 @@ using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Common;
 using namespace COOLFluiD::Config;
 using namespace COOLFluiD::Physics::MHD;
+using namespace COOLFluiD::Physics::Maxwell;
+using namespace COOLFluiD::Physics::MultiFluidMHD;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -67,6 +82,35 @@ FVMCC_MHD_RHS_PROV_TANAKA(3D, ProjectionCons, ProjectionCons, 48, "CellLaxFriedT
 FVMCC_MHD_RHS_PROV_TANAKA(2D, ProjectionCons, ProjectionPrim, 48, "CellLaxFriedTanakaMHD2DPrim")
 FVMCC_MHD_RHS_PROV_TANAKA(3D, ProjectionCons, ProjectionPrim, 48, "CellLaxFriedTanakaMHD3DPrim")
 #undef FVMCC_MHD_RHS_PROV_TANAKA
+
+
+//Provider for Steger-Warming scheme / Maxwell
+#define FVMCC_MAXWELL_RHS_PROV_STEGER(__dim__,__svars__,__uvars__,__nbBThreads__,__providerName__) \
+MethodCommandProvider<FVMCC_ComputeRHSCell<StegerWarmingMaxwellProjection2D<Maxwell##__dim__##ProjectionVarSet>, \
+					   VarSetListT<Maxwell##__dim__##__svars__##T, Maxwell##__dim__##__uvars__##T>, \
+					   LeastSquareP1PolyRec##__dim__ , BarthJesp, __nbBThreads__>, \
+		      CellCenterFVMData, FiniteVolumeCUDAModule>	\
+fvmcc_RhsMaxwellSteger##__dim__##__svars__##__uvars__##__nbBThreads__##Provider(__providerName__);
+// 48 block threads (default)
+FVMCC_MAXWELL_RHS_PROV_STEGER(2D, ProjectionCons, ProjectionCons, 48, "CellStegerWarmingMaxwell2DCons")
+
+#undef FVMCC_MAXWELL_RHS_PROV_STEGER
+
+
+//Provider for AUSMPlusUpFlux / multifluidMHD 
+#define FVMCC_MULTIFLUIDMHD_RHS_PROV_AUSMPLUSUP(__dim__,__half__,__svars__,__uvars__,__nbBThreads__,__providerName__) \
+MethodCommandProvider<FVMCC_ComputeRHSCell<AUSMPlusUpFluxMultiFluid<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
+			              VarSetListT<EulerMFMHD##__dim__##__half__##__svars__##T, EulerMFMHD##__dim__##__half__##__uvars__##T>, \
+				      LeastSquareP1PolyRec##__dim__ , BarthJesp, __nbBThreads__>, \
+		      CellCenterFVMData, FiniteVolumeCUDAModule>	\
+fvmcc_RhsMultiFluidMHDAUSMPlusUp##__dim__##__half__##__svars__##__uvars__##__nbBThreads__##Provider(__providerName__);
+
+// 48 block threads (default)
+FVMCC_MULTIFLUIDMHD_RHS_PROV_AUSMPLUSUP(2D, Half, Cons, RhoiViTi, 48, "CellAUSMPlusUpEulerMFMHD2DHalfRhoiViTi")
+
+#undef FVMCC_MULTIFLUIDMHD_RHS_PROV_AUSMPLUSUP
+
+
 
 //////////////////////////////////////////////////////////////////////////////
 

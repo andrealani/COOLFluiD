@@ -90,8 +90,14 @@
 
 #include "FiniteVolume/ComputeSourceTermFVMCC.hh"
 #include "Common/SafePtr.hh"
-
 #include "Framework/DataSocketSource.hh"
+
+#ifdef CF_HAVE_CUDA
+#include "Common/CUDA/CudaEnv.hh"
+#include "Framework/MathTypes.hh"
+#include "Framework/VarSetTransformerT.hh"
+#include "FiniteVolume/FluxData.hh"
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -113,12 +119,88 @@ namespace COOLFluiD {
  * variables
  *
  * @author Alejandro Alvarez
- *
+ * @author Isaac Alonso
  */
 template <class UPDATEVAR>
 class DriftWaves2DHalfTwoFluid : public ComputeSourceTermFVMCC {
 
 public:
+
+#ifdef CF_HAVE_CUDA
+
+  /// nested class defining local options
+  template <typename P = NOTYPE>
+  class DeviceConfigOptions {
+  public:
+    /// constructor
+    HOST_DEVICE DeviceConfigOptions() {}
+    
+    /// destructor
+    HOST_DEVICE ~DeviceConfigOptions() {}
+    
+    /// initialize with another object of the same kind
+    HOST_DEVICE void init(DeviceConfigOptions<P> *const in) 
+    {
+      electricCharge = in->electricCharge;
+      //parameters needed
+    }
+    
+    //parameters needed
+    CFreal electricCharge;
+  };
+  
+  /// nested class defining a functor
+  template <DeviceType DT, typename VS>
+  class DeviceFunc {
+  public:
+    typedef VS MODEL;
+    typedef DriftWaves2DHalfTwoFluid BASE;
+    
+    /// constructor taking the options as argument
+    HOST_DEVICE DeviceFunc(DeviceConfigOptions<NOTYPE>* dco) : m_dco(dco) {}
+    
+    /// Compute the source term : implementation
+    HOST_DEVICE void operator()(CFreal* state, VS* model, CFreal* source); 
+   
+
+  private:
+    DeviceConfigOptions<NOTYPE>* m_dco;
+
+    
+    typename MathTypes<CFreal, DT, VS::DATASIZE>::VEC d_physicalData;
+    typename MathTypes<CFreal, DT, 6>::VEC d_NonInducedEMField;
+    typename MathTypes<CFreal, DT, 3>::VEC d_Btotal;
+    typename MathTypes<CFreal, DT, 3>::VEC d_Etotal;
+
+  };
+  
+  /// copy the local configuration options to the device
+  void copyConfigOptionsToDevice(DeviceConfigOptions<NOTYPE>* dco) 
+  {
+
+    CFLog(VERBOSE, "DriftWaves2DHalfTwoFluid::copyConfigOptionsToDevice START1 \n \n");
+    
+    //CopyParameters
+    CFreal electricCharge = getElectricCharge();
+    CFLog(VERBOSE, "DriftWaves2DHalfTwoFluid::DeviceConfigOptions electricCharge = " << electricCharge  << "\n");
+    CudaEnv::copyHost2Dev(&dco->electricCharge, &electricCharge, 1);
+
+
+    CFLog(VERBOSE, "DriftWaves2DHalfTwoFluid::copyConfigOptionsToDevice END \n \n");
+  }  
+  
+  /// copy the local configuration options to the device
+  void copyConfigOptions(DeviceConfigOptions<NOTYPE>* dco) 
+  {
+    CFLog(VERBOSE, "DriftWaves2DHalfTwoFluid::copyConfigOptions \n");
+    // consider to copy to constant memory
+    dco->electricCharge = getElectricCharge();
+
+  } 
+
+
+
+#endif
 
   /**
    * Constructor
@@ -220,8 +302,10 @@ protected: // data
   /// Option to change the electric charge
   CFreal _electricCharge;
 
-  /// Option to switch-on collisions
   bool _isCollisional;
+
+  CFreal getElectricCharge(){return _electricCharge;}
+
 private:
 
   //options here
@@ -229,6 +313,195 @@ private:
 }; // end of class DriftWaves2DHalfTwoFluid
 
 //////////////////////////////////////////////////////////////////////////////
+
+#ifdef CF_HAVE_CUDA
+
+template <class UPDATEVAR>
+template <DeviceType DT, typename VS>
+HOST_DEVICE void DriftWaves2DHalfTwoFluid<UPDATEVAR>::DeviceFunc<DT, VS>::operator()(CFreal* state, VS* model, CFreal* source) 
+                                                           
+{
+
+ 
+  typename VS::UPDATE_VS* updateVS = model->getUpdateVS();
+  updateVS->computePhysicalData(&state[0], &d_physicalData[0]);    
+ 								   
+								   
+
+  for (CFuint i=0; i<6; i++){
+    d_NonInducedEMField[i] = updateVS->getNonInducedEMField()[i]; 
+  }
+   
+  
+  //AAL: Here call all the functions needed to compute the source of Maxwell equations
+  d_Etotal = 0;
+  d_Btotal = 0;
+  //computeEMField();  Por simplicidad no se crea esta funcion, se pone el codigo aqui:
+  d_Btotal[XX] = d_physicalData[UPDATEVAR::PTERM::BX] + d_NonInducedEMField[0];
+  d_Btotal[YY] = d_physicalData[UPDATEVAR::PTERM::BY] + d_NonInducedEMField[1];
+  d_Btotal[ZZ] = d_physicalData[UPDATEVAR::PTERM::BZ] + d_NonInducedEMField[2];
+  d_Etotal[XX] = d_physicalData[UPDATEVAR::PTERM::EX] + d_NonInducedEMField[3];
+  d_Etotal[YY] = d_physicalData[UPDATEVAR::PTERM::EY] + d_NonInducedEMField[4];
+  d_Etotal[ZZ] = d_physicalData[UPDATEVAR::PTERM::EZ] + d_NonInducedEMField[5];  
+
+
+
+//Physical constants:
+  const CFreal kB = updateVS->getK(); 				//Framework::PhysicalConsts::Boltzmann(); 
+  const CFuint firstDensity = updateVS->getFirstSpecies(); 	//_varSet->getModel()->getFirstScalarVar(0);
+  const CFreal qe = m_dco->electricCharge*(-1);                 // charge of electrons in Coulombs
+  const CFreal qi = qe*(-1);                                    // charge of ions in Coulombs
+  const CFreal mi = updateVS->getMolecularMass2(); 		//_varSet->getModel()->getMolecularMass2();  // Proton's mass [kg] 
+								             //source:Standart Handbook for Electrical Engineerings
+  const CFreal me = updateVS->getMolecularMass1();              // Electron's mass [kg] source:Standart Handbook for Electrical Engineerings
+  const CFreal rho = d_physicalData[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoe = rho*d_physicalData[firstDensity]; 	//electrons density
+  const CFreal rhoi = rho*d_physicalData[firstDensity + 1];     //ions density
+  //std::cout << "rho  = " << rho  << "\n";getFirstDensity
+  //std::cout << "rhoe = " << rhoe << "\n";
+  //std::cout << "rhoi = " << rhoi << std::endl;
+  const CFreal Qtot = qe*rhoe/me + qi*rhoi/mi;
+  //std::cout << "Qtot = " << Qtot << std::endl;
+  const CFuint firstVelocity = updateVS->getFirstVelocity(); 	
+  const CFreal ue = d_physicalData[firstVelocity];
+  const CFreal ve = d_physicalData[firstVelocity + 1];
+  const CFreal we = d_physicalData[firstVelocity + 2];
+  const CFreal ui = d_physicalData[firstVelocity + 3];
+  const CFreal vi = d_physicalData[firstVelocity + 4];
+  const CFreal wi = d_physicalData[firstVelocity + 5];
+  //const CFreal un = d_physicalData[firstVelocity + 6];
+  //const CFreal vn = d_physicalData[firstVelocity + 7];
+  //const CFreal wn = d_physicalData[firstVelocity + 8];
+
+  // Computing the electric current
+  const CFreal Jx = qe*(rhoe/me)*ue + qi*(rhoi/mi)*ui;
+  const CFreal Jy = qe*(rhoe/me)*ve + qi*(rhoi/mi)*vi;
+  const CFreal Jz = qe*(rhoe/me)*we + qi*(rhoi/mi)*wi;
+//  std::cout <<"Jx= " <<Jx <<"\n";
+//  std::cout <<"ue= " <<ue <<"\n";
+//  std::cout <<"ui= " <<ui <<"\n";
+//  abort();
+
+//AAL: Here goes the source of Maxwell equations
+    /// MAXWELL
+    const CFreal c_e = updateVS->getLightSpeed();
+    const CFreal mu0 = updateVS->getPermeability();  
+    const CFreal ovEpsilon = c_e*c_e*mu0;
+
+    source[0] = 0.;             //x-Faraday's Law       	
+    source[1] = 0.;          	//y-Faraday's Law		
+    source[2] = 0.;          	//z-Faraday's Law
+    source[3] = -Jx*ovEpsilon;	//x-Ampere's Law
+    source[4] = -Jy*ovEpsilon;	//y-Ampere's Law
+    source[5] = -Jz*ovEpsilon;  //z-Ampere's Law
+    source[6] = 0.;		//divB
+    source[7] = Qtot*ovEpsilon; //divE
+  
+  //AAL: Here the source for three-fluid continuity, momentum and energy equations
+    //AAL: The following should be changed for the 3 Fluid case
+    /// FLUID EQUATIONS
+    //AAL: CONTINUITY
+    source[8] = 0.;					// Electrons continuity equation
+    source[9] = 0.;					// Ions continuity equation
+      
+    //AAL: MOMENTUM
+    const CFuint firstTemperature = updateVS->getFirstTemperature(); 	//_varSet->getModel()->getFirstScalarVar(2);
+    CFreal Te = d_physicalData[firstTemperature]; 			//electron temperature
+    CFreal Ti = d_physicalData[firstTemperature + 4]; 			//ion temperature
+    //printf("d_physicalData[%d] %e \n", firstTemperature+4, Ti);
+
+
+    //electron, ion properties
+    const CFreal ne = rhoe/me;		   	// number density electrons [m^-3]
+    const CFreal ni = rhoi/mi;		   	// number density ions [m^-3]
+    const CFreal pi = 3.141592653589793238462643383279502; //MathTools::MathConsts::CFrealPi(); 			//Pi number    
+    const CFreal Epsilon0 = updateVS->getPermittivity();
+    //std::cout <<"Epsilon0e = "<<Epsilon0<< "\n";
+    //to calculate collision Frequency
+    const CFreal r_di = sqrt(Epsilon0*kB*Ti/(ni*qe*qe)); //Debye length of ions [m]
+    const CFreal r_de = sqrt(Epsilon0*kB*Te/(ne*qe*qe)); //Debye length of electrons [m]
+    const CFreal r_deb = r_de*r_di/(sqrt(r_de*r_de + r_di*r_di)); //Debye length for plasma with several species
+
+    // Collisional terms (Alex' way)
+    // General terms
+    const CFreal gamma_e = me/(kB*Te); 
+    const CFreal gamma_i = mi/(kB*Ti);
+    const CFreal mu_ie   = mi*me/(mi + me);
+    const CFreal gamma_ie   = gamma_i*gamma_e/(gamma_i + gamma_e);
+
+    // Coulomb Collisions
+    const CFreal Debye_minusTwo = ne*qe*qe/(Epsilon0*kB*Te) + ni*qi*qi/(Epsilon0*kB*Ti); 
+    const CFreal Debye = sqrt(1/Debye_minusTwo);
+    const CFreal Lambda_ie = 12*pi*Epsilon0/abs(qe*qi)*mu_ie/gamma_ie*Debye;
+    const CFreal C_log = log(Lambda_ie); //Coulomb logarithm 
+    const CFreal tau_minusOne_ie = 16*sqrt(pi)/3*ne*pow(gamma_ie/2,3./2.)*pow(qi*qe/(4*pi*Epsilon0*mu_ie),2.)*C_log;//ion collision frequency for collisions with electrons (target)
+    const CFreal tau_minusOne_ei = 16*sqrt(pi)/3*ni*pow(gamma_ie/2,3./2.)*pow(qi*qe/(4*pi*Epsilon0*mu_ie),2.)*C_log;//electron collision frequency for collisions with ions (target)
+    
+    //momentum equations - NO removed const
+    CFreal emMomentumXe = qe*ne*(d_Etotal[XX] + ve*d_Btotal[ZZ] - we*d_Btotal[YY]);	//Electromagnetic momentum for electrons in X
+    CFreal emMomentumXi = qi*ni*(d_Etotal[XX] + vi*d_Btotal[ZZ] - wi*d_Btotal[YY]);	//Electromagnetic momentum for ions in X
+    CFreal emMomentumYe = qe*ne*(d_Etotal[YY] + we*d_Btotal[XX] - ue*d_Btotal[ZZ]);	//Electromagnetic momentum for electrons in Y
+    CFreal emMomentumYi = qi*ni*(d_Etotal[YY] + wi*d_Btotal[XX] - ui*d_Btotal[ZZ]);	//Electromagnetic momentum for ions in Y
+    CFreal emMomentumZe = qe*ne*(d_Etotal[ZZ] + ue*d_Btotal[YY] - ve*d_Btotal[XX]);	//Electromagnetic momentum for electrons in Z
+    CFreal emMomentumZi = qi*ni*(d_Etotal[ZZ] + ui*d_Btotal[YY] - vi*d_Btotal[XX]);	//Electromagnetic momentum for ions in Z
+
+    //collisional momentum:
+    const CFreal collMomentumXe = -(ne*mu_ie*tau_minusOne_ei*(ue - ui));
+    const CFreal collMomentumYe = -(ne*mu_ie*tau_minusOne_ei*(ve - vi));
+    const CFreal collMomentumZe = -(ne*mu_ie*tau_minusOne_ei*(we - wi));
+    const CFreal collMomentumXi = -(ni*mu_ie*tau_minusOne_ie*(ui - ue));
+    const CFreal collMomentumYi = -(ni*mu_ie*tau_minusOne_ie*(vi - ve));
+    const CFreal collMomentumZi = -(ni*mu_ie*tau_minusOne_ie*(wi - we));
+    
+    //DEBUG
+    //printf("Epsilon0 %e \t kB %e \t ne %e \t qe %e \t ni %e \t qi %e \t Te %e \t Ti %e \n",
+    //        Epsilon0,      kB,      ne,      qe,      ni,      qi,      Te,      Ti);
+    //printf("ne %f \t mu_ie %f \t tau_minusOne_ei %f \t tau_minusOne_ie %f \t C_log %f \t Lambda_ie %f \t Debye_minusTwo %f \n",
+    //        ne,      mu_ie,      tau_minusOne_ei,      tau_minusOne_ie,      C_log,      Lambda_ie,      Debye_minusTwo);
+    //printf("emMomentumXe %f \t emMomentumXi %f \t emMomentumYe %f \t emMomentumYi %f \t emMomentumZe %f \t emMomentumZi %f \n",
+    //        emMomentumXe,      emMomentumXi,      emMomentumYe,      emMomentumYi,      emMomentumZe,      emMomentumZi);
+    //printf("collMomentumXe %f \t collMomentumYe %f \t collMomentumZe %f \t collMomentumXi %f \t collMomentumYi %f \t collMomentumZi %f \n",
+    //        collMomentumXe,      collMomentumYe,      collMomentumZe,      collMomentumXi,      collMomentumYi,      collMomentumZi);
+
+
+    source[10] = emMomentumXe + collMomentumXe;   //Electrons X momentum
+    source[11] = emMomentumYe + collMomentumYe;   //Electrons Y momentum
+    source[12] = emMomentumZe + collMomentumZe;   //Electrons Z momentum
+
+    source[13] = emMomentumXi + collMomentumXi;   //Ions X momentum
+    source[14] = emMomentumYi + collMomentumYi;   //Ions Y momentum
+    source[15] = emMomentumZi + collMomentumZi;   //Ions Z momentum
+
+      
+    //AAL: ENERGY
+    // Computation of hydrodynamic pressure
+    //const CFreal u = (rhoe*ue + rhoi*ui)/rho;      
+    //const CFreal v = (rhoe*ve + rhoi*vi)/rho; 
+    //const CFreal w = (rhoe*we + rhoi*wi)/rho;
+
+    const CFreal workColle = (ue - ui)*collMomentumXe + (ve - vi)*collMomentumYe + (we - wi)*collMomentumZe;
+    const CFreal workColli = (ui - ue)*collMomentumXi + (vi - ve)*collMomentumYi + (wi - we)*collMomentumZi;
+
+    const CFreal heatColle = -3*kB*ne*(mu_ie/(me + mi))*tau_minusOne_ei*(Te - Ti);
+    const CFreal heatColli = -3*kB*ni*(mu_ie/(me + mi))*tau_minusOne_ie*(Ti - Te);
+
+    const CFreal emEnergye = qe*(rhoe/me)*(ue*d_Etotal[XX] + ve*d_Etotal[YY] + we*d_Etotal[ZZ]); //electrons
+    const CFreal emEnergyi = qi*(rhoi/mi)*(ui*d_Etotal[XX] + vi*d_Etotal[YY] + wi*d_Etotal[ZZ]); //ions
+
+    source[16] = emEnergye + workColle + heatColle; //Electrons Energy Source terms
+    source[17] = emEnergyi + workColli + heatColli; //Ions Energy
+
+  //DEBUG
+  //for (CFuint i=0; i<VS::NBEQS; ++i){
+    //printf("source[%d] = %e \n", i, source[i]);
+  //}					
+
+
+}
+
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
 
     } // namespace FiniteVolume
 

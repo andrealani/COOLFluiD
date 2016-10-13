@@ -101,6 +101,7 @@ public: // function
   void computeStateFromPhysicalData(const RealVector& data,
 			       Framework::State& state);
  
+
   /// Compute the perturbed physical data
   virtual void computePerturbedPhysicalData(const Framework::State& state,
 					    const RealVector& pdataBkp,
@@ -132,6 +133,7 @@ private: // data
 }; // end of class Maxwell3DProjectionCons
 
 //////////////////////////////////////////////////////////////////////////////
+
 
     } // namespace Maxwell
 

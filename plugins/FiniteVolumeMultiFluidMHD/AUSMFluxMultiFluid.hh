@@ -25,10 +25,11 @@ namespace COOLFluiD {
  * @author Andrea Lani
  *
  */
-template <class UPDATEVAR>
+template <class UPDATEVAR>                                       
 class AUSMFluxMultiFluid : public FVMCC_FluxSplitter {
 public:
-  
+
+ 
   /**
    * Constructor
    */
@@ -292,7 +293,13 @@ protected:
   /// flag for using the MacCormack scaling in Maxwell equations 
   /// the default is true
   bool m_useMacCormackScaling;   
+
+  virtual CFreal getMacCormackCoeff(){return m_coeff;}
+  
+  virtual bool getUseMacCormackScaling(){return m_useMacCormackScaling;}
+
 }; // end of class AUSMFluxMultiFluid
+
 
 //////////////////////////////////////////////////////////////////////////////
 

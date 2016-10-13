@@ -15,7 +15,7 @@ Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWrite
 
 # Simulator Parameters
 Simulator.Paths.WorkingDir = plugins/MHD/testcases/Nozzle/
-Simulator.Paths.ResultsDir = ./RESULTS/
+Simulator.Paths.ResultsDir = ./RESULTS_nozzle/
 
 Simulator.SubSystem.Default.PhysicalModelType       = MHD2DProjection
 Simulator.SubSystem.MHD2DProjection.ConvTerm.gamma = 1.4

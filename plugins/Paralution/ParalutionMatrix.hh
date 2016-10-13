@@ -13,7 +13,7 @@
 
 #include "MathTools/RealVector.hh"
 #include "Framework/LSSMatrix.hh"
-
+#include "Framework/DataSocketSink.hh"
 // #include "Paralution/ParalutionVector.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -125,6 +125,31 @@ public: // functions
 		     const char* name = CFNULL);
 #endif
   
+
+
+
+  void createAIJ(const CFuint BlockSize,
+                 const CFuint nbRows,
+                 const CFuint nbCols);
+
+
+  void createCSR(std::valarray<CFint> allNonZero, CFuint nbEqs);
+
+
+  /**
+  * Assembly the matrix from the COO vectors
+  */
+  void finalAssembly(CFuint size){
+  //   CFint *rowPtr = _row.ptr();
+  //   CFint *colPtr = _col.ptr();
+  //   CFreal *valPtr = _val.ptr();
+     m_mat.SetDataPtrCSR(&_rowoff, &_col, &_val, "SystemMatrix", _size, size, size);
+  }
+
+
+
+
+
   /**
    * Start to assemble the matrix
    */
@@ -173,8 +198,20 @@ public: // functions
                 const CFint in,
                 const CFreal value)
   {
-    // CF_CHKERRCONTINUE(MatSetValues(m_mat, 1, &im, 1, &in, &value,
-    //     INSERT_VALUES));
+/*
+    bool found = false;
+      for (CFuint _i=0; _i<_nnz; _i++){
+         if (im==_row[_i] && in ==_col[_i]){
+            _val[_i] += value; found=true;
+         }
+      }
+      if (found==false){
+        _row[_nnz] = im;
+        _col[_nnz] = in;
+        _val[_nnz] += value;
+        _nnz++;
+      }
+  */ 
   }
 
   /**
@@ -195,11 +232,14 @@ public: // functions
    */
   void addValue(const CFint im,
                 const CFint in,
-                const CFreal value)
+                const CFreal value)   //TODO
   {
     // CF_CHKERRCONTINUE(MatSetValues(m_mat, 1, &im, 1, &in, &value,
     //                            ADD_VALUES));
   }
+
+
+  void addtoCOO( CFuint* col, CFuint* row, CFreal* val, CFuint nnz);
 
   /**
    * Add a list of values
@@ -236,7 +276,21 @@ public: // functions
     // CF_CHKERRCONTINUE(MatGetValues(m_mat, m, im, n, in, values));
   }
 
+  
+  paralution::LocalMatrix<CFreal> getMatrix(){
+     return m_mat;
+  }
 
+  void moveToGPU(){
+    m_mat.MoveToAccelerator();
+  }
+
+  void AssignToSolver(paralution::Solver< paralution::LocalMatrix<CFreal>, paralution::LocalVector<CFreal>, CFreal >& ls){
+    ls.SetOperator(m_mat);
+  }
+
+
+  void convertToCSR(){ m_mat.ConvertToCSR(); }
   /**
    * Set a row, diagonal and off-diagonals separate values 
    */
@@ -276,6 +330,12 @@ public: // functions
    */
   void resetToZeroEntries()
   {
+    for (CFint i=0; i<_size; i++){
+      _val[i] = 0.0;
+    }
+    _nnz = 0;  
+    m_mat.Clear();
+    std::cout << "resetToZeroEntries() \n";
     // if (!_isMatShell) {
     //   CF_CHKERRCONTINUE(MatZeroEntries(m_mat));
     // }
@@ -301,8 +361,31 @@ public: // functions
    // // MatSetOption(m_mat, MAT_NEW_NONZERO_LOCATIONS_ERR, PETSC_FALSE);
   }
   
-private: // data
+protected:
+
+  /// socket for the states
+  Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > socket_states;
   
+  /// socket for the nodes
+  Framework::DataSocketSink < Framework::Node* , Framework::GLOBAL > socket_nodes;
+
+
+private: // data
+
+  paralution::LocalMatrix<CFreal> m_mat;
+
+  //MathTools::CFVec<CFint> _row;
+  //MathTools::CFVec<CFint> _col;
+  //RealVector _val;
+
+  CFint* _row;
+  CFint* _rowoff;
+  CFint* _col;
+  CFreal* _val;
+
+  CFuint _size;
+
+  CFuint _nnz;
 }; // end of class ParalutionMatrix
 
 //////////////////////////////////////////////////////////////////////////////

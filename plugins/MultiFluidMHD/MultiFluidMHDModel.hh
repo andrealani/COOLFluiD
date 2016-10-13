@@ -21,11 +21,10 @@ namespace COOLFluiD {
 
 /**
  * This class represents the interface for a multi-fluid MHD 
- * model.
+ * model
  *
  * @author Andrea Lani
  * @author Alejandro Alvarez Laguna
- *
  */
 template <int DIM>
 class MultiFluidMHDModel : public Framework::ConvectionDiffusionReactionPM
@@ -68,7 +67,7 @@ public:
   /**
    * Get the convective name
    */
-   std::string getConvectiveName() const;
+  std::string getConvectiveName() const;
 
   /**
    * Get the diffusive name

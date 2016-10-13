@@ -7,6 +7,9 @@
 #ifndef COOLFluiD_Framework_BaseTerm_hh
 #define COOLFluiD_Framework_BaseTerm_hh
 
+
+
+
 //////////////////////////////////////////////////////////////////////////////
 
 #include "MathTools/RealVector.hh"

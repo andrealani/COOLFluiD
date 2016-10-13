@@ -82,7 +82,7 @@ namespace COOLFluiD {
   template <typename T>
   static inline void copyDev2Host(T* vec, T* vec_d, size_t n)
   {
-    CUDA_CHECK(cudaMemcpy(vec, vec_d, n*sizeof(T),cudaMemcpyDeviceToHost));
+     CUDA_CHECK(cudaMemcpy(vec, vec_d, n*sizeof(T),cudaMemcpyDeviceToHost));
   }
   
   // asynchronous copy from CPU to GPU
