@@ -469,7 +469,6 @@ __global__ void computeSource(    CFreal* volume,
 
     SOURCE Source(dcos);
     typename SOURCE::MODEL pmodel(dcop);
-
     
     CudaEnv::CFVec<CFreal,SOURCE::MODEL::NBEQS> stateBkp;
     CudaEnv::CFVecSlice<CFreal,SOURCE::MODEL::NBEQS> state(&states[cellID*SOURCE::MODEL::NBEQS]);

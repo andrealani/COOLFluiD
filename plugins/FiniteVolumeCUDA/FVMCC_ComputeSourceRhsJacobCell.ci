@@ -180,7 +180,7 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
     
     CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::setup() => uses maxSizeJacobEntries < fullMatrixSize => " 
 	  << maxSizeJacobEntries << " < " << fullMatrixSize << "\n");
-    cf_assert(maxSizeJacobEntries < fullMatrixSize);
+    cf_assert(maxSizeJacobEntries <= fullMatrixSize);
     
     // m_blockJacobians is allocated with the maximum possible size needed by a single kernel
     m_blockJacobians.resize(maxSizeJacobEntries);

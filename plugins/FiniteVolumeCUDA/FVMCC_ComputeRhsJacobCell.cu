@@ -991,7 +991,8 @@ void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>:
   finalizeComputationRHS();
   
   CFLog(VERBOSE, "FVMCC_ComputeRhsJacobCell::execute() END\n");
-  
+ 
+ 
 /*
      const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
      //DataHandle<CFreal> rhs = this->socket_rhs.getDataHandle();
