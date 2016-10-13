@@ -1,0 +1,21 @@
+LIST ( APPEND FluxReconstructionMethod_files
+FluxReconstruction.hh
+FluxReconstructionMeshDataBuilder.cxx
+FluxReconstructionMeshDataBuilder.hh
+FluxReconstructionSolver.cxx
+FluxReconstructionSolver.hh
+FluxReconstructionSolverData.cxx
+FluxReconstructionSolverData.hh
+FluxReconstructionStrategy.cxx
+FluxReconstructionStrategy.hh
+StdSetup.cxx
+StdSetup.hh
+StdSolve.cxx
+StdSolve.hh
+StdUnSetup.cxx
+StdUnSetup.hh
+)
+
+LIST ( APPEND FluxReconstructionMethod_cflibs Framework)
+CF_ADD_PLUGIN_LIBRARY ( FluxReconstructionMethod )
+CF_WARN_ORPHAN_FILES()
