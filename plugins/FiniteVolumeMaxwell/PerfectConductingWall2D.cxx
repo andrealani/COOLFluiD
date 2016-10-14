@@ -2,7 +2,9 @@
 #include "PerfectConductingWall2D.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Maxwell/Maxwell2DVarSet.hh"
+#ifdef CF_HAVE_CUDA
 #include "Maxwell/Maxwell2DProjectionVarSetT.hh"
+#endif
 #include "Framework/MeshData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
