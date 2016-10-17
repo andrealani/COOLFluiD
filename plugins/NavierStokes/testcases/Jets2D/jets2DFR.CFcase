@@ -1,0 +1,139 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, Euler2D, Forward Euler, mesh with triangles, restart from a 
+# binary CFmesh, writing of binary CFmesh, parallel TECPLOT writer in block 
+# (nodal+cell-centered) format, writing of rhs DataHandle, second-order 
+# reconstruction with Venkatakhrisnan limiter, supersonic inlet and outlet BC
+#
+################################################################################
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -10.029161
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = true
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+CFEnv.ExceptionDumps       = true
+CFEnv.ExceptionOutputs     = true
+CFEnv.RegistSignalHandlers = false
+#CFEnv.TraceToStdOut = true
+#CFEnv.TraceActive = true
+#CFEnv.OnlyCPU0Writes = false
+
+# This tests the configuration file: it gives error if some options are wrong
+# This always fails with converters (THOR2CFmesh, Gambit2CFmesh, etc.): 
+# deactivate the option in those cases 
+CFEnv.ErrorOnUnusedConfig = true
+
+# global parameter to control the number of writers for all algorithms
+#CFEnv.NbWriters = 4
+
+# SubSystem Modules
+Simulator.Modules.Libs =  libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libEmptyConvergenceMethod libNavierStokes libForwardEuler libFluxReconstructionMethod libFiniteVolume libTHOR2CFmesh libFiniteVolumeNavierStokes
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets2D/
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType = Euler2D
+Simulator.SubSystem.Euler2D.refValues = 1. 2.83972 2.83972 6.532
+Simulator.SubSystem.Euler2D.refLength = 1.0
+
+#Simulator.SubSystem.OutputFormat     = CFmesh Tecplot
+#Simulator.SubSystem.CFmesh.FileName  = jets2D-sol.CFmesh
+#Simulator.SubSystem.CFmesh.SaveRate  = 500
+# binary CFmesh writer
+#Simulator.SubSystem.CFmesh.WriteSol = ParWriteBinarySolution
+#Simulator.SubSystem.CFmesh.ParWriteBinarySolution.ParCFmeshBinaryFileWriter.NbWriters = 4
+
+# parallel ASCII Tecplot writer
+#Simulator.SubSystem.Tecplot.FileName = jets2D-sol.plt
+#Simulator.SubSystem.Tecplot.Data.outputVar = Cons
+#Simulator.SubSystem.Tecplot.SaveRate = 500
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = rhs
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = rhs0 rhs1 rhs2 rhs3
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
+#Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
+#Simulator.SubSystem.Tecplot.ParWriteSolutionBlock.OnlyNodal = true
+#Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolution
+#Simulator.SubSystem.Tecplot.ParWriteSolution.NbWriters = 4
+#Simulator.SubSystem.Tecplot.AppendRank = false
+#Simulator.SubSystem.Tecplot.Data.CoordinatesOnly = true
+#Simulator.SubSystem.Tecplot.Data.SurfaceTRS = SuperInlet SuperOutlet
+#Simulator.SubSystem.Tecplot.AppendIter = true
+
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+
+# binary CFmesh reader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2D-sol.CFmesh
+Simulator.SubSystem.CFmeshFileReader.ReadCFmesh = ParReadCFmeshBinary
+
+Simulator.SubSystem.ConvergenceMethod = EmptyIterator
+#FwdEuler
+#Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.8
+
+Simulator.SubSystem.SpaceMethod = FluxReconstructionSolver
+#Simulator.SubSystem.FluxReconstructionSolver.Builder = StdBuilder 
+#Simulator.SubSystem.SpaceMethod = CellCenterFVM
+#Simulator.SubSystem.CellCenterFVM.Restart = true
+
+#Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = RoeT4
+#Simulator.SubSystem.CellCenterFVM.Data.UpdateVar   = Cons
+#Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+#Simulator.SubSystem.CellCenterFVM.Data.LinearVar   = Roe
+#Simulator.SubSystem.CellCenterFVM.ComputeRHS = Null 
+#Simulator.SubSystem.CellCenterFVM.SetupCom = Null
+#Simulator.SubSystem.CellCenterFVM.SolveCom = Null
+
+# second order reconstruction + limiter
+#Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+#Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+#Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+#Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+#Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.6
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+#Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = HolmesConnell
+#
+# initialization is useless if you restart from previous solution
+#Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+#Simulator.SubSystem.CellCenterFVM.InitNames = InField
+#Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+#Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+#Simulator.SubSystem.CellCenterFVM.InField.Def = \
+#					if(y>0.5,0.5,1.) \
+#					if(y>0.5,1.67332,2.83972) \
+#					0.0 \
+#					if(y>0.5,3.425,6.532)
+
+#Simulator.SubSystem.CellCenterFVM.BcComds = SuperInletFVMCC SuperOutletFVMCC
+#Simulator.SubSystem.CellCenterFVM.BcNames = Jet1 Jet2
+
+#Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = SuperInlet
+#Simulator.SubSystem.CellCenterFVM.Jet1.Vars = x y
+#Simulator.SubSystem.CellCenterFVM.Jet1.Def = \
+#					if(y>0.5,0.5,1.) \
+#                                        if(y>0.5,1.67332,2.83972) \
+#                                        0.0 \
+#                                        if(y>0.5,3.425,6.532)
+
+#Simulator.SubSystem.CellCenterFVM.Jet2.applyTRS = SuperOutlet
+
