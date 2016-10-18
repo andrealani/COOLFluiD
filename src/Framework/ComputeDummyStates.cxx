@@ -62,6 +62,8 @@ void ComputeDummyStates::setDataSockets(DataSocketSink< CFreal> normals,
 
 void ComputeDummyStates::operator() (const std::vector<std::string>& trssWithGhostOnFace)
 {
+  CFLog(VERBOSE, "ComputeDummyStates::operator() => START\n");
+  
   _updating = false;
   
   // normals to the boundary are ALWAYS computed outward, by construction
@@ -126,13 +128,17 @@ void ComputeDummyStates::operator() (const std::vector<std::string>& trssWithGho
         gstates[nbGhostStates] = ghostState;
       }
     }
-  }
+  } 
+  
+  CFLog(VERBOSE, "ComputeDummyStates::operator() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void ComputeDummyStates::updateAllDummyStates()
 {
+  CFLog(VERBOSE, "ComputeDummyStates::updateAllDummyStates() => START\n");
+  
   _updating = true;
 
   // normals to the boundary are ALWAYS computed outward, by construction
@@ -191,6 +197,8 @@ void ComputeDummyStates::updateAllDummyStates()
       }
     }
   }
+  
+  CFLog(VERBOSE, "ComputeDummyStates::updateAllDummyStates() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

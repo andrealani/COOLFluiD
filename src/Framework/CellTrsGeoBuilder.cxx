@@ -261,57 +261,70 @@ GeometricEntity* CellTrsGeoBuilder::buildGE()
   const CFuint idx = _data.idx;
   cf_assert(_data.trs.isNotNull());
   const TopologicalRegionSet& trs = *_data.trs;
-
+  
   // first create the cell
   // local ID (in all the mesh) of the geometric entity to get
   const CFuint geoType = trs.getGeoType(idx);
   GeometricEntity *const cell = _poolData[geoType][_countGeo[geoType]++];
-
+  
   // set the local ID
   cell->setID(trs.getLocalGeoID(idx));
-
+  
   cf_assert(trs.getNbStatesInGeo(idx) == 1);
   const CFuint stateID0 = trs.getStateID(idx, 0);
   cell->setState(0, states[stateID0]);
-
+  
   const CFuint nbGeoNodes = trs.getNbNodesInGeo(idx);
   for (CFuint in = 0; in < nbGeoNodes; ++in) {
     const CFuint nodeID = trs.getNodeID(idx, in);
     cell->setNode(in, nodes[nodeID]);
   }
-
+  
   // keep track of the created GeometricEntity
   _builtGeos.push_back(cell);
 
   // create all the neighbor faces for the current cell
   const CFuint nbFacesInCell = _cellFaces->nbCols(idx);
   cf_assert(nbFacesInCell == cell->nbNeighborGeos());
-
+  
+  CFLog(DEBUG_MAX, "CellTrsGeoBuilder::buildGE() => nbFacesInCell = " << nbFacesInCell << "\n");
+  
   for (CFuint iFace = 0; iFace < nbFacesInCell; ++iFace)
   {
+    CFLog(DEBUG_MAX, "CellTrsGeoBuilder::buildGE() => iFace = " << iFace << "\n");
     const CFuint faceID = (*_cellFaces)(idx, iFace);
+    CFLog(DEBUG_MAX, "CellTrsGeoBuilder::buildGE() => faceID = " << faceID << "\n");
     const TopologicalRegionSet& faceTrs = *_mapGeoToTrs->getTrs(faceID);
     const CFuint faceIdx = _mapGeoToTrs->getIdxInTrs(faceID);
+    CFLog(DEBUG_MAX, "CellTrsGeoBuilder::buildGE() => faceIdx = " << faceIdx << "\n");
     const bool isBFace = _mapGeoToTrs->isBGeo(faceID);
     // local ID (in all the mesh) of the geometric entity to get
     const CFuint faceType = faceTrs.getGeoType(faceIdx);
+    CFLog(DEBUG_MAX, "CellTrsGeoBuilder::buildGE() => faceType = " << faceType << "\n");
     GeometricEntity *const face = _poolData[faceType][_countGeo[faceType]++];
     // set the local ID
     face->setID(faceTrs.getLocalGeoID(faceIdx));
-
+    
     // place the cell-centered states in those faces
     const CFuint sID0 = faceTrs.getStateID(faceIdx, 0);
+    CFLog(DEBUG_MAX, "CellTrsGeoBuilder::buildGE() => sID0 = " << sID0 << "\n");
     face->setState(0, states[sID0]);
-
+    
     const CFuint sID1 = faceTrs.getStateID(faceIdx, 1);
-    State *const state1 = (!isBFace) ?
-      states[sID1] : gstates[sID1];
+    CFLog(DEBUG_MAX, "CellTrsGeoBuilder::buildGE() => sID1 = " << sID1 << "\n");
+    CFLog(DEBUG_MAX, "CellTrsGeoBuilder::buildGE() => isBFace = " << isBFace << "\n");
+    CFLog(DEBUG_MAX, "CellTrsGeoBuilder::buildGE() => states.size() = " << states.size() << "\n");
+    CFLog(DEBUG_MAX, "CellTrsGeoBuilder::buildGE() => gstates.size() = " << gstates.size() << "\n");
+    cf_assert((!isBFace && sID1 < states.size()) || (isBFace && sID1 < gstates.size()));
+    State *const state1 = (!isBFace) ? states[sID1] : gstates[sID1];
     face->setState(1, state1);
-
+    
     // place the nodes in those faces
     const CFuint nbFaceNodes = faceTrs.getNbNodesInGeo(faceIdx);
+    CFLog(DEBUG_MAX, "CellTrsGeoBuilder::buildGE() => nbFaceNodes = " << nbFaceNodes << "\n");
     for (CFuint in = 0; in < nbFaceNodes; ++in) {
       const CFuint nodeID = faceTrs.getNodeID(faceIdx, in);
+      CFLog(DEBUG_MAX, "CellTrsGeoBuilder::buildGE() => nodeID = " << nodeID << "\n");
       face->setNode(in, nodes[nodeID]);
     }
 

@@ -552,6 +552,12 @@ void StandardSubSystem::setup()
   
   m_spaceMethod.apply(mem_fun<void,SpaceMethod>(&SpaceMethod::initializeSolution));
   
+  CFLog(VERBOSE, "StandardSubSystem::setup() => m_dataPostProcessing.apply()\n");
+  // pre-process the data (this allows to execute post-processing before running if
+  // "RunAtSetup = true" in the .CFcase)
+  m_dataPostProcessing.apply(mem_fun<void,DataProcessingMethod>
+			     (&DataProcessingMethod::processData));
+  
   CFLogInfo("Writing initial solution ... \n");
   writeSolution(true);
   
