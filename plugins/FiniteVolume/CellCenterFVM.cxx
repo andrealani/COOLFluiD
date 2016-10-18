@@ -497,7 +497,7 @@ void CellCenterFVM::setMethodImpl()
     compRHS->setBCList(_bcs);
   }
   else {
-    CFLog(WARN, "CellCenterFVM::setMethodImpl() => failed cast to \"FVMCC_ComputeRHS*\"\n");
+    CFLog(VERBOSE, "CellCenterFVM::setMethodImpl() => failed cast to \"FVMCC_ComputeRHS*\"\n");
   }
 }
 
