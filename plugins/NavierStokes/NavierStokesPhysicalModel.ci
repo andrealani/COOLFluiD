@@ -80,9 +80,9 @@ void NavierStokesPhysicalModel<DIM>::setReferenceValuesCompressible()
   const CFreal refSpeed = std::sqrt(convTerm->getRdim()*tempRef);
   
   if (pRef <= 0.) {
-    CFLog (WARN, "WATCH OUT: pRef is not defined. Computing reference viscosity with zero pressure.\n");
-    CFLog (WARN, "      ---> OK, for Sutherland law and fixed dynamic viscosity\n");
-    CFLog (WARN, "      ---> pRef should be defined for fixed kinematic viscosity\n");
+    CFLog (VERBOSE, "NavierStokesPhysicalModel::setReferenceValuesCompressible() => WATCH OUT: pRef is not defined. Computing reference viscosity with zero pressure.\n");
+    CFLog (VERBOSE, "NavierStokesPhysicalModel::setReferenceValuesCompressible() => OK, for Sutherland law and fixed dynamic viscosity\n");
+    CFLog (VERBOSE, "NavierStokesPhysicalModel::setReferenceValuesCompressible() => pRef should be defined for fixed kinematic viscosity\n");
   }
   
   const CFreal dynViscosityRef = getDiffTerm()->getDynViscosityDim(pRef, tempRef);
@@ -137,8 +137,8 @@ void NavierStokesPhysicalModel<DIM>::setReferenceValuesCompressible()
     _isAdimensional = true;
   }
   else {
-    CFout << "WATCH OUT: tempRef or machInf or Re missing" << "\n";
-    CFout << "Equations will be solved dimensionally" << "\n";
+    CFLog(VERBOSE, "NavierStokesPhysicalModel::setReferenceValuesCompressible() => tempRef or machInf or Re missing" << "\n");
+    CFLog(VERBOSE, "NavierStokesPhysicalModel::setReferenceValuesCompressible() => Equations will be solved dimensionally" << "\n");
     
     // if the pressure and temperature reference values
     // have not been specified set all the ref values to 1.
@@ -159,14 +159,14 @@ void NavierStokesPhysicalModel<DIM>::setReferenceValuesCompressible()
     _isAdimensional = false;
   }
   
-  CFLog(NOTICE, "tempRef = "   << convTerm->getTempRef() << "\n");
-  CFLog(NOTICE, "pRef    = "    << convTerm->getPressRef() << "\n");
-  CFLog(NOTICE, "rhoRef  = "  << refDataConv[EulerTerm::RHO] << "\n");
-  CFLog(NOTICE, "machInf = " << MachInf << "\n");
-  CFLog(NOTICE, "Uinf    = " << Uinf << "\n");
-  CFLog(NOTICE, "dynViscosityRef   = " << refDataDiff[NSTerm::MU]     << "\n");
-  CFLog(NOTICE, "thermConductivity = " << refDataDiff[NSTerm::LAMBDA] << "\n");
-  CFLog(NOTICE, "ReynoldsRef       = " << Re << "\n");
+  CFLog(VERBOSE, "tempRef = "   << convTerm->getTempRef() << "\n");
+  CFLog(VERBOSE, "pRef    = "    << convTerm->getPressRef() << "\n");
+  CFLog(VERBOSE, "rhoRef  = "  << refDataConv[EulerTerm::RHO] << "\n");
+  CFLog(VERBOSE, "machInf = " << MachInf << "\n");
+  CFLog(VERBOSE, "Uinf    = " << Uinf << "\n");
+  CFLog(VERBOSE, "dynViscosityRef   = " << refDataDiff[NSTerm::MU]     << "\n");
+  CFLog(VERBOSE, "thermConductivity = " << refDataDiff[NSTerm::LAMBDA] << "\n");
+  CFLog(VERBOSE, "ReynoldsRef       = " << Re << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -229,16 +229,16 @@ void NavierStokesPhysicalModel<DIM>::setReferenceValuesIncompressible()
     diffTerm->setCoeffQ(coeffTau*cp*tempRef/(diffTerm->getPrandtl()*Uinf*Uinf));
     diffTerm->setCpOverPrandtl(1.);
     
-    CFLog(NOTICE, "dynViscosityRef   = " << refDataDiff[NSTerm::MU] << "\n");
-    CFLog(NOTICE, "thermConductivity = " << refDataDiff[NSTerm::LAMBDA] << "\n");
-    CFLog(NOTICE, "ReynoldsRef       = " << Re << "\n");
-    CFLog(NOTICE, "Uinf              = " << Uinf << "\n");
+    CFLog(VERBOSE, "dynViscosityRef   = " << refDataDiff[NSTerm::MU] << "\n");
+    CFLog(VERBOSE, "thermConductivity = " << refDataDiff[NSTerm::LAMBDA] << "\n");
+    CFLog(VERBOSE, "ReynoldsRef       = " << Re << "\n");
+    CFLog(VERBOSE, "Uinf              = " << Uinf << "\n");
     
     _isAdimensional = true;
   }
   else {
-    CFout << "WATCH OUT: tempRef or machInf or Re missing" << "\n";
-    CFout << "Equations will be solved dimensionally" << "\n";
+    CFLog(VERBOSE, "NavierStokesPhysicalModel::setReferenceValuesIncompressible() => tempRef or machInf or Re missing" << "\n");
+    CFLog(VERBOSE, "NavierStokesPhysicalModel::setReferenceValuesIncompressible() => Equations will be solved dimensionally" << "\n");
     
     // if the pressure and temperature reference values
     // have not been specified set all the ref values to 1.

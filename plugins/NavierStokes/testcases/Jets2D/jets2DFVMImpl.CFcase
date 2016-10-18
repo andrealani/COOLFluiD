@@ -78,6 +78,7 @@ Simulator.SubSystem.LSSNames = BwdEulerLSS
 Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
 Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
+#Simulator.SubSystem.BwdEulerLSS.Data.PreconditionerRate = 5
 
 Simulator.SubSystem.ConvergenceMethod = BwdEuler
 Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function

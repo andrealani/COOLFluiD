@@ -14,6 +14,10 @@
 #
 ### Residual = -4.0121246
 
+#CFEnv.ErrorOnUnusedConfig = true
+CFEnv.ExceptionDumps   = true
+CFEnv.ExceptionOutputs = true
+
 # Simulation Modules
 Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes libFluctSplit libFluctSplitSystem libNewtonMethod libFluctSplitNavierStokes libForwardEuler libTecplot2CFmesh
 
@@ -29,7 +33,7 @@ Simulator.SubSystem.NavierStokes2D.refValues = 2.52 7175.576 7175.576 205.
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = doubleEllipseRDS_Bx.CFmesh
 Simulator.SubSystem.Tecplot.FileName    = doubleEllipseRDS_Bx.plt
-Simulator.SubSystem.Tecplot.Data.updateVar = Puvt
+Simulator.SubSystem.Tecplot.Data.outputVar = Puvt
 Simulator.SubSystem.Tecplot.SaveRate = 20
 Simulator.SubSystem.CFmesh.SaveRate = 20
 Simulator.SubSystem.Tecplot.AppendTime = false

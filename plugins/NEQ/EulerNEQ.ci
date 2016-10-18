@@ -104,9 +104,9 @@ void EulerNEQ<DIM>::setReferenceValues()
   CFLog(NOTICE, "machInf   = " << MachInf << "\n");
 
   if (!(MachInf > 0.)) {
-    CFout << "WARNING: Mach infinity NOT set"<< "\n";
+    CFLog(VERBOSE, "EulerNEQ::setReferenceValues() => Mach infinity NOT set\n");
   }
-
+  
   // reference physical data to set
   RealVector& refData = convTerm->getReferencePhysicalData();
   RealVector& refDataSource = sourceTerm->getReferencePhysicalData();

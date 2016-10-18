@@ -142,7 +142,7 @@ void NavierStokesNEQ<DIM, CTERM, DTERM, RTERM>::setReferenceValues()
   // reference viscosity is computed using Sutherland formula
   const CFreal dynViscosityRef = this->getDiffTerm()->getDynViscosityDim(pRef, tempRef);
   
-  CFout << "dynViscosityRef = " << dynViscosityRef << "\n";
+  CFLog(VERBOSE, "NavierStokesNEQ::setReferenceValues() => dynViscosityRef = " << dynViscosityRef << "\n");
   const CFreal gamma = convTerm->getGamma();
   const CFreal cp = convTerm->getRdim()*gamma/(gamma - 1.);
   const CFreal Re = diffTerm->getReynolds();
@@ -222,14 +222,14 @@ void NavierStokesNEQ<DIM, CTERM, DTERM, RTERM>::setReferenceValues()
 
   diffTerm->setCpOverPrandtl(cpOverPrandtl);
 
-  CFLog(NOTICE, "tempRef = "   << convTerm->getTempRef() << "\n");
-  CFLog(NOTICE, "pRef    = "    << convTerm->getPressRef() << "\n");
-  CFLog(NOTICE, "rhoRef  = "  << refDataConv[EulerTerm::RHO] << "\n");
-  CFLog(NOTICE, "machInf = " << MachInf << "\n");
-  CFLog(NOTICE, "Uinf    = " << Uinf << "\n");
-  CFLog(NOTICE, "dynViscosityRef   = " << refDataDiff[NSTerm::MU]     << "\n");
-  CFLog(NOTICE, "thermConductivity = " << refDataDiff[NSTerm::LAMBDA] << "\n");
-  CFLog(NOTICE, "ReynoldsRef       = " << Re << "\n");
+  CFLog(VERBOSE, "tempRef = "   << convTerm->getTempRef() << "\n");
+  CFLog(VERBOSE, "pRef    = "    << convTerm->getPressRef() << "\n");
+  CFLog(VERBOSE, "rhoRef  = "  << refDataConv[EulerTerm::RHO] << "\n");
+  CFLog(VERBOSE, "machInf = " << MachInf << "\n");
+  CFLog(VERBOSE, "Uinf    = " << Uinf << "\n");
+  CFLog(VERBOSE, "dynViscosityRef   = " << refDataDiff[NSTerm::MU]     << "\n");
+  CFLog(VERBOSE, "thermConductivity = " << refDataDiff[NSTerm::LAMBDA] << "\n");
+  CFLog(VERBOSE, "ReynoldsRef       = " << Re << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

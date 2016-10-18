@@ -47,9 +47,9 @@ void EulerPhysicalModel<DIM>::setReferenceValues()
   const CFreal MachInf = convTerm->getMachInf();
 
   if (!(MachInf > 0.)) {
-    CFout << "WARNING: Mach infinity NOT set"<< "\n";
+    CFLog(VERBOSE, "EulerPhysicalModel::setReferenceValues() => Mach infinity NOT set\n");
   }
-
+  
   // reference physical data to set
   RealVector& refData = convTerm->getReferencePhysicalData();
 
@@ -73,7 +73,7 @@ void EulerPhysicalModel<DIM>::setReferenceValues()
     _isAdimensional = true;
   }
   else {
-    CFout << "Equations will be solved dimensionally" << "\n";
+    CFLog(VERBOSE, "EulerPhysicalModel::setReferenceValues() => Equations will be solved dimensionally" << "\n");
     // if the pressure and temperature reference values
     // have not been specified set all the ref values to 1.
     refData = 1.0;
@@ -84,13 +84,12 @@ void EulerPhysicalModel<DIM>::setReferenceValues()
     _isAdimensional = false;
   }
 
-  CFLog(NOTICE, "tempRef = "   << tempRef << "\n");
-  CFLog(NOTICE, "pRef   = "    << pRef << "\n");
-  CFLog(NOTICE, "machInf   = " << MachInf << "\n");
-  CFLog(NOTICE, "rhoRef  = "  << refData[EulerTerm::RHO] << "\n");
-
+  CFLog(VERBOSE, "tempRef = "   << tempRef << "\n");
+  CFLog(VERBOSE, "pRef   = "    << pRef << "\n");
+  CFLog(VERBOSE, "machInf   = " << MachInf << "\n");
+  CFLog(VERBOSE, "rhoRef  = "  << refData[EulerTerm::RHO] << "\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 template <int DIM>
