@@ -1,6 +1,7 @@
 LIST ( APPEND Tecplot2CFmesh_files
 ElementTypeTecplot.hh
 NodeDim.hh
+NodeDim.cxx
 Tecplot2CFmesh.hh
 Tecplot2CFmeshConverter.cxx
 Tecplot2CFmeshConverter.hh

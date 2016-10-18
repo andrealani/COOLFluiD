@@ -411,6 +411,9 @@ void ParWriteSolution:: buildNodeIDMapping()
 	  maxNbNodesInTRGeo = max(maxNbNodesInTRGeo, tr->getNbNodesInGeo(iGeo));
 	}
 	
+	CFLog(VERBOSE, "ParWriteSolution::buildNodeIDMapping() => maxNbNodesInTRGeo = " 
+	      << maxNbNodesInTRGeo << " \n");
+	
 	storeMappings(trs, iType, nbTRGeos, maxNbNodesInTRGeo, 
 		      0, nbTRGeos, foundGlobalID);
       }
@@ -1008,7 +1011,7 @@ void ParWriteSolution::writeElementList
   }
   elementList.endElemInsertion(_myRank);
   
-  CFLog(VERBOSE,_myRank << " maxElemSendSize = " << maxElemSendSize << "\n");
+  CFLog(VERBOSE, "P[" << _myRank << "] has maxElemSendSize = " << maxElemSendSize << "\n");
   
   // buffer data to send
   vector<CFuint> sendElements(maxElemSendSize, 0);
@@ -1039,8 +1042,8 @@ void ParWriteSolution::writeElementList
 	for (CFuint in = 0; in < nbNodesInType; ++in, ++isend) {
 	  // fix for degenerated elements (e.g. quads with 2 coincident nodes)
 	  const CFuint inID = (in < nbNodes) ? in : in-1;
-	  const CFuint localNodeID = (isCell) ? elements->getNodeID(localElemID, in) : 
-	    (*elements)[iType]->getNodeID(localElemID, in);
+	  const CFuint localNodeID = (isCell) ? elements->getNodeID(localElemID, inID) : 
+	    (*elements)[iType]->getNodeID(localElemID, inID);
 	  
 	  if (isend >= sendElements.size()) {
 	    CFLogInfo(_myRank << " nbNodesInType = " << nbNodesInType
@@ -1456,7 +1459,7 @@ void ParWriteSolution::storeMappings(SafePtr<TopologicalRegionSet> trs,
   vector<CFuint>& nodesInType = tt.nodesInType[iType];
   const bool isCell = trs->hasTag("cell");
   SafePtr<TopologicalRegion> tr = (isCell) ? CFNULL : (*trs)[iType];
-  
+    
   // find which global nodeIDs are used in the elements of this type
   if (nbCellsInType > 0) {
     cf_assert(nodesInType.size() == 0);
@@ -1467,10 +1470,11 @@ void ParWriteSolution::storeMappings(SafePtr<TopologicalRegionSet> trs,
       // the following is needed for hybrid meshes for which one TR could contain both 
       // quads and triangles (nbNodesInType=4 but nbNodes can be=3 or =4)
       cf_assert(nbNodes <= nbNodesInType);
+      
       for (CFuint in = 0; in < nbNodesInType; ++in) {
 	// fix for degenerated elements (e.g. quads with 2 coincident nodes)
 	const CFuint inID = (in < nbNodes) ? in : in-1;
-	const CFuint localNodeID = (isCell) ? trs->getNodeID(iElem,in) : tr->getNodeID(iElem,in);
+	const CFuint localNodeID = (isCell) ? trs->getNodeID(iElem,inID) : tr->getNodeID(iElem,inID);
 	nodesInType.push_back(nodes[localNodeID]->getGlobalID());
       }
     }
@@ -1482,7 +1486,7 @@ void ParWriteSolution::storeMappings(SafePtr<TopologicalRegionSet> trs,
     vector<CFuint>::iterator lastNode = unique(nodesInType.begin(), nodesInType.end());
     nodesInType.erase(lastNode, nodesInType.end());
   }
-  
+    
   // now each process has a unique list of global node IDs for the current element type
   // maximum number of unique nodes across all processors for the current element type
   CFuint maxNbNodesInProc = 0;

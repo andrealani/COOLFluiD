@@ -69,7 +69,7 @@ void PetscVector::create(MPI_Comm comm,
 
 #ifdef CF_HAVE_MPI
 void PetscVector::initialize(MPI_Comm comm,
-			     const PetscScalar value)
+			     const CFreal value)
 {
   cf_assert(m_toBeDestroyed == true);
 

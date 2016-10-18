@@ -211,7 +211,6 @@ private: // helper functions
 		bool isBoundary);
   
   // renumber tthe TRS data
-  template <CFuint DIM> 
   void renumberTRSData();
   
   // build the connectivity between boundary faces and neighboring cells
@@ -221,8 +220,7 @@ private: // helper functions
   bool skipSolution() const {return (m_readVars.size() == 0);}
   
   /// get the node ID of the closest boundary point to the given node 
-  template <CFuint DIM> 
-  CFint getClosestNodeID(const NodeDim<DIM>& nodeDim, 
+  CFint getClosestNodeID(const NodeDim& nodeDim, 
 			 const std::vector<CFreal>& allTRSNodes,
 			 const std::vector<CFuint>& allTRSNodeIDs);
   
@@ -231,11 +229,17 @@ private: // helper functions
   {
     return m_interpolateFromFileName;
   }
-
+  
 private: // data
   
   /// dimension of the mesh
   CFuint  m_dimension;
+    
+  /// map nodal coordinates to node IDs (cross-element types)
+  std::map<NodeDim, CFuint> m_elemMapCoordToNodeID;
+  
+  /// array storing pointers to variables corresponding to non-duplicated nodes
+  std::vector<CFreal*> m_nodalVarPtr;
   
   /// storage of data about the ElementTypes
   /// including connectivity
@@ -264,199 +268,6 @@ private: // data
   
 }; // end class Tecplot2CFmeshConverter
 
-//////////////////////////////////////////////////////////////////////////////
-
-template <CFuint DIM>
-void Tecplot2CFmeshConverter::renumberTRSData()
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Common;
-  using namespace COOLFluiD::Environment;
-  using namespace COOLFluiD::MathTools;
-  
-  // assume 1 element type
-  SafePtr<ElementTypeTecplot> elements = m_elementType[0];
-  const CFuint nbElems = elements->getNbElems();  
-  const CFuint nbNodesPerElem = elements->getNbNodesPerElem();  
-  
-  // you could put a loop around this to analyze blocks of data instead of the whole in one shot
-  typedef NodeDim<DIM> NodeD;
-  CFMultiMap<NodeD, CFuint> mapCoord2nodeIDs(elements->getNbNodes());
-  
-  CFLog(INFO, "Tecplot2CFmeshConverter::renumberTRSData(), DIM, NBVARS = " << m_dimension << ", " << elements->getNbVars() << "\n");
-  
-  const CFreal eps = std::pow(10.,-1.*m_precision);
-  vector<bool> flagNode(elements->getNbNodes(), false);
-  NodeD nodeDim(CFNULL);
-  for (CFuint e = 0; e < nbElems; ++e) {
-    for (CFuint iNode = 0; iNode < nbNodesPerElem; ++iNode) {
-      cf_assert(e < elements->getNbElems());
-      cf_assert(iNode < nbNodesPerElem);
-      const CFuint nodeID = (*elements)(e, iNode);
-      CFLog(DEBUG_MAX, "(e, iNode) = (" << e << ", " << iNode << ") => nodeID = " << nodeID << "\n");
-      if (nodeID >= elements->getNbNodes()) {
-	CFLog(ERROR, "Tecplot2CFmeshConverter::renumberTRSData() => nodeID > nbNodes :" << nodeID << " >= " << elements->getNbNodes() << "\n");
-	cf_assert(nodeID < elements->getNbNodes());
-      }
-      
-      if (!flagNode[nodeID]) {
-	elements->setNodeDim(nodeID, nodeDim);
-	
-	// reduce precision to allow for sufficiently high matching tolerance
-	// cout << nodeDim << " -> ";
-	MathFunctions::roundUpPrecision(nodeDim, eps);
-	// cout << nodeDim << "\n";
-	
-	CFLog(DEBUG_MAX, "nodeDim = " << nodeDim << " => " << nodeID <<  "\n"); 
-	mapCoord2nodeIDs.insert(nodeDim, nodeID);
-	flagNode[nodeID] = true;
-      }
-    }
-  }
-  mapCoord2nodeIDs.sortKeys();
-  
-  CFLog(INFO, "Tecplot2CFmeshConverter::renumberTRSData(), insertion finished\n");
-  typedef typename CFMultiMap<NodeD, CFuint>::MapIterator MapIt;
-  
-  // if one single TRS coming from TECPLOT interpolation is available, loop first 
-  // on all boundary nodes to detect the global node IDs and be sure that the 
-  // coordinates match between interior and boundary TRS
-  // otherwise each TRS is processed, one at a time 
-  vector<CFuint> allTRSNodeIDs;
-  vector<CFreal> allTRSNodes; 
-  CFuint counter = 0;
-  CFuint totalNbNodes = 0;
-  const CFuint startTRS = m_nbElemTypes;
-  const CFuint nbTRSs = (m_hasAllSurfFile) ? 1 : m_elementType.size() - startTRS;
-  
-  if (m_hasAllSurfFile) {
-    // preallocation of array to cache all node coordinates
-    SafePtr<ElementTypeTecplot> trs = m_elementType[startTRS];
-    const CFuint nbTRSFaces = trs->getNbElems();
-    const CFuint nbNodesPerFace = trs->getNbNodesPerElem();
-    allTRSNodeIDs.reserve(nbTRSFaces*nbNodesPerFace);
-    allTRSNodes.reserve(nbTRSFaces*nbNodesPerFace*m_dimension);
-  }
-
-  cf_assert(DIM ==m_dimension);
-  
-  for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
-    SafePtr<ElementTypeTecplot> trs = m_elementType[startTRS +  iTRS];
-    const CFuint nbTRSFaces = trs->getNbElems();
-    const CFuint nbNodesPerFace = trs->getNbNodesPerElem();
-    for (CFuint iFace = 0; iFace < nbTRSFaces; ++iFace) {
-      for (CFuint iNode = 0; iNode < nbNodesPerFace; ++iNode) {
-	totalNbNodes++;
-	const CFuint trsNodeID = (*trs)(iFace,iNode);
-	trs->setNodeDim(trsNodeID, nodeDim);
-	
-	// reduce precision to allow for sufficiently high matching tolerance
-	// cout << "TRS: " <<  nodeDim << " -> "; 
-	MathFunctions::roundUpPrecision(nodeDim, eps);
-	///cout << nodeDim << "\n";
-	
-	bool found = false;
-	pair<MapIt, MapIt> nodeList = mapCoord2nodeIDs.find(nodeDim, found);
-	if (!found) {
-	  CFLog(ERROR, "Tecplot2CFmeshConverter::renumberTRSData() => [" << totalNbNodes << "] nodeDim " << nodeDim << " not found!\n");
-	}
-	  
-	// find(nodeDim, found);
-	//if (found) {
-	CFuint nbMatch = 0;
-	for (MapIt it = nodeList.first; it != nodeList.second; ++it) {
-	  (*trs)(iFace,iNode) = it->second;
-	  
-	  if (m_hasAllSurfFile) {
-	    allTRSNodeIDs.push_back(it->second);
-	    // store node coordinates with reduced precision
-	    for (CFuint iDim = 0; iDim < m_dimension; ++iDim) {
-	      allTRSNodes.push_back(nodeDim[iDim]);
-	    }
-	  }
-	  
-	  nbMatch++;
-	}
-	
-	// only one match allowed
-	if (nbMatch != 1) {
-	  CFLog(ERROR, "Tecplot2CFmeshConverter::renumberTRSData() => " << nbMatch << " matches found for node (" << nodeDim << ")\n");
-	  if (nbMatch == 0) {
-	    CFLog(ERROR, "Tecplot2CFmeshConverter::renumberTRSData() => node (" << nodeDim << ") not found\n");
-	    counter++;
-	  }
-	  cf_assert(nbMatch == 1);
-	}
-      }
-    }
-  }
-  
-  if (m_hasAllSurfFile) {
-    cf_assert(totalNbNodes == allTRSNodes.size()/m_dimension);
-    cf_assert(allTRSNodes.size() == allTRSNodes.capacity());
-    cf_assert(allTRSNodes.size() == allTRSNodeIDs.size()*m_dimension);
-  }
-  
-  CFLog(INFO, "Tecplot2CFmeshConverter::renumberTRSData() => " << counter << "/" << totalNbNodes << " NOT found\n");
-  
-  // if one single TRS coming from TECPLOT interpolation is available, we now have to 
-  // match the TECPLOT-generated boundary points coordinates (.allsurf.plt) with 
-  // the COOLFluiD-generated ones (.surf.plt) and assign IDs to the TRS nodes: 
-  // to achieve this we rely upon a shortest distance algorithm 
-  if (m_hasAllSurfFile) {
-    CFuint counter = 0;
-    CFuint totalNbNodes = 0;
-    const CFuint startTRS = m_nbElemTypes+1;
-    const CFuint nbTRSs = m_elementType.size() - startTRS;
-    for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
-      SafePtr<ElementTypeTecplot> trs = m_elementType[startTRS +  iTRS];
-      const CFuint nbTRSFaces = trs->getNbElems();
-      const CFuint nbNodesPerFace = trs->getNbNodesPerElem();
-      for (CFuint iFace = 0; iFace < nbTRSFaces; ++iFace) {
-	for (CFuint iNode = 0; iNode < nbNodesPerFace; ++iNode) {
-	  totalNbNodes++;
-	  const CFuint trsNodeID = (*trs)(iFace,iNode);
-	  trs->setNodeDim(trsNodeID, nodeDim);
-	  
-	  // set the nodeID corresponding to the closest boundary point in the current face
-	  (*trs)(iFace,iNode) = getClosestNodeID(nodeDim, allTRSNodes, allTRSNodeIDs);
-	}
-      }
-    }
-  }
-}
-      
-//////////////////////////////////////////////////////////////////////////////
-      
-template <CFuint DIM>
-CFint Tecplot2CFmeshConverter::getClosestNodeID(const NodeDim<DIM>& nodeDim, 
-						const std::vector<CFreal>& allTRSNodes,
-						const std::vector<CFuint>& allTRSNodeIDs)
-{
-  using namespace std;
-  using namespace COOLFluiD::MathTools;
-  
-  vector<CFreal>& allTRSNodesLocal = const_cast<vector<CFreal>&>(allTRSNodes); 
-  
-  const CFuint nbNodes = allTRSNodeIDs.size();
-  NodeDim<DIM> tmpNode(CFNULL);
-  CFint nodeID = -1;
-  CFreal distanceSqMin = numeric_limits<CFreal>::max();
-  
-  for (CFuint i = 0; i < nbNodes; ++i) {
-    tmpNode.reset(&allTRSNodesLocal[i*m_dimension]);
-    const CFreal distanceSq = MathFunctions::getSquaredDistance(nodeDim, tmpNode);
-    if (distanceSq < distanceSqMin) {
-      distanceSqMin = distanceSq;
-      nodeID = allTRSNodeIDs[i];
-    }
-  }
-  
-  cf_assert(nodeID >=0 );
-  return nodeID;
-}
-      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace Tecplot2CFmesh

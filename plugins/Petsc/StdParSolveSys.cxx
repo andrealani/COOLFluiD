@@ -174,7 +174,7 @@ stopTimer.start();
   }
   
   solVec.copy(&rhs[0], &_upLocalIDs[0], vecSize);
-  cout << "StdSolveSys::execute() took " << stopTimer << "s\n";
+  CFLog(VERBOSE, "StdParSolveSys::execute() took " << stopTimer << "s\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
