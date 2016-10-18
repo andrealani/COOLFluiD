@@ -1,5 +1,5 @@
 LIST ( APPEND RadiativeTransfer_files
-RadiativeTransferModule.hh
+RadiativeTransfer.hh
 RadiationLibrary/RadiationPhysics.hh
 RadiationLibrary/RadiationPhysics.cxx
 RadiationLibrary/RadiationPhysicsHandler.hh
@@ -26,6 +26,8 @@ Solvers/MonteCarlo/RadiativeTransferMonteCarlo.hh
 Solvers/MonteCarlo/RadiativeTransferMonteCarlo.cxx
 Solvers/MonteCarlo/RandomNumberGenerator.hh
 Solvers/MonteCarlo/RandomNumberGenerator.cxx
+Solvers/FiniteVolumeDOM/RadiativeTransferFVDOM.cxx
+Solvers/FiniteVolumeDOM/RadiativeTransferFVDOM.hh
 PostProcess/PostProcessAverage.cxx
 PostProcess/PostProcessAverage.hh
 PostProcess/PostProcess.cxx
@@ -44,7 +46,7 @@ IF (CF_HAVE_GSL)
    )
 ENDIF()
 
-LIST ( APPEND RadiativeTransfer_cflibs Framework LagrangianSolver )
+LIST ( APPEND RadiativeTransfer_cflibs Framework LagrangianSolver FiniteVolume )
 CF_ADD_PLUGIN_LIBRARY ( RadiativeTransfer )
 CF_WARN_ORPHAN_FILES()
 ADD_SUBDIRECTORY ( testcases )

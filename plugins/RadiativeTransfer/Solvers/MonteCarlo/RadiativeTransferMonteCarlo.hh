@@ -277,7 +277,7 @@ private:
 
 #include "MathTools/MathChecks.hh"
 #include "MathTools/MathConsts.hh"
-#include "RadiativeTransfer/RadiativeTransferModule.hh"
+#include "RadiativeTransfer/RadiativeTransfer.hh"
 #include "Framework/DataProcessingData.hh"
 #include "Framework/ConvectiveVarSet.hh"
 #include "Framework/DataSocketSource.hh"

@@ -1,4 +1,4 @@
-#include "RadiativeTransferMonteCarlo.hh"
+#include "RadiativeTransfer/Solvers/MonteCarlo/RadiativeTransferMonteCarlo.hh"
 #include "LagrangianSolver/ParticleTracking/ParticleTrackingAxi.hh"
 #include "LagrangianSolver/ParticleTracking/ParticleTracking3D.hh"
 #include "LagrangianSolver/ParticleTracking/ParticleTracking2D.hh"

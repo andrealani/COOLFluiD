@@ -11,8 +11,9 @@
 #include "Environment/ObjectProvider.hh"
 
 #include "PostProcessAverage.hh"
-#include "RadiativeTransfer/RadiativeTransferModule.hh"
+#include "RadiativeTransfer/RadiativeTransfer.hh"
 
+//////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 

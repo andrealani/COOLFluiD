@@ -1,3 +1,4 @@
+cf_add_case( MPI 1 CASEDIR Sphere3DFV PCASE sphere_24Dirs_TestProfile.CFcase CASEFILES air-100.dat air-100Bands.dat air-100Bins.dat Sphere1_5_22_22_22.neu )
 cf_add_case( MPI 4 CASEDIR cylinder3d PCASE cylinder3d.CFcase CASEFILES cylinder3d.neu )
 cf_add_case( MPI 4 CASEDIR cylinderAxi PCASE cylinderAxi.CFcase CASEFILES cylinderAxi.neu )
 cf_add_case( MPI 4 CASEDIR slab2d PCASE slab2d.CFcase CASEFILES slab2d.neu )

@@ -5,7 +5,6 @@
 
 #include "FiniteVolume/CellCenterFVM.hh"
 #include "Environment/ObjectProvider.hh"
-#include "RadiativeTransfer/RadiativeTransferModule.hh"
 #include "Framework/SocketBundleSetter.hh"
 
 namespace COOLFluiD {

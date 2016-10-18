@@ -5,7 +5,7 @@
 #include "Common/SetupObject.hh"
 #include "Common/NonCopyable.hh"
 #include "Environment/ConcreteProvider.hh"
-#include "RadiativeTransfer/RadiativeTransferModule.hh"
+#include "RadiativeTransfer/RadiativeTransfer.hh"
 #include "Framework/SocketBundleSetter.hh"
 #include "RadiativeTransfer/Solvers/MonteCarlo/RandomNumberGenerator.hh"
 #include "RadiationPhysics.hh"

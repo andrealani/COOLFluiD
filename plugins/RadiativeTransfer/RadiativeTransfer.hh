@@ -16,7 +16,7 @@ namespace COOLFluiD {
 /**
  * This class defines the Module RadiativeTransfer
  */
-class RadiativeTransfer : public Environment::ModuleRegister<RadiativeTransfer> {
+class RadiativeTransferModule : public Environment::ModuleRegister<RadiativeTransferModule> {
 public:
 
   /**
@@ -39,7 +39,7 @@ public:
     return "This module implements the Radiative Heat Transfer.";
   }
 
-}; // end RadiativeTransfer
+}; // end RadiativeTransferModule
 
 //////////////////////////////////////////////////////////////////////////////
 

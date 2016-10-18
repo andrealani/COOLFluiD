@@ -1,16 +1,16 @@
 #ifndef COOLFluiD_RadiativeTransfer_RadiationPhysics_hh
 #define COOLFluiD_RadiativeTransfer_RadiationPhysics_hh
 
+//////////////////////////////////////////////////////////////////////////////
 
 #include "Common/OwnedObject.hh"
 #include "Common/SetupObject.hh"
 #include "Common/NonCopyable.hh"
 #include "Environment/ConcreteProvider.hh"
-#include "RadiativeTransfer/RadiativeTransferModule.hh"
 #include "Environment/ObjectProvider.hh"
-#include "Radiator.hh"
-#include "RadiationPhysicsHandler.hh"
-#include "Reflector.hh"
+#include "RadiativeTransfer/RadiationLibrary/Radiator.hh"
+#include "RadiativeTransfer/RadiationLibrary/RadiationPhysicsHandler.hh"
+#include "RadiativeTransfer/RadiationLibrary/Reflector.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -29,8 +29,9 @@ namespace RadiativeDistTypes{
 using namespace RadiativeDistTypes;
 
 //////////////////////////////////////////////////////////////////////////////
+
 class RadiationPhysics : public Common::OwnedObject,
-                         public Config::ConfigObject
+                         public Config::ConfigObject 
 {
 public:
 

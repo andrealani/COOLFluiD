@@ -5,7 +5,6 @@
 #include <boost/random.hpp>
 #include "Common/COOLFluiD.hh"
 #include <vector>
-#include "RadiativeTransfer/RadiativeTransferModule.hh"
 
 /*  Wrapper class for the Boost Random library
 *   This works for the 1.42 version, for the new version,

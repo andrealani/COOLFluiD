@@ -1,5 +1,4 @@
 #include "Common/COOLFluiD.hh"
-#include "RadiativeTransfer/RadiativeTransferModule.hh"
 
 /**
  * This structs model a Particle

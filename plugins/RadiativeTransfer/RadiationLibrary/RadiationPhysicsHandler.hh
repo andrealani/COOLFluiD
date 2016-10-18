@@ -2,12 +2,12 @@
 #define COOLFluiD_RadiativeTransfer_RadiationPhysicsHandler_hh
 
 //////////////////////////////////////////////////////////////////////////////
+
 #include "Common/OwnedObject.hh"
 #include "Common/SetupObject.hh"
 #include "Common/NonCopyable.hh"
 #include "Environment/ConcreteProvider.hh"
-#include "RadiativeTransfer/RadiativeTransferModule.hh"
-#include "RadiationPhysics.hh"
+#include "RadiativeTransfer/RadiationLibrary/RadiationPhysics.hh"
 #include "Framework/MethodCommand.hh"
 #include "Framework/PhysicalModel.hh"
 

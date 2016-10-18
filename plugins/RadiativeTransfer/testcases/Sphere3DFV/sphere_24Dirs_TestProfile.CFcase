@@ -1,0 +1,141 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+# This testcases verifies the simulation of torch + chamber + probe at 100kW
+
+### Residual = -1.3592156
+# -3.0362587
+
+###############################################################################
+# Assertion For Debugging
+
+# this will always fail when mesh converters (Gambit, Gmesh, etc.) are activated, 
+# so must be commented out when all other errors are gone 
+#CFEnv.ErrorOnUnusedConfig = true
+
+#CFEnv.ExceptionLogLevel    = 1000
+#CFEnv.DoAssertions         = true
+#CFEnv.AssertionDumps       = true
+#CFEnv.AssertionThrows      = true
+#CFEnv.AssertThrows         = true
+#CFEnv.AssertDumps          = true
+##CFEnv.ExceptionAborts      = true
+#CFEnv.ExceptionOutputs     = true
+#CFEnv.RegistSignalHandlers = false
+##CFEnv.TraceToStdOut = true
+##CFEnv.TraceActive = true
+
+###############################################################################
+# SubSystem Modules
+Simulator.Modules.Libs = libTecplotWriter libNavierStokes libFiniteVolume libEmptyConvergenceMethod libRadiativeTransfer libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
+
+# Simulation Parameters
+Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/Sphere3DFV
+Simulator.Paths.ResultsDir = ./RESULTS_Sphere1_5cmCorr_TProf_Stret_22_22_24Dirs_Good
+
+###############################################################################
+# Physical Model
+
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes3D
+Simulator.SubSystem.NavierStokes3D.refValues = 1013250. 100. 100. 100. 4000.
+Simulator.SubSystem.NavierStokes3D.refLength = 1.
+###### CHEMICAL LIBRARY ##
+#Simulator.SubSystem.NavierStokes3D.PropertyLibrary = Mutationpp
+#Simulator.SubSystem.NavierStokes3D.Mutationpp.mixtureName = argonZA
+#Simulator.SubSystem.NavierStokes3D.PropertyLibrary = Mutation
+#Simulator.SubSystem.NavierStokes3D.Mutation.mixtureName = argon3
+#Simulator.SubSystem.NavierStokes3D.Mutation.thermCondAlgo = Direct
+
+###############################################################################
+# Output
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = sphere_out-rest-bis.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate     = 10
+Simulator.SubSystem.CFmesh.AppendIter   = false
+
+Simulator.SubSystem.Tecplot.FileName    = sphere_out-rest-bis.plt
+Simulator.SubSystem.Tecplot.SaveRate    = 1
+Simulator.SubSystem.Tecplot.Data.outputVar = Pvt
+#Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Wall
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = CellID divq qx qy qz TempProfile 
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = CellID divq qx qy qz TempProfile
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 1
+Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
+# WriteSolutionBlockFV
+
+###############################################################################
+# Time Marching
+
+#Stop Condition
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.ConvergenceMethod = EmptyIterator
+
+###############################################################################
+# Mesh Reader
+Simulator.SubSystem.Default.listTRS = Wall 
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./Sphere1_5_22_22_22.CFmesh #./RadialTest3.CFmesh #./CubeUnstructured.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1
+
+###############################################################################
+
+# Space Method
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+#Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Pvt
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Pvt
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = Null
+
+###############################################################################
+
+# Initial Conditions
+Simulator.SubSystem.CellCenterFVM.InitComds = InitStateAddVar
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+# initial variables
+Simulator.SubSystem.CellCenterFVM.InField.InitVars = x y z
+# full set of variables
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y z r det a 
+# x y z do not need definition, but r does
+Simulator.SubSystem.CellCenterFVM.InField.InitDef = \
+					sqrt(y^2+z^2) \
+					0.015^2 \
+					-9500 					
+
+Simulator.SubSystem.CellCenterFVM.InField.Def = \
+					1013250. \
+					100. \
+					0. \
+					0. \
+					500.
+#a/det*r^2+10000.
+#a/det*r^2+b/det*r+10000.
+
+###############################################################################
+# Data Processing
+
+Simulator.SubSystem.DataPostProcessing = DataProcessing
+Simulator.SubSystem.DataProcessing.Data.updateVar = Pvt
+Simulator.SubSystem.DataProcessing.Comds = RadiativeTransferFVDOM 
+Simulator.SubSystem.DataProcessing.Names = Radiation
+Simulator.SubSystem.DataProcessing.Radiation.nDirs = 24
+Simulator.SubSystem.DataProcessing.Radiation.UseExponentialMethod = true
+#Simulator.SubSystem.DataProcessing.Radiation.DirName = ./
+Simulator.SubSystem.DataProcessing.Radiation.BinTabName = air-100Bands.dat #air-100Bins.dat
+Simulator.SubSystem.DataProcessing.Radiation.OutTabName = air-100Bands.out #air-100Bins.out
+Simulator.SubSystem.DataProcessing.Radiation.ConstantP = 1013250 
+Simulator.SubSystem.DataProcessing.ProcessRate = 1
+Simulator.SubSystem.DataProcessing.RunAtSetup = true

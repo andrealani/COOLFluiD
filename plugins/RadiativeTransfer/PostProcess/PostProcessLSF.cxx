@@ -11,10 +11,11 @@
 #include "Environment/ObjectProvider.hh"
 
 #include "PostProcessLSF.hh"
-#include "RadiativeTransfer/RadiativeTransferModule.hh"
+#include "RadiativeTransfer/RadiativeTransfer.hh"
 
 #include <gsl/gsl_multifit.h>
 
+//////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
 using namespace COOLFluiD::Framework;
