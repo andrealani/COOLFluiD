@@ -1500,7 +1500,8 @@ void ParCFmeshBinaryFileReader::readFromFile(const boost::filesystem::path& file
   char* fileName = const_cast<char*>(filepath.string().c_str());
 
   // open the file in parallel
-  MPI_File_open(m_comm, fileName, MPI_MODE_RDWR | MPI_MODE_CREATE, MPI_INFO_NULL, &m_fh); 
+  //MPI_File_open(m_comm, fileName, MPI_MODE_RDWR | MPI_MODE_CREATE, MPI_INFO_NULL, &m_fh); 
+  MPI_File_open(m_comm, fileName, MPI_MODE_RDONLY, MPI_INFO_NULL, &m_fh); 
   
   bool keepOnReading = true;
   do {

@@ -55,6 +55,15 @@ MaxwellAdimTerm.hh
 MaxwellVarSet.hh
 )
 
+IF (CF_HAVE_CUDA)
+   LIST ( APPEND Maxwell_files
+Maxwell2DProjectionConsT.hh	
+Maxwell2DProjectionVarSetT.hh
+Maxwell3DProjectionConsT.hh
+Maxwell3DProjectionVarSetT.hh
+)
+ENDIF()
+
 LIST ( APPEND Maxwell_cflibs Framework )
 CF_ADD_PLUGIN_LIBRARY ( Maxwell )
 CF_WARN_ORPHAN_FILES()
