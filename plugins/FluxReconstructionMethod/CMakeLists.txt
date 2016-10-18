@@ -2,6 +2,8 @@ LIST ( APPEND FluxReconstructionMethod_files
 FluxReconstruction.hh
 FluxReconstructionMeshDataBuilder.cxx
 FluxReconstructionMeshDataBuilder.hh
+FluxReconstructionBuilder.cxx
+FluxReconstructionBuilder.hh
 FluxReconstructionSolver.cxx
 FluxReconstructionSolver.hh
 FluxReconstructionSolverData.cxx
