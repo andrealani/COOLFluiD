@@ -1,0 +1,107 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume DOM algorithm, PhysicalModelDummy, EmptyIterator, hybrid mesh,
+# only radiation transport (no flow) is computed, Tecplot2CFmesh converter,
+# Viking re-ntry into Mars atmosphere, validation case for ESA ABLARADABLA,
+# input DLR solution
+#
+################################################################################
+
+# COOLFluiD CFcase file
+# Comments begin with "#"
+
+### Residual = 0
+
+#CFEnv.ErrorOnUnusedConfig = true
+#CFEnv.ExceptionLogLevel = 200
+CFEnv.ExceptionDumps   = true
+CFEnv.ExceptionOutputs = true
+#CFEnv.OnlyCPU0Writes = false
+#CFEnv.TraceToStdOut = true
+
+# Simulation Modules
+Simulator.Modules.Libs = libTecplotWriter libPhysicalModelDummy libFiniteVolume libEmptyConvergenceMethod libRadiativeTransfer libTecplot2CFmesh libCFmeshFileReader libCFmeshFileWriter
+
+# relative path to working directory
+Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/VikingDLR
+# relative path to results directory 
+Simulator.Paths.ResultsDir = ./RESULT_VIKING
+
+Simulator.SubSystem.Default.PhysicalModelType = PhysicalModelDummy
+Simulator.SubSystem.PhysicalModelDummy.Dimensions = 3
+Simulator.SubSystem.PhysicalModelDummy.Equations = rhoCO2 rhoCO rhoO2 rhoC rhoO p T Mach
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = viking.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 1000
+Simulator.SubSystem.CFmesh.AppendIter = true
+Simulator.SubSystem.Tecplot.FileName    = viking.plt
+#Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = afterbody_FG forebody farfield axisymmetry_plane afterbody_aluminium
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = CellID divq qx qy qz TempProfile 
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = CellID divq qx qy qz TempProfile
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 1
+Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
+# WriteSolutionBlockFV
+
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -7.0
+
+Simulator.SubSystem.ConvergenceMethod = EmptyIterator
+
+###############################################################################
+# Mesh Reader
+Simulator.SubSystem.Default.listTRS = forebody afterbody_FG afterbody_aluminium axisymmetry_plane farfield
+
+Simulator.SubSystem.MeshCreator                                 = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName              = viking_DLR.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom                = Tecplot2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Discontinuous  = true
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SolutionOrder  = P0
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.HasBlockFormat = false
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SurfaceTRS = afterbody_FG forebody farfield axisymmetry_plane afterbody_aluminium
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = \
+		"CO2_partial_density" "CO_partial_density" "O2_partial_density" "C_partial_density" "O_partial_density"	\
+	"pressure" "temperature" "Mach_number"
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.NbElementTypes = 2
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = false
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1.
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
+
+###############################################################################
+
+# Space Method
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = Null
+
+###############################################################################
+
+# Data Processing
+
+Simulator.SubSystem.DataPostProcessing = DataProcessing
+Simulator.SubSystem.DataProcessing.Comds = RadiativeTransferFVDOM 
+Simulator.SubSystem.DataProcessing.Names = Radiation
+Simulator.SubSystem.DataProcessing.Radiation.nDirs = 24
+Simulator.SubSystem.DataProcessing.Radiation.UseExponentialMethod = true
+#Simulator.SubSystem.DataProcessing.Radiation.DirName = ./
+
+# here we need tables for CO2 mixtures
+Simulator.SubSystem.DataProcessing.Radiation.BinTabName = air-100Bands.dat #air-100Bins.dat
+Simulator.SubSystem.DataProcessing.Radiation.OutTabName = air-100Bands.out #air-100Bins.out
+
+#Simulator.SubSystem.DataProcessing.Radiation.ConstantP = 1013250 
+Simulator.SubSystem.DataProcessing.Radiation.PID = 5
+Simulator.SubSystem.DataProcessing.Radiation.TID = 6
+Simulator.SubSystem.DataProcessing.ProcessRate = 1
+Simulator.SubSystem.DataProcessing.RunAtSetup = true
+
+
