@@ -1,10 +1,16 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume DOM algorithm, PhysicalModelDummy, EmptyIterator, mesh with hexahedra,
+# only radiation transport (no flow) is computed 
+#
+################################################################################
+
 # COOLFluiD Startfile
 # Comments begin with "#"
 
-# This testcases verifies the simulation of torch + chamber + probe at 100kW
-
-### Residual = -1.3592156
-# -3.0362587
+### Residual = 0
 
 ###############################################################################
 # Assertion For Debugging
@@ -20,31 +26,26 @@
 #CFEnv.AssertThrows         = true
 #CFEnv.AssertDumps          = true
 ##CFEnv.ExceptionAborts      = true
-#CFEnv.ExceptionOutputs     = true
+CFEnv.ExceptionDumps     = false
+CFEnv.ExceptionOutputs   = false
 #CFEnv.RegistSignalHandlers = false
 ##CFEnv.TraceToStdOut = true
 ##CFEnv.TraceActive = true
 
 ###############################################################################
 # SubSystem Modules
-Simulator.Modules.Libs = libTecplotWriter libNavierStokes libFiniteVolume libEmptyConvergenceMethod libRadiativeTransfer libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
+Simulator.Modules.Libs = libTecplotWriter libPhysicalModelDummy libFiniteVolume libEmptyConvergenceMethod libRadiativeTransfer libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
 
 # Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/Sphere3DFV
-Simulator.Paths.ResultsDir = ./RESULTS_Sphere1_5cmCorr_TProf_Stret_22_22_24Dirs_Good
+Simulator.Paths.ResultsDir = ./RESULTS_Sphere_air_24dir_100bin
 
 ###############################################################################
 # Physical Model
 
-Simulator.SubSystem.Default.PhysicalModelType = NavierStokes3D
-Simulator.SubSystem.NavierStokes3D.refValues = 1013250. 100. 100. 100. 4000.
-Simulator.SubSystem.NavierStokes3D.refLength = 1.
-###### CHEMICAL LIBRARY ##
-#Simulator.SubSystem.NavierStokes3D.PropertyLibrary = Mutationpp
-#Simulator.SubSystem.NavierStokes3D.Mutationpp.mixtureName = argonZA
-#Simulator.SubSystem.NavierStokes3D.PropertyLibrary = Mutation
-#Simulator.SubSystem.NavierStokes3D.Mutation.mixtureName = argon3
-#Simulator.SubSystem.NavierStokes3D.Mutation.thermCondAlgo = Direct
+Simulator.SubSystem.Default.PhysicalModelType = PhysicalModelDummy
+Simulator.SubSystem.PhysicalModelDummy.Dimensions = 3
+Simulator.SubSystem.PhysicalModelDummy.Equations = p u v w T
 
 ###############################################################################
 # Output
@@ -56,7 +57,6 @@ Simulator.SubSystem.CFmesh.AppendIter   = false
 
 Simulator.SubSystem.Tecplot.FileName    = sphere_out-rest-bis.plt
 Simulator.SubSystem.Tecplot.SaveRate    = 1
-Simulator.SubSystem.Tecplot.Data.outputVar = Pvt
 #Simulator.SubSystem.Tecplot.Data.printExtraValues = true
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Wall
 Simulator.SubSystem.Tecplot.AppendIter = false
@@ -94,9 +94,6 @@ Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1
 # Space Method
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 #Simulator.SubSystem.CellCenterFVM.Restart = true
-Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Pvt
-Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
-Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Pvt
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = Null
 
 ###############################################################################
@@ -128,7 +125,6 @@ Simulator.SubSystem.CellCenterFVM.InField.Def = \
 # Data Processing
 
 Simulator.SubSystem.DataPostProcessing = DataProcessing
-Simulator.SubSystem.DataProcessing.Data.updateVar = Pvt
 Simulator.SubSystem.DataProcessing.Comds = RadiativeTransferFVDOM 
 Simulator.SubSystem.DataProcessing.Names = Radiation
 Simulator.SubSystem.DataProcessing.Radiation.nDirs = 24
