@@ -191,29 +191,10 @@ void Tecplot2CFmeshConverter::readZone(ifstream& fin,
   bool foundE = false;
   bool foundET = false;
   
-  bool foundPrism = false;
-  bool foundPyramid = false;
   while (!foundN || !foundE || !foundET) {
     string tmpStr = "";
     for (CFuint i = 0; i < words.size(); ++i) {
       CFLog(VERBOSE, "Tecplot2CFmeshConverter::readZone() => current word is [" << words[i] << "]\n");
-      
-      if (words[i].find("prism") != string::npos || 
-	  words[i].find("Prism") != string::npos ||
-	  words[i].find("PRISM") != string::npos) {
-	foundPrism = true;
-	continue;
-      }
-      
-      if (words[i].find("pyramid") != string::npos || 
-	  words[i].find("Pyramid") != string::npos ||
-	  words[i].find("PYRAMID") != string::npos || 
-	  words[i].find("pyram") != string::npos || 
-	  words[i].find("Pyram") != string::npos ||
-	  words[i].find("PYRAM") != string::npos) {
-	foundPyramid = true;
-	continue;
-      }
       
       string nextWord = (i < words.size()-1) ? words[i+1] : "";
       if (words[i].find("N=") != string::npos) {
@@ -285,13 +266,7 @@ void Tecplot2CFmeshConverter::readZone(ifstream& fin,
   
   m_dimension = max(m_dimension, getDim(cellType));
   const CFuint nbNodesInCell = getNbNodesInCell(cellType); 
-  
-  // fix for prism's or  pyramid's
-  // CFuint nbUniqueNodesPerCell = nbNodesInCell;
-  // if (foundPrism) {nbUniqueNodesPerCell = 6;}
-  // if (foundPyramid) {nbUniqueNodesPerCell = 5;}
-  // cf_assert(nbUniqueNodesPerCell <= nbNodesInCell);
-  
+    
   CFLog(VERBOSE, "ZONE has: nbNodes = " << nbNodes << ", nbElems = " << nbElems 
 	<< ", cellType = " << cellType << ", nbNodesInCell = " << nbNodesInCell << "\n");
   
@@ -329,9 +304,9 @@ void Tecplot2CFmeshConverter::readZone(ifstream& fin,
   if (!isBoundary) {
     const CFuint newSize = m_nodalVarPtr.size() + nbNodes;
     m_nodalVarPtr.reserve(newSize);
-    CFLog(INFO, "Tecplot2CFmeshConverter::readZone() => m_nodalVarPtr.capacity() = " << m_nodalVarPtr.capacity()  << "\n");
-    CFLog(INFO, "Tecplot2CFmeshConverter::readZone() => m_nodalVarPtr.size() = " << m_nodalVarPtr.size()  << "\n");
-    CFLog(INFO, "Tecplot2CFmeshConverter::readZone() => nbNodes = " << nbNodes << "\n");
+    CFLog(VERBOSE, "Tecplot2CFmeshConverter::readZone() => m_nodalVarPtr.capacity() = " << m_nodalVarPtr.capacity()  << "\n");
+    CFLog(VERBOSE, "Tecplot2CFmeshConverter::readZone() => m_nodalVarPtr.size() = " << m_nodalVarPtr.size()  << "\n");
+    CFLog(VERBOSE, "Tecplot2CFmeshConverter::readZone() => nbNodes = " << nbNodes << "\n");
     cf_assert(m_nodalVarPtr.capacity() == newSize);
     cf_assert(m_nodalVarPtr.capacity() > 0);
   }
