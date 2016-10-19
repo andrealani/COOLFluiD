@@ -26,12 +26,12 @@ Simulator.Modules.Libs = libTecplotWriter libPhysicalModelDummy libFiniteVolume 
 # relative path to working directory
 Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/FireIIDLR
 # relative path to results directory 
-Simulator.Paths.ResultsDir = ./RESULT_FIREII
+Simulator.Paths.ResultsDir = ./RESULTS_FIREII
 
 Simulator.SubSystem.Default.PhysicalModelType = PhysicalModelDummy
 Simulator.SubSystem.PhysicalModelDummy.Dimensions = 3
 Simulator.SubSystem.PhysicalModelDummy.Equations = \
-	rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp rhoe u v w p T Mach
+	rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp rhoe p T Mach
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = fire2.CFmesh
@@ -70,7 +70,7 @@ Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SurfaceTRS = B_3 B_4 B_6
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = \
 	"N2_partial_density" "O2_partial_density" "NO_partial_density" "N_partial_density" "O_partial_density" \
 	"N2p_partial_density" "O2p_partial_density" "NOp_partial_density" "Np_partial_density" "Op_partial_density" \
-	"e_partial_density" "x_velocity" "y_velocity" "z_velocity" "pressure" "temperature" "Mach_number"
+	"e_partial_density" "pressure" "temperature" "Mach_number"
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.NbElementTypes = 2
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = false
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
@@ -97,8 +97,8 @@ Simulator.SubSystem.DataProcessing.Radiation.UseExponentialMethod = true
 Simulator.SubSystem.DataProcessing.Radiation.BinTabName = air-100Bands.dat #air-100Bins.dat
 Simulator.SubSystem.DataProcessing.Radiation.OutTabName = air-100Bands.out #air-100Bins.out
 #Simulator.SubSystem.DataProcessing.Radiation.ConstantP = 1013250 
-Simulator.SubSystem.DataProcessing.Radiation.PID = 14
-Simulator.SubSystem.DataProcessing.Radiation.TID = 15
+Simulator.SubSystem.DataProcessing.Radiation.PID = 11
+Simulator.SubSystem.DataProcessing.Radiation.TID = 12
 Simulator.SubSystem.DataProcessing.ProcessRate = 1
 Simulator.SubSystem.DataProcessing.RunAtSetup = true
 
