@@ -260,10 +260,7 @@ private: //data
     
   /// Done status of a cell in a given direction at the end of a stage
   std::vector<bool> m_sdone;
-  
-  /// Done status of a cell in a given direction including those done in the current stage
-  std::vector<bool> m_cdone;
-  
+    
   /// temporary list of cell indexes to be processed
   std::vector<CFuint> m_cdoneIdx;
   

@@ -79,7 +79,6 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   m_Ttable(),
   m_Ptable(),
   m_sdone(),
-  m_cdone(),
   m_cdoneIdx(),
   m_dirs(),
   m_advanceOrder(),
@@ -299,7 +298,6 @@ void RadiativeTransferFVDOM::setup()
   const CFuint nbCells = cells->nbRows();
     
   m_sdone.resize(nbCells);
-  m_cdone.resize(nbCells);
   m_cdoneIdx.reserve(nbCells);
   
   if(m_useExponentialMethod){
@@ -316,7 +314,6 @@ void RadiativeTransferFVDOM::setup()
   
   for (CFuint iCell = 0; iCell < nbCells; iCell++){
     m_sdone[iCell] = false;
-    m_cdone[iCell] = false;
   }
   
   // m_nbThreads, m_threadID
@@ -777,7 +774,7 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d, vector<int>& advanc
   CFuint stage = 1;
   // Initializing the sdone and cdone for each direction
   m_sdone.assign(nbCells, false);
-  m_cdone.assign(nbCells, false);
+  
   m_cdoneIdx.clear();
   cf_assert(m_cdoneIdx.size() == 0);
   cf_assert(m_cdoneIdx.capacity() == nbCells);
@@ -806,7 +803,6 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d, vector<int>& advanc
 	
 	advanceOrder[m] = iCell;
 	CellID[iCell] = stage;
-	m_cdone[iCell] = true;
 	m_cdoneIdx.push_back(iCell);
 	m += 1;
       }// end if(Cell is not done)
