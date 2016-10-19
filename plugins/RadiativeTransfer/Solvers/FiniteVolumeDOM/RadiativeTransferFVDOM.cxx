@@ -456,14 +456,11 @@ void RadiativeTransferFVDOM::setup()
     }
   }
   
-  // old
-  // getAdvanceOrder();
-  
   CFLog(INFO, "RadiativeTransferFVDOM::setup() => getAdvanceOrder() took " << stp.read() << "s\n");
   
   CFLog(VERBOSE, "RadiativeTransferFVDOM::setup() => end\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void RadiativeTransferFVDOM::getDirections()
@@ -588,6 +585,10 @@ void RadiativeTransferFVDOM::execute()
   
   CFLog(INFO, "RadiativeTransferFVDOM::execute() => start\n");
   
+  Stopwatch<WallTime> stp;
+  
+  stp.start();
+  
   if (!m_emptyRun) {
     // only one CPU allow for namespace => the mesh has not been partitioned
     cf_assert(PE::GetPE().GetProcessorCount(getMethodData().getNamespace()) == 1);
@@ -657,7 +658,7 @@ void RadiativeTransferFVDOM::execute()
     } 
   }
   
-  CFLog(INFO, "RadiativeTransferFVDOM::execute() => end\n");
+  CFLog(INFO, "RadiativeTransferFVDOM::execute() => took " << stp.read() << "s \n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -749,160 +750,22 @@ void RadiativeTransferFVDOM::getFieldOpacities(CFuint ib)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void RadiativeTransferFVDOM::getAdvanceOrder()
-{ 
-  CFLog(VERBOSE, "RadiativeTransferFVDOM::getAdvanceOrder() => start\n");
-  
-  // The order of advance calculation begins here
-  DataHandle<CFreal> CellID = socket_CellID.getDataHandle();
-  CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
-  Common::SafePtr<TopologicalRegionSet> cells = geoData.trs;
-  
-  const CFreal pi = MathTools::MathConsts::CFrealPi();
-  const CFuint nbCells = cells->getLocalNbGeoEnts();
-  cf_assert(nbCells > 0);
-  const CFuint DIM = PhysicalModelStack::getActive()->getDim();
-  cf_assert(DIM == DIM_3D);
-  
-  // Only for debugging purposes one can change the direction here
-  //   m_dirs(0,0) = 1;
-  //   m_dirs(0,1) = 0;
-  //   m_dirs(0,2) = 0;
-  
-  CFLog(DEBUG_MIN, "RadiativeTransferFVDOM::getAdvanceOrder() => Computing order of advance. Before the loop over the directions\n");
-  
- directions_loop:
-  for (CFuint d = 0; d < m_nbDirs; d++){
-    CFLog(INFO, "RadiativeTransferFVDOM::getAdvanceOrder() => Direction number [" << d <<"]\n");
-    CFuint mLast = 0;
-    CFuint m = 0;
-    CFuint stage = 1;
-    // Initializing the sdone and cdone for each direction
-    m_sdone.assign(nbCells, false);
-    m_cdone.assign(nbCells, false);
-    
-    while (m < nbCells) { //The loop over the cells begins
-      mLast = m;	  //Checking to see if it counts all the cells
-      for (CFuint iCell = 0; iCell < nbCells; iCell++) {
-	CFLog(DEBUG_MAX, "RadiativeTransferFVDOM::getAdvanceOrder() => iCell = " << iCell <<"\n");
-	if (m_sdone[iCell] == false) {
-	  geoData.idx = iCell;
-	  GeometricEntity* currCell = m_geoBuilder.buildGE();
-	  const CFuint elemID = currCell->getState(0)->getLocalID();	
-	  const vector<GeometricEntity*>& faces = *currCell->getNeighborGeos();
-	  const CFuint nbFaces = faces.size();
-	  
-	  for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
-	    const GeometricEntity *const face = currCell->getNeighborGeo(iFace);
-	    setFaceNormal(face->getID(), elemID);
-	    const CFreal dotMult = m_normal[XX]*m_dirs(d,XX) + m_normal[YY]*m_dirs(d,YY) + m_normal[ZZ]*m_dirs(d,ZZ);
-	    
-	    State *const neighborState = (currCell->getState(0) == face->getState(0)) ? face->getState(1) : face->getState(0);
-	    const CFuint neighborID = neighborState->getLocalID();
-	    const bool neighborIsSdone =  m_sdone[neighborID] || neighborState->isGhost(); // AL: this could lead to a very subtle BUG
-	    // first check if it is a ghost, otherwise it could fail if m_sdone for the neighborID of the ghost was already set to "true" and this is not a ghost
-	    // ghosts have local IDs but they restart from 0 up to the maximum number of ghosts 
-	    // const bool neighborIsSdone =  neighborState->isGhost() || m_sdone[neighborID]; 
-	  
-	    // cout << "is ghost = " << neighborState->isGhost() << endl;
-	  
-	    //If the dot product is negative and the neighbor is not done, it skips the cell and continue the loop
-	    if (dotMult < 0. && neighborIsSdone == false) {goto cell_loop;}
-	  }// end loop over the FACES
-	  
-	  // cout << "m_advanceOrder[" << d << "][" << m <<"] = " << iCell << endl;
-	  
-	  m_advanceOrder[d][m] = iCell;
-	  CellID[iCell] = stage;
-	  m += 1;
-	  m_cdone[elemID] = true;
-	}// end if(Cell is not done)
-	
-      cell_loop:
-	m_geoBuilder.releaseGE();
-      }// end of the loop over the CELLS
-      
-      const string msg = "m_advanceOrder[" + StringOps::to_str(d) + "] = ";
-      CFLog(DEBUG_MAX, CFPrintContainer<vector<int> >(msg, &m_advanceOrder[d]) << "\n");
-      
-      if (m == mLast) {		//Check that it wrote a cell in the current stage
-	  std::cout << "No cell added to advance list in direction number = " << d <<". Problem with mesh.\n";
-	  //cf_assert(m != mLast);
-	  /// Test to rotate the directions
-	  CFreal xAngleRotation;
-	  CFreal yAngleRotation;
-	  CFreal zAngleRotation;
-	  std::cout << "Try rotating in x. Introduce an angle in degrees\n";
-	  std::cout << "Theta = \n";
-	  std::cin >> xAngleRotation;
-	  std::cout << "Try rotating in y. Introduce an angle in degrees\n";
-	  std::cout << "Phi = \n";
-	  std::cin >> yAngleRotation;
-	  std::cout << "Try rotating in z. Introduce an angle in degrees\n";
-	  std::cout << "Psi = \n";
-	  std::cin >> zAngleRotation;
-	  
-	  xAngleRotation *= pi/180;
-	  yAngleRotation *= pi/180;
-	  zAngleRotation *= pi/180;
-	  
-	  for(CFuint dirs = 0; dirs < m_nbDirs; dirs++){
-	    //Rotating over x
-	    const CFreal rot0 = m_dirs(dirs,0);
-	    const CFreal rot1 = m_dirs(dirs,1)*std::cos(xAngleRotation) - m_dirs(dirs,2)*std::sin(xAngleRotation);
-	    const CFreal rot2 = m_dirs(dirs,1)*std::sin(xAngleRotation) + m_dirs(dirs,2)*std::cos(xAngleRotation);
-	    //Rotating over y
-	    const CFreal rot3 = rot0*std::cos(yAngleRotation) + rot2*std::sin(yAngleRotation);
-	    const CFreal rot4 = rot1;
-	    const CFreal rot5 = -rot0*std::sin(yAngleRotation) + rot2*std::cos(yAngleRotation);
-	    //Rotating over z
-	    const CFreal rot6 = rot3*std::cos(zAngleRotation) - rot4*std::sin(zAngleRotation);
-	    const CFreal rot7 = rot3*std::sin(zAngleRotation) + rot4*std::cos(zAngleRotation);
-	    const CFreal rot8 = rot5;
-	    
-	    m_dirs(dirs,0) = rot6;
-	    m_dirs(dirs,1) = rot7;
-	    m_dirs(dirs,2) = rot8;
-	    CFLog(VERBOSE, "dirs[" << dirs <<"] = ("<<  m_dirs(dirs,0) <<", " << m_dirs(dirs,1) <<", "<<m_dirs(dirs,2)<<")\n");
-	  }
-	  goto directions_loop;
-	  CFLog(ERROR, "RadiativeTransferFVDOM::getAdvanceOrder() => No cell added to advance list. Problem with mesh\n");
-	  cf_assert(m != mLast);
-      }
-      m_advanceOrder[d][m - 1] = - m_advanceOrder[d][m - 1];
-      m_sdone = m_cdone;
-      
-      CFLog(VERBOSE, "RadiativeTransferFVDOM::getAdvanceOrder() => m  "<< m << " \n");
-      CFLog(VERBOSE, "RadiativeTransferFVDOM::getAdvanceOrder() => End of the "<< stage << " stage\n");
-      
-      ++stage;
-    }// end of the loop over the STAGES
-    //Printing advanceOrder for debug porpuses
-    const string msg = "RadiativeTransferFVDOM::getAdvanceOrder() => m_advanceOrder[" + StringOps::to_str(d) + "] = ";
-    CFLog(DEBUG_MIN, CFPrintContainer<vector<int> >(msg, &m_advanceOrder[d]) << "\n");
-  } //end for for directions
-  
-  CFLog(VERBOSE, "RadiativeTransferFVDOM::getAdvanceOrder() => end\n");
-}
-      
-//////////////////////////////////////////////////////////////////////////////
-
 void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d, vector<int>& advanceOrder)
 {
   CFLog(VERBOSE, "RadiativeTransferFVDOM::getAdvanceOrder() => start\n");
   
   // The order of advance calculation begins here
   DataHandle<CFreal> CellID = socket_CellID.getDataHandle();
-  CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
-  Common::SafePtr<TopologicalRegionSet> cells = geoData.trs;
-  
-  const CFreal pi = MathTools::MathConsts::CFrealPi();
-  const CFuint nbCells = cells->getLocalNbGeoEnts();
+  const CFuint nbCells = CellID.size();
   cf_assert(nbCells > 0);
   const CFuint DIM = PhysicalModelStack::getActive()->getDim();
   cf_assert(DIM == DIM_3D);
   
   CFLog(INFO, "RadiativeTransferFVDOM::getAdvanceOrder() => Direction number [" << d <<"]\n");
+  
+  // precompute the dot products for all faces and directions (a part from the sign)
+  RealVector dotProdInFace;
+  computeDotProdInFace(d, dotProdInFace);
   
   CFuint mLast = 0;
   CFuint m = 0;
@@ -911,93 +774,54 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d, vector<int>& advanc
   m_sdone.assign(nbCells, false);
   m_cdone.assign(nbCells, false);
   
+  SafePtr<MapGeoToTrsAndIdx> mapGeoToTrs = MeshDataStack::getActive()->getMapGeoToTrs("MapFacesToTrs");
+  SafePtr<ConnectivityTable<CFuint> > cellFaces = MeshDataStack::getActive()->getConnectivity("cellFaces");
+  DataHandle<CFint> isOutward = socket_isOutward.getDataHandle();
+    
   while (m < nbCells) { //The loop over the cells begins
     mLast = m;	  //Checking to see if it counts all the cells
     for (CFuint iCell = 0; iCell < nbCells; iCell++) {
       CFLog(DEBUG_MAX, "RadiativeTransferFVDOM::getAdvanceOrder() => iCell = " << iCell <<"\n");
       if (m_sdone[iCell] == false) {
-	geoData.idx = iCell;
-	GeometricEntity* currCell = m_geoBuilder.buildGE();
-	const CFuint elemID = currCell->getState(0)->getLocalID();	
-	const vector<GeometricEntity*>& faces = *currCell->getNeighborGeos();
-	const CFuint nbFaces = faces.size();
-	
+	const CFuint nbFaces = cellFaces->nbCols(iCell);
 	for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
-	  const GeometricEntity *const face = currCell->getNeighborGeo(iFace);
-	  setFaceNormal(face->getID(), elemID);
-	  const CFreal dotMult = getDirDotNA(d);
-	  State *const neighborState = (currCell->getState(0) == face->getState(0)) ? face->getState(1) : face->getState(0);
-	  const CFuint neighborID = neighborState->getLocalID();
-	  const bool neighborIsSdone =  m_sdone[neighborID] || neighborState->isGhost(); // AL: this could lead to a very subtle BUG
-	  // first check if it is a ghost, otherwise it could fail if m_sdone for the neighborID of the ghost was already set to "true" and this is not a ghost
-	  // ghosts have local IDs but they restart from 0 up to the maximum number of ghosts 
-	  // const bool neighborIsSdone =  neighborState->isGhost() || m_sdone[neighborID]; 
-	  // cout << "is ghost = " << neighborState->isGhost() << endl;
+	  const CFuint faceID = (*cellFaces)(iCell, iFace);
+	  const bool isBFace  = mapGeoToTrs->isBGeo(faceID);
+	  // find the TRS to which the current face belong
+	  const TopologicalRegionSet& faceTrs = *mapGeoToTrs->getTrs(faceID);
+	  // find the local index for such a face within the corresponding TRS
+	  const CFuint faceIdx = mapGeoToTrs->getIdxInTrs(faceID);
+	  // get the IDs of the two states (i.e. cells) for such a face
+	  const CFuint sID0 = faceTrs.getStateID(faceIdx, 0);
+	  // this index should not be used for boundary faces
+	  const CFuint sID1 = faceTrs.getStateID(faceIdx, 1);
+	  const CFuint neighborCellID = (iCell == sID0) ? sID1 : sID0;
+	  const bool neighborIsSdone = (!isBFace) ? m_sdone[neighborCellID] : true;
 	  
-	  //If the dot product is negative and the neighbor is not done, it skips the cell and continue the loop
+	  // When dot product is < 0 and neighbor is undone, skip the cell and continue the loop
+	  const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
+	  const CFreal dotMult = dotProdInFace[faceID]*factor;
 	  if (dotMult < 0. && neighborIsSdone == false) {goto cell_loop;}
 	}// end loop over the FACES
 	
-	// cout << "advanceOrder[" << d << "][" << m <<"] = " << iCell << endl;
+	// CFLog(DEBUG_MAX, "advanceOrder[" << d << "][" << m <<"] = " << iCell << "\n");
 	
 	advanceOrder[m] = iCell;
 	CellID[iCell] = stage;
+	m_cdone[iCell] = true;
 	m += 1;
-	m_cdone[elemID] = true;
       }// end if(Cell is not done)
       
     cell_loop:
-      m_geoBuilder.releaseGE();
+      const bool dummy = true;
     }// end of the loop over the CELLS
     
     const string msg = "advanceOrder[" + StringOps::to_str(d) + "] = ";
     CFLog(DEBUG_MAX, CFPrintContainer<vector<int> >(msg, &advanceOrder) << "\n");
     
-    if (m == mLast) {		//Check that it wrote a cell in the current stage
-      std::cout << "No cell added to advance list in direction number = " << d <<". Problem with mesh.\n";
-      //cf_assert(m != mLast);
-      /// Test to rotate the directions
-      CFreal xAngleRotation;
-      CFreal yAngleRotation;
-      CFreal zAngleRotation;
-      std::cout << "Try rotating in x. Introduce an angle in degrees\n";
-      std::cout << "Theta = \n";
-      std::cin >> xAngleRotation;
-      std::cout << "Try rotating in y. Introduce an angle in degrees\n";
-      std::cout << "Phi = \n";
-      std::cin >> yAngleRotation;
-      std::cout << "Try rotating in z. Introduce an angle in degrees\n";
-      std::cout << "Psi = \n";
-      std::cin >> zAngleRotation;
-      
-      xAngleRotation *= pi/180;
-      yAngleRotation *= pi/180;
-      zAngleRotation *= pi/180;
-      
-      for(CFuint dirs = 0; dirs < m_nbDirs; dirs++){
-	//Rotating over x
-	const CFreal rot0 = m_dirs(dirs,0);
-	const CFreal rot1 = m_dirs(dirs,1)*std::cos(xAngleRotation) - m_dirs(dirs,2)*std::sin(xAngleRotation);
-	const CFreal rot2 = m_dirs(dirs,1)*std::sin(xAngleRotation) + m_dirs(dirs,2)*std::cos(xAngleRotation);
-	//Rotating over y
-	const CFreal rot3 = rot0*std::cos(yAngleRotation) + rot2*std::sin(yAngleRotation);
-	const CFreal rot4 = rot1;
-	const CFreal rot5 = -rot0*std::sin(yAngleRotation) + rot2*std::cos(yAngleRotation);
-	//Rotating over z
-	const CFreal rot6 = rot3*std::cos(zAngleRotation) - rot4*std::sin(zAngleRotation);
-	const CFreal rot7 = rot3*std::sin(zAngleRotation) + rot4*std::cos(zAngleRotation);
-	const CFreal rot8 = rot5;
-	
-	m_dirs(dirs,0) = rot6;
-	m_dirs(dirs,1) = rot7;
-	m_dirs(dirs,2) = rot8;
-	CFLog(VERBOSE, "dirs[" << dirs <<"] = ("<<  m_dirs(dirs,0) <<", " << m_dirs(dirs,1) <<", "<<m_dirs(dirs,2)<<")\n");
-      }
-      CFLog(ERROR, "RadiativeTransferFVDOM::getAdvanceOrder() => No cell added to advance list. Problem with mesh\n");
-      return; // goto directions_loop;
-      cf_assert(m != mLast);
-    }
-    advanceOrder[m - 1] = - advanceOrder[m - 1];
+    if (m == mLast) {diagnoseProblem(d, m, mLast);}
+    
+    advanceOrder[m - 1] *= -1;
     m_sdone = m_cdone;
     
     CFLog(VERBOSE, "RadiativeTransferFVDOM::getAdvanceOrder() => m  "<< m << " \n");
@@ -1351,6 +1175,12 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
   const CFuint nbCells = cells->getLocalNbGeoEnts();
   cf_assert(m_advanceOrder[d].size() == nbCells);
   
+  // precompute the dot products for all faces and directions (a part from the sign)
+  RealVector dotProdInFace;
+  computeDotProdInFace(d, dotProdInFace);
+    
+  DataHandle<CFint> isOutward = socket_isOutward.getDataHandle();
+  
   for (CFuint m = 0; m < nbCells; m++) {
     CFreal inDirDotnANeg = 0.;
     CFreal Ic            = 0.;
@@ -1376,8 +1206,9 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
       
       for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
 	const GeometricEntity *const face = currCell->getNeighborGeo(iFace);
-	setFaceNormal(face->getID(), elemID);
-	const CFreal dirDotNA = getDirDotNA(d);
+	const CFuint faceID = face->getID();
+	const CFreal factor = ((CFuint)(isOutward[faceID]) != elemID) ? -1. : 1.;
+	const CFreal dirDotNA = dotProdInFace[faceID]*factor;
 	
 	if(dirDotNA < 0.) {
 	  dirDotnANeg += dirDotNA;
@@ -1401,8 +1232,9 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
       CFreal dirDotnAPos = 0;
       for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
 	const GeometricEntity *const face = currCell->getNeighborGeo(iFace);
-	setFaceNormal(face->getID(), elemID);
-	const CFreal dirDotNA = getDirDotNA(d);
+	const CFuint faceID = face->getID();
+	const CFreal factor = ((CFuint)(isOutward[faceID]) != elemID) ? -1. : 1.;
+	const CFreal dirDotNA = dotProdInFace[faceID]*factor;
 	
 	if (dirDotNA >= 0.){
 	  dirDotnAPos += dirDotNA;
@@ -1429,9 +1261,9 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
     CFreal inDirDotnA = inDirDotnANeg;
     for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
       const GeometricEntity *const face = currCell->getNeighborGeo(iFace);
-      setFaceNormal(face->getID(), elemID);
-      const CFreal dirDotNA = getDirDotNA(d); 
-      
+      const CFuint faceID = face->getID();
+      const CFreal factor = ((CFuint)(isOutward[faceID]) != elemID) ? -1. : 1.;
+      const CFreal dirDotNA = dotProdInFace[faceID]*factor;
       if (dirDotNA > 0.){
 	inDirDotnA += m_In[iCell]*dirDotNA;
       }
@@ -1449,8 +1281,79 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
 }
       
 //////////////////////////////////////////////////////////////////////////////
+
+void RadiativeTransferFVDOM::diagnoseProblem(const CFuint d, 
+					     const CFuint m, 
+					     const CFuint mLast)
+{
+  //Check that it wrote a cell in the current stage
+  std::cout << "No cell added to advance list in direction number = " << d <<". Problem with mesh.\n";
   
-    } // namespace RadiativeTransfer
+  const CFreal pi = MathTools::MathConsts::CFrealPi();
+  
+  /// Test to rotate the directions
+  CFreal xAngleRotation = 0.;
+  CFreal yAngleRotation = 0.;
+  CFreal zAngleRotation = 0.;
+  std::cout << "Try rotating in x. Introduce an angle in degrees\n";
+  std::cout << "Theta = \n";
+  std::cin >> xAngleRotation;
+  std::cout << "Try rotating in y. Introduce an angle in degrees\n";
+  std::cout << "Phi = \n";
+  std::cin >> yAngleRotation;
+  std::cout << "Try rotating in z. Introduce an angle in degrees\n";
+  std::cout << "Psi = \n";
+  std::cin >> zAngleRotation;
+  
+  xAngleRotation *= pi/180.;
+  yAngleRotation *= pi/180.;
+  zAngleRotation *= pi/180.;
+  
+  for(CFuint dirs = 0; dirs < m_nbDirs; dirs++){
+    //Rotating over x
+    const CFreal rot0 = m_dirs(dirs,0);
+    const CFreal rot1 = m_dirs(dirs,1)*std::cos(xAngleRotation) - m_dirs(dirs,2)*std::sin(xAngleRotation);
+    const CFreal rot2 = m_dirs(dirs,1)*std::sin(xAngleRotation) + m_dirs(dirs,2)*std::cos(xAngleRotation);
+    //Rotating over y
+    const CFreal rot3 = rot0*std::cos(yAngleRotation) + rot2*std::sin(yAngleRotation);
+    const CFreal rot4 = rot1;
+    const CFreal rot5 = -rot0*std::sin(yAngleRotation) + rot2*std::cos(yAngleRotation);
+    //Rotating over z
+    const CFreal rot6 = rot3*std::cos(zAngleRotation) - rot4*std::sin(zAngleRotation);
+    const CFreal rot7 = rot3*std::sin(zAngleRotation) + rot4*std::cos(zAngleRotation);
+    const CFreal rot8 = rot5;
+    
+    m_dirs(dirs,0) = rot6;
+    m_dirs(dirs,1) = rot7;
+    m_dirs(dirs,2) = rot8;
+    CFLog(VERBOSE, "dirs[" << dirs <<"] = ("<<  m_dirs(dirs,0) <<", " << m_dirs(dirs,1) <<", "<<m_dirs(dirs,2)<<")\n");
+  }
+  CFLog(ERROR, "RadiativeTransferFVDOM::getAdvanceOrder() => No cell added to advance list. Problem with mesh\n");
+  return; // goto directions_loop;
+  cf_assert(m != mLast);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+  
+void RadiativeTransferFVDOM::computeDotProdInFace(const CFuint d, RealVector& dotProdInFace)
+{
+  const CFuint DIM = 3;
+  DataHandle<CFreal> normals = socket_normals.getDataHandle();
+  const CFuint totalNbFaces = normals.size()/DIM;
+  dotProdInFace.resize(totalNbFaces);
+  RealVector normalPtr(DIM, static_cast<CFreal*>(NULL));
+  
+  for (CFuint faceID = 0; faceID < totalNbFaces; ++faceID) {
+    const CFuint startID = faceID*DIM;
+    normalPtr.wrap(DIM, &normals[startID]);
+    // the sign of each dot product will depend on the actual considered cell within the loop
+    dotProdInFace[faceID] = getDirDotNA(d, normalPtr);
+  }
+}      
+      
+//////////////////////////////////////////////////////////////////////////////
+
+ } // namespace RadiativeTransfer
 
 } // namespace COOLFluiD
 

@@ -70,12 +70,7 @@ public:
    * Compute the directions depending on the option selected 
    */  
   void getDirections();
-  
-  /**
-   * Compute the advance order depending on the option selected 
-   */  
-  void getAdvanceOrder(); 
-  
+    
   /**
    * Compute the advance order depending on the option selected 
    */  
@@ -142,9 +137,9 @@ private: //function
   }
   
   /// get the inner product normal*direction (the normal includes the area)
-  CFreal getDirDotNA(const CFuint d) const
+  CFreal getDirDotNA(const CFuint d, const RealVector& normal) const
   {
-    return m_normal[XX]*m_dirs(d,XX) + m_normal[YY]*m_dirs(d,YY) + m_normal[ZZ]*m_dirs(d,ZZ);
+    return normal[XX]*m_dirs(d,XX) + normal[YY]*m_dirs(d,YY) + normal[ZZ]*m_dirs(d,ZZ);
   }	  
   
   /// compute the radiative heat flux
@@ -152,6 +147,12 @@ private: //function
   /// @param d   ID of the direction
   void computeQ(const CFuint ib, const CFuint d);
   
+  /// diagnose problem when advance order algorithm fails
+  void diagnoseProblem(const CFuint d, const CFuint m, const CFuint mLast);
+  
+  /// compute the dot products direction*normal for each face (sign will be adjusted on-the-fly) 
+  void computeDotProdInFace(const CFuint d, RealVector& dotProdInFace);
+    
 private: //data
 
   /// storage of states
