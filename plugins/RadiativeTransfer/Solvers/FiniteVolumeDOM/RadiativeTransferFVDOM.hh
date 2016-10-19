@@ -84,8 +84,7 @@ public:
   /**
    * Compute the advance order depending on the option selected 
    */  
-  void getFieldOpacities(const CFuint ib, const CFuint iCell, 
-			 Framework::GeometricEntity *const currCell);
+  void getFieldOpacities(const CFuint ib, const CFuint iCell);
   
   /**
    * Reads the binary file containing the opacities as function of the temperature, pressure
@@ -153,6 +152,18 @@ private: //function
   /// compute the dot products direction*normal for each face (sign will be adjusted on-the-fly) 
   void computeDotProdInFace(const CFuint d, RealVector& dotProdInFace);
     
+  /// get the neighbor cell ID to the given face and cell
+  CFuint getNeighborCellID(const CFuint faceID, const CFuint cellID) const 
+  {
+    // find the TRS to which the current face belong
+    const Framework::TopologicalRegionSet& faceTrs = *m_mapGeoToTrs->getTrs(faceID);
+    // find the local index for such a face within the corresponding TRS
+    const CFuint faceIdx = m_mapGeoToTrs->getIdxInTrs(faceID);
+    // first neighbor of the current face
+    const CFuint sID0 = faceTrs.getStateID(faceIdx, 0);
+    return (cellID == sID0) ? faceTrs.getStateID(faceIdx, 1) : sID0;
+  }
+  
 private: //data
 
   /// storage of states
@@ -197,6 +208,9 @@ private: //data
   
   /// pointer to the physical-chemical library
   Common::SafePtr<Framework::PhysicalChemicalLibrary> m_library; 
+  
+  /// map faces to corresponding TRS and index inside that TRS
+  Common::SafePtr<Framework::MapGeoToTrsAndIdx> m_mapGeoToTrs;
   
   /// builder of geometric entities
   Framework::GeometricEntityPool<Framework::CellTrsGeoBuilder> m_geoBuilder;

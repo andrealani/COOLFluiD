@@ -63,6 +63,7 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   socket_qz("qz"),
   socket_TempProfile("TempProfile"),
   m_library(CFNULL),
+  m_mapGeoToTrs(CFNULL),
   m_geoBuilder(), 
   m_faceBuilder(),
   m_normal(),
@@ -234,6 +235,8 @@ void RadiativeTransferFVDOM::setup()
   geoData.trs = MeshDataStack::getActive()->getTrs("InnerCells");
   
   m_faceBuilder.setup();
+  
+  m_mapGeoToTrs = MeshDataStack::getActive()->getMapGeoToTrs("MapFacesToTrs");
   
   CFLog(VERBOSE, "RadiativeTransferFVDOM::setup() => start\n");
   CFLog(VERBOSE, "RadiativeTransferFVDOM::setup() => [threadID / nbThreads] = [" 
@@ -411,8 +414,6 @@ void RadiativeTransferFVDOM::setup()
     m_advanceOrder[i].resize(nbCells);
   }
   
- 
-
   m_normal.resize(DIM, 0.); 
   
   DataHandle<CFreal> CellID = socket_CellID.getDataHandle();
@@ -769,12 +770,13 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d, vector<int>& advanc
   
   CFuint mLast = 0;
   CFuint m = 0;
+
   CFuint stage = 1;
   // Initializing the sdone and cdone for each direction
   m_sdone.assign(nbCells, false);
   m_cdone.assign(nbCells, false);
   
-  SafePtr<MapGeoToTrsAndIdx> mapGeoToTrs = MeshDataStack::getActive()->getMapGeoToTrs("MapFacesToTrs");
+  
   SafePtr<ConnectivityTable<CFuint> > cellFaces = MeshDataStack::getActive()->getConnectivity("cellFaces");
   DataHandle<CFint> isOutward = socket_isOutward.getDataHandle();
     
@@ -786,17 +788,8 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d, vector<int>& advanc
 	const CFuint nbFaces = cellFaces->nbCols(iCell);
 	for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
 	  const CFuint faceID = (*cellFaces)(iCell, iFace);
-	  const bool isBFace  = mapGeoToTrs->isBGeo(faceID);
-	  // find the TRS to which the current face belong
-	  const TopologicalRegionSet& faceTrs = *mapGeoToTrs->getTrs(faceID);
-	  // find the local index for such a face within the corresponding TRS
-	  const CFuint faceIdx = mapGeoToTrs->getIdxInTrs(faceID);
-	  // get the IDs of the two states (i.e. cells) for such a face
-	  const CFuint sID0 = faceTrs.getStateID(faceIdx, 0);
-	  // this index should not be used for boundary faces
-	  const CFuint sID1 = faceTrs.getStateID(faceIdx, 1);
-	  const CFuint neighborCellID = (iCell == sID0) ? sID1 : sID0;
-	  const bool neighborIsSdone = (!isBFace) ? m_sdone[neighborCellID] : true;
+	  const bool isBFace  = m_mapGeoToTrs->isBGeo(faceID);
+	  const bool neighborIsSdone = (!isBFace) ? m_sdone[getNeighborCellID(faceID, iCell)] : true;
 	  
 	  // When dot product is < 0 and neighbor is undone, skip the cell and continue the loop
 	  const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
@@ -1089,8 +1082,7 @@ void RadiativeTransferFVDOM::unsetup()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void RadiativeTransferFVDOM::getFieldOpacities(const CFuint ib, const CFuint iCell, 
-				  GeometricEntity* const currCell)
+void RadiativeTransferFVDOM::getFieldOpacities(const CFuint ib, const CFuint iCell)
 {
   m_fieldSource[iCell] = 0.;
   if(m_useExponentialMethod){
@@ -1104,7 +1096,7 @@ void RadiativeTransferFVDOM::getFieldOpacities(const CFuint ib, const CFuint iCe
   DataHandle<CFreal> TempProfile = socket_TempProfile.getDataHandle();
   DataHandle<CFreal> volumes     = socket_volumes.getDataHandle();
   
-  const State *currState = currCell->getState(0); // please note the reference &
+  const State *currState = socket_states.getDataHandle()[iCell]; 
   //Get the field pressure and T commented because now we impose a temperature profile
   CFreal p = 0.;
   CFreal T = 0.;
@@ -1178,7 +1170,7 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
   // precompute the dot products for all faces and directions (a part from the sign)
   RealVector dotProdInFace;
   computeDotProdInFace(d, dotProdInFace);
-    
+  SafePtr<ConnectivityTable<CFuint> > cellFaces = MeshDataStack::getActive()->getConnectivity("cellFaces");
   DataHandle<CFint> isOutward = socket_isOutward.getDataHandle();
   
   for (CFuint m = 0; m < nbCells; m++) {
@@ -1187,16 +1179,12 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
     
     // allocate the cell entity
     const CFuint iCell = std::abs(m_advanceOrder[d][m]);
-    geoData.idx = iCell;    
-    GeometricEntity *const currCell = m_geoBuilder.buildGE();
     
     // new algorithm (more parallelizable): opacities are computed cell by cell
     // for a given bin
-    if (!m_oldAlgo) {getFieldOpacities(ib, iCell, currCell);} 
+    if (!m_oldAlgo) {getFieldOpacities(ib, iCell);} 
     
-    const CFuint elemID = currCell->getState(0)->getLocalID();	
-    const vector<GeometricEntity*>& faces = *currCell->getNeighborGeos();
-    const CFuint nbFaces = faces.size();
+    const CFuint nbFaces = cellFaces->nbCols(iCell);
     
     if(m_useExponentialMethod){
       inDirDotnANeg = 0.;
@@ -1205,17 +1193,17 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
       CFreal halfExp = 0;
       
       for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
-	const GeometricEntity *const face = currCell->getNeighborGeo(iFace);
-	const CFuint faceID = face->getID();
-	const CFreal factor = ((CFuint)(isOutward[faceID]) != elemID) ? -1. : 1.;
+	const CFuint faceID = (*cellFaces)(iCell, iFace);
+	const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
 	const CFreal dirDotNA = dotProdInFace[faceID]*factor;
 	
 	if(dirDotNA < 0.) {
 	  dirDotnANeg += dirDotNA;
-	  State *const neighborState = (currCell->getState(0) == face->getState(0)) ? 
-	    face->getState(1) : face->getState(0);
-	  if(neighborState->isGhost() == false){
-	    inDirDotnANeg += m_In[neighborState->getLocalID()]*dirDotNA;
+	  
+	  const bool isBFace = m_mapGeoToTrs->isBGeo(faceID);
+	  if (!isBFace){
+	    const CFuint neighborCellID = getNeighborCellID(faceID, iCell);
+	    inDirDotnANeg += m_In[neighborCellID]*dirDotNA;
 	  }
 	  else {
 	    const CFreal boundarySource = m_fieldSource[iCell];
@@ -1231,18 +1219,18 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
     else{
       CFreal dirDotnAPos = 0;
       for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
-	const GeometricEntity *const face = currCell->getNeighborGeo(iFace);
-	const CFuint faceID = face->getID();
-	const CFreal factor = ((CFuint)(isOutward[faceID]) != elemID) ? -1. : 1.;
+	const CFuint faceID = (*cellFaces)(iCell, iFace);
+	const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
 	const CFreal dirDotNA = dotProdInFace[faceID]*factor;
 	
 	if (dirDotNA >= 0.){
 	  dirDotnAPos += dirDotNA;
 	}
 	else {
-	  State *const neighborState = (currCell->getState(0) == face->getState(0)) ? face->getState(1) : face->getState(0);
-	  if (neighborState->isGhost() == false){
-	    inDirDotnANeg += m_In[neighborState->getLocalID()]*dirDotNA;
+	  const bool isBFace = m_mapGeoToTrs->isBGeo(faceID);
+	  if (!isBFace){
+	    const CFuint neighborCellID = getNeighborCellID(faceID, iCell);
+	    inDirDotnANeg += m_In[neighborCellID]*dirDotNA;
 	  }
 	  else {
 	    const CFreal boundarySource = m_fieldSource[iCell];
@@ -1260,20 +1248,16 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
     
     CFreal inDirDotnA = inDirDotnANeg;
     for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
-      const GeometricEntity *const face = currCell->getNeighborGeo(iFace);
-      const CFuint faceID = face->getID();
-      const CFreal factor = ((CFuint)(isOutward[faceID]) != elemID) ? -1. : 1.;
+      const CFuint faceID = (*cellFaces)(iCell, iFace);
+      const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
       const CFreal dirDotNA = dotProdInFace[faceID]*factor;
-      if (dirDotNA > 0.){
+      if (dirDotNA > 0.) {
 	inDirDotnA += m_In[iCell]*dirDotNA;
       }
     }
     
     m_divq[iCell] += inDirDotnA*m_weight[d];
     m_II[iCell]   += Ic*m_weight[d];
-    
-    // deallocate the cell entity
-    m_geoBuilder.releaseGE();
   }  
   
   CFLog(VERBOSE, "RadiativeTransferFVDOM::computeQ() in (bin, dir) = ("
