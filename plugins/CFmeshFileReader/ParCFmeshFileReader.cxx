@@ -938,7 +938,6 @@ void ParCFmeshFileReader::emptyNodeListRead(ifstream& fin)
 void ParCFmeshFileReader::readStateList(ifstream& fin)
 {
   CFLogDebugMin( "ParCFmeshFileReader::readStateList() start\n");
-  CFLog(INFO, "ParCFmeshFileReader::readStateList() start\n");
   
   if ((m_initValues.size()    != m_useInitValues.size()) && (m_initValuesIDs.size() != m_useInitValues.size())) {
     CFLog(VERBOSE, "ParCFmeshFileReader::readStateList() => m_initValues.size()    = " << m_initValues.size() << "\n");
