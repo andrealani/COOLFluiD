@@ -80,6 +80,7 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   m_Ptable(),
   m_sdone(),
   m_cdone(),
+  m_cdoneIdx(),
   m_dirs(),
   m_advanceOrder(),
   m_q(),
@@ -296,9 +297,11 @@ void RadiativeTransferFVDOM::setup()
     MeshDataStack::getActive()->getConnectivity("cellStates_InnerCells");
 
   const CFuint nbCells = cells->nbRows();
-  
+    
   m_sdone.resize(nbCells);
   m_cdone.resize(nbCells);
+  m_cdoneIdx.reserve(nbCells);
+  
   if(m_useExponentialMethod){
     m_fieldSource.resize(nbCells);
     m_fieldAbsor.resize(nbCells);
@@ -775,7 +778,9 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d, vector<int>& advanc
   // Initializing the sdone and cdone for each direction
   m_sdone.assign(nbCells, false);
   m_cdone.assign(nbCells, false);
-  
+  m_cdoneIdx.clear();
+  cf_assert(m_cdoneIdx.size() == 0);
+  cf_assert(m_cdoneIdx.capacity() == nbCells);
   
   SafePtr<ConnectivityTable<CFuint> > cellFaces = MeshDataStack::getActive()->getConnectivity("cellFaces");
   DataHandle<CFint> isOutward = socket_isOutward.getDataHandle();
@@ -802,6 +807,7 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d, vector<int>& advanc
 	advanceOrder[m] = iCell;
 	CellID[iCell] = stage;
 	m_cdone[iCell] = true;
+	m_cdoneIdx.push_back(iCell);
 	m += 1;
       }// end if(Cell is not done)
       
@@ -815,7 +821,12 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d, vector<int>& advanc
     if (m == mLast) {diagnoseProblem(d, m, mLast);}
     
     advanceOrder[m - 1] *= -1;
-    m_sdone = m_cdone;
+    
+    CFLog(DEBUG_MAX, "At stage[" << stage << "] => m_cdoneIdx.size() = " << m_cdoneIdx.size() << "\n");
+    for (CFuint id = 0; id < m_cdoneIdx.size(); ++id) {
+      m_sdone[m_cdoneIdx[id]] = true;
+    }
+    m_cdoneIdx.clear();
     
     CFLog(VERBOSE, "RadiativeTransferFVDOM::getAdvanceOrder() => m  "<< m << " \n");
     CFLog(VERBOSE, "RadiativeTransferFVDOM::getAdvanceOrder() => End of the "<< stage << " stage\n");
