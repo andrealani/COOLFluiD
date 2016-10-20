@@ -30,7 +30,7 @@ CFEnv.RegistSignalHandlers = false
 # This tests the configuration file: it gives error if some options are wrong
 # This always fails with converters (THOR2CFmesh, Gambit2CFmesh, etc.): 
 # deactivate the option in those cases 
-CFEnv.ErrorOnUnusedConfig = true
+#CFEnv.ErrorOnUnusedConfig = true
 
 # global parameter to control the number of writers for all algorithms
 #CFEnv.NbWriters = 4
@@ -80,14 +80,21 @@ Simulator.SubSystem.Default.listTRS = SuperInlet SuperOutlet
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 
 # binary CFmesh reader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2D-sol.CFmesh
-Simulator.SubSystem.CFmeshFileReader.ReadCFmesh = ParReadCFmeshBinary
+#Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2D-sol.CFmesh
+#Simulator.SubSystem.CFmeshFileReader.ReadCFmesh = ParReadCFmeshBinary
 
-Simulator.SubSystem.ConvergenceMethod = EmptyIterator
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2Dsfdm.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = jets2DQDPert.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+#EmptyIterator
 #FwdEuler
 #Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.8
 
 Simulator.SubSystem.SpaceMethod = FluxReconstruction
-#Simulator.SubSystem.FluxReconstructionSolver.Builder = StdBuilder 
-
+Simulator.SubSystem.FluxReconstructionSolver.Builder = StdBuilder 
 Simulator.SubSystem.FluxReconstruction.Data.InterfaceFluxComputer = Null

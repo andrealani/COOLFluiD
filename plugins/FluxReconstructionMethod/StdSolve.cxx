@@ -30,9 +30,10 @@ StdSolve::StdSolve(const std::string& name) :
   {
   }
   
-  
-  std::vector< Common::SafePtr< BaseDataSocketSink > >
-  StdSolve::needsSockets()
+//////////////////////////////////////////////////////////////////////////////
+
+std::vector< Common::SafePtr< BaseDataSocketSink > >
+StdSolve::needsSockets()
 {
   std::vector< Common::SafePtr< BaseDataSocketSink > > result;
   result.push_back(&socket_gradients);
@@ -45,6 +46,8 @@ StdSolve::StdSolve(const std::string& name) :
 void StdSolve::execute()
 {
   CFAUTOTRACE;
+  
+  CFLog(INFO, "StdSolve::execute()\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
