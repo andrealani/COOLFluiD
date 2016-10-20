@@ -30,6 +30,8 @@ void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("SolveCom","Command to solve the problem with FluxReconstruction solver.");
   options.addConfigOption< std::string >("UnSetupCom","Command to deallocate FluxReconstruction solver data.");
   options.addConfigOption< std::string >("SetupCom","Command to initialize FluxReconstruction solver data.");
+  options.addConfigOption< std::vector<std::string> >("SrcTermComds","Types of the source term commands.");
+  options.addConfigOption< std::vector<std::string> >("SrcTermNames","Names of the source term commands.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -59,6 +61,13 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
 
   m_solveStr   = "StdSolve";
   setParameter( "SolveCom",   &m_solveStr );
+  
+  // options for source term commands
+  m_srcTermTypeStr = std::vector<std::string>();
+  setParameter("SrcTermComds",&m_srcTermTypeStr);
+
+  m_srcTermNameStr = std::vector<std::string>();
+  setParameter("SrcTermNames",&m_srcTermNameStr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -102,6 +111,32 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
   cf_assert(m_setup.isNotNull());
   cf_assert(m_unsetup.isNotNull());
   cf_assert(m_solve.isNotNull());
+  
+  configureSourceTermCommands(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionSolver::configureSourceTermCommands ( Config::ConfigArgs& args )
+{
+  CFAUTOTRACE;
+  cf_assert(m_srcTermTypeStr.size() == m_srcTermNameStr.size());
+
+  m_srcTerms.resize(m_srcTermTypeStr.size());
+
+  for(CFuint i = 0; i < m_srcTerms.size(); ++i)
+  {
+
+    CFLog(INFO, "SOURCE TERM type = " << m_srcTermTypeStr[i] << "\n");
+    CFLog(INFO, "SOURCE TERM name = " << m_srcTermNameStr[i] << "\n");
+
+    configureCommand<FluxReconstructionSolverCom,
+                     FluxReconstructionSolverData,
+                     FluxReconstructionSolverComProvider>
+        (args, m_srcTerms[i], m_srcTermTypeStr[i],m_srcTermNameStr[i], m_data);
+
+    cf_assert(m_srcTerms[i].isNotNull());
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

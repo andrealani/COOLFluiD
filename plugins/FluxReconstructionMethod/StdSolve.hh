@@ -26,14 +26,25 @@ class StdSolve : public FluxReconstructionSolverCom {
 public: // functions
 
   /// Constructor
-  explicit StdSolve(const std::string& name) : FluxReconstructionSolverCom(name) {}
+  explicit StdSolve(const std::string& name);
 
   /// Destructor
   virtual ~StdSolve() {}
 
   /// Execute processing actions
   void execute();
+  
+  /// Returns the DataSocket's that this command needs as sinks
+  /// @return a vector of SafePtr with the DataSockets
+  std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
+    needsSockets();
 
+protected: //data
+  /// socket for gradients
+  Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
+  
+  /// socket for normals
+  Framework::DataSocketSink< CFreal > socket_normals;
 }; // class Solve
 
 //////////////////////////////////////////////////////////////////////////////

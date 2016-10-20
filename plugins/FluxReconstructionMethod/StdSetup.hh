@@ -57,6 +57,12 @@ protected: // data
 
   /// socket for state's
   Framework::DataSocketSink<Framework::State*, Framework::GLOBAL> socket_states;
+  
+  /// socket for gradients
+  Framework::DataSocketSource< std::vector< RealVector > > socket_gradients;
+  
+  /// socket for normals
+  Framework::DataSocketSource< CFreal > socket_normals;
 
 };  // class StdSetup
 

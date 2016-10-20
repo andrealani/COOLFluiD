@@ -26,6 +26,7 @@ namespace COOLFluiD {
   namespace FluxReconstructionMethod {
 
     class FluxReconstructionStrategy;
+    class BaseInterfaceFlux;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -110,6 +111,13 @@ public: // functions
     cf_assert(m_fluxreconstructionstrategy.isNotNull());
     return m_fluxreconstructionstrategy.getPtr();
   }
+  
+  /// Gets the interface flux computation strategy
+  BaseInterfaceFlux * getInterfaceFluxStrategy() const
+  {
+    cf_assert(m_interfaceflux.isNotNull());
+    return m_interfaceflux.getPtr();
+  }
 
 private:  // helper functions
 
@@ -141,6 +149,12 @@ private:  // data
 
   /// String to configure FluxReconstruction strategy
   std::string m_fluxreconstructionstrategyStr;
+  
+  /// Interface flux computation strategy
+  Common::SelfRegistPtr< BaseInterfaceFlux > m_interfaceflux;
+
+  /// String to configure interface flux computation strategy
+  std::string m_interfacefluxStr;
 
 };  // end of class FluxReconstructionSolverData
 
@@ -148,6 +162,9 @@ private:  // data
 
 /// Definition of a MethodCommand for FluxReconstructionMethod
 typedef Framework::MethodCommand< FluxReconstructionSolverData > FluxReconstructionSolverCom;
+
+/// Definition of a command provider for FluxReconstructionMethod
+typedef FluxReconstructionSolverCom::PROVIDER FluxReconstructionSolverComProvider;
 
 /// Definition of a MethodStrategy for FluxReconstructionMethod
 typedef Framework::MethodStrategy< FluxReconstructionSolverData > FluxReconstructionSolverStrategy;

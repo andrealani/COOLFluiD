@@ -13,6 +13,7 @@
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
 #include "FluxReconstructionMethod/FluxReconstructionStrategy.hh"
+#include "FluxReconstructionMethod/BaseInterfaceFlux.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -36,6 +37,7 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
   options.addConfigOption< std::string >("IntegratorOrder","Order of the Integration to be used for numerical quadrature.");
   options.addConfigOption< std::string >("IntegratorQuadrature","Type of Quadrature to be used in the Integration.");
   options.addConfigOption< std::string >("StrategyForSomething","A MethodStrategy to be used for some calculation (default = FluxReconstructionStrategy).");
+  options.addConfigOption< std::string >("InterfaceFluxComputer","Name of the interface flux computer");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -55,6 +57,9 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
 
   m_fluxreconstructionstrategyStr = "FluxReconstructionStrategy";
   setParameter( "StrategyForSomething", &m_fluxreconstructionstrategyStr );
+  
+  m_interfacefluxStr = "BaseInterfaceFlux";
+  setParameter( "InterfaceFluxComputer", &m_interfacefluxStr );
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -101,6 +106,28 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
 
   }
   cf_assert(m_fluxreconstructionstrategy.isNotNull());
+  
+  CFLog(INFO,"Configure strategy type: " << m_interfacefluxStr << "\n");
+  try {
+
+    SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BaseInterfaceFlux > >
+      prov = Environment::Factory< BaseInterfaceFlux >::getInstance().getProvider(
+        m_interfacefluxStr );
+    cf_assert(prov.isNotNull());
+    m_interfaceflux = prov->create(m_interfacefluxStr,thisPtr);
+    configureNested ( m_interfaceflux.getPtr(), args );
+
+  } catch (Common::NoSuchValueException& e) {
+
+    CFLog(INFO, e.what() << "\n");
+    CFLog(INFO, "Choosing Null of type: " <<  BaseInterfaceFlux ::getClassName() << " instead...\n");
+    SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BaseInterfaceFlux > >
+      prov = Environment::Factory< BaseInterfaceFlux >::getInstance().getProvider("Null");
+    cf_assert(prov.isNotNull());
+    m_interfaceflux = prov->create("Null", thisPtr);
+
+  }
+  cf_assert(m_interfaceflux.isNotNull());
 
 }
 

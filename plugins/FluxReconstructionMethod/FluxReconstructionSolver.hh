@@ -106,6 +106,10 @@ protected: // interface implementation functions
 
   /// Executed on "CF_ON_MESHADAPTER_AFTERMESHUPDATE" event
   Common::Signal::return_t afterMeshUpdateActionImpl(Common::Signal::arg_t eAfter);
+  
+private: // functions
+
+  void configureSourceTermCommands( Config::ConfigArgs& args );
 
 private: // data
 
@@ -129,6 +133,15 @@ private: // data
 
   ///The data to share between FluxReconstructionSolverCom commands
   Common::SharedPtr< FluxReconstructionSolverData > m_data;
+  
+  /// The source term command types
+  std::vector<std::string> m_srcTermTypeStr;
+
+  /// The source term command names for configuration
+  std::vector<std::string> m_srcTermNameStr;
+  
+  /// The commands for the source terms
+  std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_srcTerms;
 
 //////////////////////////////////////////////////////////////////////////////
 

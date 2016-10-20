@@ -10,6 +10,8 @@ FluxReconstructionSolverData.cxx
 FluxReconstructionSolverData.hh
 FluxReconstructionStrategy.cxx
 FluxReconstructionStrategy.hh
+BaseInterfaceFlux.cxx
+BaseInterfaceFlux.hh
 StdSetup.cxx
 StdSetup.hh
 StdSolve.cxx
