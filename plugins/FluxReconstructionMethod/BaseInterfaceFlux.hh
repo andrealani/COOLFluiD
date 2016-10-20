@@ -52,7 +52,10 @@ public:  // methods
 
   /// Set up private data and data
   virtual void setup();
-
+  
+  /// Unsetup up private data and data
+  virtual void unsetup();
+  
 private: // data
 
 }; // class BaseInterfaceFlux

@@ -66,48 +66,52 @@ void StdSetup::execute()
 {
   CFAUTOTRACE;
 
-  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
-  DataHandle<ProxyDofIterator< RealVector >* > nstatesProxy =
-    socket_nstatesProxy.getDataHandle();
+  CFLog(VERBOSE, "StdSetup::execute() => START\n");
 
-  const CFuint nbStates = states.size();
-  nstatesProxy.resize(1);
+  // DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+  // DataHandle<ProxyDofIterator< RealVector >* > nstatesProxy =
+  //   socket_nstatesProxy.getDataHandle();
 
-  // set node to state mapping
-  m_nodeIDToStateID.resize(nbStates);
-  for (CFuint stateID=0;stateID<nbStates;++stateID) {
-    const CFuint nodeID = states[stateID]->getCoordinates().getLocalID();
-    cf_assert(nodeID < nbStates);
-    m_nodeIDToStateID[nodeID] = stateID;
-  }
-  nstatesProxy[0] =
-    new DofDataHandleIterator< RealVector,State, GLOBAL >(states,&m_nodeIDToStateID);
+  // const CFuint nbStates = states.size();
+  // nstatesProxy.resize(1);
+
+  // // set node to state mapping
+  // m_nodeIDToStateID.resize(nbStates);
+  // for (CFuint stateID=0;stateID<nbStates;++stateID) {
+  //   const CFuint nodeID = states[stateID]->getCoordinates().getLocalID();
+  //   cf_assert(nodeID < nbStates);
+  //   m_nodeIDToStateID[nodeID] = stateID;
+  // }
+  // nstatesProxy[0] =
+  //   new DofDataHandleIterator< RealVector,State, GLOBAL >(states,&m_nodeIDToStateID);
   
     
-    ///
-  // number of equations
-  const CFuint nbrEqs = PhysicalModelStack::getActive()->getNbEq();
+  //   ///
+  // // number of equations
+  // const CFuint nbrEqs = PhysicalModelStack::getActive()->getNbEq();
   
-  // get number of gradients (assumed equal to the number of physical variables)
-  const CFuint nbrGrads = nbrEqs;
+  // // get number of gradients (assumed equal to the number of physical variables)
+  // const CFuint nbrGrads = nbrEqs;
   
-  // dimensionality
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();  
+  // // dimensionality
+  // const CFuint dim = PhysicalModelStack::getActive()->getDim();  
 
-  // get datahandle
-  DataHandle< std::vector< RealVector > > gradients = socket_gradients.getDataHandle();
+  // // get datahandle
+  // DataHandle< std::vector< RealVector > > gradients = socket_gradients.getDataHandle();
 
-  // resize gradients
-  gradients.resize(nbStates);
-  for (CFuint iState = 0; iState < nbStates; ++iState)
-  {
-    gradients[iState].resize(nbrGrads);
-    for (CFuint iGrad = 0; iGrad < nbrGrads; ++iGrad)
-    {
-      gradients[iState][iGrad].resize(dim);
-    }
-  }
-  ///
+  // // resize gradients
+  // gradients.resize(nbStates);
+  // for (CFuint iState = 0; iState < nbStates; ++iState)
+  // {
+  //   gradients[iState].resize(nbrGrads);
+  //   for (CFuint iGrad = 0; iGrad < nbrGrads; ++iGrad)
+  //   {
+  //     gradients[iState][iGrad].resize(dim);
+  //   }
+  // }
+  /// 
+  
+  CFLog(VERBOSE, "StdSetup::execute() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -41,6 +41,8 @@ FluxReconstructionStrategy::~FluxReconstructionStrategy()
 void FluxReconstructionStrategy::compute()
 {
   CFAUTOTRACE;
+
+  CFLog(VERBOSE, "FluxReconstructionStrategy::compute()\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -48,6 +50,21 @@ void FluxReconstructionStrategy::compute()
 void FluxReconstructionStrategy::setup()
 {
   CFAUTOTRACE;
+  
+  FluxReconstructionSolverStrategy::setup();
+  
+  CFLog(VERBOSE, "FluxReconstructionStrategy::setup()\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionStrategy::unsetup()
+{
+  CFAUTOTRACE;
+  
+  FluxReconstructionSolverStrategy::unsetup();
+  
+  CFLog(VERBOSE, "FluxReconstructionStrategy::unsetup()\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

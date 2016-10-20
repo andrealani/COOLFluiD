@@ -21,7 +21,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 Environment::ObjectProvider< FluxReconstructionSolver,SpaceMethod,FluxReconstructionModule,1 >
-  fluxReconstructionSolverProvider("FluxReconstructionSolver");
+  fluxReconstructionSolverProvider("FluxReconstruction");
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -161,8 +161,8 @@ void FluxReconstructionSolver::unsetMethodImpl()
   cf_assert(m_unsetup.isNotNull());
   m_unsetup->execute();
   unsetupCommandsAndStrategies();
-
-  SpaceMethod::setMethodImpl();
+  
+  SpaceMethod::unsetMethodImpl();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -224,6 +224,35 @@ Common::Signal::return_t FluxReconstructionSolver::afterMeshUpdateActionImpl(Com
   CFAUTOTRACE;
   return Common::Signal::return_t ();
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+// std::vector<Common::SafePtr<NumericalStrategy> > FluxReconstructionSolver::getStrategyList() const
+// {
+//   vector<Common::SafePtr<NumericalStrategy> > result;
+
+//   // add strategies here
+//   result.push_back(_data->getPolyReconstructor().d_castTo<NumericalStrategy>());
+//   result.push_back(_data->getLimiter().d_castTo<NumericalStrategy>());
+  
+//   SafePtr<vector<SelfRegistPtr<ComputeSourceTerm<CellCenterFVMData> > > > sourceTerms =
+//     _data->getSourceTermComputer();
+  
+//   for(CFuint i=0; i<sourceTerms->size();++i){
+//     SafePtr<ComputeSourceTerm<CellCenterFVMData> > sourceTerm = ((*sourceTerms)[i]).getPtr();
+//     result.push_back(sourceTerm.d_castTo<NumericalStrategy>());
+//   }
+  
+//   SafePtr<vector<SelfRegistPtr<EquationFilter<CellCenterFVMData> > > > equationFilters =
+//     _data->getEquationFilters();
+  
+//   for(CFuint i=0; i<equationFilters->size();++i){
+//     SafePtr<EquationFilter<CellCenterFVMData> > eqFilter = ((*equationFilters)[i]).getPtr();
+//     result.push_back(eqFilter.d_castTo<NumericalStrategy>());
+//   }
+  
+//   return result;
+// }
 
 //////////////////////////////////////////////////////////////////////////////
 

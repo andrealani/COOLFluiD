@@ -58,7 +58,7 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_fluxreconstructionstrategyStr = "FluxReconstructionStrategy";
   setParameter( "StrategyForSomething", &m_fluxreconstructionstrategyStr );
   
-  m_interfacefluxStr = "BaseInterfaceFlux";
+  m_interfacefluxStr = "Null";
   setParameter( "InterfaceFluxComputer", &m_interfacefluxStr );
 }
 
@@ -66,6 +66,15 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
 
 FluxReconstructionSolverData::~FluxReconstructionSolverData()
 {
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionSolverData::setup()
+{
+  CFAUTOTRACE;
+  
+  SpaceMethodData::setup();
 }
 
 //////////////////////////////////////////////////////////////////////////////

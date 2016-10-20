@@ -100,10 +100,7 @@ public: // functions
   Common::SafePtr< Framework::VolumeIntegrator > getVolumeIntegrator();
 
   /// Sets up the FluxReconstructionData
-  void setup()
-  {
-    CFAUTOTRACE;
-  }
+  void setup();
 
   /// Gets the FluxReconstruction strategy
   FluxReconstructionStrategy * getFluxReconstructionStrategy() const

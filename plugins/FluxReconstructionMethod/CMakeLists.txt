@@ -12,6 +12,8 @@ FluxReconstructionStrategy.cxx
 FluxReconstructionStrategy.hh
 BaseInterfaceFlux.cxx
 BaseInterfaceFlux.hh
+NullInterfaceFlux.cxx
+NullInterfaceFlux.hh
 StdSetup.cxx
 StdSetup.hh
 StdSolve.cxx

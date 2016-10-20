@@ -43,10 +43,7 @@ public: // functions
   /// @return a vector of SafePtr with the DataSockets
   std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
     needsSockets();
-
-  /// Node to state ID map
-  std::vector< CFuint > m_nodeIDToStateID;
-
+  
 protected: // data
 
   /// socket with proxy to be able to use the data handle of nodal states
