@@ -46,9 +46,10 @@ Simulator.SubSystem.Default.PhysicalModelType = Euler2D
 Simulator.SubSystem.Euler2D.refValues = 1. 2.83972 2.83972 6.532
 Simulator.SubSystem.Euler2D.refLength = 1.0
 
-#Simulator.SubSystem.OutputFormat     = CFmesh Tecplot
-#Simulator.SubSystem.CFmesh.FileName  = jets2D-sol.CFmesh
-#Simulator.SubSystem.CFmesh.SaveRate  = 500
+Simulator.SubSystem.OutputFormat     = CFmesh 
+#Tecplot
+Simulator.SubSystem.CFmesh.FileName  = jets2D-sol.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate  = 500
 # binary CFmesh writer
 #Simulator.SubSystem.CFmesh.WriteSol = ParWriteBinarySolution
 #Simulator.SubSystem.CFmesh.ParWriteBinarySolution.ParCFmeshBinaryFileWriter.NbWriters = 4

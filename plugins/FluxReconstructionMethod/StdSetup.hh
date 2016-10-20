@@ -61,6 +61,9 @@ protected: // data
   /// socket for normals
   Framework::DataSocketSource< CFreal > socket_normals;
 
+  /// array with IDs
+  std::vector<CFuint> m_nodeIDToStateID;
+  
 };  // class StdSetup
 
 //////////////////////////////////////////////////////////////////////////////
