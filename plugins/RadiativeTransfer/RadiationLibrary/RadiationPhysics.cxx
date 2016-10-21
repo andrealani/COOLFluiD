@@ -1,12 +1,15 @@
-#include "RadiationPhysics.hh"
+#include "RadiativeTransfer/RadiationLibrary/RadiationPhysics.hh"
 #include "Framework/TopologicalRegionSet.hh"
 #include "Framework/MeshData.hh"
 #include "MathTools/RealVector.hh"
 
+/////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
 namespace RadiativeTransfer {
+
+/////////////////////////////////////////////////////////////////////////////
 
 void RadiationPhysics::defineConfigOptions(Config::OptionList& options)
 {
@@ -19,6 +22,8 @@ void RadiationPhysics::defineConfigOptions(Config::OptionList& options)
     options.addConfigOption< std::string >
         ("Reflector","Reflector Physics Distribution");
 }
+
+/////////////////////////////////////////////////////////////////////////////
 
 void RadiationPhysics::getWallStateIDs(std::vector<CFuint>& statesID,
                                         std::vector<CFuint>& wallGeoIdx)
@@ -77,9 +82,9 @@ void RadiationPhysics::getCellStateIDs(std::vector<CFuint>& statesID){
     }
  // }
 }
+
 //////////////////////////////////////////////////////////////////////////////
-/// \brief RadiationPhysics::computeInterpolatedStates
-///
+
 void RadiationPhysics::computeInterpolatedStates()
 {
   if(m_TRStypeID == WALL){
@@ -169,10 +174,22 @@ RadiationPhysics::RadiationPhysics(const std::string& name) :
 void RadiationPhysics::configure(Config::ConfigArgs& args)
 {
   Config::ConfigObject::configure(args);
-
-  m_radiator = Environment::Factory<Radiator>::getInstance().
-      getProvider( m_radiatorName )->create( m_radiatorName  );
-
+  
+  Common::SafePtr<Radiator::PROVIDER> radiatorProv = CFNULL;
+  try {
+    radiatorProv = Environment::Factory<Radiator>::getInstance().
+      getProvider(m_radiatorName);
+  }
+  catch (Common::NoSuchValueException& e) {
+    CFLog(WARN, "RadiationPhysics::configure() => creating default NullRadiator\n");
+    m_radiatorName = "NullRadiator";
+    radiatorProv = Environment::Factory<Radiator>::getInstance().
+      getProvider(m_radiatorName);
+  }
+  cf_assert(radiatorProv.isNotNull());
+  m_radiator.reset(radiatorProv->create(m_radiatorName));
+  cf_assert(m_radiator.isNotNull());
+  
   m_reflector = Environment::Factory<Reflector>::getInstance().
       getProvider(m_reflectorName)->create(m_reflectorName);
 
@@ -204,17 +221,24 @@ void RadiationPhysics::configure(Config::ConfigArgs& args)
     }
   }
 }
+
 //////////////////////////////////////////////////////////////////////////////
-void RadiationPhysics::setupSectra(CFreal wavMin,CFreal wavMax){
+
+void RadiationPhysics::setupSpectra(CFreal wavMin,CFreal wavMax)
+{
   m_radiator->setupSpectra(wavMin, wavMax);
   m_reflector->setupSpectra(wavMin, wavMax);
-
+  
   m_radiator->computeEmissionCPD();
   m_reflector->computeReflectionCPD();
-
+  
   //scatteringDist ->setupSectra(wavMin, wavMax);
 }
-void RadiationPhysics::setup(){
+ 
+//////////////////////////////////////////////////////////////////////////////
+ 
+void RadiationPhysics::setup()
+{
   m_radiator->setRadPhysicsPtr(this);
   m_radiator->setRadPhysicsHandlerPtr(m_radPhysicsHandlerPtr);
   m_radiator->setup();

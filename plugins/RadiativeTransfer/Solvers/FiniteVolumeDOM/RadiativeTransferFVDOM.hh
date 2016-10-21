@@ -20,9 +20,10 @@ namespace COOLFluiD {
   namespace Framework {
     class PhysicalChemicalLibrary;
   }
-
-    namespace RadiativeTransfer {
-
+  
+  namespace RadiativeTransfer {
+    class RadiationPhysicsHandler;
+    
 //////////////////////////////////////////////////////////////////////////
 
 /**
@@ -41,7 +42,11 @@ public:
   /**
    * Default destructor
    */
-  ~RadiativeTransferFVDOM();
+  virtual ~RadiativeTransferFVDOM();
+
+  /// Configure the data from the supplied arguments.
+  /// @param args configuration arguments
+  virtual void configure ( Config::ConfigArgs& args );
   
   /**
    * Defines the Config Option's of this class
@@ -165,7 +170,7 @@ private: //function
   }
   
 private: //data
-
+  
   /// storage of states
   Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > socket_states;
   
@@ -208,6 +213,9 @@ private: //data
   
   /// pointer to the physical-chemical library
   Common::SafePtr<Framework::PhysicalChemicalLibrary> m_library; 
+  
+  /// pointer to the radiation library interface
+  Common::SharedPtr<RadiationPhysicsHandler> m_radiation;
   
   /// map faces to corresponding TRS and index inside that TRS
   Common::SafePtr<Framework::MapGeoToTrsAndIdx> m_mapGeoToTrs;
@@ -366,8 +374,11 @@ private: //data
   /// flag telling to run without solving anything, just for testing
   bool m_emptyRun;
   
+  /// flag telling to read the opacity tables (default behaviour)
+  bool m_readOpacityTables;
+  
 }; // end of class RadiativeTransferFVDOM
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace RadiativeTransfer

@@ -51,6 +51,7 @@ public:
   Framework::SocketBundle* const getDataSockets(){return &m_sockets;}
 
   void setup();
+    
   void configureTRS();
   CFuint getNbStates();
   void setupAxiFlag(bool isAxi){ m_isAxi = isAxi;}

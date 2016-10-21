@@ -1,6 +1,6 @@
 #include <fstream>
 
-#include "ParadeRadiator.hh"
+#include "RadiativeTransfer/RadiationLibrary/Models/PARADE/ParadeRadiator.hh"
 
 #include "Common/CFLog.hh"
 #include "Common/DebugFunctions.hh"
@@ -16,8 +16,6 @@
 #include "Framework/MeshData.hh"
 #include "Framework/PhysicalChemicalLibrary.hh"
 #include "Framework/PhysicalModel.hh"
-#include "Framework/PhysicalConsts.hh"
-#include "Framework/ProxyDofIterator.hh"
 #include "Framework/PhysicalConsts.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -36,8 +34,8 @@ namespace RadiativeTransfer {
 //////////////////////////////////////////////////////////////////////////////
 
 Environment::ObjectProvider<ParadeRadiator,
-          Radiator,
-          RadiativeTransferModule,
+			    Radiator,
+			    RadiativeTransferModule,
 			    1>
 paradeRadiatorProvider("ParadeRadiator");
 
@@ -73,10 +71,8 @@ ParadeRadiator::ParadeRadiator(const std::string& name) :
   m_vibTempID(),
   m_isLTE()
 {
-
   addConfigOptionsTo(this);
-
-
+  
   m_localDirName = "Parade";
   setParameter("LocalDirName", &m_localDirName);
   
@@ -204,9 +200,8 @@ void ParadeRadiator::setLibrarySequentially()
             
 void ParadeRadiator::unsetup()
 {
-
 }
-      
+  
 /////////////////////////////////////////////////////////////////////////////
 
 void ParadeRadiator::setupSpectra(CFreal wavMin, CFreal wavMax)
@@ -474,6 +469,8 @@ void ParadeRadiator::readLocalRadCoeff()
 //   }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+  
 inline void ParadeRadiator::getSpectralIdxs(CFreal lambda, CFuint *idx1, CFuint *idx2)
 {
   //assumes constant wavelength discretization
@@ -487,6 +484,9 @@ inline void ParadeRadiator::getSpectralIdxs(CFreal lambda, CFuint *idx1, CFuint 
 /// emission coeff   = m_radCoeff(local state ID, spectral point idx*3+1)
 /// absorption coeff = m_radCoeff(local state ID, spectral point idx*3+2)
 ///
+
+//////////////////////////////////////////////////////////////////////////////
+  
 CFreal ParadeRadiator::getEmission(CFreal lambda, RealVector &s_o)
 {
   CFuint spectralIdx1, spectralIdx2;
@@ -503,6 +503,8 @@ CFreal ParadeRadiator::getEmission(CFreal lambda, RealVector &s_o)
   return y0 + (y1-y0) * (lambda - x0) / (x1-x0);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 CFreal ParadeRadiator::getAbsorption(CFreal lambda, RealVector &s_o)
 {
   CFuint spectralIdx1, spectralIdx2;
@@ -518,6 +520,8 @@ CFreal ParadeRadiator::getAbsorption(CFreal lambda, RealVector &s_o)
   //linear interpolation
   return y0 + (y1-y0) * (lambda - x0) / (x1-x0);
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void ParadeRadiator::computeEmissionCPD()
 {
@@ -587,13 +591,16 @@ void ParadeRadiator::computeEmissionCPD()
   cout<<" ];"<<endl;
 }
 */
-
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
 CFreal ParadeRadiator::getSpectaLoopPower()
 {
   return m_spectralLoopPowers[ m_radPhysicsHandlerPtr->getCurrentCellTrsIdx() ];
 }
 
+//////////////////////////////////////////////////////////////////////////////
 
 void ParadeRadiator::getRandomEmission(CFreal &lambda, RealVector &s_o)
 {
@@ -633,12 +640,15 @@ void ParadeRadiator::getRandomEmission(CFreal &lambda, RealVector &s_o)
   m_rand.sphereDirections(dim2, s_o);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void ParadeRadiator::getData()
 {
-
 }
 
-} // namespace Parade
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace RadiativeTransfer
 
 } // namespace COOLFluiD
 

@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Physics_Parade_ParadeRadiator_hh
-#define COOLFluiD_Physics_Parade_ParadeRadiator_hh
+#ifndef COOLFluiD_RadiativeTransfer_ParadeRadiator_hh
+#define COOLFluiD_RadiativeTransfer_ParadeRadiator_hh
 
 //////////////////////////////////////////////////////////////////////////////
 #include "RadiativeTransfer/RadiationLibrary/Radiator.hh"
@@ -68,6 +68,22 @@ public:
    * Unsetups the data of the library
    */
   void unsetup();
+  
+  void setupSpectra(CFreal wavMin, CFreal wavMax);
+  
+  CFreal getEmission(CFreal lambda, RealVector &s_o);
+  
+  CFreal getAbsorption(CFreal lambda, RealVector &s_o);
+  
+  CFreal getSpectaLoopPower();
+  
+  void computeEmissionCPD();
+  
+  void getRandomEmission(CFreal &lambda, RealVector &s_o);
+
+  void getData();
+  
+  inline void getSpectralIdxs(CFreal lambda, CFuint *idx1, CFuint *idx2);
   
 private:
 
@@ -158,7 +174,6 @@ private:
   CFuint m_nbPoints;
 
   Common::SafePtr<Framework::DofDataHandleIterator<CFreal, Framework::State, Framework::GLOBAL> > m_pstates;
-  std::auto_ptr<Framework::ProxyDofIterator<CFreal> > m_nstatesProxy;
 
   /// thermodynamic library
   Common::SafePtr<Framework::PhysicalChemicalLibrary> m_library;
@@ -186,41 +201,21 @@ private:
 
   ///Vector with the spectral loop powers of the states
   std::vector<CFreal> m_spectralLoopPowers;
-
+  
   //vector with the comulative probability distributions
   std::vector<CFreal> m_cpdEms;
-
+  
   // is LTE flag
   bool m_isLTE;
-
-  // Radiator interface
-public:
-
-  void setupSpectra(CFreal wavMin, CFreal wavMax);
-
-  CFreal getEmission(CFreal lambda, RealVector &s_o);
-
-  CFreal getAbsorption(CFreal lambda, RealVector &s_o);
-
-  CFreal getSpectaLoopPower();
-
-  void computeEmissionCPD();
-
-  void getRandomEmission(CFreal &lambda, RealVector &s_o);
-
-  void getData();
-
-  inline void getSpectralIdxs(CFreal lambda, CFuint *idx1, CFuint *idx2);
   
-  // ConfigObject interface
-}; // end of class ParadeLibrary
+}; // end of class ParadeRadiator
 
 //////////////////////////////////////////////////////////////////////////////
 
-    } // namespace Parade
+    } // namespace RadiativeTransfer
 
 } // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Physics_Parade_ParadeLibrary_hh
+#endif // COOLFluiD_RadiativeTransfer_ParadeRadiator_hh

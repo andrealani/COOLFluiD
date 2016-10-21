@@ -1,6 +1,8 @@
 #ifndef COOLFluiD_RadiativeTransfer_Radiator_hh
 #define COOLFluiD_RadiativeTransfer_Radiator_hh
 
+//////////////////////////////////////////////////////////////////////////////
+
 #include "Common/OwnedObject.hh"
 #include "Common/SetupObject.hh"
 #include "Common/NonCopyable.hh"
@@ -8,7 +10,7 @@
 #include "RadiativeTransfer/RadiativeTransfer.hh"
 #include "Framework/SocketBundleSetter.hh"
 #include "RadiativeTransfer/Solvers/MonteCarlo/RandomNumberGenerator.hh"
-#include "RadiationPhysics.hh"
+#include "RadiativeTransfer/RadiationLibrary/RadiationPhysics.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -67,16 +69,15 @@ public:
   CFreal getCellVolume( CFuint stateID );
   CFreal getWallArea(CFuint wallGeoID );
 
-  static const CFreal m_angstrom = 1e-10;
-
-
 protected:
+  
+  const CFreal m_angstrom; 
   RadiationPhysics *m_radPhysicsPtr;
   RadiationPhysicsHandler *m_radPhysicsHandlerPtr;
   RandomNumberGenerator m_rand;
-
 };
-
+  
+//////////////////////////////////////////////////////////////////////////////
 
 }
 }

@@ -8,8 +8,12 @@
 namespace COOLFluiD {
 
 namespace RadiativeTransfer {
+
+////////////////////////////////////////////////////////////////////////////////
+
 using namespace std;
 using namespace RadiativeDistTypes;
+  
 ////////////////////////////////////////////////////////////////////////////////
 
 void RadiationPhysicsHandler::defineConfigOptions(Config::OptionList& options)
@@ -67,6 +71,8 @@ void RadiationPhysicsHandler::configure(Config::ConfigArgs& args)
     }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void RadiationPhysicsHandler::setup(){
 
   //Assume temperature to be the last equation
@@ -90,13 +96,14 @@ void RadiationPhysicsHandler::setup(){
   for(CFuint i=0 ; i< m_radiationPhysics.size(); ++i){
     m_radiationPhysics[i]->setup();
   }
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
 RadiationPhysicsHandler::~RadiationPhysicsHandler(){
 
 }
+
 //////////////////////////////////////////////////////////////////////////////
 
 void RadiationPhysicsHandler::setupWavStride(CFuint loop){
@@ -105,15 +112,16 @@ void RadiationPhysicsHandler::setupWavStride(CFuint loop){
   CFreal wavMax = wavMin + wavStride;
 
   for(CFuint i=0; i<m_radiationPhysics.size();++i){
-    m_radiationPhysics[i]->setupSectra(wavMin, wavMax);
+    m_radiationPhysics[i]->setupSpectra(wavMin, wavMax);
     m_radiationPhysics[i]->computeInterpolatedStates();
   }
-
 }
+
 //////////////////////////////////////////////////////////////////////////////
 
-
-Common::SharedPtr< RadiationPhysics > RadiationPhysicsHandler::getCellDistPtr(CFuint stateID){
+Common::SharedPtr< RadiationPhysics > RadiationPhysicsHandler::getCellDistPtr
+(CFuint stateID)
+{
   //CFLog(INFO,"Cell; stateID: "<<stateID<<"\n");
   cf_assert(stateID<m_statesOwner.size() );
   cf_assert(m_statesOwner[stateID][0] != -1 );
@@ -123,7 +131,11 @@ Common::SharedPtr< RadiationPhysics > RadiationPhysicsHandler::getCellDistPtr(CF
   return m_radiationPhysics[ m_statesOwner[stateID][0] ];
 }
 
-Common::SharedPtr< RadiationPhysics > RadiationPhysicsHandler::getWallDistPtr(CFuint GhostStateID){
+//////////////////////////////////////////////////////////////////////////////
+
+Common::SharedPtr< RadiationPhysics > RadiationPhysicsHandler::getWallDistPtr
+(CFuint GhostStateID)
+{
   //CFLog(INFO,"Wall; stateID: "<<GhostStateID<<"\n");
   cf_assert(GhostStateID<m_ghostStatesOwner.size() );
   cf_assert(m_ghostStatesOwner[GhostStateID][0] != -1 );
@@ -134,6 +146,7 @@ Common::SharedPtr< RadiationPhysics > RadiationPhysicsHandler::getWallDistPtr(CF
   return m_radiationPhysics[ m_ghostStatesOwner[GhostStateID][0] ];
 }
 
+//////////////////////////////////////////////////////////////////////////////
 
 void RadiationPhysicsHandler::configureTRS()
 {
@@ -211,10 +224,14 @@ void RadiationPhysicsHandler::configureTRS()
 
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 CFuint RadiationPhysicsHandler::getNbStates()
 {
   return m_statesOwner.size();
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 CFuint RadiationPhysicsHandler::getNbGhostStates()
 {

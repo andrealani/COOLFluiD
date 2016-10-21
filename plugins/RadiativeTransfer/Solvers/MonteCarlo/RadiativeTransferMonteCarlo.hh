@@ -375,27 +375,16 @@ RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::~RadiativeTransferMonteCarlo()
 template<class PARTICLE_TRACKING>
 void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::configure(Config::ConfigArgs& args)
 {
-  //cout<<"Configure\n";
-
   CFAUTOTRACE;
-  //cout<<"Configure\n";
-
+  
   DataProcessingCom::configure(args);
   cf_assert(m_radiation.isNotNull());
   configureNested ( m_radiation.getPtr(), args );
-  //cout<<"DONE!\n";
-
-//  m_radLibrary = Environment::Factory<RadiationLibrary>::getInstance().
-//      getProvider(m_radLibraryName)->create(m_radLibraryName);
-//  cf_assert(m_radLibrary.isNotNull());
-//  configureNested ( m_radLibrary.getPtr(), args );
-
-  //cout<<"Configure Postprocess\n";
+  
   m_postProcess = Environment::Factory< PostProcess >::getInstance().
-     getProvider(m_postProcessName)->create(m_postProcessName);
+    getProvider(m_postProcessName)->create(m_postProcessName);
   cf_assert(m_postProcess.isNotNull());
   configureNested ( m_postProcess.getPtr(), args );
-  //cout<<"DONE!\n";
 }
 
 //////////////////////////////////////////////////////////////////////////////

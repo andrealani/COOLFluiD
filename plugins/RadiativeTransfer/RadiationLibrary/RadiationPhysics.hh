@@ -40,7 +40,7 @@ public:
 
   RadiationPhysics(const std::string& name);
   ~RadiationPhysics(){}
-  void setupSectra(CFreal wavMin,CFreal wavMax);
+  void setupSpectra(CFreal wavMin,CFreal wavMax);
   void setup();
   void configure(Config::ConfigArgs& args);
   static void defineConfigOptions(Config::OptionList& options);

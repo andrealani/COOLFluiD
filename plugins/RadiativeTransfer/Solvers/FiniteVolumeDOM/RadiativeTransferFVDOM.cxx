@@ -20,11 +20,14 @@
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/PhysicalChemicalLibrary.hh"
+#include "Framework/SocketBundleSetter.hh"
 
 #include "FiniteVolume/CellCenterFVM.hh"
 
 #include "RadiativeTransfer/RadiativeTransfer.hh"
 #include "RadiativeTransfer/Solvers/FiniteVolumeDOM/RadiativeTransferFVDOM.hh"
+#include "RadiativeTransfer/RadiationLibrary/Radiator.hh"
+#include "RadiativeTransfer/RadiationLibrary/RadiationPhysicsHandler.hh"
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -63,6 +66,7 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   socket_qz("qz"),
   socket_TempProfile("TempProfile"),
   m_library(CFNULL),
+  m_radiation(new RadiationPhysicsHandler("RadiationPhysicsHandler")),
   m_mapGeoToTrs(CFNULL),
   m_geoBuilder(), 
   m_faceBuilder(),
@@ -146,6 +150,9 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   
   m_emptyRun = false;
   setParameter("EmptyRun", &m_emptyRun);
+  
+  m_readOpacityTables = true;
+  setParameter("ReadOpacityTables", &m_readOpacityTables);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -186,6 +193,23 @@ void RadiativeTransferFVDOM::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFuint >("ThreadID","ID of the current thread within the parallel algorithm."); 
   options.addConfigOption< bool >("LoopOverBins","Loop over bins and then over directions (do the opposite if =false).");
   options.addConfigOption< bool >("EmptyRun","Run without actually solving anything, just for testing purposes.");
+  options.addConfigOption< bool >("ReadOpacityTables","Read the opacity tables instead if using the radiation library.");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+void RadiativeTransferFVDOM::configure ( Config::ConfigArgs& args )
+{
+  CFAUTOTRACE;
+  
+  CFLog(VERBOSE, "RadiativeTransferFVDOM::configure() => START\n");
+  
+  DataProcessingCom::configure(args);
+  
+  cf_assert(m_radiation.isNotNull());
+  configureNested ( m_radiation.getPtr(), args );
+  
+  CFLog(VERBOSE, "RadiativeTransferFVDOM::configure() => END\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -229,6 +253,27 @@ void RadiativeTransferFVDOM::setup()
 {
   CFAUTOTRACE;
   
+  DataProcessingCom::setup();
+  
+  SocketBundle sockets;
+  sockets.states      = socket_states;
+  sockets.gstates     = socket_gstates;
+  sockets.nstates     = socket_nstates;
+  sockets.volumes     = socket_volumes;
+  sockets.nodes       = socket_nodes;
+  sockets.isOutward   = socket_isOutward;
+  sockets.normals     = socket_normals;
+  // sockets.faceCenters = socket_faceCenters;
+  // sockets.faceAreas   = socket_faceAreas;
+  
+  m_radiation->setupDataSockets(sockets);
+  m_radiation->setup();
+  // m_radiation->configureTRS();
+  //  m_radiation->setupAxiFlag(m_isAxi);
+  // vector<string> wallTrsNames, boundaryTrsNames;
+  // m_radiation->getBoundaryTRSnames(boundaryTrsNames);
+  // m_radiation->getWallTRSnames(wallTrsNames);
+  
   m_geoBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
   m_geoBuilder.setup();
   CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
@@ -263,9 +308,11 @@ void RadiativeTransferFVDOM::setup()
     CFLog(WARN, "RadiativeTransferFVDOM::setup() => This ndirs is not allowed. 8 directions is chosen \n");
     m_nbDirs = 8;
   } 
-  
-  // Reading the table
-  readOpacities();
+    
+  if (m_readOpacityTables) {
+    // Reading the table
+    readOpacities();
+  }
   
   const CFuint DIM = 3;
   
@@ -590,6 +637,13 @@ void RadiativeTransferFVDOM::execute()
   
   stp.start();
   
+  // compute the spectra: this calls Radiator::setupSpectra()
+  m_radiation->setupWavStride(0);
+  
+  CFLog(INFO, "RadiativeTransferFVDOM::execute() => radiation library took " << stp.read() << "s\n");
+  
+  stp.start();
+  
   if (!m_emptyRun) {
     // only one CPU allow for namespace => the mesh has not been partitioned
     cf_assert(PE::GetPE().GetProcessorCount(getMethodData().getNamespace()) == 1);
@@ -609,7 +663,7 @@ void RadiativeTransferFVDOM::execute()
     
     if (m_loopOverBins) {
       for(CFuint ib = startBin; ib < endBin; ++ib) {
-	CFLog(INFO, "( bin: " << ib << " ), dir: ( ");
+	CFLog(INFO, "( bin: " << ib << " ), ( dir: ");
 	// old algorithm: opacities computed for all cells at once for a given bin
 	if (m_oldAlgo) {getFieldOpacities(ib);}
 	const CFuint dStart = (ib != startBin) ? 0 : startDir;
@@ -624,7 +678,7 @@ void RadiativeTransferFVDOM::execute()
     }
     else {
       for (CFuint d = startDir; d < endDir; ++d) {
-	CFLog(INFO, "( dir: " << d << " ), bin: ( ");
+	CFLog(INFO, "( dir: " << d << " ), ( bin: ");
 	const CFuint bStart = (d != startDir) ? 0 : startBin;
 	const CFuint bEnd   = (d != m_startEndDir.second) ? m_nbBins : endBin;
 	for(CFuint ib = startBin; ib < endBin; ++ib) {
@@ -1085,8 +1139,10 @@ void RadiativeTransferFVDOM::writeRadialData()
 void RadiativeTransferFVDOM::unsetup()
 {
   CFAUTOTRACE;
+  
+  DataProcessingCom::unsetup();
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void RadiativeTransferFVDOM::getFieldOpacities(const CFuint ib, const CFuint iCell)

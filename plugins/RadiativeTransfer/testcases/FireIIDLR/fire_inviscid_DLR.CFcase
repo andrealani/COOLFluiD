@@ -26,7 +26,7 @@ Simulator.Modules.Libs = libTecplotWriter libPhysicalModelDummy libFiniteVolume 
 # relative path to working directory
 Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/FireIIDLR
 # relative path to results directory 
-Simulator.Paths.ResultsDir = ./RESULTS_FIREII
+Simulator.Paths.ResultsDir = ./RESULTS_FIREII_INVISCID
 
 Simulator.SubSystem.Default.PhysicalModelType = PhysicalModelDummy
 Simulator.SubSystem.PhysicalModelDummy.Dimensions = 3
