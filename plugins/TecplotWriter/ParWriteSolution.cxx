@@ -648,11 +648,13 @@ void ParWriteSolution::writeHeader(std::ofstream* fout,
       const vector<std::string>& varNames = outputVarSet->getVarNames();
       cf_assert(varNames.size() == nbEqs);
       
-      for (CFuint i = 0 ;  i < nbEqs; ++i)  {
-	std::string n = varNames[i];
-	if ( *n.begin()  != '\"' )  n  = '\"' + n;
-	if ( *n.rbegin() != '\"' )  n += '\"';
-	*fout << " " << n;
+      if (getMethodData().withEquations()) {
+	for (CFuint i = 0 ;  i < nbEqs; ++i)  {
+	  std::string n = varNames[i];
+	  if ( *n.begin()  != '\"' )  n  = '\"' + n;
+	  if ( *n.rbegin() != '\"' )  n += '\"';
+	  *fout << " " << n;
+	}
       }
       
       if (getMethodData().shouldPrintExtraValues()) {
@@ -709,7 +711,10 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
   
   CFuint nodesStride = dim; 
   if (!getMethodData().onlyCoordinates()) {
-    nodesStride += nbEqs;
+    if (getMethodData().withEquations()) {
+      nodesStride += nbEqs;
+    }
+    
     if (getMethodData().shouldPrintExtraValues()) {
       nodesStride += nbExtraVars;
     }
@@ -717,7 +722,7 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
     nodesStride += datahandle_output->getVarNames().size();
     cf_assert(datahandle_output->getVarNames().size() == m_nodalvars.size());    
   }
-    
+  
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes =
     MeshDataStack::getActive()->getNodeDataSocketSink().getDataHandle();
   cf_assert(nodes.size() > 0);
@@ -818,20 +823,26 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
 	      // dimensionalize the solution
 	      outputVarSet->setDimensionalValuesPlusExtraValues
 		(tempState, dimState, extraValues);
-	      for (CFuint in = 0; in < dimState.size(); ++in, ++isend) {
-		cf_assert(isend < sendElements.size());
-		sendElements[isend] = dimState[in];
+	      
+	      if (getMethodData().withEquations()) {
+		for (CFuint in = 0; in < dimState.size(); ++in, ++isend) {
+		  cf_assert(isend < sendElements.size());
+		  sendElements[isend] = dimState[in];
+		}
 	      }
+	      
 	      for (CFuint in = 0; in < extraValues.size(); ++in, ++isend) {
 		cf_assert(isend < sendElements.size());
 		sendElements[isend] = extraValues[in];
 	      }
 	    }
 	    else {
-	      outputVarSet->setDimensionalValues(tempState, dimState);
-	      for (CFuint in = 0; in < dimState.size(); ++in, ++isend) {
-		cf_assert(isend < sendElements.size());
-		sendElements[isend] = dimState[in];
+	      if (getMethodData().withEquations()) {
+		outputVarSet->setDimensionalValues(tempState, dimState);
+		for (CFuint in = 0; in < dimState.size(); ++in, ++isend) {
+		  cf_assert(isend < sendElements.size());
+		  sendElements[isend] = dimState[in];
+		}
 	      }
 	    }	    
 	    

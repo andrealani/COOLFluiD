@@ -129,7 +129,7 @@ void StdConcurrentReduce::execute()
 {
   CFAUTOTRACE;
   
-  CFLog(VERBOSE, "StdConcurrentReduce::execute() => start\n");
+  CFLog(INFO, "StdConcurrentReduce::execute() => start\n");
   
   // this should go in the setup, but it uses blocking MPI collective calls 
   // here is less harmful 
@@ -153,7 +153,7 @@ void StdConcurrentReduce::execute()
     }
   }
   
-  CFLog(VERBOSE, "StdConcurrentReduce::execute() => end\n");
+  CFLog(INFO, "StdConcurrentReduce::execute() => end\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -180,6 +180,7 @@ void StdConcurrentReduce::reduceData(const CFuint idx)
   
   // overwrite the socket with the total value in each processor
   for (CFuint s = 0; s < arraySize; ++s) {
+    CFLog(DEBUG_MAX, "StdConcurrentReduce::reduceData() => sendBuf[" << s << "] = "<< sendBuf[s] << ", recvBuf[" <<s << "] = " << m_recvBuf[s] << "\n");
     sendBuf[s] = m_recvBuf[s];
   }
   

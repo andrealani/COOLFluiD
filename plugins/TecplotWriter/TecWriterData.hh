@@ -88,6 +88,12 @@ public:
     return m_coord_only;
   }
 
+  /// Flag telling if to print the equations
+  bool withEquations() const
+  {
+    return m_withEquations;
+  }
+  
   /// Gets the filename
   /// @todo missing documentation
   Common::SafePtr<Framework::ConvectiveVarSet> getUpdateVarSet() const
@@ -134,6 +140,9 @@ private:
   /// print only the coordinates
   bool m_coord_only;
 
+  /// print the equations
+  bool m_withEquations;
+  
   /// Update variable set
   Common::SafePtr<Framework::ConvectiveVarSet> m_updateVarSet;
 

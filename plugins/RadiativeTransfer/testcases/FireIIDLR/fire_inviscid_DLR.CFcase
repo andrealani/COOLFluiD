@@ -45,6 +45,7 @@ Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = CellID divq qx qy qz TempProfile 
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = CellID divq qx qy qz TempProfile
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 1
+#Simulator.SubSystem.Tecplot.Data.WithEquations = false
 Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
 # WriteSolutionBlockFV
 

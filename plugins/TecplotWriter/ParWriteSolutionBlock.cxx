@@ -114,17 +114,19 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
   if (!getMethodData().onlyCoordinates()) {
     bool nodal = false;
     
-    if (m_onlyNodal || isBoundary) {
-      totNbVarsND += nbEqs;
-      nodal = true;
-    } 
-    else if (!m_onlyNodal && !isBoundary) {
-      totNbVarsCC += nbEqs;
-      nodal = false;
-    }
-    
-    for (CFuint i = 0; i < nbEqs; ++i) {
-      isVarNodal.push_back(nodal);
+    if (getMethodData().withEquations()) {
+      if (m_onlyNodal || isBoundary) {
+	totNbVarsND += nbEqs;
+	nodal = true;
+      } 
+      else if (!m_onlyNodal && !isBoundary) {
+	totNbVarsCC += nbEqs;
+	nodal = false;
+      }
+      
+      for (CFuint i = 0; i < nbEqs; ++i) {
+	isVarNodal.push_back(nodal);
+      }
     }
     
     if (printExtra) {
@@ -287,7 +289,7 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
   
   const CFuint nbDHNDVars  = datahandle_output->getVarNames().size();
   const CFuint nbDHCCVars  = datahandle_output->getCCVarNames().size();
-  const CFuint endNbEqs = dim + nbEqs;
+  const CFuint endNbEqs = (getMethodData().withEquations()) ? dim + nbEqs : dim;
   const CFuint endNbExtraVars = (printExtra) ? endNbEqs + nbExtraVars : endNbEqs;
   const CFuint endNbDHNDVars = endNbExtraVars + nbDHNDVars;
   const CFuint endNbDHCCVars = endNbDHNDVars + nbDHCCVars;
@@ -364,10 +366,12 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
 		    tempState[ieq] = currState[ieq];
 		  }
 		  
-		  if (iVar >= dim && iVar < endNbEqs) {
-		    cf_assert(isend < sendElements.size());
-		    outputVarSet->setDimensionalValues(tempState, dimState);
-		    sendElements[isend++] = dimState[iVar-dim];
+		  if (getMethodData().withEquations()) {
+		    if (iVar >= dim && iVar < endNbEqs) {
+		      cf_assert(isend < sendElements.size());
+		      outputVarSet->setDimensionalValues(tempState, dimState);
+		      sendElements[isend++] = dimState[iVar-dim];
+		    }
 		  }
 		  
 		  if (printExtra && (iVar >= endNbEqs && iVar < endNbExtraVars)) {
@@ -388,11 +392,13 @@ void ParWriteSolutionBlock::writeNodeList(ofstream* fout, const CFuint iType,
 	      }
 	      else if ((!isNodal) && iVar >= dim) {
 		// cell centered case
-		if (iVar >= dim && iVar < endNbEqs) {
-		  const State& currState = *states[dofID];
-		  outputVarSet->setDimensionalValues(currState, dimState);
-		  cf_assert(isend < sendElements.size());
-		  sendElements[isend++] = dimState[iVar-dim];
+		if (getMethodData().withEquations()) {
+		  if (iVar >= dim && iVar < endNbEqs) {
+		    const State& currState = *states[dofID];
+		    outputVarSet->setDimensionalValues(currState, dimState);
+		    cf_assert(isend < sendElements.size());
+		    sendElements[isend++] = dimState[iVar-dim];
+		  }
 		}
 		
 		if (printExtra && (iVar >= endNbEqs && iVar < endNbExtraVars)) {
@@ -548,17 +554,23 @@ void ParWriteSolutionBlock::writeZoneHeader(std::ofstream* fout,
   }
   
   if (!getMethodData().onlyCoordinates()) {
-    const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+    CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
     string locationString = "NODAL";
     if (!isBoundary) {
       locationString = m_onlyNodal ? "NODAL" : "CELLCENTERED";
     }
     
-    if (nbEqs!=1) {
-      *fout << ",[" << dim+1 << "-" << dim+nbEqs << "]=" << locationString;
+    if (getMethodData().withEquations()) {
+      if (nbEqs!=1) {
+	*fout << ",[" << dim+1 << "-" << dim+nbEqs << "]=" << locationString;
+      }
+      else {
+	*fout << "," << dim+1 << "=" << locationString;
+      }
     }
     else {
-      *fout << "," << dim+1 << "=" << locationString;
+      // no equations will be written
+      nbEqs = 0;
     }
     
     CFuint nbExtraVars = 0;

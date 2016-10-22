@@ -40,6 +40,7 @@ void TecWriterData::defineConfigOptions(Config::OptionList& options)
    options.addConfigOption< std::vector<std::string> >("SurfaceTRS","List of TRS's to be writen in the surface file.");
    options.addConfigOption< bool >("SurfaceOnly","Print only the surface data chosen in SurfaceTRS"); 
    options.addConfigOption< bool >("CoordinatesOnly","Print only the coordinates");
+   options.addConfigOption< bool >("WithEquations","Print the equations");
    options.addConfigOption< bool >("AppendAuxData","Boolean switch to append 'AUXDATA' fields in zone headers or not.");
 }
       
@@ -64,6 +65,9 @@ TecWriterData::TecWriterData(Common::SafePtr<Framework::Method> owner)
   
   m_coord_only = false;
   setParameter("CoordinatesOnly",&m_coord_only);
+  
+  m_withEquations = true;
+  setParameter("WithEquations",&m_withEquations);
   
   m_surfTRS = std::vector<std::string>();
   setParameter("SurfaceTRS",&m_surfTRS);
