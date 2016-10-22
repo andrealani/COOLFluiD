@@ -163,7 +163,7 @@ void StdConcurrentReduce::reduceData(const CFuint idx)
   SafePtr<DataToTrasfer> dtt = m_socketName2data.find(m_socketsSendRecv[idx]); 
   Group& group = PE::GetPE().getGroup(dtt->groupName);
   
-  CFLog(INFO, "StdConcurrentReduce::reduceData() within namespace[" << 
+  CFLog(VERBOSE, "StdConcurrentReduce::reduceData() within namespace[" << 
 	dtt->groupName << "] => start\n");
   
   // note this limits the maximum size to be transferred to an array of size ~2 billion 
@@ -177,14 +177,20 @@ void StdConcurrentReduce::reduceData(const CFuint idx)
     ("MPI_Allreduce", "StdConcurrentReduce::execute()", 
      MPI_Allreduce(&sendBuf[0], &m_recvBuf[0], (int)arraySize, 
 		   MPIStructDef::getMPIType(&m_recvBuf[0]), dtt->operation, group.comm));
-  
+   
+  const string fileName = "DDdivq-" + StringOps::to_str(PE::GetPE().GetRank("Default"));
+  ofstream fout(fileName.c_str());
+    
   // overwrite the socket with the total value in each processor
   for (CFuint s = 0; s < arraySize; ++s) {
     CFLog(DEBUG_MAX, "StdConcurrentReduce::reduceData() => sendBuf[" << s << "] = "<< sendBuf[s] << ", recvBuf[" <<s << "] = " << m_recvBuf[s] << "\n");
+    
+    if (s == 1000){fout << "iCell1000 => " << sendBuf[s] << " < " << m_recvBuf[s] << "\n";}
+    
     sendBuf[s] = m_recvBuf[s];
   }
   
-  CFLog(INFO, "StdConcurrentReduce::reduceData() within namespace[" << 
+  CFLog(VERBOSE, "StdConcurrentReduce::reduceData() within namespace[" << 
 	dtt->groupName << "] => end\n");
 }
       

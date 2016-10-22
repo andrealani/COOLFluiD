@@ -54,7 +54,7 @@
 #CFEnv.ExceptionLogLevel = 200
 CFEnv.ExceptionDumps   = false
 CFEnv.ExceptionOutputs = false
-#CFEnv.OnlyCPU0Writes = false
+CFEnv.OnlyCPU0Writes = false
 #CFEnv.TraceToStdOut = true
 
 # Simulation Modules
@@ -230,8 +230,9 @@ Simulator.SubSystem.ConcurrentCoupler.Namespace = RadCoupler
 Simulator.SubSystem.ConcurrentCoupler.CoupledNameSpaces = Rad@8
 Simulator.SubSystem.ConcurrentCoupler.CoupledSubSystems = SubSystem~8
 Simulator.SubSystem.ConcurrentCoupler.TransferRates = 1~8
-# new option to test
+# hose two oprions are fundamental for this case to run properly
 Simulator.SubSystem.ConcurrentCoupler.SkipFirstCouplingIter = false #true
+Simulator.SubSystem.ConcurrentCoupler.ImposeSynchronization = true
 # need an interface write coms that uses MPI_Reduce of MPI_Allreduce for all Rad*_divq 
 Simulator.SubSystem.ConcurrentCoupler.InterfacesWriteComs = StdConcurrentReduce
 Simulator.SubSystem.ConcurrentCoupler.InterfacesWriteNames = ReduceRad

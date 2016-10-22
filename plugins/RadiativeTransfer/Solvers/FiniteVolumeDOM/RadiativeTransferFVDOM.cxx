@@ -483,10 +483,12 @@ void RadiativeTransferFVDOM::setup()
   TempProfile = 0.0;
   
   //Averages for the Sphere case
-  m_qrAv.resize(m_Nr);
-  m_divqAv.resize(m_Nr);
-  m_qrAv   = 0;
-  m_divqAv = 0;  
+  if (m_radialData) {
+    m_qrAv.resize(m_Nr);
+    m_divqAv.resize(m_Nr);
+    m_qrAv   = 0;
+    m_divqAv = 0;  
+  }
   
   Stopwatch<WallTime> stp;
   
@@ -503,7 +505,7 @@ void RadiativeTransferFVDOM::setup()
       getAdvanceOrder(d, m_advanceOrder[d]);
     }
   }
-  
+    
   CFLog(INFO, "RadiativeTransferFVDOM::setup() => getAdvanceOrder() took " << stp.read() << "s\n");
   
   CFLog(VERBOSE, "RadiativeTransferFVDOM::setup() => end\n");
@@ -698,21 +700,27 @@ void RadiativeTransferFVDOM::execute()
     DataHandle<CFreal> qy   = socket_qy.getDataHandle();
     DataHandle<CFreal> qz   = socket_qz.getDataHandle();
     
+    const string fileName = "divq-" + StringOps::to_str(PE::GetPE().GetRank("Default"));
+    ofstream fout(fileName.c_str());
+    
     SafePtr<TopologicalRegionSet> cells = m_geoBuilder.getDataGE().trs;
     const CFuint nbCells = cells->getLocalNbGeoEnts();
     for (CFuint iCell = 0; iCell < nbCells; iCell++) {
-      m_divq[iCell] = m_divq[iCell]/(volumes[iCell]); //converting area from m^3 into cm^3
+      m_divq[iCell] /= volumes[iCell]; //converting area from m^3 into cm^3
       divQ[iCell] = m_divq[iCell];
+      
+      if (iCell == 1000){fout << "iCell1000 => " << divQ[iCell] << "\n";}
+      
       qx[iCell] = m_q(iCell,XX);
       qy[iCell] = m_q(iCell,YY);
       qz[iCell] = m_q(iCell,ZZ);
     }
-    
+        
     if (m_radialData){
       writeRadialData();
     } 
   }
-  
+    
   CFLog(INFO, "RadiativeTransferFVDOM::execute() => took " << stp.read() << "s \n");
 }
       

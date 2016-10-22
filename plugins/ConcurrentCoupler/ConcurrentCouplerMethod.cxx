@@ -56,6 +56,7 @@ void ConcurrentCouplerMethod::defineConfigOptions(Config::OptionList& options)
   
   options.addConfigOption< vector<CFuint> >("TransferRates","Transfer data every X iterations for each namespace.");
   options.addConfigOption<bool>("SkipFirstCouplingIter","Skip the coupling during the first iteration.");
+  options.addConfigOption<bool>("ImposeSynchronization","Impose the synchronization when coupling.");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -95,6 +96,9 @@ ConcurrentCouplerMethod::ConcurrentCouplerMethod(const string& name) :
   
   m_skipFirstCouplingIter = false;
   setParameter("SkipFirstCouplingIter",&m_skipFirstCouplingIter);
+  
+  m_imposeSynchronization = false;
+  setParameter("ImposeSynchronization",&m_imposeSynchronization);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -491,29 +495,41 @@ void ConcurrentCouplerMethod::dataTransferReadImpl()
   cf_assert(isSetup());
   cf_assert(isConfigured());
   
-  const bool doCoupling = isCouplingIter(m_fileRW, READ);
-  if (doCoupling) {
-    for(CFuint i = 0; i < m_interfacesRead.size(); ++i) {
-      cf_assert(m_interfacesRead[i].isNotNull());
-      m_interfacesRead[i]->execute();
+  if (m_interfacesRead.size() > 0) {
+    // AL: this needs to be tested DEEPLY
+    // bool doCoupling = false;
+    // if (m_imposeSynchronization) {
+    //   while(!doCoupling) {
+    // 	 doCoupling = isCouplingIter(m_fileRW, READ);
+    //   }
+    // } 
+    // else {
+    const bool doCoupling = isCouplingIter(m_fileRW, READ);
+    // }
+    
+    if (doCoupling) {
+      for(CFuint i = 0; i < m_interfacesRead.size(); ++i) {
+	cf_assert(m_interfacesRead[i].isNotNull());
+	m_interfacesRead[i]->execute();
+	
+	// barrier ensures that at this point all coupled ranks synchronize
+	CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferReadImpl() => before barrier\n");
+	MPI_Barrier(PE::GetPE().getGroup(getNamespace()).comm);
+	CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferReadImpl() => after barrier\n");
+      }
       
-      // barrier ensures that at this point all coupled ranks synchronize
-      CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferReadImpl() => before barrier\n");
+      if (PE::GetPE().GetRank(getNamespace()) == 0) {
+	const string fileName = getStatusFilename();
+	ofstream fout(fileName.c_str(), ios_base::in | ios_base::out);
+	// initialize the file with all 0's
+	resetStatusFile(&fout, READ);
+      }    
+      
+      CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferReadImpl() => before I/O barrier\n");
       MPI_Barrier(PE::GetPE().getGroup(getNamespace()).comm);
-      CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferReadImpl() => after barrier\n");
+      CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferReadImpl() => after I/O barrier\n");
     }
-    
-    if (PE::GetPE().GetRank(getNamespace()) == 0) {
-      const string fileName = getStatusFilename();
-      ofstream fout(fileName.c_str(), ios_base::in | ios_base::out);
-      // initialize the file with all 0's
-      resetStatusFile(&fout, READ);
-    }    
-    
-    CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferReadImpl() => before I/O barrier\n");
-    MPI_Barrier(PE::GetPE().getGroup(getNamespace()).comm);
-    CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferReadImpl() => after I/O barrier\n");
-  }
+  } 
   
   CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferReadImpl() => end\n\n");
 }
@@ -529,33 +545,49 @@ void ConcurrentCouplerMethod::dataTransferWriteImpl()
   cf_assert(isSetup());
   cf_assert(isConfigured());
   
-  const bool doCoupling = isCouplingIter(m_fileRW, WRITE);
-  if (doCoupling) {
-    for(CFuint i = 0; i < m_interfacesWrite.size(); ++i) {
-      cf_assert(m_interfacesWrite[i].isNotNull());
-      
-      CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => before [" 
-	    << m_interfacesWrite[i]->getName() << "]\n");
-      m_interfacesWrite[i]->execute();
-      CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => after [" 
-	    << m_interfacesWrite[i]->getName() << "]\n");
-      
-      // barrier ensures that at this point all coupled ranks synchronize
-      CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => before barrier\n");
-      MPI_Barrier(PE::GetPE().getGroup(getNamespace()).comm);
-      CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => after barrier\n");
+  if (m_interfacesWrite.size() > 0) {
+    // AL: this needs to be tested DEEPLY
+    bool doCoupling = false;
+    if (m_imposeSynchronization) {
+      while(!doCoupling) {
+	doCoupling = isCouplingIter(m_fileRW, WRITE);
+      }
+    }
+    else {
+      // AL: giving problems in radiation case
+      doCoupling = isCouplingIter(m_fileRW, WRITE);
     }
     
-    if (PE::GetPE().GetRank(getNamespace()) == 0) {
-      const string fileName = getStatusFilename();
-      ofstream fout(fileName.c_str(), ios_base::in | ios_base::out);
-      // initialize the file with all 0's
-      resetStatusFile(&fout, WRITE);
-    }   
+    if (doCoupling) {
+      for(CFuint i = 0; i < m_interfacesWrite.size(); ++i) {
+	cf_assert(m_interfacesWrite[i].isNotNull());
+	
+	CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => before [" 
+	      << m_interfacesWrite[i]->getName() << "]\n");
+	m_interfacesWrite[i]->execute();
+	CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => after [" 
+	      << m_interfacesWrite[i]->getName() << "]\n");
+	
+	// barrier ensures that at this point all coupled ranks synchronize
+	CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => before barrier\n");
+	MPI_Barrier(PE::GetPE().getGroup(getNamespace()).comm);
+	CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => after barrier\n");
+      }
+      
+      if (PE::GetPE().GetRank(getNamespace()) == 0) {
+	const string fileName = getStatusFilename();
+	ofstream fout(fileName.c_str(), ios_base::in | ios_base::out);
+	// initialize the file with all 0's
+	resetStatusFile(&fout, WRITE);
+      }   
+      
+      CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => before I/O barrier\n");
+      MPI_Barrier(PE::GetPE().getGroup(getNamespace()).comm);
+      CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => after I/O barrier\n");
+    }
     
-    CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => before I/O barrier\n");
-    MPI_Barrier(PE::GetPE().getGroup(getNamespace()).comm);
-    CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => after I/O barrier\n");
+    
+    
   }
   
   CFLog(VERBOSE, "ConcurrentCouplerMethod::dataTransferWriteImpl() => end\n\n");

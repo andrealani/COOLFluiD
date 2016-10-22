@@ -231,6 +231,9 @@ private: // member data
   ///Flag telling if to skip the first coupling iteration
   bool m_skipFirstCouplingIter;
   
+  ///Flag telling to impose synchronization when coupling
+  bool m_imposeSynchronization;
+  
 }; // end of class ConcurrentCouplerMethod
 
 //////////////////////////////////////////////////////////////////////////////
