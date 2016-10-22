@@ -5,13 +5,14 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 #include "Common/PE.hh"
-
+#include "Common/PEFunctions.hh"
 #include "Common/Stopwatch.hh"
-
 #include "Common/CFLog.hh"
+
 #include "Environment/ObjectProvider.hh"
 #include "Environment/DirPaths.hh"
 
+#include "Framework/SubSystemStatus.hh"
 #include "CFmeshFileReader/CFmeshReader.hh"
 #include "CFmeshFileReader/CFmeshFileReader.hh"
 
@@ -156,15 +157,24 @@ void CFmeshReader::convertFormat()
   
   // ensure the converter works serially only on the processor with rank 0
   // if it is not enabled to work in parallel
-  if (PE::GetPE().IsParallel() && !converter->isParallel()) {
+/*  if (PE::GetPE().IsParallel() && !converter->isParallel()) {
     PE::GetPE().setBarrier(nsp);
     if (PE::GetPE().GetRank(nsp) == 0) { convert(converter); }
     PE::GetPE().setBarrier(nsp);
   }
   else { 
     convert(converter);
+  }*/
+ 
+  if (!converter->isParallel()) {
+    const string ssGroupName = SubSystemStatusStack::getCurrentName();
+    runSerial<void, Common::SelfRegistPtr<MeshFormatConverter>, CFmeshReader, &CFmeshReader::convert>
+      (this, converter, ssGroupName);
   }
-  
+  else {
+    convert(converter);
+  }
+    
   CFLog(VERBOSE, "CFmeshReader::convertFormat() => end\n");
 }
       
