@@ -157,21 +157,12 @@ void CFmeshReader::convertFormat()
   
   // ensure the converter works serially only on the processor with rank 0
   // if it is not enabled to work in parallel
-/*  if (PE::GetPE().IsParallel() && !converter->isParallel()) {
+  if (PE::GetPE().IsParallel() && !converter->isParallel()) {
     PE::GetPE().setBarrier(nsp);
     if (PE::GetPE().GetRank(nsp) == 0) { convert(converter); }
     PE::GetPE().setBarrier(nsp);
   }
   else { 
-    convert(converter);
-  }*/
- 
-  if (!converter->isParallel()) {
-    const string ssGroupName = SubSystemStatusStack::getCurrentName();
-    runSerial<void, Common::SelfRegistPtr<MeshFormatConverter>, CFmeshReader, &CFmeshReader::convert>
-      (this, converter, ssGroupName);
-  }
-  else {
     convert(converter);
   }
     
