@@ -265,7 +265,7 @@ Simulator.SubSystem.ConcurrentCoupler.ImposeSynchronization = true
 Simulator.SubSystem.ConcurrentCoupler.InterfacesWriteComs = StdConcurrentReduce
 Simulator.SubSystem.ConcurrentCoupler.InterfacesWriteNames = ReduceRad
 # first globally reduce all qrad contributions from all Rad* namespaces 
-Simulator.SubSystem.ConcurrentCoupler.ReduceRad.SocketsSendRecv = Rad_divq
-Simulator.SubSystem.ConcurrentCoupler.ReduceRad.SocketsConnType = State
-Simulator.SubSystem.ConcurrentCoupler.ReduceRad.Operation = SUM
+Simulator.SubSystem.ConcurrentCoupler.ReduceRad.SocketsSendRecv = Rad_divq Rad_qx Rad_qy Rad_qz
+Simulator.SubSystem.ConcurrentCoupler.ReduceRad.SocketsConnType = State State State State
+Simulator.SubSystem.ConcurrentCoupler.ReduceRad.Operation = SUM SUM SUM SUM
 
