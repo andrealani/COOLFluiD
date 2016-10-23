@@ -24,6 +24,7 @@ namespace COOLFluiD {
 
 /// This class represents a CFmeshReader.
 /// @author Tiago Quintino
+/// @author Andrea Lani
 class CFmeshFileReader_API CFmeshReader : public Framework::MeshCreator {
 public: // functions
 
@@ -36,7 +37,10 @@ public: // functions
 
   /// Destructor
   ~CFmeshReader();
-
+  
+  /// Tell whether the mesh has been generated
+  virtual bool isMeshGenerated() const {return !m_onlyConversion;}
+  
   /// Configures the method, by allocating the it's dynamic members.
   /// @param args missing documentation
   virtual void configure ( Config::ConfigArgs& args );
@@ -111,7 +115,10 @@ private: // data
   /// option to convert back to the original format
   /// usefull only for debugging
   bool m_convertBack;
-
+  
+  /// option to choose to only convert the mesh without loading it into memory
+  bool m_onlyConversion;
+  
   /// stored configuration arguments
   /// @todo this should be avoided and removed.
   ///       It is currently only a quick fix for delayed configuration of an object (MeshFormatConverter)

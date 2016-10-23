@@ -47,6 +47,7 @@ void CFmeshReader::defineConfigOptions(Config::OptionList& options)
    options.addConfigOption< std::string > ("ReadCFmesh","Command to read the CFmesh. This command seldomly needs overriding.");
    options.addConfigOption< std::string > ("convertFrom","Name of format from which to convert to CFmesh.");
    options.addConfigOption< bool > ("convertBack","Also convert back to the original format. Usefull only for debugging.");
+   options.addConfigOption< bool > ("onlyConversion","Only convert the mesh without loading it into memory.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -74,6 +75,9 @@ CFmeshReader::CFmeshReader(const std::string& name)  : MeshCreator(name)
   m_converterStr = "Null";
   setParameter("convertFrom",&m_converterStr);
 
+  m_onlyConversion = false;
+  setParameter("onlyConversion",&m_onlyConversion);
+
   m_convertBack = false;
   setParameter("convertBack",&m_convertBack);
 }
@@ -99,23 +103,25 @@ void CFmeshReader::generateMeshDataImpl()
 
   // convert only if m_converterStr != "CFmesh", which assumes
   // that you create the mesh from CFmesh format
-
+  
   if (m_converterStr != "CFmesh")
   {
     convertFormat();
     CFLog(VERBOSE,"CFmeshReader : finished converting\n");
   }
-
-  Common::Stopwatch<WallTime> stp;
-
-  stp.start();
-
-  cf_assert(m_readCFmesh.isNotNull());
-  m_readCFmesh->execute();
-
-  stp.stop();
-
-  CFLog(NOTICE, "Building the mesh took: " << stp.read() << "s\n");
+  
+  if (!m_onlyConversion) {
+    Common::Stopwatch<WallTime> stp;
+    
+    stp.start();
+    
+    cf_assert(m_readCFmesh.isNotNull());
+    m_readCFmesh->execute();
+    
+    stp.stop();
+    
+    CFLog(NOTICE, "Building the mesh took: " << stp.read() << "s\n");
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

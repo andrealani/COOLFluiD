@@ -255,7 +255,7 @@ void OnlyMeshSubSystem::buildMeshData()
       m_meshCreator[iMC]->generateMeshData();
     }
   }
-
+  
   // Process the CFMeshData to do:
   //  - renumbering
   //  - conversion FVM <-> FEM
@@ -275,7 +275,7 @@ void OnlyMeshSubSystem::buildMeshData()
       m_meshCreator[iMC]->buildMeshData();
     }
   }
-
+  
   for(CFuint iMeshData = 0; iMeshData < meshDataVector.size(); iMeshData++)
   {
     bool isNonRoot = false;
@@ -283,6 +283,11 @@ void OnlyMeshSubSystem::buildMeshData()
     {
       if(m_meshCreator[iMC]->getNamespace() == meshDataVector[iMeshData]->getPrimaryNamespace())
         isNonRoot = m_meshCreator[iMC]->isNonRootMethod();
+      
+      // if at least one mesh has not been generated, stop here
+      if (!m_meshCreator[iMC]->isMeshGenerated()) {
+	return;
+      }
     }
     
     if(!isNonRoot) {

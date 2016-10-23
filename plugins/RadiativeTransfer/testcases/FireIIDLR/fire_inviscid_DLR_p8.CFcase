@@ -65,6 +65,50 @@ Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/FireIIDLR
 # relative path to results directory 
 Simulator.Paths.ResultsDir = ./RESULTS_FIREII_INVISCID
 
+
+# NOTE: this testcase works also if the following 3 lines are commented out
+Maestro = LoopMaestro
+LoopMaestro.GlobalStopCriteria = GlobalMaxNumberSteps
+LoopMaestro.GlobalMaxNumberSteps.nbSteps = 1
+#LoopMaestro.AppendIter = true
+#LoopMaestro.RestartFromPreviousSolution = true
+
+Simulator.SubSystems = SubSystemA SubSystem
+Simulator.SubSystemTypes = OnlyMeshSubSystem StandardSubSystem
+
+################################################################################
+################################################################################
+# SubSystemA converts from Tecplot to a CFmesh file serially (from just 1 CPU)
+################################################################################
+################################################################################
+
+Simulator.SubSystemA.Default.PhysicalModelType = PhysicalModelDummy
+Simulator.SubSystemA.PhysicalModelDummy.Dimensions = 3
+Simulator.SubSystemA.PhysicalModelDummy.Equations = \
+	rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp rhoe p T Mach
+
+Simulator.SubSystemA.MeshCreator                                 = CFmeshFileReader
+Simulator.SubSystemA.CFmeshFileReader.Data.FileName              = fire_inviscid_DLR.CFmesh
+Simulator.SubSystemA.CFmeshFileReader.convertFrom                = Tecplot2CFmesh
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.Discontinuous  = true
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.SolutionOrder  = P0
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.HasBlockFormat = false
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.SurfaceTRS = B_3 B_4 B_6
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = \
+	"N2_partial_density" "O2_partial_density" "NO_partial_density" "N_partial_density" "O_partial_density" \
+	"N2p_partial_density" "O2p_partial_density" "NOp_partial_density" "Np_partial_density" "Op_partial_density" \
+	"e_partial_density" "pressure" "temperature" "Mach_number"
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.NbElementTypes = 2
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = false
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
+Simulator.SubSystemA.CFmeshFileReader.onlyConversion = true
+
+################################################################################
+################################################################################
+# SubSystem solves radiation in parallel with each CPU loading the full mesh
+################################################################################
+################################################################################
+
 # 8 cores for radiation
 Simulator.SubSystem.Namespaces = Rad|8 RadCoupler
 Simulator.SubSystem.Ranks = 0:7 0:7
@@ -91,10 +135,6 @@ Simulator.SubSystem.PMRad&8.Equations = \
 ###################
 ## Output
 ###################
-#Simulator.SubSystem.OutputFormat      = Null~8
-#Simulator.SubSystem.OutputFormatNames = Null@8
-#Simulator.SubSystem.Null&8.Namespace = Rad&8
-#Simulator.SubSystem.Null&8.Data.CollaboratorNames = SMRad&8
 
 #Simulator.SubSystem.OutputFormat      = Null~7 Tecplot
 #Simulator.SubSystem.OutputFormatNames = Null@7 Tecplot7
@@ -141,19 +181,7 @@ Simulator.SubSystem.MeshCreator      = CFmeshFileReader~8
 Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader@8
 
 Simulator.SubSystem.CFmeshFileReader&8.Namespace = Rad&8
-Simulator.SubSystem.CFmeshFileReader&8.Data.FileName              = fire_inviscid_DLR.CFmesh
-Simulator.SubSystem.CFmeshFileReader&8.convertFrom                = Tecplot2CFmesh
-Simulator.SubSystem.CFmeshFileReader&8.Tecplot2CFmesh.Discontinuous  = true
-Simulator.SubSystem.CFmeshFileReader&8.Tecplot2CFmesh.SolutionOrder  = P0
-Simulator.SubSystem.CFmeshFileReader&8.Tecplot2CFmesh.HasBlockFormat = false
-Simulator.SubSystem.CFmeshFileReader&8.Tecplot2CFmesh.SurfaceTRS = B_3 B_4 B_6
-Simulator.SubSystem.CFmeshFileReader&8.Tecplot2CFmesh.ReadVariables = \
-	"N2_partial_density" "O2_partial_density" "NO_partial_density" "N_partial_density" "O_partial_density" \
-	"N2p_partial_density" "O2p_partial_density" "NOp_partial_density" "Np_partial_density" "Op_partial_density" \
-	"e_partial_density" "pressure" "temperature" "Mach_number"
-Simulator.SubSystem.CFmeshFileReader&8.Tecplot2CFmesh.NbElementTypes = 2
-Simulator.SubSystem.CFmeshFileReader&8.Tecplot2CFmesh.SkipSolution = false
-Simulator.SubSystem.CFmeshFileReader&8.Tecplot2CFmesh.Precision = 12
+Simulator.SubSystem.CFmeshFileReader&8.Data.FileName = fire_inviscid_DLR.CFmesh
 Simulator.SubSystem.CFmeshFileReader&8.Data.ScalingFactor = 1.
 Simulator.SubSystem.CFmeshFileReader&8.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
 Simulator.SubSystem.CFmeshFileReader&8.Data.CollaboratorNames = SMRad&8
@@ -191,7 +219,7 @@ Simulator.SubSystem.ProcessingRad&8.Namespace = Rad&8
 Simulator.SubSystem.ProcessingRad&8.Data.CollaboratorNames = SMRad&8 IteratorRad&8 LSSRad&8
 Simulator.SubSystem.ProcessingRad&8.Comds = RadiativeTransferFVDOM 
 Simulator.SubSystem.ProcessingRad&8.Names = Radiation
-Simulator.SubSystem.ProcessingRad&8.Radiation.nDirs = 24
+Simulator.SubSystem.ProcessingRad&8.Radiation.nDirs =  8 #24
 Simulator.SubSystem.ProcessingRad&8.Radiation.UseExponentialMethod = true
 #Simulator.SubSystem.ProcessingRad&8.Radiation.DirName = ./
 Simulator.SubSystem.ProcessingRad&8.Radiation.BinTabName = air-100Bands.dat #air-100Bins.dat

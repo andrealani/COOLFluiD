@@ -53,6 +53,9 @@ public: // methods
   /// @param args the arguments used for the configuration
   virtual void configure ( Config::ConfigArgs& args );
 
+  /// Tell whether the mesh has been generated
+  virtual bool isMeshGenerated() const {return true;}
+  
   /// Generates the Mesh in the MeshData and the connectivity.
   /// @post pushs and pops the Namespace to which this Method belongs
   void generateMeshData();
