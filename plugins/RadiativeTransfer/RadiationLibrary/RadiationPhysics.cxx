@@ -56,7 +56,10 @@ void RadiationPhysics::getWallStateIDs(std::vector<CFuint>& statesID,
   }
 }
 
-void RadiationPhysics::getCellStateIDs(std::vector<CFuint>& statesID){
+/////////////////////////////////////////////////////////////////////////////
+
+void RadiationPhysics::getCellStateIDs(std::vector<CFuint>& statesID)
+{
   Framework::SocketBundleSetter socketBundle;
   socketBundle.setDataSockets( *(m_radPhysicsHandlerPtr->getDataSockets()) );
 
@@ -111,16 +114,17 @@ void RadiationPhysics::computeInterpolatedStates()
     facesData.trs = WallFaces;
     const CFuint nbFaces = WallFaces->getLocalNbGeoEnts();
     m_interpolatedStates.resize(nbFaces);
+    RealVector nodeCenter(dim);
+    
     for(CFuint i=0; i<nbFaces; ++i){
       facesData.idx = i;
       Framework::GeometricEntity *const face = faceTRSBuilder->buildGE();
       const std::vector<Framework::Node*>& nodesInFace = *face->getNodes();
       const CFuint nbNodesInFace = nodesInFace.size();
       m_interpolatedStates[i] = 0.0;
-      RealVector nodeCenter(dim);
+      nodeCenter = 0.;
       for (CFuint node = 0; node < nbNodesInFace; ++node) {
-        //std::cout<<"hererere nodes: "<<node<<" of "<<nbNodesInFace<<std::endl<<std::flush;
-        Framework::State nstate = nstates[nodesInFace[node]->getLocalID()];
+	const Framework::State& nstate = nstates[nodesInFace[node]->getLocalID()];
         m_interpolatedStates[i]  += nstate;
         nodeCenter += *nodesInFace[node]->getData();
       }
@@ -129,19 +133,9 @@ void RadiationPhysics::computeInterpolatedStates()
       for(CFuint d=0;d<dim;++d){
         faceCenters[face->getID()*dim+d] = nodeCenter[d];
       }
-      //std::cout<<"face centers: "<<nodeCenter[0]<<' '<<nodeCenter[1]<<' '<<nodeCenter[2]<<std::endl;
-
-      //std::cout<<"node: "<<nodeCenter[0]<<' '<<nodeCenter[1]<<std::endl;
-      //Framework::Node nodeCenter2 = m_interpolatedStates[i].getCoordinates();
-      //std::cout<<"node: "<<nodeCenter2[0]<<' '<<nodeCenter2[1]<<std::endl;
-
-
       faceTRSBuilder->releaseGE();
     }
-    //std::cout<<"done!"<<std::endl;
-
   }
-
 }
 
 
@@ -251,6 +245,8 @@ void RadiationPhysics::setup()
   //reflectionDist ->setupSectra(wavMin, wavMax);
   //scatteringDist ->setupSectra(wavMin, wavMax);
 }
-
+  
+  //////////////////////////////////////////////////////////////////////////////
+  
 }
 }

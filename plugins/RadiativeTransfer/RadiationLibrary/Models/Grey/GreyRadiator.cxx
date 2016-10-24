@@ -2,9 +2,13 @@
 #include "Environment/ObjectProvider.hh"
 #include "Framework/PhysicalModel.hh"
 
+//////////////////////////////////////////////////////////////////////////////
+
 namespace COOLFluiD {
 
 namespace RadiativeTransfer {
+
+//////////////////////////////////////////////////////////////////////////////
 
 Environment::ObjectProvider<GreyRadiator,
                             Radiator,
@@ -18,6 +22,7 @@ Environment::ObjectProvider<GreyWallRadiator,
                             1>
 GreyWallRadiatorProvider("GreyWallRadiator");
 
+//////////////////////////////////////////////////////////////////////////////
 
 void GreyRadiator::defineConfigOptions(Config::OptionList& options)
 {
@@ -30,6 +35,8 @@ void GreyRadiator::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFuint >("nbComPlankTerms",
           "Number of terms of the series to be calculated for the Comulative Plank Function");
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 GreyRadiator::GreyRadiator(const std::string& name):
      Radiator(name)
@@ -50,14 +57,18 @@ GreyRadiator::GreyRadiator(const std::string& name):
 
 }
 
-void GreyRadiator::configure(Config::ConfigArgs& args){
-    ConfigObject::configure(args);
+//////////////////////////////////////////////////////////////////////////////
+
+void GreyRadiator::configure(Config::ConfigArgs& args)
+{
+  ConfigObject::configure(args);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 CFreal GreyRadiator::computeComulativePlankFraction(const CFreal lambda,
-                                                    const CFreal T      ){
+                                                    const CFreal T)
+{
   //calculate the partial Sum
   const CFreal x=m_c2/(lambda*T);
   CFreal sum=0.;
@@ -74,6 +85,8 @@ inline CFreal GreyRadiator::computePlank(const CFreal lambda, const CFreal T){
   return m_c3/(pow(lambda,5) * ( std::exp(m_c2/(lambda*T) ) -1) );
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 inline CFreal GreyRadiator::computeStefanBoltzmann(const CFreal T){
   return m_StefanBoltzmann*pow(T,4);
 }
@@ -88,6 +101,8 @@ inline CFreal GreyRadiator::getCurrentCellTemperature(){
     //std::cout<<"temperature: "<<(&(*m_states[stateID])[0])[m_tempID]<<std::endl;
     return (&(*m_states[stateID])[0])[m_tempID];
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 inline CFreal GreyRadiator::getCurrentWallTemperature(){
     CFuint wallGeoIdx = m_radPhysicsHandlerPtr->getCurrentWallTrsIdx();
@@ -111,7 +126,8 @@ CFreal GreyRadiator::getAbsorption( CFreal lambda, RealVector &s_o ){
 
 //////////////////////////////////////////////////////////////////////////////
 
-CFreal GreyRadiator::getEmission( CFreal lambda, RealVector &s_o ){
+CFreal GreyRadiator::getEmission( CFreal lambda, RealVector &s_o )
+{
   CFreal T = getCurrentElemTemperature();
   return m_emsCoeff * computePlank(lambda*m_angstrom, T);
 }
@@ -123,31 +139,37 @@ void GreyRadiator::setup(){
   m_TRStypeID = m_radPhysicsPtr->getTRStypeID();
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void GreyRadiator::setupSpectra(CFreal wavMin, CFreal wavMax)
 {
  m_minWav = wavMin*m_angstrom;
  m_maxWav = wavMax*m_angstrom;
 }
 
-CFreal GreyRadiator::getSpectaLoopPower(){
-   CFreal T = getCurrentElemTemperature();
+//////////////////////////////////////////////////////////////////////////////
 
-   CFreal a1 = computeComulativePlankFraction(m_minWav, T);
-   CFreal a2 = computeComulativePlankFraction(m_maxWav, T);
-   CFreal a3 = (a2-a1)*computeStefanBoltzmann(T) * m_emsCoeff * getSpaceIntegrator();
-
-//   if(m_TRStypeID == WALL ){
-//      std::cout<<"Temperatute: "<<T<<" Area: "<<getSpaceIntegrator()<<" emsCoeff "<<m_emsCoeff<<std::endl;
-//      std::cout<<"computeStefanBoltzmann "<<computeStefanBoltzmann(T)<<std::endl;
-//      std::cout<<"space integrator:  "<<getSpaceIntegrator()<<std::endl;
-//      std::cout<<"total:  "<<(a2-a1)*a3 <<std::endl;
-//      std::cout<<"a1: "<<a1<<" a2: "<<a2<<" a3: "<<a3<<std::endl;
-//   }
-
-   return (a2-a1)*a3;
+CFreal GreyRadiator::getSpectraLoopPower()
+{
+  CFreal T = getCurrentElemTemperature();
+  CFreal a1 = computeComulativePlankFraction(m_minWav, T);
+  CFreal a2 = computeComulativePlankFraction(m_maxWav, T);
+  CFreal a3 = (a2-a1)*computeStefanBoltzmann(T) * m_emsCoeff * getSpaceIntegrator();
+  
+  //   if(m_TRStypeID == WALL ){
+  //      std::cout<<"Temperatute: "<<T<<" Area: "<<getSpaceIntegrator()<<" emsCoeff "<<m_emsCoeff<<std::endl;
+  //      std::cout<<"computeStefanBoltzmann "<<computeStefanBoltzmann(T)<<std::endl;
+  //      std::cout<<"space integrator:  "<<getSpaceIntegrator()<<std::endl;
+  //      std::cout<<"total:  "<<(a2-a1)*a3 <<std::endl;
+  //      std::cout<<"a1: "<<a1<<" a2: "<<a2<<" a3: "<<a3<<std::endl;
+  //   }
+  return (a2-a1)*a3;
 }
 
-void GreyRadiator::getRandomEmission(CFreal &lambda, RealVector &s_o){
+//////////////////////////////////////////////////////////////////////////////
+
+void GreyRadiator::getRandomEmission(CFreal &lambda, RealVector &s_o)
+{
     CFreal T = getCurrentElemTemperature();
 
     static CFuint dim = Framework::PhysicalModelStack::getActive()->getDim();
@@ -185,6 +207,8 @@ void GreyRadiator::getRandomEmission(CFreal &lambda, RealVector &s_o){
       lambda = 1.;
     }
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 }
 }

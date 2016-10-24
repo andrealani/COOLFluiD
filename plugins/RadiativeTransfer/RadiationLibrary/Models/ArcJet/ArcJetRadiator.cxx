@@ -227,13 +227,15 @@ void ArcJetRadiator::computeEmissionCPD()
 }
 
 //////////////////////////////////////////////////////////////////////////////
-CFreal ArcJetRadiator::getSpectaLoopPower()
+
+CFreal ArcJetRadiator::getSpectraLoopPower()
 {
   return m_spectralLoopPowers[ m_radPhysicsHandlerPtr->getCurrentCellTrsIdx() ];
 }
 
 
 /////////////////////////////////////////////////////////////////////////////
+
 void ArcJetRadiator::getRandomEmission(CFreal &lambda, RealVector &s_o)
 {
   //cout<<"get emission"<<endl;

@@ -17,6 +17,34 @@
 #include "RadiativeTransfer/RadiationLibrary/RadiationPhysicsHandler.hh"
 #include "LagrangianSolver/ParallelVector/ParallelVector.hh"
 
+#include <utility>
+#include <time.h>
+#include <cmath>
+#include <algorithm>
+#include <boost/progress.hpp>
+#include <boost/random.hpp>
+
+#include "MathTools/MathChecks.hh"
+#include "MathTools/MathConsts.hh"
+#include "RadiativeTransfer/RadiativeTransfer.hh"
+#include "Framework/DataProcessingData.hh"
+#include "Framework/ConvectiveVarSet.hh"
+#include "Framework/DataSocketSource.hh"
+#include "Framework/MethodCommandProvider.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Framework/GeometricEntityPool.hh"
+#include "Framework/FaceTrsGeoBuilder.hh"
+#include "Framework/CellTrsGeoBuilder.hh"
+#include "Framework/PhysicalConsts.hh"
+#include "Common/CFPrintContainer.hh"
+#include "Common/MPI/MPIError.hh"
+#include "FiniteVolume/CellCenterFVM.hh"
+#include "MathTools/MathFunctions.hh"
+#include "Common/MPI/MPIStructDef.hh"
+#include "Framework/SocketBundleSetter.hh"
+#include "LagrangianSolver/ParallelVector/ParallelVector.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -40,7 +68,6 @@ struct PhotonData{
 typedef LagrangianSolver::Particle<PhotonData> Photon;
 
 //////////////////////////////////////////////////////////////////////////////
-
 
 template<class PARTICLE_TRACKING>
 class RadiativeTransferMonteCarlo : public Framework::DataProcessingCom                 
@@ -136,24 +163,14 @@ private:
 
 private: 
 
-  //PostProcessAverage m_postProcess;
-
   LagrangianSolver::LagrangianSolver<PhotonData, PARTICLE_TRACKING> m_lagrangianSolver;
-
-  /// particle tracking algorithm
-  //ParticleTracking *m_particleTracking;
   
-  //ParticleTrackingAxi<PhotonData> m_particleTrackingAxi;
-
   /// Socket for the Gas Radiative Heat Source
   Framework::DataSocketSource < CFreal > socket_qrad; //GasRadiativeHeatSource
   
   /// the socket to the radiative heat flux at the wall faces
   Framework::DataSocketSource < CFreal > socket_qradFluxWall;
-
-  //Framework::DataSocketSource < CFreal > socket_axiVolumes;
-
-
+  
   /// handle to the face normals
   Framework::DataSocketSink< CFreal> socket_normals;
 
@@ -181,12 +198,6 @@ private:
   /// IDs corresponding to the cell for which the normal point outward
   Framework::DataSocketSink<CFint> socket_isOutward;
     
-  ///vector that maps each cell with its radiative heat source
-  //std::vector<CFreal> m_RHSGas;
-
-  ///vector that maps each wall face ID with its radiative heat source
-  //std::vector<CFreal> m_RHSWall;
-  
   /// storage of face centroids
   Framework::DataSocketSink<CFreal> socket_faceCenters;
   
@@ -229,13 +240,10 @@ private:
   
   RandomNumberGenerator m_rand;
 
-  //PostProcess m_postProcess;
-
   CFuint m_sendBufferSize;
 
-
   RealVector m_ghostStateInRadPowers;
-
+  
   CFuint m_dim2;
 
   void getTotalEnergy();
@@ -263,55 +271,15 @@ private:
   bool getFacePhotonData(Photon &ray);
 }; // end of class RadiativeTransferMonteCarlo
 
- }
-}
-
 //////////////////////////////////////////////////////////////////////////////
-
-#include <utility>
-#include <time.h>
-#include <cmath>
-#include <algorithm>
-#include <boost/progress.hpp>
-#include <boost/random.hpp>
-
-#include "MathTools/MathChecks.hh"
-#include "MathTools/MathConsts.hh"
-#include "RadiativeTransfer/RadiativeTransfer.hh"
-#include "Framework/DataProcessingData.hh"
-#include "Framework/ConvectiveVarSet.hh"
-#include "Framework/DataSocketSource.hh"
-#include "Framework/MethodCommandProvider.hh"
-#include "Framework/PhysicalModel.hh"
-#include "Framework/GeometricEntity.hh"
-#include "Framework/GeometricEntityPool.hh"
-#include "Framework/FaceTrsGeoBuilder.hh"
-#include "Framework/CellTrsGeoBuilder.hh"
-#include "Framework/PhysicalConsts.hh"
-#include "Common/CFPrintContainer.hh"
-#include "Common/MPI/MPIError.hh"
-#include "FiniteVolume/CellCenterFVM.hh"
-#include "MathTools/MathFunctions.hh"
-#include "Common/MPI/MPIStructDef.hh"
-#include "Framework/SocketBundleSetter.hh"
-#include "LagrangianSolver/ParallelVector/ParallelVector.hh"
-
-//////////////////////////////////////////////////////////////////////////////
-
-using namespace std;
-using namespace COOLFluiD::Framework;
-using namespace COOLFluiD::MathTools;
-using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Numerics::FiniteVolume;
-using namespace COOLFluiD::LagrangianSolver;
-
-namespace COOLFluiD {
-
-namespace RadiativeTransfer {
 
 template<class PARTICLE_TRACKING>
-void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::defineConfigOptions(Config::OptionList& options)
+void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::defineConfigOptions
+(Config::OptionList& options)
 {
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  
   options.addConfigOption< CFuint >("numberOfRays","number of rays sent by each element.");
   options.addConfigOption< CFuint >("MaxNbVisitedCells","Maximum number of visited cells.");
   options.addConfigOption< bool >("Axi","True if it is an axisymmetric simulation.");
@@ -324,7 +292,8 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::defineConfigOptions(Config:
 //////////////////////////////////////////////////////////////////////////////
 
 template<class PARTICLE_TRACKING>
-RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::RadiativeTransferMonteCarlo(const std::string& name):
+RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::RadiativeTransferMonteCarlo
+(const std::string& name):
   DataProcessingCom(name),
   m_lagrangianSolver(name),
   socket_qrad("qrad"),
@@ -341,6 +310,10 @@ RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::RadiativeTransferMonteCarlo(cons
   socket_faceCenters("faceCenters"),
   m_radiation(new RadiationPhysicsHandler("RadiationPhysicsHandler"))
 {
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
   addConfigOptionsTo(this);
 
   m_postProcessName = "PostProcessNull";
@@ -366,16 +339,21 @@ RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::RadiativeTransferMonteCarlo(cons
 }
 
 /////////////////////////////////////////////////////////////////////////////
+
 template<class PARTICLE_TRACKING>
 RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::~RadiativeTransferMonteCarlo()
 {
 }
 
 /////////////////////////////////////////////////////////////////////////////
+
 template<class PARTICLE_TRACKING>
 void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::configure(Config::ConfigArgs& args)
 {
   CFAUTOTRACE;
+  
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
   
   DataProcessingCom::configure(args);
   cf_assert(m_radiation.isNotNull());
@@ -388,11 +366,13 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::configure(Config::ConfigArg
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
 template<class PARTICLE_TRACKING>
-vector<SafePtr<BaseDataSocketSink> > RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::needsSockets(){
-
-  vector<Common::SafePtr<BaseDataSocketSink> > result;
-
+vector<SafePtr<BaseDataSocketSink> > RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::
+needsSockets()
+{  
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result;
+  
   result.push_back(&socket_nodes);
   result.push_back(&socket_states);
   result.push_back(&socket_nstates);
@@ -403,18 +383,19 @@ vector<SafePtr<BaseDataSocketSink> > RadiativeTransferMonteCarlo<PARTICLE_TRACKI
   result.push_back(&socket_rankPartitionFaces);
   result.push_back(&socket_isOutward);
   result.push_back(&socket_faceCenters);
-
+  
   return result;
 }
-
+  
 //////////////////////////////////////////////////////////////////////////////
+
 template<class PARTICLE_TRACKING>
-vector<SafePtr<BaseDataSocketSource> > RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::providesSockets()
+vector<SafePtr<BaseDataSocketSource> > RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::
+providesSockets()
 {
-  std::vector<Common::SafePtr<BaseDataSocketSource> > result;
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > result;
   result.push_back(&socket_qrad);
   result.push_back(&socket_qradFluxWall);
-
   return result;
 }
 
@@ -423,6 +404,12 @@ vector<SafePtr<BaseDataSocketSource> > RadiativeTransferMonteCarlo<PARTICLE_TRAC
 template<class PARTICLE_TRACKING>
 void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::setup()
 {  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::LagrangianSolver;
+  
   const std::string nsp = getMethodData().getNamespace();
   
   // MPI parameters
@@ -509,15 +496,19 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::setup()
     nbFaces += WallFaces->getLocalNbGeoEnts();
   }
   socket_qradFluxWall.getDataHandle().resize(nbFaces);
-
-
-
 }
+   
 /////////////////////////////////////////////////////////////////////////////
+
 template<class PARTICLE_TRACKING>
 void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::executeOnTrs()
 {
-
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::LagrangianSolver;
+  
   CFLog(VERBOSE, "RadiativeTransferMonteCarlo::executeOnTrs() START\n");
 
   // for testcases == 0, the following must be recomputed everytime
@@ -543,150 +534,172 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::executeOnTrs()
 /////////////////////////////////////////////////////////////////////////////
 
 template<class PARTICLE_TRACKING>
-void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getTotalEnergy(){
-
-    CFuint nbStates = m_radiation->getNbStates();
-    CFuint nbGhostStates = m_radiation->getNbGhostStates();
-
-    m_stateRadPower.resize(nbStates);
-    m_nbPhotonsState.resize(nbStates);
-
-    m_ghostStateRadPower.resize(nbGhostStates);
-    m_nbPhotonsGhostState.resize(nbGhostStates);
-
-    //CFreal nbPhotons = nbStates ;//* m_nbRaysElem / m_radiation->getNumberLoops();
-    //cout<<"nbPhotons: "<< nbPhotons <<endl;
-
-    //Get the total radiative power of the Cells
-    CFreal stateRadPower =  0;
-    for(CFuint state=0; state<nbStates; ++state){
-      if ( !m_radiation->isStateNull(state) ){
-        //cout<<"is not ghost!"<<endl;
-        m_stateRadPower[state]= m_radiation->getCellDistPtr(state)
-                               ->getRadiatorPtr()->getSpectaLoopPower();
-        stateRadPower += m_stateRadPower[state];
-        //cout<<"state radPower: "<<m_stateRadPower[state]<<endl;
-        //cout<<"THE OTER: m_axi Volume: "<<m_axiVolumes[i]<<endl;
-       //m_stateRadPower[i] = cellK*sigma*pow(T,4.)*m_axiVolumes[i];
-      }
-      else{
-       //cout<<"is ghost!"<<endl;
-       m_stateRadPower[state] = .0;
-      }
+void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getTotalEnergy()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Numerics::FiniteVolume;
+  using namespace COOLFluiD::LagrangianSolver;
+  
+  CFuint nbStates = m_radiation->getNbStates();
+  CFuint nbGhostStates = m_radiation->getNbGhostStates();
+  
+  m_stateRadPower.resize(nbStates);
+  m_nbPhotonsState.resize(nbStates);
+  
+  m_ghostStateRadPower.resize(nbGhostStates);
+  m_nbPhotonsGhostState.resize(nbGhostStates);
+  
+  //CFreal nbPhotons = nbStates ;//* m_nbRaysElem / m_radiation->getNumberLoops();
+  //cout<<"nbPhotons: "<< nbPhotons <<endl;
+  
+  //Get the total radiative power of the Cells
+  CFreal stateRadPower =  0;
+  for(CFuint state=0; state<nbStates; ++state){
+    if ( !m_radiation->isStateNull(state) ){
+      //cout<<"is not ghost!"<<endl;
+      m_stateRadPower[state]= m_radiation->getCellDistPtr(state)
+	->getRadiatorPtr()->getSpectraLoopPower();
+      stateRadPower += m_stateRadPower[state];
+      //cout<<"state radPower: "<<m_stateRadPower[state]<<endl;
+      //cout<<"THE OTER: m_axi Volume: "<<m_axiVolumes[i]<<endl;
+      //m_stateRadPower[i] = cellK*sigma*pow(T,4.)*m_axiVolumes[i];
     }
-
-    //Get the total radiative power of the Wall Faces
-    CFreal gStateRadPower =  0;
-    for(CFuint gstate=0; gstate<nbGhostStates; ++gstate){
-      if ( !m_radiation->isGhostStateNull(gstate) ){
-        m_ghostStateRadPower[gstate]= m_radiation->getWallDistPtr(gstate)
-                                                  ->getRadiatorPtr()->getSpectaLoopPower();
-        //cout<<"gstate radPower: "<<m_ghostStateRadPower[gstate]<<endl;
-
-        gStateRadPower += m_ghostStateRadPower[gstate];
-      }
-      else{
-       //cout<<"is ghost!"<<endl;
-       m_ghostStateRadPower[gstate] = 0.;
-      }
+    else{
+      //cout<<"is ghost!"<<endl;
+      m_stateRadPower[state] = .0;
     }
-    //cout<<" walls rad power : "<< gStateRadPower<<endl;
-
-    m_totalRadPower = stateRadPower + gStateRadPower;
-
-    //cout<<"statePhotons"<<endl;
-    for(CFuint i= 0; i< m_stateRadPower.size(); ++i){
-        //CFuint test = CFuint(m_stateRadPower[i]/m_totalRadPower*nbPhotons);
-        m_nbPhotonsState[i] =( m_stateRadPower[i] > 0. )? m_nbRaysElem : 0 ;
-        //cout<<"nbPhotons: "<<m_nbPhotonsState[i]<< ' '<<m_stateRadPower[i] <<endl;
+  }
+  
+  //Get the total radiative power of the Wall Faces
+  CFreal gStateRadPower =  0;
+  for(CFuint gstate=0; gstate<nbGhostStates; ++gstate){
+    if ( !m_radiation->isGhostStateNull(gstate) ){
+      m_ghostStateRadPower[gstate]= m_radiation->getWallDistPtr(gstate)
+	->getRadiatorPtr()->getSpectraLoopPower();
+      //cout<<"gstate radPower: "<<m_ghostStateRadPower[gstate]<<endl;
+      
+      gStateRadPower += m_ghostStateRadPower[gstate];
     }
-
-    //cout<<"ghostPhotons"<<endl;
-    for(CFuint i= 0; i< m_ghostStateRadPower.size(); ++i){
-        //CFuint test = CFuint(m_stateRadPower[i]/m_totalRadPower*nbPhotons);
-        m_nbPhotonsGhostState[i] =( m_ghostStateRadPower[i] > 0.)? m_nbRaysElem : 0 ;
-        //cout<<"nbPhotons: "<<m_nbPhotonsGhostState[i]<< ' '<<m_ghostStateRadPower[i] <<endl;
+    else{
+      //cout<<"is ghost!"<<endl;
+      m_ghostStateRadPower[gstate] = 0.;
     }
-   
+  }
+  //cout<<" walls rad power : "<< gStateRadPower<<endl;
+  
+  m_totalRadPower = stateRadPower + gStateRadPower;
+  
+  //cout<<"statePhotons"<<endl;
+  for(CFuint i= 0; i< m_stateRadPower.size(); ++i){
+    //CFuint test = CFuint(m_stateRadPower[i]/m_totalRadPower*nbPhotons);
+    m_nbPhotonsState[i] =( m_stateRadPower[i] > 0. )? m_nbRaysElem : 0 ;
+    //cout<<"nbPhotons: "<<m_nbPhotonsState[i]<< ' '<<m_stateRadPower[i] <<endl;
+  }
+  
+  //cout<<"ghostPhotons"<<endl;
+  for(CFuint i= 0; i< m_ghostStateRadPower.size(); ++i){
+    //CFuint test = CFuint(m_stateRadPower[i]/m_totalRadPower*nbPhotons);
+    m_nbPhotonsGhostState[i] =( m_ghostStateRadPower[i] > 0.)? m_nbRaysElem : 0 ;
+    //cout<<"nbPhotons: "<<m_nbPhotonsGhostState[i]<< ' '<<m_ghostStateRadPower[i] <<endl;
+  }
 }
+  
 /////////////////////////////////////////////////////////////////////////////
+
 template<class PARTICLE_TRACKING>
-bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getCellPhotonData(Photon &ray){
-	
-    //static CellTrsGeoBuilder::GeoData& cellData = m_cellBuilder.getDataGE();
-    const CFuint nbStates = m_nbPhotonsState.size();
-
-    for(;m_istate_cell_fix<nbStates; ++m_istate_cell_fix)
-    {
-      for(;m_iphoton_cell_fix<m_nbPhotonsState[ m_istate_cell_fix ];)
-      {
-//        cout<<"m_nbPhotonsState[state]: "<<m_nbPhotonsState[state]<<' '<<";state: "<<state<<endl;
-//        cout<<"photon: "<<photon<<endl;
-
-        //cellData.idx =  state;
-
-        //cellData.idx = 50;
-        //GeometricEntity *const cell = m_cellBuilder.buildGE();
-        //if( cell->getState(0)->isParUpdatable() ){
-        // Calculate the wavelength
-        //cout<<"wavelength= "<<ray.userData.wavelength<<endl;
-
-        //Get directions
-        RealVector directions(m_dim2);
-        m_radiation->getCellDistPtr( m_istate_cell_fix )->
-            getRadiatorPtr()->getRandomEmission(ray.userData.wavelength, directions );
-
-        //cout<<"ray directions: ";
-        for(CFuint ii=0; ii<m_dim2; ++ii){
-          ray.commonData.direction[ii]=directions[ii];
-        }
-        //cout<<endl;
-
-        //Get the beam max optical path Ks
-        ray.userData.KS = - std::log( m_rand.uniformRand() );
-        // ray.actualKS = 0;
-//  cout<<"getCellcenter"<<endl;
-        //Get cell center
-        static Framework::DataHandle<Framework::State*, Framework::GLOBAL> states
-                = socket_states.getDataHandle();
-
-        Node& baricenter = (*states[ m_istate_cell_fix ]).getCoordinates();
-
-        //RealVector baricenter(_dim);
-        //m_particleTracking->computeAverage(*cell->getNodes(), cell->nbNodes(), baricenter);
-        //
-        //cout<<"baricenter: ";
-
-        //cout<<endl;
-
-        for(CFuint i=0;i<m_dim;++i){
-          //  cout<<baricenter[i]<<' ';
-          ray.commonData.currentPoint[i]=baricenter[i];
-        }
-        for(CFuint i=m_dim;i<m_dim2;++i){
-          //  cout<<baricenter[i]<<' ';
-          ray.commonData.currentPoint[i] = 0.;
-        }
-
-        //Get the remaining information
-        //const CFuint cellID = cell->getID();
-        CFuint cellID = m_radiation->getCurrentCellStateID();
-        ray.commonData.cellID = cellID;
-
-        ray.userData.energyFraction= m_stateRadPower[ m_istate_cell_fix ]/CFreal(m_nbPhotonsState[ m_istate_cell_fix ]);
-
-        //m_cellBuilder.releaseGE();
-        ++m_iphoton_cell_fix;
-        return true;
+bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getCellPhotonData(Photon &ray)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Numerics::FiniteVolume;
+  using namespace COOLFluiD::LagrangianSolver;
+  
+  //static CellTrsGeoBuilder::GeoData& cellData = m_cellBuilder.getDataGE();
+  const CFuint nbStates = m_nbPhotonsState.size();
+  
+  for(;m_istate_cell_fix<nbStates; ++m_istate_cell_fix) {
+    for(;m_iphoton_cell_fix<m_nbPhotonsState[ m_istate_cell_fix ];) {
+      //        cout<<"m_nbPhotonsState[state]: "<<m_nbPhotonsState[state]<<' '<<";state: "<<state<<endl;
+      //        cout<<"photon: "<<photon<<endl;
+      
+      //cellData.idx =  state;
+      
+      //cellData.idx = 50;
+      //GeometricEntity *const cell = m_cellBuilder.buildGE();
+      //if( cell->getState(0)->isParUpdatable() ){
+      // Calculate the wavelength
+      //cout<<"wavelength= "<<ray.userData.wavelength<<endl;
+      
+      //Get directions
+      RealVector directions(m_dim2);
+      m_radiation->getCellDistPtr( m_istate_cell_fix )->
+	getRadiatorPtr()->getRandomEmission(ray.userData.wavelength, directions );
+      
+      //cout<<"ray directions: ";
+      for(CFuint ii=0; ii<m_dim2; ++ii){
+	ray.commonData.direction[ii]=directions[ii];
       }
-       m_iphoton_cell_fix=0;
+      //cout<<endl;
+      
+      //Get the beam max optical path Ks
+      ray.userData.KS = - std::log( m_rand.uniformRand() );
+      // ray.actualKS = 0;
+      //  cout<<"getCellcenter"<<endl;
+      //Get cell center
+      static Framework::DataHandle<Framework::State*, Framework::GLOBAL> states
+	= socket_states.getDataHandle();
+      
+      Node& baricenter = (*states[ m_istate_cell_fix ]).getCoordinates();
+      
+      //RealVector baricenter(_dim);
+      //m_particleTracking->computeAverage(*cell->getNodes(), cell->nbNodes(), baricenter);
+      //
+      //cout<<"baricenter: ";
+      
+      //cout<<endl;
+      
+      for(CFuint i=0;i<m_dim;++i){
+	//  cout<<baricenter[i]<<' ';
+	ray.commonData.currentPoint[i]=baricenter[i];
+      }
+      for(CFuint i=m_dim;i<m_dim2;++i){
+	//  cout<<baricenter[i]<<' ';
+	ray.commonData.currentPoint[i] = 0.;
+      }
+      
+      //Get the remaining information
+      //const CFuint cellID = cell->getID();
+      CFuint cellID = m_radiation->getCurrentCellStateID();
+      ray.commonData.cellID = cellID;
+      
+      ray.userData.energyFraction= m_stateRadPower[ m_istate_cell_fix ]/CFreal(m_nbPhotonsState[ m_istate_cell_fix ]);
+      
+      //m_cellBuilder.releaseGE();
+      ++m_iphoton_cell_fix;
+      return true;
     }
-    return false;
+    m_iphoton_cell_fix=0;
+  }
+  return false;
 }
+  
+/////////////////////////////////////////////////////////////////////////////
 
 template<class PARTICLE_TRACKING>
-bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getFacePhotonData(Photon &ray){
-
+bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getFacePhotonData(Photon &ray)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Numerics::FiniteVolume;
+  using namespace COOLFluiD::LagrangianSolver;
+  
   //static CellTrsGeoBuilder::GeoData& cellData = m_cellBuilder.getDataGE();
   //m_ photon=0, gState=0;
   const CFuint nbGstates = m_nbPhotonsGhostState.size();
@@ -807,12 +820,19 @@ bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getFacePhotonData(Photon &r
 }
 
 /////////////////////////////////////////////////////////////////////////////
+
 template<class PARTICLE_TRACKING>
 void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
 {
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Numerics::FiniteVolume;
+  using namespace COOLFluiD::LagrangianSolver;
+    
   CFLog(DEBUG_MAX, "RadiativeTransferMonteCarlo::computeCellRays()\n");
-
-
+  
   m_rand.seed(time(NULL)*(m_myProcessRank+1));
 
 
@@ -870,8 +890,7 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
 
     for(CFuint i=0; i < nbWallPhotons ; ++i ){
       if(getFacePhotonData( photon )){
-        //CFLog(INFO, "****************************************/nNEW PHOTON! /n*******************************\n");
-        //printPhoton(photon);
+	//printPhoton(photon);
         rayTracing(photon);
       }
       -- toGenerateWallPhotons;
@@ -902,45 +921,68 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
 /////////////////////////////////////////////////////////////////////////////
 
 template<class PARTICLE_TRACKING>
-void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::printPhoton(Photon photon){
- CFLog(INFO,
-            "Photon data: "      <<'\n'
-            <<"  cellID: "          <<photon.commonData.cellID<<'\n'
-            <<"  currentPoint: "    <<photon.commonData.currentPoint[0]<<' '
-                                    <<photon.commonData.currentPoint[1]<<' '
-                                    <<photon.commonData.currentPoint[2]<<'\n'
-            <<"  direction: "       <<photon.commonData.direction[0]<<' '
-                                    <<photon.commonData.direction[1]<<' '
-                                    <<photon.commonData.direction[2]<<'\n'
-            <<"  wavelength: "      <<photon.userData.wavelength<<'\n'
-            <<"  KS: "              <<photon.userData.KS<<'\n'
-            <<"  Energy Fraction: " <<photon.userData.energyFraction<<'\n'
-      );
+void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::printPhoton(Photon photon)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Numerics::FiniteVolume;
+  using namespace COOLFluiD::LagrangianSolver;
+  
+  CFLog(INFO,
+	"Photon data: "      <<'\n'
+	<<"  cellID: "          <<photon.commonData.cellID<<'\n'
+	<<"  currentPoint: "    <<photon.commonData.currentPoint[0]<<' '
+	<<photon.commonData.currentPoint[1]<<' '
+	<<photon.commonData.currentPoint[2]<<'\n'
+	<<"  direction: "       <<photon.commonData.direction[0]<<' '
+	<<photon.commonData.direction[1]<<' '
+	<<photon.commonData.direction[2]<<'\n'
+	<<"  wavelength: "      <<photon.userData.wavelength<<'\n'
+	<<"  KS: "              <<photon.userData.KS<<'\n'
+	<<"  Energy Fraction: " <<photon.userData.energyFraction<<'\n'
+	);
 }
 
 /////////////////////////////////////////////////////////////////////////////
+
 template<class PARTICLE_TRACKING>
 void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::MonteCarlo()
 {
-    CFuint nbLoops = m_radiation->getNumberLoops();
-
-    //FIXME: reset persitent cell and face iterators
-    m_iphoton_cell_fix=0, m_istate_cell_fix=0;
-    m_iphoton_face_fix=0, m_igState_face_fix=0;
-
-    for(CFuint i=0; i< nbLoops; ++i){
-      m_radiation->setupWavStride(i);
-      getTotalEnergy();
-
-      computePhotons();
-    }
-
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Numerics::FiniteVolume;
+  using namespace COOLFluiD::LagrangianSolver;
+  
+  const CFuint nbLoops = m_radiation->getNumberLoops();
+  
+  //FIXME: reset persistent cell and face iterators
+  m_iphoton_cell_fix=0, m_istate_cell_fix=0;
+  m_iphoton_face_fix=0, m_igState_face_fix=0;
+  
+  for(CFuint i=0; i< nbLoops; ++i){
+    m_radiation->setupWavStride(i);
+    getTotalEnergy();
+    
+    computePhotons();
+  }
 }
-
+  
 /////////////////////////////////////////////////////////////////////////////
+
 template<class PARTICLE_TRACKING>
 CFuint RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::rayTracing(Photon& beam)
 {
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Numerics::FiniteVolume;
+  using namespace COOLFluiD::LagrangianSolver;
+  
   CFuint nbCrossedCells = 0;
   CFuint nbIter = 0;
   CFint exitCellID, exitFaceID, currentCellID;
@@ -1081,10 +1123,18 @@ CFuint RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::rayTracing(Photon& beam)
   return 0;
 }
 
+/////////////////////////////////////////////////////////////////////////////
 
 template<class PARTICLE_TRACKING>
 void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
 {
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Numerics::FiniteVolume;
+  using namespace COOLFluiD::LagrangianSolver;
+  
   CFLog(VERBOSE, "RadiativeTransferMonteCarlo computeHeatFlux()\n");
 
   //  cout<<endl<<"COMPUTE HEAT FLUX"<<endl;
@@ -1148,8 +1198,12 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
   m_postProcess->runPostProcess(gasRadiativeHeatSource);
 }
 
+/////////////////////////////////////////////////////////////////////////////
+
   } // namespace RadiativeTransfer
 
 } // namespace COOLFluiD
+
+/////////////////////////////////////////////////////////////////////////////
 
 #endif // COOLFluiD_RadiativeTransfer_RadiativeTransferMonteCarloFVMCC_hh

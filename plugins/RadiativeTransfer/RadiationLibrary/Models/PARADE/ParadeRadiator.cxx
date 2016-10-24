@@ -595,7 +595,7 @@ void ParadeRadiator::computeEmissionCPD()
 
 //////////////////////////////////////////////////////////////////////////////
 
-CFreal ParadeRadiator::getSpectaLoopPower()
+CFreal ParadeRadiator::getSpectraLoopPower()
 {
   return m_spectralLoopPowers[ m_radPhysicsHandlerPtr->getCurrentCellTrsIdx() ];
 }

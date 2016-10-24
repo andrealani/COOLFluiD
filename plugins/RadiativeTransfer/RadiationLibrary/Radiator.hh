@@ -47,7 +47,7 @@ public:
 
   virtual CFreal getAbsorption( CFreal lambda, RealVector &s_o ) = 0;
 
-  virtual CFreal getSpectaLoopPower() = 0;
+  virtual CFreal getSpectraLoopPower() = 0;
 
   virtual void computeEmissionCPD() = 0;
 

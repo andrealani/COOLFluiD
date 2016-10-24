@@ -35,11 +35,11 @@ public:
   CFreal getEmission( CFreal lambda, RealVector &s_o ){ return 0.; }
 
   CFreal getAbsorption( CFreal lambda, RealVector &s_o ){ return 0.; }
-
-  CFreal getSpectaLoopPower(){return 0.;}
+  
+  CFreal getSpectraLoopPower(){return 0.;}
 
   void computeEmissionCPD(){;}
-
+  
   void getRandomEmission(CFreal &lambda, RealVector &s_o ){
     CFLog(INFO,"Called Emission form NullRadiator");
   }

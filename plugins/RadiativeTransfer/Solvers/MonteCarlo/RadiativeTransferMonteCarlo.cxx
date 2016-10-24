@@ -11,20 +11,22 @@ namespace RadiativeTransfer {
 
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider<RadiativeTransferMonteCarlo<ParticleTrackingAxi>,
-                      DataProcessingData,     RadiativeTransferModule>
+MethodCommandProvider<RadiativeTransferMonteCarlo<LagrangianSolver::ParticleTrackingAxi>,
+                      DataProcessingData, 
+		      RadiativeTransferModule>
 RadiativeTransferMonteCarloAxiFVMCCProvider("RadiativeTransferMonteCarloAxiFVMCC");
 
 
-MethodCommandProvider<RadiativeTransferMonteCarlo<ParticleTracking3D>,
-                      DataProcessingData,    RadiativeTransferModule>
+MethodCommandProvider<RadiativeTransferMonteCarlo<LagrangianSolver::ParticleTracking3D>,
+		      DataProcessingData,    
+		      RadiativeTransferModule>
 RadiativeTransferMonteCarlo3DFVMCCProvider("RadiativeTransferMonteCarlo3DFVMCC");
 
-
-MethodCommandProvider<RadiativeTransferMonteCarlo<ParticleTracking2D>,
-                      DataProcessingData,    RadiativeTransferModule>
+  
+MethodCommandProvider<RadiativeTransferMonteCarlo<LagrangianSolver::ParticleTracking2D>,
+		      DataProcessingData,    
+		      RadiativeTransferModule>
 RadiativeTransferMonteCarlo2DFVMCCProvider("RadiativeTransferMonteCarlo2DFVMCC");
-
 
 //////////////////////////////////////////////////////////////////////////////
 

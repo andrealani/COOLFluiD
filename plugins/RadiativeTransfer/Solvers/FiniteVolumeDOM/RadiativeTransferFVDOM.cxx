@@ -639,8 +639,12 @@ void RadiativeTransferFVDOM::execute()
   
   stp.start();
   
-  // compute the spectra: this calls Radiator::setupSpectra()
-  m_radiation->setupWavStride(0);
+  // compute the spectra in steps (to avoid to have to store too much data at once): 
+  // this calls Radiator::setupSpectra(wavMin, wavMax)
+  const CFuint nbLoops = m_radiation->getNumberLoops();
+  for(CFuint i= 0; i < nbLoops; ++i) {
+    m_radiation->setupWavStride(i);
+  }
   
   CFLog(INFO, "RadiativeTransferFVDOM::execute() => radiation library took " << stp.read() << "s\n");
   
