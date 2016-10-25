@@ -236,8 +236,8 @@ Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.TypeTRS    = M
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.Radiator   = ParadeRadiator
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.LibraryPath = \
 	/software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.LocalDirName = \
-	../../../../plugins/RadiativeTransfer/testcases/FireIIAxiMC/ParadeData
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.LocalDirName = ParadeData
+#	../../../../plugins/RadiativeTransfer/testcases/FireIIAxiMC/ParadeData
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 10000
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.Tmin = 200
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = false

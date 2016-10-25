@@ -108,7 +108,7 @@ private:
   /// run PARADE in parallel
   void runLibraryInParallel() const
   {
-    std::string command = "cd " + m_paradeDir + " ; ./parade > outfile ; cd -";
+    std::string command = "cd " + m_paradeDir.string() + " ; ./parade > outfile ; cd -";
     Common::OSystem::getInstance().executeCommand(command);
   }
   
@@ -136,7 +136,7 @@ private:
   Common::SelfRegistPtr<Environment::FileHandlerOutput> m_outFileHandle;
   
   /// directory where Parade is launched
-  std::string m_paradeDir; 
+  boost::filesystem::path m_paradeDir; 
   
   /// path to the grid file
   boost::filesystem::path m_gridFile;

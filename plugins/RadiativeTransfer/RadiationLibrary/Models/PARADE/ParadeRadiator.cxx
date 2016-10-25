@@ -121,24 +121,24 @@ void ParadeRadiator::setup()
   
   // create a m_localDirName-P# directory for the current process
   // cp parade executable and database inside the m_localDirName-P# directory 
-  m_paradeDir = m_localDirName + "_" + m_radPhysicsPtr->getTRSname() + 
+  const string paradeDir = m_localDirName + "_" + m_radPhysicsPtr->getTRSname() + 
     "-P" + StringOps::to_str(PE::GetPE().GetRank(nsp));
-  
+  boost::filesystem::path paradePath(paradeDir);    
+ 
+  m_paradeDir = Environment::DirPaths::getInstance().getWorkingDir() / paradePath; 
   CFLog(VERBOSE, "ParadeRadiator::setup() => m_paradeDir = " << m_paradeDir << "\n");
  
-  boost::filesystem::path paradeDir(m_paradeDir);
-  
   boost::filesystem::path grid("grid.flo");
-  m_gridFile = Environment::DirPaths::getInstance().getWorkingDir() / paradeDir / grid;
+  m_gridFile = m_paradeDir / grid;
   
   boost::filesystem::path temp("temp.flo");
-  m_tempFile = Environment::DirPaths::getInstance().getWorkingDir() / paradeDir / temp;
+  m_tempFile = m_paradeDir / temp;
   
   boost::filesystem::path dens("dens.flo");
-  m_densFile = Environment::DirPaths::getInstance().getWorkingDir() / paradeDir / dens;
+  m_densFile = m_paradeDir / dens;
   
   boost::filesystem::path rad("parade.rad");
-  m_radFile = Environment::DirPaths::getInstance().getWorkingDir() / paradeDir / rad;
+  m_radFile = m_paradeDir / rad;
 
   m_library = PhysicalModelStack::getActive()->getImplementor()->
     getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
@@ -187,11 +187,11 @@ void ParadeRadiator::setLibrarySequentially()
   if (!m_reuseProperties) {
     // create a m_localDirName-P# directory for the current process
     // cp parade executable and database inside the m_localDirName-P# directory
-    std::string command1   = "rm -fr " + m_paradeDir + " ; mkdir " + m_paradeDir;
+    std::string command1   = "rm -fr " + m_paradeDir.string() + " ; mkdir " + m_paradeDir.string();
     Common::OSystem::getInstance().executeCommand(command1);
-    std::string command2   = "cp " + m_libPath + "/Binary/parade " + m_paradeDir;
+    std::string command2   = "cp " + m_libPath + "/Binary/parade " + m_paradeDir.string();
     Common::OSystem::getInstance().executeCommand(command2);
-    std::string command3   = "cp -R " + m_libPath + "/Data " + m_paradeDir;
+    std::string command3   = "cp -R " + m_libPath + "/Data " + m_paradeDir.string();
     Common::OSystem::getInstance().executeCommand(command3);
   }
   
@@ -311,7 +311,7 @@ void ParadeRadiator::updateWavRange(CFreal wavMin, CFreal wavMax)
   PE::GetPE().setBarrier(nsp);
   
   // each processor copies the newly updated parade.con to its own directory
-  std::string command   = "cp " + confFile.string() + " " + m_paradeDir;
+  std::string command   = "cp " + confFile.string() + " " + m_paradeDir.string();
   Common::OSystem::getInstance().executeCommand(command);
 }
       
