@@ -177,7 +177,7 @@ void ParadeRadiator::setLibrarySequentially()
 {
   // the path to the data files must be specified (there is no default)
   if (m_libPath == "") {
-    CFLog(NOTICE, "ParadeLibrary::libpath NOT SET\n");
+    CFLog(NOTICE, "ParadeRadiator::libpath NOT SET\n");
     abort();
   }
   
@@ -206,7 +206,7 @@ void ParadeRadiator::unsetup()
 
 void ParadeRadiator::setupSpectra(CFreal wavMin, CFreal wavMax)
 { 
-  CFLog(INFO,"ParadeLibrary::computeProperties() => START\n");
+  CFLog(INFO,"ParadeRadiator::computeProperties() => START\n");
   
   m_wavMin = wavMin;
   m_wavMax = wavMax;
@@ -229,7 +229,7 @@ void ParadeRadiator::setupSpectra(CFreal wavMin, CFreal wavMax)
     // run concurrently Parade in each local directory, one per process 
     runLibraryInParallel();
     
-    CFLog(INFO,"ParadeLibrary::runLibraryInParallel() took " << stp << "s\n");
+    CFLog(INFO,"ParadeRadiator::runLibraryInParallel() took " << stp << "s\n");
   }
   
   const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
@@ -238,7 +238,7 @@ void ParadeRadiator::setupSpectra(CFreal wavMin, CFreal wavMax)
   // read in the radiative properties from parade.rad
   readLocalRadCoeff();
   
-  CFLog(INFO,"ParadeLibrary::computeProperties() => END\n");
+  CFLog(INFO,"ParadeRadiator::computeProperties() => END\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -249,8 +249,8 @@ void ParadeRadiator::updateWavRange(CFreal wavMin, CFreal wavMax)
 
   if (PE::GetPE().GetRank(nsp) == 0) {
     // all the following can fail if the format of the file parade.con changes
-
-    CFLog(INFO, "ParadeLibrary: computing wavelength range [" << wavMin << ", " << wavMax << "]\n");
+    
+    CFLog(INFO, "ParadeRadiator: computing wavelength range [" << wavMin << ", " << wavMax << "]\n");
     
     // back up the last parade.con file
     std::string command = "cp parade.con parade.con.bkp";
