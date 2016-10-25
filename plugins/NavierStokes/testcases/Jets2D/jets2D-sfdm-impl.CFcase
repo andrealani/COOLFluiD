@@ -19,7 +19,7 @@ Simulator.SubSystem.Default.PhysicalModelType = Euler2D
 Simulator.SubSystem.Euler2D.refValues = 1.0 0.449622064 0.449622064 2.60108
 Simulator.SubSystem.Euler2D.refLength = 1.0
 
-Simulator.SubSystem.OutputFormat        = ParaView #CFmesh
+Simulator.SubSystem.OutputFormat        = ParaView # CFmesh
 
 #Simulator.SubSystem.CFmesh.FileName     = jets2D-sfdm-solP1.CFmesh
 #Simulator.SubSystem.CFmesh.SaveRate = 10

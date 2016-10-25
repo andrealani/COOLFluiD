@@ -159,7 +159,7 @@ void ParticleTracking2D::trackingStep(){
         }
     }
 
-    CFLog(INFO,"Can't find an exit point! \n");
+    CFLog(VERBOSE, "ParticleTracking2D::trackingStep() => Can't find an exit Point!!\n");
     m_exitCellID=-1;
     m_exitFaceID=-1;
     m_cellBuilder.releaseGE();

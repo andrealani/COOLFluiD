@@ -40,7 +40,7 @@ Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
 Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
 
 #Simulator.SubSystem.StopCondition       = Norm
 #Simulator.SubSystem.Norm.valueNorm      = -6.0
@@ -48,10 +48,10 @@ Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
 Simulator.SubSystem.Default.listTRS = SlipWall SuperInlet SuperOutlet Top Bottom
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = nozzle.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = nozzleFVMMHD1stProjImpl.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = nozzle3D.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = nozzle.CFmesh
 Simulator.SubSystem.CFmeshFileReader.convertFrom = Extruder2DFVM
-Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.NbLayers = 3 #30 #3
+Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.NbLayers = 20 #30 #3
 Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.ExtrudeSize = 0.001
 Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.Split = false
 
@@ -62,7 +62,7 @@ Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Interactive
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = BwdEulerLSS
-Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM #PCJACOBI #PCASM
+Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCJACOBI #PCASM
 Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
 #Simulator.SubSystem.BwdEulerLSS.Data.Output = true

@@ -24,6 +24,7 @@ using namespace std;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::MathTools;
 using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Environment;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -123,6 +124,8 @@ void ParadeRadiator::setup()
   m_paradeDir = m_localDirName + "_" + m_radPhysicsPtr->getTRSname() + 
     "-P" + StringOps::to_str(PE::GetPE().GetRank(nsp));
   
+  CFLog(VERBOSE, "ParadeRadiator::setup() => m_paradeDir = " << m_paradeDir << "\n");
+ 
   boost::filesystem::path paradeDir(m_paradeDir);
   
   boost::filesystem::path grid("grid.flo");
@@ -177,8 +180,8 @@ void ParadeRadiator::setLibrarySequentially()
 {
   // the path to the data files must be specified (there is no default)
   if (m_libPath == "") {
-    CFLog(NOTICE, "ParadeRadiator::libpath NOT SET\n");
-    abort();
+    CFLog(ERROR, "ParadeLibrary::setLibrarySequentially() => libpath NOT SET\n");
+    exit(1);
   }
   
   if (!m_reuseProperties) {
@@ -211,12 +214,15 @@ void ParadeRadiator::setupSpectra(CFreal wavMin, CFreal wavMax)
   m_wavMin = wavMin;
   m_wavMax = wavMax;
   m_dWav = (m_wavMax-m_wavMin)/((static_cast<CFreal>(m_nbPoints)-1));
-
- // cout<<"wavmin: "<<m_wavMin<<" wavMax: "<<m_wavMax<<" dWav: "<<m_dWav<<
- //   " nbPoints: "<<m_nbPoints<<endl;
+  
+  Stopwatch<WallTime> stp;
+  
+  CFLog(VERBOSE, "ParadeRadiator::setupSpectra(wavmin: "
+	<<m_wavMin<<", wavMax: "<<m_wavMax<<"), dWav: "<<m_dWav<<
+        " nbPoints: "<<m_nbPoints<<"\n");
+  
   if (!m_reuseProperties) {
-    Stopwatch<WallTime> stp;
-    
+    stp.start();
     // update the wavelength range inside parade.con
     // copy the modified files into the local Parade directories
     updateWavRange(wavMin, wavMax);
@@ -224,16 +230,16 @@ void ParadeRadiator::setupSpectra(CFreal wavMin, CFreal wavMax)
     // write the local grid, temperature and densities fields 
     writeLocalData();
     
-    stp.start();
-    
     // run concurrently Parade in each local directory, one per process 
     runLibraryInParallel();
-    
-    CFLog(INFO,"ParadeRadiator::runLibraryInParallel() took " << stp << "s\n");
   }
   
   const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
   PE::GetPE().setBarrier(nsp);
+  
+  if (!m_reuseProperties) {
+    CFLog(INFO,"ParadeRadiator::runLibraryInParallel() took " << stp.read() << "s\n");
+  }
   
   // read in the radiative properties from parade.rad
   readLocalRadCoeff();
@@ -246,19 +252,28 @@ void ParadeRadiator::setupSpectra(CFreal wavMin, CFreal wavMax)
 void ParadeRadiator::updateWavRange(CFreal wavMin, CFreal wavMax)
 {
   const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  boost::filesystem::path confFile = Environment::DirPaths::getInstance().getWorkingDir() / "parade.con";
 
   if (PE::GetPE().GetRank(nsp) == 0) {
     // all the following can fail if the format of the file parade.con changes
-    
+
+    boost::filesystem::path confBkp  = Environment::DirPaths::getInstance().getWorkingDir() / "parade.con.bkp";
+
     CFLog(INFO, "ParadeRadiator: computing wavelength range [" << wavMin << ", " << wavMax << "]\n");
     
     // back up the last parade.con file
-    std::string command = "cp parade.con parade.con.bkp";
+    std::string command = "cp " + confFile.string() + " " + confBkp.string();
     Common::OSystem::getInstance().executeCommand(command); 
-    
+   
+    SelfRegistPtr<FileHandlerInput> fhandleIn   = SingleBehaviorFactory<FileHandlerInput>::getInstance().create();
+    SelfRegistPtr<FileHandlerOutput> fhandleOut = SingleBehaviorFactory<FileHandlerOutput>::getInstance().create();
+
+    ifstream& fin  = fhandleIn->open(confBkp);  
+    ofstream& fout = fhandleOut->open(confFile);     
+  
     // read from the original parade.con file 
-    ifstream fin("parade.con.bkp");
-    ofstream fout("parade.con");
+   // ifstream fin("parade.con.bkp");
+    //ofstream fout("parade.con");
     
     string line;
     while (getline(fin,line)) {
@@ -296,7 +311,7 @@ void ParadeRadiator::updateWavRange(CFreal wavMin, CFreal wavMax)
   PE::GetPE().setBarrier(nsp);
   
   // each processor copies the newly updated parade.con to its own directory
-  std::string command   = "cp parade.con " + m_paradeDir;
+  std::string command   = "cp " + confFile.string() + " " + m_paradeDir;
   Common::OSystem::getInstance().executeCommand(command);
 }
       

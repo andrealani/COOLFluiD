@@ -297,7 +297,7 @@ void ParticleTracking3D::trackingStep(){
   std::fclose(pipehandle);
   #endif
 
-    cout<<"Cant find an exit Point!!"<<endl;
+    CFLog(VERBOSE, "ParticleTracking3D::trackingStep() => Can't find an exit Point!!\n");
   }
  
   m_cellBuilder.releaseGE();

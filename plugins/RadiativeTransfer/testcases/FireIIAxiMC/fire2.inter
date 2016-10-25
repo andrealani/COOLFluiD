@@ -1,0 +1,14 @@
+#increase when the convergence drops
+Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.
+#Simulator.SubSystem.DataProcessing1.ProcessRate = 99999999
+#Simulator.SubSystem.DataProcessing3.ProcessRate = 1
+#Reduced Spectral Size
+#Simulator.SubSystem.DataProcessing1.RT.Parade.ReuseProperties = 0
+# integrate under relaxation if needed
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.0	
+# freezing of the limiter 
+# set to +8 once the convergence stalls or when retarting from given limiter
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = 8.0
+#increase when the convergence goes down
+Simulator.SubSystem.CellCenterFVM.Data.Euler2DCTNEQST.RadRelaxationFactor = 1.
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveRhoivt.NbIterAdiabatic = 0

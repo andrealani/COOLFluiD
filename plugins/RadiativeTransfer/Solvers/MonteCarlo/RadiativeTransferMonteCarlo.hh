@@ -1114,12 +1114,12 @@ CFuint RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::rayTracing(Photon& beam)
       nbCrossedCells++;
     }
   else{
-    CFLog(INFO, "enter negligle \n");
+    CFLog(VERBOSE, "RadiativeTransferMonteCarlo::rayTracing() => enter negligible\n");
     //entity = NEGLIGIBLE;
     return 0;
   }
   }
-  CFLog(INFO, "Max number of steps reached! \n");
+  CFLog(INFO, "RadiativeTransferMonteCarlo::rayTracing() => Max number of steps reached! \n");
   return 0;
 }
 
@@ -1171,6 +1171,8 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
   m_radiation->getWallTRSnames(wallTrsNames);
 
   const CFuint nbWallTrs = wallTrsNames.size();
+  //  CFLog(INFO, "############# nbWallTrs = " << nbWallTrs << "\n");
+ 
   CFuint ff = 0;
   for(CFuint i=0; i<nbWallTrs; ++i){
 
@@ -1182,6 +1184,7 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
     facesData.trs = wallFaces;
     const CFuint nbFacesWall = wallFaces->getLocalNbGeoEnts();
     //cout<<"CPU "<< Common::PE::GetPE().GetRank()<<": trying TRS " << wallTrsNames[i]<<" whith "<<nbFacesWall<< " faces " <<endl;
+
     for(CFuint f=0; f<nbFacesWall; ++f, ++ff){
       facesData.idx = f;
       Framework::GeometricEntity *const face = m_wallFaceBuilder.buildGE();
@@ -1189,6 +1192,9 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
       CFuint faceGhostStateID = face->getState(1)->getLocalID();
       CFreal area = faceAreas[faceGeoID];
       area *= (m_isAxi) ? 6.283185307179586*faceCenters[faceGeoID*DIM_2D + YY] : 1.;
+   
+      //  CFLog(INFO, "face[" << f << "] =>" <<  m_ghostStateInRadPowers[faceGhostStateID] << ", " 
+      //	<< m_ghostStateRadPower[faceGhostStateID] << "\n");
       wallRadiativeHeatSource[ff] = (-m_ghostStateInRadPowers[faceGhostStateID]
                                      +m_ghostStateRadPower[faceGhostStateID] ) / area;
       m_wallFaceBuilder.releaseGE();

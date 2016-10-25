@@ -399,7 +399,7 @@ void NavierStokesSkinFrictionHeatFluxCC::updateWriteData()
   _heatFluxRad = 0.;
   if (_hasRadiationCoupling) {
     // AL: the ordering of the wall TRS's must be consistent with the one in RadiativeTransferMonteCarlo
-    cf_assert(index < _qradFluxWall.size());
+    cf_assert(_qradFluxWall.size() > 0);
     cf_assert(index < _qradFluxWall.size());
     _heatFluxRad = _qradFluxWall[index]*heatFluxRef;
   } 
