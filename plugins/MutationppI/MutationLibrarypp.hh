@@ -130,9 +130,17 @@ public:
     * Set the IDs of the molecules in the mixture
     */
    void setMoleculesIDs(std::vector<CFuint>& v)
-   {
-     // throw Common::NotImplementedException(FromHere(),"MutationLibrarypp::setMoleculesIDs()");
-   }
+  {
+    // AL: this is buggy, it always put electron first
+    const CFuint nbSpecies = getNbSpecies();
+    for (CFuint i = 0; i < nbSpecies; ++i) {
+      if (m_gasMixture->species(i).type() == Mutation::Thermodynamics::MOLECULE) {
+	CFLog(DEBUG_MAX, "MutationLibrarypp::setMoleculesIDs() => species ["<< i << "] is " 
+	      << m_gasMixture->species(i).name() << "\n");
+	v.push_back(i);
+      }
+    }
+  }
   
   /**
    * Calculates the static pressure of the mixture

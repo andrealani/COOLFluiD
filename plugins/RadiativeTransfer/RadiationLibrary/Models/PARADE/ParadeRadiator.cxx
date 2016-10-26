@@ -4,6 +4,8 @@
 
 #include "Common/CFLog.hh"
 #include "Common/DebugFunctions.hh"
+#include "Common/CFPrintContainer.hh"
+
 #include "Environment/ObjectProvider.hh"
 #include "Environment/CFEnv.hh"
 #include "Environment/FileHandlerOutput.hh"
@@ -170,6 +172,9 @@ void ParadeRadiator::setup()
     else {
       cf_assert(m_molecularSpecies.size() == nbSpecies);
     }
+    
+    const string msg = "ParadeRadiator::setup() => m_molecularSpecies: ";
+    CFLog(VERBOSE, CFPrintContainer<vector<bool> >(msg, &m_molecularSpecies) << "\n");exit(1);
   }
   
   // if this is a parallel simulation, only ONE process at a time sets the library
