@@ -516,19 +516,15 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::executeOnTrs()
   s.restart();
 
   // re-initialize the heat fluxes to 0
-
   //m_stateInRadPowers=0.;
   //m_RHSGas.assign(m_RHSGas.size(), 0.);
-
+  
   MonteCarlo();
-
   computeHeatFlux();
-  //  }
-
+  
   CFLog(INFO, "MonteCarlo() took " << s << "s\n");
-
-
-//  CFLog(VERBOSE, "RadiativeTransferMonteCarlo::executeOnTrs() END\n");
+  
+  CFLog(VERBOSE, "RadiativeTransferMonteCarlo::executeOnTrs() END\n");
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1135,8 +1131,8 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
   using namespace COOLFluiD::Numerics::FiniteVolume;
   using namespace COOLFluiD::LagrangianSolver;
   
-  CFLog(VERBOSE, "RadiativeTransferMonteCarlo computeHeatFlux()\n");
-
+  CFLog(VERBOSE, "RadiativeTransferMonteCarlo computeHeatFlux() START\n");
+  
   //  cout<<endl<<"COMPUTE HEAT FLUX"<<endl;
   //  cout<<"delta wave: "<<m_deltaWavs[m_spectralIdx]<<endl;
 
@@ -1201,7 +1197,9 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
     }
     //cout<<"CPU "<< Common::PE::GetPE().GetRank()<<" done " <<endl;
   }
-  m_postProcess->runPostProcess(gasRadiativeHeatSource);
+  m_postProcess->runPostProcess(gasRadiativeHeatSource); 
+  
+  CFLog(VERBOSE, "RadiativeTransferMonteCarlo computeHeatFlux() END\n");
 }
 
 /////////////////////////////////////////////////////////////////////////////

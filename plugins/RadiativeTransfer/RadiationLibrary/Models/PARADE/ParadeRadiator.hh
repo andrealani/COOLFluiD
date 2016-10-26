@@ -107,7 +107,8 @@ private:
   
   /// run PARADE in parallel
   void runLibraryInParallel() const
-  {
+  { 
+    CFLog(VERBOSE, "ParadeRadiator::runLibraryInParallel()\n");
     std::string command = "cd " + m_paradeDir.string() + " ; ./parade > outfile ; cd -";
     Common::OSystem::getInstance().executeCommand(command);
   }
@@ -189,13 +190,10 @@ private:
 
   /// array with Avogadro number/molar masses
   RealVector m_avogadroOvMM;
-
-  /// flag array to indicate molecular species
-  std::vector<bool> m_molecularSpecies;
-
+  
   /// Path to Parade's binary files
   std::string m_libPath;
-
+  
   /// min, max and delta wavelenght for the current spectral loop
   CFreal m_wavMin, m_wavMax, m_dWav;
 
@@ -208,6 +206,9 @@ private:
   // is LTE flag
   bool m_isLTE;
   
+  /// flag array to indicate molecular species
+  std::vector<bool> m_molecularSpecies;
+
 }; // end of class ParadeRadiator
 
 //////////////////////////////////////////////////////////////////////////////

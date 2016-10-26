@@ -51,11 +51,12 @@ void ParadeRadiator::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< string >("LibraryPath","Path to Parade data files");
   options.addConfigOption< CFreal >("NDmin","Minimum number density.");
   options.addConfigOption< CFuint >("nbPoints","Number of Points to discretize the spectra per loop");
-options.addConfigOption< bool >                                 
-  ("LTE", "True is it is a local thermodynamic equilibrium simulation");
-
+  options.addConfigOption< bool >                                 
+    ("LTE", "True is it is a local thermodynamic equilibrium simulation");
+  options.addConfigOption< vector<bool> >                                 
+    ("MolecularSpecies", "Array of flags indicating whether each species is molecular.");
 }
-      
+  
 //////////////////////////////////////////////////////////////////////////////
 
 ParadeRadiator::ParadeRadiator(const std::string& name) :
@@ -94,6 +95,9 @@ ParadeRadiator::ParadeRadiator(const std::string& name) :
 
   m_isLTE = false;
   setParameter("LTE", &m_isLTE);
+  
+  m_molecularSpecies = vector<bool>();
+  setParameter("MolecularSpecies", &m_molecularSpecies);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -145,19 +149,26 @@ void ParadeRadiator::setup()
 
   if (m_library.isNotNull()) {
     const CFuint nbSpecies = m_library->getNbSpecies();
+    cf_assert(nbSpecies > 0);
+    CFLog(VERBOSE, "ParadeRadiator::setup() => nbSpecies = " << nbSpecies << "\n");
     m_mmasses.resize(nbSpecies);
     m_library->getMolarMasses(m_mmasses);
-
+    
     m_avogadroOvMM.resize(nbSpecies);
     m_avogadroOvMM = PhysicalConsts::Avogadro()/m_mmasses;
-
-    vector<CFuint> moleculeIDs;
-    m_library->setMoleculesIDs(moleculeIDs);
-    cf_assert(moleculeIDs.size() > 0);
-
-    m_molecularSpecies.resize(nbSpecies, false);
-    for (CFuint i = 0; i < moleculeIDs.size(); ++i) {
-      m_molecularSpecies[moleculeIDs[i]] = true;
+    
+    if (m_molecularSpecies.size() == 0) {
+      vector<CFuint> moleculeIDs;
+      m_library->setMoleculesIDs(moleculeIDs);
+      cf_assert(moleculeIDs.size() > 0);
+      
+      m_molecularSpecies.resize(nbSpecies, false);
+      for (CFuint i = 0; i < moleculeIDs.size(); ++i) {
+	m_molecularSpecies[moleculeIDs[i]] = true;
+      }
+    }
+    else {
+      cf_assert(m_molecularSpecies.size() == nbSpecies);
     }
   }
   
@@ -323,13 +334,17 @@ void ParadeRadiator::updateWavRange(CFreal wavMin, CFreal wavMax)
       
 void ParadeRadiator::writeLocalData()
 { 
+  CFLog(VERBOSE, "ParadeRadiator::writeLocalData() => START\n");
+  
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const CFuint nbPoints = m_pstates->getSize();
   const CFuint nbTemps = m_radPhysicsHandlerPtr->getNbTemps();
   const CFuint tempID = m_radPhysicsHandlerPtr->getTempID();
-  CFLog(INFO, "nbPoints = " << nbPoints << ", nbTemps = " << nbTemps 
+  
+  CFLog(INFO, "ParadeRadiator::writeLocalData() => nbPoints = " 
+	<< nbPoints << ", nbTemps = " << nbTemps 
 	<< ", tempID = " << tempID << "\n");
-
+  
   // write the mesh file
   ofstream& foutG = m_outFileHandle->open(m_gridFile);
   foutG << "TINA" << endl;
@@ -371,9 +386,6 @@ void ParadeRadiator::writeLocalData()
   // write the number densities
   ofstream& foutD = m_outFileHandle->open(m_densFile);
   const CFuint nbSpecies = m_library->getNbSpecies();
-
-  CFLog(INFO, "nbSpecies = " << nbSpecies << "\n");
- 
   foutD << 1 << " " << nbPoints << " " << nbSpecies << endl;  
 
   //write species partial density
@@ -414,13 +426,15 @@ void ParadeRadiator::writeLocalData()
        foutD << endl;
      }
   }
+  
+  CFLog(VERBOSE, "ParadeRadiator::writeLocalData() => START\n");
 }   
       
 //////////////////////////////////////////////////////////////////////////////
   
 void ParadeRadiator::readLocalRadCoeff()
 {
-  // DEBUG_CONDITIONAL_PAUSE<__LINE__>();
+  CFLog(VERBOSE, "ParadeRadiator::readLocalRadCoeff() => START\n");
   
   fstream& fin = m_inFileHandle->openBinary(m_radFile);
   //string nam = "file-" + StringOps::to_str(PE::GetPE().GetRank());
@@ -455,6 +469,7 @@ void ParadeRadiator::readLocalRadCoeff()
     fin.read((char*)&m_data[iPoint*sizeCoeff], sizeCoeff*sizeof(double));
   }
   fin.close();
+  
   //fout.close();
   
   // if (PE::GetPE().GetRank() == 0) {
@@ -489,6 +504,8 @@ void ParadeRadiator::readLocalRadCoeff()
 //     }
 //     fout1.close();
 //   }
+  
+  CFLog(VERBOSE, "ParadeRadiator::readLocalRadCoeff() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
