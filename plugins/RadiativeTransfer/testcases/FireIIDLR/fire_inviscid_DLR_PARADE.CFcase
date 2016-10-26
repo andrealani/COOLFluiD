@@ -34,7 +34,8 @@ Simulator.SubSystem.PhysicalModelDummy.Equations = \
 	rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp rhoe p T Mach
 # Mutation++
 Simulator.SubSystem.PhysicalModelDummy.PropertyLibrary = Mutationpp
-Simulator.SubSystem.PhysicalModelDummy.Mutationpp.mixtureName = air11nasa9 #air11
+Simulator.SubSystem.PhysicalModelDummy.Mutationpp.mixtureName = air11_DLR
+#air11nasa9 #air11
 Simulator.SubSystem.PhysicalModelDummy.Mutationpp.StateModelName = ChemNonEq1T
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
@@ -120,7 +121,7 @@ Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.aa.ParadeRa
 #	/Users/lani/PARADEv3.2.1/parade-3.2.1
 #       /software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
 Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.LocalDirName = ParadeData
-Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 1000
+Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 10000
 Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Tmin = 200
 Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = false
 Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.MolecularSpecies = 1 1 1 0 0 1 1 1 0 0 0 
