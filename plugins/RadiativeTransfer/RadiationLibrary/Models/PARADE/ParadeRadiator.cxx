@@ -174,7 +174,7 @@ void ParadeRadiator::setup()
     }
     
     const string msg = "ParadeRadiator::setup() => m_molecularSpecies: ";
-    CFLog(VERBOSE, CFPrintContainer<vector<bool> >(msg, &m_molecularSpecies) << "\n");exit(1);
+    CFLog(VERBOSE, CFPrintContainer<vector<bool> >(msg, &m_molecularSpecies) << "\n");
   }
   
   // if this is a parallel simulation, only ONE process at a time sets the library
