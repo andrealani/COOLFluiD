@@ -1,4 +1,4 @@
-#cf_add_case( MPI 12 CASEDIR FireIIAxiMC PCASE fire2.CFcase CASEFILES fire2.CFmesh fire2.inter parade.con parade.con.bkp )
+cf_add_case( MPI 12 CASEDIR FireIIAxiMC PCASE fire2.CFcase CASEFILES fire2.CFmesh fire2.inter parade.con parade.con.bkp )
 cf_add_case( MPI 4 CASEDIR cylinder3d PCASE cylinder3d.CFcase CASEFILES cylinder3d.neu )
 cf_add_case( MPI 4 CASEDIR cylinderAxi PCASE cylinderAxi.CFcase CASEFILES cylinderAxi.neu )
 cf_add_case( MPI 4 CASEDIR slab2d PCASE slab2d.CFcase CASEFILES slab2d.neu )

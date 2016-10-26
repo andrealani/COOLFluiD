@@ -251,6 +251,8 @@ void ParadeRadiator::setupSpectra(CFreal wavMin, CFreal wavMax)
       
 void ParadeRadiator::updateWavRange(CFreal wavMin, CFreal wavMax)
 {
+  CFLog(VERBOSE,"ParadeRadiator::updateWavRange() => START\n");
+
   const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
   boost::filesystem::path confFile = Environment::DirPaths::getInstance().getWorkingDir() / "parade.con";
 
@@ -313,6 +315,8 @@ void ParadeRadiator::updateWavRange(CFreal wavMin, CFreal wavMax)
   // each processor copies the newly updated parade.con to its own directory
   std::string command   = "cp " + confFile.string() + " " + m_paradeDir.string();
   Common::OSystem::getInstance().executeCommand(command);
+
+  CFLog(VERBOSE,"ParadeRadiator::updateWavRange() => END\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -323,6 +327,8 @@ void ParadeRadiator::writeLocalData()
   const CFuint nbPoints = m_pstates->getSize();
   const CFuint nbTemps = m_radPhysicsHandlerPtr->getNbTemps();
   const CFuint tempID = m_radPhysicsHandlerPtr->getTempID();
+  CFLog(INFO, "nbPoints = " << nbPoints << ", nbTemps = " << nbTemps 
+	<< ", tempID = " << tempID << "\n");
 
   // write the mesh file
   ofstream& foutG = m_outFileHandle->open(m_gridFile);
@@ -340,7 +346,7 @@ void ParadeRadiator::writeLocalData()
       foutG << node[XX] << " " << node[YY] << " " << 0.0  << endl;
     }
     if (dim == DIM_3D) {
-      foutG << node << endl;
+      foutG << node[XX] << " " << node[YY] << " " << node[ZZ] << endl;
     }
   } 
   foutG.close();
@@ -362,10 +368,11 @@ void ParadeRadiator::writeLocalData()
   }
   foutT.close();
   
-  
   // write the number densities
   ofstream& foutD = m_outFileHandle->open(m_densFile);
   const CFuint nbSpecies = m_library->getNbSpecies();
+
+  CFLog(INFO, "nbSpecies = " << nbSpecies << "\n");
  
   foutD << 1 << " " << nbPoints << " " << nbSpecies << endl;  
 
