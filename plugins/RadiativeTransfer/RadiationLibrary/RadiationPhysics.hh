@@ -39,35 +39,42 @@ public:
   typedef const std::string& ARG1;
 
   RadiationPhysics(const std::string& name);
+  
   ~RadiationPhysics(){}
+  
   void setupSpectra(CFreal wavMin,CFreal wavMax);
+  
   void setup();
+  
   void configure(Config::ConfigArgs& args);
+  
   static void defineConfigOptions(Config::OptionList& options);
+  
   static std::string getClassName() { return "RadiationPhysics"; }
 
-  inline std::string getTRSname(){return m_TRSname;}
-  inline std::string getTRStype(){return m_TRStype;}
-  inline TRStypeID getTRStypeID(){return m_TRStypeID;}
-
-  inline void getRadPhysicsPtr(RadiationPhysics* ptr) { ptr = this; }
-
+  std::string getTRSname(){return m_TRSname;}
+  
+  std::string getTRStype(){return m_TRStype;}
+  
+  TRStypeID getTRStypeID(){return m_TRStypeID;}
+  
+  void getRadPhysicsPtr(RadiationPhysics* ptr) { ptr = this; }
+  
   void getWallStateIDs(std::vector<CFuint> &statesID,
                        std::vector<CFuint>& wallGeoIdx);
-
+  
   void getCellStateIDs(std::vector<CFuint> &statesID);
-
-  inline Framework::State* getWallState(CFuint wallTrsIdx){return &(m_interpolatedStates[wallTrsIdx]);}
-
-
-  inline void setRadPhysicsHandlerPtr( RadiationPhysicsHandler* ptr ) {
-    m_radPhysicsHandlerPtr = ptr;
-  }
-  inline Radiator* const getRadiatorPtr(){return m_radiator.getPtr();}
-  inline Reflector* const getReflectorPtr(){return m_reflector.getPtr();}
-
-
+  
+  Framework::State* getWallState(CFuint wallTrsIdx){return &(m_interpolatedStates[wallTrsIdx]);}
+  
+  void setRadPhysicsHandlerPtr( RadiationPhysicsHandler* ptr ) {m_radPhysicsHandlerPtr = ptr;}
+  
+  Radiator* const getRadiatorPtr(){return m_radiator.getPtr();}
+  
+  Reflector* const getReflectorPtr(){return m_reflector.getPtr();}
+  
   void computeInterpolatedStates();
+
 private:
   Common::SelfRegistPtr< Radiator > m_radiator;
   Common::SelfRegistPtr< Reflector > m_reflector;
@@ -79,11 +86,12 @@ private:
   std::string m_TRStype;
   std::vector<Framework::State> m_interpolatedStates;
   std::vector<CFreal> m_faceAreas;
-
 };
 
 //////////////////////////////////////////////////////////////////////////////
-}
-}
+
+} // end namespace RadiativeTransfer
+
+}// end namespace COOLFluiD
 
 #endif

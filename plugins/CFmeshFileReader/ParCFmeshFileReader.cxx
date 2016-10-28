@@ -2047,8 +2047,10 @@ void ParCFmeshFileReader::moveElementData(ElementDataArray<0>& localElem,
   tmpSizeElemArray[m_myRank] = localElem.sizeData();
   
   vector<CFuint> sizeElemArray(m_nbProc, static_cast<CFuint>(0));
-  MPI_Allreduce(&tmpSizeElemArray[0], &sizeElemArray[0], m_nbProc,
-		MPIStructDef::getMPIType(&tmpSizeElemArray[0]), MPI_SUM, m_comm);
+  MPIError::getInstance().check
+    ("MPI_Allreduce", "ParCFmeshFileReader::moveElementData()",
+     MPI_Allreduce(&tmpSizeElemArray[0], &sizeElemArray[0], m_nbProc,
+		   MPIStructDef::getMPIType(&tmpSizeElemArray[0]), MPI_SUM, m_comm));
   
   /// @todo here is a possible place to do optimization
   /// if memory or speed problems arise

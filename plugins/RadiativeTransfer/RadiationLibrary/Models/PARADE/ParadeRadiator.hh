@@ -124,8 +124,17 @@ private:
       value = Common::StringOps::template from_str<T>(line);
     }
   }
-
+  
+  /// @return Flag telling if the process stores the full grid in parallel
+  bool fullGridInProcess() const {return (m_namespace != "Default");}
+  
 private: 
+  
+  /// Rank in the corresponding MPI group (namespace)
+  CFuint m_rank;
+  
+  /// Number of ranks in the corresponding MPI group (namespace)
+  CFuint m_nbProc;
   
   //Vector containing the states id of the TRS;
   std::vector<CFuint> m_statesID;
@@ -168,6 +177,9 @@ private:
 
   /// name of the temporary local directory where Parade is run
   std::string m_localDirName;
+  
+  /// namespace within which PARADE is run in parallel
+  std::string m_namespace;
   
   /// Reuse existing radiative data (requires the same number of processors as in the previous run).
   bool m_reuseProperties;

@@ -43,10 +43,12 @@ Environment::ObjectProvider<ParadeRadiator,
 paradeRadiatorProvider("ParadeRadiator");
 
 //////////////////////////////////////////////////////////////////////////////
-      
+
 void ParadeRadiator::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< string >("LocalDirName","Name of the local temporary directories where Parade is run.");
+  options.addConfigOption< string >                                 
+    ("Namespace", "Namespace which must be used to run PARADE in parallel).");
   options.addConfigOption< bool, Config::DynamicOption<> >
     ("ReuseProperties", "Reuse existing radiative data (requires the same number of processors as in the previous run).");
   options.addConfigOption< CFreal >("Tmin","Minimum temperature.");
@@ -63,6 +65,9 @@ void ParadeRadiator::defineConfigOptions(Config::OptionList& options)
 
 ParadeRadiator::ParadeRadiator(const std::string& name) :
   Radiator(name),
+  m_statesID(),
+  m_rank(0),
+  m_nbProc(1),
   m_inFileHandle(),
   m_outFileHandle(),
   m_paradeDir(),
@@ -79,6 +84,9 @@ ParadeRadiator::ParadeRadiator(const std::string& name) :
   
   m_localDirName = "Parade";
   setParameter("LocalDirName", &m_localDirName);
+  
+  m_namespace = "Default";
+  setParameter("Namespace", &m_namespace);
   
   m_reuseProperties = false;
   setParameter("ReuseProperties", &m_reuseProperties);
@@ -120,15 +128,16 @@ void ParadeRadiator::configure ( Config::ConfigArgs& args )
       
 void ParadeRadiator::setup()
 {
+  m_rank   = PE::GetPE().GetRank(m_namespace);
+  m_nbProc = PE::GetPE().GetProcessorCount(m_namespace);
+  
   m_inFileHandle  = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
   m_outFileHandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-  
-  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
-  
+    
   // create a m_localDirName-P# directory for the current process
   // cp parade executable and database inside the m_localDirName-P# directory 
   const string paradeDir = m_localDirName + "_" + m_radPhysicsPtr->getTRSname() + 
-    "-P" + StringOps::to_str(PE::GetPE().GetRank(nsp));
+    "-P" + StringOps::to_str(PE::GetPE().GetRank(m_namespace));
   boost::filesystem::path paradePath(paradeDir);    
  
   m_paradeDir = Environment::DirPaths::getInstance().getWorkingDir() / paradePath; 
@@ -178,7 +187,7 @@ void ParadeRadiator::setup()
   }
   
   // if this is a parallel simulation, only ONE process at a time sets the library
-  runSerial<void, ParadeRadiator, &ParadeRadiator::setLibrarySequentially>(this, nsp);
+  runSerial<void, ParadeRadiator, &ParadeRadiator::setLibrarySequentially>(this, m_namespace);
   
   //get the statesID used for this Radiator
   m_radPhysicsPtr->getCellStateIDs( m_statesID );
@@ -186,10 +195,18 @@ void ParadeRadiator::setup()
   Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > states =
   m_radPhysicsHandlerPtr->getDataSockets()->states;
   DataHandle<State*, GLOBAL> statesHandle = states.getDataHandle();
+  
+  if (statesHandle.size() != m_statesID.size()) {
+    CFLog(ERROR, "ParadeRadiator::setup() => statesHandle.size() != m_statesID.size() => "
+	  << statesHandle.size() << " != " <<  m_statesID.size() << "\n");
+    cf_assert(statesHandle.size() == m_statesID.size());
+  }
+  
   // set up the TRS states
   m_pstates.reset
       (new Framework::DofDataHandleIterator<CFreal, State, GLOBAL>(statesHandle, &m_statesID));
 }
+  
 //////////////////////////////////////////////////////////////////////////////
 
 void ParadeRadiator::setLibrarySequentially()
@@ -250,8 +267,7 @@ void ParadeRadiator::setupSpectra(CFreal wavMin, CFreal wavMax)
     runLibraryInParallel();
   }
   
-  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
-  PE::GetPE().setBarrier(nsp);
+  PE::GetPE().setBarrier(m_namespace);
   
   if (!m_reuseProperties) {
     CFLog(INFO,"ParadeRadiator::runLibraryInParallel() took " << stp.read() << "s\n");
@@ -259,6 +275,8 @@ void ParadeRadiator::setupSpectra(CFreal wavMin, CFreal wavMax)
   
   // read in the radiative properties from parade.rad
   readLocalRadCoeff();
+  
+  PE::GetPE().setBarrier(m_namespace);
   
   CFLog(INFO,"ParadeRadiator::computeProperties() => END\n");
 }
@@ -269,10 +287,9 @@ void ParadeRadiator::updateWavRange(CFreal wavMin, CFreal wavMax)
 {
   CFLog(VERBOSE,"ParadeRadiator::updateWavRange() => START\n");
 
-  const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
   boost::filesystem::path confFile = Environment::DirPaths::getInstance().getWorkingDir() / "parade.con";
 
-  if (PE::GetPE().GetRank(nsp) == 0) {
+  if (PE::GetPE().GetRank(m_namespace) == 0) {
     // all the following can fail if the format of the file parade.con changes
 
     boost::filesystem::path confBkp  = Environment::DirPaths::getInstance().getWorkingDir() / "parade.con.bkp";
@@ -326,7 +343,8 @@ void ParadeRadiator::updateWavRange(CFreal wavMin, CFreal wavMax)
     fin.close();
     fout.close();
   }
-  PE::GetPE().setBarrier(nsp);
+  
+  PE::GetPE().setBarrier(m_namespace);
   
   // each processor copies the newly updated parade.con to its own directory
   std::string command   = "cp " + confFile.string() + " " + m_paradeDir.string();
@@ -342,9 +360,22 @@ void ParadeRadiator::writeLocalData()
   CFLog(VERBOSE, "ParadeRadiator::writeLocalData() => START\n");
   
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
-  const CFuint nbPoints = m_pstates->getSize();
   const CFuint nbTemps = m_radPhysicsHandlerPtr->getNbTemps();
   const CFuint tempID = m_radPhysicsHandlerPtr->getTempID();
+  
+  const CFuint totalNbPoints = m_pstates->getSize();
+  CFuint nbPoints = totalNbPoints;
+  CFuint countNode = 0;
+  // if the full mesh is in this process than you only write a part of its data
+  if (fullGridInProcess()) {
+    const CFuint nbPointsPerProc = nbPoints/m_nbProc;
+    nbPoints = (m_rank < m_nbProc-1) ? nbPointsPerProc : nbPointsPerProc + nbPoints%m_nbProc;
+    for (CFuint i = 0; i < m_rank; ++i) {
+      countNode += nbPointsPerProc;
+    }
+  }
+  
+  const CFuint startNode = countNode;
   
   CFLog(INFO, "ParadeRadiator::writeLocalData() => nbPoints = " 
 	<< nbPoints << ", nbTemps = " << nbTemps 
@@ -354,10 +385,11 @@ void ParadeRadiator::writeLocalData()
   ofstream& foutG = m_outFileHandle->open(m_gridFile);
   foutG << "TINA" << endl;
   foutG << 1 << " " << nbPoints << endl;
-  for (CFuint i =0; i < nbPoints; ++i) {
+  for (CFuint i =0; i < nbPoints; ++i, ++countNode) {
     foutG.precision(14);
     foutG.setf(ios::scientific,ios::floatfield);
-    CFreal *const node = m_pstates->getNode(i);
+    cf_assert(countNode < totalNbPoints);
+    CFreal *const node = m_pstates->getNode(countNode);
     
     if (dim == DIM_1D) {
       foutG << node[XX] << " " << 0.0 << " " << 0.0  << endl;
@@ -370,14 +402,19 @@ void ParadeRadiator::writeLocalData()
     }
   } 
   foutG.close();
-
+  
+  CFLog(INFO, "ParadeRadiator::writeLocalData() => written coordinates for cells [" 
+	<< startNode << ", " << countNode << "]\n");
+  
   // write the temperatures
   ofstream& foutT = m_outFileHandle->open(m_tempFile);
   //const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   foutT << 1 << " " << nbPoints << " " <<  nbTemps << endl;
   // here it is assumed that the temperatures are the LAST variables 
-  for (CFuint i =0; i < nbPoints; ++i) {
-    CFreal *const currState = m_pstates->getState(i);
+  countNode = startNode;
+  for (CFuint i = 0; i < nbPoints; ++i, ++countNode) {
+    cf_assert(countNode < totalNbPoints);
+    CFreal *const currState = m_pstates->getState(countNode);
     for (CFuint t = 0; t < nbTemps; ++t) {
       foutT.precision(14);
       foutT.setf(ios::scientific,ios::floatfield);
@@ -388,6 +425,9 @@ void ParadeRadiator::writeLocalData()
   }
   foutT.close();
   
+  CFLog(INFO, "ParadeRadiator::writeLocalData() => written temperature for cells [" 
+	<< startNode << ", " << countNode << "]\n");
+  
   // write the number densities
   ofstream& foutD = m_outFileHandle->open(m_densFile);
   const CFuint nbSpecies = m_library->getNbSpecies();
@@ -396,14 +436,16 @@ void ParadeRadiator::writeLocalData()
   //write species partial density
  foutD.precision(14);
  foutD.setf(ios::scientific,ios::floatfield);
-  
+ countNode = startNode;
+ 
   if(m_isLTE) {	  
     // LTE: composition is computed though the chemical library
     RealVector x(nbSpecies);
     RealVector y(nbSpecies);	 
     CFreal rhoi = 0.;
-    for (CFuint i =0; i < nbPoints; ++i) {
-      CFreal *const currState = m_pstates->getState(i);
+    for (CFuint i = 0; i < nbPoints; ++i, ++countNode) {
+      cf_assert(countNode < totalNbPoints);
+      CFreal *const currState = m_pstates->getState(countNode);
       CFreal temp  = currState[tempID];
       CFreal press = currState[0];
       m_library->setComposition(temp, press, &x);
@@ -422,15 +464,19 @@ void ParadeRadiator::writeLocalData()
   else{ 
     // NEQ: species partial density is a system state
     // here it is assumed that the species densities are the FIRST variables 
-    for(CFuint i=0; i<nbPoints; ++i){
-       CFreal *const currState = m_pstates->getState(i);
-       for(CFuint t=0; t<nbSpecies; ++t){
-         const CFreal nb = std::max(currState[t]*m_avogadroOvMM[t],m_ndminFix);
-         foutD << nb << " ";
-       }
-       foutD << endl;
-     }
+    for (CFuint i =0; i < nbPoints; ++i, ++countNode) {
+      cf_assert(countNode < totalNbPoints);
+      CFreal *const currState = m_pstates->getState(countNode);
+      for(CFuint t=0; t<nbSpecies; ++t){
+	const CFreal nb = std::max(currState[t]*m_avogadroOvMM[t],m_ndminFix);
+	foutD << nb << " ";
+      }
+      foutD << endl;
+    }
   }
+  
+  CFLog(INFO, "ParadeRadiator::writeLocalData() => written densities for cells [" 
+	<< startNode << ", " << countNode << "]\n");
   
   CFLog(VERBOSE, "ParadeRadiator::writeLocalData() => START\n");
 }   
@@ -443,7 +489,6 @@ void ParadeRadiator::readLocalRadCoeff()
   
   fstream& fin = m_inFileHandle->openBinary(m_radFile);
   //string nam = "file-" + StringOps::to_str(PE::GetPE().GetRank());
-  //ofstream fout(nam.c_str());
   
   int one = 0;
   fin.read((char*)&one, sizeof(int));
@@ -453,14 +498,29 @@ void ParadeRadiator::readLocalRadCoeff()
   int nbCells = 0;
   fin.read((char*)&nbCells, sizeof(int));
   //fout << " nbCells = " << nbCells << endl;
-  cf_assert(nbCells == (int)m_pstates->getSize()  );
+  if (!fullGridInProcess()) {
+    cf_assert(nbCells == (int)m_pstates->getSize()  );
+  }
+  else {
+    cf_assert(nbCells <= (int)m_pstates->getSize()  );
+  }
   
   vector<int> wavptsmx(3);
   fin.read((char*)&wavptsmx[0], 3*sizeof(int));
   //fout << "wav3 =  "<< wavptsmx[0] << " " << wavptsmx[1] << " " << wavptsmx[2]<< endl;
   cf_assert(wavptsmx[0] == (int) m_nbPoints);
-  m_data.resize(nbCells, m_nbPoints*3);
-
+  const CFuint totalNbCells = m_pstates->getSize();
+  m_data.resize(totalNbCells, m_nbPoints*3, 0.);
+  
+  // here if the process stores the full mesh, each processor reads 
+  // only a portion of the data
+  RealMatrix partialData;
+  RealMatrix* currData = &m_data;
+  if (fullGridInProcess()) {
+    partialData.resize(nbCells, m_nbPoints*3, 0.);
+    currData = &partialData;
+  }
+  
   double etot = 0.;
   int wavpts = 0;
   const CFuint sizeCoeff = m_nbPoints*3;
@@ -471,14 +531,46 @@ void ParadeRadiator::readLocalRadCoeff()
     cf_assert(wavpts == (int)m_nbPoints);
     //fout << "wavpt = " <<  wavpts << endl;
     // this reads [wavelength, emission, absorption] for each cell
-    fin.read((char*)&m_data[iPoint*sizeCoeff], sizeCoeff*sizeof(double));
+    fin.read((char*)&((*currData)[iPoint*sizeCoeff]), sizeCoeff*sizeof(double));
   }
   fin.close();
+  
+  if (fullGridInProcess()) {
+    // in case the full mesh is stored in each process, since we have read in only a part 
+    // of spectral data, we need now to gather all data so that each process has the full 
+    // spectra before performing binning 
+    // AL: this is just an intermediate step towards a truly parallel binning calculation
+    vector<int> recvCounts(m_nbProc, 0);
+    vector<int> displs(m_nbProc, 0);
+    const CFuint nbCellsPerProc = totalNbCells/m_nbProc;
+    const CFuint minSizeToSend = nbCellsPerProc*sizeCoeff;
+    const CFuint maxSizeToSend = minSizeToSend + (totalNbCells%m_nbProc)*sizeCoeff;
+    CFuint count = 0;
+    for (CFuint rank = 0; rank < m_nbProc; ++rank) {
+      recvCounts[rank] = (rank < m_nbProc-1) ? minSizeToSend : maxSizeToSend;
+      // displacements start at 0
+      displs[rank] = count;
+      count += minSizeToSend;
+    }
+    
+    cf_assert(currData->size() <= maxSizeToSend);
+    cf_assert(currData->size() >= minSizeToSend);
+    
+    MPIError::getInstance().check
+      ("MPI_Allgatherv", "ParadeRadiator::readLocalRadCoeff()",
+       MPI_Allgatherv(&(*currData)[0], currData->size(), MPIStructDef::getMPIType(&(*currData)[0]),
+		      &m_data[0], &recvCounts[0], &displs[0],  MPIStructDef::getMPIType(&m_data[0]),
+		      PE::GetPE().GetCommunicator(m_namespace)));
+    
+    CFLog(VERBOSE, "ParadeRadiator::readLocalRadCoeff() => after MPI_Allgatherv()\n");
+  }
+  
+  CFLog(INFO, "ParadeRadiator::readLocalRadCoeff() => read data for all cells\n");
   
   //fout.close();
   
   // if (PE::GetPE().GetRank() == 0) {
-//     ofstream fout1("inwav.txt"); 
+  //     ofstream fout1("inwav.txt"); 
 //     fout1 << "TITLE = Original spectrum of radiative properties\n";
 //     fout1 << "VARIABLES = Wavl EmCoef AbCoef \n";
 //     for (CFuint i = 0; i < data.nbCols()/3; ++i) {

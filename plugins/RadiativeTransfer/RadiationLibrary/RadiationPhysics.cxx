@@ -75,15 +75,11 @@ void RadiationPhysics::getCellStateIDs(std::vector<CFuint>& statesID)
   statesID.reserve( nbCells );
   for(CFuint i=0; i<nbCells; ++i){
     cellsData.idx = i;
- //   if (cellTRS->getNbStatesInGeo(i) == 1 ){
-      Framework::GeometricEntity *const cell = cellBuilder->buildGE();
-      if(!cell->getState(0)->isGhost() && cell->getState(0)->isParUpdatable() ){
-        statesID.push_back( cell->getState(0)->getLocalID() );
-//        CFLog(INFO, "state "<< i <<" is: "<<statesID[i]<<'\n');
-      }
-      cellBuilder->releaseGE();
-    }
- // }
+    Framework::GeometricEntity *const cell = cellBuilder->buildGE();
+    cf_assert(!cell->getState(0)->isGhost());
+    statesID.push_back( cell->getState(0)->getLocalID() );
+    cellBuilder->releaseGE();
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
