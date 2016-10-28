@@ -140,7 +140,21 @@ CFreal SubSystemStatus::getResidual() const
   {
     return 0.0;
   }
-  return m_residual[m_monitored_var];
+  if (!m_global_res) 
+  {
+    return m_residual[m_monitored_var];
+  }
+  else 
+  {
+    CFreal globalResidual = 0.;
+    const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+
+    for(CFuint iVar=0; iVar < nbEqs; ++iVar)
+    {
+      if(m_residual[iVar] != -MathTools::MathConsts::CFrealMax()) { globalResidual += m_residual[iVar];  }
+    } 
+    return globalResidual/nbEqs;
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

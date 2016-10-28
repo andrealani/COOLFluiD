@@ -127,7 +127,8 @@ RealVector ComputeL2Norm::compute ()
 
   for(m_var_itr = 0; m_var_itr < m_residuals.size(); m_var_itr++)
   {
-    const CFreal globalValue = m_gr.GetGlobalValue (nsp);
+    CFreal globalValue = m_gr.GetGlobalValue (nsp);
+    if(m_normalizedRes) { globalValue = globalValue/m_refVals[m_var_itr]; }
     if(globalValue > 0.)
     {
       m_residuals[m_var_itr] = log10(sqrt(globalValue));

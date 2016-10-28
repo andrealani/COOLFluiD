@@ -93,6 +93,7 @@ void ConvergenceMethodData::setup()
   // set monitored var in SubSystemStatus
   Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
   subSysStatus->setMonitoredVar(m_computeNorm->getMonitoredVarIndex());
+  subSysStatus->setGlobalRes(m_computeNorm->getGlobalRes());
   
   // set the var registry
   ssys_var_regist = SubSystemStatusStack::getActive()->getVarRegistry();

@@ -20,6 +20,9 @@ void ComputeNorm::defineConfigOptions(Config::OptionList& options)
 {
    options.addConfigOption< CFuint >("MonitoredVarID","ID of the variable whose residual will be monitored.");
    options.addConfigOption< std::vector<CFuint> >("ComputedVarID","IDs of the variables whose residual will be computed.");
+   options.addConfigOption< bool >("NormalizedRes","Normalize the residual with the values");
+   options.addConfigOption< std::vector<CFreal> >("RefVals","Values to normalize");
+   options.addConfigOption< bool >("GlobalRes","Flag to use the global residual in the convergence method"); 
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -34,6 +37,15 @@ ComputeNorm::ComputeNorm(const std::string & name) :
 
   m_compute_var_id = std::vector<CFuint>();
   setParameter("ComputedVarID",&m_compute_var_id);
+
+  m_normalizedRes = false;
+  setParameter("NormalizedRes",&m_normalizedRes);
+
+  m_refVals = std::vector<CFreal>(); 
+  setParameter("RefVals",&m_refVals);
+
+  m_global_res = false;
+  setParameter("GlobalRes",&m_global_res);
 }
 
 
@@ -79,7 +91,8 @@ void ComputeNorm::setup()
   }
 
   m_residuals.resize(m_compute_var_id.size());
-
+  
+  m_refVals.resize(nbEq, 1.);
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -66,7 +66,12 @@ public: // methods
   {
     m_monitored_var = monitored_var;
   }
-
+  
+  /// Set the global residual to use in the convergence method
+  void setGlobalRes(const bool global_res)
+  {
+    m_global_res = global_res;
+  }
 
   /// Get the value of the residual of the monitored variable
   /// @see setMonitoredVar
@@ -415,6 +420,9 @@ private: // member data
 
   /// the index of the variable for which the residual is monitored
   CFuint m_monitored_var;
+
+  /// Flag to set the global residual
+  bool m_global_res;
 
   ///flag: is it the first step (not time step but for example newton step)
   bool m_firstStep;

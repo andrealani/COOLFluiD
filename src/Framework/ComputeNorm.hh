@@ -73,6 +73,13 @@ public: // functions
     return m_compute_var_id.size();
   }
 
+  /// Get the flag telling that you use the normalized global residual 
+  // for the convergence method
+  bool getGlobalRes()
+  {
+    return m_global_res;
+  }
+  
   /// Gets the Class name
   static std::string getClassName()
   {
@@ -94,6 +101,12 @@ protected:
   RealVector m_residuals;
   /// temporay index iterator
   CFuint m_var_itr;
+  /// Flag to normalize the residuals
+  bool m_normalizedRes;
+  /// Values to normalized the residual
+  std::vector<CFreal> m_refVals;
+  /// Flag to use the global residual for the convergece method
+  bool m_global_res;
 
 }; // end of class ComputeNorm
 
