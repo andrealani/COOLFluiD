@@ -115,9 +115,11 @@ protected:
 class GreyWallRadiator : public GreyRadiator
 {
 public:
-  GreyWallRadiator(const std::string& name): GreyRadiator(name){}
-  ~GreyWallRadiator(){;}
-
+  
+  GreyWallRadiator(const std::string& name): GreyRadiator(name) {}
+  
+  ~GreyWallRadiator(){}
+  
   static std::string getClassName() { return "GreyWallRadiator"; }
 
 protected:

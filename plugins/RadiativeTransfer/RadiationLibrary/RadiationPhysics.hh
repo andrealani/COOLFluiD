@@ -60,6 +60,9 @@ public:
   
   void getRadPhysicsPtr(RadiationPhysics* ptr) { ptr = this; }
   
+  /// get the local IDs of the Wall TRS ghost states and the face
+  /// @param statesID    local IDs of the Wall TRS ghost states
+  /// @param wallGeoIdx  local IDs of the Wall TRS faces
   void getWallStateIDs(std::vector<CFuint> &statesID,
                        std::vector<CFuint>& wallGeoIdx);
   

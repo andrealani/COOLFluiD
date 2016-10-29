@@ -58,23 +58,22 @@ RadiationPhysicsHandler::RadiationPhysicsHandler(const std::string& name) :
 
 void RadiationPhysicsHandler::configure(Config::ConfigArgs& args)
 {
-
-    Config::ConfigObject::configure(args);
-    m_radiationPhysics.resize( m_radiationPhysicsNames.size() );
-
-    for(CFuint i=0 ; i< m_radiationPhysicsNames.size(); ++i){
-      m_radiationPhysics[i] = new RadiationPhysics( m_radiationPhysicsNames[i] );
-      cf_assert( m_radiationPhysics[i].isNotNull() );
-      CFLog(INFO, "Configuring Physic "<<m_radiationPhysicsNames[i]<<'\n');
-      m_radiationPhysics[i]->setRadPhysicsHandlerPtr(this);
-      configureNested ( m_radiationPhysics[i].getPtr(), args );
-    }
+  Config::ConfigObject::configure(args);
+  m_radiationPhysics.resize( m_radiationPhysicsNames.size() );
+  
+  for(CFuint i=0 ; i< m_radiationPhysicsNames.size(); ++i){
+    m_radiationPhysics[i] = new RadiationPhysics( m_radiationPhysicsNames[i] );
+    cf_assert( m_radiationPhysics[i].isNotNull() );
+    CFLog(VERBOSE, "RadiationPhysicsHandler::configure() => "<<m_radiationPhysicsNames[i]<<'\n');
+    m_radiationPhysics[i]->setRadPhysicsHandlerPtr(this);
+    configureNested ( m_radiationPhysics[i].getPtr(), args );
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void RadiationPhysicsHandler::setup(){
-
+void RadiationPhysicsHandler::setup()
+{
   //Assume temperature to be the last equation
   Common::SafePtr<Framework::PhysicalChemicalLibrary> library;
   library = Framework::PhysicalModelStack::getActive()->getImplementor()->
@@ -106,17 +105,18 @@ RadiationPhysicsHandler::~RadiationPhysicsHandler(){
 
 //////////////////////////////////////////////////////////////////////////////
 
-void RadiationPhysicsHandler::setupWavStride(CFuint loop){
+void RadiationPhysicsHandler::setupWavStride(CFuint loop)
+{
   static CFreal wavStride = ( m_wavMax - m_wavMin ) / m_nbLoops;
   CFreal wavMin = m_wavMin + wavStride * loop;
   CFreal wavMax = wavMin + wavStride;
-
+  
   for(CFuint i=0; i<m_radiationPhysics.size();++i){
     m_radiationPhysics[i]->setupSpectra(wavMin, wavMax);
     m_radiationPhysics[i]->computeInterpolatedStates();
   }
 }
-
+  
 //////////////////////////////////////////////////////////////////////////////
 
 Common::SharedPtr< RadiationPhysics > RadiationPhysicsHandler::getCellDistPtr
@@ -136,13 +136,18 @@ Common::SharedPtr< RadiationPhysics > RadiationPhysicsHandler::getCellDistPtr
 Common::SharedPtr< RadiationPhysics > RadiationPhysicsHandler::getWallDistPtr
 (CFuint GhostStateID)
 {
-  //CFLog(INFO,"Wall; stateID: "<<GhostStateID<<"\n");
+  using namespace COOLFluiD::Common;
+  
+  CFLog(DEBUG_MIN, "P" << PE::GetPE().GetRank("Default") << 
+	" RadiationPhysicsHandler::getWallDistPtr() => stateID["
+	<< GhostStateID << "] has owner [" << m_ghostStatesOwner[GhostStateID][0] << "]\n");
+  
   cf_assert(GhostStateID<m_ghostStatesOwner.size() );
   cf_assert(m_ghostStatesOwner[GhostStateID][0] != -1 );
   m_ghostStateID = GhostStateID;
   m_ghostStateOwnerIdx  = m_ghostStatesOwner[GhostStateID][1];
   m_ghostStateWallGeoID = m_ghostStatesOwner[GhostStateID][2];
-
+  
   return m_radiationPhysics[ m_ghostStatesOwner[GhostStateID][0] ];
 }
 
@@ -150,8 +155,10 @@ Common::SharedPtr< RadiationPhysics > RadiationPhysicsHandler::getWallDistPtr
 
 void RadiationPhysicsHandler::configureTRS()
 {
+  CFLog(VERBOSE, "RadiationPhysicsHandler::configureTRS() => START\n");
+  
   Framework::DataHandle < Framework::State* , Framework::GLOBAL > states =
-      m_sockets.states.getDataHandle();
+    m_sockets.states.getDataHandle();
 
   Framework::DataHandle < Framework::State*, Framework::LOCAL> gstates =
       m_sockets.gstates.getDataHandle();
@@ -162,29 +169,39 @@ void RadiationPhysicsHandler::configureTRS()
   vector<CFuint> buffer, buffer2;
   for(CFuint i=0; i<m_radiationPhysics.size();++i){
     TRStypeID bufferType = m_radiationPhysics[i]->getTRStypeID();
-    if (bufferType == MEDIUM){
+    CFLog(VERBOSE, "RadiationPhysicsHandler::configureTRS() => bufferType = " << bufferType << "\n");
+    
+    if (bufferType == MEDIUM) {
       m_radiationPhysics[i]->getCellStateIDs(buffer);
-      CFuint sizeBuffer = buffer.size();
-      CFuint sizeStates = states.size();
-
+      CFLog(VERBOSE, "RadiationPhysicsHandler::configureTRS() => MEDIUM has size " << buffer.size() << "\n");
+      
+      const CFuint sizeBuffer = buffer.size();
+      const CFuint sizeStates = states.size();
       m_statesOwner.resize(std::max( sizeBuffer , sizeStates ) );
       //std::cout<<"m_statesOwner: "<<sizeBuffer<<' '<<sizeStates<<std::endl;
-
+      
       for(CFuint j=0; j<buffer.size();++j){
         m_statesOwner[ buffer[j] ][0] = i; //RadPhysics owner id of that state
         m_statesOwner[ buffer[j] ][1] = j; //state idx on the RadPhysics
       }
+      
+      buffer.clear();
     }
-    else{
+    // else{ // AL: OLD code, buggy in my opinion 
+    else if (bufferType == WALL) {
       m_radiationPhysics[i]->getWallStateIDs(buffer, buffer2);
-      for(CFuint j=0; j<buffer.size();++j){
+      CFLog(VERBOSE, "RadiationPhysicsHandler::configureTRS() => WALL has size " << buffer.size() << "\n");
+      
+      for (CFuint j=0; j<buffer.size();++j) {
         m_ghostStatesOwner[ buffer[j] ][0] = i;          //RadPhysics owner id of that g state
         m_ghostStatesOwner[ buffer[j] ][1] = j;          //state idx on the RadPhysics
         m_ghostStatesOwner[ buffer[j] ][2] = buffer2[j]; //Wall geo ID
-        }
+      }
+      
+      buffer.clear();
     }
   }
-
+  
 /*
   CFLog(INFO,"m_statesOwner: \n");
   for(CFuint i = 0; i< m_statesOwner.size(); ++i){
@@ -207,23 +224,24 @@ void RadiationPhysicsHandler::configureTRS()
     //std::cout<<"TRSNAME: "<<bufferName<<" TRSTypeID: "<<bufferType<<std::endl;
 
     switch (bufferType) {
-      case WALL:
-        m_wallTRSnames.push_back(bufferName);
-        break;
-      case MEDIUM:
-        m_mediumTRSnames.push_back(bufferName);
-        break;
-      case BOUNDARY:
-        m_boundaryTRSnames.push_back(bufferName);
-        break;
-      default:
-        CFLog(INFO, "ERROR HANDLER: "<<bufferName<<": Undefined TRS type\n");
-        break;
+    case WALL: // 0
+      m_wallTRSnames.push_back(bufferName);
+      break;
+    case MEDIUM: // 1
+      m_mediumTRSnames.push_back(bufferName);
+      break;
+    case BOUNDARY: // 2
+      m_boundaryTRSnames.push_back(bufferName);
+      break;
+    default:
+      CFLog(ERROR, "ERROR HANDLER: "<<bufferName<<": Undefined TRS type\n");
+      break;
     }
+  }
+  
+  CFLog(VERBOSE, "RadiationPhysicsHandler::configureTRS() => END\n");
 }
-
-}
-
+  
 //////////////////////////////////////////////////////////////////////////////
 
 CFuint RadiationPhysicsHandler::getNbStates()

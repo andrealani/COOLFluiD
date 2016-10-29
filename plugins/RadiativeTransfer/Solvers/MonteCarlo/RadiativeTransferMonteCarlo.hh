@@ -1064,17 +1064,21 @@ CFuint RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::rayTracing(Photon& beam)
 
         const CFreal wallK = m_radiation->getWallDistPtr(ghostStateID)
             ->getRadiatorPtr()->getAbsorption( beamData.wavelength, entryDirection );
-
+	
         m_lagrangianSolver.getNormals(exitFaceID,position,normal);
-
+	
         const CFreal reflectionProbability =  m_rand.uniformRand();
-
-        if(reflectionProbability <= wallK){ // the photon is absorved by the wall
+	CFLog(DEBUG_MIN, "reflectionProbability[" << reflectionProbability << "] <= wallK[" 
+	      << wallK << "]\n");
+	
+        if (reflectionProbability <= wallK){ // the photon is absorved by the wall
           //cout<<"ABSORVED!"<<endl;
           //entity = WALL_FACE;
           const CFuint ghostStateID = m_lagrangianSolver.getWallGhotsStateId(exitFaceID);
-          m_ghostStateInRadPowers[ghostStateID] += beamData.energyFraction;
-          //foundEntity = true;
+	  m_ghostStateInRadPowers[ghostStateID] += beamData.energyFraction;
+	  CFLog(DEBUG_MIN, "Rad power in ghostStateID[" << ghostStateID << "] = " << 
+		m_ghostStateInRadPowers[ghostStateID] << "\n");
+	  //foundEntity = true;
           return exitFaceID;
         }
         else {

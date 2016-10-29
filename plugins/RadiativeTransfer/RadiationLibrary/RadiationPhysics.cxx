@@ -26,8 +26,10 @@ void RadiationPhysics::defineConfigOptions(Config::OptionList& options)
 /////////////////////////////////////////////////////////////////////////////
 
 void RadiationPhysics::getWallStateIDs(std::vector<CFuint>& statesID,
-                                        std::vector<CFuint>& wallGeoIdx)
+				       std::vector<CFuint>& wallGeoIdx)
 {
+  CFLog(VERBOSE, "RadiationPhysics::getWallStateIDs() => START\n");
+  
   statesID.clear();
   wallGeoIdx.clear();
   Framework::SocketBundleSetter socketBundle;
@@ -45,17 +47,28 @@ void RadiationPhysics::getWallStateIDs(std::vector<CFuint>& statesID,
   facesData.trs = WallFaces;
   const CFuint nbFaces = WallFaces->getLocalNbGeoEnts();
   statesID.reserve( nbFaces );
+  
+  CFLog(VERBOSE, "RadiationPhysics::getWallStateIDs() => WALL nbFaces " <<  nbFaces << "\n");
+  
   for(CFuint i=0; i<nbFaces; ++i){
     facesData.idx = i;
     Framework::GeometricEntity *const face = faceTRSBuilder->buildGE();
-     if( !face->getState(1)->isParUpdatable() && face->getState(0)->isParUpdatable() ){
-      statesID.push_back( face->getState(1)->getLocalID() );
-      wallGeoIdx.push_back( face->getID() );
-    }
+    // if (face->getState(0)->isParUpdatable() ){
+    cf_assert(!face->getState(1)->isParUpdatable());
+    // identify/store wall ghost states (which have their own local ID, independent from cell states)
+    statesID.push_back( face->getState(1)->getLocalID() );
+    wallGeoIdx.push_back( face->getID() );
+    // }
+    //else {
+    // CFLog(INFO, "RadiationPhysics::getWallStateIDs() => ghostStateID[" << face->getState(1)->getLocalID() << 
+    //	    " in non updatable face[" << face->getID() << "]\n");
+    // }
     faceTRSBuilder->releaseGE();
   }
+  
+  CFLog(VERBOSE, "RadiationPhysics::getWallStateIDs() => END\n");
 }
-
+  
 /////////////////////////////////////////////////////////////////////////////
 
 void RadiationPhysics::getCellStateIDs(std::vector<CFuint>& statesID)

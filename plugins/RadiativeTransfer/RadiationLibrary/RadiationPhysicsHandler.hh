@@ -90,7 +90,8 @@ private:
   Framework::SocketBundle m_sockets;
   std::vector< std::string > m_radiationPhysicsNames;
   std::vector<Common::SharedPtr< RadiationPhysics > > m_radiationPhysics;
-  std::vector<std::vector<CFint> > m_statesOwner, m_ghostStatesOwner;
+  std::vector<std::vector<CFint> > m_statesOwner;
+  std::vector<std::vector<CFint> > m_ghostStatesOwner;
 
   std::vector<std::string> m_wallTRSnames;
   std::vector<std::string> m_boundaryTRSnames;
