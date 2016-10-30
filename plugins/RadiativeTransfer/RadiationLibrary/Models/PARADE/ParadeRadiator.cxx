@@ -607,14 +607,21 @@ void ParadeRadiator::readLocalRadCoeff()
 
 //////////////////////////////////////////////////////////////////////////////
   
-inline void ParadeRadiator::getSpectralIdxs(CFreal lambda, CFuint *idx1, CFuint *idx2)
+inline void ParadeRadiator::getSpectralIdxs(CFreal lambda, CFuint& idx1, CFuint& idx2)
 {
   //assumes constant wavelength discretization
+  cf_assert(lambda <= m_wavMax);
   const CFreal idx = (m_nbPoints-1) * ( lambda - m_wavMin )/( m_wavMax - m_wavMin );
-  *idx1 = floor(idx);
-  *idx2 = ceil(idx);
+  
+  idx1 = (CFuint)std::floor(idx);
+  idx1 = std::min(m_nbPoints -1, idx1);
+  idx2 = (CFuint)std::ceil(idx);
+  idx2 = std::min(m_nbPoints -1, idx2);
+  
+  cf_assert(idx1 < m_nbPoints);
+  cf_assert(idx2 < m_nbPoints);
 }
-
+  
 /// array storing absorption and emission coefficients
 /// wavelength       = m_radCoeff(local state ID, spectral point idx*3)
 /// emission coeff   = m_radCoeff(local state ID, spectral point idx*3+1)
@@ -625,10 +632,17 @@ inline void ParadeRadiator::getSpectralIdxs(CFreal lambda, CFuint *idx1, CFuint 
   
 CFreal ParadeRadiator::getEmission(CFreal lambda, RealVector &s_o)
 {
-  CFuint spectralIdx1, spectralIdx2;
-  CFuint stateIdx = m_radPhysicsHandlerPtr->getCurrentCellTrsIdx();
+  CFuint spectralIdx1 = 0;
+  CFuint spectralIdx2 = 0;
+  const CFuint stateIdx = m_radPhysicsHandlerPtr->getCurrentCellTrsIdx();
+  getSpectralIdxs(lambda, spectralIdx1, spectralIdx2);
+ 
+  cf_assert(stateIdx < m_data.nbRows());
+  cf_assert(spectralIdx1*3   < m_data.nbCols());
+  cf_assert(spectralIdx1*3+1 < m_data.nbCols());
+  cf_assert(spectralIdx2*3   < m_data.nbCols());
+  cf_assert(spectralIdx2*3+1 < m_data.nbCols());
 
-  getSpectralIdxs(lambda, &spectralIdx1, &spectralIdx2);
   const CFreal x0 = m_data( stateIdx, spectralIdx1*3   );
   const CFreal y0 = m_data( stateIdx, spectralIdx1*3+1 );
 
@@ -643,10 +657,17 @@ CFreal ParadeRadiator::getEmission(CFreal lambda, RealVector &s_o)
 
 CFreal ParadeRadiator::getAbsorption(CFreal lambda, RealVector &s_o)
 {
-  CFuint spectralIdx1, spectralIdx2;
-  CFuint stateIdx = m_radPhysicsHandlerPtr->getCurrentCellTrsIdx();
-  getSpectralIdxs(lambda, &spectralIdx1, &spectralIdx2);
-  //cout << "get spectral idx: "<< lambda  <<' '<<spectralIdx1<< ' '<<spectralIdx2<<endl;
+  CFuint spectralIdx1 = 0; 
+  CFuint spectralIdx2 = 0;
+  const CFuint stateIdx = m_radPhysicsHandlerPtr->getCurrentCellTrsIdx();
+  getSpectralIdxs(lambda, spectralIdx1, spectralIdx2);
+  
+  cf_assert(stateIdx < m_data.nbRows());
+  cf_assert(spectralIdx1*3   < m_data.nbCols()); 
+  cf_assert(spectralIdx1*3+2 < m_data.nbCols());
+  cf_assert(spectralIdx2*3   < m_data.nbCols());
+  cf_assert(spectralIdx2*3+2 < m_data.nbCols());
+  
   const CFreal x0 = m_data( stateIdx, spectralIdx1*3   );
   const CFreal y0 = m_data( stateIdx, spectralIdx1*3+2 );
 

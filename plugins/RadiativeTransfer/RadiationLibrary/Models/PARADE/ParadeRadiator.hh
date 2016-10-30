@@ -83,7 +83,7 @@ public:
 
   void getData();
   
-  inline void getSpectralIdxs(CFreal lambda, CFuint *idx1, CFuint *idx2);
+  inline void getSpectralIdxs(CFreal lambda, CFuint& idx1, CFuint& idx2);
   
 private:
 

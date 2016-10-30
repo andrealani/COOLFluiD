@@ -235,19 +235,19 @@ Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ApplyTRS   = I
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.TypeTRS    = Medium
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.Radiator   = ParadeRadiator
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.LibraryPath = \
-	/Users/lani/PARADEv3.2.1/parade-3.2.1
+	/software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
+#	/Users/lani/PARADEv3.2.1/parade-3.2.1
 #	/software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.LocalDirName = ParadeData
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 100 # 10000
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 10000
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.Tmin = 200
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = true
-#false
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = false #true #false
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.ApplyTRS   = Wall
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.TypeTRS    = Wall
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.Radiator = GreyWallRadiator
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemAbsCoeff = 1.
-#Boundary
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemEmsCoeff = 0.9
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.ApplyTRS   = Symmetry
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.TypeTRS    = Boundary
