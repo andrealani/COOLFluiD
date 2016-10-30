@@ -221,13 +221,13 @@ Simulator.SubSystem.DataProcessing1.SkipFirstIteration  = false
 Simulator.SubSystem.DataProcessing1.Comds               = RadiativeTransferMonteCarloAxiFVMCC 
 Simulator.SubSystem.DataProcessing1.Names               = RT
 Simulator.SubSystem.DataProcessing1.RT.applyTRS         = InnerFaces
-Simulator.SubSystem.DataProcessing1.RT.numberOfRays     = 1000
+Simulator.SubSystem.DataProcessing1.RT.numberOfRays     = 10000
 Simulator.SubSystem.DataProcessing1.RT.Axi              = true
-Simulator.SubSystem.DataProcessing1.RT.sendBufferSize   = 1000
+Simulator.SubSystem.DataProcessing1.RT.sendBufferSize   = 10000
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.NumberLoops = 1
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.TempID = 13
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMax = 10000.
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMax = 40000.
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMin = 2000.
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.RadiationPhysicsNames = aa b1 b2 b3 b4
 
@@ -241,13 +241,13 @@ Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.LocalDirName = ParadeData
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 10000
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.Tmin = 200
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = false #true #false
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = false
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.ApplyTRS   = Wall
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.TypeTRS    = Wall
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.Radiator = GreyWallRadiator
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemAbsCoeff = 1.
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemEmsCoeff = 0.9
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemEmsCoeff = 0.
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.ApplyTRS   = Symmetry
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.TypeTRS    = Boundary
