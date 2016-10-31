@@ -48,8 +48,8 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   cf_assert(m_data.isNotNull());
 
   // set default value of builder for FluxReconstructionSolver
-  // to be FluxReconstructionMeshDataBuilder
-  m_builder = "FluxReconstruction";
+  // to be FluxReconstructionBuilder
+  m_builder = "StdBuilder";
   // set default global jacobian sparsity
   m_sparsity = "None";
 

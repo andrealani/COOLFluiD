@@ -19,10 +19,10 @@
 #include "Framework/MapGeoToTrsAndIdx.hh"
 
 //#include "FluxReconstructionMethod/HexaFluxReconstructionElementData.hh"
-//#include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBuilder.hh"
-//#include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -143,7 +143,7 @@ void FluxReconstructionBuilder::computeGeoTypeInfo()
   CFAUTOTRACE;
 
   // set polynomial type
-  getCFmeshData().setSolutionPolyType(CFPolyForm::SPECTRALFD);
+  getCFmeshData().setSolutionPolyType(CFPolyForm::LAGRANGE);
 
   // continue with the standard algorithm
   Framework::MeshDataBuilder::computeGeoTypeInfo();
@@ -158,6 +158,7 @@ void FluxReconstructionBuilder::createCellFaces()
   const CFuint nbElem      = getNbElements();
   const CFuint nbElemTypes = getNbElementTypes();
   CFLog(INFO, "nbElem = " << nbElem << "\n");
+  CFLog(VERBOSE, "nbElemTypes = " << nbElemTypes << "\n");
 
 
   // local connectivity face-node for each element type
@@ -169,21 +170,26 @@ void FluxReconstructionBuilder::createCellFaces()
 
   cf_assert(nbElemTypes == elementType->size());
 
+  
+  // loop over the types of elements
   for (CFuint iType = 0; iType < nbElemTypes; ++iType)
   {
     m_faceNodeElement[iType] = LocalConnectionData::getInstance().getFaceDofLocal((*elementType)[iType].getGeoShape(),
                                                                     getGeometricPolyOrder(),
                                                                     NODE,CFPolyForm::LAGRANGE);
+    CFLog(VERBOSE, "faceNodeElement[" << iType << "] = \n" << *(m_faceNodeElement[iType]) << "\n");
   }
 
   // array storing the number of faces per element
   m_nbFacesPerElem.resize(nbElem);
   m_nbFacesPerElem = 0;
   LocalConnectionData::getInstance().setNbFacesPerElement(m_nbFacesPerElem); // pass m_nbFacesPerElem by reference
+  CFLog(VERBOSE, "nbFacesPerElem = \n" << m_nbFacesPerElem[0] << "\n");
 
   // set the face shapes per element type
   vector< vector<CFGeoShape::Type> > faceShapesPerElemType(nbElemTypes);
   LocalConnectionData::getInstance().setFaceShapesPerElemType(faceShapesPerElemType); // pass faceShapesPerElemType by reference
+  //CFLog(VERBOSE, "faceShapesPerElemType = \n" << faceShapesPerElemType[0][0] << faceShapesPerElemType[0][1]<< faceShapesPerElemType[0][2]<< faceShapesPerElemType[0][3]<< "\n");
 
   // table storing the connectivity element-local faceID
   // (in this processor)
@@ -357,6 +363,8 @@ void FluxReconstructionBuilder::createCellFaces()
 
   cf_assert(m_nbFaces <= maxTotalNbFaces);
   cf_assert(countInFaces <= maxTotalNbFaces);
+  
+    //CFLog(VERBOSE, "cellFaces = \n" << *cellFaces << "\n");
 
   const CFuint totalNbFaces = m_nbFaces;
   const CFuint nbInnerFaces = countInFaces;
@@ -745,32 +753,32 @@ vector< vector < vector < CFuint > > > FluxReconstructionBuilder::getNodeConnPer
 {
   CFAUTOTRACE;
 
-  // FluxReconstructionElementData* sdElemData;
-  // switch (shape)
-  // {
-  //   case CFGeoShape::LINE:
-  //   {
-  //     throw Common::NotImplementedException (FromHere(),"Spectral difference has not been implemented for 1D");
-  //   } break;
-  //   case CFGeoShape::QUAD:
-  //   {
-  //     sdElemData = new QuadFluxReconstructionElementData(CFPolyOrder::ORDER0);
-  //   } break;
-  //   case CFGeoShape::HEXA:
-  //   {
-  //     sdElemData = new HexaFluxReconstructionElementData(CFPolyOrder::ORDER0);
-  //   } break;
-  //   default:
-  //   {
-  //     throw Common::ShouldNotBeHereException (FromHere(),"Unsupported cell shape");
-  //   }
-  // }
+  FluxReconstructionElementData* sdElemData;
+  switch (shape)
+  {
+    case CFGeoShape::LINE:
+    {
+      throw Common::NotImplementedException (FromHere(),"Spectral difference has not been implemented for 1D");
+    } break;
+    case CFGeoShape::QUAD:
+    {
+      sdElemData = new QuadFluxReconstructionElementData(CFPolyOrder::ORDER0);
+    } break;
+//     case CFGeoShape::HEXA:
+//     {
+//       sdElemData = new HexaFluxReconstructionElementData(CFPolyOrder::ORDER0);
+//     } break;
+    default:
+    {
+      throw Common::ShouldNotBeHereException (FromHere(),"Unsupported cell shape");
+    }
+  }
 
   // get vector containing the nodes connectivities for each orientation
-  vector< vector < vector < CFuint > > > nodeConnPerOrientation;
-  //= *sdElemData->getFaceNodeConnPerOrient();
+  vector< vector < vector < CFuint > > > nodeConnPerOrientation
+  = *sdElemData->getFaceNodeConnPerOrient();
 
-  //delete sdElemData;
+  delete sdElemData;
 
   return nodeConnPerOrientation;
 }
@@ -781,31 +789,31 @@ vector < vector < CFuint > > FluxReconstructionBuilder::getFaceConnPerOrientatio
 {
   CFAUTOTRACE;
 
-  // FluxReconstructionElementData* sdElemData;
-  // switch (shape)
-  // {
-  //   case CFGeoShape::LINE:
-  //   {
-  //     throw Common::NotImplementedException (FromHere(),"Spectral difference has not been implemented for 1D");
-  //   } break;
-  //   case CFGeoShape::QUAD:
-  //   {
-  //     sdElemData = new QuadFluxReconstructionElementData(CFPolyOrder::ORDER0);
-  //   } break;
-  //   case CFGeoShape::HEXA:
-  //   {
-  //     sdElemData = new HexaFluxReconstructionElementData(CFPolyOrder::ORDER0);
-  //   } break;
-  //   default:
-  //   {
-  //     throw Common::ShouldNotBeHereException (FromHere(),"Unsupported cell shape");
-  //   }
-  // }
+  FluxReconstructionElementData* sdElemData;
+  switch (shape)
+  {
+    case CFGeoShape::LINE:
+    {
+      throw Common::NotImplementedException (FromHere(),"Spectral difference has not been implemented for 1D");
+    } break;
+    case CFGeoShape::QUAD:
+    {
+      sdElemData = new QuadFluxReconstructionElementData(CFPolyOrder::ORDER0);
+    } break;
+//     case CFGeoShape::HEXA:
+//     {
+//       sdElemData = new HexaFluxReconstructionElementData(CFPolyOrder::ORDER0);
+//     } break;
+    default:
+    {
+      throw Common::ShouldNotBeHereException (FromHere(),"Unsupported cell shape");
+    }
+  }
 
   // get vector containing the nodes connectivities for each orientation
-  vector < vector < CFuint > > faceConnPerOrientation;
-  //= *sdElemData->getFaceConnPerOrient();
-  //delete sdElemData;
+  vector < vector < CFuint > > faceConnPerOrientation
+  = *sdElemData->getFaceConnPerOrient();
+  delete sdElemData;
 
   return faceConnPerOrientation;
 }
@@ -893,6 +901,7 @@ void FluxReconstructionBuilder::createBoundaryFacesTRS()
   // flag telling if the face is a partition face
   m_isPartitionFace.resize(nbBPlusPartitionFaces);
   m_isPartitionFace = true;
+  
 
   for(CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS)
   {
@@ -911,7 +920,6 @@ void FluxReconstructionBuilder::createBoundaryFacesTRS()
 
     CFLog(NOTICE, "Built TRS named " << (*nameTRS)[iTRS] << "\n");
   }
-
   // build partition boundary faces
   createPartitionBoundaryFacesTRS();
 
@@ -928,15 +936,20 @@ FluxReconstructionBuilder::createTopologicalRegionSet
  const TRGeoConn& trGeoConn,
  const CFuint iTRS)
 {
+        CFLog(NOTICE,"Shizzle1 \n");
   CFAUTOTRACE;
 
   // get P1 number of face nodes
   SafePtr<vector<ElementTypeData> > elementType = getCFmeshData().getElementTypeData();
   cf_assert(elementType->size() > 0);
+  CFLog(NOTICE,"Shizzle2a \n");
   const CFGeoShape::Type cellShape = (*elementType)[0].getGeoShape();
+  CFLog(NOTICE,"Shizzle2b \n");
   vector< vector< CFuint > > bFaceOrientations = getBFaceOrientations(cellShape);
+  CFLog(NOTICE,"Shizzle2c" << cellShape << "\n");
+  CFLog(NOTICE,"Shizzle2ca" << bFaceOrientations[0][0] << "\n");
   const CFuint nbFaceNodesP1 = bFaceOrientations[0].size();
-
+CFLog(NOTICE,"Shizzle2d \n");
   // create the TopologicalRegion storage
   const CFuint nbTRs = nbFacesPerTR.size();
   vector<TopologicalRegion*>* storeTR = new vector<TopologicalRegion*>(nbTRs);
@@ -946,6 +959,7 @@ FluxReconstructionBuilder::createTopologicalRegionSet
 
   // compute the total number of faces in this TRS
   const CFuint totalNbFaces = accumulate(nbFacesPerTR.begin(), nbFacesPerTR.end(), static_cast<CFuint>(0));
+        
 
   // fill in two arrays specifying the number of nodes and neighbour cells
   // per geometric entity in this TR
@@ -968,6 +982,7 @@ FluxReconstructionBuilder::createTopologicalRegionSet
   /// the TRS connectivities in MeshData
   MeshDataStack::getActive()->storeConnectivity(name + "Nodes", faceNodes);
   MeshDataStack::getActive()->storeConnectivity(name + "-Faces2Cells", faceCells);
+        CFLog(NOTICE,"Shizzle3 \n");
 
 
   // array with all the IDs of all the geometric entities in this TRS
@@ -983,6 +998,7 @@ FluxReconstructionBuilder::createTopologicalRegionSet
   SafePtr<vector<vector<vector<CFuint> > > > trsGlobalIDs = MeshDataStack::getActive()->getGlobalTRSGeoIDs();
 
   const bool hasGlobalIDs = (trsGlobalIDs->size() > 0);
+        CFLog(NOTICE,"Shizzle4 \n");
 
   CFuint nbProcessedFaces = 0;
   // let's create the required number of TR's
@@ -1304,31 +1320,31 @@ vector< vector < CFuint > > FluxReconstructionBuilder::getBFaceOrientations(cons
 {
   CFAUTOTRACE;
 
-  // FluxReconstructionElementData* sdElemData;
-  // switch (shape)
-  // {
-  //   case CFGeoShape::LINE:
-  //   {
-  //     throw Common::NotImplementedException (FromHere(),"Spectral difference has not been implemented for 1D");
-  //   } break;
-  //   case CFGeoShape::QUAD:
-  //   {
-  //     sdElemData = new QuadFluxReconstructionElementData(CFPolyOrder::ORDER0);
-  //   } break;
-  //   case CFGeoShape::HEXA:
-  //   {
-  //     sdElemData = new HexaFluxReconstructionElementData(CFPolyOrder::ORDER0);
-  //   } break;
-  //   default:
-  //   {
-  //     throw Common::ShouldNotBeHereException (FromHere(),"Unsupported cell shape...");
-  //   }
-  // }
+  FluxReconstructionElementData* sdElemData;
+  switch (shape)
+  {
+    case CFGeoShape::LINE:
+    {
+      throw Common::NotImplementedException (FromHere(),"Spectral difference has not been implemented for 1D");
+    } break;
+    case CFGeoShape::QUAD:
+    {
+      sdElemData = new QuadFluxReconstructionElementData(CFPolyOrder::ORDER0);
+    } break;
+//     case CFGeoShape::HEXA:
+//     {
+//       sdElemData = new HexaFluxReconstructionElementData(CFPolyOrder::ORDER0);
+//     } break;
+    default:
+    {
+      throw Common::ShouldNotBeHereException (FromHere(),"Unsupported cell shape...");
+    }
+  }
 
   // get vector containing the nodes connectivities for each orientation
-  vector < vector < CFuint > > bFaceOrientations; 
-  //= *sdElemData->getFaceNodeConn();
-  // delete sdElemData;
+  vector < vector < CFuint > > bFaceOrientations
+  = *sdElemData->getFaceNodeConn();
+   delete sdElemData;
 
   return bFaceOrientations;
 }

@@ -4,6 +4,8 @@ FluxReconstructionMeshDataBuilder.cxx
 FluxReconstructionMeshDataBuilder.hh
 FluxReconstructionBuilder.cxx
 FluxReconstructionBuilder.hh
+FluxReconstructionBuilder.cxx
+FluxReconstructionBuilder.hh
 FluxReconstructionSolver.cxx
 FluxReconstructionSolver.hh
 FluxReconstructionSolverData.cxx
@@ -20,6 +22,13 @@ StdSolve.cxx
 StdSolve.hh
 StdUnSetup.cxx
 StdUnSetup.hh
+
+FluxReconstructionElementData.cxx
+FluxReconstructionElementData.hh
+QuadFluxReconstructionElementData.cxx
+QuadFluxReconstructionElementData.hh
+TensorProductGaussIntegrator.cxx
+TensorProductGaussIntegrator.hh
 )
 
 LIST ( APPEND FluxReconstructionMethod_cflibs Framework)
