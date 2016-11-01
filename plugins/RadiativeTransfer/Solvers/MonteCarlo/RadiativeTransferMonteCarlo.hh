@@ -465,8 +465,6 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::setup()
   m_cartPosition3.resize(3);
   m_sOut3.resize(3);
   
-  //m_radLibrary.setDataSockets(sockets);
-
   m_stateRadPower.setDataSockets(sockets);
   m_stateInRadPowers.setDataSockets(sockets);
   
@@ -476,7 +474,6 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::setup()
 
   //initialize PostProcessign
   m_postProcess->setDataSockets(sockets);
-
   
   m_radiation->setupDataSockets(sockets);
   m_radiation->setup();

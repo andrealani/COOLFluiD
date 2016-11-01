@@ -93,7 +93,11 @@ public:
 
    inline MPI_Datatype getParticleDataType(){return m_particleDataType; }
 
-  inline void setDataSockets( Framework::SocketBundle sockets ){ return m_particleTracking.setDataSockets(sockets);}
+  inline void setDataSockets( Framework::SocketBundle sockets )
+  { 
+    m_particleTracking.setDataSockets(sockets);
+    m_particleTracking.setupAlgorithm();
+  }
 
    inline void getNormals(CFuint faceID, RealVector& CartPosition, RealVector& faceNormal ){
        m_particleTracking.getNormals( faceID, CartPosition, faceNormal );
@@ -129,9 +133,9 @@ private:
   MPI_Datatype m_particleDataType;
 
   Particle<UserData> m_particle;
-
+  
   PARTICLE_TRACKING m_particleTracking;
-
+  
   MathTools::CFMat<CFint> m_wallTypes;
   
   std::auto_ptr<SendBuffer<Particle<UserData> > > m_sendBuffer;

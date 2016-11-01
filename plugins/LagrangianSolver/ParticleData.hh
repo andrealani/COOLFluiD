@@ -1,4 +1,7 @@
 #include "Common/COOLFluiD.hh"
+#include "MathTools/CFVec.hh"
+
+//////////////////////////////////////////////////////////////////////////////
 
 /**
  * This structs model a Particle
@@ -7,16 +10,22 @@
  * @author Alessandro Sanna
  * @author Andrea Lani
  */
+
+//////////////////////////////////////////////////////////////////////////////
+
 namespace COOLFluiD {
 
 namespace LagrangianSolver {
 
+//////////////////////////////////////////////////////////////////////////////
+
 struct CommonData{
-    CFreal direction[3];
-    CFreal currentPoint[3];
-    CFuint cellID;
+  MathTools::CFVec<CFreal,3> direction;
+  MathTools::CFVec<CFreal,3> currentPoint;
+  CFuint cellID;
 };
 
+//////////////////////////////////////////////////////////////////////////////
 
 template<class UserData1>
 struct Particle
@@ -24,6 +33,9 @@ struct Particle
   CommonData commonData;
   UserData1 userData;
 };
+
+//////////////////////////////////////////////////////////////////////////////
+
 }
 
 }
