@@ -201,29 +201,29 @@ void FVMCCGeoDataComputer<METHODDATA>::computeCellVolumes()
     if (volumes[iElem] < 0.0)
     {
       countNegativeVol++;
-      cout.precision(14);
-      CFout << "Cell [" << iElem << "] with [" << cell->nbNodes() << "] nodes has negative volume [" << volumes[iElem] << "]\n";
+      CFLog(ERROR, "Cell [" << iElem << "] with [" << cell->nbNodes() << "] nodes has negative volume [" << volumes[iElem] << "]\n");
       volumes[iElem] = 0.0;
     }
-
+    
     if ( MathChecks::isZero(volumes[iElem]) )
     {
-      cout.precision(14);
-      CFout << "Cell [" << iElem << "] with [" << cell->nbNodes() << "] nodes has zero volume [" << volumes[iElem] << "]\n";
+      CFLog(ERROR, "Cell [" << iElem << "] with [" << cell->nbNodes() << "] nodes has zero volume [" << volumes[iElem] << "]\n");
       // print coordinates
       for (CFuint i = 0; i < cell->nbNodes(); ++i) {
-       CFout << *cell->getNode(i) << ", ";
-      } CFout << "\n";
+	CFLog(ERROR, *cell->getNode(i) << ", ");
+      } 
+      CFLog(ERROR, "\n");
       volumes[iElem] = 0.0;
     }
-
-    //   cf_assert(volumes[iElem] > 0.);
-
+    
+    CFLog(DEBUG_MED, "volume[" << iElem << "] = " << volumes[iElem] <<"\n"); 
+    // cf_assert(volumes[iElem] > 0.);
+    
     //release the GeometricEntity
     geoBuilder->releaseGE();
   }
   
-  CFLog(VERBOSE, "Negative volumes count [" << countNegativeVol << "]\n" );
+  CFLog(INFO, "FVMCCGeoDataComputer::computeCellVolumes() = > [" << countNegativeVol << "] negative volumes detected\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
