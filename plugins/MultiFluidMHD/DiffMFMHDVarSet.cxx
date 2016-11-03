@@ -1,6 +1,7 @@
 #include "DiffMFMHDVarSet.hh"
 #include "EulerMFMHDTerm.hh"
 #include "Framework/PhysicalConsts.hh"
+#include "MathTools/MathConsts.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -140,8 +141,15 @@ void DiffMFMHDVarSet::computeTransportProperties(const RealVector& state,
       else {		//this is the default case
         if(dim == DIM_2D){
           const RealVector& mu = getDynViscosityVec(state, gradients);
-          for (CFuint i = 0; i < nbSpecies; ++i) {
-            diffMFMHDData[i] = mu[i]; 						//reads the dimensional value imposed in the options
+          if(getModel().isVariableCoeff()) {
+	    computeVariableCoeffs(state);
+            diffMFMHDData[0] = _ionVisc;
+            diffMFMHDData[1] = _neutralVisc;
+          }
+	  else { // Constant viscosities
+            for (CFuint i = 0; i < nbSpecies; ++i) { // Reading viscosities
+              diffMFMHDData[i] = mu[i]; //reads the dimensional value imposed in the options
+	    }
           }
 
           computeBraginskiiThermConduct(state);             // Compute the Braginskii coeffs.
@@ -179,7 +187,12 @@ void DiffMFMHDVarSet::computeTransportProperties(const RealVector& state,
 	  
           diffMFMHDData[endVisc + 6] = betaWedge;
 	  
-          diffMFMHDData[endVisc + 7] = getThermConductivity(state, mu[1]);		//neutrals' thermal conduction
+	  if(getModel().isVariableCoeff()) {  
+            diffMFMHDData[endVisc + 7] = _neutralThermCond;		//neutrals' thermal conduction
+          }
+          else {
+            diffMFMHDData[endVisc + 7] = getThermConductivity(state, mu[1]); //neutrals' thermal conduction
+          }
         }
       }
       if (_setBackUpValues) {			//To be implenemted
@@ -418,6 +431,47 @@ void DiffMFMHDVarSet::computeBraginskiiThermConduct(const RealVector& state){
 //   bool stop = true;
 //   cf_assert(stop == false);
   
+}
+
+////////////////////////////////////////////////////////////////////////////// 
+
+void DiffMFMHDVarSet::computeVariableCoeffs(const RealVector& state){
+
+  const CFuint endEM  = 8;
+  const CFuint rhoiID = endEM;
+  const CFuint rhonID = endEM + 1;
+  const CFuint TiID   = endEM + 6;  
+  const CFuint TnID   = endEM + 7;
+  const CFreal rho_i   = state[rhoiID];                       //[kg/m3]
+  const CFreal rho_n   = state[rhonID];                       //[kg/m3]
+  const CFreal T_i     = state[TiID];				//[K]
+  const CFreal T_n     = state[TnID];                         //[K]
+  const CFreal m_i     = m_eulerModel->getMolecularMass3();   //[kg]
+  const CFreal m_n     = m_eulerModel->getMolecularMass2();   //[kg]
+  const CFreal m_e     = m_eulerModel->getMolecularMass1();   //[kg]
+  const CFreal n_i     = rho_i/m_i;                           //[m-3]
+  const CFreal n_n     = rho_n/m_n;                           //[m-3]
+  const CFreal c       = m_eulerModel->getLightSpeed();       //[m/s]
+  const CFreal eCharge = Framework::PhysicalConsts::ElectronCharge(); //[C]
+  const CFreal kBoltz  = Framework::PhysicalConsts::Boltzmann(); //[J/K]
+  const CFreal epsilon = Framework::PhysicalConsts::VacuumPermittivity();
+  
+  const CFreal Epsilon_nn = 7.73e-19;
+  const CFreal pi         = MathConsts::CFrealPi();
+  const CFreal nu_nn      = n_n*Epsilon_nn*std::sqrt(16*kBoltz*T_n/(pi*m_n));
+  _neutralVisc = n_n*kBoltz*T_n/nu_nn;  
+  _neutralThermCond = 4*n_n*kBoltz*kBoltz*T_n/(m_n*nu_nn);
+
+  const CFreal lambda_C   = 10;
+  const CFreal r_Debye    = eCharge*eCharge/(4*pi*epsilon*kBoltz*T_i);
+  const CFreal Epsilon_ii = lambda_C*pi*r_Debye*r_Debye;
+  const CFreal nu_ii      = 4./3.*n_i*Epsilon_ii*std::sqrt(2.*kBoltz*T_i/(pi*m_i));
+  _ionVisc = n_i*kBoltz*T_i/nu_ii; 
+
+  //cout << "DiffMFMHDVarSet::computeVariableCoeffs \n";
+  //cout << "_neutralVisc = " << _neutralVisc << "\n";
+  //cout << "_neutralThermCond = " << _neutralThermCond << "\n";
+  //cout << "_ionVisc = " << _ionVisc << "\n";
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -169,6 +169,10 @@ protected:
   
   /// Compute the braginskii thermal conductivity coefficients
   void computeBraginskiiThermConduct(const RealVector& state);
+
+  /// Compute the variable viscosity and thermal conductivity for ions and neutrals
+  // as done in Leake et al. 2013
+  void computeVariableCoeffs(const RealVector& state);
   
   /**
    * Set the gradient variables starting from state variables
@@ -252,7 +256,16 @@ protected:
   CFreal _kappaPerpendicular;
   
   ///Thermal conductivity perpendicular to the magnetic field (Braginskii) 
-  CFreal _betaWedge;  
+  CFreal _betaWedge; 
+
+  /// variable viscosity of ions 
+  CFreal _ionVisc; 
+  
+  // Variable viscosity of neutrals
+  CFreal _neutralVisc;
+   
+  // Variable thermal conductivity of neutral
+  CFreal _neutralThermCond;
   
   
 }; // end of class DiffMFMHDVarSet

@@ -130,6 +130,11 @@ public:
   /**
    * @return is using the braginskii model
   */
+  bool isVariableCoeff() const {return m_varCoeffs;}
+
+  /**
+   * @return is using the braginskii model
+  */
   bool isExtendedDomain() const {return m_isExtended;}
 
   /**
@@ -170,6 +175,10 @@ private:
   
   /// Flag to use the Braginskii properties
   bool m_braginskiiTransport;
+
+  /// Flag to use variable coefficients (variable viscosity of ions
+  // and neutrals in the two-fluid model for partially ionized plasma)
+  bool m_varCoeffs;
   
   /// dimensional coefficient to store the options input
   std::vector<CFreal> m_dynViscosity;

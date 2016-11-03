@@ -44,6 +44,8 @@ void DiffMFMHDTerm::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption<CFreal>
     ("DampingHeight", "Height of the damping where the viscosity starts being effective of the extended domain");
 
+  options.addConfigOption<bool>
+    ("VarViscCond","Flag to use variable coefficients for viscosity and thermal conductivity for ions and neutrals");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -84,6 +86,9 @@ DiffMFMHDTerm::DiffMFMHDTerm(const std::string& name) :
 
   m_y0 = 2.5e6;
   setParameter("DampingHeight",&m_y0);
+
+  m_varCoeffs = false;
+  setParameter("VarViscCond",&m_varCoeffs);
 }
       
 //////////////////////////////////////////////////////////////////////////////
