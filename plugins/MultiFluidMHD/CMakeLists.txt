@@ -65,7 +65,7 @@ EulerMFMHD2DHalfConsT.hh
 EulerMFMHD2DHalfConsToRhoiViTiT.hh                                                                            
 EulerMFMHD2DHalfRhoiViTiT.hh                                                                                    
 EulerMFMHD2DHalfRhoiViTiToConsT.hh  
-MultiFluidMHD2DTwoSpeciesVarSetT.hh 
+#MultiFluidMHD2DTwoSpeciesVarSetT.hh 
 EulerMFMHD2DConsT.hh                                                                                        
 EulerMFMHD2DConsToRhoiViTiT.hh                                                                            
 EulerMFMHD2DRhoiViTiT.hh                                                                                    
