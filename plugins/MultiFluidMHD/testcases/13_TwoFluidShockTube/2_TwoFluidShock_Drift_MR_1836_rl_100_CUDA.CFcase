@@ -35,11 +35,6 @@ CudaDeviceManager.NbThreadsPerBlock = 32
 Simulator.Paths.WorkingDir       = plugins/MultiFluidMHD/testcases/13_TwoFluidShockTube
 Simulator.Paths.ResultsDir       = ./RESULTS_TwoFluid_CUDASOURCE
 
-#SubSystem Parameters
-Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MultiFluidMHD/testcases/13_TwoFluidShockTube/TwoFluid_MR_1836.inter
-Simulator.SubSystem.InteractiveParamReader.readRate = 10
-
-
 ###############################################################################
 # Physical Model
 Simulator.SubSystem.Default.PhysicalModelType = MultiFluidMHD2D
@@ -100,8 +95,7 @@ Simulator.SubSystem.Tecplot.AppendTime = true
 #Simulator.SubSystem.SubSystemStatus.ComputeDT = FunctionDT
 #Simulator.SubSystem.SubSystemStatus.FunctionDT.Vars = i
 #Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = if(i<101,5.0e-3,if(i<111,1e-2,2e-2))
-
-
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.0000333333333
 
 # Stop Condition
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
@@ -230,8 +224,8 @@ Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 
 ## second order: uncomment this
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
-#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 0.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
 Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D #Venktn2D
 #Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1
 
