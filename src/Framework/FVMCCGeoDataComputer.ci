@@ -76,6 +76,15 @@ void FVMCCGeoDataComputer<METHODDATA>::compute()
   
   // compute volumes
   computeCellVolumes();
+  
+  /*const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  if (dim > DIM_1D) {
+    const CFuint nbFaces = MeshDataStack::getActive()->Statistics().getNbFaces();
+    if (socket_faceCenters.getDataHandle().size()  == nbFaces*dim) {
+      // compute face centers
+      computeFaceCenters();
+    }
+  }*/
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -178,7 +187,9 @@ void FVMCCGeoDataComputer<METHODDATA>::computeCellVolumes()
   using namespace COOLFluiD::Common;
   
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE, "FVMCCGeoDataComputer::computeCellVolumes() => START\n");
+  
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
 
   Common::SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->
@@ -224,6 +235,7 @@ void FVMCCGeoDataComputer<METHODDATA>::computeCellVolumes()
   }
   
   CFLog(INFO, "FVMCCGeoDataComputer::computeCellVolumes() = > [" << countNegativeVol << "] negative volumes detected\n");
+  CFLog(VERBOSE, "FVMCCGeoDataComputer::computeCellVolumes() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -287,6 +299,73 @@ void FVMCCGeoDataComputer<METHODDATA>::modifyOffMeshNodes()
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename METHODDATA>
+void FVMCCGeoDataComputer<METHODDATA>::computeFaceCenters()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  
+  CFAUTOTRACE;
+  
+  CFLog(VERBOSE, "FVMCCGeoDataComputer::computeFaceCenters() => START\n");
+  
+  DataHandle<CFreal> faceCenters = socket_faceCenters.getDataHandle();
+  const CFuint dim     = PhysicalModelStack::getActive()->getDim();
+  
+  // temporary wrappers for pointers
+  RealVector xcFacePtr(dim, static_cast<CFreal*>(CFNULL));
+  
+  // list of TRSs
+  vector<SafePtr<TopologicalRegionSet> > trs = MeshDataStack::getActive()->getTrsList();
+    
+  // face builder is created and setup
+  SafePtr<GeometricEntityPool<FaceTrsGeoBuilder> > faceBuilder = 
+    this->getMethodData().getFaceTrsGeoBuilder();
+  FaceTrsGeoBuilder::GeoData& geoData = faceBuilder->getDataGE();
+  SafePtr<FaceTrsGeoBuilder> faceBuilderPtr = faceBuilder->getGeoBuilder();
+  faceBuilderPtr->setDataSockets(this->socket_states, 
+				 this->socket_gstates, 
+				 this->socket_nodes);
+  
+  // here we loop over all (inner and boundary) faces
+  const CFuint nbTRSs = trs.size();
+  for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
+    cf_assert(iTRS < trs.size());
+    SafePtr<TopologicalRegionSet> currTrs = trs[iTRS];
+    
+    if (currTrs->getName() != "InnerCells") {
+      geoData.trs = currTrs;
+      const CFuint nbFaces = currTrs->getLocalNbGeoEnts();
+      for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+	geoData.idx = iFace;
+	const GeometricEntity *const face = faceBuilder->buildGE();
+	const vector<Node*>& nodesInFace = face->getNodes();
+	
+	const CFuint nbNodesInFace = nodesInFace.size();
+	cf_assert(nbNodesInFace > 1);
+	const CFreal nbNodesInFaceInv = 1./static_cast<CFreal>(nbNodesInFace);
+	const CFuint faceID  = face->getID();
+	const CFuint startID = faceID*dim;
+	cf_assert(startID < faceCenters.size());
+	xcFacePtr.wrap(dim, &faceCenters[startID]);
+	
+	xcFacePtr = 0.0;
+	for (CFuint iNode = 0; iNode < nbNodesInFace; ++iNode) {
+	  xcFacePtr += (*nodesInFace[iNode])*nbNodesInFaceInv;
+	}
+	
+	faceBuilder->releaseGE();
+      }
+    }
+  }
+  
+  CFLog(VERBOSE, "FVMCCGeoDataComputer::computeFaceCenters() => END\n");
+}
+    
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace Framework

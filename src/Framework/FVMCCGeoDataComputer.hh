@@ -60,7 +60,10 @@ protected: // helper functions
 
   /// Compute the cell volumes
   virtual void computeCellVolumes();
-    
+  
+  /// Compute the face centers
+  virtual void computeFaceCenters();
+  
 protected:
   
   /// storage of face normals
