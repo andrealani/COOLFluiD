@@ -137,17 +137,21 @@ public: // functions
 
 
   /**
-  * Assembly the matrix from the COO vectors
+  * Assembly the matrix from the CSR vectors
   */
   void finalAssembly(CFuint size){
-  //   CFint *rowPtr = _row.ptr();
-  //   CFint *colPtr = _col.ptr();
-  //   CFreal *valPtr = _val.ptr();
-     m_mat.SetDataPtrCSR(&_rowoff, &_col, &_val, "SystemMatrix", _size, size, size);
+    if(firstIter){
+      m_mat.AllocateCSR("SystemMatrix", _size, size, size);
+      m_mat.CopyFromCSR(_rowoff, _col, _val);
+      firstIter=false;
+    }
+     m_mat.UpdateValuesCSR(_val);
+
+  //   std::cout << _rowoff[2] << "\n";
   }
 
 
-
+  void destroy(){m_mat.Clear();}
 
 
   /**
@@ -239,7 +243,6 @@ public: // functions
   }
 
 
-  void addtoCOO( CFuint* col, CFuint* row, CFreal* val, CFuint nnz);
 
   /**
    * Add a list of values
@@ -282,7 +285,18 @@ public: // functions
   }
 
   void moveToGPU(){
+  //  std::cout << "moveToGPU \n";
     m_mat.MoveToAccelerator();
+  }
+
+  void moveToCPU(){
+  //  std::cout << "moveToCPU \n";
+    m_mat.MoveToHost();
+    _rowoff = new CFint[_rowlength];
+    _col = new CFint[_size];
+    _val = new CFreal[_size];
+    m_mat.CopyToCSR(_rowoff, _col, _val);
+
   }
 
   void AssignToSolver(paralution::Solver< paralution::LocalMatrix<CFreal>, paralution::LocalVector<CFreal>, CFreal >& ls){
@@ -330,12 +344,25 @@ public: // functions
    */
   void resetToZeroEntries()
   {
-    for (CFint i=0; i<_size; i++){
-      _val[i] = 0.0;
-    }
-    _nnz = 0;  
-    m_mat.Clear();
-    std::cout << "resetToZeroEntries() \n";
+//    std::cout << "resetToZeroEntries() \n";
+//    std::cout << _size  << " " << _val[0] << " " << _col[0] << "\n";
+
+   for (CFint i=0;i<_size;i++){
+      _val[i] = 0;
+      _col[i] = -1;
+   }
+
+
+  //  std::cout << _rowoff[2] << "\n"; 
+//    if (firstIter) { 
+//std::fill(_col.begin(), _col.end(), -1); 
+//firstIter=false;
+//} 
+
+ //   m_mat.Clear();
+  //  std::cout << _rowoff[2] << "\n";
+  //  std::cout << "resetToZeroEntries() ==> End! \n";
+    //std::cout << _rowoff[2] << "\n";
     // if (!_isMatShell) {
     //   CF_CHKERRCONTINUE(MatZeroEntries(m_mat));
     // }
@@ -377,14 +404,18 @@ private: // data
   //MathTools::CFVec<CFint> _row;
   //MathTools::CFVec<CFint> _col;
   //RealVector _val;
+  bool firstIter;
 
-  CFint* _row;
-  CFint* _rowoff;
-  CFint* _col;
-  CFreal* _val;
+  CFint *_col;
+  CFint *_rowoff;
+  CFreal *_val;
+ // std::vector<CFint> _row;
+ // std::vector<CFint> _rowoff;
+ // std::vector<CFint> _col;
+ // std::vector<CFreal> _val;
 
   CFuint _size;
-
+  CFuint _rowlength;
   CFuint _nnz;
 }; // end of class ParalutionMatrix
 

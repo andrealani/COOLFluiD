@@ -39,7 +39,7 @@ public:
   /**
    * Destructor.
    */
-  virtual ~StdSetup();
+  ~StdSetup();
 
   /**
    * Execute Processing actions

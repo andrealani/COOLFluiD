@@ -16,11 +16,14 @@
 #include "Paralution/ParalutionVector.hh"
 #include "Paralution/ParalutionMatrix.hh"
 
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
     namespace Paralution {
+
+using namespace paralution;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -36,7 +39,6 @@ namespace COOLFluiD {
  */
 class ParalutionLSSData : public Framework::LSSData {
 public:
-
   /**
    * Defines the Config Option's of this class
    * @param options a OptionList where to add the Option's
@@ -53,7 +55,7 @@ public:
   /**
    * Destructor.
    */
-  ~ParalutionLSSData();
+  virtual ~ParalutionLSSData();
 
   /// Configure the data from the supplied arguments.
   /// @param args configuration arguments
@@ -113,7 +115,53 @@ public:
     return _aTol;
   }
 
+  /**
+   * Gets the maximun number of iterations
+   */
+  CFuint getMaxIter() const
+  {
+    return _maxIter;
+  }
+
+  /**
+   * Gets the name of the Krylov Solver
+   */
+  std::string getKSPName() const
+  {
+    return _kspTypeStr;
+  }
+
+  /** 
+   * Gets the Krylov Solver
+   */
+  IterativeLinearSolver<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal >& getKSP(){
+    return _ls;
+  }
+
+  /**
+   * Gets the preconditioner
+   */
+  Preconditioner<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal >& getPreconditioner(){
+    return _p;
+  }
+
+  bool getFirstIter(){ return _firstIter; }
+
+  void setFirstIter(bool Iter){ _firstIter = Iter; }
+
+  bool getUseGPU(){return _useGPU;}
+
+  CFuint getVerbose(){return _verboseLevel;}
+
+  CFuint getreBuildRatio(){return _reBuildRatio;}
+
 private:
+
+  /// Linear Solver
+  GMRES<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal > _ls;
+
+  /// Preconditioner
+  Jacobi<LocalMatrix<CFreal>,LocalVector<CFreal>,CFreal> _p;
 
   /// solution vector
   ParalutionVector _xVec;
@@ -132,6 +180,24 @@ private:
 
   /// absolute tolerance for iterative solver
   CFreal _aTol;
+
+  /// Maximun number of iterations
+  CFuint _maxIter;
+
+  /// VerboseLevel for the Liner System Solver
+  CFuint _verboseLevel;
+
+  /// Number of iterations before reBuilding the preconditioner
+  CFuint _reBuildRatio;
+  
+  /// First iteration
+  bool _firstIter;
+
+  /// Flag to solve the system on the accelerator
+  CFuint _useGPU;
+ 
+  /// Krylov solver name
+  std::string _kspTypeStr;
       
 }; // end of class ParalutionLSSData
 
@@ -144,6 +210,7 @@ typedef Framework::MethodCommand<ParalutionLSSData> ParalutionLSSCom;
 typedef Framework::MethodCommand<ParalutionLSSData>::PROVIDER ParalutionLSSComProvider;
 
 //////////////////////////////////////////////////////////////////////////////
+
 
     } // namespace Paralution
 

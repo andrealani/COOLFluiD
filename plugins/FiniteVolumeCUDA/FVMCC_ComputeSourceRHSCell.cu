@@ -34,9 +34,14 @@
 #include "MultiFluidMHD/EulerMFMHD2DHalfRhoiViTiT.hh"
 #include "MultiFluidMHD/EulerMFMHD2DHalfRhoiViTiToConsT.hh"
 #include "MultiFluidMHD/EulerMFMHD2DHalfConsToRhoiViTiT.hh"
+#include "MultiFluidMHD/EulerMFMHD2DConsT.hh"
+#include "MultiFluidMHD/EulerMFMHD2DRhoiViTiT.hh"
+#include "MultiFluidMHD/EulerMFMHD2DRhoiViTiToConsT.hh"
+#include "MultiFluidMHD/EulerMFMHD2DConsToRhoiViTiT.hh"
 #include "FiniteVolumeMultiFluidMHD/AUSMPlusUpFluxMultiFluid.hh"
 #include "FiniteVolumeMultiFluidMHD/AUSMFluxMultiFluid.hh"
 #include "FiniteVolumeMultiFluidMHD/DriftWaves2DHalfTwoFluid.hh"
+#include "FiniteVolumeMultiFluidMHD/HartmannSourceTerm.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -62,14 +67,14 @@ namespace COOLFluiD {
 #define FVMCC_MULTIFLUIDMHD_RHS_PROV_AUSMPLUSUP_SOURCE(__dim__,__half__,__svars__,__uvars__,__sourceterm__,__nbBThreads__,__providerName__) \
 MethodCommandProvider<FVMCC_ComputeSourceRHSCell<AUSMPlusUpFluxMultiFluid<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
 			              VarSetListT<EulerMFMHD##__dim__##__half__##__svars__##T, EulerMFMHD##__dim__##__half__##__uvars__##T>, \
-				      DriftWaves2DHalfTwoFluid<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
+				      __sourceterm__<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
 				      LeastSquareP1PolyRec##__dim__ , BarthJesp, __nbBThreads__>, \
 		      CellCenterFVMData, FiniteVolumeCUDAModule>	\
 fvmcc_RhsMultiFluidMHDAUSMPlusUp##__dim__##__half__##__svars__##__uvars__##__sourceterm__##__nbBThreads__##Provider(__providerName__);
 
 // 48 block threads (default)
 FVMCC_MULTIFLUIDMHD_RHS_PROV_AUSMPLUSUP_SOURCE(2D,Half,Cons,RhoiViTi,DriftWaves2DHalfTwoFluid,48,"CellAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid")
-
+FVMCC_MULTIFLUIDMHD_RHS_PROV_AUSMPLUSUP_SOURCE(2D,,Cons,RhoiViTi,HartmannSourceTerm,48,"CellAUSMPlusUpEulerMFMHD2DHalfRhoiViTiHartmann")
 #undef FVMCC_MULTIFLUIDMHD_RHS_PROV_AUSMPLUSUP_SOURCE
 
 //////////////////////////////////////////////////////////////////////////////
@@ -574,7 +579,9 @@ void FVMCC_ComputeSourceRHSCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_T
   CFLog(VERBOSE, "FVMCC_ComputeSourceRHSCell::execute() START\n");
   
   initializeComputationRHS();
-  
+
+
+
   const CFuint nbCells = socket_states.getDataHandle().size();
   cf_assert(nbCells > 0);
   DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();

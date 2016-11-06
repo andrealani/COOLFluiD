@@ -66,6 +66,8 @@ public:
   
 protected: // data
   
+  CFuint IterCounter;
+
   /// socket for states
   Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > socket_states;
   

@@ -569,7 +569,7 @@ void FVMCC_ComputeRHSCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>::exec
   CFLog(VERBOSE, "FVMCC_ComputeRHSCell::execute() START\n");
   
   initializeComputationRHS();
-  
+
   const CFuint nbCells = socket_states.getDataHandle().size();
   cf_assert(nbCells > 0);
   DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();

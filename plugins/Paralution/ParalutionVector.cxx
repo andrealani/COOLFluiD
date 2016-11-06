@@ -19,7 +19,6 @@ namespace COOLFluiD {
 ParalutionVector::ParalutionVector() :
   Framework::LSSVector(),
   m_toBeDestroyed(false),
-  m_onLocalVector(false),
   _size(0)
 {
 }
@@ -28,7 +27,6 @@ ParalutionVector::ParalutionVector() :
 
 ParalutionVector::~ParalutionVector()
 {
-  destroy();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -76,7 +74,7 @@ void ParalutionVector::destroy()
 {
   if (m_toBeDestroyed)
   {
-    // CF_CHKERRCONTINUE( VecDestroy(&m_vec) );
+    m_vec.Clear();
   }
 
   m_toBeDestroyed = false;

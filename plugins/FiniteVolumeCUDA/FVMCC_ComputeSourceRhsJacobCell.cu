@@ -29,9 +29,14 @@
 #include "MultiFluidMHD/EulerMFMHD2DHalfRhoiViTiT.hh"
 #include "MultiFluidMHD/EulerMFMHD2DHalfRhoiViTiToConsT.hh"
 #include "MultiFluidMHD/EulerMFMHD2DHalfConsToRhoiViTiT.hh"
+#include "MultiFluidMHD/EulerMFMHD2DConsT.hh"
+#include "MultiFluidMHD/EulerMFMHD2DRhoiViTiT.hh"
+#include "MultiFluidMHD/EulerMFMHD2DRhoiViTiToConsT.hh"
+#include "MultiFluidMHD/EulerMFMHD2DConsToRhoiViTiT.hh"
 #include "FiniteVolumeMultiFluidMHD/AUSMPlusUpFluxMultiFluid.hh"
 #include "FiniteVolumeMultiFluidMHD/AUSMFluxMultiFluid.hh"
 #include "FiniteVolumeMultiFluidMHD/DriftWaves2DHalfTwoFluid.hh"
+#include "FiniteVolumeMultiFluidMHD/HartmannSourceTerm.hh"
 
 #include "Maxwell/Maxwell2DProjectionVarSet.hh"
 #include "Maxwell/Maxwell2DProjectionConsT.hh"
@@ -65,15 +70,18 @@ namespace COOLFluiD {
 #define FVMCC_MULTIFLUIDMHD_RHS_JACOB_PROV_AUSMPLUSUP_SOURCE(__dim__,__half__,__svars__,__uvars__,__sourceterm__,__nbBThreads__,__providerName__) \
 MethodCommandProvider<FVMCC_ComputeSourceRhsJacobCell<AUSMPlusUpFluxMultiFluid<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
 			              VarSetListT<EulerMFMHD##__dim__##__half__##__svars__##T, EulerMFMHD##__dim__##__half__##__uvars__##T>, \
-				      DriftWaves2DHalfTwoFluid<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
+				      __sourceterm__<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
 				      LeastSquareP1PolyRec##__dim__ , BarthJesp, __nbBThreads__>, \
 		      CellCenterFVMData, FiniteVolumeCUDAModule>	\
 fvmcc_RhsJacobMultiFluidMHDAUSMPlusUp##__dim__##__half__##__svars__##__uvars__##__sourceterm__##__nbBThreads__##Provider(__providerName__);
 
 // 48 block threads (default)
 FVMCC_MULTIFLUIDMHD_RHS_JACOB_PROV_AUSMPLUSUP_SOURCE(2D,Half,Cons,RhoiViTi,DriftWaves2DHalfTwoFluid,48,"CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid")
+
+FVMCC_MULTIFLUIDMHD_RHS_JACOB_PROV_AUSMPLUSUP_SOURCE(2D,,Cons,RhoiViTi,HartmannSourceTerm,48,"CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTiHartmann")
 //SOURCE HARD CODED
 #undef FVMCC_MULTIFLUIDMHD_RHS_JACOB_PROV_AUSMPLUSUP_SOURCE
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -595,7 +603,7 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
   }
   
   // printGradients<PHYS::NBEQS>(uX, uY, uZ, nbCells);
-  CFLog(NOTICE, "FVMCC_ComputeSourceRhsJacobCell::computeFluxJacobianCPU() => computing gradients took " << timer.elapsed() << " s\n");
+  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::computeFluxJacobianCPU() => computing gradients took " << timer.elapsed() << " s\n");
   timer.start();
   
   // compute the cell based limiter
@@ -625,7 +633,7 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
   
   // printLimiter<PHYS::NBEQS>(limiter, nbCells);
   
-  CFLog(NOTICE, "FVMCC_ComputeSourceRhsJacobCell::computeFluxJacobianCPU() => computing limiter took " << timer.elapsed() << " s\n");
+  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::computeFluxJacobianCPU() => computing limiter took " << timer.elapsed() << " s\n");
   timer.start();
   
   // compute the fluxes and the jacobian
@@ -788,7 +796,7 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
 
   } 
   
-  CFLog(NOTICE, "FVMCC_ComputeSourceRhsJacobCell::computeFluxJacobianCPU()  took " << timer.elapsed() << " s\n");
+  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::computeFluxJacobianCPU()  took " << timer.elapsed() << " s\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -805,6 +813,8 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
   CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() START\n");
   
   initializeComputationRHS();
+
+  CFLog(VERBOSE, "After initializeComputationRHS\n");
   
   const CFuint nbCells = this->socket_states.getDataHandle().size();
   cf_assert(nbCells > 0);
@@ -844,7 +854,7 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
     this->m_ghostStates.put();
     this->socket_volumes.getDataHandle().getLocalArray()->put(); 
 
-    CFLog(NOTICE, "FVMCC_ComputeSourceRhsJacobCell::execute() => CPU-->GPU data transfer took " << timer.elapsed() << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => CPU-->GPU data transfer took " << timer.elapsed() << " s\n");
     timer.start();
     
     ConfigOptionPtr<POLYREC, NOTYPE, GPU> dcor(pr);
@@ -887,7 +897,7 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
        this->m_neighborTypes.ptrDev(),
        this->m_cellConn.ptrDev());
     
-    CFLog(NOTICE, "FVMCC_ComputeSourceRhsJacobCell::execute() => computeGradientsKernel took " << timer.elapsed() << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => computeGradientsKernel took " << timer.elapsed() << " s\n");
     
     timer.start();
     
@@ -916,7 +926,7 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
        this->m_neighborTypes.ptrDev(),
        this->m_cellConn.ptrDev());
     
-    CFLog(NOTICE, "FVMCC_ComputeSourceRhsJacobCell::execute() => computeLimiterKernel took " << timer.elapsed() << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => computeLimiterKernel took " << timer.elapsed() << " s\n");
     
     timer.start();
     // compute the flux jacobian in each cell
@@ -1008,13 +1018,13 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
       timer.start();
     }
     
-    CFLog(NOTICE, "FVMCC_ComputeSourceRhsJacobCell::execute() => computeFluxJacobianKernel took " << FluxTime << " s\n");
-    CFLog(NOTICE, "FVMCC_ComputeSourceRhsJacobCell::execute() => computeSourceTerm took " << SourceTime << "\n");
-    CFLog(NOTICE, "FVMCC_ComputeSourceRhsJacobCell::execute() => updateSystemMatrix took " << UpdateSystemTime << "\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => computeFluxJacobianKernel took " << FluxTime << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => computeSourceTerm took " << SourceTime << "\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => updateSystemMatrix took " << UpdateSystemTime << "\n");
 
     rhs.getLocalArray()->get();
     updateCoeff.getLocalArray()->get();
-    CFLog(NOTICE, "FVMCC_ComputeSourceRhsJacobCell::execute() => GPU-->CPU data transfer took " << timer.elapsed() << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => GPU-->CPU data transfer took " << timer.elapsed() << " s\n");
   }
   else {
     ConfigOptionPtr<SCHEME>  dcof(lf);
@@ -1061,13 +1071,13 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
     timer.start();
     // update the system matrix
     updateSystemMatrix(0);
-    CFLog(NOTICE, "FVMCC_ComputeSourceRhsJacobCell::execute() => updateSystemMatrix took " << timer.elapsed() << "\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => updateSystemMatrix took " << timer.elapsed() << "\n");
   }
   
   timer.start();
   // compute flux jacobians on boundaries
   executeBC();
-  CFLog(NOTICE, "FVMCC_ComputeSourceRhsJacobCell::execute() => executeBC() took " << timer.elapsed() << " s\n");
+  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => executeBC() took " << timer.elapsed() << " s\n");
 
   finalizeComputationRHS();
   

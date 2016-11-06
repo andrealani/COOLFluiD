@@ -28,11 +28,11 @@
 Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libNavierStokes libMaxwell libMultiFluidMHD libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGambit2CFmesh libForwardEuler libPetscI 
 
 #SubSystem Parameters
-Simulator.Paths.WorkingDir       = ./
+Simulator.Paths.WorkingDir       = plugins/MultiFluidMHD/testcases/11_BrioWuTube/
 Simulator.Paths.ResultsDir       = ./RESULTS_BrioWu
 
 #SubSystem Parameters
-Simulator.SubSystem.InteractiveParamReader.FileName = ./BrioWu.inter
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MultiFluidMHD/testcases/11_BrioWuTube/BrioWu.inter
 Simulator.SubSystem.InteractiveParamReader.readRate = 10
 
 
@@ -207,8 +207,8 @@ Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
 #Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
 #Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
-Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
-Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D #Venktn2D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1
 
 Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUpMultiFluid2D
 Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.choiceA12 = 1 

@@ -20,6 +20,7 @@ using namespace std;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::MathTools;
 using namespace COOLFluiD::Common;
+using namespace paralution;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -83,13 +84,13 @@ void StdSetup::execute()
   }
   
   // set the vectors
-  // setVectors(nbUpdatableStates, totalNbStates);
+   setVectors(nbUpdatableStates, totalNbStates);
   
   // set the matrix
    setMatrix(nbUpdatableStates, totalNbStates);
 
   // set the Krylov Sub Space solver
-  // setKSP();
+   setKSP();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -97,7 +98,21 @@ void StdSetup::execute()
 void StdSetup::setKSP()
 {
   CFAUTOTRACE;
+  CFLog(NOTICE, "StdSetup::setKSP() \n");
 
+  IterativeLinearSolver<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal >& ls = getMethodData().getKSP();
+  Preconditioner<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal >& p = getMethodData().getPreconditioner();
+  ParalutionMatrix& mat = getMethodData().getMatrix();
+
+  CFreal RelTol = getMethodData().getRelativeTol();
+  CFreal AbsTol = getMethodData().getAbsoluteTol();
+  CFreal DivTol = 1e8; //getMethodData().getDivTol();
+  CFreal MaxIter = getMethodData().getMaxIter();
+
+  ls.Init(AbsTol, RelTol, DivTol, MaxIter);
+  mat.AssignToSolver(ls);
+  ls.SetPreconditioner(p);
+  ls.Verbose(getMethodData().getVerbose()) ;
   // Allocate and configure the LSS solver
 }
 
@@ -107,13 +122,17 @@ void StdSetup::setVectors(const CFuint localSize,
 			   const CFuint globalSize)
 {
   CFAUTOTRACE;
-  CFLog(NOTICE, "StdSetup::setVectors() \n");
-  // ParalutionVector& sol = getMethodData().getSolVector();
-  // ParalutionVector& rhs = getMethodData().getRhsVector();
+  CFLog(NOTICE, "StdSetup::setVectors() localSize: " << localSize << " globalsize: " << globalSize << "\n");
+  ParalutionVector& sol = getMethodData().getSolVector();
+  ParalutionVector& rhs = getMethodData().getRhsVector();
 
+  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
    const CFuint nbEqs = getMethodData().getNbSysEquations();
    const string nsp = getMethodData().getNamespace();
   
+  sol.create(states.size()*nbEqs);
+  rhs.create(states.size()*nbEqs);
+
   // // create the solution and the rhs vectors
   // rhs.setGPU(getMethodData().useGPU());
   // rhs.create(PE::GetPE().GetCommunicator(nsp), localSize*nbEqs,
@@ -134,7 +153,7 @@ void StdSetup::setIdxMapping()
 {
   CFAUTOTRACE;
   CFLog(NOTICE, "StdSetup::setIdxMapping() \n");
-  //TODO ESTO ESTABA COMENTADO
+
    DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
    DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
    bool useNodeBased = getMethodData().useNodeBased();
@@ -220,8 +239,8 @@ void StdSetup::setMatrix(const CFuint localSize,
   // allocating the matrix
   ParalutionMatrix& mat = getMethodData().getMatrix();
 
-for (CFint i=0; i<allNonZero.size(); i++){ if (allNonZero[i] != 0){ std::cout << i << " " << allNonZero[i] << "\n";}}
-  std::cout << allNonZero.size() <<"\n"; 
+//for (CFint i=0; i<allNonZero.size(); i++){ if (allNonZero[i] != 0){ std::cout << i << " " << allNonZero[i] << "\n";}}
+ //std::cout << allNonZero.size() <<"\n"; 
  // const CFuint blockSize   = nbEqs;
  // const CFuint nbRows      = nbStates*nbEqs;
  // const CFuint nbCols      = nbRows;

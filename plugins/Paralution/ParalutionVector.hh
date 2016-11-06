@@ -70,8 +70,8 @@ public: // functions
    */
   void Assembly()
   {
-     CFLog(NOTICE, "Assembling array, size " << _size << "\n");
-     m_vec.SetDataPtr(&_val, "LocalVector", _size);
+     CFLog(VERBOSE, "Assembling array, size " << _size << "\n");
+     m_vec.CopyFromData(_val);
   }
 
 
@@ -104,10 +104,12 @@ public: // functions
    * @param value value to be set
    */
 
-  void setSize(const CFint size)
+  void create(const CFint size)
   {
+     CFLog(VERBOSE, "Creating array, size " << size << "\n");
      _size = size;
      _val = new CFreal[size];
+     m_vec.Allocate("LocalVector", size);
   }
 
   void setValue(const CFint idx, const CFreal value)
@@ -122,11 +124,7 @@ public: // functions
    */
   void setValue(const CFreal value)
   {
-    if (m_onLocalVector) {
-       m_vec.SetValues(value);
-    }else{
-       for (CFuint i=0; i<_size; i++){ _val[i]=value;}
-    }
+     for (CFuint i=0; i<_size; i++){ _val[i]=value;}
   }
 
   /**
@@ -232,11 +230,12 @@ void copy2(CFreal *const other,
             CFint *const localIDs,
             const CFuint size)
   {
-    CFreal* array = NULL;
-    m_vec.LeaveDataPtr(&array); //Get a pointer from the vector data and FREE the vector object. 
+    CFreal* array = new CFreal[size];  //Probably really expensive.. the othee option is to reallocate every iterarion the ParalutionVector
+    m_vec.CopyToData(array); //Get a pointer from the vector data and FREE the vector object. 
     for (CFuint i = 0; i < size; ++i) {
        other[localIDs[i]] = array[i];
     }
+    _val = array;
     // CF_CHKERRCONTINUE(VecRestoreArray(m_vec, &array));
   }
 
@@ -270,6 +269,10 @@ void copy2(CFreal *const other,
     m_vec.MoveToAccelerator();
   }
 
+  void moveToCPU(){
+    m_vec.MoveToHost();
+  }
+
   paralution::LocalVector<CFreal> getVec(){
     return m_vec;
   }
@@ -294,7 +297,6 @@ private: // data
   
   /// tell if the vector has been destroyed
   bool m_toBeDestroyed;
-  bool m_onLocalVector; //tell if the vector data is inside m_vec
 
   CFreal* _val;
   CFuint _size;

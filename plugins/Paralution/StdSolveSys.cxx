@@ -42,7 +42,8 @@ StdSolveSys::StdSolveSys(const std::string& name) :
   socket_nodes("nodes"),
   socket_rhs("rhs"), 
   _upLocalIDs(),
-  _upStatesGlobalIDs()
+  _upStatesGlobalIDs(),
+  IterCounter(0)
 {
 }
 
@@ -59,26 +60,34 @@ void StdSolveSys::execute()
   using namespace paralution;
   CFAUTOTRACE;
 
-  CFLog(NOTICE, "StdSolveSys::execute() \n");
+  CFLog(VERBOSE, "StdSolveSys::execute() \n");
 
 Stopwatch<WallTime> stopTimer;
 stopTimer.start();
 
+   ParalutionLSSData& MethodData = getMethodData();
 
    DataHandle< CFreal> rhs = socket_rhs.getDataHandle();
    cf_assert(_upLocalIDs.size() == _upStatesGlobalIDs.size());
    const CFuint vecSize = _upLocalIDs.size();
-   const CFuint nbEqs = getMethodData().getNbSysEquations();
+   const CFuint nbEqs = MethodData.getNbSysEquations();
   
-   ParalutionMatrix& mat = getMethodData().getMatrix();       //Add vecsize to constructor!!
-   ParalutionVector& rhsVec = getMethodData().getRhsVector();
-   ParalutionVector& solVec = getMethodData().getSolVector();
-//   KSP& ksp = getMethodData().getKSP();
+   ParalutionMatrix& mat = MethodData.getMatrix();      
+   ParalutionVector& rhsVec = MethodData.getRhsVector();
+   ParalutionVector& solVec = MethodData.getSolVector();
+ //For re-use of the ls
+   IterativeLinearSolver<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal >& ls = MethodData.getKSP();
+   Preconditioner<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal >& p = MethodData.getPreconditioner();  
+   bool firstIter = MethodData.getFirstIter();
+//Maybe this can be stored in this object, so there is no need to call it every time
+   bool useGPU = MethodData.getUseGPU();
+   CFuint reBuildRatio = MethodData.getreBuildRatio();
+
 
    // assemble the matrix in the HOST
    mat.finalAssembly(rhs.size());
 
-   CFLog(NOTICE, "StdSolveSys::execute() ==> Matrix assembled! \n");
+   CFLog(VERBOSE, "StdSolveSys::execute() ==> Matrix assembled! \n");
   // mat.convertToCSR();
   // CFLog(NOTICE, "StdSolveSys::execute() ==> Matrix converted to CSR! \n");
 //   // after the first iteration freeze the non zero structure
@@ -90,7 +99,6 @@ stopTimer.start();
 //   // the rhs is copied into the ParalutionVector for the rhs
 //   // _upStatesGlobalIDs[i] is different from _upLocalIDs[i]
 //   // in case multiple LSS are used
-    rhsVec.setSize(vecSize);
     for (CFuint i = 0; i < vecSize; ++i) {
     //  cout << "nbSysEq = " << nbEqs << ", upLocalIDs = " << _upLocalIDs[i]
     //  	 << ", upStatesGlobalIDs = " << _upStatesGlobalIDs[i] << endl;
@@ -99,56 +107,82 @@ stopTimer.start();
 
 //   // assemble the rhs vector in HOST
     rhsVec.Assembly();
-    CFLog(NOTICE, "StdSolveSys::execute() ==> RHS assembled! \n");
+    CFLog(VERBOSE, "StdSolveSys::execute() ==> RHS assembled! \n");
 
 
-    solVec.setSize(vecSize);
     solVec.setValue(0.0);
     solVec.Assembly();
 
-    CFLog(NOTICE, "StdSolveSys::execute() ==> Solution vector assembled! \n");
+    CFLog(VERBOSE, "StdSolveSys::execute() ==> Solution vector assembled! \n");
 
-    //If useGPU==true   ERROR!!
-//      mat.moveToGPU();
-//      rhsVec.moveToGPU();
-//      solVec.moveToGPU();
-    //endif
+    if (useGPU){
+      mat.moveToGPU();
+      rhsVec.moveToGPU();
+      solVec.moveToGPU();
+    }
 
     //CFLog(NOTICE, "StdSolveSys::execute() ==> moveToGPU succesful! \n");
 
-
+/*
     //Configure LSS and preconditioner using CFcase parameters:
 
 // Linear Solver
 GMRES<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal > ls;
 //preconditioner
-ILU<LocalMatrix<CFreal>,LocalVector<CFreal>,CFreal> p;
-  p.Set(0);
-   CFLog(NOTICE, "StdSolveSys::execute() ==> configuring ls succesful! \n");
+//ILU<LocalMatrix<CFreal>,LocalVector<CFreal>,CFreal> p;
+//  p.Set(0);
+Jacobi<LocalMatrix<CFreal>,LocalVector<CFreal>,CFreal> p;
+   CFLog(VERBOSE, "StdSolveSys::execute() ==> configuring ls succesful! \n");
     //End configure   
-    
+
+
+ls.Init(MethodData.getAbsoluteTol(),
+        MethodData.getRelativeTol(),
+        1e8,
+        MethodData.getMaxIter());
+
 mat.AssignToSolver(ls);   //Not really beautiful way to do it
 
-//   ls.SetOperator(mat.getMatrix()); //run-time fatal error: no copy constructor
    ls.SetPreconditioner(p);
   
 //rhsVec.printToFile("RHS.txt");
-mat.printToFile("matrix.mtx");
+//mat.printToFile("matrix.mtx");
 ls.Build();
-ls.Verbose(2) ;
-   CFLog(NOTICE, "StdSolveSys::execute() ==> Build() succesful! \n");
-   CFLog(NOTICE, "StdSolveSys::execute() ==> START SOLVING <== \n \n");
+
+*/
+
+
+IterCounter++;
+  //FOR RE-USE THE LS
+if (firstIter){
+  ls.Build();
+  getMethodData().setFirstIter(false);
+}
+if (IterCounter%reBuildRatio == 0){
+  p.ReBuildNumeric();
+  IterCounter=0;
+}
+
+
+
+
 rhsVec.Solve(ls, solVec.getVecPtr());
-//ls.Solve(rhsVec.getVec(), solVec.getVecPtr());   //run-time fatal error: no copy constructor
-   CFLog(NOTICE, "\n StdSolveSys::execute() ==> Solved!! \n");
-ls.Clear();
+//ls.Clear(); //Only if not reusing the ls
 
-
+if(useGPU){
+solVec.moveToCPU();
+mat.moveToCPU();
+rhsVec.moveToCPU();
+}
 //solVec.printToFile("Sol.txt");
+
   solVec.copy2(&rhs[0], &_upLocalIDs[0], vecSize);
   //mat.resetToZeroEntries(); //needed?
 
-cout << "StdSolveSys::execute() took " << stopTimer << "s\n";
+
+CFLog(NOTICE, "StdSolveSys::execute() took " << stopTimer << "s, with " << ls.GetIterationCount() << " iterations \n");
+
+
 /*
 x.Allocate("x", mat.get_ncol());
 x.Zeros();

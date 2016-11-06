@@ -102,7 +102,7 @@ Simulator.SubSystem.Tecplot.AppendTime = true
 
 # Stop Condition
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 100 #100
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10 #100
 #Simulator.SubSystem.StopCondition   = MaxTime
 #Simulator.SubSystem.MaxTime.maxTime = 0.1
 
@@ -122,9 +122,9 @@ Simulator.SubSystem.MaxNumberSteps.nbSteps = 100 #100
 # Liner System with CUDA
 Simulator.SubSystem.LinearSystemSolver = PARALUTION #PETSC
 Simulator.SubSystem.LSSNames = PARALUTION #BwdEulerLSS 
-Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCBJACOBI #PCASM # PCJACOBI #PCASM
-Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
-Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.PARALUTION.Data.useGPU = 1
+Simulator.SubSystem.PARALUTION.Data.reBuildRatio = 30
+#Simulator.SubSystem.PARALUTION.Data.RelativeTolerance = 1e-5
 #Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 1
 #Simulator.SubSystem.BwdEulerLSS.Data.Output = true
 

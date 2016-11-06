@@ -13,14 +13,14 @@
 CudaDeviceManager.NbThreadsPerBlock = 64
 
 # SubSystem Modules
-Simulator.Modules.Libs =  libCFmeshFileWriter libCFmeshFileReader libNewtonMethod libPetscI libTecplotWriter libMaxwell libForwardEuler libFiniteVolume libGambit2CFmesh libFiniteVolumeMaxwell libFiniteVolumeCUDA
+Simulator.Modules.Libs =  libCFmeshFileWriter libCFmeshFileReader libNewtonMethod libParalutionI libTecplotWriter libMaxwell libForwardEuler libFiniteVolume libGambit2CFmesh libFiniteVolumeMaxwell libFiniteVolumeCUDA
 
 
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/Maxwell/testcases/FullPlaneWave/FullPlaneWaveChi1/
 #plugins/Maxwell/testcases/WireSteady/
-Simulator.Paths.ResultsDir = ./RESULTS_FullPlane_DimensionalProj_SWProj_chi_1_2nd_SuperInlet_SilverMuller_parallelCUDA
+Simulator.Paths.ResultsDir = ./RESULTS_FullPlane_DimensionalProj_SWProj_chi_1_2nd_SuperInlet_SilverMuller_parallelCUDA2
 
 Simulator.SubSystem.Default.PhysicalModelType = Maxwell2DProjection
 Simulator.SubSystem.Maxwell2DProjection.ConvTerm.divECleaningConst = 1
@@ -54,7 +54,7 @@ Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
 #Simulator.SubSystem.MaxTime.maxTime     = 10
 
 Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 1000
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 100
 
 #Simulator.SubSystem.StopCondition       = Norm
 #Simulator.SubSystem.Norm.valueNorm      = -20
@@ -75,8 +75,15 @@ Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
 #Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-04
 #Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 500
 
-Simulator.SubSystem.LinearSystemSolver = PETSC
-Simulator.SubSystem.LSSNames = BwdEulerLSS
+#Simulator.SubSystem.LinearSystemSolver = PETSC
+#Simulator.SubSystem.LSSNames = BwdEulerLSS
+
+Simulator.SubSystem.LinearSystemSolver = PARALUTION #PETSC
+Simulator.SubSystem.LSSNames = PARALUTION #BwdEulerLSS 
+Simulator.SubSystem.PARALUTION.Data.useGPU = 0
+Simulator.SubSystem.PARALUTION.Data.reBuildRatio = 1
+Simulator.SubSystem.PARALUTION.Data.MaxIter = 60
+
 Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCBJACOBI #PCASM # PCJACOBI #PCASM
 Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
@@ -108,7 +115,7 @@ Simulator.SubSystem.BDF2.Data.PrintHistory = true
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellNumJacobStegerWarmingMaxwell2DCons #NumJacob
-Simulator.SubSystem.CellCenterFVM.CellNumJacobStegerWarmingMaxwell2DCons.OnGPU = false
+Simulator.SubSystem.CellCenterFVM.CellNumJacobStegerWarmingMaxwell2DCons.OnGPU = true
 Simulator.SubSystem.CellCenterFVM.CellNumJacobStegerWarmingMaxwell2DCons.NbCellsPerBlock = 16
 Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhs
 ##Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhsLimited

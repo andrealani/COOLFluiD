@@ -3,6 +3,8 @@ IF (CF_HAVE_PARALUTION)
 LIST ( APPEND ParalutionI_files
 StdSetup.cxx
 StdSetup.hh
+StdUnSetup.cxx
+StdUnSetup.hh
 Paralution.hh
 ParalutionIdxMapping.cxx
 ParalutionIdxMapping.hh

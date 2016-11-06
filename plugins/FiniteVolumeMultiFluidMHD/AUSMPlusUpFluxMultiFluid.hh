@@ -186,6 +186,7 @@ public:
     dco->machInf[1] = machInf[1];      //number of species
     dco->beta = getBeta();
     dco->fa = getFa();
+    CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::copyConfigOptions END \n");
   }   
 
 #endif
