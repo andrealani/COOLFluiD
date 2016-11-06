@@ -11,5 +11,7 @@ cf_add_case( MPI        1       CASEDIR 10_SodTube		PCASE 1_SodTube.CFcase				  
 #cf_add_case( MPI        1       CASEDIR 11_BrioWuTube		PCASE 1_BrioWu.CFcase				   CASEFILES shockTube_1x6e-3_600x4.neu BrioWu.inter )
 IF (CF_HAVE_CUDA) 
 cf_add_case( MPI	1	CASEDIR 13_TwoFluidShockTube	PCASE 2_TwoFluidShock_Drift_MR_1836_rl_100_CUDA.CFcase                   CASEFILES shockTube_1x6e-3_600x4.neu )
+IF (CF_HAVE_PARALUTION)
 cf_add_case( MPI        1       CASEDIR 13_TwoFluidShockTube    PCASE 2_TwoFluidShock_Drift_MR_1836_rl_100_CUDA_SOURCE_PARALUTION.CFcase CASEFILES shockTube_1x6e-3_600x4.neu )
 ENDIF() 
+ENDIF()
