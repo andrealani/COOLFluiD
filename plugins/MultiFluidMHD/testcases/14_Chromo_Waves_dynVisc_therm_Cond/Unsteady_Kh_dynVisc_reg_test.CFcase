@@ -2,7 +2,7 @@
 # Comments begin with "#"
 # Case Testing the chromospheric wave propagation
 ### Residual = -3.37651
-
+### Total Number Iter: 5 Reached Residual: -3.48099 and took: 45.8844 sec on 8 nodes
 ###############################################################################
 # Assertion For Debugging
 
