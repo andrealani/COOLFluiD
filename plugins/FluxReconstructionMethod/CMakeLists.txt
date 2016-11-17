@@ -39,14 +39,12 @@ TensorProductGaussIntegrator.hh
 MeshUpgradeBuilder.cxx
 MeshUpgradeBuilder.hh
 FluxReconstructionGeometricEntities.cxx
-
 FluxReconstructionBaseFunctionQuadP1.hh
 FluxReconstructionBaseFunctionQuadP1.cxx
 FluxReconstructionBaseFunctionQuadP2.hh
 FluxReconstructionBaseFunctionQuadP2.cxx
 FluxReconstructionBaseFunctionQuadP3.hh
 FluxReconstructionBaseFunctionQuadP3.cxx
-
 SetQuadLagrangeP1FRP1StateCoord.hh
 SetQuadLagrangeP1FRP1StateCoord.cxx
 SetQuadLagrangeP1FRP2StateCoord.hh
@@ -55,6 +53,6 @@ SetQuadLagrangeP1FRP3StateCoord.hh
 SetQuadLagrangeP1FRP3StateCoord.cxx
 )
 
-LIST ( APPEND FluxReconstructionMethod_cflibs Framework)
+LIST ( APPEND FluxReconstructionMethod_cflibs Framework ShapeFunctions )
 CF_ADD_PLUGIN_LIBRARY ( FluxReconstructionMethod )
 CF_WARN_ORPHAN_FILES()
