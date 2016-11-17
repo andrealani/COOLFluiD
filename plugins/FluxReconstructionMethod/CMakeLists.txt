@@ -16,6 +16,10 @@ BaseInterfaceFlux.cxx
 BaseInterfaceFlux.hh
 NullInterfaceFlux.cxx
 NullInterfaceFlux.hh
+BaseFluxPntDistribution.cxx
+BaseFluxPntDistribution.hh
+NullFluxPntDistribution.cxx
+NullFluxPntDistribution.hh
 StdSetup.cxx
 StdSetup.hh
 StdSolve.cxx
@@ -23,12 +27,32 @@ StdSolve.hh
 StdUnSetup.cxx
 StdUnSetup.hh
 
+StdInitState.cxx
+StdInitState.hh
+
 FluxReconstructionElementData.cxx
 FluxReconstructionElementData.hh
 QuadFluxReconstructionElementData.cxx
 QuadFluxReconstructionElementData.hh
 TensorProductGaussIntegrator.cxx
 TensorProductGaussIntegrator.hh
+MeshUpgradeBuilder.cxx
+MeshUpgradeBuilder.hh
+FluxReconstructionGeometricEntities.cxx
+
+FluxReconstructionBaseFunctionQuadP1.hh
+FluxReconstructionBaseFunctionQuadP1.cxx
+FluxReconstructionBaseFunctionQuadP2.hh
+FluxReconstructionBaseFunctionQuadP2.cxx
+FluxReconstructionBaseFunctionQuadP3.hh
+FluxReconstructionBaseFunctionQuadP3.cxx
+
+SetQuadLagrangeP1FRP1StateCoord.hh
+SetQuadLagrangeP1FRP1StateCoord.cxx
+SetQuadLagrangeP1FRP2StateCoord.hh
+SetQuadLagrangeP1FRP2StateCoord.cxx
+SetQuadLagrangeP1FRP3StateCoord.hh
+SetQuadLagrangeP1FRP3StateCoord.cxx
 )
 
 LIST ( APPEND FluxReconstructionMethod_cflibs Framework)

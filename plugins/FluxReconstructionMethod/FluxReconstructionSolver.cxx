@@ -32,6 +32,9 @@ void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("SetupCom","Command to initialize FluxReconstruction solver data.");
   options.addConfigOption< std::vector<std::string> >("SrcTermComds","Types of the source term commands.");
   options.addConfigOption< std::vector<std::string> >("SrcTermNames","Names of the source term commands.");
+  options.addConfigOption< std::vector<std::string> >("InitComds","Types of the initializing commands.");
+  options.addConfigOption< std::vector<std::string> >("InitNames","Names of the initializing commands.");
+  options.addConfigOption< std::string >("LimiterCom","Command to limit the solution.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -40,7 +43,10 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   SpaceMethod(name),
   m_setup(),
   m_unsetup(),
-  m_solve()
+  m_solve(),
+  m_limiter(),
+  m_inits(),
+  m_srcTerms()
 {
   addConfigOptionsTo(this);
   m_data.reset(new FluxReconstructionSolverData(this));
@@ -52,6 +58,9 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   m_builder = "StdBuilder";
   // set default global jacobian sparsity
   m_sparsity = "None";
+  
+  m_limiterStr = "Null";
+  setParameter("LimiterCom", &m_limiterStr);
 
   m_setupStr   = "StdSetup";
   setParameter( "SetupCom",   &m_setupStr );
@@ -68,6 +77,13 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
 
   m_srcTermNameStr = std::vector<std::string>();
   setParameter("SrcTermNames",&m_srcTermNameStr);
+  
+  // options for initialize commands
+  m_initTypeStr = std::vector<std::string>();
+  setParameter("InitComds",&m_initTypeStr);
+
+  m_initNameStr = std::vector<std::string>();
+  setParameter("InitNames",&m_initNameStr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -107,12 +123,15 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
     args, m_unsetup,m_unsetupStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >(
     args, m_solve,m_solveStr,m_data );
+  configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( args, m_limiter,m_limiterStr,m_data );
 
   cf_assert(m_setup.isNotNull());
   cf_assert(m_unsetup.isNotNull());
   cf_assert(m_solve.isNotNull());
+  cf_assert(m_limiter.isNotNull());
   
   configureSourceTermCommands(args);
+  configureInitCommands(args);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -136,6 +155,30 @@ void FluxReconstructionSolver::configureSourceTermCommands ( Config::ConfigArgs&
         (args, m_srcTerms[i], m_srcTermTypeStr[i],m_srcTermNameStr[i], m_data);
 
     cf_assert(m_srcTerms[i].isNotNull());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionSolver::configureInitCommands ( Config::ConfigArgs& args )
+{
+  CFAUTOTRACE;
+  cf_assert(m_initTypeStr.size() == m_initNameStr.size());
+
+  m_inits.resize(m_initTypeStr.size());
+
+  for(CFuint i = 0; i < m_inits.size(); ++i)
+  {
+
+    CFLog(INFO, "INIT type = " << m_initTypeStr[i] << "\n");
+    CFLog(INFO, "INIT name = " << m_initNameStr[i] << "\n");
+
+    configureCommand<FluxReconstructionSolverCom,
+      FluxReconstructionSolverData,
+      FluxReconstructionSolverComProvider>
+      (args, m_inits[i], m_initTypeStr[i],m_initNameStr[i], m_data);
+
+    cf_assert(m_inits[i].isNotNull());
   }
 }
 
@@ -177,6 +220,22 @@ void FluxReconstructionSolver::extrapolateStatesToNodesImpl()
 void FluxReconstructionSolver::initializeSolutionImpl(bool isRestart)
 {
   CFAUTOTRACE;
+  
+  cf_assert(isConfigured());
+  cf_assert(isSetup());
+
+  if (!isRestart)
+  {
+    for(CFuint i = 0; i < m_inits.size(); ++i)
+    {
+      cf_assert(m_inits[i].isNotNull());
+      m_inits[i]->execute();
+    }
+  }
+
+  // apply a limiter to the solution
+  cf_assert(m_limiter.isNotNull());
+  m_limiter->execute();
 }
 
 //////////////////////////////////////////////////////////////////////////////

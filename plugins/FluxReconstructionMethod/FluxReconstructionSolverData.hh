@@ -27,6 +27,8 @@ namespace COOLFluiD {
 
     class FluxReconstructionStrategy;
     class BaseInterfaceFlux;
+    class BaseFluxPntDistribution;
+    class FluxReconstructionElementData;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -115,11 +117,26 @@ public: // functions
     cf_assert(m_interfaceflux.isNotNull());
     return m_interfaceflux.getPtr();
   }
+  
+  /// Gets the flux point distribution
+  BaseFluxPntDistribution * getFluxPntDistributionStrategy() const
+  {
+    cf_assert(m_fluxpntdistribution.isNotNull());
+    return m_fluxpntdistribution.getPtr();
+  }
+  
+  /// @return reference to m_frLocalData
+  std::vector< FluxReconstructionElementData* >& getFRLocalData();
 
 private:  // helper functions
 
   /// Configures the ContourIntegrator and the IntegrableEntity
   void configureIntegrator();
+  
+  /**
+   * Creates the local data for FR
+   */
+  void createFRLocalData();
 
 private:  // data
 
@@ -152,6 +169,15 @@ private:  // data
 
   /// String to configure interface flux computation strategy
   std::string m_interfacefluxStr;
+  
+  /// Flux point distribution
+  Common::SelfRegistPtr< BaseFluxPntDistribution > m_fluxpntdistribution;
+
+  /// String to configure flux point distribution
+  std::string m_fluxpntdistributionStr;
+  
+  /// vector containing the  FluxReconstructionElementData for different element types
+  std::vector< FluxReconstructionElementData* > m_frLocalData;
 
 };  // end of class FluxReconstructionSolverData
 

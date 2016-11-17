@@ -1028,7 +1028,7 @@ CFLog(NOTICE,"Shizzle2d \n");
       // set the connectivity tables of the TRS
       for (CFuint iFace = 0; iFace < nbFaces; ++iFace, ++nbProcessedFaces)
       {
-        CFLog(VERBOSE, "iFace= " << iFace << "\n");
+        //CFLog(VERBOSE, "iFace= " << iFace << "\n");
 
         // face-node connectivity (not really needed during actual run)
         // number of nodes in this face

@@ -110,6 +110,8 @@ protected: // interface implementation functions
 private: // functions
 
   void configureSourceTermCommands( Config::ConfigArgs& args );
+  
+  void configureInitCommands( Config::ConfigArgs& args );
 
 private: // data
 
@@ -130,9 +132,24 @@ private: // data
 
   /// The string for configuration of the _prepare command
   std::string m_solveStr;
+  
+  /// The string for configuration of the m_limiter command
+  std::string m_limiterStr;
+  
+  /// The commands to use for initializing the solution.
+  std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_inits;
+
+  /// The solution initializing command types
+  std::vector<std::string> m_initTypeStr;
+
+  /// The solution initializing command names for configuration
+  std::vector<std::string> m_initNameStr;
 
   ///The data to share between FluxReconstructionSolverCom commands
   Common::SharedPtr< FluxReconstructionSolverData > m_data;
+  
+  /// Command used to limit a solution
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_limiter;
   
   /// The source term command types
   std::vector<std::string> m_srcTermTypeStr;
