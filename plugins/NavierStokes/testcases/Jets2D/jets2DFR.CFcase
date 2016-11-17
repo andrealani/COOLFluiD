@@ -36,7 +36,7 @@ CFEnv.RegistSignalHandlers = false
 #CFEnv.NbWriters = 4
 
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libEmptyConvergenceMethod libNavierStokes libForwardEuler libFluxReconstructionMethod libTHOR2CFmesh
+Simulator.Modules.Libs = libShapeFunctions libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libEmptyConvergenceMethod libNavierStokes libForwardEuler libFluxReconstructionMethod libTHOR2CFmesh libParaViewWriter
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets2D/
@@ -46,13 +46,19 @@ Simulator.SubSystem.Default.PhysicalModelType = Euler2D
 Simulator.SubSystem.Euler2D.refValues = 1. 2.83972 2.83972 6.532
 Simulator.SubSystem.Euler2D.refLength = 1.0
 
-Simulator.SubSystem.OutputFormat     = CFmesh 
-#Tecplot
+Simulator.SubSystem.OutputFormat     = CFmesh ParaView #Tecplot
 Simulator.SubSystem.CFmesh.FileName  = jets2D-sol.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate  = 500
 # binary CFmesh writer
 #Simulator.SubSystem.CFmesh.WriteSol = ParWriteBinarySolution
 #Simulator.SubSystem.CFmesh.ParWriteBinarySolution.ParCFmeshBinaryFileWriter.NbWriters = 4
+
+Simulator.SubSystem.ParaView.FileName    = jets2dFR-P1.vtu
+Simulator.SubSystem.ParaView.WriteSol    = WriteSolutionHighOrder
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.SaveRate = 1
+Simulator.SubSystem.ParaView.AppendTime = false
+Simulator.SubSystem.ParaView.AppendIter = false
 
 # parallel ASCII Tecplot writer
 #Simulator.SubSystem.Tecplot.FileName = jets2D-sol.plt
@@ -88,7 +94,7 @@ Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2Dsfdm.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = jets2DQDPert.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
-Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P1
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
@@ -97,5 +103,5 @@ Simulator.SubSystem.ConvergenceMethod = FwdEuler
 #Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.8
 
 Simulator.SubSystem.SpaceMethod = FluxReconstruction
-Simulator.SubSystem.FluxReconstructionSolver.Builder = StdBuilder 
+Simulator.SubSystem.FluxReconstructionSolver.Builder = MeshUpgrade 
 Simulator.SubSystem.FluxReconstruction.Data.InterfaceFluxComputer = Null
