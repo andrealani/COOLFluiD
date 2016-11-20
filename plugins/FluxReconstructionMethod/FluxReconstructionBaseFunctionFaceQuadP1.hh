@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionQuadP2_hh
-#define COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionQuadP2_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionFaceQuadP1_hh
+#define COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionFaceQuadP1_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -8,24 +8,24 @@
 #include "Common/NotImplementedException.hh"
 #include "Common/ShouldNotBeHereException.hh"
 #include "MathTools/RealMatrix.hh"
-#include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh" //added RV
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
- namespace FluxReconstructionMethod {
+namespace FluxReconstructionMethod {
+
 
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class provides the spectral finite difference base function describing the
- * representation of the solution in a P2 quadrangular element.
+ * This class provides the FR base function describing the
+ * representation of the solution on a face of a P1 (linear) hexahedral element.
  *
  * @author Kris Van den Abeele
  *
  */
-class FluxReconstructionBaseFunctionQuadP2 : public ShapeFunctions::LagrangeShapeFunction {
+class FluxReconstructionBaseFunctionFaceQuadP1 : public ShapeFunctions::LagrangeShapeFunction {
 public:
 
   /**
@@ -41,7 +41,7 @@ public:
    */
   static CFuint getNbNodes()
   {
-    return 9;
+    return 4;
   }
 
   /**
@@ -49,6 +49,7 @@ public:
    */
   static CFuint getNbFaces()
   {
+    throw Common::ShouldNotBeHereException (FromHere(),"This is a basefunction defined on a face!!! Doesn't have any faces of its own");
     return 4;
   }
 
@@ -68,19 +69,19 @@ public:
     return CFPolyForm::FLUXRECONSTRUCTION;
   }
 
-  /// Gets the mapped coordinates of the DOFs
-  /// @param mappedCoords where to put the coordinates
-  static void getStatesMappedCoordinates(std::vector<RealVector>& mappedCoords)
-  {
-    throw Common::NotImplementedException (FromHere(),getName() + "::getStatesMappedCoordinates()");
-  }
-
  /**
   * Gets the Interpolator order
   */
   static CFPolyOrder::Type getInterpolatorOrder()
   {
-    return CFPolyOrder::ORDER2;
+    return CFPolyOrder::ORDER1;
+  }
+
+  /// Gets the mapped coordinates of the DOFs
+  /// @param mappedCoords where to put the coordinates
+  static void getStatesMappedCoordinates(std::vector<RealVector>& mappedCoords)
+  {
+    throw Common::NotImplementedException (FromHere(),getName() + "::getStatesMappedCoordinates()");
   }
 
   /**
@@ -102,80 +103,14 @@ public:
   static void computeShapeFunction(
         const RealVector& mappedCoord, RealVector& shapeFunc)
   {
-    //added RV
-    FluxReconstructionElementData* frElemData = new QuadFluxReconstructionElementData(getInterpolatorOrder());
-
-    Common::SafePtr< std::vector< CFreal > > solPnts1D = frElemData->getSolPntsLocalCoord1D();
-
-    const CFuint nbrSolPnts = solPnts1D->size();
-    cf_assert(nbrSolPnts == m_solPnts1D.size());
-    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-    {
-      m_solPnts1D[iSol] = (*solPnts1D)[iSol];
-    }
-
-    delete frElemData;
-    //end RV
-    // coordinates of output points
-    const CFreal ksi = mappedCoord[KSI];
-    const CFreal eta = mappedCoord[ETA];
-
-    // ksi factors
-    for (CFuint iSol = 0; iSol < 3; ++iSol)
-    {
-      const CFreal ksiSol = m_solPnts1D[iSol];
-      m_ksiFac[iSol] = 1.;
-      for (CFuint iFac = 0; iFac < 3; ++iFac)
-      {
-        if (iFac != iSol)
-        {
-          const CFreal ksiFac = m_solPnts1D[iFac];
-          m_ksiFac[iSol] *= (ksi-ksiFac)/(ksiSol-ksiFac);
-        }
-      }
-    }
-
-    // eta factors
-    for (CFuint iSol = 0; iSol < 3; ++iSol)
-    {
-      const CFreal etaSol = m_solPnts1D[iSol];
-      m_etaFac[iSol] = 1.;
-      for (CFuint iFac = 0; iFac < 3; ++iFac)
-      {
-        if (iFac != iSol)
-        {
-          const CFreal etaFac = m_solPnts1D[iFac];
-          m_etaFac[iSol] *= (eta-etaFac)/(etaSol-etaFac);
-        }
-      }
-    }
-
-    // compute shapefunctions
-    CFuint iFunc = 0;
-    for (CFuint iKsi = 0; iKsi < 3; ++iKsi)
-    {
-      const CFreal ksiFac = m_ksiFac[iKsi];
-      for (CFuint iEta = 0; iEta < 3; ++iEta, ++iFunc)
-      {
-        shapeFunc[iFunc] = ksiFac*m_etaFac[iEta];
-      }
-    }
-
-/*    const CFreal ksi  = mappedCoord[KSI];
-    const CFreal ksiM = (1.0 - mappedCoord[KSI]);
-    const CFreal ksiP = (1.0 + mappedCoord[KSI]);
-    const CFreal eta  = mappedCoord[ETA];
-    const CFreal etaM = (1.0 - mappedCoord[ETA]);
-    const CFreal etaP = (1.0 + mappedCoord[ETA]);
-    shapeFunc[0] = +0.25*ksi *ksiM*eta *etaM;
-    shapeFunc[1] = -0.50*ksi *ksiM*etaM*etaP;
-    shapeFunc[2] = -0.25*ksi *ksiM*eta *etaP;
-    shapeFunc[3] = -0.50*ksiM*ksiP*eta *etaM;
-    shapeFunc[4] = +     ksiM*ksiP*etaM*etaP;
-    shapeFunc[5] = +0.50*ksiM*ksiP*eta *etaP;
-    shapeFunc[6] = -0.25*ksi *ksiP*eta *etaM;
-    shapeFunc[7] = +0.50*ksi *ksiP*etaM*etaP;
-    shapeFunc[8] = +0.25*ksi *ksiP*eta *etaP;*/
+    const CFreal ksiM = (1.0 - mappedCoord[0]);
+    const CFreal ksiP = (1.0 + mappedCoord[0]);
+    const CFreal etaM = (1.0 - mappedCoord[1]);
+    const CFreal etaP = (1.0 + mappedCoord[1]);
+    shapeFunc[0] = 0.25*ksiM*etaM;
+    shapeFunc[1] = 0.25*ksiM*etaP;
+    shapeFunc[2] = 0.25*ksiP*etaM;
+    shapeFunc[3] = 0.25*ksiP*etaP;
   }
 
    /**
@@ -186,7 +121,7 @@ public:
          const std::vector<RealVector>& mappedCoord,
                std::vector<RealMatrix>& grad)
   {
-    throw Common::NotImplementedException (FromHere(),"The gradient of the FR base functions is not implemented");
+    throw Common::NotImplementedException (FromHere(),"The gradient of the FR base functions is not implemented (and should not be necessary...)");
   }
 
   /**
@@ -271,7 +206,7 @@ public:
    */
   static const std::string getName()
   {
-    return "FluxReconstructionQuadP2";
+    return "FluxReconstructionFaceQuadP1";
   }
 
   /**
@@ -328,7 +263,7 @@ public:
 
   static RealVector computeAvgCellNormal(const std::vector<Framework::Node*>& nodes)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"FR functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static RealVector computeCellNormal(const RealVector& mappedCoord, const std::vector<Framework::Node*>& nodes)
@@ -364,19 +299,19 @@ public:
       (FromHere(), getName()+"::isInElement()");
   }
 
+private:
+
   /**
    * Default constructor without arguments
    */
-  FluxReconstructionBaseFunctionQuadP2();
+  FluxReconstructionBaseFunctionFaceQuadP1();
 
   /**
    * Default destructor
    */
-  ~FluxReconstructionBaseFunctionQuadP2() {}
+  ~FluxReconstructionBaseFunctionFaceQuadP1();
 
-private:
-
-  static void computeFaceLineNormal(const CFuint& n,
+  static void computeFaceQuadNormal(const CFuint& n,
                           const std::vector<Framework::Node*>& nodes,
                           const CFuint& i,
                           const CFuint& j)
@@ -389,16 +324,7 @@ private: // data
   /// solution integrator ID
   static CFuint _interpolatorID;
 
-  /// factors for computation of basis functions
-  static RealVector m_ksiFac;
-
-  /// factors for computation of basis functions
-  static RealVector m_etaFac;
-
-  /// vector holding the 1D coordinates of solution points
-  static RealVector m_solPnts1D;
-
-}; // end of class FluxReconstructionBaseFunctionQuadP2
+}; // end of class FluxReconstructionBaseFunctionFaceQuadP1
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -408,4 +334,4 @@ private: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionQuadP2_hh
+#endif // COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionFaceQuadP1_hh

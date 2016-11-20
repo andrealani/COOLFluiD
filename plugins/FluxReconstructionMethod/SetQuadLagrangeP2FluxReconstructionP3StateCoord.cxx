@@ -2,7 +2,7 @@
 #include "Environment/ObjectProvider.hh"
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
-#include "FluxReconstructionMethod/SetQuadLagrangeP1FRP1StateCoord.hh"
+#include "FluxReconstructionMethod/SetQuadLagrangeP2FluxReconstructionP3StateCoord.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -16,30 +16,24 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-Environment::ObjectProvider<SetQuadLagrangeP1FRP1StateCoord,
+Environment::ObjectProvider<SetQuadLagrangeP2FluxReconstructionP3StateCoord,
                Framework::SetElementStateCoord,
                FluxReconstructionModule>
-SetQuadLagrangeP1FRP1StateCoord("QuadLagrangeP1FRP1");
+SetQuadLagrangeP2FluxReconstructionP3StateCoord("QuadLagrangeP2FluxReconstructionP3");
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SetQuadLagrangeP1FRP1StateCoord::operator() (const vector<Framework::Node*>& nodes,
-                                         vector<Framework::State*>& states)
+void SetQuadLagrangeP2FluxReconstructionP3StateCoord::operator() (const vector<Framework::Node*>& nodes,
+                                                          vector<Framework::State*>& states)
 {
-  cf_assert(states.size() == 4);
-  cf_assert(nodes.size() == 4);
-
-  // assign nodes to the states
-  states[0]->setSpaceCoordinates(nodes[0]);
-  states[1]->setSpaceCoordinates(nodes[3]);
-  states[2]->setSpaceCoordinates(nodes[1]);
-  states[3]->setSpaceCoordinates(nodes[2]);
+  cf_assert(states.size() == 16);
+  cf_assert(nodes.size() == 9);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SetQuadLagrangeP1FRP1StateCoord::update(const vector<Framework::Node*>& nodes,
-                                    vector<Framework::State*>& states)
+void SetQuadLagrangeP2FluxReconstructionP3StateCoord::update(const vector<Framework::Node*>& nodes,
+                                                     vector<Framework::State*>& states)
 {
 }
 

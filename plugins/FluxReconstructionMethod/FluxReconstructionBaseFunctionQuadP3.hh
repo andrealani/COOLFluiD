@@ -65,7 +65,7 @@ public:
   */
   static CFPolyForm::Type getInterpolatorType()
   {
-    return CFPolyForm::SPECTRALFD;
+    return CFPolyForm::FLUXRECONSTRUCTION;
   }
 
   /// Gets the mapped coordinates of the DOFs

@@ -18,7 +18,7 @@ RealVector FluxReconstructionBaseFunctionQuadP1::m_solPnts1D = RealVector(2);
 
 FluxReconstructionBaseFunctionQuadP1::FluxReconstructionBaseFunctionQuadP1() : ShapeFunctions::LagrangeShapeFunction()
 {
-  CFLog(INFO, "QUADP1 BASE FUNCTION CREATED!!!!!\n");
+  //CFLog(INFO, "QUADP1 BASE FUNCTION CREATED!!!!!\n");
   FluxReconstructionElementData* frElemData = new QuadFluxReconstructionElementData(getInterpolatorOrder());
 
   Common::SafePtr< std::vector< CFreal > > solPnts1D = frElemData->getSolPntsLocalCoord1D();

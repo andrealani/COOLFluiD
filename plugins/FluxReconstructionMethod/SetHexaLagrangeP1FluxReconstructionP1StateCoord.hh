@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_ShapeFunctions_SetQuadLagrangeP1FRP2StateCoord_hh
-#define COOLFluiD_ShapeFunctions_SetQuadLagrangeP1FRP2StateCoord_hh
+#ifndef COOLFluiD_ShapeFunctions_SetHexaLagrangeP1FluxReconstructionP1StateCoord_hh
+#define COOLFluiD_ShapeFunctions_SetHexaLagrangeP1FluxReconstructionP1StateCoord_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -20,26 +20,26 @@ namespace COOLFluiD {
 /**
  * This class is a functor and offers an abstract interface
  * for setting the corresponding space coordinates (Framework::Node) in
- * the State's in a quadrangle with P1 geometrical and P2 solution
+ * the State's in a hexahedron with P1 geometrical and P1 solution
  * interpolation.
  *
  * @author Kris Van den Abeele
  */
-class SetQuadLagrangeP1FRP2StateCoord : public Framework::SetElementStateCoord {
+class SetHexaLagrangeP1FluxReconstructionP1StateCoord : public Framework::SetElementStateCoord {
 
 public:
 
   /**
    * Constructor
    */
-  SetQuadLagrangeP1FRP2StateCoord() : Framework::SetElementStateCoord()
+  SetHexaLagrangeP1FluxReconstructionP1StateCoord() : Framework::SetElementStateCoord()
   {
   }
 
   /**
    * Destructor
    */
-  ~SetQuadLagrangeP1FRP2StateCoord()
+  ~SetHexaLagrangeP1FluxReconstructionP1StateCoord()
   {
   }
 
@@ -60,7 +60,7 @@ public:
   void update(const std::vector<Framework::Node*>& nodes,
                             std::vector<Framework::State*>& states);
 
-}; // end of class SetQuadLagrangeP1FRP2StateCoord
+}; // end of class SetHexaLagrangeP1FluxReconstructionP1StateCoord
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -70,4 +70,4 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_ShapeFunctions_SetQuadLagrangeP1FRP2StateCoord_hh
+#endif // COOLFluiD_ShapeFunctions_SetHexaLagrangeP1FluxReconstructionP1StateCoord_hh

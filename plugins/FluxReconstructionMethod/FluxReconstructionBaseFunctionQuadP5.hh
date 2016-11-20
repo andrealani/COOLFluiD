@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionQuadP2_hh
-#define COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionQuadP2_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionQuadP5_hh
+#define COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionQuadP5_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -8,7 +8,7 @@
 #include "Common/NotImplementedException.hh"
 #include "Common/ShouldNotBeHereException.hh"
 #include "MathTools/RealMatrix.hh"
-#include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh" //added RV
+#include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -20,12 +20,12 @@ namespace COOLFluiD {
 
 /**
  * This class provides the spectral finite difference base function describing the
- * representation of the solution in a P2 quadrangular element.
+ * representation of the solution in a P5 quadrangular element.
  *
  * @author Kris Van den Abeele
  *
  */
-class FluxReconstructionBaseFunctionQuadP2 : public ShapeFunctions::LagrangeShapeFunction {
+class FluxReconstructionBaseFunctionQuadP5 : public ShapeFunctions::LagrangeShapeFunction {
 public:
 
   /**
@@ -41,7 +41,7 @@ public:
    */
   static CFuint getNbNodes()
   {
-    return 9;
+    return 36;
   }
 
   /**
@@ -80,7 +80,7 @@ public:
   */
   static CFPolyOrder::Type getInterpolatorOrder()
   {
-    return CFPolyOrder::ORDER2;
+    return CFPolyOrder::ORDER5;
   }
 
   /**
@@ -102,7 +102,6 @@ public:
   static void computeShapeFunction(
         const RealVector& mappedCoord, RealVector& shapeFunc)
   {
-    //added RV
     FluxReconstructionElementData* frElemData = new QuadFluxReconstructionElementData(getInterpolatorOrder());
 
     Common::SafePtr< std::vector< CFreal > > solPnts1D = frElemData->getSolPntsLocalCoord1D();
@@ -115,17 +114,16 @@ public:
     }
 
     delete frElemData;
-    //end RV
     // coordinates of output points
     const CFreal ksi = mappedCoord[KSI];
     const CFreal eta = mappedCoord[ETA];
 
     // ksi factors
-    for (CFuint iSol = 0; iSol < 3; ++iSol)
+    for (CFuint iSol = 0; iSol < 6; ++iSol)
     {
       const CFreal ksiSol = m_solPnts1D[iSol];
       m_ksiFac[iSol] = 1.;
-      for (CFuint iFac = 0; iFac < 3; ++iFac)
+      for (CFuint iFac = 0; iFac < 6; ++iFac)
       {
         if (iFac != iSol)
         {
@@ -136,11 +134,11 @@ public:
     }
 
     // eta factors
-    for (CFuint iSol = 0; iSol < 3; ++iSol)
+    for (CFuint iSol = 0; iSol < 6; ++iSol)
     {
       const CFreal etaSol = m_solPnts1D[iSol];
       m_etaFac[iSol] = 1.;
-      for (CFuint iFac = 0; iFac < 3; ++iFac)
+      for (CFuint iFac = 0; iFac < 6; ++iFac)
       {
         if (iFac != iSol)
         {
@@ -152,30 +150,14 @@ public:
 
     // compute shapefunctions
     CFuint iFunc = 0;
-    for (CFuint iKsi = 0; iKsi < 3; ++iKsi)
+    for (CFuint iKsi = 0; iKsi < 6; ++iKsi)
     {
       const CFreal ksiFac = m_ksiFac[iKsi];
-      for (CFuint iEta = 0; iEta < 3; ++iEta, ++iFunc)
+      for (CFuint iEta = 0; iEta < 6; ++iEta, ++iFunc)
       {
         shapeFunc[iFunc] = ksiFac*m_etaFac[iEta];
       }
     }
-
-/*    const CFreal ksi  = mappedCoord[KSI];
-    const CFreal ksiM = (1.0 - mappedCoord[KSI]);
-    const CFreal ksiP = (1.0 + mappedCoord[KSI]);
-    const CFreal eta  = mappedCoord[ETA];
-    const CFreal etaM = (1.0 - mappedCoord[ETA]);
-    const CFreal etaP = (1.0 + mappedCoord[ETA]);
-    shapeFunc[0] = +0.25*ksi *ksiM*eta *etaM;
-    shapeFunc[1] = -0.50*ksi *ksiM*etaM*etaP;
-    shapeFunc[2] = -0.25*ksi *ksiM*eta *etaP;
-    shapeFunc[3] = -0.50*ksiM*ksiP*eta *etaM;
-    shapeFunc[4] = +     ksiM*ksiP*etaM*etaP;
-    shapeFunc[5] = +0.50*ksiM*ksiP*eta *etaP;
-    shapeFunc[6] = -0.25*ksi *ksiP*eta *etaM;
-    shapeFunc[7] = +0.50*ksi *ksiP*etaM*etaP;
-    shapeFunc[8] = +0.25*ksi *ksiP*eta *etaP;*/
   }
 
    /**
@@ -186,7 +168,7 @@ public:
          const std::vector<RealVector>& mappedCoord,
                std::vector<RealMatrix>& grad)
   {
-    throw Common::NotImplementedException (FromHere(),"The gradient of the FR base functions is not implemented");
+    throw Common::NotImplementedException (FromHere(),"The gradient of the spectral finite difference base functions is not implemented (and should not be necessary...)");
   }
 
   /**
@@ -217,7 +199,7 @@ public:
          const std::vector<RealVector>& mappedCoord,
                std::vector<RealMatrix>& jacob)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
   }
 
   static void computeJacobianPlus1D(
@@ -225,7 +207,7 @@ public:
          const std::vector<RealVector>& mappedCoord,
                std::vector<RealMatrix>& jacob)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
   }
 
   static void computeJacobianPlus2D(
@@ -233,7 +215,7 @@ public:
          const std::vector<RealVector>& mappedCoord,
                std::vector<RealMatrix>& jacob)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
   }
 
   static void computeJacobianDeterminant(
@@ -241,7 +223,7 @@ public:
          const std::vector<Framework::Node*>& nodes,
                std::valarray<CFreal>& detJacobian)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
   }
 
   static void computeJacobianDeterminantPlus1D(
@@ -249,7 +231,7 @@ public:
          const std::vector<Framework::Node*>& nodes,
                std::valarray<CFreal>& detJacobian)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
   }
 
   static void computeJacobianDeterminantPlus2D(
@@ -257,7 +239,7 @@ public:
          const std::vector<Framework::Node*>& nodes,
                std::valarray<CFreal>& detJacobian)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
   }
 
   static void computeFaceJacobianDeterminant(
@@ -271,7 +253,7 @@ public:
    */
   static const std::string getName()
   {
-    return "FluxReconstructionQuadP2";
+    return "FluxReconstructionQuadP5";
   }
 
   /**
@@ -292,12 +274,12 @@ public:
 
   static CFreal computeVolume(const std::vector<Framework::Node*>& nodes)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
   }
 
   static RealVector computeCentroid(const std::vector<Framework::Node*>& nodes)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
   }
 
   /**
@@ -318,22 +300,22 @@ public:
 
   static std::vector<RealVector> computeAvgFaceNormals(const std::vector<Framework::Node*>& nodes)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
   }
 
   static std::vector<RealVector> computeFaceNormals(const RealVector mappedCoord, const std::vector<Framework::Node*>& nodes)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
   }
 
   static RealVector computeAvgCellNormal(const std::vector<Framework::Node*>& nodes)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"FR functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
   }
 
   static RealVector computeCellNormal(const RealVector& mappedCoord, const std::vector<Framework::Node*>& nodes)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
   }
 
  /**
@@ -367,12 +349,12 @@ public:
   /**
    * Default constructor without arguments
    */
-  FluxReconstructionBaseFunctionQuadP2();
+  FluxReconstructionBaseFunctionQuadP5();
 
   /**
    * Default destructor
    */
-  ~FluxReconstructionBaseFunctionQuadP2() {}
+  ~FluxReconstructionBaseFunctionQuadP5() {}
 
 private:
 
@@ -381,7 +363,7 @@ private:
                           const CFuint& i,
                           const CFuint& j)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
   }
 
 private: // data
@@ -398,7 +380,7 @@ private: // data
   /// vector holding the 1D coordinates of solution points
   static RealVector m_solPnts1D;
 
-}; // end of class FluxReconstructionBaseFunctionQuadP2
+}; // end of class FluxReconstructionBaseFunctionQuadP5
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -408,4 +390,4 @@ private: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionQuadP2_hh
+#endif // COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionQuadP5_hh

@@ -186,6 +186,7 @@ void StdInitState::executeOnTrs()
 
   // prepares to loop over cells by getting the GeometricEntityPool
   SafePtr< GeometricEntityPool<StdTrsGeoBuilder> > geoBuilder = getMethodData().getStdTrsGeoBuilder();
+  geoBuilder -> setup();
   StdTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
   geoData.trs = trs;
 
@@ -208,9 +209,11 @@ void StdInitState::executeOnTrs()
     // loop over elements
     for (CFuint iElem = 0; iElem < nbrElems; ++iElem, ++cellIdx)
     {
+      //CFLog(VERBOSE,"BUILDING GE IN StdInitState!!!!!!!!!!!!!!!!!!!!");
       // build the GeometricEntity
       geoData.idx = cellIdx;
       GeometricEntity *const cell = geoBuilder->buildGE();
+      //CFLog(VERBOSE,"END buildGE!!!!!!!!!!!!!!!!!!!!");
 
       // get the states
       vector<State*>* solPntStates = cell->getStates();

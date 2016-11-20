@@ -1,5 +1,5 @@
-//#include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh"
-#include "FluxReconstructionMethod/FluxReconstructionBaseFunctionQuadP2.hh"
+//#include "FluxReconstructionMethod/HexaFluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/FluxReconstructionBaseFunctionHexaP2.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -9,17 +9,17 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-CFuint FluxReconstructionBaseFunctionQuadP2::_interpolatorID = 0;
-RealVector FluxReconstructionBaseFunctionQuadP2::m_ksiFac = RealVector(3);
-RealVector FluxReconstructionBaseFunctionQuadP2::m_etaFac = RealVector(3);
-RealVector FluxReconstructionBaseFunctionQuadP2::m_solPnts1D = RealVector(3);
+CFuint FluxReconstructionBaseFunctionHexaP2::_interpolatorID = 0;
+RealVector FluxReconstructionBaseFunctionHexaP2::m_ksiFac = RealVector(3);
+RealVector FluxReconstructionBaseFunctionHexaP2::m_etaFac = RealVector(3);
+RealVector FluxReconstructionBaseFunctionHexaP2::m_ztaFac = RealVector(3);
+RealVector FluxReconstructionBaseFunctionHexaP2::m_solPnts1D = RealVector(3);
 
 //////////////////////////////////////////////////////////////////////////////
 
-FluxReconstructionBaseFunctionQuadP2::FluxReconstructionBaseFunctionQuadP2()
+FluxReconstructionBaseFunctionHexaP2::FluxReconstructionBaseFunctionHexaP2()
 {
-  //CFLog(INFO, "QUADP2 BASE FUNCTION CREATED!!!!!\n");
-  FluxReconstructionElementData* frElemData = new QuadFluxReconstructionElementData(getInterpolatorOrder());
+  FluxReconstructionElementData* frElemData = new HexaFluxReconstructionElementData(getInterpolatorOrder());
 
   Common::SafePtr< std::vector< CFreal > > solPnts1D = frElemData->getSolPntsLocalCoord1D();
 
@@ -35,7 +35,7 @@ FluxReconstructionBaseFunctionQuadP2::FluxReconstructionBaseFunctionQuadP2()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FluxReconstructionBaseFunctionQuadP2::computeFaceJacobianDeterminant(
+void FluxReconstructionBaseFunctionHexaP2::computeFaceJacobianDeterminant(
         const std::vector<RealVector>& mappedCoord,
         const std::vector<Framework::Node*>& nodes,
         const Framework::IntegratorPattern& pattern,
@@ -46,7 +46,7 @@ void FluxReconstructionBaseFunctionQuadP2::computeFaceJacobianDeterminant(
 
 //////////////////////////////////////////////////////////////////////////////
 
-RealVector FluxReconstructionBaseFunctionQuadP2::computeMappedCoordinates(const RealVector& coord,
+RealVector FluxReconstructionBaseFunctionHexaP2::computeMappedCoordinates(const RealVector& coord,
                                     const std::vector<Framework::Node*>& nodes)
 {
   throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
@@ -54,7 +54,7 @@ RealVector FluxReconstructionBaseFunctionQuadP2::computeMappedCoordinates(const 
 
 //////////////////////////////////////////////////////////////////////////////
 
-RealVector FluxReconstructionBaseFunctionQuadP2::computeMappedCoordinatesPlus1D(const RealVector& coord,
+RealVector FluxReconstructionBaseFunctionHexaP2::computeMappedCoordinatesPlus1D(const RealVector& coord,
                                     const std::vector<Framework::Node*>& nodes)
 {
   throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");

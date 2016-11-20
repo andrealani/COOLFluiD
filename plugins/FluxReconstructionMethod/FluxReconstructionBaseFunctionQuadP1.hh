@@ -65,7 +65,7 @@ public:
   */
   static CFPolyForm::Type getInterpolatorType()
   {
-    return CFPolyForm::SPECTRALFD;
+    return CFPolyForm::FLUXRECONSTRUCTION;
   }
 
   /// Gets the mapped coordinates of the DOFs
@@ -127,7 +127,7 @@ public:
     for (CFuint iSol = 0; iSol < 2; ++iSol)
     {
       const CFreal ksiSol = m_solPnts1D[iSol];
-      CFLog(INFO, "ksiSol = " << ksiSol << "\n");
+      //CFLog(INFO, "ksiSol = " << ksiSol << "\n");
       m_ksiFac[iSol] = 1.;
       for (CFuint iFac = 0; iFac < 2; ++iFac)
       {
@@ -135,7 +135,7 @@ public:
         {
           const CFreal ksiFac = m_solPnts1D[iFac];
           m_ksiFac[iSol] *= (ksi-ksiFac)/(ksiSol-ksiFac);
-	  CFLog(INFO, "ksiFac = " << m_ksiFac[iSol] << "\n");
+	  //CFLog(INFO, "ksiFac = " << m_ksiFac[iSol] << "\n");
         }
       }
     }
@@ -163,7 +163,7 @@ public:
       for (CFuint iEta = 0; iEta < 2; ++iEta, ++iFunc)
       {
         shapeFunc[iFunc] = ksiFac*m_etaFac[iEta];
-	CFLog(INFO, "shapeFunc[" << iFunc << "] = " << shapeFunc[iFunc] << "\n");
+	//CFLog(INFO, "shapeFunc[" << iFunc << "] = " << shapeFunc[iFunc] << "\n");
       }
     }
 
@@ -216,7 +216,7 @@ public:
          const std::vector<RealVector>& mappedCoord,
                std::vector<RealMatrix>& jacob)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static void computeJacobianPlus1D(
@@ -224,7 +224,7 @@ public:
          const std::vector<RealVector>& mappedCoord,
                std::vector<RealMatrix>& jacob)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static void computeJacobianPlus2D(
@@ -232,7 +232,7 @@ public:
          const std::vector<RealVector>& mappedCoord,
                std::vector<RealMatrix>& jacob)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static void computeJacobianDeterminant(
@@ -240,7 +240,7 @@ public:
          const std::vector<Framework::Node*>& nodes,
                std::valarray<CFreal>& detJacobian)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static void computeJacobianDeterminantPlus1D(
@@ -248,7 +248,7 @@ public:
          const std::vector<Framework::Node*>& nodes,
                std::valarray<CFreal>& detJacobian)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static void computeJacobianDeterminantPlus2D(
@@ -256,7 +256,7 @@ public:
          const std::vector<Framework::Node*>& nodes,
                std::valarray<CFreal>& detJacobian)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static void computeFaceJacobianDeterminant(

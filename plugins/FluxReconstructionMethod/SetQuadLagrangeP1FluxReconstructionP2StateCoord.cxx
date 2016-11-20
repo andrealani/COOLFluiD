@@ -2,7 +2,7 @@
 #include "Environment/ObjectProvider.hh"
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
-#include "FluxReconstructionMethod/SetQuadLagrangeP1FRP2StateCoord.hh"
+#include "FluxReconstructionMethod/SetQuadLagrangeP1FluxReconstructionP2StateCoord.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -16,14 +16,14 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-Environment::ObjectProvider<SetQuadLagrangeP1FRP2StateCoord,
+Environment::ObjectProvider<SetQuadLagrangeP1FluxReconstructionP2StateCoord,
                Framework::SetElementStateCoord,
                FluxReconstructionModule>
-SetQuadLagrangeP1FRP2StateCoord("QuadLagrangeP1FRP2");
+SetQuadLagrangeP1FluxReconstructionP2StateCoord("QuadLagrangeP1FluxReconstructionP2");
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SetQuadLagrangeP1FRP2StateCoord::operator() (const vector<Framework::Node*>& nodes,
+void SetQuadLagrangeP1FluxReconstructionP2StateCoord::operator() (const vector<Framework::Node*>& nodes,
                                          vector<Framework::State*>& states)
 {
   cf_assert(states.size() == 9);
@@ -49,7 +49,7 @@ void SetQuadLagrangeP1FRP2StateCoord::operator() (const vector<Framework::Node*>
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SetQuadLagrangeP1FRP2StateCoord::update(const vector<Framework::Node*>& nodes,
+void SetQuadLagrangeP1FluxReconstructionP2StateCoord::update(const vector<Framework::Node*>& nodes,
                                                      vector<Framework::State*>& states)
 {
 }

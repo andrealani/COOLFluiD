@@ -1,14 +1,14 @@
-#ifndef COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionQuadP2_hh
-#define COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionQuadP2_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionTriagP2_hh
+#define COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionTriagP2_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Common/StringOps.hh"
 #include "ShapeFunctions/LagrangeShapeFunction.hh"
+#include "Framework/FaceJacobiansDeterminant.hh"
 #include "Common/NotImplementedException.hh"
 #include "Common/ShouldNotBeHereException.hh"
 #include "MathTools/RealMatrix.hh"
-#include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh" //added RV
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -16,16 +16,18 @@ namespace COOLFluiD {
 
  namespace FluxReconstructionMethod {
 
+
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class provides the spectral finite difference base function describing the
- * representation of the solution in a P2 quadrangular element.
+ * This class provides the FR base function describing the
+ * representation of the solution in a P2 (quadratic)
+ * triangular element.
  *
  * @author Kris Van den Abeele
  *
  */
-class FluxReconstructionBaseFunctionQuadP2 : public ShapeFunctions::LagrangeShapeFunction {
+class FluxReconstructionBaseFunctionTriagP2 : public ShapeFunctions::LagrangeShapeFunction {
 public:
 
   /**
@@ -41,7 +43,7 @@ public:
    */
   static CFuint getNbNodes()
   {
-    return 9;
+    return 6;
   }
 
   /**
@@ -49,7 +51,7 @@ public:
    */
   static CFuint getNbFaces()
   {
-    return 4;
+    return 3;
   }
 
   /**
@@ -57,7 +59,7 @@ public:
    */
   static CFGeoShape::Type getShape()
   {
-    return CFGeoShape::QUAD;
+    return CFGeoShape::TRIAG;
   }
 
  /**
@@ -68,19 +70,19 @@ public:
     return CFPolyForm::FLUXRECONSTRUCTION;
   }
 
-  /// Gets the mapped coordinates of the DOFs
-  /// @param mappedCoords where to put the coordinates
-  static void getStatesMappedCoordinates(std::vector<RealVector>& mappedCoords)
-  {
-    throw Common::NotImplementedException (FromHere(),getName() + "::getStatesMappedCoordinates()");
-  }
-
  /**
   * Gets the Interpolator order
   */
   static CFPolyOrder::Type getInterpolatorOrder()
   {
     return CFPolyOrder::ORDER2;
+  }
+
+  /// Gets the mapped coordinates of the DOFs
+  /// @param mappedCoords where to put the coordinates
+  static void getStatesMappedCoordinates(std::vector<RealVector>& mappedCoords)
+  {
+    throw Common::NotImplementedException (FromHere(),getName() + "::getStatesMappedCoordinates()");
   }
 
   /**
@@ -102,80 +104,18 @@ public:
   static void computeShapeFunction(
         const RealVector& mappedCoord, RealVector& shapeFunc)
   {
-    //added RV
-    FluxReconstructionElementData* frElemData = new QuadFluxReconstructionElementData(getInterpolatorOrder());
-
-    Common::SafePtr< std::vector< CFreal > > solPnts1D = frElemData->getSolPntsLocalCoord1D();
-
-    const CFuint nbrSolPnts = solPnts1D->size();
-    cf_assert(nbrSolPnts == m_solPnts1D.size());
-    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-    {
-      m_solPnts1D[iSol] = (*solPnts1D)[iSol];
-    }
-
-    delete frElemData;
-    //end RV
-    // coordinates of output points
-    const CFreal ksi = mappedCoord[KSI];
-    const CFreal eta = mappedCoord[ETA];
-
-    // ksi factors
-    for (CFuint iSol = 0; iSol < 3; ++iSol)
-    {
-      const CFreal ksiSol = m_solPnts1D[iSol];
-      m_ksiFac[iSol] = 1.;
-      for (CFuint iFac = 0; iFac < 3; ++iFac)
-      {
-        if (iFac != iSol)
-        {
-          const CFreal ksiFac = m_solPnts1D[iFac];
-          m_ksiFac[iSol] *= (ksi-ksiFac)/(ksiSol-ksiFac);
-        }
-      }
-    }
-
-    // eta factors
-    for (CFuint iSol = 0; iSol < 3; ++iSol)
-    {
-      const CFreal etaSol = m_solPnts1D[iSol];
-      m_etaFac[iSol] = 1.;
-      for (CFuint iFac = 0; iFac < 3; ++iFac)
-      {
-        if (iFac != iSol)
-        {
-          const CFreal etaFac = m_solPnts1D[iFac];
-          m_etaFac[iSol] *= (eta-etaFac)/(etaSol-etaFac);
-        }
-      }
-    }
-
-    // compute shapefunctions
-    CFuint iFunc = 0;
-    for (CFuint iKsi = 0; iKsi < 3; ++iKsi)
-    {
-      const CFreal ksiFac = m_ksiFac[iKsi];
-      for (CFuint iEta = 0; iEta < 3; ++iEta, ++iFunc)
-      {
-        shapeFunc[iFunc] = ksiFac*m_etaFac[iEta];
-      }
-    }
-
-/*    const CFreal ksi  = mappedCoord[KSI];
-    const CFreal ksiM = (1.0 - mappedCoord[KSI]);
-    const CFreal ksiP = (1.0 + mappedCoord[KSI]);
-    const CFreal eta  = mappedCoord[ETA];
-    const CFreal etaM = (1.0 - mappedCoord[ETA]);
-    const CFreal etaP = (1.0 + mappedCoord[ETA]);
-    shapeFunc[0] = +0.25*ksi *ksiM*eta *etaM;
-    shapeFunc[1] = -0.50*ksi *ksiM*etaM*etaP;
-    shapeFunc[2] = -0.25*ksi *ksiM*eta *etaP;
-    shapeFunc[3] = -0.50*ksiM*ksiP*eta *etaM;
-    shapeFunc[4] = +     ksiM*ksiP*etaM*etaP;
-    shapeFunc[5] = +0.50*ksiM*ksiP*eta *etaP;
-    shapeFunc[6] = -0.25*ksi *ksiP*eta *etaM;
-    shapeFunc[7] = +0.50*ksi *ksiP*etaM*etaP;
-    shapeFunc[8] = +0.25*ksi *ksiP*eta *etaP;*/
+    /// @note kvda: Specific for one partition!!!
+    const CFreal ksi1 = mappedCoord[KSI];
+    const CFreal eta1 = mappedCoord[ETA];
+    const CFreal ksi2 = ksi1*ksi1;
+    const CFreal eta2 = eta1*eta1;
+    const CFreal ksi1eta1 = ksi1*eta1;
+    shapeFunc[0] = 1.373269753 - 4.478097344*ksi1 - 4.478097344*eta1 + 3.153869682*ksi2 + 6.926622989*ksi1eta1 + 3.153869682*eta2;
+    shapeFunc[1] = -0.3046965712 + 8.544786589*ksi1 - 0.9852296464*eta1 - 8.544786589*ksi2 - 8.544786589*ksi1eta1 + 1.427965425*eta2;
+    shapeFunc[2] = -0.3046965712 - 0.9852296464*ksi1 + 8.544786589*eta1 + 1.427965425*ksi2 - 8.544786589*ksi1eta1 - 8.544786589*eta2;
+    shapeFunc[3] = 0.04904209105 - 1.82964202*ksi1 + 0.6188836248*eta1 + 3.153869682*ksi2 - 0.6188836248*ksi1eta1 - 0.6188836248*eta2;
+    shapeFunc[4] = 0.1380392075 - 1.870701204*ksi1 - 1.870701204*eta1 + 1.427965425*ksi2 + 11.40071744*ksi1eta1 + 1.427965425*eta2;
+    shapeFunc[5] = 0.04904209105 + 0.6188836248*ksi1 - 1.82964202*eta1 - 0.6188836248*ksi2 - 0.6188836248*ksi1eta1 + 3.153869682*eta2;
   }
 
    /**
@@ -186,7 +126,7 @@ public:
          const std::vector<RealVector>& mappedCoord,
                std::vector<RealMatrix>& grad)
   {
-    throw Common::NotImplementedException (FromHere(),"The gradient of the FR base functions is not implemented");
+    throw Common::NotImplementedException (FromHere(),"The gradient of the FR base functions is not implemented (and should not be necessary...)");
   }
 
   /**
@@ -271,7 +211,7 @@ public:
    */
   static const std::string getName()
   {
-    return "FluxReconstructionQuadP2";
+    return "FluxReconstructionTriagP2";
   }
 
   /**
@@ -328,7 +268,7 @@ public:
 
   static RealVector computeAvgCellNormal(const std::vector<Framework::Node*>& nodes)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"FR functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static RealVector computeCellNormal(const RealVector& mappedCoord, const std::vector<Framework::Node*>& nodes)
@@ -342,10 +282,9 @@ public:
   static bool isInMappedElement(const RealVector& mappedCoord)
   {
     cf_assert(mappedCoord.size() == 2);
-    if( (mappedCoord[0] >= -1.) &&
-        (mappedCoord[0] <= +1.) &&
-        (mappedCoord[1] >= -1.) &&
-        (mappedCoord[1] <= +1.))
+    if( (mappedCoord[0] >= 0.) &&
+        (mappedCoord[1] >= 0.) &&
+        (mappedCoord.sum() <= 1.))
     {
       return true;
     }
@@ -364,17 +303,17 @@ public:
       (FromHere(), getName()+"::isInElement()");
   }
 
+private:
+
   /**
    * Default constructor without arguments
    */
-  FluxReconstructionBaseFunctionQuadP2();
+  FluxReconstructionBaseFunctionTriagP2();
 
   /**
    * Default destructor
    */
-  ~FluxReconstructionBaseFunctionQuadP2() {}
-
-private:
+  ~FluxReconstructionBaseFunctionTriagP2();
 
   static void computeFaceLineNormal(const CFuint& n,
                           const std::vector<Framework::Node*>& nodes,
@@ -389,16 +328,22 @@ private: // data
   /// solution integrator ID
   static CFuint _interpolatorID;
 
-  /// factors for computation of basis functions
-  static RealVector m_ksiFac;
+  /// temporary vector for mapped coordinates in 2D
+  static RealVector m_mappedCoord;
 
-  /// factors for computation of basis functions
-  static RealVector m_etaFac;
+  /// temporary vector for computaiton of mapped coordinates
+  static RealVector m_vBA;
 
-  /// vector holding the 1D coordinates of solution points
-  static RealVector m_solPnts1D;
+  /// temporary vector for computaiton of mapped coordinates
+  static RealVector m_vCA;
 
-}; // end of class FluxReconstructionBaseFunctionQuadP2
+  /// temporary vector for computaiton of mapped coordinates
+  static RealVector m_vPA;
+
+  /// polynomial coefficients
+  static std::vector< std::vector< CFreal > > m_polyCoefs;
+
+}; // end of class FluxReconstructionBaseFunctionTriagP2
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -408,4 +353,4 @@ private: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionQuadP2_hh
+#endif // COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionTriagP2_hh
