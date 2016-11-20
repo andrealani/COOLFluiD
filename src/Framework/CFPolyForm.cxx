@@ -15,23 +15,25 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 CFPolyForm::Convert::FwdMap_t CFPolyForm::Convert::all_fwd = boost::assign::map_list_of
-    ( CFPolyForm::INVALID,    "INVALID" )
-    ( CFPolyForm::LAGRANGE,   "Lagrange" )
-    ( CFPolyForm::HERMITE,    "Hermite" )
-    ( CFPolyForm::SERENDIPITY,"Serendipity" )
-    ( CFPolyForm::SPECTRALFV, "SpectralFV" )
-    ( CFPolyForm::LEGENDRE,   "Legendre" )
-    ( CFPolyForm::SPECTRALFD, "SpectralFD" );
+    ( CFPolyForm::INVALID,            "INVALID" )
+    ( CFPolyForm::LAGRANGE,           "Lagrange" )
+    ( CFPolyForm::HERMITE,            "Hermite" )
+    ( CFPolyForm::SERENDIPITY,        "Serendipity" )
+    ( CFPolyForm::SPECTRALFV,         "SpectralFV" )
+    ( CFPolyForm::LEGENDRE,           "Legendre" )
+    ( CFPolyForm::SPECTRALFD,         "SpectralFD" )
+    ( CFPolyForm::FLUXRECONSTRUCTION, "FluxReconstruction");
 
 
 CFPolyForm::Convert::BwdMap_t CFPolyForm::Convert::all_rev = boost::assign::map_list_of
-    ( "INVALID",    CFPolyForm::INVALID )
-    ( "Lagrange",   CFPolyForm::LAGRANGE )
-    ( "Hermite",    CFPolyForm::HERMITE )
-    ( "Serendipity",CFPolyForm::SERENDIPITY )
-    ( "SpectralFV", CFPolyForm::SPECTRALFV )
-    ( "Legendre",   CFPolyForm::LEGENDRE )
-    ( "SpectralFD", CFPolyForm::SPECTRALFD );
+    ( "INVALID",            CFPolyForm::INVALID )
+    ( "Lagrange",           CFPolyForm::LAGRANGE )
+    ( "Hermite",            CFPolyForm::HERMITE )
+    ( "Serendipity",        CFPolyForm::SERENDIPITY )
+    ( "SpectralFV",         CFPolyForm::SPECTRALFV )
+    ( "Legendre",           CFPolyForm::LEGENDRE )
+    ( "SpectralFD",         CFPolyForm::SPECTRALFD )
+    ( "FluxReconstruction", CFPolyForm::FLUXRECONSTRUCTION);
 
 //////////////////////////////////////////////////////////////////////////////
 

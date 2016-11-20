@@ -23,13 +23,15 @@ class Framework_API CFPolyForm
   public:
 
   /// Enumeration of the polynomial fornms supported
-  enum Type  { INVALID     = 0,
-               LAGRANGE    = 1,
-               HERMITE     = 2,
-               SERENDIPITY = 3,
-               SPECTRALFV  = 4,
-               LEGENDRE    = 5,
-               SPECTRALFD  = 6  };
+  enum Type  { INVALID            = 0,
+               LAGRANGE           = 1,
+               HERMITE            = 2,
+               SERENDIPITY        = 3,
+               SPECTRALFV         = 4,
+               LEGENDRE           = 5,
+               SPECTRALFD         = 6,
+	       FLUXRECONSTRUCTION = 7
+  };
 
   typedef Common::EnumT< CFPolyForm > ConverterBase;
 
