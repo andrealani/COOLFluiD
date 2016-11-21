@@ -100,6 +100,9 @@ ThreeFluidMHDST2D.hh
 TwoFluidGravMHDST2D.ci
 TwoFluidGravMHDST2D.cxx
 TwoFluidGravMHDST2D.hh
+TwoFluidGravMHDST2DHalf.ci
+TwoFluidGravMHDST2DHalf.cxx
+TwoFluidGravMHDST2DHalf.hh
 TwoFluidGravMHDST2DChExchange.ci
 TwoFluidGravMHDST2DChExchange.cxx
 TwoFluidGravMHDST2DChExchange.hh
