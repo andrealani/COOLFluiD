@@ -24,7 +24,8 @@ namespace COOLFluiD {
  * representation of the solution in a P2 (quadratic)
  * triangular element.
  *
- * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
+ * @author Alexander Papen
  *
  */
 class FluxReconstructionBaseFunctionTriagP1 : public ShapeFunctions::LagrangeShapeFunction {

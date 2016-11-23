@@ -55,7 +55,14 @@ public: // functions
   {
     return m_data.getPtr();
   }
-
+  
+  /// Gets the Data aggregator of this space method
+  /// @return SafePtr to the MethodData
+  virtual Common::SafePtr< FluxReconstructionSolverData > getData()
+  {
+    return m_data.getPtr();
+  }
+  
   /// Sets the LinearSystemSolver for this SpaceMethod to use
   /// @pre pointer to LSS is not constant to allow dynamic casting
   void setCollaborator( Framework::MultiMethodHandle< Framework::LinearSystemSolver > lss );
@@ -65,12 +72,16 @@ public: // functions
   ///      allow dynamic_casting
   void setCollaborator(Framework::MultiMethodHandle<Framework::ConvergenceMethod> convMtd);
 
-
   /// Gets the volume integrator of the space method.
   virtual Common::SafePtr< Framework::VolumeIntegrator > getVolumeIntegrator()
   {
     return CFNULL;
   }
+  
+  /// Defined the strategy list of this Method
+  /// @todo Remove this function and configure strategies using the configureStrategy template function
+  ///       provided by MethodData
+  std::vector< Common::SafePtr< Framework::NumericalStrategy > > getStrategyList() const;
 
 protected: // interface implementation functions
 

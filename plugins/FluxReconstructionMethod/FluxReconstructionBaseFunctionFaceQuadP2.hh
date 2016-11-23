@@ -21,7 +21,8 @@ namespace COOLFluiD {
  * This class provides the FR base function describing the
  * representation of the solution on a face of a P2 (quadratic) hexahedral element.
  *
- * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
+ * @author Alexander Papen
  *
  */
 class FluxReconstructionBaseFunctionFaceQuadP2 : public ShapeFunctions::LagrangeShapeFunction {

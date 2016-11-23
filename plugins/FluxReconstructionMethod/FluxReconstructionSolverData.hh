@@ -15,7 +15,7 @@
 #include "Framework/MultiMethodHandle.hh"
 #include "Framework/SpaceMethodData.hh"
 #include "Framework/StdTrsGeoBuilder.hh"
-#include "Framework/VolumeIntegrator.hh"
+//#include "Framework/VolumeIntegrator.hh"
 
 #include "Framework/DofDataHandleIterator.hh"
 #include "Framework/ProxyDofIterator.hh"
@@ -29,6 +29,7 @@ namespace COOLFluiD {
     class BaseInterfaceFlux;
     class BaseFluxPntDistribution;
     class FluxReconstructionElementData;
+    class ReconstructStatesFluxReconstruction;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -98,11 +99,8 @@ public: // functions
     return "FluxReconstructionSolver";
   }
 
-  /// Get the VolumeIntegrator
-  Common::SafePtr< Framework::VolumeIntegrator > getVolumeIntegrator();
-
-  /// Sets up the FluxReconstructionData
-  void setup();
+//   /// Get the VolumeIntegrator
+//   Common::SafePtr< Framework::VolumeIntegrator > getVolumeIntegrator();
 
   /// Gets the FluxReconstruction strategy
   FluxReconstructionStrategy * getFluxReconstructionStrategy() const
@@ -112,14 +110,14 @@ public: // functions
   }
   
   /// Gets the interface flux computation strategy
-  BaseInterfaceFlux * getInterfaceFluxStrategy() const
+  Common::SafePtr< BaseInterfaceFlux > getInterfaceFluxStrategy() const
   {
     cf_assert(m_interfaceflux.isNotNull());
     return m_interfaceflux.getPtr();
   }
   
   /// Gets the flux point distribution
-  BaseFluxPntDistribution * getFluxPntDistributionStrategy() const
+  Common::SafePtr< BaseFluxPntDistribution > getFluxPntDistributionStrategy() const
   {
     cf_assert(m_fluxpntdistribution.isNotNull());
     return m_fluxpntdistribution.getPtr();
@@ -127,11 +125,20 @@ public: // functions
   
   /// @return reference to m_frLocalData
   std::vector< FluxReconstructionElementData* >& getFRLocalData();
+  
+  /// @return the states reconstructor
+  Common::SafePtr< ReconstructStatesFluxReconstruction > getStatesReconstructor();
+  
+  /// Sets up the FluxReconstructionData
+  void setup();
+  
+  /// Unsets the method data
+  virtual void unsetup();
 
 private:  // helper functions
 
-  /// Configures the ContourIntegrator and the IntegrableEntity
-  void configureIntegrator();
+//   /// Configures the ContourIntegrator and the IntegrableEntity
+//   void configureIntegrator();
   
   /**
    * Creates the local data for FR
@@ -149,14 +156,14 @@ private:  // data
   /// Builder for standard TRS GeometricEntity's
   Framework::GeometricEntityPool< Framework::StdTrsGeoBuilder > m_stdTrsGeoBuilder;
 
-  /// The volume integrator
-  Framework::VolumeIntegrator m_volumeIntegrator;
-
-  /// String for configuring the numerical integrator QuadratureType
-  std::string m_intquadStr;
-
-  /// String for configuring the numerical integrator Order
-  std::string m_intorderStr;
+//   /// The volume integrator
+//   Framework::VolumeIntegrator m_volumeIntegrator;
+//
+//   /// String for configuring the numerical integrator QuadratureType
+//   std::string m_intquadStr;
+// 
+//   /// String for configuring the numerical integrator Order
+//   std::string m_intorderStr;
 
   /// FluxReconstruction strategy
   Common::SelfRegistPtr< FluxReconstructionStrategy > m_fluxreconstructionstrategy;
@@ -178,6 +185,9 @@ private:  // data
   
   /// vector containing the  FluxReconstructionElementData for different element types
   std::vector< FluxReconstructionElementData* > m_frLocalData;
+  
+  /// pointer to states reconstructor strategy
+  Common::SelfRegistPtr< ReconstructStatesFluxReconstruction > m_statesReconstructor;
 
 };  // end of class FluxReconstructionSolverData
 

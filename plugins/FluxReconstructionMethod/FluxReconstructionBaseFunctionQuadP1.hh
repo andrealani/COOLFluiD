@@ -22,7 +22,8 @@ namespace COOLFluiD {
  * This class provides the spectral finite difference base function describing the
  * representation of the solution in a P1 quadrangular element.
  *
- * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
+ * @author Alexander Papen
  *
  */
 class FluxReconstructionBaseFunctionQuadP1 : public ShapeFunctions::LagrangeShapeFunction {
@@ -117,17 +118,14 @@ public:
     delete frElemData;
     //end RV
     
-    //CFLog(INFO, "QUADP1 COMPUTE SHAPE FCT EXECUTED!!!!!\n");
     // coordinates of output points
     const CFreal ksi = mappedCoord[KSI];
     const CFreal eta = mappedCoord[ETA];
-    CFLog(INFO, "ksi = " << ksi << " eta = " << eta << "\n");
 
     // ksi factors
     for (CFuint iSol = 0; iSol < 2; ++iSol)
     {
       const CFreal ksiSol = m_solPnts1D[iSol];
-      //CFLog(INFO, "ksiSol = " << ksiSol << "\n");
       m_ksiFac[iSol] = 1.;
       for (CFuint iFac = 0; iFac < 2; ++iFac)
       {
@@ -135,7 +133,6 @@ public:
         {
           const CFreal ksiFac = m_solPnts1D[iFac];
           m_ksiFac[iSol] *= (ksi-ksiFac)/(ksiSol-ksiFac);
-	  //CFLog(INFO, "ksiFac = " << m_ksiFac[iSol] << "\n");
         }
       }
     }
@@ -163,7 +160,6 @@ public:
       for (CFuint iEta = 0; iEta < 2; ++iEta, ++iFunc)
       {
         shapeFunc[iFunc] = ksiFac*m_etaFac[iEta];
-	//CFLog(INFO, "shapeFunc[" << iFunc << "] = " << shapeFunc[iFunc] << "\n");
       }
     }
 

@@ -7,6 +7,9 @@
 #include "Environment/ObjectProvider.hh"
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionSolver.hh"
+#include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
+#include "FluxReconstructionMethod/BaseFluxPntDistribution.hh"
+#include "FluxReconstructionMethod/BaseInterfaceFlux.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -286,32 +289,17 @@ Common::Signal::return_t FluxReconstructionSolver::afterMeshUpdateActionImpl(Com
 
 //////////////////////////////////////////////////////////////////////////////
 
-// std::vector<Common::SafePtr<NumericalStrategy> > FluxReconstructionSolver::getStrategyList() const
-// {
-//   vector<Common::SafePtr<NumericalStrategy> > result;
+std::vector<Common::SafePtr<NumericalStrategy> > FluxReconstructionSolver::getStrategyList() const
+{
+  std::vector<Common::SafePtr<NumericalStrategy> > result;
 
-//   // add strategies here
-//   result.push_back(_data->getPolyReconstructor().d_castTo<NumericalStrategy>());
-//   result.push_back(_data->getLimiter().d_castTo<NumericalStrategy>());
+  // add strategies here
+  result.push_back(m_data->getStatesReconstructor()  .d_castTo<NumericalStrategy>());
+  result.push_back(m_data->getInterfaceFluxStrategy()  .d_castTo<NumericalStrategy>());
+  result.push_back(m_data->getFluxPntDistributionStrategy()  .d_castTo<NumericalStrategy>());
   
-//   SafePtr<vector<SelfRegistPtr<ComputeSourceTerm<CellCenterFVMData> > > > sourceTerms =
-//     _data->getSourceTermComputer();
-  
-//   for(CFuint i=0; i<sourceTerms->size();++i){
-//     SafePtr<ComputeSourceTerm<CellCenterFVMData> > sourceTerm = ((*sourceTerms)[i]).getPtr();
-//     result.push_back(sourceTerm.d_castTo<NumericalStrategy>());
-//   }
-  
-//   SafePtr<vector<SelfRegistPtr<EquationFilter<CellCenterFVMData> > > > equationFilters =
-//     _data->getEquationFilters();
-  
-//   for(CFuint i=0; i<equationFilters->size();++i){
-//     SafePtr<EquationFilter<CellCenterFVMData> > eqFilter = ((*equationFilters)[i]).getPtr();
-//     result.push_back(eqFilter.d_castTo<NumericalStrategy>());
-//   }
-  
-//   return result;
-// }
+  return result;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 

@@ -14,9 +14,11 @@
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/HexaFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/FluxReconstructionStrategy.hh"
 #include "FluxReconstructionMethod/BaseInterfaceFlux.hh"
 #include "FluxReconstructionMethod/BaseFluxPntDistribution.hh"
+#include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -37,8 +39,8 @@ MethodCommandProvider<
 
 void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& options)
 {
-  options.addConfigOption< std::string >("IntegratorOrder","Order of the Integration to be used for numerical quadrature.");
-  options.addConfigOption< std::string >("IntegratorQuadrature","Type of Quadrature to be used in the Integration.");
+  //options.addConfigOption< std::string >("IntegratorOrder","Order of the Integration to be used for numerical quadrature.");
+  //options.addConfigOption< std::string >("IntegratorQuadrature","Type of Quadrature to be used in the Integration.");
   options.addConfigOption< std::string >("StrategyForSomething","A MethodStrategy to be used for some calculation (default = FluxReconstructionStrategy).");
   options.addConfigOption< std::string >("InterfaceFluxComputer","Name of the interface flux computer");
   options.addConfigOption< std::string >("FluxPointDistribution","Name of the flux point distribution");
@@ -51,14 +53,15 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_lss(),
   m_convergenceMtd(),
   m_stdTrsGeoBuilder(),
-  m_frLocalData()
+  m_frLocalData(),
+  m_statesReconstructor()
 {
   addConfigOptionsTo(this);
 
-  m_intorderStr = "P1";
-  m_intquadStr  = "INVALID";
-  setParameter( "IntegratorOrder",      &m_intorderStr );
-  setParameter( "IntegratorQuadrature", &m_intquadStr );
+  //m_intorderStr = "P1";
+  //m_intquadStr  = "INVALID";
+  //setParameter( "IntegratorOrder",      &m_intorderStr );
+  //setParameter( "IntegratorQuadrature", &m_intquadStr );
 
   m_fluxreconstructionstrategyStr = "FluxReconstructionStrategy";
   setParameter( "StrategyForSomething", &m_fluxreconstructionstrategyStr );
@@ -84,9 +87,25 @@ void FluxReconstructionSolverData::setup()
   
   SpaceMethodData::setup();
   
+  // setup TRS Geo builder
+  m_stdTrsGeoBuilder.setup();
+  
   // create local FR data
   createFRLocalData();
+  
+  // setup StatesReconstructor
+  m_statesReconstructor->setup();
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionSolverData::unsetup()
+{
+  CFAUTOTRACE;
+  
+  SpaceMethodData::unsetup();
+}
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -95,13 +114,13 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
   SpaceMethodData::configure(args);
   SharedPtr< FluxReconstructionSolverData > thisPtr(this);
 
-  configureIntegrator();
+  //configureIntegrator();
 
-  /* add here the setup for the specific integrators for each element that
-   * have different set of shape and interpolator type */
-
-  CFLog(INFO,"FluxReconstructionSolver: integrator quadrature: " << m_intquadStr << "\n");
-  CFLog(INFO,"FluxReconstructionSolver: integrator order: " << m_intorderStr << "\n");
+//   /* add here the setup for the specific integrators for each element that
+//    * have different set of shape and interpolator type */
+// 
+//   CFLog(INFO,"FluxReconstructionSolver: integrator quadrature: " << m_intquadStr << "\n");
+//   CFLog(INFO,"FluxReconstructionSolver: integrator order: " << m_intorderStr << "\n");
 
   /* add here different strategies configuration */
 
@@ -170,25 +189,32 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
 
   }
   cf_assert(m_fluxpntdistribution.isNotNull());
+  
+  // states reconstructor
+  Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , ReconstructStatesFluxReconstruction > > recProv =
+    Environment::Factory< ReconstructStatesFluxReconstruction >
+                                                  ::getInstance().getProvider("ReconstructStatesFluxReconstruction");
+  cf_assert(recProv.isNotNull());
+  m_statesReconstructor = recProv->create("ReconstructStatesFluxReconstruction",thisPtr);
 
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FluxReconstructionSolverData::configureIntegrator()
-{
-  const CFQuadrature::Type quadType = CFQuadrature::Convert::to_enum( m_intquadStr );
-  const CFPolyOrder::Type order = CFPolyOrder::Convert::to_enum( m_intorderStr );
-
-  m_volumeIntegrator.setIntegrationForAllGeo(quadType,order);
-}
+// void FluxReconstructionSolverData::configureIntegrator()
+// {
+//   const CFQuadrature::Type quadType = CFQuadrature::Convert::to_enum( m_intquadStr );
+//   const CFPolyOrder::Type order = CFPolyOrder::Convert::to_enum( m_intorderStr );
+// 
+//   m_volumeIntegrator.setIntegrationForAllGeo(quadType,order);
+// }
 
 //////////////////////////////////////////////////////////////////////////////
 
-SafePtr<VolumeIntegrator> FluxReconstructionSolverData::getVolumeIntegrator()
-{
-  return &m_volumeIntegrator;
-}
+// SafePtr<VolumeIntegrator> FluxReconstructionSolverData::getVolumeIntegrator()
+// {
+//   return &m_volumeIntegrator;
+// }
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -229,10 +255,10 @@ void FluxReconstructionSolverData::createFRLocalData()
       {
         throw Common::NotImplementedException (FromHere(),"FR has not been implemented for tetrahedral cells");
       } break;
-      //case CFGeoShape::HEXA:
-      //{
-      //  m_frLocalData[iElemType] = new HexaSpectralFDElementData(polyOrder);
-      //} break;
+      case CFGeoShape::HEXA:
+      {
+        m_frLocalData[iElemType] = new HexaFluxReconstructionElementData(polyOrder);
+      } break;
       default:
       {
         throw Common::NotImplementedException (FromHere(),"FR method not implemented for elements of type "
@@ -247,6 +273,14 @@ void FluxReconstructionSolverData::createFRLocalData()
 std::vector< FluxReconstructionElementData* >& FluxReconstructionSolverData::getFRLocalData()
 {
   return m_frLocalData;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+SafePtr< ReconstructStatesFluxReconstruction > FluxReconstructionSolverData::getStatesReconstructor()
+// this function has to be put in the implementation file because of the forward declaration of ReconstructStatesSpectralFD
+{
+  return m_statesReconstructor.getPtr();
 }
 
 //////////////////////////////////////////////////////////////////////////////

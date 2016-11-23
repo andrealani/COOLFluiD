@@ -21,7 +21,8 @@ namespace COOLFluiD {
  * This class provides the spectral finite difference base function describing the
  * representation of the solution on a face of a P5 hexahedral element.
  *
- * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
+ * @author Alexander Papen
  *
  */
 class FluxReconstructionBaseFunctionFaceQuadP5 : public ShapeFunctions::LagrangeShapeFunction {

@@ -22,7 +22,8 @@ namespace COOLFluiD {
  * This class provides the FR base function describing the
  * representation of the solution in a P4 quadrangular element.
  *
- * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
+ * @author Alexander Papen
  *
  */
 class FluxReconstructionBaseFunctionQuadP4 : public ShapeFunctions::LagrangeShapeFunction {

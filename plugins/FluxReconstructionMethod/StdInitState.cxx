@@ -186,7 +186,7 @@ void StdInitState::executeOnTrs()
 
   // prepares to loop over cells by getting the GeometricEntityPool
   SafePtr< GeometricEntityPool<StdTrsGeoBuilder> > geoBuilder = getMethodData().getStdTrsGeoBuilder();
-  geoBuilder -> setup();
+  //geoBuilder -> setup();
   StdTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
   geoData.trs = trs;
 

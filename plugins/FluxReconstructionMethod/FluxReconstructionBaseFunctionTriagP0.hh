@@ -23,7 +23,8 @@ namespace COOLFluiD {
  * representation of the solution in a P0
  * triangular element.
  *
- * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
+ * @author Alexander Papen
  *
  */
 class FluxReconstructionBaseFunctionTriagP0 : public ShapeFunctions::LagrangeShapeFunction {

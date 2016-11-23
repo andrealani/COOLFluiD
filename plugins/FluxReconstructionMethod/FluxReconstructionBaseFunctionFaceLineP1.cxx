@@ -14,7 +14,6 @@ CFuint FluxReconstructionBaseFunctionFaceLineP1::_interpolatorID = 0;
 
 FluxReconstructionBaseFunctionFaceLineP1::FluxReconstructionBaseFunctionFaceLineP1()
 {
-  //CFLog(INFO, "FACELINEP1 BASE FUNCTION CREATED!!!!!\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -22,7 +22,8 @@ namespace COOLFluiD {
  * This class provides the spectral finite difference base function describing the
  * representation of the solution in a P2 quadrangular element.
  *
- * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
+ * @author Alexander Papen
  *
  */
 class FluxReconstructionBaseFunctionQuadP2 : public ShapeFunctions::LagrangeShapeFunction {

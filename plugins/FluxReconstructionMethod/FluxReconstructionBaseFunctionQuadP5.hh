@@ -19,10 +19,11 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class provides the spectral finite difference base function describing the
+ * This class provides the FR base function describing the
  * representation of the solution in a P5 quadrangular element.
  *
- * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
+ * @author Alexander Papen
  *
  */
 class FluxReconstructionBaseFunctionQuadP5 : public ShapeFunctions::LagrangeShapeFunction {
@@ -168,7 +169,7 @@ public:
          const std::vector<RealVector>& mappedCoord,
                std::vector<RealMatrix>& grad)
   {
-    throw Common::NotImplementedException (FromHere(),"The gradient of the spectral finite difference base functions is not implemented (and should not be necessary...)");
+    throw Common::NotImplementedException (FromHere(),"The gradient of the Flux Reconstruction base functions is not implemented (and should not be necessary...)");
   }
 
   /**
@@ -199,7 +200,7 @@ public:
          const std::vector<RealVector>& mappedCoord,
                std::vector<RealMatrix>& jacob)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static void computeJacobianPlus1D(
@@ -207,7 +208,7 @@ public:
          const std::vector<RealVector>& mappedCoord,
                std::vector<RealMatrix>& jacob)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static void computeJacobianPlus2D(
@@ -215,7 +216,7 @@ public:
          const std::vector<RealVector>& mappedCoord,
                std::vector<RealMatrix>& jacob)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static void computeJacobianDeterminant(
@@ -223,7 +224,7 @@ public:
          const std::vector<Framework::Node*>& nodes,
                std::valarray<CFreal>& detJacobian)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static void computeJacobianDeterminantPlus1D(
@@ -231,7 +232,7 @@ public:
          const std::vector<Framework::Node*>& nodes,
                std::valarray<CFreal>& detJacobian)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static void computeJacobianDeterminantPlus2D(
@@ -239,7 +240,7 @@ public:
          const std::vector<Framework::Node*>& nodes,
                std::valarray<CFreal>& detJacobian)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static void computeFaceJacobianDeterminant(
@@ -274,12 +275,12 @@ public:
 
   static CFreal computeVolume(const std::vector<Framework::Node*>& nodes)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static RealVector computeCentroid(const std::vector<Framework::Node*>& nodes)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   /**
@@ -300,22 +301,22 @@ public:
 
   static std::vector<RealVector> computeAvgFaceNormals(const std::vector<Framework::Node*>& nodes)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static std::vector<RealVector> computeFaceNormals(const RealVector mappedCoord, const std::vector<Framework::Node*>& nodes)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static RealVector computeAvgCellNormal(const std::vector<Framework::Node*>& nodes)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
   static RealVector computeCellNormal(const RealVector& mappedCoord, const std::vector<Framework::Node*>& nodes)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
  /**
@@ -363,7 +364,7 @@ private:
                           const CFuint& i,
                           const CFuint& j)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Spectral finite difference base functions should not be used as geometrical shape functions.");
+    throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
   }
 
 private: // data

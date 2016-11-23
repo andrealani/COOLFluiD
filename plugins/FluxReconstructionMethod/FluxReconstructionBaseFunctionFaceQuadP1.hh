@@ -22,7 +22,8 @@ namespace FluxReconstructionMethod {
  * This class provides the FR base function describing the
  * representation of the solution on a face of a P1 (linear) hexahedral element.
  *
- * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
+ * @author Alexander Papen
  *
  */
 class FluxReconstructionBaseFunctionFaceQuadP1 : public ShapeFunctions::LagrangeShapeFunction {
