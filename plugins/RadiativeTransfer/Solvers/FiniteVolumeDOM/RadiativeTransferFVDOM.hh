@@ -210,6 +210,12 @@ private: //data
   
   /// storage of the radiative source table. Source[ib](it,ip)
   Framework::DataSocketSource <CFreal> socket_TempProfile; 
+
+  /// storage of the binned opacity
+  Framework::DataSocketSource <CFreal> socket_alpha_avbin;
+  
+  /// storage of the binned radiative source
+  Framework::DataSocketSource <CFreal> socket_B_bin;
   
   /// pointer to the physical-chemical library
   Common::SafePtr<Framework::PhysicalChemicalLibrary> m_library; 

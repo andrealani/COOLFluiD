@@ -16,36 +16,44 @@ namespace Framework {
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct SocketBundle{
-    SocketBundle();
-
-    /// the socket to the radiative heat flux at the wall faces
-    Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > states;
-
-    /// storage of the ghost states
-    Framework::DataSocketSink<Framework::State*> gstates;
-
-    /// storage of the nodes
-    Framework::DataSocketSink < Framework::Node* , Framework::GLOBAL > nodes;
-
-    /// storage of the nodal state's
-    Framework::DataSocketSink < RealVector > nstates;
-
-    /// handle to the face normals
-    Framework::DataSocketSink< CFreal> normals;
-
-    /// IDs corresponding to the cell for which the normal point outward
-    Framework::DataSocketSink<CFint> isOutward;
-
-    /// IDs corresponding to the cell for which the normal point outward
-    Framework::DataSocketSink<CFreal> volumes;
-
-    /// storage of face centroids
-    Framework::DataSocketSink<CFreal> faceCenters;
-
-    /// storage of face areas
-    Framework::DataSocketSink<CFreal> faceAreas;
-
+class SocketBundle {
+public:
+  
+  SocketBundle();
+  
+  /// the socket to the radiative heat flux at the wall faces
+  Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > states;
+  
+  /// storage of the ghost states
+  Framework::DataSocketSink<Framework::State*> gstates;
+  
+  /// storage of the nodes
+  Framework::DataSocketSink < Framework::Node* , Framework::GLOBAL > nodes;
+  
+  /// storage of the nodal state's
+  Framework::DataSocketSink < RealVector > nstates;
+  
+  /// handle to the face normals
+  Framework::DataSocketSink< CFreal> normals;
+  
+  /// IDs corresponding to the cell for which the normal point outward
+  Framework::DataSocketSink<CFint> isOutward;
+  
+  /// IDs corresponding to the cell for which the normal point outward
+  Framework::DataSocketSink<CFreal> volumes;
+  
+  /// storage of face centroids
+  Framework::DataSocketSink<CFreal> faceCenters;
+  
+  /// storage of face areas
+  Framework::DataSocketSink<CFreal> faceAreas; 
+  
+  /// storage of the binned opacity
+  Framework::DataHandle<CFreal> alpha_avbin;
+  
+  /// storage of the binned radiative source
+  Framework::DataHandle<CFreal> B_bin;
+  
 };
 
 //////////////////////////////////////////////////////////////////////////////

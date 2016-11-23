@@ -65,6 +65,8 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   socket_qy("qy"),
   socket_qz("qz"),
   socket_TempProfile("TempProfile"),
+  socket_alpha_avbin("alpha_avbin"),
+  socket_B_bin("B_bin"),
   m_library(CFNULL),
   m_radiation(new RadiationPhysicsHandler("RadiationPhysicsHandler")),
   m_mapGeoToTrs(CFNULL),
@@ -225,7 +227,9 @@ RadiativeTransferFVDOM::providesSockets()
   result.push_back(&socket_qy);
   result.push_back(&socket_qz);
   result.push_back(&socket_TempProfile);
-  
+  result.push_back(&socket_alpha_avbin);
+  result.push_back(&socket_B_bin);
+    
   return result;
 }
 
@@ -263,6 +267,11 @@ void RadiativeTransferFVDOM::setup()
   sockets.nodes       = socket_nodes;
   sockets.isOutward   = socket_isOutward;
   sockets.normals     = socket_normals;
+  
+  // source sockets cannot be copied
+  sockets.alpha_avbin = socket_alpha_avbin.getDataHandle();
+  sockets.B_bin       = socket_B_bin.getDataHandle();
+  
   // sockets.faceCenters = socket_faceCenters;
   // sockets.faceAreas   = socket_faceAreas;
   
@@ -308,7 +317,7 @@ void RadiativeTransferFVDOM::setup()
     CFLog(WARN, "RadiativeTransferFVDOM::setup() => This ndirs is not allowed. 8 directions is chosen \n");
     m_nbDirs = 8;
   } 
-    
+  
   if (m_readOpacityTables) {
     // Reading the table
     readOpacities();
@@ -481,6 +490,10 @@ void RadiativeTransferFVDOM::setup()
   qz     = 0.0;
   CellID = 0.0;
   TempProfile = 0.0;
+  
+  // resize the bins storage
+  socket_alpha_avbin.getDataHandle().resize(nbCells*m_nbBins);
+  socket_B_bin.getDataHandle().resize(nbCells*m_nbBins);
   
   //Averages for the Sphere case
   if (m_radialData) {

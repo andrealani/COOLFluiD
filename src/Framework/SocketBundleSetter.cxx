@@ -22,7 +22,9 @@ SocketBundle::SocketBundle():
   isOutward("Null"),
   volumes("Null"),
   faceCenters("Null"),
-  faceAreas("Null")
+  faceAreas("Null"),
+  alpha_avbin(CFNULL),
+  B_bin(CFNULL)
 {
 }
 
