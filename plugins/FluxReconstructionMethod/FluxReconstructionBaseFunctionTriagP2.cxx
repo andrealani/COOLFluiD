@@ -9,6 +9,9 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 CFuint FluxReconstructionBaseFunctionTriagP2::_interpolatorID = 0;
+RealVector FluxReconstructionBaseFunctionTriagP2::m_ksiFac = RealVector(3);
+RealVector FluxReconstructionBaseFunctionTriagP2::m_etaFac = RealVector(3);
+RealVector FluxReconstructionBaseFunctionTriagP2::m_solPnts1D = RealVector(3);
 
 //////////////////////////////////////////////////////////////////////////////
 

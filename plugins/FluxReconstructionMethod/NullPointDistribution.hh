@@ -4,12 +4,12 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_Numerics_FluxReconstructionMethod_NullFluxPntDistribution_hh
-#define COOLFluiD_Numerics_FluxReconstructionMethod_NullFluxPntDistribution_hh
+#ifndef COOLFluiD_Numerics_FluxReconstructionMethod_NullPointDistribution_hh
+#define COOLFluiD_Numerics_FluxReconstructionMethod_NullPointDistribution_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "FluxReconstructionMethod/BaseFluxPntDistribution.hh"
+#include "FluxReconstructionMethod/BasePointDistribution.hh"
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -23,17 +23,17 @@ namespace COOLFluiD {
 /// This class represent the base interface flux computer
 /// @author Alexander Papen
 /// @author Ray Vandenhoeck
-class NullFluxPntDistribution : public BaseFluxPntDistribution {
+class NullPointDistribution : public BasePointDistribution {
 public:  // methods
 
   /// Constructor
-  NullFluxPntDistribution(const std::string& name);
+  NullPointDistribution(const std::string& name);
 
   /// Destructor
-  ~NullFluxPntDistribution();
+  ~NullPointDistribution();
   
-  /// Add compute the term to add in the jacobian
-  void compute();
+  /// Get the 1D coordinates of the point distribution
+  std::vector<CFreal> getLocalCoords1D(CFPolyOrder::Type solOrder);
   
   /// Set up private data and data
   void setup();
@@ -54,5 +54,5 @@ public:  // methods
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif  // COOLFluiD_FluxReconstructionMethod_NullFluxPntDistribution_hh
+#endif  // COOLFluiD_FluxReconstructionMethod_NullPointDistribution_hh
 

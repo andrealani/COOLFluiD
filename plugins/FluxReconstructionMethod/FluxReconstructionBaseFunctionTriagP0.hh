@@ -271,9 +271,9 @@ public:
   static bool isInMappedElement(const RealVector& mappedCoord)
   {
     cf_assert(mappedCoord.size() == 2);
-    if( (mappedCoord[0] >= 0.) &&
-        (mappedCoord[1] >= 0.) &&
-        (mappedCoord.sum() <= 1.))
+    if( (mappedCoord[0] >= -1.) &&
+        (mappedCoord[1] >= -1.) &&
+        (mappedCoord.sum() <= 0.))
     {
       return true;
     }

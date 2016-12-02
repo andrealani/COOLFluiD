@@ -8,7 +8,7 @@
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionSolver.hh"
 #include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
-#include "FluxReconstructionMethod/BaseFluxPntDistribution.hh"
+#include "FluxReconstructionMethod/BasePointDistribution.hh"
 #include "FluxReconstructionMethod/BaseInterfaceFlux.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -295,8 +295,7 @@ std::vector<Common::SafePtr<NumericalStrategy> > FluxReconstructionSolver::getSt
 
   // add strategies here
   result.push_back(m_data->getStatesReconstructor()  .d_castTo<NumericalStrategy>());
-  result.push_back(m_data->getInterfaceFluxStrategy()  .d_castTo<NumericalStrategy>());
-  result.push_back(m_data->getFluxPntDistributionStrategy()  .d_castTo<NumericalStrategy>());
+  result.push_back(m_data->getInterfaceFlux()  .d_castTo<NumericalStrategy>());
   
   return result;
 }

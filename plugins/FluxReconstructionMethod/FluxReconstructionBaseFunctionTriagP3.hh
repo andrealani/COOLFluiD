@@ -10,6 +10,8 @@
 #include "Common/ShouldNotBeHereException.hh"
 #include "MathTools/RealMatrix.hh"
 
+#include "FluxReconstructionMethod/TriagFluxReconstructionElementData.hh" 
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -104,27 +106,87 @@ public:
   static void computeShapeFunction(
         const RealVector& mappedCoord, RealVector& shapeFunc)
   {
-    /// @note kvda: Specific for one partition!!!
-    const CFreal ksi1 = mappedCoord[KSI];
-    const CFreal eta1 = mappedCoord[ETA];
-    const CFreal ksi2 = ksi1*ksi1;
-    const CFreal eta2 = eta1*eta1;
-    const CFreal ksi1eta1 = ksi1*eta1;
-    const CFreal ksi3 = ksi2*ksi1;
-    const CFreal eta3 = eta2*eta1;
-    const CFreal ksi2eta1 = ksi2*eta1;
-    const CFreal ksi1eta2 = ksi1*eta2;
+//     /// @note kvda: Specific for one partition!!!
+//     const CFreal ksi1 = mappedCoord[KSI];
+//     const CFreal eta1 = mappedCoord[ETA];
+//     const CFreal ksi2 = ksi1*ksi1;
+//     const CFreal eta2 = eta1*eta1;
+//     const CFreal ksi1eta1 = ksi1*eta1;
+//     const CFreal ksi3 = ksi2*ksi1;
+//     const CFreal eta3 = eta2*eta1;
+//     const CFreal ksi2eta1 = ksi2*eta1;
+//     const CFreal ksi1eta2 = ksi1*eta2;
+//     
+//     shapeFunc[0] = 1.499644563 - 9.323086794*ksi1 - 9.323086794*eta1 + 15.65254781*ksi2 + 35.62768634*ksi1eta1 + 15.65254781*eta2 - 7.857844549*ksi3 - 28.36593385*ksi2eta1 - 28.36593385*ksi1eta2 - 7.857844549*eta3;
+//     shapeFunc[1] = -0.3793974482 + 15.82230225*ksi1 - 1.032636798*eta1 - 36.42709187*ksi2 - 40.18247406*ksi1eta1 + 4.939146613*eta2 + 21.10686244*ksi3 + 48.86642434*ksi2eta1 + 22.80272828*ksi1eta2 - 3.576136537*eta3;
+//     shapeFunc[2] = -0.3793974482 - 1.032636798*ksi1 + 15.82230225*eta1 + 4.939146613*ksi2 - 40.18247406*ksi1eta1 - 36.42709187*eta2 - 3.576136537*ksi3 + 22.80272828*ksi2eta1 + 48.86642434*ksi1eta2 + 21.10686244*eta3;
+//     shapeFunc[3] = 0.1226753786 - 6.288705845*ksi1 + 1.362607637*eta1 + 26.89349546*ksi2 - 3.763383698*ksi1eta1 - 2.915004262*eta2 - 21.10686244*ksi3 - 14.45416299*ksi2eta1 + 11.60953307*ksi1eta2 + 1.380697076*eta3;
+//     shapeFunc[4] = 0.1693258522 - 3.87025862*ksi1 - 3.87025862*eta1 + 3.87025862*ksi2 + 75.74262679*ksi1eta1 + 3.87025862*eta2 - 71.87236817*ksi2eta1 - 71.87236817*ksi1eta2;
+//     shapeFunc[5] = 0.1226753786 + 1.362607637*ksi1 - 6.288705845*eta1 - 2.915004262*ksi2 - 3.763383698*ksi1eta1 + 26.89349546*eta2 + 1.380697076*ksi3 + 11.60953307*ksi2eta1 - 14.45416299*ksi1eta2 - 21.10686244*eta3;
+//     shapeFunc[6] = -0.02873896682 + 1.591524816*ksi1 - 0.4698094915*eta1 - 7.920985835*ksi2 + 5.262209697*ksi1eta1 + 0.4698094915*eta2 + 7.857844549*ksi3 - 4.792400205*ksi2eta1 - 4.792400205*ksi1eta2;
+//     shapeFunc[7] = -0.04902417135 + 1.882753185*ksi1 + 0.3253096607*eta1 - 5.789263*ksi2 - 17.00150851*ksi1eta1 + 1.227086965*eta2 + 3.576136537*ksi3 + 33.5311379*ksi2eta1 + 7.46744184*ksi1eta2 - 1.380697076*eta3;
+//     shapeFunc[8] = -0.04902417135 + 0.3253096607*ksi1 + 1.882753185*eta1 + 1.227086965*ksi2 - 17.00150851*ksi1eta1 - 5.789263*eta2 - 1.380697076*ksi3 + 7.46744184*ksi2eta1 + 33.5311379*ksi1eta2 + 3.576136537*eta3;
+//     shapeFunc[9] = -0.02873896682 - 0.4698094915*ksi1 + 1.591524816*eta1 + 0.4698094915*ksi2 + 5.262209697*ksi1eta1 - 7.920985835*eta2 - 4.792400205*ksi2eta1 - 4.792400205*ksi1eta2 + 7.857844549*eta3;
     
-    shapeFunc[0] = 1.499644563 - 9.323086794*ksi1 - 9.323086794*eta1 + 15.65254781*ksi2 + 35.62768634*ksi1eta1 + 15.65254781*eta2 - 7.857844549*ksi3 - 28.36593385*ksi2eta1 - 28.36593385*ksi1eta2 - 7.857844549*eta3;
-    shapeFunc[1] = -0.3793974482 + 15.82230225*ksi1 - 1.032636798*eta1 - 36.42709187*ksi2 - 40.18247406*ksi1eta1 + 4.939146613*eta2 + 21.10686244*ksi3 + 48.86642434*ksi2eta1 + 22.80272828*ksi1eta2 - 3.576136537*eta3;
-    shapeFunc[2] = -0.3793974482 - 1.032636798*ksi1 + 15.82230225*eta1 + 4.939146613*ksi2 - 40.18247406*ksi1eta1 - 36.42709187*eta2 - 3.576136537*ksi3 + 22.80272828*ksi2eta1 + 48.86642434*ksi1eta2 + 21.10686244*eta3;
-    shapeFunc[3] = 0.1226753786 - 6.288705845*ksi1 + 1.362607637*eta1 + 26.89349546*ksi2 - 3.763383698*ksi1eta1 - 2.915004262*eta2 - 21.10686244*ksi3 - 14.45416299*ksi2eta1 + 11.60953307*ksi1eta2 + 1.380697076*eta3;
-    shapeFunc[4] = 0.1693258522 - 3.87025862*ksi1 - 3.87025862*eta1 + 3.87025862*ksi2 + 75.74262679*ksi1eta1 + 3.87025862*eta2 - 71.87236817*ksi2eta1 - 71.87236817*ksi1eta2;
-    shapeFunc[5] = 0.1226753786 + 1.362607637*ksi1 - 6.288705845*eta1 - 2.915004262*ksi2 - 3.763383698*ksi1eta1 + 26.89349546*eta2 + 1.380697076*ksi3 + 11.60953307*ksi2eta1 - 14.45416299*ksi1eta2 - 21.10686244*eta3;
-    shapeFunc[6] = -0.02873896682 + 1.591524816*ksi1 - 0.4698094915*eta1 - 7.920985835*ksi2 + 5.262209697*ksi1eta1 + 0.4698094915*eta2 + 7.857844549*ksi3 - 4.792400205*ksi2eta1 - 4.792400205*ksi1eta2;
-    shapeFunc[7] = -0.04902417135 + 1.882753185*ksi1 + 0.3253096607*eta1 - 5.789263*ksi2 - 17.00150851*ksi1eta1 + 1.227086965*eta2 + 3.576136537*ksi3 + 33.5311379*ksi2eta1 + 7.46744184*ksi1eta2 - 1.380697076*eta3;
-    shapeFunc[8] = -0.04902417135 + 0.3253096607*ksi1 + 1.882753185*eta1 + 1.227086965*ksi2 - 17.00150851*ksi1eta1 - 5.789263*eta2 - 1.380697076*ksi3 + 7.46744184*ksi2eta1 + 33.5311379*ksi1eta2 + 3.576136537*eta3;
-    shapeFunc[9] = -0.02873896682 - 0.4698094915*ksi1 + 1.591524816*eta1 + 0.4698094915*ksi2 + 5.262209697*ksi1eta1 - 7.920985835*eta2 - 4.792400205*ksi2eta1 - 4.792400205*ksi1eta2 + 7.857844549*eta3;
+    //added RV
+    FluxReconstructionElementData* frElemData = new TriagFluxReconstructionElementData(getInterpolatorOrder());
+
+    Common::SafePtr< std::vector< CFreal > > solPnts1D = frElemData->getSolPntsLocalCoord1D();
+
+    const CFuint nbrSolPnts1D = solPnts1D->size();
+    cf_assert(nbrSolPnts1D == m_solPnts1D.size());
+    for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
+    {
+      m_solPnts1D[iSol] = (*solPnts1D)[iSol];
+    }
+
+    delete frElemData;
+    //end RV
+    
+    // coordinates of output points
+    const CFreal ksi = mappedCoord[KSI];
+    const CFreal eta = mappedCoord[ETA];
+
+    // ksi factors
+    for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
+    {
+      const CFreal ksiSol = m_solPnts1D[iSol];
+      m_ksiFac[iSol] = 1.;
+      for (CFuint iFac = 0; iFac < nbrSolPnts1D-iSol; ++iFac)
+      {
+        if (iFac != iSol)
+        {
+          const CFreal ksiFac = (m_solPnts1D[iFac]+1.)*(2.-ksiSol)/2.-1.;//Map [-1,1] to [-1,1-ksi]
+          m_ksiFac[iSol] *= (ksi-ksiFac)/(ksiSol-ksiFac);
+        }
+      }
+    }
+
+    // eta factors
+    for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
+    {
+      const CFreal etaSol = m_solPnts1D[iSol];
+      m_etaFac[iSol] = 1.;
+      for (CFuint iFac = 0; iFac < nbrSolPnts1D-iSol; ++iFac)
+      {
+        if (iFac != iSol)
+        {
+          const CFreal etaFac = (m_solPnts1D[iFac]+1.)*(2.-etaSol)/2.-1.;//Map [-1,1] to [-1,1-ksi]
+          m_etaFac[iSol] *= (eta-etaFac)/(etaSol-etaFac);
+        }
+      }
+    }
+
+    // compute shapefunctions
+    CFuint iFunc = 0;
+    for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+    {
+      const CFreal ksiFac = m_ksiFac[iKsi];
+      for (CFuint iEta = 0; iEta < nbrSolPnts1D-iKsi; ++iEta, ++iFunc)
+      {
+        shapeFunc[iFunc] = ksiFac*m_etaFac[iEta];
+      }
+    }
   }
 
    /**
@@ -291,9 +353,9 @@ public:
   static bool isInMappedElement(const RealVector& mappedCoord)
   {
     cf_assert(mappedCoord.size() == 2);
-    if( (mappedCoord[0] >= 0.) &&
-        (mappedCoord[1] >= 0.) &&
-        (mappedCoord.sum() <= 1.))
+    if( (mappedCoord[0] >= -1.) &&
+        (mappedCoord[1] >= -1.) &&
+        (mappedCoord.sum() <= 0.))
     {
       return true;
     }
@@ -336,6 +398,15 @@ private: // data
 
   /// solution integrator ID
   static CFuint _interpolatorID;
+  
+  /// factors for computation of basis functions
+  static RealVector m_ksiFac;
+
+  /// factors for computation of basis functions
+  static RealVector m_etaFac;
+
+  /// vector holding the 1D coordinates of solution points
+  static RealVector m_solPnts1D;
 
   /// temporary vector for mapped coordinates in 2D
   static RealVector m_mappedCoord;

@@ -39,6 +39,21 @@ HexaFluxReconstructionElementData::HexaFluxReconstructionElementData(CFPolyOrder
 
 //////////////////////////////////////////////////////////////////////
 
+HexaFluxReconstructionElementData::HexaFluxReconstructionElementData(CFPolyOrder::Type polyOrder, 
+								     Common::SafePtr< BasePointDistribution > solPntDist, 
+								     Common::SafePtr< BasePointDistribution > flxPntDist)
+{
+  m_shape = CFGeoShape::HEXA;
+  m_dimensionality = DIM_3D;
+  m_polyOrder = polyOrder;
+  m_solPntsLocalCoord1D = solPntDist->getLocalCoords1D(polyOrder);
+  m_flxPntsLocalCoord1D = flxPntDist->getLocalCoords1D(polyOrder);
+
+  resetFluxReconstructionElementData();
+}
+
+//////////////////////////////////////////////////////////////////////
+
 HexaFluxReconstructionElementData::~HexaFluxReconstructionElementData()
 {
 }

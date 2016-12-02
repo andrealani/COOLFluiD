@@ -15,9 +15,9 @@
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/HexaFluxReconstructionElementData.hh"
-#include "FluxReconstructionMethod/FluxReconstructionStrategy.hh"
+#include "FluxReconstructionMethod/TriagFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/BaseInterfaceFlux.hh"
-#include "FluxReconstructionMethod/BaseFluxPntDistribution.hh"
+#include "FluxReconstructionMethod/BasePointDistribution.hh"
 #include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -41,9 +41,9 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
 {
   //options.addConfigOption< std::string >("IntegratorOrder","Order of the Integration to be used for numerical quadrature.");
   //options.addConfigOption< std::string >("IntegratorQuadrature","Type of Quadrature to be used in the Integration.");
-  options.addConfigOption< std::string >("StrategyForSomething","A MethodStrategy to be used for some calculation (default = FluxReconstructionStrategy).");
   options.addConfigOption< std::string >("InterfaceFluxComputer","Name of the interface flux computer");
   options.addConfigOption< std::string >("FluxPointDistribution","Name of the flux point distribution");
+  options.addConfigOption< std::string >("SolutionPointDistribution","Name of the solution point distribution");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -54,7 +54,8 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_convergenceMtd(),
   m_stdTrsGeoBuilder(),
   m_frLocalData(),
-  m_statesReconstructor()
+  m_statesReconstructor(),
+  m_faceBuilder()
 {
   addConfigOptionsTo(this);
 
@@ -62,15 +63,15 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   //m_intquadStr  = "INVALID";
   //setParameter( "IntegratorOrder",      &m_intorderStr );
   //setParameter( "IntegratorQuadrature", &m_intquadStr );
-
-  m_fluxreconstructionstrategyStr = "FluxReconstructionStrategy";
-  setParameter( "StrategyForSomething", &m_fluxreconstructionstrategyStr );
   
   m_interfacefluxStr = "Null";
   setParameter( "InterfaceFluxComputer", &m_interfacefluxStr );
   
   m_fluxpntdistributionStr = "Null";
   setParameter( "FluxPointDistribution", &m_fluxpntdistributionStr );
+  
+  m_solpntdistributionStr = "Null";
+  setParameter( "SolutionPointDistribution", &m_solpntdistributionStr );
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -90,11 +91,15 @@ void FluxReconstructionSolverData::setup()
   // setup TRS Geo builder
   m_stdTrsGeoBuilder.setup();
   
+  // setup face builder
+  m_faceBuilder.setup();
+  
   // create local FR data
   createFRLocalData();
   
   // setup StatesReconstructor
   m_statesReconstructor->setup();
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -123,28 +128,6 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
 //   CFLog(INFO,"FluxReconstructionSolver: integrator order: " << m_intorderStr << "\n");
 
   /* add here different strategies configuration */
-
-  CFLog(INFO,"Configure strategy type: " << m_fluxreconstructionstrategyStr << "\n");
-  try {
-
-    SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, FluxReconstructionStrategy > >
-      prov = Environment::Factory< FluxReconstructionStrategy >::getInstance().getProvider(
-        m_fluxreconstructionstrategyStr );
-    cf_assert(prov.isNotNull());
-    m_fluxreconstructionstrategy = prov->create(m_fluxreconstructionstrategyStr,thisPtr);
-    configureNested ( m_fluxreconstructionstrategy.getPtr(), args );
-
-  } catch (Common::NoSuchValueException& e) {
-
-    CFLog(INFO, e.what() << "\n");
-    CFLog(INFO, "Choosing Null of type: " <<  FluxReconstructionStrategy ::getClassName() << " instead...\n");
-    SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, FluxReconstructionStrategy > >
-      prov = Environment::Factory< FluxReconstructionStrategy >::getInstance().getProvider("Null");
-    cf_assert(prov.isNotNull());
-    m_fluxreconstructionstrategy = prov->create("Null", thisPtr);
-
-  }
-  cf_assert(m_fluxreconstructionstrategy.isNotNull());
   
   CFLog(INFO,"Configure strategy type: " << m_interfacefluxStr << "\n");
   try {
@@ -171,8 +154,8 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
   CFLog(INFO,"Configure strategy type: " << m_fluxpntdistributionStr << "\n");
   try {
 
-    SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BaseFluxPntDistribution > >
-      prov = Environment::Factory< BaseFluxPntDistribution >::getInstance().getProvider(
+    SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BasePointDistribution > >
+      prov = Environment::Factory< BasePointDistribution >::getInstance().getProvider(
         m_fluxpntdistributionStr );
     cf_assert(prov.isNotNull());
     m_fluxpntdistribution = prov->create(m_fluxpntdistributionStr,thisPtr);
@@ -181,14 +164,36 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
   } catch (Common::NoSuchValueException& e) {
 
     CFLog(INFO, e.what() << "\n");
-    CFLog(INFO, "Choosing Null of type: " <<  BaseFluxPntDistribution ::getClassName() << " instead...\n");
-    SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BaseFluxPntDistribution > >
-      prov = Environment::Factory< BaseFluxPntDistribution >::getInstance().getProvider("Null");
+    CFLog(INFO, "Choosing Null of type: " <<  BasePointDistribution ::getClassName() << " instead...\n");
+    SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BasePointDistribution > >
+      prov = Environment::Factory< BasePointDistribution >::getInstance().getProvider("Null");
     cf_assert(prov.isNotNull());
     m_fluxpntdistribution = prov->create("Null", thisPtr);
 
   }
   cf_assert(m_fluxpntdistribution.isNotNull());
+  
+  CFLog(INFO,"Configure strategy type: " << m_solpntdistributionStr << "\n");
+  try {
+
+    SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BasePointDistribution > >
+      prov = Environment::Factory< BasePointDistribution >::getInstance().getProvider(
+        m_solpntdistributionStr );
+    cf_assert(prov.isNotNull());
+    m_solpntdistribution = prov->create(m_solpntdistributionStr,thisPtr);
+    configureNested ( m_solpntdistribution.getPtr(), args );
+
+  } catch (Common::NoSuchValueException& e) {
+
+    CFLog(INFO, e.what() << "\n");
+    CFLog(INFO, "Choosing Null of type: " <<  BasePointDistribution ::getClassName() << " instead...\n");
+    SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BasePointDistribution > >
+      prov = Environment::Factory< BasePointDistribution >::getInstance().getProvider("Null");
+    cf_assert(prov.isNotNull());
+    m_solpntdistribution = prov->create("Null", thisPtr);
+
+  }
+  cf_assert(m_solpntdistribution.isNotNull());
   
   // states reconstructor
   Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , ReconstructStatesFluxReconstruction > > recProv =
@@ -245,11 +250,11 @@ void FluxReconstructionSolverData::createFRLocalData()
       } break;
       case CFGeoShape::TRIAG:
       {
-        throw Common::NotImplementedException (FromHere(),"FR has not been implemented for triangular cells");
+        m_frLocalData[iElemType] = new TriagFluxReconstructionElementData(polyOrder,getSolPntDistribution(),getFluxPntDistribution());
       } break;
       case CFGeoShape::QUAD:
       {
-        m_frLocalData[iElemType] = new QuadFluxReconstructionElementData(polyOrder);
+        m_frLocalData[iElemType] = new QuadFluxReconstructionElementData(polyOrder,getSolPntDistribution(),getFluxPntDistribution());
       } break;
       case CFGeoShape::TETRA:
       {
@@ -257,7 +262,7 @@ void FluxReconstructionSolverData::createFRLocalData()
       } break;
       case CFGeoShape::HEXA:
       {
-        m_frLocalData[iElemType] = new HexaFluxReconstructionElementData(polyOrder);
+        m_frLocalData[iElemType] = new HexaFluxReconstructionElementData(polyOrder,getSolPntDistribution(),getFluxPntDistribution());
       } break;
       default:
       {

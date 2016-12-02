@@ -38,6 +38,12 @@ public:
    * Constructor initializing polyOrder.
    */
   HexaFluxReconstructionElementData(CFPolyOrder::Type polyOrder);
+  
+  /**
+   * Constructor initializing polyOrder, solution and flux point distribution
+   */
+  HexaFluxReconstructionElementData(CFPolyOrder::Type polyOrder, Common::SafePtr< BasePointDistribution > solPntDist, 
+				    Common::SafePtr< BasePointDistribution > flxPntDist);
 
   /**
    * Default destructor.

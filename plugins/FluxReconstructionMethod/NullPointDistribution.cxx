@@ -7,7 +7,7 @@
 #include "Framework/MethodStrategyProvider.hh"
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
-#include "FluxReconstructionMethod/FluxReconstructionStrategy.hh"
+#include "FluxReconstructionMethod/NullPointDistribution.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -17,54 +17,59 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-Framework::MethodStrategyProvider<
-    FluxReconstructionStrategy,FluxReconstructionSolverData,FluxReconstructionStrategy,FluxReconstructionModule >
-  fluxReconstructionStrategyProvider("FluxReconstructionStrategy");
+Framework::MethodStrategyProvider<NullPointDistribution,
+				  FluxReconstructionSolverData,
+				  BasePointDistribution,
+				  FluxReconstructionModule >
+nullPointDistributionStrategyProvider("Null");
 
 //////////////////////////////////////////////////////////////////////////////
 
-FluxReconstructionStrategy::FluxReconstructionStrategy(const std::string& name) :
-  FluxReconstructionSolverStrategy(name)
+NullPointDistribution::NullPointDistribution(const std::string& name) :
+  BasePointDistribution(name)
 {
   CFAUTOTRACE;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-FluxReconstructionStrategy::~FluxReconstructionStrategy()
+NullPointDistribution::~NullPointDistribution()
 {
   CFAUTOTRACE;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FluxReconstructionStrategy::compute()
+std::vector<CFreal> NullPointDistribution::getLocalCoords1D(CFPolyOrder::Type solOrder)
 {
   CFAUTOTRACE;
 
-  CFLog(VERBOSE, "FluxReconstructionStrategy::compute()\n");
+  CFLog(VERBOSE, "NullPointDistribution::getLocalCoords1D()\n");
+  std::vector<CFreal> coords;
+  coords.resize(solOrder);
+  return coords;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FluxReconstructionStrategy::setup()
+void NullPointDistribution::setup()
 {
   CFAUTOTRACE;
   
-  FluxReconstructionSolverStrategy::setup();
-  
-  CFLog(VERBOSE, "FluxReconstructionStrategy::setup()\n");
+  BasePointDistribution::setup();
+
+  CFLog(VERBOSE, "NullPointDistribution::setup()\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FluxReconstructionStrategy::unsetup()
+void NullPointDistribution::unsetup()
 {
   CFAUTOTRACE;
   
-  FluxReconstructionSolverStrategy::unsetup();
+  BasePointDistribution::unsetup();
   
-  CFLog(VERBOSE, "FluxReconstructionStrategy::unsetup()\n");
+  CFLog(VERBOSE, "NullPointDistribution::unsetup()\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

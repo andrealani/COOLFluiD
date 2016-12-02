@@ -8,16 +8,16 @@ FluxReconstructionSolver.cxx
 FluxReconstructionSolver.hh
 FluxReconstructionSolverData.cxx
 FluxReconstructionSolverData.hh
-FluxReconstructionStrategy.cxx
-FluxReconstructionStrategy.hh
 BaseInterfaceFlux.cxx
 BaseInterfaceFlux.hh
 NullInterfaceFlux.cxx
 NullInterfaceFlux.hh
-BaseFluxPntDistribution.cxx
-BaseFluxPntDistribution.hh
-NullFluxPntDistribution.cxx
-NullFluxPntDistribution.hh
+BasePointDistribution.cxx
+BasePointDistribution.hh
+NullPointDistribution.cxx
+NullPointDistribution.hh
+GaussLegendre.cxx
+GaussLegendre.hh
 StdSetup.cxx
 StdSetup.hh
 StdSolve.cxx
@@ -28,6 +28,8 @@ TVBLimiterFluxReconstruction.cxx
 TVBLimiterFluxReconstruction.hh
 ReconstructStatesFluxReconstruction.cxx
 ReconstructStatesFluxReconstruction.hh
+BCStateComputer.cxx
+BCStateComputer.hh
 
 StdInitState.cxx
 StdInitState.hh

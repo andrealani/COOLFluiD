@@ -25,6 +25,7 @@
 #include "FluxReconstructionMethod/FluxReconstructionBuilder.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 
+
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
@@ -179,19 +180,16 @@ void FluxReconstructionBuilder::createCellFaces()
     m_faceNodeElement[iType] = LocalConnectionData::getInstance().getFaceDofLocal((*elementType)[iType].getGeoShape(),
                                                                     getGeometricPolyOrder(),
                                                                     NODE,CFPolyForm::LAGRANGE);
-    //CFLog(VERBOSE, "faceNodeElement[" << iType << "] = \n" << *(m_faceNodeElement[iType]) << "\n");
   }
 
   // array storing the number of faces per element
   m_nbFacesPerElem.resize(nbElem);
   m_nbFacesPerElem = 0;
   LocalConnectionData::getInstance().setNbFacesPerElement(m_nbFacesPerElem); // pass m_nbFacesPerElem by reference
-  //CFLog(VERBOSE, "nbFacesPerElem = \n" << m_nbFacesPerElem[0] << "\n");
 
   // set the face shapes per element type
   vector< vector<CFGeoShape::Type> > faceShapesPerElemType(nbElemTypes);
   LocalConnectionData::getInstance().setFaceShapesPerElemType(faceShapesPerElemType); // pass faceShapesPerElemType by reference
-  //CFLog(VERBOSE, "faceShapesPerElemType = \n" << faceShapesPerElemType[0][0] << faceShapesPerElemType[0][1]<< faceShapesPerElemType[0][2]<< faceShapesPerElemType[0][3]<< "\n");
 
   // table storing the connectivity element-local faceID
   // (in this processor)
@@ -566,7 +564,6 @@ void FluxReconstructionBuilder::reorderInnerFacesTRS()
 
   // Vector to hold the already detected face GeoTypes
   vector< CFuint > faceGeoTypes;
-
   // Create connectivity table face - inner face idx and orientation or bc type
   std::valarray<CFuint> dataSize(m_nbFaces);
   for (CFuint iFace = 0; iFace < m_nbFaces; ++iFace)
@@ -587,7 +584,6 @@ void FluxReconstructionBuilder::reorderInnerFacesTRS()
     if (isNewType)
       faceGeoTypes.push_back(faceGeoType);
   }
-
   // Get vector containing the nodes connectivities for each orientation
   SafePtr<vector<ElementTypeData> > elementType = getCFmeshData().getElementTypeData();
   cf_assert(elementType->size() == 1); // there should be only one element type
@@ -606,7 +602,6 @@ void FluxReconstructionBuilder::reorderInnerFacesTRS()
   /// start indexes of the faces with a certain orientation. Is there a better way?
   std::valarray<CFuint> nbrOrientValAr(1,nbrOrient+1);
   ConnTable* innerFacesStartIdxs = new ConnTable(nbrOrientValAr);
-
   CFuint faceIdx = 0;
   for (CFuint iOrient = 0; iOrient < nbrOrient; ++iOrient)
   {
@@ -764,7 +759,9 @@ vector< vector < vector < CFuint > > > FluxReconstructionBuilder::getNodeConnPer
     } break;
     case CFGeoShape::QUAD:
     {
+      CFLog(VERBOSE,"Creating QuadP0!!!!!!!!!!!!!!!!!!!!!!\n");
       frElemData = new QuadFluxReconstructionElementData(CFPolyOrder::ORDER0);
+      CFLog(VERBOSE,"Created QuadP0!!!!!!!!!!!!!!!!!!!!!!\n");
     } break;
     case CFGeoShape::HEXA:
     {

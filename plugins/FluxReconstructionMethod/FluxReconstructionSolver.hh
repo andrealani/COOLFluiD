@@ -72,15 +72,13 @@ public: // functions
   ///      allow dynamic_casting
   void setCollaborator(Framework::MultiMethodHandle<Framework::ConvergenceMethod> convMtd);
 
-  /// Gets the volume integrator of the space method.
-  virtual Common::SafePtr< Framework::VolumeIntegrator > getVolumeIntegrator()
-  {
-    return CFNULL;
-  }
+//   /// Gets the volume integrator of the space method.
+//   virtual Common::SafePtr< Framework::VolumeIntegrator > getVolumeIntegrator()
+//   {
+//     return CFNULL;
+//   }
   
   /// Defined the strategy list of this Method
-  /// @todo Remove this function and configure strategies using the configureStrategy template function
-  ///       provided by MethodData
   std::vector< Common::SafePtr< Framework::NumericalStrategy > > getStrategyList() const;
 
 protected: // interface implementation functions

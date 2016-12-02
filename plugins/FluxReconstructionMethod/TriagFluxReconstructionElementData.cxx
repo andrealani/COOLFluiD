@@ -33,6 +33,77 @@ TriagFluxReconstructionElementData::TriagFluxReconstructionElementData(CFPolyOrd
   m_shape = CFGeoShape::TRIAG;
   m_dimensionality = DIM_2D;
   m_polyOrder = polyOrder;
+  m_solPntsLocalCoord1D.resize(polyOrder+1);
+  m_flxPntsLocalCoord1D.resize(polyOrder+1);
+  // Use a default solution and flux point distribution: Gauss Legendre.  
+  std::vector<CFreal> coords;
+  coords.resize(polyOrder+1);
+  switch(polyOrder)
+    {
+      case CFPolyOrder::ORDER0:
+      {
+	coords[0] = 0.0;
+      } break;
+      case CFPolyOrder::ORDER1:
+      {
+	coords[0] = -1./sqrt(3.);
+	coords[1] = +1./sqrt(3.);
+      } break;
+      case CFPolyOrder::ORDER2:
+      {
+	coords[0] = -sqrt(3./5.);
+	coords[1] = 0.0;
+	coords[2] = +sqrt(3./5.);
+      } break;
+      case CFPolyOrder::ORDER3:
+      {
+	coords[0] = -sqrt((3.+2.*sqrt(6./5.))/7.);
+	coords[1] = -sqrt((3.-2.*sqrt(6./5.))/7.);
+	coords[2] = +sqrt((3.-2.*sqrt(6./5.))/7.);
+	coords[3] = +sqrt((3.+2.*sqrt(6./5.))/7.);
+      } break;
+      case CFPolyOrder::ORDER4:
+      {
+	coords[0] = -sqrt(5.+2.*sqrt(10./7.))/3.;
+	coords[1] = -sqrt(5.-2.*sqrt(10./7.))/3.;
+	coords[2] = 0.0;
+	coords[3] = +sqrt(5.-2.*sqrt(10./7.))/3.;
+	coords[4] = +sqrt(5.+2.*sqrt(10./7.))/3.;
+      } break;
+      case CFPolyOrder::ORDER5:
+      {
+        coords[0] = -0.9324695142031521;
+	coords[1] = -0.6612093864662645;
+	coords[2] = -0.2386191860831969;
+	coords[3] = 0.2386191860831969;
+	coords[4] = 0.6612093864662645;
+	coords[5] = 0.9324695142031521;
+      } break;
+      default:
+      {
+        throw Common::NotImplementedException (FromHere(),"Gauss Legendre not implemented for order "
+                                      + StringOps::to_str(polyOrder) + ".");
+      }
+    }
+  m_solPntsLocalCoord1D = coords;
+  m_flxPntsLocalCoord1D = coords;
+
+  resetFluxReconstructionElementData();
+}
+
+//////////////////////////////////////////////////////////////////////
+
+TriagFluxReconstructionElementData::TriagFluxReconstructionElementData(CFPolyOrder::Type polyOrder, 
+								       Common::SafePtr< BasePointDistribution > solPntDist, 
+								       Common::SafePtr< BasePointDistribution > flxPntDist)
+{
+  m_shape = CFGeoShape::TRIAG;
+  m_dimensionality = DIM_2D;
+  m_polyOrder = polyOrder;
+  m_solPntsLocalCoord1D = solPntDist->getLocalCoords1D(polyOrder);
+  m_flxPntsLocalCoord1D = flxPntDist->getLocalCoords1D(polyOrder);
+  m_solPntDistribution = solPntDist;
+  m_flxPntDistribution = flxPntDist;
 
   resetFluxReconstructionElementData();
 }
@@ -45,801 +116,73 @@ TriagFluxReconstructionElementData::~TriagFluxReconstructionElementData()
 
 //////////////////////////////////////////////////////////////////////
 
-void TriagFluxReconstructionElementData::computeSVNodeLocalCoords()
-{
-//   m_svNodeCoords.resize(3);
-// 
-//   // first node
-//   m_svNodeCoords[0].resize(2);
-//   m_svNodeCoords[0][KSI] = 0.0;
-//   m_svNodeCoords[0][ETA] = 0.0;
-// 
-//   // second node
-//   m_svNodeCoords[1].resize(2);
-//   m_svNodeCoords[1][KSI] = 1.0;
-//   m_svNodeCoords[1][ETA] = 0.0;
-// 
-//   // third node
-//   m_svNodeCoords[2].resize(2);
-//   m_svNodeCoords[2][KSI] = 0.0;
-//   m_svNodeCoords[2][ETA] = 1.0;
-}
-
-//////////////////////////////////////////////////////////////////////
-
-void TriagFluxReconstructionElementData::createLocalNodeCoord()
-{
-  CFAUTOTRACE;
-
-//   // Path where to read files from
-//   std::string filename;
-//   const std::string append = Environment::DirPaths::getInstance().getWorkingDir().string() + "/";
-// 
-//   // number of local nodes
-//   const CFuint nbrLocalNodes = (m_polyOrder+1)*(m_polyOrder+1) + m_polyOrder+2;
-// 
-//   // resize the vectors containing the node coordinates
-//   m_localNodeCoord.resize(nbrLocalNodes);
-//   for (CFuint iNode = 0; iNode < nbrLocalNodes; ++iNode)
-//   {
-//     m_localNodeCoord[iNode].resize(2);
-//   }
-// 
-//   switch (m_polyOrder)
-//   {
-//     case CFPolyOrder::ORDER0:
-//     {
-//       // fill the matrix containing the node coordinates
-//       m_localNodeCoord[0][KSI] = 0.0;
-//       m_localNodeCoord[0][ETA] = 0.0;
-// 
-//       m_localNodeCoord[1][KSI] = 1.0;
-//       m_localNodeCoord[1][ETA] = 0.0;
-// 
-//       m_localNodeCoord[2][KSI] = 0.0;
-//       m_localNodeCoord[2][ETA] = 1.0;
-// 
-//     } break;
-//     case CFPolyOrder::ORDER1:
-//     {
-//       // fill the matrix containing the node coordinates
-//       m_localNodeCoord[0][KSI] = 0.0;
-//       m_localNodeCoord[0][ETA] = 0.0;
-// 
-//       m_localNodeCoord[1][KSI] = 0.5;
-//       m_localNodeCoord[1][ETA] = 0.0;
-// 
-//       m_localNodeCoord[2][KSI] = 1.0/3.0;
-//       m_localNodeCoord[2][ETA] = 1.0/3.0;
-// 
-//       m_localNodeCoord[3][KSI] = 0.0;
-//       m_localNodeCoord[3][ETA] = 0.5;
-// 
-//       m_localNodeCoord[4][KSI] = 1.0;
-//       m_localNodeCoord[4][ETA] = 0.0;
-// 
-//       m_localNodeCoord[5][KSI] = 0.5;
-//       m_localNodeCoord[5][ETA] = 0.5;
-// 
-//       m_localNodeCoord[6][KSI] = 0.0;
-//       m_localNodeCoord[6][ETA] = 1.0;
-// 
-//     } break;
-//     case CFPolyOrder::ORDER2:
-//     {
-//       // partition parameters
-//       CFreal alpha, beta;
-// 
-//       // read defining parameters from file
-//       filename = append + "SV3TRIAGDEF.DAT";
-//       ifstream inputFile;
-//       inputFile.open(filename.c_str(), ios::in);
-// 
-//       if (inputFile.is_open())
-//       {
-//         inputFile >> alpha;
-//         inputFile >> beta;
-//       }
-//       else
-//       {
-//         alpha = 0.091;
-//         beta  = 0.18;
-// /*        alpha = 1.0/4.0;
-//         beta  = 1.999/3.0;*/
-// /*        alpha = 1.0/4.0;
-//         beta  = 1.0/4.0;*/
-// /*        alpha = 1.0/4.0;
-//         beta  = 1.0/3.0;*/
-//       }
-//       inputFile.close();
-// 
-//       CF_DEBUG_OBJ(alpha);
-//       CF_DEBUG_OBJ(beta);
-// 
-//       // fill the matrix containing the node coordinates
-//       m_localNodeCoord[0][KSI] = 0.0;
-//       m_localNodeCoord[0][ETA] = 0.0;
-// 
-//       m_localNodeCoord[1][KSI] = alpha;
-//       m_localNodeCoord[1][ETA] = 0.0;
-// 
-//       m_localNodeCoord[2][KSI] = 0.5*beta;
-//       m_localNodeCoord[2][ETA] = 0.5*beta;
-// 
-//       m_localNodeCoord[3][KSI] = 0.0;
-//       m_localNodeCoord[3][ETA] = alpha;
-// 
-//       m_localNodeCoord[4][KSI] = 1.0 - alpha;
-//       m_localNodeCoord[4][ETA] = 0.0;
-// 
-//       m_localNodeCoord[5][KSI] = 1.0 - beta;
-//       m_localNodeCoord[5][ETA] = 0.5*beta;
-// 
-//       m_localNodeCoord[6][KSI] = 1.0/3.0;
-//       m_localNodeCoord[6][ETA] = 1.0/3.0;
-// 
-//       m_localNodeCoord[7][KSI] = 0.5*beta;
-//       m_localNodeCoord[7][ETA] = 1.0 - beta;
-// 
-//       m_localNodeCoord[8][KSI] = 0.0;
-//       m_localNodeCoord[8][ETA] = 1.0 - alpha;
-// 
-//       m_localNodeCoord[9][KSI] = 1.0;
-//       m_localNodeCoord[9][ETA] = 0.0;
-// 
-//       m_localNodeCoord[10][KSI] = 1.0 - alpha;
-//       m_localNodeCoord[10][ETA] = alpha;
-// 
-//       m_localNodeCoord[11][KSI] = alpha;
-//       m_localNodeCoord[11][ETA] = 1.0 - alpha;
-// 
-//       m_localNodeCoord[12][KSI] = 0.0;
-//       m_localNodeCoord[12][ETA] = 1.0;
-//     } break;
-//     case CFPolyOrder::ORDER3:
-//     {
-//       // partition parameters
-//       CFreal alpha, beta, gamma, delta;
-// 
-//       // read defining parameters from file
-//       filename = append + "SV4TRIAGDEF.DAT";
-//       ifstream inputFile;
-//       inputFile.open(filename.c_str(), ios::in);
-// 
-//       if (inputFile.is_open())
-//       {
-//         inputFile >> alpha;
-//         inputFile >> beta;
-//         inputFile >> gamma;
-//         inputFile >> delta;
-//       }
-//       else
-//       {
-//         alpha = 0.078;
-//         beta  = 0.104;
-//         gamma = 0.052;
-//         delta = 0.351;
-// /*        alpha = 1.0/15.0;
-//         beta  = 2.00000/15.0;
-//         gamma = 1.0/15.0;
-//         delta = 2.00001/15.0;*/
-//       }
-//       inputFile.close();
-// 
-//       // fill the matrix containing the node coordinates
-//       m_localNodeCoord[0][KSI] = 0.0;
-//       m_localNodeCoord[0][ETA] = 0.0;
-// 
-//       m_localNodeCoord[1][KSI] = alpha;
-//       m_localNodeCoord[1][ETA] = 0.0;
-// 
-//       m_localNodeCoord[2][KSI] = 0.5*beta;
-//       m_localNodeCoord[2][ETA] = 0.5*beta;
-// 
-//       m_localNodeCoord[3][KSI] = 0.0;
-//       m_localNodeCoord[3][ETA] = alpha;
-// 
-//       m_localNodeCoord[4][KSI] = 0.5;
-//       m_localNodeCoord[4][ETA] = 0.0;
-// 
-//       m_localNodeCoord[5][KSI] = 0.5 - 0.5*gamma;
-//       m_localNodeCoord[5][ETA] = gamma;
-// 
-//       m_localNodeCoord[6][KSI] = 0.5*delta;
-//       m_localNodeCoord[6][ETA] = 0.5*delta;
-// 
-//       m_localNodeCoord[7][KSI] = gamma;
-//       m_localNodeCoord[7][ETA] = 0.5 - 0.5*gamma;
-// 
-//       m_localNodeCoord[8][KSI] = 0.0;
-//       m_localNodeCoord[8][ETA] = 0.5;
-// 
-//       m_localNodeCoord[9][KSI] = 1.0 - alpha;
-//       m_localNodeCoord[9][ETA] = 0.0;
-// 
-//       m_localNodeCoord[10][KSI] = 1.0 - beta;
-//       m_localNodeCoord[10][ETA] = 0.5*beta;
-// 
-//       m_localNodeCoord[11][KSI] = 1.0 - delta;
-//       m_localNodeCoord[11][ETA] = 0.5*delta;
-// 
-//       m_localNodeCoord[12][KSI] = 0.5 - 0.5*gamma;
-//       m_localNodeCoord[12][ETA] = 0.5 - 0.5*gamma;
-// 
-//       m_localNodeCoord[13][KSI] = 0.5*delta;
-//       m_localNodeCoord[13][ETA] = 1.0 - delta;
-// 
-//       m_localNodeCoord[14][KSI] = 0.5*beta;
-//       m_localNodeCoord[14][ETA] = 1.0 - beta;
-// 
-//       m_localNodeCoord[15][KSI] = 0.0;
-//       m_localNodeCoord[15][ETA] = 1.0 - alpha;
-// 
-//       m_localNodeCoord[16][KSI] = 1.0;
-//       m_localNodeCoord[16][ETA] = 0.0;
-// 
-//       m_localNodeCoord[17][KSI] = 1.0 - alpha;
-//       m_localNodeCoord[17][ETA] = alpha;
-// 
-//       m_localNodeCoord[18][KSI] = 0.5;
-//       m_localNodeCoord[18][ETA] = 0.5;
-// 
-//       m_localNodeCoord[19][KSI] = alpha;
-//       m_localNodeCoord[19][ETA] = 1.0 - alpha;
-// 
-//       m_localNodeCoord[20][KSI] = 0.0;
-//       m_localNodeCoord[20][ETA] = 1.0;
-//     } break;
-//     default:
-//     {
-//       throw Common::NotImplementedException (FromHere(),"Only solution orders up to 3 have been implemented for spectral FV!");
-//     }
-//   }
-}
-
-//////////////////////////////////////////////////////////////////////
-
-void TriagFluxReconstructionElementData::createLocalFaceNodeConn()
-{
-  CFAUTOTRACE;
-
-//   /*    .
-//         .
-//         .    CV5   .
-//         | \      .
-//         |   \  .
-//         |     \
-//         |  CV2  \   CV4    .
-//         |\       /\      .
-//         |  \   /    \  .
-//         |    \   CV1  \   CV3
-//         | CV0  \        \
-//         |________\________\.  .  .
-//   */
-// 
-//   // compute total number of faces
-//   const CFuint nbrLocalFaces = 3*(m_polyOrder+2)*(m_polyOrder+1)/2;
-// 
-//   // helper variable
-//   const CFuint solOrderP1 = m_polyOrder+1;
-// 
-//   // resize the local face-node connectivity
-//   m_localFaceNodeConn.resize(nbrLocalFaces);
-//   for (CFuint iFace = 0; iFace < nbrLocalFaces; ++iFace)
-//   {
-//     m_localFaceNodeConn[iFace].resize(2);
-//   }
-// 
-//   // local face ID variable
-//   CFuint faceID = 0;
-// 
-//   // create local connectivity
-// 
-//   // external faces
-//   // first SV face
-//   for (CFuint iFace = 0; iFace < solOrderP1; ++iFace, ++faceID)
-//   {
-//     CFuint node0 = (iFace+1)*(iFace+1);
-//     CFuint node1 = iFace*iFace;
-//     m_localFaceNodeConn[faceID][0] = node0;
-//     m_localFaceNodeConn[faceID][1] = node1;
-//   }
-//   // second SV face
-//   CFuint nodeID = solOrderP1*solOrderP1;
-//   for (CFuint iFace = 0; iFace < solOrderP1; ++iFace, ++faceID)
-//   {
-//     m_localFaceNodeConn[faceID][0] = nodeID+iFace+1;
-//     m_localFaceNodeConn[faceID][1] = nodeID+iFace;
-//   }
-//   // third SV face
-//   m_localFaceNodeConn[faceID][0] = nodeID - 1;
-//   m_localFaceNodeConn[faceID][1] = nodeID + solOrderP1;
-//   ++faceID;
-//   for (CFuint iFace = m_polyOrder; iFace > 0; --iFace, ++faceID)
-//   {
-//     CFuint node0 = iFace*iFace - 1;
-//     CFuint node1 = (iFace+1)*(iFace+1) - 1;
-//     m_localFaceNodeConn[faceID][0] = node0;
-//     m_localFaceNodeConn[faceID][1] = node1;
-//   }
-// 
-//   // internal faces
-//   // first for (positively) diagonal faces in sketch
-//   const CFuint polyOrderUns = static_cast<CFuint>(m_polyOrder);
-//   for (CFuint iRow = 0; iRow < polyOrderUns; ++iRow)
-//   {
-//     CFuint upperNodeID = iRow*iRow + 1;
-//     CFuint lowerNodeID = (iRow+1)*(iRow+1) + 2;
-//     for (CFuint iFace = 0; iFace < iRow; ++iFace, ++faceID)
-//     {
-//       m_localFaceNodeConn[faceID][0] = upperNodeID;
-//       m_localFaceNodeConn[faceID][1] = lowerNodeID;
-//       upperNodeID += 2;
-//       lowerNodeID += 2;
-//     }
-//   }
-//   CFuint upperNodeID = m_polyOrder*m_polyOrder + 1;
-//   CFuint lowerNodeID = solOrderP1*solOrderP1 + 1;
-//   for (CFuint iFace = 0; iFace < polyOrderUns; ++iFace, ++faceID)
-//   {
-//     m_localFaceNodeConn[faceID][0] = upperNodeID;
-//     m_localFaceNodeConn[faceID][1] = lowerNodeID;
-//     upperNodeID += 2;
-//     lowerNodeID += 1;
-//   }
-// 
-//   // then for (negatively) diagonal faces in sketch
-//   nodeID = 1;
-//   CFuint nbrFacesInRow = 2;
-//   for (CFuint iRow = 0; iRow < polyOrderUns; ++iRow, nbrFacesInRow += 2, ++nodeID)
-//   {
-//     for (CFuint iFace = 0; iFace < nbrFacesInRow; ++iFace, ++faceID, ++nodeID)
-//     {
-//       m_localFaceNodeConn[faceID][0] = nodeID;
-//       m_localFaceNodeConn[faceID][1] = nodeID+1;
-//     }
-//   }
-}
-
-//////////////////////////////////////////////////////////////////////
-
-void TriagFluxReconstructionElementData::createLocalCVNodeConn()
-{
-  CFAUTOTRACE;
-
-//   // number of CVs
-//   const CFuint nbrCVs = (m_polyOrder+1)*(m_polyOrder+2)/2;
-// 
-//   // resize local CV-node connectivity
-//   m_localCVNodeConn.resize(nbrCVs);
-// 
-//   // create connectivity
-//   if (nbrCVs == 1)
-//   {
-//     // resize local CV-node connectivity
-//     m_localCVNodeConn[0].resize(3);
-// 
-//     // fill connectivity
-//     m_localCVNodeConn[0][0] = 0;
-//     m_localCVNodeConn[0][1] = 1;
-//     m_localCVNodeConn[0][2] = 2;
-//   }
-//   else
-//   {
-//     // control volume ID
-//     CFuint cvID = 0;
-// 
-//     // first nodes
-//     CFuint upperNode = 0;
-//     CFuint lowerNode = 1;
-// 
-//     // first row (CV 0)
-//     // resize local CV-node connectivity
-//     m_localCVNodeConn[cvID].resize(4);
-//     // fill connectivity
-//     m_localCVNodeConn[cvID][0] = lowerNode;
-//     m_localCVNodeConn[cvID][1] = lowerNode+1;
-//     m_localCVNodeConn[cvID][2] = lowerNode+2;
-//     m_localCVNodeConn[cvID][3] = upperNode;
-//     ++cvID;
-//     ++upperNode;
-//     lowerNode += 3;
-// 
-//     // intermediate rows
-//     const CFuint polyOrderUns = static_cast<CFuint>(m_polyOrder);
-//     for (CFuint iRow = 1; iRow < polyOrderUns; ++iRow)
-//     {
-//       // first element of row
-//       // resize local CV-node connectivity
-//       m_localCVNodeConn[cvID].resize(5);
-//       // fill connectivity
-//       m_localCVNodeConn[cvID][0] = lowerNode;
-//       m_localCVNodeConn[cvID][1] = lowerNode+1;
-//       m_localCVNodeConn[cvID][2] = lowerNode+2;
-//       m_localCVNodeConn[cvID][3] = upperNode+1;
-//       m_localCVNodeConn[cvID][4] = upperNode;
-//       ++cvID;
-//       lowerNode += 2;
-//       ++upperNode;
-// 
-//       // intermediate elements in row
-//       for (CFuint iElem = 1; iElem < iRow; ++iElem, ++cvID, lowerNode += 2, upperNode += 2)
-//       {
-//         // resize local CV-node connectivity
-//         m_localCVNodeConn[cvID].resize(6);
-//         // fill connectivity
-//         m_localCVNodeConn[cvID][0] = lowerNode;
-//         m_localCVNodeConn[cvID][1] = lowerNode+1;
-//         m_localCVNodeConn[cvID][2] = lowerNode+2;
-//         m_localCVNodeConn[cvID][3] = upperNode+2;
-//         m_localCVNodeConn[cvID][4] = upperNode+1;
-//         m_localCVNodeConn[cvID][5] = upperNode;
-//       }
-// 
-//       // last element of row
-//       // resize local CV-node connectivity
-//       m_localCVNodeConn[cvID].resize(5);
-//       // fill connectivity
-//       m_localCVNodeConn[cvID][0] = lowerNode;
-//       m_localCVNodeConn[cvID][1] = lowerNode+1;
-//       m_localCVNodeConn[cvID][2] = lowerNode+2;
-//       m_localCVNodeConn[cvID][3] = upperNode+1;
-//       m_localCVNodeConn[cvID][4] = upperNode;
-//       ++cvID;
-//       lowerNode += 3;
-//       upperNode += 2;
-//     }
-// 
-//     // last row
-//     // first element of row
-//     // resize local CV-node connectivity
-//     m_localCVNodeConn[cvID].resize(4);
-//     // fill connectivity
-//     m_localCVNodeConn[cvID][0] = lowerNode;
-//     m_localCVNodeConn[cvID][1] = lowerNode+1;
-//     m_localCVNodeConn[cvID][2] = upperNode+1;
-//     m_localCVNodeConn[cvID][3] = upperNode;
-//     ++cvID;
-//     ++lowerNode;
-//     ++upperNode;
-// 
-//     // intermediate elements in row
-//     for (CFuint iElem = 1; iElem < polyOrderUns; ++iElem, ++cvID, ++lowerNode, upperNode += 2)
-//     {
-//       // resize local CV-node connectivity
-//       m_localCVNodeConn[cvID].resize(5);
-//       // fill connectivity
-//       m_localCVNodeConn[cvID][0] = lowerNode;
-//       m_localCVNodeConn[cvID][1] = lowerNode+1;
-//       m_localCVNodeConn[cvID][2] = upperNode+2;
-//       m_localCVNodeConn[cvID][3] = upperNode+1;
-//       m_localCVNodeConn[cvID][4] = upperNode;
-//     }
-// 
-//     // last element of row
-//     // resize local CV-node connectivity
-//     m_localCVNodeConn[cvID].resize(4);
-//     // fill connectivity
-//     m_localCVNodeConn[cvID][0] = lowerNode;
-//     m_localCVNodeConn[cvID][1] = lowerNode+1;
-//     m_localCVNodeConn[cvID][2] = upperNode+1;
-//     m_localCVNodeConn[cvID][3] = upperNode;
-//   }
-}
-
-//////////////////////////////////////////////////////////////////////
-
 void TriagFluxReconstructionElementData::computeLocalFaceNormals()
 {
   CFAUTOTRACE;
+  CFLog(VERBOSE,"computeLocalFaceNormals\n");
+  
+  // number of faces
+  const CFuint nbrFaces = 3;
 
-//   // get number of local internal faces
-//   const CFuint nbrLocalFaces    = m_localFaceNodeConn.size();
-//   const CFuint nbrLocalExtFaces = 3*(m_polyOrder+1);
-//   const CFuint nbrLocalIntFaces = nbrLocalFaces - nbrLocalExtFaces;
-// 
-// 
-//   // compute local internal face normals
-//   m_intFaceQuadPntNorm.resize(nbrLocalIntFaces);
-//   for (CFuint iIntFace = 0; iIntFace < nbrLocalIntFaces; ++iIntFace)
-//   {
-//     // number of quadrature points on this face
-//     const CFuint nbrQPnts = m_intFaceQuadWheights[iIntFace].size();
-//     m_intFaceQuadPntNorm[iIntFace].resize(nbrQPnts,RealVector(2));
-// 
-//     const CFuint node0 = m_localFaceNodeConn[iIntFace+nbrLocalExtFaces][0];
-//     const CFuint node1 = m_localFaceNodeConn[iIntFace+nbrLocalExtFaces][1];
-// 
-//     RealVector normal(2);
-//     normal[KSI] =  (m_localNodeCoord[node1][ETA] - m_localNodeCoord[node0][ETA]);
-//     normal[ETA] = -(m_localNodeCoord[node1][KSI] - m_localNodeCoord[node0][KSI]);
-//     normal /= normal.norm2(); // divide by size to create a unit normal
-// 
-//     for (CFuint iQPnt = 0; iQPnt < nbrQPnts; ++iQPnt)
-//     {
-//       m_intFaceQuadPntNorm[iIntFace][iQPnt] = normal;
-//     }
-// //     CF_DEBUG_OBJ(m_intFaceQuadPntNorm[iIntFace]);
-//   }
+  // compute the normals
+  m_faceLocalNorm.resize(nbrFaces);
+  for (CFuint iFace = 0; iFace < nbrFaces; ++iFace)
+  {
+    // resize the variable
+    m_faceLocalNorm[iFace].resize(m_dimensionality);
+
+    // compute normal
+    m_faceLocalNorm[iFace][KSI] =  (m_faceNodeCoords[iFace][1][ETA] - m_faceNodeCoords[iFace][0][ETA]);
+    m_faceLocalNorm[iFace][ETA] = -(m_faceNodeCoords[iFace][1][KSI] - m_faceNodeCoords[iFace][0][KSI]);
+
+  }
+
 }
 
 //////////////////////////////////////////////////////////////////////
 
-void TriagFluxReconstructionElementData::computeExtFaceLocalNormals()
+void TriagFluxReconstructionElementData::createFaceNodeConnectivityPerOrient()
 {
   CFAUTOTRACE;
+  CFLog(VERBOSE,"createFaceNodeConnectivityPerOrient\n");
 
-//   // number of SV faces
-//   const CFuint nbrSVFaces = 3;
-// 
-//   // compute the normals
-//   m_extFaceLocalNorm.resize(nbrSVFaces);
-//   for (CFuint iSVFace = 0; iSVFace < nbrSVFaces; ++iSVFace)
-//   {
-//     // resize the variable
-//     m_extFaceLocalNorm[iSVFace].resize(m_dimensionality);
-// 
-//     // compute normal
-//     m_extFaceLocalNorm[iSVFace][KSI] =  (m_svFaceNodeCoords[iSVFace][1][ETA] - m_svFaceNodeCoords[iSVFace][0][ETA]);
-//     m_extFaceLocalNorm[iSVFace][ETA] = -(m_svFaceNodeCoords[iSVFace][1][KSI] - m_svFaceNodeCoords[iSVFace][0][KSI]);
-// 
-// //     CF_DEBUG_OBJ(m_extFaceLocalNorm[iSVFace]);
-//   }
-}
+  // number of faces
+  const CFuint nbrFaces = m_faceNodeConn.size();
 
-//////////////////////////////////////////////////////////////////////
+  // number of possible orientations
+  const CFuint nbrOrient = 6;
 
-void TriagFluxReconstructionElementData::createLocalIntFaceCVConn()
-{
-  CFAUTOTRACE;
+  // resize the variable
+  m_faceNodeConnPerOrient.resize(nbrOrient);
+  m_faceConnPerOrient.resize(nbrOrient);
+  m_faceMappedCoordDirPerOrient.resize(nbrOrient);
+  for (CFuint iOrient = 0; iOrient < nbrOrient; ++iOrient)
+  {
+    m_faceNodeConnPerOrient[iOrient].resize(2);
+    m_faceConnPerOrient[iOrient].resize(2);
+    m_faceMappedCoordDirPerOrient[iOrient].resize(2);
+    for (CFuint iCell = 0; iCell < 2; ++iCell)
+      m_faceNodeConnPerOrient[iOrient][iCell].resize(2);
+  }
 
-//   /*    .
-//         .
-//         .    CV5   .
-//         | \      .
-//         |   \  .
-//         |     \
-//         |  CV2  \   CV4    .
-//         |\       /\      .
-//         |  \   /    \  .
-//         |    \   CV1  \   CV3
-//         | CV0  \        \
-//         |________\________\.  .  .
-//   */
-// 
-//   const CFuint solOrderP1 = m_polyOrder+1;
-// 
-//   // compute number of internal faces
-//   const CFuint nbrIntFaces = 3*m_polyOrder*(m_polyOrder+1)/2;
-// 
-//   // resize the local internal face-CV connectivity
-//   m_localIntFaceCVConn.resize(nbrIntFaces);
-//   for (CFuint iFace = 0; iFace < nbrIntFaces; ++iFace)
-//   {
-//     m_localIntFaceCVConn[iFace].resize(2);
-//   }
-// 
-//   // create local connectivity
-//   CFuint faceID = 0;
-//   // first for (positively) diagonal faces in sketch
-//   CFint cvID = 0;
-//   for (CFuint iRow = 0; iRow < solOrderP1; ++iRow, ++cvID)
-//     for (CFuint iFace = 0; iFace < iRow; ++iFace, ++faceID, ++cvID)
-//     {
-//       m_localIntFaceCVConn[faceID][0] = cvID+1;
-//       m_localIntFaceCVConn[faceID][1] = cvID;
-//     }
-// 
-//   // then for (negatively) diagonal faces in sketch above
-//   CFuint upperCVID = 0;
-//   CFuint lowerCVID = 1;
-//   CFuint nbrFacesInRow = 2;
-//   const CFuint polyOrderUns = static_cast<CFuint>(m_polyOrder);
-//   for (CFuint iRow = 0; iRow < polyOrderUns; ++iRow, nbrFacesInRow += 2, ++lowerCVID)
-//   {
-//     for (CFuint iFace = 0; iFace < nbrFacesInRow; ++iFace, ++faceID)
-//     {
-//       m_localIntFaceCVConn[faceID][LEFT ] = upperCVID;
-//       m_localIntFaceCVConn[faceID][RIGHT] = lowerCVID;
-// 
-//       //increment CV IDs
-//       lowerCVID += ((iFace+1)%2);
-//       upperCVID += (iFace    %2);
-//     }
-//   }
-// 
-// /*  for (CFuint iFace = 0; iFace < nbrIntFaces; ++iFace)
-//   {
-//     CF_DEBUG_OBJ(m_localIntFaceCVConn[iFace][LEFT ]);
-//     CF_DEBUG_OBJ(m_localIntFaceCVConn[iFace][RIGHT]);
-//   }*/
-}
+  // fill the variable
+  CFuint iOrient = 0;
+  for (CFuint iFaceL = 0; iFaceL < nbrFaces; ++iFaceL)
+  {
+    for (CFuint iFaceR = iFaceL; iFaceR < nbrFaces; ++iFaceR, ++iOrient)
+    {
+      m_faceConnPerOrient[iOrient][LEFT ] = iFaceL;
+      m_faceConnPerOrient[iOrient][RIGHT] = iFaceR;
 
-//////////////////////////////////////////////////////////////////////
-
-void TriagFluxReconstructionElementData::computeVolumeFractionsOfCVs()
-{
-  CFAUTOTRACE;
-
-//   // number of CVs in SV
-//   const CFuint nbrCVs = m_localCVNodeConn.size();
-// 
-//   // resize the vector containing the CV face fractions
-//   m_volFracCV.resize(nbrCVs);
-// 
-//   // compute CV volume fractions
-//   for (CFuint iCV = 0; iCV < nbrCVs; ++iCV)
-//   {
-//     const CFuint nbrNodesInCV = m_localCVNodeConn[iCV].size();
-// 
-//     // Create vector for node coordinates of CV
-//     vector< RealVector > cvNodesCoord(nbrNodesInCV);
-//     for (CFuint iNode = 0; iNode < nbrNodesInCV; ++iNode)
-//     {
-//       cvNodesCoord[iNode].resize(2);
-//       const CFuint localNodeID = m_localCVNodeConn[iCV][iNode];
-//       cvNodesCoord[iNode] = m_localNodeCoord[localNodeID];
-//     }
-// 
-//     // Compute the volume fraction of the CV
-//     m_volFracCV[iCV] = computePolygonSurface(cvNodesCoord)/0.5;
-//   }
-}
-
-//////////////////////////////////////////////////////////////////////
-
-void TriagFluxReconstructionElementData::createLocalExtFaceCVConn()
-{
-  CFAUTOTRACE;
-
-//   // number of external faces at SV face
-//   const CFuint nbrCVsAtSVFace = m_polyOrder + 1;
-// 
-//   // total number of external faces
-//   const CFuint nbrExtFaces = 3*nbrCVsAtSVFace;
-// 
-//   // resize m_localExtFaceCVConn
-//   m_localExtFaceCVConn.resize(nbrExtFaces);
-// 
-//   // create local external face - CV connectivity
-//   CFuint extFaceID = 0;
-//   // first SV face
-//   for (CFuint iFace = 0; iFace < nbrCVsAtSVFace; ++iFace, ++extFaceID)
-//   {
-//     m_localExtFaceCVConn[extFaceID] = iFace*(iFace+1)/2;
-//   }
-// 
-//   // second SV face
-//   CFuint cvID = m_polyOrder*(m_polyOrder+1)/2;
-//   for (CFuint iFace = 0; iFace < nbrCVsAtSVFace; ++iFace, ++cvID, ++extFaceID)
-//   {
-//     m_localExtFaceCVConn[extFaceID] = cvID;
-//   }
-// 
-//   // third SV face
-//   for (CFuint iFace = nbrCVsAtSVFace; iFace > 0; --iFace, ++extFaceID)
-//   {
-//     m_localExtFaceCVConn[extFaceID] = iFace*(iFace+1)/2 - 1;
-//   }
-}
-
-//////////////////////////////////////////////////////////////////////
-
-void TriagFluxReconstructionElementData::createSVFaceLocalExtFaceConn()
-{
-  CFAUTOTRACE;
-
-//   // number of external faces at SV face
-//   const CFuint nbrCVsAtSVFace = m_polyOrder + 1;
-// 
-//   // resize m_svFaceLocalExtFaceConn
-//   m_svFaceLocalExtFaceConn.resize(3);
-//   for (CFuint iSVFace = 0; iSVFace < 3; ++iSVFace)
-//   {
-//     m_svFaceLocalExtFaceConn[iSVFace].resize(nbrCVsAtSVFace);
-//   }
-// 
-//   // create SV face - local external face connectivity
-//   CFuint extFaceID = 0;
-//   for (CFuint iSVFace = 0; iSVFace < 3; ++iSVFace)
-//   {
-//     for (CFuint iExtFace = 0; iExtFace < nbrCVsAtSVFace; ++iExtFace, ++extFaceID)
-//     {
-//       m_svFaceLocalExtFaceConn[iSVFace][iExtFace] = extFaceID;
-//     }
-//   }
-}
-
-//////////////////////////////////////////////////////////////////////
-
-void TriagFluxReconstructionElementData::createExtFaceNodeLocalCoords()
-{
-  CFAUTOTRACE;
-
-//   // number of CVs at SV face
-//   const CFuint nbrCVsAtSVFace = m_polyOrder + 1;
-// 
-//   // create node coordinates local to face
-//   m_extFaceNodeLocalCoords.resize(nbrCVsAtSVFace);
-//   for (CFuint iExtFace = 0; iExtFace < nbrCVsAtSVFace; ++iExtFace)
-//   {
-//     // number of nodes to this face
-//     const CFuint nbrFaceNodes = m_localFaceNodeConn[iExtFace].size();
-// 
-//     m_extFaceNodeLocalCoords[iExtFace].resize(nbrFaceNodes);
-//     for (CFuint iNode = 0; iNode < nbrFaceNodes; ++iNode)
-//     {
-//       const CFuint nodeID = m_localFaceNodeConn[iExtFace][iNode];
-//       m_extFaceNodeLocalCoords[iExtFace][iNode].resize(m_dimensionality-1);
-//       m_extFaceNodeLocalCoords[iExtFace][iNode][KSI] = m_localNodeCoord[nodeID][KSI];
-//     }
-//   }
-}
-
-//////////////////////////////////////////////////////////////////////
-
-void TriagFluxReconstructionElementData::createSVFaceNodeConnectivity()
-{
-  CFAUTOTRACE;
-
-//   // number of SV faces
-//   const CFuint nbrSVFaces = 3;
-// 
-//   // resize the variable
-//   m_svFaceNodeConn.resize(nbrSVFaces);
-//   for (CFuint iSVFace = 0; iSVFace < nbrSVFaces; ++iSVFace)
-//   {
-//     m_svFaceNodeConn[iSVFace].resize(2);
-//   }
-// 
-//   // fill the variable
-//   // first SV face
-//   m_svFaceNodeConn[0][0] = 0;
-//   m_svFaceNodeConn[0][1] = 1;
-// 
-//   // second SV face
-//   m_svFaceNodeConn[1][0] = 1;
-//   m_svFaceNodeConn[1][1] = 2;
-// 
-//   // third SV face
-//   m_svFaceNodeConn[2][0] = 2;
-//   m_svFaceNodeConn[2][1] = 0;
-}
-
-//////////////////////////////////////////////////////////////////////
-
-void TriagFluxReconstructionElementData::createSVFaceNodeConnectivityPerOrient()
-{
-  CFAUTOTRACE;
-
-//   // number of SV faces
-//   const CFuint nbrSVFaces = m_svFaceNodeConn.size();
-// 
-//   // number of possible orientations
-//   const CFuint nbrOrient = 6;
-// 
-//   // resize the variable
-//   m_svFaceNodeConnPerOrientation.resize(nbrOrient);
-//   for (CFuint iOrient = 0; iOrient < nbrOrient; ++iOrient)
-//   {
-//     m_svFaceNodeConnPerOrientation[iOrient].resize(2);
-//     for (CFuint iCell = 0; iCell < 2; ++iCell)
-//       m_svFaceNodeConnPerOrientation[iOrient][iCell].resize(2);
-//   }
-// 
-//   // fill the variable
-//   CFuint iOrient = 0;
-//   for (CFuint iSVFaceL = 0; iSVFaceL < nbrSVFaces; ++iSVFaceL)
-//   {
-//     for (CFuint iSVFaceR = iSVFaceL; iSVFaceR < nbrSVFaces; ++iSVFaceR, ++iOrient)
-//     {
-//       for (CFuint iNode = 0; iNode < 2; ++iNode)
-//       {
-//         m_svFaceNodeConnPerOrientation[iOrient][LEFT ][iNode] = m_svFaceNodeConn[iSVFaceL][iNode  ];
-//         m_svFaceNodeConnPerOrientation[iOrient][RIGHT][iNode] = m_svFaceNodeConn[iSVFaceR][1-iNode];
-//       }
-//     }
-//   }
+      m_faceMappedCoordDirPerOrient[iOrient][LEFT ] = m_faceMappedCoordDir[iFaceL];
+      m_faceMappedCoordDirPerOrient[iOrient][RIGHT] = -m_faceMappedCoordDir[iFaceR];
+      for (CFuint iNode = 0; iNode < 2; ++iNode)
+      {
+        m_faceNodeConnPerOrient[iOrient][LEFT ][iNode] = m_faceNodeConn[iFaceL][iNode  ];
+        m_faceNodeConnPerOrient[iOrient][RIGHT][iNode] = m_faceNodeConn[iFaceR][1-iNode];
+      }
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -874,43 +217,6 @@ void TriagFluxReconstructionElementData::createSVFaceNodeConnectivityPerOrientNo
 //         m_svFaceNodeConnPerOrientationNoSymm[iOrient][LEFT ][iNode] = m_svFaceNodeConn[iSVFaceL][iNode  ];
 //         m_svFaceNodeConnPerOrientationNoSymm[iOrient][RIGHT][iNode] = m_svFaceNodeConn[iSVFaceR][1-iNode];
 //       }
-//     }
-//   }
-}
-
-//////////////////////////////////////////////////////////////////////
-
-void TriagFluxReconstructionElementData::computeFaceFractionsOfCVs()
-{
-  CFAUTOTRACE;
-
-//   // number of SV faces
-//   const CFuint nbrSVFaces = 3;
-// 
-//   // number of CVs at a SV face
-//   const CFuint nbrCVsAtSVFace = m_polyOrder + 1;
-// 
-//   // resize the vector containing the CV face fractions
-//   m_faceFracCV.resize(nbrSVFaces);
-//   for (CFuint iFace = 0; iFace < nbrSVFaces; ++iFace)
-//   {
-//     m_faceFracCV[iFace].resize(nbrCVsAtSVFace);
-//   }
-// 
-//   // fill in CV fractions first SV face (first nbrCVsAtSVFace faces in m_localFaceNodeConn make up one SV face)
-//   for (CFuint iCV = 0; iCV < nbrCVsAtSVFace; ++iCV)
-//   {
-//     const CFuint node1 = m_localFaceNodeConn[iCV][0];
-//     const CFuint node2 = m_localFaceNodeConn[iCV][1];
-//     m_faceFracCV[0][iCV] = m_localNodeCoord[node1][KSI] - m_localNodeCoord[node2][KSI];
-//   }
-// 
-//   // fill in CV fractions of other SV faces
-//   for (CFuint iFace = 1; iFace < nbrSVFaces; ++iFace)
-//   {
-//     for (CFuint iCV = 0; iCV < nbrCVsAtSVFace; ++iCV)
-//     {
-//       m_faceFracCV[iFace][iCV] = m_faceFracCV[0][iCV];
 //     }
 //   }
 }
@@ -1102,7 +408,7 @@ void TriagFluxReconstructionElementData::createFaceFluxPntsConn()
 
 void TriagFluxReconstructionElementData::createFaceFluxPolyNodeWheightCoord()
 {
-//   CFAUTOTRACE;
+   CFAUTOTRACE;
 // 
 //   // get the number of face flux points
 //   const CFuint nbrFaceFlxPnts = getNbrOfFaceFlxPnts();
@@ -1167,141 +473,215 @@ void TriagFluxReconstructionElementData::createFluxPolyExponents()
 void TriagFluxReconstructionElementData::setInterpolationNodeSet(const CFPolyOrder::Type order,
                                                          vector< RealVector >& nodalSet)
 {
-  // number of nodes
-  const CFuint nbrNodes = (order+1)*(order+2)/2;
+  CFLog(VERBOSE,"setInterpolationNodeSet\n");
 
-  // return variable
-  nodalSet.resize(nbrNodes);
-  for (CFuint iNode = 0; iNode < nbrNodes; ++iNode)
-  {
-    nodalSet[iNode].resize(2);
+  std::vector<CFreal> coords;
+  coords.resize(order+1);
+   
+  if(m_solPntDistribution.isNotNull()){
+    coords = m_solPntDistribution->getLocalCoords1D(order);
+  } else {
+    // Use a default solution point distribution: Gauss Legendre.  
+    switch(order)
+      {
+	case CFPolyOrder::ORDER0:
+	{
+	  coords[0] = 0.0;
+	} break;
+	case CFPolyOrder::ORDER1:
+	{
+	  coords[0] = -1./sqrt(3.);
+	  coords[1] = +1./sqrt(3.);
+	} break;
+	case CFPolyOrder::ORDER2:
+	{
+	  coords[0] = -sqrt(3./5.);
+	  coords[1] = 0.0;
+	  coords[2] = +sqrt(3./5.);
+	} break;
+	case CFPolyOrder::ORDER3:
+	{
+	  coords[0] = -sqrt((3.+2.*sqrt(6./5.))/7.);
+	  coords[1] = -sqrt((3.-2.*sqrt(6./5.))/7.);
+	  coords[2] = +sqrt((3.-2.*sqrt(6./5.))/7.);
+	  coords[3] = +sqrt((3.+2.*sqrt(6./5.))/7.);
+	} break;
+	case CFPolyOrder::ORDER4:
+	{
+	  coords[0] = -sqrt(5.+2.*sqrt(10./7.))/3.;
+	  coords[1] = -sqrt(5.-2.*sqrt(10./7.))/3.;
+	  coords[2] = 0.0;
+	  coords[3] = +sqrt(5.-2.*sqrt(10./7.))/3.;
+	  coords[4] = +sqrt(5.+2.*sqrt(10./7.))/3.;
+	} break;
+	case CFPolyOrder::ORDER5:
+	{
+	  coords[0] = -0.9324695142031521;
+	  coords[1] = -0.6612093864662645;
+	  coords[2] = -0.2386191860831969;
+	  coords[3] = 0.2386191860831969;
+	  coords[4] = 0.6612093864662645;
+	  coords[5] = 0.9324695142031521;
+	} break;
+	default:
+	{
+	  throw Common::NotImplementedException (FromHere(),"Gauss Legendre not implemented for order "
+					+ StringOps::to_str(order) + ".");
+	}
+      }
   }
+  
+  const CFuint nbrPnts1D = order+1;
 
-  // fill the vector containing the flux polynomial node coordinates
-  // Legendre-Gauss-Lobatto nodes from Hesthaven, FROM ELECTROSTATICS TO ALMOST OPTIMAL NODAL SETS
-  // FOR POLYNOMIAL INTERPOLATION IN A SIMPLEX. SIAM J. Numer. Anal. (1998); 35(2):655-676.
-  switch (order)
+  // set solution point local coordinates
+  nodalSet.resize(0);
+  for (CFuint iKsi = 0; iKsi < nbrPnts1D; ++iKsi)
   {
-    case CFPolyOrder::ORDER0:
+    for (CFuint iEta = 0; iEta < nbrPnts1D-iKsi; ++iEta)
     {
-      nodalSet[0][KSI] = 1.0/3.0;
-      nodalSet[0][ETA] = 1.0/3.0;
-    } break;
-    case CFPolyOrder::ORDER1:
-    {
-      nodalSet[0][KSI] = 0.0;
-      nodalSet[0][ETA] = 0.0;
-
-      nodalSet[1][KSI] = 1.0;
-      nodalSet[1][ETA] = 0.0;
-
-      nodalSet[2][KSI] = 0.0;
-      nodalSet[2][ETA] = 1.0;
-    } break;
-    case CFPolyOrder::ORDER2:
-    {
-      nodalSet[0][KSI] = 0.0;
-      nodalSet[0][ETA] = 0.0;
-
-      nodalSet[1][KSI] = 0.5;
-      nodalSet[1][ETA] = 0.0;
-
-      nodalSet[2][KSI] = 0.0;
-      nodalSet[2][ETA] = 0.5;
-
-      nodalSet[3][KSI] = 1.0;
-      nodalSet[3][ETA] = 0.0;
-
-      nodalSet[4][KSI] = 0.5;
-      nodalSet[4][ETA] = 0.5;
-
-      nodalSet[5][KSI] = 0.0;
-      nodalSet[5][ETA] = 1.0;
-    } break;
-    case CFPolyOrder::ORDER3:
-    {
-      nodalSet[0][KSI] = 0.0;
-      nodalSet[0][ETA] = 0.0;
-
-      nodalSet[1][KSI] = 0.25;
-      nodalSet[1][ETA] = 0.0;
-
-      nodalSet[2][KSI] = 0.0;
-      nodalSet[2][ETA] = 0.25;
-
-      nodalSet[3][KSI] = 0.75;
-      nodalSet[3][ETA] = 0.0;
-
-      nodalSet[4][KSI] = 1.0/3.0;
-      nodalSet[4][ETA] = 1.0/3.0;
-
-      nodalSet[5][KSI] = 0.0;
-      nodalSet[5][ETA] = 0.75;
-
-      nodalSet[6][KSI] = 1.0;
-      nodalSet[6][ETA] = 0.0;
-
-      nodalSet[7][KSI] = 0.75;
-      nodalSet[7][ETA] = 0.25;
-
-      nodalSet[8][KSI] = 0.25;
-      nodalSet[8][ETA] = 0.75;
-
-      nodalSet[9][KSI] = 0.0;
-      nodalSet[9][ETA] = 1.0;
-    } break;
-    case CFPolyOrder::ORDER4:
-    {
-      nodalSet[0][KSI] = 0.0;
-      nodalSet[0][ETA] = 0.0;
-
-      nodalSet[1][KSI] = 0.5*(1-cos(MathTools::MathConsts::CFrealPi()/4.0));
-      nodalSet[1][ETA] = 0.0;
-
-      nodalSet[2][KSI] = 0.0;
-      nodalSet[2][ETA] = 0.5*(1-cos(MathTools::MathConsts::CFrealPi()/4.0));
-
-      nodalSet[3][KSI] = 0.5;
-      nodalSet[3][ETA] = 0.0;
-
-      nodalSet[4][KSI] = 0.2371200168;
-      nodalSet[4][ETA] = 0.2371200168;
-
-      nodalSet[5][KSI] = 0.0;
-      nodalSet[5][ETA] = 0.5;
-
-      nodalSet[6][KSI] = 0.5*(1+cos(MathTools::MathConsts::CFrealPi()/4.0));
-      nodalSet[6][ETA] = 0.0;
-
-      nodalSet[7][KSI] = 0.5257599664;
-      nodalSet[7][ETA] = 0.2371200168;
-
-      nodalSet[8][KSI] = 0.2371200168;
-      nodalSet[8][ETA] = 0.5257599664;
-
-      nodalSet[9][KSI] = 0.0;
-      nodalSet[9][ETA] = 0.5*(1+cos(MathTools::MathConsts::CFrealPi()/4.0));
-
-      nodalSet[10][KSI] = 1.0;
-      nodalSet[10][ETA] = 0.0;
-
-      nodalSet[11][KSI] = 0.5*(1+cos(MathTools::MathConsts::CFrealPi()/4.0));
-      nodalSet[11][ETA] = 0.5*(1-cos(MathTools::MathConsts::CFrealPi()/4.0));
-
-      nodalSet[12][KSI] = 0.5;
-      nodalSet[12][ETA] = 0.5;
-
-      nodalSet[13][KSI] = 0.5*(1-cos(MathTools::MathConsts::CFrealPi()/4.0));
-      nodalSet[13][ETA] = 0.5*(1+cos(MathTools::MathConsts::CFrealPi()/4.0));
-
-      nodalSet[14][KSI] = 0.0;
-      nodalSet[14][ETA] = 1.0;
-    } break;
-    default:
-    {
-      throw Common::NotImplementedException (FromHere(),"Higher-order nodal set not defined!");
+      RealVector node(2);
+      node[KSI] = coords[iKsi];
+      node[ETA] = (coords[iEta]+1.)*(2.-coords[iKsi])/2.-1.; //Map [-1;1] onto [-1;1-ksi]
+      nodalSet.push_back(node);
     }
   }
+  
+  
+//   // number of nodes
+//   const CFuint nbrNodes = (order+1)*(order+2)/2;
+// 
+//   // return variable
+//   nodalSet.resize(nbrNodes);
+//   for (CFuint iNode = 0; iNode < nbrNodes; ++iNode)
+//   {
+//     nodalSet[iNode].resize(2);
+//   }
+// 
+//   // fill the vector containing the flux polynomial node coordinates
+//   // Legendre-Gauss-Lobatto nodes from Hesthaven, FROM ELECTROSTATICS TO ALMOST OPTIMAL NODAL SETS
+//   // FOR POLYNOMIAL INTERPOLATION IN A SIMPLEX. SIAM J. Numer. Anal. (1998); 35(2):655-676.
+//   switch (order)
+//   {
+//     case CFPolyOrder::ORDER0:
+//     {
+//       nodalSet[0][KSI] = 1.0/3.0;
+//       nodalSet[0][ETA] = 1.0/3.0;
+//     } break;
+//     case CFPolyOrder::ORDER1:
+//     {
+//       nodalSet[0][KSI] = 0.0;
+//       nodalSet[0][ETA] = 0.0;
+// 
+//       nodalSet[1][KSI] = 1.0;
+//       nodalSet[1][ETA] = 0.0;
+// 
+//       nodalSet[2][KSI] = 0.0;
+//       nodalSet[2][ETA] = 1.0;
+//     } break;
+//     case CFPolyOrder::ORDER2:
+//     {
+//       nodalSet[0][KSI] = 0.0;
+//       nodalSet[0][ETA] = 0.0;
+// 
+//       nodalSet[1][KSI] = 0.5;
+//       nodalSet[1][ETA] = 0.0;
+// 
+//       nodalSet[2][KSI] = 0.0;
+//       nodalSet[2][ETA] = 0.5;
+// 
+//       nodalSet[3][KSI] = 1.0;
+//       nodalSet[3][ETA] = 0.0;
+// 
+//       nodalSet[4][KSI] = 0.5;
+//       nodalSet[4][ETA] = 0.5;
+// 
+//       nodalSet[5][KSI] = 0.0;
+//       nodalSet[5][ETA] = 1.0;
+//     } break;
+//     case CFPolyOrder::ORDER3:
+//     {
+//       nodalSet[0][KSI] = 0.0;
+//       nodalSet[0][ETA] = 0.0;
+// 
+//       nodalSet[1][KSI] = 0.25;
+//       nodalSet[1][ETA] = 0.0;
+// 
+//       nodalSet[2][KSI] = 0.0;
+//       nodalSet[2][ETA] = 0.25;
+// 
+//       nodalSet[3][KSI] = 0.75;
+//       nodalSet[3][ETA] = 0.0;
+// 
+//       nodalSet[4][KSI] = 1.0/3.0;
+//       nodalSet[4][ETA] = 1.0/3.0;
+// 
+//       nodalSet[5][KSI] = 0.0;
+//       nodalSet[5][ETA] = 0.75;
+// 
+//       nodalSet[6][KSI] = 1.0;
+//       nodalSet[6][ETA] = 0.0;
+// 
+//       nodalSet[7][KSI] = 0.75;
+//       nodalSet[7][ETA] = 0.25;
+// 
+//       nodalSet[8][KSI] = 0.25;
+//       nodalSet[8][ETA] = 0.75;
+// 
+//       nodalSet[9][KSI] = 0.0;
+//       nodalSet[9][ETA] = 1.0;
+//     } break;
+//     case CFPolyOrder::ORDER4:
+//     {
+//       nodalSet[0][KSI] = 0.0;
+//       nodalSet[0][ETA] = 0.0;
+// 
+//       nodalSet[1][KSI] = 0.5*(1-cos(MathTools::MathConsts::CFrealPi()/4.0));
+//       nodalSet[1][ETA] = 0.0;
+// 
+//       nodalSet[2][KSI] = 0.0;
+//       nodalSet[2][ETA] = 0.5*(1-cos(MathTools::MathConsts::CFrealPi()/4.0));
+// 
+//       nodalSet[3][KSI] = 0.5;
+//       nodalSet[3][ETA] = 0.0;
+// 
+//       nodalSet[4][KSI] = 0.2371200168;
+//       nodalSet[4][ETA] = 0.2371200168;
+// 
+//       nodalSet[5][KSI] = 0.0;
+//       nodalSet[5][ETA] = 0.5;
+// 
+//       nodalSet[6][KSI] = 0.5*(1+cos(MathTools::MathConsts::CFrealPi()/4.0));
+//       nodalSet[6][ETA] = 0.0;
+// 
+//       nodalSet[7][KSI] = 0.5257599664;
+//       nodalSet[7][ETA] = 0.2371200168;
+// 
+//       nodalSet[8][KSI] = 0.2371200168;
+//       nodalSet[8][ETA] = 0.5257599664;
+// 
+//       nodalSet[9][KSI] = 0.0;
+//       nodalSet[9][ETA] = 0.5*(1+cos(MathTools::MathConsts::CFrealPi()/4.0));
+// 
+//       nodalSet[10][KSI] = 1.0;
+//       nodalSet[10][ETA] = 0.0;
+// 
+//       nodalSet[11][KSI] = 0.5*(1+cos(MathTools::MathConsts::CFrealPi()/4.0));
+//       nodalSet[11][ETA] = 0.5*(1-cos(MathTools::MathConsts::CFrealPi()/4.0));
+// 
+//       nodalSet[12][KSI] = 0.5;
+//       nodalSet[12][ETA] = 0.5;
+// 
+//       nodalSet[13][KSI] = 0.5*(1-cos(MathTools::MathConsts::CFrealPi()/4.0));
+//       nodalSet[13][ETA] = 0.5*(1+cos(MathTools::MathConsts::CFrealPi()/4.0));
+// 
+//       nodalSet[14][KSI] = 0.0;
+//       nodalSet[14][ETA] = 1.0;
+//     } break;
+//     default:
+//     {
+//       throw Common::NotImplementedException (FromHere(),"Higher-order nodal set not defined!");
+//     }
+//   }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -1339,45 +719,46 @@ void TriagFluxReconstructionElementData::setCFLConvDiffRatio()
 
 void TriagFluxReconstructionElementData::createFaceOutputPntCellMappedCoords()
 {
-//   // number of points on a face
-//   CFuint nbrFacePnts;
-//   CFreal dKsi;
-//   if (m_polyOrder == CFPolyOrder::ORDER0)
-//   {
-//     nbrFacePnts = 2;
-//     dKsi = 2.0;
-//   }
-//   else
-//   {
-//     nbrFacePnts = m_polyOrder + 1;
-//     dKsi = 2.0/m_polyOrder;
-//   }
-// 
-//   // face mapped coordinates of uniform distribution of points
-//   CFreal ksi = -1.0;
-//   m_faceOutputPntFaceMappedCoords.resize(0);
-//   for (CFuint iPnt = 0; iPnt < nbrFacePnts; ++iPnt, ksi += dKsi)
-//   {
-//     RealVector mapCoord(1);
-//     mapCoord[KSI] = ksi;
-//     m_faceOutputPntFaceMappedCoords.push_back(mapCoord);
-//   }
-// 
-//   // compute cell mapped coordinates for distribution on each face
-//   const CFuint nbrCellFaces = getNbrSVFaces();
-//   m_faceOutputPntCellMappedCoords.resize(nbrCellFaces);
-//   for (CFuint iFace = 0; iFace < nbrCellFaces; ++iFace)
-//   {
-//     // current face node coordinates
-//     const vector<RealVector>& faceNodeCoords = m_svFaceNodeCoords[iFace];
-//     m_faceOutputPntCellMappedCoords[iFace].resize(0);
-//     for (CFuint iPnt = 0; iPnt < nbrFacePnts; ++iPnt)
-//     {
-//       const CFreal fun0 = 0.5*(1.0-m_faceOutputPntFaceMappedCoords[iPnt][KSI]);
-//       const CFreal fun1 = 0.5*(1.0+m_faceOutputPntFaceMappedCoords[iPnt][KSI]);
-//       m_faceOutputPntCellMappedCoords[iFace].push_back(fun0*faceNodeCoords[0]+fun1*faceNodeCoords[1]);
-//     }
-//   }
+  CFLog(VERBOSE,"createFaceOutputPntCellMappedCoords\n");
+  // number of points on a face
+  CFuint nbrFacePnts;
+  CFreal dKsi;
+  if (m_polyOrder == CFPolyOrder::ORDER0)
+  {
+    nbrFacePnts = 2;
+    dKsi = 2.0;
+  }
+  else
+  {
+    nbrFacePnts = m_polyOrder + 1;
+    dKsi = 2.0/m_polyOrder;
+  }
+
+  // face mapped coordinates of uniform distribution of points
+  CFreal ksi = -1.0;
+  m_faceOutputPntFaceMappedCoords.resize(0);
+  for (CFuint iPnt = 0; iPnt < nbrFacePnts; ++iPnt, ksi += dKsi)
+  {
+    RealVector mapCoord(1);
+    mapCoord[KSI] = ksi;
+    m_faceOutputPntFaceMappedCoords.push_back(mapCoord);
+  }
+
+  // compute cell mapped coordinates for distribution on each face
+  const CFuint nbrCellFaces = 3;
+  m_faceOutputPntCellMappedCoords.resize(nbrCellFaces);
+  for (CFuint iFace = 0; iFace < nbrCellFaces; ++iFace)
+  {
+    // current face node coordinates
+    const vector<RealVector>& faceNodeCoords = m_faceNodeCoords[iFace];
+    m_faceOutputPntCellMappedCoords[iFace].resize(0);
+    for (CFuint iPnt = 0; iPnt < nbrFacePnts; ++iPnt)
+    {
+      const CFreal fun0 = 0.5*(1.0-m_faceOutputPntFaceMappedCoords[iPnt][KSI]);
+      const CFreal fun1 = 0.5*(1.0+m_faceOutputPntFaceMappedCoords[iPnt][KSI]);
+      m_faceOutputPntCellMappedCoords[iFace].push_back(fun0*faceNodeCoords[0]+fun1*faceNodeCoords[1]);
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -1385,6 +766,7 @@ void TriagFluxReconstructionElementData::createFaceOutputPntCellMappedCoords()
 void TriagFluxReconstructionElementData::createFaceOutputPntConn()
 {
   CFAUTOTRACE;
+  CFLog(VERBOSE,"createFaceOutputPntConn\n");
 
   m_faceOutputPntConn.resize(0);
   for (CFuint iCell = 0; iCell < (CFuint) m_polyOrder; ++iCell)
@@ -1397,89 +779,268 @@ void TriagFluxReconstructionElementData::createFaceOutputPntConn()
 }
 
 //////////////////////////////////////////////////////////////////////
+//From here newly implemented functions (in comparison to SFV)
+//standard element: nodes (-1;-1), (-1;1), (1;-1)
 
-  void TriagFluxReconstructionElementData::createFlxPntsLocalCoords(){};
+void TriagFluxReconstructionElementData::createFlxPntsLocalCoords()
+{
+  CFLog(VERBOSE,"createFlxPntsLocalCoords\n");
+  // number of flux points in 1D
+  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
 
-//////////////////////////////////////////////////////////////////////
-  
-  void TriagFluxReconstructionElementData::createSolPntsLocalCoords(){};
-
-//////////////////////////////////////////////////////////////////////
-  
-  void TriagFluxReconstructionElementData::createFaceFlxPntsFaceLocalCoords(){};
-
-//////////////////////////////////////////////////////////////////////
-  
-  void TriagFluxReconstructionElementData::createSolPolyExponents(){};
-
-//////////////////////////////////////////////////////////////////////
-  
-  void TriagFluxReconstructionElementData::computeSolPolyCoefs(){};
-
-//////////////////////////////////////////////////////////////////////
-  
-  void TriagFluxReconstructionElementData::computeInitPntsCoords(){};
-
-//////////////////////////////////////////////////////////////////////
-  
-  void TriagFluxReconstructionElementData::computeInitTransfMatrix(){};
-
-//////////////////////////////////////////////////////////////////////
-  
-  void TriagFluxReconstructionElementData::createFlxPntDerivDir(){};
+  // set flux point local coordinates
+  m_flxPntsLocalCoords.resize(0);
+  // loop over 1D Flx pnts
+  for (CFuint i = 0; i < nbrFlxPnts1D; ++i)
+  {
+    RealVector flxCoords(2);
+    flxCoords[KSI] = -1;
+    flxCoords[ETA] = m_flxPntsLocalCoord1D[i];
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    
+    flxCoords[KSI] = m_flxPntsLocalCoord1D[i];
+    flxCoords[ETA] = -1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    
+    flxCoords[KSI] = m_flxPntsLocalCoord1D[i];
+    flxCoords[ETA] = -m_flxPntsLocalCoord1D[i];
+    m_flxPntsLocalCoords.push_back(flxCoords);
+  }
+}
 
 //////////////////////////////////////////////////////////////////////
   
-  void TriagFluxReconstructionElementData::createIntFlxPntIdxs(){};
+void TriagFluxReconstructionElementData::createSolPntsLocalCoords()
+{   
+  CFLog(VERBOSE,"createSolPntsLocalCoords\n");
+  // number of solution points in 1D
+  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+
+  // set solution point local coordinates
+  m_solPntsLocalCoords.resize(0);
+  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+  { 
+    for (CFuint iEta = 0; iEta < nbrSolPnts1D-iKsi; ++iEta) //as ksi grows, create pnts on vertical closer to node (1;-1)
+    {
+      RealVector solCoords(2);
+      solCoords[KSI] = m_solPntsLocalCoord1D[iKsi];
+      solCoords[ETA] = (m_solPntsLocalCoord1D[iEta]+1.)*(2.-m_solPntsLocalCoord1D[iKsi])/2.-1.; //Map [-1;1] onto [-1;1-ksi]
+      m_solPntsLocalCoords.push_back(solCoords);
+    }
+  }
+    
+}
+
+//////////////////////////////////////////////////////////////////////
+  
+void TriagFluxReconstructionElementData::createFaceFlxPntsFaceLocalCoords()
+{
+  CFAUTOTRACE;
+  CFLog(VERBOSE,"createFaceFlxPntsFaceLocalCoords\n");
+
+  // number of solution points in 1D
+  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+
+  // set face flux point face local coordinates
+  m_faceFlxPntsFaceLocalCoords.resize(0);
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts1D; ++iFlx)
+  {
+    RealVector flxCoord(1);
+    flxCoord[KSI] = m_flxPntsLocalCoord1D[iFlx];
+    m_faceFlxPntsFaceLocalCoords.push_back(flxCoord);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+  
+void TriagFluxReconstructionElementData::createSolPolyExponents()
+{
+  CFAUTOTRACE;
+  CFLog(VERBOSE,"createSolPolyExponents\n");
+
+  // number of solution points in 1D
+  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+
+  // define exponents
+  m_solPolyExponents.resize(0);
+  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+  {
+    for (CFuint iEta = 0; iEta < nbrSolPnts1D-iKsi; ++iEta)
+    {
+      vector< CFint > solPolyExps(2);
+      solPolyExps[KSI] = iKsi;
+      solPolyExps[ETA] = iEta;
+      m_solPolyExponents.push_back(solPolyExps);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+   
+void TriagFluxReconstructionElementData::createFlxPntDerivDir()
+{
+//   CFLog(VERBOSE,"createFlxPntDerivDir\n");
+//   // number of flux points in 1D
+//   const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+// 
+//   // set derivation directions
+//   m_flxPntDerivDir.resize(0);
+//   // loop over 1D Flx pnts
+//   for (CFuint i = 0; i < nbrFlxPnts1D; ++i)
+//   {
+//     // Side at ksi = -1
+//     m_flxPntDerivDir.push_back(KSI);
+//     
+//     // Side at eta = -1
+//     m_flxPntDerivDir.push_back(ETA);
+//     
+//     // Side at 45deg
+//     m_flxPntDerivDir.push_back(ETA);
+//   }
+}
+
+//////////////////////////////////////////////////////////////////////
+  
+  void TriagFluxReconstructionElementData::createIntFlxPntIdxs(){}//internal Flx pnts not necessary
 
 
 //////////////////////////////////////////////////////////////////////
   
-  void TriagFluxReconstructionElementData::createFaceFluxPntsConnPerOrient(){};
+void TriagFluxReconstructionElementData::createFaceFluxPntsConnPerOrient()
+{
+  CFAUTOTRACE;
+
+//   // number of orientations
+//   const CFuint nbrOrients = 10;
+// 
+//   // number of solution points in 1D
+//   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+// 
+//   // create data structure
+//   m_faceFlxPntConnPerOrient.resize(nbrOrients);
+//   CFuint iOrient = 0;
+//   for (CFuint iFaceL = 0; iFaceL < 4; ++iFaceL)
+//   {
+//     for (CFuint iFaceR = iFaceL; iFaceR < 4; ++iFaceR, ++iOrient)
+//     {
+//       m_faceFlxPntConnPerOrient[iOrient].resize(2);
+//       for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
+//       {
+//         m_faceFlxPntConnPerOrient[iOrient][LEFT ]
+//             .push_back(m_faceFlxPntConn[iFaceL][iSol               ]);
+//         m_faceFlxPntConnPerOrient[iOrient][RIGHT]
+//             .push_back(m_faceFlxPntConn[iFaceR][nbrSolPnts1D-1-iSol]);
+//       }
+//     }
+//   }
+}
 
 //////////////////////////////////////////////////////////////////////
   
-  void TriagFluxReconstructionElementData::createFlxPolyExponents(){};
+void TriagFluxReconstructionElementData::createFlxPolyExponents()//Shouldn't be necessary
+{
+}
 
 //////////////////////////////////////////////////////////////////////
   
-  void TriagFluxReconstructionElementData::createFlxPntMatrixIdxForReconstruction(){};
+  void TriagFluxReconstructionElementData::createFlxPntMatrixIdxForReconstruction(){}
 
 //////////////////////////////////////////////////////////////////////
   
-  void TriagFluxReconstructionElementData::createSolPntIdxsForReconstruction(){};
+  void TriagFluxReconstructionElementData::createSolPntIdxsForReconstruction(){}
 
 //////////////////////////////////////////////////////////////////////
   
-  void TriagFluxReconstructionElementData::createSolPntMatrixIdxForDerivation(){};
+void TriagFluxReconstructionElementData::createSolPntMatrixIdxForDerivation()
+{
+  CFLog(VERBOSE,"createSolPntMatrixIdxForDerivation\n");
+
+  // number of solution points in 1D
+  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+
+  // set indices
+  m_solPntMatrixIdxForDerivation.resize(0);
+  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+  {
+    for (CFuint iEta = 0; iEta < nbrSolPnts1D-iKsi; ++iEta)
+    {
+      vector< CFuint > solIdxs(2);
+      solIdxs[KSI] = iKsi;
+      solIdxs[ETA] = iEta;
+      m_solPntMatrixIdxForDerivation.push_back(solIdxs);
+    }
+  }
+}
 
 //////////////////////////////////////////////////////////////////////
   
-  void TriagFluxReconstructionElementData::createFlxPntMatrixIdxForDerivation(){};
+  void TriagFluxReconstructionElementData::createFlxPntMatrixIdxForDerivation(){}
 
 //////////////////////////////////////////////////////////////////////
   
-  void TriagFluxReconstructionElementData::createSolPntIdxsForDerivation(){};
+  void TriagFluxReconstructionElementData::createSolPntIdxsForDerivation(){}
 
 //////////////////////////////////////////////////////////////////////
   
-  void TriagFluxReconstructionElementData::createFlxPntIdxsForDerivation(){};
+  void TriagFluxReconstructionElementData::createFlxPntIdxsForDerivation(){}
 
 //////////////////////////////////////////////////////////////////////
   
-  void TriagFluxReconstructionElementData::createCellNodeCoords(){};
+void TriagFluxReconstructionElementData::createCellNodeCoords()
+{
+  CFAUTOTRACE;
+
+  m_cellNodeCoords.resize(3);
+
+  // first node
+  m_cellNodeCoords[0].resize(2);
+  m_cellNodeCoords[0][KSI] = -1.0;
+  m_cellNodeCoords[0][ETA] = -1.0;
+
+  // second node
+  m_cellNodeCoords[1].resize(2);
+  m_cellNodeCoords[1][KSI] = -1.0;
+  m_cellNodeCoords[1][ETA] = +1.0;
+
+  // third node
+  m_cellNodeCoords[2].resize(2);
+  m_cellNodeCoords[2][KSI] = +1.0;
+  m_cellNodeCoords[2][ETA] = -1.0;
+}
 
 //////////////////////////////////////////////////////////////////////
   
-  void TriagFluxReconstructionElementData::createFaceNodeConnectivity(){};
+void TriagFluxReconstructionElementData::createFaceNodeConnectivity()
+{
+  CFAUTOTRACE;
+
+  m_faceNodeConn.resize(3);
+
+  m_faceNodeConn[0].resize(2);
+  m_faceNodeConn[0][0] = 0;
+  m_faceNodeConn[0][1] = 1;
+
+  m_faceNodeConn[1].resize(2);
+  m_faceNodeConn[1][0] = 1;
+  m_faceNodeConn[1][1] = 2;
+
+  m_faceNodeConn[2].resize(2);
+  m_faceNodeConn[2][0] = 2;
+  m_faceNodeConn[2][1] = 0;
+}
 
 //////////////////////////////////////////////////////////////////////
   
-  void TriagFluxReconstructionElementData::createFaceMappedCoordDir(){};
+void TriagFluxReconstructionElementData::createFaceMappedCoordDir()
+{
+  CFAUTOTRACE;
 
-//////////////////////////////////////////////////////////////////////
-  
-  void TriagFluxReconstructionElementData::createFaceNodeConnectivityPerOrient(){};
+  m_faceMappedCoordDir.resize(3);
+
+  m_faceMappedCoordDir[0] = -1;
+  m_faceMappedCoordDir[1] = 0.5;
+  m_faceMappedCoordDir[2] = -1;
+}
 
 //////////////////////////////////////////////////////////////////////
   

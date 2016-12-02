@@ -34,7 +34,7 @@ meshUpgradeBuilderProvider("MeshUpgrade");
 
 void MeshUpgradeBuilder::defineConfigOptions(Config::OptionList& options)
 {
-  options.addConfigOption< std::string >("PolynomialOrder","Spectral finite difference polynomial order.");
+  options.addConfigOption< std::string >("PolynomialOrder","Flux Reconstruction polynomial order.");
   options.addConfigOption< std::string >("GeoPolynomialOrder","Geometrical polynomial order.");
 }
 

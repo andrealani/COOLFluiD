@@ -7,7 +7,7 @@
 #include "Framework/MethodStrategyProvider.hh"
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
-#include "FluxReconstructionMethod/BaseFluxPntDistribution.hh"
+#include "FluxReconstructionMethod/BasePointDistribution.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -17,7 +17,7 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-BaseFluxPntDistribution::BaseFluxPntDistribution(const std::string& name) :
+BasePointDistribution::BasePointDistribution(const std::string& name) :
   FluxReconstructionSolverStrategy(name)
 {
   CFAUTOTRACE;
@@ -25,14 +25,14 @@ BaseFluxPntDistribution::BaseFluxPntDistribution(const std::string& name) :
 
 //////////////////////////////////////////////////////////////////////////////
 
-BaseFluxPntDistribution::~BaseFluxPntDistribution()
+BasePointDistribution::~BasePointDistribution()
 {
   CFAUTOTRACE;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void BaseFluxPntDistribution::setup()
+void BasePointDistribution::setup()
 {
   CFAUTOTRACE;
   
@@ -41,7 +41,7 @@ void BaseFluxPntDistribution::setup()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void BaseFluxPntDistribution::unsetup()
+void BasePointDistribution::unsetup()
 {
   CFAUTOTRACE;
   

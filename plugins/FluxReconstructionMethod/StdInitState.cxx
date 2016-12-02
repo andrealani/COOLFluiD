@@ -200,7 +200,7 @@ void StdInitState::executeOnTrs()
     CFuint cellIdx = (*elemType)[iElemType].getStartIdx();
 
     // local coordinates of initialization points and matrix used for initialization
-    SafePtr< vector< RealVector > > locInitPntCoords = frLocalData[iElemType]->getInitPntsCoords();
+    SafePtr< vector< RealVector > > locInitPntCoords = frLocalData[iElemType]->getSolPntsLocalCoords();
     SafePtr< RealMatrix >           initTransfMatrix = frLocalData[iElemType]->getInitTransfMatrix();
 
     // get number of states
@@ -209,7 +209,7 @@ void StdInitState::executeOnTrs()
     // loop over elements
     for (CFuint iElem = 0; iElem < nbrElems; ++iElem, ++cellIdx)
     {
-      //CFLog(VERBOSE,"BUILDING GE IN StdInitState!!!!!!!!!!!!!!!!!!!!");
+      //c
       // build the GeometricEntity
       geoData.idx = cellIdx;
       GeometricEntity *const cell = geoBuilder->buildGE();
@@ -224,26 +224,32 @@ void StdInitState::executeOnTrs()
       {
         // compute initialization node global coordinate
         m_initPntCoords = cell->computeCoordFromMappedCoord((*locInitPntCoords)[iPnt]);
-
+	
         // evaluate the function at the state coordinate
         m_vFunction.evaluate(m_initPntCoords,*m_inputState);
         *m_initPntsStates[iPnt] = *m_inputToUpdateVar->transform(m_inputState);
+	m_varSet->setAdimensionalValues(*m_initPntsStates[iPnt], *(*solPntStates)[iPnt]);
+// 	if(m_initPntCoords[1]>0.475 && m_initPntCoords[1]<0.525 && m_initPntCoords[0]<0.025){
+// 	CFLog(VERBOSE,"InitPntGlobalCoord = (" << m_initPntCoords[0] << "," << m_initPntCoords[1] << ") ");
+// 	CFLog(VERBOSE,", its state: " << (m_initPntsStates[iPnt])[0] << " and elem: " << iElem << "\n");
+// 	}
+	
       }
 
-      // transform initialization points solutions to solution point solutions
-      for (CFuint iSol = 0; iSol < nbrStates; ++iSol)
-      {
-        // variable for a dimensional state
-        State dimState(RealVector(0.0,m_nbrEqs));
-
-        for (CFuint iPnt = 0; iPnt < nbrStates; ++iPnt)
-        {
-          dimState += (*initTransfMatrix)(iSol,iPnt)*(*m_initPntsStates[iPnt]);
-        }
-
-        // adimensionalize the value if needed and store
-        m_varSet->setAdimensionalValues(dimState, *(*solPntStates)[iSol]);
-      }
+//       // transform initialization points solutions to solution point solutions
+//       for (CFuint iSol = 0; iSol < nbrStates; ++iSol)
+//       {
+//         // variable for a dimensional state
+//         State dimState(RealVector(0.0,m_nbrEqs));
+// 
+//         for (CFuint iPnt = 0; iPnt < nbrStates; ++iPnt)
+//         {
+//           dimState += (*initTransfMatrix)(iSol,iPnt)*(*m_initPntsStates[iPnt]);
+//         }
+// 
+//         // adimensionalize the value if needed and store
+//         m_varSet->setAdimensionalValues(dimState, *(*solPntStates)[iSol]);
+//       }
 
       //release the GeometricEntity
       geoBuilder->releaseGE();

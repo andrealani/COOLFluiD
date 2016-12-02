@@ -16,6 +16,7 @@
 #include "Framework/SpaceMethodData.hh"
 #include "Framework/StdTrsGeoBuilder.hh"
 //#include "Framework/VolumeIntegrator.hh"
+#include "Framework/FaceToCellGEBuilder.hh"
 
 #include "Framework/DofDataHandleIterator.hh"
 #include "Framework/ProxyDofIterator.hh"
@@ -27,9 +28,10 @@ namespace COOLFluiD {
 
     class FluxReconstructionStrategy;
     class BaseInterfaceFlux;
-    class BaseFluxPntDistribution;
+    class BasePointDistribution;
     class FluxReconstructionElementData;
     class ReconstructStatesFluxReconstruction;
+    class BasePointDistribution;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -101,26 +103,26 @@ public: // functions
 
 //   /// Get the VolumeIntegrator
 //   Common::SafePtr< Framework::VolumeIntegrator > getVolumeIntegrator();
-
-  /// Gets the FluxReconstruction strategy
-  FluxReconstructionStrategy * getFluxReconstructionStrategy() const
-  {
-    cf_assert(m_fluxreconstructionstrategy.isNotNull());
-    return m_fluxreconstructionstrategy.getPtr();
-  }
   
   /// Gets the interface flux computation strategy
-  Common::SafePtr< BaseInterfaceFlux > getInterfaceFluxStrategy() const
+  Common::SafePtr< BaseInterfaceFlux > getInterfaceFlux() const
   {
     cf_assert(m_interfaceflux.isNotNull());
     return m_interfaceflux.getPtr();
   }
   
   /// Gets the flux point distribution
-  Common::SafePtr< BaseFluxPntDistribution > getFluxPntDistributionStrategy() const
+  Common::SafePtr< BasePointDistribution > getFluxPntDistribution() const
   {
     cf_assert(m_fluxpntdistribution.isNotNull());
     return m_fluxpntdistribution.getPtr();
+  }
+  
+  /// Gets the solution point distribution
+  Common::SafePtr< BasePointDistribution > getSolPntDistribution() const
+  {
+    cf_assert(m_solpntdistribution.isNotNull());
+    return m_solpntdistribution.getPtr();
   }
   
   /// @return reference to m_frLocalData
@@ -128,6 +130,14 @@ public: // functions
   
   /// @return the states reconstructor
   Common::SafePtr< ReconstructStatesFluxReconstruction > getStatesReconstructor();
+  
+    /// @return the GeometricEntity face builder
+  Common::SafePtr<
+    Framework::GeometricEntityPool< Framework::FaceToCellGEBuilder > >
+    getFaceBuilder()
+  {
+    return &m_faceBuilder;
+  }
   
   /// Sets up the FluxReconstructionData
   void setup();
@@ -155,6 +165,9 @@ private:  // data
 
   /// Builder for standard TRS GeometricEntity's
   Framework::GeometricEntityPool< Framework::StdTrsGeoBuilder > m_stdTrsGeoBuilder;
+  
+  /// Builder for faces (containing the neighbouring cells)
+  Framework::GeometricEntityPool< Framework::FaceToCellGEBuilder >  m_faceBuilder;
 
 //   /// The volume integrator
 //   Framework::VolumeIntegrator m_volumeIntegrator;
@@ -164,12 +177,6 @@ private:  // data
 // 
 //   /// String for configuring the numerical integrator Order
 //   std::string m_intorderStr;
-
-  /// FluxReconstruction strategy
-  Common::SelfRegistPtr< FluxReconstructionStrategy > m_fluxreconstructionstrategy;
-
-  /// String to configure FluxReconstruction strategy
-  std::string m_fluxreconstructionstrategyStr;
   
   /// Interface flux computation strategy
   Common::SelfRegistPtr< BaseInterfaceFlux > m_interfaceflux;
@@ -177,17 +184,23 @@ private:  // data
   /// String to configure interface flux computation strategy
   std::string m_interfacefluxStr;
   
-  /// Flux point distribution
-  Common::SelfRegistPtr< BaseFluxPntDistribution > m_fluxpntdistribution;
-
-  /// String to configure flux point distribution
-  std::string m_fluxpntdistributionStr;
-  
   /// vector containing the  FluxReconstructionElementData for different element types
   std::vector< FluxReconstructionElementData* > m_frLocalData;
   
   /// pointer to states reconstructor strategy
   Common::SelfRegistPtr< ReconstructStatesFluxReconstruction > m_statesReconstructor;
+  
+  /// Flux point distribution
+  Common::SelfRegistPtr< BasePointDistribution > m_fluxpntdistribution;
+
+  /// String to configure flux point distribution
+  std::string m_fluxpntdistributionStr;
+  
+  /// Solution point distribution
+  Common::SelfRegistPtr< BasePointDistribution > m_solpntdistribution;
+
+  /// String to configure flux point distribution
+  std::string m_solpntdistributionStr;
 
 };  // end of class FluxReconstructionSolverData
 

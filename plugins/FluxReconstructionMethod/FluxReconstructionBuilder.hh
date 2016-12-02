@@ -177,6 +177,7 @@ private: // data
 
   /// max spectral finite volume polynomial order
   CFuint m_maxNbrStatesInCell;
+  
 
 };  // end of class FluxReconstructionBuilder
 

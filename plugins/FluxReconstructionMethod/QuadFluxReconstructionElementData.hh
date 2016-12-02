@@ -11,6 +11,7 @@
 #include "Common/SafePtr.hh"
 #include "MathTools/RealVector.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/BasePointDistribution.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -21,9 +22,10 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represents a quadrangular spectral finite difference element
+ * This class represents a quadrilateral Flux Reconstruction element
  *
- * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
+ * @author Alexander Papen
  *
  */
 class QuadFluxReconstructionElementData : public FluxReconstructionElementData {
@@ -38,6 +40,12 @@ public:
    * Constructor initializing polyOrder.
    */
   QuadFluxReconstructionElementData(CFPolyOrder::Type polyOrder);
+  
+  /**
+   * Constructor initializing polyOrder, solution and flux point distribution
+   */
+  QuadFluxReconstructionElementData(CFPolyOrder::Type polyOrder, Common::SafePtr< BasePointDistribution > solPntDist, 
+				    Common::SafePtr< BasePointDistribution > flxPntDist);
 
   /**
    * Default destructor.

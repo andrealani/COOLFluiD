@@ -14,6 +14,7 @@
 #include "MathTools/RealMatrix.hh"
 #include "MathTools/ZeroDeterminantException.hh"
 #include "Common/SafePtr.hh"
+#include "FluxReconstructionMethod/BasePointDistribution.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -24,9 +25,10 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represents a general spectral finite difference element
+ * This class represents a general Flux Reconstruction element
  *
- * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
+ * @author Alexander Papen
  *
  */
 class FluxReconstructionElementData {
@@ -71,6 +73,18 @@ public:
    * @par polyOrder is the new polynomial order
    */
   void setPolyOrder(CFPolyOrder::Type polyOrder);
+  
+  /**
+   * Set flux point distribution
+   * @par flxPntDist is the new 1D flux point distribution
+   */
+  void setFlxPntDistribution(Common::SafePtr< BasePointDistribution > flxPntDist);
+  
+  /**
+   * Set solution point distribution
+   * @par solPntDist is the new 1D solution point distribution
+   */
+  void setSolPntDistribution(Common::SafePtr< BasePointDistribution > solPntDist);
 
   /**
    * @return number of solution points
@@ -95,15 +109,15 @@ public:
    */
   CFuint getNbrOfIntFlxPnts()
   {
-    cf_assert(m_solPntsLocalCoord1D.size() > 0);
-    cf_assert(m_flxPntsLocalCoord1D.size() > 0);
-    CFuint nbrIntFlx = m_dimensionality*(m_flxPntsLocalCoord1D.size()-2);
-    const CFuint dim = static_cast<CFuint>(m_dimensionality);
-    for (CFuint iDim = 1; iDim < dim; ++iDim)
-    {
-      nbrIntFlx *= m_solPntsLocalCoord1D.size();
-    }
-    return nbrIntFlx;
+//     cf_assert(m_solPntsLocalCoord1D.size() > 0);
+//     cf_assert(m_flxPntsLocalCoord1D.size() > 0);
+//     CFuint nbrIntFlx = m_dimensionality*(m_flxPntsLocalCoord1D.size()-2);
+//     const CFuint dim = static_cast<CFuint>(m_dimensionality);
+//     for (CFuint iDim = 1; iDim < dim; ++iDim)
+//     {
+//       nbrIntFlx *= m_solPntsLocalCoord1D.size();
+//     }
+    return 0;
   }
 
   /**
@@ -565,40 +579,39 @@ protected: // functions
    */
   void resetFluxReconstructionElementData();
 
-  /**
-   * create vector with flux points local coordinate in 1D
-   */
-  void createFlxPntsLocalCoord1D();
+//   /**
+//    * create vector with flux points local coordinate in 1D
+//    */
+//   void createFlxPntsLocalCoord1D();
+// 
+//   /**
+//    * create vector with solution points local coordinate in 1D
+//    */
+//   void createSolPntsLocalCoord1D();
 
-  /**
-   * create vector with solution points local coordinate in 1D
-   * @pre createSolPntsLocalCoord1D()
-   */
-  void createSolPntsLocalCoord1D();
+//   /**
+//    * compute coefficients for reconstruction of solution in flux points in 1D
+//    * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
+//    */
+//   void computeRecCoefsFlxPnts1D();
 
-  /**
-   * compute coefficients for reconstruction of solution in flux points in 1D
-   * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
-   */
-  void computeRecCoefsFlxPnts1D();
-
-  /**
-   * compute coefficients for derivative of flux in solution points in 1D
-   * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
-   */
-  void computeDerivCoefsSolPnts1D();
-
-  /**
-   * compute coefficients for derivative of solution polynomial in solution points in 1D
-   * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
-   */
-  void computeSolPolyDerivCoefsSolPnts1D();
-
-  /**
-   * compute coefficients for derivative of solution polynomial in flux points in 1D
-   * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
-   */
-  void computeSolPolyDerivCoefsFlxPnts1D();
+//   /**
+//    * compute coefficients for derivative of flux in solution points in 1D
+//    * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
+//    */
+//   void computeDerivCoefsSolPnts1D();
+// 
+//   /**
+//    * compute coefficients for derivative of solution polynomial in solution points in 1D
+//    * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
+//    */
+//   void computeSolPolyDerivCoefsSolPnts1D();
+// 
+//   /**
+//    * compute coefficients for derivative of solution polynomial in flux points in 1D
+//    * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
+//    */
+//   void computeSolPolyDerivCoefsFlxPnts1D();
 
   /**
    * create vector with flux points local coordinates
@@ -849,6 +862,12 @@ protected: // protected data
 
   /// flux point local coordinate in 1D
   std::vector< CFreal > m_flxPntsLocalCoord1D;
+  
+  /// Distribution of solution points
+  Common::SafePtr<BasePointDistribution> m_solPntDistribution;
+  
+  /// Distribution of flux points
+  Common::SafePtr<BasePointDistribution> m_flxPntDistribution;
 
   /// coefficients for solution reconstruction in the flux points
   RealMatrix m_recCoefsFlxPnts1D;
@@ -1006,6 +1025,9 @@ protected: // protected data
 
   /// local cell face - output point connectivity
   std::vector< std::vector< CFuint > > m_faceOutputPntConn;
+  
+  /// local face normals 
+  std::vector< RealVector > m_faceLocalNorm;
 
 }; // end of class FluxReconstructionElementData
 

@@ -4,8 +4,8 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_Numerics_FluxReconstructionMethod_BaseFluxPntDistribution_hh
-#define COOLFluiD_Numerics_FluxReconstructionMethod_BaseFluxPntDistribution_hh
+#ifndef COOLFluiD_Numerics_FluxReconstructionMethod_BasePointDistribution_hh
+#define COOLFluiD_Numerics_FluxReconstructionMethod_BasePointDistribution_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -20,31 +20,31 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This class represent the base flux point distribution
+/// This class represent the base 1D point distribution for either flux or solution points
 /// @author Alexander Papen
 /// @author Ray Vandenhoeck
-class BaseFluxPntDistribution : public FluxReconstructionSolverStrategy {
+class BasePointDistribution : public FluxReconstructionSolverStrategy {
 
 public:  // types
 
   typedef Framework::BaseMethodStrategyProvider<
-      FluxReconstructionSolverData,BaseFluxPntDistribution > PROVIDER;
+      FluxReconstructionSolverData,BasePointDistribution > PROVIDER;
 
 public:  // methods
 
   /// Constructor
-  BaseFluxPntDistribution(const std::string& name);
+  BasePointDistribution(const std::string& name);
 
   /// Destructor
-  virtual ~BaseFluxPntDistribution();
+  virtual ~BasePointDistribution();
 
-  /// Add compute the term to add in the jacobian
-  virtual void compute() = 0;
+  /// Get the 1D coordinates of the point distribution 
+  virtual std::vector<CFreal> getLocalCoords1D(CFPolyOrder::Type solOrder) = 0;
 
   /// Gets the Class name
   static std::string getClassName()
   {
-    return "BaseFluxPntDistribution";
+    return "BasePointDistribution";
   }
 
   /// Gets the polymorphic type name
@@ -57,8 +57,9 @@ public:  // methods
   virtual void unsetup();
   
 private: // data
+  
 
-}; // class BaseFluxPntDistribution
+}; // class BasePointDistribution
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -68,5 +69,5 @@ private: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif  // COOLFluiD_FluxReconstructionMethod_BaseFluxPntDistribution_hh
+#endif  // COOLFluiD_FluxReconstructionMethod_BasePointDistribution_hh
 

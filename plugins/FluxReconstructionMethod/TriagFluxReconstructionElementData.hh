@@ -21,9 +21,10 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represents a triangular flux reconstruction element
+ * This class represents a triangular Flux Reconstruction element
  *
- * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
+ * @author Alexander Papen
  *
  */
 class TriagFluxReconstructionElementData : public FluxReconstructionElementData {
@@ -38,6 +39,12 @@ public:
    * Constructor initializing polyOrder.
    */
   TriagFluxReconstructionElementData(CFPolyOrder::Type polyOrder);
+  
+  /**
+   * Constructor initializing polyOrder, solution and flux point distribution
+   */
+  TriagFluxReconstructionElementData(CFPolyOrder::Type polyOrder, Common::SafePtr< BasePointDistribution > solPntDist, 
+				    Common::SafePtr< BasePointDistribution > flxPntDist);
 
   /**
    * Default destructor.
@@ -45,63 +52,12 @@ public:
   ~TriagFluxReconstructionElementData();
 
 protected: // functions
-  /**
-   * vector with the local coordinates of the SV nodes
-   */
-  virtual void computeSVNodeLocalCoords();
-
-  /**
-   * Creates the vector containing the local node coordinates of a SV.
-   */
-  virtual void createLocalNodeCoord();
-
-  /**
-   * Creates the connectivity between a local face and its local nodes in a SV.
-   * External faces are put first.
-   */
-  virtual void createLocalFaceNodeConn();
-
-  /**
-   * Creates local CV - node connectivity.
-   */
-  virtual void createLocalCVNodeConn();
-
-  /**
-   * Creates the connectivity between a local internal face and its local neighbouring CVs.
-   */
-  virtual void createLocalIntFaceCVConn();
 
   /**
    * Computes the local internal face normals.
-   * @pre createLocalNodeCoord() and createLocalFaceNodeConn() have to be executed first.
+   * @pre createNodeCoord() and createFaceNodeConn() have to be executed first.
    */
-  virtual void computeLocalFaceNormals();
-
-  /**
-   * Computes the external face local normals
-   */
-  virtual void computeExtFaceLocalNormals();
-
-  /**
-   * Computes the volume fraction that each CV occupates inside the SV.
-   * @pre createLocalCVNodeConn() and createLocalNodeCoord() must be called first.
-   */
-  virtual void computeVolumeFractionsOfCVs();
-
-  /**
-   * Creates the connectivity between a local external face and its local neighbouring CV.
-   */
-  virtual void createLocalExtFaceCVConn();
-
-  /**
-   * Creates the connectivity between SV faces and local external faces.
-   */
-  virtual void createSVFaceLocalExtFaceConn();
-
-  /**
-   * Creates SV face-node connectivity
-   */
-  virtual void createSVFaceNodeConnectivity();
+  void computeLocalFaceNormals();
 
   /**
    * Creates the wheight coordinates of the flux points in a SV face
@@ -110,29 +66,12 @@ protected: // functions
   virtual void createFaceFluxPolyNodeWheightCoord();
 
   /**
-   * Creates a list with the different possible connectivities of faces
-   * @pre createSVFaceNodeConnectivity()
-   */
-  virtual void createSVFaceNodeConnectivityPerOrient();
-
-  /**
    * Creates a list with the different possible connectivities of faces,
    * not taking into account possible symmetries
    * (--> more possible orientations than with function above)
    * @pre createSVFaceNodeConnectivity()
    */
   virtual void createSVFaceNodeConnectivityPerOrientNoSymm();
-
-  /**
-   * Computes the the external face node coordinates local to the SV face
-   */
-  virtual void createExtFaceNodeLocalCoords();
-
-  /**
-   * Computes the fraction of the face that each CV occupates at a SV boundary.
-   * @pre createLocalFaceNodeConn() and createLocalNodeCoord()
-   */
-  virtual void computeFaceFractionsOfCVs();
 
   /**
    * Creates a vector containing the exponents of the terms in the Spectral FV polynomials
@@ -158,12 +97,12 @@ protected: // functions
   /**
    * Creates a set of nodes for interpolation with the requested polynomial degree
    */
-  virtual void setInterpolationNodeSet(const CFPolyOrder::Type order,std::vector< RealVector >& nodalSet);
+  void setInterpolationNodeSet(const CFPolyOrder::Type order,std::vector< RealVector >& nodalSet);
 
   /**
    * sets the convective/diffusive cfl ratio
    */
-  virtual void setCFLConvDiffRatio();
+  void setCFLConvDiffRatio();
 
   /**
    * create the cell mapped coordinates of a uniform distribution of points on the cell faces (for output)
@@ -192,6 +131,7 @@ protected: // functions
   /**
    * create vector with face flux points local coordinates (coordinate system local to face)
    * @pre createSolPntsLocalCoord1D()
+   * @todo check if still necessary
    */
   void createFaceFlxPntsFaceLocalCoords();
 
@@ -217,6 +157,7 @@ protected: // functions
 
   /**
    * Creates the derivation direction of the flux points
+   * @todo Should be deleted intirely
    */
   void createFlxPntDerivDir();
 

@@ -10,6 +10,8 @@
 #include "Common/ShouldNotBeHereException.hh"
 #include "MathTools/RealMatrix.hh"
 
+#include "FluxReconstructionMethod/TriagFluxReconstructionElementData.hh" 
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -105,18 +107,78 @@ public:
   static void computeShapeFunction(
         const RealVector& mappedCoord, RealVector& shapeFunc)
   {
-    /// @note kvda: Specific for one partition!!!
-    const CFreal ksi1 = mappedCoord[KSI];
-    const CFreal eta1 = mappedCoord[ETA];
-    const CFreal ksi2 = ksi1*ksi1;
-    const CFreal eta2 = eta1*eta1;
-    const CFreal ksi1eta1 = ksi1*eta1;
-    shapeFunc[0] = 1.373269753 - 4.478097344*ksi1 - 4.478097344*eta1 + 3.153869682*ksi2 + 6.926622989*ksi1eta1 + 3.153869682*eta2;
-    shapeFunc[1] = -0.3046965712 + 8.544786589*ksi1 - 0.9852296464*eta1 - 8.544786589*ksi2 - 8.544786589*ksi1eta1 + 1.427965425*eta2;
-    shapeFunc[2] = -0.3046965712 - 0.9852296464*ksi1 + 8.544786589*eta1 + 1.427965425*ksi2 - 8.544786589*ksi1eta1 - 8.544786589*eta2;
-    shapeFunc[3] = 0.04904209105 - 1.82964202*ksi1 + 0.6188836248*eta1 + 3.153869682*ksi2 - 0.6188836248*ksi1eta1 - 0.6188836248*eta2;
-    shapeFunc[4] = 0.1380392075 - 1.870701204*ksi1 - 1.870701204*eta1 + 1.427965425*ksi2 + 11.40071744*ksi1eta1 + 1.427965425*eta2;
-    shapeFunc[5] = 0.04904209105 + 0.6188836248*ksi1 - 1.82964202*eta1 - 0.6188836248*ksi2 - 0.6188836248*ksi1eta1 + 3.153869682*eta2;
+//     /// @note kvda: Specific for one partition!!!
+//     const CFreal ksi1 = mappedCoord[KSI];
+//     const CFreal eta1 = mappedCoord[ETA];
+//     const CFreal ksi2 = ksi1*ksi1;
+//     const CFreal eta2 = eta1*eta1;
+//     const CFreal ksi1eta1 = ksi1*eta1;
+//     shapeFunc[0] = 1.373269753 - 4.478097344*ksi1 - 4.478097344*eta1 + 3.153869682*ksi2 + 6.926622989*ksi1eta1 + 3.153869682*eta2;
+//     shapeFunc[1] = -0.3046965712 + 8.544786589*ksi1 - 0.9852296464*eta1 - 8.544786589*ksi2 - 8.544786589*ksi1eta1 + 1.427965425*eta2;
+//     shapeFunc[2] = -0.3046965712 - 0.9852296464*ksi1 + 8.544786589*eta1 + 1.427965425*ksi2 - 8.544786589*ksi1eta1 - 8.544786589*eta2;
+//     shapeFunc[3] = 0.04904209105 - 1.82964202*ksi1 + 0.6188836248*eta1 + 3.153869682*ksi2 - 0.6188836248*ksi1eta1 - 0.6188836248*eta2;
+//     shapeFunc[4] = 0.1380392075 - 1.870701204*ksi1 - 1.870701204*eta1 + 1.427965425*ksi2 + 11.40071744*ksi1eta1 + 1.427965425*eta2;
+//     shapeFunc[5] = 0.04904209105 + 0.6188836248*ksi1 - 1.82964202*eta1 - 0.6188836248*ksi2 - 0.6188836248*ksi1eta1 + 3.153869682*eta2;
+    
+    //added RV
+    FluxReconstructionElementData* frElemData = new TriagFluxReconstructionElementData(getInterpolatorOrder());
+
+    Common::SafePtr< std::vector< CFreal > > solPnts1D = frElemData->getSolPntsLocalCoord1D();
+
+    const CFuint nbrSolPnts1D = solPnts1D->size();
+    cf_assert(nbrSolPnts1D == m_solPnts1D.size());
+    for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
+    {
+      m_solPnts1D[iSol] = (*solPnts1D)[iSol];
+    }
+
+    delete frElemData;
+    //end RV
+    
+    // coordinates of output points
+    const CFreal ksi = mappedCoord[KSI];
+    const CFreal eta = mappedCoord[ETA];
+
+    // ksi factors
+    for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
+    {
+      const CFreal ksiSol = m_solPnts1D[iSol];
+      m_ksiFac[iSol] = 1.;
+      for (CFuint iFac = 0; iFac < nbrSolPnts1D-iSol; ++iFac)
+      {
+        if (iFac != iSol)
+        {
+          const CFreal ksiFac = (m_solPnts1D[iFac]+1.)*(2.-ksiSol)/2.-1.;//Map [-1,1] to [-1,1-ksi]
+          m_ksiFac[iSol] *= (ksi-ksiFac)/(ksiSol-ksiFac);
+        }
+      }
+    }
+
+    // eta factors
+    for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
+    {
+      const CFreal etaSol = m_solPnts1D[iSol];
+      m_etaFac[iSol] = 1.;
+      for (CFuint iFac = 0; iFac < nbrSolPnts1D-iSol; ++iFac)
+      {
+        if (iFac != iSol)
+        {
+          const CFreal etaFac = (m_solPnts1D[iFac]+1.)*(2.-etaSol)/2.-1.;//Map [-1,1] to [-1,1-ksi]
+          m_etaFac[iSol] *= (eta-etaFac)/(etaSol-etaFac);
+        }
+      }
+    }
+
+    // compute shapefunctions
+    CFuint iFunc = 0;
+    for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+    {
+      const CFreal ksiFac = m_ksiFac[iKsi];
+      for (CFuint iEta = 0; iEta < nbrSolPnts1D-iKsi; ++iEta, ++iFunc)
+      {
+        shapeFunc[iFunc] = ksiFac*m_etaFac[iEta];
+      }
+    }
   }
 
    /**
@@ -283,9 +345,9 @@ public:
   static bool isInMappedElement(const RealVector& mappedCoord)
   {
     cf_assert(mappedCoord.size() == 2);
-    if( (mappedCoord[0] >= 0.) &&
-        (mappedCoord[1] >= 0.) &&
-        (mappedCoord.sum() <= 1.))
+    if( (mappedCoord[0] >= -1.) &&
+        (mappedCoord[1] >= -1.) &&
+        (mappedCoord.sum() <= 0.))
     {
       return true;
     }
@@ -328,6 +390,15 @@ private: // data
 
   /// solution integrator ID
   static CFuint _interpolatorID;
+  
+  /// factors for computation of basis functions
+  static RealVector m_ksiFac;
+
+  /// factors for computation of basis functions
+  static RealVector m_etaFac;
+
+  /// vector holding the 1D coordinates of solution points
+  static RealVector m_solPnts1D;
 
   /// temporary vector for mapped coordinates in 2D
   static RealVector m_mappedCoord;
