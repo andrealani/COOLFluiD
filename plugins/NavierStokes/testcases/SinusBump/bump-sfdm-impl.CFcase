@@ -38,6 +38,7 @@ Simulator.SubSystem.CFmesh.AppendIter = false
 Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
 
 Simulator.SubSystem.ParaView.FileName    = bump-sfdm-solP2_nondim.vtu
+Simulator.SubSystem.ParaView.WriteSol    = WriteSolutionHighOrder
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
 Simulator.SubSystem.ParaView.SaveRate = 1
 Simulator.SubSystem.ParaView.AppendTime = false
@@ -74,7 +75,7 @@ Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 
 # choose which builder we use
 Simulator.SubSystem.SpectralFDMethod.Builder = MeshUpgrade
-Simulator.SubSystem.SpectralFDMethod.MeshUpgrade.PolynomialOrder = P1
+Simulator.SubSystem.SpectralFDMethod.MeshUpgrade.PolynomialOrder = P2
 Simulator.SubSystem.SpectralFDMethod.SpaceRHSJacobCom = RHSJacob
 Simulator.SubSystem.SpectralFDMethod.TimeRHSJacobCom  = StdTimeRHSJacob
 Simulator.SubSystem.SpectralFDMethod.JacobianSparsity = CellCentered
