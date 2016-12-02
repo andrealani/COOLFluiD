@@ -11,6 +11,7 @@
 #include "Common/SafePtr.hh"
 #include "MathTools/RealVector.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/BasePointDistribution.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -23,7 +24,8 @@ namespace COOLFluiD {
 /**
  * This class represents a hexahedral spectral finite difference element
  *
- * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
+ * @author Alexander Papen
  *
  */
 class HexaFluxReconstructionElementData : public FluxReconstructionElementData {

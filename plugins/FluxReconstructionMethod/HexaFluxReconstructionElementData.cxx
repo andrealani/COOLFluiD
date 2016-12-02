@@ -33,6 +33,61 @@ HexaFluxReconstructionElementData::HexaFluxReconstructionElementData(CFPolyOrder
   m_shape = CFGeoShape::HEXA;
   m_dimensionality = DIM_3D;
   m_polyOrder = polyOrder;
+  
+  m_solPntsLocalCoord1D.resize(polyOrder+1);
+  m_flxPntsLocalCoord1D.resize(polyOrder+1);
+  // Use a default solution and flux point distribution: Gauss Legendre.  
+  std::vector<CFreal> coords;
+  coords.resize(polyOrder+1);
+  switch(polyOrder)
+    {
+      case CFPolyOrder::ORDER0:
+      {
+	coords[0] = 0.0;
+      } break;
+      case CFPolyOrder::ORDER1:
+      {
+	coords[0] = -1./sqrt(3.);
+	coords[1] = +1./sqrt(3.);
+      } break;
+      case CFPolyOrder::ORDER2:
+      {
+	coords[0] = -sqrt(3./5.);
+	coords[1] = 0.0;
+	coords[2] = +sqrt(3./5.);
+      } break;
+      case CFPolyOrder::ORDER3:
+      {
+	coords[0] = -sqrt((3.+2.*sqrt(6./5.))/7.);
+	coords[1] = -sqrt((3.-2.*sqrt(6./5.))/7.);
+	coords[2] = +sqrt((3.-2.*sqrt(6./5.))/7.);
+	coords[3] = +sqrt((3.+2.*sqrt(6./5.))/7.);
+      } break;
+      case CFPolyOrder::ORDER4:
+      {
+	coords[0] = -sqrt(5.+2.*sqrt(10./7.))/3.;
+	coords[1] = -sqrt(5.-2.*sqrt(10./7.))/3.;
+	coords[2] = 0.0;
+	coords[3] = +sqrt(5.-2.*sqrt(10./7.))/3.;
+	coords[4] = +sqrt(5.+2.*sqrt(10./7.))/3.;
+      } break;
+      case CFPolyOrder::ORDER5:
+      {
+        coords[0] = -0.9324695142031521;
+	coords[1] = -0.6612093864662645;
+	coords[2] = -0.2386191860831969;
+	coords[3] = 0.2386191860831969;
+	coords[4] = 0.6612093864662645;
+	coords[5] = 0.9324695142031521;
+      } break;
+      default:
+      {
+        throw Common::NotImplementedException (FromHere(),"Gauss Legendre not implemented for order "
+                                      + StringOps::to_str(polyOrder) + ".");
+      }
+    }
+  m_solPntsLocalCoord1D = coords;
+  m_flxPntsLocalCoord1D = coords;
 
   resetFluxReconstructionElementData();
 }
@@ -48,6 +103,8 @@ HexaFluxReconstructionElementData::HexaFluxReconstructionElementData(CFPolyOrder
   m_polyOrder = polyOrder;
   m_solPntsLocalCoord1D = solPntDist->getLocalCoords1D(polyOrder);
   m_flxPntsLocalCoord1D = flxPntDist->getLocalCoords1D(polyOrder);
+  m_solPntDistribution = solPntDist;
+  m_flxPntDistribution = flxPntDist;
 
   resetFluxReconstructionElementData();
 }
@@ -72,55 +129,75 @@ void HexaFluxReconstructionElementData::createFlxPntsLocalCoords()
 
   // set flux point local coordinates
   m_flxPntsLocalCoords.resize(0);
-  // ksi-flux points
-  for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+  
+  
+  for (CFuint i = 0; i < nbrFlxPnts1D; ++i)
   {
-    for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-    {
-      for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
-      {
-        RealVector flxCoords(3);
-        flxCoords[KSI] = m_flxPntsLocalCoord1D[iKsi];
-        flxCoords[ETA] = m_solPntsLocalCoord1D[iEta];
-        flxCoords[ZTA] = m_solPntsLocalCoord1D[iZta];
-        m_flxPntsLocalCoords.push_back(flxCoords);
-      }
-    }
+    RealVector flxCoords(3);
+    //faces ZTA=-1 and 1
+    flxCoords[ZTA] = -1;
+    flxCoords[KSI] = -1;
+    flxCoords[ETA] = m_flxPntsLocalCoord1D[i];
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[ZTA] = 1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[KSI] = 1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[ZTA] = -1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[ETA] = -1;
+    flxCoords[KSI] = m_flxPntsLocalCoord1D[i];
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[ZTA] = 1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[ETA] = 1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[ZTA] = -1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    //faces ETA=1 and -1
+    flxCoords[ETA] = -1;
+    flxCoords[KSI] = -1;
+    flxCoords[ZTA] = m_flxPntsLocalCoord1D[i];
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[ETA] = 1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[KSI] = 1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[ETA] = -1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[ZTA] = -1;
+    flxCoords[KSI] = m_flxPntsLocalCoord1D[i];
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[ETA] = 1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[ZTA] = 1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[ETA] = -1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    //faces KSI=1 and -1
+    flxCoords[KSI] = -1;
+    flxCoords[ZTA] = -1;
+    flxCoords[ETA] = m_flxPntsLocalCoord1D[i];
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[KSI] = 1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[ZTA] = 1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[KSI] = -1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[ETA] = -1;
+    flxCoords[ZTA] = m_flxPntsLocalCoord1D[i];
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[KSI] = 1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[ETA] = 1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    flxCoords[KSI] = -1;
+    m_flxPntsLocalCoords.push_back(flxCoords);
+    
   }
-  // eta-flux points
-  for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-  {
-    for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-    {
-      for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
-      {
-        RealVector flxCoords(3);
-        flxCoords[KSI] = m_solPntsLocalCoord1D[iKsi];
-        flxCoords[ETA] = m_flxPntsLocalCoord1D[iEta];
-        flxCoords[ZTA] = m_solPntsLocalCoord1D[iZta];
-        m_flxPntsLocalCoords.push_back(flxCoords);
-      }
-    }
-  }
-  // zta-flux points
-  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-  {
-    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-    {
-      for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
-      {
-        RealVector flxCoords(3);
-        flxCoords[KSI] = m_solPntsLocalCoord1D[iKsi];
-        flxCoords[ETA] = m_solPntsLocalCoord1D[iEta];
-        flxCoords[ZTA] = m_flxPntsLocalCoord1D[iZta];
-        m_flxPntsLocalCoords.push_back(flxCoords);
-      }
-    }
-  }
-/*  for (CFuint i = 0; i < m_flxPntsLocalCoords.size(); ++i)
-  {
-    CF_DEBUG_OBJ(m_flxPntsLocalCoords[i]);
-  }*/
+  cf_assert(m_flxPntsLocalCoords.size() == 24*nbrFlxPnts1D);
+  
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -161,17 +238,17 @@ void HexaFluxReconstructionElementData::createFaceFlxPntsFaceLocalCoords()
   CFAUTOTRACE;
 
   // number of solution points in 1D
-  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
 
   // set face flux point face local coordinates
   m_faceFlxPntsFaceLocalCoords.resize(0);
-  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+  for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
   {
-    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+    for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
     {
       RealVector flxCoord(2);
-      flxCoord[KSI] = m_solPntsLocalCoord1D[iKsi];
-      flxCoord[ETA] = m_solPntsLocalCoord1D[iEta];
+      flxCoord[KSI] = m_flxPntsLocalCoord1D[iKsi];
+      flxCoord[ETA] = m_flxPntsLocalCoord1D[iEta];
       m_faceFlxPntsFaceLocalCoords.push_back(flxCoord);
     }
   }
@@ -187,60 +264,60 @@ void HexaFluxReconstructionElementData::createFlxPolyExponents()
 {
   CFAUTOTRACE;
 
-  // number of solution points in 1D
-  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-
-  // number of flux points in 1D
-  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
-
-  // set flux point local coordinates
-  m_flxPolyExponents.resize(0);
-  m_flxPolyExponents.resize(3);
-  // ksi-flux points
-  for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-  {
-    for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-    {
-      for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
-      {
-        vector< CFint > flxPolyExps(3);
-        flxPolyExps[KSI] = iKsi;
-        flxPolyExps[ETA] = iEta;
-        flxPolyExps[ZTA] = iZta;
-        m_flxPolyExponents[KSI].push_back(flxPolyExps);
-      }
-    }
-  }
-  // eta-flux points
-  for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-  {
-    for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-    {
-      for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
-      {
-        vector< CFint > flxPolyExps(3);
-        flxPolyExps[KSI] = iKsi;
-        flxPolyExps[ETA] = iEta;
-        flxPolyExps[ZTA] = iZta;
-        m_flxPolyExponents[ETA].push_back(flxPolyExps);
-      }
-    }
-  }
-  // zta-flux points
-  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-  {
-    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-    {
-      for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
-      {
-        vector< CFint > flxPolyExps(3);
-        flxPolyExps[KSI] = iKsi;
-        flxPolyExps[ETA] = iEta;
-        flxPolyExps[ZTA] = iZta;
-        m_flxPolyExponents[ZTA].push_back(flxPolyExps);
-      }
-    }
-  }
+//   // number of solution points in 1D
+//   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+// 
+//   // number of flux points in 1D
+//   const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+// 
+//   // set flux point local coordinates
+//   m_flxPolyExponents.resize(0);
+//   m_flxPolyExponents.resize(3);
+//   // ksi-flux points
+//   for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//   {
+//     for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//     {
+//       for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+//       {
+//         vector< CFint > flxPolyExps(3);
+//         flxPolyExps[KSI] = iKsi;
+//         flxPolyExps[ETA] = iEta;
+//         flxPolyExps[ZTA] = iZta;
+//         m_flxPolyExponents[KSI].push_back(flxPolyExps);
+//       }
+//     }
+//   }
+//   // eta-flux points
+//   for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//   {
+//     for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//     {
+//       for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+//       {
+//         vector< CFint > flxPolyExps(3);
+//         flxPolyExps[KSI] = iKsi;
+//         flxPolyExps[ETA] = iEta;
+//         flxPolyExps[ZTA] = iZta;
+//         m_flxPolyExponents[ETA].push_back(flxPolyExps);
+//       }
+//     }
+//   }
+//   // zta-flux points
+//   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//   {
+//     for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//     {
+//       for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+//       {
+//         vector< CFint > flxPolyExps(3);
+//         flxPolyExps[KSI] = iKsi;
+//         flxPolyExps[ETA] = iEta;
+//         flxPolyExps[ZTA] = iZta;
+//         m_flxPolyExponents[ZTA].push_back(flxPolyExps);
+//       }
+//     }
+//   }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -280,179 +357,179 @@ void HexaFluxReconstructionElementData::createSolPolyExponents()
 
 void HexaFluxReconstructionElementData::createFlxPntMatrixIdxForReconstruction()
 {
-  // number of solution points in 1D
-  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-
-  // number of flux points in 1D
-  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
-
-  // set indices
-  m_flxPntMatrixIdxForReconstruction.resize(0);
-  // ksi-flux points
-  for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-  {
-    for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-    {
-      for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
-      {
-        m_flxPntMatrixIdxForReconstruction.push_back(iKsi);
-      }
-    }
-  }
-  // eta-flux points
-  for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-  {
-    for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-    {
-      for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
-      {
-        m_flxPntMatrixIdxForReconstruction.push_back(iEta);
-      }
-    }
-  }
-  // zta-flux points
-  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-  {
-    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-    {
-      for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
-      {
-        m_flxPntMatrixIdxForReconstruction.push_back(iZta);
-      }
-    }
-  }
-/*  for (CFuint i = 0; i < m_flxPntMatrixIdxForReconstruction.size(); ++i)
-  {
-    CF_DEBUG_OBJ(m_flxPntMatrixIdxForReconstruction[i]);
-  }*/
+//   // number of solution points in 1D
+//   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+// 
+//   // number of flux points in 1D
+//   const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+// 
+//   // set indices
+//   m_flxPntMatrixIdxForReconstruction.resize(0);
+//   // ksi-flux points
+//   for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//   {
+//     for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//     {
+//       for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+//       {
+//         m_flxPntMatrixIdxForReconstruction.push_back(iKsi);
+//       }
+//     }
+//   }
+//   // eta-flux points
+//   for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//   {
+//     for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//     {
+//       for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+//       {
+//         m_flxPntMatrixIdxForReconstruction.push_back(iEta);
+//       }
+//     }
+//   }
+//   // zta-flux points
+//   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//   {
+//     for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//     {
+//       for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+//       {
+//         m_flxPntMatrixIdxForReconstruction.push_back(iZta);
+//       }
+//     }
+//   }
+// /*  for (CFuint i = 0; i < m_flxPntMatrixIdxForReconstruction.size(); ++i)
+//   {
+//     CF_DEBUG_OBJ(m_flxPntMatrixIdxForReconstruction[i]);
+//   }*/
 }
 
 //////////////////////////////////////////////////////////////////////
 
 void HexaFluxReconstructionElementData::createSolPntIdxsForReconstruction()
 {
-  // number of solution points in 1D
-  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-  const CFuint nbrSolPnts1DSq = nbrSolPnts1D*nbrSolPnts1D;
-
-  // number of flux points in 1D
-  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
-
-  // total number of flux polynomials
-  const CFuint totNbrFlxPnts = getNbrOfFlxPnts();
-
-  // set indices
-  m_solPntIdxsForReconstruction.resize(0);
-  m_solPntIdxsForReconstruction.resize(totNbrFlxPnts);
-  CFuint flxIdx = 0;
-  // ksi-flux points
-  for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-  {
-    for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-    {
-      for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi, ++flxIdx)
-      {
-        for (CFuint iPnt = 0; iPnt < nbrSolPnts1D; ++iPnt)
-        {
-          m_solPntIdxsForReconstruction[flxIdx]
-              .push_back(nbrSolPnts1DSq*iPnt+nbrSolPnts1D*iEta+iZta);
-        }
-      }
-    }
-  }
-  // eta-flux points
-  for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-  {
-    for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-    {
-      for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta, ++flxIdx)
-      {
-        for (CFuint iPnt = 0; iPnt < nbrSolPnts1D; ++iPnt)
-        {
-          m_solPntIdxsForReconstruction[flxIdx]
-              .push_back(nbrSolPnts1DSq*iKsi+nbrSolPnts1D*iPnt+iZta);
-        }
-      }
-    }
-  }
-  // zta-flux points
-  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-  {
-    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-    {
-      for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta, ++flxIdx)
-      {
-        for (CFuint iPnt = 0; iPnt < nbrSolPnts1D; ++iPnt)
-        {
-          m_solPntIdxsForReconstruction[flxIdx]
-              .push_back(nbrSolPnts1DSq*iKsi+nbrSolPnts1D*iEta+iPnt);
-        }
-      }
-    }
-  }
-//   for (CFuint i = 0; i < m_solPntIdxsForReconstruction.size(); ++i)
+//   // number of solution points in 1D
+//   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+//   const CFuint nbrSolPnts1DSq = nbrSolPnts1D*nbrSolPnts1D;
+// 
+//   // number of flux points in 1D
+//   const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+// 
+//   // total number of flux polynomials
+//   const CFuint totNbrFlxPnts = getNbrOfFlxPnts();
+// 
+//   // set indices
+//   m_solPntIdxsForReconstruction.resize(0);
+//   m_solPntIdxsForReconstruction.resize(totNbrFlxPnts);
+//   CFuint flxIdx = 0;
+//   // ksi-flux points
+//   for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
 //   {
-//     CF_DEBUG_OBJ(i);
-//     for (CFuint j = 0; j < m_solPntIdxsForReconstruction[i].size(); ++j)
+//     for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
 //     {
-//       CF_DEBUG_OBJ(m_solPntIdxsForReconstruction[i][j]);
+//       for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi, ++flxIdx)
+//       {
+//         for (CFuint iPnt = 0; iPnt < nbrSolPnts1D; ++iPnt)
+//         {
+//           m_solPntIdxsForReconstruction[flxIdx]
+//               .push_back(nbrSolPnts1DSq*iPnt+nbrSolPnts1D*iEta+iZta);
+//         }
+//       }
 //     }
 //   }
-
-  cf_assert(totNbrFlxPnts == flxIdx);
-
-  // set indices for optimized reconstruction
-  m_solPntIdxsForRecOptim.resize(0);
-  m_solPntIdxsForRecOptim.resize(totNbrFlxPnts);
-  flxIdx = 0;
-  for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-  {
-    for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-    {
-      for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi, ++flxIdx)
-      {
-        for (CFuint iPnt = 0; iPnt < m_solPntIdxsForRecFlxPnts1DOptim[iKsi].size(); ++iPnt)
-        {
-          const CFuint solIdx = m_solPntIdxsForRecFlxPnts1DOptim[iKsi][iPnt];
-          m_solPntIdxsForRecOptim[flxIdx]
-              .push_back(nbrSolPnts1DSq*solIdx+nbrSolPnts1D*iEta+iZta);
-        }
-      }
-    }
-  }
-  // eta-flux points
-  for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-  {
-    for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-    {
-      for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta, ++flxIdx)
-      {
-        for (CFuint iPnt = 0; iPnt < m_solPntIdxsForRecFlxPnts1DOptim[iEta].size(); ++iPnt)
-        {
-          const CFuint solIdx = m_solPntIdxsForRecFlxPnts1DOptim[iEta][iPnt];
-          m_solPntIdxsForRecOptim[flxIdx]
-              .push_back(nbrSolPnts1DSq*iKsi+nbrSolPnts1D*solIdx+iZta);
-        }
-      }
-    }
-  }
-  // zta-flux points
-  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-  {
-    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-    {
-      for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta, ++flxIdx)
-      {
-        for (CFuint iPnt = 0; iPnt < m_solPntIdxsForRecFlxPnts1DOptim[iZta].size(); ++iPnt)
-        {
-          const CFuint solIdx = m_solPntIdxsForRecFlxPnts1DOptim[iZta][iPnt];
-          m_solPntIdxsForRecOptim[flxIdx]
-              .push_back(nbrSolPnts1DSq*iKsi+nbrSolPnts1D*iEta+solIdx);
-        }
-      }
-    }
-  }
-  cf_assert(totNbrFlxPnts == flxIdx);
+//   // eta-flux points
+//   for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//   {
+//     for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//     {
+//       for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta, ++flxIdx)
+//       {
+//         for (CFuint iPnt = 0; iPnt < nbrSolPnts1D; ++iPnt)
+//         {
+//           m_solPntIdxsForReconstruction[flxIdx]
+//               .push_back(nbrSolPnts1DSq*iKsi+nbrSolPnts1D*iPnt+iZta);
+//         }
+//       }
+//     }
+//   }
+//   // zta-flux points
+//   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//   {
+//     for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//     {
+//       for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta, ++flxIdx)
+//       {
+//         for (CFuint iPnt = 0; iPnt < nbrSolPnts1D; ++iPnt)
+//         {
+//           m_solPntIdxsForReconstruction[flxIdx]
+//               .push_back(nbrSolPnts1DSq*iKsi+nbrSolPnts1D*iEta+iPnt);
+//         }
+//       }
+//     }
+//   }
+// //   for (CFuint i = 0; i < m_solPntIdxsForReconstruction.size(); ++i)
+// //   {
+// //     CF_DEBUG_OBJ(i);
+// //     for (CFuint j = 0; j < m_solPntIdxsForReconstruction[i].size(); ++j)
+// //     {
+// //       CF_DEBUG_OBJ(m_solPntIdxsForReconstruction[i][j]);
+// //     }
+// //   }
+// 
+//   cf_assert(totNbrFlxPnts == flxIdx);
+// 
+//   // set indices for optimized reconstruction
+//   m_solPntIdxsForRecOptim.resize(0);
+//   m_solPntIdxsForRecOptim.resize(totNbrFlxPnts);
+//   flxIdx = 0;
+//   for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//   {
+//     for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//     {
+//       for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi, ++flxIdx)
+//       {
+//         for (CFuint iPnt = 0; iPnt < m_solPntIdxsForRecFlxPnts1DOptim[iKsi].size(); ++iPnt)
+//         {
+//           const CFuint solIdx = m_solPntIdxsForRecFlxPnts1DOptim[iKsi][iPnt];
+//           m_solPntIdxsForRecOptim[flxIdx]
+//               .push_back(nbrSolPnts1DSq*solIdx+nbrSolPnts1D*iEta+iZta);
+//         }
+//       }
+//     }
+//   }
+//   // eta-flux points
+//   for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//   {
+//     for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//     {
+//       for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta, ++flxIdx)
+//       {
+//         for (CFuint iPnt = 0; iPnt < m_solPntIdxsForRecFlxPnts1DOptim[iEta].size(); ++iPnt)
+//         {
+//           const CFuint solIdx = m_solPntIdxsForRecFlxPnts1DOptim[iEta][iPnt];
+//           m_solPntIdxsForRecOptim[flxIdx]
+//               .push_back(nbrSolPnts1DSq*iKsi+nbrSolPnts1D*solIdx+iZta);
+//         }
+//       }
+//     }
+//   }
+//   // zta-flux points
+//   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//   {
+//     for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//     {
+//       for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta, ++flxIdx)
+//       {
+//         for (CFuint iPnt = 0; iPnt < m_solPntIdxsForRecFlxPnts1DOptim[iZta].size(); ++iPnt)
+//         {
+//           const CFuint solIdx = m_solPntIdxsForRecFlxPnts1DOptim[iZta][iPnt];
+//           m_solPntIdxsForRecOptim[flxIdx]
+//               .push_back(nbrSolPnts1DSq*iKsi+nbrSolPnts1D*iEta+solIdx);
+//         }
+//       }
+//     }
+//   }
+//   cf_assert(totNbrFlxPnts == flxIdx);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -488,51 +565,51 @@ void HexaFluxReconstructionElementData::createFlxPntMatrixIdxForDerivation()
 {
   CFAUTOTRACE;
 
-  // number of solution points in 1D
-  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-
-  // number of flux points in 1D
-  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
-
-  // set indices
-  m_flxPntMatrixIdxForDerivation.resize(0);
-  // ksi-flux points
-  for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-  {
-    for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-    {
-      for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
-      {
-        m_flxPntMatrixIdxForDerivation.push_back(iKsi);
-      }
-    }
-  }
-  // eta-flux points
-  for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-  {
-    for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-    {
-      for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
-      {
-        m_flxPntMatrixIdxForDerivation.push_back(iEta);
-      }
-    }
-  }
-  // zta-flux points
-  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-  {
-    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-    {
-      for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
-      {
-        m_flxPntMatrixIdxForDerivation.push_back(iZta);
-      }
-    }
-  }
-/*  for (CFuint iFlx = 0; iFlx < m_flxPntMatrixIdxForDerivation.size(); ++iFlx)
-  {
-    CF_DEBUG_OBJ(m_flxPntMatrixIdxForDerivation[iFlx]);
-  }*/
+//   // number of solution points in 1D
+//   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+// 
+//   // number of flux points in 1D
+//   const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+// 
+//   // set indices
+//   m_flxPntMatrixIdxForDerivation.resize(0);
+//   // ksi-flux points
+//   for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//   {
+//     for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//     {
+//       for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+//       {
+//         m_flxPntMatrixIdxForDerivation.push_back(iKsi);
+//       }
+//     }
+//   }
+//   // eta-flux points
+//   for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//   {
+//     for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//     {
+//       for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+//       {
+//         m_flxPntMatrixIdxForDerivation.push_back(iEta);
+//       }
+//     }
+//   }
+//   // zta-flux points
+//   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//   {
+//     for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//     {
+//       for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+//       {
+//         m_flxPntMatrixIdxForDerivation.push_back(iZta);
+//       }
+//     }
+//   }
+// /*  for (CFuint iFlx = 0; iFlx < m_flxPntMatrixIdxForDerivation.size(); ++iFlx)
+//   {
+//     CF_DEBUG_OBJ(m_flxPntMatrixIdxForDerivation[iFlx]);
+//   }*/
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -541,71 +618,71 @@ void HexaFluxReconstructionElementData::createSolPntIdxsForDerivation()
 {
   CFAUTOTRACE;
 
-  // number of solution points in 1D
-  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-  const CFuint nbrSolPnts1DSq = nbrSolPnts1D*nbrSolPnts1D;
-
-  // number of flux points in 1D
-  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
-
-  // set indices
-  m_solPntIdxsForDerivation.resize(0);
-  // ksi-flux points
-  for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-  {
-    for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-    {
-      vector< CFuint > solPntIdxs;
-      for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
-      {
-        solPntIdxs.push_back(nbrSolPnts1DSq*iSol+nbrSolPnts1D*iEta+iZta);
-      }
-      for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
-      {
-        m_solPntIdxsForDerivation.push_back(solPntIdxs);
-      }
-    }
-  }
-  // eta-flux points
-  for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-  {
-    for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-    {
-      vector< CFuint > solPntIdxs;
-      for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
-      {
-        solPntIdxs.push_back(nbrSolPnts1DSq*iKsi+nbrSolPnts1D*iSol+iZta);
-      }
-      for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
-      {
-        m_solPntIdxsForDerivation.push_back(solPntIdxs);
-      }
-    }
-  }
-  // zta-flux points
-  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-  {
-    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-    {
-      vector< CFuint > solPntIdxs;
-      for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
-      {
-        solPntIdxs.push_back(nbrSolPnts1DSq*iKsi+nbrSolPnts1D*iEta+iSol);
-      }
-      for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
-      {
-        m_solPntIdxsForDerivation.push_back(solPntIdxs);
-      }
-    }
-  }
-/*  for (CFuint iFlx = 0; iFlx < m_solPntIdxsForDerivation.size(); ++iFlx)
-  {
-    CF_DEBUG_OBJ(iFlx);
-    for (CFuint iSol = 0; iSol < m_solPntIdxsForDerivation[iFlx].size(); ++iSol)
-    {
-      CF_DEBUG_OBJ(m_solPntIdxsForDerivation[iFlx][iSol]);
-    }
-  }*/
+//   // number of solution points in 1D
+//   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+//   const CFuint nbrSolPnts1DSq = nbrSolPnts1D*nbrSolPnts1D;
+// 
+//   // number of flux points in 1D
+//   const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+// 
+//   // set indices
+//   m_solPntIdxsForDerivation.resize(0);
+//   // ksi-flux points
+//   for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//   {
+//     for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//     {
+//       vector< CFuint > solPntIdxs;
+//       for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
+//       {
+//         solPntIdxs.push_back(nbrSolPnts1DSq*iSol+nbrSolPnts1D*iEta+iZta);
+//       }
+//       for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+//       {
+//         m_solPntIdxsForDerivation.push_back(solPntIdxs);
+//       }
+//     }
+//   }
+//   // eta-flux points
+//   for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//   {
+//     for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//     {
+//       vector< CFuint > solPntIdxs;
+//       for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
+//       {
+//         solPntIdxs.push_back(nbrSolPnts1DSq*iKsi+nbrSolPnts1D*iSol+iZta);
+//       }
+//       for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+//       {
+//         m_solPntIdxsForDerivation.push_back(solPntIdxs);
+//       }
+//     }
+//   }
+//   // zta-flux points
+//   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//   {
+//     for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//     {
+//       vector< CFuint > solPntIdxs;
+//       for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
+//       {
+//         solPntIdxs.push_back(nbrSolPnts1DSq*iKsi+nbrSolPnts1D*iEta+iSol);
+//       }
+//       for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+//       {
+//         m_solPntIdxsForDerivation.push_back(solPntIdxs);
+//       }
+//     }
+//   }
+// /*  for (CFuint iFlx = 0; iFlx < m_solPntIdxsForDerivation.size(); ++iFlx)
+//   {
+//     CF_DEBUG_OBJ(iFlx);
+//     for (CFuint iSol = 0; iSol < m_solPntIdxsForDerivation[iFlx].size(); ++iSol)
+//     {
+//       CF_DEBUG_OBJ(m_solPntIdxsForDerivation[iFlx][iSol]);
+//     }
+//   }*/
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -614,39 +691,39 @@ void HexaFluxReconstructionElementData::createFlxPntIdxsForDerivation()
 {
   CFAUTOTRACE;
 
-  // number of solution points in 1D
-  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-
-  // number of flux points in 1D
-  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
-
-  // number of solution points
-  const CFuint nbrSolPnts = getNbrOfSolPnts();
-
-  // number of flux points in one direction
-  const CFuint nbrFlxPnts = nbrSolPnts1D*nbrFlxPnts1D;
-
-  // set indices
-  m_flxPntIdxsForDerivation.resize(0);
-  m_flxPntIdxsForDerivation.resize(nbrSolPnts);
-  CFuint iSol = 0;
-  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-  {
-    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-    {
-      for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta, ++iSol)
-      {
-        for (CFuint iFlx = 0; iFlx < nbrFlxPnts1D; ++iFlx)
-        {
-          vector< CFuint > flxIdxs(3);
-          flxIdxs[KSI] = iFlx + nbrFlxPnts1D*nbrSolPnts1D*iEta + nbrFlxPnts1D*iZta;
-          flxIdxs[ETA] = nbrFlxPnts + iFlx + nbrFlxPnts1D*nbrSolPnts1D*iZta + nbrFlxPnts1D*iKsi;
-          flxIdxs[ZTA] = 2*nbrFlxPnts + iFlx + nbrFlxPnts1D*nbrSolPnts1D*iKsi + nbrFlxPnts1D*iEta;
-          m_flxPntIdxsForDerivation[iSol].push_back(flxIdxs);
-        }
-      }
-    }
-  }
+//   // number of solution points in 1D
+//   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+// 
+//   // number of flux points in 1D
+//   const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+// 
+//   // number of solution points
+//   const CFuint nbrSolPnts = getNbrOfSolPnts();
+// 
+//   // number of flux points in one direction
+//   const CFuint nbrFlxPnts = nbrSolPnts1D*nbrFlxPnts1D;
+// 
+//   // set indices
+//   m_flxPntIdxsForDerivation.resize(0);
+//   m_flxPntIdxsForDerivation.resize(nbrSolPnts);
+//   CFuint iSol = 0;
+//   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//   {
+//     for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//     {
+//       for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta, ++iSol)
+//       {
+//         for (CFuint iFlx = 0; iFlx < nbrFlxPnts1D; ++iFlx)
+//         {
+//           vector< CFuint > flxIdxs(3);
+//           flxIdxs[KSI] = iFlx + nbrFlxPnts1D*nbrSolPnts1D*iEta + nbrFlxPnts1D*iZta;
+//           flxIdxs[ETA] = nbrFlxPnts + iFlx + nbrFlxPnts1D*nbrSolPnts1D*iZta + nbrFlxPnts1D*iKsi;
+//           flxIdxs[ZTA] = 2*nbrFlxPnts + iFlx + nbrFlxPnts1D*nbrSolPnts1D*iKsi + nbrFlxPnts1D*iEta;
+//           m_flxPntIdxsForDerivation[iSol].push_back(flxIdxs);
+//         }
+//       }
+//     }
+//   }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -655,47 +732,47 @@ void HexaFluxReconstructionElementData::createFlxPntDerivDir()
 {
   CFAUTOTRACE;
 
-  // number of solution points in 1D
-  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-
-  // number of flux points in 1D
-  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
-
-  // set derivation directions
-  m_flxPntDerivDir.resize(0);
-  // ksi-flux points
-  for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-  {
-    for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-    {
-      for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
-      {
-        m_flxPntDerivDir.push_back(KSI);
-      }
-    }
-  }
-  // eta-flux points
-  for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-  {
-    for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-    {
-      for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
-      {
-        m_flxPntDerivDir.push_back(ETA);
-      }
-    }
-  }
-  // zta-flux points
-  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-  {
-    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-    {
-      for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
-      {
-        m_flxPntDerivDir.push_back(ZTA);
-      }
-    }
-  }
+//   // number of solution points in 1D
+//   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+// 
+//   // number of flux points in 1D
+//   const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+// 
+//   // set derivation directions
+//   m_flxPntDerivDir.resize(0);
+//   // ksi-flux points
+//   for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//   {
+//     for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//     {
+//       for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+//       {
+//         m_flxPntDerivDir.push_back(KSI);
+//       }
+//     }
+//   }
+//   // eta-flux points
+//   for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//   {
+//     for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//     {
+//       for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+//       {
+//         m_flxPntDerivDir.push_back(ETA);
+//       }
+//     }
+//   }
+//   // zta-flux points
+//   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//   {
+//     for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//     {
+//       for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+//       {
+//         m_flxPntDerivDir.push_back(ZTA);
+//       }
+//     }
+//   }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -704,58 +781,58 @@ void HexaFluxReconstructionElementData::createIntFlxPntIdxs()
 {
   CFAUTOTRACE;
 
-  // number of solution points in 1D
-  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-
-  // number of flux points in 1D
-  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
-
-  // set internal flux points
-  m_intFlxPntIdxs.resize(0);
-  CFuint flxIdx = 0;
-  // ksi-flux points
-  for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-  {
-    for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-    {
-      for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi, ++flxIdx)
-      {
-        if (iKsi != 0 && iKsi != nbrSolPnts1D)
-        {
-          m_intFlxPntIdxs.push_back(flxIdx);
-        }
-      }
-    }
-  }
-  // eta-flux points
-  for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-  {
-    for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-    {
-      for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta, ++flxIdx)
-      {
-        if (iEta != 0 && iEta != nbrSolPnts1D)
-        {
-          m_intFlxPntIdxs.push_back(flxIdx);
-        }
-      }
-    }
-  }
-  // zta-flux points
-  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-  {
-    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-    {
-      for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta, ++flxIdx)
-      {
-        if (iZta != 0 && iZta != nbrSolPnts1D)
-        {
-          m_intFlxPntIdxs.push_back(flxIdx);
-        }
-      }
-    }
-  }
-  cf_assert(m_intFlxPntIdxs.size() == getNbrOfIntFlxPnts());
+//   // number of solution points in 1D
+//   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+// 
+//   // number of flux points in 1D
+//   const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+// 
+//   // set internal flux points
+//   m_intFlxPntIdxs.resize(0);
+//   CFuint flxIdx = 0;
+//   // ksi-flux points
+//   for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//   {
+//     for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//     {
+//       for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi, ++flxIdx)
+//       {
+//         if (iKsi != 0 && iKsi != nbrSolPnts1D)
+//         {
+//           m_intFlxPntIdxs.push_back(flxIdx);
+//         }
+//       }
+//     }
+//   }
+//   // eta-flux points
+//   for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//   {
+//     for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//     {
+//       for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta, ++flxIdx)
+//       {
+//         if (iEta != 0 && iEta != nbrSolPnts1D)
+//         {
+//           m_intFlxPntIdxs.push_back(flxIdx);
+//         }
+//       }
+//     }
+//   }
+//   // zta-flux points
+//   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//   {
+//     for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//     {
+//       for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta, ++flxIdx)
+//       {
+//         if (iZta != 0 && iZta != nbrSolPnts1D)
+//         {
+//           m_intFlxPntIdxs.push_back(flxIdx);
+//         }
+//       }
+//     }
+//   }
+//   cf_assert(m_intFlxPntIdxs.size() == getNbrOfIntFlxPnts());
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -764,96 +841,96 @@ void HexaFluxReconstructionElementData::createFaceFluxPntsConn()
 {
   CFAUTOTRACE;
 
-  // number of solution points in 1D
-  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-
-  // number of flux points in 1D
-  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
-
-  // number of flux points per direction
-  const CFuint nbrFlxPnts = nbrSolPnts1D*nbrSolPnts1D*nbrFlxPnts1D;
-
-  // resize m_faceFlxPntConn
-  m_faceFlxPntConn.resize(6);
-
-  // variable holding the face index
-  CFuint faceIdx = 0;
-
-  // first face
-  for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-  {
-    for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-    {
-      m_faceFlxPntConn[faceIdx]
-          .push_back(2*nbrFlxPnts+nbrSolPnts1D*nbrFlxPnts1D*iKsi+nbrFlxPnts1D*iEta);
-    }
-  }
-  ++faceIdx;
-
-  // second face
-  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-  {
-    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-    {
-      m_faceFlxPntConn[faceIdx]
-          .push_back(2*nbrFlxPnts+nbrSolPnts1D*nbrFlxPnts1D*iKsi+nbrFlxPnts1D*iEta+nbrSolPnts1D);
-    }
-  }
-  ++faceIdx;
-
-  // third face
-  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-  {
-    for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-    {
-      m_faceFlxPntConn[faceIdx]
-          .push_back(nbrFlxPnts+nbrSolPnts1D*nbrFlxPnts1D*iZta+nbrFlxPnts1D*iKsi);
-    }
-  }
-  ++faceIdx;
-
-  // fourth face
-  for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-  {
-    for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-    {
-      m_faceFlxPntConn[faceIdx]
-          .push_back(nbrSolPnts1D*nbrFlxPnts1D*iEta+nbrFlxPnts1D*iZta+nbrSolPnts1D);
-    }
-  }
-  ++faceIdx;
-
-  // fifth face
-  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-  {
-    const CFuint idxKsi = nbrSolPnts1D-iKsi-1;
-    for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-    {
-      m_faceFlxPntConn[faceIdx]
-          .push_back(nbrFlxPnts+nbrSolPnts1D*nbrFlxPnts1D*iZta+nbrFlxPnts1D*idxKsi+nbrSolPnts1D);
-    }
-  }
-  ++faceIdx;
-
-  // sixth face
-  for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
-  {
-    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-    {
-      m_faceFlxPntConn[faceIdx]
-        .push_back(nbrSolPnts1D*nbrFlxPnts1D*iEta+nbrFlxPnts1D*iZta);
-    }
-  }
-  ++faceIdx;
-
-
-/*  for (CFuint iFace = 0; iFace < m_faceFlxPntConn.size(); ++iFace)
-  {
-    for (CFuint iFlx = 0; iFlx < m_faceFlxPntConn[iFace].size(); ++iFlx)
-    {
-      CF_DEBUG_OBJ(m_faceFlxPntConn[iFace][iFlx]);
-    }
-  }*/
+//   // number of solution points in 1D
+//   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+// 
+//   // number of flux points in 1D
+//   const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+// 
+//   // number of flux points per direction
+//   const CFuint nbrFlxPnts = nbrSolPnts1D*nbrSolPnts1D*nbrFlxPnts1D;
+// 
+//   // resize m_faceFlxPntConn
+//   m_faceFlxPntConn.resize(6);
+// 
+//   // variable holding the face index
+//   CFuint faceIdx = 0;
+// 
+//   // first face
+//   for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//   {
+//     for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//     {
+//       m_faceFlxPntConn[faceIdx]
+//           .push_back(2*nbrFlxPnts+nbrSolPnts1D*nbrFlxPnts1D*iKsi+nbrFlxPnts1D*iEta);
+//     }
+//   }
+//   ++faceIdx;
+// 
+//   // second face
+//   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//   {
+//     for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//     {
+//       m_faceFlxPntConn[faceIdx]
+//           .push_back(2*nbrFlxPnts+nbrSolPnts1D*nbrFlxPnts1D*iKsi+nbrFlxPnts1D*iEta+nbrSolPnts1D);
+//     }
+//   }
+//   ++faceIdx;
+// 
+//   // third face
+//   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//   {
+//     for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//     {
+//       m_faceFlxPntConn[faceIdx]
+//           .push_back(nbrFlxPnts+nbrSolPnts1D*nbrFlxPnts1D*iZta+nbrFlxPnts1D*iKsi);
+//     }
+//   }
+//   ++faceIdx;
+// 
+//   // fourth face
+//   for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//   {
+//     for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//     {
+//       m_faceFlxPntConn[faceIdx]
+//           .push_back(nbrSolPnts1D*nbrFlxPnts1D*iEta+nbrFlxPnts1D*iZta+nbrSolPnts1D);
+//     }
+//   }
+//   ++faceIdx;
+// 
+//   // fifth face
+//   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//   {
+//     const CFuint idxKsi = nbrSolPnts1D-iKsi-1;
+//     for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//     {
+//       m_faceFlxPntConn[faceIdx]
+//           .push_back(nbrFlxPnts+nbrSolPnts1D*nbrFlxPnts1D*iZta+nbrFlxPnts1D*idxKsi+nbrSolPnts1D);
+//     }
+//   }
+//   ++faceIdx;
+// 
+//   // sixth face
+//   for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+//   {
+//     for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//     {
+//       m_faceFlxPntConn[faceIdx]
+//         .push_back(nbrSolPnts1D*nbrFlxPnts1D*iEta+nbrFlxPnts1D*iZta);
+//     }
+//   }
+//   ++faceIdx;
+// 
+// 
+// /*  for (CFuint iFace = 0; iFace < m_faceFlxPntConn.size(); ++iFace)
+//   {
+//     for (CFuint iFlx = 0; iFlx < m_faceFlxPntConn[iFace].size(); ++iFlx)
+//     {
+//       CF_DEBUG_OBJ(m_faceFlxPntConn[iFace][iFlx]);
+//     }
+//   }*/
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -862,105 +939,105 @@ void HexaFluxReconstructionElementData::createFaceFluxPntsConnPerOrient()
 {
   CFAUTOTRACE;
 
-  // number of faces
-  const CFuint nbrFaces = m_faceNodeConn.size();
-
-  // number of solution points in 1D
-  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-
-  // number of face flux points
-  const CFuint nbrFaceFlxPnts = getNbrOfFaceFlxPnts();
-
-  // flux point indexes for inverted face
-  vector< CFuint > invFlxIdxs;
-  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-  {
-    const CFuint idxKsi = nbrSolPnts1D - iKsi - 1;
-    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-    {
-      invFlxIdxs.push_back(nbrSolPnts1D*idxKsi+iEta);
-    }
-  }
-
-  // number of rotatable flux point groups
-  const CFuint nbrRotFlxGroups = nbrFaceFlxPnts/4;
-
-  // maximum number of flux points in a line of flux points
-  const CFuint maxNbrFlxPntsInLine = (nbrSolPnts1D+1)/2;
-
-  // storage of flux point rotatable groups
-  vector< vector< CFuint > > rotFlxIdxs(nbrRotFlxGroups);
-  CFuint iRotGroup = 0;
-  for (CFuint iFlxLine = 0; iRotGroup < nbrRotFlxGroups; ++iFlxLine)
-  {
-    for (CFuint iFlx = 0;
-         iFlx < maxNbrFlxPntsInLine && iRotGroup < nbrRotFlxGroups;
-         ++iFlx, ++iRotGroup)
-    {
-      const CFuint idxFlxLine = nbrSolPnts1D - 1 - iFlxLine;
-      const CFuint idxFlx     = nbrSolPnts1D - 1 - iFlx    ;
-
-      rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*iFlx      +iFlxLine  );
-      rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*idxFlxLine+iFlx      );
-      rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*idxFlx    +idxFlxLine);
-      rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*iFlxLine  +idxFlx    );
-    }
-  }
-
-  // number of possible orientations
-  const CFuint nbrOrient = 84;
-
-  // create data structure
-  m_faceFlxPntConnPerOrient.resize(nbrOrient);
-  CFuint iOrient = 0;
-  for (CFuint iFaceL = 0; iFaceL < nbrFaces; ++iFaceL)
-  {
-    vector< CFuint > faceFlxConnL = m_faceFlxPntConn[iFaceL];
-    for (CFuint iFaceR = iFaceL; iFaceR < nbrFaces; ++iFaceR)
-    {
-      vector< CFuint > faceFlxConnR = m_faceFlxPntConn[iFaceR];
-      for (CFuint iRot = 0; iRot < 4; ++iRot, ++iOrient)
-      {
-        m_faceFlxPntConnPerOrient[iOrient].resize(2);
-        for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
-        {
-          m_faceFlxPntConnPerOrient[iOrient][LEFT ]
-              .push_back(faceFlxConnL[iFlx            ]);
-          m_faceFlxPntConnPerOrient[iOrient][RIGHT]
-              .push_back(faceFlxConnR[invFlxIdxs[iFlx]]);
-        }
-
-        // rotate the right face
-        for (CFuint iRotGroup = 0; iRotGroup < nbrRotFlxGroups; ++iRotGroup)
-        {
-          // indexes of flux points to be rotated
-          const CFuint flx0Idx = rotFlxIdxs[iRotGroup][0];
-          const CFuint flx1Idx = rotFlxIdxs[iRotGroup][1];
-          const CFuint flx2Idx = rotFlxIdxs[iRotGroup][2];
-          const CFuint flx3Idx = rotFlxIdxs[iRotGroup][3];
-
-          // rotate flux points
-          const CFuint swap = invFlxIdxs[flx3Idx];
-          invFlxIdxs[flx3Idx] = invFlxIdxs[flx2Idx];
-          invFlxIdxs[flx2Idx] = invFlxIdxs[flx1Idx];
-          invFlxIdxs[flx1Idx] = invFlxIdxs[flx0Idx];
-          invFlxIdxs[flx0Idx] = swap;
-        }
-      }
-    }
-  }
-/*  for (CFuint iOrient = 0; iOrient < m_faceFlxPntConnPerOrient.size(); ++iOrient)
-  {
-    CF_DEBUG_OBJ(iOrient);
-    for (CFuint iFlx = 0; iFlx < m_faceFlxPntConnPerOrient[iOrient][LEFT ].size(); ++iFlx)
-    {
-      CF_DEBUG_OBJ(m_faceFlxPntConnPerOrient[iOrient][LEFT ][iFlx]);
-    }
-    for (CFuint iFlx = 0; iFlx < m_faceFlxPntConnPerOrient[iOrient][RIGHT].size(); ++iFlx)
-    {
-      CF_DEBUG_OBJ(m_faceFlxPntConnPerOrient[iOrient][RIGHT][iFlx]);
-    }
-  }*/
+//   // number of faces
+//   const CFuint nbrFaces = m_faceNodeConn.size();
+// 
+//   // number of solution points in 1D
+//   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+// 
+//   // number of face flux points
+//   const CFuint nbrFaceFlxPnts = getNbrOfFaceFlxPnts();
+// 
+//   // flux point indexes for inverted face
+//   vector< CFuint > invFlxIdxs;
+//   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+//   {
+//     const CFuint idxKsi = nbrSolPnts1D - iKsi - 1;
+//     for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+//     {
+//       invFlxIdxs.push_back(nbrSolPnts1D*idxKsi+iEta);
+//     }
+//   }
+// 
+//   // number of rotatable flux point groups
+//   const CFuint nbrRotFlxGroups = nbrFaceFlxPnts/4;
+// 
+//   // maximum number of flux points in a line of flux points
+//   const CFuint maxNbrFlxPntsInLine = (nbrSolPnts1D+1)/2;
+// 
+//   // storage of flux point rotatable groups
+//   vector< vector< CFuint > > rotFlxIdxs(nbrRotFlxGroups);
+//   CFuint iRotGroup = 0;
+//   for (CFuint iFlxLine = 0; iRotGroup < nbrRotFlxGroups; ++iFlxLine)
+//   {
+//     for (CFuint iFlx = 0;
+//          iFlx < maxNbrFlxPntsInLine && iRotGroup < nbrRotFlxGroups;
+//          ++iFlx, ++iRotGroup)
+//     {
+//       const CFuint idxFlxLine = nbrSolPnts1D - 1 - iFlxLine;
+//       const CFuint idxFlx     = nbrSolPnts1D - 1 - iFlx    ;
+// 
+//       rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*iFlx      +iFlxLine  );
+//       rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*idxFlxLine+iFlx      );
+//       rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*idxFlx    +idxFlxLine);
+//       rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*iFlxLine  +idxFlx    );
+//     }
+//   }
+// 
+//   // number of possible orientations
+//   const CFuint nbrOrient = 84;
+// 
+//   // create data structure
+//   m_faceFlxPntConnPerOrient.resize(nbrOrient);
+//   CFuint iOrient = 0;
+//   for (CFuint iFaceL = 0; iFaceL < nbrFaces; ++iFaceL)
+//   {
+//     vector< CFuint > faceFlxConnL = m_faceFlxPntConn[iFaceL];
+//     for (CFuint iFaceR = iFaceL; iFaceR < nbrFaces; ++iFaceR)
+//     {
+//       vector< CFuint > faceFlxConnR = m_faceFlxPntConn[iFaceR];
+//       for (CFuint iRot = 0; iRot < 4; ++iRot, ++iOrient)
+//       {
+//         m_faceFlxPntConnPerOrient[iOrient].resize(2);
+//         for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
+//         {
+//           m_faceFlxPntConnPerOrient[iOrient][LEFT ]
+//               .push_back(faceFlxConnL[iFlx            ]);
+//           m_faceFlxPntConnPerOrient[iOrient][RIGHT]
+//               .push_back(faceFlxConnR[invFlxIdxs[iFlx]]);
+//         }
+// 
+//         // rotate the right face
+//         for (CFuint iRotGroup = 0; iRotGroup < nbrRotFlxGroups; ++iRotGroup)
+//         {
+//           // indexes of flux points to be rotated
+//           const CFuint flx0Idx = rotFlxIdxs[iRotGroup][0];
+//           const CFuint flx1Idx = rotFlxIdxs[iRotGroup][1];
+//           const CFuint flx2Idx = rotFlxIdxs[iRotGroup][2];
+//           const CFuint flx3Idx = rotFlxIdxs[iRotGroup][3];
+// 
+//           // rotate flux points
+//           const CFuint swap = invFlxIdxs[flx3Idx];
+//           invFlxIdxs[flx3Idx] = invFlxIdxs[flx2Idx];
+//           invFlxIdxs[flx2Idx] = invFlxIdxs[flx1Idx];
+//           invFlxIdxs[flx1Idx] = invFlxIdxs[flx0Idx];
+//           invFlxIdxs[flx0Idx] = swap;
+//         }
+//       }
+//     }
+//   }
+// /*  for (CFuint iOrient = 0; iOrient < m_faceFlxPntConnPerOrient.size(); ++iOrient)
+//   {
+//     CF_DEBUG_OBJ(iOrient);
+//     for (CFuint iFlx = 0; iFlx < m_faceFlxPntConnPerOrient[iOrient][LEFT ].size(); ++iFlx)
+//     {
+//       CF_DEBUG_OBJ(m_faceFlxPntConnPerOrient[iOrient][LEFT ][iFlx]);
+//     }
+//     for (CFuint iFlx = 0; iFlx < m_faceFlxPntConnPerOrient[iOrient][RIGHT].size(); ++iFlx)
+//     {
+//       CF_DEBUG_OBJ(m_faceFlxPntConnPerOrient[iOrient][RIGHT][iFlx]);
+//     }
+//   }*/
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -1158,80 +1235,80 @@ void HexaFluxReconstructionElementData::createFaceIntegrationCoefs()
 {
   CFAUTOTRACE;
 
-  // number of solution points in 1D
-  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-
-  // number of flux points on a face
-  const CFuint nbrFlxPnts = nbrSolPnts1D*nbrSolPnts1D;
-
-  // resize m_faceIntegrationCoefs
-  m_faceIntegrationCoefs.resize(nbrFlxPnts);
-
-  // create TensorProductGaussIntegrator
-  TensorProductGaussIntegrator tpIntegrator(DIM_2D,m_polyOrder);
-
-  // create face node local coordinates
-  vector< RealVector > nodeCoord(4);
-  nodeCoord[0].resize(2);
-  nodeCoord[0][KSI] = -1.0;
-  nodeCoord[0][ETA] = -1.0;
-  nodeCoord[1].resize(2);
-  nodeCoord[1][KSI] = +1.0;
-  nodeCoord[1][ETA] = -1.0;
-  nodeCoord[2].resize(2);
-  nodeCoord[2][KSI] = +1.0;
-  nodeCoord[2][ETA] = +1.0;
-  nodeCoord[3].resize(2);
-  nodeCoord[3][KSI] = -1.0;
-  nodeCoord[3][ETA] = +1.0;
-
-  // get quadrature point coordinates and wheights
-  vector< RealVector > quadPntCoords   = tpIntegrator.getQuadPntsCoords  (nodeCoord);
-  vector< CFreal     > quadPntWheights = tpIntegrator.getQuadPntsWheights(nodeCoord);
-  const CFuint nbrQPnts = quadPntCoords.size();
-  cf_assert(quadPntWheights.size() == nbrQPnts);
-
-  // compute the coefficients for integration over a face
-  // loop over flux points
-  CFuint iFlx = 0;
-  for (CFuint iFlxKsi = 0; iFlxKsi < nbrSolPnts1D; ++iFlxKsi)
-  {
-    const CFreal ksiFlx = m_solPntsLocalCoord1D[iFlxKsi];
-    for (CFuint iFlxEta = 0; iFlxEta < nbrSolPnts1D; ++iFlxEta, ++iFlx)
-    {
-      const CFreal etaFlx = m_solPntsLocalCoord1D[iFlxEta];
-
-      m_faceIntegrationCoefs[iFlx] = 0.0;
-      for (CFuint iQPnt = 0; iQPnt < nbrQPnts; ++iQPnt)
-      {
-        // quadrature point local coordinate on the face
-        const CFreal ksiQPnt = quadPntCoords[iQPnt][KSI];
-        const CFreal etaQPnt = quadPntCoords[iQPnt][ETA];
-
-        // evaluate polynomial value in quadrature point
-        CFreal quadPntPolyVal = 1.;
-        for (CFuint iFac = 0; iFac < nbrSolPnts1D; ++iFac)
-        {
-          if (iFac != iFlxKsi)
-          {
-            const CFreal ksiFac = m_solPntsLocalCoord1D[iFac];
-            quadPntPolyVal *= (ksiQPnt-ksiFac)/(ksiFlx-ksiFac);
-          }
-        }
-        for (CFuint iFac = 0; iFac < nbrSolPnts1D; ++iFac)
-        {
-          if (iFac != iFlxEta)
-          {
-            const CFreal etaFac = m_solPntsLocalCoord1D[iFac];
-            quadPntPolyVal *= (etaQPnt-etaFac)/(etaFlx-etaFac);
-          }
-        }
-
-        // add contribution of quadrature point to integration coefficient
-        m_faceIntegrationCoefs[iFlx] += quadPntWheights[iQPnt]*quadPntPolyVal;
-      }
-    }
-  }
+//   // number of solution points in 1D
+//   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+// 
+//   // number of flux points on a face
+//   const CFuint nbrFlxPnts = nbrSolPnts1D*nbrSolPnts1D;
+// 
+//   // resize m_faceIntegrationCoefs
+//   m_faceIntegrationCoefs.resize(nbrFlxPnts);
+// 
+//   // create TensorProductGaussIntegrator
+//   TensorProductGaussIntegrator tpIntegrator(DIM_2D,m_polyOrder);
+// 
+//   // create face node local coordinates
+//   vector< RealVector > nodeCoord(4);
+//   nodeCoord[0].resize(2);
+//   nodeCoord[0][KSI] = -1.0;
+//   nodeCoord[0][ETA] = -1.0;
+//   nodeCoord[1].resize(2);
+//   nodeCoord[1][KSI] = +1.0;
+//   nodeCoord[1][ETA] = -1.0;
+//   nodeCoord[2].resize(2);
+//   nodeCoord[2][KSI] = +1.0;
+//   nodeCoord[2][ETA] = +1.0;
+//   nodeCoord[3].resize(2);
+//   nodeCoord[3][KSI] = -1.0;
+//   nodeCoord[3][ETA] = +1.0;
+// 
+//   // get quadrature point coordinates and wheights
+//   vector< RealVector > quadPntCoords   = tpIntegrator.getQuadPntsCoords  (nodeCoord);
+//   vector< CFreal     > quadPntWheights = tpIntegrator.getQuadPntsWheights(nodeCoord);
+//   const CFuint nbrQPnts = quadPntCoords.size();
+//   cf_assert(quadPntWheights.size() == nbrQPnts);
+// 
+//   // compute the coefficients for integration over a face
+//   // loop over flux points
+//   CFuint iFlx = 0;
+//   for (CFuint iFlxKsi = 0; iFlxKsi < nbrSolPnts1D; ++iFlxKsi)
+//   {
+//     const CFreal ksiFlx = m_solPntsLocalCoord1D[iFlxKsi];
+//     for (CFuint iFlxEta = 0; iFlxEta < nbrSolPnts1D; ++iFlxEta, ++iFlx)
+//     {
+//       const CFreal etaFlx = m_solPntsLocalCoord1D[iFlxEta];
+// 
+//       m_faceIntegrationCoefs[iFlx] = 0.0;
+//       for (CFuint iQPnt = 0; iQPnt < nbrQPnts; ++iQPnt)
+//       {
+//         // quadrature point local coordinate on the face
+//         const CFreal ksiQPnt = quadPntCoords[iQPnt][KSI];
+//         const CFreal etaQPnt = quadPntCoords[iQPnt][ETA];
+// 
+//         // evaluate polynomial value in quadrature point
+//         CFreal quadPntPolyVal = 1.;
+//         for (CFuint iFac = 0; iFac < nbrSolPnts1D; ++iFac)
+//         {
+//           if (iFac != iFlxKsi)
+//           {
+//             const CFreal ksiFac = m_solPntsLocalCoord1D[iFac];
+//             quadPntPolyVal *= (ksiQPnt-ksiFac)/(ksiFlx-ksiFac);
+//           }
+//         }
+//         for (CFuint iFac = 0; iFac < nbrSolPnts1D; ++iFac)
+//         {
+//           if (iFac != iFlxEta)
+//           {
+//             const CFreal etaFac = m_solPntsLocalCoord1D[iFac];
+//             quadPntPolyVal *= (etaQPnt-etaFac)/(etaFlx-etaFac);
+//           }
+//         }
+// 
+//         // add contribution of quadrature point to integration coefficient
+//         m_faceIntegrationCoefs[iFlx] += quadPntWheights[iQPnt]*quadPntPolyVal;
+//       }
+//     }
+//   }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -1240,70 +1317,70 @@ void HexaFluxReconstructionElementData::createCellAvgSolCoefs()
 {
   CFAUTOTRACE;
 
-  // number of solution points
-  const CFuint nbrSolPnts = getNbrOfSolPnts();
-
-  // resize m_cellAvgSolCoefs
-  m_cellAvgSolCoefs.resize(nbrSolPnts);
-
-  // create TensorProductGaussIntegrator
-  TensorProductGaussIntegrator tpIntegrator(DIM_3D,m_polyOrder);
-
-  // create cell node local coordinates
-  vector< RealVector > nodeCoord(8);
-  nodeCoord[0].resize(3);
-  nodeCoord[0][KSI] = -1.0;
-  nodeCoord[0][ETA] = -1.0;
-  nodeCoord[0][ZTA] = -1.0;
-  nodeCoord[1].resize(3);
-  nodeCoord[1][KSI] = +1.0;
-  nodeCoord[1][ETA] = -1.0;
-  nodeCoord[1][ZTA] = -1.0;
-  nodeCoord[2].resize(3);
-  nodeCoord[2][KSI] = +1.0;
-  nodeCoord[2][ETA] = +1.0;
-  nodeCoord[2][ZTA] = -1.0;
-  nodeCoord[3].resize(3);
-  nodeCoord[3][KSI] = -1.0;
-  nodeCoord[3][ETA] = +1.0;
-  nodeCoord[3][ZTA] = -1.0;
-  nodeCoord[4].resize(3);
-  nodeCoord[4][KSI] = -1.0;
-  nodeCoord[4][ETA] = -1.0;
-  nodeCoord[4][ZTA] = +1.0;
-  nodeCoord[5].resize(3);
-  nodeCoord[5][KSI] = +1.0;
-  nodeCoord[5][ETA] = -1.0;
-  nodeCoord[5][ZTA] = +1.0;
-  nodeCoord[6].resize(3);
-  nodeCoord[6][KSI] = +1.0;
-  nodeCoord[6][ETA] = +1.0;
-  nodeCoord[6][ZTA] = +1.0;
-  nodeCoord[7].resize(3);
-  nodeCoord[7][KSI] = -1.0;
-  nodeCoord[7][ETA] = +1.0;
-  nodeCoord[7][ZTA] = +1.0;
-
-  // get quadrature point coordinates and wheights
-  vector< RealVector > quadPntCoords   = tpIntegrator.getQuadPntsCoords  (nodeCoord);
-  vector< CFreal     > quadPntWheights = tpIntegrator.getQuadPntsWheights(nodeCoord);
-  const CFuint nbrQPnts = quadPntCoords.size();
-  cf_assert(quadPntWheights.size() == nbrQPnts);
-
-  // get the solution polynomial values at the quadrature points
-  vector< vector< CFreal > > quadPntPolyVals = getSolPolyValsAtNode(quadPntCoords);
-
-  // compute the coefficients for integration over a face
-  // loop over solution points
-  for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-  {
-    m_cellAvgSolCoefs[iSol] = 0.0;
-    for (CFuint iQPnt = 0; iQPnt < nbrQPnts; ++iQPnt)
-    {
-      m_cellAvgSolCoefs[iSol] += quadPntWheights[iQPnt]*quadPntPolyVals[iQPnt][iSol];
-    }
-    m_cellAvgSolCoefs[iSol] *= 0.125;
-  }
+//   // number of solution points
+//   const CFuint nbrSolPnts = getNbrOfSolPnts();
+// 
+//   // resize m_cellAvgSolCoefs
+//   m_cellAvgSolCoefs.resize(nbrSolPnts);
+// 
+//   // create TensorProductGaussIntegrator
+//   TensorProductGaussIntegrator tpIntegrator(DIM_3D,m_polyOrder);
+// 
+//   // create cell node local coordinates
+//   vector< RealVector > nodeCoord(8);
+//   nodeCoord[0].resize(3);
+//   nodeCoord[0][KSI] = -1.0;
+//   nodeCoord[0][ETA] = -1.0;
+//   nodeCoord[0][ZTA] = -1.0;
+//   nodeCoord[1].resize(3);
+//   nodeCoord[1][KSI] = +1.0;
+//   nodeCoord[1][ETA] = -1.0;
+//   nodeCoord[1][ZTA] = -1.0;
+//   nodeCoord[2].resize(3);
+//   nodeCoord[2][KSI] = +1.0;
+//   nodeCoord[2][ETA] = +1.0;
+//   nodeCoord[2][ZTA] = -1.0;
+//   nodeCoord[3].resize(3);
+//   nodeCoord[3][KSI] = -1.0;
+//   nodeCoord[3][ETA] = +1.0;
+//   nodeCoord[3][ZTA] = -1.0;
+//   nodeCoord[4].resize(3);
+//   nodeCoord[4][KSI] = -1.0;
+//   nodeCoord[4][ETA] = -1.0;
+//   nodeCoord[4][ZTA] = +1.0;
+//   nodeCoord[5].resize(3);
+//   nodeCoord[5][KSI] = +1.0;
+//   nodeCoord[5][ETA] = -1.0;
+//   nodeCoord[5][ZTA] = +1.0;
+//   nodeCoord[6].resize(3);
+//   nodeCoord[6][KSI] = +1.0;
+//   nodeCoord[6][ETA] = +1.0;
+//   nodeCoord[6][ZTA] = +1.0;
+//   nodeCoord[7].resize(3);
+//   nodeCoord[7][KSI] = -1.0;
+//   nodeCoord[7][ETA] = +1.0;
+//   nodeCoord[7][ZTA] = +1.0;
+// 
+//   // get quadrature point coordinates and wheights
+//   vector< RealVector > quadPntCoords   = tpIntegrator.getQuadPntsCoords  (nodeCoord);
+//   vector< CFreal     > quadPntWheights = tpIntegrator.getQuadPntsWheights(nodeCoord);
+//   const CFuint nbrQPnts = quadPntCoords.size();
+//   cf_assert(quadPntWheights.size() == nbrQPnts);
+// 
+//   // get the solution polynomial values at the quadrature points
+//   vector< vector< CFreal > > quadPntPolyVals = getSolPolyValsAtNode(quadPntCoords);
+// 
+//   // compute the coefficients for integration over a face
+//   // loop over solution points
+//   for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+//   {
+//     m_cellAvgSolCoefs[iSol] = 0.0;
+//     for (CFuint iQPnt = 0; iQPnt < nbrQPnts; ++iQPnt)
+//     {
+//       m_cellAvgSolCoefs[iSol] += quadPntWheights[iQPnt]*quadPntPolyVals[iQPnt][iSol];
+//     }
+//     m_cellAvgSolCoefs[iSol] *= 0.125;
+//   }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -1312,29 +1389,29 @@ void HexaFluxReconstructionElementData::createCellCenterDerivCoefs()
 {
   CFAUTOTRACE;
 
-  // center coordinate
-  vector< RealVector > centerCoord(1,RealVector(3));
-  centerCoord[0][KSI] = 0.0;
-  centerCoord[0][ETA] = 0.0;
-  centerCoord[0][ZTA] = 0.0;
-
-  vector< vector< vector< CFreal > > > polyDerivs =
-                                            getSolPolyDerivsAtNode(centerCoord);
-
-  // number of solution points
-  const CFuint nbrSolPnts = getNbrOfSolPnts();
-
-  // set polynomial derivatives
-  m_cellCenterDerivCoefs.resize(3);
-  m_cellCenterDerivCoefs[KSI].resize(nbrSolPnts);
-  m_cellCenterDerivCoefs[ETA].resize(nbrSolPnts);
-  m_cellCenterDerivCoefs[ZTA].resize(nbrSolPnts);
-  for (CFuint iPoly = 0; iPoly < nbrSolPnts; ++iPoly)
-  {
-    m_cellCenterDerivCoefs[KSI][iPoly] = polyDerivs[0][KSI][iPoly];
-    m_cellCenterDerivCoefs[ETA][iPoly] = polyDerivs[0][ETA][iPoly];
-    m_cellCenterDerivCoefs[ZTA][iPoly] = polyDerivs[0][ZTA][iPoly];
-  }
+//   // center coordinate
+//   vector< RealVector > centerCoord(1,RealVector(3));
+//   centerCoord[0][KSI] = 0.0;
+//   centerCoord[0][ETA] = 0.0;
+//   centerCoord[0][ZTA] = 0.0;
+// 
+//   vector< vector< vector< CFreal > > > polyDerivs =
+//                                             getSolPolyDerivsAtNode(centerCoord);
+// 
+//   // number of solution points
+//   const CFuint nbrSolPnts = getNbrOfSolPnts();
+// 
+//   // set polynomial derivatives
+//   m_cellCenterDerivCoefs.resize(3);
+//   m_cellCenterDerivCoefs[KSI].resize(nbrSolPnts);
+//   m_cellCenterDerivCoefs[ETA].resize(nbrSolPnts);
+//   m_cellCenterDerivCoefs[ZTA].resize(nbrSolPnts);
+//   for (CFuint iPoly = 0; iPoly < nbrSolPnts; ++iPoly)
+//   {
+//     m_cellCenterDerivCoefs[KSI][iPoly] = polyDerivs[0][KSI][iPoly];
+//     m_cellCenterDerivCoefs[ETA][iPoly] = polyDerivs[0][ETA][iPoly];
+//     m_cellCenterDerivCoefs[ZTA][iPoly] = polyDerivs[0][ZTA][iPoly];
+//   }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -1342,36 +1419,112 @@ void HexaFluxReconstructionElementData::createCellCenterDerivCoefs()
 void HexaFluxReconstructionElementData::setInterpolationNodeSet(const CFPolyOrder::Type order,
                                                         vector< RealVector >& nodalSet)
 {
-  // number of points in one direction
+  std::vector<CFreal> coords;
+  coords.resize(order+1);
+   
+  if(m_solPntDistribution.isNotNull()){
+    coords = m_solPntDistribution->getLocalCoords1D(order);
+  } else {
+    // Use a default solution point distribution: Gauss Legendre.  
+    switch(order)
+      {
+	case CFPolyOrder::ORDER0:
+	{
+	  coords[0] = 0.0;
+	} break;
+	case CFPolyOrder::ORDER1:
+	{
+	  coords[0] = -1./sqrt(3.);
+	  coords[1] = +1./sqrt(3.);
+	} break;
+	case CFPolyOrder::ORDER2:
+	{
+	  coords[0] = -sqrt(3./5.);
+	  coords[1] = 0.0;
+	  coords[2] = +sqrt(3./5.);
+	} break;
+	case CFPolyOrder::ORDER3:
+	{
+	  coords[0] = -sqrt((3.+2.*sqrt(6./5.))/7.);
+	  coords[1] = -sqrt((3.-2.*sqrt(6./5.))/7.);
+	  coords[2] = +sqrt((3.-2.*sqrt(6./5.))/7.);
+	  coords[3] = +sqrt((3.+2.*sqrt(6./5.))/7.);
+	} break;
+	case CFPolyOrder::ORDER4:
+	{
+	  coords[0] = -sqrt(5.+2.*sqrt(10./7.))/3.;
+	  coords[1] = -sqrt(5.-2.*sqrt(10./7.))/3.;
+	  coords[2] = 0.0;
+	  coords[3] = +sqrt(5.-2.*sqrt(10./7.))/3.;
+	  coords[4] = +sqrt(5.+2.*sqrt(10./7.))/3.;
+	} break;
+	case CFPolyOrder::ORDER5:
+	{
+	  coords[0] = -0.9324695142031521;
+	  coords[1] = -0.6612093864662645;
+	  coords[2] = -0.2386191860831969;
+	  coords[3] = 0.2386191860831969;
+	  coords[4] = 0.6612093864662645;
+	  coords[5] = 0.9324695142031521;
+	} break;
+	default:
+	{
+	  throw Common::NotImplementedException (FromHere(),"Gauss Legendre not implemented for order "
+					+ StringOps::to_str(order) + ".");
+	}
+      }
+  }
+  
   const CFuint nbrPnts1D = order+1;
 
-  // set node coordinates
+  // set solution point local coordinates
   nodalSet.resize(0);
-  if (order == CFPolyOrder::ORDER0)
+  for (CFuint iKsi = 0; iKsi < nbrPnts1D; ++iKsi)
   {
-    RealVector node(3);
-    node[KSI] = 0.0;
-    node[ETA] = 0.0;
-    node[ZTA] = 0.0;
-    nodalSet.push_back(node);
-  }
-  else
-  {
-    for (CFuint iKsi = 0; iKsi < nbrPnts1D; ++iKsi)
+    for (CFuint iEta = 0; iEta < nbrPnts1D; ++iEta)
     {
-      for (CFuint iEta = 0; iEta < nbrPnts1D; ++iEta)
+      for (CFuint iZta = 0; iZta < nbrPnts1D; ++iZta)
       {
-        for (CFuint iZta = 0; iZta < nbrPnts1D; ++iZta)
-        {
-          RealVector node(3);
-          node[KSI] = -cos(iKsi*MathTools::MathConsts::CFrealPi()/order);
-          node[ETA] = -cos(iEta*MathTools::MathConsts::CFrealPi()/order);
-          node[ZTA] = -cos(iZta*MathTools::MathConsts::CFrealPi()/order);
-          nodalSet.push_back(node);
-        }
+	RealVector node(3);
+	node[KSI] = coords[iKsi];
+	node[ETA] = coords[iEta];
+	node[ZTA] = coords[iZta];
+	nodalSet.push_back(node);
       }
     }
   }
+  
+  
+//   // number of points in one direction
+//   const CFuint nbrPnts1D = order+1;
+// 
+//   // set node coordinates
+//   nodalSet.resize(0);
+//   if (order == CFPolyOrder::ORDER0)
+//   {
+//     RealVector node(3);
+//     node[KSI] = 0.0;
+//     node[ETA] = 0.0;
+//     node[ZTA] = 0.0;
+//     nodalSet.push_back(node);
+//   }
+//   else
+//   {
+//     for (CFuint iKsi = 0; iKsi < nbrPnts1D; ++iKsi)
+//     {
+//       for (CFuint iEta = 0; iEta < nbrPnts1D; ++iEta)
+//       {
+//         for (CFuint iZta = 0; iZta < nbrPnts1D; ++iZta)
+//         {
+//           RealVector node(3);
+//           node[KSI] = -cos(iKsi*MathTools::MathConsts::CFrealPi()/order);
+//           node[ETA] = -cos(iEta*MathTools::MathConsts::CFrealPi()/order);
+//           node[ZTA] = -cos(iZta*MathTools::MathConsts::CFrealPi()/order);
+//           nodalSet.push_back(node);
+//         }
+//       }
+//     }
+//   }
 }
 
 //////////////////////////////////////////////////////////////////////
