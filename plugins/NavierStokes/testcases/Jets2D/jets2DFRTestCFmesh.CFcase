@@ -36,7 +36,7 @@ CFEnv.RegistSignalHandlers = false
 #CFEnv.NbWriters = 4
 
 # SubSystem Modules
-Simulator.Modules.Libs = libShapeFunctions libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libTecplotWriter libFluxReconstructionMethod libEmptyConvergenceMethod libNavierStokes libForwardEuler libPetscI libTHOR2CFmesh 
+Simulator.Modules.Libs = libShapeFunctions libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libTecplotWriter libFluxReconstructionMethod libEmptyConvergenceMethod libNavierStokes libForwardEuler libPetscI libGmsh2CFmesh 
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets2D/
@@ -50,14 +50,14 @@ Simulator.SubSystem.Euler2D.refLength = 1.0
 
 Simulator.SubSystem.OutputFormat     = CFmesh Tecplot ParaView
 
-Simulator.SubSystem.Tecplot.FileName = jets2DFR-sol.plt
+Simulator.SubSystem.Tecplot.FileName = jets2DFR-solTestCfmesh.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
 Simulator.SubSystem.Tecplot.SaveRate = 10
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 
-Simulator.SubSystem.CFmesh.FileName  = jets2DFR-sol.CFmesh
+Simulator.SubSystem.CFmesh.FileName  = jets2DFR-solTestCFmesh.CFmesh
 Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
 Simulator.SubSystem.CFmesh.SaveRate  = 10
 Simulator.SubSystem.CFmesh.AppendTime = false
@@ -66,7 +66,7 @@ Simulator.SubSystem.CFmesh.AppendIter = false
 #Simulator.SubSystem.CFmesh.WriteSol = ParWriteBinarySolution
 #Simulator.SubSystem.CFmesh.ParWriteBinarySolution.ParCFmeshBinaryFileWriter.NbWriters = 4
 
-Simulator.SubSystem.ParaView.FileName    = jets2DFR-solP3.vtu
+Simulator.SubSystem.ParaView.FileName    = jets2DFR-solTestCFmesh.vtu
 Simulator.SubSystem.ParaView.WriteSol    = WriteSolutionHighOrder
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
 Simulator.SubSystem.ParaView.SaveRate = 10
@@ -103,12 +103,12 @@ Simulator.SubSystem.MeshCreator = CFmeshFileReader
 #Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2D-sol.CFmesh
 #Simulator.SubSystem.CFmeshFileReader.ReadCFmesh = ParReadCFmeshBinary
 
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2Dsfdm.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = jets2DQDPert.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2DFR-sol.CFmesh
+#Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = jets2DQDPert.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
-Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
-Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P1
-Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+#Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+#Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P1
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 #EmptyIterator
@@ -116,9 +116,9 @@ Simulator.SubSystem.ConvergenceMethod = FwdEuler
 #Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.8
 
 Simulator.SubSystem.SpaceMethod = FluxReconstruction
-Simulator.SubSystem.FluxReconstruction.Builder = MeshUpgrade
-Simulator.SubSystem.FluxReconstruction.MeshUpgrade.PolynomialOrder = P2
-#Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
+#Simulator.SubSystem.FluxReconstruction.Builder = MeshUpgrade
+#Simulator.SubSystem.FluxReconstruction.MeshUpgrade.PolynomialOrder = P2
+Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
 #Simulator.SubSystem.FluxReconstruction.LimiterCom = TVBLimiter
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
 Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
@@ -128,12 +128,12 @@ Simulator.SubSystem.FluxReconstruction.Data.InterfaceFluxComputer = Null
 Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
 
-Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState
+Simulator.SubSystem.FluxReconstruction.InitComds = Null
 Simulator.SubSystem.FluxReconstruction.InitNames = InField
 
-Simulator.SubSystem.FluxReconstruction.InField.applyTRS = InnerCells
-Simulator.SubSystem.FluxReconstruction.InField.Vars = x y
-Simulator.SubSystem.FluxReconstruction.InField.Def = if(y>0.5,0.5,1.) \
+#Simulator.SubSystem.FluxReconstruction.InField.applyTRS = InnerCells
+#Simulator.SubSystem.FluxReconstruction.InField.Vars = x y
+#Simulator.SubSystem.FluxReconstruction.InField.Def = if(y>0.5,0.5,1.) \
                                          if(x>0.5,1.67332,2.83972) \
                                          0.0 \
                                          x*y^2+1
