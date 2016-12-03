@@ -10,6 +10,7 @@
 #include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
 #include "FluxReconstructionMethod/BasePointDistribution.hh"
 #include "FluxReconstructionMethod/BaseInterfaceFlux.hh"
+#include "FluxReconstructionMethod/ConvBndFaceTermRHSFluxReconstruction.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -37,6 +38,8 @@ void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::vector<std::string> >("SrcTermNames","Names of the source term commands.");
   options.addConfigOption< std::vector<std::string> >("InitComds","Types of the initializing commands.");
   options.addConfigOption< std::vector<std::string> >("InitNames","Names of the initializing commands.");
+  options.addConfigOption< std::vector<std::string> >("BcNames","Names of the boundary condition commands.");
+  options.addConfigOption< std::string >("SpaceRHSJacobCom","Command for the computation of the space discretization contibution to RHS and Jacobian.");
   options.addConfigOption< std::string >("LimiterCom","Command to limit the solution.");
 }
 
@@ -49,7 +52,11 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   m_solve(),
   m_limiter(),
   m_inits(),
-  m_srcTerms()
+  m_srcTerms(),
+  m_convVolTerm(),
+  m_convFaceTerm(),
+  m_bcs(),
+  m_bcsComs()
 {
   addConfigOptionsTo(this);
   m_data.reset(new FluxReconstructionSolverData(this));
@@ -61,6 +68,9 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   m_builder = "StdBuilder";
   // set default global jacobian sparsity
   m_sparsity = "None";
+  
+  m_spaceRHSJacobStr = "RHS";
+  setParameter("SpaceRHSJacobCom", &m_spaceRHSJacobStr);
   
   m_limiterStr = "Null";
   setParameter("LimiterCom", &m_limiterStr);
@@ -87,6 +97,10 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
 
   m_initNameStr = std::vector<std::string>();
   setParameter("InitNames",&m_initNameStr);
+  
+  // options for bc commands
+  m_bcNameStr = std::vector<std::string>();
+  setParameter("BcNames",&m_bcNameStr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -135,6 +149,39 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
   
   configureSourceTermCommands(args);
   configureInitCommands(args);
+  
+  CFLog(INFO,"FR: Creating convective volume term command...\n");
+    CFLog(INFO,"ConvVolTerm" << m_spaceRHSJacobStr << "\n");
+    try
+    {
+      configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( args,
+        m_convVolTerm,"ConvVolTerm"+m_spaceRHSJacobStr,m_data );
+    }
+    catch (Common::NoSuchValueException& e)
+    {
+      CFLog(INFO, e.what() << "\n");
+      CFLog(INFO, "Choosing ConvVolTermRHS instead ...\n");
+
+      configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( args, m_convVolTerm,"ConvVolTermRHS",m_data );
+    }
+
+    CFLog(INFO,"FR: Creating convective face term command...\n");
+    CFLog(INFO,"ConvFaceTerm" << m_spaceRHSJacobStr << "\n");
+    try
+    {
+      configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( args, m_convFaceTerm,"ConvFaceTerm"+m_spaceRHSJacobStr,m_data );
+    }
+    catch (Common::NoSuchValueException& e)
+    {
+      CFLog(INFO, e.what() << "\n");
+      CFLog(INFO, "Choosing ConvFaceTermRHS instead ...\n");
+
+      configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( args, m_convFaceTerm,"ConvFaceTermRHS",m_data );
+    }
+    cf_assert(m_convVolTerm.isNotNull());
+    cf_assert(m_convFaceTerm.isNotNull());
+    
+    configureBcCommands(args);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -187,28 +234,67 @@ void FluxReconstructionSolver::configureInitCommands ( Config::ConfigArgs& args 
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FluxReconstructionSolver::setMethodImpl()
+void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
 {
   CFAUTOTRACE;
 
-  SpaceMethod::setMethodImpl();
+  // get bcStateComputers
+  SafePtr< std::vector< SafePtr< BCStateComputer > > > bcStateComputers = m_data->getBCStateComputers();
+  cf_assert(m_bcNameStr.size() == bcStateComputers->size());
 
-  setupCommandsAndStrategies();
-  cf_assert(m_setup.isNotNull());
-  m_setup->execute();
-}
+  // resize vector with bc commands
+  m_bcsComs.resize(m_bcNameStr.size());
 
-//////////////////////////////////////////////////////////////////////////////
+  // get bc TRS names variable from the method data
+  SafePtr< std::vector< std::vector< std::string > > > bcTRSNames = m_data->getBCTRSNameStr();
+  bcTRSNames->resize(m_bcNameStr.size());
 
-void FluxReconstructionSolver::unsetMethodImpl()
-{
-  CFAUTOTRACE;
+  // configure commands
+    m_bcs.resize(m_bcNameStr.size());
 
-  cf_assert(m_unsetup.isNotNull());
-  m_unsetup->execute();
-  unsetupCommandsAndStrategies();
-  
-  SpaceMethod::unsetMethodImpl();
+    for(CFuint iBc = 0; iBc < m_bcsComs.size(); ++iBc)
+    {
+      CFLog(INFO,"FluxReconstruction: Creating convective boundary face term command for boundary condition: "
+                  << m_bcNameStr[iBc] << "\n");
+      CFLog(INFO,"ConvBndFaceTerm" << m_spaceRHSJacobStr << "\n");
+      try
+      {
+        configureCommand<FluxReconstructionSolverCom,
+          FluxReconstructionSolverData,
+          FluxReconstructionSolverComProvider>
+          (args, m_bcsComs[iBc], "ConvBndFaceTerm"+m_spaceRHSJacobStr,m_bcNameStr[iBc], m_data);
+      }
+      catch (Common::NoSuchValueException& e)
+      {
+        CFLog(INFO, e.what() << "\n");
+        CFLog(INFO, "Choosing ConvBndFaceTermRHS instead ...\n");
+
+        configureCommand<FluxReconstructionSolverCom,
+          FluxReconstructionSolverData,
+          FluxReconstructionSolverComProvider>
+          (args, m_bcsComs[iBc], "ConvBndFaceTermRHS",m_bcNameStr[iBc], m_data);
+      }
+
+      cf_assert(m_bcsComs[iBc].isNotNull());
+
+      // dynamic_cast to ConvBndFaceTermRHSFluxReconstruction
+      SafePtr< FluxReconstructionSolverCom > bcComm = m_bcsComs[iBc].getPtr();
+      m_bcs[iBc] = bcComm.d_castTo< ConvBndFaceTermRHSFluxReconstruction >();
+      cf_assert(m_bcs[iBc].isNotNull());
+
+      // set bcStateComputer corresponding to this bc command
+      m_bcs[iBc]->setBcStateComputer((*bcStateComputers)[iBc]);
+
+      // set TRS names corresponding to this command in bcTRSNames and in bcStateComputers
+      const std::vector<std::string> currBCTRSNames = m_bcs[iBc]->getTrsNames();
+      const CFuint nbrBCTRSs = currBCTRSNames.size();
+      (*bcTRSNames)[iBc].resize(nbrBCTRSs);
+      for (CFuint iTRS = 0; iTRS < nbrBCTRSs; ++iTRS)
+      {
+        (*bcTRSNames)[iBc][iTRS] = currBCTRSNames[iTRS];
+        (*bcStateComputers)[iBc]->addTRSName(currBCTRSNames[iTRS]);
+      }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////

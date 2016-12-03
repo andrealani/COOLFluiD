@@ -21,6 +21,12 @@ namespace COOLFluiD {
   namespace FluxReconstructionMethod {
 
 //////////////////////////////////////////////////////////////////////////////
+    
+    // Forward declerations
+    class ConvBndFaceTermRHSFluxReconstruction;
+    
+//////////////////////////////////////////////////////////////////////////////  
+    
 
 /// This class implements a FluxReconstruction solver
 /// @author Alexander Papen
@@ -84,10 +90,22 @@ public: // functions
 protected: // interface implementation functions
 
   /// Sets up data, commands and strategies of this Method
-  virtual void setMethodImpl();
+  virtual void setMethodImpl(){
+    SpaceMethod::setMethodImpl();
+
+    setupCommandsAndStrategies();
+    cf_assert(m_setup.isNotNull());
+    m_setup->execute(); 
+  }
 
   /// Unsets the data, commands and strategies of this Method
-  virtual void unsetMethodImpl();
+  virtual void unsetMethodImpl(){
+    cf_assert(m_unsetup.isNotNull());
+    m_unsetup->execute();
+    unsetupCommandsAndStrategies();
+
+    SpaceMethod::unsetMethodImpl(); 
+  }
 
   /// Extrapolates the states to the node positions
   virtual void extrapolateStatesToNodesImpl();
@@ -121,6 +139,8 @@ private: // functions
   void configureSourceTermCommands( Config::ConfigArgs& args );
   
   void configureInitCommands( Config::ConfigArgs& args );
+  
+  void configureBcCommands( Config::ConfigArgs& args );
 
 private: // data
 
@@ -132,6 +152,12 @@ private: // data
 
   ///The solve command
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_solve;
+  
+  /// The command that computes the volume terms of the discretization of the convective terms
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_convVolTerm;
+
+  /// The command that computes the face terms of the discretization of the convective terms
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_convFaceTerm;
 
   ///The Setup string for configuration
   std::string m_setupStr;
@@ -145,6 +171,10 @@ private: // data
   /// The string for configuration of the m_limiter command
   std::string m_limiterStr;
   
+  /// The string for configuration of the commands that compute
+  /// RHS (and optionally the Jacobian)
+  std::string m_spaceRHSJacobStr;
+  
   /// The commands to use for initializing the solution.
   std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_inits;
 
@@ -153,6 +183,13 @@ private: // data
 
   /// The solution initializing command names for configuration
   std::vector<std::string> m_initNameStr;
+  
+  /// The commands to use for applying the boundary conditions for the convective terms,
+  /// with ConvBndFaceTermRHSFluxReconstruction as type
+  std::vector< Common::SafePtr< ConvBndFaceTermRHSFluxReconstruction > > m_bcs;
+
+  /// The commands to use for applying the boundary conditions for the convective terms
+  std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_bcsComs;
 
   ///The data to share between FluxReconstructionSolverCom commands
   Common::SharedPtr< FluxReconstructionSolverData > m_data;
@@ -168,6 +205,9 @@ private: // data
   
   /// The commands for the source terms
   std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_srcTerms;
+  
+  /// The boundary condition command names for configuration
+  std::vector<std::string> m_bcNameStr;
 
 //////////////////////////////////////////////////////////////////////////////
 

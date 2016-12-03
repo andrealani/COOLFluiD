@@ -232,7 +232,7 @@ void StdInitState::executeOnTrs()
 // 	if(m_initPntCoords[1]>0.475 && m_initPntCoords[1]<0.525 && m_initPntCoords[0]<0.025){
 // 	CFLog(VERBOSE,"InitPntGlobalCoord = (" << m_initPntCoords[0] << "," << m_initPntCoords[1] << ") ");
 // 	CFLog(VERBOSE,", its state: " << (m_initPntsStates[iPnt])[0] << " and elem: " << iElem << "\n");
-// 	}
+//  	}
 	
       }
 

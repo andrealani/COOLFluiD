@@ -74,11 +74,6 @@ protected: // functions
   virtual void createSVFaceNodeConnectivityPerOrientNoSymm();
 
   /**
-   * Creates a vector containing the exponents of the terms in the Spectral FV polynomials
-   */
-  virtual void createPolyExponents();
-
-  /**
    * Computes the polynomial coefficients of the spectral FV basis functions
    * @pre createLocalCVNodeConn() and createLocalNodeCoord() must be called first
    */

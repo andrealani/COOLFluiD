@@ -16,6 +16,11 @@
 #include "Common/SafePtr.hh"
 #include "FluxReconstructionMethod/BasePointDistribution.hh"
 
+#include "Framework/DataSocketSink.hh"
+
+#include "Framework/BaseMethodStrategyProvider.hh"
+#include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -43,6 +48,13 @@ public:
    * Default destructor.
    */
   virtual ~FluxReconstructionElementData();
+  
+//   /**
+//    * Returns the DataSocket's that this command needs as sinks
+//    * @return a vector of SafePtr with the DataSockets
+//    */
+//   std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
+//       needsSockets();
 
   /**
    * @return m_shape
@@ -1028,6 +1040,12 @@ protected: // protected data
   
   /// local face normals 
   std::vector< RealVector > m_faceLocalNorm;
+  
+//   /// socket for solution coordinates in 1D
+//   Framework::DataSocketSink< std::vector< CFreal > > socket_solCoords1D;
+//   
+//   /// socket for flux coordinates in 1D
+//   Framework::DataSocketSink< std::vector< CFreal > > socket_flxCoords1D;
 
 }; // end of class FluxReconstructionElementData
 

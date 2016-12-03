@@ -12,6 +12,7 @@
 
 using namespace std;
 using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Framework;
 
 namespace COOLFluiD {
 
@@ -35,6 +36,16 @@ QuadFluxReconstructionElementData::QuadFluxReconstructionElementData(CFPolyOrder
   m_polyOrder = polyOrder;
   m_solPntsLocalCoord1D.resize(polyOrder+1);
   m_flxPntsLocalCoord1D.resize(polyOrder+1);
+  
+//   DataHandle<std::vector<CFreal> > solPntsLocalCoord1DTemp = socket_solCoords1D.getDataHandle();
+//   DataHandle<std::vector<CFreal> > flxPntsLocalCoord1DTemp = socket_flxCoords1D.getDataHandle();
+//   
+//   if(solPntsLocalCoord1DTemp[0].size() == polyOrder+1 && flxPntsLocalCoord1DTemp[0].size() == polyOrder+1) {
+//     m_solPntsLocalCoord1D = solPntsLocalCoord1DTemp[0];
+//     m_flxPntsLocalCoord1D = flxPntsLocalCoord1DTemp[0];
+//     CFLog(VERBOSE,"IT WORKED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+//     
+//   } else {
   // Use a default solution and flux point distribution: Gauss Legendre.  
   std::vector<CFreal> coords;
   coords.resize(polyOrder+1);
@@ -87,6 +98,7 @@ QuadFluxReconstructionElementData::QuadFluxReconstructionElementData(CFPolyOrder
     }
   m_solPntsLocalCoord1D = coords;
   m_flxPntsLocalCoord1D = coords;
+  
 
   resetFluxReconstructionElementData();
 }

@@ -8,10 +8,12 @@
 
 #include "FluxReconstructionMethod/StdSetup.hh"
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
+#include "FluxReconstructionMethod/BasePointDistribution.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
 
 namespace COOLFluiD {
   namespace FluxReconstructionMethod {
@@ -28,7 +30,9 @@ StdSetup::StdSetup(const std::string& name) :
   socket_nstatesProxy("nstatesProxy"),
   socket_states("states"),
   socket_gradients("gradients"),
-  socket_normals("normals")
+  socket_normals("normals"),
+  socket_solCoords1D("solCoords1D"),
+  socket_flxCoords1D("flxCoords1D")
 {
 }
 
@@ -57,6 +61,8 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
   result.push_back(&socket_nstatesProxy);
   result.push_back(&socket_gradients);
   result.push_back(&socket_normals);
+  result.push_back(&socket_solCoords1D);
+  result.push_back(&socket_flxCoords1D);
   return result;
 }
 
@@ -107,6 +113,19 @@ void StdSetup::execute()
       gradients[iState][iGrad].resize(dim);
     }
   }
+  
+  // setup socket solCoords1D
+  DataHandle<std::vector<CFreal> > solCoords1D = socket_solCoords1D.getDataHandle();
+  SafePtr< std::vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
+  // get the order of the polynomial interpolation
+  const CFPolyOrder::Type polyOrder = static_cast<CFPolyOrder::Type>((*elemType)[0].getSolOrder());
+  solCoords1D.resize(polyOrder+1);
+  solCoords1D = getMethodData().getSolPntDistribution()->getLocalCoords1D(polyOrder);
+  
+  // setup socket flxCoords1D
+  DataHandle<std::vector<CFreal> > flxCoords1D = socket_flxCoords1D.getDataHandle();
+  flxCoords1D.resize(polyOrder+1);
+  flxCoords1D = getMethodData().getFluxPntDistribution()->getLocalCoords1D(polyOrder);
     
   CFLog(VERBOSE, "StdSetup::execute() => END\n");
 }

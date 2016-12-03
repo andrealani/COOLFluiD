@@ -30,7 +30,20 @@ ReconstructStatesFluxReconstruction.cxx
 ReconstructStatesFluxReconstruction.hh
 BCStateComputer.cxx
 BCStateComputer.hh
-
+ConvBndFaceTermRHSFluxReconstruction.hh
+ConvBndFaceTermRHSFluxReconstruction.cxx
+BaseBndFaceTermComputer.hh
+BaseBndFaceTermComputer.cxx
+ConvVolTermRHSFluxReconstruction.hh
+ConvVolTermRHSFluxReconstruction.cxx
+ConvFaceTermRHSFluxReconstruction.hh
+ConvFaceTermRHSFluxReconstruction.cxx
+BaseFaceTermComputer.cxx
+BaseFaceTermComputer.hh
+BaseVolTermComputer.cxx
+BaseVolTermComputer.hh
+RiemannFlux.hh
+RiemannFlux.cxx
 StdInitState.cxx
 StdInitState.hh
 

@@ -18,7 +18,9 @@
 #include "FluxReconstructionMethod/TriagFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/BaseInterfaceFlux.hh"
 #include "FluxReconstructionMethod/BasePointDistribution.hh"
+#include "FluxReconstructionMethod/BaseBndFaceTermComputer.hh"
 #include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
+#include "FluxReconstructionMethod/BCStateComputer.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -44,6 +46,8 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
   options.addConfigOption< std::string >("InterfaceFluxComputer","Name of the interface flux computer");
   options.addConfigOption< std::string >("FluxPointDistribution","Name of the flux point distribution");
   options.addConfigOption< std::string >("SolutionPointDistribution","Name of the solution point distribution");
+  options.addConfigOption< std::vector<std::string> >("BcTypes","Types of the boundary condition commands.");
+  options.addConfigOption< std::vector<std::string> >("BcNames","Names of the boundary condition commands.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -55,7 +59,19 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_stdTrsGeoBuilder(),
   m_frLocalData(),
   m_statesReconstructor(),
-  m_faceBuilder()
+  m_bcs(),
+  m_bcsSP(),
+  m_bcTypeStr(),
+  m_bcNameStr(),
+  m_bcTRSNameStr(),
+  m_faceBuilder(),
+  m_bndFaceTermComputerStr(),
+  m_bndFaceTermComputer(),
+  m_bndFacesStartIdxs(),
+  m_maxNbrRFluxPnts(),
+  m_maxNbrStatesData()
+  //socket_solCoords1D("solCoords1D"),
+  //socket_flxCoords1D("flxCoords1D")
 {
   addConfigOptionsTo(this);
 
@@ -72,6 +88,13 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   
   m_solpntdistributionStr = "Null";
   setParameter( "SolutionPointDistribution", &m_solpntdistributionStr );
+  
+  // options for bc commands
+  m_bcTypeStr = vector<std::string>();
+  setParameter("BcTypes",&m_bcTypeStr);
+
+  m_bcNameStr = vector<std::string>();
+  setParameter("BcNames",&m_bcNameStr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -81,6 +104,19 @@ FluxReconstructionSolverData::~FluxReconstructionSolverData()
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+// std::vector< Common::SafePtr< BaseDataSocketSource > >
+//   FluxReconstructionSolverData::providesSockets()
+// {
+//   std::vector< Common::SafePtr< BaseDataSocketSource > > result;
+//   result.push_back(&socket_solCoords1D);
+//   result.push_back(&socket_flxCoords1D);
+//   return result;
+// }
+
+//////////////////////////////////////////////////////////////////////////////
+
+
 
 void FluxReconstructionSolverData::setup()
 {
@@ -94,11 +130,28 @@ void FluxReconstructionSolverData::setup()
   // setup face builder
   m_faceBuilder.setup();
   
+//   _updateVar   ->setup();
+//   _solutionVar ->setup();
+//   _diffusiveVar->setup();
+  
   // create local FR data
   createFRLocalData();
   
   // setup StatesReconstructor
   m_statesReconstructor->setup();
+  
+//   // setup socket solCoords1D
+//   DataHandle<std::vector<CFreal> > solCoords1D = socket_solCoords1D.getDataHandle();
+//   SafePtr< std::vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
+//   // get the order of the polynomial interpolation
+//   const CFPolyOrder::Type polyOrder = static_cast<CFPolyOrder::Type>((*elemType)[0].getSolOrder());
+//   solCoords1D.resize(polyOrder+1);
+//   solCoords1D = getSolPntDistribution()->getLocalCoords1D(polyOrder);
+//   
+//   // setup socket flxCoords1D
+//   DataHandle<std::vector<CFreal> > flxCoords1D = socket_flxCoords1D.getDataHandle();
+//   flxCoords1D.resize(polyOrder+1);
+//   flxCoords1D = getFluxPntDistribution()->getLocalCoords1D(polyOrder);
   
 }
 
@@ -201,6 +254,33 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
                                                   ::getInstance().getProvider("ReconstructStatesFluxReconstruction");
   cf_assert(recProv.isNotNull());
   m_statesReconstructor = recProv->create("ReconstructStatesFluxReconstruction",thisPtr);
+  
+  
+  CFLog(INFO,"FR: configureBCStateComputers()\n");
+  cf_assert(m_bcTypeStr.size() == m_bcNameStr.size());
+
+  // number of boundary conditions
+  const CFuint nbrBcs = m_bcTypeStr.size();
+
+  // resize m_bcs and m_bcsSP
+  m_bcs.resize(nbrBcs);
+  m_bcsSP.resize(nbrBcs);
+
+  for (CFuint iBc = 0; iBc < nbrBcs; ++iBc)
+  {
+    CFLog(INFO, "BC type = " << m_bcTypeStr[iBc] << "\n");
+    CFLog(INFO, "BC name = " << m_bcNameStr[iBc] << "\n");
+
+    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , BCStateComputer > > prov =
+      Environment::Factory<BCStateComputer>::getInstance().getProvider(m_bcTypeStr[iBc]);
+    cf_assert(prov.isNotNull());
+    m_bcs[iBc] = prov->create(m_bcNameStr[iBc],thisPtr);
+    configureNested(m_bcs[iBc].getPtr(), args);
+    cf_assert(m_bcs[iBc].isNotNull());
+
+    // set SafePtr
+    m_bcsSP[iBc] = m_bcs[iBc].getPtr();
+  }
 
 }
 

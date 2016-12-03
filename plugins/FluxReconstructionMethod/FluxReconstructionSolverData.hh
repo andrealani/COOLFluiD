@@ -21,17 +21,21 @@
 #include "Framework/DofDataHandleIterator.hh"
 #include "Framework/ProxyDofIterator.hh"
 
+#include "Framework/DataSocketSource.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
   namespace FluxReconstructionMethod {
 
+    class BCStateComputer;
     class FluxReconstructionStrategy;
     class BaseInterfaceFlux;
     class BasePointDistribution;
     class FluxReconstructionElementData;
     class ReconstructStatesFluxReconstruction;
     class BasePointDistribution;
+    class BaseBndFaceTermComputer;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -95,10 +99,17 @@ public: // functions
     return &m_stdTrsGeoBuilder;
   }
 
+
   /// Gets the Class name
   static std::string getClassName()
   {
     return "FluxReconstructionSolver";
+  }
+  
+  /// @return the boundary face term computer
+  Common::SafePtr< BaseBndFaceTermComputer > getBndFaceTermComputer()
+  {
+    return m_bndFaceTermComputer.getPtr();
   }
 
 //   /// Get the VolumeIntegrator
@@ -139,11 +150,83 @@ public: // functions
     return &m_faceBuilder;
   }
   
+  /// @return the BCStateComputers
+  Common::SafePtr< std::vector< Common::SafePtr< BCStateComputer > > > getBCStateComputers()
+  {
+    return &m_bcsSP;
+  }
+  
+  /// @return m_bcNameStr
+  std::vector< std::string >& getBCNameStr()
+  {
+    return m_bcNameStr;
+  }
+
+  /// @return m_bcTRSNameStr
+  Common::SafePtr< std::vector< std::vector< std::string > > > getBCTRSNameStr()
+  {
+    return &m_bcTRSNameStr;
+  }
+  
+  /// set m_resFactor
+  void setResFactor(CFreal resFactor)
+  {
+    m_resFactor = resFactor;
+  }
+  
+  /// @return m_resFactor
+  CFreal getResFactor()
+  {
+    return m_resFactor;
+  }
+  
+  /// set m_maxNbrRFluxPnts
+  void setMaxNbrRFluxPnts(CFuint maxNbrRFluxPnts)
+  {
+    m_maxNbrRFluxPnts = maxNbrRFluxPnts;
+  }
+  
+  /// @return m_maxNbrRFluxPnts
+  CFuint getMaxNbrRFluxPnts()
+  {
+    return m_maxNbrRFluxPnts;
+  }
+  
+  /// @return reference to m_bndFacesStartIdxs
+  std::map< std::string , std::vector< std::vector< CFuint > > >& getBndFacesStartIdxs()
+  {
+    return m_bndFacesStartIdxs;
+  }
+  
+  /// @return m_maxNbrStatesData
+  CFuint getMaxNbrStatesData()
+  {
+    return m_maxNbrStatesData;
+  }
+  
+  /// set m_maxNbrStatesData
+  void setMaxNbrStatesData(CFuint maxNbrStatesData)
+  {
+    m_maxNbrStatesData = maxNbrStatesData;
+  }
+  
+  /// @return reference to m_innerFacesStartIdxs
+  std::vector< CFuint >& getInnerFacesStartIdxs()
+  {
+    return m_innerFacesStartIdxs;
+  }
+
+  
   /// Sets up the FluxReconstructionData
   void setup();
   
   /// Unsets the method data
-  virtual void unsetup();
+  void unsetup();
+  
+//   /// Returns the DataSocket's that this command provides as sources
+//   /// @return a vector of SafePtr with the DataSockets
+//   std::vector< Common::SafePtr< Framework::BaseDataSocketSource > >
+//     providesSockets();
 
 private:  // helper functions
 
@@ -201,6 +284,48 @@ private:  // data
 
   /// String to configure flux point distribution
   std::string m_solpntdistributionStr;
+  
+  /// The boundary condition state computer strategies
+  std::vector< Common::SelfRegistPtr< BCStateComputer > > m_bcs;
+
+  /// The boundary condition state computer strategies, as SafePtrs
+  std::vector< Common::SafePtr< BCStateComputer > > m_bcsSP;
+
+  /// The boundary condition strategy types
+  std::vector< std::string > m_bcTypeStr;
+
+  /// The boundary condition strategy names for configuration
+  std::vector< std::string > m_bcNameStr;
+
+  /// The boundary condition TRS names
+  std::vector< std::vector< std::string > > m_bcTRSNameStr;
+  
+  /// variable for maximum number of points in which the Riemann solver is evaluated
+  CFuint m_maxNbrRFluxPnts;
+  
+  /// variable for maximum number of statesData that has to be computed
+  CFuint m_maxNbrStatesData;
+  
+  /// factor to multiply the residual with, coming from the time discretization
+  CFreal m_resFactor;
+  
+  /// map between the boundary TRS and the start index of faces with a certain orientation
+  std::map< std::string , std::vector< std::vector< CFuint > > > m_bndFacesStartIdxs;
+  
+  /// start index of inner faces with a certain orientation
+  std::vector< CFuint > m_innerFacesStartIdxs;
+  
+  /// String for the boundary face terms computer
+  std::string m_bndFaceTermComputerStr;
+
+  /// pointer to boundary face term computer
+  Common::SelfRegistPtr< BaseBndFaceTermComputer > m_bndFaceTermComputer;
+  
+//   /// socket for solution coordinates in 1D
+//   Framework::DataSocketSource< std::vector< CFreal > > socket_solCoords1D;
+//   
+//   /// socket for flux coordinates in 1D
+//   Framework::DataSocketSource< std::vector< CFreal > > socket_flxCoords1D;
 
 };  // end of class FluxReconstructionSolverData
 

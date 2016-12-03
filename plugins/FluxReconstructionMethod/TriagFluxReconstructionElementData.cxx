@@ -119,7 +119,7 @@ TriagFluxReconstructionElementData::~TriagFluxReconstructionElementData()
 void TriagFluxReconstructionElementData::computeLocalFaceNormals()
 {
   CFAUTOTRACE;
-  CFLog(VERBOSE,"computeLocalFaceNormals\n");
+  //CFLog(VERBOSE,"computeLocalFaceNormals\n");
   
   // number of faces
   const CFuint nbrFaces = 3;
@@ -144,7 +144,7 @@ void TriagFluxReconstructionElementData::computeLocalFaceNormals()
 void TriagFluxReconstructionElementData::createFaceNodeConnectivityPerOrient()
 {
   CFAUTOTRACE;
-  CFLog(VERBOSE,"createFaceNodeConnectivityPerOrient\n");
+  //CFLog(VERBOSE,"createFaceNodeConnectivityPerOrient\n");
 
   // number of faces
   const CFuint nbrFaces = m_faceNodeConn.size();
@@ -222,11 +222,33 @@ void TriagFluxReconstructionElementData::createSVFaceNodeConnectivityPerOrientNo
 }
 
 //////////////////////////////////////////////////////////////////////
-
-void TriagFluxReconstructionElementData::createPolyExponents()
+  
+void TriagFluxReconstructionElementData::createSolPolyExponents()
 {
   CFAUTOTRACE;
+  //CFLog(VERBOSE,"createSolPolyExponents\n");
 
+  // define exponents
+  m_solPolyExponents.resize(0);
+  for (CFuint iKsi = 0; iKsi < m_polyOrder+1; ++iKsi)
+  {
+    for (CFuint iEta = 0; iEta < m_polyOrder+1-iKsi; ++iEta)
+    {
+      vector< CFint > solPolyExps(2);
+      solPolyExps[KSI] = iKsi;
+      solPolyExps[ETA] = iEta;
+      m_solPolyExponents.push_back(solPolyExps);
+    }
+  }
+  cf_assert(m_solPolyExponents.size() == (m_polyOrder+1)*(m_polyOrder+2)/2);
+}
+
+//////////////////////////////////////////////////////////////////////
+
+// void TriagFluxReconstructionElementData::createPolyExponents()
+// {
+//   CFAUTOTRACE;
+// 
 //   // helper variable
 //   const CFuint polyOrderP1 = m_polyOrder + 1;
 // 
@@ -234,10 +256,10 @@ void TriagFluxReconstructionElementData::createPolyExponents()
 //   const CFuint nbrPolyTerms = (m_polyOrder + 1)*(m_polyOrder + 2)/2;
 // 
 //   // resize the variable
-//   m_polyExponents.resize(nbrPolyTerms);
+//   m_solPolyExponents.resize(nbrPolyTerms);
 //   for (CFuint iTerm = 0; iTerm < nbrPolyTerms; ++iTerm)
 //   {
-//     m_polyExponents[iTerm].resize(2);
+//     m_solPolyExponents[iTerm].resize(2);
 //   }
 // 
 //   // define exponents
@@ -246,11 +268,11 @@ void TriagFluxReconstructionElementData::createPolyExponents()
 //   {
 //     for (CFuint iY = 0; iY < iP+1; ++iY, ++iTerm)
 //     {
-//       m_polyExponents[iTerm][KSI] = iP-iY;
-//       m_polyExponents[iTerm][ETA] = iY;
+//       m_solPolyExponents[iTerm][KSI] = iP-iY;
+//       m_solPolyExponents[iTerm][ETA] = iY;
 //     }
 //   }
-}
+// }
 
 //////////////////////////////////////////////////////////////////////
 
@@ -473,7 +495,7 @@ void TriagFluxReconstructionElementData::createFluxPolyExponents()
 void TriagFluxReconstructionElementData::setInterpolationNodeSet(const CFPolyOrder::Type order,
                                                          vector< RealVector >& nodalSet)
 {
-  CFLog(VERBOSE,"setInterpolationNodeSet\n");
+  //CFLog(VERBOSE,"setInterpolationNodeSet\n");
 
   std::vector<CFreal> coords;
   coords.resize(order+1);
@@ -540,8 +562,8 @@ void TriagFluxReconstructionElementData::setInterpolationNodeSet(const CFPolyOrd
     for (CFuint iEta = 0; iEta < nbrPnts1D-iKsi; ++iEta)
     {
       RealVector node(2);
-      node[KSI] = coords[iKsi];
-      node[ETA] = (coords[iEta]+1.)*(2.-coords[iKsi])/2.-1.; //Map [-1;1] onto [-1;1-ksi]
+      node[KSI] = (coords[iKsi]+1.)/2.; //Map [-1;1] onto [0;1]
+      node[ETA] = (coords[iEta]+1.)/2.*(1.-coords[iKsi])/2.; //Map for eta [0;1] onto [0;1-ksi'] with ksi' on [-;1]
       nodalSet.push_back(node);
     }
   }
@@ -719,7 +741,7 @@ void TriagFluxReconstructionElementData::setCFLConvDiffRatio()
 
 void TriagFluxReconstructionElementData::createFaceOutputPntCellMappedCoords()
 {
-  CFLog(VERBOSE,"createFaceOutputPntCellMappedCoords\n");
+  //CFLog(VERBOSE,"createFaceOutputPntCellMappedCoords\n");
   // number of points on a face
   CFuint nbrFacePnts;
   CFreal dKsi;
@@ -757,6 +779,8 @@ void TriagFluxReconstructionElementData::createFaceOutputPntCellMappedCoords()
       const CFreal fun0 = 0.5*(1.0-m_faceOutputPntFaceMappedCoords[iPnt][KSI]);
       const CFreal fun1 = 0.5*(1.0+m_faceOutputPntFaceMappedCoords[iPnt][KSI]);
       m_faceOutputPntCellMappedCoords[iFace].push_back(fun0*faceNodeCoords[0]+fun1*faceNodeCoords[1]);
+      //RealVector temp = fun0*faceNodeCoords[0]+fun1*faceNodeCoords[1];
+      //CFLog(VERBOSE,"Face output Pnt coord: (" << temp[0] << " , " << temp[1] << ")\n");
     }
   }
 }
@@ -766,7 +790,7 @@ void TriagFluxReconstructionElementData::createFaceOutputPntCellMappedCoords()
 void TriagFluxReconstructionElementData::createFaceOutputPntConn()
 {
   CFAUTOTRACE;
-  CFLog(VERBOSE,"createFaceOutputPntConn\n");
+  //CFLog(VERBOSE,"createFaceOutputPntConn\n");
 
   m_faceOutputPntConn.resize(0);
   for (CFuint iCell = 0; iCell < (CFuint) m_polyOrder; ++iCell)
@@ -779,12 +803,10 @@ void TriagFluxReconstructionElementData::createFaceOutputPntConn()
 }
 
 //////////////////////////////////////////////////////////////////////
-//From here newly implemented functions (in comparison to SFV)
-//standard element: nodes (-1;-1), (-1;1), (1;-1)
 
 void TriagFluxReconstructionElementData::createFlxPntsLocalCoords()
 {
-  CFLog(VERBOSE,"createFlxPntsLocalCoords\n");
+  //CFLog(VERBOSE,"createFlxPntsLocalCoords\n");
   // number of flux points in 1D
   const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
 
@@ -812,7 +834,7 @@ void TriagFluxReconstructionElementData::createFlxPntsLocalCoords()
   
 void TriagFluxReconstructionElementData::createSolPntsLocalCoords()
 {   
-  CFLog(VERBOSE,"createSolPntsLocalCoords\n");
+  //CFLog(VERBOSE,"createSolPntsLocalCoords\n");
   // number of solution points in 1D
   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
 
@@ -823,8 +845,8 @@ void TriagFluxReconstructionElementData::createSolPntsLocalCoords()
     for (CFuint iEta = 0; iEta < nbrSolPnts1D-iKsi; ++iEta) //as ksi grows, create pnts on vertical closer to node (1;-1)
     {
       RealVector solCoords(2);
-      solCoords[KSI] = m_solPntsLocalCoord1D[iKsi];
-      solCoords[ETA] = (m_solPntsLocalCoord1D[iEta]+1.)*(2.-m_solPntsLocalCoord1D[iKsi])/2.-1.; //Map [-1;1] onto [-1;1-ksi]
+      solCoords[KSI] = (m_solPntsLocalCoord1D[iKsi]+1.)/2.; //Map [-1,1] to [0,1]
+      solCoords[ETA] = (m_solPntsLocalCoord1D[iEta]+1.)/2.*(1-m_solPntsLocalCoord1D[iKsi])/2.; //Map for eta [0;1] onto [0;1-ksi'] with ksi' on [-;1]
       m_solPntsLocalCoords.push_back(solCoords);
     }
   }
@@ -836,7 +858,7 @@ void TriagFluxReconstructionElementData::createSolPntsLocalCoords()
 void TriagFluxReconstructionElementData::createFaceFlxPntsFaceLocalCoords()
 {
   CFAUTOTRACE;
-  CFLog(VERBOSE,"createFaceFlxPntsFaceLocalCoords\n");
+  //CFLog(VERBOSE,"createFaceFlxPntsFaceLocalCoords\n");
 
   // number of solution points in 1D
   const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
@@ -846,32 +868,8 @@ void TriagFluxReconstructionElementData::createFaceFlxPntsFaceLocalCoords()
   for (CFuint iFlx = 0; iFlx < nbrFlxPnts1D; ++iFlx)
   {
     RealVector flxCoord(1);
-    flxCoord[KSI] = m_flxPntsLocalCoord1D[iFlx];
+    flxCoord[KSI] = m_flxPntsLocalCoord1D[iFlx]/2.+1.;
     m_faceFlxPntsFaceLocalCoords.push_back(flxCoord);
-  }
-}
-
-//////////////////////////////////////////////////////////////////////
-  
-void TriagFluxReconstructionElementData::createSolPolyExponents()
-{
-  CFAUTOTRACE;
-  CFLog(VERBOSE,"createSolPolyExponents\n");
-
-  // number of solution points in 1D
-  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-
-  // define exponents
-  m_solPolyExponents.resize(0);
-  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-  {
-    for (CFuint iEta = 0; iEta < nbrSolPnts1D-iKsi; ++iEta)
-    {
-      vector< CFint > solPolyExps(2);
-      solPolyExps[KSI] = iKsi;
-      solPolyExps[ETA] = iEta;
-      m_solPolyExponents.push_back(solPolyExps);
-    }
   }
 }
 
@@ -953,7 +951,7 @@ void TriagFluxReconstructionElementData::createFlxPolyExponents()//Shouldn't be 
   
 void TriagFluxReconstructionElementData::createSolPntMatrixIdxForDerivation()
 {
-  CFLog(VERBOSE,"createSolPntMatrixIdxForDerivation\n");
+  //CFLog(VERBOSE,"createSolPntMatrixIdxForDerivation\n");
 
   // number of solution points in 1D
   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
@@ -994,18 +992,18 @@ void TriagFluxReconstructionElementData::createCellNodeCoords()
 
   // first node
   m_cellNodeCoords[0].resize(2);
-  m_cellNodeCoords[0][KSI] = -1.0;
-  m_cellNodeCoords[0][ETA] = -1.0;
+  m_cellNodeCoords[0][KSI] = 0.;
+  m_cellNodeCoords[0][ETA] = 0.;
 
   // second node
   m_cellNodeCoords[1].resize(2);
-  m_cellNodeCoords[1][KSI] = -1.0;
+  m_cellNodeCoords[1][KSI] = 0.;
   m_cellNodeCoords[1][ETA] = +1.0;
 
   // third node
   m_cellNodeCoords[2].resize(2);
   m_cellNodeCoords[2][KSI] = +1.0;
-  m_cellNodeCoords[2][ETA] = -1.0;
+  m_cellNodeCoords[2][ETA] = 0.;
 }
 
 //////////////////////////////////////////////////////////////////////

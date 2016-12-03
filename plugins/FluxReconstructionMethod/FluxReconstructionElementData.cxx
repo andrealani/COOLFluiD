@@ -4,11 +4,15 @@
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/FluxReconstructionSolver.hh"
 
+#include "FluxReconstructionMethod/FluxReconstruction.hh"
+
+
 //////////////////////////////////////////////////////////////////////
 
 using namespace std;
 using namespace COOLFluiD::MathTools;
 using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Framework;
 
 namespace COOLFluiD {
 
@@ -76,6 +80,8 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_solPntDistribution(),
   m_flxPntDistribution(),
   m_faceLocalNorm()
+//   socket_solCoords1D("solCoords1D"),
+//   socket_flxCoords1D("flxCoords1D")
 {
   CFAUTOTRACE;
 }
@@ -163,6 +169,17 @@ void FluxReconstructionElementData::resetFluxReconstructionElementData()
   createFaceOutputPntSolPolyAndDerivCoef();
   createFaceOutputPntConn();
 }
+
+//////////////////////////////////////////////////////////////////////
+
+// std::vector< Common::SafePtr< BaseDataSocketSink > >
+//   FluxReconstructionElementData::needsSockets()
+// {
+//   std::vector< Common::SafePtr< BaseDataSocketSink > > result;
+//   result.push_back(&socket_solCoords1D);
+//   result.push_back(&socket_flxCoords1D);
+//   return result;
+// }
 
 //////////////////////////////////////////////////////////////////////
 

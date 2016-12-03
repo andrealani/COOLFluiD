@@ -64,6 +64,12 @@ protected: // data
   /// array with IDs
   std::vector<CFuint> m_nodeIDToStateID;
   
+  /// socket for solution coordinates in 1D
+  Framework::DataSocketSource< std::vector< CFreal > > socket_solCoords1D;
+  
+  /// socket for flux coordinates in 1D
+  Framework::DataSocketSource< std::vector< CFreal > > socket_flxCoords1D;
+  
 };  // class StdSetup
 
 //////////////////////////////////////////////////////////////////////////////
