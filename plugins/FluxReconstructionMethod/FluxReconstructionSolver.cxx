@@ -9,8 +9,13 @@
 #include "FluxReconstructionMethod/FluxReconstructionSolver.hh"
 #include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
 #include "FluxReconstructionMethod/BasePointDistribution.hh"
-#include "FluxReconstructionMethod/BaseInterfaceFlux.hh"
 #include "FluxReconstructionMethod/ConvBndFaceTermRHSFluxReconstruction.hh"
+#include "FluxReconstructionMethod/BaseBndFaceTermComputer.hh"
+#include "FluxReconstructionMethod/BaseFaceTermComputer.hh"
+#include "FluxReconstructionMethod/BaseVolTermComputer.hh"
+#include "FluxReconstructionMethod/BCStateComputer.hh"
+#include "FluxReconstructionMethod/ConvBndFaceTermRHSFluxReconstruction.hh"
+#include "FluxReconstructionMethod/RiemannFlux.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -31,6 +36,8 @@ Environment::ObjectProvider< FluxReconstructionSolver,SpaceMethod,FluxReconstruc
 
 void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
 {
+  options.addConfigOption< std::string >("ExtrapolateCom","Command to extrapolate the states values to the position at the nodes.");
+  options.addConfigOption< std::string >("PrepareCom","Command to prepare before the computation of the residuals.");
   options.addConfigOption< std::string >("SolveCom","Command to solve the problem with FluxReconstruction solver.");
   options.addConfigOption< std::string >("UnSetupCom","Command to deallocate FluxReconstruction solver data.");
   options.addConfigOption< std::string >("SetupCom","Command to initialize FluxReconstruction solver data.");
@@ -49,12 +56,14 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   SpaceMethod(name),
   m_setup(),
   m_unsetup(),
+  m_extrapolate(),
+  m_prepare(),
   m_solve(),
   m_limiter(),
-  m_inits(),
-  m_srcTerms(),
   m_convVolTerm(),
   m_convFaceTerm(),
+  m_srcTerms(),
+  m_inits(),
   m_bcs(),
   m_bcsComs()
 {
@@ -63,9 +72,9 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
 
   cf_assert(m_data.isNotNull());
 
-  // set default value of builder for FluxReconstructionSolver
-  // to be FluxReconstructionBuilder
+  // set default value of builder for FluxReconstructionSolver to be FluxReconstructionBuilder
   m_builder = "StdBuilder";
+  
   // set default global jacobian sparsity
   m_sparsity = "None";
   
@@ -80,6 +89,12 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
 
   m_unsetupStr = "StdUnSetup";
   setParameter( "UnSetupCom", &m_unsetupStr );
+  
+  m_extrapolateStr = "StdExtrapolate";
+  setParameter("ExtrapolateCom", &m_extrapolateStr);
+  
+  m_prepareStr = "StdPrepare";
+  setParameter("PrepareCom", &m_prepareStr);
 
   m_solveStr   = "StdSolve";
   setParameter( "SolveCom",   &m_solveStr );
@@ -138,12 +153,19 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
     args, m_setup,m_setupStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >(
     args, m_unsetup,m_unsetupStr,m_data );
+  configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
+    args, m_extrapolate,m_extrapolateStr,m_data );
+  configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
+    args, m_prepare,m_prepareStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >(
     args, m_solve,m_solveStr,m_data );
-  configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( args, m_limiter,m_limiterStr,m_data );
+  configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
+    args, m_limiter,m_limiterStr,m_data );
 
   cf_assert(m_setup.isNotNull());
   cf_assert(m_unsetup.isNotNull());
+  cf_assert(m_extrapolate.isNotNull());
+  cf_assert(m_prepare.isNotNull());
   cf_assert(m_solve.isNotNull());
   cf_assert(m_limiter.isNotNull());
   
@@ -302,6 +324,9 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
 void FluxReconstructionSolver::extrapolateStatesToNodesImpl()
 {
   CFAUTOTRACE;
+  
+  cf_assert(m_extrapolate.isNotNull());
+  m_extrapolate->execute();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -334,6 +359,46 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
   CFAUTOTRACE;
   cf_assert(m_solve.isNotNull());
   m_solve->execute();
+  
+//   cf_assert(isConfigured());
+//   cf_assert(isSetup());
+// 
+//   // set the residual factor in the MethodData
+//   m_data->setResFactor(factor);
+// 
+//   // apply the boundary conditions (this function is in SpaceMethod and is not called anywhere else)
+//   applyBC();
+// 
+//   // compute the face terms of the SV discretization of the convective terms
+//   cf_assert(m_convFaceTerm.isNotNull());
+//   m_convFaceTerm->execute();
+// 
+//   // compute the volume terms of the SV discretization of the convective terms
+//   // should be placed after the computation of the convective boundary conditions and the convective face terms
+//   // for proper computation of the gradients
+//   cf_assert(m_convVolTerm.isNotNull());
+//   m_convVolTerm->execute();
+// 
+//   // if there is a diffusive term, compute the diffusive contributions to the residual
+//   if (m_data->hasDiffTerm() && m_data->separateConvDiffComs())
+//   {
+//     // add the diffusive boundary fluxes
+//     applyBCDiffImpl();
+// 
+//     // compute the face terms of the SV discretization of the diffusive terms
+//     cf_assert(m_diffFaceTerm.isNotNull());
+//     m_diffFaceTerm->execute();
+// 
+//     // compute the volume terms of the SV discretization of the diffusive terms
+//     cf_assert(m_diffVolTerm.isNotNull());
+//     m_diffVolTerm->execute();
+//   }
+// 
+//   // add source terms
+//   addSourceTermsImpl();
+// 
+//   // divide by volume/Jacobian determinant
+//   m_divideRHSByCellVol->execute();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -348,6 +413,27 @@ void FluxReconstructionSolver::computeTimeResidualImpl(CFreal factor)
 void FluxReconstructionSolver::applyBCImpl()
 {
   CFAUTOTRACE;
+  
+  const CFuint nbrBcs = m_bcsComs.size();
+  for(CFuint iBc = 0; iBc < nbrBcs; ++iBc)
+  {
+    cf_assert(m_bcsComs[iBc].isNotNull());
+    m_bcsComs[iBc]->execute();
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionSolver::addSourceTermsImpl()
+{
+  CFAUTOTRACE;
+
+  const CFuint nbrSrcTerms = m_srcTerms.size();
+  for(CFuint iSrc = 0; iSrc < nbrSrcTerms; ++iSrc)
+  {
+    cf_assert(m_srcTerms[iSrc].isNotNull());
+    m_srcTerms[iSrc]->execute();
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -355,6 +441,9 @@ void FluxReconstructionSolver::applyBCImpl()
 void FluxReconstructionSolver::prepareComputationImpl()
 {
   CFAUTOTRACE;
+  
+  cf_assert(m_prepare.isNotNull());
+  m_prepare->execute();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -381,7 +470,21 @@ std::vector<Common::SafePtr<NumericalStrategy> > FluxReconstructionSolver::getSt
 
   // add strategies here
   result.push_back(m_data->getStatesReconstructor()  .d_castTo<NumericalStrategy>());
-  result.push_back(m_data->getInterfaceFlux()  .d_castTo<NumericalStrategy>());
+  result.push_back(m_data->getBndFaceTermComputer()  .d_castTo<NumericalStrategy>());
+  result.push_back(m_data->getFaceTermComputer()     .d_castTo<NumericalStrategy>());
+  result.push_back(m_data->getVolTermComputer()      .d_castTo<NumericalStrategy>());
+  result.push_back(m_data->getSolPntDistribution()   .d_castTo<NumericalStrategy>());
+  result.push_back(m_data->getFluxPntDistribution()  .d_castTo<NumericalStrategy>());
+  
+  // add BCStateComputers
+  SafePtr< std::vector< SafePtr< BCStateComputer > > > bcStateComputers = m_data->getBCStateComputers();
+  for (CFuint iBC = 0; iBC < bcStateComputers->size(); ++iBC)
+  {
+    result.push_back((*bcStateComputers)[iBC]        .d_castTo<NumericalStrategy>());
+  }
+  
+  // these have to be added last!!! (need data from previous strategies)
+  result.push_back(m_data->getRiemannFlux()        .d_castTo<NumericalStrategy>());
   
   return result;
 }

@@ -4,8 +4,8 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_Numerics_FluxReconstructionMethod_FluxReconstructionSolverData_hh
-#define COOLFluiD_Numerics_FluxReconstructionMethod_FluxReconstructionSolverData_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_FluxReconstructionSolverData_hh
+#define COOLFluiD_FluxReconstructionMethod_FluxReconstructionSolverData_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -17,11 +17,12 @@
 #include "Framework/StdTrsGeoBuilder.hh"
 //#include "Framework/VolumeIntegrator.hh"
 #include "Framework/FaceToCellGEBuilder.hh"
+#include "Framework/VarSetMatrixTransformer.hh"
 
 #include "Framework/DofDataHandleIterator.hh"
 #include "Framework/ProxyDofIterator.hh"
 
-#include "Framework/DataSocketSource.hh"
+//#include "Framework/DataSocketSource.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -30,12 +31,13 @@ namespace COOLFluiD {
 
     class BCStateComputer;
     class FluxReconstructionStrategy;
-    class BaseInterfaceFlux;
     class BasePointDistribution;
     class FluxReconstructionElementData;
     class ReconstructStatesFluxReconstruction;
-    class BasePointDistribution;
     class BaseBndFaceTermComputer;
+    class BaseFaceTermComputer;
+    class BaseVolTermComputer;
+    class RiemannFlux;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -58,6 +60,17 @@ public: // functions
 
   /// Configure the data from the supplied arguments
   virtual void configure ( Config::ConfigArgs& args );
+  
+  /**
+   * Get the vector transformer from update to solution variables
+   * This function is implemented in the specific (space) MethodData
+   */
+  Common::SafePtr<Framework::VarSetTransformer>
+  getUpdateToSolutionVecTrans() const
+  {
+    cf_assert(m_updateToSolutionVecTrans.isNotNull());
+    return m_updateToSolutionVecTrans.getPtr();
+  }
 
   /// Sets the LinearSystemSolver for this SpaceMethod to use
   /// @pre LinearSystemSolver pointer is not constant to allow dynamic_casting
@@ -111,16 +124,20 @@ public: // functions
   {
     return m_bndFaceTermComputer.getPtr();
   }
+  
+  /// @return the face term computer
+  Common::SafePtr< BaseFaceTermComputer > getFaceTermComputer()
+  {
+    return m_faceTermComputer.getPtr();
+  }
+  
+  /// @return the volume term computer
+  Common::SafePtr< BaseVolTermComputer > getVolTermComputer(){
+    return m_volTermComputer.getPtr();
+  }
 
 //   /// Get the VolumeIntegrator
 //   Common::SafePtr< Framework::VolumeIntegrator > getVolumeIntegrator();
-  
-  /// Gets the interface flux computation strategy
-  Common::SafePtr< BaseInterfaceFlux > getInterfaceFlux() const
-  {
-    cf_assert(m_interfaceflux.isNotNull());
-    return m_interfaceflux.getPtr();
-  }
   
   /// Gets the flux point distribution
   Common::SafePtr< BasePointDistribution > getFluxPntDistribution() const
@@ -137,10 +154,22 @@ public: // functions
   }
   
   /// @return reference to m_frLocalData
-  std::vector< FluxReconstructionElementData* >& getFRLocalData();
+  std::vector< FluxReconstructionElementData* >& getFRLocalData()
+  {
+    return m_frLocalData;
+  }
+  
+  /// @return m_linearVarStr
+  std::string getLinearVarStr()
+  {
+    return m_linearVarStr;
+  }
   
   /// @return the states reconstructor
-  Common::SafePtr< ReconstructStatesFluxReconstruction > getStatesReconstructor();
+  Common::SafePtr< ReconstructStatesFluxReconstruction > getStatesReconstructor()
+  {
+    return m_statesReconstructor.getPtr();
+  }
   
     /// @return the GeometricEntity face builder
   Common::SafePtr<
@@ -148,6 +177,18 @@ public: // functions
     getFaceBuilder()
   {
     return &m_faceBuilder;
+  }
+  
+  /// @return SafePtr to the Riemann flux strategy
+  Common::SafePtr< RiemannFlux > getRiemannFlux()
+  {
+    return m_riemannFlux.getPtr();
+  }
+  
+  /// @return m_riemannFluxStr
+  std::string getRiemannFluxStr()
+  {
+    return m_riemannFluxStr;
   }
   
   /// @return the BCStateComputers
@@ -261,12 +302,6 @@ private:  // data
 //   /// String for configuring the numerical integrator Order
 //   std::string m_intorderStr;
   
-  /// Interface flux computation strategy
-  Common::SelfRegistPtr< BaseInterfaceFlux > m_interfaceflux;
-
-  /// String to configure interface flux computation strategy
-  std::string m_interfacefluxStr;
-  
   /// vector containing the  FluxReconstructionElementData for different element types
   std::vector< FluxReconstructionElementData* > m_frLocalData;
   
@@ -284,6 +319,27 @@ private:  // data
 
   /// String to configure flux point distribution
   std::string m_solpntdistributionStr;
+  
+  /// String for the linear variable name (for instance, the Roe average variables)
+  std::string m_linearVarStr;
+  
+  /// pointer to Riemann flux strategy
+  Common::SelfRegistPtr< RiemannFlux > m_riemannFlux;
+  
+  /// String for the Riemann flux
+  std::string m_riemannFluxStr;
+  
+  /// String for the volume terms computer
+  std::string m_volTermComputerStr;
+
+  /// pointer to volume term computer
+  Common::SelfRegistPtr< BaseVolTermComputer > m_volTermComputer;
+  
+  /// String for the face terms computer
+  std::string m_faceTermComputerStr;
+  
+  /// pointer to face term computer
+  Common::SelfRegistPtr< BaseFaceTermComputer > m_faceTermComputer;
   
   /// The boundary condition state computer strategies
   std::vector< Common::SelfRegistPtr< BCStateComputer > > m_bcs;
@@ -320,6 +376,9 @@ private:  // data
 
   /// pointer to boundary face term computer
   Common::SelfRegistPtr< BaseBndFaceTermComputer > m_bndFaceTermComputer;
+  
+  /// Vector transformer from update to solution variables
+  Common::SelfRegistPtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
   
 //   /// socket for solution coordinates in 1D
 //   Framework::DataSocketSource< std::vector< CFreal > > socket_solCoords1D;

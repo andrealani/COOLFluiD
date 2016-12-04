@@ -24,6 +24,7 @@ namespace COOLFluiD {
     
     // Forward declerations
     class ConvBndFaceTermRHSFluxReconstruction;
+    //class BndFaceTermRHSSpectralFD;
     
 //////////////////////////////////////////////////////////////////////////////  
     
@@ -78,11 +79,11 @@ public: // functions
   ///      allow dynamic_casting
   void setCollaborator(Framework::MultiMethodHandle<Framework::ConvergenceMethod> convMtd);
 
-//   /// Gets the volume integrator of the space method.
-//   virtual Common::SafePtr< Framework::VolumeIntegrator > getVolumeIntegrator()
-//   {
-//     return CFNULL;
-//   }
+  /// Gets the volume integrator of the space method.
+  virtual Common::SafePtr< Framework::VolumeIntegrator > getVolumeIntegrator()
+  {
+    return CFNULL;
+  }
   
   /// Defined the strategy list of this Method
   std::vector< Common::SafePtr< Framework::NumericalStrategy > > getStrategyList() const;
@@ -111,7 +112,7 @@ protected: // interface implementation functions
   virtual void extrapolateStatesToNodesImpl();
 
   /// Initialize the solution before starting the computation
-  virtual void initializeSolutionImpl(bool isRestart);
+  void initializeSolutionImpl(bool isRestart);
 
   /// Set matrix, right hand side and solve system
   virtual void computeSpaceResidualImpl(CFreal factor);
@@ -121,6 +122,9 @@ protected: // interface implementation functions
 
   /// Apply boundary conditions
   virtual void applyBCImpl();
+  
+  /// add source terms
+  virtual void addSourceTermsImpl();
 
   /// Prepare to compute
   virtual void prepareComputationImpl();
@@ -149,6 +153,12 @@ private: // data
 
   ///The UnSetup command to use
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_unsetup;
+  
+  /// The extrapolate command
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_extrapolate;
+
+  /// Command used to prepare the computation
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_prepare;
 
   ///The solve command
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_solve;
@@ -158,12 +168,21 @@ private: // data
 
   /// The command that computes the face terms of the discretization of the convective terms
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_convFaceTerm;
+  
+  /// Command used to limit a solution
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_limiter;
 
   ///The Setup string for configuration
   std::string m_setupStr;
 
   ///The UnSetup string for configuration
   std::string m_unsetupStr;
+  
+  /// The string for configuration of the extrapolate command
+  std::string m_extrapolateStr;
+
+  /// The string for configuration of the m_prepare command
+  std::string m_prepareStr;
 
   /// The string for configuration of the _prepare command
   std::string m_solveStr;
@@ -190,12 +209,6 @@ private: // data
 
   /// The commands to use for applying the boundary conditions for the convective terms
   std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_bcsComs;
-
-  ///The data to share between FluxReconstructionSolverCom commands
-  Common::SharedPtr< FluxReconstructionSolverData > m_data;
-  
-  /// Command used to limit a solution
-  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_limiter;
   
   /// The source term command types
   std::vector<std::string> m_srcTermTypeStr;
@@ -208,6 +221,9 @@ private: // data
   
   /// The boundary condition command names for configuration
   std::vector<std::string> m_bcNameStr;
+  
+  ///The data to share between FluxReconstructionSolverCom commands
+  Common::SharedPtr< FluxReconstructionSolverData > m_data;
 
 //////////////////////////////////////////////////////////////////////////////
 

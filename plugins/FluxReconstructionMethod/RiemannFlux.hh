@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Numerics_FluxReconstructionMethod_RiemannFlux_hh
-#define COOLFluiD_Numerics_FluxReconstructionMethod_RiemannFlux_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_RiemannFlux_hh
+#define COOLFluiD_FluxReconstructionMethod_RiemannFlux_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -62,6 +62,9 @@ public:  // methods
   
   /// Set up private data and data
   virtual void setup();
+  
+  /// Unset up private data and data
+  virtual void unsetup();
 
   /// Set the maximum number of points the Riemann flux will be evaluated in simultaneously
   void setMaxNbrFlxPnts(const CFuint maxNbrFlxPnts)

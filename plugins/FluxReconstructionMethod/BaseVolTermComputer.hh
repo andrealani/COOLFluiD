@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Numerics_FluxReconstructionMethod_BaseVolTermComputer_hh
-#define COOLFluiD_Numerics_FluxReconstructionMethod_BaseVolTermComputer_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_BaseVolTermComputer_hh
+#define COOLFluiD_FluxReconstructionMethod_BaseVolTermComputer_hh
 
 //////////////////////////////////////////////////////////////////////////////
 

@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Numerics_FluxReconstructionMethod_BCStateComputer_hh
-#define COOLFluiD_Numerics_FluxReconstructionMethod_BCStateComputer_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_BCStateComputer_hh
+#define COOLFluiD_FluxReconstructionMethod_BCStateComputer_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -53,6 +53,9 @@ public:  // methods
   
   /// Set up private data and data
   virtual void setup();
+  
+  /// Set up private data and data
+  virtual void unsetup();
 
   /// function returning a boolean that is true if the boundary condition requires the spatial coordinates
   bool needsSpatialCoordinates()

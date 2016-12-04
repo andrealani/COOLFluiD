@@ -4,9 +4,10 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
+#include "Common/FilesystemException.hh"
+#include "Framework/NamespaceSwitcher.hh"
 
-
-#include "Framework/VolumeIntegrator.hh"
+//#include "Framework/VolumeIntegrator.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/MethodStrategyProvider.hh"
 
@@ -16,9 +17,11 @@
 #include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/HexaFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/TriagFluxReconstructionElementData.hh"
-#include "FluxReconstructionMethod/BaseInterfaceFlux.hh"
 #include "FluxReconstructionMethod/BasePointDistribution.hh"
 #include "FluxReconstructionMethod/BaseBndFaceTermComputer.hh"
+#include "FluxReconstructionMethod/BaseFaceTermComputer.hh"
+#include "FluxReconstructionMethod/BaseVolTermComputer.hh"
+#include "FluxReconstructionMethod/RiemannFlux.hh"
 #include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
 
@@ -43,9 +46,13 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
 {
   //options.addConfigOption< std::string >("IntegratorOrder","Order of the Integration to be used for numerical quadrature.");
   //options.addConfigOption< std::string >("IntegratorQuadrature","Type of Quadrature to be used in the Integration.");
-  options.addConfigOption< std::string >("InterfaceFluxComputer","Name of the interface flux computer");
+  options.addConfigOption< std::string >("LinearVar","Name of the linear variable set.");
   options.addConfigOption< std::string >("FluxPointDistribution","Name of the flux point distribution");
   options.addConfigOption< std::string >("SolutionPointDistribution","Name of the solution point distribution");
+  options.addConfigOption< std::string >("RiemannFlux","Name of the Riemann flux.");
+  options.addConfigOption< std::string >("BndFaceTermComputer","Name of the boundary face term computer."  );
+  options.addConfigOption< std::string >("FaceTermComputer","Name of the face term computer."  );
+  options.addConfigOption< std::string >("VolTermComputer" ,"Name of the volume term computer.");
   options.addConfigOption< std::vector<std::string> >("BcTypes","Types of the boundary condition commands.");
   options.addConfigOption< std::vector<std::string> >("BcNames","Names of the boundary condition commands.");
 }
@@ -57,19 +64,29 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_lss(),
   m_convergenceMtd(),
   m_stdTrsGeoBuilder(),
-  m_frLocalData(),
+  m_faceBuilder(),
   m_statesReconstructor(),
+  m_volTermComputerStr(),
+  m_volTermComputer(),
+  m_faceTermComputerStr(),
+  m_faceTermComputer(),
+  m_bndFaceTermComputerStr(),
+  m_bndFaceTermComputer(),
+  m_linearVarStr(),
+  m_riemannFluxStr(),
+  m_riemannFlux(),
   m_bcs(),
   m_bcsSP(),
   m_bcTypeStr(),
   m_bcNameStr(),
   m_bcTRSNameStr(),
-  m_faceBuilder(),
-  m_bndFaceTermComputerStr(),
-  m_bndFaceTermComputer(),
+  m_innerFacesStartIdxs(),
   m_bndFacesStartIdxs(),
+  m_frLocalData(),
+  m_maxNbrStatesData(),
   m_maxNbrRFluxPnts(),
-  m_maxNbrStatesData()
+  m_resFactor(),
+  m_updateToSolutionVecTrans()
   //socket_solCoords1D("solCoords1D"),
   //socket_flxCoords1D("flxCoords1D")
 {
@@ -80,14 +97,26 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   //setParameter( "IntegratorOrder",      &m_intorderStr );
   //setParameter( "IntegratorQuadrature", &m_intquadStr );
   
-  m_interfacefluxStr = "Null";
-  setParameter( "InterfaceFluxComputer", &m_interfacefluxStr );
+  m_linearVarStr = "Roe";
+  setParameter( "LinearVar", &m_linearVarStr );
+  
+  m_riemannFluxStr = "RoeFlux";
+  setParameter("RiemannFlux", &m_riemannFluxStr);
   
   m_fluxpntdistributionStr = "Null";
   setParameter( "FluxPointDistribution", &m_fluxpntdistributionStr );
   
   m_solpntdistributionStr = "Null";
   setParameter( "SolutionPointDistribution", &m_solpntdistributionStr );
+  
+  m_bndFaceTermComputerStr = "BaseBndFaceTermComputer";
+  setParameter("BndFaceTermComputer", &m_bndFaceTermComputerStr);
+
+  m_faceTermComputerStr = "BaseFaceTermComputer";
+  setParameter("FaceTermComputer", &m_faceTermComputerStr);
+
+  m_volTermComputerStr = "BaseVolTermComputer";
+  setParameter("VolTermComputer", &m_volTermComputerStr);
   
   // options for bc commands
   m_bcTypeStr = vector<std::string>();
@@ -130,15 +159,51 @@ void FluxReconstructionSolverData::setup()
   // setup face builder
   m_faceBuilder.setup();
   
-//   _updateVar   ->setup();
-//   _solutionVar ->setup();
-//   _diffusiveVar->setup();
+  // setup the variable sets
+  _updateVar   ->setup();
+  _solutionVar ->setup();
+  _diffusiveVar->setup();
   
   // create local FR data
   createFRLocalData();
   
   // setup StatesReconstructor
   m_statesReconstructor->setup();
+  
+  // create the transformer from update to solution variables 
+  std::string name = getNamespace();
+  Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
+    (SubSystemStatusStack::getCurrentName()).getNamespace(name);
+  Common::SafePtr<PhysicalModel> physModel =
+    PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
+  
+  Common::SafePtr<VarSetTransformer::PROVIDER> vecTransProv = CFNULL;
+  
+  std::string updateToSolutionVecTransStr =
+  VarSetTransformer::getProviderName
+  (physModel->getConvectiveName(), _updateVarStr, _solutionVarStr);
+  
+  CFLog(VERBOSE, "Configuring VarSet Transformer: " <<
+        updateToSolutionVecTransStr << "\n");
+  
+  try {
+    vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
+    (updateToSolutionVecTransStr);
+  }
+  catch (Common::NoSuchValueException& e) {
+    updateToSolutionVecTransStr = "Identity";
+    
+    CFLog(VERBOSE, e.what() << "\n");
+    CFLog(VERBOSE, "Choosing IdentityVarSetTransformer instead ..." << "\n");
+    vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
+    (updateToSolutionVecTransStr);
+  }
+  CFLog(VERBOSE, "SpectralFDMethodData::setup() => updateToSolutionVarName = " << updateToSolutionVecTransStr << "\n");
+  
+  cf_assert(vecTransProv.isNotNull());
+  m_updateToSolutionVecTrans.reset(vecTransProv->create(physModel->getImplementor()));
+  cf_assert(m_updateToSolutionVecTrans.isNotNull());
+  m_updateToSolutionVecTrans->setup(2);
   
 //   // setup socket solCoords1D
 //   DataHandle<std::vector<CFreal> > solCoords1D = socket_solCoords1D.getDataHandle();
@@ -182,29 +247,80 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
 
   /* add here different strategies configuration */
   
-  CFLog(INFO,"Configure strategy type: " << m_interfacefluxStr << "\n");
-  try {
+  // Configure boundary face term computer
+  CFLog(INFO,"Configure boundary face term computer: " << m_bndFaceTermComputerStr << "\n");
 
-    SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BaseInterfaceFlux > >
-      prov = Environment::Factory< BaseInterfaceFlux >::getInstance().getProvider(
-        m_interfacefluxStr );
+  try
+  {
+    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , BaseBndFaceTermComputer > > prov =
+      Environment::Factory<BaseBndFaceTermComputer>::getInstance().getProvider(m_bndFaceTermComputerStr);
     cf_assert(prov.isNotNull());
-    m_interfaceflux = prov->create(m_interfacefluxStr,thisPtr);
-    configureNested ( m_interfaceflux.getPtr(), args );
-
-  } catch (Common::NoSuchValueException& e) {
-
-    CFLog(INFO, e.what() << "\n");
-    CFLog(INFO, "Choosing Null of type: " <<  BaseInterfaceFlux ::getClassName() << " instead...\n");
-    SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BaseInterfaceFlux > >
-      prov = Environment::Factory< BaseInterfaceFlux >::getInstance().getProvider("Null");
-    cf_assert(prov.isNotNull());
-    m_interfaceflux = prov->create("Null", thisPtr);
-
+    m_bndFaceTermComputer = prov->create(m_bndFaceTermComputerStr,thisPtr);
+    configureNested ( m_bndFaceTermComputer.getPtr(), args );
   }
-  cf_assert(m_interfaceflux.isNotNull());
+  catch (Common::NoSuchValueException& e)
+  {
+    CFLog(VERBOSE, e.what() << "\n");
+    CFLog(VERBOSE, "Choosing BaseBndFaceTermComputer instead ...\n");
+
+    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , BaseBndFaceTermComputer > > prov =
+      Environment::Factory<BaseBndFaceTermComputer>::getInstance().getProvider("BaseBndFaceTermComputer");
+    cf_assert(prov.isNotNull());
+    m_bndFaceTermComputer = prov->create("BaseBndFaceTermComputer", thisPtr);
+    configureNested ( m_bndFaceTermComputer.getPtr(), args );
+  }
+  cf_assert(m_bndFaceTermComputer.isNotNull());
   
-  CFLog(INFO,"Configure strategy type: " << m_fluxpntdistributionStr << "\n");
+  // Configure face term computer
+  CFLog(INFO,"Configure face term computer: " << m_faceTermComputerStr << "\n");
+
+  try
+  {
+    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , BaseFaceTermComputer > > prov =
+      Environment::Factory<BaseFaceTermComputer>::getInstance().getProvider(m_faceTermComputerStr);
+    cf_assert(prov.isNotNull());
+    m_faceTermComputer = prov->create(m_faceTermComputerStr,thisPtr);
+    configureNested ( m_faceTermComputer.getPtr(), args );
+  }
+  catch (Common::NoSuchValueException& e)
+  {
+    CFLog(VERBOSE, e.what() << "\n");
+    CFLog(VERBOSE, "Choosing BaseFaceTermComputer instead ...\n");
+
+    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , BaseFaceTermComputer > > prov =
+      Environment::Factory<BaseFaceTermComputer>::getInstance().getProvider("BaseFaceTermComputer");
+    cf_assert(prov.isNotNull());
+    m_faceTermComputer = prov->create("BaseFaceTermComputer", thisPtr);
+    configureNested ( m_faceTermComputer.getPtr(), args );
+  }
+  cf_assert(m_faceTermComputer.isNotNull());
+  
+  // Configure volume term computer
+  CFLog(INFO,"Configure volume term computer: " << m_volTermComputerStr << "\n");
+
+  try
+  {
+    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , BaseVolTermComputer > > prov =
+      Environment::Factory< BaseVolTermComputer >::getInstance().getProvider(m_volTermComputerStr);
+    cf_assert(prov.isNotNull());
+    m_volTermComputer = prov->create(m_volTermComputerStr,thisPtr);
+    configureNested ( m_volTermComputer.getPtr(), args );
+  }
+  catch (Common::NoSuchValueException& e)
+  {
+    CFLog(VERBOSE, e.what() << "\n");
+    CFLog(VERBOSE, "Choosing BaseVolTermComputer instead ...\n");
+
+    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , BaseVolTermComputer > > prov =
+      Environment::Factory< BaseVolTermComputer >::getInstance().getProvider("BaseVolTermComputer");
+    cf_assert(prov.isNotNull());
+    m_volTermComputer = prov->create("BaseVolTermComputer", thisPtr);
+    configureNested ( m_volTermComputer.getPtr(), args );
+  }
+  cf_assert(m_volTermComputer.isNotNull());
+  
+  // Configure flux point distribution
+  CFLog(INFO,"Configure flux point distribution: " << m_fluxpntdistributionStr << "\n");
   try {
 
     SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BasePointDistribution > >
@@ -226,7 +342,8 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
   }
   cf_assert(m_fluxpntdistribution.isNotNull());
   
-  CFLog(INFO,"Configure strategy type: " << m_solpntdistributionStr << "\n");
+  // Configure solution point distribution
+  CFLog(INFO,"Configure solution point distribution: " << m_solpntdistributionStr << "\n");
   try {
 
     SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BasePointDistribution > >
@@ -248,15 +365,32 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
   }
   cf_assert(m_solpntdistribution.isNotNull());
   
-  // states reconstructor
-  Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , ReconstructStatesFluxReconstruction > > recProv =
-    Environment::Factory< ReconstructStatesFluxReconstruction >
-                                                  ::getInstance().getProvider("ReconstructStatesFluxReconstruction");
-  cf_assert(recProv.isNotNull());
-  m_statesReconstructor = recProv->create("ReconstructStatesFluxReconstruction",thisPtr);
+  // Configure Riemann flux
+  CFLog(INFO,"Configure Riemann flux: " << m_riemannFluxStr << "\n");
+
+  try
+  {
+    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , RiemannFlux > > prov =
+      Environment::Factory< RiemannFlux >::getInstance().getProvider(m_riemannFluxStr);
+    cf_assert(prov.isNotNull());
+    m_riemannFlux = prov->create(m_riemannFluxStr,thisPtr);
+    configureNested ( m_riemannFlux.getPtr(), args );
+  }
+  catch (Common::NoSuchValueException& e)
+  {
+    CFLog(VERBOSE, e.what() << "\n");
+    CFLog(VERBOSE, "Choosing RoeFlux instead ...\n");
+
+    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , RiemannFlux > > prov =
+      Environment::Factory< RiemannFlux >::getInstance().getProvider("RoeFlux");
+    cf_assert(prov.isNotNull());
+    m_riemannFlux = prov->create("RoeFlux", thisPtr);
+    configureNested ( m_riemannFlux.getPtr(), args );
+  }
+  cf_assert(m_riemannFlux.isNotNull());
   
-  
-  CFLog(INFO,"FR: configureBCStateComputers()\n");
+  // Configure BC state computers
+  CFLog(INFO,"Configure BC state computers\n");
   cf_assert(m_bcTypeStr.size() == m_bcNameStr.size());
 
   // number of boundary conditions
@@ -281,6 +415,13 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
     // set SafePtr
     m_bcsSP[iBc] = m_bcs[iBc].getPtr();
   }
+  
+  // Configure states reconstructor
+  Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , ReconstructStatesFluxReconstruction > > recProv =
+    Environment::Factory< ReconstructStatesFluxReconstruction >
+                                                  ::getInstance().getProvider("ReconstructStatesFluxReconstruction");
+  cf_assert(recProv.isNotNull());
+  m_statesReconstructor = recProv->create("ReconstructStatesFluxReconstruction",thisPtr);
 
 }
 
@@ -351,21 +492,6 @@ void FluxReconstructionSolverData::createFRLocalData()
       }
     }
   }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-std::vector< FluxReconstructionElementData* >& FluxReconstructionSolverData::getFRLocalData()
-{
-  return m_frLocalData;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-SafePtr< ReconstructStatesFluxReconstruction > FluxReconstructionSolverData::getStatesReconstructor()
-// this function has to be put in the implementation file because of the forward declaration of ReconstructStatesSpectralFD
-{
-  return m_statesReconstructor.getPtr();
 }
 
 //////////////////////////////////////////////////////////////////////////////

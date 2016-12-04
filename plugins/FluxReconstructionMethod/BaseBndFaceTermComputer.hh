@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Numerics_FluxReconstructionMethod_BaseBndFaceTermComputer_hh
-#define COOLFluiD_Numerics_FluxReconstructionMethod_BaseBndFaceTermComputer_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_BaseBndFaceTermComputer_hh
+#define COOLFluiD_FluxReconstructionMethod_BaseBndFaceTermComputer_hh
 
 //////////////////////////////////////////////////////////////////////////////
 

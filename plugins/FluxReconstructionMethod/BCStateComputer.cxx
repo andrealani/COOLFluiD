@@ -79,6 +79,17 @@ void BCStateComputer::setup()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BCStateComputer::unsetup()
+{
+  CFAUTOTRACE;
+
+  // call setup of parent class
+  FluxReconstructionSolverStrategy::unsetup();
+  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BCStateComputer::addCurvatureToBndFaces()
 {
   if (PhysicalModelStack::getActive()->getDim() == DIM_3D)

@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Numerics_FluxReconstructionMethod_ReconstructStatesFluxReconstruction_hh
-#define COOLFluiD_Numerics_FluxReconstructionMethod_ReconstructStatesFluxReconstruction_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_ReconstructStatesFluxReconstruction_hh
+#define COOLFluiD_FluxReconstructionMethod_ReconstructStatesFluxReconstruction_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -44,6 +44,9 @@ public:  // methods
   
   /// Set up private data and data
   virtual void setup();
+  
+  /// Unset up private data and data
+  virtual void unsetup();
 
   /// reconstruct one state
   void reconstructState(const std::vector< Framework::State* >& cellStates,

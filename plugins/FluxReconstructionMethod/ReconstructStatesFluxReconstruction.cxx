@@ -432,6 +432,14 @@ void ReconstructStatesFluxReconstruction::setup()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void ReconstructStatesFluxReconstruction::unsetup()
+{
+  FluxReconstructionSolverStrategy::unsetup();
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
   }  // namespace FluxReconstructionMethod
 
 }  // namespace COOLFluiD

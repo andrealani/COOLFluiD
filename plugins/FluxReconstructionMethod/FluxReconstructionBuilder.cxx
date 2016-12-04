@@ -759,9 +759,7 @@ vector< vector < vector < CFuint > > > FluxReconstructionBuilder::getNodeConnPer
     } break;
     case CFGeoShape::QUAD:
     {
-      CFLog(VERBOSE,"Creating QuadP0!!!!!!!!!!!!!!!!!!!!!!\n");
       frElemData = new QuadFluxReconstructionElementData(CFPolyOrder::ORDER0);
-      CFLog(VERBOSE,"Created QuadP0!!!!!!!!!!!!!!!!!!!!!!\n");
     } break;
     case CFGeoShape::HEXA:
     {

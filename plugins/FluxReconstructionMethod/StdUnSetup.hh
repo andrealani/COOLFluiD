@@ -26,13 +26,36 @@ class StdUnSetup : public FluxReconstructionSolverCom {
 public: // functions
 
   /// Constructor
-  explicit StdUnSetup(const std::string& name) : FluxReconstructionSolverCom(name) {}
+  explicit StdUnSetup(const std::string& name);
 
   /// Destructor
   ~StdUnSetup() {}
 
   /// Execute processing actions
   void execute();
+  
+  /**
+   * Returns the DataSocket's that this command provides as sources
+   * @return a vector of SafePtr with the DataSockets
+   */
+  virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSource > >
+    providesSockets();
+
+  /**
+   * Returns the DataSocket's that this command needs as sinks
+   * @return a vector of SafePtr with the DataSockets
+   */
+  virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
+    needsSockets();
+    
+protected: // protected data
+  
+  /// socket for unit normals in face flux points
+  /// socket for size of projection vector in face flux points
+  Framework::DataSocketSink<  std::vector< CFreal > > socket_faceJacobVecSizeFaceFlxPnts;
+    
+  /// socket for gradients
+  Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
 
 }; // class StdUnSetup
 

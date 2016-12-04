@@ -4,8 +4,8 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_Numerics_FluxReconstructionMethod_NullPointDistribution_hh
-#define COOLFluiD_Numerics_FluxReconstructionMethod_NullPointDistribution_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_NullPointDistribution_hh
+#define COOLFluiD_FluxReconstructionMethod_NullPointDistribution_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
