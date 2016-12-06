@@ -681,34 +681,10 @@ void RadiativeTransferFVDOM::execute()
     cf_assert(endDir <= m_nbDirs);
     
     if (m_loopOverBins) {
-      for(CFuint ib = startBin; ib < endBin; ++ib) {
-	CFLog(INFO, "( bin: " << ib << " ), ( dir: ");
-	// old algorithm: opacities computed for all cells at once for a given bin
-	if (m_oldAlgo) {getFieldOpacities(ib);}
-	const CFuint dStart = (ib != startBin) ? 0 : startDir;
-	const CFuint dEnd = (ib != m_startEndBin.second)? m_nbDirs : endDir;
-	for (CFuint d = dStart; d < dEnd; ++d) {
-	  // CFLog(INFO, "[bin, dir] = [" << ib << ", " << d << "]\n");
-	  CFLog(INFO, d << " ");
-	  computeQ(ib,d);
-	}
-	CFLog(INFO, ")\n");
-      }
+      loopOverBins(startBin, endBin, startDir, endDir);
     }
     else {
-      for (CFuint d = startDir; d < endDir; ++d) {
-	CFLog(INFO, "( dir: " << d << " ), ( bin: ");
-	const CFuint bStart = (d != startDir) ? 0 : startBin;
-	const CFuint bEnd   = (d != m_startEndDir.second) ? m_nbBins : endBin;
-	for(CFuint ib = startBin; ib < endBin; ++ib) {
-	  // CFLog(INFO, "[dir, bin] = [" << d << ", " << ib << "]\n");
-	  // old algorithm: opacities computed for all cells at once for a given bin
-	  CFLog(INFO, ib << " ");
-	  if (m_oldAlgo) {getFieldOpacities(ib);}
-	  computeQ(ib,d);
-	}
-	CFLog(INFO, ")\n");
-      }
+      loopOverDirs(startBin, endBin, startDir, endDir);
     }
     
     DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
@@ -747,12 +723,11 @@ void RadiativeTransferFVDOM::getFieldOpacities(CFuint ib)
 {
   CFLog(VERBOSE, "RadiativeTransferFVDOM::getFieldOpacities() => start\n");
   
-  if(m_useExponentialMethod){
-    m_fieldSource = 0.;
+  m_fieldSource = 0.;
+  if(m_useExponentialMethod) {
     m_fieldAbsor  = 0.;
   }
-  else{
-    m_fieldSource = 0.;
+  else {
     m_fieldAbSrcV = 0.;
     m_fieldAbV    = 0.;
   }
@@ -796,7 +771,7 @@ void RadiativeTransferFVDOM::getFieldOpacities(CFuint ib)
     
     TempProfile[iCell] = T;
     
-    const CFreal patm   = p/101325; //converting from Pa to atm
+    const CFreal patm   = p/101325.; //converting from Pa to atm
     CFreal val1 = 0;
     CFreal val2 = 0;
     
@@ -1423,9 +1398,54 @@ void RadiativeTransferFVDOM::computeDotProdInFace(const CFuint d, RealVector& do
   }
 }      
       
+
 //////////////////////////////////////////////////////////////////////////////
 
- } // namespace RadiativeTransfer
+void RadiativeTransferFVDOM::loopOverBins(const CFuint startBin, 
+					  const CFuint endBin, 
+					  const CFuint startDir,
+					  const CFuint endDir)
+{
+  for(CFuint ib = startBin; ib < endBin; ++ib) {
+    CFLog(INFO, "( bin: " << ib << " ), ( dir: ");
+    // old algorithm: opacities computed for all cells at once for a given bin
+    if (m_oldAlgo) {getFieldOpacities(ib);}
+    const CFuint dStart = (ib != startBin) ? 0 : startDir;
+    const CFuint dEnd = (ib != m_startEndBin.second)? m_nbDirs : endDir;
+    for (CFuint d = dStart; d < dEnd; ++d) {
+      // CFLog(INFO, "[bin, dir] = [" << ib << ", " << d << "]\n");
+      CFLog(INFO, d << " ");
+      computeQ(ib,d);
+    }
+    CFLog(INFO, ")\n");
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+void RadiativeTransferFVDOM::loopOverDirs(const CFuint startBin, 
+					  const CFuint endBin, 
+					  const CFuint startDir,
+					  const CFuint endDir)
+{
+  for (CFuint d = startDir; d < endDir; ++d) {
+    CFLog(INFO, "( dir: " << d << " ), ( bin: ");
+    const CFuint bStart = (d != startDir) ? 0 : startBin;
+    const CFuint bEnd   = (d != m_startEndDir.second) ? m_nbBins : endBin;
+    for(CFuint ib = startBin; ib < endBin; ++ib) {
+      // CFLog(INFO, "[dir, bin] = [" << d << ", " << ib << "]\n");
+      // old algorithm: opacities computed for all cells at once for a given bin
+      CFLog(INFO, ib << " ");
+      if (m_oldAlgo) {getFieldOpacities(ib);}
+      computeQ(ib,d);
+    }
+    CFLog(INFO, ")\n");
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace RadiativeTransfer
 
 } // namespace COOLFluiD
 

@@ -168,6 +168,18 @@ private: //function
     const CFuint sID0 = faceTrs.getStateID(faceIdx, 0);
     return (cellID == sID0) ? faceTrs.getStateID(faceIdx, 1) : sID0;
   }
+    
+  /// Compute radiative fluxes by looping over bins
+  void loopOverBins(const CFuint startBin, 
+		    const CFuint endBin, 
+		    const CFuint startDir,
+		    const CFuint endDir);
+  
+  /// Compute radiative fluxes by looping over directions
+  void loopOverDirs(const CFuint startBin, 
+		    const CFuint endBin, 
+		    const CFuint startDir,
+		    const CFuint endDir);
   
 private: //data
   
