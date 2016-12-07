@@ -29,9 +29,11 @@
 namespace COOLFluiD {
   namespace FluxReconstructionMethod {
 
+    // Forward declarations
     class BCStateComputer;
     class FluxReconstructionStrategy;
     class BasePointDistribution;
+    class BaseCorrectionFunction;
     class FluxReconstructionElementData;
     class ReconstructStatesFluxReconstruction;
     class BaseBndFaceTermComputer;
@@ -153,6 +155,13 @@ public: // functions
     return m_solpntdistribution.getPtr();
   }
   
+  /// Gets the correction function computation strategy
+  Common::SafePtr< BaseCorrectionFunction > getCorrectionFunction() const
+  {
+    cf_assert(m_correctionfunction.isNotNull());
+    return m_correctionfunction.getPtr();
+  }
+    
   /// @return reference to m_frLocalData
   std::vector< FluxReconstructionElementData* >& getFRLocalData()
   {
@@ -317,8 +326,14 @@ private:  // data
   /// Solution point distribution
   Common::SelfRegistPtr< BasePointDistribution > m_solpntdistribution;
 
-  /// String to configure flux point distribution
+  /// String to configure solution point distribution
   std::string m_solpntdistributionStr;
+    
+  /// Correction function computation strategy
+  Common::SelfRegistPtr< BaseCorrectionFunction > m_correctionfunction;
+    
+  /// String to configure correction function computation strategy
+  std::string m_correctionfunctionStr;
   
   /// String for the linear variable name (for instance, the Roe average variables)
   std::string m_linearVarStr;

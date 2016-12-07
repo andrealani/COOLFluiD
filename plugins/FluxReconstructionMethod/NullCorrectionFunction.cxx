@@ -1,0 +1,77 @@
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
+#include "Framework/MethodStrategyProvider.hh"
+
+#include "FluxReconstructionMethod/FluxReconstruction.hh"
+#include "FluxReconstructionMethod/NullCorrectionFunction.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace FluxReconstructionMethod {
+
+//////////////////////////////////////////////////////////////////////////////
+
+Framework::MethodStrategyProvider<NullCorrectionFunction,
+				  FluxReconstructionSolverData,
+				  BaseCorrectionFunction,
+				  FluxReconstructionModule >
+nullCorrectionFunctionStrategyProvider("Null");
+
+//////////////////////////////////////////////////////////////////////////////
+
+NullCorrectionFunction::NullCorrectionFunction(const std::string& name) :
+  BaseCorrectionFunction(name)
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+NullCorrectionFunction::~NullCorrectionFunction()
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NullCorrectionFunction::compute()
+{
+  CFAUTOTRACE;
+
+  CFLog(VERBOSE, "NullCorrectionFunction::compute()\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NullCorrectionFunction::setup()
+{
+  CFAUTOTRACE;
+  
+  BaseCorrectionFunction::setup();
+
+  CFLog(VERBOSE, "NullCorrectionFunction::setup()\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NullCorrectionFunction::unsetup()
+{
+  CFAUTOTRACE;
+  
+  BaseCorrectionFunction::unsetup();
+  
+  CFLog(VERBOSE, "NullCorrectionFunction::unsetup()\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  }  // namespace FluxReconstructionMethod
+
+}  // namespace COOLFluiD
+

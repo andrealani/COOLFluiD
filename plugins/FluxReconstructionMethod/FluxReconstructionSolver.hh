@@ -22,7 +22,7 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
     
-    // Forward declerations
+    // Forward declarations
     class ConvBndFaceTermRHSFluxReconstruction;
     //class BndFaceTermRHSSpectralFD;
     

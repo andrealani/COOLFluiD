@@ -9,6 +9,7 @@
 #include "FluxReconstructionMethod/FluxReconstructionSolver.hh"
 #include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
 #include "FluxReconstructionMethod/BasePointDistribution.hh"
+#include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
 #include "FluxReconstructionMethod/ConvBndFaceTermRHSFluxReconstruction.hh"
 #include "FluxReconstructionMethod/BaseBndFaceTermComputer.hh"
 #include "FluxReconstructionMethod/BaseFaceTermComputer.hh"

@@ -12,6 +12,10 @@ BasePointDistribution.cxx
 BasePointDistribution.hh
 NullPointDistribution.cxx
 NullPointDistribution.hh
+BaseCorrectionFunction.cxx
+BaseCorrectionFunction.hh
+NullCorrectionFunction.cxx
+NullCorrectionFunction.hh
 GaussLegendre.cxx
 GaussLegendre.hh
 StdSetup.cxx

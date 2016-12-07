@@ -18,6 +18,7 @@
 #include "FluxReconstructionMethod/HexaFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/TriagFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/BasePointDistribution.hh"
+#include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
 #include "FluxReconstructionMethod/BaseBndFaceTermComputer.hh"
 #include "FluxReconstructionMethod/BaseFaceTermComputer.hh"
 #include "FluxReconstructionMethod/BaseVolTermComputer.hh"
@@ -53,6 +54,7 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
   options.addConfigOption< std::string >("BndFaceTermComputer","Name of the boundary face term computer."  );
   options.addConfigOption< std::string >("FaceTermComputer","Name of the face term computer."  );
   options.addConfigOption< std::string >("VolTermComputer" ,"Name of the volume term computer.");
+  options.addConfigOption< std::string >("CorrectionFunctionComputer","Name of the correction function computer");
   options.addConfigOption< std::vector<std::string> >("BcTypes","Types of the boundary condition commands.");
   options.addConfigOption< std::vector<std::string> >("BcNames","Names of the boundary condition commands.");
 }
@@ -108,6 +110,9 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   
   m_solpntdistributionStr = "Null";
   setParameter( "SolutionPointDistribution", &m_solpntdistributionStr );
+  
+  m_correctionfunctionStr = "Null";
+  setParameter( "CorrectionFunctionComputer", &m_correctionfunctionStr );
   
   m_bndFaceTermComputerStr = "BaseBndFaceTermComputer";
   setParameter("BndFaceTermComputer", &m_bndFaceTermComputerStr);
@@ -364,6 +369,28 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
 
   }
   cf_assert(m_solpntdistribution.isNotNull());
+
+  CFLog(INFO,"Configure strategy type: " << m_correctionfunctionStr << "\n");
+  try {
+        
+    SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BaseCorrectionFunction > >
+      prov = Environment::Factory< BaseCorrectionFunction >::getInstance().getProvider(
+        m_correctionfunctionStr );
+    cf_assert(prov.isNotNull());
+    m_correctionfunction = prov->create(m_correctionfunctionStr,thisPtr);
+    configureNested ( m_correctionfunction.getPtr(), args );
+        
+  } catch (Common::NoSuchValueException& e) {
+        
+    CFLog(INFO, e.what() << "\n");
+    CFLog(INFO, "Choosing Null of type: " <<  BaseCorrectionFunction ::getClassName() << " instead...\n");
+    SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BaseCorrectionFunction > >
+      prov = Environment::Factory< BaseCorrectionFunction >::getInstance().getProvider("Null");
+    cf_assert(prov.isNotNull());
+    m_correctionfunction = prov->create("Null", thisPtr);
+        
+  }
+  cf_assert(m_correctionfunction.isNotNull());
   
   // Configure Riemann flux
   CFLog(INFO,"Configure Riemann flux: " << m_riemannFluxStr << "\n");
