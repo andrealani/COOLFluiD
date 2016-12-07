@@ -181,6 +181,19 @@ private: //function
 		    const CFuint startDir,
 		    const CFuint endDir);
   
+  /// @return the wall face ID to be used inside the qradFluxWall socket
+  /// @post returns -1 if the face is not a wall face
+  CFint getWallFaceID(const CFuint faceID)
+  {
+    if (m_isWallFace[faceID]) {
+      // find the local index for such a face within the corresponding TRS
+      const CFuint faceIdx = m_mapGeoToTrs->getIdxInTrs(faceID);
+      const std::string wallTRSName = m_mapGeoToTrs->getTrs(faceID)->getName();
+      return m_mapWallTRSToOffsetFaceID.find(wallTRSName)->second + faceIdx;
+    }
+    return -1;
+  }
+  
 private: //data
   
   /// storage of states
@@ -241,6 +254,12 @@ private: //data
   /// map faces to corresponding TRS and index inside that TRS
   Common::SafePtr<Framework::MapGeoToTrsAndIdx> m_mapGeoToTrs;
   
+  /// flag array telling whether a face is on the wall
+  std::vector<bool> m_isWallFace;
+  
+  /// map with TRS name as key and the offset for the wall face IDs as value
+  std::map<std::string, CFuint> m_mapWallTRSToOffsetFaceID;
+  
   /// builder of geometric entities
   Framework::GeometricEntityPool<Framework::CellTrsGeoBuilder> m_geoBuilder;
   
@@ -292,6 +311,9 @@ private: //data
     
   /// temporary list of cell indexes to be processed
   std::vector<CFuint> m_cdoneIdx;
+  
+  /// names of the TRSs of type "Wall"
+  std::vector<std::string> m_wallTrsNames;
   
   /// Directions 
   RealMatrix m_dirs;  

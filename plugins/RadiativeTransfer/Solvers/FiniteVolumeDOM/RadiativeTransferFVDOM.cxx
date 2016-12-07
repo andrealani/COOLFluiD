@@ -21,7 +21,6 @@
 #include "Framework/MeshData.hh"
 #include "Framework/PhysicalChemicalLibrary.hh"
 #include "Framework/SocketBundleSetter.hh"
-#include "Framework/FaceTrsGeoBuilder.hh"
 
 #include "FiniteVolume/CellCenterFVM.hh"
 
@@ -72,6 +71,8 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   m_library(CFNULL),
   m_radiation(new RadiationPhysicsHandler("RadiationPhysicsHandler")),
   m_mapGeoToTrs(CFNULL),
+  m_isWallFace(),
+  m_mapWallTRSToOffsetFaceID(),
   m_geoBuilder(), 
   m_wallFaceBuilder(),
   m_normal(),
@@ -88,6 +89,7 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   m_Ptable(),
   m_sdone(),
   m_cdoneIdx(),
+  m_wallTrsNames(),
   m_dirs(),
   m_advanceOrder(),
   m_q(),
@@ -503,16 +505,25 @@ void RadiativeTransferFVDOM::setup()
   
   // the following returns a list of all the .ApplyTRS with .TypeTRS=Wall in the .CFcase
   // for which radiative heat flux has to be computed 
-  vector<string> wallTrsNames;
-  m_radiation->getWallTRSnames(wallTrsNames);
+  m_radiation->getWallTRSnames(m_wallTrsNames);
   // FaceTrsGeoBuilder::GeoData& wallFacesData = m_wallFaceBuilder.getDataGE();
+
+  const CFuint totalNbFaces = MeshDataStack::getActive()->Statistics().getNbFaces();
+  cf_assert(socket_normals.getDataHandle().size()/3);
+  m_isWallFace.resize(totalNbFaces, false);
   
   CFuint nbFaces = 0; // total number of boundary faces belonging to TRS of type "Wall"  
-  for(CFuint j=0; j< wallTrsNames.size(); ++j) {
-    SafePtr<TopologicalRegionSet> wallFaces = 
-      MeshDataStack::getActive()->getTrs(wallTrsNames[j]);
-    CFLog(VERBOSE, "RadiativeTransferFVDOM::setup() => TRS["<< wallTrsNames[j] << "] is Wall\n");
-    nbFaces += wallFaces->getLocalNbGeoEnts();
+  for(CFuint j=0; j< m_wallTrsNames.size(); ++j) {
+    const string wallTRSName = m_wallTrsNames[j];
+    SafePtr<TopologicalRegionSet> wallFaces = MeshDataStack::getActive()->getTrs(wallTRSName);
+    CFLog(VERBOSE, "RadiativeTransferFVDOM::setup() => TRS["<< wallTRSName << "] is Wall\n");
+    const CFuint nbLocalFaces = wallFaces->getLocalNbGeoEnts();
+    for (CFuint f = 0; f < nbLocalFaces; ++f) {
+      m_isWallFace[wallFaces->getLocalGeoID(f)] = true;
+    }
+    // store the offset for the corresponding wall TRS name
+    m_mapWallTRSToOffsetFaceID[wallTRSName] = nbFaces;
+    nbFaces += nbLocalFaces;
   }
   // preallocation of memory for qradFluxWall
   socket_qradFluxWall.getDataHandle().resize(nbFaces);
