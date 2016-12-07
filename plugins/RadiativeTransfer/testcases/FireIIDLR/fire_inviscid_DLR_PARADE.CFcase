@@ -112,7 +112,7 @@ Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.NumberLoops
 Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.TempID = 12
 Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.WavelengthMax = 10000.
 Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.WavelengthMin = 2000.
-Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.RadiationPhysicsNames = aa
+Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.RadiationPhysicsNames = aa b1
 Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.aa.ApplyTRS   = InnerCells
 Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.aa.TypeTRS    = Medium
 Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.aa.Radiator   = ParadeRadiator
@@ -126,4 +126,9 @@ Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.aa.ParadeRa
 Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = false
 Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.MolecularSpecies = 1 1 1 0 0 1 1 1 0 0 0 
 
+Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.b1.ApplyTRS   = B_3
+Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.b1.TypeTRS    = Wall
+Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.b1.Radiator = GreyWallRadiator
+Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemAbsCoeff = 1.
+Simulator.SubSystem.DataProcessing.Radiation.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemEmsCoeff = 0.
 

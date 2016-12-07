@@ -21,6 +21,7 @@
 #include "Framework/MeshData.hh"
 #include "Framework/PhysicalChemicalLibrary.hh"
 #include "Framework/SocketBundleSetter.hh"
+#include "Framework/FaceTrsGeoBuilder.hh"
 
 #include "FiniteVolume/CellCenterFVM.hh"
 
@@ -67,11 +68,12 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   socket_TempProfile("TempProfile"),
   socket_alpha_avbin("alpha_avbin"),
   socket_B_bin("B_bin"),
+  socket_qradFluxWall("qradFluxWall"),
   m_library(CFNULL),
   m_radiation(new RadiationPhysicsHandler("RadiationPhysicsHandler")),
   m_mapGeoToTrs(CFNULL),
   m_geoBuilder(), 
-  m_faceBuilder(),
+  m_wallFaceBuilder(),
   m_normal(),
   m_weight(),
   m_fieldSource(),
@@ -229,7 +231,8 @@ RadiativeTransferFVDOM::providesSockets()
   result.push_back(&socket_TempProfile);
   result.push_back(&socket_alpha_avbin);
   result.push_back(&socket_B_bin);
-    
+  result.push_back(&socket_qradFluxWall);
+  
   return result;
 }
 
@@ -277,18 +280,21 @@ void RadiativeTransferFVDOM::setup()
   
   m_radiation->setupDataSockets(sockets);
   m_radiation->setup();
-  // m_radiation->configureTRS();
-  //  m_radiation->setupAxiFlag(m_isAxi);
-  // vector<string> wallTrsNames, boundaryTrsNames;
+  m_radiation->configureTRS();
+  // m_radiation->setupAxiFlag(m_isAxi);
+  // vector<string> boundaryTrsNames;
   // m_radiation->getBoundaryTRSnames(boundaryTrsNames);
-  // m_radiation->getWallTRSnames(wallTrsNames);
   
+  // cell builder
   m_geoBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
   m_geoBuilder.setup();
   CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
   geoData.trs = MeshDataStack::getActive()->getTrs("InnerCells");
   
-  m_faceBuilder.setup();
+  // wall face builder
+  m_wallFaceBuilder.setup();
+  m_wallFaceBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
+  m_wallFaceBuilder.getDataGE().isBFace = true;
   
   m_mapGeoToTrs = MeshDataStack::getActive()->getMapGeoToTrs("MapFacesToTrs");
   
@@ -494,6 +500,22 @@ void RadiativeTransferFVDOM::setup()
   // resize the bins storage
   socket_alpha_avbin.getDataHandle().resize(nbCells*m_nbBins);
   socket_B_bin.getDataHandle().resize(nbCells*m_nbBins);
+  
+  // the following returns a list of all the .ApplyTRS with .TypeTRS=Wall in the .CFcase
+  // for which radiative heat flux has to be computed 
+  vector<string> wallTrsNames;
+  m_radiation->getWallTRSnames(wallTrsNames);
+  // FaceTrsGeoBuilder::GeoData& wallFacesData = m_wallFaceBuilder.getDataGE();
+  
+  CFuint nbFaces = 0; // total number of boundary faces belonging to TRS of type "Wall"  
+  for(CFuint j=0; j< wallTrsNames.size(); ++j) {
+    SafePtr<TopologicalRegionSet> wallFaces = 
+      MeshDataStack::getActive()->getTrs(wallTrsNames[j]);
+    CFLog(VERBOSE, "RadiativeTransferFVDOM::setup() => TRS["<< wallTrsNames[j] << "] is Wall\n");
+    nbFaces += wallFaces->getLocalNbGeoEnts();
+  }
+  // preallocation of memory for qradFluxWall
+  socket_qradFluxWall.getDataHandle().resize(nbFaces);
   
   //Averages for the Sphere case
   if (m_radialData) {

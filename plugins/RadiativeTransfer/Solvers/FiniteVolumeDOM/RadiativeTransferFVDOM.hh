@@ -229,6 +229,9 @@ private: //data
   /// storage of the binned radiative source
   Framework::DataSocketSource <CFreal> socket_B_bin;
   
+  /// the socket to the radiative heat flux at the wall faces
+  Framework::DataSocketSource < CFreal > socket_qradFluxWall;
+  
   /// pointer to the physical-chemical library
   Common::SafePtr<Framework::PhysicalChemicalLibrary> m_library; 
   
@@ -241,8 +244,8 @@ private: //data
   /// builder of geometric entities
   Framework::GeometricEntityPool<Framework::CellTrsGeoBuilder> m_geoBuilder;
   
-  /// face builder
-  Framework::GeometricEntityPool<Framework::FaceTrsGeoBuilder> m_faceBuilder;
+  /// wall face builder
+  Framework::GeometricEntityPool<Framework::FaceTrsGeoBuilder> m_wallFaceBuilder;
   
   /// temporary normal to the face
   RealVector m_normal; 
