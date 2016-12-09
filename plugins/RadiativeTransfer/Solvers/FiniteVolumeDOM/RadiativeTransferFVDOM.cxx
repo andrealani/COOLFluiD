@@ -772,6 +772,8 @@ void RadiativeTransferFVDOM::getFieldOpacities(CFuint ib)
   DataHandle<CFreal> volumes        = socket_volumes.getDataHandle();
   DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
   
+  RadiativeTransferFVDOM::Interpolator interp;
+  
   const CFuint nbCells = states.size();
   cf_assert(nbCells > 0);
   const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
@@ -811,10 +813,10 @@ void RadiativeTransferFVDOM::getFieldOpacities(CFuint ib)
     CFreal val1 = 0;
     CFreal val2 = 0;
     
-    tableInterpolate(m_nbBins, m_nbTemp, m_nbPress, 
-		     &m_Ttable[0], &m_Ptable[0],
-		     &m_opacities[0], &m_radSource[0],
-		     T, patm, ib, val1, val2); 
+    interp.tableInterpolate(m_nbBins, m_nbTemp, m_nbPress, 
+			    &m_Ttable[0], &m_Ptable[0],
+			    &m_opacities[0], &m_radSource[0],
+			    T, patm, ib, val1, val2); 
     
     if(m_useExponentialMethod){
       if (val1 <= 1e-30 || val2 <= 1e-30 ){
@@ -1253,11 +1255,12 @@ void RadiativeTransferFVDOM::getFieldOpacities(const CFuint ib, const CFuint iCe
   const CFreal patm   = p/101325.; //converting from Pa to atm
   CFreal val1 = 0;
   CFreal val2 = 0;
-  
-  tableInterpolate(m_nbBins, m_nbTemp, m_nbPress, 
-		   &m_Ttable[0], &m_Ptable[0],
-		   &m_opacities[0], &m_radSource[0],
-		   T, patm, ib, val1, val2); 
+
+  RadiativeTransferFVDOM::Interpolator interp;
+  interp.tableInterpolate(m_nbBins, m_nbTemp, m_nbPress, 
+			  &m_Ttable[0], &m_Ptable[0],
+			  &m_opacities[0], &m_radSource[0],
+			  T, patm, ib, val1, val2); 
   
   if(m_useExponentialMethod){
     if (val1 <= 1e-30 || val2 <= 1e-30 ){

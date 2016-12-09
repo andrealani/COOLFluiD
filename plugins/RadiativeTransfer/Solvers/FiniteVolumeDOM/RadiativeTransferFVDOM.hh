@@ -30,10 +30,29 @@ namespace COOLFluiD {
  * This class compute the radiative heat transfer using a Finite Volume algorithm
  *
  * @author Alejandro Alvarez (C++ version of Alan Wray's algorithm)
+ * @author Andrea Lani (parallelization)
+ * @author Javier Martinez
+ * @author Claudio Lisco
  */
 class RadiativeTransferFVDOM : public Framework::DataProcessingCom {
 public:
-
+  
+  class Interpolator {
+  public:
+    /// constructor
+    HOST_DEVICE Interpolator() {}
+    
+    /// destructor
+    HOST_DEVICE ~Interpolator() {}
+    
+    /// Interpolates the values of the opacity tables
+    HOST_DEVICE inline void tableInterpolate
+    (const CFuint nbBins, const CFuint nbTemp,const CFuint nbPress, 
+     const CFreal* Ttable, const CFreal* Ptable, const CFreal* opacities, 
+     const CFreal* radSource, CFreal T, CFreal p, CFuint ib, 
+     CFreal& val1, CFreal& val2);
+  };
+  
   /**
    * Constructor
    */
@@ -102,15 +121,7 @@ public:
    */
   void findOrderOfAdvance();
   
-  /**
-   * Interpolates the values of the opacity tables
-   */ 
-  void tableInterpolate
-  (const CFuint nbBins, const CFuint nbTemp,const CFuint nbPress, 
-   const CFreal* Ttable, const CFreal* Ptable, const CFreal* opacities, 
-   const CFreal* radSource, CFreal T, CFreal p, CFuint ib, 
-   CFreal& val1, CFreal& val2);
-  
+ 
   /**
    * Writes radial q and divQ to a file for the Sphere case 
    * (only if option RadialData is enabled)
@@ -129,8 +140,8 @@ public:
    * @return a vector of SafePtr with the DataSockets
    */
   virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets();
-
-private: //function
+  
+protected: //function
   
   /// set the normal corresponding to the given face ID
   void setFaceNormal(const CFuint faceID, const CFuint elemID) 
@@ -197,7 +208,8 @@ private: //function
     }
     return -1;
   }
-  
+
+
 protected: //data
   
   /// storage of states
@@ -431,7 +443,7 @@ protected: //data
       
 //////////////////////////////////////////////////////////////////////////////
 
-inline void RadiativeTransferFVDOM::tableInterpolate
+void RadiativeTransferFVDOM::Interpolator::tableInterpolate
 (const CFuint nbBins, const CFuint nbTemp, const CFuint nbPress, 
  const CFreal* Ttable, const CFreal* Ptable, const CFreal* opacities, 
  const CFreal* radSource, CFreal T, CFreal p, CFuint ib, CFreal& val1, CFreal& val2)

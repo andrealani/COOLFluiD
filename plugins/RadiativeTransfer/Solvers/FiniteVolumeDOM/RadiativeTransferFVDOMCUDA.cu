@@ -55,7 +55,7 @@ radiativeTransferFVDOMCUDAProvider("RadiativeTransferFVDOMCUDA");
 
 //////////////////////////////////////////////////////////////////////////////
 
-__device__ void tableInterpolate
+/*__device__ void tableInterpolate
 (const CFuint nbBins, const CFuint nbTemp, const CFuint nbPress, 
  const CFreal* Ttable, const CFreal* Ptable, const CFreal* opacities, 
  const CFreal* radSource, CFreal T, CFreal p, CFuint ib, CFreal& val1, CFreal& val2)
@@ -127,7 +127,7 @@ __device__ void tableInterpolate
   }
   
   //cf_assert(ib == 0);
-}
+  }*/
       
 //////////////////////////////////////////////////////////////////////////////
 
@@ -173,8 +173,9 @@ __global__ void getFieldOpacitiesKernel(const bool useExponentialMethod,
     CFreal val1 = 0;
     CFreal val2 = 0;
     
-    tableInterpolate(nbBins, nbTemp, nbPress, Ttable, Ptable,
-		     opacities, radSource, T, patm, ib, val1, val2); 
+    RadiativeTransferFVDOM::Interpolator interp;
+    interp.tableInterpolate(nbBins, nbTemp, nbPress, Ttable, Ptable,
+			    opacities, radSource, T, patm, ib, val1, val2); 
     
     if(useExponentialMethod){
       if (val1 <= 1e-30 || val2 <= 1e-30 ){
@@ -443,8 +444,15 @@ void RadiativeTransferFVDOMCUDA::loopOverDirs(const CFuint startBin,
 	 m_fieldAbSrcV.ptrDev(),
 	 m_fieldAbV.ptrDev());  
       
+      m_fieldSource.get();
+      m_fieldAbsor.get();
+      m_fieldAbSrcV.get();
+      m_fieldAbV.get();
+      
+      RadiativeTransferFVDOM::computeQ(ib,d);
+      
       // compute the radiative heat flux
-      computeQKernel<<<blocksPerGrid,nThreads>>> 
+      /*computeQKernel<<<blocksPerGrid,nThreads>>> 
 	(ib, nbCells,
 	 cellFaces->getPtr()->ptrDev(),
 	 isOutward.getLocalArray()->ptrDev(),
@@ -454,7 +462,7 @@ void RadiativeTransferFVDOMCUDA::loopOverDirs(const CFuint startBin,
 	 m_fieldSource.ptrDev(),
 	 m_fieldAbsor.ptrDev(),
 	 m_fieldAbSrcV.ptrDev(),
-	 m_fieldAbV.ptrDev());
+	 m_fieldAbV.ptrDev());*/
     }    
     
     CFLog(INFO, ")\n");
