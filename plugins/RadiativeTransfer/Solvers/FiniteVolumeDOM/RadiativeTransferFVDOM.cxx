@@ -94,7 +94,6 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   m_wallTrsNames(),
   m_dirs(),
   m_advanceOrder(),
-  m_q(),
   m_qrAv(),
   m_divqAv(),
   m_nbDirTypes()
@@ -472,7 +471,6 @@ void RadiativeTransferFVDOM::setup()
   
   m_dirs.resize(m_nbDirs, 3);
   m_advanceOrder.resize(m_nbDirs);
-  m_q.resize(nbCells, DIM);
   
   cf_assert(endDir <= m_nbDirs);
   // resize only the rows corresponding to considered directions 
@@ -707,7 +705,6 @@ void RadiativeTransferFVDOM::execute()
     
     // Compute the order of advance
     // Call the function to get the directions
-    m_q  = 0.0;
     divQ = 0.0;
     m_II = 0.0;
     
@@ -738,12 +735,6 @@ void RadiativeTransferFVDOM::execute()
     const CFuint nbCells = cells->getLocalNbGeoEnts();
     for (CFuint iCell = 0; iCell < nbCells; iCell++) {
       divQ[iCell] /= volumes[iCell]; //converting area from m^3 into cm^3
-      
-      // if (iCell == 1000){fout << "iCell1000 => " << divQ[iCell] << "\n";}
-      
-      qx[iCell] = m_q(iCell,XX);
-      qy[iCell] = m_q(iCell,YY);
-      qz[iCell] = m_q(iCell,ZZ);
     }
         
     if (m_radialData){
@@ -1088,7 +1079,10 @@ void RadiativeTransferFVDOM::writeRadialData()
   CFreal rCoord = 0.;
   const CFreal Radius = 1.5;
   DataHandle<CFreal> divQ = socket_divq.getDataHandle();
-    
+  DataHandle<CFreal> qx = socket_qx.getDataHandle();
+  DataHandle<CFreal> qy = socket_qy.getDataHandle();
+  DataHandle<CFreal> qz = socket_qz.getDataHandle();
+  
   for(CFuint ir = 0; ir < m_Nr; ir++){
     nbPoints = 0;
     rCoord = (ir + 0.5)*Radius/m_Nr; //middle point between ir and (ir + 1)
@@ -1106,7 +1100,7 @@ void RadiativeTransferFVDOM::writeRadialData()
       if(rCell >= ir*Radius/m_Nr && rCell < (ir + 1)*Radius/m_Nr){
 	nbPoints++;
 	m_divqAv[ir] += divQ[iCell];
-	m_qrAv[ir]   += (m_q(iCell,XX)*x + m_q(iCell,YY)*y + m_q(iCell,ZZ)*z)/rCell; //*rCell*rCell; Multiply by r**2 for area-weighted average
+	m_qrAv[ir]   += (qx[iCell]*x + qy[iCell]*y + qz[iCell]*z)/rCell; //*rCell*rCell; Multiply by r**2 for area-weighted average
       }
       m_geoBuilder.releaseGE();
     }
@@ -1228,8 +1222,12 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib,
     computeDotProdInFace(d, m_dotProdInFace);
   }
   
-  SafePtr<ConnectivityTable<CFuint> > cellFaces = MeshDataStack::getActive()->getConnectivity("cellFaces");
+  SafePtr<ConnectivityTable<CFuint> > cellFaces = 
+    MeshDataStack::getActive()->getConnectivity("cellFaces");
   DataHandle<CFint> isOutward = socket_isOutward.getDataHandle();
+  DataHandle<CFreal> qx = socket_qx.getDataHandle();
+  DataHandle<CFreal> qy = socket_qy.getDataHandle();
+  DataHandle<CFreal> qz = socket_qz.getDataHandle();
   
   for (CFuint m = 0; m < nbCells; m++) {
     CFreal inDirDotnANeg = 0.;
@@ -1300,9 +1298,9 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib,
       Ic = m_In[iCell];
     }
     
-    m_q(iCell,XX) += Ic*m_dirs(d,0)*m_weight[d];
-    m_q(iCell,YY) += Ic*m_dirs(d,1)*m_weight[d];
-    m_q(iCell,ZZ) += Ic*m_dirs(d,2)*m_weight[d];
+    qx[iCell] += Ic*m_dirs(d,0)*m_weight[d];
+    qy[iCell] += Ic*m_dirs(d,1)*m_weight[d];
+    qz[iCell] += Ic*m_dirs(d,2)*m_weight[d];
     
     CFreal inDirDotnA = inDirDotnANeg;
     for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {

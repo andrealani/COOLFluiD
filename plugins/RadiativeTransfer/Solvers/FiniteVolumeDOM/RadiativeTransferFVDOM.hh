@@ -346,10 +346,7 @@ protected: //data
   /// then cells (1,2,5) can be done first, and are in fact the boundary cells for direction 1,
   /// then cells (3,4,8) can be done; finally cells (6,7) can be done to complete the sweep in direction 1.
   std::vector<Framework::LocalArray<CFint>::TYPE > m_advanceOrder;   
-  
-  /// Radiative flux
-  RealMatrix m_q;
-  
+    
   /// Radial average of q vector for a Sphere
   RealVector m_qrAv;
   
