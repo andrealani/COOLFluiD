@@ -170,8 +170,9 @@ protected: //function
   void diagnoseProblem(const CFuint d, const CFuint m, const CFuint mLast);
   
   /// compute the dot products direction*normal for each face (sign will be adjusted on-the-fly) 
-  void computeDotProdInFace(const CFuint d, RealVector& dotProdInFace);
-    
+  void computeDotProdInFace(const CFuint d, 
+			    Framework::LocalArray<CFreal>::TYPE& dotProdInFace);
+  
   /// get the neighbor cell ID to the given face and cell
   CFuint getNeighborCellID(const CFuint faceID, const CFuint cellID) const 
   {
@@ -324,7 +325,10 @@ protected: //data
   
   /// storage of the pressure of theopacity table
   Framework::LocalArray<CFreal>::TYPE m_Ptable; 
-    
+  
+  /// storage of the dot products per face
+  Framework::LocalArray<CFreal>::TYPE m_dotProdInFace; 
+  
   /// Done status of a cell in a given direction at the end of a stage
   std::vector<bool> m_sdone;
     
@@ -345,9 +349,6 @@ protected: //data
   
   /// Radiative flux
   RealMatrix m_q;
-  
-  /// Divergence of dif flux
-  RealVector m_divq;
   
   /// Radial average of q vector for a Sphere
   RealVector m_qrAv;

@@ -88,13 +88,13 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   m_radSource(),
   m_Ttable(),
   m_Ptable(),
+  m_dotProdInFace(),
   m_sdone(),
   m_cdoneIdx(),
   m_wallTrsNames(),
   m_dirs(),
   m_advanceOrder(),
   m_q(),
-  m_divq(),
   m_qrAv(),
   m_divqAv(),
   m_nbDirTypes()
@@ -473,7 +473,6 @@ void RadiativeTransferFVDOM::setup()
   m_dirs.resize(m_nbDirs, 3);
   m_advanceOrder.resize(m_nbDirs);
   m_q.resize(nbCells, DIM);
-  m_divq.resize(nbCells);
   
   cf_assert(endDir <= m_nbDirs);
   // resize only the rows corresponding to considered directions 
@@ -514,6 +513,7 @@ void RadiativeTransferFVDOM::setup()
   const CFuint totalNbFaces = MeshDataStack::getActive()->Statistics().getNbFaces();
   cf_assert(socket_normals.getDataHandle().size()/3);
   m_isWallFace.resize(totalNbFaces, false);
+  m_dotProdInFace.resize(totalNbFaces);
   
   CFuint nbFaces = 0; // total number of boundary faces belonging to TRS of type "Wall"  
   for(CFuint j=0; j< m_wallTrsNames.size(); ++j) {
@@ -556,7 +556,7 @@ void RadiativeTransferFVDOM::setup()
   }
     
   CFLog(INFO, "RadiativeTransferFVDOM::setup() => getAdvanceOrder() took " << stp.read() << "s\n");
-  
+    
   CFLog(VERBOSE, "RadiativeTransferFVDOM::setup() => end\n");
 }
       
@@ -700,14 +700,16 @@ void RadiativeTransferFVDOM::execute()
   stp.start();
   
   if (!m_emptyRun) {
+    DataHandle<CFreal> divQ = socket_divq.getDataHandle();
+    
     // only one CPU allow for namespace => the mesh has not been partitioned
     cf_assert(PE::GetPE().GetProcessorCount(getMethodData().getNamespace()) == 1);
     
     // Compute the order of advance
     // Call the function to get the directions
-    m_q    = 0.0;
-    m_divq = 0.0;
-    m_II   = 0.0;
+    m_q  = 0.0;
+    divQ = 0.0;
+    m_II = 0.0;
     
     const CFuint startBin = m_startEndBin.first;
     const CFuint endBin   = m_startEndBin.second+1;
@@ -724,7 +726,7 @@ void RadiativeTransferFVDOM::execute()
     }
     
     DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
-    DataHandle<CFreal> divQ = socket_divq.getDataHandle();
+   
     DataHandle<CFreal> qx   = socket_qx.getDataHandle();
     DataHandle<CFreal> qy   = socket_qy.getDataHandle();
     DataHandle<CFreal> qz   = socket_qz.getDataHandle();
@@ -735,8 +737,7 @@ void RadiativeTransferFVDOM::execute()
     SafePtr<TopologicalRegionSet> cells = m_geoBuilder.getDataGE().trs;
     const CFuint nbCells = cells->getLocalNbGeoEnts();
     for (CFuint iCell = 0; iCell < nbCells; iCell++) {
-      m_divq[iCell] /= volumes[iCell]; //converting area from m^3 into cm^3
-      divQ[iCell] = m_divq[iCell];
+      divQ[iCell] /= volumes[iCell]; //converting area from m^3 into cm^3
       
       // if (iCell == 1000){fout << "iCell1000 => " << divQ[iCell] << "\n";}
       
@@ -861,8 +862,7 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d,
   CFLog(INFO, "RadiativeTransferFVDOM::getAdvanceOrder() => Direction number [" << d <<"]\n");
   
   // precompute the dot products for all faces and directions (a part from the sign)
-  RealVector dotProdInFace;
-  computeDotProdInFace(d, dotProdInFace);
+  computeDotProdInFace(d, m_dotProdInFace);
   
   CFuint mLast = 0;
   CFuint m = 0;
@@ -891,7 +891,7 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d,
 	  
 	  // When dot product is < 0 and neighbor is undone, skip the cell and continue the loop
 	  const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
-	  const CFreal dotMult = dotProdInFace[faceID]*factor;
+	  const CFreal dotMult = m_dotProdInFace[faceID]*factor;
 	  if (dotMult < 0. && neighborIsSdone == false) {goto cell_loop;}
 	}// end loop over the FACES
 	
@@ -1065,83 +1065,6 @@ void RadiativeTransferFVDOM::readOpacities()
 }
 
 //////////////////////////////////////////////////////////////////////////////
-      
-/*void RadiativeTransferFVDOM::tableInterpolate
-(const CFuint nbBins, const CFuint nbTemp, const CFuint nbPress, 
- const CFreal* Ttable, const CFreal* Ptable, const CFreal* opacities, 
- const CFreal* radSource, CFreal T, CFreal p, CFuint ib, CFreal& val1, CFreal& val2)
-{
-  //Find the lower bound fo the temperature and the pressure ranges
-  //we assume that the temperature and pressure always fall in the bounds.
-  //If they don't then the value are still interpolated from the nearest
-  //two points in the temperature or pressure list
-  CFuint it = nbTemp - 2;
-  for (CFuint i = 1; i < (nbTemp - 2); i++){
-    if(Ttable[i] > T) { it = i - 1; break;}
-  }
-  
-  CFuint ip = nbPress - 2;
-  for (CFuint i = 1; i < (nbPress - 2); i++){
-    if(Ptable[i] > p) { ip = i - 1; break;}
-  }
-  
-  //Linear interpolation for the pressure
-  
-  const CFuint iPiBiT           = it + ib*nbTemp + ip*nbBins*nbTemp;
-  const CFuint iPplus1iBiT      = it + ib*nbTemp + (ip + 1)*nbBins*nbTemp;
-  const CFuint iPiBiTplus1      = (it + 1) + ib*nbTemp + ip*nbBins*nbTemp;
-  const CFuint iPplus1iBiTplus1 = (it + 1) + ib*nbTemp + (ip + 1)*nbBins*nbTemp;
-  
-  // Linear interpolation for the pressure
-  // Interpolation of the opacities
-  const CFreal bt1op = (opacities[iPplus1iBiT] - opacities[iPiBiT])*
-		    (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]) + opacities[iPiBiT];
-  
-  const CFreal bt2op = (opacities[iPplus1iBiTplus1] - opacities[iPiBiTplus1])*
-		    (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]) + opacities[iPiBiTplus1];
-  
-  // Interpolation of the source
-  const CFreal bt1so = (radSource[iPplus1iBiT] - radSource[iPiBiT])*
-		    (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]) + radSource[iPiBiT];
-  
-  const CFreal bt2so = (radSource[iPplus1iBiTplus1] - radSource[iPiBiTplus1])*
-		    (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]) + radSource[iPiBiTplus1];    
-  
-  // Logarithmic interpolation for the temperature
-  // Protect against log(0) and x/0 by switching to linear interpolation if either
-  // bt1 or bt2 == 0.  (Note we can't allow log of negative numbers either)
-  // Interpolation of the opacities   
-  if(bt1op <= 0 || bt2op <= 0){
-    val1 = (bt2op - bt1op)*(T - Ttable[it])/(Ttable[it + 1] - Ttable[it]) + bt1op;
-//    cout <<"\nOption1 \n";
-//    cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
-//    cout <<"val1 = " << val1 <<"\tbt2op ="<< bt2op <<"\tbt1op ="<< bt1op <<"\n";
-  }
-  else {
-    val1 = std::exp((T - Ttable[it])/(Ttable[it + 1] - Ttable[it])*std::log(bt2op/bt1op))*bt1op;
-//     cout <<"\nOption2 \n";
-//     cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
-//     cout <<"val1 = " << val1 <<"\tbt2op ="<< bt2op <<"\tbt1op ="<< bt1op <<"\n";
-  }
-  // Interpolation of the source
-  if(bt1so <= 0 || bt2so <= 0){
-    val2 = (bt2so - bt1so)*(T - Ttable[it])/(Ttable[it + 1] - Ttable[it]) + bt1so;
-//     cout <<"\nOption3 \n";
-//     cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
-//     cout <<"val1 = " << val2 <<"\tbt2so ="<< bt2so <<"\tbt1so ="<< bt1so <<"\n";
-  }
-  else {
-    val2 = std::exp((T - Ttable[it])/(Ttable[it + 1] - Ttable[it])*std::log(bt2so/bt1so))*bt1so;
-//     cout <<"\nOption3 \n";
-//     cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
-//     cout <<"val2 = " << val2 <<"\tbt2so ="<< bt2so <<"\tbt1so ="<< bt1so <<"\n";
-  }
-  
-  //cf_assert(ib == 0);
-  
-  }*/
-      
-//////////////////////////////////////////////////////////////////////////////
 
 void RadiativeTransferFVDOM::writeRadialData()
 {
@@ -1164,7 +1087,8 @@ void RadiativeTransferFVDOM::writeRadialData()
   CFuint nbPoints = 0;
   CFreal rCoord = 0.;
   const CFreal Radius = 1.5;
-  
+  DataHandle<CFreal> divQ = socket_divq.getDataHandle();
+    
   for(CFuint ir = 0; ir < m_Nr; ir++){
     nbPoints = 0;
     rCoord = (ir + 0.5)*Radius/m_Nr; //middle point between ir and (ir + 1)
@@ -1173,16 +1097,15 @@ void RadiativeTransferFVDOM::writeRadialData()
       geoData.idx = iCell;
       GeometricEntity* currCell = m_geoBuilder.buildGE();
       
-      Node& coordinate = currCell->getState(0)->getCoordinates();
-      CFreal x = coordinate[XX];
-      CFreal y = coordinate[YY];
-      CFreal z = coordinate[ZZ];
-      
-      CFreal rCell = std::sqrt(x*x + y*y + z*z);
+      const Node& coordinate = currCell->getState(0)->getCoordinates();
+      const CFreal x = coordinate[XX];
+      const CFreal y = coordinate[YY];
+      const CFreal z = coordinate[ZZ];
+      const CFreal rCell = std::sqrt(x*x + y*y + z*z);
       
       if(rCell >= ir*Radius/m_Nr && rCell < (ir + 1)*Radius/m_Nr){
 	nbPoints++;
-	m_divqAv[ir] += m_divq[iCell];
+	m_divqAv[ir] += divQ[iCell];
 	m_qrAv[ir]   += (m_q(iCell,XX)*x + m_q(iCell,YY)*y + m_q(iCell,ZZ)*z)/rCell; //*rCell*rCell; Multiply by r**2 for area-weighted average
       }
       m_geoBuilder.releaseGE();
@@ -1287,20 +1210,24 @@ void RadiativeTransferFVDOM::getFieldOpacities(const CFuint ib, const CFuint iCe
       
 //////////////////////////////////////////////////////////////////////////////
 
-void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
+void RadiativeTransferFVDOM::computeQ(const CFuint ib, 
+				      const CFuint d)
 {      
   CFLog(VERBOSE, "RadiativeTransferFVDOM::computeQ() in (bin, dir) = ("
 	<< ib << ", " << d << ") => start\n");
   
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+  DataHandle<CFreal> divQ = socket_divq.getDataHandle();
   CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
   SafePtr<TopologicalRegionSet> cells = geoData.trs;
   const CFuint nbCells = cells->getLocalNbGeoEnts();
   cf_assert(m_advanceOrder[d].size() == nbCells);
   
   // precompute the dot products for all faces and directions (a part from the sign)
-  RealVector dotProdInFace;
-  computeDotProdInFace(d, dotProdInFace);
+  if (m_loopOverBins) {
+    computeDotProdInFace(d, m_dotProdInFace);
+  }
+  
   SafePtr<ConnectivityTable<CFuint> > cellFaces = MeshDataStack::getActive()->getConnectivity("cellFaces");
   DataHandle<CFint> isOutward = socket_isOutward.getDataHandle();
   
@@ -1326,7 +1253,7 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
       for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
 	const CFuint faceID = (*cellFaces)(iCell, iFace);
 	const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
-	const CFreal dirDotNA = dotProdInFace[faceID]*factor;
+	const CFreal dirDotNA = m_dotProdInFace[faceID]*factor;
 	
 	if(dirDotNA < 0.) {
 	  dirDotnANeg += dirDotNA;
@@ -1352,7 +1279,7 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
       for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
 	const CFuint faceID = (*cellFaces)(iCell, iFace);
 	const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
-	const CFreal dirDotNA = dotProdInFace[faceID]*factor;
+	const CFreal dirDotNA = m_dotProdInFace[faceID]*factor;
 	
 	if (dirDotNA >= 0.){
 	  dirDotnAPos += dirDotNA;
@@ -1381,13 +1308,13 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
     for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
       const CFuint faceID = (*cellFaces)(iCell, iFace);
       const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
-      const CFreal dirDotNA = dotProdInFace[faceID]*factor;
+      const CFreal dirDotNA = m_dotProdInFace[faceID]*factor;
       if (dirDotNA > 0.) {
 	inDirDotnA += m_In[iCell]*dirDotNA;
       }
     }
     
-    m_divq[iCell] += inDirDotnA*m_weight[d];
+    divQ[iCell] += inDirDotnA*m_weight[d];
     m_II[iCell]   += Ic*m_weight[d];
   }  
   
@@ -1450,12 +1377,13 @@ void RadiativeTransferFVDOM::diagnoseProblem(const CFuint d,
       
 //////////////////////////////////////////////////////////////////////////////
   
-void RadiativeTransferFVDOM::computeDotProdInFace(const CFuint d, RealVector& dotProdInFace)
+void RadiativeTransferFVDOM::computeDotProdInFace
+(const CFuint d, LocalArray<CFreal>::TYPE& dotProdInFace)
 {
   const CFuint DIM = 3;
   DataHandle<CFreal> normals = socket_normals.getDataHandle();
   const CFuint totalNbFaces = normals.size()/DIM;
-  dotProdInFace.resize(totalNbFaces);
+  cf_assert(dotProdInFace.size() == totalNbFaces);
   RealVector normalPtr(DIM, static_cast<CFreal*>(NULL));
   
   for (CFuint faceID = 0; faceID < totalNbFaces; ++faceID) {
@@ -1496,10 +1424,15 @@ void RadiativeTransferFVDOM::loopOverDirs(const CFuint startBin,
 					  const CFuint startDir,
 					  const CFuint endDir)
 {
+  
+  
   for (CFuint d = startDir; d < endDir; ++d) {
     CFLog(INFO, "( dir: " << d << " ), ( bin: ");
     const CFuint bStart = (d != startDir) ? 0 : startBin;
     const CFuint bEnd   = (d != m_startEndDir.second) ? m_nbBins : endBin;
+    // precompute dot products for all faces and directions (a part from the sign)
+    computeDotProdInFace(d, m_dotProdInFace);
+    
     for(CFuint ib = startBin; ib < endBin; ++ib) {
       // CFLog(INFO, "[dir, bin] = [" << d << ", " << ib << "]\n");
       // old algorithm: opacities computed for all cells at once for a given bin
