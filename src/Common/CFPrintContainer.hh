@@ -59,7 +59,7 @@ public:
 	out << *it << " ";
       }
       else {
-	out << *it << "  ";
+	out << *it << "\n";
       }
     }
     out << "\n";

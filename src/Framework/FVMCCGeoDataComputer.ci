@@ -77,14 +77,15 @@ void FVMCCGeoDataComputer<METHODDATA>::compute()
   // compute volumes
   computeCellVolumes();
   
-  /*const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
   if (dim > DIM_1D) {
     const CFuint nbFaces = MeshDataStack::getActive()->Statistics().getNbFaces();
-    if (socket_faceCenters.getDataHandle().size()  == nbFaces*dim) {
-      // compute face centers
-      computeFaceCenters();
+    if (socket_faceCenters.getDataHandle().size() != nbFaces*dim) {
+      socket_faceCenters.getDataHandle().resize(nbFaces*dim);
     }
-  }*/
+    // compute face centers
+    computeFaceCenters();
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -337,14 +338,19 @@ void FVMCCGeoDataComputer<METHODDATA>::computeFaceCenters()
     cf_assert(iTRS < trs.size());
     SafePtr<TopologicalRegionSet> currTrs = trs[iTRS];
     
+    geoData.isBFace = false;
     if (currTrs->getName() != "InnerCells") {
+      
+      if (currTrs->getName() != "InnerFaces") {
+	geoData.isBFace = true;
+      }
+      
       geoData.trs = currTrs;
       const CFuint nbFaces = currTrs->getLocalNbGeoEnts();
       for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
 	geoData.idx = iFace;
 	const GeometricEntity *const face = faceBuilder->buildGE();
 	const vector<Node*>& nodesInFace = face->getNodes();
-	
 	const CFuint nbNodesInFace = nodesInFace.size();
 	cf_assert(nbNodesInFace > 1);
 	const CFreal nbNodesInFaceInv = 1./static_cast<CFreal>(nbNodesInFace);

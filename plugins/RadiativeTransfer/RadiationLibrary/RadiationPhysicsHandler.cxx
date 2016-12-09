@@ -107,13 +107,17 @@ RadiationPhysicsHandler::~RadiationPhysicsHandler(){
 
 void RadiationPhysicsHandler::setupWavStride(CFuint loop)
 {
+  cf_assert(m_nbLoops > 0);
   static CFreal wavStride = ( m_wavMax - m_wavMin ) / m_nbLoops;
   CFreal wavMin = m_wavMin + wavStride * loop;
   CFreal wavMax = wavMin + wavStride;
   
-  for(CFuint i=0; i<m_radiationPhysics.size();++i){
+  for(CFuint i=0; i<m_radiationPhysics.size();++i) {
+    CFLog(VERBOSE, "RadiationPhysicsHandler::setupWavStride() for [" << m_radiationPhysics[i]->getName() << "] START\n");
     m_radiationPhysics[i]->setupSpectra(wavMin, wavMax);
+    CFLog(VERBOSE, "RadiationPhysicsHandler::setupWavStride() for [" << m_radiationPhysics[i]->getName() <<"] END\n");
     m_radiationPhysics[i]->computeInterpolatedStates();
+    CFLog(VERBOSE, "RadiationPhysicsHandler::computeInterpolatedStates() for [" << m_radiationPhysics[i]->getName() <<" END\n");
   }
 }
   

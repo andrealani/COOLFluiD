@@ -99,18 +99,19 @@ void RadiationPhysics::getCellStateIDs(std::vector<CFuint>& statesID)
 
 void RadiationPhysics::computeInterpolatedStates()
 {
+  CFLog(VERBOSE, "RadiationPhysics::computeInterpolatedStates() => START\n");
+  
   if(m_TRStypeID == WALL){
-    //std::cout<<"isWall!"<<std::endl;
-
     const CFuint dim = Framework::PhysicalModelStack::getActive()->getDim();
-
     Framework::SocketBundleSetter socketBundle;
     socketBundle.setDataSockets( *(m_radPhysicsHandlerPtr->getDataSockets()) )  ;
-
+    
     Framework::DataHandle< RealVector> nstates = socketBundle.getDataSocket()->nstates.getDataHandle();
+    cf_assert(nstates.size() > 0);
+        
     Framework::DataHandle< CFreal > faceCenters = socketBundle.getDataSocket()->faceCenters.getDataHandle();
-
-    //std::cout<<"is WALL OR BOUNDARY"<<std::endl;
+    cf_assert(faceCenters.size() > 0);
+    
     Framework::GeometricEntityPool<Framework::FaceTrsGeoBuilder>* faceTRSBuilder =
         socketBundle.getFaceTrsBuilder();
 
@@ -131,20 +132,25 @@ void RadiationPhysics::computeInterpolatedStates()
       const std::vector<Framework::Node*>& nodesInFace = *face->getNodes();
       const CFuint nbNodesInFace = nodesInFace.size();
       m_interpolatedStates[i] = 0.0;
-      nodeCenter = 0.;
+      nodeCenter = 0.; // AL: to be removed
       for (CFuint node = 0; node < nbNodesInFace; ++node) {
 	const Framework::State& nstate = nstates[nodesInFace[node]->getLocalID()];
         m_interpolatedStates[i]  += nstate;
-        nodeCenter += *nodesInFace[node]->getData();
+        nodeCenter += *nodesInFace[node]->getData(); // AL: to be removed
       }
       m_interpolatedStates[i] /= nbNodesInFace;
-      nodeCenter/= nbNodesInFace;
+      nodeCenter/= nbNodesInFace; // AL: to be removed
+      
+      // AL: to be removed
       for(CFuint d=0;d<dim;++d){
-        faceCenters[face->getID()*dim+d] = nodeCenter[d];
+      	faceCenters[face->getID()*dim+d] = nodeCenter[d];
       }
+      // 
+      
       faceTRSBuilder->releaseGE();
     }
   }
+  CFLog(VERBOSE, "RadiationPhysics::computeInterpolatedStates() => END\n");
 }
 
 

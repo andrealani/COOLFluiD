@@ -124,11 +124,12 @@ GeometricEntity* FaceTrsGeoBuilder::buildGE()
   geo->setState(0, states[stateID0]);
 
   const CFuint stateID1 = trs.getStateID(idx, 1);
-  // cout << isBFace << " => stateID(0,1) = (" << stateID0 << ", " << stateID1 << "), " << states.size() << " - " << gstates.size() << endl;
-  State *const state1 = (!isBFace) ?
-    states[stateID1] : gstates[stateID1];
+  CFLog(DEBUG_MAX, "FaceTrsGeoBuilder::buildGE() => isBFace[" << isBFace 
+	<< "] => stateID(0,1) = (" << stateID0 << ", " << stateID1 << "), " 
+	<< states.size() << " - " << gstates.size() << "\n");
+  State *const state1 = (!isBFace) ? states[stateID1] : gstates[stateID1];
   geo->setState(1, state1);
-
+  
   const CFuint nbGeoNodes = trs.getNbNodesInGeo(idx);
   for (CFuint in = 0; in < nbGeoNodes; ++in) {
     const CFuint nodeID = trs.getNodeID(idx, in);
