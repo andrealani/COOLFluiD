@@ -59,6 +59,7 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   socket_nodes("nodes"),
   socket_isOutward("isOutward"),
   socket_normals("normals"),
+  socket_faceCenters("faceCenters"),
   socket_CellID("CellID"),
   socket_divq("divq"),
   socket_qx("qx"),
@@ -252,6 +253,7 @@ RadiativeTransferFVDOM::needsSockets()
   result.push_back(&socket_nodes);
   result.push_back(&socket_isOutward);
   result.push_back(&socket_normals);  
+  result.push_back(&socket_faceCenters);  
   
   return result;
 }
@@ -272,6 +274,7 @@ void RadiativeTransferFVDOM::setup()
   sockets.nodes       = socket_nodes;
   sockets.isOutward   = socket_isOutward;
   sockets.normals     = socket_normals;
+  sockets.faceCenters = socket_faceCenters;
   
   // source sockets cannot be copied
   sockets.alpha_avbin = socket_alpha_avbin.getDataHandle();
@@ -808,7 +811,10 @@ void RadiativeTransferFVDOM::getFieldOpacities(CFuint ib)
     CFreal val1 = 0;
     CFreal val2 = 0;
     
-    tableInterpolate(T, patm, ib, val1, val2); 
+    tableInterpolate(m_nbBins, m_nbTemp, m_nbPress, 
+		     &m_Ttable[0], &m_Ptable[0],
+		     &m_opacities[0], &m_radSource[0],
+		     T, patm, ib, val1, val2); 
     
     if(m_useExponentialMethod){
       if (val1 <= 1e-30 || val2 <= 1e-30 ){
@@ -838,7 +844,8 @@ void RadiativeTransferFVDOM::getFieldOpacities(CFuint ib)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d, vector<int>& advanceOrder)
+void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d, 
+					     LocalArray<CFint>::TYPE& advanceOrder)
 {
   CFLog(VERBOSE, "RadiativeTransferFVDOM::getAdvanceOrder() => start\n");
   
@@ -899,7 +906,16 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d, vector<int>& advanc
     }// end of the loop over the CELLS
     
     const string msg = "advanceOrder[" + StringOps::to_str(d) + "] = ";
-    CFLog(DEBUG_MAX, CFPrintContainer<vector<int> >(msg, &advanceOrder) << "\n");
+#ifndef CF_HAVE_CUDA
+    CFLog(DEBUG_MAX, CFPrintContainer<LocalArray<CFint>::TYPE>(msg, &advanceOrder) << "\n");
+#else
+    CFint *const aoPtr = advanceOrder.ptr(); 
+    CFLog(DEBUG_MAX, msg << "\n");
+    for (CFuint a = 0; a < advanceOrder.size(); ++a) {
+      CFLog(DEBUG_MAX, aoPtr[a] << " ");
+    }
+    CFLog(DEBUG_MAX, "\n");
+#endif
     
     if (m == mLast) {diagnoseProblem(d, m, mLast);}
     
@@ -919,8 +935,18 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d, vector<int>& advanc
   
   //Printing advanceOrder for debug purpuses
   const string msg = "RadiativeTransferFVDOM::getAdvanceOrder() => advanceOrder[" + StringOps::to_str(d) + "] = ";
-  CFLog(DEBUG_MIN, CFPrintContainer<vector<int> >(msg, &advanceOrder) << "\n");
-  
+
+#ifndef CF_HAVE_CUDA
+    CFLog(DEBUG_MAX, CFPrintContainer<LocalArray<CFint>::TYPE>(msg, &advanceOrder) << "\n");
+#else
+    CFint *const aoPtr = advanceOrder.ptr(); 
+    CFLog(DEBUG_MAX, msg << "\n");
+    for (CFuint a = 0; a < advanceOrder.size(); ++a) {
+      CFLog(DEBUG_MAX, aoPtr[a] << " ");
+    }
+    CFLog(DEBUG_MAX, "\n");
+#endif
+    
   CFLog(VERBOSE, "RadiativeTransferFVDOM::getAdvanceOrder() => end\n");
 }
       
@@ -1038,78 +1064,81 @@ void RadiativeTransferFVDOM::readOpacities()
 
 //////////////////////////////////////////////////////////////////////////////
       
-void RadiativeTransferFVDOM::tableInterpolate(CFreal T, CFreal p, CFuint ib, CFreal& val1, CFreal& val2)
+/*void RadiativeTransferFVDOM::tableInterpolate
+(const CFuint nbBins, const CFuint nbTemp, const CFuint nbPress, 
+ const CFreal* Ttable, const CFreal* Ptable, const CFreal* opacities, 
+ const CFreal* radSource, CFreal T, CFreal p, CFuint ib, CFreal& val1, CFreal& val2)
 {
-  
   //Find the lower bound fo the temperature and the pressure ranges
   //we assume that the temperature and pressure always fall in the bounds.
   //If they don't then the value are still interpolated from the nearest
   //two points in the temperature or pressure list
-  CFuint it = m_nbTemp - 2;
-  for (CFuint i = 1; i < (m_nbTemp - 2); i++){
-    if(m_Ttable[i] > T) { it = i - 1; break;}
+  CFuint it = nbTemp - 2;
+  for (CFuint i = 1; i < (nbTemp - 2); i++){
+    if(Ttable[i] > T) { it = i - 1; break;}
   }
   
-  CFuint ip = m_nbPress - 2;
-  for (CFuint i = 1; i < (m_nbPress - 2); i++){
-    if(m_Ptable[i] > p) { ip = i - 1; break;}
+  CFuint ip = nbPress - 2;
+  for (CFuint i = 1; i < (nbPress - 2); i++){
+    if(Ptable[i] > p) { ip = i - 1; break;}
   }
   
   //Linear interpolation for the pressure
   
-  const CFuint iPiBiT           = it + ib*m_nbTemp + ip*m_nbBins*m_nbTemp;
-  const CFuint iPplus1iBiT      = it + ib*m_nbTemp + (ip + 1)*m_nbBins*m_nbTemp;
-  const CFuint iPiBiTplus1      = (it + 1) + ib*m_nbTemp + ip*m_nbBins*m_nbTemp;
-  const CFuint iPplus1iBiTplus1 = (it + 1) + ib*m_nbTemp + (ip + 1)*m_nbBins*m_nbTemp;
+  const CFuint iPiBiT           = it + ib*nbTemp + ip*nbBins*nbTemp;
+  const CFuint iPplus1iBiT      = it + ib*nbTemp + (ip + 1)*nbBins*nbTemp;
+  const CFuint iPiBiTplus1      = (it + 1) + ib*nbTemp + ip*nbBins*nbTemp;
+  const CFuint iPplus1iBiTplus1 = (it + 1) + ib*nbTemp + (ip + 1)*nbBins*nbTemp;
   
   // Linear interpolation for the pressure
   // Interpolation of the opacities
-  const CFreal bt1op = (m_opacities[iPplus1iBiT] - m_opacities[iPiBiT])*
-		    (p - m_Ptable[ip])/(m_Ptable[ip + 1] - m_Ptable[ip]) + m_opacities[iPiBiT];
+  const CFreal bt1op = (opacities[iPplus1iBiT] - opacities[iPiBiT])*
+		    (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]) + opacities[iPiBiT];
   
-  const CFreal bt2op = (m_opacities[iPplus1iBiTplus1] - m_opacities[iPiBiTplus1])*
-		    (p - m_Ptable[ip])/(m_Ptable[ip + 1] - m_Ptable[ip]) + m_opacities[iPiBiTplus1];
+  const CFreal bt2op = (opacities[iPplus1iBiTplus1] - opacities[iPiBiTplus1])*
+		    (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]) + opacities[iPiBiTplus1];
   
   // Interpolation of the source
-  const CFreal bt1so = (m_radSource[iPplus1iBiT] - m_radSource[iPiBiT])*
-		    (p - m_Ptable[ip])/(m_Ptable[ip + 1] - m_Ptable[ip]) + m_radSource[iPiBiT];
+  const CFreal bt1so = (radSource[iPplus1iBiT] - radSource[iPiBiT])*
+		    (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]) + radSource[iPiBiT];
   
-  const CFreal bt2so = (m_radSource[iPplus1iBiTplus1] - m_radSource[iPiBiTplus1])*
-		    (p - m_Ptable[ip])/(m_Ptable[ip + 1] - m_Ptable[ip]) + m_radSource[iPiBiTplus1];    
+  const CFreal bt2so = (radSource[iPplus1iBiTplus1] - radSource[iPiBiTplus1])*
+		    (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]) + radSource[iPiBiTplus1];    
   
   // Logarithmic interpolation for the temperature
   // Protect against log(0) and x/0 by switching to linear interpolation if either
   // bt1 or bt2 == 0.  (Note we can't allow log of negative numbers either)
   // Interpolation of the opacities   
   if(bt1op <= 0 || bt2op <= 0){
-    val1 = (bt2op - bt1op)*(T - m_Ttable[it])/(m_Ttable[it + 1] - m_Ttable[it]) + bt1op;
+    val1 = (bt2op - bt1op)*(T - Ttable[it])/(Ttable[it + 1] - Ttable[it]) + bt1op;
 //    cout <<"\nOption1 \n";
-//    cout <<"T = "<< T <<"\tTi+1 = "<<m_Ttable[it + 1]<<"\tTi = "<<m_Ttable[it] <<"\n";
+//    cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
 //    cout <<"val1 = " << val1 <<"\tbt2op ="<< bt2op <<"\tbt1op ="<< bt1op <<"\n";
   }
   else {
-    val1 = std::exp((T - m_Ttable[it])/(m_Ttable[it + 1] - m_Ttable[it])*std::log(bt2op/bt1op))*bt1op;
+    val1 = std::exp((T - Ttable[it])/(Ttable[it + 1] - Ttable[it])*std::log(bt2op/bt1op))*bt1op;
 //     cout <<"\nOption2 \n";
-//     cout <<"T = "<< T <<"\tTi+1 = "<<m_Ttable[it + 1]<<"\tTi = "<<m_Ttable[it] <<"\n";
+//     cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
 //     cout <<"val1 = " << val1 <<"\tbt2op ="<< bt2op <<"\tbt1op ="<< bt1op <<"\n";
   }
   // Interpolation of the source
   if(bt1so <= 0 || bt2so <= 0){
-    val2 = (bt2so - bt1so)*(T - m_Ttable[it])/(m_Ttable[it + 1] - m_Ttable[it]) + bt1so;
+    val2 = (bt2so - bt1so)*(T - Ttable[it])/(Ttable[it + 1] - Ttable[it]) + bt1so;
 //     cout <<"\nOption3 \n";
-//     cout <<"T = "<< T <<"\tTi+1 = "<<m_Ttable[it + 1]<<"\tTi = "<<m_Ttable[it] <<"\n";
+//     cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
 //     cout <<"val1 = " << val2 <<"\tbt2so ="<< bt2so <<"\tbt1so ="<< bt1so <<"\n";
   }
   else {
-    val2 = std::exp((T - m_Ttable[it])/(m_Ttable[it + 1] - m_Ttable[it])*std::log(bt2so/bt1so))*bt1so;
+    val2 = std::exp((T - Ttable[it])/(Ttable[it + 1] - Ttable[it])*std::log(bt2so/bt1so))*bt1so;
 //     cout <<"\nOption3 \n";
-//     cout <<"T = "<< T <<"\tTi+1 = "<<m_Ttable[it + 1]<<"\tTi = "<<m_Ttable[it] <<"\n";
+//     cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
 //     cout <<"val2 = " << val2 <<"\tbt2so ="<< bt2so <<"\tbt1so ="<< bt1so <<"\n";
   }
   
   //cf_assert(ib == 0);
   
-}
+  }*/
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void RadiativeTransferFVDOM::writeRadialData()
@@ -1225,7 +1254,10 @@ void RadiativeTransferFVDOM::getFieldOpacities(const CFuint ib, const CFuint iCe
   CFreal val1 = 0;
   CFreal val2 = 0;
   
-  tableInterpolate(T, patm, ib, val1, val2); 
+  tableInterpolate(m_nbBins, m_nbTemp, m_nbPress, 
+		   &m_Ttable[0], &m_Ptable[0],
+		   &m_opacities[0], &m_radSource[0],
+		   T, patm, ib, val1, val2); 
   
   if(m_useExponentialMethod){
     if (val1 <= 1e-30 || val2 <= 1e-30 ){

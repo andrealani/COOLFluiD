@@ -58,28 +58,28 @@ public:
    * Set up private data and data of the aggregated classes
    * in this command before processing phase
    */
-  void setup();
-
-/**
+  virtual void setup();
+  
+  /**
    * Unset up private data and data of the aggregated classes
    * in this command
    */
-  void unsetup();
-
+  virtual void unsetup();
+  
   /**
    * Execute on a set of dofs
    */
-  void execute();
+  virtual void execute();
   
   /**
    * Compute the directions depending on the option selected 
    */  
   void getDirections();
-    
+  
   /**
    * Compute the advance order depending on the option selected 
    */  
-  void getAdvanceOrder(const CFuint d, std::vector<int>& advanceOrder); 
+  void getAdvanceOrder(const CFuint d, Framework::LocalArray<CFint>::TYPE& advanceOrder); 
   
   /**
    * Compute the advance order depending on the option selected 
@@ -105,7 +105,11 @@ public:
   /**
    * Interpolates the values of the opacity tables
    */ 
-  void tableInterpolate(CFreal T, CFreal p, CFuint ib, CFreal& val1, CFreal& val2);
+  void tableInterpolate
+  (const CFuint nbBins, const CFuint nbTemp,const CFuint nbPress, 
+   const CFreal* Ttable, const CFreal* Ptable, const CFreal* opacities, 
+   const CFreal* radSource, CFreal T, CFreal p, CFuint ib, 
+   CFreal& val1, CFreal& val2);
   
   /**
    * Writes radial q and divQ to a file for the Sphere case 
@@ -113,7 +117,7 @@ public:
    * 
    */
   void writeRadialData();
-
+  
   /**
    * Returns the DataSocket's that this command needs as sources
    * @return a vector of SafePtr with the DataSockets
@@ -170,16 +174,16 @@ private: //function
   }
     
   /// Compute radiative fluxes by looping over bins
-  void loopOverBins(const CFuint startBin, 
-		    const CFuint endBin, 
-		    const CFuint startDir,
-		    const CFuint endDir);
+  virtual void loopOverBins(const CFuint startBin, 
+			    const CFuint endBin, 
+			    const CFuint startDir,
+			    const CFuint endDir);
   
   /// Compute radiative fluxes by looping over directions
-  void loopOverDirs(const CFuint startBin, 
-		    const CFuint endBin, 
-		    const CFuint startDir,
-		    const CFuint endDir);
+  virtual void loopOverDirs(const CFuint startBin, 
+			    const CFuint endBin, 
+			    const CFuint startDir,
+			    const CFuint endDir);
   
   /// @return the wall face ID to be used inside the qradFluxWall socket
   /// @post returns -1 if the face is not a wall face
@@ -194,7 +198,7 @@ private: //function
     return -1;
   }
   
-private: //data
+protected: //data
   
   /// storage of states
   Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > socket_states;
@@ -218,7 +222,10 @@ private: //data
   /// storage of normals
   Framework::DataSocketSink<CFreal> socket_normals; 
   
-    /// storage of the the stage of the order of advance
+  /// storage of face centers
+  Framework::DataSocketSink<CFreal> socket_faceCenters; 
+  
+  /// storage of the the stage of the order of advance
   Framework::DataSocketSource <CFreal> socket_CellID;
   
   /// storage of the divq 
@@ -273,38 +280,38 @@ private: //data
   RealVector m_weight;
   
   /// Field source of oppacity table 
-  RealVector m_fieldSource;
+  Framework::LocalArray<CFreal>::TYPE m_fieldSource;
   
   /// Field Absorption of oppacity table used if exponential Method
-  RealVector m_fieldAbsor;
+  Framework::LocalArray<CFreal>::TYPE m_fieldAbsor;
   
   /// Field Absorption of oppacity table used if not Exponential Method
-  RealVector  m_fieldAbSrcV;
+  Framework::LocalArray<CFreal>::TYPE m_fieldAbSrcV;
   
   /// Field Absorption of oppacity table used if not Exponential Method
-  RealVector  m_fieldAbV;  
+  Framework::LocalArray<CFreal>::TYPE m_fieldAbV;  
   
   /// Exponent for the radiation of oppacity table
-  RealVector m_In;
+  Framework::LocalArray<CFreal>::TYPE m_In;
   
   /// Exponent for the radiation of oppacity table
-  RealVector m_II;
+  Framework::LocalArray<CFreal>::TYPE m_II;
   
   /// Opacities read from table. Stored as follows:
   /// kappa(p0,b0,T0),kappa(p0,b0,T1),...,kappa(p0,b0,Tn),
   /// kappa(p0,b1,T0),kappa(p0,b1,T1),...,kappa(p0,b1,Tn), .... 
   /// kappa(p0,bn,T0),kappa(p0,bn,T1),...,kappa(p0,bn,Tn), ....
   /// kappa(p1,b0,T0),kappa(p1,b0,T1),...,kappa(p1,b0,Tn), ...
-  RealVector m_opacities;
+  Framework::LocalArray<CFreal>::TYPE m_opacities;
   
   /// Radiative source reaf from table and stored the same way as the opacities
-  RealVector m_radSource;
+  Framework::LocalArray<CFreal>::TYPE m_radSource;
   
   /// storage of the temperatures of the opacity table. 
-  RealVector m_Ttable;
+  Framework::LocalArray<CFreal>::TYPE m_Ttable;
   
   /// storage of the pressure of theopacity table
-  RealVector m_Ptable; 
+  Framework::LocalArray<CFreal>::TYPE m_Ptable; 
     
   /// Done status of a cell in a given direction at the end of a stage
   std::vector<bool> m_sdone;
@@ -322,7 +329,7 @@ private: //data
   /// a set of cells that can be advanced in parallel.These sets are terminated by a negative entry.  E.g., if there are 8 cells and advance_order(1:8,1) = (1,2,-5,3,4,-8,6,-7), 
   /// then cells (1,2,5) can be done first, and are in fact the boundary cells for direction 1,
   /// then cells (3,4,8) can be done; finally cells (6,7) can be done to complete the sweep in direction 1.
-  std::vector<std::vector<int> > m_advanceOrder;   
+  std::vector<Framework::LocalArray<CFint>::TYPE > m_advanceOrder;   
   
   /// Radiative flux
   RealMatrix m_q;
@@ -422,6 +429,83 @@ private: //data
   
 }; // end of class RadiativeTransferFVDOM
       
+//////////////////////////////////////////////////////////////////////////////
+
+inline void RadiativeTransferFVDOM::tableInterpolate
+(const CFuint nbBins, const CFuint nbTemp, const CFuint nbPress, 
+ const CFreal* Ttable, const CFreal* Ptable, const CFreal* opacities, 
+ const CFreal* radSource, CFreal T, CFreal p, CFuint ib, CFreal& val1, CFreal& val2)
+{
+  //Find the lower bound fo the temperature and the pressure ranges
+  //we assume that the temperature and pressure always fall in the bounds.
+  //If they don't then the value are still interpolated from the nearest
+  //two points in the temperature or pressure list
+  CFuint it = nbTemp - 2;
+  for (CFuint i = 1; i < (nbTemp - 2); i++){
+    if(Ttable[i] > T) { it = i - 1; break;}
+  }
+  
+  CFuint ip = nbPress - 2;
+  for (CFuint i = 1; i < (nbPress - 2); i++){
+    if(Ptable[i] > p) { ip = i - 1; break;}
+  }
+  
+  //Linear interpolation for the pressure
+  
+  const CFuint iPiBiT           = it + ib*nbTemp + ip*nbBins*nbTemp;
+  const CFuint iPplus1iBiT      = it + ib*nbTemp + (ip + 1)*nbBins*nbTemp;
+  const CFuint iPiBiTplus1      = (it + 1) + ib*nbTemp + ip*nbBins*nbTemp;
+  const CFuint iPplus1iBiTplus1 = (it + 1) + ib*nbTemp + (ip + 1)*nbBins*nbTemp;
+  
+  // Linear interpolation for the pressure
+  // Interpolation of the opacities
+  const CFreal bt1op = (opacities[iPplus1iBiT] - opacities[iPiBiT])*
+		    (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]) + opacities[iPiBiT];
+  
+  const CFreal bt2op = (opacities[iPplus1iBiTplus1] - opacities[iPiBiTplus1])*
+		    (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]) + opacities[iPiBiTplus1];
+  
+  // Interpolation of the source
+  const CFreal bt1so = (radSource[iPplus1iBiT] - radSource[iPiBiT])*
+		    (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]) + radSource[iPiBiT];
+  
+  const CFreal bt2so = (radSource[iPplus1iBiTplus1] - radSource[iPiBiTplus1])*
+		    (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]) + radSource[iPiBiTplus1];    
+  
+  // Logarithmic interpolation for the temperature
+  // Protect against log(0) and x/0 by switching to linear interpolation if either
+  // bt1 or bt2 == 0.  (Note we can't allow log of negative numbers either)
+  // Interpolation of the opacities   
+  if(bt1op <= 0 || bt2op <= 0){
+    val1 = (bt2op - bt1op)*(T - Ttable[it])/(Ttable[it + 1] - Ttable[it]) + bt1op;
+//    cout <<"\nOption1 \n";
+//    cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
+//    cout <<"val1 = " << val1 <<"\tbt2op ="<< bt2op <<"\tbt1op ="<< bt1op <<"\n";
+  }
+  else {
+    val1 = std::exp((T - Ttable[it])/(Ttable[it + 1] - Ttable[it])*std::log(bt2op/bt1op))*bt1op;
+//     cout <<"\nOption2 \n";
+//     cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
+//     cout <<"val1 = " << val1 <<"\tbt2op ="<< bt2op <<"\tbt1op ="<< bt1op <<"\n";
+  }
+  // Interpolation of the source
+  if(bt1so <= 0 || bt2so <= 0){
+    val2 = (bt2so - bt1so)*(T - Ttable[it])/(Ttable[it + 1] - Ttable[it]) + bt1so;
+//     cout <<"\nOption3 \n";
+//     cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
+//     cout <<"val1 = " << val2 <<"\tbt2so ="<< bt2so <<"\tbt1so ="<< bt1so <<"\n";
+  }
+  else {
+    val2 = std::exp((T - Ttable[it])/(Ttable[it + 1] - Ttable[it])*std::log(bt2so/bt1so))*bt1so;
+//     cout <<"\nOption3 \n";
+//     cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
+//     cout <<"val2 = " << val2 <<"\tbt2so ="<< bt2so <<"\tbt1so ="<< bt1so <<"\n";
+  }
+  
+  //cf_assert(ib == 0);
+  
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace RadiativeTransfer

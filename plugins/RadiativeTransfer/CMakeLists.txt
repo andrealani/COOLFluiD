@@ -46,6 +46,15 @@ IF (CF_HAVE_GSL)
    )
 ENDIF()
 
+IF (CF_HAVE_CUDA)
+  LIST ( APPEND RadiativeTransfer_includedirs ${MPI_INCLUDE_DIR} ${CUDA_INCLUDE_DIR} )
+  LIST ( APPEND RadiativeTransfer_libs ${CUDA_LIBRARIES} )
+  LIST ( APPEND RadiativeTransfer_files
+    Solvers/FiniteVolumeDOM/RadiativeTransferFVDOMCUDA.cu
+    Solvers/FiniteVolumeDOM/RadiativeTransferFVDOMCUDA.hh
+    )
+ENDIF()
+
 LIST ( APPEND RadiativeTransfer_cflibs Framework LagrangianSolver FiniteVolume )
 CF_ADD_PLUGIN_LIBRARY ( RadiativeTransfer )
 CF_WARN_ORPHAN_FILES()
