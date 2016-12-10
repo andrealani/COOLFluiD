@@ -64,6 +64,12 @@ private: //function
   
 private: //data
   
+  /// face-cell connectivity
+  Framework::LocalArray<CFint>::TYPE m_faceCell;
+
+  /// number of faces per cell
+  Framework::LocalArray<CFuint>::TYPE m_nbFacesInCell;
+  
 }; // end of class RadiativeTransferFVDOMCUDA
     
 //////////////////////////////////////////////////////////////////////////////

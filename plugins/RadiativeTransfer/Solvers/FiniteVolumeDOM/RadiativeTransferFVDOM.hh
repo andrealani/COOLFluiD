@@ -158,7 +158,8 @@ protected: //function
   /// get the inner product normal*direction (the normal includes the area)
   CFreal getDirDotNA(const CFuint d, const RealVector& normal) const
   {
-    return normal[XX]*m_dirs(d,XX) + normal[YY]*m_dirs(d,YY) + normal[ZZ]*m_dirs(d,ZZ);
+    return normal[XX]*m_dirs[d*3] + normal[YY]*m_dirs[d*3+1] 
+      + normal[ZZ]*m_dirs[d*3+2];
   }	  
   
   /// compute the radiative heat flux
@@ -339,7 +340,7 @@ protected: //data
   std::vector<std::string> m_wallTrsNames;
   
   /// Directions 
-  RealMatrix m_dirs;  
+  Framework::LocalArray<CFreal>::TYPE m_dirs;  
   
   /// Create the array advance_order, which contains, for each direction (1st index), the list of cells to be advanced.  The list is divided into "stages" that consist of 
   /// a set of cells that can be advanced in parallel.These sets are terminated by a negative entry.  E.g., if there are 8 cells and advance_order(1:8,1) = (1,2,-5,3,4,-8,6,-7), 
@@ -511,9 +512,6 @@ void RadiativeTransferFVDOM::Interpolator::tableInterpolate
 //     cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
 //     cout <<"val2 = " << val2 <<"\tbt2so ="<< bt2so <<"\tbt1so ="<< bt1so <<"\n";
   }
-  
-  //cf_assert(ib == 0);
-  
 }
 
 //////////////////////////////////////////////////////////////////////////////

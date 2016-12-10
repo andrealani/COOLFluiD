@@ -469,7 +469,7 @@ void RadiativeTransferFVDOM::setup()
     CFLog(VERBOSE, "\n");
   }
   
-  m_dirs.resize(m_nbDirs, 3);
+  m_dirs.resize(m_nbDirs*3);
   m_advanceOrder.resize(m_nbDirs);
   
   cf_assert(endDir <= m_nbDirs);
@@ -492,10 +492,13 @@ void RadiativeTransferFVDOM::setup()
   qx.resize(nbCells);
   qy.resize(nbCells);
   qz.resize(nbCells);
+  
+  // this is fundamental since += is used afterwards
   divQ   = 0.0;
   qx     = 0.0;
   qy     = 0.0;
   qz     = 0.0;
+  
   CellID = 0.0;
   TempProfile = 0.0;
   
@@ -568,49 +571,51 @@ void RadiativeTransferFVDOM::getDirections()
   
   CFLog(VERBOSE, "RadiativeTransferFVDOM::getDirections() => Number of Directions = " << m_nbDirs << "\n");
   
+  RealMatrix mdirs(m_nbDirs, 3, &m_dirs[0]);
+  
   const CFreal overSq3 = 1./std::sqrt(3.);
   switch(m_nbDirs) {
   case 8:
     m_weight[0] = 4.*pi/m_nbDirs;
-    m_dirs(0,0) = overSq3;
-    m_dirs(0,1) = overSq3;
-    m_dirs(0,2) = overSq3;
+    mdirs(0,0) = overSq3;
+    mdirs(0,1) = overSq3;
+    mdirs(0,2) = overSq3;
     break;
   case 24:
     m_weight[0] = 4.*pi/m_nbDirs;
-    m_dirs(0,0) = 0.2958759;
-    m_dirs(0,1) = 0.2958759;
-    m_dirs(0,2) = 0.9082483;
+    mdirs(0,0) = 0.2958759;
+    mdirs(0,1) = 0.2958759;
+    mdirs(0,2) = 0.9082483;
     break;
   case 48:
     m_weight[0] = 0.1609517;
-    m_dirs(0,0) = 0.1838670;
-    m_dirs(0,1) = 0.1838670;
-    m_dirs(0,2) = 0.9656013;
+    mdirs(0,0) = 0.1838670;
+    mdirs(0,1) = 0.1838670;
+    mdirs(0,2) = 0.9656013;
     m_weight[1] = 0.3626469;
-    m_dirs(1,0) = 0.1838670;
-    m_dirs(1,1) = 0.6950514;
-    m_dirs(1,2) = 0.6950514;
+    mdirs(1,0) = 0.1838670;
+    mdirs(1,1) = 0.6950514;
+    mdirs(1,2) = 0.6950514;
     break;
   case 80:
     m_weight[0] = 0.1712359;
-    m_dirs(0,0) = 0.1422555;
-    m_dirs(0,1) = 0.1422555;
-    m_dirs(0,2) = 0.9795543;
+    mdirs(0,0) = 0.1422555;
+    mdirs(0,1) = 0.1422555;
+    mdirs(0,2) = 0.9795543;
     m_weight[1] = 0.0992284;
-    m_dirs(1,0) = 0.1422555;
-    m_dirs(1,1) = overSq3;
-    m_dirs(1,2) = 0.8040087;
+    mdirs(1,0) = 0.1422555;
+    mdirs(1,1) = overSq3;
+    mdirs(1,2) = 0.8040087;
     m_weight[2] = 0.4617179;
-    m_dirs(2,0) = overSq3;
-    m_dirs(2,1) = overSq3;
-    m_dirs(2,2) = overSq3;
+    mdirs(2,0) = overSq3;
+    mdirs(2,1) = overSq3;
+    mdirs(2,2) = overSq3;
     break;
   default:	// nDirs = 8
     m_weight[0] = 4.*pi/m_nbDirs;
-    m_dirs(0,0) = overSq3;
-    m_dirs(0,1) = overSq3;
-    m_dirs(0,2) = overSq3;
+    mdirs(0,0) = overSq3;
+    mdirs(0,1) = overSq3;
+    mdirs(0,2) = overSq3;
     break;
   }
   
@@ -621,8 +626,8 @@ void RadiativeTransferFVDOM::getDirections()
       const CFuint m = (p+1) % 3; //Note a % b is the remainder of the division a/b
       const CFuint n = (p+2) % 3;
       
-      if (p == 0 || m_dirs(dirType,0) != m_dirs(dirType,1) ||
-	  m_dirs(dirType,1) != m_dirs(dirType,2) || m_dirs(dirType,2) != m_dirs(dirType,0)) {
+      if (p == 0 || mdirs(dirType,0) != mdirs(dirType,1) ||
+	  mdirs(dirType,1) != mdirs(dirType,2) || mdirs(dirType,2) != mdirs(dirType,0)) {
         CFLog(VERBOSE, "Case1::dirTypes = " << dirType <<"\n");
 	CFLog(DEBUG_MIN, "l = " << l << "m = " << m << "n = " << n  <<"\n");
 	for (int i = 0; i <= 1; i++) {
@@ -632,19 +637,19 @@ void RadiativeTransferFVDOM::getDirections()
 		//Note that this is different because the counters are different
 		d += 1;
 		m_weight[d] = m_weight[dirType];
-		m_dirs(d,0) = std::pow(-1.,i)*m_dirs(dirType,l);
-		m_dirs(d,1) = std::pow(-1.,j)*m_dirs(dirType,m);
-		m_dirs(d,2) = std::pow(-1.,k)*m_dirs(dirType,n);
+		mdirs(d,0) = std::pow(-1.,i)*mdirs(dirType,l);
+		mdirs(d,1) = std::pow(-1.,j)*mdirs(dirType,m);
+		mdirs(d,2) = std::pow(-1.,k)*mdirs(dirType,n);
 		CFLog(DEBUG_MIN, "l = " << l << " m = " << m << " n = " << n  <<"\n");
 		CFLog(DEBUG_MIN, "d = " << d <<"\n");
-		CFLog(DEBUG_MIN, "dirs[" << d <<"] = ("<<  m_dirs(d,0) <<", " << m_dirs(d,1) <<", "<<m_dirs(d,2)<<")\n");
+		CFLog(DEBUG_MIN, "dirs[" << d <<"] = ("<<  mdirs(d,0) <<", " << mdirs(d,1) <<", "<<mdirs(d,2)<<")\n");
 	      }
 	    }
 	  }
 	}
       }     
-      if (m_dirs(dirType,0) != m_dirs(dirType,1) && m_dirs(dirType,1) != m_dirs(dirType,2) 
-	  && m_dirs(dirType,2) != m_dirs(dirType,0)) {
+      if (mdirs(dirType,0) != mdirs(dirType,1) && mdirs(dirType,1) != mdirs(dirType,2) 
+	  && mdirs(dirType,2) != mdirs(dirType,0)) {
 	CFLog(VERBOSE, "Case2::dirTypes = " << dirType <<"\n");
 	CFLog(DEBUG_MIN, "l = " << l << "m = " << m << "n = " << n  <<"\n");
 	for (int i = 0; i <= 1; i++) {
@@ -653,12 +658,12 @@ void RadiativeTransferFVDOM::getDirections()
 	      //Note that this is different because the counters are different
 	      d += 1;
 	      m_weight[d] = m_weight[dirType];
-	      m_dirs(d,0) = std::pow(-1.,i)*m_dirs(dirType,l);
-	      m_dirs(d,1) = std::pow(-1.,j)*m_dirs(dirType,m);
-	      m_dirs(d,2) = std::pow(-1.,k)*m_dirs(dirType,n);
+	      mdirs(d,0) = std::pow(-1.,i)*mdirs(dirType,l);
+	      mdirs(d,1) = std::pow(-1.,j)*mdirs(dirType,m);
+	      mdirs(d,2) = std::pow(-1.,k)*mdirs(dirType,n);
 	      CFLog(DEBUG_MIN, "l = " << l << " m = " << m << " n = " << n  <<"\n");
 	      CFLog(DEBUG_MIN, "d = " << d <<"\n");
-	      CFLog(DEBUG_MIN, "dirs[" << d <<"] = ("<<  m_dirs(d,0) <<", " << m_dirs(d,1) <<", "<<m_dirs(d,2)<<")\n");
+	      CFLog(DEBUG_MIN, "dirs[" << d <<"] = ("<<  mdirs(d,0) <<", " << mdirs(d,1) <<", "<<mdirs(d,2)<<")\n");
 	    }
 	  }
 	}
@@ -668,7 +673,7 @@ void RadiativeTransferFVDOM::getDirections()
   
   // Printing the Directions for debugging
   for (CFuint dir = 0; dir < m_nbDirTypes; dir++) {
-    CFLog(DEBUG_MIN, "Direction[" << dir <<"] = (" << m_dirs(dir,0) <<", " << m_dirs(dir,1) <<", " << m_dirs(dir,2) <<")\n");
+    CFLog(DEBUG_MIN, "Direction[" << dir <<"] = (" << mdirs(dir,0) <<", " << mdirs(dir,1) <<", " << mdirs(dir,2) <<")\n");
   }
   
   CFLog(DEBUG_MIN, "RadiativeTransferFVDOM::getDirections() => end\n");
@@ -1298,9 +1303,9 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib,
       Ic = m_In[iCell];
     }
     
-    qx[iCell] += Ic*m_dirs(d,0)*m_weight[d];
-    qy[iCell] += Ic*m_dirs(d,1)*m_weight[d];
-    qz[iCell] += Ic*m_dirs(d,2)*m_weight[d];
+    qx[iCell] += Ic*m_dirs[d*3]*m_weight[d];
+    qy[iCell] += Ic*m_dirs[d*3+1]*m_weight[d];
+    qz[iCell] += Ic*m_dirs[d*3+2]*m_weight[d];
     
     CFreal inDirDotnA = inDirDotnANeg;
     for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
@@ -1349,11 +1354,13 @@ void RadiativeTransferFVDOM::diagnoseProblem(const CFuint d,
   yAngleRotation *= pi/180.;
   zAngleRotation *= pi/180.;
   
+  RealMatrix mdirs(m_nbDirs, 3, &m_dirs[0]);
+  
   for(CFuint dirs = 0; dirs < m_nbDirs; dirs++){
     //Rotating over x
-    const CFreal rot0 = m_dirs(dirs,0);
-    const CFreal rot1 = m_dirs(dirs,1)*std::cos(xAngleRotation) - m_dirs(dirs,2)*std::sin(xAngleRotation);
-    const CFreal rot2 = m_dirs(dirs,1)*std::sin(xAngleRotation) + m_dirs(dirs,2)*std::cos(xAngleRotation);
+    const CFreal rot0 = mdirs(dirs,0);
+    const CFreal rot1 = mdirs(dirs,1)*std::cos(xAngleRotation) - mdirs(dirs,2)*std::sin(xAngleRotation);
+    const CFreal rot2 = mdirs(dirs,1)*std::sin(xAngleRotation) + mdirs(dirs,2)*std::cos(xAngleRotation);
     //Rotating over y
     const CFreal rot3 = rot0*std::cos(yAngleRotation) + rot2*std::sin(yAngleRotation);
     const CFreal rot4 = rot1;
@@ -1363,10 +1370,10 @@ void RadiativeTransferFVDOM::diagnoseProblem(const CFuint d,
     const CFreal rot7 = rot3*std::sin(zAngleRotation) + rot4*std::cos(zAngleRotation);
     const CFreal rot8 = rot5;
     
-    m_dirs(dirs,0) = rot6;
-    m_dirs(dirs,1) = rot7;
-    m_dirs(dirs,2) = rot8;
-    CFLog(VERBOSE, "dirs[" << dirs <<"] = ("<<  m_dirs(dirs,0) <<", " << m_dirs(dirs,1) <<", "<<m_dirs(dirs,2)<<")\n");
+    mdirs(dirs,0) = rot6;
+    mdirs(dirs,1) = rot7;
+    mdirs(dirs,2) = rot8;
+    CFLog(VERBOSE, "dirs[" << dirs <<"] = ("<<  mdirs(dirs,0) <<", " << mdirs(dirs,1) <<", "<<mdirs(dirs,2)<<")\n");
   }
   CFLog(ERROR, "RadiativeTransferFVDOM::getAdvanceOrder() => No cell added to advance list. Problem with mesh\n");
   return; // goto directions_loop;
