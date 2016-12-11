@@ -94,44 +94,44 @@ void BaseFaceTermComputer::configure ( Config::ConfigArgs& args )
 
 void BaseFaceTermComputer::setFaceTermData()
 {
-//   // get the FluxReconstructionElementData
-//   vector< FluxReconstructionElementData* >& sdLocalData = getMethodData().getFRLocalData();
-// 
-//   // get derivation coefficients for the solution points
-//   m_solPntsDerivCoefs = sdLocalData[0]->getDerivCoefsSolPnts1D();
-// 
-//   // get indexes of internal flux points
-//   m_faceFlxPntConn = sdLocalData[0]->getFaceFlxPntConnPerOrient();
-// 
-//   // get flux point mapped coordinate directions
-//   m_faceMappedCoordDir = sdLocalData[0]->getFaceMappedCoordDirPerOrient();
-// 
-//   // get flux point index (in the matrix flxPntRecCoefs) for reconstruction
-//   m_flxPntMatrixIdxForReconstruction = sdLocalData[0]->getFlxPntMatrixIdxForReconstruction();
-// 
-//   // get flux point index (in the matrix m_solPntsDerivCoefs) for derivation
-//   m_flxPntMatrixIdxForDerivation = sdLocalData[0]->getFlxPntMatrixIdxForDerivation();
-// 
-//   // get solution point index (in the cell) for derivation
-//   m_solPntIdxsForDerivation = sdLocalData[0]->getSolPntIdxsForDerivation();
-// 
-//   // get coefficients for integration over a face
-//   m_faceIntegrationCoefs = sdLocalData[0]->getFaceIntegrationCoefs();
-// 
-//   // get face flux points face local coordinates
-//   m_faceFlxPntsFaceLocalCoords = sdLocalData[0]->getFaceFlxPntsFaceLocalCoords();
-// 
-//   // get convective/diffusive CFL ratio
-//   m_cflConvDiffRatio = sdLocalData[0]->getCFLConvDiffRatio();
-// 
-//   // set number of flux points
-//   const CFuint nbrOrients = m_faceFlxPntConn->size();
-//   m_nbrFlxPnts.resize(nbrOrients);
-//   for (CFuint iOrient = 0; iOrient < nbrOrients; ++iOrient)
-//   {
-//     m_nbrFlxPnts[iOrient] = (*m_faceFlxPntConn)[iOrient][LEFT].size();
-//   }
-// 
+  // get the FluxReconstructionElementData
+  vector< FluxReconstructionElementData* >& sdLocalData = getMethodData().getFRLocalData();
+
+  // get derivation coefficients for the solution points
+  m_solPntsDerivCoefs = sdLocalData[0]->getDerivCoefsSolPnts1D();
+
+  // get indexes of internal flux points
+  m_faceFlxPntConn = sdLocalData[0]->getFaceFlxPntConnPerOrient();
+
+  // get flux point mapped coordinate directions
+  m_faceMappedCoordDir = sdLocalData[0]->getFaceMappedCoordDirPerOrient();
+
+  // get flux point index (in the matrix flxPntRecCoefs) for reconstruction
+  m_flxPntMatrixIdxForReconstruction = sdLocalData[0]->getFlxPntMatrixIdxForReconstruction();
+
+  // get flux point index (in the matrix m_solPntsDerivCoefs) for derivation
+  m_flxPntMatrixIdxForDerivation = sdLocalData[0]->getFlxPntMatrixIdxForDerivation();
+
+  // get solution point index (in the cell) for derivation
+  m_solPntIdxsForDerivation = sdLocalData[0]->getSolPntIdxsForDerivation();
+
+  // get coefficients for integration over a face
+  m_faceIntegrationCoefs = sdLocalData[0]->getFaceIntegrationCoefs();
+
+  // get face flux points face local coordinates
+  m_faceFlxPntsFaceLocalCoords = sdLocalData[0]->getFaceFlxPntsFaceLocalCoords();
+
+  // get convective/diffusive CFL ratio
+  m_cflConvDiffRatio = sdLocalData[0]->getCFLConvDiffRatio();
+
+  // set number of flux points
+  const CFuint nbrOrients = m_faceFlxPntConn->size();
+  m_nbrFlxPnts.resize(nbrOrients);
+  for (CFuint iOrient = 0; iOrient < nbrOrients; ++iOrient)
+  {
+    m_nbrFlxPnts[iOrient] = (*m_faceFlxPntConn)[iOrient][LEFT].size();
+  }
+
 //   // set interpolation type dependent data
 //   const std::string interpolationType = getMethodData().getInterpolationType();
 //   if (interpolationType == "standard")
@@ -154,9 +154,9 @@ void BaseFaceTermComputer::setFaceTermData()
 //   {
 //     throw BadValueException (FromHere(),"BaseVolTermComputer::setFaceTermData --> Interpolation type should be standard or optimized");
 //   }
-// 
-//   // get face flux point cell mapped coordinates
-//   m_faceFlxPntCellMappedCoords = sdLocalData[0]->getFaceFlxPntCellMappedCoordsPerOrient();
+
+  // get face flux point cell mapped coordinates
+  m_faceFlxPntCellMappedCoords = sdLocalData[0]->getFaceFlxPntCellMappedCoordsPerOrient();
 }
 
 //////////////////////////////////////////////////////////////////////////////

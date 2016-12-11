@@ -111,4 +111,4 @@ private: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif  // COOLFluiD_Numerics_FluxReconstructionMethod_RoeFlux_hh
+#endif  // COOLFluiD_FluxReconstructionMethod_RoeFlux_hh

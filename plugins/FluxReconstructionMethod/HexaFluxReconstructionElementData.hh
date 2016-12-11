@@ -171,6 +171,11 @@ protected: // functions
    * Create the coefficients for the cell center derivatives
    */
   void createCellCenterDerivCoefs();
+  
+  /**
+   * Creates face normals
+   */
+  void createFaceNormals();
 
   /**
    * sets the convective/diffusive cfl ratio

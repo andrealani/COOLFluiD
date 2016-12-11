@@ -41,15 +41,15 @@ VCJH::~VCJH()
 
 //////////////////////////////////////////////////////////////////////////////
       
-void VCJH::computeCorrectionFunction(FluxReconstructionElementData frElemData, std::vector< std::vector< RealVector > > corrcts)
+void VCJH::computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > > corrcts)
 {
     CFAUTOTRACE;
-    const CFGeoShape::Type elemShape = frElemData.getShape();
+    const CFGeoShape::Type elemShape = frElemData->getShape();
     switch(elemShape)
     {
       case CFGeoShape::QUAD:
       {
-      const CFuint nbrSolPnts1D = frElemData.getSolPntsLocalCoord1D()->size();
+      const CFuint nbrSolPnts1D = frElemData->getSolPntsLocalCoord1D()->size();
       for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
       {
           for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)

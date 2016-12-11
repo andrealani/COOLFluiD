@@ -332,5 +332,5 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif  // COOLFluiD_Numerics_FluxReconstructionMethod_BaseFaceTermComputer_hh
+#endif  // COOLFluiD_FluxReconstructionMethod_BaseFaceTermComputer_hh
 

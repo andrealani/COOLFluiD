@@ -145,6 +145,11 @@ protected: // functions
    * Creates face-node connectivity
    */
   void createFaceNodeConnectivity();
+  
+  /**
+   * Creates face normals
+   */
+  void createFaceNormals();
 
   /**
    * Creates face-mapped coordinate direction

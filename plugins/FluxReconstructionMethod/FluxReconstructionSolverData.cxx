@@ -203,7 +203,7 @@ void FluxReconstructionSolverData::setup()
     vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
     (updateToSolutionVecTransStr);
   }
-  CFLog(VERBOSE, "SpectralFDMethodData::setup() => updateToSolutionVarName = " << updateToSolutionVecTransStr << "\n");
+  CFLog(VERBOSE, "FluxReconstructionSolverData::setup() => updateToSolutionVarName = " << updateToSolutionVecTransStr << "\n");
   
   cf_assert(vecTransProv.isNotNull());
   m_updateToSolutionVecTrans.reset(vecTransProv->create(physModel->getImplementor()));

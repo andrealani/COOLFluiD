@@ -105,5 +105,5 @@ protected: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif  // COOLFluiD_Numerics_FluxReconstructionMethod_RiemannFlux_hh
+#endif  // COOLFluiD_FluxReconstructionMethod_RiemannFlux_hh
 

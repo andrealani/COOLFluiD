@@ -1160,6 +1160,34 @@ void HexaFluxReconstructionElementData::createFaceMappedCoordDir()
 
 //////////////////////////////////////////////////////////////////////
 
+void HexaFluxReconstructionElementData::createFaceNormals()
+{
+  CFAUTOTRACE;
+
+  m_faceNormals.resize(6);
+
+  m_faceNormals[0][0] = 0.;
+  m_faceNormals[0][1] = 0.;
+  m_faceNormals[0][2] = -1.;
+  m_faceNormals[1][0] = 0.;
+  m_faceNormals[1][1] = 0.;
+  m_faceNormals[1][2] = 1.;
+  m_faceNormals[2][0] = 0.;
+  m_faceNormals[2][1] = -1.;
+  m_faceNormals[2][2] = 0.;
+  m_faceNormals[3][0] = 1.;
+  m_faceNormals[3][1] = 0.;
+  m_faceNormals[3][2] = 0.;
+  m_faceNormals[4][0] = 0.;
+  m_faceNormals[4][1] = 1.;
+  m_faceNormals[4][2] = 0.;
+  m_faceNormals[5][0] = -1.;
+  m_faceNormals[5][1] = 0.;
+  m_faceNormals[5][2] = 0.;
+}
+
+//////////////////////////////////////////////////////////////////////
+
 void HexaFluxReconstructionElementData::createFaceNodeConnectivityPerOrient()
 {
   CFAUTOTRACE;

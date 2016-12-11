@@ -592,50 +592,42 @@ void QuadFluxReconstructionElementData::createFaceFluxPntsConn()
 {
   CFAUTOTRACE;
 
-//   // number of solution points in 1D
-//   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-// 
-//   // number of flux points in 1D
-//   const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
-// 
-//   // number of flux points per direction
-//   const CFuint nbrFlxPnts = nbrSolPnts1D*nbrFlxPnts1D;
-// 
-//   // resize m_faceFlxPntConn
-//   m_faceFlxPntConn.resize(4);
-// 
-//   // variable holding the face index
-//   CFuint faceIdx = 0;
-// 
-//   // first face
-//   for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
-//   {
-//     m_faceFlxPntConn[faceIdx].push_back(nbrFlxPnts+iSol*nbrFlxPnts1D);
-//   }
-//   ++faceIdx;
-// 
-// 
-//   // second face
-//   for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
-//   {
-//     m_faceFlxPntConn[faceIdx].push_back((iSol+1)*nbrFlxPnts1D-1);
-//   }
-//   ++faceIdx;
-// 
-//   // third face
-//   for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
-//   {
-//     const CFuint solIdxP1 = nbrSolPnts1D-iSol;
-//     m_faceFlxPntConn[faceIdx].push_back(nbrFlxPnts+solIdxP1*nbrFlxPnts1D-1);
-//   }
-//   ++faceIdx;
-// 
-//   // fourth face
-//   for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
-//   {
-//     const CFuint solIdx = nbrSolPnts1D-1-iSol;
-//     m_faceFlxPntConn[faceIdx].push_back(solIdx*nbrFlxPnts1D);
-//   }
+  // number of flux points in 1D
+  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+
+  // resize m_faceFlxPntConn
+  m_faceFlxPntConn.resize(4);
+
+  // variable holding the face index
+  CFuint faceIdx = 0;
+
+  // zeroth face
+  for (CFuint iSol = 0; iSol < nbrFlxPnts1D; ++iSol)
+  {
+    m_faceFlxPntConn[faceIdx].push_back(2+iSol*4);
+  }
+  ++faceIdx;
+
+
+  // first face
+  for (CFuint iSol = 0; iSol < nbrFlxPnts1D; ++iSol)
+  {
+    m_faceFlxPntConn[faceIdx].push_back(1+iSol*4);
+  }
+  ++faceIdx;
+
+  // second face
+  for (CFuint iSol = 0; iSol < nbrFlxPnts1D; ++iSol)
+  {
+    m_faceFlxPntConn[faceIdx].push_back(3+iSol*4);
+  }
+  ++faceIdx;
+
+  // third face
+  for (CFuint iSol = 0; iSol < nbrFlxPnts1D; ++iSol)
+  {
+    m_faceFlxPntConn[faceIdx].push_back(iSol*4);
+  }
 // 
 // /*  for (CFuint iFace = 0; iFace < m_faceFlxPntConn.size(); ++iFace)
 //   {
@@ -652,29 +644,29 @@ void QuadFluxReconstructionElementData::createFaceFluxPntsConnPerOrient()
 {
   CFAUTOTRACE;
 
-//   // number of orientations
-//   const CFuint nbrOrients = 10;
-// 
-//   // number of solution points in 1D
-//   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-// 
-//   // create data structure
-//   m_faceFlxPntConnPerOrient.resize(nbrOrients);
-//   CFuint iOrient = 0;
-//   for (CFuint iFaceL = 0; iFaceL < 4; ++iFaceL)
-//   {
-//     for (CFuint iFaceR = iFaceL; iFaceR < 4; ++iFaceR, ++iOrient)
-//     {
-//       m_faceFlxPntConnPerOrient[iOrient].resize(2);
-//       for (CFuint iSol = 0; iSol < nbrSolPnts1D; ++iSol)
-//       {
-//         m_faceFlxPntConnPerOrient[iOrient][LEFT ]
-//             .push_back(m_faceFlxPntConn[iFaceL][iSol               ]);
-//         m_faceFlxPntConnPerOrient[iOrient][RIGHT]
-//             .push_back(m_faceFlxPntConn[iFaceR][nbrSolPnts1D-1-iSol]);
-//       }
-//     }
-//   }
+  // number of orientations
+  const CFuint nbrOrients = 10;
+
+  // number of solution points in 1D
+  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+
+  // create data structure
+  m_faceFlxPntConnPerOrient.resize(nbrOrients);
+  CFuint iOrient = 0;
+  for (CFuint iFaceL = 0; iFaceL < 4; ++iFaceL)
+  {
+    for (CFuint iFaceR = iFaceL; iFaceR < 4; ++iFaceR, ++iOrient)
+    {
+      m_faceFlxPntConnPerOrient[iOrient].resize(2);
+      for (CFuint iSol = 0; iSol < nbrFlxPnts1D; ++iSol)
+      {
+        m_faceFlxPntConnPerOrient[iOrient][LEFT ]
+            .push_back(m_faceFlxPntConn[iFaceL][iSol               ]);
+        m_faceFlxPntConnPerOrient[iOrient][RIGHT]
+            .push_back(m_faceFlxPntConn[iFaceR][nbrFlxPnts1D-1-iSol]);
+      }
+    }
+  }
 // /*  for (CFuint iOrient = 0; iOrient < m_faceFlxPntConnPerOrient.size(); ++iOrient)
 //   {
 //     CF_DEBUG_OBJ(iOrient);
@@ -755,6 +747,24 @@ void QuadFluxReconstructionElementData::createFaceMappedCoordDir()
   m_faceMappedCoordDir[1] = +1;
   m_faceMappedCoordDir[2] = +1;
   m_faceMappedCoordDir[3] = -1;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void QuadFluxReconstructionElementData::createFaceNormals()
+{
+  CFAUTOTRACE;
+
+  m_faceNormals.resize(4);
+
+  m_faceNormals[0][0] = 0.;
+  m_faceNormals[0][1] = -1.;
+  m_faceNormals[1][0] = 1.;
+  m_faceNormals[1][1] = 0.;
+  m_faceNormals[2][0] = 0.;
+  m_faceNormals[2][1] = 1.;
+  m_faceNormals[3][0] = -1.;
+  m_faceNormals[3][1] = 0.;
 }
 
 //////////////////////////////////////////////////////////////////////

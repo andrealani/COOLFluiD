@@ -116,7 +116,7 @@ TriagFluxReconstructionElementData::~TriagFluxReconstructionElementData()
 
 //////////////////////////////////////////////////////////////////////
 
-void TriagFluxReconstructionElementData::computeLocalFaceNormals()
+void TriagFluxReconstructionElementData::createFaceNormals()
 {
   CFAUTOTRACE;
   //CFLog(VERBOSE,"computeLocalFaceNormals\n");
@@ -125,15 +125,15 @@ void TriagFluxReconstructionElementData::computeLocalFaceNormals()
   const CFuint nbrFaces = 3;
 
   // compute the normals
-  m_faceLocalNorm.resize(nbrFaces);
+  m_faceNormals.resize(nbrFaces);
   for (CFuint iFace = 0; iFace < nbrFaces; ++iFace)
   {
     // resize the variable
-    m_faceLocalNorm[iFace].resize(m_dimensionality);
+    m_faceNormals[iFace].resize(m_dimensionality);
 
     // compute normal
-    m_faceLocalNorm[iFace][KSI] =  (m_faceNodeCoords[iFace][1][ETA] - m_faceNodeCoords[iFace][0][ETA]);
-    m_faceLocalNorm[iFace][ETA] = -(m_faceNodeCoords[iFace][1][KSI] - m_faceNodeCoords[iFace][0][KSI]);
+    m_faceNormals[iFace][KSI] =  (m_faceNodeCoords[iFace][1][ETA] - m_faceNodeCoords[iFace][0][ETA]);
+    m_faceNormals[iFace][ETA] = -(m_faceNodeCoords[iFace][1][KSI] - m_faceNodeCoords[iFace][0][KSI]);
 
   }
 

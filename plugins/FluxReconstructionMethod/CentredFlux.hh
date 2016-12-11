@@ -69,4 +69,4 @@ private: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif  // COOLFluiD_FluxReconstructionMethod_VCJH_hh
+#endif  // COOLFluiD_FluxReconstructionMethod_CentredFlux_hh

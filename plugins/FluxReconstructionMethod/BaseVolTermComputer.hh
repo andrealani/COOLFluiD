@@ -266,5 +266,5 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif  // COOLFluiD_Numerics_FluxReconstructionMethod_BaseVolTermComputer_hh
+#endif  // COOLFluiD_FluxReconstructionMethod_BaseVolTermComputer_hh
 

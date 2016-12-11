@@ -162,6 +162,11 @@ public:
   {
     return &m_solPntsLocalCoord1D;
   }
+  
+  Common::SafePtr< std::vector< CFreal > > getFlxPntsLocalCoord1D()
+  {
+    return &m_flxPntsLocalCoord1D;
+  }
 
   /**
    * @return m_recCoefsFlxPnts1D
@@ -377,6 +382,14 @@ public:
   Common::SafePtr< std::vector< CFint > > getFaceMappedCoordDir()
   {
     return &m_faceMappedCoordDir;
+  }
+  
+  /**
+   * @return m_faceNormals
+   */
+  Common::SafePtr< std::vector<RealVector> > getFaceNormals()
+  {
+    return &m_faceNormals;
   }
 
   /**
@@ -601,29 +614,29 @@ protected: // functions
 //    */
 //   void createSolPntsLocalCoord1D();
 
-//   /**
-//    * compute coefficients for reconstruction of solution in flux points in 1D
-//    * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
-//    */
-//   void computeRecCoefsFlxPnts1D();
+  /**
+   * compute coefficients for reconstruction of solution in flux points in 1D
+   * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
+   */
+  void computeRecCoefsFlxPnts1D();
 
-//   /**
-//    * compute coefficients for derivative of flux in solution points in 1D
-//    * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
-//    */
-//   void computeDerivCoefsSolPnts1D();
-// 
-//   /**
-//    * compute coefficients for derivative of solution polynomial in solution points in 1D
-//    * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
-//    */
-//   void computeSolPolyDerivCoefsSolPnts1D();
-// 
-//   /**
-//    * compute coefficients for derivative of solution polynomial in flux points in 1D
-//    * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
-//    */
-//   void computeSolPolyDerivCoefsFlxPnts1D();
+  /**
+   * compute coefficients for derivative of flux in solution points in 1D
+   * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
+   */
+  void computeDerivCoefsSolPnts1D();
+
+  /**
+   * compute coefficients for derivative of solution polynomial in solution points in 1D
+   * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
+   */
+  void computeSolPolyDerivCoefsSolPnts1D();
+
+  /**
+   * compute coefficients for derivative of solution polynomial in flux points in 1D
+   * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
+   */
+  void computeSolPolyDerivCoefsFlxPnts1D();
 
   /**
    * create vector with flux points local coordinates
@@ -842,6 +855,11 @@ protected: // functions
    * create the connectivity in a uniform distribution of points on the cell faces (for output)
    */
   virtual void createFaceOutputPntConn() = 0;
+  
+  /**
+   * create the normals for each face
+   */
+  virtual void createFaceNormals() = 0;
 
   /**
    * A function that computes the inverse of the matrix A and puts it in the patrix AI.
@@ -974,6 +992,9 @@ protected: // protected data
 
   /// cell face - mapped coordinate direction per orientation
   std::vector< std::vector< CFint > > m_faceMappedCoordDirPerOrient;
+  
+  /// cell face - mapped coordinate direction per orientation
+  std::vector< RealVector > m_faceNormals;
 
   /// cell face - node connectivity per orientation, not taking into account symmetries
 //   std::vector< std::vector< std::vector< CFuint > > > m_faceNodeConnPerOrientNoSymm;
@@ -1038,8 +1059,6 @@ protected: // protected data
   /// local cell face - output point connectivity
   std::vector< std::vector< CFuint > > m_faceOutputPntConn;
   
-  /// local face normals 
-  std::vector< RealVector > m_faceLocalNorm;
   
 //   /// socket for solution coordinates in 1D
 //   Framework::DataSocketSink< std::vector< CFreal > > socket_solCoords1D;

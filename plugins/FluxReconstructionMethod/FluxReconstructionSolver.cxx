@@ -47,7 +47,7 @@ void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::vector<std::string> >("InitComds","Types of the initializing commands.");
   options.addConfigOption< std::vector<std::string> >("InitNames","Names of the initializing commands.");
   options.addConfigOption< std::vector<std::string> >("BcNames","Names of the boundary condition commands.");
-  options.addConfigOption< std::string >("SpaceRHSJacobCom","Command for the computation of the space discretization contibution to RHS and Jacobian.");
+  options.addConfigOption< std::string >("SpaceRHSJacobCom","Command for the computation of the space discretization contribution to RHS and Jacobian.");
   options.addConfigOption< std::string >("LimiterCom","Command to limit the solution.");
 }
 
@@ -348,9 +348,9 @@ void FluxReconstructionSolver::initializeSolutionImpl(bool isRestart)
     }
   }
 
-  // apply a limiter to the solution
-  cf_assert(m_limiter.isNotNull());
-  m_limiter->execute();
+  //// apply a limiter to the solution
+  //cf_assert(m_limiter.isNotNull());
+  //m_limiter->execute();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -361,25 +361,25 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
   cf_assert(m_solve.isNotNull());
   m_solve->execute();
   
-//   cf_assert(isConfigured());
-//   cf_assert(isSetup());
-// 
-//   // set the residual factor in the MethodData
-//   m_data->setResFactor(factor);
-// 
-//   // apply the boundary conditions (this function is in SpaceMethod and is not called anywhere else)
-//   applyBC();
-// 
-//   // compute the face terms of the SV discretization of the convective terms
-//   cf_assert(m_convFaceTerm.isNotNull());
-//   m_convFaceTerm->execute();
-// 
-//   // compute the volume terms of the SV discretization of the convective terms
-//   // should be placed after the computation of the convective boundary conditions and the convective face terms
-//   // for proper computation of the gradients
-//   cf_assert(m_convVolTerm.isNotNull());
-//   m_convVolTerm->execute();
-// 
+  cf_assert(isConfigured());
+  cf_assert(isSetup());
+
+  // set the residual factor in the MethodData
+  m_data->setResFactor(factor);
+
+  // apply the boundary conditions (this function is in SpaceMethod and is not called anywhere else)
+  applyBC();
+
+  // compute the face terms of the SV discretization of the convective terms
+  cf_assert(m_convFaceTerm.isNotNull());
+  m_convFaceTerm->execute();
+
+  // compute the volume terms of the SV discretization of the convective terms
+  // should be placed after the computation of the convective boundary conditions and the convective face terms
+  // for proper computation of the gradients
+  cf_assert(m_convVolTerm.isNotNull());
+  m_convVolTerm->execute();
+
 //   // if there is a diffusive term, compute the diffusive contributions to the residual
 //   if (m_data->hasDiffTerm() && m_data->separateConvDiffComs())
 //   {
@@ -394,10 +394,10 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
 //     cf_assert(m_diffVolTerm.isNotNull());
 //     m_diffVolTerm->execute();
 //   }
-// 
-//   // add source terms
-//   addSourceTermsImpl();
-// 
+
+  // add source terms
+  addSourceTermsImpl();
+
 //   // divide by volume/Jacobian determinant
 //   m_divideRHSByCellVol->execute();
 }
@@ -476,6 +476,7 @@ std::vector<Common::SafePtr<NumericalStrategy> > FluxReconstructionSolver::getSt
   result.push_back(m_data->getVolTermComputer()      .d_castTo<NumericalStrategy>());
   result.push_back(m_data->getSolPntDistribution()   .d_castTo<NumericalStrategy>());
   result.push_back(m_data->getFluxPntDistribution()  .d_castTo<NumericalStrategy>());
+  result.push_back(m_data->getCorrectionFunction()   .d_castTo<NumericalStrategy>());
   
   // add BCStateComputers
   SafePtr< std::vector< SafePtr< BCStateComputer > > > bcStateComputers = m_data->getBCStateComputers();

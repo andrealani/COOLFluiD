@@ -159,5 +159,5 @@ protected: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif  // COOLFluiD_Numerics_FluxReconstructionMethod_BCStateComputer_hh
+#endif  // COOLFluiD_FluxReconstructionMethod_BCStateComputer_hh
 

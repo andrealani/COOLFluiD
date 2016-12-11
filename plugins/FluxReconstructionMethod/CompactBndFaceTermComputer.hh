@@ -144,5 +144,5 @@ protected: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif  // COOLFluiD_Numerics_FluxReconstructionMethod_CompactBndFaceTermComputer_hh
+#endif  // COOLFluiD_FluxReconstructionMethod_CompactBndFaceTermComputer_hh
 

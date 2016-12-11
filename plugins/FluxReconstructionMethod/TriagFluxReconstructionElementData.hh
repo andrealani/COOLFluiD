@@ -54,12 +54,6 @@ public:
 protected: // functions
 
   /**
-   * Computes the local internal face normals.
-   * @pre createNodeCoord() and createFaceNodeConn() have to be executed first.
-   */
-  void computeLocalFaceNormals();
-
-  /**
    * Creates the wheight coordinates of the flux points in a SV face
    * @pre createFluxPolyNodeCoord() and createFaceFluxPntsConn()
    */
@@ -160,6 +154,11 @@ protected: // functions
    * Creates list of internal flux points
    */
   void createIntFlxPntIdxs();
+  
+  /**
+   * Creates face normals
+   */
+  void createFaceNormals();
 
   /**
    * Creates the connectivity between faces and flux points,

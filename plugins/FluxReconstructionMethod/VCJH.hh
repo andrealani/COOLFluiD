@@ -12,6 +12,8 @@
 namespace COOLFluiD {
 
   namespace FluxReconstructionMethod {
+    
+    class FluxReconstructionElementData;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -32,7 +34,7 @@ public:  // methods
   ~VCJH();
     
   /// Compute the VCJH correction function of an instance of FluxReconstructionElementData
-  void computeCorrectionFunction(FluxReconstructionElementData frElemData, const std::vector< std::vector< RealVector > > corrcts);
+  void computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, const std::vector< std::vector< RealVector > > corrcts);
     
     
 private :

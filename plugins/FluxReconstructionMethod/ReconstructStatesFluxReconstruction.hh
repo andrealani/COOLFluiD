@@ -131,5 +131,5 @@ RealVector m_gradMappedCoord;
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif  // COOLFluiD_Numerics_FluxReconstructionMethod_ReconstructStatesFluxReconstruction_hh
+#endif  // COOLFluiD_FluxReconstructionMethod_ReconstructStatesFluxReconstruction_hh
 

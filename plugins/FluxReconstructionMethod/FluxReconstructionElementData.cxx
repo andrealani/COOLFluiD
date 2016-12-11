@@ -79,7 +79,7 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_faceOutputPntConn(),
   m_solPntDistribution(),
   m_flxPntDistribution(),
-  m_faceLocalNorm()
+  m_faceNormals()
 //   socket_solCoords1D("solCoords1D"),
 //   socket_flxCoords1D("flxCoords1D")
 {
@@ -168,6 +168,7 @@ void FluxReconstructionElementData::resetFluxReconstructionElementData()
   createFaceOutputPntCellMappedCoords();
   createFaceOutputPntSolPolyAndDerivCoef();
   createFaceOutputPntConn();
+  createFaceNormals();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -183,307 +184,184 @@ void FluxReconstructionElementData::resetFluxReconstructionElementData()
 
 //////////////////////////////////////////////////////////////////////
 
-// void FluxReconstructionElementData::createFlxPntsLocalCoord1D()
-// {
-//   CFAUTOTRACE;
-// 
-//   // resize m_flxPntsLocalCoord1D
-//   m_flxPntsLocalCoord1D.resize(m_polyOrder+2);
-// 
-//   // set local coordinate
-//   switch(m_polyOrder)
-//   {
-//     case CFPolyOrder::ORDER0:
-//     {
-//       m_flxPntsLocalCoord1D[0] = -1.;
-//       m_flxPntsLocalCoord1D[1] = +1.;
-//     } break;
-//     case CFPolyOrder::ORDER1:
-//     {
-//       m_flxPntsLocalCoord1D[0] = -1.;
-//       m_flxPntsLocalCoord1D[1] =  0.;
-//       m_flxPntsLocalCoord1D[2] = +1.;
-//     } break;
-//     case CFPolyOrder::ORDER2:
-//     {
-//       m_flxPntsLocalCoord1D[0] = -1.;
-//       m_flxPntsLocalCoord1D[1] = -1./sqrt(3.);
-//       m_flxPntsLocalCoord1D[2] = +1./sqrt(3.);
-//       m_flxPntsLocalCoord1D[3] = +1.;
-//     } break;
-//     case CFPolyOrder::ORDER3:
-//     {
-//       m_flxPntsLocalCoord1D[0] = -1.;
-//       m_flxPntsLocalCoord1D[1] = -sqrt(3./5.);
-//       m_flxPntsLocalCoord1D[2] =  0.;
-//       m_flxPntsLocalCoord1D[3] = +sqrt(3./5.);
-//       m_flxPntsLocalCoord1D[4] = +1.;
-//     } break;
-//     case CFPolyOrder::ORDER4:
-//     {
-//       m_flxPntsLocalCoord1D[0] = -1.;
-//       m_flxPntsLocalCoord1D[1] = -sqrt((3.+2.*sqrt(6./5.))/7.);
-//       m_flxPntsLocalCoord1D[2] = -sqrt((3.-2.*sqrt(6./5.))/7.);
-//       m_flxPntsLocalCoord1D[3] = +sqrt((3.-2.*sqrt(6./5.))/7.);
-//       m_flxPntsLocalCoord1D[4] = +sqrt((3.+2.*sqrt(6./5.))/7.);
-//       m_flxPntsLocalCoord1D[5] = +1.;
-//     } break;
-//     case CFPolyOrder::ORDER5:
-//     {
-//       m_flxPntsLocalCoord1D[0] = -1.;
-//       m_flxPntsLocalCoord1D[1] = -sqrt(5.+2.*sqrt(10./7.))/3.;
-//       m_flxPntsLocalCoord1D[2] = -sqrt(5.-2.*sqrt(10./7.))/3.;
-//       m_flxPntsLocalCoord1D[3] = 0.0;
-//       m_flxPntsLocalCoord1D[4] = +sqrt(5.-2.*sqrt(10./7.))/3.;
-//       m_flxPntsLocalCoord1D[5] = +sqrt(5.+2.*sqrt(10./7.))/3.;;
-//       m_flxPntsLocalCoord1D[6] = +1.;
-//     } break;
-//     default:
-//     {
-//       const std::string message = "Flux Reconstruction scheme with polynomial order " +
-//                                StringOps::to_str(m_polyOrder) + " not implemented...";
-//       throw Common::NotImplementedException (FromHere(),message);
-//     }
-//   }
-// }
+void FluxReconstructionElementData::computeRecCoefsFlxPnts1D()
+{
+  CFAUTOTRACE;
+
+  // number of solution points
+  const CFuint nbrSolPnts = m_polyOrder+1;
+
+  // resize m_recCoefsFlxPnts1D
+  m_recCoefsFlxPnts1D.resize(2,nbrSolPnts);
+
+  // compute reconstruction coefficients
+  for (CFuint iFlx = 0; iFlx < 2; ++iFlx)
+  {
+    const CFreal ksiFlx = 2.*iFlx-1.;
+    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+    {
+      const CFreal ksiSol = m_solPntsLocalCoord1D[iSol];
+      m_recCoefsFlxPnts1D(iFlx,iSol) = 1.;
+      for (CFuint iFac = 0; iFac < nbrSolPnts; ++iFac)
+      {
+        if (iFac != iSol)
+        {
+          const CFreal ksiFac = m_solPntsLocalCoord1D[iFac];
+          m_recCoefsFlxPnts1D(iFlx,iSol) *= (ksiFlx-ksiFac)/(ksiSol-ksiFac);
+        }
+      }
+    }
+  }
+
+  // create matrix for optimized reconstruction
+  // resize m_recCoefsFlxPnts1DOptim and m_solPntIdxsForRecFlxPnts1DOptim
+  m_recCoefsFlxPnts1DOptim.resize(2,nbrSolPnts);
+  m_solPntIdxsForRecFlxPnts1DOptim.resize(2);
+
+  // set reconstruction coefficients
+  for (CFuint iFlx = 0; iFlx < 2; ++iFlx)
+  {
+    CFuint solIdx = 0;
+    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+    {
+      if (std::abs(m_recCoefsFlxPnts1D(iFlx,iSol)) > MathTools::MathConsts::CFrealEps())
+      {
+        m_solPntIdxsForRecFlxPnts1DOptim[iFlx].push_back(iSol);
+        m_recCoefsFlxPnts1DOptim(iFlx,solIdx) = m_recCoefsFlxPnts1D(iFlx,iSol);
+        ++solIdx;
+      }
+    }
+  }
+}
 
 //////////////////////////////////////////////////////////////////////
 
-// void FluxReconstructionElementData::createSolPntsLocalCoord1D()
-// {
-//   CFAUTOTRACE;
-// 
-//   // number of solution points
-//   const CFuint nbrSolPnts = m_polyOrder+1;
-// 
-//   // resize m_solPntsLocalCoord1D
-//   m_solPntsLocalCoord1D.resize(nbrSolPnts);
-// 
-//   // set local coordinate
-//   // as in Kopriva and Kolias
-// /*  for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-//   {
-//     m_solPntsLocalCoord1D[iSol] = -cos((2*iSol+1)*MathTools::MathConsts::CFrealPi()/(2*m_polyOrder+2));
-//   }*/
-//   // at gauss-lobatto points
-// /*  if (m_polyOrder == CFPolyOrder::ORDER0)
-//   {
-//     m_solPntsLocalCoord1D[0] = 0.0;
-//   }
-//   else
-//   {
-//     for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-//     {
-//       m_solPntsLocalCoord1D[iSol] = -cos(iSol*MathTools::MathConsts::CFrealPi()/m_polyOrder);
-//     }
-//   }*/
-//   // most at flux points, symmetrical
-//   const CFuint nbrFlxPnts = m_polyOrder+2;
-//   CFuint solIdx = 0;
-//   for (CFuint iFlx = 0; iFlx < nbrSolPnts/2; ++iFlx, ++solIdx)
-//   {
-//     m_solPntsLocalCoord1D[solIdx] = m_flxPntsLocalCoord1D[iFlx];
-//   }
-//   if (nbrSolPnts%2 == 1)
-//   {
-//     m_solPntsLocalCoord1D[solIdx] = 0.5*(m_flxPntsLocalCoord1D[nbrSolPnts/2  ]+
-//                                          m_flxPntsLocalCoord1D[nbrSolPnts/2+1]);
-//     ++solIdx;
-//   }
-//   for (CFuint iFlx = nbrFlxPnts/2+1; iFlx < nbrFlxPnts; ++iFlx, ++solIdx)
-//   {
-//     m_solPntsLocalCoord1D[solIdx] = m_flxPntsLocalCoord1D[iFlx];
-//   }
-// // at flux points
-// /*  for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-//   {
-//     m_solPntsLocalCoord1D[iSol] = m_flxPntsLocalCoord1D[iSol];
-//   }*/
-// }
+void FluxReconstructionElementData::computeDerivCoefsSolPnts1D()
+{
+  CFAUTOTRACE;
+
+  // number of solution points
+  const CFuint nbrSolPnts = m_polyOrder+1;
+
+  // number of flux points
+  const CFuint nbrFlxPnts = 2;
+
+  // resize m_recCoefsFlxPnts1D
+  m_derivCoefsSolPnts1D.resize(nbrSolPnts,nbrFlxPnts);
+
+  // compute derivation coefficients
+  for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+  {
+    const CFreal ksiSol = m_solPntsLocalCoord1D[iSol];
+    for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+    {
+      const CFreal ksiFlx = 2.*iFlx-1.;
+      m_derivCoefsSolPnts1D(iSol,iFlx) = 0.;
+      for (CFuint iTerm = 0; iTerm < nbrFlxPnts; ++iTerm)
+      {
+        if (iTerm != iFlx)
+        {
+          const CFreal ksiTerm = m_flxPntsLocalCoord1D[iTerm];
+          CFreal term = 1./(ksiFlx-ksiTerm);
+          for (CFuint iFac = 0; iFac < nbrFlxPnts; ++iFac)
+          {
+            if (iFac != iFlx && iFac != iTerm)
+            {
+              const CFreal ksiFac = 2.*iFac-1.;
+              term *= (ksiSol-ksiFac)/(ksiFlx-ksiFac);
+            }
+          }
+          m_derivCoefsSolPnts1D(iSol,iFlx) += term;
+        }
+      }
+    }
+  }
+}
 
 //////////////////////////////////////////////////////////////////////
 
-// void FluxReconstructionElementData::computeRecCoefsFlxPnts1D()
-// {
-//   CFAUTOTRACE;
-// 
-//   // number of solution points
-//   const CFuint nbrSolPnts = m_polyOrder+1;
-// 
-//   // number of flux points
-//   const CFuint nbrFlxPnts = m_polyOrder+2;
-// 
-//   // resize m_recCoefsFlxPnts1D
-//   m_recCoefsFlxPnts1D.resize(nbrFlxPnts,nbrSolPnts);
-// 
-//   // compute reconstruction coefficients
-//   for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
-//   {
-//     const CFreal ksiFlx = m_flxPntsLocalCoord1D[iFlx];
-//     for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-//     {
-//       const CFreal ksiSol = m_solPntsLocalCoord1D[iSol];
-//       m_recCoefsFlxPnts1D(iFlx,iSol) = 1.;
-//       for (CFuint iFac = 0; iFac < nbrSolPnts; ++iFac)
-//       {
-//         if (iFac != iSol)
-//         {
-//           const CFreal ksiFac = m_solPntsLocalCoord1D[iFac];
-//           m_recCoefsFlxPnts1D(iFlx,iSol) *= (ksiFlx-ksiFac)/(ksiSol-ksiFac);
-//         }
-//       }
-//     }
-//   }
-// 
-//   // create matrix for optimized reconstruction
-//   // resize m_recCoefsFlxPnts1DOptim and m_solPntIdxsForRecFlxPnts1DOptim
-//   m_recCoefsFlxPnts1DOptim.resize(nbrFlxPnts,nbrSolPnts);
-//   m_solPntIdxsForRecFlxPnts1DOptim.resize(nbrFlxPnts);
-// 
-//   // set reconstruction coefficients
-//   for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
-//   {
-//     CFuint solIdx = 0;
-//     for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-//     {
-//       if (std::abs(m_recCoefsFlxPnts1D(iFlx,iSol)) > MathTools::MathConsts::CFrealEps())
-//       {
-//         m_solPntIdxsForRecFlxPnts1DOptim[iFlx].push_back(iSol);
-//         m_recCoefsFlxPnts1DOptim(iFlx,solIdx) = m_recCoefsFlxPnts1D(iFlx,iSol);
-//         ++solIdx;
-//       }
-//     }
-//   }
-// }
+void FluxReconstructionElementData::computeSolPolyDerivCoefsSolPnts1D()
+{
+  CFAUTOTRACE;
+
+  // number of solution points
+  const CFuint nbrSolPnts = m_polyOrder+1;
+
+  // number of flux points
+  const CFuint nbrFlxPnts = 2;
+
+  // resize m_solPolyDerivCoefsFlxPnts1D
+  m_solPolyDerivCoefsFlxPnts1D.resize(nbrFlxPnts,nbrSolPnts);
+
+  // compute derivation coefficients
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+  {
+    const CFreal ksiFlx = 2.*iFlx-1.;
+    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+    {
+      const CFreal ksiSol = m_solPntsLocalCoord1D[iSol];
+      m_solPolyDerivCoefsFlxPnts1D(iFlx,iSol) = 0.;
+      for (CFuint iTerm = 0; iTerm < nbrSolPnts; ++iTerm)
+      {
+        if (iTerm != iSol)
+        {
+          const CFreal ksiTerm = m_solPntsLocalCoord1D[iTerm];
+          CFreal term = 1./(ksiSol-ksiTerm);
+          for (CFuint iFac = 0; iFac < nbrSolPnts; ++iFac)
+          {
+            if (iFac != iSol && iFac != iTerm)
+            {
+              const CFreal ksiFac = m_solPntsLocalCoord1D[iFac];
+              term *= (ksiFlx-ksiFac)/(ksiSol-ksiFac);
+            }
+          }
+          m_solPolyDerivCoefsFlxPnts1D(iFlx,iSol) += term;
+        }
+      }
+    }
+  }
+}
 
 //////////////////////////////////////////////////////////////////////
 
-// void FluxReconstructionElementData::computeDerivCoefsSolPnts1D()
-// {
-//   CFAUTOTRACE;
-// 
-//   // number of solution points
-//   const CFuint nbrSolPnts = m_polyOrder+1;
-// 
-//   // number of flux points
-//   const CFuint nbrFlxPnts = m_polyOrder+2;
-// 
-//   // resize m_recCoefsFlxPnts1D
-//   m_derivCoefsSolPnts1D.resize(nbrSolPnts,nbrFlxPnts);
-// 
-//   // compute derivation coefficients
-//   for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-//   {
-//     const CFreal ksiSol = m_solPntsLocalCoord1D[iSol];
-//     for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
-//     {
-//       const CFreal ksiFlx = m_flxPntsLocalCoord1D[iFlx];
-//       m_derivCoefsSolPnts1D(iSol,iFlx) = 0.;
-//       for (CFuint iTerm = 0; iTerm < nbrFlxPnts; ++iTerm)
-//       {
-//         if (iTerm != iFlx)
-//         {
-//           const CFreal ksiTerm = m_flxPntsLocalCoord1D[iTerm];
-//           CFreal term = 1./(ksiFlx-ksiTerm);
-//           for (CFuint iFac = 0; iFac < nbrFlxPnts; ++iFac)
-//           {
-//             if (iFac != iFlx && iFac != iTerm)
-//             {
-//               const CFreal ksiFac = m_flxPntsLocalCoord1D[iFac];
-//               term *= (ksiSol-ksiFac)/(ksiFlx-ksiFac);
-//             }
-//           }
-//           m_derivCoefsSolPnts1D(iSol,iFlx) += term;
-//         }
-//       }
-//     }
-//   }
-// }
+void FluxReconstructionElementData::computeSolPolyDerivCoefsFlxPnts1D()
+{
+  CFAUTOTRACE;
 
-//////////////////////////////////////////////////////////////////////
+  // number of solution points
+  const CFuint nbrSolPnts = m_polyOrder+1;
 
-// void FluxReconstructionElementData::computeSolPolyDerivCoefsSolPnts1D()
-// {
-//   CFAUTOTRACE;
-// 
-//   // number of solution points
-//   const CFuint nbrSolPnts = m_polyOrder+1;
-// 
-//   // number of flux points
-//   const CFuint nbrFlxPnts = m_polyOrder+2;
-// 
-//   // resize m_solPolyDerivCoefsFlxPnts1D
-//   m_solPolyDerivCoefsFlxPnts1D.resize(nbrFlxPnts,nbrSolPnts);
-// 
-//   // compute derivation coefficients
-//   for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
-//   {
-//     const CFreal ksiFlx = m_flxPntsLocalCoord1D[iFlx];
-//     for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-//     {
-//       const CFreal ksiSol = m_solPntsLocalCoord1D[iSol];
-//       m_solPolyDerivCoefsFlxPnts1D(iFlx,iSol) = 0.;
-//       for (CFuint iTerm = 0; iTerm < nbrSolPnts; ++iTerm)
-//       {
-//         if (iTerm != iSol)
-//         {
-//           const CFreal ksiTerm = m_solPntsLocalCoord1D[iTerm];
-//           CFreal term = 1./(ksiSol-ksiTerm);
-//           for (CFuint iFac = 0; iFac < nbrSolPnts; ++iFac)
-//           {
-//             if (iFac != iSol && iFac != iTerm)
-//             {
-//               const CFreal ksiFac = m_solPntsLocalCoord1D[iFac];
-//               term *= (ksiFlx-ksiFac)/(ksiSol-ksiFac);
-//             }
-//           }
-//           m_solPolyDerivCoefsFlxPnts1D(iFlx,iSol) += term;
-//         }
-//       }
-//     }
-//   }
-// }
+  // resize m_solPolyDerivCoefsSolPnts1D
+  m_solPolyDerivCoefsSolPnts1D.resize(nbrSolPnts,nbrSolPnts);
 
-//////////////////////////////////////////////////////////////////////
-
-// void FluxReconstructionElementData::computeSolPolyDerivCoefsFlxPnts1D()
-// {
-//   CFAUTOTRACE;
-// 
-//   // number of solution points
-//   const CFuint nbrSolPnts = m_polyOrder+1;
-// 
-//   // resize m_solPolyDerivCoefsSolPnts1D
-//   m_solPolyDerivCoefsSolPnts1D.resize(nbrSolPnts,nbrSolPnts);
-// 
-//   // compute derivation coefficients
-//   for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-//   {
-//     const CFreal ksiSol = m_solPntsLocalCoord1D[iSol];
-//     for (CFuint iSol2 = 0; iSol2 < nbrSolPnts; ++iSol2)
-//     {
-//       const CFreal ksiSol2 = m_solPntsLocalCoord1D[iSol2];
-//       m_solPolyDerivCoefsSolPnts1D(iSol,iSol2) = 0.;
-//       for (CFuint iTerm = 0; iTerm < nbrSolPnts; ++iTerm)
-//       {
-//         if (iTerm != iSol2)
-//         {
-//           const CFreal ksiTerm = m_solPntsLocalCoord1D[iTerm];
-//           CFreal term = 1./(ksiSol2-ksiTerm);
-//           for (CFuint iFac = 0; iFac < nbrSolPnts; ++iFac)
-//           {
-//             if (iFac != iSol2 && iFac != iTerm)
-//             {
-//               const CFreal ksiFac = m_solPntsLocalCoord1D[iFac];
-//               term *= (ksiSol-ksiFac)/(ksiSol2-ksiFac);
-//             }
-//           }
-//           m_solPolyDerivCoefsSolPnts1D(iSol,iSol2) += term;
-//         }
-//       }
-//     }
-//   }
-// }
+  // compute derivation coefficients
+  for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+  {
+    const CFreal ksiSol = m_solPntsLocalCoord1D[iSol];
+    for (CFuint iSol2 = 0; iSol2 < nbrSolPnts; ++iSol2)
+    {
+      const CFreal ksiSol2 = m_solPntsLocalCoord1D[iSol2];
+      m_solPolyDerivCoefsSolPnts1D(iSol,iSol2) = 0.;
+      for (CFuint iTerm = 0; iTerm < nbrSolPnts; ++iTerm)
+      {
+        if (iTerm != iSol2)
+        {
+          const CFreal ksiTerm = m_solPntsLocalCoord1D[iTerm];
+          CFreal term = 1./(ksiSol2-ksiTerm);
+          for (CFuint iFac = 0; iFac < nbrSolPnts; ++iFac)
+          {
+            if (iFac != iSol2 && iFac != iTerm)
+            {
+              const CFreal ksiFac = m_solPntsLocalCoord1D[iFac];
+              term *= (ksiSol-ksiFac)/(ksiSol2-ksiFac);
+            }
+          }
+          m_solPolyDerivCoefsSolPnts1D(iSol,iSol2) += term;
+        }
+      }
+    }
+  }
+}
 
 //////////////////////////////////////////////////////////////////////
 

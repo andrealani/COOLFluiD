@@ -69,4 +69,4 @@ private: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif  // COOLFluiD_Numerics_FluxReconstructionMethod_LaxFriedrichsFlux_hh
+#endif  // COOLFluiD_FluxReconstructionMethod_LaxFriedrichsFlux_hh
