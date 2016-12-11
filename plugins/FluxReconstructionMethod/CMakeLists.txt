@@ -185,6 +185,8 @@ FluxReconstructionBaseFunctionFaceQuadP4.hh
 FluxReconstructionBaseFunctionFaceQuadP4.cxx
 FluxReconstructionBaseFunctionFaceQuadP5.hh
 FluxReconstructionBaseFunctionFaceQuadP5.cxx
+VCJH.hh
+VCJH.cxx
 )
 
 LIST ( APPEND FluxReconstructionMethod_cflibs Framework ShapeFunctions )
