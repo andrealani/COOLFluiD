@@ -711,7 +711,7 @@ void RadiativeTransferFVDOM::execute()
     // Compute the order of advance
     // Call the function to get the directions
     divQ = 0.0;
-    m_II = 0.0;
+    for (CFuint i = 0; i < m_II.size(); ++i) {m_II[i] = 0.0;}
     
     const CFuint startBin = m_startEndBin.first;
     const CFuint endBin   = m_startEndBin.second+1;
@@ -756,13 +756,13 @@ void RadiativeTransferFVDOM::getFieldOpacities(CFuint ib)
 {
   CFLog(VERBOSE, "RadiativeTransferFVDOM::getFieldOpacities() => start\n");
   
-  m_fieldSource = 0.;
+  for (CFuint i = 0; i < m_fieldSource.size(); ++i) {m_fieldSource[i] = 0.;}
   if(m_useExponentialMethod) {
-    m_fieldAbsor  = 0.;
+    for (CFuint i = 0; i < m_fieldAbsor.size(); ++i) {m_fieldAbsor[i] = 0.;}
   }
   else {
-    m_fieldAbSrcV = 0.;
-    m_fieldAbV    = 0.;
+    for (CFuint i = 0; i < m_fieldAbSrcV.size(); ++i) {m_fieldAbSrcV[i] = 0.;}
+    for (CFuint i = 0; i < m_fieldAbV.size(); ++i) {m_fieldAbV[i] = 0.;}
   }
   
   DataHandle<CFreal> TempProfile    = socket_TempProfile.getDataHandle();
