@@ -40,9 +40,9 @@ Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = 1 2 3 4
 
 Simulator.SubSystem.CFmesh.FileName     = hemi.CFmesh
-Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.CFmesh.SaveRate = 200
 Simulator.SubSystem.CFmesh.AppendTime = false
-Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = true
 
 #Simulator.SubSystem.StopCondition       = MaxNumberSteps
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 30
@@ -53,7 +53,8 @@ Simulator.SubSystem.Norm.valueNorm      = -5.
 Simulator.SubSystem.Default.listTRS = 1 2 3 4
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = hemisphere.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = hemiN.CFmesh
+# hemisphere.CFmesh
 # Converting from Tecplot mesh
 # # file.plt and file.surf.plt must be both present
 Simulator.SubSystem.CFmeshFileReader.convertFrom = Tecplot2CFmesh
@@ -61,9 +62,9 @@ Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Discontinuous = true
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.HasBlockFormat = false
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SurfaceTRS = 1 2 3 4
-#Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = "Z(1)" "Z(2)" "Z(3)" "Z(4)" "Z(5)" 
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = "p" "u" "v" "w" "T" 
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.NbElementTypes = 1
-Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = true
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = false
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
 # # Safety practice: generate scaled up meshes w/ gambit and rescale
 # # them back before running. When restarting comment out the scaling factor,
@@ -74,7 +75,7 @@ Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<10,1.,min(300.,cfl*1.1))
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<700,1.,if(i<900,min(10.,cfl*1.03),min(100.,cfl*1.03)))
 
 Simulator.SubSystem.LinearSystemSolver = PETSC PETSC
 Simulator.SubSystem.LSSNames = MeshAlgoLSS BwdEulerLSS
@@ -100,7 +101,7 @@ Simulator.SubSystem.NewtonIterator.Data.CollaboratorNames = BwdEulerLSS
 Simulator.SubSystem.CellCenterFVM.Data.CollaboratorNames = BwdEulerLSS
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
-#Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.Restart = true
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
 #Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff = true
 Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
@@ -119,12 +120,12 @@ Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
 Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS3D
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.limitIter = 1500
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.limitIter = 500
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.limitRes = -4.0
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.gradientFactor = 0.
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.Vars = i
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.Def = \
-	if(i<700,0.,1.) if(i<700,0.,1.) if(i<700,0.,1.) if(i<500,0.,1.)
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.Vars = i
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS3D.Def = \
+#	if(i<200,0.,1.) if(i<200,0.,1.) if(i<200,0.,1.) if(i<200,0.,1.)
 Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn3D
 Simulator.SubSystem.CellCenterFVM.Data.Venktn3D.coeffEps = 1.0
 Simulator.SubSystem.CellCenterFVM.Data.Venktn3D.useFullStencil = true
@@ -164,9 +165,9 @@ Simulator.SubSystem.DataPostProcessing          = DataProcessing
 Simulator.SubSystem.DataPostProcessingNames     = MeFiAlgo
 Simulator.SubSystem.MeFiAlgo.Comds              = MeshFittingAlgorithm
 Simulator.SubSystem.MeFiAlgo.Data.CollaboratorNames = MeshAlgoLSS
-Simulator.SubSystem.MeFiAlgo.ProcessRate        = 100000
+Simulator.SubSystem.MeFiAlgo.ProcessRate        = 10
 Simulator.SubSystem.MeFiAlgo.SkipFirstIteration = true
-Simulator.SubSystem.MeFiAlgo.StopIter           = 200000
+Simulator.SubSystem.MeFiAlgo.StopIter           = 5000
 Simulator.SubSystem.MeFiAlgo.Names              = MeshFitting
 Simulator.SubSystem.MeFiAlgo.Data.updateVar     = Pvt
 Simulator.SubSystem.MeFiAlgo.MeshFitting.minPercentile    = 0.30
