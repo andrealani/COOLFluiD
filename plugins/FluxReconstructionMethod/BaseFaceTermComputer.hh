@@ -1,4 +1,4 @@
-#ifndef COOLFlui_FluxReconstructionMethod_BaseFaceTermComputer_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_BaseFaceTermComputer_hh
 #define COOLFluiD_FluxReconstructionMethod_BaseFaceTermComputer_hh
 
 //////////////////////////////////////////////////////////////////////////////

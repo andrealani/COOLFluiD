@@ -38,17 +38,23 @@ NullCorrectionFunction::~NullCorrectionFunction()
   CFAUTOTRACE;
 }
 
+
 //////////////////////////////////////////////////////////////////////////////
 
-void NullCorrectionFunction::compute()
+void NullCorrectionFunction::computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > > corrcts)
 {
-  CFAUTOTRACE;
-
-  CFLog(VERBOSE, "NullCorrectionFunction::compute()\n");
+    CFAUTOTRACE;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
+void NullCorrectionFunction::computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > > corrcts)
+{
+    CFAUTOTRACE;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
 void NullCorrectionFunction::setup()
 {
   CFAUTOTRACE;

@@ -27,6 +27,12 @@ class VCJH : public BaseCorrectionFunction {
 
 public:  // methods
 
+  /// Defines the Config Options of this class
+  static void defineConfigOptions(Config::OptionList& options);
+    
+  /// Configures this Method.
+  virtual void configure ( Config::ConfigArgs& args );
+    
   /// Constructor
   VCJH(const std::string& name);
 
@@ -34,13 +40,22 @@ public:  // methods
   ~VCJH();
     
   /// Compute the VCJH correction function of an instance of FluxReconstructionElementData
-  void computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, const std::vector< std::vector< RealVector > > corrcts);
+  void computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > > corrcts);
     
+  /// Compute the divergence of the VCJH correction function of an instance of FluxReconstructionElementData
+  void computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > > corrcts);
     
-private :
-  /// Compute the value of the VCJH 1D correction function of order p at ksi
+private : // helper functions
+  /// Compute the value of the VCJH 1D correction function of order p and cfactor at the 1D coordinate ksi
   CFreal computeCorrectionFunction1D(CFPolyOrder::Type solOrder, CFreal ksi, CFreal cfactor);
 
+  /// Compute the value of the derivative of the VCJH 1D correction function of order p and cfactor at the 1D coordinate ksi
+  CFreal computeDerivativeCorrectionFunction1D(CFPolyOrder::Type solOrder, CFreal ksi, CFreal cfactor);
+
+private : // private data
+  /// Value of the C factor for VCJH 1D correction function
+  CFreal  m_cfactor;
+    
   /// Gets the Class name
   static std::string getClassName()
   {

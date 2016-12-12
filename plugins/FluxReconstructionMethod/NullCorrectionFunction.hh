@@ -11,6 +11,7 @@
 
 #include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
+#include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -31,9 +32,12 @@ public:  // methods
 
   /// Destructor
   ~NullCorrectionFunction();
-  
-  /// Add compute the term to add in the jacobian
-  void compute();
+
+  /// Compute the Null correction function of an instance of FluxReconstructionElementData
+  void computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > > corrcts);
+    
+  /// Compute the divergence of the Null correction function of an instance of FluxReconstructionElementData
+  void computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > > corrcts);
   
   /// Set up private data and data
   void setup();
