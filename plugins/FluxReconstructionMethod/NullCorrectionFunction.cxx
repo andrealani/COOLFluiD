@@ -48,7 +48,7 @@ void NullCorrectionFunction::computeCorrectionFunction(Common::SafePtr< FluxReco
 
 //////////////////////////////////////////////////////////////////////////////
 
-void NullCorrectionFunction::computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > > corrcts)
+void NullCorrectionFunction::computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< CFreal > > corrcts)
 {
     CFAUTOTRACE;
 }

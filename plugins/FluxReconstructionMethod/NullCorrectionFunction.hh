@@ -37,7 +37,7 @@ public:  // methods
   void computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > > corrcts);
     
   /// Compute the divergence of the Null correction function of an instance of FluxReconstructionElementData
-  void computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > > corrcts);
+  void computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< CFreal > > corrcts);
   
   /// Set up private data and data
   void setup();

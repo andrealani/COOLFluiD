@@ -93,7 +93,7 @@ void VCJH::computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementD
       
 //////////////////////////////////////////////////////////////////////////////
 
-void VCJH::computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > > corrfct)
+void VCJH::computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< CFreal > > corrfct)
 {
     CFAUTOTRACE;
     const CFGeoShape::Type elemShape = frElemData->getShape();

@@ -43,7 +43,7 @@ public:  // methods
   void computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > > corrcts);
     
   /// Compute the divergence of the VCJH correction function of an instance of FluxReconstructionElementData
-  void computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > > corrcts);
+  void computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< CFreal > > corrcts);
     
 private : // helper functions
   /// Compute the value of the VCJH 1D correction function of order p and cfactor at the 1D coordinate ksi
