@@ -756,6 +756,11 @@ void QuadFluxReconstructionElementData::createFaceNormals()
   CFAUTOTRACE;
 
   m_faceNormals.resize(4);
+  
+  for (CFuint iFace = 0; iFace < 4; ++iFace)
+  {
+    m_faceNormals[iFace].resize(2);
+  }
 
   m_faceNormals[0][0] = 0.;
   m_faceNormals[0][1] = -1.;

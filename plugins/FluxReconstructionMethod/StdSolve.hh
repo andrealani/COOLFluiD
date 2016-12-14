@@ -13,6 +13,7 @@
 
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
 #include "FluxReconstructionMethod/RiemannFlux.hh"
+#include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
 #include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -39,6 +40,17 @@ public: // functions
   void execute();
   
   /**
+   * Defines the Config Option's of this class
+   * @param options a OptionList where to add the Option's
+   */
+  static void defineConfigOptions(Config::OptionList& options);
+  
+  /**
+   * Configures the command.
+   */
+  virtual void configure ( Config::ConfigArgs& args );
+  
+  /**
    * Set up private data and data of the aggregated classes
    * in this command before processing phase
    */
@@ -53,6 +65,11 @@ public: // functions
   /// @return a vector of SafePtr with the DataSockets
   std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
     needsSockets();
+    
+protected: //functions
+
+  /// add the residual updates to the RHS
+  void updateRHS();
 
 protected: //data
   /// socket for gradients
@@ -60,6 +77,9 @@ protected: //data
   
   /// socket for normals
   Framework::DataSocketSink< CFreal > socket_normals;
+  
+  /// storage of the rhs
+  Framework::DataSocketSink<CFreal> socket_rhs;
   
   /// builder of cells
   Common::SafePtr<Framework::GeometricEntityPool<Framework::StdTrsGeoBuilder> > m_cellBuilder;
@@ -74,13 +94,13 @@ protected: //data
   std::vector< Framework::State* >* m_cellStates;
   
   /// vector containing pointers to the states in a cell
-  std::vector< std::vector< Framework::State* >* > m_cellStatesFlxPnt;
+  std::vector< std::vector< Framework::State* > > m_cellStatesFlxPnt;
   
   /// vector containing pointers to the internal fluxes in a cell (fr each sol pnt)
   std::vector< RealVector >* m_cellIntFlx;
   
   /// vector containing pointers to the fluxes in the flux points
-  std::vector< Common::SafePtr< std::vector< RealVector > > > m_cellFlx;
+  std::vector< std::vector< RealVector > > m_cellFlx;
   
   /// vector containing pointers to the face normals
   Common::SafePtr< std::vector< RealVector > > m_faceNormals;
@@ -98,7 +118,7 @@ protected: //data
   Common::SafePtr< std::vector< std::vector< CFuint > > > m_faceConnPerOrient;
   
   /// interface minus discontinuous flux in the flux points for each face
-  std::vector< Common::SafePtr< std::vector< std::vector< RealVector > > > > m_corrFlxFactor;
+  std::vector< std::vector< std::vector< RealVector > > > m_corrFlxFactor;
   
   /// builder of faces
   Common::SafePtr<Framework::GeometricEntityPool<Framework::FaceToCellGEBuilder> > m_faceBuilder;
@@ -121,6 +141,15 @@ protected: //data
   /// Riemann flux
   Common::SafePtr< RiemannFlux > m_riemannFluxComputer;
   
+  /// Correction function computer
+  Common::SafePtr< BaseCorrectionFunction > m_corrFctComputer;
+  
+  /// Correction function for current cell
+  std::vector< std::vector< RealVector > > m_corrFct;
+  
+  /// Divergence of the correction function for current cell
+  std::vector< std::vector< CFreal > > m_corrFctDiv;
+  
   /// variable for the states in the left and right cell
   std::vector< std::vector< Framework::State* >* > m_states;
   
@@ -132,6 +161,11 @@ protected: //data
   
   /// Divergence of the continuous flux at the solution points
   std::vector< RealVector> m_divContFlx;
+  
+  private:
+
+  /// Physical data temporary vector
+  RealVector m_pData;
   
 }; // class Solve
 

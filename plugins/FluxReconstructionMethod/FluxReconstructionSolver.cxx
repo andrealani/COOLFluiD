@@ -358,27 +358,28 @@ void FluxReconstructionSolver::initializeSolutionImpl(bool isRestart)
 void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
 {
   CFAUTOTRACE;
-  cf_assert(m_solve.isNotNull());
-  m_solve->execute();
   
   cf_assert(isConfigured());
   cf_assert(isSetup());
-
+  
   // set the residual factor in the MethodData
   m_data->setResFactor(factor);
-
+  
   // apply the boundary conditions (this function is in SpaceMethod and is not called anywhere else)
   applyBC();
-
-  // compute the face terms of the SV discretization of the convective terms
-  cf_assert(m_convFaceTerm.isNotNull());
-  m_convFaceTerm->execute();
-
-  // compute the volume terms of the SV discretization of the convective terms
-  // should be placed after the computation of the convective boundary conditions and the convective face terms
-  // for proper computation of the gradients
-  cf_assert(m_convVolTerm.isNotNull());
-  m_convVolTerm->execute();
+  
+  cf_assert(m_solve.isNotNull());
+  m_solve->execute();
+  
+//   // compute the face terms of the SV discretization of the convective terms
+//   cf_assert(m_convFaceTerm.isNotNull());
+//   m_convFaceTerm->execute();
+// 
+//   // compute the volume terms of the SV discretization of the convective terms
+//   // should be placed after the computation of the convective boundary conditions and the convective face terms
+//   // for proper computation of the gradients
+//   cf_assert(m_convVolTerm.isNotNull());
+//   m_convVolTerm->execute();
 
 //   // if there is a diffusive term, compute the diffusive contributions to the residual
 //   if (m_data->hasDiffTerm() && m_data->separateConvDiffComs())

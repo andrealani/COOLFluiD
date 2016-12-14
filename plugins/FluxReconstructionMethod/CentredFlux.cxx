@@ -51,6 +51,7 @@ RealVector& CentredFlux::computeFlux(State& lState,
   // Set members to current left and right update state
   m_updateStates[LEFT]  = &lState;
   m_updateStates[RIGHT] = &rState;
+  CFLog(VERBOSE, "LeftState = " << (*(m_updateStates[RIGHT]->getData()))[0] << "\n");
   
   // compute physical data for the left and the right internal flux points
   updateVarSet->computePhysicalData(lState, m_pData[LEFT]);
