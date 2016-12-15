@@ -828,55 +828,55 @@ void QuadFluxReconstructionElementData::createFaceIntegrationCoefs()
 {
   CFAUTOTRACE;
 
-//   // number of flux points on a face
-//   const CFuint nbrFlxPnts = m_solPntsLocalCoord1D.size();
-// 
-//   // resize m_faceIntegrationCoefs
-//   m_faceIntegrationCoefs.resize(nbrFlxPnts);
-// 
-//   // create TensorProductGaussIntegrator
-//   TensorProductGaussIntegrator tpIntegrator(DIM_1D,m_polyOrder);
-// 
-//   // create face node local coordinates
-//   vector< RealVector > nodeCoord(2);
-//   nodeCoord[0].resize(1);
-//   nodeCoord[0][KSI] = -1.0;
-//   nodeCoord[1].resize(1);
-//   nodeCoord[1][KSI] = +1.0;
-// 
-//   // get quadrature point coordinates and wheights
-//   vector< RealVector > quadPntCoords   = tpIntegrator.getQuadPntsCoords  (nodeCoord);
-//   vector< CFreal     > quadPntWheights = tpIntegrator.getQuadPntsWheights(nodeCoord);
-//   const CFuint nbrQPnts = quadPntCoords.size();
-//   cf_assert(quadPntWheights.size() == nbrQPnts);
-// 
-//   // compute the coefficients for integration over a face
-//   // loop over flux points
-//   for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
-//   {
-//     m_faceIntegrationCoefs[iFlx] = 0.0;
-// 
-//     const CFreal ksiFlx = m_solPntsLocalCoord1D[iFlx];
-//     for (CFuint iQPnt = 0; iQPnt < nbrQPnts; ++iQPnt)
-//     {
-//       // quadrature point local coordinate on the face
-//       const CFreal ksiQPnt = quadPntCoords[iQPnt][KSI];
-// 
-//       // evaluate polynomial value in quadrature point
-//       CFreal quadPntPolyVal = 1.;
-//       for (CFuint iFac = 0; iFac < nbrFlxPnts; ++iFac)
-//       {
-//         if (iFac != iFlx)
-//         {
-//           const CFreal ksiFac = m_solPntsLocalCoord1D[iFac];
-//           quadPntPolyVal *= (ksiQPnt-ksiFac)/(ksiFlx-ksiFac);
-//         }
-//       }
-// 
-//       // add contribution of quadrature point to integration coefficient
-//       m_faceIntegrationCoefs[iFlx] += quadPntWheights[iQPnt]*quadPntPolyVal;
-//     }
-//   }
+  // number of flux points on a face
+  const CFuint nbrFlxPnts = m_flxPntsLocalCoord1D.size();
+
+  // resize m_faceIntegrationCoefs
+  m_faceIntegrationCoefs.resize(nbrFlxPnts);
+
+  // create TensorProductGaussIntegrator
+  TensorProductGaussIntegrator tpIntegrator(DIM_1D,m_polyOrder);
+
+  // create face node local coordinates
+  vector< RealVector > nodeCoord(2);
+  nodeCoord[0].resize(1);
+  nodeCoord[0][KSI] = -1.0;
+  nodeCoord[1].resize(1);
+  nodeCoord[1][KSI] = +1.0;
+
+  // get quadrature point coordinates and wheights
+  vector< RealVector > quadPntCoords   = tpIntegrator.getQuadPntsCoords  (nodeCoord);
+  vector< CFreal     > quadPntWheights = tpIntegrator.getQuadPntsWheights(nodeCoord);
+  const CFuint nbrQPnts = quadPntCoords.size();
+  cf_assert(quadPntWheights.size() == nbrQPnts);
+
+  // compute the coefficients for integration over a face
+  // loop over flux points
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+  {
+    m_faceIntegrationCoefs[iFlx] = 0.0;
+
+    const CFreal ksiFlx = m_flxPntsLocalCoord1D[iFlx];
+    for (CFuint iQPnt = 0; iQPnt < nbrQPnts; ++iQPnt)
+    {
+      // quadrature point local coordinate on the face
+      const CFreal ksiQPnt = quadPntCoords[iQPnt][KSI];
+
+      // evaluate polynomial value in quadrature point
+      CFreal quadPntPolyVal = 1.;
+      for (CFuint iFac = 0; iFac < nbrFlxPnts; ++iFac)
+      {
+        if (iFac != iFlx)
+        {
+          const CFreal ksiFac = m_flxPntsLocalCoord1D[iFac];
+          quadPntPolyVal *= (ksiQPnt-ksiFac)/(ksiFlx-ksiFac);
+        }
+      }
+
+      // add contribution of quadrature point to integration coefficient
+      m_faceIntegrationCoefs[iFlx] += quadPntWheights[iQPnt]*quadPntPolyVal;
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////

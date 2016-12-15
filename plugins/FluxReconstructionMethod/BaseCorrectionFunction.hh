@@ -49,10 +49,10 @@ public:  // methods
   virtual std::string getPolymorphicTypeName() {return getClassName();}
     
   /// Compute the VCJH correction function of an instance of FluxReconstructionElementData
-  virtual void computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > > corrcts) = 0;
+  virtual void computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > >& corrcts) = 0;
     
   /// Compute the divergence of the VCJH correction function of an instance of FluxReconstructionElementData
-  virtual void computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< CFreal > > corrcts) = 0;
+  virtual void computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< CFreal > >& corrcts) = 0;
 
   /// Set up private data and data
   virtual void setup();

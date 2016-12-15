@@ -64,15 +64,15 @@ void StdPrepare::execute()
 //     }
 //   }
 // 
-//   // reset the jacobian
-//   if (getMethodData().getLinearSystemSolver().size() > 0)
-//   {
-//     SafePtr<LSSMatrix> jacobMatrix = getMethodData().getLinearSystemSolver()[0]->getMatrix();
-//     if (jacobMatrix.isNotNull())
-//     {
-//       jacobMatrix->resetToZeroEntries();
-//     }
-//   }
+  // reset the jacobian
+  if (getMethodData().getLinearSystemSolver().size() > 0)
+  {
+    SafePtr<LSSMatrix> jacobMatrix = getMethodData().getLinearSystemSolver()[0]->getMatrix();
+    if (jacobMatrix.isNotNull())
+    {
+      jacobMatrix->resetToZeroEntries();
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

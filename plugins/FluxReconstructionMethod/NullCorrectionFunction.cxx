@@ -41,14 +41,14 @@ NullCorrectionFunction::~NullCorrectionFunction()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void NullCorrectionFunction::computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > > corrcts)
+void NullCorrectionFunction::computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > >& corrcts)
 {
     CFAUTOTRACE;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void NullCorrectionFunction::computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< CFreal > > corrcts)
+void NullCorrectionFunction::computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< CFreal > >& corrcts)
 {
     CFAUTOTRACE;
 }

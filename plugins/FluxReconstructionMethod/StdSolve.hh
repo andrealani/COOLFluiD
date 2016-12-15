@@ -70,6 +70,21 @@ protected: //functions
 
   /// add the residual updates to the RHS
   void updateRHS();
+  
+  /// add the updates to the wave speed
+  void updateWaveSpeed();
+  
+  /**
+   * compute the wave speed updates for this face
+   * @pre reconstructFluxPntsStates(), reconstructFaceAvgState(),
+   *      setFaceTermData() and set the geometrical data of the face
+   */
+  void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd);
+  
+  /**
+   * Divides by jacobian determinant
+   */
+  void divideByJacobDet();
 
 protected: //data
   /// socket for gradients
@@ -80,6 +95,16 @@ protected: //data
   
   /// storage of the rhs
   Framework::DataSocketSink<CFreal> socket_rhs;
+  
+  /// socket for updateCoeff
+  /// denominators of the coefficients for the update
+  Framework::DataSocketSink<CFreal > socket_updateCoeff;
+  
+  /// socket for size of projection vector in face flux points
+  Framework::DataSocketSink<  std::vector< CFreal > > socket_faceJacobVecSizeFaceFlxPnts;
+  
+  /// update variable set
+  Common::SafePtr< Framework::ConvectiveVarSet > m_updateVarSet;
   
   /// builder of cells
   Common::SafePtr<Framework::GeometricEntityPool<Framework::StdTrsGeoBuilder> > m_cellBuilder;
@@ -93,7 +118,7 @@ protected: //data
   /// vector containing pointers to the states in a cell
   std::vector< Framework::State* >* m_cellStates;
   
-  /// vector containing pointers to the states in a cell
+  /// extrapolated states in the flux points of the cell
   std::vector< std::vector< Framework::State* > > m_cellStatesFlxPnt;
   
   /// vector containing pointers to the internal fluxes in a cell (fr each sol pnt)
@@ -161,6 +186,15 @@ protected: //data
   
   /// Divergence of the continuous flux at the solution points
   std::vector< RealVector> m_divContFlx;
+  
+  /// updates for the wave speed
+  std::vector< CFreal > m_waveSpeedUpd;
+  
+  /// face Jacobian vector sizes (abs)
+  std::vector< CFreal > m_faceJacobVecAbsSizeFlxPnts;
+  
+  /// coefficients for integration over a face
+  Common::SafePtr< RealVector > m_faceIntegrationCoefs;
   
   private:
 

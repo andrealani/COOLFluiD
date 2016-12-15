@@ -49,8 +49,8 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
   //options.addConfigOption< std::string >("IntegratorQuadrature","Type of Quadrature to be used in the Integration.");
   options.addConfigOption< std::string >("LinearVar","Name of the linear variable set.");
   options.addConfigOption< std::string >("FluxPointDistribution","Name of the flux point distribution");
-  options.addConfigOption< std::string >("SolutionPointDistribution","Name of the solution point distribution");
   options.addConfigOption< std::string >("RiemannFlux","Name of the Riemann flux.");
+  options.addConfigOption< std::string >("SolutionPointDistribution","Name of the solution point distribution");
   options.addConfigOption< std::string >("BndFaceTermComputer","Name of the boundary face term computer."  );
   options.addConfigOption< std::string >("FaceTermComputer","Name of the face term computer."  );
   options.addConfigOption< std::string >("VolTermComputer" ,"Name of the volume term computer.");
@@ -392,30 +392,6 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
   }
   cf_assert(m_correctionfunction.isNotNull());
   
-  // Configure Riemann flux
-  CFLog(INFO,"Configure Riemann flux: " << m_riemannFluxStr << "\n");
-
-  try
-  {
-    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , RiemannFlux > > prov =
-      Environment::Factory< RiemannFlux >::getInstance().getProvider(m_riemannFluxStr);
-    cf_assert(prov.isNotNull());
-    m_riemannFlux = prov->create(m_riemannFluxStr,thisPtr);
-    configureNested ( m_riemannFlux.getPtr(), args );
-  }
-  catch (Common::NoSuchValueException& e)
-  {
-    CFLog(VERBOSE, e.what() << "\n");
-    CFLog(VERBOSE, "Choosing RoeFlux instead ...\n");
-
-    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , RiemannFlux > > prov =
-      Environment::Factory< RiemannFlux >::getInstance().getProvider("RoeFlux");
-    cf_assert(prov.isNotNull());
-    m_riemannFlux = prov->create("RoeFlux", thisPtr);
-    configureNested ( m_riemannFlux.getPtr(), args );
-  }
-  cf_assert(m_riemannFlux.isNotNull());
-  
   // Configure BC state computers
   CFLog(INFO,"Configure BC state computers\n");
   cf_assert(m_bcTypeStr.size() == m_bcNameStr.size());
@@ -442,6 +418,30 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
     // set SafePtr
     m_bcsSP[iBc] = m_bcs[iBc].getPtr();
   }
+  
+  // Configure Riemann flux
+  CFLog(INFO,"Configure Riemann flux: " << m_riemannFluxStr << "\n");
+
+  try
+  {
+    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , RiemannFlux > > prov =
+      Environment::Factory< RiemannFlux >::getInstance().getProvider(m_riemannFluxStr);
+    cf_assert(prov.isNotNull());
+    m_riemannFlux = prov->create(m_riemannFluxStr,thisPtr);
+    configureNested ( m_riemannFlux.getPtr(), args );
+  }
+  catch (Common::NoSuchValueException& e)
+  {
+    CFLog(VERBOSE, e.what() << "\n");
+    CFLog(VERBOSE, "Choosing RoeFlux instead ...\n");
+
+    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , RiemannFlux > > prov =
+      Environment::Factory< RiemannFlux >::getInstance().getProvider("RoeFlux");
+    cf_assert(prov.isNotNull());
+    m_riemannFlux = prov->create("RoeFlux", thisPtr);
+    configureNested ( m_riemannFlux.getPtr(), args );
+  }
+  cf_assert(m_riemannFlux.isNotNull());
   
   // Configure states reconstructor
   Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , ReconstructStatesFluxReconstruction > > recProv =

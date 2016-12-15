@@ -54,6 +54,7 @@ void RiemannFlux::setup()
   for (CFuint i = 0; i < m_pData.size(); ++i) {
     convTerm->resizePhysicalData(m_pData[i]);
   }
+  
   m_solStates.resize(2);
   m_updateStates.resize(2);
 }
