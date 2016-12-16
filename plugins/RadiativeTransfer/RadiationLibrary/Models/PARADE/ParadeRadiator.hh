@@ -84,7 +84,7 @@ public:
   void getData();
   
   inline void getSpectralIdxs(CFreal lambda, CFuint& idx1, CFuint& idx2);
-  
+
 private:
 
   void setLibrarySequentially();
@@ -144,9 +144,18 @@ private:
   
   /// output file handle
   Common::SelfRegistPtr<Environment::FileHandlerOutput> m_outFileHandle;
+
+  /// File where the table is written
+  std::string m_outTabName;
+
+  /// Bool expression to write the table in a file
+  bool m_writePARADEToFile;
   
   /// directory where Parade is launched
   boost::filesystem::path m_paradeDir; 
+
+  //name of the temporary local directory where Parade is run
+  boost::filesystem::path m_dirName;
   
   /// path to the grid file
   boost::filesystem::path m_gridFile;
@@ -175,6 +184,39 @@ private:
   /// absorption coeff = m_radCoeff(local state ID, spectral point idx*3+2)
   RealMatrix m_data;
 
+
+  /// arrays storing absorption and emission coefficients for the binning
+  //
+  //
+
+  // vector storing for each cell the absorption coefficient
+  RealVector alpha;
+
+  // vector storing for each cell the emission coefficient
+  RealVector epsilon;
+
+  //vector storing for each cell the source term
+  RealVector B;
+
+  // vector storing for each component the numerator of the mean absorption coeffic  ient in that cell  and for that wavelength
+  RealVector num_alpha_vol;
+
+  // vector storing for each component the denominator of the mean absorption coeff  icient in that cell and for that wavelength
+  RealVector den_alpha_vol;
+
+  // vector storing the averaged absorption coefficient for each wavelength
+  std::vector<CFreal> alphaav;
+
+  // vectors storing the matrix with the data for each bin and each cell, for the absorption, emission and source terms
+
+  std::vector<CFreal> m_alpha_bin;
+  std::vector<CFreal> m_emission_bin;
+  std::vector<CFreal> m_B_bin;
+
+  // vector storing the averaged absorption coefficients data
+
+  std::vector<CFreal> m_alpha_avbin;
+
   /// name of the temporary local directory where Parade is run
   std::string m_localDirName;
   
@@ -197,6 +239,18 @@ private:
   /// minimum temperature
   CFreal m_TminFix;
 
+  /// number of bins
+  CFuint m_nbBins;
+
+  /// number of bands
+  CFuint m_nbBands;
+
+  /// number of bins using PARADE
+  CFuint m_nbBinsPARADE;
+
+  /// bands' distribution
+  std::string m_bandsDistr;
+ 
   /// array with molar masses
   RealVector m_mmasses;
 

@@ -63,7 +63,7 @@ Simulator.Modules.Libs = libTecplotWriter libPhysicalModelDummy libFiniteVolume 
 # relative path to working directory
 Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/FireIIDLR
 # relative path to results directory 
-Simulator.Paths.ResultsDir = ./RESULTS_FIREII_INVISCID
+Simulator.Paths.ResultsDir = ./RESULTS_FIREII_INVISCID_test_tab100bins
 
 
 # NOTE: this testcase works also if the following 3 lines are commented out
@@ -219,9 +219,9 @@ Simulator.SubSystem.ProcessingRad&8.Namespace = Rad&8
 Simulator.SubSystem.ProcessingRad&8.Data.CollaboratorNames = SMRad&8 IteratorRad&8 LSSRad&8
 Simulator.SubSystem.ProcessingRad&8.Comds = RadiativeTransferFVDOM 
 Simulator.SubSystem.ProcessingRad&8.Names = Radiation
-Simulator.SubSystem.ProcessingRad&8.Radiation.nDirs =  24
+Simulator.SubSystem.ProcessingRad&8.Radiation.nDirs = 80
 Simulator.SubSystem.ProcessingRad&8.Radiation.UseExponentialMethod = true
-#Simulator.SubSystem.ProcessingRad&8.Radiation.OldAlgorithm = false
+Simulator.SubSystem.ProcessingRad&8.Radiation.OldAlgorithm = false
 #Simulator.SubSystem.ProcessingRad&8.Radiation.DirName = ./
 Simulator.SubSystem.ProcessingRad&8.Radiation.BinTabName = air-100Bands.dat #air-100Bins.dat
 Simulator.SubSystem.ProcessingRad&8.Radiation.OutTabName = air-100Bands.out #air-100Bins.out

@@ -233,6 +233,7 @@ Simulator.SubSystem.ProcessingRad&8.Radiation.PID = 11
 Simulator.SubSystem.ProcessingRad&8.Radiation.TID = 12
 Simulator.SubSystem.ProcessingRad&8.ProcessRate = 1
 #Simulator.SubSystem.ProcessingRad&8.RunAtSetup = true
+Simulator.SubSystem.ProcessingRad&8.Radiation.OldAlgorithm = true
 
 # here we need to find a way to write expression
 Simulator.SubSystem.ProcessingRad&8.Radiation.NbThreads = 8

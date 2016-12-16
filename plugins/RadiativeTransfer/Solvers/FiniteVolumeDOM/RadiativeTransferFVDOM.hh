@@ -104,6 +104,12 @@ public:
    * Compute the advance order depending on the option selected 
    */  
   void getFieldOpacities(CFuint ib);
+
+  /**
+   * Computes the opacities from the values coming from the binning algorithm
+   */
+
+  void getFieldOpacitiesBinning(CFuint ib);
     
   /**
    * Compute the advance order depending on the option selected 
@@ -128,7 +134,14 @@ public:
    * 
    */
   void writeRadialData();
-  
+
+  /**
+   * Writes dir_ID, cosines and weight for each direction. Vectors are centered in (0,0,0) 
+   * (only if option RadialData is enabled)
+   * 
+   */
+  void writeDirections();
+
   /**
    * Returns the DataSocket's that this command needs as sources
    * @return a vector of SafePtr with the DataSockets
@@ -166,6 +179,14 @@ protected: //function
   /// @param ib  ID of the bin
   /// @param d   ID of the direction
   void computeQ(const CFuint ib, const CFuint d);
+
+  /**
+   * Computes wall heat flux
+   *
+   */
+
+  void computeWallHeatFlux();
+
   
   /// diagnose problem when advance order algorithm fails
   void diagnoseProblem(const CFuint d, const CFuint m, const CFuint mLast);
@@ -210,7 +231,6 @@ protected: //function
     }
     return -1;
   }
-
 
 protected: //data
   
@@ -264,7 +284,7 @@ protected: //data
   Framework::DataSocketSource <CFreal> socket_B_bin;
   
   /// the socket to the radiative heat flux at the wall faces
-  Framework::DataSocketSource < CFreal > socket_qradFluxWall;
+  Framework::DataSocketSource <CFreal> socket_qradFluxWall;
   
   /// pointer to the physical-chemical library
   Common::SafePtr<Framework::PhysicalChemicalLibrary> m_library; 
@@ -286,7 +306,7 @@ protected: //data
   
   /// wall face builder
   Framework::GeometricEntityPool<Framework::FaceTrsGeoBuilder> m_wallFaceBuilder;
-  
+
   /// temporary normal to the face
   RealVector m_normal; 
   
@@ -368,6 +388,14 @@ protected: //data
   
   /// File where the table is written
   std::string m_outTabName;
+
+  /// bool to use the binning data computed from PARADE
+  bool m_binningPARADE;
+
+  /// Number of bins
+  CFuint m_nbBinsPARADE;
+
+  CFuint m_nbBands;
   
   /// bool to write the table in a file
   bool m_writeToFile;
@@ -438,6 +466,22 @@ protected: //data
   /// flag telling to read the opacity tables (default behaviour)
   bool m_readOpacityTables;
   
+  ///settings for Munafo computation
+  std::string m_dirGenerator;
+
+  CFreal m_theta_max;
+
+  CFuint m_nb_pts_polar;
+
+  CFuint m_nb_pts_azi;
+
+  std::string m_rule_polar;
+
+  std::string m_rule_azi;
+
+  /// option to print directions
+  bool m_directions;
+
 }; // end of class RadiativeTransferFVDOM
       
 //////////////////////////////////////////////////////////////////////////////

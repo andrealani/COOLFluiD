@@ -37,7 +37,7 @@ CFEnv.ExceptionOutputs   = false
 Simulator.Modules.Libs = libTecplotWriter libPhysicalModelDummy libFiniteVolume libEmptyConvergenceMethod libRadiativeTransfer libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
 
 # Simulation Parameters
-Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/Sphere3DFV
+Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/Sphere3DFV_24dir
 Simulator.Paths.ResultsDir = ./RESULTS_Sphere_air_24dir_100bin
 
 ###############################################################################
@@ -83,7 +83,7 @@ Simulator.SubSystem.ConvergenceMethod = EmptyIterator
 Simulator.SubSystem.Default.listTRS = Wall 
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./Sphere1_5_22_22_22.CFmesh #./RadialTest3.CFmesh #./CubeUnstructured.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./RadialTest3.CFmesh #./Sphere1_5_22_22_22.CFmesh #./CubeUnstructured.CFmesh
 Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
@@ -117,7 +117,7 @@ Simulator.SubSystem.CellCenterFVM.InField.Def = \
 					100. \
 					0. \
 					0. \
-					500.
+					r^2+r
 #a/det*r^2+10000.
 #a/det*r^2+b/det*r+10000.
 
@@ -132,7 +132,11 @@ Simulator.SubSystem.DataProcessing.Radiation.UseExponentialMethod = true
 #Simulator.SubSystem.DataProcessing.Radiation.DirName = ./
 Simulator.SubSystem.DataProcessing.Radiation.BinTabName = air-100Bands.dat #air-100Bins.dat
 Simulator.SubSystem.DataProcessing.Radiation.OutTabName = air-100Bands.out #air-100Bins.out
-Simulator.SubSystem.DataProcessing.Radiation.ConstantP = 1013250 
+Simulator.SubSystem.DataProcessing.Radiation.ConstantP = 1013250
+Simulator.SubSystem.DataProcessing.Radiation.Tmin = 1300
+Simulator.SubSystem.DataProcessing.Radiation.Tmax = 13000 
+Simulator.SubSystem.DataProcessing.Radiation.RadialData = true
+Simulator.SubSystem.DataProcessing.Radiation.NbRadialPoints = 100
 #Simulator.SubSystem.DataProcessing.Radiation.LoopOverBins = false
 Simulator.SubSystem.DataProcessing.ProcessRate = 1
 Simulator.SubSystem.DataProcessing.RunAtSetup = true

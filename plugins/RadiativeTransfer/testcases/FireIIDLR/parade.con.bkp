@@ -1,9 +1,9 @@
 c       User input file for PARADE
 c       1. Spectrum control data:
 c
-2000 wavlo [A]
+500 wavlo [A]
 10000 wavhi [A] 
-10000 npoints
+100 npoints
 c       2. Parameters for adaptive wavelength discretisation:
   0.0005       minimum distance between adjacent points
    100.        integration limit for line shape

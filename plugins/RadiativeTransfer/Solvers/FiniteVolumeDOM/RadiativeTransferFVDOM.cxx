@@ -85,6 +85,7 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   m_In(),
   m_II(),
   m_opacities(),
+  m_nbBinsPARADE(),
   m_radSource(),
   m_Ttable(),
   m_Ptable(),
@@ -121,8 +122,14 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   m_radialData = false;
   setParameter("RadialData", &m_radialData);
   
-  m_oldAlgo = true;
+  m_oldAlgo = false;
   setParameter("OldAlgorithm", &m_oldAlgo);
+
+  m_binningPARADE = false;
+  setParameter("BinningPARADE", &m_binningPARADE);
+
+  m_nbBinsPARADE = 100;
+  setParameter("nbBinsPARADE", &m_nbBinsPARADE);
   
   m_Nr = 100;
   setParameter("NbRadialPoints", &m_Nr);
@@ -159,6 +166,32 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   
   m_readOpacityTables = true;
   setParameter("ReadOpacityTables", &m_readOpacityTables);
+
+  m_nbBands = 1;
+  setParameter("nbBands", &m_nbBands);
+ 
+
+  m_dirGenerator = "Default";
+  setParameter("DirectionsGenerator", &m_dirGenerator);
+
+  m_theta_max = 180.;
+  setParameter("theta_max", &m_theta_max);
+
+  m_nb_pts_polar = 16;
+  setParameter("nb_pts_polar", &m_nb_pts_polar);
+
+  m_nb_pts_azi = 16;
+  setParameter("nb_pts_azi", &m_nb_pts_azi);
+
+  m_rule_polar = "GL";
+  setParameter("rule_polar", &m_rule_polar);
+
+  m_rule_azi = "TRAP";
+  setParameter("rule_azi", &m_rule_azi);
+
+
+  m_directions = false;
+  setParameter("directions", &m_directions);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -187,8 +220,10 @@ void RadiativeTransferFVDOM::defineConfigOptions(Config::OptionList& options)
     ("RadialData","radial q and divQ for the sphere case");
   options.addConfigOption< bool >
     ("OldAlgorithm","old algorithm (very inefficient) just kept for comparison purposes");
-  options.addConfigOption< CFuint >
-    ("NbRadialPoints","Number of Radial points in the sphere case");
+  options.addConfigOption< bool >
+    ("BinningPARADE","Computes the radiative properties based on the binning done with data from PARADE database");
+  options.addConfigOption< CFuint >("nbBinsPARADE", "States the number of bins used in the algorithm");
+  options.addConfigOption< CFuint >("NbRadialPoints","Number of Radial points in the sphere case");
   options.addConfigOption< CFreal >("ConstantP","Constant pressure temperature");
   options.addConfigOption< CFreal >("Tmin","Minimum temperature");
   options.addConfigOption< CFreal >("Tmax","Maximum temperature");
@@ -200,6 +235,16 @@ void RadiativeTransferFVDOM::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >("LoopOverBins","Loop over bins and then over directions (do the opposite if =false).");
   options.addConfigOption< bool >("EmptyRun","Run without actually solving anything, just for testing purposes.");
   options.addConfigOption< bool >("ReadOpacityTables","Read the opacity tables instead if using the radiation library.");
+  
+  options.addConfigOption< string >("DirectionsGenerator","Name of the method for generating directions.");
+  options.addConfigOption< CFreal >("theta_max","Maximum value of theta.");
+  options.addConfigOption< CFuint >("nb_pts_polar","Number of polar points.");
+  options.addConfigOption< CFuint >("nb_pts_azi","Number of azimut points.");
+  options.addConfigOption< string >("rule_polar","Rule for polars computation.");
+  options.addConfigOption< string >("rule_azi","Rule for azimut computation.");
+  options.addConfigOption< bool >("directions","Option to write directions");
+  options.addConfigOption< CFuint >("nbBands", "Number of Bands");
+ 
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -322,12 +367,19 @@ void RadiativeTransferFVDOM::setup()
   
   CFLog(VERBOSE, "RadiativeTransferFVDOM::setup() => m_binTableFile = "<< m_binTableFile <<"\n");
   
-  // Check to force an allowed number of directions
-  if ((m_nbDirs != 8) && (m_nbDirs != 24) && (m_nbDirs != 48) && (m_nbDirs != 80)) {
-    CFLog(WARN, "RadiativeTransferFVDOM::setup() => This ndirs is not allowed. 8 directions is chosen \n");
+  // Check to force an allowed number of directions for Default
+  if ((m_dirGenerator == "Default") && (m_nbDirs != 8) && (m_nbDirs != 24) && (m_nbDirs != 48) && (m_nbDirs != 80)) {
+    CFLog(WARN, "RadiativeTransferFVDOM::setup() => This ndirs is not allowed for Default directions generator. 8 directions is chosen \n");
     m_nbDirs = 8;
   } 
   
+  // Check to force an allowed number points for Munafo (GL method)
+  if ((m_dirGenerator == "Munafo") && (m_rule_polar=="GL") && (m_nb_pts_polar != 2) && (m_nb_pts_polar != 4) && (m_nb_pts_polar != 8) && (m_nb_pts_polar != 16) && (m_nb_pts_polar != 19) && (m_nb_pts_polar != 31) && (m_nb_pts_polar != 32) && (m_nb_pts_polar != 64) && (m_nb_pts_polar != 96))  {
+   CFLog(WARN, "RadiativeTransferFVDOM::setup() => This nb_pts_polar is not allowed for Monafo directions generator (GL). 16 points are chosen \n");
+   m_nb_pts_polar = 16;
+  }
+
+ 
   if (m_readOpacityTables) {
     // Reading the table
     readOpacities();
@@ -335,6 +387,10 @@ void RadiativeTransferFVDOM::setup()
   
   const CFuint DIM = 3;
   
+  if(m_dirGenerator == "Munafo"){
+    m_nbDirs = m_nb_pts_polar*m_nb_pts_azi;
+  }
+
   // Selecting the # of direction types depending on the option
   switch(m_nbDirs) {
   case 8:     
@@ -385,6 +441,10 @@ void RadiativeTransferFVDOM::setup()
   // m_nbThreads, m_threadID
   cf_assert(m_nbDirs > 0);
   cf_assert(m_nbBins > 0);
+  cf_assert(m_nbBands > 0);
+
+  CFuint nb_bb=m_nbBins;
+  m_nbBins=m_nbBands*m_nbBins;
   
   // set the start/end bins for this process
   if (m_nbThreads == 1) { 
@@ -406,7 +466,7 @@ void RadiativeTransferFVDOM::setup()
       minNbThreadsPerProc : maxNbThreadsPerProc; 
     const CFuint endThread = startThread + nbThreadsPerProc;
     
-    CFLog(VERBOSE, "RadiativeTransferFVDOM::setup() => nbBins, nbDirs   = [" << m_nbBins << ", " << m_nbDirs << "]\n");
+    CFLog(INFO, "RadiativeTransferFVDOM::setup() => nbBins, nbDirs, nbBands   = [" << m_nbBins << ", " << m_nbDirs << ", " << m_nbBands <<"]\n");
     CFLog(VERBOSE, "RadiativeTransferFVDOM::setup() => startThread      = [" << startThread << "]\n");
     CFLog(VERBOSE, "RadiativeTransferFVDOM::setup() => endThread        = [" << endThread << "]\n");
     CFLog(VERBOSE, "RadiativeTransferFVDOM::setup() => nbThreadsPerProc = [" << nbThreadsPerProc << "]\n");
@@ -437,6 +497,8 @@ void RadiativeTransferFVDOM::setup()
   const CFuint startDir = m_startEndDir.first;
   const CFuint endDir   = m_startEndDir.second+1;
   cf_assert(endDir <= m_nbDirs);
+
+  m_nbBins=nb_bb;
 
   if (m_loopOverBins) {
     CFLog(INFO, "RadiativeTransferFVDOM::setup() => start/end Bin = [" << startBin << ", " << endBin << "]\n");
@@ -503,8 +565,8 @@ void RadiativeTransferFVDOM::setup()
   TempProfile = 0.0;
   
   // resize the bins storage
-  socket_alpha_avbin.getDataHandle().resize(nbCells*m_nbBins);
-  socket_B_bin.getDataHandle().resize(nbCells*m_nbBins);
+  socket_alpha_avbin.getDataHandle().resize(nbCells*m_nbBins*m_nbBands);
+  socket_B_bin.getDataHandle().resize(nbCells*m_nbBins*m_nbBands);
   
   // the following returns a list of all the .ApplyTRS with .TypeTRS=Wall in the .CFcase
   // for which radiative heat flux has to be computed 
@@ -572,7 +634,12 @@ void RadiativeTransferFVDOM::getDirections()
   CFLog(VERBOSE, "RadiativeTransferFVDOM::getDirections() => Number of Directions = " << m_nbDirs << "\n");
   
   RealMatrix mdirs(m_nbDirs, 3, &m_dirs[0]);
-  
+
+  if(m_dirGenerator == "Default") 
+  {
+
+  CFLog(VERBOSE, "RadiativeTransferFVDOM::getDirections() => Directions generator is Default \n");
+ 
   const CFreal overSq3 = 1./std::sqrt(3.);
   switch(m_nbDirs) {
   case 8:
@@ -670,10 +737,507 @@ void RadiativeTransferFVDOM::getDirections()
       }          
     }
   }
+  }
+
+  else if(m_dirGenerator == "Munafo")
+  {
+
+   CFLog(VERBOSE, "RadiativeTransferFVDOM::getDirections() => Directions generator is Munafo \n"); 
+
+   //Vectors declaration
+   std::vector<CFreal> theta_vec;
+   std::vector<CFreal> cos_theta_vec;
+   std::vector<CFreal> sin_theta_vec;
+   std::vector<CFreal> phi_vec;
+   std::vector<CFreal> cos_phi_vec;
+   std::vector<CFreal> sin_phi_vec;
+   std::vector<CFreal> w_theta;
+   std::vector<CFreal> w_phi;
+   std::vector<CFreal> w_total;
+   
+   //conversion to rad
+   m_theta_max = m_theta_max*pi/180.;
+
+   //Integration limits for polar angle (theta)
+   CFreal a_theta = 0.;
+   CFreal b_theta = m_theta_max;
+
+   //Integration limits for azimuthal angle (phi)
+   CFreal a_phi = 0.;
+   CFreal b_phi = 2.*pi;
+
+   //Number of discrete points
+   CFreal nb_pts = m_nb_pts_polar * m_nb_pts_azi;
+
+   CFreal cos_theta;
+   CFreal sin_theta;
+   
+   //Vectors allocation
+   theta_vec.resize(m_nb_pts_polar+1);
+   cos_theta_vec.resize(m_nb_pts_polar+1);
+   sin_theta_vec.resize(m_nb_pts_polar+1);
+   phi_vec.resize(m_nb_pts_azi+1);
+   cos_phi_vec.resize(m_nb_pts_azi+1);
+   sin_phi_vec.resize(m_nb_pts_azi+1);
+   w_theta.resize(m_nb_pts_polar+1);
+   w_phi.resize(m_nb_pts_azi+1);
+   w_total.resize(nb_pts);
+
+   // Useless value to switch from fortran to c++ vectors
+   theta_vec[0] = 0.;
+   cos_theta_vec[0] = 0.;
+   sin_theta_vec[0] = 0.;
+   phi_vec[0] = 0.;
+   cos_phi_vec[0] = 0.;
+   sin_phi_vec[0] = 0.;
+   w_theta[0] = 0.;
+   w_phi[0] = 0.;
+
+   //Polar angle computation
+    if(m_rule_polar == "GL") {
+      
+      CFLog(VERBOSE, "RadiativeTransferFVDOM::getDirections() => The method for polar angle computation is Gauss-Legendre \n");
+
+      a_theta = std::cos(a_theta);
+      b_theta = std::cos(b_theta);
+      
+     switch(m_nb_pts_polar) {
+
+      case 2:
+      // Nodes
+      theta_vec[2] = 0.5773502691896257645091488;
+      // Weights
+      w_theta[2] = 1.;
+      break;
+
+      case 4:
+      // Nodes
+      theta_vec[3] = 0.3399810435848562648026658;
+      theta_vec[4] = 0.8611363115940525752239465;
+      // Weights
+      w_theta[3] = 0.6521451548625461426269361;
+      w_theta[4] = 0.3478548451374538573730639;
+      break;
+
+      case 8:
+      // Nodes     
+      theta_vec[5] = 0.1834346424956498049394761;
+      theta_vec[6] = 0.5255324099163289858177390;
+      theta_vec[7] = 0.7966664774136267395915539;
+      theta_vec[8] = 0.9602898564975362316835609;
+      // Weights
+      w_theta[5] = 0.3626837833783619829651504;
+      w_theta[6] = 0.3137066458778872873379622;
+      w_theta[7] = 0.2223810344533744705443560;
+      w_theta[8] = 0.1012285362903762591525314;
+      break;
+
+      case 16:
+      // Nodes
+      theta_vec[9]  = 0.0950125098376374401853193;
+      theta_vec[10] = 0.2816035507792589132304605;
+      theta_vec[11] = 0.4580167776572273863424194;
+      theta_vec[12] = 0.6178762444026437484466718;
+      theta_vec[13] = 0.7554044083550030338951012;
+      theta_vec[14] = 0.8656312023878317438804679;
+      theta_vec[15] = 0.9445750230732325760779884;
+      theta_vec[16] = 0.9894009349916499325961542;
+      // Weights
+      w_theta[9]  = 0.1894506104550684962853967;
+      w_theta[10] = 0.1826034150449235888667637;
+      w_theta[11] = 0.1691565193950025381893121;
+      w_theta[12] = 0.1495959888165767320815017;
+      w_theta[13] = 0.1246289712555338720524763;
+      w_theta[14] = 0.0951585116824927848099251;
+      w_theta[15] = 0.0622535239386478928628438;
+      w_theta[16] = 0.0271524594117540948517806;
+      break;
+
+      case 19:
+      // Nodes
+      theta_vec[10] = 0.;
+      theta_vec[11] = 0.1603586456402253758680961;
+      theta_vec[12] = 0.3165640999636298319901173; 
+      theta_vec[13] = 0.4645707413759609457172671;
+      theta_vec[14] = 0.6005453046616810234696382;
+      theta_vec[15] = 0.7209661773352293786170959;
+      theta_vec[16] = 0.8227146565371428249789225;
+      theta_vec[17] = 0.9031559036148179016426609;
+      theta_vec[18] = 0.9602081521348300308527788;
+      theta_vec[19] = 0.9924068438435844031890177;
+
+      // Weights
+      w_theta[10] = 0.1610544498487836959791636;
+      w_theta[11] = 0.1589688433939543476499564;
+      w_theta[12] = 0.1527660420658596667788554;
+      w_theta[13] = 0.1426067021736066117757461;
+      w_theta[14] = 0.1287539625393362276755158;
+      w_theta[15] = 0.1115666455473339947160239;
+      w_theta[16] = 0.0914900216224499994644621;
+      w_theta[17] = 0.0690445427376412265807083;
+      w_theta[18] = 0.0448142267656996003328382;
+      w_theta[19] = 0.0194617882297264770363120;
+      break;
+
+      case 31:
+      // Nodes
+      theta_vec[16] = 0.;
+      theta_vec[17] = 0.0995553121523415;
+      theta_vec[18] = 0.1981211993355706;
+      theta_vec[19] = 0.2947180699817016;
+      theta_vec[20] = 0.3883859016082329;
+      theta_vec[21] = 0.4781937820449025;
+      theta_vec[22] = 0.5632491614071493;
+      theta_vec[23] = 0.6427067229242603;
+      theta_vec[24] = 0.7157767845868532;
+      theta_vec[25] = 0.7817331484166249;
+      theta_vec[26] = 0.8399203201462674;
+      theta_vec[27] = 0.8897600299482711;
+      theta_vec[28] = 0.9307569978966481;
+      theta_vec[29] = 0.9625039250929497;
+      theta_vec[30] = 0.9846859096651525;
+      theta_vec[31] = 0.9970874818194770;
+
+      // Weights
+      w_theta[16] = 0.0997205447934265;
+      w_theta[17] = 0.0992250112266723;
+      w_theta[18] = 0.0977433353863287;
+      w_theta[19] = 0.0952902429123195;
+      w_theta[20] = 0.0918901138936415;
+      w_theta[21] = 0.0875767406084779;
+      w_theta[22] = 0.0823929917615893;
+      w_theta[23] = 0.0763903865987766;
+      w_theta[24] = 0.0696285832354104;
+      w_theta[25] = 0.0621747865610284;
+      w_theta[26] = 0.0541030824249169;
+      w_theta[27] = 0.0454937075272011;
+      w_theta[28] = 0.0364322739123855;
+      w_theta[29] = 0.0270090191849794;
+      w_theta[30] = 0.0173186207903106;
+      w_theta[31] = 0.0074708315792488;
+      break;
+
+      case 32:
+      // Nodes
+      theta_vec[17] = 0.0483076656877383162348126;
+      theta_vec[18] = 0.1444719615827964934851864;
+      theta_vec[19] = 0.2392873622521370745446032;
+      theta_vec[20] = 0.3318686022821276497799168;
+      theta_vec[21] = 0.4213512761306353453641194;
+      theta_vec[22] = 0.5068999089322293900237475;
+      theta_vec[23] = 0.5877157572407623290407455;
+      theta_vec[24] = 0.6630442669302152009751152;
+      theta_vec[25] = 0.7321821187402896803874267;
+      theta_vec[26] = 0.7944837959679424069630973;
+      theta_vec[27] = 0.8493676137325699701336930;
+      theta_vec[28] = 0.8963211557660521239653072;
+      theta_vec[29] = 0.9349060759377396891709191;
+      theta_vec[30] = 0.9647622555875064307738119;
+      theta_vec[31] = 0.9856115115452683354001750;
+      theta_vec[32] = 0.9972638618494815635449811;
+
+      // Weights
+      w_theta[17] = 0.0965400885147278005667648;
+      w_theta[18] = 0.0956387200792748594190820;
+      w_theta[19] = 0.0938443990808045656391802;
+      w_theta[20] = 0.0911738786957638847128686;
+      w_theta[21] = 0.0876520930044038111427715;
+      w_theta[22] = 0.0833119242269467552221991;
+      w_theta[23] = 0.0781938957870703064717409;
+      w_theta[24] = 0.0723457941088485062253994;
+      w_theta[25] = 0.0658222227763618468376501;
+      w_theta[26] = 0.0586840934785355471452836;
+      w_theta[27] = 0.0509980592623761761961632;
+      w_theta[28] = 0.0428358980222266806568786;
+      w_theta[29] = 0.0342738629130214331026877;
+      w_theta[30] = 0.0253920653092620594557526;
+      w_theta[31] = 0.0162743947309056706051706;
+      w_theta[32] = 0.0070186100094700966004071;
+      break;
+
+      case 64:
+      // Nodes
+      theta_vec[33] = 0.0243502926634244325089554;
+      theta_vec[34] = 0.0729931217877990394495429;
+      theta_vec[35] = 0.1214628192961205544703765;
+      theta_vec[36] = 0.1696444204239928180373136;
+      theta_vec[37] = 0.2174236437400070841496487;
+      theta_vec[38] = 0.2646871622087674163739642;
+      theta_vec[39] = 0.3113228719902109561575127;
+      theta_vec[40] = 0.3572201583376681159504426;
+      theta_vec[41] = 0.4022701579639916036957668;
+      theta_vec[42] = 0.4463660172534640879849477;
+      theta_vec[43] = 0.4894031457070529574785263;
+      theta_vec[44] = 0.5312794640198945456580139;
+      theta_vec[45] = 0.5718956462026340342838781;
+      theta_vec[46] = 0.6111553551723932502488530;
+      theta_vec[47] = 0.6489654712546573398577612;
+      theta_vec[48] = 0.6852363130542332425635584;
+      theta_vec[49] = 0.7198818501716108268489402;
+      theta_vec[50] = 0.7528199072605318966118638;
+      theta_vec[51] = 0.7839723589433414076102205;
+      theta_vec[52] = 0.8132653151227975597419233;
+      theta_vec[53] = 0.8406292962525803627516915;
+      theta_vec[54] = 0.8659993981540928197607834;
+      theta_vec[55] = 0.8893154459951141058534040;
+      theta_vec[56] = 0.9105221370785028057563807;
+      theta_vec[57] = 0.9295691721319395758214902;
+      theta_vec[58] = 0.9464113748584028160624815;
+      theta_vec[59] = 0.9610087996520537189186141;
+      theta_vec[60] = 0.9733268277899109637418535;
+      theta_vec[61] = 0.9833362538846259569312993;
+      theta_vec[62] = 0.9910133714767443207393824;
+      theta_vec[63] = 0.9963401167719552793469245;
+      theta_vec[64] = 0.9993050417357721394569056;
+
+      // Weights
+      w_theta[33] = 0.0486909570091397203833654;
+      w_theta[34] = 0.0485754674415034269347991;
+      w_theta[35] = 0.0483447622348029571697695;
+      w_theta[36] = 0.0479993885964583077281262;
+      w_theta[37] = 0.0475401657148303086622822;
+      w_theta[38] = 0.0469681828162100173253263;
+      w_theta[39] = 0.0462847965813144172959532;
+      w_theta[40] = 0.0454916279274181444797710;
+      w_theta[41] = 0.0445905581637565630601347;
+      w_theta[42] = 0.0435837245293234533768279;
+      w_theta[43] = 0.0424735151236535890073398;
+      w_theta[44] = 0.0412625632426235286101563;
+      w_theta[45] = 0.0399537411327203413866569;
+      w_theta[46] = 0.0385501531786156291289625;
+      w_theta[47] = 0.0370551285402400460404151;
+      w_theta[48] = 0.0354722132568823838106931;
+      w_theta[49] = 0.0338051618371416093915655;
+      w_theta[50] = 0.0320579283548515535854675;
+      w_theta[51] = 0.0302346570724024788679741;
+      w_theta[52] = 0.0283396726142594832275113;
+      w_theta[53] = 0.0263774697150546586716918;
+      w_theta[54] = 0.0243527025687108733381776;
+      w_theta[55] = 0.0222701738083832541592983;
+      w_theta[56] = 0.0201348231535302093723403;
+      w_theta[57] = 0.0179517157756973430850453;
+      w_theta[58] = 0.0157260304760247193219660;
+      w_theta[59] = 0.0134630478967186425980608;
+      w_theta[60] = 0.0111681394601311288185905;
+      w_theta[61] = 0.0088467598263639477230309;
+      w_theta[62] = 0.0065044579689783628561174;
+      w_theta[63] = 0.0041470332605624676352875;
+      w_theta[64] = 0.0017832807216964329472961;  
+      break;
+
+      case 96:
+      // Nodes
+      theta_vec[49] = 0.0162767448496029695791346;
+      theta_vec[50] = 0.0488129851360497311119582;
+      theta_vec[51] = 0.0812974954644255589944713;
+      theta_vec[52] = 0.1136958501106659209112081;
+      theta_vec[53] = 0.1459737146548969419891073;
+      theta_vec[54] = 0.1780968823676186027594026;
+      theta_vec[55] = 0.2100313104605672036028472;
+      theta_vec[56] = 0.2417431561638400123279319;
+      theta_vec[57] = 0.2731988125910491414872722;
+      theta_vec[58] = 0.3043649443544963530239298;
+      theta_vec[59] = 0.3352085228926254226163256;
+      theta_vec[60] = 0.3656968614723136350308956;
+      theta_vec[61] = 0.3957976498289086032850002;
+      theta_vec[62] = 0.4254789884073005453648192;
+      theta_vec[63] = 0.4547094221677430086356761;
+      theta_vec[64] = 0.4834579739205963597684056;
+      theta_vec[65] = 0.5116941771546676735855097;
+      theta_vec[66] = 0.5393881083243574362268026;
+      theta_vec[67] = 0.5665104185613971684042502;
+      theta_vec[68] = 0.5930323647775720806835558;
+      theta_vec[69] = 0.6189258401254685703863693;
+      theta_vec[70] = 0.6441634037849671067984124;
+      theta_vec[71] = 0.6687183100439161539525572;
+      theta_vec[72] = 0.6925645366421715613442458;
+      theta_vec[73] = 0.7156768123489676262251441;
+      theta_vec[74] = 0.7380306437444001328511657;
+      theta_vec[75] = 0.7596023411766474987029704;
+      theta_vec[76] = 0.7803690438674332176036045;
+      theta_vec[77] = 0.8003087441391408172287961;
+      theta_vec[78] = 0.8194003107379316755389996;
+      theta_vec[79] = 0.8376235112281871214943028;
+      theta_vec[80] = 0.8549590334346014554627870;
+      theta_vec[81] = 0.8713885059092965028737748;
+      theta_vec[82] = 0.8868945174024204160568774;
+      theta_vec[83] = 0.9014606353158523413192327;
+      theta_vec[84] = 0.9150714231208980742058845;
+      theta_vec[85] = 0.9277124567223086909646905;
+      theta_vec[86] = 0.9393703397527552169318574;
+      theta_vec[87] = 0.9500327177844376357560989;
+      theta_vec[88] = 0.9596882914487425393000680;
+      theta_vec[89] = 0.9683268284632642121736594;
+      theta_vec[90] = 0.9759391745851364664526010;
+      theta_vec[91] = 0.9825172635630146774470458;
+      theta_vec[92] = 0.9880541263296237994807628;
+      theta_vec[93] = 0.9925439003237626245718923;
+      theta_vec[94] = 0.9959818429872092906503991;
+      theta_vec[95] = 0.9983643758631816777241494;
+      theta_vec[96] = 0.9996895038832307668276901;
+
+      // Weights
+      w_theta[49] = 0.0325506144923631662419614;
+      w_theta[50] = 0.0325161187138688359872055;
+      w_theta[51] = 0.0324471637140642693640128;
+      w_theta[52] = 0.0323438225685759284287748;
+      w_theta[53] = 0.0322062047940302506686671;
+      w_theta[54] = 0.0320344562319926632181390;
+      w_theta[55] = 0.0318287588944110065347537;
+      w_theta[56] = 0.0315893307707271685580207;
+      w_theta[57] = 0.0313164255968613558127843;
+      w_theta[58] = 0.0310103325863138374232498;
+      w_theta[59] = 0.0306713761236691490142288;
+      w_theta[60] = 0.0302999154208275937940888;
+      w_theta[61] = 0.0298963441363283859843881;
+      w_theta[62] = 0.0294610899581679059704363;
+      w_theta[63] = 0.0289946141505552365426788;
+      w_theta[64] = 0.0284974110650853856455995;
+      w_theta[65] = 0.0279700076168483344398186;
+      w_theta[66] = 0.0274129627260292428234211;
+      w_theta[67] = 0.0268268667255917621980567;
+      w_theta[68] = 0.0262123407356724139134580;
+      w_theta[69] = 0.0255700360053493614987972;
+      w_theta[70] = 0.0249006332224836102883822;
+      w_theta[71] = 0.0242048417923646912822673;
+      w_theta[72] = 0.0234833990859262198422359;
+      w_theta[73] = 0.0227370696583293740013478;
+      w_theta[74] = 0.0219666444387443491947564;
+      w_theta[75] = 0.0211729398921912989876739;
+      w_theta[76] = 0.0203567971543333245952452;
+      w_theta[77] = 0.0195190811401450224100852;
+      w_theta[78] = 0.0186606796274114673851568;
+      w_theta[79] = 0.0177825023160452608376142;
+      w_theta[80] = 0.0168854798642451724504775;
+      w_theta[81] = 0.0159705629025622913806165;
+      w_theta[82] = 0.0150387210269949380058763;
+      w_theta[83] = 0.0140909417723148609158616;
+      w_theta[84] = 0.0131282295669615726370637;
+      w_theta[85] = 0.0121516046710883196351814;
+      w_theta[86] = 0.0111621020998384985912133;
+      w_theta[87] = 0.0101607705350084157575876;
+      w_theta[88] = 0.0091486712307833866325846;
+      w_theta[89] = 0.0081268769256987592173824;
+      w_theta[90] = 0.0070964707911538652691442;
+      w_theta[91] = 0.0060585455042359616833167;
+      w_theta[92] = 0.0050142027429275176924702;
+      w_theta[93] = 0.0039645543384446866737334;
+      w_theta[94] = 0.0029107318179349464084106;
+      w_theta[95] = 0.0018539607889469217323359;
+      w_theta[96] = 0.0007967920655520124294381;
+      break;
+     }
+
+     // Apply reflection
+
+     if(m_nb_pts_polar % 2 == 0) {
+       for(CFuint i=1; i <= m_nb_pts_polar/2; i++) {
+          theta_vec[m_nb_pts_polar/2 - i + 1] = -theta_vec[m_nb_pts_polar/2 +i];
+          w_theta[m_nb_pts_polar/2 - i + 1] = w_theta[m_nb_pts_polar/2 +i];
+       }
+      }
+
+     else {
+       CFuint m = m_nb_pts_polar/2 + m_nb_pts_polar % 2;
+	 for(CFuint ii=1; ii <= (m_nb_pts_polar/2); ii++) {
+          theta_vec[m-ii] = -theta_vec[m+ii];
+          w_theta[m-ii] = w_theta[m+ii];
+       }
+      }
+   
+     for(CFuint iii=1; iii <= m_nb_pts_polar; iii++) {
+       theta_vec[iii] = 0.5 * ((a_theta - b_theta) * theta_vec[iii] + (b_theta + a_theta));
+       w_theta[iii] = w_theta[iii]*0.5*(a_theta-b_theta);
+       cos_theta_vec[iii] = theta_vec[iii];
+       sin_theta_vec[iii] = std::sqrt(1.-std::pow(cos_theta_vec[iii],2));
+      }
+    } // end of GL
+
+
+  else  if(m_rule_polar == "TRAP") {
+    
+    CFLog(VERBOSE, "RadiativeTransferFVDOM::getDirections() => The method for polar angle computation is Trapezoidal \n");
+
+    // weights  
+    w_theta[1] = 0.5;    
+    for(CFuint i=2; i <= (m_nb_pts_polar - 1); i++)  {
+      w_theta[i] = 1.;
+    }
+    w_theta[m_nb_pts_polar] = 0.5;
+
+    // Nodes
+    CFreal dx = (b_theta - a_theta)/(m_nb_pts_polar -1);
+    theta_vec[1] = a_theta;
+    for(CFuint ii = 2; ii <= m_nb_pts_polar; ii++) {
+      theta_vec[ii] = theta_vec[ii - 1] + dx;
+    }
+
+    for(CFuint iv=1; iv <= m_nb_pts_polar; iv++) {
+
+    w_theta[iv] = w_theta[iv]*dx;
+    cos_theta_vec[iv] = std::cos(theta_vec[iv]);
+    sin_theta_vec[iv] = std::sin(theta_vec[iv]);
+    }
+  } // end of TRAP
+
+  //Azimutal angle computation (TRAP rule)
+
+    CFLog(VERBOSE, "RadiativeTransferFVDOM::getDirections() => The method for azimutal angle computation is Trapezoidal \n");
+
+    // Weights
+    w_phi[1] = 0.5;    
+    for(CFuint i=2; i <= (m_nb_pts_azi - 1); i++)  {
+      w_phi[i] = 1.;
+    }
+    w_phi[m_nb_pts_azi] = 0.5;
+
+    // Nodes
+    CFreal dx = (b_phi - a_phi)/(m_nb_pts_azi - 1);
+    phi_vec[1] = a_phi;
+    for(CFuint ii = 2; ii <= m_nb_pts_azi; ii++) {
+      phi_vec[ii] = phi_vec[ii - 1] + dx;
+    }
+
+    for(CFuint i=1; i <= m_nb_pts_azi; i++) {
+    w_phi[i] = w_phi[i]*dx;
+    cos_phi_vec[i] = std::cos(phi_vec[i]);
+    sin_phi_vec[i] = std::sin(phi_vec[i]);
+    }
+
+   // Compute direction cosines and weights
+    CFuint d = 0;
+    for(CFuint p = 1; p <= m_nb_pts_polar; p++) {
+      cos_theta = cos_theta_vec[p];
+      sin_theta = sin_theta_vec[p];
   
+      for(CFuint q = 1; q <= m_nb_pts_azi; q++) {
+        //cosines
+	mdirs(d,0)=cos_theta;
+        mdirs(d,1)=sin_theta*cos_phi_vec[q];
+	mdirs(d,2)=sin_theta*sin_phi_vec[q];
+ 
+        //weights
+	if(m_rule_polar == "GL") {
+          m_weight[d]=w_theta[p]*w_phi[q];
+        }
+
+        else {
+	  m_weight[d]=w_theta[p]*w_phi[q]*sin_theta;
+        }  
+        
+        ++d; 
+      } 
+    } 
+
+    m_nbDirTypes = d; 
+ }
   // Printing the Directions for debugging
   for (CFuint dir = 0; dir < m_nbDirTypes; dir++) {
     CFLog(DEBUG_MIN, "Direction[" << dir <<"] = (" << mdirs(dir,0) <<", " << mdirs(dir,1) <<", " << mdirs(dir,2) <<")\n");
+  }
+
+  if (m_directions){
+      writeDirections();
   }
   
   CFLog(DEBUG_MIN, "RadiativeTransferFVDOM::getDirections() => end\n");
@@ -699,7 +1263,22 @@ void RadiativeTransferFVDOM::execute()
   }
   
   CFLog(INFO, "RadiativeTransferFVDOM::execute() => radiation library took " << stp.read() << "s\n");
+   
+  DataHandle<CFreal> alpha_avbin    = socket_alpha_avbin.getDataHandle();
+  DataHandle<CFreal> B_bin          = socket_B_bin.getDataHandle();
+  DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
   
+  const CFuint nbCells = states.size();
+
+  for(CFuint i=0;i< nbCells;i++){
+    for(CFuint j=1;j< m_nbBins*m_nbBands;j++){
+      CFLog(VERBOSE,"Vector alpha(" << j << "," << i << ") = " << alpha_avbin[j+m_nbBins*i] << "\n");
+    }
+  }
+
+  Common::SafePtr<Common::ConnectivityTable<CFuint> > cells =
+    MeshDataStack::getActive()->getConnectivity("cellStates_InnerCells");
+
   stp.start();
   
   if (!m_emptyRun) {
@@ -715,7 +1294,7 @@ void RadiativeTransferFVDOM::execute()
     
     const CFuint startBin = m_startEndBin.first;
     const CFuint endBin   = m_startEndBin.second+1;
-    cf_assert(endBin <= m_nbBins);
+    cf_assert(endBin <= m_nbBins*m_nbBands);
     const CFuint startDir = m_startEndDir.first;
     const CFuint endDir   = m_startEndDir.second+1;
     cf_assert(endDir <= m_nbDirs);
@@ -745,6 +1324,8 @@ void RadiativeTransferFVDOM::execute()
     if (m_radialData){
       writeRadialData();
     } 
+
+    //computeWallHeatFlux();
   }
     
   CFLog(INFO, "RadiativeTransferFVDOM::execute() => took " << stp.read() << "s \n");
@@ -843,6 +1424,65 @@ void RadiativeTransferFVDOM::getFieldOpacities(CFuint ib)
 
 //////////////////////////////////////////////////////////////////////////////
 
+void RadiativeTransferFVDOM::getFieldOpacitiesBinning(const CFuint ib)
+{
+
+  DataHandle<CFreal> alpha_avbin    = socket_alpha_avbin.getDataHandle();
+  DataHandle<CFreal> B_bin          = socket_B_bin.getDataHandle();
+  DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
+  
+  const CFuint nbCells = states.size();
+
+  for(CFuint i=0;i< nbCells;i++){
+    for(CFuint j=0;j< (m_nbBins*m_nbBands);j++){
+      CFLog(INFO,"Vector alpha(" << j << "," << i << ") = " << alpha_avbin[j+m_nbBins*i] << "\n");
+    }
+  }
+
+for (CFuint iCell = 0; iCell < nbCells; iCell++) {
+    const State *currState = states[iCell];
+
+  m_fieldSource[iCell] = 0.;
+
+  if(m_useExponentialMethod){
+    m_fieldAbsor[iCell] = 0.;
+  }
+  else{
+    m_fieldAbSrcV[iCell] = 0.;
+    m_fieldAbV[iCell]    = 0.;
+  }
+  
+  DataHandle<CFreal> volumes     = socket_volumes.getDataHandle();
+  
+  //CFreal val1 = 0;
+  //CFreal val2 = 0;
+
+  if(m_useExponentialMethod){
+   if (B_bin[ib+m_nbBins*iCell] <= 1e-30 || alpha_avbin[ib+m_nbBins*iCell] <= 1e-30 ){
+    m_fieldSource[iCell] = 1e-30;
+    m_fieldAbsor[iCell]  = 1e-30;
+   }
+   else {
+      m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
+      m_fieldAbsor[iCell]  = alpha_avbin[ib+m_nbBins*iCell];
+   }
+  }
+  else {
+   if (B_bin[ib+m_nbBins*iCell] <= 1e-30 || alpha_avbin[ib+m_nbBins*iCell] <= 1e-30){
+    m_fieldSource[iCell] = 1e-30;
+    m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
+   }
+   else {
+      m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
+      m_fieldAbV[iCell]    = alpha_avbin[ib+m_nbBins*iCell]*volumes[iCell];
+   }      
+    m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
+  }
+ }
+}
+
+//////////////////////////////////////////////////////////////////////  
+    
 void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d, 
 					     LocalArray<CFint>::TYPE& advanceOrder)
 {
@@ -960,7 +1600,13 @@ void RadiativeTransferFVDOM::readOpacities()
   vector<double> data(3);
   is.read((char*)&data[0], 3*sizeof(double));
   
+  if(m_binningPARADE = false){
   m_nbBins  = ((int) data[0]);
+    }
+  else{
+    m_nbBins = m_nbBinsPARADE;
+  }
+
   m_nbTemp  = ((int) data[1]);
   m_nbPress = ((int) data[2]);
   
@@ -1144,7 +1790,12 @@ void RadiativeTransferFVDOM::getFieldOpacities(const CFuint ib, const CFuint iCe
   
   DataHandle<CFreal> TempProfile = socket_TempProfile.getDataHandle();
   DataHandle<CFreal> volumes     = socket_volumes.getDataHandle();
-  
+  DataHandle<CFreal> alpha_avbin    = socket_alpha_avbin.getDataHandle();
+  DataHandle<CFreal> B_bin          = socket_B_bin.getDataHandle();
+  DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
+
+  const CFuint nbCells = states.size();
+
   const State *currState = socket_states.getDataHandle()[iCell]; 
   //Get the field pressure and T commented because now we impose a temperature profile
   CFreal p = 0.;
@@ -1177,13 +1828,16 @@ void RadiativeTransferFVDOM::getFieldOpacities(const CFuint ib, const CFuint iCe
   const CFreal patm   = p/101325.; //converting from Pa to atm
   CFreal val1 = 0;
   CFreal val2 = 0;
+  //if (!m_readOpacityTables) {  // if ...ReadOpacityTables = true (in the CFcase)
+  //tableInterpolate(T, patm, ib, val1, val2);
 
+  if (!m_binningPARADE) {
   RadiativeTransferFVDOM::Interpolator interp;
   interp.tableInterpolate(m_nbBins, m_nbTemp, m_nbPress, 
 			  &m_Ttable[0], &m_Ptable[0],
 			  &m_opacities[0], &m_radSource[0],
 			  T, patm, ib, val1, val2); 
-  
+
   if(m_useExponentialMethod){
     if (val1 <= 1e-30 || val2 <= 1e-30 ){
       m_fieldSource[iCell] = 1e-30;
@@ -1205,12 +1859,35 @@ void RadiativeTransferFVDOM::getFieldOpacities(const CFuint ib, const CFuint iCe
     }      
     m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
   }
+ }
+ else {
+if(m_useExponentialMethod){
+    if (((alpha_avbin[ib+m_nbBins*iCell]) <= 1e-30) || ((B_bin[ib+m_nbBins*iCell]) <= 1e-30) ){
+      m_fieldSource[iCell] = 1e-30;
+      m_fieldAbsor[iCell]  = 1e-30;
+     }
+     else {
+     m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
+     m_fieldAbsor[iCell]  = alpha_avbin[ib+m_nbBins*iCell];
+      }
+  }
+  else{
+     if (alpha_avbin[ib+m_nbBins*iCell] <= 1e-30 || B_bin[ib+m_nbBins*iCell] <= 1e-30 ){
+      m_fieldSource[iCell] = 1e-30;
+      m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
+     }
+     else {
+      m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
+      m_fieldAbV[iCell]    = alpha_avbin[ib+m_nbBins*iCell]*volumes[iCell];
+     }      
+    m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
+  }
 }
-      
+  } 
+
 //////////////////////////////////////////////////////////////////////////////
 
-void RadiativeTransferFVDOM::computeQ(const CFuint ib, 
-				      const CFuint d)
+void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
 {      
   CFLog(VERBOSE, "RadiativeTransferFVDOM::computeQ() in (bin, dir) = ("
 	<< ib << ", " << d << ") => start\n");
@@ -1398,6 +2075,45 @@ void RadiativeTransferFVDOM::computeDotProdInFace
     dotProdInFace[faceID] = getDirDotNA(d, normalPtr);
   }
 }      
+
+//////////////////////////////////////////////////////////////////////////////
+/*
+void RadiativeTransferFVDOM::writeDirections()
+{
+  CFLog(VERBOSE, "RadiativeTransferFVDOM::writeDirections() = > Writing directions => start\n");
+  
+  boost::filesystem::path file = m_dirName / boost::filesystem::path("directions.plt");
+  file = PathAppender::getInstance().appendParallel( file );
+  
+  SelfRegistPtr<Environment::FileHandlerOutput> fhandle = 
+    Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
+  ofstream& outputFile = fhandle->open(file);
+  
+  outputFile << "TITLE  = RadiativeTransferFVDOM directions\n";
+  outputFile << "VARIABLES = x y z l m n weight dir_ID\n";
+
+  CFreal mu_1 = 0.0;
+  RealVector mu_2;
+  mu_2.resize(3);
+  mu_2[0] = 0.0;
+  mu_2[1] = 0.0;
+  mu_2[2] = 0.0;
+  for(CFuint c=0; c < m_nbDirs; c++) {
+    outputFile << "0.0 0.0 0.0 " << m_dirs(c,0) << " " << m_dirs(c,1) << " " << m_dirs(c,2) << " " << m_weight[c] << " " << c << "\n";
+    mu_1 += m_weight[c]; //zeroth moment
+    mu_2[0] += m_weight[c]*m_dirs(c,0); //first moment l
+    mu_2[1] += m_weight[c]*m_dirs(c,1); //first moment m
+    mu_2[2] += m_weight[c]*m_dirs(c,2); //first moment n
+  }
+  
+  fhandle->close();
+
+  CFLog(INFO, "RadiativeTransferFVDOM::writeDirections() = > Zeroth moment = " << mu_1 << "\n");
+  CFLog(INFO, "RadiativeTransferFVDOM::writeDirections() = > First moment = ( " << mu_2[0] << ", " << mu_2[1] << ", " << mu_2[2] << " )\n");
+
+  CFLog(VERBOSE, "RadiativeTransferFVDOM::writeDirections() = > Writing directions => end\n");
+}
+*/
       
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1410,7 +2126,8 @@ void RadiativeTransferFVDOM::loopOverBins(const CFuint startBin,
   for(CFuint ib = startBin; ib < endBin; ++ib) {
     CFLog(INFO, "( bin: " << ib << " ), ( dir: ");
     // old algorithm: opacities computed for all cells at once for a given bin
-    if (m_oldAlgo) {getFieldOpacities(ib);}
+    if (m_oldAlgo && !m_binningPARADE) {getFieldOpacities(ib);}
+    if(m_binningPARADE){getFieldOpacitiesBinning(ib);}
     const CFuint dStart = (ib != startBin) ? 0 : startDir;
     const CFuint dEnd = (ib != m_startEndBin.second)? m_nbDirs : endDir;
     for (CFuint d = dStart; d < dEnd; ++d) {
@@ -1429,9 +2146,7 @@ void RadiativeTransferFVDOM::loopOverDirs(const CFuint startBin,
 					  const CFuint startDir,
 					  const CFuint endDir)
 {
-  
-  
-  for (CFuint d = startDir; d < endDir; ++d) {
+    for (CFuint d = startDir; d < endDir; ++d) {
     CFLog(INFO, "( dir: " << d << " ), ( bin: ");
     const CFuint bStart = (d != startDir) ? 0 : startBin;
     const CFuint bEnd   = (d != m_startEndDir.second) ? m_nbBins : endBin;
@@ -1448,6 +2163,129 @@ void RadiativeTransferFVDOM::loopOverDirs(const CFuint startBin,
     CFLog(INFO, ")\n");
   }
 }
+
+//////////////////////////////////////////////////////////////////////////////
+/*
+void RadiativeTransferFVDOM::computeWallHeatFlux()
+{
+
+
+  boost::filesystem::path file = m_dirName / boost::filesystem::path("wallHeatFlux.out");
+  file = PathAppender::getInstance().appendParallel( file );
+  
+  SelfRegistPtr<Environment::FileHandlerOutput> fhandle = 
+    Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
+  ofstream& outputFile = fhandle->open(file);
+
+
+
+
+  CFLog(VERBOSE, "RadiativeTransferFVDOM::computeWallHeatFlux() => START\n");
+
+  DataHandle< CFreal > qradFluxWall = socket_qradFluxWall.getDataHandle();
+  DataHandle< CFreal > qxFluxWall = socket_qxFluxWall.getDataHandle();
+  DataHandle< CFreal > qyFluxWall = socket_qyFluxWall.getDataHandle();
+  DataHandle< CFreal > qzFluxWall = socket_qzFluxWall.getDataHandle();
+  DataHandle< CFreal > faceCenters = socket_faceCenters.getDataHandle();
+
+  vector< string > wallTrsNames;
+  m_radiation->getWallTRSnames(wallTrsNames);
+  const CFuint nbWallTrs = wallTrsNames.size();
+  
+  cf_assert(nbWallTrs > 0);
+  CFLog(VERBOSE, "RadiativeTransferFVDOM::computeWallHeatFlux() => Number of walls for heat flux computation =" << nbWallrs << "\n");
+
+  RealVector distance(2);
+  RealVector divq(2);
+  RealVector qx(2);
+  RealVector qy(2);
+  RealVector qz(2);
+  CFreal tot_dist;
+
+  const CFuint m_dim = 3; //3D mesh
+  RealVector faceCoord(m_dim);
+
+  for (CFuint i=0; i<nbWallTrs; ++i){ //for each wall
+
+    Framework::FaceTrsGeoBuilder::GeoData& facesData = m_wallFaceBuilder.getDataGE();
+    SafePtr<TopologicalRegionSet> wallFaces = MeshDataStack::getActive()->getTrs(wallTrsNames[i]);
+    facesData.trs = wallFaces;
+    const CFuint nbFacesWall = wallFaces->getLocalNbGeoEnts();
+    
+    CFLog(VERBOSE, "RadiativeTransferFVDOM::computeWallHeatFlux() => Wall TRS number" << i << "has " << nbFacesWall << " faces\n");
+
+
+    for(CFuint f=0; f<nbFacesWall; ++f){
+      facesData.idx = f;
+      Framework::GeometricEntity *const face = m_wallFaceBuilder.buildGE();
+      CFuint faceID = face->getID();
+      const Framework::TopologicalRegionSet& faceTrs = *m_mapGeoToTrs->getTrs(faceID);
+      const CFuint faceIdx = m_mapGeoToTrs->getIdxInTrs(faceID); //taking the local idx for the faceID within the TRS
+      const CFuint faceGeoID = m_radiation->getCurrentWallGeoID();    
+
+      for(CFuint iii=0; iii<m_dim; ++iii) {
+	faceCoord[i] = faceCenters[m_dim*faceGeoID + iii];
+      }
+
+      CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
+      Common::SafePtr<TopologicalRegionSet> cells = geoData.trs;
+
+      CFreal tot_dist = 0.;
+      //exploring the neighborhood of the current face
+      for(CFuint ii=0; ii<2; ++ii) {
+      const CFuint cellID = faceTrs.getStateID(faceIdx, ii); //IDs delle celle
+      //const CFuint cellID2 = faceTrs.getStateID(faceIdx, 1);
+      
+      divq[ii] = m_divq[cellID];
+      qx[ii] = m_q(cellID,XX);
+      qy[ii] = m_q(cellID,YY);
+      qz[ii] = m_q(cellID,ZZ);
+
+      geoData.idx = cellID;
+      GeometricEntity* currCell = m_geoBuilder.buildGE();
+      Node& coordinate = currCell->getState(0)->getCoordinates(); //coordinate[XX,YY,ZZ]
+      distance[ii] = std::sqrt((faceCoord[0]-coordinate[XX])*(faceCoord[0]-coordinate[XX])+(faceCoord[1]-coordinate[YY])*(faceCoord[1]-coordinate[YY])+(faceCoord[2]-coordinate[ZZ])*(faceCoord[2]-coordinate[ZZ]));
+      tot_dist += distance[ii];
+      }
+  
+      CFreal divq_face = 0.;
+      CFreal qx_face = 0.;
+      CFreal qy_face = 0.;
+      CFreal qz_face = 0.;
+
+      for(CFuint ii=0; ii<2; ++ii) {
+        cf_assert(tot_dist > 0.);
+	divq_face += divq[ii]*distance[ii]/tot_dist; //distance-weighted average
+        qx_face += qx[ii]*distance[ii]/tot_dist;
+        qy_face += qy[ii]*distance[ii]/tot_dist;
+        qz_face += qz[ii]*distance[ii]/tot_dist;
+
+      }
+
+      CFuint idx = getWallFaceID(faceID); //////should already have it (faceIdx?!)
+      cf_assert(idx > 0);
+      qradFluxWall[idx] = divq_face;      //////
+      qxFluxWall[idx] = qx_face;
+      qyFluxWall[idx] = qy_face;
+      qzFluxWall[idx] = qz_face;
+      
+      outputFile << divq[0] << " " << divq[1] << " " << divq_face  <<"\n";
+
+
+      m_geoBuilder.releaseGE();
+
+    }
+   
+   m_wallFaceBuilder.releaseGE();
+
+  }
+
+  fhandle->close();
+
+  CFLog(VERBOSE, "RadiativeTransferFVDOM::computeWallHeatFlux() => END\n");
+
+}
+*/
 
 //////////////////////////////////////////////////////////////////////////////
 

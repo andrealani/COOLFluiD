@@ -103,6 +103,7 @@ void RadiationPhysics::computeInterpolatedStates()
   
   if(m_TRStypeID == WALL){
     const CFuint dim = Framework::PhysicalModelStack::getActive()->getDim();
+
     Framework::SocketBundleSetter socketBundle;
     socketBundle.setDataSockets( *(m_radPhysicsHandlerPtr->getDataSockets()) )  ;
     
