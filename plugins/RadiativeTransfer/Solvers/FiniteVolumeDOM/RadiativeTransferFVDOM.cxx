@@ -188,8 +188,7 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
 
   m_rule_azi = "TRAP";
   setParameter("rule_azi", &m_rule_azi);
-
-
+  
   m_directions = false;
   setParameter("directions", &m_directions);
 }
@@ -1235,9 +1234,9 @@ void RadiativeTransferFVDOM::getDirections()
   for (CFuint dir = 0; dir < m_nbDirTypes; dir++) {
     CFLog(DEBUG_MIN, "Direction[" << dir <<"] = (" << mdirs(dir,0) <<", " << mdirs(dir,1) <<", " << mdirs(dir,2) <<")\n");
   }
-
-  if (m_directions){
-      writeDirections();
+  
+  if (m_directions) {
+    writeDirections();
   }
   
   CFLog(DEBUG_MIN, "RadiativeTransferFVDOM::getDirections() => end\n");
@@ -1600,9 +1599,9 @@ void RadiativeTransferFVDOM::readOpacities()
   vector<double> data(3);
   is.read((char*)&data[0], 3*sizeof(double));
   
-  if(m_binningPARADE = false){
-  m_nbBins  = ((int) data[0]);
-    }
+  if(m_binningPARADE == false){
+    m_nbBins  = ((int) data[0]);
+  }
   else{
     m_nbBins = m_nbBinsPARADE;
   }
@@ -2077,7 +2076,7 @@ void RadiativeTransferFVDOM::computeDotProdInFace
 }      
 
 //////////////////////////////////////////////////////////////////////////////
-/*
+
 void RadiativeTransferFVDOM::writeDirections()
 {
   CFLog(VERBOSE, "RadiativeTransferFVDOM::writeDirections() = > Writing directions => start\n");
@@ -2099,11 +2098,12 @@ void RadiativeTransferFVDOM::writeDirections()
   mu_2[1] = 0.0;
   mu_2[2] = 0.0;
   for(CFuint c=0; c < m_nbDirs; c++) {
-    outputFile << "0.0 0.0 0.0 " << m_dirs(c,0) << " " << m_dirs(c,1) << " " << m_dirs(c,2) << " " << m_weight[c] << " " << c << "\n";
+    outputFile << "0.0 0.0 0.0 " << m_dirs[c*3+0] << " " << m_dirs[c*3+1] << " " 
+	       << m_dirs[c*3+2] << " " << m_weight[c] << " " << c << "\n";
     mu_1 += m_weight[c]; //zeroth moment
-    mu_2[0] += m_weight[c]*m_dirs(c,0); //first moment l
-    mu_2[1] += m_weight[c]*m_dirs(c,1); //first moment m
-    mu_2[2] += m_weight[c]*m_dirs(c,2); //first moment n
+    mu_2[0] += m_weight[c]*m_dirs[c*3+0]; //first moment l
+    mu_2[1] += m_weight[c]*m_dirs[c*3+1]; //first moment m
+    mu_2[2] += m_weight[c]*m_dirs[c*3+2]; //first moment n
   }
   
   fhandle->close();
@@ -2112,9 +2112,7 @@ void RadiativeTransferFVDOM::writeDirections()
   CFLog(INFO, "RadiativeTransferFVDOM::writeDirections() = > First moment = ( " << mu_2[0] << ", " << mu_2[1] << ", " << mu_2[2] << " )\n");
 
   CFLog(VERBOSE, "RadiativeTransferFVDOM::writeDirections() = > Writing directions => end\n");
-}
-*/
-      
+}      
 
 //////////////////////////////////////////////////////////////////////////////
 
