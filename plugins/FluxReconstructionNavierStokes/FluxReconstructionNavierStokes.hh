@@ -37,7 +37,7 @@ public:
    */
   static std::string getModuleDescription()
   {
-    return "This module implements the classes specific for the Spectral Finite Difference space discretization for Navier-Stokes.";
+    return "This module implements the classes specific for the Flux Reconstruction space discretization for Navier-Stokes.";
   }
 
 }; // end FluxReconstructionNavierStokesModule

@@ -1,0 +1,14 @@
+LIST( APPEND FluxReconstructionNavierStokes_files
+BCMirrorEuler2D.cxx
+BCMirrorEuler2D.hh
+BCSubInletEulerTtPtAlpha2D.cxx
+BCSubInletEulerTtPtAlpha2D.hh
+BCSubOutletEuler2D.cxx
+BCSubOutletEuler2D.hh
+FluxReconstructionNavierStokes.hh
+)
+
+LIST ( APPEND FluxReconstructionNavierStokes_cflibs FluxReconstructionMethod NavierStokes Framework)
+CF_ADD_PLUGIN_LIBRARY ( FluxReconstructionNavierStokes )
+
+CF_WARN_ORPHAN_FILES()
