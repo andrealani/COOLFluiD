@@ -36,7 +36,7 @@ namespace COOLFluiD {
     class BaseCorrectionFunction;
     class FluxReconstructionElementData;
     class ReconstructStatesFluxReconstruction;
-    class BaseBndFaceTermComputer;
+    class ConvBndCorrectionsRHSFluxReconstruction;
     class BaseFaceTermComputer;
     class BaseVolTermComputer;
     class RiemannFlux;
@@ -119,12 +119,6 @@ public: // functions
   static std::string getClassName()
   {
     return "FluxReconstructionSolver";
-  }
-  
-  /// @return the boundary face term computer
-  Common::SafePtr< BaseBndFaceTermComputer > getBndFaceTermComputer()
-  {
-    return m_bndFaceTermComputer.getPtr();
   }
   
   /// @return the face term computer
@@ -385,12 +379,6 @@ private:  // data
   
   /// start index of inner faces with a certain orientation
   std::vector< CFuint > m_innerFacesStartIdxs;
-  
-  /// String for the boundary face terms computer
-  std::string m_bndFaceTermComputerStr;
-
-  /// pointer to boundary face term computer
-  Common::SelfRegistPtr< BaseBndFaceTermComputer > m_bndFaceTermComputer;
   
   /// Vector transformer from update to solution variables
   Common::SelfRegistPtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;

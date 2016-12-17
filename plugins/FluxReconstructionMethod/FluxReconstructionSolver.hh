@@ -23,7 +23,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
     
     // Forward declarations
-    class ConvBndFaceTermRHSFluxReconstruction;
+    class ConvBndCorrectionsRHSFluxReconstruction;
     //class BndFaceTermRHSFluxReconstruction;
     
 //////////////////////////////////////////////////////////////////////////////  
@@ -205,7 +205,7 @@ private: // data
   
   /// The commands to use for applying the boundary conditions for the convective terms,
   /// with ConvBndFaceTermRHSFluxReconstruction as type
-  std::vector< Common::SafePtr< ConvBndFaceTermRHSFluxReconstruction > > m_bcs;
+  std::vector< Common::SafePtr< ConvBndCorrectionsRHSFluxReconstruction > > m_bcs;
 
   /// The commands to use for applying the boundary conditions for the convective terms
   std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_bcsComs;

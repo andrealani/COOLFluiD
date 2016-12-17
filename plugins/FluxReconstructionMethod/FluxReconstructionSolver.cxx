@@ -10,12 +10,10 @@
 #include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
 #include "FluxReconstructionMethod/BasePointDistribution.hh"
 #include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
-#include "FluxReconstructionMethod/ConvBndFaceTermRHSFluxReconstruction.hh"
-#include "FluxReconstructionMethod/BaseBndFaceTermComputer.hh"
 #include "FluxReconstructionMethod/BaseFaceTermComputer.hh"
 #include "FluxReconstructionMethod/BaseVolTermComputer.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
-#include "FluxReconstructionMethod/ConvBndFaceTermRHSFluxReconstruction.hh"
+#include "FluxReconstructionMethod/ConvBndCorrectionsRHSFluxReconstruction.hh"
 #include "FluxReconstructionMethod/RiemannFlux.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -264,6 +262,7 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
   // get bcStateComputers
   SafePtr< std::vector< SafePtr< BCStateComputer > > > bcStateComputers = m_data->getBCStateComputers();
   cf_assert(m_bcNameStr.size() == bcStateComputers->size());
+  CFLog(VERBOSE, "Nbr of BCs: " << bcStateComputers->size() << "\n");
 
   // resize vector with bc commands
   m_bcsComs.resize(m_bcNameStr.size());
@@ -277,32 +276,32 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
 
     for(CFuint iBc = 0; iBc < m_bcsComs.size(); ++iBc)
     {
-      CFLog(INFO,"FluxReconstruction: Creating convective boundary face term command for boundary condition: "
+      CFLog(INFO,"FluxReconstruction: Creating convective boundary correction command for boundary condition: "
                   << m_bcNameStr[iBc] << "\n");
-      CFLog(INFO,"ConvBndFaceTerm" << m_spaceRHSJacobStr << "\n");
+      CFLog(INFO,"ConvBndCorrections" << m_spaceRHSJacobStr << "\n");
       try
       {
         configureCommand<FluxReconstructionSolverCom,
           FluxReconstructionSolverData,
           FluxReconstructionSolverComProvider>
-          (args, m_bcsComs[iBc], "ConvBndFaceTerm"+m_spaceRHSJacobStr,m_bcNameStr[iBc], m_data);
+          (args, m_bcsComs[iBc], "ConvBndCorrections"+m_spaceRHSJacobStr,m_bcNameStr[iBc], m_data);
       }
       catch (Common::NoSuchValueException& e)
       {
         CFLog(INFO, e.what() << "\n");
-        CFLog(INFO, "Choosing ConvBndFaceTermRHS instead ...\n");
+        CFLog(INFO, "Choosing ConvBndCorrectionsRHS instead ...\n");
 
         configureCommand<FluxReconstructionSolverCom,
           FluxReconstructionSolverData,
           FluxReconstructionSolverComProvider>
-          (args, m_bcsComs[iBc], "ConvBndFaceTermRHS",m_bcNameStr[iBc], m_data);
+          (args, m_bcsComs[iBc], "ConvBndCorrectionsRHS",m_bcNameStr[iBc], m_data);
       }
 
       cf_assert(m_bcsComs[iBc].isNotNull());
 
       // dynamic_cast to ConvBndFaceTermRHSFluxReconstruction
       SafePtr< FluxReconstructionSolverCom > bcComm = m_bcsComs[iBc].getPtr();
-      m_bcs[iBc] = bcComm.d_castTo< ConvBndFaceTermRHSFluxReconstruction >();
+      m_bcs[iBc] = bcComm.d_castTo< ConvBndCorrectionsRHSFluxReconstruction >();
       cf_assert(m_bcs[iBc].isNotNull());
 
       // set bcStateComputer corresponding to this bc command
@@ -472,7 +471,6 @@ std::vector<Common::SafePtr<NumericalStrategy> > FluxReconstructionSolver::getSt
 
   // add strategies here
   result.push_back(m_data->getStatesReconstructor()  .d_castTo<NumericalStrategy>());
-  result.push_back(m_data->getBndFaceTermComputer()  .d_castTo<NumericalStrategy>());
   result.push_back(m_data->getFaceTermComputer()     .d_castTo<NumericalStrategy>());
   result.push_back(m_data->getVolTermComputer()      .d_castTo<NumericalStrategy>());
   result.push_back(m_data->getSolPntDistribution()   .d_castTo<NumericalStrategy>());

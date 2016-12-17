@@ -136,8 +136,11 @@ protected: //data
   /// flux point mapped coordinates
   Common::SafePtr< std::vector< RealVector > > m_flxPntsLocalCoords;
   
+  /// flx pnt - face connectivity per orient
+  Common::SafePtr< std::vector< std::vector< std::vector< CFuint > > > > m_faceFlxPntConnPerOrient;
+  
   /// flx pnt - face connectivity
-  Common::SafePtr< std::vector< std::vector< std::vector< CFuint > > > > m_faceFlxPntConn;
+  Common::SafePtr< std::vector< std::vector< CFuint > > > m_faceFlxPntConn;
   
   /// face connectivity per orient
   Common::SafePtr< std::vector< std::vector< CFuint > > > m_faceConnPerOrient;
@@ -182,7 +185,7 @@ protected: //data
   std::vector< RealVector> m_flxPntRiemannFlux;
   
   /// Continuous flux at the solution points
-  std::vector< RealMatrix> m_contFlx;
+  std::vector< std::vector< RealVector> > m_contFlx;
   
   /// Divergence of the continuous flux at the solution points
   std::vector< RealVector> m_divContFlx;
@@ -195,6 +198,24 @@ protected: //data
   
   /// coefficients for integration over a face
   Common::SafePtr< RealVector > m_faceIntegrationCoefs;
+  
+  /// local cell face - mapped coordinate direction per orientation
+  Common::SafePtr< std::vector< std::vector< CFint > > > m_faceMappedCoordDir;
+  
+  /// unit normal vector in flux points
+  std::vector< RealVector > m_unitNormalFlxPnts;
+  
+  /// face Jacobian vector sizes
+  std::vector< std::vector< CFreal > > m_faceJacobVecSizeFlxPnts;
+  
+  /// 1D flux points mapped coordinates
+  Common::SafePtr< std::vector< CFreal > > m_flxPntsLocalCoords1D;
+  
+  /// flux point coordinates
+  std::vector< RealVector > m_flxPntCoords;
+  
+  /// flux projection vectors in solution points for disc flux
+  std::vector< std::vector< RealVector > > m_cellFluxProjVects;
   
   private:
 

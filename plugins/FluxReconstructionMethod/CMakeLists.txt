@@ -18,6 +18,7 @@ NullCorrectionFunction.cxx
 NullCorrectionFunction.hh
 GaussLegendre.cxx
 GaussLegendre.hh
+CMakeLists.txt
 StdSetup.cxx
 StdSetup.hh
 StdSolve.cxx
@@ -36,10 +37,6 @@ ReconstructStatesFluxReconstruction.cxx
 ReconstructStatesFluxReconstruction.hh
 BCStateComputer.cxx
 BCStateComputer.hh
-ConvBndFaceTermRHSFluxReconstruction.hh
-ConvBndFaceTermRHSFluxReconstruction.cxx
-BaseBndFaceTermComputer.hh
-BaseBndFaceTermComputer.cxx
 ConvVolTermRHSFluxReconstruction.hh
 ConvVolTermRHSFluxReconstruction.cxx
 ConvFaceTermRHSFluxReconstruction.hh
@@ -48,10 +45,6 @@ BaseFaceTermComputer.cxx
 BaseFaceTermComputer.hh
 BaseVolTermComputer.cxx
 BaseVolTermComputer.hh
-BndFaceTermRHSFluxReconstruction.cxx
-BndFaceTermRHSFluxReconstruction.hh
-CompactBndFaceTermComputer.cxx
-CompactBndFaceTermComputer.hh
 RiemannFlux.hh
 RiemannFlux.cxx
 RoeFlux.cxx
@@ -72,6 +65,8 @@ TensorProductGaussIntegrator.cxx
 TensorProductGaussIntegrator.hh
 MeshUpgradeBuilder.cxx
 MeshUpgradeBuilder.hh
+ConvBndCorrectionsRHSFluxReconstruction.cxx
+ConvBndCorrectionsRHSFluxReconstruction.hh
 FluxReconstructionGeometricEntities.cxx
 FluxReconstructionBaseFunctionQuadP0.hh
 FluxReconstructionBaseFunctionQuadP0.cxx

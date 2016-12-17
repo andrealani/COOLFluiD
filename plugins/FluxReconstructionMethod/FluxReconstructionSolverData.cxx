@@ -19,7 +19,7 @@
 #include "FluxReconstructionMethod/TriagFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/BasePointDistribution.hh"
 #include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
-#include "FluxReconstructionMethod/BaseBndFaceTermComputer.hh"
+#include "FluxReconstructionMethod/ConvBndCorrectionsRHSFluxReconstruction.hh"
 #include "FluxReconstructionMethod/BaseFaceTermComputer.hh"
 #include "FluxReconstructionMethod/BaseVolTermComputer.hh"
 #include "FluxReconstructionMethod/RiemannFlux.hh"
@@ -51,7 +51,6 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
   options.addConfigOption< std::string >("FluxPointDistribution","Name of the flux point distribution");
   options.addConfigOption< std::string >("RiemannFlux","Name of the Riemann flux.");
   options.addConfigOption< std::string >("SolutionPointDistribution","Name of the solution point distribution");
-  options.addConfigOption< std::string >("BndFaceTermComputer","Name of the boundary face term computer."  );
   options.addConfigOption< std::string >("FaceTermComputer","Name of the face term computer."  );
   options.addConfigOption< std::string >("VolTermComputer" ,"Name of the volume term computer.");
   options.addConfigOption< std::string >("CorrectionFunctionComputer","Name of the correction function computer");
@@ -72,8 +71,6 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_volTermComputer(),
   m_faceTermComputerStr(),
   m_faceTermComputer(),
-  m_bndFaceTermComputerStr(),
-  m_bndFaceTermComputer(),
   m_linearVarStr(),
   m_riemannFluxStr(),
   m_riemannFlux(),
@@ -113,9 +110,6 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   
   m_correctionfunctionStr = "Null";
   setParameter( "CorrectionFunctionComputer", &m_correctionfunctionStr );
-  
-  m_bndFaceTermComputerStr = "BaseBndFaceTermComputer";
-  setParameter("BndFaceTermComputer", &m_bndFaceTermComputerStr);
 
   m_faceTermComputerStr = "BaseFaceTermComputer";
   setParameter("FaceTermComputer", &m_faceTermComputerStr);
@@ -251,30 +245,6 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
 //   CFLog(INFO,"FluxReconstructionSolver: integrator order: " << m_intorderStr << "\n");
 
   /* add here different strategies configuration */
-  
-  // Configure boundary face term computer
-  CFLog(INFO,"Configure boundary face term computer: " << m_bndFaceTermComputerStr << "\n");
-
-  try
-  {
-    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , BaseBndFaceTermComputer > > prov =
-      Environment::Factory<BaseBndFaceTermComputer>::getInstance().getProvider(m_bndFaceTermComputerStr);
-    cf_assert(prov.isNotNull());
-    m_bndFaceTermComputer = prov->create(m_bndFaceTermComputerStr,thisPtr);
-    configureNested ( m_bndFaceTermComputer.getPtr(), args );
-  }
-  catch (Common::NoSuchValueException& e)
-  {
-    CFLog(VERBOSE, e.what() << "\n");
-    CFLog(VERBOSE, "Choosing BaseBndFaceTermComputer instead ...\n");
-
-    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , BaseBndFaceTermComputer > > prov =
-      Environment::Factory<BaseBndFaceTermComputer>::getInstance().getProvider("BaseBndFaceTermComputer");
-    cf_assert(prov.isNotNull());
-    m_bndFaceTermComputer = prov->create("BaseBndFaceTermComputer", thisPtr);
-    configureNested ( m_bndFaceTermComputer.getPtr(), args );
-  }
-  cf_assert(m_bndFaceTermComputer.isNotNull());
   
   // Configure face term computer
   CFLog(INFO,"Configure face term computer: " << m_faceTermComputerStr << "\n");
