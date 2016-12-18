@@ -3,7 +3,7 @@
 #include "Framework/CellConn.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/MathTypes.hh"
-#include "Common/CUDA/CudaDeviceManager.hh"
+#include "Framework/CudaDeviceManager.hh"
 #include "Common/CUDA/CFVec.hh"
 
 //////////////////////////////////////////////////////////////////////////////

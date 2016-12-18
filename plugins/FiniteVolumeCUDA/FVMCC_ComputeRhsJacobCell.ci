@@ -6,7 +6,7 @@
 #include "Framework/MeshData.hh"
 #include "Framework/MathTypes.hh"
 #include "Framework/BlockAccumulator.hh"
-#include "Common/CUDA/CudaDeviceManager.hh"
+#include "Framework/CudaDeviceManager.hh"
 #include "Common/CUDA/CFVec.hh"
 
 //////////////////////////////////////////////////////////////////////////////

@@ -4,7 +4,7 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#include "Common/CUDA/CudaDeviceManager.hh"
+#include "Framework/CudaDeviceManager.hh"
 #include "Common/CFLog.hh"
 #include "Common/PE.hh"
 	

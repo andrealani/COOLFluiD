@@ -95,6 +95,8 @@ void StdTrsGeoBuilder::setup()
   for (CFuint i = 0; i < nbGeoTypes; ++i) 
   {
     BaseGeometricEntityProvider *const prov =  geoTypesReg.getProvider(i);
+    CFLog(VERBOSE, "StdTrsGeoBuilder::setup() => registering provider " 
+	  << prov->getProviderName() << "\n");
     GeometricEntity *const geo = prov->create();
     geo->resizeNodes(prov->getGeometryShapeFunctionNbNodes());
     geo->resizeStates(prov->getSolutionShapeFunctionNbNodes());

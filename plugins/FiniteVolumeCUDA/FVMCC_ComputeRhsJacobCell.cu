@@ -3,9 +3,9 @@
 #include "Framework/BlockAccumulatorBaseCUDA.hh"
 #include "Framework/CellConn.hh"
 #include "Config/ConfigOptionPtr.hh"
-#include "Common/CUDA/CudaDeviceManager.hh"
+#include "Framework/CudaDeviceManager.hh"
 #include "Common/CUDA/CFVec.hh"
-#include "Common/CUDA/CudaTimer.hh"
+#include "Framework/CudaTimer.hh"
 #include "FiniteVolume/CellData.hh"
 
 #include "FiniteVolumeCUDA/FiniteVolumeCUDA.hh"

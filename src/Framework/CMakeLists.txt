@@ -543,6 +543,9 @@ WriteListMap.cxx
 IF ( CF_HAVE_CUDA )
 LIST ( APPEND Framework_files
      BlockAccumulatorBaseCUDA.hh
+     CudaDeviceManager.cu
+     CudaDeviceManager.hh
+     CudaTimer.hh
 )    
 ENDIF ()
 

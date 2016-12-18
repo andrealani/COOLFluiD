@@ -11,10 +11,10 @@
 
 #include <iostream>
 #include <sstream>
-#include "CudaEnv.hh"
 
 #include "Config/ConfigObject.hh"
 #include "Common/NonCopyable.hh"
+#include "Common/CUDA/CudaEnv.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 

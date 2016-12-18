@@ -7,7 +7,7 @@
 #include "Framework/MeshData.hh"
 
 #ifdef CF_HAVE_CUDA
-#include "Common/CUDA/CudaTimer.hh"
+#include "Framework/CudaTimer.hh"
 #endif
 
 //////////////////////////////////////////////////////////////////////////////

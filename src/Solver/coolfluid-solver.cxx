@@ -34,7 +34,7 @@
 #include "Framework/SubSystemStatus.hh"
 
 #ifdef CF_HAVE_CUDA
-#include "Common/CUDA/CudaDeviceManager.hh"
+#include "Framework/CudaDeviceManager.hh"
 #endif
 
 //////////////////////////////////////////////////////////////////////////////

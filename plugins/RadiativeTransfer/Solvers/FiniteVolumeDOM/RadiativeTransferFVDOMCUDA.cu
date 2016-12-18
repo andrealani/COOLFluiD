@@ -4,9 +4,9 @@
 #include "Common/PE.hh"
 #include "Common/BadValueException.hh"
 #include "Common/CFPrintContainer.hh"
-#include "Common/CUDA/CudaDeviceManager.hh"
+#include "Framework/CudaDeviceManager.hh"
 #include "Common/CUDA/CFVec.hh"
-#include "Common/CUDA/CudaTimer.hh"
+#include "Framework/CudaTimer.hh"
 
 #include "MathTools/MathConsts.hh"
 

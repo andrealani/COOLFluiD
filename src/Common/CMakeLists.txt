@@ -182,18 +182,20 @@ IF (CF_HAVE_CUDA)
     CUDA/CFMatSlice.hh
     CUDA/CFVec.hh
     CUDA/CFVecSlice.hh
-    CUDA/CudaDeviceManager.cu
-    CUDA/CudaDeviceManager.hh
     CUDA/CudaEnv.hh
     CUDA/CudaLock.hh
-    CUDA/CudaTimer.hh
     CUDA/CudaVector.hh
     CUDA/ExprT.hh
     CUDA/MacrosET.hh
     CUDA/MatExprT.hh
     CUDA/MathFunctions.hh
-  )                       
-  LIST(APPEND Common_libs ${CUDA_LIBRARIES}) 
+  )     
+
+  LIST ( APPEND Common_libs ${CUDA_LIBRARIES})
+
+# the following should work but it does not on Mac OS X!!
+#  LIST ( APPEND Common_cflibs Config )
+   
 ENDIF ()
 
 ###############################################################################
