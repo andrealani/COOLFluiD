@@ -176,7 +176,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
           m_flxPntsLocalCoords[iFlx] = (*allFlxPnts)[(*m_faceFlxPntConn)[m_orient][iFlx]];
         }
       
-      //CFLog(VERBOSE,"m_orient: " << m_orient << "\n");
+      CFLog(VERBOSE,"m_orient: " << m_orient << "\n");
       // start and stop index of the faces with this orientation
       const CFuint startFaceIdx = bndFacesStartIdxs[iTR][m_orient  ];
       const CFuint stopFaceIdx  = bndFacesStartIdxs[iTR][m_orient+1];
@@ -192,7 +192,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
         // get the neighbouring cell
         m_intCell = m_face->getNeighborGeo(0);
 	
-	CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
+	//CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
 
         // get the states in the neighbouring cell
         m_cellStates = m_intCell->getStates();
@@ -290,19 +290,30 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
 
           for (CFuint iFlxPnt = 0; iFlxPnt < nbrFlxPnt1D; ++iFlxPnt)
           {
-	    //CFLog(VERBOSE, "Ghost state = " << *(m_flxPntGhostSol[iFlxPnt]->getData()) << "\n");
+	    
 	    m_flxPntRiemannFlux[iFlxPnt].resize(m_nbrEqs);
 	    m_flxPntRiemannFlux[iFlxPnt] = m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[iFlxPnt]),
 									      *(m_flxPntGhostSol[iFlxPnt]),
 									      m_unitNormalFlxPnts[iFlxPnt]);
-	    //CFLog(VERBOSE, "RiemannFlux = " << m_flxPntRiemannFlux[iFlxPnt] << "\n");
+	    if(m_intCell->getID() == 323)
+	      {
+	    CFLog(VERBOSE, "Ghost state = " << *(m_flxPntGhostSol[iFlxPnt]->getData()) << "\n");
+	    CFLog(VERBOSE, "RiemannFlux = " << m_flxPntRiemannFlux[iFlxPnt] << "\n");
+	    CFLog(VERBOSE, "Flux in flx pnt = " << m_cellFlx[iFlxPnt] << "\n");
+	     CFLog(VERBOSE, "unit vector = " << m_unitNormalFlxPnts[iFlxPnt] << "\n");
+	      }
+	    
           }
       
 
           for (CFuint jFlxPnt = 0; jFlxPnt < nbrFlxPnt1D; ++jFlxPnt)
           {
-            m_cellFlx[jFlxPnt] = (m_flxPntRiemannFlux[jFlxPnt] - m_cellFlx[jFlxPnt])*m_faceJacobVecSizeFlxPnts[jFlxPnt]/10;
-	    //CFLog(VERBOSE,"delta flux = " << m_cellFlx[jFlxPnt] << "\n");
+            m_cellFlx[jFlxPnt] = (m_flxPntRiemannFlux[jFlxPnt] - m_cellFlx[jFlxPnt])*m_faceJacobVecSizeFlxPnts[jFlxPnt];
+	    if(m_intCell->getID() == 323)
+	      {
+	        CFLog(VERBOSE,"delta flux = " << m_cellFlx[jFlxPnt] << "\n");
+	      }
+	    
           }
       
           computeWaveSpeedUpdates(m_waveSpeedUpd);
@@ -326,19 +337,31 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
 	      RealVector currentCorrFactor = m_cellFlx[iFlxPnt1D];
 	      cf_assert(currentCorrFactor.size() == m_nbrEqs);
 	    
-	      // Fill in the matrix
+	      // Fill in the corrections
 	      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
 	      {
 	        m_corrections[iSolPnt][iVar] -= currentCorrFactor[iVar] * m_corrFctDiv[iSolPnt][(*m_faceFlxPntConn)[m_orient][iFlxPnt1D]]; 
 	      }
-	      if(m_intCell->getID() == 323 || m_intCell->getID() == 72)
+	      if(m_intCell->getID() == 323)
 	      {
+		
 		//CFLog(VERBOSE, "FI-FD = " << currentCorrFactor << "\n");
+		//CFLog(VERBOSE, "iSol: " << iSolPnt << ", flxID = " << (*m_faceFlxPntConn)[m_orient][iFlxPnt1D] << "\n");
 		//CFLog(VERBOSE, "div h = " << m_corrFctDiv[iSolPnt][(*m_faceFlxPntConn)[m_orient][iFlxPnt1D]] << "\n");
 		//CFLog(VERBOSE, "correction = " << m_corrections[iSolPnt] << "\n\n\n");
 	      }
+	      
 	    }
+	    if(m_intCell->getID() == 323)
+	      {
+		//CFLog(VERBOSE,"State: " << iSolPnt << ": " << (*m_cellStates)[iSolPnt]->getCoordinates() << "\n");
+		//CFLog(VERBOSE, "FI-FD = " << currentCorrFactor << "\n");
+		//CFLog(VERBOSE, "div h = " << m_corrFctDiv[iSolPnt][(*m_faceFlxPntConn)[m_orient][iFlxPnt1D]] << "\n");
+		CFLog(VERBOSE, "correction = " << m_corrections[iSolPnt] << "\n");
+	      }
 	  }
+	  
+	  
 	  
 	  // update the rhs
           updateRHS();

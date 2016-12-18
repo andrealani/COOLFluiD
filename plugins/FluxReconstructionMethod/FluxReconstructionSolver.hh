@@ -24,7 +24,6 @@ namespace COOLFluiD {
     
     // Forward declarations
     class ConvBndCorrectionsRHSFluxReconstruction;
-    //class BndFaceTermRHSFluxReconstruction;
     
 //////////////////////////////////////////////////////////////////////////////  
     

@@ -10,8 +10,6 @@
 #include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
 #include "FluxReconstructionMethod/BasePointDistribution.hh"
 #include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
-#include "FluxReconstructionMethod/BaseFaceTermComputer.hh"
-#include "FluxReconstructionMethod/BaseVolTermComputer.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
 #include "FluxReconstructionMethod/ConvBndCorrectionsRHSFluxReconstruction.hh"
 #include "FluxReconstructionMethod/RiemannFlux.hh"
@@ -170,39 +168,7 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
   
   configureSourceTermCommands(args);
   configureInitCommands(args);
-  
-  CFLog(INFO,"FR: Creating convective volume term command...\n");
-    CFLog(INFO,"ConvVolTerm" << m_spaceRHSJacobStr << "\n");
-    try
-    {
-      configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( args,
-        m_convVolTerm,"ConvVolTerm"+m_spaceRHSJacobStr,m_data );
-    }
-    catch (Common::NoSuchValueException& e)
-    {
-      CFLog(INFO, e.what() << "\n");
-      CFLog(INFO, "Choosing ConvVolTermRHS instead ...\n");
-
-      configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( args, m_convVolTerm,"ConvVolTermRHS",m_data );
-    }
-
-    CFLog(INFO,"FR: Creating convective face term command...\n");
-    CFLog(INFO,"ConvFaceTerm" << m_spaceRHSJacobStr << "\n");
-    try
-    {
-      configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( args, m_convFaceTerm,"ConvFaceTerm"+m_spaceRHSJacobStr,m_data );
-    }
-    catch (Common::NoSuchValueException& e)
-    {
-      CFLog(INFO, e.what() << "\n");
-      CFLog(INFO, "Choosing ConvFaceTermRHS instead ...\n");
-
-      configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( args, m_convFaceTerm,"ConvFaceTermRHS",m_data );
-    }
-    cf_assert(m_convVolTerm.isNotNull());
-    cf_assert(m_convFaceTerm.isNotNull());
-    
-    configureBcCommands(args);
+  configureBcCommands(args);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -364,21 +330,14 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
   // set the residual factor in the MethodData
   m_data->setResFactor(factor);
   
+  cf_assert(m_prepare.isNotNull());
+  m_prepare->execute();
+  
   // apply the boundary conditions (this function is in SpaceMethod and is not called anywhere else)
   applyBC();
   
   cf_assert(m_solve.isNotNull());
   m_solve->execute();
-  
-//   // compute the face terms of the SV discretization of the convective terms
-//   cf_assert(m_convFaceTerm.isNotNull());
-//   m_convFaceTerm->execute();
-// 
-//   // compute the volume terms of the SV discretization of the convective terms
-//   // should be placed after the computation of the convective boundary conditions and the convective face terms
-//   // for proper computation of the gradients
-//   cf_assert(m_convVolTerm.isNotNull());
-//   m_convVolTerm->execute();
 
 //   // if there is a diffusive term, compute the diffusive contributions to the residual
 //   if (m_data->hasDiffTerm() && m_data->separateConvDiffComs())
@@ -396,7 +355,7 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
 //   }
 
   // add source terms
-  addSourceTermsImpl();
+  //addSourceTermsImpl();
 
 //   // divide by volume/Jacobian determinant
 //   m_divideRHSByCellVol->execute();
@@ -443,6 +402,7 @@ void FluxReconstructionSolver::prepareComputationImpl()
 {
   CFAUTOTRACE;
   
+  CFLog(VERBOSE,"EXECUTING PREPARE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
   cf_assert(m_prepare.isNotNull());
   m_prepare->execute();
 }
@@ -471,8 +431,6 @@ std::vector<Common::SafePtr<NumericalStrategy> > FluxReconstructionSolver::getSt
 
   // add strategies here
   result.push_back(m_data->getStatesReconstructor()  .d_castTo<NumericalStrategy>());
-  result.push_back(m_data->getFaceTermComputer()     .d_castTo<NumericalStrategy>());
-  result.push_back(m_data->getVolTermComputer()      .d_castTo<NumericalStrategy>());
   result.push_back(m_data->getSolPntDistribution()   .d_castTo<NumericalStrategy>());
   result.push_back(m_data->getFluxPntDistribution()  .d_castTo<NumericalStrategy>());
   result.push_back(m_data->getCorrectionFunction()   .d_castTo<NumericalStrategy>());

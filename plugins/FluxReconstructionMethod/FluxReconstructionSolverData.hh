@@ -37,8 +37,6 @@ namespace COOLFluiD {
     class FluxReconstructionElementData;
     class ReconstructStatesFluxReconstruction;
     class ConvBndCorrectionsRHSFluxReconstruction;
-    class BaseFaceTermComputer;
-    class BaseVolTermComputer;
     class RiemannFlux;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -119,17 +117,6 @@ public: // functions
   static std::string getClassName()
   {
     return "FluxReconstructionSolver";
-  }
-  
-  /// @return the face term computer
-  Common::SafePtr< BaseFaceTermComputer > getFaceTermComputer()
-  {
-    return m_faceTermComputer.getPtr();
-  }
-  
-  /// @return the volume term computer
-  Common::SafePtr< BaseVolTermComputer > getVolTermComputer(){
-    return m_volTermComputer.getPtr();
   }
 
 //   /// Get the VolumeIntegrator
@@ -337,18 +324,6 @@ private:  // data
   
   /// String for the Riemann flux
   std::string m_riemannFluxStr;
-  
-  /// String for the volume terms computer
-  std::string m_volTermComputerStr;
-
-  /// pointer to volume term computer
-  Common::SelfRegistPtr< BaseVolTermComputer > m_volTermComputer;
-  
-  /// String for the face terms computer
-  std::string m_faceTermComputerStr;
-  
-  /// pointer to face term computer
-  Common::SelfRegistPtr< BaseFaceTermComputer > m_faceTermComputer;
   
   /// The boundary condition state computer strategies
   std::vector< Common::SelfRegistPtr< BCStateComputer > > m_bcs;

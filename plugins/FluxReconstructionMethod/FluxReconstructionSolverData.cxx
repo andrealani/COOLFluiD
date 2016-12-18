@@ -20,8 +20,6 @@
 #include "FluxReconstructionMethod/BasePointDistribution.hh"
 #include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
 #include "FluxReconstructionMethod/ConvBndCorrectionsRHSFluxReconstruction.hh"
-#include "FluxReconstructionMethod/BaseFaceTermComputer.hh"
-#include "FluxReconstructionMethod/BaseVolTermComputer.hh"
 #include "FluxReconstructionMethod/RiemannFlux.hh"
 #include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
@@ -51,8 +49,6 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
   options.addConfigOption< std::string >("FluxPointDistribution","Name of the flux point distribution");
   options.addConfigOption< std::string >("RiemannFlux","Name of the Riemann flux.");
   options.addConfigOption< std::string >("SolutionPointDistribution","Name of the solution point distribution");
-  options.addConfigOption< std::string >("FaceTermComputer","Name of the face term computer."  );
-  options.addConfigOption< std::string >("VolTermComputer" ,"Name of the volume term computer.");
   options.addConfigOption< std::string >("CorrectionFunctionComputer","Name of the correction function computer");
   options.addConfigOption< std::vector<std::string> >("BcTypes","Types of the boundary condition commands.");
   options.addConfigOption< std::vector<std::string> >("BcNames","Names of the boundary condition commands.");
@@ -67,10 +63,6 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_stdTrsGeoBuilder(),
   m_faceBuilder(),
   m_statesReconstructor(),
-  m_volTermComputerStr(),
-  m_volTermComputer(),
-  m_faceTermComputerStr(),
-  m_faceTermComputer(),
   m_linearVarStr(),
   m_riemannFluxStr(),
   m_riemannFlux(),
@@ -86,8 +78,6 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_maxNbrRFluxPnts(),
   m_resFactor(),
   m_updateToSolutionVecTrans()
-  //socket_solCoords1D("solCoords1D"),
-  //socket_flxCoords1D("flxCoords1D")
 {
   addConfigOptionsTo(this);
 
@@ -110,12 +100,6 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   
   m_correctionfunctionStr = "Null";
   setParameter( "CorrectionFunctionComputer", &m_correctionfunctionStr );
-
-  m_faceTermComputerStr = "BaseFaceTermComputer";
-  setParameter("FaceTermComputer", &m_faceTermComputerStr);
-
-  m_volTermComputerStr = "BaseVolTermComputer";
-  setParameter("VolTermComputer", &m_volTermComputerStr);
   
   // options for bc commands
   m_bcTypeStr = vector<std::string>();
@@ -204,19 +188,6 @@ void FluxReconstructionSolverData::setup()
   cf_assert(m_updateToSolutionVecTrans.isNotNull());
   m_updateToSolutionVecTrans->setup(2);
   
-//   // setup socket solCoords1D
-//   DataHandle<std::vector<CFreal> > solCoords1D = socket_solCoords1D.getDataHandle();
-//   SafePtr< std::vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
-//   // get the order of the polynomial interpolation
-//   const CFPolyOrder::Type polyOrder = static_cast<CFPolyOrder::Type>((*elemType)[0].getSolOrder());
-//   solCoords1D.resize(polyOrder+1);
-//   solCoords1D = getSolPntDistribution()->getLocalCoords1D(polyOrder);
-//   
-//   // setup socket flxCoords1D
-//   DataHandle<std::vector<CFreal> > flxCoords1D = socket_flxCoords1D.getDataHandle();
-//   flxCoords1D.resize(polyOrder+1);
-//   flxCoords1D = getFluxPntDistribution()->getLocalCoords1D(polyOrder);
-  
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -245,54 +216,6 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
 //   CFLog(INFO,"FluxReconstructionSolver: integrator order: " << m_intorderStr << "\n");
 
   /* add here different strategies configuration */
-  
-  // Configure face term computer
-  CFLog(INFO,"Configure face term computer: " << m_faceTermComputerStr << "\n");
-
-  try
-  {
-    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , BaseFaceTermComputer > > prov =
-      Environment::Factory<BaseFaceTermComputer>::getInstance().getProvider(m_faceTermComputerStr);
-    cf_assert(prov.isNotNull());
-    m_faceTermComputer = prov->create(m_faceTermComputerStr,thisPtr);
-    configureNested ( m_faceTermComputer.getPtr(), args );
-  }
-  catch (Common::NoSuchValueException& e)
-  {
-    CFLog(VERBOSE, e.what() << "\n");
-    CFLog(VERBOSE, "Choosing BaseFaceTermComputer instead ...\n");
-
-    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , BaseFaceTermComputer > > prov =
-      Environment::Factory<BaseFaceTermComputer>::getInstance().getProvider("BaseFaceTermComputer");
-    cf_assert(prov.isNotNull());
-    m_faceTermComputer = prov->create("BaseFaceTermComputer", thisPtr);
-    configureNested ( m_faceTermComputer.getPtr(), args );
-  }
-  cf_assert(m_faceTermComputer.isNotNull());
-  
-  // Configure volume term computer
-  CFLog(INFO,"Configure volume term computer: " << m_volTermComputerStr << "\n");
-
-  try
-  {
-    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , BaseVolTermComputer > > prov =
-      Environment::Factory< BaseVolTermComputer >::getInstance().getProvider(m_volTermComputerStr);
-    cf_assert(prov.isNotNull());
-    m_volTermComputer = prov->create(m_volTermComputerStr,thisPtr);
-    configureNested ( m_volTermComputer.getPtr(), args );
-  }
-  catch (Common::NoSuchValueException& e)
-  {
-    CFLog(VERBOSE, e.what() << "\n");
-    CFLog(VERBOSE, "Choosing BaseVolTermComputer instead ...\n");
-
-    Common::SafePtr<BaseMethodStrategyProvider< FluxReconstructionSolverData , BaseVolTermComputer > > prov =
-      Environment::Factory< BaseVolTermComputer >::getInstance().getProvider("BaseVolTermComputer");
-    cf_assert(prov.isNotNull());
-    m_volTermComputer = prov->create("BaseVolTermComputer", thisPtr);
-    configureNested ( m_volTermComputer.getPtr(), args );
-  }
-  cf_assert(m_volTermComputer.isNotNull());
   
   // Configure flux point distribution
   CFLog(INFO,"Configure flux point distribution: " << m_fluxpntdistributionStr << "\n");

@@ -744,8 +744,8 @@ void QuadFluxReconstructionElementData::createFaceMappedCoordDir()
   m_faceMappedCoordDir.resize(4);
 
   m_faceMappedCoordDir[0] = -1;
-  m_faceMappedCoordDir[1] = +1;
-  m_faceMappedCoordDir[2] = +1;
+  m_faceMappedCoordDir[1] = 1;
+  m_faceMappedCoordDir[2] = 1;
   m_faceMappedCoordDir[3] = -1;
 }
 

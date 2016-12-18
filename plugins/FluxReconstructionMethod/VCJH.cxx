@@ -175,7 +175,7 @@ CFreal VCJH::computeDerivativeCorrectionFunction1D(CFPolyOrder::Type solOrder, C
     {
         case CFPolyOrder::ORDER1:
         {
-            corrfct = -0.5+1.5/(1.+1.5*cfactor);
+            corrfct = -0.5+1.5*ksi/(1.+1.5*cfactor);
         } break;
         case CFPolyOrder::ORDER2:
         {

@@ -37,14 +37,6 @@ ReconstructStatesFluxReconstruction.cxx
 ReconstructStatesFluxReconstruction.hh
 BCStateComputer.cxx
 BCStateComputer.hh
-ConvVolTermRHSFluxReconstruction.hh
-ConvVolTermRHSFluxReconstruction.cxx
-ConvFaceTermRHSFluxReconstruction.hh
-ConvFaceTermRHSFluxReconstruction.cxx
-BaseFaceTermComputer.cxx
-BaseFaceTermComputer.hh
-BaseVolTermComputer.cxx
-BaseVolTermComputer.hh
 RiemannFlux.hh
 RiemannFlux.cxx
 RoeFlux.cxx
