@@ -604,7 +604,7 @@ void QuadFluxReconstructionElementData::createFaceFluxPntsConn()
   // zeroth face
   for (CFuint iSol = 0; iSol < nbrFlxPnts1D; ++iSol)
   {
-    m_faceFlxPntConn[faceIdx].push_back(2+iSol*4);
+    m_faceFlxPntConn[faceIdx].push_back(2+iSol*4);// 4*nbrFlxPnts1D-2-iSol
   }
   ++faceIdx;
 
@@ -612,21 +612,21 @@ void QuadFluxReconstructionElementData::createFaceFluxPntsConn()
   // first face
   for (CFuint iSol = 0; iSol < nbrFlxPnts1D; ++iSol)
   {
-    m_faceFlxPntConn[faceIdx].push_back(1+iSol*4);
+    m_faceFlxPntConn[faceIdx].push_back(1+iSol*4);// 4*nbrFlxPnts1D-3-iSol
   }
   ++faceIdx;
 
   // second face
   for (CFuint iSol = 0; iSol < nbrFlxPnts1D; ++iSol)
   {
-    m_faceFlxPntConn[faceIdx].push_back(3+iSol*4);
+    m_faceFlxPntConn[faceIdx].push_back(4*nbrFlxPnts1D-1-4*iSol);// 3+iSol*4
   }
   ++faceIdx;
 
   // third face
   for (CFuint iSol = 0; iSol < nbrFlxPnts1D; ++iSol)
   {
-    m_faceFlxPntConn[faceIdx].push_back(iSol*4);
+    m_faceFlxPntConn[faceIdx].push_back(4*nbrFlxPnts1D-4-4*iSol);//iSol*4 
   }
 // 
 // /*  for (CFuint iFace = 0; iFace < m_faceFlxPntConn.size(); ++iFace)

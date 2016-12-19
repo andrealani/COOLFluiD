@@ -177,6 +177,8 @@ void StdSolve::execute()
   // get flux point local coordinates
   m_flxPntsLocalCoords1D = frLocalData[0]->getFlxPntsLocalCoord1D();
   
+  const CFuint nbrFlxPnts = m_flxPntsLocalCoords->size();
+  
   // Resize vectors
   m_cells.resize(0);
   m_cells.resize(2);
@@ -194,17 +196,14 @@ void StdSolve::execute()
   for (CFuint iElem = 0; iElem < cells->getLocalNbGeoEnts(); ++iElem)
   {
     m_corrFlxFactor[iElem].resize(0);
-    m_corrFlxFactor[iElem].resize(m_flxPntsLocalCoords->size()/nbrFlxPnt1D);
-    for (CFuint iFace = 0; iFace < m_flxPntsLocalCoords->size()/nbrFlxPnt1D; ++iFace)
-    {
-      m_corrFlxFactor[iElem][iFace].resize(0);
-      m_corrFlxFactor[iElem][iFace].resize(nbrFlxPnt1D);
-      for (CFuint jFlxPnt = 0; jFlxPnt < nbrFlxPnt1D; ++jFlxPnt)
+    m_corrFlxFactor[iElem].resize(nbrFlxPnts);
+
+      for (CFuint iFlxPnt = 0; iFlxPnt < nbrFlxPnts; ++iFlxPnt)
       {
-	m_corrFlxFactor[iElem][iFace][jFlxPnt].resize(0);
-	m_corrFlxFactor[iElem][iFace][jFlxPnt].resize(m_nbrEqs);
+	m_corrFlxFactor[iElem][iFlxPnt].resize(0);
+	m_corrFlxFactor[iElem][iFlxPnt].resize(m_nbrEqs);
       }
-    }
+    
   }
   
 
@@ -358,24 +357,38 @@ void StdSolve::execute()
 	
       }
       
-      for (CFuint jFlxPnt = 0; jFlxPnt < nbrFlxPnt1D; ++jFlxPnt)
-      {
-        m_cellFlx[LEFT][jFlxPnt] = (m_flxPntRiemannFlux[jFlxPnt] - m_cellFlx[LEFT][jFlxPnt])*m_faceJacobVecSizeFlxPnts[jFlxPnt][LEFT];
-	m_cellFlx[RIGHT][jFlxPnt] = (m_flxPntRiemannFlux[jFlxPnt] - m_cellFlx[RIGHT][jFlxPnt])*m_faceJacobVecSizeFlxPnts[jFlxPnt][RIGHT];
-	if(m_face->getID() == 700)
-	      {
-	        CFLog(VERBOSE,"delta fluxL = " << m_cellFlx[LEFT][jFlxPnt] << "\n");
-	        CFLog(VERBOSE,"delta fluxR = " << m_cellFlx[RIGHT][jFlxPnt] << "\n");
-	      }
-      }
-      
       CFuint leftID = (m_cells[LEFT])->getID();
       CFuint rightID = (m_cells[RIGHT])->getID();
-      CFuint leftLocalFace = (*m_faceConnPerOrient)[m_orient][LEFT];
-      CFuint rightLocalFace = (*m_faceConnPerOrient)[m_orient][RIGHT];
       
-      m_corrFlxFactor[leftID][leftLocalFace] = m_cellFlx[LEFT];
-      m_corrFlxFactor[rightID][rightLocalFace] = m_cellFlx[RIGHT];
+      for (CFuint iFlxPnt = 0; iFlxPnt < nbrFlxPnt1D; ++iFlxPnt)
+      {
+        m_cellFlx[LEFT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt] - m_cellFlx[LEFT][iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT];
+	m_cellFlx[RIGHT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt] - m_cellFlx[RIGHT][iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT];
+	if(m_face->getID() == 700)
+	      {
+	        CFLog(VERBOSE,"delta fluxL = " << m_cellFlx[LEFT][iFlxPnt] << "\n");
+	        CFLog(VERBOSE,"delta fluxR = " << m_cellFlx[RIGHT][iFlxPnt] << "\n");
+	      }
+	      
+        CFuint flxPntIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlxPnt];
+	CFuint flxPntIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlxPnt];
+	
+// 	if(m_cells[LEFT]->getID() == 323 || m_cells[])
+// 	      {
+// 	        CFLog(VERBOSE,"delta fluxL = " << m_cellFlx[LEFT][iFlxPnt] << "\n");
+// 	        CFLog(VERBOSE,"delta fluxR = " << m_cellFlx[RIGHT][iFlxPnt] << "\n");
+// 	      }
+// 	
+	m_corrFlxFactor[leftID][flxPntIdxL] = m_cellFlx[LEFT][iFlxPnt];
+        m_corrFlxFactor[rightID][flxPntIdxR] = m_cellFlx[RIGHT][iFlxPnt];
+      }
+      
+      
+      //CFuint leftLocalFace = (*m_faceConnPerOrient)[m_orient][LEFT];
+      //CFuint rightLocalFace = (*m_faceConnPerOrient)[m_orient][RIGHT];
+      
+      //m_corrFlxFactor[leftID][leftLocalFace] = m_cellFlx[LEFT];
+      //m_corrFlxFactor[rightID][rightLocalFace] = m_cellFlx[RIGHT];
 
       computeWaveSpeedUpdates(m_waveSpeedUpd);
 
@@ -542,6 +555,7 @@ void StdSolve::execute()
 	}
 	if(m_cell->getID() == 323)
 	      {
+		CFLog(VERBOSE,"flx in " << iSolPnt << " : (" << m_contFlx[iSolPnt][0] << " , " << m_contFlx[iSolPnt][1] << "\n");
 	CFLog(VERBOSE, "-div FD = " << m_divContFlx[iSolPnt] << "\n");
 	      }
       }
@@ -553,12 +567,13 @@ void StdSolve::execute()
       
       for (CFuint iSolPnt = 0; iSolPnt < nbrSolPnt; ++iSolPnt)
       {
+	//RealVector divh(nbrSolPnt);
 	//CFLog(VERBOSE, "After: -div FD = " << m_divContFlx[iSolPnt] << "\n");
 	for (CFuint iFace = 0; iFace < nbrFaces; ++iFace)
 	{
 	  for (CFuint iFlxPnt1D = 0; iFlxPnt1D < nbrFlxPnt1D; ++iFlxPnt1D)
 	  {
-	    RealVector currentCorrFactor = m_corrFlxFactor[elemIdx][iFace][iFlxPnt1D];
+	    RealVector currentCorrFactor = m_corrFlxFactor[elemIdx][(*m_faceFlxPntConn)[iFace][iFlxPnt1D]];
 	    cf_assert(currentCorrFactor.size() == m_nbrEqs);
 	    
 	    // Fill in the matrix
@@ -569,16 +584,21 @@ void StdSolve::execute()
 // 		(m_contFlx[iSolPnt])(iVar,iDim) += currentCorrFactor[iVar] * m_corrFct[iSolPnt][iFlxPnt][iDim];
 // 	      }
 	      m_divContFlx[iSolPnt][iVar] -= currentCorrFactor[iVar] * m_corrFctDiv[iSolPnt][(*m_faceFlxPntConn)[iFace][iFlxPnt1D]]; 
+	      
+	      
 	    }
+	    //divh[iSolPnt][] -= m_corrFctDiv[iSolPnt][(*m_faceFlxPntConn)[iFace][iFlxPnt1D]];
+	    if(m_cell->getID() == 323)
+	      {
+		CFLog(VERBOSE, "FI-FD = " << currentCorrFactor << "\n");
+		CFLog(VERBOSE,"flxPntIdx = " << (*m_faceFlxPntConn)[iFace][iFlxPnt1D] << ", iSol = " << iSolPnt << "\n");
+		//CFLog(VERBOSE, "div h = " << divh[iSolPnt][(*m_faceFlxPntConn)[iFace][iFlxPnt1D]] << "\n");
+		//CFLog(VERBOSE, "-div FC = " << m_divContFlx[iSolPnt] << "\n");
+	      }
 	    
 	  }
 	}
-	if(m_cell->getID() == 323)
-	      {
-		//CFLog(VERBOSE, "FI-FD = " << currentCorrFactor << "\n");
-		//CFLog(VERBOSE, "div h = " << m_corrFctDiv[iSolPnt][iFlxPnt] << "\n");
-		CFLog(VERBOSE, "-div FC = " << m_divContFlx[iSolPnt] << "\n");
-	      }
+	
       }
       
       updateRHS();

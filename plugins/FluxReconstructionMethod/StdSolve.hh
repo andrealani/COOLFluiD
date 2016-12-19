@@ -146,7 +146,7 @@ protected: //data
   Common::SafePtr< std::vector< std::vector< CFuint > > > m_faceConnPerOrient;
   
   /// interface minus discontinuous flux in the flux points for each face
-  std::vector< std::vector< std::vector< RealVector > > > m_corrFlxFactor;
+  std::vector< std::vector< RealVector > > m_corrFlxFactor;
   
   /// builder of faces
   Common::SafePtr<Framework::GeometricEntityPool<Framework::FaceToCellGEBuilder> > m_faceBuilder;
