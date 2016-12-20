@@ -910,6 +910,9 @@ void ParadeRadiator::getData()
 void ParadeRadiator::computeBinning()
 {    
   CFLog(VERBOSE, "ParadeRadiator::computeBinning() => START\n");
+
+  Stopwatch<WallTime> stp;
+  stp.start();
   
   const CFuint nbCells = m_pstates->getSize();
 
@@ -918,9 +921,7 @@ void ParadeRadiator::computeBinning()
   CFreal num_alphatot = 0.0;
   CFreal den_alphatot = 0.0;
   
-  alphaav.resize(m_nbPoints);
-  den_alpha_vol.resize(nbCells);
-  num_alpha_vol.resize(nbCells);
+  m_alphaav.resize(m_nbPoints);
   
   for(CFuint i=0;i<m_nbPoints;++i) {
     
@@ -942,33 +943,30 @@ void ParadeRadiator::computeBinning()
       const CFreal volume = getCellVolume(m_pstates->getStateLocalID(s));
       cf_assert(volume > 0.); 
       const CFreal BsVolume = Bs*volume;
-      num_alpha_vol[s] = alpha*BsVolume;
-      den_alpha_vol[s] = BsVolume;
+      const CFreal num_alpha_vol = alpha*BsVolume;
+      const CFreal den_alpha_vol = BsVolume;
+      num_alphatot += num_alpha_vol;
+      den_alphatot += den_alpha_vol;
     }
+        
+    m_alphaav[i] = num_alphatot / den_alphatot;
     
-    for(CFuint it = 0;it < nbCells; ++it) {
-      num_alphatot += num_alpha_vol[it];
-      den_alphatot += den_alpha_vol[it];
-    }
-    
-    alphaav[i] = num_alphatot / den_alphatot;
-    
-    CFLog(DEBUG_MIN,"ParadeLibrary::computeBinning () => alphaav = " << alphaav[i] <<"\n");
+    CFLog(DEBUG_MIN,"ParadeLibrary::computeBinning () => m_alphaav = " << m_alphaav[i] <<"\n");
   }
   
-  CFreal alphamin = alphaav[0];
-  CFreal alphamax = alphaav[0];
+  CFreal alphamin = m_alphaav[0];
+  CFreal alphamax = m_alphaav[0];
   for(CFuint r=0;r<m_nbPoints;++r) {
-    if(alphaav[r]<alphamin) {
-      alphamin = alphaav[r];
+    if(m_alphaav[r]<alphamin) {
+      alphamin = m_alphaav[r];
     }
-    if(alphaav[r]>alphamax) {
-      alphamax = alphaav[r];
+    if(m_alphaav[r]>alphamax) {
+      alphamax = m_alphaav[r];
     }
   }
   
-  CFLog(INFO,"ParadeLibrary::computeBinning () => [alphamax, alphamin] = [" 
-	<< alphamax <<", " << alphamin << "]\n");
+  CFLog(INFO,"ParadeLibrary::computeBinning () => [alphamin, alphamax] = [" 
+	<< alphamin <<", " << alphamax << "]\n");
   
   // Logarithmic spacing
   //
@@ -990,8 +988,8 @@ void ParadeRadiator::computeBinning()
   }
   
   // To search for minimum alpha and maximum
-  CFreal alphamin_tot = alphaav[0];
-  CFreal alphamax_tot = alphaav[0];
+  CFreal alphamin_tot = m_alphaav[0];
+  CFreal alphamax_tot = m_alphaav[0];
   for(CFuint i=0;i<m_nbPoints;++i) {
     for(CFuint s=0;s<nbCells;s++) {
       const CFreal alphaA = m_data(s,i*3+2);
@@ -1105,6 +1103,7 @@ void ParadeRadiator::computeBinning()
     }
   }
   
+  CFLog(INFO, "ParadeRadiator::computeBinning() took " << stp.read() << "s\n");
   CFLog(VERBOSE, "ParadeRadiator::computeBinning() => END\n");
 }
 
@@ -1113,7 +1112,10 @@ void ParadeRadiator::computeBinning()
 void ParadeRadiator::computeBanding() 
 {  
   CFLog(VERBOSE, "ParadeRadiator::computeBanding() => START\n");
- 
+
+  Stopwatch<WallTime> stp;
+  stp.start();
+  
   const CFuint nbCells = m_pstates->getSize();
 
   // Banding
@@ -1208,6 +1210,7 @@ void ParadeRadiator::computeBanding()
     }
   }
   
+  CFLog(INFO, "ParadeRadiator::computeBanding() took " << stp.read() << "s\n");
   CFLog(VERBOSE, "ParadeRadiator::computeBanding() => END\n");
 }
 
@@ -1217,6 +1220,8 @@ void ParadeRadiator::computeBinningBanding()
 { 
   CFLog(VERBOSE, "ParadeRadiator::computeBinningBanding() => START\n");
  
+  Stopwatch<WallTime> stp;
+  stp.start();
   const CFuint nbCells = m_pstates->getSize();
   
   m_nbBins = m_nbBinsPARADE; //for each band, to be set in the *.CFcase
@@ -1234,8 +1239,6 @@ void ParadeRadiator::computeBinningBanding()
   m_emission_bin.resize(nbBinsre*nbCells);
   m_B_bin.resize(nbBinsre*nbCells*nbBandsre);       //bands included as bins
   m_alpha_avbin.resize(nbBinsre*nbCells*nbBandsre); //bands included as bins
-  den_alpha_vol.resize(nbCells);
-  num_alpha_vol.resize(nbCells); 
   RealVector vctBins(m_nbBins);
   CFreal alpha_bincoeff = 0.;
   CFreal emission_bincoeff = 0.;
@@ -1297,7 +1300,7 @@ void ParadeRadiator::computeBinningBanding()
     //Function to calculate the binning algorithm with the absorption and emission coefficients
     CFreal num_alphatot = 0.0;
     CFreal den_alphatot = 0.0;
-    alphaav.clear();
+    m_alphaav.clear();
     
     for(CFuint i=0;i<nb_bandPoints[b]; ++i) {
       for(CFuint s=0;s<nbCells; ++s) {
@@ -1318,34 +1321,30 @@ void ParadeRadiator::computeBinningBanding()
 	const CFreal volume = getCellVolume( m_pstates->getStateLocalID(s));
 	cf_assert(volume > 0.); 
 	const CFreal BsVolume = Bs*volume;
-	num_alpha_vol[s] = alpha*BsVolume;
-	den_alpha_vol[s] = BsVolume;
+	const CFreal num_alpha_vol = alpha*BsVolume;
+	const CFreal den_alpha_vol = BsVolume;
+	num_alphatot += num_alpha_vol;
+	den_alphatot += den_alpha_vol;
       }
       
-      for(CFuint it = 0;it < nbCells; ++it) {
-	num_alphatot += num_alpha_vol[it];
-	den_alphatot += den_alpha_vol[it];
-	//CFLog(INFO,"ParadeLibrary::computeproperties () => num_alphatot" << num_alphatot <<"\n");
-      }
-      
-      alphaav.push_back(num_alphatot/den_alphatot);
-      CFLog(VERBOSE,"ParadeLibrary::computeproperties () => alphaav = " << alphaav[i] <<"\n");
+      m_alphaav.push_back(num_alphatot/den_alphatot);
+      CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_alphaav = " << m_alphaav[i] <<"\n");
     }
     
-    CFreal alphamin = alphaav[0];
-    CFreal alphamax = alphaav[0];
+    CFreal alphamin = m_alphaav[0];
+    CFreal alphamax = m_alphaav[0];
     
     for(CFuint r=0; r<nb_bandPoints[b]; ++r) {
-      if(alphaav[r]<alphamin) {
-	alphamin = alphaav[r];
+      if(m_alphaav[r]<alphamin) {
+	alphamin = m_alphaav[r];
       }
-      if(alphaav[r]>alphamax) {
-	alphamax = alphaav[r];
+      if(m_alphaav[r]>alphamax) {
+	alphamax = m_alphaav[r];
       }
     }
     
-    CFLog(INFO,"ParadeLibrary::computeproperties () => alphamax = " << alphamax <<"\n");
-    CFLog(INFO,"ParadeLibrary::computeproperties () => alphamin = " << alphamin <<"\n");
+    CFLog(INFO,"ParadeLibrary::computeBinningBanding () => [alphamin, alphamax] = [" 
+	  << alphamin <<", " << alphamax << "]\n");
     
     // Logarithmic spacing for binning
     //
@@ -1367,8 +1366,8 @@ void ParadeRadiator::computeBinningBanding()
     
     //To search for minimum alpha and maximum
     
-    CFreal alphamin_tot = alphaav[0];
-    CFreal alphamax_tot = alphaav[0];
+    CFreal alphamin_tot = m_alphaav[0];
+    CFreal alphamax_tot = m_alphaav[0];
     
     for(CFuint i=0;i<nb_bandPoints[b]; ++i) {
       for(CFuint s=0;s<nbCells; ++s) {
@@ -1455,7 +1454,7 @@ void ParadeRadiator::computeBinningBanding()
     cc = cc + nb_bandPoints[b];
   }
   
-  CFLog(VERBOSE, "ParadeRadiator::computeBinningBanding() => END\n");
+  CFLog(INFO, "ParadeRadiator::computeBinningBanding() took "<< stp.read() << "s\n");  CFLog(VERBOSE, "ParadeRadiator::computeBinningBanding() => END\n");
 }
   
 //////////////////////////////////////////////////////////////////////////////

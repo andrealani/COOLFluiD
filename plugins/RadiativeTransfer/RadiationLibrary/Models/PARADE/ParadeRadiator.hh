@@ -193,17 +193,10 @@ private:
   /// absorption coeff = m_radCoeff(local state ID, spectral point idx*3+2)
   RealMatrix m_data;
   
-  /// vector storing for each component the numerator of the mean absorption coeffic  ient in that cell  and for that wavelength
-  RealVector num_alpha_vol;
-  
-  /// vector storing for each component the denominator of the mean absorption coeff  icient in that cell and for that wavelength
-  RealVector den_alpha_vol;
-
   /// vector storing the averaged absorption coefficient for each wavelength
-  std::vector<CFreal> alphaav;
+  std::vector<CFreal> m_alphaav;
   
   /// vectors storing the matrix with the data for each bin and each cell, for the absorption, emission and source terms
-
   std::vector<CFreal> m_alpha_bin;
   std::vector<CFreal> m_emission_bin;
   std::vector<CFreal> m_B_bin;
