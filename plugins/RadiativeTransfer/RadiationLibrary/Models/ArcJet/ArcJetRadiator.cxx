@@ -1,5 +1,5 @@
 #include <fstream>
-#include "ArcJetRadiator.hh"
+
 #include "Common/CFLog.hh"
 #include "Common/DebugFunctions.hh"
 #include "Environment/ObjectProvider.hh"
@@ -17,6 +17,8 @@
 #include "Framework/PhysicalConsts.hh"
 #include "Framework/ProxyDofIterator.hh"
 #include "Framework/PhysicalConsts.hh"
+#include "RadiativeTransfer/RadiationLibrary/Models/ArcJet/ArcJetRadiator.hh"
+#include "RadiativeTransfer/RadiationLibrary/RadiationPhysicsHandler.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -34,8 +36,8 @@ namespace RadiativeTransfer {
 //////////////////////////////////////////////////////////////////////////////
 
 Environment::ObjectProvider<ArcJetRadiator,
-          Radiator,
-          RadiativeTransferModule,
+			    Radiator,
+			    RadiativeTransferModule,
 			    1>
 ArcJetRadiatorProvider("ArcJetRadiator");
 
@@ -45,7 +47,6 @@ void ArcJetRadiator::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< string > ("BinTabName","Name of the dat file");
 }
-
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -80,27 +81,24 @@ void ArcJetRadiator::configure ( Config::ConfigArgs& args )
       
 void ArcJetRadiator::setup()
 {
-   m_inFileHandle  = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
-
+  Radiator::setup();
+  
+  m_inFileHandle  = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
+  
   m_library = PhysicalModelStack::getActive()->getImplementor()->
     getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
-
+  
   //read opacities
   readOpacities();
-
+  
   //get the statesID used for this Radiator
   m_radPhysicsPtr->getCellStateIDs( m_statesID );
-
-  Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > states =
-  m_radPhysicsHandlerPtr->getDataSockets()->states;
-  DataHandle<State*, GLOBAL> statesHandle = states.getDataHandle();
-
-  //CFuint size = m_statesID.size();
+  
   // set up the TRS states
   m_pstates.reset
-      (new Framework::DofDataHandleIterator<CFreal, State, GLOBAL>(statesHandle, &m_statesID));
-
+    (new Framework::DofDataHandleIterator<CFreal, State, GLOBAL>(m_states, &m_statesID));
 }
+  
 //////////////////////////////////////////////////////////////////////////////
 
 void ArcJetRadiator::unsetup()

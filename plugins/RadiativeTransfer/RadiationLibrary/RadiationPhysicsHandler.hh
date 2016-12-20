@@ -41,54 +41,87 @@ public:
   Common::SharedPtr< RadiationPhysics > getCellDistPtr(CFuint stateID);
   Common::SharedPtr< RadiationPhysics > getWallDistPtr(CFuint GhostStateID);
 
-
+  /// get the number of loops
   CFuint getNumberLoops() const {return m_nbLoops;}
 
-  void setupDataSockets(Framework::SocketBundle sockets){
-      m_sockets = sockets;
-  }
-
+  /// set up the data sockets
+  void setupDataSockets(Framework::SocketBundle sockets){m_sockets = sockets;}
+  
+  /// get the bundle of sockets
   Framework::SocketBundle* const getDataSockets(){return &m_sockets;}
-
+  
+  /// setup private data
   void setup();
-    
+  
+  /// configure the corresponing TRS
   void configureTRS();
-  CFuint getNbStates();
-  void setupAxiFlag(bool isAxi){ m_isAxi = isAxi;}
-
-  inline void getWallTRSnames(std::vector<std::string> &wallTRSnames)
-         {wallTRSnames=m_wallTRSnames;}
-
-  inline void getBoundaryTRSnames(std::vector<std::string> &boundaryTRSnames)
-         {boundaryTRSnames = m_boundaryTRSnames;}
-
-  inline void getMediumTRSnames(std::vector<std::string> &mediumTRSnames)
-          {mediumTRSnames = m_mediumTRSnames;}
-
-  inline bool isStateNull(CFuint stateID) {
+  
+  /// get the number of states
+  CFuint getNbStates() const {return m_statesOwner.size();}
+  
+  /// set up the axisymmetric flag
+  void setupAxiFlag(const bool isAxi)
+  {
+    if (isAxi) {
+      cf_assert(Framework::PhysicalModelStack::getActive()->getDim() == DIM_2D);
+    }
+    m_isAxi = isAxi;
+  }
+  
+  /// get the Wall TRS names
+  void getWallTRSnames(std::vector<std::string> &wallTRSnames)
+  {wallTRSnames=m_wallTRSnames;}
+  
+  /// get the Boundary TRS names
+  void getBoundaryTRSnames(std::vector<std::string> &boundaryTRSnames)
+  {boundaryTRSnames = m_boundaryTRSnames;}
+  
+  /// get the Medium TRS names
+  void getMediumTRSnames(std::vector<std::string> &mediumTRSnames)
+  {mediumTRSnames = m_mediumTRSnames;}
+  
+  /// check if the given state is NULL
+  bool isStateNull(CFuint stateID) const 
+  {
     return (m_statesOwner[stateID][0] == -1);
   }
-
-  inline bool isGhostStateNull(CFuint ghostStateID) {
+  
+  /// check if the given ghost state is NULL
+  bool isGhostStateNull(CFuint ghostStateID) const 
+  {
     return (m_ghostStatesOwner[ghostStateID][0] == -1);
   }
+  
+  /// @return the current cell state ID
+  CFuint getCurrentCellStateID() const {return m_cellStateID;}
+  
+  /// @return the current cell ID into its corresponding  TRS
+  CFuint getCurrentCellTrsIdx() const {return m_cellStateOwnerIdx;}
+  
+  /// @return the current cell wall ghost state ID
+  CFuint getCurrentWallGhostStateID() const {return m_ghostStateID;}
+  
+  /// @return the current wall face ID into its corresponding TRS
+  CFuint getCurrentWallTrsIdx() const {return m_ghostStateOwnerIdx;}
+  
+  /// @return the current wall face ID (local ID in the current processor)
+  CFuint getCurrentWallGeoID() const {return m_ghostStateWallGeoID;}
+  
+  /// @return the variable ID corresponding to the temperature
+  CFuint getTempID() const {return m_TempID;}
+  
+  /// @return the numer of temperature
+  /// @post   will return an integer>1 for thermal nonequilibrium models
+  CFuint getNbTemps() const {return m_nbTemps;}
 
-
-  inline CFuint getCurrentCellStateID(){return m_cellStateID;}
-  inline CFuint getCurrentCellTrsIdx(){return m_cellStateOwnerIdx;}
-
-  inline CFuint getCurrentWallGhostStateID(){return m_ghostStateID;}
-  inline CFuint getCurrentWallTrsIdx(){return m_ghostStateOwnerIdx;}
-  inline CFuint getCurrentWallGeoID(){return m_ghostStateWallGeoID;}
-
-  inline CFuint getTempID(){return m_TempID;}
-  inline CFuint getNbTemps(){return m_nbTemps;}
-  inline bool isAxi(){return m_isAxi;}
-
-  CFuint getNbGhostStates();
+  /// flag telling whether the case is 2D axialsymemtric
+  bool isAxi() const {return m_isAxi;}
+  
+  /// @return the number of ghost states
+  CFuint getNbGhostStates() const {return m_ghostStatesOwner.size();} 
+  
 private:
   Framework::SocketBundle m_sockets;
-  std::vector< std::string > m_radiationPhysicsNames;
   std::vector<Common::SharedPtr< RadiationPhysics > > m_radiationPhysics;
   std::vector<std::vector<CFint> > m_statesOwner;
   std::vector<std::vector<CFint> > m_ghostStatesOwner;
@@ -96,23 +129,26 @@ private:
   std::vector<std::string> m_wallTRSnames;
   std::vector<std::string> m_boundaryTRSnames;
   std::vector<std::string> m_mediumTRSnames;
-
-  CFreal m_wavMin;
-  CFreal m_wavMax;
-  CFuint m_nbLoops;
-  CFint m_TempID;
+  
   CFuint m_nbTemps;
-
   CFuint m_cellStateID;
   CFuint m_cellStateOwnerIdx;
-
+  
   CFuint m_ghostStateID;
   CFuint m_ghostStateOwnerIdx;
   CFuint m_ghostStateWallGeoID;
-
+  
   bool m_isAxi;
-
+  
+  CFreal m_wavMin;
+  CFreal m_wavMax;
+  CFuint m_nbLoops;
+  CFint  m_TempID;
+  
+  std::vector< std::string > m_radiationPhysicsNames;
 };
+
+//////////////////////////////////////////////////////////////////////////////
 
 }
 }

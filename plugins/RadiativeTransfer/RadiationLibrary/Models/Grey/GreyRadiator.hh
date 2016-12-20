@@ -2,6 +2,7 @@
 #define COOLFluiD_RadiativeTransfer_GreyRadiator_hh
 
 #include "RadiativeTransfer/RadiationLibrary/Radiator.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -9,6 +10,7 @@ namespace COOLFluiD {
 namespace RadiativeTransfer {
 
 //////////////////////////////////////////////////////////////////////////////
+
 class GreyRadiator : public Radiator
 {
 public:
@@ -34,41 +36,23 @@ public:
   void computeEmissionCPD(){;}
 
   void getRandomEmission(CFreal &lambda, RealVector &s_o );
-
-  void getData(){;}
-
+  
+  void getData(){}
+  
 protected:
-
-  virtual inline CFreal getCurrentElemTemperature(){
-    return getCurrentCellTemperature();
-  }
-
-  virtual inline CFreal getSpaceIntegrator(){
+  
+  virtual CFreal getCurrentElemTemperature() {return getCurrentCellTemperature();}
+  
+  virtual CFreal getSpaceIntegrator(){
     return getCurrentCellVolume() * 4.; //4 is from the solid angle integration
   }
-
-  virtual inline void getRandomDirections(CFuint dim, RealVector &s_o ){
+  
+  virtual void getRandomDirections(CFuint dim, RealVector &s_o ){
     getSphericalDirections(dim, s_o);
   }
-
-  void getHemiDirections(CFuint dim, RealVector &s_o){
-     static Framework::DataHandle<CFreal> socketNormals
-         = m_radPhysicsHandlerPtr->getDataSockets()->normals.getDataHandle();
-     static CFuint dim2 = Framework::PhysicalModelStack::getActive()->getDim();
-     static RealVector normals(dim);
-
-     cf_assert(dim == s_o.size() );
-     CFuint wallGeoID = m_radPhysicsHandlerPtr->getCurrentWallGeoID();
-     normals =0.;
-     for (CFuint i=0; i<dim2; ++i){
-        normals[i] = -socketNormals[wallGeoID*dim2+i];
-     }
-     //normals.normalize();
-
-     m_rand.hemiDirections(dim, normals, s_o);
-     //std::cout<< "outDir= ["<<s_o<<" ]; \n";
-  }
-
+  
+  void getHemiDirections(CFuint dim, RealVector &s_o);
+  
   void getSphericalDirections(CFuint dim, RealVector &s_o){
     m_rand.sphereDirections(dim, s_o);
   }
@@ -97,7 +81,6 @@ protected:
   static const CFreal m_Boltzmann       = 1.3806580e-23 ;
   static const CFreal m_StefanBoltzmann = 5.67037321e-08;
   static const CFreal m_SpeedOfLight    = 2.99792458e8  ;
-  static const CFreal m_Pi              = 3.14159265359 ;
   static const CFreal m_Angstrom        = 1.0000000e-10 ;
 
   //m_c1=std::pow(m_Boltzmann,4)/(std::pow(m_Planck,3)*std::pow(m_SpeedOfLight,2))/m_StefanBoltzmann/(2*m_Pi);
@@ -106,8 +89,19 @@ protected:
   static const CFreal m_c1 = 1.5399311364756e-01;
   static const CFreal m_c2 = 1.4387673140816e-02;
   static const CFreal m_c3 = 1.1910428196088e-16;
+  
+protected:
+  
+  /// array of face normals
+  Framework::DataHandle<CFreal> m_socketNormals;
+  
+  /// problem dimension
+  CFuint m_dim2;
+  
+  /// array storing temporary normal 
+  RealVector m_normal;
 };
-
+  
 
 /// /////////////////////////////////////////////////////////////////
 /// \brief The GreyWallRadiator class
@@ -134,8 +128,9 @@ protected:
   virtual inline void getRandomDirections(CFuint dim, RealVector &s_o ){
     getHemiDirections(dim, s_o);
   }
-
 };
+
+//////////////////////////////////////////////////////////////////////////////
 
 }
 }

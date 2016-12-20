@@ -128,6 +128,15 @@ private:
   /// @return Flag telling if the process stores the full grid in parallel
   bool fullGridInProcess() const {return (m_namespace != "Default");}
   
+  /// apply the binning method to reduce the spectral data
+  void computeBinning();
+  
+  /// apply the banding method to reduce the spectral data
+  void computeBanding();
+    
+  /// apply the binning/banding method to reduce the spectral data
+  void computeBinningBanding();
+  
 private: 
   
   /// Rank in the corresponding MPI group (namespace)
@@ -172,10 +181,10 @@ private:
   /// roto-translational temperature ID
   CFuint m_trTempID;
   
-  // electronic temperature ID
+  /// electronic temperature ID
   CFuint m_elTempID;
   
-  // vibrational temperature ID
+  /// vibrational temperature ID
   CFuint m_vibTempID;
 
   /// array storing absorption and emission coefficients
@@ -183,40 +192,25 @@ private:
   /// emission coeff   = m_radCoeff(local state ID, spectral point idx*3+1)
   /// absorption coeff = m_radCoeff(local state ID, spectral point idx*3+2)
   RealMatrix m_data;
-
-
-  /// arrays storing absorption and emission coefficients for the binning
-  //
-  //
-
-  // vector storing for each cell the absorption coefficient
-  RealVector alpha;
-
-  // vector storing for each cell the emission coefficient
-  RealVector epsilon;
-
-  //vector storing for each cell the source term
-  RealVector B;
-
-  // vector storing for each component the numerator of the mean absorption coeffic  ient in that cell  and for that wavelength
+  
+  /// vector storing for each component the numerator of the mean absorption coeffic  ient in that cell  and for that wavelength
   RealVector num_alpha_vol;
-
-  // vector storing for each component the denominator of the mean absorption coeff  icient in that cell and for that wavelength
+  
+  /// vector storing for each component the denominator of the mean absorption coeff  icient in that cell and for that wavelength
   RealVector den_alpha_vol;
 
-  // vector storing the averaged absorption coefficient for each wavelength
+  /// vector storing the averaged absorption coefficient for each wavelength
   std::vector<CFreal> alphaav;
-
-  // vectors storing the matrix with the data for each bin and each cell, for the absorption, emission and source terms
+  
+  /// vectors storing the matrix with the data for each bin and each cell, for the absorption, emission and source terms
 
   std::vector<CFreal> m_alpha_bin;
   std::vector<CFreal> m_emission_bin;
   std::vector<CFreal> m_B_bin;
 
-  // vector storing the averaged absorption coefficients data
-
+  /// vector storing the averaged absorption coefficients data
   std::vector<CFreal> m_alpha_avbin;
-
+  
   /// name of the temporary local directory where Parade is run
   std::string m_localDirName;
   
@@ -225,20 +219,22 @@ private:
   
   /// Reuse existing radiative data (requires the same number of processors as in the previous run).
   bool m_reuseProperties;
-
+  
+  /// number of spectral points
   CFuint m_nbPoints;
-
+  
+  /// iterator for the state vector
   Common::SafePtr<Framework::DofDataHandleIterator<CFreal, Framework::State, Framework::GLOBAL> > m_pstates;
-
+  
   /// thermodynamic library
   Common::SafePtr<Framework::PhysicalChemicalLibrary> m_library;
-
+  
   /// minimum number density
   CFreal m_ndminFix;
-
+  
   /// minimum temperature
   CFreal m_TminFix;
-
+  
   /// number of bins
   CFuint m_nbBins;
 
@@ -266,20 +262,26 @@ private:
   ///Vector with the spectral loop powers of the states
   std::vector<CFreal> m_spectralLoopPowers;
   
-  //vector with the comulative probability distributions
+  /// vector with the comulative probability distributions
   std::vector<CFreal> m_cpdEms;
   
-  // is LTE flag
+  /// flag telling whether the input flowfield is in LTE
   bool m_isLTE;
+  
+  /// flag telling whether the binning has to be applied
+  bool m_binning;
+  
+  /// flag telling whether the banding has to be applied
+  bool m_banding;
   
   /// flag array to indicate molecular species
   std::vector<bool> m_molecularSpecies;
-
+  
 }; // end of class ParadeRadiator
 
 //////////////////////////////////////////////////////////////////////////////
-
-    } // namespace RadiativeTransfer
+    
+  } // namespace RadiativeTransfer
 
 } // namespace COOLFluiD
 

@@ -35,7 +35,21 @@ void RadiationPhysicsHandler::defineConfigOptions(Config::OptionList& options)
 RadiationPhysicsHandler::RadiationPhysicsHandler(const std::string& name) :
   Common::OwnedObject(),
   ConfigObject(name),
-  Common::NonCopyable<RadiationPhysicsHandler>()
+  Common::NonCopyable<RadiationPhysicsHandler>(),
+  m_sockets(),
+  m_radiationPhysics(),
+  m_statesOwner(),
+  m_ghostStatesOwner(),
+  m_wallTRSnames(),
+  m_boundaryTRSnames(),
+  m_mediumTRSnames(),
+  m_nbTemps(1),
+  m_cellStateID(0),
+  m_cellStateOwnerIdx(0),
+  m_ghostStateID(0),
+  m_ghostStateOwnerIdx(0),
+  m_ghostStateWallGeoID(0),
+  m_isAxi(false)
 {
   addConfigOptionsTo(this);
   
@@ -47,10 +61,10 @@ RadiationPhysicsHandler::RadiationPhysicsHandler(const std::string& name) :
   
   m_nbLoops = 1;
   setParameter("NumberLoops",&m_nbLoops);
-
+  
   m_TempID = -1;
   setParameter("TempID",&m_TempID);
-
+  
   setParameter("RadiationPhysicsNames",&m_radiationPhysicsNames);
 }
 
@@ -248,18 +262,5 @@ void RadiationPhysicsHandler::configureTRS()
   
 //////////////////////////////////////////////////////////////////////////////
 
-CFuint RadiationPhysicsHandler::getNbStates()
-{
-  return m_statesOwner.size();
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-CFuint RadiationPhysicsHandler::getNbGhostStates()
-{
-  return m_ghostStatesOwner.size();
-}
-
-//////////////////////////////////////////////////////////////////////////////
 }
 }

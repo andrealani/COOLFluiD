@@ -1,4 +1,5 @@
-#include "Radiator.hh"
+#include "RadiativeTransfer/RadiationLibrary/Radiator.hh"
+#include "RadiativeTransfer/RadiationLibrary/RadiationPhysicsHandler.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -12,66 +13,71 @@ namespace RadiativeTransfer {
 Radiator::Radiator(const std::string& name):
   Common::OwnedObject(),
   ConfigObject(name),
-  m_angstrom(1e-10)
+  m_angstrom(1e-10),
+  m_states(CFNULL),
+  m_volumes(CFNULL),
+  m_faceAreas(CFNULL),
+  m_faceCenters(CFNULL)
 {
   addConfigOptionsTo(this);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-CFreal Radiator::getCellVolume( CFuint stateID )
+void Radiator::setup()
 {
-  static Framework::DataHandle<CFreal> volumes
-    = m_radPhysicsHandlerPtr->getDataSockets()->volumes.getDataHandle();
-  static Framework::DataHandle<Framework::State*, Framework::GLOBAL> states
-    = m_radPhysicsHandlerPtr->getDataSockets()->states.getDataHandle();
-  static bool isAxi = m_radPhysicsHandlerPtr->isAxi();
-  //static CFuint trsTypeID  = m_radPhysicsPtr->getTRStypeID();
-  CFreal volume = volumes[stateID];
-  //convert to axi volumes if necessary
-  volume *= (isAxi)? 2.*3.141516*(*states[stateID]).getCoordinates()[YY] : 1. ;
-  return volume;
+  m_states = m_radPhysicsHandlerPtr->getDataSockets()->states.getDataHandle();
+  m_volumes = m_radPhysicsHandlerPtr->getDataSockets()->volumes.getDataHandle();
+
+  m_faceAreas = m_radPhysicsHandlerPtr->getDataSockets()->faceAreas.getDataHandle();
+  
+  m_faceCenters = m_radPhysicsHandlerPtr->getDataSockets()->faceCenters.getDataHandle();
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-CFreal Radiator::getCurrentCellVolume()
+CFreal Radiator::getCurrentCellVolume() const
 {
-  CFuint stateID = m_radPhysicsHandlerPtr->getCurrentCellStateID();
+  const CFuint stateID = 
+    m_radPhysicsHandlerPtr->getCurrentCellStateID();
   return getCellVolume( stateID );
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-CFreal Radiator::getWallArea( CFuint wallGeoID )
+CFreal Radiator::getCurrentWallArea() const 
 {
-  //Framework::State* state = m_radPhysicsPtr->getWallState( wallTrsIdx );
+  const CFuint wallGeoID = 
+      m_radPhysicsHandlerPtr->getCurrentWallGeoID();
+  //CFuint wallTrsIdx = m_radPhysicsHandlerPtr->getCurrentWallTrsIdx();
+  return getWallArea(wallGeoID);
+}
   
-  static Framework::DataHandle<CFreal> faceAreas
-    = m_radPhysicsHandlerPtr->getDataSockets()->faceAreas.getDataHandle();
+//////////////////////////////////////////////////////////////////////////////
   
-  static Framework::DataHandle<CFreal> faceCenters
-    = m_radPhysicsHandlerPtr->getDataSockets()->faceCenters.getDataHandle();
-  
-  static bool isAxi = m_radPhysicsHandlerPtr->isAxi();
-  //convert to axi volumes if necessary
-  CFreal area = faceAreas[wallGeoID];
-  //std::cout<<"My area: "<<area;
-  CFreal h =  faceCenters[wallGeoID*DIM_2D+YY];
-  CFreal coeff = (isAxi) ? h * 2.*3.141516 : 1. ;
-  area = area * coeff;
-  //std::cout<<" r: "<<h<<" coeff: "<<coeff<<" final area: "<<area<<std::endl;
-  return area ;
+CFreal Radiator::getCellVolume(CFuint stateID) const
+{
+  CFreal volume = m_volumes[stateID];
+  cf_assert(volume > 0.);
+  if (m_radPhysicsHandlerPtr->isAxi()) { //convert to axi volumes if necessary
+    volume *= 2.*MathTools::MathConsts::CFrealPi()*(*m_states[stateID]).getCoordinates()[YY];
+  }
+  return volume;
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
-CFreal Radiator::getCurrentWallArea()
-{
-  CFuint wallGeoID = m_radPhysicsHandlerPtr->getCurrentWallGeoID();
-  //CFuint wallTrsIdx = m_radPhysicsHandlerPtr->getCurrentWallTrsIdx();
-
-  return getWallArea(wallGeoID);
+  
+CFreal Radiator::getWallArea(CFuint wallGeoID) const
+{  
+  CFreal area = m_faceAreas[wallGeoID];
+  cf_assert(area > 0.);
+  if (m_radPhysicsHandlerPtr->isAxi()) { //convert to axi volumes if necessary
+    const CFreal h = m_faceCenters[wallGeoID*DIM_2D+YY];
+    const CFreal coeff = h * 2.*MathTools::MathConsts::CFrealPi();
+    area *= coeff;
+  }
+  //std::cout<<" r: "<<h<<" coeff: "<<coeff<<" final area: "<<area<<std::endl;
+  return area ;
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -35,9 +35,9 @@ public:
   /// Constructor without arguments
   Reflector(const std::string& name);
   ~Reflector(){;}
-
-  virtual void setup() = 0;
-
+  
+  virtual void setup() {}
+  
   virtual void setupSpectra(CFreal wavMin, CFreal wavMax) = 0;
 
   virtual CFreal getReflectionProbability( CFreal lambda, RealVector &s_o, RealVector &s_i, RealVector &normal ) = 0;

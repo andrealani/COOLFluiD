@@ -259,6 +259,9 @@ protected: //data
   /// storage of face centers
   Framework::DataSocketSink<CFreal> socket_faceCenters; 
   
+  /// storage of face areas
+  Framework::DataSocketSink<CFreal> socket_faceAreas; 
+  
   /// storage of the the stage of the order of advance
   Framework::DataSocketSource <CFreal> socket_CellID;
   

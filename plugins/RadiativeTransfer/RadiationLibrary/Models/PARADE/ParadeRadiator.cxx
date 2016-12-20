@@ -1,6 +1,7 @@
 #include <fstream>
 
 #include "RadiativeTransfer/RadiationLibrary/Models/PARADE/ParadeRadiator.hh"
+#include "RadiativeTransfer/RadiationLibrary/RadiationPhysicsHandler.hh"
 
 #include "Common/CFLog.hh"
 #include "Common/DebugFunctions.hh"
@@ -62,7 +63,8 @@ void ParadeRadiator::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFuint >("nbBands", "Number of Bands");
   options.addConfigOption< string >("bandsDistr", "Banding distribution");
   options.addConfigOption< CFuint >("nbBinsPARADE", "Number of Bins using PARADE");
-
+  options.addConfigOption< bool >("Binning","Activation of binning");
+  options.addConfigOption< bool >("Banding","Activation of banding");
 }
   
 //////////////////////////////////////////////////////////////////////////////
@@ -121,6 +123,12 @@ ParadeRadiator::ParadeRadiator(const std::string& name) :
 
   m_bandsDistr = "equally";
   setParameter("bandsDistr", &m_bandsDistr);
+
+  m_binning = false;
+  setParameter("Binning",&m_binning);
+  
+  m_banding = false;
+  setParameter("Banding",&m_banding);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -141,6 +149,10 @@ void ParadeRadiator::configure ( Config::ConfigArgs& args )
       
 void ParadeRadiator::setup()
 {
+  CFLog(VERBOSE, "ParadeRadiator::setup() => START\n");
+  
+  Radiator::setup();
+  
   m_rank   = PE::GetPE().GetRank(m_namespace);
   m_nbProc = PE::GetPE().GetProcessorCount(m_namespace);
   
@@ -218,6 +230,8 @@ void ParadeRadiator::setup()
   // set up the TRS states
   m_pstates.reset
       (new Framework::DofDataHandleIterator<CFreal, State, GLOBAL>(statesHandle, &m_statesID));
+  
+  CFLog(VERBOSE, "ParadeRadiator::setup() => END\n");
 }
   
 //////////////////////////////////////////////////////////////////////////////
@@ -249,6 +263,7 @@ void ParadeRadiator::setLibrarySequentially()
             
 void ParadeRadiator::unsetup()
 {
+  Radiator::unsetup();
 }
   
 /////////////////////////////////////////////////////////////////////////////
@@ -288,314 +303,33 @@ void ParadeRadiator::setupSpectra(CFreal wavMin, CFreal wavMax)
   
   // read in the radiative properties from parade.rad
   readLocalRadCoeff();
-
-CFuint m_nbBins = m_nbBinsPARADE; //for each band, to be set in the *.CFcase
-CFuint nbCells = m_pstates->getSize();
-RealVector vctBands(m_nbBands + 1); //vector containing the limits of bands
-
- if(m_nbBins == 1){
-  CFLog(INFO, "ParadeLibrary::computeproprieties() => nbBins = 1 is not allowed, nbBins = 2 is set\n"); //otherwise dy = inf
-  m_nbBins = 2;
- }
-
-//variables for binning
-CFuint nbBinsre = m_nbBins;
-CFuint nbBandsre = m_nbBands;
-m_alpha_bin.resize(nbBinsre*nbCells);
-m_emission_bin.resize(nbBinsre*nbCells);
-m_B_bin.resize(nbBinsre*nbCells*nbBandsre);       //bands included as bins
-m_alpha_avbin.resize(nbBinsre*nbCells*nbBandsre); //bands included as bins
-alpha.resize(nbCells);
-epsilon.resize(nbCells);
-B.resize(nbCells);
-den_alpha_vol.resize(nbCells);
-num_alpha_vol.resize(nbCells); 
-RealVector vctBins(m_nbBins);
-CFreal m_alpha_bincoeff;
-CFreal m_emission_bincoeff;
-CFreal m_B_bincoeff;
-
-DataHandle<CFreal> alpha_avbin = m_radPhysicsHandlerPtr->getDataSockets()->alpha_avbin;
-DataHandle<CFreal> B_bin = m_radPhysicsHandlerPtr->getDataSockets()->B_bin;
-
-//logarithmic spacing for banding
- if(m_bandsDistr == "logarithmic") {
-  CFLog(VERBOSE,"ParadeLibrary::computeproperties () => Logarithmic banding\n");
-  CFreal wavMin_log = std::log(wavMin);
-  CFreal wavMax_log = std::log(wavMax);
-  CFreal dx = (wavMax_log-wavMin_log)/m_nbBands;
-  vctBands[0] = wavMin;
-  for(CFuint i = 1; i<m_nbBands; i++)
-   {
-    vctBands[i] = std::exp(wavMin_log + (dx * i));
-   }
-  vctBands[m_nbBands] = wavMax;
- }
-
- //equally-spaced distribution for banding
- else if(m_bandsDistr == "equally") {
-  CFLog(VERBOSE,"ParadeLibrary::computeproperties () => Equally-spaced banding\n");
-  CFreal dx = (wavMax-wavMin)/m_nbBands;
-  vctBands[0] = wavMin;
-  for(CFuint i = 1; i<m_nbBands; i++)
-   {
-    vctBands[i] = wavMin + (dx * i);
-   }
-  vctBands[m_nbBands] = wavMax;
- }
-
- for(CFuint i = 0; i<(m_nbBands + 1); i++) {
-  CFLog(INFO,"ParadeLibrary::computeproperties () => vctBands(" << i << ") = " << vctBands[i] <<"\n");
- }
-
- //Number of points in each band for each cell
- std::vector< int > nb_bandPoints(m_nbBands, 0); //initialized to 1 to take into accout the starting point of each band
- 
- for(CFuint ii=0; ii<m_nbPoints; ii++) {
-  for(CFuint iii=0; iii<m_nbBands; iii++) {
-    if(m_data(1, ii*3)>vctBands[iii] && m_data(1, ii*3)<vctBands[iii+1]) {
-      //counting points within the band
-      //on the 1st cell 'cause the overall points distribution does not change over cells
-      nb_bandPoints[iii]++;
+  
+  const CFuint nbCells = m_pstates->getSize();
+  
+  // AL: remove this loop during normal runs
+  for(CFuint i=0;i<m_nbPoints;i++) {
+    for(CFuint s=0;s<nbCells;s++) {
+      CFLog(DEBUG_MAX, "absorption parade of point ( " << s << "," << i << ") is" << m_data(s,i*3+2) << "\n");
+      CFLog(DEBUG_MAX, "emission parade of point ( " << s << "," << i << ") is" << m_data(s,i*3+1) << "\n");
+      CFLog(DEBUG_MAX, "wavelength parade of point ( " << s << "," << i << ") is"  << m_data(s,i*3) << "\n");
     }
-   }
   }
- nb_bandPoints[0]++;
- nb_bandPoints[m_nbBands-1]++; //To include wavMax in the last band
-
- for(CFuint iii=0; iii<m_nbBands; iii++) {
-   CFLog(INFO,"ParadeLibrary::computeproperties () => nb_bandPoints(" << iii  << ") = " << nb_bandPoints[iii] << "\n");
- }
-
- CFuint cc = 0; //counter to pick the proper proprieties from m_data
- for(CFuint b=0; b<m_nbBands; b++) { //the loop over bands starts
-
-//Function to calculate the binning algorithm with the absorption and emission coefficients
-
- CFreal num_alphatot = 0.0;
- CFreal den_alphatot = 0.0;
- 
- alphaav.clear();
-
- for(CFuint i=0;i<nb_bandPoints[b];i++)
- {
-
-  for(CFuint s=0;s<nbCells;s++)
-  {
-   alpha[s] = m_data(s,(i+cc)*3+2);
-   epsilon[s] = m_data(s,(i+cc)*3+1);
-   B[s] = epsilon[s] / alpha[s];
-     
-
-// Planck function if we are not in equilibrium
-//
-// CFreal h = 6.626070040e-34;     //SI units Js
-// CFuint c = 3e08; //SI units m/s
-// CFreal k_b = 1.3806485279e-23;  //SI units J/K
-//
-//
-// T needs to be defined from the values extracted
-// const  B = (2*h*pow(c,2)/pow(m_data(j,i*3),5))*(1/(exp(h*c/(m_data(j,i*3)*k_b*T))-1));
-
-
-
- if(getCellVolume( m_pstates->getStateLocalID(s)) > 0)
- {
- num_alpha_vol[s] = alpha[s]*B[s]*getCellVolume( m_pstates->getStateLocalID(s));
- den_alpha_vol[s] = B[s]*getCellVolume( m_pstates->getStateLocalID(s));
- }
- else
- {
- CFLog(VERBOSE,"In binning function, negative or 0 value found" << "\n");
- CFLog(VERBOSE,"State Local ID = " << m_pstates->getStateLocalID(s) << "\n");
- num_alpha_vol[s] = alpha[s]*B[s]*-getCellVolume( m_pstates->getStateLocalID(s));
- den_alpha_vol[s] = B[s]*-getCellVolume( m_pstates->getStateLocalID(s));
- }
-
- }
-
- for(CFuint s = 0; s < nbCells; s++)
- {
-   CFLog(VERBOSE,"Alpha = " << alpha[s] << "\n");
- }
-
- for(CFuint it = 0;it < nbCells; it++)
- {
-    num_alphatot += num_alpha_vol[it];
-    den_alphatot += den_alpha_vol[it];
-
- //CFLog(INFO,"ParadeLibrary::computeproperties () => num_alphatot" << num_alphatot <<"\n");
- 
- }
- 
-
- alphaav.push_back(num_alphatot/den_alphatot);
-
-
-CFLog(VERBOSE,"ParadeLibrary::computeproperties () => alphaav = " << alphaav[i] <<"\n");
-
-}
-
-
-CFreal alphamin = alphaav[0];
-CFreal alphamax = alphaav[0];
-
-for(CFuint r=0;r<nb_bandPoints[b];r++)
-{
-
- if(alphaav[r]<alphamin)
-   {
- alphamin = alphaav[r];
-   }
- if(alphaav[r]>alphamax)
-   {
- alphamax = alphaav[r];
-   }
-
-}
-
-
-CFLog(INFO,"ParadeLibrary::computeproperties () => alphamax = " << alphamax <<"\n");
-CFLog(INFO,"ParadeLibrary::computeproperties () => alphamin = " << alphamin <<"\n");
-
-
-
-// Logarithmic spacing for binning
-//
-
- CFreal alpha_minlog = std::log(alphamin);
- CFreal alpha_maxlog = std::log(alphamax);
-
-CFLog(VERBOSE,"ParadeLibrary::computeproperties () => alpha_minlog = " << alpha_minlog <<"\n");
-CFLog(VERBOSE,"ParadeLibrary::computeproperties () => alpha_maxlog = " << alpha_maxlog <<"\n");
-
-CFreal dy = (alpha_maxlog-alpha_minlog) / (m_nbBins-1);
-
-CFLog(INFO,"ParadeLibrary::computeproperties () => dy = " << dy <<"\n");
-
- vctBins = 0.;
-  for(int i = 0; i<m_nbBins; i++)
-  {
-  vctBins[i] = std::exp(alpha_minlog + (dy * i));
-  CFLog(VERBOSE,"ParadeLibrary::computeproperties () => vctBins(" << i << ") = " << vctBins[i] <<"\n");
+  
+  if (m_binning && !m_banding) {
+    computeBinning();
   }
-
-  //To search for minimum alpha and maximum
-
-CFreal alphamin_tot = alphaav[0];
-CFreal alphamax_tot = alphaav[0];
-
-for(CFuint i=0;i<nb_bandPoints[b];i++)
-{
- for(CFuint s=0;s<nbCells;s++)
- {
-   if((m_data(s,(i+cc)*3+2))<alphamin_tot)
-   {
-     alphamin_tot = m_data(s,(i+cc)*3+2);
-   }
-   if((m_data(s,(i+cc)*3+2))>alphamax_tot)
-   {
-     alphamax_tot = m_data(s,(i+cc)*3+2);
-   }
- }
-}
-
-  vctBins[0] = alphamin_tot;
-  vctBins[m_nbBins-1] = alphamax_tot;
-    
-  for( CFuint i = 0; i<m_nbBins;i++)
-    {
-  CFLog(INFO, " vctBins = " << vctBins[i] << "\n");
-    }
-
-// Binning part of the function
- 
-for(CFuint i=0;i<nb_bandPoints[b];i++)
-{
- for(CFuint j=0;j<nbCells;j++){
-    
-   CFreal Bs = m_data(j,(i+cc)*3+1)/m_data(j,(i+cc)*3+2);
-
- m_alpha_bin[0+nbBinsre*j] = 0;
- m_emission_bin[0+nbBinsre*j] = 0;
- B_bin[0+nbBinsre*j] = 0;
-
-   for(CFuint k=1;k<nbBinsre;k++){
-        
-     if((m_data(j,(i+cc)*3+2)>=vctBins[k-1]) && (m_data(j,(i+cc)*3+2)<vctBins[k]))
-    {
-
-      m_alpha_bincoeff = m_data(j,(i+cc)*3+2)*Bs*m_dWav*1.e-10;
-      m_emission_bincoeff = m_data(j,(i+cc)*3+1)*m_dWav;
-      m_B_bincoeff = Bs*m_dWav*1.e-10;
-    /*
-    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_emission_bin(" << k << "," << j << ") = " << m_emission_bin[m_nbBins*j+k] <<"\n");
-    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_alpha_bin(" << k << "," << j << ") = " <<  m_alpha_bin[m_nbBins*j+k] <<"\n");
-    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_B_bin(" << k << "," << j << ") = " << m_B_bin[m_nbBins*j+k] <<"\n");
-    */
-    }
-
-   
-    m_alpha_bin[k + nbBinsre*j] += m_alpha_bincoeff;
-    m_emission_bin[k + nbBinsre*j] += m_emission_bincoeff;
-    m_B_bin[k + nbBinsre*j] += m_B_bincoeff;
-
+  else if (!m_binning && m_banding) {
+    computeBanding();
   }
- }
-}
-
-for(CFuint k=1;k<nbBinsre;k++)
-{
- for(CFuint j=0;j<nbCells;j++)
- {
-    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_alpha_bin(" << k << "," << j << ") = " <<  m_alpha_bin[nbBinsre*j+k] <<"\n");
-    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_B_bin(" << k << "," << j << ") = " << m_B_bin[nbBinsre*j+k] <<"\n");
+  else if (m_binning && m_banding) {
+    computeBinningBanding();
   }
-}
-
- for(int j=0;j<nbCells;j++)
-   {
-  for(int k=1;k<nbBinsre;k++)
-  {
-   m_alpha_avbin[0+nbBinsre*j] = 0.;
-   
-   if(m_B_bin[k + nbBinsre*j]!= 0.)
-     {
-     CFreal m_alpha_avbin_a = (m_alpha_bin[k + nbBinsre*j]) / (m_B_bin[k + nbBinsre*j]);
-     m_alpha_avbin[k + nbBinsre*j] = m_alpha_avbin_a;
-     CFLog(VERBOSE,"ParadeRadiator::computeProperties()=>alpha_avbin(" << k << "," << j << ") = "<<m_alpha_avbin[k + nbBinsre*j]<<"\n");
-     }
-   else
-     {
-     alpha_avbin[k + nbBinsre*j] = 0.;
-     CFLog(VERBOSE,"ParadeRadiator::computeProperties()=>alpha_avbin(" << k << ","<< j << ") = "<<alpha_avbin[k + nbBinsre*j]<<"\n");
-     }
- }
-}
-
-//alpha_avbin, emission_bin are the average values for absorptivity and emissivity for each bin.
-
-for(int j=0;j<nbCells;j++)
- {
-   for(int k=1;k<nbBinsre;k++)
-  {
-   //the index "b" added for banding
-    alpha_avbin[(k+b) + nbBinsre*j] = m_alpha_avbin[k + nbBinsre*j];
-    B_bin[(k+b) + nbBinsre*j] = m_B_bin[k + nbBinsre*j];
-    CFLog(VERBOSE,"alpha (" << b << "," << k << "," << j << ") = " << alpha_avbin[(k+b) + nbBinsre*j] << "\n");
-  }
- }
-  cc = cc + nb_bandPoints[b];
-
+  
   PE::GetPE().setBarrier(m_namespace);
-
- }
+  
   CFLog(INFO,"ParadeRadiator::computeProperties() => END\n");
- }
-
-
-
-      
+}
+  
 //////////////////////////////////////////////////////////////////////////////
       
 void ParadeRadiator::updateWavRange(CFreal wavMin, CFreal wavMax)
@@ -802,6 +536,11 @@ void ParadeRadiator::readLocalRadCoeff()
 {
   CFLog(VERBOSE, "ParadeRadiator::readLocalRadCoeff() => START\n");
   
+  /// array storing absorption and emission coefficients
+  /// wavelength       = m_radCoeff(local state ID, spectral point idx*3)
+  /// emission coeff   = m_radCoeff(local state ID, spectral point idx*3+1)
+  /// absorption coeff = m_radCoeff(local state ID, spectral point idx*3+2)
+
   fstream& fin = m_inFileHandle->openBinary(m_radFile);
   //string nam = "file-" + StringOps::to_str(PE::GetPE().GetRank());
   
@@ -812,8 +551,8 @@ void ParadeRadiator::readLocalRadCoeff()
   
   int nbCells = 0;
   fin.read((char*)&nbCells, sizeof(int));
-  CFLog(INFO,"nbCells="<<nbCells<<"\n");
-    //fout << " nbCells = " << nbCells << endl;
+  
+  CFLog(VERBOSE,"ParadeRadiator::readLocalRadCoeff() => nbCells = " << nbCells << "\n");
   if (!fullGridInProcess()) {
     cf_assert(nbCells == (int)m_pstates->getSize()  );
   }
@@ -988,11 +727,6 @@ inline void ParadeRadiator::getSpectralIdxs(CFreal lambda, CFuint& idx1, CFuint&
   cf_assert(idx2 < m_nbPoints);
 }
   
-/// array storing absorption and emission coefficients
-/// wavelength       = m_radCoeff(local state ID, spectral point idx*3)
-/// emission coeff   = m_radCoeff(local state ID, spectral point idx*3+1)
-/// absorption coeff = m_radCoeff(local state ID, spectral point idx*3+2)
-///
 
 //////////////////////////////////////////////////////////////////////////////
   
@@ -1053,14 +787,11 @@ void ParadeRadiator::computeEmissionCPD()
 
   m_spectralLoopPowers.resize( nbCells );
   m_cpdEms.resize( nbCells * nbCpdPoints );
-
-  CFreal emInt;
   
+  CFreal emInt = 0.;
   for (CFuint s = 0; s < nbCells; ++s) {
     //first pass to get the total emission coefficient
     //use this information to get the cell's total Radiative Power
-
-    //cout<<"firrst pass, cell "<<s<<' '<<m_dWav<<endl;
     emInt=0.;
     m_cpdEms[ s*nbCpdPoints + 0 ] = 0;
     for (CFuint j=1; j < nbCpdPoints; j++ ){
@@ -1068,22 +799,21 @@ void ParadeRadiator::computeEmissionCPD()
       emInt += ( m_data(s,(j-1)*3+1) + m_data(s,(j)*3+1) )/2. * m_dWav;
       m_cpdEms[ s*nbCpdPoints + j ] = emInt;
     }
-    //cout<<"done, cell "<<s<<' '<<emInt <<endl;
-    m_spectralLoopPowers[s]=emInt*getCellVolume( m_pstates->getStateLocalID(s)) * m_angstrom * 4.0 * 3.1415926535897;
-    if(getCellVolume( m_pstates->getStateLocalID(s)) <= 0)
-    {
-    CFLog(VERBOSE,"In compute Emission CPD, negative or 0 value found" << "\n");
-    CFLog(VERBOSE,"State Local ID = " << m_pstates->getStateLocalID(s) << "\n");
+    
+    m_spectralLoopPowers[s]=emInt*getCellVolume( m_pstates->getStateLocalID(s)) * 
+      m_angstrom * 4.0 * MathConsts::CFrealPi();
+    
+    if(getCellVolume( m_pstates->getStateLocalID(s)) <= 0) {
+      CFLog(VERBOSE,"In compute Emission CPD, negative or 0 value found" << "\n");
+      CFLog(VERBOSE,"State Local ID = " << m_pstates->getStateLocalID(s) << "\n");
     }
-
-
-    //cout<<"second pass, cell "<<s<<endl;
-    //second pass to get the [0->1] comulative probably distribution
+    
+    //second pass to get the [0->1] cumulative probably distribution
     for (CFuint j=1; j < nbCpdPoints; j++ ){
       m_cpdEms[ s*nbCpdPoints + j ] /= emInt;
     }
   }
-
+  
 /*  if (  PE::GetPE().GetRank()  == 0) {
   //test for the first cell
   cout<<endl<<" wav = [";
@@ -1136,7 +866,7 @@ void ParadeRadiator::getRandomEmission(CFreal &lambda, RealVector &s_o)
   //cout<<"get emission"<<endl;
   static CFuint dim = Framework::PhysicalModelStack::getActive()->getDim();
   static CFuint dim2 = m_radPhysicsHandlerPtr->isAxi() ? 3 : dim;
-
+  
   CFuint nbCpdPoints = m_nbPoints;
   CFuint stateIdx = m_radPhysicsHandlerPtr->getCurrentCellTrsIdx();
   
@@ -1176,6 +906,560 @@ void ParadeRadiator::getData()
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+void ParadeRadiator::computeBinning()
+{    
+  CFLog(VERBOSE, "ParadeRadiator::computeBinning() => START\n");
+  
+  const CFuint nbCells = m_pstates->getSize();
+
+  //Function to calculate the binning algorithm with the absorption and emission coefficients
+  const CFuint m_nbBins = m_nbBinsPARADE;
+  CFreal num_alphatot = 0.0;
+  CFreal den_alphatot = 0.0;
+  
+  alphaav.resize(m_nbPoints);
+  den_alpha_vol.resize(nbCells);
+  num_alpha_vol.resize(nbCells);
+  
+  for(CFuint i=0;i<m_nbPoints;++i) {
+    
+    for(CFuint s=0;s<nbCells;s++) {
+      const CFreal alpha = m_data(s,i*3+2);
+      const CFreal epsilon = m_data(s,i*3+1);
+      const CFreal Bs = epsilon/alpha;
+      
+      // Planck function if we are not in equilibrium
+      //
+      // CFreal h = 6.626070040e-34;     //SI units Js
+      // CFuint c = 3e08; //SI units m/s
+      // CFreal k_b = 1.3806485279e-23;  //SI units J/K
+      //
+      //
+      // T needs to be defined from the values extracted
+      // const  B = (2*h*pow(c,2)/pow(m_data(j,i*3),5))*(1/(exp(h*c/(m_data(j,i*3)*k_b*T))-1));
+      
+      const CFreal volume = getCellVolume(m_pstates->getStateLocalID(s));
+      cf_assert(volume > 0.); 
+      const CFreal BsVolume = Bs*volume;
+      num_alpha_vol[s] = alpha*BsVolume;
+      den_alpha_vol[s] = BsVolume;
+    }
+    
+    for(CFuint it = 0;it < nbCells; ++it) {
+      num_alphatot += num_alpha_vol[it];
+      den_alphatot += den_alpha_vol[it];
+    }
+    
+    alphaav[i] = num_alphatot / den_alphatot;
+    
+    CFLog(DEBUG_MIN,"ParadeLibrary::computeBinning () => alphaav = " << alphaav[i] <<"\n");
+  }
+  
+  CFreal alphamin = alphaav[0];
+  CFreal alphamax = alphaav[0];
+  for(CFuint r=0;r<m_nbPoints;++r) {
+    if(alphaav[r]<alphamin) {
+      alphamin = alphaav[r];
+    }
+    if(alphaav[r]>alphamax) {
+      alphamax = alphaav[r];
+    }
+  }
+  
+  CFLog(INFO,"ParadeLibrary::computeBinning () => [alphamax, alphamin] = [" 
+	<< alphamax <<", " << alphamin << "]\n");
+  
+  // Logarithmic spacing
+  //
+  const CFreal alpha_minlog = std::log(alphamin);
+  const CFreal alpha_maxlog = std::log(alphamax);
+  
+  CFLog(VERBOSE,"ParadeLibrary::computeBinning () => [alpha_minlog, alpha_maxlog] = [" 
+	<< alpha_minlog << ", " << alpha_maxlog << "]\n");
+  
+  const CFreal dy = (alpha_maxlog-alpha_minlog) / (m_nbBins-1);
+  
+  CFLog(VERBOSE,"ParadeLibrary::computeBinning () => dy = " << dy <<"\n");
+  RealVector vctBins(m_nbBins);
+  
+  vctBins = 0.;
+  for(CFuint i = 0; i<m_nbBins; ++i) {
+    vctBins[i] = std::exp(alpha_minlog + (dy * i));
+    CFLog(VERBOSE,"ParadeLibrary::computeBinning () => vctBins(" << i << ") = " << vctBins[i] <<"\n");
+  }
+  
+  // To search for minimum alpha and maximum
+  CFreal alphamin_tot = alphaav[0];
+  CFreal alphamax_tot = alphaav[0];
+  for(CFuint i=0;i<m_nbPoints;++i) {
+    for(CFuint s=0;s<nbCells;s++) {
+      const CFreal alphaA = m_data(s,i*3+2);
+      if(alphaA < alphamin_tot) {alphamin_tot = alphaA;}
+      if(alphaA > alphamax_tot) {alphamax_tot = alphaA;}
+    }
+  }
+  
+  vctBins[0] = alphamin_tot;
+  vctBins[m_nbBins-1] = alphamax_tot;
+  
+  /*
+    CFreal alpha_minlog = std::log(alphamin_tot);
+    CFreal alpha_maxlog = std::log(alphamax_tot);
+    RealVector vctBins(m_nbBins);
+    CFreal dy = (alpha_maxlog-alpha_minlog) / (m_nbBins-1);
+    
+    vctBins = 0.;
+    for(int i = 0; i<m_nbBins; ++i)
+    {
+    vctBins[i] = std::exp(alpha_minlog + (dy * i));
+    CFLog(VERBOSE,"ParadeLibrary::computeBinning() => vctBins(" << i << ") = " << vctBins[i] <<"\n");
+    }
+    
+      vctBins[0] = alphamin_tot;
+      vctBins[m_nbBins-1] = alphamax_tot;
+      
+      for( CFuint i = 0; i<m_nbBins;++i)
+      {
+      CFLog(INFO, " vctBins = " << vctBins[i] << "\n");
+      }
+  */
+  // Binning part of the function
+  const CFuint nbBinsre = m_nbBins;
+  m_alpha_bin.resize(nbBinsre*nbCells);
+  m_emission_bin.resize(nbBinsre*nbCells);
+  m_B_bin.resize(nbBinsre*nbCells);
+  CFreal m_alpha_bincoeff = 0.;
+  CFreal m_emission_bincoeff = 0.;
+  CFreal m_B_bincoeff = 0.;
+  
+  for(CFuint i=0;i<m_nbPoints;++i) {
+    for(CFuint j=0;j<nbCells;++j) {
+      const CFreal Bs = m_data(j,i*3+1)/m_data(j,i*3+2);
+      m_alpha_bin[0+nbBinsre*j] = 0.;
+      m_emission_bin[0+nbBinsre*j] = 0.;
+      m_B_bin[0+nbBinsre*j] = 0.;
+      
+      for(CFuint k=1;k<nbBinsre;++k) {
+	if((m_data(j,i*3+2)>=vctBins[k-1]) && (m_data(j,i*3+2)<vctBins[k])) {
+	  m_alpha_bincoeff = m_data(j,i*3+2)*Bs*m_dWav*1e-10;
+	  m_emission_bincoeff = m_data(j,i*3+1)*m_dWav*1e-10;
+	  m_B_bincoeff = Bs*m_dWav*1e-10;
+	  
+	  /*
+	    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_emission_bin(" 
+	    << k << "," << j << ") = " << m_emission_bin[m_nbBins*j+k] <<"\n");
+	    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_alpha_bin(" 
+	    << k << "," << j << ") = " <<  m_alpha_bin[m_nbBins*j+k] <<"\n");
+	    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_B_bin(" 
+	    << k << "," << j << ") = " << m_B_bin[m_nbBins*j+k] <<"\n");
+	  */
+	}
+	
+	m_alpha_bin[k + nbBinsre*j] += m_alpha_bincoeff;
+	m_emission_bin[k + nbBinsre*j] += m_emission_bincoeff;
+	m_B_bin[k + nbBinsre*j] += m_B_bincoeff;
+      }
+    }
+  }
+  
+  for(CFuint k=1;k<nbBinsre;++k) {
+    for(CFuint j=0;j<nbCells;++j) {
+      CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_alpha_bin(" << k << "," << j << ") = " << m_alpha_bin[nbBinsre*j+k] <<"\n");
+      CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_B_bin(" << k << "," << j << ") = " << m_B_bin[nbBinsre*j+k] <<"\n");
+    }
+  }
+  
+  m_alpha_avbin.resize(nbBinsre*nbCells);
+  
+  for(int j=0;j<nbCells;++j) {
+    for(int k=1;k<nbBinsre;++k) {
+      m_alpha_avbin[0+nbBinsre*j] = 0.;
+      
+      if(m_B_bin[k + nbBinsre*j]!= 0.) {
+	CFreal m_alpha_avbin_a = (m_alpha_bin[k + nbBinsre*j]) / (m_B_bin[k + nbBinsre*j]);
+	m_alpha_avbin[k + nbBinsre*j] = m_alpha_avbin_a;
+	CFLog(VERBOSE,"ParadeRadiator::computeBinning()=>alpha_avbin(" << k << "," << j << ") = "<<m_alpha_avbin[k + nbBinsre*j]<<"\n");
+      }
+      else {
+	m_alpha_avbin[k + nbBinsre*j] = 0.;
+	CFLog(VERBOSE,"ParadeRadiator::computeBinning()=>alpha_avbin(" << k << ","<< j << ") = "<<m_alpha_avbin[k + nbBinsre*j]<<"\n");
+      }
+    }
+  }
+  
+  //alpha_avbin, emission_bin are the average values for absorptivity and emissivity for each bin
+  DataHandle<CFreal> alpha_avbin = m_radPhysicsHandlerPtr->getDataSockets()->alpha_avbin;
+  DataHandle<CFreal> B_bin = m_radPhysicsHandlerPtr->getDataSockets()->B_bin;
+  
+  for(int j=0;j<nbCells;++j) {
+    for(int k=1;k<nbBinsre;++k) {
+      alpha_avbin[k + nbBinsre*j] = m_alpha_avbin[k + nbBinsre*j];
+      B_bin[k + nbBinsre*j] = m_B_bin[k + nbBinsre*j];
+    }
+  }
+  
+  for(CFuint j=0;j<nbCells;++j) {
+    for(CFuint k=1;k<nbBinsre;++k) {
+      CFLog(VERBOSE,"alpha (" << k << "," << j << ") = " << alpha_avbin[k + nbBinsre*j] << "\n");
+    }
+  }
+  
+  CFLog(VERBOSE, "ParadeRadiator::computeBinning() => END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+  
+void ParadeRadiator::computeBanding() 
+{  
+  CFLog(VERBOSE, "ParadeRadiator::computeBanding() => START\n");
+ 
+  const CFuint nbCells = m_pstates->getSize();
+
+  // Banding
+  CFreal alphamin_tot = m_data(0,0);
+  CFreal alphamax_tot = m_data(0,0);
+  
+  for(CFuint i=0;i<m_nbPoints;++i) {
+    for(CFuint s=0;s<nbCells;s++) {
+      if((m_data(s,i*3))<alphamin_tot) {
+	alphamin_tot = m_data(s,i*3);
+      }
+      if((m_data(s,i*3))>alphamax_tot) {
+	alphamax_tot = m_data(s,i*3);
+      }
+    }
+  }
+  
+  CFreal alpha_minlog = std::log(alphamin_tot);
+  CFreal alpha_maxlog = std::log(alphamax_tot);
+  
+  CFLog(VERBOSE,"ParadeLibrary::computeBanding () => alpha_minlog = " << alpha_minlog <<"\n");
+  CFLog(VERBOSE,"ParadeLibrary::computeBanding () => alpha_maxlog = " << alpha_maxlog <<"\n");
+  
+  const CFreal dy = (alpha_maxlog-alpha_minlog) / (m_nbBands-1);
+  
+  CFLog(INFO,"ParadeLibrary::computeBanding() => dy = " << dy <<"\n");
+  
+  RealVector vctBins(m_nbBands);
+  
+  vctBins = 0.;
+  for(int i = 0; i<m_nbBands; ++i) {
+    vctBins[i] = std::exp(alpha_minlog + (dy * i));
+    CFLog(VERBOSE,"ParadeLibrary::computeBanding() => vctBins(" << i << ") = " << vctBins[i] <<"\n");
+  }
+  
+  //To search for minimum alpha and maximum
+  //*/
+  
+  m_alpha_bin.resize(m_nbBands*nbCells);
+  m_emission_bin.resize(m_nbBands*nbCells);
+  m_B_bin.resize(m_nbBands*nbCells);
+  CFreal m_alpha_bincoeff;
+  CFreal m_emission_bincoeff;
+  CFreal m_B_bincoeff;
+  
+  for(CFuint i=0;i<m_nbPoints;++i) {
+    for(CFuint j=0;j<nbCells;++j) {
+      const CFreal Bs = m_data(j,i*3+1)/m_data(j,i*3+2);
+      
+      m_alpha_bin[0+m_nbBands*j] = 0;
+      m_emission_bin[0+m_nbBands*j] = 0;
+      m_B_bin[0+m_nbBands*j] = 0;
+      
+      for(CFuint k=1;k<m_nbBands;++k){
+	if((m_data(j,i*3)>=vctBins[k-1]) && (m_data(j,i*3)<vctBins[k])) {
+	  m_alpha_bincoeff = m_data(j,i*3+2)*Bs*m_dWav*1e-10;
+	  m_emission_bincoeff = m_data(j,i*3+1)*m_dWav*1e-10;
+	  m_B_bincoeff = Bs*m_dWav*1e-10;
+	}
+	
+	m_alpha_bin[k +m_nbBands *j] += m_alpha_bincoeff;
+	m_emission_bin[k + m_nbBands*j] += m_emission_bincoeff;
+	m_B_bin[k + m_nbBands*j] += m_B_bincoeff;
+      }
+    }
+  }
+  m_alpha_avbin.resize(m_nbBands*nbCells);
+  
+  for(int j=0;j<nbCells;++j) {
+    for(int k=1;k<m_nbBands;++k) {
+      m_alpha_avbin[0+m_nbBands*j] = 0;
+      
+      if(m_B_bin[k + m_nbBands*j]!= 0.) {
+	CFreal m_alpha_avbin_a = (m_alpha_bin[k + m_nbBands*j]) / (m_B_bin[k + m_nbBands*j]);
+	m_alpha_avbin[k + m_nbBands*j] = m_alpha_avbin_a;
+      }
+      else {
+	m_alpha_avbin[k + m_nbBands*j] = 0.;
+      }
+    }
+  }
+  
+  //alpha_avbin, emission_bin are the average values for absorptivity and emissivity for each bin.
+  
+  DataHandle<CFreal> alpha_avbin = m_radPhysicsHandlerPtr->getDataSockets()->alpha_avbin;
+  DataHandle<CFreal> B_bin = m_radPhysicsHandlerPtr->getDataSockets()->B_bin;
+    
+  for(int j=0;j<nbCells;++j) {
+    for(int k=1;k<m_nbBands;++k) {
+      alpha_avbin[k + m_nbBands*j] = m_alpha_avbin[k + m_nbBands*j];
+      B_bin[k + m_nbBands*j] = m_B_bin[k + m_nbBands*j];
+    }
+  }
+  
+  CFLog(VERBOSE, "ParadeRadiator::computeBanding() => END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ParadeRadiator::computeBinningBanding() 
+{ 
+  CFLog(VERBOSE, "ParadeRadiator::computeBinningBanding() => START\n");
+ 
+  const CFuint nbCells = m_pstates->getSize();
+  
+  m_nbBins = m_nbBinsPARADE; //for each band, to be set in the *.CFcase
+  RealVector vctBands(m_nbBands + 1); //vector containing the limits of bands
+  
+  if (m_nbBins == 1) {
+    CFLog(INFO, "ParadeLibrary::computeproprieties() => nbBins = 1 is not allowed, nbBins = 2 is set\n"); //otherwise dy = inf
+    m_nbBins = 2;
+  }
+  
+  //variables for binning
+  const CFuint nbBinsre = m_nbBins;
+  const CFuint nbBandsre = m_nbBands;
+  m_alpha_bin.resize(nbBinsre*nbCells);
+  m_emission_bin.resize(nbBinsre*nbCells);
+  m_B_bin.resize(nbBinsre*nbCells*nbBandsre);       //bands included as bins
+  m_alpha_avbin.resize(nbBinsre*nbCells*nbBandsre); //bands included as bins
+  den_alpha_vol.resize(nbCells);
+  num_alpha_vol.resize(nbCells); 
+  RealVector vctBins(m_nbBins);
+  CFreal alpha_bincoeff = 0.;
+  CFreal emission_bincoeff = 0.;
+  CFreal B_bincoeff = 0.;
+  
+  DataHandle<CFreal> alpha_avbin = m_radPhysicsHandlerPtr->getDataSockets()->alpha_avbin;
+  DataHandle<CFreal> B_bin = m_radPhysicsHandlerPtr->getDataSockets()->B_bin;
+  
+  //logarithmic spacing for banding
+  if (m_bandsDistr == "logarithmic") {
+    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => Logarithmic banding\n");
+    const CFreal wavMin_log = std::log(m_wavMin);
+    const CFreal wavMax_log = std::log(m_wavMax);
+    const CFreal dx = (wavMax_log-wavMin_log)/m_nbBands;
+    vctBands[0] = m_wavMin;
+    for(CFuint i = 1; i<m_nbBands; ++i) {
+      vctBands[i] = std::exp(wavMin_log + (dx * i));
+    }
+    vctBands[m_nbBands] = m_wavMax;
+  }
+  
+  //equally-spaced distribution for banding
+  else if(m_bandsDistr == "equally") {
+    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => Equally-spaced banding\n");
+    CFreal dx = (m_wavMax-m_wavMin)/m_nbBands;
+    vctBands[0] = m_wavMin;
+    for(CFuint i = 1; i<m_nbBands; ++i) {
+      vctBands[i] = m_wavMin + (dx * i);
+    }
+    vctBands[m_nbBands] = m_wavMax;
+  }
+  
+  for(CFuint i = 0; i<(m_nbBands + 1); ++i) {
+    CFLog(INFO,"ParadeLibrary::computeproperties () => vctBands(" << i << ") = " << vctBands[i] <<"\n");
+  }
+  
+  //Number of points in each band for each cell
+  //initialized to 1 to take into accout the starting point of each band
+  std::vector< int > nb_bandPoints(m_nbBands, 0); 
+  
+  for(CFuint ii=0; ii<m_nbPoints; ++ii) {
+    for(CFuint iii=0; iii<m_nbBands; ++iii) {
+      if(m_data(1, ii*3)>vctBands[iii] && m_data(1, ii*3)<vctBands[iii+1]) {
+	//counting points within the band
+	//on the 1st cell 'cause the overall points distribution does not change over cells
+	nb_bandPoints[iii]++;
+      }
+    }
+  }
+  nb_bandPoints[0]++;
+  nb_bandPoints[m_nbBands-1]++; //To include wavMax in the last band
+  
+  for(CFuint iii=0; iii<m_nbBands; ++iii) {
+    CFLog(INFO,"ParadeLibrary::computeproperties () => nb_bandPoints(" << iii  << ") = " << nb_bandPoints[iii] << "\n");
+  }
+  
+  CFuint cc = 0; //counter to pick the proper proprieties from m_data
+  for(CFuint b=0; b<m_nbBands; ++b) { //the loop over bands starts
+    //Function to calculate the binning algorithm with the absorption and emission coefficients
+    CFreal num_alphatot = 0.0;
+    CFreal den_alphatot = 0.0;
+    alphaav.clear();
+    
+    for(CFuint i=0;i<nb_bandPoints[b]; ++i) {
+      for(CFuint s=0;s<nbCells; ++s) {
+	const CFreal alpha = m_data(s,(i+cc)*3+2);
+	const CFreal epsilon = m_data(s,(i+cc)*3+1);
+	const CFreal Bs = epsilon/alpha;
+	
+	// Planck function if we are not in equilibrium
+	//
+	// CFreal h = 6.626070040e-34;     //SI units Js
+	// CFuint c = 3e08; //SI units m/s
+	// CFreal k_b = 1.3806485279e-23;  //SI units J/K
+	//
+	//
+	// T needs to be defined from the values extracted
+	// const  B = (2*h*pow(c,2)/pow(m_data(j,i*3),5))*(1/(exp(h*c/(m_data(j,i*3)*k_b*T))-1));	
+	
+	const CFreal volume = getCellVolume( m_pstates->getStateLocalID(s));
+	cf_assert(volume > 0.); 
+	const CFreal BsVolume = Bs*volume;
+	num_alpha_vol[s] = alpha*BsVolume;
+	den_alpha_vol[s] = BsVolume;
+      }
+      
+      for(CFuint it = 0;it < nbCells; ++it) {
+	num_alphatot += num_alpha_vol[it];
+	den_alphatot += den_alpha_vol[it];
+	//CFLog(INFO,"ParadeLibrary::computeproperties () => num_alphatot" << num_alphatot <<"\n");
+      }
+      
+      alphaav.push_back(num_alphatot/den_alphatot);
+      CFLog(VERBOSE,"ParadeLibrary::computeproperties () => alphaav = " << alphaav[i] <<"\n");
+    }
+    
+    CFreal alphamin = alphaav[0];
+    CFreal alphamax = alphaav[0];
+    
+    for(CFuint r=0; r<nb_bandPoints[b]; ++r) {
+      if(alphaav[r]<alphamin) {
+	alphamin = alphaav[r];
+      }
+      if(alphaav[r]>alphamax) {
+	alphamax = alphaav[r];
+      }
+    }
+    
+    CFLog(INFO,"ParadeLibrary::computeproperties () => alphamax = " << alphamax <<"\n");
+    CFLog(INFO,"ParadeLibrary::computeproperties () => alphamin = " << alphamin <<"\n");
+    
+    // Logarithmic spacing for binning
+    //
+    
+    CFreal alpha_minlog = std::log(alphamin);
+    CFreal alpha_maxlog = std::log(alphamax);
+    
+    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => alpha_minlog = " << alpha_minlog <<"\n");
+    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => alpha_maxlog = " << alpha_maxlog <<"\n");
+    
+    const CFreal dy = (alpha_maxlog-alpha_minlog) / (m_nbBins-1);
+    CFLog(INFO,"ParadeLibrary::computeproperties () => dy = " << dy <<"\n");
+    
+    vctBins = 0.;
+    for(int i = 0; i<m_nbBins; ++i) {
+      vctBins[i] = std::exp(alpha_minlog + (dy * i));
+      CFLog(VERBOSE,"ParadeLibrary::computeproperties () => vctBins(" << i << ") = " << vctBins[i] <<"\n");
+    }
+    
+    //To search for minimum alpha and maximum
+    
+    CFreal alphamin_tot = alphaav[0];
+    CFreal alphamax_tot = alphaav[0];
+    
+    for(CFuint i=0;i<nb_bandPoints[b]; ++i) {
+      for(CFuint s=0;s<nbCells; ++s) {
+	if((m_data(s,(i+cc)*3+2))<alphamin_tot) {
+	  alphamin_tot = m_data(s,(i+cc)*3+2);
+	}
+	if((m_data(s,(i+cc)*3+2))>alphamax_tot) {
+	  alphamax_tot = m_data(s,(i+cc)*3+2);
+	}
+      }
+    }
+    
+    vctBins[0] = alphamin_tot;
+    vctBins[m_nbBins-1] = alphamax_tot;
+    
+    for( CFuint i = 0; i<m_nbBins; ++i) {
+      CFLog(INFO, " vctBins = " << vctBins[i] << "\n");
+    }
+    
+    // Binning part of the function
+    for(CFuint i=0;i<nb_bandPoints[b]; ++i) {
+      for(CFuint j=0;j<nbCells; ++j){
+	CFreal Bs = m_data(j,(i+cc)*3+1)/m_data(j,(i+cc)*3+2);
+	
+	m_alpha_bin[0+nbBinsre*j] = 0;
+	m_emission_bin[0+nbBinsre*j] = 0;
+	B_bin[0+nbBinsre*j] = 0;
+	
+	for(CFuint k=1;k<nbBinsre; ++k) {
+	  if((m_data(j,(i+cc)*3+2)>=vctBins[k-1]) && (m_data(j,(i+cc)*3+2)<vctBins[k])) {
+	    alpha_bincoeff = m_data(j,(i+cc)*3+2)*Bs*m_dWav*1.e-10;
+	    emission_bincoeff = m_data(j,(i+cc)*3+1)*m_dWav;
+	    B_bincoeff = Bs*m_dWav*1.e-10;
+	    /*
+	      CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_emission_bin(" 
+	      << k << "," << j << ") = " << m_emission_bin[m_nbBins*j+k] <<"\n");
+	      CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_alpha_bin(" 
+	      << k << "," << j << ") = " <<  m_alpha_bin[m_nbBins*j+k] <<"\n");
+	      CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_B_bin(" 
+	      << k << "," << j << ") = " << m_B_bin[m_nbBins*j+k] <<"\n");
+	    */
+	  }
+	  
+	  m_alpha_bin[k + nbBinsre*j] += alpha_bincoeff;
+	  m_emission_bin[k + nbBinsre*j] += emission_bincoeff;
+	  m_B_bin[k + nbBinsre*j] += B_bincoeff;
+	}
+      }
+    }
+    
+    for(CFuint k=1;k<nbBinsre; ++k) {
+      for(CFuint j=0;j<nbCells; ++j) {
+	CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_alpha_bin(" << k << "," << j << ") = " <<  m_alpha_bin[nbBinsre*j+k] <<"\n");
+	CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_B_bin(" << k << "," << j << ") = " << m_B_bin[nbBinsre*j+k] <<"\n");
+      }
+    }
+    
+    for(CFuint j=0;j<nbCells; ++j) {
+      for(CFuint k=1;k<nbBinsre;++k) {
+	m_alpha_avbin[0+nbBinsre*j] = 0.;
+	
+	if(m_B_bin[k + nbBinsre*j] != 0.) {
+	  CFreal m_alpha_avbin_a = (m_alpha_bin[k + nbBinsre*j]) / (m_B_bin[k + nbBinsre*j]);
+	  m_alpha_avbin[k + nbBinsre*j] = m_alpha_avbin_a;
+	  CFLog(VERBOSE,"ParadeRadiator::computeProperties()=>alpha_avbin(" << k << "," << j << ") = "<<m_alpha_avbin[k + nbBinsre*j]<<"\n");
+	}
+	else {
+	  alpha_avbin[k + nbBinsre*j] = 0.;
+	  CFLog(VERBOSE,"ParadeRadiator::computeProperties()=>alpha_avbin(" << k << ","<< j << ") = "<<alpha_avbin[k + nbBinsre*j]<<"\n");
+	}
+      }
+    }
+    
+    //alpha_avbin, emission_bin are the average values for absorptivity and emissivity for each bin.
+    
+    for(CFuint j=0;j<nbCells; ++j) {
+      for(CFuint k=1;k<nbBinsre; ++k) {
+	//the index "b" added for banding
+	alpha_avbin[(k+b) + nbBinsre*j] = m_alpha_avbin[k + nbBinsre*j];
+	B_bin[(k+b) + nbBinsre*j] = m_B_bin[k + nbBinsre*j];
+	CFLog(VERBOSE,"alpha (" << b << "," << k << "," << j << ") = " << alpha_avbin[(k+b) + nbBinsre*j] << "\n");
+      }
+    }
+    cc = cc + nb_bandPoints[b];
+  }
+  
+  CFLog(VERBOSE, "ParadeRadiator::computeBinningBanding() => END\n");
+}
+  
+//////////////////////////////////////////////////////////////////////////////
+
 
 } // namespace RadiativeTransfer
 

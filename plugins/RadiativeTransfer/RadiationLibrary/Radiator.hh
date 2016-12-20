@@ -10,7 +10,6 @@
 #include "RadiativeTransfer/RadiativeTransfer.hh"
 #include "Framework/SocketBundleSetter.hh"
 #include "RadiativeTransfer/Solvers/MonteCarlo/RandomNumberGenerator.hh"
-#include "RadiativeTransfer/RadiationLibrary/RadiationPhysics.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -39,8 +38,10 @@ public:
   Radiator(const std::string& name);
   ~Radiator(){;}
 
-  virtual void setup() = 0;
-
+  virtual void setup();
+  
+  virtual void unsetup() {}
+  
   virtual void setupSpectra(CFreal wavMin, CFreal wavMax) = 0;
 
   virtual CFreal getEmission( CFreal lambda, RealVector &s_o ) = 0;
@@ -62,19 +63,37 @@ public:
   void setRadPhysicsHandlerPtr(RadiationPhysicsHandler *radPhysicsHandlerPtr){
     m_radPhysicsHandlerPtr = radPhysicsHandlerPtr;
   }
-
-  CFreal getCurrentCellVolume();
-  CFreal getCurrentWallArea();
-
-  CFreal getCellVolume( CFuint stateID );
-  CFreal getWallArea(CFuint wallGeoID );
-
+  
+  /// get the volume of the current cell
+  CFreal getCurrentCellVolume() const;
+  
+  /// get the area of the current wall face
+  CFreal getCurrentWallArea() const;
+  
+  /// get the cell volume
+  CFreal getCellVolume(CFuint stateID) const;
+  
+  /// get the wall face area
+  CFreal getWallArea(CFuint wallGeoID) const;
+  
 protected:
   
   const CFreal m_angstrom; 
   RadiationPhysics *m_radPhysicsPtr;
   RadiationPhysicsHandler *m_radPhysicsHandlerPtr;
   RandomNumberGenerator m_rand;
+  
+  /// array of state vectors
+  Framework::DataHandle<Framework::State*, Framework::GLOBAL> m_states;
+  
+  /// array of cell volumes
+  Framework::DataHandle<CFreal> m_volumes;
+
+  /// array fo face areas
+  Framework::DataHandle<CFreal> m_faceAreas;
+  
+  /// array of face centers
+  Framework::DataHandle<CFreal> m_faceCenters;
 };
   
 //////////////////////////////////////////////////////////////////////////////

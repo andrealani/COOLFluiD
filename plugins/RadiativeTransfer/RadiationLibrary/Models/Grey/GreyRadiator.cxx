@@ -1,6 +1,8 @@
-#include "GreyRadiator.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Framework/PhysicalModel.hh"
+#include "RadiativeTransfer/RadiationLibrary/RadiationPhysicsHandler.hh"
+#include "RadiativeTransfer/RadiationLibrary/RadiationPhysics.hh"
+#include "RadiativeTransfer/RadiationLibrary/Models/Grey/GreyRadiator.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -39,22 +41,24 @@ void GreyRadiator::defineConfigOptions(Config::OptionList& options)
 //////////////////////////////////////////////////////////////////////////////
 
 GreyRadiator::GreyRadiator(const std::string& name):
-     Radiator(name)
+  Radiator(name),
+  m_socketNormals(CFNULL),
+  m_dim2(0),
+  m_normal()
 {
-    addConfigOptionsTo(this);
-
-    m_emsCoeff=-1.;
-    setParameter("ElemEmsCoeff",&m_emsCoeff);
-
-    m_absCoeff=-1.;
-    setParameter("ElemAbsCoeff",&m_absCoeff);
-
-    m_allIsGrey = false;
-    setParameter("allIsGrey",&m_allIsGrey);
-
-    m_nbComPlankTerms = 10;
-    setParameter("nbComPlankTerms",&m_nbComPlankTerms);
-
+  addConfigOptionsTo(this);
+  
+  m_emsCoeff=-1.;
+  setParameter("ElemEmsCoeff",&m_emsCoeff);
+  
+  m_absCoeff=-1.;
+  setParameter("ElemAbsCoeff",&m_absCoeff);
+  
+  m_allIsGrey = false;
+  setParameter("allIsGrey",&m_allIsGrey);
+  
+  m_nbComPlankTerms = 10;
+  setParameter("nbComPlankTerms",&m_nbComPlankTerms);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -104,22 +108,23 @@ inline CFreal GreyRadiator::getCurrentCellTemperature(){
 
 //////////////////////////////////////////////////////////////////////////////
 
-inline CFreal GreyRadiator::getCurrentWallTemperature(){
-    CFuint wallGeoIdx = m_radPhysicsHandlerPtr->getCurrentWallTrsIdx();
-    Framework::State* state = m_radPhysicsPtr->getWallState( wallGeoIdx );
-
-//    CFuint wallGeoID = m_radPhysicsHandlerPtr->getCurrentWallGeoID();
-//    Framework::DataHandle<CFreal> faceNormals
-//      = m_radPhysicsHandlerPtr->getDataSockets()->normals.getDataHandle();
- //   std::cout<<"normal "<<faceNormals[DIM_2D*wallGeoID]<<' '<< faceNormals[DIM_2D*wallGeoID+1]<<std::endl;
-    
-    CFreal Temperature = (&(*state)[0])[m_tempID];
-    cf_assert(Temperature > 0 && "Temperature negative, is the temp ID well defined?");
-    return Temperature;
+inline CFreal GreyRadiator::getCurrentWallTemperature()
+{
+  CFuint wallGeoIdx = m_radPhysicsHandlerPtr->getCurrentWallTrsIdx();
+  Framework::State* state = m_radPhysicsPtr->getWallState( wallGeoIdx );
+  
+  //    CFuint wallGeoID = m_radPhysicsHandlerPtr->getCurrentWallGeoID();
+  //    Framework::DataHandle<CFreal> faceNormals
+  //      = m_radPhysicsHandlerPtr->getDataSockets()->normals.getDataHandle();
+  //   std::cout<<"normal "<<faceNormals[DIM_2D*wallGeoID]<<' '<< faceNormals[DIM_2D*wallGeoID+1]<<std::endl;
+  
+  CFreal Temperature = (&(*state)[0])[m_tempID];
+  cf_assert(Temperature > 0 && "Temperature negative, is the temp ID well defined?");
+  return Temperature;
 }
-
+  
 //////////////////////////////////////////////////////////////////////////////
-
+  
 CFreal GreyRadiator::getAbsorption( CFreal lambda, RealVector &s_o ){
   return m_absCoeff;
 }
@@ -128,15 +133,26 @@ CFreal GreyRadiator::getAbsorption( CFreal lambda, RealVector &s_o ){
 
 CFreal GreyRadiator::getEmission( CFreal lambda, RealVector &s_o )
 {
-  CFreal T = getCurrentElemTemperature();
+  const CFreal T = getCurrentElemTemperature();
   return m_emsCoeff * computePlank(lambda*m_angstrom, T);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void GreyRadiator::setup(){
+void GreyRadiator::setup()
+{
+  CFLog(VERBOSE, "GreyRadiator::setup() => START\n");
+  
+  Radiator::setup();
+  
+  m_socketNormals
+    = m_radPhysicsHandlerPtr->getDataSockets()->normals.getDataHandle();
+  m_dim2 = Framework::PhysicalModelStack::getActive()->getDim();
+  
   m_tempID = m_radPhysicsHandlerPtr->getTempID();
   m_TRStypeID = m_radPhysicsPtr->getTRStypeID();
+  
+  CFLog(VERBOSE, "GreyRadiator::setup() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -208,6 +224,20 @@ void GreyRadiator::getRandomEmission(CFreal &lambda, RealVector &s_o)
     }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+void GreyRadiator::getHemiDirections(CFuint dim, RealVector &s_o)
+{
+  cf_assert(dim == s_o.size() );
+  const CFuint wallGeoID = m_radPhysicsHandlerPtr->getCurrentWallGeoID();
+  m_normal.resize(dim);
+  m_normal = 0.;
+  for (CFuint i=0; i<m_dim2; ++i){
+    m_normal[i] = -m_socketNormals[wallGeoID*m_dim2+i];
+  }
+  m_rand.hemiDirections(dim, m_normal, s_o);
+}
+  
 //////////////////////////////////////////////////////////////////////////////
 
 }

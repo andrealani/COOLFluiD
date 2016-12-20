@@ -60,6 +60,7 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   socket_isOutward("isOutward"),
   socket_normals("normals"),
   socket_faceCenters("faceCenters"),
+  socket_faceAreas("faceAreas"),
   socket_CellID("CellID"),
   socket_divq("divq"),
   socket_qx("qx"),
@@ -296,7 +297,8 @@ RadiativeTransferFVDOM::needsSockets()
   result.push_back(&socket_nodes);
   result.push_back(&socket_isOutward);
   result.push_back(&socket_normals);  
-  result.push_back(&socket_faceCenters);  
+  result.push_back(&socket_faceCenters);
+  result.push_back(&socket_faceAreas);
   
   return result;
 }
@@ -306,6 +308,8 @@ RadiativeTransferFVDOM::needsSockets()
 void RadiativeTransferFVDOM::setup()
 {
   CFAUTOTRACE;
+  
+  CFLog(VERBOSE, "RadiativeTransferFVDOM::setup() => START\n");
   
   DataProcessingCom::setup();
   
@@ -318,13 +322,11 @@ void RadiativeTransferFVDOM::setup()
   sockets.isOutward   = socket_isOutward;
   sockets.normals     = socket_normals;
   sockets.faceCenters = socket_faceCenters;
+  sockets.faceAreas   = socket_faceAreas;
   
   // source sockets cannot be copied
   sockets.alpha_avbin = socket_alpha_avbin.getDataHandle();
   sockets.B_bin       = socket_B_bin.getDataHandle();
-  
-  // sockets.faceCenters = socket_faceCenters;
-  // sockets.faceAreas   = socket_faceAreas;
   
   m_radiation->setupDataSockets(sockets);
   m_radiation->setup();
@@ -353,7 +355,7 @@ void RadiativeTransferFVDOM::setup()
   cf_assert(m_PID < PhysicalModelStack::getActive()->getNbEq());
   cf_assert(m_TID < PhysicalModelStack::getActive()->getNbEq());
   cf_assert(m_PID != m_TID);
-  
+    
   const std::string nsp = getMethodData().getNamespace();
   cf_assert(PE::GetPE().GetProcessorCount(nsp) == 1);
   
@@ -619,7 +621,7 @@ void RadiativeTransferFVDOM::setup()
     
   CFLog(INFO, "RadiativeTransferFVDOM::setup() => getAdvanceOrder() took " << stp.read() << "s\n");
     
-  CFLog(VERBOSE, "RadiativeTransferFVDOM::setup() => end\n");
+  CFLog(VERBOSE, "RadiativeTransferFVDOM::setup() => END\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
