@@ -97,28 +97,29 @@ inline CFreal GreyRadiator::computeStefanBoltzmann(const CFreal T){
 
 //////////////////////////////////////////////////////////////////////////////
 
-inline CFreal GreyRadiator::getCurrentCellTemperature(){
-    CFuint stateID = m_radPhysicsHandlerPtr->getCurrentCellStateID();
-    static Framework::DataHandle<Framework::State*, Framework::GLOBAL> m_states
-            = m_radPhysicsHandlerPtr->getDataSockets()->states.getDataHandle();
-
-    //std::cout<<"temperature: "<<(&(*m_states[stateID])[0])[m_tempID]<<std::endl;
-    return (&(*m_states[stateID])[0])[m_tempID];
+inline CFreal GreyRadiator::getCurrentCellTemperature()
+{
+  CFuint stateID = m_radPhysicsHandlerPtr->getCurrentCellStateID();
+  static Framework::DataHandle<Framework::State*, Framework::GLOBAL> m_states
+    = m_radPhysicsHandlerPtr->getDataSockets()->states.getDataHandle();
+  
+  //std::cout<<"temperature: "<<(&(*m_states[stateID])[0])[m_tempID]<<std::endl;
+  return (&(*m_states[stateID])[0])[m_tempID];
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 inline CFreal GreyRadiator::getCurrentWallTemperature()
 {
-  CFuint wallGeoIdx = m_radPhysicsHandlerPtr->getCurrentWallTrsIdx();
-  Framework::State* state = m_radPhysicsPtr->getWallState( wallGeoIdx );
+  const CFuint wallGeoIdx = m_radPhysicsHandlerPtr->getCurrentWallTrsIdx();
+  Common::SafePtr<Framework::State> state = m_radPhysicsPtr->getWallState( wallGeoIdx );
   
   //    CFuint wallGeoID = m_radPhysicsHandlerPtr->getCurrentWallGeoID();
   //    Framework::DataHandle<CFreal> faceNormals
   //      = m_radPhysicsHandlerPtr->getDataSockets()->normals.getDataHandle();
   //   std::cout<<"normal "<<faceNormals[DIM_2D*wallGeoID]<<' '<< faceNormals[DIM_2D*wallGeoID+1]<<std::endl;
   
-  CFreal Temperature = (&(*state)[0])[m_tempID];
+  const CFreal Temperature = (&(*state)[0])[m_tempID];
   cf_assert(Temperature > 0 && "Temperature negative, is the temp ID well defined?");
   return Temperature;
 }

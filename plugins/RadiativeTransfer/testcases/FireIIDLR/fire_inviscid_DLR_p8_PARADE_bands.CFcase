@@ -266,7 +266,7 @@ Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeR
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = false
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.MolecularSpecies = 1 1 1 0 0 1 1 1 0 0 0 
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Binning = true
-Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbBins = 10
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbBands = 50
 
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b1.ApplyTRS   = B_3
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b1.TypeTRS    = Wall

@@ -38,26 +38,37 @@ public:
   typedef Environment::ConcreteProvider<RadiationPhysics,1> PROVIDER;
   typedef const std::string& ARG1;
 
+  /// Constructor
   RadiationPhysics(const std::string& name);
   
+  /// Destructor
   ~RadiationPhysics(){}
   
+  /// setup the spectra
   void setupSpectra(CFreal wavMin,CFreal wavMax);
   
+  /// setup private data
   void setup();
   
+  /// configure this object from given options
   void configure(Config::ConfigArgs& args);
   
+  /// define the configurable options statically
   static void defineConfigOptions(Config::OptionList& options);
   
+  /// @return the class name
   static std::string getClassName() { return "RadiationPhysics"; }
-
+  
+  /// @return the name of the TRS to which RadiationPhysics is applied
   std::string getTRSname(){return m_TRSname;}
   
+  /// @return the type of the TRS to which RadiationPhysics is applied
   std::string getTRStype(){return m_TRStype;}
   
+  /// @return the type ID of the TRS to which RadiationPhysics is applied
   TRStypeID getTRStypeID(){return m_TRStypeID;}
   
+  /// @return the radiation physics itself
   void getRadPhysicsPtr(RadiationPhysics* ptr) { ptr = this; }
   
   /// get the local IDs of the Wall TRS ghost states and the face
@@ -66,18 +77,24 @@ public:
   void getWallStateIDs(std::vector<CFuint> &statesID,
                        std::vector<CFuint>& wallGeoIdx);
   
+  /// @return the cell state ID
   void getCellStateIDs(std::vector<CFuint> &statesID);
   
-  Framework::State* getWallState(CFuint wallTrsIdx){return &(m_interpolatedStates[wallTrsIdx]);}
+  /// @return the wall state
+  Common::SafePtr<Framework::State> getWallState(CFuint wallTrsIdx){return &(m_interpolatedStates[wallTrsIdx]);}
   
+  /// set the @see RadiationPhysicsHandler
   void setRadPhysicsHandlerPtr( RadiationPhysicsHandler* ptr ) {m_radPhysicsHandlerPtr = ptr;}
   
-  Radiator* const getRadiatorPtr(){return m_radiator.getPtr();}
+  /// @return the pointer to the radiator
+  Common::SafePtr<Radiator> getRadiatorPtr() const {return m_radiator.getPtr();}
   
-  Reflector* const getReflectorPtr(){return m_reflector.getPtr();}
+  /// @return the pointer to the reflector
+  Common::SafePtr<Reflector> getReflectorPtr() const {return m_reflector.getPtr();}
   
+  /// compute the interpolated states
   void computeInterpolatedStates();
-
+  
 private:
   Common::SelfRegistPtr< Radiator > m_radiator;
   Common::SelfRegistPtr< Reflector > m_reflector;

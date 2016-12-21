@@ -9,6 +9,14 @@ namespace RadiativeTransfer {
 
 //////////////////////////////////////////////////////////////////////////////
 
+void Radiator::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< CFuint >("nbBands", "Number of Bands");
+  options.addConfigOption< CFuint >("nbBins", "Number of Bins");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 /// Constructor without arguments
 Radiator::Radiator(const std::string& name):
   Common::OwnedObject(),
@@ -20,6 +28,12 @@ Radiator::Radiator(const std::string& name):
   m_faceCenters(CFNULL)
 {
   addConfigOptionsTo(this);
+  
+  m_nbBands = 1;
+  setParameter("nbBands", &m_nbBands);
+  
+  m_nbBins = 1;
+  setParameter("nbBins", &m_nbBins);
 }
 
 //////////////////////////////////////////////////////////////////////////////

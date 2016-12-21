@@ -41,7 +41,7 @@ using namespace COOLFluiD::Numerics::FiniteVolume;
 
 namespace COOLFluiD {
 
-    namespace RadiativeTransfer {
+  namespace RadiativeTransfer {
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -86,7 +86,6 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   m_In(),
   m_II(),
   m_opacities(),
-  m_nbBinsPARADE(),
   m_radSource(),
   m_Ttable(),
   m_Ptable(),
@@ -98,6 +97,8 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   m_advanceOrder(),
   m_qrAv(),
   m_divqAv(),
+  m_nbBins(1),
+  m_nbBands(1),
   m_nbDirTypes()
 {
   addConfigOptionsTo(this);
@@ -108,10 +109,10 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   m_dirName = Environment::DirPaths::getInstance().getWorkingDir();
   setParameter("DirName", &m_dirName);
   
-  m_binTabName = "air-100.dat";
+  m_binTabName = "";
   setParameter("BinTabName", &m_binTabName); 
   
-  m_outTabName = "air-100.out";
+  m_outTabName = "tableout.dat";
   setParameter("OutTabName", &m_outTabName);
   
   m_writeToFile = true;
@@ -125,12 +126,9 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   
   m_oldAlgo = false;
   setParameter("OldAlgorithm", &m_oldAlgo);
-
+  
   m_binningPARADE = false;
   setParameter("BinningPARADE", &m_binningPARADE);
-
-  m_nbBinsPARADE = 100;
-  setParameter("nbBinsPARADE", &m_nbBinsPARADE);
   
   m_Nr = 100;
   setParameter("NbRadialPoints", &m_Nr);
@@ -164,14 +162,7 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   
   m_emptyRun = false;
   setParameter("EmptyRun", &m_emptyRun);
-  
-  m_readOpacityTables = true;
-  setParameter("ReadOpacityTables", &m_readOpacityTables);
-
-  m_nbBands = 1;
-  setParameter("nbBands", &m_nbBands);
- 
-
+    
   m_dirGenerator = "Default";
   setParameter("DirectionsGenerator", &m_dirGenerator);
 
@@ -222,7 +213,6 @@ void RadiativeTransferFVDOM::defineConfigOptions(Config::OptionList& options)
     ("OldAlgorithm","old algorithm (very inefficient) just kept for comparison purposes");
   options.addConfigOption< bool >
     ("BinningPARADE","Computes the radiative properties based on the binning done with data from PARADE database");
-  options.addConfigOption< CFuint >("nbBinsPARADE", "States the number of bins used in the algorithm");
   options.addConfigOption< CFuint >("NbRadialPoints","Number of Radial points in the sphere case");
   options.addConfigOption< CFreal >("ConstantP","Constant pressure temperature");
   options.addConfigOption< CFreal >("Tmin","Minimum temperature");
@@ -234,8 +224,6 @@ void RadiativeTransferFVDOM::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFuint >("ThreadID","ID of the current thread within the parallel algorithm."); 
   options.addConfigOption< bool >("LoopOverBins","Loop over bins and then over directions (do the opposite if =false).");
   options.addConfigOption< bool >("EmptyRun","Run without actually solving anything, just for testing purposes.");
-  options.addConfigOption< bool >("ReadOpacityTables","Read the opacity tables instead if using the radiation library.");
-  
   options.addConfigOption< string >("DirectionsGenerator","Name of the method for generating directions.");
   options.addConfigOption< CFreal >("theta_max","Maximum value of theta.");
   options.addConfigOption< CFuint >("nb_pts_polar","Number of polar points.");
@@ -243,8 +231,6 @@ void RadiativeTransferFVDOM::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< string >("rule_polar","Rule for polars computation.");
   options.addConfigOption< string >("rule_azi","Rule for azimut computation.");
   options.addConfigOption< bool >("directions","Option to write directions");
-  options.addConfigOption< CFuint >("nbBands", "Number of Bands");
- 
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -331,9 +317,18 @@ void RadiativeTransferFVDOM::setup()
   m_radiation->setupDataSockets(sockets);
   m_radiation->setup();
   m_radiation->configureTRS();
-  // m_radiation->setupAxiFlag(m_isAxi);
+  m_radiation->setupAxiFlag(false);
   // vector<string> boundaryTrsNames;
   // m_radiation->getBoundaryTRSnames(boundaryTrsNames);
+  
+  if (m_radiation->hasRadiationPhysics()) {
+    SafePtr<Radiator> radiator = 
+      m_radiation->getCellDistPtr(0)->getRadiatorPtr();
+    if (radiator->getName() != "NullRadiator") {
+      m_nbBins  = radiator->getNbBins();
+      m_nbBands = radiator->getNbBands();
+    }
+  }
   
   // cell builder
   m_geoBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
@@ -379,9 +374,8 @@ void RadiativeTransferFVDOM::setup()
    CFLog(WARN, "RadiativeTransferFVDOM::setup() => This nb_pts_polar is not allowed for Monafo directions generator (GL). 16 points are chosen \n");
    m_nb_pts_polar = 16;
   }
-
- 
-  if (m_readOpacityTables) {
+  
+  if (readOpacityTables()) {
     // Reading the table
     readOpacities();
   }
@@ -443,10 +437,10 @@ void RadiativeTransferFVDOM::setup()
   cf_assert(m_nbDirs > 0);
   cf_assert(m_nbBins > 0);
   cf_assert(m_nbBands > 0);
-
+   
   CFuint nb_bb=m_nbBins;
   m_nbBins=m_nbBands*m_nbBins;
-  
+    
   // set the start/end bins for this process
   if (m_nbThreads == 1) { 
     m_startEndDir.first  = 0;
@@ -599,8 +593,8 @@ void RadiativeTransferFVDOM::setup()
   if (m_radialData) {
     m_qrAv.resize(m_Nr);
     m_divqAv.resize(m_Nr);
-    m_qrAv   = 0;
-    m_divqAv = 0;  
+    m_qrAv   = 0.;
+    m_divqAv = 0.;  
   }
   
   Stopwatch<WallTime> stp;
@@ -1250,7 +1244,7 @@ void RadiativeTransferFVDOM::execute()
 {
   CFAUTOTRACE;
   
-  CFLog(INFO, "RadiativeTransferFVDOM::execute() => start\n");
+  CFLog(INFO, "RadiativeTransferFVDOM::execute() => START\n");
   
   Stopwatch<WallTime> stp;
   
@@ -1308,7 +1302,6 @@ void RadiativeTransferFVDOM::execute()
     }
     
     DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
-   
     DataHandle<CFreal> qx   = socket_qx.getDataHandle();
     DataHandle<CFreal> qy   = socket_qy.getDataHandle();
     DataHandle<CFreal> qz   = socket_qz.getDataHandle();
@@ -1321,113 +1314,21 @@ void RadiativeTransferFVDOM::execute()
     for (CFuint iCell = 0; iCell < nbCells; iCell++) {
       divQ[iCell] /= volumes[iCell]; //converting area from m^3 into cm^3
     }
-        
+    
     if (m_radialData){
       writeRadialData();
     } 
 
     //computeWallHeatFlux();
   }
-    
+  
   CFLog(INFO, "RadiativeTransferFVDOM::execute() => took " << stp.read() << "s \n");
 }
-      
-//////////////////////////////////////////////////////////////////////////////
-
-void RadiativeTransferFVDOM::getFieldOpacities(CFuint ib)
-{
-  CFLog(VERBOSE, "RadiativeTransferFVDOM::getFieldOpacities() => start\n");
-  
-  for (CFuint i = 0; i < m_fieldSource.size(); ++i) {m_fieldSource[i] = 0.;}
-  if(m_useExponentialMethod) {
-    for (CFuint i = 0; i < m_fieldAbsor.size(); ++i) {m_fieldAbsor[i] = 0.;}
-  }
-  else {
-    for (CFuint i = 0; i < m_fieldAbSrcV.size(); ++i) {m_fieldAbSrcV[i] = 0.;}
-    for (CFuint i = 0; i < m_fieldAbV.size(); ++i) {m_fieldAbV[i] = 0.;}
-  }
-  
-  DataHandle<CFreal> TempProfile    = socket_TempProfile.getDataHandle();
-  DataHandle<CFreal> volumes        = socket_volumes.getDataHandle();
-  DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
-  
-  RadiativeTransferFVDOM::Interpolator interp;
-  
-  const CFuint nbCells = states.size();
-  cf_assert(nbCells > 0);
-  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
-  
-  for (CFuint iCell = 0; iCell < nbCells; iCell++) {
-    const State *currState = states[iCell];
-    //Get the field pressure and T commented because now we impose a temperature profile
-    CFreal p = 0.;
-    CFreal T = 0.;
     
-    if (m_constantP < 0.) {
-      cf_assert(m_PID < currState->size());
-      cf_assert(m_TID < currState->size());
-      p = (*currState)[m_PID];
-      T = (*currState)[m_TID];
-    }
-    else {
-      cf_assert(m_constantP > 0.);
-      cf_assert(m_Tmax > 0.);
-      cf_assert(m_Tmin > 0.);
-      cf_assert(m_deltaT > 0.);
-      
-      const CFreal r  = currState->getCoordinates().norm2();
-      p = m_constantP; //Pressure in Pa
-      const CFreal Tmax   = m_Tmax;
-      const CFreal Tmin   = m_Tmin;
-      const CFreal deltaT = m_deltaT;
-      const CFreal A      = std::pow(r*0.01/deltaT, 2);
-      const CFreal rmax   = 1.5;
-      const CFreal Amax   = std::pow(rmax*0.01/deltaT, 2);
-      T = Tmax - (Tmax - Tmin)*(1 - std::exp(-A))/(1 - std::exp(-Amax));
-    }
-    
-    TempProfile[iCell] = T;
-    
-    const CFreal patm   = p/101325.; //converting from Pa to atm
-    CFreal val1 = 0;
-    CFreal val2 = 0;
-    
-    interp.tableInterpolate(m_nbBins, m_nbTemp, m_nbPress, 
-			    &m_Ttable[0], &m_Ptable[0],
-			    &m_opacities[0], &m_radSource[0],
-			    T, patm, ib, val1, val2); 
-    
-    if(m_useExponentialMethod){
-      if (val1 <= 1e-30 || val2 <= 1e-30 ){
-	m_fieldSource[iCell] = 1e-30;
-	m_fieldAbsor[iCell]  = 1e-30;
-      }
-      else {
-	m_fieldSource[iCell] = val2/val1;
-	m_fieldAbsor[iCell]  = val1;
-      }
-    }
-    else{
-      if (val1 <= 1e-30 || val2 <= 1e-30 ){
-	m_fieldSource[iCell] = 1e-30;
-	m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volumen converted from m^3 into cm^3
-      }
-      else {
-	m_fieldSource[iCell] = val2/val1;
-	m_fieldAbV[iCell]    = val1*volumes[iCell];
-      }      
-      m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
-    }
-  }
-  
-  CFLog(VERBOSE, "RadiativeTransferFVDOM::getFieldOpacities() => end\n");
-}
-
 //////////////////////////////////////////////////////////////////////////////
 
 void RadiativeTransferFVDOM::getFieldOpacitiesBinning(const CFuint ib)
 {
-
   DataHandle<CFreal> alpha_avbin    = socket_alpha_avbin.getDataHandle();
   DataHandle<CFreal> B_bin          = socket_B_bin.getDataHandle();
   DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
@@ -1439,47 +1340,46 @@ void RadiativeTransferFVDOM::getFieldOpacitiesBinning(const CFuint ib)
       CFLog(INFO,"Vector alpha(" << j << "," << i << ") = " << alpha_avbin[j+m_nbBins*i] << "\n");
     }
   }
-
-for (CFuint iCell = 0; iCell < nbCells; iCell++) {
+  
+  for (CFuint iCell = 0; iCell < nbCells; iCell++) {
     const State *currState = states[iCell];
-
-  m_fieldSource[iCell] = 0.;
-
-  if(m_useExponentialMethod){
-    m_fieldAbsor[iCell] = 0.;
+    m_fieldSource[iCell] = 0.;
+    
+    if(m_useExponentialMethod){
+      m_fieldAbsor[iCell] = 0.;
+    }
+    else{
+      m_fieldAbSrcV[iCell] = 0.;
+      m_fieldAbV[iCell]    = 0.;
+    }
+    
+    DataHandle<CFreal> volumes     = socket_volumes.getDataHandle();
+    
+    //CFreal val1 = 0;
+    //CFreal val2 = 0;
+    
+    if(m_useExponentialMethod){
+      if (B_bin[ib+m_nbBins*iCell] <= 1e-30 || alpha_avbin[ib+m_nbBins*iCell] <= 1e-30 ){
+	m_fieldSource[iCell] = 1e-30;
+	m_fieldAbsor[iCell]  = 1e-30;
+      }
+      else {
+	m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
+	m_fieldAbsor[iCell]  = alpha_avbin[ib+m_nbBins*iCell];
+      }
+    }
+    else {
+      if (B_bin[ib+m_nbBins*iCell] <= 1e-30 || alpha_avbin[ib+m_nbBins*iCell] <= 1e-30){
+	m_fieldSource[iCell] = 1e-30;
+	m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
+      }
+      else {
+	m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
+	m_fieldAbV[iCell]    = alpha_avbin[ib+m_nbBins*iCell]*volumes[iCell];
+      }      
+      m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
+    }
   }
-  else{
-    m_fieldAbSrcV[iCell] = 0.;
-    m_fieldAbV[iCell]    = 0.;
-  }
-  
-  DataHandle<CFreal> volumes     = socket_volumes.getDataHandle();
-  
-  //CFreal val1 = 0;
-  //CFreal val2 = 0;
-
-  if(m_useExponentialMethod){
-   if (B_bin[ib+m_nbBins*iCell] <= 1e-30 || alpha_avbin[ib+m_nbBins*iCell] <= 1e-30 ){
-    m_fieldSource[iCell] = 1e-30;
-    m_fieldAbsor[iCell]  = 1e-30;
-   }
-   else {
-      m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
-      m_fieldAbsor[iCell]  = alpha_avbin[ib+m_nbBins*iCell];
-   }
-  }
-  else {
-   if (B_bin[ib+m_nbBins*iCell] <= 1e-30 || alpha_avbin[ib+m_nbBins*iCell] <= 1e-30){
-    m_fieldSource[iCell] = 1e-30;
-    m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
-   }
-   else {
-      m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
-      m_fieldAbV[iCell]    = alpha_avbin[ib+m_nbBins*iCell]*volumes[iCell];
-   }      
-    m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
-  }
- }
 }
 
 //////////////////////////////////////////////////////////////////////  
@@ -1532,7 +1432,7 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d,
 	  if (dotMult < 0. && neighborIsSdone == false) {goto cell_loop;}
 	}// end loop over the FACES
 	
-	// CFLog(DEBUG_MAX, "advanceOrder[" << d << "][" << m <<"] = " << iCell << "\n");
+	CFLog(DEBUG_MAX, "advanceOrder[" << d << "][" << m <<"] = " << iCell << "\n");
 	
 	advanceOrder[m] = iCell;
 	CellID[iCell] = stage;
@@ -1601,13 +1501,8 @@ void RadiativeTransferFVDOM::readOpacities()
   vector<double> data(3);
   is.read((char*)&data[0], 3*sizeof(double));
   
-  if(m_binningPARADE == false){
-    m_nbBins  = ((int) data[0]);
-  }
-  else{
-    m_nbBins = m_nbBinsPARADE;
-  }
-
+  if (!m_binningPARADE) {m_nbBins  = ((int) data[0]);}
+  
   m_nbTemp  = ((int) data[1]);
   m_nbPress = ((int) data[2]);
   
@@ -1780,6 +1675,9 @@ void RadiativeTransferFVDOM::unsetup()
 
 void RadiativeTransferFVDOM::getFieldOpacities(const CFuint ib, const CFuint iCell)
 {
+  CFLog(DEBUG_MIN, "RadiativeTransferFVDOM::getFieldOpacities(" << ib << ", " 
+	<< iCell << ") => START\n");
+  
   m_fieldSource[iCell] = 0.;
   if(m_useExponentialMethod){
     m_fieldAbsor[iCell] = 0.;
@@ -1789,18 +1687,16 @@ void RadiativeTransferFVDOM::getFieldOpacities(const CFuint ib, const CFuint iCe
     m_fieldAbV[iCell]    = 0.;
   }
   
-  DataHandle<CFreal> TempProfile = socket_TempProfile.getDataHandle();
-  DataHandle<CFreal> volumes     = socket_volumes.getDataHandle();
+  DataHandle<CFreal> TempProfile    = socket_TempProfile.getDataHandle();
+  DataHandle<CFreal> volumes        = socket_volumes.getDataHandle();
   DataHandle<CFreal> alpha_avbin    = socket_alpha_avbin.getDataHandle();
   DataHandle<CFreal> B_bin          = socket_B_bin.getDataHandle();
   DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
-
-  const CFuint nbCells = states.size();
-
+  
   const State *currState = socket_states.getDataHandle()[iCell]; 
-  //Get the field pressure and T commented because now we impose a temperature profile
   CFreal p = 0.;
   CFreal T = 0.;
+  
   if (m_constantP < 0.) {
     cf_assert(m_PID < currState->size());
     cf_assert(m_TID < currState->size());
@@ -1829,69 +1725,68 @@ void RadiativeTransferFVDOM::getFieldOpacities(const CFuint ib, const CFuint iCe
   const CFreal patm   = p/101325.; //converting from Pa to atm
   CFreal val1 = 0;
   CFreal val2 = 0;
-  //if (!m_readOpacityTables) {  // if ...ReadOpacityTables = true (in the CFcase)
-  //tableInterpolate(T, patm, ib, val1, val2);
-
   if (!m_binningPARADE) {
-  RadiativeTransferFVDOM::Interpolator interp;
-  interp.tableInterpolate(m_nbBins, m_nbTemp, m_nbPress, 
-			  &m_Ttable[0], &m_Ptable[0],
-			  &m_opacities[0], &m_radSource[0],
-			  T, patm, ib, val1, val2); 
-
-  if(m_useExponentialMethod){
-    if (val1 <= 1e-30 || val2 <= 1e-30 ){
-      m_fieldSource[iCell] = 1e-30;
-      m_fieldAbsor[iCell]  = 1e-30;
-    }
-    else {
-      m_fieldSource[iCell] = val2/val1;
-      m_fieldAbsor[iCell]  = val1;
-    }
-  }
-  else{
-    if (val1 <= 1e-30 || val2 <= 1e-30 ){
-      m_fieldSource[iCell] = 1e-30;
-      m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
-    }
-    else {
-      m_fieldSource[iCell] = val2/val1;
-      m_fieldAbV[iCell]    = val1*volumes[iCell];
-    }      
-    m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
-  }
- }
- else {
-if(m_useExponentialMethod){
-    if (((alpha_avbin[ib+m_nbBins*iCell]) <= 1e-30) || ((B_bin[ib+m_nbBins*iCell]) <= 1e-30) ){
-      m_fieldSource[iCell] = 1e-30;
-      m_fieldAbsor[iCell]  = 1e-30;
-     }
-     else {
-     m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
-     m_fieldAbsor[iCell]  = alpha_avbin[ib+m_nbBins*iCell];
+    RadiativeTransferFVDOM::Interpolator interp;
+    interp.tableInterpolate(m_nbBins, m_nbTemp, m_nbPress, 
+			    &m_Ttable[0], &m_Ptable[0],
+			    &m_opacities[0], &m_radSource[0],
+			    T, patm, ib, val1, val2); 
+    
+    if(m_useExponentialMethod){
+      if (val1 <= 1e-30 || val2 <= 1e-30 ){
+	m_fieldSource[iCell] = 1e-30;
+	m_fieldAbsor[iCell]  = 1e-30;
       }
+      else {
+	m_fieldSource[iCell] = val2/val1;
+	m_fieldAbsor[iCell]  = val1;
+      }
+    }
+    else{
+      if (val1 <= 1e-30 || val2 <= 1e-30 ){
+	m_fieldSource[iCell] = 1e-30;
+	m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
+      }
+      else {
+	m_fieldSource[iCell] = val2/val1;
+	m_fieldAbV[iCell]    = val1*volumes[iCell];
+      }      
+      m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
+    }
   }
-  else{
-     if (alpha_avbin[ib+m_nbBins*iCell] <= 1e-30 || B_bin[ib+m_nbBins*iCell] <= 1e-30 ){
-      m_fieldSource[iCell] = 1e-30;
-      m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
-     }
-     else {
-      m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
-      m_fieldAbV[iCell]    = alpha_avbin[ib+m_nbBins*iCell]*volumes[iCell];
-     }      
-    m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
+  else {
+    if(m_useExponentialMethod){
+      if (((alpha_avbin[ib+m_nbBins*iCell]) <= 1e-30) || ((B_bin[ib+m_nbBins*iCell]) <= 1e-30) ){
+	m_fieldSource[iCell] = 1e-30;
+	m_fieldAbsor[iCell]  = 1e-30;
+      }
+      else {
+	m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
+	m_fieldAbsor[iCell]  = alpha_avbin[ib+m_nbBins*iCell];
+      }
+    }
+    else{
+      if (alpha_avbin[ib+m_nbBins*iCell] <= 1e-30 || B_bin[ib+m_nbBins*iCell] <= 1e-30 ){
+	m_fieldSource[iCell] = 1e-30;
+	m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
+      }
+      else {
+	m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
+	m_fieldAbV[iCell]    = alpha_avbin[ib+m_nbBins*iCell]*volumes[iCell];
+      }      
+      m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
+    }
   }
-}
-  } 
-
+  
+  CFLog(DEBUG_MIN, "RadiativeTransferFVDOM::getFieldOpacities(" << ib << ", " << iCell << ") => END\n");
+} 
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
 {      
   CFLog(VERBOSE, "RadiativeTransferFVDOM::computeQ() in (bin, dir) = ("
-	<< ib << ", " << d << ") => start\n");
+	<< ib << ", " << d << ") => START\n");
   
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
   DataHandle<CFreal> divQ = socket_divq.getDataHandle();
@@ -1900,7 +1795,7 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
   const CFuint nbCells = cells->getLocalNbGeoEnts();
   cf_assert(m_advanceOrder[d].size() == nbCells);
   
-  // precompute the dot products for all faces and directions (a part from the sign)
+  // precompute dot products for all faces and directions (apart from the sign)
   if (m_loopOverBins) {
     computeDotProdInFace(d, m_dotProdInFace);
   }
@@ -1996,11 +1891,11 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
     }
     
     divQ[iCell] += inDirDotnA*m_weight[d];
-    m_II[iCell]   += Ic*m_weight[d];
+    m_II[iCell] += Ic*m_weight[d];
   }  
   
   CFLog(VERBOSE, "RadiativeTransferFVDOM::computeQ() in (bin, dir) = ("
-	<< ib << ", " << d << ") => end\n");
+	<< ib << ", " << d << ") => END\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -2010,7 +1905,7 @@ void RadiativeTransferFVDOM::diagnoseProblem(const CFuint d,
 					     const CFuint mLast)
 {
   //Check that it wrote a cell in the current stage
-  std::cout << "No cell added to advance list in direction number = " << d <<". Problem with mesh.\n";
+  CFLog(ERROR, "RadiativeTransferFVDOM::diagnoseProblem() => No cell added to advance list in direction [" << d << "].\n");
   
   const CFreal pi = MathTools::MathConsts::CFrealPi();
   
@@ -2123,6 +2018,7 @@ void RadiativeTransferFVDOM::loopOverBins(const CFuint startBin,
 					  const CFuint startDir,
 					  const CFuint endDir)
 {
+  CFLog(VERBOSE, "RadiativeTransferFVDOM::loopOverBins() => START\n");
   for(CFuint ib = startBin; ib < endBin; ++ib) {
     CFLog(INFO, "( bin: " << ib << " ), ( dir: ");
     // old algorithm: opacities computed for all cells at once for a given bin
@@ -2131,12 +2027,12 @@ void RadiativeTransferFVDOM::loopOverBins(const CFuint startBin,
     const CFuint dStart = (ib != startBin) ? 0 : startDir;
     const CFuint dEnd = (ib != m_startEndBin.second)? m_nbDirs : endDir;
     for (CFuint d = dStart; d < dEnd; ++d) {
-      // CFLog(INFO, "[bin, dir] = [" << ib << ", " << d << "]\n");
       CFLog(INFO, d << " ");
       computeQ(ib,d);
     }
     CFLog(INFO, ")\n");
   }
+  CFLog(VERBOSE, "RadiativeTransferFVDOM::loopOverBins() => END\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -2146,15 +2042,14 @@ void RadiativeTransferFVDOM::loopOverDirs(const CFuint startBin,
 					  const CFuint startDir,
 					  const CFuint endDir)
 {
-    for (CFuint d = startDir; d < endDir; ++d) {
+  CFLog(VERBOSE, "RadiativeTransferFVDOM::loopOverDirs() => START\n");
+  for (CFuint d = startDir; d < endDir; ++d) {
     CFLog(INFO, "( dir: " << d << " ), ( bin: ");
-    const CFuint bStart = (d != startDir) ? 0 : startBin;
-    const CFuint bEnd   = (d != m_startEndDir.second) ? m_nbBins : endBin;
-    // precompute dot products for all faces and directions (a part from the sign)
+    
+    // precompute dot products for all faces and directions (apart from the sign)
     computeDotProdInFace(d, m_dotProdInFace);
     
     for(CFuint ib = startBin; ib < endBin; ++ib) {
-      // CFLog(INFO, "[dir, bin] = [" << d << ", " << ib << "]\n");
       // old algorithm: opacities computed for all cells at once for a given bin
       CFLog(INFO, ib << " ");
       if (m_oldAlgo) {getFieldOpacities(ib);}
@@ -2162,8 +2057,9 @@ void RadiativeTransferFVDOM::loopOverDirs(const CFuint startBin,
     }
     CFLog(INFO, ")\n");
   }
+  CFLog(VERBOSE, "RadiativeTransferFVDOM::loopOverDirs() => END\n");
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 /*
 void RadiativeTransferFVDOM::computeWallHeatFlux()

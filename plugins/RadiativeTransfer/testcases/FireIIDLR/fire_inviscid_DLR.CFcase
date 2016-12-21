@@ -94,6 +94,7 @@ Simulator.SubSystem.DataProcessing.Comds = RadiativeTransferFVDOM
 Simulator.SubSystem.DataProcessing.Names = Radiation
 Simulator.SubSystem.DataProcessing.Radiation.nDirs = 8 #24
 Simulator.SubSystem.DataProcessing.Radiation.UseExponentialMethod = true
+Simulator.SubSystem.DataProcessing.Radiation.LoopOverBins = false
 Simulator.SubSystem.DataProcessing.Radiation.OldAlgorithm = true
 #Simulator.SubSystem.DataProcessing.Radiation.DirName = ./
 Simulator.SubSystem.DataProcessing.Radiation.BinTabName = air-100Bands.dat #air-100Bins.dat

@@ -103,12 +103,20 @@ public:
   /**
    * Compute the advance order depending on the option selected 
    */  
-  void getFieldOpacities(CFuint ib);
-
+  void getFieldOpacities(CFuint ib)
+  {
+    CFLog(VERBOSE, "RadiativeTransferFVDOM::getFieldOpacities() => START\n");
+    const CFuint nbCells = socket_states.getDataHandle().size();
+    cf_assert(nbCells > 0);
+    for (CFuint iCell = 0; iCell < nbCells; ++iCell) {
+      getFieldOpacities(ib, iCell);
+    }
+    CFLog(VERBOSE, "RadiativeTransferFVDOM::getFieldOpacities() => END\n");
+  }
+  
   /**
    * Computes the opacities from the values coming from the binning algorithm
    */
-
   void getFieldOpacitiesBinning(CFuint ib);
     
   /**
@@ -231,7 +239,10 @@ protected: //function
     }
     return -1;
   }
-
+  
+  /// flag telling whether opacities tables are available
+  bool readOpacityTables() const {return (m_binTabName != "");}
+  
 protected: //data
   
   /// storage of states
@@ -377,6 +388,12 @@ protected: //data
   /// Radial average of divQ for a Sphere
   RealVector m_divqAv;  
   
+  /// Number of bins
+  CFuint m_nbBins;
+  
+  /// Number of bands
+  CFuint m_nbBands;
+  
   /// Number of directions types
   CFuint m_nbDirTypes;   
   
@@ -394,11 +411,6 @@ protected: //data
 
   /// bool to use the binning data computed from PARADE
   bool m_binningPARADE;
-
-  /// Number of bins
-  CFuint m_nbBinsPARADE;
-
-  CFuint m_nbBands;
   
   /// bool to write the table in a file
   bool m_writeToFile;
@@ -444,10 +456,7 @@ protected: //data
   
   /// start/end direction to consider
   std::pair<CFuint, CFuint> m_startEndDir;
-  
-  /// number of bins
-  CFuint m_nbBins;
-  
+    
   /// number of Temperatures
   CFuint m_nbTemp;
   
@@ -465,10 +474,7 @@ protected: //data
   
   /// flag telling to run without solving anything, just for testing
   bool m_emptyRun;
-  
-  /// flag telling to read the opacity tables (default behaviour)
-  bool m_readOpacityTables;
-  
+    
   ///settings for Munafo computation
   std::string m_dirGenerator;
 

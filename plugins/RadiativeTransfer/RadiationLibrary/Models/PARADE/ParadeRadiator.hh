@@ -228,15 +228,6 @@ private:
   /// minimum temperature
   CFreal m_TminFix;
   
-  /// number of bins
-  CFuint m_nbBins;
-
-  /// number of bands
-  CFuint m_nbBands;
-
-  /// number of bins using PARADE
-  CFuint m_nbBinsPARADE;
-
   /// bands' distribution
   std::string m_bandsDistr;
  

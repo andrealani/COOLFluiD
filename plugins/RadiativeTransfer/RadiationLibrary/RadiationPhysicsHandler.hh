@@ -16,29 +16,44 @@
 namespace COOLFluiD {
 
 namespace RadiativeTransfer {
-
-class RadiationPhysics;
+  class RadiationPhysics;
+  
+//////////////////////////////////////////////////////////////////////////////
 
 class RadiationPhysicsHandler : public Common::OwnedObject,
                                 public Config::ConfigObject,
-                                public Common::NonCopyable<RadiationPhysicsHandler>
+                                public Common::NonCopyable<RadiationPhysicsHandler> 
 {
 public:
-
+  
   typedef Environment::ConcreteProvider<RadiationPhysicsHandler,1> PROVIDER;
   typedef const std::string& ARG1;
-
-
+  
+  /// Constructor
   RadiationPhysicsHandler(const std::string &name);
+  
+  /// Destructor
   ~RadiationPhysicsHandler();
-
-  static std::string getClassName() { return "RadiationPhysicsHandler"; }
+  
+  /// @return the class name
+  static std::string getClassName() { return "RadiationPhysicsHandler";}
+  
+   /// configure this object from given options
   void configure(Config::ConfigArgs& args);
+  
+  /// define the configurable options statically
   static void defineConfigOptions(Config::OptionList& options);
 
+  /// set the wavelength stride
   void setupWavStride(CFuint loop);
-
+  
+  /// @return flag telling whether @see RadiationPhysics is present
+  bool hasRadiationPhysics() const {return (m_radiationPhysics.size()>0);}
+  
+  /// @return @see RadiationPhysics corresponding to the given cell state ID
   Common::SharedPtr< RadiationPhysics > getCellDistPtr(CFuint stateID);
+
+  /// @return @see RadiationPhysics corresponding to the given ghost state ID
   Common::SharedPtr< RadiationPhysics > getWallDistPtr(CFuint GhostStateID);
 
   /// get the number of loops
@@ -48,7 +63,7 @@ public:
   void setupDataSockets(Framework::SocketBundle sockets){m_sockets = sockets;}
   
   /// get the bundle of sockets
-  Framework::SocketBundle* const getDataSockets(){return &m_sockets;}
+  Common::SafePtr<Framework::SocketBundle> getDataSockets() {return &m_sockets;}
   
   /// setup private data
   void setup();

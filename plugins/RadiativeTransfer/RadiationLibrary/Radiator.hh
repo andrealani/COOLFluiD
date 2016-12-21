@@ -30,14 +30,26 @@ public:
   typedef Environment::ConcreteProvider<Radiator,1> PROVIDER;
   typedef const std::string& ARG1;
 
+  /**
+   * Defines the Config Option's of this class
+   * @param options a OptionList where to add the Option's
+   */
+  static void defineConfigOptions(Config::OptionList& options);
+  
   static std::string getClassName() { return "Radiator"; }
-  static void defineConfigOptions(Config::OptionList& options){;}
+
   void configure(Config::ConfigArgs& args){;}
 
   /// Constructor without arguments
   Radiator(const std::string& name);
   ~Radiator(){;}
-
+  
+  /// @return the number of bins for spectra reduction
+  CFuint getNbBins() const {return m_nbBins;}
+  
+  /// @return the number of bands for spetra reduction 
+  CFuint getNbBands() const {return m_nbBands;}
+  
   virtual void setup();
   
   virtual void unsetup() {}
@@ -94,6 +106,12 @@ protected:
   
   /// array of face centers
   Framework::DataHandle<CFreal> m_faceCenters;
+  
+  /// number of bands
+  CFuint m_nbBands;
+  
+  /// number of bins
+  CFuint m_nbBins;
 };
   
 //////////////////////////////////////////////////////////////////////////////
