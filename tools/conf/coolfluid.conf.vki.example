@@ -77,3 +77,19 @@ cmake_generator = kdev
 #
 with_testcases = 1
 #assertions = 0
+
+#########################################################################################
+# examples of user-defined modes that can be used for compilation
+#
+# the following will create /data/user/COOLFluiD/OPENMPI/releasefort after configuration
+releasefort_cflags     = -O3 
+releasefort_cxxflags   = -O3 
+releasefort_fflags     = -c -fpe0 -O2 -r8 -ip
+
+# the following will create /data/user/COOLFluiD/OPENMPI/debugprofile after configuration
+debugprofile_cflags     = -pg -O2
+debugprofile_cxxflags   = -pg -O2
+debugprofile_fflags     = -pg -O2
+
+ 
+
