@@ -400,6 +400,9 @@ protected: //data
   /// Number of bands
   CFuint m_nbBands;
   
+  /// Multispectral index
+  CFuint m_multiSpectralIdx;
+  
   /// Number of directions types
   CFuint m_nbDirTypes;   
   

@@ -99,6 +99,7 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   m_divqAv(),
   m_nbBins(1),
   m_nbBands(1),
+  m_multiSpectralIdx(),
   m_nbDirTypes()
 {
   addConfigOptionsTo(this);
@@ -438,18 +439,25 @@ void RadiativeTransferFVDOM::setup()
   cf_assert(m_nbBins > 0);
   cf_assert(m_nbBands > 0);
 
-  CFuint nb_bb=m_nbBins;
-  m_nbBins=m_nbBands*m_nbBins;
+  if(m_nbBins > 1 && m_nbBands == 1){
+    m_multiSpectralIdx = m_nbBins;
+  }
+  else if(m_nbBins ==1 && m_nbBands > 1){
+    m_multiSpectralIdx = m_nbBands;
+  }
+  else if(m_nbBins > 1 && m_nbBands > 1){
+    m_multiSpectralIdx = m_nbBands*m_nbBins;
+  }
   
   // set the start/end bins for this process
   if (m_nbThreads == 1) { 
     m_startEndDir.first  = 0;
     m_startEndBin.first  = 0;
     m_startEndDir.second = m_nbDirs-1;
-    m_startEndBin.second = m_nbBins-1;
+    m_startEndBin.second = m_multiSpectralIdx-1;
   }
   else {
-    const CFuint nbBinDir     = m_nbBins*m_nbDirs; 
+    const CFuint nbBinDir     = m_multiSpectralIdx*m_nbDirs; 
     const CFuint minNbThreadsPerProc = nbBinDir/m_nbThreads;
     const CFuint maxNbThreadsPerProc = minNbThreadsPerProc + nbBinDir%m_nbThreads;
     cf_assert(minNbThreadsPerProc > 0);
@@ -479,21 +487,19 @@ void RadiativeTransferFVDOM::setup()
       // suppose you sweep all entries while walking row-wise through 
       // a matrix (d,b) of size m_nbDirs*m_nbBins, consider the corresponding 
       // (d_start,b_start) and (d_end,b_end) points
-      m_startEndDir.first = startThread/m_nbBins; 
-      m_startEndBin.first = startThread%m_nbBins;
-      m_startEndDir.second = (endThread-1)/m_nbBins;
-      m_startEndBin.second = (endThread-1)%m_nbBins;
+      m_startEndDir.first = startThread/m_multiSpectralIdx; 
+      m_startEndBin.first = startThread%m_multiSpectralIdx;
+      m_startEndDir.second = (endThread-1)/m_multiSpectralIdx;
+      m_startEndBin.second = (endThread-1)%m_multiSpectralIdx;
     }
   }
   
   const CFuint startBin = m_startEndBin.first;
   const CFuint endBin   = m_startEndBin.second+1;
-  cf_assert(endBin <= m_nbBins);
+  cf_assert(endBin <= m_multiSpectralIdx);
   const CFuint startDir = m_startEndDir.first;
   const CFuint endDir   = m_startEndDir.second+1;
   cf_assert(endDir <= m_nbDirs);
-
-  m_nbBins=nb_bb;
 
   if (m_loopOverBins) {
     CFLog(INFO, "RadiativeTransferFVDOM::setup() => start/end Bin = [" << startBin << ", " << endBin << "]\n");
@@ -517,7 +523,7 @@ void RadiativeTransferFVDOM::setup()
     
     for(CFuint d = startDir; d < endDir; ++d) {
       const CFuint bStart = (d != startDir) ? 0 : startBin;
-      const CFuint bEnd   = (d != m_startEndDir.second) ? m_nbBins : endBin;
+      const CFuint bEnd   = (d != m_startEndDir.second) ? m_multiSpectralIdx : endBin;
       for (CFuint ib = bStart; ib < bEnd; ++ib) {
 	CFLog(VERBOSE, "(" << d << ", " << ib <<"), ");
       }
@@ -557,8 +563,8 @@ void RadiativeTransferFVDOM::setup()
   TempProfile = 0.0;
   
   // resize the bins storage
-  socket_alpha_avbin.getDataHandle().resize(nbCells*m_nbBins*m_nbBands);
-  socket_B_bin.getDataHandle().resize(nbCells*m_nbBins*m_nbBands);
+  socket_alpha_avbin.getDataHandle().resize(nbCells*m_multiSpectralIdx);
+  socket_B_bin.getDataHandle().resize(nbCells*m_multiSpectralIdx);
   
   // the following returns a list of all the .ApplyTRS with .TypeTRS=Wall in the .CFcase
   // for which radiative heat flux has to be computed 
@@ -1262,8 +1268,8 @@ void RadiativeTransferFVDOM::execute()
   const CFuint nbCells = states.size();
 
   for(CFuint i=0;i< nbCells;i++){
-    for(CFuint j=1;j< m_nbBins*m_nbBands;j++){
-      CFLog(VERBOSE,"Vector alpha(" << j << "," << i << ") = " << alpha_avbin[j+m_nbBins*i] << "\n");
+    for(CFuint j=1;j< m_multiSpectralIdx;j++){
+      CFLog(VERBOSE,"Vector alpha(" << j << "," << i << ") = " << alpha_avbin[j+m_multiSpectralIdx*i] << "\n");
     }
   }
 
@@ -1285,7 +1291,7 @@ void RadiativeTransferFVDOM::execute()
     
     const CFuint startBin = m_startEndBin.first;
     const CFuint endBin   = m_startEndBin.second+1;
-    cf_assert(endBin <= m_nbBins*m_nbBands);
+    cf_assert(endBin <= m_multiSpectralIdx);
     const CFuint startDir = m_startEndDir.first;
     const CFuint endDir   = m_startEndDir.second+1;
     cf_assert(endDir <= m_nbDirs);
@@ -1332,8 +1338,8 @@ void RadiativeTransferFVDOM::getFieldOpacitiesBinning(const CFuint ib)
   const CFuint nbCells = states.size();
 
   for(CFuint i=0;i< nbCells;i++){
-    for(CFuint j=0;j< (m_nbBins*m_nbBands);j++){
-      CFLog(INFO,"Vector alpha(" << j << "," << i << ") = " << alpha_avbin[j+m_nbBins*i] << "\n");
+    for(CFuint j=0;j< (m_multiSpectralIdx);j++){
+      CFLog(INFO,"Vector alpha(" << j << "," << i << ") = " << alpha_avbin[j+m_multiSpectralIdx*i] << "\n");
     }
   }
   
@@ -1352,23 +1358,23 @@ void RadiativeTransferFVDOM::getFieldOpacitiesBinning(const CFuint ib)
     DataHandle<CFreal> volumes     = socket_volumes.getDataHandle();
     
     if(m_useExponentialMethod){
-      if (B_bin[ib+m_nbBins*iCell] <= 1e-30 || alpha_avbin[ib+m_nbBins*iCell] <= 1e-30 ){
+      if (B_bin[ib+m_multiSpectralIdx *iCell] <= 1e-30 || alpha_avbin[ib+m_multiSpectralIdx *iCell] <= 1e-30 ){
 	m_fieldSource[iCell] = 1e-30;
 	m_fieldAbsor[iCell]  = 1e-30;
       }
       else {
-	m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
-	m_fieldAbsor[iCell]  = alpha_avbin[ib+m_nbBins*iCell];
+	m_fieldSource[iCell] = B_bin[ib+m_multiSpectralIdx *iCell];
+	m_fieldAbsor[iCell]  = alpha_avbin[ib+m_multiSpectralIdx *iCell];
       }
     }
     else {
-      if (B_bin[ib+m_nbBins*iCell] <= 1e-30 || alpha_avbin[ib+m_nbBins*iCell] <= 1e-30){
+      if (B_bin[ib+m_multiSpectralIdx *iCell] <= 1e-30 || alpha_avbin[ib+m_multiSpectralIdx *iCell] <= 1e-30){
 	m_fieldSource[iCell] = 1e-30;
 	m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
       }
       else {
-	m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
-	m_fieldAbV[iCell]    = alpha_avbin[ib+m_nbBins*iCell]*volumes[iCell];
+	m_fieldSource[iCell] = B_bin[ib+m_multiSpectralIdx *iCell];
+	m_fieldAbV[iCell]    = alpha_avbin[ib+m_multiSpectralIdx*iCell]*volumes[iCell];
       }      
       m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
     }
@@ -1425,7 +1431,7 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d,
 	  if (dotMult < 0. && neighborIsSdone == false) {goto cell_loop;}
 	}// end loop over the FACES
 	
-	// CFLog(DEBUG_MAX, "advanceOrder[" << d << "][" << m <<"] = " << iCell << "\n");
+	CFLog(DEBUG_MAX, "advanceOrder[" << d << "][" << m <<"] = " << iCell << "\n");
 	
 	advanceOrder[m] = iCell;
 	CellID[iCell] = stage;
@@ -1484,7 +1490,7 @@ void RadiativeTransferFVDOM::readOpacities()
   vector<double> data(3);
   is.read((char*)&data[0], 3*sizeof(double));
   
-  if (!m_binningPARADE) {m_nbBins  = ((int) data[0]);}
+  if (!m_binningPARADE) {m_nbBins = ((int) data[0]);}
   
   m_nbTemp  = ((int) data[1]);
   m_nbPress = ((int) data[2]);
@@ -1709,58 +1715,60 @@ void RadiativeTransferFVDOM::getFieldOpacities(const CFuint ib, const CFuint iCe
   const CFreal patm   = p/101325.; //converting from Pa to atm
   CFreal val1 = 0;
   CFreal val2 = 0;
-
+  
   if (!m_binningPARADE) {
     RadiativeTransferFVDOM::DeviceFunc interp;
-    interp.tableInterpolate(m_nbBins, m_nbTemp, m_nbPress, 
-       &m_Ttable[0], &m_Ptable[0],
-			  &m_opacities[0], &m_radSource[0],
-			  T, patm, ib, val1, val2); 
-
-  if(m_useExponentialMethod){
-    if (val1 <= 1e-30 || val2 <= 1e-30 ){
-      m_fieldSource[iCell] = 1e-30;
-      m_fieldAbsor[iCell]  = 1e-30;}
-    else {
-      m_fieldSource[iCell] = val2/val1;
-      m_fieldAbsor[iCell]  = val1;
-  }
-  } else{
-    if (val1 <= 1e-30 || val2 <= 1e-30 ){
-    m_fieldSource[iCell] = 1e-30;
-    m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
-  }
-    else {
-    m_fieldSource[iCell] = val2/val1;
-      m_fieldAbV[iCell]    = val1*volumes[iCell];
-    }      
-    m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
-  }
- }
- else {
-if(m_useExponentialMethod){
-    if (((alpha_avbin[ib+m_nbBins*iCell]) <= 1e-30) || ((B_bin[ib+m_nbBins*iCell]) <= 1e-30) ){
-    m_fieldSource[iCell] = 1e-30;
-    m_fieldAbsor[iCell]  = 1e-30;
-     }
-     else {
-    m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
-     m_fieldAbsor[iCell]  = alpha_avbin[ib+m_nbBins*iCell];
+    interp.tableInterpolate(m_nbBins, m_nbTemp, m_nbPress,
+                            &m_Ttable[0], &m_Ptable[0],
+			    &m_opacities[0], &m_radSource[0],
+			    T, patm, ib, val1, val2); 
+    
+    if(m_useExponentialMethod){
+      if (val1 <= 1e-30 || val2 <= 1e-30 ){
+	m_fieldSource[iCell] = 1e-30;
+	m_fieldAbsor[iCell]  = 1e-30;
+      } 
+      else {
+	m_fieldSource[iCell] = val2/val1;
+	m_fieldAbsor[iCell]  = val1;
       }
-  }
-  else{
-     if (alpha_avbin[ib+m_nbBins*iCell] <= 1e-30 || B_bin[ib+m_nbBins*iCell] <= 1e-30 ){
-    m_fieldSource[iCell] = 1e-30;
-    m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
-     }
-     else {
-      m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
-      m_fieldAbV[iCell]    = alpha_avbin[ib+m_nbBins*iCell]*volumes[iCell];
-     }      
-    m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
+    } 
+    else{
+      if (val1 <= 1e-30 || val2 <= 1e-30 ){
+	m_fieldSource[iCell] = 1e-30;
+	m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
+      }
+      else {
+	m_fieldSource[iCell] = val2/val1;
+	m_fieldAbV[iCell]    = val1*volumes[iCell];
+      }      
+      m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
     }
   }
-
+  else {
+    if(m_useExponentialMethod){
+      if (((alpha_avbin[ib+m_multiSpectralIdx*iCell]) <= 1e-30) || ((B_bin[ib+m_multiSpectralIdx*iCell]) <= 1e-30) ){
+	m_fieldSource[iCell] = 1e-30;
+	m_fieldAbsor[iCell]  = 1e-30;
+      }
+      else {
+	m_fieldSource[iCell] = B_bin[ib+m_multiSpectralIdx*iCell];
+	m_fieldAbsor[iCell]  = alpha_avbin[ib+m_multiSpectralIdx*iCell];
+      }
+    }
+    else{
+      if (alpha_avbin[ib+m_multiSpectralIdx*iCell] <= 1e-30 || B_bin[ib+m_multiSpectralIdx*iCell] <= 1e-30 ){
+	m_fieldSource[iCell] = 1e-30;
+	m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
+      }
+      else {
+	m_fieldSource[iCell] = B_bin[ib+m_multiSpectralIdx*iCell];
+	m_fieldAbV[iCell]    = alpha_avbin[ib+m_multiSpectralIdx*iCell]*volumes[iCell];
+      }      
+      m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
+    }
+  }
+  
   CFLog(DEBUG_MIN, "RadiativeTransferFVDOM::getFieldOpacities(" << ib << ", " << iCell << ") => END\n");
 } 
     
