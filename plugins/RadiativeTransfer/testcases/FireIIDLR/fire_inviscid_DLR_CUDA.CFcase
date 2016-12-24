@@ -92,12 +92,16 @@ Simulator.SubSystem.CellCenterFVM.ComputeRHS = Null
 Simulator.SubSystem.DataPostProcessing = DataProcessing
 Simulator.SubSystem.DataProcessing.Comds = RadiativeTransferFVDOMCUDA 
 Simulator.SubSystem.DataProcessing.Names = Radiation
-Simulator.SubSystem.DataProcessing.Radiation.nDirs = 8 #24
+#Simulator.SubSystem.DataProcessing.Radiation.LoopOverBins = false
+Simulator.SubSystem.DataProcessing.Radiation.nDirs = 8 #8 #24
 Simulator.SubSystem.DataProcessing.Radiation.UseExponentialMethod = true
+Simulator.SubSystem.DataProcessing.Radiation.OldAlgorithm = true
 #Simulator.SubSystem.DataProcessing.Radiation.OldAlgorithm = false
 #Simulator.SubSystem.DataProcessing.Radiation.DirName = ./
 Simulator.SubSystem.DataProcessing.Radiation.BinTabName = air-100Bands.dat #air-100Bins.dat
 Simulator.SubSystem.DataProcessing.Radiation.OutTabName = air-100Bands.out #air-100Bins.out
+Simulator.SubSystem.DataProcessing.Radiation.QAlgoName = BigMem # Atomic #BigMem
+
 #Simulator.SubSystem.DataProcessing.Radiation.ConstantP = 1013250 
 Simulator.SubSystem.DataProcessing.Radiation.PID = 11
 Simulator.SubSystem.DataProcessing.Radiation.TID = 12

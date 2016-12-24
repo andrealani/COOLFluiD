@@ -37,13 +37,13 @@ namespace COOLFluiD {
 class RadiativeTransferFVDOM : public Framework::DataProcessingCom {
 public:
   
-  class Interpolator {
+  class DeviceFunc {
   public:
     /// constructor
-    HOST_DEVICE Interpolator() {}
+    HOST_DEVICE DeviceFunc() {}
     
     /// destructor
-    HOST_DEVICE ~Interpolator() {}
+    HOST_DEVICE ~DeviceFunc() {}
     
     /// Interpolates the values of the opacity tables
     HOST_DEVICE inline void tableInterpolate
@@ -51,6 +51,15 @@ public:
      const CFreal* Ttable, const CFreal* Ptable, const CFreal* opacities, 
      const CFreal* radSource, CFreal T, CFreal p, CFuint ib, 
      CFreal& val1, CFreal& val2);
+    
+    /// get the inner product normal*direction (the normal includes the area)
+    HOST_DEVICE CFreal getDirDotNA(const CFuint d, 
+				   const CFreal* dirs, 
+				   const CFreal* normal) const
+    {
+      return normal[XX]*dirs[d*3] + normal[YY]*dirs[d*3+1] + 
+	normal[ZZ]*dirs[d*3+2];
+    }
   };
   
   /**
@@ -98,7 +107,7 @@ public:
   /**
    * Compute the advance order depending on the option selected 
    */  
-  void getAdvanceOrder(const CFuint d, Framework::LocalArray<CFint>::TYPE& advanceOrder); 
+  void getAdvanceOrder(const CFuint d, CFint *const advanceOrder); 
   
   /**
    * Compute the advance order depending on the option selected 
@@ -134,8 +143,7 @@ public:
    * Compute the order of the cells depending on the option selected (For the moment in the execute())
    */
   void findOrderOfAdvance();
-  
- 
+
   /**
    * Writes radial q and divQ to a file for the Sphere case 
    * (only if option RadialData is enabled)
@@ -175,18 +183,16 @@ protected: //function
       m_normal[dir] = normals[startID+dir]*factor;
     }    
   }
-  
-  /// get the inner product normal*direction (the normal includes the area)
-  CFreal getDirDotNA(const CFuint d, const RealVector& normal) const
-  {
-    return normal[XX]*m_dirs[d*3] + normal[YY]*m_dirs[d*3+1] 
-      + normal[ZZ]*m_dirs[d*3+2];
-  }	  
-  
-  /// compute the radiative heat flux
+    
+  /// compute the radiative heat flux with the exponential method
   /// @param ib  ID of the bin
   /// @param d   ID of the direction
-  void computeQ(const CFuint ib, const CFuint d);
+  void computeQExponential(const CFuint ib, const CFuint dStart, const CFuint d);
+  
+  /// compute the radiative heat flux with the standard method
+  /// @param ib  ID of the bin
+  /// @param d   ID of the direction
+  void computeQNoExponential(const CFuint ib, const CFuint dStart, const CFuint d);
 
   /**
    * Computes wall heat flux
@@ -325,7 +331,7 @@ protected: //data
   RealVector m_normal; 
   
   /// Weights for the directions
-  RealVector m_weight;
+  Framework::LocalArray<CFreal>::TYPE m_weight;
   
   /// Field source of oppacity table 
   Framework::LocalArray<CFreal>::TYPE m_fieldSource;
@@ -380,8 +386,8 @@ protected: //data
   /// a set of cells that can be advanced in parallel.These sets are terminated by a negative entry.  E.g., if there are 8 cells and advance_order(1:8,1) = (1,2,-5,3,4,-8,6,-7), 
   /// then cells (1,2,5) can be done first, and are in fact the boundary cells for direction 1,
   /// then cells (3,4,8) can be done; finally cells (6,7) can be done to complete the sweep in direction 1.
-  std::vector<Framework::LocalArray<CFint>::TYPE > m_advanceOrder;   
-    
+  Framework::LocalArray<CFint>::TYPE m_advanceOrder;
+  
   /// Radial average of q vector for a Sphere
   RealVector m_qrAv;
   
@@ -456,7 +462,7 @@ protected: //data
   
   /// start/end direction to consider
   std::pair<CFuint, CFuint> m_startEndDir;
-    
+
   /// number of Temperatures
   CFuint m_nbTemp;
   
@@ -474,7 +480,7 @@ protected: //data
   
   /// flag telling to run without solving anything, just for testing
   bool m_emptyRun;
-    
+  
   ///settings for Munafo computation
   std::string m_dirGenerator;
 
@@ -495,7 +501,7 @@ protected: //data
       
 //////////////////////////////////////////////////////////////////////////////
 
-void RadiativeTransferFVDOM::Interpolator::tableInterpolate
+void RadiativeTransferFVDOM::DeviceFunc::tableInterpolate
 (const CFuint nbBins, const CFuint nbTemp, const CFuint nbPress, 
  const CFreal* Ttable, const CFreal* Ptable, const CFreal* opacities, 
  const CFreal* radSource, CFreal T, CFreal p, CFuint ib, CFreal& val1, CFreal& val2)

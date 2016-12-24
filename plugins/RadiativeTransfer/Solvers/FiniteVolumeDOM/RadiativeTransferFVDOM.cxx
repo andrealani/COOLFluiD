@@ -350,7 +350,7 @@ void RadiativeTransferFVDOM::setup()
   cf_assert(m_PID < PhysicalModelStack::getActive()->getNbEq());
   cf_assert(m_TID < PhysicalModelStack::getActive()->getNbEq());
   cf_assert(m_PID != m_TID);
-    
+  
   const std::string nsp = getMethodData().getNamespace();
   cf_assert(PE::GetPE().GetProcessorCount(nsp) == 1);
   
@@ -437,10 +437,10 @@ void RadiativeTransferFVDOM::setup()
   cf_assert(m_nbDirs > 0);
   cf_assert(m_nbBins > 0);
   cf_assert(m_nbBands > 0);
-   
+
   CFuint nb_bb=m_nbBins;
   m_nbBins=m_nbBands*m_nbBins;
-    
+  
   // set the start/end bins for this process
   if (m_nbThreads == 1) { 
     m_startEndDir.first  = 0;
@@ -527,13 +527,10 @@ void RadiativeTransferFVDOM::setup()
   }
   
   m_dirs.resize(m_nbDirs*3);
-  m_advanceOrder.resize(m_nbDirs);
-  
   cf_assert(endDir <= m_nbDirs);
-  // resize only the rows corresponding to considered directions 
-  for (CFuint i = startDir; i< endDir; i++) {
-    m_advanceOrder[i].resize(nbCells);
-  }
+  // 1D array (logically 2D) to store advanceOrder
+  m_advanceOrder.resize(nbCells*(endDir-startDir));
+  cf_assert(m_advanceOrder.size() > 0);
   
   m_normal.resize(DIM, 0.); 
   
@@ -607,9 +604,9 @@ void RadiativeTransferFVDOM::setup()
   
   if (!m_emptyRun) {
     // only get advance order for the considered directions
-    for (CFuint d = startDir; d < endDir; d++){
-      cf_assert(m_advanceOrder[d].size() == nbCells);
-      getAdvanceOrder(d, m_advanceOrder[d]);
+    CFuint countd = 0;
+    for (CFuint d = startDir; d < endDir; ++d, ++countd){
+      getAdvanceOrder(d, &m_advanceOrder[countd*nbCells]);
     }
   }
     
@@ -1247,7 +1244,6 @@ void RadiativeTransferFVDOM::execute()
   CFLog(INFO, "RadiativeTransferFVDOM::execute() => START\n");
   
   Stopwatch<WallTime> stp;
-  
   stp.start();
   
   // compute the spectra in steps (to avoid to have to store too much data at once): 
@@ -1355,9 +1351,6 @@ void RadiativeTransferFVDOM::getFieldOpacitiesBinning(const CFuint ib)
     
     DataHandle<CFreal> volumes     = socket_volumes.getDataHandle();
     
-    //CFreal val1 = 0;
-    //CFreal val2 = 0;
-    
     if(m_useExponentialMethod){
       if (B_bin[ib+m_nbBins*iCell] <= 1e-30 || alpha_avbin[ib+m_nbBins*iCell] <= 1e-30 ){
 	m_fieldSource[iCell] = 1e-30;
@@ -1385,7 +1378,7 @@ void RadiativeTransferFVDOM::getFieldOpacitiesBinning(const CFuint ib)
 //////////////////////////////////////////////////////////////////////  
     
 void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d, 
-					     LocalArray<CFint>::TYPE& advanceOrder)
+					     CFint *const advanceOrder)
 {
   CFLog(VERBOSE, "RadiativeTransferFVDOM::getAdvanceOrder() => start\n");
   
@@ -1432,7 +1425,7 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d,
 	  if (dotMult < 0. && neighborIsSdone == false) {goto cell_loop;}
 	}// end loop over the FACES
 	
-	CFLog(DEBUG_MAX, "advanceOrder[" << d << "][" << m <<"] = " << iCell << "\n");
+	// CFLog(DEBUG_MAX, "advanceOrder[" << d << "][" << m <<"] = " << iCell << "\n");
 	
 	advanceOrder[m] = iCell;
 	CellID[iCell] = stage;
@@ -1445,17 +1438,12 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d,
     }// end of the loop over the CELLS
     
     const string msg = "advanceOrder[" + StringOps::to_str(d) + "] = ";
-#ifndef CF_HAVE_CUDA
-    CFLog(DEBUG_MAX, CFPrintContainer<LocalArray<CFint>::TYPE>(msg, &advanceOrder) << "\n");
-#else
-    CFint *const aoPtr = advanceOrder.ptr(); 
     CFLog(DEBUG_MAX, msg << "\n");
-    for (CFuint a = 0; a < advanceOrder.size(); ++a) {
-      CFLog(DEBUG_MAX, aoPtr[a] << " ");
+    for (CFuint a = 0; a < nbCells; ++a) {
+      CFLog(DEBUG_MAX, advanceOrder[a] << " ");
     }
     CFLog(DEBUG_MAX, "\n");
-#endif
-    
+
     if (m == mLast) {diagnoseProblem(d, m, mLast);}
     
     advanceOrder[m - 1] *= -1;
@@ -1474,17 +1462,12 @@ void RadiativeTransferFVDOM::getAdvanceOrder(const CFuint d,
   
   //Printing advanceOrder for debug purpuses
   const string msg = "RadiativeTransferFVDOM::getAdvanceOrder() => advanceOrder[" + StringOps::to_str(d) + "] = ";
-
-#ifndef CF_HAVE_CUDA
-    CFLog(DEBUG_MAX, CFPrintContainer<LocalArray<CFint>::TYPE>(msg, &advanceOrder) << "\n");
-#else
-    CFint *const aoPtr = advanceOrder.ptr(); 
-    CFLog(DEBUG_MAX, msg << "\n");
-    for (CFuint a = 0; a < advanceOrder.size(); ++a) {
-      CFLog(DEBUG_MAX, aoPtr[a] << " ");
-    }
-    CFLog(DEBUG_MAX, "\n");
-#endif
+  
+  CFLog(DEBUG_MAX, msg << "\n");
+  for (CFuint a = 0; a < nbCells; ++a) {
+    CFLog(DEBUG_MAX, advanceOrder[a] << " ");
+  }
+  CFLog(DEBUG_MAX, "\n");
     
   CFLog(VERBOSE, "RadiativeTransferFVDOM::getAdvanceOrder() => end\n");
 }
@@ -1694,6 +1677,7 @@ void RadiativeTransferFVDOM::getFieldOpacities(const CFuint ib, const CFuint iCe
   DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
   
   const State *currState = socket_states.getDataHandle()[iCell]; 
+  //Get the field pressure and T commented because now we impose a temperature profile
   CFreal p = 0.;
   CFreal T = 0.;
   
@@ -1725,80 +1709,76 @@ void RadiativeTransferFVDOM::getFieldOpacities(const CFuint ib, const CFuint iCe
   const CFreal patm   = p/101325.; //converting from Pa to atm
   CFreal val1 = 0;
   CFreal val2 = 0;
+
   if (!m_binningPARADE) {
-    RadiativeTransferFVDOM::Interpolator interp;
+    RadiativeTransferFVDOM::DeviceFunc interp;
     interp.tableInterpolate(m_nbBins, m_nbTemp, m_nbPress, 
-			    &m_Ttable[0], &m_Ptable[0],
-			    &m_opacities[0], &m_radSource[0],
-			    T, patm, ib, val1, val2); 
-    
-    if(m_useExponentialMethod){
-      if (val1 <= 1e-30 || val2 <= 1e-30 ){
-	m_fieldSource[iCell] = 1e-30;
-	m_fieldAbsor[iCell]  = 1e-30;
+       &m_Ttable[0], &m_Ptable[0],
+			  &m_opacities[0], &m_radSource[0],
+			  T, patm, ib, val1, val2); 
+
+  if(m_useExponentialMethod){
+    if (val1 <= 1e-30 || val2 <= 1e-30 ){
+      m_fieldSource[iCell] = 1e-30;
+      m_fieldAbsor[iCell]  = 1e-30;}
+    else {
+      m_fieldSource[iCell] = val2/val1;
+      m_fieldAbsor[iCell]  = val1;
+  }
+  } else{
+    if (val1 <= 1e-30 || val2 <= 1e-30 ){
+    m_fieldSource[iCell] = 1e-30;
+    m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
+  }
+    else {
+    m_fieldSource[iCell] = val2/val1;
+      m_fieldAbV[iCell]    = val1*volumes[iCell];
+    }      
+    m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
+  }
+ }
+ else {
+if(m_useExponentialMethod){
+    if (((alpha_avbin[ib+m_nbBins*iCell]) <= 1e-30) || ((B_bin[ib+m_nbBins*iCell]) <= 1e-30) ){
+    m_fieldSource[iCell] = 1e-30;
+    m_fieldAbsor[iCell]  = 1e-30;
+     }
+     else {
+    m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
+     m_fieldAbsor[iCell]  = alpha_avbin[ib+m_nbBins*iCell];
       }
-      else {
-	m_fieldSource[iCell] = val2/val1;
-	m_fieldAbsor[iCell]  = val1;
-      }
-    }
-    else{
-      if (val1 <= 1e-30 || val2 <= 1e-30 ){
-	m_fieldSource[iCell] = 1e-30;
-	m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
-      }
-      else {
-	m_fieldSource[iCell] = val2/val1;
-	m_fieldAbV[iCell]    = val1*volumes[iCell];
-      }      
-      m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
+  }
+  else{
+     if (alpha_avbin[ib+m_nbBins*iCell] <= 1e-30 || B_bin[ib+m_nbBins*iCell] <= 1e-30 ){
+    m_fieldSource[iCell] = 1e-30;
+    m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
+     }
+     else {
+      m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
+      m_fieldAbV[iCell]    = alpha_avbin[ib+m_nbBins*iCell]*volumes[iCell];
+     }      
+    m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
     }
   }
-  else {
-    if(m_useExponentialMethod){
-      if (((alpha_avbin[ib+m_nbBins*iCell]) <= 1e-30) || ((B_bin[ib+m_nbBins*iCell]) <= 1e-30) ){
-	m_fieldSource[iCell] = 1e-30;
-	m_fieldAbsor[iCell]  = 1e-30;
-      }
-      else {
-	m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
-	m_fieldAbsor[iCell]  = alpha_avbin[ib+m_nbBins*iCell];
-      }
-    }
-    else{
-      if (alpha_avbin[ib+m_nbBins*iCell] <= 1e-30 || B_bin[ib+m_nbBins*iCell] <= 1e-30 ){
-	m_fieldSource[iCell] = 1e-30;
-	m_fieldAbV[iCell]    = 1e-30*volumes[iCell]; // Volume converted from m^3 into cm^3
-      }
-      else {
-	m_fieldSource[iCell] = B_bin[ib+m_nbBins*iCell];
-	m_fieldAbV[iCell]    = alpha_avbin[ib+m_nbBins*iCell]*volumes[iCell];
-      }      
-      m_fieldAbSrcV[iCell]   = m_fieldSource[iCell]*m_fieldAbV[iCell];
-    }
-  }
-  
+
   CFLog(DEBUG_MIN, "RadiativeTransferFVDOM::getFieldOpacities(" << ib << ", " << iCell << ") => END\n");
 } 
     
 //////////////////////////////////////////////////////////////////////////////
 
-void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
+void RadiativeTransferFVDOM::computeQExponential(const CFuint ib,
+						 const CFuint dStart,
+						 const CFuint d)
 {      
-  CFLog(VERBOSE, "RadiativeTransferFVDOM::computeQ() in (bin, dir) = ("
-	<< ib << ", " << d << ") => START\n");
+  CFLog(VERBOSE, 
+	"RadiativeTransferFVDOM::computeQExponential() in (bin, dir) = ("
+	<< ib << ", " << d << ") => start\n");
   
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
   DataHandle<CFreal> divQ = socket_divq.getDataHandle();
   CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
   SafePtr<TopologicalRegionSet> cells = geoData.trs;
   const CFuint nbCells = cells->getLocalNbGeoEnts();
-  cf_assert(m_advanceOrder[d].size() == nbCells);
-  
-  // precompute dot products for all faces and directions (apart from the sign)
-  if (m_loopOverBins) {
-    computeDotProdInFace(d, m_dotProdInFace);
-  }
   
   SafePtr<ConnectivityTable<CFuint> > cellFaces = 
     MeshDataStack::getActive()->getConnectivity("cellFaces");
@@ -1807,74 +1787,199 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
   DataHandle<CFreal> qy = socket_qy.getDataHandle();
   DataHandle<CFreal> qz = socket_qz.getDataHandle();
   
+  //////// 
+  const CFuint totalNbFaces = MeshDataStack::getActive()->Statistics().getNbFaces();
+  vector<CFint> faceCell(totalNbFaces*2, -1);
+  vector<CFuint> nbFacesInCell(nbCells);
+  
+  for (CFuint iCell = 0; iCell < nbCells; ++iCell) {
+    const CFuint nbFaces = cellFaces->nbCols(iCell);
+    nbFacesInCell[iCell] = nbFaces;
+    for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+      const CFuint faceID2 = (*cellFaces)(iCell, iFace)*2;
+      if (faceCell[faceID2] == -1) {
+	faceCell[faceID2] = iCell;
+      }
+      else {
+	faceCell[faceID2+1] = iCell;
+      }
+    }
+  }
+  //////
+  
+
+  const CFuint startCell = (d-dStart)*nbCells;
   for (CFuint m = 0; m < nbCells; m++) {
     CFreal inDirDotnANeg = 0.;
     CFreal Ic            = 0.;
+    CFreal dirDotnANeg   = 0.;
+    CFreal Lc            = 0.;
+    CFreal halfExp       = 0.;
     
     // allocate the cell entity
-    const CFuint iCell = std::abs(m_advanceOrder[d][m]);
+    cf_assert(startCell+m < m_advanceOrder.size());
+    const CFuint iCell = std::abs(m_advanceOrder[startCell+m]);
     
     // new algorithm (more parallelizable): opacities are computed cell by cell
     // for a given bin
     if (!m_oldAlgo) {getFieldOpacities(ib, iCell);} 
     
     const CFuint nbFaces = cellFaces->nbCols(iCell);
-    
-    if(m_useExponentialMethod){
-      inDirDotnANeg = 0.;
-      CFreal dirDotnANeg = 0;
-      CFreal Lc      = 0;
-      CFreal halfExp = 0;
+    cf_assert(nbFaces == nbFacesInCell[iCell]);
+    for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+      const CFuint faceID = (*cellFaces)(iCell, iFace);
+      const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
+      const CFreal dirDotNA = m_dotProdInFace[faceID]*factor;
       
-      for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
-	const CFuint faceID = (*cellFaces)(iCell, iFace);
-	const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
-	const CFreal dirDotNA = m_dotProdInFace[faceID]*factor;
+      if(dirDotNA < 0.) {
+	dirDotnANeg += dirDotNA;
+	const CFint fcellID = faceCell[faceID*2]; 
+        const CFint neighborCellID = (fcellID == iCell) ? faceCell[faceID*2+1] : fcellID;
+	const CFreal source = (neighborCellID >=0) ? m_In[neighborCellID] : m_fieldSource[iCell];
+        inDirDotnANeg += source*dirDotNA;
 	
-	if(dirDotNA < 0.) {
-	  dirDotnANeg += dirDotNA;
-	  
-	  const bool isBFace = m_mapGeoToTrs->isBGeo(faceID);
-	  if (!isBFace){
-	    const CFuint neighborCellID = getNeighborCellID(faceID, iCell);
-	    inDirDotnANeg += m_In[neighborCellID]*dirDotNA;
+	/*if (iCell==100 && d == 0) {
+	  printf ("source   : %6.6f \n", source);
+	  printf ("dirDotNA : %6.6f  \n", dirDotNA);
+	  printf ("inDirDotnANeg : %6.6f \n",inDirDotnANeg);
+	  printf ("factor   : %6.6f  \n", factor);
+	  }*/
+	
+	/*const bool isBFace = m_mapGeoToTrs->isBGeo(faceID);
+	if (!isBFace){
+	const CFuint neighborCellID = getNeighborCellID(faceID, iCell);
+	  inDirDotnANeg += m_In[neighborCellID]*dirDotNA;
 	  }
 	  else {
-	    const CFreal boundarySource = m_fieldSource[iCell];
-	    inDirDotnANeg += boundarySource*dirDotNA;
-	  }
-	}
-      } 
-      Lc          = volumes[iCell]/(- dirDotnANeg); 
-      halfExp     = std::exp(-0.5*Lc*m_fieldAbsor[iCell]);
-      m_In[iCell] = (inDirDotnANeg/dirDotnANeg)*halfExp*halfExp + (1. - halfExp*halfExp)*m_fieldSource[iCell];
-      Ic          = (inDirDotnANeg/dirDotnANeg)*halfExp + (1. - halfExp)*m_fieldSource[iCell];
-    }
-    else{
-      CFreal dirDotnAPos = 0;
-      for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
-	const CFuint faceID = (*cellFaces)(iCell, iFace);
-	const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
-	const CFreal dirDotNA = m_dotProdInFace[faceID]*factor;
+	  const CFreal boundarySource = m_fieldSource[iCell];
+	  inDirDotnANeg += boundarySource*dirDotNA;
+	  }*/
 	
-	if (dirDotNA >= 0.){
-	  dirDotnAPos += dirDotNA;
+      }
+    } 
+    Lc          = volumes[iCell]/(- dirDotnANeg); 
+    halfExp     = std::exp(-0.5*Lc*m_fieldAbsor[iCell]);
+    const CFreal InCell = (inDirDotnANeg/dirDotnANeg)*halfExp*halfExp + (1. - halfExp*halfExp)*m_fieldSource[iCell];
+    Ic          = (inDirDotnANeg/dirDotnANeg)*halfExp + (1. - halfExp)*m_fieldSource[iCell];
+    /* if (iCell==100 && d == 0) {
+      printf ("out inDirDotnANeg : %6.6f \n",inDirDotnANeg);
+      printf ("Lc       : %6.6f  \n", Lc);
+      printf ("halfExp  : %6.6f  \n", halfExp);
+      printf ("InCell   : %6.6f  \n", InCell);
+      printf ("Ic       : %6.6f  \n", Ic);
+      printf ("weight   : %6.6f \n", m_weight[d]);
+      }*/
+        
+    CFreal inDirDotnA = inDirDotnANeg;
+    for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+      const CFuint faceID = (*cellFaces)(iCell, iFace);
+      const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
+      const CFreal dirDotNA = m_dotProdInFace[faceID]*factor;
+      if (dirDotNA > 0.) {
+	inDirDotnA += InCell*dirDotNA;
+      }
+    }
+    
+    m_In[iCell] = InCell;
+    const CFreal IcWeight = Ic*m_weight[d];
+    const CFuint d3 = d*3;
+    
+    /*   if (iCell==100 && d == 0) {
+	 printf ("IcWeight : %6.6f \n", IcWeight);
+	 printf ("d3       : %d  \n", d3);
+	 printf ("inDirDotnA : %6.6f \n",inDirDotnA);
+	 }*/
+    
+    qx[iCell]   += m_dirs[d3]*IcWeight;
+    qy[iCell]   += m_dirs[d3+1]*IcWeight;
+    qz[iCell]   += m_dirs[d3+2]*IcWeight;
+    divQ[iCell] += inDirDotnA*m_weight[d];
+    // m_II[iCell] += Ic*m_weight[d]; // useless
+   
+    /*if (iCell==100 && d == 0) {
+        printf ("IcWeight    : %6.6f \n", IcWeight);
+        printf ("inDirDotnA  : %6.6f \n",inDirDotnA);
+        printf ("InCell      : %6.6f \n", InCell);
+        printf ("cellIDin    : %d  \n", iCell*m_nbDirs+d);
+        const CFreal qxIcell = qx[iCell];
+        printf ("qx[iCell]   : %6.6f  \n", qxIcell);
+        const CFreal divqIcell = divQ[iCell];
+        printf ("divq[iCell] : %6.6f  \n", divqIcell);
+        const CFreal In0 = m_In[iCell];
+        printf ("In[iCell]   : %6.6f  \n", In0);
+        printf ("d3          : %d  \n", d3);
+        printf ("mdirs[d3]   : %6.6f  \n", m_dirs[d3]);
+        printf ("mdirs[d3+1] : %6.6f  \n", m_dirs[d3+1]);
+        printf ("mdirs[d3+2] : %6.6f  \n", m_dirs[d3+2]);
+      exit(1);
+    }*/
+  }
+  
+  CFLog(VERBOSE, 
+	"RadiativeTransferFVDOM::computeQExponential() in (bin, dir) = ("
+	<< ib << ", " << d << ") => end\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+void RadiativeTransferFVDOM::computeQNoExponential(const CFuint ib, 
+						   const CFuint dStart,
+						   const CFuint d)
+{      
+  CFLog(VERBOSE, 
+	"RadiativeTransferFVDOM::computeQNoExponential() in (bin, dir) = ("
+	<< ib << ", " << d << ") => start\n");
+  
+  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+  DataHandle<CFreal> divQ = socket_divq.getDataHandle();
+  CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
+  SafePtr<TopologicalRegionSet> cells = geoData.trs;
+  const CFuint nbCells = cells->getLocalNbGeoEnts();
+  
+  SafePtr<ConnectivityTable<CFuint> > cellFaces = 
+    MeshDataStack::getActive()->getConnectivity("cellFaces");
+  DataHandle<CFint> isOutward = socket_isOutward.getDataHandle();
+  DataHandle<CFreal> qx = socket_qx.getDataHandle();
+  DataHandle<CFreal> qy = socket_qy.getDataHandle();
+  DataHandle<CFreal> qz = socket_qz.getDataHandle();
+  
+  const CFuint startCell = (d-dStart)*nbCells;
+  for (CFuint m = 0; m < nbCells; m++) {
+    CFreal inDirDotnANeg = 0.;
+    CFreal Ic            = 0.;
+    CFreal dirDotnAPos   = 0.;
+    
+    // allocate the cell entity
+    cf_assert(startCell+m < m_advanceOrder.size());
+    const CFuint iCell = std::abs(m_advanceOrder[startCell+m]);
+    
+    // new algorithm (more parallelizable): opacities are computed cell by cell
+    // for a given bin
+    if (!m_oldAlgo) {getFieldOpacities(ib, iCell);} 
+    
+    const CFuint nbFaces = cellFaces->nbCols(iCell);
+    for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+      const CFuint faceID = (*cellFaces)(iCell, iFace);
+      const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
+      const CFreal dirDotNA = m_dotProdInFace[faceID]*factor;
+      
+      if (dirDotNA >= 0.){
+	dirDotnAPos += dirDotNA;
+      }
+      else {
+	const bool isBFace = m_mapGeoToTrs->isBGeo(faceID);
+	if (!isBFace){
+	  const CFuint neighborCellID = getNeighborCellID(faceID, iCell);
+	  inDirDotnANeg += m_In[neighborCellID]*dirDotNA;
 	}
 	else {
-	  const bool isBFace = m_mapGeoToTrs->isBGeo(faceID);
-	  if (!isBFace){
-	    const CFuint neighborCellID = getNeighborCellID(faceID, iCell);
-	    inDirDotnANeg += m_In[neighborCellID]*dirDotNA;
-	  }
-	  else {
-	    const CFreal boundarySource = m_fieldSource[iCell];
-	    inDirDotnANeg += boundarySource*dirDotNA;
-	  }
+	  const CFreal boundarySource = m_fieldSource[iCell];
+	  inDirDotnANeg += boundarySource*dirDotNA;
 	}
-      } 
-      m_In[iCell] = (m_fieldAbSrcV[iCell] - inDirDotnANeg)/(m_fieldAbV[iCell] + dirDotnAPos);
-      Ic = m_In[iCell];
-    }
+      }
+    } 
+    m_In[iCell] = (m_fieldAbSrcV[iCell] - inDirDotnANeg)/(m_fieldAbV[iCell] + dirDotnAPos);
+    Ic = m_In[iCell];
     
     qx[iCell] += Ic*m_dirs[d*3]*m_weight[d];
     qy[iCell] += Ic*m_dirs[d*3+1]*m_weight[d];
@@ -1895,7 +2000,7 @@ void RadiativeTransferFVDOM::computeQ(const CFuint ib, const CFuint d)
   }  
   
   CFLog(VERBOSE, "RadiativeTransferFVDOM::computeQ() in (bin, dir) = ("
-	<< ib << ", " << d << ") => END\n");
+	<< ib << ", " << d << ") => end\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -1962,13 +2067,12 @@ void RadiativeTransferFVDOM::computeDotProdInFace
   DataHandle<CFreal> normals = socket_normals.getDataHandle();
   const CFuint totalNbFaces = normals.size()/DIM;
   cf_assert(dotProdInFace.size() == totalNbFaces);
-  RealVector normalPtr(DIM, static_cast<CFreal*>(NULL));
   
+  RadiativeTransferFVDOM::DeviceFunc fun;
   for (CFuint faceID = 0; faceID < totalNbFaces; ++faceID) {
     const CFuint startID = faceID*DIM;
-    normalPtr.wrap(DIM, &normals[startID]);
     // the sign of each dot product will depend on the actual considered cell within the loop
-    dotProdInFace[faceID] = getDirDotNA(d, normalPtr);
+    dotProdInFace[faceID] = fun.getDirDotNA(d, &m_dirs[0], &normals[startID]);
   }
 }      
 
@@ -2024,14 +2128,43 @@ void RadiativeTransferFVDOM::loopOverBins(const CFuint startBin,
     // old algorithm: opacities computed for all cells at once for a given bin
     if (m_oldAlgo && !m_binningPARADE) {getFieldOpacities(ib);}
     if(m_binningPARADE){getFieldOpacitiesBinning(ib);}
+    
+    /*for (CFuint k = 0; k < m_fieldSource.size(); ++k)
+      CFLog(INFO, "m_fieldSource[" <<k << "] => (" << m_fieldSource[k] << "\n");
+    for (CFuint k = 0; k < m_fieldAbsor.size(); ++k)
+      CFLog(INFO, "m_fieldAbsor[" <<k << "] => (" << m_fieldAbsor[k] << "\n");
+    for (CFuint k = 0; k < m_fieldAbSrcV.size(); ++k)
+      CFLog(INFO, "m_fieldAbSrcV[" <<k << "] => (" << m_fieldAbSrcV[k] << "\n");
+    for (CFuint k = 0; k < m_fieldAbV.size(); ++k)
+      CFLog(INFO, "m_fieldAbV[" <<k << "] => (" << m_fieldAbV[k] << "\n");
+      exit(1);*/
+    
     const CFuint dStart = (ib != startBin) ? 0 : startDir;
     const CFuint dEnd = (ib != m_startEndBin.second)? m_nbDirs : endDir;
     for (CFuint d = dStart; d < dEnd; ++d) {
       CFLog(INFO, d << " ");
-      computeQ(ib,d);
+      // precompute dot products for all faces and directions (a part from the sign)
+      computeDotProdInFace(d, m_dotProdInFace);
+      
+      (m_useExponentialMethod) ? 
+	computeQExponential(ib,dStart,d) : computeQNoExponential(ib,dStart,d);
     }
     CFLog(INFO, ")\n");
   }
+
+  /*  for (CFuint k = 0; k < socket_divq.getDataHandle().size(); ++k) {
+    CFLog(INFO, "divQ[" <<k << "] => (" << socket_divq.getDataHandle()[k] << "\n");
+  }
+  for (CFuint k = 0; k < socket_qx.getDataHandle().size(); ++k) {
+    CFLog(INFO, "qx[" <<k << "] => (" << socket_qx.getDataHandle()[k] << "\n");
+  }
+  for (CFuint k = 0; k < socket_qy.getDataHandle().size(); ++k) {
+    CFLog(INFO, "qy[" <<k << "] => (" << socket_qy.getDataHandle()[k] << "\n");
+  }
+  for (CFuint k = 0; k < socket_qz.getDataHandle().size(); ++k) {
+    CFLog(INFO, "qz[" <<k << "] => (" << socket_qz.getDataHandle()[k] << "\n");
+  }
+  exit(1);*/
   CFLog(VERBOSE, "RadiativeTransferFVDOM::loopOverBins() => END\n");
 }
       
@@ -2045,15 +2178,18 @@ void RadiativeTransferFVDOM::loopOverDirs(const CFuint startBin,
   CFLog(VERBOSE, "RadiativeTransferFVDOM::loopOverDirs() => START\n");
   for (CFuint d = startDir; d < endDir; ++d) {
     CFLog(INFO, "( dir: " << d << " ), ( bin: ");
-    
-    // precompute dot products for all faces and directions (apart from the sign)
+    const CFuint bStart = (d != startDir) ? 0 : startBin;
+    const CFuint bEnd   = (d != m_startEndDir.second) ? m_nbBins : endBin;
+    // precompute dot products for all faces and directions (a part from the sign)
     computeDotProdInFace(d, m_dotProdInFace);
     
     for(CFuint ib = startBin; ib < endBin; ++ib) {
       // old algorithm: opacities computed for all cells at once for a given bin
       CFLog(INFO, ib << " ");
       if (m_oldAlgo) {getFieldOpacities(ib);}
-      computeQ(ib,d);
+      
+      (m_useExponentialMethod) ? 
+	computeQExponential(ib,startDir,d) : computeQNoExponential(ib,startDir,d);
     }
     CFLog(INFO, ")\n");
   }

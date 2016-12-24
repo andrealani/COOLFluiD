@@ -47,9 +47,9 @@ Simulator.SubSystem.Tecplot.FileName    = fire2.plt
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = B_3 B_4 B_6
 Simulator.SubSystem.Tecplot.SaveRate = 100
 Simulator.SubSystem.Tecplot.AppendIter = false
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = CellID divq qx qy qz
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = CellID divq qx qy qz
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = qrad
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = qrad
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 
 #Simulator.SubSystem.Tecplot.Data.WithEquations = false
 Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
 
@@ -106,7 +106,7 @@ Simulator.SubSystem.DataProcessing1.RT.sendBufferSize   = 10000
 Simulator.SubSystem.DataProcessing1.RunAtSetup = true
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.NumberLoops = 1
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.TempID = 13
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.TempID = 12
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMax = 10000.
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMin = 2000.
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.RadiationPhysicsNames = aa b1 b2 b3
@@ -115,19 +115,22 @@ Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ApplyTRS   = I
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.TypeTRS    = Medium
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.Radiator   = ParadeRadiator
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.LibraryPath = \
-	/Users/lani/PARADEv3.2.1/parade-3.2.1
+	/software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
+#	/Users/lani/PARADEv3.2.1/parade-3.2.1
 #	/software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.LocalDirName = ParadeData
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 10000
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.Tmin = 200
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = false
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = true #false #true #false
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.MolecularSpecies = 1 1 1 0 0 1 1 1 0 0 0 
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.ApplyTRS   = B_3
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.TypeTRS    = Wall
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.Radiator = GreyWallRadiator
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemAbsCoeff = 1.
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemEmsCoeff = 0.
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.TypeTRS    = Boundary
+# need BC in order to have T > 0 at the wall
+#Wall
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.Radiator = GreyWallRadiator
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemAbsCoeff = 1.
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemEmsCoeff = 0.
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.ApplyTRS   = B_4
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.TypeTRS    = Boundary

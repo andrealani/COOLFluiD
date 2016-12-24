@@ -51,10 +51,11 @@ public:
   
 private: //function
   
-  /// compute the radiative heat flux
-  /// @param ib  ID of the bin
-  /// @param d   ID of the direction
-  // void computeQ(const CFuint ib, const CFuint d);
+  /// Compute radiative fluxes by looping over bins
+  virtual void loopOverBins(const CFuint startBin, 
+			    const CFuint endBin, 
+			    const CFuint startDir,
+			    const CFuint endDir);
   
   /// Compute radiative fluxes by looping over directions
   virtual void loopOverDirs(const CFuint startBin, 
@@ -69,6 +70,24 @@ private: //data
 
   /// number of faces per cell
   Framework::LocalArray<CFuint>::TYPE m_nbFacesInCell;
+  
+  /// Exponent for the radiation of oppacity table
+  Framework::LocalArray<CFreal>::TYPE m_InDir;
+  
+  /// qx for each direction
+  Framework::LocalArray<CFreal>::TYPE m_qxDir;
+  
+  /// qz for each direction
+  Framework::LocalArray<CFreal>::TYPE m_qyDir;
+  
+  /// qz for each direction
+  Framework::LocalArray<CFreal>::TYPE m_qzDir;
+  
+  /// divq for each direction
+  Framework::LocalArray<CFreal>::TYPE m_divqDir;
+  
+  /// name of the algorithm to use for computing Q
+  std::string m_qAlgoName;
   
 }; // end of class RadiativeTransferFVDOMCUDA
     
