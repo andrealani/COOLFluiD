@@ -135,7 +135,7 @@ __global__ void getFieldOpacitiesKernel(const bool useExponentialMethod,
     else{
       if (val1 <= 1e-30 || val2 <= 1e-30 ){
 	fieldSource[cellID] = 1e-30;
-	fieldAbV[cellID]    = 1e-30*volumes[cellID]; // Volumen converted from m^3 into cm^3
+	fieldAbV[cellID]    = 1e-30*volumes[cellID]; // Volume converted from m^3 into cm^3
       }
       else {
 	fieldSource[cellID] = val2/val1;

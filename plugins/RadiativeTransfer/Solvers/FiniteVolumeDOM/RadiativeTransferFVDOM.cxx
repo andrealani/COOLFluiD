@@ -1796,7 +1796,7 @@ void RadiativeTransferFVDOM::computeQExponential(const CFuint ib,
   DataHandle<CFreal> qz = socket_qz.getDataHandle();
   
   //////// 
-  const CFuint totalNbFaces = MeshDataStack::getActive()->Statistics().getNbFaces();
+  /*const CFuint totalNbFaces = MeshDataStack::getActive()->Statistics().getNbFaces();
   vector<CFint> faceCell(totalNbFaces*2, -1);
   vector<CFuint> nbFacesInCell(nbCells);
   
@@ -1812,7 +1812,7 @@ void RadiativeTransferFVDOM::computeQExponential(const CFuint ib,
 	faceCell[faceID2+1] = iCell;
       }
     }
-  }
+    }*/
   //////
   
 
@@ -1833,7 +1833,7 @@ void RadiativeTransferFVDOM::computeQExponential(const CFuint ib,
     if (!m_oldAlgo) {getFieldOpacities(ib, iCell);} 
     
     const CFuint nbFaces = cellFaces->nbCols(iCell);
-    cf_assert(nbFaces == nbFacesInCell[iCell]);
+    //    cf_assert(nbFaces == nbFacesInCell[iCell]);
     for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
       const CFuint faceID = (*cellFaces)(iCell, iFace);
       const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
@@ -1841,27 +1841,21 @@ void RadiativeTransferFVDOM::computeQExponential(const CFuint ib,
       
       if(dirDotNA < 0.) {
 	dirDotnANeg += dirDotNA;
-	const CFint fcellID = faceCell[faceID*2]; 
+	
+	/*const CFint fcellID = faceCell[faceID*2]; 
         const CFint neighborCellID = (fcellID == iCell) ? faceCell[faceID*2+1] : fcellID;
 	const CFreal source = (neighborCellID >=0) ? m_In[neighborCellID] : m_fieldSource[iCell];
-        inDirDotnANeg += source*dirDotNA;
+        inDirDotnANeg += source*dirDotNA;*/
 	
-	/*if (iCell==100 && d == 0) {
-	  printf ("source   : %6.6f \n", source);
-	  printf ("dirDotNA : %6.6f  \n", dirDotNA);
-	  printf ("inDirDotnANeg : %6.6f \n",inDirDotnANeg);
-	  printf ("factor   : %6.6f  \n", factor);
-	  }*/
-	
-	/*const bool isBFace = m_mapGeoToTrs->isBGeo(faceID);
+	const bool isBFace = m_mapGeoToTrs->isBGeo(faceID);
 	if (!isBFace){
-	const CFuint neighborCellID = getNeighborCellID(faceID, iCell);
+	  const CFuint neighborCellID = getNeighborCellID(faceID, iCell);
 	  inDirDotnANeg += m_In[neighborCellID]*dirDotNA;
-	  }
-	  else {
+	}
+	else {
 	  const CFreal boundarySource = m_fieldSource[iCell];
 	  inDirDotnANeg += boundarySource*dirDotNA;
-	  }*/
+	}
 	
       }
     } 
@@ -1869,15 +1863,7 @@ void RadiativeTransferFVDOM::computeQExponential(const CFuint ib,
     halfExp     = std::exp(-0.5*Lc*m_fieldAbsor[iCell]);
     const CFreal InCell = (inDirDotnANeg/dirDotnANeg)*halfExp*halfExp + (1. - halfExp*halfExp)*m_fieldSource[iCell];
     Ic          = (inDirDotnANeg/dirDotnANeg)*halfExp + (1. - halfExp)*m_fieldSource[iCell];
-    /* if (iCell==100 && d == 0) {
-      printf ("out inDirDotnANeg : %6.6f \n",inDirDotnANeg);
-      printf ("Lc       : %6.6f  \n", Lc);
-      printf ("halfExp  : %6.6f  \n", halfExp);
-      printf ("InCell   : %6.6f  \n", InCell);
-      printf ("Ic       : %6.6f  \n", Ic);
-      printf ("weight   : %6.6f \n", m_weight[d]);
-      }*/
-        
+    
     CFreal inDirDotnA = inDirDotnANeg;
     for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
       const CFuint faceID = (*cellFaces)(iCell, iFace);
@@ -1891,12 +1877,6 @@ void RadiativeTransferFVDOM::computeQExponential(const CFuint ib,
     m_In[iCell] = InCell;
     const CFreal IcWeight = Ic*m_weight[d];
     const CFuint d3 = d*3;
-    
-    /*   if (iCell==100 && d == 0) {
-	 printf ("IcWeight : %6.6f \n", IcWeight);
-	 printf ("d3       : %d  \n", d3);
-	 printf ("inDirDotnA : %6.6f \n",inDirDotnA);
-	 }*/
     
     qx[iCell]   += m_dirs[d3]*IcWeight;
     qy[iCell]   += m_dirs[d3+1]*IcWeight;
