@@ -427,6 +427,7 @@ void RadiativeTransferFVDOM::setup()
     m_fieldAbSrcV.resize(nbCells);
     m_fieldAbV.resize(nbCells);
   }
+  
   m_In.resize(nbCells);
   m_II.resize(nbCells);
   

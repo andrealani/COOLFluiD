@@ -86,6 +86,18 @@ private: //data
   /// divq for each direction
   Framework::LocalArray<CFreal>::TYPE m_divqDir;
   
+  /// Field source of opacity table for each bin
+  Framework::LocalArray<CFreal>::TYPE m_fieldSourceBin;
+  
+  /// Field Absorption of opacity table used if exponential Method for each bin
+  Framework::LocalArray<CFreal>::TYPE m_fieldAbsorBin;
+  
+  /// Field Absorption of opacity table used if not Exponential Method for each bin
+  Framework::LocalArray<CFreal>::TYPE m_fieldAbSrcVBin;
+  
+  /// Field Absorption of opacity table used if not Exponential Method for each bin
+  Framework::LocalArray<CFreal>::TYPE m_fieldAbVBin;  
+  
   /// name of the algorithm to use for computing Q
   std::string m_qAlgoName;
   

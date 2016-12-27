@@ -333,16 +333,16 @@ protected: //data
   /// Weights for the directions
   Framework::LocalArray<CFreal>::TYPE m_weight;
   
-  /// Field source of oppacity table 
+  /// Field source of opacity table 
   Framework::LocalArray<CFreal>::TYPE m_fieldSource;
   
-  /// Field Absorption of oppacity table used if exponential Method
+  /// Field Absorption of opacity table used if exponential Method
   Framework::LocalArray<CFreal>::TYPE m_fieldAbsor;
   
-  /// Field Absorption of oppacity table used if not Exponential Method
+  /// Field Absorption of opacity table used if not Exponential Method
   Framework::LocalArray<CFreal>::TYPE m_fieldAbSrcV;
   
-  /// Field Absorption of oppacity table used if not Exponential Method
+  /// Field Absorption of opacity table used if not Exponential Method
   Framework::LocalArray<CFreal>::TYPE m_fieldAbV;  
   
   /// Exponent for the radiation of oppacity table

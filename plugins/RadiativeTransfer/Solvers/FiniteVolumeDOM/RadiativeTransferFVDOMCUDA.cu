@@ -85,6 +85,7 @@ __global__ void getFieldOpacitiesKernel(const bool useExponentialMethod,
 					const CFuint ib,
 					const CFuint nbEqs,
 					const CFuint nbCells,
+					const CFuint fieldOffset,
 					const CFreal* Ttable,
 					const CFreal* Ptable,
 					const CFreal* states,
@@ -100,13 +101,14 @@ __global__ void getFieldOpacitiesKernel(const bool useExponentialMethod,
   const int cellID = threadIdx.x + blockIdx.x*blockDim.x;
   
   if (cellID < nbCells) {
-    fieldSource[cellID] = 0.;
+    const CFuint idx = cellID + fieldOffset;
+    fieldSource[idx] = 0.;
     if(useExponentialMethod) {
-      fieldAbsor[cellID]  = 0.;
+      fieldAbsor[idx]  = 0.;
     }
     else {
-      fieldAbSrcV[cellID] = 0.;
-      fieldAbV[cellID]    = 0.;
+      fieldAbSrcV[idx] = 0.;
+      fieldAbV[idx]    = 0.;
     }
     
     //Get the field pressure and T commented because now we impose a temperature profile
@@ -124,24 +126,222 @@ __global__ void getFieldOpacitiesKernel(const bool useExponentialMethod,
     
     if(useExponentialMethod){
       if (val1 <= 1e-30 || val2 <= 1e-30 ){
-	fieldSource[cellID] = 1e-30;
-	fieldAbsor[cellID]  = 1e-30;
+	fieldSource[idx] = 1e-30;
+	fieldAbsor[idx]  = 1e-30;
       }
       else {
-	fieldSource[cellID] = val2/val1;
-	fieldAbsor[cellID]  = val1;
+	fieldSource[idx] = val2/val1;
+	fieldAbsor[idx]  = val1;
       }
     }
     else{
       if (val1 <= 1e-30 || val2 <= 1e-30 ){
-	fieldSource[cellID] = 1e-30;
-	fieldAbV[cellID]    = 1e-30*volumes[cellID]; // Volume converted from m^3 into cm^3
+	fieldSource[idx] = 1e-30;
+	fieldAbV[idx]    = 1e-30*volumes[cellID]; // Volume converted from m^3 into cm^3
       }
       else {
-	fieldSource[cellID] = val2/val1;
-	fieldAbV[cellID]    = val1*volumes[cellID];
+	fieldSource[idx] = val2/val1;
+	fieldAbV[idx]    = val1*volumes[cellID];
       }      
-      fieldAbSrcV[cellID]   = fieldSource[cellID]*fieldAbV[cellID];
+      fieldAbSrcV[idx]   = fieldSource[idx]*fieldAbV[idx];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+__global__ void computeQKernelExponentialBinAtomic(const CFuint bStart,
+						   const CFuint bEnd,
+						   const CFuint dStart,
+						   const CFuint d,
+						   const CFuint nbCells,
+						   const CFuint* cellFaces,
+						   const CFint* faceCell,
+						   const CFuint* nbFacesInCell,
+						   const CFint* isOutward,
+						   const CFint* advanceOrder,
+						   const CFreal weightIn,
+						   const CFreal* volumes,
+						   const CFreal* fieldSource,
+						   const CFreal* fieldAbsor,
+						   const CFreal* mdirs,
+						   const CFreal* dotProdInFace,
+						   CFreal* In,
+						   CFreal* divq,
+						   CFreal* qx, CFreal* qy, CFreal* qz)
+{ 
+  const CFuint nbBins = bEnd - bStart; 
+  
+  // each thread takes care of computing the gradient for one single cell
+  const CFuint binID = threadIdx.x + blockIdx.x*blockDim.x;
+  if (binID < nbBins) {
+    RadiativeTransferFVDOM::DeviceFunc fun;
+    const CFuint d3 = d*3;
+    const CFreal mdirs30 = mdirs[d3];
+    const CFreal mdirs31 = mdirs[d3+1];
+    const CFreal mdirs32 = mdirs[d3+2];
+    const CFreal weight = weightIn;
+    const CFuint startCell = (d-dStart)*nbCells;
+    
+    for (CFuint m = 0; m < nbCells; ++m) {
+      CFreal inDirDotnANeg = 0.;
+      CFreal Ic            = 0.;
+      CFreal dirDotnANeg   = 0.;
+      CFreal Lc            = 0.;
+      CFreal halfExp       = 0.;
+      
+      // allocate the cell entity
+      const CFuint iCell   = abs(advanceOrder[startCell+m]);
+      const CFuint nbFaces = nbFacesInCell[iCell];
+      const CFuint cellIDin = binID*nbCells+iCell; 
+      //const CFuint cellIDin = iCell*nbBins+binID;
+      const CFreal fSource = fieldSource[cellIDin];
+      
+      for (CFuint iFace = 0; iFace < nbFaces; ++iFace) { 
+	const CFuint faceID = cellFaces[iFace*nbCells + iCell];
+	const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
+	const CFreal dirDotNA = dotProdInFace[faceID]*factor;
+	
+	if(dirDotNA < 0.) {
+	  dirDotnANeg += dirDotNA;
+	  const CFint fcellID = faceCell[faceID*2]; 
+	  const CFint neighborCellID = (fcellID == iCell) ? faceCell[faceID*2+1] : fcellID;
+	  //const CFreal source = (neighborCellID >=0) ? In[neighborCellID*nbBins+binID] : fSource;
+	  const CFreal source = (neighborCellID >=0) ? In[binID*nbCells+neighborCellID] : fSource;
+	  inDirDotnANeg += source*dirDotNA;
+	  
+	  /* if (iCell==100 && binID == 0) {
+	     printf ("source   : %6.6f \n", source);
+	     printf ("dirDotNA : %6.6f  \n", dirDotNA);
+	     printf ("inDirDotnANeg : %6.6f \n",inDirDotnANeg);
+	     printf ("factor   : %6.6f  \n", factor);
+	    printf ("fSource  : %6.6f  \n", fSource); 
+	    printf ("nbBins   : %d  \n", nbBins); 
+	    printf ("cellIDin : %d  \n", cellIDin);
+	    }*/
+	}
+      } 
+      
+      Lc        = volumes[iCell]/(- dirDotnANeg); 
+      halfExp   = exp(-0.5*Lc*fieldAbsor[cellIDin]);
+      const CFreal InCell = (inDirDotnANeg/dirDotnANeg)*halfExp*halfExp + 
+	(1. - halfExp*halfExp)*fSource;
+      Ic = (inDirDotnANeg/dirDotnANeg)*halfExp + (1. - halfExp)*fSource;
+      
+      CFreal inDirDotnA = inDirDotnANeg;
+      for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+	const CFuint faceID = cellFaces[iFace*nbCells + iCell];
+	const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
+	const CFreal dirDotNA = dotProdInFace[faceID]*factor;
+	if (dirDotNA > 0.) {
+	  inDirDotnA += InCell*dirDotNA;
+	}
+      }
+      
+      In[cellIDin] = InCell;
+      const CFreal IcWeight = Ic*weight;
+      const CFreal m0w = mdirs30*IcWeight;
+      const CFreal m1w = mdirs31*IcWeight;
+      const CFreal m2w = mdirs32*IcWeight;
+      const CFreal inw = inDirDotnA*weight;    
+      
+      // here atomics are needed since qi/divq are single arrays shared by all threads
+      atomicAdd(&qx[iCell], m0w);
+      atomicAdd(&qy[iCell], m1w);          
+      atomicAdd(&qz[iCell], m2w);
+      atomicAdd(&divq[iCell], inw);
+      
+      /*if (iCell==100 && dirID == 0) {
+	printf ("IcWeight    : %6.6f \n", IcWeight);
+	printf ("inDirDotnA  : %6.6f \n",inDirDotnA);
+	printf ("InCell      : %6.6f \n", InCell);
+      	printf ("cellIDin    : %d  \n", cellIDin);
+	const CFreal qxIcell = qx[iCell];
+	printf ("qx[iCell]   : %6.6f  \n", qxIcell);
+	const CFreal divqIcell = divq[iCell];
+	printf ("divq[iCell] : %6.6f  \n", divqIcell);
+	const CFreal In0 = In[cellIDin];
+	printf ("In[iCell]   : %6.6f  \n", In0);
+	printf ("d3          : %d  \n", d3);
+	printf ("mdirs[d3]   : %6.6f  \n", mdirs30);
+	printf ("mdirs[d3+1] : %6.6f  \n", mdirs31);
+	printf ("mdirs[d3+2] : %6.6f  \n", mdirs32);
+      }*/
+    }
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+__global__ void getFieldOpacitiesBinKernel(const CFuint startBin,
+					   const CFuint endBin,
+					   const bool useExponentialMethod,
+					   const CFuint TID, 
+					   const CFuint PID,
+					   const CFuint nbTemp,
+					   const CFuint nbPress,
+					   const CFuint nbBins,
+					   const CFuint nbEqs,
+					   const CFuint nbCells,
+					   const CFreal* Ttable,
+					   const CFreal* Ptable,
+					   const CFreal* states,
+					   const CFreal* volumes,
+					   const CFreal* opacities,
+					   const CFreal* radSource,
+					   CFreal* fieldSource,
+					   CFreal* fieldAbsor,
+					   CFreal* fieldAbSrcV,
+					   CFreal* fieldAbV)
+{    
+  // each thread takes care of computing the gradient for one single cell
+  const int cellID = threadIdx.x + blockIdx.x*blockDim.x;
+  const int binID  = threadIdx.y + blockIdx.y*blockDim.y;
+  
+  if (cellID < nbCells && binID < nbBins) {
+    const CFuint idx = cellID*nbBins+binID; // here could also be binID*nbCells+cellID
+    fieldSource[idx] = 0.;
+    if(useExponentialMethod) {
+      fieldAbsor[idx]  = 0.;
+    }
+    else {
+      fieldAbSrcV[idx] = 0.;
+      fieldAbV[idx]    = 0.;
+    }
+    
+    //Get the field pressure and T commented because now we impose a temperature profile
+    const CFuint sIdx = cellID*nbEqs; 
+    const CFreal p = states[sIdx + PID];
+    const CFreal T = states[sIdx + TID];
+    const CFreal patm = p/101325.; //converting from Pa to atm
+    
+    CFreal val1 = 0;
+    CFreal val2 = 0;
+    
+    RadiativeTransferFVDOM::DeviceFunc interp;
+    interp.tableInterpolate(nbBins, nbTemp, nbPress, Ttable, Ptable,
+			    opacities, radSource, T, patm, binID, val1, val2); 
+    
+    if(useExponentialMethod){
+      if (val1 <= 1e-30 || val2 <= 1e-30 ){
+	fieldSource[idx] = 1e-30;
+	fieldAbsor[idx]  = 1e-30;
+      }
+      else {
+	fieldSource[idx] = val2/val1;
+	fieldAbsor[idx]  = val1;
+      }
+    }
+    else{
+      if (val1 <= 1e-30 || val2 <= 1e-30 ){
+	fieldSource[idx] = 1e-30;
+	fieldAbV[idx]    = 1e-30*volumes[cellID]; // Volume converted from m^3 into cm^3
+      }
+      else {
+	fieldSource[idx] = val2/val1;
+	fieldAbV[idx]    = val1*volumes[cellID];
+      }      
+      fieldAbSrcV[idx]   = fieldSource[idx]*fieldAbV[idx];
     }
   }
 }
@@ -197,20 +397,22 @@ __global__ void computeQKernelExponentialDirBigMem(const CFuint dStart,
       // allocate the cell entity
       const CFuint iCell   = abs(advanceOrder[startCell+m]);
       const CFuint nbFaces = nbFacesInCell[iCell];
+      const CFreal fSource = fieldSource[iCell];
+      const CFreal* dirs = &mdirs[0];
       for (CFuint iFace = 0; iFace < nbFaces; ++iFace) { 
 	const CFuint faceID = cellFaces[iFace*nbCells + iCell];
 	const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
 	const CFuint startID = faceID*3;
-	const CFreal dotProdInFace = fun.getDirDotNA(d,&mdirs[0],&normals[startID]);
+	const CFreal dotProdInFace = fun.getDirDotNA(d, dirs, &normals[startID]);
 	const CFreal dirDotNA = dotProdInFace*factor;
 	
 	if(dirDotNA < 0.) {
 	  dirDotnANeg += dirDotNA;
 	  const CFint fcellID = faceCell[faceID*2]; 
 	  const CFint neighborCellID = (fcellID == iCell) ? faceCell[faceID*2+1] : fcellID;
-	  const CFreal source = (neighborCellID >=0) ? In[neighborCellID*nbDirs+dirID] : fieldSource[iCell];
+	  const CFreal source = (neighborCellID >=0) ? In[neighborCellID*nbDirs+dirID] : fSource;
 	  inDirDotnANeg += source*dirDotNA;
-	   
+	  
 	  /*if (iCell==100 && dirID == 0) {
 	    printf ("source   : %6.6f \n", source);
 	    printf ("dirDotNA : %6.6f  \n", dirDotNA);
@@ -223,15 +425,15 @@ __global__ void computeQKernelExponentialDirBigMem(const CFuint dStart,
       Lc        = volumes[iCell]/(- dirDotnANeg); 
       halfExp   = exp(-0.5*Lc*fieldAbsor[iCell]);
       const CFreal InCell = (inDirDotnANeg/dirDotnANeg)*halfExp*halfExp + 
-	(1. - halfExp*halfExp)*fieldSource[iCell];
-      Ic = (inDirDotnANeg/dirDotnANeg)*halfExp + (1. - halfExp)*fieldSource[iCell];
-
+	(1. - halfExp*halfExp)*fSource;
+      Ic = (inDirDotnANeg/dirDotnANeg)*halfExp + (1. - halfExp)*fSource;
+      
       CFreal inDirDotnA = inDirDotnANeg;
       for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
 	const CFuint faceID = cellFaces[iFace*nbCells + iCell];
 	const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
 	const CFuint startID = faceID*3;
-	const CFreal dotProdInFace = fun.getDirDotNA(d,&mdirs[0],&normals[startID]);
+	const CFreal dotProdInFace = fun.getDirDotNA(d,dirs,&normals[startID]);
 	const CFreal dirDotNA = dotProdInFace*factor;
 	if (dirDotNA > 0.) {
 	  inDirDotnA += InCell*dirDotNA;
@@ -291,12 +493,12 @@ __global__ void computeQKernelExponentialDirAtomic(const CFuint dStart,
   // mdirs is used often, by all threads and should be shared 
   //__shared__ CFreal mdirs[256]; // overallocated memory
   const CFuint nbDirs = dEnd - dStart; 
- // CFint tID = threadIdx.x; 
- // while (tID < nbDirs) {
- //   mdirs[dStart+tID] = mdirsIn[dStart+tID];
- //   tID += blockDim.x;
- // }
- // __syncthreads();
+  // CFint tID = threadIdx.x; 
+  // while (tID < nbDirs) {
+  //   mdirs[dStart+tID] = mdirsIn[dStart+tID];
+  //   tID += blockDim.x;
+  // }
+  // __syncthreads();
   
   // each thread takes care of computing the gradient for one single cell
   const CFuint dirID = threadIdx.x + blockIdx.x*blockDim.x;
@@ -309,29 +511,31 @@ __global__ void computeQKernelExponentialDirAtomic(const CFuint dStart,
     const CFreal mdirs32 = mdirs[d3+2];
     const CFreal weight = weightIn[d];
     const CFuint startCell = dirID*nbCells;
-     
+    
     for (CFuint m = 0; m < nbCells; ++m) {
       CFreal inDirDotnANeg = 0.;
       CFreal Ic            = 0.;
       CFreal dirDotnANeg   = 0.;
       CFreal Lc            = 0.;
       CFreal halfExp       = 0.;
-     
+      
       // allocate the cell entity
       const CFuint iCell   = abs(advanceOrder[startCell+m]);
       const CFuint nbFaces = nbFacesInCell[iCell];
+      const CFreal fSource = fieldSource[iCell];
+      const CFreal* dirs = &mdirs[0];
       for (CFuint iFace = 0; iFace < nbFaces; ++iFace) { 
 	const CFuint faceID = cellFaces[iFace*nbCells + iCell];
 	const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
 	const CFuint startID = faceID*3;
-	const CFreal dotProdInFace = fun.getDirDotNA(d,&mdirs[0],&normals[startID]);
+	const CFreal dotProdInFace = fun.getDirDotNA(d,dirs,&normals[startID]);
 	const CFreal dirDotNA = dotProdInFace*factor;
 	
 	if(dirDotNA < 0.) {
 	  dirDotnANeg += dirDotNA;
 	  const CFint fcellID = faceCell[faceID*2]; 
 	  const CFint neighborCellID = (fcellID == iCell) ? faceCell[faceID*2+1] : fcellID;
-	  const CFreal source = (neighborCellID >=0) ? In[neighborCellID*nbDirs+dirID] : fieldSource[iCell];
+	  const CFreal source = (neighborCellID>=0) ? In[neighborCellID*nbDirs+dirID] : fSource;
 	  inDirDotnANeg += source*dirDotNA;
 	  
 	  /*if (iCell==100 && dirID == 0) {
@@ -340,22 +544,21 @@ __global__ void computeQKernelExponentialDirAtomic(const CFuint dStart,
 	    printf ("inDirDotnANeg : %6.6f \n",inDirDotnANeg);
 	    printf ("factor   : %6.6f  \n", factor);
 	    }*/
-	  
 	}
       } 
       
       Lc        = volumes[iCell]/(- dirDotnANeg); 
       halfExp   = exp(-0.5*Lc*fieldAbsor[iCell]);
       const CFreal InCell = (inDirDotnANeg/dirDotnANeg)*halfExp*halfExp + 
-	(1. - halfExp*halfExp)*fieldSource[iCell];
-      Ic = (inDirDotnANeg/dirDotnANeg)*halfExp + (1. - halfExp)*fieldSource[iCell];
+	(1. - halfExp*halfExp)*fSource;
+      Ic = (inDirDotnANeg/dirDotnANeg)*halfExp + (1. - halfExp)*fSource;
       
       CFreal inDirDotnA = inDirDotnANeg;
       for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
 	const CFuint faceID = cellFaces[iFace*nbCells + iCell];
 	const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
 	const CFuint startID = faceID*3;
-	const CFreal dotProdInFace = fun.getDirDotNA(d,&mdirs[0],&normals[startID]);
+	const CFreal dotProdInFace = fun.getDirDotNA(d,dirs,&normals[startID]);
 	const CFreal dirDotNA = dotProdInFace*factor;
 	if (dirDotNA > 0.) {
 	  inDirDotnA += InCell*dirDotNA;
@@ -809,7 +1012,11 @@ RadiativeTransferFVDOMCUDA::RadiativeTransferFVDOMCUDA(const std::string& name) 
   m_qxDir(),
   m_qyDir(),
   m_qzDir(),
-  m_divqDir()  
+  m_divqDir(),
+  m_fieldSourceBin(),
+  m_fieldAbsorBin(),
+  m_fieldAbSrcVBin(),
+  m_fieldAbVBin()
 {
   addConfigOptionsTo(this);
   
@@ -858,7 +1065,7 @@ void RadiativeTransferFVDOMCUDA::setup()
   for (CFuint i = 0; i < m_weight.size(); ++i) {
    CFLog(INFO, m_weight[i] << " ");  
   }*/
-
+  
   m_fieldSource.put();  // to be removed 
   m_fieldAbsor.put();  // to be removed
   m_fieldAbSrcV.put(); // to be removed
@@ -928,12 +1135,27 @@ void RadiativeTransferFVDOMCUDA::setup()
       m_qzDir.put();
       m_divqDir.put();
     }
-    
-    for (CFuint i = 0; i < m_InDir.size(); ++i) {
-      m_InDir[i] = 0.;
-    }
-    m_InDir.put();
   }
+  else { 
+    cf_assert(!m_loopOverBins); 
+    const CFuint nbCellsBins = nbCells*m_nbBins;
+    m_InDir.resize(nbCellsBins);
+    
+    if(m_useExponentialMethod){
+      m_fieldSourceBin.resize(nbCellsBins); // AL: here should endBin-startBin
+      m_fieldAbsorBin.resize(nbCellsBins);  // AL: here should endBin-startBin
+    }
+    else {
+      m_fieldSourceBin.resize(nbCellsBins);
+      m_fieldAbSrcVBin.resize(nbCellsBins);
+      m_fieldAbVBin.resize(nbCellsBins);
+    }
+  }
+  
+  for (CFuint i = 0; i < m_InDir.size(); ++i) {
+    m_InDir[i] = 0.;
+  }
+  m_InDir.put();
   
   CFLog(VERBOSE, "RadiativeTransferFVDOMCUDA::setup() => END\n");
 }
@@ -976,7 +1198,10 @@ void RadiativeTransferFVDOMCUDA::loopOverDirs(const CFuint startBin,
   const CFuint blocksPerGrid = 
     CudaEnv::CudaDeviceManager::getInstance().getBlocksPerGrid(nbCells);
   const CFuint nThreads = CudaEnv::CudaDeviceManager::getInstance().getNThreads();
-    
+  
+  Stopwatch<WallTime> stp;
+  stp.start();
+  
   for (CFuint d = startDir; d < endDir; ++d) {
     CFLog(INFO, "( dir: " << d << " ), ( bin: ");
     const CFuint bStart = (d != startDir) ? 0 : startBin;
@@ -986,14 +1211,16 @@ void RadiativeTransferFVDOMCUDA::loopOverDirs(const CFuint startBin,
     computeDotProdInFace(d, m_dotProdInFace);
     m_dotProdInFace.put();
     
-    for (CFuint ib = startBin; ib < endBin; ++ib) {
-      CFLog(INFO, ib << " ");
-      
-      // precompute the radiation properties for all cells
-      getFieldOpacitiesKernel<<<blocksPerGrid,nThreads>>>
-	(m_useExponentialMethod, 
+    /*   const CFuint fieldOffset = 0;
+	 for (CFuint ib = bStart; ib < bEnd; ++ib) {
+	 CFLog(INFO, ib << " ");
+	 
+	 // precompute the radiation properties for all cells
+	 getFieldOpacitiesKernel<<<blocksPerGrid,nThreads>>>
+	 (m_useExponentialMethod, 
 	 m_TID, m_PID, m_nbTemp, m_nbPress, m_nbBins,
-	 ib, nbEqs, nbCells, m_Ttable.ptrDev(), m_Ptable.ptrDev(), 
+	 ib, nbEqs, nbCells, fieldOffset, 
+	 m_Ttable.ptrDev(), m_Ptable.ptrDev(), 
 	 states.getGlobalArray()->ptrDev(),
 	 volumes.getLocalArray()->ptrDev(),
 	 m_opacities.ptrDev(),
@@ -1002,7 +1229,7 @@ void RadiativeTransferFVDOMCUDA::loopOverDirs(const CFuint startBin,
 	 m_fieldAbsor.ptrDev(),
 	 m_fieldAbSrcV.ptrDev(),
 	 m_fieldAbV.ptrDev());  
-      
+	 
       m_fieldSource.get();
       m_fieldAbsor.get();
       m_fieldAbSrcV.get();
@@ -1014,9 +1241,85 @@ void RadiativeTransferFVDOMCUDA::loopOverDirs(const CFuint startBin,
       // advance ordering
       (m_useExponentialMethod) ? 
 	computeQExponential(ib,startDir,d) : computeQNoExponential(ib,startDir,d);
+	}*/
+    
+    for (CFuint ib = bStart; ib < bEnd; ++ib) {
+      // CFLog(INFO, ib << " ");
+      const CFuint fieldOffset = ib*nbCells;
+      getFieldOpacitiesKernel<<<blocksPerGrid,nThreads>>>
+	(m_useExponentialMethod, 
+	 m_TID, m_PID, m_nbTemp, m_nbPress, m_nbBins,
+	 ib, nbEqs, nbCells, fieldOffset, 
+	 m_Ttable.ptrDev(), m_Ptable.ptrDev(), 
+	 states.getGlobalArray()->ptrDev(),
+	 volumes.getLocalArray()->ptrDev(),
+	 m_opacities.ptrDev(),
+	 m_radSource.ptrDev(),
+	 m_fieldSourceBin.ptrDev(),
+	 m_fieldAbsorBin.ptrDev(),
+	 m_fieldAbSrcVBin.ptrDev(),
+	 m_fieldAbVBin.ptrDev());  
     }
-    CFLog(INFO, ")\n");
+    
+    // precompute the radiation properties for all cells and all bins
+    const CFuint nbLocalBins = bEnd - bStart;
+    /*cf_assert(m_nbBins == nbLocalBins); // this will have to be fixed in MPI-parallel runs
+      dim3 blocksDim(blocksPerGrid,1);
+      dim3 threadsDim(nThreads, nbLocalBins);
+      
+      getFieldOpacitiesBinKernel<<<blocksDim,threadsDim>>>
+      (bStart, bEnd,
+      m_useExponentialMethod, 
+      m_TID, m_PID, m_nbTemp, m_nbPress, nbLocalBins,
+      nbEqs, nbCells, m_Ttable.ptrDev(), m_Ptable.ptrDev(), 
+      states.getGlobalArray()->ptrDev(),
+      volumes.getLocalArray()->ptrDev(),
+      m_opacities.ptrDev(),
+      m_radSource.ptrDev(),
+      m_fieldSourceBin.ptrDev(),
+      m_fieldAbsorBin.ptrDev(),
+      m_fieldAbSrcVBin.ptrDev(),
+      m_fieldAbVBin.ptrDev()); */
+    
+    
+    if (m_useExponentialMethod) {
+      const CFuint nBlocksBin = 
+	CudaEnv::CudaDeviceManager::getInstance().getBlocksPerGrid(nbLocalBins);
+      const CFuint nThreadsBin = 
+	std::min((CFuint)CudaEnv::CudaDeviceManager::getInstance().getNThreads(), nbLocalBins);
+      
+      computeQKernelExponentialBinAtomic<<<nBlocksBin,nThreadsBin>>> 
+	(bStart, bEnd, startDir, d, nbCells,
+	 cellFaces->getPtr()->ptrDev(),
+	 m_faceCell.ptrDev(),
+	 m_nbFacesInCell.ptrDev(),
+	 isOutward.getLocalArray()->ptrDev(),
+	 m_advanceOrder.ptrDev(),
+	 m_weight[d],
+	 volumes.getLocalArray()->ptrDev(),
+	 m_fieldSourceBin.ptrDev(),
+	 m_fieldAbsorBin.ptrDev(),
+	 m_dirs.ptrDev(),
+	 m_dotProdInFace.ptrDev(),
+	 m_InDir.ptrDev(),
+	 divQ.getLocalArray()->ptrDev(),
+	 qx.getLocalArray()->ptrDev(),
+	 qy.getLocalArray()->ptrDev(),
+	 qz.getLocalArray()->ptrDev());
+    }
+    
+     for (CFuint ib = bStart; ib < bEnd; ++ib) {
+       CFLog(INFO, ib << " ");
+     }
+     CFLog(INFO, ")\n");
   }
+  
+  socket_divq.getDataHandle().getLocalArray()->get();
+  socket_qx.getDataHandle().getLocalArray()->get();
+  socket_qy.getDataHandle().getLocalArray()->get();
+  socket_qz.getDataHandle().getLocalArray()->get();
+  
+  CFLog(INFO, "RadiativeTransferFVDOMCUDA::loopOverDirs() loop took " << stp.read() << "s \n");
   
   CFLog(VERBOSE, "RadiativeTransferFVDOMCUDA::loopOverDirs() =>END\n");
 }
@@ -1065,6 +1368,7 @@ void RadiativeTransferFVDOMCUDA::loopOverBins(const CFuint startBin,
   Stopwatch<WallTime> stp;
   stp.start();
   
+  const CFuint fieldOffset = 0;
   for(CFuint ib = startBin; ib < endBin; ++ib) {
     CFLog(INFO, "( bin: " << ib << " ), ( dir: ");
     
@@ -1073,7 +1377,8 @@ void RadiativeTransferFVDOMCUDA::loopOverBins(const CFuint startBin,
       getFieldOpacitiesKernel<<<blocksPerGrid,nThreads>>>
 	(m_useExponentialMethod, 
 	 m_TID, m_PID, m_nbTemp, m_nbPress, m_nbBins,
-	 ib, nbEqs, nbCells, m_Ttable.ptrDev(), m_Ptable.ptrDev(), 
+	 ib, nbEqs, nbCells, fieldOffset, 
+	 m_Ttable.ptrDev(), m_Ptable.ptrDev(), 
 	 states.getGlobalArray()->ptrDev(),
 	 volumes.getLocalArray()->ptrDev(),
 	 m_opacities.ptrDev(),
