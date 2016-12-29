@@ -140,17 +140,29 @@ void ParalutionMatrix::createCSR(std::valarray<CFint> allNonZero, CFuint nbEqs)
    _rowoff = new CFint[_rowlength];  //.resize(_rowlength);
    _size = 0;
    _rowoff[0] = 0;
-   for (CFuint i=0; i<nbStates; i++){ 
-      _rowoff[i+1] = _size+allNonZero[i];
-      _size += allNonZero[i];
-      //std::cout << _rowoff[i] << "\t";
-   }
-  
+/*
+  The allNonZero can store {0,3,5,...} indicating the number of neigbours,
+  or {0, 54, 126} indicating the exact index of the offset. In the first one it is needed to multiply by nbEqs
+
+   if (allNonZero[1]<=nbEqs){
+     for (CFuint i=0; i<nbStates; i++){ 
+        _rowoff[i+1] = _size+allNonZero[i]*nbEqs;
+        _size += allNonZero[i]*nbEqs;
+       // std::cout << _rowoff[i] << "\t";
+     }
+   }else{
+*/
+     for (CFuint i=0; i<nbStates; i++){ 
+        _rowoff[i+1] = _size+allNonZero[i];
+        _size += allNonZero[i];
+      //  std::cout << _rowoff[i] << "\t";
+     }
+//   }
  //  _row.resize(_size);
    _val = new CFreal[_size]; //.resize(_size);   
    _col = new CFint[_size];   
 
-   CFLog(VERBOSE, "Allocated: " << _size << "\t nbStates: " << _rowoff[nbStates] << "\n");
+   CFLog(NOTICE, "Allocated: " << _size << "\t nbStates: " << _rowoff[nbStates] << "\n");
  // _nnz = 0;
 }
 
@@ -170,15 +182,11 @@ void ParalutionMatrix::addValues(const Framework::BlockAccumulator& acc)
 {
   using namespace std;
 
-  CFuint size = acc.size(); //number of entries
-
   CFuint m = acc.getM();    //Number of neighbors
   CFuint n = acc.getN();    //Central cell
   CFuint nb = acc.getNB();  //nb eqs
-
   const std::vector<int>& nbID = acc.getIM(); //Array storing indexes of neigbours
   const std::vector<int>& IDs = acc.getIN(); //Array storing neigbours
-
   CFuint IndexCSR;
   CFreal val;
   CFuint RowPosition;
@@ -186,7 +194,6 @@ void ParalutionMatrix::addValues(const Framework::BlockAccumulator& acc)
   CFuint mm;
   CFuint index = 0; //Also number of nonzerovalues
   CFreal* values = const_cast<Framework::BlockAccumulator&>(acc).getPtr();
-
       CFuint counter = 0;                //Number of non-connected neigbours
       for (CFint mi=0; mi<m; mi++){      //Loop over the neigbours
          if (nbID[mi] == -1) {
@@ -198,13 +205,14 @@ void ParalutionMatrix::addValues(const Framework::BlockAccumulator& acc)
               mm = (RowPositionPlusOne-RowPosition)/nb;  //Number of nonzero values of the neighbour
               IndexCSR = -1;
               for (CFint mii=0; mii<mm; mii++){  //Look for the correct index looping over the neighbors of the neigbour
-                
                  if (_col[RowPosition+mii*nb] == IDs[0]*nb || _col[RowPosition+mii*nb] == -1){
                     IndexCSR = RowPosition+mii*nb;
                  }
                 
               }
+
               for (CFint nbi=0; nbi<nb; nbi++){
+		
                 val = values[mi*nb*nb + nbj*nb + nbi]; 
                 _col[IndexCSR+nbi] = IDs[0]*nb + nbi;
                 _val[IndexCSR+nbi] += val;
@@ -212,7 +220,6 @@ void ParalutionMatrix::addValues(const Framework::BlockAccumulator& acc)
            }
          }
       }
-
 }
       
 

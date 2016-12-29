@@ -121,35 +121,7 @@ stopTimer.start();
       solVec.moveToGPU();
     }
 
-    //CFLog(NOTICE, "StdSolveSys::execute() ==> moveToGPU succesful! \n");
-
-/*
-    //Configure LSS and preconditioner using CFcase parameters:
-
-// Linear Solver
-GMRES<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal > ls;
-//preconditioner
-//ILU<LocalMatrix<CFreal>,LocalVector<CFreal>,CFreal> p;
-//  p.Set(0);
-Jacobi<LocalMatrix<CFreal>,LocalVector<CFreal>,CFreal> p;
-   CFLog(VERBOSE, "StdSolveSys::execute() ==> configuring ls succesful! \n");
-    //End configure   
-
-
-ls.Init(MethodData.getAbsoluteTol(),
-        MethodData.getRelativeTol(),
-        1e8,
-        MethodData.getMaxIter());
-
-mat.AssignToSolver(ls);   //Not really beautiful way to do it
-
-   ls.SetPreconditioner(p);
-  
-//rhsVec.printToFile("RHS.txt");
-//mat.printToFile("matrix.mtx");
-ls.Build();
-
-*/
+    CFLog(VERBOSE, "StdSolveSys::execute() ==> moveToGPU succesful! \n");
 
 
 IterCounter++;

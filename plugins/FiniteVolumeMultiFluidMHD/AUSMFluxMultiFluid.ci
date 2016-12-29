@@ -167,7 +167,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::compute(RealVector& result)
   m_rData = &pdata[RIGHT];
   CFuint dim = PhysicalModelStack::getActive()->getDim();
   const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
-  
+
   if (nbEqs == totalNbEqs || iEqSS == 1) {
     if (this->getMethodData().useAnalyticalConvJacob()) {
       computeLinearizedAbsJacob();
@@ -179,10 +179,10 @@ void AUSMFluxMultiFluid<UPDATEVAR>::compute(RealVector& result)
     // The flow at the freestream is assumed to be one-dimensional
     // calculation of the normal component of velocity for
     // the left and right states
-    const RealVector& normal = getMethodData().getUnitNormal();
+    RealVector& normal = getMethodData().getUnitNormal();
     const CFuint nbSpecies = m_updateVarSet->getModel()->getNbScalarVars(0);
     const CFuint firstVelocity = m_updateVarSet->getModel()->getFirstScalarVar(1);
-    
+
     for (CFuint ie = 0; ie < nbSpecies; ++ie) {
       m_unL[ie] = 0.0;
       m_unR[ie] = 0.0;
@@ -236,7 +236,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::compute(RealVector& result)
     
     // const CFuint firstEMField = varIDsEMField[0];  
     const CFuint endEM = varIDsEMField.size();
-    
+
     /// flux splitting scheme for Maxwell's Equations
     //loop to set the electromagnetic variables 
     for (CFuint i = 0; i < endEM; ++i){

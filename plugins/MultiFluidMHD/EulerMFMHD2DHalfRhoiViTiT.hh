@@ -125,7 +125,8 @@ public: // classes
     const CFuint endEM = 8;
     const CFuint firstSpecies = m_dco->firstSpecies;  
     const CFuint firstVelocity = m_dco->firstVelocity;   
-    
+    const CFuint firstTemperature = m_dco->firstTemperature;
+
     const CFreal m_e = m_dco->molecularMass1;
     const CFreal m_n = m_dco->molecularMass2;
     const CFreal m_p = m_dco->molecularMass3; 
@@ -140,8 +141,8 @@ public: // classes
     //        gamma,      K_gas,      m_e,      m_n,      m_p);
 
 
-    //printf("nbSpecies %d \t firstSpecies %d \t firstVelocity %d \t m_e %e \t m_n %e \n",
-    //        nbSpecies,      firstSpecies,      firstVelocity,      m_e,      m_n);
+    //printf("nbSpecies %d \t firstSpecies %d \t firstVelocity %d \t firstTemperature %d \n",
+    //        nbSpecies,      firstSpecies,      firstVelocity,      firstTemperature);
 
 
     //set the molar masses of the species (should be changed in the future)
@@ -176,8 +177,9 @@ public: // classes
     
       //Partial densities
       data[firstSpecies] =  rho_i*ovRho;
-      data[firstSpecies + 1] =  rho_n*ovRho;
-    
+      data[firstSpecies + 1] =  rho_n*ovRho;  
+
+
       //Velocities
       const CFreal u_i = state[endEM + nbSpecies];	//Ions x-velocity
       const CFreal v_i = state[endEM + nbSpecies + 1];	//Ions y-velocity
@@ -194,7 +196,7 @@ public: // classes
       data[firstVelocity + 5] = w_n;
     
       //Energy Variables: Ti, pi, ai, Hi
-      const CFuint firstTemperature = m_dco->firstTemperature;
+      
       const CFreal gamma = m_dco->gamma;	// gamma = 5/3
       const CFreal K_B = m_dco->K;     // Boltzmann constant
               
@@ -251,7 +253,9 @@ public: // classes
       //set the species mass fraction
       for (CFuint ie = 0; ie < nbSpecies; ++ie) {
         const CFreal rhoi = state[endEM + ie];
+        
         data[firstSpecies + ie] = rhoi*ovRho;
+        //printf("data[%d] %e \n", firstSpecies + ie, data[firstSpecies + ie]);
         //set the species velocities in 2.5D 
         const CFuint dim = 3;
         const CFreal ui = state[endEM + nbSpecies + dim*ie];
@@ -261,8 +265,7 @@ public: // classes
         data[firstVelocity + dim*ie + 1] = vi;
         data[firstVelocity + dim*ie + 2] = wi;
       
-        //set the  energy physical data  
-        const CFuint firstTemperature = m_dco->firstTemperature;
+        
       
       
         const CFreal mi = _m_i[ie];    
@@ -282,9 +285,7 @@ public: // classes
         //cout << "Ti = "<< Ti <<"\n";
       }
     }
-    //for (CFuint ie = 0; ie < firstTemperature + 4*nbSpecies; ++ie) {
-    //  printf("data[%d] = %f \n", ie, data[ie]);
-    //}
+
   }  
 
 

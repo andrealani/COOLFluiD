@@ -97,8 +97,7 @@ stopTimer.start();
 
 //mat.printToFile("matPETSC.txt");
 //rhsVec.printToFile("rhsPETSC.txt");
-
-
+//abort();
 
   const CFuint nbIter = SubSystemStatusStack::getActive()->getNbIter();
   if (getMethodData().getSaveRate() > 0) {

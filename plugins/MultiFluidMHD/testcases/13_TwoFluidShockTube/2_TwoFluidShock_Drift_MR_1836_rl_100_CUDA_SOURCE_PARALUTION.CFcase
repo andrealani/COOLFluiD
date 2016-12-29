@@ -1,7 +1,7 @@
 # COOLFluiD Startfile
 # Comments begin with "#"
 
-### Residual = -1.0151153 
+### Residual = -1.06373 
 
 # It stops at 188 *save the 187
 ###############################################################################
@@ -72,7 +72,7 @@ Simulator.SubSystem.CFmesh.AppendIter   = false
 
 Simulator.SubSystem.Tecplot.FileName    = multiFluid.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = RhoiViTi
-Simulator.SubSystem.Tecplot.SaveRate    = 10 #1250
+Simulator.SubSystem.Tecplot.SaveRate    = 50 #1250
 #Simulator.SubSystem.Tecplot.Data.printExtraValues = true
 #Simulator.SubSystem.Tecplot.Data.SurfaceTRS = x0 y0
 Simulator.SubSystem.Tecplot.AppendTime = true
@@ -99,7 +99,7 @@ Simulator.SubSystem.SubSystemStatus.TimeStep = 0.000033333333
 
 # Stop Condition
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 10 #100
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 30 #100
 #Simulator.SubSystem.StopCondition   = MaxTime
 #Simulator.SubSystem.MaxTime.maxTime = 0.1
 

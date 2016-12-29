@@ -160,6 +160,7 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
   State *const currState = (*states)[0];
   _varSet->computePhysicalData(*(*states)[0], _physicalData);
    const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
+
   if(is2DHalf || PhysicalModelStack::getActive()->getDim() == 2) 
   {
     _NonInducedEMField = _varSet->getModel()->getNonInducedEMField
@@ -373,11 +374,14 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::computeSource
       //}
     //}
   }
-  // AAL: Don't forget to multiply by the volume!!!!!
-  source *= volumes[elemID];
+ 
   for (CFuint i = 0; i < source.size(); i++) {
     CFLog(VERBOSE, "DriftWaves2DHalfTwoFluid:: source [" << i <<"] = " << source[i] << "\n");
   }
+
+ // AAL: Don't forget to multiply by the volume!!!!!
+  source *= volumes[elemID];
+
 }
 
 //////////////////////////////////////////////////////////////////////////////

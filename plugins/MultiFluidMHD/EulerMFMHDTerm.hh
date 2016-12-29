@@ -135,7 +135,12 @@ public:
           dco->lightSpeed = _lightSpeed;    
           dco->divECleaningConst = _divECleaningConst;
           dco->divBCleaningConst = _divBCleaningConst;  
-          //dco->NonInducedEMField = _NonInducedEMField;       
+          dco->NonInducedEMField[0] = _NonInducedEMField[0];
+          dco->NonInducedEMField[1] = _NonInducedEMField[1];
+          dco->NonInducedEMField[2] = _NonInducedEMField[2];
+          dco->NonInducedEMField[3] = _NonInducedEMField[3];
+          dco->NonInducedEMField[4] = _NonInducedEMField[4];
+          dco->NonInducedEMField[5] = _NonInducedEMField[5];
           dco->isLeake = _isLeake;  
           dco->dim = _dim;       
           dco->is2DHalf = _is2DHalf; 

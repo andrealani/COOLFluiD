@@ -221,22 +221,18 @@ public: // functions
             CFint *const localIDs,
             const CFuint size) const
   {
-  //  copy2(other,localIDs,size);
-  //passing ‘const COOLFluiD::Paralution::ParalutionVector’ as ‘this’ argument of ‘void COOLFluiD::Paralution::ParalutionVector::copy2(COOLFluiD::CFreal*, COOLFluiD::CFint*, COOLFluiD::CFuint)’ discards qualifiers [-fpermissive]
-  //The same if I put the code inside copy2 here... it has to be with the const declaration of the function I think, but that can not be changed
+  
   }
 
 void copy2(CFreal *const other,
             CFint *const localIDs,
             const CFuint size)
-  {
-    CFreal* array = new CFreal[size];  //Probably really expensive.. the othee option is to reallocate every iterarion the ParalutionVector
-    m_vec.CopyToData(array); //Get a pointer from the vector data and FREE the vector object. 
+  { 
+    m_vec.CopyToData(_val); //Get a pointer from the vector data and FREE the vector object. 
+   // m_vec.Clear();
     for (CFuint i = 0; i < size; ++i) {
-       other[localIDs[i]] = array[i];
+       other[localIDs[i]] = _val[i];
     }
-    _val = array;
-    // CF_CHKERRCONTINUE(VecRestoreArray(m_vec, &array));
   }
 
 

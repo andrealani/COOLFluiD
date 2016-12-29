@@ -90,7 +90,6 @@ public:
       const CFreal R_i = K_B/m_p;				// ions gas constant
       const CFreal R_p = 2.*R_i;				// Plasma gas constant (ions + electrons)
       const CFreal Cv_p = R_p/(gamma-1.);
-      const CFreal Cp_p = gamma*Cv_p;
     
       const CFreal u_i = state[endEM + nbSpecies];
       const CFreal v_i = state[endEM + nbSpecies + 1];
@@ -105,7 +104,6 @@ public:
     
       const CFreal R_n = K_B/m_n;				// neutrals gas constant
       const CFreal Cv_n = R_n/(gamma-1.);      // Cv for neutrals 
-      const CFreal Cp_n = gamma*Cv_n;          // Cp for neutrals
     
       const CFreal u_n = state[endEM + nbSpecies + 3];
       const CFreal v_n = state[endEM + nbSpecies + 4];
@@ -199,7 +197,6 @@ public:
     
       const CFreal R_i = K_B/m_p;				// ions gas constant
       const CFreal R_p = 2*R_i;				// Plasma gas constant (ions + electrons)
-      const CFreal Cp_p = (gamma/(gamma-1))*R_p;	
       const CFreal Cv_p = (1/(gamma-1))*R_p;  
     
       const CFreal u_i = data[firstVelocity];
@@ -212,7 +209,6 @@ public:
       const CFreal m_n = m_dco->molecularMass2;
     
       const CFreal R_n = K_B/m_n;				// neutrals gas constant
-      const CFreal Cp_n = (gamma/(gamma-1))*R_n;	
       const CFreal Cv_n = (1/(gamma-1))*R_n;
       const CFreal u_n = data[firstVelocity + 3];
       const CFreal v_n = data[firstVelocity + 4];

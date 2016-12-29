@@ -279,15 +279,15 @@ __global__ void computeLimiterKernel(typename LIMITER::BASE::template DeviceConf
     }
   }
 }
-  
-//////////////////////////////////////////////////////////////////////////////
 
-template <typename SCHEME, typename POLYREC, typename LIMITER>
-__global__ void computeFluxJacobianKernel(typename SCHEME::BASE::template DeviceConfigOptions<NOTYPE>* dcof,
+template <typename SCHEME, typename POLYREC, typename LIMITER, typename SOURCE>
+__global__ void computeFluxSourceJacobianKernel(typename SCHEME::BASE::template DeviceConfigOptions<NOTYPE>* dcof,
 					  typename POLYREC::BASE::template DeviceConfigOptions<NOTYPE>* dcor,
 					  typename LIMITER::BASE::template DeviceConfigOptions<NOTYPE>* dcol,
 					  typename NumericalJacobian::DeviceConfigOptions<typename SCHEME::MODEL>* dcon,
 					  typename SCHEME::MODEL::PTERM::template DeviceConfigOptions<NOTYPE>* dcop,
+                                          typename SOURCE::BASE::template DeviceConfigOptions<NOTYPE>* dcos,
+					  CFreal* volume,
 					  const CFuint nbCells,
 					  const CFuint startCellID,
 					  CFreal* states, 
@@ -310,19 +310,20 @@ __global__ void computeFluxJacobianKernel(typename SCHEME::BASE::template Device
 					  const CFuint* cellFaces,
 					  const CFuint* cellNodes,
 					  const CFint* neighborTypes,
-					  const Framework::CellConn* cellConn)
+					  const Framework::CellConn* cellConn,
+			           	  CFreal ResFactor, bool IsAxisymmetric)
 {  
   typedef typename SCHEME::MODEL PHYS;
 
   // each thread takes care of computing the gradient for one single cell
   const int cellID = threadIdx.x + blockIdx.x*blockDim.x + startCellID;
-  //printf("Inside computeFluxJacobianKernel \n \n");
   if (cellID < nbCells) {
     
     // compute and store cell gradients at once 
     POLYREC polyRec(dcor);
     SCHEME  fluxScheme(dcof);
     LIMITER limt(dcol);
+    SOURCE Source(dcos);
     NumericalJacobian::DeviceFunc<PHYS> numJacob(dcon);
     KernelData<CFreal> kd (nbCells, states, nodes, centerNodes, ghostStates, 
 			   ghostNodes, updateCoeff, rhs, normals, uX, uY, uZ, isOutward);
@@ -339,7 +340,23 @@ __global__ void computeFluxJacobianKernel(typename SCHEME::BASE::template Device
     CudaEnv::CFVecSlice<CFreal,PHYS::NBEQS> res(&rhs[cellID*PHYS::NBEQS]);
     res = 0.;
     updateCoeff[cellID] = 0.;
-    
+   
+
+    CFreal invR = 1.0;
+    if (IsAxisymmetric) {     
+      printf("IsAxisymmetric=true not implemented \n");
+      //invR /= abs(currCell->getState(0)->getCoordinates()[YY]); //It just need the y-component (easy addition)
+    }
+
+    CFreal factor = invR*volume[cellID]*ResFactor;
+
+    //Arrays needed for the source jacobian
+    CudaEnv::CFVec<CFreal,SOURCE::MODEL::NBEQS> SourceDiff;
+    CudaEnv::CFVec<CFreal,SOURCE::MODEL::NBEQS> sourceBkp;
+    CudaEnv::CFVec<CFreal,SOURCE::MODEL::NBEQS> source;
+    source = 0.0;
+    sourceBkp = 0.0;    
+
     CellData cells(nbCells, cellInfo, cellStencil, cellFaces, cellNodes, neighborTypes, cellConn);
     CellData::Itr cell = cells.getItr(cellID);
     const CFuint nbFacesInCell = cell.getNbActiveFacesInCell();
@@ -413,88 +430,22 @@ __global__ void computeFluxJacobianKernel(typename SCHEME::BASE::template Device
 	}
       }
     }
-  }
-}
-
-
-//////////////////////////////////////////////////////////////////////////////
-
-template <typename SOURCE>
-__global__ void computeSource(    CFreal* volume,
-                                  typename SOURCE::BASE::template DeviceConfigOptions<NOTYPE>* dcos,
-				  typename SOURCE::MODEL::PTERM::template DeviceConfigOptions<NOTYPE>* dcop,
-                                  typename NumericalJacobian::DeviceConfigOptions<typename SOURCE::MODEL>* dcon,
-				  const CFuint nbCells,
- 				  const CFuint startCellID,
-				  CFreal* states, 
-				  CFreal* centerNodes,
-				  CFreal* ghostStates,
-				  CFreal* ghostNodes,
-				  CFreal* blockJacob,
-			          CFuint* blockStart,
-				  CFreal* uX,
-				  CFreal* uY,
-				  CFreal* uZ,
-				  CFreal* limiter,
-				  CFreal* updateCoeff, 
-				  CFreal* rhs,
-				  CFreal* normals,
-				  CFint* isOutward,
-				  const CFuint* cellInfo,
-				  const CFuint* cellStencil,
-				  const CFuint* cellFaces,
-				  const CFuint* cellNodes,
-				  const CFint*  neighborTypes,
-				  const Framework::CellConn* cellConn,
-				  CFreal ResFactor, bool IsAxisymmetric)
-{
-  const int cellID = threadIdx.x + blockIdx.x*blockDim.x + startCellID;
-
-  if (cellID < nbCells) { 
-
-    const CFuint nbEqs = SOURCE::MODEL::NBEQS;
-    NumericalJacobian::DeviceFunc<typename SOURCE::MODEL> numJacob(dcon);
-
-    const CFuint bStartCellID = blockStart[cellID];
-
-    //Block accumulator where the source jacobian will be stored
-    BlockAccumulatorBaseCUDA acc(1, 1, SOURCE::MODEL::NBEQS, &blockJacob[bStartCellID]);
-
-    CFreal invR = 1.0;
-    if (IsAxisymmetric) {     
-      printf("IsAxisymmetric not implemented \n");
-      //invR /= abs(currCell->getState(0)->getCoordinates()[YY]); //It just need the y-component (easy addition)
-    }
-
-    CFreal factor = invR*volume[cellID]*ResFactor;
-
-    //Arrays needed for the source jacobian
-    CudaEnv::CFVec<CFreal,SOURCE::MODEL::NBEQS> SourceDiff;
-    CudaEnv::CFVec<CFreal,SOURCE::MODEL::NBEQS> sourceBkp;
-    CudaEnv::CFVec<CFreal,SOURCE::MODEL::NBEQS> source;
-    source = 0.0;
-    sourceBkp = 0.0;    
-
-    SOURCE Source(dcos);
-    typename SOURCE::MODEL pmodel(dcop);
-    
-    CudaEnv::CFVec<CFreal,SOURCE::MODEL::NBEQS> stateBkp;
+   
+    //Source computation
     CudaEnv::CFVecSlice<CFreal,SOURCE::MODEL::NBEQS> state(&states[cellID*SOURCE::MODEL::NBEQS]);
     Source(&state[0], &pmodel, &source[0]);   //Source term computation
     source *= factor;    
 
-    CudaEnv::CFVecSlice<CFreal,SOURCE::MODEL::NBEQS> res(&rhs[cellID*SOURCE::MODEL::NBEQS]);
-    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {  //Add source term to the RHS and create backup for the derivatives
+    for (CFuint iEq = 0; iEq < SOURCE::MODEL::NBEQS; ++iEq) {  //Add source term to the RHS and create backup for the derivatives
        const CFreal value = source[iEq]; 
        res[iEq] += value;  
        sourceBkp[iEq] = value;
-       stateBkp[iEq] = state[iEq];
     }
-   
-    /////////////////////////////////////////////
+
 
     //Source Jacobian computation
     for (CFuint iVar = 0; iVar < SOURCE::MODEL::NBEQS; ++iVar) {
+      const CFreal stateBkp = state[iVar];
       // here we perturb the current variable for the state
       numJacob.perturb(iVar, &state[iVar]);
 	    
@@ -505,28 +456,20 @@ __global__ void computeSource(    CFreal* volume,
       source *= factor;
       SourceDiff = 0.0; 
       numJacob.computeDerivative(&sourceBkp, &source, &SourceDiff);
-      SourceDiff *= factor;
        
-//      printf("sourceBkp %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \n",
-// sourceBkp[0],sourceBkp[1],sourceBkp[2],sourceBkp[3],sourceBkp[4],sourceBkp[5],sourceBkp[6],sourceBkp[7],sourceBkp[8],sourceBkp[9],
-// sourceBkp[10],sourceBkp[11],sourceBkp[12],sourceBkp[13],sourceBkp[14],sourceBkp[15]);
-
+//      printf("SourceDiff %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \n",
+//SourceDiff[0],SourceDiff[1],SourceDiff[2],SourceDiff[3],SourceDiff[4],SourceDiff[5],SourceDiff[6],SourceDiff[7],SourceDiff[8],SourceDiff[9],
+//SourceDiff[10],SourceDiff[11],SourceDiff[12],SourceDiff[13],SourceDiff[14],SourceDiff[15]);
 
       acc.addValues(0, 0, iVar, &SourceDiff[0]);   //Add values to the block accumulator
 
       // restore perturbed states
-      state[iVar] = stateBkp[iVar];
+      state[iVar] = stateBkp;
     }
-   
-  //////////////////////////////
 
-  
+
   }
 }
-//////////////////////////////////////////////////////////
-
-
-
 
 
   
@@ -603,7 +546,7 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
   }
   
   // printGradients<PHYS::NBEQS>(uX, uY, uZ, nbCells);
-  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::computeFluxJacobianCPU() => computing gradients took " << timer.elapsed() << " s\n");
+  CFLog(NOTICE, "FVMCC_ComputeSourceRhsJacobCell::computeFluxJacobianCPU() => computing gradients took " << timer.elapsed() << " s\n");
   timer.start();
   
   // compute the cell based limiter
@@ -633,7 +576,7 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
   
   // printLimiter<PHYS::NBEQS>(limiter, nbCells);
   
-  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::computeFluxJacobianCPU() => computing limiter took " << timer.elapsed() << " s\n");
+  CFLog(NOTICE, "FVMCC_ComputeSourceRhsJacobCell::computeFluxJacobianCPU() => computing limiter took " << timer.elapsed() << " s\n");
   timer.start();
   
   // compute the fluxes and the jacobian
@@ -735,20 +678,17 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
       }
     }
 
-    
     //Source computation
     source = 0.;
     
- 
-    //CellData cells(nbCells, cellInfo, cellStencil, cellFaces, cellNodes, neighborTypes, cellConn);
-    //CellData::Itr cell = cells.getItr(cellID);
     CudaEnv::CFVec<CFreal,SOURCE::MODEL::NBEQS> stateBkp;
     CudaEnv::CFVecSlice<CFreal,PHYS::NBEQS> state(&states[cellID*PHYS::NBEQS]);
     Source(&state[0], &pmodel, &source[0]);
 
     CFreal invR = 1.0;
-    if (IsAxisymmetric) {     //Is this used?
-      //invR /= abs(currCell->getState(0)->getCoordinates()[YY]);  //This can be done using cellConn or states? idk
+    if (IsAxisymmetric) {   
+      printf("IsAxissymmetric=true not implemeted \n");  
+      //invR /= abs(currCell->getState(0)->getCoordinates()[YY]);  
     }
     CFreal factor = invR*volumes[cellID]*ResFactor;     
 
@@ -777,14 +717,13 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
 	    
       // contribution to the row corresponding of the current cell
       // this subblock gets all contributions from all face cells
-      SourceDiff *= factor;  //Not sure if I should do this.. I think that it is needed.
        
 //      printf("SourceDiff %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \n",
 // SourceDiff[0],SourceDiff[1],SourceDiff[2],SourceDiff[3],SourceDiff[4],SourceDiff[5],SourceDiff[6],SourceDiff[7],SourceDiff[8],SourceDiff[9],
 // SourceDiff[10],SourceDiff[11],SourceDiff[12],SourceDiff[13],SourceDiff[14],SourceDiff[15]);
 
 
-      acc.addValues(0, 0, iVar, &SourceDiff[0]);   //From FVMCC_ComputeRhsJacob.cxx
+      acc.addValues(0, 0, iVar, &SourceDiff[0]);   
 
       // restore perturbed states
       state = stateBkp;
@@ -796,7 +735,7 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
 
   } 
   
-  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::computeFluxJacobianCPU()  took " << timer.elapsed() << " s\n");
+  CFLog(NOTICE, "FVMCC_ComputeSourceRhsJacobCell::computeFluxJacobianCPU()  took " << timer.elapsed() << " s\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -935,18 +874,22 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
       (&this->getMethodData().getNumericalJacobian());
     CFreal startCellID = 0;
     CFreal FluxTime = 0;
-    CFreal SourceTime = 0;
     CFreal UpdateSystemTime = 0;
     
     CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => End of Configuring method \n");
     for (CFuint s = 0; s < m_nbCellsInKernel.size(); ++s) {
       CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => loop " << s << " of " << m_nbCellsInKernel.size() << "\n");
-      computeFluxJacobianKernel<FluxScheme, PolyRec, Limiter> <<<m_nbKernelBlocks,nThreads>>> 
+
+      CFreal ResFactor = this->getMethodData().getResFactor(); //Default = 1
+      bool IsAxisymmetric = this->getMethodData().isAxisymmetric(); //Default = false
+      computeFluxSourceJacobianKernel<FluxScheme, PolyRec, Limiter, SourceTerm> <<<m_nbKernelBlocks,nThreads>>> 
 	(dcof.getPtr(),
 	 dcor.getPtr(),
 	 dcol.getPtr(),
 	 dcon.getPtr(),
 	 dcop.getPtr(),
+         dcos.getPtr(),
+         this->socket_volumes.getDataHandle().getLocalArray()->ptrDev(),
 	 nbCells,
 	 startCellID,
 	 this->socket_states.getDataHandle().getGlobalArray()->ptrDev(), 
@@ -969,46 +912,12 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
 	 this->m_cellFaces->getPtr()->ptrDev(),
 	 this->m_cellNodes->getPtr()->ptrDev(),
 	 this->m_neighborTypes.ptrDev(),
-	 this->m_cellConn.ptrDev());
-      
-      FluxTime += timer.elapsed();
-      timer.start();
-
-      CFreal ResFactor = this->getMethodData().getResFactor(); //Default = 1
-      bool IsAxisymmetric = this->getMethodData().isAxisymmetric(); //Default = false
-      computeSource<SourceTerm> <<<blocksPerGrid,nThreads>>>
-        (this->socket_volumes.getDataHandle().getLocalArray()->ptrDev(),
-         dcos.getPtr(),
-         dcop.getPtr(),
-         dcon.getPtr(),
-         nbCells,
-         startCellID,
-         this->socket_states.getDataHandle().getGlobalArray()->ptrDev(), 
-         this->m_centerNodes.ptrDev(), 
-         this->m_ghostStates.ptrDev(),
-         this->m_ghostNodes.ptrDev(),
-	 m_blockJacobians.ptrDev(), 
-	 m_blockStart.ptrDev(),
-         this->socket_uX.getDataHandle().getLocalArray()->ptrDev(),
-         this->socket_uY.getDataHandle().getLocalArray()->ptrDev(),
-         this->socket_uZ.getDataHandle().getLocalArray()->ptrDev(),
-         this->socket_limiter.getDataHandle().getLocalArray()->ptrDev(),
-         updateCoeff.getLocalArray()->ptrDev(), 
-         rhs.getLocalArray()->ptrDev(),
-         normals.getLocalArray()->ptrDev(),
-         isOutward.getLocalArray()->ptrDev(),
-         this->m_cellInfo.ptrDev(),
-         this->m_cellStencil.ptrDev(),
-         this->m_cellFaces->getPtr()->ptrDev(),
-         this->m_cellNodes->getPtr()->ptrDev(),
-         this->m_neighborTypes.ptrDev(),
-         this->m_cellConn.ptrDev(),
+	 this->m_cellConn.ptrDev(),
          ResFactor, 
          IsAxisymmetric);
 
-
-
-      SourceTime += timer.elapsed();      
+         FluxTime += timer.elapsed();
+  
       timer.start();
       m_blockJacobians.get();
       // update the portion of system matrix computed by this kernel
@@ -1018,10 +927,8 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
       timer.start();
     }
     
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => computeFluxJacobianKernel took " << FluxTime << " s\n");
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => computeSourceTerm took " << SourceTime << "\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => computeFluxSourceJacobianKernel took " << FluxTime << "\n");
     CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => updateSystemMatrix took " << UpdateSystemTime << "\n");
-
     rhs.getLocalArray()->get();
     updateCoeff.getLocalArray()->get();
     CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => GPU-->CPU data transfer took " << timer.elapsed() << " s\n");
@@ -1071,7 +978,7 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
     timer.start();
     // update the system matrix
     updateSystemMatrix(0);
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => updateSystemMatrix took " << timer.elapsed() << "\n");
+    CFLog(NOTICE, "FVMCC_ComputeSourceRhsJacobCell::execute() => updateSystemMatrix took " << timer.elapsed() << "\n");
   }
   
   timer.start();
@@ -1134,3 +1041,4 @@ void printLimiter(CFreal* limiter, CFuint nbCells)
   } // namespace Numerics
 
 } // namespace COOLFluiD
+

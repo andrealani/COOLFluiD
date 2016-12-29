@@ -285,7 +285,6 @@ public: // functions
   }
 
   void moveToGPU(){
-  //  std::cout << "moveToGPU \n";
     m_mat.MoveToAccelerator();
   }
 
@@ -297,6 +296,8 @@ public: // functions
     _val = new CFreal[_size];
     m_mat.CopyToCSR(_rowoff, _col, _val);
 
+   // delete [] _rowoff;
+   // delete [] _col;
   }
 
   void AssignToSolver(paralution::Solver< paralution::LocalMatrix<CFreal>, paralution::LocalVector<CFreal>, CFreal >& ls){

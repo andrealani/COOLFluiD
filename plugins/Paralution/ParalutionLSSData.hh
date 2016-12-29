@@ -134,7 +134,7 @@ public:
   /** 
    * Gets the Krylov Solver
    */
-  IterativeLinearSolver<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal >& getKSP(){
+  GMRES<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal >& getKSP(){
     return _ls;
   }
 
@@ -154,6 +154,8 @@ public:
   CFuint getVerbose(){return _verboseLevel;}
 
   CFuint getreBuildRatio(){return _reBuildRatio;}
+
+  CFint getNbKsp(){return _nbKsp;}
 
 private:
 

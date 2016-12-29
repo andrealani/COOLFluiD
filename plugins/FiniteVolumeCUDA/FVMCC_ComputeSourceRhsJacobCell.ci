@@ -294,7 +294,7 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
       // so adding 0 to block (cellID,cellID) will not harm 
       acc->setRowIndex(f+1, neighID);
     }
-    
+
     m_lss->getMatrix()->addValues(*acc);
     
      //acc->printToScreen(); //abort();

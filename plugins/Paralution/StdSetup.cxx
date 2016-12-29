@@ -100,7 +100,7 @@ void StdSetup::setKSP()
   CFAUTOTRACE;
   CFLog(NOTICE, "StdSetup::setKSP() \n");
 
-  IterativeLinearSolver<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal >& ls = getMethodData().getKSP();
+  GMRES<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal >& ls = getMethodData().getKSP();
   Preconditioner<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal >& p = getMethodData().getPreconditioner();
   ParalutionMatrix& mat = getMethodData().getMatrix();
 
@@ -108,8 +108,11 @@ void StdSetup::setKSP()
   CFreal AbsTol = getMethodData().getAbsoluteTol();
   CFreal DivTol = 1e8; //getMethodData().getDivTol();
   CFreal MaxIter = getMethodData().getMaxIter();
+  CFint nbKsp = getMethodData().getNbKsp();  
+
 
   ls.Init(AbsTol, RelTol, DivTol, MaxIter);
+  ls.SetBasisSize(nbKsp);
   mat.AssignToSolver(ls);
   ls.SetPreconditioner(p);
   ls.Verbose(getMethodData().getVerbose()) ;
