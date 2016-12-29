@@ -213,7 +213,8 @@ void RadiativeTransferFVDOM::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >
     ("OldAlgorithm","old algorithm (very inefficient) just kept for comparison purposes");
   options.addConfigOption< bool >
-    ("BinningPARADE","Computes the radiative properties based on the binning done with data from PARADE database");
+    ("BinningPARADE",
+     "Computes the radiative properties based on the binning done with data from PARADE database");
   options.addConfigOption< CFuint >("NbRadialPoints","Number of Radial points in the sphere case");
   options.addConfigOption< CFreal >("ConstantP","Constant pressure temperature");
   options.addConfigOption< CFreal >("Tmin","Minimum temperature");
@@ -1824,7 +1825,8 @@ void RadiativeTransferFVDOM::computeQExponential(const CFuint ib,
     CFreal dirDotnANeg   = 0.;
     CFreal Lc            = 0.;
     CFreal halfExp       = 0.;
-    
+    CFreal POP_dirDotNA  = 0.;
+      
     // allocate the cell entity
     cf_assert(startCell+m < m_advanceOrder.size());
     const CFuint iCell = std::abs(m_advanceOrder[startCell+m]);
@@ -1844,9 +1846,9 @@ void RadiativeTransferFVDOM::computeQExponential(const CFuint ib,
 	dirDotnANeg += dirDotNA;
 	
 	/*const CFint fcellID = faceCell[faceID*2]; 
-        const CFint neighborCellID = (fcellID == iCell) ? faceCell[faceID*2+1] : fcellID;
-	const CFreal source = (neighborCellID >=0) ? m_In[neighborCellID] : m_fieldSource[iCell];
-        inDirDotnANeg += source*dirDotNA;*/
+	  const CFint neighborCellID = (fcellID == iCell) ? faceCell[faceID*2+1] : fcellID;
+	  const CFreal source = (neighborCellID >=0) ? m_In[neighborCellID] : m_fieldSource[iCell];
+	  inDirDotnANeg += source*dirDotNA;*/
 	
 	const bool isBFace = m_mapGeoToTrs->isBGeo(faceID);
 	if (!isBFace){
@@ -1857,24 +1859,19 @@ void RadiativeTransferFVDOM::computeQExponential(const CFuint ib,
 	  const CFreal boundarySource = m_fieldSource[iCell];
 	  inDirDotnANeg += boundarySource*dirDotNA;
 	}
-	
+      }
+      else if (dirDotNA > 0.) {
+	POP_dirDotNA += dirDotNA;
       }
     } 
+    
     Lc          = volumes[iCell]/(- dirDotnANeg); 
     halfExp     = std::exp(-0.5*Lc*m_fieldAbsor[iCell]);
     const CFreal InCell = (inDirDotnANeg/dirDotnANeg)*halfExp*halfExp + (1. - halfExp*halfExp)*m_fieldSource[iCell];
     Ic          = (inDirDotnANeg/dirDotnANeg)*halfExp + (1. - halfExp)*m_fieldSource[iCell];
     
     CFreal inDirDotnA = inDirDotnANeg;
-    for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
-      const CFuint faceID = (*cellFaces)(iCell, iFace);
-      const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
-      const CFreal dirDotNA = m_dotProdInFace[faceID]*factor;
-      if (dirDotNA > 0.) {
-	inDirDotnA += InCell*dirDotNA;
-      }
-    }
-    
+    inDirDotnA += InCell*POP_dirDotNA;
     m_In[iCell] = InCell;
     const CFreal IcWeight = Ic*m_weight[d];
     const CFuint d3 = d*3;
@@ -1884,31 +1881,31 @@ void RadiativeTransferFVDOM::computeQExponential(const CFuint ib,
     qz[iCell]   += m_dirs[d3+2]*IcWeight;
     divQ[iCell] += inDirDotnA*m_weight[d];
     // m_II[iCell] += Ic*m_weight[d]; // useless
-   
+    
     /*if (iCell==100 && d == 0) {
-        printf ("IcWeight    : %6.6f \n", IcWeight);
-        printf ("inDirDotnA  : %6.6f \n",inDirDotnA);
-        printf ("InCell      : %6.6f \n", InCell);
-        printf ("cellIDin    : %d  \n", iCell*m_nbDirs+d);
-        const CFreal qxIcell = qx[iCell];
-        printf ("qx[iCell]   : %6.6f  \n", qxIcell);
-        const CFreal divqIcell = divQ[iCell];
-        printf ("divq[iCell] : %6.6f  \n", divqIcell);
-        const CFreal In0 = m_In[iCell];
-        printf ("In[iCell]   : %6.6f  \n", In0);
-        printf ("d3          : %d  \n", d3);
-        printf ("mdirs[d3]   : %6.6f  \n", m_dirs[d3]);
-        printf ("mdirs[d3+1] : %6.6f  \n", m_dirs[d3+1]);
+      printf ("IcWeight    : %6.6f \n", IcWeight);
+      printf ("inDirDotnA  : %6.6f \n",inDirDotnA);
+      printf ("InCell      : %6.6f \n", InCell);
+      printf ("cellIDin    : %d  \n", iCell*m_nbDirs+d);
+      const CFreal qxIcell = qx[iCell];
+      printf ("qx[iCell]   : %6.6f  \n", qxIcell);
+      const CFreal divqIcell = divQ[iCell];
+      printf ("divq[iCell] : %6.6f  \n", divqIcell);
+      const CFreal In0 = m_In[iCell];
+      printf ("In[iCell]   : %6.6f  \n", In0);
+      printf ("d3          : %d  \n", d3);
+      printf ("mdirs[d3]   : %6.6f  \n", m_dirs[d3]);
+      printf ("mdirs[d3+1] : %6.6f  \n", m_dirs[d3+1]);
         printf ("mdirs[d3+2] : %6.6f  \n", m_dirs[d3+2]);
-      exit(1);
-    }*/
+	exit(1);
+	}*/
   }
   
   CFLog(VERBOSE, 
 	"RadiativeTransferFVDOM::computeQExponential() in (bin, dir) = ("
 	<< ib << ", " << d << ") => end\n");
 }
-      
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void RadiativeTransferFVDOM::computeQNoExponential(const CFuint ib, 
@@ -2186,6 +2183,7 @@ void RadiativeTransferFVDOM::loopOverDirs(const CFuint startBin,
 }
     
 //////////////////////////////////////////////////////////////////////////////
+
 /*
 void RadiativeTransferFVDOM::computeWallHeatFlux()
 {

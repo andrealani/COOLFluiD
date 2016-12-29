@@ -531,48 +531,33 @@ void RadiativeTransferFVDOM::DeviceFunc::tableInterpolate
   const CFuint iPplus1iBiTplus1 = (it + 1) + ib*nbTemp + (ip + 1)*nbBins*nbTemp;
   
   // Linear interpolation for the pressure
+  const CFreal ratioP = (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]);
   // Interpolation of the opacities
-  const CFreal bt1op = (opacities[iPplus1iBiT] - opacities[iPiBiT])*
-		    (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]) + opacities[iPiBiT];
-  
-  const CFreal bt2op = (opacities[iPplus1iBiTplus1] - opacities[iPiBiTplus1])*
-		    (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]) + opacities[iPiBiTplus1];
+  const CFreal bt1op = (opacities[iPplus1iBiT] - opacities[iPiBiT])*ratioP + opacities[iPiBiT];
+  const CFreal bt2op = (opacities[iPplus1iBiTplus1] - opacities[iPiBiTplus1])*ratioP + opacities[iPiBiTplus1];
   
   // Interpolation of the source
-  const CFreal bt1so = (radSource[iPplus1iBiT] - radSource[iPiBiT])*
-		    (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]) + radSource[iPiBiT];
-  
-  const CFreal bt2so = (radSource[iPplus1iBiTplus1] - radSource[iPiBiTplus1])*
-		    (p - Ptable[ip])/(Ptable[ip + 1] - Ptable[ip]) + radSource[iPiBiTplus1];    
+  const CFreal bt1so = (radSource[iPplus1iBiT] - radSource[iPiBiT])*ratioP + radSource[iPiBiT];
+  const CFreal bt2so = (radSource[iPplus1iBiTplus1] - radSource[iPiBiTplus1])*ratioP + radSource[iPiBiTplus1];    
   
   // Logarithmic interpolation for the temperature
   // Protect against log(0) and x/0 by switching to linear interpolation if either
   // bt1 or bt2 == 0.  (Note we can't allow log of negative numbers either)
-  // Interpolation of the opacities   
+  // Interpolation of the opacities
+  const CFreal ratioT = (T - Ttable[it])/(Ttable[it + 1] - Ttable[it]);
   if(bt1op <= 0 || bt2op <= 0){
-    val1 = (bt2op - bt1op)*(T - Ttable[it])/(Ttable[it + 1] - Ttable[it]) + bt1op;
-//    cout <<"\nOption1 \n";
-//    cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
-//    cout <<"val1 = " << val1 <<"\tbt2op ="<< bt2op <<"\tbt1op ="<< bt1op <<"\n";
+    val1 = (bt2op - bt1op)*ratioT + bt1op;
   }
   else {
-    val1 = std::exp((T - Ttable[it])/(Ttable[it + 1] - Ttable[it])*std::log(bt2op/bt1op))*bt1op;
-//     cout <<"\nOption2 \n";
-//     cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
-//     cout <<"val1 = " << val1 <<"\tbt2op ="<< bt2op <<"\tbt1op ="<< bt1op <<"\n";
+    val1 = std::exp(ratioT*std::log(bt2op/bt1op))*bt1op;
   }
+  
   // Interpolation of the source
   if(bt1so <= 0 || bt2so <= 0){
-    val2 = (bt2so - bt1so)*(T - Ttable[it])/(Ttable[it + 1] - Ttable[it]) + bt1so;
-//     cout <<"\nOption3 \n";
-//     cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
-//     cout <<"val1 = " << val2 <<"\tbt2so ="<< bt2so <<"\tbt1so ="<< bt1so <<"\n";
+    val2 = (bt2so - bt1so)*ratioT + bt1so;
   }
   else {
-    val2 = std::exp((T - Ttable[it])/(Ttable[it + 1] - Ttable[it])*std::log(bt2so/bt1so))*bt1so;
-//     cout <<"\nOption3 \n";
-//     cout <<"T = "<< T <<"\tTi+1 = "<<Ttable[it + 1]<<"\tTi = "<<Ttable[it] <<"\n";
-//     cout <<"val2 = " << val2 <<"\tbt2so ="<< bt2so <<"\tbt1so ="<< bt1so <<"\n";
+    val2 = std::exp(ratioT*std::log(bt2so/bt1so))*bt1so;
   }
 }
 
