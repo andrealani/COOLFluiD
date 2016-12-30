@@ -226,8 +226,8 @@ Simulator.SubSystem.ProcessingRad&8.Names = Radiation
 Simulator.SubSystem.ProcessingRad&8.Radiation.nDirs =  8
 Simulator.SubSystem.ProcessingRad&8.Radiation.UseExponentialMethod = true
 #Simulator.SubSystem.ProcessingRad&8.Radiation.DirName = ./
-Simulator.SubSystem.ProcessingRad&8.Radiation.BinTabName = air-100Bands.dat #air-100Bins.dat
-Simulator.SubSystem.ProcessingRad&8.Radiation.OutTabName = air-100Bands.out #air-100Bins.out
+#Simulator.SubSystem.ProcessingRad&8.Radiation.BinTabName = air-100Bands.dat #air-100Bins.dat
+#Simulator.SubSystem.ProcessingRad&8.Radiation.OutTabName = air-100Bands.out #air-100Bins.out
 #Simulator.SubSystem.ProcessingRad&8.Radiation.ConstantP = 1013250 
 Simulator.SubSystem.ProcessingRad&8.Radiation.PID = 5
 Simulator.SubSystem.ProcessingRad&8.Radiation.TID = 6
@@ -246,6 +246,8 @@ Simulator.SubSystem.ProcessingRad&8.Radiation.ThreadID  = &8
 # if the following is "true" with 8 directions and 100 bins you have:
 # a matrix nbBins*nbDirections => with 100 CPUs, each CPU gets 1 bin and 8 directions 
 Simulator.SubSystem.ProcessingRad&8.Radiation.LoopOverBins = false
+Simulator.SubSystem.ProcessingRad&8.Radiation.BinningPARADE = true
+
 
 # PARADE-related settings
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.NumberLoops = 1
