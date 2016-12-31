@@ -1,5 +1,5 @@
 #include "FluctSplit/CUDA/LDAC_CUDA.hh"
-#include "Common/CUDA/CudaDeviceManager.hh"
+#include "Framework/CudaDeviceManager.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
