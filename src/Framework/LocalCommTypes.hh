@@ -116,7 +116,11 @@ template <typename ETYPE>
 class LocalArray {
 public:
 #ifdef CF_HAVE_CUDA
+#ifndef CF_HAVE_CUDA_MALLOC
   typedef CudaEnv::CudaVector<ETYPE> TYPE;
+#else
+  typedef CudaEnv::CudaVector<ETYPE, CudaEnv::MallocHostAlloc<ETYPE> > TYPE;
+#endif
   typedef CudaEnv::CudaVector<ETYPE, CudaEnv::MallocHostAlloc<ETYPE> > MALLOC_TYPE;
 #else
   typedef std::vector<ETYPE> TYPE;

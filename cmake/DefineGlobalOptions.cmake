@@ -31,6 +31,11 @@ IF ( NOT CF_PRECISION_SINGLE AND NOT CF_PRECISION_LONG_DOUBLE )
 OPTION(CF_PRECISION_DOUBLE   "Real numbers have double precision"           ON )
 ENDIF()
 
+# memory allocation for CUDA 
+IF ( CF_CUDA_MALLOC )
+ OPTION(CF_HAVE_CUDA_MALLOC  "Memory allocation for CUDA is set to Malloc" ON )
+ENDIF()
+
 # user option to add tracing
 OPTION(CF_ENABLE_TRACE 	"Enable tracing code"  ON)
 IF( NOT CF_ENABLE_TRACE)

@@ -97,6 +97,7 @@ my %default_options = (
     'withdocs'        => "",
     'mpi_extra_libs'  => "",
     'nofortran'       => "",
+    'withcuda_malloc' => 0,
     'explicit_templates' => "",
     'cflags'          => "",
     'cxxflags'        => "",
@@ -935,6 +936,7 @@ sub setup_cfgoptions()
   setup_option('single_precision',    'CF_PRECISION_SINGLE');
   setup_option('with_longint',        'CF_ENABLE_LONG');
   setup_option('with_llongint',       'CF_ENABLE_LLONG');
+  setup_option('withcuda_malloc',     'CF_CUDA_MALLOC');
 }
 
 #==========================================================================

@@ -330,7 +330,11 @@ protected:
 ///
 /// @author Andrea Lani 
 //template <typename T, template <class T1 = T> class ALLOC = PinnedHostAlloc> 
-template<class T, class ALLOC = PinnedHostAlloc<T> > 
+#ifndef CF_HAVE_CUDA_MALLOC
+template<class T, class ALLOC = PinnedHostAlloc<T> >
+#else
+template<class T, class ALLOC = MallocHostAlloc<T> >
+#endif 
 class CudaVectorSlice {
   
   typedef CudaVectorSlice<T, ALLOC> SELF;   
@@ -393,7 +397,11 @@ private:
 ///
 /// @author Andrea Lani  
 //template <typename T, template <class T1 = T> class ALLOC = PinnedHostAlloc> 
-template<class T, class ALLOC = PinnedHostAlloc<T> > 
+#ifndef CF_HAVE_CUDA_MALLOC
+template<class T, class ALLOC = PinnedHostAlloc<T> >
+#else
+template<class T, class ALLOC = MallocHostAlloc<T> >
+#endif 
 class CudaVector {
   
   typedef CudaVector<T, ALLOC> SELF;   
@@ -562,8 +570,12 @@ template <typename ARRAY, TransferType TT> class CudaCopy {};
 /// synchronously or asynchronously depending on the given cudaStream_t pointer.
 ///
 /// @author Andrea Lani
-template <typename T> 
+template <typename T>
+#ifndef CF_HAVE_CUDA_MALLOC
 class CudaCopy<CudaVectorSlice<T, PinnedHostAlloc<T> >, TO_GPU > {
+#else
+class CudaCopy<CudaVectorSlice<T, MallocHostAlloc<T> >, TO_GPU > {
+#endif 
 public:
   CudaCopy(T* out, T* in, size_t ns, cudaStream_t* cs) 
   {
@@ -579,7 +591,11 @@ public:
 ///
 /// @author Andrea Lani
 template <typename T> 
+#ifndef CF_HAVE_CUDA_MALLOC
 class CudaCopy<CudaVectorSlice<T, PinnedHostAlloc<T> >, FROM_GPU > {
+#else
+class CudaCopy<CudaVectorSlice<T, MallocHostAlloc<T> >, FROM_GPU > {
+#endif
 public:
   CudaCopy(T* out, T* in, size_t ns, cudaStream_t* cs) 
   {
