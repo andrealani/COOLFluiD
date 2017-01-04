@@ -262,8 +262,9 @@ void WriteSolutionHighOrder::writeToFileStream(std::ofstream& fout)
 
         outputPntState[iPnt]  = 0.0;
         for (CFuint iState = 0; iState < nbrStates; ++iState)
-        {
-          outputPntState[iPnt] += solShapeFuncs[iPnt][iState]*(*(*cellStates)[iState]);
+	{  
+	  // CFLog(INFO, "state[" << iState << "] = " << (*(*cellStates)[iState]) << ", solShapeFuncs[" << iPnt << "] = " << solShapeFuncs[iPnt][iState] <<"\n");
+	  outputPntState[iPnt] += solShapeFuncs[iPnt][iState]*(*(*cellStates)[iState]);
         }
       }
 
@@ -298,10 +299,10 @@ void WriteSolutionHighOrder::writeToFileStream(std::ofstream& fout)
 
         // copy to temporary state variable
         for (CFuint iEq = 0; iEq < nbEqs; ++iEq)
-        {
-          tempState[iEq] = nodalState[iEq];
+	{
+	  tempState[iEq] = nodalState[iEq];
         }
-
+		
         // set temporary state ID
         CFLogDebugMin("temporary state ID not set in WriteSolutionHighOrder!!");
 //           const CFuint stateID = nodalStates.getStateLocalID(iNode);
