@@ -1150,9 +1150,15 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   fout << "  INCLUDECUSTOMLABELS = NO\n";
   fout << "  VARLOADMODE = BYNAME\n";
   fout << "  ASSIGNSTRANDIDS = YES\n";
-  fout << "  INITIALPLOTTYPE = CARTESIAN3D\n";
-  fout << "  VARNAMELIST = '";
+  
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  if (dim == DIM_3D) {
+    fout << "  INITIALPLOTTYPE = CARTESIAN3D\n";
+  }
+  else if (dim == DIM_2D) {
+    fout << "  INITIALPLOTTYPE = CARTESIAN2D\n";
+  }
+  fout << "  VARNAMELIST = '";
   for (CFuint i = 0 ; i < dim; ++i) {
     fout << "\"x" << i << "\" ";
   }
