@@ -257,8 +257,7 @@ Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.Radiato
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Namespace = RadCoupler
 # the following path needs to be modified by users outside VKI
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.LibraryPath = \
-/Users/lani/PARADEv3.2.1/parade-3.2.1
-#/software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
+/software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
 #	/Users/lani/PARADEv3.2.1/parade-3.2.1
 #       /software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.LocalDirName = ParadeData
