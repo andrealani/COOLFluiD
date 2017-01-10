@@ -83,10 +83,10 @@ public:
 
   void getData();
   
-  inline void getSpectralIdxs(CFreal lambda, CFuint& idx1, CFuint& idx2);
-
+  void getSpectralIdxs(CFreal lambda, CFuint& idx1, CFuint& idx2);
+  
 private:
-
+  
   void setLibrarySequentially();
   
   /// update the range of wavelengths to use
@@ -97,6 +97,9 @@ private:
   
   /// read the radiative coefficients corresponding to the local mesh
   void readLocalRadCoeff();
+  
+  /// write the local mesh radiative coefficients to a ASCII file
+  void writeLocalRadCoeffASCII(const CFuint nbCells);
   
   /// run PARADE
   void runLibrary() const
@@ -136,6 +139,20 @@ private:
     
   /// apply the binning/banding method to reduce the spectral data
   void computeBinningBanding();
+
+  /// compute recv counts and dispacements for parallel communication
+  void computeRecvCountsDispls(const CFuint totalNbCells, const CFuint sizeCoeff, 
+			       CFuint& minSizeToSend, CFuint& maxSizeToSend,
+			       std::vector<int>& recvCounts, std::vector<int>& displs);
+  
+  /// compute all binned data corresponding to the given cell
+  void computeCellBins(const CFuint i, 
+		       const CFuint j,
+		       const CFuint nbBinsre, 
+		       const RealVector& vctBins, 
+		       std::vector<CFreal>& alpha_bin,
+		       std::vector<CFreal>& emission_bin,
+		       CFreal *const B_binCurr);
   
 private: 
   
@@ -157,9 +174,6 @@ private:
   /// File where the table is written
   std::string m_outTabName;
 
-  /// Bool expression to write the table in a file
-  bool m_writePARADEToFile;
-  
   /// directory where Parade is launched
   boost::filesystem::path m_paradeDir; 
 
@@ -257,6 +271,12 @@ private:
   
   /// flag telling whether the banding has to be applied
   bool m_banding;
+  
+  /// flag telling to write the radiative coefficients to ASCII file 
+  bool m_writeLocalRadCoeffASCII;
+  
+  /// flag telling to parallelize as much as possible to save memory
+  bool m_saveMemory;
   
   /// flag array to indicate molecular species
   std::vector<bool> m_molecularSpecies;
