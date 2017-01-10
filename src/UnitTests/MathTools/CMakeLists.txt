@@ -25,7 +25,7 @@ cf_add_test(
   LIBS  MathTools
 )
 
-LIST ( APPEND TestSuite_MathTools_libs ${CF_KERNEL_LIBS} ${CF_KERNEL_STATIC_LIBS} )
+LIST ( APPEND TestSuite_MathTools_libs ${CF_KERNEL_LIBS} ${CF_KERNEL_STATIC_LIBS} ${CF_Boost_LIBRARIES} )
 
 CF_WARN_ORPHAN_FILES()
 
