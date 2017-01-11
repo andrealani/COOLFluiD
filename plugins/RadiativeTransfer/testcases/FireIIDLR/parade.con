@@ -3,7 +3,7 @@ c       1. Spectrum control data:
 c
 2000 wavlo [A]
 40000 wavhi [A] 
-10000 npoints
+100 npoints
 c       2. Parameters for adaptive wavelength discretisation:
   0.0005       minimum distance between adjacent points
    100.        integration limit for line shape
@@ -35,13 +35,13 @@ c       4. rad(y/n) remark  at. spec  tt  tr  tv  te    rad.file
  'Y',        'N2'     2         1  1   1   1,   'Data/N2ibp.dat'
  'Y',        'O2'     2         1  1   1   1,   'Data/O2ibp.dat'
  'Y',        'NO'     2         1  1   1   1,   'Data/NOibp.dat'
- 'y',        'N'      1         1  1   0   1,   'Data/NIST/niNIST.dat'
- 'Y',        'O'      1         1  1   0   1,   'Data/NIST/oiNIST.dat'
+ 'y',        'N'      1         1  0   0   1,   'Data/NIST/niNIST.dat'
+ 'Y',        'O'      1         1  0   0   1,   'Data/NIST/oiNIST.dat'
  'Y',        'N2+'    2         1  1   1   1,  'Data/N2iibp.dat'
  'N',        'O2+'    2         1  1   1   1,   ''
  'N',        'NO+'    2         1  1   1   1,   'Data/MOLECULEDATA.NEQAIR/NOiipark.dat'
- 'Y',        'N+'     1         1  1   0   1,   'Data/NIST/niiNIST.dat'
- 'Y',        'O+'     1         1  1   0   1,   'Data/oiiseb.dat'
+ 'Y',        'N+'     1         1  0   0   1,   'Data/NIST/niiNIST.dat'
+ 'Y',        'O+'     1         1  0   0   1,   'Data/oiiseb.dat'
  'Y',        'E'      0         1  0   0   1,   ' '
  
  
