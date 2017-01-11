@@ -35,6 +35,6 @@ c       4. rad(y/n) remark  at. spec  tt  tr  tv  te    rad.file
  'Y',        'CO2'    3         1  1   1   1,   'Data/CO2ihl.dat'
  'Y',        'CO'     2         1  1   1   1,   'Data/COilm.dat'
  'Y',        'O2'     2         1  1   1   1,   'Data/O2ibp.dat'
- 'Y',        'C'      1         1  1   0   1,   'Data/NIST/cinist.dat'
- 'Y',        'O'      1         1  1   0   1,   'Data/NIST/oiNIST.dat' 
+ 'Y',        'C'      1         1  0   0   1,   'Data/NIST/cinist.dat'
+ 'Y',        'O'      1         1  0   0   1,   'Data/NIST/oiNIST.dat' 
 
