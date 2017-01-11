@@ -1323,7 +1323,7 @@ void RadiativeTransferFVDOM::execute()
       writeRadialData();
     } 
 
-    //computeWallHeatFlux();
+    computeWallHeatFlux();
   }
   
   CFLog(INFO, "RadiativeTransferFVDOM::execute() => took " << stp.read() << "s \n");
@@ -2184,11 +2184,8 @@ void RadiativeTransferFVDOM::loopOverDirs(const CFuint startBin,
     
 //////////////////////////////////////////////////////////////////////////////
 
-/*
 void RadiativeTransferFVDOM::computeWallHeatFlux()
 {
-
-
   boost::filesystem::path file = m_dirName / boost::filesystem::path("wallHeatFlux.out");
   file = PathAppender::getInstance().appendParallel( file );
   
@@ -2196,43 +2193,47 @@ void RadiativeTransferFVDOM::computeWallHeatFlux()
     Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
   ofstream& outputFile = fhandle->open(file);
 
-
-
+  outputFile << "TITLE  = RadiativeTransferFVDOM wallHeatFlux\n";
+  outputFile << "VARIABLES = x y z q\n";
 
   CFLog(VERBOSE, "RadiativeTransferFVDOM::computeWallHeatFlux() => START\n");
 
   DataHandle< CFreal > qradFluxWall = socket_qradFluxWall.getDataHandle();
-  DataHandle< CFreal > qxFluxWall = socket_qxFluxWall.getDataHandle();
-  DataHandle< CFreal > qyFluxWall = socket_qyFluxWall.getDataHandle();
-  DataHandle< CFreal > qzFluxWall = socket_qzFluxWall.getDataHandle();
-  DataHandle< CFreal > faceCenters = socket_faceCenters.getDataHandle();
+  //DataHandle< CFreal > qxFluxWall = socket_qxFluxWall.getDataHandle();!!
+  //DataHandle< CFreal > qyFluxWall = socket_qyFluxWall.getDataHandle();!!
+  //DataHandle< CFreal > qzFluxWall = socket_qzFluxWall.getDataHandle();!!
+  DataHandle<CFreal> faceCenters = socket_faceCenters.getDataHandle();
+  DataHandle<CFreal> faceAreas = socket_faceAreas.getDataHandle();
+  DataHandle<CFreal> divQ = socket_divq.getDataHandle();
+  DataHandle<CFreal> qx = socket_qx.getDataHandle();
+  DataHandle<CFreal> qy = socket_qy.getDataHandle();
+  DataHandle<CFreal> qz = socket_qz.getDataHandle();
 
-  vector< string > wallTrsNames;
-  m_radiation->getWallTRSnames(wallTrsNames);
+  vector< string > wallTrsNames;  //to be moved to the .hh
+  m_radiation->getWallTRSnames(wallTrsNames); //to be moved to the setup()
   const CFuint nbWallTrs = wallTrsNames.size();
   
-  cf_assert(nbWallTrs > 0);
-  CFLog(VERBOSE, "RadiativeTransferFVDOM::computeWallHeatFlux() => Number of walls for heat flux computation =" << nbWallrs << "\n");
+  CFLog(INFO, "RadiativeTransferFVDOM::computeWallHeatFlux() => Number of walls for heat flux computation = [" << nbWallTrs << "]\n");
 
   RealVector distance(2);
-  RealVector divq(2);
-  RealVector qx(2);
-  RealVector qy(2);
-  RealVector qz(2);
+  //RealVector divq_w(2); //wall values
+  RealVector qx_w(2);
+  RealVector qy_w(2);
+  RealVector qz_w(2);
   CFreal tot_dist;
+  RealVector q_tot(nbWallTrs); //storing the total heat flux on each wall
+  q_tot = 0.;
 
   const CFuint m_dim = 3; //3D mesh
   RealVector faceCoord(m_dim);
 
   for (CFuint i=0; i<nbWallTrs; ++i){ //for each wall
-
     Framework::FaceTrsGeoBuilder::GeoData& facesData = m_wallFaceBuilder.getDataGE();
     SafePtr<TopologicalRegionSet> wallFaces = MeshDataStack::getActive()->getTrs(wallTrsNames[i]);
-    facesData.trs = wallFaces;
     const CFuint nbFacesWall = wallFaces->getLocalNbGeoEnts();
-    
-    CFLog(VERBOSE, "RadiativeTransferFVDOM::computeWallHeatFlux() => Wall TRS number" << i << "has " << nbFacesWall << " faces\n");
+    facesData.trs = wallFaces;
 
+    CFLog(INFO, "RadiativeTransferFVDOM::computeWallHeatFlux() => Wall TRS number [" << i << "] has [" << nbFacesWall << "] faces\n");
 
     for(CFuint f=0; f<nbFacesWall; ++f){
       facesData.idx = f;
@@ -2242,9 +2243,13 @@ void RadiativeTransferFVDOM::computeWallHeatFlux()
       const CFuint faceIdx = m_mapGeoToTrs->getIdxInTrs(faceID); //taking the local idx for the faceID within the TRS
       const CFuint faceGeoID = m_radiation->getCurrentWallGeoID();    
 
-      for(CFuint iii=0; iii<m_dim; ++iii) {
-	faceCoord[i] = faceCenters[m_dim*faceGeoID + iii];
+      m_wallFaceBuilder.releaseGE();
+
+      for(CFuint ii=0; ii<m_dim; ++ii) {
+	faceCoord[ii] = faceCenters[m_dim*faceGeoID + ii];
       }
+
+      CFreal faceArea = faceAreas[faceID];
 
       CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
       Common::SafePtr<TopologicalRegionSet> cells = geoData.trs;
@@ -2252,50 +2257,53 @@ void RadiativeTransferFVDOM::computeWallHeatFlux()
       CFreal tot_dist = 0.;
       //exploring the neighborhood of the current face
       for(CFuint ii=0; ii<2; ++ii) {
-      const CFuint cellID = faceTrs.getStateID(faceIdx, ii); //IDs delle celle
+      CFuint cellID = faceTrs.getStateID(faceIdx, ii); //neighbor's ID
       //const CFuint cellID2 = faceTrs.getStateID(faceIdx, 1);
       
-      divq[ii] = m_divq[cellID];
-      qx[ii] = m_q(cellID,XX);
-      qy[ii] = m_q(cellID,YY);
-      qz[ii] = m_q(cellID,ZZ);
+      //divq_w[ii] = divQ[cellID];
+      qx_w[ii] = qx[cellID];
+      qy_w[ii] = qy[cellID];
+      qz_w[ii] = qz[cellID];
 
       geoData.idx = cellID;
       GeometricEntity* currCell = m_geoBuilder.buildGE();
+
       Node& coordinate = currCell->getState(0)->getCoordinates(); //coordinate[XX,YY,ZZ]
       distance[ii] = std::sqrt((faceCoord[0]-coordinate[XX])*(faceCoord[0]-coordinate[XX])+(faceCoord[1]-coordinate[YY])*(faceCoord[1]-coordinate[YY])+(faceCoord[2]-coordinate[ZZ])*(faceCoord[2]-coordinate[ZZ]));
       tot_dist += distance[ii];
+
+      m_geoBuilder.releaseGE();
+
       }
   
-      CFreal divq_face = 0.;
+      //CFreal divq_face = 0.;
       CFreal qx_face = 0.;
       CFreal qy_face = 0.;
       CFreal qz_face = 0.;
 
       for(CFuint ii=0; ii<2; ++ii) {
         cf_assert(tot_dist > 0.);
-	divq_face += divq[ii]*distance[ii]/tot_dist; //distance-weighted average
-        qx_face += qx[ii]*distance[ii]/tot_dist;
-        qy_face += qy[ii]*distance[ii]/tot_dist;
-        qz_face += qz[ii]*distance[ii]/tot_dist;
-
+	//divq_face += divq_w[ii]*distance[ii]/tot_dist; //distance-weighted average
+        qx_face += qx_w[ii]*distance[ii]/tot_dist;
+        qy_face += qy_w[ii]*distance[ii]/tot_dist;
+        qz_face += qz_w[ii]*distance[ii]/tot_dist;
       }
 
-      CFuint idx = getWallFaceID(faceID); //////should already have it (faceIdx?!)
-      cf_assert(idx > 0);
-      qradFluxWall[idx] = divq_face;      //////
-      qxFluxWall[idx] = qx_face;
-      qyFluxWall[idx] = qy_face;
-      qzFluxWall[idx] = qz_face;
+      CFreal q_face = std::sqrt(qx_face*qx_face+qy_face*qy_face+qz_face*qz_face);
+      q_tot[i] += q_face*faceArea;
+
+      //CFuint idx = getWallFaceID(faceID); / == faceIdx
+      //CFLog(INFO, " " << diff << "\n"); //to check the index
+      qradFluxWall[faceIdx] = q_face;
+      //qxFluxWall[idx] = qx_face;
+      //qyFluxWall[idx] = qy_face;
+      //qzFluxWall[idx] = qz_face;
       
-      outputFile << divq[0] << " " << divq[1] << " " << divq_face  <<"\n";
-
-
-      m_geoBuilder.releaseGE();
+      outputFile << faceCoord[0] << " " << faceCoord[1] << " " << faceCoord[2] << " " << q_face  <<"\n";
+      //CFLog(INFO, divq_w[0] << " " << divq_w[1] << " " << q_face  <<"\n");
 
     }
-   
-   m_wallFaceBuilder.releaseGE();
+      CFLog(INFO, "RadiativeTransferFVDOM::computeWallHeatFlux() => Total heat flux on the wall number [" << i  << "] = " << q_tot[i] << "\n");
 
   }
 
@@ -2304,7 +2312,6 @@ void RadiativeTransferFVDOM::computeWallHeatFlux()
   CFLog(VERBOSE, "RadiativeTransferFVDOM::computeWallHeatFlux() => END\n");
 
 }
-*/
 
 //////////////////////////////////////////////////////////////////////////////
 

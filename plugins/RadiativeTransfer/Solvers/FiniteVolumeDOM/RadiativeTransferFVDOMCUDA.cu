@@ -668,7 +668,6 @@ __global__ void computeQKernelExponentialDir(const CFuint dStart,
 					     const CFreal* normals,
 					     const CFreal* mdirs,
 					     CFreal* In,
-					     CFreal* II,
 					     CFreal* divq,
 					     CFreal* qx, CFreal* qy, CFreal* qz)
 { 
@@ -719,6 +718,7 @@ __global__ void computeQKernelExponentialDir(const CFuint dStart,
       const CFuint iCell   = abs(advanceOrder[startCell+m]);
       iCellList[iCellSh] = iCell;
       const CFuint nbFaces = nbFacesInCell[iCell];
+      const CFreal fSource = fieldSource[iCell];
       for (CFuint iFace = 0; iFace < nbFaces; ++iFace) { 
 	const CFuint faceID = cellFaces[iFace*nbCells + iCell];
 	const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
@@ -730,7 +730,7 @@ __global__ void computeQKernelExponentialDir(const CFuint dStart,
 	  dirDotnANeg += dirDotNA;
 	  const CFint fcellID = faceCell[faceID*2]; 
 	  const CFint neighborCellID = (fcellID == iCell) ? faceCell[faceID*2+1] : fcellID;
-	  const CFreal source = (neighborCellID >=0) ? In[nbCells*dirID+neighborCellID] : fieldSource[iCell];
+	  const CFreal source = (neighborCellID >=0) ? In[nbCells*dirID+neighborCellID] : fSource;
 	  inDirDotnANeg += source*dirDotNA;
 	}
 	else if (dirDotNA > 0.) {
@@ -741,14 +741,14 @@ __global__ void computeQKernelExponentialDir(const CFuint dStart,
       const CFuint cellIDin = nbCells*dirID+iCell;
       Lc        = volumes[iCell]/(- dirDotnANeg); 
       halfExp   = exp(-0.5*Lc*fieldAbsor[iCell]);
-      const CFreal InCell = (inDirDotnANeg/dirDotnANeg)*halfExp*halfExp + (1. - halfExp*halfExp)*fieldSource[iCell];
-      Ic        = (inDirDotnANeg/dirDotnANeg)*halfExp + (1. - halfExp)*fieldSource[iCell];
+      const CFreal InCell = (inDirDotnANeg/dirDotnANeg)*halfExp*halfExp + (1. - halfExp*halfExp)*fSource;
+      Ic        = (inDirDotnANeg/dirDotnANeg)*halfExp + (1. - halfExp)*fSource;
       
       In[cellIDin] = InCell;
       CFreal inDirDotnA = inDirDotnANeg;
       inDirDotnA += InCell*POP_dirDotNA;
       const CFreal IcWeight = Ic*weight;
-      II[cellIDin] += IcWeight;
+     // II[cellIDin] += IcWeight;
       const CFuint d3 = d*3;
       atomicAdd(&qxSh[iCellSh], mdirs[d3]*IcWeight);
       atomicAdd(&qySh[iCellSh], mdirs[d3+1]*IcWeight);          

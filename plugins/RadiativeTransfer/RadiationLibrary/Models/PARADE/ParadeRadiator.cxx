@@ -305,12 +305,15 @@ void ParadeRadiator::setupSpectra(CFreal wavMin, CFreal wavMax)
   readLocalRadCoeff();
   
   if (m_binning && !m_banding) {
+    if (m_nbBins > m_nbPoints) { CFLog(WARN, "ParadeRadiator:: WARNING - The number of Bins is higher than the number of spectrum points\n"); }
     computeBinning();
   }
   else if (!m_binning && m_banding) {
+    if (m_nbBands > m_nbPoints) { CFLog(WARN, "ParadeRadiator:: WARNING - The number of Bands is higher than the number of spectrum points\n"); }
     computeBanding();
   }
   else if (m_binning && m_banding) {
+    if (m_nbBins*m_nbBands > m_nbPoints) { CFLog(WARN, "ParadeRadiator:: WARNING - The total number of Bins is higher than the number of spectrum points\n"); }
     computeBinningBanding();
   }
   
@@ -1367,10 +1370,10 @@ void ParadeRadiator::computeBinningBanding()
   //variables for binning
   const CFuint nbBinsre = nbBins;
   const CFuint nbBandsre = m_nbBands;
-  m_alpha_bin.resize(nbBinsre*nbCells);
-  m_emission_bin.resize(nbBinsre*nbCells);
-  m_B_bin.resize(nbBinsre*nbCells*nbBandsre);       //bands included as bins
-  m_alpha_avbin.resize(nbBinsre*nbCells*nbBandsre); //bands included as bins
+  m_alpha_bin.resize(nbBinsre*nbCells, 0.);
+  m_emission_bin.resize(nbBinsre*nbCells, 0.);
+  m_B_bin.resize(nbBinsre*nbCells*nbBandsre, 0.);       //bands included as bins
+  m_alpha_avbin.resize(nbBinsre*nbCells*nbBandsre, 0.); //bands included as bins
   RealVector vctBins(nbBins);
   CFreal alpha_bincoeff = 0.;
   CFreal emission_bincoeff = 0.;
@@ -1411,24 +1414,35 @@ void ParadeRadiator::computeBinningBanding()
   //initialized to 1 to take into accout the starting point of each band
   std::vector< int > nb_bandPoints(m_nbBands, 0); 
   
+  CFuint tot_nb_pts = 0;
   for(CFuint ii=0; ii<m_nbPoints; ++ii) {
     for(CFuint iii=0; iii<m_nbBands; ++iii) {
       if(m_data(1, ii*3)>vctBands[iii] && m_data(1, ii*3)<vctBands[iii+1]) {
 	//counting points within the band
 	//on the 1st cell 'cause the overall points distribution does not change over cells
 	nb_bandPoints[iii]++;
+        tot_nb_pts++;
       }
     }
   }
-  nb_bandPoints[0]++;
-  nb_bandPoints[m_nbBands-1]++; //To include wavMax in the last band
   
+  if(tot_nb_pts <  m_nbPoints){
+  nb_bandPoints[0]++;
+  nb_bandPoints[m_nbBands-1]++; //To include wavMin/wavMax
+  tot_nb_pts += 2;
+  }
+  cf_assert(tot_nb_pts == m_nbPoints);
+ 
   for(CFuint iii=0; iii<m_nbBands; ++iii) {
     CFLog(INFO,"ParadeLibrary::computeBinningBanding() => nb_bandPoints(" << iii  << ") = " << nb_bandPoints[iii] << "\n");
   }
+
+  CFLog(INFO,"ParadeLibrary::computeproperties () => tot_nb_pts = " << tot_nb_pts << "\n");
+  CFLog(INFO,"ParadeLibrary::computeproperties () => m_nbPoints = " << m_nbPoints << "\n");  
   
   CFuint cc = 0; //counter to pick the proper proprieties from m_data
   for(CFuint b=0; b<m_nbBands; ++b) { //the loop over bands starts
+    if(nb_bandPoints[b] > 1) { //otherwise the binning doesn't make sense, but we risk to miss a point in the band
     //Function to calculate the binning algorithm with the absorption and emission coefficients
     CFreal num_alphatot = 0.0;
     CFreal den_alphatot = 0.0;
@@ -1542,6 +1556,12 @@ void ParadeRadiator::computeBinningBanding()
 	      << k << "," << j << ") = " << m_B_bin[nbBins*j+k] <<"\n");
 	    */
 	  }
+
+	  else {
+            alpha_bincoeff = 0.;
+	    emission_bincoeff = 0.;
+	    B_bincoeff = 0.;
+	  }
 	  
 	  m_alpha_bin[k + nbBinsre*j] += alpha_bincoeff;
 	  m_emission_bin[k + nbBinsre*j] += emission_bincoeff;
@@ -1578,10 +1598,11 @@ void ParadeRadiator::computeBinningBanding()
     for(CFuint j=0;j<nbCells; ++j) {
       for(CFuint k=1;k<nbBinsre; ++k) {
 	//the index "b" added for banding
-	alpha_avbin[(k+b) + nbBinsre*j] = m_alpha_avbin[k + nbBinsre*j];
-	B_bin[(k+b) + nbBinsre*j] = m_B_bin[k + nbBinsre*j];
-	CFLog(VERBOSE,"alpha (" << b << "," << k << "," << j << ") = " << alpha_avbin[(k+b) + nbBinsre*j] << "\n");
+	alpha_avbin[k+b*nbBinsre + m_nbBands*nbBinsre*j] = m_alpha_avbin[k + nbBinsre*j];
+	B_bin[k+b*nbBinsre + m_nbBands*nbBinsre*j] = m_B_bin[k + nbBinsre*j];
+	CFLog(VERBOSE,"alpha (" << b << "," << k << "," << j << ") = " << alpha_avbin[k+b*nbBinsre + m_nbBands*nbBinsre*j] << "\n");
       }
+     }
     }
     cc = cc + nb_bandPoints[b];
   }
