@@ -1109,136 +1109,9 @@ void ParadeRadiator::computeBinning()
     }
   */
   
-  //alpha_avbin is average value for absorptivity for each bin
-  SafePtr<SocketBundle> sockets = m_radPhysicsHandlerPtr->getDataSockets();
-  DataHandle<CFreal> alpha_avbin = sockets->alpha_avbin; // array w GLOBAL cell size
-  DataHandle<CFreal> B_bin = sockets->B_bin;             // array w GLOBAL cell size
-  const CFuint nbBinsre = nbBins;
-  
-  if (alpha_avbin.size() != nbBinsre*totalNbCells) {
-    CFLog(ERROR, "alpha_avbin.size() != nbBinsre*totalNbCells => " << 
-	  alpha_avbin.size() << " != " <<  nbBinsre*totalNbCells << "\n");
-    cf_assert(alpha_avbin.size() == nbBinsre*totalNbCells);
-  }
-  if (B_bin.size() != nbBinsre*totalNbCells) {
-    CFLog(ERROR, "B_bin.size() != nbBinsre*totalNbCells => " << B_bin.size() << 
-	  " != " <<  nbBinsre*totalNbCells << "\n");
-    cf_assert(B_bin.size() == nbBinsre*totalNbCells);
-  }
-  
-  // from now only local arrays (=global if m_saveMemory==false) are used
-  m_alpha_bin.resize(nbBinsre*nbCells);     // array w LOCAL cell size
-  m_emission_bin.resize(nbBinsre*nbCells);  // array w LOCAL cell size
-  
-  vector<CFreal> alpha_avbinLocal;
-  vector<CFreal> B_binLocal;
-  // by default (not optimized mode) you point to the global storage of bin arrays
-  CFreal* alpha_avbinCurr = &alpha_avbin[0];
-  CFreal* B_binCurr = &B_bin[0];
-  
-  if (m_saveMemory) {
-    // if you run in optimized parallel mode, point to a local copy of the bin arrays
-    // of size nbCells < totalNbCells
-    cf_assert((nbCells < totalNbCells && m_nbProc > 1) || (nbCells == totalNbCells && m_nbProc == 1));
-    
-    alpha_avbinLocal.resize(nbBinsre*nbCells, 0.);
-    alpha_avbinCurr = &alpha_avbinLocal[0];
-    
-    B_binLocal.resize(nbBinsre*nbCells, 0.);
-    B_binCurr = &B_binLocal[0];
-  }  
-  
-  // fill the alpha and emission arrays for each local cell in parallel simulations
-  for(CFuint i=0;i<m_nbPoints;++i) {
-    // m_alpha_bin, m_emission_bin, B_bin are logically 2D arrays filled by rows:
-    // each row gives all the bins for a cell
-    for(CFuint j=0;j<nbCells;++j) {
-      computeCellBins(i,j, nbBinsre, vctBins, m_alpha_bin, m_emission_bin, B_binCurr);
-    }
-  }
-  
-  /*for(CFuint k=1;k<nbBinsre;++k) {
-    for(CFuint j=0;j<nbCells;++j) {
-    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_alpha_bin(" << k << "," << j << ") = " << m_alpha_bin[nbBinsre*j+k] <<"\n");
-    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => B_binCurr(" << k << "," << j << ") = " << B_binCurr[nbBinsre*j+k] <<"\n");
-    }
-    }*/
-  
-  for(CFuint j=0;j<nbCells;++j) {
-    for(CFuint k=1;k<nbBinsre;++k) {
-      const CFuint idx0 = nbBinsre*j;
-      alpha_avbinCurr[idx0] = 0.;
-      const CFuint idx = k + idx0;
-      // AL: is this fix needed to mask an error or it is supposed to be like this?
-      if(B_binCurr[idx] != 0.) {
-	alpha_avbinCurr[idx] = m_alpha_bin[idx] / B_binCurr[idx];
-	CFLog(DEBUG_MED,"ParadeRadiator::computeBinning() => alpha_avbinCurr(" << k << "," << j << ") = "<< alpha_avbinCurr[idx] <<"\n");
-      }
-      else {
-	alpha_avbinCurr[idx] = 0.;
-	CFLog(DEBUG_MED,"ParadeRadiator::computeBinning() => alpha_avbinCurr(" << k << ","<< j << ") = "<< alpha_avbinCurr[idx] <<"\n");
-      }
-    }
-  }
-  
-  if (m_saveMemory) {
-    // here we need to gather all the entries for alpha_avbin and B_bin from all processes, so that
-    // every process keeps a global storage of them
-    CFuint minSizeToSend = 0;
-    CFuint maxSizeToSend = 0;
-    vector<int> recvCounts(m_nbProc, 0);
-    vector<int> displs(m_nbProc, 0);
-    computeRecvCountsDispls(totalNbCells, nbBinsre, minSizeToSend, maxSizeToSend, recvCounts, displs);
-    const CFuint sendSize = nbCells*nbBinsre;
-    cf_assert(sendSize <= maxSizeToSend);
-    cf_assert(sendSize >= minSizeToSend);
-    cf_assert(sendSize <= maxSizeToSend);
-    cf_assert(sendSize >= minSizeToSend);
-    
-    MPIError::getInstance().check
-      ("MPI_Allgatherv", "ParadeRadiator::computeBinning() => alpha_avbin",
-       MPI_Allgatherv(&alpha_avbinCurr[0], sendSize, MPIStructDef::getMPIType(&alpha_avbinCurr[0]),
-		      &alpha_avbin[0], &recvCounts[0], &displs[0],  MPIStructDef::getMPIType(&alpha_avbin[0]),
-		      PE::GetPE().GetCommunicator(m_namespace)));
-    
-    MPIError::getInstance().check
-      ("MPI_Allgatherv", "ParadeRadiator::computeBinning() => B_bin",
-       MPI_Allgatherv(&B_binCurr[0], sendSize, MPIStructDef::getMPIType(&B_binCurr[0]),
-		      &B_bin[0], &recvCounts[0], &displs[0],  MPIStructDef::getMPIType(&B_bin[0]),
-		      PE::GetPE().GetCommunicator(m_namespace)));
-  }
-  
-  // To be commented out after verification
-  if(PE::GetPE().GetRank(m_namespace) == 0) {
-   
-    /*for(CFuint j=0;j<totalNbCells;++j) {
-	for(CFuint k=1;k<nbBinsre;++k) {
-	CFLog(VERBOSE,"alpha (" << k << "," << j << ") = " << alpha_avbin[k + nbBinsre*j] << "\n");
-	}
-	}*/
-    ofstream fout1("alpha.txt");
-    for(CFuint j=0;j<totalNbCells;++j) {
-      for(CFuint k=1;k<nbBinsre;++k) {
-	fout1 << "alpha (" << k << "," << j << ") = " << 
-	  alpha_avbin[k + nbBinsre*j] << "\n";
-      }
-    }
-    fout1.close();
-    
-    ofstream fout2("beta.txt");
-    for(CFuint j=0;j<totalNbCells;++j) {
-      for(CFuint k=1;k<nbBinsre;++k) {
-	fout2 << "beta (" << k << "," << j << ") = " << 
-	  B_bin[k + nbBinsre*j] << "\n";
-      }
-    }
-    fout2.close();
-  }
-  
-  PE::GetPE().setBarrier(m_namespace);
+  computeAveragedBins(nbBins,2, vctBins);
   
   CFLog(INFO, "ParadeRadiator::computeBinning() took " << stp.read() << "s\n"); 
-  
   CFLog(VERBOSE, "ParadeRadiator::computeBinning() => END\n");
 }
   
@@ -1250,8 +1123,20 @@ void ParadeRadiator::computeBanding()
 
   Stopwatch<WallTime> stp;
   stp.start();
+   
+  const CFuint totalNbCells = m_pstates->getSize();
+  CFuint nbCells = m_data.nbRows();
+  cf_assert((!m_saveMemory && nbCells == totalNbCells) || 
+	    ( m_saveMemory && nbCells <= totalNbCells));
   
-  const CFuint nbCells = m_pstates->getSize();
+  if (m_saveMemory) {
+    CFuint totalNbCells = 0;
+    MPIError::getInstance().check
+      ("MPI_Allreduce", "ParadeRadiator::computeBinning()",
+       MPI_Allreduce(&nbCells, &totalNbCells, 1, MPIStructDef::getMPIType(&nbCells), 
+		     MPI_SUM, PE::GetPE().GetCommunicator(m_namespace)));
+    cf_assert(totalNbCells == m_pstates->getSize());
+  }
 
   // Banding
   CFreal alphamin_tot = m_data(0,0);
@@ -1259,20 +1144,36 @@ void ParadeRadiator::computeBanding()
   
   for(CFuint i=0;i<m_nbPoints;++i) {
     for(CFuint s=0;s<nbCells;s++) {
-      if((m_data(s,i*3))<alphamin_tot) {
-	alphamin_tot = m_data(s,i*3);
+      const CFreal wavelength = m_data(s,i*3);
+      if(wavelength < alphamin_tot) {
+	alphamin_tot = wavelength;
       }
-      if((m_data(s,i*3))>alphamax_tot) {
-	alphamax_tot = m_data(s,i*3);
+      if(wavelength > alphamax_tot) {
+	alphamax_tot = wavelength;
       }
     }
   }
   
-  CFreal alpha_minlog = std::log(alphamin_tot);
-  CFreal alpha_maxlog = std::log(alphamax_tot);
+  CFreal alphamax_totGlobal = 0.;
+  CFreal alphamin_totGlobal = 1e10;
   
-  CFLog(VERBOSE,"ParadeLibrary::computeBanding () => alpha_minlog = " << alpha_minlog <<"\n");
-  CFLog(VERBOSE,"ParadeLibrary::computeBanding () => alpha_maxlog = " << alpha_maxlog <<"\n");
+  MPIError::getInstance().check
+    ("MPI_Allreduce", "ParadeRadiator::computeBanding()",
+     MPI_Allreduce(&alphamin_tot, &alphamin_totGlobal, 1, 
+		   MPIStructDef::getMPIType(&alphamin_tot), 
+		   MPI_MIN, PE::GetPE().GetCommunicator(m_namespace)));
+  
+  MPIError::getInstance().check
+    ("MPI_Allreduce", "ParadeRadiator::computeBanding()",
+     MPI_Allreduce(&alphamax_tot, &alphamax_totGlobal, 1, 
+		   MPIStructDef::getMPIType(&alphamax_tot), 
+		   MPI_MAX, PE::GetPE().GetCommunicator(m_namespace)));
+  
+  const CFreal alpha_minlog = std::log(alphamin_totGlobal);
+  const CFreal alpha_maxlog = std::log(alphamax_totGlobal);
+
+  CFLog(INFO,"ParadeLibrary::computeBanding () => [alpha_minlog, alpha_maxlog] = ["
+	<< alpha_minlog << ", " << alpha_maxlog << "]\n");
   
   const CFreal dy = (alpha_maxlog-alpha_minlog) / (m_nbBands-1);
   
@@ -1286,64 +1187,9 @@ void ParadeRadiator::computeBanding()
     CFLog(VERBOSE,"ParadeLibrary::computeBanding() => vctBins(" << i << ") = " << vctBins[i] <<"\n");
   }
   
+  // AL: I stop here 
   //To search for minimum alpha and maximum
-  //*/
-  
-  m_alpha_bin.resize(m_nbBands*nbCells);
-  m_emission_bin.resize(m_nbBands*nbCells);
-  m_B_bin.resize(m_nbBands*nbCells);
-  CFreal alpha_bincoeff = 0.;
-  CFreal emission_bincoeff = 0.;
-  CFreal B_bincoeff = 0.;
-  
-  for(CFuint i=0;i<m_nbPoints;++i) {
-    for(CFuint j=0;j<nbCells;++j) {
-      const CFreal Bs = m_data(j,i*3+1)/m_data(j,i*3+2);
-      
-      m_alpha_bin[0+m_nbBands*j] = 0;
-      m_emission_bin[0+m_nbBands*j] = 0;
-      m_B_bin[0+m_nbBands*j] = 0;
-      
-      for(CFuint k=1;k<m_nbBands;++k){
-	if((m_data(j,i*3)>=vctBins[k-1]) && (m_data(j,i*3)<vctBins[k])) {
-	  alpha_bincoeff = m_data(j,i*3+2)*Bs*m_dWav*1e-10;
-	  emission_bincoeff = m_data(j,i*3+1)*m_dWav*1e-10;
-	  B_bincoeff = Bs*m_dWav*1e-10;
-	}
-	
-	m_alpha_bin[k +m_nbBands *j] += alpha_bincoeff;
-	m_emission_bin[k + m_nbBands*j] += emission_bincoeff;
-	m_B_bin[k + m_nbBands*j] += B_bincoeff;
-      }
-    }
-  }
-  m_alpha_avbin.resize(m_nbBands*nbCells);
-  
-  for(int j=0;j<nbCells;++j) {
-    for(int k=1;k<m_nbBands;++k) {
-      m_alpha_avbin[0+m_nbBands*j] = 0;
-      
-      if(m_B_bin[k + m_nbBands*j]!= 0.) {
-	CFreal m_alpha_avbin_a = (m_alpha_bin[k + m_nbBands*j]) / (m_B_bin[k + m_nbBands*j]);
-	m_alpha_avbin[k + m_nbBands*j] = m_alpha_avbin_a;
-      }
-      else {
-	m_alpha_avbin[k + m_nbBands*j] = 0.;
-      }
-    }
-  }
-  
-  //alpha_avbin, emission_bin are the average values for absorptivity and emissivity for each bin.
-  
-  DataHandle<CFreal> alpha_avbin = m_radPhysicsHandlerPtr->getDataSockets()->alpha_avbin;
-  DataHandle<CFreal> B_bin = m_radPhysicsHandlerPtr->getDataSockets()->B_bin;
-    
-  for(int j=0;j<nbCells;++j) {
-    for(int k=1;k<m_nbBands;++k) {
-      alpha_avbin[k + m_nbBands*j] = m_alpha_avbin[k + m_nbBands*j];
-      B_bin[k + m_nbBands*j] = m_B_bin[k + m_nbBands*j];
-    }
-  }
+  computeAveragedBins(m_nbBands, 0, vctBins);
   
   CFLog(INFO, "ParadeRadiator::computeBanding() took " << stp.read() << "s\n");
   CFLog(VERBOSE, "ParadeRadiator::computeBanding() => END\n");
@@ -1633,11 +1479,14 @@ void ParadeRadiator::computeRecvCountsDispls(const CFuint totalNbCells, const CF
 void ParadeRadiator::computeCellBins(const CFuint i, 
 				     const CFuint j, 
 				     const CFuint nbBinsre, 
+				     const CFuint testID,
 				     const RealVector& vctBins,  
 				     vector<CFreal>& alpha_bin,
 				     vector<CFreal>& emission_bin,
 				     CFreal*const B_binCurr)
 {
+  cf_assert(testID == 0 || testID == 2);
+  const CFreal test   = m_data(j,i*3+testID);
   const CFreal emCoef = m_data(j,i*3+1);
   const CFreal abCoef = m_data(j,i*3+2);
   const CFreal Bs = emCoef/abCoef;
@@ -1650,8 +1499,8 @@ void ParadeRadiator::computeCellBins(const CFuint i,
     CFreal alpha_bincoeff = 0.;
     CFreal emission_bincoeff = 0.;
     CFreal B_bincoeff = 0.;
-   
-    if((abCoef>=vctBins[k-1]) && (abCoef<vctBins[k])) {
+    
+    if((test>=vctBins[k-1]) && (test<vctBins[k])) {
       const CFreal dWav = m_dWav*1e-10;
       B_bincoeff        = Bs*dWav;
       alpha_bincoeff    = abCoef*B_bincoeff;
@@ -1673,6 +1522,143 @@ void ParadeRadiator::computeCellBins(const CFuint i,
   }
 }
   
+//////////////////////////////////////////////////////////////////////////////
+
+void ParadeRadiator::computeAveragedBins(const CFuint nbBinsre, 
+					 const CFuint testID,
+					 const RealVector& vctBins)
+{
+  const CFuint totalNbCells = m_pstates->getSize();
+  CFuint nbCells = m_data.nbRows();
+  
+  //alpha_avbin is average value for absorptivity for each bin
+  SafePtr<SocketBundle> sockets = m_radPhysicsHandlerPtr->getDataSockets();
+  DataHandle<CFreal> alpha_avbin = sockets->alpha_avbin; // array w GLOBAL cell size
+  DataHandle<CFreal> B_bin = sockets->B_bin;             // array w GLOBAL cell size
+  
+  if (alpha_avbin.size() != nbBinsre*totalNbCells) {
+    CFLog(ERROR, "alpha_avbin.size() != nbBinsre*totalNbCells => " << 
+	  alpha_avbin.size() << " != " <<  nbBinsre*totalNbCells << "\n");
+    cf_assert(alpha_avbin.size() == nbBinsre*totalNbCells);
+  }
+  if (B_bin.size() != nbBinsre*totalNbCells) {
+    CFLog(ERROR, "B_bin.size() != nbBinsre*totalNbCells => " << B_bin.size() << 
+	  " != " <<  nbBinsre*totalNbCells << "\n");
+    cf_assert(B_bin.size() == nbBinsre*totalNbCells);
+  }
+  
+  // from now only local arrays (=global if m_saveMemory==false) are used
+  m_alpha_bin.resize(nbBinsre*nbCells);     // array w LOCAL cell size
+  m_emission_bin.resize(nbBinsre*nbCells);  // array w LOCAL cell size
+  
+  vector<CFreal> alpha_avbinLocal;
+  vector<CFreal> B_binLocal;
+  // by default (not optimized mode) you point to the global storage of bin arrays
+  CFreal* alpha_avbinCurr = &alpha_avbin[0];
+  CFreal* B_binCurr = &B_bin[0];
+  
+  if (m_saveMemory) {
+    // if you run in optimized parallel mode, point to a local copy of the bin arrays
+    // of size nbCells < totalNbCells
+    cf_assert((nbCells < totalNbCells && m_nbProc > 1) || (nbCells == totalNbCells && m_nbProc == 1));
+    
+    alpha_avbinLocal.resize(nbBinsre*nbCells, 0.);
+    alpha_avbinCurr = &alpha_avbinLocal[0];
+    
+    B_binLocal.resize(nbBinsre*nbCells, 0.);
+    B_binCurr = &B_binLocal[0];
+  }  
+  
+  // fill the alpha and emission arrays for each local cell in parallel simulations
+  for(CFuint i=0;i<m_nbPoints;++i) {
+    // m_alpha_bin, m_emission_bin, B_bin are logically 2D arrays filled by rows:
+    // each row gives all the bins for a cell
+    for(CFuint j=0;j<nbCells;++j) {
+      computeCellBins(i,j, nbBinsre, testID, vctBins, m_alpha_bin, m_emission_bin, B_binCurr);
+    }
+  }
+  
+  /*for(CFuint k=1;k<nbBinsre;++k) {
+    for(CFuint j=0;j<nbCells;++j) {
+    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_alpha_bin(" << k << "," << j << ") = " << m_alpha_bin[nbBinsre*j+k] <<"\n");
+    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => B_binCurr(" << k << "," << j << ") = " << B_binCurr[nbBinsre*j+k] <<"\n");
+    }
+    }*/
+  
+  for(CFuint j=0;j<nbCells;++j) {
+    for(CFuint k=1;k<nbBinsre;++k) {
+      const CFuint idx0 = nbBinsre*j;
+      alpha_avbinCurr[idx0] = 0.;
+      const CFuint idx = k + idx0;
+      // AL: is this fix needed to mask an error or it is supposed to be like this?
+      if(B_binCurr[idx] != 0.) {
+	alpha_avbinCurr[idx] = m_alpha_bin[idx] / B_binCurr[idx];
+	CFLog(DEBUG_MED,"ParadeRadiator::computeAverageBins() => alpha_avbinCurr(" << k << "," << j << ") = "<< alpha_avbinCurr[idx] <<"\n");
+      }
+      else {
+	alpha_avbinCurr[idx] = 0.;
+	CFLog(DEBUG_MED,"ParadeRadiator::computeAverageBins() => alpha_avbinCurr(" << k << ","<< j << ") = "<< alpha_avbinCurr[idx] <<"\n");
+      }
+    }
+  }
+  
+  if (m_saveMemory) {
+    // here we need to gather all the entries for alpha_avbin and B_bin from all processes, so that
+    // every process keeps a global storage of them
+    CFuint minSizeToSend = 0;
+    CFuint maxSizeToSend = 0;
+    vector<int> recvCounts(m_nbProc, 0);
+    vector<int> displs(m_nbProc, 0);
+    computeRecvCountsDispls(totalNbCells, nbBinsre, minSizeToSend, maxSizeToSend, recvCounts, displs);
+    const CFuint sendSize = nbCells*nbBinsre;
+    cf_assert(sendSize <= maxSizeToSend);
+    cf_assert(sendSize >= minSizeToSend);
+    cf_assert(sendSize <= maxSizeToSend);
+    cf_assert(sendSize >= minSizeToSend);
+    
+    MPIError::getInstance().check
+      ("MPI_Allgatherv", "ParadeRadiator::computeAverageBins() => alpha_avbin",
+       MPI_Allgatherv(&alpha_avbinCurr[0], sendSize, MPIStructDef::getMPIType(&alpha_avbinCurr[0]),
+		      &alpha_avbin[0], &recvCounts[0], &displs[0],  MPIStructDef::getMPIType(&alpha_avbin[0]),
+		      PE::GetPE().GetCommunicator(m_namespace)));
+    
+    MPIError::getInstance().check
+      ("MPI_Allgatherv", "ParadeRadiator::computeAverageBins() => B_bin",
+       MPI_Allgatherv(&B_binCurr[0], sendSize, MPIStructDef::getMPIType(&B_binCurr[0]),
+		      &B_bin[0], &recvCounts[0], &displs[0],  MPIStructDef::getMPIType(&B_bin[0]),
+		      PE::GetPE().GetCommunicator(m_namespace)));
+  }
+  
+  // To be commented out after verification
+  if(PE::GetPE().GetRank(m_namespace) == 0) {
+   
+    /*for(CFuint j=0;j<totalNbCells;++j) {
+	for(CFuint k=1;k<nbBinsre;++k) {
+	CFLog(VERBOSE,"alpha (" << k << "," << j << ") = " << alpha_avbin[k + nbBinsre*j] << "\n");
+	}
+	}*/
+    ofstream fout1("alpha.txt");
+    for(CFuint j=0;j<totalNbCells;++j) {
+      for(CFuint k=1;k<nbBinsre;++k) {
+	fout1 << "alpha (" << k << "," << j << ") = " << 
+	  alpha_avbin[k + nbBinsre*j] << "\n";
+      }
+    }
+    fout1.close();
+    
+    ofstream fout2("beta.txt");
+    for(CFuint j=0;j<totalNbCells;++j) {
+      for(CFuint k=1;k<nbBinsre;++k) {
+	fout2 << "beta (" << k << "," << j << ") = " << 
+	  B_bin[k + nbBinsre*j] << "\n";
+      }
+    }
+    fout2.close();
+  }
+  
+  PE::GetPE().setBarrier(m_namespace);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 } // namespace RadiativeTransfer

@@ -149,10 +149,16 @@ private:
   void computeCellBins(const CFuint i, 
 		       const CFuint j,
 		       const CFuint nbBinsre, 
+		       const CFuint testID,
 		       const RealVector& vctBins, 
 		       std::vector<CFreal>& alpha_bin,
 		       std::vector<CFreal>& emission_bin,
 		       CFreal *const B_binCurr);
+  
+  /// compute the averaged bins/bands
+  void computeAveragedBins(const CFuint nbBinsre, 
+			   const CFuint testID,
+			   const RealVector& vctBins);
   
 private: 
   
