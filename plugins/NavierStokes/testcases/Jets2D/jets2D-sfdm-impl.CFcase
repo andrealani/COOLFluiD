@@ -63,7 +63,7 @@ Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2Dsfdm.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = jets2DQDPert.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = SpectralFDMethod
 Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
-Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P1
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 #Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2
 

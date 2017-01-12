@@ -176,6 +176,6 @@ Simulator.SubSystem.MeFiAlgo.MeshFitting.meshAcceleration = 0.05
 Simulator.SubSystem.MeFiAlgo.MeshFitting.monitorVarID     = 0
 Simulator.SubSystem.MeFiAlgo.MeshFitting.equilibriumSpringLength = 1e-3
 Simulator.SubSystem.MeFiAlgo.MeshFitting.ratioBoundaryToInnerEquilibriumSpringLength = 0.1
-Simulator.SubSystem.MeFiAlgo.MeshFitting.unlockedBoundaryTRSs = 1 2 3 4
+Simulator.SubSystem.MeFiAlgo.MeshFitting.unlockedBoundaryTRSs = 1 4
 
 Simulator.SubSystem.CellCenterFVM.AfterMeshUpdateCom = StdMeshFittingUpdate

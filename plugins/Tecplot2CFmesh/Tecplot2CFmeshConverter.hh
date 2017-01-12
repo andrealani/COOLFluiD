@@ -263,6 +263,9 @@ private: // data
   /// tells if a TECPLOT file *.allsurf.plt including all boundaries is given
   bool m_hasAllSurfFile;
   
+  /// tells to stoare the nodal states while converting the mesh
+  bool m_saveNodalStates;
+  
   /// The name of the file from which to interpolate
   std::string m_interpolateFromFileName;
   

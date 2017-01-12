@@ -22,6 +22,8 @@
 #include "Common/BadValueException.hh"
 #include "Framework/MapGeoEnt.hh"
 #include "Framework/CFPolyOrder.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/DataStorage.hh"
 #include "Tecplot2CFmesh/Tecplot2CFmeshConverter.hh"
 #include "Tecplot2CFmesh/Tecplot2CFmesh.hh"
 
@@ -68,6 +70,9 @@ void Tecplot2CFmeshConverter::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >
     ("HasAllSurfFile","Flag telling if a TECPLOT file *.allsurf.plt including all boundaries is given.");
   
+  options.addConfigOption< bool >
+    ("SaveNodalStates","Store the nodal states while converting the mesh.");
+  
   options.addConfigOption< std::string >("InterpolateFrom","The donor file for interpolation");
 }
       
@@ -99,6 +104,9 @@ Tecplot2CFmeshConverter::Tecplot2CFmeshConverter (const std::string& name)
   
   m_hasAllSurfFile = false;
   setParameter("HasAllSurfFile", &m_hasAllSurfFile); 
+  
+  m_saveNodalStates = false;
+  setParameter("SaveNodalStates", &m_saveNodalStates); 
   
   m_interpolateFromFileName = "";
   setParameter("InterpolateFrom", &m_interpolateFromFileName);
@@ -748,6 +756,35 @@ void Tecplot2CFmeshConverter::writeNodes(ofstream& fout)
      fout << startCoord[j] << " ";
     }
     fout << "\n";
+  }
+  
+  const CFuint nbVars = m_elementType[0]->getNbVars();
+  const CFuint startVar = m_dimension;
+  const CFuint nbNodalVars = nbVars - startVar; 
+  
+  // AL: here we store the nodal variables assuming that the global node IDs
+  // won't change later (e.g. sue to mesh partitioning or renumbering) otherwise 
+  // the DataHandle "initialNodalStates" will also need some ID mapping to be accessible
+  if (m_saveNodalStates && (!skipSolution()) && nbNodalVars > 0) {
+    const string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+    const string dhName = nsp + "_initialNodalStates";
+    DataHandle<CFreal> initialNodalStates =
+      MeshDataStack::getActive()->getDataStorage()->createData<CFreal>
+      (dhName, nbNodes*nbNodalVars); 
+    
+    CFLog(VERBOSE, "Tecplot2CFmeshConverter::writeNodes() => " << 
+	  "[startVar, nbVars, nbNodalVars] = [" << startVar << ", " << nbVars << ", " << nbNodalVars << "]\n");
+    
+    for (CFuint k = 0; k < nbNodes; ++k) {
+      cf_assert(k < m_nodalVarPtr.size());
+      const CFreal *const startCoord = m_nodalVarPtr[k];
+      const CFuint firstVar = k*nbNodalVars;
+      for (CFuint j = startVar; j < nbVars; ++j) {
+	const CFuint idx = firstVar + j - startVar;
+	cf_assert(idx < initialNodalStates.size());
+	initialNodalStates[idx] = startCoord[j];
+      }
+    }
   }
   
   CFLog(VERBOSE, "Tecplot2CFmeshConverter::writeNodes() => END\n");

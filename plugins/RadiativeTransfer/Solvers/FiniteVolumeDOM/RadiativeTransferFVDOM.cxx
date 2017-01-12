@@ -323,6 +323,27 @@ void RadiativeTransferFVDOM::setup()
   // vector<string> boundaryTrsNames;
   // m_radiation->getBoundaryTRSnames(boundaryTrsNames);
   
+  // copy the content of the "initialNodalStates" (if available) into "nstates"
+  const string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  const string dhName = nsp + "_initialNodalStates";
+  if (MeshDataStack::getActive()->getDataStorage()->checkData(dhName)) {
+    DataHandle<CFreal> initialNodalStates =
+      MeshDataStack::getActive()->getDataStorage()->getData<CFreal>(dhName); 
+  
+    /// storage of nstates (states in nodes)
+    DataHandle<RealVector> nstates = socket_nstates.getDataHandle();  
+    const CFuint nbNodalVars = nstates[0].size();
+    cf_assert(nstates.size()*nbNodalVars == initialNodalStates.size());
+    for (CFuint i = 0; i < nstates.size(); ++i) {
+      const CFuint startn = i*nbNodalVars;
+      for (CFuint j = 0; j < nbNodalVars; ++j) {
+	nstates[i][j] = initialNodalStates[startn+j]; 
+      }
+    }  
+    
+    MeshDataStack::getActive()->getDataStorage()->deleteData<CFreal>(dhName);
+  }
+  
   if (m_radiation->hasRadiationPhysics()) {
     SafePtr<Radiator> radiator = 
       m_radiation->getCellDistPtr(0)->getRadiatorPtr();
@@ -352,8 +373,6 @@ void RadiativeTransferFVDOM::setup()
   cf_assert(m_PID < PhysicalModelStack::getActive()->getNbEq());
   cf_assert(m_TID < PhysicalModelStack::getActive()->getNbEq());
   cf_assert(m_PID != m_TID);
-  
-  const std::string nsp = getMethodData().getNamespace();
   cf_assert(PE::GetPE().GetProcessorCount(nsp) == 1);
   
   // Setting up the file containing the binary table with opacities

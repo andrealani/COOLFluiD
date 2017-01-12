@@ -101,6 +101,7 @@ Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = \
 Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.NbElementTypes = 2
 Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = false
 Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.SaveNodalStates = true
 Simulator.SubSystemA.CFmeshFileReader.onlyConversion = true
 
 ################################################################################

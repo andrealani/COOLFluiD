@@ -15,20 +15,20 @@
 #CFEnv.TraceToStdOut = true
 
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libGmsh2CFmesh libParaViewWriter libNavierStokes libSpectralFD libSpectralFDNavierStokes libBackwardEuler libPetscI
+Simulator.Modules.Libs = libTecplotWriter libCFmeshFileWriter libCFmeshFileReader libGmsh2CFmesh libParaViewWriter libNavierStokes libSpectralFD libSpectralFDNavierStokes libBackwardEuler libPetscI
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/SinusBump
 Simulator.Paths.ResultsDir = ./
 
 Simulator.SubSystem.Default.PhysicalModelType = Euler3D
-Simulator.SubSystem.DefaultEuler3D.refValues = 1.0 0.591607978 0.591607978 0.591607978 2.675
+Simulator.SubSystem.Euler3D.refValues = 1.0 0.591607978 0.591607978 0.591607978 2.675
 Simulator.SubSystem.Euler3D.refLength = 1.0
 Simulator.SubSystem.Euler3D.ConvTerm.pRef = 1.
 Simulator.SubSystem.Euler3D.ConvTerm.tempRef = 0.003483762
 Simulator.SubSystem.Euler3D.ConvTerm.machInf = 0.5
 
-Simulator.SubSystem.OutputFormat        = ParaView CFmesh
+Simulator.SubSystem.OutputFormat        = ParaView CFmesh Tecplot
 
 Simulator.SubSystem.CFmesh.FileName     = bump3D-sfdm-solP2P3.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate = 10
@@ -42,6 +42,14 @@ Simulator.SubSystem.ParaView.Data.updateVar = Cons
 Simulator.SubSystem.ParaView.SaveRate = 1
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
+
+Simulator.SubSystem.Tecplot.FileName     = bump3D-sfdm-solP2P3.plt
+Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.Tecplot.Data.outputVar = Cons
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
+
 
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
 Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 20
