@@ -99,7 +99,8 @@ Simulator.SubSystem.DataProcessing.Radiation.OldAlgorithm = true
 #Simulator.SubSystem.DataProcessing.Radiation.DirName = ./
 Simulator.SubSystem.DataProcessing.Radiation.BinTabName = air-100Bands.dat #air-100Bins.dat
 Simulator.SubSystem.DataProcessing.Radiation.OutTabName = air-100Bands.out #air-100Bins.out
-Simulator.SubSystem.DataProcessing.Radiation.QAlgoName = Atomic
+Simulator.SubSystem.DataProcessing.Radiation.QAlgoName = Atomic  # this fails on MAC OS X (problems with atomics)
+#Simulator.SubSystem.DataProcessing.Radiation.QAlgoName = BigMem # this works on MAC OS X
 
 #Simulator.SubSystem.DataProcessing.Radiation.ConstantP = 1013250 
 Simulator.SubSystem.DataProcessing.Radiation.PID = 11
