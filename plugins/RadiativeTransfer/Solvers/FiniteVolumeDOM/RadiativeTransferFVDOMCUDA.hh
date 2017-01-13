@@ -74,6 +74,18 @@ private: //data
   /// Exponent for the radiation of oppacity table
   Framework::LocalArray<CFreal>::TYPE m_InDir;
   
+  /// qx for each direction
+  Framework::LocalArray<CFreal>::TYPE m_qxDir;
+  
+  /// qz for each direction
+  Framework::LocalArray<CFreal>::TYPE m_qyDir;
+  
+  /// qz for each direction
+  Framework::LocalArray<CFreal>::TYPE m_qzDir;
+  
+  /// divq for each direction
+  Framework::LocalArray<CFreal>::TYPE m_divqDir;
+  
   /// Field source of opacity table for each bin
   Framework::LocalArray<CFreal>::TYPE m_fieldSourceBin;
   

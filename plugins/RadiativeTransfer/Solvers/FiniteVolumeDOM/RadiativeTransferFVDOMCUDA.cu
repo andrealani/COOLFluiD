@@ -383,7 +383,7 @@ __global__ void computeQKernelExponentialBinAtomic(const CFuint bStart,
       atomicAdd(&qz[iCell], m2w);
       atomicAdd(&divq[iCell], inw);
       
-      /*if (iCell==100 && dirID == 0) {
+      /*if (iCell==100 && binID == 0) {
 	printf ("IcWeight    : %6.6f \n", IcWeight);
 	printf ("inDirDotnA  : %6.6f \n",inDirDotnA);
 	printf ("InCell      : %6.6f \n", InCell);
@@ -399,6 +399,115 @@ __global__ void computeQKernelExponentialBinAtomic(const CFuint bStart,
 	printf ("mdirs[d3+1] : %6.6f  \n", mdirs31);
 	printf ("mdirs[d3+2] : %6.6f  \n", mdirs32);
       }*/
+    }
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+__global__ void computeQKernelExponentialBinBigMem(const CFuint bStart,
+						   const CFuint bEnd,
+						   const CFuint dStart,
+						   const CFuint d,
+						   const CFuint nbCells,
+						   const CFuint* cellFaces,
+						   const CFint* faceCell,
+						   const CFuint* nbFacesInCell,
+						   const CFint* isOutward,
+						   const CFint* advanceOrder,
+						   const CFreal weightIn,
+						   const CFreal* volumes,
+						   const CFreal* fieldSource,
+						   const CFreal* fieldAbsor,
+						   const CFreal* mdirs,
+						   const CFreal* dotProdInFace,
+						   CFreal* In,
+						   CFreal* divq,
+						   CFreal* qx, CFreal* qy, CFreal* qz)
+{ 
+  const CFuint nbBins = bEnd - bStart; 
+  
+  // each thread takes care of computing the gradient for one single cell
+  // const CFuint binID = threadIdx.x + blockIdx.x*blockDim.x;
+  const CFuint binID = blockIdx.x;
+  
+  if (binID < nbBins) {
+    RadiativeTransferFVDOM::DeviceFunc fun;
+    const CFuint d3 = d*3;
+    const CFreal mdirs30 = mdirs[d3];
+    const CFreal mdirs31 = mdirs[d3+1];
+    const CFreal mdirs32 = mdirs[d3+2];
+    const CFreal weight = weightIn;
+    const CFuint startCell = (d-dStart)*nbCells;
+    
+    for (CFuint m = 0; m < nbCells; ++m) {
+      CFreal inDirDotnANeg = 0.;
+      CFreal Ic            = 0.;
+      CFreal dirDotnANeg   = 0.;
+      CFreal Lc            = 0.;
+      CFreal halfExp       = 0.;
+      CFreal POP_dirDotNA  = 0.;
+      
+      // allocate the cell entity
+      const CFuint iCell   = abs(advanceOrder[startCell+m]);
+      const CFuint nbFaces = nbFacesInCell[iCell];
+      const CFuint cellIDin = binID*nbCells+iCell; 
+      const CFreal fSource = fieldSource[cellIDin];
+      
+      for (CFuint iFace = 0; iFace < nbFaces; ++iFace) { 
+	const CFuint faceID = cellFaces[iFace*nbCells + iCell];
+	const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
+	const CFreal dirDotNA = dotProdInFace[faceID]*factor;
+	
+	if(dirDotNA < 0.) {
+	  dirDotnANeg += dirDotNA;
+	  const CFint fcellID = faceCell[faceID*2]; 
+	  const CFint neighborCellID = (fcellID == iCell) ? faceCell[faceID*2+1] : fcellID;
+	  const CFreal source = (neighborCellID >=0) ? In[binID*nbCells+neighborCellID] : fSource;
+	  inDirDotnANeg += source*dirDotNA;
+	}
+	else if (dirDotNA > 0.) {
+	  POP_dirDotNA += dirDotNA;    
+	}
+      } 
+      
+      Lc        = volumes[iCell]/(- dirDotnANeg); 
+      halfExp   = exp(-0.5*Lc*fieldAbsor[cellIDin]);
+      const CFreal InCell = (inDirDotnANeg/dirDotnANeg)*halfExp*halfExp + 
+	(1. - halfExp*halfExp)*fSource;
+      Ic = (inDirDotnANeg/dirDotnANeg)*halfExp + (1. - halfExp)*fSource;
+      
+      CFreal inDirDotnA = inDirDotnANeg;
+      inDirDotnA += InCell*POP_dirDotNA;
+      In[cellIDin] = InCell;
+      const CFreal IcWeight = Ic*weight;
+      const CFreal m0w = mdirs30*IcWeight;
+      const CFreal m1w = mdirs31*IcWeight;
+      const CFreal m2w = mdirs32*IcWeight;
+      const CFreal inw = inDirDotnA*weight;    
+      
+      // here no atomics are needed since qi/divq is a (logically) 2D array, with one qi/diq array for each threads
+      qx[cellIDin]    += m0w;
+      qy[cellIDin]    += m1w;
+      qz[cellIDin]    += m2w;
+      divq[cellIDin]  += inw;
+      
+      /*if (iCell==100 && binID == 0) {
+	printf ("IcWeight    : %6.6f \n", IcWeight);
+	printf ("inDirDotnA  : %6.6f \n",inDirDotnA);
+	printf ("InCell      : %6.6f \n", InCell);
+      	printf ("cellIDin    : %d  \n", cellIDin);
+	const CFreal qxIcell = qx[cellIDin];
+	printf ("qx[iCell]   : %6.6f  \n", qxIcell);
+	const CFreal divqIcell = divq[cellIDin];
+	printf ("divq[iCell] : %6.6f  \n", divqIcell);
+	const CFreal In0 = In[cellIDin];
+	printf ("In[iCell]   : %6.6f  \n", In0);
+	printf ("d3          : %d  \n", d3);
+	printf ("mdirs[d3]   : %6.6f  \n", mdirs30);
+	printf ("mdirs[d3+1] : %6.6f  \n", mdirs31);
+	printf ("mdirs[d3+2] : %6.6f  \n", mdirs32);
+	}*/
     }
   }
 }
@@ -1040,6 +1149,10 @@ RadiativeTransferFVDOMCUDA::RadiativeTransferFVDOMCUDA(const std::string& name) 
   m_faceCell(),
   m_nbFacesInCell(),
   m_InDir(),
+  m_qxDir(),
+  m_qyDir(),
+  m_qzDir(),
+  m_divqDir(),
   m_fieldSourceBin(),
   m_fieldAbsorBin(),
   m_fieldAbSrcVBin(),
@@ -1151,6 +1264,20 @@ void RadiativeTransferFVDOMCUDA::setup()
     const CFuint nbCellsBins = nbCells*m_nbBins;
     m_InDir.resize(nbCellsBins);
     
+    if (m_qAlgoName == "BigMem") {
+      m_qxDir.resize(nbCellsBins);
+      m_qyDir.resize(nbCellsBins);
+      m_qzDir.resize(nbCellsBins);
+      m_divqDir.resize(nbCellsBins);
+      for (CFuint i = 0; i < m_InDir.size(); ++i) {
+	m_qxDir[i] = m_qyDir[i] = m_qzDir[i] = m_divqDir[i] = 0.;
+      }
+      m_qxDir.put();
+      m_qyDir.put();
+      m_qzDir.put();
+      m_divqDir.put();
+    }
+    
     if(m_useExponentialMethod){
       m_fieldSourceBin.resize(nbCellsBins); // AL: here should endBin-startBin
       m_fieldAbsorBin.resize(nbCellsBins);  // AL: here should endBin-startBin
@@ -1210,7 +1337,6 @@ void RadiativeTransferFVDOMCUDA::loopOverDirs(const CFuint startBin,
   const CFuint nThreads = CudaEnv::CudaDeviceManager::getInstance().getNThreads();
   
   CudaEnv::CudaTimer& timer = CudaEnv::CudaTimer::getInstance();
-  
   CFreal opacitiesTime = 0.;
   CFreal binLoopTime   = 0.;
   CFreal totalTime     = 0.;
@@ -1227,21 +1353,21 @@ void RadiativeTransferFVDOMCUDA::loopOverDirs(const CFuint startBin,
     m_dotProdInFace.put();
     
     /* for (CFuint ib = bStart; ib < bEnd; ++ib) {
-      const CFuint fieldOffset = ib*nbCells;
-      getFieldOpacitiesKernel<<<blocksPerGrid,nThreads>>>
-	(m_useExponentialMethod, 
-	 m_TID, m_PID, m_nbTemp, m_nbPress, m_nbBins,
-	 ib, nbEqs, nbCells, fieldOffset, 
-	 m_Ttable.ptrDev(), m_Ptable.ptrDev(), 
-	 states.getGlobalArray()->ptrDev(),
-	 volumes.getLocalArray()->ptrDev(),
-	 m_opacities.ptrDev(),
-	 m_radSource.ptrDev(),
-	 m_fieldSourceBin.ptrDev(),
-	 m_fieldAbsorBin.ptrDev(),
-	 m_fieldAbSrcVBin.ptrDev(),
-	 m_fieldAbVBin.ptrDev());
-	 } */  
+       const CFuint fieldOffset = ib*nbCells;
+       getFieldOpacitiesKernel<<<blocksPerGrid,nThreads>>>
+       (m_useExponentialMethod, 
+       m_TID, m_PID, m_nbTemp, m_nbPress, m_nbBins,
+       ib, nbEqs, nbCells, fieldOffset, 
+       m_Ttable.ptrDev(), m_Ptable.ptrDev(), 
+       states.getGlobalArray()->ptrDev(),
+       volumes.getLocalArray()->ptrDev(),
+       m_opacities.ptrDev(),
+       m_radSource.ptrDev(),
+       m_fieldSourceBin.ptrDev(),
+       m_fieldAbsorBin.ptrDev(),
+       m_fieldAbSrcVBin.ptrDev(),
+       m_fieldAbVBin.ptrDev());
+       } */  
     
     // precompute the radiation properties for all cells and all bins
     const CFuint nbLocalBins = bEnd - bStart;
@@ -1249,6 +1375,9 @@ void RadiativeTransferFVDOMCUDA::loopOverDirs(const CFuint startBin,
     const CFuint blocks = 
       CudaEnv::CudaDeviceManager::getInstance().getBlocksPerGrid(nbCells*nbLocalBins);
     const CFuint threads = CudaEnv::CudaDeviceManager::getInstance().getNThreads();
+    
+    CFLog(VERBOSE, "RadiativeTransferFVDOMCUDA::loopOverDirs() => [blocks, thread] = [" 
+	  << blocks << ", " << threads << "]\n");
     
     getFieldOpacitiesBinKernel<<<blocks,threads>>>
       (bStart, bEnd,
@@ -1269,7 +1398,6 @@ void RadiativeTransferFVDOMCUDA::loopOverDirs(const CFuint startBin,
     timer.start();
     
     if (m_useExponentialMethod) {
-      
       // getFieldOpacitiesExpoBinKernel<<<blocks,threads>>>
       // 	(bStart, bEnd,
       // 	 m_TID, m_PID, m_nbTemp, m_nbPress, nbLocalBins,
@@ -1287,6 +1415,8 @@ void RadiativeTransferFVDOMCUDA::loopOverDirs(const CFuint startBin,
       const CFuint nThreadsBin = 
 	std::min((CFuint)CudaEnv::CudaDeviceManager::getInstance().getNThreads(), nbLocalBins);
       
+      CFLog(VERBOSE, "RadiativeTransferFVDOMCUDA::loopOverDirs() => [nThreadsBin, nBlocksBin] = ["              
+	    << nThreadsBin << ", " << nBlocksBin << "]\n");
       
       /* computeQKernelExponentialBin<<<nThreadsBin, nBlocksBin>>> 
 	 (bStart, bEnd, startDir, d, nbEqs, nbCells,
@@ -1310,24 +1440,48 @@ void RadiativeTransferFVDOMCUDA::loopOverDirs(const CFuint startBin,
 	 qy.getLocalArray()->ptrDev(),
 	 qz.getLocalArray()->ptrDev());*/
       
-      computeQKernelExponentialBinAtomic<<<nThreadsBin,nBlocksBin>>> 
-	(bStart, bEnd, startDir, d, nbCells,
-	 cellFaces->getPtr()->ptrDev(),
-	 m_faceCell.ptrDev(),
-	 m_nbFacesInCell.ptrDev(),
-	 isOutward.getLocalArray()->ptrDev(),
-	 m_advanceOrder.ptrDev(),
-	 m_weight[d],
-	 volumes.getLocalArray()->ptrDev(),
-	 m_fieldSourceBin.ptrDev(),
-	 m_fieldAbsorBin.ptrDev(),
-	 m_dirs.ptrDev(),
-	 m_dotProdInFace.ptrDev(),
-	 m_InDir.ptrDev(),
-	 divQ.getLocalArray()->ptrDev(),
-	 qx.getLocalArray()->ptrDev(),
-	 qy.getLocalArray()->ptrDev(),
-	 qz.getLocalArray()->ptrDev());
+      if (m_qAlgoName == "Atomic") { 
+	// Atomic uses less memory and relies on atomics but fails on MAC OS X
+	computeQKernelExponentialBinAtomic<<<nThreadsBin,nBlocksBin>>> 
+	  (bStart, bEnd, startDir, d, nbCells,
+	   cellFaces->getPtr()->ptrDev(),
+	   m_faceCell.ptrDev(),
+	   m_nbFacesInCell.ptrDev(),
+	   isOutward.getLocalArray()->ptrDev(),
+	   m_advanceOrder.ptrDev(),
+	   m_weight[d],
+	   volumes.getLocalArray()->ptrDev(),
+	   m_fieldSourceBin.ptrDev(),
+	   m_fieldAbsorBin.ptrDev(),
+	   m_dirs.ptrDev(),
+	   m_dotProdInFace.ptrDev(),
+	   m_InDir.ptrDev(),
+	   divQ.getLocalArray()->ptrDev(),
+	   qx.getLocalArray()->ptrDev(),
+	   qy.getLocalArray()->ptrDev(),
+	   qz.getLocalArray()->ptrDev());
+      }
+      else if (m_qAlgoName == "BigMem") {
+	// BigMem uses more memory and no atomics but works also on MAC OS X 
+	computeQKernelExponentialBinBigMem<<<nThreadsBin,nBlocksBin>>> 
+	  (bStart, bEnd, startDir, d, nbCells,
+	   cellFaces->getPtr()->ptrDev(),
+	   m_faceCell.ptrDev(),
+	   m_nbFacesInCell.ptrDev(),
+	   isOutward.getLocalArray()->ptrDev(),
+	   m_advanceOrder.ptrDev(),
+	   m_weight[d],
+	   volumes.getLocalArray()->ptrDev(),
+	   m_fieldSourceBin.ptrDev(),
+	   m_fieldAbsorBin.ptrDev(),
+	   m_dirs.ptrDev(),
+	   m_dotProdInFace.ptrDev(),
+	   m_InDir.ptrDev(),
+	   m_divqDir.ptrDev(),
+	   m_qxDir.ptrDev(),
+	   m_qyDir.ptrDev(),
+	   m_qzDir.ptrDev());
+      }
     }
     
     const CFreal binLoopT = timer.elapsed();
@@ -1346,16 +1500,43 @@ void RadiativeTransferFVDOMCUDA::loopOverDirs(const CFuint startBin,
   
   timer.start();
   
-  socket_divq.getDataHandle().getLocalArray()->get();
-  socket_qx.getDataHandle().getLocalArray()->get();
-  socket_qy.getDataHandle().getLocalArray()->get();
-  socket_qz.getDataHandle().getLocalArray()->get();
+  if (m_qAlgoName == "Atomic") {
+    divQ.getLocalArray()->get();
+    qx.getLocalArray()->get();
+    qy.getLocalArray()->get();
+    qz.getLocalArray()->get();
+  }
+  else if (m_qAlgoName == "BigMem") {
+    m_divqDir.get();
+    m_qxDir.get(); 
+    m_qyDir.get();
+    m_qzDir.get();
+    
+    // this is only working on single GPU
+    // neds to be fixed for multi-GPU  
+    const CFuint bStart = 0; 
+    const CFuint bEnd = m_nbBins; 
+    for (CFuint binID = bStart; binID < bEnd; ++binID) {
+      const CFuint startc = binID*nbCells;
+      for (CFuint c = 0; c < nbCells; ++c) {
+	const CFuint startd = startc+c;
+	qx[c]   += m_qxDir[startd];
+	qy[c]   += m_qyDir[startd];
+	qz[c]   += m_qzDir[startd];
+	divQ[c] += m_divqDir[startd];
+      }
+    }
+  }
+  
+  // for (CFuint k = 0; k < socket_divq.getDataHandle().size(); ++k) {
+  //  CFLog(INFO, "divQ/qx/qy/qz = "<<divQ[k]<<"/"<<qx[k]<<"/"<<qy[k]<<"/"<<qz[k]<<"\n"); 
+  // }
   
   CFLog(INFO, "RadiativeTransferFVDOMCUDA::loopOverDirs() data transfer took " << timer.elapsed() << "s \n");
   
   CFLog(VERBOSE, "RadiativeTransferFVDOMCUDA::loopOverDirs() =>END\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
       
 void RadiativeTransferFVDOMCUDA::loopOverBins(const CFuint startBin, 
