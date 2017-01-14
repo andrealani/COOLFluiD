@@ -209,6 +209,8 @@ AeroForcesFVMCC::providesSockets()
 
 void AeroForcesFVMCC::setup()
 {
+  DataProcessingCom::setup();
+  
   if (Common::PE::GetPE().IsParallel()) {
     // there is only one file for the aerodynamic coefficients
     m_nameOutputFileAero = m_nameOutputFileAero + "-P0";
@@ -608,9 +610,10 @@ void AeroForcesFVMCC::computeAero()
 
 void AeroForcesFVMCC::unsetup()
 {
+  DataProcessingCom::unsetup();
   deletePtr(m_avState);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void AeroForcesFVMCC::prepareOutputFileWall()

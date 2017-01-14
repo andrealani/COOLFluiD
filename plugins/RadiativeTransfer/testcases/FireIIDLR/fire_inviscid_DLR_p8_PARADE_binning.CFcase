@@ -99,7 +99,8 @@ Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = \
 	"e_partial_density" "pressure" "temperature" "Mach_number"
 Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.NbElementTypes = 2
 Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = false
-Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.Precision = 1
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.SaveNodalStates = true
 Simulator.SubSystemA.CFmeshFileReader.onlyConversion = true
 
 ################################################################################
@@ -221,8 +222,8 @@ Simulator.SubSystem.DataPostProcessing = DataProcessing~8
 Simulator.SubSystem.DataPostProcessingNames = ProcessingRad@8
 Simulator.SubSystem.ProcessingRad&8.Namespace = Rad&8
 Simulator.SubSystem.ProcessingRad&8.Data.CollaboratorNames = SMRad&8 IteratorRad&8 LSSRad&8
-Simulator.SubSystem.ProcessingRad&8.Comds = RadiativeTransferFVDOM 
-Simulator.SubSystem.ProcessingRad&8.Names = Radiation
+Simulator.SubSystem.ProcessingRad&8.Comds = RadiativeTransferFVDOM RadiativeTransferOutputFVMCC
+Simulator.SubSystem.ProcessingRad&8.Names = Radiation HeatFlux
 Simulator.SubSystem.ProcessingRad&8.Radiation.nDirs = 8
 Simulator.SubSystem.ProcessingRad&8.Radiation.UseExponentialMethod = true
 #Simulator.SubSystem.ProcessingRad&8.Radiation.DirName = ./
@@ -233,7 +234,7 @@ Simulator.SubSystem.ProcessingRad&8.Radiation.PID = 11
 Simulator.SubSystem.ProcessingRad&8.Radiation.TID = 12
 Simulator.SubSystem.ProcessingRad&8.ProcessRate = 1
 #Simulator.SubSystem.ProcessingRad&8.RunAtSetup = true
-Simulator.SubSystem.ProcessingRad&8.Radiation.OldAlgorithm = false #true #false #true
+Simulator.SubSystem.ProcessingRad&8.Radiation.OldAlgorithm = false #true
 
 # here we need to find a way to write expression
 Simulator.SubSystem.ProcessingRad&8.Radiation.NbThreads = 8
@@ -257,13 +258,14 @@ Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.Radiato
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Namespace = RadCoupler
 # the following path needs to be modified by users outside VKI
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.LibraryPath = \
-/software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
+/Users/lani/PARADEv3.2.1/parade-3.2.1
+#/software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
 #	/Users/lani/PARADEv3.2.1/parade-3.2.1
 #       /software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.LocalDirName = ParadeData
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 100
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Tmin = 200
-Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = false #true
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = true #false #true
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.MolecularSpecies = 1 1 1 0 0 1 1 1 0 0 0 
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Binning = true
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbBins = 10
@@ -282,6 +284,13 @@ Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b2.TypeTRS
 
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b3.ApplyTRS   = B_6
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b3.TypeTRS    = Boundary
+
+# radiative heat flux
+Simulator.SubSystem.ProcessingRad&8.HeatFlux.applyTRS = B_3
+Simulator.SubSystem.ProcessingRad&8.HeatFlux.TID = 12
+Simulator.SubSystem.ProcessingRad&8.HeatFlux.OutputFileWall = heatFlux-P&8.plt
+Simulator.SubSystem.ProcessingRad&8.HeatFlux.AppendTime = false
+Simulator.SubSystem.ProcessingRad&8.HeatFlux.AppendIter = true
 
 # fictitious coupling model
 Simulator.SubSystem.RadCoupler.SubSystemStatus = RadCouplerSubSystemStatus

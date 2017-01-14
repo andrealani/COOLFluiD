@@ -207,14 +207,14 @@ void NavierStokesSkinFrictionHeatFluxCC3D<BASE>::updateOutputFileWall()
 	for (CFuint iVar = dim; iVar < this->m_varNames.size(); ++iVar) {
 	  //   fout << "#### variable " << this->m_varNames[iVar] << "\n\n";
 	  const CFuint varID = iVar-dim;
-	  assert(varID <  this->m_valuesMat.nbRows());
+	  cf_assert(varID <  this->m_valuesMat.nbRows());
 	  
 	  for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace) {
 	    fout.setf(ios::scientific,ios::floatfield);
 	    fout.precision(12);
 	    
 	    const CFuint index = this->m_mapTrsFaceToID.find(currTrs->getLocalGeoID(iFace));
-	    assert(index < this->m_valuesMat.nbCols());
+	    cf_assert(index < this->m_valuesMat.nbCols());
 	    
 	    fout << this->m_valuesMat(varID, index);
 	    ((iFace+1)%writeStride == 0) ? fout << "\n" : fout << " ";

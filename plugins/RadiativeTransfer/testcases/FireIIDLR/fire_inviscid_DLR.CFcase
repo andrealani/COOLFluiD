@@ -75,6 +75,7 @@ Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = \
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.NbElementTypes = 2
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = false
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SaveNodalStates = true
 Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1.
 Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
 
@@ -90,8 +91,11 @@ Simulator.SubSystem.CellCenterFVM.ComputeRHS = Null
 # Data Processing
 
 Simulator.SubSystem.DataPostProcessing = DataProcessing
-Simulator.SubSystem.DataProcessing.Comds = RadiativeTransferFVDOM
-Simulator.SubSystem.DataProcessing.Names = Radiation
+Simulator.SubSystem.DataProcessing.ProcessRate = 1
+Simulator.SubSystem.DataProcessing.RunAtSetup = true
+Simulator.SubSystem.DataProcessing.Comds = RadiativeTransferFVDOM RadiativeTransferOutputFVMCC
+Simulator.SubSystem.DataProcessing.Names = Radiation HeatFlux
+
 Simulator.SubSystem.DataProcessing.Radiation.nDirs = 8 #24
 Simulator.SubSystem.DataProcessing.Radiation.UseExponentialMethod = true
 Simulator.SubSystem.DataProcessing.Radiation.LoopOverBins = true #false
@@ -102,7 +106,9 @@ Simulator.SubSystem.DataProcessing.Radiation.OutTabName = air-100Bands.out #air-
 #Simulator.SubSystem.DataProcessing.Radiation.ConstantP = 1013250 
 Simulator.SubSystem.DataProcessing.Radiation.PID = 11
 Simulator.SubSystem.DataProcessing.Radiation.TID = 12
-Simulator.SubSystem.DataProcessing.ProcessRate = 1
-Simulator.SubSystem.DataProcessing.RunAtSetup = true
 
-
+Simulator.SubSystem.DataProcessing.HeatFlux.applyTRS = B_3
+Simulator.SubSystem.DataProcessing.HeatFlux.TID = 12
+Simulator.SubSystem.DataProcessing.HeatFlux.OutputFileWall = heatFlux.plt
+Simulator.SubSystem.DataProcessing.HeatFlux.AppendTime = false
+Simulator.SubSystem.DataProcessing.HeatFlux.AppendIter = true

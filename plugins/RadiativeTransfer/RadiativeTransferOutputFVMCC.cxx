@@ -99,14 +99,15 @@ RadiativeTransferOutputFVMCC::needsSockets()
 
 void RadiativeTransferOutputFVMCC::setup()
 {
+  DataProcessingCom::setup();
+  
   m_faceTrsGeoBuilder.setup();
   
   // suppose that just one space method is available
   SafePtr<SpaceMethod> spaceMethod = getMethodData().getCollaborator<SpaceMethod>();
-  SafePtr<CellCenterFVM> fvmcc = spaceMethod.d_castTo<CellCenterFVM>();
-  cf_assert(fvmcc.isNotNull());
-  
-  m_fvmccData = fvmcc->getData();
+  // SafePtr<CellCenterFVM> fvmcc = spaceMethod.d_castTo<CellCenterFVM>();
+  // cf_assert(fvmcc.isNotNull());
+  // m_fvmccData = fvmcc->getData();
   
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   m_midFaceNode.resize(dim);
@@ -147,6 +148,12 @@ void RadiativeTransferOutputFVMCC::setup()
       
       m_mapTrsFaceToID.sortKeys();
     }
+    
+    DataHandle<CFreal> qradFluxWall = socket_qradFluxWall.getDataHandle();
+    if (qradFluxWall.size() == 0) {
+      qradFluxWall.resize(totalNbFaces);
+    }
+    cf_assert(qradFluxWall.size() == totalNbFaces);
   }
 }
 
@@ -217,22 +224,27 @@ void RadiativeTransferOutputFVMCC::computeWall()
 {
   CFAUTOTRACE;
   
- 
-  const CFuint index = this->m_mapTrsFaceToID.find(this->m_currFace->getID());
+  cf_assert(m_mapTrsFaceToID.size() > 0);
+  const CFuint index = m_mapTrsFaceToID.find(m_currFace->getID());
   DataHandle<RealVector> nstates = socket_nstates.getDataHandle();
   
-  vector<Node*>& faceNodes = *this->m_currFace->getNodes();
+  vector<Node*>& faceNodes = *m_currFace->getNodes();
   const CFuint nbFaceNodes = faceNodes.size();
+  cf_assert(m_TID < nstates[0].size());
+  
+  // average temperature on face
   CFreal temp = 0.;
   for (CFuint iNode = 0; iNode < nbFaceNodes; ++iNode) {
     const CFuint nodeID = faceNodes[iNode]->getLocalID();
+    cf_assert(nodeID < nstates.size());
     temp += nstates[nodeID][m_TID];
   }
   temp /= nbFaceNodes;
   
-  this->updateValuesMat(0, index, temp);
+  updateValuesMat(0, index, temp);
+  cf_assert(index < socket_qradFluxWall.getDataHandle().size());
   const CFreal heatFluxRad = socket_qradFluxWall.getDataHandle()[index];
-  this->updateValuesMat(1, index, -heatFluxRad);
+  updateValuesMat(1, index, -heatFluxRad);
 }
       
 //////////////////////////////////////////////////////////////////////////////
