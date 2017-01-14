@@ -1,5 +1,7 @@
 LIST ( APPEND RadiativeTransfer_files
 RadiativeTransfer.hh
+RadiativeTransferOutputFVMCC.cxx
+RadiativeTransferOutputFVMCC.hh
 RadiationLibrary/RadiationPhysics.hh
 RadiationLibrary/RadiationPhysics.cxx
 RadiationLibrary/RadiationPhysicsHandler.hh

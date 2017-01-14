@@ -1418,8 +1418,8 @@ void ParadeRadiator::computeBinningBanding()
     
     for(CFuint k=1;k<nbBinsre; ++k) {
       for(CFuint j=0;j<nbCells; ++j) {
-	CFLog(VERBOSE,"ParadeLibrary::computeBinningBanding() => m_alpha_bin(" << k << "," << j << ") = " <<  m_alpha_bin[nbBinsre*j+k] <<"\n");
-	CFLog(VERBOSE,"ParadeLibrary::computeBinningBanding() => m_B_bin(" << k << "," << j << ") = " << m_B_bin[nbBinsre*j+k] <<"\n");
+	CFLog(DEBUG_MAX,"ParadeLibrary::computeBinningBanding() => m_alpha_bin(" << k << "," << j << ") = " <<  m_alpha_bin[nbBinsre*j+k] <<"\n");
+	CFLog(DEBUG_MAX,"ParadeLibrary::computeBinningBanding() => m_B_bin(" << k << "," << j << ") = " << m_B_bin[nbBinsre*j+k] <<"\n");
       }
     }
     
@@ -1430,11 +1430,11 @@ void ParadeRadiator::computeBinningBanding()
 	if(m_B_bin[k + nbBinsre*j] != 0.) {
 	  CFreal m_alpha_avbin_a = (m_alpha_bin[k + nbBinsre*j]) / (m_B_bin[k + nbBinsre*j]);
 	  m_alpha_avbin[k + nbBinsre*j] = m_alpha_avbin_a;
-	  CFLog(VERBOSE,"ParadeRadiator::computeBinningBanding()=>alpha_avbin(" << k << "," << j << ") = "<<m_alpha_avbin[k + nbBinsre*j]<<"\n");
+	  CFLog(DEBUG_MAX,"ParadeRadiator::computeBinningBanding()=>alpha_avbin(" << k << "," << j << ") = "<<m_alpha_avbin[k + nbBinsre*j]<<"\n");
 	}
 	else {
 	  alpha_avbin[k + nbBinsre*j] = 0.;
-	  CFLog(VERBOSE,"ParadeRadiator::computeBinningBanding()=>alpha_avbin(" << k << ","<< j << ") = "<<alpha_avbin[k + nbBinsre*j]<<"\n");
+	  CFLog(DEBUG_MAX,"ParadeRadiator::computeBinningBanding()=>alpha_avbin(" << k << ","<< j << ") = "<<alpha_avbin[k + nbBinsre*j]<<"\n");
 	}
       }
     }
@@ -1446,7 +1446,7 @@ void ParadeRadiator::computeBinningBanding()
 	//the index "b" added for banding
 	alpha_avbin[k+b*nbBinsre + m_nbBands*nbBinsre*j] = m_alpha_avbin[k + nbBinsre*j];
 	B_bin[k+b*nbBinsre + m_nbBands*nbBinsre*j] = m_B_bin[k + nbBinsre*j];
-	CFLog(VERBOSE,"alpha (" << b << "," << k << "," << j << ") = " << alpha_avbin[k+b*nbBinsre + m_nbBands*nbBinsre*j] << "\n");
+	CFLog(DEBUG_MAX,"alpha (" << b << "," << k << "," << j << ") = " << alpha_avbin[k+b*nbBinsre + m_nbBands*nbBinsre*j] << "\n");
       }
      }
     }
@@ -1506,11 +1506,11 @@ void ParadeRadiator::computeCellBins(const CFuint i,
       alpha_bincoeff    = abCoef*B_bincoeff;
       emission_bincoeff = emCoef*dWav;
       /*
-	CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_emission_bin(" 
+	CFLog(DEBUG_MAX,"ParadeLibrary::computeproperties () => m_emission_bin(" 
 	<< k << "," << j << ") = " << emission_bin[nbBins*j+k] <<"\n");
-	CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_alpha_bin(" 
+	CFLog(DEBUG_MAX,"ParadeLibrary::computeproperties () => m_alpha_bin(" 
 	<< k << "," << j << ") = " <<  alpha_bin[nbBins*j+k] <<"\n");
-	CFLog(VERBOSE,"ParadeLibrary::computeproperties () => B_bin(" 
+	CFLog(DEBUG_MAX,"ParadeLibrary::computeproperties () => B_bin(" 
 	<< k << "," << j << ") = " << B_binCurr[nbBins*j+k] <<"\n");
       */
     }
@@ -1580,8 +1580,8 @@ void ParadeRadiator::computeAveragedBins(const CFuint nbBinsre,
   
   /*for(CFuint k=1;k<nbBinsre;++k) {
     for(CFuint j=0;j<nbCells;++j) {
-    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => m_alpha_bin(" << k << "," << j << ") = " << m_alpha_bin[nbBinsre*j+k] <<"\n");
-    CFLog(VERBOSE,"ParadeLibrary::computeproperties () => B_binCurr(" << k << "," << j << ") = " << B_binCurr[nbBinsre*j+k] <<"\n");
+    CFLog(DEBUG_MAX,"ParadeLibrary::computeproperties () => m_alpha_bin(" << k << "," << j << ") = " << m_alpha_bin[nbBinsre*j+k] <<"\n");
+    CFLog(DEBUG_MAX,"ParadeLibrary::computeproperties () => B_binCurr(" << k << "," << j << ") = " << B_binCurr[nbBinsre*j+k] <<"\n");
     }
     }*/
   
@@ -1634,7 +1634,7 @@ void ParadeRadiator::computeAveragedBins(const CFuint nbBinsre,
    
     /*for(CFuint j=0;j<totalNbCells;++j) {
 	for(CFuint k=1;k<nbBinsre;++k) {
-	CFLog(VERBOSE,"alpha (" << k << "," << j << ") = " << alpha_avbin[k + nbBinsre*j] << "\n");
+	CFLog(DEBUG_MAX,"alpha (" << k << "," << j << ") = " << alpha_avbin[k + nbBinsre*j] << "\n");
 	}
 	}*/
     ofstream fout1("alpha.txt");
