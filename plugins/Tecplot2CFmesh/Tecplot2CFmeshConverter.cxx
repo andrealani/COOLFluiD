@@ -271,7 +271,7 @@ void Tecplot2CFmeshConverter::readZone(ifstream& fin,
   if (line.find("DT=") == string::npos) {
     fin.seekg(startData);
   }
-  
+
   m_dimension = max(m_dimension, getDim(cellType));
   const CFuint nbNodesInCell = getNbNodesInCell(cellType); 
     
@@ -279,9 +279,17 @@ void Tecplot2CFmeshConverter::readZone(ifstream& fin,
 	<< ", cellType = " << cellType << ", nbNodesInCell = " << nbNodesInCell << "\n");
   
   const CFuint nbVarsToStore = (skipSolution()) ? m_dimension : (m_dimension + m_readVars.size());
+  
+  CFLog(VERBOSE, "Vars to read = ");
+  for (CFuint v = 0; v < m_readVars.size(); ++v) {
+    CFLog(VERBOSE, "(" << v << ")" << m_readVars[v] <<  " ");
+  }
+  CFLog(VERBOSE, "\n");
+  
   ElementTypeTecplot* elements = new ElementTypeTecplot(nbElems, nbNodesInCell, nbNodes, nbVarsToStore);
   
-  CFLog(VERBOSE, "nbVarsToStore = " << nbVarsToStore << "\n");	  
+  CFLog(VERBOSE, "m_dimension = " << m_dimension << ", m_readVars.size() = " 
+	<< m_readVars.size() << ", nbVarsToStore = " << nbVarsToStore << "\n");	  
   
   // mesh/solution variables
   const CFuint nbVars = vars.size(); 
@@ -946,7 +954,8 @@ void Tecplot2CFmeshConverter::writeDiscontinuousStates(ofstream& fout)
 
 CFuint Tecplot2CFmeshConverter::getNbNodesInCell(const std::string& etype) const
 {
-  if (etype == "LINESEG" || etype == "FELineseg" || etype == "FELINESEG") {
+  if (etype == "LINESEG" || etype == "FELineseg" || 
+      etype == "FELineSeg" || etype == "FELINESEG") {
     return 2;
   }
   else if (etype == "TRIANGLE" || etype == "FETriangle" || etype == "FETRIANGLE" ) {

@@ -67,7 +67,7 @@ public:
   CFuint& operator()(CFuint iElem , CFuint iNode) 
   {
     const CFuint idx = iElem*m_nbNodesPerElem + iNode;
-    assert(idx < m_cellNode.size()); 
+    cf_assert(idx < m_cellNode.size()); 
     return m_cellNode[idx];
   }
   
@@ -77,7 +77,7 @@ public:
   CFuint operator()(CFuint iElem , CFuint iNode) const
   {
     const CFuint idx = iElem*m_nbNodesPerElem + iNode;
-    assert(idx < m_cellNode.size());  
+    cf_assert(idx < m_cellNode.size());  
     return m_cellNode[idx];
   }
   
@@ -87,7 +87,7 @@ public:
   void setBkpElementNode(CFuint iElem , CFuint iNode, CFuint nodeID)
   {
     const CFuint idx = iElem*m_nbNodesPerElem + iNode;
-    assert(idx < m_cellNode.size());  
+    cf_assert(idx < m_cellNode.size());  
     m_cellNodeBkp[idx] = nodeID;
   }
   
@@ -97,7 +97,7 @@ public:
   CFuint getBkpElementNode(CFuint iElem , CFuint iNode) const
   {
     const CFuint idx = iElem*m_nbNodesPerElem + iNode;
-    assert(idx < m_cellNode.size());  
+    cf_assert(idx < m_cellNode.size());  
     return m_cellNodeBkp[idx];
   }
   
@@ -107,7 +107,7 @@ public:
   void setVar(CFuint iNode, CFuint iVar, CFreal value) 
   {
     const CFuint idx = iNode*m_nbVars+iVar;
-    assert(idx < m_variables.size());  
+    cf_assert(idx < m_variables.size());  
     m_variables[idx] = value;
   }
    
@@ -117,7 +117,7 @@ public:
   CFreal getVar(CFuint iNode, CFuint iVar) const
   {
     const CFuint idx = iNode*m_nbVars+iVar;
-    assert(idx < m_variables.size());
+    cf_assert(idx < m_variables.size());
     return m_variables[idx];
   } 
   
@@ -127,7 +127,7 @@ public:
   CFreal* getNodalVarPtr(CFuint iNode)
   {
     const CFuint idx = iNode*m_nbVars;
-    assert(idx < m_variables.size());
+    cf_assert(idx < m_variables.size());
     return &m_variables[idx];
   } 
   
@@ -137,7 +137,7 @@ public:
   void setNodeDim(CFuint iNode, NodeDim& nodeDim)
   {
     const CFuint idx = iNode*m_nbVars;
-    assert(idx < m_variables.size());
+    cf_assert(idx < m_variables.size());
     nodeDim.reset(&m_variables[idx]);
   }
   
@@ -146,7 +146,7 @@ public:
    */
   void setNeighborID(CFuint iElem, CFint neighborID)
   {
-    assert(neighborID >= 0);
+    cf_assert(neighborID >= 0);
     m_neighbor[iElem] = neighborID;
   } 
   
