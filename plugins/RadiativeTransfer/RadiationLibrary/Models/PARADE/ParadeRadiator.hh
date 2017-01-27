@@ -2,6 +2,7 @@
 #define COOLFluiD_RadiativeTransfer_ParadeRadiator_hh
 
 //////////////////////////////////////////////////////////////////////////////
+
 #include "RadiativeTransfer/RadiationLibrary/Radiator.hh"
 #include "MathTools/RealMatrix.hh"
 #include "MathTools/RealVector.hh"
@@ -12,6 +13,7 @@
 #include "Common/StringOps.hh"
 #include "Framework/PhysicalChemicalLibrary.hh"
 #include "Common/CFMap.hh"
+
 ///////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -35,6 +37,31 @@ namespace COOLFluiD {
  */
 class ParadeRadiator : public Radiator {
 public:
+
+  /// Nested class providing some functions that can be called by both CPU and GPU
+  class DeviceFunc {
+  public:
+    /// Default constructor
+    HOST_DEVICE DeviceFunc() {}
+    
+    /// Destructor
+    HOST_DEVICE ~DeviceFunc() {} 
+    
+    /// Compute all binned data corresponding to the given cell
+    /// The template parameter prevents from having linking errors
+    template <DeviceType DT>
+    HOST_DEVICE void computeCellBins(const CFuint nbPoints,
+				     const CFuint i, 
+				     const CFuint j, 
+				     const CFuint nbBinsre, 
+				     const CFuint testID,
+				     const CFreal dWavIn,
+				     const CFreal* vctBins,  
+				     const CFreal* data,
+				     CFreal* alpha_bin,
+				     CFreal* emission_bin,
+				     CFreal* B_binCurr);
+  };
   
   /**
    * Defines the Config Option's of this class
@@ -52,7 +79,7 @@ public:
   /**
    * Default destructor
    */
-  ~ParadeRadiator();
+  virtual ~ParadeRadiator();
   
   /**
    * Configures this configurable object.
@@ -62,14 +89,14 @@ public:
   /**
    * Setups the data of the library
    */
-  void setup();
+  virtual void setup();
   
   /**
    * Unsetups the data of the library
    */
-  void unsetup();
+  virtual void unsetup();
   
-  void setupSpectra(CFreal wavMin, CFreal wavMax);
+  virtual void setupSpectra(CFreal wavMin, CFreal wavMax);
   
   CFreal getEmission(CFreal lambda, RealVector &s_o);
   
@@ -85,12 +112,12 @@ public:
   
   void getSpectralIdxs(CFreal lambda, CFuint& idx1, CFuint& idx2);
   
-private:
+protected:
   
-  void setLibrarySequentially();
+  virtual void setLibrarySequentially();
   
   /// update the range of wavelengths to use
-  void updateWavRange(CFreal wavMin, CFreal wavMax);
+  virtual void updateWavRange(CFreal wavMin, CFreal wavMax);
   
   /// write the data (grid, temperatue, densities) corresponding to the local mesh
   void writeLocalData();
@@ -132,35 +159,25 @@ private:
   bool fullGridInProcess() const {return (m_namespace != "Default");}
   
   /// apply the binning method to reduce the spectral data
-  void computeBinning();
+  virtual void computeBinning();
   
   /// apply the banding method to reduce the spectral data
-  void computeBanding();
+  virtual void computeBanding();
     
   /// apply the binning/banding method to reduce the spectral data
-  void computeBinningBanding();
-
+  virtual void computeBinningBanding();
+  
   /// compute recv counts and dispacements for parallel communication
   void computeRecvCountsDispls(const CFuint totalNbCells, const CFuint sizeCoeff, 
 			       CFuint& minSizeToSend, CFuint& maxSizeToSend,
 			       std::vector<int>& recvCounts, std::vector<int>& displs);
   
-  /// compute all binned data corresponding to the given cell
-  void computeCellBins(const CFuint i, 
-		       const CFuint j,
-		       const CFuint nbBinsre, 
-		       const CFuint testID,
-		       const RealVector& vctBins, 
-		       std::vector<CFreal>& alpha_bin,
-		       std::vector<CFreal>& emission_bin,
-		       CFreal *const B_binCurr);
-  
   /// compute the averaged bins/bands
-  void computeAveragedBins(const CFuint nbBinsre, 
-			   const CFuint testID,
-			   const RealVector& vctBins);
+  virtual void computeAveragedBins(const CFuint nbBinsre, 
+				   const CFuint testID,
+				   Framework::LocalArray<CFreal>::TYPE& vctBins);
   
-private: 
+protected: 
   
   /// Rank in the corresponding MPI group (namespace)
   CFuint m_rank;
@@ -211,16 +228,16 @@ private:
   /// wavelength       = m_radCoeff(local state ID, spectral point idx*3)
   /// emission coeff   = m_radCoeff(local state ID, spectral point idx*3+1)
   /// absorption coeff = m_radCoeff(local state ID, spectral point idx*3+2)
-  RealMatrix m_data;
+  Framework::LocalArray<CFreal>::TYPE m_data;
   
   /// vector storing the averaged absorption coefficient for each wavelength
   std::vector<CFreal> m_alphaav;
   
   /// vectors storing the matrix with the data for each bin and each cell, for the absorption, emission and source terms
-  std::vector<CFreal> m_alpha_bin;
-  std::vector<CFreal> m_emission_bin;
-  std::vector<CFreal> m_B_bin;
-
+  Framework::LocalArray<CFreal>::TYPE m_alpha_bin;
+  Framework::LocalArray<CFreal>::TYPE m_emission_bin;
+  Framework::LocalArray<CFreal>::TYPE m_B_bin;
+  
   /// vector storing the averaged absorption coefficients data
   std::vector<CFreal> m_alpha_avbin;
   
@@ -290,7 +307,51 @@ private:
 }; // end of class ParadeRadiator
 
 //////////////////////////////////////////////////////////////////////////////
+
+template <DeviceType DT>
+void ParadeRadiator::DeviceFunc::computeCellBins(const CFuint nbPoints,
+						 const CFuint i, 
+						 const CFuint j, 
+						 const CFuint nbBinsre, 
+						 const CFuint testID,
+						 const CFreal dWavIn,
+						 const CFreal* vctBins,  
+						 const CFreal* data,
+						 CFreal* alpha_bin,
+						 CFreal* emission_bin,
+						 CFreal* B_binCurr)
+{
+  const CFuint nbCols = nbPoints*3;
+  const CFreal test   = data[j*nbCols + i*3+testID];
+  const CFreal emCoef = data[j*nbCols + i*3+1];
+  const CFreal abCoef = data[j*nbCols + i*3+2];
+  const CFreal Bs = emCoef/abCoef;
+  const CFuint idx0 = nbBinsre*j;
+  alpha_bin[idx0]    = 0.;
+  emission_bin[idx0] = 0.;
+  B_binCurr[idx0]    = 0.;
+  
+  for(CFuint k=1;k<nbBinsre;++k) {
+    CFreal alpha_bincoeff = 0.;
+    CFreal emission_bincoeff = 0.;
+    CFreal B_bincoeff = 0.;
     
+    if((test>=vctBins[k-1]) && (test<vctBins[k])) {
+      const CFreal dWav = dWavIn*1e-10;
+      B_bincoeff        = Bs*dWav;
+      alpha_bincoeff    = abCoef*B_bincoeff;
+      emission_bincoeff = emCoef*dWav;
+    }
+    
+    const CFuint idx = k + idx0;
+    alpha_bin[idx]    += alpha_bincoeff;
+    emission_bin[idx] += emission_bincoeff;
+    B_binCurr[idx]    += B_bincoeff;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
   } // namespace RadiativeTransfer
 
 } // namespace COOLFluiD

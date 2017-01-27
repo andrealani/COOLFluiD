@@ -51,7 +51,10 @@ ENDIF()
 IF (CF_HAVE_CUDA)
   LIST ( APPEND RadiativeTransfer_includedirs ${MPI_INCLUDE_DIR} ${CUDA_INCLUDE_DIR} )
   LIST ( APPEND RadiativeTransfer_libs ${CUDA_LIBRARIES} )
+  LIST ( APPEND RadiativeTransferCUDA_cflibs FiniteVolume RadiativeTransfer )
   LIST ( APPEND RadiativeTransfer_files
+    RadiationLibrary/Models/PARADE/ParadeRadiatorCUDA.cu
+    RadiationLibrary/Models/PARADE/ParadeRadiatorCUDA.hh
     Solvers/FiniteVolumeDOM/RadiativeTransferFVDOMCUDA.cu
     Solvers/FiniteVolumeDOM/RadiativeTransferFVDOMCUDA.hh
     )
