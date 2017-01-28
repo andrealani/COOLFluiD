@@ -24,7 +24,8 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider<BCPeriodic, CellCenterFVMData, FiniteVolumeModule> BCPeriodicFVMCCProvider("BCPeriodicFVMCC");
+MethodCommandProvider<BCPeriodic, CellCenterFVMData, FiniteVolumeModule> 
+BCPeriodicFVMCCProvider("BCPeriodicFVMCC");
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -35,6 +36,7 @@ void BCPeriodic::defineConfigOptions(Config::OptionList& options)
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
 
 BCPeriodic::BCPeriodic(const std::string& name):
   FVMCC_BC(name),

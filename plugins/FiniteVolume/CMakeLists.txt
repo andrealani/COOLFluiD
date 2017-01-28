@@ -200,6 +200,8 @@ LeastSquareP1PolyRec2DBcFix.hh
 LeastSquareP1PolyRec2DBcFix.cxx
 #LeastSquareP1PolyRec2DLin.cxx
 #LeastSquareP1PolyRec2DLin.hh
+LeastSquareP1PolyRec2DPeriodic.cxx
+LeastSquareP1PolyRec2DPeriodic.hh
 LeastSquareP1PolyRec2DTurb.cxx
 LeastSquareP1PolyRec2DTurb.hh
 LeastSquareP1PolyRec3D.cxx
