@@ -3,10 +3,10 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "CellCenterFVMData.hh"
+#include "FiniteVolume/CellCenterFVMData.hh"
 #include "Framework/DataSocketSink.hh"
-#include "ComputeDiffusiveFlux.hh"
-#include "FVMCC_PolyRec.hh"
+#include "FiniteVolume/ComputeDiffusiveFlux.hh"
+#include "FiniteVolume/FVMCC_PolyRec.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -18,7 +18,7 @@ namespace COOLFluiD {
 
     namespace FiniteVolume {
       class FVMCC_BC;
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -69,12 +69,7 @@ public:
    */
   virtual void execute();
 
-  /**
-   * Set the list of boundary conditions
-   */
-  virtual void setBCList
-  (const std::vector<Common::SelfRegistPtr<CellCenterFVMCom> >& bcList);
-
+ 
   /**
    * Returns the DataSocket's that this command needs as sinks
    * @return a vector of SafePtr with the DataSockets
@@ -333,9 +328,6 @@ protected:
   
   /// flags for telling to compute the source term jacobian 
   std::vector<bool> _sourceJacobOnCell;
-  
-  ///The command to use for computing the boundary conditions.
-  Common::CFMap<CFuint, FVMCC_BC*> _bcMap;
   
   /// storage for temporary extrapolated solution
   /// in the quadrature points

@@ -356,6 +356,7 @@ void FVMCC_ComputeRHSMHD<BASE>::initializeComputationRHS()
     // this could be set during set up with no guarantee that it will be effective:
     // a MethodStrategy could set it to a different value afterwards, before entering here
     geoData.allCells = this->getMethodData().getBuildAllCells();
+    SafePtr<CFMap<CFuint, FVMCC_BC*> > bcMap = this->getMethodData().getMapBC();
     
     for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
       SafePtr<TopologicalRegionSet> currTrs = trs[iTRS];
@@ -366,7 +367,7 @@ void FVMCC_ComputeRHSMHD<BASE>::initializeComputationRHS()
       // be processed (their fluxes could give NaN)
       if (currTrs->getName() != "PartitionFaces" && currTrs->getName() != "InnerCells") {
 	if (currTrs->hasTag("writable")) {
-	  this->_currBC = this->_bcMap.find(iTRS);
+	  this->_currBC = bcMap->find(iTRS);
 	  
 	  // set the flag telling if the ghost states have to be placed on the face itself
 	  this->_currBC->setPutGhostsOnFace();

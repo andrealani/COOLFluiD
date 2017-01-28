@@ -12,7 +12,8 @@ namespace COOLFluiD {
   namespace Numerics {
 
     namespace FiniteVolume {
-
+      class BCPeriodic;
+      
 //////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -71,11 +72,20 @@ protected:
   
 protected:
   
+  /// map faces to corresponding TRS and index inside that TRS
+  Common::SafePtr<Framework::MapGeoToTrsAndIdx> m_mapGeoToTrs;
+  
   /// array of flags indicating the periodic faces
   std::vector<bool> m_isPeriodicFace;
   
-  /// names of the TRSs that are associated to periodic BCs
-  std::vector<std::string> m_periodicTRS;
+  /// array to store pointers to gradients for cells attached to periodic faces
+  std::vector<CFreal*> m_periodicGradients;
+  
+  /// map TRS name to the corresponding BC command
+  std::map<Framework::TopologicalRegionSet*, BCPeriodic*> m_mapTrs2BC;
+  
+  /// names of all the periodic BC commands
+  std::vector<std::string> m_periodicBCNames;
   
 }; // end of class LeastSquareP1PolyRec2DPeriodic
 

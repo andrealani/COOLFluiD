@@ -46,6 +46,11 @@ public: // functions
    * in this command before processing phase
    */
   virtual void setup();
+
+  /**
+   * Transfer the gradients data
+   */
+  virtual void transferGradientsData() {}
   
 };
       

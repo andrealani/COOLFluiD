@@ -39,6 +39,7 @@ namespace COOLFluiD {
       
       class ComputeDiffusiveFlux;
       class DerivativeComputer;
+      class FVMCC_BC;
       
 //////////////////////////////////////////////////////////////////////////////
 
@@ -467,6 +468,17 @@ public:
     return &_volumeIntegrator;
   }
   
+  /**
+   * Set the list of boundary conditions
+   */
+  void setBCList(const std::vector<Common::SelfRegistPtr<Framework::MethodCommand<CellCenterFVMData> > >& bcList);
+  
+  /**
+   * Get the BC map, associating the TRS index with the corresponding BC command
+   * @pre this cannot be inlined for compilation reasons: FVMCC_BC needs to be forward declared
+   */
+  Common::SafePtr<Common::CFMap<CFuint, FVMCC_BC*> > getMapBC();
+  
 private:
   
   /**
@@ -594,7 +606,10 @@ private:
 
   /// current face
   Framework::GeometricEntity* _currFace;
-    
+  
+  ///The command to use for computing the boundary conditions.
+  Common::CFMap<CFuint, FVMCC_BC*> _bcMap;
+  
   /// adimensional normal
   RealVector _unitNormal;
   

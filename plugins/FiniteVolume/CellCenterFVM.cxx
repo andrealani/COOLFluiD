@@ -1,8 +1,9 @@
-#include "CellCenterFVM.hh"
-#include "FVMCC_ComputeRHS.hh"
 #include "Environment/ObjectProvider.hh"
+
+#include "FiniteVolume/CellCenterFVM.hh"
 #include "FiniteVolume/FiniteVolume.hh"
 #include "FiniteVolume/DerivativeComputer.hh"
+#include "FiniteVolume/ComputeDiffusiveFlux.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -477,6 +478,9 @@ void CellCenterFVM::setMethodImpl()
   // needed by the BC commands to create the nodal normals
   // in Method::setupCommandsAndStrategies()
   
+  // store the mapping index TRS -> bc commands into the data
+  _data->setBCList(_bcs);
+  
   for(CFuint i=0; i < _setups.size();i++){
     cf_assert(_setups[i].isNotNull());
     CFLog(VERBOSE, "CellCenterFVM::setMethodImpl() => start setting up " << _setups[i]->getName() << " \n");
@@ -487,18 +491,6 @@ void CellCenterFVM::setMethodImpl()
   CFLog(VERBOSE, "CellCenterFVM::setMethodImpl() => before setupCommandsAndStrategies()\n");
   setupCommandsAndStrategies();
   CFLog(VERBOSE, "CellCenterFVM::setMethodImpl() => after setupCommandsAndStrategies()\n");
-  
-  // dynamic_cast to FVM_ComputeRHS command to be able to set the
-  FVMCC_ComputeRHS *const compRHS = dynamic_cast<FVMCC_ComputeRHS*>
-    (_computeSpaceRHS.getPtr());
-  
-  if (compRHS != CFNULL) {
-    // add the bc commands in the computeResidual
-    compRHS->setBCList(_bcs);
-  }
-  else {
-    CFLog(VERBOSE, "CellCenterFVM::setMethodImpl() => failed cast to \"FVMCC_ComputeRHS*\"\n");
-  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

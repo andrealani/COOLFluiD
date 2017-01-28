@@ -37,9 +37,15 @@ void BCPeriodic::defineConfigOptions(Config::OptionList& options)
 
 //////////////////////////////////////////////////////////////////////////////
 
-
 BCPeriodic::BCPeriodic(const std::string& name):
   FVMCC_BC(name),
+  socket_uX("uX", false),
+  socket_uY("uY", false),
+  socket_uZ("uZ", false), 
+  socket_limiter("limiter"),
+  _uxExists(false),
+  _uyExists(false),
+  _uzExists(false),
   _faceBuilder(),
   _translationVector(),
   _localConnectivityMap()
@@ -68,8 +74,16 @@ void BCPeriodic::setup()
   /* Setup parent class */
   FVMCC_BC::setup();
   
+  const string namespaceName = MeshDataStack::getActive()->getPrimaryNamespace();
+  const string uxName = namespaceName + "_uX";
+  _uxExists = MeshDataStack::getActive()->getDataStorage()->checkData(uxName);
+  const string uyName = namespaceName + "_uY";
+  _uyExists = MeshDataStack::getActive()->getDataStorage()->checkData(uyName);
+  const string uzName = namespaceName + "_uZ";
+  _uzExists = MeshDataStack::getActive()->getDataStorage()->checkData(uzName);
+  
   /* Check if translation vector has right dimension */
-  CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
   cf_assert(_translationVector.size()==dim);
   
   /* Convert std::vector<CFreal> to RealVector version */
@@ -307,17 +321,27 @@ void BCPeriodic::setupMPI()
     }
   }
   _LastDisplacement = _recvdispls[_nbProcesses-1] + _recvcounts[_nbProcesses-1];
-  _recvbuf.resize(_LastDisplacement);
-  for(CFuint i=0; i<_LastDisplacement; i++){
-    _recvbuf[i] = 0.0;
-  }
+  
+  _recvbuf.resize(_LastDisplacement, 0.);
   _sendbuf.reserve(_nbTrsFaces*_nE*_nbProcesses);
   
+  _recvbufLimiter.resize(_LastDisplacement, 0.);
+  _sendbufLimiter.reserve(_nbTrsFaces*_nE*_nbProcesses);
+  
+  // allocate data for the transfer of cell-based gradients
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  _recvbufGrad.resize(dim);
+  for (CFuint i = 0; i < dim; ++i) {
+    _recvbufGrad[i].resize(_LastDisplacement, 0.);
+  }
+  _sendbufGrad.resize(dim);
+  for (CFuint i = 0; i < dim; ++i) {
+    _sendbufGrad[i].reserve(_nbTrsFaces*_nE*_nbProcesses);
+  }
 }
 
 
 //////////////////////////////////////////////////////////////////////////////
-
 
 void BCPeriodic::preProcess()
 {
@@ -417,6 +441,134 @@ void BCPeriodic::setGhostState(GeometricEntity *const face)
   CFLog(DEBUG_MIN, "BCPeriodic::setGhostState() => end\n");
 }
       
+//////////////////////////////////////////////////////////////////////////////
+
+void BCPeriodic::transferGradientsData()
+{
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  if (_uxExists) {transferArray(socket_uX.getDataHandle(), _sendbufGrad[XX], _recvbufGrad[XX]);} 
+  if (_uyExists && dim >= DIM_2D) {transferArray(socket_uY.getDataHandle(), _sendbufGrad[YY], _recvbufGrad[YY]);}
+  if (_uzExists && dim == DIM_3D) {transferArray(socket_uZ.getDataHandle(), _sendbufGrad[ZZ], _recvbufGrad[ZZ]);} 
+  
+  DataHandle<CFreal> limiter = socket_limiter.getDataHandle();
+  if (limiter.size() > 0) {transferArray(limiter, _sendbufLimiter, _recvbufLimiter);}
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+void BCPeriodic::transferArray(const DataHandle<CFreal>& gradients, 
+			       vector<CFreal>& sendbuf, 
+			       vector<CFreal>& recvbuf)
+{
+  if (_nbProcesses > 1) {
+    sendbuf.clear();
+    
+    FaceTrsGeoBuilder::GeoData& faceData = _faceBuilder.getDataGE();
+    faceData.isBFace = true;
+    
+    std::vector<CFreal> boundaryState;
+    if (_nbTrsFaces > 0) {
+      boundaryState.reserve(_nbTrsFaces*_nE); 
+    }
+    
+    // Loop for every face
+    for(CFuint iFace=0; iFace<_nbTrsFaces; iFace++) {
+      faceData.idx = iFace;
+      GeometricEntity *const face = _faceBuilder.buildGE();
+      const CFuint stateID = face->getState(0)->getLocalID();
+      const CFuint start = stateID*_nE;
+      for(CFuint e=0; e<_nE; e++){
+        boundaryState.push_back( gradients[start+e]);
+      }
+      
+      _faceBuilder.releaseGE();
+    }
+    
+    const CFuint nbTrsNE = _nbTrsFaces*_nE;
+    for(CFuint iP=0; iP<_nbProcesses; iP++){
+      for(CFuint i=0; i< nbTrsNE; i++){
+        sendbuf.push_back(boundaryState[i]);
+      }
+    }
+
+    MPI_Barrier(_comm);    
+    
+    MPI_Datatype MPI_CFREAL = Common::MPIStructDef::getMPIType(&sendbuf[0]);
+    
+    MPI_Alltoallv(&sendbuf[0], &_sendcounts[0], &_senddispls[0], MPI_CFREAL,
+		  &recvbuf[0], &_recvcounts[0], &_recvdispls[0], MPI_CFREAL, _comm);
+    MPI_Barrier(_comm);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCPeriodic::computePeriodicGradient(GeometricEntity *const face, 
+					 vector<CFreal*>& cellGradient,
+					 CFreal*& cellLimiter)
+{
+  CFLog(DEBUG_MIN, "BCPeriodic::computePeriodicGradient() => start\n");
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  CFreal* uX = (_uxExists) ?                  &socket_uX.getDataHandle()[0] : CFNULL;
+  CFreal* uY = (_uyExists && dim >= DIM_2D) ? &socket_uY.getDataHandle()[0] : CFNULL;
+  CFreal* uZ = (_uzExists && dim == DIM_3D) ? &socket_uZ.getDataHandle()[0] : CFNULL;
+  DataHandle<CFreal> limiter = socket_limiter.getDataHandle();
+  CFreal* lim = (limiter.size() > 0.) ? &limiter[0] : CFNULL;
+  
+  const CFuint faceGlobalID = face->getID();
+  const CFuint faceLocalID = _globalToLocalTRSFaceID.find(faceGlobalID);
+  const CFuint j = _localConnectivityMap[faceLocalID].size() - 1;
+  const CFuint periodicFaceID = _localConnectivityMap[faceLocalID][j].getFaceID();
+  
+  if (_nbProcesses == 1) {
+    FaceTrsGeoBuilder::GeoData& faceData = _faceBuilder.getDataGE();
+    faceData.isBFace = true;
+    faceData.idx = periodicFaceID;
+    GeometricEntity *const periodicFace = _faceBuilder.buildGE();
+    const CFuint stateID = periodicFace->getState(0)->getLocalID();
+    const CFuint start = stateID*_nE;
+    if (uX != CFNULL) {cellGradient[XX] = &uX[start];}
+    if (uY != CFNULL) {cellGradient[YY] = &uY[start];}
+    if (uZ != CFNULL) {cellGradient[ZZ] = &uZ[start];}
+    if (limiter.size() > 0.) {cellLimiter = &lim[start];}
+    _faceBuilder.releaseGE();
+  }
+  else {
+    cf_assert(faceLocalID < _localConnectivityMap.size());
+    cf_assert(j < _localConnectivityMap[faceLocalID].size()); 
+    CFLog(DEBUG_MIN, "BCPeriodic::computePeriodicState() => 1 end\n");
+    const CFuint periodicProcess = _localConnectivityMap[faceLocalID][j].getProcess();
+    cf_assert(periodicProcess < _recvdispls.size());
+    const CFuint idx = _recvdispls[periodicProcess] + _nE*periodicFaceID;
+    cf_assert(idx < _recvbufGrad[XX].size());
+    cf_assert(idx < _recvbufGrad[YY].size());
+    cf_assert(idx < _recvbufGrad[ZZ].size());
+    if (uX != CFNULL) {cellGradient[XX] = &_recvbufGrad[XX][idx];}
+    if (uY != CFNULL) {cellGradient[YY] = &_recvbufGrad[YY][idx];}
+    if (uZ != CFNULL) {cellGradient[ZZ] = &_recvbufGrad[ZZ][idx];}
+    if (limiter.size() > 0.) {cellLimiter = &_recvbufLimiter[idx];}
+  }
+  
+  CFLog(DEBUG_MIN, "BCPeriodic::computePeriodicState() => end\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+std::vector<Common::SafePtr<BaseDataSocketSink> > BCPeriodic::needsSockets()
+{
+  std::vector<Common::SafePtr<BaseDataSocketSink> > result =
+    FVMCC_BC::needsSockets();
+  
+  // Add the needed DataSocketSinks
+  result.push_back(&socket_uX);
+  result.push_back(&socket_uY);
+  result.push_back(&socket_uZ);
+  result.push_back(&socket_limiter);
+  
+  return result;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace FiniteVolume

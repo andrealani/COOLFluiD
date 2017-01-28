@@ -71,7 +71,6 @@ FVMCC_ComputeRHS::FVMCC_ComputeRHS(const std::string& name) :
   _stNumJacobIDs(),
   _stAnJacobIDs(),
   _sourceJacobOnCell(2),
-  _bcMap(),
   _fluxData(CFNULL),
   _tempUnitNormal(),
   _rExtraVars(),
@@ -166,7 +165,8 @@ void FVMCC_ComputeRHS::execute()
   geoData.allCells = getMethodData().getBuildAllCells();
   
   const vector<string>& noBCTRS = getMethodData().getTRSsWithNoBC();
-    
+  SafePtr<CFMap<CFuint, FVMCC_BC*> > bcMap = getMethodData().getMapBC();
+  
   for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
     SafePtr<TopologicalRegionSet> currTrs = trs[iTRS];
     
@@ -177,7 +177,7 @@ void FVMCC_ComputeRHS::execute()
 	!binary_search(noBCTRS.begin(), noBCTRS.end(), currTrs->getName())) {
       
       if (currTrs->hasTag("writable")) {
-	_currBC = _bcMap.find(iTRS);
+	_currBC = bcMap->find(iTRS);
 	
 	// set the flag telling if the ghost states have to be placed on the face itself
 	_currBC->setPutGhostsOnFace();
@@ -655,60 +655,6 @@ RealMatrix& FVMCC_ComputeRHS::computeNumericalTransMatrix(State& state)
   return _invJacobDummy;
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-void FVMCC_ComputeRHS::setBCList
-(const vector<SelfRegistPtr<CellCenterFVMCom> >& bcList)
-{
-  const CFuint nbBCs = bcList.size();
-  _bcMap.reserve(nbBCs);
-  
-  vector<FVMCC_BC*> tempBC(nbBCs);
-  for (CFuint iBC = 0; iBC < nbBCs; ++iBC) {
-    tempBC[iBC] = dynamic_cast<FVMCC_BC*>(bcList[iBC].getPtr());
-    if(tempBC[iBC] == CFNULL){
-      std::string msg = std::string("The boundary condition with the name: ") +
-        bcList[iBC]->getName() +
-        std::string(" is not a FVMCC boundary condition");
-      throw NoSuchValueException (FromHere(),msg);
-    }
-  }
-
-  // build a mapping iTRS -> appropriate BC
-  vector<Common::SafePtr<TopologicalRegionSet> > trs =
-    MeshDataStack::getActive()->getTrsList();
-
-  const CFuint nbTRSs = trs.size();
-  CFLog(VERBOSE, "FVMCC_ComputeRHS::setBCList() => nbBCs = " << nbBCs << ", nbTRSs = " << nbTRSs << "\n");
-  
-  for (CFuint iBC = 0; iBC < nbBCs; ++iBC) {
-    // one BC can be associated to more TRSs
-    // however there is only one BC associated to each TRS
-    const vector<std::string>& names = tempBC[iBC]->getTrsNames();
-    for (CFuint iName = 0; iName < names.size(); ++iName) {
-      std::string nameTRS = names[iName];
-      bool nameFound = false;
-      for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
-	CFLog(VERBOSE, "FVMCC_ComputeRHS::setBCList() => " << trs[iTRS]->getName() << " == " << nameTRS << "?\n");
-	if (trs[iTRS]->getName() == nameTRS) {
-	  CFLog(VERBOSE, "found iTRS = " << iTRS << " == " << tempBC[iBC] << "\n");
-	  _bcMap.insert(iTRS, tempBC[iBC]);
-	  nameFound = true;
-	  break;
-	}
-      }
-      if (!nameFound) {
-	std::string msg = std::string("TRS named ") +
-	  nameTRS + std::string("not found");
-	throw NoSuchValueException (FromHere(),msg);
-      }
-    }
-  }
-  
-  // this is fundamental when using CFMap !!!
-  _bcMap.sortKeys();
-}
-      
 //////////////////////////////////////////////////////////////////////////////
       
 vector<SafePtr<BaseDataSocketSink> > FVMCC_ComputeRHS::needsSockets()

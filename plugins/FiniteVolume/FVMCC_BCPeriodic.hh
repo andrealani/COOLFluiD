@@ -54,7 +54,11 @@ public:
    */
   virtual void setup();
 
-
+  /**
+   * Transfer the gradients data
+   */
+  virtual void transferGradientsData();
+  
   /**
    * Set the preProcesses connectivity between faces belonging to different processes
    */
@@ -64,6 +68,17 @@ public:
    * Apply boundary condition on the given face
    */
   virtual void setGhostState(Framework::GeometricEntity *const face);
+   
+  /**
+   * Returns the DataSocket's that this command needs as sinks
+   * @return a vector of SafePtr with the DataSockets
+   */
+  virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets();
+  
+  /// Compute the periodic cell gradient and corresponding limiter
+  virtual void computePeriodicGradient(Framework::GeometricEntity *const face, 
+				       std::vector<CFreal*>& gradientLimiter,
+				       CFreal*& cellLimiter);
   
   /** 
    * Gets the Class name
@@ -74,6 +89,7 @@ public:
   }
   
 protected:
+  
   /// face builder
   Framework::GeometricEntityPool<Framework::FaceTrsGeoBuilder> _faceBuilder; 
   
@@ -85,7 +101,7 @@ protected:
    * It is assumed that MPI-communication has occured in preProcess() first
    */
   Framework::State* computePeriodicState(Framework::GeometricEntity *const face);
-  
+    
   /**
    * Return if the face is an outlet face. (outlet = true, inlet = false)
    */
@@ -125,6 +141,12 @@ protected:
    }
 
 private: // class definitions
+  
+  /// transfer the gradient data
+  void transferArray(const Framework::DataHandle<CFreal>& gradient,
+		     std::vector<CFreal>& sendbuf, 
+		     std::vector<CFreal>& recvbuf);
+  
   /**
    * Definition of a pair containing the processor number and the faceID
    */
@@ -222,6 +244,27 @@ private: // class definitions
   
 private: //data
   
+  /// socket for uX values
+  Framework::DataSocketSink<CFreal> socket_uX;
+  
+  /// socket for uY values
+  Framework::DataSocketSink<CFreal> socket_uY;
+  
+  /// socket for uZ values
+  Framework::DataSocketSink<CFreal> socket_uZ;
+  
+  /// socket for limiter
+  Framework::DataSocketSink<CFreal> socket_limiter;
+  
+  /// flag telling if socket uX exists
+  bool _uxExists;
+  
+  /// flag telling if socket uY exists
+  bool _uyExists;
+  
+  /// flag telling if socket uZ exists
+  bool _uzExists;
+  
   /// Translation Vector between planes
   std::vector<CFreal> _translationVector;
   
@@ -239,13 +282,10 @@ private: //data
 
   /// number of faces
   CFuint _nbTrsFaces;
-
-
   
   /// maps local face to periodic process and periodic face (can be more than 1)
   std::vector< std::vector< PairStruct > > _localConnectivityMap;
-
-
+  
   /**
    * MPI Related parameters
    */
@@ -272,11 +312,16 @@ private: //data
   std::vector<int> _senddispls;
   std::vector<double> _recvbuf;
   std::vector<double> _sendbuf;
+
+  std::vector<double> _recvbufLimiter;
+  std::vector<double> _sendbufLimiter;
+  std::vector<std::vector<double> > _recvbufGrad;
+  std::vector<std::vector<double> > _sendbufGrad;
+    
   CFuint _LastDisplacement;
   
-        
 }; // end of class BCPeriodic
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 
