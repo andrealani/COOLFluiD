@@ -148,11 +148,13 @@ void BCPeriodic::setup()
     thisFace.setGlobalFaceID(faceGlobalID);
     thisFace.setLocalFaceID(iFace);
     
-    
+
     /* Check if the projection of the face-normal on the translation vector
      * is positive (westFace) or negative (eastFace)
      */
     const CFuint startID = faceGlobalID*dim;
+    DataHandle<CFreal> normals = socket_normals.getDataHandle();
+    RealVector faceNormal(dim);
     for(CFuint iDim=0; iDim<dim; ++iDim) {
       faceNormal[iDim]=normals[startID+iDim];
     }
@@ -287,7 +289,6 @@ void BCPeriodic::setup()
 void BCPeriodic::setupMPI() 
 {
   const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
-  
   _nbProcesses = PE::GetPE().GetProcessorCount(nsp);
   _rank = PE::GetPE().GetRank(nsp);
   _comm = PE::GetPE().GetCommunicator(nsp);

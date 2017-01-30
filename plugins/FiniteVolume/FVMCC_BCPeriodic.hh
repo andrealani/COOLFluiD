@@ -101,7 +101,7 @@ protected:
    * It is assumed that MPI-communication has occured in preProcess() first
    */
   Framework::State* computePeriodicState(Framework::GeometricEntity *const face);
-    
+  
   /**
    * Return if the face is an outlet face. (outlet = true, inlet = false)
    */
@@ -139,8 +139,6 @@ protected:
    {
      return _nbTrsFaces;
    }
-
-private: // class definitions
   
   /// transfer the gradient data
   void transferArray(const Framework::DataHandle<CFreal>& gradient,
@@ -176,9 +174,8 @@ private: // class definitions
       CFuint getGlobalFaceID() const {return _globalFaceID;}
       void setLocalFaceID(CFuint localFaceID) { _localFaceID = localFaceID;}
       CFuint getLocalFaceID() const {return _localFaceID;}
-    void setCentreCoordinates(const RealVector& centreCoordinates) 
-    { _centreCoordinates.resize(centreCoordinates.size()); _centreCoordinates = centreCoordinates;}
-    const RealVector& getCentreCoordinates() const {return _centreCoordinates;}
+      void setCentreCoordinates(const RealVector& centreCoordinates) { _centreCoordinates.resize(centreCoordinates.size()); _centreCoordinates = centreCoordinates;}
+      const RealVector& getCentreCoordinates() const {return _centreCoordinates;}
   };
   
   /**
@@ -191,9 +188,7 @@ private: // class definitions
     MPI_Comm _comm;
     
   public:
-    
-    FaceMPIStruct() : FaceStruct() 
-    { 
+    FaceMPIStruct() : FaceStruct() { 
       CFuint dim = Framework::PhysicalModelStack::getActive()->getDim();
       ln[0] = 1;     // first block is localFaceID --> 1 element
       ln[1] = 1;     // second block is globalFaceID --> 1 element
@@ -241,8 +236,8 @@ private: // class definitions
       return isMatch;
     }
   };
-  
-private: //data
+
+protected: //data
   
   /// socket for uX values
   Framework::DataSocketSink<CFreal> socket_uX;
@@ -321,7 +316,7 @@ private: //data
   CFuint _LastDisplacement;
   
 }; // end of class BCPeriodic
-      
+
 //////////////////////////////////////////////////////////////////////////////
 
 
