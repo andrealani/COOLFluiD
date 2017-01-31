@@ -161,9 +161,12 @@ void LeastSquareP1PolyRec2DPeriodic::extrapolateImpl(GeometricEntity* const face
 void LeastSquareP1PolyRec2DPeriodic::extrapolateImpl(GeometricEntity* const face,
 						     CFuint iVar, CFuint leftOrRight)
 {
+  CFLog(DEBUG_MED, "LeastSquareP1PolyRec2DPeriodic::extrapolateImpl() => start\n");
+  
   if (!m_isPeriodicFace[face->getID()] ||
       (m_isPeriodicFace[face->getID()] && leftOrRight == LEFT))  {
-    LeastSquareP1PolyRec2DPeriodic::extrapolateImpl(face, iVar, leftOrRight);
+    LeastSquareP1PolyRec2D::extrapolateImpl(face, iVar, leftOrRight);
+    CFLog(DEBUG_MED, "LeastSquareP1PolyRec2DPeriodic::extrapolateImpl() => end\n");
   }
   else {
     cf_assert(m_isPeriodicFace[face->getID()] && leftOrRight == RIGHT);
@@ -197,6 +200,8 @@ void LeastSquareP1PolyRec2DPeriodic::extrapolateImpl(GeometricEntity* const face
     // reconstructed value
     getValues(leftOrRight)[iVar] = (*state)[iVar] + periodicLimiter[iVar]*gradientCoeffState;
   }
+  
+  CFLog(DEBUG_MED, "LeastSquareP1PolyRec2DPeriodic::extrapolateImpl() => end\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////

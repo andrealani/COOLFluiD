@@ -215,6 +215,8 @@ void LeastSquareP1PolyRec2D::extrapolateImpl(GeometricEntity* const face)
 void LeastSquareP1PolyRec2D::extrapolateImpl(GeometricEntity* const face,
 					     CFuint iVar, CFuint leftOrRight)
 {
+  CFLog(DEBUG_MED, "LeastSquareP1PolyRec2D::extrapolateImpl() => start\n");
+  
   DataHandle<CFreal> uX = socket_uX.getDataHandle();
   DataHandle<CFreal> uY = socket_uY.getDataHandle();
   DataHandle<CFreal> newLimiter = socket_limiter.getDataHandle();
@@ -248,8 +250,10 @@ void LeastSquareP1PolyRec2D::extrapolateImpl(GeometricEntity* const face,
   
   // reconstructed value
   getValues(leftOrRight)[iVar] = (*state)[iVar] + newLimiter[startID + iVar]*gradientCoeffState;
+  
+  CFLog(DEBUG_MED, "LeastSquareP1PolyRec2D::extrapolateImpl() => end\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void LeastSquareP1PolyRec2D::updateWeights()
