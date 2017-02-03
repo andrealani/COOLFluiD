@@ -305,8 +305,6 @@ ENDIF()
 IF ( CF_ENABLE_CUDA )
 FIND_PACKAGE(CUDA)  # CUDA environment
 INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIR})
-# define CF_HAVE_CUDA only if enabled to do so
-# ADD_DEFINITIONS  ( -DCF_HAVE_CUDA )
 ENDIF()
 
 # cmake find macros
