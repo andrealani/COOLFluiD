@@ -352,6 +352,7 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
   geoData.allCells = this->getMethodData().getBuildAllCells();
   
   DataHandle<bool> cellFlag = this->socket_cellFlag.getDataHandle();
+  SafePtr<CFMap<CFuint, FVMCC_BC*> > bcMap = this->getMethodData().getMapBC();
   
   for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
     SafePtr<TopologicalRegionSet> currTrs = trs[iTRS];
@@ -362,7 +363,7 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
     // be processed (their fluxes could give NaN)
     if (currTrs->getName() != "PartitionFaces" && currTrs->getName() != "InnerCells") {
       if (currTrs->hasTag("writable")) {
-        this->_currBC = this->_bcMap.find(iTRS);
+        this->_currBC = bcMap->find(iTRS);
 	
 	// set the flag telling if the ghost states have to be placed on the face itself
 	this->_currBC->setPutGhostsOnFace();
