@@ -26,6 +26,11 @@ LIST ( APPEND FiniteVolumeCUDA_cflibs MHD FiniteVolume FiniteVolumeMHD FiniteVol
 LIST ( APPEND FiniteVolumeCUDA_includedirs ${MPI_INCLUDE_DIR} ${CUDA_INCLUDE_DIR} )
 LIST ( APPEND FiniteVolumeCUDA_libs ${CUDA_LIBRARIES} )
 
+IF(CF_HAVE_PARALUTION)
+LIST ( APPEND FiniteVolumeCUDA_includedirs ${PARALUTION_INCLUDE_DIR} )
+LIST ( APPEND FiniteVolumeCUDA_cflibs ${PARALUTION_LIBRARIES} )
+ENDIF()
+
 CF_ADD_PLUGIN_LIBRARY ( FiniteVolumeCUDA )
 
 ENDIF()
