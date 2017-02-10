@@ -228,183 +228,198 @@ void BCPeriodic::setup()
    */
   _localConnectivityMap.resize(_nbTrsFaces);
 
-  //Sending information of all the faces 
-  std::vector<CFuint> sendGlobalIDW(nbWestFaces, 0);
-  std::vector<CFuint> sendLocalIDW(nbWestFaces, 0);
-  std::vector<CFreal> sendCoordsW(nbWestFaces*dim, 0);
-  std::vector<CFuint> recvGlobalIDW(totalNbWestFaces, 0);
-  std::vector<CFuint> recvLocalIDW(totalNbWestFaces, 0);
-  std::vector<CFreal> recvCoordsW(totalNbWestFaces*dim, 0);
-
-  std::vector<int> displsW(_nbProcesses, 0);
-  std::vector<int> rcountsW(_nbProcesses, 0);
-  std::vector<int> displsWDim(_nbProcesses, 0);
-  std::vector<int> rcountsWDim(_nbProcesses, 0);
-
-  int localLengthW = nbWestFaces;
-  int localLengthWDim = nbWestFaces*dim;
-
-  std::vector<CFuint> sendGlobalIDE(nbEastFaces, 0);
-  std::vector<CFuint> sendLocalIDE(nbEastFaces, 0);
-  std::vector<CFreal> sendCoordsE(nbEastFaces*dim, 0);
-  std::vector<CFuint> recvGlobalIDE(totalNbEastFaces, 0);
-  std::vector<CFuint> recvLocalIDE(totalNbEastFaces, 0);
-  std::vector<CFreal> recvCoordsE(totalNbEastFaces*dim, 0);
-
-  std::vector<int> displsE(_nbProcesses, 0);
-  std::vector<int> rcountsE(_nbProcesses, 0);
-  std::vector<int> displsEDim(_nbProcesses, 0);
-  std::vector<int> rcountsEDim(_nbProcesses, 0);
-
-  int localLengthE = nbEastFaces;
-  int localLengthEDim = nbEastFaces*dim;
-  
-  displsW[0] = 0;
-  displsE[0] = 0;
-  for (CFuint iP=1;iP<_nbProcesses;iP++) {
-    displsW[iP] = displsW[iP-1] + nbWestFacesPerProcess[iP-1];
-    displsWDim[iP] = displsW[iP]*dim;
-    displsE[iP] = displsE[iP-1] + nbEastFacesPerProcess[iP-1];
-    displsEDim[iP] = displsE[iP]*dim;
-  }
-
-  for(CFuint iP=0; iP<_nbProcesses; ++iP) {
-    rcountsW[iP] = nbWestFacesPerProcess[iP];
-    rcountsWDim[iP] = rcountsW[iP]*dim;
-    rcountsE[iP] = nbEastFacesPerProcess[iP];
-    rcountsEDim[iP] = rcountsE[iP]*dim;
-  }
-    
-  /* Fill the send vector */
-  for(CFuint iFace=0; iFace<nbWestFaces; iFace++) {
-
-    /* fill the sentd info */
-    sendGlobalIDW[iFace] = westFaces[iFace].getGlobalFaceID();
-    sendLocalIDW[iFace] = westFaces[iFace].getLocalFaceID();
-    for (CFuint iDim = 0; iDim<dim; iDim++){
-      sendCoordsW[iFace*dim + iDim] = westFaces[iFace].getCentreCoordinates()[iDim];
-      //std::cout<<"rank = "<<_rank<<" sendCoordsW["<<iFace*dim + iDim<<"] = "<<sendCoordsW[iFace*dim + iDim] <<"\n";
-    }
-  }
-  for(CFuint iFace=0; iFace<nbEastFaces; iFace++) {
-
-    /* fill the sentd info */
-    sendGlobalIDE[iFace] = eastFaces[iFace].getGlobalFaceID();
-    sendLocalIDE[iFace] = eastFaces[iFace].getLocalFaceID();
-    for (CFuint iDim = 0; iDim<dim; iDim++){
-      sendCoordsE[iFace*dim + iDim] = eastFaces[iFace].getCentreCoordinates()[iDim];
-      //std::cout<<"rank = "<<_rank<<" sendCoordsE["<<iFace*dim + iDim<<"] = "<<sendCoordsE[iFace*dim + iDim] <<"\n";
-    }
-  }
-  MPI_Barrier(_comm);
-
-  MPI_Datatype MPI_CFUINT = Common::MPIStructDef::getMPIType(&sendGlobalIDW[0]);
-  MPI_Datatype MPI_CFREAL = Common::MPIStructDef::getMPIType(&sendCoordsW[0]);
-  MPI_Allgatherv(&sendGlobalIDW[0], localLengthW, MPI_CFUINT,
-                  &recvGlobalIDW[0], &rcountsW[0], &displsW[0], MPI_CFUINT, _comm);
-  MPI_Allgatherv(&sendLocalIDW[0], localLengthW, MPI_CFUINT,
-                  &recvLocalIDW[0], &rcountsW[0], &displsW[0], MPI_CFUINT, _comm);
-  MPI_Allgatherv(&sendCoordsW[0], localLengthWDim, MPI_CFREAL,
-                  &recvCoordsW[0], &rcountsWDim[0], &displsWDim[0], MPI_CFREAL, _comm);
-  MPI_Allgatherv(&sendGlobalIDE[0], localLengthE, MPI_CFUINT,
-                  &recvGlobalIDE[0], &rcountsE[0], &displsE[0], MPI_CFUINT, _comm);
-  MPI_Allgatherv(&sendLocalIDE[0], localLengthE, MPI_CFUINT,
-                  &recvLocalIDE[0], &rcountsE[0], &displsE[0], MPI_CFUINT, _comm);
-  MPI_Allgatherv(&sendCoordsE[0], localLengthEDim, MPI_CFREAL,
-                  &recvCoordsE[0], &rcountsEDim[0], &displsEDim[0], MPI_CFREAL, _comm);
-  MPI_Barrier(_comm);
-
-  // Constructing all the faces
-  /// WEST
-  std::vector<FaceStruct> totalWestFaces;
-  RealVector coordinates(dim);
-  totalWestFaces.resize(totalNbWestFaces);
-  for (CFuint iFace=0; iFace<totalNbWestFaces; iFace++) {
-    for (CFuint iDim=0; iDim<dim; iDim++) {
-      coordinates[iDim] = recvCoordsW[iFace*dim + iDim];
-    }
-    /* Load this face in a structure */
-    totalWestFaces[iFace].setCentreCoordinates(coordinates);
-    totalWestFaces[iFace].setGlobalFaceID(recvGlobalIDW[iFace]);
-    totalWestFaces[iFace].setLocalFaceID(recvLocalIDW[iFace]);
-  }
-  ///EAST
-  std::vector<FaceStruct> totalEastFaces(totalNbEastFaces);
-  for (CFuint iFace=0; iFace<totalNbEastFaces; iFace++) {
-    for (CFuint iDim=0; iDim<dim; iDim++) {
-      coordinates[iDim] = recvCoordsE[iFace*dim + iDim]; 
-    }
-    /* Load this face in a structure */
-    totalEastFaces[iFace].setCentreCoordinates(coordinates);
-    totalEastFaces[iFace].setGlobalFaceID(recvGlobalIDE[iFace]);
-    totalEastFaces[iFace].setLocalFaceID(recvLocalIDE[iFace]);
-  }
-  //std::vector< std::vector<FaceStruct> > totalWestFaces(_nbProcesses);
-  //for (CFuint iP=0; iP<_nbProcesses; iP++) {
-    //const CFuint nbW = nbWestFacesPerProcess[iP];
-    //totalWestFaces[iP].resize(nbW);  // Resizing the vectors of FaceStruct
-    
-    //for (CFuint iFace=0; iFace<nbW; iFace++) {
-      //for (CFuint iDim=0; iDim<dim; iDim++) {
-        //centreNode[iDim] = recvCoordsW[displsWDim[iP] + iFace*dim + iDim];
-      //}
-      ///* Load this face in a structure */
-      //thisFace.setCentreCoordinates(centreNode);
-      //thisFace.setGlobalFaceID(recvGlobalIDW[displsW[iP] + iFace]);
-      //thisFace.setLocalFaceID(recvLocalIDW[displsW[iP] + iFace]);
-      //totalWestFaces[iP].push_back(thisFace);
-    //}
-  //}
-  //std::cout<<"after Copying the West faces \n";
-  /// EAST
-  //std::vector< std::vector<FaceStruct> > totalEastFaces(_nbProcesses);
-  //for (CFuint iP=0; iP<_nbProcesses; iP++) {
-    //const CFuint nbE = nbEastFacesPerProcess[iP];
-    //totalEastFaces[iP].resize(nbE);  // Resizing the vectors of FaceStruct
-    
-    //for (CFuint iFace=0; iFace<nbE; iFace++) {
-      //for (CFuint iDim=0; iDim<dim; iDim++) {
-        //centreNode[iDim] = recvCoordsE[displsEDim[iP] + iFace*dim + iDim];
-      //}
-      ///* Load this face in a structure */
-      //thisFace.setCentreCoordinates(centreNode);
-      //thisFace.setGlobalFaceID(recvGlobalIDE[displsE[iP] + iFace]);
-      //thisFace.setLocalFaceID(recvLocalIDE[displsE[iP] + iFace]);
-      //totalEastFaces[iP].push_back(thisFace);
-    //}
-  //}
-
+  //Sending information of all the faces
   CFuint matches = 0;
-    
-  /* Find WestFace connectivity */
-  for(CFuint iP=0; iP<_nbProcesses; iP++){
-    const CFuint nbW = nbWestFacesPerProcess[iP]; 
-    for(CFuint iFace=0; iFace<nbW; iFace++) {
-      FaceStruct westFace = totalWestFaces[displsW[iP] + iFace];
-      /* Find eastFace corresponding to this westFace */
-      std::vector<FaceStruct>::iterator found = std::find_if(eastFaces.begin(), eastFaces.end(), findTranslated(westFace,translationVector,_threshold));
-      if (found != eastFaces.end()) {
-        if (_localConnectivityMap[found->getLocalFaceID()].size() == 0)   matches++;
-        _localConnectivityMap[found->getLocalFaceID()].push_back(PairStruct(iP,westFace.getLocalFaceID()));
-      }
-    } 
-    
-    /* Find eastFace connectivity */
-    const CFuint nbE = nbEastFacesPerProcess[iP];
-    for(CFuint iFace=0; iFace<nbE; iFace++) {
-      //CFLog(INFO,"iD = "<<displsE[iP] + iFace <<"\n");
-      FaceStruct eastFace = totalEastFaces[displsE[iP] + iFace]; 
-      
-      /* Find westFace corresponding to this eastFace */
-      std::vector<FaceStruct>::iterator found = std::find_if(westFaces.begin(), westFaces.end(), findTranslated(eastFace,backTranslationVector,_threshold));
-      if (found != westFaces.end()) {
-        if (_localConnectivityMap[found->getLocalFaceID()].size() == 0)   matches++;
-        _localConnectivityMap[found->getLocalFaceID()].push_back(PairStruct(iP,eastFace.getLocalFaceID()));
-      }
-    } // end eastFace connectivity
+  if(_nbProcesses == 1){
+    for(CFuint iP=0; iP<_nbProcesses; ++iP) {
+
+      /* Find WestFace connectivity */
+      const CFuint nbW = nbWestFacesPerProcess[iP];
+      for(CFuint iFace=0; iFace<nbW; iFace++) {
+
+	/* fill the mpi_struct */
+	if(iP == _rank) faceMPIStruct.copy(westFaces[iFace]);
+
+	/* MPI Broadcast struct */
+	faceMPIStruct.broadcast(iP);
+
+	/* Unload the buffer */
+	FaceStruct westFace = static_cast<FaceStruct>(faceMPIStruct);
+
+	/* Find eastFace corresponding to this westFace */
+	std::vector<FaceStruct>::iterator found = std::find_if(eastFaces.begin(), eastFaces.end(), findTranslated(westFace,translationVector,_threshold));
+	if (found != eastFaces.end()) {
+	  if (_localConnectivityMap[found->getLocalFaceID()].size() == 0)   matches++;
+	  _localConnectivityMap[found->getLocalFaceID()].push_back(PairStruct(iP,westFace.getLocalFaceID()));
+	}
+
+      } // end westFace connectivity
+
+
+      /* Find eastFace connectivity */
+      const CFuint nbE = nbEastFacesPerProcess[iP];
+      for(CFuint iFace=0; iFace<nbE; iFace++) {
+
+	/* fill the mpi_struct */
+	if(iP == _rank) faceMPIStruct.copy(eastFaces[iFace]);
+
+	/* MPI Broadcast struct */
+	faceMPIStruct.broadcast(iP);
+
+	/* Unload the buffer */
+	FaceStruct eastFace = static_cast<FaceStruct>(faceMPIStruct);
+
+	/* Find westFace corresponding to this eastFace */
+	std::vector<FaceStruct>::iterator found = std::find_if(westFaces.begin(), westFaces.end(), findTranslated(eastFace,backTranslationVector,_threshold));
+	if (found != westFaces.end()) {
+	  if (_localConnectivityMap[found->getLocalFaceID()].size() == 0)   matches++;
+	  _localConnectivityMap[found->getLocalFaceID()].push_back(PairStruct(iP,eastFace.getLocalFaceID()));
+	}
+      } // end eastFace connectivity
+
+    } // end Assembly of localConnectivityMap
+
   }
-  
-  MPI_Barrier(_comm);    
+  else { 
+    std::vector<CFuint> sendGlobalIDW(nbWestFaces, 0);
+    std::vector<CFuint> sendLocalIDW(nbWestFaces, 0);
+    std::vector<CFreal> sendCoordsW(nbWestFaces*dim, 0);
+    std::vector<CFuint> recvGlobalIDW(totalNbWestFaces, 0);
+    std::vector<CFuint> recvLocalIDW(totalNbWestFaces, 0);
+    std::vector<CFreal> recvCoordsW(totalNbWestFaces*dim, 0);
+
+    std::vector<int> displsW(_nbProcesses, 0);
+    std::vector<int> rcountsW(_nbProcesses, 0);
+    std::vector<int> displsWDim(_nbProcesses, 0);
+    std::vector<int> rcountsWDim(_nbProcesses, 0);
+
+    int localLengthW = nbWestFaces;
+    int localLengthWDim = nbWestFaces*dim;
+
+    std::vector<CFuint> sendGlobalIDE(nbEastFaces, 0);
+    std::vector<CFuint> sendLocalIDE(nbEastFaces, 0);
+    std::vector<CFreal> sendCoordsE(nbEastFaces*dim, 0);
+    std::vector<CFuint> recvGlobalIDE(totalNbEastFaces, 0);
+    std::vector<CFuint> recvLocalIDE(totalNbEastFaces, 0);
+    std::vector<CFreal> recvCoordsE(totalNbEastFaces*dim, 0);
+
+    std::vector<int> displsE(_nbProcesses, 0);
+    std::vector<int> rcountsE(_nbProcesses, 0);
+    std::vector<int> displsEDim(_nbProcesses, 0);
+    std::vector<int> rcountsEDim(_nbProcesses, 0);
+
+    int localLengthE = nbEastFaces;
+    int localLengthEDim = nbEastFaces*dim;
+    
+    displsW[0] = 0;
+    displsE[0] = 0;
+    for (CFuint iP=1;iP<_nbProcesses;iP++) {
+      displsW[iP] = displsW[iP-1] + nbWestFacesPerProcess[iP-1];
+      displsWDim[iP] = displsW[iP]*dim;
+      displsE[iP] = displsE[iP-1] + nbEastFacesPerProcess[iP-1];
+      displsEDim[iP] = displsE[iP]*dim;
+    }
+
+    for(CFuint iP=0; iP<_nbProcesses; ++iP) {
+      rcountsW[iP] = nbWestFacesPerProcess[iP];
+      rcountsWDim[iP] = rcountsW[iP]*dim;
+      rcountsE[iP] = nbEastFacesPerProcess[iP];
+      rcountsEDim[iP] = rcountsE[iP]*dim;
+    }
+      
+    /* Fill the send vector */
+    for(CFuint iFace=0; iFace<nbWestFaces; iFace++) {
+
+      /* fill the sentd info */
+      sendGlobalIDW[iFace] = westFaces[iFace].getGlobalFaceID();
+      sendLocalIDW[iFace] = westFaces[iFace].getLocalFaceID();
+      for (CFuint iDim = 0; iDim<dim; iDim++){
+	sendCoordsW[iFace*dim + iDim] = westFaces[iFace].getCentreCoordinates()[iDim];
+      }
+    }
+    for(CFuint iFace=0; iFace<nbEastFaces; iFace++) {
+
+      /* fill the sentd info */
+      sendGlobalIDE[iFace] = eastFaces[iFace].getGlobalFaceID();
+      sendLocalIDE[iFace] = eastFaces[iFace].getLocalFaceID();
+      for (CFuint iDim = 0; iDim<dim; iDim++){
+	sendCoordsE[iFace*dim + iDim] = eastFaces[iFace].getCentreCoordinates()[iDim];
+      }
+    }
+    MPI_Barrier(_comm);
+
+    MPI_Datatype MPI_CFUINT = Common::MPIStructDef::getMPIType(&sendGlobalIDW[0]);
+    MPI_Datatype MPI_CFREAL = Common::MPIStructDef::getMPIType(&sendCoordsW[0]);
+    MPI_Allgatherv(&sendGlobalIDW[0], localLengthW, MPI_CFUINT,
+		    &recvGlobalIDW[0], &rcountsW[0], &displsW[0], MPI_CFUINT, _comm);
+    MPI_Allgatherv(&sendLocalIDW[0], localLengthW, MPI_CFUINT,
+		    &recvLocalIDW[0], &rcountsW[0], &displsW[0], MPI_CFUINT, _comm);
+    MPI_Allgatherv(&sendCoordsW[0], localLengthWDim, MPI_CFREAL,
+		    &recvCoordsW[0], &rcountsWDim[0], &displsWDim[0], MPI_CFREAL, _comm);
+    MPI_Allgatherv(&sendGlobalIDE[0], localLengthE, MPI_CFUINT,
+		    &recvGlobalIDE[0], &rcountsE[0], &displsE[0], MPI_CFUINT, _comm);
+    MPI_Allgatherv(&sendLocalIDE[0], localLengthE, MPI_CFUINT,
+		    &recvLocalIDE[0], &rcountsE[0], &displsE[0], MPI_CFUINT, _comm);
+    MPI_Allgatherv(&sendCoordsE[0], localLengthEDim, MPI_CFREAL,
+		    &recvCoordsE[0], &rcountsEDim[0], &displsEDim[0], MPI_CFREAL, _comm);
+    MPI_Barrier(_comm);
+
+    // Constructing all the faces
+    /// WEST
+    std::vector<FaceStruct> totalWestFaces;
+    RealVector coordinates(dim);
+    totalWestFaces.resize(totalNbWestFaces);
+    for (CFuint iFace=0; iFace<totalNbWestFaces; iFace++) {
+      for (CFuint iDim=0; iDim<dim; iDim++) {
+	coordinates[iDim] = recvCoordsW[iFace*dim + iDim];
+      }
+      /* Load this face in a structure */
+      totalWestFaces[iFace].setCentreCoordinates(coordinates);
+      totalWestFaces[iFace].setGlobalFaceID(recvGlobalIDW[iFace]);
+      totalWestFaces[iFace].setLocalFaceID(recvLocalIDW[iFace]);
+    }
+    ///EAST
+    std::vector<FaceStruct> totalEastFaces(totalNbEastFaces);
+    for (CFuint iFace=0; iFace<totalNbEastFaces; iFace++) {
+      for (CFuint iDim=0; iDim<dim; iDim++) {
+	coordinates[iDim] = recvCoordsE[iFace*dim + iDim]; 
+      }
+      /* Load this face in a structure */
+      totalEastFaces[iFace].setCentreCoordinates(coordinates);
+      totalEastFaces[iFace].setGlobalFaceID(recvGlobalIDE[iFace]);
+      totalEastFaces[iFace].setLocalFaceID(recvLocalIDE[iFace]);
+    }
+
+    /* Find WestFace connectivity */
+    for(CFuint iP=0; iP<_nbProcesses; iP++){
+      const CFuint nbW = nbWestFacesPerProcess[iP]; 
+      for(CFuint iFace=0; iFace<nbW; iFace++) {
+	FaceStruct westFace = totalWestFaces[displsW[iP] + iFace];
+	/* Find eastFace corresponding to this westFace */
+	std::vector<FaceStruct>::iterator found = std::find_if(eastFaces.begin(), eastFaces.end(), findTranslated(westFace,translationVector,_threshold));
+	if (found != eastFaces.end()) {
+	  if (_localConnectivityMap[found->getLocalFaceID()].size() == 0)   matches++;
+	  _localConnectivityMap[found->getLocalFaceID()].push_back(PairStruct(iP,westFace.getLocalFaceID()));
+	}
+      } 
+      
+      /* Find eastFace connectivity */
+      const CFuint nbE = nbEastFacesPerProcess[iP];
+      for(CFuint iFace=0; iFace<nbE; iFace++) {
+	//CFLog(INFO,"iD = "<<displsE[iP] + iFace <<"\n");
+	FaceStruct eastFace = totalEastFaces[displsE[iP] + iFace]; 
+	
+	/* Find westFace corresponding to this eastFace */
+	std::vector<FaceStruct>::iterator found = std::find_if(westFaces.begin(), westFaces.end(), findTranslated(eastFace,backTranslationVector,_threshold));
+	if (found != westFaces.end()) {
+	  if (_localConnectivityMap[found->getLocalFaceID()].size() == 0)   matches++;
+	  _localConnectivityMap[found->getLocalFaceID()].push_back(PairStruct(iP,eastFace.getLocalFaceID()));
+	}
+      } // end eastFace connectivity
+    }
+    
+    MPI_Barrier(_comm);    
+  }
   
   CFLog(INFO,"BCPeriodic::setup() => step 3 took " << stp.read() << "s\n");
   
