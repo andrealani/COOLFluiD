@@ -230,6 +230,7 @@ protected:
       bool isMatch = true;
       const RealVector& iterVec = iter.getCentreCoordinates();
       const CFuint dim = iterVec.size();
+      //CFLog(INFO,"Translated Coords"<<_Vt<<"\tCompared coords = "<<iterVec<<"\n");
       for(CFuint i=0; i<dim; ++i) {
         isMatch = isMatch && (std::abs(iterVec[i]-_Vt[i]) < _threshold);
       }
