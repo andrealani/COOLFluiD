@@ -258,38 +258,38 @@ void AUSMFluxMultiFluid<UPDATEVAR>::compute(RealVector& result)
   }
   
   if(is2DHalf){
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux BX = " << result[0] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux BY = " << result[1] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux BZ = " << result[2] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux EX = " << result[3] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux EY = " << result[4] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux EZ = " << result[5] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux PSI = " << result[6] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux PHI = " << result[7] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux mass = " << result[8] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux mass = " << result[9] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << result[10] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << result[11] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux z-mom = " << result[12] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << result[13] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << result[14] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux z-mom = " << result[15] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << result[16] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << result[17] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux BX = " << result[0] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux BY = " << result[1] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux BZ = " << result[2] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux EX = " << result[3] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux EY = " << result[4] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux EZ = " << result[5] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux PSI = " << result[6] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux PHI = " << result[7] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux mass = " << result[8] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux mass = " << result[9] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << result[10] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << result[11] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux z-mom = " << result[12] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << result[13] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << result[14] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux z-mom = " << result[15] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << result[16] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << result[17] << "\n");
   }
   else{
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux BX = " << result[0] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux BY = " << result[1] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux BZ = " << result[2] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux EX = " << result[3] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux EY = " << result[4] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux EZ = " << result[5] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux PSI = " << result[6] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux PHI = " << result[7] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux mass = " << result[8] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << result[9] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << result[10] << "\n");
-   CFLog(VERBOSE,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << result[11] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux BX = " << result[0] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux BY = " << result[1] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux BZ = " << result[2] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux EX = " << result[3] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux EY = " << result[4] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux EZ = " << result[5] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux PSI = " << result[6] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux PHI = " << result[7] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux mass = " << result[8] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << result[9] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << result[10] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << result[11] << "\n");
   }
 }
 
@@ -318,7 +318,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeUpdateCoeff()
     // left contribution to update coefficient
     const CFuint leftID = face.getState(0)->getLocalID();
     CFreal maxEV = m_updateVarSet->getMaxEigenValue(*m_lData, data.getUnitNormal());
-    CFLog(VERBOSE, "AUSMFluxMultiFluid::computeUpdateCoeff() => Max left eigenvalue in EqSS " << i << " is " << maxEV << "\n");
+    CFLog(DEBUG_MED, "AUSMFluxMultiFluid::computeUpdateCoeff() => Max left eigenvalue in EqSS " << i << " is " << maxEV << "\n");
     updateCoeff[leftID*nbEqSS + i] += max(maxEV, 0.)*faceArea;
     
     if (!face.getState(1)->isGhost()) {
@@ -326,7 +326,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeUpdateCoeff()
       const CFuint rightID = face.getState(1)->getLocalID();
       m_tempUnitNormal = -1.0*data.getUnitNormal();
       maxEV = m_updateVarSet->getMaxEigenValue(*m_rData,m_tempUnitNormal);
-      CFLog(VERBOSE, "AUSMFluxMultiFluid::computeUpdateCoeff() => Max right eigenvalue in EqSS " << i << " is " << maxEV << "\n");
+      CFLog(DEBUG_MED, "AUSMFluxMultiFluid::computeUpdateCoeff() => Max right eigenvalue in EqSS " << i << " is " << maxEV << "\n");
       updateCoeff[rightID*nbEqSS + i] += max(maxEV, 0.)*faceArea;    
     }
   }

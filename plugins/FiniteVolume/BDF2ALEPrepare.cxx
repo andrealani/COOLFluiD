@@ -27,6 +27,8 @@ void BDF2ALEPrepare::execute()
 {
   CFAUTOTRACE;
 
+  CFLog(VERBOSE, "BDF2ALEPrepare::execute() => start\n");
+  
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
 
   DataHandle<Node*> pastNodes = socket_pastNodes.getDataHandle();
@@ -38,6 +40,9 @@ void BDF2ALEPrepare::execute()
   cf_assert (nodes.size() == pastNodes.size());
   cf_assert (pastNodes.size() == pastPastNodes.size());
 
+  CFLog(VERBOSE, "BDF2ALEPrepare::execute() => isSubIterationFirstStep [" << 
+	SubSystemStatusStack::getActive()->isSubIterationFirstStep() << "]\n");
+  
   if(SubSystemStatusStack::getActive()->isSubIterationFirstStep()){
     //Back up the nodes positions before continuing`
     for (CFuint i=0; i < nodes.size();++i){
@@ -51,6 +56,8 @@ void BDF2ALEPrepare::execute()
       *nodes[i] = *pastNodes[i];
     }
   }
+  
+  CFLog(VERBOSE, "BDF2ALEPrepare::execute() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

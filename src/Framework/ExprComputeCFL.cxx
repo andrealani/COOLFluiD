@@ -42,8 +42,8 @@ ExprComputeCFL::ExprComputeCFL(const std::string& name) :
   _firstResidual(0.0),
   _lastResidual(0.0),
   _maxResidual(0.0),
-  _eval(1.0,6),
-  _vars("i,r,ri,rl,rmax,cfl")
+  _eval(1.0,7),
+  _vars("i,r,ri,rl,rmax,cfl,si")
 {
    addConfigOptionsTo(this);
   _function = "1.0";
@@ -64,16 +64,17 @@ void ExprComputeCFL::operator() (const ConvergenceStatus& cstatus)
   if(SubSystemStatusStack::getActive()->getNbIter() == 1) {
     _firstResidual = SubSystemStatusStack::getActive()->getResidual();
   }
-
+  
   _eval[0] = cstatus.iter;
   _eval[1] = cstatus.res;
   _eval[2] = _firstResidual;
   _eval[3] = _lastResidual;
   _eval[4] = _maxResidual;
   _eval[5] = _cfl->getCFLValue();
+  _eval[6] = cstatus.subiter;
   
   const CFreal currResidual = SubSystemStatusStack::getActive()->getResidual();
-
+  
   _lastResidual = currResidual;
   if(_maxResidual < currResidual) {
     _maxResidual = currResidual;

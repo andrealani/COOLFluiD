@@ -57,12 +57,21 @@ void BDF2::prepare()
   
   // update subsystemstatus if first subiteration step
   Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
-
-  if (subSysStatus->isSubIterationFirstStep())
+  
+  // set the subiteration 
+  subSysStatus->setSubIter(0);
+  
+  // AL: at the moment there is a confusing and inconsistent use of "subiterations"
+  //     This concept needs to be cleaned up
+  // subSysStatus->setSubIterationFlag(true);
+  if (subSysStatus->isSubIterationFirstStep()) 
   {
     subSysStatus->updateNbIter();
     subSysStatus->updateTimeStep();
     // getConvergenceMethodData()->getCFL()->update();
+  
+    CFLog(VERBOSE, "BDF2::prepare() => isSubIterationFirstStep, Iter[" 
+	  << subSysStatus->getNbIter() << "], timeStep[" << subSysStatus->getDT() << "]\n");
   }
   
   // prepare to take a time step
@@ -113,6 +122,12 @@ void BDF2::takeStepImpl()
   // sweeps to solve the nonlinear system
   for(CFuint k = 0; !m_data->isAchieved(); ++k)
   {
+    subSysStatus->setSubIter(k);
+    
+    CFLog(VERBOSE, "BDF2::takeStepImpl() => Iter[" << subSysStatus->getNbIter()  
+	  << "], SubIter[" << subSysStatus->getSubIter()  << "], isSubIterationFirstStep() ? ["
+	  << subSysStatus->isSubIterationFirstStep() << "]\n");
+    
     *cvgst = subSysStatus->getConvergenceStatus();
     
     CFLog(VERBOSE, "BDF2::takeStep(): preparing Computation\n");
@@ -154,8 +169,6 @@ void BDF2::takeStepImpl()
 				  m_data->getNbLSSToSolveAtOnce());
     
     CFLog(VERBOSE, "BDF2::takeStep(): updating the solution\n");
-
-    CFLog(VERBOSE, "BDF2::takeStep(): updating the solution\n");
     m_updateSol->execute();
     
     // synchronize the states and compute the residual norms
@@ -164,7 +177,7 @@ void BDF2::takeStepImpl()
     // Display info over each step of the Newton iterator
     if (m_data->isPrintHistory())
     {
-      CFout << "BDF2 Step: " << k+1 << " L2 dU: " << subSysStatus->getResidual() << "\n";
+      CFLog(INFO, "BDF2 Step: " << k+1 << " L2 dU: " << subSysStatus->getResidual() << "\n");
     }
     
     CFLog(VERBOSE, "BDF2::takeStep(): post process the solution\n"); 
@@ -179,12 +192,17 @@ void BDF2::takeStepImpl()
 
     // set subsystemstatus
     subSysStatus->setFirstStep(false);
-    subSysStatus->setLastStep(m_data->isAchieved());
+    const bool achieved = m_data->isAchieved();
+    subSysStatus->setLastStep(achieved);
+    // if (achieved) {subSysStatus->setIsSubIterationLastStep(true);}
   }
-
+  
   // back up the time contribution
   if(subSysStatus->isSubIterationLastStep())
   {
+    CFLog(VERBOSE, "BDF2::takeStepImpl() => isSubIterationLastStep, SubIter[" 
+	  << subSysStatus->getSubIter() << "]\n");
+    
     getMethodData()->getCollaborator<SpaceMethod>()->setComputeJacobianFlag(false);
     getMethodData()->getCollaborator<SpaceMethod>()->computeTimeResidual(xi);
     getMethodData()->getCollaborator<SpaceMethod>()->setComputeJacobianFlag(true);

@@ -118,20 +118,16 @@ void FVMCC_PseudoSteadyTimeRhs::execute()
   const CFuint nbStates = states.size();
   const CFreal cfl = getMethodData().getCFL()->getCFLValue();
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
-
-  const CFreal dt = SubSystemStatusStack::getActive()->getDT();
-
+  
   CFreal minDt = 0.0;
   if (_useGlobalDT) {
-    //make sure we are not doing unsteady
-    //cf_assert(dt >= 0.);
     // select the minimum delta T
     minDt = volumes[0]/updateCoeff[0];
     for (CFuint iState = 0; iState < nbStates; ++iState) {
       minDt = min(volumes[iState]/updateCoeff[iState], minDt);
     }
   }
-
+  
 #ifdef CF_HAVE_MPI
   const std::string nsp = getMethodData().getNamespace();
   CFreal totalMinDt = 1e10;
@@ -141,6 +137,19 @@ void FVMCC_PseudoSteadyTimeRhs::execute()
   minDt = totalMinDt;
 #endif
   
+  // if global DT is requested, set the minimum DT
+  if (_useGlobalDT) {
+    // AL: this is kinda hack, but minDT needs access to CFL, update coefficient and volumes,
+    // so it would be more cumbersome to do it elsewhere. Ideally, should be implemented inside a
+    // subclass of ComputeDT (future work!!!)
+    if (SubSystemStatusStack::getActive()->getSubIter() == 0) {
+      SubSystemStatusStack::getActive()->setDT(minDt);
+      CFLog(INFO, "FVMCC_PseudoSteadyTimeRhs::execute() => CFL[" << cfl << "], DT[" << minDt <<"]\n");
+    }
+  }
+  
+  const CFreal dt = SubSystemStatusStack::getActive()->getDT();
+    
   // add the diagonal entries in the jacobian (updateCoeff/CFL)
   for (CFuint iState = 0; iState < nbStates; ++iState) {
 
@@ -148,11 +157,13 @@ void FVMCC_PseudoSteadyTimeRhs::execute()
       _diagValue = (dt > 0.0) ? volumes[iState]/dt : updateCoeff[iState]/cfl;
     }
     else {
+      // this corresponds to the case with variable DT, as function of the given CFL 
+      cf_assert(minDt > 0.);
+      cf_assert(dt > 0.);
       _diagValue = volumes[iState]/(minDt*cfl);
     }
-
+    
     if (states[iState]->isParUpdatable()) {
-      
       if (!_useAnalyticalMatrix) {
 	// compute the transformation matrix numerically
 	computeNumericalTransMatrix(iState);

@@ -123,10 +123,6 @@ Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCBJACOBI #PCASM # PCJACOBI #PCASM
 Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
 
-
-
-
-
 # Explicit
 #Simulator.SubSystem.ConvergenceMethod = FwdEuler
 #Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
@@ -159,7 +155,7 @@ Simulator.SubSystem.BDF2.ShowRate = 1
 #Simulator.SubSystem.BDF2.Data.CFL.ComputeCFL = Interactive
 #Simulator.SubSystem.BDF2.ConvergenceFile = convergence_UnsteadyMagnetosphereACAImplPrim0_85READFROMFILE.plt 
 
-Simulator.SubSystem.BDF2.Data.MaxSteps = 100 
+Simulator.SubSystem.BDF2.Data.MaxSteps = 30 
 Simulator.SubSystem.BDF2.Data.L2.MonitoredVarID = 16 #12 
 Simulator.SubSystem.BDF2.Data.Norm = -1. #-4
 #Simulator.SubSystem.BDF2.Data.FilterState = Max
@@ -202,6 +198,11 @@ Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhsLimited
 Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.TimeLimiter = MinMod
 Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.MinMod.SlopeRatio = 3.
 Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.zeroDiagValue = 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 0 0 0
+# this flag allows to compute DT from CFL
+Simulator.SubSystem.BDF2.Data.CFL.Value = 10.0
+Simulator.SubSystem.BDF2.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.BDF2.Data.CFL.Function.Def = if(i<2,10.,if(si=0,min(cfl*1.01,100.),cfl))
+Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.useGlobalDT = true
 
 ### second order: uncomment this
 Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup

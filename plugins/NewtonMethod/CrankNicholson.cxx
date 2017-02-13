@@ -104,7 +104,9 @@ void CrankNicholson::takeStepImpl()
   
   // sweeps to solve the nonlinear system
   for(CFuint k = 0; !m_data->isAchieved(); ++k) {
-    *cvgst = subSysStatus->getConvergenceStatus();
+     subSysStatus->setSubIter(k);
+     
+     *cvgst = subSysStatus->getConvergenceStatus();
     
     // prepare the computation of the residuals
     getMethodData()->getCollaborator<SpaceMethod>()->prepareComputation();
@@ -161,13 +163,16 @@ void CrankNicholson::takeStepImpl()
 
   // back up the spatial rhs
   if(subSysStatus->isSubIterationLastStep()){
+    CFLog(VERBOSE, "CrankNicholson::takeStepImpl() => isSubIterationLastStep, SubIter[" 
+	   << subSysStatus->getSubIter() << "]\n");
+    
     // compute the steady space residual
     getMethodData()->getCollaborator<SpaceMethod>()->setComputeJacobianFlag(false);
     getMethodData()->getCollaborator<SpaceMethod>()->computeSpaceResidual(0.5);
     getMethodData()->getCollaborator<SpaceMethod>()->setComputeJacobianFlag(true);
     m_intermediate->execute();
   }
-
+  
   // update mesh
   if(subSysStatus->isMovingMesh()) m_aleUpdate->execute();
 }

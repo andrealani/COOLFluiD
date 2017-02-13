@@ -288,9 +288,9 @@ void EulerMFMHD2DHalfRhoiViTi::computePhysicalData(const State& state, RealVecto
       //cout << "Ti = "<< Ti <<"\n";
     }
   }
-  CFLog(VERBOSE,"EulerMFMHD2DHalfRhoiViTi::computePhysicalData" << "\n");
+  CFLog(DEBUG_MED,"EulerMFMHD2DHalfRhoiViTi::computePhysicalData" << "\n");
   for (CFuint ie = 0; ie < firstTemperature + 4*nbSpecies; ++ie) {
-    CFLog(VERBOSE,"data["<< ie <<"] = "<< data[ie] << "\n");
+    CFLog(DEBUG_MED,"data["<< ie <<"] = "<< data[ie] << "\n");
   }
 }
 
@@ -339,7 +339,7 @@ void EulerMFMHD2DHalfRhoiViTi::computeStateFromPhysicalData(const RealVector& da
   }  
   CFLog(DEBUG_MAX,"EulerMFMHD2DRhoiViTi::computeStateFromPhysicalData" << "\n");
   for (CFuint ie = 0; ie < endEM + 5*nbSpecies; ++ie) {
-     CFLog(VERBOSE,"state["<< ie <<"] = "<< state[ie] << "\n");
+     CFLog(DEBUG_MED,"state["<< ie <<"] = "<< state[ie] << "\n");
   }
 }
 
