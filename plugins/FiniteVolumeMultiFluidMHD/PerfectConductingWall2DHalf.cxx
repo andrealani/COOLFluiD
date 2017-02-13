@@ -112,9 +112,9 @@ void PerfectConductingWall2DHalf::setGhostState(GeometricEntity *const face)
   (*ghostState)[0] = (*innerState)[0] - 2*bn*nx;	//Bx
   (*ghostState)[1] = (*innerState)[1] - 2*bn*ny;	//By
   (*ghostState)[2] = (*innerState)[2] - 2*bn*nz;	//Bz
-  (*ghostState)[3] = -(*innerState)[3] + 2*en*nx; 	//Ex
-  (*ghostState)[4] = -(*innerState)[4] + 2*en*ny; 	//Ey
-  (*ghostState)[5] = -(*innerState)[5] + 2*en*nz; 	//Ez
+  (*ghostState)[3] = -(*innerState)[3]; //-(*innerState)[3] + 2*en*nx; 	//Ex
+  (*ghostState)[4] = -(*innerState)[4]; //-(*innerState)[4] + 2*en*ny; 	//Ey
+  (*ghostState)[5] = -(*innerState)[5]; //-(*innerState)[5] + 2*en*nz; 	//Ez
   (*ghostState)[6] = (*innerState)[6];			//Psi
   (*ghostState)[7] = (*innerState)[7];			//Phi
   
