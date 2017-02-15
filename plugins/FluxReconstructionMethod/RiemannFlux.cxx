@@ -33,6 +33,8 @@ RiemannFlux::~RiemannFlux()
 void RiemannFlux::setup()
 {
   CFAUTOTRACE;
+  
+  FluxReconstructionSolverStrategy::setup();
 
   // get number of equations
   m_nbrEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
@@ -64,6 +66,8 @@ void RiemannFlux::setup()
 void RiemannFlux::unsetup()
 {
   CFAUTOTRACE;
+  
+  FluxReconstructionSolverStrategy::unsetup();
 }
     
 //////////////////////////////////////////////////////////////////////////////

@@ -31,8 +31,6 @@ StdPrepare.cxx
 StdPrepare.hh
 StdInitState.cxx
 StdInitState.hh
-TVBLimiterFluxReconstruction.cxx
-TVBLimiterFluxReconstruction.hh
 ReconstructStatesFluxReconstruction.cxx
 ReconstructStatesFluxReconstruction.hh
 BCStateComputer.cxx

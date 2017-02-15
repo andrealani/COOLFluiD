@@ -18,7 +18,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * This class represents a command that computes contribution of the boundary face terms for the
+   * This class represents a command that computes contribution of the boundary faces for the
    * Flux Reconstruction schemes for convective terms to the RHS
    *
    * @author Ray Vandenhoeck
@@ -83,6 +83,12 @@ protected: // functions
 
   /// set face term data for current element type
   void setCorrectionsData();
+  
+  /// compute the interface flux correction FI-FD
+  void computeInterfaceFlxCorrection(CFuint faceID);
+  
+  /// compute the total correction
+  void computeCorrection();
 
   /// add the residual updates to the RHS
   void updateRHS();
@@ -162,6 +168,9 @@ protected: // data
   
   /// 1D flux points mapped coordinates
   Common::SafePtr< std::vector< CFreal > > m_flxPntsLocalCoords1D;
+  
+  // All flux points of a cell
+  Common::SafePtr<std::vector< RealVector > > m_allCellFlxPnts;
   
   /// flux points mapped coordinates
   std::vector< RealVector > m_flxPntsLocalCoords;

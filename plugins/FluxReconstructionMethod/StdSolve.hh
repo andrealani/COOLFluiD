@@ -23,7 +23,7 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This is a standard command to assemble the system using FluxReconstruction solver
+/// This is a standard command to assemble the system using a FluxReconstruction solver
 /// @author Alexander Papen
 /// @author Ray Vandenhoeck
 class StdSolve : public FluxReconstructionSolverCom {
@@ -68,6 +68,12 @@ public: // functions
     
 protected: //functions
 
+  /// compute the interface flux correction FI-FD
+  void computeInterfaceFlxCorrection(CFuint faceID);
+  
+  /// compute the residual updates (-divFC)
+  void computeResUpdates(CFuint elemIdx);
+  
   /// add the residual updates to the RHS
   void updateRHS();
   
@@ -126,9 +132,6 @@ protected: //data
   
   /// vector containing pointers to the fluxes in the flux points
   std::vector< std::vector< RealVector > > m_cellFlx;
-  
-  /// vector containing pointers to the face normals
-  Common::SafePtr< std::vector< RealVector > > m_faceNormals;
   
   /// solution point mapped coordinates
   Common::SafePtr< std::vector< RealVector > > m_solPntsLocalCoords;
@@ -201,6 +204,9 @@ protected: //data
   
   /// local cell face - mapped coordinate direction per orientation
   Common::SafePtr< std::vector< std::vector< CFint > > > m_faceMappedCoordDir;
+  
+  /// local cell face - mapped coordinate direction
+  Common::SafePtr< std::vector< CFint > > m_faceLocalDir;
   
   /// unit normal vector in flux points
   std::vector< RealVector > m_unitNormalFlxPnts;
