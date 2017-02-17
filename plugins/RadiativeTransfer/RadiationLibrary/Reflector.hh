@@ -46,8 +46,6 @@ public:
 
   virtual void getRandomDirection(CFreal &lambda, RealVector &s_o, RealVector &s_i, RealVector &normal ) = 0;
 
-  virtual void getData() = 0;
-
   void setRadPhysicsPtr(RadiationPhysics *radPhysicsPtr) {
     m_radPhysicsPtr = radPhysicsPtr;
   }

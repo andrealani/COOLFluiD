@@ -166,8 +166,6 @@ public: // Radiator interface
 
   void getRandomEmission(CFreal &lambda, RealVector &s_o);
   
-  void getData();
-
   inline void getSpectralIdxs(CFreal lambda, CFuint *idx);
 
   // ConfigObject interface

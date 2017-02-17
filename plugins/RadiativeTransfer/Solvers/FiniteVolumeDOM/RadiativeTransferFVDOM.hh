@@ -249,6 +249,9 @@ protected: //function
   /// flag telling whether opacities tables are available
   bool readOpacityTables() const {return (m_binTabName != "");}
   
+  /// parallel reduce the heat flux
+  void reduceHeatFlux();
+  
 protected: //data
   
   /// storage of states
@@ -499,7 +502,10 @@ protected: //data
 
   /// option to print directions
   bool m_directions;
-
+  
+  /// name of the radiation namespace
+  std::string m_radNamespace;
+  
 }; // end of class RadiativeTransferFVDOM
       
 //////////////////////////////////////////////////////////////////////////////

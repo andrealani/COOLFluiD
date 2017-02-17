@@ -43,8 +43,6 @@ public:
   void getRandomEmission(CFreal &lambda, RealVector &s_o ){
     CFLog(INFO,"Called Emission form NullRadiator");
   }
-
-  void getData(){;}
 };
 
 }

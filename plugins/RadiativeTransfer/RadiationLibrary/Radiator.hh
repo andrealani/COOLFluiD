@@ -66,8 +66,6 @@ public:
 
   virtual void getRandomEmission(CFreal &lambda, RealVector &s_o ) = 0;
 
-  virtual void getData() = 0;
-
   void setRadPhysicsPtr(RadiationPhysics *radPhysicsPtr) {
     m_radPhysicsPtr = radPhysicsPtr;
   }

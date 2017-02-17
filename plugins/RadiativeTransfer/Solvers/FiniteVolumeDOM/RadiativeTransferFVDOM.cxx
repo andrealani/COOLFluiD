@@ -109,7 +109,7 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   
   m_dirName = Environment::DirPaths::getInstance().getWorkingDir();
   setParameter("DirName", &m_dirName);
-  
+    
   m_binTabName = "";
   setParameter("BinTabName", &m_binTabName); 
   
@@ -183,9 +183,13 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   setParameter("rule_azi", &m_rule_azi);
   
   m_directions = false;
-  setParameter("directions", &m_directions);
+  setParameter("directions", &m_directions); 
+  
+  // AL: to be removed once a cleaner solution is found 
+  m_radNamespace = "Default";
+  setParameter("RadNamespace", &m_radNamespace);
 }
-      
+    
 //////////////////////////////////////////////////////////////////////////////
 
 RadiativeTransferFVDOM::~RadiativeTransferFVDOM()
@@ -233,6 +237,10 @@ void RadiativeTransferFVDOM::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< string >("rule_polar","Rule for polars computation.");
   options.addConfigOption< string >("rule_azi","Rule for azimut computation.");
   options.addConfigOption< bool >("directions","Option to write directions");
+  
+  // AL: to be removed once a cleaner solution is found 
+  options.addConfigOption< string >
+    ("RadNamespace","Namespace grouping all ranks involved in parallel communication");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -1345,6 +1353,9 @@ void RadiativeTransferFVDOM::execute()
     computeWallHeatFlux();
   }
   
+  // AL: to be removed once a better solution is found
+  reduceHeatFlux();
+  
   CFLog(INFO, "RadiativeTransferFVDOM::execute() => took " << stp.read() << "s \n");
 }
     
@@ -1678,6 +1689,7 @@ void RadiativeTransferFVDOM::unsetup()
 {
   CFAUTOTRACE;
   
+ 
   DataProcessingCom::unsetup();
 }
       
@@ -2328,6 +2340,30 @@ void RadiativeTransferFVDOM::computeWallHeatFlux()
   CFLog(VERBOSE, "RadiativeTransferFVDOM::computeWallHeatFlux() => END\n");
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+void RadiativeTransferFVDOM::reduceHeatFlux()
+{
+  if (PE::GetPE().GetProcessorCount(m_radNamespace) > 1) {
+    // AL: the following has to be moved to a postprocess() or something function
+    //     to be called after execute() unless the ConcurrentCoupler can be modified to
+    //     take care of it
+    PE::GetPE().setBarrier(m_radNamespace);
+    
+    DataHandle< CFreal > qradFluxWall = socket_qradFluxWall.getDataHandle(); 
+    const CFuint qsize = qradFluxWall.size();
+    vector<CFreal> localHeatFlux(qsize);
+    for (CFuint i = 0; i < qsize; ++i) {
+      localHeatFlux[i] = qradFluxWall[i];
+    }
+    
+    MPIError::getInstance().check
+      ("MPI_Allreduce", "RadiativeTransferFVDOM::unsetup()",
+       MPI_Allreduce(&localHeatFlux[0], &qradFluxWall[0], qsize, MPIStructDef::getMPIType(&localHeatFlux[0]), 
+		     MPI_SUM, PE::GetPE().GetCommunicator(m_radNamespace)));
+  }
+}
+    
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace RadiativeTransfer

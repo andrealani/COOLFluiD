@@ -265,11 +265,6 @@ void ArcJetRadiator::getRandomEmission(CFreal &lambda, RealVector &s_o)
   m_rand.sphereDirections(dim2, s_o);
 }
 
-void ArcJetRadiator::getData()
-{
-
-}
-
 void ArcJetRadiator::readOpacities()
 {
 // assuming the following format:

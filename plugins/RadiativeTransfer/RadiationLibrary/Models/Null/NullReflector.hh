@@ -27,10 +27,6 @@ public:
   void computeReflectionCPD(){}
 
   void getRandomDirection(CFreal &lambda, RealVector &s_o, RealVector &s_i, RealVector &normal ){}
-
-  void getData(){}
-
-private:
 };
 
 }

@@ -107,8 +107,6 @@ public:
   void computeEmissionCPD();
   
   void getRandomEmission(CFreal &lambda, RealVector &s_o);
-
-  void getData();
   
   void getSpectralIdxs(CFreal lambda, CFuint& idx1, CFuint& idx2);
   

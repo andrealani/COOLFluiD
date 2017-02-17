@@ -916,12 +916,6 @@ void ParadeRadiator::getRandomEmission(CFreal &lambda, RealVector &s_o)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ParadeRadiator::getData()
-{
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 void ParadeRadiator::computeBinning()
 {    
   CFLog(VERBOSE, "ParadeRadiator::computeBinning() => START\n");
@@ -1054,7 +1048,7 @@ void ParadeRadiator::computeBinning()
   
   const CFreal dy = (alpha_maxlog-alpha_minlog) / (nbBins-1);
   CFLog(VERBOSE,"ParadeLibrary::computeBinning () => dy = " << dy <<"\n");
-  LocalArray<CFreal>::TYPE vctBins(0., nbBins);
+  LocalArray<CFreal>::TYPE vctBins(nbBins);
   for(CFuint i = 0; i<nbBins; ++i) {
     vctBins[i] = std::exp(alpha_minlog + (dy * i));
     CFLog(VERBOSE,"ParadeLibrary::computeBinning () => vctBins(" << i << ") = " << vctBins[i] <<"\n");
@@ -1193,8 +1187,7 @@ void ParadeRadiator::computeBanding()
   
   CFLog(INFO,"ParadeLibrary::computeBanding() => dy = " << dy <<"\n");
   
-  LocalArray<CFreal>::TYPE vctBins(0., m_nbBands);
-  
+  LocalArray<CFreal>::TYPE vctBins(m_nbBands);
   cf_assert(vctBins.size() == m_nbBands);
   for(int i = 0; i<m_nbBands; ++i) {
     vctBins[i] = std::exp(alpha_minlog + (dy * i));

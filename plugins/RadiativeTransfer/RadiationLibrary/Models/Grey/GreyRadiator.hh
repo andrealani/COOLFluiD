@@ -37,8 +37,6 @@ public:
 
   void getRandomEmission(CFreal &lambda, RealVector &s_o );
   
-  void getData(){}
-  
 protected:
   
   virtual CFreal getCurrentElemTemperature() {return getCurrentCellTemperature();}

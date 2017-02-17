@@ -235,6 +235,7 @@ Simulator.SubSystem.ProcessingRad&8.Radiation.TID = 12
 Simulator.SubSystem.ProcessingRad&8.ProcessRate = 1
 #Simulator.SubSystem.ProcessingRad&8.RunAtSetup = true
 Simulator.SubSystem.ProcessingRad&8.Radiation.OldAlgorithm = false #true
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadNamespace = RadCoupler 
 
 # here we need to find a way to write expression
 Simulator.SubSystem.ProcessingRad&8.Radiation.NbThreads = 8
@@ -261,8 +262,6 @@ Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeR
 /software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
 #/Users/lani/PARADEv3.2.1/parade-3.2.1
 #/software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
-#	/Users/lani/PARADEv3.2.1/parade-3.2.1
-#       /software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.LocalDirName = ParadeData
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 100
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Tmin = 200
