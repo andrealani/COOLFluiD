@@ -1350,11 +1350,11 @@ void RadiativeTransferFVDOM::execute()
       writeRadialData();
     } 
 
-    computeWallHeatFlux();
+    // computeWallHeatFlux();
   }
   
   // AL: to be removed once a better solution is found
-  reduceHeatFlux();
+  // reduceHeatFlux();
   
   CFLog(INFO, "RadiativeTransferFVDOM::execute() => took " << stp.read() << "s \n");
 }
