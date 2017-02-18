@@ -44,7 +44,7 @@ void StdConcurrentReduce::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< vector<string> >
     ("SocketsSendRecv","Sockets to transfer, for example: Namespace1_send>Namespace2_recv (no space on both sides of \">\".");
   options.addConfigOption< vector<string> >
-    ("SocketsConnType","Connectivity type for sockets to transfer (State or Node): this is ne1eded to define global IDs.");
+    ("SocketsConnType","Connectivity type for sockets to transfer (State, Node, NONE): this is ne1eded to define global IDs.");
   options.addConfigOption< vector<string> >
     ("Operation","Name of operation to perform during the reduction for each socket (SUM, SUB, MIN. MAX, PROD).");
 }
@@ -236,6 +236,10 @@ void StdConcurrentReduce::reduceData(const CFuint idx)
 	 DataHandle<Node*, GLOBAL> dofs = ds->getGlobalData<Node*>(data->dofsName);
 	 dofsSize = dofs.size();
        }
+       if (m_socketsConnType[idx] == "NONE") {
+	 dofsSize = 1;
+       }
+       cf_assert(dofsSize > 0);
        
        data->array = &array[0]; 
        data->arraySize = array.size();
