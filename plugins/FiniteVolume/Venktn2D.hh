@@ -115,7 +115,9 @@ protected:
 
   /// user defined characteristic solution length in the smooth flow region
   CFreal _length;
-  
+ 
+  /// Flag for MultiFluid cases to use the fix for smooth regions 
+  bool _isMFMHD; 
 }; // end of class Venktn2D
 
 //////////////////////////////////////////////////////////////////////////////

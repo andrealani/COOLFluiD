@@ -35,6 +35,8 @@ void Venktn2D::defineConfigOptions(Config::OptionList& options)
     ("coeffEps","Coefficient for the epsilon.");
   options.addConfigOption< CFreal >
     ("length","Characteristic solution length in the smooth flow region.");
+  options.addConfigOption< bool >
+    ("isMFMHD","Fix for smooth flow region.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -57,6 +59,9 @@ Venktn2D::Venktn2D(const std::string& name) :
   // default negative value for convenience  
   _length = -1.0;
   setParameter("length",&_length);
+
+  _isMFMHD = false;
+  setParameter("isMFMHD",&_isMFMHD);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -110,6 +115,7 @@ void Venktn2D::limit(const vector<vector<Node*> >& coord,
   DataHandle< vector<State*> > stencil = socket_stencil.getDataHandle();
   
   for(CFuint iVar = 0; iVar < nbEquations; ++iVar) {
+    //std::cout<<"iVar = "<< iVar <<"\n";
     CFreal min0 = (*state)[iVar];
     CFreal max0 = (*state)[iVar];
     CFreal avgDistance = 0.0;
@@ -175,28 +181,60 @@ void Venktn2D::limit(const vector<vector<Node*> >& coord,
     
     CFreal psi = 1.0;
     CFreal psimin = 1.1;
-    const CFreal epsilon = _coeffEps*_magnitudeValues[iVar]*_magnitudeValues[iVar]*
-      pow(avgDistance/_length, 3.0);
+    if(_isMFMHD){ // IMPLEMENTATION FROM VENKATAKRISHNAN PAPER 
+      const CFreal epsilon2 = pow(_coeffEps*avgDistance/_length, 3.0); //_magnitudeValues[iVar]*_magnitudeValues[iVar]*
     
-    for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
-      // number of quadrature points associated with this face
-      const CFuint nbPoints = 1;
+      for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+        // number of quadrature points associated with this face
+        const CFuint nbPoints = 1;
       
-      for (CFuint ip = 0; ip < nbPoints; ++ip) {
-	computeDeltaMin((*coord[iFace][ip]), *state, iVar);
+        for (CFuint ip = 0; ip < nbPoints; ++ip) {
+	  computeDeltaMin((*coord[iFace][ip]), *state, iVar);
 	
-        if (_deltaMin > 0.0) {
-	  const CFreal dPlusMax2   = deltaPlusMax*deltaPlusMax;
-	  const CFreal dPlusMaxMin = deltaPlusMax*_deltaMin;
-	  // epsilon is a scaling factor which is assigned arbitrarily
-	  psi = (dPlusMax2 + 2.0*dPlusMaxMin + epsilon)/
-	    (dPlusMax2 + dPlusMaxMin + 2.0*_deltaMin*_deltaMin + epsilon);
-	}
-        if (_deltaMin < 0.0) {
-          const CFreal y = deltaPlusMin/_deltaMin;
-          psi = (y*y + 2*y)/(y*y + y + 2.);
-	}
-        psimin = min(psi, psimin);
+          if (_deltaMin > 0.0) {
+	    const CFreal dMinStar = MathTools::MathFunctions::sign(_deltaMin)*(std::abs(_deltaMin)/_magnitudeValues[iVar] + 1e-24);
+	    const CFreal dPlus = deltaPlusMax/_magnitudeValues[iVar];
+	    const CFreal dPlus2   = dPlus*dPlus;
+	    const CFreal dPlusMin = dPlus*dMinStar;
+	    const CFreal Num = (dPlus2 + epsilon2)*dMinStar + 2*dPlusMin*dPlusMin*dPlus;
+	    const CFreal Den = (dPlus2 + 2*dMinStar*dMinStar + dPlusMin + epsilon2);
+	    psi = 1./dMinStar*(Num/Den);
+	  }
+          if (_deltaMin < 0.0) {
+	    const CFreal dMinStar = MathTools::MathFunctions::sign(_deltaMin)*(std::abs(_deltaMin)/_magnitudeValues[iVar] + 1e-24);
+            const CFreal dPlus = deltaPlusMin/_magnitudeValues[iVar];
+            const CFreal dPlus2   = dPlus*dPlus;
+            const CFreal dPlusMin = dPlus*dMinStar;
+            const CFreal Num = (dPlus2 + epsilon2)*dMinStar + 2*dPlusMin*dPlusMin*dPlus;
+            const CFreal Den = (dPlus2 + 2*dMinStar*dMinStar + dPlusMin + epsilon2);
+            psi = 1./dMinStar*(Num/Den);
+	  }
+          psimin = min(psi, psimin);
+        }
+      }
+    }
+    else{ //OLD IMPLEMENTATION
+      const CFreal epsilon = _coeffEps*_magnitudeValues[iVar]*_magnitudeValues[iVar]*
+        pow(avgDistance/_length, 3.0);
+
+      for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+        const CFuint nbPoints = 1;
+
+        for (CFuint ip = 0; ip < nbPoints; ++ip) {
+          computeDeltaMin((*coord[iFace][ip]), *state, iVar);
+ 
+          if (_deltaMin > 0.0) {
+            const CFreal dPlusMax2   = deltaPlusMax*deltaPlusMax;
+            const CFreal dPlusMaxMin = deltaPlusMax*_deltaMin;
+            psi = (dPlusMax2 + 2.0*dPlusMaxMin + epsilon)/
+              (dPlusMax2 + dPlusMaxMin + 2.0*_deltaMin*_deltaMin + epsilon);
+          }
+          if (_deltaMin < 0.0) {
+            const CFreal y = deltaPlusMin/_deltaMin;
+            psi = (y*y + 2*y)/(y*y + y + 2.);
+          }
+          psimin = min(psi, psimin);
+        }
       }
     }
     limiterValue[iVar] = psimin;
@@ -207,7 +245,6 @@ void Venktn2D::limit(const vector<vector<Node*> >& coord,
       CFout << "wrong limiterValue = " << limiterValue[iVar] << "\n";
     }
   }
-  
 }
 
 //////////////////////////////////////////////////////////////////////////////
