@@ -122,9 +122,9 @@ void FVMCC_PseudoSteadyTimeRhs::execute()
   CFreal minDt = 0.0;
   if (_useGlobalDT) {
     // select the minimum delta T
-    minDt = volumes[0]/updateCoeff[0];
-    for (CFuint iState = 0; iState < nbStates; ++iState) {
-      minDt = min(volumes[iState]/updateCoeff[iState], minDt);
+    minDt = volumes[0]/updateCoeff[0]*cfl;
+    for (CFuint iState = 1; iState < nbStates; ++iState) {
+      minDt = min(volumes[iState]/updateCoeff[iState]*cfl, minDt);
     }
   }
   
@@ -149,18 +149,19 @@ void FVMCC_PseudoSteadyTimeRhs::execute()
   }
   
   const CFreal dt = SubSystemStatusStack::getActive()->getDT();
-    
+  
   // add the diagonal entries in the jacobian (updateCoeff/CFL)
   for (CFuint iState = 0; iState < nbStates; ++iState) {
-
     if (!_useGlobalDT) {
+      // dt > 0 for unsteady cases, not for steady!
       _diagValue = (dt > 0.0) ? volumes[iState]/dt : updateCoeff[iState]/cfl;
     }
     else {
       // this corresponds to the case with variable DT, as function of the given CFL 
       cf_assert(minDt > 0.);
       cf_assert(dt > 0.);
-      _diagValue = volumes[iState]/(minDt*cfl);
+      // _diagValue = volumes[iState]/(minDt*cfl); WRONG!!
+      _diagValue = volumes[iState]/minDt;      
     }
     
     if (states[iState]->isParUpdatable()) {
