@@ -159,14 +159,11 @@ private: // data
   /// Command used to prepare the computation
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_prepare;
 
-  ///The solve command
-  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_solve;
+  ///The convective solve command
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_convSolve;
   
-  /// The command that computes the volume terms of the discretization of the convective terms
-  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_convVolTerm;
-
-  /// The command that computes the face terms of the discretization of the convective terms
-  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_convFaceTerm;
+  /// The command that computes the contribution of the time discretization to the rhs
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_timeRHSJacob;
   
   /// Command used to limit a solution
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_limiter;
@@ -183,8 +180,8 @@ private: // data
   /// The string for configuration of the m_prepare command
   std::string m_prepareStr;
 
-  /// The string for configuration of the _prepare command
-  std::string m_solveStr;
+  /// The string for configuration of the m_convSolve command
+  std::string m_convSolveStr;
   
   /// The string for configuration of the m_limiter command
   std::string m_limiterStr;
@@ -192,6 +189,9 @@ private: // data
   /// The string for configuration of the commands that compute
   /// RHS (and optionally the Jacobian)
   std::string m_spaceRHSJacobStr;
+  
+  /// The string for configuration of the m_timeRHSJacob command
+  std::string m_timeRHSJacobStr;
   
   /// The commands to use for initializing the solution.
   std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_inits;

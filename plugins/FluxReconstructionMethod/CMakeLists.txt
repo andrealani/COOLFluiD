@@ -21,8 +21,10 @@ GaussLegendre.hh
 CMakeLists.txt
 StdSetup.cxx
 StdSetup.hh
-StdSolve.cxx
-StdSolve.hh
+ConvRHSFluxReconstruction.cxx
+ConvRHSFluxReconstruction.hh
+ConvRHSJacobFluxReconstruction.cxx
+ConvRHSJacobFluxReconstruction.hh
 StdUnSetup.cxx
 StdUnSetup.hh
 StdExtrapolate.cxx
@@ -31,6 +33,8 @@ StdPrepare.cxx
 StdPrepare.hh
 StdInitState.cxx
 StdInitState.hh
+StdTimeRHSJacob.cxx
+StdTimeRHSJacob.hh
 ReconstructStatesFluxReconstruction.cxx
 ReconstructStatesFluxReconstruction.hh
 BCStateComputer.cxx
@@ -57,6 +61,8 @@ MeshUpgradeBuilder.cxx
 MeshUpgradeBuilder.hh
 ConvBndCorrectionsRHSFluxReconstruction.cxx
 ConvBndCorrectionsRHSFluxReconstruction.hh
+ConvBndCorrectionsRHSJacobFluxReconstruction.cxx
+ConvBndCorrectionsRHSJacobFluxReconstruction.hh
 FluxReconstructionGeometricEntities.cxx
 FluxReconstructionBaseFunctionQuadP0.hh
 FluxReconstructionBaseFunctionQuadP0.cxx

@@ -45,7 +45,8 @@ MeshUpgradeBuilder::MeshUpgradeBuilder(const std::string& name) :
   m_solPolyOrder(),
   m_geoPolyOrder(),
   m_prevGeoPolyOrder(),
-  m_bndFacesNodes()
+  m_bndFacesNodes(),
+  m_updatables()
 {
   addConfigOptionsTo(this);
 
@@ -339,7 +340,7 @@ void MeshUpgradeBuilder::createTopologicalRegionSets()
     recreateNodes();
   }
 
-  // continue with the standart algorithm
+  // continue with the standard algorithm
   FluxReconstructionBuilder::createTopologicalRegionSets();
 }
 
@@ -355,8 +356,33 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
 
   // get the connectivity that we will change
   SafePtr<MeshData::ConnTable> cellStates = MeshDataStack::getActive()->getConnectivity("cellStates_InnerCells");
+  
+  // get the old states
+  DataHandle < Framework::State*, Framework::GLOBAL > oldStates = getCFmeshData().getStatesHandle();
 
   const CFuint nbElems = getNbElements();
+  
+  // temporary vector to store which old states are parallel updatable
+  vector< bool > updatablesElems;
+  updatablesElems.resize(nbElems);
+  m_updatables.resize(0);
+  
+  // loop on all the elements to store which old states are parallel updatable
+  for (type_itr = elementType->begin(); type_itr != elementType->end(); ++type_itr)
+  {
+    // get the number of elements
+    const CFuint nbrElems = type_itr->getNbElems();
+
+    // get start index of this element type in global element list
+    CFuint globalIdx = type_itr->getStartIdx();
+
+    // loop over elements of this type
+    for (CFuint iElem = 0; iElem < nbrElems; ++iElem, ++globalIdx)
+    {
+      CFuint stateID = (*cellStates)(globalIdx,0);
+      updatablesElems[globalIdx] = oldStates[stateID]->isParUpdatable();
+    }
+  }
 
   // we will create a mesh with equal order on all the elements
   // and we reset the connectivity accordingly, using a std::valarray
@@ -401,9 +427,11 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
       for (CFuint jState = 0; jState < nbStatesPerElem; ++jState, ++stateID)
       {
         (*cellStates)(globalIdx,jState) = stateID;
+	m_updatables.push_back(updatablesElems[globalIdx]);
       }
     }
   }
+  updatablesElems.resize(0);
 
   cf_assert(stateID == columnPattern.sum());
 }
@@ -432,14 +460,15 @@ void MeshUpgradeBuilder::recreateStates()
   states.resize(newNbStates);
 
   // allocate the new states
-  bool updatable = true;
+  //bool updatable = true;
   const CFuint nbeq = PhysicalModelStack::getActive()->getNbEq();
   RealVector stateData (nbeq);
   for (CFuint iState = 0; iState < states.size(); ++iState)
   {
     getCFmeshData().createState(iState,stateData);
-    states[iState]->setParUpdatable(updatable);
+    states[iState]->setParUpdatable(m_updatables[iState]);
   }
+  m_updatables.resize(0);
 }
 
 //////////////////////////////////////////////////////////////////////////////

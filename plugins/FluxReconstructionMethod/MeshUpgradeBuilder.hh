@@ -147,6 +147,9 @@ protected: // data
 
   /// total number of nodes (including new high-order nodes
   CFuint m_totNbrNodes;
+  
+  /// stores whether an old state is updatable
+  std::vector< bool > m_updatables;
 
 };  // end of class MeshUpgradeBuilder
 

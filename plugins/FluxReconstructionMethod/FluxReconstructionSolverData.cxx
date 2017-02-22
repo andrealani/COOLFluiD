@@ -58,6 +58,7 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
 
 FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Framework::Method> owner) :
   SpaceMethodData(owner),
+  m_numJacob(CFNULL),
   m_lss(),
   m_convergenceMtd(),
   m_stdTrsGeoBuilder(),
@@ -73,10 +74,12 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_bcTRSNameStr(),
   m_innerFacesStartIdxs(),
   m_bndFacesStartIdxs(),
+  m_partitionFacesStartIdxs(),
   m_frLocalData(),
   m_maxNbrStatesData(),
   m_maxNbrRFluxPnts(),
   m_resFactor(),
+  m_hasDiffTerm(),
   m_updateToSolutionVecTrans()
 {
   addConfigOptionsTo(this);
@@ -142,6 +145,13 @@ void FluxReconstructionSolverData::setup()
   // setup face builder
   m_faceBuilder.setup();
   
+  // create numerical Jacobian computer
+  m_numJacob.reset(new NumericalJacobian("NumericalJacobian"));
+  
+  // set reference values in numerical Jacobian computer
+  RealVector refValues = PhysicalModelStack::getActive()->getImplementor()->getRefStateValues();
+  m_numJacob->setRefValues(refValues);
+  
   // setup the variable sets
   _updateVar   ->setup();
   _solutionVar ->setup();
@@ -152,6 +162,10 @@ void FluxReconstructionSolverData::setup()
   
   // setup StatesReconstructor
   m_statesReconstructor->setup();
+  
+  // set the hasDiffTerm boolean
+  /// @note it would be better to check a name related to the DiffusiveVarSet here
+  m_hasDiffTerm = (_diffusiveVarStr != "Null");
   
   // create the transformer from update to solution variables 
   std::string name = getNamespace();

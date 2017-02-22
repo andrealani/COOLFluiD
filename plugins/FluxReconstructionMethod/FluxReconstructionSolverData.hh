@@ -62,6 +62,15 @@ public: // functions
   virtual void configure ( Config::ConfigArgs& args );
   
   /**
+   * Get the numerical jacobian calculator
+   */
+  Common::SafePtr<Framework::NumericalJacobian> getNumericalJacobian() const
+  {
+    cf_assert(m_numJacob.get() != CFNULL);
+    return m_numJacob.get();
+  }
+  
+  /**
    * Get the vector transformer from update to solution variables
    * This function is implemented in the specific (space) MethodData
    */
@@ -229,6 +238,12 @@ public: // functions
     return m_bndFacesStartIdxs;
   }
   
+  /// @return reference to m_bndFacesStartIdxs
+  std::vector< CFuint >& getPartitionFacesStartIdxs()
+  {
+    return m_partitionFacesStartIdxs;
+  }
+  
   /// @return m_maxNbrStatesData
   CFuint getMaxNbrStatesData()
   {
@@ -245,6 +260,12 @@ public: // functions
   std::vector< CFuint >& getInnerFacesStartIdxs()
   {
     return m_innerFacesStartIdxs;
+  }
+  
+  /// @return m_hasDiffTerm
+  bool hasDiffTerm()
+  {
+    return m_hasDiffTerm;
   }
 
   
@@ -270,6 +291,9 @@ private:  // helper functions
   void createFRLocalData();
 
 private:  // data
+  
+  /// Numerical jacobian calculator
+  std::auto_ptr<Framework::NumericalJacobian> m_numJacob;
 
   /// Linear system solver
   Framework::MultiMethodHandle< Framework::LinearSystemSolver > m_lss;
@@ -349,11 +373,17 @@ private:  // data
   /// factor to multiply the residual with, coming from the time discretization
   CFreal m_resFactor;
   
+  /// boolean storing wether there is a diffusive term
+  bool m_hasDiffTerm;
+  
   /// map between the boundary TRS and the start index of faces with a certain orientation
   std::map< std::string , std::vector< std::vector< CFuint > > > m_bndFacesStartIdxs;
   
   /// start index of inner faces with a certain orientation
   std::vector< CFuint > m_innerFacesStartIdxs;
+  
+  /// start index of partition faces with a certain orientation
+  std::vector< CFuint > m_partitionFacesStartIdxs;
   
   /// Vector transformer from update to solution variables
   Common::SelfRegistPtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;

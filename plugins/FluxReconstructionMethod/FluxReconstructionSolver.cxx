@@ -35,7 +35,7 @@ void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< std::string >("ExtrapolateCom","Command to extrapolate the states values to the position at the nodes.");
   options.addConfigOption< std::string >("PrepareCom","Command to prepare before the computation of the residuals.");
-  options.addConfigOption< std::string >("SolveCom","Command to solve the problem with FluxReconstruction solver.");
+  options.addConfigOption< std::string >("ConvSolveCom","Command to solve the convection problem with FluxReconstruction solver.");
   options.addConfigOption< std::string >("UnSetupCom","Command to deallocate FluxReconstruction solver data.");
   options.addConfigOption< std::string >("SetupCom","Command to initialize FluxReconstruction solver data.");
   options.addConfigOption< std::vector<std::string> >("SrcTermComds","Types of the source term commands.");
@@ -44,6 +44,7 @@ void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::vector<std::string> >("InitNames","Names of the initializing commands.");
   options.addConfigOption< std::vector<std::string> >("BcNames","Names of the boundary condition commands.");
   options.addConfigOption< std::string >("SpaceRHSJacobCom","Command for the computation of the space discretization contribution to RHS and Jacobian.");
+  options.addConfigOption< std::string >("TimeRHSJacobCom","Command for the computation of the time discretization contibution to RHS and Jacobian.");
   options.addConfigOption< std::string >("LimiterCom","Command to limit the solution.");
 }
 
@@ -55,13 +56,12 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   m_unsetup(),
   m_extrapolate(),
   m_prepare(),
-  m_solve(),
+  m_convSolve(),
   m_limiter(),
-  m_convVolTerm(),
-  m_convFaceTerm(),
   m_srcTerms(),
   m_inits(),
   m_bcs(),
+  m_timeRHSJacob(),
   m_bcsComs()
 {
   addConfigOptionsTo(this);
@@ -78,6 +78,9 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   m_spaceRHSJacobStr = "RHS";
   setParameter("SpaceRHSJacobCom", &m_spaceRHSJacobStr);
   
+  m_timeRHSJacobStr = "Null";
+  setParameter("TimeRHSJacobCom", &m_timeRHSJacobStr);
+  
   m_limiterStr = "Null";
   setParameter("LimiterCom", &m_limiterStr);
 
@@ -93,8 +96,8 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   m_prepareStr = "StdPrepare";
   setParameter("PrepareCom", &m_prepareStr);
 
-  m_solveStr   = "StdSolve";
-  setParameter( "SolveCom",   &m_solveStr );
+  m_convSolveStr   = "ConvRHS";
+  setParameter( "ConvSolveCom",   &m_convSolveStr );
   
   // options for source term commands
   m_srcTermTypeStr = std::vector<std::string>();
@@ -155,16 +158,19 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_prepare,m_prepareStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >(
-    args, m_solve,m_solveStr,m_data );
+    args, m_convSolve,m_convSolveStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_limiter,m_limiterStr,m_data );
+  configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
+    args, m_timeRHSJacob,m_timeRHSJacobStr,m_data );
 
   cf_assert(m_setup.isNotNull());
   cf_assert(m_unsetup.isNotNull());
   cf_assert(m_extrapolate.isNotNull());
   cf_assert(m_prepare.isNotNull());
-  cf_assert(m_solve.isNotNull());
+  cf_assert(m_convSolve.isNotNull());
   cf_assert(m_limiter.isNotNull());
+  cf_assert(m_timeRHSJacob.isNotNull());
   
   configureSourceTermCommands(args);
   configureInitCommands(args);
@@ -336,8 +342,8 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
   // apply the boundary conditions (this function is in SpaceMethod and is not called anywhere else)
   applyBC();
   
-  cf_assert(m_solve.isNotNull());
-  m_solve->execute();
+  cf_assert(m_convSolve.isNotNull());
+  m_convSolve->execute();
 
 //   // if there is a diffusive term, compute the diffusive contributions to the residual
 //   if (m_data->hasDiffTerm() && m_data->separateConvDiffComs())
@@ -366,6 +372,15 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
 void FluxReconstructionSolver::computeTimeResidualImpl(CFreal factor)
 {
   CFAUTOTRACE;
+  
+  cf_assert(isConfigured());
+  cf_assert(isSetup());
+
+  // set the residual factor in the MethodData
+  m_data->setResFactor(factor);
+
+  // compute the time contribution to the jacobian
+  m_timeRHSJacob->execute();
 }
 
 //////////////////////////////////////////////////////////////////////////////

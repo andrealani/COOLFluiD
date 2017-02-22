@@ -131,8 +131,11 @@ void FluxReconstructionBuilder::createTopologicalRegionSets()
   // create all the boundary faces TRSs
   createBoundaryFacesTRS();
 
-  // reorder the faces list
+  // reorder the boundary faces list
   reorderBoundaryFacesTRS();
+  
+  // reorder the partition faces list
+  reorderPartitionFacesTRS();
 
   // needed for the sparsity of the matrix
   setMapGeoToTrs();
@@ -1619,6 +1622,268 @@ void FluxReconstructionBuilder::reorderBoundaryFacesTRS()
     MeshDataStack::getActive()->storeConnectivity((*nameTRS)[iTRS]+"boundaryFacesStartIdxs", bndFacesStartIdxs);
   }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionBuilder::reorderPartitionFacesTRS()
+{
+  CFAUTOTRACE;
+
+  // get cell-node connectivity
+  SafePtr< ConnTable > cellNodeConn = MeshDataStack::getActive()->getConnectivity("cellNodes_InnerCells");
+
+  // get possible face orientations and number of face nodes
+  SafePtr<vector<ElementTypeData> > elementType = getCFmeshData().getElementTypeData();
+  const CFuint nbElemTypes = elementType->size();
+  CFLog(VERBOSE, "size elemType: " << nbElemTypes << "\n");
+  const CFuint nbCellFaces = (*elementType)[0].getNbFaces();
+  const CFGeoShape::Type cellShape = (*elementType)[0].getGeoShape();
+  vector< vector< CFuint > > bFaceOrientations = getBFaceOrientations(cellShape);
+  const CFuint nbFaceNodes = bFaceOrientations[0].size();
+
+  // number of possible orientations
+  const CFuint nbOrients = bFaceOrientations.size();
+  cf_assert(nbOrients == nbCellFaces);
+
+    // get current boundary TRS
+    SafePtr<TopologicalRegionSet> bndTRS = MeshDataStack::getActive()->getTrs("PartitionFaces");
+
+    // get boundary face - cell connectivity
+    SafePtr< ConnTable > bFaceCellConn =
+      MeshDataStack::getActive()->getConnectivity("PartitionFaces-Faces2Cells");
+
+    // get boundary face - node connectivity
+    SafePtr< ConnectivityTable< CFuint > > bFaceNodeConn = bndTRS->getGeo2NodesConn();
+
+    // get local (this processor) face IDs
+    SafePtr<vector<CFuint> > localFaceIDs = bndTRS->getGeoEntsLocalIdx();
+
+    // get global face IDs
+    SafePtr<vector<CFuint> > globalFaceIDs = bndTRS->getGeoEntsGlobalIdx();
+
+    // number of TRs
+    const CFuint nbTRs = bndTRS->getNbTRs();
+    cf_assert(nbTRs == 1);
+
+    /// @warning I'm cheating a little here, by using a connectivity table to store
+    /// the start indexes of the faces with a certain orientation. Is there a better way?
+    std::valarray<CFuint> nbOrientsValAr(1,nbTRs*(nbOrients+1));
+    ConnTable* bndFacesStartIdxs = new ConnTable(nbOrientsValAr);
+
+    // get TR list
+    SafePtr<vector<TopologicalRegion*> > bndTRList = bndTRS->getTopologicalRegionList();
+
+    // index over groups of faces with a certain orientation
+    CFuint iFaceOrient = 0;
+
+    // loop over TRs
+    for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
+    {
+      // number of boundary faces in this TR
+      const CFuint nbBFaces = (*bndTRList)[iTR]->getLocalNbGeoEnts();
+
+      // start face index in this TR
+      CFuint faceIdx = (*bndTRList)[iTR]->getGeoIDInTrs(0);
+
+      // stop face index in this TR
+      const CFuint stopFaceIdx = (*bndTRList)[iTR]->getGeoIDInTrs(nbBFaces);
+
+      // loop over possible orientations
+      for (CFuint iOrient = 0; iOrient < nbOrients; ++iOrient)
+      {
+
+        // store start index of faces with this orientation
+        (*bndFacesStartIdxs)(iFaceOrient,0) = faceIdx; ++iFaceOrient;
+
+        // loop over boundary faces in this TR
+        for (CFuint iBFace = faceIdx; iBFace < stopFaceIdx; ++iBFace)
+        {
+
+          // neighbouring cell
+          const CFuint cellID = (*bFaceCellConn)(iBFace,0);
+
+          // get cell face nodes
+          vector< CFuint > cellFaceNodes(nbFaceNodes);
+          for (CFuint iNode = 0; iNode < nbFaceNodes; ++iNode)
+          {
+            // node local ID in cell
+            const CFuint nodeLocalID = bFaceOrientations[iOrient][iNode];
+
+            // node local ID in this processor
+            cellFaceNodes[iNode] = (*cellNodeConn)(cellID,nodeLocalID);
+          }
+
+          // get face nodes
+          vector< CFuint > faceNodes(nbFaceNodes);
+          for (CFuint iNode = 0; iNode < nbFaceNodes; ++iNode)
+          {
+            // node local ID in this processor
+            faceNodes[iNode] = (*bFaceNodeConn)(iBFace,iNode);
+          }
+
+          // check if face has this orientation
+          bool hasThisOrient = false;
+
+          // the following depends on whether the mesh is 3D or not
+          if (nbFaceNodes > 2)
+          {
+            // loop over possible rotations of face
+            for (CFuint iRot = 0; iRot < nbFaceNodes && !hasThisOrient; ++iRot)
+            {
+              hasThisOrient = true;
+
+              // check if face has this orientation
+              for (CFuint iNode = 0; iNode < nbFaceNodes && hasThisOrient; ++iNode)
+              {
+                if (cellFaceNodes[iNode] != faceNodes[iNode])
+                {
+                  hasThisOrient = false;
+                  break;
+                }
+              }
+
+              // rotate face nodes
+              if (!hasThisOrient)
+              {
+                const CFuint swap = faceNodes[0];
+                for (CFuint iNode = 0; iNode < nbFaceNodes-1; ++iNode)
+                {
+                  faceNodes[iNode] = faceNodes[iNode+1];
+                }
+                faceNodes[nbFaceNodes-1] = swap;
+              }
+            }
+
+            // if no match was found, try opposite face orientation
+            if (!hasThisOrient)
+            {
+              // change orientation (only two nodes need to be switched)
+              CFuint swap = faceNodes[nbFaceNodes-1];
+              faceNodes[nbFaceNodes-1] = faceNodes[nbFaceNodes-2];
+              faceNodes[nbFaceNodes-2] = swap;
+
+              // loop over possible rotations of face
+              for (CFuint iRot = 0; iRot < nbFaceNodes && !hasThisOrient; ++iRot)
+              {
+                hasThisOrient = true;
+
+                // check if face has this orientation
+                for (CFuint iNode = 0; iNode < nbFaceNodes && hasThisOrient; ++iNode)
+                {
+                  if (cellFaceNodes[iNode] != faceNodes[iNode])
+                  {
+                    hasThisOrient = false;
+                    break;
+                  }
+                }
+
+                // rotate face nodes
+                if (!hasThisOrient)
+                {
+                  const CFuint swap = faceNodes[0];
+                  for (CFuint iNode = 0; iNode < nbFaceNodes-1; ++iNode)
+                  {
+                    faceNodes[iNode] = faceNodes[iNode+1];
+                  }
+                  faceNodes[nbFaceNodes-1] = swap;
+                }
+              }
+            }
+          }
+          else
+          {
+            hasThisOrient = true;
+            // check if face has this orientation
+            for (CFuint iNode = 0; iNode < nbFaceNodes && hasThisOrient; ++iNode)
+            {
+              if (cellFaceNodes[iNode] != faceNodes[iNode])
+              {
+                hasThisOrient = false;
+                break;
+              }
+            }
+            // if no match was found, try opposite face orientation
+            if (!hasThisOrient)
+            {
+              // change orientation (only two nodes need to be switched)
+              CFuint swap = faceNodes[1];
+              faceNodes[1] = faceNodes[0];
+              faceNodes[0] = swap;
+
+              // check if face has this orientation
+              hasThisOrient = true;
+              for (CFuint iNode = 0; iNode < nbFaceNodes && hasThisOrient; ++iNode)
+              {
+                if (cellFaceNodes[iNode] != faceNodes[iNode])
+                {
+                  hasThisOrient = false;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (hasThisOrient)
+          {
+            // swap list entries if needed
+            if (iBFace != faceIdx)
+            {
+              // swap boundary face - cell connectivity
+              CFuint swap = (*bFaceCellConn)(faceIdx,0);
+              (*bFaceCellConn)(faceIdx,0) = (*bFaceCellConn)(iBFace,0);
+              (*bFaceCellConn)(iBFace,0) = swap;
+
+              // swap boundary face local (this processor) ID list
+              swap = (*localFaceIDs)[faceIdx];
+              (*localFaceIDs)[faceIdx] = (*localFaceIDs)[iBFace];
+              (*localFaceIDs)[iBFace] = swap;
+
+              // swap boundary face global ID list
+              //swap = (*globalFaceIDs)[faceIdx];
+              //(*globalFaceIDs)[faceIdx] = (*globalFaceIDs)[iBFace];
+              //(*globalFaceIDs)[iBFace] = swap;
+
+              // swap boundary face-geotype list
+              /// @warning The face-geotype list cannot be retrieved from the TRS. There should be
+              /// only one face type in the mesh though, so it is not necessary to swap this list.
+            }
+
+            // find neighbouring cell type
+            CFuint cellType;
+            for (cellType = 0; cellType < nbElemTypes; ++cellType)
+            {
+              if ((*elementType)[cellType].getStartIdx() <= cellID &&
+                  (*elementType)[cellType].getEndIdx()   >  cellID   )
+              {
+                break;
+              }
+            }
+
+            // swap boundary face - node connectivity
+            // (this has to be done outside the if, in case the order of the nodes has to be altered)
+            const CFuint nbNodes = m_faceNodeElement[cellType]->nbCols(iOrient); // iOrient == local face ID (in a cell)
+            for (CFuint iNode = 0; iNode < nbNodes; ++iNode)
+            {
+              (*bFaceNodeConn)(iBFace,iNode) = (*bFaceNodeConn)(faceIdx,iNode);
+              const CFuint nodeLocalID = (*m_faceNodeElement[cellType])(iOrient,iNode);
+              (*bFaceNodeConn)(faceIdx,iNode) = (*cellNodeConn)(cellID,nodeLocalID);
+            }
+
+            // increase faceIdx
+            ++faceIdx;
+          }
+        }
+      }
+
+      // store stop index of faces with this orientation
+      cf_assert(faceIdx == stopFaceIdx);
+      (*bndFacesStartIdxs)(iFaceOrient,0) = faceIdx; ++iFaceOrient;
+    }
+
+    // store start indexes of faces with a certain orientation in this TRS
+    MeshDataStack::getActive()->storeConnectivity("partitionFacesStartIdxs", bndFacesStartIdxs);
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////
 

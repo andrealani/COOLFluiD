@@ -41,8 +41,6 @@ StdPrepare::~StdPrepare()
 void StdPrepare::execute()
 {
   CFAUTOTRACE;
-  
-  CFLog(NOTICE,"PREPARE EXECUTE");
 
   // reset the rhs
   DataHandle< CFreal > rhs = socket_rhs.getDataHandle();

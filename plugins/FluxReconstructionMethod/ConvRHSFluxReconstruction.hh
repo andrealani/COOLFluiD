@@ -4,8 +4,8 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_FluxReconstructionMethod_StdSolve_hh
-#define COOLFluiD_FluxReconstructionMethod_StdSolve_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_ConvRHSFluxReconstruction_hh
+#define COOLFluiD_FluxReconstructionMethod_ConvRHSFluxReconstruction_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -26,15 +26,15 @@ namespace COOLFluiD {
 /// This is a standard command to assemble the system using a FluxReconstruction solver
 /// @author Alexander Papen
 /// @author Ray Vandenhoeck
-class StdSolve : public FluxReconstructionSolverCom {
+class ConvRHSFluxReconstruction : public FluxReconstructionSolverCom {
 
 public: // functions
 
   /// Constructor
-  explicit StdSolve(const std::string& name);
+  explicit ConvRHSFluxReconstruction(const std::string& name);
 
   /// Destructor
-  virtual ~StdSolve() {}
+  virtual ~ConvRHSFluxReconstruction() {}
 
   /// Execute processing actions
   void execute();
@@ -72,13 +72,16 @@ protected: //functions
   void computeInterfaceFlxCorrection(CFuint faceID);
   
   /// compute the residual updates (-divFC)
-  void computeResUpdates(CFuint elemIdx);
+  void computeResUpdates(CFuint elemIdx, std::vector< RealVector >& residuals);
   
   /// add the residual updates to the RHS
   void updateRHS();
   
   /// add the updates to the wave speed
   void updateWaveSpeed();
+  
+  /// compute the correction -(FI-FD)divh of a neighbouring cell
+  void computeCorrection(CFuint side, std::vector< RealVector >& corrections);
   
   /**
    * compute the wave speed updates for this face
@@ -91,6 +94,16 @@ protected: //functions
    * Divides by jacobian determinant
    */
   void divideByJacobDet();
+  
+  /**
+   * Set the data for the current face necessary to calculate FI-FD
+   */
+  void setFaceData(CFuint faceID);
+  
+  /**
+   * Add the updateCoeff corrections due to the partition faces
+   */
+  void addPartitionFacesCorrection();
 
 protected: //data
   /// socket for gradients
@@ -147,9 +160,6 @@ protected: //data
   
   /// face connectivity per orient
   Common::SafePtr< std::vector< std::vector< CFuint > > > m_faceConnPerOrient;
-  
-  /// interface minus discontinuous flux in the flux points for each face
-  std::vector< std::vector< RealVector > > m_corrFlxFactor;
   
   /// builder of faces
   Common::SafePtr<Framework::GeometricEntityPool<Framework::FaceToCellGEBuilder> > m_faceBuilder;
@@ -237,5 +247,5 @@ protected: //data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_FluxReconstructionMethod_StdSolve_hh
+#endif // COOLFluiD_FluxReconstructionMethod_ConvRHSFluxReconstruction_hh
 

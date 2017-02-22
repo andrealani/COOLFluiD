@@ -68,6 +68,7 @@ protected: // functions
    * Creates all the TopologicalRegionSet's in the MeshData
    */
   virtual void createTopologicalRegionSets();
+  
 
 private: // helper functions
 
@@ -125,6 +126,11 @@ private: // helper functions
    * Reorder the faces in the BoundaryFacesTRS. Group the faces according to their connectivity to cells.
    */
   void reorderBoundaryFacesTRS();
+  
+  /**
+   * Reorder the faces in the PartitionFacesTRS. Group the faces according to their connectivity to cells.
+   */
+  void reorderPartitionFacesTRS();
 
   /**
    * Returns a vector containing all the face orientations (LINE, QUAD, HEXA)

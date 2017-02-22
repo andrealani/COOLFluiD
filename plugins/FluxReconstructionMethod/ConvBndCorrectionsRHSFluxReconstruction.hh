@@ -88,7 +88,7 @@ protected: // functions
   void computeInterfaceFlxCorrection(CFuint faceID);
   
   /// compute the total correction
-  void computeCorrection();
+  void computeCorrection(std::vector< RealVector >& corrections);
 
   /// add the residual updates to the RHS
   void updateRHS();
@@ -101,6 +101,9 @@ protected: // functions
   
   /// add the updates to the wave speed
   void updateWaveSpeed();
+  
+  /// set the bnd face data necessary to compute FI-FD
+  void setBndFaceData(CFuint faceID);
   
   /**
    * compute the wave speed updates for this face
@@ -147,9 +150,6 @@ protected: // data
 
   /// the states in the neighbouring cell
   std::vector< Framework::State* >* m_cellStates;
-
-  /// residual updates
-  RealVector m_resUpdates;
 
   /// update for the wave speed in the neighbouring cell
   CFreal m_waveSpeedUpd;

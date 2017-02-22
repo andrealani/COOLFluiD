@@ -85,6 +85,10 @@ void StdUnSetup::execute()
   // clear start index of inner faces with a certain orientation
   vector< CFuint >& innerFacesStartIdxs = getMethodData().getInnerFacesStartIdxs();
   innerFacesStartIdxs.resize(0);
+  
+  // clear start index of partition faces with a certain orientation
+  vector< CFuint >& partitionFacesStartIdxs = getMethodData().getPartitionFacesStartIdxs();
+  partitionFacesStartIdxs.resize(0);
 
   // clear start index of boundary faces with a certain orientation
   map<std::string, vector< vector< CFuint > > >& bndFacesStartIdxs = getMethodData().getBndFacesStartIdxs();

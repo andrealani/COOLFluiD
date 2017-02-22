@@ -317,7 +317,27 @@ void StdSetup::createFaceOrientationStartIndexes()
 
       // increment boundary TRS counter
       ++iBndTRS;
-    }
+    } 
+  }
+
+  // START INDEXES FOR Partition CFGeoEnt::CELLS
+  // get the face start indexes
+  vector< CFuint >& partitionFacesStartIdxs = getMethodData().getPartitionFacesStartIdxs();
+
+  // get connectivity where the face start indexes are stored
+  SafePtr< ConnectivityTable< CFuint > > partitionFacesStartIdxsConnTable
+    = MeshDataStack::getActive()->getConnectivity("partitionFacesStartIdxs");
+
+  // get number of orientations
+  const CFuint nbrPartFaceOrientsPlus1 = partitionFacesStartIdxsConnTable->nbRows();
+
+  // resize innerFacesStartIdxs
+  partitionFacesStartIdxs.resize(nbrPartFaceOrientsPlus1);
+
+  // put indexes in innerFacesStartIdxs
+  for (CFuint iIdx = 0; iIdx < nbrPartFaceOrientsPlus1; ++iIdx)
+  {
+    partitionFacesStartIdxs[iIdx] = (*partitionFacesStartIdxsConnTable)(iIdx,0);
   }
 }
 
