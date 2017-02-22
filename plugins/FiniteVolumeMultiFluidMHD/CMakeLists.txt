@@ -33,6 +33,8 @@ GEMMHDST2DHalfTwoFluid.cxx
 GEMMHDST2DHalfTwoFluid.hh
 GridConvergence.cxx
 GridConvergence.hh
+EnergyIntegration.cxx
+EnergyIntegration.hh
 HartmannSourceTerm.ci
 HartmannSourceTerm.cxx
 HartmannSourceTerm.hh
