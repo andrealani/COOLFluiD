@@ -59,6 +59,7 @@ bool MaxNumberSubIterCondition::IsGlobal () const
 
 bool MaxNumberSubIterCondition::isAchieved (const ConvergenceStatus& status)
 {
+  if (SubSystemStatusStack::getActive()->getStopSimulation()) return true;
   return status.subiter >= _maxNbSteps;
 }
 

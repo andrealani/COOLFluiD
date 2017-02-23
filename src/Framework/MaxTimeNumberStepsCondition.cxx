@@ -65,6 +65,7 @@ bool MaxTimeNumberStepsCondition::IsGlobal () const
 
 bool MaxTimeNumberStepsCondition::isAchieved (const ConvergenceStatus& status)
 {
+  if (SubSystemStatusStack::getActive()->getStopSimulation()) return true;
   if (MaxNumberStepsCondition::isAchieved(status)) return true;
   
   // set the maximum time

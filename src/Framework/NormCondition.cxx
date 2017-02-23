@@ -54,6 +54,7 @@ bool NormCondition::IsGlobal () const
 
 bool NormCondition::isAchieved (const ConvergenceStatus& status)
 {
+  if (SubSystemStatusStack::getActive()->getStopSimulation()) return true;
   static bool isFirstIter = true;
   if (isFirstIter) {
     isFirstIter = false;

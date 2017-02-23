@@ -64,6 +64,8 @@ bool NormAndMaxSubIter::IsGlobal () const
 
 bool NormAndMaxSubIter::isAchieved(const ConvergenceStatus& status)
 {
+  if (SubSystemStatusStack::getActive()->getStopSimulation()) return true;
+
   const std::string currentNspName = NamespaceSwitcher::getInstance
     (SubSystemStatusStack::getCurrentName()).getCurrentNamespace()->getName();
   

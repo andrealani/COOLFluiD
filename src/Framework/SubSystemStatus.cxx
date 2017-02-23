@@ -47,7 +47,8 @@ SubSystemStatus::SubSystemStatus(const std::string& name) :
   m_innerDTConf(0),
   m_previousTimeStep(0.),
   m_subIterationFlag(false),
-  m_lastSubIter(false)
+  m_lastSubIter(false),
+  m_stopSim(false)
 {
   addConfigOptionsTo(this);
 

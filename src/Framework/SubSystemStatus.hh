@@ -56,11 +56,15 @@ public: // methods
 //
 //////////////////////////////////////////////////////////////////////////////
 
-
+  /// Sets the flag asking the simulation to be stopped
+  void setStopSimulation(const bool stopSim) {m_stopSim = stopSim;}
+  
+  /// @return the flag asking the simulation to be stopped
+  bool getStopSimulation() const {return m_stopSim;}
+    
   /// Sets the residual
   void setResidual(const RealVector& residual);
-
-
+  
   /// Sets the residual
   void setMonitoredVar(const CFuint monitored_var)
   {
@@ -447,7 +451,7 @@ private: // member data
 
   ///flag: should the current time be append to the filename
   bool m_appendTime;
-
+  
   /// Name of the subsystem
   std::string m_subSystemName;
 
@@ -489,7 +493,10 @@ private: // member data
 
   ///Is it the last step of the subiteration process
   bool m_lastSubIter;
-
+  
+  ///flag: tells the simulation to stop
+  bool m_stopSim;
+  
 }; // end of class SubSystemStatus
 
 //////////////////////////////////////////////////////////////////////////////

@@ -62,6 +62,8 @@ bool MaxTimeCondition::IsGlobal () const
 
 bool MaxTimeCondition::isAchieved (const ConvergenceStatus& status)
 {
+  if (SubSystemStatusStack::getActive()->getStopSimulation()) return true;
+
   Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
   subSysStatus->setMaxTimeDim(m_maxTime);
   

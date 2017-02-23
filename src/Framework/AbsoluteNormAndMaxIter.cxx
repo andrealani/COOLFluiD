@@ -60,6 +60,7 @@ bool AbsoluteNormAndMaxIter::IsGlobal () const
 
 bool AbsoluteNormAndMaxIter::isAchieved(const ConvergenceStatus& status)
 {
+  if (SubSystemStatusStack::getActive()->getStopSimulation()) return true;
   // if no iteration has been done, dont evalute the residual
   if (status.iter == 0) { return (status.iter >= m_maxIter); }
 

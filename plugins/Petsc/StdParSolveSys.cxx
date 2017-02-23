@@ -156,17 +156,17 @@ stopTimer.start();
 
   ierr = KSPSolve(ksp, rhsVec.getVec(), solVec.getVec());
   CHKERRCONTINUE(ierr);
-
-
-
-//solVec.printToFile("solPETSC.txt");
-
-
-
-
+  
+  //solVec.printToFile("solPETSC.txt");
+  
   CFint iter = 0;
   ierr = KSPGetIterationNumber(ksp, &iter);
   CHKERRCONTINUE(ierr);
+  
+  // Ask to stop the simulation if convergence is achieved at iteration 0 (i.e. LSS was not solved)
+  if (iter == 0) {
+    SubSystemStatusStack::getActive()->setStopSimulation(true);
+  }
   
   if (nbIter%getMethodData().getKSPConvergenceShowRate() == 0) {
     CFLog(INFO, "KSP convergence reached at iteration: " << iter << "\n");

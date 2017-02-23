@@ -62,6 +62,8 @@ bool MaxNumberStepsCondition::IsGlobal () const
 
 bool MaxNumberStepsCondition::isAchieved (const ConvergenceStatus& status)
 {
+  if (SubSystemStatusStack::getActive()->getStopSimulation()) return true;
+
   NamespaceSwitcher& nsw = 
     NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
   const CFuint nbNsp = nsw.getAllNamespaces().size();

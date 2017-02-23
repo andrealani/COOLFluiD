@@ -81,7 +81,7 @@ bool RelativeNormAndMaxSubIter::IsGlobal () const
 
 bool RelativeNormAndMaxSubIter::isAchieved(const ConvergenceStatus& status)
 {
-
+  if (SubSystemStatusStack::getActive()->getStopSimulation()) return true;
   const CFuint start = 0; // first residual comes after first iteration
   const CFuint first = 1; // first residual comes after first iteration
   
