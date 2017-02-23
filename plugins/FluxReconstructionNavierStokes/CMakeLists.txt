@@ -1,10 +1,16 @@
 LIST( APPEND FluxReconstructionNavierStokes_files
 BCMirrorEuler2D.cxx
 BCMirrorEuler2D.hh
+BCMirrorEuler3D.cxx
+BCMirrorEuler3D.hh
 BCSubInletEulerTtPtAlpha2D.cxx
 BCSubInletEulerTtPtAlpha2D.hh
+BCSubInletEulerTtPtAlpha3D.cxx
+BCSubInletEulerTtPtAlpha3D.hh
 BCSubOutletEuler2D.cxx
 BCSubOutletEuler2D.hh
+BCSubOutletEuler3D.cxx
+BCSubOutletEuler3D.hh
 FluxReconstructionNavierStokes.hh
 )
 
