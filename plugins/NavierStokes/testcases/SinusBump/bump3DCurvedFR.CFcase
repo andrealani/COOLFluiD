@@ -15,7 +15,7 @@
 #CFEnv.TraceToStdOut = true
 
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libGmsh2CFmesh libParaViewWriter libNavierStokes libFluxReconstructionMethod libForwardEuler libPetscI libTecplotWriter
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libGmsh2CFmesh libParaViewWriter libNavierStokes libFluxReconstructionMethod libForwardEuler libPetscI libTecplotWriter libFluxReconstructionNavierStokes
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/SinusBump
@@ -54,6 +54,7 @@ Simulator.SubSystem.StopCondition          = MaxNumberSteps
 Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.4
 
 Simulator.SubSystem.SpaceMethod = FluxReconstruction
 
@@ -67,20 +68,40 @@ Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 # choose which builder we use
 Simulator.SubSystem.FluxReconstruction.Builder = MeshUpgrade
 Simulator.SubSystem.FluxReconstruction.MeshUpgrade.PolynomialOrder = P2
-#Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
-#Simulator.SubSystem.FluxReconstruction.LimiterCom = TVBLimiter
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
 Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
 Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
+Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHS
+#Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = StdTimeRHSJacob
+#Simulator.SubSystem.FluxReconstruction.JacobianSparsity = CellCentered
+#Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHS
+Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = RoeFlux
 
-Simulator.SubSystem.FluxReconstruction.Data.InterfaceFluxComputer = Null
 Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
+
+Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor = 4.0/135.0 #0.3333333333 #3.0/3150.0 #8.0/496125.0
 
 Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState
 Simulator.SubSystem.FluxReconstruction.InitNames = InField
 
-Simulator.SubSystem.FluxReconstruction.InField.applyTRS = InnerCells
-Simulator.SubSystem.FluxReconstruction.InField.Vars = x y z
-Simulator.SubSystem.FluxReconstruction.InField.Def = x*y*z if(x>0.5,0.0,1.0) 0.0 0.0 if(z>0.2,0.0,1.0)
+Simulator.SubSystem.SpectralFDMethod.InField.applyTRS = InnerCells
+Simulator.SubSystem.SpectralFDMethod.InField.Vars = x y z
+Simulator.SubSystem.SpectralFDMethod.InField.Def = 1.204524948 206.7002847 0.0 0.0 271044.375
 
+Simulator.SubSystem.SpectralFDMethod.BcNames = Wall Inlet Outlet
+Simulator.SubSystem.SpectralFDMethod.Wall.applyTRS = Bump Top Left Right
+Simulator.SubSystem.SpectralFDMethod.Inlet.applyTRS = Inlet
+Simulator.SubSystem.SpectralFDMethod.Outlet.applyTRS = Outlet
+
+Simulator.SubSystem.SpectralFDMethod.Data.BcTypes = MirrorEuler3D SubInletEulerTtPtAlpha3D SubOutletEuler3D
+Simulator.SubSystem.SpectralFDMethod.Data.BcNames = Wall          Inlet                    Outlet
+
+Simulator.SubSystem.SpectralFDMethod.Data.Inlet.Ttot = 307.6488978
+Simulator.SubSystem.SpectralFDMethod.Data.Inlet.Ptot = 120195.4453
+Simulator.SubSystem.SpectralFDMethod.Data.Inlet.alphaXY = 0.0
+Simulator.SubSystem.SpectralFDMethod.Data.Inlet.alphaXZ = 0.0
+
+Simulator.SubSystem.SpectralFDMethod.Data.Outlet.P = 101325.0
