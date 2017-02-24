@@ -121,82 +121,77 @@ void HexaFluxReconstructionElementData::createFlxPntsLocalCoords()
 {
   CFAUTOTRACE;
 
-  // number of solution points in 1D
-  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-
   // number of flux points in 1D
   const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
 
   // set flux point local coordinates
   m_flxPntsLocalCoords.resize(0);
   
-  
-  for (CFuint i = 0; i < nbrFlxPnts1D; ++i)
-  {
     RealVector flxCoords(3);
     //faces ZTA=-1 and 1
     flxCoords[ZTA] = -1;
-    flxCoords[KSI] = -1;
-    flxCoords[ETA] = m_flxPntsLocalCoord1D[i];
-    m_flxPntsLocalCoords.push_back(flxCoords);
+    for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+    {
+      for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+      {
+        flxCoords[KSI] = m_flxPntsLocalCoord1D[iKsi];
+        flxCoords[ETA] = m_flxPntsLocalCoord1D[iEta];
+        m_flxPntsLocalCoords.push_back(flxCoords);
+      }
+    }
     flxCoords[ZTA] = 1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[KSI] = 1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[ZTA] = -1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[ETA] = -1;
-    flxCoords[KSI] = m_flxPntsLocalCoord1D[i];
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[ZTA] = 1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[ETA] = 1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[ZTA] = -1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    //faces ETA=1 and -1
-    flxCoords[ETA] = -1;
+    for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+    {
+        for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+        {
+            flxCoords[KSI] = m_flxPntsLocalCoord1D[iKsi];
+            flxCoords[ETA] = m_flxPntsLocalCoord1D[iEta];
+            m_flxPntsLocalCoords.push_back(flxCoords);
+        }
+    }
+    //faces KSI=-1 and 1
     flxCoords[KSI] = -1;
-    flxCoords[ZTA] = m_flxPntsLocalCoord1D[i];
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[ETA] = 1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
+    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+    {
+        for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+        {
+            flxCoords[ZTA] = m_flxPntsLocalCoord1D[iZta];
+            flxCoords[ETA] = m_flxPntsLocalCoord1D[iEta];
+            m_flxPntsLocalCoords.push_back(flxCoords);
+        }
+    }
     flxCoords[KSI] = 1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
+    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+    {
+        for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+        {
+            flxCoords[ZTA] = m_flxPntsLocalCoord1D[iZta];
+            flxCoords[ETA] = m_flxPntsLocalCoord1D[iEta];
+            m_flxPntsLocalCoords.push_back(flxCoords);
+        }
+    }
+    //faces ETA=-1 and 1
     flxCoords[ETA] = -1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[ZTA] = -1;
-    flxCoords[KSI] = m_flxPntsLocalCoord1D[i];
-    m_flxPntsLocalCoords.push_back(flxCoords);
+    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+    {
+        for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+        {
+            flxCoords[ZTA] = m_flxPntsLocalCoord1D[iZta];
+            flxCoords[KSI] = m_flxPntsLocalCoord1D[iKsi];
+            m_flxPntsLocalCoords.push_back(flxCoords);
+        }
+    }
     flxCoords[ETA] = 1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[ZTA] = 1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[ETA] = -1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    //faces KSI=1 and -1
-    flxCoords[KSI] = -1;
-    flxCoords[ZTA] = -1;
-    flxCoords[ETA] = m_flxPntsLocalCoord1D[i];
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[KSI] = 1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[ZTA] = 1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[KSI] = -1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[ETA] = -1;
-    flxCoords[ZTA] = m_flxPntsLocalCoord1D[i];
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[KSI] = 1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[ETA] = 1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    flxCoords[KSI] = -1;
-    m_flxPntsLocalCoords.push_back(flxCoords);
-    
-  }
-  cf_assert(m_flxPntsLocalCoords.size() == 24*nbrFlxPnts1D);
+    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+    {
+        for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+        {
+            flxCoords[ZTA] = m_flxPntsLocalCoord1D[iZta];
+            flxCoords[KSI] = m_flxPntsLocalCoord1D[iKsi];
+            m_flxPntsLocalCoords.push_back(flxCoords);
+        }
+    }
+  cf_assert(m_flxPntsLocalCoords.size() == 6*nbrFlxPnts1D*nbrFlxPnts1D);
   
 }
 
@@ -213,9 +208,9 @@ void HexaFluxReconstructionElementData::createSolPntsLocalCoords()
   m_solPntsLocalCoords.resize(0);
   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
   {
-    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+    for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
     {
-      for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+      for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
       {
         RealVector solCoords(3);
         solCoords[KSI] = m_solPntsLocalCoord1D[iKsi];

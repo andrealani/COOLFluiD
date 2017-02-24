@@ -82,7 +82,40 @@ void VCJH::computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementD
               corrfct[iSol][3+4*iKsi][1] = computeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][1], m_cfactor);
           }
       }
-      } break;
+      }
+      case CFGeoShape::HEXA:
+      {
+      CFuint iSol = 0;
+      const CFuint nbrSolPnts1D = frElemData->getSolPntsLocalCoord1D()->size();
+      const CFuint nbrSolPnts = frElemData->getNbrOfSolPnts();
+      const CFuint nbrFlxPnts = frElemData->getNbrOfFlxPnts();
+      const CFuint dim = frElemData->getDimensionality();
+      std::vector< RealVector > solPntsLocalCoord = *(frElemData->getSolPntsLocalCoords());
+      corrfct.resize(nbrSolPnts);
+      for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+      {
+          CFuint iSolPlane = 0;
+          for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+          {
+              for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta, ++iSol, ++iSolPlane)
+              {
+                  corrfct[iSol].resize(nbrFlxPnts);
+                  for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+                  {
+                      corrfct[iSol][iFlx].resize(dim);
+                  }
+                  corrfct[iSol][2*nbrSolPnts1D*nbrSolPnts1D+iSolPlane][0] = computeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][KSI], m_cfactor);
+                  corrfct[iSol][3*nbrSolPnts1D*nbrSolPnts1D+iSolPlane][0] = computeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][KSI], m_cfactor);
+                  corrfct[iSol][4*nbrSolPnts1D*nbrSolPnts1D+nbrSolPnts1D*iEta+iKsi][1] = computeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][ETA], m_cfactor);
+                  corrfct[iSol][5*nbrSolPnts1D*nbrSolPnts1D+nbrSolPnts1D*iEta+iKsi][1] = computeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][ETA], m_cfactor);
+                  corrfct[iSol][iZta+nbrSolPnts1D*iKsi][2] = computeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][ZTA], m_cfactor);
+                  corrfct[iSol][iZta+nbrSolPnts1D*iKsi+nbrSolPnts1D*nbrSolPnts1D][2] = computeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][ZTA], m_cfactor);
+                  
+              }
+          }
+      }
+      }
+            break;
       default:
       {
         throw Common::NotImplementedException (FromHere(),"VCJH Correction Functions not implemented for elements of type "
@@ -100,27 +133,55 @@ void VCJH::computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionEleme
     const CFPolyOrder::Type solOrder = frElemData->getPolyOrder();
     switch(elemShape)
     {
-        case CFGeoShape::QUAD:
-        {
-            CFuint iSol = 0;
-            const CFuint nbrSolPnts1D = frElemData->getSolPntsLocalCoord1D()->size();
-            const CFuint nbrSolPnts = frElemData->getNbrOfSolPnts();
-            const CFuint nbrFlxPnts = frElemData->getNbrOfFlxPnts();
-            const CFuint dim = frElemData->getDimensionality();
-            std::vector< RealVector > solPntsLocalCoord = *(frElemData->getSolPntsLocalCoords());
-            corrfct.resize(nbrSolPnts);
-            for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-            {
-                for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta, ++iSol)
-                {
-                    corrfct[iSol].resize(nbrFlxPnts);
-                    corrfct[iSol][4*iEta] = computeDerivativeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][0], m_cfactor);
-                    corrfct[iSol][1+4*iEta] = -computeDerivativeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][0], m_cfactor);
-                    corrfct[iSol][2+4*iKsi] = computeDerivativeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][1], m_cfactor);
-                    corrfct[iSol][3+4*iKsi] = -computeDerivativeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][1], m_cfactor);
-                }
-            }
-        } break;
+      case CFGeoShape::QUAD:
+      {
+      CFuint iSol = 0;
+      const CFuint nbrSolPnts1D = frElemData->getSolPntsLocalCoord1D()->size();
+      const CFuint nbrSolPnts = frElemData->getNbrOfSolPnts();
+      const CFuint nbrFlxPnts = frElemData->getNbrOfFlxPnts();
+      const CFuint dim = frElemData->getDimensionality();
+      std::vector< RealVector > solPntsLocalCoord = *(frElemData->getSolPntsLocalCoords());
+      corrfct.resize(nbrSolPnts);
+      for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+      {
+          for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta, ++iSol)
+          {
+              corrfct[iSol].resize(nbrFlxPnts);
+              corrfct[iSol][4*iEta] = computeDerivativeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][0], m_cfactor);
+              corrfct[iSol][1+4*iEta] = -computeDerivativeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][0], m_cfactor);
+              corrfct[iSol][2+4*iKsi] = computeDerivativeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][1], m_cfactor);
+              corrfct[iSol][3+4*iKsi] = -computeDerivativeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][1], m_cfactor);
+          }
+      }
+      }
+      case CFGeoShape::HEXA:
+      {
+      CFuint iSol = 0;
+      const CFuint nbrSolPnts1D = frElemData->getSolPntsLocalCoord1D()->size();
+      const CFuint nbrSolPnts = frElemData->getNbrOfSolPnts();
+      const CFuint nbrFlxPnts = frElemData->getNbrOfFlxPnts();
+      const CFuint dim = frElemData->getDimensionality();
+      std::vector< RealVector > solPntsLocalCoord = *(frElemData->getSolPntsLocalCoords());
+      corrfct.resize(nbrSolPnts);
+      for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+      {
+          CFuint iSolPlane = 0;
+          for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+          {
+              for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta, ++iSol, ++iSolPlane)
+              {
+                  corrfct[iSol].resize(nbrFlxPnts);
+                  corrfct[iSol][2*nbrSolPnts1D*nbrSolPnts1D+iSolPlane] = computeDerivativeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][KSI], m_cfactor);
+                  corrfct[iSol][3*nbrSolPnts1D*nbrSolPnts1D+iSolPlane] = -computeDerivativeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][KSI], m_cfactor);
+                  corrfct[iSol][4*nbrSolPnts1D*nbrSolPnts1D+nbrSolPnts1D*iEta+iKsi] = computeDerivativeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][ETA], m_cfactor);
+                  corrfct[iSol][5*nbrSolPnts1D*nbrSolPnts1D+nbrSolPnts1D*iEta+iKsi] = -computeDerivativeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][ETA], m_cfactor);
+                  corrfct[iSol][iZta+nbrSolPnts1D*iKsi] = computeDerivativeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][ZTA], m_cfactor);
+                  corrfct[iSol][iZta+nbrSolPnts1D*iKsi+nbrSolPnts1D*nbrSolPnts1D] = -computeDerivativeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][ZTA], m_cfactor);
+              }
+           }
+        }
+        }
+            break;
         default:
         {
             throw Common::NotImplementedException (FromHere(),"Divergence of VCJH Correction Functions not implemented for elements of type "
