@@ -821,7 +821,7 @@ void HexaFluxReconstructionElementData::createIntFlxPntIdxs()
 //       for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta, ++flxIdx)
 //       {
 //         if (iZta != 0 && iZta != nbrSolPnts1D)
-//         {
+//         {xConnL
 //           m_intFlxPntIdxs.push_back(flxIdx);
 //         }
 //       }
@@ -835,6 +835,56 @@ void HexaFluxReconstructionElementData::createIntFlxPntIdxs()
 void HexaFluxReconstructionElementData::createFaceFluxPntsConn()
 {
   CFAUTOTRACE;
+
+  // number of flux points in 1D
+  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+
+  // resize m_faceFlxPntConn
+  m_faceFlxPntConn.resize(6);
+
+  // variable holding the face index
+  CFuint faceIdx = 0;
+
+  // zeroth face
+  for (CFuint iSol = 0; iSol < nbrFlxPnts1D*nbrFlxPnts1D; ++iSol)
+  {
+    m_faceFlxPntConn[faceIdx].push_back(iSol);
+  }
+  ++faceIdx;
+
+
+  // first face
+  for (CFuint iSol = 0; iSol < nbrFlxPnts1D*nbrFlxPnts1D; ++iSol)
+  {
+    m_faceFlxPntConn[faceIdx].push_back(iSol + nbrFlxPnts1D*nbrFlxPnts1D);
+  }
+  ++faceIdx;
+
+  // second face
+  for (CFuint iSol = 0; iSol < nbrFlxPnts1D*nbrFlxPnts1D; ++iSol)
+  {
+    m_faceFlxPntConn[faceIdx].push_back(iSol + 4*nbrFlxPnts1D*nbrFlxPnts1D);
+  }
+  ++faceIdx;
+
+  // third face
+  for (CFuint iSol = 0; iSol < nbrFlxPnts1D*nbrFlxPnts1D; ++iSol)
+  {
+    m_faceFlxPntConn[faceIdx].push_back(iSol + 3*nbrFlxPnts1D*nbrFlxPnts1D); 
+  }
+  
+  // fourth face
+  for (CFuint iSol = 0; iSol < nbrFlxPnts1D*nbrFlxPnts1D; ++iSol)
+  {
+    m_faceFlxPntConn[faceIdx].push_back(iSol + 5*nbrFlxPnts1D*nbrFlxPnts1D); 
+  }
+  
+  // fifth face
+  for (CFuint iSol = 0; iSol < nbrFlxPnts1D*nbrFlxPnts1D; ++iSol)
+  {
+    m_faceFlxPntConn[faceIdx].push_back(iSol + 2*nbrFlxPnts1D*nbrFlxPnts1D); 
+  }
+
 
 //   // number of solution points in 1D
 //   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
@@ -933,94 +983,99 @@ void HexaFluxReconstructionElementData::createFaceFluxPntsConn()
 void HexaFluxReconstructionElementData::createFaceFluxPntsConnPerOrient()
 {
   CFAUTOTRACE;
+  CFLog(VERBOSE,"HEREe1\n");
 
-//   // number of faces
-//   const CFuint nbrFaces = m_faceNodeConn.size();
-// 
-//   // number of solution points in 1D
-//   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-// 
-//   // number of face flux points
-//   const CFuint nbrFaceFlxPnts = getNbrOfFaceFlxPnts();
-// 
-//   // flux point indexes for inverted face
-//   vector< CFuint > invFlxIdxs;
-//   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
-//   {
-//     const CFuint idxKsi = nbrSolPnts1D - iKsi - 1;
-//     for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
-//     {
-//       invFlxIdxs.push_back(nbrSolPnts1D*idxKsi+iEta);
-//     }
-//   }
-// 
-//   // number of rotatable flux point groups
-//   const CFuint nbrRotFlxGroups = nbrFaceFlxPnts/4;
-// 
-//   // maximum number of flux points in a line of flux points
-//   const CFuint maxNbrFlxPntsInLine = (nbrSolPnts1D+1)/2;
-// 
-//   // storage of flux point rotatable groups
-//   vector< vector< CFuint > > rotFlxIdxs(nbrRotFlxGroups);
-//   CFuint iRotGroup = 0;
-//   for (CFuint iFlxLine = 0; iRotGroup < nbrRotFlxGroups; ++iFlxLine)
-//   {
-//     for (CFuint iFlx = 0;
-//          iFlx < maxNbrFlxPntsInLine && iRotGroup < nbrRotFlxGroups;
-//          ++iFlx, ++iRotGroup)
-//     {
-//       const CFuint idxFlxLine = nbrSolPnts1D - 1 - iFlxLine;
-//       const CFuint idxFlx     = nbrSolPnts1D - 1 - iFlx    ;
-// 
-//       rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*iFlx      +iFlxLine  );
-//       rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*idxFlxLine+iFlx      );
-//       rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*idxFlx    +idxFlxLine);
-//       rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*iFlxLine  +idxFlx    );
-//     }
-//   }
-// 
-//   // number of possible orientations
-//   const CFuint nbrOrient = 84;
-// 
-//   // create data structure
-//   m_faceFlxPntConnPerOrient.resize(nbrOrient);
-//   CFuint iOrient = 0;
-//   for (CFuint iFaceL = 0; iFaceL < nbrFaces; ++iFaceL)
-//   {
-//     vector< CFuint > faceFlxConnL = m_faceFlxPntConn[iFaceL];
-//     for (CFuint iFaceR = iFaceL; iFaceR < nbrFaces; ++iFaceR)
-//     {
-//       vector< CFuint > faceFlxConnR = m_faceFlxPntConn[iFaceR];
-//       for (CFuint iRot = 0; iRot < 4; ++iRot, ++iOrient)
-//       {
-//         m_faceFlxPntConnPerOrient[iOrient].resize(2);
-//         for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
-//         {
-//           m_faceFlxPntConnPerOrient[iOrient][LEFT ]
-//               .push_back(faceFlxConnL[iFlx            ]);
-//           m_faceFlxPntConnPerOrient[iOrient][RIGHT]
-//               .push_back(faceFlxConnR[invFlxIdxs[iFlx]]);
-//         }
-// 
-//         // rotate the right face
-//         for (CFuint iRotGroup = 0; iRotGroup < nbrRotFlxGroups; ++iRotGroup)
-//         {
-//           // indexes of flux points to be rotated
-//           const CFuint flx0Idx = rotFlxIdxs[iRotGroup][0];
-//           const CFuint flx1Idx = rotFlxIdxs[iRotGroup][1];
-//           const CFuint flx2Idx = rotFlxIdxs[iRotGroup][2];
-//           const CFuint flx3Idx = rotFlxIdxs[iRotGroup][3];
-// 
-//           // rotate flux points
-//           const CFuint swap = invFlxIdxs[flx3Idx];
-//           invFlxIdxs[flx3Idx] = invFlxIdxs[flx2Idx];
-//           invFlxIdxs[flx2Idx] = invFlxIdxs[flx1Idx];
-//           invFlxIdxs[flx1Idx] = invFlxIdxs[flx0Idx];
-//           invFlxIdxs[flx0Idx] = swap;
-//         }
-//       }
-//     }
-//   }
+  // number of faces
+  const CFuint nbrFaces = m_faceNodeConn.size();
+CFLog(VERBOSE,"HEREe2\n");
+  // number of solution points in 1D
+  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+CFLog(VERBOSE,"HEREe3\n");
+  // number of face flux points
+  const CFuint nbrFaceFlxPnts = getNbrOfFaceFlxPnts();
+CFLog(VERBOSE,"HEREe4\n");
+  // flux point indexes for inverted face
+  vector< CFuint > invFlxIdxs;
+  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+  {
+    const CFuint idxKsi = nbrSolPnts1D - iKsi - 1;
+    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+    {
+      invFlxIdxs.push_back(nbrSolPnts1D*idxKsi+iEta);
+    }
+  }
+CFLog(VERBOSE,"HEREe5\n");
+  // number of rotatable flux point groups
+  const CFuint nbrRotFlxGroups = nbrFaceFlxPnts/4;
+
+  // maximum number of flux points in a line of flux points
+  const CFuint maxNbrFlxPntsInLine = (nbrSolPnts1D+1)/2;
+CFLog(VERBOSE,"HEREe6\n");
+  // storage of flux point rotatable groups
+  vector< vector< CFuint > > rotFlxIdxs(nbrRotFlxGroups);
+  CFuint iRotGroup = 0;
+  for (CFuint iFlxLine = 0; iRotGroup < nbrRotFlxGroups; ++iFlxLine)
+  {
+    for (CFuint iFlx = 0;
+         iFlx < maxNbrFlxPntsInLine && iRotGroup < nbrRotFlxGroups;
+         ++iFlx, ++iRotGroup)
+    {
+      const CFuint idxFlxLine = nbrSolPnts1D - 1 - iFlxLine;
+      const CFuint idxFlx     = nbrSolPnts1D - 1 - iFlx    ;
+
+      rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*iFlx      +iFlxLine  );
+      rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*idxFlxLine+iFlx      );
+      rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*idxFlx    +idxFlxLine);
+      rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*iFlxLine  +idxFlx    );
+    }
+  }
+  CFLog(VERBOSE,"HEREe7\n");
+
+  // number of possible orientations
+  const CFuint nbrOrient = 84;
+
+  // create data structure
+  m_faceFlxPntConnPerOrient.resize(nbrOrient);
+  CFuint iOrient = 0;
+  for (CFuint iFaceL = 0; iFaceL < nbrFaces; ++iFaceL)
+  {
+    vector< CFuint > faceFlxConnL = m_faceFlxPntConn[iFaceL];
+    for (CFuint iFaceR = iFaceL; iFaceR < nbrFaces; ++iFaceR)
+    {
+      vector< CFuint > faceFlxConnR = m_faceFlxPntConn[iFaceR];
+      for (CFuint iRot = 0; iRot < 4; ++iRot, ++iOrient)
+      {
+        m_faceFlxPntConnPerOrient[iOrient].resize(2);
+        for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
+        {
+	  CFLog(VERBOSE,"HEREe8\n");
+          m_faceFlxPntConnPerOrient[iOrient][LEFT ]
+              .push_back(faceFlxConnL[iFlx            ]);
+          m_faceFlxPntConnPerOrient[iOrient][RIGHT]
+              .push_back(faceFlxConnR[invFlxIdxs[iFlx]]);
+        }
+CFLog(VERBOSE,"HEREe9\n");
+        // rotate the right face
+        for (CFuint iRotGroup = 0; iRotGroup < nbrRotFlxGroups; ++iRotGroup)
+        {
+	  CFLog(VERBOSE,"HEREe10\n");
+          // indexes of flux points to be rotated
+          const CFuint flx0Idx = rotFlxIdxs[iRotGroup][0];
+          const CFuint flx1Idx = rotFlxIdxs[iRotGroup][1];
+          const CFuint flx2Idx = rotFlxIdxs[iRotGroup][2];
+          const CFuint flx3Idx = rotFlxIdxs[iRotGroup][3];
+
+          // rotate flux points
+          const CFuint swap = invFlxIdxs[flx3Idx];
+          invFlxIdxs[flx3Idx] = invFlxIdxs[flx2Idx];
+          invFlxIdxs[flx2Idx] = invFlxIdxs[flx1Idx];
+          invFlxIdxs[flx1Idx] = invFlxIdxs[flx0Idx];
+          invFlxIdxs[flx0Idx] = swap;
+        }
+      }
+    }
+    CFLog(VERBOSE,"HEREe11\n");
+  }
 // /*  for (CFuint iOrient = 0; iOrient < m_faceFlxPntConnPerOrient.size(); ++iOrient)
 //   {
 //     CF_DEBUG_OBJ(iOrient);
@@ -1160,6 +1215,10 @@ void HexaFluxReconstructionElementData::createFaceNormals()
   CFAUTOTRACE;
 
   m_faceNormals.resize(6);
+  for (CFuint iFace = 0; iFace < 6; ++iFace)
+  {
+    m_faceNormals[iFace].resize(3);
+  }
 
   m_faceNormals[0][0] = 0.;
   m_faceNormals[0][1] = 0.;
@@ -1258,80 +1317,80 @@ void HexaFluxReconstructionElementData::createFaceIntegrationCoefs()
 {
   CFAUTOTRACE;
 
-//   // number of solution points in 1D
-//   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-// 
-//   // number of flux points on a face
-//   const CFuint nbrFlxPnts = nbrSolPnts1D*nbrSolPnts1D;
-// 
-//   // resize m_faceIntegrationCoefs
-//   m_faceIntegrationCoefs.resize(nbrFlxPnts);
-// 
-//   // create TensorProductGaussIntegrator
-//   TensorProductGaussIntegrator tpIntegrator(DIM_2D,m_polyOrder);
-// 
-//   // create face node local coordinates
-//   vector< RealVector > nodeCoord(4);
-//   nodeCoord[0].resize(2);
-//   nodeCoord[0][KSI] = -1.0;
-//   nodeCoord[0][ETA] = -1.0;
-//   nodeCoord[1].resize(2);
-//   nodeCoord[1][KSI] = +1.0;
-//   nodeCoord[1][ETA] = -1.0;
-//   nodeCoord[2].resize(2);
-//   nodeCoord[2][KSI] = +1.0;
-//   nodeCoord[2][ETA] = +1.0;
-//   nodeCoord[3].resize(2);
-//   nodeCoord[3][KSI] = -1.0;
-//   nodeCoord[3][ETA] = +1.0;
-// 
-//   // get quadrature point coordinates and wheights
-//   vector< RealVector > quadPntCoords   = tpIntegrator.getQuadPntsCoords  (nodeCoord);
-//   vector< CFreal     > quadPntWheights = tpIntegrator.getQuadPntsWheights(nodeCoord);
-//   const CFuint nbrQPnts = quadPntCoords.size();
-//   cf_assert(quadPntWheights.size() == nbrQPnts);
-// 
-//   // compute the coefficients for integration over a face
-//   // loop over flux points
-//   CFuint iFlx = 0;
-//   for (CFuint iFlxKsi = 0; iFlxKsi < nbrSolPnts1D; ++iFlxKsi)
-//   {
-//     const CFreal ksiFlx = m_solPntsLocalCoord1D[iFlxKsi];
-//     for (CFuint iFlxEta = 0; iFlxEta < nbrSolPnts1D; ++iFlxEta, ++iFlx)
-//     {
-//       const CFreal etaFlx = m_solPntsLocalCoord1D[iFlxEta];
-// 
-//       m_faceIntegrationCoefs[iFlx] = 0.0;
-//       for (CFuint iQPnt = 0; iQPnt < nbrQPnts; ++iQPnt)
-//       {
-//         // quadrature point local coordinate on the face
-//         const CFreal ksiQPnt = quadPntCoords[iQPnt][KSI];
-//         const CFreal etaQPnt = quadPntCoords[iQPnt][ETA];
-// 
-//         // evaluate polynomial value in quadrature point
-//         CFreal quadPntPolyVal = 1.;
-//         for (CFuint iFac = 0; iFac < nbrSolPnts1D; ++iFac)
-//         {
-//           if (iFac != iFlxKsi)
-//           {
-//             const CFreal ksiFac = m_solPntsLocalCoord1D[iFac];
-//             quadPntPolyVal *= (ksiQPnt-ksiFac)/(ksiFlx-ksiFac);
-//           }
-//         }
-//         for (CFuint iFac = 0; iFac < nbrSolPnts1D; ++iFac)
-//         {
-//           if (iFac != iFlxEta)
-//           {
-//             const CFreal etaFac = m_solPntsLocalCoord1D[iFac];
-//             quadPntPolyVal *= (etaQPnt-etaFac)/(etaFlx-etaFac);
-//           }
-//         }
-// 
-//         // add contribution of quadrature point to integration coefficient
-//         m_faceIntegrationCoefs[iFlx] += quadPntWheights[iQPnt]*quadPntPolyVal;
-//       }
-//     }
-//   }
+  // number of solution points in 1D
+  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+
+  // number of flux points on a face
+  const CFuint nbrFlxPnts = nbrFlxPnts1D*nbrFlxPnts1D;
+
+  // resize m_faceIntegrationCoefs
+  m_faceIntegrationCoefs.resize(nbrFlxPnts);
+
+  // create TensorProductGaussIntegrator
+  TensorProductGaussIntegrator tpIntegrator(DIM_2D,m_polyOrder);
+
+  // create face node local coordinates
+  vector< RealVector > nodeCoord(4);
+  nodeCoord[0].resize(2);
+  nodeCoord[0][KSI] = -1.0;
+  nodeCoord[0][ETA] = -1.0;
+  nodeCoord[1].resize(2);
+  nodeCoord[1][KSI] = +1.0;
+  nodeCoord[1][ETA] = -1.0;
+  nodeCoord[2].resize(2);
+  nodeCoord[2][KSI] = +1.0;
+  nodeCoord[2][ETA] = +1.0;
+  nodeCoord[3].resize(2);
+  nodeCoord[3][KSI] = -1.0;
+  nodeCoord[3][ETA] = +1.0;
+
+  // get quadrature point coordinates and wheights
+  vector< RealVector > quadPntCoords   = tpIntegrator.getQuadPntsCoords  (nodeCoord);
+  vector< CFreal     > quadPntWheights = tpIntegrator.getQuadPntsWheights(nodeCoord);
+  const CFuint nbrQPnts = quadPntCoords.size();
+  cf_assert(quadPntWheights.size() == nbrQPnts);
+
+  // compute the coefficients for integration over a face
+  // loop over flux points
+  CFuint iFlx = 0;
+  for (CFuint iFlxKsi = 0; iFlxKsi < nbrFlxPnts1D; ++iFlxKsi)
+  {
+    const CFreal ksiFlx = m_flxPntsLocalCoord1D[iFlxKsi];
+    for (CFuint iFlxEta = 0; iFlxEta < nbrFlxPnts1D; ++iFlxEta, ++iFlx)
+    {
+      const CFreal etaFlx = m_flxPntsLocalCoord1D[iFlxEta];
+
+      m_faceIntegrationCoefs[iFlx] = 0.0;
+      for (CFuint iQPnt = 0; iQPnt < nbrQPnts; ++iQPnt)
+      {
+        // quadrature point local coordinate on the face
+        const CFreal ksiQPnt = quadPntCoords[iQPnt][KSI];
+        const CFreal etaQPnt = quadPntCoords[iQPnt][ETA];
+
+        // evaluate polynomial value in quadrature point
+        CFreal quadPntPolyVal = 1.;
+        for (CFuint iFac = 0; iFac < nbrFlxPnts1D; ++iFac)
+        {
+          if (iFac != iFlxKsi)
+          {
+            const CFreal ksiFac = m_flxPntsLocalCoord1D[iFac];
+            quadPntPolyVal *= (ksiQPnt-ksiFac)/(ksiFlx-ksiFac);
+          }
+        }
+        for (CFuint iFac = 0; iFac < nbrFlxPnts1D; ++iFac)
+        {
+          if (iFac != iFlxEta)
+          {
+            const CFreal etaFac = m_flxPntsLocalCoord1D[iFac];
+            quadPntPolyVal *= (etaQPnt-etaFac)/(etaFlx-etaFac);
+          }
+        }
+
+        // add contribution of quadrature point to integration coefficient
+        m_faceIntegrationCoefs[iFlx] += quadPntWheights[iQPnt]*quadPntPolyVal;
+      }
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////
