@@ -196,7 +196,7 @@ void Venktn2D::limit(const vector<vector<Node*> >& coord,
 	    const CFreal dPlus = deltaPlusMax/_magnitudeValues[iVar];
 	    const CFreal dPlus2   = dPlus*dPlus;
 	    const CFreal dPlusMin = dPlus*dMinStar;
-	    const CFreal Num = (dPlus2 + epsilon2)*dMinStar + 2*dPlusMin*dPlusMin*dPlus;
+	    const CFreal Num = (dPlus2 + epsilon2)*dMinStar + 2*dMinStar*dMinStar*dPlus;
 	    const CFreal Den = (dPlus2 + 2*dMinStar*dMinStar + dPlusMin + epsilon2);
 	    psi = 1./dMinStar*(Num/Den);
 	  }
@@ -205,7 +205,7 @@ void Venktn2D::limit(const vector<vector<Node*> >& coord,
             const CFreal dPlus = deltaPlusMin/_magnitudeValues[iVar];
             const CFreal dPlus2   = dPlus*dPlus;
             const CFreal dPlusMin = dPlus*dMinStar;
-            const CFreal Num = (dPlus2 + epsilon2)*dMinStar + 2*dPlusMin*dPlusMin*dPlus;
+            const CFreal Num = (dPlus2 + epsilon2)*dMinStar + 2*dMinStar*dMinStar*dPlus;
             const CFreal Den = (dPlus2 + 2*dMinStar*dMinStar + dPlusMin + epsilon2);
             psi = 1./dMinStar*(Num/Den);
 	  }
