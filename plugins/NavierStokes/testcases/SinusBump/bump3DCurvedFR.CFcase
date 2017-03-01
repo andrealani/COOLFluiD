@@ -51,7 +51,7 @@ Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.4

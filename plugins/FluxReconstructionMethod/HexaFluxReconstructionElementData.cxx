@@ -132,12 +132,12 @@ void HexaFluxReconstructionElementData::createFlxPntsLocalCoords()
     flxCoords[ZTA] = -1;
     for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
     {
-      for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
-      {
-        flxCoords[KSI] = m_flxPntsLocalCoord1D[iKsi];
-        flxCoords[ETA] = m_flxPntsLocalCoord1D[iEta];
-        m_flxPntsLocalCoords.push_back(flxCoords);
-      }
+        for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+        {
+          flxCoords[KSI] = m_flxPntsLocalCoord1D[iKsi];
+          flxCoords[ETA] = m_flxPntsLocalCoord1D[iEta];
+          m_flxPntsLocalCoords.push_back(flxCoords);
+        }
     }
     flxCoords[ZTA] = 1;
     for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
@@ -191,6 +191,12 @@ void HexaFluxReconstructionElementData::createFlxPntsLocalCoords()
             m_flxPntsLocalCoords.push_back(flxCoords);
         }
     }
+//  CFLog(VERBOSE, m_flxPntsLocalCoords[0] << "\n");
+//  CFLog(VERBOSE, m_flxPntsLocalCoords[1] << "\n");
+//  CFLog(VERBOSE, m_flxPntsLocalCoords[2] << "\n");
+//  CFLog(VERBOSE, m_flxPntsLocalCoords[3] << "\n");
+//  CFLog(VERBOSE, m_flxPntsLocalCoords[4] << "\n");
+//  CFLog(VERBOSE, m_flxPntsLocalCoords[5] << "\n");
   cf_assert(m_flxPntsLocalCoords.size() == 6*nbrFlxPnts1D*nbrFlxPnts1D);
   
 }
@@ -872,13 +878,13 @@ void HexaFluxReconstructionElementData::createFaceFluxPntsConn()
   {
     m_faceFlxPntConn[faceIdx].push_back(iSol + 3*nbrFlxPnts1D*nbrFlxPnts1D); 
   }
-  
+  ++faceIdx;
   // fourth face
   for (CFuint iSol = 0; iSol < nbrFlxPnts1D*nbrFlxPnts1D; ++iSol)
   {
     m_faceFlxPntConn[faceIdx].push_back(iSol + 5*nbrFlxPnts1D*nbrFlxPnts1D); 
   }
-  
+  ++faceIdx;
   // fifth face
   for (CFuint iSol = 0; iSol < nbrFlxPnts1D*nbrFlxPnts1D; ++iSol)
   {
@@ -983,17 +989,15 @@ void HexaFluxReconstructionElementData::createFaceFluxPntsConn()
 void HexaFluxReconstructionElementData::createFaceFluxPntsConnPerOrient()
 {
   CFAUTOTRACE;
-  CFLog(VERBOSE,"HEREe1\n");
-
   // number of faces
   const CFuint nbrFaces = m_faceNodeConn.size();
-CFLog(VERBOSE,"HEREe2\n");
+  CFLog(VERBOSE,"nbrFaces:" << nbrFaces << "\n");
   // number of solution points in 1D
   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
-CFLog(VERBOSE,"HEREe3\n");
+  CFLog(VERBOSE,"nbrSolPnts1D:" << nbrSolPnts1D << "\n");
   // number of face flux points
   const CFuint nbrFaceFlxPnts = getNbrOfFaceFlxPnts();
-CFLog(VERBOSE,"HEREe4\n");
+  CFLog(VERBOSE,"nbrFaceFlxPnts:" << nbrFaceFlxPnts << "\n");
   // flux point indexes for inverted face
   vector< CFuint > invFlxIdxs;
   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
@@ -1004,13 +1008,12 @@ CFLog(VERBOSE,"HEREe4\n");
       invFlxIdxs.push_back(nbrSolPnts1D*idxKsi+iEta);
     }
   }
-CFLog(VERBOSE,"HEREe5\n");
   // number of rotatable flux point groups
   const CFuint nbrRotFlxGroups = nbrFaceFlxPnts/4;
-
+  CFLog(VERBOSE,"nbrRotFlxGroups:" << nbrRotFlxGroups << "\n");
   // maximum number of flux points in a line of flux points
   const CFuint maxNbrFlxPntsInLine = (nbrSolPnts1D+1)/2;
-CFLog(VERBOSE,"HEREe6\n");
+  CFLog(VERBOSE,"maxNbrFlxPntsInLine:" << maxNbrFlxPntsInLine << "\n");
   // storage of flux point rotatable groups
   vector< vector< CFuint > > rotFlxIdxs(nbrRotFlxGroups);
   CFuint iRotGroup = 0;
@@ -1028,8 +1031,10 @@ CFLog(VERBOSE,"HEREe6\n");
       rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*idxFlx    +idxFlxLine);
       rotFlxIdxs[iRotGroup].push_back(nbrSolPnts1D*iFlxLine  +idxFlx    );
     }
+//      CFLog(VERBOSE,"rotFlxIdxs_0:" << rotFlxIdxs[0][0] << rotFlxIdxs[0][1] << rotFlxIdxs[0][2] << rotFlxIdxs[0][3] << "\n");
+//      CFLog(VERBOSE,"rotFlxIdxs_1:" << rotFlxIdxs[1][0] << rotFlxIdxs[1][1] << rotFlxIdxs[1][2] << rotFlxIdxs[1][3] << "\n");
+//      CFLog(VERBOSE,"iRotGroup:" << iRotGroup << "\n");
   }
-  CFLog(VERBOSE,"HEREe7\n");
 
   // number of possible orientations
   const CFuint nbrOrient = 84;
@@ -1048,22 +1053,22 @@ CFLog(VERBOSE,"HEREe6\n");
         m_faceFlxPntConnPerOrient[iOrient].resize(2);
         for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
         {
-	  CFLog(VERBOSE,"HEREe8\n");
           m_faceFlxPntConnPerOrient[iOrient][LEFT ]
               .push_back(faceFlxConnL[iFlx            ]);
           m_faceFlxPntConnPerOrient[iOrient][RIGHT]
               .push_back(faceFlxConnR[invFlxIdxs[iFlx]]);
+//          CFLog(VERBOSE,"m_faceFlxPntConnPerOrient[" <<iOrient << "][LEFT]" << m_faceFlxPntConnPerOrient[iOrient][LEFT][0] << m_faceFlxPntConnPerOrient[iOrient][LEFT][1] << m_faceFlxPntConnPerOrient[iOrient][LEFT][2] << m_faceFlxPntConnPerOrient[iOrient][LEFT][3] << m_faceFlxPntConnPerOrient[iOrient][LEFT][4] << m_faceFlxPntConnPerOrient[iOrient][LEFT][5] << m_faceFlxPntConnPerOrient[iOrient][LEFT][6] << m_faceFlxPntConnPerOrient[iOrient][LEFT][7] << "\n");
+//          CFLog(VERBOSE,"m_faceFlxPntConnPerOrient[" <<iOrient << "][RIGHT]" << m_faceFlxPntConnPerOrient[iOrient][RIGHT][0] << m_faceFlxPntConnPerOrient[iOrient][RIGHT][1] << m_faceFlxPntConnPerOrient[iOrient][RIGHT][2] << m_faceFlxPntConnPerOrient[iOrient][RIGHT][3] << m_faceFlxPntConnPerOrient[iOrient][RIGHT][4] << m_faceFlxPntConnPerOrient[iOrient][RIGHT][5] << m_faceFlxPntConnPerOrient[iOrient][RIGHT][6] << m_faceFlxPntConnPerOrient[iOrient][RIGHT][7] << "\n");
         }
-CFLog(VERBOSE,"HEREe9\n");
         // rotate the right face
         for (CFuint iRotGroup = 0; iRotGroup < nbrRotFlxGroups; ++iRotGroup)
         {
-	  CFLog(VERBOSE,"HEREe10\n");
           // indexes of flux points to be rotated
           const CFuint flx0Idx = rotFlxIdxs[iRotGroup][0];
           const CFuint flx1Idx = rotFlxIdxs[iRotGroup][1];
           const CFuint flx2Idx = rotFlxIdxs[iRotGroup][2];
           const CFuint flx3Idx = rotFlxIdxs[iRotGroup][3];
+          CFLog(VERBOSE,"flxrotIdx" << flx0Idx << flx1Idx << flx2Idx << flx3Idx << "\n");
 
           // rotate flux points
           const CFuint swap = invFlxIdxs[flx3Idx];
@@ -1074,7 +1079,9 @@ CFLog(VERBOSE,"HEREe9\n");
         }
       }
     }
-    CFLog(VERBOSE,"HEREe11\n");
+      CFLog(VERBOSE,"m_faceFlxPntConnPerOrient[0][LEFT]" << m_faceFlxPntConnPerOrient[0][LEFT][0] << m_faceFlxPntConnPerOrient[0][LEFT][1] << m_faceFlxPntConnPerOrient[0][LEFT][2] << m_faceFlxPntConnPerOrient[0][LEFT][3] << m_faceFlxPntConnPerOrient[0][LEFT][4] << m_faceFlxPntConnPerOrient[0][LEFT][5] << m_faceFlxPntConnPerOrient[0][LEFT][6] << m_faceFlxPntConnPerOrient[0][LEFT][7] << m_faceFlxPntConnPerOrient[0][LEFT][8] << "\n");
+      CFLog(VERBOSE,"m_faceFlxPntConnPerOrient[0][RIGHT]" << m_faceFlxPntConnPerOrient[0][RIGHT][0] << m_faceFlxPntConnPerOrient[0][RIGHT][1] << m_faceFlxPntConnPerOrient[0][RIGHT][2] << m_faceFlxPntConnPerOrient[0][RIGHT][3] << m_faceFlxPntConnPerOrient[0][RIGHT][4] << m_faceFlxPntConnPerOrient[0][RIGHT][5] << m_faceFlxPntConnPerOrient[0][RIGHT][6] << m_faceFlxPntConnPerOrient[0][RIGHT][7] << m_faceFlxPntConnPerOrient[0][RIGHT][8] << "\n");
+    CFLog(VERBOSE,iOrient << "\n");
   }
 // /*  for (CFuint iOrient = 0; iOrient < m_faceFlxPntConnPerOrient.size(); ++iOrient)
 //   {

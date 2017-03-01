@@ -82,6 +82,7 @@ void VCJH::computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementD
               corrfct[iSol][3+4*iKsi][1] = computeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][1], m_cfactor);
           }
       }
+          break;
       }
       case CFGeoShape::HEXA:
       {
@@ -114,8 +115,8 @@ void VCJH::computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementD
               }
           }
       }
+          break;
       }
-            break;
       default:
       {
         throw Common::NotImplementedException (FromHere(),"VCJH Correction Functions not implemented for elements of type "
