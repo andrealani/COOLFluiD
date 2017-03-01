@@ -182,10 +182,18 @@ void StdConcurrentReduce::reduceData(const CFuint idx)
   // ofstream fout(fileName.c_str());
     
   // overwrite the socket with the total value in each processor
+  CFLog(VERBOSE, "StdConcurrentReduce::reduceData() [" << dtt->sendSocketStr << "=>" << dtt->recvSocketStr 
+	<< ", " << dtt->dofsName << "] with size [" <<  arraySize << "]\n");
+  
   for (CFuint s = 0; s < arraySize; ++s) {
     CFLog(DEBUG_MAX, "StdConcurrentReduce::reduceData() => sendBuf[" << s << "] = "<< sendBuf[s] << ", recvBuf[" <<s << "] = " << m_recvBuf[s] << "\n");
+    // if (arraySize == 2016) {
+    //   if (sendBuf[s] != 0. && m_recvBuf[s] != 0.) {
+    // 	CFLog(INFO, "sendBuf[" << s << "] = "<< sendBuf[s] << ", recvBuf[" <<s << "] = " << m_recvBuf[s] << "\n");
+    //   }
+    // }
     
-    //if (s == 1000){fout << "iCell1000 => " << sendBuf[s] << " < " << m_recvBuf[s] << "\n";}
+    // if (s == 1000){cout << "P["<< PE::GetPE().GetRank("Default") << "], iCell[1000] => " << sendBuf[s] << " < " << m_recvBuf[s] << "\n";}
     
     sendBuf[s] = m_recvBuf[s];
   }
