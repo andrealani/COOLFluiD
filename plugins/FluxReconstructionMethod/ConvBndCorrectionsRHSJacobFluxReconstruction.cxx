@@ -97,11 +97,11 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
   // get number of solution points
   const CFuint nbrSolPnt = m_solPntsLocalCoords->size();
     
-  // get number of flux points
-  const CFuint nbrFlxPnt1D = m_flxPntsLocalCoords1D->size();
+  // compute flux point coordinates
+  SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
+  const CFuint nbrFlxPnts = flxLocalCoords->size();
   
   cf_assert(nbrSolPnt == frLocalData[0]->getNbrOfSolPnts());
-  cf_assert(nbrFlxPnt1D == (frLocalData[0]->getFlxPntsLocalCoord1D())->size());
   
   // loop over TRs
   for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
@@ -112,7 +112,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
       CFLog(VERBOSE,"m_orient: " << m_orient << "\n");
       
       // select the correct flx pnts on the face out of all cell flx pnts for the current orient
-      for (CFuint iFlx = 0; iFlx < nbrFlxPnt1D; ++iFlx)
+      for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
       {
         m_flxPntsLocalCoords[iFlx] = (*m_allCellFlxPnts)[(*m_faceFlxPntConn)[m_orient][iFlx]];
       }
@@ -138,7 +138,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
 	CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
 	CFLog(VERBOSE,"coord state 0: " << (((*m_cellStates)[0])->getCoordinates()) << "\n");
 	
-	setBndFaceData(faceID);//faceID
+	setBndFaceData(m_face->getID());//faceID
 
         // if cell is parallel updatable, compute the correction flux
         if ((*m_cellStates)[0]->isParUpdatable())
@@ -147,7 +147,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
 	  m_bcStateComputer->setFaceID(m_face->getID());
       
 	  // compute FI-FD
-          computeInterfaceFlxCorrection(faceID);//faceID
+          computeInterfaceFlxCorrection(m_face->getID());//faceID
       
           // compute the wave speed updates
           computeWaveSpeedUpdates(m_waveSpeedUpd);
@@ -162,7 +162,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
           updateRHS();
 	  
 	  // compute the convective boundary flux correction contribution to the jacobian
-	  computeJacobConvBndCorrection(faceID);//faceID
+	  computeJacobConvBndCorrection(m_face->getID());//faceID
         } else {
 	  // compute the wave speed updates
           computeWaveSpeedUpdates(m_waveSpeedUpd);
@@ -255,6 +255,12 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
       
     }
   }
+  
+//   if (m_intCell->getID() == 56)
+//   {
+//   CFLog(VERBOSE,"accBndFace:\n");
+//    acc.printToScreen();
+//   }
 
   if (getMethodData().doComputeJacobian())
   {

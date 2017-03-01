@@ -34,6 +34,14 @@ void SetQuadLagrangeP1FluxReconstructionP1StateCoord::operator() (const vector<F
   states[1]->setSpaceCoordinates(nodes[3]);
   states[2]->setSpaceCoordinates(nodes[1]);
   states[3]->setSpaceCoordinates(nodes[2]);
+  
+//   for (CFuint i = 0; i < 4; ++i)
+//   {
+//     states[i]->setParUpdatable(nodes[i]->isParUpdatable());
+//   }
+  
+//   CFLog(VERBOSE, "Owned by state: " << nodes[1]->isOwnedByState() << ", parUpdatable: " << nodes[1]->isParUpdatable() << ", on mesh: " << nodes[1]->isOnMesh() << "\n");
+//   CFLog(VERBOSE, "Global ID: " << states[1]->getGlobalID() << ", parUpdatable: " << states[1]->isParUpdatable() << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

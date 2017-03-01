@@ -553,7 +553,8 @@ void FluxReconstructionBuilder::createInnerFacesTRS()
 void FluxReconstructionBuilder::reorderInnerFacesTRS()
 {
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE,"Reordering inner faces TRS\n");
   // Pointer to list containing the GeoType of the face ==> class variable of FluxReconstructionBuilder, we can access this variable directly through m_inGeoTypes
   // Same for list containing the local (this processor) index of the face, variable m_inLocalGeoIDs
 
@@ -597,7 +598,7 @@ void FluxReconstructionBuilder::reorderInnerFacesTRS()
   const CFuint nbrNodesPerFace = nodeConnPerOrientation[0][0].size();
   const vector < vector < CFuint > > faceConnPerOrientation =
       getFaceConnPerOrientation(cellShape);
-
+      
   // Rearrange the faces
   const CFuint nbrOrient = nodeConnPerOrientation.size();
 
@@ -610,7 +611,6 @@ void FluxReconstructionBuilder::reorderInnerFacesTRS()
   {
     // assign start index of first range of faces
     (*innerFacesStartIdxs)(iOrient,0) = faceIdx;
-
     for (CFuint iFace = faceIdx; iFace < nbInnerFaces; ++iFace)
     {
       // Get face cell neighbour local IDs
@@ -632,7 +632,6 @@ void FluxReconstructionBuilder::reorderInnerFacesTRS()
         leftCellFaceNodes [iNode] = (*cellNodes)(leftCellID ,leftCellNodeLocalID );
         rightCellFaceNodes[iNode] = (*cellNodes)(rightCellID,rightCellNodeLocalID);
       }
-
       // Check if nodes match
       bool hasThisOrient = true;
       for (CFuint iNode = 0; iNode < nbrNodesPerFace && hasThisOrient; ++iNode)
@@ -643,7 +642,6 @@ void FluxReconstructionBuilder::reorderInnerFacesTRS()
           break;
         }
       }
-
       // If no match was found, try for opposite face orientation
       if (!hasThisOrient)
       {
@@ -673,7 +671,6 @@ void FluxReconstructionBuilder::reorderInnerFacesTRS()
           }
         }
       }
-
       // If a match was found, move this face to the next place in the InnerFaces list
       if (hasThisOrient)
       {
@@ -694,7 +691,6 @@ void FluxReconstructionBuilder::reorderInnerFacesTRS()
           (*m_inGeoTypes)[iFace] = (*m_inGeoTypes)[faceIdx];
           (*m_inGeoTypes)[faceIdx] = swap;
         }
-
         // swap inner face-cell connectivity (outside loop to ensure proper normal orientation)
         (*innerFaceCells)(iFace,LEFT ) = (*innerFaceCells)(faceIdx,LEFT );
         (*innerFaceCells)(iFace,RIGHT) = (*innerFaceCells)(faceIdx,RIGHT);
@@ -711,7 +707,6 @@ void FluxReconstructionBuilder::reorderInnerFacesTRS()
             break;
           }
         }
-
         // set inner face-node connectivity (to ensure correct face orientation for normal computation)
         // no need for swapping here, innerFaceNodes is not used in the identification of the face orientations
         // this will give problems if the faces at faceIdx and at iFace have a different number of nodes,
@@ -723,7 +718,6 @@ void FluxReconstructionBuilder::reorderInnerFacesTRS()
           const CFuint nodeLocalID = (*m_faceNodeElement[leftCellType])(faceLocalIDLeftCell,iNode);
           (*innerFaceNodes)(faceIdx,iNode) = (*cellNodes)(leftCellID,nodeLocalID);
         }
-
         // set inner face index
         (*faceToInFaceIdxOrientOrBCIdx)((*m_inLocalGeoIDs)[faceIdx],0) = faceIdx;
 
@@ -745,6 +739,8 @@ void FluxReconstructionBuilder::reorderInnerFacesTRS()
 
   // Check if all faces have been assigned an orientation
   cf_assert(faceIdx == nbInnerFaces);
+  
+  CFLog(VERBOSE,"Reordering inner faces TRS complete\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -777,7 +773,7 @@ vector< vector < vector < CFuint > > > FluxReconstructionBuilder::getNodeConnPer
       throw Common::ShouldNotBeHereException (FromHere(),"Unsupported cell shape");
     }
   }
-
+  
   // get vector containing the nodes connectivities for each orientation
   vector< vector < vector < CFuint > > > nodeConnPerOrientation
   = *frElemData->getFaceNodeConnPerOrient();

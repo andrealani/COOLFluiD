@@ -132,7 +132,6 @@ void VCJH::computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionEleme
     CFAUTOTRACE;
     const CFGeoShape::Type elemShape = frElemData->getShape();
     const CFPolyOrder::Type solOrder = frElemData->getPolyOrder();
-    CFLog(VERBOSE, elemShape << "\n");
     switch(elemShape)
     {
       case CFGeoShape::QUAD:
@@ -148,7 +147,6 @@ void VCJH::computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionEleme
         {
           for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta, ++iSol)
           {
-	    CFLog(VERBOSE, "Here3\n");
             corrfct[iSol].resize(nbrFlxPnts);
             corrfct[iSol][4*iEta] = computeDerivativeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][0], m_cfactor);
             corrfct[iSol][1+4*iEta] = -computeDerivativeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][0], m_cfactor);

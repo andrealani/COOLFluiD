@@ -169,10 +169,10 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
 	// get the states in the neighbouring cell
         m_cellStates = m_intCell->getStates();
 	
-	CFLog(VERBOSE,"faceID: " << faceID << ", real face ID: " << m_face->getID() << "\n");
-	CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
-	CFLog(VERBOSE,"coord state 0: " << (((*m_cellStates)[0])->getCoordinates()) << "\n");
-	CFLog(VERBOSE,"state 0: " << *(((*m_cellStates)[0])->getData()) << "\n");
+	//CFLog(VERBOSE,"faceID: " << faceID << ", real face ID: " << m_face->getID() << "\n");
+	//CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
+	//CFLog(VERBOSE,"coord state 0: " << (((*m_cellStates)[0])->getCoordinates()) << "\n");
+	//CFLog(VERBOSE,"state 0: " << *(((*m_cellStates)[0])->getData()) << "\n");
 	
 	setBndFaceData(m_face->getID());//faceID
 
@@ -385,9 +385,10 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeCorrection(vector< RealVect
 	CFLog(VERBOSE, "div h = " << m_corrFctDiv[iSolPnt][(*m_faceFlxPntConn)[m_orient][iFlxPnt]] << "\n");
       }
     }
-    if(m_intCell->getID() == 36)
+    if(m_intCell->getID() == 161)
     {
       CFLog(VERBOSE, "State: " << iSolPnt << ": " << (*m_cellStates)[iSolPnt]->getCoordinates() << "\n");
+      CFLog(VERBOSE, "State global ID: " << (*m_cellStates)[iSolPnt]->getGlobalID() << "\n");
       CFLog(VERBOSE, "correction = " << corrections[iSolPnt] << "\n");
     }
   }

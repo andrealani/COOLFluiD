@@ -46,6 +46,10 @@ MeshUpgradeBuilder::MeshUpgradeBuilder(const std::string& name) :
   m_geoPolyOrder(),
   m_prevGeoPolyOrder(),
   m_bndFacesNodes(),
+  m_globalIDs(),
+  m_elemLocalIDOfState(),
+  m_elemIDOfState(),
+  m_elemFirstStateLocalID(),
   m_updatables()
 {
   addConfigOptionsTo(this);
@@ -362,10 +366,19 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
 
   const CFuint nbElems = getNbElements();
   
+  const CFuint oldNbStatesPerElem = (oldStates.size())/nbElems;
+  
   // temporary vector to store which old states are parallel updatable
   vector< bool > updatablesElems;
   updatablesElems.resize(nbElems);
+  vector< vector< CFuint > > globalIDsTemp;
+  globalIDsTemp.resize(nbElems);
   m_updatables.resize(0);
+  m_globalIDs.resize(0);
+  m_elemFirstStateLocalID.resize(0);
+  
+  //const CFuint globalRank = PE::GetPE().GetRank("Default");
+  const CFuint oldMaxGlobalID = oldStates.getGlobalSize();
   
   // loop on all the elements to store which old states are parallel updatable
   for (type_itr = elementType->begin(); type_itr != elementType->end(); ++type_itr)
@@ -379,8 +392,16 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
     // loop over elements of this type
     for (CFuint iElem = 0; iElem < nbrElems; ++iElem, ++globalIdx)
     {
+      globalIDsTemp[globalIdx].resize(oldNbStatesPerElem);
       CFuint stateID = (*cellStates)(globalIdx,0);
+      m_elemFirstStateLocalID.push_back(stateID);
       updatablesElems[globalIdx] = oldStates[stateID]->isParUpdatable();
+      
+      for (CFuint jState = 0; jState < oldNbStatesPerElem; ++jState)
+      {
+        globalIDsTemp[globalIdx][jState] = oldStates[(*cellStates)(globalIdx,jState)]->getGlobalID();
+	CFLog(VERBOSE,"elem " << globalIdx << ", state " << jState << ", globalID: " << globalIDsTemp[globalIdx][jState] << "\n");
+      }
     }
   }
 
@@ -388,6 +409,9 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
   // and we reset the connectivity accordingly, using a std::valarray
   // first create the std::valarray
   std::valarray<CFuint> columnPattern(nbElems);
+  m_elemLocalIDOfState.resize(0);
+  m_elemIDOfState.resize(0);
+  
   for (type_itr = elementType->begin(); type_itr != elementType->end(); ++type_itr)
   {
     // get the number of control volumes (states) in this element type
@@ -427,11 +451,23 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
       for (CFuint jState = 0; jState < nbStatesPerElem; ++jState, ++stateID)
       {
         (*cellStates)(globalIdx,jState) = stateID;
+	m_elemIDOfState.push_back(globalIdx);
+	m_elemLocalIDOfState.push_back(jState);
 	m_updatables.push_back(updatablesElems[globalIdx]);
+	if (jState == 0)
+	{
+	  m_globalIDs.push_back(globalIDsTemp[globalIdx][0]);
+	}
+	else
+	{
+	  m_globalIDs.push_back(oldMaxGlobalID+globalIDsTemp[globalIdx][0]*(nbStatesPerElem-1)+jState-1);//(globalIDsTemp[globalIdx][0]/oldNbStatesPerElem)*nbStatesPerElem+jState
+	}
       }
     }
   }
+
   updatablesElems.resize(0);
+  globalIDsTemp.resize(0);
 
   cf_assert(stateID == columnPattern.sum());
 }
@@ -444,31 +480,128 @@ void MeshUpgradeBuilder::recreateStates()
 
   SafePtr<MeshData::ConnTable> cellStates = MeshDataStack::getActive()->getConnectivity("cellStates_InnerCells");
 
-  DataHandle < Framework::State*, Framework::GLOBAL > states = getCFmeshData().getStatesHandle();
+  //DataHandle < Framework::State*, Framework::GLOBAL > states = getCFmeshData().getStatesHandle();
+  DataHandle < Framework::State*, Framework::GLOBAL > states =
+    MeshDataStack::getActive()->getStateDataSocketSink().getDataHandle();
 
   const CFuint newNbStates = cellStates->size();
   const CFuint oldNbStates = states.size();
+  const CFuint oldNbGlobalStates = states.getGlobalSize();
 
   // delete the existing states
   for (CFuint i = 0; i < oldNbStates; ++i)
   {
+    //CFLog(VERBOSE, "Global ID: " << states[i]->getGlobalID() << "\n");
     deletePtr(states[i]);
   }
   IndexList<State>::getList().reset();
 
+  const bool isPara = PE::GetPE().IsParallel();
   // Resize the datahandle for the states
-  states.resize(newNbStates);
+  if (isPara)
+  {
+    states.resize(newNbStates+oldNbStates);
+  }
+  else
+  {
+    states.resize(newNbStates);
+  }
 
   // allocate the new states
   //bool updatable = true;
   const CFuint nbeq = PhysicalModelStack::getActive()->getNbEq();
   RealVector stateData (nbeq);
-  for (CFuint iState = 0; iState < states.size(); ++iState)
+  CFLog(VERBOSE, "nb of states: " << states.size() << ", old nb of states: " << oldNbStates << "\n");
+  
+  //states.freeContiguosGlobal();
+  //states.createIndex();
+  for (CFuint iState = 0; iState < newNbStates; ++iState)
   {
-    getCFmeshData().createState(iState,stateData);
-    states[iState]->setParUpdatable(m_updatables[iState]);
+    CFuint globalID = m_globalIDs[iState];
+    CFuint localID = 0;
+    //CFLog(VERBOSE, "HERE1!!!!!!!!!!!!!!!!!\n");
+    if (isPara)
+    {
+      if (m_elemLocalIDOfState[iState] != 0)
+      {
+        if (m_updatables[iState])
+        {
+	  //CFLog(VERBOSE, "HERE1a!!!!!!!!!!!!!!!!!\n");
+          localID = states.addLocalPoint(globalID);
+	  //CFLog(VERBOSE, "HERE1ab!!!!!!!!!!!!!!!!!\n");
+        } 
+        else
+        {
+	  //CFLog(VERBOSE, "HERE1b!!!!!!!!!!!!!!!!!\n");
+          localID = states.addGhostPoint(globalID);
+	  //CFLog(VERBOSE, "HERE1bb!!!!!!!!!!!!!!!!!\n");
+        }
+      }
+      else
+      {
+        //CFLog(VERBOSE, "HERE1c!!!!!!!!!!!!!!!!!\n");
+        localID = m_elemFirstStateLocalID[m_elemIDOfState[iState]];
+        //CFLog(VERBOSE, "HERE1cb!!!!!!!!!!!!!!!!!\n");
+      }
+      (*cellStates)(m_elemIDOfState[iState],m_elemLocalIDOfState[iState]) = localID;
+    }
+    else
+    {
+      localID = iState;
+    }
+    //CFLog(VERBOSE, "HERE2!!!!!!!!!!!!!!!!!\n");
+    
+    
+    
+    //CFLog(VERBOSE, "LocalID: " << localID << "\n");
+    getCFmeshData().createState(localID,stateData);
+    //CFLog(VERBOSE, "HERE4!!!!!!!!!!!!!!!!!\n");
+    states[localID]->setParUpdatable(m_updatables[iState]);
+    //CFLog(VERBOSE, "HERE5!!!!!!!!!!!!!!!!!\n");
+    states[localID]->setGlobalID(globalID);
+    //CFLog(VERBOSE, "Global ID: " << states[localID]->getGlobalID() << "\n");
+    //CFLog(VERBOSE, "HERE6!!!!!!!!!!!!!!!!!\n");
+    //CFLog(VERBOSE, "Local ID: " << states[localID]->getLocalID() << "\n");
+    
   }
   m_updatables.resize(0);
+  m_globalIDs.resize(0);
+  m_elemLocalIDOfState.resize(0);
+  m_elemIDOfState.resize(0);
+  m_elemFirstStateLocalID.resize(0);
+  
+  
+  
+  
+  
+  
+  
+  
+  
+//   CFuint localID = 0;
+//     bool isGhost = false;
+//     bool isFound = false;
+//     if (hasEntry(m_localStateIDs, iState)) {
+//       countLocals++;
+//       localID = states.addLocalPoint (iState);
+//       cf_assert(localID < nbLocalStates);
+//       isFound = true;
+//     }
+//     else if (hasEntry(m_ghostStateIDs, iState)) {
+//       countLocals++;
+//       localID = states.addGhostPoint (iState);
+//       cf_assert(localID < nbLocalStates);
+//       isGhost = true;
+//       isFound = true;
+//     }
+// 
+//     if (isFound) {
+//       State* newState = getReadData().createState
+//   (localID, states.getGlobalData(localID), tmpState, !isGhost);
+//       newState->setGlobalID(iState);
+// 
+//       
+//     }
 }
 
 //////////////////////////////////////////////////////////////////////////////

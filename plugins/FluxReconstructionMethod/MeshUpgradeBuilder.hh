@@ -150,6 +150,19 @@ protected: // data
   
   /// stores whether an old state is updatable
   std::vector< bool > m_updatables;
+  
+  /// stores the globalIDs of the old states
+  std::vector< CFuint > m_globalIDs;
+  
+  /// stores the localID of the element of a new state
+  std::vector< CFuint > m_elemIDOfState;
+  
+  /// stores the local ID of state within its element for a new state
+  std::vector< CFuint > m_elemLocalIDOfState;
+  
+  /// stores the old local ID of the first state in an element
+  std::vector< CFuint > m_elemFirstStateLocalID;
+  
 
 };  // end of class MeshUpgradeBuilder
 

@@ -109,8 +109,8 @@ void StdSetup::execute()
   
   DataHandle<ProxyDofIterator< RealVector >* > nstatesProxy = socket_nstatesProxy.getDataHandle();
 
-  // const CFuint nbStates = states.size();
   nstatesProxy.resize(1);
+  nstatesProxy[0] = new DofDataHandleIterator<RealVector,RealVector>(nstates);//
   
   const CFuint nbStates = states.size();
   

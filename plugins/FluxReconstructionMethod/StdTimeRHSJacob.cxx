@@ -63,8 +63,6 @@ void StdTimeRHSJacob::setup()
 void StdTimeRHSJacob::execute()
 {
   CFAUTOTRACE;
-  
-  CFLog(NOTICE,"TIME RHS JACOBIAN EXECUTE\n");
 
   SafePtr<LSSMatrix> jacobMatrix = m_lss->getMatrix();
 

@@ -198,14 +198,14 @@ void ConvRHSFluxReconstruction::execute()
       m_states[LEFT ] = m_cells[LEFT ]->getStates();
       m_states[RIGHT] = m_cells[RIGHT]->getStates();
       
-      if(m_cells[LEFT]->getID() == 36)
+      if(m_cells[LEFT]->getID() == 49)
       {
 	for (CFuint iState = 0; iState < nbrSolPnt; ++iState)
 	{
 	DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
         CFLog(VERBOSE, "UpdateCoeff1: " << updateCoeff[(*(m_states[LEFT]))[iState]->getLocalID()] << "\n");
 	}
-      } else if (m_cells[RIGHT]->getID() == 36)
+      } else if (m_cells[RIGHT]->getID() == 49)
       {
 	for (CFuint iState = 0; iState < nbrSolPnt; ++iState)
 	{
@@ -250,14 +250,14 @@ void ConvRHSFluxReconstruction::execute()
 
       }
       
-      if(m_cells[LEFT]->getID() == 36)
+      if(m_cells[LEFT]->getID() == 49)
       {
 	for (CFuint iState = 0; iState < nbrSolPnt; ++iState)
 	{
 	DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
         CFLog(VERBOSE, "UpdateCoeff2: " << updateCoeff[(*(m_states[LEFT]))[iState]->getLocalID()] << "\n");
 	}
-      } else if (m_cells[RIGHT]->getID() == 36)
+      } else if (m_cells[RIGHT]->getID() == 49)
       {
 	for (CFuint iState = 0; iState < nbrSolPnt; ++iState)
 	{
@@ -310,7 +310,7 @@ void ConvRHSFluxReconstruction::execute()
       // if the states in the cell are parallel updatable, compute the resUpdates (-divFC)
       if ((*m_cellStates)[0]->isParUpdatable())
       {
-	if(m_cell->getID() == 36)
+	if(m_cell->getID() == 49)
       {CFLog(VERBOSE, "Updatable! \n");}
 	// compute the residual updates (-divFC)
 	computeResUpdates(m_cell->getID(),m_divContFlx);//elemIdx
@@ -321,7 +321,7 @@ void ConvRHSFluxReconstruction::execute()
 	CFLog(VERBOSE, "cellID " << m_cell->getID() << " not updatable! \n");
       }
       
-      if(m_cell->getID() == 36)
+      if(m_cell->getID() == 49)
       {
 	for (CFuint iState = 0; iState < nbrSolPnt; ++iState)
 	{
@@ -334,7 +334,7 @@ void ConvRHSFluxReconstruction::execute()
       //divideByJacobDet();
       
       // print out the residual updates for debugging
-      if(m_cell->getID() == 36)
+      if(m_cell->getID() == 49)
       {
 	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
         CFLog(VERBOSE, "Update = \n");
@@ -380,7 +380,7 @@ void ConvRHSFluxReconstruction::computeInterfaceFlxCorrection(CFuint faceID)
     m_cellFlx[LEFT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt] - m_cellFlx[LEFT][iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT];
     m_cellFlx[RIGHT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt] - m_cellFlx[RIGHT][iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT];
 
-    if(m_cells[LEFT]->getID() == 36 || m_cells[RIGHT]->getID() == 36)
+    if(m_cells[LEFT]->getID() == 49 || m_cells[RIGHT]->getID() == 49)
     {
       CFLog(VERBOSE, "faceID =  " << m_face->getID() << "\n");
       CFLog(VERBOSE, "cell 0 == LEFT <=> " << (m_cells[LEFT]->getID() == 281) << "\n");
@@ -454,7 +454,7 @@ void ConvRHSFluxReconstruction::setFaceData(CFuint faceID)
 
     for (CFuint iSol = 1; iSol < nbrSolPnt; ++iSol)
     {
-      // CFLog(VERBOSE, "Left State GlobalID: " << (*(m_states[LEFT]))[iSol]->getGlobalID() << "\n");
+      //CFLog(VERBOSE, "Left State GlobalID: " << (*(m_states[LEFT]))[iSol]->getGlobalID() << "\n");
       if(m_face->getID() == 624)
       {
 	CFLog(DEBUG_MIN, "Left State " << *((*(m_states[LEFT]))[iSol]->getData()) << "\n");
@@ -479,7 +479,7 @@ void ConvRHSFluxReconstruction::setFaceData(CFuint faceID)
     m_updateVarSet->computePhysicalData(*(m_cellStatesFlxPnt[RIGHT][iFlxPnt]), m_pData);
     m_cellFlx[RIGHT][iFlxPnt] = m_updateVarSet->getFlux()(m_pData,m_unitNormalFlxPnts[iFlxPnt]);
 
-    if(m_cells[LEFT]->getID() == 36 || m_cells[RIGHT]->getID() == 36)
+    if(m_cells[LEFT]->getID() == 49 || m_cells[RIGHT]->getID() == 49)
     {
       CFLog(DEBUG_MIN, "Flux Left = " << m_cellFlx[LEFT][iFlxPnt] << "\n");
       CFLog(DEBUG_MIN, "Flux Right = " << m_cellFlx[RIGHT][iFlxPnt] << "\n");
@@ -519,7 +519,7 @@ void ConvRHSFluxReconstruction::computeResUpdates(CFuint elemIdx, vector< RealVe
     }
     m_cellFluxProjVects[iDim] = m_cell->computeMappedCoordPlaneNormalAtMappedCoords(dimList,
                                                                             *m_solPntsLocalCoords);
-    if(m_cell->getID() == 36)
+    if(m_cell->getID() == 49)
     {
       for (CFuint iSol = 0; iSol < nbrSolPnt; ++iSol)
       {
@@ -566,9 +566,10 @@ void ConvRHSFluxReconstruction::computeResUpdates(CFuint elemIdx, vector< RealVe
 	}
       }
     }
-    if(m_cell->getID() == 36)
+    if(m_cell->getID() == 49)
     {
       CFLog(VERBOSE, "state: " << *((*m_cellStates)[iSolPnt]->getData()) << "\n");
+      CFLog(VERBOSE, "ID: " << m_cell->getID() << "\n");
       CFLog(VERBOSE, "flx in " << iSolPnt << " : (" << m_contFlx[iSolPnt][0] << " , " << m_contFlx[iSolPnt][1] << "\n");
       CFLog(VERBOSE, "-div FD = " << residuals[iSolPnt] << "\n");
     }
@@ -676,7 +677,7 @@ void ConvRHSFluxReconstruction::computeCorrection(CFuint side, vector< RealVecto
         corrections[iSolPnt][iVar] -= currentCorrFactor[iVar] * m_corrFctDiv[iSolPnt][(*m_faceFlxPntConnPerOrient)[m_orient][side][iFlxPnt]]; 
       }
       
-      if(m_cells[side]->getID() == 36)
+      if(m_cells[side]->getID() == 49)
       {
         CFLog(VERBOSE, "FI-FD = " << currentCorrFactor << "\n");
         CFLog(VERBOSE, "iSol: " << iSolPnt << ", flxID = " << (*m_faceFlxPntConnPerOrient)[m_orient][side][iFlxPnt] << "\n");
@@ -684,7 +685,7 @@ void ConvRHSFluxReconstruction::computeCorrection(CFuint side, vector< RealVecto
       }
     }
     
-    if(m_cells[side]->getID() == 36)
+    if(m_cells[side]->getID() == 49)
     {
       CFLog(VERBOSE, "correction = " << corrections[iSolPnt] << "\n");
     }
@@ -778,7 +779,7 @@ void ConvRHSFluxReconstruction::addPartitionFacesCorrection()
       // get the states in the neighbouring cells
       m_states[0] = m_cells[0]->getStates();
       
-      if(m_cells[0]->getID() == 36)
+      if(m_cells[0]->getID() == 49)
       {
 	for (CFuint iState = 0; iState < nbrSolPnt; ++iState)
 	{
@@ -848,7 +849,7 @@ void ConvRHSFluxReconstruction::addPartitionFacesCorrection()
         updateCoeff[solID] += waveSpeedUpd;
       }
       
-      if(m_cells[0]->getID() == 36)
+      if(m_cells[0]->getID() == 49)
       {
 	for (CFuint iState = 0; iState < nbrSolPnt; ++iState)
 	{
