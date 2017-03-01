@@ -30,20 +30,20 @@ Simulator.SubSystem.Euler3D.ConvTerm.machInf = 0.5
 
 Simulator.SubSystem.OutputFormat        = ParaView CFmesh Tecplot
 
-Simulator.SubSystem.CFmesh.FileName     = bump3DFR-solP2P2.CFmesh
+Simulator.SubSystem.CFmesh.FileName     = bump3DFR-solP1P2.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate = 10
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
 
-Simulator.SubSystem.Tecplot.FileName = bump3DFR-solP2P2.plt
+Simulator.SubSystem.Tecplot.FileName = bump3DFR-solP1P2.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
 Simulator.SubSystem.Tecplot.SaveRate = 10
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 
-Simulator.SubSystem.ParaView.FileName    = bump3DFR-solP2P2.vtu
+Simulator.SubSystem.ParaView.FileName    = bump3DFR-solP1P2.vtu
 Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
 Simulator.SubSystem.ParaView.SaveRate = 1
@@ -51,23 +51,23 @@ Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1000
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.4
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.5
 
 Simulator.SubSystem.SpaceMethod = FluxReconstruction
 
 Simulator.SubSystem.Default.listTRS = InnerCells Bump Top Inlet Outlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = sineBumpHexaCurved3D.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = sineBumpHexa3D.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 
 # choose which builder we use
 Simulator.SubSystem.FluxReconstruction.Builder = MeshUpgrade
-Simulator.SubSystem.FluxReconstruction.MeshUpgrade.PolynomialOrder = P2
+Simulator.SubSystem.FluxReconstruction.MeshUpgrade.PolynomialOrder = P1
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
 Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
 Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
@@ -82,7 +82,7 @@ Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLeg
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
 
 Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor = 4.0/135.0 #0.3333333333 #3.0/3150.0 #8.0/496125.0
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.3333333333 #4.0/135.0 #3.0/3150.0 #8.0/496125.0
 
 Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState
 Simulator.SubSystem.FluxReconstruction.InitNames = InField
