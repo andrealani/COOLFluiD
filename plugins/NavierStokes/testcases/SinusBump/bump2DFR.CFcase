@@ -100,12 +100,12 @@ Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 # choose which builder we use
 Simulator.SubSystem.FluxReconstruction.Builder = MeshUpgrade
 Simulator.SubSystem.FluxReconstruction.MeshUpgrade.PolynomialOrder = P1
+#Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
 Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHS
 #Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = StdTimeRHSJacob
 #Simulator.SubSystem.FluxReconstruction.JacobianSparsity = CellCentered
 #Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHS
-Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
-#Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
+#Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
 #Simulator.SubSystem.FluxReconstruction.LimiterCom = TVBLimiter
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
 Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
@@ -123,7 +123,7 @@ Simulator.SubSystem.FluxReconstruction.InitNames = InField
 
 Simulator.SubSystem.FluxReconstruction.InField.applyTRS = InnerCells
 Simulator.SubSystem.FluxReconstruction.InField.Vars = x y
-Simulator.SubSystem.FluxReconstruction.InField.Def = 1.0 0.591607978 0.0 2.675 #1.0 if(x>1.7,if(x<2.2,if(y>0.7,if(y<0.95,(x-1.95)/0.6+1.0,1.0),1.0),1.0),1.0)*0.6 0.0 2.675 #if(x>1.905,if(x<2.0,if(y>0.805,if(y<0.9,1.2,1.0),1.0),1.0),1.0) if(x>1.905,if(x<2.0,if(y>0.805,if(y<0.9,1.2,1.0),1.0),1.0),1.0)*0.6 0.0 if(x>1.905,if(x<2.0,if(y>0.805,if(y<0.9,1.2,1.0),1.0),1.0),1.0)*2.675 
+Simulator.SubSystem.FluxReconstruction.InField.Def = 1.0 0.591607978 0.0 2.675  #1.0 if(x>1.7,if(x<2.2,if(y>0.7,if(y<0.92,(x-1.95)/0.6+1.0,1.0),1.0),1.0),1.0)*0.6 0.0 2.675 #if(x>1.905,if(x<2.0,if(y>0.805,if(y<0.9,1.2,1.0),1.0),1.0),1.0) if(x>1.905,if(x<2.0,if(y>0.805,if(y<0.9,1.2,1.0),1.0),1.0),1.0)*0.6 0.0 if(x>1.905,if(x<2.0,if(y>0.805,if(y<0.9,1.2,1.0),1.0),1.0),1.0)*2.675 
 
 Simulator.SubSystem.FluxReconstruction.BcNames = Wall Inlet Outlet
 Simulator.SubSystem.FluxReconstruction.Wall.applyTRS = Bump Top
