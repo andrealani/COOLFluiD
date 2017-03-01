@@ -626,13 +626,14 @@ void ParadeRadiator::writeLocalRadCoeffASCII(const CFuint nbCells)
   ofstream& fout = m_outFileHandle->open(outfile);
   
   // Writing m_data into a ASCII file.
-  const CFuint nbP3 = m_nbPoints*3;
+  const CFuint nbCols = m_nbPoints*3;
+  RealMatrix dataMat(m_data.size()/nbCols, nbCols, &m_data[0]);
   for(CFuint p=0;p<m_nbPoints;++p) {
+    const CFuint p3 = p*3;
     for(CFuint m=0;m<nbCells;++m) {
-      const CFuint start = m*nbP3 + p*3;
-      fout << m_data[start] << " ";
-      fout << m_data[start+2] << " ";
-      fout << m_data[start+1] << " ";
+      fout << dataMat(m,p3) << " ";
+      fout << dataMat(m,p3+2) << " ";
+      fout << dataMat(m,p3+1) << " ";
     }
   }
   fout.close();
@@ -701,18 +702,18 @@ CFreal ParadeRadiator::getEmission(CFreal lambda, RealVector &s_o)
   
   const CFuint nbCols = m_nbPoints*3;
   const CFuint nbRows = m_data.size()/nbCols;
-  
+ 
   cf_assert(stateIdx < nbRows);
   cf_assert(spectralIdx1*3   < nbCols);
   cf_assert(spectralIdx1*3+1 < nbCols);
   cf_assert(spectralIdx2*3   < nbCols);
   cf_assert(spectralIdx2*3+1 < nbCols);
-  
+
   const CFreal x0 = m_data[stateIdx*nbCols + spectralIdx1*3];
   const CFreal y0 = m_data[stateIdx*nbCols + spectralIdx1*3+1];
   const CFreal x1 = m_data[stateIdx*nbCols + spectralIdx2*3];
   const CFreal y1 = m_data[stateIdx*nbCols + spectralIdx2*3+1];
-  
+
   //linear interpolation
   return y0 + (y1-y0) * (lambda - x0) / (x1-x0);
 }
@@ -900,13 +901,13 @@ void ParadeRadiator::getRandomEmission(CFreal &lambda, RealVector &s_o)
   CFuint spectralIdx2 = spectralIdx1 - 1;
   
   //cout<<stateIdx<<dx<<' '<<spectralIdx1<<' '<<spectralIdx2<<endl;
-  
+
   const CFuint nbCols = m_nbPoints*3;
   const CFreal x0 = m_cpdEms[ stateIdx*nbCpdPoints + spectralIdx1 ];
   const CFreal y0 = m_data[stateIdx*nbCols + spectralIdx1*3];
   const CFreal x1 = m_cpdEms[ stateIdx*nbCpdPoints + spectralIdx2 ];
   const CFreal y1 = m_data[stateIdx*nbCols + spectralIdx2*3];
-  
+
   lambda = y0 + (y1-y0) * (rand - x0) / (x1-x0);
 
   //cout<<x0<<' '<<x1<<' '<<y0<<' '<<y1<<' '<<rand<<' '<<lambda<<endl;
@@ -1194,7 +1195,6 @@ void ParadeRadiator::computeBanding()
     CFLog(VERBOSE,"ParadeLibrary::computeBanding() => vctBins(" << i << ") = " << vctBins[i] <<"\n");
   }
   
-  // AL: I stop here 
   //To search for minimum alpha and maximum
   computeAveragedBins(m_nbBands, 0, vctBins);
   

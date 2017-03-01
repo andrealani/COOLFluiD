@@ -235,7 +235,7 @@ protected:
   Framework::LocalArray<CFreal>::TYPE m_alpha_bin;
   Framework::LocalArray<CFreal>::TYPE m_emission_bin;
   Framework::LocalArray<CFreal>::TYPE m_B_bin;
-  
+
   /// vector storing the averaged absorption coefficients data
   std::vector<CFreal> m_alpha_avbin;
   
