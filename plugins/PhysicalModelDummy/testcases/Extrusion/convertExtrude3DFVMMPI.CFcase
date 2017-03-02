@@ -33,7 +33,7 @@ Simulator.Modules.Libs = libCFmeshFileReader libCFmeshExtruder libPhysicalModelD
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/PhysicalModelDummy/testcases/Extrusion
-Simulator.Paths.ResultsDir = ./OUTPUT
+Simulator.Paths.ResultsDir = plugins/PhysicalModelDummy/testcases/Extrusion
 
 #Maestro = LoopMaestro
 #LoopMaestro.GlobalStopCriteria = GlobalMaxNumberSteps
@@ -75,10 +75,14 @@ Simulator.SubSysB.MeshCreator = CFmeshFileReader
 Simulator.SubSysB.CFmeshFileReader.Data.FileName = Extruded.CFmesh
 Simulator.SubSysB.CFmeshFileReader.Data.convertFromFile = 2DFullDomainCoarse.CFmesh
 Simulator.SubSysB.CFmeshFileReader.convertFrom = Extruder2DFVMMPI
-Simulator.SubSysB.CFmeshFileReader.Extruder2DFVMMPI.NbLayers = 16
+# number of mesh layers in the z direction
+Simulator.SubSysB.CFmeshFileReader.Extruder2DFVMMPI.NbLayers = 100
+# total size in [m] in the Z direction
 Simulator.SubSysB.CFmeshFileReader.Extruder2DFVMMPI.ExtrudeSize = 250000.
 Simulator.SubSysB.CFmeshFileReader.Extruder2DFVMMPI.Split = false
-Simulator.SubSysB.CFmeshFileReader.Extruder2DFVMMPI.CFmeshBinaryFileWriter.NbWriters = 16
+# number of writers (keep this number around 20% of the total number of cores to write fast 
+# OR close to 100% to save memory)
+Simulator.SubSysB.CFmeshFileReader.Extruder2DFVMMPI.CFmeshBinaryFileWriter.NbWriters = 1
 Simulator.SubSysB.CFmeshFileReader.ReadCFmesh = Dummy
 
 Simulator.SubSysB.SpaceMethod = Null
