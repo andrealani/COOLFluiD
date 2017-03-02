@@ -467,7 +467,14 @@ void ConvRHSJacobFluxReconstruction::computeOneJacob(const CFuint side, CFuint f
           for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
 	  {
             m_pertResUpdates[side][m_nbrEqs*iState+iVar] = m_pertDivContFlx[side][iState][iVar];
-	    m_resUpdates[side][m_nbrEqs*iState+iVar] = m_divContFlxL[side][iVar];
+	    if (side == LEFT)
+	    {
+	      m_resUpdates[side][m_nbrEqs*iState+iVar] = m_divContFlxL[iState][iVar];
+	    }
+	    else
+	    {
+	      m_resUpdates[side][m_nbrEqs*iState+iVar] = m_divContFlxR[iState][iVar];
+	    }
           }
         }
 
