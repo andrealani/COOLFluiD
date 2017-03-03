@@ -909,6 +909,7 @@ void Tecplot2CFmeshConverter::writeDiscontinuousStates(ofstream& fout)
   fout << "!LIST_STATE " << !skipSolution() << "\n";
   
   if (!skipSolution()) {
+    cf_assert(m_readVars.size() > 0);
     RealVector averageState(m_readVars.size());
     
     const CFuint nbElemTypes = getNbElementTypes();
@@ -975,7 +976,8 @@ CFuint Tecplot2CFmeshConverter::getNbNodesInCell(const std::string& etype) const
 
 CFuint Tecplot2CFmeshConverter::getDim(const std::string& etype) const
 {
-  if (etype == "LINESEG" || etype == "FELineseg" || etype == "FELINESEG") {
+  if (etype == "LINESEG" || etype == "FELineseg" || 
+      etype == "FELineSeg" || etype == "FELINESEG") {
     return DIM_1D;
   }
   else if (etype == "TRIANGLE" || etype == "QUADRILATERAL" || 
