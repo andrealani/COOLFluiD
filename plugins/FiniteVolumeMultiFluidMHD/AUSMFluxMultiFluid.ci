@@ -63,6 +63,12 @@ AUSMFluxMultiFluid<UPDATEVAR>::AUSMFluxMultiFluid(const std::string& name) :
 
   m_coeff = 1.;
   this->setParameter("Coeff",&m_coeff);
+
+  m_Bdiss = 1.;
+  this->setParameter("Bdiss",&m_Bdiss);
+
+  m_Ediss = 1.;
+  this->setParameter("Ediss",&m_Ediss);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -90,6 +96,11 @@ void AUSMFluxMultiFluid<UPDATEVAR>::defineConfigOptions(Config::OptionList& opti
   options.template addConfigOption< CFreal >
     ("Coeff","Coeff for numerical viscosity in the div cleaning");
 
+  options.template addConfigOption< CFreal >
+    ("Bdiss","Coeff for numerical viscosity in the magnetic Field");
+
+  options.template addConfigOption< CFreal >
+    ("Ediss","Coeff for numerical viscosity in the electric Field");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -833,8 +844,8 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAplus()
     factor4 = m_coeff;
   }
   else{
-    factor1 = c_e;
-    factor2 = c_e;
+    factor1 = c_e*m_Bdiss;
+    factor2 = c_e*m_Ediss;
     factor3 = c_e;
     factor4 = c_e;
   }
@@ -1009,8 +1020,8 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAminus()
     factor4 = m_coeff;
   }
   else{
-    factor1 = c_e;
-    factor2 = c_e;
+    factor1 = c_e*m_Bdiss;
+    factor2 = c_e*m_Ediss;
     factor3 = c_e;
     factor4 = c_e;
   }

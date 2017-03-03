@@ -285,7 +285,13 @@ protected:
 
   /// Coeff for numerical viscosity
   CFreal m_coeff;
-  
+
+  /// Coeff for numerical viscosity in the magnetic field
+  CFreal m_Bdiss;
+
+  /// Coeff for numerical viscosity in the magnetic field
+  CFreal m_Ediss; 
+ 
   /// flag telling if Liou's way of computing the update coeff 
   /// imposing positivity has to be used
   bool m_useLiouUpdateCoeff; 
@@ -295,6 +301,8 @@ protected:
   bool m_useMacCormackScaling;   
 
   virtual CFreal getMacCormackCoeff(){return m_coeff;}
+
+  virtual CFreal getMagneticDissCoeff(){return m_Bdiss;}
   
   virtual bool getUseMacCormackScaling(){return m_useMacCormackScaling;}
 
