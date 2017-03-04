@@ -377,7 +377,6 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
   m_globalIDs.resize(0);
   m_elemFirstStateLocalID.resize(0);
   
-  //const CFuint globalRank = PE::GetPE().GetRank("Default");
   const CFuint oldMaxGlobalID = oldStates.getGlobalSize();
   
   // loop on all the elements to store which old states are parallel updatable
@@ -495,8 +494,9 @@ void MeshUpgradeBuilder::recreateStates()
     deletePtr(states[i]);
   }
   IndexList<State>::getList().reset();
-
-  const bool isPara = PE::GetPE().IsParallel();
+  
+  // for now only serial upgrading is supported
+  const bool isPara = false; //PE::GetPE().IsParallel();
   // Resize the datahandle for the states
   if (isPara)
   {
@@ -564,21 +564,15 @@ void MeshUpgradeBuilder::recreateStates()
     //CFLog(VERBOSE, "Local ID: " << states[localID]->getLocalID() << "\n");
     
   }
-  m_updatables.resize(0);
-  m_globalIDs.resize(0);
-  m_elemLocalIDOfState.resize(0);
-  m_elemIDOfState.resize(0);
-  m_elemFirstStateLocalID.resize(0);
   
-  
-  
-  
-  
-  
-  
-  
-  
-//   CFuint localID = 0;
+  // AL: .resize(0) crashes with some compilers on some systems, better to use clear()
+  m_updatables.clear();
+  m_globalIDs.clear();
+  m_elemLocalIDOfState.clear();
+  m_elemIDOfState.clear();
+  m_elemFirstStateLocalID.clear();
+    
+  //   CFuint localID = 0;
 //     bool isGhost = false;
 //     bool isFound = false;
 //     if (hasEntry(m_localStateIDs, iState)) {

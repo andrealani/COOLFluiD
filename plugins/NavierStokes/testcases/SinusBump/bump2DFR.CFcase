@@ -11,7 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -7.745744
+### Residual = -2.5522124
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -31,7 +31,41 @@ Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libGmsh2CFmesh 
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/SinusBump
-Simulator.Paths.ResultsDir = ./
+Simulator.Paths.ResultsDir = plugins/NavierStokes/testcases/SinusBump
+
+##################################################################
+## SubSystemMesh only creates the mesh and upgrades it serially ##
+##################################################################
+
+Simulator.SubSystems     = SubSysMesh SubSystem
+Simulator.SubSystemTypes = OnlyMeshSubSystem StandardSubSystem
+Simulator.SubSysMesh.Namespaces = MeshNamespace
+Simulator.SubSysMesh.Ranks = 0:0
+Simulator.SubSysMesh.MeshNamespace.MeshData = MeshMeshData
+Simulator.SubSysMesh.MeshNamespace.SubSystemStatus = MeshSubSystemStatus
+Simulator.SubSysMesh.MeshNamespace.PhysicalModelType = Euler2D
+#Simulator.SubSysMesh.MeshNamespace.PhysicalModelName = Euler2D
+Simulator.SubSysMesh.MeshMeshData.listTRS = Bump Top Inlet Outlet
+Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
+
+Simulator.SubSysMesh.OutputFormat = CFmesh
+Simulator.SubSysMesh.CFmesh.FileName = sineBumpQuadUpgraded.CFmesh
+Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
+Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
+
+Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = sineBumpQuad.CFmesh
+Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
+
+Simulator.SubSysMesh.SpaceMethod = Null
+Simulator.SubSysMesh.Null.Builder = MeshUpgrade
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P1
+Simulator.SubSysMesh.Null.Namespace = MeshNamespace
+
+##################################
+## SubSystem runs the FR solver ##
+##################################
 
 Simulator.SubSystem.Default.PhysicalModelType = Euler2D
 Simulator.SubSystem.Euler2D.refValues = 1.0 0.591607978 0.591607978 2.675
@@ -72,35 +106,15 @@ Simulator.SubSystem.MaxNumberSteps.nbSteps = 12000
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.5
 
-#Simulator.SubSystem.ConvergenceMethod = BwdEuler
-#Simulator.SubSystem.BwdEuler.Data.CFL.Value = 0.3
-#Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
-#Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(1e4,0.5*2.0^max(i-5,0))
-#Simulator.SubSystem.BwdEuler.ConvergenceFile = convergenceImpl.plt
-#Simulator.SubSystem.BwdEuler.ShowRate        = 1
-#Simulator.SubSystem.BwdEuler.ConvRate        = 1
-
-#Simulator.SubSystem.LinearSystemSolver = PETSC
-#Simulator.SubSystem.LSSNames = BwdEulerLSS
-#Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 1000
-#Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
-#Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
-#Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
-#Simulator.SubSystem.BwdEulerLSS.Data.Output = true
-
 Simulator.SubSystem.SpaceMethod = FluxReconstruction
-
 Simulator.SubSystem.Default.listTRS = InnerCells Bump Top Inlet Outlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = sineBumpQuad.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = sineBumpQuadUpgraded.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
-Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 
 # choose which builder we use
-Simulator.SubSystem.FluxReconstruction.Builder = MeshUpgrade
-Simulator.SubSystem.FluxReconstruction.MeshUpgrade.PolynomialOrder = P1
-#Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
+Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
 Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHS
 #Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = StdTimeRHSJacob
 #Simulator.SubSystem.FluxReconstruction.JacobianSparsity = CellCentered

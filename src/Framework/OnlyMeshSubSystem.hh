@@ -116,7 +116,10 @@ protected: // functions
 
   /// Set the non root flags in the methods
   void setNonRootMethods();
-
+  
+  /// Set up MeshData that are global across partitions
+  void setGlobalMeshData();
+  
 protected: // data
 
   /// Duration of the simulation of this SubSystem

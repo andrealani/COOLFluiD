@@ -55,6 +55,7 @@ void SubSystem::defineConfigOptions(Config::OptionList& options)
 
 SubSystem::SubSystem(const string& name)
   : ConfigObject(name),
+    m_ranksCounter(),
     m_namespaces(),
     m_has_null_methods(true),
     m_nbmethods(0)
@@ -353,7 +354,10 @@ void SubSystem::configure ( Config::ConfigArgs& args )
 
   ConfigObject::configure(args);
 
-  configureNamespaces(args);
+  configureNamespaces(
+
+
+args);
   configureSingletons(args);
 
   configureNested ( m_int_param_reader, args );
@@ -620,6 +624,8 @@ void SubSystem::fillGroupRanks(const string rankString, vector<int>& granks)
   const CFuint start = StringOps::from_str<CFuint>(ranks[0]);
   const CFuint end   = StringOps::from_str<CFuint>(ranks[1]);
   const CFuint gsize = end-start+1; 
+  m_ranksCounter += end-start+1;
+  cf_assert(m_ranksCounter > 0);
   
   granks.resize(gsize);
   for (CFuint r = 0; r < gsize; ++r) {

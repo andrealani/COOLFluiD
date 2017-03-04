@@ -116,7 +116,7 @@ void ConvRHSFluxReconstruction::execute()
 {
   CFAUTOTRACE;
   
-  CFLog(INFO, "ConvRHSFluxReconstruction::execute()\n");
+  CFLog(VERBOSE, "ConvRHSFluxReconstruction::execute()\n");
   
   // get the elementTypeData
   SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();

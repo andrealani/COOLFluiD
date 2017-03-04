@@ -241,9 +241,15 @@ protected: // helper functions
   template <class METHOD, class COLLAB>
   void setCollaborators(MultiMethodTuple<METHOD>& method,
                         MultiMethodTuple<COLLAB>& collaborator);
-
+  
+  /// @return the counter of the active ranks involved in this subsystem
+  CFuint getNbActiveRanks() const {return m_ranksCounter;}
+  
  private: // member data
 
+  /// counter for the number of ranks to be activated in this SubSystem
+  CFuint m_ranksCounter;
+  
   /// names of the namespaces of this SubSystem
   std::vector<std::string> m_namespaces;
   
