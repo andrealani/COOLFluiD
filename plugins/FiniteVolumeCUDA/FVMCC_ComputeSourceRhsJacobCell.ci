@@ -38,6 +38,7 @@ FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_T
   
   m_nbKernelBlocks = 64;
   this->setParameter("NbKernelBlocks",&m_nbKernelBlocks);
+
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -182,9 +183,10 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
 	  << maxSizeJacobEntries << " < " << fullMatrixSize << "\n");
     cf_assert(maxSizeJacobEntries <= fullMatrixSize);
     
-    // m_blockJacobians is allocated with the maximum possible size needed by a single kernel
-    m_blockJacobians.resize(maxSizeJacobEntries);
-    
+    if (!this->m_useParalutionPtr){
+      // m_blockJacobians is allocated with the maximum possible size needed by a single kernel
+      m_blockJacobians.resize(maxSizeJacobEntries);
+    }
     // here we need to overwrite m_blockStart in such a way that 
     // m_blockStart[cellID] will give the start in the m_blockJacobians storage for the corresponding kernel ID
     // (each cellID is uniquely assigned to just one kernel ID, i.e. the corresponding RHS+jacobian will be 
@@ -352,7 +354,6 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
   geoData.allCells = this->getMethodData().getBuildAllCells();
   
   DataHandle<bool> cellFlag = this->socket_cellFlag.getDataHandle();
-  SafePtr<CFMap<CFuint, FVMCC_BC*> > bcMap = this->getMethodData().getMapBC();
   
   for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS) {
     SafePtr<TopologicalRegionSet> currTrs = trs[iTRS];
@@ -363,7 +364,7 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
     // be processed (their fluxes could give NaN)
     if (currTrs->getName() != "PartitionFaces" && currTrs->getName() != "InnerCells") {
       if (currTrs->hasTag("writable")) {
-        this->_currBC = bcMap->find(iTRS);
+        this->_currBC = this->_bcMap.find(iTRS);
 	
 	// set the flag telling if the ghost states have to be placed on the face itself
 	this->_currBC->setPutGhostsOnFace();

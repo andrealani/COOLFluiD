@@ -43,6 +43,9 @@ FVMCC_ComputeSourceRHSCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_THREAD
   
   m_nbCellsPerBlock = 1;
   setParameter("NbCellsPerBlock",&m_nbCellsPerBlock);
+
+  m_useParalutionPtr = false;
+  this->setParameter("UseParalutionPrt",&m_useParalutionPtr);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -67,6 +70,7 @@ void FVMCC_ComputeSourceRHSCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_T
 {
   options.template addConfigOption< bool > ("OnGPU", "Flag telling to solve on GPU");
   options.template addConfigOption< CFuint > ("NbCellsPerBlock", "Number of cells per block");
+  options.template addConfigOption< bool > ("UseParalutionPrt", "Build the system on the GPU");
 }
       
 //////////////////////////////////////////////////////////////////////////////

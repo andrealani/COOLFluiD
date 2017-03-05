@@ -36,7 +36,8 @@ void ParalutionLSSData::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFuint >("NbKrylovSpaces","Number of Krylov spaces.");
   options.addConfigOption< CFuint >("Verbose", "Verbose level for the paralution solver");
   options.addConfigOption< CFuint >("useGPU", "Flag telling if the system is solved on the gpu");
-  options.addConfigOption< CFuint >("reBuildRatio", "Number of steps before building the preconditioner again");
+  options.addConfigOption< CFuint >("reBuildRatio", "Number of steps before building the preconditioner again"); 
+  options.addConfigOption< bool >("buildOnGPU", "The matrix data is stored directly on the GPU");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -74,6 +75,9 @@ ParalutionLSSData::ParalutionLSSData(SafePtr<std::valarray<bool> > maskArray,
  
   _reBuildRatio = 1;
   setParameter("reBuildRatio",&_reBuildRatio);
+
+  _buildOnGPU = false;
+  setParameter("buildOnGPU",&_buildOnGPU);
 
   _firstIter = true;
 }

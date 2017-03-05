@@ -5,13 +5,16 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 #include "Common/PE.hh"
+#include "Common/CUDA/CudaEnv.hh"
+#include "Framework/CudaDeviceManager.hh"
 #include "Framework/BlockAccumulator.hh"
 #include "Framework/DataHandle.hh"
 #include "Paralution/ParalutionMatrix.hh"
 
 #include "Framework/DataSocketSink.hh"
 
-using namespace std;
+
+
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::MathTools;
 using namespace COOLFluiD::Common;
@@ -131,7 +134,7 @@ void ParalutionMatrix::createAIJ(const CFuint BlockSize,
 //////////////////////////////////////////////////////////////////////////////
 
 
-void ParalutionMatrix::createCSR(std::valarray<CFint> allNonZero, CFuint nbEqs)
+void ParalutionMatrix::createCSR(std::valarray<CFint> allNonZero, CFuint nbEqs, CFuint nbCells)
 {
    
    CFuint nbStates = allNonZero.size();
@@ -161,8 +164,47 @@ void ParalutionMatrix::createCSR(std::valarray<CFint> allNonZero, CFuint nbEqs)
  //  _row.resize(_size);
    _val = new CFreal[_size]; //.resize(_size);   
    _col = new CFint[_size];   
+   
+initializeMatrix();
+   if(buildOnGPU){
+      CFLog(NOTICE, "Copying initial matrix to GPU \n");
+      
+CFint m_nbKernelBlocks = 64;
 
-   CFLog(NOTICE, "Allocated: " << _size << "\t nbStates: " << _rowoff[nbStates] << "\n");
+
+    _nbKernelBlocks = 64;
+
+    _blocksPerGrid = CudaEnv::CudaDeviceManager::getInstance().getBlocksPerGrid(nbCells);
+    _nThreads = CudaEnv::CudaDeviceManager::getInstance().getNThreads();
+    // minimum number of kernel calls to assemble the full RHS + jacobian
+    _sizeb = (_blocksPerGrid+(_nbKernelBlocks-1))/_nbKernelBlocks;
+
+
+      //This can be done using the COOLFluiD CUDA vector
+      CudaEnv::allocDev(_rowoffDev, _rowlength);
+      CudaEnv::allocDev(_colDev, _size);
+      CudaEnv::allocDev(_valDev, _size);
+      CudaEnv::allocDev(_diagAccDev, _nThreads*_nbKernelBlocks*nbEqs*nbEqs);   //KernelSize
+      diagAccSize = nbStates*nbEqs*nbEqs;
+      _diagAcc = new CFreal[diagAccSize];
+      //_rowoff = cudaMalloc(_rowlength * sizeof(CFint));
+      //_col = cudaMalloc(_size * sizeof(CFint));
+      //_val = cudaMalloc(_size * sizeof(CFreal));
+
+      //memcopy()
+      CudaEnv::copyHost2Dev(_rowoffDev, _rowoff, _rowlength);
+      CudaEnv::copyHost2Dev(_colDev, _col, _size);
+      CudaEnv::copyHost2Dev(_valDev, _val, _size);
+
+      m_mat.MoveToAccelerator();
+      //cudaMemcpy(_rowoffDev, _rowoff, _rowlength * sizeof(CFint) ,cudaMemcpyHostToDevice);
+      //cudaMemcpy(_colDev, _col, _size * sizeof(CFint) ,cudaMemcpyHostToDevice);
+      //cudaMemcpy(_valDev, _val, _size * sizeof(CFreal) ,cudaMemcpyHostToDevice);
+
+   }
+
+   
+   CFLog(VERBOSE, "Allocated: " << _size << "\t nbStates: " << _rowoff[nbStates] << "\n");
  // _nnz = 0;
 }
 
@@ -181,12 +223,12 @@ void ParalutionMatrix::setValues(const Framework::BlockAccumulator& acc)
 void ParalutionMatrix::addValues(const Framework::BlockAccumulator& acc)
 {
   using namespace std;
-
+ if(!buildOnGPU){
   CFuint m = acc.getM();    //Number of neighbors
   CFuint n = acc.getN();    //Central cell
   CFuint nb = acc.getNB();  //nb eqs
   const std::vector<int>& nbID = acc.getIM(); //Array storing indexes of neigbours
-  const std::vector<int>& IDs = acc.getIN(); //Array storing neigbours
+  const std::vector<int>& IDs = acc.getIN(); //Array storing cellID
   CFuint IndexCSR;
   CFreal val;
   CFuint RowPosition;
@@ -220,10 +262,12 @@ void ParalutionMatrix::addValues(const Framework::BlockAccumulator& acc)
            }
          }
       }
+ }else{
+    addValuesGPU(acc);
+ }
 }
-      
 
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void ParalutionMatrix::printToScreen() const

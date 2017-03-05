@@ -156,7 +156,10 @@ protected:
   
   /// flag telling to solve on GPU
   bool m_onGPU;
-  
+
+  /// build the mesh on the GPU for Paralution
+  bool m_useParalutionPtr;  
+
 }; // class FVMCC_ComputeSourceRHSCell
 
 //////////////////////////////////////////////////////////////////////////////

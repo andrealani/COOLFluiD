@@ -157,6 +157,8 @@ public:
 
   CFint getNbKsp(){return _nbKsp;}
 
+  bool getBuildOnGPU(){return _buildOnGPU;}
+
 private:
 
   /// Linear Solver
@@ -164,7 +166,8 @@ private:
 
   /// Preconditioner
   Jacobi<LocalMatrix<CFreal>,LocalVector<CFreal>,CFreal> _p;
-
+  //MultiColoredSGS<LocalMatrix<CFreal>,LocalVector<CFreal>,CFreal> _p;
+  
   /// solution vector
   ParalutionVector _xVec;
 
@@ -200,6 +203,9 @@ private:
  
   /// Krylov solver name
   std::string _kspTypeStr;
+
+  /// Build the matrix in the GPU
+  bool _buildOnGPU;
       
 }; // end of class ParalutionLSSData
 

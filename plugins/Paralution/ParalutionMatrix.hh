@@ -10,11 +10,10 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include <paralution.hpp>
-
+#include <valarray> 
 #include "MathTools/RealVector.hh"
 #include "Framework/LSSMatrix.hh"
 #include "Framework/DataSocketSink.hh"
-// #include "Paralution/ParalutionVector.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -133,21 +132,21 @@ public: // functions
                  const CFuint nbCols);
 
 
-  void createCSR(std::valarray<CFint> allNonZero, CFuint nbEqs);
+  void createCSR(std::valarray<CFint> allNonZero, CFuint nbEqs, CFuint nbCells);
 
 
   /**
   * Assembly the matrix from the CSR vectors
   */
   void finalAssembly(CFuint size){
-    if(firstIter){
-      m_mat.AllocateCSR("SystemMatrix", _size, size, size);
-      m_mat.CopyFromCSR(_rowoff, _col, _val);
-      firstIter=false;
+    if(buildOnGPU){
+      CFLog(VERBOSE, "ParalutionMatrix::finalAssembly -> GPU \n");
+      m_mat.SetDataPtrCSR(&_rowoffDev, &_colDev, &_valDev, "SystemMatrix", _size, size, size);
+    }else{
+      CFLog(VERBOSE, "ParalutionMatrix::finalAssembly -> CPU \n");
+      m_mat.SetDataPtrCSR(&_rowoff, &_col, &_val, "SystemMatrix", _size, size, size);
     }
-     m_mat.UpdateValuesCSR(_val);
-
-  //   std::cout << _rowoff[2] << "\n";
+    firstIter=false;
   }
 
 
@@ -285,19 +284,28 @@ public: // functions
   }
 
   void moveToGPU(){
+    CFLog(NOTICE, "ParalutionMatrix::moveToGPU \n");
     m_mat.MoveToAccelerator();
   }
 
   void moveToCPU(){
   //  std::cout << "moveToCPU \n";
     m_mat.MoveToHost();
-    _rowoff = new CFint[_rowlength];
-    _col = new CFint[_size];
-    _val = new CFreal[_size];
-    m_mat.CopyToCSR(_rowoff, _col, _val);
-
+  //  _rowoff = new CFint[_rowlength];
+  //  _col = new CFint[_size];
+  //  _val = new CFreal[_size];
+  //  m_mat.CopyToCSR(_rowoff, _col, _val);
+   
    // delete [] _rowoff;
    // delete [] _col;
+  }
+
+  void LeavePointers(){
+    if(buildOnGPU){
+      m_mat.LeaveDataPtrCSR(&_rowoffDev, &_colDev, &_valDev); 
+    }else{
+      m_mat.LeaveDataPtrCSR(&_rowoff, &_col, &_val); 
+    }
   }
 
   void AssignToSolver(paralution::Solver< paralution::LocalMatrix<CFreal>, paralution::LocalVector<CFreal>, CFreal >& ls){
@@ -347,11 +355,30 @@ public: // functions
   {
 //    std::cout << "resetToZeroEntries() \n";
 //    std::cout << _size  << " " << _val[0] << " " << _col[0] << "\n";
+    if (!buildOnGPU){
+      for (CFint i=0;i<_size;i++){
+         _val[i] = 0;    
+         //_col[i] = -1;   
+      }
+    }else{
+      resetToZeroEntriesGPU();
+    }
+  }
 
-   for (CFint i=0;i<_size;i++){
-      _val[i] = 0;
-      _col[i] = -1;
-   }
+  void initializeMatrix()
+  {
+//    std::cout << "initializeMatrix() \n";
+//    std::cout << _size  << " " << _val[0] << " " << _col[0] << "\n";
+    
+    for (CFint i=0;i<_size;i++){
+         _val[i] = 0;    
+         _col[i] = -1;   
+    }
+
+  }
+
+
+  void resetToZeroEntriesGPU();
 
 
   //  std::cout << _rowoff[2] << "\n"; 
@@ -367,7 +394,7 @@ public: // functions
     // if (!_isMatShell) {
     //   CF_CHKERRCONTINUE(MatZeroEntries(m_mat));
     // }
-  }
+  
 
   /**
    * Set a list of values
@@ -380,6 +407,16 @@ public: // functions
   void addValues(const Framework::BlockAccumulator& acc);
 
   /**
+   * Add a list of values
+   */
+  void addValuesGPU(const Framework::BlockAccumulator& acc);
+
+  /**
+   * Update the diagonal block on the GPU
+   */
+  void updateDiagBlocks(CFuint nbCells, CFuint nbEqs);
+
+  /**
    * Freeze the matrix structure concerning the non zero
    * locations
    */
@@ -389,6 +426,14 @@ public: // functions
    // // MatSetOption(m_mat, MAT_NEW_NONZERO_LOCATIONS_ERR, PETSC_FALSE);
   }
   
+  void SetBuildOnGPU(bool isBuildOnGPU){
+     buildOnGPU = isBuildOnGPU;
+  }
+
+  CFreal* getValPtrDev(){ return _valDev; }
+  CFint* getColPtrDev(){ return _colDev; }
+  CFint* getRowoffPtrDev(){ return _rowoffDev; }
+
 protected:
 
   /// socket for the states
@@ -406,10 +451,30 @@ private: // data
   //MathTools::CFVec<CFint> _col;
   //RealVector _val;
   bool firstIter;
+  bool buildOnGPU;
 
   CFint *_col;
   CFint *_rowoff;
   CFreal *_val;
+  CFreal *_diagAcc;
+
+  CFint *_colDev;
+  CFint *_rowoffDev;
+  CFreal *_valDev;
+  CFreal *_diagAccDev;
+
+  CFint _NbKernel;
+  CFint diagAccSize;
+
+  CFuint _nbKernelBlocks;
+
+  CFuint _blocksPerGrid;
+  CFuint _nThreads;
+  CFuint _sizeb;
+
+  //CudaEnv::CudaVector<CFint> _col;
+  //CudaEnv::CudaVector<CFint> _rowoff;
+  //CudaEnv::CudaVector<CFreal> _val;
  // std::vector<CFint> _row;
  // std::vector<CFint> _rowoff;
  // std::vector<CFint> _col;

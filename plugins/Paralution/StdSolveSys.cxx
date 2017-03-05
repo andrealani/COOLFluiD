@@ -67,6 +67,10 @@ stopTimer.start();
 
    ParalutionLSSData& MethodData = getMethodData();
 
+   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
+   const bool useNodeBased = getMethodData().useNodeBased();
+   const CFuint nbStates = (!useNodeBased) ? states.size() : nodes.size();
    DataHandle< CFreal> rhs = socket_rhs.getDataHandle();
    cf_assert(_upLocalIDs.size() == _upStatesGlobalIDs.size());
    const CFuint vecSize = _upLocalIDs.size();
@@ -75,6 +79,7 @@ stopTimer.start();
    ParalutionMatrix& mat = MethodData.getMatrix();      
    ParalutionVector& rhsVec = MethodData.getRhsVector();
    ParalutionVector& solVec = MethodData.getSolVector();
+
  //For re-use of the ls
    IterativeLinearSolver<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal >& ls = MethodData.getKSP();
    Preconditioner<LocalMatrix<CFreal>, LocalVector<CFreal>, CFreal >& p = MethodData.getPreconditioner();  
@@ -84,17 +89,21 @@ stopTimer.start();
    CFuint reBuildRatio = MethodData.getreBuildRatio();
 
 
+ if (getMethodData().getBuildOnGPU()){
+   Stopwatch<WallTime> diagTimer;
+   diagTimer.start();
+
+   mat.updateDiagBlocks(nbStates, nbEqs);
+
+   CFLog(NOTICE, "ParalutionMatrix::updateDiagBlocks took " << diagTimer << "s \n");
+}
    // assemble the matrix in the HOST
    mat.finalAssembly(rhs.size());
+//mat.moveToCPU();
+//mat.printToFile("ParalutionMatrix.txt");
+//abort();
 
    CFLog(VERBOSE, "StdSolveSys::execute() ==> Matrix assembled! \n");
-  // mat.convertToCSR();
-  // CFLog(NOTICE, "StdSolveSys::execute() ==> Matrix converted to CSR! \n");
-//   // after the first iteration freeze the non zero structure
-//   // of the matrix
-//   if (SubSystemStatusStack::getActive()->getNbIter() == 1) {
-//     mat.freezeNonZeroStructure();
-//   }
 
 //   // the rhs is copied into the ParalutionVector for the rhs
 //   // _upStatesGlobalIDs[i] is different from _upLocalIDs[i]
@@ -114,19 +123,21 @@ stopTimer.start();
     solVec.Assembly();
 
     CFLog(VERBOSE, "StdSolveSys::execute() ==> Solution vector assembled! \n");
-
+    CFLog(VERBOSE, "StdSolveSys: useGPU " << useGPU << " ; buildOnGPU " << getMethodData().getBuildOnGPU() << " \n");
     if (useGPU){
-      mat.moveToGPU();
+      if (!getMethodData().getBuildOnGPU()){mat.moveToGPU();}
       rhsVec.moveToGPU();
       solVec.moveToGPU();
     }
 
-    CFLog(VERBOSE, "StdSolveSys::execute() ==> moveToGPU succesful! \n");
+
 
 
 IterCounter++;
   //FOR RE-USE THE LS
 if (firstIter){
+  mat.AssignToSolver(ls);
+  ls.SetPreconditioner(p);
   ls.Build();
   getMethodData().setFirstIter(false);
 }
@@ -137,19 +148,31 @@ if (IterCounter%reBuildRatio == 0){
 
 
 
-
 rhsVec.Solve(ls, solVec.getVecPtr());
 //ls.Clear(); //Only if not reusing the ls
 
 if(useGPU){
+  if (!getMethodData().getBuildOnGPU()){mat.moveToCPU();}
 solVec.moveToCPU();
-mat.moveToCPU();
 rhsVec.moveToCPU();
 }
-//solVec.printToFile("Sol.txt");
+mat.LeavePointers();
 
+//mat.resetToZeroEntriesGPU();
+//mat.finalAssembly(rhs.size());
+//mat.moveToCPU();
+//mat.printToFile("ParalutionMatrix.txt");
+//abort();
+
+
+
+
+
+//solVec.printToFile("Sol.txt");
+//abort();
   solVec.copy2(&rhs[0], &_upLocalIDs[0], vecSize);
-  //mat.resetToZeroEntries(); //needed?
+
+
 
 
 CFLog(NOTICE, "StdSolveSys::execute() took " << stopTimer << "s, with " << ls.GetIterationCount() << " iterations \n");

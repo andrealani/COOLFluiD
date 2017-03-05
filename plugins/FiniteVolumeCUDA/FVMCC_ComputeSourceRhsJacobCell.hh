@@ -114,7 +114,8 @@ protected:
   
   /// number of kernel blocks
   CFuint m_nbKernelBlocks;
-  
+
+
 }; // class FVMCC_ComputeSourceRhsJacobCell
 
 //////////////////////////////////////////////////////////////////////////////

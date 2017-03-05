@@ -109,12 +109,12 @@ void StdSetup::setKSP()
   CFreal DivTol = 1e8; //getMethodData().getDivTol();
   CFreal MaxIter = getMethodData().getMaxIter();
   CFint nbKsp = getMethodData().getNbKsp();  
-
+  
 
   ls.Init(AbsTol, RelTol, DivTol, MaxIter);
   ls.SetBasisSize(nbKsp);
-  mat.AssignToSolver(ls);
-  ls.SetPreconditioner(p);
+  //mat.AssignToSolver(ls);
+  //ls.SetPreconditioner(p);
   ls.Verbose(getMethodData().getVerbose()) ;
   // Allocate and configure the LSS solver
 }
@@ -221,7 +221,7 @@ void StdSetup::setMatrix(const CFuint localSize,
   const CFuint nbStates = (!useNodeBased) ? states.size() : nodes.size();
   const CFuint nbEqs = getMethodData().getNbSysEquations();
   
-  CFLog(VERBOSE, "StdSeqSetup::setMatrix() => useNodeBased[" << useNodeBased << "], nbEqs[" << nbEqs << "]\n");
+  CFLog(NOTICE, "StdSeqSetup::setMatrix() => useNodeBased[" << useNodeBased << "], nbEqs[" << nbEqs << "]\n");
   
   // all non zero entries (block matrix format is not supported on GPU)
   std::valarray<CFint> allNonZero(nbStates);
@@ -250,7 +250,9 @@ void StdSetup::setMatrix(const CFuint localSize,
  // const CFuint nbNonZeroBlocks = 0;
  // std::cout << blockSize << " " << nbRows << " " << nbCols << " " << nbNonZeroBlocks << "\n";
  
-   mat.createCSR(allNonZero, nbEqs);
+   mat.SetBuildOnGPU(getMethodData().getBuildOnGPU());  
+
+   mat.createCSR(allNonZero, nbEqs, nbStates);
 
   // create a sequential sparse matrix in block compressed row
   // format
