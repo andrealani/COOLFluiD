@@ -88,15 +88,17 @@ stopTimer.start();
    bool useGPU = MethodData.getUseGPU();
    CFuint reBuildRatio = MethodData.getreBuildRatio();
 
-
- if (getMethodData().getBuildOnGPU()){
-   Stopwatch<WallTime> diagTimer;
-   diagTimer.start();
-
-   mat.updateDiagBlocks(nbStates, nbEqs);
-
-   CFLog(NOTICE, "ParalutionMatrix::updateDiagBlocks took " << diagTimer << "s \n");
-}
+#ifdef CF_HAVE_CUDA
+   if (getMethodData().getBuildOnGPU()) {
+  Stopwatch<WallTime> diagTimer;
+  diagTimer.start();
+  
+  mat.updateDiagBlocks(nbStates, nbEqs);
+  
+  CFLog(NOTICE, "ParalutionMatrix::updateDiagBlocks took " << diagTimer << "s \n");
+  }
+#endif
+   
    // assemble the matrix in the HOST
    mat.finalAssembly(rhs.size());
 //mat.moveToCPU();

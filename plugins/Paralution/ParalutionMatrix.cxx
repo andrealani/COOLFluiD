@@ -5,8 +5,12 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 #include "Common/PE.hh"
+
+#ifdef CF_HAVE_CUDA
 #include "Common/CUDA/CudaEnv.hh"
 #include "Framework/CudaDeviceManager.hh"
+#endif
+
 #include "Framework/BlockAccumulator.hh"
 #include "Framework/DataHandle.hh"
 #include "Paralution/ParalutionMatrix.hh"
@@ -174,6 +178,7 @@ CFint m_nbKernelBlocks = 64;
 
     _nbKernelBlocks = 64;
 
+#ifdef CF_HAVE_CUDA
     _blocksPerGrid = CudaEnv::CudaDeviceManager::getInstance().getBlocksPerGrid(nbCells);
     _nThreads = CudaEnv::CudaDeviceManager::getInstance().getNThreads();
     // minimum number of kernel calls to assemble the full RHS + jacobian
@@ -201,6 +206,7 @@ CFint m_nbKernelBlocks = 64;
       //cudaMemcpy(_colDev, _col, _size * sizeof(CFint) ,cudaMemcpyHostToDevice);
       //cudaMemcpy(_valDev, _val, _size * sizeof(CFreal) ,cudaMemcpyHostToDevice);
 
+#endif
    }
 
    
@@ -223,51 +229,52 @@ void ParalutionMatrix::setValues(const Framework::BlockAccumulator& acc)
 void ParalutionMatrix::addValues(const Framework::BlockAccumulator& acc)
 {
   using namespace std;
- if(!buildOnGPU){
-  CFuint m = acc.getM();    //Number of neighbors
-  CFuint n = acc.getN();    //Central cell
-  CFuint nb = acc.getNB();  //nb eqs
-  const std::vector<int>& nbID = acc.getIM(); //Array storing indexes of neigbours
-  const std::vector<int>& IDs = acc.getIN(); //Array storing cellID
-  CFuint IndexCSR;
-  CFreal val;
-  CFuint RowPosition;
-  CFuint RowPositionPlusOne;
-  CFuint mm;
-  CFuint index = 0; //Also number of nonzerovalues
-  CFreal* values = const_cast<Framework::BlockAccumulator&>(acc).getPtr();
-      CFuint counter = 0;                //Number of non-connected neigbours
-      for (CFint mi=0; mi<m; mi++){      //Loop over the neigbours
-         if (nbID[mi] == -1) {
-           counter++;
-         }else{
-           for (CFint nbj=0;nbj<nb; nbj++){
-              RowPosition = _rowoff[nbID[mi]*nb + nbj];  //Neighbour row position
-              RowPositionPlusOne = _rowoff[nbID[mi]*nb + nbj + 1]; //index of next row
-              mm = (RowPositionPlusOne-RowPosition)/nb;  //Number of nonzero values of the neighbour
-              IndexCSR = -1;
-              for (CFint mii=0; mii<mm; mii++){  //Look for the correct index looping over the neighbors of the neigbour
-                 if (_col[RowPosition+mii*nb] == IDs[0]*nb || _col[RowPosition+mii*nb] == -1){
-                    IndexCSR = RowPosition+mii*nb;
-                 }
-                
-              }
-
-              for (CFint nbi=0; nbi<nb; nbi++){
-		
-                val = values[mi*nb*nb + nbj*nb + nbi]; 
-                _col[IndexCSR+nbi] = IDs[0]*nb + nbi;
-                _val[IndexCSR+nbi] += val;
-              }
-           }
-         }
+  if(!buildOnGPU){
+    CFuint m = acc.getM();    //Number of neighbors
+    CFuint n = acc.getN();    //Central cell
+    CFuint nb = acc.getNB();  //nb eqs
+    const std::vector<int>& nbID = acc.getIM(); //Array storing indexes of neigbours
+    const std::vector<int>& IDs = acc.getIN(); //Array storing cellID
+    CFuint IndexCSR;
+    CFreal val;
+    CFuint RowPosition;
+    CFuint RowPositionPlusOne;
+    CFuint mm;
+    CFuint index = 0; //Also number of nonzerovalues
+    CFreal* values = const_cast<Framework::BlockAccumulator&>(acc).getPtr();
+    CFuint counter = 0;                //Number of non-connected neigbours
+    for (CFint mi=0; mi<m; mi++){      //Loop over the neigbours
+      if (nbID[mi] == -1) {
+	counter++;
+      }else{
+	for (CFint nbj=0;nbj<nb; nbj++){
+	  RowPosition = _rowoff[nbID[mi]*nb + nbj];  //Neighbour row position
+	  RowPositionPlusOne = _rowoff[nbID[mi]*nb + nbj + 1]; //index of next row
+	  mm = (RowPositionPlusOne-RowPosition)/nb;  //Number of nonzero values of the neighbour
+	  IndexCSR = -1;
+	  for (CFint mii=0; mii<mm; mii++){  //Look for the correct index looping over the neighbors of the neigbour
+	    if (_col[RowPosition+mii*nb] == IDs[0]*nb || _col[RowPosition+mii*nb] == -1){
+	      IndexCSR = RowPosition+mii*nb;
+	    }
+            
+	  }
+	  
+	  for (CFint nbi=0; nbi<nb; nbi++){
+	    
+	    val = values[mi*nb*nb + nbj*nb + nbi]; 
+	    _col[IndexCSR+nbi] = IDs[0]*nb + nbi;
+	    _val[IndexCSR+nbi] += val;
+	  }
+	}
       }
- }else{
+    }
+  } else{
+#ifdef CF_HAVE_CUDA
     addValuesGPU(acc);
- }
+#endif
+  }
 }
-
-    
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void ParalutionMatrix::printToScreen() const

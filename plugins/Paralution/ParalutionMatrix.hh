@@ -361,7 +361,9 @@ public: // functions
          //_col[i] = -1;   
       }
     }else{
+#ifdef CF_HAVE_CUDA    
       resetToZeroEntriesGPU();
+#endif
     }
   }
 
@@ -377,9 +379,10 @@ public: // functions
 
   }
 
-
+  /// reset to zero the entries on the GPU
+#ifdef CF_HAVE_CUDA
   void resetToZeroEntriesGPU();
-
+#endif
 
   //  std::cout << _rowoff[2] << "\n"; 
 //    if (firstIter) { 
@@ -406,16 +409,18 @@ public: // functions
    */
   void addValues(const Framework::BlockAccumulator& acc);
 
+#ifdef CF_HAVE_CUDA
   /**
    * Add a list of values
    */
   void addValuesGPU(const Framework::BlockAccumulator& acc);
-
+  
   /**
    * Update the diagonal block on the GPU
    */
   void updateDiagBlocks(CFuint nbCells, CFuint nbEqs);
-
+#endif
+  
   /**
    * Freeze the matrix structure concerning the non zero
    * locations

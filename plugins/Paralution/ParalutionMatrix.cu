@@ -88,6 +88,7 @@ void ParalutionMatrix::addValuesGPU(const Framework::BlockAccumulator& acc)
    } 
 }  
 
+////////////////////////////////////////////////////////////////////
 
 void ParalutionMatrix::updateDiagBlocks(CFuint nbCells, CFuint nbEqs)
 {
