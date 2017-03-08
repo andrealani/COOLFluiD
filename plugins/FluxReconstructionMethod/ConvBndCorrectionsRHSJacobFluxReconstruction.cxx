@@ -88,21 +88,6 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
   geoData.facesTRS = faceTrs;
   geoData.isBoundary = true;
   
-  // set the data needed to compute the bnd face flux corrections
-  setCorrectionsData();
-  
-  // get the local FR data
-  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
-  
-  // get number of solution points
-  const CFuint nbrSolPnt = m_solPntsLocalCoords->size();
-    
-  // compute flux point coordinates
-  SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
-  const CFuint nbrFlxPnts = flxLocalCoords->size();
-  
-  cf_assert(nbrSolPnt == frLocalData[0]->getNbrOfSolPnts());
-  
   // loop over TRs
   for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
   {
@@ -112,7 +97,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
       CFLog(VERBOSE,"m_orient: " << m_orient << "\n");
       
       // select the correct flx pnts on the face out of all cell flx pnts for the current orient
-      for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+      for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
       {
         m_flxPntsLocalCoords[iFlx] = (*m_allCellFlxPnts)[(*m_faceFlxPntConn)[m_orient][iFlx]];
       }
@@ -143,11 +128,14 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
         // if cell is parallel updatable, compute the correction flux
         if ((*m_cellStates)[0]->isParUpdatable())
         {
+	  // compute the discontinuous flx in the flx pnts
+	  computeDiscontinuousFlx();
+	  
 	  // set the face ID in the BCStateComputer
 	  m_bcStateComputer->setFaceID(m_face->getID());
       
 	  // compute FI-FD
-          computeInterfaceFlxCorrection(m_face->getID());//faceID
+          computeInterfaceFlxCorrection();
       
           // compute the wave speed updates
           computeWaveSpeedUpdates(m_waveSpeedUpd);
@@ -162,14 +150,8 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
           updateRHS();
 	  
 	  // compute the convective boundary flux correction contribution to the jacobian
-	  computeJacobConvBndCorrection(m_face->getID());//faceID
-        } else {
-	  // compute the wave speed updates
-          computeWaveSpeedUpdates(m_waveSpeedUpd);
-      
-          // update the wave speeds
-          updateWaveSpeed();
-	}
+	  computeJacobConvBndCorrection();
+        }
         
         
         // release the face
@@ -181,7 +163,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection(CFuint faceID)
+void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection()
 {
   // get number of solution points in the cell
   const CFuint nbrSolPnts = m_cellStates->size();
@@ -196,6 +178,15 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
   for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
   {
     acc.setRowColIndex(iSol,(*m_cellStates)[iSol]->getLocalID());
+  }
+  
+  // put the perturbed and unperturbed corrections in the correct format
+  for (CFuint iState = 0; iState < nbrSolPnts; ++iState)
+  {
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {
+      m_resUpdates[m_nbrEqs*iState+iVar] = m_corrections[iState][iVar];
+    }
   }
 
   // loop over the states in the internal cell to perturb the states
@@ -214,10 +205,10 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
       // and reconstruct the ghost states)
       backupAndReconstructPhysVar(iEqPert,*m_cellStates);
       
-      setBndFaceData(faceID);
+      computeDiscontinuousFlx();
 
       // compute the perturbed boundary face term
-      computeInterfaceFlxCorrection(faceID);
+      computeInterfaceFlxCorrection();
       computeCorrection(m_pertCorrections);
       
       // get nb of states
@@ -229,7 +220,6 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
         for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
 	{
           m_pertResUpdates[m_nbrEqs*iState+iVar] = m_pertCorrections[iState][iVar];
-	  m_resUpdates[m_nbrEqs*iState+iVar] = m_corrections[iState][iVar];
         }
       }
 
@@ -332,15 +322,12 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::setup()
 
   // get the numerical Jacobian computer
   m_numJacob = getMethodData().getNumericalJacobian();
-  
-  // maximum number of solution points in a cell
-  const CFuint maxNbrSolPnts = frLocalData[0]->getNbrOfSolPnts();
 
   // create blockaccumulator
-  m_acc.reset(m_lss->createBlockAccumulator(maxNbrSolPnts,maxNbrSolPnts,m_nbrEqs));
+  m_acc.reset(m_lss->createBlockAccumulator(m_nbrSolPnts,m_nbrSolPnts,m_nbrEqs));
   
   // resize variables
-  const CFuint nbrRes = maxNbrSolPnts*m_nbrEqs;
+  const CFuint nbrRes = m_nbrSolPnts*m_nbrEqs;
   m_pertResUpdates .resize(nbrRes);
   m_derivResUpdates.resize(nbrRes);
   m_resUpdates .resize(nbrRes);

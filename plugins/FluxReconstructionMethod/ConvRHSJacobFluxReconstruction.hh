@@ -85,12 +85,12 @@ protected: // functions
   /**
    * 
    */
-  void computeBothJacobs(CFuint faceID);
+  void computeBothJacobs();
   
   /**
    * 
    */
-  void computeOneJacob(const CFuint side, CFuint faceID);
+  void computeOneJacob(const CFuint side);
 
 protected: // data
 

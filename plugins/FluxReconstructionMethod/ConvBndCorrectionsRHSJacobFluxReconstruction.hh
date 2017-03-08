@@ -92,7 +92,7 @@ protected: // functions
   /**
    * compute the contribution of the convective boundary flux correction to the Jacobian
    */
-  void computeJacobConvBndCorrection(CFuint faceID);
+  void computeJacobConvBndCorrection();
 
 
 protected: // data

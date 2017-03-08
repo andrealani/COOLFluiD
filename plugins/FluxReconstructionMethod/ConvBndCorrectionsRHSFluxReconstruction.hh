@@ -81,11 +81,11 @@ protected: // functions
    */
   virtual void executeOnTrs();
 
-  /// set face term data for current element type
-  void setCorrectionsData();
+  /// compute the discontinuous flx in the flx points of the face
+  void computeDiscontinuousFlx();
   
   /// compute the interface flux correction FI-FD
-  void computeInterfaceFlxCorrection(CFuint faceID);
+  void computeInterfaceFlxCorrection();
   
   /// compute the total correction
   void computeCorrection(std::vector< RealVector >& corrections);
@@ -159,6 +159,12 @@ protected: // data
 
   /// number of equations in the physical model
   CFuint m_nbrEqs;
+  
+  /// number of solution pnts in the cell
+  CFuint m_nbrSolPnts;
+  
+  /// number of flux pnts on a face
+  CFuint m_nbrFaceFlxPnts;
   
   /// vector containing pointers to the face normals
   Common::SafePtr< std::vector< RealVector > > m_faceNormals;

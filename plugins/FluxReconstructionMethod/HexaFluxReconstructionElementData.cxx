@@ -1068,7 +1068,7 @@ void HexaFluxReconstructionElementData::createFaceFluxPntsConnPerOrient()
           const CFuint flx1Idx = rotFlxIdxs[iRotGroup][1];
           const CFuint flx2Idx = rotFlxIdxs[iRotGroup][2];
           const CFuint flx3Idx = rotFlxIdxs[iRotGroup][3];
-          CFLog(VERBOSE,"flxrotIdx" << flx0Idx << flx1Idx << flx2Idx << flx3Idx << "\n");
+          //CFLog(VERBOSE,"flxrotIdx" << flx0Idx << flx1Idx << flx2Idx << flx3Idx << "\n");
 
           // rotate flux points
           const CFuint swap = invFlxIdxs[flx3Idx];
@@ -1079,9 +1079,9 @@ void HexaFluxReconstructionElementData::createFaceFluxPntsConnPerOrient()
         }
       }
     }
-      CFLog(VERBOSE,"m_faceFlxPntConnPerOrient[0][LEFT]" << m_faceFlxPntConnPerOrient[0][LEFT][0] << m_faceFlxPntConnPerOrient[0][LEFT][1] << m_faceFlxPntConnPerOrient[0][LEFT][2] << m_faceFlxPntConnPerOrient[0][LEFT][3] << m_faceFlxPntConnPerOrient[0][LEFT][4] << m_faceFlxPntConnPerOrient[0][LEFT][5] << m_faceFlxPntConnPerOrient[0][LEFT][6] << m_faceFlxPntConnPerOrient[0][LEFT][7] << m_faceFlxPntConnPerOrient[0][LEFT][8] << "\n");
-      CFLog(VERBOSE,"m_faceFlxPntConnPerOrient[0][RIGHT]" << m_faceFlxPntConnPerOrient[0][RIGHT][0] << m_faceFlxPntConnPerOrient[0][RIGHT][1] << m_faceFlxPntConnPerOrient[0][RIGHT][2] << m_faceFlxPntConnPerOrient[0][RIGHT][3] << m_faceFlxPntConnPerOrient[0][RIGHT][4] << m_faceFlxPntConnPerOrient[0][RIGHT][5] << m_faceFlxPntConnPerOrient[0][RIGHT][6] << m_faceFlxPntConnPerOrient[0][RIGHT][7] << m_faceFlxPntConnPerOrient[0][RIGHT][8] << "\n");
-    CFLog(VERBOSE,iOrient << "\n");
+      //CFLog(VERBOSE,"m_faceFlxPntConnPerOrient[0][LEFT]" << m_faceFlxPntConnPerOrient[0][LEFT][0] << m_faceFlxPntConnPerOrient[0][LEFT][1] << m_faceFlxPntConnPerOrient[0][LEFT][2] << m_faceFlxPntConnPerOrient[0][LEFT][3] << m_faceFlxPntConnPerOrient[0][LEFT][4] << m_faceFlxPntConnPerOrient[0][LEFT][5] << m_faceFlxPntConnPerOrient[0][LEFT][6] << m_faceFlxPntConnPerOrient[0][LEFT][7] << m_faceFlxPntConnPerOrient[0][LEFT][8] << "\n");
+      //CFLog(VERBOSE,"m_faceFlxPntConnPerOrient[0][RIGHT]" << m_faceFlxPntConnPerOrient[0][RIGHT][0] << m_faceFlxPntConnPerOrient[0][RIGHT][1] << m_faceFlxPntConnPerOrient[0][RIGHT][2] << m_faceFlxPntConnPerOrient[0][RIGHT][3] << m_faceFlxPntConnPerOrient[0][RIGHT][4] << m_faceFlxPntConnPerOrient[0][RIGHT][5] << m_faceFlxPntConnPerOrient[0][RIGHT][6] << m_faceFlxPntConnPerOrient[0][RIGHT][7] << m_faceFlxPntConnPerOrient[0][RIGHT][8] << "\n");
+    //CFLog(VERBOSE,iOrient << "\n");
   }
 // /*  for (CFuint iOrient = 0; iOrient < m_faceFlxPntConnPerOrient.size(); ++iOrient)
 //   {

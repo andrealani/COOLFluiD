@@ -46,6 +46,7 @@ void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("SpaceRHSJacobCom","Command for the computation of the space discretization contribution to RHS and Jacobian.");
   options.addConfigOption< std::string >("TimeRHSJacobCom","Command for the computation of the time discretization contibution to RHS and Jacobian.");
   options.addConfigOption< std::string >("LimiterCom","Command to limit the solution.");
+  options.addConfigOption< std::string >("ComputeErrorCom","Command to compute the error of the solution.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -62,7 +63,8 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   m_inits(),
   m_bcs(),
   m_timeRHSJacob(),
-  m_bcsComs()
+  m_bcsComs(),
+  m_computeError()
 {
   addConfigOptionsTo(this);
   m_data.reset(new FluxReconstructionSolverData(this));
@@ -98,6 +100,9 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
 
   m_convSolveStr   = "ConvRHS";
   setParameter( "ConvSolveCom",   &m_convSolveStr );
+  
+  m_computeErrorStr = "Null";
+  setParameter("ComputeErrorCom", &m_computeErrorStr);
   
   // options for source term commands
   m_srcTermTypeStr = std::vector<std::string>();
@@ -163,6 +168,8 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
     args, m_limiter,m_limiterStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_timeRHSJacob,m_timeRHSJacobStr,m_data );
+  configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
+    args, m_computeError,m_computeErrorStr,m_data );
 
   cf_assert(m_setup.isNotNull());
   cf_assert(m_unsetup.isNotNull());
@@ -171,6 +178,7 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
   cf_assert(m_convSolve.isNotNull());
   cf_assert(m_limiter.isNotNull());
   cf_assert(m_timeRHSJacob.isNotNull());
+  cf_assert(m_computeError.isNotNull());
   
   configureSourceTermCommands(args);
   configureInitCommands(args);
@@ -344,6 +352,9 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
   
   cf_assert(m_convSolve.isNotNull());
   m_convSolve->execute();
+  
+  cf_assert(m_computeError.isNotNull());
+  m_computeError->execute();
 
 //   // if there is a diffusive term, compute the diffusive contributions to the residual
 //   if (m_data->hasDiffTerm() && m_data->separateConvDiffComs())
@@ -417,9 +428,21 @@ void FluxReconstructionSolver::prepareComputationImpl()
 {
   CFAUTOTRACE;
   
-  CFLog(VERBOSE,"EXECUTING PREPARE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  //CFLog(VERBOSE,"EXECUTING PREPARE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
   cf_assert(m_prepare.isNotNull());
   m_prepare->execute();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionSolver::postProcessSolutionImpl()
+{
+  CFAUTOTRACE;
+  
+  //CFLog(NOTICE,"EXECUTING PostProcess!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  
+
+
 }
 
 //////////////////////////////////////////////////////////////////////////////

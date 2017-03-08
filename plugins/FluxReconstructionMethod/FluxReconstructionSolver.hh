@@ -129,7 +129,7 @@ protected: // interface implementation functions
   virtual void prepareComputationImpl();
 
   /// Postprocess the solution.
-  virtual void postProcessSolutionImpl() {};
+  virtual void postProcessSolutionImpl();
 
   /// Executed on "CF_ON_MESHADAPTER_BEFOREMESHUPDATE" event
   Common::Signal::return_t beforeMeshUpdateActionImpl(Common::Signal::arg_t eBefore);
@@ -167,6 +167,9 @@ private: // data
   
   /// Command used to limit a solution
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_limiter;
+  
+  /// Command used to compute the error of the solution
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_computeError;
 
   ///The Setup string for configuration
   std::string m_setupStr;
@@ -192,6 +195,9 @@ private: // data
   
   /// The string for configuration of the m_timeRHSJacob command
   std::string m_timeRHSJacobStr;
+  
+  ///The computeError string for configuration
+  std::string m_computeErrorStr;
   
   /// The commands to use for initializing the solution.
   std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_inits;

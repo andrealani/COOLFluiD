@@ -399,7 +399,6 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
       for (CFuint jState = 0; jState < oldNbStatesPerElem; ++jState)
       {
         globalIDsTemp[globalIdx][jState] = oldStates[(*cellStates)(globalIdx,jState)]->getGlobalID();
-	CFLog(VERBOSE,"elem " << globalIdx << ", state " << jState << ", globalID: " << globalIDsTemp[globalIdx][jState] << "\n");
       }
     }
   }
@@ -498,50 +497,33 @@ void MeshUpgradeBuilder::recreateStates()
   // for now only serial upgrading is supported
   const bool isPara = false; //PE::GetPE().IsParallel();
   // Resize the datahandle for the states
-  if (isPara)
-  {
-    states.resize(newNbStates+oldNbStates);
-  }
-  else
-  {
-    states.resize(newNbStates);
-  }
+  states.resize(newNbStates);
 
   // allocate the new states
-  //bool updatable = true;
   const CFuint nbeq = PhysicalModelStack::getActive()->getNbEq();
   RealVector stateData (nbeq);
-  CFLog(VERBOSE, "nb of states: " << states.size() << ", old nb of states: " << oldNbStates << "\n");
   
-  //states.freeContiguosGlobal();
-  //states.createIndex();
   for (CFuint iState = 0; iState < newNbStates; ++iState)
   {
     CFuint globalID = m_globalIDs[iState];
     CFuint localID = 0;
-    //CFLog(VERBOSE, "HERE1!!!!!!!!!!!!!!!!!\n");
+
     if (isPara)
     {
       if (m_elemLocalIDOfState[iState] != 0)
       {
         if (m_updatables[iState])
         {
-	  //CFLog(VERBOSE, "HERE1a!!!!!!!!!!!!!!!!!\n");
           localID = states.addLocalPoint(globalID);
-	  //CFLog(VERBOSE, "HERE1ab!!!!!!!!!!!!!!!!!\n");
         } 
         else
         {
-	  //CFLog(VERBOSE, "HERE1b!!!!!!!!!!!!!!!!!\n");
           localID = states.addGhostPoint(globalID);
-	  //CFLog(VERBOSE, "HERE1bb!!!!!!!!!!!!!!!!!\n");
         }
       }
       else
       {
-        //CFLog(VERBOSE, "HERE1c!!!!!!!!!!!!!!!!!\n");
         localID = m_elemFirstStateLocalID[m_elemIDOfState[iState]];
-        //CFLog(VERBOSE, "HERE1cb!!!!!!!!!!!!!!!!!\n");
       }
       (*cellStates)(m_elemIDOfState[iState],m_elemLocalIDOfState[iState]) = localID;
     }
@@ -549,19 +531,10 @@ void MeshUpgradeBuilder::recreateStates()
     {
       localID = iState;
     }
-    //CFLog(VERBOSE, "HERE2!!!!!!!!!!!!!!!!!\n");
-    
-    
-    
-    //CFLog(VERBOSE, "LocalID: " << localID << "\n");
+
     getCFmeshData().createState(localID,stateData);
-    //CFLog(VERBOSE, "HERE4!!!!!!!!!!!!!!!!!\n");
     states[localID]->setParUpdatable(m_updatables[iState]);
-    //CFLog(VERBOSE, "HERE5!!!!!!!!!!!!!!!!!\n");
     states[localID]->setGlobalID(globalID);
-    //CFLog(VERBOSE, "Global ID: " << states[localID]->getGlobalID() << "\n");
-    //CFLog(VERBOSE, "HERE6!!!!!!!!!!!!!!!!!\n");
-    //CFLog(VERBOSE, "Local ID: " << states[localID]->getLocalID() << "\n");
     
   }
   

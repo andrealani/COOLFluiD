@@ -69,10 +69,10 @@ public: // functions
 protected: //functions
 
   /// compute the interface flux correction FI-FD
-  void computeInterfaceFlxCorrection(CFuint faceID);
+  void computeInterfaceFlxCorrection();
   
   /// compute the residual updates (-divFC)
-  void computeResUpdates(CFuint elemIdx, std::vector< RealVector >& residuals);
+  void computeResUpdates(std::vector< RealVector >& residuals);
   
   /// add the residual updates to the RHS
   void updateRHS();
@@ -101,9 +101,19 @@ protected: //functions
   void setFaceData(CFuint faceID);
   
   /**
+   * Set the data for the current cell necessary to calculate the residual update
+   */
+  void setCellData();
+  
+  /**
    * Add the updateCoeff corrections due to the partition faces
    */
   void addPartitionFacesCorrection();
+  
+  /**
+   * Compute the discontinuous fluxes in the flx pnts
+   */
+  void computeDiscontinuousFluxes();
 
 protected: //data
   /// socket for gradients
@@ -172,6 +182,15 @@ protected: //data
   
   /// variable for current face orientation
   CFuint m_orient;
+  
+  /// number of solution pnts in the cell
+  CFuint m_nbrSolPnts;
+  
+  /// number of flx pnts in the cell
+  CFuint m_nbrFlxPnts;
+  
+  /// number of face flx pnts
+  CFuint m_nbrFaceFlxPnts;
   
   /// variable for current face
   Framework::GeometricEntity* m_face;

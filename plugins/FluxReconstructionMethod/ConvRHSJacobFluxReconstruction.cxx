@@ -101,33 +101,6 @@ void ConvRHSJacobFluxReconstruction::execute()
   geoData2.facesTRS = faces;
   geoData2.isBoundary = false;
   
-  // get the local FR data
-  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
-  
-  // get solution point local coordinates
-  m_solPntsLocalCoords = frLocalData[0]->getSolPntsLocalCoords();
-    
-  // get flux point local coordinates
-  m_flxPntsLocalCoords = frLocalData[0]->getFlxPntsLocalCoords();
-   
-  // get the face - flx pnt connectivity per orient
-  m_faceFlxPntConnPerOrient = frLocalData[0]->getFaceFlxPntConnPerOrient();
-    
-  // get the face connectivity per orientation
-  m_faceConnPerOrient = frLocalData[0]->getFaceConnPerOrient();
-  
-  // get the face integration coefficient
-  m_faceIntegrationCoefs = frLocalData[0]->getFaceIntegrationCoefs();
-  
-  // get flux point mapped coordinate directions per orient
-  m_faceMappedCoordDir = frLocalData[0]->getFaceMappedCoordDirPerOrient();
-  
-  // get flux point mapped coordinate directions
-  m_faceLocalDir = frLocalData[0]->getFaceMappedCoordDir();
-  
-  // get flux point local coordinates
-  m_flxPntsLocalCoords1D = frLocalData[0]->getFlxPntsLocalCoord1D();
-  
   //// Loop over faces to calculate fluxes and interface fluxes in the flux points
   
   // loop over different orientations
@@ -154,12 +127,14 @@ void ConvRHSJacobFluxReconstruction::execute()
       m_states[RIGHT] = m_cells[RIGHT]->getStates();
       
       setFaceData(m_face->getID());//faceID
+      
+      computeDiscontinuousFluxes();
 
       // if one of the neighbouring cells is parallel updatable, compute the correction flux
       if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable())
       {
 	// compute FI-FD
-	computeInterfaceFlxCorrection(m_face->getID());//faceID
+	computeInterfaceFlxCorrection();
 	CFLog(VERBOSE, "real faceID: " << m_face->getID() << ", faceID: " << faceID << "\n");
 	
 	// compute the wave speed updates
@@ -185,23 +160,17 @@ void ConvRHSJacobFluxReconstruction::execute()
 	// compute the convective face term contribution to the jacobian
         if ((*m_states[LEFT ])[0]->isParUpdatable() && (*m_states[RIGHT])[0]->isParUpdatable())
         {
-          computeBothJacobs(m_face->getID());//faceID
+          computeBothJacobs();
         }
         else if ((*m_states[LEFT ])[0]->isParUpdatable())
         {
-          computeOneJacob(LEFT, m_face->getID());//faceID
+          computeOneJacob(LEFT);
         }
         else if ((*m_states[RIGHT])[0]->isParUpdatable())
         {
-          computeOneJacob(RIGHT, m_face->getID());//faceID
+          computeOneJacob(RIGHT);
         }
 
-      } else {
-	// compute the wave speed updates
-        computeWaveSpeedUpdates(m_waveSpeedUpd);
-
-        // update the wave speed
-        updateWaveSpeed();
       }
 
       // release the GeometricEntity
@@ -210,6 +179,7 @@ void ConvRHSJacobFluxReconstruction::execute()
     }
   }
   
+  // add the correction due to partition faces
   addPartitionFacesCorrection();
   
   //// Loop over the elements to calculate the divergence of the continuous flux
@@ -222,21 +192,9 @@ void ConvRHSJacobFluxReconstruction::execute()
     // get start and end indexes for this type of element
     const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
     const CFuint endIdx   = (*elemType)[m_iElemType].getEndIdx();
-    
-    // get number of solution points
-    const CFuint nbrSolPnt = frLocalData[m_iElemType]->getNbrOfSolPnts();
-    
-    // get solution point local coordinates
-    m_solPntsLocalCoords = frLocalData[m_iElemType]->getSolPntsLocalCoords();
-    
-    // get flux point local coordinates
-    m_flxPntsLocalCoords = frLocalData[m_iElemType]->getFlxPntsLocalCoords();
-    
-    // get the face - flx pnt connectivity per orient
-    m_faceFlxPntConn = frLocalData[m_iElemType]->getFaceFlxPntConn();
 
     // create blockaccumulator
-    m_acc.reset(m_lss->createBlockAccumulator(nbrSolPnt,nbrSolPnt,m_nbrEqs));
+    m_acc.reset(m_lss->createBlockAccumulator(m_nbrSolPnts,m_nbrSolPnts,m_nbrEqs));
 
     // loop over cells
     for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
@@ -251,8 +209,11 @@ void ConvRHSJacobFluxReconstruction::execute()
       // if the states in the cell are parallel updatable, compute the resUpdates (-divFC)
       if ((*m_cellStates)[0]->isParUpdatable())
       {
+	// set the cell data
+	setCellData();
+	
 	// compute the residual updates (-divFC)
-	computeResUpdates(m_cell->getID(), m_divContFlx);//elemIdx
+	computeResUpdates(m_divContFlx);
 
 	// update RHS
         updateRHS();
@@ -265,13 +226,13 @@ void ConvRHSJacobFluxReconstruction::execute()
       //divideByJacobDet();
       
       // print out the residual updates for debugging
-      if(m_cell->getID() == 49)
+      if(m_cell->getID() == 150)
       {
 	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
         CFLog(VERBOSE, "Update = \n");
         // get the datahandle of the rhs
         DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
-        for (CFuint iState = 0; iState < nbrSolPnt; ++iState)
+        for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
         {
           CFuint resID = m_nbrEqs*( (*m_cellStates)[iState]->getLocalID() );
           for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
@@ -281,6 +242,10 @@ void ConvRHSJacobFluxReconstruction::execute()
           CFLog(VERBOSE,"\n");
           DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
           CFLog(VERBOSE, "UpdateCoeff: " << updateCoeff[(*m_cellStates)[iState]->getLocalID()] << "\n");
+	  
+	  CFLog(NOTICE, "state " << iState << ": " << *(((*m_cellStates)[iState])->getData()) << "\n");
+	  //CFLog(NOTICE, "coord: " << ((*m_cellStates)[iState])->getCoordinates() << "\n");
+
         }
       }
       //release the GeometricEntity
@@ -291,7 +256,7 @@ void ConvRHSJacobFluxReconstruction::execute()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ConvRHSJacobFluxReconstruction::computeBothJacobs(CFuint faceID)
+void ConvRHSJacobFluxReconstruction::computeBothJacobs()
 {
   // get residual factor
   const CFreal resFactor = getMethodData().getResFactor();
@@ -310,6 +275,16 @@ void ConvRHSJacobFluxReconstruction::computeBothJacobs(CFuint faceID)
     for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol, ++solIdx)
     {
       acc.setRowColIndex(solIdx,(*m_states[iSide])[iSol]->getLocalID());
+    }
+  }
+  
+  // put the perturbed and unperturbed corrections in the correct format
+  for (CFuint iState = 0; iState < nbrLeftSolPnts; ++iState)
+  {
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {
+      m_resUpdates[LEFT][m_nbrEqs*iState+iVar] = m_divContFlxL[iState][iVar];
+      m_resUpdates[RIGHT][m_nbrEqs*iState+iVar] = m_divContFlxR[iState][iVar];
     }
   }
 
@@ -335,10 +310,11 @@ void ConvRHSJacobFluxReconstruction::computeBothJacobs(CFuint faceID)
         // backup and reconstruct physical variable in the flux points
         backupAndReconstructPhysVar(iEqPert,*m_states[iSide]);// had arg iSide
 	
-	setFaceData(faceID);
+	// compute the perturbed discontinuous fluxes in the flx pnts
+	computeDiscontinuousFluxes();
 	
 	// compute perturbed FI-FD
-	computeInterfaceFlxCorrection(faceID);
+	computeInterfaceFlxCorrection();
 	
 	// compute the perturbed corrections
 	computeCorrection(LEFT, m_pertDivContFlx[LEFT]);
@@ -351,8 +327,6 @@ void ConvRHSJacobFluxReconstruction::computeBothJacobs(CFuint faceID)
 	  {
             m_pertResUpdates[LEFT][m_nbrEqs*iState+iVar] = m_pertDivContFlx[LEFT][iState][iVar];
 	    m_pertResUpdates[RIGHT][m_nbrEqs*iState+iVar] = m_pertDivContFlx[RIGHT][iState][iVar];
-	    m_resUpdates[LEFT][m_nbrEqs*iState+iVar] = m_divContFlxL[iState][iVar];
-            m_resUpdates[RIGHT][m_nbrEqs*iState+iVar] = m_divContFlxR[iState][iVar];
           }
         }
 
@@ -403,7 +377,7 @@ void ConvRHSJacobFluxReconstruction::computeBothJacobs(CFuint faceID)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ConvRHSJacobFluxReconstruction::computeOneJacob(const CFuint side, CFuint faceID)
+void ConvRHSJacobFluxReconstruction::computeOneJacob(const CFuint side)
 {
   // get residual factor
   const CFreal resFactor = getMethodData().getResFactor();
@@ -427,6 +401,22 @@ void ConvRHSJacobFluxReconstruction::computeOneJacob(const CFuint side, CFuint f
 
   // term depending on the side
   const CFuint sideTerm = side*nbrLeftSolPnts;
+  
+  // put the perturbed and unperturbed corrections in the correct format
+  for (CFuint iState = 0; iState < nbrLeftSolPnts; ++iState)
+  {
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {
+      if (side == LEFT)
+      {
+        m_resUpdates[side][m_nbrEqs*iState+iVar] = m_divContFlxL[iState][iVar];
+      }
+      else
+      {
+	m_resUpdates[side][m_nbrEqs*iState+iVar] = m_divContFlxR[iState][iVar];
+      }
+    }
+  }
 
   // loop over left and right cell
   for (CFuint iSide = 0; iSide < 2; ++iSide)
@@ -450,10 +440,10 @@ void ConvRHSJacobFluxReconstruction::computeOneJacob(const CFuint side, CFuint f
         // backup and reconstruct physical variable in the flux points
         backupAndReconstructPhysVar(iEqPert,*m_states[iSide]);// had arg iSide
 	
-	setFaceData(faceID);
+	computeDiscontinuousFluxes();
 	
 	// compute perturbed FI-FD
-	computeInterfaceFlxCorrection(faceID);
+	computeInterfaceFlxCorrection();
 	
 	// compute the perturbed corrections
 	computeCorrection(side, m_pertDivContFlx[side]);
@@ -467,14 +457,6 @@ void ConvRHSJacobFluxReconstruction::computeOneJacob(const CFuint side, CFuint f
           for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
 	  {
             m_pertResUpdates[side][m_nbrEqs*iState+iVar] = m_pertDivContFlx[side][iState][iVar];
-	    if (side == LEFT)
-	    {
-	      m_resUpdates[side][m_nbrEqs*iState+iVar] = m_divContFlxL[iState][iVar];
-	    }
-	    else
-	    {
-	      m_resUpdates[side][m_nbrEqs*iState+iVar] = m_divContFlxR[iState][iVar];
-	    }
           }
         }
 
@@ -530,7 +512,15 @@ void ConvRHSJacobFluxReconstruction::computeJacobConvCorrection()
   {
     acc.setRowColIndex(iSol,(*m_cellStates)[iSol]->getLocalID());
   }
-
+  
+  // put the perturbed and unperturbed corrections in the correct format
+  for (CFuint iState = 0; iState < nbrSolPnts; ++iState)
+  {
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {
+      m_resUpdates[0][m_nbrEqs*iState+iVar] = m_divContFlx[iState][iVar];
+    }
+  }
 
   // loop over the states/solpnts in this cell to perturb the states
   for (CFuint iSolPert = 0; iSolPert < nbrSolPnts; ++iSolPert)
@@ -548,7 +538,7 @@ void ConvRHSJacobFluxReconstruction::computeJacobConvCorrection()
       backupAndReconstructPhysVar(iEqPert,*m_cellStates);
 
       // compute the perturbed residual updates (-divFC)
-      computeResUpdates(m_cell->getID(), m_pertCorrections);//elemIdx
+      computeResUpdates(m_pertCorrections);
       
       // put the perturbed and unperturbed corrections in the correct format
       for (CFuint iState = 0; iState < nbrSolPnts; ++iState)
@@ -556,7 +546,6 @@ void ConvRHSJacobFluxReconstruction::computeJacobConvCorrection()
         for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
 	{
           m_pertResUpdates[0][m_nbrEqs*iState+iVar] = m_pertCorrections[iState][iVar];
-	  m_resUpdates[0][m_nbrEqs*iState+iVar] = m_divContFlx[iState][iVar];
         }
       }
 
@@ -646,35 +635,28 @@ void ConvRHSJacobFluxReconstruction::setup()
   // get the numerical Jacobian computer
   m_numJacob = getMethodData().getNumericalJacobian();
 
-  // get the local spectral FD data
-  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
-  cf_assert(frLocalData.size() > 0);
-
-  // maximum number of solution points in a cell
-  const CFuint maxNbrSolPnts = frLocalData[0]->getNbrOfSolPnts();
-
   // create blockaccumulator
-  m_accFace.reset(m_lss->createBlockAccumulator(2*maxNbrSolPnts,2*maxNbrSolPnts,m_nbrEqs));
+  m_accFace.reset(m_lss->createBlockAccumulator(2*m_nbrSolPnts,2*m_nbrSolPnts,m_nbrEqs));
 
   // resize variables
-  const CFuint resSize = maxNbrSolPnts*m_nbrEqs;
+  const CFuint resSize = m_nbrSolPnts*m_nbrEqs;
   m_pertResUpdates .resize(2);
   m_pertDivContFlx .resize(2);
   m_pertResUpdates [LEFT ].resize(resSize);
   m_pertResUpdates [RIGHT].resize(resSize);
-  m_pertDivContFlx [LEFT ].resize(maxNbrSolPnts);
-  m_pertDivContFlx [RIGHT].resize(maxNbrSolPnts);
+  m_pertDivContFlx [LEFT ].resize(m_nbrSolPnts);
+  m_pertDivContFlx [RIGHT].resize(m_nbrSolPnts);
   m_resUpdates .resize(2);
   m_resUpdates [LEFT ].resize(resSize);
   m_resUpdates [RIGHT].resize(resSize);
   m_derivResUpdates.resize(resSize);
   
-  m_divContFlxL.resize(maxNbrSolPnts);
-  m_divContFlxR.resize(maxNbrSolPnts);
+  m_divContFlxL.resize(m_nbrSolPnts);
+  m_divContFlxR.resize(m_nbrSolPnts);
   
-  m_pertCorrections.resize(maxNbrSolPnts);
+  m_pertCorrections.resize(m_nbrSolPnts);
   
-  for (CFuint iSolPnt = 0; iSolPnt < maxNbrSolPnts; ++iSolPnt)
+  for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
     m_divContFlxL[iSolPnt].resize(m_nbrEqs);
     m_divContFlxR[iSolPnt].resize(m_nbrEqs);
