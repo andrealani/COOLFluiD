@@ -151,9 +151,9 @@ void HexaFluxReconstructionElementData::createFlxPntsLocalCoords()
     }
     //faces KSI=-1 and 1
     flxCoords[KSI] = -1;
-    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+    for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
     {
-        for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+        for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
         {
             flxCoords[ZTA] = m_flxPntsLocalCoord1D[iZta];
             flxCoords[ETA] = m_flxPntsLocalCoord1D[iEta];
@@ -161,9 +161,9 @@ void HexaFluxReconstructionElementData::createFlxPntsLocalCoords()
         }
     }
     flxCoords[KSI] = 1;
-    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+    for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
     {
-        for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+        for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
         {
             flxCoords[ZTA] = m_flxPntsLocalCoord1D[iZta];
             flxCoords[ETA] = m_flxPntsLocalCoord1D[iEta];
@@ -172,9 +172,9 @@ void HexaFluxReconstructionElementData::createFlxPntsLocalCoords()
     }
     //faces ETA=-1 and 1
     flxCoords[ETA] = -1;
-    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+    for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
     {
-        for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+        for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
         {
             flxCoords[ZTA] = m_flxPntsLocalCoord1D[iZta];
             flxCoords[KSI] = m_flxPntsLocalCoord1D[iKsi];
@@ -182,9 +182,9 @@ void HexaFluxReconstructionElementData::createFlxPntsLocalCoords()
         }
     }
     flxCoords[ETA] = 1;
-    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+    for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
     {
-        for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+        for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
         {
             flxCoords[ZTA] = m_flxPntsLocalCoord1D[iZta];
             flxCoords[KSI] = m_flxPntsLocalCoord1D[iKsi];
@@ -214,9 +214,9 @@ void HexaFluxReconstructionElementData::createSolPntsLocalCoords()
   m_solPntsLocalCoords.resize(0);
   for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
   {
-    for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
+    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
     {
-      for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+      for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
       {
         RealVector solCoords(3);
         solCoords[KSI] = m_solPntsLocalCoord1D[iKsi];

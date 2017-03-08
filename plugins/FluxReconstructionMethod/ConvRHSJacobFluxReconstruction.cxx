@@ -243,8 +243,8 @@ void ConvRHSJacobFluxReconstruction::execute()
           DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
           CFLog(VERBOSE, "UpdateCoeff: " << updateCoeff[(*m_cellStates)[iState]->getLocalID()] << "\n");
 	  
-	  CFLog(NOTICE, "state " << iState << ": " << *(((*m_cellStates)[iState])->getData()) << "\n");
-	  //CFLog(NOTICE, "coord: " << ((*m_cellStates)[iState])->getCoordinates() << "\n");
+	  CFLog(VERBOSE, "state " << iState << ": " << *(((*m_cellStates)[iState])->getData()) << "\n");
+	  //CFLog(VERBOSE, "coord: " << ((*m_cellStates)[iState])->getCoordinates() << "\n");
 
         }
       }
