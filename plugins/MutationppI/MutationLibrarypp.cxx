@@ -204,7 +204,7 @@ CFdouble MutationLibrarypp::sigma(CFdouble& temp, //electrical conductivity
   // this needs to be modified for NEQ case unless one assumes to have called 
   // setState() before  
   m_gasMixture->setState(&pressure, &temp, 1);
-  return m_gasMixture->sigma();
+  return m_gasMixture->electricConductivity();
 }
       
 //////////////////////////////////////////////////////////////////////////////
