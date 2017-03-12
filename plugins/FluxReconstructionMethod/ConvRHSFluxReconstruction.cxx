@@ -192,6 +192,16 @@ void ConvRHSFluxReconstruction::execute()
 	// compute the correction for the left neighbour
 	computeCorrection(LEFT, m_divContFlx);
 	
+	if(m_cells[LEFT]->getID() == 140 || m_cells[LEFT]->getID() == 141)
+      {
+        for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+        {
+	  
+	  CFLog(VERBOSE, "updateFace " << iState << ": " << m_divContFlx[iState] << "\n");
+
+        }
+      }
+	
 	// update RHS
 	updateRHS();
 	
@@ -200,6 +210,17 @@ void ConvRHSFluxReconstruction::execute()
 	
 	// update RHS
 	updateRHS();
+      }
+      
+      
+      if(m_cells[RIGHT]->getID() == 140 || m_cells[RIGHT]->getID() == 141)
+      {
+        for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+        {
+	  
+	  CFLog(VERBOSE, "updateFace " << iState << ": " << m_divContFlx[iState] << "\n");
+
+        }
       }
 
       // release the GeometricEntity
@@ -249,11 +270,21 @@ void ConvRHSFluxReconstruction::execute()
       // divide by the Jacobian to transform the residuals back to the physical domain
       //divideByJacobDet();
       
+      if(m_cell->getID() == 140 || m_cell->getID() == 141)
+      {
+        for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+        {
+	  
+	  CFLog(VERBOSE, "updateVol " << iState << ": " << m_divContFlx[iState] << "\n");
+
+        }
+      }
+      
       // print out the residual updates for debugging
-      if(m_cell->getID() == 49)
+      if(m_cell->getID() == 140 || m_cell->getID() == 141)
       {
 	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
-        CFLog(VERBOSE, "Update = \n");
+        CFLog(VERBOSE, "UpdateTotal = \n");
         // get the datahandle of the rhs
         DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
         for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
@@ -266,6 +297,7 @@ void ConvRHSFluxReconstruction::execute()
           CFLog(VERBOSE,"\n");
           DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
           CFLog(VERBOSE, "UpdateCoeff: " << updateCoeff[(*m_cellStates)[iState]->getLocalID()] << "\n");
+	  CFLog(VERBOSE, "state " << iState << ": " << *(((*m_cellStates)[iState])->getData()) << "\n");
         }
       }
       //release the GeometricEntity
@@ -286,25 +318,30 @@ void ConvRHSFluxReconstruction::computeInterfaceFlxCorrection()
     m_flxPntRiemannFlux[iFlxPnt] = m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]),
 									  *(m_cellStatesFlxPnt[RIGHT][iFlxPnt]),
 									  m_unitNormalFlxPnts[iFlxPnt]);
+    if(m_cells[LEFT]->getID() == 150 || m_cells[RIGHT]->getID() == 150)
+    {
+      //CFLog(VERBOSE,"fluxL = " << m_cellFlx[LEFT][iFlxPnt] << "\n");
+      //CFLog(VERBOSE,"fluxR = " << m_cellFlx[RIGHT][iFlxPnt] << "\n");
+    }
     // compute FI-FD in the mapped coord frame
     m_cellFlx[LEFT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt] - m_cellFlx[LEFT][iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT];
     m_cellFlx[RIGHT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt] - m_cellFlx[RIGHT][iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT];
 
-    if(m_cells[LEFT]->getID() == 49 || m_cells[RIGHT]->getID() == 49)
+    if(m_cells[LEFT]->getID() == 150 || m_cells[RIGHT]->getID() == 150)
     {
-      CFLog(VERBOSE, "faceID =  " << m_face->getID() << "\n");
-      CFLog(VERBOSE, "cell 0 == LEFT <=> " << (m_cells[LEFT]->getID() == 281) << "\n");
-      CFLog(VERBOSE, "Unit vector = " << m_unitNormalFlxPnts[iFlxPnt] << "\n");
-      CFLog(VERBOSE, "flxIdx LEFT = " << (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlxPnt] << "\n");
-      CFLog(VERBOSE, "flxIdx RIGHT = " << (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlxPnt] << "\n");
+      //CFLog(VERBOSE, "faceID =  " << m_face->getID() << "\n");
+      //CFLog(VERBOSE, "cell 0 == LEFT <=> " << (m_cells[LEFT]->getID() == 150) << "\n");
+      //CFLog(VERBOSE, "Unit vector = " << m_unitNormalFlxPnts[iFlxPnt] << "\n");
+      //CFLog(VERBOSE, "flxIdx LEFT = " << (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlxPnt] << "\n");
+      //CFLog(VERBOSE, "flxIdx RIGHT = " << (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlxPnt] << "\n");
       RealVector RiemannL = (m_flxPntRiemannFlux[iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT]);
       RealVector RiemannR = (m_flxPntRiemannFlux[iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT]);
-      CFLog(VERBOSE,"RiemannL = " << RiemannL << "\n");
-      CFLog(VERBOSE,"RiemannR = " << RiemannR << "\n");
-      CFLog(VERBOSE,"delta fluxL = " << m_cellFlx[LEFT][iFlxPnt] << "\n");
-      CFLog(VERBOSE,"delta fluxR = " << m_cellFlx[RIGHT][iFlxPnt] << "\n");
-      CFLog(VERBOSE,"Jacob L = " << m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT] << "\n");
-      CFLog(VERBOSE,"Jacob R = " << m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT] << "\n");
+      //CFLog(VERBOSE,"RiemannL = " << RiemannL << "\n");
+      //CFLog(VERBOSE,"RiemannR = " << RiemannR << "\n");
+      //CFLog(VERBOSE,"delta fluxL = " << m_cellFlx[LEFT][iFlxPnt] << "\n");
+      //CFLog(VERBOSE,"delta fluxR = " << m_cellFlx[RIGHT][iFlxPnt] << "\n");
+      //CFLog(VERBOSE,"Jacob L = " << m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT] << "\n");
+      //CFLog(VERBOSE,"Jacob R = " << m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT] << "\n");
     }
   }
 }
@@ -455,7 +492,7 @@ void ConvRHSFluxReconstruction::computeResUpdates(vector< RealVector >& residual
 	}
       }
     }
-    if(m_cell->getID() == 49)
+    if(m_cell->getID() == 140 || m_cell->getID() == 141)
     {
       CFLog(VERBOSE, "state: " << *((*m_cellStates)[iSolPnt]->getData()) << "\n");
       CFLog(VERBOSE, "ID: " << m_cell->getID() << "\n");
@@ -571,27 +608,39 @@ void ConvRHSFluxReconstruction::computeCorrection(CFuint side, vector< RealVecto
     // compute the term due to each flx pnt
     for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
     {
-      // the current correction factor (stored in cellFlx)
-      RealVector currentCorrFactor = m_cellFlx[side][iFlxPnt];
-      cf_assert(currentCorrFactor.size() == m_nbrEqs);
-    
-      // Fill in the corrections
-      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-      {
-        corrections[iSolPnt][iVar] -= currentCorrFactor[iVar] * m_corrFctDiv[iSolPnt][(*m_faceFlxPntConnPerOrient)[m_orient][side][iFlxPnt]]; 
-      }
+      // divergence of the correction function
+      CFreal divh = m_corrFctDiv[iSolPnt][(*m_faceFlxPntConnPerOrient)[m_orient][side][iFlxPnt]];
       
-      if(m_cells[side]->getID() == 49)
+      if (divh != 0)
       {
-        CFLog(VERBOSE, "FI-FD = " << currentCorrFactor << "\n");
-        CFLog(VERBOSE, "iSol: " << iSolPnt << ", flxID = " << (*m_faceFlxPntConnPerOrient)[m_orient][side][iFlxPnt] << "\n");
-        CFLog(VERBOSE, "div h = " << m_corrFctDiv[iSolPnt][(*m_faceFlxPntConnPerOrient)[m_orient][side][iFlxPnt]] << "\n");
+        // the current correction factor (stored in cellFlx)
+        RealVector currentCorrFactor = m_cellFlx[side][iFlxPnt];
+        cf_assert(currentCorrFactor.size() == m_nbrEqs);
+    
+        // Fill in the corrections
+        for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+        {
+          corrections[iSolPnt][iVar] -= currentCorrFactor[iVar] * divh; 
+        }
+      
+        if(m_cells[side]->getID() == 150)
+        {
+	  if (iSolPnt == 0)
+	  {
+            //CFLog(VERBOSE, "FI-FD = " << currentCorrFactor << "\n");
+            //CFLog(VERBOSE, "iSol: " << iSolPnt << ", flxID = " << (*m_faceFlxPntConnPerOrient)[m_orient][side][iFlxPnt] << "\n");
+            //CFLog(VERBOSE, "div h = " << divh << "\n");
+	  }
+        }
       }
     }
     
-    if(m_cells[side]->getID() == 49)
+    if(m_cells[side]->getID() == 150)
     {
-      CFLog(VERBOSE, "correction = " << corrections[iSolPnt] << "\n");
+      if(iSolPnt == 0)
+      {
+      //CFLog(VERBOSE, "correction = " << corrections[iSolPnt] << "\n");
+      }
     }
   }
   

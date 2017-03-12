@@ -172,9 +172,9 @@ void HexaFluxReconstructionElementData::createFlxPntsLocalCoords()
     }
     //faces ETA=-1 and 1
     flxCoords[ETA] = -1;
-    for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
     {
-        for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+        for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
         {
             flxCoords[ZTA] = m_flxPntsLocalCoord1D[iZta];
             flxCoords[KSI] = m_flxPntsLocalCoord1D[iKsi];
@@ -182,9 +182,9 @@ void HexaFluxReconstructionElementData::createFlxPntsLocalCoords()
         }
     }
     flxCoords[ETA] = 1;
-    for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
     {
-        for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+        for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
         {
             flxCoords[ZTA] = m_flxPntsLocalCoord1D[iZta];
             flxCoords[KSI] = m_flxPntsLocalCoord1D[iKsi];
@@ -852,43 +852,63 @@ void HexaFluxReconstructionElementData::createFaceFluxPntsConn()
   CFuint faceIdx = 0;
 
   // zeroth face
-  for (CFuint iSol = 0; iSol < nbrFlxPnts1D*nbrFlxPnts1D; ++iSol)
+  for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
   {
-    m_faceFlxPntConn[faceIdx].push_back(iSol);
+    for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+    {
+      m_faceFlxPntConn[faceIdx].push_back(nbrFlxPnts1D*iKsi + iEta);
+    }
   }
   ++faceIdx;
 
-
   // first face
-  for (CFuint iSol = 0; iSol < nbrFlxPnts1D*nbrFlxPnts1D; ++iSol)
+  for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
   {
-    m_faceFlxPntConn[faceIdx].push_back(iSol + nbrFlxPnts1D*nbrFlxPnts1D);
+    for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+    {
+      m_faceFlxPntConn[faceIdx].push_back(nbrFlxPnts1D*nbrFlxPnts1D + nbrFlxPnts1D*iKsi + iEta);
+    }
   }
   ++faceIdx;
 
   // second face
-  for (CFuint iSol = 0; iSol < nbrFlxPnts1D*nbrFlxPnts1D; ++iSol)
+  for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
   {
-    m_faceFlxPntConn[faceIdx].push_back(iSol + 4*nbrFlxPnts1D*nbrFlxPnts1D);
+    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+    {
+      m_faceFlxPntConn[faceIdx].push_back(4*nbrFlxPnts1D*nbrFlxPnts1D + nbrFlxPnts1D*iZta + iKsi);
+    }
   }
   ++faceIdx;
 
   // third face
-  for (CFuint iSol = 0; iSol < nbrFlxPnts1D*nbrFlxPnts1D; ++iSol)
+  for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
   {
-    m_faceFlxPntConn[faceIdx].push_back(iSol + 3*nbrFlxPnts1D*nbrFlxPnts1D); 
+    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+    {
+      m_faceFlxPntConn[faceIdx].push_back(3*nbrFlxPnts1D*nbrFlxPnts1D + nbrFlxPnts1D*iEta + iZta); 
+    }
   }
   ++faceIdx;
+  
   // fourth face
-  for (CFuint iSol = 0; iSol < nbrFlxPnts1D*nbrFlxPnts1D; ++iSol)
+  for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
   {
-    m_faceFlxPntConn[faceIdx].push_back(iSol + 5*nbrFlxPnts1D*nbrFlxPnts1D); 
+    const CFuint idxKsi = nbrFlxPnts1D-iKsi-1;
+    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+    {
+      m_faceFlxPntConn[faceIdx].push_back(5*nbrFlxPnts1D*nbrFlxPnts1D + nbrFlxPnts1D*iZta + idxKsi); 
+    }
   }
   ++faceIdx;
+  
   // fifth face
-  for (CFuint iSol = 0; iSol < nbrFlxPnts1D*nbrFlxPnts1D; ++iSol)
+  for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
   {
-    m_faceFlxPntConn[faceIdx].push_back(iSol + 2*nbrFlxPnts1D*nbrFlxPnts1D); 
+    for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+    {
+      m_faceFlxPntConn[faceIdx].push_back(2*nbrFlxPnts1D*nbrFlxPnts1D + nbrFlxPnts1D*iEta + iZta); 
+    }
   }
 
 

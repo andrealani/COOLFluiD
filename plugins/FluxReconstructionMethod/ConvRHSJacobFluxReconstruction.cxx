@@ -172,6 +172,25 @@ void ConvRHSJacobFluxReconstruction::execute()
         }
 
       }
+      
+      if(m_cells[LEFT]->getID() == 150)
+      {
+        for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+        {
+	  
+	  CFLog(VERBOSE, "updateFace " << iState << ": " << m_divContFlxL[iState] << "\n");
+
+        }
+      }
+      if(m_cells[RIGHT]->getID() == 150)
+      {
+        for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+        {
+	  
+	  CFLog(VERBOSE, "updateFace " << iState << ": " << m_divContFlxR[iState] << "\n");
+
+        }
+      }
 
       // release the GeometricEntity
       m_faceBuilder->releaseGE();
@@ -225,11 +244,21 @@ void ConvRHSJacobFluxReconstruction::execute()
       // divide by the Jacobian to transform the residuals back to the physical domain
       //divideByJacobDet();
       
+      if(m_cell->getID() == 150)
+      {
+        for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+        {
+	  
+	  CFLog(VERBOSE, "updateVol " << iState << ": " << m_divContFlx[iState] << "\n");
+
+        }
+      }
+      
       // print out the residual updates for debugging
       if(m_cell->getID() == 150)
       {
 	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
-        CFLog(VERBOSE, "Update = \n");
+        CFLog(VERBOSE, "UpdateTotal = \n");
         // get the datahandle of the rhs
         DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
         for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
