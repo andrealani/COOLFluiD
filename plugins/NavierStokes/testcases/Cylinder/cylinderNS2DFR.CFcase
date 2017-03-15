@@ -1,0 +1,171 @@
+# COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+# Residual = -1.32335
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = true
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+CFEnv.ExceptionDumps       = true
+CFEnv.ExceptionOutputs     = true
+CFEnv.RegistSignalHandlers = false
+CFEnv.OnlyCPU0Writes = false
+
+#CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libTecplotWriter libNavierStokes libFluxReconstructionMethod libFluxReconstructionNavierStokes libForwardEuler libPetscI
+
+###################################
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Cylinder
+Simulator.Paths.ResultsDir = plugins/NavierStokes/testcases/Cylinder
+
+##################################################################
+## SubSystemMesh only creates the mesh and upgrades it serially ##
+##################################################################
+
+Simulator.SubSystems     = SubSysMesh SubSystem
+Simulator.SubSystemTypes = OnlyMeshSubSystem StandardSubSystem
+Simulator.SubSysMesh.Namespaces = MeshNamespace
+Simulator.SubSysMesh.Ranks = 0:0
+Simulator.SubSysMesh.MeshNamespace.MeshData = MeshMeshData
+Simulator.SubSysMesh.MeshNamespace.SubSystemStatus = MeshSubSystemStatus
+Simulator.SubSysMesh.MeshNamespace.PhysicalModelType = NavierStokes2D
+#Simulator.SubSysMesh.MeshNamespace.PhysicalModelName = NavierStokes2D
+Simulator.SubSysMesh.MeshMeshData.listTRS = Cylinder Farfield
+Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
+
+Simulator.SubSysMesh.OutputFormat = CFmesh
+Simulator.SubSysMesh.CFmesh.FileName = cylinderUpgraded.CFmesh
+Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
+Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
+
+Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = cylinder_2D_quad.CFmesh
+Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
+
+Simulator.SubSysMesh.SpaceMethod = Null
+Simulator.SubSysMesh.Null.Builder = MeshUpgrade
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P1
+Simulator.SubSysMesh.Null.Namespace = MeshNamespace
+
+##################################
+## SubSystem runs the FR solver ##
+##################################
+
+###################################
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2D
+Simulator.SubSystem.NavierStokes2D.refValues = 1.0 0.1774823934930 0.1774823934930 2.51575
+Simulator.SubSystem.NavierStokes2D.refLength = 1.0
+#Simulator.SubSystem.NavierStokes2D.ConvTerm.pRef    = 1.0
+#Simulator.SubSystem.NavierStokes2D.ConvTerm.tempRef = 0.003483762
+#Simulator.SubSystem.NavierStokes2D.ConvTerm.machInf = 0.15
+#Simulator.SubSystem.NavierStokes2D.DiffTerm.Reynolds = 40.0
+Simulator.SubSystem.NavierStokes2D.DiffTerm.ViscosityLaw = FixedKinematicViscosity
+Simulator.SubSystem.NavierStokes2D.DiffTerm.FixedKinematicViscosity.KinVisc = 0.00443706
+
+###################################
+Simulator.SubSystem.OutputFormat        = ParaView Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = cylinderNS-FR-sol.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+
+Simulator.SubSystem.ParaView.FileName    = cylinderNS-FR-sol.vtu
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.ParaView.SaveRate = 10
+Simulator.SubSystem.ParaView.AppendTime = false
+Simulator.SubSystem.ParaView.AppendIter = false
+
+Simulator.SubSystem.Tecplot.FileName    = cylinderNS-FR-sol.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+
+###################################
+Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 10
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
+
+###################################
+Simulator.SubSystem.SpaceMethod = FluxReconstruction
+
+Simulator.SubSystem.Default.listTRS = InnerCells Cylinder Farfield
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cylinderUpgraded.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
+
+###################################
+# choose which builder we use
+Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
+Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHS
+#Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = StdTimeRHSJacob
+Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
+Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
+Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
+Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
+Simulator.SubSystem.FluxReconstruction.Data.DiffusiveVar= Cons
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = LaxFriedrichsFlux
+
+Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre
+Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
+
+Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  50 #1.0/3.0 #4.0/135.0 #3.0/3150.0 #8.0/496125.0 #5.0/29469825
+
+###################################
+Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState
+Simulator.SubSystem.FluxReconstruction.InitNames = InField
+
+Simulator.SubSystem.FluxReconstruction.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluxReconstruction.InField.Vars = x y
+Simulator.SubSystem.FluxReconstruction.InField.Def = 1.0 0.1774823934930 0.0 2.51575
+
+Simulator.SubSystem.FluxReconstruction.BcNames = Wall Farfield
+Simulator.SubSystem.FluxReconstruction.Wall.applyTRS = Cylinder
+Simulator.SubSystem.FluxReconstruction.Farfield.applyTRS = Farfield
+
+Simulator.SubSystem.FluxReconstruction.Data.BcTypes = NoSlipWallHeatFluxNS2D  Dirichlet
+Simulator.SubSystem.FluxReconstruction.Data.BcNames = Wall                    Farfield
+
+Simulator.SubSystem.FluxReconstruction.Data.Farfield.Vars = x y
+Simulator.SubSystem.FluxReconstruction.Data.Farfield.Def  = 1.0 0.1774823934930 0.0 2.51575
+
+###################################
+#
+# DataProcessing to get the aerodynamic coeficients
+#
+#Simulator.SubSystem.DataPostProcessing = DataProcessing
+#Simulator.SubSystem.DataProcessing.Data.updateVar = Cons
+#Simulator.SubSystem.DataProcessing.Comds = NavierStokesConsComputeAeroSpectralFD
+#Simulator.SubSystem.DataProcessing.Names = AeroCoef
+#Simulator.SubSystem.DataProcessing.ProcessRate = 1
+
+#Simulator.SubSystem.DataProcessing.AeroCoef.applyTRS = Cylinder
+#Simulator.SubSystem.DataProcessing.AeroCoef.SaveRateAero = 1
+#Simulator.SubSystem.DataProcessing.AeroCoef.OutputFileAero = AeroCoefCyl.plt
+
+#Simulator.SubSystem.DataProcessing.AeroCoef.OutputFileWall = WallCyl.plt
+#Simulator.SubSystem.DataProcessing.AeroCoef.SaveRateWall = 1
+
+#Simulator.SubSystem.DataProcessing.AeroCoef.uInf = 0.1774823934930
+#Simulator.SubSystem.DataProcessing.AeroCoef.rhoInf = 1.0
+#Simulator.SubSystem.DataProcessing.AeroCoef.pInf = 1.0
+#Simulator.SubSystem.DataProcessing.AeroCoef.FlowDir = 1.0 0.0
+
+###################################
+#CFEnv.RegistSignalHandlers = false
