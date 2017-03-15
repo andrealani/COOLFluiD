@@ -11,6 +11,8 @@ BCSubOutletEuler2D.cxx
 BCSubOutletEuler2D.hh
 BCSubOutletEuler3D.cxx
 BCSubOutletEuler3D.hh
+BCNoSlipWallHeatFluxNS2D.cxx
+BCNoSlipWallHeatFluxNS2D.hh
 ComputeErrorEuler.cxx
 ComputeErrorEuler.hh
 FluxReconstructionNavierStokes.hh
