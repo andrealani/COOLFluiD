@@ -25,6 +25,8 @@ ConvRHSFluxReconstruction.cxx
 ConvRHSFluxReconstruction.hh
 ConvRHSJacobFluxReconstruction.cxx
 ConvRHSJacobFluxReconstruction.hh
+DiffRHSFluxReconstruction.cxx
+DiffRHSFluxReconstruction.hh
 StdUnSetup.cxx
 StdUnSetup.hh
 StdExtrapolate.cxx
@@ -61,6 +63,8 @@ MeshUpgradeBuilder.cxx
 MeshUpgradeBuilder.hh
 ConvBndCorrectionsRHSFluxReconstruction.cxx
 ConvBndCorrectionsRHSFluxReconstruction.hh
+DiffBndCorrectionsRHSFluxReconstruction.cxx
+DiffBndCorrectionsRHSFluxReconstruction.hh
 ConvBndCorrectionsRHSJacobFluxReconstruction.cxx
 ConvBndCorrectionsRHSJacobFluxReconstruction.hh
 FluxReconstructionGeometricEntities.cxx
@@ -178,6 +182,8 @@ FluxReconstructionBaseFunctionFaceQuadP5.hh
 FluxReconstructionBaseFunctionFaceQuadP5.cxx
 VCJH.hh
 VCJH.cxx
+BCDirichlet.cxx
+BCDirichlet.hh
 )
 
 LIST ( APPEND FluxReconstructionMethod_cflibs Framework ShapeFunctions )

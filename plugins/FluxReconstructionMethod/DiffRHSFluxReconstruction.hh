@@ -4,8 +4,8 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_FluxReconstructionMethod_ConvRHSFluxReconstruction_hh
-#define COOLFluiD_FluxReconstructionMethod_ConvRHSFluxReconstruction_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_DiffRHSFluxReconstruction_hh
+#define COOLFluiD_FluxReconstructionMethod_DiffRHSFluxReconstruction_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -26,15 +26,15 @@ namespace COOLFluiD {
 /// This is a standard command to assemble the system using a FluxReconstruction solver
 /// @author Alexander Papen
 /// @author Ray Vandenhoeck
-class ConvRHSFluxReconstruction : public FluxReconstructionSolverCom {
+class DiffRHSFluxReconstruction : public FluxReconstructionSolverCom {
 
 public: // functions
 
   /// Constructor
-  explicit ConvRHSFluxReconstruction(const std::string& name);
+  explicit DiffRHSFluxReconstruction(const std::string& name);
 
   /// Destructor
-  virtual ~ConvRHSFluxReconstruction() {}
+  virtual ~DiffRHSFluxReconstruction() {}
 
   /// Execute processing actions
   void execute();
@@ -114,12 +114,6 @@ protected: //functions
    * Compute the discontinuous fluxes in the flx pnts
    */
   void computeDiscontinuousFluxes();
-  
-  /// compute the volume term contribution to the gradients
-  void computeGradients();
-  
-  /// compute the face correctcion to the gradients
-  void computeGradientFaceCorrections();
 
 protected: //data
   /// socket for gradients
@@ -138,8 +132,8 @@ protected: //data
   /// socket for size of projection vector in face flux points
   Framework::DataSocketSink<  std::vector< CFreal > > socket_faceJacobVecSizeFaceFlxPnts;
   
-  /// update variable set
-  Common::SafePtr< Framework::ConvectiveVarSet > m_updateVarSet;
+  /// diffusive variable set
+  Common::SafePtr< Framework::DiffusiveVarSet > m_diffusiveVarSet;
   
   /// builder of cells
   Common::SafePtr<Framework::GeometricEntityPool<Framework::StdTrsGeoBuilder> > m_cellBuilder;
@@ -258,8 +252,17 @@ protected: //data
   /// flux projection vectors in solution points for disc flux
   std::vector< std::vector< RealVector > > m_cellFluxProjVects;
   
-  /// updates to the gradients
-  std::vector< std::vector< std::vector< RealVector > > > m_gradUpdates;
+  /// the gradients in the neighbouring cell
+  std::vector< std::vector< std::vector< RealVector >* > > m_cellGrads;
+  
+  /// the corrected gradients in the flux points
+  std::vector< std::vector< std::vector< RealVector* > > > m_cellGradFlxPnt;
+  
+  /// cell volume
+  std::vector< CFreal > m_cellVolume;
+  
+  /// ratio between convective and diffusive cfl limit
+  CFreal m_cflConvDiffRatio;
   
   private:
 
@@ -275,5 +278,5 @@ protected: //data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_FluxReconstructionMethod_ConvRHSFluxReconstruction_hh
+#endif // COOLFluiD_FluxReconstructionMethod_DiffRHSFluxReconstruction_hh
 

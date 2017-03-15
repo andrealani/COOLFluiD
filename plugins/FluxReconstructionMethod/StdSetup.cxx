@@ -124,28 +124,31 @@ void StdSetup::execute()
   // nstatesProxy[0] =
   //   new DofDataHandleIterator< RealVector,State, GLOBAL >(states,&m_nodeIDToStateID);
   
-  // get number of gradients (assumed equal to the number of physical variables)
-  const CFuint nbrGrads = nbrEqs;
-  
   DataHandle<bool> isUpdated = socket_isUpdated.getDataHandle();
   isUpdated.resize(nbStates);
-  isUpdated = false;
+  isUpdated = false;  
+
+  // create gradients variable
+  if (getMethodData().hasDiffTerm())
+  {
+    // get number of gradients (assumed equal to the number of physical variables)
+    const CFuint nbrGrads = nbrEqs;
   
-  // dimensionality
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();  
+    // dimensionality
+    const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  
+    // get datahandle
+    DataHandle< std::vector< RealVector > > gradients = socket_gradients.getDataHandle();
 
-  // get datahandle
-  DataHandle< std::vector< RealVector > > gradients = socket_gradients.getDataHandle();
-
-  // resize gradients
-  gradients.resize(nbStates);
-  for (CFuint iState = 0; iState < nbStates; ++iState) {
-    gradients[iState].resize(nbrGrads);
-    for (CFuint iGrad = 0; iGrad < nbrGrads; ++iGrad) {
-      gradients[iState][iGrad].resize(dim);
+    // resize gradients
+    gradients.resize(nbStates);
+    for (CFuint iState = 0; iState < nbStates; ++iState) {
+      gradients[iState].resize(nbrGrads);
+      for (CFuint iGrad = 0; iGrad < nbrGrads; ++iGrad) {
+        gradients[iState][iGrad].resize(dim);
+      }
     }
   }
-  
   // CREATE ADDITIONAL MESH DATASTRUCTURE
 
   // get the start indexes of the range of faces with a certain orientation

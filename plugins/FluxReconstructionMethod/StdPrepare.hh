@@ -57,8 +57,8 @@ private: // data
   Framework::DataSocketSink<
                               CFreal> socket_updateCoeff;
 
-//   /// socket for gradients
-//   Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
+  /// socket for gradients
+  Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
 
 }; // class Prepare
 

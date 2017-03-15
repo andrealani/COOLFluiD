@@ -24,6 +24,7 @@ namespace COOLFluiD {
     
     // Forward declarations
     class ConvBndCorrectionsRHSFluxReconstruction;
+    class DiffBndCorrectionsRHSFluxReconstruction;
     
 //////////////////////////////////////////////////////////////////////////////  
     
@@ -122,6 +123,9 @@ protected: // interface implementation functions
   /// Apply boundary conditions
   virtual void applyBCImpl();
   
+  /// Apply boundary conditions for diffusive terms
+  virtual void applyBCDiffImpl();
+  
   /// add source terms
   virtual void addSourceTermsImpl();
 
@@ -162,6 +166,9 @@ private: // data
   ///The convective solve command
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_convSolve;
   
+  ///The diffusion solve command
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_diffSolve;
+  
   /// The command that computes the contribution of the time discretization to the rhs
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_timeRHSJacob;
   
@@ -185,6 +192,9 @@ private: // data
 
   /// The string for configuration of the m_convSolve command
   std::string m_convSolveStr;
+  
+  /// The string for configuration of the m_diffSolve command
+  std::string m_diffSolveStr;
   
   /// The string for configuration of the m_limiter command
   std::string m_limiterStr;
@@ -229,6 +239,13 @@ private: // data
   
   ///The data to share between FluxReconstructionSolverCom commands
   Common::SharedPtr< FluxReconstructionSolverData > m_data;
+  
+  /// The commands to use for applying the boundary conditions for the diffusive terms,
+  /// with DiffBndCorrectionsRHSFluxReconstruction as type
+  std::vector< Common::SafePtr< DiffBndCorrectionsRHSFluxReconstruction > > m_bcsDiff;
+
+  /// The commands to use for applying the boundary conditions for the diffusive terms
+  std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_bcsDiffComs;
 
 //////////////////////////////////////////////////////////////////////////////
 

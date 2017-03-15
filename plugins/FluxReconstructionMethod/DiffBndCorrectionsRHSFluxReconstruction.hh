@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_FluxReconstructionMethod_ConvBndCorrectionsRHSFluxReconstruction_hh
-#define COOLFluiD_FluxReconstructionMethod_ConvBndCorrectionsRHSFluxReconstruction_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_DiffBndCorrectionsRHSFluxReconstruction_hh
+#define COOLFluiD_FluxReconstructionMethod_DiffBndCorrectionsRHSFluxReconstruction_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -25,23 +25,23 @@ namespace COOLFluiD {
    * @author Alexander Papen
    *
    */
-class ConvBndCorrectionsRHSFluxReconstruction : public FluxReconstructionSolverCom {
+class DiffBndCorrectionsRHSFluxReconstruction : public FluxReconstructionSolverCom {
 
 public:
   typedef Framework::BaseMethodCommandProvider<
-      FluxReconstructionSolverData,ConvBndCorrectionsRHSFluxReconstruction > PROVIDER;
+      FluxReconstructionSolverData,DiffBndCorrectionsRHSFluxReconstruction > PROVIDER;
 
 public:
 
   /**
    * Constructor
    */
-  ConvBndCorrectionsRHSFluxReconstruction(const std::string& name);
+  DiffBndCorrectionsRHSFluxReconstruction(const std::string& name);
 
   /**
    * Default destructor
    */
-  virtual ~ConvBndCorrectionsRHSFluxReconstruction();
+  virtual ~DiffBndCorrectionsRHSFluxReconstruction();
 
   /**
    * Set up private data and data of the aggregated classes
@@ -93,9 +93,6 @@ protected: // functions
   /// add the residual updates to the RHS
   void updateRHS();
 
-  /// compute the bnd face corrections to the gradients
-  void computeGradientBndFaceCorrections();
-  
   /// add the updates to the wave speed
   void updateWaveSpeed();
   
@@ -123,9 +120,6 @@ protected: // data
   
   /// socket for size of projection vector in face flux points
   Framework::DataSocketSink<  std::vector< CFreal > > socket_faceJacobVecSizeFaceFlxPnts;
-  
-  /// update variable set
-  Common::SafePtr< Framework::ConvectiveVarSet > m_updateVarSet;
 
   /// builder of faces
   Common::SafePtr<Framework::GeometricEntityPool<Framework::FaceToCellGEBuilder> > m_faceBuilder;
@@ -150,6 +144,21 @@ protected: // data
 
   /// update for the wave speed in the neighbouring cell
   CFreal m_waveSpeedUpd;
+  
+  /// the gradients in the neighbouring cell
+  std::vector< std::vector< RealVector >* > m_cellGrads;
+  
+  /// the corrected gradients in the flux points
+  std::vector< std::vector< RealVector* > > m_cellGradFlxPnt;
+  
+  /// the ghost gradients in the flux points
+  std::vector< std::vector< RealVector* > > m_flxPntGhostGrads;
+  
+  /// cell volume
+  CFreal m_cellVolume;
+  
+  /// ratio between convective and diffusive cfl limit
+  CFreal m_cflConvDiffRatio;
 
   /// number of equations in the physical model
   CFuint m_nbrEqs;
@@ -223,15 +232,15 @@ protected: // data
   /// face Jacobian vector sizes
   std::vector< CFreal > m_faceJacobVecSizeFlxPnts;
   
-  /// updates to the gradients
-  std::vector< std::vector< RealVector > > m_gradUpdates;
+  /// diffusive variable set
+  Common::SafePtr< Framework::DiffusiveVarSet > m_diffusiveVarSet;
   
   private:
 
   /// Physical data temporary vector
   RealVector m_pData;
 
-}; // end of class ConvBndCorrectionsRHSFluxReconstruction
+}; // end of class DiffBndCorrectionsRHSFluxReconstruction
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -241,4 +250,4 @@ protected: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_FluxReconstructionMethod_ConvBndCorrectionsRHSFluxReconstruction_hh
+#endif // COOLFluiD_FluxReconstructionMethod_DiffBndCorrectionsRHSFluxReconstruction_hh

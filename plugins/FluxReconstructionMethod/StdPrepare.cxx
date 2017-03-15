@@ -25,8 +25,8 @@ MethodCommandProvider<StdPrepare, FluxReconstructionSolverData, FluxReconstructi
 
 StdPrepare::StdPrepare(const std::string& name) : FluxReconstructionSolverCom(name),
   socket_rhs("rhs"),
-  socket_updateCoeff("updateCoeff")
-//   socket_gradients("gradients")
+  socket_updateCoeff("updateCoeff"),
+  socket_gradients("gradients")
 {
 }
 
@@ -50,18 +50,18 @@ void StdPrepare::execute()
   DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
   updateCoeff = 0.0;
 
-//   // reset the gradients
-//   DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
-//   const CFuint nGrads = gradients.size();
-//   for (CFuint iGrad = 0; iGrad < nGrads; ++iGrad)
-//   {
-//     const CFuint nVar = gradients[iGrad].size();
-//     for (CFuint iVar = 0; iVar < nVar; ++iVar)
-//     {
-//       gradients[iGrad][iVar] = 0.0;
-//     }
-//   }
-// 
+  // reset the gradients
+  DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
+  const CFuint nGrads = gradients.size();
+  for (CFuint iGrad = 0; iGrad < nGrads; ++iGrad)
+  {
+    const CFuint nVar = gradients[iGrad].size();
+    for (CFuint iVar = 0; iVar < nVar; ++iVar)
+    {
+      gradients[iGrad][iVar] = 0.0;
+    }
+  }
+
   // reset the jacobian
   if (getMethodData().getLinearSystemSolver().size() > 0)
   {
@@ -82,7 +82,7 @@ StdPrepare::needsSockets()
 
   result.push_back(&socket_rhs);
   result.push_back(&socket_updateCoeff);
-//   result.push_back(&socket_gradients);
+  result.push_back(&socket_gradients);
 
   return result;
 }

@@ -12,6 +12,7 @@
 #include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
 #include "FluxReconstructionMethod/ConvBndCorrectionsRHSFluxReconstruction.hh"
+#include "FluxReconstructionMethod/DiffBndCorrectionsRHSFluxReconstruction.hh"
 #include "FluxReconstructionMethod/RiemannFlux.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -36,6 +37,7 @@ void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("ExtrapolateCom","Command to extrapolate the states values to the position at the nodes.");
   options.addConfigOption< std::string >("PrepareCom","Command to prepare before the computation of the residuals.");
   options.addConfigOption< std::string >("ConvSolveCom","Command to solve the convection problem with FluxReconstruction solver.");
+  options.addConfigOption< std::string >("DiffSolveCom","Command to solve the diffusion problem with FluxReconstruction solver.");
   options.addConfigOption< std::string >("UnSetupCom","Command to deallocate FluxReconstruction solver data.");
   options.addConfigOption< std::string >("SetupCom","Command to initialize FluxReconstruction solver data.");
   options.addConfigOption< std::vector<std::string> >("SrcTermComds","Types of the source term commands.");
@@ -58,12 +60,15 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   m_extrapolate(),
   m_prepare(),
   m_convSolve(),
+  m_diffSolve(),
   m_limiter(),
   m_srcTerms(),
   m_inits(),
   m_bcs(),
   m_timeRHSJacob(),
   m_bcsComs(),
+  m_bcsDiff(),
+  m_bcsDiffComs(),
   m_computeError()
 {
   addConfigOptionsTo(this);
@@ -100,6 +105,9 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
 
   m_convSolveStr   = "ConvRHS";
   setParameter( "ConvSolveCom",   &m_convSolveStr );
+  
+  m_diffSolveStr   = "DiffRHS";
+  setParameter( "DiffSolveCom",   &m_diffSolveStr );
   
   m_computeErrorStr = "Null";
   setParameter("ComputeErrorCom", &m_computeErrorStr);
@@ -164,6 +172,8 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
     args, m_prepare,m_prepareStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >(
     args, m_convSolve,m_convSolveStr,m_data );
+  configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >(
+    args, m_diffSolve,m_diffSolveStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_limiter,m_limiterStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
@@ -176,6 +186,7 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
   cf_assert(m_extrapolate.isNotNull());
   cf_assert(m_prepare.isNotNull());
   cf_assert(m_convSolve.isNotNull());
+  cf_assert(m_diffSolve.isNotNull());
   cf_assert(m_limiter.isNotNull());
   cf_assert(m_timeRHSJacob.isNotNull());
   cf_assert(m_computeError.isNotNull());
@@ -253,6 +264,8 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
 
   // configure commands
     m_bcs.resize(m_bcNameStr.size());
+    m_bcsDiffComs.resize(m_bcNameStr.size());
+    m_bcsDiff.resize(m_bcNameStr.size());
 
     for(CFuint iBc = 0; iBc < m_bcsComs.size(); ++iBc)
     {
@@ -296,6 +309,37 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
         (*bcTRSNames)[iBc][iTRS] = currBCTRSNames[iTRS];
         (*bcStateComputers)[iBc]->addTRSName(currBCTRSNames[iTRS]);
       }
+      
+      CFLog(INFO,"FluxReconstruction: Creating diffusive boundary correction command for boundary condition: "
+                  << m_bcNameStr[iBc] << "\n");
+      CFLog(INFO,"DiffBndCorrections" << m_spaceRHSJacobStr << "\n");
+      try
+      {
+        configureCommand<FluxReconstructionSolverCom,
+          FluxReconstructionSolverData,
+          FluxReconstructionSolverComProvider>
+          (args, m_bcsDiffComs[iBc], "DiffBndCorrections"+m_spaceRHSJacobStr,m_bcNameStr[iBc], m_data);
+      }
+      catch (Common::NoSuchValueException& e)
+      {
+        CFLog(INFO, e.what() << "\n");
+        CFLog(INFO, "Choosing DiffBndCorrectionsRHS instead ...\n");
+
+        configureCommand<FluxReconstructionSolverCom,
+          FluxReconstructionSolverData,
+          FluxReconstructionSolverComProvider>
+          (args, m_bcsDiffComs[iBc], "DiffBndCorrectionsRHS",m_bcNameStr[iBc], m_data);
+      }
+
+      cf_assert(m_bcsDiffComs[iBc].isNotNull());
+
+      // dynamic_cast to DiffBndCorrectionsRHSFluxReconstruction
+      SafePtr< FluxReconstructionSolverCom > bcDiffComm = m_bcsDiffComs[iBc].getPtr();
+      m_bcsDiff[iBc] = bcDiffComm.d_castTo< DiffBndCorrectionsRHSFluxReconstruction >();
+      cf_assert(m_bcsDiff[iBc].isNotNull());
+
+      // set bcStateComputer corresponding to this bc command
+      m_bcsDiff[iBc]->setBcStateComputer((*bcStateComputers)[iBc]);
     }
 }
 
@@ -352,24 +396,20 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
   
   cf_assert(m_convSolve.isNotNull());
   m_convSolve->execute();
+
+  // if there is a diffusive term, compute the diffusive contributions to the residual
+  if (m_data->hasDiffTerm())
+  {
+    CFLog(VERBOSE,"Executing diff BCs!\n");
+    // add the diffusive boundary fluxes
+    applyBCDiffImpl();
+    CFLog(VERBOSE,"Executing diff solver!\n");
+    cf_assert(m_diffSolve.isNotNull());
+    m_diffSolve->execute();
+  }
   
   cf_assert(m_computeError.isNotNull());
   m_computeError->execute();
-
-//   // if there is a diffusive term, compute the diffusive contributions to the residual
-//   if (m_data->hasDiffTerm() && m_data->separateConvDiffComs())
-//   {
-//     // add the diffusive boundary fluxes
-//     applyBCDiffImpl();
-// 
-//     // compute the face terms of the SV discretization of the diffusive terms
-//     cf_assert(m_diffFaceTerm.isNotNull());
-//     m_diffFaceTerm->execute();
-// 
-//     // compute the volume terms of the SV discretization of the diffusive terms
-//     cf_assert(m_diffVolTerm.isNotNull());
-//     m_diffVolTerm->execute();
-//   }
 
   // add source terms
   //addSourceTermsImpl();
@@ -405,6 +445,21 @@ void FluxReconstructionSolver::applyBCImpl()
   {
     cf_assert(m_bcsComs[iBc].isNotNull());
     m_bcsComs[iBc]->execute();
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionSolver::applyBCDiffImpl()
+{
+  CFAUTOTRACE;
+
+  const CFuint nbrBcs = m_bcsDiffComs.size();
+  for(CFuint iBc = 0; iBc < nbrBcs; ++iBc)
+  {
+    CFLog(VERBOSE,"Executing BC " << iBc << "\n");
+    cf_assert(m_bcsDiffComs[iBc].isNotNull());
+    m_bcsDiffComs[iBc]->execute();
   }
 }
 
