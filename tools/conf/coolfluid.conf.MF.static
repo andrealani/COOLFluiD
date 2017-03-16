@@ -1,0 +1,103 @@
+#==================================================================
+# Configuration opions for the prepare.pl script
+#==================================================================
+# This file should be in the directory from where the script is run
+#==================================================================
+# This file is meant as an example and it should be copied
+# and renamed to coolfluid.conf, and adapted to the
+# characteristics of the envrionment where you plan to
+# configure and run COOLFluiD
+#
+# If you used the install-coolfluid.pl script, just replace
+#    $HOME for your home account directory
+#    $ARCH for the result of command "uname -m"
+#==================================================================
+
+#==================================================================
+# default build options
+#==================================================================
+
+coolfluid_dir = /Users/lani/TRUNK
+basebuild_dir = /Users/lani/TRUNK/OPENMPI_MF_STATIC
+
+# compilers
+cc     = /Users/lani/COOLFluiD/deps/openmpi_1.10.0/bin/mpicc
+cxx    = /Users/lani/COOLFluiD/deps/openmpi_1.10.0/bin/mpic++
+fc     = gfortran
+
+#cudac = /Developer/NVIDIA/CUDA-7.0/bin/nvcc
+#cudacflags = -O2 -g -Xcompiler
+#cuda_dir = /Developer/NVIDIA/CUDA-7.0
+#withcuda = 1
+
+#withcurl = 0
+nofortran = 1
+
+# library locations
+mpi_dir       = /Users/lani/COOLFluiD/deps/openmpi_1.10.0
+curl_dir      = /usr
+boost_dir     = /Users/lani/COOLFluiD/deps/openmpi_1.10.0/boost_static
+petsc_dir     = /Users/lani/COOLFluiD/deps/openmpi_1.10.0/petsc_long_static
+parmetis_dir  = /Users/lani/COOLFluiD/deps/openmpi_1.10.0
+
+allactive = 0
+
+#static compilation
+allstatic = 1
+
+# mimimum set of libs to be able to compile CF
+lib_Config = on
+lib_Common = on
+lib_MathTools = on
+lib_logcpp = on
+lib_Environment = on
+lib_Framework = on
+lib_ShapeFunctions = on
+lib_AnalyticalModel = on
+
+####################
+# plugin libraries #
+####################
+
+# input formats
+lib_CFmeshFileReader = on
+lib_Gambit2CFmesh = on
+lib_Gmsh2CFmesh = on
+lib_Tecplot2CFmesh = on
+lib_THOR2CFmesh = on
+lib_CFmeshExtruder = on
+lib_CFmeshFileWriter = on
+lib_TecplotWriter = on
+
+lib_Maxwell = on
+lib_FiniteVolume = on
+
+lib_MultiFluidMHD = on
+lib_ForwardEuler = on
+lib_NewtonMethod = on
+lib_ParaViewWriter = on
+
+lib_FiniteVolumeMaxwell = on
+lib_FiniteVolumeMultiFluidMHD = on
+
+lib_MHD = on
+lib_FiniteVolumeMHD = on
+
+# linear system solvers
+#lib_PetscI = on
+
+# long long int 
+with_llongint = 1
+
+# long int
+#with_longint = 1
+
+# enable doxygen
+withdocs = 1
+
+cmake_generator = kdev
+#
+#cmake_generator = xcode
+#
+with_testcases = 1
+#assertions = 0
