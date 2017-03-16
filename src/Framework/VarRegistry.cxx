@@ -4,13 +4,13 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#include "Common/VarRegistry.hh"
+#include "Framework/VarRegistry.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
-  namespace Common {
+  namespace Framework {
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -28,7 +28,7 @@ VarRegistry::~VarRegistry()
 
 //////////////////////////////////////////////////////////////////////////////
 
-  } // namespace Common
+  } // namespace Framework
 
 } // namespace COOLFluiD
 

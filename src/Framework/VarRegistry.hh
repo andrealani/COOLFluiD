@@ -4,20 +4,20 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_Common_VarRegistry_hh
-#define COOLFluiD_Common_VarRegistry_hh
+#ifndef COOLFluiD_Framework_VarRegistry_hh
+#define COOLFluiD_Framework_VarRegistry_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
+#include "Framework/Framework.hh"
 #include "Common/NonCopyable.hh"
-
 #include "Common/GeneralStorage.hh"
 #include "Common/BadValueException.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-  namespace Common {
+  namespace Framework {
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -30,7 +30,7 @@ namespace COOLFluiD {
 /// Each variable is stored with its name given as a std::string and its type,
 /// encoded also into std::string.
 /// @author Tiago Quintino
-class Common_API VarRegistry : public Common::NonCopyable<VarRegistry> {
+class Framework_API VarRegistry : public Common::NonCopyable<VarRegistry> {
 
 public: // functions
 
@@ -47,7 +47,7 @@ public: // functions
   void registVar ( const std::string& name, TYPE * var )
   {
     if (var == CFNULL)
-      throw BadValueException (FromHere(),"Trying to regist null pointer into VarRegistry");
+      throw Common::BadValueException (FromHere(),"Trying to regist null pointer into VarRegistry");
     m_storage.addEntry(name, var );
     m_typestr.addEntry(name, new std::string (DEMANGLED_TYPEID(TYPE)) );
   }
@@ -95,7 +95,7 @@ private: // helper function
     std::string* n = m_typestr.getEntry(name);
     if (*n != DEMANGLED_TYPEID(TYPE))
     {
-      throw BadValueException (FromHere(),"Trying to access variable ["
+      throw Common::BadValueException (FromHere(),"Trying to access variable ["
                                + name + "] of type [" + *n
                                + "] with wrong type ["
                                + DEMANGLED_TYPEID(TYPE) + "]" );
@@ -115,9 +115,9 @@ private: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-  } // namespace Common
+  } // namespace Framework
 } // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Common_VarRegistry_hh
+#endif // COOLFluiD_Framework_VarRegistry_hh
