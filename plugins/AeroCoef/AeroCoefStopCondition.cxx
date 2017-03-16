@@ -1,7 +1,7 @@
 #include "Environment/ObjectProvider.hh"
 
 #include "Framework/SubSystemStatus.hh"
-#include "Common/VarRegistry.cxx"
+#include "Framework/VarRegistry.cxx"
 
 #include "AeroCoef/AeroCoef.hh"
 #include "AeroCoef/AeroCoefStopCondition.hh"
