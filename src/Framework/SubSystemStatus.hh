@@ -12,18 +12,17 @@
 #include "Common/Stopwatch.hh"
 
 #include "Framework/ComputeDT.hh"
-#include "Framework/ComputeNorm.hh"
 #include "Framework/ConvergenceStatus.hh"
 #include "Framework/NamespaceStack.hh"
+#include "Framework/VarRegistry.hh"
+#include "MathTools/RealVector.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
-  namespace Common { class VarRegistry; }
-
   namespace Framework {
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 /// This class represents a singleton object where global infos (number
@@ -41,7 +40,7 @@ friend class SubSystemStatusStack;
 public: // methods
 
   /// Gets the variable registry
-  Common::SafePtr<Common::VarRegistry> getVarRegistry();
+ Common::SafePtr<VarRegistry> getVarRegistry() {return m_var_registry;}
 
   /// Defines the Config Option's of this class
   /// @param options a OptionList where to add the Option's
@@ -405,7 +404,7 @@ private: // methods
 private: // member data
 
   /// registry for dynamic created variables
-  Common::VarRegistry * m_var_registry;
+  VarRegistry * m_var_registry;
 
   /// Cronometer to time the simulation
   Common::Stopwatch<Common::CPUTime> m_stopwatch;

@@ -6,7 +6,6 @@
 
 #include "Environment/Factory.hh"
 #include "Framework/SubSystemStatus.hh"
-#include "Common/VarRegistry.cxx"
 #include "Framework/PhysicalModel.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -101,13 +100,6 @@ void SubSystemStatus::configure ( Config::ConfigArgs& args )
     }
   }
   }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-Common::SafePtr<Common::VarRegistry> SubSystemStatus::getVarRegistry()
-{
-  return m_var_registry;
 }
 
 //////////////////////////////////////////////////////////////////////////////

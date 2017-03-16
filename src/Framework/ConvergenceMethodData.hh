@@ -14,19 +14,15 @@
 #include "Framework/MethodData.hh"
 #include "Framework/ComputeNorm.hh"
 #include "Framework/CFL.hh"
-#include "Framework/Framework.hh"
 #include "Framework/SpaceMethod.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
-  namespace Common {
-    class VarRegistry;
-  }
-  
   namespace Framework {
-    
+   class VarRegistry;
+ 
 //////////////////////////////////////////////////////////////////////////////
 
 /// Base class for the Data of the ConvergenceMethod's.
@@ -176,7 +172,7 @@ private: // data
   /// number of linear system solvers to solve at once
   CFint m_nbLSSToSolveAtOnce;
   
-  Common::SafePtr<Common::VarRegistry> ssys_var_regist;
+  Common::SafePtr<VarRegistry> ssys_var_regist;
   
 }; // end of class ConvergenceMethodData
 

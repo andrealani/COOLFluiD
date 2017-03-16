@@ -48,6 +48,7 @@ my $opt_compile       = 0;
 my $opt_fetchonly     = 0;
 my $opt_many_mpi      = 0;
 my $opt_with_cuda     = 0;
+my $opt_static        = "0";
 my $opt_install_dir   = "$home/local/coolfluid_deps/$arch";
 my $opt_install_mpi_dir = "";
 my $opt_petsc_dir = "";
@@ -147,6 +148,7 @@ sub parse_commandline() # Parse command line
         'genconf'               => \$opt_genconf,
         'debug=s'               => \$opt_debug,
         'int64=s'               => \$opt_int64,
+        'static=s'              => \$opt_static,
         'viennacl=s'            => \$opt_viennacl,
 	'nompi'                 => \$opt_nompi,
         'many-mpi'              => \$opt_many_mpi,
@@ -192,6 +194,7 @@ options:
                              therefore allowing multiple mpi environments to coexist
                               Default: $opt_many_mpi.
 
+        --static=            Compile all libraries static
         --debug=             Compile dependencies and coolfluid with debug symbols (=1 is default)
         --int64=             If =1 compiles PETSc using long long int. 
         --fetchonly          Just download the sources. Do not install anything.
@@ -1332,16 +1335,22 @@ sub install_petsc ()
     my $COPTFLAGS ="-O3 ";
     my $CXXOPTFLAGS ="-O3 ";
 
+    my $link_libraries = "--with-shared-libraries=1"; 
+    if ( $opt_static eq "1" ) 
+    {
+      $link_libraries = "--with-shared-libraries=0";
+    } 
+
    if ($wdebug eq "--with-debugging=0") { 
-    run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 FFLAGS=$FFLAGS F90FLAGS=$F90FLAGS CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS CXXOPTFLAGS=$CXXOPTFLAGS COPTFLAGS=$COPTFLAGS FOPTFLAGS=$FOPTFLAGS --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 --with-shared-libraries=1 $wviennacl $cuda_support --PETSC_ARCH=$petsc_arch");
+    run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 FFLAGS=$FFLAGS F90FLAGS=$F90FLAGS CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS CXXOPTFLAGS=$CXXOPTFLAGS COPTFLAGS=$COPTFLAGS FOPTFLAGS=$FOPTFLAGS --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 $link_libraries $wviennacl $cuda_support --PETSC_ARCH=$petsc_arch");
    }
    else {
-     run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 --with-shared-libraries=1 $cuda_support --PETSC_ARCH=$petsc_arch");
+     run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 $link_libraries $cuda_support --PETSC_ARCH=$petsc_arch");
    }
    run_command_or_die("make");
   }
   else {
-   run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 COPTFLAGS='-O3 ' FOPTFLAGS='-O3 ' --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 --with-shared-libraries=1 --with-dynamic-loading=1 $cuda_support --PETSC_ARCH=$petsc_arch");
+   run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 COPTFLAGS='-O3 ' FOPTFLAGS='-O3 ' --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 $link_libraries --with-dynamic-loading=1 $cuda_support --PETSC_ARCH=$petsc_arch");
    run_command_or_die("make");
   }
     run_command_or_die("make install PETSC_DIR=$build_dir");
@@ -1582,10 +1591,15 @@ ZZZ
 	run_command_or_die("./tools/jam/src/bin.$boost_arch/bjam --prefix=$opt_install_dir $opt_makeopts --with-test --with-thread --with-iostreams --with-filesystem --with-system --with-regex --with-date_time --with-program_options $boostmpiopt toolset=$toolset threading=multi variant=release stage install");
       }
     
+    my $static_link = "";
+    if ( $opt_static eq "1" ) 
+    {
+       $static_link = " link=static";
+    }
     if ($version  eq "1_54_0" or $version  eq "1_59_0") 
       {
 	run_command_or_die("./bootstrap.sh --prefix=$opt_install_dir -with-libraries=test,thread,iostreams,filesystem,system,regex,date_time toolset=$toolset threading=multi variant=release stage");
-	run_command_or_die("./b2 install");
+	run_command_or_die("./b2 $static_link install");
       }
   }
 }

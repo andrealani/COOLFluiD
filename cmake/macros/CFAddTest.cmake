@@ -132,8 +132,10 @@ function( cf_add_test )
       target_link_libraries( ${_TEST_TARGETNAME} ${MPI_LIBRARIES} )
     endif()
 
+   IF (CF_ENABLE_UNITTESTS)
     # add boost unit test lib
     target_link_libraries( ${_TEST_TARGETNAME} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} )
+   ENDIF()
 
     # prepare test
     if(_RUN_MPI)

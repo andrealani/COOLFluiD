@@ -127,8 +127,6 @@ TimePolicies.cxx
 TimePolicies.hh
 Trio.hh
 URLException.hh
-VarRegistry.cxx
-VarRegistry.hh
 xmlParser.h
 xmlParser.cpp
 )

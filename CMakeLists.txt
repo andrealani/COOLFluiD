@@ -217,6 +217,13 @@ ADD_SUBDIRECTORY ( cmake )
 ADD_SUBDIRECTORY ( doc )
 
 ##############################################################################
+
+IF (CF_ENABLE_STATIC)
+  SET(CF_HAVE_ALLSTATIC 1 CACHE BOOL "All libraries compiled with static linking")
+ELSE()
+  SET(CF_HAVE_ALLSTATIC 0 CACHE BOOL "All libraries compiled with dynamic linking")
+ENDIF()
+
 # finding boost (essential)
 
 # find boost package (essential)

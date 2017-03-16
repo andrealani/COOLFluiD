@@ -2,6 +2,7 @@
 
 #include "Common/OSystem.hh"
 #include "Common/EventHandler.hh"
+#include "Common/PE.hh"
 
 #include "Environment/ObjectProvider.hh"
 #include "Environment/DirPaths.hh"
@@ -11,7 +12,6 @@
 #include "Framework/GlobalStopCriteria.hh"
 
 #include "Framework/LMaestro.hh"
-#include "Framework/Framework.hh"
 #include "Framework/Simulator.hh"
 
 //////////////////////////////////////////////////////////////////////////////

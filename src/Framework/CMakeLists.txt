@@ -521,6 +521,8 @@ TrsMultiGeoWithNodesBuilder.cxx
 TrsMultiGeoWithNodesBuilder.hh
 TrsNotFoundException.hh
 UniversalConstant.hh
+VarRegistry.cxx
+VarRegistry.hh
 VarSetListT.hh
 VarSetMatrixTransformer.cxx
 VarSetMatrixTransformer.hh

@@ -19,7 +19,6 @@
 #include "Common/PE.hh"
 
 #include "Common/EventHandler.hh"
-#include "Common/VarRegistry.hh"
 #include "Common/CFLog.hh"
 #include "Common/SignalHandler.hh"
 #include "Common/OSystem.hh"
@@ -77,8 +76,7 @@ CFEnv::CFEnv() : Config::ConfigObject("CFEnv"),
   m_eventHandler(new Common::EventHandler()),
   m_moduleRegistry(new Environment::ModuleRegistry()),
   m_factoryRegistry(new Environment::FactoryRegistry()),
-  m_env_vars (new CFEnvVars()),
-  m_var_registry ( new VarRegistry() )
+  m_env_vars (new CFEnvVars())
 {
   addConfigOptionsTo(this);
 
@@ -156,13 +154,6 @@ void CFEnv::setup()
 void CFEnv::unsetup()
 {
   SetupObject::unsetup();
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-Common::SafePtr<VarRegistry> CFEnv::getVarRegistry()
-{
-  return m_var_registry;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -256,7 +247,6 @@ std::string CFEnv::getSystemBits() const
 
 CFEnv::~CFEnv()
 {
-  deletePtr ( m_var_registry );
   deletePtr ( m_env_vars );
 
   delete m_moduleRegistry;     m_moduleRegistry = CFNULL;

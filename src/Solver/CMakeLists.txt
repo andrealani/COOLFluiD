@@ -6,6 +6,11 @@ CONFIGURE_FILE ( ${CMAKE_CURRENT_SOURCE_DIR}/coolfluid-solver-wrapper ${CMAKE_CU
 LIST ( APPEND coolfluid-solver_files coolfluid-solver.cxx )
 LIST ( APPEND coolfluid-solver_libs ${CF_KERNEL_LIBS} ${CF_KERNEL_STATIC_LIBS} ${CF_Boost_LIBRARIES} )
 
+IF ( CF_HAVE_ALLSTATIC )
+LOG("CF_KERNEL_LIBS is [${CF_KERNEL_LIBS}]" )
+LOG("CF_KERNEL_STATIC_LIBS is [${CF_KERNEL_STATIC_LIBS}]" )
+ENDIF()
+
 CF_ADD_PLUGIN_APP ( coolfluid-solver )
 
 # testing of testcases

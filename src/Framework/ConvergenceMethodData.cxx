@@ -7,7 +7,6 @@
 #include "Framework/ConvergenceMethodData.hh"
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/ConvergenceMethod.hh"
-#include "Common/VarRegistry.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
