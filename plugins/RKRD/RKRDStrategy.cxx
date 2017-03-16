@@ -1,4 +1,4 @@
-#include "Common/VarRegistry.hh"
+#include "Framework/VarRegistry.hh"
 
 
 #include "Framework/MethodStrategyProvider.hh"

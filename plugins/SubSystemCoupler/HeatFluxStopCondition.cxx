@@ -1,7 +1,7 @@
 #include "Environment/ObjectProvider.hh"
 
 #include "Framework/SubSystemStatus.hh"
-#include "Common/VarRegistry.hh"
+#include "Framework/VarRegistry.hh"
 
 #include "SubSystemCoupler/HeatFluxStopCondition.hh"
 #include "SubSystemCoupler/SubSystemCoupler.hh"

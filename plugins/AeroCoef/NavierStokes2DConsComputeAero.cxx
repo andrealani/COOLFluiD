@@ -9,7 +9,7 @@
 #include "Environment/DirPaths.hh"
 
 #include "Framework/SubSystemStatus.hh"
-#include "Common/VarRegistry.hh"
+#include "Framework/VarRegistry.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/PathAppender.hh"
 #include "Common/BadValueException.hh"
