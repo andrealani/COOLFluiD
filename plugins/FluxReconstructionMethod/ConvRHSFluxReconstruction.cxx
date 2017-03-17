@@ -16,7 +16,6 @@
 #include "FluxReconstructionMethod/ConvRHSFluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
-#include "NavierStokes/Euler2DVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 

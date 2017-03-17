@@ -229,7 +229,9 @@ void Extruder2DFVM::extrude()
 void Extruder2DFVM::transformNodesTo3D()
 {
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE, "Extruder2DFVM::transformNodesTo3D() => START\n");
+  
   CFmeshReaderWriterSource& data = *(_data.get());
   
   const CFuint nbNodes = data.getTotalNbNodes();
@@ -250,6 +252,8 @@ void Extruder2DFVM::transformNodesTo3D()
     }
     newValue[DIM_2D] = 0.0;
   }
+  
+  CFLog(VERBOSE, "Extruder2DFVM::transformNodesTo3D() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -268,7 +272,9 @@ void Extruder2DFVM::createFirstLayer()
 void Extruder2DFVM::convertCurrentElementsTo3D()
 {
   CFAUTOTRACE;
-
+ 
+  CFLog(VERBOSE, "Extruder2DFVM::convertCurrentElementsTo3D() => START\n");
+  
   CFmeshReaderWriterSource& data = *(_data.get());
 
   _nbNodesPerLayer   = data.getTotalNbNodes();
@@ -340,9 +346,9 @@ void Extruder2DFVM::convertCurrentElementsTo3D()
           _nodePattern[elemID] = nodesInTetra;
           _nodePattern[elemID + nbElemsPerType] = nodesInTetra;
           _nodePattern[elemID + 2*nbElemsPerType] = nodesInTetra;
-          _statePattern[elemID] = 4;
-          _statePattern[elemID + nbElemsPerType] = 4;
-          _statePattern[elemID + 2*nbElemsPerType] = 4;
+          _statePattern[elemID] = 1;
+          _statePattern[elemID + nbElemsPerType] = 1;
+          _statePattern[elemID + 2*nbElemsPerType] = 1;
         break;
 
       case CFGeoShape::PRISM:
@@ -384,17 +390,16 @@ void Extruder2DFVM::convertCurrentElementsTo3D()
       switch(currShape) {
 
       case CFGeoShape::TETRA:
-	
 	{
         newNbElements += 2;
 
         // here we assume all the elements are of the same type !!
         /// @todo change this
-
+	
 	newID[0] = iElem;
         newID[1] = iElem + _nbElemPerLayer;
         newID[2] = iElem + 2*_nbElemPerLayer;
-
+	
         CFuint oldNbElemsPerType = (*elementType)[_tetraTypeID].getNbElems();
         (*elementType)[_tetraTypeID].setNbElems(oldNbElemsPerType + 2);
 	
@@ -414,14 +419,13 @@ void Extruder2DFVM::convertCurrentElementsTo3D()
             //CFout << "newID[iTetra]: " << newID[iTetra] << "\n";
             //CFout << _newTetras[iTetra][localID]  << " " << localID << "\n";
             (*elementNode)(newID[iTetra],localID) = _newTetras[iTetra][localID];
-            (*elementState)(newID[iTetra],localID) = _newTetras[iTetra][localID];
-	    
-          }
-        }
-	
-        ++elemID;
-        }
-        break;
+	  }
+	  
+	  (*elementState)(newID[iTetra],0) = newID[iTetra];
+	}
+	++elemID;
+	}
+	break;
 
       case CFGeoShape::PRISM:
         {
@@ -435,7 +439,7 @@ void Extruder2DFVM::convertCurrentElementsTo3D()
 	
         // state
         (*elementState)(elemID,0) = _oldElemState(elemID,0);
-
+	
         ++elemID;
         }
         break;
@@ -474,6 +478,8 @@ void Extruder2DFVM::convertCurrentElementsTo3D()
 
   _nbElemPerLayer = nbElements;
   data.setNbElements(newNbElements);
+  
+  CFLog(VERBOSE, "Extruder2DFVM::convertCurrentElementsTo3D() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -481,7 +487,9 @@ void Extruder2DFVM::convertCurrentElementsTo3D()
 void Extruder2DFVM::migrateElementTypes()
 {
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE, "Extruder2DFVM::migrateElementTypes() => START\n");
+  
   CFmeshReaderWriterSource& data = *(_data.get());
 
   SafePtr<vector<ElementTypeData> > elementType = data.getElementTypeData();
@@ -519,6 +527,8 @@ void Extruder2DFVM::migrateElementTypes()
       }
     }
   }
+  
+  CFLog(VERBOSE, "Extruder2DFVM::migrateElementTypes() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -527,6 +537,8 @@ void Extruder2DFVM::createAnotherLayer()
 {
   CFAUTOTRACE;
 
+  CFLog(VERBOSE, "Extruder2DFVM::createAnotherLayer() => START\n");
+  
   CFmeshReaderWriterSource& data = *(_data.get());
   SafePtr< vector<CFreal> > nodes  = data.getNodeList();
   SafePtr< vector<CFreal> > states = data.getStateList();
@@ -557,14 +569,14 @@ void Extruder2DFVM::createAnotherLayer()
       states->push_back((*states)[start+s]);
     }
   }
-  
+    
   SafePtr< Table<CFuint> > elementNode   = data.getElementNode();
   SafePtr< Table<CFuint> > elementState  = data.getElementState();
   
   //unused//  const CFuint oldNbElements = elementNode->nbRows();
   elementNode->increase(_nodePattern);
   elementState->increase(_statePattern);
-  
+    
   CFuint nbElements = data.getNbElements();
   CFuint eStartID = nbElements - _nbElemPerLayer;
   CFuint eEndID   = nbElements;
@@ -595,10 +607,8 @@ void Extruder2DFVM::createAnotherLayer()
       }
     }
   }
-  
+    
   cf_assert(nbElements == elemID);
-  // std::cout << "eStartID: " <<eStartID<<std::endl;
-  // std::cout << "eEndID: " <<eEndID<<std::endl;
   vector<CFuint> newIDs(3);
   vector<CFuint> tempPrism(6); 
   
@@ -607,7 +617,6 @@ void Extruder2DFVM::createAnotherLayer()
     ++newNbElements;
     
     CFuint newID = iElem + _nbElemPerLayer;
-    
     CFuint oldNbElemsPerType = 0;
     
     // is this iElem valid???? check
@@ -641,9 +650,9 @@ void Extruder2DFVM::createAnotherLayer()
           for(CFuint localID = 0; localID < 4; ++localID) {
             // first layer
             (*elementNode)(newIDs[iTetra],localID) = _newTetras[iTetra][localID];
-            (*elementState)(newIDs[iTetra],localID) = _newTetras[iTetra][localID];
-	    
-          }
+	  }
+	
+	  (*elementState)(newIDs[iTetra],0) = newIDs[iTetra];
         }
       }
       break;
@@ -698,6 +707,8 @@ void Extruder2DFVM::createAnotherLayer()
   }
   
   data.setNbElements(newNbElements);
+  
+  CFLog(VERBOSE, "Extruder2DFVM::createAnotherLayer() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -750,7 +761,9 @@ void Extruder2DFVM::updateTRSData()
 void Extruder2DFVM::extrudeCurrentTRSs()
 {
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE, "Extruder2DFVM::extrudeCurrentTRSs() => START\n");
+  
   CFuint nbNodesInGeo = 4;
   CFuint nbStatesInGeo = 1;
 
@@ -875,12 +888,16 @@ void Extruder2DFVM::extrudeCurrentTRSs()
       (*nbGeomEntsPerTR)[iTRS][iTR] = geoC.size();
     }
   }
+  
+  CFLog(VERBOSE, "Extruder2DFVM::extrudeCurrentTRSs() => END\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
 
 void Extruder2DFVM::createTopBottomTRSs()
 {
+  CFLog(VERBOSE, "Extruder2DFVM::createTopBottomTRSs() => START\n");
+  
   if (!_periodic) {
     vector<CFuint> layer(1);
     layer[0] = 0;
@@ -893,6 +910,8 @@ void Extruder2DFVM::createTopBottomTRSs()
     layer[0] = 0; layer[1] = _nbLayers;
     createSideTRS("Periodic",layer,false);
   }
+  
+  CFLog(VERBOSE, "Extruder2DFVM::createTopBottomTRSs() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -901,6 +920,8 @@ void Extruder2DFVM::createSideTRS(const std::string& name,
 				  const vector<CFuint>& layer,
 				  const bool& bottom)
 {
+  CFLog(VERBOSE, "Extruder2DFVM::createSideTRS() => START\n");
+  
   cf_assert(_oldElemNode.nbRows() == _oldElemState.nbRows());
 
   const CFuint nbElemsPerLayer = _oldElemNode.nbRows();
@@ -966,6 +987,8 @@ void Extruder2DFVM::createSideTRS(const std::string& name,
       }
     }
   }
+  
+  CFLog(VERBOSE, "Extruder2DFVM::createSideTRS() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

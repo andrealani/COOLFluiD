@@ -84,7 +84,8 @@ void MeshFormatConverter::convert(const boost::filesystem::path& fromFilepath,
   
   // AL: Those info make the CFmesh file version-dependent, can create problems with regression testing 
   fout << "!COOLFLUID_VERSION "    << Environment::CFEnv::getInstance().getCFVersion() << "\n";
-  fout << "!COOLFLUID_SVNVERSION " << Environment::CFEnv::getInstance().getSvnVersion() << "\n";
+  // this can fail if there are problems with SVN
+  // fout << "!COOLFLUID_SVNVERSION " << Environment::CFEnv::getInstance().getSvnVersion() << "\n";
   fout << "!CFMESH_FORMAT_VERSION 1.3\n";
   
   fout << "!NB_DIM " << getDimension() << "\n";

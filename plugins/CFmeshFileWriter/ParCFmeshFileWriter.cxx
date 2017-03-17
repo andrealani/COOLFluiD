@@ -197,7 +197,8 @@ void ParCFmeshFileWriter::writeVersionStamp(std::ofstream *const fout)
   if (_myRank  == _ioRank)
   {
     *fout << "!COOLFLUID_VERSION "    << CFEnv::getInstance().getCFVersion() << "\n";
-    *fout << "!COOLFLUID_SVNVERSION " << CFEnv::getInstance().getSvnVersion() << "\n";
+    // this can fail if there are problems with SVN
+    // *fout << "!COOLFLUID_SVNVERSION " << CFEnv::getInstance().getSvnVersion() << "\n";
     *fout << "!CFMESH_FORMAT_VERSION 1.3\n";
   }
 

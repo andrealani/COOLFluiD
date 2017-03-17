@@ -290,7 +290,7 @@ void Extruder2D::convertCurrentElementsTo3D()
   elementNode->clear();
   elementState->clear();
 
-  SafePtr< vector<ElementTypeData> > elementType =
+  SafePtr< vector<ElementTypeData> > elementType = 
     data.getElementTypeData();
 
   const CFuint nbElements = data.getNbElements();

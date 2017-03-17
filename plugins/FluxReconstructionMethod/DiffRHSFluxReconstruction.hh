@@ -88,7 +88,7 @@ protected: //functions
    * @pre reconstructFluxPntsStates(), reconstructFaceAvgState(),
    *      setFaceTermData() and set the geometrical data of the face
    */
-  void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd);
+  virtual void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd) = 0;
   
   /**
    * Divides by jacobian determinant
@@ -108,7 +108,7 @@ protected: //functions
   /**
    * Add the updateCoeff corrections due to the partition faces
    */
-  void addPartitionFacesCorrection();
+  virtual void addPartitionFacesCorrection() = 0;
   
   /**
    * Compute the discontinuous fluxes in the flx pnts

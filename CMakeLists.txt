@@ -336,8 +336,9 @@ ENDIF()
 ADD_DEFINITIONS  ( -DCF_HAVE_CONFIG_H )
 INCLUDE_DIRECTORIES ( ${COOLFluiD_BINARY_DIR} )
 
+# AL: SVN is not checked anymore for portability reasons
 # check for subversion support
-INCLUDE(CheckSvnVersion)
+# INCLUDE(CheckSvnVersion)
 
 # enable all kind of tests
 IF ( CF_ENABLE_TESTCASES )

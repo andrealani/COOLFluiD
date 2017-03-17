@@ -139,7 +139,8 @@ void ConvertStructMesh::writeCFmeshFileFEM()
   const CFuint nbNodesInElem = (dim == DIM_3D) ? 8 : 4;
 
   fout << "!COOLFLUID_VERSION "    << Environment::CFEnv::getInstance().getCFVersion() << "\n";
-  fout << "!COOLFLUID_SVNVERSION " << Environment::CFEnv::getInstance().getSvnVersion() << "\n";
+  // this can fail if there are problems with SVN
+  // fout << "!COOLFLUID_SVNVERSION " << Environment::CFEnv::getInstance().getSvnVersion() << "\n";
   fout << "!CFMESH_FORMAT_VERSION 1.2\n";
   fout << "!NB_DIM " << dim << endl;
   fout << "!NB_EQ " << 1 << endl;
@@ -252,7 +253,8 @@ void ConvertStructMesh::writeCFmeshFileFEMSplit()
   const CFuint nbNodesInElem = 3;
 
   fout << "!COOLFLUID_VERSION "    << Environment::CFEnv::getInstance().getCFVersion() << "\n";
-  fout << "!COOLFLUID_SVNVERSION " << Environment::CFEnv::getInstance().getSvnVersion() << "\n";
+  // this can fail if there are problems with SVN
+  // fout << "!COOLFLUID_SVNVERSION " << Environment::CFEnv::getInstance().getSvnVersion() << "\n";
   fout << "!CFMESH_FORMAT_VERSION 1.2\n";
   fout << "!NB_DIM " << dim << endl;
 
@@ -369,7 +371,8 @@ void ConvertStructMesh::writeCFmeshFileFVM()
   const CFuint nbNodesInElem = (dim == DIM_3D) ? 8 : 4;
 
   fout << "!COOLFLUID_VERSION "    << Environment::CFEnv::getInstance().getCFVersion() << "\n";
-  fout << "!COOLFLUID_SVNVERSION " << Environment::CFEnv::getInstance().getSvnVersion() << "\n";
+  // this can fail if there are problems with SVN
+  // fout << "!COOLFLUID_SVNVERSION " << Environment::CFEnv::getInstance().getSvnVersion() << "\n";
   fout << "!CFMESH_FORMAT_VERSION 1.2\n";
   fout << "!NB_DIM " << dim << endl;
   fout << "!NB_EQ " << 1 << endl;
@@ -471,7 +474,8 @@ void ConvertStructMesh::writeCFmeshFileFVMSplit()
   const CFuint nbTriagElements = _nbElements*2;
 
   fout << "!COOLFLUID_VERSION "    << Environment::CFEnv::getInstance().getCFVersion() << "\n";
-  fout << "!COOLFLUID_SVNVERSION " << Environment::CFEnv::getInstance().getSvnVersion() << "\n";
+  // this can fail if there are problems with SVN
+  // fout << "!COOLFLUID_SVNVERSION " << Environment::CFEnv::getInstance().getSvnVersion() << "\n";
   fout << "!CFMESH_FORMAT_VERSION 1.2\n";
   fout << "!NB_DIM " << dim << endl;
 

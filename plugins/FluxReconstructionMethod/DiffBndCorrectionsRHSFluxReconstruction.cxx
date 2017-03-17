@@ -6,27 +6,19 @@
 #include "MathTools/MathFunctions.hh"
 
 #include "FluxReconstructionMethod/DiffBndCorrectionsRHSFluxReconstruction.hh"
-#include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
-#include "NavierStokes/NavierStokesVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Physics::NavierStokes;
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
     namespace FluxReconstructionMethod {
-
-//////////////////////////////////////////////////////////////////////////////
-
-MethodCommandProvider< DiffBndCorrectionsRHSFluxReconstruction, FluxReconstructionSolverData, FluxReconstructionModule >
-  DiffBndCorrectionsRHSFluxReconstructionProvider("DiffBndCorrectionsRHS");
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -435,32 +427,6 @@ void DiffBndCorrectionsRHSFluxReconstruction::updateWaveSpeed()
     updateCoeff[solID] += m_waveSpeedUpd;
   }
 }
-
-//////////////////////////////////////////////////////////////////////////////
-
-void DiffBndCorrectionsRHSFluxReconstruction::computeWaveSpeedUpdates(CFreal& waveSpeedUpd)
-{
-  CFreal visc = 1.0;
-  /// @todo needs to be changed for non-NS
-  SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokesVarSet >();
-  const CFreal dynVisc = navierStokesVarSet->getCurrDynViscosity();
-  
-  waveSpeedUpd = 0.0;
-  for (CFuint iFlx = 0; iFlx < m_cellFlx.size(); ++iFlx)
-  {
-    const CFreal jacobXJacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
-                                 m_faceJacobVecAbsSizeFlxPnts[iFlx]*
-                                   (*m_faceIntegrationCoefs)[iFlx]*
-                                   m_cflConvDiffRatio;
-    const CFreal rho = navierStokesVarSet->getDensity(*m_cellStatesFlxPnt[iFlx]);
-    visc = dynVisc/rho;
-				   
-    // transform update states to physical data to calculate eigenvalues
-    waveSpeedUpd += visc*jacobXJacobXIntCoef/m_cellVolume;
-  }
-
-}
-
 
 //////////////////////////////////////////////////////////////////////////////
 
