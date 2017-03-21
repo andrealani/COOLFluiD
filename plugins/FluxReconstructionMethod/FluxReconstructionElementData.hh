@@ -509,11 +509,19 @@ public:
   }
 
   /**
-   * @return m_coefSolPolyDerivInFlxPnts
+   * @return m_coefSolPolyDerivInSolPnts
    */
-  Common::SafePtr< std::vector< std::vector< std::vector< CFreal > > > > getCoefSolPolyDerivInFlxPnts()
+  Common::SafePtr< std::vector< std::vector< std::vector< CFreal > > > > getCoefSolPolyDerivInSolPnts()
   {
-    return &m_coefSolPolyDerivInFlxPnts;
+    return &m_coefSolPolyDerivInSolPnts;
+  }
+  
+  /**
+   * @return m_coefSolPolyInFlxPnts
+   */
+  Common::SafePtr< std::vector< std::vector< CFreal > > > getCoefSolPolyInFlxPnts()
+  {
+    return &m_coefSolPolyInFlxPnts;
   }
 
   /**
@@ -833,7 +841,12 @@ protected: // functions
   /**
    * create coefficients for computation of solution polynomial derivatives
    */
-  void createCoefSolPolyDerivInFlxPnts();
+  void createCoefSolPolyDerivInSolPnts();
+  
+  /**
+   * create coefficients for computation of solution polynomials in the flx pnts
+   */
+  void createCoefSolPolyInFlxPnts();
 
   /**
    * create coefficients for optimized computation of solution polynomial derivatives
@@ -1032,8 +1045,14 @@ protected: // protected data
   /// flux polynomial coefficients
   std::vector< std::vector< std::vector< CFreal > > > m_flxPolyCoefs;
 
+  /// coefficients for derivatives of solution polynomials in the soltution points
+  std::vector< std::vector< std::vector< CFreal > > > m_coefSolPolyDerivInSolPnts;
+  
   /// coefficients for derivatives of solution polynomials in the flux points
   std::vector< std::vector< std::vector< CFreal > > > m_coefSolPolyDerivInFlxPnts;
+  
+  /// coefficients for solution polynomials in the flux points
+  std::vector< std::vector < CFreal > > m_coefSolPolyInFlxPnts;
 
   /// coefficients for derivatives of solution polynomials in the flux points (optimized computation)
   std::vector< std::vector< std::vector< CFreal > > > m_coefSolPolyDerivInFlxPntsOptim;

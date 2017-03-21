@@ -103,8 +103,6 @@ void DiffBndCorrectionsRHSFluxReconstruction::executeOnTrs()
   SafePtr<TopologicalRegionSet> faceTrs = getCurrentTRS();
   
   CFLog(VERBOSE,"DiffBndCorrectionsRHSFluxReconstruction::executeOnTRS: " << faceTrs->getName() << "\n");
-  
-  CFLog(NOTICE,"HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 
   // get bndFacesStartIdxs from FluxReconstructionMethodData
   map< std::string , vector< vector< CFuint > > >&
@@ -535,6 +533,10 @@ void DiffBndCorrectionsRHSFluxReconstruction::setup()
     m_flxPntRiemannFlux[iFlx].resize(m_nbrEqs);
     m_cellGradFlxPnt[iFlx].resize(m_nbrEqs);
     m_flxPntGhostGrads[iFlx].resize(m_nbrEqs);
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {
+      (m_flxPntGhostGrads[iFlx][iVar]) = new RealVector(m_dim);
+    }
   }
   
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)

@@ -45,6 +45,7 @@ void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::vector<std::string> >("InitComds","Types of the initializing commands.");
   options.addConfigOption< std::vector<std::string> >("InitNames","Names of the initializing commands.");
   options.addConfigOption< std::vector<std::string> >("BcNames","Names of the boundary condition commands.");
+  options.addConfigOption< std::vector<std::string> >("BcNamesDiff","Names of the diffusive boundary condition commands.");
   options.addConfigOption< std::string >("SpaceRHSJacobCom","Command for the computation of the space discretization contribution to RHS and Jacobian.");
   options.addConfigOption< std::string >("TimeRHSJacobCom","Command for the computation of the time discretization contibution to RHS and Jacobian.");
   options.addConfigOption< std::string >("LimiterCom","Command to limit the solution.");
@@ -129,6 +130,10 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   // options for bc commands
   m_bcNameStr = std::vector<std::string>();
   setParameter("BcNames",&m_bcNameStr);
+  
+  // options for bc commands
+  m_bcNameDiffStr = std::vector<std::string>();
+  setParameter("BcNamesDiff",&m_bcNameDiffStr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -253,6 +258,15 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
   // get bcStateComputers
   SafePtr< std::vector< SafePtr< BCStateComputer > > > bcStateComputers = m_data->getBCStateComputers();
   cf_assert(m_bcNameStr.size() == bcStateComputers->size());
+  if (m_bcNameDiffStr != m_bcNameStr)
+  {
+    CFLog(NOTICE,"Number of Diffusive BCs doesn't make convective BCs: should only happen when there is no diffusive term!");
+    m_bcNameDiffStr.resize(m_bcNameStr.size());
+    for (CFuint iBC; iBC < m_bcNameStr.size(); ++iBC)
+    {
+      m_bcNameDiffStr[iBC] = m_bcNameStr[iBC];
+    }
+  }
   CFLog(VERBOSE, "Nbr of BCs: " << bcStateComputers->size() << "\n");
 
   // resize vector with bc commands
@@ -266,12 +280,14 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
     m_bcs.resize(m_bcNameStr.size());
     m_bcsDiffComs.resize(m_bcNameStr.size());
     m_bcsDiff.resize(m_bcNameStr.size());
+    std::vector<std::string> TRSsConv;
 
     for(CFuint iBc = 0; iBc < m_bcsComs.size(); ++iBc)
     {
       CFLog(INFO,"FluxReconstruction: Creating convective boundary correction command for boundary condition: "
                   << m_bcNameStr[iBc] << "\n");
       CFLog(INFO,"ConvBndCorrections" << m_spaceRHSJacobStr << "\n");
+
       try
       {
         configureCommand<FluxReconstructionSolverCom,
@@ -299,7 +315,7 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
 
       // set bcStateComputer corresponding to this bc command
       m_bcs[iBc]->setBcStateComputer((*bcStateComputers)[iBc]);
-
+      
       // set TRS names corresponding to this command in bcTRSNames and in bcStateComputers
       const std::vector<std::string> currBCTRSNames = m_bcs[iBc]->getTrsNames();
       const CFuint nbrBCTRSs = currBCTRSNames.size();
@@ -311,14 +327,14 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
       }
       
       CFLog(INFO,"FluxReconstruction: Creating diffusive boundary correction command for boundary condition: "
-                  << m_bcNameStr[iBc] << "\n");
+                  << m_bcNameDiffStr[iBc] << "\n");
       CFLog(INFO,"DiffBndCorrections" << m_spaceRHSJacobStr << "\n");
       try
       {
         configureCommand<FluxReconstructionSolverCom,
           FluxReconstructionSolverData,
           FluxReconstructionSolverComProvider>
-          (args, m_bcsDiffComs[iBc], "DiffBndCorrections"+m_spaceRHSJacobStr,m_bcNameStr[iBc], m_data);
+          (args, m_bcsDiffComs[iBc], "DiffBndCorrections"+m_spaceRHSJacobStr,m_bcNameDiffStr[iBc], m_data);
       }
       catch (Common::NoSuchValueException& e)
       {
@@ -328,7 +344,7 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
         configureCommand<FluxReconstructionSolverCom,
           FluxReconstructionSolverData,
           FluxReconstructionSolverComProvider>
-          (args, m_bcsDiffComs[iBc], "DiffBndCorrectionsRHS",m_bcNameStr[iBc], m_data);
+          (args, m_bcsDiffComs[iBc], "DiffBndCorrectionsRHS",m_bcNameDiffStr[iBc], m_data);
       }
 
       cf_assert(m_bcsDiffComs[iBc].isNotNull());
@@ -340,6 +356,18 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
 
       // set bcStateComputer corresponding to this bc command
       m_bcsDiff[iBc]->setBcStateComputer((*bcStateComputers)[iBc]);
+      
+      TRSsConv = m_bcsComs[iBc]->getTrsNames();
+      for (CFuint i = 0; i < TRSsConv.size(); ++i)
+      {
+	CFLog(VERBOSE, "Conv TRS " << i << ": " << TRSsConv[i] << "\n");
+      }
+      const std::vector<std::string> TRSsDiff = m_bcsDiffComs[iBc]->getTrsNames();
+      for (CFuint i = 0; i < TRSsDiff.size(); ++i)
+      {
+	CFLog(VERBOSE, "Diff TRS " << i << ": " << TRSsDiff[i] << "\n");
+      }
+      
     }
 }
 

@@ -14,7 +14,6 @@
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
 #include "FluxReconstructionMethod/RiemannFlux.hh"
 #include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
-#include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -71,8 +70,8 @@ protected: //functions
   /// compute the interface flux correction FI-FD
   void computeInterfaceFlxCorrection();
   
-  /// compute the residual updates (-divFC)
-  void computeResUpdates(std::vector< RealVector >& residuals);
+  /// compute the divergence of the discontinuous flx (-divFD)
+  void computeDivDiscontFlx(std::vector< RealVector >& residuals);
   
   /// add the residual updates to the RHS
   void updateRHS();
@@ -85,8 +84,6 @@ protected: //functions
   
   /**
    * compute the wave speed updates for this face
-   * @pre reconstructFluxPntsStates(), reconstructFaceAvgState(),
-   *      setFaceTermData() and set the geometrical data of the face
    */
   void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd);
   
@@ -111,9 +108,9 @@ protected: //functions
   void addPartitionFacesCorrection();
   
   /**
-   * Compute the discontinuous fluxes in the flx pnts
+   * Compute the left and right states in the flx pnts
    */
-  void computeDiscontinuousFluxes();
+  void computeFlxPntStates();
   
   /// compute the volume term contribution to the gradients
   void computeGradients();
@@ -124,9 +121,6 @@ protected: //functions
 protected: //data
   /// socket for gradients
   Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
-  
-  /// socket for normals
-  Framework::DataSocketSink< CFreal > socket_normals;
   
   /// storage of the rhs
   Framework::DataSocketSink<CFreal> socket_rhs;
@@ -192,9 +186,6 @@ protected: //data
   /// number of solution pnts in the cell
   CFuint m_nbrSolPnts;
   
-  /// number of flx pnts in the cell
-  CFuint m_nbrFlxPnts;
-  
   /// number of face flx pnts
   CFuint m_nbrFaceFlxPnts;
   
@@ -249,9 +240,6 @@ protected: //data
   /// face Jacobian vector sizes
   std::vector< std::vector< CFreal > > m_faceJacobVecSizeFlxPnts;
   
-  /// 1D flux points mapped coordinates
-  Common::SafePtr< std::vector< CFreal > > m_flxPntsLocalCoords1D;
-  
   /// flux point coordinates
   std::vector< RealVector > m_flxPntCoords;
   
@@ -260,6 +248,12 @@ protected: //data
   
   /// updates to the gradients
   std::vector< std::vector< std::vector< RealVector > > > m_gradUpdates;
+  
+  /// coefs to extrapolate the states to the flx pnts
+  Common::SafePtr< std::vector< std::vector< CFreal > > > m_solPolyValsAtFlxPnts;
+  
+  /// coefs to compute the derivative of the states in the sol pnts
+  Common::SafePtr< std::vector< std::vector< std::vector< CFreal > > > > m_solPolyDerivAtSolPnts;
   
   private:
 

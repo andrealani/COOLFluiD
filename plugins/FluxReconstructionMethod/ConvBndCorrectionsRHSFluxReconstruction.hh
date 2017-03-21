@@ -80,9 +80,9 @@ protected: // functions
    * Execute on the current TRS
    */
   virtual void executeOnTrs();
-
-  /// compute the discontinuous flx in the flx points of the face
-  void computeDiscontinuousFlx();
+  
+  /// compute the states and ghost states in the flx pnts
+  void computeFlxPntStates();
   
   /// compute the interface flux correction FI-FD
   void computeInterfaceFlxCorrection();
@@ -166,14 +166,11 @@ protected: // data
   /// solution point mapped coordinates
   Common::SafePtr< std::vector< RealVector > > m_solPntsLocalCoords;
   
-  /// 1D flux points mapped coordinates
-  Common::SafePtr< std::vector< CFreal > > m_flxPntsLocalCoords1D;
+  // flx pnt mapped coordinates
+  std::vector< RealVector > m_flxPntsLocalCoords;
   
   // All flux points of a cell
   Common::SafePtr<std::vector< RealVector > > m_allCellFlxPnts;
-  
-  /// flux points mapped coordinates
-  std::vector< RealVector > m_flxPntsLocalCoords;
   
   /// flux point coordinates
   std::vector< RealVector > m_flxPntCoords;
@@ -225,6 +222,9 @@ protected: // data
   
   /// updates to the gradients
   std::vector< std::vector< RealVector > > m_gradUpdates;
+  
+  /// coefs to extrapolate the states to the flx pnts
+  Common::SafePtr< std::vector< std::vector< CFreal > > > m_solPolyValsAtFlxPnts;
   
   private:
 

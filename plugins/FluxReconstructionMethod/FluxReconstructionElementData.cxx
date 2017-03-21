@@ -69,6 +69,7 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_cellCenterDerivCoefs(),
   m_flxPolyExponents(),
   m_flxPolyCoefs(),
+  m_coefSolPolyDerivInSolPnts(),
   m_coefSolPolyDerivInFlxPnts(),
   m_coefSolPolyDerivInFlxPntsOptim(),
   m_solPntIdxsSolPolyDerivInFlxPntsOptim(),
@@ -79,7 +80,8 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_faceOutputPntConn(),
   m_solPntDistribution(),
   m_flxPntDistribution(),
-  m_faceNormals()
+  m_faceNormals(),
+  m_coefSolPolyInFlxPnts()
 //   socket_solCoords1D("solCoords1D"),
 //   socket_flxCoords1D("flxCoords1D")
 {
@@ -162,8 +164,9 @@ void FluxReconstructionElementData::resetFluxReconstructionElementData()
   createCellAvgSolCoefs();
   createCellCenterDerivCoefs();
   setCFLConvDiffRatio();
-  createCoefSolPolyDerivInFlxPnts();
+  createCoefSolPolyDerivInSolPnts();
   createCoefSolPolyDerivInFlxPntsOptim();
+  createCoefSolPolyInFlxPnts();
   createFaceFlxPntsCellLocalCoords();
   createFaceOutputPntCellMappedCoords();
   createFaceOutputPntSolPolyAndDerivCoef();
@@ -745,26 +748,18 @@ void FluxReconstructionElementData::computeFlxPolyCoefs()
 
 //////////////////////////////////////////////////////////////////////
 
-void FluxReconstructionElementData::createCoefSolPolyDerivInFlxPnts()
+void FluxReconstructionElementData::createCoefSolPolyDerivInSolPnts()
 {
   //CFLog(VERBOSE,"createCoefSolPolyDerivInFlxPnts\n");
-  m_coefSolPolyDerivInFlxPnts = getSolPolyDerivsAtNode(m_flxPntsLocalCoords);
-//   if (m_polyOrder == CFPolyOrder::ORDER1)
-//   {
-//     for (CFuint iFlx = 0; iFlx < m_coefSolPolyDerivInFlxPnts.size(); ++iFlx)
-//     {
-//       CF_DEBUG_OBJ(iFlx);
-//       for (CFuint iDir = 0; iDir < m_coefSolPolyDerivInFlxPnts[iFlx].size(); ++iDir)
-//       {
-//         CF_DEBUG_OBJ(iDir);
-//         for (CFuint iSol = 0; iSol < m_coefSolPolyDerivInFlxPnts[iFlx][iDir].size(); ++iSol)
-//         {
-//           CF_DEBUG_OBJ(m_coefSolPolyDerivInFlxPnts[iFlx][iDir][iSol]);
-//         }
-//       }
-//     }
-//     CF_DEBUG_EXIT;
-//   }
+  m_coefSolPolyDerivInSolPnts = getSolPolyDerivsAtNode(m_solPntsLocalCoords);
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionElementData::createCoefSolPolyInFlxPnts()
+{
+  //CFLog(VERBOSE,"createCoefSolPolyDerivInFlxPnts\n");
+  m_coefSolPolyInFlxPnts = getSolPolyValsAtNode(m_flxPntsLocalCoords);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -772,36 +767,36 @@ void FluxReconstructionElementData::createCoefSolPolyDerivInFlxPnts()
 void FluxReconstructionElementData::createCoefSolPolyDerivInFlxPntsOptim()
 {
   CFAUTOTRACE;
-  //CFLog(VERBOSE,"createCoefSolPolyDerivInFlxPntsOptim\n");
-
-  // get number of solution points
-  const CFuint nbrSolPnts = getNbrOfSolPnts();
-
-  // get number of flux points
-  const CFuint nbrFlxPnts = getNbrOfFlxPnts();
-
-  // loop over flux points to search solution points
-  // with nonzero coefficients for derivative computation
-  m_coefSolPolyDerivInFlxPntsOptim.resize(nbrFlxPnts);
-  m_solPntIdxsSolPolyDerivInFlxPntsOptim.resize(nbrFlxPnts);
-  for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
-  {
-    m_coefSolPolyDerivInFlxPntsOptim      [iFlx].resize(m_dimensionality);
-    m_solPntIdxsSolPolyDerivInFlxPntsOptim[iFlx].resize(m_dimensionality);
-    for (CFuint iDir = 0; iDir < static_cast<CFuint>(m_dimensionality); ++iDir)
-    {
-      for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-      {
-        if (std::abs(m_coefSolPolyDerivInFlxPnts[iFlx][iDir][iSol]) > 1e-10)
-        {
-          m_coefSolPolyDerivInFlxPntsOptim      [iFlx][iDir]
-              .push_back(m_coefSolPolyDerivInFlxPnts[iFlx][iDir][iSol]);
-          m_solPntIdxsSolPolyDerivInFlxPntsOptim[iFlx][iDir]
-              .push_back(iSol);
-        }
-      }
-    }
-  }
+//   //CFLog(VERBOSE,"createCoefSolPolyDerivInFlxPntsOptim\n");
+// 
+//   // get number of solution points
+//   const CFuint nbrSolPnts = getNbrOfSolPnts();
+// 
+//   // get number of flux points
+//   const CFuint nbrFlxPnts = getNbrOfFlxPnts();
+// 
+//   // loop over flux points to search solution points
+//   // with nonzero coefficients for derivative computation
+//   m_coefSolPolyDerivInFlxPntsOptim.resize(nbrFlxPnts);
+//   m_solPntIdxsSolPolyDerivInFlxPntsOptim.resize(nbrFlxPnts);
+//   for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+//   {
+//     m_coefSolPolyDerivInFlxPntsOptim      [iFlx].resize(m_dimensionality);
+//     m_solPntIdxsSolPolyDerivInFlxPntsOptim[iFlx].resize(m_dimensionality);
+//     for (CFuint iDir = 0; iDir < static_cast<CFuint>(m_dimensionality); ++iDir)
+//     {
+//       for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+//       {
+//         if (std::abs(m_coefSolPolyDerivInFlxPnts[iFlx][iDir][iSol]) > 1e-10)
+//         {
+//           m_coefSolPolyDerivInFlxPntsOptim      [iFlx][iDir]
+//               .push_back(m_coefSolPolyDerivInFlxPnts[iFlx][iDir][iSol]);
+//           m_solPntIdxsSolPolyDerivInFlxPntsOptim[iFlx][iDir]
+//               .push_back(iSol);
+//         }
+//       }
+//     }
+//   }
 }
 
 //////////////////////////////////////////////////////////////////////

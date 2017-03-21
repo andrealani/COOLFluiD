@@ -237,6 +237,9 @@ private: // data
   /// The boundary condition command names for configuration
   std::vector<std::string> m_bcNameStr;
   
+  /// The diffusion boundary condition command names for configuration
+  std::vector<std::string> m_bcNameDiffStr;
+  
   ///The data to share between FluxReconstructionSolverCom commands
   Common::SharedPtr< FluxReconstructionSolverData > m_data;
   

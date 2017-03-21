@@ -84,6 +84,11 @@ protected: // functions
    * Recreates the nodes to match the new geometrically high-order elements
    */
   virtual void recreateNodes();
+  
+  /**
+   * Divide the elements in equal parts to form new elements
+   */
+  virtual void divideElements();
 
   /**
    * Returns the number of states in a spectral difference cell of given shape and order
@@ -132,6 +137,12 @@ protected: // data
 
   /// string holding the spectral finite difference polynomial order
   std::string m_solPolyOrderStr;
+  
+  /// number of times the cells will be divided in equal parts to form new cells
+  CFuint m_elementDivision;
+  
+  /// string holding the number of times the cells will be divided
+  std::string m_elementDivisionStr;
 
   /// geometrical polynomial order
   CFPolyOrder::Type m_geoPolyOrder;
@@ -162,6 +173,9 @@ protected: // data
   
   /// stores the old local ID of the first state in an element
   std::vector< CFuint > m_elemFirstStateLocalID;
+  
+  /// connectivity pattern
+  std::valarray<CFuint>  m_pattern;
   
 
 };  // end of class MeshUpgradeBuilder

@@ -36,6 +36,7 @@ void MeshUpgradeBuilder::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< std::string >("PolynomialOrder","Flux Reconstruction polynomial order.");
   options.addConfigOption< std::string >("GeoPolynomialOrder","Geometrical polynomial order.");
+  options.addConfigOption< std::string >("DivideElements","Divide elements on equal parts to form new cells. This number is equal to te number of element adjescend to an old element face");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -44,6 +45,7 @@ MeshUpgradeBuilder::MeshUpgradeBuilder(const std::string& name) :
   FluxReconstructionBuilder(name),
   m_solPolyOrder(),
   m_geoPolyOrder(),
+  m_elementDivision(),
   m_prevGeoPolyOrder(),
   m_bndFacesNodes(),
   m_globalIDs(),
@@ -59,6 +61,9 @@ MeshUpgradeBuilder::MeshUpgradeBuilder(const std::string& name) :
 
   m_geoPolyOrderStr = "P1";
   setParameter( "GeoPolynomialOrder", &m_geoPolyOrderStr);
+  
+  m_elementDivisionStr = "1";
+  setParameter( "DivideElements", &m_elementDivisionStr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -325,6 +330,18 @@ void MeshUpgradeBuilder::computeGeoTypeInfo()
 void MeshUpgradeBuilder::createTopologicalRegionSets()
 {
   CFAUTOTRACE;
+  
+  CFLog(NOTICE, "MeshUpgradeBuilder: dividing elements in " << m_elementDivisionStr << "equal parts to form new elements\n");
+  
+  if (m_elementDivision != 1)
+  {
+    if (m_prevGeoPolyOrder != CFPolyOrder::ORDER1)
+    {
+      CFLog(NOTICE, "For now, by dividing the elements the geometric poly order will be reduced to P1!\n");
+    }
+    
+    divideElements();
+  }
 
   CFLog(NOTICE,"MeshUpgradeBuilder: upgrading mesh to solution polynomial order " << m_solPolyOrderStr << "\n");
 
@@ -348,6 +365,148 @@ void MeshUpgradeBuilder::createTopologicalRegionSets()
   FluxReconstructionBuilder::createTopologicalRegionSets();
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+void MeshUpgradeBuilder::divideElements()
+{
+  SafePtr< vector<ElementTypeData> > elementType =
+    getCFmeshData().getElementTypeData();
+    
+  SafePtr<MeshData::ConnTable> cellStates = MeshDataStack::getActive()->getConnectivity("cellStates_InnerCells");
+  SafePtr<MeshData::ConnTable> cellNodes = MeshDataStack::getActive()->getConnectivity("cellNodes_InnerCells");
+    
+  const CFuint nbElements = getCFmeshData().getNbElements();
+
+  const CFuint nbElementTypes = getCFmeshData().getNbElementTypes();
+  cf_assert(nbElementTypes == elementType->size());
+  const Cfuint nbNewCellsPerOldCell = pow(m_elementDivision,getCFmeshData().getDimension());
+  
+  m_pattern.resize(nbElements*nbNewCellsPerOldCell);
+  
+  
+  // set the correct number of nodes per element in m_pattern
+  CFuint elemID = 0;
+  CFuint firstFreeIdx = nbElements;
+  for(CFuint iType = 0; iType <  nbElementTypes; ++iType) 
+  {
+
+    const CFuint nbElemsPerType = (*elementType)[iType].getNbElems();
+    const CFGeoShape::Type elemGeoShape = (*elementType)[iType].getGeoShape();
+    for(CFuint iElem = 0; iElem < nbElemsPerType; ++iElem, ++elemID) 
+    {
+
+      switch(elemGeoShape) 
+      {
+
+      case CFGeoShape::TRIAG:
+        m_pattern[elemID] = 3;
+	for (Cfuint iNewCell = 0; iNewCell < nbNewCellsPerOldCell; ++iNewCell,++firstFreeIdx)
+	{
+	  m_pattern[firstFreeIdx] = 3;
+	}
+        break;
+
+      case CFGeoShape::QUAD:
+        m_pattern[elemID] = 4;
+        for (Cfuint iNewCell = 0; iNewCell < nbNewCellsPerOldCell; ++iNewCell,++firstFreeIdx)
+	{
+	  m_pattern[firstFreeIdx] = 4;
+	}
+        break;
+	
+      case CFGeoShape::HEXA:
+        m_pattern[elemID] = 8;
+        for (Cfuint iNewCell = 0; iNewCell < nbNewCellsPerOldCell; ++iNewCell,++firstFreeIdx)
+	{
+	  m_pattern[firstFreeIdx] = 8;
+	}
+        break;
+
+      default:
+        std::string shape =
+          CFGeoShape::Convert::to_str(elemGeoShape);
+        std::string msg = std::string("Element type not implemented: ") + shape;
+        throw Common::NotImplementedException (FromHere(),msg);
+      }
+    }
+  }
+  cf_assert(firstFreeIdx == m_pattern.size());
+  
+  CFuint newNbElements = nbElements;
+
+  elemID = 0;
+//   for (CFuint iType = 0; iType < nbElementTypes; ++iType) 
+//   {
+//     const CFGeoShape::Type currShape = (*elementType)[iType].getGeoShape();
+//     const CFuint nbElemPerType = (*elementType)[iType].getNbElems();
+// 
+//     for(CFuint iElem = 0; iElem < nbElemPerType; ++iElem) 
+//     {
+// 
+//       switch(currShape) 
+//       {
+// 
+//       case CFGeoShape::TRIAG:
+// 
+//         for(CFuint localID = 0; localID < 3; ++localID) {
+// 
+//           (*elementNode)(elemID,localID) =
+//             _oldElemNode (elemID,localID);
+// 
+//           (*elementState)(elemID,localID) =
+//             _oldElemState(elemID,localID);
+//         }
+// 
+//         ++elemID;
+//         break;
+// 
+//       case CFGeoShape::QUAD:
+//         {
+//         newNbElements += 1;
+// 
+//         vector<CFuint> newID(2);
+//         newID[0] = elemID;
+//         newID[1] = nbElements + quadElemID;
+// 
+// /*        CFuint oldNbElemsPerType = (*elementType)[_triagTypeID].getNbElems();
+//         (*elementType)[_triagTypeID].setNbElems(oldNbElemsPerType + 1);*/
+// 
+//         vector<CFuint> tempQuad;
+//         tempQuad.resize(4);
+//         // Create the Quad
+// 
+//         for(CFuint localID = 0; localID < 4; ++localID) {
+//           tempQuad[localID] = _oldElemNode(elemID,localID);
+//         }
+// 
+//         splitQuads(tempQuad);
+// 
+//         //Create the triangles
+//         for (CFuint iTriag = 0; iTriag < 2; ++iTriag) {
+//           for(CFuint localID = 0; localID < 3; ++localID) {
+//             (*elementNode)(newID[iTriag],localID) = _newTriags[iTriag][localID];
+//             (*elementState)(newID[iTriag],localID) = _newTriags[iTriag][localID];
+//           }
+//         }
+// 
+//         ++elemID;
+//         ++quadElemID;
+//         }
+//         break;
+// 
+//       default:
+// 
+//         std::string shape = CFGeoShape::Convert::to_str(currShape);
+// 
+//         std::string msg = std::string("Wrong kind of elements present in 2D mesh: ") +
+//                        shape +
+//                        std::string(" ElemID: ") +
+//                        Common::StringOps::to_str(++elemID);
+//         throw BadValueException (FromHere(),msg);
+//         }
+//     }
+//   }
+}
 //////////////////////////////////////////////////////////////////////////////
 
 void MeshUpgradeBuilder::upgradeStateConnectivity()

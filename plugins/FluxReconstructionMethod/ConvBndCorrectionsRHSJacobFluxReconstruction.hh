@@ -8,7 +8,6 @@
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
 #include "FluxReconstructionMethod/RiemannFlux.hh"
 #include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
-#include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
 #include "FluxReconstructionMethod/ConvBndCorrectionsRHSFluxReconstruction.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -114,9 +113,6 @@ protected: // data
 
   /// derivative of update to one CV-residual
   RealVector m_derivResUpdates;
-  
-  /// Strategy that reconstructs the states in a given number of nodes
-  Common::SafePtr< ReconstructStatesFluxReconstruction > m_statesReconstr;
   
   /// perturbed corrections due to the boundary faces for the Jacobian
   std::vector< RealVector> m_pertCorrections;

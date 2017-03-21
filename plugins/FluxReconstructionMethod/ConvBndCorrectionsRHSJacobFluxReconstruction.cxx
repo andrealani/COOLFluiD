@@ -88,6 +88,9 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
   geoData.facesTRS = faceTrs;
   geoData.isBoundary = true;
   
+  // boolean telling whether there is a diffusive term
+  const bool hasDiffTerm = getMethodData().hasDiffTerm();
+  
   // loop over TRs
   for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
   {
@@ -119,24 +122,29 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
 	// get the states in the neighbouring cell
         m_cellStates = m_intCell->getStates();
 	
-	CFLog(VERBOSE,"faceID: " << faceID << "\n");
-	CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
-	CFLog(VERBOSE,"coord state 0: " << (((*m_cellStates)[0])->getCoordinates()) << "\n");
-	
-	setBndFaceData(m_face->getID());//faceID
+	//CFLog(VERBOSE,"faceID: " << faceID << "\n");
+	//CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
+	//CFLog(VERBOSE,"coord state 0: " << (((*m_cellStates)[0])->getCoordinates()) << "\n");
 
-        // if cell is parallel updatable, compute the correction flux
-        if ((*m_cellStates)[0]->isParUpdatable())
+        // if cell is parallel updatable or the gradients have to be computed, compute states and ghost states in the flx pnts
+        if ((*m_cellStates)[0]->isParUpdatable() || hasDiffTerm)
         {
-	  // compute the discontinuous flx in the flx pnts
-	  computeDiscontinuousFlx();
-	  
 	  // set the face ID in the BCStateComputer
 	  m_bcStateComputer->setFaceID(m_face->getID());
-      
+	  
+	  // set the bnd face data
+	  setBndFaceData(m_face->getID());//faceID
+	  
+	  // compute the perturbed states and ghost states in the flx pnts
+          computeFlxPntStates();
+	}
+	
+	// if the cell is parallel updatable,compute the flx correction
+	if ((*m_cellStates)[0]->isParUpdatable())
+	{
 	  // compute FI-FD
           computeInterfaceFlxCorrection();
-      
+	  
           // compute the wave speed updates
           computeWaveSpeedUpdates(m_waveSpeedUpd);
       
@@ -148,7 +156,17 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
 	  
 	  // update the rhs
           updateRHS();
+	}
 	  
+	// if there is a diffusive term, compute the gradients
+        if (hasDiffTerm)
+        {
+          computeGradientBndFaceCorrections();
+        }
+	
+	// if the cell is parallel updatable, compute the contribution to the numerical jacobian
+	if ((*m_cellStates)[0]->isParUpdatable())
+	{
 	  // compute the convective boundary flux correction contribution to the jacobian
 	  computeJacobConvBndCorrection();
         }
@@ -187,9 +205,6 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
 
 void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection()
 {
-  // get number of solution points in the cell
-  const CFuint nbrSolPnts = m_cellStates->size();
-
   // get residual factor
   const CFreal resFactor = getMethodData().getResFactor();
 
@@ -197,13 +212,13 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
   BlockAccumulator& acc = *m_acc;
 
   // set block row and column indices
-  for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
     acc.setRowColIndex(iSol,(*m_cellStates)[iSol]->getLocalID());
   }
   
   // put the perturbed and unperturbed corrections in the correct format
-  for (CFuint iState = 0; iState < nbrSolPnts; ++iState)
+  for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
   {
     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
     {
@@ -212,7 +227,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
   }
 
   // loop over the states in the internal cell to perturb the states
-  for (CFuint iSolPert = 0; iSolPert < nbrSolPnts; ++iSolPert)
+  for (CFuint iSolPert = 0; iSolPert < m_nbrSolPnts; ++iSolPert)
   {
     // dereference state
     State& pertState = *(*m_cellStates)[iSolPert];
@@ -225,19 +240,17 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
 
       // backup and reconstruct physical variable in the flux points
       // and reconstruct the ghost states)
-      backupAndReconstructPhysVar(iEqPert,*m_cellStates);
+      //backupAndReconstructPhysVar(iEqPert,*m_cellStates);
       
-      computeDiscontinuousFlx();
+      // compute the perturbed states and ghost states in the flx pnts
+      computeFlxPntStates();
 
-      // compute the perturbed boundary face term
+      // compute the perturbed interface flx correction
       computeInterfaceFlxCorrection();
       computeCorrection(m_pertCorrections);
       
-      // get nb of states
-      const CFuint nbrStates = m_cellStates->size();
-      
       // put the perturbed and unperturbed corrections in the correct format
-      for (CFuint iState = 0; iState < nbrStates; ++iState)
+      for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
       {
         for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
 	{
@@ -254,7 +267,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
 
       // add the derivative of the residual updates to the accumulator
       CFuint resUpdIdx = 0;
-      for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol, resUpdIdx += m_nbrEqs)
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol, resUpdIdx += m_nbrEqs)
       {
         acc.addValues(iSol,iSolPert,iEqPert,&m_derivResUpdates[resUpdIdx]);
       }
@@ -263,7 +276,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
       m_numJacob->restore(pertState[iEqPert]);
 
       // restore physical variable in the flux points
-      restorePhysVar(iEqPert);
+      //restorePhysVar(iEqPert);
       
     }
   }
@@ -329,16 +342,6 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::setup()
 
   ConvBndCorrectionsRHSFluxReconstruction::setup();
   
-  // get the states reconstructor
-  m_statesReconstr = getMethodData().getStatesReconstructor();
-  
-  // get the local spectral FD data
-  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
-  cf_assert(frLocalData.size() > 0);
-  
-  // number of sol points
-  const CFuint nbrSolPnts = frLocalData[0]->getNbrOfSolPnts();
-  
   // get the linear system solver
   m_lss = getMethodData().getLinearSystemSolver()[0];
 
@@ -353,9 +356,9 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::setup()
   m_pertResUpdates .resize(nbrRes);
   m_derivResUpdates.resize(nbrRes);
   m_resUpdates .resize(nbrRes);
-  m_pertCorrections.resize(nbrSolPnts);
+  m_pertCorrections.resize(m_nbrSolPnts);
   
-  for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
     m_pertCorrections[iSol].resize(m_nbrEqs);
   }
