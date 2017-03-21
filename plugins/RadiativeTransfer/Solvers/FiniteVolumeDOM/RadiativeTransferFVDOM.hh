@@ -8,6 +8,7 @@
 #include "Framework/DataSocketSource.hh"
 #include "Framework/CellTrsGeoBuilder.hh"
 #include "Framework/GeometricEntityPool.hh"
+#include "Framework/PhysicalConsts.hh"
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -151,6 +152,9 @@ public:
    */
   void writeRadialData();
 
+  /// write the tangent slab data	
+  void writeTGSData();
+
   /**
    * Writes dir_ID, cosines and weight for each direction. Vectors are centered in (0,0,0) 
    * (only if option RadialData is enabled)
@@ -194,14 +198,10 @@ protected: //function
   /// @param d   ID of the direction
   void computeQNoExponential(const CFuint ib, const CFuint dStart, const CFuint d);
 
-  /**
-   * Computes wall heat flux
-   *
-   */
+  /// parallel reduce the heat flux
+  void reduceHeatFlux();
 
-  void computeWallHeatFlux();
 
-  
   /// diagnose problem when advance order algorithm fails
   void diagnoseProblem(const CFuint d, const CFuint m, const CFuint mLast);
   
@@ -246,11 +246,56 @@ protected: //function
     return -1;
   }
   
+  // AL: gory fix to be REMOVED!  use Radiator!
+  // returns the blackbody intensity for a given wall face
+  CFreal getFaceIbq(const CFuint faceID) 
+  {
+   const CFint faceIdx = getWallFaceID(faceID);
+   cf_assert(faceIdx > -1);
+   const std::string wallTRSName = m_mapGeoToTrs->getTrs(faceID)->getName();
+   Framework::FaceTrsGeoBuilder::GeoData& facesData = m_wallFaceBuilder.getDataGE();
+   Common::SafePtr<Framework::TopologicalRegionSet> wallFaces = Framework::MeshDataStack::getActive()->getTrs(wallTRSName);
+   facesData.trs = wallFaces;
+   facesData.idx = faceIdx;
+   const Framework::GeometricEntity *const face = m_wallFaceBuilder.buildGE();
+   const std::vector<Framework::Node*> faceNodes = face->getNodes();
+   const CFuint nbFaceNodes = faceNodes.size();
+   m_wallFaceBuilder.releaseGE();
+      
+   CFreal Temp = 0.;
+   for(CFuint iNode=0; iNode<nbFaceNodes; ++iNode) {
+     const CFuint nodeID = faceNodes[iNode]->getLocalID();
+     Temp += socket_nstates.getDataHandle()[nodeID][m_TID];
+   }
+   Temp /= nbFaceNodes;
+
+   //const CFreal sigma = Framework::PhysicalConsts::StephanBolzmann(); //W*(m^-2)*(K^-4)
+   const CFreal sigma = 5.670367*(std::pow(10,-8)); //W*(m^-2)*(K^-4)
+   return sigma*(std::pow(Temp, 4)); //W*(m^-2)
+  }
+  
+  // AL: gory fix to be REMOVED!  use Radiator!
+  // returns 1 if the cell is in the fluid field
+  // returns 0 if it isn't
+  CFuint isInner(const CFuint iCell, const CFuint faceID)
+  {
+   const CFint faceIdx = getWallFaceID(faceID);
+   const std::string wallTRSName = m_mapGeoToTrs->getTrs(faceID)->getName();
+   Framework::FaceTrsGeoBuilder::GeoData& facesData = m_wallFaceBuilder.getDataGE();
+   Common::SafePtr<Framework::TopologicalRegionSet> wallFaces = Framework::MeshDataStack::getActive()->getTrs(wallTRSName);
+   facesData.trs = wallFaces;
+   facesData.idx = faceIdx;
+   const Framework::GeometricEntity *const face = m_wallFaceBuilder.buildGE();
+   const CFuint cellIDin = face->getState(0)->getGlobalID();
+   m_wallFaceBuilder.releaseGE();
+
+   cf_assert(iCell == cellIDin);
+   if(iCell == cellIDin){ return 1; }
+   else { return 0; }
+  }
+  
   /// flag telling whether opacities tables are available
   bool readOpacityTables() const {return (m_binTabName != "");}
-  
-  /// parallel reduce the heat flux
-  void reduceHeatFlux();
   
 protected: //data
   
@@ -296,7 +341,7 @@ protected: //data
   
   /// storage of the qz
   Framework::DataSocketSource <CFreal> socket_qz;
-  
+ 
   /// storage of the radiative source table. Source[ib](it,ip)
   Framework::DataSocketSource <CFreal> socket_TempProfile; 
 
@@ -308,7 +353,7 @@ protected: //data
   
   /// the socket to the radiative heat flux at the wall faces
   Framework::DataSocketSource <CFreal> socket_qradFluxWall;
-  
+
   /// pointer to the physical-chemical library
   Common::SafePtr<Framework::PhysicalChemicalLibrary> m_library; 
   
@@ -432,6 +477,9 @@ protected: //data
   
   /// option to print the radial q and divQ for the Sphere
   bool m_radialData;
+
+  /// use tangent slab data
+  bool m_TGSData;
   
   /// old algorithm just kept for comparison purposes
   bool m_oldAlgo;
@@ -502,10 +550,13 @@ protected: //data
 
   /// option to print directions
   bool m_directions;
-  
+
+  /// AL: to be removed: this should be set inside the Radiator!!
+  CFreal m_wallEmissivity;
+
   /// name of the radiation namespace
   std::string m_radNamespace;
-  
+
 }; // end of class RadiativeTransferFVDOM
       
 //////////////////////////////////////////////////////////////////////////////

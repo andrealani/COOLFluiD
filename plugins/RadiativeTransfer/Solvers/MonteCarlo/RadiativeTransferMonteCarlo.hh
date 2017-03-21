@@ -1126,12 +1126,8 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
   
   CFLog(VERBOSE, "RadiativeTransferMonteCarlo computeHeatFlux() START\n");
   
-  //  cout<<endl<<"COMPUTE HEAT FLUX"<<endl;
-  //  cout<<"delta wave: "<<m_deltaWavs[m_spectralIdx]<<endl;
-
   DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
-
   DataHandle<CFreal> gasRadiativeHeatSource = socket_qrad.getDataHandle();
   
   m_stateInRadPowers.sincronizeAssign();
@@ -1147,7 +1143,7 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
       //cout<<"state: "<<m_stateInRadPowers[istate]<<
       //	      ' '<< m_stateRadPower[istate]<<' '<<gasRadiativeHeatSource[istate]<<endl;
     
-    //}
+      //}
   }
 
   //Fill qradFluxWall socket (loop Trs idxs for each trs)
@@ -1158,30 +1154,27 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
 
   vector<string> wallTrsNames;
   m_radiation->getWallTRSnames(wallTrsNames);
-
   const CFuint nbWallTrs = wallTrsNames.size();
-  //  CFLog(INFO, "############# nbWallTrs = " << nbWallTrs << "\n");
- 
+  CFLog(VERBOSE, "RadiativeTransferMonteCarlo::computeHeatFlux() => nbWallTrs = " << nbWallTrs << "\n");
+  
   CFuint ff = 0;
   for(CFuint i=0; i<nbWallTrs; ++i){
-
     Framework::FaceTrsGeoBuilder::GeoData& facesData = m_wallFaceBuilder.getDataGE();
-
-    SafePtr<TopologicalRegionSet> wallFaces =
-            MeshDataStack::getActive()->getTrs(wallTrsNames[i]);
-
+    SafePtr<TopologicalRegionSet> wallFaces = 
+      MeshDataStack::getActive()->getTrs(wallTrsNames[i]);
+    
     facesData.trs = wallFaces;
     const CFuint nbFacesWall = wallFaces->getLocalNbGeoEnts();
     //cout<<"CPU "<< Common::PE::GetPE().GetRank()<<": trying TRS " << wallTrsNames[i]<<" whith "<<nbFacesWall<< " faces " <<endl;
-
+    
     for(CFuint f=0; f<nbFacesWall; ++f, ++ff){
       facesData.idx = f;
       Framework::GeometricEntity *const face = m_wallFaceBuilder.buildGE();
-      CFuint faceGeoID = face->getID();
-      CFuint faceGhostStateID = face->getState(1)->getLocalID();
+      const CFuint faceGeoID = face->getID();
+      const CFuint faceGhostStateID = face->getState(1)->getLocalID();
       CFreal area = faceAreas[faceGeoID];
       area *= (m_isAxi) ? 6.283185307179586*faceCenters[faceGeoID*DIM_2D + YY] : 1.;
-   
+      
       //  CFLog(INFO, "face[" << f << "] =>" <<  m_ghostStateInRadPowers[faceGhostStateID] << ", " 
       //	<< m_ghostStateRadPower[faceGhostStateID] << "\n");
       wallRadiativeHeatSource[ff] = (-m_ghostStateInRadPowers[faceGhostStateID]

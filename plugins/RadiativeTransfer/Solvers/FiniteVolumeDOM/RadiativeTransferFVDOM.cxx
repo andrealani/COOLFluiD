@@ -109,7 +109,7 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   
   m_dirName = Environment::DirPaths::getInstance().getWorkingDir();
   setParameter("DirName", &m_dirName);
-    
+  
   m_binTabName = "";
   setParameter("BinTabName", &m_binTabName); 
   
@@ -131,7 +131,7 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   m_binningPARADE = false;
   setParameter("BinningPARADE", &m_binningPARADE);
   
-  m_Nr = 100;
+  m_Nr = 50;
   setParameter("NbRadialPoints", &m_Nr);
   
   m_constantP = -1.; // negative by default to force to give pressure if needed
@@ -183,9 +183,15 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   setParameter("rule_azi", &m_rule_azi);
   
   m_directions = false;
-  setParameter("directions", &m_directions); 
-  
-  // AL: to be removed once a cleaner solution is found 
+  setParameter("directions", &m_directions);
+
+  m_TGSData = false;
+  setParameter("TGSData", &m_TGSData);
+
+  m_wallEmissivity = 1;
+  setParameter("wallEmissivity", &m_wallEmissivity);
+
+// AL: to be removed once a cleaner solution is found 
   m_radNamespace = "Default";
   setParameter("RadNamespace", &m_radNamespace);
 }
@@ -237,7 +243,8 @@ void RadiativeTransferFVDOM::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< string >("rule_polar","Rule for polars computation.");
   options.addConfigOption< string >("rule_azi","Rule for azimut computation.");
   options.addConfigOption< bool >("directions","Option to write directions");
-  
+  options.addConfigOption< bool >("TGSData","axial q and divQ for the TGS case");
+  options.addConfigOption< CFreal >("wallEmissivity","The value of wall emissivity");
   // AL: to be removed once a cleaner solution is found 
   options.addConfigOption< string >
     ("RadNamespace","Namespace grouping all ranks involved in parallel communication");
@@ -323,7 +330,7 @@ void RadiativeTransferFVDOM::setup()
   // source sockets cannot be copied
   sockets.alpha_avbin = socket_alpha_avbin.getDataHandle();
   sockets.B_bin       = socket_B_bin.getDataHandle();
-  
+ 
   m_radiation->setupDataSockets(sockets);
   m_radiation->setup();
   m_radiation->configureTRS();
@@ -575,6 +582,7 @@ void RadiativeTransferFVDOM::setup()
   DataHandle<CFreal> qy = socket_qy.getDataHandle();
   DataHandle<CFreal> qz = socket_qz.getDataHandle();
   DataHandle<CFreal> TempProfile = socket_TempProfile.getDataHandle();
+
   divQ.resize(nbCells);
   CellID.resize(nbCells);
   TempProfile.resize(nbCells);
@@ -587,7 +595,6 @@ void RadiativeTransferFVDOM::setup()
   qx     = 0.0;
   qy     = 0.0;
   qz     = 0.0;
-  
   CellID = 0.0;
   TempProfile = 0.0;
   
@@ -620,9 +627,10 @@ void RadiativeTransferFVDOM::setup()
   }
   // preallocation of memory for qradFluxWall
   socket_qradFluxWall.getDataHandle().resize(nbFaces);
-  
+  socket_qradFluxWall.getDataHandle() = 0.0;
+
   //Averages for the Sphere case
-  if (m_radialData) {
+  if (m_radialData || m_TGSData) {
     m_qrAv.resize(m_Nr);
     m_divqAv.resize(m_Nr);
     m_qrAv   = 0.;
@@ -1336,7 +1344,7 @@ void RadiativeTransferFVDOM::execute()
     DataHandle<CFreal> qx   = socket_qx.getDataHandle();
     DataHandle<CFreal> qy   = socket_qy.getDataHandle();
     DataHandle<CFreal> qz   = socket_qz.getDataHandle();
-    
+
     // const string fileName = "divq-" + StringOps::to_str(PE::GetPE().GetRank("Default"));
     // ofstream fout(fileName.c_str());
     
@@ -1350,11 +1358,12 @@ void RadiativeTransferFVDOM::execute()
       writeRadialData();
     } 
 
-    // computeWallHeatFlux();
+    if (m_TGSData){
+      writeTGSData();
+    } 
+
+    reduceHeatFlux();
   }
-  
-  // AL: to be removed once a better solution is found
-  // reduceHeatFlux();
   
   CFLog(INFO, "RadiativeTransferFVDOM::execute() => took " << stp.read() << "s \n");
 }
@@ -1689,7 +1698,6 @@ void RadiativeTransferFVDOM::unsetup()
 {
   CFAUTOTRACE;
   
- 
   DataProcessingCom::unsetup();
 }
       
@@ -1814,7 +1822,8 @@ void RadiativeTransferFVDOM::computeQExponential(const CFuint ib,
   CFLog(VERBOSE, 
 	"RadiativeTransferFVDOM::computeQExponential() in (bin, dir) = ("
 	<< ib << ", " << d << ") => start\n");
-  
+  DataHandle<CFreal> qradFluxWall = socket_qradFluxWall.getDataHandle();
+  DataHandle<CFreal> faceAreas = socket_faceAreas.getDataHandle();
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
   DataHandle<CFreal> divQ = socket_divq.getDataHandle();
   CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
@@ -1848,6 +1857,10 @@ void RadiativeTransferFVDOM::computeQExponential(const CFuint ib,
     }*/
   //////
   
+  // AL: allocation arrays for heat flux (use reserve!!!)
+  std::vector< CFuint > wallfIdx;
+  std::vector< CFreal > ddd;
+  std::vector< CFreal > Ibq;
 
   const CFuint startCell = (d-dStart)*nbCells;
   for (CFuint m = 0; m < nbCells; m++) {
@@ -1868,11 +1881,22 @@ void RadiativeTransferFVDOM::computeQExponential(const CFuint ib,
     
     const CFuint nbFaces = cellFaces->nbCols(iCell);
     //    cf_assert(nbFaces == nbFacesInCell[iCell]);
+    
     for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
       const CFuint faceID = (*cellFaces)(iCell, iFace);
       const CFreal factor = ((CFuint)(isOutward[faceID]) != iCell) ? -1. : 1.;
       const CFreal dirDotNA = m_dotProdInFace[faceID]*factor;
       
+      // AL: check on wall faces and emissivities (use Radiator for this!!!)
+      const CFint isWallFace = getWallFaceID(faceID);
+      // isInner would always be true...
+      const bool isComputingWallFace = qradFluxWall.size() > 0 && isWallFace != -1 && isInner(iCell, faceID) == 1;
+      if(isComputingWallFace) {
+	wallfIdx.push_back(isWallFace);
+	ddd.push_back(dirDotNA*m_weight[d]/faceAreas[faceID]);
+	Ibq.push_back(getFaceIbq(faceID));
+      }
+
       if(dirDotNA < 0.) {
 	dirDotnANeg += dirDotNA;
 	
@@ -1886,10 +1910,16 @@ void RadiativeTransferFVDOM::computeQExponential(const CFuint ib,
 	  const CFuint neighborCellID = getNeighborCellID(faceID, iCell);
 	  inDirDotnANeg += m_In[neighborCellID]*dirDotNA;
 	}
-	else {
+	else { // it recognizes a wall as it was a boundary
+         if(isComputingWallFace) { // is a wall
+	   inDirDotnANeg += m_wallEmissivity*getFaceIbq(faceID)*dirDotNA/m_multiSpectralIdx; //divided by m_multiSpectralIdx
+             //CFLog(INFO,"WALL FACE ------------> " << getWallFaceID(faceID) << ", SOURCE ----> " << m_wallEmissivity*getFaceIbq(faceID) <<"\n");
+          }
+          else { // is another boundary
 	  const CFreal boundarySource = m_fieldSource[iCell];
 	  inDirDotnANeg += boundarySource*dirDotNA;
-	}
+	 }
+        }
       }
       else if (dirDotNA > 0.) {
 	POP_dirDotNA += dirDotNA;
@@ -1901,6 +1931,27 @@ void RadiativeTransferFVDOM::computeQExponential(const CFuint ib,
     const CFreal InCell = (inDirDotnANeg/dirDotnANeg)*halfExp*halfExp + (1. - halfExp*halfExp)*m_fieldSource[iCell];
     Ic          = (inDirDotnANeg/dirDotnANeg)*halfExp + (1. - halfExp)*m_fieldSource[iCell];
     
+    // AL: computation of heat fluxes
+    if(wallfIdx.size() > 0) {
+      for(CFuint fcount=0; fcount < wallfIdx.size(); fcount++){
+	const CFuint IDX = wallfIdx[fcount];
+	const CFreal DDD = ddd[fcount];
+	const CFreal IBQ = Ibq[fcount];
+	if(DDD > 0.0){
+          qradFluxWall[IDX] += -m_wallEmissivity*InCell*DDD;
+	}
+	else{
+	  if(ib == 0){ //AL: why for the first bin you do this????
+            qradFluxWall[IDX] += m_wallEmissivity*IBQ*std::abs(DDD);
+	    //CFLog(INFO,"IBQ = " << IBQ <<"\n");
+	  }
+	}
+      }
+      wallfIdx.clear();
+      ddd.clear();
+      Ibq.clear();
+    }
+
     CFreal inDirDotnA = inDirDotnANeg;
     inDirDotnA += InCell*POP_dirDotNA;
     m_In[iCell] = InCell;
@@ -2215,7 +2266,146 @@ void RadiativeTransferFVDOM::loopOverDirs(const CFuint startBin,
     
 //////////////////////////////////////////////////////////////////////////////
 
-void RadiativeTransferFVDOM::computeWallHeatFlux()
+void RadiativeTransferFVDOM::writeTGSData()
+{
+  // AL: THIS NEEDS TO BE PARALLELIZED. see exampe of reduceHeatFlux(), 
+  // OTHERWISE IT CANNOT WORK IN PARALLEL LIKE THIS
+  
+  CFLog(VERBOSE, "RadiativeTransferFVDOM::writeTGSData() = > Writing stag line data for TGS testcase => start\n");
+  
+  boost::filesystem::path file = m_dirName / boost::filesystem::path("TGSData.plt");
+  file = PathAppender::getInstance().appendParallel( file );
+  
+  SelfRegistPtr<Environment::FileHandlerOutput> fhandle = 
+    Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
+  ofstream& outputFile = fhandle->open(file);
+  
+  outputFile << "TITLE  = RadiativeTransferFVDOM data for TGS\n";
+  outputFile << "VARIABLES = x  qx divq nbPoints\n";
+
+  CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
+  Common::SafePtr<TopologicalRegionSet> cells = geoData.trs;
+  
+  const CFuint nbCells = cells->getLocalNbGeoEnts();
+  CFuint nbPoints = 0;
+  CFreal xCoord = 0.;
+  const CFreal length = 0.06;
+  DataHandle<CFreal> divQ = socket_divq.getDataHandle();
+  DataHandle<CFreal> qx = socket_qx.getDataHandle();
+  //DataHandle<CFreal> qy = socket_qy.getDataHandle();
+  //DataHandle<CFreal> qz = socket_qz.getDataHandle();
+  
+  for(CFuint ir = 0; ir < m_Nr; ir++){
+    nbPoints = 0;
+    xCoord = -(ir + 0.5)*length/m_Nr; //middle point between ir and (ir + 1)
+    
+    for(CFuint iCell = 0; iCell < nbCells; iCell++){
+      geoData.idx = iCell;
+      GeometricEntity* currCell = m_geoBuilder.buildGE();
+      
+      const Node& coordinate = currCell->getState(0)->getCoordinates();
+      const CFreal x = coordinate[XX];
+      //const CFreal y = coordinate[YY];
+      //const CFreal z = coordinate[ZZ];
+      //const CFreal rCell = std::sqrt(x*x + y*y + z*z);
+      
+      if(abs(x) >= ir*length/m_Nr && abs(x) < (ir + 1)*length/m_Nr){
+	nbPoints++;
+	m_divqAv[ir] += divQ[iCell];
+	m_qrAv[ir]   += qx[iCell]; //*rCell*rCell; Multiply by r**2 for area-weighted average
+      }
+      m_geoBuilder.releaseGE();
+    }
+    if(nbPoints > 0){
+      m_divqAv[ir] /= nbPoints;
+      m_qrAv[ir]   /= nbPoints; //m_qrAv[ir]   /= nbPoints*rCoord*rCoord; //area-weighted average radial flux
+      outputFile << xCoord << " " << m_qrAv[ir] << " " << m_divqAv[ir] << " " <<  nbPoints << "\n";
+    }
+  }
+  fhandle->close();
+  
+  CFLog(VERBOSE, "RadiativeTransferFVDOM::writeTGSData() => Writing stag line data for TGS testcase => end\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void RadiativeTransferFVDOM::reduceHeatFlux()
+{
+  if (PE::GetPE().GetProcessorCount(m_radNamespace) > 1) {
+    CFLog(VERBOSE, "RadiativeTransferFVDOM::reduceHeatFlux() => start\n");
+    
+    // AL: the following has to be moved to a postprocess() or something function
+    //     to be called after execute() unless the ConcurrentCoupler can be modified to
+    //     take care of it
+    DataHandle< CFreal > qradFluxWall = socket_qradFluxWall.getDataHandle(); 
+    const CFuint qsize = qradFluxWall.size();
+    if (qsize > 0) { 
+      PE::GetPE().setBarrier(m_radNamespace);
+      
+      vector<CFreal> localHeatFlux(qsize);
+      for (CFuint i = 0; i < qsize; ++i) {
+        localHeatFlux[i] = qradFluxWall[i];
+      }
+      
+      MPIError::getInstance().check
+	("MPI_Allreduce", "RadiativeTransferFVDOM::reduceHeatFlux()",
+	 MPI_Allreduce(&localHeatFlux[0], &qradFluxWall[0], qsize, 
+		       MPIStructDef::getMPIType(&localHeatFlux[0]), 
+		       MPI_SUM, PE::GetPE().GetCommunicator(m_radNamespace)));
+    }
+    
+    /*DataHandle<CFreal> divQ = socket_divq.getDataHandle();
+    DataHandle<CFreal> qx   = socket_qx.getDataHandle();
+    DataHandle<CFreal> qy   = socket_qy.getDataHandle();
+    DataHandle<CFreal> qz   = socket_qz.getDataHandle();
+    
+    const CFuint qsize2 = divQ.size();
+    vector<CFreal> localQ(qsize2);
+    
+    PE::GetPE().setBarrier(m_radNamespace);
+    
+    CFLog(VERBOSE, "RadiativeTransferFVDOM::reduceHeatFlux() => reducing divQ\n");
+    for (CFuint i = 0; i < qsize2; ++i) {localQ[i] = divQ[i];}
+    MPIError::getInstance().check
+      ("MPI_Allreduce", "RadiativeTransferFVDOM::reduceHeatFlux()",
+       MPI_Allreduce(&localQ[0], &divQ[0], qsize2, MPIStructDef::getMPIType(&localQ[0]), 
+		     MPI_SUM, PE::GetPE().GetCommunicator(m_radNamespace)));
+    
+    PE::GetPE().setBarrier(m_radNamespace);
+    
+    CFLog(VERBOSE, "RadiativeTransferFVDOM::reduceHeatFlux() => reducing qx\n");
+    for (CFuint i = 0; i < qsize2; ++i) {localQ[i] = qx[i];}
+    MPIError::getInstance().check
+      ("MPI_Allreduce", "RadiativeTransferFVDOM::reduceHeatFlux()",
+       MPI_Allreduce(&localQ[0], &qx[0], qsize2, MPIStructDef::getMPIType(&localQ[0]), 
+		     MPI_SUM, PE::GetPE().GetCommunicator(m_radNamespace)));
+    
+    PE::GetPE().setBarrier(m_radNamespace);
+    
+    CFLog(VERBOSE, "RadiativeTransferFVDOM::reduceHeatFlux() => reducing qy\n");
+    for (CFuint i = 0; i < qsize2; ++i) {localQ[i] = qy[i];}
+    MPIError::getInstance().check
+      ("MPI_Allreduce", "RadiativeTransferFVDOM::reduceHeatFlux()",
+       MPI_Allreduce(&localQ[0], &qy[0], qsize2, MPIStructDef::getMPIType(&localQ[0]), 
+		     MPI_SUM, PE::GetPE().GetCommunicator(m_radNamespace)));
+    
+    PE::GetPE().setBarrier(m_radNamespace);
+    
+    CFLog(VERBOSE, "RadiativeTransferFVDOM::reduceHeatFlux() => reducing qz\n");
+    for (CFuint i = 0; i < qsize2; ++i) {localQ[i] = qz[i];}
+    MPIError::getInstance().check
+      ("MPI_Allreduce", "RadiativeTransferFVDOM::reduceHeatFlux()",
+       MPI_Allreduce(&localQ[0], &qz[0], qsize2, MPIStructDef::getMPIType(&localQ[0]), 
+		     MPI_SUM, PE::GetPE().GetCommunicator(m_radNamespace)));
+    */
+    
+    CFLog(VERBOSE, "RadiativeTransferFVDOM::reduceHeatFlux() => end\n");
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+/*void RadiativeTransferFVDOM::computeWallHeatFlux()
 {
   boost::filesystem::path file = m_dirName / boost::filesystem::path("wallHeatFlux.out");
   file = PathAppender::getInstance().appendParallel( file );
@@ -2339,31 +2529,8 @@ void RadiativeTransferFVDOM::computeWallHeatFlux()
 
   CFLog(VERBOSE, "RadiativeTransferFVDOM::computeWallHeatFlux() => END\n");
 }
+*/
 
-//////////////////////////////////////////////////////////////////////////////
-
-void RadiativeTransferFVDOM::reduceHeatFlux()
-{
-  if (PE::GetPE().GetProcessorCount(m_radNamespace) > 1) {
-    // AL: the following has to be moved to a postprocess() or something function
-    //     to be called after execute() unless the ConcurrentCoupler can be modified to
-    //     take care of it
-    PE::GetPE().setBarrier(m_radNamespace);
-    
-    DataHandle< CFreal > qradFluxWall = socket_qradFluxWall.getDataHandle(); 
-    const CFuint qsize = qradFluxWall.size();
-    vector<CFreal> localHeatFlux(qsize);
-    for (CFuint i = 0; i < qsize; ++i) {
-      localHeatFlux[i] = qradFluxWall[i];
-    }
-    
-    MPIError::getInstance().check
-      ("MPI_Allreduce", "RadiativeTransferFVDOM::unsetup()",
-       MPI_Allreduce(&localHeatFlux[0], &qradFluxWall[0], qsize, MPIStructDef::getMPIType(&localHeatFlux[0]), 
-		     MPI_SUM, PE::GetPE().GetCommunicator(m_radNamespace)));
-  }
-}
-    
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace RadiativeTransfer
