@@ -369,72 +369,72 @@ void MeshUpgradeBuilder::createTopologicalRegionSets()
 
 void MeshUpgradeBuilder::divideElements()
 {
-  SafePtr< vector<ElementTypeData> > elementType =
-    getCFmeshData().getElementTypeData();
-    
-  SafePtr<MeshData::ConnTable> cellStates = MeshDataStack::getActive()->getConnectivity("cellStates_InnerCells");
-  SafePtr<MeshData::ConnTable> cellNodes = MeshDataStack::getActive()->getConnectivity("cellNodes_InnerCells");
-    
-  const CFuint nbElements = getCFmeshData().getNbElements();
-
-  const CFuint nbElementTypes = getCFmeshData().getNbElementTypes();
-  cf_assert(nbElementTypes == elementType->size());
-  const Cfuint nbNewCellsPerOldCell = pow(m_elementDivision,getCFmeshData().getDimension());
-  
-  m_pattern.resize(nbElements*nbNewCellsPerOldCell);
-  
-  
-  // set the correct number of nodes per element in m_pattern
-  CFuint elemID = 0;
-  CFuint firstFreeIdx = nbElements;
-  for(CFuint iType = 0; iType <  nbElementTypes; ++iType) 
-  {
-
-    const CFuint nbElemsPerType = (*elementType)[iType].getNbElems();
-    const CFGeoShape::Type elemGeoShape = (*elementType)[iType].getGeoShape();
-    for(CFuint iElem = 0; iElem < nbElemsPerType; ++iElem, ++elemID) 
-    {
-
-      switch(elemGeoShape) 
-      {
-
-      case CFGeoShape::TRIAG:
-        m_pattern[elemID] = 3;
-	for (Cfuint iNewCell = 0; iNewCell < nbNewCellsPerOldCell; ++iNewCell,++firstFreeIdx)
-	{
-	  m_pattern[firstFreeIdx] = 3;
-	}
-        break;
-
-      case CFGeoShape::QUAD:
-        m_pattern[elemID] = 4;
-        for (Cfuint iNewCell = 0; iNewCell < nbNewCellsPerOldCell; ++iNewCell,++firstFreeIdx)
-	{
-	  m_pattern[firstFreeIdx] = 4;
-	}
-        break;
-	
-      case CFGeoShape::HEXA:
-        m_pattern[elemID] = 8;
-        for (Cfuint iNewCell = 0; iNewCell < nbNewCellsPerOldCell; ++iNewCell,++firstFreeIdx)
-	{
-	  m_pattern[firstFreeIdx] = 8;
-	}
-        break;
-
-      default:
-        std::string shape =
-          CFGeoShape::Convert::to_str(elemGeoShape);
-        std::string msg = std::string("Element type not implemented: ") + shape;
-        throw Common::NotImplementedException (FromHere(),msg);
-      }
-    }
-  }
-  cf_assert(firstFreeIdx == m_pattern.size());
-  
-  CFuint newNbElements = nbElements;
-
-  elemID = 0;
+//   SafePtr< vector<ElementTypeData> > elementType =
+//     getCFmeshData().getElementTypeData();
+//     
+//   SafePtr<MeshData::ConnTable> cellStates = MeshDataStack::getActive()->getConnectivity("cellStates_InnerCells");
+//   SafePtr<MeshData::ConnTable> cellNodes = MeshDataStack::getActive()->getConnectivity("cellNodes_InnerCells");
+//     
+//   const CFuint nbElements = getCFmeshData().getNbElements();
+// 
+//   const CFuint nbElementTypes = getCFmeshData().getNbElementTypes();
+//   cf_assert(nbElementTypes == elementType->size());
+//   const Cfuint nbNewCellsPerOldCell = pow(m_elementDivision,getCFmeshData().getDimension());
+//   
+//   m_pattern.resize(nbElements*nbNewCellsPerOldCell);
+//   
+//   
+//   // set the correct number of nodes per element in m_pattern
+//   CFuint elemID = 0;
+//   CFuint firstFreeIdx = nbElements;
+//   for(CFuint iType = 0; iType <  nbElementTypes; ++iType) 
+//   {
+// 
+//     const CFuint nbElemsPerType = (*elementType)[iType].getNbElems();
+//     const CFGeoShape::Type elemGeoShape = (*elementType)[iType].getGeoShape();
+//     for(CFuint iElem = 0; iElem < nbElemsPerType; ++iElem, ++elemID) 
+//     {
+// 
+//       switch(elemGeoShape) 
+//       {
+// 
+//       case CFGeoShape::TRIAG:
+//         m_pattern[elemID] = 3;
+// 	for (Cfuint iNewCell = 0; iNewCell < nbNewCellsPerOldCell; ++iNewCell,++firstFreeIdx)
+// 	{
+// 	  m_pattern[firstFreeIdx] = 3;
+// 	}
+//         break;
+// 
+//       case CFGeoShape::QUAD:
+//         m_pattern[elemID] = 4;
+//         for (Cfuint iNewCell = 0; iNewCell < nbNewCellsPerOldCell; ++iNewCell,++firstFreeIdx)
+// 	{
+// 	  m_pattern[firstFreeIdx] = 4;
+// 	}
+//         break;
+// 	
+//       case CFGeoShape::HEXA:
+//         m_pattern[elemID] = 8;
+//         for (Cfuint iNewCell = 0; iNewCell < nbNewCellsPerOldCell; ++iNewCell,++firstFreeIdx)
+// 	{
+// 	  m_pattern[firstFreeIdx] = 8;
+// 	}
+//         break;
+// 
+//       default:
+//         std::string shape =
+//           CFGeoShape::Convert::to_str(elemGeoShape);
+//         std::string msg = std::string("Element type not implemented: ") + shape;
+//         throw Common::NotImplementedException (FromHere(),msg);
+//       }
+//     }
+//   }
+//   cf_assert(firstFreeIdx == m_pattern.size());
+//   
+//   CFuint newNbElements = nbElements;
+// 
+//   elemID = 0;
 //   for (CFuint iType = 0; iType < nbElementTypes; ++iType) 
 //   {
 //     const CFGeoShape::Type currShape = (*elementType)[iType].getGeoShape();
