@@ -126,6 +126,7 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostGradients(const std::vector< std::vec
     RealVector& tempGradG = *ghostGrads[iState][3];
     const CFreal nTempGrad = tempGradI[XX]*normal[XX] + tempGradI[YY]*normal[YY];
     tempGradG = tempGradI - 2.0*nTempGrad*normal; // + heatFlux*normal;
+
   }
 }
 

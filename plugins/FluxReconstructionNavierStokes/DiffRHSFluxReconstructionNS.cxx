@@ -101,9 +101,14 @@ void DiffRHSFluxReconstructionNS::addPartitionFacesCorrection()
   // get the local FR data
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
   
-  // get solution polynomial values at nodes
-  vector< vector< CFreal > > solPolyValsAtNodes
-	= frLocalData[0]->getSolPolyValsAtNode(*m_flxPntsLocalCoords);
+  // compute flux point coordinates
+  SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
+  
+  // compute face Jacobian vectors
+  vector< RealVector > faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*flxLocalCoords);
+  
+  // get face Jacobian vector sizes in the flux points
+  DataHandle< vector< CFreal > > faceJacobVecSizeFaceFlxPnts = socket_faceJacobVecSizeFaceFlxPnts.getDataHandle();
   
   // loop over different orientations
   for (m_orient = 0; m_orient < nbrFaceOrients; ++m_orient)
@@ -128,35 +133,24 @@ void DiffRHSFluxReconstructionNS::addPartitionFacesCorrection()
       
       // compute volume
       m_cellVolume[0] = m_cells[0]->computeVolume();
-      
-      // compute flux point coordinates
-      SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
   
-      // Loop over flux points to extrapolate the states to the flux points and get the 
-      // discontinuous normal flux in the flux points and the Riemann flux
+      // Loop over flux points to extrapolate the states to the flux points
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
       {
-        // get face Jacobian vector sizes in the flux points
-        DataHandle< vector< CFreal > >
-        faceJacobVecSizeFaceFlxPnts = socket_faceJacobVecSizeFaceFlxPnts.getDataHandle();
-  
         // get face Jacobian vector size
         m_faceJacobVecAbsSizeFlxPnts[iFlxPnt] = faceJacobVecSizeFaceFlxPnts[m_face->getID()][iFlxPnt];//faceID
-      }
-      
-      // Loop over flux points to extrapolate the states to the flux points and get the 
-      // discontinuous normal flux in the flux points and the Riemann flux
-      for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
-      {
-        State* tempVector = new State(solPolyValsAtNodes[iFlxPnt][0]*(*((*(m_states[0]))[0]->getData())));
+        
+        // set face Jacobian vector size with sign depending on mapped coordinate direction
+        m_faceJacobVecSizeFlxPnts[iFlxPnt][0] = m_faceJacobVecAbsSizeFlxPnts[iFlxPnt]*((*m_faceLocalDir)[m_orient]);
+    
+        // set unit normal vector
+        m_unitNormalFlxPnts[iFlxPnt] = faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
 
-        m_cellStatesFlxPnt[0][iFlxPnt] = tempVector;
-  
-        for (CFuint iSol = 1; iSol < m_nbrSolPnts; ++iSol)
+        (*m_cellStatesFlxPnt[0][iFlxPnt]) = 0.0;
+
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
-          CFLog(DEBUG_MIN,"cellStates: " << *((*m_cellStates)[iSol]->getData()) << "\n");
-          *(m_cellStatesFlxPnt[0][iFlxPnt]) = (State) (*(m_cellStatesFlxPnt[0][iFlxPnt]->getData()) + 
-			  solPolyValsAtNodes[iFlxPnt][iSol]*(*((*(m_states[0]))[iSol]->getData())));
+          *(m_cellStatesFlxPnt[0][iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[iFlxPnt][iSol]*(*((*(m_states[0]))[iSol]));
         }
       }
            
