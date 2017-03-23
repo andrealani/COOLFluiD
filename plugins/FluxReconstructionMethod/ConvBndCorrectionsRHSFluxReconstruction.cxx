@@ -365,7 +365,6 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeCorrection(vector< RealVect
       // divergence of the correctionfct
       const CFreal divh = m_corrFctDiv[iSolPnt][(*m_faceFlxPntConn)[m_orient][iFlxPnt]];
       
-      
       if (divh != 0)
       {
 	if (m_intCell->getID() == 140)

@@ -213,7 +213,7 @@ void ConvRHSJacobFluxReconstruction::execute()
   }
   
   // add the correction due to partition faces
-  addPartitionFacesCorrection();
+  //addPartitionFacesCorrection();
   
   //// Loop over the elements to calculate the divergence of the continuous flux
   

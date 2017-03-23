@@ -170,8 +170,6 @@ void StdInitState::configure ( Config::ConfigArgs& args )
 void StdInitState::executeOnTrs()
 {
   CFAUTOTRACE;
-  
-  CFLog(NOTICE,"INITSTATE EXECUTE ON TRS");
 
   // get the local FR data
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();

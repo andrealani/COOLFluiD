@@ -63,8 +63,6 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
 void StdExtrapolate::execute()
 {
   CFAUTOTRACE;
-  
-  CFLog(NOTICE,"EXTRAPOLATE EXECUTE");
 
   // get the datahandle for the states
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();

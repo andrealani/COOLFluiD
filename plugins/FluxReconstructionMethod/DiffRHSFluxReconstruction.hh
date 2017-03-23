@@ -71,8 +71,8 @@ protected: //functions
   /// compute the interface flux correction FI-FD
   void computeInterfaceFlxCorrection();
   
-  /// compute the residual updates (-divFC)
-  void computeResUpdates(std::vector< RealVector >& residuals);
+  /// compute the divergence of the discontinuous flux (-divFD)
+  void computeDivDiscontFlx(std::vector< RealVector >& residuals);
   
   /// add the residual updates to the RHS
   void updateRHS();
@@ -111,16 +111,13 @@ protected: //functions
   virtual void addPartitionFacesCorrection() = 0;
   
   /**
-   * Compute the discontinuous fluxes in the flx pnts
+   * Compute the left and right states and gradients in the flx pnts
    */
-  void computeDiscontinuousFluxes();
+  void computeFlxPntStates();
 
 protected: //data
   /// socket for gradients
   Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
-  
-  /// socket for normals
-  Framework::DataSocketSink< CFreal > socket_normals;
   
   /// storage of the rhs
   Framework::DataSocketSink<CFreal> socket_rhs;
@@ -184,10 +181,7 @@ protected: //data
   CFuint m_orient;
   
   /// number of solution pnts in the cell
-  CFuint m_nbrSolPnts;
-  
-  /// number of flx pnts in the cell
-  CFuint m_nbrFlxPnts;
+  CFuint m_nbrSolPnts;;
   
   /// number of face flx pnts
   CFuint m_nbrFaceFlxPnts;
@@ -243,9 +237,6 @@ protected: //data
   /// face Jacobian vector sizes
   std::vector< std::vector< CFreal > > m_faceJacobVecSizeFlxPnts;
   
-  /// 1D flux points mapped coordinates
-  Common::SafePtr< std::vector< CFreal > > m_flxPntsLocalCoords1D;
-  
   /// flux point coordinates
   std::vector< RealVector > m_flxPntCoords;
   
@@ -257,6 +248,12 @@ protected: //data
   
   /// the corrected gradients in the flux points
   std::vector< std::vector< std::vector< RealVector* > > > m_cellGradFlxPnt;
+  
+  /// coefs to extrapolate the states to the flx pnts
+  Common::SafePtr< std::vector< std::vector< CFreal > > > m_solPolyValsAtFlxPnts;
+  
+  /// coefs to compute the derivative of the states in the sol pnts
+  Common::SafePtr< std::vector< std::vector< std::vector< CFreal > > > > m_solPolyDerivAtSolPnts;
   
   /// cell volume
   std::vector< CFreal > m_cellVolume;

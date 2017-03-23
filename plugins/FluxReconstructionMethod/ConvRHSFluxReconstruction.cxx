@@ -288,7 +288,7 @@ void ConvRHSFluxReconstruction::execute()
       // if the states in the cell are parallel updatable, compute the divergence of the discontinuous flx (-divFD)
       if ((*m_cellStates)[0]->isParUpdatable())
       {
-	// compute the residual updates (-divFC)
+	// compute the divergence of the discontinuous flux (-divFD)
 	computeDivDiscontFlx(m_divContFlx);
       
 	// update RHS

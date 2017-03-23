@@ -258,9 +258,9 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
   // get bcStateComputers
   SafePtr< std::vector< SafePtr< BCStateComputer > > > bcStateComputers = m_data->getBCStateComputers();
   cf_assert(m_bcNameStr.size() == bcStateComputers->size());
-  if (m_bcNameDiffStr != m_bcNameStr)
+  if (m_bcNameDiffStr.size() != m_bcNameStr.size())
   {
-    CFLog(NOTICE,"Number of Diffusive BCs doesn't make convective BCs: should only happen when there is no diffusive term!");
+    CFLog(NOTICE,"Number of Diffusive BCs doesn't match convective BCs: should only happen when there is no diffusive term!\n");
     m_bcNameDiffStr.resize(m_bcNameStr.size());
     for (CFuint iBC; iBC < m_bcNameStr.size(); ++iBC)
     {
