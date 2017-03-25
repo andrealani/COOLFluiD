@@ -1049,7 +1049,13 @@ void ParadeRadiator::computeBinning()
   
   const CFreal dy = (alpha_maxlog-alpha_minlog) / (nbBins-1);
   CFLog(VERBOSE,"ParadeLibrary::computeBinning () => dy = " << dy <<"\n");
+
+#ifdef CF_HAVE_CUDA
   LocalArray<CFreal>::TYPE vctBins(0., nbBins);
+#else
+  LocalArray<CFreal>::TYPE vctBins(nbBins, 0.);
+#endif
+  cf_assert(vctBins.size() == nbBins);  
   for(CFuint i = 0; i<nbBins; ++i) {
     vctBins[i] = std::exp(alpha_minlog + (dy * i));
     CFLog(VERBOSE,"ParadeLibrary::computeBinning () => vctBins(" << i << ") = " << vctBins[i] <<"\n");
@@ -1188,7 +1194,11 @@ void ParadeRadiator::computeBanding()
   
   CFLog(INFO,"ParadeLibrary::computeBanding() => dy = " << dy <<"\n");
   
+#ifdef CF_HAVE_CUDA
   LocalArray<CFreal>::TYPE vctBins(0., m_nbBands);
+#else
+  LocalArray<CFreal>::TYPE vctBins(m_nbBands, 0.);
+#endif
   cf_assert(vctBins.size() == m_nbBands);
   for(int i = 0; i<m_nbBands; ++i) {
     vctBins[i] = std::exp(alpha_minlog + (dy * i));
