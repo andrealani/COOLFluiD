@@ -1380,7 +1380,7 @@ void RadiativeTransferFVDOM::getFieldOpacitiesBinning(const CFuint ib)
 
   for(CFuint i=0;i< nbCells;i++){
     for(CFuint j=0;j< (m_multiSpectralIdx);j++){
-      CFLog(INFO,"Vector alpha(" << j << "," << i << ") = " << alpha_avbin[j+m_multiSpectralIdx*i] << "\n");
+      CFLog(VERBOSE,"Vector alpha(" << j << "," << i << ") = " << alpha_avbin[j+m_multiSpectralIdx*i] << "\n");
     }
   }
   
