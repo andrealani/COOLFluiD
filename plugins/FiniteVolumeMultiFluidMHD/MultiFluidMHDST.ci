@@ -245,7 +245,7 @@ void MultiFluidMHDST<UPDATEVAR>::computeSource
       const CFreal emEnergy = _J[XX]*_Etotal[XX] + _J[YY]*_Etotal[YY] + _J[ZZ]*_Etotal[ZZ];
       const CFreal collWorki = _collMomentumSource[0]*ui + _collMomentumSource[1]*vi;
       const CFreal collWorkn = _collMomentumSource[2]*un + _collMomentumSource[3]*vn;
-      const CFreal EnergyIon = 13.6*1.60217657e-19;							//13.6eV to J
+      const CFreal EnergyIon = 33.*1.60217657e-19;							//13.6eV to J
       const CFreal kinEnerRec_n = 0.5*GammaRec_n*mi*(ui*ui + vi*vi);
       const CFreal kinEnerIon_i = 0.5*GammaIon_i*mn*(un*un + vn*vn);
       const CFreal kinEnerIon_e = GammaIon_i*EnergyIon;
