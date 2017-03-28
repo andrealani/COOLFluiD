@@ -111,6 +111,9 @@ public:
   /// name of the Output File where to write the electric current
   std::string m_nameOutputFileError;
 
+  /// The wave is transversal in the domain
+  bool m_isTransversal;
+
 private: //function
 
 private: //data

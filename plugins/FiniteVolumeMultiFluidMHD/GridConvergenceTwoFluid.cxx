@@ -52,6 +52,7 @@ void GridConvergenceTwoFluid::defineConfigOptions(Config::OptionList& options)
     options.addConfigOption< bool >("AppendTime","Save each iteration to different file with suffix _time#.");
     options.addConfigOption< bool >("AppendIter","Save each iteration to different file with suffix _iter#.");
     options.addConfigOption< std::string >("OutputFileError","Name of Output File to write the electric and magnetic field divergence");
+    options.addConfigOption< bool >("IsTransversal","The wave crosses the domain with an angle");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -84,6 +85,9 @@ GridConvergenceTwoFluid::GridConvergenceTwoFluid(const std::string& name) :
 
   m_nameOutputFileError = "Error.plt";
   setParameter("OutputFileError",&m_nameOutputFileError);
+
+  m_isTransversal = false;
+  setParameter("IsTransversal",&m_isTransversal);
 
 }
 
@@ -268,34 +272,77 @@ void GridConvergenceTwoFluid::computeAnalyticalSolution()
   const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
   CFreal t = SubSystemStatusStack::getActive()->getCurrentTimeDim();; 
 
-  for (CFuint iCell = 0; iCell < nbCells; ++iCell){
-    //Set the cartesian and radial coordinates
-    geoData.idx = iCell;
-    GeometricEntity* currCell = m_geoBuilder.buildGE();
-    const CFuint elemID = currCell->getID();
-    Node& coordinate = currCell->getState(0)->getCoordinates();
-    const CFreal x = coordinate[XX];
-    const CFreal y = coordinate[YY];
+  if(!m_isTransversal) {
+    for (CFuint iCell = 0; iCell < nbCells; ++iCell){
+      //Set the cartesian and radial coordinates
+      geoData.idx = iCell;
+      GeometricEntity* currCell = m_geoBuilder.buildGE();
+      const CFuint elemID = currCell->getID();
+      Node& coordinate = currCell->getState(0)->getCoordinates();
+      const CFreal x = coordinate[XX];
+      const CFreal y = coordinate[YY];
     
-    TheorySolution[iCell*nbEqs + 0] = 6e-09; //Bx
-    TheorySolution[iCell*nbEqs + 1] = 6e-10*cos(3.10528461412e-05*x - 3.121781382662538*t); //By
-    TheorySolution[iCell*nbEqs + 2] = 6e-10*sin(3.10528461412e-05*x - 3.121781382662538*t); //Bz
-    TheorySolution[iCell*nbEqs + 3] = 0.0; //Ex
-    TheorySolution[iCell*nbEqs + 4] = -6.03187489185e-05*sin(3.10528461412e-05*x - 3.121781382662538*t); //Ey
-    TheorySolution[iCell*nbEqs + 5] = 6.03187489185e-05*cos(3.10528461412e-05*x - 3.121781382662538*t); //Ez
-    TheorySolution[iCell*nbEqs + 6] = 0.0; //Psi
-    TheorySolution[iCell*nbEqs + 7] = 0.0; //Phi
-    TheorySolution[iCell*nbEqs + 8] = 6.5336788193e-23; //rhoe
-    TheorySolution[iCell*nbEqs + 9] = 1.67262177774e-20; //rhoi
-    TheorySolution[iCell*nbEqs + 10] = 0.0; //Ue
-    TheorySolution[iCell*nbEqs + 11] = 10271.0531054*cos(3.10528461412e-05*x - 3.121781382662538*t); //Ve
-    TheorySolution[iCell*nbEqs + 12] = 10271.0531054*sin(3.10528461412e-05*x - 3.121781382662538*t); //We
-    TheorySolution[iCell*nbEqs + 13] = 0.0; //Ui
-    TheorySolution[iCell*nbEqs + 14] = 1563.05016333*cos(3.10528461412e-05*x - 3.121781382662538*t); //Vi
-    TheorySolution[iCell*nbEqs + 15] = 1563.05016333*sin(3.10528461412e-05*x - 3.121781382662538*t); //Wi
-    TheorySolution[iCell*nbEqs + 16] = 5187.39732495; //Te
-    TheorySolution[iCell*nbEqs + 17] = 5187.39732495; //Ti
-    m_geoBuilder.releaseGE();
+      TheorySolution[iCell*nbEqs + 0] = 6e-09; //Bx
+      TheorySolution[iCell*nbEqs + 1] = 6e-10*cos(3.10528461412e-05*x - 3.121781382662538*t); //By
+      TheorySolution[iCell*nbEqs + 2] = 6e-10*sin(3.10528461412e-05*x - 3.121781382662538*t); //Bz
+      TheorySolution[iCell*nbEqs + 3] = 0.0; //Ex
+      TheorySolution[iCell*nbEqs + 4] = -6.03187489185e-05*sin(3.10528461412e-05*x - 3.121781382662538*t); //Ey
+      TheorySolution[iCell*nbEqs + 5] = 6.03187489185e-05*cos(3.10528461412e-05*x - 3.121781382662538*t); //Ez
+      TheorySolution[iCell*nbEqs + 6] = 0.0; //Psi
+      TheorySolution[iCell*nbEqs + 7] = 0.0; //Phi
+      TheorySolution[iCell*nbEqs + 8] = 6.5336788193e-23; //rhoe
+      TheorySolution[iCell*nbEqs + 9] = 1.67262177774e-20; //rhoi
+      TheorySolution[iCell*nbEqs + 10] = 0.0; //Ue
+      TheorySolution[iCell*nbEqs + 11] = 10271.0531054*cos(3.10528461412e-05*x - 3.121781382662538*t); //Ve
+      TheorySolution[iCell*nbEqs + 12] = 10271.0531054*sin(3.10528461412e-05*x - 3.121781382662538*t); //We
+      TheorySolution[iCell*nbEqs + 13] = 0.0; //Ui
+      TheorySolution[iCell*nbEqs + 14] = 1563.05016333*cos(3.10528461412e-05*x - 3.121781382662538*t); //Vi
+      TheorySolution[iCell*nbEqs + 15] = 1563.05016333*sin(3.10528461412e-05*x - 3.121781382662538*t); //Wi
+      TheorySolution[iCell*nbEqs + 16] = 5187.39732495; //Te
+      TheorySolution[iCell*nbEqs + 17] = 5187.39732495; //Ti
+      m_geoBuilder.releaseGE();
+    }
+  }
+  else {
+    for (CFuint iCell = 0; iCell < nbCells; ++iCell){
+      geoData.idx = iCell;
+      GeometricEntity* currCell = m_geoBuilder.buildGE();
+      const CFuint elemID = currCell->getID();
+      Node& coordinate = currCell->getState(0)->getCoordinates();
+      const CFreal x = coordinate[XX];
+      const CFreal y = coordinate[YY];
+      const CFreal sinalpha = sqrt(4./5.);
+      const CFreal cosalpha = sqrt(1./5.);
+      const CFreal xStar = (x*cosalpha+y*sinalpha);
+      const CFreal Bpar  = 6e-09;
+      const CFreal Bperp = 6e-10*cos(3.10528461412e-05*xStar - 3.121781382662538*t);
+      const CFreal Epar  = 0.;
+      const CFreal Eperp = -6.03187489185e-05*sin(3.10528461412e-05*xStar - 3.121781382662538*t);
+      const CFreal Uepar = 0.;
+      const CFreal Ueperp= 10271.0531054*cos(3.10528461412e-05*xStar - 3.121781382662538*t);
+      const CFreal Uipar = 0.;
+      const CFreal Uiperp= 1563.05016333*cos(3.10528461412e-05*xStar - 3.121781382662538*t);
+    
+      TheorySolution[iCell*nbEqs + 0] = Bpar*cosalpha - Bperp*sinalpha; //Bx
+      TheorySolution[iCell*nbEqs + 1] = Bpar*sinalpha + Bperp*cosalpha; //By
+      TheorySolution[iCell*nbEqs + 2] = 6e-10*sin(3.10528461412e-05*xStar - 3.121781382662538*t); //Bz
+      TheorySolution[iCell*nbEqs + 3] = Epar*cosalpha - Eperp*sinalpha; //Ex
+      TheorySolution[iCell*nbEqs + 4] = Epar*sinalpha + Eperp*cosalpha; //Ey
+      TheorySolution[iCell*nbEqs + 5] = 6.03187489185e-05*cos(3.10528461412e-05*xStar - 3.121781382662538*t); //Ez
+      TheorySolution[iCell*nbEqs + 6] = 0.0; //Psi
+      TheorySolution[iCell*nbEqs + 7] = 0.0; //Phi
+      TheorySolution[iCell*nbEqs + 8] = 6.5336788193e-23; //rhoe
+      TheorySolution[iCell*nbEqs + 9] = 1.67262177774e-20; //rhoi
+      TheorySolution[iCell*nbEqs + 10] = Uepar*cosalpha - Ueperp*sinalpha; //Ue
+      TheorySolution[iCell*nbEqs + 11] = Uepar*sinalpha + Ueperp*cosalpha; //Ve
+      TheorySolution[iCell*nbEqs + 12] = 10271.0531054*sin(3.10528461412e-05*xStar - 3.121781382662538*t); //We
+      TheorySolution[iCell*nbEqs + 13] = Uipar*cosalpha - Uiperp*sinalpha; //Ui
+      TheorySolution[iCell*nbEqs + 14] = Uipar*sinalpha + Uiperp*cosalpha; //Vi
+      TheorySolution[iCell*nbEqs + 15] = 1563.05016333*sin(3.10528461412e-05*xStar - 3.121781382662538*t); //Wi
+      TheorySolution[iCell*nbEqs + 16] = 5187.39732495; //Te
+      TheorySolution[iCell*nbEqs + 17] = 5187.39732495; //Ti
+      m_geoBuilder.releaseGE();
+    }   
   }
 }
 
