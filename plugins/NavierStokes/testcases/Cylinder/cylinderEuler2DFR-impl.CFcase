@@ -53,7 +53,7 @@ Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 
 Simulator.SubSysMesh.SpaceMethod = Null
 Simulator.SubSysMesh.Null.Builder = MeshUpgrade
-Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P4
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P2
 Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 
 ##################################
@@ -64,9 +64,9 @@ Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 Simulator.SubSystem.Default.PhysicalModelType = Euler2D
 Simulator.SubSystem.Euler2D.refValues = 1.0 0.449622064 0.449622064 2.60108
 Simulator.SubSystem.Euler2D.refLength = 1.0
-Simulator.SubSystem.Euler2D.ConvTerm.pRef = 1.
-Simulator.SubSystem.Euler2D.ConvTerm.tempRef = 0.003483762
-Simulator.SubSystem.Euler2D.ConvTerm.machInf = 0.38
+#Simulator.SubSystem.Euler2D.ConvTerm.pRef = 1.
+#Simulator.SubSystem.Euler2D.ConvTerm.tempRef = 0.003483762
+#Simulator.SubSystem.Euler2D.ConvTerm.machInf = 0.38
 
 ###################################
 Simulator.SubSystem.OutputFormat        = ParaView Tecplot CFmesh
@@ -116,7 +116,7 @@ Simulator.SubSystem.SpaceMethod = FluxReconstruction
 Simulator.SubSystem.Default.listTRS = InnerCells Cylinder FarField
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = cylinderUpgraded.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cylinderUpgraded.CFmesh #cylinderEuler-sfdmP2P2-sol.CFmesh #cylinderNS-sfdmP2P2-sol.CFmesh 
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 
 ###################################
@@ -136,10 +136,10 @@ Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLeg
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
 
 Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.0004 #1.0/3.0 #4.0/135.0 #3.0/3150.0 #8.0/496125.0 #5.0/29469825
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.015 #1.0/3.0 #4.0/135.0 #3.0/3150.0 #8.0/496125.0 #5.0/29469825
 
 ###################################
-Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState
+Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState #Null
 Simulator.SubSystem.FluxReconstruction.InitNames = InField
 
 Simulator.SubSystem.FluxReconstruction.InField.applyTRS = InnerCells

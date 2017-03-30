@@ -53,7 +53,8 @@ Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 
 Simulator.SubSysMesh.SpaceMethod = Null
 Simulator.SubSysMesh.Null.Builder = MeshUpgrade
-Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P2
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P3
+Simulator.SubSysMesh.Null.MeshUpgrade.GeoPolynomialOrder = P2
 Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 
 ##################################
@@ -74,7 +75,7 @@ Simulator.SubSystem.NavierStokes2D.DiffTerm.FixedKinematicViscosity.KinVisc = 0.
 ###################################
 Simulator.SubSystem.OutputFormat        = ParaView Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = cylinderNS-FR-sol.CFmesh
-Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.CFmesh.SaveRate = 100
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
@@ -82,24 +83,24 @@ Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
 Simulator.SubSystem.ParaView.FileName    = cylinderNS-FR-sol.vtu
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
 Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.ParaView.SaveRate = 1
+Simulator.SubSystem.ParaView.SaveRate = 100
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.Tecplot.FileName    = cylinderNS-FR-sol.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.Tecplot.SaveRate = 100
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 
 ###################################
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
-Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 6
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 400
 Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.5
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
 
 ###################################
 Simulator.SubSystem.SpaceMethod = FluxReconstruction
@@ -113,20 +114,21 @@ Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 ###################################
 # choose which builder we use
 Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
-Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHS
+Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSNS
+Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHSNS
 #Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = StdTimeRHSJacob
 Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
 Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
 Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
 Simulator.SubSystem.FluxReconstruction.Data.DiffusiveVar= Cons
-Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = LaxFriedrichsFlux
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = RoeFlux
 
 Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
 
 Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.015 #1.0/3.0 #4.0/135.0 #3.0/3150.0 #8.0/496125.0 #5.0/29469825
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.035 #0.015 #1.0/3.0 #4.0/135.0 #3.0/3150.0 #8.0/496125.0 #5.0/29469825
 
 ###################################
 Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState
