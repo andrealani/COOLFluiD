@@ -54,7 +54,7 @@ void DiffRHSFluxReconstructionNS::computeWaveSpeedUpdates(vector< CFreal >& wave
   // compute the wave speed updates for the neighbouring cells
   cf_assert(waveSpeedUpd.size() == 2);
   CFreal visc = 1.0;
-  /// @todo needs to be changed for non-NS
+
   SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokesVarSet >();
   const CFreal dynVisc = navierStokesVarSet->getCurrDynViscosity();
   

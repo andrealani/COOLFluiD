@@ -15,6 +15,10 @@ BCNoSlipWallHeatFluxNS2D.cxx
 BCNoSlipWallHeatFluxNS2D.hh
 ComputeErrorEuler.cxx
 ComputeErrorEuler.hh
+NSGradientComputer.cxx
+NSGradientComputer.hh
+NSBndGradientComputer.cxx
+NSBndGradientComputer.hh
 DiffBndCorrectionsRHSFluxReconstructionNS.cxx
 DiffBndCorrectionsRHSFluxReconstructionNS.hh
 DiffRHSFluxReconstructionNS.cxx			

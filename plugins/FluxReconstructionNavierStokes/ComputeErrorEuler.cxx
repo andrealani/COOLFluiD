@@ -129,7 +129,6 @@ void ComputeErrorEuler::setup()
   // setup of the parent class
   FluxReconstructionSolverCom::setup();
 
-
   // get Euler 2D varset
   m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<Euler2DVarSet>();
   if (m_eulerVarSet.isNull())
