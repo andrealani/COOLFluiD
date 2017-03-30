@@ -94,7 +94,7 @@ protected: // functions
   void updateRHS();
 
   /// compute the bnd face corrections to the gradients
-  void computeGradientBndFaceCorrections();
+  virtual void computeGradientBndFaceCorrections();
   
   /// add the updates to the wave speed
   void updateWaveSpeed();

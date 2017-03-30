@@ -308,7 +308,7 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
 
       cf_assert(m_bcsComs[iBc].isNotNull());
 
-      // dynamic_cast to ConvBndFaceTermRHSFluxReconstruction
+      // dynamic_cast to ConvBndCorrectionsRHSFluxReconstruction
       SafePtr< FluxReconstructionSolverCom > bcComm = m_bcsComs[iBc].getPtr();
       m_bcs[iBc] = bcComm.d_castTo< ConvBndCorrectionsRHSFluxReconstruction >();
       cf_assert(m_bcs[iBc].isNotNull());

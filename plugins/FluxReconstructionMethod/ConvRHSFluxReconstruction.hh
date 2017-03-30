@@ -113,10 +113,10 @@ protected: //functions
   void computeFlxPntStates();
   
   /// compute the volume term contribution to the gradients
-  void computeGradients();
+  virtual void computeGradients();
   
   /// compute the face correctcion to the gradients
-  void computeGradientFaceCorrections();
+  virtual void computeGradientFaceCorrections();
 
 protected: //data
   /// socket for gradients

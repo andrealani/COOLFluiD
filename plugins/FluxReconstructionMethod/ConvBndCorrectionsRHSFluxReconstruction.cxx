@@ -160,10 +160,10 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
 
         // get the neighbouring cell
         m_intCell = m_face->getNeighborGeo(0);
-	
+
 	// get the states in the neighbouring cell
         m_cellStates = m_intCell->getStates();
-	
+
 	//CFLog(VERBOSE,"faceID: " << faceID << ", real face ID: " << m_face->getID() << "\n");
 	//CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
 	if (m_intCell->getID() == 140)
@@ -187,21 +187,21 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
 	  // compute the states and ghost states in the flx pnts
 	  computeFlxPntStates();
 	}
-	  
+
 	if ((*m_cellStates)[0]->isParUpdatable())
 	{
 	  // compute FI-FD
           computeInterfaceFlxCorrection();
-	  
+
           // compute the wave speed updates
           computeWaveSpeedUpdates(m_waveSpeedUpd);
-      
+
           // update the wave speeds
           updateWaveSpeed();
-       
+
 	  // compute the correction -(FI-FD)divh of the bnd face for each sol pnt
           computeCorrection(m_corrections);
-	  
+
 	  // update the rhs
           updateRHS();
         } 
@@ -628,6 +628,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::unsetup()
   FluxReconstructionSolverCom::unsetup();
 
 }
+
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace FluxReconstructionMethod

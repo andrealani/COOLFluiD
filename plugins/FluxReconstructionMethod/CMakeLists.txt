@@ -21,6 +21,8 @@ GaussLegendre.hh
 CMakeLists.txt
 StdSetup.cxx
 StdSetup.hh
+PseudoSteadyStdTimeRHSJacob.cxx
+PseudoSteadyStdTimeRHSJacob.hh
 ConvRHSFluxReconstruction.cxx
 ConvRHSFluxReconstruction.hh
 ConvRHSJacobFluxReconstruction.cxx

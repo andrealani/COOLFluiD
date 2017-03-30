@@ -69,7 +69,7 @@ public: // functions
 protected: //functions
 
   /// compute the interface flux correction FI-FD
-  void computeInterfaceFlxCorrection();
+  virtual void computeInterfaceFlxCorrection();
   
   /// compute the divergence of the discontinuous flux (-divFD)
   void computeDivDiscontFlx(std::vector< RealVector >& residuals);

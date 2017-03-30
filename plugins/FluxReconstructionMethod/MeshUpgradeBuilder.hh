@@ -4,6 +4,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "FluxReconstructionMethod/FluxReconstructionBuilder.hh"
+#include "Framework/MeshData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -129,6 +130,11 @@ protected: // functions
    * @return the number of `internal' nodes in the given face type
    */
   CFuint getNbrOfInternalNodesInFaceType(CFGeoShape::Type geoShape, CFPolyOrder::Type polyOrder);
+  
+  /**
+   * Get the mapped coordinates of the new nodes for dividing the elements
+   */
+  std::vector< RealVector > getNewNodesMappedCoords(CFGeoShape::Type shape,CFuint solOrder, CFuint cellIdx,  const Framework::MeshData::ConnTable nodesConn);
 
 protected: // data
 
@@ -140,9 +146,6 @@ protected: // data
   
   /// number of times the cells will be divided in equal parts to form new cells
   CFuint m_elementDivision;
-  
-  /// string holding the number of times the cells will be divided
-  std::string m_elementDivisionStr;
 
   /// geometrical polynomial order
   CFPolyOrder::Type m_geoPolyOrder;
