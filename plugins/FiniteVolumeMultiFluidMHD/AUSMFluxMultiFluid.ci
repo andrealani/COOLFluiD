@@ -846,8 +846,8 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAplus()
   else{
     factor1 = c_e*m_Bdiss;
     factor2 = c_e*m_Ediss;
-    factor3 = c_e;
-    factor4 = c_e;
+    factor3 = c_e*m_coeff;
+    factor4 = c_e*m_coeff;
   }
   
   if(dim == 2){
@@ -1022,8 +1022,8 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAminus()
   else{
     factor1 = c_e*m_Bdiss;
     factor2 = c_e*m_Ediss;
-    factor3 = c_e;
-    factor4 = c_e;
+    factor3 = c_e*m_coeff;
+    factor4 = c_e*m_coeff;
   }
 
   if(dim == 2){
