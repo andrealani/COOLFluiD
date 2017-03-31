@@ -240,7 +240,7 @@ void GridConvergenceTwoFluid::execute()
   }
   for(CFuint i = 0; i<nbEqs ; i++){
     m_ErrorTotalL1[i] /= totalnbCells;
-    m_ErrorTotalL2[i] = sqrt(m_ErrorTotalL2[i])/totalnbCells; 
+    m_ErrorTotalL2[i] = sqrt(m_ErrorTotalL2[i]/totalnbCells); 
   }
 
 
