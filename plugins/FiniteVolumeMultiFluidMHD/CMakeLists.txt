@@ -40,6 +40,9 @@ EnergyIntegration.hh
 HartmannSourceTerm.ci
 HartmannSourceTerm.cxx
 HartmannSourceTerm.hh
+# to be removed after testing
+InitStateMF.cxx
+InitStateMF.hh
 MagnetosphericWall.cxx
 MagnetosphericWall.hh
 MirrorWall.cxx
