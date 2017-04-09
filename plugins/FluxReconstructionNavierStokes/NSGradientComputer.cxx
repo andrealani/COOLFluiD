@@ -85,11 +85,6 @@ void NSGradientComputer::computeGradients()
 	  
           // compute the grad updates
           m_gradUpdates[0][iSolPnt][iEq] += (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolPnt]*projectedState;
-       
-	  if (fabs(m_gradUpdates[0][iSolPnt][iEq][iDir]) < MathTools::MathConsts::CFrealEps())
-          {
-            m_gradUpdates[0][iSolPnt][iEq][iDir] = 0;
-	  }
 	}
       }
     }

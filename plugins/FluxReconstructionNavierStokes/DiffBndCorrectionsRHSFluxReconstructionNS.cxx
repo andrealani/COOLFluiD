@@ -28,7 +28,7 @@ namespace COOLFluiD {
 MethodCommandProvider< DiffBndCorrectionsRHSFluxReconstructionNS, 
 		       FluxReconstructionSolverData, 
 		       FluxReconstructionNavierStokesModule >
-DiffBndCorrectionsRHSFluxReconstructionNSProvider("DiffBndCorrectionsRHS");
+DiffBndCorrectionsRHSNSFluxReconstructionProvider("DiffBndCorrectionsRHSNS");
 
 //////////////////////////////////////////////////////////////////////////////
 

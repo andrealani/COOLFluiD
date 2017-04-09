@@ -7,7 +7,6 @@
 #include "Framework/MethodCommandProvider.hh"
 
 #include "Framework/CFSide.hh"
-#include "Framework/MethodCommandProvider.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/BaseTerm.hh"
 
@@ -37,7 +36,7 @@ namespace COOLFluiD {
 MethodCommandProvider< DiffRHSFluxReconstructionNS,
 		       FluxReconstructionSolverData,
 		       FluxReconstructionNavierStokesModule >
-diffRHSFluxReconstructionProvider("DiffRHS");
+diffRHSNSFluxReconstructionProvider("DiffRHSNS");
   
 //////////////////////////////////////////////////////////////////////////////
   
