@@ -165,7 +165,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
         m_cellStates = m_intCell->getStates();
 
 	//CFLog(VERBOSE,"faceID: " << faceID << ", real face ID: " << m_face->getID() << "\n");
-	//CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
+	CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
 	if (m_intCell->getID() == 140)
 	{
 	  for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)

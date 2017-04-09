@@ -6,6 +6,7 @@
 #include "MathTools/MathFunctions.hh"
 
 #include "FluxReconstructionMethod/DiffBndCorrectionsRHSFluxReconstruction.hh"
+#include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -19,6 +20,13 @@ using namespace COOLFluiD::Common;
 namespace COOLFluiD {
 
     namespace FluxReconstructionMethod {
+      
+//////////////////////////////////////////////////////////////////////////////
+
+MethodCommandProvider< DiffBndCorrectionsRHSFluxReconstruction, 
+		       FluxReconstructionSolverData, 
+		       FluxReconstructionModule >
+DiffBndCorrectionsRHSFluxReconstructionProvider("DiffBndCorrectionsRHS");
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -422,6 +430,26 @@ void DiffBndCorrectionsRHSFluxReconstruction::updateWaveSpeed()
     const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
     updateCoeff[solID] += m_waveSpeedUpd;
   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void DiffBndCorrectionsRHSFluxReconstruction::computeWaveSpeedUpdates(CFreal& waveSpeedUpd)
+{
+  CFreal visc = 1.0;
+  
+  waveSpeedUpd = 0.0;
+  for (CFuint iFlx = 0; iFlx < m_cellFlx.size(); ++iFlx)
+  {
+    const CFreal jacobXJacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
+                                 m_faceJacobVecAbsSizeFlxPnts[iFlx]*
+                                   (*m_faceIntegrationCoefs)[iFlx]*
+                                   m_cflConvDiffRatio;
+   
+    // transform update states to physical data to calculate eigenvalues
+    waveSpeedUpd += visc*jacobXJacobXIntCoef/m_cellVolume;
+  }
+
 }
 
 //////////////////////////////////////////////////////////////////////////////

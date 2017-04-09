@@ -381,6 +381,7 @@ void MeshUpgradeBuilder::divideElements()
   DataHandle < Framework::State*, Framework::GLOBAL > states = getCFmeshData().getStatesHandle();
     
   const CFuint nbElements = getCFmeshData().getNbElements();
+  const CFuint nbNodes = getCFmeshData().getTotalNbNodes();
 
   const CFuint nbElementTypes = getCFmeshData().getNbElementTypes();
   cf_assert(nbElementTypes == elementType->size());
@@ -403,6 +404,9 @@ void MeshUpgradeBuilder::divideElements()
   CFuint firstFreeIdx = 0;
   CFuint nodeToCellsMapSize = 0;
   CFuint nbNewNodes = 0;
+  // nodes to cells multimap
+  CFMultiMap<CFuint,CFuint> mapNode2CellsOld;
+  mapNode2CellsOld.reserve(nbNodes);
   for (type_itr = elementType->begin(); type_itr != elementType->end(); ++type_itr)
   {
     // get the current geo shape
@@ -423,6 +427,11 @@ void MeshUpgradeBuilder::divideElements()
       newNodeCoords.push_back(getNewNodesMappedCoords(elemGeoShape,m_elementDivision,globalIdx,initialCellNodes));
       
       updatables.push_back(states[(*cellStates)(globalIdx,0)]->isParUpdatable());
+      
+      for (CFuint iNode = 0; iNode < nbNodesPerCell; ++iNode)
+      {
+        mapNode2CellsOld.insert((*cellNodes)(globalIdx,iNode),globalIdx);
+      }
 
       switch(elemGeoShape) 
       {
@@ -460,6 +469,9 @@ void MeshUpgradeBuilder::divideElements()
     }
   }
   cf_assert(firstFreeIdx == m_pattern.size());
+  
+  // sort the nodes to cells map
+  mapNode2CellsOld.sortKeys();
   
   cellNodes->resize(m_pattern);
   cellStates->resize(m_pattern);
@@ -503,19 +515,33 @@ void MeshUpgradeBuilder::divideElements()
       const CFuint nbNodesPerCell = getNbrOfNodesInCellType(elemGeoShape,m_prevGeoPolyOrder);
       
       const CFuint idxFirstNewElement = firstFreeIdx;
+      
+      
+      vector< pair<MapIterator, MapIterator> > neighbors;
 
       switch(elemGeoShape) 
       {
-
       case CFGeoShape::TRIAG:
 
         break;
 
       case CFGeoShape::QUAD:
 	
+	
+	
+	for (CFuint iNode = 0; iNode < 4; ++iNode)
+	{
+	  const CFuint id = initialCellNodes(globalIdx,iNode);
+
+	  bool fo = false;
+	  neighbors.push_back(mapNode2Cells.find(id,fo));
+	  cf_assert(fo);
+	}
+	
+	
 	for (CFuint iKsi = 0; iKsi < nodes1D; ++iKsi)
 	{
-	  for (CFuint iEta = 0; iEta < nodes1D; ++iEta, ++nodeIdx)
+	  for (CFuint iEta = 0; iEta < nodes1D; ++iEta)
 	  {
 	    if (iKsi != 0 && iKsi != nodes1D-1 && iEta != 0 && iEta != nodes1D-1)
 	    {
@@ -524,6 +550,7 @@ void MeshUpgradeBuilder::divideElements()
 	      mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iEta+(iKsi-1)*m_elementDivision);
 	      mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iEta-1+(iKsi)*m_elementDivision);
 	      mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iEta+(iKsi)*m_elementDivision);
+	      ++nodeIdx;
 	    }
 	  }
 	}

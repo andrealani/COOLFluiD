@@ -104,7 +104,7 @@ protected: // functions
    * @pre reconstructFluxPntsStates(), reconstructFaceAvgState(),
    *      setFaceTermData() and set the geometrical data of the face
    */
-  virtual void computeWaveSpeedUpdates(CFreal& waveSpeedUpd) = 0;
+  virtual void computeWaveSpeedUpdates(CFreal& waveSpeedUpd);
 
 protected: // data
 

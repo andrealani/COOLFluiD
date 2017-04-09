@@ -798,7 +798,7 @@ void ConvRHSFluxReconstruction::computeGradients()
        
 	  if (fabs(m_gradUpdates[0][iSolPnt][iEq][iDir]) < MathTools::MathConsts::CFrealEps())
           {
-            m_gradUpdates[0][iSolPnt][iEq][iDir] = 0;
+            m_gradUpdates[0][iSolPnt][iEq][iDir] = 0.0;
 	  }
 	}
       }

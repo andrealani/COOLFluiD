@@ -88,7 +88,7 @@ protected: //functions
    * @pre reconstructFluxPntsStates(), reconstructFaceAvgState(),
    *      setFaceTermData() and set the geometrical data of the face
    */
-  virtual void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd) = 0;
+  virtual void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd);
   
   /**
    * Divides by jacobian determinant
@@ -108,7 +108,7 @@ protected: //functions
   /**
    * Add the updateCoeff corrections due to the partition faces
    */
-  virtual void addPartitionFacesCorrection() = 0;
+  virtual void addPartitionFacesCorrection();
   
   /**
    * Compute the left and right states and gradients in the flx pnts
