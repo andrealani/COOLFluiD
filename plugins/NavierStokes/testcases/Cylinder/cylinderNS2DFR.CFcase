@@ -53,7 +53,7 @@ Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 
 Simulator.SubSysMesh.SpaceMethod = Null
 Simulator.SubSysMesh.Null.Builder = MeshUpgrade
-Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P3
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P2
 Simulator.SubSysMesh.Null.MeshUpgrade.GeoPolynomialOrder = P2
 Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 
@@ -96,11 +96,11 @@ Simulator.SubSystem.Tecplot.AppendIter = false
 
 ###################################
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
-Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 400
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 100
 Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.5
 
 ###################################
 Simulator.SubSystem.SpaceMethod = FluxReconstruction
@@ -116,6 +116,7 @@ Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
 Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSNS
 Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHSNS
+Simulator.SubSystem.FluxReconstruction.DiffSolveCom = DiffRHSNS
 #Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = StdTimeRHSJacob
 Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
@@ -128,7 +129,7 @@ Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLeg
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
 
 Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.035 #0.015 #1.0/3.0 #4.0/135.0 #3.0/3150.0 #8.0/496125.0 #5.0/29469825
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.015 #0.00047 #0.035 #1.0/3.0 #4.0/135.0 #3.0/3150.0 #8.0/496125.0 #5.0/29469825
 
 ###################################
 Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState
