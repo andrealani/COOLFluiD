@@ -22,6 +22,8 @@
 #include "Framework/DofDataHandleIterator.hh"
 #include "Framework/ProxyDofIterator.hh"
 
+#include "FluxReconstructionMethod/CellToFaceGEBuilder.hh"
+
 //#include "Framework/DataSocketSource.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -267,6 +269,22 @@ public: // functions
   {
     return m_hasDiffTerm;
   }
+  
+  /// @return the GeometricEntity cell builder
+  Common::SafePtr<
+      Framework::GeometricEntityPool< FluxReconstructionMethod::CellToFaceGEBuilder > >
+      getCellBuilder()
+  {
+    return &m_cellBuilder;
+  }
+  
+  /// @return the second GeometricEntity cell builder
+  Common::SafePtr<
+      Framework::GeometricEntityPool< FluxReconstructionMethod::CellToFaceGEBuilder > >
+      getSecondCellBuilder()
+  {
+    return &m_cellBuilder2nd;
+  }
 
   
   /// Sets up the FluxReconstructionData
@@ -315,6 +333,12 @@ private:  // data
 // 
 //   /// String for configuring the numerical integrator Order
 //   std::string m_intorderStr;
+  
+  /// Builder for cells (containing the neighbouring faces)
+  Framework::GeometricEntityPool< FluxReconstructionMethod::CellToFaceGEBuilder >  m_cellBuilder;
+  
+  /// Second builder for cells (containing the neighbouring faces)
+  Framework::GeometricEntityPool< FluxReconstructionMethod::CellToFaceGEBuilder >  m_cellBuilder2nd;
   
   /// vector containing the  FluxReconstructionElementData for different element types
   std::vector< FluxReconstructionElementData* > m_frLocalData;

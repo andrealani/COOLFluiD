@@ -1029,8 +1029,6 @@ void ConvRHSFluxReconstruction::setup()
   m_states.resize(2);
   m_cellFlx.resize(2);
   m_faceJacobVecAbsSizeFlxPnts.resize(m_nbrFaceFlxPnts);
-  m_cellStatesFlxPnt[LEFT].resize(m_nbrFaceFlxPnts);
-  m_cellStatesFlxPnt[RIGHT].resize(m_nbrFaceFlxPnts);
   m_cellFlx[LEFT].resize(m_nbrFaceFlxPnts);
   m_cellFlx[RIGHT].resize(m_nbrFaceFlxPnts);
   m_faceJacobVecSizeFlxPnts.resize(m_nbrFaceFlxPnts);

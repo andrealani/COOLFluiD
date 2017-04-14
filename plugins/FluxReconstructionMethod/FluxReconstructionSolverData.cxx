@@ -59,6 +59,7 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
 FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Framework::Method> owner) :
   SpaceMethodData(owner),
   m_numJacob(CFNULL),
+  m_cellBuilder(),
   m_lss(),
   m_convergenceMtd(),
   m_stdTrsGeoBuilder(),
@@ -80,6 +81,7 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_maxNbrRFluxPnts(),
   m_resFactor(),
   m_hasDiffTerm(),
+  m_cellBuilder2nd(),
   m_updateToSolutionVecTrans()
 {
   addConfigOptionsTo(this);
@@ -144,6 +146,10 @@ void FluxReconstructionSolverData::setup()
   
   // setup face builder
   m_faceBuilder.setup();
+  
+  // setup cell to face builder
+  m_cellBuilder.setup();
+  m_cellBuilder2nd.setup();
   
   // create numerical Jacobian computer
   m_numJacob.reset(new NumericalJacobian("NumericalJacobian"));

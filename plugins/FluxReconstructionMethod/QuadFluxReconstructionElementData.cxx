@@ -885,50 +885,50 @@ void QuadFluxReconstructionElementData::createCellAvgSolCoefs()
 {
   CFAUTOTRACE;
 
-//   // number of solution points
-//   const CFuint nbrSolPnts = getNbrOfSolPnts();
-// 
-//   // resize m_cellAvgSolCoefs
-//   m_cellAvgSolCoefs.resize(nbrSolPnts);
-// 
-//   // create TensorProductGaussIntegrator
-//   TensorProductGaussIntegrator tpIntegrator(DIM_2D,m_polyOrder);
-// 
-//   // create cell node local coordinates
-//   vector< RealVector > nodeCoord(4);
-//   nodeCoord[0].resize(2);
-//   nodeCoord[0][KSI] = -1.0;
-//   nodeCoord[0][ETA] = -1.0;
-//   nodeCoord[1].resize(2);
-//   nodeCoord[1][KSI] = +1.0;
-//   nodeCoord[1][ETA] = -1.0;
-//   nodeCoord[2].resize(2);
-//   nodeCoord[2][KSI] = +1.0;
-//   nodeCoord[2][ETA] = +1.0;
-//   nodeCoord[3].resize(2);
-//   nodeCoord[3][KSI] = -1.0;
-//   nodeCoord[3][ETA] = +1.0;
-// 
-//   // get quadrature point coordinates and wheights
-//   vector< RealVector > quadPntCoords   = tpIntegrator.getQuadPntsCoords  (nodeCoord);
-//   vector< CFreal     > quadPntWheights = tpIntegrator.getQuadPntsWheights(nodeCoord);
-//   const CFuint nbrQPnts = quadPntCoords.size();
-//   cf_assert(quadPntWheights.size() == nbrQPnts);
-// 
-//   // get the solution polynomial values at the quadrature points
-//   vector< vector< CFreal > > quadPntPolyVals = getSolPolyValsAtNode(quadPntCoords);
-// 
-//   // compute the coefficients for integration over a face
-//   // loop over solution points
-//   for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-//   {
-//     m_cellAvgSolCoefs[iSol] = 0.0;
-//     for (CFuint iQPnt = 0; iQPnt < nbrQPnts; ++iQPnt)
-//     {
-//       m_cellAvgSolCoefs[iSol] += quadPntWheights[iQPnt]*quadPntPolyVals[iQPnt][iSol];
-//     }
-//     m_cellAvgSolCoefs[iSol] *= 0.25;
-//   }
+  // number of solution points
+  const CFuint nbrSolPnts = getNbrOfSolPnts();
+
+  // resize m_cellAvgSolCoefs
+  m_cellAvgSolCoefs.resize(nbrSolPnts);
+
+  // create TensorProductGaussIntegrator
+  TensorProductGaussIntegrator tpIntegrator(DIM_2D,m_polyOrder);
+
+  // create cell node local coordinates
+  vector< RealVector > nodeCoord(4);
+  nodeCoord[0].resize(2);
+  nodeCoord[0][KSI] = -1.0;
+  nodeCoord[0][ETA] = -1.0;
+  nodeCoord[1].resize(2);
+  nodeCoord[1][KSI] = +1.0;
+  nodeCoord[1][ETA] = -1.0;
+  nodeCoord[2].resize(2);
+  nodeCoord[2][KSI] = +1.0;
+  nodeCoord[2][ETA] = +1.0;
+  nodeCoord[3].resize(2);
+  nodeCoord[3][KSI] = -1.0;
+  nodeCoord[3][ETA] = +1.0;
+
+  // get quadrature point coordinates and wheights
+  vector< RealVector > quadPntCoords   = tpIntegrator.getQuadPntsCoords  (nodeCoord);
+  vector< CFreal     > quadPntWheights = tpIntegrator.getQuadPntsWheights(nodeCoord);
+  const CFuint nbrQPnts = quadPntCoords.size();
+  cf_assert(quadPntWheights.size() == nbrQPnts);
+
+  // get the solution polynomial values at the quadrature points
+  vector< vector< CFreal > > quadPntPolyVals = getSolPolyValsAtNode(quadPntCoords);
+
+  // compute the coefficients for integration over a face
+  // loop over solution points
+  for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+  {
+    m_cellAvgSolCoefs[iSol] = 0.0;
+    for (CFuint iQPnt = 0; iQPnt < nbrQPnts; ++iQPnt)
+    {
+      m_cellAvgSolCoefs[iSol] += quadPntWheights[iQPnt]*quadPntPolyVals[iQPnt][iSol];
+    }
+    m_cellAvgSolCoefs[iSol] *= 0.25;
+  }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -937,26 +937,26 @@ void QuadFluxReconstructionElementData::createCellCenterDerivCoefs()
 {
   CFAUTOTRACE;
 
-//   // center coordinate
-//   vector< RealVector > centerCoord(1,RealVector(2));
-//   centerCoord[0][KSI] = 0.0;
-//   centerCoord[0][ETA] = 0.0;
-// 
-//   vector< vector< vector< CFreal > > > polyDerivs =
-//       getSolPolyDerivsAtNode(centerCoord);
-// 
-//   // number of solution points
-//   const CFuint nbrSolPnts = getNbrOfSolPnts();
-// 
-//   // set polynomial derivatives
-//   m_cellCenterDerivCoefs.resize(2);
-//   m_cellCenterDerivCoefs[KSI].resize(nbrSolPnts);
-//   m_cellCenterDerivCoefs[ETA].resize(nbrSolPnts);
-//   for (CFuint iPoly = 0; iPoly < nbrSolPnts; ++iPoly)
-//   {
-//     m_cellCenterDerivCoefs[KSI][iPoly] = polyDerivs[0][KSI][iPoly];
-//     m_cellCenterDerivCoefs[ETA][iPoly] = polyDerivs[0][ETA][iPoly];
-//   }
+  // center coordinate
+  vector< RealVector > centerCoord(1,RealVector(2));
+  centerCoord[0][KSI] = 0.0;
+  centerCoord[0][ETA] = 0.0;
+
+  vector< vector< vector< CFreal > > > polyDerivs =
+      getSolPolyDerivsAtNode(centerCoord);
+
+  // number of solution points
+  const CFuint nbrSolPnts = getNbrOfSolPnts();
+
+  // set polynomial derivatives
+  m_cellCenterDerivCoefs.resize(2);
+  m_cellCenterDerivCoefs[KSI].resize(nbrSolPnts);
+  m_cellCenterDerivCoefs[ETA].resize(nbrSolPnts);
+  for (CFuint iPoly = 0; iPoly < nbrSolPnts; ++iPoly)
+  {
+    m_cellCenterDerivCoefs[KSI][iPoly] = polyDerivs[0][KSI][iPoly];
+    m_cellCenterDerivCoefs[ETA][iPoly] = polyDerivs[0][ETA][iPoly];
+  }
 }
 
 //////////////////////////////////////////////////////////////////////

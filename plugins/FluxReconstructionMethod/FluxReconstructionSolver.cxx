@@ -399,9 +399,9 @@ void FluxReconstructionSolver::initializeSolutionImpl(bool isRestart)
     }
   }
 
-  //// apply a limiter to the solution
-  //cf_assert(m_limiter.isNotNull());
-  //m_limiter->execute();
+  // apply a limiter to the solution
+  cf_assert(m_limiter.isNotNull());
+  m_limiter->execute();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -510,8 +510,7 @@ void FluxReconstructionSolver::addSourceTermsImpl()
 void FluxReconstructionSolver::prepareComputationImpl()
 {
   CFAUTOTRACE;
-  
-  //CFLog(VERBOSE,"EXECUTING PREPARE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+
   cf_assert(m_prepare.isNotNull());
   m_prepare->execute();
 }
@@ -521,11 +520,9 @@ void FluxReconstructionSolver::prepareComputationImpl()
 void FluxReconstructionSolver::postProcessSolutionImpl()
 {
   CFAUTOTRACE;
-  
-  //CFLog(NOTICE,"EXECUTING PostProcess!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-  
 
-
+  cf_assert(m_limiter.isNotNull());
+  m_limiter->execute();
 }
 
 //////////////////////////////////////////////////////////////////////////////
