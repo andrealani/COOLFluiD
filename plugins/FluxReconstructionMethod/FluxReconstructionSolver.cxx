@@ -262,7 +262,7 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
   {
     CFLog(NOTICE,"Number of Diffusive BCs doesn't match convective BCs: should only happen when there is no diffusive term!\n");
     m_bcNameDiffStr.resize(m_bcNameStr.size());
-    for (CFuint iBC; iBC < m_bcNameStr.size(); ++iBC)
+    for (CFuint iBC = 0; iBC < m_bcNameStr.size(); ++iBC)
     {
       m_bcNameDiffStr[iBC] = m_bcNameStr[iBC];
     }
