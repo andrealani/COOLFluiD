@@ -64,7 +64,8 @@ my $opt_wgetprog      = "wget -nc -nd";
 my $opt_curlprog      = "curl -O -nc -nv --progress-bar";
 my $opt_dwnldprog     = $opt_wgetprog;
 my $opt_makeopts      = "-j12";
-my $opt_svnrevision       = 0;
+my $opt_svnrevision   = 0;
+my $opt_cray          = 0;
 my @opt_install = ();
 
 # list of packages, and their associated values
@@ -167,7 +168,8 @@ sub parse_commandline() # Parse command line
         'makeopts=s'            => \$opt_makeopts,
         'install=s'             => \@opt_install,
         'install-petsc-dir=s'   => \$opt_petsc_dir,
-	'install-parmetis-dir=s'   => \$opt_parmetis_dir
+	'install-parmetis-dir=s'   => \$opt_parmetis_dir,
+        'cray'                => \$opt_cray 
     );
 
     # show help if required
@@ -194,6 +196,7 @@ options:
                              therefore allowing multiple mpi environments to coexist
                               Default: $opt_many_mpi.
 
+        --cray               Compile on CRAY systems
         --static=            Compile all libraries static
         --debug=             Compile dependencies and coolfluid with debug symbols (=1 is default)
         --int64=             If =1 compiles PETSc using long long int. 
@@ -1119,6 +1122,13 @@ sub install_parmetis () {
      $opt_parmetis_dir = "$opt_install_mpi_dir";
   }
 
+  my $mpicc_comp  = "mpicc";
+  my $mpicxx_comp = "mpicxx";
+  if ($opt_cray) {
+     $mpicc_comp  = "cc";
+     $mpicxx_comp = "CC";
+  }
+
   safe_chdir($opt_tmp_dir);
   download_src("parmetis",$version);
   unless ($opt_fetchonly) {
@@ -1127,12 +1137,12 @@ sub install_parmetis () {
     # build metis
     if ( $version eq "4.0.3") {
        safe_chdir("$opt_tmp_dir/parmetis-$version/metis");
-       run_command_or_die("make config shared=1 prefix=$opt_parmetis_dir cc=$opt_mpi_dir/bin/mpicc cxx=$opt_mpi_dir/bin/mpicxx"); 
+       run_command_or_die("make config shared=1 prefix=$opt_parmetis_dir cc=$opt_mpi_dir/bin/$mpicc_comp cxx=$opt_mpi_dir/bin/$mpicxx_comp");
        run_command_or_die("make install");
     }
     #build parmetis
     safe_chdir("$opt_tmp_dir/parmetis-$version/");
-    run_command_or_die("make config shared=1 prefix=$opt_parmetis_dir cc=$opt_mpi_dir/bin/mpicc cxx=$opt_mpi_dir/bin/mpicxx");
+    run_command_or_die("make config shared=1 prefix=$opt_parmetis_dir cc=$opt_mpi_dir/bin/$mpicc_comp cxx=$opt_mpi_dir/bin/$mpicxx_comp");
     run_command_or_die("make install");
   }
  }

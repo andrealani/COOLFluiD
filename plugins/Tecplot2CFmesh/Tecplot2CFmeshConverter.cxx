@@ -1216,14 +1216,18 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   }
   fout << "'\n";
 
+#ifdef CF_HAVE_BOOST_1_60
+  fout << "$!READDATASET  '\"|MFBD|/" << meshFile.filename().string() << "\" '\n";
+#else
 #ifdef CF_HAVE_BOOST_1_59
   fout << "$!READDATASET  '\"|MFBD|/" << meshFile.filename().string() << "\" '\n";
 #else
 #ifdef CF_HAVE_BOOST_1_54
   fout << "$!READDATASET  '\"|MFBD|/" << meshFile.filename().string() << "\" '\n";
 #else
-  CFLog(ERROR, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => you need BOOST version >= 1.59 for this!\n");
+  CFLog(ERROR, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => you need BOOST version >= 1.54 for this!\n");
   exit(1);
+#endif
 #endif
 #endif
   
@@ -1256,6 +1260,9 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   fout << "  SOURCEZONE = 2\n";
   fout << "  REMOVEBLANKEDSURFACES = NO\n";
 
+#ifdef CF_HAVE_BOOST_1_60
+  fout << "$!WRITEDATASET  \"|MFBD|/" << meshFile.filename().string() << "\"\n";
+#else
 #ifdef CF_HAVE_BOOST_1_59
   fout << "$!WRITEDATASET  \"|MFBD|/" << meshFile.filename().string() << "\"\n";
 #else
@@ -1264,6 +1271,7 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
 #else
   CFLog(ERROR, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => you need BOOST version >= 1.54 for this!\n");
   exit(1);
+#endif
 #endif
 #endif
 
@@ -1278,15 +1286,19 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   fout << "  TECPLOTVERSIONTOWRITE = TECPLOTCURRENT\n";
 
   path allSurfFile = change_extension(filepath, "allsurf.plt");
-  
+ 
+#ifdef CF_HAVE_BOOST_1_60
+  fout << "$!WRITEDATASET  \"|MFBD|/" << allSurfFile.filename().string() << "\"\n";
+#else 
 #ifdef CF_HAVE_BOOST_1_59
   fout << "$!WRITEDATASET  \"|MFBD|/" << allSurfFile.filename().string() << "\"\n";
 #else
 #ifdef CF_HAVE_BOOST_1_54
  fout << "$!WRITEDATASET  \"|MFBD|/" << allSurfFile.filename().string() << "\"\n";
 #else
-  CFLog(ERROR, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => you need BOOST version >= 1.59 for this!\n");
+  CFLog(ERROR, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => you need BOOST version >= 1.54 for this!\n");
   exit(1);
+#endif
 #endif
 #endif
 

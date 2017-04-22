@@ -17,10 +17,9 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 // provider for this behavior
-Environment::ObjectProvider<
-                Environment::FileHandlerInputConcrete< DirectFileAccess >,
-                Environment::FileHandlerInput,
-                EnvironmentModule >
+ObjectProvider<FileHandlerInputConcrete< DirectFileAccess >,
+               FileHandlerInput,
+               EnvironmentModule >
 directFileAccessProvider("DirectFileAccess");
 
 //////////////////////////////////////////////////////////////////////////////

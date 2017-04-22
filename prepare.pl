@@ -156,6 +156,7 @@ my %default_options = (
     'single_precision'     => 0,
     'with_longint'         => 0,
     'with_llongint'        => 0,
+    'libpetsc_name' 	   => "petsc"
 );
 
 # add skip default skip options
@@ -225,6 +226,7 @@ sub parse_command_line_options()
        'coolfluid_dir=s'=> \$options{'coolfluid_dir'},
        'install_dir=s'  => \$options{'install_dir'},
        'cmake_generator=s' => \$options{'cmake_generator'},
+       'libpetsc_name=s'   => \$options{'libpetsc_name'}
        );
    
    # remove duplicated entries in options
@@ -288,7 +290,7 @@ sub parse_command_line_options()
          --extra-mods-list=   Comma separated list of extra modules
                                   Default: $default_options{'extra_mods_list'}
 
-        
+         --libpetsc_name=  Name of the petsc library (Default: petsc)  
 
 
   ACTIONS
@@ -910,6 +912,13 @@ sub setup_cfgoptions()
     my $opt_profiler_tool = get_option('profiler_tool');
     unless ( ($opt_profiling eq "on") or ($opt_profiling eq "off") ) { die "Option 'profiling' must have value 'on' of 'off'"; }
     $other_options .= " -DCF_ENABLE_PROFILING=$opt_profiling -DCF_PROFILER_TOOL=$opt_profiler_tool";
+  }
+
+  my $libpetsc_name = "petsc"; 
+  if (get_option('libpetsc_name'))
+  {
+   $libpetsc_name = get_option('libpetsc_name');
+   $other_options .= " -DCF_LIBPETSC_NAME=$libpetsc_name";
   }
 
   setup_option('nofortran',           'CF_SKIP_FORTRAN');
