@@ -238,8 +238,12 @@ SET ( Boost_FIND_VERSION_PATCH  "0"  )
 # older cmakes dont have these versions
 SET ( Boost_ADDITIONAL_VERSIONS  "1.60" "1.60.0" "1.59" "1.59.0" "1.55" "1.55.0" "1.54" "1.54.0" "1.42" "1.42.0" "1.41" "1.41.0"  "1.40" "1.40.0" "1.39" "1.39.0" )
 # components to search for
-#LIST ( APPEND CF_Boost_COMPONENTS thread filesystem system regex unit_test_framework )
+
+IF (CF_ENABLE_IBMSHARED) 
 LIST ( APPEND CF_Boost_COMPONENTS filesystem system regex unit_test_framework )
+ELSE()
+LIST ( APPEND CF_Boost_COMPONENTS thread filesystem system regex unit_test_framework )
+ENDIF()
 FIND_PACKAGE( Boost COMPONENTS ${CF_Boost_COMPONENTS} )
 
 LOG ( "Boost include path [${Boost_INCLUDE_DIR}]" )
