@@ -1,0 +1,110 @@
+#==================================================================
+# Configuration opions for the prepare.pl script
+#==================================================================
+# This file should be in the directory from where the script is run
+#==================================================================
+# This file is meant as an example and it should be copied
+# and renamed to coolfluid.conf, and adapted to the
+# characteristics of the envrionment where you plan to
+# configure and run COOLFluiD
+#
+# If you used the install-coolfluid.pl script, just replace
+#    $HOME for your home account directory
+#    $ARCH for the result of command "uname -m"
+#==================================================================
+
+#==================================================================
+# default build options
+#==================================================================
+
+coolfluid_dir = /homeb/prpc19/prpc1900/COOLFluiD
+basebuild_dir = /homeb/prpc19/prpc1900/COOLFluiD/BGMPI
+
+# compilers
+cc     = /bgsys/drivers/ppcfloor/comm/xl/bin/mpixlc
+cxx    = /bgsys/drivers/ppcfloor/comm/xl/bin/mpixlcxx
+fc     = mpixlf90
+
+withcurl = 0
+nofortran = 1
+
+# library locations
+mpi_dir       = /bgsys/drivers/ppcfloor/comm/xl
+boost_dir     = /bgsys/local/boost/1.55.0
+petsc_dir     = /homeb/prpc19/prpc1900/local/petsc_3.6.3
+#/bgsys/local/petsc/3.7.3/juqueen-downloads-O3strict 
+parmetis_dir  = /bgsys/local/ParMetis/4.0.3
+#/bgsys/local/ParMetis/4.0.3_big
+
+allactive = 0
+
+# mimimum set of libs to be able to compile CF
+lib_Config = on
+lib_Common = on
+lib_MathTools = on
+lib_logcpp = on
+lib_Environment = on
+lib_Framework = on
+lib_ShapeFunctions = on
+lib_AnalyticalModel = on
+
+####################
+# plugin libraries #
+####################
+
+# input formats
+lib_CFmeshFileReader = on
+lib_Gambit2CFmesh = on
+lib_Gmsh2CFmesh = on
+lib_Tecplot2CFmesh = on
+lib_CFmeshExtruder = on
+
+# time steppers
+lib_ForwardEuler = on
+lib_NewtonMethod = on
+
+# linear system solvers
+lib_PetscI = on
+
+# physical models (PDE)
+lib_MultiFluidMHD = on
+lib_Maxwell = on
+
+lib_CFmeshFileWriter = on
+lib_TecplotWriter = on
+lib_ParaViewWriter = on
+
+# Finite Volume solvers
+lib_FiniteVolume = on
+lib_FiniteVolumeMultiFluidMHD = on
+lib_FiniteVolumeMaxwell = on
+
+# long long int 
+#with_llongint = 1
+#
+# long int
+with_longint = 1
+
+# enable doxygen
+withdocs = 1
+
+cmake_generator = kdev
+#
+#cmake_generator = xcode
+#
+with_testcases = 1
+#assertions = 0
+#
+# shared linking with IBM compiler
+with_ibmshared = 1
+
+bgoptim4_cflags  = -O4 -qarch=qp -qtune=qp
+bgoptim4_flags   = -O4 -qarch=qp -qtune=qp
+bgoptim4_fflags  = -O4 -qarch=qp -qtune=qp
+
+bgoptim3_cflags  = -O3 -qstrict -qarch=qp -qtune=qp
+# -qpic -qmkshrobj -qnostaticlink -qnostaticlink=libgcc
+bgoptim3_flags   = -O3 -qstrict -qarch=qp -qtune=qp 
+#-qpic -qmkshrobj -qnostaticlink -qnostaticlink=libgcc
+bgoptim3_fflags  = -O3 -qstrict -qarch=qp -qtune=qp
+# -qpic -qmkshrobj -qnostaticlink -qnostaticlink=libgcc
