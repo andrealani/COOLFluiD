@@ -229,17 +229,17 @@ ENDIF()
 # find boost package (essential)
 # SET ( Boost_DEBUG 1 )  # to debug boost search
 SET ( Boost_USE_STATIC_LIBS ${CF_ENABLE_STATIC} )
-SET ( Boost_USE_MULTITHREAD ON  )
+SET ( Boost_USE_MULTITHREAD OFF  )  # here the default has been changed from ON to OFF
 # find based on minimal version defined below
 SET ( Boost_FIND_VERSION        ON   )
 SET ( Boost_FIND_VERSION_MAJOR  "1"  )
 SET ( Boost_FIND_VERSION_MINOR  "42" )
 SET ( Boost_FIND_VERSION_PATCH  "0"  )
 # older cmakes dont have these versions
-SET ( Boost_ADDITIONAL_VERSIONS  "1.60" "1.60.0" "1.59" "1.59.0" "1.54" "1.54.0" "1.42" "1.42.0" "1.41" "1.41.0"  "1.40" "1.40.0" "1.39" "1.39.0" )
+SET ( Boost_ADDITIONAL_VERSIONS  "1.60" "1.60.0" "1.59" "1.59.0" "1.55" "1.55.0" "1.54" "1.54.0" "1.42" "1.42.0" "1.41" "1.41.0"  "1.40" "1.40.0" "1.39" "1.39.0" )
 # components to search for
-LIST ( APPEND CF_Boost_COMPONENTS thread filesystem system regex unit_test_framework )
-
+#LIST ( APPEND CF_Boost_COMPONENTS thread filesystem system regex unit_test_framework )
+LIST ( APPEND CF_Boost_COMPONENTS filesystem system regex unit_test_framework )
 FIND_PACKAGE( Boost COMPONENTS ${CF_Boost_COMPONENTS} )
 
 LOG ( "Boost include path [${Boost_INCLUDE_DIR}]" )
@@ -250,6 +250,8 @@ IF (${Boost_LIB_VERSION} STREQUAL "1_60" )
 ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_60 )
 ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_59" )
 ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_59 )
+ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_55" )
+ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_55 )
 ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_54" )
 ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_54 )
 ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_42")

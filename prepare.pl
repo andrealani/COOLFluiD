@@ -89,6 +89,7 @@ my %default_options = (
     'withcuda'        => 0,
     'withviennacl'    => 0,
     'withomp'	      => 0,
+    'with_ibmshared'  => 0, # shared with IBM compiler
     'withcurl'        => 1,
     'with_mutationpp' => 0,
     'with_plato'      => 0,
@@ -926,6 +927,7 @@ sub setup_cfgoptions()
   setup_option('withcuda',            'CF_ENABLE_CUDA');
   setup_option('withviennacl',        'CF_ENABLE_VIENNACL');
   setup_option('withomp',             'CF_ENABLE_OMP');
+  setup_option('with_ibmshared',      'CF_ENABLE_IBMSHARED');
   setup_option('withcurl',            'CF_ENABLE_CURL');
   setup_option('with_mutationpp',     'CF_ENABLE_MUTATIONPP');
   setup_option('with_plato',          'CF_ENABLE_PLATO');

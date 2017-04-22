@@ -1,5 +1,10 @@
 #######################################################
-### DEBUG mode
+### DEBUG mode #### TO BE REMOVED !!!!!!!
+IF ( CF_ENABLE_IBMSHARED )
+LIST ( APPEND CMAKE_CXX_LINK_FLAGS  " -qpic -qmkshrobj -qnostaticlink -qnostaticlink=libgcc" )
+LIST ( APPEND CMAKE_C_LINK_FLAGS    " -qpic -qmkshrobj -qnostaticlink -qnostaticlink=libgcc" )
+ENDIF( CF_ENABLE_IBMSHARED )
+
 IF(CF_ENABLE_OMP)
  SET ( CF_FOMP_FLAG "-fopenmp")
  ADD_DEFINITIONS  ( -DCF_HAVE_OMP )

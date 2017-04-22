@@ -50,7 +50,10 @@
 #      define CF_EXPORT_API
 #      define CF_IMPORT_API
 #    else
-#      error "Unrecognised compiler and / or platform"
+#      define CF_LOCAL_API
+#      define CF_EXPORT_API
+#      define CF_IMPORT_API
+//#      error "Unrecognised compiler and / or platform"
 #    endif
 #  endif
 
