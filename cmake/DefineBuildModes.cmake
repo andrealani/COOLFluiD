@@ -5,6 +5,10 @@ LIST ( APPEND CMAKE_CXX_LINK_FLAGS  " -qpic -qmkshrobj -qnostaticlink -qnostatic
 LIST ( APPEND CMAKE_C_LINK_FLAGS    " -qpic -qmkshrobj -qnostaticlink -qnostaticlink=libgcc" )
 ENDIF( CF_ENABLE_IBMSHARED )
 
+IF ( CF_ENABLE_IBMSTATIC )
+LIST ( APPEND CMAKE_CXX_LINK_FLAGS  " -Wl,--allow-multiple-definition" )
+ENDIF( CF_ENABLE_IBMSTATIC )
+
 IF(CF_ENABLE_OMP)
  SET ( CF_FOMP_FLAG "-fopenmp")
  ADD_DEFINITIONS  ( -DCF_HAVE_OMP )
