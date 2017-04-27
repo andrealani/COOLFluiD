@@ -70,7 +70,7 @@ protected: // functions
   virtual void createTopologicalRegionSets();
   
 
-private: // helper functions
+protected: // helper functions
 
   /**
    * Create the cell-faces connectivity
@@ -98,11 +98,6 @@ private: // helper functions
   std::vector< std::vector < CFuint > > getFaceConnPerOrientation(const CFGeoShape::Type shape);
 
   /**
-   * Create the Boundary faces TRS
-   */
-  void createBoundaryFacesTRS();
-
-  /**
    * Creates a the TopologicalRegionSet and put it in the MeshDataBuilder
    *
    * @param nbGeomEntsInTr  list of the nb of geometric entities in each tr
@@ -110,7 +105,7 @@ private: // helper functions
    * @param trGeoCon connectivity for GeometricEntity's present in the TRS
    * @param isWritable  flag telling if the TRS can be written in output file
    */
-  Common::SafePtr<Framework::TopologicalRegionSet>
+  virtual Common::SafePtr<Framework::TopologicalRegionSet>
   createTopologicalRegionSet
   (const std::vector<CFuint>& nbGeomEntsInTr,
    const std::string& name,
@@ -136,8 +131,13 @@ private: // helper functions
    * Returns a vector containing all the face orientations (LINE, QUAD, HEXA)
    */
   std::vector< std::vector < CFuint > > getBFaceOrientations(const CFGeoShape::Type shape);
+  
+  /**
+   * Create the Boundary faces TRS
+   */
+  virtual void createBoundaryFacesTRS();
 
-private: // data
+protected: // data
 
   /// total number of faces
   CFuint m_nbFaces;

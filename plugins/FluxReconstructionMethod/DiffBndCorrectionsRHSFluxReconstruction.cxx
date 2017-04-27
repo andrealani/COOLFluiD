@@ -278,13 +278,14 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeInterfaceFlxCorrection()
       deletePtr(avgGrad[iVar]); 
     }
     avgGrad.clear();
-    if(m_intCell->getID() == 36)
+    if(m_intCell->getID() == 1234)
     {
       CFLog(VERBOSE, "state = " << *(m_cellStatesFlxPnt[iFlxPnt]->getData()) << "\n");
       CFLog(VERBOSE, "Ghost state = " << *(m_flxPntGhostSol[iFlxPnt]->getData()) << "\n");
       CFLog(VERBOSE, "RiemannFlux = " << m_flxPntRiemannFlux[iFlxPnt] << "\n");
       CFLog(VERBOSE, "Flux in flx pnt = " << m_cellFlx[iFlxPnt] << "\n");
       CFLog(VERBOSE, "unit vector = " << m_unitNormalFlxPnts[iFlxPnt] << "\n");
+      CFLog(VERBOSE, "faceJacob = " << m_faceJacobVecSizeFlxPnts[iFlxPnt] << "\n");
       CFLog(VERBOSE, "delta flux = " << m_cellFlx[iFlxPnt] << "\n");
     }
   }
@@ -376,7 +377,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeCorrection(vector< RealVect
         {
           corrections[iSolPnt][iVar] -= currentCorrFactor[iVar] * divh; 
         }
-        if(m_intCell->getID() == 36)
+        if(m_intCell->getID() == 1234)
         {
 	  CFLog(VERBOSE, "FI-FD = " << currentCorrFactor << "\n");
 	  CFLog(VERBOSE, "iSol: " << iSolPnt << ", flxID = " << (*m_faceFlxPntConn)[m_orient][iFlxPnt] << "\n");
@@ -533,7 +534,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::setup()
   m_unitNormalFlxPnts.resize(m_nbrFaceFlxPnts);
 
   // dimensionality and number of equations
-  m_dim   = PhysicalModelStack::getActive()->getDim();
+  m_dim = PhysicalModelStack::getActive()->getDim();
   m_nbrEqs = PhysicalModelStack::getActive()->getNbEq();
   
   // resize vectors

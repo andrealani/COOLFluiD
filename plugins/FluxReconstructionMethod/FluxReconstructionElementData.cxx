@@ -805,38 +805,35 @@ void FluxReconstructionElementData::createFaceFlxPntsCellLocalCoords()
 {
   CFAUTOTRACE;
 //   CFLog(VERBOSE,"createFaceFlxPntsCellLocalCoords\n");
-// 
-//   // number of face flux points
-//   const CFuint nbrFaceFlxPnts = getNbrOfFaceFlxPnts();
-// 
-//   // connectivity for all faces
-//   const CFuint nbrCellFaces = getNbrCellFaces();
-//   m_faceFlxPntCellMappedCoords.resize(nbrCellFaces);
-//   for (CFuint iFace = 0; iFace < nbrCellFaces; ++iFace)
-//   {
-//     for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
-//     {
-//       CFLog(VERBOSE,"createFaceFlxPntsCellLocalCoords1\n");
-//       const CFuint flxIdx = m_faceFlxPntConn[iFace][iFlx];
-//       m_faceFlxPntCellMappedCoords[iFace].push_back(m_flxPntsLocalCoords[flxIdx]);
-//     }
-//   }
-//   CFLog(VERBOSE,"createFaceFlxPntsCellLocalCoords2\n");
-//   // connectivity for all orientations
-//   const CFuint nbrOrients = m_faceFlxPntConnPerOrient.size();
-//   m_faceFlxPntCellMappedCoordsPerOrient.resize(nbrOrients);
-//   for (CFuint iOrient = 0; iOrient < nbrOrients; ++iOrient)
-//   {
-//     m_faceFlxPntCellMappedCoordsPerOrient[iOrient].resize(2);
-//     for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
-//     {
-//       CFLog(VERBOSE,"createFaceFlxPntsCellLocalCoords3\n");
-//       const CFuint flxIdxL = m_faceFlxPntConnPerOrient[iOrient][LEFT ][iFlx];
-//       m_faceFlxPntCellMappedCoordsPerOrient[iOrient][LEFT ].push_back(m_flxPntsLocalCoords[flxIdxL]);
-//       const CFuint flxIdxR = m_faceFlxPntConnPerOrient[iOrient][RIGHT][iFlx];
-//       m_faceFlxPntCellMappedCoordsPerOrient[iOrient][RIGHT].push_back(m_flxPntsLocalCoords[flxIdxR]);
-//     }
-//   }
+  
+  // number of face flux points
+  const CFuint nbrFaceFlxPnts = getNbrOfFaceFlxPnts();
+
+  // connectivity for all faces
+  const CFuint nbrCellFaces = getNbrCellFaces();
+  m_faceFlxPntCellMappedCoords.resize(nbrCellFaces);
+  for (CFuint iFace = 0; iFace < nbrCellFaces; ++iFace)
+  {
+    for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
+    {
+      const CFuint flxIdx = m_faceFlxPntConn[iFace][iFlx];
+      m_faceFlxPntCellMappedCoords[iFace].push_back(m_flxPntsLocalCoords[flxIdx]);
+    }
+  }
+  // connectivity for all orientations
+  const CFuint nbrOrients = m_faceFlxPntConnPerOrient.size();
+  m_faceFlxPntCellMappedCoordsPerOrient.resize(nbrOrients);
+  for (CFuint iOrient = 0; iOrient < nbrOrients; ++iOrient)
+  {
+    m_faceFlxPntCellMappedCoordsPerOrient[iOrient].resize(2);
+    for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
+    {
+      const CFuint flxIdxL = m_faceFlxPntConnPerOrient[iOrient][LEFT ][iFlx];
+      m_faceFlxPntCellMappedCoordsPerOrient[iOrient][LEFT ].push_back(m_flxPntsLocalCoords[flxIdxL]);
+      const CFuint flxIdxR = m_faceFlxPntConnPerOrient[iOrient][RIGHT][iFlx];
+      m_faceFlxPntCellMappedCoordsPerOrient[iOrient][RIGHT].push_back(m_flxPntsLocalCoords[flxIdxR]);
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////

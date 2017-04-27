@@ -255,11 +255,17 @@ protected: //data
   /// coefs to compute the derivative of the states in the sol pnts
   Common::SafePtr< std::vector< std::vector< std::vector< CFreal > > > > m_solPolyDerivAtSolPnts;
   
+  /// face inverse characteristic lengths
+  std::vector< CFreal > m_faceInvCharLengths;
+  
   /// cell volume
   std::vector< CFreal > m_cellVolume;
   
   /// ratio between convective and diffusive cfl limit
   CFreal m_cflConvDiffRatio;
+  
+  /// local cell face - flux point cell mapped coordinate per face connection orientation
+  Common::SafePtr< std::vector< std::vector< std::vector< RealVector > > > > m_faceFlxPntCellMappedCoords;
   
   private:
 

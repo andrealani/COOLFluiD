@@ -255,7 +255,7 @@ void ConvRHSFluxReconstruction::execute()
   }
   
   // add the correction due to partition faces
-  addPartitionFacesCorrection();
+  //addPartitionFacesCorrection();
   
   //// Loop over the elements to calculate the divergence of the continuous flux
   
@@ -295,6 +295,23 @@ void ConvRHSFluxReconstruction::execute()
         updateRHS();
       } 
       
+      if(m_cell->getID() == 1234)
+      {
+	// get the gradients
+  //DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
+
+        for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+        {
+	  CFuint solID = ((*m_cellStates)[iState])->getLocalID();
+    for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
+    {
+      
+
+	  //CFLog(VERBOSE, "Bnd+Face gradients " << iGrad << " of  " << iState << ": " << gradients[solID][iGrad] << "\n");
+        }
+      }
+      }
+      
       // if there is a diffusive term, compute the gradients
       if (hasDiffTerm)
       {
@@ -332,6 +349,47 @@ void ConvRHSFluxReconstruction::execute()
           DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
           CFLog(VERBOSE, "UpdateCoeff: " << updateCoeff[(*m_cellStates)[iState]->getLocalID()] << "\n");
 	  CFLog(VERBOSE, "state " << iState << ": " << *(((*m_cellStates)[iState])->getData()) << "\n");
+        }
+      }
+      
+      if(m_cell->getID() == 1234)
+      {
+	// get the gradients
+  //DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
+
+        for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+        {
+	  CFuint solID = ((*m_cellStates)[iState])->getLocalID();
+    for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
+    {
+      
+
+	  //CFLog(VERBOSE, "total gradient " << iGrad << " of  " << iState << ": " << gradients[solID][iGrad] << "\n");
+        }
+        
+      }
+      for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+        {
+	  CFLog(VERBOSE, "state " << iState << ": " << *(((*m_cellStates)[iState])->getData()) << "\n");
+	}
+      }
+      // print out the residual updates for debugging
+      if(m_cell->getID() == 1234)
+      {
+	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
+        CFLog(VERBOSE, "ConvUpdate = \n");
+        // get the datahandle of the rhs
+        DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
+        for (CFuint iState = 0; iState < m_cellStates->size(); ++iState)
+        {
+          CFuint resID = m_nbrEqs*( (*m_cellStates)[iState]->getLocalID() );
+          for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+          {
+            CFLog(VERBOSE, "" << rhs[resID+iVar] << " ");
+          }
+          CFLog(VERBOSE,"\n");
+          DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+          CFLog(VERBOSE, "UpdateCoeff: " << updateCoeff[(*m_cellStates)[iState]->getLocalID()] << "\n");
         }
       }
       //release the GeometricEntity

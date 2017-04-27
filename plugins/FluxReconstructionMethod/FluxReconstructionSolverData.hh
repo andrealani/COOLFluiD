@@ -240,7 +240,7 @@ public: // functions
     return m_bndFacesStartIdxs;
   }
   
-  /// @return reference to m_bndFacesStartIdxs
+  /// @return reference to m_partitionFacesStartIdxs
   std::vector< CFuint >& getPartitionFacesStartIdxs()
   {
     return m_partitionFacesStartIdxs;

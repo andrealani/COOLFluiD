@@ -225,6 +225,7 @@ void FluxReconstructionBuilder::createCellFaces()
   const CFuint maxTotalNbFaces = sumNbFacesPerElem;
 
   CFLog(INFO, "nbBoundaryFaces = " << nbBoundaryFaces << "\n");
+  CFLog(VERBOSE, "maxTotalNbFaces = " << maxTotalNbFaces << "\n");
 
   // the following arrays are oversized
   m_geoTypeIDs.resize(maxTotalNbFaces);
@@ -272,9 +273,11 @@ void FluxReconstructionBuilder::createCellFaces()
 
     // loop over the elements of this type
     const CFuint nbElemPerType = (*elementType)[iType].getNbElems();
+
     for (CFuint iElem = 0; iElem < nbElemPerType; ++iElem, ++elemID)
     {
       const CFuint nbElemFaces = m_nbFacesPerElem[elemID];
+      
       // loop over the faces in the current element
       for (CFuint iFace = 0; iFace < nbElemFaces; ++iFace)
       {
@@ -941,6 +944,8 @@ FluxReconstructionBuilder::createTopologicalRegionSet
  const CFuint iTRS)
 {
   CFAUTOTRACE;
+  
+  CFLog(VERBOSE,"FRBuilder::createTopologicalRegionSet\n");
 
   // get P1 number of face nodes
   SafePtr<vector<ElementTypeData> > elementType = getCFmeshData().getElementTypeData();
