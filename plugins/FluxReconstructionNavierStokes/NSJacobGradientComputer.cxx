@@ -13,7 +13,7 @@
 
 #include "MathTools/MathFunctions.hh"
 
-#include "FluxReconstructionNavierStokes/NSGradientComputer.hh"
+#include "FluxReconstructionNavierStokes/NSJacobGradientComputer.hh"
 #include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 #include "NavierStokes/NavierStokesVarSet.hh"
@@ -34,15 +34,15 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider< NSGradientComputer,
+MethodCommandProvider< NSJacobGradientComputer,
 		       FluxReconstructionSolverData,
 		       FluxReconstructionNavierStokesModule >
-nsGradientComputerProvider("ConvRHSNS");
+NSJacobGradientComputerProvider("ConvRHSJacobNS");
   
 //////////////////////////////////////////////////////////////////////////////
   
-NSGradientComputer::NSGradientComputer(const std::string& name) :
-  ConvRHSFluxReconstruction(name),
+NSJacobGradientComputer::NSJacobGradientComputer(const std::string& name) :
+  ConvRHSJacobFluxReconstruction(name),
   m_diffusiveVarSet(CFNULL)
 {
   addConfigOptionsTo(this);
@@ -50,7 +50,7 @@ NSGradientComputer::NSGradientComputer(const std::string& name) :
   
 //////////////////////////////////////////////////////////////////////////////
 
-void NSGradientComputer::computeGradients()
+void NSJacobGradientComputer::computeGradients()
 {
   // get the diffusive varset
   m_diffusiveVarSet = getMethodData().getDiffusiveVar();
@@ -62,10 +62,6 @@ void NSGradientComputer::computeGradients()
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
     tempStates.push_back((*m_cellStates)[iSol]->getData());
-    if (m_cell->getID() == 191)
-    {
-      CFLog(VERBOSE,"State " << iSol << ": " << *((*m_cellStates)[iSol]->getData()) << "\n");
-    }
   }
   
   navierStokesVarSet->setGradientVars(tempStates,tempGradTerm,m_nbrSolPnts);
@@ -86,11 +82,6 @@ void NSGradientComputer::computeGradients()
         for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolPnts; ++jSolPnt)
         {
 	  const RealVector projectedState = tempGradTerm(iEq,jSolPnt) * m_cellFluxProjVects[iDir][jSolPnt];
-	  
-	  if (m_cell->getID() == 191)
-    {
-      CFLog(VERBOSE,"Projected State " << jSolPnt << " on dir " << iDir << ": " << projectedState << " of eq " << iEq << "\n");
-    }
 	  
           // compute the grad updates
           m_gradUpdates[0][iSolPnt][iEq] += (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolPnt]*projectedState;
@@ -119,19 +110,13 @@ void NSGradientComputer::computeGradients()
     {
       gradients[solID][iGrad] += m_gradUpdates[0][iSol][iGrad];
       gradients[solID][iGrad] *= invJacobDet;
-      if(m_cell->getID() == 191)
-      {
-
-	  CFLog(VERBOSE, "Vol gradient updates " << iGrad << " of  " << iSol << ": " << m_gradUpdates[0][iSol][iGrad] << "\n");
-
-      }
     }
   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void NSGradientComputer::computeGradientFaceCorrections()
+void NSJacobGradientComputer::computeGradientFaceCorrections()
 {
   // get the diffusive varset
   m_diffusiveVarSet = getMethodData().getDiffusiveVar();

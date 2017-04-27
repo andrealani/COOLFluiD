@@ -23,10 +23,18 @@ NSGradientComputer.cxx
 NSGradientComputer.hh
 NSBndGradientComputer.cxx
 NSBndGradientComputer.hh
+NSJacobGradientComputer.cxx
+NSJacobGradientComputer.hh
+NSJacobBndGradientComputer.cxx
+NSJacobBndGradientComputer.hh
 DiffBndCorrectionsRHSFluxReconstructionNS.cxx
 DiffBndCorrectionsRHSFluxReconstructionNS.hh
-DiffRHSFluxReconstructionNS.cxx			
+DiffBndCorrectionsRHSJacobFluxReconstructionNS.cxx
+DiffBndCorrectionsRHSJacobFluxReconstructionNS.hh
+DiffRHSFluxReconstructionNS.cxx
 DiffRHSFluxReconstructionNS.hh
+DiffRHSJacobFluxReconstructionNS.cxx
+DiffRHSJacobFluxReconstructionNS.hh
 FluxReconstructionNavierStokes.hh
 )
 
