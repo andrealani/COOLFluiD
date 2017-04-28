@@ -1129,6 +1129,11 @@ sub install_parmetis () {
      $mpicxx_comp = "CC";
   }
 
+  my $sharedflag = "shared=1";
+  if ( $opt_static eq "1" )
+  {
+    $sharedflag = "";
+  }
   safe_chdir($opt_tmp_dir);
   download_src("parmetis",$version);
   unless ($opt_fetchonly) {
@@ -1137,14 +1142,14 @@ sub install_parmetis () {
     # build metis
     if ( $version eq "4.0.3") {
        safe_chdir("$opt_tmp_dir/parmetis-$version/metis");
-       run_command_or_die("make config shared=1 prefix=$opt_parmetis_dir cc=$opt_mpi_dir/bin/$mpicc_comp cxx=$opt_mpi_dir/bin/$mpicxx_comp");
+       run_command_or_die("make config $sharedflag prefix=$opt_parmetis_dir cc=$opt_mpi_dir/bin/$mpicc_comp cxx=$opt_mpi_dir/bin/$mpicxx_comp");
        run_command_or_die("make install");
     }
     #build parmetis
     safe_chdir("$opt_tmp_dir/parmetis-$version/");
-    run_command_or_die("make config shared=1 prefix=$opt_parmetis_dir cc=$opt_mpi_dir/bin/$mpicc_comp cxx=$opt_mpi_dir/bin/$mpicxx_comp");
+    run_command_or_die("make config $sharedflag prefix=$opt_parmetis_dir cc=$opt_mpi_dir/bin/$mpicc_comp cxx=$opt_mpi_dir/bin/$mpicxx_comp");
     run_command_or_die("make install");
-  }
+  }  
  }
 }
 

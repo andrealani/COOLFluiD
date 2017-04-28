@@ -145,6 +145,7 @@ my %default_options = (
     'tvmet_dir'            => "",
     'cblas_dir'            => "",
     'cuda_dir'             => "",
+    'with_gsl'             => 0,
     'gsl_dir'              => "",
     'gsl_librarydir'       => "/usr/lib64",
     'gsl_includedir'       => "/usr/include",
@@ -934,6 +935,7 @@ sub setup_cfgoptions()
   setup_option('with_mutationpp',     'CF_ENABLE_MUTATIONPP');
   setup_option('with_plato',          'CF_ENABLE_PLATO');
   setup_option('with_paralution',     'CF_ENABLE_PARALUTION'); 
+  setup_option('with_gsl',            'CF_ENABLE_GSL');
   setup_option('withdocs',            'CF_ENABLE_DOCS');
   setup_option('explicit_templates',  'CF_ENABLE_EXPLICIT_TEMPLATES');
   setup_option('with_testcases',      'CF_ENABLE_TESTCASES');

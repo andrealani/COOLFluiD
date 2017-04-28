@@ -277,7 +277,7 @@ SET ( CF_Boost_LIBRARIES ${Boost_LIBRARIES} )
 # find non essential packages
 
 # our find macros
-FIND_PACKAGE(BlasLapack)      # search for Blas Lapack support
+#FIND_PACKAGE(BlasLapack)      # search for Blas Lapack support
 FIND_PACKAGE(Metis)           # serial domain decomposition
 FIND_PACKAGE(Parmetis)        # parallel domain decomposition
 #ADD_DEFINITIONS  ( -DIDXTYPEWIDTH=64 )   # 64 bit
@@ -288,7 +288,10 @@ IF ( CF_ENABLE_CURL )
 ENDIF()
 FIND_PACKAGE(Valgrind)        # valgrind for profiling and memmory leak detection
 FIND_PACKAGE(GooglePerftools) # Google PerfTools for profiling
-FIND_PACKAGE(GSL)             # GNU Scientific Library
+
+IF ( CF_ENABLE_GSL )
+  FIND_PACKAGE(GSL)             # GNU Scientific Library
+ENDIF() 
 
 # MPI 
 IF (CF_ENABLE_MPI)  
@@ -442,6 +445,11 @@ FOREACH( amodule ${CF_EXTRA_MODULES_LIST} )
     ADD_SUBDIRECTORY ( ${amodule} extra )
 ENDFOREACH( amodule ${CF_EXTRA_MODULES_LIST} )
 LOG ( "---------------------------------------------------------" )
+
+###########################
+# AL: experiment
+# applications directory
+# ADD_SUBDIRECTORY ( apps )
 
 #config file generation (at the end, so everything is detected)
 ADD_SUBDIRECTORY ( config )

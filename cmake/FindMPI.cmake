@@ -45,6 +45,10 @@ FIND_LIBRARY(MPI_LIBRARY
              PATHS ${TRIAL_LIBRARY_PATHS} NO_DEFAULT_PATH )
 
 IF ( NOT MPI_LIBRARY )
+  IF( CF_ENABLE_STATIC )
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  ENDIF( CF_ENABLE_STATIC )
+
   FIND_LIBRARY(MPI_LIBRARY
                NAMES mpich2 mpi mpich mpich.rts
                PATH_SUFFIXES mpi/lib
@@ -54,6 +58,10 @@ IF ( NOT MPI_LIBRARY )
                "C:/Program Files/MPICH/SDK/Lib" )
 ENDIF()
 
+IF( CF_ENABLE_STATIC )
+  SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+ENDIF( CF_ENABLE_STATIC )
+
 # search for the mpi c++ library
 FIND_LIBRARY(MPICXX_LIBRARY
              NAMES mpi++ mpi_cxx
@@ -62,6 +70,10 @@ FIND_LIBRARY(MPICXX_LIBRARY
 
 
 IF ( NOT MPICXX_LIBRARY )
+  IF( CF_ENABLE_STATIC )
+   SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  ENDIF( CF_ENABLE_STATIC )
+
   FIND_LIBRARY(MPICXX_LIBRARY
                NAMES mpi++ mpi_cxx
                PATH_SUFFIXES mpi/lib
@@ -82,11 +94,19 @@ IF ( DEFINED MPI_EXTRA_LIBRARY_NAMES )
 
 	FOREACH( mpi_extra_lib ${MPI_EXTRA_LIBRARY_NAMES} )
 
+    IF( CF_ENABLE_STATIC )
+      SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    ENDIF( CF_ENABLE_STATIC )
+
     # try in user defined paths first
     FIND_LIBRARY( MPI_EXTRA_LIBRARY_${mpi_extra_lib}
                   NAMES ${mpi_extra_lib}
                   PATH_SUFFIXES mpi/lib
                   PATHS ${TRIAL_LIBRARY_PATHS} NO_DEFAULT_PATH)
+
+    IF( CF_ENABLE_STATIC )
+     SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    ENDIF( CF_ENABLE_STATIC )
 
     # try in these paths first and then the system ones
     FIND_LIBRARY( MPI_EXTRA_LIBRARY_${mpi_extra_lib}
