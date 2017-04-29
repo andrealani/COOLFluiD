@@ -159,7 +159,8 @@ my %default_options = (
     'single_precision'     => 0,
     'with_longint'         => 0,
     'with_llongint'        => 0,
-    'libpetsc_name' 	   => "petsc"
+    'libpetsc_name' 	   => "petsc",
+    'libpetsc_deps_paths'  => ""
 );
 
 # add skip default skip options
@@ -229,7 +230,8 @@ sub parse_command_line_options()
        'coolfluid_dir=s'=> \$options{'coolfluid_dir'},
        'install_dir=s'  => \$options{'install_dir'},
        'cmake_generator=s' => \$options{'cmake_generator'},
-       'libpetsc_name=s'   => \$options{'libpetsc_name'}
+       'libpetsc_name=s'   => \$options{'libpetsc_name'},
+       'libpetsc_deps_paths' => \$options{'libpetsc_deps_paths'}
        );
    
    # remove duplicated entries in options
@@ -293,8 +295,8 @@ sub parse_command_line_options()
          --extra-mods-list=   Comma separated list of extra modules
                                   Default: $default_options{'extra_mods_list'}
 
-         --libpetsc_name=  Name of the petsc library (Default: petsc)  
-
+         --libpetsc_name=       Name of the petsc library (Default: petsc)  
+         --libpetsc_deps_paths  Full paths to all petsc dependencies (needed only for static linking)
 
   ACTIONS
 
@@ -923,6 +925,13 @@ sub setup_cfgoptions()
    $libpetsc_name = get_option('libpetsc_name');
    $other_options .= " -DCF_LIBPETSC_NAME=$libpetsc_name";
   }
+
+  my $libpetsc_deps_paths = "";
+  if (get_option('libpetsc_deps_paths'))
+  {
+   $libpetsc_deps_paths = get_option('libpetsc_deps_paths');
+   $other_options .= " -DCF_LIBPETSC_DEPS_PATHS=\"$libpetsc_deps_paths\"";
+  } 
 
   setup_option('nofortran',           'CF_SKIP_FORTRAN');
   setup_option('withmpi',             'CF_ENABLE_MPI');
