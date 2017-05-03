@@ -245,7 +245,7 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::computeJacobDiffBndContributi
       m_numJacob->perturb(iEqPert,pertState[iEqPert]);
       
       // compute the perturbed corrected gradients
-      computePerturbedGradients();
+      computePerturbedGradients();//++
 
       // compute the perturbed states and ghost states in the flx pnts
       computeFlxPntStates();
@@ -289,7 +289,7 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::computeJacobDiffBndContributi
       }
     }
   }
-//   acc.printToScreen();
+   //acc.printToScreen();
 
   if (getMethodData().doComputeJacobian())
   {

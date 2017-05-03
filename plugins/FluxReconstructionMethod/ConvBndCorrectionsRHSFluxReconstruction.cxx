@@ -166,14 +166,14 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
 
 	//CFLog(VERBOSE,"faceID: " << faceID << ", real face ID: " << m_face->getID() << "\n");
 	CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
-	if (m_intCell->getID() == 1234)
+	if (m_intCell->getID() == 1184)
 	{
-	  CFLog(VERBOSE,"coord state: " << (((*m_cellStates)[0])->getCoordinates()) << "\n");
+	  //CFLog(VERBOSE,"coord state: " << (((*m_cellStates)[0])->getCoordinates()) << "\n");
 	  CFLog(VERBOSE,"face ID: " << m_face->getID() << "\n");
 	  for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
 	  {
-	     //CFLog(VERBOSE,"coord state " << iState << ": " << (((*m_cellStates)[iState])->getCoordinates()) << "\n");
-	     //CFLog(VERBOSE,"rho: " << (*(((*m_cellStates)[iState])->getData()))[0] << "\n");
+	     CFLog(VERBOSE,"coord state " << iState << ": " << (((*m_cellStates)[iState])->getCoordinates()) << "\n");
+	     CFLog(VERBOSE,"states: " << (*(((*m_cellStates)[iState])->getData())) << "\n");
 	  }
 	}
 
@@ -214,7 +214,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
           computeGradientBndFaceCorrections();
         }
         
-        if(m_intCell->getID() == 191)
+        if(m_intCell->getID() == 1184 && hasDiffTerm)
       {
 	// get the gradients
   DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();

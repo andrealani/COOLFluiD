@@ -238,6 +238,9 @@ void ConvRHSJacobFluxReconstruction::execute()
 
       // get the states in this cell
       m_cellStates = m_cell->getStates();
+      
+      //CFLog(VERBOSE,"cell ID: " << m_cell->getID() << "\n");
+      //CFLog(VERBOSE,"coords: " << ((*m_cellStates)[0])->getCoordinates() << "\n");
 
       // if the states in the cell are parallel updatable or the gradients need to be computed, set the cell data
       if ((*m_cellStates)[0]->isParUpdatable() || hasDiffTerm)
@@ -283,10 +286,10 @@ void ConvRHSJacobFluxReconstruction::execute()
       }
       
       // print out the residual updates for debugging
-      if(m_cell->getID() == 150)
+      if(m_cell->getID() == 1337)
       {
-	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
-        CFLog(VERBOSE, "UpdateTotal = \n");
+	CFLog(VERBOSE, "ID  = " << m_cell->getID() << "\n");
+        CFLog(VERBOSE, "ConvUpdate = \n");
         // get the datahandle of the rhs
         DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
         for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
@@ -300,7 +303,7 @@ void ConvRHSJacobFluxReconstruction::execute()
           DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
           CFLog(VERBOSE, "UpdateCoeff: " << updateCoeff[(*m_cellStates)[iState]->getLocalID()] << "\n");
 	  
-	  CFLog(VERBOSE, "state " << iState << ": " << *(((*m_cellStates)[iState])->getData()) << "\n");
+	  //CFLog(VERBOSE, "state " << iState << ": " << *(((*m_cellStates)[iState])->getData()) << "\n");
 	  //CFLog(VERBOSE, "coord: " << ((*m_cellStates)[iState])->getCoordinates() << "\n");
 
         }

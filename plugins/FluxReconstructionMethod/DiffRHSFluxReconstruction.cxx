@@ -182,7 +182,7 @@ void DiffRHSFluxReconstruction::execute()
       m_cellVolume[RIGHT] = m_cells[RIGHT]->computeVolume();
       
       // print out the residual updates for debugging
-      if(m_cells[LEFT ]->getID() == 1234 || m_cells[RIGHT ]->getID() == 1234)
+      if(m_cells[LEFT ]->getID() == 1234 || m_cells[RIGHT ]->getID() == 1234) //1184
       {
 	CFuint pSide = RIGHT;
 	if (m_cells[LEFT ]->getID() == 1234)
@@ -241,11 +241,13 @@ void DiffRHSFluxReconstruction::execute()
       if(m_cells[LEFT ]->getID() == 1234 || m_cells[RIGHT ]->getID() == 1234)
       {
 	CFuint pSide = RIGHT;
+	CFuint otherSide = LEFT;
 	if (m_cells[LEFT ]->getID() == 1234)
 	{
 	  pSide = LEFT;
+	  otherSide = RIGHT;
 	}
-	CFLog(VERBOSE, "ID  = " << (*m_states[pSide])[0]->getLocalID() << "\n");
+	CFLog(VERBOSE, "other cell ID  = " << m_cells[otherSide]->getID() << "\n");
         CFLog(VERBOSE, "Bnd+FaceUpdate = \n");
         // get the datahandle of the rhs
         DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
@@ -269,7 +271,7 @@ void DiffRHSFluxReconstruction::execute()
   }
   
   // add the correction due to partition faces
-  addPartitionFacesCorrection();
+  //addPartitionFacesCorrection();
   
   //// Loop over the elements to calculate the divergence of the continuous flux
   
@@ -355,6 +357,24 @@ void DiffRHSFluxReconstruction::computeInterfaceFlxCorrection()
       CFLog(VERBOSE,"fluxLLocal = " << fluxL << "\n");
       CFLog(VERBOSE,"fluxRLocal = " << fluxR << "\n");
     }
+    if(m_cells[LEFT ]->getID() == 1234 || m_cells[RIGHT ]->getID() == 1234)
+      {
+	CFuint pSide = RIGHT;
+	CFuint otherSide = LEFT;
+	if (m_cells[LEFT ]->getID() == 1234)
+	{
+	  pSide = LEFT;
+	  otherSide = RIGHT;
+	}
+	RealVector fluxT = (m_cellFlx[pSide][iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt][pSide]);
+      RealVector fluxO = (m_cellFlx[otherSide][iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt][otherSide]);
+	CFLog(VERBOSE, "Flux this = " << fluxT<< "\n");
+      CFLog(VERBOSE, "Flux other = " << fluxO << "\n");
+    CFLog(VERBOSE, "state this = " << *(m_cellStatesFlxPnt[pSide][iFlxPnt]->getData()) << "\n");
+      CFLog(VERBOSE, "state other = " << *(m_cellStatesFlxPnt[otherSide][iFlxPnt]->getData()) << "\n");
+      CFLog(VERBOSE, "grad1 this = " << *(m_cellGradFlxPnt[pSide][iFlxPnt][1]) << "\n");
+      CFLog(VERBOSE, "grad1 other = " << *(m_cellGradFlxPnt[otherSide][iFlxPnt][1]) << "\n");
+      }
     
     RealVector avgSol(m_nbrEqs);
     vector< RealVector* > avgGrad;
@@ -395,6 +415,22 @@ void DiffRHSFluxReconstruction::computeInterfaceFlxCorrection()
       CFLog(VERBOSE,"Jacob L = " << m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT] << "\n");
       CFLog(VERBOSE,"Jacob R = " << m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT] << "\n");
     }
+    
+    if(m_cells[LEFT ]->getID() == 1234 || m_cells[RIGHT ]->getID() == 1234)
+      {
+	CFuint pSide = RIGHT;
+	CFuint otherSide = LEFT;
+	if (m_cells[LEFT ]->getID() == 1234)
+	{
+	  pSide = LEFT;
+	  otherSide = RIGHT;
+	}
+	CFLog(VERBOSE,"Riemann = " << m_flxPntRiemannFlux[iFlxPnt] << "\n");
+      CFLog(VERBOSE,"delta flux this = " << m_cellFlx[pSide][iFlxPnt] << "\n");
+      CFLog(VERBOSE,"delta flux other = " << m_cellFlx[otherSide][iFlxPnt] << "\n");
+      CFLog(VERBOSE,"Jacob this = " << m_faceJacobVecSizeFlxPnts[iFlxPnt][pSide] << "\n");
+      CFLog(VERBOSE,"Jacob other = " << m_faceJacobVecSizeFlxPnts[iFlxPnt][otherSide] << "\n");
+      }
   }
 }
 
@@ -489,8 +525,9 @@ void DiffRHSFluxReconstruction::computeFlxPntStates()
       for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
       {
         *(m_cellGradFlxPnt[LEFT][iFlxPnt][iVar]) += (*m_solPolyValsAtFlxPnts)[flxPntIdxL][iSol]*((*(m_cellGrads[LEFT][iSol]))[iVar]);
-	*(m_cellGradFlxPnt[RIGHT][iFlxPnt][iVar]) += (*m_solPolyValsAtFlxPnts)[flxPntIdxL][iSol]*((*(m_cellGrads[RIGHT][iSol]))[iVar]);
+	*(m_cellGradFlxPnt[RIGHT][iFlxPnt][iVar]) += (*m_solPolyValsAtFlxPnts)[flxPntIdxR][iSol]*((*(m_cellGrads[RIGHT][iSol]))[iVar]);
       }
+      
     }
     if(m_face->getID() == 624)
     {
@@ -499,6 +536,30 @@ void DiffRHSFluxReconstruction::computeFlxPntStates()
       CFLog(DEBUG_MIN, "right state in flx pnt = " << *(m_cellStatesFlxPnt[RIGHT][iFlxPnt]->getData()) << "\n");
       CFLog(DEBUG_MIN, "Normal: " << m_unitNormalFlxPnts[iFlxPnt] << "\n");
     }
+    
+      if(m_cells[LEFT ]->getID() == 1234 || m_cells[RIGHT ]->getID() == 1234)
+      {
+	CFuint pSide = RIGHT;
+	CFuint otherSide = LEFT;
+	if (m_cells[LEFT ]->getID() == 1234)
+	{
+	  pSide = LEFT;
+	  otherSide = RIGHT;
+	}
+	CFLog(VERBOSE, "this state in flx pnt = " << *(m_cellStatesFlxPnt[pSide][iFlxPnt]->getData()) << "\n");
+      CFLog(VERBOSE, "other state in flx pnt = " << *(m_cellStatesFlxPnt[otherSide][iFlxPnt]->getData()) << "\n");
+      CFLog(VERBOSE, "Normal: " << m_unitNormalFlxPnts[iFlxPnt] << "\n");
+      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+      {
+	CFLog(VERBOSE, "this grad " << iVar << " : " << *(m_cellGradFlxPnt[pSide][iFlxPnt][iVar]) << "\n");
+      CFLog(VERBOSE, "other grad " << iVar << " : " << *(m_cellGradFlxPnt[otherSide][iFlxPnt][iVar]) << "\n");
+      }
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+	CFLog(VERBOSE, "this grad1 of sol " << iSol << " : " << (*(m_cellGrads[pSide][iSol]))[1] << "\n");
+      CFLog(VERBOSE, "other grad1 of sol" << iSol << " : " << (*(m_cellGrads[otherSide][iSol]))[1] << "\n");
+      }
+      }
   }
 }
 
@@ -514,21 +575,29 @@ void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
     {
       // dereference the state
       State& stateSolPnt = *(*m_cellStates)[iSolPnt];
-      
+
       vector< RealVector > temp = *(m_cellGrads[0][iSolPnt]);
       vector< RealVector* > grad;
       grad.resize(m_nbrEqs);
-      
+
       for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
       {
 	cf_assert(temp.size() == m_nbrEqs);
 	grad[iVar] = & (temp[iVar]);
+	if(false)//m_cell->getID() == 1234
+    {
+      CFLog(VERBOSE, "gradFlx var " << iVar << " : " << *(grad[iVar]) << "\n");
+    }
       }
       
       m_contFlx[iSolPnt][iDim] = m_diffusiveVarSet->getFlux(*(stateSolPnt.getData()),grad,m_cellFluxProjVects[iDim][iSolPnt],0);
+      if(false)//m_cell->getID() == 1234
+    {
+      CFLog(VERBOSE, "stateFlx: " << *(stateSolPnt.getData()) << "\n");
+    }
     }
   }
-         
+
   // Loop over solution pnts to calculate the divergence of the discontinuous flux
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
@@ -544,21 +613,22 @@ void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          residuals[iSolPnt][iEq] -= (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolPnt]*(m_contFlx[jSolPnt][iDir][iEq]);
-       
+          residuals[iSolPnt][iEq] += (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolPnt]*(m_contFlx[jSolPnt][iDir][iEq]);//-
+
 	  if (fabs(residuals[iSolPnt][iEq]) < MathTools::MathConsts::CFrealEps())
           {
-            residuals[iSolPnt][iEq] = 0;
+            residuals[iSolPnt][iEq] = 0.0;
 	  }
 	}
       }
     }
-    if(false)
+    if(false)//m_cell->getID() == 1234
     {
       CFLog(VERBOSE, "state: " << *((*m_cellStates)[iSolPnt]->getData()) << "\n");
       CFLog(VERBOSE, "ID: " << m_cell->getID() << "\n");
-      CFLog(VERBOSE, "flx in " << iSolPnt << " : (" << m_contFlx[iSolPnt][0] << " , " << m_contFlx[iSolPnt][1] << "\n");
+      CFLog(VERBOSE, "flx in " << iSolPnt << " : (" << m_contFlx[iSolPnt][0] << " , " << m_contFlx[iSolPnt][1] << ")\n");
       CFLog(VERBOSE, "-div FD = " << residuals[iSolPnt] << "\n");
+      CFLog(VERBOSE, "projVec x: " << m_cellFluxProjVects[0][iSolPnt] << ", projVec y: " << m_cellFluxProjVects[1][iSolPnt] << ")\n");
     }
   }
 }
@@ -669,7 +739,7 @@ void DiffRHSFluxReconstruction::computeCorrection(CFuint side, vector< RealVecto
         // Fill in the corrections
         for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
         {
-          corrections[iSolPnt][iVar] -= currentCorrFactor[iVar] * divh; 
+          corrections[iSolPnt][iVar] += currentCorrFactor[iVar] * divh; //-
         }
       
         if(m_cells[side]->getID() == 49)

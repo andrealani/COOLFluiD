@@ -238,7 +238,29 @@ void ConvRHSFluxReconstruction::execute()
         computeGradientFaceCorrections();
       }
       
-      if(m_cells[RIGHT]->getID() == 140 || m_cells[RIGHT]->getID() == 141)
+      if((m_cells[LEFT]->getID() == 1184 || m_cells[RIGHT]->getID() == 1184) && hasDiffTerm)
+      {
+	// get the gradients
+  DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
+  CFuint side = LEFT;
+  if (m_cells[RIGHT]->getID() == 1184)
+  {
+    side = RIGHT;
+  }
+
+        for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+        {
+	  CFuint solID = ((*(m_states[side]))[iState])->getLocalID();
+    for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
+    {
+      
+
+	  CFLog(VERBOSE, "Face gradients " << iGrad << " of  " << iState << ": " << gradients[solID][iGrad] << "\n");
+        }
+      }
+      }
+      
+      if(m_cells[LEFT]->getID() == 140 || m_cells[RIGHT]->getID() == 141)
       {
         for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
         {
@@ -295,10 +317,10 @@ void ConvRHSFluxReconstruction::execute()
         updateRHS();
       } 
       
-      if(m_cell->getID() == 1234)
+      if(m_cell->getID() == 1234 && hasDiffTerm)
       {
 	// get the gradients
-  //DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
+  DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
 
         for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
         {
@@ -307,7 +329,7 @@ void ConvRHSFluxReconstruction::execute()
     {
       
 
-	  //CFLog(VERBOSE, "Bnd+Face gradients " << iGrad << " of  " << iState << ": " << gradients[solID][iGrad] << "\n");
+	  CFLog(VERBOSE, "Bnd+Face gradients " << iGrad << " of  " << iState << ": " << gradients[solID][iGrad] << "\n");
         }
       }
       }
@@ -352,10 +374,10 @@ void ConvRHSFluxReconstruction::execute()
         }
       }
       
-      if(m_cell->getID() == 1234)
+      if(m_cell->getID() == 1234 && hasDiffTerm)
       {
 	// get the gradients
-  //DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
+   DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
 
         for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
         {
@@ -364,7 +386,7 @@ void ConvRHSFluxReconstruction::execute()
     {
       
 
-	  //CFLog(VERBOSE, "total gradient " << iGrad << " of  " << iState << ": " << gradients[solID][iGrad] << "\n");
+	  CFLog(VERBOSE, "total gradient " << iGrad << " of  " << iState << ": " << gradients[solID][iGrad] << "\n");
         }
         
       }
@@ -376,7 +398,7 @@ void ConvRHSFluxReconstruction::execute()
       // print out the residual updates for debugging
       if(m_cell->getID() == 1234)
       {
-	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
+	CFLog(VERBOSE, "ID  = " << m_cell->getID() << "\n");
         CFLog(VERBOSE, "ConvUpdate = \n");
         // get the datahandle of the rhs
         DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
@@ -418,8 +440,8 @@ void ConvRHSFluxReconstruction::computeInterfaceFlxCorrection()
       CFLog(DEBUG_MIN, "Flux Right = " << m_cellFlx[RIGHT][iFlxPnt] << "\n");
       RealVector fluxL = (m_cellFlx[LEFT][iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT]);
       RealVector fluxR = (m_cellFlx[RIGHT][iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT]);
-      CFLog(VERBOSE,"fluxLLocal = " << fluxL << "\n");
-      CFLog(VERBOSE,"fluxRLocal = " << fluxR << "\n");
+      CFLog(DEBUG_MIN,"fluxLLocal = " << fluxL << "\n");
+      CFLog(DEBUG_MIN,"fluxRLocal = " << fluxR << "\n");
     }
     
     // compute the riemann flux

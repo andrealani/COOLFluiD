@@ -135,6 +135,8 @@ void TVBLimiter::execute()
       m_cellBuilder->releaseGE();
     }
   }
+  
+  CFuint limitCounter = 0;
 
   // LOOP OVER ELEMENT TYPES, TO LIMIT THE SOLUTIONS
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
@@ -158,6 +160,14 @@ void TVBLimiter::execute()
 
       // get the nodes in this cell
       m_cellNodes  = m_cell->getNodes ();
+      
+      if (m_cell->getID() == 1337)
+      {
+	for (CFuint iState = 0; iState < m_cellStates->size(); ++iState)
+	{
+	  CFLog(VERBOSE, "state " << iState << " : " << *((*m_cellStates)[iState]) << "\n");
+	}
+      }
 
       // set the min and max neighbouring cell averaged states
       setMinMaxNghbrCellAvgStates();
@@ -168,13 +178,17 @@ void TVBLimiter::execute()
       // apply limiter if necessary
       if (m_applyLimiter)
       {
+	CFLog(VERBOSE,"Limits done: " << limitCounter << "\n");
         limitStates();
+	++limitCounter;
       }
 
       //release the GeometricEntity
       m_cellBuilder->releaseGE();
     }
   }
+  
+  CFLog(VERBOSE,"Limits done: " << limitCounter << "\n");
 
   CFTRACEEND;
 }
@@ -360,10 +374,11 @@ void TVBLimiter::setLimitBooleans()
     const CFreal dVar = lengthScaleFactor*(m_maxAvgStateAll[iEq] - m_minAvgStateAll[iEq]);
     const CFreal lowerBnd = m_minAvgState[iEq] - dVar;
     const CFreal upperBnd = m_maxAvgState[iEq] + dVar;
+    //CFLog(VERBOSE,"lower Bnd: " << lowerBnd << ", upper Bnd: " << upperBnd << "\n");
     for (CFuint iSol = 0; iSol < m_nbrSolPnts && !m_applyLimiterToPhysVar[iEq]; ++iSol)
     {
       m_applyLimiterToPhysVar[iEq] = (*((*m_cellStates)[iSol]))[iEq] < lowerBnd ||
-                                     (*((*m_cellStates)[iSol]))[iEq] > upperBnd;
+                                     (*((*m_cellStates)[iSol]))[iEq] > upperBnd;	     
     }
 
     if (m_applyLimiterToPhysVar[iEq])

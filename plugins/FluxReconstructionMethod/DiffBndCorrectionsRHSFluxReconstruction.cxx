@@ -252,6 +252,11 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeInterfaceFlxCorrection()
   {     
     // compute the normal flux at the current flux point
     m_cellFlx[iFlxPnt] = m_diffusiveVarSet->getFlux(*(m_cellStatesFlxPnt[iFlxPnt]->getData()),m_cellGradFlxPnt[iFlxPnt],m_unitNormalFlxPnts[iFlxPnt],0);
+    if(m_intCell->getID() == 1234)
+    {
+      RealVector projFlux = m_cellFlx[iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt];
+      CFLog(VERBOSE, "Flux in flx pnt = " << projFlux << "\n");
+    }
   }
 
   // compute the riemann flux minus the discontinuous flx in the flx pnts
@@ -282,8 +287,11 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeInterfaceFlxCorrection()
     {
       CFLog(VERBOSE, "state = " << *(m_cellStatesFlxPnt[iFlxPnt]->getData()) << "\n");
       CFLog(VERBOSE, "Ghost state = " << *(m_flxPntGhostSol[iFlxPnt]->getData()) << "\n");
+      CFLog(VERBOSE, "grad1 = " << *(m_cellGradFlxPnt[iFlxPnt][1]) << "\n");
+      CFLog(VERBOSE, "Ghost grad1 = " << *(m_flxPntGhostGrads[iFlxPnt][1]) << "\n");
       CFLog(VERBOSE, "RiemannFlux = " << m_flxPntRiemannFlux[iFlxPnt] << "\n");
-      CFLog(VERBOSE, "Flux in flx pnt = " << m_cellFlx[iFlxPnt] << "\n");
+      RealVector projFlux = m_flxPntRiemannFlux[iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt];
+      CFLog(VERBOSE, "RiemannFlux proj = " << projFlux << "\n");
       CFLog(VERBOSE, "unit vector = " << m_unitNormalFlxPnts[iFlxPnt] << "\n");
       CFLog(VERBOSE, "faceJacob = " << m_faceJacobVecSizeFlxPnts[iFlxPnt] << "\n");
       CFLog(VERBOSE, "delta flux = " << m_cellFlx[iFlxPnt] << "\n");
@@ -375,7 +383,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeCorrection(vector< RealVect
         // Fill in the corrections
         for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
         {
-          corrections[iSolPnt][iVar] -= currentCorrFactor[iVar] * divh; 
+          corrections[iSolPnt][iVar] += currentCorrFactor[iVar] * divh; //-
         }
         if(m_intCell->getID() == 1234)
         {

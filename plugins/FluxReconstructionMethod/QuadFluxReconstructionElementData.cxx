@@ -43,7 +43,6 @@ QuadFluxReconstructionElementData::QuadFluxReconstructionElementData(CFPolyOrder
 //   if(solPntsLocalCoord1DTemp[0].size() == polyOrder+1 && flxPntsLocalCoord1DTemp[0].size() == polyOrder+1) {
 //     m_solPntsLocalCoord1D = solPntsLocalCoord1DTemp[0];
 //     m_flxPntsLocalCoord1D = flxPntsLocalCoord1DTemp[0];
-//     CFLog(VERBOSE,"IT WORKED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 //     
 //   } else {
   // Use a default solution and flux point distribution: Gauss Legendre.  
