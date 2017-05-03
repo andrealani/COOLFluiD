@@ -51,6 +51,7 @@ NSBndGradientComputer::NSBndGradientComputer(const std::string& name) :
 
 void NSBndGradientComputer::computeGradientBndFaceCorrections()
 { 
+  //ConvBndCorrectionsRHSFluxReconstruction::computeGradientBndFaceCorrections();
   // get the diffusive varset
   m_diffusiveVarSet = getMethodData().getDiffusiveVar();
   

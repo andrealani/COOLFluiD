@@ -133,6 +133,7 @@ void NSGradientComputer::computeGradients()
 
 void NSGradientComputer::computeGradientFaceCorrections()
 {
+  //ConvRHSFluxReconstruction::computeGradientFaceCorrections();
   // get the diffusive varset
   m_diffusiveVarSet = getMethodData().getDiffusiveVar();
   

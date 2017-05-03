@@ -159,6 +159,14 @@ void TVBLimiterEuler::setLimitBooleans()
     {
       m_applyLimiter = (*((*m_cellStates)[iSol]))[iEq] < lowerBnd ||
                        (*((*m_cellStates)[iSol]))[iEq] > upperBnd;
+      if (m_cell->getID() == 1337)
+      {
+        CFLog(VERBOSE,"state for limiter: " << (*((*m_cellStates)[iSol]))[iEq] << "\n");
+      }
+    }
+    if (m_cell->getID() == 1337)
+    {
+      CFLog(VERBOSE,"lower Bnd: " << lowerBnd << ", upper Bnd: " << upperBnd << "\n");
     }
   }
 
@@ -175,6 +183,10 @@ void TVBLimiterEuler::setLimitBooleans()
       computePressFromConsVar(*((*m_cellStates)[iSol]),pressure);
       m_applyLimiter = pressure < lowerBnd ||
                        pressure > upperBnd;
+    }
+    if (m_cell->getID() == 1337)
+    {
+      CFLog(VERBOSE,"Press lower Bnd: " << lowerBnd << ", upper Bnd: " << upperBnd << ", press: " << pressure << "\n");
     }
   }
 }
