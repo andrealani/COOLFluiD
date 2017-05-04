@@ -155,6 +155,8 @@ void TVBLimiterEuler::setLimitBooleans()
     const CFreal dVar = lengthScaleFactor*(m_maxAvgStateAll[iEq] - m_minAvgStateAll[iEq]);
     const CFreal lowerBnd = m_minAvgState[iEq] - dVar;
     const CFreal upperBnd = m_maxAvgState[iEq] + dVar;
+    
+    // loop over the states in the solution points
     for (CFuint iSol = 0; iSol < m_nbrSolPnts && !m_applyLimiter; ++iSol)
     {
       m_applyLimiter = (*((*m_cellStates)[iSol]))[iEq] < lowerBnd ||
@@ -162,6 +164,17 @@ void TVBLimiterEuler::setLimitBooleans()
       if (m_cell->getID() == 1337)
       {
         CFLog(VERBOSE,"state for limiter: " << (*((*m_cellStates)[iSol]))[iEq] << "\n");
+      }
+    }
+    
+    // loop over the states in the flux points
+    for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts && !m_applyLimiter; ++iFlx)
+    {
+      m_applyLimiter = m_cellStatesFlxPnt[iFlx][iEq] < lowerBnd ||
+                       m_cellStatesFlxPnt[iFlx][iEq] > upperBnd;
+      if (m_cell->getID() == 1337)
+      {
+        CFLog(VERBOSE,"flxState for limiter: " << m_cellStatesFlxPnt[iFlx][iEq] << "\n");
       }
     }
     if (m_cell->getID() == 1337)
@@ -178,9 +191,19 @@ void TVBLimiterEuler::setLimitBooleans()
     const CFreal lowerBnd = m_minAvgState[m_nbrEqsMinusOne] - dVar;
     const CFreal upperBnd = m_maxAvgState[m_nbrEqsMinusOne] + dVar;
     CFreal pressure = 0.0;
+    
+    // loop over the states in the solution points
     for (CFuint iSol = 0; iSol < m_nbrSolPnts && !m_applyLimiter; ++iSol)
     {
       computePressFromConsVar(*((*m_cellStates)[iSol]),pressure);
+      m_applyLimiter = pressure < lowerBnd ||
+                       pressure > upperBnd;
+    }
+    
+    // loop over the states in the flux points
+    for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts && !m_applyLimiter; ++iFlx)
+    {
+      computePressFromConsVar(m_cellStatesFlxPnt[iFlx],pressure);
       m_applyLimiter = pressure < lowerBnd ||
                        pressure > upperBnd;
     }
