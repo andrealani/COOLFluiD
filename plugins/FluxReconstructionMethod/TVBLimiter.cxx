@@ -40,6 +40,7 @@ TVBLimiter::TVBLimiter(const std::string& name) :
   socket_nodeNghbCellMinAvgStates("nodeNghbCellMinAvgStates"),
   socket_nodeNghbCellMaxAvgStates("nodeNghbCellMaxAvgStates"),
   m_cellBuilder(CFNULL),
+  m_solPolyValsAtFlxPnts(CFNULL),
   m_cell(),
   m_cellStates(),
   m_cellNodes(),
@@ -61,7 +62,8 @@ TVBLimiter::TVBLimiter(const std::string& name) :
   m_applyLimiter(),
   m_applyLimiterToPhysVar(),
   m_tvbLimitFactor(),
-  m_lengthScaleExp()
+  m_lengthScaleExp(),
+  m_cellStatesFlxPnt()
 {
   addConfigOptionsTo(this);
 
@@ -171,6 +173,9 @@ void TVBLimiter::execute()
 
       // set the min and max neighbouring cell averaged states
       setMinMaxNghbrCellAvgStates();
+      
+      // compute the states in the flux points
+      computeFlxPntStates();
 
       // check if limiting is necessary
       setLimitBooleans();
@@ -374,11 +379,19 @@ void TVBLimiter::setLimitBooleans()
     const CFreal dVar = lengthScaleFactor*(m_maxAvgStateAll[iEq] - m_minAvgStateAll[iEq]);
     const CFreal lowerBnd = m_minAvgState[iEq] - dVar;
     const CFreal upperBnd = m_maxAvgState[iEq] + dVar;
-    //CFLog(VERBOSE,"lower Bnd: " << lowerBnd << ", upper Bnd: " << upperBnd << "\n");
+
+    // loop over the solution points
     for (CFuint iSol = 0; iSol < m_nbrSolPnts && !m_applyLimiterToPhysVar[iEq]; ++iSol)
     {
       m_applyLimiterToPhysVar[iEq] = (*((*m_cellStates)[iSol]))[iEq] < lowerBnd ||
                                      (*((*m_cellStates)[iSol]))[iEq] > upperBnd;	     
+    }
+    
+    // loop over the flux points
+    for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts&& !m_applyLimiterToPhysVar[iEq]; ++iFlx)
+    {
+      m_applyLimiterToPhysVar[iEq] = m_cellStatesFlxPnt[iFlx][iEq] < lowerBnd ||
+                                     m_cellStatesFlxPnt[iFlx][iEq] > upperBnd;	     
     }
 
     if (m_applyLimiterToPhysVar[iEq])
@@ -394,8 +407,6 @@ void TVBLimiter::limitStates()
 {
   for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
   {
-/*    if (m_applyLimiterToPhysVar[iEq])
-    {*/
       // reconstruct the cell averaged variable and the derivatives in the cell center
       reconstructCellAveragedVariable(iEq);
       computeCellCenterDerivVariable (iEq);
@@ -434,7 +445,24 @@ void TVBLimiter::limitStates()
               m_cellCenterDerivVar[iCoor]*(*m_solPntsLocalCoords)[iSol][iCoor];
         }
       }
-//     }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void TVBLimiter::computeFlxPntStates()
+{
+  // loop over flx pnts to extrapolate the states to the flux points and get the 
+  // discontinuous normal flux in the flux points and the Riemann flux
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_maxNbrFlxPnts; ++iFlxPnt)
+  {        
+    m_cellStatesFlxPnt[iFlxPnt] = 0.0;
+
+    // extrapolate the left and right states to the flx pnts
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    {
+      m_cellStatesFlxPnt[iFlxPnt] += (*m_solPolyValsAtFlxPnts)[iFlxPnt][iSol]*(*((*m_cellStates)[iSol]));
+    }
   }
 }
 
@@ -464,13 +492,16 @@ void TVBLimiter::setup()
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
   const CFuint nbrElemTypes = frLocalData.size();
   cf_assert(nbrElemTypes > 0);
+  
+  // get the coefs for extrapolation of the states to the flx pnts
+  m_solPolyValsAtFlxPnts = frLocalData[0]->getCoefSolPolyInFlxPnts();
 
   // get the maximum number of flux points
-  CFuint maxNbrFlxPnts = 0;
+  m_maxNbrFlxPnts = 0;
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
   {
     const CFuint nbrFlxPnts = frLocalData[iElemType]->getNbrOfFlxPnts();
-    maxNbrFlxPnts = maxNbrFlxPnts > nbrFlxPnts ? maxNbrFlxPnts : nbrFlxPnts;
+    m_maxNbrFlxPnts = m_maxNbrFlxPnts > nbrFlxPnts ? m_maxNbrFlxPnts : nbrFlxPnts;
   }
 
   // get the number of nodes in the mesh
@@ -490,6 +521,13 @@ void TVBLimiter::setup()
   }
 
   m_lengthScaleExp = 2.0/static_cast<CFreal>(m_dim);
+  
+  for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
+  {
+    RealVector temp(m_nbrEqs);
+    m_cellStatesFlxPnt.push_back(temp);
+  }
+  cf_assert(m_cellStatesFlxPnt.size() == m_maxNbrFlxPnts);
 }
 
 //////////////////////////////////////////////////////////////////////////////

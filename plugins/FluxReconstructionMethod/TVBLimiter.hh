@@ -121,6 +121,11 @@ protected: // functions
    * apply the limiter
    */
   virtual void limitStates();
+  
+  /**
+   * Compute the left and right states in the flx pnts
+   */
+  void computeFlxPntStates();
 
 protected: // data
 
@@ -201,6 +206,15 @@ protected: // data
 
   /// exponent for the computation of the length scale
   CFreal m_lengthScaleExp;
+  
+  /// extrapolated states in the flux points of the cell
+  std::vector< RealVector > m_cellStatesFlxPnt;
+  
+  /// maximum number of flux points in a cell
+  CFuint m_maxNbrFlxPnts;
+  
+  /// coefs to extrapolate the states to the flx pnts
+  Common::SafePtr< std::vector< std::vector< CFreal > > > m_solPolyValsAtFlxPnts;
 
 }; // class TVBLimiter
 
