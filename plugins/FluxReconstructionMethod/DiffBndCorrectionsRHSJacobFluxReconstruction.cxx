@@ -413,9 +413,6 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::computePerturbedGradients()
   
   // compute flux point coordinates
   SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
-    
-  // compute face Jacobian vectors
-  vector< RealVector > faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*flxLocalCoords);
   
   // get face Jacobian vector sizes in the flux points
   DataHandle< vector< CFreal > > faceJacobVecSizeFaceFlxPnts = socket_faceJacobVecSizeFaceFlxPnts.getDataHandle();
@@ -428,6 +425,9 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::computePerturbedGradients()
     // get local face index
     const CFuint faceIdx = m_otherFaceLocalIdxs[iFace];
     const CFuint orient = (*m_faceOrients)[faceIdx];
+    
+    // compute face Jacobian vectors
+    vector< RealVector > faceJacobVecs = (*m_faces)[faceIdx]->computeFaceJacobDetVectorAtMappedCoords(*flxLocalCoords);
 
     // Loop over flux points to set the normal vectors
     for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
@@ -437,6 +437,8 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::computePerturbedGradients()
 
       // set unit normal vector
       m_unitNormalFlxPnts[iFlxPnt] = faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
+      
+      m_flxPntCoords[iFlxPnt] = (*m_faces)[faceIdx]->computeCoordFromMappedCoord((*flxLocalCoords)[iFlxPnt]);
     }
 
     if ((*m_isFaceOnBoundary)[faceIdx])
@@ -473,7 +475,7 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::computePerturbedGradients()
           for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
           {
             const CFreal avgSol = (gradTermFace(iEq,iFlx)+ghostGradTerm(iEq,iFlx))/2.0;
-	    const RealVector projectedCorr = (avgSol-gradTermFace(iEq,iFlx))*(m_faceJacobVecAbsSizeFlxPnts[iFlx]*(*m_faceMappedCoordDir)[orient])*m_unitNormalFlxPnts[iFlx];
+	    const RealVector projectedCorr = (avgSol-gradTermFace(iEq,iFlx))*(m_faceJacobVecAbsSizeFlxPnts[iFlx]*(*m_faceMappedCoordDir)[faceIdx])*m_unitNormalFlxPnts[iFlx];
 	    /// @todo Check if this is also OK for triangles!!
 	    m_gradUpdates[0][iSolPnt][iEq] += projectedCorr*m_corrFctDiv[iSolPnt][(*m_faceFlxPntConn)[faceIdx][iFlx]];
           }
@@ -560,6 +562,10 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::computePerturbedGradients()
   }
 
   // Add the contribution of the correction of the gradients for this bnd face
+  
+  // compute face Jacobian vectors
+  vector< RealVector > faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*flxLocalCoords);
+    
   // Loop over flux points to set the normal vectors
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   {
@@ -568,6 +574,8 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::computePerturbedGradients()
 
     // set unit normal vector
     m_unitNormalFlxPnts[iFlxPnt] = faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
+    
+    m_flxPntCoords[iFlxPnt] = m_face->computeCoordFromMappedCoord((*flxLocalCoords)[iFlxPnt]);
   }
 
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)

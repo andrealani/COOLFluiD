@@ -286,7 +286,7 @@ void ConvRHSJacobFluxReconstruction::execute()
       }
       
       // print out the residual updates for debugging
-      if(m_cell->getID() == 1337)
+      if(m_cell->getID() == 191)
       {
 	CFLog(VERBOSE, "ID  = " << m_cell->getID() << "\n");
         CFLog(VERBOSE, "ConvUpdate = \n");
