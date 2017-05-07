@@ -446,10 +446,8 @@ FOREACH( amodule ${CF_EXTRA_MODULES_LIST} )
 ENDFOREACH( amodule ${CF_EXTRA_MODULES_LIST} )
 LOG ( "---------------------------------------------------------" )
 
-###########################
-# AL: experiment
-# applications directory
-# ADD_SUBDIRECTORY ( apps )
+# applications directory (Solver & co)
+ADD_SUBDIRECTORY ( apps )
 
 #config file generation (at the end, so everything is detected)
 ADD_SUBDIRECTORY ( config )
