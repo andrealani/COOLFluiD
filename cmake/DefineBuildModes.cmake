@@ -6,7 +6,7 @@ LIST ( APPEND CMAKE_C_LINK_FLAGS    " -qpic -qmkshrobj -qnostaticlink -qnostatic
 ENDIF( CF_ENABLE_IBMSHARED )
 
 IF ( CF_ENABLE_IBMSTATIC )
-LIST ( APPEND CMAKE_CXX_LINK_FLAGS  " -Wl,--allow-multiple-definition" )
+LIST ( APPEND CMAKE_CXX_LINK_FLAGS  " -Wl,--allow-multiple-definition -Wl,--whole-archive" )
 ENDIF( CF_ENABLE_IBMSTATIC )
 
 
