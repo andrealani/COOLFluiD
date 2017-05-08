@@ -92,6 +92,7 @@ my %default_options = (
     'with_ibmshared'  => 0, # shared with IBM compiler
     'with_ibmstatic'  => 0, # static with IBM compiler
     'withcurl'        => 1,
+    'with_craystatic' => 0,
     'with_mutationpp' => 0,
     'with_plato'      => 0,
     'with_paralution' => 0,
@@ -941,6 +942,7 @@ sub setup_cfgoptions()
   setup_option('with_ibmshared',      'CF_ENABLE_IBMSHARED');
   setup_option('with_ibmstatic',      'CF_ENABLE_IBMSTATIC');
   setup_option('withcurl',            'CF_ENABLE_CURL');
+  setup_option('with_craystatic',     'CF_ENABLE_CRAYSTATIC');
   setup_option('with_mutationpp',     'CF_ENABLE_MUTATIONPP');
   setup_option('with_plato',          'CF_ENABLE_PLATO');
   setup_option('with_paralution',     'CF_ENABLE_PARALUTION'); 
