@@ -137,8 +137,10 @@ void CFEnv::configure ( Config::ConfigArgs& args )
 
 void CFEnv::setup()
 {
+  CFLog(VERBOSE, "CFEnv::setup() => start\n");
+  
   SetupObject::setup();
-
+  
   // these are the default values
 #ifdef CF_HAVE_CURL  
   SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().setDefaultBehavior("CurlAccessRepository");
@@ -147,6 +149,8 @@ void CFEnv::setup()
 #endif
 
   SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().setDefaultBehavior("DirectFileWrite");
+  
+  CFLog(VERBOSE, "CFEnv::setup() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

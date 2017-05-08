@@ -58,6 +58,7 @@ class AppOptions : public Config::ConfigObject {
       options.addConfigOption< bool >     ("wait",    "Wait before continuing with execution");
       options.addConfigOption< bool >     ("waitend",    "Wait before ending execution");
       options.addConfigOption< bool >     ("help",    "Show this help");
+      options.addConfigOption< bool >     ("testEnv",    "test only the CF environment");
       options.addConfigOption< CFuint >   ("log",     "Logging level for output");
       options.addConfigOption< CFreal >   ("residual",  "The simulation should finish with this residual. The executable will return an erro if not.");
       options.addConfigOption< CFreal >   ("tolerance",   "Acceptable percentage in the testcase residual.");
@@ -72,6 +73,7 @@ class AppOptions : public Config::ConfigObject {
       wait(false),
       waitend(false),
       show_help(false),
+      test_env(false),
       log_level(INFO),
       residual(MathConsts::CFrealMax()),
       tolerance(3.0),
@@ -84,6 +86,7 @@ class AppOptions : public Config::ConfigObject {
       setParameter( "wait",   &wait        );
       setParameter( "waitend",   &waitend        );
       setParameter( "help",   &show_help    );
+      setParameter( "testEnv",   &test_env    );
       setParameter( "log",    &log_level    );
       setParameter( "tolerance", &tolerance    );
       setParameter( "residual", &residual  );
@@ -128,6 +131,7 @@ class AppOptions : public Config::ConfigObject {
       bool   wait;
       bool   waitend;
       bool   show_help;
+      bool   test_env;
       CFuint  log_level;
       CFreal  residual;
       CFreal  tolerance;
@@ -254,6 +258,8 @@ int main(int argc, char** argv)
     // setup the runtime environment
     cf_env.setup();
     
+    if (!options.test_env) {
+      
 #ifdef CF_HAVE_CUDA
     CudaEnv::CudaDeviceManager& cudaDev = CudaEnv::CudaDeviceManager::getInstance();
     cudaDev.configure(config_args);
@@ -354,6 +360,7 @@ int main(int argc, char** argv)
     sim.release();
     // deallocate Maestro
     maestro.release();
+    }
     
     // unsetup the runtime environment
     cf_env.unsetup();
