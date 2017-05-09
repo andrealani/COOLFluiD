@@ -13,6 +13,10 @@
 
 #include "Common/COOLFluiD.hh"
 
+#if defined(CF_HAVE_IBMSTATIC) && defined(CF_HAVE_MPI)
+#include <mpi.h>
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -84,10 +88,23 @@ private: // methods
 
 //////////////////////////////////////////////////////////////////////////////
 
+// bypass default CFLog when compiling with IBM compiler with static linking
+#if defined(CF_HAVE_IBMSTATIC) && defined(CF_HAVE_MPI)
+static int getCPURank() 
+{
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  return rank;
+}
+#define CFLog(n,x) if (n <= CFLogger::getInstance().getMainLoggerLevel() && getCPURank() == 0) CFLogger::getInstance().getMainLogger() << n << x 
+#endif
+
+#ifndef CF_HAVE_IBMSTATIC
 #ifndef CF_NO_LOG
-#define CFLog(n,x) if (n <= CFLogger::getInstance().getMainLoggerLevel()) CFLogger::getInstance().getMainLogger() << n << x
-#else
+  #define CFLog(n,x) if (n <= CFLogger::getInstance().getMainLoggerLevel()) CFLogger::getInstance().getMainLogger() << n << x
+ #else
   #define CFLog(n,x)
+#endif
 #endif
 
 //////////////////////////////////////////////////////////////////////////////

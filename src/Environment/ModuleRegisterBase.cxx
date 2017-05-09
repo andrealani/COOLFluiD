@@ -24,7 +24,7 @@ ModuleRegisterBase::ModuleRegisterBase(const std::string& name) :
  m_configRegistry(),
  m_init(false)
 {
-  CFLog(VERBOSE, "Registering module [" << name << "]\n");
+  CFtrace << "ModuleRegisterBase::ModuleRegisterBase() => Registering module [" << name << "]\n";
   Environment::CFEnv::getInstance().getModuleRegistry()->regist(this);
 }
 

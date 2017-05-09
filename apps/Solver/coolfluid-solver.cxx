@@ -149,19 +149,6 @@ int main(int argc, char** argv)
 {
   using namespace boost;
 
-  CFLog(VERBOSE, "--- coolfluid-solver ----------------------------------------\n\n");
-
-  // print out starting directory
-  CFLog(VERBOSE, "starting in directory [" << filesystem::current_path().string() << "]\n\n");
-  
-  // print out input parameters
-  CFLog(VERBOSE, "called with arguments:\n");
-  for ( int iarg = 0; iarg < argc; ++iarg ) {
-    CFLog(VERBOSE, "arg [" << iarg << "] : [" << argv[iarg] << "]\n");
-  }
-  CFLog(VERBOSE, "\n-------------------------------------------------------------\n");
-  
-  //////////////////////////////////////////////////////////////////
   // process the command line
   AppOptions options;
   options.getOptionList().setStrictArgs(true);
@@ -178,21 +165,11 @@ int main(int argc, char** argv)
   // Something bad happened. Dump the usage statement:
   catch (const Exception& e)
   {
-	  CFLog ( DEBUG_MIN, e.what() << "\n" );
+    cerr << e.what() << "\n";
     cerr << options.writeUsage();
     exit(1);
   }
-  //////////////////////////////////////////////////////////////////
 
-  CFLog(VERBOSE, "places to search for libraries ...\n[");
-  std::vector< string >::const_iterator itr = options.libDir.begin();
-  for ( ; itr != options.libDir.end() ; ++itr )
-  {
-    CFLog(VERBOSE, "\n\tlibpath [" << *itr << "]");
-  }
-  CFLog(VERBOSE, "\n]");
-  CFLog(VERBOSE, "\n-------------------------------------------------------------\n\n");
-  
   int return_value = 0;
   try
   {
@@ -205,7 +182,28 @@ int main(int argc, char** argv)
     
     // initiate the environemnt
     cf_env.initiate(argc, argv);
+
+    CFLog(VERBOSE, "--- coolfluid-solver ----------------------------------------\n\n");
+ 
+    // print out starting directory
+    CFLog(VERBOSE, "starting in directory [" << filesystem::current_path().string() << "]\n\n");
     
+    // print out input parameters 
+    CFLog(VERBOSE, "called with arguments:\n");
+    for ( int iarg = 0; iarg < argc; ++iarg ) {
+      CFLog(VERBOSE, "arg [" << iarg << "] : [" << argv[iarg] << "]\n");
+     }
+    CFLog(VERBOSE, "\n-------------------------------------------------------------\n");
+
+    CFLog(VERBOSE, "places to search for libraries ...\n[");
+    std::vector< string >::const_iterator itr = options.libDir.begin();
+    for ( ; itr != options.libDir.end() ; ++itr )
+    {
+       CFLog(VERBOSE, "\n\tlibpath [" << *itr << "]");
+     }   
+     CFLog(VERBOSE, "\n]");
+     CFLog(VERBOSE, "\n-------------------------------------------------------------\n\n");
+   
     //////////////////////////////////////////////////////////////////
     // removes the config-p*.log
     // only processor 0 does it while the others wait

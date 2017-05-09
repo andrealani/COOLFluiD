@@ -35,11 +35,11 @@ void FactoryRegistry::regist(Environment::FactoryBase* factory)
   if ( ! m_store.checkEntry(type_name) )
   {
     m_store.addEntry(type_name, factory);
-//     CFLog ( INFO, "Factory [" + type_name + "] registered\n" );
+    CFtrace << "Factory [" + type_name + "] registered\n";
   }
   else
   {
-    CFLogWarn("Factory " + factory->getTypeName() + " already registered : skipping registration\n");
+   CFtrace << "Factory " + factory->getTypeName() + " already registered : skipping registration\n";
   }
 }
 
@@ -50,11 +50,11 @@ void FactoryRegistry::unregist(const std::string& type_name)
   if ( m_store.checkEntry(type_name) )
   {
     m_store.removeEntry(type_name);
-//     CFLog ( INFO, "Factory [" + type_name + "] unregistered\n" );
+    CFtrace << "Factory [" + type_name + "] unregistered\n";
   }
   else
   {
-    CFLogWarn("Factory [" + type_name + "] not registered : skipping removal\n");
+    CFtrace << "Factory [" + type_name + "] not registered : skipping removal\n";
   }
 }
 
@@ -65,7 +65,7 @@ FactoryRegistry::getFactory(const std::string& type_name)
 {
   if ( m_store.checkEntry(type_name) )
   {
-//     CFLog ( INFO, "Factory [" + type_name + "] found and returning\n" );
+    //     CFLog ( INFO, "Factory [" + type_name + "] found and returning\n" );
     return m_store.getEntry(type_name);
   }
   else

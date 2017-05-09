@@ -31,11 +31,11 @@ void ModuleRegistry::regist(Environment::ModuleRegisterBase* module)
   if ( !m_store.checkEntry( module->getName()) )
   {
     m_store.addEntry(module->getName(),module);
-    CFLog(VERBOSE,"Module " + module->getName() + " registered\n");
+    CFtrace << "Module " + module->getName() + " registered\n";
   }
   else
   {
-    CFLogWarn("Module " + module->getName() + " already registered : skipping registration\n");
+    CFtrace << "Module " + module->getName() + " already registered : skipping registration\n";
   }
 }
 

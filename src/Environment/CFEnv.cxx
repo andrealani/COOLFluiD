@@ -141,6 +141,7 @@ void CFEnv::setup()
   
   SetupObject::setup();
   
+  CFout << "CFEnv::setup()" << "\n";
   // these are the default values
 #ifdef CF_HAVE_CURL  
   SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().setDefaultBehavior("CurlAccessRepository");
@@ -353,9 +354,9 @@ void CFEnv::initiate ( int argc, char** argv )
   // Initiate the Parallel environment
   // This modifies argc and argv! 
   
-  CFLog(VERBOSE, "Initializing Parallel Environment : \n");
   COOLFluiD::Common::PE::InitPE(&argc, &argv);
   
+  CFLog(VERBOSE, "CFEnv::initiate() => start\n");
   if (Common::PE::GetPE().GetRank("Default") == 0) {
     CFLog(INFO, "-------------------------------------------------------------\n");
     CFLog(INFO, "COOLFluiD Environment\n");
@@ -379,6 +380,8 @@ void CFEnv::initiate ( int argc, char** argv )
   if (Common::PE::GetPE().GetRank("Default") == 0) {
     CFLog(INFO, "-------------------------------------------------------------\n");
   }
+  
+  CFLog(VERBOSE, "CFEnv::initiate() => end\n");
 }
     
 //////////////////////////////////////////////////////////////////////////////

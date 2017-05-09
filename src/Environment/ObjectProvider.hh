@@ -81,7 +81,7 @@ public:
   /// Constructor
   explicit ObjectProvider(const std::string& name) : BASE::PROVIDER(name)
   {
-    CFLog ( DEBUG_MAX , "Creating provider \'" << name << "\' of type \'" << BASE::getClassName() << "\'\n" );
+    CFtrace << "Creating provider \'" << name << "\' of type \'" << BASE::getClassName() << "\'\n";
     MODULE::getInstance().getSelfRegistry().regist(this);
   }
 
@@ -129,7 +129,7 @@ public:
   explicit ObjectProvider(const std::string& name) :
     BASE::PROVIDER(name)
   {
-    CFLog ( DEBUG_MAX , "Creating provider \'" << name << "\' of type \'" << BASE::getClassName() << "\'\n" );
+    CFtrace << "Creating provider \'" << name << "\' of type \'" << BASE::getClassName() << "\'\n";
     MODULE::getInstance().getSelfRegistry().regist(this);
   }
 

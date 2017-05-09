@@ -40,9 +40,9 @@ void SelfRegistry::regist(Common::ProviderBase* provider)
   }
   else
   {
-   CFLog(WARN, "Provider [" + provider->getProviderName()
+   CFtrace << "Provider [" + provider->getProviderName()
               + "] of type [" + provider->getProviderType()
-              + "] already registered : skipping registration\n");
+              + "] already registered : skipping registration\n";
   }
 }
 
@@ -56,9 +56,9 @@ void SelfRegistry::unregist(const std::string& name, const std::string& type)
   }
   else
   {
-    CFLog(WARN, "Provider [" + name
+    CFtrace << "Provider [" + name
               + "] of type [" + type
-              + "] not registered : skipping removal\n");
+              + "] not registered : skipping removal\n";
   }
 }
 
@@ -75,9 +75,9 @@ void SelfRegistry::unregist(Common::ProviderBase* provider)
   }
   else
   {
-    CFLog(WARN, "Provider ["  + provider->getProviderName()
+    CFtrace << "Provider ["  + provider->getProviderName()
               + "] of type [" + provider->getProviderType()
-              + "] not registered : skipping removal\n");
+              + "] not registered : skipping removal\n";
   }
 }
 
@@ -92,7 +92,7 @@ SelfRegistry::getProvider(const std::string& name, const std::string& type)
   }
   else
   {
-    CFLog(WARN, "Provider [" + name
+    CFLog(VERBOSE, "Provider [" + name
               + "] of type [" + type
               + "] not registered : returning null pointer\n");
     return Common::SafePtr<Common::ProviderBase>(CFNULL);

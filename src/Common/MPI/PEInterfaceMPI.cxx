@@ -53,20 +53,19 @@ PEInterface<PM_MPI>::~PEInterface ()
 
 void PEInterface<PM_MPI>::CallInitFunctions ()
 {
-  CFLogDebugMin( "PEInterface<PM_MPI>::CallInitFunctions()\n");
   cf_assert (!StopCalled_);
   InitContainerType::iterator Cur = InitList_.begin();
   while (Cur != InitList_.end()) {
     CallInitFunction (*Cur);
     ++Cur;
   }
+  CFLogDebugMin( "PEInterface<PM_MPI>::CallInitFunctions()\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void PEInterface<PM_MPI>::CallDoneFunctions ()
 {
-  CFLogDebugMin( "PEInterface<PM_MPI>::CallDoneFunctions ()\n");
   InitContainerType::iterator Cur = InitList_.begin();
   while (Cur != InitList_.end()) {
     CallDoneFunction (*Cur);
@@ -75,6 +74,7 @@ void PEInterface<PM_MPI>::CallDoneFunctions ()
   StopCalled_ = true;
   // Clear the list
   InitList_.clear ();
+  CFLogDebugMin( "PEInterface<PM_MPI>::CallDoneFunctions ()\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -82,16 +82,16 @@ void PEInterface<PM_MPI>::CallDoneFunctions ()
 void PEInterface<PM_MPI>::CallInitFunction (MPIInitObject * NewObj) const
 {
   // AL: check this, I'm not sure if "Default" should be used here 
-  CFLogDebugMin( "Calling MPI_Init on " << NewObj << "\n");
   NewObj->MPI_Init (GetCommunicator(std::string("Default")));
+  CFLogDebugMin( "Calling MPI_Init on " << NewObj << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void PEInterface<PM_MPI>::CallDoneFunction (MPIInitObject * NewObj) const
 {
-  CFLogDebugMin( "Calling MPI_Done on " << NewObj << "\n");
   NewObj->MPI_Done ();
+  CFLogDebugMin( "Calling MPI_Done on " << NewObj << "\n"); 
 }
 //////////////////////////////////////////////////////////////////////////////
       

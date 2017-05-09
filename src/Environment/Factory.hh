@@ -109,10 +109,12 @@ void Factory<BASE>::regist(Provider<BASE>* provider)
 {
   if (exists(provider->getName()))
   {
+#ifndef CF_HAVE_ALLSTATIC
     throw Common::StorageExistsException (FromHere(),
       "In factory of [" + BASE::getClassName() +
       "] a provider with the name [" + provider->getName() +
       "] was found when trying to regist it" );
+#endif
   }
   CFtrace << "Registering provider [" << provider->getName() << "] in factory of [" << BASE::getClassName() << "]\n";
   getProviderMap()[provider->getName()] = provider;

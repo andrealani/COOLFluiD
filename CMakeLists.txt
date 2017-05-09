@@ -224,6 +224,12 @@ ELSE()
   SET(CF_HAVE_ALLSTATIC 0 CACHE BOOL "All libraries compiled with dynamic linking")
 ENDIF()
 
+IF ( CF_ENABLE_IBMSTATIC )
+   SET(CF_HAVE_IBMSTATIC 1 CACHE BOOL "Compiling on IBM machine with static linking")                                         
+ELSE()  
+   SET(CF_HAVE_IBMSTATIC 0 CACHE BOOL "Compiling on IBM machine with static linking")
+ENDIF() 
+
 # finding boost (essential)
 
 # find boost package (essential)

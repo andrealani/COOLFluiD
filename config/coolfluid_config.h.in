@@ -78,6 +78,7 @@
 #cmakedefine CF_HAVE_MUTATION2OLD   // Mutation2OLD support
 #cmakedefine CF_HAVE_PARALUTION     // Paralution support
 #cmakedefine CF_HAVE_ALLSTATIC      // compile static
+#cmakedefine CF_HAVE_IBMSTATIC      // compile static with IBM compiler
 
 // Package options
 #cmakedefine CF_HAVE_GOOGLE_PERFTOOLS

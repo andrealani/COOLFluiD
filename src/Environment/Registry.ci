@@ -39,10 +39,10 @@ void Registry::regist(TYPE* entry)
 {
   try {
     m_store.addEntry(entry->getName(),entry);
-    CFLog(NOTICE,TYPE::getClassName() + entry->getName() + " registered\n");
+    CFtrace << TYPE::getClassName() + entry->getName() + " registered\n";
   }
   catch (Common::StorageExistsException& e) {
-    CFLogWarn(TYPE::getClassName() + " " + entry->getName() + " already registered : skipping registration\n");
+    CFtrace << TYPE::getClassName() + " " + entry->getName() + " already registered : skipping registration\n";
   }
 }
 
@@ -54,7 +54,7 @@ void Registry::unregist(const std::string& entryName)
     m_store.removeEntry(entryName);
   }
   catch (Common::NoSuchStorageException& e) {
-    CFLogWarn(TYPE::getClassName() + " " +  + entryName + " not registered : skipping removal\n");
+    CFtrace << TYPE::getClassName() + " " +  + entryName + " not registered : skipping removal\n";
   }
 }
 
@@ -74,7 +74,7 @@ Registry::getTYPE(const std::string& entryName)
     return m_store.getEntry(entryName);
   }
   catch (Common::NoSuchStorageException& e) {
-    CFLogWarn(TYPE::getClassName() + " " +  + entryName + " not registered : returning null pointer\n");
+    CFtrace << TYPE::getClassName() + " " +  + entryName + " not registered : returning null pointer\n";
   }
   return Common::SafePtr<TYPE>(CFNULL);
 }
