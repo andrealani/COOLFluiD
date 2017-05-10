@@ -104,6 +104,8 @@ void CFmeshReader::generateMeshDataImpl()
   // convert only if m_converterStr != "CFmesh", which assumes
   // that you create the mesh from CFmesh format
   
+  CFLog(VERBOSE, "CFmeshReader::generateMeshDataImpl() => start\n"); 
+  
   if (m_converterStr != "CFmesh")
   {
     convertFormat();
@@ -122,6 +124,8 @@ void CFmeshReader::generateMeshDataImpl()
     
     CFLog(NOTICE, "Building the mesh took: " << stp.read() << "s\n");
   }
+  
+  CFLog(VERBOSE, "CFmeshReader::generateMeshDataImpl() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

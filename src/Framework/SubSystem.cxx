@@ -55,7 +55,7 @@ void SubSystem::defineConfigOptions(Config::OptionList& options)
 
 SubSystem::SubSystem(const string& name)
   : ConfigObject(name),
-    m_ranksCounter(),
+    m_ranksCounter(0),
     m_namespaces(),
     m_has_null_methods(true),
     m_nbmethods(0)
@@ -255,6 +255,8 @@ void SubSystem::configureNamespaces(Config::ConfigArgs& args)
     
     PE::GetPE().createGroup("Default", SubSystemStatusStack::getCurrentName(), subSystemRanksUnique, true); 
   }
+  
+  if (m_ranksCounter == 0) {m_ranksCounter = PE::GetPE().GetProcessorCount("Default");}
 }
     
 //////////////////////////////////////////////////////////////////////////////

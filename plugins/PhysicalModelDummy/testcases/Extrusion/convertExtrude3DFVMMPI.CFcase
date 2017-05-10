@@ -51,15 +51,15 @@ Simulator.SubSystemTypes = OnlyMeshSubSystem OnlyMeshSubSystem
 Simulator.SubSysA.Default.PhysicalModelType  = PhysicalModelDummy
 Simulator.SubSysA.PhysicalModelDummy.Dimensions = 2
 
-Simulator.SubSysA.Default.listTRS = y0 y1 x0 x1
+Simulator.SubSysA.Default.listTRS = y0 y1 PeriodicX
 
 Simulator.SubSysA.MeshCreator = CFmeshFileReader
-Simulator.SubSysA.CFmeshFileReader.Data.FileName = 2DFullDomainCoarse.CFmesh
+Simulator.SubSysA.CFmeshFileReader.Data.FileName = Mesh_2x2_300x300_extended.CFmesh
 Simulator.SubSysA.CFmeshFileReader.convertFrom = Gambit2CFmesh
 Simulator.SubSysA.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
 Simulator.SubSysA.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
 Simulator.SubSysA.CFmeshFileReader.ReadCFmesh = Dummy
-
+#Simulator.SubSysA.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 4
 Simulator.SubSysA.SpaceMethod = Null
 Simulator.SubSysA.Null.Builder = FVMCC
 
@@ -69,14 +69,14 @@ Simulator.SubSysA.Null.Builder = FVMCC
 
 Simulator.SubSysB.Default.PhysicalModelType  = PhysicalModelDummy
 
-Simulator.SubSysB.Default.listTRS = y0 y1 x0 x1 Top Bottom
+Simulator.SubSysB.Default.listTRS = y0 y1 PeriodicX Top Bottom
 
 Simulator.SubSysB.MeshCreator = CFmeshFileReader
 Simulator.SubSysB.CFmeshFileReader.Data.FileName = Extruded.CFmesh
-Simulator.SubSysB.CFmeshFileReader.Data.convertFromFile = 2DFullDomainCoarse.CFmesh
+Simulator.SubSysB.CFmeshFileReader.Data.convertFromFile = Mesh_2x2_300x300_extended.CFmesh
 Simulator.SubSysB.CFmeshFileReader.convertFrom = Extruder2DFVMMPI
 # number of mesh layers in the z direction
-Simulator.SubSysB.CFmeshFileReader.Extruder2DFVMMPI.NbLayers = 100
+Simulator.SubSysB.CFmeshFileReader.Extruder2DFVMMPI.NbLayers = 8
 # total size in [m] in the Z direction
 Simulator.SubSysB.CFmeshFileReader.Extruder2DFVMMPI.ExtrudeSize = 250000.
 Simulator.SubSysB.CFmeshFileReader.Extruder2DFVMMPI.Split = false
@@ -84,7 +84,7 @@ Simulator.SubSysB.CFmeshFileReader.Extruder2DFVMMPI.Split = false
 # OR close to 100% to save memory)
 Simulator.SubSysB.CFmeshFileReader.Extruder2DFVMMPI.CFmeshBinaryFileWriter.NbWriters = 1
 Simulator.SubSysB.CFmeshFileReader.ReadCFmesh = Dummy
-
+#Simulator.SubSysB.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 4
 Simulator.SubSysB.SpaceMethod = Null
 Simulator.SubSysB.Null.Builder = FVMCC
 
