@@ -155,7 +155,7 @@ public: // classes
 protected:  
   
   /// @returns the number of equations of this VarSet
-  CFuint getNbEqs() const { return 6; std::cout << "getNbEqs()\n"; }
+  CFuint getNbEqs() const { return 6; }
   
 private:
   

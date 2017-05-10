@@ -19,7 +19,6 @@ namespace COOLFluiD {
 
 void ConvMaxwellTerm::defineConfigOptions(Config::OptionList& options)
 {
-  //std::cout<<"ConvMaxwellTerm::defineConfigOptions()\n";
   options.addConfigOption< CFreal , Config::DynamicOption<> >("divBCleaningConst","Hyperbolic divB cleaning Constant");
   options.addConfigOption< CFreal , Config::DynamicOption<> >("divECleaningConst","Hyperbolic divE cleaning Constant");   
   options.addConfigOption< CFreal , Config::DynamicOption<> >("divBAdimCleaningConst","Adimensional hyperbolic divB cleaning Constant");       

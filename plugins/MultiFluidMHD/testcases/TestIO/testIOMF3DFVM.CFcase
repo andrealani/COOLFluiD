@@ -1,0 +1,141 @@
+############################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, MultiFluidMHD3D, Forward Euler, extruded mesh with hexahedra, 
+# extruder from 2D to 3D, Tecplot writer.
+#
+#############################################################################
+#
+
+# COOLFluiD Startfile
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+#### Residual = -1.5830387
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = true
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
+CFEnv.RegistSignalHandlers = false
+CFEnv.TraceToStdOut = false
+CFEnv.TraceActive = false
+CFEnv.OnlyCPU0Writes = false
+
+# This tests the configuration file: it gives error if some options are wrong
+# This always fails with converters (THOR2CFmesh, Gambit2CFmesh, etc.): 
+# deactivate the option in those cases 
+# CFEnv.ErrorOnUnusedConfig = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libShapeFunctions libCFmeshFileReader libForwardEuler libTecplotWriter libMaxwell libMultiFluidMHD libFiniteVolume libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libCFmeshExtruder  
+
+#SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/MultiFluidMHD/testcases/TestIO
+Simulator.Paths.ResultsDir = plugins/MultiFluidMHD/testcases/TestIO
+
+###############################################################################
+# Physical Model
+# order of the reference values is Bx, By, Bz, Ex, Ey, Ez, Psi, Phi, rhoi, rhon, ui, vi, wi, un, vn, wn, Ti, Tn
+Simulator.SubSystem.Default.PhysicalModelType = MultiFluidMHD3D
+Simulator.SubSystem.MultiFluidMHD3D.refValues = 1e-3 1e-3 1e-3 0.02 0.02 0.02 1e-4 1e-3 8.6e-8 1.6e-4 100 20 20 100 20 20 7000 7000
+Simulator.SubSystem.MultiFluidMHD3D.refLength = 1.0
+Simulator.SubSystem.MultiFluidMHD3D.nbSpecies = 2
+Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.molecularMass1 = 9.1093829140e-31 
+Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.molecularMass2 = 1.6735327160314e-27 
+Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.molecularMass3 = 1.67262177774e-27
+Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.gamma = 1.6666666666667
+Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.nonInducedElectromagnetic = 0. 0. 0. 0. 0. 0.    
+Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.divBCleaningConst = 1.
+Simulator.SubSystem.MultiFluidMHD3D.DiffTerm.nbSpecies = 2
+Simulator.SubSystem.MultiFluidMHD3D.DiffTerm.VarViscCond = true
+Simulator.SubSystem.MultiFluidMHD3D.DiffTerm.BraginskiiTransport = true 
+Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.lightSpeedMax = 3e6 #299792458
+Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.lightSpeedMF = 3e6 #299792458
+Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.IsLeake = true
+
+###############################################################################
+# Output
+
+Simulator.SubSystem.OutputFormat        = Tecplot
+Simulator.SubSystem.Tecplot.FileName    = multiFluid.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = RhoiViTi
+Simulator.SubSystem.Tecplot.SaveRate    = 1
+#Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = y0 y1 PeriodicX Top Bottom
+Simulator.SubSystem.Tecplot.AppendIter = true
+#Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
+
+###############################################################################
+# Stop Condition
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+
+###############################################################################
+# Mesh Reader
+Simulator.SubSystem.Default.listTRS = y0 y1 PeriodicX Top Bottom
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = Extruded.CFmesh
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 4
+Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = Mesh_2x2_300x300_extended.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Extruder2DFVM
+# number of mesh layers in the z direction
+Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.NbLayers = 10 #100
+# total size in [m] in the Z direction
+Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.ExtrudeSize = 250000.
+Simulator.SubSystem.CFmeshFileReader.Extruder2DFVM.Split = false
+
+###############################################################################
+# Space Method
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUpMultiFluid3D
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid3D.useMacCormackScaling = true
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid3D.choiceA12 = 1
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid3D.machInf = 0.1 0.1 0.1
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar = RhoiViTi
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = RhoiViTi
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokesMF
+
+###############################################################################
+# Initial Conditions (order of species: ions then neutrals)
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState 
+Simulator.SubSystem.CellCenterFVM.InitNames = InField 
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.InField.Def =\
+						0.\
+						1.8e-3*exp(-((x-2e6)^2)/(2*(40000^2)))\
+						0.\
+						0.\
+						0.\						
+						0.\
+						0.\
+						0.\
+                       if(y<398e3,(1.6726e-27)*10.^(-2.832785475079908e-013*(y*1e-3)^5+5.977852883001713e-010*(y*1e-3)^4-3.786566517387232e-007*(y*1e-3)^3+9.733782235969860e-005*(y*1e-3)^2-0.020565569998380*(y*1e-3)+20.861001647753444),if(y<1.094527363184080e+006,(1.6726e-27)*10.^(4.523494134476573e-019*(y*1e-3)^7-2.594809056070059e-015*(y*1e-3)^6+6.250211316849979e-012*(y*1e-3)^5-8.126603319433488e-009*(y*1e-3)^4+6.081791731970105e-006*(y*1e-3)^3-0.002573410564984*(y*1e-3)^2+0.558577333309927*(y*1e-3)-30.618825700023685),if(y<1.592039800995025e+006,(1.6726e-27)*10.^(-4.140594909851221e-020*(y*1e-3)^7+4.471908116269837e-016*(y*1e-3)^6-2.007271704534731e-012*(y*1e-3)^5+4.867415885245781e-009*(y*1e-3)^4-6.897552317635694e-006*(y*1e-3)^3+0.005717424842731*(y*1e-3)^2-2.569651421262249*(y*1e-3)+5.013441185615005e+002),if(y<2e6,(1.6726e-27)*10.^(-2.239684893712833e-013*(y*1e-3)^5+1.958712980009841e-009*(y*1e-3)^4-6.825804482375326e-006*(y*1e-3)^3+0.011851734183174*(y*1e-3)^2-10.257547642371989*(y*1e-3)+3.558587237491116e+003),(1.6726e-27)*10.^(-2.239684893712833e-013*(2e6*1e-3)^5+1.958712980009841e-009*(2e6*1e-3)^4-6.825804482375326e-006*(2e6*1e-3)^3+0.011851734183174*(2e6*1e-3)^2-10.257547642371989*(2e6*1e-3)+3.558587237491116e+003)))))\
+                       if(y<398e3,(1.6735e-27)*10.^(6.443494562022385e-014*(y*1e-3)^5-8.630561614020515e-011*(y*1e-3)^4+4.255047954651374e-008*(y*1e-3)^3-1.095613022688500e-005*(y*1e-3)^2-9.974125060932813e-004*(y*1e-3)+23.062153880512739),if(y<1.094527363184080e+006,(1.6735e-27)*10.^(2.841199217162226e-015*(y*1e-3)^5-1.529555555254348e-011*(y*1e-3)^4+3.048007863797447e-008*(y*1e-3)^3-2.731143862689854e-005*(y*1e-3)^2+0.007645698421407*(y*1e-3)+21.805930768705480),if(y<1.592039800995025e+006,(1.6735e-27)*10.^(-2.580161300013330e-015*(y*1e-3)^5+1.842676588487182e-011*(y*1e-3)^4-5.197613291331953e-008*(y*1e-3)^3+7.248916929241559e-005*(y*1e-3)^2-0.052424478841290*(y*1e-3)+36.232533293199801),if(y<2e6,(1.6735e-27)*10.^(1.212041242989839e-014*(y*1e-3)^5-1.066222624132299e-010*(y*1e-3)^4+3.732295947790998e-007*(y*1e-3)^3-6.500925005347501e-004*(y*1e-3)^2+0.561354176723640*(y*1e-3)-1.722723362791486e+002),(1.6735e-27)*10.^(1.212041242989839e-014*(2e6*1e-3)^5-1.066222624132299e-010*(2e6*1e-3)^4+3.732295947790998e-007*(2e6*1e-3)^3-6.500925005347501e-004*(2e6*1e-3)^2+0.561354176723640*(2e6*1e-3)-1.722723362791486e+002)))))\
+						0.\
+						0.\
+						0.\
+						0.\
+						0.\
+						0.\
+						if(y<2e6,6430.933-17.272*(y*1e-3)+0.11957*(y*1e-3)^2-0.000561*(y*1e-3)^3+1.42339e-6*(y*1e-3)^4-1.996685e-9*(y*1e-3)^5+1.61992e-12*(y*1e-3)^6-7.5977e-16*(y*1e-3)^7+1.9155e-19*(y*1e-3)^8-2.011e-23*(y*1e-3)^9,7286.933)\ 
+						if(y<2e6,6430.933-17.272*(y*1e-3)+0.11957*(y*1e-3)^2-0.000561*(y*1e-3)^3+1.42339e-6*(y*1e-3)^4-1.996685e-9*(y*1e-3)^5+1.61992e-12*(y*1e-3)^6-7.5977e-16*(y*1e-3)^7+1.9155e-19*(y*1e-3)^8-2.011e-23*(y*1e-3)^9,7286.933)
+
+###############################################################################
+# Boundary Conditions
+Simulator.SubSystem.CellCenterFVM.BcComds = SuperOutletFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = Jet1
+
+# Bottom Condition 
+Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = y0 y1 PeriodicX Top Bottom
+

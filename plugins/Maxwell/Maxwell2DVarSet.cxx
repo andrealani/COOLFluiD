@@ -46,8 +46,6 @@ CFreal Maxwell2DVarSet::getMaxEigenValue(const RealVector& data,
 {
   
   const CFreal ce = getModel()->getLightSpeed();
-  //cout << "Maxwell2DVarSet::getMaxEigenValue" << ce <<"\n" ;
-
   return ce;  
 }
 

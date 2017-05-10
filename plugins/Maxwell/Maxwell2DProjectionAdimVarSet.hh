@@ -50,7 +50,6 @@ public: // classes
    */
   virtual void setup()
   {
-    std::cout << "Maxwell2DProjectionAdimVarSet::setup()/n";
     Framework::ConvectiveVarSet::setup();
     
     // set EquationSetData
@@ -123,7 +122,7 @@ protected:
   virtual void computeStateFlux(const RealVector& pdata);
 
    /// @returns the number of equations of this VarSet
-  CFuint getNbEqs() const { return 8; std::cout << "getNbEqs()\n"; }
+  CFuint getNbEqs() const { return 8; }
   
 private:
 
