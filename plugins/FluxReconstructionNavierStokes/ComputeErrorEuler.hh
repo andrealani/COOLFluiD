@@ -6,6 +6,7 @@
 #include "Framework/BaseMethodStrategyProvider.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
+#include "FluxReconstructionMethod/TensorProductGaussIntegrator.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -73,6 +74,27 @@ protected: // data
   
   /// socket for state's
   Framework::DataSocketSink<Framework::State*, Framework::GLOBAL> socket_states;
+  
+  /// coefficients for the computation of the cell averaged solution
+  Common::SafePtr< RealVector > m_cellAvgSolCoefs;
+  
+  /// builder of cells
+  Common::SafePtr<Framework::GeometricEntityPool<Framework::StdTrsGeoBuilder> > m_cellBuilder;
+  
+  /// variable for cell
+  Framework::GeometricEntity* m_cell;
+  
+  /// vector containing pointers to the states in a cell
+  std::vector< Framework::State* >* m_cellStates;
+  
+  /// gaus integrator
+  TensorProductGaussIntegrator m_tpIntegrator;
+  
+  /// mapped coords of the gauss quadrature points
+  std::vector< RealVector > m_quadPntCoords;
+  
+  /// coefficients for reconstructing the state in the quadrature points
+  std::vector< std::vector< CFreal > > m_quadCoefs;
 
 
 }; // class ComputeErrorEuler

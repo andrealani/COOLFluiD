@@ -13,6 +13,8 @@ BCSubOutletEuler3D.cxx
 BCSubOutletEuler3D.hh
 BCNoSlipWallHeatFluxNS2D.cxx
 BCNoSlipWallHeatFluxNS2D.hh
+BCNoSlipWallHeatFluxNS3D.cxx
+BCNoSlipWallHeatFluxNS3D.hh
 ComputeErrorEuler.cxx
 ComputeErrorEuler.hh
 TVBLimiterEuler.cxx
