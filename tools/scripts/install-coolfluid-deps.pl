@@ -1290,7 +1290,7 @@ sub install_petsc ()
       run_command_or_die("export PATH=$opt_cuda_dir/bin:\\\$PATH");
       run_command_or_die("export LD_LIBRARY_PATH=/usr/lib64:$opt_cuda_dir/lib64:/usr/lib64/nvidia:\\\$LD_LIBRARY_PATH");
      
-      if ($version eq "3.6.3" or $version eq "3.7.3a" or $version eq "3.7.3-next" ) {
+      if ($version eq "3.6.3" or $version eq "3.7.3a" or $version eq "3.7.3-next" or $version eq "3.7.6") {
          if ($opt_viennacl eq "0") {
            # download and unpack compatible cusp source files
            my $cusp_name = "cusp-v0.4.0.zip";
@@ -1366,6 +1366,17 @@ sub install_petsc ()
     my $FOPTFLAGS ="-O3 ";
     my $COPTFLAGS ="-O3 ";
     my $CXXOPTFLAGS ="-O3 ";
+
+    # IBM BG/Q
+    if ( $petsc_arch eq "arch-ppc64" ) {
+      $CXXFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+      $CFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+      $FFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+      $F90FLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+      $CXXOPTFLAGS="-O3 -qstrict -qarch=qp -qtune=qp"; 
+      $COPTFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+      $FOPTFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+    }
 
    if ($version eq "3.7.6") {
       $dynamicload ="";
