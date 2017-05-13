@@ -7,6 +7,7 @@
 #include "FluxReconstructionMethod/BCStateComputer.hh"
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
 #include "FluxReconstructionMethod/TensorProductGaussIntegrator.hh"
+#include "FluxReconstructionMethod/CellToFaceGEBuilder.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 

@@ -181,14 +181,14 @@ void ComputeErrorEuler::execute()
         const CFreal ht2 = gamma/(gamma-1.0)*R*T2+V2*V2/2.0;
     
         // L2
-        const CFreal errorht = pow(ht - ht2,2);
+        CFreal errorht = pow(ht - ht2,2);
         const CFreal errors = pow(s - s2,2);
 	
 	if(m_cell->getID() == 1)
 	{
 	  //CFLog(NOTICE,"error ht in sol: " << errorht << "\n");
 	}
-	if (errorht > 0.0001)
+	if (errorht > 0.00001)
 	{
 	  //CFLog(NOTICE,"high error: " << errorht << " in " << m_cell->getID() << "\n");
 	}
@@ -222,6 +222,9 @@ void ComputeErrorEuler::execute()
         const CFreal errorsLi = fabs(s - s2);
         totaleht += errorhtLi;
 	totales += errorsLi;
+	
+	//(*((*m_cellStates)[iState]))[0] = errorhtLi;
+	//(*((*m_cellStates)[iState]))[1] = errorsLi;
       }
       
       for (CFuint iPnt = 0; iPnt < nbrQPnts; ++iPnt)

@@ -15,6 +15,13 @@ BCNoSlipWallHeatFluxNS2D.cxx
 BCNoSlipWallHeatFluxNS2D.hh
 BCNoSlipWallHeatFluxNS3D.cxx
 BCNoSlipWallHeatFluxNS3D.hh
+AUSMFlux.cxx
+AUSMFlux.ci
+AUSMFlux.hh
+AUSMPlusUpFlux.ci
+AUSMPlusUpFlux.hh
+AUSMPlusFlux.ci
+AUSMPlusFlux.hh
 ComputeErrorEuler.cxx
 ComputeErrorEuler.hh
 TVBLimiterEuler.cxx
