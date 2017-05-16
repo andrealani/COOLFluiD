@@ -4,7 +4,7 @@ ELSE ()
 SET ( MYLIBNAME "coolfluid-solver" )
 ENDIF()
 
-LIST ( APPEND ${ForwardEuler}_files
+LIST ( APPEND ForwardEuler_files
 CopySol.cxx
 CopySol.hh
 ForwardEuler.hh
