@@ -79,6 +79,7 @@
 #cmakedefine CF_HAVE_PARALUTION     // Paralution support
 #cmakedefine CF_HAVE_ALLSTATIC      // compile static
 #cmakedefine CF_HAVE_IBMSTATIC      // compile static with IBM compiler
+#cmakedefine CF_HAVE_SINGLE_EXEC    // compile a single executable with no separate libraries
 
 // Package options
 #cmakedefine CF_HAVE_GOOGLE_PERFTOOLS

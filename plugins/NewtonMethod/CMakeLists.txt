@@ -1,3 +1,9 @@
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME "NewtonMethod" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+
 LIST ( APPEND NewtonMethod_files
 NewtonMethod.hh
 SelfAdjustUpdateSol.cxx
@@ -108,13 +114,24 @@ U.minit.hh
 UFEMUpdateSol.cxx
 UFEMUpdateSol.hh
 )
-
+ 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND NewtonMethod_cflibs Framework )
-
-
 CF_ADD_PLUGIN_LIBRARY ( NewtonMethod )
+ELSE()
+ FOREACH (AFILE ${NewtonMethod_files} )
+ LIST(APPEND coolfluid-solver_files ../../plugins/NewtonMethod/${AFILE} )
+ ENDFOREACH(AFILE)
+ CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+ENDIF()
 
 #######################################################################
+
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME2 "NewtonMethodFVM" )
+ELSE ()
+SET ( MYLIBNAME2 "coolfluid-solver" )
+ENDIF()
 
 LIST ( APPEND NewtonMethodFVM_files
 CrankNicholsonLim.hh
@@ -133,24 +150,48 @@ UpdateSolFVMCC.cxx
 UpdateSolFVMCC.hh
 )
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND NewtonMethodFVM_requires_mods FiniteVolume )
-
 LIST ( APPEND NewtonMethodFVM_cflibs Framework NewtonMethod FiniteVolume )
 CF_ADD_PLUGIN_LIBRARY ( NewtonMethodFVM )
+ELSE()
+ FOREACH (AFILE ${NewtonMethodFVM_files} )
+ LIST(APPEND coolfluid-solver_files ../../plugins/NewtonMethod/${AFILE} )
+ ENDFOREACH(AFILE)
+ CF_CACHE_LIST_APPEND ( ${MYLIBNAME2}_files  ${coolfluid-solver_files} )
+ENDIF()
 
 #######################################################################
+
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME3 "NewtonMethodFVMNavierStokes" )
+ELSE ()
+SET ( MYLIBNAME3 "coolfluid-solver" )
+ENDIF()
 
 LIST ( APPEND NewtonMethodFVMNavierStokes_files
 ImposeHSEquilibriumUpdateSol.cxx
 ImposeHSEquilibriumUpdateSol.hh
 )
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND NewtonMethodFVMNavierStokes_requires_mods FiniteVolume NavierStokes)
-
 LIST ( APPEND NewtonMethodFVMNavierStokes_cflibs Framework NewtonMethod FiniteVolume )
 CF_ADD_PLUGIN_LIBRARY ( NewtonMethodFVMNavierStokes )
+ELSE()
+ FOREACH (AFILE ${NewtonMethodFVMNavierStokes_files} )
+ LIST(APPEND coolfluid-solver_files ../../plugins/NewtonMethod/${AFILE} )
+ ENDFOREACH(AFILE)
+ CF_CACHE_LIST_APPEND ( ${MYLIBNAME3}_files  ${coolfluid-solver_files} )
+ENDIF()
 
 #######################################################################
+
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME4 "NewtonMethodMHD" )
+ELSE () 
+SET ( MYLIBNAME4 "coolfluid-solver" )
+ENDIF()
 
 LIST ( APPEND NewtonMethodMHD_files
 NewtonMethodMHD.hh
@@ -158,11 +199,16 @@ UpdateSolMHD.hh
 UpdateSolMHD.cxx
 )
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND NewtonMethodMHD_requires_mods MHD )
 LIST ( APPEND NewtonMethodMHD_cflibs NewtonMethod MHD )
-
-
 CF_ADD_PLUGIN_LIBRARY ( NewtonMethodMHD )
+ELSE()
+ FOREACH (AFILE ${NewtonMethodMHD_files} )
+ LIST(APPEND coolfluid-solver_files ../../plugins/NewtonMethod/${AFILE} )
+ ENDFOREACH(AFILE)
+ CF_CACHE_LIST_APPEND ( ${MYLIBNAME4}_files  ${coolfluid-solver_files} )
+ENDIF()
 
 #######################################################################
 

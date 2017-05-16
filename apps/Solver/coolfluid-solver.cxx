@@ -37,6 +37,10 @@
 #include "Framework/CudaDeviceManager.hh"
 #endif
 
+#ifdef CF_HAVE_SINGLE_EXEC
+#include "PluginsRegister.hh"
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
@@ -149,6 +153,11 @@ int main(int argc, char** argv)
 {
   using namespace boost;
 
+#ifdef CF_HAVE_SINGLE_EXEC
+  PluginsRegister pr;
+  pr.registerAll();
+#endif
+ 
   // process the command line
   AppOptions options;
   options.getOptionList().setStrictArgs(true);

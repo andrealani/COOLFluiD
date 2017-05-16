@@ -3,7 +3,7 @@
 #include "Framework/GeometricEntity.hh"
 #include "MHD/MHD3DProjectionPolytropicVarSet.hh"
 #include "FiniteVolumeMHD/FiniteVolumeMHD.hh"
-#include "FiniteVolumeMHD/MHD3DProjectionPolytropicCoriolisCentrifugalForcesSourceTerm.hh"
+#include "FiniteVolumeMHD/MHD3DProjectionPolytropicCoriolisSourceTerm.hh"
 #include "FiniteVolume/CellCenterFVMData.hh"
 
 //////////////////////////////////////////////////////////////////////////////

@@ -1,3 +1,9 @@
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME "Framework" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+
 LIST ( APPEND Framework_files
 AbsoluteNormAndMaxIter.cxx
 AbsoluteNormAndMaxIter.hh
@@ -587,8 +593,8 @@ IF(CF_HAVE_MPI)
 	   ParMetis.cxx 
 	   ParMetis.hh 
 	 )
-    LIST ( APPEND Framework_includedirs ${PARMETIS_INCLUDE_DIR} )
-    LIST ( APPEND Framework_libs ${PARMETIS_LIBRARIES} )
+    LIST ( APPEND ${MYLIBNAME}_includedirs ${PARMETIS_INCLUDE_DIR} )
+    LIST ( APPEND ${MYLIBNAME}_libs ${PARMETIS_LIBRARIES} )
   ENDIF ()
 
 ENDIF()
@@ -602,9 +608,18 @@ ENDIF()
 #  LIST ( APPEND Framework_libs ${METIS_LIBRARY})
 #ENDIF(CF_HAVE_METIS)
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND Framework_cflibs Environment MathTools )
-
 CF_ADD_KERNEL_LIBRARY ( Framework )
+ELSE()
+FOREACH (AFILE ${Framework_files} )
+LIST(APPEND coolfluid-solver_files ../../src/Framework/${AFILE} )
+ENDFOREACH(AFILE)
+
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_libs  ${coolfluid-solver_libs} )
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_includedirs  ${coolfluid-solver_includedirs} )
+ENDIF()
 
 CF_WARN_ORPHAN_FILES()
 

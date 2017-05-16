@@ -1,3 +1,9 @@
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME "Config" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" ) 
+ENDIF()
+
 LIST (APPEND Config_files
 BadMatchException.hh
 BiggerThanZero.hh
@@ -46,8 +52,14 @@ XMLConfigFileReader.cxx
 XMLConfigFileReader.hh
 )
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND Config_cflibs Common )
-
 CF_ADD_KERNEL_LIBRARY ( Config )
+ELSE()
+FOREACH (AFILE ${Config_files} )
+LIST(APPEND coolfluid-solver_files ../../src/Config/${AFILE} )
+ENDFOREACH(AFILE)
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+ENDIF()
 
 CF_WARN_ORPHAN_FILES()

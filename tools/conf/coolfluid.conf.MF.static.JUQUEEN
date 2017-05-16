@@ -17,8 +17,8 @@
 # default build options
 #==================================================================
 
-coolfluid_dir = /homeb/prpc19/prpc1900/COOLFluiD
-basebuild_dir = /homeb/prpc19/prpc1900/COOLFluiD/BGMPI
+coolfluid_dir = /homeb/prpc19/prpc1900/trunk
+basebuild_dir = /homeb/prpc19/prpc1900/trunk/BGMPI_STATIC_LLINT
 
 # compilers
 cc     = /bgsys/drivers/ppcfloor/comm/xl/bin/mpixlc
@@ -27,17 +27,23 @@ fc     = mpixlf90
 
 withcurl = 0
 nofortran = 1
+with_ibmstatic = 1
+libpetsc_deps_paths = /bgsys/local/lib/libesslbg.a;/bgsys/local/lapack/3.7.0_simd/lib/liblapack.a;/opt/ibmcmp/xlf/bg/14.1/bglib64/libxlf90_r.a;/opt/ibmcmp/xlsmp/bg/3.1/bglib64/libxlomp_ser.a;/opt/ibmcmp/xlf/bg/14.1/bglib64/libxlfmath.a
 
 # library locations
 mpi_dir       = /bgsys/drivers/ppcfloor/comm/xl
-boost_dir     = /bgsys/local/boost/1.55.0
-petsc_dir     = /homeb/prpc19/prpc1900/local/petsc_3.6.3
-#/bgsys/local/petsc/3.7.3/juqueen-downloads-O3strict 
+boost_dir     = /bgsys/local/boost/1.47.0 
+petsc_dir     = /bgsys/local/petsc/3.7.6/juqueen-int8-O3simd_C++
+#/homeb/prpc19/prpc1900/local/petsc_3.6.3
 parmetis_dir  = /bgsys/local/ParMetis/4.0.3
 #/bgsys/local/ParMetis/4.0.3_big
 
 allactive = 0
-
+#static compilation
+allstatic = 1
+# only executable, no libraries
+with_singleexec = 1 
+#
 # mimimum set of libs to be able to compile CF
 lib_Config = on
 lib_Common = on
@@ -52,38 +58,35 @@ lib_AnalyticalModel = on
 # plugin libraries #
 ####################
 
-# input formats
 lib_CFmeshFileReader = on
 lib_Gambit2CFmesh = on
 lib_Gmsh2CFmesh = on
 lib_Tecplot2CFmesh = on
+#lib_THOR2CFmesh = on
 lib_CFmeshExtruder = on
+lib_CFmeshFileWriter = on
+lib_TecplotWriter = on
 
-# time steppers
+lib_Maxwell = on
+lib_FiniteVolume = on
+
+lib_MultiFluidMHD = on
 lib_ForwardEuler = on
 lib_NewtonMethod = on
+lib_ParaViewWriter = on
+
+lib_FiniteVolumeMaxwell = on
+lib_FiniteVolumeMultiFluidMHD = on
+
+#lib_MHD = on
+#lib_FiniteVolumeMHD = on
 
 # linear system solvers
 lib_PetscI = on
 
-# physical models (PDE)
-lib_MultiFluidMHD = on
-lib_Maxwell = on
-
-lib_CFmeshFileWriter = on
-lib_TecplotWriter = on
-lib_ParaViewWriter = on
-
-# Finite Volume solvers
-lib_FiniteVolume = on
-lib_FiniteVolumeMultiFluidMHD = on
-lib_FiniteVolumeMaxwell = on
-
-# long long int 
-#with_llongint = 1
-#
 # long int
-with_longint = 1
+#with_longint = 1
+with_llongint = 1
 
 # enable doxygen
 withdocs = 1
@@ -95,16 +98,10 @@ cmake_generator = kdev
 with_testcases = 1
 #assertions = 0
 #
-# shared linking with IBM compiler
-with_ibmshared = 1
+bgoptim4_cxxflags = -O4 -qarch=qp -qtune=qp
+bgoptim4_cflags   = -O4 -qarch=qp -qtune=qp
+bgoptim4_fflags   = -O4 -qarch=qp -qtune=qp
 
-bgoptim4_cflags  = -O4 -qarch=qp -qtune=qp
-bgoptim4_flags   = -O4 -qarch=qp -qtune=qp
-bgoptim4_fflags  = -O4 -qarch=qp -qtune=qp
-
-bgoptim3_cflags  = -O3 -qstrict -qarch=qp -qtune=qp
-# -qpic -qmkshrobj -qnostaticlink -qnostaticlink=libgcc
-bgoptim3_flags   = -O3 -qstrict -qarch=qp -qtune=qp 
-#-qpic -qmkshrobj -qnostaticlink -qnostaticlink=libgcc
-bgoptim3_fflags  = -O3 -qstrict -qarch=qp -qtune=qp
-# -qpic -qmkshrobj -qnostaticlink -qnostaticlink=libgcc
+bgoptim3_cxxflags = -O3 -qstrict -qarch=qp -qtune=qp 
+bgoptim3_cflags   = -O3 -qstrict -qarch=qp -qtune=qp
+bgoptim3_fflags   = -O3 -qstrict -qarch=qp -qtune=qp

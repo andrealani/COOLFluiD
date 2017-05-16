@@ -1,3 +1,9 @@
+IF ( NOT CF_HAVE_SINGLE_EXEC ) 
+SET ( MYLIBNAME "FiniteVolume" )
+ELSE () 
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+
 LIST ( APPEND FiniteVolume_files
 AUSMFluxALE.ci
 AUSMFluxALE.hh
@@ -363,12 +369,18 @@ LIST ( APPEND FiniteVolume_files
      LaxFriedFlux.cu
      LaxFriedFlux.hh
 ) 
-LIST ( APPEND FiniteVolume_includedirs ${MPI_INCLUDE_DIR} ${CUDA_INCLUDE_DIR} )
-LIST ( APPEND FiniteVolume_libs ${CUDA_LIBRARIES} )
+LIST ( APPEND ${MYLIBNAME}_includedirs ${MPI_INCLUDE_DIR} ${CUDA_INCLUDE_DIR} )
+LIST ( APPEND ${MYLIBNAME}_libs ${CUDA_LIBRARIES} )
 ENDIF ()
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND FiniteVolume_cflibs Framework ShapeFunctions )
-
 CF_ADD_PLUGIN_LIBRARY ( FiniteVolume )
+ELSE()
+FOREACH (AFILE ${FiniteVolume_files} )
+LIST(APPEND coolfluid-solver_files ../../plugins/FiniteVolume/${AFILE} )
+ENDFOREACH(AFILE)
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+ENDIF()
 
 CF_WARN_ORPHAN_FILES()

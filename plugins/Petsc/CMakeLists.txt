@@ -1,5 +1,11 @@
 IF (CF_HAVE_PETSC)
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME "PetscI" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+
 LIST ( APPEND PetscI_files
 BaseSetup.cxx
 BaseSetup.hh
@@ -78,11 +84,23 @@ TwoLayerSeqSolveSys.cxx
 TwoLayerSeqSolveSys.hh
 )
 
-LIST ( APPEND PetscI_includedirs ${MPI_INCLUDE_DIR} ${PETSC_INCLUDE_DIR} )
-
-LIST ( APPEND PetscI_cflibs Common Framework ${PETSC_LIBRARIES} )
-
+LIST ( APPEND ${MYLIBNAME}_includedirs ${MPI_INCLUDE_DIR} ${PETSC_INCLUDE_DIR} )
+LIST ( APPEND ${MYLIBNAME}_libs ${PETSC_LIBRARIES} )
+ 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+LIST ( APPEND ${MYLIBNAME}_cflibs Common Framework )
 CF_ADD_PLUGIN_LIBRARY ( PetscI )
+ELSE()
+ FOREACH (AFILE ${PetscI_files} )
+ LIST(APPEND coolfluid-solver_files ../../plugins/Petsc/${AFILE} )
+ ENDFOREACH(AFILE)
+ CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+ CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_libs  ${coolfluid-solver_libs} )
+ 
+#MESSAGE ("######################### coolfluid-solver_libs in PETSC is ${coolfluid-solver_libs}")
+
+ CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_includedirs  ${coolfluid-solver_includedirs} )
+ENDIF()
 
 CF_WARN_ORPHAN_FILES()
 

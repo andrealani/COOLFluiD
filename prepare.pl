@@ -91,6 +91,7 @@ my %default_options = (
     'withomp'	      => 0,
     'with_ibmshared'  => 0, # shared with IBM compiler
     'with_ibmstatic'  => 0, # static with IBM compiler
+    'with_singleexec' => 0, # only coolfluid-solver will be compiled
     'withcurl'        => 1,
     'with_craystatic' => 0,
     'with_mutationpp' => 0,
@@ -263,6 +264,7 @@ sub parse_command_line_options()
                                This is the default.
          --allstatic         Makes all libraries static by default, instead of dynamic.
                                They still can be desactivated in the configuration file.
+         --with_singleexec   Create a single executable with no libraries  
          --with_unit_tests   Create the unit tests. [Default: $default_options{'with_unit_tests'}]
          --config-file=      User config file to overide default configuration options
                                 Default: $default_options{'config_file'}
@@ -941,6 +943,7 @@ sub setup_cfgoptions()
   setup_option('withomp',             'CF_ENABLE_OMP');
   setup_option('with_ibmshared',      'CF_ENABLE_IBMSHARED');
   setup_option('with_ibmstatic',      'CF_ENABLE_IBMSTATIC');
+  setup_option('with_singleexec',     'CF_ENABLE_SINGLEEXEC');
   setup_option('withcurl',            'CF_ENABLE_CURL');
   setup_option('with_craystatic',     'CF_ENABLE_CRAYSTATIC');
   setup_option('with_mutationpp',     'CF_ENABLE_MUTATIONPP');

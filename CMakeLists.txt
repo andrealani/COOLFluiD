@@ -225,10 +225,16 @@ ELSE()
 ENDIF()
 
 IF ( CF_ENABLE_IBMSTATIC )
-   SET(CF_HAVE_IBMSTATIC 1 CACHE BOOL "Compiling on IBM machine with static linking")                                         
+   SET (CF_HAVE_IBMSTATIC 1 CACHE BOOL "Compiling on IBM machine with static linking")                                         
 ELSE()  
-   SET(CF_HAVE_IBMSTATIC 0 CACHE BOOL "Compiling on IBM machine with static linking")
-ENDIF() 
+   SET (CF_HAVE_IBMSTATIC 0 CACHE BOOL "Compiling on IBM machine with dynamic linking")
+ENDIF()
+
+IF ( CF_ENABLE_SINGLEEXEC ) 
+   SET (CF_HAVE_SINGLE_EXEC 1 CACHE BOOL "Compile a single executable, no libraries")
+ELSE()
+   SET (CF_HAVE_SINGLE_EXEC 0 CACHE BOOL "Don't compile a single executable, no libraries")
+ENDIF()
 
 # finding boost (essential)
 
@@ -278,6 +284,18 @@ ENDIF()
 # add boost include path
 INCLUDE_DIRECTORIES ( ${Boost_INCLUDE_DIR} )
 SET ( CF_Boost_LIBRARIES ${Boost_LIBRARIES} )
+
+IF ( CF_ENABLE_SINGLEEXEC )
+# remove debug version of Boost libraries if present
+# we assume that the release version is available
+ LIST ( REMOVE_ITEM CF_Boost_LIBRARIES debug )
+ LIST ( REMOVE_ITEM CF_Boost_LIBRARIES optimized )
+ FOREACH (ABoostLIB ${Boost_LIBRARIES})
+  IF (${ABoostLIB} MATCHES "-d-")
+   LIST ( REMOVE_ITEM CF_Boost_LIBRARIES ${ABoostLIB} )
+  ENDIF()
+ ENDFOREACH(ABoostLIB)
+ENDIF()
 
 ##############################################################################
 # find non essential packages
@@ -342,6 +360,9 @@ IF ( ZLIB_FOUND )
 	LOG ( "  ZLIB_LIBRARIES:    [${ZLIB_LIBRARIES}]" )
 ENDIF()
 
+
+# AL: this should not be here !!!!!!
+IF ( NOT CF_ENABLE_SINGLEEXEC )
 FIND_PACKAGE (BZip2)
 LOG ( "BZIP2_FOUND: [${BZIP2_FOUND}]" )
 IF ( BZIP2_FOUND )
@@ -350,6 +371,8 @@ IF ( BZIP2_FOUND )
 	LOG ( "  BZIP2_DEFINITIONS:  [${BZIP2_DEFINITIONS}]" )
 	LOG ( "  BZIP2_NEED_PREFIX:  [${BZIP2_NEED_PREFIX}]" )
 ENDIF()
+ENDIF()
+
 
 #include the generated config file
 ADD_DEFINITIONS  ( -DCF_HAVE_CONFIG_H )
@@ -378,6 +401,8 @@ LOG ( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++" )
 INCLUDE_DIRECTORIES( ${COOLFluiD_SOURCE_DIR}/src )
 # include in compilation path the src dir
 ADD_SUBDIRECTORY ( src )
+
+#MESSAGE("##### coolfluid-solver_files = ${coolfluid-solver_files}")
 
 ##############################################################################
 LOG ( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++" )

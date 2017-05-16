@@ -1,3 +1,9 @@
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME "MHD" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+
 LIST ( APPEND MHD_files
 MHD.hh
 MHD2DCons.cxx
@@ -113,11 +119,19 @@ MHD3DProjectionVarSetT.hh
 ENDIF()
 
 IF (CF_HAVE_GSL)
-   LIST ( APPEND MHD_includedirs ${GSL_INCLUDE_DIR} )
-   LIST ( APPEND MHD_libs ${GSL_LIBRARY} )
+   LIST ( APPEND ${MYLIBNAME}_includedirs ${GSL_INCLUDE_DIR} )
+   LIST ( APPEND ${MYLIBNAME}_libs ${GSL_LIBRARY} )
 ENDIF()
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND MHD_cflibs Framework )
 CF_ADD_PLUGIN_LIBRARY ( MHD )
+ELSE()
+ FOREACH (AFILE ${MHD_files} )
+ LIST(APPEND coolfluid-solver_files ../../plugins/MHD/${AFILE} )
+ ENDFOREACH(AFILE)
+ CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+ENDIF()
+
 CF_WARN_ORPHAN_FILES()
 ADD_SUBDIRECTORY ( testcases )

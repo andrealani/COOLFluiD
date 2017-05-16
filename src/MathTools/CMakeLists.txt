@@ -10,6 +10,12 @@ CHECK_CXX_SOURCE_COMPILES (
 	CF_HAVE_BOOST_ERFC )
 ENDIF()
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME "MathTools" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+
 LIST ( APPEND MathTools_files
 FindMinimum.hh
 MatrixInverter.cxx
@@ -33,8 +39,6 @@ InverterDiag.hh
 LUInverter.cxx
 MathChecks.hh
 MathTools.hh
-#FunctionParser.hh
-#FunctionParser.cxx
 MatrixIntersect.cxx
 MatrixEigenSolver.cxx
 JacobiEigenSolver.hh
@@ -65,9 +69,16 @@ FParser/fpconfig.hh
 FParser/fpoptimizer.cc
 )
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND MathTools_cflibs Common )
-
 CF_ADD_KERNEL_LIBRARY ( MathTools )
+ELSE()
+FOREACH (AFILE ${MathTools_files} )
+LIST(APPEND coolfluid-solver_files ../../src/MathTools/${AFILE} )
+ENDFOREACH(AFILE)
+
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+ENDIF()
 
 CF_WARN_ORPHAN_FILES()
 

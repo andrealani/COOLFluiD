@@ -1,3 +1,9 @@
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME "ShapeFunctions" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+
 LIST (APPEND ShapeFunctions_files
 ContourGaussLegendre1LagrangeHexa.cxx
 ContourGaussLegendre1LagrangeHexa.hh
@@ -200,8 +206,14 @@ VolumeGaussLegendre8LagrangeTetra.cxx
 VolumeGaussLegendre8LagrangeTetra.hh
 )
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND ShapeFunctions_cflibs Framework )
-
 CF_ADD_KERNEL_LIBRARY ( ShapeFunctions )
+ELSE()
+FOREACH (AFILE ${ShapeFunctions_files} )
+LIST(APPEND coolfluid-solver_files ../../src/ShapeFunctions/${AFILE} )
+ENDFOREACH(AFILE)
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+ENDIF()
 
 CF_WARN_ORPHAN_FILES()

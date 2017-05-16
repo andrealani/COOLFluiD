@@ -1,3 +1,9 @@
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME "MultiFluidMHD" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+
 LIST ( APPEND MultiFluidMHD_files
 MultiFluidMHD.hh
 EulerMFMHDTerm.cxx
@@ -57,7 +63,6 @@ ReacMFMHDTerm.cxx
 ReacMFMHDTerm.hh
 )
 
-
 IF (CF_HAVE_CUDA) 
    LIST ( APPEND MultiFluidMHD_files
 MultiFluidMHD2DHalfTwoSpeciesVarSetT.hh 
@@ -73,11 +78,16 @@ EulerMFMHD2DRhoiViTiToConsT.hh
 ) 
 ENDIF ()
 
-
-
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND MultiFluidMHD_cflibs Framework Maxwell )
 LIST ( APPEND MultiFluidMHD_requires_mods Maxwell )
-
 CF_ADD_PLUGIN_LIBRARY ( MultiFluidMHD )
+ELSE()
+FOREACH (AFILE ${MultiFluidMHD_files} )
+LIST(APPEND coolfluid-solver_files ../../plugins/MultiFluidMHD/${AFILE} )
+ENDFOREACH(AFILE)
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+ENDIF()
+
 CF_WARN_ORPHAN_FILES()
 ADD_SUBDIRECTORY ( testcases )

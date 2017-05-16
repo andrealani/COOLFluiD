@@ -1,3 +1,9 @@
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME "TecplotWriter" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+
 LIST ( APPEND TecplotWriter_files
 MapGeoEntToTecplot.hh
 MapGeoEntToTecplot.cxx
@@ -43,8 +49,14 @@ IF( CF_HAVE_UNISTD_H )
   LIST ( APPEND TecplotWriter_files TECXXX.h preutil.c )
 ENDIF()
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND TecplotWriter_cflibs Framework )
-
 CF_ADD_PLUGIN_LIBRARY ( TecplotWriter )
+ELSE()
+FOREACH (AFILE ${TecplotWriter_files} )
+LIST(APPEND coolfluid-solver_files ../../plugins/TecplotWriter/${AFILE} )
+ENDFOREACH(AFILE)
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+ENDIF()
 
 CF_WARN_ORPHAN_FILES()
