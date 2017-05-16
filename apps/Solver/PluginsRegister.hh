@@ -89,9 +89,10 @@
 #include "Framework/SMaestro.hh"
 #include "Framework/StandardSubSystem.hh"
 #include "Framework/SubIterCustomSubSystem.hh"
+#include "Framework/MethodStrategyProvider.hh"
 
 #include "CFmeshCellSplitter/CFmeshCellSplitter.hh"
-#include "CFmeshCellSplitter/CellSplitter2D.cxx"
+#include "CFmeshCellSplitter/CellSplitter2D.hh"
 #include "CFmeshCellSplitter/CellSplitter2DFVM.hh"
 #include "CFmeshCellSplitter/CellSplitter3D.hh"
 #include "CFmeshCellSplitter/CellSplitter3DFVM.hh"
@@ -180,8 +181,106 @@
 #include "MultiFluidMHD/EulerMFMHD3DRhoiViTiToCons.hh"
 #include "MultiFluidMHD/MultiFluidMHDModel.hh"
 
+#include "ForwardEuler/ForwardEuler.hh"
+#include "ForwardEuler/CopySol.hh"
+#include "ForwardEuler/FSHOPrepare.hh"
+#include "ForwardEuler/FSHOSetup.hh"
+#include "ForwardEuler/FSHOUnSetup.hh"
+#include "ForwardEuler/FwdEuler.hh"
+#include "ForwardEuler/FwdEulerData.hh"
+#include "ForwardEuler/StdPrepare.hh"
+#include "ForwardEuler/StdSetup.hh"
+#include "ForwardEuler/StdUnSetup.hh"
+#include "ForwardEuler/TwoLayerPrepare.hh"
+#include "ForwardEuler/TwoLayerSetup.hh"
+#include "ForwardEuler/TwoLayerUnSetup.hh"
+#include "ForwardEuler/TwoLayerUpdateSol.hh"
+#include "ForwardEuler/UpdateSol.hh"
 
+#include "NewtonMethod/ALE_FVMGeometricAverage.hh"
+#include "NewtonMethod/BDF2.hh"
+#include "NewtonMethod/NewtonMethod.hh"
+#include "NewtonMethod/NewtonMethodMHD.hh"
+#include "NewtonMethod/BDF2Intermediate.hh"
+#include "NewtonMethod/BDF2Setup.hh"
+#include "NewtonMethod/BDF2_CN1stStepIntermediate.hh"
+#include "NewtonMethod/BDF2_CN1stStepPrepare.hh"
+#include "NewtonMethod/BDF2_InitCN.hh"
+#include "NewtonMethod/CopySol.hh"
+#include "NewtonMethod/CrankNichIntermediate.hh"
+#include "NewtonMethod/CrankNichLimInit.hh"
+#include "NewtonMethod/CrankNichLimIntermediate.hh"
+#include "NewtonMethod/CrankNichLimPrepare.hh"
+#include "NewtonMethod/CrankNichLimSetup.hh"
+#include "NewtonMethod/CrankNichLimUnSetup.hh"
+#include "NewtonMethod/CrankNichSetup.hh"
+#include "NewtonMethod/CrankNichUnSetup.hh"
+#include "NewtonMethod/CrankNicholson.hh"
+#include "NewtonMethod/CrankNicholsonLim.hh"
+#include "NewtonMethod/FSHOPrepare.hh"
+#include "NewtonMethod/FSHOSetup.hh"
+#include "NewtonMethod/FSHOUnSetup.hh"
+#include "NewtonMethod/GReKOUpdateSol.hh"
+#include "NewtonMethod/ImposeHSEquilibriumUpdateSol.hh"
+#include "NewtonMethod/Linearized.hh"
+#include "NewtonMethod/LinearizedBDF2.hh"
+#include "NewtonMethod/LinearizedBDF2Setup.hh"
+#include "NewtonMethod/LinearizedIntermediate.hh"
+#include "NewtonMethod/LinearizedIntermediateLim.hh"
+#include "NewtonMethod/LinearizedPrepare.hh"
+#include "NewtonMethod/LinearizedSetup.hh"
+#include "NewtonMethod/LinearizedUnSetup.hh"
+#include "NewtonMethod/NewmarkExplicit.hh"
+#include "NewtonMethod/NewmarkExplicitUpdateSol.hh"
+#include "NewtonMethod/NewmarkImplicit.hh"
+#include "NewtonMethod/NewmarkImplicitUpdateSol.hh"
+#include "NewtonMethod/NewmarkPrepare.hh"
+#include "NewtonMethod/NewmarkResetSystem.hh"
+#include "NewtonMethod/NewmarkSetup.hh"
+#include "NewtonMethod/NewmarkUnSetup.hh"
+#include "NewtonMethod/NewtonIterator.hh"
+#include "NewtonMethod/NewtonIteratorCoupling.hh"
+#include "NewtonMethod/NewtonIteratorData.hh"
+#include "NewtonMethod/ResetSystem.hh"
+#include "NewtonMethod/SelfAdjustUpdateSol.hh"
+#include "NewtonMethod/StdPrepare.hh"
+#include "NewtonMethod/StdSetup.hh"
+#include "NewtonMethod/StdUnSetup.hh"
+#include "NewtonMethod/StdUpdateSol.hh"
+#include "NewtonMethod/TurbUpdateSol.hh"
+#include "NewtonMethod/TwoLayerPrepare.hh"
+#include "NewtonMethod/TwoLayerSetup.hh"
+#include "NewtonMethod/TwoLayerUnSetup.hh"
+#include "NewtonMethod/TwoLayerUpdateSol.hh"
+#include "NewtonMethod/UpdateSolCoupling.hh"
+#include "NewtonMethod/UpdateSolFVMCC.hh"
+#include "NewtonMethod/UpdateSolMHD.hh"
 
+#include "Petsc/PetscLSSData.hh"
+#include "Petsc/Petsc.hh"
+#include "Petsc/BSORPreconditioner.hh"
+#include "Petsc/BlockJacobiPreconditioner.hh"
+#include "Petsc/DPLURPreconditioner.hh"
+#include "Petsc/ILUPreconditioner.hh"
+#include "Petsc/LUSGSPreconditioner.hh"
+#include "Petsc/NewParSetup.hh"
+#include "Petsc/NullPreconditioner.hh"
+#include "Petsc/ParJFSetup.hh"
+#include "Petsc/ParJFSetupGMRESR.hh"
+#include "Petsc/ParJFSolveSys.hh"
+#include "Petsc/ParJFSolveSysGMRESR.hh"
+#include "Petsc/ParMFSolveSys.hh"
+#include "Petsc/ParMFSetup.hh"
+#include "Petsc/PetscLSS.hh"
+#include "Petsc/StdParSolveSys.hh"
+#include "Petsc/StdParUnSetup.hh"
+#include "Petsc/StdSeqSetup.hh"
+#include "Petsc/StdSeqUnSetup.hh"
+#include "Petsc/TridiagPreconditioner.hh"
+#include "Petsc/TwoLayerParSetup.hh"
+#include "Petsc/TwoLayerParSolveSys.hh"
+#include "Petsc/TwoLayerSeqSetup.hh"
+#include "Petsc/TwoLayerSeqSolveSys.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -753,6 +852,361 @@ Factory<VarSetTransformer>::getInstance().regist
    (new Environment::ObjectProvider<MultiFluidMHDModel<DIM_3D>, PhysicalModelImpl,MultiFluidMHDModule, 1>
     ("MultiFluidMHD3D"));
  
+ using namespace ForwardEuler;
+ 
+ Factory<FwdEulerCom>::getInstance().regist
+   (new MethodCommandProvider<COOLFluiD::ForwardEuler::CopySol,FwdEulerData,ForwardEulerLib >("StdCopySol"));
+ 
+ Factory<FwdEulerCom>::getInstance().regist
+   (new MethodCommandProvider<FSHOPrepare, FwdEulerData, ForwardEulerLib>("FSHOPrepare"));
+ 
+ Factory<FwdEulerCom>::getInstance().regist
+   (new MethodCommandProvider<FSHOSetup, FwdEulerData, ForwardEulerLib>("FSHOSetup"));
+ 
+ Factory<FwdEulerCom>::getInstance().regist
+   (new MethodCommandProvider<FSHOUnSetup, FwdEulerData, ForwardEulerLib>("FSHOUnSetup"));
+ 
+ Factory<ConvergenceMethod>::getInstance().regist
+   (new Environment::ObjectProvider<FwdEuler, ConvergenceMethod, ForwardEulerLib, 1>
+    ("FwdEuler"));
+
+Factory<FwdEulerCom>::getInstance().regist
+(new MethodCommandProvider<NullMethodCommand<FwdEulerData>, FwdEulerData, ForwardEulerLib>
+ ("Null"));
+
+ Factory<FwdEulerCom>::getInstance().regist
+   (new MethodCommandProvider<StdPrepare, FwdEulerData, ForwardEulerLib>
+    ("StdPrepare"));
+ 
+ Factory<FwdEulerCom>::getInstance().regist
+   (new MethodCommandProvider<COOLFluiD::ForwardEuler::StdSetup, FwdEulerData, ForwardEulerLib>("StdSetup"));
+
+Factory<FwdEulerCom>::getInstance().regist
+(new MethodCommandProvider<COOLFluiD::ForwardEuler::StdUnSetup, FwdEulerData, ForwardEulerLib>("StdUnSetup"));
+
+Factory<FwdEulerCom>::getInstance().regist
+(new MethodCommandProvider<TwoLayerPrepare, FwdEulerData, ForwardEulerLib>
+ ("TwoLayerPrepare"));
+
+Factory<FwdEulerCom>::getInstance().regist
+(new MethodCommandProvider<TwoLayerSetup, FwdEulerData, ForwardEulerLib>("TwoLayerSetup"));
+
+Factory<FwdEulerCom>::getInstance().regist
+(new MethodCommandProvider<TwoLayerUnSetup, FwdEulerData, ForwardEulerLib>("TwoLayerUnSetup"));
+
+Factory<FwdEulerCom>::getInstance().regist
+(new MethodCommandProvider<TwoLayerUpdateSol, FwdEulerData, ForwardEulerLib>
+ ("TwoLayerUpdateSol"));
+
+Factory<FwdEulerCom>::getInstance().regist
+  (new MethodCommandProvider<COOLFluiD::ForwardEuler::UpdateSol, FwdEulerData, ForwardEulerLib>
+ ("StdUpdateSol"));
+ 
+using namespace Numerics::NewtonMethod;
+ 
+Factory<NewtonIteratorCom>::getInstance().regist
+  (new MethodCommandProvider<ALE_FVMGeometricAverage, NewtonIteratorData, NewtonMethodModule> ("ALE_FVMGeometricAverage"));
+
+ Factory<ConvergenceMethod>::getInstance().regist
+   (new Environment::ObjectProvider<BDF2, ConvergenceMethod, NewtonMethodModule, 1>
+    ("BDF2"));
+
+ Factory<NewtonIteratorCom>::getInstance().regist
+   (new MethodCommandProvider<BDF2Intermediate, NewtonIteratorData, NewtonMethodModule>
+    ("BDF2Intermediate"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+   (new MethodCommandProvider<BDF2Setup, NewtonIteratorData, NewtonMethodModule>
+    ("BDF2Setup"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<BDF2_CN1stStepIntermediate, NewtonIteratorData, NewtonMethodModule>
+ ("CN1stStepIntermediate"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<BDF2_CN1stStepPrepare, NewtonIteratorData, NewtonMethodModule>
+ ("CN1stStepPrepare"));
+
+Factory<ConvergenceMethod>::getInstance().regist
+   (new Environment::ObjectProvider<BDF2_InitCN, ConvergenceMethod, NewtonMethodModule, 1>
+    ("BDF2_InitCN"));
+
+ Factory<NewtonIteratorCom>::getInstance().regist
+   (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::CopySol, NewtonIteratorData, NewtonMethodModule>("CopySol"));
+ 
+ Factory<NewtonIteratorCom>::getInstance().regist
+   (new MethodCommandProvider<CrankNichIntermediate, NewtonIteratorData, NewtonMethodModule> 
+    ("CrankNichIntermediate"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<CrankNichLimInit, NewtonIteratorData, NewtonMethodModule>
+ ("CrankNichLimInit"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<CrankNichLimIntermediate, NewtonIteratorData, NewtonMethodModule>
+ ("CrankNichLimIntermediate"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<CrankNichLimPrepare, NewtonIteratorData, NewtonMethodModule>
+ ("CrankNichLimPrepare"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<CrankNichLimSetup, NewtonIteratorData, NewtonMethodModule>
+ ("CrankNichLimSetup"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<CrankNichLimUnSetup, NewtonIteratorData, NewtonMethodModule> 
+ ("CrankNichLimUnSetup"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<CrankNichSetup, NewtonIteratorData, NewtonMethodModule>
+ ("CrankNichSetup"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<CrankNichUnSetup, NewtonIteratorData, NewtonMethodModule>
+ ("CrankNichUnSetup"));
+ 
+Factory<ConvergenceMethod>::getInstance().regist
+   (new Environment::ObjectProvider<CrankNicholson, ConvergenceMethod, NewtonMethodModule, 1>
+    ("CrankNicholson"));
+
+Factory<ConvergenceMethod>::getInstance().regist
+   (new Environment::ObjectProvider<CrankNicholsonLim, ConvergenceMethod, NewtonMethodModule, 1>
+   ("CrankNicholsonLim"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::FSHOPrepare, NewtonIteratorData, NewtonMethodModule>
+("FSHOPrepare"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::FSHOSetup, NewtonIteratorData, NewtonMethodModule>
+("FSHOSetup"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::FSHOUnSetup, NewtonIteratorData, NewtonMethodModule>
+("FSHOUnSetup"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<GReKOUpdateSol, NewtonIteratorData, NewtonMethodModule>
+("GReKOUpdateSol"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<ImposeHSEquilibriumUpdateSol, NewtonIteratorData, NewtonMethodModule>("ImposeHSEquilibriumUpdateSol"));
+
+Factory<ConvergenceMethod>::getInstance().regist
+   (new Environment::ObjectProvider<Linearized, ConvergenceMethod, NewtonMethodModule, 1>
+   ("Linearized"));
+
+Factory<ConvergenceMethod>::getInstance().regist
+   (new Environment::ObjectProvider<LinearizedBDF2, ConvergenceMethod, NewtonMethodModule, 1>
+   ("LinearizedBDF2"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<LinearizedBDF2Setup, NewtonIteratorData, NewtonMethodModule>("LinearizedBDF2Setup"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<LinearizedIntermediate, NewtonIteratorData, NewtonMethodModule>("LinearizedIntermediate"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<LinearizedIntermediateLim, NewtonIteratorData, NewtonMethodModule>("LinearizedIntermediateLim"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<LinearizedPrepare, NewtonIteratorData, NewtonMethodModule>("LinearizedPrepare"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<LinearizedSetup, NewtonIteratorData, NewtonMethodModule>("LinearizedSetup"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+  (new MethodCommandProvider<LinearizedUnSetup, NewtonIteratorData, NewtonMethodModule>("LinearizedUnSetup"));
+ 
+Factory<ConvergenceMethod>::getInstance().regist
+   (new Environment::ObjectProvider<NewmarkExplicit, ConvergenceMethod, NewtonMethodModule, 1>
+   ("NewmarkExplicit"));
+ 
+Factory<NewtonIteratorCom>::getInstance().regist
+  (new MethodCommandProvider<NewmarkExplicitUpdateSol, NewtonIteratorData, NewtonMethodModule> ("NewmarkExplicitUpdateSol"));
+
+ Factory<ConvergenceMethod>::getInstance().regist
+   (new Environment::ObjectProvider<NewmarkImplicit, ConvergenceMethod, NewtonMethodModule, 1>
+    ("NewmarkImplicit"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+  (new MethodCommandProvider<NewmarkImplicitUpdateSol, NewtonIteratorData, NewtonMethodModule> ("NewmarkImplicitUpdateSol"));
+
+ Factory<NewtonIteratorCom>::getInstance().regist
+   (new MethodCommandProvider<NewmarkPrepare,NewtonIteratorData, NewtonMethodModule>
+    ("NewmarkPrepare"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+   (new MethodCommandProvider<NewmarkResetSystem,NewtonIteratorData, NewtonMethodModule>
+    ("NewmarkResetSystem"));
+ 
+ Factory<NewtonIteratorCom>::getInstance().regist
+   (new MethodCommandProvider<NewmarkSetup,NewtonIteratorData, NewtonMethodModule>
+    ("NewmarkSetup"));
+ 
+ Factory<NewtonIteratorCom>::getInstance().regist
+   (new MethodCommandProvider<NewmarkUnSetup,NewtonIteratorData, NewtonMethodModule>
+    ("NewmarkUnSetup"));
+
+ Factory<ConvergenceMethod>::getInstance().regist
+   (new Environment::ObjectProvider<NewtonIterator, ConvergenceMethod, NewtonMethodModule, 1>
+    ("NewtonIterator"));
+ 
+ Factory<ConvergenceMethod>::getInstance().regist
+   (new Environment::ObjectProvider<NewtonIteratorCoupling, ConvergenceMethod, NewtonMethodModule, 1>
+    ("NewtonIteratorCoupling"));
+ 
+ Factory<NewtonIteratorCom>::getInstance().regist
+   (new MethodCommandProvider<NullMethodCommand<NewtonIteratorData>,NewtonIteratorData, NewtonMethodModule>("Null"));
+ 
+ Factory<NewtonIteratorCom>::getInstance().regist
+   (new MethodCommandProvider<ResetSystem, NewtonIteratorData, NewtonMethodModule>
+    ("ResetSystem"));
+
+ Factory<NewtonIteratorCom>::getInstance().regist
+   (new MethodCommandProvider<SelfAdjustUpdateSol, NewtonIteratorData, NewtonMethodModule> 
+    ("SelfAdjustUpdateSol"));
+ 
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::StdPrepare, NewtonIteratorData, NewtonMethodModule>
+("StdPrepare"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::StdSetup, NewtonIteratorData, NewtonMethodModule>
+("StdSetup"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::StdUnSetup, NewtonIteratorData, NewtonMethodModule>
+("StdUnSetup"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::StdUpdateSol, NewtonIteratorData, NewtonMethodModule>
+("StdUpdateSol"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+(new MethodCommandProvider<TurbUpdateSol, NewtonIteratorData, NewtonMethodModule>
+("TurbUpdateSol"));
+
+ Factory<NewtonIteratorCom>::getInstance().regist
+   (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::TwoLayerPrepare, NewtonIteratorData, NewtonMethodModule>("TwoLayerPrepare"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+   (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::TwoLayerSetup, NewtonIteratorData, NewtonMethodModule>("TwoLayerSetup"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+  (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::TwoLayerUnSetup, NewtonIteratorData, NewtonMethodModule>("TwoLayerUnSetup"));
+
+Factory<NewtonIteratorCom>::getInstance().regist
+  (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::TwoLayerUpdateSol, NewtonIteratorData, NewtonMethodModule>("TwoLayerUpdateSol"));
+ 
+Factory<NewtonIteratorCom>::getInstance().regist
+  (new MethodCommandProvider<UpdateSolCoupling, NewtonIteratorData, NewtonMethodModule> 
+    ("UpdateSolCoupling"));
+
+ Factory<NewtonIteratorCom>::getInstance().regist
+  (new MethodCommandProvider<UpdateSolFVMCC, NewtonIteratorData, NewtonMethodModule> 
+    ("UpdateSolFVMCC"));
+
+ Factory<NewtonIteratorCom>::getInstance().regist
+   (new MethodCommandProvider<UpdateSolMHD, NewtonIteratorData, NewtonMethodMHDModule> 
+    ("UpdateSolMHD"));
+
+ using namespace Petsc;
+ 
+ Factory<ShellPreconditioner>::getInstance().regist
+   (new MethodStrategyProvider<BSORPreconditioner, PetscLSSData, ShellPreconditioner,
+			       PetscModule>("BSOR"));
+ 
+ Factory<ShellPreconditioner>::getInstance().regist
+   (new MethodStrategyProvider<BlockJacobiPreconditioner, PetscLSSData, ShellPreconditioner,
+			       PetscModule>("BJacobi"));
+ 
+ Factory<ShellPreconditioner>::getInstance().regist
+   (new MethodStrategyProvider<DPLURPreconditioner, PetscLSSData, ShellPreconditioner,
+			       PetscModule>("DPLUR"));
+ 
+ Factory<ShellPreconditioner>::getInstance().regist
+   (new MethodStrategyProvider<ILUPreconditioner, PetscLSSData, ShellPreconditioner,
+			       PetscModule>("ILU"));
+
+ Factory<ShellPreconditioner>::getInstance().regist
+   (new MethodStrategyProvider<LUSGSPreconditioner, PetscLSSData, ShellPreconditioner,
+			       PetscModule>("LUSGS"));
+ 
+  Factory<PetscLSSCom>::getInstance().regist
+  (new MethodCommandProvider<NewParSetup, PetscLSSData, PetscModule>("NewParSetup"));
+
+Factory<ShellPreconditioner>::getInstance().regist
+(new MethodStrategyProvider<NullPreconditioner, PetscLSSData, ShellPreconditioner, PetscModule>("Null"));
+
+Factory<PetscLSSCom>::getInstance().regist
+    (new MethodCommandProvider<ParJFSetup, PetscLSSData, PetscModule>("ParJFSetup"));
+  
+  Factory<PetscLSSCom>::getInstance().regist
+    (new MethodCommandProvider<ParJFSetupGMRESR, PetscLSSData, PetscModule>("ParJFSetupGMRESR"));
+  
+  Factory<PetscLSSCom>::getInstance().regist
+    (new MethodCommandProvider<ParJFSolveSys, PetscLSSData, PetscModule>("ParJFSolveSys"));
+  
+  Factory<PetscLSSCom>::getInstance().regist
+    (new MethodCommandProvider<ParJFSolveSys, PetscLSSData, PetscModule>("SeqJFSolveSys"));
+  
+  Factory<PetscLSSCom>::getInstance().regist
+    (new MethodCommandProvider<ParJFSolveSysGMRESR, PetscLSSData, PetscModule>("ParJFSolveSysGMRESR"));
+  
+ Factory<PetscLSSCom>::getInstance().regist
+    (new MethodCommandProvider<ParJFSolveSysGMRESR, PetscLSSData, PetscModule>("SeqJFSolveSysGMRESR"));
+
+Factory<PetscLSSCom>::getInstance().regist
+    (new MethodCommandProvider<ParMFSetup, PetscLSSData, PetscModule>("ParMFSetup"));
+  
+Factory<PetscLSSCom>::getInstance().regist
+    (new MethodCommandProvider<ParMFSolveSys, PetscLSSData, PetscModule>("ParMFSolveSys"));
+  
+Factory<PetscLSSCom>::getInstance().regist
+    (new MethodCommandProvider<ParMFSolveSys, PetscLSSData, PetscModule>("SeqMFSolveSys"));
+
+Factory<LinearSystemSolver>::getInstance().regist
+(new Environment::ObjectProvider<PetscLSS, LinearSystemSolver, PetscModule,1>("PETSC"));
+
+Factory<PetscLSSCom>::getInstance().regist
+(new MethodCommandProvider<NullMethodCommand<PetscLSSData>, PetscLSSData, PetscModule>
+("Null"));
+
+Factory<PetscLSSCom>::getInstance().regist
+(new MethodCommandProvider<StdParSolveSys, PetscLSSData, PetscModule>("StdParSolveSys"));
+
+Factory<PetscLSSCom>::getInstance().regist
+(new MethodCommandProvider<StdParSolveSys, PetscLSSData, PetscModule>("StdSeqSolveSys"));
+
+Factory<PetscLSSCom>::getInstance().regist
+(new MethodCommandProvider<StdParUnSetup, PetscLSSData, PetscModule>("StdParUnSetup"));
+
+Factory<PetscLSSCom>::getInstance().regist
+(new MethodCommandProvider<StdSeqSetup, PetscLSSData, PetscModule>("StdSeqSetup"));
+
+Factory<PetscLSSCom>::getInstance().regist
+(new MethodCommandProvider<StdSeqUnSetup, PetscLSSData, PetscModule>("StdSeqUnSetup"));
+ 
+ Factory<ShellPreconditioner>::getInstance().regist
+   (new MethodStrategyProvider<TridiagPreconditioner, PetscLSSData, ShellPreconditioner,
+			       PetscModule>("Tridiag"));
+ 
+ Factory<PetscLSSCom>::getInstance().regist
+   (new MethodCommandProvider<TwoLayerParSetup, PetscLSSData, PetscModule>("TwoLayerParSetup"));
+ 
+ Factory<PetscLSSCom>::getInstance().regist
+   (new MethodCommandProvider<TwoLayerParSolveSys, PetscLSSData, PetscModule>
+    ("TwoLayerParSolveSys"));
+ 
+ Factory<PetscLSSCom>::getInstance().regist
+   (new MethodCommandProvider<TwoLayerSeqSetup, PetscLSSData, PetscModule>
+    ("TwoLayerSeqSetup"));
+
+ Factory<PetscLSSCom>::getInstance().regist
+   (new MethodCommandProvider<TwoLayerSeqSolveSys, PetscLSSData, PetscModule>
+    ("TwoLayerSeqSolveSys"));
 }
   
 };

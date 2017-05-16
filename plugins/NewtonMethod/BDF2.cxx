@@ -4,7 +4,7 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#include "BDF2.hh"
+#include "NewtonMethod/BDF2.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Framework/SubSystemStatus.hh"
 #include "NewtonMethod/NewtonMethod.hh"

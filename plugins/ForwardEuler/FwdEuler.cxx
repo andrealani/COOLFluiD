@@ -4,7 +4,7 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#include "FwdEuler.hh"
+#include "ForwardEuler/FwdEuler.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Framework/SpaceMethod.hh"
 #include "Common/CFLog.hh"
@@ -22,8 +22,6 @@ using namespace COOLFluiD::MathTools;
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-
-
 
     namespace ForwardEuler {
 
