@@ -27,8 +27,8 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void cmpAndTakeMaxAbs2(CFreal* invec, CFreal* inoutvec, int* len,
-		       MPI_Datatype* datatype)
+static void cmpAndTakeMaxAbs2(CFreal* invec, CFreal* inoutvec, int* len,
+			      MPI_Datatype* datatype)
 {
   cf_assert(len != CFNULL);
   int size = *len;
