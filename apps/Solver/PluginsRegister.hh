@@ -146,6 +146,43 @@
 #include "TecplotWriter/WriteSolutionHO.hh"
 #include "TecplotWriter/WriteSolutionHighOrder.hh"
 
+#include "Maxwell/Maxwell.hh"
+#include "Maxwell/Maxwell2DCons.hh"
+#include "Maxwell/Maxwell2DAdimCons.hh"
+#include "Maxwell/Maxwell2DProjectionAdimCons.hh"
+#include "Maxwell/Maxwell2DProjectionCons.hh"
+#include "Maxwell/Maxwell3DAdimCons.hh"
+#include "Maxwell/Maxwell3DCons.hh"
+#include "Maxwell/Maxwell3DProjectionCons.hh"
+#include "Maxwell/MaxwellModel.hh"
+#include "Maxwell/MaxwellModelAdim.hh"
+#include "Maxwell/MaxwellProjection.hh"
+#include "Maxwell/MaxwellProjectionAdim.hh"
+
+#include "MultiFluidMHD/MultiFluidMHD.hh"
+#include "MultiFluidMHD/DiffMFMHD2DHalfRhoiViTi.hh"
+#include "MultiFluidMHD/DiffMFMHD2DRhoiViTi.hh"
+#include "MultiFluidMHD/DiffMFMHD3DRhoiViTi.hh"
+#include "MultiFluidMHD/Euler2DHalfMFMHDConsToRhoiViTiInRhoiViTi.hh"
+#include "MultiFluidMHD/Euler2DMFMHDConsToRhoiViTiInRhoiViTi.hh"
+#include "MultiFluidMHD/Euler3DMFMHDConsToRhoiViTiInRhoiViTi.hh"
+#include "MultiFluidMHD/EulerMFMHD2DCons.hh"
+#include "MultiFluidMHD/EulerMFMHD2DConsToRhoiViTi.hh"
+#include "MultiFluidMHD/EulerMFMHD2DHalfCons.hh"
+#include "MultiFluidMHD/EulerMFMHD2DHalfConsToRhoiViTi.hh"
+#include "MultiFluidMHD/EulerMFMHD2DHalfRhoiViTi.hh"
+#include "MultiFluidMHD/EulerMFMHD2DHalfRhoiViTiToCons.hh"
+#include "MultiFluidMHD/EulerMFMHD2DRhoiViTi.hh"
+#include "MultiFluidMHD/EulerMFMHD2DRhoiViTiToCons.hh"
+#include "MultiFluidMHD/EulerMFMHD3DCons.hh"
+#include "MultiFluidMHD/EulerMFMHD3DConsToRhoiViTi.hh"
+#include "MultiFluidMHD/EulerMFMHD3DRhoiViTi.hh"
+#include "MultiFluidMHD/EulerMFMHD3DRhoiViTiToCons.hh"
+#include "MultiFluidMHD/MultiFluidMHDModel.hh"
+
+
+
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -589,6 +626,133 @@ Factory<MeshFormatConverter>::getInstance().regist
  Factory<TecWriterCom>::getInstance().regist
    (new MethodCommandProvider<WriteSolutionHighOrder, TecWriterData, TecplotWriterModule>
     ("WriteSolutionHighOrder")); 
+ 
+ using namespace Physics::Maxwell;
+ 
+ Factory<ConvectiveVarSet>::getInstance().regist
+   (new Environment::ObjectProvider<Maxwell2DAdimCons, ConvectiveVarSet, MaxwellModule, 1>("Maxwell2DAdimCons"));
+ 
+Factory<ConvectiveVarSet>::getInstance().regist
+   (new Environment::ObjectProvider<Maxwell2DCons, ConvectiveVarSet, MaxwellModule, 1>("Maxwell2DCons"));
+ 
+Factory<ConvectiveVarSet>::getInstance().regist
+(new Environment::ObjectProvider<Maxwell2DProjectionAdimCons, ConvectiveVarSet, MaxwellModule, 1>("Maxwell2DProjectionAdimCons"));
+
+Factory<ConvectiveVarSet>::getInstance().regist
+(new Environment::ObjectProvider<Maxwell2DProjectionCons, ConvectiveVarSet, MaxwellModule, 1>("Maxwell2DProjectionCons"));
+
+Factory<ConvectiveVarSet>::getInstance().regist
+(new Environment::ObjectProvider<Maxwell3DAdimCons, ConvectiveVarSet, MaxwellModule, 1>("Maxwell3DAdimCons"));
+
+Factory<ConvectiveVarSet>::getInstance().regist
+(new Environment::ObjectProvider<Maxwell3DCons, ConvectiveVarSet, MaxwellModule, 1>("Maxwell3DCons"));
+
+Factory<ConvectiveVarSet>::getInstance().regist
+(new Environment::ObjectProvider<Maxwell3DProjectionCons, ConvectiveVarSet, MaxwellModule, 1>("Maxwell3DProjectionCons"));
+
+Factory<PhysicalModelImpl>::getInstance().regist
+(new Environment::ObjectProvider<MaxwellModel<DIM_2D>, PhysicalModelImpl,MaxwellModule, 1>("Maxwell2D"));
+
+Factory<PhysicalModelImpl>::getInstance().regist
+(new Environment::ObjectProvider<MaxwellModel<DIM_3D>, PhysicalModelImpl,MaxwellModule, 1>("Maxwell3D"));
+
+Factory<PhysicalModelImpl>::getInstance().regist
+(new Environment::ObjectProvider<MaxwellModelAdim<DIM_2D>, PhysicalModelImpl, MaxwellModule,1>("Maxwell2DAdim"));
+
+Factory<PhysicalModelImpl>::getInstance().regist
+(new Environment::ObjectProvider<MaxwellModelAdim<DIM_3D>, PhysicalModelImpl, MaxwellModule,1>("Maxwell3DAdim"));
+
+Factory<PhysicalModelImpl>::getInstance().regist
+(new Environment::ObjectProvider<MaxwellProjection<DIM_2D>, PhysicalModelImpl, MaxwellModule,1>("Maxwell2DProjection"));
+
+Factory<PhysicalModelImpl>::getInstance().regist
+(new Environment::ObjectProvider<MaxwellProjection<DIM_3D>, PhysicalModelImpl, MaxwellModule,1>("Maxwell3DProjection"));
+
+Factory<PhysicalModelImpl>::getInstance().regist
+(new Environment::ObjectProvider<MaxwellProjectionAdim<DIM_2D>, PhysicalModelImpl, MaxwellModule,1>("Maxwell2DProjectionAdim"));
+
+Factory<PhysicalModelImpl>::getInstance().regist
+(new Environment::ObjectProvider<MaxwellProjectionAdim<DIM_3D>, PhysicalModelImpl, MaxwellModule,1>("Maxwell3DProjectionAdim"));
+ 
+ using namespace Physics::MultiFluidMHD;
+ 
+ Factory<DiffusiveVarSet>::getInstance().regist
+  (new Environment::ObjectProvider<DiffMFMHD2DHalfRhoiViTi, DiffusiveVarSet, MultiFluidMHDModule, 2>("MultiFluidMHD2DHalfRhoiViTi"));
+ 
+Factory<DiffusiveVarSet>::getInstance().regist
+(new Environment::ObjectProvider<DiffMFMHD2DRhoiViTi, DiffusiveVarSet, MultiFluidMHDModule, 2>("MultiFluidMHD2DRhoiViTi"));
+ 
+Factory<DiffusiveVarSet>::getInstance().regist
+(new Environment::ObjectProvider<DiffMFMHD3DRhoiViTi, DiffusiveVarSet, MultiFluidMHDModule, 2>("MultiFluidMHD3DRhoiViTi"));
+
+ Factory<VarSetMatrixTransformer>::getInstance().regist
+   (new Environment::ObjectProvider<Euler2DHalfMFMHDConsToRhoiViTiInRhoiViTi, VarSetMatrixTransformer, 
+    MultiFluidMHDModule, 1> ("Euler2DHalfMFMHDConsToRhoiViTiInRhoiViTi"));
+ 
+ Factory<VarSetMatrixTransformer>::getInstance().regist
+   (new Environment::ObjectProvider<Euler2DMFMHDConsToRhoiViTiInRhoiViTi, VarSetMatrixTransformer, 
+    MultiFluidMHDModule, 1> ("Euler2DMFMHDConsToRhoiViTiInRhoiViTi"));
+ 
+ Factory<VarSetMatrixTransformer>::getInstance().regist
+   (new Environment::ObjectProvider<Euler3DMFMHDConsToRhoiViTiInRhoiViTi, VarSetMatrixTransformer, 
+    MultiFluidMHDModule, 1>("Euler3DMFMHDConsToRhoiViTiInRhoiViTi"));
+ 
+ Factory<ConvectiveVarSet>::getInstance().regist
+   (new Environment::ObjectProvider<EulerMFMHD2DCons, ConvectiveVarSet, MultiFluidMHDModule, 1>
+    ("EulerMFMHD2DCons"));
+ 
+ Factory<VarSetTransformer>::getInstance().regist
+   (new Environment::ObjectProvider<EulerMFMHD2DConsToRhoiViTi, VarSetTransformer, MultiFluidMHDModule, 1>
+    ("EulerMFMHD2DConsToRhoiViTi"));
+ 
+ Factory<ConvectiveVarSet>::getInstance().regist
+   (new Environment::ObjectProvider<EulerMFMHD2DHalfCons, ConvectiveVarSet, MultiFluidMHDModule, 1>
+    ("EulerMFMHD2DHalfCons"));
+ 
+ Factory<VarSetTransformer>::getInstance().regist
+   (new Environment::ObjectProvider<EulerMFMHD2DHalfConsToRhoiViTi, VarSetTransformer, MultiFluidMHDModule, 1>
+    ("EulerMFMHD2DHalfConsToRhoiViTi"));
+ 
+ Factory<ConvectiveVarSet>::getInstance().regist
+   (new Environment::ObjectProvider<EulerMFMHD2DHalfRhoiViTi, ConvectiveVarSet, MultiFluidMHDModule, 1>
+    ("EulerMFMHD2DHalfRhoiViTi"));
+ 
+Factory<VarSetTransformer>::getInstance().regist
+(new Environment::ObjectProvider<EulerMFMHD2DHalfRhoiViTiToCons, VarSetTransformer, MultiFluidMHDModule, 1>
+ ("EulerMFMHD2DHalfRhoiViTiToCons"));
+
+Factory<ConvectiveVarSet>::getInstance().regist
+(new Environment::ObjectProvider<EulerMFMHD2DRhoiViTi, ConvectiveVarSet, MultiFluidMHDModule, 1>
+ ("EulerMFMHD2DRhoiViTi"));
+
+Factory<VarSetTransformer>::getInstance().regist
+(new Environment::ObjectProvider<EulerMFMHD2DRhoiViTiToCons, VarSetTransformer, MultiFluidMHDModule, 1>
+ ("EulerMFMHD2DRhoiViTiToCons"));
+
+Factory<ConvectiveVarSet>::getInstance().regist
+(new Environment::ObjectProvider<EulerMFMHD3DCons, ConvectiveVarSet, MultiFluidMHDModule, 1>
+ ("EulerMFMHD3DCons"));
+
+Factory<VarSetTransformer>::getInstance().regist
+  (new Environment::ObjectProvider<EulerMFMHD3DConsToRhoiViTi, VarSetTransformer, MultiFluidMHDModule, 1>
+ ("EulerMFMHD3DConsToRhoiViTi"));
+ 
+ Factory<ConvectiveVarSet>::getInstance().regist
+   (new Environment::ObjectProvider<EulerMFMHD3DRhoiViTi, ConvectiveVarSet, MultiFluidMHDModule, 1>
+    ("EulerMFMHD3DRhoiViTi"));
+ 
+ Factory<VarSetTransformer>::getInstance().regist
+   (new Environment::ObjectProvider<EulerMFMHD3DRhoiViTiToCons, VarSetTransformer, MultiFluidMHDModule, 1>
+    ("EulerMFMHD3DRhoiViTiToCons"));
+ 
+ Factory<PhysicalModelImpl>::getInstance().regist
+   (new Environment::ObjectProvider<MultiFluidMHDModel<DIM_2D>, PhysicalModelImpl,MultiFluidMHDModule, 1>
+    ("MultiFluidMHD2D"));
+ 
+ Factory<PhysicalModelImpl>::getInstance().regist
+   (new Environment::ObjectProvider<MultiFluidMHDModel<DIM_3D>, PhysicalModelImpl,MultiFluidMHDModule, 1>
+    ("MultiFluidMHD3D"));
+ 
 }
   
 };
