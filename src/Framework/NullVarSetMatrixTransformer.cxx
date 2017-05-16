@@ -4,7 +4,7 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#include "NullVarSetMatrixTransformer.hh"
+#include "Framework/NullVarSetMatrixTransformer.hh"
 #include "Common/CFLog.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Framework/Framework.hh"

@@ -4,8 +4,8 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#include "DataProcessingData.hh"
-#include "MethodCommandProvider.hh"
+#include "Framework/DataProcessingData.hh"
+#include "Framework/MethodCommandProvider.hh"
 #include "Framework/ConvectiveVarSet.hh"
 #include "Framework/PhysicalModel.hh"
 #include "Framework/NamespaceSwitcher.hh"

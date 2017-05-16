@@ -4,7 +4,7 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#include "NullMeshFormatConverter.hh"
+#include "Framework/NullMeshFormatConverter.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Framework/Framework.hh"
 

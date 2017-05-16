@@ -4,7 +4,7 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#include "NullVarSet.hh"
+#include "Framework/NullVarSet.hh"
 #include "Common/CFLog.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Framework/Framework.hh"
@@ -18,8 +18,9 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 Environment::ObjectProvider<NullVarSet,
-               ConvectiveVarSet,
-	       FrameworkLib, 1> nullVarSetProvider("Null");
+			    ConvectiveVarSet,
+			    FrameworkLib, 1> 
+nullVarSetProvider("Null");
 
 //////////////////////////////////////////////////////////////////////////////
 
