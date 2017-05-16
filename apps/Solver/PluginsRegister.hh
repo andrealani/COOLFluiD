@@ -5,6 +5,10 @@
 #include "Environment/FileHandlerOutputConcrete.hh"
 #include "Environment/DirectFileWrite.hh"
 
+#ifdef CF_HAVE_CURL
+#include "Environment/CurlAccessRepository.hh"
+#endif
+
 #include "Framework/Framework.hh"
 #include "Framework/AbsoluteNormAndMaxIter.hh"
 #include "Framework/CellCenteredDiffLocalApproachSparsity.hh"
@@ -86,6 +90,62 @@
 #include "Framework/StandardSubSystem.hh"
 #include "Framework/SubIterCustomSubSystem.hh"
 
+#include "CFmeshCellSplitter/CFmeshCellSplitter.hh"
+#include "CFmeshCellSplitter/CellSplitter2D.cxx"
+#include "CFmeshCellSplitter/CellSplitter2DFVM.hh"
+#include "CFmeshCellSplitter/CellSplitter3D.hh"
+#include "CFmeshCellSplitter/CellSplitter3DFVM.hh"
+
+#include "CFmeshExtruder/CFmeshExtruder.hh"
+#include "CFmeshExtruder/Extruder2D.hh"
+#include "CFmeshExtruder/Extruder2DDGM.hh"
+#include "CFmeshExtruder/Extruder2DFVM.hh"
+#include "CFmeshExtruder/Extruder2DFVMMPI.hh"
+
+#include "CFmeshFileReader/CFmeshFileReader.hh"
+#include "CFmeshFileReader/CFmeshReader.hh"
+#include "CFmeshFileReader/CFmeshReaderData.hh"
+#include "CFmeshFileReader/ParReadCFmesh.hh"
+#include "CFmeshFileReader/ParCFmeshFileReader.hh"
+#include "CFmeshFileReader/ParCFmeshBinaryFileReader.hh"
+#include "CFmeshFileReader/ReadCFmesh.hh"
+#include "CFmeshFileReader/ReadDummy.hh"
+#include "CFmeshFileReader/StdSetup.hh"
+#include "CFmeshFileReader/StdUnSetup.hh"
+
+#include "CFmeshFileWriter/CFmeshFileWriter.hh"
+#include "CFmeshFileWriter/CFmeshWriter.hh"
+#include "CFmeshFileWriter/CFmeshWriterData.hh"
+#include "CFmeshFileWriter/ParWriteSolution.hh"
+#include "CFmeshFileWriter/ParCFmeshFileWriter.hh"
+#include "CFmeshFileWriter/ParCFmeshBinaryFileWriter.hh"
+#include "CFmeshFileWriter/StdSetup.hh"
+#include "CFmeshFileWriter/StdUnSetup.hh"
+#include "CFmeshFileWriter/WriteSolution.hh"
+#include "CFmeshFileWriter/WriteSolutionDG.hh"
+#include "CFmeshFileWriter/WriteSolutionFluctSplitP2P1.hh"
+
+#include "Gambit2CFmesh/Gambit2CFmesh.hh"
+#include "Gambit2CFmesh/Gambit2CFmeshConverter.hh"
+
+#include "Gmsh2CFmesh/Gmsh2CFmeshConverter.hh"
+#include "Gmsh2CFmesh/Gmsh2CFmesh.hh"
+
+#include "TecplotWriter/TecplotWriter.hh"
+#include "TecplotWriter/ParWriteSolution.hh"
+#include "TecplotWriter/ParWriteSolutionBlock.hh"
+#include "TecplotWriter/StdSetup.hh"
+#include "TecplotWriter/StdUnSetup.hh"
+#include "TecplotWriter/TecWriter.hh"
+#include "TecplotWriter/TecWriterData.hh"
+#include "TecplotWriter/WriteSolution.hh"
+#include "TecplotWriter/WriteSolution1D.hh"
+#include "TecplotWriter/WriteSolutionBlock.hh"
+#include "TecplotWriter/WriteSolutionBlockDG.hh"
+#include "TecplotWriter/WriteSolutionBlockFV.hh"
+#include "TecplotWriter/WriteSolutionHO.hh"
+#include "TecplotWriter/WriteSolutionHighOrder.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -100,6 +160,14 @@ void registerAll()
 using namespace Environment;
 using namespace Framework;
 
+// Enviroment
+#ifdef CF_HAVE_CURL
+ Factory<FileHandlerInput>::getInstance().regist
+   (new Environment::ObjectProvider<Environment::FileHandlerInputConcrete<  CurlAccessRepository >, 
+    Environment::FileHandlerInput,
+    Environment::EnvironmentModule >("CurlAccessRepository"));
+#endif
+ 
 Factory<FileHandlerInput>::getInstance().regist
 (new Environment::ObjectProvider<Environment::FileHandlerInputConcrete< Environment::DirectFileAccess >, 
 				 Environment::FileHandlerInput,
@@ -110,6 +178,7 @@ Factory<FileHandlerOutput>::getInstance().regist
 				 Environment::FileHandlerOutput, 
 				 Environment::EnvironmentModule >("DirectFileWrite")); 
 
+// Framework
 Factory<StopCondition>::getInstance().regist
 (new Environment::ObjectProvider<AbsoluteNormAndMaxIter, 
 				 StopCondition, FrameworkLib, 1>("AbsoluteNormAndMaxIter"));
@@ -354,10 +423,175 @@ Factory<ComputeNorm>::getInstance().regist
  
  Factory<SubSystem>::getInstance().regist
    (new Environment::ObjectProvider<SubIterCustomSubSystem, SubSystem, FrameworkLib, 1>("SubIterCustomSubSystem"));
+ 
+ using namespace IO::CFmeshCellSplitter;
+ 
+ Factory<MeshFormatConverter>::getInstance().regist
+   (new Environment::ObjectProvider<CellSplitter2D,  MeshFormatConverter,
+    CFmeshCellSplitterModule, 1>("CellSplitter2D"));
+ 
+Factory<MeshFormatConverter>::getInstance().regist
+  (new Environment::ObjectProvider<CellSplitter2DFVM,  MeshFormatConverter,
+ CFmeshCellSplitterModule, 1>("CellSplitter2DFVM"));
+ 
+ Factory<MeshFormatConverter>::getInstance().regist
+   (new Environment::ObjectProvider<CellSplitter3D,  MeshFormatConverter,
+    CFmeshCellSplitterModule, 1>("CellSplitter3D"));
+ 
+ Factory<MeshFormatConverter>::getInstance().regist
+   (new Environment::ObjectProvider<CellSplitter3DFVM,  MeshFormatConverter,
+    CFmeshCellSplitterModule, 1>("CellSplitter3DFVM"));
+ 
+ using namespace IO::CFmeshExtruder;
+ 
+ Factory<MeshFormatConverter>::getInstance().regist
+   (new Environment::ObjectProvider<Extruder2D,  MeshFormatConverter,
+    CFmeshCellSplitterModule, 1>("Extruder2D"));
+ 
+ Factory<MeshFormatConverter>::getInstance().regist
+   (new Environment::ObjectProvider<Extruder2DDGM,  MeshFormatConverter,
+    CFmeshCellSplitterModule, 1>("Extruder2DDGM"));
+ 
+ Factory<MeshFormatConverter>::getInstance().regist
+   (new Environment::ObjectProvider<Extruder2DFVM,  MeshFormatConverter,
+    CFmeshCellSplitterModule, 1>("Extruder2DFVM"));
+ 
+ Factory<MeshFormatConverter>::getInstance().regist
+   (new Environment::ObjectProvider<Extruder2DFVMMPI,  MeshFormatConverter,
+    CFmeshCellSplitterModule, 1>("Extruder2DFVMMPI"));
+
+ using namespace COOLFluiD::CFmeshFileReader;
+
+Factory<MeshCreator>::getInstance().regist
+(new ObjectProvider<CFmeshReader, MeshCreator, CFmeshFileReaderPlugin,1>
+ ("CFmeshFileReader"));
+
+Factory<CFmeshReaderCom>::getInstance().regist
+(new MethodCommandProvider<NullMethodCommand<CFmeshReaderData>,
+ CFmeshReaderData, FrameworkLib>("Null"));
+
+Factory<CFmeshReaderCom>::getInstance().regist
+(new MethodCommandProvider<ParReadCFmesh<ParCFmeshFileReader>, 
+ CFmeshReaderData, CFmeshFileReaderPlugin>("ParReadCFmesh"));
+
+Factory<CFmeshReaderCom>::getInstance().regist
+(new MethodCommandProvider<ParReadCFmesh<ParCFmeshBinaryFileReader>, 
+ CFmeshReaderData,CFmeshFileReaderPlugin>("ParReadCFmeshBinary"));
+
+Factory<CFmeshReaderCom>::getInstance().regist
+     (new MethodCommandProvider<ReadCFmesh, CFmeshReaderData, 
+      CFmeshFileReaderPlugin>("StdReadCFmesh"));
+
+Factory<CFmeshReaderCom>::getInstance().regist
+(new MethodCommandProvider<ReadDummy, CFmeshReaderData, CFmeshFileReaderPlugin>("Dummy"));
    
-      
-    }
-  };
+   Factory<CFmeshReaderCom>::getInstance().regist
+     (new MethodCommandProvider<COOLFluiD::CFmeshFileReader::StdSetup, CFmeshReaderData, CFmeshFileReaderPlugin>("StdSetup"));
+   
+   Factory<CFmeshReaderCom>::getInstance().regist
+    (new MethodCommandProvider<COOLFluiD::CFmeshFileReader::StdUnSetup, CFmeshReaderData, CFmeshFileReaderPlugin>("StdUnSetup"));  
+   
+ using namespace CFmeshFileWriter;
+ 
+Factory<OutputFormatter>::getInstance().regist
+(new Environment::ObjectProvider<CFmeshWriter, OutputFormatter, CFmeshFileWriterModule,1>
+ ("CFmesh"));
+
+Factory<CFmeshWriterCom>::getInstance().regist
+(new MethodCommandProvider<NullMethodCommand<CFmeshWriterData>,
+ CFmeshWriterData, FrameworkLib>("Null"));
+
+Factory<CFmeshWriterCom>::getInstance().regist
+(new MethodCommandProvider<COOLFluiD::CFmeshFileWriter::ParWriteSolution<ParCFmeshFileWriter>, 
+ CFmeshWriterData, CFmeshFileWriterModule>("ParWriteSolution"));
+
+Factory<CFmeshWriterCom>::getInstance().regist
+  (new MethodCommandProvider<COOLFluiD::CFmeshFileWriter::ParWriteSolution<ParCFmeshBinaryFileWriter>, 
+ CFmeshWriterData, CFmeshFileWriterModule>("ParWriteBinarySolution"));
+ 
+Factory<CFmeshWriterCom>::getInstance().regist
+  (new MethodCommandProvider<COOLFluiD::CFmeshFileWriter::StdSetup, CFmeshWriterData, CFmeshFileWriterModule>("StdSetup"));
+
+Factory<CFmeshWriterCom>::getInstance().regist
+  (new MethodCommandProvider<COOLFluiD::CFmeshFileWriter::StdUnSetup, CFmeshWriterData, CFmeshFileWriterModule>("StdUnSetup"));
+
+ Factory<CFmeshWriterCom>::getInstance().regist
+   (new MethodCommandProvider<COOLFluiD::CFmeshFileWriter::WriteSolution, CFmeshWriterData, CFmeshFileWriterModule>("WriteSolution"));
+
+Factory<CFmeshWriterCom>::getInstance().regist
+(new MethodCommandProvider<WriteSolutionDG, CFmeshWriterData, CFmeshFileWriterModule>("WriteSolutionDG"));
+ 
+ Factory<CFmeshWriterCom>::getInstance().regist
+   (new MethodCommandProvider<WriteSolutionFluctSplitP2P1, CFmeshWriterData, CFmeshFileWriterModule>("WriteSolutionFluctSplitP2P1"));
+ 
+using namespace IO::Gambit2CFmesh;
+
+Factory<MeshFormatConverter>::getInstance().regist
+(new Environment::ObjectProvider<Gambit2CFmeshConverter, MeshFormatConverter, 
+ Gambit2CFmeshModule, 1>("Gambit2CFmesh"));
+
+ using namespace IO::Gmsh2CFmesh;
+ 
+ Factory<MeshFormatConverter>::getInstance().regist
+(new Environment::ObjectProvider<Gmsh2CFmeshConverter, MeshFormatConverter, 
+ Gmsh2CFmeshModule, 1>("Gmsh2CFmesh"));
+ 
+ using namespace TecplotWriter;
+ 
+ Factory<TecWriterCom>::getInstance().regist
+   (new MethodCommandProvider<COOLFluiD::TecplotWriter::ParWriteSolution, TecWriterData, TecplotWriterModule>
+    ("ParWriteSolution"));
+ 
+ Factory<TecWriterCom>::getInstance().regist
+   (new MethodCommandProvider<ParWriteSolutionBlock, TecWriterData, TecplotWriterModule>
+    ("ParWriteSolutionBlock"));
+ 
+ Factory<TecWriterCom>::getInstance().regist
+   (new MethodCommandProvider<COOLFluiD::TecplotWriter::StdSetup, TecWriterData, TecplotWriterModule>
+    ("StdSetup"));
+ 
+ Factory<TecWriterCom>::getInstance().regist
+   (new MethodCommandProvider<COOLFluiD::TecplotWriter::StdUnSetup, TecWriterData, TecplotWriterModule>
+    ("StdUnSetup"));
+ 
+ Factory<OutputFormatter>::getInstance().regist
+   (new Environment::ObjectProvider<TecWriter, OutputFormatter, TecplotWriterModule,1>
+    ("Tecplot"));
+ 
+ Factory<TecWriterCom>::getInstance().regist
+   (new MethodCommandProvider<NullMethodCommand<TecWriterData>, TecWriterData, 
+    TecplotWriterModule>("Null"));
+ 
+ Factory<TecWriterCom>::getInstance().regist
+   (new MethodCommandProvider<COOLFluiD::TecplotWriter::WriteSolution, TecWriterData, TecplotWriterModule>
+    ("WriteSolution"));
+ 
+ Factory<TecWriterCom>::getInstance().regist
+   (new MethodCommandProvider<WriteSolution1D, TecWriterData, TecplotWriterModule>
+    ("WriteSolution1D"));
+
+ Factory<TecWriterCom>::getInstance().regist
+   (new MethodCommandProvider<WriteSolutionBlock, TecWriterData, TecplotWriterModule>
+    ("WriteSolutionBlock"));
+
+ Factory<TecWriterCom>::getInstance().regist
+   (new MethodCommandProvider<WriteSolutionBlockDG, TecWriterData, TecplotWriterModule>
+    ("WriteSolutionBlockDG"));
+ 
+ Factory<TecWriterCom>::getInstance().regist
+   (new MethodCommandProvider<WriteSolutionBlockFV, TecWriterData, TecplotWriterModule>
+    ("WriteSolutionBlockFV"));
+ 
+ Factory<TecWriterCom>::getInstance().regist
+   (new MethodCommandProvider<WriteSolutionHO, TecWriterData, TecplotWriterModule>
+    ("WriteSolutionHO"));
+ 
+ Factory<TecWriterCom>::getInstance().regist
+   (new MethodCommandProvider<WriteSolutionHighOrder, TecWriterData, TecplotWriterModule>
+    ("WriteSolutionHighOrder")); 
+}
+  
+};
   
 //////////////////////////////////////////////////////////////////////////////
 
