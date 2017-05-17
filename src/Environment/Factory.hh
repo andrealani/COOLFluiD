@@ -51,6 +51,10 @@ public: // methods
   /// @throw Common::NoSuchValueException if the provider is not registered
   void unregist(const std::string& providerName);
 
+  /// Registers a provider at run-time by staticallt linked executable
+  /// @param provider pointer to the provider to be registered
+  void registStatic(Environment::Provider<BASE>* provider);
+
   /// @return the name of the BASE of this factory
   std::string getTypeName() const { return BASE::getClassName(); }
 
@@ -107,6 +111,7 @@ Factory<BASE>::~Factory()
 template <class BASE>
 void Factory<BASE>::regist(Provider<BASE>* provider)
 {
+ #ifndef CF_HAVE_SINGLE_EXEC
   if (exists(provider->getName()))
   {
 #ifndef CF_HAVE_ALLSTATIC
@@ -118,9 +123,31 @@ void Factory<BASE>::regist(Provider<BASE>* provider)
   }
   CFtrace << "Registering provider [" << provider->getName() << "] in factory of [" << BASE::getClassName() << "]\n";
   getProviderMap()[provider->getName()] = provider;
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void Factory<BASE>::registStatic(Provider<BASE>* provider)
+{
+#ifdef CF_HAVE_SINGLE_EXEC
+  if (exists(provider->getName()))
+    {
+#ifndef CF_HAVE_ALLSTATIC
+      throw Common::StorageExistsException (FromHere(),
+					    "In factory of [" + BASE::getClassName() +
+					    "] a provider with the name [" + provider->getName() +
+					    "] was found when trying to regist it" );
+#endif
+    }
+  CFtrace << "Registering provider [" << provider->getName() << "] in factory of [" << BASE::getClassName() << "]\\
+n";
+  getProviderMap()[provider->getName()] = provider;
+#endif
+}
+   
+//////////////////////////////////////////////////////////////////////////////  
 
 template <class BASE>
 bool Factory<BASE>::exists(const std::string& name)

@@ -298,913 +298,913 @@ using namespace Framework;
 
 // Enviroment
 #ifdef CF_HAVE_CURL
- Factory<FileHandlerInput>::getInstance().regist
+ Factory<FileHandlerInput>::getInstance().registStatic
    (new Environment::ObjectProvider<Environment::FileHandlerInputConcrete<  CurlAccessRepository >, 
     Environment::FileHandlerInput,
     Environment::EnvironmentModule >("CurlAccessRepository"));
 #endif
  
-Factory<FileHandlerInput>::getInstance().regist
+Factory<FileHandlerInput>::getInstance().registStatic
 (new Environment::ObjectProvider<Environment::FileHandlerInputConcrete< Environment::DirectFileAccess >, 
 				 Environment::FileHandlerInput,
 				 Environment::EnvironmentModule >("DirectFileAccess"));
 
-Factory<FileHandlerOutput>::getInstance().regist
+Factory<FileHandlerOutput>::getInstance().registStatic
 (new Environment::ObjectProvider<Environment::FileHandlerOutputConcrete< DirectFileWrite >, 
 				 Environment::FileHandlerOutput, 
 				 Environment::EnvironmentModule >("DirectFileWrite")); 
 
 // Framework
-Factory<StopCondition>::getInstance().regist
+Factory<StopCondition>::getInstance().registStatic
 (new Environment::ObjectProvider<AbsoluteNormAndMaxIter, 
 				 StopCondition, FrameworkLib, 1>("AbsoluteNormAndMaxIter"));
 
-Factory<GlobalJacobianSparsity>::getInstance().regist
+Factory<GlobalJacobianSparsity>::getInstance().registStatic
 (new Environment::ObjectProvider<CellCenteredDiffLocalApproachSparsity,
 				 GlobalJacobianSparsity, FrameworkLib>("CellCenteredDiffLocalApproach"));
 
-Factory<GlobalJacobianSparsity>::getInstance().regist
+Factory<GlobalJacobianSparsity>::getInstance().registStatic
 (new Environment::ObjectProvider<CellCenteredSparsity,
 				 GlobalJacobianSparsity, FrameworkLib>("CellCentered"));
 
-Factory<GlobalJacobianSparsity>::getInstance().regist
+Factory<GlobalJacobianSparsity>::getInstance().registStatic
 (new Environment::ObjectProvider<CellVertexSparsity,
 				 GlobalJacobianSparsity, FrameworkLib>("CellVertex"));
 
-Factory<ComputeNorm>::getInstance().regist
+Factory<ComputeNorm>::getInstance().registStatic
 (new Environment::ObjectProvider<ComputeAllNorms, ComputeNorm, FrameworkLib, 1>("AllNorms"));
 
-Factory<ComputeNormals>::getInstance().regist
+Factory<ComputeNormals>::getInstance().registStatic
   (new Environment::ObjectProvider<ComputeFaceNormalsHexaP1, ComputeNormals,FrameworkLib>("FaceHexaP1"));
  
- Factory<ComputeNormals>::getInstance().regist
+ Factory<ComputeNormals>::getInstance().registStatic
   (new Environment::ObjectProvider<ComputeFaceNormalsLineP1, ComputeNormals,FrameworkLib>("FaceLineP1"));
 
-Factory<ComputeNormals>::getInstance().regist
+Factory<ComputeNormals>::getInstance().registStatic
   (new Environment::ObjectProvider<ComputeFaceNormalsPrismP1, ComputeNormals,FrameworkLib>("FacePrismP1"));
 
- Factory<ComputeNormals>::getInstance().regist
+ Factory<ComputeNormals>::getInstance().registStatic
   (new Environment::ObjectProvider<ComputeFaceNormalsPyramP1, ComputeNormals,FrameworkLib>("FacePyramP1"));
  
-Factory<ComputeNormals>::getInstance().regist
+Factory<ComputeNormals>::getInstance().registStatic
   (new Environment::ObjectProvider<ComputeFaceNormalsQuadP1, ComputeNormals,FrameworkLib>("FaceQuadP1"));
  
-Factory<ComputeNormals>::getInstance().regist
+Factory<ComputeNormals>::getInstance().registStatic
   (new Environment::ObjectProvider<ComputeFaceNormalsTetraP1, ComputeNormals,FrameworkLib>("FaceTetraP1"));
  
-Factory<ComputeNormals>::getInstance().regist
+Factory<ComputeNormals>::getInstance().registStatic
   (new Environment::ObjectProvider<ComputeFaceNormalsTriagP1, ComputeNormals,FrameworkLib>("FaceTriagP1"));
 
-Factory<ComputeNorm>::getInstance().regist
+Factory<ComputeNorm>::getInstance().registStatic
   (new Environment::ObjectProvider<ComputeL2Norm, ComputeNorm, FrameworkLib, 1>("L2"));
  
-Factory<ComputeDT>::getInstance().regist
+Factory<ComputeDT>::getInstance().registStatic
   (new Environment::ObjectProvider<ConstantDTWarn, ComputeDT, FrameworkLib, 1>("ConstantDTWarn"));
  
-Factory<SubSystem>::getInstance().regist
+Factory<SubSystem>::getInstance().registStatic
   (new Environment::ObjectProvider<CustomSubSystem, SubSystem, FrameworkLib, 1>("CustomSubSystem"));
  
-Factory<ComputeNorm>::getInstance().regist
+Factory<ComputeNorm>::getInstance().registStatic
   (new Environment::ObjectProvider<ComputeL2Norm, ComputeNorm, FrameworkLib, 1>("L2"));
  
- Factory<DataProcessingMethod>::getInstance().regist
+ Factory<DataProcessingMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<DataProcessing, DataProcessingMethod, FrameworkLib, 1>("DataProcessing"));
  
- Factory<DataProcessingCom>::getInstance().regist
+ Factory<DataProcessingCom>::getInstance().registStatic
    (new MethodCommandProvider<NullMethodCommand<DataProcessingData>,
     DataProcessingData, FrameworkLib>("Null"));
  
- Factory<ComputeCFL>::getInstance().regist
+ Factory<ComputeCFL>::getInstance().registStatic
    (new Environment::ObjectProvider<DetermineCFL, ComputeCFL, FrameworkLib, 1>("Determine"));
 
- Factory<ComputeCFL>::getInstance().regist
+ Factory<ComputeCFL>::getInstance().registStatic
    (new Environment::ObjectProvider<ExprComputeCFL, ComputeCFL, FrameworkLib, 1>("Function"));
 
- Factory<ComputeDT>::getInstance().regist
+ Factory<ComputeDT>::getInstance().registStatic
    (new Environment::ObjectProvider<ExprComputeDT, ComputeDT, FrameworkLib, 1>("FunctionDT"));
 
- Factory<MeshDataBuilder>::getInstance().regist
+ Factory<MeshDataBuilder>::getInstance().registStatic
    (new Environment::ObjectProvider<FVMCC_MeshDataBuilder, MeshDataBuilder, FrameworkLib, 1>("FVMCC"));
  
- Factory<GlobalStopCriteria>::getInstance().regist
+ Factory<GlobalStopCriteria>::getInstance().registStatic
    (new Environment::ObjectProvider<GlobalMaxNumberStepsCriteria, GlobalStopCriteria,FrameworkLib, 1>("GlobalMaxNumberSteps"));
  
- Factory<FilterRHS>::getInstance().regist
+ Factory<FilterRHS>::getInstance().registStatic
    (new Environment::ObjectProvider<IdentityFilterRHS,FilterRHS, FrameworkLib,1>("Identity"));
  
- Factory<FilterState>::getInstance().regist
+ Factory<FilterState>::getInstance().registStatic
    (new Environment::ObjectProvider<IdentityFilterState,FilterState,FrameworkLib,1>("Identity"));
  
- Factory<VarSetMatrixTransformer>::getInstance().regist
+ Factory<VarSetMatrixTransformer>::getInstance().registStatic
    (new Environment::ObjectProvider<IdentityVarSetMatrixTransformer,VarSetMatrixTransformer,
     FrameworkLib, 1>("Identity"));
  
- Factory<ComputeCFL>::getInstance().regist
+ Factory<ComputeCFL>::getInstance().registStatic
    (new Environment::ObjectProvider<InteractiveComputeCFL, ComputeCFL, FrameworkLib, 1>("Interactive"));
  
- Factory<ComputeDT>::getInstance().regist
+ Factory<ComputeDT>::getInstance().registStatic
    (new Environment::ObjectProvider<InteractiveComputeDT, ComputeDT, FrameworkLib, 1>("Interactive"));
  
- Factory<Maestro>::getInstance().regist
+ Factory<Maestro>::getInstance().registStatic
    (new ObjectProvider<LMaestro, Maestro, FrameworkLib, 1>("LoopMaestro"));
  
- Factory<FilterRHS>::getInstance().regist
+ Factory<FilterRHS>::getInstance().registStatic
    (new Environment::ObjectProvider<LimitFilterRHS,FilterRHS, FrameworkLib,1>("LimitRHS"));
 
- Factory<StateInterpolator>::getInstance().regist
+ Factory<StateInterpolator>::getInstance().registStatic
    (new ObjectProvider<LookupInterpolator, StateInterpolator, FrameworkLib, 1>("Lookup"));
  
- Factory<ComputeDT>::getInstance().regist
+ Factory<ComputeDT>::getInstance().registStatic
    (new Environment::ObjectProvider<MaxComputeDT, ComputeDT, FrameworkLib, 1>("MaxDT"));
 
- Factory<FilterState>::getInstance().regist
+ Factory<FilterState>::getInstance().registStatic
    (new Environment::ObjectProvider<MaxFilterState,FilterState,FrameworkLib,1>("Max"));
  
- Factory<StopCondition>::getInstance().regist
+ Factory<StopCondition>::getInstance().registStatic
    (new Environment::ObjectProvider<MaxNumberStepsCondition, 
     StopCondition, FrameworkLib, 1>("MaxNumberSteps"));
  
- Factory<StopCondition>::getInstance().regist
+ Factory<StopCondition>::getInstance().registStatic
    (new Environment::ObjectProvider<MaxNumberSubIterCondition, 
     StopCondition, FrameworkLib, 1>("MaxNumberSubIter"));
  
- Factory<StopCondition>::getInstance().regist
+ Factory<StopCondition>::getInstance().registStatic
    (new Environment::ObjectProvider<MaxTimeCondition, 
     StopCondition, FrameworkLib, 1>("MaxTime"));
  
- Factory<StopCondition>::getInstance().regist
+ Factory<StopCondition>::getInstance().registStatic
    (new Environment::ObjectProvider<MaxTimeNumberStepsCondition, 
     StopCondition, FrameworkLib, 1>("MaxTimeNumberSteps"));
  
- Factory<FilterState>::getInstance().regist
+ Factory<FilterState>::getInstance().registStatic
    (new Environment::ObjectProvider<MinMaxFilterState,FilterState,FrameworkLib,1>("MinMax"));
  
- Factory<StopCondition>::getInstance().regist
+ Factory<StopCondition>::getInstance().registStatic
    (new Environment::ObjectProvider<NormAndMaxSubIter, StopCondition, FrameworkLib, 1>("NormAndMaxSubIter"));
  
- Factory<StopCondition>::getInstance().regist
+ Factory<StopCondition>::getInstance().registStatic
    (new Environment::ObjectProvider<NormCondition, StopCondition, FrameworkLib, 1>("Norm"));
  
- Factory<CatalycityModel>::getInstance().regist
+ Factory<CatalycityModel>::getInstance().registStatic
    (new Environment::ObjectProvider<NullCatalycityModel, CatalycityModel, FrameworkLib, 1>("Null"));
  
- Factory<ComputeCFL>::getInstance().regist
+ Factory<ComputeCFL>::getInstance().registStatic
    (new Environment::ObjectProvider<NullComputeCFL, ComputeCFL, FrameworkLib, 1>("Null"));
  
- Factory<ComputeDT>::getInstance().regist
+ Factory<ComputeDT>::getInstance().registStatic
    (new Environment::ObjectProvider<NullComputeDT, ComputeDT, FrameworkLib, 1>("Null"));
  
- Factory<ComputeNorm>::getInstance().regist
+ Factory<ComputeNorm>::getInstance().registStatic
    (new Environment::ObjectProvider<NullComputeNorm, ComputeNorm, FrameworkLib, 1>("Null"));
 
  // IntegratorImplProvider<ContourIntegratorImpl, NullContourIntegratorImpl>()
  
- Factory<ConvergenceMethod>::getInstance().regist
+ Factory<ConvergenceMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<NullConvergenceMethod, ConvergenceMethod, FrameworkLib,1>("Null"));
  
- Factory<CouplerMethod>::getInstance().regist
+ Factory<CouplerMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<NullCouplerMethod, CouplerMethod, FrameworkLib,1>("Null"));
  
- Factory<DataProcessingMethod>::getInstance().regist
+ Factory<DataProcessingMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<NullDataProcessing, DataProcessingMethod, FrameworkLib,1>("Null"));
 
- Factory<DiffusiveVarSet>::getInstance().regist
+ Factory<DiffusiveVarSet>::getInstance().registStatic
    (new Environment::ObjectProvider<NullDiffusiveVarSet, DiffusiveVarSet,FrameworkLib,2>("Null"));
  
- Factory<DomainModel>::getInstance().regist
+ Factory<DomainModel>::getInstance().registStatic
    (new Environment::ObjectProvider<NullDomainModel, DomainModel, FrameworkLib, 1>("Null"));
 
- Factory<ErrorEstimatorMethod>::getInstance().regist
+ Factory<ErrorEstimatorMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<NullErrorEstimatorMethod, ErrorEstimatorMethod, FrameworkLib,1>("Null"));
  
- Factory<InertiaVarSet>::getInstance().regist
+ Factory<InertiaVarSet>::getInstance().registStatic
    (new Environment::ObjectProvider<NullInertiaVarSet, InertiaVarSet, FrameworkLib, 1>("Null"));
  
- Factory<IntegrableEntity>::getInstance().regist
+ Factory<IntegrableEntity>::getInstance().registStatic
    (new Environment::ObjectProvider<NullIntegrableEntity, IntegrableEntity, FrameworkLib>("Null"));
  
- Factory<LinearSystemSolver>::getInstance().regist
+ Factory<LinearSystemSolver>::getInstance().registStatic
    (new Environment::ObjectProvider<NullLinearSystemSolver, LinearSystemSolver, FrameworkLib,1>("Null"));
  
- Factory<JacobianLinearizer>::getInstance().regist
+ Factory<JacobianLinearizer>::getInstance().registStatic
    (new Environment::ObjectProvider<NullLinearizer,JacobianLinearizer,FrameworkLib,1>("Null"));
  
- Factory<MeshAdapterMethod>::getInstance().regist
+ Factory<MeshAdapterMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<NullMeshAdapterMethod, MeshAdapterMethod, FrameworkLib,1>("Null"));
  
- Factory<MeshCreator>::getInstance().regist
+ Factory<MeshCreator>::getInstance().registStatic
    (new Environment::ObjectProvider<NullMeshCreator, MeshCreator, FrameworkLib,1>("Null"));
  
- Factory<MeshDataBuilder>::getInstance().regist
+ Factory<MeshDataBuilder>::getInstance().registStatic
    (new Environment::ObjectProvider<NullMeshDataBuilder, MeshDataBuilder, FrameworkLib, 1>("Null"));
  
- Factory<MeshFormatConverter>::getInstance().regist
+ Factory<MeshFormatConverter>::getInstance().registStatic
    (new Environment::ObjectProvider<NullMeshFormatConverter, MeshFormatConverter, FrameworkLib, 1>("Null"));
  
- Factory<OutputFormatter>::getInstance().regist
+ Factory<OutputFormatter>::getInstance().registStatic
    (new Environment::ObjectProvider<NullOutputFormatter, OutputFormatter, FrameworkLib,1>("Null"));
  
- Factory<PhysicalModelImpl>::getInstance().regist
+ Factory<PhysicalModelImpl>::getInstance().registStatic
    (new Environment::ObjectProvider<NullPhysicalModelImpl, PhysicalModelImpl, FrameworkLib, 1>("Null"));
  
- Factory<PhysicalPropertyLibrary>::getInstance().regist
+ Factory<PhysicalPropertyLibrary>::getInstance().registStatic
    (new Environment::ObjectProvider<NullPhysicalPropertyLibrary, PhysicalPropertyLibrary, FrameworkLib, 1>("Null"));
  
- Factory<RadiationLibrary>::getInstance().regist
+ Factory<RadiationLibrary>::getInstance().registStatic
    (new Environment::ObjectProvider<NullRadiationLibrary, RadiationLibrary, FrameworkLib, 1>("Null"));
  
- Factory<SourceVarSet>::getInstance().regist
+ Factory<SourceVarSet>::getInstance().registStatic
    (new Environment::ObjectProvider<NullSourceVarSet,SourceVarSet, FrameworkLib, 1>("Null"));
  
- Factory<SpaceMethod>::getInstance().regist
+ Factory<SpaceMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<NullSpaceMethod, SpaceMethod, FrameworkLib,1>("Null"));
  
- Factory<StateInterpolator>::getInstance().regist
+ Factory<StateInterpolator>::getInstance().registStatic
    (new ObjectProvider<NullStateInterpolator, StateInterpolator, FrameworkLib, 1>("Null"));
  
- Factory<ConvectiveVarSet>::getInstance().regist
+ Factory<ConvectiveVarSet>::getInstance().registStatic
    (new Environment::ObjectProvider<NullVarSet, ConvectiveVarSet, FrameworkLib, 1>("Null"));
 
- Factory<VarSetMatrixTransformer>::getInstance().regist
+ Factory<VarSetMatrixTransformer>::getInstance().registStatic
    (new Environment::ObjectProvider<NullVarSetMatrixTransformer, VarSetMatrixTransformer, FrameworkLib,1>("Null"));
  
- Factory<VarSetTransformer>::getInstance().regist
+ Factory<VarSetTransformer>::getInstance().registStatic
    (new Environment::ObjectProvider<NullVarSetTransformer, VarSetTransformer, FrameworkLib,1>("Null"));
  
  // IntegratorImplProvider<VolumeIntegratorImpl, NullVolumeIntegratorImpl>();
  
- Factory<SubSystem>::getInstance().regist
+ Factory<SubSystem>::getInstance().registStatic
    (new Environment::ObjectProvider<OnlyMeshSubSystem, SubSystem, FrameworkLib, 1>("OnlyMeshSubSystem"));
  
- Factory<MeshPartitioner>::getInstance().regist
+ Factory<MeshPartitioner>::getInstance().registStatic
    (new Environment::ObjectProvider<ParMetis, MeshPartitioner, FrameworkLib, 1>("ParMetis"));
  
- Factory<SubSystem>::getInstance().regist
+ Factory<SubSystem>::getInstance().registStatic
    (new Environment::ObjectProvider<PrePostProcessingSubSystem, SubSystem, FrameworkLib, 1>("PrePostProcessingSubSystem"));
  
- Factory<StopCondition>::getInstance().regist
+ Factory<StopCondition>::getInstance().registStatic
    (new Environment::ObjectProvider<RelativeNormAndMaxIter, StopCondition, FrameworkLib, 1>("RelativeNormAndMaxIter"));
  
- Factory<StopCondition>::getInstance().regist
+ Factory<StopCondition>::getInstance().registStatic
    (new Environment::ObjectProvider<RelativeNormAndMaxSubIter, StopCondition, FrameworkLib, 1>("RelativeNormAndMaxSubIter"));
 
- Factory<ComputeCFL>::getInstance().regist
+ Factory<ComputeCFL>::getInstance().registStatic
    (new Environment::ObjectProvider<SERComputeCFL, ComputeCFL, FrameworkLib, 1>("SER"));
 
- Factory<Maestro>::getInstance().regist
+ Factory<Maestro>::getInstance().registStatic
    (new ObjectProvider<SMaestro, Maestro, FrameworkLib, 1>("SimpleMaestro"));
  
- Factory<SubSystem>::getInstance().regist
+ Factory<SubSystem>::getInstance().registStatic
    (new Environment::ObjectProvider<StandardSubSystem, SubSystem, FrameworkLib, 1>("StandardSubSystem"));
  
- Factory<SubSystem>::getInstance().regist
+ Factory<SubSystem>::getInstance().registStatic
    (new Environment::ObjectProvider<SubIterCustomSubSystem, SubSystem, FrameworkLib, 1>("SubIterCustomSubSystem"));
  
  using namespace IO::CFmeshCellSplitter;
  
- Factory<MeshFormatConverter>::getInstance().regist
+ Factory<MeshFormatConverter>::getInstance().registStatic
    (new Environment::ObjectProvider<CellSplitter2D,  MeshFormatConverter,
     CFmeshCellSplitterModule, 1>("CellSplitter2D"));
  
-Factory<MeshFormatConverter>::getInstance().regist
+Factory<MeshFormatConverter>::getInstance().registStatic
   (new Environment::ObjectProvider<CellSplitter2DFVM,  MeshFormatConverter,
  CFmeshCellSplitterModule, 1>("CellSplitter2DFVM"));
  
- Factory<MeshFormatConverter>::getInstance().regist
+ Factory<MeshFormatConverter>::getInstance().registStatic
    (new Environment::ObjectProvider<CellSplitter3D,  MeshFormatConverter,
     CFmeshCellSplitterModule, 1>("CellSplitter3D"));
  
- Factory<MeshFormatConverter>::getInstance().regist
+ Factory<MeshFormatConverter>::getInstance().registStatic
    (new Environment::ObjectProvider<CellSplitter3DFVM,  MeshFormatConverter,
     CFmeshCellSplitterModule, 1>("CellSplitter3DFVM"));
  
  using namespace IO::CFmeshExtruder;
  
- Factory<MeshFormatConverter>::getInstance().regist
+ Factory<MeshFormatConverter>::getInstance().registStatic
    (new Environment::ObjectProvider<Extruder2D,  MeshFormatConverter,
     CFmeshCellSplitterModule, 1>("Extruder2D"));
  
- Factory<MeshFormatConverter>::getInstance().regist
+ Factory<MeshFormatConverter>::getInstance().registStatic
    (new Environment::ObjectProvider<Extruder2DDGM,  MeshFormatConverter,
     CFmeshCellSplitterModule, 1>("Extruder2DDGM"));
  
- Factory<MeshFormatConverter>::getInstance().regist
+ Factory<MeshFormatConverter>::getInstance().registStatic
    (new Environment::ObjectProvider<Extruder2DFVM,  MeshFormatConverter,
     CFmeshCellSplitterModule, 1>("Extruder2DFVM"));
  
- Factory<MeshFormatConverter>::getInstance().regist
+ Factory<MeshFormatConverter>::getInstance().registStatic
    (new Environment::ObjectProvider<Extruder2DFVMMPI,  MeshFormatConverter,
     CFmeshCellSplitterModule, 1>("Extruder2DFVMMPI"));
 
  using namespace COOLFluiD::CFmeshFileReader;
 
-Factory<MeshCreator>::getInstance().regist
+Factory<MeshCreator>::getInstance().registStatic
 (new ObjectProvider<CFmeshReader, MeshCreator, CFmeshFileReaderPlugin,1>
  ("CFmeshFileReader"));
 
-Factory<CFmeshReaderCom>::getInstance().regist
+Factory<CFmeshReaderCom>::getInstance().registStatic
 (new MethodCommandProvider<NullMethodCommand<CFmeshReaderData>,
  CFmeshReaderData, FrameworkLib>("Null"));
 
-Factory<CFmeshReaderCom>::getInstance().regist
+Factory<CFmeshReaderCom>::getInstance().registStatic
 (new MethodCommandProvider<ParReadCFmesh<ParCFmeshFileReader>, 
  CFmeshReaderData, CFmeshFileReaderPlugin>("ParReadCFmesh"));
 
-Factory<CFmeshReaderCom>::getInstance().regist
+Factory<CFmeshReaderCom>::getInstance().registStatic
 (new MethodCommandProvider<ParReadCFmesh<ParCFmeshBinaryFileReader>, 
  CFmeshReaderData,CFmeshFileReaderPlugin>("ParReadCFmeshBinary"));
 
-Factory<CFmeshReaderCom>::getInstance().regist
+Factory<CFmeshReaderCom>::getInstance().registStatic
      (new MethodCommandProvider<ReadCFmesh, CFmeshReaderData, 
       CFmeshFileReaderPlugin>("StdReadCFmesh"));
 
-Factory<CFmeshReaderCom>::getInstance().regist
+Factory<CFmeshReaderCom>::getInstance().registStatic
 (new MethodCommandProvider<ReadDummy, CFmeshReaderData, CFmeshFileReaderPlugin>("Dummy"));
    
-   Factory<CFmeshReaderCom>::getInstance().regist
+   Factory<CFmeshReaderCom>::getInstance().registStatic
      (new MethodCommandProvider<COOLFluiD::CFmeshFileReader::StdSetup, CFmeshReaderData, CFmeshFileReaderPlugin>("StdSetup"));
    
-   Factory<CFmeshReaderCom>::getInstance().regist
+   Factory<CFmeshReaderCom>::getInstance().registStatic
     (new MethodCommandProvider<COOLFluiD::CFmeshFileReader::StdUnSetup, CFmeshReaderData, CFmeshFileReaderPlugin>("StdUnSetup"));  
    
  using namespace CFmeshFileWriter;
  
-Factory<OutputFormatter>::getInstance().regist
+Factory<OutputFormatter>::getInstance().registStatic
 (new Environment::ObjectProvider<CFmeshWriter, OutputFormatter, CFmeshFileWriterModule,1>
  ("CFmesh"));
 
-Factory<CFmeshWriterCom>::getInstance().regist
+Factory<CFmeshWriterCom>::getInstance().registStatic
 (new MethodCommandProvider<NullMethodCommand<CFmeshWriterData>,
  CFmeshWriterData, FrameworkLib>("Null"));
 
-Factory<CFmeshWriterCom>::getInstance().regist
+Factory<CFmeshWriterCom>::getInstance().registStatic
 (new MethodCommandProvider<COOLFluiD::CFmeshFileWriter::ParWriteSolution<ParCFmeshFileWriter>, 
  CFmeshWriterData, CFmeshFileWriterModule>("ParWriteSolution"));
 
-Factory<CFmeshWriterCom>::getInstance().regist
+Factory<CFmeshWriterCom>::getInstance().registStatic
   (new MethodCommandProvider<COOLFluiD::CFmeshFileWriter::ParWriteSolution<ParCFmeshBinaryFileWriter>, 
  CFmeshWriterData, CFmeshFileWriterModule>("ParWriteBinarySolution"));
  
-Factory<CFmeshWriterCom>::getInstance().regist
+Factory<CFmeshWriterCom>::getInstance().registStatic
   (new MethodCommandProvider<COOLFluiD::CFmeshFileWriter::StdSetup, CFmeshWriterData, CFmeshFileWriterModule>("StdSetup"));
 
-Factory<CFmeshWriterCom>::getInstance().regist
+Factory<CFmeshWriterCom>::getInstance().registStatic
   (new MethodCommandProvider<COOLFluiD::CFmeshFileWriter::StdUnSetup, CFmeshWriterData, CFmeshFileWriterModule>("StdUnSetup"));
 
- Factory<CFmeshWriterCom>::getInstance().regist
+ Factory<CFmeshWriterCom>::getInstance().registStatic
    (new MethodCommandProvider<COOLFluiD::CFmeshFileWriter::WriteSolution, CFmeshWriterData, CFmeshFileWriterModule>("WriteSolution"));
 
-Factory<CFmeshWriterCom>::getInstance().regist
+Factory<CFmeshWriterCom>::getInstance().registStatic
 (new MethodCommandProvider<WriteSolutionDG, CFmeshWriterData, CFmeshFileWriterModule>("WriteSolutionDG"));
  
- Factory<CFmeshWriterCom>::getInstance().regist
+ Factory<CFmeshWriterCom>::getInstance().registStatic
    (new MethodCommandProvider<WriteSolutionFluctSplitP2P1, CFmeshWriterData, CFmeshFileWriterModule>("WriteSolutionFluctSplitP2P1"));
  
 using namespace IO::Gambit2CFmesh;
 
-Factory<MeshFormatConverter>::getInstance().regist
+Factory<MeshFormatConverter>::getInstance().registStatic
 (new Environment::ObjectProvider<Gambit2CFmeshConverter, MeshFormatConverter, 
  Gambit2CFmeshModule, 1>("Gambit2CFmesh"));
 
  using namespace IO::Gmsh2CFmesh;
  
- Factory<MeshFormatConverter>::getInstance().regist
+ Factory<MeshFormatConverter>::getInstance().registStatic
 (new Environment::ObjectProvider<Gmsh2CFmeshConverter, MeshFormatConverter, 
  Gmsh2CFmeshModule, 1>("Gmsh2CFmesh"));
  
  using namespace TecplotWriter;
  
- Factory<TecWriterCom>::getInstance().regist
+ Factory<TecWriterCom>::getInstance().registStatic
    (new MethodCommandProvider<COOLFluiD::TecplotWriter::ParWriteSolution, TecWriterData, TecplotWriterModule>
     ("ParWriteSolution"));
  
- Factory<TecWriterCom>::getInstance().regist
+ Factory<TecWriterCom>::getInstance().registStatic
    (new MethodCommandProvider<ParWriteSolutionBlock, TecWriterData, TecplotWriterModule>
     ("ParWriteSolutionBlock"));
  
- Factory<TecWriterCom>::getInstance().regist
+ Factory<TecWriterCom>::getInstance().registStatic
    (new MethodCommandProvider<COOLFluiD::TecplotWriter::StdSetup, TecWriterData, TecplotWriterModule>
     ("StdSetup"));
  
- Factory<TecWriterCom>::getInstance().regist
+ Factory<TecWriterCom>::getInstance().registStatic
    (new MethodCommandProvider<COOLFluiD::TecplotWriter::StdUnSetup, TecWriterData, TecplotWriterModule>
     ("StdUnSetup"));
  
- Factory<OutputFormatter>::getInstance().regist
+ Factory<OutputFormatter>::getInstance().registStatic
    (new Environment::ObjectProvider<TecWriter, OutputFormatter, TecplotWriterModule,1>
     ("Tecplot"));
  
- Factory<TecWriterCom>::getInstance().regist
+ Factory<TecWriterCom>::getInstance().registStatic
    (new MethodCommandProvider<NullMethodCommand<TecWriterData>, TecWriterData, 
     TecplotWriterModule>("Null"));
  
- Factory<TecWriterCom>::getInstance().regist
+ Factory<TecWriterCom>::getInstance().registStatic
    (new MethodCommandProvider<COOLFluiD::TecplotWriter::WriteSolution, TecWriterData, TecplotWriterModule>
     ("WriteSolution"));
  
- Factory<TecWriterCom>::getInstance().regist
+ Factory<TecWriterCom>::getInstance().registStatic
    (new MethodCommandProvider<WriteSolution1D, TecWriterData, TecplotWriterModule>
     ("WriteSolution1D"));
 
- Factory<TecWriterCom>::getInstance().regist
+ Factory<TecWriterCom>::getInstance().registStatic
    (new MethodCommandProvider<WriteSolutionBlock, TecWriterData, TecplotWriterModule>
     ("WriteSolutionBlock"));
 
- Factory<TecWriterCom>::getInstance().regist
+ Factory<TecWriterCom>::getInstance().registStatic
    (new MethodCommandProvider<WriteSolutionBlockDG, TecWriterData, TecplotWriterModule>
     ("WriteSolutionBlockDG"));
  
- Factory<TecWriterCom>::getInstance().regist
+ Factory<TecWriterCom>::getInstance().registStatic
    (new MethodCommandProvider<WriteSolutionBlockFV, TecWriterData, TecplotWriterModule>
     ("WriteSolutionBlockFV"));
  
- Factory<TecWriterCom>::getInstance().regist
+ Factory<TecWriterCom>::getInstance().registStatic
    (new MethodCommandProvider<WriteSolutionHO, TecWriterData, TecplotWriterModule>
     ("WriteSolutionHO"));
  
- Factory<TecWriterCom>::getInstance().regist
+ Factory<TecWriterCom>::getInstance().registStatic
    (new MethodCommandProvider<WriteSolutionHighOrder, TecWriterData, TecplotWriterModule>
     ("WriteSolutionHighOrder")); 
  
  using namespace Physics::Maxwell;
  
- Factory<ConvectiveVarSet>::getInstance().regist
+ Factory<ConvectiveVarSet>::getInstance().registStatic
    (new Environment::ObjectProvider<Maxwell2DAdimCons, ConvectiveVarSet, MaxwellModule, 1>("Maxwell2DAdimCons"));
  
-Factory<ConvectiveVarSet>::getInstance().regist
+Factory<ConvectiveVarSet>::getInstance().registStatic
    (new Environment::ObjectProvider<Maxwell2DCons, ConvectiveVarSet, MaxwellModule, 1>("Maxwell2DCons"));
  
-Factory<ConvectiveVarSet>::getInstance().regist
+Factory<ConvectiveVarSet>::getInstance().registStatic
 (new Environment::ObjectProvider<Maxwell2DProjectionAdimCons, ConvectiveVarSet, MaxwellModule, 1>("Maxwell2DProjectionAdimCons"));
 
-Factory<ConvectiveVarSet>::getInstance().regist
+Factory<ConvectiveVarSet>::getInstance().registStatic
 (new Environment::ObjectProvider<Maxwell2DProjectionCons, ConvectiveVarSet, MaxwellModule, 1>("Maxwell2DProjectionCons"));
 
-Factory<ConvectiveVarSet>::getInstance().regist
+Factory<ConvectiveVarSet>::getInstance().registStatic
 (new Environment::ObjectProvider<Maxwell3DAdimCons, ConvectiveVarSet, MaxwellModule, 1>("Maxwell3DAdimCons"));
 
-Factory<ConvectiveVarSet>::getInstance().regist
+Factory<ConvectiveVarSet>::getInstance().registStatic
 (new Environment::ObjectProvider<Maxwell3DCons, ConvectiveVarSet, MaxwellModule, 1>("Maxwell3DCons"));
 
-Factory<ConvectiveVarSet>::getInstance().regist
+Factory<ConvectiveVarSet>::getInstance().registStatic
 (new Environment::ObjectProvider<Maxwell3DProjectionCons, ConvectiveVarSet, MaxwellModule, 1>("Maxwell3DProjectionCons"));
 
-Factory<PhysicalModelImpl>::getInstance().regist
+Factory<PhysicalModelImpl>::getInstance().registStatic
 (new Environment::ObjectProvider<MaxwellModel<DIM_2D>, PhysicalModelImpl,MaxwellModule, 1>("Maxwell2D"));
 
-Factory<PhysicalModelImpl>::getInstance().regist
+Factory<PhysicalModelImpl>::getInstance().registStatic
 (new Environment::ObjectProvider<MaxwellModel<DIM_3D>, PhysicalModelImpl,MaxwellModule, 1>("Maxwell3D"));
 
-Factory<PhysicalModelImpl>::getInstance().regist
+Factory<PhysicalModelImpl>::getInstance().registStatic
 (new Environment::ObjectProvider<MaxwellModelAdim<DIM_2D>, PhysicalModelImpl, MaxwellModule,1>("Maxwell2DAdim"));
 
-Factory<PhysicalModelImpl>::getInstance().regist
+Factory<PhysicalModelImpl>::getInstance().registStatic
 (new Environment::ObjectProvider<MaxwellModelAdim<DIM_3D>, PhysicalModelImpl, MaxwellModule,1>("Maxwell3DAdim"));
 
-Factory<PhysicalModelImpl>::getInstance().regist
+Factory<PhysicalModelImpl>::getInstance().registStatic
 (new Environment::ObjectProvider<MaxwellProjection<DIM_2D>, PhysicalModelImpl, MaxwellModule,1>("Maxwell2DProjection"));
 
-Factory<PhysicalModelImpl>::getInstance().regist
+Factory<PhysicalModelImpl>::getInstance().registStatic
 (new Environment::ObjectProvider<MaxwellProjection<DIM_3D>, PhysicalModelImpl, MaxwellModule,1>("Maxwell3DProjection"));
 
-Factory<PhysicalModelImpl>::getInstance().regist
+Factory<PhysicalModelImpl>::getInstance().registStatic
 (new Environment::ObjectProvider<MaxwellProjectionAdim<DIM_2D>, PhysicalModelImpl, MaxwellModule,1>("Maxwell2DProjectionAdim"));
 
-Factory<PhysicalModelImpl>::getInstance().regist
+Factory<PhysicalModelImpl>::getInstance().registStatic
 (new Environment::ObjectProvider<MaxwellProjectionAdim<DIM_3D>, PhysicalModelImpl, MaxwellModule,1>("Maxwell3DProjectionAdim"));
  
  using namespace Physics::MultiFluidMHD;
  
- Factory<DiffusiveVarSet>::getInstance().regist
+ Factory<DiffusiveVarSet>::getInstance().registStatic
   (new Environment::ObjectProvider<DiffMFMHD2DHalfRhoiViTi, DiffusiveVarSet, MultiFluidMHDModule, 2>("MultiFluidMHD2DHalfRhoiViTi"));
  
-Factory<DiffusiveVarSet>::getInstance().regist
+Factory<DiffusiveVarSet>::getInstance().registStatic
 (new Environment::ObjectProvider<DiffMFMHD2DRhoiViTi, DiffusiveVarSet, MultiFluidMHDModule, 2>("MultiFluidMHD2DRhoiViTi"));
  
-Factory<DiffusiveVarSet>::getInstance().regist
+Factory<DiffusiveVarSet>::getInstance().registStatic
 (new Environment::ObjectProvider<DiffMFMHD3DRhoiViTi, DiffusiveVarSet, MultiFluidMHDModule, 2>("MultiFluidMHD3DRhoiViTi"));
 
- Factory<VarSetMatrixTransformer>::getInstance().regist
+ Factory<VarSetMatrixTransformer>::getInstance().registStatic
    (new Environment::ObjectProvider<Euler2DHalfMFMHDConsToRhoiViTiInRhoiViTi, VarSetMatrixTransformer, 
     MultiFluidMHDModule, 1> ("Euler2DHalfMFMHDConsToRhoiViTiInRhoiViTi"));
  
- Factory<VarSetMatrixTransformer>::getInstance().regist
+ Factory<VarSetMatrixTransformer>::getInstance().registStatic
    (new Environment::ObjectProvider<Euler2DMFMHDConsToRhoiViTiInRhoiViTi, VarSetMatrixTransformer, 
     MultiFluidMHDModule, 1> ("Euler2DMFMHDConsToRhoiViTiInRhoiViTi"));
  
- Factory<VarSetMatrixTransformer>::getInstance().regist
+ Factory<VarSetMatrixTransformer>::getInstance().registStatic
    (new Environment::ObjectProvider<Euler3DMFMHDConsToRhoiViTiInRhoiViTi, VarSetMatrixTransformer, 
     MultiFluidMHDModule, 1>("Euler3DMFMHDConsToRhoiViTiInRhoiViTi"));
  
- Factory<ConvectiveVarSet>::getInstance().regist
+ Factory<ConvectiveVarSet>::getInstance().registStatic
    (new Environment::ObjectProvider<EulerMFMHD2DCons, ConvectiveVarSet, MultiFluidMHDModule, 1>
     ("EulerMFMHD2DCons"));
  
- Factory<VarSetTransformer>::getInstance().regist
+ Factory<VarSetTransformer>::getInstance().registStatic
    (new Environment::ObjectProvider<EulerMFMHD2DConsToRhoiViTi, VarSetTransformer, MultiFluidMHDModule, 1>
     ("EulerMFMHD2DConsToRhoiViTi"));
  
- Factory<ConvectiveVarSet>::getInstance().regist
+ Factory<ConvectiveVarSet>::getInstance().registStatic
    (new Environment::ObjectProvider<EulerMFMHD2DHalfCons, ConvectiveVarSet, MultiFluidMHDModule, 1>
     ("EulerMFMHD2DHalfCons"));
  
- Factory<VarSetTransformer>::getInstance().regist
+ Factory<VarSetTransformer>::getInstance().registStatic
    (new Environment::ObjectProvider<EulerMFMHD2DHalfConsToRhoiViTi, VarSetTransformer, MultiFluidMHDModule, 1>
     ("EulerMFMHD2DHalfConsToRhoiViTi"));
  
- Factory<ConvectiveVarSet>::getInstance().regist
+ Factory<ConvectiveVarSet>::getInstance().registStatic
    (new Environment::ObjectProvider<EulerMFMHD2DHalfRhoiViTi, ConvectiveVarSet, MultiFluidMHDModule, 1>
     ("EulerMFMHD2DHalfRhoiViTi"));
  
-Factory<VarSetTransformer>::getInstance().regist
+Factory<VarSetTransformer>::getInstance().registStatic
 (new Environment::ObjectProvider<EulerMFMHD2DHalfRhoiViTiToCons, VarSetTransformer, MultiFluidMHDModule, 1>
  ("EulerMFMHD2DHalfRhoiViTiToCons"));
 
-Factory<ConvectiveVarSet>::getInstance().regist
+Factory<ConvectiveVarSet>::getInstance().registStatic
 (new Environment::ObjectProvider<EulerMFMHD2DRhoiViTi, ConvectiveVarSet, MultiFluidMHDModule, 1>
  ("EulerMFMHD2DRhoiViTi"));
 
-Factory<VarSetTransformer>::getInstance().regist
+Factory<VarSetTransformer>::getInstance().registStatic
 (new Environment::ObjectProvider<EulerMFMHD2DRhoiViTiToCons, VarSetTransformer, MultiFluidMHDModule, 1>
  ("EulerMFMHD2DRhoiViTiToCons"));
 
-Factory<ConvectiveVarSet>::getInstance().regist
+Factory<ConvectiveVarSet>::getInstance().registStatic
 (new Environment::ObjectProvider<EulerMFMHD3DCons, ConvectiveVarSet, MultiFluidMHDModule, 1>
  ("EulerMFMHD3DCons"));
 
-Factory<VarSetTransformer>::getInstance().regist
+Factory<VarSetTransformer>::getInstance().registStatic
   (new Environment::ObjectProvider<EulerMFMHD3DConsToRhoiViTi, VarSetTransformer, MultiFluidMHDModule, 1>
  ("EulerMFMHD3DConsToRhoiViTi"));
  
- Factory<ConvectiveVarSet>::getInstance().regist
+ Factory<ConvectiveVarSet>::getInstance().registStatic
    (new Environment::ObjectProvider<EulerMFMHD3DRhoiViTi, ConvectiveVarSet, MultiFluidMHDModule, 1>
     ("EulerMFMHD3DRhoiViTi"));
  
- Factory<VarSetTransformer>::getInstance().regist
+ Factory<VarSetTransformer>::getInstance().registStatic
    (new Environment::ObjectProvider<EulerMFMHD3DRhoiViTiToCons, VarSetTransformer, MultiFluidMHDModule, 1>
     ("EulerMFMHD3DRhoiViTiToCons"));
  
- Factory<PhysicalModelImpl>::getInstance().regist
+ Factory<PhysicalModelImpl>::getInstance().registStatic
    (new Environment::ObjectProvider<MultiFluidMHDModel<DIM_2D>, PhysicalModelImpl,MultiFluidMHDModule, 1>
     ("MultiFluidMHD2D"));
  
- Factory<PhysicalModelImpl>::getInstance().regist
+ Factory<PhysicalModelImpl>::getInstance().registStatic
    (new Environment::ObjectProvider<MultiFluidMHDModel<DIM_3D>, PhysicalModelImpl,MultiFluidMHDModule, 1>
     ("MultiFluidMHD3D"));
  
  using namespace ForwardEuler;
  
- Factory<FwdEulerCom>::getInstance().regist
+ Factory<FwdEulerCom>::getInstance().registStatic
    (new MethodCommandProvider<COOLFluiD::ForwardEuler::CopySol,FwdEulerData,ForwardEulerLib >("StdCopySol"));
  
- Factory<FwdEulerCom>::getInstance().regist
+ Factory<FwdEulerCom>::getInstance().registStatic
    (new MethodCommandProvider<FSHOPrepare, FwdEulerData, ForwardEulerLib>("FSHOPrepare"));
  
- Factory<FwdEulerCom>::getInstance().regist
+ Factory<FwdEulerCom>::getInstance().registStatic
    (new MethodCommandProvider<FSHOSetup, FwdEulerData, ForwardEulerLib>("FSHOSetup"));
  
- Factory<FwdEulerCom>::getInstance().regist
+ Factory<FwdEulerCom>::getInstance().registStatic
    (new MethodCommandProvider<FSHOUnSetup, FwdEulerData, ForwardEulerLib>("FSHOUnSetup"));
  
- Factory<ConvergenceMethod>::getInstance().regist
+ Factory<ConvergenceMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<FwdEuler, ConvergenceMethod, ForwardEulerLib, 1>
     ("FwdEuler"));
 
-Factory<FwdEulerCom>::getInstance().regist
+Factory<FwdEulerCom>::getInstance().registStatic
 (new MethodCommandProvider<NullMethodCommand<FwdEulerData>, FwdEulerData, ForwardEulerLib>
  ("Null"));
 
- Factory<FwdEulerCom>::getInstance().regist
+ Factory<FwdEulerCom>::getInstance().registStatic
    (new MethodCommandProvider<StdPrepare, FwdEulerData, ForwardEulerLib>
     ("StdPrepare"));
  
- Factory<FwdEulerCom>::getInstance().regist
+ Factory<FwdEulerCom>::getInstance().registStatic
    (new MethodCommandProvider<COOLFluiD::ForwardEuler::StdSetup, FwdEulerData, ForwardEulerLib>("StdSetup"));
 
-Factory<FwdEulerCom>::getInstance().regist
+Factory<FwdEulerCom>::getInstance().registStatic
 (new MethodCommandProvider<COOLFluiD::ForwardEuler::StdUnSetup, FwdEulerData, ForwardEulerLib>("StdUnSetup"));
 
-Factory<FwdEulerCom>::getInstance().regist
+Factory<FwdEulerCom>::getInstance().registStatic
 (new MethodCommandProvider<TwoLayerPrepare, FwdEulerData, ForwardEulerLib>
  ("TwoLayerPrepare"));
 
-Factory<FwdEulerCom>::getInstance().regist
+Factory<FwdEulerCom>::getInstance().registStatic
 (new MethodCommandProvider<TwoLayerSetup, FwdEulerData, ForwardEulerLib>("TwoLayerSetup"));
 
-Factory<FwdEulerCom>::getInstance().regist
+Factory<FwdEulerCom>::getInstance().registStatic
 (new MethodCommandProvider<TwoLayerUnSetup, FwdEulerData, ForwardEulerLib>("TwoLayerUnSetup"));
 
-Factory<FwdEulerCom>::getInstance().regist
+Factory<FwdEulerCom>::getInstance().registStatic
 (new MethodCommandProvider<TwoLayerUpdateSol, FwdEulerData, ForwardEulerLib>
  ("TwoLayerUpdateSol"));
 
-Factory<FwdEulerCom>::getInstance().regist
+Factory<FwdEulerCom>::getInstance().registStatic
   (new MethodCommandProvider<COOLFluiD::ForwardEuler::UpdateSol, FwdEulerData, ForwardEulerLib>
  ("StdUpdateSol"));
  
 using namespace Numerics::NewtonMethod;
  
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
   (new MethodCommandProvider<ALE_FVMGeometricAverage, NewtonIteratorData, NewtonMethodModule> ("ALE_FVMGeometricAverage"));
 
- Factory<ConvergenceMethod>::getInstance().regist
+ Factory<ConvergenceMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<BDF2, ConvergenceMethod, NewtonMethodModule, 1>
     ("BDF2"));
 
- Factory<NewtonIteratorCom>::getInstance().regist
+ Factory<NewtonIteratorCom>::getInstance().registStatic
    (new MethodCommandProvider<BDF2Intermediate, NewtonIteratorData, NewtonMethodModule>
     ("BDF2Intermediate"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
    (new MethodCommandProvider<BDF2Setup, NewtonIteratorData, NewtonMethodModule>
     ("BDF2Setup"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<BDF2_CN1stStepIntermediate, NewtonIteratorData, NewtonMethodModule>
  ("CN1stStepIntermediate"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<BDF2_CN1stStepPrepare, NewtonIteratorData, NewtonMethodModule>
  ("CN1stStepPrepare"));
 
-Factory<ConvergenceMethod>::getInstance().regist
+Factory<ConvergenceMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<BDF2_InitCN, ConvergenceMethod, NewtonMethodModule, 1>
     ("BDF2_InitCN"));
 
- Factory<NewtonIteratorCom>::getInstance().regist
+ Factory<NewtonIteratorCom>::getInstance().registStatic
    (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::CopySol, NewtonIteratorData, NewtonMethodModule>("CopySol"));
  
- Factory<NewtonIteratorCom>::getInstance().regist
+ Factory<NewtonIteratorCom>::getInstance().registStatic
    (new MethodCommandProvider<CrankNichIntermediate, NewtonIteratorData, NewtonMethodModule> 
     ("CrankNichIntermediate"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<CrankNichLimInit, NewtonIteratorData, NewtonMethodModule>
  ("CrankNichLimInit"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<CrankNichLimIntermediate, NewtonIteratorData, NewtonMethodModule>
  ("CrankNichLimIntermediate"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<CrankNichLimPrepare, NewtonIteratorData, NewtonMethodModule>
  ("CrankNichLimPrepare"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<CrankNichLimSetup, NewtonIteratorData, NewtonMethodModule>
  ("CrankNichLimSetup"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<CrankNichLimUnSetup, NewtonIteratorData, NewtonMethodModule> 
  ("CrankNichLimUnSetup"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<CrankNichSetup, NewtonIteratorData, NewtonMethodModule>
  ("CrankNichSetup"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<CrankNichUnSetup, NewtonIteratorData, NewtonMethodModule>
  ("CrankNichUnSetup"));
  
-Factory<ConvergenceMethod>::getInstance().regist
+Factory<ConvergenceMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<CrankNicholson, ConvergenceMethod, NewtonMethodModule, 1>
     ("CrankNicholson"));
 
-Factory<ConvergenceMethod>::getInstance().regist
+Factory<ConvergenceMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<CrankNicholsonLim, ConvergenceMethod, NewtonMethodModule, 1>
    ("CrankNicholsonLim"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::FSHOPrepare, NewtonIteratorData, NewtonMethodModule>
 ("FSHOPrepare"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::FSHOSetup, NewtonIteratorData, NewtonMethodModule>
 ("FSHOSetup"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::FSHOUnSetup, NewtonIteratorData, NewtonMethodModule>
 ("FSHOUnSetup"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<GReKOUpdateSol, NewtonIteratorData, NewtonMethodModule>
 ("GReKOUpdateSol"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<ImposeHSEquilibriumUpdateSol, NewtonIteratorData, NewtonMethodModule>("ImposeHSEquilibriumUpdateSol"));
 
-Factory<ConvergenceMethod>::getInstance().regist
+Factory<ConvergenceMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<Linearized, ConvergenceMethod, NewtonMethodModule, 1>
    ("Linearized"));
 
-Factory<ConvergenceMethod>::getInstance().regist
+Factory<ConvergenceMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<LinearizedBDF2, ConvergenceMethod, NewtonMethodModule, 1>
    ("LinearizedBDF2"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<LinearizedBDF2Setup, NewtonIteratorData, NewtonMethodModule>("LinearizedBDF2Setup"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<LinearizedIntermediate, NewtonIteratorData, NewtonMethodModule>("LinearizedIntermediate"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<LinearizedIntermediateLim, NewtonIteratorData, NewtonMethodModule>("LinearizedIntermediateLim"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<LinearizedPrepare, NewtonIteratorData, NewtonMethodModule>("LinearizedPrepare"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<LinearizedSetup, NewtonIteratorData, NewtonMethodModule>("LinearizedSetup"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
   (new MethodCommandProvider<LinearizedUnSetup, NewtonIteratorData, NewtonMethodModule>("LinearizedUnSetup"));
  
-Factory<ConvergenceMethod>::getInstance().regist
+Factory<ConvergenceMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<NewmarkExplicit, ConvergenceMethod, NewtonMethodModule, 1>
    ("NewmarkExplicit"));
  
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
   (new MethodCommandProvider<NewmarkExplicitUpdateSol, NewtonIteratorData, NewtonMethodModule> ("NewmarkExplicitUpdateSol"));
 
- Factory<ConvergenceMethod>::getInstance().regist
+ Factory<ConvergenceMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<NewmarkImplicit, ConvergenceMethod, NewtonMethodModule, 1>
     ("NewmarkImplicit"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
   (new MethodCommandProvider<NewmarkImplicitUpdateSol, NewtonIteratorData, NewtonMethodModule> ("NewmarkImplicitUpdateSol"));
 
- Factory<NewtonIteratorCom>::getInstance().regist
+ Factory<NewtonIteratorCom>::getInstance().registStatic
    (new MethodCommandProvider<NewmarkPrepare,NewtonIteratorData, NewtonMethodModule>
     ("NewmarkPrepare"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
    (new MethodCommandProvider<NewmarkResetSystem,NewtonIteratorData, NewtonMethodModule>
     ("NewmarkResetSystem"));
  
- Factory<NewtonIteratorCom>::getInstance().regist
+ Factory<NewtonIteratorCom>::getInstance().registStatic
    (new MethodCommandProvider<NewmarkSetup,NewtonIteratorData, NewtonMethodModule>
     ("NewmarkSetup"));
  
- Factory<NewtonIteratorCom>::getInstance().regist
+ Factory<NewtonIteratorCom>::getInstance().registStatic
    (new MethodCommandProvider<NewmarkUnSetup,NewtonIteratorData, NewtonMethodModule>
     ("NewmarkUnSetup"));
 
- Factory<ConvergenceMethod>::getInstance().regist
+ Factory<ConvergenceMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<NewtonIterator, ConvergenceMethod, NewtonMethodModule, 1>
     ("NewtonIterator"));
  
- Factory<ConvergenceMethod>::getInstance().regist
+ Factory<ConvergenceMethod>::getInstance().registStatic
    (new Environment::ObjectProvider<NewtonIteratorCoupling, ConvergenceMethod, NewtonMethodModule, 1>
     ("NewtonIteratorCoupling"));
  
- Factory<NewtonIteratorCom>::getInstance().regist
+ Factory<NewtonIteratorCom>::getInstance().registStatic
    (new MethodCommandProvider<NullMethodCommand<NewtonIteratorData>,NewtonIteratorData, NewtonMethodModule>("Null"));
  
- Factory<NewtonIteratorCom>::getInstance().regist
+ Factory<NewtonIteratorCom>::getInstance().registStatic
    (new MethodCommandProvider<ResetSystem, NewtonIteratorData, NewtonMethodModule>
     ("ResetSystem"));
 
- Factory<NewtonIteratorCom>::getInstance().regist
+ Factory<NewtonIteratorCom>::getInstance().registStatic
    (new MethodCommandProvider<SelfAdjustUpdateSol, NewtonIteratorData, NewtonMethodModule> 
     ("SelfAdjustUpdateSol"));
  
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::StdPrepare, NewtonIteratorData, NewtonMethodModule>
 ("StdPrepare"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::StdSetup, NewtonIteratorData, NewtonMethodModule>
 ("StdSetup"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::StdUnSetup, NewtonIteratorData, NewtonMethodModule>
 ("StdUnSetup"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::StdUpdateSol, NewtonIteratorData, NewtonMethodModule>
 ("StdUpdateSol"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
 (new MethodCommandProvider<TurbUpdateSol, NewtonIteratorData, NewtonMethodModule>
 ("TurbUpdateSol"));
 
- Factory<NewtonIteratorCom>::getInstance().regist
+ Factory<NewtonIteratorCom>::getInstance().registStatic
    (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::TwoLayerPrepare, NewtonIteratorData, NewtonMethodModule>("TwoLayerPrepare"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
    (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::TwoLayerSetup, NewtonIteratorData, NewtonMethodModule>("TwoLayerSetup"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
   (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::TwoLayerUnSetup, NewtonIteratorData, NewtonMethodModule>("TwoLayerUnSetup"));
 
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
   (new MethodCommandProvider<COOLFluiD::Numerics::NewtonMethod::TwoLayerUpdateSol, NewtonIteratorData, NewtonMethodModule>("TwoLayerUpdateSol"));
  
-Factory<NewtonIteratorCom>::getInstance().regist
+Factory<NewtonIteratorCom>::getInstance().registStatic
   (new MethodCommandProvider<UpdateSolCoupling, NewtonIteratorData, NewtonMethodModule> 
     ("UpdateSolCoupling"));
 
- Factory<NewtonIteratorCom>::getInstance().regist
+ Factory<NewtonIteratorCom>::getInstance().registStatic
   (new MethodCommandProvider<UpdateSolFVMCC, NewtonIteratorData, NewtonMethodModule> 
     ("UpdateSolFVMCC"));
 
- Factory<NewtonIteratorCom>::getInstance().regist
+ Factory<NewtonIteratorCom>::getInstance().registStatic
    (new MethodCommandProvider<UpdateSolMHD, NewtonIteratorData, NewtonMethodMHDModule> 
     ("UpdateSolMHD"));
 
  using namespace Petsc;
  
- Factory<ShellPreconditioner>::getInstance().regist
+ Factory<ShellPreconditioner>::getInstance().registStatic
    (new MethodStrategyProvider<BSORPreconditioner, PetscLSSData, ShellPreconditioner,
 			       PetscModule>("BSOR"));
  
- Factory<ShellPreconditioner>::getInstance().regist
+ Factory<ShellPreconditioner>::getInstance().registStatic
    (new MethodStrategyProvider<BlockJacobiPreconditioner, PetscLSSData, ShellPreconditioner,
 			       PetscModule>("BJacobi"));
  
- Factory<ShellPreconditioner>::getInstance().regist
+ Factory<ShellPreconditioner>::getInstance().registStatic
    (new MethodStrategyProvider<DPLURPreconditioner, PetscLSSData, ShellPreconditioner,
 			       PetscModule>("DPLUR"));
  
- Factory<ShellPreconditioner>::getInstance().regist
+ Factory<ShellPreconditioner>::getInstance().registStatic
    (new MethodStrategyProvider<ILUPreconditioner, PetscLSSData, ShellPreconditioner,
 			       PetscModule>("ILU"));
 
- Factory<ShellPreconditioner>::getInstance().regist
+ Factory<ShellPreconditioner>::getInstance().registStatic
    (new MethodStrategyProvider<LUSGSPreconditioner, PetscLSSData, ShellPreconditioner,
 			       PetscModule>("LUSGS"));
  
-  Factory<PetscLSSCom>::getInstance().regist
+  Factory<PetscLSSCom>::getInstance().registStatic
   (new MethodCommandProvider<NewParSetup, PetscLSSData, PetscModule>("NewParSetup"));
 
-Factory<ShellPreconditioner>::getInstance().regist
+Factory<ShellPreconditioner>::getInstance().registStatic
 (new MethodStrategyProvider<NullPreconditioner, PetscLSSData, ShellPreconditioner, PetscModule>("Null"));
 
-Factory<PetscLSSCom>::getInstance().regist
+Factory<PetscLSSCom>::getInstance().registStatic
     (new MethodCommandProvider<ParJFSetup, PetscLSSData, PetscModule>("ParJFSetup"));
   
-  Factory<PetscLSSCom>::getInstance().regist
+  Factory<PetscLSSCom>::getInstance().registStatic
     (new MethodCommandProvider<ParJFSetupGMRESR, PetscLSSData, PetscModule>("ParJFSetupGMRESR"));
   
-  Factory<PetscLSSCom>::getInstance().regist
+  Factory<PetscLSSCom>::getInstance().registStatic
     (new MethodCommandProvider<ParJFSolveSys, PetscLSSData, PetscModule>("ParJFSolveSys"));
   
-  Factory<PetscLSSCom>::getInstance().regist
+  Factory<PetscLSSCom>::getInstance().registStatic
     (new MethodCommandProvider<ParJFSolveSys, PetscLSSData, PetscModule>("SeqJFSolveSys"));
   
-  Factory<PetscLSSCom>::getInstance().regist
+  Factory<PetscLSSCom>::getInstance().registStatic
     (new MethodCommandProvider<ParJFSolveSysGMRESR, PetscLSSData, PetscModule>("ParJFSolveSysGMRESR"));
   
- Factory<PetscLSSCom>::getInstance().regist
+ Factory<PetscLSSCom>::getInstance().registStatic
     (new MethodCommandProvider<ParJFSolveSysGMRESR, PetscLSSData, PetscModule>("SeqJFSolveSysGMRESR"));
 
-Factory<PetscLSSCom>::getInstance().regist
+Factory<PetscLSSCom>::getInstance().registStatic
     (new MethodCommandProvider<ParMFSetup, PetscLSSData, PetscModule>("ParMFSetup"));
   
-Factory<PetscLSSCom>::getInstance().regist
+Factory<PetscLSSCom>::getInstance().registStatic
     (new MethodCommandProvider<ParMFSolveSys, PetscLSSData, PetscModule>("ParMFSolveSys"));
   
-Factory<PetscLSSCom>::getInstance().regist
+Factory<PetscLSSCom>::getInstance().registStatic
     (new MethodCommandProvider<ParMFSolveSys, PetscLSSData, PetscModule>("SeqMFSolveSys"));
 
-Factory<LinearSystemSolver>::getInstance().regist
+Factory<LinearSystemSolver>::getInstance().registStatic
 (new Environment::ObjectProvider<PetscLSS, LinearSystemSolver, PetscModule,1>("PETSC"));
 
-Factory<PetscLSSCom>::getInstance().regist
+Factory<PetscLSSCom>::getInstance().registStatic
 (new MethodCommandProvider<NullMethodCommand<PetscLSSData>, PetscLSSData, PetscModule>
 ("Null"));
 
-Factory<PetscLSSCom>::getInstance().regist
+Factory<PetscLSSCom>::getInstance().registStatic
 (new MethodCommandProvider<StdParSolveSys, PetscLSSData, PetscModule>("StdParSolveSys"));
 
-Factory<PetscLSSCom>::getInstance().regist
+Factory<PetscLSSCom>::getInstance().registStatic
 (new MethodCommandProvider<StdParSolveSys, PetscLSSData, PetscModule>("StdSeqSolveSys"));
 
-Factory<PetscLSSCom>::getInstance().regist
+Factory<PetscLSSCom>::getInstance().registStatic
 (new MethodCommandProvider<StdParUnSetup, PetscLSSData, PetscModule>("StdParUnSetup"));
 
-Factory<PetscLSSCom>::getInstance().regist
+Factory<PetscLSSCom>::getInstance().registStatic
 (new MethodCommandProvider<StdSeqSetup, PetscLSSData, PetscModule>("StdSeqSetup"));
 
-Factory<PetscLSSCom>::getInstance().regist
+Factory<PetscLSSCom>::getInstance().registStatic
 (new MethodCommandProvider<StdSeqUnSetup, PetscLSSData, PetscModule>("StdSeqUnSetup"));
  
- Factory<ShellPreconditioner>::getInstance().regist
+ Factory<ShellPreconditioner>::getInstance().registStatic
    (new MethodStrategyProvider<TridiagPreconditioner, PetscLSSData, ShellPreconditioner,
 			       PetscModule>("Tridiag"));
  
- Factory<PetscLSSCom>::getInstance().regist
+ Factory<PetscLSSCom>::getInstance().registStatic
    (new MethodCommandProvider<TwoLayerParSetup, PetscLSSData, PetscModule>("TwoLayerParSetup"));
  
- Factory<PetscLSSCom>::getInstance().regist
+ Factory<PetscLSSCom>::getInstance().registStatic
    (new MethodCommandProvider<TwoLayerParSolveSys, PetscLSSData, PetscModule>
     ("TwoLayerParSolveSys"));
  
- Factory<PetscLSSCom>::getInstance().regist
+ Factory<PetscLSSCom>::getInstance().registStatic
    (new MethodCommandProvider<TwoLayerSeqSetup, PetscLSSData, PetscModule>
     ("TwoLayerSeqSetup"));
 
- Factory<PetscLSSCom>::getInstance().regist
+ Factory<PetscLSSCom>::getInstance().registStatic
    (new MethodCommandProvider<TwoLayerSeqSolveSys, PetscLSSData, PetscModule>
     ("TwoLayerSeqSolveSys"));
 }
