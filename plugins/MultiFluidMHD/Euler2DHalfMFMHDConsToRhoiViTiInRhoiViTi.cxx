@@ -1,9 +1,9 @@
 #include "MultiFluidMHD/MultiFluidMHD.hh"
-#include "Euler2DHalfMFMHDConsToRhoiViTiInRhoiViTi.hh"
-#include "MultiFluidMHDModel.hh"
+#include "MultiFluidMHD/Euler2DHalfMFMHDConsToRhoiViTiInRhoiViTi.hh"
+#include "MultiFluidMHD/MultiFluidMHDModel.hh"
 #include "Framework/PhysicalModel.hh"
 #include "Environment/ObjectProvider.hh"
-#include "EulerMFMHDTerm.hh"
+#include "MultiFluidMHD/EulerMFMHDTerm.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
