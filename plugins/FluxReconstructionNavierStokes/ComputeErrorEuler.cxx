@@ -76,18 +76,40 @@ std::vector< Common::SafePtr< BaseDataSocketSink > >
 
 void ComputeErrorEuler::execute()
 {
-  // get some data from the physical model
   const CFreal gamma = m_eulerVarSet->getModel()->getGamma();
   const CFreal R = m_eulerVarSet->getModel()->getR();
-  const CFreal Tt = 0.00365795/m_eulerVarSet->getModel()->getTempRef();
-  const CFreal pt = 1.186212306/m_eulerVarSet->getModel()->getPressRef();
-  const CFreal M = 0.5;
-  const CFreal p = pt/pow(1.0+(gamma-1.0)/2.0*M*M, gamma/(gamma-1.0));
-  const CFreal T = Tt/(1.0+(gamma-1.0)/2.0*M*M);
-  const CFreal rho = p/(R*T);
-  const CFreal a = pow(gamma*p/rho,0.5);
-  const CFreal s = p*pow(rho,-gamma);
-  const CFreal ht = gamma/(gamma-1.0)*R*T+a*a*M*M/2.0;
+  CFreal s;
+  CFreal ht;
+  
+  // data from testcases
+  if (false)
+  {
+    const CFreal TtBump = 0.00365795;
+    const CFreal ptBump = 1.186212306;
+    const CFreal MBump = 0.5;
+    const CFreal Tt = TtBump/m_eulerVarSet->getModel()->getTempRef();
+    const CFreal pt = ptBump/m_eulerVarSet->getModel()->getPressRef();
+    const CFreal M = MBump;
+  
+    // get some data from the physical model
+    
+    const CFreal p = pt/pow(1.0+(gamma-1.0)/2.0*M*M, gamma/(gamma-1.0));
+    const CFreal T = Tt/(1.0+(gamma-1.0)/2.0*M*M);
+    const CFreal rho = p/(R*T);
+    const CFreal a = pow(gamma*p/rho,0.5);
+    s = p*pow(rho,-gamma);
+    ht = gamma/(gamma-1.0)*R*T+a*a*M*M/2.0;
+  }
+  else
+  {
+    const CFreal MCyl = 0.38;
+    const CFreal pCyl = (gamma-1.0)*(2.60108 - 0.5*1.0*0.449622064*0.449622064);
+    const CFreal rho = 1.0;
+    const CFreal T = pCyl/(rho*R);
+    const CFreal a = pow(gamma*pCyl/rho,0.5);
+    s = pCyl*pow(rho,-gamma);
+    ht = gamma/(gamma-1.0)*R*T+a*a*MCyl*MCyl/2.0;
+  }
   CFreal es = 0.0;
   CFreal eht = 0.0;
   CFreal esLi = 0.0;
@@ -170,7 +192,8 @@ void ComputeErrorEuler::execute()
       for (CFuint iSol = 0; iSol < nbrQPnts; ++iSol)
       {
         // set the physical data starting from the inner state
-        m_eulerVarSet->computePhysicalData(*(quadStates[iSol]),m_solPhysData);
+        m_eulerVarSet->computePhysicalData((*((*m_cellStates)[iSol])),m_solPhysData);
+	//m_eulerVarSet->computePhysicalData(*(quadStates[iSol]),m_solPhysData);
 
         const CFreal M2 = m_solPhysData[EulerTerm::V]/m_solPhysData[EulerTerm::A];
         const CFreal p2 = m_solPhysData[EulerTerm::P];
@@ -181,8 +204,8 @@ void ComputeErrorEuler::execute()
         const CFreal ht2 = gamma/(gamma-1.0)*R*T2+V2*V2/2.0;
     
         // L2
-        CFreal errorht = pow(ht - ht2,2);
-        const CFreal errors = pow(s - s2,2);
+        CFreal errorht = pow((ht - ht2)/ht,2);
+        const CFreal errors = pow((s - s2)/s,2);
 	
 	if(m_cell->getID() == 1)
 	{
@@ -197,8 +220,8 @@ void ComputeErrorEuler::execute()
         es += quadPntWeights[iSol]*errors;
 
         // L inf
-        const CFreal errorhtLi = fabs(ht - ht2);
-        const CFreal errorsLi = fabs(s - s2);
+        const CFreal errorhtLi = fabs(ht - ht2)/ht;
+        const CFreal errorsLi = fabs(s - s2)/s;
 
         ehtLi += quadPntWeights[iSol]*errorhtLi;
         esLi += quadPntWeights[iSol]*errorsLi;
@@ -282,7 +305,7 @@ void ComputeErrorEuler::setup()
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
   
   // create TensorProductGaussIntegrator
-  TensorProductGaussIntegrator tempGI(DIM_2D,frLocalData[0]->getPolyOrder());
+  TensorProductGaussIntegrator tempGI(DIM_2D,static_cast<CFPolyOrder::Type>((frLocalData[0]->getPolyOrder())*2-1));
   m_tpIntegrator = tempGI;
 
   // get quadrature point coordinates and wheights
