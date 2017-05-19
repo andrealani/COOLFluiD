@@ -239,6 +239,11 @@ protected: // functions
    * Create the coefficients for the cell center derivatives
    */
   void createCellCenterDerivCoefs();
+  
+  /**
+   * create the dimensions on which the flux must be projected in the flux points
+   */
+  void createFluxPntFluxDim() {}
 
 
 }; // end of class TriagFluxReconstructionElementData

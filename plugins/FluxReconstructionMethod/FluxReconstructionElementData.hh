@@ -587,6 +587,14 @@ public:
   {
     return &m_faceOutputPntConn;
   }
+  
+  /**
+   * @return m_flxPntFlxDim
+   */
+  Common::SafePtr< std::vector< CFuint > > getFluxPntFluxDim()
+  {
+    return &m_flxPntFlxDim;
+  }
 
   /**
    * This function evaluates the solution polynomials at the given nodes
@@ -888,6 +896,11 @@ protected: // functions
    * @par row1 and row2 are the numbers of the rows to be swapped.
    */
   void SwapRows(RealMatrix& A, CFuint row1, CFuint row2);
+  
+  /**
+   * create the dimensions on which the flux must be projected in the flux points
+   */
+  virtual void createFluxPntFluxDim() = 0;
 
 protected: // protected data
 
@@ -1077,6 +1090,9 @@ protected: // protected data
 
   /// local cell face - output point connectivity
   std::vector< std::vector< CFuint > > m_faceOutputPntConn;
+  
+  /// dimension on which the flux must be projected in the flux points
+  std::vector<CFuint> m_flxPntFlxDim;
   
   
 //   /// socket for solution coordinates in 1D

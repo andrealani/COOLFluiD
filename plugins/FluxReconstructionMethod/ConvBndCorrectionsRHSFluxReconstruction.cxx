@@ -2,6 +2,7 @@
 
 #include "Framework/MeshData.hh"
 #include "Framework/BaseTerm.hh"
+#include <math.h>       /* sin */
 
 #include "MathTools/MathFunctions.hh"
 
@@ -166,7 +167,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
 
 	//CFLog(VERBOSE,"faceID: " << faceID << ", real face ID: " << m_face->getID() << "\n");
 	CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
-	if (m_intCell->getID() == 1184)
+	if (m_intCell->getID() == 72)
 	{
 	  //CFLog(VERBOSE,"coord state: " << (((*m_cellStates)[0])->getCoordinates()) << "\n");
 	  CFLog(VERBOSE,"face ID: " << m_face->getID() << "\n");
@@ -231,7 +232,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
       }
       }
         
-        if(m_intCell->getID() == 140 || m_intCell->getID() == 141)
+        if(m_intCell->getID() == 72)
       {
 	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
         CFLog(VERBOSE, "UpdateBnd = \n");
@@ -265,8 +266,8 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeInterfaceFlxCorrection()
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   {     
     // compute the normal flux at the current flux point
-    m_updateVarSet->computePhysicalData(*(m_cellStatesFlxPnt[iFlxPnt]), m_pData);
-    m_cellFlx[iFlxPnt] = m_updateVarSet->getFlux()(m_pData,m_unitNormalFlxPnts[iFlxPnt]);
+    //m_updateVarSet->computePhysicalData(*(m_cellStatesFlxPnt[iFlxPnt]), m_pData);//qq+
+    //m_cellFlx[iFlxPnt] = m_updateVarSet->getFlux()(m_pData,m_unitNormalFlxPnts[iFlxPnt]);//qq+
   }
 
   // compute the riemann flux minus the discontinuous flx in the flx pnts
@@ -275,12 +276,12 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeInterfaceFlxCorrection()
     m_flxPntRiemannFlux[iFlxPnt] = m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[iFlxPnt]),
 								      *(m_flxPntGhostSol[iFlxPnt]),
 								      m_unitNormalFlxPnts[iFlxPnt]);
-    if(m_intCell->getID() == 140 || m_intCell->getID() == 141)
+    if(m_intCell->getID() == 72)
     {
-      CFLog(VERBOSE, "Flux in flx pnt = " << m_cellFlx[iFlxPnt] << "\n");
+      //CFLog(VERBOSE, "Flux in flx pnt = " << m_cellFlx[iFlxPnt] << "\n");
     }
-    m_cellFlx[iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt] - m_cellFlx[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt];
-    if(m_intCell->getID() == 140 || m_intCell->getID() == 141)
+    m_cellFlx[iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt];//rr
+    if(m_intCell->getID() == 72)
     {
       CFLog(VERBOSE, "state = " << *(m_cellStatesFlxPnt[iFlxPnt]->getData()) << "\n");
       CFLog(VERBOSE, "Ghost state = " << *(m_flxPntGhostSol[iFlxPnt]->getData()) << "\n");
@@ -300,15 +301,14 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeFlxPntStates()
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   {
     *(m_cellStatesFlxPnt[iFlxPnt]) = 0.0;
+    m_cellFlx[iFlxPnt] = 0.0;
     const CFuint currFlxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
     {
-    *(m_cellStatesFlxPnt[iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[currFlxIdx][iSol]*(*((*m_cellStates)[iSol]));
+      *(m_cellStatesFlxPnt[iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[currFlxIdx][iSol]*(*((*m_cellStates)[iSol]));
+      //m_updateVarSet->computePhysicalData((*((*m_cellStates)[iSol])), m_pData);//qq
+      //m_cellFlx[iFlxPnt] += (*m_solPolyValsAtFlxPnts)[currFlxIdx][iSol]*(m_updateVarSet->getFlux()(m_pData,m_unitNormalFlxPnts[iFlxPnt]));//qq
     }
-    if (m_intCell->getID() == 140)
-	{
-	     CFLog(VERBOSE,"rho in flx pnt " << iFlxPnt << ": " << (*(m_cellStatesFlxPnt[iFlxPnt]->getData()))[0] << "\n");
-	}
   }
   
   // compute ghost states
@@ -332,8 +332,8 @@ void ConvBndCorrectionsRHSFluxReconstruction::setBndFaceData(CFuint faceID)
     if (m_intCell->getID() == 140)
 	{
 
-	     CFLog(VERBOSE,"Global coord flx pnt " << iFlx << ": " << m_flxPntsLocalCoords[iFlx] << "\n");
-	     CFLog(VERBOSE,"Local coord flx pnt " << iFlx << ": " << (*flxLocalCoords)[iFlx] << "\n");
+	     //CFLog(VERBOSE,"Global coord flx pnt " << iFlx << ": " << m_flxPntsLocalCoords[iFlx] << "\n");
+	     //CFLog(VERBOSE,"Local coord flx pnt " << iFlx << ": " << (*flxLocalCoords)[iFlx] << "\n");
 	}
   }
           
@@ -357,7 +357,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::setBndFaceData(CFuint faceID)
     // set unit normal vector
     m_unitNormalFlxPnts[iFlxPnt] = faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
     
-    if(m_intCell->getID() == 140 || m_intCell->getID() == 141)
+    if(m_intCell->getID() == 150 || m_intCell->getID() == 289)
      {
        CFLog(VERBOSE, "jacob vec = " << faceJacobVecs[iFlxPnt] << "\n");
        CFLog(VERBOSE, "abs vec = " << m_faceJacobVecAbsSizeFlxPnts[iFlxPnt] << "\n");
@@ -386,9 +386,9 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeCorrection(vector< RealVect
       
       if (divh != 0)
       {
-	if (m_intCell->getID() == 140)
+	if (m_intCell->getID() == 72)
 	{
-	     CFLog(VERBOSE,"derivh for flx " << iFlxPnt << " and state " << iSolPnt << ": " << divh << "\n");
+	     CFLog(VERBOSE,"derivh for flx " << (*m_faceFlxPntConn)[m_orient][iFlxPnt] << " and state " << iSolPnt << ": " << divh << "\n");
 	}
         // the current correction factor
         const RealVector currentCorrFactor = m_cellFlx[iFlxPnt];

@@ -736,6 +736,30 @@ void QuadFluxReconstructionElementData::createFaceNodeConnectivity()
 
 //////////////////////////////////////////////////////////////////////
 
+void QuadFluxReconstructionElementData::createFluxPntFluxDim()
+{
+  CFAUTOTRACE;
+
+  m_flxPntFlxDim.resize(4*m_flxPntsLocalCoord1D.size());
+  
+  for (CFuint iFace = 0; iFace < m_faceFlxPntConn.size(); ++iFace)
+  {
+    for (CFuint iFlx = 0; iFlx < m_flxPntsLocalCoord1D.size(); ++iFlx)
+    {
+      if (iFace == 1 || iFace == 3)
+      {
+        m_flxPntFlxDim[m_faceFlxPntConn[iFace][iFlx]] = 0;
+      }
+      else
+      {
+	m_flxPntFlxDim[m_faceFlxPntConn[iFace][iFlx]] = 1;
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
 void QuadFluxReconstructionElementData::createFaceMappedCoordDir()
 {
   CFAUTOTRACE;

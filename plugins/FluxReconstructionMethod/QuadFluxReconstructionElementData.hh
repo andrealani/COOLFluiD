@@ -196,6 +196,11 @@ protected: // functions
    * create the connectivity in a uniform distribution of points on the cell faces (for output)
    */
   void createFaceOutputPntConn();
+  
+  /**
+   * create the dimensions on which the flux must be projected in the flux points
+   */
+  void createFluxPntFluxDim();
 
 }; // end of class QuadFluxReconstructionElementData
 

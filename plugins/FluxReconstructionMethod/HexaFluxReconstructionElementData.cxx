@@ -1237,6 +1237,34 @@ void HexaFluxReconstructionElementData::createFaceMappedCoordDir()
 
 //////////////////////////////////////////////////////////////////////
 
+void HexaFluxReconstructionElementData::createFluxPntFluxDim()
+{
+  CFAUTOTRACE;
+
+  m_flxPntFlxDim.resize(6*m_flxPntsLocalCoord1D.size()*m_flxPntsLocalCoord1D.size());
+  
+  for (CFuint iFace = 0; iFace < m_faceFlxPntConn.size(); ++iFace)
+  {
+    for (CFuint iFlx = 0; iFlx < m_faceFlxPntConn[iFace].size(); ++iFlx)
+    {
+      if (iFace == 3 || iFace == 5)
+      {
+        m_flxPntFlxDim[m_faceFlxPntConn[iFace][iFlx]] = 0;
+      }
+      else if (iFace == 2 || iFace == 4)
+      {
+	m_flxPntFlxDim[m_faceFlxPntConn[iFace][iFlx]] = 1;
+      }
+      else
+      {
+	m_flxPntFlxDim[m_faceFlxPntConn[iFace][iFlx]] = 2;
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
 void HexaFluxReconstructionElementData::createFaceNormals()
 {
   CFAUTOTRACE;

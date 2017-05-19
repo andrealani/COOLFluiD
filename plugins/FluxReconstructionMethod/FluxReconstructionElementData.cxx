@@ -81,7 +81,8 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_solPntDistribution(),
   m_flxPntDistribution(),
   m_faceNormals(),
-  m_coefSolPolyInFlxPnts()
+  m_coefSolPolyInFlxPnts(),
+  m_flxPntFlxDim()
 //   socket_solCoords1D("solCoords1D"),
 //   socket_flxCoords1D("flxCoords1D")
 {
@@ -172,6 +173,7 @@ void FluxReconstructionElementData::resetFluxReconstructionElementData()
   createFaceOutputPntSolPolyAndDerivCoef();
   createFaceOutputPntConn();
   createFaceNormals();
+  createFluxPntFluxDim();
 }
 
 //////////////////////////////////////////////////////////////////////

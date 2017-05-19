@@ -255,6 +255,9 @@ protected: //data
   /// coefs to compute the derivative of the states in the sol pnts
   Common::SafePtr< std::vector< std::vector< std::vector< CFreal > > > > m_solPolyDerivAtSolPnts;
   
+  /// dimensions on which to evaluate the flux in the flux points
+  Common::SafePtr< std::vector< CFuint > >  m_flxPntFlxDim;
+  
   private:
 
   /// Physical data temporary vector
