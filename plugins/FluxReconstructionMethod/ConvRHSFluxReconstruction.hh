@@ -258,6 +258,9 @@ protected: //data
   /// dimensions on which to evaluate the flux in the flux points
   Common::SafePtr< std::vector< CFuint > >  m_flxPntFlxDim;
   
+  /// the discontinuous flux extrapolated to the flux points
+  std::vector< RealVector > m_extrapolatedFluxes;
+  
   private:
 
   /// Physical data temporary vector

@@ -48,6 +48,7 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
   options.addConfigOption< std::string >("LinearVar","Name of the linear variable set.");
   options.addConfigOption< std::string >("FluxPointDistribution","Name of the flux point distribution");
   options.addConfigOption< std::string >("RiemannFlux","Name of the Riemann flux.");
+  options.addConfigOption< bool >("FreezeGradients","Flag telling whether to freeze the gradients for the Jacobian computation.");
   options.addConfigOption< std::string >("SolutionPointDistribution","Name of the solution point distribution");
   options.addConfigOption< std::string >("CorrectionFunctionComputer","Name of the correction function computer");
   options.addConfigOption< std::vector<std::string> >("BcTypes","Types of the boundary condition commands.");
@@ -105,6 +106,9 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   
   m_correctionfunctionStr = "Null";
   setParameter( "CorrectionFunctionComputer", &m_correctionfunctionStr );
+  
+  m_freezeGrads = false;
+  setParameter( "FreezeGradients", &m_freezeGrads );
   
   // options for bc commands
   m_bcTypeStr = vector<std::string>();

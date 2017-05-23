@@ -244,8 +244,11 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::computeJacobDiffBndContributi
       // perturb physical variable in state
       m_numJacob->perturb(iEqPert,pertState[iEqPert]);
       
-      // compute the perturbed corrected gradients
-      computePerturbedGradients();//++
+      if (!m_freezeGrads)
+      {
+        // compute the perturbed corrected gradients
+        computePerturbedGradients();
+      }
 
       // compute the perturbed states and ghost states in the flx pnts
       computeFlxPntStates();

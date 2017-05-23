@@ -267,6 +267,15 @@ protected: //data
   /// local cell face - flux point cell mapped coordinate per face connection orientation
   Common::SafePtr< std::vector< std::vector< std::vector< RealVector > > > > m_faceFlxPntCellMappedCoords;
   
+  /// flag telling whether to freeze the gradients
+  bool m_freezeGrads;
+  
+  /// the discontinuous flux extrapolated to the flux points
+  std::vector< RealVector > m_extrapolatedFluxes;
+  
+  /// dimensions on which to evaluate the flux in the flux points
+  Common::SafePtr< std::vector< CFuint > >  m_flxPntFlxDim;
+  
   private:
 
   /// Physical data temporary vector

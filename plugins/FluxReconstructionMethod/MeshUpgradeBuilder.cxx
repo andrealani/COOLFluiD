@@ -2555,6 +2555,14 @@ MeshUpgradeBuilder::createTopologicalRegionSet
     if (m_elementDivision != 1)
     {
       geoConn.resize(nbFacesPerTR[iTR]);
+      ///@todo is this necessary?
+//       for (CFuint iNewFace = nbFaces; iNewFace < nbFacesPerTR[iTR]; ++iNewFace)
+//       {
+// 	GeoConnElementPart temp1;
+// 	GeoConnElementPart temp2;
+// 	GeoConnElement temp(temp1,temp2);
+// 	geoConn[iNewFace] = temp;
+//       }
     }
     
     // allocate the TopologicalRegion

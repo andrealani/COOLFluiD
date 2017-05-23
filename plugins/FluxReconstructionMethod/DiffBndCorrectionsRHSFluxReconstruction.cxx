@@ -71,6 +71,7 @@ DiffBndCorrectionsRHSFluxReconstruction::DiffBndCorrectionsRHSFluxReconstruction
   m_nbrFaceFlxPnts(),
   m_cflConvDiffRatio(),
   m_cellVolume(),
+  m_freezeGrads(),
   m_flxPntGhostGrads()
 {
 }
@@ -251,11 +252,11 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeInterfaceFlxCorrection()
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   {     
     // compute the normal flux at the current flux point
-    m_cellFlx[iFlxPnt] = m_diffusiveVarSet->getFlux(*(m_cellStatesFlxPnt[iFlxPnt]->getData()),m_cellGradFlxPnt[iFlxPnt],m_unitNormalFlxPnts[iFlxPnt],0);
+    //m_cellFlx[iFlxPnt] = m_diffusiveVarSet->getFlux(*(m_cellStatesFlxPnt[iFlxPnt]->getData()),m_cellGradFlxPnt[iFlxPnt],m_unitNormalFlxPnts[iFlxPnt],0);//rr
     if(m_intCell->getID() == 1234)
     {
-      RealVector projFlux = m_cellFlx[iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt];
-      CFLog(VERBOSE, "Flux in flx pnt = " << projFlux << "\n");
+      //RealVector projFlux = m_cellFlx[iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt];
+      //CFLog(VERBOSE, "Flux in flx pnt = " << projFlux << "\n");
     }
   }
 
@@ -276,7 +277,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeInterfaceFlxCorrection()
 
     m_flxPntRiemannFlux[iFlxPnt] = m_diffusiveVarSet->getFlux(avgSol,avgGrad,m_unitNormalFlxPnts[iFlxPnt],0);
     
-    m_cellFlx[iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt] - m_cellFlx[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt];
+    m_cellFlx[iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt];
     
     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
     {
@@ -383,7 +384,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeCorrection(vector< RealVect
         // Fill in the corrections
         for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
         {
-          corrections[iSolPnt][iVar] += currentCorrFactor[iVar] * divh; //-
+          corrections[iSolPnt][iVar] += currentCorrFactor[iVar] * divh;
         }
         if(m_intCell->getID() == 1234)
         {
@@ -521,6 +522,9 @@ void DiffBndCorrectionsRHSFluxReconstruction::setup()
   
   // get the coefs for extrapolation of the states to the flx pnts
   m_solPolyValsAtFlxPnts = frLocalData[0]->getCoefSolPolyInFlxPnts();
+  
+  // get the flag telling whether to freeze the gradients
+  m_freezeGrads = getMethodData().getFreezeGrads(); 
 
   // create internal and ghost states
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)

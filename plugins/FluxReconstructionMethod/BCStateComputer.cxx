@@ -92,6 +92,7 @@ void BCStateComputer::unsetup()
 
 void BCStateComputer::addCurvatureToBndFaces()
 {
+  CFLog(NOTICE, "Adding curvature to the BCs.\n"); 
   if (PhysicalModelStack::getActive()->getDim() == DIM_3D)
   {
     throw Common::NotImplementedException(FromHere(),"Adding of curvature for boundary faces is not yet implemented for 3D...");

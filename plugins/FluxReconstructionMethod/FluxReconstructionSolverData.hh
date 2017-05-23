@@ -153,6 +153,12 @@ public: // functions
     cf_assert(m_correctionfunction.isNotNull());
     return m_correctionfunction.getPtr();
   }
+  
+  /// Gets the correction function computation strategy
+  bool getFreezeGrads()
+  {;
+    return m_freezeGrads;
+  }
     
   /// @return reference to m_frLocalData
   std::vector< FluxReconstructionElementData* >& getFRLocalData()
@@ -411,6 +417,9 @@ private:  // data
   
   /// Vector transformer from update to solution variables
   Common::SelfRegistPtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
+  
+  /// Flag telling whether to freeze the gradients in the Jacobian computation
+  bool m_freezeGrads;
   
 //   /// socket for solution coordinates in 1D
 //   Framework::DataSocketSource< std::vector< CFreal > > socket_solCoords1D;

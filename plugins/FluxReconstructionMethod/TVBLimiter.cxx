@@ -162,14 +162,6 @@ void TVBLimiter::execute()
 
       // get the nodes in this cell
       m_cellNodes  = m_cell->getNodes ();
-      
-      if (m_cell->getID() == 1337)
-      {
-	for (CFuint iState = 0; iState < m_cellStates->size(); ++iState)
-	{
-	  CFLog(VERBOSE, "state " << iState << " : " << *((*m_cellStates)[iState]) << "\n");
-	}
-      }
 
       // set the min and max neighbouring cell averaged states
       setMinMaxNghbrCellAvgStates();
@@ -183,10 +175,28 @@ void TVBLimiter::execute()
       // apply limiter if necessary
       if (m_applyLimiter)
       {
-	CFLog(VERBOSE,"Limits done: " << limitCounter << "\n");
+	//CFLog(VERBOSE,"Limits done: " << limitCounter << "\n");
+	
+	for (CFuint iState = 0; iState < m_cellStates->size(); ++iState)
+	{
+	  CFLog(VERBOSE, "state " << iState << " : " << *((*m_cellStates)[iState]) << "\n");
+	}
+	CFLog(VERBOSE, "average state : " << m_cellAvgState << "\n");
+
         limitStates();
 	++limitCounter;
       }
+//       else
+//       {
+// 	///@warning for plotting limitFac
+// 	for(CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+// 	{
+// 	  for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+// 	  {
+// 	    (*((*m_cellStates)[iSol]))[iEq] = 0.0;
+// 	  }
+// 	}
+//       }
 
       //release the GeometricEntity
       m_cellBuilder->releaseGE();

@@ -59,6 +59,7 @@ DiffRHSFluxReconstruction::DiffRHSFluxReconstruction(const std::string& name) :
   m_solPolyValsAtFlxPnts(CFNULL),
   m_solPolyDerivAtSolPnts(CFNULL),
   m_faceFlxPntCellMappedCoords(CFNULL),
+  m_flxPntFlxDim(CFNULL),
   m_flxPntRiemannFlux(),
   m_iElemType(),
   m_cell(),
@@ -87,7 +88,9 @@ DiffRHSFluxReconstruction::DiffRHSFluxReconstruction(const std::string& name) :
   m_cflConvDiffRatio(),
   m_cellVolume(),
   m_faceInvCharLengths(),
-  m_nbrFaceFlxPnts()
+  m_nbrFaceFlxPnts(),
+  m_freezeGrads(),
+  m_extrapolatedFluxes()
   {
     addConfigOptionsTo(this);
   }
@@ -345,18 +348,9 @@ void DiffRHSFluxReconstruction::computeInterfaceFlxCorrection()
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   {
     // compute the normal flux at the current flux point
-    m_cellFlx[LEFT][iFlxPnt] = m_diffusiveVarSet->getFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]->getData()),m_cellGradFlxPnt[LEFT][iFlxPnt],m_unitNormalFlxPnts[iFlxPnt],0);
-    m_cellFlx[RIGHT][iFlxPnt] = m_diffusiveVarSet->getFlux(*(m_cellStatesFlxPnt[RIGHT][iFlxPnt]->getData()),m_cellGradFlxPnt[RIGHT][iFlxPnt],m_unitNormalFlxPnts[iFlxPnt],0);
+    //m_cellFlx[LEFT][iFlxPnt] = m_diffusiveVarSet->getFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]->getData()),m_cellGradFlxPnt[LEFT][iFlxPnt],m_unitNormalFlxPnts[iFlxPnt],0);
+    //m_cellFlx[RIGHT][iFlxPnt] = m_diffusiveVarSet->getFlux(*(m_cellStatesFlxPnt[RIGHT][iFlxPnt]->getData()),m_cellGradFlxPnt[RIGHT][iFlxPnt],m_unitNormalFlxPnts[iFlxPnt],0);
 
-    if(m_cells[LEFT]->getID() == 49 || m_cells[RIGHT]->getID() == 49)
-    {
-      CFLog(DEBUG_MIN, "Flux Left = " << m_cellFlx[LEFT][iFlxPnt] << "\n");
-      CFLog(DEBUG_MIN, "Flux Right = " << m_cellFlx[RIGHT][iFlxPnt] << "\n");
-      RealVector fluxL = (m_cellFlx[LEFT][iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT]);
-      RealVector fluxR = (m_cellFlx[RIGHT][iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT]);
-      CFLog(VERBOSE,"fluxLLocal = " << fluxL << "\n");
-      CFLog(VERBOSE,"fluxRLocal = " << fluxR << "\n");
-    }
     if(m_cells[LEFT ]->getID() == 1234 || m_cells[RIGHT ]->getID() == 1234)
       {
 	CFuint pSide = RIGHT;
@@ -366,10 +360,10 @@ void DiffRHSFluxReconstruction::computeInterfaceFlxCorrection()
 	  pSide = LEFT;
 	  otherSide = RIGHT;
 	}
-	RealVector fluxT = (m_cellFlx[pSide][iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt][pSide]);
-      RealVector fluxO = (m_cellFlx[otherSide][iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt][otherSide]);
-	CFLog(VERBOSE, "Flux this = " << fluxT<< "\n");
-      CFLog(VERBOSE, "Flux other = " << fluxO << "\n");
+	//RealVector fluxT = (m_cellFlx[pSide][iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt][pSide]);
+      //RealVector fluxO = (m_cellFlx[otherSide][iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt][otherSide]);
+	//CFLog(VERBOSE, "Flux this = " << fluxT<< "\n");
+      //CFLog(VERBOSE, "Flux other = " << fluxO << "\n");
     CFLog(VERBOSE, "state this = " << *(m_cellStatesFlxPnt[pSide][iFlxPnt]->getData()) << "\n");
       CFLog(VERBOSE, "state other = " << *(m_cellStatesFlxPnt[otherSide][iFlxPnt]->getData()) << "\n");
       CFLog(VERBOSE, "grad1 this = " << *(m_cellGradFlxPnt[pSide][iFlxPnt][1]) << "\n");
@@ -391,30 +385,14 @@ void DiffRHSFluxReconstruction::computeInterfaceFlxCorrection()
     m_flxPntRiemannFlux[iFlxPnt] = m_diffusiveVarSet->getFlux(avgSol,avgGrad,m_unitNormalFlxPnts[iFlxPnt],0);
      
     // compute FI-FD in the mapped coord frame
-    m_cellFlx[LEFT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt] - m_cellFlx[LEFT][iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT];
-    m_cellFlx[RIGHT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt] - m_cellFlx[RIGHT][iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT];
+    m_cellFlx[LEFT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT];
+    m_cellFlx[RIGHT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT];
 
     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
     {
       deletePtr(avgGrad[iVar]); 
     }
     avgGrad.clear();
-    if(m_cells[LEFT]->getID() == 150 || m_cells[RIGHT]->getID() == 150)
-    {
-      CFLog(VERBOSE, "faceID =  " << m_face->getID() << "\n");
-      CFLog(VERBOSE, "cell 0 == LEFT <=> " << (m_cells[LEFT]->getID() == 281) << "\n");
-      CFLog(VERBOSE, "Unit vector = " << m_unitNormalFlxPnts[iFlxPnt] << "\n");
-      CFLog(VERBOSE, "flxIdx LEFT = " << (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlxPnt] << "\n");
-      CFLog(VERBOSE, "flxIdx RIGHT = " << (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlxPnt] << "\n");
-      RealVector RiemannL = (m_flxPntRiemannFlux[iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT]);
-      RealVector RiemannR = (m_flxPntRiemannFlux[iFlxPnt]*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT]);
-      CFLog(VERBOSE,"RiemannL = " << RiemannL << "\n");
-      CFLog(VERBOSE,"RiemannR = " << RiemannR << "\n");
-      CFLog(VERBOSE,"delta fluxL = " << m_cellFlx[LEFT][iFlxPnt] << "\n");
-      CFLog(VERBOSE,"delta fluxR = " << m_cellFlx[RIGHT][iFlxPnt] << "\n");
-      CFLog(VERBOSE,"Jacob L = " << m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT] << "\n");
-      CFLog(VERBOSE,"Jacob R = " << m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT] << "\n");
-    }
     
     if(m_cells[LEFT ]->getID() == 1234 || m_cells[RIGHT ]->getID() == 1234)
       {
@@ -567,34 +545,46 @@ void DiffRHSFluxReconstruction::computeFlxPntStates()
 
 void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residuals)
 {
+  // reset the extrapolated fluxes
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_flxPntsLocalCoords->size(); ++iFlxPnt)
+  {
+    m_extrapolatedFluxes[iFlxPnt] = 0.0;
+  }
+  
   // Loop over solution points to calculate the discontinuous flux.
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
-  {
+  { 
+    // dereference the state
+    State& stateSolPnt = *(*m_cellStates)[iSolPnt];
+
+    vector< RealVector > temp = *(m_cellGrads[0][iSolPnt]);
+    vector< RealVector* > grad;
+    grad.resize(m_nbrEqs);
+
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {
+      cf_assert(temp.size() == m_nbrEqs);
+      grad[iVar] = & (temp[iVar]);
+      if(false)//m_cell->getID() == 1234
+      {
+        CFLog(VERBOSE, "gradFlx var " << iVar << " : " << *(grad[iVar]) << "\n");
+      }
+    }
+    
     // calculate the discontinuous flux projected on x, y, z-directions
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {
-      // dereference the state
-      State& stateSolPnt = *(*m_cellStates)[iSolPnt];
-
-      vector< RealVector > temp = *(m_cellGrads[0][iSolPnt]);
-      vector< RealVector* > grad;
-      grad.resize(m_nbrEqs);
-
-      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-      {
-	cf_assert(temp.size() == m_nbrEqs);
-	grad[iVar] = & (temp[iVar]);
-	if(false)//m_cell->getID() == 1234
-    {
-      CFLog(VERBOSE, "gradFlx var " << iVar << " : " << *(grad[iVar]) << "\n");
-    }
-      }
-      
       m_contFlx[iSolPnt][iDim] = m_diffusiveVarSet->getFlux(*(stateSolPnt.getData()),grad,m_cellFluxProjVects[iDim][iSolPnt],0);
       if(false)//m_cell->getID() == 1234
-    {
-      CFLog(VERBOSE, "stateFlx: " << *(stateSolPnt.getData()) << "\n");
+      {
+        CFLog(VERBOSE, "stateFlx: " << *(stateSolPnt.getData()) << "\n");
+      }
     }
+    
+    for (CFuint iFlxPnt = 0; iFlxPnt < m_flxPntsLocalCoords->size(); ++iFlxPnt)
+    {
+      CFuint dim = (*m_flxPntFlxDim)[iFlxPnt];
+      m_extrapolatedFluxes[iFlxPnt] += (*m_solPolyValsAtFlxPnts)[iFlxPnt][iSolPnt]*(m_contFlx[iSolPnt][dim]);//rr
     }
   }
 
@@ -622,6 +612,21 @@ void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
 	}
       }
     }
+    
+    for (CFuint iFlxPnt = 0; iFlxPnt < m_flxPntsLocalCoords->size(); ++iFlxPnt)
+    {
+      const CFreal divh = m_corrFctDiv[iSolPnt][iFlxPnt];
+
+      if (divh != 0)
+      {   
+        // Fill in the corrections
+        for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+        {
+          residuals[iSolPnt][iVar] += -m_extrapolatedFluxes[iFlxPnt][iVar] * divh; 
+        }
+      }
+    }
+      
     if(false)//m_cell->getID() == 1234
     {
       CFLog(VERBOSE, "state: " << *((*m_cellStates)[iSolPnt]->getData()) << "\n");
@@ -1011,6 +1016,12 @@ void DiffRHSFluxReconstruction::setup()
   // get face flux point cell mapped coordinates
   m_faceFlxPntCellMappedCoords = frLocalData[0]->getFaceFlxPntCellMappedCoordsPerOrient();
   
+  // get the flag telling whether the gradients are frozen during jacobian computation
+  m_freezeGrads = getMethodData().getFreezeGrads();
+  
+  // get the dimension on which to project the flux in a flux point
+  m_flxPntFlxDim = frLocalData[0]->getFluxPntFluxDim();
+  
   // create internal and ghost states
   m_cellStatesFlxPnt.resize(2);
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
@@ -1023,6 +1034,12 @@ void DiffRHSFluxReconstruction::setup()
   {
     m_cellStatesFlxPnt[LEFT][iFlx]->setLocalID(iFlx);
     m_cellStatesFlxPnt[RIGHT][iFlx]->setLocalID(iFlx);
+  }
+  
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_flxPntsLocalCoords->size(); ++iFlxPnt)
+  {
+    RealVector temp(m_nbrEqs);
+    m_extrapolatedFluxes.push_back(temp);
   }
   
   // Resize vectors

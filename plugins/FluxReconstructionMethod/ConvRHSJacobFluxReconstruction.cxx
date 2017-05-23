@@ -187,7 +187,7 @@ void ConvRHSJacobFluxReconstruction::execute()
       }
 
       
-      if(m_cells[LEFT]->getID() == 150)
+      if(m_cells[LEFT]->getID() == 160)
       {
         for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
         {
@@ -196,7 +196,7 @@ void ConvRHSJacobFluxReconstruction::execute()
 
         }
       }
-      if(m_cells[RIGHT]->getID() == 150)
+      if(m_cells[RIGHT]->getID() == 160)
       {
         for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
         {
@@ -275,7 +275,7 @@ void ConvRHSJacobFluxReconstruction::execute()
       // divide by the Jacobian to transform the residuals back to the physical domain
       //divideByJacobDet();
       
-      if(m_cell->getID() == 150)
+      if(m_cell->getID() == 160)
       {
         for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
         {
@@ -286,7 +286,7 @@ void ConvRHSJacobFluxReconstruction::execute()
       }
       
       // print out the residual updates for debugging
-      if(m_cell->getID() == 191)
+      if(m_cell->getID() == 160)
       {
 	CFLog(VERBOSE, "ID  = " << m_cell->getID() << "\n");
         CFLog(VERBOSE, "ConvUpdate = \n");
@@ -312,6 +312,10 @@ void ConvRHSJacobFluxReconstruction::execute()
       m_cellBuilder->releaseGE();
     }
   }
+  
+  // get the datahandle of the rhs
+  //DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
+  //rhs = 0.0;
 }
 
 //////////////////////////////////////////////////////////////////////////////

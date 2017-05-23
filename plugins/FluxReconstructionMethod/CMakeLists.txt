@@ -18,6 +18,10 @@ NullCorrectionFunction.cxx
 NullCorrectionFunction.hh
 GaussLegendre.cxx
 GaussLegendre.hh
+Equidistant.cxx
+Equidistant.hh
+Lobatto.cxx
+Lobatto.hh
 CMakeLists.txt
 StdSetup.cxx
 StdSetup.hh

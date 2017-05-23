@@ -103,6 +103,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
       for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
       {
         m_flxPntsLocalCoords[iFlx] = (*m_allCellFlxPnts)[(*m_faceFlxPntConn)[m_orient][iFlx]];
+	CFLog(VERBOSE,"flx pnt coord: " << m_flxPntsLocalCoords[iFlx] << "\n");
       }
       
       // start and stop index of the faces with this orientation
@@ -123,7 +124,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
         m_cellStates = m_intCell->getStates();
 	
 	//CFLog(VERBOSE,"faceID: " << faceID << "\n");
-        //CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
+        CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
 	//CFLog(VERBOSE,"coord state 0: " << (((*m_cellStates)[0])->getCoordinates()) << "\n");
 
         // if cell is parallel updatable or the gradients have to be computed, compute states and ghost states in the flx pnts
@@ -171,7 +172,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
 	  computeJacobConvBndCorrection();
         }
         
-        if(m_intCell->getID() == 150)
+        if(m_intCell->getID() == 160)
       {
 	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
         CFLog(VERBOSE, "UpdateBnd = \n");

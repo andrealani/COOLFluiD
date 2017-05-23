@@ -235,6 +235,9 @@ protected: // data
   /// coefs to extrapolate the states to the flx pnts
   Common::SafePtr< std::vector< std::vector< CFreal > > > m_solPolyValsAtFlxPnts;
   
+  /// flag telling whether to freeze the gradients
+  bool m_freezeGrads;
+  
   private:
 
   /// Physical data temporary vector

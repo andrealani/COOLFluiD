@@ -1109,7 +1109,7 @@ void QuadFluxReconstructionElementData::setCFLConvDiffRatio()
     } break;
     case CFPolyOrder::ORDER3:
     {
-      m_cflConvDiffRatio = 50.0; // check this!
+      m_cflConvDiffRatio = 15.0; // check this! 25
     } break;
     case CFPolyOrder::ORDER4:
     {
