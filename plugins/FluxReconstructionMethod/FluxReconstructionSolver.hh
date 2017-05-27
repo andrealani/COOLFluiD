@@ -177,6 +177,9 @@ private: // data
   
   /// Command used to compute the error of the solution
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_computeError;
+  
+  /// Command used to finalize the computation of the RHS
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_finalizeRHS;
 
   ///The Setup string for configuration
   std::string m_setupStr;
@@ -208,6 +211,9 @@ private: // data
   
   ///The computeError string for configuration
   std::string m_computeErrorStr;
+  
+  ///The finalizeRHS string for configuration
+  std::string m_finalizeRHSStr;
   
   /// The commands to use for initializing the solution.
   std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_inits;

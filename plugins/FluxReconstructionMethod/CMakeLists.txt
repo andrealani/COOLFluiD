@@ -73,6 +73,8 @@ CellToFaceGEBuilder.cxx
 CellToFaceGEBuilder.hh
 TVBLimiter.cxx
 TVBLimiter.hh
+FinalizeRHS.cxx
+FinalizeRHS.hh
 ConvBndCorrectionsRHSFluxReconstruction.cxx
 ConvBndCorrectionsRHSFluxReconstruction.hh
 DiffBndCorrectionsRHSFluxReconstruction.cxx

@@ -291,6 +291,14 @@ public: // functions
   {
     return &m_cellBuilder2nd;
   }
+  
+  /**
+   * Tell if a variable has to be applied for the residual
+   */
+  bool isResidualTransformationNeeded() const
+  {
+    return (_updateVarStr != _solutionVarStr);
+  }
 
   
   /// Sets up the FluxReconstructionData

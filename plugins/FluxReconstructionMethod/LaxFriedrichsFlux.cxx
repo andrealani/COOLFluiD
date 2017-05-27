@@ -53,9 +53,11 @@ RealVector& LaxFriedrichsFlux::computeFlux(Framework::State& lState,
   m_updateStates[LEFT]  = &lState;
   m_updateStates[RIGHT] = &rState;
 
+  CFLog(VERBOSE, "stateLF = "  << rState << "\n");
   // compute physical data for the left and the right internal flux points
   updateVarSet->computePhysicalData(lState, m_pData[LEFT]);
   updateVarSet->computePhysicalData(rState, m_pData[RIGHT]);
+  CFLog(VERBOSE, "HERE2!!\n");
   
   // flux for right and left state (the physical data must be passed here!)
   m_sumFlux  = updateVarSet->getFlux()(m_pData[LEFT], normal);
