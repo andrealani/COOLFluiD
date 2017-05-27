@@ -220,6 +220,8 @@ void TVBLimiterEuler::limitStates()
 {
   for (CFuint iEq = 0; iEq < m_nbrEqsMinusOne; ++iEq)
   {
+    CFreal limitFactPlot = 1.0;
+    
     // reconstruct the cell averaged variable and the derivatives in the cell center
     reconstructCellAveragedVariable(iEq);
     computeCellCenterDerivVariable (iEq);
@@ -247,6 +249,9 @@ void TVBLimiterEuler::limitStates()
         limitFact = limitFact2 < limitFact ? limitFact2 : limitFact;
       }
       m_cellCenterDerivVar *= limitFact;
+      
+      limitFactPlot = limitFact;
+      CFLog(VERBOSE, "limitFact: " << limitFact << "\n");
     }
 
     // set the solution in the solution points
@@ -258,6 +263,9 @@ void TVBLimiterEuler::limitStates()
         (*(*m_cellStates)[iSol])[iEq] +=
             m_cellCenterDerivVar[iCoor]*(*m_solPntsLocalCoords)[iSol][iCoor];
       }
+      
+      ///@warning plot limitFact
+      //(*(*m_cellStates)[iSol])[iEq] = 1.0-limitFactPlot;
     }
   }
 
@@ -292,6 +300,8 @@ void TVBLimiterEuler::limitStates()
     dSolCellMax += std::abs(m_cellCenterDerivVar[iCoor]);
   }
 
+  CFreal limitFactPlot = 1.0;
+  
   if (dSolCellMax > MathTools::MathConsts::CFrealMin())
   {
     CFreal limitFact = 1.0;
@@ -305,6 +315,9 @@ void TVBLimiterEuler::limitStates()
       limitFact = limitFact2 < limitFact ? limitFact2 : limitFact;
     }
     m_cellCenterDerivVar *= limitFact;
+    
+    limitFactPlot = limitFact;
+    CFLog(VERBOSE, "limitFact: " << limitFact << "\n");
   }
 
   // set the solution in the solution points
@@ -322,6 +335,9 @@ void TVBLimiterEuler::limitStates()
                                                << StringOps::to_str(pressure) << "\n");
     }
     computeRhoEFromPressAndOtherConsVar(*(*m_cellStates)[iSol],pressure);
+    
+    ///@warning plot limitFact
+    //(*(*m_cellStates)[iSol])[m_nbrEqsMinusOne] = 1.0-limitFactPlot;
   }
 
 /*  // check density and pressure positivity

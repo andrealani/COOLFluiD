@@ -1,6 +1,6 @@
 #include "Framework/MethodCommandProvider.hh"
 
-#include "NavierStokes/Euler2DVarSet.hh"
+#include "NavierStokes/Euler3DVarSet.hh"//3D
 #include "NavierStokes/EulerTerm.hh"
 
 #include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
@@ -82,7 +82,7 @@ void ComputeErrorEuler::execute()
   CFreal ht;
   
   // data from testcases
-  if (false)
+  if (true)
   {
     const CFreal TtBump = 0.00365795;
     const CFreal ptBump = 1.186212306;
@@ -99,6 +99,11 @@ void ComputeErrorEuler::execute()
     const CFreal a = pow(gamma*p/rho,0.5);
     s = p*pow(rho,-gamma);
     ht = gamma/(gamma-1.0)*R*T+a*a*M*M/2.0;
+    //CFLog(NOTICE, "gamma:" << gamma << "\n");
+    //CFLog(NOTICE, "R:" << R << "\n");
+    //CFLog(NOTICE, "p:" << p << "\n");
+    //CFLog(NOTICE, "rho:" << rho << "\n");
+    //CFLog(NOTICE, "rhoU:" << M*a << "\n");
   }
   else
   {
@@ -114,6 +119,8 @@ void ComputeErrorEuler::execute()
   CFreal eht = 0.0;
   CFreal esLi = 0.0;
   CFreal ehtLi = 0.0;
+  CFreal esL1 = 0.0;
+  CFreal ehtL1 = 0.0;
   CFreal totaleht = 0.0;
   CFreal totales = 0.0;
   CFuint nbStates = 0;
@@ -151,7 +158,7 @@ void ComputeErrorEuler::execute()
 
       vector< RealVector > nodeCoord;
       vector< Node* >* nodes = m_cell->getNodes();
-      for (CFuint iNode = 0; iNode < 4; ++iNode)
+      for (CFuint iNode = 0; iNode < 8; ++iNode)//3D
       {
 	nodeCoord.push_back(*((*nodes)[iNode]->getData()));
       }
@@ -164,12 +171,12 @@ void ComputeErrorEuler::execute()
 
       for (CFuint iPnt = 0; iPnt < nbrQPnts; ++iPnt)
       {
-	RealVector temp(4);
+	RealVector temp(5);//3D
 	temp = 0.0;
 	statesInQuadPnts.push_back(temp);
 	if(m_cell->getID() == 1)
 	{
-	  CFLog(VERBOSE,"Weights: " << quadPntWeights[iPnt] << "\n");
+	  //CFLog(VERBOSE,"Weights: " << quadPntWeights[iPnt] << "\n");
 	}
       }
 
@@ -219,12 +226,12 @@ void ComputeErrorEuler::execute()
         eht += quadPntWeights[iSol]*errorht;
         es += quadPntWeights[iSol]*errors;
 
-        // L inf
-        const CFreal errorhtLi = fabs(ht - ht2)/ht;
-        const CFreal errorsLi = fabs(s - s2)/s;
+        // L 1
+        const CFreal errorhtL1 = fabs(ht - ht2)/ht;
+        const CFreal errorsL1 = fabs(s - s2)/s;
 
-        ehtLi += quadPntWeights[iSol]*errorhtLi;
-        esLi += quadPntWeights[iSol]*errorsLi;
+        ehtL1 += quadPntWeights[iSol]*errorhtL1;
+        esL1 += quadPntWeights[iSol]*errorsL1;
       }
       
       // loop over the states
@@ -241,10 +248,18 @@ void ComputeErrorEuler::execute()
         const CFreal s2 = p2*pow(rho2,-gamma);
         const CFreal ht2 = gamma/(gamma-1.0)*R*T2+V2*V2/2.0;
     
-        const CFreal errorhtLi = fabs(ht - ht2);
-        const CFreal errorsLi = fabs(s - s2);
+        const CFreal errorhtLi = fabs(ht - ht2)/ht;
+        const CFreal errorsLi = fabs(s - s2)/s;
         totaleht += errorhtLi;
 	totales += errorsLi;
+	if(errorhtLi > ehtLi)
+	{
+	  ehtLi = errorhtLi;
+	}
+	if(errorsLi > esLi)
+	{
+	  esLi = errorsLi;
+	}
 	
 	//(*((*m_cellStates)[iState]))[0] = errorhtLi;
 	//(*((*m_cellStates)[iState]))[1] = errorsLi;
@@ -262,7 +277,11 @@ void ComputeErrorEuler::execute()
 
   // L2
   const CFreal errorEnthalpy = pow(eht,0.5);
-  const CFreal errorEntropy = pow(es,0.5);
+  const CFreal errorEntropy = pow(es,1);
+  
+  //L1
+  const CFreal errorEnthalpyL1 = ehtL1;
+  const CFreal errorEntropyL1 = esL1;
   
   //Li
   const CFreal errorEnthalpyLi = ehtLi;
@@ -271,6 +290,8 @@ void ComputeErrorEuler::execute()
   // print out errors
   CFLog(NOTICE, "error ht L2: " << errorEnthalpy << "\n");
   CFLog(NOTICE, "error s L2: " << errorEntropy << "\n");
+  CFLog(NOTICE, "error ht L1: " << errorEnthalpyL1 << "\n");
+  CFLog(NOTICE, "error s L1: " << errorEntropyL1 << "\n");
   CFLog(NOTICE, "error ht Linf: " << errorEnthalpyLi << "\n");
   CFLog(NOTICE, "error s Linf: " << errorEntropyLi << "\n");
   CFLog(NOTICE, "av error ht: " << totaleht/nbStates << "\n");
@@ -292,7 +313,7 @@ void ComputeErrorEuler::setup()
   m_cellBuilder = getMethodData().getStdTrsGeoBuilder();
 
   // get Euler 2D varset
-  m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<Euler2DVarSet>();
+  m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<Euler3DVarSet>();//3D
   if (m_eulerVarSet.isNull())
   {
     throw Common::ShouldNotBeHereException (FromHere(),"Update variable set is not Euler2DVarSet in ComputeErrorEuler!");
@@ -305,7 +326,7 @@ void ComputeErrorEuler::setup()
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
   
   // create TensorProductGaussIntegrator
-  TensorProductGaussIntegrator tempGI(DIM_2D,static_cast<CFPolyOrder::Type>((frLocalData[0]->getPolyOrder())*2-1));
+  TensorProductGaussIntegrator tempGI(DIM_3D,static_cast<CFPolyOrder::Type>((frLocalData[0]->getPolyOrder())*2-1));//3D
   m_tpIntegrator = tempGI;
 
   // get quadrature point coordinates and wheights

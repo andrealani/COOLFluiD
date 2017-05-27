@@ -14,7 +14,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class computes the AUSM flux
+ * This class computes the AUSM plus up flux
  *
  * @author Ray Vandenhoeck
  * @author Alexander Papen

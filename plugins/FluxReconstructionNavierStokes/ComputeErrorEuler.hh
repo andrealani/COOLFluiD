@@ -15,7 +15,7 @@ namespace COOLFluiD {
 
   namespace Physics {
     namespace NavierStokes {
-      class Euler2DVarSet;
+      class Euler3DVarSet;//3D
     }
   }
 
@@ -68,7 +68,7 @@ public:  // methods
 protected: // data
 
   /// physical model (in conservative variables)
-  Common::SafePtr<Physics::NavierStokes::Euler2DVarSet> m_eulerVarSet;
+  Common::SafePtr<Physics::NavierStokes::Euler3DVarSet> m_eulerVarSet;//3D
   
   /// variable for physical data
   RealVector m_solPhysData;
