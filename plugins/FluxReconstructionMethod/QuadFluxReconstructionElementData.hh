@@ -201,6 +201,21 @@ protected: // functions
    * create the dimensions on which the flux must be projected in the flux points
    */
   void createFluxPntFluxDim();
+  
+  /**
+   * create the tensor product indices for all states of the associated states
+   */
+  void createTensorProductIdx();
+  
+  /**
+   * create the vandermonde matrix of the transformation to modal basis
+   */
+  virtual void createVandermondeMatrix();
+  
+  private: //data
+    
+    /// ksi and eta tensor product indices of the states
+    std::vector< std::vector< std::vector< CFuint > > > m_tensorProdIdx;
 
 }; // end of class QuadFluxReconstructionElementData
 

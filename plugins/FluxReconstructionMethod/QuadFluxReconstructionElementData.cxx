@@ -25,6 +25,7 @@ QuadFluxReconstructionElementData::QuadFluxReconstructionElementData() :
 {
   m_shape = CFGeoShape::QUAD;
   m_dimensionality = DIM_2D;
+  createTensorProductIdx();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -100,6 +101,7 @@ QuadFluxReconstructionElementData::QuadFluxReconstructionElementData(CFPolyOrder
   
 
   resetFluxReconstructionElementData();
+  createTensorProductIdx();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -117,6 +119,7 @@ QuadFluxReconstructionElementData::QuadFluxReconstructionElementData(CFPolyOrder
   m_flxPntDistribution = flxPntDist;
 
   resetFluxReconstructionElementData();
+  createTensorProductIdx();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -1176,6 +1179,87 @@ void QuadFluxReconstructionElementData::createFaceOutputPntConn()
     cellNode[0] = iCell;
     cellNode[1] = iCell+1;
     m_faceOutputPntConn.push_back(cellNode);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void QuadFluxReconstructionElementData::createTensorProductIdx()
+{
+  CFAUTOTRACE;
+  
+  const CFuint nbrSolPnts = m_solPntsLocalCoords.size();
+  // number of solution points in 1D
+  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+  
+  m_tensorProdIdx.resize(nbrSolPnts);
+  for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+  {
+    m_tensorProdIdx[iSol].resize(2);
+    //m_tensorProdIdx[iSol][KSI].resize(nbrSolPnts1D-1);
+    //m_tensorProdIdx[iSol][ETA].resize(nbrSolPnts1D-1);
+  }
+
+  CFuint iSol = 0;
+  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+  {
+    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta, ++iSol)
+    {
+      for (CFuint jKsi = 0; jKsi < nbrSolPnts1D-1; ++jKsi)
+      {
+	if (iKsi == jKsi)
+	{
+	  jKsi += 1;
+	}
+        m_tensorProdIdx[iSol][KSI].push_back(iEta+nbrSolPnts1D*jKsi);
+      }
+      for (CFuint jEta = 0; jEta < nbrSolPnts1D-1; ++jEta)
+      {
+	if (iEta == jEta)
+	{
+	  jEta += 1;
+	}
+        m_tensorProdIdx[iSol][ETA].push_back(jEta+nbrSolPnts1D*iKsi);
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void QuadFluxReconstructionElementData::createVandermondeMatrix()
+{
+  CFAUTOTRACE;
+  
+  const CFuint nbrSolPnts = m_solPntsLocalCoords.size();
+  // number of solution points in 1D
+  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+  
+  m_vandermonde.resize(nbrSolPnts,nbrSolPnts);
+  m_vandermondeInv.resize(nbrSolPnts,nbrSolPnts);
+  
+  if(m_polyOrder != CFPolyOrder::ORDER0 && m_polyOrder != CFPolyOrder::ORDER1)
+  {
+    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+    {
+      CFuint modalDof = 0;
+      for (CFuint iOrder = 0; iOrder < nbrSolPnts1D; ++iOrder)
+      {
+        for (CFuint iOrderKsi = 0; iOrderKsi < iOrder; ++iOrderKsi, ++modalDof)
+        {
+	  CFuint iOrderEta = iOrder;
+          m_vandermonde(iSol,modalDof) = evaluateLegendre(m_solPntsLocalCoords[iSol][KSI],iOrderKsi)*evaluateLegendre(m_solPntsLocalCoords[iSol][ETA],iOrderEta);
+        }
+        for (CFuint iOrderEta = 0; iOrderEta < iOrder+1; ++iOrderEta, ++modalDof)
+        {
+	  CFuint iOrderKsi = iOrder;
+          m_vandermonde(iSol,modalDof) = evaluateLegendre(m_solPntsLocalCoords[iSol][KSI],iOrderKsi)*evaluateLegendre(m_solPntsLocalCoords[iSol][ETA],iOrderEta);
+        }
+      }
+      cf_assert(modalDof == nbrSolPnts);
+    }
+    
+    InvertMatrix(m_vandermonde,m_vandermondeInv);
   }
 }
 

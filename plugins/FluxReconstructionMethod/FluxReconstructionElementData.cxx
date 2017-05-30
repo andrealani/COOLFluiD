@@ -70,6 +70,7 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_flxPolyExponents(),
   m_flxPolyCoefs(),
   m_coefSolPolyDerivInSolPnts(),
+  m_coefSolPolyDerivInNodes(),
   m_coefSolPolyDerivInFlxPnts(),
   m_coefSolPolyDerivInFlxPntsOptim(),
   m_solPntIdxsSolPolyDerivInFlxPntsOptim(),
@@ -82,7 +83,10 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_flxPntDistribution(),
   m_faceNormals(),
   m_coefSolPolyInFlxPnts(),
-  m_flxPntFlxDim()
+  m_flxPntFlxDim(),
+  m_vandermonde(),
+  m_vandermondeInv(),
+  m_coefSolPolyInNodes()
 //   socket_solCoords1D("solCoords1D"),
 //   socket_flxCoords1D("flxCoords1D")
 {
@@ -174,6 +178,9 @@ void FluxReconstructionElementData::resetFluxReconstructionElementData()
   createFaceOutputPntConn();
   createFaceNormals();
   createFluxPntFluxDim();
+  createVandermondeMatrix();
+  createCoefSolPolyInNodes();
+  createCoefSolPolyDerivInNodes();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -758,10 +765,26 @@ void FluxReconstructionElementData::createCoefSolPolyDerivInSolPnts()
 
 //////////////////////////////////////////////////////////////////////
 
+void FluxReconstructionElementData::createCoefSolPolyDerivInNodes()
+{
+  //CFLog(VERBOSE,"createCoefSolPolyDerivInFlxPnts\n");
+  m_coefSolPolyDerivInNodes = getSolPolyDerivsAtNode(m_cellNodeCoords);
+}
+
+//////////////////////////////////////////////////////////////////////
+
 void FluxReconstructionElementData::createCoefSolPolyInFlxPnts()
 {
   //CFLog(VERBOSE,"createCoefSolPolyDerivInFlxPnts\n");
   m_coefSolPolyInFlxPnts = getSolPolyValsAtNode(m_flxPntsLocalCoords);
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionElementData::createCoefSolPolyInNodes()
+{
+  //CFLog(VERBOSE,"createCoefSolPolyDerivInFlxPnts\n");
+  m_coefSolPolyInNodes = getSolPolyValsAtNode(m_cellNodeCoords);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -939,6 +962,52 @@ void FluxReconstructionElementData::SwapRows(RealMatrix& A, CFuint row1, CFuint 
   RealVector swapRow = A.getRow<RealVector>(row1);
   A.setRow(A.getRow<RealVector>(row2),row1);
   A.setRow(swapRow,row2);
+}
+
+//////////////////////////////////////////////////////////////////////
+
+CFreal FluxReconstructionElementData::evaluateLegendre(CFreal coord, CFuint order)
+{
+  CFreal result = 0.0;
+  switch(order)
+    {
+      case 0:
+      {
+	result = 1;
+
+      } break;
+      case 1:
+      {
+	result = coord;
+
+      } break;
+      case 2:
+      {
+	result = 0.5*(3.0*pow(coord,2)-1.0);
+
+      } break;
+      case 3:
+      {
+	result = 0.5*(5.0*pow(coord,3)-3.0*coord);
+
+      } break;
+      case 4:
+      {
+	result = 0.125*(35.0*pow(coord,4)-30.0*pow(coord,2)+3.0);
+
+      } break;
+      case 5:
+      {
+	result = 0.125*(63.0*pow(coord,5)-70.0*pow(coord,3)+15.0*coord);
+
+      } break;
+      default:
+      {
+        throw Common::NotImplementedException (FromHere(),"Legendre not implemented for order "
+                                      + StringOps::to_str(order) + ".");
+      }
+    }
+  return result;
 }
 
 //////////////////////////////////////////////////////////////////////

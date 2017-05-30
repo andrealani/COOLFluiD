@@ -517,11 +517,27 @@ public:
   }
   
   /**
+   * @return m_coefSolPolyDerivInNodes
+   */
+  Common::SafePtr< std::vector< std::vector< std::vector< CFreal > > > > getCoefSolPolyDerivInNodes()
+  {
+    return &m_coefSolPolyDerivInNodes;
+  }
+  
+  /**
    * @return m_coefSolPolyInFlxPnts
    */
   Common::SafePtr< std::vector< std::vector< CFreal > > > getCoefSolPolyInFlxPnts()
   {
     return &m_coefSolPolyInFlxPnts;
+  }
+  
+  /**
+   * @return m_coefSolPolyInNodes
+   */
+  Common::SafePtr< std::vector< std::vector< CFreal > > > getCoefSolPolyInNodes()
+  {
+    return &m_coefSolPolyInNodes;
   }
 
   /**
@@ -594,6 +610,22 @@ public:
   Common::SafePtr< std::vector< CFuint > > getFluxPntFluxDim()
   {
     return &m_flxPntFlxDim;
+  }
+  
+  /**
+   * @return m_vandermonde
+   */
+  Common::SafePtr< RealMatrix > getVandermondeMatrix()
+  {
+    return &m_vandermonde;
+  }
+  
+  /**
+   * @return m_vandermondeInv
+   */
+  Common::SafePtr< RealMatrix > getVandermondeMatrixInv()
+  {
+    return &m_vandermondeInv;
   }
 
   /**
@@ -676,6 +708,11 @@ protected: // functions
    * Creates a vector containing the exponents of the terms in the solution polynomials.
    */
   virtual void createSolPolyExponents() = 0;
+  
+  /**
+   * create the vandermonde matrix of the transformation to modal basis
+   */
+  virtual void createVandermondeMatrix() {}
 
   /**
    * Computes the polynomial coefficients of the solution polynomial basis functions.
@@ -901,6 +938,21 @@ protected: // functions
    * create the dimensions on which the flux must be projected in the flux points
    */
   virtual void createFluxPntFluxDim() = 0;
+  
+  /**
+   * Evaluate the a Legendre polynomial
+   */
+  CFreal evaluateLegendre(CFreal coord, CFuint order);
+  
+  /**
+   * create coefficients for computation of solution polynomials in the nodes
+   */
+  void createCoefSolPolyInNodes();
+  
+  /**
+   * create coefficients for computation of solution polynomial derivatives
+   */
+  void createCoefSolPolyDerivInNodes();
 
 protected: // protected data
 
@@ -1066,6 +1118,9 @@ protected: // protected data
   
   /// coefficients for solution polynomials in the flux points
   std::vector< std::vector < CFreal > > m_coefSolPolyInFlxPnts;
+  
+  /// coefficients for solution polynomials in the nodes
+  std::vector< std::vector < CFreal > > m_coefSolPolyInNodes;
 
   /// coefficients for derivatives of solution polynomials in the flux points (optimized computation)
   std::vector< std::vector< std::vector< CFreal > > > m_coefSolPolyDerivInFlxPntsOptim;
@@ -1093,6 +1148,15 @@ protected: // protected data
   
   /// dimension on which the flux must be projected in the flux points
   std::vector<CFuint> m_flxPntFlxDim;
+  
+  /// vandermonde matrix of the transformation to modal basis
+  RealMatrix m_vandermonde;
+  
+  /// inverse of the vandermonde matrix of the transformation to modal basis
+  RealMatrix m_vandermondeInv;
+  
+  /// coefficients for derivatives of solution polynomials in the nodes
+  std::vector< std::vector< std::vector< CFreal > > > m_coefSolPolyDerivInNodes;
   
   
 //   /// socket for solution coordinates in 1D

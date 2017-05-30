@@ -352,7 +352,7 @@ void TVBLimiter::setMinMaxNghbrCellAvgStates()
   // set the minimum and maximum average states in the node neighbours
   const CFuint nodeID = (*m_cellNodes)[0]->getLocalID();
   m_minAvgState = nodeNghbCellMinAvgStates[nodeID];
-  m_minAvgState = nodeNghbCellMaxAvgStates[nodeID];
+  m_maxAvgState = nodeNghbCellMaxAvgStates[nodeID];
   for (CFuint iNode = 1; iNode < m_nbrCornerNodes; ++iNode)
   {
     // get node ID
