@@ -2,7 +2,6 @@
 #include "FiniteVolumeMultiFluidMHD/FiniteVolumeMultiFluidMHD.hh"
 #include "Framework/MethodStrategyProvider.hh"
 #include "Maxwell/Maxwell2DProjectionVarSet.hh"
-//#include "Maxwell/Maxwell3DProjectionVarSet.hh"
 #include "MultiFluidMHD/MultiFluidMHDVarSet.hh"
 #include "Framework/MethodStrategyProvider.hh"
 #include "FiniteVolume/CellCenterFVMData.hh"

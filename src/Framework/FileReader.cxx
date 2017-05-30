@@ -6,6 +6,7 @@
 
 #include <limits>
 #include "Common/CFLog.hh"
+#include "Common/FactoryRegistry.hh"
 #include "Framework/FileReader.hh"
 #include "Framework/BadFormatException.hh"
 #include "Environment/FileHandlerInput.hh"
@@ -25,6 +26,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 FileReader::FileReader() :
+  m_fr(CFNULL),
   m_readAgain(false),
   m_readCount(0)
 {
@@ -82,6 +84,22 @@ void FileReader::readFromFile(const boost::filesystem::path& filepath)
 void FileReader::finish()
 {
 }
+
+//////////////////////////////////////////////////////////////////////////////
+ 
+void FileReader::setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> fr)
+{
+  m_fr = fr;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+ Common::SafePtr<Common::FactoryRegistry> FileReader::getFactoryRegistry() 
+ {
+#ifdef CF_HAVE_SINGLE_EXEC
+   return m_fr;
+#endif
+ }
 
 //////////////////////////////////////////////////////////////////////////////
 

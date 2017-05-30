@@ -206,8 +206,6 @@ GaussLegendreVolumeIntegratorImpl.hh
 GeoDataComputer.ci
 GeoDataComputer.hh
 GeometricEntity.cxx
-GeometricEntityFactory.cxx
-GeometricEntityFactory.hh
 GeometricEntity.hh
 GeometricEntityPool.hh
 GeometricEntityProvider.hh

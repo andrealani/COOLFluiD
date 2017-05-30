@@ -111,9 +111,11 @@ void TecWriterData::configure ( Config::ConfigArgs& args )
   // configure the output varset -------------------------------------------
 
   CFLog(VERBOSE, "TecWriterData::outputVarStr = " << provider_base + m_outputVarStr << "\n");
-
-  m_outputVarSet.reset(Environment::Factory<ConvectiveVarSet>::getInstance().
-                       getProvider(provider_base + m_outputVarStr)->create(physModel->getImplementor()->getConvectiveTerm()));
+  
+  const std::string varProv = provider_base + m_outputVarStr;
+  m_outputVarSet.reset
+    (FACTORY_GET_PROVIDER(getFactoryRegistry(), ConvectiveVarSet, varProv)->
+     create(physModel->getImplementor()->getConvectiveTerm()));
   
   cf_assert(m_outputVarSet.isNotNull());
   
@@ -127,8 +129,9 @@ void TecWriterData::configure ( Config::ConfigArgs& args )
   // create the transformer from update to output variables ----------------
   std::string provider_tr =  Framework::VarSetTransformer::getProviderName
     (physModel->getConvectiveName(), updateVarStr, m_outputVarStr);
-  m_updateToOutputVar = Environment::Factory<Framework::VarSetTransformer>::getInstance().
-    getProvider(provider_tr)->create(physModel->getImplementor());
+  m_updateToOutputVar = 
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, provider_tr)->
+    create(physModel->getImplementor());
   
   cf_assert(m_updateToOutputVar.isNotNull());  
 }

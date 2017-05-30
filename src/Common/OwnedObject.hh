@@ -10,8 +10,8 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Common/COOLFluiD.hh"
-
 #include "Common/Common.hh"
+#include "Common/FactoryRegistry.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -29,14 +29,27 @@ namespace COOLFluiD {
 
 class Common_API OwnedObject {
 
-public: // functions
-
+ public: // functions
+  
   /// Default constructor
-  OwnedObject() : m_owners(0) {}
-
+  OwnedObject() : m_fr(CFNULL), m_owners(0) {}
+  
   /// Virtual destructor
   virtual ~OwnedObject() {}
-
+  
+  /// Set the factory registry
+  virtual void setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> fr) 
+  {m_fr = fr;}
+  
+  /// Get the factory registry
+  Common::SafePtr<Common::FactoryRegistry> getFactoryRegistry() 
+  {
+#ifdef CF_HAVE_SINGLE_EXEC
+    cf_assert(m_fr != CFNULL);
+#endif
+    return m_fr;
+  }  
+  
   /// Add an owner.
   void addOwner() { m_owners++; }
 
@@ -50,10 +63,13 @@ public: // functions
   CFuint getNbOwners() const { return m_owners; }
 
 private: // data
-
+  
+  /// factory registry to allow polymorphic creation of objects
+  SafePtr<FactoryRegistry> m_fr;
+  
   /// Counter for the number of owners of this object
   CFuint m_owners;
-
+  
 }; // end class OwnedObject
 
 //////////////////////////////////////////////////////////////////////////////

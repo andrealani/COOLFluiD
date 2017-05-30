@@ -554,15 +554,15 @@ void OnlyMeshSubSystem::configurePhysicalModel ( Config::ConfigArgs& args )
 
     // create the new physical model implementor
     Common::SafePtr<PhysicalModelImpl::PROVIDER> physicalMdlProv =
-      Environment::Factory<PhysicalModelImpl>::getInstance().getProvider(physicalModelType);
-
+      FACTORY_GET_PROVIDER(getFactoryRegistry(), PhysicalModelImpl, physicalModelType);
     cf_assert(physicalMdlProv.isNotNull());
-
+    
     Common::SelfRegistPtr<PhysicalModelImpl> physicalModelImpl =
       physicalMdlProv->create(physicalModelName);
-
     cf_assert(physicalModelImpl.isNotNull());
-
+    
+    physicalModelImpl->setFactoryRegistry(getFactoryRegistry());
+    
     // configure the physical model implementor
     configureNested ( physicalModelImpl.getPtr(), args );
 

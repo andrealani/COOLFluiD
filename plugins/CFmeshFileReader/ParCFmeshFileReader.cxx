@@ -125,8 +125,8 @@ void ParCFmeshFileReader::configure ( Config::ConfigArgs& args )
   SafePtr<MeshPartitioner::PROVIDER> provider;
   try
   {
-     provider = Environment::Factory<MeshPartitioner>::getInstance().
-      getProvider(m_partitionerName);
+    provider = 
+      FACTORY_GET_PROVIDER(getFactoryRegistry(), MeshPartitioner, m_partitionerName);
   }
   catch (NoSuchValueException& e)
   {
@@ -134,7 +134,7 @@ void ParCFmeshFileReader::configure ( Config::ConfigArgs& args )
     std::string message = "Could not find mesh partitioner " + m_partitionerName;
     throw NoSuchValueException (FromHere(),message.c_str());
   }
-
+  
   cf_assert(provider.isNotNull());
   m_partitioner = provider->create(m_partitionerName);
   cf_assert(m_partitioner.isNotNull());
@@ -1027,16 +1027,16 @@ void ParCFmeshFileReader::readStateList(ifstream& fin)
     SafePtr<VarSetTransformer::PROVIDER> vecTransProv = CFNULL;
 
     CFLog(VERBOSE, "ParCFmeshFileReader::configure(): configuring " << m_inputToUpdateVecStr << "\n");
-    try
-    {
-      vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider(m_inputToUpdateVecStr);
+    try {
+      vecTransProv = FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, m_inputToUpdateVecStr);
     }
     catch (NoSuchValueException& except) {
       m_inputToUpdateVecStr = "Identity";
-
+      
       CFLog(VERBOSE, except.what() << "\n");
       CFLog(VERBOSE, "Choosing IdentityVarSetTransformer instead ..." << "\n");
-      vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider(m_inputToUpdateVecStr);
+      vecTransProv = 
+	FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, m_inputToUpdateVecStr);
     }
 
     cf_assert(vecTransProv.isNotNull());

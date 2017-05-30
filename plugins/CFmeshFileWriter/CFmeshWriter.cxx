@@ -100,8 +100,10 @@ void CFmeshWriter::unsetMethodImpl()
 void CFmeshWriter::configure ( Config::ConfigArgs& args )
 {
   OutputFormatter::configure(args);
+  
+  _data->setFactoryRegistry(getFactoryRegistry());
   configureNested ( _data.getPtr(), args );
-
+  
   // add configures to the CFmeshWriterCom's
 
   configureCommand<CFmeshWriterData,CFmeshWriterComProvider>(args,_setup,_setupStr,_data);

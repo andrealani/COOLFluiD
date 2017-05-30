@@ -56,6 +56,12 @@ public: // methods
       return TYPE::getClassName();
   }
 
+#ifdef CF_HAVE_SINGLE_EXEC
+  /// Set the factory registry
+  virtual void setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> fr) 
+  {m_fr = fr;}
+#endif
+  
 protected: // methods
 
   /// Constructor
@@ -67,7 +73,10 @@ protected: // methods
 private: // data
 
   std::string m_default;
-
+  
+  /// factory registry to allow polymorphic creation of objects
+  Common::SafePtr<Common::FactoryRegistry> m_fr;
+  
 }; // end of class SingleBehaviorFactory
 
 //////////////////////////////////////////////////////////////////////////////

@@ -81,4 +81,4 @@ ELSE()
 ENDIF()
 
 CF_WARN_ORPHAN_FILES()
-ADD_SUBDIRECTORY ( testcases )
+#ADD_SUBDIRECTORY ( testcases )

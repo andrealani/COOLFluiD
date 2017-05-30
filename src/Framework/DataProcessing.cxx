@@ -146,9 +146,10 @@ void DataProcessing::configure ( Config::ConfigArgs& args )
   CFAUTOTRACE;
 
   DataProcessingMethod::configure(args);
-
+  
+  m_data->setFactoryRegistry(getFactoryRegistry());
   configureNested ( m_data.getPtr(), args );
-
+  
   clearComs();
   cf_assert(m_dataprocessTypeStr.size() == m_dataprocessNameStr.size());
 

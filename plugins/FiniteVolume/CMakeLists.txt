@@ -289,6 +289,8 @@ RoeFlux.hh
 #RoeFluxLinALE.hh
 RoeFluxTurb.cxx
 RoeFluxTurb.hh
+SimpleEdgeGraph.cxx
+SimpleEdgeGraph.hh
 StateDiffDerivative.cxx
 StateDiffDerivative.hh
 StdALEPrepare.cxx
@@ -353,7 +355,6 @@ RoeSAFluxGhost.hh
 RoeSAFluxGhost.cxx
 UpwindBiasedMUSCLPolyRec.hh
 UpwindBiasedMUSCLPolyRec.cxx
-SimpleEdgeGraph.hh
 )
 
 IF (NOT CF_HAVE_CUDA)

@@ -145,14 +145,14 @@ void FVMCCGeoDataComputer<METHODDATA>::computeNormalsData()
   {
     const CFuint geoOrder = (*elemTypes)[iType].getGeoOrder();
     const std::string elemName = (*elemTypes)[iType].getShape() + CFPolyOrder::Convert::to_str(geoOrder);
-
+    
+    const string cname = "Face" + elemName;
     SelfRegistPtr<ComputeNormals> computeFaceNormals =
-      Environment::Factory<ComputeNormals>::getInstance().
-      getProvider("Face" + elemName)->create();
-
+      FACTORY_T_GET_PROVIDER(this->getFactoryRegistry(), ComputeNormals, cname)->create();
+    
     const CFuint firstElem = (*elemTypes)[iType].getStartIdx();
     const CFuint lastElem  = (*elemTypes)[iType].getEndIdx();
-
+    
     SelfRegistPtr<ComputeFaceNormalsFVMCC> faceNormalsComputer =
       computeFaceNormals.d_castTo<ComputeFaceNormalsFVMCC>();
 
@@ -279,10 +279,10 @@ void FVMCCGeoDataComputer<METHODDATA>::modifyOffMeshNodes()
 
     ///@todo change this for other order!!
     const std::string elemName = CFGeoShape::Convert::to_str((*elementType)[iType].getGeoShape()) + "LagrangeP1LagrangeP0";
-
-    SelfRegistPtr<SetElementStateCoord> setStateCoord = Environment::Factory<SetElementStateCoord>::getInstance().
-      getProvider(elemName)->create();
-
+    
+    SelfRegistPtr<SetElementStateCoord> setStateCoord = 
+      FACTORY_T_GET_PROVIDER(this->getFactoryRegistry(), SetElementStateCoord, elemName)->create();
+    
     const CFuint nbElemPerType = (*elementType)[iType].getNbElems();
     for (CFuint iElem = 0; iElem < nbElemPerType; ++iElem, ++elemID) {
       // build the cell

@@ -1,4 +1,4 @@
-#include "RMSJouleHeatSourceTerm.hh"
+#include "FiniteVolume/RMSJouleHeatSourceTerm.hh"
 #include "Framework/GeometricEntity.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/MethodStrategyProvider.hh"
@@ -64,8 +64,8 @@ void RMSJouleHeatSourceTerm::setup()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void RMSJouleHeatSourceTerm::
-computeSource(Framework::GeometricEntity *const element, RealVector& source)
+void RMSJouleHeatSourceTerm::computeSource
+(Framework::GeometricEntity *const element, RealVector& source, RealMatrix& jacobian)
 {
   using namespace COOLFluiD::Framework;
 

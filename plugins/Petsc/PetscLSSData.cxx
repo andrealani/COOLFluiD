@@ -129,7 +129,7 @@ void PetscLSSData::configure ( Config::ConfigArgs& args )
   SharedPtr<PetscLSSData> thisPtr(this);
 
   SafePtr<BaseMethodStrategyProvider<PetscLSSData,ShellPreconditioner > > prov =
-    Environment::Factory<ShellPreconditioner >::getInstance().getProvider(_shellPrecoStr);
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), ShellPreconditioner, _shellPrecoStr);
 
   cf_assert(prov.isNotNull());
   _shellPreco = prov->create(_shellPrecoStr,thisPtr);

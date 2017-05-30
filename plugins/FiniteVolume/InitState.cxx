@@ -181,9 +181,9 @@ void InitState::configure ( Config::ConfigArgs& args )
   CFLog(VERBOSE, "InitState::configure() => provider for _inputToUpdateVar is "<< provider << "\n");
   
   _inputToUpdateVar =
-    Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider)->
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, provider)->
     create(physModel->getImplementor());
-
+  
   cf_assert(_inputToUpdateVar.isNotNull());
   _vFunction.setFunctions(_functions);
   _vFunction.setVariables(_vars);

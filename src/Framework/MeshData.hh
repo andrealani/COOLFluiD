@@ -27,7 +27,10 @@
 
 namespace COOLFluiD {
 
-  namespace Common { template <typename TYPE> class GeneralStorage; }
+  namespace Common { 
+    template <typename TYPE> class GeneralStorage; 
+    class FactoryRegistry;
+  }
 
   namespace Framework {
 
@@ -36,7 +39,7 @@ namespace COOLFluiD {
     class MapGeoToTrsAndIdx;
     class MeshDataStack;
     class DomainModel;
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 /// This class offers a facade for the Data realted to the Mesh,
@@ -97,6 +100,12 @@ public: // methods
   /// and the constructor cannot explicitly be called.
   void reallocate();
 
+  /// Set the factory registry
+  void setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> fr);
+  
+  /// Get the factory registry
+  Common::SafePtr<Common::FactoryRegistry> getFactoryRegistry();
+  
   /// Access the mesh statistics
   MeshStatistics& Statistics() { return m_statistics; }
   
@@ -291,7 +300,10 @@ private: // methods
   MeshData(const std::string& name);
 
 private: // member data
-
+  
+  /// factory registry to allow polymorphic creation of objects
+  Common::SafePtr<Common::FactoryRegistry> m_fr;
+  
   /// list of the names of the TRS
   MeshStatistics m_statistics;
 

@@ -216,6 +216,8 @@ void CellCenterFVM::configure ( Config::ConfigArgs& args )
   SpaceMethod::configure(args);
   
   CFLog(VERBOSE, "CellCenterFVM::configureNested()\n");
+  
+  _data->setFactoryRegistry(getFactoryRegistry());
   configureNested ( _data.getPtr(), args );
   
   // add here configures to the CellCenterFVM
@@ -436,9 +438,9 @@ void CellCenterFVM::applyBCImpl()
   
   for(CFuint i = 0; i < _bcs.size(); ++i) {
     cf_assert(_bcs[i].isNotNull());
-    CFLog(VERBOSE, "Applying BC " << _bcs[i]->getName() << "START\n");
+    CFLog(VERBOSE, "Applying BC " << _bcs[i]->getName() << " => START\n");
     _bcs[i]->execute();
-    CFLog(VERBOSE, "Applying BC " << _bcs[i]->getName() << "END\n");
+    CFLog(VERBOSE, "Applying BC " << _bcs[i]->getName() << " => END\n");
   }
   
   // reset to false the preProcessBCFlag

@@ -22,7 +22,8 @@
 
 namespace COOLFluiD {
   namespace Framework {
-
+    class BaseGeometricEntityProvider;
+    
 //////////////////////////////////////////////////////////////////////////////
 
 /// This class represents a GeometricEntity (Cell, Face, Edge, ...).
@@ -44,7 +45,9 @@ namespace COOLFluiD {
 /// @author Tiago Quintino
 class Framework_API GeometricEntity {
 public:
-
+  
+  typedef BaseGeometricEntityProvider PROVIDER;
+  
   /// Constructor
   /// @param states   list of the states in the geometric entity
   /// @param nodes  list of the nodes in the geometric entity
@@ -57,6 +60,9 @@ public:
   /// @pre all derived classes have to define a destructor
   virtual ~GeometricEntity() = 0;
 
+  /// Gets the Class name
+  static std::string getClassName() {return "GeometricEntity";}
+  
   /// Set the ID
   void setID(const CFuint geoID) {  _geoID = geoID; }
 

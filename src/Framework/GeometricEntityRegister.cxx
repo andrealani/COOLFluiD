@@ -4,24 +4,26 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-
-
 #include "Framework/GeometricEntityRegister.hh"
 #include "Framework/BaseGeometricEntityProvider.hh"
-#include "Framework/GeometricEntityFactory.hh"
 #include "Framework/InterpolatorRegister.hh"
+#include "Framework/GeometricEntity.hh"
 #include "Config/DuplicateNameException.hh"
+#include "Common/FactoryRegistry.hh"
+#include "Environment/CFEnv.hh"
+#include "Environment/Factory.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
+using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Environment;
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
   namespace Framework {
-
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -58,38 +60,39 @@ CFuint GeometricEntityRegister::regist(const std::string& providerName)
     }
   }
   else {
+    SafePtr<FactoryRegistry> fRegistry = 
+      Environment::CFEnv::getInstance().getFactoryRegistry();
+    cf_assert(fRegistry.isNotNull());
+    
     // else add it to the database and return the index
-
-    BaseGeometricEntityProvider* provider =
-    GeometricEntityFactory::getProvider(providerName);
-
-    cf_assert(!exists(provider));
-
+    cf_assert(FACTORY_EXISTS_PROVIDER(fRegistry, GeometricEntity, providerName));
+    Common::SafePtr<BaseGeometricEntityProvider> provider =
+      FACTORY_GET_PROVIDER(fRegistry, GeometricEntity, providerName);
+    
     idx = _database.size();
-    _database.push_back(provider);
-
-
+    _database.push_back(&*provider);
+    
     // register the solution interpolator
     InterpolatorID solID =
-    InterpolatorRegister::getInstance().
+      InterpolatorRegister::getInstance().
       registInterpolator(provider->getSolutionShapeFunctionName(),
-                        provider->getSolutionShapeFunctionType(),
-                        provider->getSolutionShapeFunctionOrder(),
-                        provider->getShape());
-
+			 provider->getSolutionShapeFunctionType(),
+			 provider->getSolutionShapeFunctionOrder(),
+			 provider->getShape());
+    
     // register the geometry interpolator
     InterpolatorID geoID =
-    InterpolatorRegister::getInstance().
+      InterpolatorRegister::getInstance().
       registInterpolator(provider->getGeometryShapeFunctionName(),
-                        provider->getGeometryShapeFunctionType(),
-                        provider->getGeometryShapeFunctionOrder(),
-                        provider->getShape());
-
+			 provider->getGeometryShapeFunctionType(),
+			 provider->getGeometryShapeFunctionOrder(),
+			 provider->getShape());
+    
     provider->setSolInterpolatorID(solID);
     provider->setGeomInterpolatorID(geoID);
-   }
-
-   return idx;
+  }
+  
+  return idx;
 }
 
 //////////////////////////////////////////////////////////////////////////////

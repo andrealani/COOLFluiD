@@ -19,8 +19,6 @@ namespace COOLFluiD {
 
   namespace Environment {
 
-  template < class BASE > class Factory;
-
 //////////////////////////////////////////////////////////////////////////////
 
 /// @brief Templated class provider
@@ -32,27 +30,29 @@ class Provider : public Common::NamedObject,
                  public Common::ProviderBase
 {
 public: // methods
-
+  
   /// Constructor
   /// @param name provider registration name
   Provider(const std::string& name) :
     Common::NamedObject(name),
     Common::ProviderBase()
   {
+#ifndef CF_HAVE_SINGLE_EXEC
     Environment::Factory<BASE>::getInstance().regist(this);
+#endif
   }
-
+  
   /// Virtual destructor
   virtual ~Provider() {}
-
+  
   /// @return the name of this provider
   virtual std::string getProviderName () const { return getName(); }
-
+  
   /// @return the BASE of this provider
   virtual std::string getProviderType () const { return BASE::getClassName(); }
 
 }; // end of class Provider
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace Environment

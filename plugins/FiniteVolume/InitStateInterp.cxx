@@ -144,7 +144,7 @@ void InitStateInterp::setup()
     (physModel->getConvectiveName(), m_inputInterpVarStr, getMethodData().getUpdateVarStr());
   
   m_inputInterpToUpdateVar =
-    Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider)->
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, provider)->
     create(physModel->getImplementor());
   cf_assert(m_inputInterpToUpdateVar.isNotNull());
   

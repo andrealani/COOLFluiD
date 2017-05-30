@@ -58,13 +58,12 @@ void CFL::configure ( Config::ConfigArgs& args )
 
   // configure the CFL computer
   Common::SafePtr<ComputeCFL::PROVIDER> prov =
-    Environment::Factory<ComputeCFL>::getInstance().getProvider(m_computeCFLStr);
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), ComputeCFL, m_computeCFLStr);
   m_computeCFL.reset(prov->create(prov->getName()));
-
+  
   configureNested ( m_computeCFL.getPtr(), args );
-
+  
   (*m_computeCFL).setCFL(this);
-
 }
     
 //////////////////////////////////////////////////////////////////////////////

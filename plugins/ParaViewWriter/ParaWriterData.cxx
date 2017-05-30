@@ -84,7 +84,8 @@ void ParaWriterData::configure ( Config::ConfigArgs& args )
   std::string name = getNamespace();
   Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
     (SubSystemStatusStack::getCurrentName()).getNamespace(name);
-  Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
+  Common::SafePtr<PhysicalModel> physModel = 
+    PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
   
   std::string provider = "Null";
   if (m_updateVarStr != "Null") {
@@ -94,10 +95,11 @@ void ParaWriterData::configure ( Config::ConfigArgs& args )
   }
 
   CFLog(VERBOSE, "ParaWriterData::UpdateVarStr = " << provider << "\n");
-
-  m_updateVarSet.reset(Environment::Factory<ConvectiveVarSet>::getInstance().
-                      getProvider(provider)->create(physModel->getImplementor()->getConvectiveTerm()));
-
+  
+  m_updateVarSet.reset
+    (FACTORY_GET_PROVIDER(getFactoryRegistry(), ConvectiveVarSet, provider)->
+     create(physModel->getImplementor()->getConvectiveTerm()));
+  
   cf_assert(m_updateVarSet.isNotNull());
 }
 

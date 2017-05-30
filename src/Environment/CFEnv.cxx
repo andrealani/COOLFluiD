@@ -17,18 +17,17 @@
 #include "coolfluid_svnversion.hh"
 
 #include "Common/PE.hh"
-
 #include "Common/EventHandler.hh"
 #include "Common/CFLog.hh"
 #include "Common/SignalHandler.hh"
 #include "Common/OSystem.hh"
+#include "Common/FactoryRegistry.hh"
 
 #include "Environment/SingleBehaviorFactory.hh"
 #include "Environment/DirPaths.hh"
 #include "Environment/FileHandlerInput.hh"
 #include "Environment/FileHandlerOutput.hh"
 #include "Environment/ModuleRegistry.hh"
-#include "Environment/FactoryRegistry.hh"
 #include "Environment/CFEnv.hh"
 #include "Environment/ModuleRegisterBase.hh"
 #include "Environment/CFEnvVars.hh"
@@ -36,6 +35,8 @@
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace COOLFluiD::Common;
+
+//////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
@@ -71,11 +72,12 @@ void CFEnv::defineConfigOptions(Config::OptionList& options)
 }
     
 //////////////////////////////////////////////////////////////////////////////
-
-CFEnv::CFEnv() : Config::ConfigObject("CFEnv"),
+    
+CFEnv::CFEnv() : 
+  Config::ConfigObject("CFEnv"),
   m_eventHandler(new Common::EventHandler()),
   m_moduleRegistry(new Environment::ModuleRegistry()),
-  m_factoryRegistry(new Environment::FactoryRegistry()),
+  m_factoryRegistry(new Common::FactoryRegistry()),
   m_env_vars (new CFEnvVars())
 {
   addConfigOptionsTo(this);
@@ -148,7 +150,7 @@ void CFEnv::setup()
 #else
   SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().setDefaultBehavior("DirectFileAccess");
 #endif
-
+  
   SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().setDefaultBehavior("DirectFileWrite");
   
   CFLog(VERBOSE, "CFEnv::setup() => end\n");
@@ -452,7 +454,7 @@ Common::SafePtr<Environment::ModuleRegistry> CFEnv::getModuleRegistry()
 
 //////////////////////////////////////////////////////////////////////////////
 
-Common::SafePtr<Environment::FactoryRegistry> CFEnv::getFactoryRegistry()
+Common::SafePtr<Common::FactoryRegistry> CFEnv::getFactoryRegistry()
 {
   cf_assert(m_factoryRegistry != CFNULL);
   return m_factoryRegistry;

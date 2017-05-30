@@ -33,7 +33,13 @@ class Framework_API PhysicalModel : public Common::NonCopyable<PhysicalModel>,
 friend class PhysicalModelStack;
 
 public: // methods
-
+ 
+  /// Set the factory registry
+  void setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> fr);
+ 
+  /// Get the factory registry
+  Common::SafePtr<Common::FactoryRegistry> getFactoryRegistry();
+  
   /// Set the PhysicalModelImpl once created and configured
   void setPhysicalModelImpl(
   Common::SelfRegistPtr<PhysicalModelImpl>physicalModelImpl);
@@ -175,7 +181,10 @@ private: // methods
   PhysicalModel(const std::string& name);
 
 private: // member data
-
+  
+  /// factory registry to allow polymorphic creation of objects
+  Common::SafePtr<Common::FactoryRegistry> m_fr;
+  
   /// Physical model implementor
   Common::SelfRegistPtr<PhysicalModelImpl> _physicalModelImpl;
 

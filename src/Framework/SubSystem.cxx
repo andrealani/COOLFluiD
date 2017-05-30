@@ -327,21 +327,21 @@ void SubSystem::configureNamespaceSingletons(Config::ConfigArgs& args, Common::S
 
   if (!md->isConfigured()) {
     // md->reallocate();
+    md->setFactoryRegistry(getFactoryRegistry());
     configureNested(*md,args);
   }
   
   cf_assert(!physicalModelName.empty());
   Common::SafePtr<PhysicalModel> pm = PhysicalModelStack::getInstance().createUnique(physicalModelName);
-
+  pm->setFactoryRegistry(getFactoryRegistry());
   if (!pm->isConfigured()) {
     configureNested(*pm,args);
   }
 
   cf_assert(!sysStatusName.empty());
   Common::SafePtr<SubSystemStatus> ss = SubSystemStatusStack::getInstance().createUnique(sysStatusName);
-
-  if (ss->getSubSystemName().empty())
-  {
+  ss->setFactoryRegistry(getFactoryRegistry());
+  if (ss->getSubSystemName().empty()) {
     ss->setSubSystemName(getName());
     ss->setMovingMesh(false);
     configureNested(*ss,args);

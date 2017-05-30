@@ -121,9 +121,9 @@ void SpecialSuperInlet::configure ( Config::ConfigArgs& args )
     (physModel->getConvectiveName(), _inputVarStr, _updateVarStr);
 // CFout << "Trying to use provider: " << provider <<"\n";
   _inputToUpdateVar =
-    Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider)->
+      FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, provider)->
     create(physModel->getImplementor());
-
+  
   cf_assert(_inputToUpdateVar.isNotNull());
 
   _vFunction.setFunctions(_functions);

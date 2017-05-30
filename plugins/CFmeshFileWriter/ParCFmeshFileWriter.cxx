@@ -194,14 +194,13 @@ void ParCFmeshFileWriter::writeVersionStamp(std::ofstream *const fout)
 {
   CFLogDebugMin( "ParCFmeshFileWriter::writeDimension() called" << "\n");
 
-  if (_myRank  == _ioRank)
-  {
-    *fout << "!COOLFLUID_VERSION "    << CFEnv::getInstance().getCFVersion() << "\n";
+  if (_myRank  == _ioRank) {
+    *fout << "!COOLFLUID_VERSION " << Environment::CFEnv::getInstance().getCFVersion() << "\n";
     // this can fail if there are problems with SVN
     // *fout << "!COOLFLUID_SVNVERSION " << CFEnv::getInstance().getSvnVersion() << "\n";
     *fout << "!CFMESH_FORMAT_VERSION 1.3\n";
   }
-
+  
   CFLogDebugMin( "ParCFmeshFileWriter::writeDimension() end" << "\n");
 }
 

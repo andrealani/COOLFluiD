@@ -11,11 +11,9 @@
 
 #include "Common/NonCopyable.hh"
 #include "Common/COOLFluiD.hh"
-
 #include "Common/SafePtr.hh"
 #include "Common/SetupObject.hh"
 #include "Common/SharedPtr.hh"
-
 #include "Config/ConfigObject.hh"
 
 #include "Environment/Environment.hh"
@@ -27,12 +25,12 @@ namespace COOLFluiD {
   namespace Common
   {
     class EventHandler;
+    class FactoryRegistry;
   }
 
   namespace Environment {
-
+    
     class ModuleRegistry;
-    class FactoryRegistry;
     class CFEnvVars;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -41,15 +39,15 @@ namespace COOLFluiD {
 /// which is used to initialize the COOLFluiD runtime environment.
 /// @author Tiago Quintino
 class Environment_API  CFEnv :
-  public Config::ConfigObject,
-  public Common::SetupObject,
-  public Common::NonCopyable<CFEnv> {
-
-public: // methods
+      public Config::ConfigObject,
+      public Common::SetupObject,
+      public Common::NonCopyable<CFEnv> {
+  
+ public: // methods
 
   /// @return the instance of this singleton
   static CFEnv& getInstance();
-
+  
   /// Defines the Config Option's of this class
   /// @param options a OptionList where to add the Option's
   static void defineConfigOptions(Config::OptionList& options);
@@ -83,12 +81,12 @@ public: // methods
 
   /// Gets the FactoryRegistry
   /// @note Does not need to be initialized before
-  Common::SafePtr<Environment::FactoryRegistry> getFactoryRegistry();
-
+  Common::SafePtr<Common::FactoryRegistry> getFactoryRegistry();
+  
   /// Gets the EventHandler of the COOLFluiD runtime environment
   /// @note Does not need to be initialized before
   Common::SafePtr<Common::EventHandler> getEventHandler();
-
+  
   /// Gets the CFEnvVars
   Common::SafePtr<Environment::CFEnvVars> getVars();
 
@@ -156,8 +154,8 @@ private: // data
   Environment::ModuleRegistry* m_moduleRegistry;
 
   /// the FactoryRegistry singleton object is only held by the CFEnv singleton object
-  Environment::FactoryRegistry* m_factoryRegistry;
-
+  Common::FactoryRegistry* m_factoryRegistry;
+  
   /// @brief Static environment variables
   /// pointer to a struct of variables that always exist
   CFEnvVars * m_env_vars;

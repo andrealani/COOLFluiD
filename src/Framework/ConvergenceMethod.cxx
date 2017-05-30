@@ -131,11 +131,11 @@ void ConvergenceMethod::configure ( Config::ConfigArgs& args )
 
   // builds the stop condition
   Common::SafePtr<StopCondition::PROVIDER> stopCondProv =
-    Environment::Factory<StopCondition>::getInstance().getProvider(m_stopConditionStr);
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), StopCondition, m_stopConditionStr);
   SelfRegistPtr<StopCondition> stopCondition = stopCondProv->create(stopCondProv->getName());
-
+  
   configureNested ( stopCondition.getPtr(), args );
-
+  
   // Pass the stop condition to the stop condition controller
   m_stopCondControler.reset(StopConditionController::Create(stopCondition));
 }

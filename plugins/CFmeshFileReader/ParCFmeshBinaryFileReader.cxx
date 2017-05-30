@@ -2172,14 +2172,16 @@ void ParCFmeshBinaryFileReader::readStateList(MPI_File* fh)
     
     CFLog(VERBOSE, "ParCFmeshBinaryFileReader::configure(): configuring " << m_inputToUpdateVecStr << "\n");
     try {
-      vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider(m_inputToUpdateVecStr);
+      vecTransProv = FACTORY_GET_PROVIDER
+	(getFactoryRegistry(), VarSetTransformer, m_inputToUpdateVecStr);
     }
     catch (NoSuchValueException& except) {
       m_inputToUpdateVecStr = "Identity";
       
       CFLog(VERBOSE, except.what() << "\n");
       CFLog(VERBOSE, "Choosing IdentityVarSetTransformer instead ..." << "\n");
-      vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider(m_inputToUpdateVecStr);
+      vecTransProv = FACTORY_GET_PROVIDER
+	(getFactoryRegistry(), VarSetTransformer, m_inputToUpdateVecStr);
     }
     
     cf_assert(vecTransProv.isNotNull());

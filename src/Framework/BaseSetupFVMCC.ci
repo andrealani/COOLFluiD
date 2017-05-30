@@ -324,11 +324,11 @@ void BaseSetupFVMCC<BASE>::computeNormalsData()
   {
     const CFuint geoOrder = (*elemTypes)[iType].getGeoOrder();
     const std::string elemName = (*elemTypes)[iType].getShape() + CFPolyOrder::Convert::to_str(geoOrder);
-
+    
+    const string cname = "Face" + elemName;
     SelfRegistPtr<ComputeNormals> computeFaceNormals =
-      Environment::Factory<ComputeNormals>::getInstance().
-      getProvider("Face" + elemName)->create();
-
+      FACTORY_T_GET_PROVIDER(this->getFactoryRegistry(), ComputeNormals, cname)->create();
+    
     const CFuint firstElem = (*elemTypes)[iType].getStartIdx();
     const CFuint lastElem  = (*elemTypes)[iType].getEndIdx();
 

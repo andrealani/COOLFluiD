@@ -4,8 +4,8 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#include "Environment/FactoryRegistry.hh"
-#include "Environment/FactoryBase.hh"
+#include "Common/FactoryRegistry.hh"
+#include "Common/FactoryBase.hh"
 #include "Common/CFLog.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -13,7 +13,7 @@
 using namespace COOLFluiD::Common;
 
 namespace COOLFluiD {
-  namespace Environment {
+  namespace Common {
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -29,7 +29,7 @@ FactoryRegistry::~FactoryRegistry()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FactoryRegistry::regist(Environment::FactoryBase* factory)
+void FactoryRegistry::regist(FactoryBase* factory)
 {
   const std::string type_name = factory->getTypeName();
   if ( ! m_store.checkEntry(type_name) )
@@ -60,8 +60,7 @@ void FactoryRegistry::unregist(const std::string& type_name)
 
 //////////////////////////////////////////////////////////////////////////////
 
-Common::SafePtr<Environment::FactoryBase>
-FactoryRegistry::getFactory(const std::string& type_name)
+SafePtr<FactoryBase> FactoryRegistry::getFactory(const std::string& type_name)
 {
   if ( m_store.checkEntry(type_name) )
   {
@@ -71,13 +70,13 @@ FactoryRegistry::getFactory(const std::string& type_name)
   else
   {
     CFLogWarn("Factory [" + type_name + "] not registered : returning null pointer\n");
-    return Common::SafePtr<Environment::FactoryBase>(CFNULL);
+    return SafePtr<FactoryBase>(CFNULL);
   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-  } // namespace Environment
+  } // namespace Common 
 } // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////

@@ -131,6 +131,11 @@ public: // functions
     return m_sm;
   }
   
+#ifdef CF_HAVE_SINGLE_EXEC
+  /// Set the factory registry
+  virtual void setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> fr);
+#endif
+  
 private: // data
 
   /// Current convergence status

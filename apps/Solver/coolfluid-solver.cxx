@@ -152,12 +152,18 @@ class AppOptions : public Config::ConfigObject {
 int main(int argc, char** argv)
 {
   using namespace boost;
-
+  
 #ifdef CF_HAVE_SINGLE_EXEC
+  Common::SafePtr<FactoryRegistry> fRegistry = 
+    Environment::CFEnv::getInstance().getFactoryRegistry();
+  cf_assert(fRegistry.isNotNull());
+  
   PluginsRegister pr;
-  pr.registerAll();
+  pr.registerAll(fRegistry);
+#else
+  Common::SafePtr<FactoryRegistry> fRegistry(CFNULL);
 #endif
- 
+  
   // process the command line
   AppOptions options;
   options.getOptionList().setStrictArgs(true);
@@ -272,21 +278,20 @@ int main(int argc, char** argv)
     cudaDev.configure(config_args);
 #endif
     
-    if (options.wait) // wait to attach debugger
-      {
-	CFuint pid = OSystem::getInstance().getProcessInfo()->getPID();
-	CFLog(INFO, "Stopping to attach debugger ...\n");
-	CFLog(INFO, "Current PID is [" << pid << "].\n");
-	char ans;
-	bool first_pass = true;
-	do {
-	  if (!first_pass) { CFLog(INFO, "Please type a 'y' or an 'n'.\n"); }
-	  CFout << "Continue (y/n) ?\n";
-	  std::cin >> ans;
-	  first_pass = false;
-	}
-	while((ans !='Y')&&(ans !='N')&&(ans !='y')&&(ans !='n'));
+    if (options.wait) { // wait to attach debugger
+      CFuint pid = OSystem::getInstance().getProcessInfo()->getPID();
+      CFLog(INFO, "Stopping to attach debugger ...\n");
+      CFLog(INFO, "Current PID is [" << pid << "].\n");
+      char ans;
+      bool first_pass = true;
+      do {
+	if (!first_pass) { CFLog(INFO, "Please type a 'y' or an 'n'.\n"); }
+	CFout << "Continue (y/n) ?\n";
+	std::cin >> ans;
+	first_pass = false;
       }
+      while((ans !='Y')&&(ans !='N')&&(ans !='y')&&(ans !='n'));
+    }
     
     CFLog(VERBOSE,"-------------------------------------------------------------\n");
     
@@ -298,10 +303,16 @@ int main(int argc, char** argv)
       maestro_str = config_args["Maestro"];
     
     CFLog(VERBOSE,"Creating Simulation Maestro\n");
-    Common::SafePtr<Maestro::PROVIDER> prov = Environment::Factory<Maestro>::getInstance().getProvider( maestro_str );
+    Common::SafePtr<Maestro::PROVIDER> prov = 
+      FACTORY_GET_PROVIDER(fRegistry, Maestro, maestro_str);
+    CFLog(VERBOSE,"Creating Simulation Maestro 1\n");
     cf_assert(prov.isNotNull());
+    CFLog(VERBOSE,"Creating Simulation Maestro 2\n");
     maestro.reset(prov->create(prov->getName()));
+    maestro->setFactoryRegistry(fRegistry);
+    CFLog(VERBOSE,"Creating Simulation Maestro 4\n");
     maestro->configure ( config_args );
+    CFLog(VERBOSE,"Creating Simulation Maestro 5\n");
     
     CFLog(INFO,"-------------------------------------------------------------\n");
     
@@ -310,6 +321,7 @@ int main(int argc, char** argv)
     CFLog(INFO,"Creating Simulation\n");
     // create the simulator
     SharedPtr < Simulator > sim ( new Simulator("Simulator") );
+    sim->setFactoryRegistry(fRegistry);
     // give him the file to configure from
     sim->openCaseFile(casefile.string());
     

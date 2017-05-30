@@ -160,7 +160,9 @@ void CFmeshReader::convertFormat()
   // To be investigated whether this is a bug...
   Config::ConfigArgs originalArgs = m_stored_args;
   Common::SelfRegistPtr<MeshFormatConverter> converter =
-    Factory<MeshFormatConverter>::getInstance().getProvider(m_converterStr)->create(m_converterStr);
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), MeshFormatConverter, m_converterStr)->
+    create(m_converterStr);
+  converter->setFactoryRegistry(getFactoryRegistry());
   configureNested ( converter.getPtr(), originalArgs );
   
   const std::string nsp = getMethodData()->getNamespace();
@@ -230,8 +232,9 @@ void CFmeshReader::configure ( Config::ConfigArgs& args )
 
   MeshCreator::configure(args);
   
+  m_data->setFactoryRegistry(getFactoryRegistry());
   configureNested ( m_data.getPtr(), args );
-
+  
   configureCommand<CFmeshReaderData,
                    CFmeshReaderComProvider>(args,
                                             m_setup,

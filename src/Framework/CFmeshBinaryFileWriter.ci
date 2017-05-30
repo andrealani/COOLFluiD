@@ -192,13 +192,13 @@ template <typename DATA>
 void CFmeshBinaryFileWriter<DATA>::writeVersionStamp(MPI_File* fh)
 {
   using namespace COOLFluiD::Common;
-  using namespace COOLFluiD::Environment;
   
   CFLog(VERBOSE,  "CFmeshBinaryFileWriter<DATA>::writeVersionStamp() start\n");
   
   if (_myRank == _ioRank) {
     MPIIOFunctions::writeKeyValue<char>(fh, "!COOLFLUID_VERSION ");
-    MPIIOFunctions::writeKeyValue<char>(fh, CFEnv::getInstance().getCFVersion());
+    MPIIOFunctions::writeKeyValue<char>
+      (fh, Environment::CFEnv::getInstance().getCFVersion());
     // this can fail if there are problems with SVN
     // MPIIOFunctions::writeKeyValue<char>(fh, "\n!COOLFLUID_SVNVERSION ");
     // MPIIOFunctions::writeKeyValue<char>(fh, CFEnv::getInstance().getSvnVersion());

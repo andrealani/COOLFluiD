@@ -149,6 +149,16 @@ void ConvergenceMethodData::updateResidual()
 
 //////////////////////////////////////////////////////////////////////////////
 
+#ifdef CF_HAVE_SINGLE_EXEC
+void ConvergenceMethodData::setFactoryRegistry(SafePtr<FactoryRegistry> fr) 
+{
+  MethodData::setFactoryRegistry(fr);
+  m_CFL.setFactoryRegistry(fr);
+}
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+
     } // namespace Framework
 
 } // namespace COOLFluiD

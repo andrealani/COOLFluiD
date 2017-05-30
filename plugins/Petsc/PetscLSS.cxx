@@ -86,6 +86,8 @@ Common::SafePtr<MethodData> PetscLSS::getMethodData () const
 void PetscLSS::configure ( Config::ConfigArgs& args )
 {
   LinearSystemSolver::configure(args);
+  
+  m_data->setFactoryRegistry(getFactoryRegistry());
   configureNested ( m_data.getPtr(), args );
 
   const bool isParallel = Common::PE::GetPE().IsParallel ();

@@ -60,15 +60,11 @@ FVMCC_BDF2TimeRhsLimited::~FVMCC_BDF2TimeRhsLimited()
 void FVMCC_BDF2TimeRhsLimited::configure ( Config::ConfigArgs& args )
 {
   CellCenterFVMCom::configure(args);
-
+  
   _timeLimiter =
-  Environment::Factory<TimeLimiter>::getInstance().
-    getProvider(_timeLimiterStr)->create(_timeLimiterStr);
-
- configureNested ( _timeLimiter.getPtr(), args );
-
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), TimeLimiter, _timeLimiterStr)->create(_timeLimiterStr);
   cf_assert(_timeLimiter.isNotNull());
-
+  configureNested ( _timeLimiter.getPtr(), args );
 }
 
 //////////////////////////////////////////////////////////////////////////////

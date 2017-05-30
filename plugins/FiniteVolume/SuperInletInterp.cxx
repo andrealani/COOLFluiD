@@ -117,7 +117,7 @@ void SuperInletInterp::setup()
   }
   
   m_inputToUpdateVar = 
-    Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider)->
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, provider)->
     create(physModel->getImplementor());
   
   cf_assert(m_inputToUpdateVar.isNotNull());

@@ -7,7 +7,7 @@
 #include "Framework/DataProcessingData.hh"
 #include "Framework/DataSocketSink.hh"
 #include "Framework/CellTrsGeoBuilder.hh"
-#include "SimpleEdgeGraph.hh"
+#include "FiniteVolume/SimpleEdgeGraph.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -267,8 +267,8 @@ private: //data
   SpringTrucationData m_springTruncationData;
     
   //Simple edge graph 
-  FiniteVolume::SimpleEdgeGraph m_edgeGraph;
-
+  SimpleEdgeGraph m_edgeGraph;
+  
 }; // end of class MeshFittingAlgorithm
 
 //////////////////////////////////////////////////////////////////////////////

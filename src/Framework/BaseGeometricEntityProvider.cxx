@@ -4,8 +4,10 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-// #include <iostream>
 #include "Framework/BaseGeometricEntityProvider.hh"
+#include "Environment/Factory.hh"
+
+//////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
   namespace Framework {
@@ -13,11 +15,11 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 BaseGeometricEntityProvider::BaseGeometricEntityProvider(const std::string& name) 
-  : Common::NamedObject(name), ProviderBase()
+  : Environment::Provider<GeometricEntity>(name)
 {
-  // std::cout << "Adding [" << name << "] to GeometricEntityFactory" << std::endl;
-  
-  GeometricEntityFactory::add(this);  
+#ifndef CF_HAVE_SINGLE_EXEC
+  Environment::Factory<GeometricEntity>::getInstance().regist(this);
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////

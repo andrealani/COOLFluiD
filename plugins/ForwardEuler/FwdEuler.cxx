@@ -94,9 +94,10 @@ void FwdEuler::configure ( Config::ConfigArgs& args )
 {
   CFAUTOTRACE;
   ConvergenceMethod::configure(args);
-
+  
+  m_data->setFactoryRegistry(getFactoryRegistry());
   configureNested ( m_data.getPtr(), args );
-
+  
   // add configures to the FwdEulerCom's
 
   configureCommand<FwdEulerData,FwdEulerComProvider>(args, m_setup,m_setupStr,m_data);

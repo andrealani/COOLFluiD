@@ -99,6 +99,8 @@ void TecWriter::configure ( Config::ConfigArgs& args )
   CFAUTOTRACE;
   
   OutputFormatter::configure(args);
+  
+  m_data->setFactoryRegistry(getFactoryRegistry());
   configureNested ( m_data.getPtr(), args );
   
   // add configures to the TecWriterCom's

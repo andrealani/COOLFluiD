@@ -239,11 +239,13 @@ Common::Signal::return_t Simulator::buildSubSystem(Common::Signal::arg_t eBuild)
   CFLog(NOTICE,"Name : " << subSystemName << "\n");
   CFLog(NOTICE,"Type : " << subSystemType << "\n");
   CFLog(NOTICE,"-------------------------------------------------------------\n");
-
-  Common::SafePtr<SubSystem::PROVIDER> prov = Environment::Factory<SubSystem>::getInstance().getProvider(subSystemType);
+  
+  Common::SafePtr<SubSystem::PROVIDER> prov = 
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), SubSystem, subSystemType);
   cf_assert(prov.isNotNull());
   
   m_subSys.reset(prov->create(subSystemName));
+  m_subSys->setFactoryRegistry(getFactoryRegistry());
   return Common::Signal::return_t ();
 }
 
@@ -281,7 +283,7 @@ Common::Signal::return_t Simulator::configSubSystem(Common::Signal::arg_t eConfi
     msg += local_args.str();
     CFLog ( WARN , "WARNING : " << msg << "\n" );
     
-    if ( CFEnv::getInstance().getVars()->ErrorOnUnusedConfig ) {
+    if ( Environment::CFEnv::getInstance().getVars()->ErrorOnUnusedConfig ) {
       throw Config::ConfigOptionException ( FromHere(), msg );
     }
   }

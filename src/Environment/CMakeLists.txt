@@ -29,8 +29,6 @@ ConcreteProvider.hh
 DirPaths.hh
 DirPaths.cxx
 ObjectProvider.hh
-FactoryRegistry.hh
-FactoryRegistry.cxx
 DirectFileAccess.hh
 DirectFileAccess.cxx
 SingleBehaviorFactory.hh
@@ -38,7 +36,6 @@ SingleBehaviorFactory.ci
 DirectFileWrite.hh
 DirectFileWrite.cxx
 Provider.hh
-FactoryBase.hh
 Factory.hh
 Registry.ci
 Registry.hh

@@ -229,7 +229,7 @@ protected: // helper functions
     Common::SafePtr<PROVIDER> prov;
     try
     {
-      prov = Environment::Factory<BASECOMMAND>::getInstance().getProvider(type);
+      prov = FACTORY_T_GET_PROVIDER(this->getFactoryRegistry(), BASECOMMAND, type);
     }
     catch (Common::NoSuchValueException& e)
     {
@@ -239,6 +239,7 @@ protected: // helper functions
     cf_assert(prov.isNotNull());
     com = prov->create(name,data);
     cf_assert(com.isNotNull());
+    com->setFactoryRegistry(this->getFactoryRegistry());
     m_commands.push_back(com.getPtr());
     configureNested ( com.getPtr(), args );
   }

@@ -167,6 +167,7 @@ void CellCenterFVMData::configure ( Config::ConfigArgs& args )
   // AL: volume integrator is still needed for ALE
   const CFQuadrature::Type quadType = CFQuadrature::Convert::to_enum(_integratorQuadratureStr);
   const CFPolyOrder::Type order = CFPolyOrder::Convert::to_enum( _integratorOrderStr );
+  _volumeIntegrator.setFactoryRegistry(getFactoryRegistry());
   _volumeIntegrator.setIntegrationForAllGeo(quadType,order);
   
   CFLog(VERBOSE, "CellCenterFVMData::configure() => after SpaceMethodData::configure()\n");
@@ -229,11 +230,12 @@ void CellCenterFVMData::configureGeoDataComputer ( Config::ConfigArgs& args )
   
   SharedPtr<CellCenterFVMData> thisPtr(this);
   Common::SafePtr<BaseMethodStrategyProvider<CellCenterFVMData,GeoDataComputer<CellCenterFVMData> > > prov =
-      Environment::Factory<GeoDataComputer<CellCenterFVMData> >::getInstance().getProvider(name);
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), GeoDataComputer<CellCenterFVMData>, name);
   
   cf_assert(prov.isNotNull());
   
   _geoDataComputer = prov->create(name,thisPtr);
+  _geoDataComputer->setFactoryRegistry(getFactoryRegistry());
   configureNested ( _geoDataComputer.getPtr(), args ); 
 }
 
@@ -247,12 +249,12 @@ void CellCenterFVMData::configureFluxSplitter ( Config::ConfigArgs& args )
 
   SharedPtr<CellCenterFVMData> thisPtr(this);
   Common::SafePtr<BaseMethodStrategyProvider<CellCenterFVMData,FluxSplitter<CellCenterFVMData> > > prov =
-      Environment::Factory<FluxSplitter<CellCenterFVMData> >::getInstance().getProvider(name);
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), FluxSplitter<CellCenterFVMData>, name);
 
   cf_assert(prov.isNotNull());
 
   _fluxSplitter = prov->create(name,thisPtr);
-   
+  _fluxSplitter->setFactoryRegistry(getFactoryRegistry());
   configureNested ( _fluxSplitter.getPtr(), args ); 
 }
 
@@ -266,19 +268,19 @@ void CellCenterFVMData::configureDiffusiveFluxComputer ( Config::ConfigArgs& arg
      ComputeDiffusiveFlux > > prov = CFNULL;
 
   try {
-   prov =  Environment::Factory<ComputeDiffusiveFlux>::getInstance().getProvider(_diffusiveFluxStr);
+    prov = FACTORY_GET_PROVIDER(getFactoryRegistry(), ComputeDiffusiveFlux, _diffusiveFluxStr);
   }
   catch (Common::NoSuchValueException& e) {
    _diffusiveFluxStr = "Null";
 
     CFLog(VERBOSE, e.what() << "\n");
     CFLog(VERBOSE, "Choosing NullDiffusiveFlux instead ..." << "\n");
-    prov = Environment::Factory<ComputeDiffusiveFlux>::getInstance().getProvider(_diffusiveFluxStr);
+    prov = FACTORY_GET_PROVIDER(getFactoryRegistry(), ComputeDiffusiveFlux, _diffusiveFluxStr);
   }
 
   cf_assert(prov.isNotNull());
   _diffusiveFlux = prov->create(_diffusiveFluxStr, thisPtr);
-
+  _diffusiveFlux->setFactoryRegistry(getFactoryRegistry());
   configureNested ( _diffusiveFlux.getPtr(), args );
 
   // configuration of the DerivativeComputer
@@ -303,11 +305,12 @@ void CellCenterFVMData::configureDiffusiveFluxComputer ( Config::ConfigArgs& arg
 
   Common::SafePtr<BaseMethodStrategyProvider<CellCenterFVMData,
      DerivativeComputer > > dcprov =
-    Environment::Factory<DerivativeComputer>::getInstance().getProvider(_derivComputerStr);
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), DerivativeComputer, _derivComputerStr);
   cf_assert(dcprov.isNotNull());
   _derivComputer = dcprov->create(_derivComputerStr,thisPtr);
+  
   configureNested ( _derivComputer.getPtr(), args );
-
+  _derivComputer->setFactoryRegistry(getFactoryRegistry());
   cf_assert(_derivComputer.isNotNull());
 }
 
@@ -320,9 +323,10 @@ void CellCenterFVMData::configurePolyReconstructor ( Config::ConfigArgs& args )
 
   Common::SafePtr<BaseMethodStrategyProvider<CellCenterFVMData,
     PolyReconstructor<CellCenterFVMData> > > prov =
-    Environment::Factory<PolyReconstructor<CellCenterFVMData> >::getInstance().getProvider(_polyRecStr);
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), PolyReconstructor<CellCenterFVMData>, _polyRecStr);
   cf_assert(prov.isNotNull());
   _polyRec = prov->create(_polyRecStr,thisPtr).d_castTo<FVMCC_PolyRec>();
+  _polyRec->setFactoryRegistry(getFactoryRegistry());
   configureNested ( _polyRec.getPtr(), args );
   
   cf_assert(_polyRec.isNotNull());
@@ -336,11 +340,12 @@ void CellCenterFVMData::configureLimiter ( Config::ConfigArgs& args )
   SharedPtr<CellCenterFVMData> thisPtr(this);
 
   Common::SafePtr<BaseMethodStrategyProvider<CellCenterFVMData,Limiter<CellCenterFVMData> > > prov =
-    Environment::Factory<Limiter<CellCenterFVMData> >::getInstance().getProvider(_limiterStr);
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), Limiter<CellCenterFVMData>, _limiterStr);
   cf_assert(prov.isNotNull());
   _limiter = prov->create(_limiterStr,thisPtr);
+  _limiter->setFactoryRegistry(getFactoryRegistry());
   configureNested ( _limiter.getPtr(), args );
-
+  
   cf_assert(_limiter.isNotNull());
 }
 
@@ -353,11 +358,12 @@ void CellCenterFVMData::configureNodalStatesExtrapolator ( Config::ConfigArgs& a
 
   Common::SafePtr<BaseMethodStrategyProvider<
     CellCenterFVMData, NodalStatesExtrapolator<CellCenterFVMData> > > prov =
-    Environment::Factory<NodalStatesExtrapolator<CellCenterFVMData> >::getInstance().
-    getProvider(_nStatesExtrapolatorStr);
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), NodalStatesExtrapolator<CellCenterFVMData>,
+			 _nStatesExtrapolatorStr);
   
   cf_assert(prov.isNotNull());
   _nStatesExtrapolator = prov->create(_nStatesExtrapolatorStr,thisPtr);
+  _nStatesExtrapolator->setFactoryRegistry(getFactoryRegistry());
   configureNested ( _nStatesExtrapolator.getPtr(), args );
 
   cf_assert(_nStatesExtrapolator.isNotNull());
@@ -373,20 +379,20 @@ void CellCenterFVMData::configureEquationFilters ( Config::ConfigArgs& args )
     // resize the vector of equation filters
     _eqFilters.resize(_eqFiltersStr.size());
     
-    Common::SafePtr<BaseMethodStrategyProvider<CellCenterFVMData,
-      EquationFilter<CellCenterFVMData> > > prov = CFNULL;
+    Common::SafePtr<BaseMethodStrategyProvider
+		    <CellCenterFVMData,EquationFilter<CellCenterFVMData> > > prov = CFNULL;
     
     for (CFuint i = 0; i < _eqFiltersStr.size(); ++i) {
       try {
-	prov = Environment::Factory<EquationFilter<CellCenterFVMData> >::getInstance().
-	  getProvider(_eqFiltersStr[i]);
+	prov = 
+	  FACTORY_GET_PROVIDER(getFactoryRegistry(), EquationFilter<CellCenterFVMData>, _eqFiltersStr[i]);
       }
       catch (Common::NoSuchValueException& e ) {
 	CFLog(VERBOSE, e.what() << "\n");
 	CFLog(VERBOSE, "Choosing NullEquationFilter instead ..." << "\n");
 	_eqFiltersStr[i] = "Null";
 	
-	prov = Environment::Factory<EquationFilter<CellCenterFVMData> >::getInstance().getProvider(_eqFiltersStr[i]);
+	prov = FACTORY_GET_PROVIDER(getFactoryRegistry(), EquationFilter<CellCenterFVMData>, _eqFiltersStr[i]);
       }
       
       _eqFilters[i] = prov->create(_eqFiltersStr[i], thisPtr);
@@ -395,8 +401,7 @@ void CellCenterFVMData::configureEquationFilters ( Config::ConfigArgs& args )
   else {
     // create a single Null equatiion filter
     _eqFilters.resize(1);
-    _eqFilters[0] = Environment::Factory<EquationFilter<CellCenterFVMData> >::getInstance().
-      getProvider("Null")->create("Null",thisPtr);
+    _eqFilters[0] = FACTORY_GET_PROVIDER(getFactoryRegistry(), EquationFilter<CellCenterFVMData>, "Null")->create("Null",thisPtr);
   }
   
   for (CFuint i = 0; i < _eqFilters.size(); ++i) {
@@ -428,21 +433,21 @@ void CellCenterFVMData::configureSourceTermComputer ( Config::ConfigArgs& args )
 
     // resize the vector of source terms
     _stComputer.resize(_stComputerStr.size());
-
-    Common::SafePtr<BaseMethodStrategyProvider<CellCenterFVMData,
-      ComputeSourceTerm<CellCenterFVMData> > > prov = CFNULL;
-
+    
+    Common::SafePtr<BaseMethodStrategyProvider
+		    <CellCenterFVMData,
+		     ComputeSourceTerm<CellCenterFVMData> > > prov = CFNULL;
+    
     for (CFuint i = 0; i < _stComputerStr.size(); ++i) {
       try {
-        prov = Environment::Factory<ComputeSourceTerm<CellCenterFVMData> >::getInstance().
-	  getProvider(_stComputerStr[i]);
+        prov = FACTORY_GET_PROVIDER(getFactoryRegistry(), ComputeSourceTerm<CellCenterFVMData>, _stComputerStr[i]);
       }
       catch (Common::NoSuchValueException& e ) {
         CFLog(VERBOSE, e.what() << "\n");
         CFLog(VERBOSE, "Choosing NullComputeSourceTerm instead ..." << "\n");
         _stComputerStr[i] = "Null";
 
-        prov = Environment::Factory<ComputeSourceTerm<CellCenterFVMData> >::getInstance().getProvider(_stComputerStr[i]);
+        prov = FACTORY_GET_PROVIDER(getFactoryRegistry(), ComputeSourceTerm<CellCenterFVMData>, _stComputerStr[i]);
       }
 
       _stComputer[i] = prov->create(_stComputerStr[i], thisPtr);
@@ -451,12 +456,11 @@ void CellCenterFVMData::configureSourceTermComputer ( Config::ConfigArgs& args )
   else {
     // create a single Null source term
     _stComputer.resize(1);
-    _stComputer[0] = Environment::Factory<ComputeSourceTerm<CellCenterFVMData> >::getInstance().
-      getProvider("Null")->create("Null",thisPtr);
+    _stComputer[0] = FACTORY_GET_PROVIDER(getFactoryRegistry(), ComputeSourceTerm<CellCenterFVMData>, "Null")->create("Null",thisPtr);
   }
 
-  for (CFuint i = 0; i < _stComputerStr.size(); ++i)
-  {
+  for (CFuint i = 0; i < _stComputerStr.size(); ++i) {
+    _stComputer[i]->setFactoryRegistry(getFactoryRegistry());
     configureNested(_stComputer[i].getPtr(), args);
   }
 }
@@ -482,16 +486,14 @@ void CellCenterFVMData::configureVarSetTransformers ( Config::ConfigArgs& args )
   Common::SafePtr<VarSetMatrixTransformer::PROVIDER> matTransProv = CFNULL;
 
   try {
-    matTransProv = Environment::Factory<VarSetMatrixTransformer>::getInstance().getProvider
-      (solToUpdateInUpdateMatTransStr);
+    matTransProv = FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetMatrixTransformer, solToUpdateInUpdateMatTransStr);
   }
   catch (Common::NoSuchValueException& e) {
     solToUpdateInUpdateMatTransStr = "Identity";
 
     CFLog(VERBOSE, e.what() << "\n");
     CFLog(VERBOSE, "Choosing IdentityVarSetMatrixTransformer instead ..." << "\n");
-    matTransProv = Environment::Factory<VarSetMatrixTransformer>::getInstance().getProvider
-      (solToUpdateInUpdateMatTransStr);
+    matTransProv = FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetMatrixTransformer, solToUpdateInUpdateMatTransStr);
   }
 
   cf_assert(matTransProv.isNotNull());
@@ -505,16 +507,14 @@ void CellCenterFVMData::configureVarSetTransformers ( Config::ConfigArgs& args )
   CFLog(VERBOSE, "Configuring VarSet Transformer: " <<
 	updateToSolutionInUpdateMatTransStr << "\n");
   try {
-    matTransProv = Environment::Factory<VarSetMatrixTransformer>::getInstance().getProvider
-      (updateToSolutionInUpdateMatTransStr);
+    matTransProv = FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetMatrixTransformer, updateToSolutionInUpdateMatTransStr);
   }
   catch (Common::NoSuchValueException& e) {
     updateToSolutionInUpdateMatTransStr = "Identity";
     
     CFLog(VERBOSE, e.what() << "\n");
     CFLog(VERBOSE, "Choosing IdentityVarSetMatrixTransformer instead ..." << "\n");
-    matTransProv = Environment::Factory<VarSetMatrixTransformer>::getInstance().getProvider
-      (updateToSolutionInUpdateMatTransStr);
+    matTransProv = FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetMatrixTransformer, updateToSolutionInUpdateMatTransStr);
   }
   
   cf_assert(matTransProv.isNotNull());
@@ -532,16 +532,14 @@ void CellCenterFVMData::configureVarSetTransformers ( Config::ConfigArgs& args )
 	updateToSolutionVecTransStr << "\n");
 
   try {
-    vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
-      (updateToSolutionVecTransStr);
+    vecTransProv = FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, updateToSolutionVecTransStr);
   }
   catch (Common::NoSuchValueException& e) {
     updateToSolutionVecTransStr = "Identity";
 
     CFLog(VERBOSE, e.what() << "\n");
     CFLog(VERBOSE, "Choosing IdentityVarSetTransformer instead ..." << "\n");
-    vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
-      (updateToSolutionVecTransStr);
+    vecTransProv = FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, updateToSolutionVecTransStr);
   }
 
   cf_assert(vecTransProv.isNotNull());
@@ -554,16 +552,14 @@ void CellCenterFVMData::configureVarSetTransformers ( Config::ConfigArgs& args )
   CFLog(VERBOSE, "Configuring VarSet Transformer: " << solutionToLinearVecTransStr << "\n");
   
   try {
-    vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
-      (solutionToLinearVecTransStr);
+    vecTransProv = FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, solutionToLinearVecTransStr);
   }
   catch (Common::NoSuchValueException& e) {
     solutionToLinearVecTransStr = "Identity";
 
     CFLog(VERBOSE, e.what() << "\n");
     CFLog(VERBOSE, "Choosing IdentityVarSetTransformer instead ..." << "\n");
-    vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
-      (solutionToLinearVecTransStr);
+    vecTransProv = FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, solutionToLinearVecTransStr);
   }
   
   cf_assert(vecTransProv.isNotNull());
@@ -578,16 +574,14 @@ void CellCenterFVMData::configureVarSetTransformers ( Config::ConfigArgs& args )
 	updateToReconstructVecTransStr << "\n");
   
   try {
-    vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
-      (updateToReconstructVecTransStr);
+    vecTransProv = FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, updateToReconstructVecTransStr);
   }
   catch (Common::NoSuchValueException& e) {
     updateToReconstructVecTransStr = "Identity";
     
     CFLog(VERBOSE, e.what() << "\n");
     CFLog(VERBOSE, "Choosing IdentityVarSetTransformer instead ..." << "\n");
-    vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
-      (updateToReconstructVecTransStr);
+    vecTransProv = FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, updateToReconstructVecTransStr);
   }
 
   cf_assert(vecTransProv.isNotNull());
@@ -602,16 +596,14 @@ void CellCenterFVMData::configureVarSetTransformers ( Config::ConfigArgs& args )
 	reconstructToUpdateVecTransStr << "\n");
   
   try {
-    vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
-      (reconstructToUpdateVecTransStr);
+    vecTransProv = FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, reconstructToUpdateVecTransStr);
   }
   catch (Common::NoSuchValueException& e) {
     reconstructToUpdateVecTransStr = "Identity";
     
     CFLog(VERBOSE, e.what() << "\n");
     CFLog(VERBOSE, "Choosing IdentityVarSetTransformer instead ..." << "\n");
-    vecTransProv = Environment::Factory<VarSetTransformer>::getInstance().getProvider
-      (reconstructToUpdateVecTransStr);
+    vecTransProv = FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, reconstructToUpdateVecTransStr);
   }
 
   cf_assert(vecTransProv.isNotNull());
@@ -636,13 +628,13 @@ void CellCenterFVMData::configureJacobianLinearizer( Config::ConfigArgs& args )
   
   SafePtr<JacobianLinearizer::PROVIDER> jacobLinearProv = CFNULL;
   try {
-    jacobLinearProv = Environment::Factory<JacobianLinearizer>::getInstance().
-      getProvider(linearizerName);
+    jacobLinearProv =
+      FACTORY_GET_PROVIDER(getFactoryRegistry(), JacobianLinearizer, linearizerName);
   }
   catch (Common::NoSuchValueException& except) {
     linearizerName = "Null";
-    jacobLinearProv = Environment::Factory<JacobianLinearizer>::getInstance().
-      getProvider(linearizerName);
+    jacobLinearProv = 
+      FACTORY_GET_PROVIDER(getFactoryRegistry(), JacobianLinearizer, linearizerName);
   }
   _linearizer = jacobLinearProv->create(physModel);
   cf_assert(_linearizer.isNotNull());
@@ -653,10 +645,13 @@ void CellCenterFVMData::configureJacobianLinearizer( Config::ConfigArgs& args )
 void CellCenterFVMData::setup()
 {
   CFAUTOTRACE;
+  
+  CFLog(VERBOSE, "CellCenterFVMData::setup() => start\n");
+    
   SpaceMethodData::setup();
   
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
-    
+  
   // set up the GeometricEntity builders
   _faceTrsGeoBuilder.setup();
   _faceCellTrsGeoBuilder.setup();
@@ -668,7 +663,9 @@ void CellCenterFVMData::setup()
   _volumeIntegrator.setup();
   
   // sort TRSs to which BCs are not associated
-  sort(_trssWithNoBC.begin(), _trssWithNoBC.end());
+  sort(_trssWithNoBC.begin(), _trssWithNoBC.end()); 
+  
+  CFLog(VERBOSE, "CellCenterFVMData::setup() => end\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////

@@ -219,12 +219,13 @@ void ParCFmeshBinaryFileWriter::writeVersionStamp(MPI_File* fh)
   
   if (_myRank == _ioRank) {
     MPIIOFunctions::writeKeyValue<char>(fh, "!COOLFLUID_VERSION ");
-    MPIIOFunctions::writeKeyValue<char>(fh, CFEnv::getInstance().getCFVersion());
+    MPIIOFunctions::writeKeyValue<char>
+      (fh, Environment::CFEnv::getInstance().getCFVersion());
     
     // this can fail if there are problems with SVN
     // MPIIOFunctions::writeKeyValue<char>(fh, "\n!COOLFLUID_SVNVERSION ");
     // MPIIOFunctions::writeKeyValue<char>(fh, CFEnv::getInstance().getSvnVersion());
-
+    
     MPIIOFunctions::writeKeyValue<char>(fh, "\n!CFMESH_FORMAT_VERSION ");
     MPIIOFunctions::writeKeyValue<char>(fh, "1.3");
   }

@@ -82,11 +82,13 @@ void PhysicalModelImpl::configure ( Config::ConfigArgs& args )
     }
   }
 
-  _physicalPropLib = Environment::Factory<PhysicalPropertyLibrary>::getInstance().
-    getProvider(_physicalPropLibStr)->create(_physicalPropLibStr);
-
+  _physicalPropLib = FACTORY_GET_PROVIDER
+    (getFactoryRegistry(), PhysicalPropertyLibrary, _physicalPropLibStr)->
+    create(_physicalPropLibStr);
   cf_assert(_physicalPropLib.isNotNull());
-
+  
+  _physicalPropLib->setFactoryRegistry(getFactoryRegistry());
+  
   configureNested ( _physicalPropLib.getPtr(), args );
 }
 

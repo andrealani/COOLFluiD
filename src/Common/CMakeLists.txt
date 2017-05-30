@@ -27,6 +27,9 @@ DynamicObject.hh
 DynamicObject.cxx
 Exception.cxx
 Exception.hh
+FactoryBase.hh
+FactoryRegistry.cxx
+FactoryRegistry.hh
 FailedAssertionException.hh
 FloatingPointException.hh
 Fortran.hh

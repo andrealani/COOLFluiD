@@ -149,9 +149,9 @@ void LeastSquareP1Setup::computeStencil()
   const CFuint nbStates = states.size();
   // table that stores the connectivity state-neighbor states
   vector< vector<State*> > neighborStates(nbStates);
-
-  SelfRegistPtr<ComputeStencil> computeStencil(Environment::Factory<ComputeStencil>::getInstance().
-					       getProvider(_stencilType)->create(_stencilType));
+  
+  SelfRegistPtr<ComputeStencil> computeStencil
+    (FACTORY_GET_PROVIDER(getFactoryRegistry(), ComputeStencil, _stencilType)->create(_stencilType));
   configureNested ( computeStencil.getPtr(), m_stored_args );
   
   computeStencil->setDataSocketSinks(socket_states, socket_nodes, socket_stencil, socket_gstates);

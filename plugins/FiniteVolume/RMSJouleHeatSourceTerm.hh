@@ -3,7 +3,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "ComputeSourceTermFVMCC.hh"
+#include "FiniteVolume/ComputeSourceTermFVMCC.hh"
 #include "Common/SafePtr.hh"
 #include "Framework/State.hh"
 #include "Framework/DataSocketSink.hh"
@@ -69,8 +69,9 @@ public:
    * Compute the source term
    */
   void computeSource(Framework::GeometricEntity *const element,
-                     RealVector& source);
-
+                     RealVector& source,
+		     RealMatrix& jacobian);
+  
   /**
    * Returns the DataSocket's that this command needs as sinks
    * @return a vector of SafePtr with the DataSockets

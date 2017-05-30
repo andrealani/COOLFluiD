@@ -81,9 +81,11 @@ void SubSystemStatus::configure ( Config::ConfigArgs& args )
   ConfigObject::configure(args);
 
   // configure the DT computer
-  m_computeDT.reset(Environment::Factory<ComputeDT>::getInstance().getProvider(m_computeDTStr)->
-                   create(m_computeDTStr));
-
+  m_computeDT.reset
+    (FACTORY_GET_PROVIDER(getFactoryRegistry(), ComputeDT, m_computeDTStr)->
+     create(m_computeDTStr));
+  m_computeDT->setFactoryRegistry(getFactoryRegistry());
+  
   configureNested ( m_computeDT.getPtr(), args );
 
   if (m_timeStepLayers > 1){
@@ -221,6 +223,22 @@ void SubSystemStatus::setDTDim(const CFreal DT)
   m_previousTimeStep = m_timeStep;
   m_timeStep = DT/(PhysicalModelStack::getActive()->getImplementor()->getRefTime());
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+ void SubSystemStatus::setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> fr)
+ {
+   m_fr = fr;
+ }
+
+//////////////////////////////////////////////////////////////////////////////
+
+ Common::SafePtr<Common::FactoryRegistry> SubSystemStatus::getFactoryRegistry() 
+ {
+#ifdef CF_HAVE_SINGLE_EXEC
+   return m_fr;
+#endif
+ }
 
 //////////////////////////////////////////////////////////////////////////////
 
