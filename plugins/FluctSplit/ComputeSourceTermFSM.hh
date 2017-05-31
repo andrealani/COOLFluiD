@@ -15,8 +15,6 @@
 
 namespace COOLFluiD {
 
-
-
     namespace FluctSplit {
 
 //////////////////////////////////////////////////////////////////////////////
@@ -48,6 +46,7 @@ public:
   /// in this command before processing phase
   virtual void setup()
   {
+    Framework::ComputeSourceTerm<FluctuationSplitData>::setup();
     const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
     _jacobMatrix.resize(nbEqs, nbEqs);
   }

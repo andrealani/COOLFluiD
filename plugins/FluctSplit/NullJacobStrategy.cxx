@@ -43,6 +43,7 @@ NullJacobStrategy::~NullJacobStrategy()
 
 void NullJacobStrategy::setup()
 {
+  ComputeJacobStrategy::setup();
 }
 
 //////////////////////////////////////////////////////////////////////////////

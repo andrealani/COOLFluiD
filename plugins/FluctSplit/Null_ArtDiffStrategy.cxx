@@ -44,7 +44,7 @@ Null_ArtDiffStrategy::~Null_ArtDiffStrategy()
 
 void Null_ArtDiffStrategy::setup()
 {
-
+  ArtificialDiffusionStrategy::setup();
 }
 
 //////////////////////////////////////////////////////////////////////////////

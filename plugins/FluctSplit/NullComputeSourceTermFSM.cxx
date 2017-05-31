@@ -44,6 +44,7 @@ NullComputeSourceTermFSM::~NullComputeSourceTermFSM()
 
 void NullComputeSourceTermFSM::setup()
 {
+  ComputeSourceTermFSM::setup();
   CFLog(VERBOSE, "Calling NullComputeSourceTermFSM::setup()\n");
 }
 

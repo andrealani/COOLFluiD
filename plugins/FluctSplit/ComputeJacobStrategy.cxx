@@ -43,6 +43,8 @@ ComputeJacobStrategy::~ComputeJacobStrategy()
 
 void ComputeJacobStrategy::setup()
 {
+   MethodStrategy<FluctuationSplitData>::setup();
+
   _fsStrategy = getMethodData().getFluctSplitStrategy();
 //  _adStrategy = getMethodData().getArtificialDiffusionStrategy();
 

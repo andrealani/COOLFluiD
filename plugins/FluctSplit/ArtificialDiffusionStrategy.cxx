@@ -57,6 +57,8 @@ void ArtificialDiffusionStrategy::configure ( Config::ConfigArgs& args )
 
 void ArtificialDiffusionStrategy::setup()
 {
+  Framework::MethodStrategy<FluctuationSplitData>::setup();
+
   CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
 //   CFuint dim   = PhysicalModelStack::getActive()->getDim();
 
