@@ -143,7 +143,6 @@ void CFEnv::setup()
   
   SetupObject::setup();
   
-  CFout << "CFEnv::setup()" << "\n";
   // these are the default values
 #ifdef CF_HAVE_CURL  
   SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().setDefaultBehavior("CurlAccessRepository");
