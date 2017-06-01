@@ -11,7 +11,6 @@
 #include "Common/NonCopyable.hh"
 #include "Common/SelfRegistPtr.hh"
 #include "Common/SafePtr.hh"
-
 #include "Common/CommonAPI.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -80,6 +79,7 @@ private: // data
   Common::ProcessInfo * m_process_info;
   /// signal handler object
   Common::SignalHandler * m_sig_handler;
+  
   /// libloader object
   Common::LibLoader * m_lib_loader;
 

@@ -19,7 +19,9 @@
 
 #include "Config/ConfigObject.hh"
 
+#ifndef CF_HAVE_SINGLE_EXEC
 #include "Environment/ModuleLoader.hh"
+#endif
 
 #include "Framework/Framework.hh"
 
@@ -132,8 +134,11 @@ protected: // functions
     
  private: // data
 
+#ifndef CF_HAVE_SINGLE_EXEC
   /// Module loader
   Environment::ModuleLoader m_moduleLoader;
+#endif
+
   /// the names of the SubSytem's to create in this simulation
   std::vector<std::string> m_subSystemNames;
   /// the types of the SubSytem's to create in this simulation

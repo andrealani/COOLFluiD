@@ -97,7 +97,9 @@ void Simulator::defineConfigOptions(Config::OptionList& options)
 
 Simulator::Simulator(const std::string& name) :
   ConfigObject(name),
+#ifndef CF_HAVE_SINGLE_EXEC
   m_moduleLoader(),
+#endif
   m_subSystemNames(),
   m_subSystemTypes(),
   m_subSys(),
@@ -195,12 +197,14 @@ void Simulator::configure ( Config::ConfigArgs& args )
   // configure ModuleLoader must be after dir config
   // and before all other configs
   CFLog(NOTICE,"-------------------------------------------------------------\n");
-  
+
+#ifndef CF_HAVE_SINGLE_EXEC  
   CFLog(NOTICE,"Loading external modules\n");
   configureNested ( m_moduleLoader, args );
   m_moduleLoader.loadExternalModules();
   CFLog(NOTICE,"Initiating environment of loaded modules\n");
   Environment::CFEnv::getInstance().initiateModules();
+#endif
   
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   

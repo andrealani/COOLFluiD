@@ -10,8 +10,6 @@ LIST ( APPEND coolfluid-solver_libs ${CF_KERNEL_LIBS} ${CF_KERNEL_STATIC_LIBS} )
  
 IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND coolfluid-solver_libs ${CF_Boost_LIBRARIES} )
-ELSE()
-LIST ( APPEND coolfluid-solver_libs dl )
 ENDIF()
 
 MESSAGE ("###### coolfluid-solver_libs are ${coolfluid-solver_libs}")

@@ -235,15 +235,15 @@ LIST ( APPEND OPTIONAL_dirfiles ProcessInfoWin32.hh ProcessInfoWin32.cxx )
 ### UNIXES ####
 IF (UNIX)
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
   IF ( CF_HAVE_DLOPEN )
     LIST ( APPEND Common_files PosixDlopenLibLoader.hh PosixDlopenLibLoader.cxx )
     # the following makes the compilation fail when no library is created
     # needs to be tested better for static compilation
-    IF ( NOT CF_HAVE_SINGLE_EXEC )
-     LIST ( APPEND Common_libs dl )
-    ENDIF()
+    LIST ( APPEND Common_libs dl )
     SET ( CF_HAVE_LIBLOADER ON )
   ENDIF()
+ENDIF()
 
   IF    ( CF_OS_MACOSX )
     LIST ( APPEND Common_files SignalHandlerMacOSX.hh SignalHandlerMacOSX.cxx )
@@ -277,7 +277,7 @@ IF (WIN32)
 
 ENDIF()
 
-IF    ( NOT CF_HAVE_LIBLOADER )
+IF ( NOT CF_HAVE_LIBLOADER AND NOT CF_HAVE_SINGLE_EXEC )
   MESSAGE ( FATAL_ERROR "No dynamic library loader was found!")
 ENDIF()
 
