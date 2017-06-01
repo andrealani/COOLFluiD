@@ -111,8 +111,10 @@ void MeshData::configure ( Config::ConfigArgs& args )
   m_domainmodel = prov_dm->create(m_domainmodel_str);
   cf_assert(m_domainmodel.isNotNull());
   m_domainmodel->setFactoryRegistry(getFactoryRegistry());
-  
+ 
   configureNested ( m_domainmodel.getPtr(), args );
+
+  GeometricEntityRegister::getInstance().setFactoryRegistry(getFactoryRegistry());
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -523,8 +525,9 @@ void MeshData::setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> fr)
 Common::SafePtr<Common::FactoryRegistry> MeshData::getFactoryRegistry() 
 {
 #ifdef CF_HAVE_SINGLE_EXEC
-  return m_fr;
+  cf_assert(m_fr != CFNULL);
 #endif
+  return m_fr;
 }
 
 //////////////////////////////////////////////////////////////////////////////

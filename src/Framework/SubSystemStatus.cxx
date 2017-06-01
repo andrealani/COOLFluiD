@@ -236,8 +236,9 @@ void SubSystemStatus::setDTDim(const CFreal DT)
  Common::SafePtr<Common::FactoryRegistry> SubSystemStatus::getFactoryRegistry() 
  {
 #ifdef CF_HAVE_SINGLE_EXEC
-   return m_fr;
+  cf_assert(m_fr != CFNULL);
 #endif
+  return m_fr;
  }
 
 //////////////////////////////////////////////////////////////////////////////

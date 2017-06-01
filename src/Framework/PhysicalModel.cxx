@@ -115,8 +115,9 @@ void PhysicalModel::setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> 
  Common::SafePtr<Common::FactoryRegistry> PhysicalModel::getFactoryRegistry() 
  {
 #ifdef CF_HAVE_SINGLE_EXEC
-   return m_fr;
+  cf_assert(m_fr != CFNULL);
 #endif
+  return m_fr;
  }
 
 //////////////////////////////////////////////////////////////////////////////

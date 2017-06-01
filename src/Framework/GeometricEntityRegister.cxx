@@ -7,10 +7,6 @@
 #include "Framework/GeometricEntityRegister.hh"
 #include "Framework/BaseGeometricEntityProvider.hh"
 #include "Framework/InterpolatorRegister.hh"
-#include "Framework/GeometricEntity.hh"
-#include "Config/DuplicateNameException.hh"
-#include "Common/FactoryRegistry.hh"
-#include "Environment/CFEnv.hh"
 #include "Environment/Factory.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -47,6 +43,23 @@ GeometricEntityRegister::~GeometricEntityRegister()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void GeometricEntityRegister::setFactoryRegistry(SafePtr<FactoryRegistry> fr)
+{
+  m_fr = fr;
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
+SafePtr<FactoryRegistry> GeometricEntityRegister::getFactoryRegistry()
+{
+#ifdef CF_HAVE_SINGLE_EXEC
+  cf_assert(m_fr != CFNULL);
+#endif
+  return m_fr;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 CFuint GeometricEntityRegister::regist(const std::string& providerName)
 {
   CFuint idx = 0;
@@ -60,14 +73,10 @@ CFuint GeometricEntityRegister::regist(const std::string& providerName)
     }
   }
   else {
-    SafePtr<FactoryRegistry> fRegistry = 
-      Environment::CFEnv::getInstance().getFactoryRegistry();
-    cf_assert(fRegistry.isNotNull());
-    
     // else add it to the database and return the index
-    cf_assert(FACTORY_EXISTS_PROVIDER(fRegistry, GeometricEntity, providerName));
+    cf_assert(FACTORY_EXISTS_PROVIDER(getFactoryRegistry(), GeometricEntity, providerName));
     Common::SafePtr<BaseGeometricEntityProvider> provider =
-      FACTORY_GET_PROVIDER(fRegistry, GeometricEntity, providerName);
+      FACTORY_GET_PROVIDER(getFactoryRegistry(), GeometricEntity, providerName);
     
     idx = _database.size();
     _database.push_back(&*provider);

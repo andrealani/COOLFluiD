@@ -154,8 +154,8 @@ int main(int argc, char** argv)
   using namespace boost;
   
 #ifdef CF_HAVE_SINGLE_EXEC
-  Common::SafePtr<FactoryRegistry> fRegistry = 
-    Environment::CFEnv::getInstance().getFactoryRegistry();
+  std::unique_ptr<FactoryRegistry> fr(new FactoryRegistry());
+  SafePtr<FactoryRegistry> fRegistry(fr.get()); 
   cf_assert(fRegistry.isNotNull());
   
   PluginsRegister pr;
