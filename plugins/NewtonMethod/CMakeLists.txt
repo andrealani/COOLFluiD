@@ -204,10 +204,12 @@ LIST ( APPEND NewtonMethodMHD_requires_mods MHD )
 LIST ( APPEND NewtonMethodMHD_cflibs NewtonMethod MHD )
 CF_ADD_PLUGIN_LIBRARY ( NewtonMethodMHD )
 ELSE()
+IF ( CF_BUILD_NewtonMethodMHD )
  FOREACH (AFILE ${NewtonMethodMHD_files} )
  LIST(APPEND coolfluid-solver_files ../../plugins/NewtonMethod/${AFILE} )
  ENDFOREACH(AFILE)
  CF_CACHE_LIST_APPEND ( ${MYLIBNAME4}_files  ${coolfluid-solver_files} )
+ENDIF()
 ENDIF()
 
 #######################################################################
