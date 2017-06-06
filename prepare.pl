@@ -162,7 +162,9 @@ my %default_options = (
     'with_longint'         => 0,
     'with_llongint'        => 0,
     'libpetsc_name' 	   => "petsc",
-    'libpetsc_deps_paths'  => ""
+    'libpetsc_deps_paths'  => "",
+    'libparmetis_name'     => "parmetis",
+    'libmetis_name'        => "metis"
 );
 
 # add skip default skip options
@@ -233,7 +235,9 @@ sub parse_command_line_options()
        'install_dir=s'  => \$options{'install_dir'},
        'cmake_generator=s' => \$options{'cmake_generator'},
        'libpetsc_name=s'   => \$options{'libpetsc_name'},
-       'libpetsc_deps_paths' => \$options{'libpetsc_deps_paths'}
+       'libpetsc_deps_paths' => \$options{'libpetsc_deps_paths'},
+       'libparmetis_name=s'  => \$options{'libparmetis_name'},
+       'libmetis_name=s'     => \$options{'libmetis_name'}
        );
    
    # remove duplicated entries in options
@@ -300,6 +304,8 @@ sub parse_command_line_options()
 
          --libpetsc_name=       Name of the petsc library (Default: petsc)  
          --libpetsc_deps_paths  Full paths to all petsc dependencies (needed only for static linking)
+         --libparmetis_name=    Name of the parmetis library (Default: parmetis)
+         --libmetis_name=       Name of the metis library (Default: metis) 
 
   ACTIONS
 
@@ -935,6 +941,20 @@ sub setup_cfgoptions()
    $libpetsc_deps_paths = get_option('libpetsc_deps_paths');
    $other_options .= " -DCF_LIBPETSC_DEPS_PATHS=\"$libpetsc_deps_paths\"";
   } 
+
+  my $libparmetis_name = "parmetis";
+  if (get_option('libparmetis_name'))
+  {
+   $libparmetis_name = get_option('libparmetis_name');
+   $other_options .= " -DCF_LIBPARMETIS_NAME=$libparmetis_name";
+  }
+
+  my $libmetis_name = "metis";
+  if (get_option('libmetis_name'))
+  {
+   $libmetis_name = get_option('libmetis_name');
+   $other_options .= " -DCF_LIBMETIS_NAME=$libmetis_name";
+  }
 
   setup_option('nofortran',           'CF_SKIP_FORTRAN');
   setup_option('withmpi',             'CF_ENABLE_MPI');
