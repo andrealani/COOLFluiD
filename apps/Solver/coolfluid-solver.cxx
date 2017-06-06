@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <memory>
 
 #include "boost/filesystem/operations.hpp" // includes boost/filesystem/path.hpp
 #include "boost/filesystem/fstream.hpp"    
@@ -154,7 +155,7 @@ int main(int argc, char** argv)
   using namespace boost;
   
 #ifdef CF_HAVE_SINGLE_EXEC
-  std::unique_ptr<FactoryRegistry> fr(new FactoryRegistry());
+  std::auto_ptr<FactoryRegistry> fr(new FactoryRegistry());
   SafePtr<FactoryRegistry> fRegistry(fr.get()); 
   cf_assert(fRegistry.isNotNull());
   
