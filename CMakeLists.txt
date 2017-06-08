@@ -230,6 +230,12 @@ ELSE()
    SET (CF_HAVE_IBMSTATIC 0 CACHE BOOL "Compiling on IBM machine with dynamic linking")
 ENDIF()
 
+IF ( CF_ENABLE_CRAYSTATIC )
+    SET (CF_HAVE_CRAYSTATIC 1 CACHE BOOL "Compiling on CRAY machine with static linking")
+ELSE()
+   SET (CF_HAVE_CRAYSTATIC 0 CACHE BOOL "Compiling on CRAY machine with dynamic linking")
+ENDIF()
+
 IF ( CF_ENABLE_SINGLEEXEC ) 
    SET (CF_HAVE_SINGLE_EXEC 1 CACHE BOOL "Compile a single executable, no libraries")
 ELSE()
