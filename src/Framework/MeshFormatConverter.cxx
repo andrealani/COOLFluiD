@@ -116,7 +116,7 @@ void MeshFormatConverter::convert(const boost::filesystem::path& fromFilepath,
   stp.stop();
   fhandle->close();
 
-  CFout << "Conversion " << this->getName()<< " took: " << stp.read() << "s\n";
+  CFLog(INFO, "Conversion " << this->getName()<< " took: " << stp.read() << "s\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

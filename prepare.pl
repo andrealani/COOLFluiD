@@ -102,6 +102,7 @@ my %default_options = (
     'mpi_extra_libs'  => "",
     'nofortran'       => "",
     'withcuda_malloc' => 0,
+    'with_log4cpp'    => 1, 
     'explicit_templates' => "",
     'cflags'          => "",
     'cxxflags'        => "",
@@ -986,6 +987,7 @@ sub setup_cfgoptions()
   setup_option('with_longint',        'CF_ENABLE_LONG');
   setup_option('with_llongint',       'CF_ENABLE_LLONG');
   setup_option('withcuda_malloc',     'CF_CUDA_MALLOC');
+  setup_option('with_log4cpp',        'CF_ENABLE_LOG4CPP');  
 }
 
 #==========================================================================

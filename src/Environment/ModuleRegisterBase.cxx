@@ -24,7 +24,9 @@ ModuleRegisterBase::ModuleRegisterBase(const std::string& name) :
  m_configRegistry(),
  m_init(false)
 {
+#ifndef CF_HAVE_CRAYSTATIC
   CFtrace << "ModuleRegisterBase::ModuleRegisterBase() => Registering module [" << name << "]\n";
+#endif
   Environment::CFEnv::getInstance().getModuleRegistry()->regist(this);
 }
 

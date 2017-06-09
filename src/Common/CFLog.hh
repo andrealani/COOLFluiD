@@ -9,11 +9,15 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
+#if defined(CF_HAVE_CRAYSTATIC) || !defined(CF_HAVE_LOG4CPP)
+#include <iostream>
+#endif
+
 #include "logcpp/Category.hh"
 
 #include "Common/COOLFluiD.hh"
 
-#if (defined(CF_HAVE_IBMSTATIC) || defined(CF_HAVE_CRAYSTATIC)) && defined(CF_HAVE_MPI)
+#if (defined(CF_HAVE_IBMSTATIC) || defined(CF_HAVE_CRAYSTATIC) || !defined(CF_HAVE_LOG4CPP))  && defined(CF_HAVE_MPI)
 #include <mpi.h>
 #endif
 
@@ -80,26 +84,41 @@ private: // methods
 //////////////////////////////////////////////////////////////////////////////
 
 /// these are always defined
+#if !defined(CF_HAVE_CRAYSTATIC) || defined(CF_HAVE_LOG4CPP)  
 #define CFout    CFLogger::getInstance().getMainLogger().noticeStream()
 #define CFerr    CFLogger::getInstance().getMainLogger().errorStream()
 #define CFlog    CFLogger::getInstance().getMainLogger().infoStream()
 #define CFtrace  CFLogger::getInstance().getTraceLogger().debugStream()
 #define CFendl   logcpp::CategoryStream::ENDLINE
+#else
+#define CFout    std::cout
+#define CFerr    std::cout
+#define CFlog    std::cout
+#define CFtrace  std::cout
+#define CFendl   std::endl
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 
 // bypass default CFLog when compiling with IBM compiler with static linking
-#if (defined(CF_HAVE_IBMSTATIC) || defined(CF_HAVE_CRAYSTATIC)) && defined(CF_HAVE_MPI)
+#if (defined(CF_HAVE_IBMSTATIC) || defined(CF_HAVE_CRAYSTATIC)) || !defined(CF_HAVE_LOG4CPP) && defined(CF_HAVE_MPI)
 static int getCPURank() 
 {
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   return rank;
 }
+#ifdef CF_HAVE_IBMSTATIC
 #define CFLog(n,x) if (n <= CFLogger::getInstance().getMainLoggerLevel() && getCPURank() == 0) CFLogger::getInstance().getMainLogger() << n << x 
 #endif
 
-#if !defined(CF_HAVE_IBMSTATIC) && !defined(CF_HAVE_CRAYSTATIC)
+#if defined(CF_HAVE_CRAYSTATIC) || !defined(CF_HAVE_LOG4CPP)
+#define CFLog(n,x) if (n <= CFLogger::getInstance().getMainLoggerLevel() && getCPURank() == 0) std::cout << x
+#endif
+
+#endif
+
+#if !defined(CF_HAVE_IBMSTATIC) && !defined(CF_HAVE_CRAYSTATIC) && defined(CF_HAVE_LOG4CPP)
 #ifndef CF_NO_LOG
   #define CFLog(n,x) if (n <= CFLogger::getInstance().getMainLoggerLevel()) CFLogger::getInstance().getMainLogger() << n << x
  #else

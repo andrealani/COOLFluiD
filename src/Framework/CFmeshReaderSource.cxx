@@ -130,13 +130,13 @@ void CFmeshReaderSource::resizeNodes(const CFuint nbNodes)
         nbVarFound++;
       }
       else{
-        CFout << "Extra Nodal Variable : " << (*(getExtraNodalVarNames()))[iVar] << " present in CFmesh but not read...\n";
+        CFLog(WARN, "Extra Nodal Variable : " << (*(getExtraNodalVarNames()))[iVar] << " present in CFmesh but not read...\n");
       }
     }
 
     if(nbVarFound != nbExtraVarsInCFcase)
     {
-      CFout << "Some extra nodal variables requested in the CFcase could be found...\n";
+      CFLog(WARN, "Some extra nodal variables requested in the CFcase could be found...\n");
       cf_assert(nbVarFound == nbExtraVarsInCFcase);
     }
   }
@@ -198,13 +198,13 @@ void CFmeshReaderSource::resizeStates(const CFuint nbStates)
         nbVarFound++;
       }
       else {
-        CFout << "Extra State Variable : " << (*(getExtraStateVarNames()))[iVar] << " present in CFmesh but not read...\n";
+        CFLog(WARN, "Extra State Variable : " << (*(getExtraStateVarNames()))[iVar] << " present in CFmesh but not read...\n");
       }
     }
 
     if(nbVarFound != nbExtraVarsInCFcase)
     {
-      CFout << "Some extra state variables requested in the CFcase could be found...\n";
+      CFLog(WARN, "Some extra state variables requested in the CFcase could be found...\n");
       cf_assert(nbVarFound == nbExtraVarsInCFcase);
     }
   }
@@ -235,13 +235,13 @@ void CFmeshReaderSource::resizeExtraVars()
         nbVarFound++;
       }
       else{
-        CFout << "Extra Variable : " << (*(getExtraVarNames()))[iVar] << " present in CFmesh but not read...\n";
+        CFLog(WARN, "Extra Variable : " << (*(getExtraVarNames()))[iVar] << " present in CFmesh but not read...\n");
       }
     }
     
     if(nbVarFound != nbExtraVarsInCFcase)
     {
-      CFout << "Some extra variables requested in the CFcase could be found...\n";
+      CFLog(WARN, "Some extra variables requested in the CFcase could be found...\n");
       cf_assert(nbVarFound == nbExtraVarsInCFcase);
     }
   }

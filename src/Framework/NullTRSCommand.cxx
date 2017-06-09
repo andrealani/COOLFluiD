@@ -29,7 +29,7 @@ NullTRSCommand::~NullTRSCommand()
 
 void NullTRSCommand::execute()
 {
-  CFout << getName() << " => " << getCurrentTRS()->getName() << "\n";
+  CFLog(INFO, getName() << " => " << getCurrentTRS()->getName() << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

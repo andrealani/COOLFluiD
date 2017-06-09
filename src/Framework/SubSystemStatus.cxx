@@ -93,7 +93,7 @@ void SubSystemStatus::configure ( Config::ConfigArgs& args )
   m_innerDTRatio.resize(m_timeStepLayers);
 
   if(m_innerDT.size() != m_innerDTConf.size()) {
-    CFout << "WARNING: Inner DeltaT not set correctly!!!" << "\n";
+    CFLog(WARN, "WARNING: Inner DeltaT not set correctly!!!" << "\n");
   }
   else {
       for (CFuint i = 0; i < m_timeStepLayers; ++i) {

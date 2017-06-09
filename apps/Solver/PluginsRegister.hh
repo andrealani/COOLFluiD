@@ -256,7 +256,10 @@
 #include "NewtonMethod/TwoLayerUpdateSol.hh"
 #include "NewtonMethod/UpdateSolCoupling.hh"
 #include "NewtonMethod/UpdateSolFVMCC.hh"
+
+#if defined(CF_BUILD_NewtonMethodMHD) && defined(CF_BUILD_MHD)
 #include "NewtonMethod/UpdateSolMHD.hh"
+#endif
 
 #include "Petsc/PetscLSSData.hh"
 #include "Petsc/Petsc.hh"
@@ -1465,10 +1468,12 @@ void registerAll(Common::SafePtr<Common::FactoryRegistry> fRegistry)
     FACTORY(fRegistry, NewtonIteratorCom)->regist
       (new MethodCommandProvider<UpdateSolFVMCC, NewtonIteratorData, NewtonMethodModule> 
        ("UpdateSolFVMCC"));
- 
+
+#if defined(CF_BUILD_NewtonMethodMHD) && defined(CF_BUILD_MHD) 
     FACTORY(fRegistry, NewtonIteratorCom)->regist
       (new MethodCommandProvider<UpdateSolMHD, NewtonIteratorData, NewtonMethodMHDModule> 
        ("UpdateSolMHD"));
+#endif
  
     using namespace Petsc;
  

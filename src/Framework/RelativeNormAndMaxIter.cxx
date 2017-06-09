@@ -82,12 +82,12 @@ bool RelativeNormAndMaxIter::isAchieved(const ConvergenceStatus& status)
   }
 
   if ( status.iter >= m_maxIter && m_warn )
-    CFout << "!!! Max number iterations [" << m_maxIter << "] reached !!!\n";
+    CFLog(INFO, "!!! Max number iterations [" << m_maxIter << "] reached !!!\n");
 
   const CFreal diff = status.res - m_firstNorm;
   bool return_value = ( (diff < m_relNorm) || (status.iter >= m_maxIter) );
   if ( return_value && m_warn )
-    CFout << "Stop condition reached at iteration [" << status.iter << "]\n";
+    CFLog(INFO, "Stop condition reached at iteration [" << status.iter << "]\n");
 
   return return_value;
 }

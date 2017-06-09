@@ -236,6 +236,12 @@ ELSE()
    SET (CF_HAVE_CRAYSTATIC 0 CACHE BOOL "Compiling on CRAY machine with dynamic linking")
 ENDIF()
 
+IF ( CF_ENABLE_LOG4CPP )
+   SET (CF_HAVE_LOG4CPP 1 CACHE BOOL "Compiling with full log4cpp functionality")
+ELSE()
+   SET (CF_HAVE_LOG4CPP 0 CACHE BOOL "Compiling without full log4cpp functionality") 
+ENDIF()
+
 IF ( CF_ENABLE_SINGLEEXEC ) 
    SET (CF_HAVE_SINGLE_EXEC 1 CACHE BOOL "Compile a single executable, no libraries")
 ELSE()

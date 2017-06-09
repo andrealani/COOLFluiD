@@ -35,11 +35,15 @@ void FactoryRegistry::regist(FactoryBase* factory)
   if ( ! m_store.checkEntry(type_name) )
   {
     m_store.addEntry(type_name, factory);
-    CFtrace << "Factory [" + type_name + "] registered\n";
+#ifndef CF_HAVE_CRAYSTATIC    
+  CFtrace << "Factory [" + type_name + "] registered\n";
+#endif
   }
   else
   {
+#ifndef CF_HAVE_CRAYSTATIC
    CFtrace << "Factory " + factory->getTypeName() + " already registered : skipping registration\n";
+#endif
   }
 }
 
@@ -50,11 +54,15 @@ void FactoryRegistry::unregist(const std::string& type_name)
   if ( m_store.checkEntry(type_name) )
   {
     m_store.removeEntry(type_name);
-    CFtrace << "Factory [" + type_name + "] unregistered\n";
+#ifndef CF_HAVE_CRAYSTATIC
+  CFtrace << "Factory [" + type_name + "] unregistered\n";
+#endif
   }
   else
   {
+#ifndef CF_HAVE_CRAYSTATIC
     CFtrace << "Factory [" + type_name + "] not registered : skipping removal\n";
+#endif  
   }
 }
 

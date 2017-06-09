@@ -525,7 +525,7 @@ void OnlyMeshSubSystem::writeSolution(const bool force_write )
         m_outputFormat[i]->write();
         m_outputFormat[i]->close();
         stopTimer.stop();
-        CFout << "Writing took " << stopTimer << "s\n";
+        CFLog(INFO, "Writing took " << stopTimer << "s\n");
       }
     }
   }
