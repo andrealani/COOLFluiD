@@ -17,8 +17,8 @@
 # default build options
 #==================================================================
 
-coolfluid_dir = /zhome/academic/HLRS/pri/ipranlan/COOLFluiD
-basebuild_dir = /zhome/academic/HLRS/pri/ipranlan/COOLFluiD/CRAY_STATIC_boost_1.59
+coolfluid_dir = /zhome/academic/HLRS/pri/ipranlan/trunk_static
+basebuild_dir = /zhome/academic/HLRS/pri/ipranlan/trunk_static/CRAY_STATIC_BOOST
 
 # compilers
 cc     = /opt/cray/craype/2.5.9/bin/cc
@@ -27,17 +27,23 @@ fc     = /opt/cray/craype/2.5.9/bin/ftn
 
 withcurl = 0
 nofortran = 1
+with_singleexec = 1
+with_log4cpp = 0
+trace = off
+
 # name of the petsc library (!= petsc)
-libpetsc_name = craypetsc_cray_real-64
+libpetsc_name    = craypetsc_cray_real-64
+libparmetis_name = parmetis-64_cray
+libmetis_name    = metis-64_cray
 
 with_craystatic = 1
 
 # library locations
 mpi_dir       = /opt/cray/mpt/7.5.4/gni/mpich-cray/8.4
-boost_dir     = /zhome/academic/HLRS/pri/ipranlan/local
-#boost_dir     = /opt/hlrs/tools/boost/1.60.0
+boost_dir     = /opt/cray/trilinos/12.10.1.0/CRAY/8.5/haswell
+#/zhome/academic/HLRS/pri/ipranlan/local
 petsc_dir     = /opt/cray/petsc/3.6.3.0/real/CRAY64/8.3/haswell
-parmetis_dir  = /zhome/academic/HLRS/pri/ipranlan/local/parmetis
+parmetis_dir  = /opt/cray/tpsl/17.04.1/CRAY64/8.3/haswell
 
 allactive = 0
 
@@ -62,12 +68,13 @@ lib_AnalyticalModel = on
 lib_CFmeshFileReader = on
 lib_Gambit2CFmesh = on
 lib_Gmsh2CFmesh = on
-lib_Tecplot2CFmesh = on
+#lib_Tecplot2CFmesh = on
 #lib_THOR2CFmesh = on
 lib_CFmeshExtruder = on
 lib_CFmeshFileWriter = on
 lib_TecplotWriter = on
 
+lib_PhysicalModelDummy = on
 lib_Maxwell = on
 lib_FiniteVolume = on
 
@@ -88,7 +95,7 @@ lib_PetscI = on
 # long long int 
 #with_llongint = 1
 
-# long int
+# long int (with petsc 3.6.3)
 with_longint = 1
 
 # enable doxygen
