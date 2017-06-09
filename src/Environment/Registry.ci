@@ -39,7 +39,9 @@ void Registry::regist(TYPE* entry)
 {
   try {
     m_store.addEntry(entry->getName(),entry);
+#ifdef CF_HAVE_LOG4CPP
     CFtrace << TYPE::getClassName() + entry->getName() + " registered\n";
+#endif
   }
   catch (Common::StorageExistsException& e) {
     CFtrace << TYPE::getClassName() + " " + entry->getName() + " already registered : skipping registration\n";

@@ -40,7 +40,7 @@ void SelfRegistry::regist(Common::ProviderBase* provider)
   }
   else
   {
-#ifndef CF_HAVE_CRAYSTATIC
+#ifdef CF_HAVE_LOG4CPP
    CFtrace << "Provider [" + provider->getProviderName()
               + "] of type [" + provider->getProviderType()
               + "] already registered : skipping registration\n";
@@ -58,7 +58,7 @@ void SelfRegistry::unregist(const std::string& name, const std::string& type)
   }
   else
   {
-#ifndef CF_HAVE_CRAYSTATIC
+#ifdef CF_HAVE_LOG4CPP
     CFtrace << "Provider [" + name
               + "] of type [" + type
               + "] not registered : skipping removal\n";
@@ -79,7 +79,7 @@ void SelfRegistry::unregist(Common::ProviderBase* provider)
   }
   else
   {
-#ifndef CF_HAVE_CRAYSTATIC
+#ifdef CF_HAVE_LOG4CPP
     CFtrace << "Provider ["  + provider->getProviderName()
               + "] of type [" + provider->getProviderType()
               + "] not registered : skipping removal\n";
@@ -98,7 +98,7 @@ SelfRegistry::getProvider(const std::string& name, const std::string& type)
   }
   else
   {
-#ifndef CF_HAVE_CRAYSTATIC
+#ifdef CF_HAVE_LOG4CPP
     CFLog(VERBOSE, "Provider [" + name
               + "] of type [" + type
               + "] not registered : returning null pointer\n");

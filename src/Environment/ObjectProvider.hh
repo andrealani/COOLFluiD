@@ -35,7 +35,7 @@ public:
   /// Constructor
   explicit ObjectProvider(const std::string& name) : BASE::PROVIDER(name)
   {
-#ifndef CF_HAVE_CRAYSTATIC
+#ifdef CF_HAVE_LOG4CPP
     CFtrace << "Creating provider [" << name << "] of type [" << BASE::getClassName() << "]\n";
 #endif
     Environment::ModuleRegister<MODULE>::getInstance().getSelfRegistry().regist(this);
@@ -83,7 +83,7 @@ public:
   /// Constructor
   explicit ObjectProvider(const std::string& name) : BASE::PROVIDER(name)
   {
-#ifndef CF_HAVE_CRAYSTATIC
+#ifdef CF_HAVE_LOG4CPP
     CFtrace << "Creating provider \'" << name << "\' of type \'" << BASE::getClassName() << "\'\n";
 #endif    
     MODULE::getInstance().getSelfRegistry().regist(this);
@@ -133,7 +133,7 @@ public:
   explicit ObjectProvider(const std::string& name) :
     BASE::PROVIDER(name)
   {
-#ifndef CF_HAVE_CRAYSTATIC
+#ifdef CF_HAVE_LOG4CPP
    CFtrace << "Creating provider \'" << name << "\' of type \'" << BASE::getClassName() << "\'\n";
 #endif  
    MODULE::getInstance().getSelfRegistry().regist(this);

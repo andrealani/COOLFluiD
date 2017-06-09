@@ -124,7 +124,7 @@ void Factory<BASE>::regist(Provider<BASE>* provider)
     "] was found when trying to regist it\n";
 #endif
   }
-#ifndef CF_HAVE_CRAYSTATIC
+#ifdef CF_HAVE_LOG4CPP
   CFtrace << "Registering provider [" << provider->getName() << "] in factory of [" << BASE::getClassName() << "]\n";
 #endif 
  getProviderMap()[provider->getName()] = provider;

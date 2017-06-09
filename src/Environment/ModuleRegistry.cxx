@@ -31,16 +31,16 @@ void ModuleRegistry::regist(Environment::ModuleRegisterBase* module)
   if ( !m_store.checkEntry( module->getName()) )
   {
     m_store.addEntry(module->getName(),module);
-#ifndef CF_HAVE_CRAYSTATIC
+#ifdef CF_HAVE_LOG4CPP
     CFtrace << "Module " + module->getName() + " registered\n";
 #endif
   }
   else
   {
-#ifndef CF_HAVE_CRAYSTATIC
+#ifdef CF_HAVE_LOG4CPP
     CFtrace << "Module " + module->getName() + " already registered : skipping registration\n";
 #endif 
- }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

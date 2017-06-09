@@ -418,7 +418,7 @@ void CFEnv::terminate()
   CFLog(VERBOSE, "Terminating Parallel Environment : Model " << Common::PE::GetPE().GetName() << "\n");
   Common::PE::DonePE ();
  
-#if !defined(CF_HAVE_CRAYSTATIC) && defined(CF_HAVE_LOG4CPP) 
+#ifdef CF_HAVE_LOG4CPP 
   CFLog(NOTICE, "-------------------------------------------------------------\n");
   CFLog(NOTICE, "COOLFluiD Environment Terminated\n");
   CFLog(NOTICE, "-------------------------------------------------------------\n");
