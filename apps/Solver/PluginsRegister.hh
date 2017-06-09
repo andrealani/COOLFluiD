@@ -547,6 +547,12 @@
 #include "Framework/Cell.hh"
 #include "Framework/Face.hh"
 
+#include "PhysicalModelDummy/CouplingModelDummy.hh"
+#include "PhysicalModelDummy/CouplingModelDummySendToRecv.hh"
+#include "PhysicalModelDummy/Dummy.hh"
+#include "PhysicalModelDummy/DummyPrim.hh"
+#include "PhysicalModelDummy/PhysicalModelDummy.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -2936,6 +2942,26 @@ FACTORY(fRegistry, GeometricEntity)->regist
  LagrangeShapeFunctionTriagP0,
  ShapeFunctionsLib>("FaceTriagLagrangeP1LagrangeP0"));
 
+ using namespace PhysicalModelDummy;
+ 
+ FACTORY(fRegistry, PhysicalModelImpl)->regist
+ (new ObjectProvider<COOLFluiD::PhysicalModelDummy::PhysicalModelDummy,
+  PhysicalModelImpl,DummyModule,1>("PhysicalModelDummy"));
+
+  FACTORY(fRegistry, PhysicalModelImpl)->regist
+  (new ObjectProvider<CouplingModelDummy,PhysicalModelImpl,DummyModule,1>
+  ("CouplingModelDummy"));
+
+  FACTORY(fRegistry, ConvectiveVarSet)->regist
+   (new ObjectProvider<DummyPrim, ConvectiveVarSet, DummyModule,1>("PhysicalModelDummyPrim"));
+ 
+  FACTORY(fRegistry, ConvectiveVarSet)->regist
+   (new ObjectProvider<DummyPrim, ConvectiveVarSet, DummyModule,1>("CouplingModelDummyPrim"));
+ 
+  FACTORY(fRegistry, VarSetTransformer)->regist
+   (new ObjectProvider<CouplingModelDummySendToRecv, VarSetTransformer, DummyModule,1>
+    ("CouplingModelDummySendToRecv"));
+  
   }
   
 };
