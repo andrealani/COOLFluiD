@@ -97,7 +97,7 @@ void Simulator::defineConfigOptions(Config::OptionList& options)
 
 Simulator::Simulator(const std::string& name) :
   ConfigObject(name),
-#ifndef CF_HAVE_SINGLE_EXEC
+#ifndef CF_HAVE_ALLSTATIC
   m_moduleLoader(),
 #endif
   m_subSystemNames(),
@@ -198,7 +198,7 @@ void Simulator::configure ( Config::ConfigArgs& args )
   // and before all other configs
   CFLog(NOTICE,"-------------------------------------------------------------\n");
 
-#ifndef CF_HAVE_SINGLE_EXEC  
+#ifndef CF_HAVE_ALLSTATIC
   CFLog(NOTICE,"Loading external modules\n");
   configureNested ( m_moduleLoader, args );
   m_moduleLoader.loadExternalModules();

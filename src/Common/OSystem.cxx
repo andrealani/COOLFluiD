@@ -11,7 +11,7 @@
 #include "Common/OSystem.hh"
 #include "Common/StringOps.hh"
 
-#ifndef CF_HAVE_SINGLE_EXEC
+#ifndef CF_HAVE_ALLSTATIC
 #ifdef CF_HAVE_DLOPEN
   #include "Common/PosixDlopenLibLoader.hh"
 #endif
@@ -50,7 +50,7 @@ OSystem::OSystem() :
   m_sig_handler(CFNULL), 
   m_lib_loader(CFNULL)
 {
-#ifndef CF_HAVE_SINGLE_EXEC
+#ifndef CF_HAVE_ALLSTATIC
 #ifdef CF_HAVE_DLOPEN
     if ( m_lib_loader == CFNULL )   m_lib_loader = new PosixDlopenLibLoader();
 #endif
@@ -81,7 +81,7 @@ OSystem::~OSystem()
 {
   deletePtr(m_process_info);
   deletePtr(m_sig_handler);
-#ifndef CF_HAVE_SINGLE_EXEC
+#ifndef CF_HAVE_ALLSTATIC
   deletePtr(m_lib_loader);
 #endif
 }

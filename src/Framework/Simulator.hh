@@ -19,7 +19,7 @@
 
 #include "Config/ConfigObject.hh"
 
-#ifndef CF_HAVE_SINGLE_EXEC
+#ifndef CF_HAVE_ALLSTATIC
 #include "Environment/ModuleLoader.hh"
 #endif
 
@@ -134,7 +134,7 @@ protected: // functions
     
  private: // data
 
-#ifndef CF_HAVE_SINGLE_EXEC
+#ifndef CF_HAVE_ALLSTATIC
   /// Module loader
   Environment::ModuleLoader m_moduleLoader;
 #endif

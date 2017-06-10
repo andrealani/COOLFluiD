@@ -235,7 +235,8 @@ LIST ( APPEND OPTIONAL_dirfiles ProcessInfoWin32.hh ProcessInfoWin32.cxx )
 ### UNIXES ####
 IF (UNIX)
 
-IF ( NOT CF_HAVE_SINGLE_EXEC )
+#IF ( NOT CF_HAVE_SINGLE_EXEC )
+IF (NOT CF_HAVE_ALLSTATIC )
   IF ( CF_HAVE_DLOPEN )
     LIST ( APPEND Common_files PosixDlopenLibLoader.hh PosixDlopenLibLoader.cxx )
     # the following makes the compilation fail when no library is created
@@ -277,8 +278,9 @@ IF (WIN32)
 
 ENDIF()
 
-IF ( NOT CF_HAVE_LIBLOADER AND NOT CF_HAVE_SINGLE_EXEC )
-  MESSAGE ( FATAL_ERROR "No dynamic library loader was found!")
+#IF ( NOT CF_HAVE_LIBLOADER AND NOT CF_HAVE_SINGLE_EXEC )
+IF ( NOT CF_HAVE_LIBLOADER AND NOT CF_HAVE_ALLSTATIC ) 
+ MESSAGE ( FATAL_ERROR "No dynamic library loader was found!")
 ENDIF()
 
 ###############################################################################
