@@ -505,20 +505,37 @@
 #include "ShapeFunctions/SetTriagLagrangeP2LagrangeP1StateCoord.hh"
 #include "ShapeFunctions/SetTriagLagrangeP2LagrangeP2StateCoord.hh"
 #include "ShapeFunctions/SetTriagLagrangeP3LagrangeP3StateCoord.hh"
+
+#include "ShapeFunctions/VolumeGaussLegendre1LagrangeHexa.hh"
 #include "ShapeFunctions/VolumeGaussLegendre1LagrangeLine.hh"
+#include "ShapeFunctions/VolumeGaussLegendre1LagrangePrism.hh"
+#include "ShapeFunctions/VolumeGaussLegendre1LagrangePyram.hh"
 #include "ShapeFunctions/VolumeGaussLegendre1LagrangeQuad.hh"
 #include "ShapeFunctions/VolumeGaussLegendre1LagrangeTriag.hh"
+#include "ShapeFunctions/VolumeGaussLegendre1LagrangeTetra.hh"
+
+#include "ShapeFunctions/VolumeGaussLegendre2LagrangeHexa.hh"
 #include "ShapeFunctions/VolumeGaussLegendre2LagrangeLine.hh"
 #include "ShapeFunctions/VolumeGaussLegendre2LagrangeQuad.hh"
 #include "ShapeFunctions/VolumeGaussLegendre2LagrangeTriag.hh"
+#include "ShapeFunctions/VolumeGaussLegendre2LagrangeTetra.hh"
+
+#include "ShapeFunctions/VolumeGaussLegendre3LagrangeHexa.hh"
 #include "ShapeFunctions/VolumeGaussLegendre3LagrangeLine.hh"
+#include "ShapeFunctions/VolumeGaussLegendre3LagrangePrism.hh"
 #include "ShapeFunctions/VolumeGaussLegendre3LagrangeQuad.hh"
 #include "ShapeFunctions/VolumeGaussLegendre3LagrangeTriag.hh"
+#include "ShapeFunctions/VolumeGaussLegendre3LagrangeTetra.hh"
+
 #include "ShapeFunctions/VolumeGaussLegendre4LagrangeLine.hh"
 #include "ShapeFunctions/VolumeGaussLegendre4LagrangeQuad.hh"
+#include "ShapeFunctions/VolumeGaussLegendre4LagrangeTetra.hh"
+
 #include "ShapeFunctions/VolumeGaussLegendre5LagrangeLine.hh"
 #include "ShapeFunctions/VolumeGaussLegendre5LagrangeQuad.hh"
 #include "ShapeFunctions/VolumeGaussLegendre5LagrangeTriag.hh"
+#include "ShapeFunctions/VolumeGaussLegendre5LagrangeTetra.hh"
+
 #include "ShapeFunctions/LagrangeShapeFunctionHexaP0.hh"
 #include "ShapeFunctions/LagrangeShapeFunctionHexaP1.hh"
 #include "ShapeFunctions/LagrangeShapeFunctionHexaP2.hh"
@@ -2530,6 +2547,16 @@ FACTORY(fRegistry, SetElementStateCoord)->regist
 (new ObjectProvider<SetTriagLagrangeP3LagrangeP3StateCoord,
  SetElementStateCoord, ShapeFunctionsLib>("TriagLagrangeP3LagrangeP3"));
  
+// GL1
+ 
+ FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre1LagrangeHexa<LagrangeShapeFunctionHexaP0> >());
+  
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre1LagrangeHexa<LagrangeShapeFunctionHexaP1> >());
+  
 FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 (new IntegratorImplProvider<VolumeIntegratorImpl,
  VolumeGaussLegendre1LagrangeLine<LagrangeShapeFunctionLineP0> >());
@@ -2537,6 +2564,22 @@ FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 (new IntegratorImplProvider<VolumeIntegratorImpl,
  VolumeGaussLegendre1LagrangeLine<LagrangeShapeFunctionLineP1> >());
+  
+ FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre1LagrangePrism<LagrangeShapeFunctionPrismP0> >());
+  
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre1LagrangePrism<LagrangeShapeFunctionPrismP1> >());
+  
+ FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre1LagrangePyram<LagrangeShapeFunctionPyramP0> >());
+  
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre1LagrangePyram<LagrangeShapeFunctionPyramP1> >());
   
 FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 (new IntegratorImplProvider<VolumeIntegratorImpl,
@@ -2561,7 +2604,33 @@ FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 (new IntegratorImplProvider<VolumeIntegratorImpl,
  VolumeGaussLegendre1LagrangeTriag<LagrangeShapeFunctionTriagP2> >());
+ 
+ FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre1LagrangeTetra<LagrangeShapeFunctionTetraP0> >());
   
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre1LagrangeTetra<LagrangeShapeFunctionTetraP1> >());
+  
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre1LagrangeTetra<LagrangeShapeFunctionTetraP2> >());
+ 
+// GL2
+ 
+ FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre2LagrangeHexa<LagrangeShapeFunctionHexaP0> >());
+  
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre2LagrangeHexa<LagrangeShapeFunctionHexaP1> >());
+ 
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre2LagrangeHexa<LagrangeShapeFunctionHexaP2> >());
+ 
 FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 (new IntegratorImplProvider<VolumeIntegratorImpl,
  VolumeGaussLegendre2LagrangeLine<LagrangeShapeFunctionLineP0> >());
@@ -2597,7 +2666,29 @@ FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 (new IntegratorImplProvider<VolumeIntegratorImpl,
  VolumeGaussLegendre2LagrangeTriag<LagrangeShapeFunctionTriagP2> >());
+ 
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre2LagrangeTetra<LagrangeShapeFunctionTetraP0> >());
   
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre2LagrangeTetra<LagrangeShapeFunctionTetraP1> >());
+  
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre2LagrangeTetra<LagrangeShapeFunctionTetraP2> >());
+
+// GL3
+
+ FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre3LagrangeHexa<LagrangeShapeFunctionHexaP0> >());
+  
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre3LagrangeHexa<LagrangeShapeFunctionHexaP1> >());
+ 
 FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 (new IntegratorImplProvider<VolumeIntegratorImpl,
  VolumeGaussLegendre3LagrangeLine<LagrangeShapeFunctionLineP0> >());
@@ -2609,7 +2700,15 @@ FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 (new IntegratorImplProvider<VolumeIntegratorImpl,
  VolumeGaussLegendre3LagrangeLine<LagrangeShapeFunctionLineP2> >());
-
+ 
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre3LagrangePrism<LagrangeShapeFunctionPrismP0> >());
+  
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre3LagrangePrism<LagrangeShapeFunctionPrismP1> >());
+  
 FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 (new IntegratorImplProvider<VolumeIntegratorImpl,
  VolumeGaussLegendre3LagrangeQuad<LagrangeShapeFunctionQuadP0> >());
@@ -2633,7 +2732,21 @@ FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 (new IntegratorImplProvider<VolumeIntegratorImpl,
  VolumeGaussLegendre3LagrangeTriag<LagrangeShapeFunctionTriagP2> >());
+ 
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre3LagrangeTetra<LagrangeShapeFunctionTetraP0> >());
   
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre3LagrangeTetra<LagrangeShapeFunctionTetraP1> >());
+  
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre3LagrangeTetra<LagrangeShapeFunctionTetraP2> >());
+ 
+// GL4
+ 
 FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 (new IntegratorImplProvider<VolumeIntegratorImpl,
  VolumeGaussLegendre4LagrangeLine<LagrangeShapeFunctionLineP0> >());
@@ -2658,6 +2771,8 @@ FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 (new IntegratorImplProvider<VolumeIntegratorImpl,
  VolumeGaussLegendre4LagrangeQuad<LagrangeShapeFunctionQuadP2> >());
 
+// GL5 
+ 
 FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 (new IntegratorImplProvider<VolumeIntegratorImpl,
  VolumeGaussLegendre5LagrangeLine<LagrangeShapeFunctionLineP0> >());
@@ -2689,7 +2804,19 @@ FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 FACTORY(fRegistry, VolumeIntegratorImpl)->regist
 (new IntegratorImplProvider<VolumeIntegratorImpl,
  VolumeGaussLegendre5LagrangeTriag<LagrangeShapeFunctionTriagP2> >());
+
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre5LagrangeTetra<LagrangeShapeFunctionTetraP0> >());
   
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre5LagrangeTetra<LagrangeShapeFunctionTetraP1> >());
+  
+FACTORY(fRegistry, VolumeIntegratorImpl)->regist
+(new IntegratorImplProvider<VolumeIntegratorImpl,
+ VolumeGaussLegendre5LagrangeTetra<LagrangeShapeFunctionTetraP2> >());
+ 
   // cell types
   
  fRegistry->regist(new Factory<GeometricEntity>());
