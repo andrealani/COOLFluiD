@@ -14,7 +14,7 @@
 #include "CFmeshExtruder/Extruder2DFVMMPI.hh"
 #include "CFmeshExtruder/CFmeshExtruder.hh"
 
-///////////////////////////////////////////()///////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
 using namespace COOLFluiD::Framework;
@@ -349,7 +349,7 @@ void Extruder2DFVMMPI::extrude()
   }
   
   SafePtr< vector<CFuint> > globalNodeIDs = MeshDataStack::getActive()->getGlobalNodeIDs();
-  globalNodeIDs->resize(nbGlobalNodesStates[0]);
+  globalNodeIDs->resize(nbLocalNodesStates[0]);
   const CFuint offsetNodeID = _nbNodesPerLayer*minNbLayers*_myRank;
   for (CFuint i = 0; i < globalNodeIDs->size(); ++i) {
     (*globalNodeIDs)[i] = offsetNodeID + i;
