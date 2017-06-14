@@ -9,12 +9,13 @@
 #include "Common/BadValueException.hh"
 #include "Common/Stopwatch.hh"
 #include "Common/PEFunctions.hh"
+#include "Common/OSystem.hh"
 #include "Environment/DirPaths.hh"
 #include "Environment/ObjectProvider.hh"
 #include "CFmeshExtruder/Extruder2DFVMMPI.hh"
 #include "CFmeshExtruder/CFmeshExtruder.hh"
 
-//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////()///////////////////////////////////
 
 using namespace std;
 using namespace COOLFluiD::Framework;
@@ -300,7 +301,10 @@ void Extruder2DFVMMPI::extrude()
   cf_assert(data.getNbEquations() >= 1);
   CFLog(INFO, "Extruder2DFVMMPI::extrude() => [#nodes, #states] = [" << 
 	nbGlobalNodesStates[0] << ", " << nbGlobalNodesStates[1] << "]\n");
-  
+ 
+  CFLog(VERBOSE, "Extruder2DFVMMPI::extrude() 1 => Memory usage: "<<
+      Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n");
+ 
   // set global counts (will be needed by parallel writer)
   MeshDataStack::getActive()->setTotalNodeCount(nbGlobalNodesStates[0]);
   MeshDataStack::getActive()->setTotalStateCount(nbGlobalNodesStates[1]);
@@ -315,7 +319,7 @@ void Extruder2DFVMMPI::extrude()
   data.setNbNonUpdatableStates(0);
   
   data.consistencyCheck();
-  
+ 
   SafePtr< vector<ElementTypeData> > elementType = data.getElementTypeData();
   const CFuint totNbElemTypes = elementType->size();
   cf_assert(totNbElemTypes == 1); // only one element type is supported for now
@@ -333,29 +337,31 @@ void Extruder2DFVMMPI::extrude()
   CFuint nbLocalElems = data.getNbElements();
   SafePtr< vector<CFuint> > globalElementIDs = MeshDataStack::getActive()->getGlobalElementIDs();
   globalElementIDs->resize(nbLocalElems);
-    
+   
   // sanity check on the total number of elements
   CFuint totElemCount = 0;
   MPI_Allreduce(&nbLocalElems, &totElemCount, 1, 
 		MPIStructDef::getMPIType(&nbLocalElems), MPI_SUM, _comm);
   const vector<CFuint>& te = MeshDataStack::getActive()->getTotalElements();
-  cf_assert(totElemCount == std::accumulate(te.begin(), te.end(), 0));
+  cf_assert(totElemCount == std::accumulate(te.begin(), te.end(), (CFuint)0));
   
   // the following has to be modified if splitting into tetra is used
   const CFuint minNbLayers = _nbLayers/_nbProc;
+  cf_assert(minNbLayers > 0);
   const CFuint offsetStateID = _nbStatesPerLayer*minNbLayers*_myRank;
   for (CFuint i = 0; i < nbLocalElems; ++i) {
     (*globalElementIDs)[i] = offsetStateID + i; 
   }
-  
+ 
   SafePtr< vector<CFuint> > globalNodeIDs = MeshDataStack::getActive()->getGlobalNodeIDs();
+  cf_assert(nbLocalNodesStates[0] > 0);
   globalNodeIDs->resize(nbLocalNodesStates[0]);
+
   const CFuint offsetNodeID = _nbNodesPerLayer*minNbLayers*_myRank;
   for (CFuint i = 0; i < globalNodeIDs->size(); ++i) {
     (*globalNodeIDs)[i] = offsetNodeID + i;
   }
   
-  // set the global info about TRSs
   const CFuint nbTRSs = data.getNbTRSs();
   vector<vector<CFuint> >& trs = MeshDataStack::getActive()->getTotalTRSInfo();
   trs.resize(nbTRSs);
@@ -400,6 +406,9 @@ void Extruder2DFVMMPI::extrude()
     }
   }
   
+  CFLog(VERBOSE, "Extruder2DFVMMPI::extrude() 2 => Memory usage: "<<
+      Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n");
+
   CFLog(VERBOSE, "Extruder2DFVMMPI::extrude() END\n");
 }
       
