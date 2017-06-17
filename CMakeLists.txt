@@ -399,7 +399,6 @@ IF ( CF_ENABLE_TESTCASES )
   SET (CF_ENABLE_UNIT_TESTS ON) 
   SET (CF_ENABLE_UNIT_CASES ON)    
   SET (CF_ENABLE_PERFORMANCE_TESTS ON)     
-
   SET (CF_ENABLE_PERFORMANCE_CASES ON)
 ENDIF()
 
@@ -421,6 +420,12 @@ LOG ( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++" )
 LOG ( "Plugin's Configuration ")
 LOG ( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++" )
 ##############################################################################
+
+#IF (CF_ENABLE_STATIC)
+SET ( coolfluid_solver_exe ${COOLFluiD_BINARY_DIR}/apps/Solver/coolfluid-solver CACHE  "Full path to coolfluid-solver" INTERNAL )
+MESSAGE ("###### coolfluid_solver_exe is ${coolfluid_solver_exe}")
+MARK_AS_ADVANCED ( coolfluid_solver_exe )
+#ENDIF()
 
 # check existence of Mutation* libraries and set corresponding environmental variables
 IF (EXISTS "${COOLFluiD_SOURCE_DIR}/plugins/Mutation") 

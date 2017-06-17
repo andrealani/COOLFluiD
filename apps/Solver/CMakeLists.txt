@@ -23,9 +23,11 @@ ENDIF()
 CF_ADD_PLUGIN_APP ( coolfluid-solver )
 
 # testing of testcases
-GET_PROPERTY ( coolfluid_solver_path TARGET coolfluid-solver PROPERTY LOCATION )
-SET ( coolfluid_solver_exe ${coolfluid_solver_path} CACHE "Full path to coolfluid-solver" INTERNAL )
-MARK_AS_ADVANCED ( coolfluid_solver_exe )
+#GET_PROPERTY ( coolfluid_solver_path TARGET coolfluid-solver PROPERTY LOCATION )
+#SET ( coolfluid_solver_exe ${coolfluid_solver_path} CACHE "Full path to coolfluid-solver" INTERNAL )
+#MESSAGE ("###### coolfluid_solver_exe is ${coolfluid_solver_exe}")
+
+#MARK_AS_ADVANCED ( coolfluid_solver_exe )
 
 ###############################################################################
 
