@@ -64,6 +64,9 @@ ParCFmeshBinaryFileWriter::ParCFmeshBinaryFileWriter() :
   _nbWriters = 1;
   setParameter("NbWriters",&_nbWriters);
   
+  _nbWritersPerNode = 0;
+  setParameter("NbWritersPerNode",&_nbWritersPerNode);
+  
   _maxBuffSize = 2147479200; // (CFuint) std::numeric_limits<int>::max();
   setParameter("MaxBuffSize",&_maxBuffSize);
 }
@@ -78,7 +81,8 @@ ParCFmeshBinaryFileWriter::~ParCFmeshBinaryFileWriter()
 
 void ParCFmeshBinaryFileWriter::defineConfigOptions(Config::OptionList& options)
 {
-  options.addConfigOption< CFuint >("NbWriters", "Number of writers (and MPI groups)");
+  options.addConfigOption< CFuint >("NbWriters", "Number of writers");
+  options.addConfigOption< CFuint >("NbWritersPerNode", "Number of writers per node");
   options.addConfigOption< int >("MaxBuffSize", "Maximum buffer size for MPI I/O");
 }
       

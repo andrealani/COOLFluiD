@@ -7,6 +7,8 @@
 #include "Common/MPI/PEInterfaceMPI.hh"
 #include "Common/MPI/MPIInitObject.hh"
 #include "Common/MPI/MPIError.hh"
+#include "Common/MPI/MPIStructDef.hh"
+#include "Common/CFPrintContainer.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -176,6 +178,136 @@ void PEInterface<PM_MPI>::clearGroups()
   for (map<string,Group*>::iterator itr = m_groups.begin(); itr != m_groups.end(); ++itr) {
     delete itr->second;
   } 
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+  
+void PEInterface<PM_MPI>::createNodeToCoreMapping(const std::string nsp, 
+						  std::vector<int>& nodeIDs,
+						  std::vector<int>& coreIDs, 
+						  std::vector<int>& uniqueNodeIDs)
+{
+  MPI_Comm comm = GetCommunicator(nsp);
+  
+  int world_size = 0;
+  MPI_Comm_size(comm, &world_size);
+  
+  int world_rank = 0;
+  MPI_Comm_rank(comm, &world_rank);
+  
+  int nodeID = 0;
+  int coreID = 0;
+  getID(comm, world_size, world_rank, nodeID, coreID);
+  
+  nodeIDs.resize(world_size, -1);
+  coreIDs.resize(world_size, -1);
+  vector<int> nodeIDsIn(world_size, -1);
+  vector<int> coreIDsIn(world_size, -1);
+  
+  // set local nodeID and coreID
+  nodeIDsIn[world_rank] = nodeID;
+  coreIDsIn[world_rank] = coreID;
+  
+  MPI_Allreduce(&nodeIDsIn[0], &nodeIDs[0], world_size, MPI_INT, MPI_MAX, comm);
+  MPI_Allreduce(&coreIDsIn[0], &coreIDs[0], world_size, MPI_INT, MPI_MAX, comm);
+  
+  set<int> nodeIDsList;
+  for (int i = 0; i < world_size; ++i) {
+    nodeIDsList.insert(nodeIDs[i]);
+  }
+  cf_assert(nodeIDsList.size() > 0);
+  
+  uniqueNodeIDs.reserve(nodeIDsList.size());
+  for (set<int>::const_iterator it = nodeIDsList.begin(); it != nodeIDsList.end(); ++it) {
+    uniqueNodeIDs.push_back(*it);
+  }
+  cf_assert(uniqueNodeIDs.size() > 0);
+  
+  if (world_rank == 0) {
+    for (int i = 0; i < world_size; ++i) {
+      CFLog(VERBOSE, "rank["<<i<<"] => nodeID["<<nodeIDs[i]<<"], coreID["<<coreIDs[i]<<"]\n");
+    } 
+  }
+  MPI_Barrier(comm);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+void PEInterface<PM_MPI>::getID(MPI_Comm comm, const int size, const int rank, 
+				int& nodeID, int& coreID)
+{
+  const int world_size=size;
+  const int world_rank=rank;
+  
+  char processor_name[MPI_MAX_PROCESSOR_NAME];
+  int name_len = 0;
+  MPI_Get_processor_name(processor_name, &name_len);
+  
+  int i = 0;
+  int j = 0;
+  int N = 0;
+  int n = 0;
+  int ret = 0;
+  const int MSIZE = MPI_MAX_PROCESSOR_NAME+1;
+  char str[world_size][MSIZE];
+  
+  MPI_Gather(&processor_name, MSIZE, MPI_CHAR,str[0], MSIZE, MPI_CHAR, 0, comm);
+  
+  char DiffNodeName[world_size][MSIZE];
+  
+  N=1;
+  
+  if(world_rank==0) {
+    strncpy(DiffNodeName[0],str[0],MSIZE);
+    for(i=1;i<world_size;i++) {
+      n=1;
+      for(j=0;j<N;j++) {    
+	ret= strncmp(str[i],DiffNodeName[j],MSIZE);     
+	n=n*ret;
+      }
+      if(n!=0) {
+	strncpy(DiffNodeName[N],str[i],MSIZE);
+	N++;
+      }
+    }
+  }
+  
+  // MPI_Barrier(comm);  
+  MPI_Bcast(&N, 1, MPI_INT, 0, comm );
+  // MPI_Barrier(comm);  
+  MPI_Bcast(&DiffNodeName, N*MSIZE, MPI_CHAR, 0, comm);
+  // MPI_Barrier(comm);  
+  
+  int NodeNumber = -1;
+  for(i=0;i<N;i++) { 
+    ret = strncmp(DiffNodeName[i],processor_name,MSIZE); 
+    if(ret==0) {
+      NodeNumber=i;
+    }
+  }
+  MPI_Barrier(comm);  
+  
+  int coreIDlocal[world_size]; 
+  
+  if(world_rank==0) {
+    for(j=0;j<N;j++) {
+      int n=0;
+      for(i=0;i<world_size;i++) {
+	ret= strncmp(str[i],DiffNodeName[j],MSIZE);     
+	
+	if(ret==0) {
+	  coreIDlocal[i]=n;
+	  n++;
+	}
+      }
+    }
+  }
+  
+  MPI_Bcast(&coreIDlocal[0], world_size, MPI_INT, 0, comm);
+  MPI_Barrier(comm);  
+  
+  nodeID = NodeNumber;
+  coreID = coreIDlocal[world_rank];
 }
       
 //////////////////////////////////////////////////////////////////////////////

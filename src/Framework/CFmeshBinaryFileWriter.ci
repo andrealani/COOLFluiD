@@ -52,6 +52,9 @@ CFmeshBinaryFileWriter<DATA>::CFmeshBinaryFileWriter() :
   _nbWriters = 1;
   setParameter("NbWriters",&_nbWriters);
   
+  _nbWritersPerNode = 0;
+  setParameter("NbWritersPerNode",&_nbWritersPerNode);
+  
   _maxBuffSize = 2147479200; // (CFuint) std::numeric_limits<int>::max();
   setParameter("MaxBuffSize",&_maxBuffSize);
 }
@@ -72,6 +75,7 @@ void CFmeshBinaryFileWriter<DATA>::defineConfigOptions(Config::OptionList& optio
   using namespace COOLFluiD::Common;
   
   options.addConfigOption< CFuint >("NbWriters", "Number of writers (and MPI groups)");
+  options.addConfigOption< CFuint >("NbWritersPerNode", "Number of writers per node");
   options.addConfigOption< int >("MaxBuffSize", "Maximum buffer size for MPI I/O");
 }
       

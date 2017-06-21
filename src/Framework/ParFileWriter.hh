@@ -44,6 +44,12 @@ public:
   /// Set group of writers
   virtual void setWriterGroup();  
   
+  /// Set the default writers by picking an arbitrary selection of _nbWriters writers
+  void setDefaultWriters(std::vector<int>& writerRanks);
+  
+  /// Set _nbWritersPerNode writers per node
+  void setNodeWriters(std::vector<int>& writerRanks);
+  
  protected: //data
   
   /// Class holding all offsets defining the parallel file structure
@@ -98,8 +104,11 @@ public:
   /// set keeping track of the files already created
   std::map<boost::filesystem::path, long long> _mapFileToStartNodeList;
   
-  /// number of writers (and MPI groups)
+  /// number of writers
   CFuint _nbWriters;
+  
+  /// number of writers per node
+  CFuint _nbWritersPerNode;
   
   /// maximu size of the buffer to write with MPI I/O
   int _maxBuffSize;
