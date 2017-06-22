@@ -55,6 +55,7 @@ void ParWriteSolution::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >("OnlyNodal", "This flag forces output to be all nodal.");
   options.addConfigOption< std::string>("FileFormat","Format to write Tecplot file."); 
   options.addConfigOption< CFuint >("NbWriters", "Number of writers (and MPI groups)");
+  options.addConfigOption< CFuint >("NbWritersPerNode", "Number of writers per node");
   options.addConfigOption< int >("MaxBuffSize", "Maximum buffer size for MPI I/O"); 
 }
     
