@@ -82,7 +82,10 @@ void ParWriteSolution::defineConfigOptions(Config::OptionList& options)
    
    _nbWriters = 1;
    setParameter("NbWriters",&_nbWriters);
-   
+  
+   _nbWritersPerNode = 0;
+   setParameter("NbWritersPerNode",&_nbWritersPerNode);
+ 
    _maxBuffSize = 2147479200; // (CFuint) std::numeric_limits<int>::max();
    setParameter("MaxBuffSize",&_maxBuffSize);
  }
