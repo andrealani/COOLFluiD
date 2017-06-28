@@ -1010,7 +1010,7 @@ void MPICommPattern<DATA>::BuildCGlobal ()
       // Wait receives
       while (true)
         {
-    int Current;
+    int Current = 0;
     MPI_Status Status;
 
     cf_assert (Requests != CFNULL);
@@ -1022,8 +1022,8 @@ void MPICommPattern<DATA>::BuildCGlobal ()
 
     cf_assert (Requests[Current]==MPI_REQUEST_NULL);
     
-    IndexType Aantal = 0;
-    MPI_Get_count (&Status, MPIStructDef::getMPIType(&Aantal), (int*) &Aantal);
+    int Aantal = 0;
+    MPI_Get_count (&Status, MPIStructDef::getMPIType(&MaxSendSize), &Aantal);
     
     if (Aantal > _GhostSize) {
       CFLog(WARN, "MPICommPattern<DATA>::Sync_BuildReceiveList() => Aantal > _GhostSize : " 
