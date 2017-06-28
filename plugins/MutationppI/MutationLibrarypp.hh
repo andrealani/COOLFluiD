@@ -79,9 +79,11 @@ public:
   /// @param mixture temperature
   void setState(CFdouble* rhoi, CFdouble* T) 
   {
-    RealVector rhoiv(_NS, &rhoi[0]);
-    CFLog(DEBUG_MAX, "MutationLibrarypp::setState() => rhoiv = " << rhoiv << ", T = " << *T << "\n"); 
-    m_gasMixture->setState(rhoi, T, 1);
+    for (CFuint i = 0; i < _NS; ++i) {
+      m_rhoiv[i] = std::max(_minRhoi, rhoi[i]);
+    }
+    CFLog(DEBUG_MAX, "MutationLibrarypp::setState() => rhoiv = " << m_rhoiv << ", T = " << *T << "\n"); 
+    m_gasMixture->setState(&m_rhoiv[0], T, 1);
   }   
   
   /**
@@ -561,12 +563,6 @@ protected:
   /// state model type enumerator 
   MutationLibrarypp::StateModelType m_smType;
   
-  /// mixture formation enthalphy at T=0K
-  CFreal m_H0;
-  
-  /// species formation enthalphy at T=0K
-  RealVector m_vecH0;
-  
   /// mass fractions
   RealVector m_y;
   
@@ -599,9 +595,9 @@ protected:
     
   /// state model name
   std::string _stateModelName;
-
-  /// shift the formation enthalpy to have H(T=0K)=0
-  bool m_shiftHO;
+  
+  /// minimum partial density
+  CFreal _minRhoi;
   
 }; // end of class MutationLibrarypp
       

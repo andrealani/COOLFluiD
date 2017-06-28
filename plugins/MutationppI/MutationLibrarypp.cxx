@@ -38,7 +38,7 @@ void MutationLibrarypp::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("mixtureName","Name of the mixture."); 
   options.addConfigOption< std::string >
     ("StateModelName","Name of the state model (e.g. \"Equil\", \"ChemNonEq1T\", \"ChemNonEq1TTv\").");
-  options.addConfigOption< bool >("ShiftH0","Shift the formation enthalpy to have H(T=0K)=0."); 
+  options.addConfigOption< CFreal >("MinRhoi","Minimum partial density."); 
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -47,8 +47,6 @@ MutationLibrarypp::MutationLibrarypp(const std::string& name)
   : Framework::PhysicalChemicalLibrary(name),
     m_gasMixture(CFNULL),
     m_smType(),
-    m_H0(0.),
-    m_vecH0(),
     m_y(),
     m_x(),
     m_yn(),
@@ -66,8 +64,11 @@ MutationLibrarypp::MutationLibrarypp(const std::string& name)
   _stateModelName = "Equil"; // equilibrium by default
   setParameter("StateModelName",&_stateModelName);
   
+  _minRhoi = 0.;
+  setParameter("MinRhoi",&_minRhoi);
+  
+  // change default
   m_shiftHO = true;
-  setParameter("ShiftH0",&m_shiftHO);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -86,7 +87,7 @@ void MutationLibrarypp::configure ( Config::ConfigArgs& args )
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrarypp::setup()
-{    
+{
   CFLog(VERBOSE, "MutationLibrarypp::setup() => start\n"); 
   
   Framework::PhysicalChemicalLibrary::setup();
