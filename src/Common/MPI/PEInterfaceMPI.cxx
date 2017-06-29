@@ -10,6 +10,8 @@
 #include "Common/MPI/MPIStructDef.hh"
 #include "Common/CFPrintContainer.hh"
 
+#include <stdlib.h>
+
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
@@ -197,7 +199,12 @@ void PEInterface<PM_MPI>::createNodeToCoreMapping(const std::string nsp,
   
   int nodeID = 0;
   int coreID = 0;
+  
+#ifdef CF_HAVE_IBMSTATIC
+  getIDNew(comm, world_size, world_rank, nodeID, coreID);
+#else
   getID(comm, world_size, world_rank, nodeID, coreID);
+#endif
   
   nodeIDs.resize(world_size, -1);
   coreIDs.resize(world_size, -1);
@@ -308,6 +315,102 @@ void PEInterface<PM_MPI>::getID(MPI_Comm comm, const int size, const int rank,
   
   nodeID = NodeNumber;
   coreID = coreIDlocal[world_rank];
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+  
+void PEInterface<PM_MPI>::getIDNew(MPI_Comm comm, const int size, const int rank, 
+				   int& nodeID, int& coreID)
+{
+  const int world_size=size;
+  const int world_rank=rank;
+  
+  char processor_name[MPI_MAX_PROCESSOR_NAME];
+  int name_len = 0;
+  MPI_Get_processor_name(processor_name, &name_len);
+  
+  const int MSIZE = MPI_MAX_PROCESSOR_NAME+1;
+  
+  char *node_str=(char *)malloc(MSIZE*sizeof(char)); 
+  char *last;
+  char *token;
+  node_str=strndup(processor_name,MSIZE);
+  
+  while((token=strsep(&node_str," ")))  last=token;
+  
+  strncpy(processor_name,last,MSIZE);
+  
+  int i = 0;
+  int j = 0;
+  int N = 0;
+  int n = 0;
+  int ret = 0;
+  
+  char *str=(char *)malloc(world_size*MSIZE*sizeof(char));       
+  
+  MPI_Gather(&processor_name,MSIZE, MPI_CHAR,str, MSIZE, MPI_CHAR,0,comm);
+  char  *DiffNodeName= (char*)malloc(world_size*MSIZE*sizeof(char));
+  
+  N=1;
+  
+  if(world_rank==0) {
+    strncpy(DiffNodeName,str,MSIZE);
+    
+    for(i=1;i<world_size;i++) {
+      n=1;
+      for(j=0;j<N;j++) {    
+	ret= strncmp(str+i*MSIZE,DiffNodeName+j*MSIZE,MSIZE);     
+	n=n*ret;
+      }
+      if(n!=0) {
+	strncpy(DiffNodeName+N*MSIZE,str+i*MSIZE,MSIZE);
+	N++;
+      }
+    }
+  }
+  
+  MPI_Barrier(comm);  
+  MPI_Bcast(&N, 1, MPI_INT, 0, comm );
+  MPI_Barrier(comm);  
+  
+  MPI_Bcast(DiffNodeName, N*MSIZE, MPI_CHAR, 0, comm );
+  MPI_Barrier(comm);  
+  
+  int NodeNumber = 0;
+  for(i=0;i<N;i++) { 
+    ret= strncmp(DiffNodeName+i*MSIZE,processor_name,MSIZE); 
+    if(ret==0) {
+      NodeNumber=i;
+    }
+  }
+  MPI_Barrier(comm);  
+  
+  int *coreID_local=(int *)malloc(world_size*sizeof(int)); 
+  
+  if(world_rank==0) {
+    for(j=0;j<N;j++) {
+      int n=0;
+      for(i=0;i<world_size;i++) {
+	ret= strncmp(str+i*MSIZE,DiffNodeName+j*MSIZE,MSIZE);     
+	
+	if(ret==0) {
+	  coreID_local[i]=n;
+	  n++;
+	}
+      }
+    }
+  }
+  
+  MPI_Bcast(coreID_local, world_size, MPI_INT, 0, comm);
+  MPI_Barrier(comm);  
+  
+  nodeID = NodeNumber;
+  coreID = coreID_local[world_rank];
+  
+  free(str);
+  free(DiffNodeName);
+  free(coreID_local);
+  free(node_str);
 }
       
 //////////////////////////////////////////////////////////////////////////////

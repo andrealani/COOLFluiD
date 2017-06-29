@@ -188,6 +188,10 @@ class Common_API PEInterface<PM_MPI> : public PEInterfaceBase,
   /// @author Wei Zhang, 2017-3-25, NSC
   void getID(MPI_Comm comm, const int size, const int rank, int& nodeID, int& coreID);
   
+  /// get the nodeID and coreID corresponding to the given rank (new version, BG/Q compatible) 
+  /// @author Wei Zhang, 2017-3-25, NSC
+  void getIDNew(MPI_Comm comm, const int size, const int rank, int& nodeID, int& coreID);
+  
   /// clear all groups 
   void clearGroups();
   
