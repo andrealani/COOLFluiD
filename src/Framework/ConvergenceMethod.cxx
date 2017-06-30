@@ -200,8 +200,9 @@ void ConvergenceMethod::prepareConvergenceFile()
   fpath = Environment::DirPaths::getInstance().getResultsDir() /
     Framework::PathAppender::getInstance().appendParallel( fpath );
   
-  SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-  ofstream& convergenceFile = fhandle->open(fpath);
+  SelfRegistPtr<Environment::FileHandlerOutput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
+  ofstream& convergenceFile = (*fhandle)->open(fpath);
 
   convergenceFile << "TITLE  =  Convergence of SubSystem" << "\n";
   convergenceFile << "VARIABLES = Iter";
@@ -214,15 +215,17 @@ void ConvergenceMethod::prepareConvergenceFile()
   }
   convergenceFile << " CFL PhysTime DT WallTime MemUsage" << "\n";
 
-  fhandle->close();
-  
+  (*fhandle)->close();
+  delete fhandle; 
+ 
   if (m_outputSpaceResidual) {
     path fpath = getFileName(m_nameSpaceResidualFile);
     fpath = Environment::DirPaths::getInstance().getResultsDir() /
             Framework::PathAppender::getInstance().appendParallel( fpath );
 
-    SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-    ofstream& spaceResidualFile = fhandle->open(fpath);
+    SelfRegistPtr<Environment::FileHandlerOutput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
+    ofstream& spaceResidualFile = (*fhandle)->open(fpath);
 
     spaceResidualFile << "TITLE  =  Space Residual of SubSystem" << "\n";
     spaceResidualFile << "VARIABLES = Iter";
@@ -235,10 +238,9 @@ void ConvergenceMethod::prepareConvergenceFile()
     }
     spaceResidualFile << " CFL PhysTime DT WallTime MemUsage" << "\n";
 
-    fhandle->close();
-  }
-
-  
+    (*fhandle)->close();
+    delete fhandle; 
+ }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -255,8 +257,9 @@ void ConvergenceMethod::updateConvergenceFile()
     fpath = Environment::DirPaths::getInstance().getResultsDir() /
             Framework::PathAppender::getInstance().appendParallel( fpath );
 
-    SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-    ofstream& convergenceFile = fhandle->open(fpath, ios_base::app);
+    SelfRegistPtr<Environment::FileHandlerOutput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
+    ofstream& convergenceFile = (*fhandle)->open(fpath, ios_base::app);
 
     convergenceFile << subSysStatus->getNbIter()       << " "
                     << subSysStatus->getAllResiduals() << " "
@@ -266,7 +269,8 @@ void ConvergenceMethod::updateConvergenceFile()
                     << m_stopwatch.read()             << " "
                     << OSystem::getInstance().getProcessInfo()->memoryUsageBytes()  << "\n";
 
-    fhandle->close();
+    (*fhandle)->close();
+    delete fhandle;
   }
   
   if (outputSpaceResidual()) {
@@ -276,8 +280,9 @@ void ConvergenceMethod::updateConvergenceFile()
       fpath = Environment::DirPaths::getInstance().getResultsDir() /
               Framework::PathAppender::getInstance().appendParallel( fpath );
 
-      SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-      ofstream& spaceResidualFile = fhandle->open(fpath, ios_base::app);
+      SelfRegistPtr<Environment::FileHandlerOutput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
+      ofstream& spaceResidualFile = (*fhandle)->open(fpath, ios_base::app);
 
       spaceResidualFile << subSysStatus->getNbIter()       << " "
                       << getConvergenceMethodData()->getSpaceResidual() << " "
@@ -287,8 +292,9 @@ void ConvergenceMethod::updateConvergenceFile()
                       << m_stopwatch.read()             << " "
                       << OSystem::getInstance().getProcessInfo()->memoryUsageBytes()  << "\n";
 
-      fhandle->close();
-    }
+      (*fhandle)->close();
+      delete fhandle; 
+   }
   }
 }
 

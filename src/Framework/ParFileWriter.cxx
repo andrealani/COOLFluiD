@@ -71,12 +71,8 @@ void ParFileWriter::setWriterGroup()
 
   vector<int> writerRanks;
 
-#ifndef CF_HAVE_IBMSTATIC
   (_nbWritersPerNode == 0) ? 
     setDefaultWriters(writerRanks) : setNodeWriters(writerRanks);
-#else
-  setDefaultWriters(writerRanks);
-#endif
   
   // create the writers group
   const string writerName = nsp + "_Writers";

@@ -51,7 +51,9 @@ public: // methods
     m_contents(obj), m_provider(prov)
   {
     cf_assert(m_contents != CFNULL);
-    cf_assert(m_provider != CFNULL);
+#ifndef CF_HAVE_SINGLE_EXEC  
+  cf_assert(m_provider != CFNULL);
+#endif
     if (m_contents != CFNULL) { m_contents->addOwner(); }
   }
 
@@ -122,10 +124,14 @@ public: // methods
       // object only if the later is not owned by anybody anymore
       if (m_contents->hasNoOwner())
       {
+#ifndef CF_HAVE_SINGLE_EXEC
         cf_assert (m_provider != CFNULL);
-        m_provider->freeInstance(m_contents);
+#endif
+        if (m_provider != CFNULL) {
+          m_provider->freeInstance(m_contents);
+          m_provider = CFNULL;
+        } 
         m_contents = CFNULL;
-        m_provider = CFNULL;
       }
     }
   }

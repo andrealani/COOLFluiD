@@ -50,7 +50,7 @@ void Extruder2DFVMMPI::defineConfigOptions(Config::OptionList& options)
    options.addConfigOption< bool >("Periodic","Create a single TRS named Periodic instead of Top & Bottom.");
    options.addConfigOption< CFreal >("ExtrudeSize","Extrude size in z coordinate.");
    options.addConfigOption< CFuint >("NbLayers","Nb of Layers to extrude from the 2D mesh."); 
-    options.addConfigOption< std::string >("Def","Definition of the Function.");
+   options.addConfigOption< std::string >("Def","Definition of the Function.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -208,10 +208,14 @@ void Extruder2DFVMMPI::convert(const boost::filesystem::path& fromFilepath,
   }
     
   // each processor reads the origin 2D CFmesh
+#ifndef CF_HAVE_IBMSTATIC 
   runSerial<void, const boost::filesystem::path&, FileReader, &FileReader::readFromFile>
-    (&_reader, fromFilepath, nsp);
-  
-  // _reader.readFromFile(fromFilepath);
+   (&_reader, fromFilepath, nsp);
+#else
+   _reader.readFromFile(fromFilepath);
+#endif
+
+  CFLog(VERBOSE, "Extruder2DFVMMPI::convert() => after readFromFile()\n");
   
   // transforms the data by extruding in z coordinate
   extrude();
@@ -261,22 +265,32 @@ void Extruder2DFVMMPI::extrude()
   
   createFirstLayer();
   
+  MPI_Barrier(_comm);
+  
   SafePtr< vector<CFreal> > nodes  = data.getNodeList();
   SafePtr< vector<CFreal> > states = data.getStateList();
+ 
+  CFLog(INFO, "Extruder2DFVMMPI::extrude() => _nbLayersLocal = " << _nbLayersLocal <<"\n"); 
   
   // create subsequent layers of elements
-  if (_nbLayersLocal > 1){    
+  if (_nbLayersLocal > 1) {    
     // preallocation of memory for nodes and states
     nodes->reserve (nodes->size() + (_nbLayersLocal-1)*nodes->size());
     states->reserve (states->size() + (_nbLayersLocal-1)*states->size());
-    
+   
+//#ifdef CF_HAVE_SINGLE_EXEC 
     auto_ptr<boost::progress_display> progressBar;
     if (_myRank == 0) {
       progressBar.reset(new boost::progress_display(_nbLayersLocal-1));
     }
+//#endif
     
     for(CFuint iLayer = 1; iLayer < _nbLayersLocal; ++iLayer) {
+      CFLog(INFO, "Extruder2DFVMMPI::extrude() => creating iLayer[" << iLayer <<"]\n");
+    
+//#ifdef CF_HAVE_SINGLE_EXEC
       if (_myRank == 0) {++(*progressBar);}
+//#endif
       _iLayer = iLayer;
       createAnotherLayer();
     }
@@ -284,7 +298,9 @@ void Extruder2DFVMMPI::extrude()
     if (_random == true) randomNodes();
     CFLog(INFO, "\n");	
   }
-  
+ 
+  MPI_Barrier(_comm);
+ 
   //if(isHybrid) reorderElementNodeState();
     
   vector<CFuint> nbGlobalNodesStates(2, (CFuint)0);

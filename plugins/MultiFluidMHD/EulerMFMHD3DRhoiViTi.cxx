@@ -346,9 +346,9 @@ void EulerMFMHD3DRhoiViTi::computePhysicalData(const State& state, RealVector& d
   //     data[firstTemperature + 4*ie + 3] = 0.5*V2 + c_p*data[firstTemperature + 4*ie];//enthaply 
     }
   }
-  CFLog(VERBOSE,"EulerMFMHD3DRhoiViTi::computePhysicalData" << "\n");
+  CFLog(DEBUG_MIN,"EulerMFMHD3DRhoiViTi::computePhysicalData" << "\n");
   for (CFuint ie = 0; ie < firstTemperature + 4*nbSpecies; ++ie) {
-    CFLog(VERBOSE,"data["<< ie <<"] = "<< data[ie] << "\n");
+    CFLog(DEBUG_MIN,"data["<< ie <<"] = "<< data[ie] << "\n");
   }
 }
 

@@ -81,11 +81,12 @@ void SubSystemStatus::configure ( Config::ConfigArgs& args )
   ConfigObject::configure(args);
 
   // configure the DT computer
-  m_computeDT.reset
+  Common::SelfRegistPtr<ComputeDT>* computeDT =
     (FACTORY_GET_PROVIDER(getFactoryRegistry(), ComputeDT, m_computeDTStr)->
-     create(m_computeDTStr));
+     createPtr(m_computeDTStr));
+ 
+  m_computeDT = *computeDT;
   m_computeDT->setFactoryRegistry(getFactoryRegistry());
-  
   configureNested ( m_computeDT.getPtr(), args );
 
   if (m_timeStepLayers > 1){
@@ -102,6 +103,7 @@ void SubSystemStatus::configure ( Config::ConfigArgs& args )
     }
   }
   }
+  delete computeDT;
 }
 
 //////////////////////////////////////////////////////////////////////////////

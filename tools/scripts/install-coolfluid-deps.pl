@@ -67,6 +67,7 @@ my $opt_dwnldprog     = $opt_wgetprog;
 my $opt_makeopts      = "-j12";
 my $opt_svnrevision   = 0;
 my $opt_cray          = 0;
+my $opt_ibmgnu        = 0;
 my @opt_install = ();
 
 # list of packages, and their associated values
@@ -109,6 +110,7 @@ my %packages = (  #  version   default install priority      function
     "dateshift"  => [ "1.0",    'off',  'off', $priority++,  sub { install_gnu("dateshift") } ],
     "curl"       => [ "7.19.7", 'off' ,  'off', $priority++,  \&install_curl ],
     "libfaketime"=> [ "0.8",    'off',  'off', $priority++,  \&install_libfaketime ],
+#     "boost"      => [ "1_42_0", 'on' ,  'off', $priority++,  \&install_boost ],
     "boost"      => [ "1_59_0", 'on' ,  'off', $priority++,  \&install_boost ],
 #    "boost"      => [ "1_54_0", 'on' ,  'off', $priority++,  \&install_boost ],
 #   "openmpi"    => [ "1.4.2",  'off',  'off', $priority++,  \&install_openmpi ],
@@ -126,8 +128,8 @@ my %packages = (  #  version   default install priority      function
 #    "petsc"      => [ "3.2-p6",'on',  'off', $priority++,  \&install_petsc ], 
 #    "petsc"      => [ "3.4.2",'on',  'off', $priority++,  \&install_petsc ], 
 #    "petsc"      => [ "3.6.3-dev",'on',  'off', $priority++,  \&install_petsc ],
-    "petsc"      => [ "3.6.3",'on',  'off', $priority++,  \&install_petsc ], 
-#     "petsc"      => [ "3.7.6",'on',  'off', $priority++,  \&install_petsc ],
+#    "petsc"      => [ "3.6.3",'on',  'off', $priority++,  \&install_petsc ], 
+     "petsc"      => [ "3.7.6",'on',  'off', $priority++,  \&install_petsc ],
 #    "petsc"      => [ "3.7.3a",'on',  'off', $priority++,  \&install_petsc ],
 #    "petsc"      => [ "3.7.3-next",'on',  'off', $priority++,  \&install_petsc ],
     "gmsh"       => [ "1.60.1", 'off',  'off', $priority++,  sub { install_gnu("gmsh") } ],
@@ -172,6 +174,7 @@ sub parse_commandline() # Parse command line
         'install-petsc-dir=s'   => \$opt_petsc_dir,
 	'install-parmetis-dir=s'   => \$opt_parmetis_dir,
         'cray'                  => \$opt_cray,
+        'ibmgnu'                => \$opt_ibmgnu,
 	'blaslapack-dir=s'      => \$opt_blaslapack_dir,
     );
 
@@ -198,8 +201,9 @@ options:
         --many-mpi=          Install all mpi related packages in a separate directory
                              therefore allowing multiple mpi environments to coexist
                               Default: $opt_many_mpi.
-
+       
         --cray               Compile on CRAY systems
+        --ibmgnu             Compile on IBM systems with GNU compiler       
         --static=            Compile all libraries static
         --debug=             Compile dependencies and coolfluid with debug symbols (=1 is default)
         --int64=             If =1 compiles PETSc using long long int. 
@@ -1133,6 +1137,12 @@ sub install_parmetis () {
      $mpicxx_comp = "CC";
   }
 
+  #
+  if ($opt_ibmgnu) {
+     $mpicc_comp  = "mpigcc";
+     $mpicxx_comp = "mpig++";
+  }
+
   my $sharedflag = "shared=1";
   if ( $opt_static eq "1" )
   {
@@ -1368,19 +1378,19 @@ sub install_petsc ()
     my $CXXOPTFLAGS ="-O3 ";
 
     # IBM BG/Q
-    if ( $petsc_arch eq "arch-ppc64" ) {
-      $CXXFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
-      $CFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
-      $FFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
-      $F90FLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
-      $CXXOPTFLAGS="-O3 -qstrict -qarch=qp -qtune=qp"; 
-      $COPTFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
-      $FOPTFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+    if (not $opt_ibmgnu and $petsc_arch eq "arch-ppc64" ) {
+       $CXXFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+       $CFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+       $FFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+       $F90FLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+       $CXXOPTFLAGS="-O3 -qstrict -qarch=qp -qtune=qp"; 
+       $COPTFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+       $FOPTFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
     }
 
-   if ($version eq "3.7.6") {
+    if ($version eq "3.7.6") {
       $dynamicload ="";
-   } 
+    } 
     my $link_libraries = "--with-shared-libraries=1"; 
     if ( $opt_static eq "1" ) 
     {
@@ -1617,7 +1627,7 @@ sub install_boost()
       }    
     
     my $boostmpiopt=" --without-mpi ";
-    unless ($opt_nompi or $version  eq "1_59_0") {
+    unless ($opt_nompi or $version  eq "1_59_0" or $version  eq "1_62_0")  {
       $boostmpiopt=" --with-mpi cxxflags=-DBOOST_MPI_HOMOGENEOUS ";
       open  (USERCONFIGJAM, ">>./tools/build/v2/user-config.jam") || die("Cannot Open File ./tools/build/v2/user-config.jam") ;
       print  USERCONFIGJAM <<ZZZ;
@@ -1642,7 +1652,7 @@ ZZZ
     {
        $static_link = " link=static";
     }
-    if ($version  eq "1_54_0" or $version  eq "1_59_0") 
+    if ($version  eq "1_54_0" or $version  eq "1_59_0" or $version  eq "1_62_0") 
       {
 	run_command_or_die("./bootstrap.sh --prefix=$opt_install_dir -with-libraries=test,thread,iostreams,filesystem,system,regex,date_time toolset=$toolset threading=multi variant=release stage");
 	run_command_or_die("./b2 $static_link install");

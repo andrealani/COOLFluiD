@@ -158,10 +158,11 @@ void Tecplot2CFmeshConverter::readTecplotFile(CFuint nbZones,
   string line = "";
   CFuint countl = 0;
   vector<string> words;
-  SelfRegistPtr<FileHandlerInput> fhandle = SingleBehaviorFactory<FileHandlerInput>::getInstance().create();
+  SelfRegistPtr<FileHandlerInput>* fhandle = 
+	SingleBehaviorFactory<FileHandlerInput>::getInstance().createPtr();
   path meshFile = change_extension(filepath, extension);
   
-  ifstream& fin = fhandle->open(meshFile);
+  ifstream& fin = (*fhandle)->open(meshFile);
   getTecplotWordsFromLine(fin, line, countl, words); // TITLE
   
   vector<string> vars;
@@ -172,7 +173,8 @@ void Tecplot2CFmeshConverter::readTecplotFile(CFuint nbZones,
     readZone(fin, countl, vars, isBoundary);
     CFLog(VERBOSE, "END   Reading ZONE " << i << "\n");
   }
-  fhandle->close();
+  (*fhandle)->close();
+  delete fhandle;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1180,7 +1182,8 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   
   path meshFile = change_extension(filepath, getOriginExtension());
   
-  SelfRegistPtr<FileHandlerOutput> fhandle = SingleBehaviorFactory<FileHandlerOutput>::getInstance().create();
+  //SelfRegistPtr<FileHandlerOutput>* fhandle = 
+  //	SingleBehaviorFactory<FileHandlerOutput>::getInstance().createPtr();
   
   // string macroFileName = "interpolate.mcr";
   // path macroFile = DirPaths::getInstance().getWorkingDir()/macroFileName;

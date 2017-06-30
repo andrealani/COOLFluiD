@@ -82,8 +82,9 @@ void FileInitState::execute()
   boost::filesystem::path fname =
     Environment::DirPaths::getInstance().getResultsDir() / boost::filesystem::path(_fileName);
 
-  Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
-  ifstream& file = fhandle->open(fname);
+  Common::SelfRegistPtr<Environment::FileHandlerInput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().createPtr();
+  ifstream& file = (*fhandle)->open(fname);
 
   CFuint nbStates;
   CFuint nbEqs;
@@ -145,7 +146,8 @@ void FileInitState::execute()
     geoBuilder.releaseGE();
   }
 
-  fhandle->close();
+  (*fhandle)->close();
+  delete fhandle;
 }
 
 //////////////////////////////////////////////////////////////////////////////

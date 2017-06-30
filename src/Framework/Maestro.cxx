@@ -60,17 +60,20 @@ void Maestro::configure ( Config::ConfigArgs& args )
   ConfigObject::configure(args);
 
   // builds the global stop Criteria
-  m_stopcriteria = FACTORY_GET_PROVIDER
+  Common::SelfRegistPtr<GlobalStopCriteria>* stopcriteria = FACTORY_GET_PROVIDER
     (getFactoryRegistry(), GlobalStopCriteria, m_stopcriteria_str)->
-    create(m_stopcriteria_str);
+    createPtr(m_stopcriteria_str);
   
+  m_stopcriteria = *stopcriteria;
   m_stopcriteria->setFactoryRegistry(getFactoryRegistry());
   configureNested ( m_stopcriteria.getPtr(), args );
-  
+
   SimulationStatus::getInstance().setAppendIter(m_append_iter);
   
   const bool restart = SimulationStatus::getInstance().isRestart();
   if(!restart) SimulationStatus::getInstance().setRestart(m_restart_from_previous);
+ 
+  delete stopcriteria;
 }
 
 //////////////////////////////////////////////////////////////////////////////

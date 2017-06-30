@@ -395,12 +395,13 @@ void GridConvergenceTwoFluid::writeOutputFile()
 
   //std::cout << "IN writeOutputFile() \n";
 
-  SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
+  SelfRegistPtr<Environment::FileHandlerOutput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
   
   const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
 
     if (iter == 1) {
-      ofstream& outputFile = fhandle->open(constructFilename());
+      ofstream& outputFile = (*fhandle)->open(constructFilename());
       prepareOutputFile(outputFile);
       outputFile << iter <<" ";
       for(CFuint i = 0; i < nbEqs; i++){
@@ -413,7 +414,7 @@ void GridConvergenceTwoFluid::writeOutputFile()
       outputFile.close();
     }
     else {
-      ofstream& outputFile = fhandle->open(constructFilename(), ios::app);
+      ofstream& outputFile = (*fhandle)->open(constructFilename(), ios::app);
       outputFile << iter <<" ";
       for(CFuint i = 0; i < nbEqs; i++){
         outputFile << m_ErrorTotalL1[i] <<" ";
@@ -424,9 +425,9 @@ void GridConvergenceTwoFluid::writeOutputFile()
       outputFile << CurrentTime << " " << totalnbCells << "\n";
       outputFile.close();
     }
+    delete fhandle;
   }
-  CFout << "Writing Error file finished." << "\n";
-//  outputFile.close();
+  CFLog(VERBOSE, "Writing Error file finished." << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -83,8 +83,9 @@ void WriteTecplot::writeFile(std::string FileName)
   prepareNodeValues(l_strategy, outputVector);
 
   // open file
-  SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-  ofstream& outputFile = fhandle->open( boost::filesystem::path(FileName) );
+  SelfRegistPtr<Environment::FileHandlerOutput>* fhandle =
+	 Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
+  ofstream& outputFile = (*fhandle)->open( boost::filesystem::path(FileName) );
 
   // write title and variables
   outputFile << "TITLE = \"" << l_title << "\"\n";
@@ -137,6 +138,7 @@ void WriteTecplot::writeFile(std::string FileName)
 
   // close file
   outputFile.close();
+  delete fhandle;
   resetOutput();
 }
 
@@ -164,8 +166,9 @@ void WriteTecplot::writeFileStructure(std::string FileName)
   const CFuint nbCells = cells->getLocalNbGeoEnts();
 
   // open file
-  SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-  ofstream& outputFile = fhandle->open( boost::filesystem::path(FileName) );
+  SelfRegistPtr<Environment::FileHandlerOutput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
+  ofstream& outputFile = (*fhandle)->open( boost::filesystem::path(FileName) );
 
   // write title and variables
   outputFile << "TITLE = \"" << l_title << "\"\n";
@@ -213,6 +216,7 @@ void WriteTecplot::writeFileStructure(std::string FileName)
 
   // close file
   outputFile.close();
+  delete fhandle;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -241,8 +245,8 @@ void WriteTecplot::writeOutput(std::string FileName)
   prepareNodeValues(l_strategy, outputVector);
 
   // open file
-  SelfRegistPtr<Environment::FileHandlerOutput> fhandle2 = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-
+  SelfRegistPtr<Environment::FileHandlerOutput>* fhandle2 = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
 
     { std::stringstream mm; 
     mm << boost::filesystem::path(FileName);
@@ -280,12 +284,13 @@ void WriteTecplot::writeOutput(std::string FileName)
       }
       myfile.close();
    
-      ofstream& outputFile2 = fhandle2->open(boost::filesystem::path(FileName));
+      ofstream& outputFile2 = (*fhandle2)->open(boost::filesystem::path(FileName));
       outputFile2 << ss.str();
       outputFile2.close(); 
     }
     else CFLog(VERBOSE, "!!! Unable to open file !!! \n  WriteTecplot::writeOutput(" << FileName << ")" << "\n"); 
 
+    delete fhandle2;
     resetOutput();
 }
 

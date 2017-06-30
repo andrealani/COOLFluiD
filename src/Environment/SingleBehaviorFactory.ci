@@ -74,6 +74,27 @@ std::string SingleBehaviorFactory<TYPE>::getDefaultBehavior()
 //////////////////////////////////////////////////////////////////////////////
 
 template <class TYPE>
+Common::SelfRegistPtr<TYPE>* SingleBehaviorFactory<TYPE>::createPtr()
+{
+  Common::SafePtr<typename TYPE::PROVIDER> prov;
+  if (!m_default.empty())  {
+    prov = FACTORY_T_GET_PROVIDER(m_fr, TYPE, m_default);
+  }
+  else  {
+    std::vector<Common::ProviderBase*> all = FACTORY_T_GET_ALL_PROVIDERS(m_fr, TYPE);
+    if (all.empty()) {
+      throw Common::NoSuchValueException (FromHere(),"No providers in factory of '" + TYPE::getClassName() + "'");
+    }
+    else { // since there is no default we use the first on the list of providers
+      prov = dynamic_cast<typename TYPE::PROVIDER*>(*(all.begin()));
+    }
+  }
+  return prov->createPtr();
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
 Common::SelfRegistPtr<TYPE> SingleBehaviorFactory<TYPE>::create()
 {
   Common::SafePtr<typename TYPE::PROVIDER> prov;
@@ -91,7 +112,7 @@ Common::SelfRegistPtr<TYPE> SingleBehaviorFactory<TYPE>::create()
   }
   return prov->create();
 }
-    
+
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace Environment

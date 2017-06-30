@@ -37,7 +37,9 @@ public:
   explicit MethodStrategyProvider(const std::string& name)
     : BaseMethodStrategyProvider<DATA, BASESTRATEGY >(name)
   {
+#ifndef CF_HAVE_SINGLE_EXEC 
     Environment::ModuleRegister<MODULE>::getInstance().getSelfRegistry().regist(this);
+#endif
   }
 
   /// Default destructor.

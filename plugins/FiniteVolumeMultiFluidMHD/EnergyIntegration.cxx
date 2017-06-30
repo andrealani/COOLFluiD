@@ -347,11 +347,11 @@ void EnergyIntegration::writeOutputFile()
     CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
     const CFreal CurrentTime = SubSystemStatusStack::getActive()->getCurrentTimeDim();
 
-    SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-
+    SelfRegistPtr<Environment::FileHandlerOutput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
 
     if (iter == 1) {
-      ofstream& outputFile = fhandle->open(constructFilename());
+      ofstream& outputFile = (*fhandle)->open(constructFilename());
       prepareOutputFile(outputFile);
       outputFile << iter
                << " "
@@ -386,7 +386,7 @@ void EnergyIntegration::writeOutputFile()
       outputFile.close();
     }
     else {
-      ofstream& outputFile = fhandle->open(constructFilename(), ios::app);
+      ofstream& outputFile = (*fhandle)->open(constructFilename(), ios::app);
       outputFile << iter
                  << " "
                  << _totalMagneticEner
@@ -419,6 +419,7 @@ void EnergyIntegration::writeOutputFile()
                  << "\n";
       outputFile.close();
     }
+    delete fhandle;
   }
   CFout << "Writing of Energy integration" << "\n";
 }

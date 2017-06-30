@@ -4,13 +4,14 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#include "PhysicalModelImpl.hh"
+#include "Framework/PhysicalModelImpl.hh"
 #include "Common/CFLog.hh"
-#include "PhysicalPropertyLibrary.hh"
+#include "Framework/PhysicalPropertyLibrary.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
+using namespace COOLFluiD::Common;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -82,14 +83,15 @@ void PhysicalModelImpl::configure ( Config::ConfigArgs& args )
     }
   }
 
-  _physicalPropLib = FACTORY_GET_PROVIDER
-    (getFactoryRegistry(), PhysicalPropertyLibrary, _physicalPropLibStr)->
-    create(_physicalPropLibStr);
+  SelfRegistPtr<PhysicalPropertyLibrary>* ppl =
+  FACTORY_GET_PROVIDER(getFactoryRegistry(), PhysicalPropertyLibrary, _physicalPropLibStr)->
+    createPtr(_physicalPropLibStr);
+  
+  _physicalPropLib = *ppl;
   cf_assert(_physicalPropLib.isNotNull());
-  
   _physicalPropLib->setFactoryRegistry(getFactoryRegistry());
-  
   configureNested ( _physicalPropLib.getPtr(), args );
+  delete ppl;
 }
 
 //////////////////////////////////////////////////////////////////////////////

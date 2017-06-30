@@ -155,7 +155,7 @@ int main(int argc, char** argv)
   using namespace boost;
   
 #ifdef CF_HAVE_SINGLE_EXEC
-  std::auto_ptr<FactoryRegistry> fr(new FactoryRegistry());
+  auto_ptr<FactoryRegistry> fr(new FactoryRegistry());
   SafePtr<FactoryRegistry> fRegistry(fr.get()); 
   cf_assert(fRegistry.isNotNull());
   
@@ -306,14 +306,11 @@ int main(int argc, char** argv)
     CFLog(VERBOSE,"Creating Simulation Maestro\n");
     Common::SafePtr<Maestro::PROVIDER> prov = 
       FACTORY_GET_PROVIDER(fRegistry, Maestro, maestro_str);
-    CFLog(VERBOSE,"Creating Simulation Maestro 1\n");
     cf_assert(prov.isNotNull());
-    CFLog(VERBOSE,"Creating Simulation Maestro 2\n");
+   
     maestro.reset(prov->create(prov->getName()));
     maestro->setFactoryRegistry(fRegistry);
-    CFLog(VERBOSE,"Creating Simulation Maestro 4\n");
     maestro->configure ( config_args );
-    CFLog(VERBOSE,"Creating Simulation Maestro 5\n");
     
     CFLog(INFO,"-------------------------------------------------------------\n");
     

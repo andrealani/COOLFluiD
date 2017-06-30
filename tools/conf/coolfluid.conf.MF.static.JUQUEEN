@@ -17,8 +17,8 @@
 # default build options
 #==================================================================
 
-coolfluid_dir = /homeb/prpc19/prpc1900/trunk
-basebuild_dir = /homeb/prpc19/prpc1900/trunk/BGMPI_STATIC_LLINT
+coolfluid_dir = /homeb/prpc19/prpc1900/trunk_NEW
+basebuild_dir = /homeb/prpc19/prpc1900/trunk_NEW/BGMPI_STATIC_INT
 
 # compilers
 cc     = /bgsys/drivers/ppcfloor/comm/xl/bin/mpixlc
@@ -34,7 +34,6 @@ libpetsc_deps_paths = /bgsys/local/lib/libesslbg.a;/bgsys/local/lapack/3.7.0_sim
 mpi_dir       = /bgsys/drivers/ppcfloor/comm/xl
 boost_dir     = /bgsys/local/boost/1.47.0 
 petsc_dir     = /bgsys/local/petsc/3.7.6/juqueen-int8-O3simd_C++
-#/homeb/prpc19/prpc1900/local/petsc_3.6.3
 parmetis_dir  = /bgsys/local/ParMetis/4.0.3
 #/bgsys/local/ParMetis/4.0.3_big
 
@@ -62,17 +61,19 @@ lib_CFmeshFileReader = on
 lib_Gambit2CFmesh = on
 lib_Gmsh2CFmesh = on
 lib_Tecplot2CFmesh = on
+#lib_THOR2CFmesh = on
 lib_CFmeshExtruder = on
 lib_CFmeshFileWriter = on
 lib_TecplotWriter = on
 
 lib_Maxwell = on
-lib_MultiFluidMHD = on
+lib_FiniteVolume = on
 
+lib_MultiFluidMHD = on
 lib_ForwardEuler = on
 lib_NewtonMethod = on
 lib_ParaViewWriter = on
-lib_FiniteVolume = on
+
 lib_FiniteVolumeMaxwell = on
 lib_FiniteVolumeMultiFluidMHD = on
 
@@ -100,6 +101,6 @@ bgoptim4_cxxflags = -O4 -qarch=qp -qtune=qp
 bgoptim4_cflags   = -O4 -qarch=qp -qtune=qp
 bgoptim4_fflags   = -O4 -qarch=qp -qtune=qp
 
-bgoptim3_cxxflags = -O3 -qstrict -qarch=qp -qtune=qp 
+bgoptim3_cxxflags = -O3 -qstrict -qarch=qp -qtune=qp -qminimaltoc
 bgoptim3_cflags   = -O3 -qstrict -qarch=qp -qtune=qp
 bgoptim3_fflags   = -O3 -qstrict -qarch=qp -qtune=qp

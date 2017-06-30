@@ -423,7 +423,7 @@ void StandardSubSystem::setGlobalMeshData()
 	      for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
 		// we make sure that the number of boundary faces is always updated
 		TotalTRSInfo[counter][iTR] = (*(*it))[iTR]->getLocalNbGeoEnts();
-		CFLog(VERBOSE, "TRS : " << (*it)->getName()
+		CFLog(INFO, "TRS : " << (*it)->getName()
 		      << ", TR : "<< iTR
 		      << ", nbGeos : "
 		      << TotalTRSInfo[counter][iTR] << "\n");
@@ -451,9 +451,11 @@ void StandardSubSystem::setGlobalMeshData()
 	  //  states.DumpContents ();
 	  //  nodes.DumpContents ();
 	  //  #endif
-	  
+
+          CFLog(VERBOSE, "StandardSubSystem::setGlobalMeshData() => buildMap() start\n");	  
 	  states.buildMap ();
 	  nodes.buildMap ();
+          CFLog(VERBOSE, "StandardSubSystem::setGlobalMeshData() => buildMap() end\n");
 	  
 	  // #ifndef NDEBUG
 	  //  states.DumpInfo ();

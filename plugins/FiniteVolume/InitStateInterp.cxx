@@ -179,9 +179,9 @@ void InitStateInterp::fillTable()
 {
   boost::filesystem::path filepath = Environment::DirPaths::getInstance().
     getWorkingDir() / m_infile;
-  Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle =
-    Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
-  ifstream& fin = fhandle->open(filepath);
+  Common::SelfRegistPtr<Environment::FileHandlerInput>* fhandle =
+    Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().createPtr();
+  ifstream& fin = (*fhandle)->open(filepath);
   
   string variables;
   // read the first line with the variables names
@@ -211,6 +211,7 @@ void InitStateInterp::fillTable()
   for (CFuint i = 0; i < nbEqs; ++i) {
     m_lookupState[i]->sortKeys();
   }
+  delete fhandle;
 }
 
 //////////////////////////////////////////////////////////////////////////////

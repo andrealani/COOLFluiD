@@ -70,6 +70,8 @@ void FactoryRegistry::unregist(const std::string& type_name)
 
 SafePtr<FactoryBase> FactoryRegistry::getFactory(const std::string& type_name)
 {
+  CFtrace << "FactoryRegistry::getFactory(" << type_name << ") => start\n"; 
+
   if ( m_store.checkEntry(type_name) )
   {
     //     CFLog ( INFO, "Factory [" + type_name + "] found and returning\n" );
@@ -80,6 +82,7 @@ SafePtr<FactoryBase> FactoryRegistry::getFactory(const std::string& type_name)
     CFLogWarn("Factory [" + type_name + "] not registered : returning null pointer\n");
     return SafePtr<FactoryBase>(CFNULL);
   }
+  CFtrace << "FactoryRegistry::getFactory(" << type_name << ") => end\n";
 }
 
 //////////////////////////////////////////////////////////////////////////////

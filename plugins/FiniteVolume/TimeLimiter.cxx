@@ -11,7 +11,9 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 TimeLimiter::TimeLimiter(const std::string& name) :
-    Config::ConfigObject(name)
+	Common::NonCopyable<TimeLimiter>(),
+	Common::OwnedObject(),
+	Config::ConfigObject(name)
 {
 }
 

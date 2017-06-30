@@ -16,6 +16,7 @@
 
 using namespace std;
 using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Environment;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -51,10 +52,12 @@ void FileReader::readFromFile(const boost::filesystem::path& filepath)
   m_readCount = 0;
 
   do {
-    Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle =
-      Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
-    ifstream& file = fhandle->open(filepath);
 
+    Common::SelfRegistPtr<Environment::FileHandlerInput>* fhandle =
+      Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().createPtr();
+
+    std::ifstream& file = (*fhandle)->open(filepath);
+    
     m_readAgain = false;
     bool keepOnReading = true;
     CFuint linesRead = 0;
@@ -67,15 +70,21 @@ void FileReader::readFromFile(const boost::filesystem::path& filepath)
 				  "\nSee void FileReader::readFromFile for more info\n");
 
     } while (keepOnReading);
-    
-    fhandle->close();
+
+    CFLog(VERBOSE, "FileReader::readFromFile() => 2\n");    
+    (*fhandle)->close();
+    CFLog(VERBOSE, "FileReader::readFromFile() => 3\n");
 
     m_readCount++;
-    
+    CFLog(VERBOSE, "FileReader::readFromFile() => 4\n");    
+
+    delete fhandle;
   } while (m_readAgain);
-  
+ 
+  CFLog(VERBOSE, "FileReader::readFromFile() => 5\n");
   finish();
-  
+  CFLog(VERBOSE, "FileReader::readFromFile() => 6\n");
+
   CFLog(VERBOSE, "FileReader::readFromFile() => end\n");
 }
 

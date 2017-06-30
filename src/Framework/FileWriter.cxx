@@ -38,12 +38,14 @@ void FileWriter::writeToFile(const boost::filesystem::path& filepath)
 {
   CFAUTOTRACE;
 
-  Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-  ofstream& file = fhandle->open(filepath);
+  Common::SelfRegistPtr<Environment::FileHandlerOutput>* fhandle = 	
+	Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
+  ofstream& file = (*fhandle)->open(filepath);
 
   writeToFileStream(file);
 
-  fhandle->close();
+  (*fhandle)->close();
+  delete fhandle;
 }
 
 //////////////////////////////////////////////////////////////////////////////

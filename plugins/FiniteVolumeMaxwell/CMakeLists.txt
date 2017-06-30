@@ -85,10 +85,12 @@ LIST ( APPEND FiniteVolumeMaxwell_requires_mods FiniteVolume Maxwell TecplotWrit
 LIST ( APPEND FiniteVolumeMaxwell_cflibs Framework FiniteVolume Maxwell TecplotWriter )
 CF_ADD_PLUGIN_LIBRARY ( FiniteVolumeMaxwell )
 ELSE()
+IF ( CF_BUILD_FiniteVolumeMaxwell)
 FOREACH (AFILE ${FiniteVolumeMaxwell_files} )
 LIST(APPEND coolfluid-solver_files ../../plugins/FiniteVolumeMaxwell/${AFILE} )
 ENDFOREACH(AFILE)
 CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+ENDIF()
 ENDIF()
 
 CF_WARN_ORPHAN_FILES()

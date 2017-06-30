@@ -105,11 +105,11 @@ Common::Signal::return_t SMaestro::control ( Common::Signal::arg_t input )
     event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_SETUP"), msg );
 
     CFLog(INFO, "#\n###### RUN PHASE ####################\n#\n");
-    for ( ; !m_stopcriteria->isSatisfied(); )
-    {
+    //for ( ; !m_stopcriteria->isSatisfied(); )
+   // {
       simStatus.incrementNbIter();
       event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_RUN"), msg );
-    }
+   // }
 
     CFLog(INFO, "#\n###### UNSETUP PHASE ################\n#\n");
     event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_UNSETUP"), msg );

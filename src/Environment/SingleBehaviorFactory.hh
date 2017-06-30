@@ -40,8 +40,12 @@ public: // methods
 
   /// Function to create an instance polymorphically
   /// @return a pointer to the instantiated value
-  Common::SelfRegistPtr<TYPE> create();
+  Common::SelfRegistPtr<TYPE>* createPtr();
 
+  /// Function to create an instance polymorphically
+  /// @return a pointer to the instantiated value
+  Common::SelfRegistPtr<TYPE> create();
+  
   /// Sets th default behavior to be constructed by this factory
   /// @param name of the provider which is default
   void setDefaultBehavior(const std::string& name);

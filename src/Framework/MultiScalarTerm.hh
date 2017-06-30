@@ -88,7 +88,7 @@ public:
     _nbScalarStrides = 1;
     if (nbScalarStrides != CFNULL) {
       cf_assert(nbScalarVars.size() == nbScalarStrides->size());
-      CFLog(VERBOSE,  _nbScalarStrides.size() << " vs " << nbScalarStrides->size() << "\n");
+      CFLog(DEBUG_MIN,  _nbScalarStrides.size() << " vs " << nbScalarStrides->size() << "\n");
       cf_assert(_nbScalarStrides.size() == nbScalarStrides->size());
       _nbScalarStrides = *nbScalarStrides; 
     }

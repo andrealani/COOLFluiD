@@ -241,8 +241,9 @@ void Gmsh2CFmeshConverter::checkFormat(const boost::filesystem::path& filepath)
   using namespace boost::filesystem;
   path meshFile = change_extension(filepath, getOriginExtension());
 
-  Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
-  ifstream& fin = fhandle->open(meshFile);
+  Common::SelfRegistPtr<Environment::FileHandlerInput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().createPtr();
+  ifstream& fin = (*fhandle)->open(meshFile);
 
   CFuint lineNb = 0;
   std::string line;
@@ -427,8 +428,8 @@ void Gmsh2CFmeshConverter::checkFormat(const boost::filesystem::path& filepath)
 
   ///@todo add many more checks
 
-  fhandle->close();
-
+  (*fhandle)->close();
+  delete fhandle;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -467,8 +468,9 @@ void Gmsh2CFmeshConverter::readGmshFileVersion1(const boost::filesystem::path& f
    using namespace boost::filesystem;
    path meshFile = change_extension(filepath, getOriginExtension() );
 
-   Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
-   ifstream& fin = fhandle->open(meshFile);
+   Common::SelfRegistPtr<Environment::FileHandlerInput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().createPtr();
+   ifstream& fin = (*fhandle)->open(meshFile);
 
    CFuint lineNb = 0;
    std::string line;
@@ -642,8 +644,8 @@ void Gmsh2CFmeshConverter::readGmshFileVersion1(const boost::filesystem::path& f
    lineNb -= _nbCells;
    /// Go back to the beginning of the elements
    /// @todo try to do this without closing/opening...
-   fhandle->close();
-   fhandle->open(meshFile);
+   (*fhandle)->close();
+   (*fhandle)->open(meshFile);
    for (CFuint i = 0; i < lineNb; ++i){
       getline(fin,line);
    }
@@ -717,7 +719,8 @@ void Gmsh2CFmeshConverter::readGmshFileVersion1(const boost::filesystem::path& f
       }
    }
    _nbCells = totalNbElements;
-  fhandle->close();
+  (*fhandle)->close();
+  delete fhandle;
 }
 
 
@@ -731,8 +734,9 @@ void Gmsh2CFmeshConverter::readGmshFileVersion2(const boost::filesystem::path& f
   using namespace boost::filesystem;
   path meshFile = change_extension(filepath, getOriginExtension() );
 
-  Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
-  ifstream& fin = fhandle->open(meshFile);
+  Common::SelfRegistPtr<Environment::FileHandlerInput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().createPtr();
+  ifstream& fin = (*fhandle)->open(meshFile);
 
   CFuint lineNb = 0;
   std::string line = "";
@@ -952,8 +956,8 @@ void Gmsh2CFmeshConverter::readGmshFileVersion2(const boost::filesystem::path& f
    /// Re-loop over the elements to effectively read the elements
    /// Go back to the beginning of the elements
    /// @todo try to do this without closing/opening...
-   fhandle->close();
-   fhandle->open(meshFile);
+   (*fhandle)->close();
+   (*fhandle)->open(meshFile);
 
    line = "";
    while( line != "$Elements" )
@@ -1038,7 +1042,8 @@ void Gmsh2CFmeshConverter::readGmshFileVersion2(const boost::filesystem::path& f
   } // Loop over cells
 
 
-  fhandle->close();
+  (*fhandle)->close();
+  delete fhandle;	
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1050,8 +1055,9 @@ void Gmsh2CFmeshConverter::readSPInnerCells(const boost::filesystem::path& filep
   using namespace boost::filesystem;
   path fileSP = change_extension(filepath,".SP");
 
-  Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
-  ifstream& fin = fhandle->open(fileSP);
+  Common::SelfRegistPtr<Environment::FileHandlerInput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().createPtr();
+  ifstream& fin = (*fhandle)->open(fileSP);
 
   std::string line;
   vector<std::string> words;
@@ -1083,7 +1089,8 @@ void Gmsh2CFmeshConverter::readSPInnerCells(const boost::filesystem::path& filep
 
   if(!found) throw BadFormatException (FromHere(),"No InField defined in SP file");
 
-  fhandle->close();
+  (*fhandle)->close();
+  delete fhandle;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1095,8 +1102,9 @@ void Gmsh2CFmeshConverter::readSPFile(const boost::filesystem::path& filepath)
   using namespace boost::filesystem;
   path fileSP = change_extension(filepath,".SP");
 
-  Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
-  ifstream& fin = fhandle->open(fileSP);
+  Common::SelfRegistPtr<Environment::FileHandlerInput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().createPtr();
+  ifstream& fin = (*fhandle)->open(fileSP);
 
   std::string line;
   vector<std::string> words;
@@ -1163,7 +1171,8 @@ void Gmsh2CFmeshConverter::readSPFile(const boost::filesystem::path& filepath)
       }
   }
 
-  fhandle->close();
+  (*fhandle)->close();
+  delete fhandle;
 }
 
 //////////////////////////////////////////////////////////////////////////////

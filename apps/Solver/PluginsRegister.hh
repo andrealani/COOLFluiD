@@ -256,10 +256,9 @@
 #include "NewtonMethod/TwoLayerUpdateSol.hh"
 #include "NewtonMethod/UpdateSolCoupling.hh"
 #include "NewtonMethod/UpdateSolFVMCC.hh"
-
-#if defined(CF_BUILD_NewtonMethodMHD) && defined(CF_BUILD_MHD)
-#include "NewtonMethod/UpdateSolMHD.hh"
-#endif
+//#if defined(CF_BUILD_NewtonMethodMHD) && defined(CF_BUILD_MHD)
+//#include "NewtonMethod/UpdateSolMHD.hh"
+//#endif
 
 #include "Petsc/PetscLSSData.hh"
 #include "Petsc/Petsc.hh"
@@ -1003,7 +1002,7 @@ void registerAll(Common::SafePtr<Common::FactoryRegistry> fRegistry)
     FACTORY(fRegistry, CFmeshReaderCom)->regist
       (new MethodCommandProvider<COOLFluiD::CFmeshFileReader::StdUnSetup, CFmeshReaderData, CFmeshFileReaderPlugin>("StdUnSetup"));  
  
-    using namespace CFmeshFileWriter;
+    using namespace COOLFluiD::CFmeshFileWriter;
  
     FACTORY(fRegistry, OutputFormatter)->regist
       (new Environment::ObjectProvider<CFmeshWriter, OutputFormatter, CFmeshFileWriterModule,1>
@@ -1493,9 +1492,9 @@ void registerAll(Common::SafePtr<Common::FactoryRegistry> fRegistry)
        ("UpdateSolFVMCC"));
 
 #if defined(CF_BUILD_NewtonMethodMHD) && defined(CF_BUILD_MHD) 
-    FACTORY(fRegistry, NewtonIteratorCom)->regist
+ /*   FACTORY(fRegistry, NewtonIteratorCom)->regist
       (new MethodCommandProvider<UpdateSolMHD, NewtonIteratorData, NewtonMethodMHDModule> 
-       ("UpdateSolMHD"));
+       ("UpdateSolMHD"));*/
 #endif
  
     using namespace Petsc;

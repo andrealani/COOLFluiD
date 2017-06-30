@@ -1245,9 +1245,9 @@ void WriteSolution::writeBoundarySurface()
     path cfgpath = getMethodData().getFilename();
     path filepath = cfgpath.branch_path() / ( basename(cfgpath) + "-surf" + extension(cfgpath) );
 
-    Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
-      Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-    ofstream& fout = fhandle->open(filepath);
+    Common::SelfRegistPtr<Environment::FileHandlerOutput>* fhandle =
+      Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
+    ofstream& fout = (*fhandle)->open(filepath);
 
     //  Tecplot Header
     fout << "TITLE      = Boundary data" << "\n";
@@ -1423,6 +1423,7 @@ void WriteSolution::writeBoundarySurface()
     }
 
     fout.close();
+    delete fhandle;
   }
 }
 

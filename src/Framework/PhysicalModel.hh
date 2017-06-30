@@ -42,7 +42,7 @@ public: // methods
   
   /// Set the PhysicalModelImpl once created and configured
   void setPhysicalModelImpl(
-  Common::SelfRegistPtr<PhysicalModelImpl>physicalModelImpl);
+  Common::SelfRegistPtr<PhysicalModelImpl> physicalModelImpl);
 
   /// Set the PhysicalModelImpl
   void unsetPhysicalModelImpl();

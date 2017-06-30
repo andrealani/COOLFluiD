@@ -28,6 +28,7 @@
 using namespace std;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Environment;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -316,8 +317,12 @@ void Gambit2CFmeshConverter::checkFormat(const boost::filesystem::path& filepath
   using namespace boost::filesystem;
   path meshFile = change_extension(filepath, getOriginExtension());
 
-  Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
-  ifstream& fin = fhandle->open(meshFile);
+  Common::SelfRegistPtr<Environment::FileHandlerInput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().createPtr();
+
+  CFLog(VERBOSE, "Gambit2CFmeshConverter::checkFormat() 1\n");
+  std::ifstream& fin = (*fhandle)->open(meshFile);
+  CFLog(VERBOSE, "Gambit2CFmeshConverter::checkFormat() 2\n");
 
   CFuint lineNb = 0;
   std::string line;
@@ -365,7 +370,8 @@ void Gambit2CFmeshConverter::checkFormat(const boost::filesystem::path& filepath
   if((nbVelComponents < 2) || (nbVelComponents > 3)) callGambitFileError("Wrong number of Velocity Components.",lineNb,meshFile);
 
   // Close file
-  fhandle->close();
+  (*fhandle)->close();
+  delete fhandle; 
 }
 
 ////////////////////////////////////////////////////////////////////////////// 2
@@ -941,8 +947,12 @@ void Gambit2CFmeshConverter::readGambitFile(const boost::filesystem::path& filep
   using namespace boost::filesystem;
   path meshFile = change_extension(filepath, getOriginExtension());
 
-  Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
-  ifstream& fin = fhandle->open(meshFile);
+  Common::SelfRegistPtr<Environment::FileHandlerInput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().createPtr();
+
+  CFLog(VERBOSE, "Gambit2CFmeshConverter::readGambitFile() 1\n");
+  std::ifstream& fin = (*fhandle)->open(meshFile);
+  CFLog(VERBOSE, "Gambit2CFmeshConverter::readGambitFile() 2\n");
 
   CFuint lineNb = 0;
   std::string line;
@@ -1007,7 +1017,8 @@ void Gambit2CFmeshConverter::readGambitFile(const boost::filesystem::path& filep
     CFLogDebugMin(  "SuperPatch number = " << i << " => end\n" );
   }
 
-  fhandle->close();
+  (*fhandle)->close();
+  delete fhandle;
 }
 
 ////////////////////////////////////////////////////////////////////////////// 9

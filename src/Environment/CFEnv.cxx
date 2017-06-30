@@ -32,6 +32,10 @@
 #include "Environment/ModuleRegisterBase.hh"
 #include "Environment/CFEnvVars.hh"
 
+#ifdef CF_HAVE_SINGLE_EXEC
+#include "Petsc/Petsc.hh"
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace COOLFluiD::Common;
@@ -389,20 +393,31 @@ void CFEnv::initiate ( int argc, char** argv )
 
 void CFEnv::initiateModules()
 {
+#ifndef CF_HAVE_SINGLE_EXEC
   std::vector< SafePtr<ModuleRegisterBase> > mod = m_moduleRegistry->getAllModules();
   std::for_each(mod.begin(),
                 mod.end(),
                 Common::safeptr_mem_fun(&ModuleRegisterBase::initiate));
+#else
+ // AL: very gory fix
+  COOLFluiD::Petsc::PetscModule::getInstance().initiate();
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void CFEnv::terminateModules()
 {
+#ifndef CF_HAVE_SINGLE_EXEC
   std::vector< SafePtr<ModuleRegisterBase> > mod = m_moduleRegistry->getAllModules();
   std::for_each(mod.begin(),
                 mod.end(),
                 Common::safeptr_mem_fun(&ModuleRegisterBase::terminate));
+
+#else
+  // AL: very gory fix
+  COOLFluiD::Petsc::PetscModule::getInstance().terminate();
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////

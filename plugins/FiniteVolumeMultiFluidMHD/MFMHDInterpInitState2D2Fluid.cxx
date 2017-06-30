@@ -96,9 +96,9 @@ void MFMHDInterpInitState2D2Fluid::readInputFile()
 //  DataHandle<std::vector<CFreal> > Blmreal  = socket_Blmreal.getDataHandle();
 //  DataHandle<std::vector<CFreal> > Blmimg  = socket_Blmimg.getDataHandle();
 
-  SelfRegistPtr<Environment::FileHandlerInput> fhandle =
-     Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
-  ifstream& inputFile = fhandle->open(constructFilename(_nameDataFile));
+  SelfRegistPtr<Environment::FileHandlerInput>* fhandle =
+     Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().createPtr();
+  ifstream& inputFile = (*fhandle)->open(constructFilename(_nameDataFile));
 
 //  std::string line, tmpstr;
 //  vector<CFreal> tmprow;
@@ -176,7 +176,8 @@ void MFMHDInterpInitState2D2Fluid::readInputFile()
 //      tmprow.clear();
 //  }
 
-  fhandle->close();
+  (*fhandle)->close();
+  delete fhandle;
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -78,9 +78,9 @@ void MeshFormatConverter::convert(const boost::filesystem::path& fromFilepath,
   stp.start();
   adjustToCFmeshNodeNumbering();
 
-  Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
-    Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-  ofstream& fout = fhandle->open(filepath);
+  Common::SelfRegistPtr<Environment::FileHandlerOutput>* fhandle =
+    Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
+  ofstream& fout = (*fhandle)->open(filepath);
   
   // AL: Those info make the CFmesh file version-dependent, can create problems with regression testing 
   fout << "!COOLFLUID_VERSION "    << Environment::CFEnv::getInstance().getCFVersion() << "\n";
@@ -114,8 +114,9 @@ void MeshFormatConverter::convert(const boost::filesystem::path& fromFilepath,
   fout << "!END" << "\n";
 
   stp.stop();
-  fhandle->close();
+  (*fhandle)->close();
 
+  delete fhandle;
   CFLog(INFO, "Conversion " << this->getName()<< " took: " << stp.read() << "s\n");
 }
 

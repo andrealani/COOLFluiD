@@ -6,12 +6,12 @@ LIST ( APPEND CMAKE_C_LINK_FLAGS    " -qpic -qmkshrobj -qnostaticlink -qnostatic
 ENDIF( CF_ENABLE_IBMSHARED )
 
 IF ( CF_ENABLE_IBMSTATIC )
-LIST ( APPEND CMAKE_CXX_LINK_FLAGS  " -Wl,--allow-multiple-definition -Wl,--whole-archive" )
+LIST ( APPEND CMAKE_CXX_LINK_FLAGS  "-O2 -Wl,--allow-multiple-definition -Wl,--whole-archive" )
+#LIST ( APPEND CMAKE_CXX_LINK_FLAGS  " -Wl,--allow-multiple-definition -Wl,--whole-archive" )
 ENDIF( CF_ENABLE_IBMSTATIC )
 
-
 IF ( CMAKE_COMPILER_IS_GNUCC AND CF_ENABLE_STATIC )
-LIST ( APPEND CMAKE_CXX_LINK_FLAGS  " -Wl,--allow-multiple-definition" )
+LIST ( APPEND CMAKE_CXX_LINK_FLAGS  "-O2 -Wl,--allow-multiple-definition" )
 ENDIF()
 
 IF(CF_ENABLE_OMP)

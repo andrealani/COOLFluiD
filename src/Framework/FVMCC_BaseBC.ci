@@ -310,10 +310,15 @@ void FVMCC_BaseBC<BASE>::configure ( Config::ConfigArgs& args )
     stateInterpProv = 
       FACTORY_T_GET_PROVIDER(this->getFactoryRegistry(), StateInterpolator, m_sInterpolatorStr);
   }
-  
-  m_sInterpolator.reset(stateInterpProv->create(m_sInterpolatorStr));
+ 
+  Common::SelfRegistPtr<Framework::StateInterpolator>* sInterpolator =
+	 stateInterpProv->createPtr(m_sInterpolatorStr);
+  m_sInterpolator = *sInterpolator;
+  cf_assert(m_sInterpolator.isNotNull());
   
   this->configureNested(m_sInterpolator.getPtr(), args);
+
+  delete sInterpolator;
 }
     
 //////////////////////////////////////////////////////////////////////////////

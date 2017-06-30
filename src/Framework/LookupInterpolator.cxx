@@ -110,9 +110,9 @@ void LookupInterpolator::fillTable()
 {
   boost::filesystem::path filepath = Environment::DirPaths::getInstance().
     getWorkingDir() / m_infile;
-  Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle =
-    Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
-  ifstream& fin = fhandle->open(filepath);
+  Common::SelfRegistPtr<Environment::FileHandlerInput>* fhandle =
+    Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().createPtr();
+  ifstream& fin = (*fhandle)->open(filepath);
   
   // this interpolator expects a file with the following format
   //
@@ -157,6 +157,7 @@ void LookupInterpolator::fillTable()
   }
   
   fin.close();
+  delete fhandle;
 }
 
 //////////////////////////////////////////////////////////////////////////////
