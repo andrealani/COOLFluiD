@@ -1050,12 +1050,8 @@ void ParCFmeshBinaryFileReader::readGeomEntList(MPI_File* fh)
     vector<CFint> buf(sizeBuf);
     
     // read from one rank and then broadcast to all the others
-    
-    if (m_myRank == root) {
-      MPIIOFunctions::readArraySingle(fh, &buf[0], sizeBuf);
-    }
-    MPI_Bcast(&buf[0], sizeBuf, MPIStructDef::getMPIType(&buf[0]), root, m_comm);
-    
+    MPIIOFunctions::readArrayAndBcast(fh, &buf[0], sizeBuf, m_myRank, root, m_comm);
+        
     CFuint counter = 0;
     CFuint countGeos = 0;
     for (CFuint iGeo = 0; iGeo < nbTRGeos; ++iGeo, counter+=stride) 
