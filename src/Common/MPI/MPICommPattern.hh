@@ -1049,80 +1049,81 @@ void MPICommPattern<DATA>::BuildCGlobal ()
     }
 
     template <typename DATA>
-    void MPICommPattern<DATA>::BuildGhostMap ()
-    {
-      cf_assert (_InitMPIOK);
-
-      cf_assert (_GhostSendList.size()==
-           static_cast<CFuint>(_CommSize));
-      cf_assert (_GhostReceiveList.size()==
-           static_cast<CFuint>(_CommSize));
+    void MPICommPattern<DATA>::BuildGhostMap()
+    { 
+      CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMap() => start\n");
       
-      // CFLogNotice("MPICommPattern<DATA>::BuildGhostMap() START");
-
+      cf_assert (_InitMPIOK);
+      cf_assert (_GhostSendList.size()==static_cast<CFuint>(_CommSize));
+      cf_assert (_GhostReceiveList.size()==static_cast<CFuint>(_CommSize));
+      
       // Clear old mapping
       for (int j=0; j<_CommSize; j++)
       {
-	  _GhostSendList[j].clear();
-	  _GhostReceiveList[j].clear();
+	_GhostSendList[j].clear();
+	_GhostReceiveList[j].clear();
       }
 
+      CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMap() => 1\n");
       // Broadcast needed points
       Sync_BroadcastNeeded ();
-
+      
+      CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMap() => 2\n");
       // Build send datatype
       Sync_BuildSendTypes();
-
+      
+      CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMap() => 3\n");
       // Now building receive lists
       Sync_BuildReceiveList ();
-
+      
       // Check if all ghost elements were found...
       IndexType GhostFound = 0;
-      for (int i=0; i<_CommSize; i++)
+      for (int i=0; i<_CommSize; i++) {
         GhostFound+=_GhostReceiveList[i].size();
-
+      }
+      
       cf_assert (_GhostSize == _GhostMap.size());
       if (GhostFound != _GhostSize)
       {
-	  // Error: we don't have all the ghost points
-	  CFLog(DEBUG_MIN, "Not all ghost points were found! Starting investigation\n");
-
-	  std::set<CFuint> Ghosts;
-	  std::set<CFuint> Receives;
-	  std::set<CFuint> Missing;
-
-	  typename TGhostMap::const_iterator Iter;
-
-	  for (Iter=_GhostMap.begin(); Iter!=_GhostMap.end(); ++Iter)
-	      Ghosts.insert(Iter->first);
-
-	  for (int i=0; i<_CommSize; ++i)
-	      std::copy(_GhostReceiveList[i].begin(), _GhostReceiveList[i].end(),
-			std::inserter(Receives, Receives.begin()));
-
-	  std::set_difference(Ghosts.begin(), Ghosts.end(), Receives.begin(),
-			      Receives.end(), std::inserter(Missing, Missing.begin()));
-
-	  std::ostringstream S;
-	  S << "Missing ghost elements (globalID): ";
-	  for (std::set<CFuint>::const_iterator I = Missing.begin();
-	       I!=Missing.end(); ++I)
-	      S << *I << " ";
-	  S << "\n";
-
-	  throw NotFoundException(FromHere(), S.str().c_str());
+	// Error: we don't have all the ghost points
+	CFLog(DEBUG_MIN, "Not all ghost points were found! Starting investigation\n");
+	
+	std::set<CFuint> Ghosts;
+	std::set<CFuint> Receives;
+	std::set<CFuint> Missing;
+	
+	typename TGhostMap::const_iterator Iter;
+	
+	for (Iter=_GhostMap.begin(); Iter!=_GhostMap.end(); ++Iter)
+	  Ghosts.insert(Iter->first);
+	
+	for (int i=0; i<_CommSize; ++i)
+	  std::copy(_GhostReceiveList[i].begin(), _GhostReceiveList[i].end(),
+		    std::inserter(Receives, Receives.begin()));
+	
+	std::set_difference(Ghosts.begin(), Ghosts.end(), Receives.begin(),
+			    Receives.end(), std::inserter(Missing, Missing.begin()));
+	
+	std::ostringstream S;
+	S << "Missing ghost elements (globalID): ";
+	for (std::set<CFuint>::const_iterator I = Missing.begin();
+	     I!=Missing.end(); ++I)
+	  S << *I << " ";
+	S << "\n";
+	
+	throw NotFoundException(FromHere(), S.str().c_str());
       }
-
-      // CFLogNotice("MPICommPattern<DATA>::BuildGhostMap()  => Sync_BuildReceiveTypes");
-
+      
+      CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMap() => 4\n");
       // Build receive datatype
       Sync_BuildReceiveTypes ();
-
+      CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMap() => 5\n");
+      
 #ifdef CF_ENABLE_PARALLEL_DEBUG
       WriteCommPattern ();
 #endif
       
-      //CFLogNotice("MPICommPattern<DATA>::BuildGhostMap()  END");
+      CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMap() => end\n");
     }
 
 //////////////////////////////////////////////////////////////////////////////
