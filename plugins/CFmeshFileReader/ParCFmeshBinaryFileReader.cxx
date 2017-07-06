@@ -1018,8 +1018,7 @@ void ParCFmeshBinaryFileReader::readGeomEntList(MPI_File* fh)
   // this is actually only useful to be able to write file
   // without having constructed TRSs
   // get id of last TRS read from file
-  SafePtr< vector<vector<CFuint> > > nbGeomEntsPerTR =
-    getReadData().getNbGeomEntsPerTR();
+  SafePtr< vector<vector<CFuint> > > nbGeomEntsPerTR = getReadData().getNbGeomEntsPerTR();
   
   const CFuint iTRS = m_trs_idxmap[m_curr_trs];
   const CFuint nbTRsAdded = (*nbTRs)[iTRS];
@@ -1034,30 +1033,32 @@ void ParCFmeshBinaryFileReader::readGeomEntList(MPI_File* fh)
   SafePtr<vector<vector<vector<CFuint> > > > trsGlobalIDs =
     MeshDataStack::getActive()->getGlobalTRSGeoIDs();
   (*trsGlobalIDs)[iTRS].resize(nbTRsAdded);
-  
-  CFuint sizeBuf = 0;
-  // loop only in the new TRs, which have not been read yet
-  for (CFuint iTR = nbTRsAdded - m_curr_nbtr; iTR < nbTRsAdded; ++iTR) {
-    const CFuint nbTRGeos = (*nbGeomEntsPerTR)[iTRS][iTR];
-    sizeBuf += nbTRGeos*(2 + nbNodesStatesInTRGeo(iTR,0) + nbNodesStatesInTRGeo(iTR,1));
-  }
-  
-  // read the full list of geometric entities
-  vector<CFint> buf(sizeBuf);
-  MPIIOFunctions::readArray(fh, &buf[0], sizeBuf);
-  
+
+  CFuint root = 0;
   pair<std::valarray<CFuint>, std::valarray<CFuint> > geoConLocal;
   
-  CFuint counter = 0;
+  // read the full list of geometric entities
+  
   // loop only in the new TRs, which have not been read yet
-  for (CFuint iTR = nbTRsAdded - m_curr_nbtr; iTR < nbTRsAdded; ++iTR)
-  {
-    const CFuint nbTRGeos = (*nbGeomEntsPerTR)[iTRS][iTR];
+  for (CFuint iTR = nbTRsAdded - m_curr_nbtr; iTR < nbTRsAdded; ++iTR) 
+    {
+      const CFuint nbTRGeos = (*nbGeomEntsPerTR)[iTRS][iTR];
     CFLogDebugMin("Rank " << m_myRank << " iTR = " << iTR << ", nbTRGeos = "<< nbTRGeos << "\n");
     const CFuint stride = 2 + nbNodesStatesInTRGeo(iTR,0) + nbNodesStatesInTRGeo(iTR,1);
     
+    const CFuint sizeBuf = nbTRGeos*stride;
+    vector<CFint> buf(sizeBuf);
+    
+    // read from one rank and then broadcast to all the others
+    
+    if (m_myRank == root) {
+      MPIIOFunctions::readArraySingle(fh, &buf[0], sizeBuf);
+    }
+    MPI_Bcast(&buf[0], sizeBuf, MPIStructDef::getMPIType(&buf[0]), root, m_comm);
+    
+    CFuint counter = 0;
     CFuint countGeos = 0;
-    for (CFuint iGeo = 0; iGeo < nbTRGeos; ++iGeo, counter+=stride)
+    for (CFuint iGeo = 0; iGeo < nbTRGeos; ++iGeo, counter+=stride) 
     {
       const CFuint nbNodesInGeo  = buf[counter];
       cf_assert(counter < buf.size());
@@ -1165,6 +1166,14 @@ void ParCFmeshBinaryFileReader::readGeomEntList(MPI_File* fh)
     
     CFLog(VERBOSE, "Rank " << m_myRank << ", iTR = " << iTR << ", countGeos = " << countGeos << "\n");
   }
+  
+  // reposition the file handle where the root's one is
+  MPI_Offset offset;
+  if (m_myRank == root) {
+    MPI_File_get_position(*fh, &offset);
+  }
+  MPI_Bcast(&offset, 1, MPIStructDef::getMPIOffsetType(), root, m_comm);
+  MPI_File_seek(*fh, offset, MPI_SEEK_SET); 
   
   CFLogDebugMin( "ParCFmeshBinaryFileReader::readGeomEntList() end\n");
 }
