@@ -430,10 +430,10 @@ public: // funcions
   /// Create the indexes
   /// (to speed up index operations)
   /// (An index counter is maintained)
-  void CreateIndex ();
+  void CreateIndex();
 
   /// Free the indexes (to conserve memory)
-  void DestroyIndex ();
+  void DestroyIndex();
 
   /// Given a pointer, try to find the index of the element
   /// (HACK ! DON'T USE)
@@ -508,6 +508,8 @@ template <typename DATA>
 const int MPICommPattern<DATA>::_MPI_TAG_SYNC  =
   MPICommPattern<DATA>::_MPI_TAG_BUILDGHOSTMAP + 1;
 
+//////////////////////////////////////////////////////////////////////////////
+
 //
 // Index flags
 //
@@ -569,13 +571,17 @@ void MPICommPattern<DATA>::BuildCGlobalLocal (std::vector<IndexType> & Ghosts)
   CFLog(DEBUG_MIN, "MPICommPattern<DATA>: CMap: Remaining to translate: " << Ghosts.size() << " ghost elements...\n");
   // Now all CGlobal IDs are set for every non-ghost element
 }
-      
+     
+//////////////////////////////////////////////////////////////////////////////
+ 
 template <typename DATA>
 bool MPICommPattern<DATA>::HasCGlobal () const
 {
   return _CGlobalValid;
 }
-      
+   
+//////////////////////////////////////////////////////////////////////////////
+    
 template <typename DATA>
 void MPICommPattern<DATA>::BuildCGlobal ()
 {
@@ -587,9 +593,10 @@ void MPICommPattern<DATA>::BuildCGlobal ()
   const CFuint LocalGhostSize = GetGhostSize();
   CFuint MaxGhostSize = 0;
   
-Common::CheckMPIStatus(MPI_Allreduce (const_cast<CFuint *>(&LocalGhostSize),
-				      &MaxGhostSize, 1,
-				      MPIStructDef::getMPIType(&MaxGhostSize), MPI_MAX, _Communicator));
+  Common::CheckMPIStatus(MPI_Allreduce (const_cast<CFuint *>(&LocalGhostSize),
+					&MaxGhostSize, 1,
+					MPIStructDef::getMPIType(&MaxGhostSize), 
+					MPI_MAX, _Communicator));
   
   // Create a vector to do the translation for every ghost
   std::vector<IndexType> Ghosts;
@@ -628,47 +635,46 @@ Common::CheckMPIStatus(MPI_Allreduce (const_cast<CFuint *>(&LocalGhostSize),
   // and set the ghost flag to indicate that the number isn't translated
   // yet
   SendBuf[0] = Ghosts.size();
-  for (CFuint i=0; i<static_cast<CFuint>(Ghosts.size()); ++i)
+  for (CFuint i=0; i<static_cast<CFuint>(Ghosts.size()); ++i) {
     SendBuf[i+1] = SetFlag(LocalToGlobal(Ghosts[i]), _FLAG_GHOST);
+  }
   
-  for (CFuint Round = 0; Round < static_cast<CFuint>(_CommSize);
-       ++Round)
-    {
-      Common::CheckMPIStatus(MPI_Isend (&SendBuf[0], SendBuf[0]+1,
-					MPIStructDef::getMPIType(&SendBuf[0]),
-					SendTo, Round, _Communicator, &SendRequest));
-      Common::CheckMPIStatus(MPI_Irecv (&ReceiveBuf[0], ReceiveBuf.size(),
-					MPIStructDef::getMPIType(&ReceiveBuf[0]),
-					ReceiveFrom, Round, _Communicator, &ReceiveRequest));
-      
-      Common::CheckMPIStatus(MPI_Wait (&ReceiveRequest, MPI_STATUS_IGNORE));
-      
-      // Process receive buffer
-
+  for (CFuint Round = 0; Round < static_cast<CFuint>(_CommSize); ++Round) {
+    Common::CheckMPIStatus(MPI_Isend (&SendBuf[0], SendBuf[0]+1,
+				      MPIStructDef::getMPIType(&SendBuf[0]),
+				      SendTo, Round, _Communicator, &SendRequest));
+    Common::CheckMPIStatus(MPI_Irecv (&ReceiveBuf[0], ReceiveBuf.size(),
+				      MPIStructDef::getMPIType(&ReceiveBuf[0]),
+				      ReceiveFrom, Round, _Communicator, &ReceiveRequest));
+    
+    Common::CheckMPIStatus(MPI_Wait (&ReceiveRequest, MPI_STATUS_IGNORE));
+    
+    // Process receive buffer
+    
     // It is impossible that we receive more elements than we agreed on.
     const CFuint EleCount = ReceiveBuf[0];
-
+    
     cf_assert (EleCount <= MaxGhostSize);
     
     CFLogDebugMin( "BuildCMap: Translating " << EleCount << " elements...\n");
     
     for (CFuint i=0; i<EleCount; ++i)
       {
-        const CFuint CurID = i+1;
-
-        const IndexType CurVal = ReceiveBuf[CurID];
-
-        // We have to map CurGlobalID to CGlobalID
-
-        // If it is already mapped, skip
-        if (!IsFlagSet(CurVal, _FLAG_GHOST)) {
+	const CFuint CurID = i+1;
+	
+	const IndexType CurVal = ReceiveBuf[CurID];
+	
+	// We have to map CurGlobalID to CGlobalID
+	
+	// If it is already mapped, skip
+	if (!IsFlagSet(CurVal, _FLAG_GHOST)) {
 	  CFLogDebugMax( "Skipping " << NormalIndex(CurVal) << "\n");
 	  continue;
 	}
 	
         // We check if we have it
         IndexType LocalID = FindLocal (NormalIndex(CurVal));
-
+	
         // If we don't have it, leave it
         if (LocalID == _NOT_FOUND) {
 	  CFLogDebugMax( "Don't have " << NormalIndex(CurVal) << "\n");
@@ -677,87 +683,91 @@ Common::CheckMPIStatus(MPI_Allreduce (const_cast<CFuint *>(&LocalGhostSize),
 	
         // Now we have the local ID overhere, replace the
         // global one with the CGlobal one
-
+	
         // For non-ghost entries CGlobal is already valid...
 	
         cf_assert (!IsGhost (LocalID));
 	
-        CFLogDebugMax( "Translating " << NormalIndex (CurVal) << " by " << _CGlobal[LocalID] << "\n");
+        CFLogDebugMax( "Translating " << NormalIndex (CurVal) << " by " 
+		       << _CGlobal[LocalID] << "\n");
 	
         ReceiveBuf[CurID] = _CGlobal[LocalID];
       }
-
+    
     Common::CheckMPIStatus(MPI_Wait (&SendRequest, MPI_STATUS_IGNORE));
-
+    
     SendBuf.swap (ReceiveBuf);
-        }
-
-      // After _CommSize rounds, we have back our own values
-      // in SendBuf
-      cf_assert (SendBuf.size()>=SendBuf[0]+1);
-      cf_assert (SendBuf[0] == GetGhostSize ());
-      cf_assert (Ghosts.size() == GetGhostSize ());
-
-      // Now we have the global mapping ghosts and the translated
-      // mapping in SendBuf...
-      for (CFuint i=0; i<Ghosts.size(); ++i)
-        {
+  }
+  
+  // After _CommSize rounds, we have back our own values
+  // in SendBuf
+  cf_assert (SendBuf.size()>=SendBuf[0]+1);
+  cf_assert (SendBuf[0] == GetGhostSize ());
+  cf_assert (Ghosts.size() == GetGhostSize ());
+  
+  // Now we have the global mapping ghosts and the translated
+  // mapping in SendBuf...
+  for (CFuint i=0; i<Ghosts.size(); ++i) {
     _CGlobal[Ghosts[i]] = SendBuf[i+1];
     cf_assert (!IsFlagSet (SendBuf[i+1], _FLAG_GHOST));
-        }
+  }
+  
+  _CGlobalValid = true;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+ 
+template <typename DATA>
+void MPICommPattern<DATA>::FreeCGlobal ()
+{
+  if (_CGlobalValid)
+    InvalidateCGlobal ();
+}
 
-      _CGlobalValid = true;
-    }
+//////////////////////////////////////////////////////////////////////////////
+ 
+template <typename DATA>
+void MPICommPattern<DATA>::InvalidateCGlobal ()
+{
+  _CGlobalValid = false;
+  std::swap (_CGlobal, std::vector<CFuint>());
+}
 
-    template <typename DATA>
-    void MPICommPattern<DATA>::FreeCGlobal ()
-    {
-      if (_CGlobalValid)
-        InvalidateCGlobal ();
-    }
+//////////////////////////////////////////////////////////////////////////////
+ 
+template <typename DATA>
+typename MPICommPattern<DATA>::IndexType MPICommPattern<DATA>::LocalToCGlobal (IndexType LocalID) const
+{
+  cf_assert (_CGlobalValid);
+  cf_assert (LocalID < _CGlobal.size());
+  // always true // cf_assert (LocalID >= 0);
+  return _CGlobal[LocalID];
+}
 
-    template <typename DATA>
-    void MPICommPattern<DATA>::InvalidateCGlobal ()
-    {
-      _CGlobalValid = false;
-      std::swap (_CGlobal, std::vector<CFuint>());
-    }
+//////////////////////////////////////////////////////////////////////////////
+      
+template <typename DATA>
+inline typename MPICommPattern<DATA>::IndexType
+MPICommPattern<DATA>::ClearFlag (IndexType Global, IndexType Flag) const
+{
+  return (Global & (~Flag));
+}
+      
+template <typename DATA>
+inline typename MPICommPattern<DATA>::IndexType
+MPICommPattern<DATA>::SetFlag (IndexType Global, IndexType Flag) const
+{
+  return (Global | (Flag));
+}
 
-    template <typename DATA>
-    typename MPICommPattern<DATA>::IndexType MPICommPattern<DATA>::LocalToCGlobal (IndexType LocalID) const
-    {
-      cf_assert (_CGlobalValid);
-      cf_assert (LocalID < _CGlobal.size());
-      // always true // cf_assert (LocalID >= 0);
-      return _CGlobal[LocalID];
-    }
-
-
-    /*============================================================================
-    /// Flag functions
-    ///////////////////////////////////////////////////////////////////////////////=*/
-
-    template <typename DATA>
-    inline typename MPICommPattern<DATA>::IndexType
-    MPICommPattern<DATA>::ClearFlag (IndexType Global, IndexType Flag) const
-    {
-      return (Global & (~Flag));
-    }
-
-    template <typename DATA>
-    inline typename MPICommPattern<DATA>::IndexType
-    MPICommPattern<DATA>::SetFlag (IndexType Global, IndexType Flag) const
-    {
-      return (Global | (Flag));
-    }
-
-    template <typename DATA>
-    inline bool MPICommPattern<DATA>::IsFlagSet (IndexType Global,
-                IndexType Flag) const
-    {
-      return (Global & Flag);
-    }
-
+template <typename DATA>
+inline bool MPICommPattern<DATA>::IsFlagSet (IndexType Global,
+					     IndexType Flag) const
+{
+  return (Global & Flag);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
 
     /* ==================================================
     ///  Index functions
@@ -860,70 +870,75 @@ Common::CheckMPIStatus(MPI_Allreduce (const_cast<CFuint *>(&LocalGhostSize),
       _GhostMap[Global]=Local;
     }
 
-    template <typename DATA>
-    void MPICommPattern<DATA>::CreateIndex ()
-    {
-      cf_assert (!_IsIndexed);
-
-      // Also erases memory
-      _IndexMap.clear ();
-      _GhostMap.clear ();
-  
-      CFLog (DEBUG_MED, "MPICommPattern<DATA>::CreateIndex() -> m_data->size() = " << m_data->size() << "\n" );
+//////////////////////////////////////////////////////////////////////////////
       
-      for (unsigned int i=0; i < m_data->size(); ++i)
-      {
-	IndexType Global = _MetaData(i).GlobalIndex;
-
+template <typename DATA>
+void MPICommPattern<DATA>::CreateIndex()
+{
+  CFLog (VERBOSE, "MPICommPattern<DATA>::CreateIndex() => start\n" );
+  
+  cf_assert (!_IsIndexed);
+  
+  // Also erases memory
+  _IndexMap.clear();
+  _GhostMap.clear();
+  
+  for (unsigned int i=0; i < m_data->size(); ++i) {
+    IndexType Global = _MetaData(i).GlobalIndex;
+    
     if (IsFlagSet (Global, _FLAG_DELETED))
       continue;
-
+    
     if (IsFlagSet (Global, _FLAG_GHOST))
       _GhostMap[NormalIndex(Global)]=i;
     else
       _IndexMap[NormalIndex(Global)]=i;
-        }
-
-      cf_assert (_GhostMap.size ()==_GhostSize);
-      cf_assert (_IndexMap.size ()==_LocalSize);
-
-      _IsIndexed=true;
-    }
-
-
-    template <typename DATA>
-    typename MPICommPattern<DATA>::IndexType
-    MPICommPattern<DATA>::LocalToGlobal (IndexType LocalIndex) const
-    {
-      return NormalIndex(_MetaData(LocalIndex).GlobalIndex);
-    }
-
-
-    /// Return true if the element with local ID LocaLID is a ghost element
-    template <typename DATA>
-    inline bool MPICommPattern<DATA>::IsGhost (IndexType LocalID) const
-    {
-      return IsFlagSet (_MetaData(LocalID).GlobalIndex, _FLAG_GHOST);
-    }
-
-
-    template <typename DATA>
-    typename MPICommPattern<DATA>::IndexType
-    MPICommPattern<DATA>::GlobalToLocal (IndexType GlobalIndex) const
-    {
-
-      // TODO: adapt for search functions
-      //
-      typename TIndexMap::const_iterator Iter = _IndexMap.find(GlobalIndex);
-      if (Iter!=_IndexMap.end())
-        return Iter->second;
-
-      typename TGhostMap::const_iterator Iter2 = _GhostMap.find(GlobalIndex);
-      if (Iter2!=_GhostMap.end())
-        return Iter2->second;
-
-      throw NotFoundException (FromHere(),"MPICommPattern<DATA>: NotFoundException");
-    }
+  }
+  
+  // cf_assert (_GhostMap.size ()==_GhostSize);
+  // cf_assert (_IndexMap.size ()==_LocalSize);
+  
+  _IsIndexed=true;
+  
+  CFLog(VERBOSE, "MPICommPattern<DATA>::CreateIndex() => end\n" );
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+template <typename DATA>
+typename MPICommPattern<DATA>::IndexType
+MPICommPattern<DATA>::LocalToGlobal (IndexType LocalIndex) const
+{
+  return NormalIndex(_MetaData(LocalIndex).GlobalIndex);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+  
+/// Return true if the element with local ID LocaLID is a ghost element
+template <typename DATA>
+inline bool MPICommPattern<DATA>::IsGhost (IndexType LocalID) const
+{
+  return IsFlagSet (_MetaData(LocalID).GlobalIndex, _FLAG_GHOST);
+}
+     
+//////////////////////////////////////////////////////////////////////////////
+   
+template <typename DATA>
+typename MPICommPattern<DATA>::IndexType
+MPICommPattern<DATA>::GlobalToLocal (IndexType GlobalIndex) const
+{   
+  // TODO: adapt for search functions
+  //
+  typename TIndexMap::const_iterator Iter = _IndexMap.find(GlobalIndex);
+  if (Iter!=_IndexMap.end())
+    return Iter->second;
+  
+  typename TGhostMap::const_iterator Iter2 = _GhostMap.find(GlobalIndex);
+  if (Iter2!=_GhostMap.end())
+    return Iter2->second;
+  
+  throw NotFoundException (FromHere(),"MPICommPattern<DATA>: NotFoundException");
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -1695,7 +1710,7 @@ template <typename DATA>
 typename MPICommPattern<DATA>::IndexType
 MPICommPattern<DATA>::GetGhostSize () const
 {
-  cf_assert (_GhostMap.size()==_GhostSize);
+  // cf_assert (_GhostMap.size()==_GhostSize);
   return _GhostSize;
 }
 
@@ -1705,7 +1720,7 @@ template <typename DATA>
 typename MPICommPattern<DATA>::IndexType
 MPICommPattern<DATA>::GetLocalSize () const
 {
-  cf_assert (_IndexMap.size()<=_LocalSize);
+  //cf_assert (_IndexMap.size()<=_LocalSize);
   return _LocalSize;
 }
 
