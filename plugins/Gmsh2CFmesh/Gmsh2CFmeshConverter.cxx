@@ -764,7 +764,7 @@ void Gmsh2CFmeshConverter::readGmshFileVersion2(const boost::filesystem::path& f
 
     // Clip off the leading and trailing quote
     std::string regionName = words[2].substr(1,words[2].length()-2);
-    physTagToName.insert( make_pair<CFuint,string>( StringOps::from_str<CFuint>(words[1]),regionName) );
+    physTagToName[StringOps::from_str<CFuint>(words[1])] = regionName;
   }
 
   getGmshWordsFromLine(fin,line,lineNb,words);
