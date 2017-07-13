@@ -18,6 +18,7 @@
 #include "Petsc/ParJFSolveSysGMRESR.hh"
 #include "Common/PE.hh"
 #include <fstream>
+#include "Environment/CFEnvVars.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -25,7 +26,7 @@ using namespace std;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::MathTools;
 using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Environment;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -226,10 +227,15 @@ PetscErrorCode computeJFMatGMRESR(Mat petscMat, Vec x, Vec y)
 			idx++;
 		}
 	}
-	
+
+
   // syncronize the states after the modifications
-	states.beginSync();
-	states.endSync();
+  if (CFEnv::getInstance().getVars()->NewSyncAlgo) {
+    states.synchronize();
+  } else {           
+    states.beginSync();
+    states.endSync();
+  }
 	
   // computation of F(U + eps*delta_U)
 	jfc->spaceMethod->setComputeJacobianFlag(false);

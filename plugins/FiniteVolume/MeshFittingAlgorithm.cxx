@@ -1,5 +1,7 @@
 #include "Common/PE.hh"
 #include "Common/EventHandler.hh"
+#include "Environment/CFEnvVars.hh"
+
 #include "MathTools/LeastSquaresSolver.hh"
 #include "MathTools/MathFunctions.hh"
 
@@ -27,6 +29,7 @@
 
 using namespace std;
 using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Environment;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -732,9 +735,14 @@ void MeshFittingAlgorithm::updateNodePositions() {
       }
     }
   }
+
   //synchronize Nodes
-  nodes.beginSync();
-  nodes.endSync();
+  if (CFEnv::getInstance().getVars()->NewSyncAlgo) {
+    nodes.synchronize();
+   } else {
+   nodes.beginSync();
+   nodes.endSync();
+ }
 }
 
 //////////////////////////////////////////////////////////////////////////////
