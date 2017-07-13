@@ -376,12 +376,34 @@ protected: // member functions
 			      std::set<CFuint>& isLocalState,
 			      std::vector<CFuint>& ghostNodeIDs,
 			      std::vector<CFuint>& ghostStateIDs,
+			      Common::CFMultiMap<CFuint, CFuint>& gNodeID2DonorRank,
+			      Common::CFMultiMap<CFuint, CFuint>& gStateID2DonorRank,
 			      std::vector<CFuint>& newLocalNodeIDs,
 			      std::vector<CFuint>& newLocalStateIDs,
 			      std::vector<CFuint>& localNodeIDsToRemove,
 			      std::vector<CFuint>& localStateIDsToRemove,
 			      std::vector<bool>& isOverlap,
 			      CFuint nOverlap);
+  
+  /// Update the array telling if nodes and states are local or not
+  void buildOverlapLayers(Framework::ElementDataArray<0>& localElem,
+			  const std::vector<CFuint>& sizeElemArray,
+			  const std::vector<CFuint>& localNodeIDs,
+			  const std::vector<CFuint>& localStateIDs,
+			  std::set<CFuint>& isLocalNode,
+			  std::set<CFuint>& isLocalState,
+			  std::vector<CFuint>& ghostNodeIDs,
+			  std::vector<CFuint>& ghostStateIDs,
+			  std::vector<CFuint>& localNodeIDsToRemove,
+			  std::vector<CFuint>& localStateIDsToRemove);
+  
+  /// Update the local DOF list (for nodes and states)
+  void updateLocalDofList(std::vector<CFuint>& ghostDofIDs, 
+			  std::vector<CFuint>& localDofIDsToRemove, 
+			  std::vector<CFuint>& localDofIDs, 
+			  std::set<CFuint>& isLocalDof,
+			  std::vector<CFuint>& mghostDofIDs, 
+			  std::vector<CFuint>& mlocalDofIDs);
   
   /// Set the mapping between the global and the local node (or state) ID
   void setMapGlobalToLocalID(const std::vector<CFuint>& localIDs,
@@ -490,10 +512,16 @@ protected: // member functions
 
   /// ghost node IDs
   std::vector<CFuint> m_ghostNodeIDs;
-
+  
   /// ghost state IDs
   std::vector<CFuint> m_ghostStateIDs;
-
+  
+  /// mapping ghost node global IDs to donor rank  of the owning process
+  Common::SharedPtr<Common::CFMultiMap<CFuint, CFuint> > m_gNodeID2DonorRank;
+  
+  /// mapping ghost state global IDs to donor rank  of the owning process
+  Common::SharedPtr<Common::CFMultiMap<CFuint, CFuint> > m_gStateID2DonorRank;
+  
   /// map global node ID to local node ID
   Common::CFMap<CFuint,CFuint> m_mapGlobToLocNodeID;
 

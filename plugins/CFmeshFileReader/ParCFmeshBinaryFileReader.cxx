@@ -1540,6 +1540,8 @@ void ParCFmeshBinaryFileReader::readNodeList(MPI_File* fh)
   sort(m_localNodeIDs.begin(), m_localNodeIDs.end());
   sort(m_ghostNodeIDs.begin(), m_ghostNodeIDs.end());
   
+  nodes.setMapGhost2DonorRanks(m_gNodeID2DonorRank);
+  
   if (!m_hasPastNodes && getReadData().storePastNodes()){
     throw BadFormatException
       (FromHere(), "ParCFmeshBinaryFileReader => readPastNodes is asked but PastNodes are not present in the CFmesh");
@@ -1654,6 +1656,8 @@ void ParCFmeshBinaryFileReader::createNodesAll(const vector<CFreal>& localNodesD
     globalIDs.push_back(m_ghostNodeIDs[i]);
   }
   sort(globalIDs.begin(), globalIDs.end());
+  
+  typedef CFMultiMap<CFuint,CFuint>::MapIterator MapIt;
   
   CFuint countBufLocal = 0;
   CFuint countBufGhost = 0;
@@ -2125,6 +2129,8 @@ void ParCFmeshBinaryFileReader::readStateList(MPI_File* fh)
   
   sort(m_localStateIDs.begin(), m_localStateIDs.end());
   sort(m_ghostStateIDs.begin(), m_ghostStateIDs.end());
+  
+  states.setMapGhost2DonorRanks(m_gStateID2DonorRank);
   
   if(!m_hasPastStates && getReadData().storePastStates()){
     throw BadFormatException

@@ -11,6 +11,8 @@
 
 #include "Common/SafePtr.hh"
 #include "Common/MPI/MPICommPattern.hh"
+#include "Common/SharedPtr.hh"
+#include "Common/CFMultiMap.hh"
 
 #ifdef CF_HAVE_CUDA
 #include "Common/CUDA/CudaVector.hh"
@@ -59,6 +61,13 @@ public: // functions
     deletePtr(m_pattern);
   }
   
+  /// Set the mapping from global ghost IDs to donor ranks
+  void setMapGhost2DonorRanks
+  (Common::SharedPtr<Common::CFMultiMap<CFuint, CFuint> >& mapGhost2Donor) 
+  {
+    m_pattern->setMapGhost2DonorRanks(mapGhost2Donor);
+  }
+    
   /// Return the local size: This is the number of
   /// locally owned points incremented by the number of ghost points
   /// Local operation.
@@ -109,9 +118,12 @@ public: // functions
   /// end the synchronization
   void EndSync() { m_pattern->EndSync();}
   
-  /// Build Sync table
-  void BuildGhostMap () { m_pattern->BuildGhostMap();}
+  /// execute the synchronization
+  void synchronize() {m_pattern->synchronize();} 
   
+  /// Build Sync table
+  void BuildGhostMap(const bool newAlgo) {m_pattern->BuildGhostMap(newAlgo);}
+    
   /// Returns the list of ghost nodes (by processor rank) to be sent to
   /// another processor
   const std::vector< std::vector< CFuint > >& GetGhostSendList() const

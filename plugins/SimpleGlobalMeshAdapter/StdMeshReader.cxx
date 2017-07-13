@@ -14,13 +14,14 @@
 #include "Common/ProcessInfo.hh"
 #include "Common/OSystem.hh"
 #include "Common/PE.hh"
+#include "Environment/CFEnvVars.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Environment;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -158,8 +159,8 @@ void StdMeshReader::buildMeshData()
       DataHandle<Node*, GLOBAL> nodes =
         meshDataVector[meshDataID]->getDataStorage()->getGlobalData<Node*>(parNodeVecName);
 
-      states.buildMap ();
-      nodes.buildMap ();
+      states.buildMap(CFEnv::getInstance().getVars()->NewSyncAlgo);
+      nodes.buildMap(CFEnv::getInstance().getVars()->NewSyncAlgo);
     }
 
   meshCreator[0]->unsetMethod();

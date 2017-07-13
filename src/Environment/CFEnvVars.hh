@@ -55,6 +55,8 @@ class Environment_API CFEnvVars : public Common::NonCopyable<CFEnvVars>
     std::pair<int,char**> InitArgs;
     /// number of writing processes in parallel I/O
     CFuint NbWriters;
+    /// flag telling to use the new synchronization algorithm
+    bool NewSyncAlgo;
     
 }; // end class CFEnvVars
 

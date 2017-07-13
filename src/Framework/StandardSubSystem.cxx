@@ -19,6 +19,8 @@
 #include "Environment/DirPaths.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Environment/SingleBehaviorFactory.hh"
+#include "Environment/CFEnv.hh"
+#include "Environment/CFEnvVars.hh"
 
 #include "Framework/StandardSubSystem.hh"
 #include "Framework/MeshData.hh"
@@ -48,6 +50,7 @@
 using namespace std;
 using namespace boost::filesystem;
 using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Environment;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -452,10 +455,9 @@ void StandardSubSystem::setGlobalMeshData()
 	  //  nodes.DumpContents ();
 	  //  #endif
 
-          CFLog(VERBOSE, "StandardSubSystem::setGlobalMeshData() => buildMap() start\n");	  
-	  states.buildMap ();
-	  nodes.buildMap ();
-          CFLog(VERBOSE, "StandardSubSystem::setGlobalMeshData() => buildMap() end\n");
+          CFLog(VERBOSE, "StandardSubSystem::setGlobalMeshData() => buildMap() start\n");	  	  states.buildMap(CFEnv::getInstance().getVars()->NewSyncAlgo);
+	  nodes.buildMap(CFEnv::getInstance().getVars()->NewSyncAlgo);
+	  CFLog(VERBOSE, "StandardSubSystem::setGlobalMeshData() => buildMap() end\n");
 	  
 	  // #ifndef NDEBUG
 	  //  states.DumpInfo ();

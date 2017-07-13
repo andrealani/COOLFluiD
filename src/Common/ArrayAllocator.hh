@@ -179,7 +179,6 @@ typename ArrayAllocator<T,A>::IndexType ArrayAllocator<T,A>::PointerToIndex
 template<class T, typename A>
 inline bool ArrayAllocator<T,A>::CheckIndex(IndexType I) const
 {
-  //TODO
   cf_assert(I<getCurrSize());
   return true;
 }      

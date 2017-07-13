@@ -304,7 +304,7 @@ public:
     /// Overloading of the !=
     bool operator!= (const Itr& other) {return (_dataPtr != other._dataPtr);}
     
-    /// Overloading of the ==d
+    /// Overloading of the ==
     bool operator== (const Itr& other) {return (_dataPtr == other._dataPtr);}
     
     /// Overloading of the operator++

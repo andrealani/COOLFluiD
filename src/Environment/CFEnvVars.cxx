@@ -33,6 +33,7 @@ CFEnvVars::CFEnvVars() :
   InitArgs.second = CFNULL;
   
   NbWriters = 1;
+  NewSyncAlgo = false;
 }
 
 //////////////////////////////////////////////////////////////////////////////

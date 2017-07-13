@@ -14,6 +14,8 @@
 #include "Environment/DirPaths.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Environment/SingleBehaviorFactory.hh"
+#include "Environment/CFEnv.hh"
+#include "Environment/CFEnvVars.hh"
 
 #include "Framework/OnlyMeshSubSystem.hh"
 #include "Framework/MeshData.hh"
@@ -39,7 +41,7 @@
 using namespace std;
 using namespace boost::filesystem;
 using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Environment;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -665,8 +667,8 @@ void OnlyMeshSubSystem::setGlobalMeshData()
 	  //  nodes.DumpContents ();
 	  //  #endif
 	  
-	  states.buildMap ();
-	  nodes.buildMap ();
+	  states.buildMap(CFEnv::getInstance().getVars()->NewSyncAlgo);
+	  nodes.buildMap(CFEnv::getInstance().getVars()->NewSyncAlgo);
 	  
 	  // #ifndef NDEBUG
 	  //  states.DumpInfo ();

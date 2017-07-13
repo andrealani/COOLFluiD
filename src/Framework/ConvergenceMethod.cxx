@@ -13,7 +13,7 @@
 #include "Common/OSystem.hh"
 #include "Environment/FileHandlerOutput.hh"
 
-#include "Environment/CFEnv.hh"
+#include "Environment/CFEnvVars.hh"
 #include "Environment/DirPaths.hh"
 #include "Environment/SingleBehaviorFactory.hh"
 
@@ -320,22 +320,30 @@ void ConvergenceMethod::syncGlobalDataComputeResidual(const bool computeResidual
   DataHandle<Node*, GLOBAL> nodedata = 
     MeshDataStack::getInstance().getEntryByNamespace(nsp)->getNodeDataSocketSink().getDataHandle();
   
-  // after each update the states have to be syncronized
-  if (isParallel)
-  {
-    syncTimer.start();
-    statedata.beginSync ();
+  if (CFEnv::getInstance().getVars()->NewSyncAlgo) {
+    if (isParallel) {
+      statedata.synchronize();
+      nodedata.synchronize();
+    }
+    if (computeResidual) {
+      getConvergenceMethodData()->updateResidual();
+    }
   }
-  
-  if (computeResidual)
-  {
-    getConvergenceMethodData()->updateResidual();
-  }
-
-  if (isParallel)
-  {
-    statedata.endSync();
-    syncTimer.stop();
+  else {
+    // after each update the states have to be syncronized
+    if (isParallel) {
+      syncTimer.start();
+      statedata.beginSync ();
+    }
+    
+    if (computeResidual) {
+      getConvergenceMethodData()->updateResidual();
+    }
+    
+    if (isParallel) {
+      statedata.endSync();
+      syncTimer.stop();
+    }
   }
 
   popNamespace();

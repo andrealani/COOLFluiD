@@ -17,6 +17,7 @@ namespace COOLFluiD {
 
 template<class KEY, class VALUE>
 CFMultiMap<KEY, VALUE>::CFMultiMap(CFuint maxSize) :
+  OwnedObject(),
   _sorted(false)
 {
   if(maxSize != 0) {

@@ -12,6 +12,8 @@
 #include "Common/PE.hh"
 #include "Common/ParallelException.hh"
 #include "Common/Stopwatch.hh"
+#include "Common/SharedPtr.hh"
+#include "Common/CFMultiMap.hh"
 
 #include "Framework/GlobalCommTypes.hh"
 #include "Framework/GlobalTypeTrait.hh"
@@ -110,6 +112,11 @@ public:
     return _globalPtr->GetGhostReceiveList();
   }
   
+  /// Set the mapping from global ghost IDs to donor ranks
+  void setMapGhost2DonorRanks
+    (Common::SharedPtr<Common::CFMultiMap<CFuint, CFuint> >& mapGhost2Donor) 
+  {_globalPtr->setMapGhost2DonorRanks(mapGhost2Donor);}
+  
   /// Build a continuous global mapping.
   /// Should be called after all points are added,
   /// and after buildMap is called
@@ -132,13 +139,13 @@ public:
   }
 
   /// Build Sync table
-  void buildMap ()
+  void buildMap(const bool newAlgo)
   {
     Common::Stopwatch<Common::WallTime> timer;
     timer.start ();
-    _globalPtr->BuildGhostMap ();
+    _globalPtr->BuildGhostMap(newAlgo);
     timer.stop();
-    CFLog(VERBOSE, "DataHandle<MPI>::buildMap() " << timer.read() << "s\n");
+    CFLog(INFO, "DataHandle<MPI>::buildMap(" << newAlgo << ") took " << timer.read() << "s\n");
   }
 
   /// This function returns the global (cross-processes) size of
@@ -157,19 +164,26 @@ public:
   }
   
   /// begin the synchronization
-  void beginSync ()
+  void beginSync()
   {
     cf_assert(_globalPtr != NULL);
     _globalPtr->BeginSync ();
   }
   
   /// end the synchronization
-  void endSync ()
+  void endSync()
   {
     cf_assert(_globalPtr != NULL);
     _globalPtr->EndSync ();
   }
-  
+    
+  /// execute the synchronization
+  void synchronize()
+  {
+    cf_assert(_globalPtr != NULL);
+    _globalPtr->synchronize();
+  }
+
   /// allocate memory dynamically before insertion 
   void reserve (const CFuint Size, 
 		const CFuint elementSize, 
