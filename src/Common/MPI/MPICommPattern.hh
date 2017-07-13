@@ -186,14 +186,14 @@ private:
 
   /// The real size of an element stored in the vector
   /// (as opposed to the size of the element TYPE)
-  size_t _ElementSize;
-
-  /// The number of local owned points
-  IndexType _LocalSize;
-
+  int _ElementSize;
+  
+  /// The number of local owned points 
+  int _LocalSize;
+  
   /// The number of Ghost points
-  IndexType _GhostSize;
-
+  int _GhostSize;
+  
   /// The index of the next free element in the vector
   /// (can be NO_MORE_FREE)
   IndexType _NextFree;
@@ -639,11 +639,12 @@ void MPICommPattern<DATA>::BuildCGlobal ()
     SendBuf[i+1] = SetFlag(LocalToGlobal(Ghosts[i]), _FLAG_GHOST);
   }
   
-  for (CFuint Round = 0; Round < static_cast<CFuint>(_CommSize); ++Round) {
-    Common::CheckMPIStatus(MPI_Isend (&SendBuf[0], SendBuf[0]+1,
+  for (int Round = 0; Round < _CommSize; ++Round) {
+    int ssize = SendBuf[0]+1;
+    Common::CheckMPIStatus(MPI_Isend (&SendBuf[0], ssize,
 				      MPIStructDef::getMPIType(&SendBuf[0]),
 				      SendTo, Round, _Communicator, &SendRequest));
-    Common::CheckMPIStatus(MPI_Irecv (&ReceiveBuf[0], ReceiveBuf.size(),
+    Common::CheckMPIStatus(MPI_Irecv (&ReceiveBuf[0], (int)ReceiveBuf.size(),
 				      MPIStructDef::getMPIType(&ReceiveBuf[0]),
 				      ReceiveFrom, Round, _Communicator, &ReceiveRequest));
     
@@ -953,7 +954,7 @@ void MPICommPattern<DATA>::Sync_BuildReceiveTypes ()
 template <typename DATA>
 void MPICommPattern<DATA>::Sync_BroadcastNeeded ()
 {
-  IndexType MaxGhostSize;
+  IndexType MaxGhostSize = 0;
   
   // Determine needed buffer size
   Common::CheckMPIStatus (MPI_Allreduce (&_GhostSize, &MaxGhostSize, 1, 
@@ -966,8 +967,8 @@ void MPICommPattern<DATA>::Sync_BroadcastNeeded ()
     return;     // No node has ghost points
   
   // Allocate storage
-  const IndexType StorageSize = MaxGhostSize+1;
-  IndexType * Storage = new IndexType[StorageSize];
+  const int StorageSize = MaxGhostSize+1;
+  IndexType* Storage = new IndexType[StorageSize];
   
   typename TIndexMap::const_iterator Iter;
   
@@ -1024,14 +1025,13 @@ void MPICommPattern<DATA>::Sync_BroadcastNeeded ()
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename DATA>
-void MPICommPattern<DATA>::Sync_BuildReceiveList ()
+void MPICommPattern<DATA>::Sync_BuildReceiveList()
 {
   IndexType MaxSendSize = 0;
   
   // Allocate bufferspace
   for (IndexType i=0; i< (IndexType) _CommSize; i++)
-    MaxSendSize = std::max(
-			   MaxSendSize, static_cast<IndexType>(_GhostSendList[i].size()) );
+    MaxSendSize = std::max(MaxSendSize, static_cast<IndexType>(_GhostSendList[i].size()) );
   
   IndexType * ReceiveStorage = new IndexType[_CommSize*_GhostSize];
   IndexType * SendStorage = new IndexType[MaxSendSize];
@@ -1062,7 +1062,7 @@ void MPICommPattern<DATA>::Sync_BuildReceiveList ()
       SendStorage[j++]=NormalIndex(_MetaData(*iter).GlobalIndex);
     }
     
-    Common::CheckMPIStatus(MPI_Send (SendStorage, _GhostSendList[i].size(),
+    Common::CheckMPIStatus(MPI_Send (SendStorage, (int)_GhostSendList[i].size(),
 				     MPIStructDef::getMPIType(SendStorage), i,
 				     _MPI_TAG_BUILDGHOSTMAP, _Communicator));
   }
@@ -1133,7 +1133,7 @@ void MPICommPattern<DATA>::BuildGhostMapNew()
   CFuint maxNbLocalGhosts = 0;
   MPIError::getInstance().check
     ("MPI_Allreduce", "MPICommPattern<DATA>::BuildGhostMapNew()",
-     MPI_Allreduce(&nbLocalGhosts, & maxNbLocalGhosts, 1, 
+     MPI_Allreduce(&nbLocalGhosts, &maxNbLocalGhosts, 1, 
 		   MPIStructDef::getMPIType(&nbLocalGhosts), MPI_MAX, _Communicator));
   cf_assert(maxNbLocalGhosts > 0);
   
@@ -1336,8 +1336,9 @@ void MPICommPattern<DATA>::BuildGhostMapOld()
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename DATA>
-void MPICommPattern<DATA>::Sync_BuildTypeHelper (const std::vector<std::vector<IndexType> > & V,
-						 std::vector<MPI_Datatype> & MPIType) const
+void MPICommPattern<DATA>::Sync_BuildTypeHelper 
+(const std::vector<std::vector<IndexType> > & V,
+ std::vector<MPI_Datatype> & MPIType) const
 {
   
 #ifdef HAVE_MPI_TYPE_GET_TRUE_EXTENT
@@ -1370,7 +1371,7 @@ void MPICommPattern<DATA>::Sync_BuildTypeHelper (const std::vector<std::vector<I
 	  Offset[j]=V[i][j];
 	}
       
-      CheckMPIStatus (MPI_Type_indexed (V[i].size(),Length,Offset,_BasicType, &MPIType[i]));
+      CheckMPIStatus (MPI_Type_indexed ((int)V[i].size(),Length,Offset,_BasicType, &MPIType[i]));
       CheckMPIStatus (MPI_Type_commit (&MPIType[i]));
     }
   
