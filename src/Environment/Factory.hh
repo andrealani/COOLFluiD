@@ -11,9 +11,6 @@
 
 #include "Common/FactoryBase.hh"
 #include "Common/CFLog.hh"
-#include "Common/SafePtr.hh"
-#include "Common/NoSuchValueException.hh"
-#include "Common/StorageExistsException.hh"
 #include "Common/FactoryRegistry.hh"
 #include "Environment/CFEnv.hh"
 

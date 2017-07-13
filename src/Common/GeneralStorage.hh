@@ -10,8 +10,6 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Common/COOLFluiD.hh"
-
-#include "Common/COOLFluiD.hh"
 #include "Common/NoSuchStorageException.hh"
 #include "Common/StorageExistsException.hh"
 
