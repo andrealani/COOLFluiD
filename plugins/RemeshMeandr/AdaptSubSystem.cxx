@@ -145,13 +145,14 @@ void AdaptSubSystem::run()
 
     DataHandle<State*, GLOBAL>* states = 0;
 
-    if (isParallel)
-    {
-      states = new DataHandle<State*, GLOBAL> (MeshDataStack::getActive()->getDataStorage()->getGlobalData<State*>("states"));
-
-      if (CFEnv::getInstance().getVars()->NewSyncAlgo) {
-        states->synchronize();
-      } else {
+    if (isParallel) {
+      states = new DataHandle<State*, GLOBAL>
+	(MeshDataStack::getActive()->getDataStorage()->getGlobalData<State*>("states"));
+      
+      if (CFEnv::getInstance().getVars()->SyncAlgo != "Old") {
+	states->synchronize();
+      } 
+      else {
         states->beginSync();
         states->endSync();
       }

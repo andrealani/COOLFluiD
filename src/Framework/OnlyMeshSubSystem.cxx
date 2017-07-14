@@ -667,8 +667,8 @@ void OnlyMeshSubSystem::setGlobalMeshData()
 	  //  nodes.DumpContents ();
 	  //  #endif
 	  
-	  states.buildMap(CFEnv::getInstance().getVars()->NewSyncAlgo);
-	  nodes.buildMap(CFEnv::getInstance().getVars()->NewSyncAlgo);
+	  states.buildMap(CFEnv::getInstance().getVars()->SyncAlgo);
+	  nodes.buildMap(CFEnv::getInstance().getVars()->SyncAlgo);
 	  
 	  // #ifndef NDEBUG
 	  //  states.DumpInfo ();

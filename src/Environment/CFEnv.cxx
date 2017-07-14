@@ -73,7 +73,7 @@ void CFEnv::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >    ("ErrorOnUnusedConfig","Signal error when some user provided config parameters are not used");
   options.addConfigOption< std::string >("MainLoggerFileName", "Name of main log file");
   options.addConfigOption< CFuint >("NbWriters", "Number of writing processes in parallel I/O");
-  options.addConfigOption< bool >("NewSyncAlgo", "Enable the new synchronization algorithm");
+  options.addConfigOption< std::string >("SyncAlgo", "Choose the synchronization algorithm (Old, Bcast, AllToAll");
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -104,7 +104,7 @@ CFEnv::CFEnv() :
   setParameter("MainLoggerFileName",    &(m_env_vars->MainLoggerFileName));
   setParameter("ExceptionLogLevel",     &(m_env_vars->ExceptionLogLevel));
   setParameter("NbWriters",     &(m_env_vars->NbWriters));
-  setParameter("NewSyncAlgo",   &(m_env_vars->NewSyncAlgo));
+  setParameter("SyncAlgo",   &(m_env_vars->SyncAlgo));
 }
 
 //////////////////////////////////////////////////////////////////////////////

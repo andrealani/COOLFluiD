@@ -252,13 +252,14 @@ PetscErrorCode computeJFMat(Mat petscMat, Vec x, Vec y)
   }
 
   // syncronize the states after the modifications
-  if (CFEnv::getInstance().getVars()->NewSyncAlgo) {
-      states.synchronize();
-  } else {
-   states.beginSync();
-   states.endSync();
+  if (CFEnv::getInstance().getVars()->SyncAlgo != "Old") {
+    states.synchronize();
+  } 
+  else {
+    states.beginSync();
+    states.endSync();
   }
-
+  
   // computation of F(U + eps*delta_U)
   jfc->spaceMethod->setComputeJacobianFlag(false);
 
@@ -301,9 +302,10 @@ PetscErrorCode computeJFMat(Mat petscMat, Vec x, Vec y)
     }
 
     // syncronize the states after the modifications
-    if (CFEnv::getInstance().getVars()->NewSyncAlgo) {
-        states.synchronize();
-    } else {
+    if (CFEnv::getInstance().getVars()->SyncAlgo != "Old") {
+      states.synchronize();
+    } 
+    else {
       states.beginSync();
       states.endSync();
     }

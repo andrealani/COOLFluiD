@@ -320,7 +320,7 @@ void ConvergenceMethod::syncGlobalDataComputeResidual(const bool computeResidual
   DataHandle<Node*, GLOBAL> nodedata = 
     MeshDataStack::getInstance().getEntryByNamespace(nsp)->getNodeDataSocketSink().getDataHandle();
   
-  if (CFEnv::getInstance().getVars()->NewSyncAlgo) {
+  if (CFEnv::getInstance().getVars()->SyncAlgo != "Old") {
     if (isParallel) {
       statedata.synchronize();
       nodedata.synchronize();

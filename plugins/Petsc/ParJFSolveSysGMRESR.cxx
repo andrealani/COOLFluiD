@@ -230,9 +230,10 @@ PetscErrorCode computeJFMatGMRESR(Mat petscMat, Vec x, Vec y)
 
 
   // syncronize the states after the modifications
-  if (CFEnv::getInstance().getVars()->NewSyncAlgo) {
+  if (CFEnv::getInstance().getVars()->SyncAlgo != "Old") {
     states.synchronize();
-  } else {           
+  }
+  else {           
     states.beginSync();
     states.endSync();
   }

@@ -122,8 +122,8 @@ public: // functions
   void synchronize() {m_pattern->synchronize();} 
   
   /// Build Sync table
-  void BuildGhostMap(const bool newAlgo) {m_pattern->BuildGhostMap(newAlgo);}
-    
+  void BuildGhostMap(const std::string& algo) {m_pattern->BuildGhostMap(algo);}
+  
   /// Returns the list of ghost nodes (by processor rank) to be sent to
   /// another processor
   const std::vector< std::vector< CFuint > >& GetGhostSendList() const

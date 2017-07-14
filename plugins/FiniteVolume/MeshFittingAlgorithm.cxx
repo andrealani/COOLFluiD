@@ -731,20 +731,22 @@ void MeshFittingAlgorithm::updateNodePositions() {
     if (nodes[iNode]->isParUpdatable()) {
       Framework::Node& currNode = *nodes[iNode];
       for(CFuint iDim = 0; iDim < nbDims; ++iDim) {
-        currNode[XX+iDim] = currNode[XX+iDim]*(1.-m_meshAcceleration) + rhs[iNode*totalNbEqs+XX+iDim]*m_meshAcceleration;
+        currNode[XX+iDim] = currNode[XX+iDim]*
+	  (1.-m_meshAcceleration) + rhs[iNode*totalNbEqs+XX+iDim]*m_meshAcceleration;
       }
     }
   }
-
+  
   //synchronize Nodes
-  if (CFEnv::getInstance().getVars()->NewSyncAlgo) {
+  if (CFEnv::getInstance().getVars()->SyncAlgo == "Old") {
     nodes.synchronize();
-   } else {
-   nodes.beginSync();
-   nodes.endSync();
- }
+  } 
+  else {
+    nodes.beginSync();
+    nodes.endSync();
+  }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void MeshFittingAlgorithm::triggerRecomputeMeshData() {

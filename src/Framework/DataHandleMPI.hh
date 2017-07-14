@@ -139,15 +139,15 @@ public:
   }
 
   /// Build Sync table
-  void buildMap(const bool newAlgo)
+  void buildMap(const std::string& algo)
   {
     Common::Stopwatch<Common::WallTime> timer;
     timer.start ();
-    _globalPtr->BuildGhostMap(newAlgo);
+    _globalPtr->BuildGhostMap(algo);
     timer.stop();
-    CFLog(INFO, "DataHandle<MPI>::buildMap(" << newAlgo << ") took " << timer.read() << "s\n");
+    CFLog(INFO, "DataHandle<MPI>::buildMap(" << algo << ") took " << timer.read() << "s\n");
   }
-
+  
   /// This function returns the global (cross-processes) size of
   /// the underlying parallel array
   /// @return the global size of the parallel array

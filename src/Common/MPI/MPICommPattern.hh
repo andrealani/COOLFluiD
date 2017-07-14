@@ -48,6 +48,7 @@
 #include "Common/ArrayAllocator.hh"
 #include "Common/CFLog.hh"
 #include "Common/SharedPtr.hh"
+#include "Common/CFPrintContainer.hh"
 #include "Common/CFMultiMap.hh"
 #include "Common/MPI/ParVectorException.hh"
 #include "Common/MPI/MPIException.hh"
@@ -250,10 +251,10 @@ private:
   std::vector<int> m_recvCount;
   
   /// send displacements for ghost points
-  std::vector<int> m_sendDispls;
+  std::vector<int> m_sendDispl;
     
   /// recv displacements for ghost points
-  std::vector<int> m_recvDispls;
+  std::vector<int> m_recvDispl;
 
   /// send local IDs
   std::vector<CFuint> m_sendLocalIDs;
@@ -411,12 +412,24 @@ public: // funcions
   /// (to be called after adding ghost points but before doing a sync)
   /// Collective.
   /// @pre InitMPI needs to be called before this.
-  void BuildGhostMap(const bool newAlgo) {(newAlgo) ? BuildGhostMapNew() : BuildGhostMapOld();}
-
+  void BuildGhostMap(const std::string& algo) 
+  {
+    cf_assert(algo == "Old" || algo == "Bcast" || algo == "AllToAll");
+    if (algo == "Old") BuildGhostMapOld(); 
+    if (algo == "Bcast") BuildGhostMapBcast();
+    if (algo == "AllToAll") BuildGhostMapAllToAll();
+  }
+  
   /// Build the ghost mapping for synchronization with the new algorithm 
+  /// based on MPI_Alltoall and MPI_Alltoallv
   /// @author Andrea Lani
-  void BuildGhostMapNew();
-    
+  void BuildGhostMapAllToAll();
+  
+  /// Build the ghost mapping for synchronization with the new algorithm 
+  /// based on MPI_Bcast and MPI_Alltoall
+  /// @author Andrea Lani
+  void BuildGhostMapBcast();
+  
   /// Build the ghost mapping for synchronization with the old algorithm
   void BuildGhostMapOld();
    
@@ -1112,9 +1125,9 @@ void MPICommPattern<DATA>::Sync_BuildReceiveList()
 
 ///  Build the communication pattern for exchanging ghost points later 
 template <typename DATA>
-void MPICommPattern<DATA>::BuildGhostMapNew()
+void MPICommPattern<DATA>::BuildGhostMapBcast()
 { 
-  CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMapNew() => start\n");
+  CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMapBcast() => start\n");
   
   using namespace std;
   
@@ -1122,17 +1135,17 @@ void MPICommPattern<DATA>::BuildGhostMapNew()
   
   // find the localID corresponding to ghost globalID in the donor process
   // counts for data to send/receive to/from each process
-  m_sendCount.resize(_CommSize, static_cast<CFuint>(0));
-  m_recvCount.resize(_CommSize, static_cast<CFuint>(0));
-  m_sendDispls.resize(_CommSize, static_cast<CFuint>(0));
-  m_recvDispls.resize(_CommSize, static_cast<CFuint>(0));
+  m_sendCount.resize(_CommSize, 0);
+  m_recvCount.resize(_CommSize, 0);
+  m_sendDispl.resize(_CommSize, 0);
+  m_recvDispl.resize(_CommSize, 0);
   
   CFuint nbLocalGhosts = _GhostMap.size();
   cf_assert(nbLocalGhosts > 0);
   
   CFuint maxNbLocalGhosts = 0;
   MPIError::getInstance().check
-    ("MPI_Allreduce", "MPICommPattern<DATA>::BuildGhostMapNew()",
+    ("MPI_Allreduce", "MPICommPattern<DATA>::BuildGhostMapBcast()",
      MPI_Allreduce(&nbLocalGhosts, &maxNbLocalGhosts, 1, 
 		   MPIStructDef::getMPIType(&nbLocalGhosts), MPI_MAX, _Communicator));
   cf_assert(maxNbLocalGhosts > 0);
@@ -1150,7 +1163,7 @@ void MPICommPattern<DATA>::BuildGhostMapNew()
   vector<CFuint> recvLocalIDs; 
   recvLocalIDs.reserve(elemsize*maxNbLocalGhosts); // overestimated size
   
-  CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMapNew() => 1\n");
+  CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMapBcast() => 1\n");
   
   for (CFuint root = 0; root < _CommSize; ++root) {
     if (root == _CommRank) {
@@ -1187,7 +1200,7 @@ void MPICommPattern<DATA>::BuildGhostMapNew()
   
     // there can be room for optimization if we pass the right bcastSize instead of the max one
     MPIError::getInstance().check
-      ("MPI_Bcast", "MPICommPattern<DATA>::BuildGhostMapNew()",
+      ("MPI_Bcast", "MPICommPattern<DATA>::BuildGhostMapBcast()",
        MPI_Bcast(&gGlobalDonorIDs[0], bcastSize, 
 		 MPIStructDef::getMPIType(&gGlobalDonorIDs[0]), root, _Communicator)); 
     
@@ -1216,7 +1229,7 @@ void MPICommPattern<DATA>::BuildGhostMapNew()
     }
   }
   
-  CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMapNew() => 2\n");
+  CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMapBcast() => 2\n");
   
   m_sendLocalIDs.resize(sendLocalIDs.size());
   copy(sendLocalIDs.begin(), sendLocalIDs.end(), m_sendLocalIDs.begin());
@@ -1225,22 +1238,22 @@ void MPICommPattern<DATA>::BuildGhostMapNew()
   copy(recvLocalIDs.begin(), recvLocalIDs.end(), m_recvLocalIDs.begin());
   
   MPIError::getInstance().check
-    ("MPI_Alltoall", "MPICommPattern<DATA>::BuildGhostMapNew()",
+    ("MPI_Alltoall", "MPICommPattern<DATA>::BuildGhostMapBcast()",
      MPI_Alltoall(&m_sendCount[0], 1, MPIStructDef::getMPIType(&m_sendCount[0]),
 		  &m_recvCount[0], 1, MPIStructDef::getMPIType(&m_recvCount[0]), 
 		  _Communicator));
     
-  CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMapNew() => 3\n");
+  CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMapBcast() => 3\n");
  
-  m_sendDispls[0] = 0;
-  m_recvDispls[0] = 0;
+  m_sendDispl[0] = 0;
+  m_recvDispl[0] = 0;
   CFuint scount = m_sendCount[0];
   CFuint rcount = m_recvCount[0];
   for (CFuint i = 1; i < _CommSize; ++i) {
-    m_sendDispls[i] = scount;
+    m_sendDispl[i] = scount;
     // AL: not 100% sure about this
     if (m_recvCount[i] > 0) {
-      m_recvDispls[i] = rcount;
+      m_recvDispl[i] = rcount;
     }
     scount += m_sendCount[i];
     rcount += m_recvCount[i];
@@ -1251,7 +1264,134 @@ void MPICommPattern<DATA>::BuildGhostMapNew()
   cf_assert(m_recvLocalIDs.size()*elemsize == 
 	    std::accumulate(m_recvCount.begin(), m_recvCount.end(), 0));
   
-  CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMapNew() => end\n");
+  CFLog(DEBUG_MIN, CFPrintContainer<vector<int> >("sendCount  = ", &m_sendCount));
+  CFLog(DEBUG_MIN, CFPrintContainer<vector<int> >("recvCount  = ", &m_recvCount));
+  CFLog(DEBUG_MIN, CFPrintContainer<vector<int> >("sendDispl  = ", &m_sendDispl));
+  CFLog(DEBUG_MIN, CFPrintContainer<vector<int> >("recvDispl  = ", &m_recvDispl));
+  
+  CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMapBcast() => end\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DATA>
+void MPICommPattern<DATA>::BuildGhostMapAllToAll()
+{ 
+  CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMapAllToAll() => start\n");
+  
+  using namespace std;
+  
+  cf_assert (_InitMPIOK);
+  
+  // find the localID corresponding to ghost globalID in the donor process
+  // counts for data to send/receive to/from each process
+  m_sendCount.resize(_CommSize, 0);
+  m_recvCount.resize(_CommSize, 0);
+  m_sendDispl.resize(_CommSize, 0);
+  m_recvDispl.resize(_CommSize, 0);
+  
+  CFuint nbLocalGhosts = _GhostMap.size();
+  cf_assert(nbLocalGhosts > 0);
+  
+  // each processor communicates the global IDs of its ghosts to the donor process
+  
+  // ghosts have to be ordered by donor ID to be consistent with MPI_Alltoallv order
+  // therefore we build a (multi) mapping to store pairs donorID->globalID
+  // after the sorting, we can access directly the pairs ordered by donorID
+  CFMultiMap<int,CFuint> donor2GhostGlobalID(_GhostMap.size());
+  typename TGhostMap::const_iterator itr;
+  for (itr = _GhostMap.begin(); itr != _GhostMap.end(); ++itr) {
+    const CFuint globalID = itr->first;
+    bool flag = false;
+    const CFuint donorID = m_mapGhost2Donor->find(globalID, flag).first->second;
+    cf_assert(flag);
+    donor2GhostGlobalID.insert(donorID, globalID);
+  }
+  donor2GhostGlobalID.sortKeys();
+  
+  // The following array contains the global IDs corresponding to the ghost to receive
+  const CFuint dsize = donor2GhostGlobalID.size();
+  m_recvLocalIDs.resize(dsize);
+  
+  vector<int> sendCount(_CommSize, 0);
+  vector<int> recvCount(_CommSize, 0);
+  vector<int> sendDispl(_CommSize, 0);
+  vector<int> recvDispl(_CommSize, 0);
+  vector<CFuint> sendGhostGlobalIDs(dsize);
+  
+  for (CFuint i = 0; i < dsize; ++i) {
+    const CFuint globalID = donor2GhostGlobalID[i];
+    sendGhostGlobalIDs[i] = globalID;
+    const CFuint donorID  = donor2GhostGlobalID.getKey(i);
+    // donor is always != current rank
+    cf_assert(donorID != _CommRank); 
+    sendCount[donorID]++;
+    const CFuint localID = _GhostMap.find(globalID)->second;
+    cf_assert(localID < size());
+    m_recvLocalIDs[i] = localID;
+  }
+  cf_assert(sendCount[_CommRank] == 0);
+  
+  MPIError::getInstance().check
+    ("MPI_Alltoall", "MPICommPattern<DATA>::BuildGhostMapAllToAll()",
+     MPI_Alltoall(&sendCount[0], 1, MPIStructDef::getMPIType(&sendCount[0]),
+		  &recvCount[0], 1, MPIStructDef::getMPIType(&recvCount[0]), 
+		  _Communicator));
+  
+  cf_assert(recvCount[_CommRank] == 0);
+  
+  sendDispl[0] = 0;
+  recvDispl[0] = 0;
+  CFuint scount = sendCount[0];
+  CFuint rcount = recvCount[0];
+  for (CFuint i = 1; i < _CommSize; ++i) {
+    sendDispl[i] = scount;
+    // AL: not 100% sure about this
+    if (recvCount[i] > 0) {
+      recvDispl[i] = rcount;
+    }
+    scount += sendCount[i];
+    rcount += recvCount[i];
+  }
+  
+  cf_assert(scount == m_recvLocalIDs.size());
+  cf_assert(rcount == std::accumulate(recvCount.begin(), recvCount.end(), 0));
+  
+  // during the first MPI_Alltoallv, each rank sends the global IDs to the rank that 
+  // will send the updated ghost state/node data back at the next MPI_Alltoallv
+  
+  vector<CFuint> recvGhostGlobalIDs(rcount);
+  
+  MPIError::getInstance().check
+    ("MPI_Alltoallv", "MPICommPattern<DATA>::BuildGhostMapAllToAll()",
+     MPI_Alltoallv(&sendGhostGlobalIDs[0], &sendCount[0], &sendDispl[0], 
+		   MPIStructDef::getMPIType(&sendGhostGlobalIDs[0]), 
+		   &recvGhostGlobalIDs[0], &recvCount[0], &recvDispl[0], 
+		   MPIStructDef::getMPIType(&recvGhostGlobalIDs[0]),
+		   _Communicator));
+  
+  m_sendLocalIDs.resize(rcount);
+  for (CFuint i = 0; i < rcount; ++i) {
+    const CFuint globalGhostID = recvGhostGlobalIDs[i];
+    const CFuint localGhostID = GlobalToLocal(globalGhostID);
+    cf_assert(localGhostID < size());
+    m_sendLocalIDs[i] = localGhostID;
+  }
+  
+  const CFuint elemsize = _ElementSize/sizeof(T);
+  for (CFuint i = 0; i < _CommSize; ++i) {
+    m_sendCount[i]  = recvCount[i]*elemsize;
+    m_sendDispl[i] = recvDispl[i]*elemsize;
+    m_recvCount[i]  = sendCount[i]*elemsize;
+    m_recvDispl[i] = sendDispl[i]*elemsize;
+  }
+  
+  CFLog(DEBUG_MIN, CFPrintContainer<vector<int> >("sendCount  = ", &m_sendCount));
+  CFLog(DEBUG_MIN, CFPrintContainer<vector<int> >("recvCount  = ", &m_recvCount));
+  CFLog(DEBUG_MIN, CFPrintContainer<vector<int> >("sendDispl  = ", &m_sendDispl));
+  CFLog(DEBUG_MIN, CFPrintContainer<vector<int> >("recvDispl  = ", &m_recvDispl));
+  
+  CFLog(VERBOSE, "MPICommPattern<DATA>::BuildGhostMapAllToAll() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1899,9 +2039,9 @@ void MPICommPattern<DATA>::synchronize()
   
   MPIError::getInstance().check
     ("MPI_Alltoallv", "MPICommPattern<DATA>::synchronize()",
-     MPI_Alltoallv(&m_sendBuf[0], &m_sendCount[0], &m_sendDispls[0], 
+     MPI_Alltoallv(&m_sendBuf[0], &m_sendCount[0], &m_sendDispl[0], 
 		   MPIStructDef::getMPIType(&dummy), 
-		   &m_recvBuf[0], &m_recvCount[0], &m_recvDispls[0], 
+		   &m_recvBuf[0], &m_recvCount[0], &m_recvDispl[0], 
 		   MPIStructDef::getMPIType(&dummy),
 		   _Communicator));
   

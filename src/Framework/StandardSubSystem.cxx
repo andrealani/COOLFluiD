@@ -455,8 +455,8 @@ void StandardSubSystem::setGlobalMeshData()
 	  //  nodes.DumpContents ();
 	  //  #endif
 
-          CFLog(VERBOSE, "StandardSubSystem::setGlobalMeshData() => buildMap() start\n");	  	  states.buildMap(CFEnv::getInstance().getVars()->NewSyncAlgo);
-	  nodes.buildMap(CFEnv::getInstance().getVars()->NewSyncAlgo);
+          CFLog(VERBOSE, "StandardSubSystem::setGlobalMeshData() => buildMap() start\n");	       states.buildMap(CFEnv::getInstance().getVars()->SyncAlgo);
+	  nodes.buildMap(CFEnv::getInstance().getVars()->SyncAlgo);
 	  CFLog(VERBOSE, "StandardSubSystem::setGlobalMeshData() => buildMap() end\n");
 	  
 	  // #ifndef NDEBUG

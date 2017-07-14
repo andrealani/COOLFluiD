@@ -159,8 +159,8 @@ void StdMeshReader::buildMeshData()
       DataHandle<Node*, GLOBAL> nodes =
         meshDataVector[meshDataID]->getDataStorage()->getGlobalData<Node*>(parNodeVecName);
 
-      states.buildMap(CFEnv::getInstance().getVars()->NewSyncAlgo);
-      nodes.buildMap(CFEnv::getInstance().getVars()->NewSyncAlgo);
+      states.buildMap(CFEnv::getInstance().getVars()->SyncAlgo);
+      nodes.buildMap(CFEnv::getInstance().getVars()->SyncAlgo);
     }
 
   meshCreator[0]->unsetMethod();
