@@ -17,8 +17,8 @@
 # default build options
 #==================================================================
 
-coolfluid_dir = /homeb/prpc19/prpc1900/trunk_NEW
-basebuild_dir = /homeb/prpc19/prpc1900/trunk_NEW/BGMPI_STATIC_INT
+coolfluid_dir = /homeb/prpc19/prpc1900/trunk_LANI
+basebuild_dir = /homeb/prpc19/prpc1900/trunk_LANI/LANI_opt2
 
 # compilers
 cc     = /bgsys/drivers/ppcfloor/comm/xl/bin/mpixlc
@@ -59,26 +59,25 @@ lib_AnalyticalModel = on
 
 lib_CFmeshFileReader = on
 lib_Gambit2CFmesh = on
-lib_Gmsh2CFmesh = on
-lib_Tecplot2CFmesh = on
+#lib_Gmsh2CFmesh = on
+#lib_Tecplot2CFmesh = on
 #lib_THOR2CFmesh = on
 lib_CFmeshExtruder = on
 lib_CFmeshFileWriter = on
 lib_TecplotWriter = on
 
 lib_Maxwell = on
-lib_FiniteVolume = on
-
+#lib_MHD = on
 lib_MultiFluidMHD = on
+
 lib_ForwardEuler = on
 lib_NewtonMethod = on
-lib_ParaViewWriter = on
-
-lib_FiniteVolumeMaxwell = on
-lib_FiniteVolumeMultiFluidMHD = on
-
-#lib_MHD = on
+#lib_ParaViewWriter = on
+lib_FiniteVolume = on
+#lib_FiniteVolumeMaxwell = on
 #lib_FiniteVolumeMHD = on
+lib_FiniteVolumeMultiFluidMHD = on
+lib_PhysicalModelDummy = on
 
 # linear system solvers
 lib_PetscI = on
@@ -101,6 +100,19 @@ bgoptim4_cxxflags = -O4 -qarch=qp -qtune=qp
 bgoptim4_cflags   = -O4 -qarch=qp -qtune=qp
 bgoptim4_fflags   = -O4 -qarch=qp -qtune=qp
 
-bgoptim3_cxxflags = -O3 -qstrict -qarch=qp -qtune=qp -qminimaltoc
+bgoptim3_cxxflags = -O3 -qstrict -qarch=qp -qtune=qp 
+#-qminimaltoc
 bgoptim3_cflags   = -O3 -qstrict -qarch=qp -qtune=qp
 bgoptim3_fflags   = -O3 -qstrict -qarch=qp -qtune=qp
+
+bgoptim2_cxxflags = -O2 -qstrict -qarch=qp -qtune=qp -qmaxmem=-1
+bgoptim2_cflags   = -O2 -qstrict -qarch=qp -qtune=qp -qmaxmem=-1
+bgoptim2_fflags   = -O2 -qstrict -qarch=qp -qtune=qp
+
+bgrelease2_cxxflags = -O2 -DNDEBUG -qstrict -qarch=qp -qtune=qp 
+# -qmaxmem=-1 
+#-qminimaltoc 
+bgrelease2_cflags   = -O2 -DNDEBUG -qstrict -qarch=qp -qtune=qp 
+#-qmaxmem=-1 
+bgrelease2_fflags   = -O2 -DNDEBUG -qstrict -qarch=qp -qtune=qp
+
