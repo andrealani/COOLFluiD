@@ -146,6 +146,7 @@ static int getCPURank()
 
 #define CFLogInfo(x)   CFLog(INFO,x)
 #define CFLogNotice(x) CFLog(NOTICE,x)
+#define CFLogVerbose(x) CFLog(VERBOSE,x)
 #define CFLogWarn(x)   CFLog(WARN,x)
 #define CFLogError(x)  CFerr << x ; CFerr.flush()
 

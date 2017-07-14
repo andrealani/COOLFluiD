@@ -6,7 +6,9 @@ LIST ( APPEND CMAKE_C_LINK_FLAGS    " -qpic -qmkshrobj -qnostaticlink -qnostatic
 ENDIF( CF_ENABLE_IBMSHARED )
 
 IF ( CF_ENABLE_IBMSTATIC )
-LIST ( APPEND CMAKE_CXX_LINK_FLAGS  "-O2 -Wl,--allow-multiple-definition -Wl,--whole-archive" )
+   ## AL: changed from -02 to -03 for experiments
+LIST ( APPEND CMAKE_CXX_LINK_FLAGS  "-O2 -Wl,--allow-multiple-definition" )
+#LIST ( APPEND CMAKE_CXX_LINK_FLAGS  "-O2 -Wl,--allow-multiple-definition -Wl,--whole-archive" )
 #LIST ( APPEND CMAKE_CXX_LINK_FLAGS  " -Wl,--allow-multiple-definition -Wl,--whole-archive" )
 ENDIF( CF_ENABLE_IBMSTATIC )
 
@@ -163,6 +165,14 @@ IF(UNIX)
 ENDIF(UNIX)
 
 MARK_AS_ADVANCED( CF_CMAKE_CXX_FLAGS_CUDARELEASE  CF_CMAKE_C_FLAGS_CUDARELEASE CF_CMAKE_Fortran_FLAGS_CUDARELEASE CF_CUDAC_FLAGS_CUDARELEASE )
+
+#IF ( CF_ENABLE_IBMSTATIC )
+# LIST ( APPEND CMAKE_CXX_LINK_FLAGS       "-O3 -Wl,--allow-multiple-definition -Wl,--whole-archive" )
+# LIST ( APPEND CF_C_FLAGS_BGOPTIM3        "-O3 -qstrict -qarch=qp -qtune=qp" )
+# LIST ( APPEND CF_CXX_FLAGS_BGOPTIM3      "-O3 -qstrict -qarch=qp -qtune=qp" )
+# LIST ( APPEND CF_Fortran_FLAGS_BGOPTIM3  "-O3 -qstrict -qarch=qp -qtune=qp" )
+#MARK_AS_ADVANCED( CF_CMAKE_CXX_FLAGS_BGOPTIM3  CF_CMAKE_C_FLAGS_BGOPTIM3 CF_CMAKE_Fortran_FLAGS_BGOPTIM3 )
+#ENDIF(CF_ENABLE_IBMSTATIC)
 
 #######################################################
 
