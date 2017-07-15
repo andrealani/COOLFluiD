@@ -112,11 +112,11 @@ public:
   /// @return SelfRegistPtr olding the created object
   Common::SelfRegistPtr<BASE> create(typename BASE::ARG1 arg)
   {
-    CFtrace << "ObjectProvider::create() => 1" << BASE::getClassName() << "\n";
+    // CFtrace << "ObjectProvider::create() => 1" << BASE::getClassName() << "\n";
     CONCRETE* obj = new CONCRETE(arg); 
-    CFtrace << "ObjectProvider::create() => 2" << BASE::getClassName() << "\n";
+    // CFtrace << "ObjectProvider::create() => 2" << BASE::getClassName() << "\n";
     Common::SelfRegistPtr<BASE> ptr (obj, dynamic_cast<Common::ProviderBase*>(this));
-    CFtrace << "ObjectProvider::create() => ptr created\n";
+    // CFtrace << "ObjectProvider::create() => ptr created\n";
     return ptr;
     // return Common::SelfRegistPtr<BASE>(new CONCRETE(arg), this);
   }
