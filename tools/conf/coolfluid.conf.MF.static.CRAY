@@ -17,8 +17,20 @@
 # default build options
 #==================================================================
 
-coolfluid_dir = /zhome/academic/HLRS/pri/ipranlan/trunk_static
-basebuild_dir = /zhome/academic/HLRS/pri/ipranlan/trunk_static/CRAY_STATIC_BOOST
+# settings for .bashrc on XC40 Hzel Hen
+# module load cdt/17.04 >& /dev/null
+# module load cray-mpich/7.5.4 >& /dev/null
+# module load cray-petsc-64/3.6.3.0 >& /dev/null
+## the following contains parmetis 4.0.2
+# module load cray-tpsl-64/17.04.1 >& /dev/null
+## the following is needed otherwise you get a weird error with cmake
+# module load cray-hdf5-parallel/1.10.0 >& /dev/null
+# module load tools/cmake/3.8.1
+# export CRAYPE_LINK_TYPE=static
+
+# change those two paths to your directory
+coolfluid_dir = /zhome/academic/HLRS/pri/ipranlan/trunk_last
+basebuild_dir = /zhome/academic/HLRS/pri/ipranlan/trunk_last/CRAY_STATIC
 
 # compilers
 cc     = /opt/cray/craype/2.5.9/bin/cc
@@ -27,7 +39,8 @@ fc     = /opt/cray/craype/2.5.9/bin/ftn
 
 withcurl = 0
 nofortran = 1
-with_singleexec = 1
+# create the CF static libs
+#with_singleexec = 1
 with_log4cpp = 0
 trace = off
 
@@ -110,3 +123,8 @@ with_testcases = 1
 crayoptim_cflags   = -O3 #-D_GLIBCXX_USE_CXX11_ABI=0
 crayoptim_cxxflags = -O3
 crayoptim_fflags   = -O3 
+
+crayrelease_cflags   = -O3 -DNDEBUG
+crayrelease_cxxflags = -O3 -DNDEBUG
+crayrelease_fflags   = -O3 -DNDEBUG
+
