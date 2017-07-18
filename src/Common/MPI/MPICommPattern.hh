@@ -415,10 +415,14 @@ public: // funcions
   void BuildGhostMap(const std::string& algo) 
   {
     cf_assert(algo == "Old" || algo == "Bcast" || algo == "AllToAll");
-    if (algo == "Old") BuildGhostMapOld(); 
-    if (algo == "Bcast") BuildGhostMapBcast();
-    if (algo == "AllToAll") BuildGhostMapAllToAll();
-  }
+    if (algo == "Old") {
+      BuildGhostMapOld(); 
+    }
+    else if (_CommSize > 1) {
+      if (algo == "Bcast") BuildGhostMapBcast();
+      if (algo == "AllToAll") BuildGhostMapAllToAll();
+    }
+  }  
   
   /// Build the ghost mapping for synchronization with the new algorithm 
   /// based on MPI_Alltoall and MPI_Alltoallv
@@ -2008,52 +2012,54 @@ void MPICommPattern<DATA>::synchronize()
 { 
   CFLog(VERBOSE, "MPICommPattern<DATA>::synchronize() => start\n");
   
-  using namespace std;
-  
-  T dummy = 0.;
-  const CFuint elemsize = _ElementSize/sizeof(T);
-  
-  // allocate the send and recv buffers
-  m_sendBuf.resize(m_sendLocalIDs.size()*elemsize);
-  cf_assert(m_sendBuf.size() > 0);
-  
-  m_recvBuf.resize(m_recvLocalIDs.size()*elemsize);
-  cf_assert(m_recvBuf.size() > 0);
-  
-  // send local IDs stores the local IDs of the locally updatable DOFs to send 
-  const CFuint totalSize = size()*elemsize;
-  
-  CFLog(VERBOSE, "MPICommPattern<DATA>::synchronize() => 1\n");
-  
-  CFuint scounter = 0;
-  for (CFuint i = 0; i < m_sendLocalIDs.size(); ++i) {
-    const CFuint startLocalID = m_sendLocalIDs[i]*elemsize;
-    for (CFuint e = 0; e < elemsize; ++e, ++scounter) {
-      const CFuint localID = startLocalID+e;
-      cf_assert(localID < totalSize);
-      m_sendBuf[scounter] = m_data->ptr()[localID]; // localID must be < nbGhosts
+  if (_CommSize > 1) {
+    using namespace std;
+    
+    T dummy = 0.;
+    const CFuint elemsize = _ElementSize/sizeof(T);
+    
+    // allocate the send and recv buffers
+    m_sendBuf.resize(m_sendLocalIDs.size()*elemsize);
+    cf_assert(m_sendBuf.size() > 0);
+    
+    m_recvBuf.resize(m_recvLocalIDs.size()*elemsize);
+    cf_assert(m_recvBuf.size() > 0);
+    
+    // send local IDs stores the local IDs of the locally updatable DOFs to send 
+    const CFuint totalSize = size()*elemsize;
+    
+    CFLog(VERBOSE, "MPICommPattern<DATA>::synchronize() => 1\n");
+    
+    CFuint scounter = 0;
+    for (CFuint i = 0; i < m_sendLocalIDs.size(); ++i) {
+      const CFuint startLocalID = m_sendLocalIDs[i]*elemsize;
+      for (CFuint e = 0; e < elemsize; ++e, ++scounter) {
+	const CFuint localID = startLocalID+e;
+	cf_assert(localID < totalSize);
+	m_sendBuf[scounter] = m_data->ptr()[localID]; // localID must be < nbGhosts
+      }
     }
-  }
-  
-  CFLog(VERBOSE, "MPICommPattern<DATA>::synchronize() => 2\n");
-  
-  MPIError::getInstance().check
-    ("MPI_Alltoallv", "MPICommPattern<DATA>::synchronize()",
-     MPI_Alltoallv(&m_sendBuf[0], &m_sendCount[0], &m_sendDispl[0], 
-		   MPIStructDef::getMPIType(&dummy), 
-		   &m_recvBuf[0], &m_recvCount[0], &m_recvDispl[0], 
-		   MPIStructDef::getMPIType(&dummy),
-		   _Communicator));
-  
-  CFLog(VERBOSE, "MPICommPattern<DATA>::synchronize() => 3\n");
-  
-  CFuint rcounter = 0;
-  for (CFuint i = 0; i < m_recvLocalIDs.size(); ++i) {
-    const CFuint startLocalID = m_recvLocalIDs[i]*elemsize;
-    for (CFuint e = 0; e < elemsize; ++e, ++rcounter) {
-      const CFuint localID = startLocalID+e;
-      cf_assert(localID < totalSize);
-      m_data->ptr()[localID] = m_recvBuf[rcounter];
+    
+    CFLog(VERBOSE, "MPICommPattern<DATA>::synchronize() => 2\n");
+    
+    MPIError::getInstance().check
+      ("MPI_Alltoallv", "MPICommPattern<DATA>::synchronize()",
+       MPI_Alltoallv(&m_sendBuf[0], &m_sendCount[0], &m_sendDispl[0], 
+		     MPIStructDef::getMPIType(&dummy), 
+		     &m_recvBuf[0], &m_recvCount[0], &m_recvDispl[0], 
+		     MPIStructDef::getMPIType(&dummy),
+		     _Communicator));
+    
+    CFLog(VERBOSE, "MPICommPattern<DATA>::synchronize() => 3\n");
+    
+    CFuint rcounter = 0;
+    for (CFuint i = 0; i < m_recvLocalIDs.size(); ++i) {
+      const CFuint startLocalID = m_recvLocalIDs[i]*elemsize;
+      for (CFuint e = 0; e < elemsize; ++e, ++rcounter) {
+	const CFuint localID = startLocalID+e;
+	cf_assert(localID < totalSize);
+	m_data->ptr()[localID] = m_recvBuf[rcounter];
+      }
     }
   }
   
