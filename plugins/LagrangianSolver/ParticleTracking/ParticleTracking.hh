@@ -3,8 +3,6 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-//#include "RadiativeTransfer/RadiativeTransfer.hh"
-
 #include "Framework/SocketBundleSetter.hh"
 #include "LagrangianSolver/ParticleData.hh"
 
@@ -15,7 +13,6 @@ namespace COOLFluiD {
 namespace LagrangianSolver {
 
 //////////////////////////////////////////////////////////////////////////////
-
 
 class ParticleTracking : public Framework::SocketBundleSetter
 {
@@ -85,6 +82,8 @@ protected: //data
   CommonData m_particleCommonData;
 
 };
+
+//////////////////////////////////////////////////////////////////////////////
 
 } // namespace RadiativeTransfer
 

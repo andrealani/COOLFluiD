@@ -43,10 +43,12 @@ public:
     }
 
 private:
-    std::vector<CFreal> m_centroids;
-    CFuint m_maxNbFaces;
-    RealVector m_exitPoint, m_entryPoint, m_direction;
-    CFreal m_stepDist;
+  std::vector<CFreal> m_centroids;
+  CFuint m_maxNbFaces;
+  RealVector m_exitPoint;
+  RealVector m_entryPoint;
+  RealVector m_direction;
+  CFreal m_stepDist;
 };
 
 

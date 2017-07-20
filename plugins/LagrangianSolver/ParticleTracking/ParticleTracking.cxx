@@ -1,31 +1,16 @@
-//#include <iostream>
-//#include <cmath>
-//#include <algorithm>
-
-//#include "MathTools/MathChecks.hh"
-//#include "RadiativeTransfer/ParticleTracking.hh"
-//#include "FiniteVolume/CellCenterFVM.hh"
-//#include "Framework/MeshData.hh"
-//#include "Framework/PhysicalModel.hh"
 #include "LagrangianSolver/ParallelVector/ParallelVector.hh"
 #include "ParticleTracking.hh"
 #include "Framework/PhysicalModel.hh"
 #include "Framework/MeshData.hh"
-////////////////////////////////////////////////////////////////////////////////
-
-//using namespace std;
-//using namespace COOLFluiD::Framework;
-//using namespace COOLFluiD::Common;
-//using namespace COOLFluiD::MathTools;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-//namespace COOLFluiD {
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
+using namespace COOLFluiD::MathTools;
 
-//  namespace RadiativeTransfer {
-
-//////////////////////////////////////////////////////////////////////////////
-
+////////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
@@ -34,23 +19,24 @@ namespace LagrangianSolver {
 //////////////////////////////////////////////////////////////////////////////
 
 ParticleTracking::ParticleTracking(const std::string& name) :
-  //Common::OwnedObject(),
-  //ConfigObject(name),
-  //Common::NonCopyable<ParticleTracking>(),
   SocketBundleSetter()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
 ParticleTracking::~ParticleTracking()
 {
 }
 
-void ParticleTracking::getAxiNormals(CFuint faceID, RealVector& CartPosition, RealVector& faceNormal ){
+//////////////////////////////////////////////////////////////////////////////
 
-  faceNormal.resize( 3 );
+void ParticleTracking::getAxiNormals(CFuint faceID, RealVector& CartPosition, 
+				     RealVector& faceNormal)
+{
+  faceNormal.resize(3);
   static RealVector cartNormal(2);
-
+  
   //Create the Cylindrical normal vector
 
   //1. Get the 2D cartesian normal
@@ -69,10 +55,12 @@ void ParticleTracking::getAxiNormals(CFuint faceID, RealVector& CartPosition, Re
 
 /////////////////////////////////////////////////////////////////////////////
 
-void ParticleTracking::getCartNormals(CFuint faceID, RealVector& CartPosition, RealVector& faceNormal ){
+void ParticleTracking::getCartNormals(CFuint faceID, RealVector& CartPosition, 
+				      RealVector& faceNormal)
+{
   static Framework::DataHandle<CFreal> normals = m_sockets.normals.getDataHandle();
   static CFuint dim = Framework::PhysicalModelStack::getActive()->getDim();
-
+  
   CFuint startID=faceID*dim;
   cf_assert(startID < normals.size() );
   //std::cout<<"startId: "<<startID<<"normals.size(): "<<normals.size()<<
@@ -85,22 +73,15 @@ void ParticleTracking::getCartNormals(CFuint faceID, RealVector& CartPosition, R
 
 /////////////////////////////////////////////////////////////////////////////
 
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ParticleTracking::setFaceTypes(MathTools::CFMat<CFint> & wallTypes, std::vector<std::string>& wallNames,
-                                    std::vector<std::string>& boundaryNames){
-
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Common;
-
-
+void ParticleTracking::setFaceTypes(MathTools::CFMat<CFint> & wallTypes, 
+				    std::vector<std::string>& wallNames,
+                                    std::vector<std::string>& boundaryNames)
+{
   setupAlgorithm();
   
   FaceTrsGeoBuilder::GeoData& facesData = m_faceBuilder.getDataGE();
   CellTrsGeoBuilder::GeoData& cellsData = m_cellBuilder.getDataGE();
-
-
+  
   LagrangianSolver::ParallelVector < CFuint > ownerCellRank, ownerCellLocalID;
 
   ownerCellRank.setDataSockets(m_sockets);
@@ -108,7 +89,6 @@ void ParticleTracking::setFaceTypes(MathTools::CFMat<CFint> & wallTypes, std::ve
 
   ownerCellRank.getSharedEntries();
   ownerCellLocalID.getSharedEntries();
-  
   
   const CFuint nbCells = cellsData.trs->getLocalNbGeoEnts();
   const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
@@ -125,12 +105,10 @@ void ParticleTracking::setFaceTypes(MathTools::CFMat<CFint> & wallTypes, std::ve
     ownerCellLocalID[i]=cell->getState(0)->getLocalID();
     m_cellBuilder.releaseGE();
   }
-
+  
   ownerCellRank.sincronizeAssign();
   ownerCellLocalID.sincronizeAssign();
-
-
-
+  
   //1. Get the total number of faces.
   const CFuint nbFaces = MeshDataStack::getActive()->Statistics().getNbFaces();
   //cout<<"number of faces= "<< nbFaces<<endl;
@@ -145,7 +123,8 @@ void ParticleTracking::setFaceTypes(MathTools::CFMat<CFint> & wallTypes, std::ve
   //Set type and physics ID for the cells
   CFuint nbMediaTrs = mediaNames.size();
   for(CFuint j=0; j<nbMediaTrs; ++j){
-    SafePtr<TopologicalRegionSet> MediumCells = MeshDataStack::getActive()->getTrs(mediaNames[j]);
+    SafePtr<TopologicalRegionSet> MediumCells = 
+      MeshDataStack::getActive()->getTrs(mediaNames[j]);
     cellsData.trs = MediumCells;
     const CFuint nbCellsMedia = MediumCells->getLocalNbGeoEnts();
     for(CFuint i=0; i<nbCellsMedia; ++i){
@@ -263,6 +242,7 @@ void ParticleTracking::setFaceTypes(MathTools::CFMat<CFint> & wallTypes, std::ve
 //  }
 }
 
+//////////////////////////////////////////////////////////////////////////////
 
 }
 }
