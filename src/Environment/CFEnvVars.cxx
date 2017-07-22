@@ -26,7 +26,7 @@ CFEnvVars::CFEnvVars() :
   VerboseEvents        ( false ),
   ErrorOnUnusedConfig  ( false ),
   MainLoggerFileName("output.log"),
-  SyncAlgo("AllToAll"),
+  SyncAlgo("Old"),
   ExceptionLogLevel( (CFuint) VERBOSE),
   InitArgs()
 {
