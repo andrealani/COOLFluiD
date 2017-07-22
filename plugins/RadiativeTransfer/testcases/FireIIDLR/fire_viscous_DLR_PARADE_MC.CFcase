@@ -1,0 +1,151 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume DOM algorithm, PhysicalModelDummy, EmptyIterator, hybrid mesh,
+# only radiation transport (no flow) is computed, Tecplot2CFmesh converter,
+# FIRE II (t = 1643s), validation case for ESA ABLARADABLA, input DLR solution
+#
+################################################################################
+
+# COOLFluiD CFcase file
+# Comments begin with "#"
+
+### Residual = 0
+
+#CFEnv.ErrorOnUnusedConfig = true
+#CFEnv.ExceptionLogLevel = 200
+CFEnv.ExceptionDumps   = false
+CFEnv.ExceptionOutputs = false
+#CFEnv.OnlyCPU0Writes = false
+#CFEnv.TraceToStdOut = true
+
+# Simulation Modules
+Simulator.Modules.Libs = libTecplotWriter libMutationppI libPhysicalModelDummy libFiniteVolume libEmptyConvergenceMethod libRadiativeTransfer libTecplot2CFmesh libCFmeshFileReader libCFmeshFileWriter
+
+# relative path to working directory
+Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/FireIIDLR
+# relative path to results directory 
+Simulator.Paths.ResultsDir = ./RESULTS_FIREII_VISCOUS 
+
+Simulator.SubSystem.Default.PhysicalModelType = PhysicalModelDummy
+Simulator.SubSystem.PhysicalModelDummy.Dimensions = 3
+Simulator.SubSystem.PhysicalModelDummy.Equations = \
+	 rhoe rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp p T Mach
+#rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp rhoe p T Mach
+# Mutation++
+Simulator.SubSystem.PhysicalModelDummy.PropertyLibrary = Mutationpp
+Simulator.SubSystem.PhysicalModelDummy.Mutationpp.mixtureName = air11_DLR
+#air11nasa9 #air11
+Simulator.SubSystem.PhysicalModelDummy.Mutationpp.StateModelName = ChemNonEq1T
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = fire2.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 1000
+Simulator.SubSystem.CFmesh.AppendIter = true
+Simulator.SubSystem.Tecplot.FileName    = fire2.plt
+#Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = B_3 B_4 B_6
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = qrad
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = qrad
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 
+#Simulator.SubSystem.Tecplot.Data.WithEquations = false
+Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
+
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -7.0
+
+Simulator.SubSystem.ConvergenceMethod = EmptyIterator
+
+###############################################################################
+# Mesh Reader
+Simulator.SubSystem.Default.listTRS = B_3 B_4 B_6
+
+Simulator.SubSystem.MeshCreator                                 = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName              = fire_viscous_DLR.CFmesh
+#fire_inviscid_DLR.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom                = Tecplot2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Discontinuous  = true
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SolutionOrder  = P0
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.HasBlockFormat = false
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SurfaceTRS = B_3 B_4 B_6
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = \
+        "e_partial_density" "N2_partial_density" "O2_partial_density" "NO_partial_density" "N_partial_density" "O_partial_density" \
+        "N2p_partial_density" "O2p_partial_density" "NOp_partial_density" "Np_partial_density" "Op_partial_density" \
+        "pressure" "temperature" "Mach_number"
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.NbElementTypes = 2
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = false
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SaveNodalStates = true
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1.
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
+
+###############################################################################
+
+# Space Method
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = Null
+
+###############################################################################
+
+Simulator.SubSystem.DataPostProcessing               = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames          = DataProcessing1
+
+Simulator.SubSystem.DataProcessing1.ProcessRate         = 1
+Simulator.SubSystem.DataProcessing1.SkipFirstIteration  = false
+Simulator.SubSystem.DataProcessing1.Comds               = RadiativeTransferMonteCarlo3DFVMCC RadiativeTransferOutputFVMCC
+
+Simulator.SubSystem.DataProcessing1.Names               = RT HeatFlux
+Simulator.SubSystem.DataProcessing1.RT.applyTRS         = InnerFaces
+Simulator.SubSystem.DataProcessing1.RT.numberOfRays     = 1000 #10000
+Simulator.SubSystem.DataProcessing1.RT.Axi              = false
+Simulator.SubSystem.DataProcessing1.RT.sendBufferSize   = 10000
+# run at setup, no flow iterations
+Simulator.SubSystem.DataProcessing1.RunAtSetup = true
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.NumberLoops = 1
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.TempID = 12
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMax = 40000.
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMin = 2000.
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.RadiationPhysicsNames = aa b1 b2 b3
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ApplyTRS   = InnerCells 
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.TypeTRS    = Medium
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.Radiator   = ParadeRadiator
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.LibraryPath = \
+	/software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
+#	/Users/lani/PARADEv3.2.1/parade-3.2.1
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.LocalDirName = ParadeData
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 10000
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.Tmin = 200
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = true #false
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.MolecularSpecies = 0 1 1 1 0 0 1 1 1 0 0
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.ApplyTRS   = B_3
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.TypeTRS    = Wall
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.Radiator = GreyWallRadiator
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemAbsCoeff = 1.
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemEmsCoeff = 0.
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.ApplyTRS   = B_4
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.TypeTRS    = Boundary
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.ApplyTRS   = B_6
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.TypeTRS    = Boundary
+
+# radiative heat flux
+Simulator.SubSystem.DataProcessing1.HeatFlux.applyTRS = B_3
+Simulator.SubSystem.DataProcessing1.HeatFlux.TID = 12
+Simulator.SubSystem.DataProcessing1.HeatFlux.OutputFileWall = heatFlux.plt
+Simulator.SubSystem.DataProcessing1.HeatFlux.AppendTime = false
+Simulator.SubSystem.DataProcessing1.HeatFlux.AppendIter = true
+#
+
+#
+
