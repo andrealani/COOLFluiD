@@ -44,9 +44,9 @@ public:
     m_particleCommonData.direction[1]= particleCommonData.direction[1];
     m_particleCommonData.direction[2]= particleCommonData.direction[2];
   }
-
-  virtual void setupAlgorithm() = 0;
-
+  
+  virtual void setupAlgorithm();
+  
   virtual void getCommonData(CommonData &data)=0;
 
   virtual void newDirection(RealVector &direction)=0;
@@ -63,24 +63,31 @@ public:
 
   CFuint getExitFaceID(){return m_exitFaceID;}
 
-  void setFaceTypes(MathTools::CFMat<CFint> & wallTypes, std::vector<std::string>& wallNames,
+  void setFaceTypes(MathTools::CFMat<CFint> & wallTypes, 
+		    std::vector<std::string>& wallNames,
                     std::vector<std::string>& boundaryNames);
-
-protected: //data
-  void getAxiNormals(CFuint faceID, RealVector &CartPosition, RealVector &faceNormal);
-
-  void getCartNormals(CFuint faceID, RealVector &CartPosition, RealVector &faceNormal);
-
-  MPI_Datatype m_particleDataType;
-
-  CFuint m_exitFaceID, m_entryFaceID;
-
-  CFuint m_exitCellID, m_entryCellID;
-
-  CFuint m_cellIdx, m_faceIdx;
   
+protected: // functions
+  void getAxiNormals(CFuint faceID, RealVector &CartPosition, RealVector &faceNormal);
+  
+  void getCartNormals(CFuint faceID, RealVector &CartPosition, RealVector &faceNormal);
+  
+protected: // data
+  
+  MPI_Datatype m_particleDataType;
   CommonData m_particleCommonData;
-
+  
+  CFuint m_exitFaceID;
+  CFuint m_entryFaceID;
+  CFuint m_exitCellID;
+  CFuint m_entryCellID;
+  CFuint m_cellIdx;
+  CFuint m_faceIdx;
+  CFuint m_dim; 
+  
+  Framework::DataHandle<CFreal> m_normals;
+  RealVector m_cartNormal;
+  
 };
 
 //////////////////////////////////////////////////////////////////////////////

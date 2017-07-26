@@ -1,46 +1,53 @@
 #include "ParticleTrackingAxi.hh"
 #include "Framework/MeshData.hh"
 
-namespace COOLFluiD {
-
-namespace LagrangianSolver {
+//////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Common;
 using namespace COOLFluiD::MathTools;
 
-ParticleTrackingAxi::ParticleTrackingAxi(const std::string& name) :
-    ParticleTracking(name),
-    //m_tCantidates(),
-    //m_fCandidates(),
-    faceOutNormal(2),
-    rayTangent(2)
-{
-    //m_tCantidates.reserve(5);
-    //m_fCandidates.reserve(5);
-}
+//////////////////////////////////////////////////////////////////////////////
 
+namespace COOLFluiD {
+
+namespace LagrangianSolver {
+
+//////////////////////////////////////////////////////////////////////////////
+
+ParticleTrackingAxi::ParticleTrackingAxi(const std::string& name) :
+  ParticleTracking(name),
+  faceOutNormal(2),
+  rayTangent(2)
+{
+}
+  
+//////////////////////////////////////////////////////////////////////////////
 
 ParticleTrackingAxi::~ParticleTrackingAxi()
 {
 }
 
-void ParticleTrackingAxi::getCommonData(CommonData &data){
-    static RealVector initialPoint(3);
-    getExitPoint(initialPoint);
+//////////////////////////////////////////////////////////////////////////////
 
-    data.currentPoint[0]=initialPoint[0];
-    data.currentPoint[1]=initialPoint[1];
-    data.currentPoint[2]=initialPoint[2];
-
-    data.direction[0] = m_particleCommonData.direction[0];
-    data.direction[1] = m_particleCommonData.direction[1];
-    data.direction[2] = m_particleCommonData.direction[2];
-
-    data.cellID = m_particleCommonData.cellID;
+void ParticleTrackingAxi::getCommonData(CommonData &data)
+{
+  static RealVector initialPoint(3);
+  getExitPoint(initialPoint);
+  
+  data.currentPoint[0]=initialPoint[0];
+  data.currentPoint[1]=initialPoint[1];
+  data.currentPoint[2]=initialPoint[2];
+  
+  data.direction[0] = m_particleCommonData.direction[0];
+  data.direction[1] = m_particleCommonData.direction[1];
+  data.direction[2] = m_particleCommonData.direction[2];
+  
+  data.cellID = m_particleCommonData.cellID;
 }
-
+  
+//////////////////////////////////////////////////////////////////////////////
 
 void ParticleTrackingAxi::newParticle(CommonData &particle)
 {
@@ -61,14 +68,22 @@ void ParticleTrackingAxi::newParticle(CommonData &particle)
     newDirection(buffer);
 }
 
-void ParticleTrackingAxi::setupAlgorithm(){
-  m_maxNbFaces = Framework::MeshDataStack::getActive()->Statistics().getMaxNbFacesInCell();
+//////////////////////////////////////////////////////////////////////////////
+
+void ParticleTrackingAxi::setupAlgorithm()
+{
+  ParticleTracking::setupAlgorithm();
+  
+  m_maxNbFaces = 
+    Framework::MeshDataStack::getActive()->Statistics().getMaxNbFacesInCell();
 }
+  
+//////////////////////////////////////////////////////////////////////////////
 
-//Maybe use the cell->getNeighborGeos() for caching.
-//TODO: USE 2D algorithm with last ray tangent for first aproximation
-//TODO: Don't need to calculate the intersections on an entry face(same as the last cell's exit face)
-
+  //Maybe use the cell->getNeighborGeos() for caching.
+  //TODO: USE 2D algorithm with last ray tangent for first aproximation
+  //TODO: Don't need to calculate the intersections on an entry face(same as the last cell's exit face)
+  
 
 void ParticleTrackingAxi::getExitPoint(RealVector &exitPoint){
     cf_assert(exitPoint.size()==3);
@@ -77,17 +92,21 @@ void ParticleTrackingAxi::getExitPoint(RealVector &exitPoint){
     exitPoint[2] = m_particleCommonData.currentPoint[2] + m_particle_t * m_particleCommonData.direction[2];
 }
 
+//////////////////////////////////////////////////////////////////////////////
 
 CFreal ParticleTrackingAxi::getStepDistance()
 {
   return (m_particle_t - m_particle_t_old);
 }
 
-void ParticleTrackingAxi::newDirection(RealVector &direction){
+//////////////////////////////////////////////////////////////////////////////
+
+void ParticleTrackingAxi::newDirection(RealVector &direction)
+{
   static RealVector initialPoint(3);
   cf_assert(direction.size() == 3);
   getExitPoint(initialPoint);
-
+  
   m_particle_t_old=1e-8;
   m_particle_t=1e-8;
 
@@ -112,13 +131,15 @@ void ParticleTrackingAxi::newDirection(RealVector &direction){
   m_c_2=pow(m_a,2);
 }
 
-void ParticleTrackingAxi::trackingStep(){
-  m_entryCellID = m_exitCellID;
+//////////////////////////////////////////////////////////////////////////////
 
+void ParticleTrackingAxi::trackingStep()
+{
+  m_entryCellID = m_exitCellID;
   m_exitCellID=-1;
   m_exitFaceID=-1;
-
-//  cout<<"****************************************************"<<endl;
+  
+  //  cout<<"****************************************************"<<endl;
 //  cout<<"New Step!"<<endl<<"on Cell with ID: "<<  m_entryCellID<<endl;
 
 //  cout<<"direction: "<<
@@ -258,11 +279,10 @@ void ParticleTrackingAxi::trackingStep(){
     exitFace->getState(1)->getLocalID() : m_exitCellID;
 
   m_cellBuilder.releaseGE();
-
-
 }
 
 /////////////////////////////////////////////////////////////////////////////
+
 }
 }
 
