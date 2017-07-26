@@ -855,8 +855,8 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
 
   //CFuint toGeneratePhotons = totalnbPhotons;
 
-  // Stopwatch<WallTime> s;
-  //s.restart();
+  Stopwatch<WallTime> s;
+  s.restart();
 
   vector< Photon > photonStack;
   photonStack.reserve(m_sendBufferSize);
@@ -908,8 +908,8 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
     CFLog(VERBOSE,"Number of photons left: "<< toGenerateCellPhotons <<"\n");
   }
   delete progressBar;
-
-  //CFLog(INFO,"Raytracing took "<<s.readTimeHMS().str()<<'\n');
+  
+  CFLog(INFO,"RadiativeTransferMonteCarlo::computePhotons() => Raytracing took "<<s.readTimeHMS().str()<<'\n');
 }
 
 /////////////////////////////////////////////////////////////////////////////
