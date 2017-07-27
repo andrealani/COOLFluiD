@@ -108,7 +108,7 @@ void RadiativeTransferOutputFVMCC::setup()
   // SafePtr<CellCenterFVM> fvmcc = spaceMethod.d_castTo<CellCenterFVM>();
   // cf_assert(fvmcc.isNotNull());
   // m_fvmccData = fvmcc->getData();
-  
+ 
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   m_midFaceNode.resize(dim);
   
@@ -251,11 +251,14 @@ void RadiativeTransferOutputFVMCC::computeWall()
 
 void RadiativeTransferOutputFVMCC::updateOutputFileWall()
 {
+  DataHandle<Node*, GLOBAL > nodes = this->socket_nodes.getDataHandle();
+  DataHandle<State*, GLOBAL> states = this->socket_states.getDataHandle();
   const std::string nsp = this->getMethodData().getNamespace();
   PE::GetPE().setBarrier(nsp);
-  
+ 
   // all processors will write their own data one after the other 
-  for (CFuint i = 0; i < PE::GetPE().GetProcessorCount(nsp); ++i) {
+  const CFuint nbProc = PE::GetPE().GetProcessorCount(nsp);
+  for (CFuint i = 0; i < nbProc; ++i) {
     if (i == PE::GetPE().GetRank(nsp)) {
       
       SafePtr<TopologicalRegionSet> currTrs = this->getCurrentTRS();
@@ -272,16 +275,19 @@ void RadiativeTransferOutputFVMCC::updateOutputFileWall()
 	// carefull here 
 	ofstream& fout = fhandle->open(file, ios::app);
 	
-	DataHandle < Framework::Node*, Framework::GLOBAL > nodes = this->socket_nodes.getDataHandle();
 	const CFuint nbTrsFaces = currTrs->getLocalNbGeoEnts();
 	SafePtr<vector<CFuint> > trsNodes = currTrs->getNodesInTrs();
 	
 	// this is to ensure consistency for hybrid meshes
 	// take as shape the one corresponding to the maximum number of face nodes in the whole TRS 
 	CFuint nbFaceNodes = 0;
+        CFuint nbUpdatableTrsFaces = 0;
 	for (CFuint f = 0; f < nbTrsFaces; ++f) { 
-	  nbFaceNodes = std::max(currTrs->getNbNodesInGeo(f), nbFaceNodes); 
-	}
+	  if (states[currTrs->getStateID(f,0)]->isParUpdatable()) {
+            nbFaceNodes = std::max(currTrs->getNbNodesInGeo(f), nbFaceNodes);
+            nbUpdatableTrsFaces++;
+          }
+        }
 	const std::string shape = (nbFaceNodes == 3) ? "FETRIANGLE" : "FEQUADRILATERAL";
 	
 	// print zone header,
@@ -290,7 +296,7 @@ void RadiativeTransferOutputFVMCC::updateOutputFileWall()
 	fout << "ZONE "
 	     << "  T=\"P" << PE::GetPE().GetRank("Default")<< " ZONE" << 0 << " " << shape <<"\""
 	     << ", N=" << trsNodes->size()
-	     << ", E=" << nbTrsFaces
+	     << ", E=" << nbUpdatableTrsFaces 
 	     << ", DATAPACKING=BLOCK"
 	     << ", ZONETYPE=" << shape
 	     << ", VARLOCATION=( [" << (dim + 1) << "-" << this->m_varNames.size() << "]=CELLCENTERED )";
@@ -314,15 +320,17 @@ void RadiativeTransferOutputFVMCC::updateOutputFileWall()
 	  cf_assert(varID <  this->m_valuesMat.nbRows());
 	  
 	  for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace) {
-	    fout.setf(ios::scientific,ios::floatfield);
-	    fout.precision(12);
+	    if (states[currTrs->getStateID(iFace,0)]->isParUpdatable()) {
+             fout.setf(ios::scientific,ios::floatfield);
+	     fout.precision(12);
 	    
-	    const CFuint index = this->m_mapTrsFaceToID.find(currTrs->getLocalGeoID(iFace));
-	    cf_assert(index < this->m_valuesMat.nbCols());
+	     const CFuint index = this->m_mapTrsFaceToID.find(currTrs->getLocalGeoID(iFace));
+	     cf_assert(index < this->m_valuesMat.nbCols());
 	    
-	    fout << this->m_valuesMat(varID, index);
-	    ((iFace+1)%writeStride == 0) ? fout << "\n" : fout << " ";
-	  }
+	     fout << this->m_valuesMat(varID, index);
+	     ((iFace+1)%writeStride == 0) ? fout << "\n" : fout << " ";
+	   }
+          }
 	}
 	
 	CFMap<CFuint,CFuint> mapNodesID(nbTrsNodes);
@@ -332,19 +340,21 @@ void RadiativeTransferOutputFVMCC::updateOutputFileWall()
 	mapNodesID.sortKeys();
 	
 	for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace) {
-	  const CFuint nbNodesInGeo = currTrs->getNbNodesInGeo(iFace);
-	  for (CFuint in = 0; in < nbNodesInGeo; ++in) {
-	    fout << mapNodesID.find(currTrs->getNodeID(iFace,in)) << " ";
-	  }
+          if (states[currTrs->getStateID(iFace,0)]->isParUpdatable()) {
+	   const CFuint nbNodesInGeo = currTrs->getNbNodesInGeo(iFace);
+	   for (CFuint in = 0; in < nbNodesInGeo; ++in) {
+	     fout << mapNodesID.find(currTrs->getNodeID(iFace,in)) << " ";
+	   }
 	  
-	  if (nbNodesInGeo < nbFaceNodes) {
+	   if (nbNodesInGeo < nbFaceNodes) {
 	    // here you can only have the case 3 instead of 4 nodes
 	    // output twice the last node ID
 	    fout << mapNodesID.find(currTrs->getNodeID(iFace,nbNodesInGeo-1)) << " "; 
-	  }
+	   }
 	  
 	  fout << "\n";
-	  fout.flush();
+	  fout.flush(); 
+         }
 	}
 	
 	//closing the file

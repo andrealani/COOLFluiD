@@ -17,7 +17,7 @@
 #CFEnv.ExceptionLogLevel = 200
 CFEnv.ExceptionDumps   = false
 CFEnv.ExceptionOutputs = false
-#CFEnv.OnlyCPU0Writes = false
+CFEnv.OnlyCPU0Writes = false
 #CFEnv.TraceToStdOut = true
 
 # Simulation Modules
@@ -110,7 +110,7 @@ Simulator.SubSystem.DataProcessing1.RT.sendBufferSize   = 10000
 Simulator.SubSystem.DataProcessing1.RunAtSetup = true
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.NumberLoops = 1
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.TempID = 12
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.TempID = 12 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMax = 40000.
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMin = 2000.
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.RadiationPhysicsNames = aa b1 b2 b3
