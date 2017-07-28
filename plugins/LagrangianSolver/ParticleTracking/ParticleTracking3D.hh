@@ -52,10 +52,14 @@ private:
   /// @param O    ray origin
   /// @param D    ray direction
   /// @param out  ray intersection
-  bool triangle_intersection(const Vec3& V1, const Vec3& V2, const Vec3& V3,
-			     const Vec3& O, const Vec3& D, CFreal* out);
+  bool triangle_intersection(const Vec3& V1, const Vec3& V2, 
+			     const Vec3& V3, const Vec3& O, 
+			     const Vec3& D, CFreal* out);
   
 private:
+  
+  Framework::DataHandle<CFint> m_isOutward; 
+  Framework::DataHandle<CFreal> m_faceCenters; 
   std::vector<CFreal> m_centroids;
   CFuint m_maxNbFaces;
   RealVector m_exitPoint;
