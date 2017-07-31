@@ -29,8 +29,8 @@ namespace COOLFluiD {
 /// 2. local element ID
 /// 3. element type ID
 /// 4. number of nodes in element
-/// 5. node list in element
-/// 6. number of states in element
+/// 5. number of states in element
+/// 6. node list in element
 /// 7. state list in element
 ///
 /// @author Andrea Lani

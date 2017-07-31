@@ -461,7 +461,9 @@ void BaseSetupFVMCC<BASE>::assignPartitionFaceGlobalGhostStateIDS()
   const CFuint nbFaces = faceData.trs->getLocalNbGeoEnts();
   CFuint faceNodesSize = 0;
   for (CFuint i = 0; i < nbFaces; ++i) {
-    faceNodesSize += pTRS->getNbNodesInGeo(i);
+    const CFuint nbNodesInFace = faceData.trs->getNbNodesInGeo(i);
+    cf_assert(nbNodesInFace <= 4);
+    faceNodesSize += nbNodesInFace;
   }
   
   DataHandle<CFuint> rankPartitionFaces = socket_rankPartitionFaces.getDataHandle();
@@ -487,7 +489,7 @@ void BaseSetupFVMCC<BASE>::assignPartitionFaceGlobalGhostStateIDS()
   DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
   SafePtr<TopologicalRegionSet> cellTRS = MeshDataStack::getActive()->getTrs("InnerCells");
   const CFuint nbCells = states.size();
-  assert(nbCells == cellTRS->getLocalNbGeoEnts());
+  cf_assert(nbCells == cellTRS->getLocalNbGeoEnts());
   
   // compute the size of the data needed for describing all partition cells
   // store the corresponding cell local IDs
@@ -503,28 +505,29 @@ void BaseSetupFVMCC<BASE>::assignPartitionFaceGlobalGhostStateIDS()
   }
   
   nbPartitionCellsAndSize[0] = partitionCellsIDs.size();
-  assert(nbPartitionCellsAndSize[0] > 0);
-  assert(nbPartitionCellsAndSize[1] > 0);
-  assert(nbPartitionCellsAndSize[0] < nbPartitionCellsAndSize[1]);
+  cf_assert(nbPartitionCellsAndSize[0] > 0);
+  cf_assert(nbPartitionCellsAndSize[1] > 0);
+  cf_assert(nbPartitionCellsAndSize[0] < nbPartitionCellsAndSize[1]);
   
   // compute the maximum sizes for the number of partition cells and their description data
   vector<CFuint> maxNbPartitionCellsAndSize(2, 0);
   
   const std::string nsp = this->getMethodData().getNamespace();
-  
   const CFuint nbPr = PE::GetPE().GetProcessorCount(nsp);
-  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
   const CFuint rank = PE::GetPE().GetRank(nsp);
+  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+  
   MPI_Allreduce(&nbPartitionCellsAndSize[0], &maxNbPartitionCellsAndSize[0], 2, 
 		MPIStructDef::getMPIType(&nbPartitionCellsAndSize[0]), MPI_MAX, comm);
-  assert(maxNbPartitionCellsAndSize[0] > 0);
-  assert(maxNbPartitionCellsAndSize[1] > 0);
-  assert(maxNbPartitionCellsAndSize[0] < nbPartitionCellsAndSize[1]);
+  cf_assert(maxNbPartitionCellsAndSize[0] > 0);
+  cf_assert(maxNbPartitionCellsAndSize[1] > 0);
+  cf_assert(maxNbPartitionCellsAndSize[0] < maxNbPartitionCellsAndSize[1]);
+  cf_assert(maxNbPartitionCellsAndSize[0] >= nbPartitionCellsAndSize[0]);
+  cf_assert(maxNbPartitionCellsAndSize[1] >= nbPartitionCellsAndSize[1]);
   
   // store all data needed for the local partition cell description
   ElementDataArray<0> partitionCells;
   partitionCells.reserve(maxNbPartitionCellsAndSize[0], maxNbPartitionCellsAndSize[1]);
-  assert(maxNbPartitionCellsAndSize[0] < maxNbPartitionCellsAndSize[1]);
   
   // build only cells belonging to the partition and store all related data
   GeometricEntityPool<CellTrsGeoBuilder> cellBuilder;
@@ -547,11 +550,15 @@ void BaseSetupFVMCC<BASE>::assignPartitionFaceGlobalGhostStateIDS()
     partitionCells.addElemDataEntry(0);
     
     const CFuint nbCellNodes = cell->nbNodes();
+    cf_assert(nbCellNodes <= 8);
     partitionCells.addElemDataEntry(nbCellNodes);
     partitionCells.addElemDataEntry(1); // nb states in cell
+    
+    // connectivity element-node
     for (CFuint n = 0; n < nbCellNodes; ++n) {
       partitionCells.addElemDataEntry(cell->getNode(n)->getGlobalID()); 
     }
+    // connectivity element-state
     partitionCells.addElemDataEntry(cell->getState(0)->getGlobalID());
     partitionCells.setEndEptr();
     
@@ -574,6 +581,7 @@ void BaseSetupFVMCC<BASE>::assignPartitionFaceGlobalGhostStateIDS()
     CFuint commNbCells = 0;
     // only root copy its data
     if (root == rank) {
+      // copy the ElementDataArray without resizing the data
       commPartitionCells.copy(partitionCells, false);
       commNbCells = partitionCellsIDs.size();
     }
@@ -592,7 +600,7 @@ void BaseSetupFVMCC<BASE>::assignPartitionFaceGlobalGhostStateIDS()
 	bool isFound =  false;
 	
 	const CFuint nbNodesInCell = itr.get(ElementDataArray<0>::NB_NODES);	
-	assert(nbNodesInCell <= 8);	
+	cf_assert(nbNodesInCell <= 8);	
 	for (CFuint jn = 0; jn < nbNodesInCell; ++jn) {
 	  pair<MapIt, MapIt> localFaceIDs = mapNodeIDToTrsFaceID.find(itr.getNode(jn), isFound);
 	  
@@ -605,7 +613,8 @@ void BaseSetupFVMCC<BASE>::assignPartitionFaceGlobalGhostStateIDS()
 		faceData.idx = faceID;
 		GeometricEntity *const face = faceBuilder.buildGE();
 		const CFuint nbNodesInFace = face->nbNodes();
-		assert(nbNodesInFace < nbNodesInCell);
+		// nbNodesInFace == nbNodesInCell on hybrid meshes with quad faces and tetrahedral cells
+		cf_assert(nbNodesInFace <= nbNodesInCell); 
 		
 		CFuint counter = 0;
 		for (CFuint in = 0; in < nbNodesInFace; ++in) {

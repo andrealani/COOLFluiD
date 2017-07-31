@@ -1235,7 +1235,12 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
     //cout<<"CPU "<< Common::PE::GetPE().GetRank()<<" done " <<endl;
   }
   m_postProcess->runPostProcess(gasRadiativeHeatSource); 
-  
+ 
+  // change the sign of the heat source
+  for (CFuint i = 0; i < gasRadiativeHeatSource.size(); ++i) {
+   gasRadiativeHeatSource[i] *= -1.;
+  }
+ 
   CFLog(VERBOSE, "RadiativeTransferMonteCarlo computeHeatFlux() END\n");
 }
 
