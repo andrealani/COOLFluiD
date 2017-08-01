@@ -7,6 +7,8 @@ cf_add_case( MPI 12 CASEDIR TCNEQ/Hornung PCASE hornung_FVM_NS_CNEQ.CFcase CASEF
 cf_add_case( MPI 12 CASEDIR TCNEQ/Hornung PCASE hornung_FVM_NS_CNEQ_M++.CFcase CASEFILES hornung_FVM_visc.inter jesus0_quad.neu )
 cf_add_case( MPI 12 CASEDIR TCNEQ/Hornung PCASE hornung_FVM_NS_TCNEQ.CFcase CASEFILES hornung_FVM_visc.inter jesus0_quad.neu )
 cf_add_case( MPI 8  CASEDIR TCNEQ/Hornung PCASE hornung_FVM_NS_CNEQ_euler_M++.CFcase CASEFILES coarse.dbs coarse.neu )
+cf_add_case( MPI 8  CASEDIR CNEQ/SphereCO2Mach28 PCASE Mach38_FVM_NS_CNEQ_M++_interpolate.CFcaseHornung CASEFILES Mach38.inter OLD.plt NEW.CFmesh )
+
 #cf_add_case( MPI default PCASE CNEQ/Catalicity/Testcase_TCNEQ.CFcase )
 #cf_add_case( MPI default PCASE CNEQ/Catalicity/Test_for_Cyl.CFcase )
 #cf_add_case( MPI default PCASE PrabhuCylinder/PrabhuCylRDS_TCNEQ.CFcase )

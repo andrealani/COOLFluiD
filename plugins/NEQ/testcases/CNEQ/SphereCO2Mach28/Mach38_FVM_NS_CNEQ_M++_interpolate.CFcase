@@ -1,0 +1,348 @@
+###############################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Two subsystems (one to write Tecplot files for a new mesh, one to interpolate 
+# a given solution onto such a mesh via Tecplot and solve)
+# Converter from Tecplot to CFmesh including solution interpolation from coarse 
+# (OLD) to fine (NEW) mesh, Finite Volume, NavierStokes2DNEQ (chemical NEQ model 
+# for CO2 mixture on a sphere), NewtonIterator, mesh with quads, second-order 
+# reconstruction with limiter, AUSM+ flux, noslip wall BC, PETSc, Mutation++,
+# postprocessing of wall quantities (e.g. heat flux),
+#
+################################################################################
+#
+# This testcases simulates Mach 38 over a sphere 
+#
+### Residual = 3.5085997
+
+# Simulator.TraceToStdOut = true
+
+# Simulation Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libEmptyConvergenceMethod libTecplot2CFmesh libTecplotWriter libNavierStokes libNEQ libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeNEQ libGambit2CFmesh libPetscI libMutationppI libAeroCoefFVM libAeroCoefFVMNEQ libMeshTools libMeshToolsFVM
+
+# this option helps if you want to check that all the options you set are declared properly (no spelling mistakes)
+# some options (for instance some Gambit or other converter settings) will always fail anyway
+#CFEnv.ErrorOnUnusedConfig = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
+
+# NOTE: this testcase works also if the following 3 lines are commented out
+Maestro = LoopMaestro
+LoopMaestro.GlobalStopCriteria = GlobalMaxNumberSteps
+LoopMaestro.GlobalMaxNumberSteps.nbSteps = 1
+
+Simulator.SubSystems = SubSystemA SubSystem
+Simulator.SubSystemTypes = StandardSubSystem StandardSubSystem
+
+# The following two paths need to be identical for the TECPLOT 
+# interpolation to work properly
+Simulator.Paths.WorkingDir = plugins/NEQ/testcases/CNEQ/SphereCO2Mach28
+Simulator.Paths.ResultsDir = plugins/NEQ/testcases/CNEQ/SphereCO2Mach28
+
+################################################################################
+#
+# SubSystemA writes 2 Tecplot files for the fine mesh: 
+# .plt (full domain) and .surf.plt (boundary TRSs)
+#
+################################################################################
+
+Simulator.SubSystemA.Default.PhysicalModelType = NavierStokes2DNEQ
+# The refValues have to be of the order of the free stream and they 
+# are used for scaling (as denominator, when computing derivatives)
+# so they cannot be #zero. Use 1e-11 for electrons
+# which is the first component if you have an ionzied mixture and 
+# use 1e-8 for others which are zero 
+# e- N O2 NO O NO+ N2
+Simulator.SubSystemA.NavierStokes2DNEQ.refValues = \
+1e-11 1e-8 7.61744e-06 1e-8 1e-8 1e-8 2.55111e-05 11125. 11125. 206.05 
+Simulator.SubSystemA.NavierStokes2DNEQ.refLength = 1.0
+Simulator.SubSystemA.NavierStokes2DNEQ.PropertyLibrary = Mutationpp
+Simulator.SubSystemA.NavierStokes2DNEQ.Mutationpp.mixtureName = air7_sahadeo_reordered
+Simulator.SubSystemA.NavierStokes2DNEQ.Mutationpp.StateModelName = ChemNonEq1T
+Simulator.SubSystemA.NavierStokes2DNEQ.Mutationpp.ShiftH0 = true 
+Simulator.SubSystemA.NavierStokes2DNEQ.nbSpecies = 7
+Simulator.SubSystemA.NavierStokes2DNEQ.nbEulerEqs = 3
+
+Simulator.SubSystemA.OutputFormat        = Tecplot
+Simulator.SubSystemA.Tecplot.FileName    = NEW.plt
+Simulator.SubSystemA.Tecplot.Data.outputVar = Rhoivt
+#Simulator.SubSystemA.Tecplot.Data.printExtraValues = true
+Simulator.SubSystemA.Tecplot.SaveRate = 100
+Simulator.SubSystemA.Tecplot.AppendIter = false
+# AL: here list of all boundaries. This will generate NEW.surf.plt
+Simulator.SubSystemA.Tecplot.Data.SurfaceTRS = SYMMETRY SPHERE EXIT OUTER
+
+Simulator.SubSystemA.StopCondition       = MaxNumberSteps
+Simulator.SubSystemA.MaxNumberSteps.nbSteps = 0 
+
+Simulator.SubSystemA.Default.listTRS = SYMMETRY SPHERE EXIT OUTER
+
+# conversion from Gambit .neu to .CFmesh file 
+Simulator.SubSystemA.MeshCreator = CFmeshFileReader
+Simulator.SubSystemA.CFmeshFileReader.Data.FileName = NEW.CFmesh 
+# Activate only when starting from Gambit file
+#Simulator.SubSystemA.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+#Simulator.SubSystemA.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+#Simulator.SubSystemA.CFmeshFileReader.convertFrom = Gambit2CFmesh
+Simulator.SubSystemA.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
+
+Simulator.SubSystemA.ConvergenceMethod = EmptyIterator
+
+# second order
+Simulator.SubSystemA.SpaceMethod = CellCenterFVM
+Simulator.SubSystemA.CellCenterFVM.Data.UpdateVar = Rhoivt     # variables in which solution is stored and updated 
+Simulator.SubSystemA.CellCenterFVM.Data.SolutionVar = Cons       # conservative variables 
+Simulator.SubSystemA.CellCenterFVM.Data.DiffusiveVar = Rhoivt
+Simulator.SubSystemA.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+Simulator.SubSystemA.CellCenterFVM.Data.SourceTerm = Euler2DCNEQST
+
+# node extrapolation enforcing strongly the no slip condition on boundary nodes
+### uncomment for LTE at the wall
+Simulator.SubSystemA.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMoveRhoivt
+Simulator.SubSystemA.CellCenterFVM.Data.DistanceBasedGMoveRhoivt.TrsPriorityList = SPHERE SYMMETRY EXIT OUTER 
+#you put the name of the wall boundary here ./Mach38_solution.plt
+Simulator.SubSystemA.CellCenterFVM.Data.DistanceBasedGMoveRhoivt.TRSName = SPHERE
+Simulator.SubSystemA.CellCenterFVM.Data.DistanceBasedGMoveRhoivt.ValuesIdx = 7 8 9 #IDS of Ux,Uy,T. Look at ref values and start counting from zero
+Simulator.SubSystemA.CellCenterFVM.Data.DistanceBasedGMoveRhoivt.Values = 0. 0. 2527. #IDS of Ux,Uy,T at the wall
+Simulator.SubSystemA.CellCenterFVM.Data.DistanceBasedGMoveRhoivt.NbIterAdiabatic = 2000
+
+Simulator.SubSystemA.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystemA.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystemA.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystemA.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystemA.CellCenterFVM.UnSetupNames = UnSetup1
+Simulator.SubSystemA.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystemA.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
+Simulator.SubSystemA.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+Simulator.SubSystemA.CellCenterFVM.Data.Limiter = Venktn2D
+Simulator.SubSystemA.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+# the following option will be renamed soon
+#Simulator.SubSystemA.CellCenterFVM.Data.Venktn2D.isMFMHD = true #false
+Simulator.SubSystemA.CellCenterFVM.Data.LinearLS2D.limitIter = 3500
+
+#Simulator.SubSystemA.CellCenterFVM.Data.LinearLS2D.Vars = i
+#Simulator.SubSystemA.CellCenterFVM.Data.LinearLS2D.Def = \
+#	if(i<3000,0.,1.) if(i<3000,0.,1.) if(i<3000,0.,1.) if(i<3000,0.,1.) if(i<3000,0.,1.) if(i<3000,0.,1.)
+Simulator.SubSystemA.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
+
+# only initialization of internal field here
+# the other boundaries will be initialized by the corresponding BC
+Simulator.SubSystemA.CellCenterFVM.InitComds = InitState 
+Simulator.SubSystemA.CellCenterFVM.InitNames = InField
+Simulator.SubSystemA.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystemA.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystemA.CellCenterFVM.InField.Def = 1e-11 1e-8 7.61744e-6 1e-8 1e-8 1e-8 2.55111e-5 11125. 0. 206.5
+			
+Simulator.SubSystemA.CellCenterFVM.BcComds = NoSlipWallIsothermalNSrvtMultiFVMCC MirrorVelocityFVMCC SuperOutletFVMCC SuperInletFVMCC 
+Simulator.SubSystemA.CellCenterFVM.BcNames = BcWall BcMirror BcOutlet BcInlet 
+
+#setting radiative equilibirum at the wall 
+Simulator.SubSystemA.CellCenterFVM.BcWall.applyTRS =  SPHERE
+Simulator.SubSystemA.CellCenterFVM.BcWall.TWall = 2527.
+ 
+Simulator.SubSystemA.CellCenterFVM.BcMirror.applyTRS = SYMMETRY
+#For symmetry you put 0 for the velocities and for wall and inlet 
+# you don't prescribe it at all. 
+Simulator.SubSystemA.CellCenterFVM.BcMirror.ZeroGradientFlags = 1 1 1 1 1 1 1 0 0 1 
+
+#for wall zerogradient flags are all one
+Simulator.SubSystemA.CellCenterFVM.BcOutlet.applyTRS = EXIT
+Simulator.SubSystemA.CellCenterFVM.BcOutlet.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 
+
+#Bcinlet is the 'alias' for SuperInletFVMCC
+Simulator.SubSystemA.CellCenterFVM.BcInlet.applyTRS = OUTER
+Simulator.SubSystemA.CellCenterFVM.BcInlet.Vars = x y 
+Simulator.SubSystemA.CellCenterFVM.BcInlet.Def =1e-11 1e-8 7.61744e-6 1e-8 1e-8 1e-8 2.55111e-5 11125. 0. 206.5
+
+################################################################################
+#
+# SubSystem runs a Tecplot macro to interpolate from given coarse to fine mesh
+# and runs the simulation starting from the interpolated solution saved in a 
+# newly generated Tecplot file
+#
+################################################################################
+
+#for specifing .interactive file
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/NEQ/testcases/CNEQ/SphereCO2Mach28/Mach38.inter
+Simulator.SubSystem.InteractiveParamReader.readRate = 10
+
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DNEQ
+#The refValues have to be of the order of the free stream and they are used for scaling (as denominator, when computing derivatives) so they cannot be #zero. Use 1e-11 for electrons
+#which is the first component if you have an ionzied mixture and use 1e-8 for others which are zero 
+#e- N O2 NO O NO+ N2
+Simulator.SubSystem.NavierStokes2DNEQ.refValues = 1e-11 1e-8 7.61744e-06 1e-8 1e-8 1e-8 2.55111e-05 11125. 11125. 206.05 
+Simulator.SubSystem.NavierStokes2DNEQ.refLength = 1.0
+Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary = Mutationpp
+Simulator.SubSystem.NavierStokes2DNEQ.Mutationpp.mixtureName = air7_sahadeo_reordered
+Simulator.SubSystem.NavierStokes2DNEQ.Mutationpp.StateModelName = ChemNonEq1T
+Simulator.SubSystem.NavierStokes2DNEQ.Mutationpp.ShiftH0 = true 
+Simulator.SubSystem.NavierStokes2DNEQ.nbSpecies = 7
+Simulator.SubSystem.NavierStokes2DNEQ.nbEulerEqs = 3
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+
+Simulator.SubSystem.Tecplot.FileName    = interpolated_solution.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = Rhoivt
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = SYMMETRY
+# just keep the symmetry for now, you don't need the rest
+# SPHERE EXIT OUTER 
+
+Simulator.SubSystem.CFmesh.FileName  = interpolated_solution.CFmesh
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.SaveRate = 200
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarNames = limiter
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarStrides = 10
+
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+
+#Simulator.SubSystem.StopCondition       = Norm
+# the heat flux needs valueNorm = -7.0 to converge
+#Simulator.SubSystem.Norm.valueNorm      = -7.0
+
+Simulator.SubSystem.Default.listTRS = SYMMETRY SPHERE EXIT OUTER 
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./NEW.CFmesh
+#Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1000.
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Tecplot2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.HasBlockFormat = false
+#the names of the boundary zones defined in the .surf.plt file is speceified 
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SurfaceTRS = SYMMETRY SPHERE EXIT OUTER 
+#the names of the variables to be read in both the .plt and .surf.plt are specefied here
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = "rho0" "rho1" "rho2" "rho3" "rho4" "rho5" "rho6" "u" "v" "T"
+#"rho_e" "rho_N" "rho_O2" "rho_NO" "rho_O" "rho_NO+" "rho_N2" "U" "V" "T"
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.NbElementTypes = 1
+#the following flag must be set to true if only the mesh (no solution is read)
+#if the skip solution is false (solution variables are read) the flag corresponding to a restart has to be activated for the corresponding solver
+#Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = false
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Precision = 9
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.HasAllSurfFile = true
+# AL: name of the old (generally coarser) mesh file
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.InterpolateFrom = OLD.plt
+
+#Reading Gambit Mesh
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+#Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+#Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 200
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+#Simulator.SubSystem.NewtonIteratorLSS.Data.ILULevels = 2
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
+#indicates the ID of the variable to be monitored for convergence. Temperature is the last variable in your Rhoivt. You start counting from zero
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 9
+#Simulator.SubSystem.NewtonIterator.Data.L2.ComputedVarID = 9
+#Simulator.SubSystem.NewtonIterator.Data.FilterState = Max
+#These two lines is to fix the minimum allowed value for the variables indicated by 1. You can impose a minima temperature of 100
+#by doing .maskIDs=0 0 0 0 1 and .minValues=0. 0. 0. 0. 100.
+#Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs = 1 1 0 0 1
+#Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobFast
+Simulator.SubSystem.CellCenterFVM.NumJacobFast.FreezeDiffCoeff = true
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+# new settings for AUSM+ for multi species
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusMS2D 
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusMS2D.choiceA12 = 5
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar = Rhoivt     # variables in which solution is stored and updated 
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons       # conservative variables 
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Rhoivt
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = Euler2DCNEQST
+
+# node extrapolation enforcing strongly the no slip condition on boundary nodes
+### uncomment for LTE at the wall
+Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMoveRhoivt
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveRhoivt.TrsPriorityList = SPHERE SYMMETRY EXIT OUTER 
+#you put the name of the wall boundary here 
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveRhoivt.TRSName = SPHERE
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveRhoivt.ValuesIdx = 7 8 9 #IDS of Ux,Uy,T. Look at ref values and start counting from zero
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveRhoivt.Values = 0. 0. 2527. #IDS of Ux,Uy,T at the wall
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveRhoivt.NbIterAdiabatic = 2000
+
+# second order
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+# the following option will be renamed soon
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.isMFMHD = true #false
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitIter = 3500
+
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Vars = i
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.Def = \
+#	if(i<3000,0.,1.) if(i<3000,0.,1.) if(i<3000,0.,1.) if(i<3000,0.,1.) if(i<3000,0.,1.) if(i<3000,0.,1.)
+Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
+
+# only initialization of internal field here
+# the other boundaries will be initialized by the corresponding BC
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState 
+#InitStateD
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 1e-11 1e-8 7.61744e-6 1e-8 1e-8 1e-8 2.55111e-5 11125. 0. 206.5
+			
+Simulator.SubSystem.CellCenterFVM.BcComds = NoSlipWallIsothermalNSrvtMultiFVMCC MirrorVelocityFVMCC SuperOutletFVMCC SuperInletFVMCC 
+Simulator.SubSystem.CellCenterFVM.BcNames = BcWall BcMirror BcOutlet BcInlet 
+
+#setting radiative equilibirum at the wall 
+Simulator.SubSystem.CellCenterFVM.BcWall.applyTRS =  SPHERE
+Simulator.SubSystem.CellCenterFVM.BcWall.TWall = 2527.
+ 
+Simulator.SubSystem.CellCenterFVM.BcMirror.applyTRS = SYMMETRY
+#For symmetry you put 0 for the velocities and for wall and inlet you don't prescribe it at all. 
+Simulator.SubSystem.CellCenterFVM.BcMirror.ZeroGradientFlags = 1 1 1 1 1 1 1 0 0 1 
+
+#for wall zerogradient flags are all one
+Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS = EXIT
+Simulator.SubSystem.CellCenterFVM.BcOutlet.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 
+
+#Bcinlet is the 'alias' for SuperInletFVMCC
+Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS = OUTER
+Simulator.SubSystem.CellCenterFVM.BcInlet.Vars = x y 
+Simulator.SubSystem.CellCenterFVM.BcInlet.Def =1e-11 1e-8 7.61744e-6 1e-8 1e-8 1e-8 2.55111e-5 11125. 0. 206.5
+					      
+# Compute the wall heat flux
+Simulator.SubSystem.DataPreProcessing = DataProcessing
+Simulator.SubSystem.DataPreProcessingNames = DataProcessing2 
+Simulator.SubSystem.DataProcessing2.ProcessRate = 100
+Simulator.SubSystem.DataProcessing2.Comds = NavierStokesSkinFrictionHeatFluxCCNEQ
+Simulator.SubSystem.DataProcessing2.Names = SkinFriction
+Simulator.SubSystem.DataProcessing2.SkinFriction.applyTRS = SPHERE
+Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileWall = Mach38_heat.plt
+Simulator.SubSystem.DataProcessing2.SkinFriction.rhoInf = 3.31286e-5
+Simulator.SubSystem.DataProcessing2.SkinFriction.pInf = 1.968
+Simulator.SubSystem.DataProcessing2.SkinFriction.uInf = 11125.
+Simulator.SubSystem.DataProcessing2.SkinFriction.TInf = 206.05
+Simulator.SubSystem.DataProcessing2.SkinFriction.UID = 7
+Simulator.SubSystem.DataProcessing2.SkinFriction.VID = 8
+Simulator.SubSystem.DataProcessing2.SkinFriction.TID = 9
