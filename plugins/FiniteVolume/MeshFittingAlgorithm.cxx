@@ -738,7 +738,7 @@ void MeshFittingAlgorithm::updateNodePositions() {
   }
   
   //synchronize Nodes
-  if (CFEnv::getInstance().getVars()->SyncAlgo == "Old") {
+  if (CFEnv::getInstance().getVars()->SyncAlgo != "Old") {
     nodes.synchronize();
   } 
   else {
