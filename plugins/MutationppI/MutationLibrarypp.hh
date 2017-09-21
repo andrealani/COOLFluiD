@@ -83,7 +83,10 @@ public:
       m_rhoiv[i] = std::max(_minRhoi, rhoi[i]);
     }
     CFLog(DEBUG_MAX, "MutationLibrarypp::setState() => rhoiv = " << m_rhoiv << ", T = " << *T << "\n"); 
-    m_gasMixture->setState(&m_rhoiv[0], T, 1);
+    
+    // this needs to be fixed for 2-temperatures
+    CFreal Tmin = std::max(*T, _minT);
+    m_gasMixture->setState(&m_rhoiv[0], &Tmin, 1);
   }   
   
   /**
@@ -598,6 +601,9 @@ protected:
   
   /// minimum partial density
   CFreal _minRhoi;
+  
+  /// minimum temperature
+  CFreal _minT;
   
 }; // end of class MutationLibrarypp
       

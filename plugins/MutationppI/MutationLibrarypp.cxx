@@ -39,6 +39,7 @@ void MutationLibrarypp::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >
     ("StateModelName","Name of the state model (e.g. \"Equil\", \"ChemNonEq1T\", \"ChemNonEq1TTv\").");
   options.addConfigOption< CFreal >("MinRhoi","Minimum partial density."); 
+  options.addConfigOption< CFreal >("MinT","Minimum temperature."); 
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -66,6 +67,9 @@ MutationLibrarypp::MutationLibrarypp(const std::string& name)
   
   _minRhoi = 0.;
   setParameter("MinRhoi",&_minRhoi);
+  
+  _minT = 0.;
+  setParameter("MinT",&_minT);
   
   // change default
   m_shiftHO = true;
@@ -401,9 +405,9 @@ CFdouble MutationLibrarypp::enthalpy(CFdouble& temp,
        yEl += ys[is] / m_molarmassp[is];
      }
    }
-
+   
    yEl *= m_molarmassp[0]; // 1st species: electron
-   ys[0] = yEl; // overwrite electron mass fraction
+   ys[0] = std::max(0., yEl); // overwrite electron mass fraction (keep them positive)
    
    CFLog(DEBUG_MAX, "Mutation::setElectronFraction() => " << ys[0] << "\n");
  }
