@@ -47,23 +47,22 @@ void ComputeInertiaTerm::configure ( Config::ConfigArgs& args )
 
 void ComputeInertiaTerm::setup()
 {
-
+  ComputeTerm<FiniteElementMethodData>::setup();
+  
   _inertiaEntity = getMethodData().getInertiaEntity();
   cf_assert(_inertiaEntity.isNotNull());
-
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
-void ComputeInertiaTerm::computeTerm(GeometricEntity* const cell, RealMatrix& result)
+void ComputeInertiaTerm::computeTerm
+(GeometricEntity* const cell, RealMatrix& result)
 {
-
   getMethodData().getFEMVolumeIntegrator()->
     integrateFastGeneralFEMEntityOnGeoEnt<InertiaEntity>
-      (*_inertiaEntity, result);
-
+    (*_inertiaEntity, result);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace FiniteElement

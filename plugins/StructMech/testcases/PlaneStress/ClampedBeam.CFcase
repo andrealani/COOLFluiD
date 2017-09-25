@@ -3,8 +3,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -12.233183
-
+### Residual = -12.310242
 ### Tolerance = 5
 #
 
@@ -18,21 +17,17 @@ Simulator.Paths.ResultsDir       = ./
 Simulator.SubSystem.Default.PhysicalModelType = StructMech2D
 
 # Some kind of steel
-Simulator.SubSystem.StructMech2D.Young = 205E9
-Simulator.SubSystem.StructMech2D.Poisson = 0.3
-Simulator.SubSystem.StructMech2D.Lambda = 1.0
-Simulator.SubSystem.StructMech2D.mu = 1.0
-Simulator.SubSystem.StructMech2D.Density = 7850.0
-
-
-
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
-
+Simulator.SubSystem.StructMech2D.MaterialNames = Custom
+Simulator.SubSystem.StructMech2D.Custom.YoungModulus = 205E9
+Simulator.SubSystem.StructMech2D.Custom.Poisson = 0.3
+Simulator.SubSystem.StructMech2D.Custom.Density = 7850.0
+#Simulator.SubSystem.StructMech2D.Custom.Lambda = 1.0
+#Simulator.SubSystem.StructMech2D.Custom.mu = 1.0
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = beam-plane-stress.CFmesh
 Simulator.SubSystem.Tecplot.FileName    = beam-plane-stress.plt
-Simulator.SubSystem.Tecplot.Data.updateVar = Disp
+Simulator.SubSystem.Tecplot.Data.outputVar = Disp
 Simulator.SubSystem.Tecplot.Data.printExtraValues = true
 Simulator.SubSystem.Tecplot.SaveRate = 10
 Simulator.SubSystem.CFmesh.SaveRate = 10
@@ -40,9 +35,6 @@ Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
-
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 1
 
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
 Simulator.SubSystem.MaxNumberSteps.nbSteps = 1

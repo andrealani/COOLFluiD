@@ -56,8 +56,7 @@ public:
    * Setup the strategy
    */
   virtual void setup();
-
-
+  
   /**
    * Is This ComputeTerm null
    */

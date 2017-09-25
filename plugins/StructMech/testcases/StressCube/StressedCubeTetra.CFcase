@@ -3,8 +3,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -0.782605
-
+### Residual = -0.77862466 
 
 # SubSystem Modules
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libFiniteElement libStructMech libNewtonMethod libPetscI  libFiniteElementStructMech
@@ -22,23 +21,16 @@ Simulator.SubSystem.StructMech3D.Lambda = 1.0
 Simulator.SubSystem.StructMech3D.mu = 1.0
 Simulator.SubSystem.StructMech3D.Density = 1.0
 
-
-
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
-
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = cube-stress.CFmesh
 Simulator.SubSystem.Tecplot.FileName    = cube-stress.plt
-Simulator.SubSystem.Tecplot.Data.updateVar = Disp
+Simulator.SubSystem.Tecplot.Data.outputVar = Disp
 Simulator.SubSystem.Tecplot.SaveRate = 10
 Simulator.SubSystem.CFmesh.SaveRate = 10
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
-
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 1
 
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
 Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
