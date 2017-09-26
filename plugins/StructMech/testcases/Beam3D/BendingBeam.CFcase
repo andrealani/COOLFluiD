@@ -3,7 +3,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -2.44541
+### Residual = -2.4454088
 
 #
 
@@ -12,20 +12,17 @@ Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWrite
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/StructMech/testcases/Beam3D/
-Simulator.Paths.ResultsDir       = ./
+Simulator.Paths.ResultsDir = ./
 
 Simulator.SubSystem.Default.PhysicalModelType = StructMech3D
 
 # Some kind of steel
-Simulator.SubSystem.StructMech3D.Young = 200E9
-Simulator.SubSystem.StructMech3D.Poisson = 0.29
-Simulator.SubSystem.StructMech3D.Lambda = 1.0
-Simulator.SubSystem.StructMech3D.mu = 1.0
-Simulator.SubSystem.StructMech3D.Density = 1.0
-
-
-
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
+Simulator.SubSystem.StructMech3D.MaterialNames = Custom
+Simulator.SubSystem.StructMech3D.Custom.YoungModulus = 200E9
+Simulator.SubSystem.StructMech3D.Custom.Poisson = 0.29
+Simulator.SubSystem.StructMech3D.Custom.Density = 1.0
+#Simulator.SubSystem.StructMech3D.Custom.Lambda = 1.0
+#Simulator.SubSystem.StructMech3D.Custom.mu = 1.0
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = bending-beam3d.CFmesh
@@ -38,10 +35,7 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 1
-
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
 Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
 
 Simulator.SubSystem.Default.listTRS = InnerCells North South East West Top Bottom
