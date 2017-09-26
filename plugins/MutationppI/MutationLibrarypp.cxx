@@ -117,7 +117,7 @@ void MutationLibrarypp::setup()
   
   if (_stateModelName == "Equil") m_smType = LTE;
   if (_stateModelName == "ChemNonEq1T") m_smType = CNEQ;
-  if (_stateModelName == "ChemNonEq1TTv") m_smType = TCNEQ;
+  if (_stateModelName == "ChemNonEqTTv") m_smType = TCNEQ;
   
   // AL: check this for LTE
   _nbTvib = m_gasMixture->nEnergyEqns()-1;
@@ -196,9 +196,15 @@ void MutationLibrarypp::lambdaVibNEQ(CFreal& temperature,
 				     CFreal& lambdaTrRo,
 				     RealVector& lambdaInt)
 {
-  throw NotImplementedException(FromHere(),"MutationLibrarypp::lambdaVibNEQ()");
+  RealVector lambdaTRV(_nbTvib+1);
+  m_gasMixture->frozenThermalConductivityVector(&lambdaTRV[0]);
+  CFLog(INFO, "MutationLibrarypp::lambdaVibNEQ() => " << lambdaTRV << "\n");
+  lambdaTrRo = lambdaTRV[0];
+  for (CFuint i = 0; i < _nbTvib; ++i) {
+    lambdaInt[i] = lambdaTRV[i+1];
+  }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 CFdouble MutationLibrarypp::sigma(CFdouble& temp, //electrical conductivity
@@ -300,6 +306,10 @@ void MutationLibrarypp::setDensityEnthalpyEnergy(CFdouble& temp,
 						 RealVector& dhe,
 						 bool storeExtraData)
 {
+  dhe[0] = m_gasMixture->density();
+  dhe[1] = m_gasMixture->mixtureHMass() - m_H0;
+  dhe[2] = dhe[1]-pressure/dhe[0];
+  
   throw NotImplementedException(FromHere(),"MutationLibrarypp::setDensityEnthalpyEnergy()");
 }
       
@@ -339,9 +349,9 @@ CFdouble MutationLibrarypp::pressure(CFdouble& rho,
 CFdouble MutationLibrarypp::electronPressure(CFreal rhoE,
 					     CFreal tempE)
 {
-  throw NotImplementedException(FromHere(),"MutationLibrarypp::soundSpeed()");
+  return rhoE*tempE*_Rgas/m_molarmassp[0];
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 CFdouble MutationLibrarypp::energy(CFdouble& temp,
@@ -515,6 +525,8 @@ void MutationLibrarypp::getSource(CFdouble& temperature,
 {
   // we assume setState() already called before
   m_gasMixture->netProductionRates(&omega[0]);
+  
+  m_gasMixture->energyTransferSource(&omegav[0]);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -602,7 +614,7 @@ void MutationLibrarypp::getSpeciesTotEnthalpies(CFdouble& temp,
   // recheck this with 2-temperature
   CFreal* hv = (hsVib != CFNULL) ? &(*hsVib)[0] : CFNULL;
   CFreal* he = (hsEl  != CFNULL) ?  &(*hsEl)[0] : CFNULL;
-  m_gasMixture->speciesHOverRT(&hsTot[0], CFNULL, CFNULL, hv, he); 
+  m_gasMixture->speciesHOverRT(&hsTot[0], CFNULL, CFNULL, hv, he, CFNULL); 
   
   const CFreal RT = _Rgas*temp;
   for (CFuint i = 0; i < _NS; ++i) {
@@ -626,7 +638,7 @@ void MutationLibrarypp::getSourceTermVT(CFdouble& temperature,
 					RealVector& omegav,
 					CFdouble& omegaRad)
 {
-  throw NotImplementedException(FromHere(),"MutationLibrarypp::getSourceTermVT()");
+  m_gasMixture->energyTransferSource(&omegav[0]);
 }
 
 //////////////////////////////////////////////////////////////////////////////
