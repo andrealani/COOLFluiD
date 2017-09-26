@@ -306,11 +306,14 @@ void MutationLibrarypp::setDensityEnthalpyEnergy(CFdouble& temp,
 						 RealVector& dhe,
 						 bool storeExtraData)
 {
+  CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => P = " 
+	<< pressure << ", T = " << temp << ", Tv " << tVec << " \n");
+  
   dhe[0] = m_gasMixture->density();
   dhe[1] = m_gasMixture->mixtureHMass() - m_H0;
   dhe[2] = dhe[1]-pressure/dhe[0];
   
-  throw NotImplementedException(FromHere(),"MutationLibrarypp::setDensityEnthalpyEnergy()");
+  CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => " << dhe << ", " <<  m_y << "\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
