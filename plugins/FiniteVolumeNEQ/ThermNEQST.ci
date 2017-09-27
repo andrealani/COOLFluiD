@@ -223,20 +223,21 @@ void ThermNEQST<UPDATEVAR>::computeSource
     // AM: ugly but effective
     // the real solution would be to implement the function
     // MutationLibrary2OLD::getSource() 
-    if (this-> _library->getName() != "Mutation2OLD" && this-> _library->getName() != "MutationPanesi") {
-        this-> _library->getSource(Tdim, this-> _tvDim, pdim, rhodim, this-> _ys,
-		        this->useAnalyticalJacob(),
-		        this-> _omega, _omegaTv, _omegaRad, jacobian);
+    if (this-> _library->getName() != "Mutation2OLD" 
+	&& this-> _library->getName() != "MutationPanesi" 
+	&& this-> _library->getName() != "Mutationpp") {
+      this-> _library->getSource(Tdim, this-> _tvDim, pdim, rhodim, this-> _ys,
+				 this->useAnalyticalJacob(), this-> _omega, _omegaTv, _omegaRad, jacobian);
     }    
     else {
       // compute the mass production/destruction term
       this-> _library->getMassProductionTerm(Tdim, this-> _tvDim, pdim, rhodim, this-> _ys,
-				               this->useAnalyticalJacob(), this-> _omega, jacobian);      
+					     this->useAnalyticalJacob(), this-> _omega, jacobian);      
       
       // compute energy relaxation and excitation term 
       if (nbEvEqs != 0) { 
-	  this-> _library->getSourceTermVT(Tdim, this-> _tvDim, pdim, rhodim, _omegaTv, _omegaRad); 
-     }
+	this-> _library->getSourceTermVT(Tdim, this-> _tvDim, pdim, rhodim, _omegaTv, _omegaRad); 
+      }
     }    
     
     const CFreal r = (this->getMethodData().isAxisymmetric()) ? currState->getCoordinates()[YY] : 1.0;
