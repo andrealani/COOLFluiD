@@ -85,10 +85,10 @@ public:
     CFLog(DEBUG_MAX, "MutationLibrarypp::setState() => rhoiv = " << m_rhoiv << ", T = " << *T << "\n"); 
     
     // this needs to be fixed for 2-temperatures
-    m_gasMixture->setState(&m_rhoiv[0], T, 1);
-    
-    // CFreal Tmin = std::max(*T, _minT);
-    // m_gasMixture->setState(&m_rhoiv[0], &Tmin, 1);
+    for (CFuint i = 0; i < m_Tstate.size(); ++i) {
+      m_Tstate[i] = std::max(T[i], _minT);
+    }
+    m_gasMixture->setState(&m_rhoiv[0], &m_Tstate[0], 1);
   }   
   
   /**
@@ -594,6 +594,9 @@ protected:
   
   /// partial densities
   RealVector m_rhoiv;
+  
+  /// state temperatures
+  RealVector m_Tstate;
   
   /// mixture name
   std::string _mixtureName;

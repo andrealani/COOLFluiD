@@ -55,7 +55,8 @@ MutationLibrarypp::MutationLibrarypp(const std::string& name)
     m_molarmassp(),
     m_df(),
     m_rhoivBkp(),
-    m_rhoiv()
+    m_rhoiv(),
+    m_Tstate()
 {
   addConfigOptionsTo(this);
   
@@ -121,6 +122,8 @@ void MutationLibrarypp::setup()
   
   // AL: check this for LTE
   _nbTvib = m_gasMixture->nEnergyEqns()-1;
+  
+  m_Tstate.resize(_nbTvib+1);
   
   CFLog(VERBOSE, "MutationLibrarypp::setup() => _nbTvib = " << _nbTvib << "\n");
   
@@ -515,7 +518,7 @@ void MutationLibrarypp::getMassProductionTerm(CFdouble& temperature,
   else {
     omega = 0.;
   }
-  
+    
   CFLog(DEBUG_MAX, "Mutation::getMassProductionTerm() => omega = " << omega << "\n\n");
   //EXIT_AT(1000);
   // TODO: Need to figure out how to do the Jacobian later
@@ -652,7 +655,7 @@ void MutationLibrarypp::getSourceTermVT(CFdouble& temperature,
 					CFdouble& omegaRad)
 {
   m_gasMixture->energyTransferSource(&omegav[0]);
-   
+    
   CFLog(DEBUG_MAX, "Mutation::getSourceTermVT() => omegav = " << omegav << "\n");
 }
       
