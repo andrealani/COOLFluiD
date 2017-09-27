@@ -122,6 +122,8 @@ void MutationLibrarypp::setup()
   // AL: check this for LTE
   _nbTvib = m_gasMixture->nEnergyEqns()-1;
   
+  CFLog(VERBOSE, "MutationLibrarypp::setup() => _nbTvib = " << _nbTvib << "\n");
+  
   // Setup the charge array
   for (CFint i = 0; i < _NS; ++i) {
     m_charge[i] = m_gasMixture->speciesCharge(i);
@@ -129,6 +131,8 @@ void MutationLibrarypp::setup()
   
   _Rgas = Mutation::RU;
   cf_assert(_Rgas > 0.);
+  
+  CFLog(VERBOSE, "MutationLibrarypp::setup() => m_shiftHO [" << m_shiftHO << "]\n");
   
   if (m_shiftHO) { 
     /// computation of the H formation at (close to) 0K
@@ -198,11 +202,14 @@ void MutationLibrarypp::lambdaVibNEQ(CFreal& temperature,
 {
   RealVector lambdaTRV(_nbTvib+1);
   m_gasMixture->frozenThermalConductivityVector(&lambdaTRV[0]);
-  CFLog(INFO, "MutationLibrarypp::lambdaVibNEQ() => " << lambdaTRV << "\n");
+  
   lambdaTrRo = lambdaTRV[0];
   for (CFuint i = 0; i < _nbTvib; ++i) {
     lambdaInt[i] = lambdaTRV[i+1];
   }
+  
+  CFLog(DEBUG_MAX, "Mutation::lambdaVibNEQ() => " << lambdaTrRo 
+	<< " " << lambdaInt << "\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -312,7 +319,7 @@ void MutationLibrarypp::setDensityEnthalpyEnergy(CFdouble& temp,
   dhe[0] = m_gasMixture->density();
   dhe[1] = m_gasMixture->mixtureHMass() - m_H0;
   dhe[2] = dhe[1]-pressure/dhe[0];
-  
+ 
   CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => " << dhe << ", " <<  m_y << "\n");
 }
       
@@ -343,7 +350,8 @@ CFdouble MutationLibrarypp::pressure(CFdouble& rho,
   }
   cf_assert(p>0.);
   
-  CFLog(DEBUG_MAX, "Mutation::pressure() => " << p << "\n");
+  //CFLog(DEBUG_MAX, "Mutation::pressure() => " << p << "\n");
+  
   return p;
 }
 
@@ -509,6 +517,7 @@ void MutationLibrarypp::getMassProductionTerm(CFdouble& temperature,
   }
   
   CFLog(DEBUG_MAX, "Mutation::getMassProductionTerm() => omega = " << omega << "\n\n");
+  //EXIT_AT(1000);
   // TODO: Need to figure out how to do the Jacobian later
 }
       
@@ -628,8 +637,9 @@ void MutationLibrarypp::getSpeciesTotEnthalpies(CFdouble& temp,
   }
   
   hsTot -= m_vecH0; // shift on the formation enthalpy (considering H(T=0K)=0)
-  
+  CFLog(DEBUG_MAX, "Mutation::getSpeciesTotEnthalpies() => m_vecH0 = " << m_vecH0 << "\n");
   CFLog(DEBUG_MAX, "Mutation::getSpeciesTotEnthalpies() => hsTot = " << hsTot << "\n");
+  //EXIT_AT(5);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -642,8 +652,10 @@ void MutationLibrarypp::getSourceTermVT(CFdouble& temperature,
 					CFdouble& omegaRad)
 {
   m_gasMixture->energyTransferSource(&omegav[0]);
+   
+  CFLog(DEBUG_MAX, "Mutation::getSourceTermVT() => omegav = " << omegav << "\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrarypp::getMolarMasses(RealVector& mm)
