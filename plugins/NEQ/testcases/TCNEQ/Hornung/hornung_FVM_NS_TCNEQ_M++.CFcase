@@ -37,6 +37,7 @@ Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary = Mutationpp
 Simulator.SubSystem.NavierStokes2DNEQ.Mutationpp.mixtureName = N2_TTv
 Simulator.SubSystem.NavierStokes2DNEQ.Mutationpp.StateModelName = ChemNonEqTTv
 Simulator.SubSystem.NavierStokes2DNEQ.Mutationpp.ShiftH0 = false
+Simulator.SubSystem.NavierStokes2DNEQ.Mutationpp.MinT = 200.
 Simulator.SubSystem.NavierStokes2DNEQ.nbSpecies = 2
 Simulator.SubSystem.NavierStokes2DNEQ.nbEulerEqs = 3
 Simulator.SubSystem.NavierStokes2DNEQ.nbVibEnergyEqs = 1
