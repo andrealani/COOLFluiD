@@ -1,6 +1,6 @@
 #include "Framework/MethodCommandProvider.hh"
 
-#include "NavierStokes/Euler3DVarSet.hh"//3D
+#include "NavierStokes/Euler2DVarSet.hh"//3D
 #include "NavierStokes/EulerTerm.hh"
 
 #include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
@@ -153,12 +153,14 @@ void ComputeErrorEuler::execute()
 
       // get the states in this cell
       m_cellStates = m_cell->getStates();
+      if ((*m_cellStates)[0]->isParUpdatable())
+      {
       
       nbStates += m_cellStates->size();
 
       vector< RealVector > nodeCoord;
       vector< Node* >* nodes = m_cell->getNodes();
-      for (CFuint iNode = 0; iNode < 8; ++iNode)//3D
+      for (CFuint iNode = 0; iNode < 4; ++iNode)//3D
       {
 	nodeCoord.push_back(*((*nodes)[iNode]->getData()));
       }
@@ -171,7 +173,7 @@ void ComputeErrorEuler::execute()
 
       for (CFuint iPnt = 0; iPnt < nbrQPnts; ++iPnt)
       {
-	RealVector temp(5);//3D
+	RealVector temp(4);//3D
 	temp = 0.0;
 	statesInQuadPnts.push_back(temp);
 	if(m_cell->getID() == 1)
@@ -269,7 +271,7 @@ void ComputeErrorEuler::execute()
       {
         deletePtr(quadStates[iPnt]);
       }
-      
+      }
       //release the GeometricEntity
       m_cellBuilder->releaseGE();
     }
@@ -313,7 +315,7 @@ void ComputeErrorEuler::setup()
   m_cellBuilder = getMethodData().getStdTrsGeoBuilder();
 
   // get Euler 2D varset
-  m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<Euler3DVarSet>();//3D
+  m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<Euler2DVarSet>();//3D
   if (m_eulerVarSet.isNull())
   {
     throw Common::ShouldNotBeHereException (FromHere(),"Update variable set is not Euler2DVarSet in ComputeErrorEuler!");
@@ -326,7 +328,7 @@ void ComputeErrorEuler::setup()
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
   
   // create TensorProductGaussIntegrator
-  TensorProductGaussIntegrator tempGI(DIM_3D,static_cast<CFPolyOrder::Type>((frLocalData[0]->getPolyOrder())*2-1));//3D
+  TensorProductGaussIntegrator tempGI(DIM_2D,static_cast<CFPolyOrder::Type>((frLocalData[0]->getPolyOrder())*2-1));//3D
   m_tpIntegrator = tempGI;
 
   // get quadrature point coordinates and wheights
