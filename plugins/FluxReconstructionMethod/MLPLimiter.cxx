@@ -70,7 +70,9 @@ MLPLimiter::MLPLimiter(const std::string& name) :
   m_statesP1(),
   m_states2(),
   m_nbrNodesElem(),
-  m_order()
+  m_order(),
+  m_solPolyValsAtFlxPnts(CFNULL),
+  m_cellStatesFlxPnt()
 {
   addConfigOptionsTo(this);
 
@@ -210,8 +212,8 @@ void MLPLimiter::execute()
       // check if P1u is within vertex limiting averages
       for (CFuint iNode = 0; iNode < m_nbrNodesElem; ++iNode)
       {
-        m_applyLimiter[iNode] = m_cellStatesNodesP1[iNode][0] <  m_minAvgState[0] ||
-                                m_cellStatesNodesP1[iNode][0] >  m_maxAvgState[0];
+        m_applyLimiter[iNode] = m_cellStatesNodesP1[iNode][0] <  1.01*m_minAvgState[0] ||
+                                m_cellStatesNodesP1[iNode][0] >  0.99*m_maxAvgState[0];
 	if(m_cell->getID() == 1876)
         {
 	  bool tempBool = m_cellStatesNodesP1[iNode][0] <  m_minAvgState[0];
@@ -230,18 +232,21 @@ void MLPLimiter::execute()
 	}
       }
       
-      if (limitFlag)
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+        m_states2[iSol] = (*((*m_cellStates)[iSol]));
+      }
+        
+      // compute the states in the nodes
+      computeNodeStates(m_states2,m_cellStatesNodes);
+      
+      bool unphysical = !checkPhysicality();
+      
+      if (limitFlag || unphysical)
       {
 	++MLPuLimit;
       for (CFuint iOrder = m_order; iOrder > 0; --iOrder)
       {
-        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-        {
-	  m_states2[iSol] = (*((*m_cellStates)[iSol]));
-        }
-        
-        // compute the states in the nodes
-        computeNodeStates(m_states2,m_cellStatesNodes);
 	
 	if(m_cell->getID() == 1876)
         {
@@ -267,7 +272,7 @@ void MLPLimiter::execute()
 	  if (m_applyLimiter[iNode])
 	  {
 	    // check if we are in constant area of sol
-	    m_applyLimiter[iNode] = !( fabs(m_cellStatesNodes[iNode][0] - m_cellAvgState[0]) < max(1e-3 * m_cellAvgState[0],m_cell->computeVolume()) );
+	    m_applyLimiter[iNode] = !( fabs(m_cellStatesNodes[iNode][0] - m_cellAvgState[0]) < 1e-3 * m_cellAvgState[0]);// ,m_cell->computeVolume()) );
 	    
 	    // get node ID
             const CFuint nodeID = (*m_cellNodes)[iNode]->getLocalID();
@@ -308,7 +313,7 @@ void MLPLimiter::execute()
 	  stillLimit = true;
 	}
         
-        if (stillLimit)
+        if (stillLimit || unphysical)
 	{
 	  CFLog(VERBOSE, "limiting cell " << m_cell->getID() << "\n");
 	  if (iOrder > 2)
@@ -363,7 +368,7 @@ void MLPLimiter::execute()
 		  //CFreal epsilon2 = m_tvbLimitFactor*m_cell->computeVolume();
 		  //CFreal epsilon2 = pow(m_tvbLimitFactor*(m_maxAvgStateAll[iEq]-m_minAvgStateAll[iEq]),2);
 		  CFreal epsilon2 = m_tvbLimitFactor*pow((maxAvgState[iEq]-minAvgState[iEq]),2)/(1.0+(maxAvgState[iEq]-minAvgState[iEq])/(m_tvbLimitFactor*pow(m_cell->computeVolume(),0.5)));
-		  r = ((Dp*Dp+epsilon2)*Dm + 2.0*Dm*Dm*Dp)/(Dp*Dp + 2.0*Dm*Dm + Dm*Dp + epsilon2)*1.0/Dm;
+		  //r = ((Dp*Dp+epsilon2)*Dm + 2.0*Dm*Dm*Dp)/(Dp*Dp + 2.0*Dm*Dm + Dm*Dp + epsilon2)*1.0/Dm;
 		  phi = min(phi,r);
 		}
 	      }
@@ -378,6 +383,8 @@ void MLPLimiter::execute()
 	        }
 	      }
 	    }
+	    applyChecks(phi);
+	    
 	  }
 	  ++limitCounter;
 	  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
@@ -390,6 +397,7 @@ void MLPLimiter::execute()
 	  if (m_order != iOrder)
 	  {
 	    ++limitCounter;
+	    applyChecks(1.0);
 	  }
 	  break;
 	}
@@ -717,6 +725,22 @@ void MLPLimiter::computeNodeStates(std::vector< RealVector > states, vector< Rea
 
 //////////////////////////////////////////////////////////////////////////////
 
+void MLPLimiter::computeFlxPntStates(std::vector< RealVector > states, std::vector< RealVector >& statesFlxPnt)
+{
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_maxNbrFlxPnts; ++iFlxPnt)
+  {        
+    statesFlxPnt[iFlxPnt] = 0.0;
+
+    // extrapolate the left and right states to the flx pnts
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    {
+      statesFlxPnt[iFlxPnt] += (*m_solPolyValsAtFlxPnts)[iFlxPnt][iSol]*states[iSol];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void MLPLimiter::setup()
 {
   CFAUTOTRACE;
@@ -781,6 +805,15 @@ void MLPLimiter::setup()
     RealVector temp2(m_nbrEqs);
     m_cellStatesNodes.push_back(temp);
     m_cellStatesNodesP1.push_back(temp2);
+  }
+  
+  // get the coefs for extrapolation of the states to the flx pnts
+  m_solPolyValsAtFlxPnts = frLocalData[0]->getCoefSolPolyInFlxPnts();
+  
+  for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
+  {
+    RealVector temp(m_nbrEqs);
+    m_cellStatesFlxPnt.push_back(temp);
   }
   
   SafePtr<RealMatrix> vdm = frLocalData[0]->getVandermondeMatrix();

@@ -136,6 +136,24 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
 	  // set the bnd face data
 	  setBndFaceData(m_face->getID());//faceID
 	  
+// 	  if (faceTrs->getName() == "Bump" && iTR == 1)
+// 	  {
+// 	    CFLog(VERBOSE, "coord: " << (*m_cellStates)[0]->getCoordinates() << "\n");
+// 	    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+// 	    {
+// 	      CFLog(VERBOSE, "normal before: " << m_unitNormalFlxPnts[iFlx] << "\n");
+// 	      m_unitNormalFlxPnts[iFlx][1] = 1.0;
+// 	      m_unitNormalFlxPnts[iFlx][0] = 0.1*3.14159265358979323846264338327950288419716939937510*sin(3.14159265358979323846264338327950288419716939937510*(m_flxPntCoords[iFlx][0]-2.0));
+// 	      m_unitNormalFlxPnts[iFlx] /= pow(pow(m_unitNormalFlxPnts[iFlx][1],2)+pow(m_unitNormalFlxPnts[iFlx][0],2),0.5);
+// 	      if (m_faceJacobVecSizeFlxPnts[iFlx] < 0)
+// 	      {
+// 		m_unitNormalFlxPnts[iFlx] *= -1.0;
+// 	      }
+// 	      CFLog(VERBOSE, "normal after: " << m_unitNormalFlxPnts[iFlx] << "\n");
+// 	      
+// 	    }
+// 	  }
+	  
 	  // compute the perturbed states and ghost states in the flx pnts
           computeFlxPntStates();
 	}

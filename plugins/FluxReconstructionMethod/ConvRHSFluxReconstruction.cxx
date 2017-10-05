@@ -384,7 +384,7 @@ void ConvRHSFluxReconstruction::execute()
 	}
       }
       // print out the residual updates for debugging
-      if(m_cell->getID() == 72)
+      if(m_cell->getID() == 1232)
       {
 	CFLog(VERBOSE, "ID  = " << m_cell->getID() << "\n");
         CFLog(VERBOSE, "ConvUpdate = \n");
@@ -402,6 +402,14 @@ void ConvRHSFluxReconstruction::execute()
           CFLog(VERBOSE, "UpdateCoeff: " << updateCoeff[(*m_cellStates)[iState]->getLocalID()] << "\n");
         }
       }
+      if(m_cell->getID() == 1232)
+      {
+      CFLog(VERBOSE, "ID " << m_cell->getID() << "\n");
+      for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+        {
+      CFLog(VERBOSE, *(((*m_cellStates)[iState])->getData()) << "\n");
+	}
+      }
       
       //release the GeometricEntity
       m_cellBuilder->releaseGE();
@@ -410,6 +418,7 @@ void ConvRHSFluxReconstruction::execute()
   ///@warning set rhs to zero for plotting stuff 
   //DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
   //rhs = 0.0;
+  // get the datahandle of the rhs
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -704,8 +713,15 @@ void ConvRHSFluxReconstruction::updateWaveSpeed()
     for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
     {
       const CFuint solID = (*m_states[iSide])[iSol]->getLocalID();
+      if(m_cells[iSide]->getID() == 1232)
+    {
+      CFLog(VERBOSE, "updateCoeffBefore = " << updateCoeff[solID] << "\n");
+    }
       updateCoeff[solID] += m_waveSpeedUpd[iSide];
-      CFLog(DEBUG_MIN, "updateCoeff = " << updateCoeff[solID] << "\n");
+      if(m_cells[iSide]->getID() == 1232)
+    {
+      CFLog(VERBOSE, "updateCoeffAfter = " << updateCoeff[solID] << "\n");
+    }
     }
   }
 }
@@ -727,7 +743,14 @@ void ConvRHSFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& waveSp
       m_updateVarSet->computePhysicalData(*(m_cellStatesFlxPnt[iSide][iFlx]), m_pData);
       waveSpeedUpd[iSide] += jacobXIntCoef*
           m_updateVarSet->getMaxAbsEigenValue(m_pData,m_unitNormalFlxPnts[iFlx]);
+	  if(m_cells[iSide]->getID() == 1232)
+    {
+      CFLog(VERBOSE, "jacob: " << jacobXIntCoef << ", states: " << *(m_cellStatesFlxPnt[iSide][iFlx]) << ", lambda " << m_updateVarSet->getMaxAbsEigenValue(m_pData,m_unitNormalFlxPnts[iFlx]) << "\n");
+    
+      CFLog(VERBOSE, "WSupdate: " << waveSpeedUpd[iSide] << "\n");
     }
+    }
+    
   }
 }
 
@@ -1055,7 +1078,7 @@ void ConvRHSFluxReconstruction::setup()
   
   m_waveSpeedUpd.resize(2);
   
-  // get the local spectral FD data
+  // get the local FR data
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
   cf_assert(frLocalData.size() > 0);
   // for now, there should be only one type of element

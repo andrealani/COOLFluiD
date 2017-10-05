@@ -469,6 +469,12 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeWaveSpeedUpdates(CFreal& wa
     m_updateVarSet->computePhysicalData(*(m_cellStatesFlxPnt[iFlx]), m_pData);
     waveSpeedUpd += jacobXIntCoef*
                     m_updateVarSet->getMaxAbsEigenValue(m_pData,m_unitNormalFlxPnts[iFlx]);
+	if(m_intCell->getID() == 3694)
+    {
+      CFLog(VERBOSE, "jacob: " << jacobXIntCoef << ", states: " << *(m_cellStatesFlxPnt[iFlx]) << ", lambda " << m_updateVarSet->getMaxAbsEigenValue(m_pData,m_unitNormalFlxPnts[iFlx]) << "\n");
+    CFLog(VERBOSE, "WSupdateBnd: " << waveSpeedUpd << "\n");
+      
+    }
     }
 }
 

@@ -131,6 +131,21 @@ protected: // functions
    * Compute states projected to a lower order
    */
   void computeProjStates(std::vector< RealVector >& projStates, CFuint order);
+  
+  /**
+   * Apply additional checks to the state
+   */
+  virtual void applyChecks(CFreal phi) {};
+  
+  /**
+   * Check if the states are physical
+   */
+  virtual bool checkPhysicality() {return true;};
+  
+  /**
+   * Compute the flx pnt states
+   */
+  void computeFlxPntStates(std::vector< RealVector > states, std::vector< RealVector >& statesFlxPnt);
 
 protected: // data
 
@@ -241,6 +256,12 @@ protected: // data
   
   /// order of FR method
   CFuint m_order;
+  
+  /// coefs to extrapolate the states to the flx pnts
+  Common::SafePtr< std::vector< std::vector< CFreal > > > m_solPolyValsAtFlxPnts;
+  
+  /// extrapolated states in the flux points of the cell
+  std::vector< RealVector > m_cellStatesFlxPnt;
 
 }; // class MLPLimiter
 
