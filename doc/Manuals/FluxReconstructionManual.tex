@@ -1,0 +1,190 @@
+\documentclass[11pt]{article}
+%*******************************************************************
+%--Packages
+%*******************************************************************
+\usepackage[final]{graphicx,epsfig}
+\usepackage{subfigure}
+\usepackage{subfigmat}
+\newcommand{\noi}{\noindent}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt plus 2pt minus 1 pt}
+\topmargin  -5mm
+\evensidemargin 8mm
+\oddsidemargin  2mm
+\textwidth  158mm
+\textheight 230mm
+%\renewcommand{\baselinestretch}{1.0}
+\frenchspacing
+\sloppy
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+\pagestyle{empty}
+
+\begin{center}
+  {\fontsize{14}{20}\bf 
+    User-manual for COOLFluiD Flux Reconstruction Solver \\
+    (version 2017.01) \\[10pt]}
+\end{center}
+
+\begin{center}
+  {Ray Vandenhoeck, \underline{ray.vandenhoeck@vki.ac.be} \\
+    Von Karman Institute, Aeronautics \& Aerospace Dept.}
+\end{center}
+
+\section*{Introduction} 
+
+\noi
+The COOLFluiD platform \cite{lani05, lani06, phd:lani, phd:quintino, phd:wuilbaut} contains a high-order Flux Reconstruction (FR) solver capable of solving the Euler and Navier-Stokes equations in 2D and 3D. This manual gives an overview of the options particular to the FR solver and the general configuration of an FR test case.
+
+\section{Test Case Configuration}
+
+A Flux Reconstruction test case is constructed in the same way as test cases for other methods. The following libraries must be added to the {\tt CFcase} file in order to use the FR method for the Euler or Navier-Stokes equations, in addition to any other required libraries:
+
+\begin{tabular}{r l}
+    {\tt \quad\ \# Simulator.Modules.Libs =} & {\tt libFluxReconstructionMethod}\\
+    & {\tt libFluxReconstructionNavierStokes}
+\end{tabular}
+
+In order to use the FR method to solve a test case, the following line must be added:
+\begin{verbatim}
+    # Simulator.SubSystem.SpaceMethod = FluxReconstruction
+\end{verbatim}
+The FR method can either be used with an explicit time marching scheme such as Forward Euler, or with an implicit time marching scheme, such as Backward Euler. For an explicit scheme solving the Euler equations, the following must be added:
+\begin{verbatim}
+    # Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHS
+\end{verbatim}
+For an implicit scheme solving the Euler equations, the following is used:
+\begin{verbatim}
+    # Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSJacob
+    # Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHSJacob
+    # Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = StdTimeRHSJacob
+\end{verbatim}
+When solving the Navier-Stokes equations with an explicit scheme, the following is used:
+\begin{verbatim}
+    # Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSNS
+    # Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHSNS
+    # Simulator.SubSystem.FluxReconstruction.DiffSolveCom = DiffRHSNS
+\end{verbatim}
+For an implicit scheme solving the Navier-Stokes equations, the following is added:
+\begin{verbatim}
+    # Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSJacobNS
+    # Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHSJacobNS
+    # Simulator.SubSystem.FluxReconstruction.DiffSolveCom = DiffRHSJacobNS
+    # Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = StdTimeRHSJacob
+\end{verbatim}
+In addition to the lines provided above, all other options associated with the time marching scheme, not particular to the FR method, should be added.
+
+\subsection{Upgrading mesh order}
+
+In order to read an input mesh, the standard mesh builder can be used:
+\begin{verbatim}
+    # Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
+\end{verbatim}
+This is also the default, so the above line can be omitted. When using the default mesh builder, the order of the FR method will be the order specified in the input mesh file. However, it is also possible to upgrade the order by using the {\tt MeshUpgradeBuilder} in the following way:
+\begin{verbatim}
+    # Simulator.SubSysMesh.FluxReconstruction.Builder = MeshUpgrade
+    # Simulator.SubSysMesh.FluxReconstruction.MeshUpgrade.PolynomialOrder = Px
+    # Simulator.SubSysMesh.FluxReconstruction.MeshUpgrade.GeoPolynomialOrder = Py
+    # Simulator.SubSysMesh.FluxReconstruction.MeshUpgrade.DivideElements = z
+\end{verbatim}
+The option {\tt PolynomialOrder} must be specified. The integer x determines the order of the FR method. Currently, this can be an integer ranging from 1 to 5. 
+
+The option {\tt GeoPolynomialOrder} upgrades the geometric order of the elements of the mesh to order y. If this option is omitted, the order specified in the mesh input file is used. Currently an order of 1 or 2 is supported, meaning in essence that a mesh with geometric order P1 can be upgraded to P2.
+
+The option {\tt DivideElements} is used to increase the amount of elements in a mesh, which is useful for performing convergence studies. If this option is omitted, or z=1, the amount of elements in the mesh remains unchanged. The integer z determines how many new elements are adjacent to one face (2D) or edge (3D) of an element of the original mesh. For example, when set to 2, an original quadrilateral element will be equally divided in 4 new elements and an original hexahedra will be equally divided in 8 new elements.
+
+\subsection{Running in Parallel}
+
+The FR method can be used in parallel without modification to the test case file when using the standard builder. However, when using {\tt MeshUpgradeBuilder}, the method must be run serially. In order to define a single test case file that first upgrades the order of a mesh and then runs the test case in parallel, a second subsystem must be added:
+\begin{verbatim}
+    # Simulator.SubSystems = SubSysMesh SubSystem
+    # Simulator.SubSystemTypes = OnlyMeshSubSystem StandardSubSystem
+    # Simulator.SubSysMesh.Namespaces = MeshNamespace
+    # Simulator.SubSysMesh.Ranks = 0:0
+    # Simulator.SubSysMesh.MeshNamespace.MeshData = MeshMeshData
+    # Simulator.SubSysMesh.MeshNamespace.SubSystemStatus = MeshSubSystemStatus
+\end{verbatim}
+Here {\tt SubSysMesh} is the new subsystem used to upgrade the order of the mesh and {\tt SubSystem} is the subsystem used to solve the test case in parallel, to which no particular modifications need to be made. The test case can then be executed in parallel.
+
+All options relevant to reading an input mesh, upgrading its order and writing the output mesh must be added to {\tt SubSysMesh}. Because no simulation actually needs to be run in this subsystem, the {\tt SpaceMethod} can be set to {\tt Null}:
+\begin{verbatim}
+    # Simulator.SubSysMesh.SpaceMethod = Null
+\end{verbatim}
+
+\subsection{Options of the FR method}
+
+The FR method has four characterizing parameters. The first is the approximate Riemann solver used for the convective interface flux. This can be chosen as follows:
+\begin{verbatim}
+    # Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = ...
+\end{verbatim}
+The current options that can be chosen are: {\tt CentredFlux}, {\tt RoeFlux}, {\tt LaxFriedrichsFlux}, {\tt AUSMPlusFlux2D}, {\tt AUSMPlusFlux3D}, {\tt AUSMPlusUpFlux2D} and {\tt AUSMPlusUpFlux3D}.
+
+The second parameter, is the correction function. Currently, the VCJH scheme is implemented. The characterizing $c$ parameter of this scheme can be chosen as follows:
+\begin{verbatim}
+    # Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
+    # Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  c 
+\end{verbatim}
+Here, c is a real number. 
+
+The third and fourth parameters are the distributions of solution and flux points. These can be chosen as follows:
+\begin{verbatim}
+    # Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = ...
+    # Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = ...
+\end{verbatim}
+The current options are {\tt GaussLegendre}, {\tt Lobatto} and {\tt Equidistant}, being respectively the Gauss-Legendre, Gauss-Lobatto points and an equidistant distribution. For tensor elements (Quadrilaterals, Hexahedra),  it is strongly advised to use the same distributions for solution and flux points, since this greatly reduces the necessary computational time.
+
+\subsection{Boundary conditions and initial condition}
+
+In order to initialize the solution, the following default line can be used:
+\begin{verbatim}
+    # Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState
+\end{verbatim}
+Additionally, all other commands used to initialize the solution must be added. Alternatively, this option can be set to {\tt Null} in order to use the initial condition specified in the input mesh file. 
+
+The boundary conditions are specified in the usual way:
+\begin{verbatim}
+    # Simulator.SubSystem.FluxReconstruction.BcNames = Name1 Name2
+    # Simulator.SubSystem.FluxReconstruction.Name1.applyTRS = TRS1
+    # Simulator.SubSystem.FluxReconstruction.Name2.applyTRS = TRS2
+    # Simulator.SubSystem.FluxReconstruction.Data.BcTypes = Type1 Type2
+    # Simulator.SubSystem.FluxReconstruction.Data.BcNames = Name1 Name2 
+\end{verbatim}
+When solving the Navier-Stokes equations, currently the following lines must be added as well:
+\begin{verbatim}
+    # Simulator.SubSystem.FluxReconstruction.BcNamesDiff = Name1Diff Name2Diff
+    # Simulator.SubSystem.FluxReconstruction.Name1Diff.applyTRS = TRS1
+    # Simulator.SubSystem.FluxReconstruction.Name2Diff.applyTRS = TRS2
+\end{verbatim}
+The currently implemented boundary conditions are {\tt Dirichlet}, {\tt MirrorEuler2D}, {\tt MirrorEuler3D}, {\tt NoSlipWallHeatFluxNS2D}, {\tt NoSlipWallHeatFluxNS3D}, {\tt SuperOutlet}, {\tt SubInletEulerTtPtAlpha2D}, {\tt SubInletEulerTtPtAlpha3D}, {\tt SubOutletEuler2D}, {\tt SubOutletEuler3D}. {\tt SuperOutlet} being a Neumann boundary condition.
+
+\begin{thebibliography}{00}
+
+\bibitem{lani05} 
+  A. Lani, T. Quintino, D. Kimpe, H. Deconinck, 
+  {\it The COOLFluiD Framework - Design Solutions for High-Performance Object Oriented Scientific Computing Software}, 
+  International Conference Computational Science 2005, Atlanta (GA), LNCS 3514, Vol.1, pp. 281-286, Springer-Verlag, 2005. 
+
+\bibitem{lani06} 
+  A. Lani, T. Quintino, D. Kimpe, H. Deconinck, S. Vandewalle and S. Poedts, 
+  {\it Reusable Object-Oriented Solutions for Numerical Simulation of PDEs in a High Performance Environment}, 
+  Scientific Programming. ISSN 1058-9244, Vol. 14, N. 2, pp. 111-139, IOS Press, 2006.
+
+\bibitem{phd:lani}
+  A. Lani, {\it An Object Oriented and High Performance Platform for Aerothermodynamics Simulation}, 
+  Ph.D. thesis,von Karman Institute, Rhode-Saint-Gen\`ese, Belgium, 2008.
+  
+\bibitem{phd:quintino}
+  T. L. Quintino. {\it A Component Environment for High-Performance
+    Scientific Computing. Design and Implementation},
+  Ph.D. thesis,von Karman Institute, Rhode-Saint-Gen\`ese, Belgium, 2008.
+  
+\bibitem{phd:wuilbaut}
+  Thomas Wuilbaut, {\it Algorithmic Developments for a Multiphysics Framework},  
+  Ph.D. thesis,von Karman Institute, Rhode-Saint-Gen\`ese, Belgium, 2008.
+  
+\end{thebibliography}
+
+\end{document}
