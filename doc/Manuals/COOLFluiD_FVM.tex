@@ -1213,6 +1213,195 @@ Simulator.SubSystem.DataProcessing3.SkinFriction.VID = 12           # y-velocity
 Simulator.SubSystem.DataProcessing3.SkinFriction.TID = 13           # temperature ID
 \end{verbatim}
 
+\section{Mesh Fitting Algorithms}
+
+{\bf Required libs:~} libMeshTools, libMeshToolsFVM.
+
+The COOLFLuiD framework contains an autonomous physics-driven mesh deformation algorithms capable of performing mesh r-adaptive simulations based on both local physical and geometrical properties, respectively, of the flow field and of the mesh elements. This section presents the different configuration options needed to apply the mesh deformation.\\
+The mesh fitting algorithms options are simply added to a classical {\tt CFcase} file.
+
+\subsection{Linear System Solver (LSS)}
+{\bf Required libs:~} libPetscI.
+
+The mesh fitting algorithms reuse the Linear System Solver, described in section \ref{sec:LSS}. 
+
+\begin{verbatim}
+# setting for PETSC linear system solver
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = MeshAlgoLSS
+\end{verbatim}
+The option {\tt UseNodalBased} ensures that the system is nodal-based and not cell-centred based
+\begin{verbatim}
+Simulator.SubSystem.MeshAlgoLSS.Data.UseNodeBased = true
+# preconditioner types: PCILU for serial, PCASM for serial/parallel
+Simulator.SubSystem.MeshAlgoLSS.Data.PCType = PCASM
+Simulator.SubSystem.MeshAlgoLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.MeshAlgoLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.MeshAlgoLSS.Data.MaxIter = 1000
+Simulator.SubSystem.MeshAlgoLSS.Data.SaveSystemToFile = false
+Simulator.SubSystem.MeshAlgoLSS.MaskEquationIDs = 0 1
+# Krylov method is chosen 
+Simulator.SubSystem.MeshAlgoLSS.Data.NbKrylovSpaces = 50
+\end{verbatim}
+
+{\bf WATCH OUT:~} {\it The option $\tt{MaskEquationIDs}$ is set to 0 1 for a 2D test case and 0 1 2 for a 3D test case. Not using correctly one of the aforementioned settings will result in a system crush}
+
+
+\subsection{Wall Distance computations}
+The wall distance computation is used to evaluate the nodal distance from a user-defined boundary and stored in a data array (a.k.a data socket inside COOLFluiD)\\ 
+The output of the wall distance computations is writtem and plottable with \textbf{Tecplot}
+\begin{verbatim}
+# setting wall distance socket
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = wallDistance
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = wdistance
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
+Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
+\end{verbatim}
+The following configuration options ensure the wall distance computations.
+
+\begin{verbatim}
+Simulator.SubSystem.DataPreProcessing = DataProcessing
+Simulator.SubSystem.DataPreProcessingNames = DataProcessing1
+Simulator.SubSystem.DataProcessing1.RunAtSetup = true
+\end{verbatim}
+The computation is not done at the first iteration
+\begin{verbatim}
+Simulator.SubSystem.DataProcessing1.SkipFirstIteration = true
+\end{verbatim}
+To reduce the computational time and memory cost, the computation is done after a {\tt ProcessRate} iteration(s)
+\begin{verbatim}
+Simulator.SubSystem.DataProcessing1.ProcessRate = 50
+\end{verbatim}
+The option {\tt Comds} specifies the name of the class responsible of the wall distance computations.
+\begin{verbatim}
+Simulator.SubSystem.DataProcessing1.Comds = ComputeWallDistanceVector2CCMPI
+\end{verbatim}
+The user can specify the boundary from which the computations are done in the option {\tt BoundaryTRS}.
+\begin{verbatim}
+Simulator.SubSystem.DataProcessing1.Names = WallDistance
+Simulator.SubSystem.DataProcessing1.WallDistance.BoundaryTRS = SlipWall
+Simulator.SubSystem.DataProcessing1.WallDistance.CentroidBased = true
+\end{verbatim}
+
+A particular user-defined distance, denoted Acceptable Distance, from the specified boundary in the {\tt BoundaryTRS} results in defining two separate region that incorporate improved stiffness concepts or specific nodal displacement behaviors. As a result, the regions 1 \& 2 will be subject to two different spring analogies
+
+\begin{verbatim}
+# Setting the Acceptable distance 
+Simulator.SubSystem.DataProcessing1.WallDistance.AcceptableDistance= 1.
+\end{verbatim}
+
+\begin{figure}[H]
+\centering{\includegraphics[scale=0.5]{Acce.png}}
+\end{figure}
+{\bf WATCH OUT:~} {\it If the option {\tt AcceptableDistance} is set on 0, this means that only one spring analogy will be applied to all the mesh}
+
+\subsection{Mesh Fitting Parameters}
+The mesh fitting techniques are defined as a post-process step.
+\begin{verbatim}
+Simulator.SubSystem.DataPostProcessing          = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames     = MeFiAlgo
+Simulator.SubSystem.MeFiAlgo.Comds              = MeshFittingAlgorithm
+Simulator.SubSystem.MeFiAlgo.Data.CollaboratorNames = MeshAlgoLSS
+\end{verbatim}
+The algorithm has a several characterizing parameters:\\
+\newline
+The Mesh adaptation is activated at a specific iteration.
+\begin{verbatim}
+Simulator.SubSystem.MeFiAlgo.StartIter          = 0
+Simulator.SubSystem.MeFiAlgo.SkipFirstIteration = true
+\end{verbatim}
+The algorithm can be stopped by prescribing a maximum number of steps.
+\begin{verbatim}
+Simulator.SubSystem.MeFiAlgo.StopIter           = 5000  
+\end{verbatim}
+The option {\tt ProcessRate} will control the frequency of the use of the mesh refinement within the simulation.
+\begin{verbatim}
+Simulator.SubSystem.MeFiAlgo.ProcessRate        = 20
+\end{verbatim}
+The option {\tt updateVar} for the mesh fitting process needs to be consistent with the option {\tt updateVar} of the flow field computations (e.g. Rhoivt, cons)
+\begin{verbatim}
+Simulator.SubSystem.MeFiAlgo.Names              = MeshFitting
+Simulator.SubSystem.MeFiAlgo.Data.updateVar     = Cons
+\end{verbatim}
+The linear springs are truncated and bounded between a minimum and maximum value based on a $P^2$ method, denoted respectively, minimum percentile and maximum percentile
+\begin{verbatim}
+Simulator.SubSystem.MeFiAlgo.MeshFitting.minPercentile    = 0.30
+Simulator.SubSystem.MeFiAlgo.MeshFitting.maxPercentile    = 0.55
+\end{verbatim}
+An under-relaxation factor,  having a similar behavior as a mesh velocity, is added to the mesh adaptation solver to smooth the nodal displacements and avoid mesh node overlaps.
+\begin{verbatim}
+Simulator.SubSystem.MeFiAlgo.MeshFitting.meshAcceleration = 0.05
+\end{verbatim}
+{\bf WATCH OUT:~} {\it The {\tt meshAcceleration} option affects negatively the convergence rate. A trade-off between convergence issues in the flow field solver and convergence rate gives an order of magnitude of the under-relaxation factor of $\mathcal{O}(10^{-2})$}
+
+The physics-driven adaptation, based on a physical flow field variable, is defined in the following options (e.g. density, pressure or temperature etc...) 
+\begin{verbatim}
+Simulator.SubSystem.MeFiAlgo.MeshFitting.monitorVarID     = 4
+Simulator.SubSystem.MeFiAlgo.MeshFitting.monitorPhysVarID = 0  
+\end{verbatim}
+{\bf WATCH OUT:~} {\it If the {\tt monitorPhysVarID} is specified, it cancels the effect of the {\tt monitorVarID}}
+
+The equilibrium spring length concerns the inner nodes and the multiplication factor {\tt ratioBoundaryToInnerEquilibriumSpringLength} tends to stiffen the boundary mesh nodes.
+\begin{verbatim}
+Simulator.SubSystem.MeFiAlgo.MeshFitting.equilibriumSpringLength = 2e-4
+Simulator.SubSystem.MeFiAlgo.MeshFitting.
+                    ratioBoundaryToInnerEquilibriumSpringLength  = 0.01
+\end{verbatim}
+The nodes on specific boundaries can be unlocked and therefore moving along a boundary line for 2D or a boundary surface for 3D.
+\begin{verbatim}
+Simulator.SubSystem.MeFiAlgo.MeshFitting.unlockedBoundaryTRSs = SuperOutlet \
+                                                                SlipWall
+\end{verbatim}
+The last step will be to update the mesh 
+\begin{verbatim}
+Simulator.SubSystem.CellCenterFVM.AfterMeshUpdateCom = StdMeshFittingUpdate
+\end{verbatim}
+\subsection{Mesh Quality Indicator (MQI)}
+A mesh quality indicator is a tool to qualitatively grade an adapted mesh.
+One need to assign a specific value to the Mesh Quality Indicator depending on the mesh element type.\\
+{\bf NOTE:~} {\it The Mesh Quality Indicator is mesh type dependant}
+\begin{table}[H]
+\centering
+\label{my-label}
+\begin{tabular}{cc}
+\hline
+Value & MQI                   \\
+0     & deactivated option    \\
+2     & 2D Triangular meshes  \\
+3     & Aspect Ratio 2D Quads \\
+4     & Skewness 2D Quads     \\
+5     & 3D tetrahedral meshs  \\ \hline
+\end{tabular}
+\end{table}
+\begin{verbatim}
+Simulator.SubSystem.MeFiAlgo.MeshFitting.MQIvalue = 0
+\end{verbatim}
+
+\subsection{Refinement Stop Indicator (RSI)}
+A Refinement Stop Indicator is a quantitative function aiming to stopping the refinement process at the best moment autonomously. It is based on user-defined tolerance on the mesh movement, expressed in percentage.\\
+{\bf NOTE:~} {\it The  Refinement Stop Indicator is deactivated if the option {\tt tolerance = 0.}}
+\begin{verbatim}
+Simulator.SubSystem.MeFiAlgo.MeshFitting.tolerance = 0.01
+\end{verbatim}
+
+\subsection{Post-Processing - Outputs}
+This section presents the different plottable outputs with \textbf{Tecplot} based on the predefined socket filled during the refinement process.\\
+The option {\tt SocketNames} can be defined as following:
+\begin{itemize}
+\item {\tt stiffness }: For visualizing the mesh stiffness.
+\item {\tt iradius   }: MQI for 2D triangular meshes
+\item {\tt skewness  }: MQI for 2D quadrilateral meshes based on the skewness criteria 
+\item {\tt AR        }: MQI for 2D quadrilateral meshes based on the aspect ratio criteria
+\item {\tt isphere  }:  MQI for 3D tetrahedral meshes
+\item {\tt relativeError }: For visualizing the value of the relative movement of the mesh nodes 
+\end{itemize}
+
+\begin{verbatim}
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.SocketNames   = stiffness
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.VariableNames = kstiff
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.isNodal = true
+\end{verbatim}
+
 \begin{thebibliography}{00}
   
 \bibitem{FParser} 
