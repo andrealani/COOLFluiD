@@ -843,6 +843,284 @@ the following line should be included in the CFcase file:
 Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarNames = InitLimiter
 \end{lstlisting}
 
+\subsubsection{Boundary conditions (physics-independent examples)}
+
+Boundary conditions fields will be applied also during initialization on the corresponding boundary TRS,
+in such a way that {\it ghost states} (dummy cell centers that lie outside the computational domain) are set 
+consistently before starting computing numerical fluxes. \\
+The following example shows how to specify a full set of boundary conditions (four in this case, but 
+real settings will obviously depend on the mesh in use).
+
+\begin{lstlisting}[breaklines]
+# list of the names of the objects defining each boundary condition
+Simulator.SubSystem.CellCenterFVM.BcComds = \
+    MirrorVelocityFVMCC SuperInletFVMCC SuperOutletFVMCC
+
+# list of aliases that the use must define for configuring each BC
+Simulator.SubSystem.CellCenterFVM.BcNames = Mirror SInlet SOutlet
+\end{lstlisting}
+
+\paragraph{Symmetry plane or slip wall}
+
+\begin{lstlisting}[breaklines]
+# apply MirrorVelocityFVMCC to the Symmetry TRS 
+Simulator.SubSystem.CellCenterFVM.Mirror.applyTRS = Symmetry
+
+# IDs corresponding to the velocity components within the state vector
+# (they dependent on the model in use, here 2D Euler example)
+Simulator.SubSystem.CellCenterFVM.Mirror.VelocityIDs = 1 2
+
+# array of flags where "1" correspond to variables for which 
+# a zero gradient has to be imposed (2D Euler case here)
+Simulator.SubSystem.CellCenterFVM.Mirror.ZeroGradientFlags = 1 0 0 1
+\end{lstlisting}
+
+\paragraph{Super inlet}
+
+\begin{lstlisting}[breaklines]
+# apply SuperInletFVMCC to the Inlet TRS
+Simulator.SubSystem.CellCenterFVM.SInlet.applyTRS = Inlet
+
+# analytical functions can be defined here as for InitState 
+# (2-step option is not available though)
+Simulator.SubSystem.CellCenterFVM.SInlet.Vars = x y
+Simulator.SubSystem.CellCenterFVM.SInlet.Def = 1000. 11360. 0. 195.
+\end{lstlisting}
+specify the settings for a supersonic inlet: all update variables (Puvt, 
+Rhoivt, Cons, etc. depending on the actual case) have to be prescribed.
+Additional interactive parameters (to be put in the interactive file) can be used 
+for running stiff cases (typically 3D), for which, for instance, it may be impossible 
+to start with the full velocity:
+
+\begin{lstlisting}[breaklines]
+# the following settings tell the solver to multiply the variable with 
+# ID = 11 (x-velocity) by a factor (must <= 1.0)
+Simulator.SubSystem.CellCenterFVM.SInlet.InteractiveVarIDs = 1
+Simulator.SubSystem.CellCenterFVM.SInlet.InteractiveFactor = 1.0
+\end{lstlisting}
+
+\paragraph{Super outlet}
+
+\begin{lstlisting}[breaklines]
+Simulator.SubSystem.CellCenterFVM.SOutlet.applyTRS = Outlet
+
+# array of flags where "1" correspond to variables for which 
+# a zero gradient has to be imposed
+Simulator.SubSystem.CellCenterFVM.SOutlet.ZeroGradientFlags = 1 1 1 1
+\end{lstlisting}
+
+\subsection{Finite Volume Navier-Stokes}
+
+{\bf Required libs:~} libFiniteVolume, libNavierStokes, libFiniteVolumeNavierStokes.
+
+\begin{lstlisting}[breaklines]
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+\end{lstlisting}
+
+\subsubsection{Convective flux schemes}
+
+The user must choose one of the following convective flux schemes:
+
+The following work for both single- and multi-temperatures:
+\begin{lstlisting}[breaklines]
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlus2D
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlus2D.choiceA12 = 1
+\end{lstlisting}
+
+\begin{lstlisting}[breaklines]
+# it includes some built-in preconditioning to handle low Mach flows
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUp2D
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp2D.choiceA12 = 1
+# the free stream Mach number must be specified
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp2D.machInf = 2.
+\end{lstlisting}
+
+\begin{lstlisting}[breaklines]
+# HUS flux works for all NEQ models but is generally less stable and carbuncle prone
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = HUS2D
+Simulator.SubSystem.CellCenterFVM.Data.HUS2D.isNatural = true
+\end{lstlisting}
+
+\begin{lstlisting}[breaklines]
+# Van Leer scheme is good enough for inviscid flows but inaccurate for viscous cases
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = VanLeer2D
+\end{lstlisting}
+
+\begin{lstlisting}[breaklines]
+# standard Roe scheme
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
+\end{lstlisting}
+
+\begin{lstlisting}[breaklines]
+# Roe scheme with entropy fix
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = RoeEntropyFix
+Simulator.SubSystem.CellCenterFVM.Data.RoeEntropyFix.entropyFixID = 1 #2 
+\end{lstlisting}
+
+\begin{lstlisting}[breaklines]
+# Roe scheme (Sanders' carbuncle fix) works only for neutral mixtures
+# in thermo-chemical NEQ
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = RoeSA 
+Simulator.SubSystem.CellCenterFVM.Data.RoeSA.entropyFixID = 1  #2 or 3 
+# the following option if activated could be more stable in some cases
+#Simulator.SubSystem.CellCenterFVM.Data.RoeSA.oldStencil = true
+\end{lstlisting}
+
+\subsubsection{Variable sets for Navier-Stokes}
+
+The following settings define some variable that are needed in different phases of the simulation.
+In particular, the user should substitute {\tt <VARSET>} with {\tt Puvt} in 2D or {\tt Pvt} in 3D:
+
+\begin{lstlisting}[breaklines]
+# variables in which the solution is stored and updated 
+# (use Rhoivt for thermal equilibrium)
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar = <VARSET>
+
+# variables in which the equations are formulated must ALWAYS be Cons
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+
+# variables in which the diffusive fluxes are computed 
+# (use Rhoivt for thermal equilibrium)
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = <VARSET>
+
+# diffusive flux must be NavierStokes for viscous computations
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+\end{lstlisting}
+
+\subsubsection{2D axisymmetric settings}
+
+\begin{lstlisting}[breaklines]
+Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
+\end{lstlisting}
+should always be present in 2D axisymmetric computations. \\
+
+\begin{lstlisting}[breaklines]
+# source terms for the axisymmetric case
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = NavierStokes2DAxiST
+
+# IDs corresponding to the velocity variables (momentum equations) 
+Simulator.SubSystem.CellCenterFVM.Data. NavierStokes2DAxiST.uvIDs = 11 12
+\end{lstlisting}
+
+\subsubsection{Boundary conditions examples for Navier-Stokes}
+
+\paragraph{Subsonic inlet from u,v,T}
+
+\begin{lstlisting}[breaklines]
+# ...BcComds = SubInletEuler2DUVTFVMCC
+# ...BcNames = BcInlet
+Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS = Inlet
+# inlet velocity components
+Simulator.SubSystem.CellCenterFVM.BcInlet.Vx = 121.151
+Simulator.SubSystem.CellCenterFVM.BcInlet.Vy = 0.0
+# inlet temperature
+Simulator.SubSystem.CellCenterFVM.BcInlet.T = 298.15
+\end{lstlisting}
+
+\paragraph{Subsonic outlet}
+
+\begin{lstlisting}[breaklines]
+# ...BcComds = SubOutletEuler2DFVMCC
+# ...BcNames = BcOutlet
+Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS = Outlet
+Simulator.SubSystem.CellCenterFVM.BcOutlet.P = 986.369
+\end{lstlisting}
+
+\paragraph{Far field}
+
+\begin{lstlisting}[breaklines]
+# ...BcComds = FarFieldEuler2DFVMCC #FarFieldEuler3DFVMCC
+# ...BcNames = Infarfld
+Simulator.SubSystem.CellCenterFVM.Infarfld.applyTRS = FarField
+Simulator.SubSystem.CellCenterFVM.Infarfld.Tinf = 288.15
+Simulator.SubSystem.CellCenterFVM.Infarfld.Pinf = 43.489948
+Simulator.SubSystem.CellCenterFVM.Infarfld.Uinf = 170.131324
+Simulator.SubSystem.CellCenterFVM.Infarfld.Vinf = 0.0
+#Simulator.SubSystem.CellCenterFVM.Infarfld.Winf = 0.0
+# specify analytical functions for each variable given by InputVar
+# a variable transformation from input to update will be applied if 
+# InputVar is different from Simulator.SubSystem.CellCenterFVM.UpdateVar 
+#Simulator.SubSystem.CellCenterFVM.Infarfld.InputVar = Puvt
+#Simulator.SubSystem.CellCenterFVM.Infarfld.Vars = x y #z
+#Simulator.SubSystem.CellCenterFVM.Infarfld.Def = if(x<0,43.489948,30*y) 170.131324 0.0 288.15
+\end{lstlisting}
+
+\paragraph{Far field from characteristic variables}
+
+\begin{lstlisting}[breaklines]
+# ...BcComds = FarFieldEulerChar2DFVMCC #FarFieldEulerChar3DFVMCC
+# ...BcNames = Infarfld
+Simulator.SubSystem.CellCenterFVM.Infarfld.applyTRS = FarField
+Simulator.SubSystem.CellCenterFVM.Infarfld.Tinf = 288.15
+Simulator.SubSystem.CellCenterFVM.Infarfld.Pinf = 43.489948
+Simulator.SubSystem.CellCenterFVM.Infarfld.Uinf = 170.131324
+Simulator.SubSystem.CellCenterFVM.Infarfld.Vinf = 0.0
+#Simulator.SubSystem.CellCenterFVM.Infarfld.Winf = 0.0
+# specify analytical functions for each variable given by InputVar
+# a variable transformation from input to update will be applied if 
+# InputVar is different from Simulator.SubSystem.CellCenterFVM.UpdateVar 
+#Simulator.SubSystem.CellCenterFVM.Infarfld.InputVar = Puvt
+#Simulator.SubSystem.CellCenterFVM.Infarfld.Vars = x y #z
+#Simulator.SubSystem.CellCenterFVM.Infarfld.Def = if(x<0,43.489948,30*y) 170.131324 0.0 288.15
+\end{lstlisting}
+
+\paragraph{Noslip wall (isothermal, adiabatic or with radiative equilibrium)}
+
+\begin{lstlisting}[breaklines]
+# ...BcComds = NoSlipWallIsothermalNSvtFVMCC
+# ...BcNames = NSWall
+# apply NoSlipWallIsothermalNSvtFVMCC to the Wall
+# (TRS name coming from the initial mesh file)
+Simulator.SubSystem.CellCenterFVM.NSWall.applyTRS = Wall
+
+# if an adiabatic condition is needed set this flag to true
+Simulator.SubSystem.CellCenterFVM.NSWall.Adiabatic = false
+
+# imposed wall temperature
+Simulator.SubSystem.CellCenterFVM.NSWall.TWall = 615.0
+
+In order to impose a radiative equilibrium condition, additional options are needed:
+\begin{lstlisting}[breaklines]
+Simulator.SubSystem.CellCenterFVM.NSWall.RadEquilibrium = true
+
+# emissivity
+Simulator.SubSystem.CellCenterFVM.NSWall.Emissivity = 0.9
+
+# maximum allowable change in temperature between two consecutive time step
+Simulator.SubSystem.CellCenterFVM.NSWall.MaxRadEqDTwall = 100.
+
+# temperature of the distant body (typically 0 or free stream value)
+Simulator.SubSystem.CellCenterFVM.NSWall.DistantBodyTemp = 0.
+\end{lstlisting}
+
+\subsection{Nodal Extrapolation}
+
+Since flow solution is computed in the cell centers, nodal values must be extrapolated from cell centers 
+to the mesh vertices for visualization purposes or for computing viscous gradients. This is accomplished by 
+{\tt NodalExtrapolation} objects. In viscous cases, where a slip condition and, possibly, a temperature 
+are imposed at the wall, the following settings must be added in order to strongly impose the desired values.
+
+\begin{lstlisting}[breaklines]
+# this specifies the name of the nodal extrapolator object
+Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMove
+
+# the name(s) of the boundary TRS(s) on which imposing values strongly 
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TRSName = Wall
+
+# IDs of the variables to be imposed strongly on the boundaries listed in TRSName
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.ValuesIdx = 1 2 3 #uID vID TID
+
+# values of the selected variables to be imposed strongly
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.Values = 0. 0. 615. #u v T at the wall
+
+# list determines the priority of one TRS (and BC) over another in corner nodes
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TrsPriorityList = Wall Symmetry Inlet Outlet
+\end{lstlisting}
+
+{\bf WATCH OUT:~} {\it Nodal extrapolation settings must be consistent with the boundary conditions (same velocity IDs, same temperature at the wall, etc.).}
+
 \subsection{Finite Volume MHD}
 
 {\bf Required libs:~} libFiniteVolume, libMHD, libFiniteVolumeMHD.
@@ -927,7 +1205,7 @@ Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = MHD2DPowellST (or MHD3DPowel
 \end{lstlisting}
 should always be present in simulations involving Powell's source term technique.
 
-\subsubsection{Boundary conditions}
+\subsubsection{Boundary conditions examples for MHD}
 
 Boundary condition fields will be applied also during initialization on the corresponding boundary TRS,
 in such a way that {\it ghost states} (dummy cell centers that lie outside the computational domain) are set 
@@ -1118,29 +1396,13 @@ Simulator.SubSystem.CellCenterFVM.Data.NavierStokes2DNEQAxiST.uvIDs = 11 12
 
 {\bf WATCH OUT:} {\it In 2D non-axisymmetric cases, only {\tt Euler2DCTNEQST} or {\tt Euler2DCNEQST} should be declared as source term.}
 
-\subsubsection{Boundary Conditions}
-
-Boundary conditions fields will be applied also during initialization on the corresponding boundary TRS,
-in such a way that {\it ghost states} (dummy cell centers that lie outside the computational domain) are set 
-consistently before starting computing numerical fluxes. \\
-The following example shows how to specify a full set of boundary conditions (four in this case, but 
-real settings will obviously depend on the mesh in use).
-
-\begin{lstlisting}[breaklines]
-# list of the names of the objects defining each boundary condition
-Simulator.SubSystem.CellCenterFVM.BcComds = \
-    NoSlipWallIsothermalNSrvtMultiFVMCC \
-    MirrorVelocityFVMCC \
-    SuperInletFVMCC \
-    SuperOutletFVMCC
-
-# list of aliases that the use must define for configuring each BC
-Simulator.SubSystem.CellCenterFVM.BcNames = NSWall Mirror SInlet SOutlet
-\end{lstlisting}
+\subsubsection{Boundary Conditions examples for ATD}
 
 \paragraph{Noslip wall (isothermal, adiabatic or with radiative equilibrium)}
 
 \begin{lstlisting}[breaklines]
+# ...BcComds = NoSlipWallIsothermalNSrvtMultiFVMCC
+# ...BcNames = NSWall
 # apply NoSlipWallIsothermalNSrvtMultiFVMCC to the Wall
 # (TRS name coming from the initial mesh file)
 Simulator.SubSystem.CellCenterFVM.NSWall.applyTRS = Wall
@@ -1168,57 +1430,6 @@ Simulator.SubSystem.CellCenterFVM.NSWall.DistantBodyTemp = 0.
 A super-catalytic wall condition, imposing LTE at the wall, can be imposed by replacing 
 the BC object name {\tt NoSlipWallIsothermalNSrvtMultiFVMCC} with 
 {\tt NoSlipWallIsothermalNSrvtLTEMultiFVMCC}. 
-
-\paragraph{Symmetry plane or slip wall}
-
-\begin{lstlisting}[breaklines]
-# apply MirrorVelocityFVMCC to the Symmetry TRS 
-Simulator.SubSystem.CellCenterFVM.Mirror.applyTRS = Symmetry
-
-# IDs corresponding to the velocity components 
-# (they dependent on the chemical model in use)
-Simulator.SubSystem.CellCenterFVM.Mirror.VelocityIDs = 11 12
-
-# array of flags where "1" correspond to variables for which 
-# a zero gradient has to be imposed
-Simulator.SubSystem.CellCenterFVM.Mirror.ZeroGradientFlags = \
-  1 1 1 1 1 1 1 1 1 1 1 0 0 1 1
-\end{lstlisting}
-
-\paragraph{Super inlet}
-
-\begin{lstlisting}[breaklines]
-# apply SuperInletFVMCC to the Inlet TRS
-Simulator.SubSystem.CellCenterFVM.SInlet.applyTRS = Inlet
-
-# analytical functions can be defined here as for InitState 
-# (2-step option is not available though)
-Simulator.SubSystem.CellCenterFVM.SInlet.Vars = x y
-Simulator.SubSystem.CellCenterFVM.SInlet.Def = \
- 0. 0. 0. 0.00002854 0. 0.00000866 0. 0. 0. 0. 0. 11360. 0. 195. 195.
-\end{lstlisting}
-specify the settings for a supersonic inlet (all RhoivtTv variables have to be prescribed).
-Additional interactive parameters (to be put in the interactive file) can be used 
-for running stiff cases (typically 3D), for which, for instance, it may be impossible 
-to start with the full velocity:
-
-\begin{lstlisting}[breaklines]
-# the following settings tell the solver to multiply the variable with 
-# ID = 11 (x-velocity) by a factor (must <= 1.0)
-Simulator.SubSystem.CellCenterFVM.SInlet.InteractiveVarIDs = 11
-Simulator.SubSystem.CellCenterFVM.SInlet.InteractiveFactor = 1.0
-\end{lstlisting}
-
-\paragraph{Super outlet}
-
-\begin{lstlisting}[breaklines]
-Simulator.SubSystem.CellCenterFVM.SOutlet.applyTRS = Outlet
-
-# array of flags where "1" correspond to variables for which 
-# a zero gradient has to be imposed
-Simulator.SubSystem.CellCenterFVM.SOutlet.ZeroGradientFlags = \
-  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-\end{lstlisting}
 
 \subsubsection{Nodal Extrapolation}
 
@@ -1543,7 +1754,7 @@ A particular user-defined distance, denoted Acceptable Distance, from the specif
 Simulator.SubSystem.DataProcessing1.WallDistance.AcceptableDistance= 1.
 \end{lstlisting}
 
-\begin{figure}[H]
+\begin{figure}[hbt!]
 \centering{\includegraphics[scale=0.5]{Acce.png}}
 \end{figure}
 {\bf WATCH OUT:~} {\it If the option {\tt AcceptableDistance} is set on 0, this means that only one spring analogy will be applied to all the mesh}
@@ -1613,7 +1824,7 @@ Simulator.SubSystem.CellCenterFVM.AfterMeshUpdateCom = StdMeshFittingUpdate
 A mesh quality indicator is a tool to qualitatively grade an adapted mesh.
 One need to assign a specific value to the Mesh Quality Indicator depending on the mesh element type.\\
 {\bf NOTE:~} {\it The Mesh Quality Indicator is mesh type dependant}
-\begin{table}[H]
+\begin{table}[hbt!]
 \centering
 \label{my-label}
 \begin{tabular}{cc}
@@ -1655,6 +1866,8 @@ Simulator.SubSystem.Tecplot.Data.DataHandleOutput.VariableNames = kstiff
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.isNodal = true
 \end{lstlisting}
 
+\clearpage
+\newpage
 \begin{thebibliography}{00}
   
 \bibitem{FParser} 
