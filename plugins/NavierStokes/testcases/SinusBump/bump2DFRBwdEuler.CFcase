@@ -24,7 +24,7 @@ CFEnv.ExceptionOutputs     = true
 CFEnv.RegistSignalHandlers = false
 CFEnv.OnlyCPU0Writes = false
 
-#CFEnv.TraceToStdOut = true
+CFEnv.TraceToStdOut = false
 
 # SubSystem Modules
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libGmsh2CFmesh libParaViewWriter libTecplotWriter libNavierStokes libFluxReconstructionMethod libFluxReconstructionNavierStokes libBackwardEuler libPetscI libNewtonMethod libAnalyticalModel
@@ -59,9 +59,8 @@ Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
 
 Simulator.SubSysMesh.SpaceMethod = Null
 Simulator.SubSysMesh.Null.Builder = MeshUpgrade
-#Simulator.SubSysMesh.Null.MeshUpgrade.GeoPolynomialOrder = P1
-Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P3
-#Simulator.SubSysMesh.Null.MeshUpgrade.DivideElements = 1
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P1
+Simulator.SubSysMesh.Null.MeshUpgrade.DivideElements = 1
 Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 
 ##################################
@@ -75,15 +74,15 @@ Simulator.SubSystem.Euler2D.ConvTerm.pRef = 1.
 Simulator.SubSystem.Euler2D.ConvTerm.tempRef = 0.003483762
 Simulator.SubSystem.Euler2D.ConvTerm.machInf = 0.5
 
-Simulator.SubSystem.OutputFormat        = CFmesh #ParaView Tecplot 
+Simulator.SubSystem.OutputFormat        = CFmesh ParaView Tecplot 
 
-Simulator.SubSystem.CFmesh.FileName     = bumpFR2DP3.CFmesh
+Simulator.SubSystem.CFmesh.FileName     = bumpFR2D.CFmesh
 Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
 Simulator.SubSystem.CFmesh.SaveRate = 100
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.Tecplot.FileName = bumpFR2DP3.plt
+Simulator.SubSystem.Tecplot.FileName = bumpFR2D.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Bump
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
@@ -91,7 +90,7 @@ Simulator.SubSystem.Tecplot.SaveRate = 10
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 
-Simulator.SubSystem.ParaView.FileName    = bumpFR2DP3.vtu
+Simulator.SubSystem.ParaView.FileName    = AbumpFR2D.vtu
 Simulator.SubSystem.ParaView.WriteSol    = WriteSolutionHighOrder
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
 Simulator.SubSystem.ParaView.SaveRate = 1
@@ -135,15 +134,15 @@ Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
 Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
 Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
-Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = RoeFlux
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = RoeFlux #LaxFriedrichsFlux # 
 
 #Simulator.SubSystem.FluxReconstruction.ComputeErrorCom = ComputeErrorEuler
 
-Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre #Lobatto # Equidistant
-Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre #Lobatto #Equidistant
+Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre # Equidistant #Lobatto #
+Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre #Equidistant #Lobatto #
 
 Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor = 0.015238095
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor = 0.015238095 #0.0 #
 
 Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState #Null #
 Simulator.SubSystem.FluxReconstruction.InitNames = InField
