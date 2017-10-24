@@ -3,7 +3,7 @@
 # This COOLFluiD CFcase file tests: 
 # 
 # FR, VCJH, NS2D, Backward Euler, mesh with curved quads, 
-# Lax-Friedrichs scheme, mirror BCs and Dirichlet BC 
+# Lax-Friedrichs scheme, wall BCs and Dirichlet BC 
 #
 ################################################################################
 #
@@ -54,7 +54,7 @@ Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
 Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
 
 Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
-Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = CylinderNSQuadCurved_16_5.CFmesh #cylinder_2D_quad.CFmesh #cylinderNSQuadCurved_64_17.CFmesh #cylinderNSQuadCurved.CFmesh
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = CylinderNSQuadCurved_16_5.CFmesh
 Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
 #Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 
@@ -70,7 +70,7 @@ Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 ###################################
 Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2D
 Simulator.SubSystem.NavierStokes2D.refValues = 1.0 0.1774823934930 0.1774823934930 2.51575
-Simulator.SubSystem.NavierStokes2D.refLength = 1.0 #0.005 #50
+Simulator.SubSystem.NavierStokes2D.refLength = 1.0
 #Simulator.SubSystem.NavierStokes2D.ConvTerm.pRef    = 1.0
 #Simulator.SubSystem.NavierStokes2D.ConvTerm.tempRef = 0.003483762
 #Simulator.SubSystem.NavierStokes2D.ConvTerm.machInf = 0.15
@@ -79,21 +79,21 @@ Simulator.SubSystem.NavierStokes2D.DiffTerm.ViscosityLaw = FixedKinematicViscosi
 Simulator.SubSystem.NavierStokes2D.DiffTerm.FixedKinematicViscosity.KinVisc = 0.00443706
 
 ###################################
-Simulator.SubSystem.OutputFormat        = CFmesh #ParaView Tecplot 
-Simulator.SubSystem.CFmesh.FileName     = cylinderNSFR2Dtest.CFmesh
+Simulator.SubSystem.OutputFormat        = CFmesh ParaView Tecplot 
+Simulator.SubSystem.CFmesh.FileName     = AcylinderNSFR2DTest.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate = 10
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
 
-Simulator.SubSystem.ParaView.FileName    = cylinderNSFR2DTest.vtu
+Simulator.SubSystem.ParaView.FileName    = AcylinderNSFR2DTest.vtu
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
 Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
 Simulator.SubSystem.ParaView.SaveRate = 10
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
-Simulator.SubSystem.Tecplot.FileName    = cylinderNSFR2DTest.plt
+Simulator.SubSystem.Tecplot.FileName    = AcylinderNSFR2DTest.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
 Simulator.SubSystem.Tecplot.SaveRate = 10
@@ -107,7 +107,7 @@ Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
 
 Simulator.SubSystem.ConvergenceMethod = BwdEuler
 Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(1e4,0.5*2.0^max(i-1,0)) #min(1e4,0.1*1.5^max(i-20,0))
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(8000,0.5*2.0^max(i-1,0)) #min(1e4,0.1*1.5^max(i-20,0))
 Simulator.SubSystem.BwdEuler.ConvergenceFile = convergenceImplCylDiff2DP5.plt
 Simulator.SubSystem.BwdEuler.ShowRate        = 1
 Simulator.SubSystem.BwdEuler.ConvRate        = 1
@@ -126,7 +126,7 @@ Simulator.SubSystem.SpaceMethod = FluxReconstruction
 Simulator.SubSystem.Default.listTRS = InnerCells Cylinder FarField
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = cylinderUpgraded.CFmesh #cylinderNSFRExplstrP5.CFmesh #
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cylinderUpgraded.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2
 
