@@ -10,7 +10,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -8.31381
+### Residual = -7.07874
 
 CFEnv.OnlyCPU0Writes = false
 
@@ -122,15 +122,15 @@ Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHSJacob
 Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = StdTimeRHSJacob
 Simulator.SubSystem.FluxReconstruction.JacobianSparsity = CellCentered
 Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
-Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = RoeFlux
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = RoeFlux #AUSMPlusFlux3D #
 
 #Simulator.SubSystem.FluxReconstruction.ComputeErrorCom = ComputeErrorEuler
 
-Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre
-Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
+Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre #Lobatto #
+Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre #Lobatto #
 
 Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =   0.015238095
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =   0.015238095 #0.066666666667 #
 
 Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState
 Simulator.SubSystem.FluxReconstruction.InitNames = InField

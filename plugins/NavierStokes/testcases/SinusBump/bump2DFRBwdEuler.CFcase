@@ -11,7 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -7.82442
+### Residual = -8.15853
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = false #true
@@ -60,7 +60,6 @@ Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
 Simulator.SubSysMesh.SpaceMethod = Null
 Simulator.SubSysMesh.Null.Builder = MeshUpgrade
 Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P1
-Simulator.SubSysMesh.Null.MeshUpgrade.DivideElements = 1
 Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 
 ##################################
@@ -93,7 +92,7 @@ Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.ParaView.FileName    = AbumpFR2D.vtu
 Simulator.SubSystem.ParaView.WriteSol    = WriteSolutionHighOrder
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
-Simulator.SubSystem.ParaView.SaveRate = 1
+Simulator.SubSystem.ParaView.SaveRate = 10
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
