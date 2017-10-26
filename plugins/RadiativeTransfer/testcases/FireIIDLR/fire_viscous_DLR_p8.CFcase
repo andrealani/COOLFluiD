@@ -56,6 +56,7 @@ CFEnv.ExceptionDumps   = false
 CFEnv.ExceptionOutputs = false
 CFEnv.OnlyCPU0Writes = false
 #CFEnv.TraceToStdOut = true
+CFEnv.SyncAlgo = Old
 
 # Simulation Modules
 Simulator.Modules.Libs = libTecplotWriter libPhysicalModelDummy libFiniteVolume libEmptyConvergenceMethod libRadiativeTransfer libTecplot2CFmesh libCFmeshFileReader libCFmeshFileWriter libConcurrentCoupler
@@ -88,7 +89,7 @@ Simulator.SubSystemA.PhysicalModelDummy.Equations = \
 	rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp rhoe p T Mach
 
 Simulator.SubSystemA.MeshCreator                                 = CFmeshFileReader
-Simulator.SubSystemA.CFmeshFileReader.Data.FileName              = fire_inviscid_DLR.CFmesh
+Simulator.SubSystemA.CFmeshFileReader.Data.FileName              = fire_viscous_DLR.CFmesh
 Simulator.SubSystemA.CFmeshFileReader.convertFrom                = Tecplot2CFmesh
 Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.Discontinuous  = true
 Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.SolutionOrder  = P0
@@ -182,7 +183,7 @@ Simulator.SubSystem.MeshCreator      = CFmeshFileReader~8
 Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader@8
 
 Simulator.SubSystem.CFmeshFileReader&8.Namespace = Rad&8
-Simulator.SubSystem.CFmeshFileReader&8.Data.FileName = fire_inviscid_DLR.CFmesh
+Simulator.SubSystem.CFmeshFileReader&8.Data.FileName = fire_viscous_DLR.CFmesh
 Simulator.SubSystem.CFmeshFileReader&8.Data.ScalingFactor = 1.
 Simulator.SubSystem.CFmeshFileReader&8.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
 Simulator.SubSystem.CFmeshFileReader&8.Data.CollaboratorNames = SMRad&8
@@ -218,9 +219,9 @@ Simulator.SubSystem.DataPostProcessing = DataProcessing~8
 Simulator.SubSystem.DataPostProcessingNames = ProcessingRad@8
 Simulator.SubSystem.ProcessingRad&8.Namespace = Rad&8
 Simulator.SubSystem.ProcessingRad&8.Data.CollaboratorNames = SMRad&8 IteratorRad&8 LSSRad&8
-Simulator.SubSystem.ProcessingRad&8.Comds = RadiativeTransferFVDOM 
-Simulator.SubSystem.ProcessingRad&8.Names = Radiation
-Simulator.SubSystem.ProcessingRad&8.Radiation.nDirs = 80
+Simulator.SubSystem.ProcessingRad&8.Comds = RadiativeTransferFVDOM RadiativeTransferOutputFVMCC
+Simulator.SubSystem.ProcessingRad&8.Names = Radiation HeatFlux
+Simulator.SubSystem.ProcessingRad&8.Radiation.nDirs = 8
 Simulator.SubSystem.ProcessingRad&8.Radiation.UseExponentialMethod = true
 Simulator.SubSystem.ProcessingRad&8.Radiation.OldAlgorithm = false
 #Simulator.SubSystem.ProcessingRad&8.Radiation.DirName = ./
@@ -240,6 +241,13 @@ Simulator.SubSystem.ProcessingRad&8.Radiation.ThreadID  = &8
 # if the following is "true" with 8 directions and 100 bins you have:
 # a matrix nbBins*nbDirections => with 100 CPUs, each CPU gets 1 bin and 8 directions 
 Simulator.SubSystem.ProcessingRad&8.Radiation.LoopOverBins = false
+
+# radiative heat flux
+Simulator.SubSystem.ProcessingRad&8.HeatFlux.applyTRS = B_3
+Simulator.SubSystem.ProcessingRad&8.HeatFlux.TID = 12
+Simulator.SubSystem.ProcessingRad&8.HeatFlux.OutputFileWall = heatFlux-P&8.plt
+Simulator.SubSystem.ProcessingRad&8.HeatFlux.AppendTime = false
+Simulator.SubSystem.ProcessingRad&8.HeatFlux.AppendIter = true
 
 # fictitious coupling model
 Simulator.SubSystem.RadCoupler.SubSystemStatus = RadCouplerSubSystemStatus
