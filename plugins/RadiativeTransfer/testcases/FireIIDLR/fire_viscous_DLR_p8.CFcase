@@ -219,9 +219,9 @@ Simulator.SubSystem.DataPostProcessing = DataProcessing~8
 Simulator.SubSystem.DataPostProcessingNames = ProcessingRad@8
 Simulator.SubSystem.ProcessingRad&8.Namespace = Rad&8
 Simulator.SubSystem.ProcessingRad&8.Data.CollaboratorNames = SMRad&8 IteratorRad&8 LSSRad&8
-Simulator.SubSystem.ProcessingRad&8.Comds = RadiativeTransferFVDOM RadiativeTransferOutputFVMCC
-Simulator.SubSystem.ProcessingRad&8.Names = Radiation HeatFlux
-Simulator.SubSystem.ProcessingRad&8.Radiation.nDirs = 8
+Simulator.SubSystem.ProcessingRad&8.Comds = RadiativeTransferFVDOM #RadiativeTransferOutputFVMCC
+Simulator.SubSystem.ProcessingRad&8.Names = Radiation #HeatFlux
+Simulator.SubSystem.ProcessingRad&8.Radiation.nDirs = 80
 Simulator.SubSystem.ProcessingRad&8.Radiation.UseExponentialMethod = true
 Simulator.SubSystem.ProcessingRad&8.Radiation.OldAlgorithm = false
 #Simulator.SubSystem.ProcessingRad&8.Radiation.DirName = ./
@@ -243,11 +243,11 @@ Simulator.SubSystem.ProcessingRad&8.Radiation.ThreadID  = &8
 Simulator.SubSystem.ProcessingRad&8.Radiation.LoopOverBins = false
 
 # radiative heat flux
-Simulator.SubSystem.ProcessingRad&8.HeatFlux.applyTRS = B_3
-Simulator.SubSystem.ProcessingRad&8.HeatFlux.TID = 12
-Simulator.SubSystem.ProcessingRad&8.HeatFlux.OutputFileWall = heatFlux-P&8.plt
-Simulator.SubSystem.ProcessingRad&8.HeatFlux.AppendTime = false
-Simulator.SubSystem.ProcessingRad&8.HeatFlux.AppendIter = true
+#Simulator.SubSystem.ProcessingRad&8.HeatFlux.applyTRS = B_3
+#Simulator.SubSystem.ProcessingRad&8.HeatFlux.TID = 12
+#Simulator.SubSystem.ProcessingRad&8.HeatFlux.OutputFileWall = heatFlux-P&8.plt
+#Simulator.SubSystem.ProcessingRad&8.HeatFlux.AppendTime = false
+#Simulator.SubSystem.ProcessingRad&8.HeatFlux.AppendIter = true
 
 # fictitious coupling model
 Simulator.SubSystem.RadCoupler.SubSystemStatus = RadCouplerSubSystemStatus
