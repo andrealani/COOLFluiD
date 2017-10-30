@@ -234,6 +234,86 @@ MPIDTYPE(char,MPI_CHAR)
     obj.start = t1;
   }
 
+  /// The following function build a MPIStruct with 14 types
+  template <typename T1, typename T2,
+    typename T3, typename T4,
+    typename T5, typename T6, typename T7, typename T8, typename T9,typename T10,
+            typename T11, typename T12, typename T13, typename T14>
+  static void buildMPIStruct(T1* t1, T2* t2, T3* t3,
+             T4* t4, T5* t5, T6* t6, T7* t7, T8* t8,
+             T9* t9, T10* t10, T11* t11, T12* t12,
+             T13* t13, T14* t14,
+
+             int blockLengths[],
+             MPIStruct& obj)
+  {
+    const unsigned int N = 14;
+    MPI_Datatype typelist[N];
+    typelist[0] = getMPIType(t1);
+    typelist[1] = getMPIType(t2);
+    typelist[2] = getMPIType(t3);
+    typelist[3] = getMPIType(t4);
+    typelist[4] = getMPIType(t5);
+    typelist[5] = getMPIType(t6);
+    typelist[6] = getMPIType(t7);
+    typelist[7] = getMPIType(t8);
+    typelist[8] = getMPIType(t9);
+    typelist[9] = getMPIType(t10);
+    typelist[10] = getMPIType(t11);
+    typelist[11] = getMPIType(t12);
+    typelist[12] = getMPIType(t13);
+    typelist[13] = getMPIType(t14);
+
+    MPI_Aint displacements[N];
+    MPI_Aint startAddress;
+    MPI_Aint address;
+    displacements[0] = 0;
+
+    MPI_Get_address(t1,&startAddress);
+    MPI_Get_address(t2,&address);
+    displacements[1] = address - startAddress;
+
+    MPI_Get_address(t3,&address);
+    displacements[2] = address - startAddress;
+
+    MPI_Get_address(t4,&address);
+    displacements[3] = address - startAddress;
+
+    MPI_Get_address(t5,&address);
+    displacements[4] = address - startAddress;
+
+    MPI_Get_address(t6,&address);
+    displacements[5] = address - startAddress;
+
+    MPI_Get_address(t7,&address);
+    displacements[6] = address - startAddress;
+
+    MPI_Get_address(t8,&address);
+    displacements[7] = address - startAddress;
+
+    MPI_Get_address(t9,&address);
+    displacements[8] = address - startAddress;
+
+    MPI_Get_address(t10,&address);
+    displacements[9] = address - startAddress;
+
+    MPI_Get_address(t11,&address);
+    displacements[10] = address - startAddress;
+
+    MPI_Get_address(t12,&address);
+    displacements[11] = address - startAddress;
+
+    MPI_Get_address(t13,&address);
+    displacements[12] = address - startAddress;
+
+    MPI_Get_address(t14,&address);
+    displacements[13] = address - startAddress;
+
+    MPI_Type_create_struct(N, blockLengths, displacements, typelist, &obj.type);
+    MPI_Type_commit(&obj.type);
+    obj.start = t1;
+  }
+
 private:
 
   /// Private constructor
