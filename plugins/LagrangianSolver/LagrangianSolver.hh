@@ -72,7 +72,7 @@ public:
 
    inline void getUserData(UserData &data){ data = m_particle.userData; }
 
-   inline void setUserData(UserData data){ m_particle.userData=data; }
+   inline void setUserData(UserData &data){ m_particle.userData=data; }
 
    inline UserData& getUserDataPtr(){return (m_particle.userData); }
 
@@ -124,6 +124,8 @@ public:
        return m_wallTypes(faceID,0);
    }
 
+   CFuint getTargetProcess(CFuint faceID) const;
+
    void bufferCommitParticle(CFuint faceID);
 
 private:
@@ -161,6 +163,14 @@ LagrangianSolver<UserData,PARTICLE_TRACKING>::~LagrangianSolver()
 
 //////////////////////////////////////////////////////////////////////////////
 
+template<typename UserData, class PARTICLE_TRACKING>
+CFuint LagrangianSolver<UserData, PARTICLE_TRACKING>::getTargetProcess(CFuint faceID) const
+{
+  return m_wallTypes(faceID,2);
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
 template<typename UserData, class PARTICLE_TRACKING>
 void LagrangianSolver<UserData, PARTICLE_TRACKING>::bufferCommitParticle(CFuint faceID)
 {

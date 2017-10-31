@@ -188,7 +188,7 @@ RadiativeTransferFVDOM::RadiativeTransferFVDOM(const std::string& name) :
   m_TGSData = false;
   setParameter("TGSData", &m_TGSData);
 
-  m_wallEmissivity = 1;
+  m_wallEmissivity = 1.;
   setParameter("wallEmissivity", &m_wallEmissivity);
 
 // AL: to be removed once a cleaner solution is found 

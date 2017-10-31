@@ -2,7 +2,7 @@
 # 
 # This COOLFluiD CFcase file tests: 
 # 
-# Finite Volume DOM algorithm, PhysicalModelDummy, EmptyIterator, hybrid mesh,
+# Monte Carlo algorithm, PhysicalModelDummy, EmptyIterator, hybrid mesh,
 # only radiation transport (no flow) is computed, Tecplot2CFmesh converter,
 # FIRE II (t = 1643s), validation case for ESA ABLARADABLA, input DLR solution
 #
@@ -103,7 +103,7 @@ Simulator.SubSystem.DataProcessing1.Comds               = RadiativeTransferMonte
 
 Simulator.SubSystem.DataProcessing1.Names               = RT HeatFlux
 Simulator.SubSystem.DataProcessing1.RT.applyTRS         = InnerFaces
-Simulator.SubSystem.DataProcessing1.RT.numberOfRays     = 1000 #10000
+Simulator.SubSystem.DataProcessing1.RT.numberOfRays     = 1000
 Simulator.SubSystem.DataProcessing1.RT.Axi              = false
 Simulator.SubSystem.DataProcessing1.RT.sendBufferSize   = 10000
 # run at setup, no flow iterations
