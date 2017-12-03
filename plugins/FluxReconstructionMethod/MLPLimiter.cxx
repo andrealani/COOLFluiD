@@ -134,7 +134,7 @@ void MLPLimiter::execute()
       m_cellStates = m_cell->getStates();
 
       // get the nodes in this cell
-      m_cellNodes  = m_cell->getNodes ();
+      m_cellNodes  = m_cell->getNodes();
       
       // reconstruct cell averaged state
       reconstructCellAveragedState();
