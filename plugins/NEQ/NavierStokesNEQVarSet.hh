@@ -152,6 +152,9 @@ protected:
   /// array to store the normal concentration gradients of species
   RealVector _normConcGradients;
 
+  /// array to store the normal temperature gradients
+  RealVector _normTempGradients;
+  
   /// matrix to store the diffusion velocities of species multiplied by the
   /// species densities (backup)
   RealVector _rhoUdiffBkp;

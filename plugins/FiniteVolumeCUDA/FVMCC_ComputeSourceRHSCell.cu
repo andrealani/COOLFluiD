@@ -3,6 +3,7 @@
 #include "Framework/CellConn.hh"
 #include "Config/ConfigOptionPtr.hh"
 #include "Framework/CudaDeviceManager.hh"
+#include "Common/SelfRegistPtr.hh"
 #include "Common/CUDA/CFVec.hh"
 #include "Framework/CudaTimer.hh"
 #include "FiniteVolume/FluxData.hh"
@@ -600,7 +601,7 @@ void FVMCC_ComputeSourceRHSCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_T
   typedef typename LIMITER::template DeviceFunc<PHYSICS> Limiter;  
   
   //Added for Source
-  SelfRegistPtr<SOURCE> ls1  = (*getMethodData().getSourceTermComputer())[0].d_castTo<SOURCE>();  //Only valid if there is only one source term!!
+  SelfRegistPtr<SOURCE> ls1  = (*this->getMethodData().getSourceTermComputer())[0].template d_castTo<SOURCE>();  //Only valid if there is only one source term!!
   SafePtr<SOURCE> ls = ls1.getPtr();
   typedef typename SOURCE::template DeviceFunc<GPU, PHYSICS> SourceTerm; 
 

@@ -105,9 +105,15 @@ CFreal NavierStokesCNEQVarSet<BASE>::getHeatFlux(const RealVector& state,
   for (CFuint is = 0; is < nbSpecies; ++is) {
     this->_normConcGradients[is] = MathFunctions::innerProd((*gradients[this->_yID[is]]), normal)*ovL;
   }
+  // normal temperature gradients
+  this->_normTempGradients[0] = MathFunctions::innerProd((*gradients[this->_TID]), normal)*ovL*this->_eulerModel->getTempRef();
   
   // Getting diffusion velocities multiplied by species densities
-  this->_library->getRhoUdiff(avTdim, avpdim, this->_normConcGradients, CFNULL, this->_rhoUdiff);
+  this->_library->getRhoUdiff(avTdim, avpdim,
+			      this->_normConcGradients,
+			      this->_normTempGradients,
+			      CFNULL, this->_rhoUdiff);
+  
   this->_rhoUdiff /= (eulerRefData[EulerTerm::RHO]*eulerRefData[EulerTerm::V]);
   
   // adimensional thermal conductivity
@@ -157,9 +163,15 @@ void NavierStokesCNEQVarSet<BASE>::computeTransportProperties
   for (CFuint is = 0; is < nbSpecies; ++is) {
     this->_normConcGradients[is] = MathFunctions::innerProd((*gradients[this->_yID[is]]), normal)*ovL;
   }
+  // normal temperature gradients
+  this->_normTempGradients[0] = MathFunctions::innerProd((*gradients[this->_TID]), normal)*ovL*this->_eulerModel->getTempRef();
   
   // Getting diffusion velocities multiplied by species densities
-  this->_library->getRhoUdiff(avTdim, avpdim, this->_normConcGradients, CFNULL, this->_rhoUdiff);
+  this->_library->getRhoUdiff(avTdim, avpdim,
+			      this->_normConcGradients,
+			      this->_normTempGradients,
+			      CFNULL, this->_rhoUdiff);
+
   this->_rhoUdiff /= (eulerRefData[EulerTerm::RHO]*eulerRefData[EulerTerm::V]);  
   //}
   //else {

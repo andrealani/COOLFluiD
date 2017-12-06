@@ -910,11 +910,12 @@ void ATDModelLibrary::getSource(CFdouble& temperature,
 //////////////////////////////////////////////////////////////////////////////
 
 void ATDModelLibrary::getRhoUdiff(CFdouble& temperature,
-                                   CFdouble& pressure,
-                                   RealVector& normConcGradients,
-                                   CFreal* tVec,
-                                   RealVector& rhoUdiff,
-                                   bool fast)
+				  CFdouble& pressure,
+				  RealVector& normConcGradients,
+				  RealVector& normTempGradients,
+				  CFreal* tVec,
+				  RealVector& rhoUdiff,
+				  bool fast)
 {
   CFdouble PHIs,ktr=0.0,Cp=0.0;
   CFint i,j;
@@ -1132,13 +1133,14 @@ void ATDModelLibrary::getSourceTermVT(CFdouble& temperature,
 
 
 void ATDModelLibrary::transportCoeffNEQ(CFreal& temperature,
-                                         CFdouble& pressure,
-                                         CFreal* tVec,
-                                         RealVector& normConcGradients,
-                                         CFreal& eta,
-                                         CFreal& lambdaTrRo,
-                                         RealVector& lambdaInt,
-                                         RealVector& rhoUdiff)
+					CFdouble& pressure,
+					CFreal* tVec,
+					RealVector& normConcGradients,
+					RealVector& normTempGradients,
+					CFreal& eta,
+					CFreal& lambdaTrRo,
+					RealVector& lambdaInt,
+					RealVector& rhoUdiff)
 {
     CFint i,j;
     CFdouble PHIs,Cp=0.0;

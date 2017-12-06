@@ -547,11 +547,12 @@ void MutationLibrarypp::getSource(CFdouble& temperature,
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrarypp::getRhoUdiff(CFdouble& temperature,
-				   CFdouble& pressure,
-				   RealVector& normConcGradients,
-				   CFreal* tVec,
-				   RealVector& rhoUdiff,
-				   bool fast)
+				    CFdouble& pressure,
+				    RealVector& normConcGradients,
+				    RealVector& normTempGradients,
+				    CFreal* tVec,
+				    RealVector& rhoUdiff,
+				    bool fast)
 {  
   // Set driving forces as gradients of molar fractions
   CFreal MMass = m_gasMixture->mixtureMw();
@@ -676,13 +677,14 @@ void MutationLibrarypp::getMolarMasses(RealVector& mm)
 //////////////////////////////////////////////////////////////////////////////
       
 void MutationLibrarypp::transportCoeffNEQ(CFreal& temperature, 
-					 CFdouble& pressure,
-					 CFreal* tVec, 
-					 RealVector& normConcGradients,
-					 CFreal& eta,
-					 CFreal& lambdaTrRo, 
-					 RealVector& lambdaInt,
-					 RealVector& rhoUdiff)
+					  CFdouble& pressure,
+					  CFreal* tVec, 
+					  RealVector& normConcGradients,
+					  RealVector& normTempGradients,
+					  CFreal& eta,
+					  CFreal& lambdaTrRo, 
+					  RealVector& lambdaInt,
+					  RealVector& rhoUdiff)
 {
    throw NotImplementedException(FromHere(),"MutationLibrarypp::transportCoeffNEQ()");
 }

@@ -164,11 +164,11 @@ public:
 			 CFdouble& pressure,
 			 CFreal* tVec, 
 			 RealVector& normConcGradients,
+			 RealVector& normTempGradients,
 			 CFreal& eta,
 			 CFreal& lambdaTrRo, 
 			 RealVector& lambdaInt,
 			 RealVector& rhoUdiff);
-  
   
   /**
    * Calculates the thermal conductivity by conjugate gradient method method
@@ -184,11 +184,11 @@ public:
    * @param temp temperature
    * @param pressure pressure
    */
-   void lambdaVibNEQ(CFreal& temp,
+  void lambdaVibNEQ(CFreal& temp,
 		    RealVector& tVec,
 		    CFdouble& pressure,
-		     CFreal& lambdaTrRo,
-		     RealVector& lambdaInt);
+		    CFreal& lambdaTrRo,
+		    RealVector& lambdaInt);
   
   /**
    * Calculates the dynamic viscosity, given temperature and pressure
@@ -504,12 +504,13 @@ public:
    * @param normConcGradients the cell normal gradients of species mass fractions
    */
    void getRhoUdiff(CFdouble& temp,
-                   CFdouble& pressure,
-                   RealVector& normConcGradients,
-		   CFreal* tVec,
-                   RealVector& rhoUdiff,
-		   bool fast);
-
+		    CFdouble& pressure,
+		    RealVector& normConcGradients,
+		    RealVector& normTempGradients,
+		    CFreal* tVec,
+		    RealVector& rhoUdiff,
+		    bool fast);
+  
   /**
    * Returns the diffusion flux
    * This function returnm the binary coefficients of Fick

@@ -216,6 +216,7 @@ public:
 				 CFdouble& pressure,
 				 CFreal* tVec, 
 				 RealVector& normConcGradients,
+				 RealVector& normTempGradients,
 				 CFreal& eta,
 				 CFreal& lambdaTrRo, 
 				 RealVector& lambdaInt,
@@ -485,6 +486,7 @@ public:
   virtual void getRhoUdiff(CFdouble& temp,
 			   CFdouble& pressure,
 			   RealVector& normConcGradients,
+			   RealVector& normTempGradients,
 			   CFreal* tVec,
 			   RealVector& rhoUdiff,
 			   bool fast = false) = 0;

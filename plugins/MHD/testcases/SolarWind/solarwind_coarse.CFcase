@@ -35,7 +35,7 @@
 #CFEnv.ErrorOnUnusedConfig = true
 
 # Simulator Modules
-Simulator.Modules.Libs = libShapeFunctions libPetscI libCFmeshFileWriter libCFmeshFileReader libEmptyConvergenceMethod libTecplotWriter libMHD libFiniteVolume libFiniteVolumeMHD libNewtonMethod libNewtonMethodMHD libGambit2CFmesh libTecplot2CFmesh
+Simulator.Modules.Libs = libShapeFunctions libPetscI libCFmeshFileWriter libCFmeshFileReader libEmptyConvergenceMethod libParaViewWriter libTecplotWriter libMHD libFiniteVolume libFiniteVolumeMHD libNewtonMethod libNewtonMethodMHD libGambit2CFmesh libTecplot2CFmesh
 
 # NOTE: this testcase works also if the following 3 lines are commented out
 
@@ -44,7 +44,7 @@ Simulator.SubSystemTypes = StandardSubSystem
 
 # Simulator Parameters
 Simulator.Paths.WorkingDir       = plugins/MHD/testcases/SolarWind
-Simulator.Paths.ResultsDir       = plugins/MHD/testcases/SolarWind
+Simulator.Paths.ResultsDir       = ./RESULTS_SolarWind
 
 ################################################################################
 #
@@ -69,20 +69,29 @@ Simulator.SubSystemB.MHD3DProjection.ConvTerm.refSpeed = 10.877434703482
 #Simulator.SubSystemB.InteractiveParamReader.readRate = 15
 #Simulator.SubSystemB.InteractiveParamReader.FileName = ./06042000.inter
 
-Simulator.SubSystemB.OutputFormat        = Tecplot CFmesh
-Simulator.SubSystemB.CFmesh.FileName     = Steady06042000Storm_Final.CFmesh
+Simulator.SubSystemB.OutputFormat        = Tecplot CFmesh ParaView
+
 Simulator.SubSystemB.Tecplot.FileName    = Steady06042000Storm_Final.plt
 Simulator.SubSystemB.Tecplot.Data.printExtraValues = true
 Simulator.SubSystemB.Tecplot.Data.outputVar = Prim
-Simulator.SubSystemB.Tecplot.Data.SurfaceTRS = SlipWall SuperInlet SuperOutlet 
+Simulator.SubSystemB.Tecplot.Data.SurfaceTRS = SlipWall SuperInlet SuperOutlet
 Simulator.SubSystemB.Tecplot.SaveRate = 50
-Simulator.SubSystemB.CFmesh.SaveRate = 100 
 Simulator.SubSystemB.Tecplot.AppendTime = false
-Simulator.SubSystemB.CFmesh.AppendTime = false
 Simulator.SubSystemB.Tecplot.AppendIter = false
+
+Simulator.SubSystemB.CFmesh.FileName     = Steady06042000Storm_Final.CFmesh
+Simulator.SubSystemB.CFmesh.SaveRate = 100 
+Simulator.SubSystemB.CFmesh.AppendTime = false
 Simulator.SubSystemB.CFmesh.AppendIter = false
 Simulator.SubSystemB.CFmesh.Data.ExtraStateVarNames = limiter
 Simulator.SubSystemB.CFmesh.Data.ExtraStateVarStrides = 9
+
+Simulator.SubSystemB.ParaView.FileName    = Steady06042000Storm_Final.vtu
+#Simulator.SubSystemB.ParaView.WriteSol    = WriteSolution
+Simulator.SubSystemB.ParaView.Data.updateVar = Prim
+Simulator.SubSystemB.ParaView.SaveRate = 100
+Simulator.SubSystemB.ParaView.AppendTime = false
+Simulator.SubSystemB.ParaView.AppendIter = true
 
 Simulator.SubSystemB.StopCondition       = MaxNumberSteps
 Simulator.SubSystemB.MaxNumberSteps.nbSteps = 1 
