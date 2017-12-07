@@ -65,6 +65,7 @@ void ParadeRadiator::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >("Banding","Activation of banding.");
   options.addConfigOption< bool >("WriteRadFileASCII", "Write the radiative coefficients to ASCII file (for debugging).");
   options.addConfigOption< bool >("SaveMemory", "Flag asking to parallelize as much as possible in order to save memory.");
+  options.addConfigOption< bool > ("Equilibrium","Activation LTE");
 }
   
 //////////////////////////////////////////////////////////////////////////////
@@ -129,6 +130,9 @@ ParadeRadiator::ParadeRadiator(const std::string& name) :
 
   m_saveMemory = false;
   setParameter("SaveMemory",&m_saveMemory);
+
+  m_Equilibrium = false;
+  setParameter("Equilibrium",&m_Equilibrium);
 }
   
 //////////////////////////////////////////////////////////////////////////////
@@ -963,11 +967,26 @@ void ParadeRadiator::computeBinning()
     }
   }
   
+  CFreal h = 6.626070040e-34;     //SI units Js
+  CFuint c = 3e08; //SI units m/s
+  CFreal k_b = 1.3806485279e-23;  //SI units J/K
+  const CFuint tempID = m_radPhysicsHandlerPtr->getTempID();
+
   for(CFuint i=0;i<m_nbPoints;++i) {
     for(CFuint s=0;s<nbCells;++s) {
       const CFreal alpha = dataMat(s,i*3+2);
       const CFreal epsilon = dataMat(s,i*3+1);
-      const CFreal Bs = epsilon/alpha;
+      CFreal Bs = 0.;
+      CFreal *const currState = m_pstates->getState(s);
+      CFreal temp  = currState[tempID];
+      
+      if(!m_Equilibrium){
+	Bs = epsilon/alpha;
+      }
+      else{
+	Bs = (2*h*pow(c,2)/pow((dataMat(s,i*3)*1e-10),5))*
+	  (1/(exp(h*c/((dataMat(s,i*3)*1e-10)*k_b*temp))-1));
+      }
       
       // Planck function if we are not in equilibrium
       //
@@ -1541,15 +1560,19 @@ void ParadeRadiator::computeAveragedBins(const CFuint nbBinsre,
     B_binLocal.resize(nbBinsre*nbCells, 0.);
     B_binCurr = &B_binLocal[0];
   }  
-  
+
+  const CFuint tempID = m_radPhysicsHandlerPtr->getTempID();
   DeviceFunc df;
   // fill the alpha and emission arrays for each local cell in parallel simulations
   for(CFuint i=0;i<m_nbPoints;++i) {
     // m_alpha_bin, m_emission_bin, B_bin are logically 2D arrays filled by rows:
     // each row gives all the bins for a cell
     for(CFuint j=0;j<nbCells;++j) {
-      df.computeCellBins<CPU>(m_nbPoints, i,j, nbBinsre, testID, m_dWav, &vctBins[0], 
-			      &m_data[0], &m_alpha_bin[0], &m_emission_bin[0], B_binCurr);
+      CFreal *const currState = m_pstates->getState(j);
+      CFreal temp  = currState[tempID];
+      df.computeCellBins<CPU>(m_Equilibrium, m_nbPoints, i,j, nbBinsre, testID, temp, m_dWav,
+			      &vctBins[0], &m_data[0], &m_alpha_bin[0], &m_emission_bin[0],
+			      B_binCurr);
     }
   }
   

@@ -50,11 +50,13 @@ public:
     /// Compute all binned data corresponding to the given cell
     /// The template parameter prevents from having linking errors
     template <DeviceType DT>
-    HOST_DEVICE void computeCellBins(const CFuint nbPoints,
+    HOST_DEVICE void computeCellBins(const bool isEquil,
+				     const CFuint nbPoints,
 				     const CFuint i, 
 				     const CFuint j, 
 				     const CFuint nbBinsre, 
 				     const CFuint testID,
+				     const CFreal temp,
 				     const CFreal dWavIn,
 				     const CFreal* vctBins,  
 				     const CFreal* data,
@@ -301,17 +303,22 @@ protected:
   
   /// flag array to indicate molecular species
   std::vector<bool> m_molecularSpecies;
+
+  // bool to indicate if the source is computed in LTE conditions or not
+  bool m_Equilibrium;
   
 }; // end of class ParadeRadiator
 
 //////////////////////////////////////////////////////////////////////////////
 
 template <DeviceType DT>
-void ParadeRadiator::DeviceFunc::computeCellBins(const CFuint nbPoints,
+void ParadeRadiator::DeviceFunc::computeCellBins(const bool isEquil,
+						 const CFuint nbPoints,
 						 const CFuint i, 
 						 const CFuint j, 
 						 const CFuint nbBinsre, 
 						 const CFuint testID,
+						 const CFreal temp,
 						 const CFreal dWavIn,
 						 const CFreal* vctBins,  
 						 const CFreal* data,
@@ -323,7 +330,17 @@ void ParadeRadiator::DeviceFunc::computeCellBins(const CFuint nbPoints,
   const CFreal test   = data[j*nbCols + i*3+testID];
   const CFreal emCoef = data[j*nbCols + i*3+1];
   const CFreal abCoef = data[j*nbCols + i*3+2];
-  const CFreal Bs = emCoef/abCoef;
+  CFreal h = 6.626070040e-34;     //SI units Js
+  CFuint c = 3e08; //SI units m/s
+  CFreal k_b = 1.3806485279e-23;  //SI units J/K
+  CFreal Bs = 0.0;
+  if(!isEquil){ 
+    Bs = emCoef/abCoef;
+  }
+  else {
+    Bs = (2*h*pow(c,2)/pow((data[j+nbCols+i*3]*1e-10),5))*(1/(exp(h*c/((data[j+nbCols+i*3]*1e-10)*k_b*temp))-1));
+  }
+  
   const CFuint idx0 = nbBinsre*j;
   alpha_bin[idx0]    = 0.;
   emission_bin[idx0] = 0.;
