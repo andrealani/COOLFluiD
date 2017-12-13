@@ -50,10 +50,10 @@ MLPLimiterEuler2D::MLPLimiterEuler2D(const std::string& name) :
 {
   addConfigOptionsTo(this);
 
-  m_minDensity = 1e-1;
+  m_minDensity = 1e-2;
   setParameter( "MinDensity", &m_minDensity );
 
-  m_minPressure = 1e-1;
+  m_minPressure = 1e-2;
   setParameter( "MinPressure", &m_minPressure );
 }
 
@@ -143,7 +143,7 @@ void MLPLimiterEuler2D::applyChecks(CFreal phi)
     
     if (press < m_minPressure)
     {
-      CFLog(VERBOSE, "Limiting pressure!\n");
+      CFLog(NOTICE, "Limiting pressure in cell " << m_cell->getID() << "\n");
       for (CFuint iScale = 0; iScale < 10; ++iScale)
       {
         phi /= 2.0;
@@ -211,7 +211,7 @@ void MLPLimiterEuler2D::applyChecks(CFreal phi)
     
     if (press < m_minPressure)
     {
-      CFLog(VERBOSE, "Limiting pressure!\n");
+      CFLog(NOTICE, "Limiting pressure in cell " << m_cell->getID() << "\n");
       for (CFuint iScale = 0; iScale < 10; ++iScale)
       {
         phi /= 2.0;
