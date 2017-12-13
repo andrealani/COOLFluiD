@@ -146,6 +146,11 @@ protected: // functions
    * Compute the flx pnt states
    */
   void computeFlxPntStates(std::vector< RealVector > states, std::vector< RealVector >& statesFlxPnt);
+  
+  /**
+   * Apply the previously computed limiter instead of recomputing the limiter
+   */
+  void applyPrevLimiter();
 
 protected: // data
 
@@ -154,6 +159,9 @@ protected: // data
 
   /// socket for maximum nodal state's
   Framework::DataSocketSource< RealVector > socket_nodeNghbCellMaxAvgStates;
+  
+  /// socket for limiter values
+  std::vector< RealVector > m_limiterValues;
 
   /// builder of cells
   Common::SafePtr<Framework::GeometricEntityPool<Framework::StdTrsGeoBuilder> > m_cellBuilder;
@@ -223,6 +231,9 @@ protected: // data
 
   /// factor used to determine whether to limit the solution
   CFreal m_tvbLimitFactor;
+  
+  /// residual after which the limiter is frozen
+  CFreal m_freezeLimiter;
 
   /// exponent for the computation of the length scale
   CFreal m_lengthScaleExp;

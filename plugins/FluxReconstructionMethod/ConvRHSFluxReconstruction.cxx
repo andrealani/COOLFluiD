@@ -411,6 +411,26 @@ void ConvRHSFluxReconstruction::execute()
 	}
       }
       
+//       // get the datahandle of the rhs
+//       DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
+//   
+//       const CFuint nbrStates = m_cellStates->size();
+// 
+//       //update rhs
+//       for (CFuint iState = 0; iState < nbrStates; ++iState)
+//       {
+//        CFuint resID = m_nbrEqs*( (*m_cellStates)[iState]->getLocalID() );
+//        ((*m_cellStates)[iState])[0] = rhs[resID];
+//       }
+      
+//       DataHandle< RealVector > stateBackup = socket_stateBackup.getDataHandle();
+//       
+//       // copy the states in the correct format
+//       for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+//       {
+//         (*((*m_cellStates)[iSol])) = stateBackup[((*m_cellStates)[iSol])->getLocalID()];
+//       }
+      
       //release the GeometricEntity
       m_cellBuilder->releaseGE();
     }

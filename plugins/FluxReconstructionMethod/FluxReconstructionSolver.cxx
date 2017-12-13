@@ -428,7 +428,7 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
   m_prepare->execute();
   
   cf_assert(m_limiter.isNotNull());
-  m_limiter->execute();
+  //m_limiter->execute();
   
   // apply the boundary conditions (this function is in SpaceMethod and is not called anywhere else)
   applyBC();
@@ -537,7 +537,7 @@ void FluxReconstructionSolver::postProcessSolutionImpl()
   CFAUTOTRACE;
 
   //cf_assert(m_limiter.isNotNull());
-  //m_limiter->execute();
+  m_limiter->execute();
 }
 
 //////////////////////////////////////////////////////////////////////////////
