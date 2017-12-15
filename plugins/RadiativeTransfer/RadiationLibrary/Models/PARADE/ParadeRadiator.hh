@@ -2,7 +2,6 @@
 #define COOLFluiD_RadiativeTransfer_ParadeRadiator_hh
 
 //////////////////////////////////////////////////////////////////////////////
-
 #include "RadiativeTransfer/RadiationLibrary/Radiator.hh"
 #include "MathTools/RealMatrix.hh"
 #include "MathTools/RealVector.hh"
@@ -13,7 +12,6 @@
 #include "Common/StringOps.hh"
 #include "Framework/PhysicalChemicalLibrary.hh"
 #include "Common/CFMap.hh"
-
 ///////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -37,7 +35,7 @@ namespace COOLFluiD {
  */
 class ParadeRadiator : public Radiator {
 public:
-
+  
   /// Nested class providing some functions that can be called by both CPU and GPU
   class DeviceFunc {
   public:
@@ -59,10 +57,22 @@ public:
 				     const CFreal temp,
 				     const CFreal dWavIn,
 				     const CFreal* vctBins,  
-				     const CFreal* data,
+				     CFreal* data,
 				     CFreal* alpha_bin,
 				     CFreal* emission_bin,
 				     CFreal* B_binCurr);
+    
+    /// compute Planck function
+    /// @param wav is wavelength in Angstrom
+    HOST_DEVICE CFreal computePlanckFun(const CFreal h, 
+					const CFreal c, 
+					const CFreal k_b,
+					const CFreal wav,
+					const CFreal temp) const
+    {
+      return 2.*h*pow(c,2.)/pow(wav*1e-10,5.)*(1./(exp(h*c/(wav*1e-10)*k_b*temp))-1.);
+    }
+    
   };
   
   /**
@@ -81,7 +91,7 @@ public:
   /**
    * Default destructor
    */
-  virtual ~ParadeRadiator();
+  ~ParadeRadiator();
   
   /**
    * Configures this configurable object.
@@ -91,14 +101,14 @@ public:
   /**
    * Setups the data of the library
    */
-  virtual void setup();
+  void setup();
   
   /**
    * Unsetups the data of the library
    */
-  virtual void unsetup();
+  void unsetup();
   
-  virtual void setupSpectra(CFreal wavMin, CFreal wavMax);
+  void setupSpectra(CFreal wavMin, CFreal wavMax);
   
   CFreal getEmission(CFreal lambda, RealVector &s_o);
   
@@ -109,15 +119,17 @@ public:
   void computeEmissionCPD();
   
   void getRandomEmission(CFreal &lambda, RealVector &s_o);
+
+  void getData();
   
-  void getSpectralIdxs(CFreal lambda, CFuint& idx1, CFuint& idx2);
-  
-protected:
-  
-  virtual void setLibrarySequentially();
+  inline void getSpectralIdxs(CFreal lambda, CFuint& idx1, CFuint& idx2);
+
+private:
+
+  void setLibrarySequentially();
   
   /// update the range of wavelengths to use
-  virtual void updateWavRange(CFreal wavMin, CFreal wavMax);
+  void updateWavRange(CFreal wavMin, CFreal wavMax);
   
   /// write the data (grid, temperatue, densities) corresponding to the local mesh
   void writeLocalData();
@@ -159,25 +171,28 @@ protected:
   bool fullGridInProcess() const {return (m_namespace != "Default");}
   
   /// apply the binning method to reduce the spectral data
-  virtual void computeBinning();
+  void computeBinning();
   
   /// apply the banding method to reduce the spectral data
-  virtual void computeBanding();
+  void computeBanding();
     
   /// apply the binning/banding method to reduce the spectral data
-  virtual void computeBinningBanding();
-  
+  void computeBinningBanding();
+
   /// compute recv counts and dispacements for parallel communication
   void computeRecvCountsDispls(const CFuint totalNbCells, const CFuint sizeCoeff, 
 			       CFuint& minSizeToSend, CFuint& maxSizeToSend,
 			       std::vector<int>& recvCounts, std::vector<int>& displs);
   
-  /// compute the averaged bins/bands
-  virtual void computeAveragedBins(const CFuint nbBinsre, 
-				   const CFuint testID,
-				   Framework::LocalArray<CFreal>::TYPE& vctBins);
+ 
   
-protected: 
+  /// compute the averaged bins/bands
+  virtual void computeAveragedBins
+  (const CFuint nbBinsre, 
+   const CFuint testID,
+   Framework::LocalArray<CFreal>::TYPE& vctBins);
+  
+private: 
   
   /// Rank in the corresponding MPI group (namespace)
   CFuint m_rank;
@@ -197,6 +212,9 @@ protected:
   /// File where the table is written
   std::string m_outTabName;
 
+  /// Bool expression to write the table in a file
+  bool m_writePARADEToFile;
+  
   /// directory where Parade is launched
   boost::filesystem::path m_paradeDir; 
 
@@ -288,6 +306,13 @@ protected:
   
   /// flag telling whether the input flowfield is in LTE
   bool m_isLTE;
+
+  bool m_Equilibrium;
+
+  /// flag telling whether the input flowfield has only the mass fractions as data
+  bool m_massfraction;
+
+  bool m_TisLTE;
   
   /// flag telling whether the binning has to be applied
   bool m_binning;
@@ -304,8 +329,8 @@ protected:
   /// flag array to indicate molecular species
   std::vector<bool> m_molecularSpecies;
 
-  // bool to indicate if the source is computed in LTE conditions or not
-  bool m_Equilibrium;
+  /// bool to write the table in a file
+  bool m_writeHSNB;
   
 }; // end of class ParadeRadiator
 
@@ -321,30 +346,43 @@ void ParadeRadiator::DeviceFunc::computeCellBins(const bool isEquil,
 						 const CFreal temp,
 						 const CFreal dWavIn,
 						 const CFreal* vctBins,  
-						 const CFreal* data,
+						 CFreal* data,
+						 //const CFreal* data,
 						 CFreal* alpha_bin,
 						 CFreal* emission_bin,
 						 CFreal* B_binCurr)
 {
   const CFuint nbCols = nbPoints*3;
-  const CFreal test   = data[j*nbCols + i*3+testID];
   const CFreal emCoef = data[j*nbCols + i*3+1];
-  const CFreal abCoef = data[j*nbCols + i*3+2];
-  CFreal h = 6.626070040e-34;     //SI units Js
-  CFuint c = 3e08; //SI units m/s
-  CFreal k_b = 1.3806485279e-23;  //SI units J/K
-  CFreal Bs = 0.0;
+  
+  // AL: just to reproduce the BUG
+  CFreal& abCoef = data[j*nbCols + i*3+2];
+  
+  const CFreal h = 6.626070040e-34;     //SI units Js
+  const CFuint c = 3e08; //SI units m/s
+  const CFreal k_b = 1.3806485279e-23;  //SI units J/K
+  CFreal Bs = 0.;
+  
   if(!isEquil){ 
-    Bs = emCoef/abCoef;
+    if(abCoef=!0){ // this line is a clear BUG!!!!
+      Bs = emCoef/abCoef;
+    }
+    else{
+      Bs = computePlanckFun(h,c,k_b,data[j+nbCols+i*3],temp);
+    }
   }
-  else {
-    Bs = (2*h*pow(c,2)/pow((data[j+nbCols+i*3]*1e-10),5))*(1/(exp(h*c/((data[j+nbCols+i*3]*1e-10)*k_b*temp))-1));
+  else{
+    Bs = computePlanckFun(h,c,k_b,data[j+nbCols+i*3],temp);
   }
   
   const CFuint idx0 = nbBinsre*j;
-  alpha_bin[idx0]    = 0.;
-  emission_bin[idx0] = 0.;
-  B_binCurr[idx0]    = 0.;
+  
+  /*
+    alpha_bin[idx0]    = 0.;
+    emission_bin[idx0] = 0.;
+    B_binCurr[idx0]    = 0.;
+  */
+  const CFreal test   = data[j*nbCols + i*3+testID];
   
   for(CFuint k=1;k<nbBinsre;++k) {
     CFreal alpha_bincoeff = 0.;
@@ -352,13 +390,22 @@ void ParadeRadiator::DeviceFunc::computeCellBins(const bool isEquil,
     CFreal B_bincoeff = 0.;
     
     if((test>=vctBins[k-1]) && (test<vctBins[k])) {
-      const CFreal dWav = dWavIn*1e-10;
-      B_bincoeff        = Bs*dWav;
-      alpha_bincoeff    = abCoef*B_bincoeff;
-      emission_bincoeff = emCoef*dWav;
+      // const CFreal dWav = dWavIn*1e-10;
+      // B_bincoeff        = Bs*dWav;
+      // alpha_bincoeff    = abCoef*B_bincoeff;
+      // emission_bincoeff = emCoef*dWav;
+      
+      alpha_bincoeff = abCoef*Bs*dWavIn*1e-10;
+      emission_bincoeff = emCoef*dWavIn*1e-10;
+      B_bincoeff = Bs*dWavIn*1e-10;
+    }
+    else{
+      B_bincoeff = 0.;
+      alpha_bincoeff = 0.;
+      emission_bincoeff = 0.;
     }
     
-    const CFuint idx = k + idx0;
+    const CFuint idx  = k + idx0;
     alpha_bin[idx]    += alpha_bincoeff;
     emission_bin[idx] += emission_bincoeff;
     B_binCurr[idx]    += B_bincoeff;
@@ -366,7 +413,7 @@ void ParadeRadiator::DeviceFunc::computeCellBins(const bool isEquil,
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
+    
   } // namespace RadiativeTransfer
 
 } // namespace COOLFluiD

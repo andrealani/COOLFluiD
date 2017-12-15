@@ -232,7 +232,7 @@ Simulator.SubSystem.ProcessingRad&8.Namespace = Rad&8
 Simulator.SubSystem.ProcessingRad&8.Data.CollaboratorNames = SMRad&8 IteratorRad&8 LSSRad&8
 Simulator.SubSystem.ProcessingRad&8.Comds = RadiativeTransferFVDOM 
 Simulator.SubSystem.ProcessingRad&8.Names = Radiation
-Simulator.SubSystem.ProcessingRad&8.Radiation.nDirs = 80
+Simulator.SubSystem.ProcessingRad&8.Radiation.nDirs = 8
 Simulator.SubSystem.ProcessingRad&8.Radiation.UseExponentialMethod = true
 #Simulator.SubSystem.ProcessingRad&8.Radiation.DirName = ./
 #Simulator.SubSystem.ProcessingRad&8.Radiation.BinTabName = air-100Bands.dat #air-100Bins.dat
@@ -285,14 +285,15 @@ Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeR
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.LocalDirName = ParadeData
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 1500
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Tmin = 200
-Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = false #true
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = true 
+#false 
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.MolecularSpecies = 0 1 1 1 0 0 1 1 1 0 0 
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Binning = true
-Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbBins = 100
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbBins = 5 #10
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Banding = false
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbBands = 1
-# this flag uses a parallel algorithm for the bins computation
-#Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.SaveMemory = true
+# this flag uses a parallel algorithm for the bins computation (faster and memory usage-friendly)
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.SaveMemory = true
 
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b1.ApplyTRS   = B_3
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b1.TypeTRS    = Wall

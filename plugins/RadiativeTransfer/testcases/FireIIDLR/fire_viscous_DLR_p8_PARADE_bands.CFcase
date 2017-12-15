@@ -56,6 +56,7 @@ CFEnv.ExceptionDumps   = false
 CFEnv.ExceptionOutputs = false
 CFEnv.OnlyCPU0Writes = false
 #CFEnv.TraceToStdOut = true
+CFEnv.SyncAlgo = Old
 
 # Simulation Modules
 Simulator.Modules.Libs = libTecplotWriter libMutationppI libPhysicalModelDummy libFiniteVolume libEmptyConvergenceMethod libRadiativeTransfer libTecplot2CFmesh libCFmeshFileReader libCFmeshFileWriter libConcurrentCoupler
@@ -63,7 +64,7 @@ Simulator.Modules.Libs = libTecplotWriter libMutationppI libPhysicalModelDummy l
 # relative path to working directory
 Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/FireIIDLR
 # relative path to results directory 
-Simulator.Paths.ResultsDir = ./RESULTS_FIREII_INVISCID
+Simulator.Paths.ResultsDir = ./RESULTS_FIREII_VISCOUS
 
 # NOTE: this testcase works also if the following 3 lines are commented out
 Maestro = LoopMaestro
@@ -84,22 +85,27 @@ Simulator.SubSystemTypes = OnlyMeshSubSystem StandardSubSystem
 Simulator.SubSystemA.Default.PhysicalModelType = PhysicalModelDummy
 Simulator.SubSystemA.PhysicalModelDummy.Dimensions = 3
 Simulator.SubSystemA.PhysicalModelDummy.Equations = \
-	rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp rhoe p T Mach
+	rhoe rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp p T Mach	
+#rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp rhoe p T Mach
 
 Simulator.SubSystemA.MeshCreator                                 = CFmeshFileReader
-Simulator.SubSystemA.CFmeshFileReader.Data.FileName              = fire_inviscid_DLR.CFmesh
+Simulator.SubSystemA.CFmeshFileReader.Data.FileName              = fire_viscous_DLR.CFmesh 
+#fire_inviscid_DLR.CFmesh
 Simulator.SubSystemA.CFmeshFileReader.convertFrom                = Tecplot2CFmesh
 Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.Discontinuous  = true
 Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.SolutionOrder  = P0
 Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.HasBlockFormat = false
 Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.SurfaceTRS = B_3 B_4 B_6
 Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = \
-	"N2_partial_density" "O2_partial_density" "NO_partial_density" "N_partial_density" "O_partial_density" \
-	"N2p_partial_density" "O2p_partial_density" "NOp_partial_density" "Np_partial_density" "Op_partial_density" \
-	"e_partial_density" "pressure" "temperature" "Mach_number"
+	"e_partial_density" "N2_partial_density" "O2_partial_density" "NO_partial_density" "N_partial_density" "O_partial_density" \
+        "N2p_partial_density" "O2p_partial_density" "NOp_partial_density" "Np_partial_density" "Op_partial_density" \
+        "pressure" "temperature" "Mach_number"
+#	"N2_partial_density" "O2_partial_density" "NO_partial_density" "N_partial_density" "O_partial_density" \
+#	"N2p_partial_density" "O2p_partial_density" "NOp_partial_density" "Np_partial_density" "Op_partial_density" \
+#	"e_partial_density" "pressure" "temperature" "Mach_number"
 Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.NbElementTypes = 2
 Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = false
-Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.Precision = 1
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
 Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.SaveNodalStates = true
 Simulator.SubSystemA.CFmeshFileReader.onlyConversion = true
 
@@ -130,7 +136,9 @@ Simulator.SubSystem.Rad&8.PhysicalModelType = PhysicalModelDummy
 Simulator.SubSystem.Rad&8.PhysicalModelName = PMRad&8
 Simulator.SubSystem.PMRad&8.Dimensions = 3
 Simulator.SubSystem.PMRad&8.Equations = \
-	rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp rhoe p T Mach
+	rhoe rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp p T Mach
+#rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp rhoe p T Mach
+
 # Mutation++
 Simulator.SubSystem.PMRad&8.PropertyLibrary = Mutationpp
 Simulator.SubSystem.PMRad&8.Mutationpp.mixtureName = air11_DLR
@@ -141,34 +149,34 @@ Simulator.SubSystem.PMRad&8.Mutationpp.StateModelName = ChemNonEq1T
 ## Output
 ###################
 
-#Simulator.SubSystem.OutputFormat      = Null~7 Tecplot
-#Simulator.SubSystem.OutputFormatNames = Null@7 Tecplot7
-#Simulator.SubSystem.Tecplot7.Namespace = Rad7
-#Simulator.SubSystem.Tecplot7.FileName  = fire2_rad7.plt
-#Simulator.SubSystem.Tecplot7.Data.SurfaceTRS = B_3 B_4 B_6
-#Simulator.SubSystem.Tecplot7.SaveRate = 100
-#Simulator.SubSystem.Tecplot7.AppendIter = false
-#Simulator.SubSystem.Tecplot7.Data.DataHandleOutput.CCSocketNames = CellID divq qx qy qz
-#Simulator.SubSystem.Tecplot7.Data.DataHandleOutput.CCVariableNames = CellID divq qx qy qz
-#Simulator.SubSystem.Tecplot7.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1
-#Simulator.SubSystem.Tecplot7.WriteSol = ParWriteSolutionBlock
-#Simulator.SubSystem.Tecplot7.Data.CollaboratorNames = SMRad7 
-#Simulator.SubSystem.Null&7.Namespace = Rad&7
-#Simulator.SubSystem.Null&7.Data.CollaboratorNames = SMRad&7
+Simulator.SubSystem.OutputFormat      = Null~7 Tecplot
+Simulator.SubSystem.OutputFormatNames = Null@7 Tecplot7
+Simulator.SubSystem.Tecplot7.Namespace = Rad7
+Simulator.SubSystem.Tecplot7.FileName  = fire2_rad7.plt
+Simulator.SubSystem.Tecplot7.Data.SurfaceTRS = B_3 B_4 B_6
+Simulator.SubSystem.Tecplot7.SaveRate = 100
+Simulator.SubSystem.Tecplot7.AppendIter = false
+Simulator.SubSystem.Tecplot7.Data.DataHandleOutput.CCSocketNames = CellID divq qx qy qz
+Simulator.SubSystem.Tecplot7.Data.DataHandleOutput.CCVariableNames = CellID divq qx qy qz
+Simulator.SubSystem.Tecplot7.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1
+Simulator.SubSystem.Tecplot7.WriteSol = ParWriteSolutionBlock
+Simulator.SubSystem.Tecplot7.Data.CollaboratorNames = SMRad7 
+Simulator.SubSystem.Null&7.Namespace = Rad&7
+Simulator.SubSystem.Null&7.Data.CollaboratorNames = SMRad&7
 
-Simulator.SubSystem.OutputFormat      = Tecplot~8
-Simulator.SubSystem.OutputFormatNames = Tecplot@8
-Simulator.SubSystem.Tecplot&8.Namespace = Rad&8
-Simulator.SubSystem.Tecplot&8.FileName  = fire2_rad&8.plt
-Simulator.SubSystem.Tecplot&8.Data.SurfaceTRS = B_3 B_4 B_6
-Simulator.SubSystem.Tecplot&8.SaveRate = 100
-Simulator.SubSystem.Tecplot&8.AppendIter = false
-Simulator.SubSystem.Tecplot&8.Data.DataHandleOutput.CCSocketNames = CellID divq qx qy qz
-Simulator.SubSystem.Tecplot&8.Data.DataHandleOutput.CCVariableNames = CellID divq qx qy qz
-Simulator.SubSystem.Tecplot&8.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1
-Simulator.SubSystem.Tecplot&8.WriteSol = ParWriteSolutionBlock
-Simulator.SubSystem.Tecplot&8.Data.CollaboratorNames = SMRad&8
-Simulator.SubSystem.Tecplot&8.Data.WithEquations = false
+#Simulator.SubSystem.OutputFormat      = Tecplot~8
+#Simulator.SubSystem.OutputFormatNames = Tecplot@8
+#Simulator.SubSystem.Tecplot&8.Namespace = Rad&8
+#Simulator.SubSystem.Tecplot&8.FileName  = fire2_rad&8.plt
+#Simulator.SubSystem.Tecplot&8.Data.SurfaceTRS = B_3 B_4 B_6
+#Simulator.SubSystem.Tecplot&8.SaveRate = 100
+#Simulator.SubSystem.Tecplot&8.AppendIter = false
+#Simulator.SubSystem.Tecplot&8.Data.DataHandleOutput.CCSocketNames = CellID divq qx qy qz
+#Simulator.SubSystem.Tecplot&8.Data.DataHandleOutput.CCVariableNames = CellID divq qx qy qz
+#Simulator.SubSystem.Tecplot&8.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 
+#Simulator.SubSystem.Tecplot&8.WriteSol = ParWriteSolutionBlock
+#Simulator.SubSystem.Tecplot&8.Data.CollaboratorNames = SMRad&8
+#Simulator.SubSystem.Tecplot&8.Data.WithEquations = false
 
 ###################
 ## Stop condition
@@ -186,7 +194,7 @@ Simulator.SubSystem.MeshCreator      = CFmeshFileReader~8
 Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader@8
 
 Simulator.SubSystem.CFmeshFileReader&8.Namespace = Rad&8
-Simulator.SubSystem.CFmeshFileReader&8.Data.FileName = fire_inviscid_DLR.CFmesh
+Simulator.SubSystem.CFmeshFileReader&8.Data.FileName = fire_viscous_DLR.CFmesh
 Simulator.SubSystem.CFmeshFileReader&8.Data.ScalingFactor = 1.
 Simulator.SubSystem.CFmeshFileReader&8.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
 Simulator.SubSystem.CFmeshFileReader&8.Data.CollaboratorNames = SMRad&8
@@ -218,12 +226,12 @@ Simulator.SubSystem.SMRad&8.Restart = true
 ###############################################################################
 
 # Data Processing
-Simulator.SubSystem.DataPostProcessing = DataProcessing~8
-Simulator.SubSystem.DataPostProcessingNames = ProcessingRad@8
+Simulator.SubSystem.DataPostProcessing = DataProcessing~8 DataProcessing
+Simulator.SubSystem.DataPostProcessingNames = ProcessingRad@8 ProcessingHeatFlux
 Simulator.SubSystem.ProcessingRad&8.Namespace = Rad&8
 Simulator.SubSystem.ProcessingRad&8.Data.CollaboratorNames = SMRad&8 IteratorRad&8 LSSRad&8
-Simulator.SubSystem.ProcessingRad&8.Comds = RadiativeTransferFVDOM RadiativeTransferOutputFVMCC
-Simulator.SubSystem.ProcessingRad&8.Names = Radiation HeatFlux
+Simulator.SubSystem.ProcessingRad&8.Comds = RadiativeTransferFVDOM 
+Simulator.SubSystem.ProcessingRad&8.Names = Radiation
 Simulator.SubSystem.ProcessingRad&8.Radiation.nDirs = 8
 Simulator.SubSystem.ProcessingRad&8.Radiation.UseExponentialMethod = true
 #Simulator.SubSystem.ProcessingRad&8.Radiation.DirName = ./
@@ -234,8 +242,20 @@ Simulator.SubSystem.ProcessingRad&8.Radiation.PID = 11
 Simulator.SubSystem.ProcessingRad&8.Radiation.TID = 12
 Simulator.SubSystem.ProcessingRad&8.ProcessRate = 1
 #Simulator.SubSystem.ProcessingRad&8.RunAtSetup = true
-Simulator.SubSystem.ProcessingRad&8.Radiation.OldAlgorithm = false #true
-Simulator.SubSystem.ProcessingRad&8.Radiation.RadNamespace = RadCoupler 
+Simulator.SubSystem.ProcessingRad&8.Radiation.OldAlgorithm = false
+Simulator.SubSystem.ProcessingRad&8.Radiation.wallEmissivity = 0.7
+
+# radiative heat flux
+Simulator.SubSystem.ProcessingHeatFlux.Namespace = Rad1
+Simulator.SubSystem.ProcessingHeatFlux.Data.CollaboratorNames = SMRad1 IteratorRad1 LSSRad1
+Simulator.SubSystem.ProcessingHeatFlux.Comds = RadiativeTransferOutputFVMCC
+Simulator.SubSystem.ProcessingHeatFlux.Names = HeatFlux
+Simulator.SubSystem.ProcessingHeatFlux.HeatFlux.applyTRS = B_3
+Simulator.SubSystem.ProcessingHeatFlux.HeatFlux.TID = 12
+Simulator.SubSystem.ProcessingHeatFlux.HeatFlux.OutputFileWall = heatFlux-P1.plt
+Simulator.SubSystem.ProcessingHeatFlux.HeatFlux.AppendTime = false
+Simulator.SubSystem.ProcessingHeatFlux.HeatFlux.AppendIter = true
+#
 
 # here we need to find a way to write expression
 Simulator.SubSystem.ProcessingRad&8.Radiation.NbThreads = 8
@@ -250,7 +270,7 @@ Simulator.SubSystem.ProcessingRad&8.Radiation.BinningPARADE = true
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.NumberLoops = 1
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.TempID = 12
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.WavelengthMax = 40000
-Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.WavelengthMin = 2000.
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.WavelengthMin = 2000
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.RadiationPhysicsNames = aa b1 b2 b3
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ApplyTRS   = InnerCells
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.TypeTRS    = Medium
@@ -263,13 +283,16 @@ Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeR
 #/Users/lani/PARADEv3.2.1/parade-3.2.1
 #/software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.LocalDirName = ParadeData
-Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 100
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 1500
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Tmin = 200
-Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = true
-Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.MolecularSpecies = 1 1 1 0 0 1 1 1 0 0 0 
-Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Binning = true
-Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbBins = 10
-# this flag uses a parallel algorithm for the bins computation
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = true 
+#false 
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.MolecularSpecies = 0 1 1 1 0 0 1 1 1 0 0 
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Binning = false
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbBins = 1 #10
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Banding = true
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbBands = 10
+# this flag uses a parallel algorithm for the bins computation (faster and memory usage-friendly)
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.SaveMemory = true
 
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b1.ApplyTRS   = B_3
@@ -281,16 +304,8 @@ Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b1.TypeTRS
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b2.ApplyTRS   = B_4
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b2.TypeTRS    = Boundary
 
-
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b3.ApplyTRS   = B_6
 Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b3.TypeTRS    = Boundary
-
-# radiative heat flux
-Simulator.SubSystem.ProcessingRad&8.HeatFlux.applyTRS = B_3
-Simulator.SubSystem.ProcessingRad&8.HeatFlux.TID = 12
-Simulator.SubSystem.ProcessingRad&8.HeatFlux.OutputFileWall = heatFlux-P&8.plt
-Simulator.SubSystem.ProcessingRad&8.HeatFlux.AppendTime = false
-Simulator.SubSystem.ProcessingRad&8.HeatFlux.AppendIter = true
 
 # fictitious coupling model
 Simulator.SubSystem.RadCoupler.SubSystemStatus = RadCouplerSubSystemStatus
