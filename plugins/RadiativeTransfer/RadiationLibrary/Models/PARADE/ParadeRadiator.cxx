@@ -1809,6 +1809,8 @@ void ParadeRadiator::computeAveragedBins(const CFuint nbBinsre,
 
   const CFuint tempID = m_radPhysicsHandlerPtr->getTempID();
   DeviceFunc df;
+  const CFuint isEquil = (const CFreal)m_Equilibrium;
+  
   // fill the alpha and emission arrays for each local cell in parallel simulations
   for(CFuint i=0;i<m_nbPoints;++i) {
     // m_alpha_bin, m_emission_bin, B_bin are logically 2D arrays filled 
@@ -1816,7 +1818,7 @@ void ParadeRadiator::computeAveragedBins(const CFuint nbBinsre,
     for(CFuint j=0;j<nbCells;++j) {
       CFreal *const currState = m_pstates->getState(j);
       CFreal temp  = currState[tempID];
-      df.computeCellBins<CPU>(m_Equilibrium, m_nbPoints, i,j, nbBinsre, testID, temp, m_dWav,
+      df.computeCellBins<CPU>(isEquil, m_nbPoints, i,j, nbBinsre, testID, temp, m_dWav,
 			      &vctBins[0], &m_data[0], &m_alpha_bin[0], &m_emission_bin[0],
 			      B_binCurr);
     }

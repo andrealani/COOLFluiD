@@ -2,6 +2,7 @@
 #define COOLFluiD_RadiativeTransfer_ParadeRadiator_hh
 
 //////////////////////////////////////////////////////////////////////////////
+
 #include "RadiativeTransfer/RadiationLibrary/Radiator.hh"
 #include "MathTools/RealMatrix.hh"
 #include "MathTools/RealVector.hh"
@@ -12,6 +13,7 @@
 #include "Common/StringOps.hh"
 #include "Framework/PhysicalChemicalLibrary.hh"
 #include "Common/CFMap.hh"
+
 ///////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -48,7 +50,7 @@ public:
     /// Compute all binned data corresponding to the given cell
     /// The template parameter prevents from having linking errors
     template <DeviceType DT>
-    HOST_DEVICE void computeCellBins(const bool isEquil,
+    HOST_DEVICE void computeCellBins(const CFuint isEquil,
 				     const CFuint nbPoints,
 				     const CFuint i, 
 				     const CFuint j, 
@@ -91,7 +93,7 @@ public:
   /**
    * Default destructor
    */
-  ~ParadeRadiator();
+  virtual ~ParadeRadiator();
   
   /**
    * Configures this configurable object.
@@ -101,44 +103,42 @@ public:
   /**
    * Setups the data of the library
    */
-  void setup();
+  virtual void setup();
   
   /**
    * Unsetups the data of the library
    */
-  void unsetup();
+  virtual void unsetup();
   
-  void setupSpectra(CFreal wavMin, CFreal wavMax);
+  virtual void setupSpectra(CFreal wavMin, CFreal wavMax);
   
-  CFreal getEmission(CFreal lambda, RealVector &s_o);
+  virtual CFreal getEmission(CFreal lambda, RealVector &s_o);
   
-  CFreal getAbsorption(CFreal lambda, RealVector &s_o);
+  virtual CFreal getAbsorption(CFreal lambda, RealVector &s_o);
   
-  CFreal getSpectraLoopPower();
+  virtual CFreal getSpectraLoopPower();
   
-  void computeEmissionCPD();
+  virtual void computeEmissionCPD();
   
-  void getRandomEmission(CFreal &lambda, RealVector &s_o);
+  virtual void getRandomEmission(CFreal &lambda, RealVector &s_o);
 
-  void getData();
-  
   inline void getSpectralIdxs(CFreal lambda, CFuint& idx1, CFuint& idx2);
-
-private:
-
-  void setLibrarySequentially();
+  
+protected:
+  
+  virtual void setLibrarySequentially();
   
   /// update the range of wavelengths to use
-  void updateWavRange(CFreal wavMin, CFreal wavMax);
+  virtual void updateWavRange(CFreal wavMin, CFreal wavMax);
   
   /// write the data (grid, temperatue, densities) corresponding to the local mesh
-  void writeLocalData();
+  virtual void writeLocalData();
   
   /// read the radiative coefficients corresponding to the local mesh
-  void readLocalRadCoeff();
+  virtual void readLocalRadCoeff();
   
   /// write the local mesh radiative coefficients to a ASCII file
-  void writeLocalRadCoeffASCII(const CFuint nbCells);
+  virtual void writeLocalRadCoeffASCII(const CFuint nbCells);
   
   /// run PARADE
   void runLibrary() const
@@ -171,18 +171,18 @@ private:
   bool fullGridInProcess() const {return (m_namespace != "Default");}
   
   /// apply the binning method to reduce the spectral data
-  void computeBinning();
+  virtual void computeBinning();
   
   /// apply the banding method to reduce the spectral data
-  void computeBanding();
+  virtual void computeBanding();
     
   /// apply the binning/banding method to reduce the spectral data
-  void computeBinningBanding();
-
+  virtual void computeBinningBanding();
+  
   /// compute recv counts and dispacements for parallel communication
-  void computeRecvCountsDispls(const CFuint totalNbCells, const CFuint sizeCoeff, 
-			       CFuint& minSizeToSend, CFuint& maxSizeToSend,
-			       std::vector<int>& recvCounts, std::vector<int>& displs);
+  virtual  void computeRecvCountsDispls(const CFuint totalNbCells, const CFuint sizeCoeff, 
+					CFuint& minSizeToSend, CFuint& maxSizeToSend,
+					std::vector<int>& recvCounts, std::vector<int>& displs);
   
  
   
@@ -192,7 +192,7 @@ private:
    const CFuint testID,
    Framework::LocalArray<CFreal>::TYPE& vctBins);
   
-private: 
+protected: 
   
   /// Rank in the corresponding MPI group (namespace)
   CFuint m_rank;
@@ -337,7 +337,7 @@ private:
 //////////////////////////////////////////////////////////////////////////////
 
 template <DeviceType DT>
-void ParadeRadiator::DeviceFunc::computeCellBins(const bool isEquil,
+void ParadeRadiator::DeviceFunc::computeCellBins(const CFuint isEquil,
 						 const CFuint nbPoints,
 						 const CFuint i, 
 						 const CFuint j, 
@@ -347,7 +347,6 @@ void ParadeRadiator::DeviceFunc::computeCellBins(const bool isEquil,
 						 const CFreal dWavIn,
 						 const CFreal* vctBins,  
 						 CFreal* data,
-						 //const CFreal* data,
 						 CFreal* alpha_bin,
 						 CFreal* emission_bin,
 						 CFreal* B_binCurr)

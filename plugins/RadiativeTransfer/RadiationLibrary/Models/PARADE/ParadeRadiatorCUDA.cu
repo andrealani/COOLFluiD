@@ -46,13 +46,14 @@ paradeRadiatorCUDAProvider("ParadeRadiatorCUDA");
 
 //////////////////////////////////////////////////////////////////////////////
 
-__global__ void computeCellBinsKernel(const CFuint nbPoints, 
+__global__ void computeCellBinsKernel(const CFuint isEquil,
+				      const CFuint nbPoints, 
 				      const CFuint nbCells, 
 				      const CFuint nbBinsre,
-				      const CFuint testID, 
+				      const CFuint testID,
 				      const CFreal dWavIn,
 				      const CFreal* vctBins,
-				      const CFreal* data,
+				      CFreal* data,
 				      CFreal* alpha_bin, 
 				      CFreal* emission_bin,
 				      CFreal* B_binCurr)
@@ -62,12 +63,13 @@ __global__ void computeCellBinsKernel(const CFuint nbPoints,
   const CFuint pointID  = idx/nbPoints;
   const CFuint sizeLoop = nbCells*nbPoints;
   
-  // fill the alpha and emission arrays for each local cell in parallel simulations
+  // fill the alpha and emission arrayas for each local cell in parallel simulations
   // each row gives all the bins for a cell
   if (idx < sizeLoop) {
     ParadeRadiator::DeviceFunc df;
-    df.computeCellBins<GPU>(nbPoints, pointID, cellID, nbBinsre, testID, dWavIn, vctBins, 
-			    data, alpha_bin, emission_bin, B_binCurr);
+    const CFreal temp = 300.; // AL: here the equilibrium case is basically not supported
+    df.computeCellBins<GPU>(isEquil, nbPoints, pointID, cellID, nbBinsre, testID, temp, dWavIn,
+			    vctBins, data, alpha_bin, emission_bin, B_binCurr);
   }
 }
     
@@ -121,7 +123,7 @@ void ParadeRadiatorCUDA::computeBinning()
 
   CudaEnv::CudaTimer& timer = CudaEnv::CudaTimer::getInstance();
   
-  CFuint totalNbCells = m_pstates->getSize();
+  CFuint totalNbCells = this->m_pstates->getSize();
   const CFuint nbCols = m_nbPoints*3;
   CFuint nbCells = m_data.size()/nbCols;
   cf_assert(m_saveMemory && nbCells <= totalNbCells);
@@ -426,10 +428,11 @@ void ParadeRadiatorCUDA::computeAveragedBins(const CFuint nbBinsre,
   // copy input data from CPU to GPU
   vctBins.put(); 
   m_data.put();
-  
+
+  const CFuint isEquil = (const CFuint)m_Equilibrium;
   // call a kernel that computes bins 
   computeCellBinsKernel<<<blocks, threads>>>
-    (m_nbPoints, nbCells, nbBinsre, testID, m_dWav, vctBins.ptrDev(), m_data.ptrDev(),
+    (isEquil, m_nbPoints, nbCells, nbBinsre, testID, m_dWav, vctBins.ptrDev(), m_data.ptrDev(),
      m_alpha_bin.ptrDev(), m_emission_bin.ptrDev(), B_binCurr.ptrDev());
   
   // copy output data from GPU to CPU
