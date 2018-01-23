@@ -16,7 +16,7 @@
 # Simulation Modules
 Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libPoisson libFiniteVolume libBackwardEuler libTHOR2CFmesh
 
-CFEnv.ErrorOnUnusedConfig = true
+#CFEnv.ErrorOnUnusedConfig = true
 
 # Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/Poisson/testcases/Benchmarks
@@ -57,9 +57,9 @@ Simulator.SubSystem.LSSNames = BwdEulerLSS
 Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
 Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
-Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 300
-#Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
-#Simulator.SubSystem.NewtonIteratorLSS.Data.UseAIJ = true
+Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 300
+Simulator.SubSystem.BwdEulerLSS.Data.RelativeTolerance = 1e-4
+#Simulator.SubSystem.BwdEulerLSS.Data.UseAIJ = true
 #Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
 #Simulator.SubSystem.BwdEulerLSS.Data.PreconditionerRate = 5
 #
@@ -68,11 +68,12 @@ Simulator.SubSystem.BwdEuler.Data.Norm = L2
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
-Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = StdTimeRhs
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = Null
+#StdTimeRhs
 
 Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
 Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
-Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhosts
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
 Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 
@@ -83,8 +84,8 @@ Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Cons
 Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = FunctionST
-Simulator.SubSystem.CellCenterFVM.Data.Vars = x y phi
-Simulator.SubSystem.CellCenterFVM.Data.Def = -6.
+Simulator.SubSystem.CellCenterFVM.Data.FunctionST.Vars = x y phi
+Simulator.SubSystem.CellCenterFVM.Data.FunctionST.Def = -6.
 
 #Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = HolmesConnell
 #Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = StateDiff
