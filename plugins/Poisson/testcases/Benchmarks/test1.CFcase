@@ -14,7 +14,7 @@
 #
 
 # Simulation Modules
-Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libPoisson libFiniteVolume libBackwardEuler libTHOR2CFmesh
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libPoisson libFiniteVolume libFiniteVolumePoisson libBackwardEuler libTHOR2CFmesh
 
 #CFEnv.ErrorOnUnusedConfig = true
 
@@ -57,7 +57,7 @@ Simulator.SubSystem.LSSNames = BwdEulerLSS
 Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
 Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
-Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 300
+Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 1000
 Simulator.SubSystem.BwdEulerLSS.Data.RelativeTolerance = 1e-4
 #Simulator.SubSystem.BwdEulerLSS.Data.UseAIJ = true
 #Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
@@ -68,8 +68,6 @@ Simulator.SubSystem.BwdEuler.Data.Norm = L2
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
-Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = Null
-#StdTimeRhs
 
 Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
 Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
@@ -82,7 +80,7 @@ Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Null
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
 Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Cons
-Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = PureDiffFlux
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = FunctionST
 Simulator.SubSystem.CellCenterFVM.Data.FunctionST.Vars = x y phi
 Simulator.SubSystem.CellCenterFVM.Data.FunctionST.Def = -6.

@@ -12,7 +12,6 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-
 PoissonDiffVarSet::PoissonDiffVarSet(const std::string& name,
  Common::SafePtr<Framework::PhysicalModelImpl> model) :
   DiffusiveVarSet(name, model),
@@ -42,14 +41,23 @@ void PoissonDiffVarSet::setup()
 
 //////////////////////////////////////////////////////////////////////////////
 
-RealVector& PoissonDiffVarSet::getFlux
-(const RealVector& values,
- const std::vector<RealVector*>& gradients,
- const RealVector& normal)
+RealVector& PoissonDiffVarSet::getFlux(const RealVector& values,
+				       const std::vector<RealVector*>& gradients,
+				       const RealVector& normal,
+				       const CFreal& radius)
+{
+  return getFlux(values, gradients, normal);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+ 
+RealVector& PoissonDiffVarSet::getFlux(const RealVector& values,
+				       const std::vector<RealVector*>& gradients,
+				       const RealVector& normal)
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
-	
+  
   //@TODO: We need to figure out how to have veriable sigma
   // AL: not generic this assumes [p v T] variables !!!
   //CFreal Tdim = values[this->_TID];
@@ -67,18 +75,16 @@ RealVector& PoissonDiffVarSet::getFlux
   const CFuint dim    = PhysicalModelStack::getActive()->getDim();
 
   // AL: double check the sign
-
   _flux[phiID] = 0.0;
-
   for (CFuint i = 0; i < dim ; ++i) {
     _flux[phiID] += sigma*gradPhi[i]*normal[i];
-    //cout <<"PoissonDiffVarSet::getFlux; gradPhi["<< i <<"] = "<<gradPhi[i]<<"\n";
+    CFLog(DEBUG_MAX, "PoissonDiffVarSet::getFlux; gradPhi["<< i <<"] = "<<gradPhi[i]<< "\n");
   }
   
-  //cout <<"PoissonDiffVarSet::getFlux; _flux["<< phiID <<"] = "<< _flux <<"\n";
+  CFLog(DEBUG_MAX, "PoissonDiffVarSet::getFlux; _flux["<< phiID <<"] = "<< _flux <<"\n");
   return _flux;
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 CFreal PoissonDiffVarSet::getCurrUpdateDiffCoeff(CFuint iEqSS)

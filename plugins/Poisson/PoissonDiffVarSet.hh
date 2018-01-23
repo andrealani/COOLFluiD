@@ -77,15 +77,22 @@ public: // classes
    * Get the model
    */
   PoissonDiffTerm& getModel() {return *_model;}
-  
+
+  /**
+   * Get the diffusive flux
+   */
+  virtual RealVector& getFlux(const RealVector& values,
+                              const std::vector<RealVector*>& gradients,
+                              const RealVector& normal,
+                              const CFreal& radius);
   /**
    * Get the diffusive flux
    */
   virtual RealVector& getFlux(const RealVector& values,
                               const std::vector<RealVector*>& gradients,
                               const RealVector& normal);
-
-
+  
+  
   /**
    * Get the diffusive flux vector
    */
