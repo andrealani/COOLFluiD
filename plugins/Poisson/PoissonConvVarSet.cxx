@@ -1,5 +1,5 @@
 #include "Poisson/Poisson.hh"
-#include "PoissonConv3DVarSet.hh"
+#include "Poisson/PoissonConvVarSet.hh"
 #include "Environment/ObjectProvider.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -17,76 +17,67 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-PoissonConv3DVarSet::PoissonConv3DVarSet(Common::SafePtr<BaseTerm> term) :
-  PoissonConvVarSet(term)
+PoissonConvVarSet::PoissonConvVarSet(Common::SafePtr<BaseTerm> term) :
+  Framework::ConvectiveVarSet(term),
+  _model(term.d_castTo<PoissonConvTerm>())
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-PoissonConv3DVarSet::~PoissonConv3DVarSet()
+PoissonConvVarSet::~PoissonConvVarSet()
 {
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
-void PoissonConv3DVarSet::setup()
+void PoissonConvVarSet::setup()
 {
-  PoissonConvVarSet::setup();
-
+  Framework::ConvectiveVarSet::setup();
+  
   // set EquationSetData
-  PoissonConv3DVarSet::getEqSetData().resize(1);
-  PoissonConv3DVarSet::getEqSetData()[0].setup(0,0,1);
+  getEqSetData().resize(1);
+  getEqSetData()[0].setup(0,0,1);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-CFreal PoissonConv3DVarSet::getMaxEigenValue(const RealVector& data,
-				       const RealVector& normal)
-{
-  return 1;
-
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-CFreal PoissonConv3DVarSet::getMaxAbsEigenValue(const RealVector& data,
-					  const RealVector& normal)
+CFreal PoissonConvVarSet::getMaxEigenValue(const RealVector& data,
+					   const RealVector& normal)
 {
   return 1;
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
-void PoissonConv3DVarSet::computeEigenValues(const RealVector& data,
-				       const RealVector& normal,
-				       RealVector& result)
+CFreal PoissonConvVarSet::getMaxAbsEigenValue(const RealVector& data,
+					      const RealVector& normal)
 {
-  result[0] = 1;
-
+  return 1;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+void PoissonConvVarSet::computeEigenValues(const RealVector& data,
+					   const RealVector& normal,
+					   RealVector& result)
+{
+  result[0] = 1.;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void PoissonConv3DVarSet::computeFlux (const RealVector& data,
-				 const RealVector& normals)
+void PoissonConvVarSet::computeFlux (const RealVector& data,
+				     const RealVector& normals)
 {
-
   _fluxArray[0] = 0. ;
-
- 
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void PoissonConv3DVarSet::computeStateFlux (const RealVector& data)
+void PoissonConvVarSet::computeStateFlux (const RealVector& data)
 {
-
-  
-  _physFlux(0,XX) = 0;
-  _physFlux(0,YY) = 0;
-  _physFlux(0,ZZ) = 0;
-  
+  _physFlux = 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////

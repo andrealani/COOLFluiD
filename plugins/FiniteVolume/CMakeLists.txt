@@ -85,6 +85,8 @@ DistanceBasedExtrapolatorGMoveMultiTRS.hh
 FileInitState.cxx
 FileInitState.hh
 FiniteVolume.hh
+FunctionSourceTerm.cxx
+FunctionSourceTerm.hh
 FVMCCSparsity.cxx
 FVMCCSparsity.hh
 FVMCCSparsityNoBlock.cxx

@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Physics_Poisson_PoissonDiff3DCons_hh
-#define COOLFluiD_Physics_Poisson_PoissonDiff3DCons_hh
+#ifndef COOLFluiD_Physics_Poisson_PoissonDiffCons_hh
+#define COOLFluiD_Physics_Poisson_PoissonDiffCons_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -22,7 +22,7 @@ namespace COOLFluiD {
    *
    * @author Alejandro Alvarez
    */
-class PoissonDiff3DCons : public PoissonDiffVarSet {
+class PoissonDiffCons : public PoissonDiffVarSet {
 public:
 
   typedef PoissonConvTerm PTERM;
@@ -32,12 +32,12 @@ public:
    * Constructor
    * @see PoissonDiffVarSet
    */
-  PoissonDiff3DCons(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model);
+  PoissonDiffCons(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model);
 
   /**
    * Default destructor
    */
-  ~PoissonDiff3DCons();
+  ~PoissonDiffCons();
   
   /**
    * Set the quantities needed to compute gradients (pressure,
@@ -75,7 +75,7 @@ private:
   /// convective model
   Common::SafePtr<PTERM> m_eulerModel;
 
-}; // end of class PoissonDiff3DCons
+}; // end of class PoissonDiffCons
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -87,4 +87,4 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Physics_Poisson_PoissonDiff3DCons_hh
+#endif // COOLFluiD_Physics_Poisson_PoissonDiffCons_hh

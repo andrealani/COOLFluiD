@@ -1,9 +1,9 @@
-#ifndef COOLFluiD_Physics_Poisson_PoissonConv3DCons_hh
-#define COOLFluiD_Physics_Poisson_PoissonConv3DCons_hh
+#ifndef COOLFluiD_Physics_Poisson_PoissonConvCons_hh
+#define COOLFluiD_Physics_Poisson_PoissonConvCons_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "PoissonConv3DVarSet.hh"
+#include "Poisson/PoissonConvVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -16,24 +16,23 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represents a Poisson physical model 3D for conservative
- * variables
+ * This class represents a Poisson physical model for conservative variables
  *
  * @author Alejandro Alvarez Laguna
  */
-class PoissonConv3DCons : public PoissonConv3DVarSet {
+class PoissonConvCons : public PoissonConvVarSet {
 public: // classes
 
   /**
    * Constructor
    * @see PoissonModel
    */
-  PoissonConv3DCons(Common::SafePtr<Framework::BaseTerm> term);
+  PoissonConvCons(Common::SafePtr<Framework::BaseTerm> term);
 
   /**
    * Default destructor
    */
-  ~PoissonConv3DCons();
+  ~PoissonConvCons();
 
   /**
    * Set up the private data and give the maximum size of states physical
@@ -122,7 +121,7 @@ private: // data
   /// temporary matrix of left eigenvalues
   RealMatrix                       _leftEv;
   
-}; // end of class PoissonConv3DCons
+}; // end of class PoissonConvCons
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -134,4 +133,4 @@ private: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Physics_Poisson_PoissonConv3DCons_hh
+#endif // COOLFluiD_Physics_Poisson_PoissonConvCons_hh

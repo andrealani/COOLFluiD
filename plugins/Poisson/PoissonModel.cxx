@@ -1,3 +1,4 @@
+
 #include "Poisson/Poisson.hh"
 #include "Poisson/PoissonModel.hh"
 #include "Environment/ObjectProvider.hh"
@@ -17,6 +18,9 @@ namespace COOLFluiD {
     namespace Poisson {
 
 //////////////////////////////////////////////////////////////////////////////
+
+Environment::ObjectProvider<PoissonModel<DIM_1D>, PhysicalModelImpl,PoissonModule, 1>
+mfModel1DProvider("Poisson1D");
 
 Environment::ObjectProvider<PoissonModel<DIM_2D>, PhysicalModelImpl,PoissonModule, 1>
 mfModel2DProvider("Poisson2D");

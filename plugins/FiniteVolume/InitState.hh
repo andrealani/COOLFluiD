@@ -76,26 +76,19 @@ protected:
   virtual void configure ( Config::ConfigArgs& args );
 
 protected: // data
-
-  /// handle to the states
-  //Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > socket_states;
-
-
+  
   /// handle to the face normals
   Framework::DataSocketSink< CFreal> socket_normals;
-
+  
   /// storage of the states
   Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > socket_states;
-
+  
   /// storage of the ghost states
   Framework::DataSocketSink<Framework::State*> socket_gstates;
-
+  
   /// storage of the nodes
   Framework::DataSocketSink < Framework::Node* , Framework::GLOBAL > socket_nodes;
-
-
-
-
+  
   /// physical model var set
   Common::SafePtr<Framework::ConvectiveVarSet> _varSet;
   
