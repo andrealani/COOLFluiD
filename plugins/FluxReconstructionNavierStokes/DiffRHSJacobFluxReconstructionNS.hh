@@ -41,11 +41,6 @@ protected: //functions
   void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd);
   
   /**
-   * Add the updateCoeff corrections due to the partition faces
-   */
-  void addPartitionFacesCorrection();
-  
-  /**
    * compute the terms for the gradient computation for a bnd face
    */
   virtual void computeBndGradTerms(RealMatrix& gradTerm, RealMatrix& ghostGradTerm);

@@ -39,11 +39,6 @@ protected: //functions
    *      setFaceTermData() and set the geometrical data of the face
    */
   void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd);
-  
-  /**
-   * Add the updateCoeff corrections due to the partition faces
-   */
-  void addPartitionFacesCorrection();
     
 }; // class Solve
 

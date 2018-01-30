@@ -89,6 +89,9 @@ protected: // data
 
   /// heat capacity ratio minus one
   CFreal m_gammaMinusOne;
+  
+  /// variable for physical data of sol
+  RealVector m_solPhysData;
 
 }; // class MLPLimiterEuler2D
 
