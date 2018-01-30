@@ -84,8 +84,8 @@ protected: // functions
   /// compute the states and ghost states in the flx pnts
   void computeFlxPntStates();
   
-  /// compute the interface flux correction FI-FD
-  void computeInterfaceFlxCorrection();
+  /// compute the interface flux
+  virtual void computeInterfaceFlxCorrection();
   
   /// compute the total correction
   void computeCorrection(std::vector< RealVector >& corrections);
@@ -100,7 +100,7 @@ protected: // functions
   void updateWaveSpeed();
   
   /// set the bnd face data necessary to compute FI-FD
-  void setBndFaceData(CFuint faceID);
+  virtual void setBndFaceData(CFuint faceID);
   
   /**
    * compute the wave speed updates for this face

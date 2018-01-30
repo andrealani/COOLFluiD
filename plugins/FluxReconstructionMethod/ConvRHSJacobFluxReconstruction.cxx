@@ -77,7 +77,7 @@ void ConvRHSJacobFluxReconstruction::execute()
   CFLog(VERBOSE, "ConvRHSJacobFluxReconstruction::execute()\n");
   
   // boolean telling whether there is a diffusive term
-  const bool hasDiffTerm = getMethodData().hasDiffTerm();
+  const bool hasDiffTerm = getMethodData().hasDiffTerm() || getMethodData().hasArtificialViscosity();
   
   // get the elementTypeData
   SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
@@ -142,7 +142,7 @@ void ConvRHSJacobFluxReconstruction::execute()
       // if one of the neighbouring cells is parallel updatable, compute the correction flux
       if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable())
       {
-	// compute FI-FD
+	// compute the interface flux
 	computeInterfaceFlxCorrection();
 	
 	// compute the wave speed updates
@@ -186,34 +186,10 @@ void ConvRHSJacobFluxReconstruction::execute()
         computeOneJacob(RIGHT);
       }
 
-      
-      if(m_cells[LEFT]->getID() == 160)
-      {
-        for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
-        {
-	  
-	  CFLog(VERBOSE, "updateFace " << iState << ": " << m_divContFlxL[iState] << "\n");
-
-        }
-      }
-      if(m_cells[RIGHT]->getID() == 160)
-      {
-        for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
-        {
-	  
-	  CFLog(VERBOSE, "updateFace " << iState << ": " << m_divContFlxR[iState] << "\n");
-
-        }
-      }
-
       // release the GeometricEntity
       m_faceBuilder->releaseGE();
-
     }
   }
-  
-  // add the correction due to partition faces
-  //addPartitionFacesCorrection();
   
   //// Loop over the elements to calculate the divergence of the continuous flux
   
@@ -238,9 +214,6 @@ void ConvRHSJacobFluxReconstruction::execute()
 
       // get the states in this cell
       m_cellStates = m_cell->getStates();
-      
-      //CFLog(VERBOSE,"cell ID: " << m_cell->getID() << "\n");
-      //CFLog(VERBOSE,"coords: " << ((*m_cellStates)[0])->getCoordinates() << "\n");
 
       // if the states in the cell are parallel updatable or the gradients need to be computed, set the cell data
       if ((*m_cellStates)[0]->isParUpdatable() || hasDiffTerm)
@@ -249,7 +222,7 @@ void ConvRHSJacobFluxReconstruction::execute()
 	setCellData();
       }
       
-      // if the states in the cell are parallel updatable, compute the divergence of the discontinuous flx (-divFD)
+      // if the states in the cell are parallel updatable, compute the divergence of the discontinuous flx (-divFD+divhFD)
       if ((*m_cellStates)[0]->isParUpdatable())
       {
 	// compute the residual updates (-divFC)
@@ -275,16 +248,6 @@ void ConvRHSJacobFluxReconstruction::execute()
       // divide by the Jacobian to transform the residuals back to the physical domain
       //divideByJacobDet();
       
-      if(m_cell->getID() == 160)
-      {
-        for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
-        {
-	  
-	  CFLog(VERBOSE, "updateVol " << iState << ": " << m_divContFlx[iState] << "\n");
-
-        }
-      }
-      
       // print out the residual updates for debugging
       if(m_cell->getID() == 160)
       {
@@ -302,20 +265,12 @@ void ConvRHSJacobFluxReconstruction::execute()
           CFLog(VERBOSE,"\n");
           DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
           CFLog(VERBOSE, "UpdateCoeff: " << updateCoeff[(*m_cellStates)[iState]->getLocalID()] << "\n");
-	  
-	  //CFLog(VERBOSE, "state " << iState << ": " << *(((*m_cellStates)[iState])->getData()) << "\n");
-	  //CFLog(VERBOSE, "coord: " << ((*m_cellStates)[iState])->getCoordinates() << "\n");
-
         }
       }
       //release the GeometricEntity
       m_cellBuilder->releaseGE();
     }
   }
-  
-  // get the datahandle of the rhs
-  //DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
-  //rhs = 0.0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -367,14 +322,11 @@ void ConvRHSJacobFluxReconstruction::computeBothJacobs()
       {
         // perturb physical variable in state
         m_numJacob->perturb(iEqPert,pertState[iEqPert]);
-
-        // backup and reconstruct physical variable in the flux points
-        //backupAndReconstructPhysVar(iEqPert,*m_states[iSide]);// had arg iSide
 	
 	// compute the perturbed left and right states in the flx pnts
 	computeFlxPntStates();
 	
-	// compute perturbed FI-FD
+	// compute perturbed FI
 	computeInterfaceFlxCorrection();
 	
 	// compute the perturbed corrections
@@ -413,9 +365,6 @@ void ConvRHSJacobFluxReconstruction::computeBothJacobs()
 
         // restore physical variable in state
         m_numJacob->restore(pertState[iEqPert]);
-
-        // restore physical variable in the flux points
-        //restorePhysVar(iEqPert);// had arg iSide
       }
     }
   }
@@ -494,14 +443,11 @@ void ConvRHSJacobFluxReconstruction::computeOneJacob(const CFuint side)
       {
         // perturb physical variable in state
         m_numJacob->perturb(iEqPert,pertState[iEqPert]);
-
-        // backup and reconstruct physical variable in the flux points
-        //backupAndReconstructPhysVar(iEqPert,*m_states[iSide]);// had arg iSide
 	
 	// compute the left and right perturbed states in the flx pnts
 	computeFlxPntStates();
 	
-	// compute perturbed FI-FD
+	// compute perturbed FI
 	computeInterfaceFlxCorrection();
 	
 	// compute the perturbed corrections
@@ -532,9 +478,6 @@ void ConvRHSJacobFluxReconstruction::computeOneJacob(const CFuint side)
 
         // restore physical variable in state
         m_numJacob->restore(pertState[iEqPert]);
-
-        // restore physical variable in the flux points
-        //restorePhysVar(iEqPert);// had arg iSide
       }
     }
   }
@@ -586,10 +529,7 @@ void ConvRHSJacobFluxReconstruction::computeJacobConvCorrection()
       // perturb physical variable in state
       m_numJacob->perturb(iEqPert,pertState[iEqPert]);
 
-      // backup and reconstruct physical variable in the flux points
-      //backupAndReconstructPhysVar(iEqPert,*m_cellStates);
-
-      // compute the perturbed residual updates (-divFC)
+      // compute the perturbed residual updates (-divFD+divhFD)
       computeDivDiscontFlx(m_pertCorrections);
       
       // put the perturbed and unperturbed corrections in the correct format
@@ -616,9 +556,6 @@ void ConvRHSJacobFluxReconstruction::computeJacobConvCorrection()
 
       // restore physical variable in state
       m_numJacob->restore(pertState[iEqPert]);
-
-      // restore physical variable in the flux points
-      //restorePhysVar(iEqPert);
     }
   }
 //   if (m_cell->getID() == 49)
@@ -635,43 +572,6 @@ void ConvRHSJacobFluxReconstruction::computeJacobConvCorrection()
 
   // reset to zero the entries in the block accumulator
   acc.reset();
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ConvRHSJacobFluxReconstruction::backupAndReconstructPhysVar
-    (const CFuint iVar, const vector< State* >& cellIntStates)
-{
-  // backup
-  backupPhysVar(iVar);
-  
-
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ConvRHSJacobFluxReconstruction::backupPhysVar(const CFuint iVar)
-{
-  //cf_assert(m_nbrFlxPnts[m_orient] <= m_backupPhysVar.size());
-  //cf_assert(m_nbrFlxPnts[m_orient] <= m_backupGhostStates.size());
-  //for (CFuint iFlx = 0; iFlx < m_nbrFlxPnts[m_orient]; ++iFlx)
-  //{
-    //m_backupPhysVar[iFlx] = (*m_flxPntIntSol[iFlx])[iVar];
-    //m_backupGhostStates[iFlx] = *m_flxPntGhostSol[iFlx];
-  //}
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ConvRHSJacobFluxReconstruction::restorePhysVar(const CFuint iVar)
-{
-  //cf_assert(m_nbrFlxPnts[m_orient] <= m_backupPhysVar.size());
-  //cf_assert(m_nbrFlxPnts[m_orient] <= m_backupGhostStates.size());
-  //for (CFuint iFlx = 0; iFlx < m_nbrFlxPnts[m_orient]; ++iFlx)
-  //{
-    //(*m_flxPntIntSol[iFlx])[iVar] = m_backupPhysVar[iFlx];
-    //*m_flxPntGhostSol[iFlx] = m_backupGhostStates[iFlx];
-  //}
 }
 
 //////////////////////////////////////////////////////////////////////////////

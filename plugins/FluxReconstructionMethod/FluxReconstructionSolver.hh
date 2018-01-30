@@ -25,6 +25,7 @@ namespace COOLFluiD {
     // Forward declarations
     class ConvBndCorrectionsRHSFluxReconstruction;
     class DiffBndCorrectionsRHSFluxReconstruction;
+    class LLAVBndFluxReconstruction;
     
 //////////////////////////////////////////////////////////////////////////////  
     
@@ -78,12 +79,6 @@ public: // functions
   /// @pre the pointer to ConvergenceMethod is not constant to
   ///      allow dynamic_casting
   void setCollaborator(Framework::MultiMethodHandle<Framework::ConvergenceMethod> convMtd);
-
-  /// Gets the volume integrator of the space method.
-  virtual Common::SafePtr< Framework::VolumeIntegrator > getVolumeIntegrator()
-  {
-    return CFNULL;
-  }
   
   /// Defined the strategy list of this Method
   std::vector< Common::SafePtr< Framework::NumericalStrategy > > getStrategyList() const;
@@ -125,6 +120,9 @@ protected: // interface implementation functions
   
   /// Apply boundary conditions for diffusive terms
   virtual void applyBCDiffImpl();
+  
+  /// Apply boundary conditions for artificial viscosity
+  virtual void applyBCAVImpl();
   
   /// add source terms
   virtual void addSourceTermsImpl();
@@ -175,6 +173,9 @@ private: // data
   /// Command used to limit a solution
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_limiter;
   
+  /// Command used to add artificial viscosity
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_artificialVisc;
+  
   /// Command used to compute the error of the solution
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_computeError;
   
@@ -201,6 +202,9 @@ private: // data
   
   /// The string for configuration of the m_limiter command
   std::string m_limiterStr;
+  
+  /// The string for configuration of the m_artificialVisc command
+  std::string m_artificialViscStr;
   
   /// The string for configuration of the commands that compute
   /// RHS (and optionally the Jacobian)
@@ -255,6 +259,16 @@ private: // data
 
   /// The commands to use for applying the boundary conditions for the diffusive terms
   std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_bcsDiffComs;
+  
+  /// The commands to use for applying the boundary conditions for the artificial viscosity,
+  /// with LLAVBndRHSFluxReconstruction as type
+  std::vector< Common::SafePtr< LLAVBndFluxReconstruction > > m_bcsAV;
+
+  /// The commands to use for applying the boundary conditions for the artificial viscosity
+  std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_bcsAVComs;
+  
+  /// The artificial viscosity boundary condition command names for configuration
+  std::vector<std::string> m_bcNameAVStr;
 
 //////////////////////////////////////////////////////////////////////////////
 

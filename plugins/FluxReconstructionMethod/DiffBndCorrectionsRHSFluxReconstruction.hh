@@ -84,7 +84,7 @@ protected: // functions
   /// compute the states, gradients and ghost states, gradients in the flx pnts
   void computeFlxPntStates();
   
-  /// compute the interface flux correction FI-FD
+  /// compute the interface flux
   void computeInterfaceFlxCorrection();
   
   /// compute the total correction
@@ -237,6 +237,12 @@ protected: // data
   
   /// flag telling whether to freeze the gradients
   bool m_freezeGrads;
+  
+  /// average solution in a flux point
+  RealVector m_avgSol;
+  
+  /// average gradients in a flux point
+  std::vector< RealVector* > m_avgGrad;
   
   private:
 

@@ -32,7 +32,9 @@ void MLPLimiter::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< CFreal >("LimFactor","K factor in the MLP-u2 limiting part.");
   
-  options.addConfigOption< CFreal >("FreezeLimiter","Residual after which to freeze the residual.");
+  options.addConfigOption< CFreal >("FreezeLimiterRes","Residual after which to freeze the residual.");
+  
+  options.addConfigOption< CFuint >("FreezeLimiterIter","Iteration after which to freeze the residual.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -73,18 +75,23 @@ MLPLimiter::MLPLimiter(const std::string& name) :
   m_states2(),
   m_nbrNodesElem(),
   m_order(),
-  m_freezeLimiter(),
+  m_freezeLimiterRes(),
+  m_freezeLimiterIter(),
   m_limiterValues(),
   m_solPolyValsAtFlxPnts(CFNULL),
-  m_cellStatesFlxPnt()
+  m_cellStatesFlxPnt(),
+  m_cellStatesBackup()
 {
   addConfigOptionsTo(this);
 
   m_tvbLimitFactor = 0.0;
   setParameter( "LimFactor", &m_tvbLimitFactor);
   
-  m_freezeLimiter = -8.0;
-  setParameter( "FreezeLimiter", &m_freezeLimiter);
+  m_freezeLimiterRes = -20.0;
+  setParameter( "FreezeLimiterRes", &m_freezeLimiterRes);
+  
+  m_freezeLimiterIter = MathTools::MathConsts::CFuintMax();
+  setParameter( "FreezeLimiterIter", &m_freezeLimiterIter);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -121,12 +128,17 @@ void MLPLimiter::execute()
   
   const CFreal residual = SubSystemStatusStack::getActive()->getResidual();
   
-  const bool recomputeLimiter = residual > m_freezeLimiter;
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+  
+  const bool recomputeLimiter = true; //residual > m_freezeLimiterRes && iter < m_freezeLimiterIter;
+  
+  const bool useMin = residual < m_freezeLimiterRes || iter > m_freezeLimiterIter;
+  
+  const CFuint nbrElemTypes = elemType->size();
   
   if (recomputeLimiter)
   {
   // LOOP OVER ELEMENT TYPES, TO SET THE MINIMUM AND MAXIMUM CELL AVERAGED STATES IN THE NODES
-  const CFuint nbrElemTypes = elemType->size();
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
   {
     // get start and end indexes for this type of element
@@ -359,96 +371,73 @@ void MLPLimiter::execute()
 	   }
 	   else
 	   {
-	     CFreal phiMin = 1.0;
-	     
-	     // store the order to which was limited
-	     m_limiterValues[elemIdx][0] = 1.0;
-	   
-	     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
-	     {
-	       CFreal phi = 2.0;
-	        
-	       for (CFuint iNode = 0; iNode < m_nbrNodesElem; ++iNode)
-               {
-	         // get node ID
-                 const CFuint nodeID = (*m_cellNodes)[iNode]->getLocalID();
-	      
-	         // get min and max states
-                 RealVector minAvgState = nodeNghbCellMinAvgStates[nodeID];
-                 RealVector maxAvgState = nodeNghbCellMaxAvgStates[nodeID];
-		
-	         if (fabs(m_cellStatesNodesP1[iNode][iEq] - m_cellAvgState[iEq]) > MathConsts::CFrealEps())
-		 {
-	           CFreal r1 = (minAvgState[iEq]-m_cellAvgState[iEq])/(m_cellStatesNodesP1[iNode][iEq] - m_cellAvgState[iEq]);
-	           CFreal r2 = (maxAvgState[iEq]-m_cellAvgState[iEq])/(m_cellStatesNodesP1[iNode][iEq] - m_cellAvgState[iEq]);
-		   CFreal r = max(r1,r2);
-		   if(r < 0.0)
-		   {
-		     CFLog(NOTICE, "r < 0!!\n");
-		     CFLog(VERBOSE, "r: " << r << ", r1: " << r1 << ", r2: " << r2 << "\n");
-		     CFLog(VERBOSE, "min: " << minAvgState[iEq] << ", max: " << maxAvgState[iEq] << ", av: " << m_cellAvgState[iEq] << ", P1: " << m_cellStatesNodesP1[iNode][iEq] << "\n");
-		     r = 0.0;
-		   }
-		   CFreal Dm = m_cellStatesNodesP1[iNode][iEq] - m_cellAvgState[iEq];
-		   CFreal Dp = Dm*r;
-
-		   //CFreal epsilon2 = m_tvbLimitFactor*m_cell->computeVolume();
-		   //CFreal epsilon2 = pow(m_tvbLimitFactor*(m_maxAvgStateAll[iEq]-m_minAvgStateAll[iEq]),2);
-		   CFreal epsilon2 = m_tvbLimitFactor*pow((maxAvgState[iEq]-minAvgState[iEq]),2.0)/(1.0+(maxAvgState[iEq]-minAvgState[iEq])/(m_tvbLimitFactor*pow(m_cell->computeVolume(),0.75)));
-		   r = ((Dp*Dp+epsilon2)*Dm + 2.0*Dm*Dm*Dp)/(Dp*Dp + 2.0*Dm*Dm + Dm*Dp + epsilon2)*1.0/Dm;
-		   phi = min(phi,r);
-		 }
-		 else
-		 {
-		   phi = min(phi,1.0);
-		 }
-	       }
-
-	       CFLog(VERBOSE, "phi: " << phi << "\n");
-	       cf_assert(phi > -0.01 && phi < 2.01);
-	       if (phi < phiMin)
-	       {
-		 phiMin = phi;
-	       }
-	      
-	       for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-	       {
-	         //for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
-	         //{
-  	           (*((*m_cellStates)[iSol]))[iEq] = (1.0-phi)*m_cellAvgState[iEq] + phi*m_statesP1[iSol][iEq];
-	         //} 
-	       }
-	       if(m_cell->getID() == 36)
-      {
-	CFLog(VERBOSE, "new states: \n");
-	for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-	{
-	  CFLog(VERBOSE, (*((*m_cellStates)[iSol])) << "\n");
-	}
-      }
-	       
-	       // store the limiting value
-	       m_limiterValues[elemIdx][iEq+1] = phi;
-	     }
+	     executeSlopeLimiter(elemIdx, useMin);
 	     ++limitCounter;
-	     applyChecks(phiMin);
+	     
 	     // only for purposes of printing the shock detector!!
 	     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
 	     {
 	       //(*((*m_cellStates)[iSol]))[0] = 5.0;
-	     }
+             }
 	   }
 	 }
 	 else
 	 {
 	   // store the order to which was limited
-	   m_limiterValues[elemIdx][0] = iOrder;
+	   const CFuint prevOrder = static_cast<CFuint>(m_limiterValues[elemIdx][0]+0.5);
 	   
-	   if (m_order != iOrder)
+	   if (useMin)
+	   {
+	     m_limiterValues[elemIdx][0] = min(iOrder,prevOrder);
+	   }
+	   else
+	   {
+	     m_limiterValues[elemIdx][0] = iOrder;
+	   }
+	   
+	   if (!useMin || prevOrder == iOrder)
+	   {
+	     if (m_order != iOrder)
+	     {
+	       ++limitCounter;
+	       ++orderLimit;
+	       applyChecks(1.0);
+	       // only for purposes of printing the shock detector!!
+	       for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+	       {
+	         //(*((*m_cellStates)[iSol]))[0] = 5.0;
+	       }
+	     }
+	     break;
+	   }
+	   else if (useMin && prevOrder == 0)
+	   {
+	     executeSlopeLimiter(elemIdx,useMin);
+	     ++limitCounter;
+	     break;
+	   }
+	 }
+       }
+       else
+       {
+	 // store the order to which was limited
+	 const CFuint prevOrder = static_cast<CFuint>(m_limiterValues[elemIdx][0]+0.5);
+	 
+	 if (useMin)
+	 {
+	   m_limiterValues[elemIdx][0] = min(iOrder,prevOrder);
+	 }
+	 else
+	 {
+	   m_limiterValues[elemIdx][0] = iOrder;
+	 }
+	 
+	 if (!useMin || prevOrder == iOrder)
+	 {
+	   if (iOrder != m_order) 
 	   {
 	     ++limitCounter;
 	     ++orderLimit;
-	     applyChecks(1.0);
 	     // only for purposes of printing the shock detector!!
 	     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
 	     {
@@ -457,23 +446,12 @@ void MLPLimiter::execute()
 	   }
 	   break;
 	 }
-       }
-       else
-       {
-	 // store the order to which was limited
-	 m_limiterValues[elemIdx][0] = iOrder;
-	 
-	 if (iOrder != m_order) 
+	 else if (useMin && prevOrder == 0)
 	 {
+	   executeSlopeLimiter(elemIdx,useMin);
 	   ++limitCounter;
-	   ++orderLimit;
-	   // only for purposes of printing the shock detector!!
-	   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-	   {
-	     //(*((*m_cellStates)[iSol]))[0] = 5.0;
-	   }
+	   break;
 	 }
-	 break;
        }
      }
 //       else
@@ -500,7 +478,24 @@ void MLPLimiter::execute()
   {      
     applyPrevLimiter();
   }
+  
+  CFreal sumLim = 0.0;
+  for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
+  {
+    // get start and end indexes for this type of element
+    const CFuint startIdx = (*elemType)[iElemType].getStartIdx();
+    const CFuint endIdx   = (*elemType)[iElemType].getEndIdx  ();
 
+    // loop over cells
+    for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
+    {
+      for (CFuint iEq = 0; iEq < m_nbrEqs+1; ++iEq)
+      {
+        sumLim += m_limiterValues[elemIdx][iEq];
+      }
+    }
+  }
+  CFLog(NOTICE,"Sum limiters: " << sumLim << "\n");
   CFTRACEEND;
 }
 
@@ -584,14 +579,8 @@ void MLPLimiter::applyPrevLimiter()
       if (limitOrder != m_order)
       {
 	// check if order reduction is needed or P1 slope limiting
-        if (limitOrder != 1)
+        if (limitOrder != 0)
         {
-	  // copy the states in the correct format
-          for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-          {
-            m_states2[iSol] = (*((*m_cellStates)[iSol]));
-          }
-        
 	  // compute Pn-1 projection of states
           computeProjStates(m_states2,limitOrder);
 	    
@@ -822,55 +811,98 @@ void MLPLimiter::setMinMaxNghbrCellAvgStates()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void MLPLimiter::setLimitBooleans()
+void MLPLimiter::limitPerturbedStates(CFuint elemIdx, CFuint pertSol, CFuint pertVar)
 {
-//   // compute length scale factor
-//   const CFreal lengthScaleFactor = m_tvbLimitFactor*pow(m_cell->computeVolume(),m_lengthScaleExp);
-// 
-//   if (m_applyLimiter)
-//   {
-//     // check if we are in a constant part of u
-//     for (CFuint iNode = 0; iNode < m_nbrNodesElem && m_applyLimiter; ++iNode)
-//     {
-//       m_applyLimiter = !( fabs(m_cellStatesNodes[iNode][0] - m_cellAvgState[0]) < 1e-3 * m_cellAvgState[0] );	     
-//     }
-//     if (m_applyLimiter)
-//     {
-//       // check if we are in a smooth local maximum
-//       for (CFuint iNode = 0; iNode < m_nbrNodesElem && m_applyLimiter; ++iNode)
-//       {
-// 	bool cond1 = m_cellStatesNodesP1[iNode][0] - m_cellAvgState[0] > 0.0;
-// 	bool cond2 = m_cellStatesNodes[iNode][0] - m_cellStatesNodesP1[iNode][0] < 0.0;
-// 	bool cond3 = m_cellStatesNodes[iNode][0] > m_minAvgStateAll[0];
-//         m_applyLimiter = !( cond1 && cond2 && cond3 );	     
-//       }
-//       
-//       if(m_applyLimiter)
-//       {
-// 	// check if we are in a smooth local minimum
-//         for (CFuint iNode = 0; iNode < m_nbrNodesElem && m_applyLimiter; ++iNode)
-//         {
-// 	  bool cond1 = m_cellStatesNodesP1[iNode][0] - m_cellAvgState[0] < 0.0;
-// 	  bool cond2 = m_cellStatesNodes[iNode][0] - m_cellStatesNodesP1[iNode][0] > 0.0;
-// 	  bool cond3 = m_cellStatesNodes[iNode][0] < m_maxAvgStateAll[0];
-//           m_applyLimiter = !( cond1 && cond2 && cond3 );	     
-//         }
-//       }
-//     }
-//   }
+  const RealVector limiterValues = m_limiterValues[elemIdx];
+      
+  const CFuint limitOrder = static_cast<CFuint>(limiterValues[0]+0.5);
+  
+  if (limitOrder != m_order)
+  {
+    // get InnerCells TopologicalRegionSet
+    SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
+
+    // get the geodata of the geometric entity builder and set the TRS
+    StdTrsGeoBuilder::GeoData& geoData = m_cellBuilder->getDataGE();
+    geoData.trs = cells;
+    
+    // build the GeometricEntity
+    geoData.idx = elemIdx;
+    m_cell = m_cellBuilder->buildGE();
+
+    // get the states in this cell
+    m_cellStates = m_cell->getStates();
+    
+    // copy the states in the correct format
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    {
+      m_cellStatesBackup[iSol] = (*((*m_cellStates)[iSol]));
+    }
+  
+    if (limitOrder == 1)
+    {
+      // reconstruct cell averaged state
+      reconstructCellAveragedState();
+	  
+      // compute P1 projection of states
+      computeProjStates(m_statesP1,1);
+	  
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      {
+        const CFreal phi = limiterValues[iEq+1];
+	  
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+          (*((*m_cellStates)[iSol]))[iEq] = (1.0-phi)*m_cellAvgState[iEq] + phi*m_statesP1[iSol][iEq];
+        }
+      }
+    }
+    else
+    {   
+      // compute Pn-1 projection of states
+      computeProjStates(m_states2,limitOrder);
+	    
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+        {
+          (*((*m_cellStates)[iSol]))[iEq] = m_states2[iSol][iEq];
+        }
+      }
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void MLPLimiter::limitStates()
+void MLPLimiter::restoreStates(CFuint elemIdx)
 {
-//   for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
-//   {
-//     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-//     {
-//       
-//     }
-//   }
+  const RealVector limiterValues = m_limiterValues[elemIdx];
+      
+  const CFuint limitOrder = static_cast<CFuint>(limiterValues[0]+0.5);
+  
+  if (limitOrder != m_order)
+  {
+    // get InnerCells TopologicalRegionSet
+    SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
+
+    // get the geodata of the geometric entity builder and set the TRS
+    StdTrsGeoBuilder::GeoData& geoData = m_cellBuilder->getDataGE();
+    geoData.trs = cells;
+    
+    // build the GeometricEntity
+    geoData.idx = elemIdx;
+    m_cell = m_cellBuilder->buildGE();
+
+    // get the states in this cell
+    m_cellStates = m_cell->getStates();
+    
+    // copy the states in the correct format
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    {
+      (*((*m_cellStates)[iSol])) = m_cellStatesBackup[iSol];
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -879,14 +911,14 @@ void MLPLimiter::computeNodeStates(std::vector< RealVector > states, vector< Rea
 {
   // loop over nodes to extrapolate the states to the flux points and get the 
   // discontinuous normal flux in the flux points and the Riemann flux
-  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrNodesElem; ++iFlxPnt)
+  for (CFuint iNode = 0; iNode < m_nbrNodesElem; ++iNode)
   {        
-    statesNodes[iFlxPnt] = 0.0;
+    statesNodes[iNode] = 0.0;
 
     // extrapolate the left and right states to the flx pnts
     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
     {
-      statesNodes[iFlxPnt] += (*m_solPolyValsAtNodes)[iFlxPnt][iSol]*states[iSol];
+      statesNodes[iNode] += (*m_solPolyValsAtNodes)[iNode][iSol]*states[iSol];
     }
   }
 }
@@ -934,6 +966,10 @@ void MLPLimiter::setup()
   const CFuint nbrElemTypes = frLocalData.size();
   cf_assert(nbrElemTypes > 0);
   
+  const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
+  
+  m_order = static_cast<CFuint>(order);
+
   
   // get the coefs for extrapolation of the states to the flx pnts
   m_solPolyValsAtNodes = frLocalData[0]->getCoefSolPolyInNodes();
@@ -960,6 +996,9 @@ void MLPLimiter::setup()
     for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
     {
       RealVector temp(m_nbrEqs+1);
+      temp = 1.0;
+      temp[0] = m_order;
+      
       m_limiterValues.push_back(temp);
     }
   }
@@ -1011,13 +1050,10 @@ void MLPLimiter::setup()
     temp = 0.0;
     m_statesP1.push_back(temp);
     m_states2.push_back(temp);
+    m_cellStatesBackup.push_back(temp);
   }
   
   m_applyLimiter.resize(m_nbrNodesElem);
-  
-  const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
-  
-  m_order = static_cast<CFuint>(order);
   
   for (CFuint iOrder = 0; iOrder < order; ++iOrder)
   {
@@ -1029,6 +1065,99 @@ void MLPLimiter::setup()
     }
     m_transformationMatrices.push_back((*vdm)*temp*(*vdmInv));
   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void MLPLimiter::executeSlopeLimiter(const CFuint elemIdx, const bool useMin)
+{
+  // get the data handles for the minimum and maximum nodal states
+  DataHandle< RealVector > nodeNghbCellMinAvgStates = socket_nodeNghbCellMinAvgStates.getDataHandle();
+  DataHandle< RealVector > nodeNghbCellMaxAvgStates = socket_nodeNghbCellMaxAvgStates.getDataHandle();
+
+  CFreal phiMin = 1.0;
+	     
+  bool comparePhi = false;
+	     
+  // store the order to which was limited
+  if (useMin)
+  {
+    comparePhi = static_cast<CFuint>(m_limiterValues[elemIdx][0]+0.5) == 0;
+  }
+  m_limiterValues[elemIdx][0] = 0.0;
+	   
+  for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+  {
+    CFreal phi = 2.0;
+	        
+    for (CFuint iNode = 0; iNode < m_nbrNodesElem; ++iNode)
+    {
+      // get node ID
+      const CFuint nodeID = (*m_cellNodes)[iNode]->getLocalID();
+	      
+      // get min and max states
+      RealVector minAvgState = nodeNghbCellMinAvgStates[nodeID];
+      RealVector maxAvgState = nodeNghbCellMaxAvgStates[nodeID];
+		
+      if (fabs(m_cellStatesNodesP1[iNode][iEq] - m_cellAvgState[iEq]) > MathConsts::CFrealEps())
+      {
+        CFreal r1 = (minAvgState[iEq]-m_cellAvgState[iEq])/(m_cellStatesNodesP1[iNode][iEq] - m_cellAvgState[iEq]);
+        CFreal r2 = (maxAvgState[iEq]-m_cellAvgState[iEq])/(m_cellStatesNodesP1[iNode][iEq] - m_cellAvgState[iEq]);
+        CFreal r = max(r1,r2);
+	if(r < 0.0)
+	{
+	  CFLog(NOTICE, "r < 0!!\n");
+	  CFLog(VERBOSE, "r: " << r << ", r1: " << r1 << ", r2: " << r2 << "\n");
+	  CFLog(VERBOSE, "min: " << minAvgState[iEq] << ", max: " << maxAvgState[iEq] << ", av: " << m_cellAvgState[iEq] << ", P1: " << m_cellStatesNodesP1[iNode][iEq] << "\n");
+	  r = 0.0;
+	}
+	CFreal Dm = m_cellStatesNodesP1[iNode][iEq] - m_cellAvgState[iEq];
+	CFreal Dp = Dm*r;
+
+	//CFreal epsilon2 = m_tvbLimitFactor*m_cell->computeVolume();
+	//CFreal epsilon2 = pow(m_tvbLimitFactor*(m_maxAvgStateAll[iEq]-m_minAvgStateAll[iEq]),2);
+	CFreal epsilon2 = m_tvbLimitFactor*pow((maxAvgState[iEq]-minAvgState[iEq]),2.0)/(1.0+(maxAvgState[iEq]-minAvgState[iEq])/(m_tvbLimitFactor*pow(m_cell->computeVolume(),0.75)));
+	r = ((Dp*Dp+epsilon2)*Dm + 2.0*Dm*Dm*Dp)/(Dp*Dp + 2.0*Dm*Dm + Dm*Dp + epsilon2)*1.0/Dm;
+	phi = min(phi,r);
+      }
+      else
+      {
+	phi = min(phi,1.0);
+      }
+    }
+       
+    if (useMin && comparePhi)
+    {
+      phi = min(phi,m_limiterValues[elemIdx][iEq+1]);
+    }
+
+    CFLog(VERBOSE, "phi: " << phi << "\n");
+    cf_assert(phi > -0.01 && phi < 2.01);
+    if (phi < phiMin)
+    {
+      phiMin = phi;
+    }
+	      
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    {
+      //for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      //{
+      (*((*m_cellStates)[iSol]))[iEq] = (1.0-phi)*m_cellAvgState[iEq] + phi*m_statesP1[iSol][iEq];
+      //} 
+    }
+    if(m_cell->getID() == 36)
+    {
+      CFLog(VERBOSE, "new states: \n");
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+	CFLog(VERBOSE, (*((*m_cellStates)[iSol])) << "\n");
+      }
+    }
+	       
+    // store the limiting value
+    m_limiterValues[elemIdx][iEq+1] = phi;
+  }
+  applyChecks(phiMin);
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -48,13 +48,6 @@ public:
    * Default destructor.
    */
   virtual ~FluxReconstructionElementData();
-  
-//   /**
-//    * Returns the DataSocket's that this command needs as sinks
-//    * @return a vector of SafePtr with the DataSockets
-//    */
-//   std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
-//       needsSockets();
 
   /**
    * @return m_shape
@@ -117,27 +110,11 @@ public:
   }
 
   /**
-   * @return number of internal flux points
-   */
-  CFuint getNbrOfIntFlxPnts()
-  {
-//     cf_assert(m_solPntsLocalCoord1D.size() > 0);
-//     cf_assert(m_flxPntsLocalCoord1D.size() > 0);
-//     CFuint nbrIntFlx = m_dimensionality*(m_flxPntsLocalCoord1D.size()-2);
-//     const CFuint dim = static_cast<CFuint>(m_dimensionality);
-//     for (CFuint iDim = 1; iDim < dim; ++iDim)
-//     {
-//       nbrIntFlx *= m_solPntsLocalCoord1D.size();
-//     }
-    return 0;
-  }
-
-  /**
    * @return number of flux points on a face
    */
   CFuint getNbrOfFaceFlxPnts()
   {
-    return (getNbrOfFlxPnts() - getNbrOfIntFlxPnts())/getNbrCellFaces();
+    return getNbrOfFlxPnts()/getNbrCellFaces();
   }
 
   /**
@@ -169,46 +146,6 @@ public:
   }
 
   /**
-   * @return m_recCoefsFlxPnts1D
-   */
-  Common::SafePtr< RealMatrix > getRecCoefsFlxPnts1D()
-  {
-    return &m_recCoefsFlxPnts1D;
-  }
-
-  /**
-   * @return m_recCoefsFlxPnts1DOptim
-   */
-  Common::SafePtr< RealMatrix > getRecCoefsFlxPnts1DOptim()
-  {
-    return &m_recCoefsFlxPnts1DOptim;
-  }
-
-  /**
-   * @return m_derivCoefsSolPnts1D
-   */
-  Common::SafePtr< RealMatrix > getDerivCoefsSolPnts1D()
-  {
-    return &m_derivCoefsSolPnts1D;
-  }
-
-  /**
-   * @return m_solPolyDerivCoefsFlxPnts1D
-   */
-  Common::SafePtr< RealMatrix > getSolPolyDerivCoefsFlxPnts1D()
-  {
-    return &m_solPolyDerivCoefsFlxPnts1D;
-  }
-
-  /**
-   * @return m_solPolyDerivCoefsSolPnts1D
-   */
-  Common::SafePtr< RealMatrix > getSolPolyDerivCoefsSolPnts1D()
-  {
-    return &m_solPolyDerivCoefsSolPnts1D;
-  }
-
-  /**
    * @return m_solPntsLocalCoords
    */
   Common::SafePtr< std::vector< RealVector > > getSolPntsLocalCoords()
@@ -233,62 +170,6 @@ public:
   }
 
   /**
-   * @return m_flxPntMatrixIdxForReconstruction
-   */
-  Common::SafePtr< std::vector< CFuint > > getFlxPntMatrixIdxForReconstruction()
-  {
-    return &m_flxPntMatrixIdxForReconstruction;
-  }
-
-  /**
-   * @return m_solPntIdxsForReconstruction
-   */
-  Common::SafePtr< std::vector< std::vector< CFuint > > > getSolPntIdxsForReconstruction()
-  {
-    return &m_solPntIdxsForReconstruction;
-  }
-
-  /**
-   * @return m_solPntIdxsForRecOptim
-   */
-  Common::SafePtr< std::vector< std::vector< CFuint > > > getSolPntIdxsForRecOptim()
-  {
-    return &m_solPntIdxsForRecOptim;
-  }
-
-  /**
-   * @return m_solPntMatrixIdxForDerivation
-   */
-  Common::SafePtr< std::vector< std::vector< CFuint > > > getSolPntMatrixIdxForDerivation()
-  {
-    return &m_solPntMatrixIdxForDerivation;
-  }
-
-  /**
-   * @return m_flxPntMatrixIdxForDerivation
-   */
-  Common::SafePtr< std::vector< CFuint > > getFlxPntMatrixIdxForDerivation()
-  {
-    return &m_flxPntMatrixIdxForDerivation;
-  }
-
-  /**
-   * @return m_solPntIdxsForDerivation
-   */
-  Common::SafePtr< std::vector< std::vector< CFuint > > > getSolPntIdxsForDerivation()
-  {
-    return &m_solPntIdxsForDerivation;
-  }
-
-  /**
-   * @return m_flxPntIdxsForDerivation
-   */
-  Common::SafePtr< std::vector< std::vector< std::vector< CFuint > > > > getFlxPntIdxsForDerivation()
-  {
-    return &m_flxPntIdxsForDerivation;
-  }
-
-  /**
    * @return m_flxPntDerivDir
    */
   Common::SafePtr< std::vector< CFuint > > getFlxPntDerivDir()
@@ -310,14 +191,6 @@ public:
   Common::SafePtr< std::vector< CFuint > > getAllFlxPntIdxs()
   {
     return &m_allFlxPntIdxs;
-  }
-
-  /**
-   * @return m_intFlxPntIdxs
-   */
-  Common::SafePtr< std::vector< CFuint > > getIntFlxPntIdxs()
-  {
-    return &m_intFlxPntIdxs;
   }
 
   /**
@@ -401,14 +274,6 @@ public:
   }
 
   /**
-   * @return m_faceNodeConnPerOrientNoSymm
-   */
-//   Common::SafePtr< std::vector< std::vector< std::vector< CFuint > > > > getFaceNodeConnPerOrientNoSymm()
-//   {
-//     return &m_faceNodeConnPerOrientNoSymm;
-//   }
-
-  /**
    * @return m_faceNodeCoordsPerOrient
    */
   Common::SafePtr< std::vector< std::vector< std::vector< RealVector > > > > getFaceNodeCoordsPerOrient()
@@ -431,14 +296,6 @@ public:
   {
     return &m_faceMappedCoordDirPerOrient;
   }
-
-  /**
-   * @return m_faceNodeCoordsPerOrientNoSymm
-   */
-//   Common::SafePtr< std::vector< std::vector< std::vector< RealVector > > > > getFaceNodeCoordsPerOrientNoSymm()
-//   {
-//     return &m_faceNodeCoordsPerOrientNoSymm;
-//   }
 
   /**
    * @return m_solPolyExponents
@@ -541,22 +398,6 @@ public:
   }
 
   /**
-   * @return m_coefSolPolyDerivInFlxPntsOptim
-   */
-  Common::SafePtr< std::vector< std::vector< std::vector< CFreal > > > > getCoefSolPolyDerivInFlxPntsOptim()
-  {
-    return &m_coefSolPolyDerivInFlxPntsOptim;
-  }
-
-  /**
-   * @return m_solPntIdxsSolPolyDerivInFlxPntsOptim
-   */
-  Common::SafePtr< std::vector< std::vector< std::vector< CFuint > > > > getSolPntIdxsSolPolyDerivInFlxPntsOptim()
-  {
-    return &m_solPntIdxsSolPolyDerivInFlxPntsOptim;
-  }
-
-  /**
    * @return m_cflConvDiffRatio
    */
   CFreal getCFLConvDiffRatio()
@@ -652,22 +493,6 @@ protected: // functions
    */
   void resetFluxReconstructionElementData();
 
-//   /**
-//    * create vector with flux points local coordinate in 1D
-//    */
-//   void createFlxPntsLocalCoord1D();
-// 
-//   /**
-//    * create vector with solution points local coordinate in 1D
-//    */
-//   void createSolPntsLocalCoord1D();
-
-  /**
-   * compute coefficients for reconstruction of solution in flux points in 1D
-   * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
-   */
-  void computeRecCoefsFlxPnts1D();
-
   /**
    * compute coefficients for derivative of flux in solution points in 1D
    * @pre createSolPntsLocalCoord1D(), createFlxPntsLocalCoord1D()
@@ -730,11 +555,6 @@ protected: // functions
   void computeInitTransfMatrix();
 
   /**
-   * Creates the derivation direction of the flux points
-   */
-  virtual void createFlxPntDerivDir() = 0;
-
-  /**
    * Creates list of all solution points
    */
   void createAllSolPntIdxs();
@@ -743,11 +563,6 @@ protected: // functions
    * Creates list of all flux points
    */
   void createAllFlxPntIdxs();
-
-  /**
-   * Creates list of internal flux points
-   */
-  virtual void createIntFlxPntIdxs() = 0;
 
   /**
    * Creates the connectivity between faces and flux points
@@ -765,49 +580,6 @@ protected: // functions
    * @pre createFaceFluxPntsConn, createFaceFluxPntsConnPerOrient()
    */
   void createFaceFlxPntsCellLocalCoords();
-
-  /**
-   * Creates a vector containing the exponents of the terms in the flux polynomials.
-   */
-  virtual void createFlxPolyExponents() = 0;
-
-  /**
-   * Computes the polynomial coefficients of the flux polynomial basis functions.
-   */
-  void computeFlxPolyCoefs();
-
-  /**
-   * Creates the flux point index (the row index in m_recCoefsFlxPnts1D)
-   * for the solution reconstruction in each flux point
-   */
-  virtual void createFlxPntMatrixIdxForReconstruction() = 0;
-
-  /**
-   * Creates the solution point indices for the solution reconstruction in each flux point
-   */
-  virtual void createSolPntIdxsForReconstruction() = 0;
-
-  /**
-   * Creates the solution point index (the row index in m_derivCoefsSolPnts1D)
-   * for the flux derivation in each solution point
-   */
-  virtual void createSolPntMatrixIdxForDerivation() = 0;
-
-  /**
-   * Creates the flux point index (the column index in m_derivCoefsSolPnts1D)
-   * for the flux derivation in each solution point
-   */
-  virtual void createFlxPntMatrixIdxForDerivation() = 0;
-
-  /**
-   * Creates the solution point index for the flux derivation in each flux point
-   */
-  virtual void createSolPntIdxsForDerivation() = 0;
-
-  /**
-   * Creates the flux point index for the flux derivation in each solution point
-   */
-  virtual void createFlxPntIdxsForDerivation() = 0;
 
   /**
    * Creates the local coorinates of the cell nodes
@@ -831,14 +603,6 @@ protected: // functions
   virtual void createFaceNodeConnectivityPerOrient() = 0;
 
   /**
-   * Creates a list with the different possible connectivities of faces,
-   * not taking into account possible symmetries
-   * (--> more possible orientations than with function above)
-   * @pre createFaceNodeConnectivity()
-   */
-//   virtual void createFaceNodeConnectivityPerOrientNoSymm() = 0;
-
-  /**
    * Creates a vector containing the face node coordinates for each face.
    * @pre computeNodeLocalCoords() and createFaceNodeConnectivity()
    */
@@ -850,13 +614,6 @@ protected: // functions
    * @pre computeNodeLocalCoords() and createFaceNodeConnectivityPerOrient()
    */
   virtual void createFaceNodeCoordsPerOrient();
-
-  /**
-   * Creates a vector containing the face node coordinates for each face,
-   * arranged per orientation of the face connecitivity (not taking into account any symmetries).
-   * @pre computeNodeLocalCoords() and createFaceNodeConnectivityPerOrient()
-   */
-//   virtual void createFaceNodeCoordsPerOrientNoSymm();
 
   /**
    * Create the coefficients for the integration over a face
@@ -892,11 +649,6 @@ protected: // functions
    * create coefficients for computation of solution polynomials in the flx pnts
    */
   void createCoefSolPolyInFlxPnts();
-
-  /**
-   * create coefficients for optimized computation of solution polynomial derivatives
-   */
-  void createCoefSolPolyDerivInFlxPntsOptim();
 
   /**
    * create the cell mapped coordinates of a uniform distribution of points on the cell faces (for output)
@@ -977,16 +729,6 @@ protected: // protected data
   /// Distribution of flux points
   Common::SafePtr<BasePointDistribution> m_flxPntDistribution;
 
-  /// coefficients for solution reconstruction in the flux points
-  RealMatrix m_recCoefsFlxPnts1D;
-
-  /// coefficients for solution reconstruction in the flux points in an optimized way
-  RealMatrix m_recCoefsFlxPnts1DOptim;
-
-  /// indexes of solution points corresponding to the coefficients
-  /// for solution reconstruction in the flux points in an optimized way
-  std::vector< std::vector< CFuint > > m_solPntIdxsForRecFlxPnts1DOptim;
-
   /// coefficients for derivative computation in the solution points
   RealMatrix m_derivCoefsSolPnts1D;
 
@@ -1004,27 +746,6 @@ protected: // protected data
 
   /// face flux point local coordinates (face coordinates)
   std::vector< RealVector > m_faceFlxPntsFaceLocalCoords;
-
-  /// flux point index (row index in m_recCoefsFlxPnts1D) for solution reconstruction
-  std::vector< CFuint > m_flxPntMatrixIdxForReconstruction;
-
-  /// solution point indices for solution reconstruction
-  std::vector< std::vector< CFuint > > m_solPntIdxsForReconstruction;
-
-  /// solution point indices for solution reconstruction in an optimized way
-  std::vector< std::vector< CFuint > > m_solPntIdxsForRecOptim;
-
-  /// solution point index (row index in m_derivCoefsSolPnts1D) for flux derivation
-  std::vector< std::vector< CFuint > > m_solPntMatrixIdxForDerivation;
-
-  /// flux point index (column index in m_derivCoefsSolPnts1D) for flux derivation
-  std::vector< CFuint > m_flxPntMatrixIdxForDerivation;
-
-  /// solution point indices for flux derivation
-  std::vector< std::vector< CFuint > > m_solPntIdxsForDerivation;
-
-  /// flux point indices for flux derivation
-  std::vector< std::vector< std::vector< CFuint > > > m_flxPntIdxsForDerivation;
 
   /// flux point local coordinate derivative direction
   std::vector< CFuint > m_flxPntDerivDir;
@@ -1074,14 +795,8 @@ protected: // protected data
   /// cell face - mapped coordinate direction per orientation
   std::vector< RealVector > m_faceNormals;
 
-  /// cell face - node connectivity per orientation, not taking into account symmetries
-//   std::vector< std::vector< std::vector< CFuint > > > m_faceNodeConnPerOrientNoSymm;
-
   /// cell face - node coordinates per orientation
   std::vector< std::vector< std::vector< RealVector > > > m_faceNodeCoordsPerOrient;
-
-  /// cell face - node coordinates per orientation
-//   std::vector< std::vector< std::vector< RealVector > > > m_faceNodeCoordsPerOrientNoSymm;
 
   /// polynomial exponents
   std::vector< std::vector< CFint > > m_solPolyExponents;
@@ -1122,12 +837,6 @@ protected: // protected data
   /// coefficients for solution polynomials in the nodes
   std::vector< std::vector < CFreal > > m_coefSolPolyInNodes;
 
-  /// coefficients for derivatives of solution polynomials in the flux points (optimized computation)
-  std::vector< std::vector< std::vector< CFreal > > > m_coefSolPolyDerivInFlxPntsOptim;
-
-  /// solution point indexes for optimized computation of derivatives of solution polynomials in the flux points
-  std::vector< std::vector< std::vector< CFuint > > > m_solPntIdxsSolPolyDerivInFlxPntsOptim;
-
   /// ratio between convective and diffusive CFL limit (results from a trial and error procedure...)
   CFreal m_cflConvDiffRatio;
 
@@ -1157,13 +866,6 @@ protected: // protected data
   
   /// coefficients for derivatives of solution polynomials in the nodes
   std::vector< std::vector< std::vector< CFreal > > > m_coefSolPolyDerivInNodes;
-  
-  
-//   /// socket for solution coordinates in 1D
-//   Framework::DataSocketSink< std::vector< CFreal > > socket_solCoords1D;
-//   
-//   /// socket for flux coordinates in 1D
-//   Framework::DataSocketSink< std::vector< CFreal > > socket_flxCoords1D;
 
 }; // end of class FluxReconstructionElementData
 

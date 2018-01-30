@@ -14,7 +14,6 @@
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
 #include "FluxReconstructionMethod/RiemannFlux.hh"
 #include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
-#include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -23,7 +22,7 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This is a standard command to assemble the system using a FluxReconstruction solver
+/// This is a standard command to assemble the (diffusive part of the) system using a FluxReconstruction solver
 /// @author Alexander Papen
 /// @author Ray Vandenhoeck
 class DiffRHSFluxReconstruction : public FluxReconstructionSolverCom {
@@ -68,11 +67,11 @@ public: // functions
     
 protected: //functions
 
-  /// compute the interface flux correction FI-FD
+  /// compute the interface flux
   virtual void computeInterfaceFlxCorrection();
   
-  /// compute the divergence of the discontinuous flux (-divFD)
-  void computeDivDiscontFlx(std::vector< RealVector >& residuals);
+  /// compute the divergence of the discontinuous flux (-divFD+divhFD)
+  virtual void computeDivDiscontFlx(std::vector< RealVector >& residuals);
   
   /// add the residual updates to the RHS
   void updateRHS();
@@ -80,7 +79,7 @@ protected: //functions
   /// add the updates to the wave speed
   void updateWaveSpeed();
   
-  /// compute the correction -(FI-FD)divh of a neighbouring cell
+  /// compute the correction -(FI)divh of a neighbouring cell
   void computeCorrection(CFuint side, std::vector< RealVector >& corrections);
   
   /**
@@ -96,24 +95,19 @@ protected: //functions
   void divideByJacobDet();
   
   /**
-   * Set the data for the current face necessary to calculate FI-FD
+   * Set the data for the current face necessary to calculate FI
    */
-  void setFaceData(CFuint faceID);
+  virtual void setFaceData(CFuint faceID);
   
   /**
    * Set the data for the current cell necessary to calculate the residual update
    */
-  void setCellData();
-  
-  /**
-   * Add the updateCoeff corrections due to the partition faces
-   */
-  virtual void addPartitionFacesCorrection();
+  virtual void setCellData();
   
   /**
    * Compute the left and right states and gradients in the flx pnts
    */
-  void computeFlxPntStates();
+  void computeFlxPntStatesAndGrads();
 
 protected: //data
   /// socket for gradients
@@ -146,9 +140,6 @@ protected: //data
   
   /// extrapolated states in the flux points of the cell
   std::vector< std::vector< Framework::State* > > m_cellStatesFlxPnt;
-  
-  /// vector containing pointers to the internal fluxes in a cell (fr each sol pnt)
-  std::vector< RealVector >* m_cellIntFlx;
   
   /// vector containing pointers to the fluxes in the flux points
   std::vector< std::vector< RealVector > > m_cellFlx;
@@ -275,6 +266,12 @@ protected: //data
   
   /// dimensions on which to evaluate the flux in the flux points
   Common::SafePtr< std::vector< CFuint > >  m_flxPntFlxDim;
+  
+  /// average solution in a flux point
+  RealVector m_avgSol;
+  
+  /// average gradients in a flux point
+  std::vector< RealVector* > m_avgGrad;
   
   private:
 

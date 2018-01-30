@@ -24,7 +24,7 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This is a standard command to assemble the system using a FluxReconstruction solver
+/// This is a standard command to assemble the diffusive part of the system using a FluxReconstruction solver for an implicit scheme
 /// @author Alexander Papen
 /// @author Ray Vandenhoeck
 class DiffRHSJacobFluxReconstruction : public DiffRHSFluxReconstruction {
@@ -96,7 +96,7 @@ protected: //functions
    * @pre m_faceTermComputers->computeDiffFaceTermAndUpdateCoefContributions
    * @pre setCellsData()
    */
-  void computeUnpertCellDiffResiduals();
+  virtual void computeUnpertCellDiffResiduals();
 
   /**
    * recompute the cell gradients from the current cell solutions,
@@ -132,7 +132,7 @@ protected: //functions
    * @pre backupAndReconstructOtherFacesAndCellPhysVars(
    * @pre reconstructOtherFacesAndCellGradients()
    */
-  void computePertCellDiffResiduals(const CFuint side);
+  virtual void computePertCellDiffResiduals(const CFuint side);
 
   /**
    * compute the contribution of the diffusive face term to both Jacobians
@@ -173,6 +173,11 @@ protected: //functions
    * compute the terms for the gradient computation for a face
    */
   virtual void computeFaceGradTerms(RealMatrix& gradTermL, RealMatrix& gradTermR);
+  
+  /**
+   * compute the diffusive flux
+   */
+  virtual void computeFlux(const RealVector& sol, const std::vector< RealVector* >& grad, const RealVector& normals, RealVector& flux);
 
 protected: //data
   

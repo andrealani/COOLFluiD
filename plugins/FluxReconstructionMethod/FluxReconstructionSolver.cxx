@@ -13,6 +13,7 @@
 #include "FluxReconstructionMethod/BCStateComputer.hh"
 #include "FluxReconstructionMethod/ConvBndCorrectionsRHSFluxReconstruction.hh"
 #include "FluxReconstructionMethod/DiffBndCorrectionsRHSFluxReconstruction.hh"
+#include "FluxReconstructionMethod/LLAVBndFluxReconstruction.hh"
 #include "FluxReconstructionMethod/RiemannFlux.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -46,11 +47,13 @@ void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::vector<std::string> >("InitNames","Names of the initializing commands.");
   options.addConfigOption< std::vector<std::string> >("BcNames","Names of the boundary condition commands.");
   options.addConfigOption< std::vector<std::string> >("BcNamesDiff","Names of the diffusive boundary condition commands.");
+  options.addConfigOption< std::vector<std::string> >("BcNamesAV","Names of the artificial viscosity boundary condition commands.");
   options.addConfigOption< std::string >("SpaceRHSJacobCom","Command for the computation of the space discretization contribution to RHS and Jacobian.");
   options.addConfigOption< std::string >("TimeRHSJacobCom","Command for the computation of the time discretization contibution to RHS and Jacobian.");
   options.addConfigOption< std::string >("LimiterCom","Command to limit the solution.");
   options.addConfigOption< std::string >("ComputeErrorCom","Command to compute the error of the solution.");
   options.addConfigOption< std::string >("FinalizeRHSCom","Finilaze computation of the RHS.");
+  options.addConfigOption< std::string >("ArtificialViscosityCom","Command to add artificial viscosity.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -71,8 +74,11 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   m_bcsComs(),
   m_bcsDiff(),
   m_bcsDiffComs(),
+  m_bcsAV(),
+  m_bcsAVComs(),
   m_computeError(),
-  m_finalizeRHS()
+  m_finalizeRHS(),
+  m_artificialVisc()
 {
   addConfigOptionsTo(this);
   m_data.reset(new FluxReconstructionSolverData(this));
@@ -93,6 +99,9 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   
   m_limiterStr = "Null";
   setParameter("LimiterCom", &m_limiterStr);
+  
+  m_artificialViscStr = "Null";
+  setParameter("ArtificialViscosityCom", &m_artificialViscStr);
 
   m_setupStr   = "StdSetup";
   setParameter( "SetupCom",   &m_setupStr );
@@ -139,6 +148,10 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   // options for bc commands
   m_bcNameDiffStr = std::vector<std::string>();
   setParameter("BcNamesDiff",&m_bcNameDiffStr);
+  
+  // options for bc commands
+  m_bcNameAVStr = std::vector<std::string>();
+  setParameter("BcNamesAV",&m_bcNameAVStr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -187,6 +200,8 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_limiter,m_limiterStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
+    args, m_artificialVisc,m_artificialViscStr,m_data );
+  configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_timeRHSJacob,m_timeRHSJacobStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_computeError,m_computeErrorStr,m_data );
@@ -200,6 +215,7 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
   cf_assert(m_convSolve.isNotNull());
   cf_assert(m_diffSolve.isNotNull());
   cf_assert(m_limiter.isNotNull());
+  cf_assert(m_artificialVisc.isNotNull());
   cf_assert(m_timeRHSJacob.isNotNull());
   cf_assert(m_computeError.isNotNull());
   cf_assert(m_finalizeRHS.isNotNull());
@@ -288,7 +304,17 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
     m_bcs.resize(m_bcNameStr.size());
     m_bcsDiffComs.resize(m_bcNameStr.size());
     m_bcsDiff.resize(m_bcNameStr.size());
+    m_bcsAV.resize(m_bcNameStr.size());
+    m_bcsAVComs.resize(m_bcNameStr.size());
     std::vector<std::string> TRSsConv;
+    
+    if (m_artificialViscStr != "Null" && m_bcNameAVStr.size() != m_bcNameStr.size())
+    {
+      for (CFuint i = 0; i < m_bcNameStr.size(); ++i)
+      {
+        m_bcNameAVStr.push_back(m_bcNameStr[i]);
+      }
+    }
 
     for(CFuint iBc = 0; iBc < m_bcsComs.size(); ++iBc)
     {
@@ -364,6 +390,40 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
 
       // set bcStateComputer corresponding to this bc command
       m_bcsDiff[iBc]->setBcStateComputer((*bcStateComputers)[iBc]);
+
+      if (m_artificialViscStr != "Null")
+      {
+        CFLog(INFO,"FluxReconstruction: Creating AV boundary correction command for boundary condition: "
+                    << m_bcNameAVStr[iBc] << "\n");
+        CFLog(INFO,"LLAVBnd" << m_spaceRHSJacobStr << "\n");
+        try
+        {
+          configureCommand<FluxReconstructionSolverCom,
+            FluxReconstructionSolverData,
+            FluxReconstructionSolverComProvider>
+            (args, m_bcsAVComs[iBc], "LLAVBnd"+m_spaceRHSJacobStr,m_bcNameAVStr[iBc], m_data);
+        }
+        catch (Common::NoSuchValueException& e)
+        {
+          CFLog(INFO, e.what() << "\n");
+          CFLog(INFO, "Choosing LLAVBndRHS instead ...\n");
+
+          configureCommand<FluxReconstructionSolverCom,
+            FluxReconstructionSolverData,
+            FluxReconstructionSolverComProvider>
+            (args, m_bcsAVComs[iBc], "LLAVBndRHS",m_bcNameAVStr[iBc], m_data);
+        }
+ 
+        cf_assert(m_bcsAVComs[iBc].isNotNull());
+
+        // dynamic_cast to LLAVBndFluxReconstruction
+        SafePtr< FluxReconstructionSolverCom > bcAVComm = m_bcsAVComs[iBc].getPtr();
+        m_bcsAV[iBc] = bcAVComm.d_castTo< LLAVBndFluxReconstruction >();
+        cf_assert(m_bcsAV[iBc].isNotNull());
+
+        // set bcStateComputer corresponding to this bc command
+        m_bcsAV[iBc]->setBcStateComputer((*bcStateComputers)[iBc]);
+      }
       
       TRSsConv = m_bcsComs[iBc]->getTrsNames();
       for (CFuint i = 0; i < TRSsConv.size(); ++i)
@@ -376,6 +436,14 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
 	CFLog(VERBOSE, "Diff TRS " << i << ": " << TRSsDiff[i] << "\n");
       }
       
+      if (m_artificialViscStr != "Null")
+      {
+        const std::vector<std::string> TRSsAV = m_bcsAVComs[iBc]->getTrsNames();
+         for (CFuint i = 0; i < TRSsAV.size(); ++i)
+        {
+	  CFLog(VERBOSE, "AV TRS " << i << ": " << TRSsAV[i] << "\n");
+        }
+      }
     }
 }
 
@@ -427,14 +495,19 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
   cf_assert(m_prepare.isNotNull());
   m_prepare->execute();
   
-  cf_assert(m_limiter.isNotNull());
-  //m_limiter->execute();
-  
   // apply the boundary conditions (this function is in SpaceMethod and is not called anywhere else)
   applyBC();
   
   cf_assert(m_convSolve.isNotNull());
   m_convSolve->execute();
+  
+  if (m_artificialViscStr != "Null")
+  {
+    cf_assert(m_artificialVisc.isNotNull());
+    m_artificialVisc->execute();
+    
+    applyBCAVImpl();
+  }
 
   // if there is a diffusive term, compute the diffusive contributions to the residual
   if (m_data->hasDiffTerm())
@@ -453,6 +526,9 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
   {
     m_finalizeRHS->execute();
   }
+  
+  cf_assert(m_limiter.isNotNull());
+  //m_limiter->execute();
 
   // add source terms
   //addSourceTermsImpl();
@@ -508,6 +584,21 @@ void FluxReconstructionSolver::applyBCDiffImpl()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void FluxReconstructionSolver::applyBCAVImpl()
+{
+  CFAUTOTRACE;
+
+  const CFuint nbrBcs = m_bcsAVComs.size();
+  for(CFuint iBc = 0; iBc < nbrBcs; ++iBc)
+  {
+    CFLog(VERBOSE,"Executing AV BC " << iBc << "\n");
+    cf_assert(m_bcsAVComs[iBc].isNotNull());
+    m_bcsAVComs[iBc]->execute();
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void FluxReconstructionSolver::addSourceTermsImpl()
 {
   CFAUTOTRACE;
@@ -536,7 +627,7 @@ void FluxReconstructionSolver::postProcessSolutionImpl()
 {
   CFAUTOTRACE;
 
-  //cf_assert(m_limiter.isNotNull());
+  cf_assert(m_limiter.isNotNull());
   m_limiter->execute();
 }
 

@@ -16,7 +16,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represents a Vincent-Castonguay-Jameson-Huyn Correction Function
+ * This class represents the centred flux scheme for computing the common interface flux
  *
  * @author Ray Vandenhoeck
  * @author Alexander Papen

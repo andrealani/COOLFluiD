@@ -24,7 +24,7 @@ namespace COOLFluiD {
 
   /**
    * This class represents a command that computes contribution of the boundary face terms for the
-   * Flux Reconstruction schemes for convective terms to the RHS
+   * Flux Reconstruction schemes for convective terms to the RHS for implicit schemes
    *
    * @author Ray Vandenhoeck
    * @author Alexander Papen
@@ -64,22 +64,6 @@ public:
    * Configures the command.
    */
   virtual void configure ( Config::ConfigArgs& args );
-  
-  /**
-   * backup and reconstruct physical variable in the boundary face in the required points
-   * and reconstruct the ghost states
-   */
-  void backupAndReconstructPhysVar(const CFuint iVar, const std::vector< Framework::State* >& cellStates);
-
-  /**
-   * backup physical variable in the boundary face in the required points
-   */
-  void backupPhysVar(const CFuint iVar);
-  
-  /**
-   * restore physical variable in the boundary face in the required points
-   */
-  void restorePhysVar(const CFuint iVar);
 
 protected: // functions
 

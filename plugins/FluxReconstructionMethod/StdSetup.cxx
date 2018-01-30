@@ -129,7 +129,7 @@ void StdSetup::execute()
   isUpdated = false;  
 
   // create gradients variable
-  if (getMethodData().hasDiffTerm())
+  if (getMethodData().hasDiffTerm() || getMethodData().hasArtificialViscosity())
   {
     // get number of gradients (assumed equal to the number of physical variables)
     const CFuint nbrGrads = nbrEqs;

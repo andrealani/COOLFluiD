@@ -67,8 +67,7 @@ void BCDirichlet::computeGhostStates(const vector< State* >& intStates,
                                      const std::vector< RealVector >& normals,
                                      const std::vector< RealVector >& coords)
 {
-
-// Current time
+  // Current time
   Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();  
   CFreal time = subSysStatus->getCurrentTimeDim();
 
@@ -86,7 +85,7 @@ void BCDirichlet::computeGhostStates(const vector< State* >& intStates,
     State& intSol   = *intStates  [iState];
     State& ghostSol = *ghostStates[iState];
 
- // compute input variables depending on space and time
+  // compute input variables depending on space and time
       for (CFuint i=0; i<coords[iState].size(); ++i)
   	space_time[i]=coords[iState][i];  
       space_time[coords[iState].size()]= time; // time

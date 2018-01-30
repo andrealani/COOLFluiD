@@ -75,6 +75,12 @@ TVBLimiter.cxx
 TVBLimiter.hh
 MLPLimiter.cxx
 MLPLimiter.hh
+LLAVFluxReconstruction.cxx
+LLAVFluxReconstruction.hh
+LLAVBndFluxReconstruction.cxx
+LLAVBndFluxReconstruction.hh
+LLAVJacobFluxReconstruction.cxx
+LLAVJacobFluxReconstruction.hh
 FinalizeRHS.cxx
 FinalizeRHS.hh
 ConvBndCorrectionsRHSFluxReconstruction.cxx

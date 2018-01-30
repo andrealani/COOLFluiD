@@ -17,8 +17,7 @@ namespace COOLFluiD {
  * This class represents a basic strategy that computes the ghost states corresponding
  * to a boundary condition
  *
- * @author Ray Vandenhoeck
- * @author Alexander Papen
+ * @author Kris Van den Abeele
  * 
  */
 class BCStateComputer : public FluxReconstructionSolverStrategy {

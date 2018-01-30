@@ -89,7 +89,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
   geoData.isBoundary = true;
   
   // boolean telling whether there is a diffusive term
-  const bool hasDiffTerm = getMethodData().hasDiffTerm();
+  const bool hasDiffTerm = getMethodData().hasDiffTerm() || getMethodData().hasArtificialViscosity();
   
   // loop over TRs
   for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
@@ -103,7 +103,6 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
       for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
       {
         m_flxPntsLocalCoords[iFlx] = (*m_allCellFlxPnts)[(*m_faceFlxPntConn)[m_orient][iFlx]];
-	CFLog(VERBOSE,"flx pnt coord: " << m_flxPntsLocalCoords[iFlx] << "\n");
       }
       
       // start and stop index of the faces with this orientation
@@ -123,7 +122,6 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
 	// get the states in the neighbouring cell
         m_cellStates = m_intCell->getStates();
 	
-	//CFLog(VERBOSE,"faceID: " << faceID << "\n");
         CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
 	//CFLog(VERBOSE,"coord state 0: " << (((*m_cellStates)[0])->getCoordinates()) << "\n");
 
@@ -135,24 +133,6 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
 	  
 	  // set the bnd face data
 	  setBndFaceData(m_face->getID());//faceID
-	  
-// 	  if (faceTrs->getName() == "Bump" && iTR == 1)
-// 	  {
-// 	    CFLog(VERBOSE, "coord: " << (*m_cellStates)[0]->getCoordinates() << "\n");
-// 	    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
-// 	    {
-// 	      CFLog(VERBOSE, "normal before: " << m_unitNormalFlxPnts[iFlx] << "\n");
-// 	      m_unitNormalFlxPnts[iFlx][1] = 1.0;
-// 	      m_unitNormalFlxPnts[iFlx][0] = 0.1*3.14159265358979323846264338327950288419716939937510*sin(3.14159265358979323846264338327950288419716939937510*(m_flxPntCoords[iFlx][0]-2.0));
-// 	      m_unitNormalFlxPnts[iFlx] /= pow(pow(m_unitNormalFlxPnts[iFlx][1],2)+pow(m_unitNormalFlxPnts[iFlx][0],2),0.5);
-// 	      if (m_faceJacobVecSizeFlxPnts[iFlx] < 0)
-// 	      {
-// 		m_unitNormalFlxPnts[iFlx] *= -1.0;
-// 	      }
-// 	      CFLog(VERBOSE, "normal after: " << m_unitNormalFlxPnts[iFlx] << "\n");
-// 	      
-// 	    }
-// 	  }
 	  
 	  // compute the perturbed states and ghost states in the flx pnts
           computeFlxPntStates();
@@ -189,29 +169,6 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
 	  // compute the convective boundary flux correction contribution to the jacobian
 	  computeJacobConvBndCorrection();
         }
-        
-        if(m_intCell->getID() == 160)
-      {
-	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
-        CFLog(VERBOSE, "UpdateBnd = \n");
-        // get the datahandle of the rhs
-        DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
-        for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
-        {
-          CFuint resID = m_nbrEqs*( (*m_cellStates)[iState]->getLocalID() );
-          for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-          {
-            CFLog(VERBOSE, "" << rhs[resID+iVar] << " ");
-          }
-          CFLog(VERBOSE,"\n");
-          DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
-          CFLog(VERBOSE, "UpdateCoeff: " << updateCoeff[(*m_cellStates)[iState]->getLocalID()] << "\n");
-	  
-	  CFLog(VERBOSE, "state " << iState << ": " << *(((*m_cellStates)[iState])->getData()) << "\n");
-	  //CFLog(VERBOSE, "coord: " << ((*m_cellStates)[iState])->getCoordinates() << "\n");
-
-        }
-      }
         
         // release the face
         m_faceBuilder->releaseGE();
@@ -256,10 +213,6 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
     {
       // perturb physical variable in state
       m_numJacob->perturb(iEqPert,pertState[iEqPert]);
-
-      // backup and reconstruct physical variable in the flux points
-      // and reconstruct the ghost states)
-      //backupAndReconstructPhysVar(iEqPert,*m_cellStates);
       
       // compute the perturbed states and ghost states in the flx pnts
       computeFlxPntStates();
@@ -293,10 +246,6 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
 
       // restore physical variable in state
       m_numJacob->restore(pertState[iEqPert]);
-
-      // restore physical variable in the flux points
-      //restorePhysVar(iEqPert);
-      
     }
   }
   
@@ -314,43 +263,6 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
 
   // reset to zero the entries in the block accumulator
   acc.reset();
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ConvBndCorrectionsRHSJacobFluxReconstruction::backupAndReconstructPhysVar
-    (const CFuint iVar, const vector< State* >& cellIntStates)
-{
-  // backup
-  backupPhysVar(iVar);
-  
-
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ConvBndCorrectionsRHSJacobFluxReconstruction::backupPhysVar(const CFuint iVar)
-{
-  //cf_assert(m_nbrFlxPnts[m_orient] <= m_backupPhysVar.size());
-  //cf_assert(m_nbrFlxPnts[m_orient] <= m_backupGhostStates.size());
-  //for (CFuint iFlx = 0; iFlx < m_nbrFlxPnts[m_orient]; ++iFlx)
-  //{
-    //m_backupPhysVar[iFlx] = (*m_flxPntIntSol[iFlx])[iVar];
-    //m_backupGhostStates[iFlx] = *m_flxPntGhostSol[iFlx];
-  //}
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ConvBndCorrectionsRHSJacobFluxReconstruction::restorePhysVar(const CFuint iVar)
-{
-  //cf_assert(m_nbrFlxPnts[m_orient] <= m_backupPhysVar.size());
-  //cf_assert(m_nbrFlxPnts[m_orient] <= m_backupGhostStates.size());
-  //for (CFuint iFlx = 0; iFlx < m_nbrFlxPnts[m_orient]; ++iFlx)
-  //{
-    //(*m_flxPntIntSol[iFlx])[iVar] = m_backupPhysVar[iFlx];
-    //*m_flxPntGhostSol[iFlx] = m_backupGhostStates[iFlx];
-  //}
 }
 
 //////////////////////////////////////////////////////////////////////////////

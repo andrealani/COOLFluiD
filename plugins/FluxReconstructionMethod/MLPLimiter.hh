@@ -67,6 +67,16 @@ public:
    */
   std::vector< Common::SafePtr< Framework::BaseDataSocketSource > >
       providesSockets();
+      
+   /**
+   * apply the limiter to perturbed states
+   */
+   void limitPerturbedStates(CFuint elemIdx, CFuint pertSol, CFuint pertVar);
+   
+   /**
+   * restore the limited perturbed states
+   */
+   void restoreStates(CFuint elemIdx);
 
 protected: // functions
 
@@ -110,17 +120,6 @@ protected: // functions
    * set minimum and maximum neighbouring cell average solutions
    */
   void setMinMaxNghbrCellAvgStates();
-
-  /**
-   * check if limiting is necessary
-   * @pre solution has been reconstructed at flux points
-   */
-  virtual void setLimitBooleans();
-
-  /**
-   * apply the limiter
-   */
-  virtual void limitStates();
   
   /**
    * Compute the node states
@@ -151,6 +150,11 @@ protected: // functions
    * Apply the previously computed limiter instead of recomputing the limiter
    */
   void applyPrevLimiter();
+  
+  /**
+   * Execute the slope limiter on the P1 states
+   */
+  void executeSlopeLimiter(const CFuint elemIdx, const bool useMin);
 
 protected: // data
 
@@ -171,6 +175,9 @@ protected: // data
 
   /// vector containing pointers to the states in a cell
   std::vector< Framework::State* >* m_cellStates;
+  
+  /// vector containing backup states
+  std::vector< RealVector > m_cellStatesBackup;
 
   /// vector containing pointers to the nodes in a cell
   std::vector< Framework::Node*  >* m_cellNodes;
@@ -233,7 +240,10 @@ protected: // data
   CFreal m_tvbLimitFactor;
   
   /// residual after which the limiter is frozen
-  CFreal m_freezeLimiter;
+  CFreal m_freezeLimiterRes;
+  
+  /// iteration after which the limiter is frozen
+  CFuint m_freezeLimiterIter;
 
   /// exponent for the computation of the length scale
   CFreal m_lengthScaleExp;

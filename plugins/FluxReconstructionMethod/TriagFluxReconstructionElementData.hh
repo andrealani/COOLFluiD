@@ -54,26 +54,6 @@ public:
 protected: // functions
 
   /**
-   * Creates the wheight coordinates of the flux points in a SV face
-   * @pre createFluxPolyNodeCoord() and createFaceFluxPntsConn()
-   */
-  virtual void createFaceFluxPolyNodeWheightCoord();
-
-  /**
-   * Creates a list with the different possible connectivities of faces,
-   * not taking into account possible symmetries
-   * (--> more possible orientations than with function above)
-   * @pre createSVFaceNodeConnectivity()
-   */
-  virtual void createSVFaceNodeConnectivityPerOrientNoSymm();
-
-  /**
-   * Computes the polynomial coefficients of the spectral FV basis functions
-   * @pre createLocalCVNodeConn() and createLocalNodeCoord() must be called first
-   */
-  virtual void computePolyCoefs();
-
-  /**
    * Creates the connectivity between SV faces and flux points
    */
   virtual void createFaceFluxPntsConn();
@@ -143,17 +123,6 @@ protected: // functions
    * Computes the transformation matrix used for the initialization of the states.
    */
   void computeInitTransfMatrix();
-
-  /**
-   * Creates the derivation direction of the flux points
-   * @todo Should be deleted intirely
-   */
-  void createFlxPntDerivDir();
-
-  /**
-   * Creates list of internal flux points
-   */
-  void createIntFlxPntIdxs();
   
   /**
    * Creates face normals
@@ -165,44 +134,6 @@ protected: // functions
    * arranged per face connectivity orientation.
    */
   void createFaceFluxPntsConnPerOrient();
-
-  /**
-   * Creates a vector containing the exponents of the terms in the flux polynomials.
-   */
-  void createFlxPolyExponents();
-
-  /**
-   * Creates the flux point index (the row index in m_recCoefsFlxPnts1D)
-   * for the solution reconstruction in each flux point
-   */
-  void createFlxPntMatrixIdxForReconstruction();
-
-  /**
-   * Creates the solution point indices for the solution reconstruction in each flux point
-   */
-  void createSolPntIdxsForReconstruction();
-
-  /**
-   * Creates the solution point index (the row index in m_derivCoefsSolPnts1D)
-   * for the flux derivation in each solution point
-   */
-  void createSolPntMatrixIdxForDerivation();
-
-  /**
-   * Creates the flux point index (the column index in m_derivCoefsSolPnts1D)
-   * for the flux derivation in each solution point
-   */
-  void createFlxPntMatrixIdxForDerivation();
-
-  /**
-   * Creates the solution point index for the flux derivation in each flux point
-   */
-  void createSolPntIdxsForDerivation();
-
-  /**
-   * Creates the flux point index for the flux derivation in each solution point
-   */
-  void createFlxPntIdxsForDerivation();
 
   /**
    * Creates the local coorinates of the cell nodes

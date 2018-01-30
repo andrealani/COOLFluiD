@@ -142,11 +142,6 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
 	
 	// compute volume
         m_cellVolume = m_face->getNeighborGeo(0)->computeVolume();
-	
-	//CFLog(VERBOSE,"faceID: " << faceID << ", real face ID: " << m_face->getID() << "\n");
-	//CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
-	//CFLog(VERBOSE,"coord state 0: " << (((*m_cellStates)[0])->getCoordinates()) << "\n");
-	//CFLog(VERBOSE,"state 0: " << *(((*m_cellStates)[0])->getData()) << "\n");
 
         // if cell is parallel updatable, compute the correction flux
         if ((*m_cellStates)[0]->isParUpdatable())
@@ -165,7 +160,7 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
 	  // compute the states, gradients and ghost states, gradients in the flx pnts
 	  computeFlxPntStates();
 
-	  // compute FI-FD
+	  // compute FI
           computeInterfaceFlxCorrection();
 
           // compute the wave speed updates
@@ -174,7 +169,7 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
           // update the wave speeds
           updateWaveSpeed();
 
-	  // compute the correction -(FI-FD)divh of the bnd face for each sol pnt
+	  // compute the correction -(FI)divh of the bnd face for each sol pnt
           computeCorrection(m_corrections);
 
 	  // update the rhs

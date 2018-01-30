@@ -20,7 +20,7 @@ namespace COOLFluiD {
 
   /**
    * This class represents a command that computes contribution of the boundary faces for the
-   * Flux Reconstruction schemes for convective terms to the RHS
+   * Flux Reconstruction schemes for diffusive terms to the RHS for an implicit scheme
    *
    * @author Ray Vandenhoeck
    * @author Alexander Papen
