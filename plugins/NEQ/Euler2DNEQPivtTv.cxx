@@ -116,7 +116,11 @@ void Euler2DNEQPivtTv::setThermodynamics(CFreal rho,
   for (CFuint ie = 0;  ie < nbSpecies; ++ie) {
     p += state[ie];
   }
-
+  
+  const CFuint TID = getTempID(nbSpecies);
+  CFreal* Tvec = &const_cast<State&>(state)[TID];
+  _library->setState(&_rhoi[0], Tvec);
+  
   CFLog(DEBUG_MIN, "rhodim=" << rhodim << ", ");
   CFLog(DEBUG_MIN, "Tdim=" << Tdim << ", ");
   CFLog(DEBUG_MIN, "p=" << p << "\n");
@@ -224,6 +228,10 @@ void Euler2DNEQPivtTv::setDimensionalValuesPlusExtraValues
     _rhoi[ie] = state[ie]/(_Rspecies[ie]*Ti);
     rho += _rhoi[ie];
   }
+
+  const CFuint TID = getTempID(nbSpecies);
+  CFreal* Tvec = &const_cast<State&>(state)[TID];
+  _library->setState(&_rhoi[0], Tvec);
   
   // Set the species
   const CFreal ovRho = 1./rho;
