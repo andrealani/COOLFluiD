@@ -408,7 +408,7 @@ void RMSJouleHeatSourceCoupling<ST>::prepareElConductivity ()
     // getting real EpR and imaginary EpI part of plasma el. field intensity from states
     State *currState = currCell->getState(0);
     
-    // AL: very ugly, find alternative way
+    // AL: very ugly and dangerous, find alternative way
     if (!m_skipPreparation) {
       updateVarSet->computePhysicalData(*currState, m_physicalData);
     }

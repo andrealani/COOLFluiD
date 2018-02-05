@@ -44,19 +44,20 @@ void MutationLibrarypp::defineConfigOptions(Config::OptionList& options)
       
 //////////////////////////////////////////////////////////////////////////////
 
-MutationLibrarypp::MutationLibrarypp(const std::string& name)
-  : Framework::PhysicalChemicalLibrary(name),
-    m_gasMixture(CFNULL),
-    m_smType(),
-    m_y(),
-    m_x(),
-    m_yn(),
-    m_xn(),
-    m_molarmassp(),
-    m_df(),
-    m_rhoivBkp(),
-    m_rhoiv(),
-    m_Tstate()
+MutationLibrarypp::MutationLibrarypp(const std::string& name) :
+  Framework::PhysicalChemicalLibrary(name),
+  m_gasMixture(CFNULL),
+  m_gasMixtureEquil(CFNULL),
+  m_smType(),
+  m_y(),
+  m_x(),
+  m_yn(),
+  m_xn(),
+  m_molarmassp(),
+  m_df(),
+  m_rhoivBkp(),
+  m_rhoiv(),
+  m_Tstate()
 {
   addConfigOptionsTo(this);
   
@@ -100,6 +101,15 @@ void MutationLibrarypp::setup()
   Mutation::MixtureOptions mo(_mixtureName);
   mo.setStateModel(_stateModelName);
   m_gasMixture.reset(new Mutation::Mixture(mo));
+
+  if (_stateModelName != "Equil") {
+    Mutation::MixtureOptions moEquil(_mixtureName);
+    moEquil.setStateModel("Equil");
+    m_gasMixtureEquil = new Mutation::Mixture(moEquil);
+  }
+  else {
+    m_gasMixtureEquil = m_gasMixture.get();
+  }
   
   _NS = m_gasMixture->nSpecies();
   m_vecH0.resize(_NS, 0.); 
@@ -139,16 +149,11 @@ void MutationLibrarypp::setup()
   
   if (m_shiftHO) { 
     /// computation of the H formation at (close to) 0K
-    auto_ptr<Mutation::Mixture> gasMixtureLTE; 
-    Mutation::MixtureOptions moLTE(_mixtureName);
-    moLTE.setStateModel("Equil");
-    gasMixtureLTE.reset(new Mutation::Mixture(moLTE)); 
-    
     const CFreal P0 = 10.; // pressure can be whatever in this case
     CFreal T0 = 10.; // the equilibrium solver doesn't work with T<10K
-    gasMixtureLTE->setState(&P0, &T0, 1);
+    m_gasMixtureEquil->setState(&P0, &T0, 1);
     // composition at (close to) 0K
-    RealVector y0(_NS, const_cast<CFreal*>(gasMixtureLTE->Y()));
+    RealVector y0(_NS, const_cast<CFreal*>(m_gasMixtureEquil->Y()));
     T0 = 0.00000000001; // set T0 closer to 0K
     m_gasMixture->setState(&y0[0], &T0, 1); // suppose rho=1 (rho value is irrelevant at 0K)
     m_H0 = m_gasMixture->mixtureHMass(T0); 
@@ -176,6 +181,10 @@ void MutationLibrarypp::setup()
 void MutationLibrarypp::unsetup()
 {
   CFLog(VERBOSE, "MutationLibrarypp::unsetup() => start\n"); 
+  
+  if (_stateModelName != "Equil") {
+    delete m_gasMixtureEquil;
+  }
   
   if(isSetup()) {
     Framework::PhysicalChemicalLibrary::unsetup();
@@ -222,12 +231,11 @@ CFdouble MutationLibrarypp::sigma(CFdouble& temp, //electrical conductivity
 				  CFreal* tVec)
 {
   if (temp < 100.) {temp = 100.;}
-  // this needs to be modified for NEQ case unless one assumes to have called 
-  // setState() before  
-  m_gasMixture->setState(&pressure, &temp, 1);
+  // we are assuming here that setState() has been called before!
+  // this way we don't care about given pressure and temperature
   return m_gasMixture->electricConductivity();
 }
-      
+
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrarypp::gammaAndSoundSpeed(CFdouble& temp,
@@ -278,16 +286,16 @@ void MutationLibrarypp::setComposition(CFdouble& temp,
 {
   if (temp < 100.) {temp = 100.;}
 
-  m_gasMixture->setState(&pressure, &temp, 1);
-  const double* xm = m_gasMixture->X();
+  m_gasMixtureEquil->setState(&pressure, &temp, 1);
+  const double* xm = m_gasMixtureEquil->X();
   
   if (x != CFNULL) {
     for(CFint i = 0; i < _NS; ++i) {
       (*x)[i] = xm[i];
     }
   }
-    
-  m_gasMixture->convert<X_TO_Y>(xm, &m_y[0]);
+  
+  m_gasMixtureEquil->convert<X_TO_Y>(xm, &m_y[0]);
   
   CFLog(DEBUG_MAX, "Mutation::setComposition() => m_y = " << m_y << "\n");
 }

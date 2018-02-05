@@ -103,6 +103,9 @@ void FunctionSourceTerm::computeSource(GeometricEntity *const element,
   
   _vFunction.evaluate(_inputVars, _input);
   source = _input;
+
+  CFLog(DEBUG_MAX, "FunctionSourceTerm::computeSource() => source = "
+	<< source << "\n");
   
   const CFreal volume = socket_volumes.getDataHandle()[element->getID()];
   source *= volume;

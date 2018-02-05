@@ -387,7 +387,8 @@ void LorentzForceSourceTerm<ST>::execute()
      /*UNCOMMENT THIS TO COMPUTE elConductivity EVERY ITERATION
        pdim = getModel()->getPressureFromState(currState[0]); // *getModel()->getPressRef(); watch out with this reference pressure
        Tdim = currState[3]*refData[EulerTerm::T];
-       
+      
+       // AL: this WOULD NOT WORK in nonequilibrium 
        m_library->setComposition(Tdim,pdim);
 
         cout << "Lorentz:: T, p => " << Tdim << ", " << pdim << endl;

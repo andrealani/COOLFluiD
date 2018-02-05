@@ -566,6 +566,9 @@ protected:
   /// gas mixture pointer
   std::auto_ptr<Mutation::Mixture> m_gasMixture; 
   
+  /// gas mixture pointer for equilibrium
+  Mutation::Mixture* m_gasMixtureEquil; 
+  
   /// state model type enumerator 
   MutationLibrarypp::StateModelType m_smType;
   
