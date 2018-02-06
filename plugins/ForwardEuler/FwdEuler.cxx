@@ -11,6 +11,7 @@
 #include "Framework/SubSystemStatus.hh"
 #include "ForwardEuler/ForwardEuler.hh"
 #include "Framework/CFL.hh"
+#include "Framework/StopConditionController.hh"
 #include "MathTools/MathConsts.hh"
 
 //////////////////////////////////////////////////////////////////////////////

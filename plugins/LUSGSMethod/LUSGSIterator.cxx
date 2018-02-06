@@ -6,6 +6,7 @@
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/SpaceMethod.hh"
 #include "Framework/CFL.hh"
+#include "Framework/StopConditionController.hh"
 
 #include "LUSGSMethod/LUSGSMethod.hh"
 #include "LUSGSMethod/LUSGSIterator.hh"

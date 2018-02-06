@@ -12,7 +12,7 @@
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/SpaceMethod.hh"
 #include "Framework/CFL.hh"
-
+#include "Framework/StopConditionController.hh"
 #include "NewtonMethod/NewtonMethod.hh"
 #include "NewtonMethod/NewtonIterator.hh"
 #include "MathTools/MathConsts.hh"
