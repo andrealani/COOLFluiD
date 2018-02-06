@@ -599,6 +599,15 @@ protected:
   /// partial densities
   RealVector m_rhoiv;
   
+  /// enthalpies
+  RealVector m_ht;
+
+  /// enthalpies
+  RealVector m_hr;  
+
+  /// enthalpies
+  RealVector m_hf; 
+
   /// state temperatures
   RealVector m_Tstate;
   

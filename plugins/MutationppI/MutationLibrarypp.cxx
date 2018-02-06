@@ -57,6 +57,9 @@ MutationLibrarypp::MutationLibrarypp(const std::string& name) :
   m_df(),
   m_rhoivBkp(),
   m_rhoiv(),
+  m_ht(),
+  m_hr(),
+  m_hf(),  
   m_Tstate()
 {
   addConfigOptionsTo(this);
@@ -125,13 +128,18 @@ void MutationLibrarypp::setup()
   }
   m_rhoivBkp.resize(_NS);
   m_rhoiv.resize(_NS);
-  
+  m_ht.resize(_NS);
+  m_hr.resize(_NS);
+  m_hf.resize(_NS);  
+ 
   if (_stateModelName == "Equil") m_smType = LTE;
   if (_stateModelName == "ChemNonEq1T") m_smType = CNEQ;
   if (_stateModelName == "ChemNonEqTTv") m_smType = TCNEQ;
   
   // AL: check this for LTE
   _nbTvib = m_gasMixture->nEnergyEqns()-1;
+
+  _hasElectrons = m_gasMixture->hasElectrons();  
   
   m_Tstate.resize(_nbTvib+1);
   
@@ -448,7 +456,7 @@ CFdouble MutationLibrarypp::enthalpy(CFdouble& temp,
 
 void MutationLibrarypp::setSpeciesFractions(const RealVector& ys)
 {
-  if (m_gasMixture->hasElectrons()) {
+  if (presenceElectron()) {
     setElectronFraction(const_cast<RealVector&>(ys));
   }
   
@@ -635,22 +643,28 @@ void MutationLibrarypp::getSpeciesTotEnthalpies(CFdouble& temp,
 {
   // CFLog(DEBUG_MAX, "Mutation::getSpeciesTotEnthalpies()\n");
   
-  // recheck this with 2-temperature
-  CFreal* hv = (hsVib != CFNULL) ? &(*hsVib)[0] : CFNULL;
-  CFreal* he = (hsEl  != CFNULL) ?  &(*hsEl)[0] : CFNULL;
-  m_gasMixture->speciesHOverRT(&hsTot[0], CFNULL, CFNULL, hv, he, CFNULL); 
+  CFreal* hv = (hsVib != CFNULL) ? &(*hsVib)[0] : CFNULL; 
+  CFreal* he = (hsEl  != CFNULL) ? &(*hsEl)[0] : CFNULL;
+  CFreal* ht = (hsVib != CFNULL) ? &m_ht[0] : CFNULL;
+  CFreal* hr = (hsVib != CFNULL) ? &m_hr[0] : CFNULL;
+  CFreal* hf = (hsVib != CFNULL) ? &m_hf[0] : CFNULL;
+
+  m_gasMixture->speciesHOverRT(&hsTot[0], ht, hr, hv, he, hf); 
   
   const CFreal RT = _Rgas*temp;
   for (CFuint i = 0; i < _NS; ++i) {
     const CFreal k = RT/m_molarmassp[i];
     hsTot[i] *= k;
-    if (hsVib != CFNULL) {hsVib[i] *= k;}
-    if (hsEl != CFNULL) {hsEl[i]  *= k;}
+    if (hsVib != CFNULL) {(*hsVib)[i] *= k;} 
+  //  if (presenceElectron()) {
+     if (hsEl != CFNULL) {(*hsEl)[i]  *= k;}
+  // }
   }
   
   hsTot -= m_vecH0; // shift on the formation enthalpy (considering H(T=0K)=0)
   CFLog(DEBUG_MAX, "Mutation::getSpeciesTotEnthalpies() => m_vecH0 = " << m_vecH0 << "\n");
   CFLog(DEBUG_MAX, "Mutation::getSpeciesTotEnthalpies() => hsTot = " << hsTot << "\n");
+  
   //EXIT_AT(5);
 }
       

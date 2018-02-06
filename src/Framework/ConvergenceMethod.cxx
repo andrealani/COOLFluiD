@@ -8,11 +8,10 @@
 #include <sstream>
 
 #include "Common/PE.hh"
-
 #include "Common/ProcessInfo.hh"
 #include "Common/OSystem.hh"
-#include "Environment/FileHandlerOutput.hh"
 
+#include "Environment/FileHandlerOutput.hh"
 #include "Environment/CFEnvVars.hh"
 #include "Environment/DirPaths.hh"
 #include "Environment/SingleBehaviorFactory.hh"
@@ -22,6 +21,7 @@
 #include "Framework/ConvergenceMethodData.hh"
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/NamespaceSwitcher.hh"
+#include "Framework/StopConditionController.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 

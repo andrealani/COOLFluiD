@@ -2313,8 +2313,8 @@ void MutationLibrary2::getSpeciesTotEnthalpies(CFdouble& temp,
   
   // This is NOT FLEXIBLE !!
   if (tVec.size() > 0) {
-    for (CFuint i = 0; i < _molecIDs.size(); ++i) {
-      (*hsVib)[i] = _HVIBRUM[_molecIDs[i]];
+    for (CFuint i = 0; i < _NS; ++i) {
+      (*hsVib)[i] = _HVIBRUM[i];
     }
   }
   

@@ -76,10 +76,13 @@ RealVector& NavierStokesTCNEQVarSet<BASE>::getFlux(const RealVector& state,
     for (CFuint i = 0; i < nbTvib; ++i) {
       const CFuint iMol2Tv = molEvIDs[i];
       const CFuint ispecies = this->_moleculeIdx[iMol2Tv];
+      cf_assert(iMol2Tv < this->_moleculeIdx.size());
+      cf_assert(ispecies < nbSpecies);
       const RealVector& gradTv = *gradients[this->_TvibID[i]];
       const CFreal qVib = this->_gradState[ispecies]*this->_lambdaVib[i]*MathFunctions::innerProd(gradTv, normal);
       flux[this->_TID] += qVib;
-      flux[this->_TvibID[i]] = qVib - this->_hsVibBkp[iMol2Tv]*this->_rhoUdiff[ispecies];
+      // flux[this->_TvibID[i]] = qVib - this->_hsVibBkp[iMol2Tv]*this->_rhoUdiff[ispecies];
+      flux[this->_TvibID[i]] = qVib - this->_hsVibBkp[ispecies]*this->_rhoUdiff[ispecies];
     }
   }
   else {
@@ -90,7 +93,9 @@ RealVector& NavierStokesTCNEQVarSet<BASE>::getFlux(const RealVector& state,
     
     const CFuint nbMol = this->_moleculeIdx.size();
     for (CFuint i = 0; i < nbMol; ++i) {
-      flux[this->_TvibID[0]] -= this->_hsVibBkp[i]*this->_rhoUdiff[this->_moleculeIdx[i]];
+      const CFuint ispecies = this->_moleculeIdx[i];
+      flux[this->_TvibID[0]] -= this->_hsVibBkp[ispecies]*this->_rhoUdiff[ispecies];
+      // flux[this->_TvibID[0]] -= this->_hsVibBkp[i]*this->_rhoUdiff[this->_moleculeIdx[i]];
     }
     
     if (this->_library->getNbTe() == 0) {
@@ -129,7 +134,7 @@ CFreal NavierStokesTCNEQVarSet<BASE>::getHeatFlux(const RealVector& state,
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Physics::NavierStokes;
+ using namespace COOLFluiD::Physics::NavierStokes;
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::MathTools;
   
@@ -196,9 +201,12 @@ CFreal NavierStokesTCNEQVarSet<BASE>::getHeatFlux(const RealVector& state,
     for (CFuint i = 0; i < nbTv; ++i) {
       const CFuint iMol2Tv = molEvIDs[i];
       const CFuint ispecies = this->_moleculeIdx[iMol2Tv];
+      cf_assert(iMol2Tv < this->_moleculeIdx.size());
+      cf_assert(ispecies < nbSpecies);
       const RealVector& gradTv = *gradients[this->_TvibID[i]];
       heatFlux -= this->_gradState[ispecies]*this->_lambdaVib[i]*MathFunctions::innerProd(gradTv, normal);
-      heatFlux += this->_hsVib[iMol2Tv]*this->_rhoUdiff[ispecies];
+      // heatFlux += this->_hsVib[iMol2Tv]*this->_rhoUdiff[ispecies];
+      heatFlux += this->_hsVib[ispecies]*this->_rhoUdiff[ispecies];
     }
   }
   else {
@@ -207,7 +215,10 @@ CFreal NavierStokesTCNEQVarSet<BASE>::getHeatFlux(const RealVector& state,
     
     const CFuint nbMol = this->_moleculeIdx.size();
     for (CFuint i = 0; i < nbMol; ++i) {
-      heatFlux += this->_hsVib[i]*this->_rhoUdiff[this->_moleculeIdx[i]];
+      const CFuint ispecies = this->_moleculeIdx[i];
+      // heatFlux += this->_hsVib[i]*this->_rhoUdiff[this->_moleculeIdx[i]];
+      cf_assert(ispecies < nbSpecies);
+      heatFlux += this->_hsVib[ispecies]*this->_rhoUdiff[ispecies];
     }
     
     if (this->_library->presenceElectron()) {
@@ -368,11 +379,13 @@ void NavierStokesTCNEQVarSet<BASE>::getAxiSourceTerm(const RealVector& physicalD
     for (CFuint i = 0; i < nbTv; ++i) {
       const CFuint iMol2Tv = molEvIDs[i];
       const CFuint ispecies = this->_moleculeIdx[iMol2Tv];
+      cf_assert(iMol2Tv < this->_moleculeIdx.size());
+      cf_assert(ispecies < nbSpecies);
       const RealVector& gradTv = *gradients[this->_TvibID[i]];
       const CFreal qVib = this->_ys[ispecies]*this->_lambdaVib[i]*gradTv[YY];
       source[this->_TID] += qVib;
-      source[this->_TvibID[i]] = -rhov*physicalData[firstTv + i] + qVib - 
-	this->_hsVib[iMol2Tv]*this->_rhoUdiff[ispecies];
+      //source[this->_TvibID[i]] = -rhov*physicalData[firstTv + i] + qVib - this->_hsVib[iMol2Tv]*this->_rhoUdiff[ispecies];
+      source[this->_TvibID[i]] = -rhov*physicalData[firstTv + i] + qVib - this->_hsVib[ispecies]*this->_rhoUdiff[ispecies];
     }
   }
   else {
@@ -381,11 +394,14 @@ void NavierStokesTCNEQVarSet<BASE>::getAxiSourceTerm(const RealVector& physicalD
     source[this->_TvibID[0]] = -rhov*physicalData[firstTv] + qVib;
     
     for (CFuint i = 0; i < this->_moleculeIdx.size(); ++i) {
-      source[this->_TvibID[0]] -= this->_hsVib[i]*this->_rhoUdiff[this->_moleculeIdx[i]];
+      const CFuint ispecies = this->_moleculeIdx[i];
+      cf_assert(ispecies < nbSpecies);    
+      // source[this->_TvibID[0]] -= this->_hsVib[i]*this->_rhoUdiff[this->_moleculeIdx[i]];
+      source[this->_TvibID[0]] -= this->_hsVib[ispecies]*this->_rhoUdiff[ispecies];
     }
   }
 }
-  
+      
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename BASE>

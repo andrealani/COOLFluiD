@@ -2499,7 +2499,7 @@ void ParCFmeshFileReader::updateIsLocalNodeState
 {
   CFLog(DEBUG_MED, "ParCFmeshFileReader::updateIsLocalNodeState() => start\n");
   
-  // AL: be ware that here we trade performance for safety!
+  // AL: be aware that here we trade performance for safety!
   // ElementDataArray "elem" is not in a totally valid state, its storage is 
   // potentially bigger than necessary in order to allow for preallocating is 
   // memory once for all. In particular, its end(), sizeData(), getNbElements() 

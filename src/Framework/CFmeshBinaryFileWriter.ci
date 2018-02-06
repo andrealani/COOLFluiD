@@ -14,7 +14,7 @@
 #include "Common/CFMultiMap.hh"
 #include "Common/CFPrintContainer.hh"
 #include "Common/MPI/MPIIOFunctions.hh"
-
+#include "Common/OSystem.hh"
 #include "Environment/SingleBehaviorFactory.hh"
 
 #include "Framework/WriteListMap.hh"
@@ -105,7 +105,10 @@ void CFmeshBinaryFileWriter<DATA>::writeToFile(const boost::filesystem::path& fi
   CFAUTOTRACE;
   
   using namespace COOLFluiD::Common;
-  
+ 
+  CFLog(VERBOSE, "CFmeshBinaryFileWriter<DATA>::writeToFile() => Memory usage: "<< 
+      Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n");
+ 
   // AL: the writer processor with less elements is chosen as the master IO node
   // this can avoid memory "explosion" on master node in cases for which 
   // the partitioning is not well balanced
@@ -405,7 +408,10 @@ void CFmeshBinaryFileWriter<DATA>::writeElementList(MPI_File* fh)
   
   WriteListMap elementList;
   elementList.reserve(nbElementTypes, nSend, nbLocalElements);
-  
+ 
+  CFLog(VERBOSE, "CFmeshBinaryFileWriter<DATA>::writeElementList() 1 => Memory usage: "<< 
+      Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n");
+ 
   // store global info about the global ID ranges for sending
   // and the size of each send
   // each send will involve one writing process which wil collect all data 
@@ -610,7 +616,10 @@ void CFmeshBinaryFileWriter<DATA>::writeElementList(MPI_File* fh)
       }
     }
   }
-  
+
+  CFLog(VERBOSE, "CFmeshBinaryFileWriter<DATA>::writeElementList() 2 => Memory usage: "<<
+      Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n");
+
   CFLogInfo("Element written \n"); 
   
   if (_isWriterRank) {
@@ -721,7 +730,10 @@ void CFmeshBinaryFileWriter<DATA>::writeNodeList(MPI_File* fh)
   
   WriteListMap elementList;
   elementList.reserve(nbElementTypes, nSend, nbLocalElements);
-  
+ 
+  CFLog(VERBOSE, "CFmeshBinaryFileWriter<DATA>::writeNodeList() 1 => Memory usage: "<<
+      Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n");
+ 
   // store global info about the global ID ranges for sending
   // and the size of each send
   const CFuint nbExtraNodalVars = getWriteData().getNbExtraNodalVars();
@@ -865,7 +877,10 @@ void CFmeshBinaryFileWriter<DATA>::writeNodeList(MPI_File* fh)
   for (CFuint i = 0; i < maxElemSendSize; ++i) {
     elementToPrint[i] = 0;
   }
-  
+ 
+ CFLog(VERBOSE, "CFmeshBinaryFileWriter<DATA>::writeNodeList() 2 => Memory usage: " <<
+      Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n");
+ 
   if (_isWriterRank) {
     MPI_Barrier(wg.comm);
     MPI_File_seek(*fh, _offset[0].nodes.second, MPI_SEEK_SET);
@@ -931,7 +946,10 @@ void CFmeshBinaryFileWriter<DATA>::writeStateList(MPI_File* fh)
     
     WriteListMap elementList;
     elementList.reserve(nbElementTypes, nSend, nbLocalElements);
-    
+   
+    CFLog(VERBOSE, "CFmeshBinaryFileWriter<DATA>::writeStateList() 1 => Memory usage: "<<
+      Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n");
+ 
     // store global info about the global ID ranges for sending
     // and the size of each send
     const CFuint nbExtraStateVars = getWriteData().getNbExtraStateVars();
@@ -1081,6 +1099,9 @@ void CFmeshBinaryFileWriter<DATA>::writeStateList(MPI_File* fh)
     for (CFuint i = 0; i < maxElemSendSize; ++i) {
       elementToPrint[i] = 0;
     }
+
+     CFLog(VERBOSE, "CFmeshBinaryFileWriter<DATA>::writeStateList() 2 => Memory usage: "<<
+      Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n");
   }
   
   if (_isWriterRank) {
