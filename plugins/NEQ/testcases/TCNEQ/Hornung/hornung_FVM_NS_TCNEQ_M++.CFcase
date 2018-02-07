@@ -41,6 +41,7 @@ Simulator.SubSystem.NavierStokes2DNEQ.Mutationpp.MinT = 200.
 Simulator.SubSystem.NavierStokes2DNEQ.nbSpecies = 2
 Simulator.SubSystem.NavierStokes2DNEQ.nbEulerEqs = 3
 Simulator.SubSystem.NavierStokes2DNEQ.nbVibEnergyEqs = 1
+Simulator.SubSystem.NavierStokes2DNEQ.Mutationpp.electrEnergyID = 0
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 

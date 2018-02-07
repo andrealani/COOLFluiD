@@ -78,6 +78,7 @@ MutationLibrarypp::MutationLibrarypp(const std::string& name) :
   
   // change default
   m_shiftHO = true;
+  _electrEnergyID = 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////

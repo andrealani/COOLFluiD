@@ -59,6 +59,7 @@ Simulator.SubSystem.ICPNEQ2D.Mutationpp.ShiftH0 = true
 Simulator.SubSystem.ICPNEQ2D.nbSpecies = 11
 Simulator.SubSystem.ICPNEQ2D.nbEulerEqs = 3
 Simulator.SubSystem.ICPNEQ2D.nbVibEnergyEqs = 1
+Simulator.SubSystem.ICPNEQ2D.Mutationpp.electrEnergyID = 0
 #
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.Tecplot.Data.outputVar = PivtTv
