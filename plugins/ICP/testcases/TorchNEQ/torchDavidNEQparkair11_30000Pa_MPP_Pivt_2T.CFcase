@@ -1,0 +1,326 @@
+# COOLFluiD Startfile
+# # Comments begin with "#"
+
+#-------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------
+####### DEFAULT SETTINGS #############################################################
+#-------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = true
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+#CFEnv.ExceptionAborts      = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
+CFEnv.RegistSignalHandlers = false
+#CFEnv.TraceToStdOut = true
+#CFEnv.TraceActive = true
+
+####### TEST CONFIGURATION
+#CFEnv.ErrorOnUnusedConfig = true
+
+# Simulation Modules
+Simulator.Modules.Libs = libPetscI libTecplotWriter libNavierStokes libMutationppI libLTE libNEQ libICP libICPNEQ libFiniteVolume libFiniteVolumeNavierStokes libFiniteVolumeNEQ libFiniteVolumeICP libFiniteVolumeICPNEQ libNewtonMethod libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
+
+#######################################################################
+# Simulation Parameters (should not change)                           #
+#######################################################################
+
+############################
+###### ICP PHYSICAL MODEL ##
+############################
+
+Simulator.SubSystem.Default.PhysicalModelType = ICPNEQ2D
+Simulator.SubSystem.ICPNEQ2D.refValues = 30000 30000 30000 30000 30000 30000 30000 30000 30000 30000 30000 100. 100. 10000. 10000. 0.01 0.01
+Simulator.SubSystem.ICPNEQ2D.refLength = 1.
+
+########################
+###### EM Field MODEL ##
+########################
+Simulator.SubSystem.ICPNEQ2D.SourceTerm.Use2DModel = true
+Simulator.SubSystem.ICPNEQ2D.SourceTerm.Permeability = 0.0000012566
+Simulator.SubSystem.ICPNEQ2D.SourceTerm.Freq = 0.45
+#Simulator.SubSystem.ICPNEQ2D.SourceTerm.OutputFile = ./EM.plt
+#Simulator.SubSystem.ICPNEQ2D.SourceTerm.OutputFileSaveRate = 5
+#Simulator.SubSystem.ICPNEQ2D.SourceTerm.PegaseApproximation = true
+
+##########################
+###### CHEMICAL LIBRARY ##
+##########################
+
+Simulator.SubSystem.ICPNEQ2D.PropertyLibrary = Mutationpp
+Simulator.SubSystem.ICPNEQ2D.Mutationpp.mixtureName = air11_renumber
+Simulator.SubSystem.ICPNEQ2D.Mutationpp.StateModelName = ChemNonEqTTv
+Simulator.SubSystem.ICPNEQ2D.Mutationpp.ShiftH0 = true 
+Simulator.SubSystem.ICPNEQ2D.nbSpecies = 11
+Simulator.SubSystem.ICPNEQ2D.nbEulerEqs = 3
+Simulator.SubSystem.ICPNEQ2D.nbVibEnergyEqs = 1
+#
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.Tecplot.Data.outputVar = PivtTv
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+
+####################################
+## Reading the previous solution   ##
+#####################################
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CellCenterFVM.Restart = true
+
+##########################################
+### Pseudo-time solver                 ###
+##########################################
+
+Simulator.SubSystem.LinearSystemSolver = PETSC PETSC
+Simulator.SubSystem.LSSNames = NSLSS ELSS
+
+Simulator.SubSystem.NSLSS.Data.PCType = PCASM
+Simulator.SubSystem.NSLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NSLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NSLSS.Data.MaxIter = 1000
+Simulator.SubSystem.NSLSS.MaskEquationIDs = 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
+Simulator.SubSystem.NSLSS.Data.NbKrylovSpaces = 250
+Simulator.SubSystem.NSLSS.Data.RelativeTolerance = 1e-4
+#Simulator.SubSystem.NSLSS.Data.SaveSystemToFile = true
+
+Simulator.SubSystem.ELSS.Data.PCType = PCASM
+Simulator.SubSystem.ELSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.ELSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.ELSS.Data.MaxIter = 500
+Simulator.SubSystem.ELSS.MaskEquationIDs = 15 16
+Simulator.SubSystem.ELSS.Data.NbKrylovSpaces = 80
+Simulator.SubSystem.ELSS.Data.RelativeTolerance = 1e-4
+#Simulator.SubSystem.ELSS.Data.SaveSystemToFile = true
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.ConvRate = 1
+Simulator.SubSystem.NewtonIterator.ShowRate = 1
+Simulator.SubSystem.NewtonIterator.Data.CollaboratorNames = NSLSS ELSS
+#Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation = 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. .1 .1 .1 .1 1. 1.
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 13
+Simulator.SubSystem.NewtonIterator.Data.L2.ComputedVarID = 11 12 13 14
+Simulator.SubSystem.NewtonIterator.Data.FilterState = Max
+Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs   = 1 1 1 1 1 1 1 1 1 1 1 0 0 1 1 0 0
+Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+
+##########################################
+### Finite Volume  Solver              ###
+##########################################
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Data.CollaboratorNames = NSLSS ELSS
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacobCoupling
+Simulator.SubSystem.CellCenterFVM.NumJacobCoupling.FreezeDiffCoeff = false
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhsCoupling
+Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhsCoupling.annullDiagValue = 0 1
+#Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhsCoupling.useGlobalDT = true
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUpMS2D
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMS2D.choiceA12 = 5
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMS2D.machInf = 0.2
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = PivtTv
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = PivtTv
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokesCoupling
+Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
+
+Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = \
+        NavierStokes2DTCNEQAxiST Euler2DCTNEQST ICPNEQInductionEquationST RMSJouleHeatST LorentzForceAlternativeST
+Simulator.SubSystem.CellCenterFVM.Data.NavierStokes2DTCNEQAxiST.uvIDs = 11 12
+
+#############################################################
+####    Polynomial reconstruction (linear here)           ###
+#############################################################
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -10.0
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 0.
+
+#########################################################
+### Preprocessing                                    ####
+#########################################################
+
+# this has to activated to add the joule heating to both energy equations
+Simulator.SubSystem.CellCenterFVM.Data.RMSJouleHeatST.AddToBothEnergyEquations = true
+Simulator.SubSystem.DataPreProcessing = DataProcessing
+Simulator.SubSystem.DataProcessing.Data.updateVar = PivtTv
+###### COUPLING INDUCTION THROUGH SOURCES ##
+Simulator.SubSystem.DataProcessing.Comds = RMSJouleHeatSourceCouplingNEQ LorentzForceSourceTermCommNEQ
+Simulator.SubSystem.DataProcessing.Names = JouleHeatSource LorentzForce
+Simulator.SubSystem.DataProcessing.ProcessRate = 1
+
+#-------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------
+####### USER INPUTS ##################################################################
+#-------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------
+###
+# directory from which reading inputs and where this CFcase file is located
+###
+Simulator.Paths.WorkingDir = ./
+###
+# directory where ouput files are written
+###
+Simulator.Paths.ResultsDir = ./OUTPUT_AUSMNEQ_M77
+
+################
+# output CFmesh file name
+#################
+Simulator.SubSystem.CFmesh.FileName = torch_50kW-sol.CFmesh
+#torch_50kW-out.CFmesh
+# how often the CFmesh file is written
+Simulator.SubSystem.CFmesh.SaveRate     = 500
+# append the iteration number to the CFmesh file
+Simulator.SubSystem.CFmesh.AppendIter   = true
+
+# output Tecplot file name
+Simulator.SubSystem.Tecplot.FileName    = torch_50kW-out.plt
+#how often the Tecplot file is written
+Simulator.SubSystem.Tecplot.SaveRate    = 100
+# list of TRS's for which a surface solution file is written
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Wall_torch_in
+Simulator.SubSystem.Tecplot.AppendIter = true
+
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = rhs
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = \
+#	v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15 v16
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
+#Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
+
+###########################################################
+###   Declaring the topological regions                 ###
+###########################################################
+Simulator.SubSystem.Default.listTRS = InnerFaces Symmetry Wall_torch_up Wall_torch_in Inlet Outlet_torch 
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = LTE20000pa10gs.CFmesh
+#restart_LTE20000pa.CFmesh
+#NEQparkair11.CFmesh
+#torch_90kW-in2.CFmesh
+
+#This may be activatid only if restarting from LTE case
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.InputToUpdate = ICPNEQ2DPvtToPivtTv
+#Simulator.SubSystem.ICPNEQ2D.ConvTerm.p0InfComp = 20000.
+
+#################################################
+## Stop conditions                             ##
+#################################################
+#Simulator.SubSystem.StopCondition          = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -7.0
+
+##################################################
+##  CFL function                                ##
+##################################################
+
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 0.5
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<30,1.,if(i<100,2.,if(i<1200,min(4.,cfl*1.02),if(i<2500,min(30,cfl*1.02),min(200.,cfl*1.02)))))
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function 
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i>50,if(i>150,if(i>250,if(i>300,if(i>500,if(i>600,if(i>700,if(i>800,if(i>900,if(i>1000,400,200),100),50),20),10),1),0.1),0.05),0.01),0.001)
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<50,0.1,if(i<200,1,if(i<400,10,100)))
+#if(i<900,5,if(i<1200,10,if(i<1350,20,if(i<1500,40,if(i<1700,50,100))))))))
+
+##################################################
+##  Interactive CFL                             ##
+##################################################
+# interactive CFL requires file torch.inter)
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+# interactive CFL requires following line on it
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 0.0001
+Simulator.SubSystem.InteractiveParamReader.FileName = ./torch.inter
+Simulator.SubSystem.InteractiveParamReader.readRate = 5
+
+#######################################################
+##  Extrapolation from cell centered to nodal states ##
+#######################################################
+
+Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMove
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TrsPriorityList = \
+	Wall_torch_up Symmetry Wall_torch_in Inlet Outlet_torch
+
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.TRSName = Wall_torch_up 
+#Wall_torch_in
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.ValuesIdx = 11 12 13 14
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMove.Values = 0. 0. 350. 350.
+
+#################################################
+##   Boundary conditions                       ##
+#################################################
+# boundary conditions (actual object name)
+Simulator.SubSystem.CellCenterFVM.BcComds = EpComputingNoSlipWallIsothermalICPNEQPvtFVMCC \
+                                            MirrorICPFVMCC \
+                                            EpComputingNoSlipWallIsothermalICPNEQPvtFVMCC \
+                                            EpComputingSubInletICPNEQ2DPuvtUVTFVMCC \
+                                            EpComputingSubOutletICPNEQ2DPuvtFVMCC 
+
+# boundary conditions (user-defined name for following configuration)
+Simulator.SubSystem.CellCenterFVM.BcNames = BcTorchWallUp \
+                                            BcSymmetry \
+                                            BcTorchWallIn \
+                                            BcInlet \
+                                            BcOutlet
+
+# boundary condition list with user-defined parameters
+Simulator.SubSystem.CellCenterFVM.BcTorchWallUp.applyTRS = Wall_torch_up
+Simulator.SubSystem.CellCenterFVM.BcTorchWallUp.TWall = 350.
+Simulator.SubSystem.CellCenterFVM.BcTorchWallUp.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 1 1
+
+Simulator.SubSystem.CellCenterFVM.BcSymmetry.applyTRS = Symmetry
+Simulator.SubSystem.CellCenterFVM.BcSymmetry.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 0 0 1 1 1 1
+
+Simulator.SubSystem.CellCenterFVM.BcTorchWallIn.applyTRS = Wall_torch_in
+Simulator.SubSystem.CellCenterFVM.BcTorchWallIn.TWall = 350.
+Simulator.SubSystem.CellCenterFVM.BcTorchWallIn.Adiabatic = true
+Simulator.SubSystem.CellCenterFVM.BcTorchWallIn.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 0 0 1 1 1 1
+
+Simulator.SubSystem.CellCenterFVM.BcInlet.applyTRS = Inlet
+Simulator.SubSystem.CellCenterFVM.BcInlet.MassFlow = 6.
+Simulator.SubSystem.CellCenterFVM.BcInlet.T = 350.
+Simulator.SubSystem.CellCenterFVM.BcInlet.InletRadii = .067 .08
+Simulator.SubSystem.CellCenterFVM.BcInlet.Yi = 0. 0. 0. 0.767 0. 0.233 0. 0. 0. 0. 0.
+Simulator.SubSystem.CellCenterFVM.BcInlet.ZeroGradientFlags = 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1  
+
+Simulator.SubSystem.CellCenterFVM.BcOutlet.applyTRS = Outlet_torch
+Simulator.SubSystem.CellCenterFVM.BcOutlet.P = 30000.0
+Simulator.SubSystem.CellCenterFVM.BcOutlet.ZeroGradientFlags = 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 
+
+##################################
+###### COILS, CURRENT AND POWER ##
+##################################
+Simulator.SubSystem.DataProcessing.JouleHeatSource.DesiredPower = 50.
+Simulator.SubSystem.DataProcessing.JouleHeatSource.NbCoils = 6
+Simulator.SubSystem.DataProcessing.JouleHeatSource.RadiusCoils = .109 .109 .109 .109 .109 .109
+Simulator.SubSystem.DataProcessing.JouleHeatSource.ZPositionCoils = .100 .150 .200 .250 .300 .350
+Simulator.SubSystem.DataProcessing.JouleHeatSource.OutputFileElCurrent = ./elCurrent.plt
+
+################################
+###### Lorentz Force settings ##
+################################
+## LorentzForce.FaceCenterComputationMethod:
+##  0: E in the middle of the face obtained from E in adjacent nodes 
+##  1: E in the middle of the face obtained with complete distance-base diamond-shape stencil (DEFAULT)
+##  2: E in the middle of the face obtained from E in cell centers
+Simulator.SubSystem.DataProcessing.LorentzForce.FaceCenterComputationMethod = 1
+
+## LorentzForce.AverageInNodeStrategy:
+##  0: LorentzForce takes computed Ev coming from RMSJouleHeatSourceComm.cxx (DEFAULT)
+##  1: LorentzForce compute Ev usign distance-based average 
+##  2: LorentzForce computes Ev in the original way, usign volume-based average
+Simulator.SubSystem.DataProcessing.LorentzForce.AverageInNodeStrategy = 0
+
