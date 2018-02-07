@@ -1,11 +1,22 @@
-# COOLFluiD Startfile
-# # Comments begin with "#"
-
-#-------------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------------
-####### DEFAULT SETTINGS #############################################################
-#-------------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------------
+################################################################################
+## 
+## This COOLFluiD CFcase file tests: 
+## 
+## Finite Volume, ICPNEQ2D, NewtonIterator using two weakly coupled systems 
+## (fluid and electric field), mesh with quads, first-order with PivtTv variables, 
+## AUSM+up flux, subsonic inlet and outlet, isothermal noslip wall, 
+## PETSc using >200 Krylov spaces, computation of Lorentz force and Joule heating 
+## source terms for ICP, Mutation++ library, 11-species air mixture in NEQ, 
+## restart from a first order TCNEQ solution with RhoivtTv variables on a torch 
+## configuration at p=30,000 Pa
+##
+#################################################################################
+##
+## Comments begin with "#"
+#
+## This testcases verifies the simulation of torch at 50kW on 12 processors
+#
+### Residual = 3.8176909
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -173,7 +184,7 @@ Simulator.SubSystem.DataProcessing.ProcessRate = 1
 ###
 # directory from which reading inputs and where this CFcase file is located
 ###
-Simulator.Paths.WorkingDir = ./
+Simulator.Paths.WorkingDir = plugins/ICP/testcases/TorchNEQ/
 ###
 # directory where ouput files are written
 ###
@@ -207,23 +218,25 @@ Simulator.SubSystem.Tecplot.AppendIter = true
 ###   Declaring the topological regions                 ###
 ###########################################################
 Simulator.SubSystem.Default.listTRS = InnerFaces Symmetry Wall_torch_up Wall_torch_in Inlet Outlet_torch 
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = LTE20000pa10gs.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = restart_30000Pa_1st.CFmesh
+#LTE20000pa10gs.CFmesh
 #restart_LTE20000pa.CFmesh
 #NEQparkair11.CFmesh
 #torch_90kW-in2.CFmesh
 
 #This may be activatid only if restarting from LTE case
-Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.InputToUpdate = ICPNEQ2DPvtToPivtTv
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.InputToUpdate = ICPNEQ2DRhoivtTvToPivtTv
+#Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.InputToUpdate = ICPNEQ2DPvtToPivtTv
 #Simulator.SubSystem.ICPNEQ2D.ConvTerm.p0InfComp = 20000.
 
 #################################################
 ## Stop conditions                             ##
 #################################################
-#Simulator.SubSystem.StopCondition          = MaxNumberSteps
-#Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
 
-Simulator.SubSystem.StopCondition       = Norm
-Simulator.SubSystem.Norm.valueNorm      = -7.0
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -7.0
 
 ##################################################
 ##  CFL function                                ##
@@ -244,7 +257,7 @@ Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 0.5
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 # interactive CFL requires following line on it
 #Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 0.0001
-Simulator.SubSystem.InteractiveParamReader.FileName = ./torch.inter
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/ICP/testcases/TorchNEQ/torch.inter
 Simulator.SubSystem.InteractiveParamReader.readRate = 5
 
 #######################################################
