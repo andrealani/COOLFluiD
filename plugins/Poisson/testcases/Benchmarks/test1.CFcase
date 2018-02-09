@@ -10,11 +10,11 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.0373281
+### Residual = -6.8166021
 #
 
 # Simulation Modules
-Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libPoisson libFiniteVolume libFiniteVolumePoisson libBackwardEuler libTHOR2CFmesh
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libTecplotWriter libPoisson libFiniteVolume libFiniteVolumePoisson libBackwardEuler libTHOR2CFmesh
 
 #CFEnv.ErrorOnUnusedConfig = true
 
@@ -28,7 +28,7 @@ Simulator.SubSystem.Poisson2D.refLength    = 1.0
 #Simulator.SubSystem.Poisson2D.DiffTerm.Def = 1
 #Simulator.SubSystem.Poisson2D.SourceTerm.Def = 1.
 
-Simulator.SubSystem.OutputFormat    = Tecplot CFmesh
+Simulator.SubSystem.OutputFormat    = ParaView Tecplot CFmesh
 
 Simulator.SubSystem.CFmesh.FileName = test1.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate = 10
@@ -40,6 +40,13 @@ Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 10
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
+
+Simulator.SubSystem.ParaView.FileName    = test1.vtu
+#Simulator.SubSystem.ParaView.WriteSol    = WriteSolution
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.SaveRate = 10
+Simulator.SubSystem.ParaView.AppendTime = false
+Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.StopCondition          = MaxNumberSteps
 Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
@@ -54,13 +61,14 @@ Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = BwdEulerLSS
-Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
 Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES #KSPBICG #KSPGMRES
 Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
 Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 1000
-Simulator.SubSystem.BwdEulerLSS.Data.RelativeTolerance = 1e-4
-#Simulator.SubSystem.BwdEulerLSS.Data.UseAIJ = true
-#Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
+Simulator.SubSystem.BwdEulerLSS.Data.RelativeTolerance = 1e-3
+#Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
+Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCGAMG
+Simulator.SubSystem.BwdEulerLSS.Data.UseAIJ = true
+Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
 #Simulator.SubSystem.BwdEulerLSS.Data.PreconditionerRate = 5
 #
 Simulator.SubSystem.ConvergenceMethod = BwdEuler
