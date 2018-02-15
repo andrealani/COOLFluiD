@@ -89,6 +89,12 @@ protected: //data
   /// socket for the wallDistance storage
   Framework::DataSocketSource<CFreal> socket_wallDistance;
 
+  /// socket for the nodes inside the Region 
+  // True if node is inside the region 
+  // False if the node is outside the region
+  Framework::DataSocketSource<bool> socket_nodeisAD;
+
+
   /// storage of face normals 
   Framework::DataSocketSink<CFreal> socket_normals; 
   

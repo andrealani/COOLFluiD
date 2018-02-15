@@ -11,7 +11,7 @@
 
 #include "Framework/TRSDistributeData.hh"
 #include "MeshTools/ComputeWallDistance.hh"
-
+#include <vector>
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -31,6 +31,9 @@ namespace COOLFluiD {
  */
 class ComputeWallDistanceVector2CCMPI : public ComputeWallDistance {
 public:
+
+
+
   
   /**
    * Defines the Config Option's of this class
@@ -64,8 +67,10 @@ public:
    * @return a vector of SafePtr with the DataSockets
    */
   std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets();
-  
-private:
+
+
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > provideSockets();
+
     
   /**
    * This class stores face centers and normals to be distributed in parallel
@@ -78,9 +83,7 @@ private:
     std::vector<CFreal> faceNormals; /// face normals
   };
   
-  /**
-   * Compute the distance to the wall in 3D
-   */
+  
   void execute3D();
   
   /**
@@ -92,7 +95,8 @@ private:
    * Compute the wall distance (2D and 3D)
    */
   void computeWallDistance(TRSFaceDistributeData& data);
-  
+ 
+     
 private:
   
   /// temporary coefficient
@@ -134,9 +138,12 @@ private:
   CFuint m_nbProc;
   
   /// flag to select centroid-based algorithm
-  bool _centroidBased;
+  bool m_centroidBased;
 
-}; // end of class ComputeWallDistanceVector2CCMPI
+  /// Define the acceptable distance  
+ 
+  CFreal m_acceptableDistance;
+  }; // end of class ComputeWallDistanceVector2CCMPI
 
 //////////////////////////////////////////////////////////////////////////////
 
