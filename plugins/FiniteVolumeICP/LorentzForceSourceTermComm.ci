@@ -141,12 +141,18 @@ void LorentzForceSourceTerm<ST>::setup()
   const CFuint nbCells = cells->nbRows();
   
   DataHandle<RealVector> LorentzForce = socket_LorentzForce.getDataHandle();
-  LorentzForce.resize(2);
-  LorentzForce[0].resize(nbCells);
-  LorentzForce[1].resize(nbCells);
+  
+  const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
+  const CFuint dim = (is2DHalf) ? 3 : PhysicalModelStack::getActive()->getDim();
+  
+  LorentzForce.resize(dim);
+  for (CFuint i = 0; i < dim; ++i) {
+    LorentzForce[i].resize(nbCells);
+  }
   for(CFuint iCell = 0; iCell < nbCells; ++iCell) {
-    LorentzForce[0][iCell] = 0.0;
-    LorentzForce[1][iCell] = 0.0;
+    for (CFuint i = 0; i < dim; ++i) {
+      LorentzForce[i][iCell] = 0.0;
+    }
   }
   
   // suppose that just one space method is available

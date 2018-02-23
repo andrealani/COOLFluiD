@@ -22,6 +22,9 @@ namespace COOLFluiD {
 
 Environment::ObjectProvider<NavierStokes3DPvtLTE, DiffusiveVarSet, LTEModule, 2> ns3DPvtLTEProvider("NavierStokes3DPvtLTE");
 
+// 2D and 1/2      
+Environment::ObjectProvider<NavierStokes3DPvtLTE, DiffusiveVarSet, LTEModule, 2> ns2DPvtLTEProvider("NavierStokes2DPvtLTE");
+
 //////////////////////////////////////////////////////////////////////////////
 
 NavierStokes3DPvtLTE::NavierStokes3DPvtLTE(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model) :

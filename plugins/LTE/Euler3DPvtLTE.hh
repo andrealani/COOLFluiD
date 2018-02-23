@@ -123,7 +123,7 @@ public: // classes
   
   /// Set the IDs corresponding to the velocity components in a State
   virtual void setStateVelocityIDs (std::vector<CFuint>& velIDs)
-  {
+  {    
     velIDs.resize(3); velIDs[XX] = 1; velIDs[YY] = 2; velIDs[ZZ] = 3;
   }
   

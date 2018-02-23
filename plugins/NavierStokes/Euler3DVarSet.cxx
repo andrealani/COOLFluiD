@@ -90,7 +90,7 @@ void Euler3DVarSet::computeFlux (const RealVector& data,
 {
   const CFreal nx = normals[XX];
   const CFreal ny = normals[YY];
-  const CFreal nz = normals[ZZ];
+  const CFreal nz = (normals.size() == 3) ? normals[ZZ] : 0.;
   const CFreal u = data[EulerTerm::VX];
   const CFreal v = data[EulerTerm::VY];
   const CFreal w = data[EulerTerm::VZ];
@@ -119,6 +119,9 @@ void Euler3DVarSet::computeFlux (const RealVector& data,
 
 void Euler3DVarSet::computeStateFlux (const RealVector& data)
 {
+  // AL: this needs to be adapted for 2D and 1/2
+  cf_assert(PhysicalModelStack::getActive()->getDim() == 3);
+  
   const CFreal u = data[EulerTerm::VX];
   const CFreal v = data[EulerTerm::VY];
   const CFreal w = data[EulerTerm::VZ];

@@ -6,8 +6,8 @@ ICPInductionConvVarSet.cxx
 ICPInductionDiffVarSet.hh
 ICPInductionDiffVarSet.ci
 ICPInductionDiffVarSet.cxx
-ICPLTE2DPuvtToCons.hh
-ICPLTE2DPuvtToCons.cxx
+ICPLTEPvtToCons.hh
+ICPLTEPvtToCons.cxx
 ICPLTE2DdPuvtToPuvt.hh
 ICPLTE2DdPuvtToPuvt.cxx
 ICPLTE2DPuvtToConsInPuvt.cxx

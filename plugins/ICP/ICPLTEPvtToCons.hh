@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Physics_ICP_ICPLTE2DPuvtToCons_hh
-#define COOLFluiD_Physics_ICP_ICPLTE2DPuvtToCons_hh
+#ifndef COOLFluiD_Physics_ICP_ICPLTEPvtToCons_hh
+#define COOLFluiD_Physics_ICP_ICPLTEPvtToCons_hh
 
 //////////////////////////////////////////////////////////////////////
 
@@ -24,7 +24,7 @@ namespace COOLFluiD {
  * @author Radek Honzattko
  *
  */
-class ICPLTE2DPuvtToCons : public Framework::VarSetTransformer {
+class ICPLTEPvtToCons : public Framework::VarSetTransformer {
 public:
   
   typedef Framework::MultiScalarTerm<Physics::NavierStokes::EulerTerm> PTERM;
@@ -32,12 +32,12 @@ public:
   /**
    * Default constructor without arguments
    */
-  ICPLTE2DPuvtToCons(Common::SafePtr<Framework::PhysicalModelImpl> model);
+  ICPLTEPvtToCons(Common::SafePtr<Framework::PhysicalModelImpl> model);
 
   /**
    * Default destructor
    */
-  virtual ~ICPLTE2DPuvtToCons();
+  virtual ~ICPLTEPvtToCons();
 
   /**
    * Transform a set of state vectors into another one
@@ -58,7 +58,7 @@ private:
   /// array storing density enthalpy energy
   RealVector _dhe;
   
-}; // end of class ICPLTE2DPuvtToCons
+}; // end of class ICPLTEPvtToCons
 
 //////////////////////////////////////////////////////////////////////
 
@@ -70,4 +70,4 @@ private:
 
 //////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Physics_ICP_ICPLTE2DPuvtToCons_hh
+#endif // COOLFluiD_Physics_ICP_ICPLTEPvtToCons_hh

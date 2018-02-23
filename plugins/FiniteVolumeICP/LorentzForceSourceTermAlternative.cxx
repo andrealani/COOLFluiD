@@ -85,6 +85,12 @@ void LorentzForceSourceTermAlternative::computeSource
     CFLogDebugMax( "LorentzForceSourceTermAlternative::computeSource() => source[" << 
 		   m_velIDs[1] << "] = " <<LorentzForce[1][elemID]  << "\n");
 
+    if (PhysicalModelStack::getActive()->getImplementor()->is2DHalf()) {
+      source[m_velIDs[2]] = LorentzForce[2][elemID] ;
+      CFLogDebugMax( "LorentzForceSourceTermAlternative::computeSource() => source[" << 
+		   m_velIDs[2] << "] = " <<LorentzForce[2][elemID]  << "\n");
+    }
+    
     source *= volumes[elemID];
   }
 }

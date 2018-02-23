@@ -10,14 +10,15 @@ LIST ( APPEND coolfluid-solver_libs ${CF_KERNEL_LIBS} ${CF_KERNEL_STATIC_LIBS} )
  
 IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND coolfluid-solver_libs ${CF_Boost_LIBRARIES} )
+LOG("CF_Boost_LIBRARIES are [${CF_Boost_LIBRARIES}]" )
 ENDIF()
 
 MESSAGE ("###### coolfluid-solver_libs are ${coolfluid-solver_libs}")
 MESSAGE ("###### coolfluid-solver_cflibs are ${coolfluid-solver_cflibs}")
 IF ( CF_HAVE_ALLSTATIC )
 LOG ("coolfluid-solver_libs are ${coolfluid-solver_libs}")
-LOG("CF_KERNEL_LIBS is [${CF_KERNEL_LIBS}]" )
-LOG("CF_KERNEL_STATIC_LIBS is [${CF_KERNEL_STATIC_LIBS}]" )
+LOG("CF_KERNEL_LIBS are [${CF_KERNEL_LIBS}]" )
+LOG("CF_KERNEL_STATIC_LIBS are [${CF_KERNEL_STATIC_LIBS}]" )
 ENDIF()
 
 CF_ADD_PLUGIN_APP ( coolfluid-solver )
