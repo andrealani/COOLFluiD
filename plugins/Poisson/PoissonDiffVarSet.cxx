@@ -77,7 +77,7 @@ RealVector& PoissonDiffVarSet::getFlux(const RealVector& values,
   // AL: double check the sign
   _flux[phiID] = 0.0;
   for (CFuint i = 0; i < dim ; ++i) {
-    _flux[phiID] += sigma*gradPhi[i]*normal[i];
+    _flux[phiID] = sigma*gradPhi[i]*normal[i];
     CFLog(DEBUG_MAX, "PoissonDiffVarSet::getFlux; gradPhi["<< i <<"] = "<<gradPhi[i]<< "\n");
   }
   

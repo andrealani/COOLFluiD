@@ -104,14 +104,14 @@ Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
 Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
-Simulator.SubSystem.CellCenterFVM.InField.Def = 1+x^2.+2.*y^2. 
+Simulator.SubSystem.CellCenterFVM.InField.Def = 1.+x^2.+2.*y^2. 
 
 Simulator.SubSystem.CellCenterFVM.BcComds = SuperInletFVMCC
 Simulator.SubSystem.CellCenterFVM.BcNames = Jet1
 
 Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = SuperInlet SuperOutlet
 Simulator.SubSystem.CellCenterFVM.Jet1.Vars = x y
-Simulator.SubSystem.CellCenterFVM.Jet1.Def = 1+x^2.+2.*y^2.
+Simulator.SubSystem.CellCenterFVM.Jet1.Def = 1.+x^2.+2.*y^2.
 
 
 

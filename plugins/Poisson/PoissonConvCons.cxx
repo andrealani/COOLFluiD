@@ -26,6 +26,15 @@ poissonConv2DConsProvider("PoissonConv2DCons");
 Environment::ObjectProvider<PoissonConvCons, ConvectiveVarSet, PoissonModule, 1>
 poissonConv3DConsProvider("PoissonConv3DCons");
 
+Environment::ObjectProvider<PoissonConvCons, ConvectiveVarSet, PoissonModule, 1>
+poissonConv1DPrimProvider("PoissonConv1DPrim");
+
+Environment::ObjectProvider<PoissonConvCons, ConvectiveVarSet, PoissonModule, 1>
+poissonConv2DPrimProvider("PoissonConv2DPrim");
+
+Environment::ObjectProvider<PoissonConvCons, ConvectiveVarSet, PoissonModule, 1>
+poissonConv3DPrimProvider("PoissonConv3DPrim");
+      
 //////////////////////////////////////////////////////////////////////////////
 
 PoissonConvCons::PoissonConvCons(Common::SafePtr<BaseTerm> term) :

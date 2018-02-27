@@ -35,7 +35,6 @@ PoissonDiffCons::PoissonDiffCons(const std::string& name, Common::SafePtr<Framew
   PoissonDiffVarSet(name, model),
   m_eulerModel(model->getConvectiveTerm().d_castTo<PTERM>())
 {
-  
   const CFuint totalNbEqs = 1;
   vector<std::string> names(totalNbEqs);
   
