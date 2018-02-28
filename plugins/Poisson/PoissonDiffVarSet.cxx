@@ -74,11 +74,11 @@ RealVector& PoissonDiffVarSet::getFlux(const RealVector& values,
   const RealVector& gradPhi = *gradients[phiID];
   const CFuint dim    = PhysicalModelStack::getActive()->getDim();
 
-  // AL: double check the sign
   _flux[phiID] = 0.0;
-  for (CFuint i = 0; i < dim ; ++i) {
-    _flux[phiID] = sigma*gradPhi[i]*normal[i];
-    CFLog(DEBUG_MAX, "PoissonDiffVarSet::getFlux; gradPhi["<< i <<"] = "<<gradPhi[i]<< "\n");
+  for (CFuint i = 0; i < dim; ++i) {
+    _flux[phiID] -= sigma*gradPhi[i]*normal[i];
+    CFLog(DEBUG_MAX, "PoissonDiffVarSet::getFlux; gradPhi["<< i <<"] = "<<gradPhi[i]
+	  << ", normal["<< i <<"] = " << normal[i] <<  "\n");
   }
   
   CFLog(DEBUG_MAX, "PoissonDiffVarSet::getFlux; _flux["<< phiID <<"] = "<< _flux <<"\n");
@@ -89,7 +89,7 @@ RealVector& PoissonDiffVarSet::getFlux(const RealVector& values,
 
 CFreal PoissonDiffVarSet::getCurrUpdateDiffCoeff(CFuint iEqSS)
 {
-  return 1.;
+  return 0.;
 }
 
 //////////////////////////////////////////////////////////////////////////////

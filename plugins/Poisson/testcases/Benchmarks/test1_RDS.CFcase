@@ -14,7 +14,7 @@
 ### Residual = -5.9246803
 
 #
-# CFEnv.ErrorOnUnusedConfig = true
+CFEnv.ErrorOnUnusedConfig = true
 # CFEnv.TraceToStdOut = true
 
 # SubSystem Modules
@@ -30,30 +30,34 @@ Simulator.SubSystem.Poisson2D.refLength    = 1.0
 
 Simulator.SubSystem.OutputFormat        = ParaView Tecplot CFmesh
 
-Simulator.SubSystem.CFmesh.FileName     = testRDS.CFmesh
-Simulator.SubSystem.CFmesh.SaveRate = 400
+Simulator.SubSystem.CFmesh.FileName   = testRDS.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate   = 400
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.Tecplot.FileName    = testRDS.plt
+Simulator.SubSystem.Tecplot.FileName        = testRDS.plt
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = SuperInlet SuperOutlet
-Simulator.SubSystem.Tecplot.Data.updateVar = Cons
-Simulator.SubSystem.Tecplot.SaveRate = 400
-Simulator.SubSystem.Tecplot.AppendTime = false
-Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.Tecplot.Data.outputVar  = Cons
+Simulator.SubSystem.Tecplot.SaveRate        = 400
+Simulator.SubSystem.Tecplot.AppendTime      = false
+Simulator.SubSystem.Tecplot.AppendIter      = true
+#false
 
-Simulator.SubSystem.ParaView.FileName    = testRDS.vtu
+Simulator.SubSystem.ParaView.FileName       = testRDS.vtu
 #Simulator.SubSystem.ParaView.WriteSol    = WriteSolution
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
-Simulator.SubSystem.ParaView.SaveRate = 10
-Simulator.SubSystem.ParaView.AppendTime = false
-Simulator.SubSystem.ParaView.AppendIter = false
+Simulator.SubSystem.ParaView.SaveRate       = 10
+Simulator.SubSystem.ParaView.AppendTime     = false
+Simulator.SubSystem.ParaView.AppendIter     = false
 
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
 Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
 
-Simulator.SubSystem.Default.listTRS = InnerCells SuperInlet SuperOutlet
-#Simulator.SubSystem.Default.sameNodeStateConnectivity = true
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -7.0
+
+Simulator.SubSystem.Default.listTRS = SuperInlet SuperOutlet
+Simulator.SubSystem.Default.sameNodeStateConnectivity = true
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = square.CFmesh
@@ -70,6 +74,7 @@ Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 1000
 Simulator.SubSystem.BwdEulerLSS.Data.RelativeTolerance = 1e-3
 Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCGAMG #PCASM
 Simulator.SubSystem.BwdEulerLSS.Data.UseAIJ = true
+Simulator.SubSystem.BwdEulerLSS.Data.NbKrylovSpaces = 200
 
 Simulator.SubSystem.SpaceMethod = FluctuationSplit
 Simulator.SubSystem.FluctuationSplit.ComputeRHS = DiffusionRhsJacob
@@ -79,7 +84,7 @@ Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
 
 Simulator.SubSystem.FluctuationSplit.Data.SourceTerm = FunctionST
 Simulator.SubSystem.FluctuationSplit.Data.FunctionST.Vars = x y phi
-Simulator.SubSystem.FluctuationSplit.Data.FunctionST.Def = (x^2.+y^2.-2.)*exp(-0.5*(x^2.+y^2))/(2.*pi)
+Simulator.SubSystem.FluctuationSplit.Data.FunctionST.Def = -6.
 Simulator.SubSystem.FluctuationSplit.Data.SourceTermSplitter = LumpedGalerkin
 
 Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
@@ -96,16 +101,17 @@ Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
 Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
 Simulator.SubSystem.FluctuationSplit.InField.Def = x^2.+y^2.
 
-Simulator.SubSystem.FluctuationSplit.MachStep.applyTRS = SuperInlet
+Simulator.SubSystem.FluctuationSplit.MachStep.applyTRS = SuperInlet SuperOutlet
 Simulator.SubSystem.FluctuationSplit.MachStep.Vars = x y
-Simulator.SubSystem.FluctuationSplit.MachStep.Def = exp(-0.5*(x^2.+y^2))/(2.*pi)
+Simulator.SubSystem.FluctuationSplit.MachStep.Def = 1.+x^2.+2.*y^2.
 
 Simulator.SubSystem.FluctuationSplit.BcComds = SuperInletImpl
 Simulator.SubSystem.FluctuationSplit.BcNames = Inlet
 
-Simulator.SubSystem.FluctuationSplit.Inlet.applyTRS = SuperInlet
+Simulator.SubSystem.FluctuationSplit.Inlet.applyTRS = SuperInlet SuperOutlet
 Simulator.SubSystem.FluctuationSplit.Inlet.Vars = x y
-Simulator.SubSystem.FluctuationSplit.Inlet.Def = exp(-0.5*(x^2.+y^2))/(2.*pi)
+Simulator.SubSystem.FluctuationSplit.Inlet.Def = 1.+x^2.+2.*y^2.
+
 
 
 

@@ -25,8 +25,6 @@ Simulator.Paths.ResultsDir = ./
 Simulator.SubSystem.Default.PhysicalModelType   = Poisson2D
 Simulator.SubSystem.Poisson2D.refValues    = 1.0
 Simulator.SubSystem.Poisson2D.refLength    = 1.0
-#Simulator.SubSystem.Poisson2D.DiffTerm.Def = 1
-#Simulator.SubSystem.Poisson2D.SourceTerm.Def = 1.
 
 Simulator.SubSystem.OutputFormat    = ParaView Tecplot CFmesh
 
@@ -104,7 +102,7 @@ Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
 Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
-Simulator.SubSystem.CellCenterFVM.InField.Def = 1.+x^2.+2.*y^2. 
+Simulator.SubSystem.CellCenterFVM.InField.Def = x^2.+y^2.
 
 Simulator.SubSystem.CellCenterFVM.BcComds = SuperInletFVMCC
 Simulator.SubSystem.CellCenterFVM.BcNames = Jet1

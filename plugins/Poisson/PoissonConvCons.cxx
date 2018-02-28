@@ -58,7 +58,7 @@ PoissonConvCons::~PoissonConvCons()
 
 void PoissonConvCons::setup()
 {
-  CFLog(NOTICE,"PoissonConvCons::setup()\n");
+  CFLog(VERBOSE,"PoissonConvCons::setup()\n");
   
   PoissonConvVarSet::setup();
   
