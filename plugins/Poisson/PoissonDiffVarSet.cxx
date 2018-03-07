@@ -15,6 +15,7 @@ namespace COOLFluiD {
 PoissonDiffVarSet::PoissonDiffVarSet(const std::string& name,
  Common::SafePtr<Framework::PhysicalModelImpl> model) :
   DiffusiveVarSet(name, model),
+  _model(model->getDiffusiveTerm().d_castTo<PoissonDiffTerm>()),
   m_library(CFNULL)
 {
 }
@@ -29,7 +30,6 @@ PoissonDiffVarSet::~PoissonDiffVarSet()
 
 void PoissonDiffVarSet::setup()
 {
-
   using namespace COOLFluiD::Framework;
 
   DiffusiveVarSet::setup();
@@ -74,9 +74,10 @@ RealVector& PoissonDiffVarSet::getFlux(const RealVector& values,
   const RealVector& gradPhi = *gradients[phiID];
   const CFuint dim    = PhysicalModelStack::getActive()->getDim();
 
+  // we are discretizing -delta u = f => 0 = delta u + f => flux has sign>0 
   _flux[phiID] = 0.0;
   for (CFuint i = 0; i < dim; ++i) {
-    _flux[phiID] -= sigma*gradPhi[i]*normal[i];
+    _flux[phiID] += sigma*gradPhi[i]*normal[i];
     CFLog(DEBUG_MAX, "PoissonDiffVarSet::getFlux; gradPhi["<< i <<"] = "<<gradPhi[i]
 	  << ", normal["<< i <<"] = " << normal[i] <<  "\n");
   }

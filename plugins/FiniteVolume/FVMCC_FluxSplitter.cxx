@@ -119,7 +119,7 @@ void FVMCC_FluxSplitter::computeFlux(RealVector& result)
   } 
   else {
     const bool isBFace =  currFace->getState(1)->isGhost();
-    (!isBFace) ? integrateFluxAndJacob(result) : integrateFluxOnly(result);
+      (!isBFace) ? integrateFluxAndJacob(result) : integrateFluxOnly(result);
   }
 }
       
@@ -200,29 +200,32 @@ void FVMCC_FluxSplitter::evaluateDissipationControlFunction()
       
 void FVMCC_FluxSplitter::computeLeftJacobian()
 {
-  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-
-  if (m_fluxDerivative.size() != nbEqs) {  
-    throw Common::NotImplementedException 
-      (FromHere(),"FVMCC_FluxSplitter::computeLeftJacobian()");
+  if (!isNull()) {
+    const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+    
+    if (m_fluxDerivative.size() != nbEqs) {  
+      throw Common::NotImplementedException 
+	(FromHere(),"FVMCC_FluxSplitter::computeLeftJacobian()");
+    }
+    
+    _tmpJacobMatrix = 0.;
+    for (CFuint iVar = 0; iVar < m_fluxDerivative.size(); ++iVar) {
+      // compute d(F)/d(p) where p is each variable of the update state vector 
+      // this corresponds to a column in the jacobian matrix 
+      (this->*m_fluxDerivative[iVar])(LEFT, iVar, &_tmpJacobMatrix[iVar*nbEqs]);
+    }
+    _tmpJacobMatrix.transpose(_lFluxJacobian);
+    CFLog(DEBUG_MIN, "FVMCC_FluxSplitter::computeLeftJacobian() => _lFluxJacobian = " <<_tmpJacobMatrix << "\n");
   }
-  
-  _tmpJacobMatrix = 0.;
-  for (CFuint iVar = 0; iVar < m_fluxDerivative.size(); ++iVar) {
-    // compute d(F)/d(p) where p is each variable of the update state vector 
-    // this corresponds to a column in the jacobian matrix 
-    (this->*m_fluxDerivative[iVar])(LEFT, iVar, &_tmpJacobMatrix[iVar*nbEqs]);
-  }
-  _tmpJacobMatrix.transpose(_lFluxJacobian);
-  CFLog(DEBUG_MIN, "FVMCC_FluxSplitter::computeLeftJacobian() => _lFluxJacobian = " <<_tmpJacobMatrix << "\n");
 }
  
 //////////////////////////////////////////////////////////////////////////////
       
 void FVMCC_FluxSplitter::computeRightJacobian() 
 {
-  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-  
+  if (!isNull()) {
+    const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+    
   if (m_fluxDerivative.size() != nbEqs) {  
     throw Common::NotImplementedException 
       (FromHere(),"FVMCC_FluxSplitter::computeRightJacobian()");
@@ -235,6 +238,7 @@ void FVMCC_FluxSplitter::computeRightJacobian()
   } 
   _tmpJacobMatrix.transpose(_rFluxJacobian);
   CFLog(DEBUG_MIN, "FVMCC_FluxSplitter::computeLeftJacobian() => _rFluxJacobian = " <<_tmpJacobMatrix << "\n");
+  }
 }
  
 //////////////////////////////////////////////////////////////////////////////

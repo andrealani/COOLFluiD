@@ -24,7 +24,7 @@ MethodStrategyProvider<SourceTermSplitStrategy,
                        FluctuationSplitData,
                        FluctuationSplitStrategy,
                        FluctSplitModule>
-                       sourceTermSplitStrategyProvider("SourceTerm");
+sourceTermSplitStrategyProvider("SourceTerm");
 
 //////////////////////////////////////////////////////////////////////////////
 

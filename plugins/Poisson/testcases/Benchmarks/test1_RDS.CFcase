@@ -2,7 +2,7 @@
 # 
 # This COOLFluiD CFcase file tests: 
 # 
-# Residual Distribution Schemes, Poisson, Backward Euler, mesh with triangles, 
+# Residual Distribution Schemes, Poisson, NewtonIterator, mesh with triangles, 
 # converter from THOR to CFmesh, Dirichlet BC (supersonic inlet)
 #
 ################################################################################
@@ -18,7 +18,7 @@ CFEnv.ErrorOnUnusedConfig = true
 # CFEnv.TraceToStdOut = true
 
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libParaViewWriter libPoisson libFluctSplit libFluctSplitSystem libFluctSplitPoisson libBackwardEuler libTHOR2CFmesh libPetscI
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libParaViewWriter libPoisson libFluctSplit libFluctSplitSystem libFluctSplitPoisson libNewtonMethod libTHOR2CFmesh libPetscI
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/Poisson/testcases/Benchmarks/
@@ -63,18 +63,25 @@ Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = square.CFmesh
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
-Simulator.SubSystem.ConvergenceMethod = BwdEuler
-Simulator.SubSystem.BwdEuler.Data.CFL.Value = 1.
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+Simulator.SubSystem.NewtonIterator.Data.SaveSystemToFile = false
+Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
+Simulator.SubSystem.NewtonIterator.InitCom = ResetSystem
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
-Simulator.SubSystem.LSSNames = BwdEulerLSS
-Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES #KSPBICG #KSPGMRES
-Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
-Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 1000
-Simulator.SubSystem.BwdEulerLSS.Data.RelativeTolerance = 1e-3
-Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCGAMG #PCASM
-Simulator.SubSystem.BwdEulerLSS.Data.UseAIJ = true
-Simulator.SubSystem.BwdEulerLSS.Data.NbKrylovSpaces = 200
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES #KSPCG #KSPBICG
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
+#Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-6 #1e-10
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+#Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCGAMG
+#Simulator.SubSystem.NewtonIteratorLSS.Data.UseAIJ = true
+#Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
+###Simulator.SubSystem.NewtonIteratorLSS.Data.PreconditionerRate = 5
+Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 80
 
 Simulator.SubSystem.SpaceMethod = FluctuationSplit
 Simulator.SubSystem.FluctuationSplit.ComputeRHS = DiffusionRhsJacob
@@ -99,7 +106,7 @@ Simulator.SubSystem.FluctuationSplit.InitNames = InField MachStep
 
 Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
 Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
-Simulator.SubSystem.FluctuationSplit.InField.Def = x^2.+y^2.
+Simulator.SubSystem.FluctuationSplit.InField.Def = 0.
 
 Simulator.SubSystem.FluctuationSplit.MachStep.applyTRS = SuperInlet SuperOutlet
 Simulator.SubSystem.FluctuationSplit.MachStep.Vars = x y

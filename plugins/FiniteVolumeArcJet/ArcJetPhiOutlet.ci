@@ -94,24 +94,29 @@ void ArcJetPhiOutlet<BASE>::setGhostState
   const CFuint nbEqs = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
   const CFuint eqSSID = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getEqSS();
   
-  _vFunction.setFunctions(_function);
-  _vFunction.setVariables(_vars);
-  try {
-    _vFunction.parse();
+  if (_function.size() > 0) {
+    cf_assert(_vars.size() > 0);
+    _vFunction.setFunctions(_function);
+    _vFunction.setVariables(_vars);
+    try {
+      _vFunction.parse();
+    }
+    catch (Common::ParserException& e) {
+      CFout << e.what() << "\n";
+      throw; // retrow the exception to signal the error to the user
+    }
   }
-  catch (Common::ParserException& e) {
-    CFout << e.what() << "\n";
-    throw; // retrow the exception to signal the error to the user
-  }
-
   
   SafePtr<EulerTerm> eulerTerm = PhysicalModelStack::getActive()->getImplementor()->
     getConvectiveTerm().d_castTo<EulerTerm>();
      
   _iter = SubSystemStatusStack::getActive()->getNbIter();
   
-  _vFunction.evaluate(_iter, _resultI);
-  m_imposedI = _resultI[0];
+  if (_function.size() > 0) {
+    _vFunction.evaluate(_iter, _resultI);
+    m_imposedI = _resultI[0];
+  }
+  
   //   std::cout<< "_iter" << _iter << "\n";
   //   std::cout<< "_resultI" << _resultI << "\n";
   
@@ -144,6 +149,8 @@ void ArcJetPhiOutlet<BASE>::setGhostState
     CFreal* tVec = CFNULL;
     
     m_library->setComposition(Tdim, pdim, CFNULL);
+
+    
 
     const CFreal sigma = m_library->sigma(Tdim, pdim, tVec);
     //     const CFreal sigma = 0.27311;  //Only For debugging
@@ -255,7 +262,8 @@ void ArcJetPhiOutlet<BASE>::preProcess()
     m_library->setComposition(Tdim,pdim,CFNULL);
 
     const CFreal sigma = m_library->sigma(Tdim, pdim, tVec);
-    //     const CFreal sigma = 0.27111; 				//WATCH OUT: only for debugging
+   //   cout << "T, p, sigma = " << Tdim << ", " << pdim << ", " << sigma << "\n";  
+    // const CFreal sigma = 0.27111; 				//WATCH OUT: only for debugging
     cf_assert(sigma > 0.);
     if (face->getState(0)->isParUpdatable()) {
       localSigmaIntegral += sigma*faceAreas[face->getID()];

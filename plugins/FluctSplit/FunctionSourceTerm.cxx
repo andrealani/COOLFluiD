@@ -78,6 +78,8 @@ void FunctionSourceTerm::computeSourceFSM(Framework::GeometricEntity *const cell
 					  RealVector& source,
 					  const FluctSplit::InwardNormalsData& normalsData)
 {
+  CFLog(DEBUG_MAX, "FunctionSourceTerm::computeSourceFSM() 1\n");
+  
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const vector<State*>& states = *cell->getStates();
@@ -112,6 +114,8 @@ void FunctionSourceTerm::computeSourceFSM(Framework::GeometricEntity *const cell
 					  std::vector<RealVector>& source,
 					  const FluctSplit::InwardNormalsData& normalsData)
 {
+  CFLog(DEBUG_MAX, "FunctionSourceTerm::computeSourceFSM() 2\n");
+  
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const vector<State*>& states = *cell->getStates();

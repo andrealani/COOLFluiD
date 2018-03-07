@@ -132,37 +132,36 @@ void NumJacobStrategy::computeJacobianTerm
 
       vector<RealVector> *const tBackResidual =
         _distToSolutionMatTrans->transformFromRef(&_otherResidual);
-
-      if (_hasDiffusiveTerm)
-      {
-	       diffTermComputer->computeDiffusiveTerm(cell, _diffResidual, false);
-
-         for (CFuint i = 0; i < nbStatesInCell; ++i)
-         {
-            (*tBackResidual)[i] -= _diffResidual[i];
-	       }
+      
+      if (_hasDiffusiveTerm) {
+	// reset the residual to 0.
+	cleanDiffResidual();
+	
+	diffTermComputer->computeDiffusiveTerm(cell, _diffResidual, false);
+	
+	for (CFuint i = 0; i < nbStatesInCell; ++i) {
+	  (*tBackResidual)[i] -= _diffResidual[i];
+	}
       }
-
+      
       // compute and distribute the jacobian contributions
       for (CFuint jState = 0; jState < nbStatesInCell; ++jState)
       {
-
         CFLogDebugMax( "Perturbing jState = " << jState << "\n");
 
         if ((*states)[jState]->isParUpdatable()) {
           // jacobian contribution (dR_jState/dU_iState)_k
           // compute (R_jState[U_iState + dU_k] - R_jState[U_iState])/eps
           numericalJacob.computeDerivative(_tResidual[jState],
-                    (*tBackResidual)[jState],
-                    _tempRes);
-
-
-      //    cout << "_tempRes = " << _tempRes << endl;
-
+					   (*tBackResidual)[jState],
+					   _tempRes);
+	  
+	  //    cout << "_tempRes = " << _tempRes << endl;
+	  
           acc->addValues(jState, iState, iVar, &_tempRes[0]);
         }
       }
-
+      
       // restore the unperturbed value
       numericalJacob.restore((*currState)[iVar]);
     }

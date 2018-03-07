@@ -22,8 +22,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class computes the diffusive flux corresponding to the Navier Stokes
- * physical model
+ * This class computes the diffusive flux corresponding to the Poisson model
  *
  * @author Alejandro Alvarez Laguna
  *
@@ -45,7 +44,7 @@ public:
   /**
    * Default destructor
    */
-  ~PureDiffFlux();
+  virtual ~PureDiffFlux();
 
   /**
    * Configure the object
@@ -68,16 +67,6 @@ public:
    */
   virtual void computeFlux(RealVector& result);
 
-protected:
-  
-//  /**
-//   * Set the quantities needed to compute gradients (velocity magnitude, temperature, Mach number)
-//   * starting from the states
-//   */
-//  void setGradientVars(const std::vector<RealVector*>& states,
-//		       RealMatrix& values,
-//		       CFuint stateSize);
-  
 protected: // data
   
   /// socket for the cell volumes storage

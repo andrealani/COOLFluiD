@@ -59,10 +59,16 @@ protected:
   /// Set up private data and data
   void setup();
 
-  /// Set up private data and data
+  /// cleanup the residual
   void cleanOtherResidual()
   {
     fill(_otherResidual.begin(),_otherResidual.end(),0.0);
+  }
+
+  /// cleanup the residual
+  void cleanDiffResidual()
+  {
+    fill(_diffResidual.begin(),_diffResidual.end(),0.0);
   }
 
 private:

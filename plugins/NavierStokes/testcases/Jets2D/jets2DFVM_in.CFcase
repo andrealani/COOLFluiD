@@ -3,9 +3,10 @@
 # This COOLFluiD CFcase file tests: 
 # 
 # Finite Volume, Euler2D, Forward Euler, mesh with triangles, restart from a 
-# binary CFmesh, writing of binary CFmesh, parallel TECPLOT writer in block 
-# (nodal+cell-centered) format, writing of rhs DataHandle, second-order 
-# reconstruction with Venkatakhrisnan limiter, supersonic inlet and outlet BC
+# binary CFmesh, writing of binary CFmesh, Paraview writer, parallel TECPLOT
+# writer in block (nodal+cell-centered) format, writing of rhs DataHandle,
+# second-order reconstruction with Venkatakhrisnan limiter, supersonic inlet and
+# outlet BC
 #
 ################################################################################
 #
@@ -36,7 +37,7 @@ CFEnv.ErrorOnUnusedConfig = true
 CFEnv.NbWriters = 4
 
 # SubSystem Modules
-Simulator.Modules.Libs =  libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libForwardEuler libFiniteVolume libTHOR2CFmesh libFiniteVolumeNavierStokes
+Simulator.Modules.Libs =  libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libParaViewWriter libNavierStokes libForwardEuler libFiniteVolume libTHOR2CFmesh libFiniteVolumeNavierStokes
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets2D/
@@ -46,7 +47,7 @@ Simulator.SubSystem.Default.PhysicalModelType = Euler2D
 Simulator.SubSystem.Euler2D.refValues = 1. 2.83972 2.83972 6.532
 Simulator.SubSystem.Euler2D.refLength = 1.0
 
-Simulator.SubSystem.OutputFormat     = CFmesh Tecplot
+Simulator.SubSystem.OutputFormat     = CFmesh Tecplot ParaView
 Simulator.SubSystem.CFmesh.FileName  = jets2D-sol.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate  = 500
 # binary CFmesh writer
@@ -68,6 +69,12 @@ Simulator.SubSystem.Tecplot.AppendRank = false
 #Simulator.SubSystem.Tecplot.Data.CoordinatesOnly = true
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = SuperInlet SuperOutlet
 Simulator.SubSystem.Tecplot.AppendIter = true
+
+Simulator.SubSystem.ParaView.FileName    = jets2D-sol.vtu
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.SaveRate = 300
+Simulator.SubSystem.ParaView.AppendTime = false
+Simulator.SubSystem.ParaView.AppendIter = false
 
 #Simulator.SubSystem.StopCondition          = MaxNumberSteps
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 1

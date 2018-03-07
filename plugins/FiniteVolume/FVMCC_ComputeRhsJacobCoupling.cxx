@@ -202,14 +202,15 @@ void FVMCC_ComputeRhsJacobCoupling::computeBothJacobTerms()
   // first node contribution
   for (CFuint iCell = 0; iCell < 2; ++iCell) {
     State& state = *_currFace->getState(iCell); 
-        
+    cf_assert(!state.isGhost());
+    
     for (CFuint iEq = 0; iEq < _nbEqs; ++iEq) {
       // variable to perturb
       const CFuint iVar = (*equations)[iEq];
       cf_assert(iEq <= iVar);
       
       CFLogDebugMax("Perturbing iVar = " << iVar << "\n");
-      
+    
       // set the perturbed variable
       getMethodData().setIPerturbVar(iVar);
       
@@ -237,7 +238,7 @@ void FVMCC_ComputeRhsJacobCoupling::computeBothJacobTerms()
   // add the values in the jacobian matrix
   _lss[_iLSS]->getMatrix()->addValues(acc);
  
-  // acc.print(); 
+  // acc.print(); EXIT_AT(1);
   
   // reset to zero the entries in the block accumulator
   acc.reset();
@@ -451,7 +452,7 @@ void FVMCC_ComputeRhsJacobCoupling::computeConvDiffFluxes(CFuint iVar,
   // compute the flux corresponding to the first _nbEqs components
   _pertFlux.slice(_start, _nbEqs) = 0.;
   _fluxSplitter->computeFlux(_pertFlux);
-  
+
   if (_hasDiffusiveTerm) {
     if (_extrapolateInNodes) {
       _nodalExtrapolator->extrapolateInNodes(*_currFace->getNodes());

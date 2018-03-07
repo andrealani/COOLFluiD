@@ -63,6 +63,13 @@ public:
                          std::vector< std::vector<RealVector*> >& stateGradients,
                          const CFuint stateSize);
 
+  /// Get the diffusive flux
+  void computeFluxJacobian(const RealVector& state,
+			   const RealVector& gradientJacob,
+			   const RealVector& normal,
+			   const CFreal& radius,
+			   RealMatrix& fluxJacob);
+  
 protected:
 
   /**

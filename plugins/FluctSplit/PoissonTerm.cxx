@@ -173,6 +173,9 @@ void PoissonTerm::computeCellGradientsAndAverageState
       }
     }
     grad *= coeffGrad;
+    
+    CFLog(DEBUG_MAX, "PoissonTerm::computeCellGradientsAndAverageState() => grad["
+	  << iEq << "] = " << grad << "\n");
   }
   
   // avesrage state is not needed to be filled in 

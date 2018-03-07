@@ -53,7 +53,7 @@ Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Inlet Outlet Wall Electrode
 Simulator.SubSystem.Tecplot.AppendIter = true
 
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 3
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
 
 #Simulator.SubSystem.StopCondition       = Norm
 #Simulator.SubSystem.Norm.valueNorm      = -5.0

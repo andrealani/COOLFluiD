@@ -118,6 +118,20 @@ void PoissonDiffCons::setGradientState(const RealVector& state)
 
 //////////////////////////////////////////////////////////////////////////////
 
+void PoissonDiffCons::computeFluxJacobian(const RealVector& state,
+					  const RealVector& gradientJacob,
+					  const RealVector& normal,
+					  const CFreal& radius,
+					  RealMatrix& fluxJacob)
+{
+  //RealVector& nsData = getModel().getPhysicalData();
+  //const CFreal sigma = nsData[PoissonDiffTerm::SIGMA];
+  const CFreal sigma = 1.0;
+  fluxJacob(0,0) = sigma*MathTools::MathFunctions::innerProd(gradientJacob, normal);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
     } // namespace Poisson
 
   } // namespace Physics

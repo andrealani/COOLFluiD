@@ -75,14 +75,14 @@ void FVMCC_ComputeRhsJacobAnalytic::computeBothJacobTerms()
   // state in the jacobian matrix
   _acc->setRowColIndex(0, state0.getLocalID());
   _acc->setRowColIndex(1, state1.getLocalID());
-  
+
   // analytical jacobian of convective fluxes (left and right state)  
   SafePtr<RealMatrix> convJacobL = _fluxSplitter->getLeftFluxJacob();
   SafePtr<RealMatrix> convJacobR = _fluxSplitter->getRightFluxJacob();
   
   if (_hasDiffusiveTerm) {
     // analytical jacobian of diffusive fluxes (left and right state)  
-    SafePtr<RealMatrix> diffLeftJacob = _diffusiveFlux->getLeftFluxJacob();
+    SafePtr<RealMatrix> diffLeftJacob  = _diffusiveFlux->getLeftFluxJacob();
     SafePtr<RealMatrix> diffRightJacob = _diffusiveFlux->getRightFluxJacob();
     
     // note the opposite sign of the diffusive jacob compared to convective jacob

@@ -141,7 +141,7 @@ void FVMCC_ComputeRhsJacob::computeBothJacobTerms()
   // first node contribution
   for (CFuint iCell = 0; iCell < 2; ++iCell) {
     State& state = *_currFace->getState(iCell); 
-    assert(!state.isGhost());
+    cf_assert(!state.isGhost());
     
     for (CFuint iVar = 0; iVar < nbEqs; ++iVar) {
       CFLogDebugMax("Perturbing iVar = " << iVar << "\n");
@@ -151,6 +151,7 @@ void FVMCC_ComputeRhsJacob::computeBothJacobTerms()
       
       // perturb the given component of the state vector
       _numericalJacob->perturb(iVar, state[iVar]); 
+      
       computeConvDiffFluxes(iVar, iCell);  
       addBothJacobTerms(iVar, iCell);
       
@@ -277,6 +278,7 @@ void FVMCC_ComputeRhsJacob::computeBoundaryJacobianTerm()
       // state and in the left and right cell centers
       computeStatesData();
 
+      _pertFlux = 0.;
       _currBC->computeFlux(_pertFlux);
 
       if (_hasDiffusiveTerm && _isDiffusionActive) {
@@ -327,6 +329,7 @@ void FVMCC_ComputeRhsJacob::computeConvDiffFluxes(CFuint iVar, CFuint iCell)
   computeStatesData();
   
   // linearization will be done in the flux splitter if needed
+  _pertFlux = 0.;
   _fluxSplitter->computeFlux(_pertFlux);
   
   if (_hasDiffusiveTerm && _isDiffusionActive) {
@@ -337,9 +340,6 @@ void FVMCC_ComputeRhsJacob::computeConvDiffFluxes(CFuint iVar, CFuint iCell)
   
   // compute the finite difference derivative of the flux
   _numericalJacob->computeDerivative(getJacobianFlux(),_pertFlux,_fluxDiff);
-
-  // cout << "_pertFlux = " << _pertFlux  << endl;
-  // cout << "getJacobianFlux() = " << getJacobianFlux()  << endl;
 }
 
 //////////////////////////////////////////////////////////////////////////////
