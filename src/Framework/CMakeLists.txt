@@ -36,6 +36,8 @@ CellTrsGeoBuilder.cxx
 CellTrsGeoBuilder.hh
 CellVertexSparsity.cxx
 CellVertexSparsity.hh
+CellVertexSparsityNoBlock.cxx
+CellVertexSparsityNoBlock.hh
 CFDofType.hh
 CFGeoEnt.hh
 CFGeoEnt.cxx
