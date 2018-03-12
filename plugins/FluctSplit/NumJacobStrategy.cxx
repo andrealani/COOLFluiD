@@ -121,7 +121,6 @@ void NumJacobStrategy::computeJacobianTerm
       
       dd.iVar = iVar;
       
-      
       // reset the residual to 0.
       cleanOtherResidual();
       
@@ -129,17 +128,19 @@ void NumJacobStrategy::computeJacobianTerm
       numericalJacob.perturb(iVar, (*currState)[iVar]);
       
       _fsStrategy->computeFluctuation(_otherResidual);
-
+      
       vector<RealVector> *const tBackResidual =
         _distToSolutionMatTrans->transformFromRef(&_otherResidual);
       
       if (_hasDiffusiveTerm) {
 	// reset the residual to 0.
-	cleanDiffResidual();
+	// cleanDiffResidual();
 	
 	diffTermComputer->computeDiffusiveTerm(cell, _diffResidual, false);
 	
 	for (CFuint i = 0; i < nbStatesInCell; ++i) {
+	  // CFLog(INFO, "tBackResidual[" << i << "] = " << (*tBackResidual)[i] << "\n");
+	  // CFLog(INFO, "_diffResidua [" << i << "] = " << _diffResidual[i] << "\n");
 	  (*tBackResidual)[i] -= _diffResidual[i];
 	}
       }

@@ -81,7 +81,6 @@ void PoissonTerm::computeDiffusiveTerm(Framework::GeometricEntity *const geo,
   computeCellGradientsAndAverageState(geo, edata);
   
   DataHandle< InwardNormalsData*> normals = this->socket_normals.getDataHandle();
-  DataHandle< CFreal> updateCoeff = this->socket_updateCoeff.getDataHandle();
   const CFuint nbCellStates = geo->getStates()->size();
   
   DistributionData& dd = this->getMethodData().getDistributionData();
@@ -103,6 +102,8 @@ void PoissonTerm::computeDiffusiveTerm(Framework::GeometricEntity *const geo,
     for (CFuint iDim = 0; iDim < dim; ++iDim) {
       _normal[iDim] = normals[cellID]->getNodalNormComp(i,iDim);
     }
+    
+    // CFLog(INFO, "result[" << i << "] = " << result[i] << "\n");
     
     const RealVector& flux = _diffVar->getFlux(avState, gradients, _normal, radius);
     if (ComputeDiffusiveTerm::addToDerivedTerm()) {

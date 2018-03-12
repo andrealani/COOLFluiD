@@ -11,7 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -5.9246803
+### Residual = 1.9102713
 
 #
 CFEnv.ErrorOnUnusedConfig = true
@@ -40,8 +40,7 @@ Simulator.SubSystem.Tecplot.Data.SurfaceTRS = SuperInlet SuperOutlet
 Simulator.SubSystem.Tecplot.Data.outputVar  = Cons
 Simulator.SubSystem.Tecplot.SaveRate        = 400
 Simulator.SubSystem.Tecplot.AppendTime      = false
-Simulator.SubSystem.Tecplot.AppendIter      = true
-#false
+Simulator.SubSystem.Tecplot.AppendIter      = false
 
 Simulator.SubSystem.ParaView.FileName       = testRDS.vtu
 #Simulator.SubSystem.ParaView.WriteSol    = WriteSolution
@@ -67,8 +66,9 @@ Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
 Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
 Simulator.SubSystem.NewtonIterator.Data.SaveSystemToFile = false
-Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
-Simulator.SubSystem.NewtonIterator.InitCom = ResetSystem
+# the following won't work because of the Dirichlet BC
+#Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
+#Simulator.SubSystem.NewtonIterator.InitCom = ResetSystem
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = NewtonIteratorLSS
@@ -79,7 +79,7 @@ Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
 Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
 #Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCGAMG
 #Simulator.SubSystem.NewtonIteratorLSS.Data.UseAIJ = true
-#Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
+#Simulator.SubSystem.FluctuationSplit.JacobianSparsity = CellVertexNoBlock
 ###Simulator.SubSystem.NewtonIteratorLSS.Data.PreconditionerRate = 5
 Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 80
 

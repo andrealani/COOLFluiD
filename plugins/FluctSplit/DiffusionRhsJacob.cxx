@@ -113,8 +113,11 @@ void DiffusionRhsJacob::executeOnTrs()
       distdata.cell   = &cell;
       distdata.cellID = cell.getID();
       distdata.states = states;
-      
+
       const CFuint nbStatesInCell = states->size();
+      for (CFuint i = 0; i < nbStatesInCell; ++i) {
+	_residual[i] = 0.;
+      }
       // the following will compute the source term
       _fsStrategy->computeFluctuation(_residual);
       
@@ -123,6 +126,7 @@ void DiffusionRhsJacob::executeOnTrs()
 	
         _diffTermComputer->computeDiffusiveTerm(&cell, _diffResidual, updateDiffCoeff);
         for (CFuint i = 0; i < nbStatesInCell; ++i) {
+	  // CFLog(INFO, "_residual[" << i << "] = " <<  _residual[i] <<"\n");
 	  _residual[i] -= _diffResidual[i];
 	}
       }
