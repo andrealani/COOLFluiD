@@ -83,6 +83,20 @@ CF_ADD_PLUGIN_LIBRARY ( DataProcessingHeat )
 
 ##################################################################
 
+LIST ( APPEND AeroCoefFR_files
+AeroCoefFR.hh
+AeroForcesFR.cxx
+AeroForcesFR.hh
+NavierStokesSkinFrictionHeatFluxFR.cxx
+NavierStokesSkinFrictionHeatFluxFR.hh
+)
+
+LIST ( APPEND AeroCoefFR_requires_mods FluxReconstruction NavierStokes )
+LIST ( APPEND AeroCoefFR_cflibs FluxReconstructionMethod NavierStokes Framework )
+CF_ADD_PLUGIN_LIBRARY ( AeroCoefFR )
+
+##################################################################
+
 LIST ( APPEND AeroCoefSpectralFD_files
 AeroCoefSpectralFD.hh
 EulerConsComputeAeroSpectralFD.cxx
