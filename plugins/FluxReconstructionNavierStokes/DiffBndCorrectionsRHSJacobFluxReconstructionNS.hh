@@ -59,6 +59,9 @@ protected: // functions
    */
   virtual void computeFaceGradTerms(RealMatrix& gradTermL, RealMatrix& gradTermR);
   
+  /// prepare the computation of the diffusive flux
+  void prepareFluxComputation();
+  
 protected: // data
 
 }; // end of class DiffBndCorrectionsRHSJacobFluxReconstructionNS

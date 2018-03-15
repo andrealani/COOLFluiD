@@ -1,12 +1,13 @@
-#ifndef COOLFluiD_FluxReconstructionMethod_MLPLimiterEuler2D_hh
-#define COOLFluiD_FluxReconstructionMethod_MLPLimiterEuler2D_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_PhysicalityEuler3D_hh
+#define COOLFluiD_FluxReconstructionMethod_PhysicalityEuler3D_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Framework/DataSocketSink.hh"
 
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
-#include "FluxReconstructionMethod/MLPLimiter.hh"
+
+#include "FluxReconstructionMethod/BasePhysicality.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -14,7 +15,7 @@ namespace COOLFluiD {
   
   namespace Physics {
     namespace NavierStokes {
-      class Euler2DVarSet;
+      class Euler3DVarSet;
     }
   }
 
@@ -23,24 +24,23 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represent a command that applies an elementwise MLP limiter to the solution,
- * taking into account the requirement of pressure positivty
+ * This class represent a command that checks and enforces the physicality of an Euler 3D state, particularly the positivity of the pressure
  *
  * @author Ray Vandenhoeck
  *
  */
-class MLPLimiterEuler2D : public MLPLimiter {
+class PhysicalityEuler3D : public BasePhysicality {
 public:
 
   /**
    * Constructor.
    */
-  explicit MLPLimiterEuler2D(const std::string& name);
+  explicit PhysicalityEuler3D(const std::string& name);
 
   /**
    * Destructor.
    */
-  virtual ~MLPLimiterEuler2D();
+  virtual ~PhysicalityEuler3D();
 
   /**
    * Defines the Config Option's of this class
@@ -69,27 +69,12 @@ protected: // functions
   /**
    * apply pressure possitivity check
    */
-  virtual void applyChecks(CFreal phi);
+  virtual void enforcePhysicality();
   
   /**
    * Check if the states are physical
    */
   virtual bool checkPhysicality();
-  
-  /**
-   * Compute the physical value that should be used to limit the solution in order to make it physical
-   */
-  virtual CFreal computeLimitingValue(RealVector state);
-  
-  /**
-   * Limit the average cell state to make it physical
-   */
-  virtual void limitAvgState();
-  
-  /**
-   * check for special physics-dependent conditions if limiting is necessary (for Euler: check whether we are in a supersonic region)
-   */
-  virtual bool checkSpecialLimConditions();
 
 protected: // data
 
@@ -99,16 +84,25 @@ protected: // data
   /// minimum allowable value for pressure
   CFreal m_minPressure;
   
+  /// boolean telling wether to also check the internal solution for physicality
+  bool m_checkInternal;
+  
   /// physical model (in conservative variables)
-  Common::SafePtr<Physics::NavierStokes::Euler2DVarSet> m_eulerVarSet;
+  Common::SafePtr<Physics::NavierStokes::Euler3DVarSet> m_eulerVarSet;
 
   /// heat capacity ratio minus one
   CFreal m_gammaMinusOne;
   
   /// variable for physical data of sol
   RealVector m_solPhysData;
+  
+  /// coefficients for the computation of the cell averaged solution
+  Common::SafePtr< RealVector > m_cellAvgSolCoefs;
+  
+  /// cell averaged state
+  RealVector m_cellAvgState;
 
-}; // class MLPLimiterEuler2D
+}; // class PhysicalityEuler3D
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -118,4 +112,4 @@ protected: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_FluxReconstructionMethod_MLPLimiterEuler2D_hh
+#endif // COOLFluiD_FluxReconstructionMethod_PhysicalityEuler3D_hh

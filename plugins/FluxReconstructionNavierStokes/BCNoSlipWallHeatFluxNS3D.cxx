@@ -36,6 +36,17 @@ BCNoSlipWallHeatFluxNS3D::BCNoSlipWallHeatFluxNS3D(const std::string& name) :
   m_intSolPhysData()
 {
   CFAUTOTRACE;
+  
+  addConfigOptionsTo(this);
+
+  m_wallT = 0.0;
+   setParameter("T",&m_wallT);
+
+  m_wallQ = 0.0;
+   setParameter("q",&m_wallQ);
+
+  m_heatFlux= true;
+   setParameter("HeatFlux",&m_heatFlux);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -43,6 +54,15 @@ BCNoSlipWallHeatFluxNS3D::BCNoSlipWallHeatFluxNS3D(const std::string& name) :
 BCNoSlipWallHeatFluxNS3D::~BCNoSlipWallHeatFluxNS3D()
 {
   CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCNoSlipWallHeatFluxNS3D::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< CFreal >("T","wall static temperature");
+  options.addConfigOption< CFreal >("q","wall heat flux");
+  options.addConfigOption< bool >("HeatFlux","bool to tell if the wall has constant heat flux, default true.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -85,7 +105,14 @@ void BCNoSlipWallHeatFluxNS3D::computeGhostStates(const vector< State* >& intSta
                                                   m_intSolPhysData[EulerTerm::V]*
                                                   m_intSolPhysData[EulerTerm::V]
                                          )/m_ghostSolPhysData[EulerTerm::RHO];
-    m_ghostSolPhysData[EulerTerm::T] = m_intSolPhysData[EulerTerm::T];
+    if (m_heatFlux)
+    {
+      m_ghostSolPhysData[EulerTerm::T] = m_intSolPhysData[EulerTerm::T];
+    }
+    else
+    {
+      m_ghostSolPhysData[EulerTerm::T] = 2.0*m_wallT - m_intSolPhysData[EulerTerm::T];
+    }
 
     // set the ghost state from its physical data
     m_eulerVarSet->computeStateFromPhysicalData(m_ghostSolPhysData,ghostState);
@@ -128,7 +155,7 @@ void BCNoSlipWallHeatFluxNS3D::computeGhostGradients(const std::vector< std::vec
     RealVector& tempGradI = *intGrads  [iState][4];
     RealVector& tempGradG = *ghostGrads[iState][4];
     const CFreal nTempGrad = tempGradI[XX]*normal[XX] + tempGradI[YY]*normal[YY] + tempGradI[ZZ]*normal[ZZ];
-    tempGradG = tempGradI - 2.0*nTempGrad*normal; // + heatFlux*normal;
+    tempGradG = tempGradI - 2.0*nTempGrad*normal + m_wallQ*normal; 
   }
 }
 

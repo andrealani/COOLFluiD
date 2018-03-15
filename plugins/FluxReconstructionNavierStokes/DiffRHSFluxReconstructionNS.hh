@@ -39,6 +39,9 @@ protected: //functions
    *      setFaceTermData() and set the geometrical data of the face
    */
   void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd);
+  
+  /// prepare the computation of the diffusive flux
+  void prepareFluxComputation();
     
 }; // class Solve
 

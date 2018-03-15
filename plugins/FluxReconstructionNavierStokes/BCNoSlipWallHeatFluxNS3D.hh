@@ -42,6 +42,12 @@ public:  // methods
   {
     return "BCNoSlipWallHeatFluxNS3D";
   }
+  
+  /**
+   * Defines the Config Option's of this class
+   * @param options a OptionList where to add the Option's
+   */
+  static void defineConfigOptions(Config::OptionList& options);
 
   /// Set up private data and data
   void setup();
@@ -72,6 +78,15 @@ protected: // data
 
   /// variable for physical data of intSol
   RealVector m_intSolPhysData;
+  
+  /// boolean telling if the wall has constant heat flux
+  bool m_heatFlux;
+  
+  /// wall static temperature
+  CFreal m_wallT;
+  
+  /// wall heat flux
+  CFreal m_wallQ;
 
   /// imposed heat flux
   /// @todo add option for this variable, with imposed function for heat flux as a function of coordinates

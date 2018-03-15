@@ -121,9 +121,7 @@ void NSGradientComputer::computeGradients()
       gradients[solID][iGrad] *= invJacobDet;
       if(m_cell->getID() == 191)
       {
-
-	  CFLog(VERBOSE, "Vol gradient updates " << iGrad << " of  " << iSol << ": " << m_gradUpdates[0][iSol][iGrad] << "\n");
-
+	CFLog(VERBOSE, "Vol gradient updates " << iGrad << " of  " << iSol << ": " << m_gradUpdates[0][iSol][iGrad] << "\n");
       }
     }
   }
@@ -136,7 +134,7 @@ void NSGradientComputer::computeGradientFaceCorrections()
   //ConvRHSFluxReconstruction::computeGradientFaceCorrections();
   // get the diffusive varset
   m_diffusiveVarSet = getMethodData().getDiffusiveVar();
-  
+
   SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokesVarSet >();
 
   RealMatrix tempGradTermL(m_nbrEqs,m_nbrFaceFlxPnts);

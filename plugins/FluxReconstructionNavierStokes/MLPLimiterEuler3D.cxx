@@ -4,12 +4,12 @@
 
 #include "MathTools/MathFunctions.hh"
 
-#include "NavierStokes/Euler2DVarSet.hh"
+#include "NavierStokes/Euler3DVarSet.hh"
 
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 
 #include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
-#include "FluxReconstructionNavierStokes/MLPLimiterEuler2D.hh"
+#include "FluxReconstructionNavierStokes/MLPLimiterEuler3D.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -28,12 +28,12 @@ namespace COOLFluiD {
     
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider<MLPLimiterEuler2D, FluxReconstructionSolverData, FluxReconstructionNavierStokesModule>
-    MLPLimiterEuler2DFRProvider("MLPLimiterEuler2D");
+MethodCommandProvider<MLPLimiterEuler3D, FluxReconstructionSolverData, FluxReconstructionNavierStokesModule>
+    MLPLimiterEuler3DFRProvider("MLPLimiterEuler3D");
 
 //////////////////////////////////////////////////////////////////////////////
 
-void MLPLimiterEuler2D::defineConfigOptions(Config::OptionList& options)
+void MLPLimiterEuler3D::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< CFreal >("MinDensity","Minimum allowable value for density.");
   options.addConfigOption< CFreal >("MinPressure","Minimum allowable value for pressure.");
@@ -41,7 +41,7 @@ void MLPLimiterEuler2D::defineConfigOptions(Config::OptionList& options)
 
 //////////////////////////////////////////////////////////////////////////////
 
-MLPLimiterEuler2D::MLPLimiterEuler2D(const std::string& name) :
+MLPLimiterEuler3D::MLPLimiterEuler3D(const std::string& name) :
   MLPLimiter(name),
   m_minDensity(),
   m_minPressure(),
@@ -60,20 +60,20 @@ MLPLimiterEuler2D::MLPLimiterEuler2D(const std::string& name) :
 
 //////////////////////////////////////////////////////////////////////////////
 
-MLPLimiterEuler2D::~MLPLimiterEuler2D()
+MLPLimiterEuler3D::~MLPLimiterEuler3D()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void MLPLimiterEuler2D::configure ( Config::ConfigArgs& args )
+void MLPLimiterEuler3D::configure ( Config::ConfigArgs& args )
 {
   MLPLimiter::configure(args);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-bool MLPLimiterEuler2D::checkPhysicality()
+bool MLPLimiterEuler3D::checkPhysicality()
 {
   bool physical = true;
   const bool Puvt = getMethodData().getUpdateVarStr() == "Puvt";
@@ -122,7 +122,7 @@ bool MLPLimiterEuler2D::checkPhysicality()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void MLPLimiterEuler2D::applyChecks(CFreal phi)
+void MLPLimiterEuler3D::applyChecks(CFreal phi)
 {
   const bool Puvt = getMethodData().getUpdateVarStr() == "Puvt";
   CFreal press;
@@ -248,12 +248,6 @@ void MLPLimiterEuler2D::applyChecks(CFreal phi)
         }
       }
     }
-    
-//     // only for purposes of printing the shock detector!!
-//     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-//     {
-//       (*((*m_cellStates)[iSol]))[0] = 15.0;
-//     }
   }
   
   if (Puvt)
@@ -311,7 +305,7 @@ void MLPLimiterEuler2D::applyChecks(CFreal phi)
 
 //////////////////////////////////////////////////////////////////////////////
 
-CFreal MLPLimiterEuler2D::computeLimitingValue(RealVector state)
+CFreal MLPLimiterEuler3D::computeLimitingValue(RealVector state)
 {
   CFAUTOTRACE;
   
@@ -321,16 +315,17 @@ CFreal MLPLimiterEuler2D::computeLimitingValue(RealVector state)
   
   if (Puvt)
   {
-    press  = min(state[0],state[3]);
+    press  = min(state[0],state[4]);
   }
   else
   {
     CFreal rho  = state[0];
     CFreal rhoU = state[1];
     CFreal rhoV = state[2];
-    CFreal rhoE = state[3];
+    CFreal rhoW = state[3];
+    CFreal rhoE = state[4];
 
-    press = m_gammaMinusOne*(rhoE - 0.5*(rhoU*rhoU+rhoV*rhoV)/rho);
+    press = m_gammaMinusOne*(rhoE - 0.5*(rhoU*rhoU+rhoV*rhoV+rhoW*rhoW)/rho);
   }
   
   
@@ -339,7 +334,7 @@ CFreal MLPLimiterEuler2D::computeLimitingValue(RealVector state)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void MLPLimiterEuler2D::limitAvgState()
+void MLPLimiterEuler3D::limitAvgState()
 {
   CFAUTOTRACE;
   
@@ -351,24 +346,25 @@ void MLPLimiterEuler2D::limitAvgState()
       {
         m_cellAvgState[0] = m_minPressure;
       }
-      if (m_cellAvgState[3] < m_minPressure)
+      if (m_cellAvgState[4] < m_minPressure)
       {
-	m_cellAvgState[3] = m_minPressure;
+	m_cellAvgState[4] = m_minPressure;
       }
     }
     else
     {
       CFreal rhoU = m_cellAvgState[1];
       CFreal rhoV = m_cellAvgState[2];
-      CFreal rhoE = m_cellAvgState[3];
+      CFreal rhoW = m_cellAvgState[3];
+      CFreal rhoE = m_cellAvgState[4];
     
-      m_cellAvgState[0] = 0.6*(rhoU*rhoU+rhoV*rhoV)/(rhoE-m_minPressure/m_gammaMinusOne);
+      m_cellAvgState[0] = 0.6*(rhoU*rhoU+rhoV*rhoV+rhoW*rhoW)/(rhoE-m_minPressure/m_gammaMinusOne);
     }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-bool MLPLimiterEuler2D::checkSpecialLimConditions()
+bool MLPLimiterEuler3D::checkSpecialLimConditions()
 {
   CFAUTOTRACE;
   
@@ -383,8 +379,8 @@ bool MLPLimiterEuler2D::checkSpecialLimConditions()
   {
     for (CFuint iNode = 0; iNode < m_nbrCornerNodes; ++iNode)
     {
-      const CFreal v2 = m_cellStatesNodesP1[iNode][1]*m_cellStatesNodesP1[iNode][1]+m_cellStatesNodesP1[iNode][2]*m_cellStatesNodesP1[iNode][2];
-      const CFreal a2 = gamma*m_cellStatesNodesP1[iNode][3]*idGassConst;
+      const CFreal v2 = m_cellStatesNodesP1[iNode][1]*m_cellStatesNodesP1[iNode][1]+m_cellStatesNodesP1[iNode][2]*m_cellStatesNodesP1[iNode][2]+m_cellStatesNodesP1[iNode][3]*m_cellStatesNodesP1[iNode][3];
+      const CFreal a2 = gamma*m_cellStatesNodesP1[iNode][4]*idGassConst;
       
       CFreal currM;
       
@@ -407,9 +403,10 @@ bool MLPLimiterEuler2D::checkSpecialLimConditions()
       const CFreal rho = m_cellStatesNodesP1[iNode][0];
       const CFreal rhoU = m_cellStatesNodesP1[iNode][1];
       const CFreal rhoV = m_cellStatesNodesP1[iNode][2];
-      const CFreal rhoE = m_cellStatesNodesP1[iNode][3];
+      const CFreal rhoW = m_cellStatesNodesP1[iNode][3];
+      const CFreal rhoE = m_cellStatesNodesP1[iNode][4];
       
-      CFreal v2 = rhoU*rhoU + rhoV*rhoV;
+      CFreal v2 = rhoU*rhoU + rhoV*rhoV + rhoW*rhoW;
       v2 /= rho*rho;
       const CFreal pdRho2 = gamma*m_gammaMinusOne*(rhoE/rho - 0.5*v2);
       
@@ -433,19 +430,19 @@ bool MLPLimiterEuler2D::checkSpecialLimConditions()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void MLPLimiterEuler2D::setup()
+void MLPLimiterEuler3D::setup()
 {
   CFAUTOTRACE;
 
   MLPLimiter::setup();
   
-  // get Euler 2D varset
-  m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<Euler2DVarSet>();
+  // get Euler 3D varset
+  m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<Euler3DVarSet>();
   if (m_eulerVarSet.isNull())
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Update variable set is not Euler2DVarSet in MLPLimiterEuler2DFluxReconstruction!");
+    throw Common::ShouldNotBeHereException (FromHere(),"Update variable set is not Euler3DVarSet in MLPLimiterEuler3DFluxReconstruction!");
   }
-  cf_assert(m_nbrEqs == 4);
+  cf_assert(m_nbrEqs == 5);
 
   // get gamma-1
   m_gammaMinusOne = m_eulerVarSet->getModel()->getGamma()-1.0;
@@ -456,7 +453,7 @@ void MLPLimiterEuler2D::setup()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void MLPLimiterEuler2D::unsetup()
+void MLPLimiterEuler3D::unsetup()
 {
   CFAUTOTRACE;
 

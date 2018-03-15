@@ -121,6 +121,16 @@ void DiffBndCorrectionsRHSJacobFluxReconstructionNS::computeFaceGradTerms(RealMa
 
 //////////////////////////////////////////////////////////////////////////////
 
+void DiffBndCorrectionsRHSJacobFluxReconstructionNS::prepareFluxComputation()
+{
+  const bool isPerturb = this->getMethodData().isPerturb();
+  const CFuint iPerturbVar = this->getMethodData().iPerturbVar();
+  SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokesVarSet >();
+  navierStokesVarSet->setComposition(m_avgSol, isPerturb, iPerturbVar);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
     } // namespace FluxReconstructionMethod
 
 } // namespace COOLFluiD

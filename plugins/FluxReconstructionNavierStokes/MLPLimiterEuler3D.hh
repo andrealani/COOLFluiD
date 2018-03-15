@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_FluxReconstructionMethod_MLPLimiterEuler2D_hh
-#define COOLFluiD_FluxReconstructionMethod_MLPLimiterEuler2D_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_MLPLimiterEuler3D_hh
+#define COOLFluiD_FluxReconstructionMethod_MLPLimiterEuler3D_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -14,7 +14,7 @@ namespace COOLFluiD {
   
   namespace Physics {
     namespace NavierStokes {
-      class Euler2DVarSet;
+      class Euler3DVarSet;
     }
   }
 
@@ -29,18 +29,18 @@ namespace COOLFluiD {
  * @author Ray Vandenhoeck
  *
  */
-class MLPLimiterEuler2D : public MLPLimiter {
+class MLPLimiterEuler3D : public MLPLimiter {
 public:
 
   /**
    * Constructor.
    */
-  explicit MLPLimiterEuler2D(const std::string& name);
+  explicit MLPLimiterEuler3D(const std::string& name);
 
   /**
    * Destructor.
    */
-  virtual ~MLPLimiterEuler2D();
+  virtual ~MLPLimiterEuler3D();
 
   /**
    * Defines the Config Option's of this class
@@ -100,7 +100,7 @@ protected: // data
   CFreal m_minPressure;
   
   /// physical model (in conservative variables)
-  Common::SafePtr<Physics::NavierStokes::Euler2DVarSet> m_eulerVarSet;
+  Common::SafePtr<Physics::NavierStokes::Euler3DVarSet> m_eulerVarSet;
 
   /// heat capacity ratio minus one
   CFreal m_gammaMinusOne;
@@ -108,7 +108,7 @@ protected: // data
   /// variable for physical data of sol
   RealVector m_solPhysData;
 
-}; // class MLPLimiterEuler2D
+}; // class MLPLimiterEuler3D
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -118,4 +118,4 @@ protected: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_FluxReconstructionMethod_MLPLimiterEuler2D_hh
+#endif // COOLFluiD_FluxReconstructionMethod_MLPLimiterEuler3D_hh
