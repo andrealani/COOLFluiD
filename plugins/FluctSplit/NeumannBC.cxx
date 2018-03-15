@@ -123,14 +123,14 @@ void NeumannBC::executeOnTrs()
       
       // apply the BC to this node
       if (applyBC) {
-	CFLog(INFO, "NeumannBC::executeOnTrs() => applying BC\n"); exit(1);
+	// CFLog(INFO, "NeumannBC::executeOnTrs() => applying BC\n");
 	//Set the values of the variables xyz + time
 	for (CFuint iDim = 0; iDim < dim; ++iDim){
 	  variables[iDim] = state->getCoordinates()[iDim];
 	}
 	
 	//Evaluate the function
-	m_vFunction.evaluate(variables,*_input);
+	m_vFunction.evaluate(variables, *_input);
 	
 	for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
 	  // this sign has to be checked
