@@ -337,6 +337,8 @@ CF_ADD_PLUGIN_LIBRARY ( FluctSplitMHD )
 LIST ( APPEND FluctSplit_files
 DiffusionRhsJacob.cxx
 DiffusionRhsJacob.hh
+NeumannBC.cxx
+NeumannBC.hh
 SourceTermSplitStrategy.cxx
 SourceTermSplitStrategy.hh
 FunctionSourceTerm.cxx

@@ -34,7 +34,7 @@ public:
   SuperInlet(const std::string& name);
 
   /// Default destructor
-  ~SuperInlet();
+  virtual ~SuperInlet();
 
   /// Configures the command.
   virtual void configure ( Config::ConfigArgs& args );
@@ -48,13 +48,13 @@ public:
 
   /// Returns the DataSocket's that this command needs as sinks
   /// @return a vector of SafePtr with the DataSockets
-  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets();
+  virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets();
 
 protected: // methods
 
   /// Execute on the current TRS
-  void executeOnTrs();
-
+  virtual void executeOnTrs();
+  
   /// Setup the FunctionParser that will parse the expression for the
   /// condition to apply this boundary condition.
   /// @throw Common::ParserException if the condition string or variables are badly set
