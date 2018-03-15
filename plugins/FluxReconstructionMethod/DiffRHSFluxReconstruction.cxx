@@ -412,7 +412,7 @@ void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
   {
     m_extrapolatedFluxes[iFlxPnt] = 0.0;
   }
-  
+
   // Loop over solution points to calculate the discontinuous flux.
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   { 
@@ -428,22 +428,17 @@ void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
       cf_assert(temp.size() == m_nbrEqs);
       grad[iVar] = & (temp[iVar]);
     }
-    
+
     m_avgSol = stateSolPnt;
-    
+
     prepareFluxComputation();
-    
+
     // calculate the discontinuous flux projected on x, y, z-directions
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {
       m_contFlx[iSolPnt][iDim] = m_diffusiveVarSet->getFlux(m_avgSol,grad,m_cellFluxProjVects[iDim][iSolPnt],0);
     }
-    
-    if (m_cell->getID() == 1220)
-    {
-      CFLog(VERBOSE, "grad: " << *(grad[1]) << ", flux: " << m_contFlx[iSolPnt][1] << "\n");
-    }
-    
+
     for (CFuint iFlxPnt = 0; iFlxPnt < m_flxPntsLocalCoords->size(); ++iFlxPnt)
     {
       CFuint dim = (*m_flxPntFlxDim)[iFlxPnt];
@@ -475,7 +470,7 @@ void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
 	}
       }
     }
-    
+
     for (CFuint iFlxPnt = 0; iFlxPnt < m_flxPntsLocalCoords->size(); ++iFlxPnt)
     {
       const CFreal divh = m_corrFctDiv[iSolPnt][iFlxPnt];
