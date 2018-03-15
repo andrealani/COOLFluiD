@@ -271,7 +271,7 @@ void ConvRHSFluxReconstruction::execute()
       //divideByJacobDet();
       
       // print out the residual updates for debugging
-      if(m_cell->getID() == 72)
+      if(m_cell->getID() == 1220)
       {
 	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
         CFLog(VERBOSE, "UpdateTotal = \n");
@@ -291,7 +291,7 @@ void ConvRHSFluxReconstruction::execute()
         }
       }
       
-      if(m_cell->getID() == 1234 && hasDiffTerm)
+      if(m_cell->getID() == 1220 && hasDiffTerm)
       {
 	// get the gradients
         DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();

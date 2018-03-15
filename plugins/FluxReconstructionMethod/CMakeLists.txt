@@ -77,10 +77,14 @@ MLPLimiter.cxx
 MLPLimiter.hh
 LLAVFluxReconstruction.cxx
 LLAVFluxReconstruction.hh
-LLAVBndFluxReconstruction.cxx
-LLAVBndFluxReconstruction.hh
 LLAVJacobFluxReconstruction.cxx
 LLAVJacobFluxReconstruction.hh
+BasePhysicality.cxx
+BasePhysicality.hh
+StdSourceTerm.cxx
+StdSourceTerm.hh
+AnalyticalSourceTerm.cxx
+AnalyticalSourceTerm.hh
 FinalizeRHS.cxx
 FinalizeRHS.hh
 ConvBndCorrectionsRHSFluxReconstruction.cxx

@@ -205,6 +205,26 @@ void TriagFluxReconstructionElementData::createSolPolyExponents()
 }
 
 //////////////////////////////////////////////////////////////////////
+  
+void TriagFluxReconstructionElementData::createNodePolyExponents()
+{
+  CFAUTOTRACE;
+
+  // define exponents
+  m_nodePolyExponents.resize(0);
+  for (CFuint iKsi = 0; iKsi < 2; ++iKsi)
+  {
+    for (CFuint iEta = 0; iEta < 2-iKsi; ++iEta)
+    {
+      vector< CFint > nodePolyExps(2);
+      nodePolyExps[KSI] = iKsi;
+      nodePolyExps[ETA] = iEta;
+      m_nodePolyExponents.push_back(nodePolyExps);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
 
 void TriagFluxReconstructionElementData::createFaceFluxPntsConn()
 {

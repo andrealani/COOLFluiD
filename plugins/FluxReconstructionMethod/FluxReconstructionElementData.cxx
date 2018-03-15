@@ -50,6 +50,8 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_faceNodeCoordsPerOrient(),
   m_solPolyExponents(),
   m_solPolyCoefs(),
+  m_nodePolyExponents(),
+  m_nodePolyCoefs(),
   m_initPntsCoords(),
   m_initTransfMatrix(),
   m_faceIntegrationCoefs(),
@@ -131,6 +133,8 @@ void FluxReconstructionElementData::resetFluxReconstructionElementData()
   createCellNodeCoords();
   createFaceNodeCoords();
   createFaceNodeCoordsPerOrient();
+  createNodePolyExponents();
+  computeNodePolyCoefs();
   createFaceIntegrationCoefs();
   createCellAvgSolCoefs();
   createCellCenterDerivCoefs();
@@ -312,6 +316,51 @@ FluxReconstructionElementData::getSolPolyValsAtNode(vector< RealVector > nodeLoc
         for (CFuint iCoor = 0; iCoor < static_cast<CFuint>(m_dimensionality); ++iCoor)
         {
           term *= pow(nodeLocalCoords[iNode][iCoor],m_solPolyExponents[iTerm][iCoor]);
+        }
+
+        // add term to polynomial value
+        polyValsAtNodes[iNode][iPoly] += term;
+      }
+    }
+  }
+  return polyValsAtNodes;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+vector< vector< CFreal > >
+FluxReconstructionElementData::getNodePolyValsAtPnt(vector< RealVector > pntLocalCoords)
+{
+  cf_assert(pntLocalCoords.size() > 0);
+  cf_assert(pntLocalCoords[0].size() == static_cast<CFuint>(m_dimensionality));
+
+  // number of nodes passed
+  const CFuint nbrNodes = pntLocalCoords.size();
+
+  // number of polynomials
+  const CFuint nbrPolys = getNbrCornerNodes();
+
+  // return variable
+  vector< vector< CFreal > > polyValsAtNodes(nbrNodes);
+
+  // compute polynomial values at given nodes
+  for (CFuint iNode = 0; iNode < nbrNodes; ++iNode)
+  {
+    // resize
+    polyValsAtNodes[iNode].resize(nbrPolys);
+
+    // loop over polynomials
+    for (CFuint iPoly = 0; iPoly < nbrPolys; ++iPoly)
+    {
+      // loop over terms
+      for (CFuint iTerm = 0; iTerm < nbrPolys; ++iTerm)
+      {
+        CFreal term = m_nodePolyCoefs[iPoly][iTerm];
+
+        // loop over coordinates x-y-z
+        for (CFuint iCoor = 0; iCoor < static_cast<CFuint>(m_dimensionality); ++iCoor)
+        {
+          term *= pow(pntLocalCoords[iNode][iCoor],m_nodePolyExponents[iTerm][iCoor]);
         }
 
         // add term to polynomial value
@@ -580,6 +629,52 @@ void FluxReconstructionElementData::computeSolPolyCoefs()
     for (CFuint iTerm = 0; iTerm < nbrSolPolys; ++iTerm)
     {
       m_solPolyCoefs[iPoly][iTerm] = lhsInv(iTerm,iPoly);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionElementData::computeNodePolyCoefs()
+{
+  CFAUTOTRACE;
+
+  // number of solution polynomials
+  const CFuint nbrNodePolys = getNbrCornerNodes();
+
+  // resize m_solPolyCoefs
+  m_nodePolyCoefs.resize(nbrNodePolys);
+  for (CFuint iPoly = 0; iPoly < nbrNodePolys; ++iPoly)
+  {
+    m_nodePolyCoefs[iPoly].resize(nbrNodePolys);
+  }
+
+  // variable for LHS of linear system
+  RealMatrix lhs   (nbrNodePolys,nbrNodePolys);
+  RealMatrix lhsInv(nbrNodePolys,nbrNodePolys);
+
+  // create LHS matrix
+  for (CFuint iPoly = 0; iPoly < nbrNodePolys; ++iPoly)
+  {
+    for (CFuint iTerm = 0; iTerm < nbrNodePolys; ++iTerm)
+    {
+      lhs(iPoly,iTerm) = 1.0;
+      for (CFuint iCoor = 0; iCoor < static_cast<CFuint>(m_dimensionality); ++ iCoor)
+      {
+        lhs(iPoly,iTerm) *= pow(m_cellNodeCoords[iPoly][iCoor],m_nodePolyExponents[iTerm][iCoor]);
+      }
+    }
+  }
+
+  // invert the LHS matrix
+  InvertMatrix(lhs,lhsInv);
+
+  // store solution polynomial coefficients
+  for (CFuint iPoly = 0; iPoly < nbrNodePolys; ++iPoly)
+  {
+    for (CFuint iTerm = 0; iTerm < nbrNodePolys; ++iTerm)
+    {
+      m_nodePolyCoefs[iPoly][iTerm] = lhsInv(iTerm,iPoly);
     }
   }
 }

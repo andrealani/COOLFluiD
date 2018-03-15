@@ -218,6 +218,29 @@ void QuadFluxReconstructionElementData::createSolPolyExponents()
 
 //////////////////////////////////////////////////////////////////////
 
+void QuadFluxReconstructionElementData::createNodePolyExponents()
+{
+  CFAUTOTRACE;
+
+  // number of solution points in 1D
+  const CFuint nbrNodes1D = 2;
+
+  // define exponents
+  m_nodePolyExponents.resize(0);
+  for (CFuint iKsi = 0; iKsi < nbrNodes1D; ++iKsi)
+  {
+    for (CFuint iEta = 0; iEta < nbrNodes1D; ++iEta)
+    {
+      vector< CFint > nodePolyExps(2);
+      nodePolyExps[KSI] = iKsi;
+      nodePolyExps[ETA] = iEta;
+      m_nodePolyExponents.push_back(nodePolyExps);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
 void QuadFluxReconstructionElementData::createFaceFluxPntsConn()
 {
   CFAUTOTRACE;
@@ -683,11 +706,11 @@ void QuadFluxReconstructionElementData::setCFLConvDiffRatio()
     } break;
     case CFPolyOrder::ORDER1:
     {
-      m_cflConvDiffRatio = 1.0; //6.5; // check this!
+      m_cflConvDiffRatio = 6.5; //6.5; // check this!
     } break;
     case CFPolyOrder::ORDER2:
     {
-      m_cflConvDiffRatio = 2.0; //17.0; // check this!
+      m_cflConvDiffRatio = 17.0; //17.0; // check this!
     } break;
     case CFPolyOrder::ORDER3:
     {

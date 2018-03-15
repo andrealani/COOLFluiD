@@ -201,6 +201,27 @@ void DiffBndCorrectionsRHSFluxReconstruction::executeOnTrs()
           updateRHS();
         } 
         
+        // print out the residual updates for debugging
+        if(m_intCell->getID() == 1220)
+        {
+	  CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
+          CFLog(VERBOSE, "UpdateBnd = \n");
+          // get the datahandle of the rhs
+          DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
+          for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+          {
+            CFuint resID = m_nbrEqs*( (*m_cellStates)[iState]->getLocalID() );
+            for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+            {
+              CFLog(VERBOSE, "" << rhs[resID+iVar] << " ");
+            }
+            CFLog(VERBOSE,"\n");
+            DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+            CFLog(VERBOSE, "UpdateCoeff: " << updateCoeff[(*m_cellStates)[iState]->getLocalID()] << "\n");
+	    CFLog(VERBOSE, "state " << iState << ": " << *(((*m_cellStates)[iState])->getData()) << "\n");
+          }
+        } 
+        
         // release the face
         m_faceBuilder->releaseGE();
       }
@@ -259,12 +280,16 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeInterfaceFlxCorrection()
 
       m_avgSol[iVar] = ((*(m_flxPntGhostSol[iFlxPnt]))[iVar] + (*(m_cellStatesFlxPnt[iFlxPnt]))[iVar])/2.0; 
     }
+    
+    prepareFluxComputation();
 
     // compute FI
     m_flxPntRiemannFlux[iFlxPnt] = m_diffusiveVarSet->getFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0);
-    
+  
     // compute FI in the local frame
     m_cellFlx[iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt];
+    
+    if (m_intCell->getID() == 1220) CFLog(VERBOSE, "flux: " << m_cellFlx[iFlxPnt] << ", state: " << m_avgSol << ", grad: " << (*(m_avgGrad[1]))[1] << "\n");
   }
 }
 
@@ -370,6 +395,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::updateRHS()
     {
       rhs[resID+iVar] += resFactor*m_corrections[iState][iVar];
     }
+    if (m_intCell->getID() == 1220) CFLog(VERBOSE, "corr: " << m_corrections[iState] << "\n");
   }
 }
 
@@ -497,9 +523,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::setup()
   // resize vectors
   m_flxPntsLocalCoords.resize(m_nbrFaceFlxPnts);
   m_faceJacobVecAbsSizeFlxPnts.resize(m_nbrFaceFlxPnts);
-  m_cellStatesFlxPnt.resize(m_nbrFaceFlxPnts);
   m_cellFlx.resize(m_nbrFaceFlxPnts);
-  m_flxPntCoords.resize(m_nbrFaceFlxPnts);
   m_flxPntCoords.resize(m_nbrFaceFlxPnts);
   m_flxPntRiemannFlux.resize(m_nbrFaceFlxPnts);
   m_corrections.resize(m_nbrSolPnts);

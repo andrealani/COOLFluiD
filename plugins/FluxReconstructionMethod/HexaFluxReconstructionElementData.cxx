@@ -274,6 +274,33 @@ void HexaFluxReconstructionElementData::createSolPolyExponents()
 
 //////////////////////////////////////////////////////////////////////
 
+void HexaFluxReconstructionElementData::createNodePolyExponents()
+{
+  CFAUTOTRACE;
+
+  // number of solution points in 1D
+  const CFuint nbrNodes1D = 2;
+
+  // define exponents
+  m_nodePolyExponents.resize(0);
+  for (CFuint iKsi = 0; iKsi < nbrNodes1D; ++iKsi)
+  {
+    for (CFuint iEta = 0; iEta < nbrNodes1D; ++iEta)
+    {
+      for (CFuint iZta = 0; iZta < nbrNodes1D; ++iZta)
+      {
+        vector< CFint > nodePolyExps(3);
+        nodePolyExps[KSI] = iKsi;
+        nodePolyExps[ETA] = iEta;
+        nodePolyExps[ZTA] = iZta;
+        m_nodePolyExponents.push_back(nodePolyExps);
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
 void HexaFluxReconstructionElementData::createFaceFluxPntsConn()
 {
   CFAUTOTRACE;
@@ -1068,6 +1095,62 @@ void HexaFluxReconstructionElementData::createFaceOutputPntConn()
       cellNodesConn[3] = (iKsi  )*nbrNodes1D + iEta+1;
       m_faceOutputPntConn.push_back(cellNodesConn);
     }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void HexaFluxReconstructionElementData::createVandermondeMatrix()
+{
+  CFAUTOTRACE;
+  
+  const CFuint nbrSolPnts = m_solPntsLocalCoords.size();
+  // number of solution points in 1D
+  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+  
+  m_vandermonde.resize(nbrSolPnts,nbrSolPnts);
+  m_vandermondeInv.resize(nbrSolPnts,nbrSolPnts);
+  
+  if(m_polyOrder != CFPolyOrder::ORDER0 && m_polyOrder != CFPolyOrder::ORDER1)
+  {
+    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+    {
+      CFuint modalDof = 0;
+      for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+      {
+        for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+        {
+          for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta, ++modalDof)
+          {
+            m_vandermonde(iSol,modalDof) = evaluateLegendre(m_solPntsLocalCoords[iSol][KSI],iKsi)*evaluateLegendre(m_solPntsLocalCoords[iSol][ETA],iEta)*evaluateLegendre(m_solPntsLocalCoords[iSol][ZTA],iZta);
+          }
+        }
+      }
+//       for (CFuint iOrder = 0; iOrder < nbrSolPnts1D; ++iOrder)
+//       {
+//         for (CFuint iOrderKsi = 0; iOrderKsi < iOrder; ++iOrderKsi, ++modalDof)
+//         {
+// 	  CFuint iOrderEta = iOrder;
+// 	  CFuint iOrderZta = iOrder;
+//           m_vandermonde(iSol,modalDof) = evaluateLegendre(m_solPntsLocalCoords[iSol][KSI],iOrderKsi)*evaluateLegendre(m_solPntsLocalCoords[iSol][ETA],iOrderEta)*evaluateLegendre(m_solPntsLocalCoords[iSol][ZTA],iOrderZta);
+//         }
+//         for (CFuint iOrderEta = 0; iOrderEta < iOrder+1; ++iOrderEta, ++modalDof)
+//         {
+// 	  CFuint iOrderKsi = iOrder;
+// 	  CFuint iOrderZta = iOrder;
+//           m_vandermonde(iSol,modalDof) = evaluateLegendre(m_solPntsLocalCoords[iSol][KSI],iOrderKsi)*evaluateLegendre(m_solPntsLocalCoords[iSol][ETA],iOrderEta)*evaluateLegendre(m_solPntsLocalCoords[iSol][ZTA],iOrderZta);
+//         }
+//         for (CFuint iOrderZta = 0; iOrderZta < iOrder+2; ++iOrderZta, ++modalDof)
+//         {
+// 	  CFuint iOrderKsi = iOrder;
+// 	  CFuint iOrderEta = iOrder;
+//           m_vandermonde(iSol,modalDof) = evaluateLegendre(m_solPntsLocalCoords[iSol][KSI],iOrderKsi)*evaluateLegendre(m_solPntsLocalCoords[iSol][ETA],iOrderEta)*evaluateLegendre(m_solPntsLocalCoords[iSol][ZTA],iOrderZta);
+//         }
+//       }
+      cf_assert(modalDof == nbrSolPnts);
+    }
+    
+    InvertMatrix(m_vandermonde,m_vandermondeInv);
   }
 }
 

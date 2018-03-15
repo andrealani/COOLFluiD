@@ -297,6 +297,9 @@ protected: //data
   
   /// the ghost gradients in the flux points
   std::vector< std::vector< RealVector* > > m_flxPntGhostGrads;
+  
+  /// the current flux pnt number
+  CFuint m_currFlx;
 
   
 }; // class Solve

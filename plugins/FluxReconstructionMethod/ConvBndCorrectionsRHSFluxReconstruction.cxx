@@ -200,6 +200,27 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
 
 	  // update the rhs
           updateRHS();
+	  
+	  // print out the residual updates for debugging
+          if(m_intCell->getID() == 1220)
+          {
+	    CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
+            CFLog(VERBOSE, "UpdateBnd = \n");
+            // get the datahandle of the rhs
+            DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
+            for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+            {
+              CFuint resID = m_nbrEqs*( (*m_cellStates)[iState]->getLocalID() );
+              for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+              {
+                CFLog(VERBOSE, "" << rhs[resID+iVar] << " ");
+              }
+              CFLog(VERBOSE,"\n");
+              DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+              CFLog(VERBOSE, "UpdateCoeff: " << updateCoeff[(*m_cellStates)[iState]->getLocalID()] << "\n");
+	      CFLog(VERBOSE, "state " << iState << ": " << *(((*m_cellStates)[iState])->getData()) << "\n");
+            }
+          }
         } 
         
         // if there is a diffusive term, compute the gradients
@@ -249,6 +270,14 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeFlxPntStates()
   
   // compute ghost states
   m_bcStateComputer->computeGhostStates(m_cellStatesFlxPnt,m_flxPntGhostSol,m_unitNormalFlxPnts,m_flxPntCoords);
+  
+  if (m_intCell->getID() == 1220)
+  {
+    for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+    {
+      CFLog(VERBOSE, "state: " << *(m_cellStatesFlxPnt[iFlxPnt]) << ", ghost: " << *(m_flxPntGhostSol[iFlxPnt]) << "\n");
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -379,6 +408,10 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeWaveSpeedUpdates(CFreal& wa
     m_updateVarSet->computePhysicalData(*(m_cellStatesFlxPnt[iFlx]), m_pData);
     waveSpeedUpd += jacobXIntCoef*
                     m_updateVarSet->getMaxAbsEigenValue(m_pData,m_unitNormalFlxPnts[iFlx]);
+    if (waveSpeedUpd != waveSpeedUpd)
+    {
+      CFLog(NOTICE, "ID: " << m_intCell->getID() << " states: " << *(m_cellStatesFlxPnt[iFlx]) << ", pdata: " << m_pData << "\n");
+    }
   }
 }
 

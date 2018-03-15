@@ -80,7 +80,8 @@ MLPLimiter::MLPLimiter(const std::string& name) :
   m_limiterValues(),
   m_solPolyValsAtFlxPnts(CFNULL),
   m_cellStatesFlxPnt(),
-  m_cellStatesBackup()
+  m_cellStatesBackup(),
+  m_prevStates()
 {
   addConfigOptionsTo(this);
 
@@ -133,6 +134,9 @@ void MLPLimiter::execute()
   const bool recomputeLimiter = true; //residual > m_freezeLimiterRes && iter < m_freezeLimiterIter;
   
   const bool useMin = residual < m_freezeLimiterRes || iter > m_freezeLimiterIter;
+  
+  RealVector duL2Norm(m_nbrEqs);
+  duL2Norm = 0.0;
   
   const CFuint nbrElemTypes = elemType->size();
   
@@ -230,6 +234,9 @@ void MLPLimiter::execute()
 	}
 	CFLog(VERBOSE, "min state: " << m_minAvgState[0] << ", max state: " << m_maxAvgState[0] << "\n");
       }
+      
+      if (checkSpecialLimConditions())
+      {
 
       // Initiate hierarchical procedure at order P and break from loop if no limiting is necessary
       for (CFuint iOrder = m_order; iOrder > 0; --iOrder)
@@ -262,7 +269,7 @@ void MLPLimiter::execute()
 	  // check if we are in constant area of sol
 	  if (!( fabs(m_cellStatesNodes[iNode][0] - m_cellAvgState[0]) < max(1e-3 * fabs(m_cellAvgState[0]),m_cell->computeVolume())))
 	  {   
-            m_applyLimiter[iNode] = m_cellStatesNodesP1[iNode][0] < m_minAvgState[0] || m_cellStatesNodesP1[iNode][0] > m_maxAvgState[0];
+            m_applyLimiter[iNode] = m_cellStatesNodesP1[iNode][0] < 1.0*m_minAvgState[0] || m_cellStatesNodesP1[iNode][0] > 1.0*m_maxAvgState[0];
 	    
 	    if(m_cell->getID() == 36)
             {
@@ -281,7 +288,7 @@ void MLPLimiter::execute()
 	  }
         }
       
-        bool unphysical = !checkPhysicality();
+        const bool unphysical = !checkPhysicality();
       
         if (limitFlag || unphysical)
         {
@@ -325,9 +332,9 @@ void MLPLimiter::execute()
 	        if (m_applyLimiter[iNode])
                 {
                   // check if we are in a smooth local maximum
-	          bool cond1 = m_cellStatesNodesP1[iNode][0] - m_cellAvgState[0] > 0.0;
-	          bool cond2 = m_cellStatesNodes[iNode][0] - m_cellStatesNodesP1[iNode][0] < 0.0;
-	          bool cond3 = m_cellStatesNodes[iNode][0] > minAvgState[0];
+	          bool cond1 = m_cellStatesNodesP1[iNode][0] - 1.0*m_cellAvgState[0] > 0.0;
+	          bool cond2 = 1.0*m_cellStatesNodes[iNode][0] - m_cellStatesNodesP1[iNode][0] < 0.0;
+	          bool cond3 = m_cellStatesNodes[iNode][0] > 1.0*minAvgState[0];
                   m_applyLimiter[iNode] = !( cond1 && cond2 && cond3 );	
 	          CFLog(VERBOSE, "max cond: " << cond1 << ", " << cond2 << ", " << cond3 << "\n");
                 }
@@ -335,9 +342,9 @@ void MLPLimiter::execute()
                 if(m_applyLimiter[iNode])
                 {
 	          // check if we are in a smooth local minimum
-	          bool cond1 = m_cellStatesNodesP1[iNode][0] - m_cellAvgState[0] < 0.0;
-	          bool cond2 = m_cellStatesNodes[iNode][0] - m_cellStatesNodesP1[iNode][0] > 0.0;
-	          bool cond3 = m_cellStatesNodes[iNode][0] < maxAvgState[0];
+	          bool cond1 = m_cellStatesNodesP1[iNode][0] - 1.0*m_cellAvgState[0] < 0.0;
+	          bool cond2 = 1.0*m_cellStatesNodes[iNode][0] - m_cellStatesNodesP1[iNode][0] > 0.0;
+	          bool cond3 = m_cellStatesNodes[iNode][0] < 1.0*maxAvgState[0];
                   m_applyLimiter[iNode] = !( cond1 && cond2 && cond3 );	
 	          CFLog(VERBOSE, "min cond: " << cond1 << ", " << cond2 << ", " << cond3 << "\n");
                 }
@@ -374,11 +381,11 @@ void MLPLimiter::execute()
 	     executeSlopeLimiter(elemIdx, useMin);
 	     ++limitCounter;
 	     
-	     // only for purposes of printing the shock detector!!
-	     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-	     {
-	       //(*((*m_cellStates)[iSol]))[0] = 5.0;
-             }
+// 	     // only for purposes of printing the shock detector!!
+// 	     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+// 	     {
+// 	       (*((*m_cellStates)[iSol]))[0] = 15.0;
+//              }
 	   }
 	 }
 	 else
@@ -402,11 +409,11 @@ void MLPLimiter::execute()
 	       ++limitCounter;
 	       ++orderLimit;
 	       applyChecks(1.0);
-	       // only for purposes of printing the shock detector!!
-	       for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-	       {
-	         //(*((*m_cellStates)[iSol]))[0] = 5.0;
-	       }
+// 	       // only for purposes of printing the shock detector!!
+// 	       for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+// 	       {
+// 	         (*((*m_cellStates)[iSol]))[0] = 15.0;
+// 	       }
 	     }
 	     break;
 	   }
@@ -438,11 +445,11 @@ void MLPLimiter::execute()
 	   {
 	     ++limitCounter;
 	     ++orderLimit;
-	     // only for purposes of printing the shock detector!!
-	     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-	     {
-	       //(*((*m_cellStates)[iSol]))[0] = 5.0;
-	     }
+// 	     // only for purposes of printing the shock detector!!
+// 	     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+// 	     {
+// 	       (*((*m_cellStates)[iSol]))[0] = 15.0;
+// 	     }
 	   }
 	   break;
 	 }
@@ -454,6 +461,7 @@ void MLPLimiter::execute()
 	 }
        }
      }
+      }
 //       else
 //       {
 // 	///@warning for plotting limitFac
@@ -466,12 +474,24 @@ void MLPLimiter::execute()
 // 	}
 //       }
 
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+	CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
+	RealVector diff = (*((*m_cellStates)[iSol])-m_prevStates[stateID])*(*((*m_cellStates)[iSol])-m_prevStates[stateID]);
+	duL2Norm += diff;
+	m_prevStates[stateID] = *((*m_cellStates)[iSol]);
+	//CFLog(NOTICE, "diff: " << diff << "\n");
+      }
+
       //release the GeometricEntity
       m_cellBuilder->releaseGE();
     }
   }
   
-  CFLog(NOTICE,"Limits done: " << limitCounter << " of which " << orderLimit << " partial limits\n");
+  duL2Norm = 0.5*log10(duL2Norm);
+  
+  CFLog(INFO,"Limits done: " << limitCounter << " of which " << orderLimit << " partial limits\n");
+  CFLog(INFO,"L2 norm of the state difference: " << duL2Norm << "\n");
   
   }
   else
@@ -479,23 +499,24 @@ void MLPLimiter::execute()
     applyPrevLimiter();
   }
   
-  CFreal sumLim = 0.0;
-  for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
-  {
-    // get start and end indexes for this type of element
-    const CFuint startIdx = (*elemType)[iElemType].getStartIdx();
-    const CFuint endIdx   = (*elemType)[iElemType].getEndIdx  ();
-
-    // loop over cells
-    for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
-    {
-      for (CFuint iEq = 0; iEq < m_nbrEqs+1; ++iEq)
-      {
-        sumLim += m_limiterValues[elemIdx][iEq];
-      }
-    }
-  }
-  CFLog(NOTICE,"Sum limiters: " << sumLim << "\n");
+//   CFreal sumLim = 0.0;
+//   
+//   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
+//   {
+//     // get start and end indexes for this type of element
+//     const CFuint startIdx = (*elemType)[iElemType].getStartIdx();
+//     const CFuint endIdx   = (*elemType)[iElemType].getEndIdx  ();
+// 
+//     // loop over cells
+//     for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
+//     {
+//       for (CFuint iEq = 0; iEq < m_nbrEqs+1; ++iEq)
+//       {
+//         sumLim += m_limiterValues[elemIdx][iEq];
+//       }
+//     }
+//   }
+//   CFLog(NOTICE,"Sum limiters: " << sumLim << "\n");
   CFTRACEEND;
 }
 
@@ -941,134 +962,6 @@ void MLPLimiter::computeFlxPntStates(std::vector< RealVector > states, std::vect
 
 //////////////////////////////////////////////////////////////////////////////
 
-void MLPLimiter::setup()
-{
-  CFAUTOTRACE;
-
-  // get number of equations
-  m_nbrEqs = PhysicalModelStack::getActive()->getNbEq();
-  m_dim    = PhysicalModelStack::getActive()->getDim ();
-
-  // resize variables
-  m_applyLimiterToPhysVar.resize(m_nbrEqs);
-  m_cellAvgState.resize(m_nbrEqs);
-  m_cellCenterDerivVar.resize(m_dim);
-  m_minAvgState.resize(m_nbrEqs);
-  m_maxAvgState.resize(m_nbrEqs+1);
-  m_minAvgStateAll.resize(m_nbrEqs);
-  m_maxAvgStateAll.resize(m_nbrEqs);
-
-  // get cell builder
-  m_cellBuilder = getMethodData().getStdTrsGeoBuilder();
-
-  // get the local spectral FD data
-  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
-  const CFuint nbrElemTypes = frLocalData.size();
-  cf_assert(nbrElemTypes > 0);
-  
-  const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
-  
-  m_order = static_cast<CFuint>(order);
-
-  
-  // get the coefs for extrapolation of the states to the flx pnts
-  m_solPolyValsAtNodes = frLocalData[0]->getCoefSolPolyInNodes();
-  
-  m_nbrNodesElem = m_solPolyValsAtNodes->size();
-  m_nbrSolPnts = frLocalData[0]->getNbrOfSolPnts();
-
-  // get the maximum number of flux points
-  m_maxNbrFlxPnts = 0;
-  
-  // get the elementTypeData
-  SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
-  
-  for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
-  {
-    const CFuint nbrFlxPnts = frLocalData[iElemType]->getNbrOfFlxPnts();
-    m_maxNbrFlxPnts = m_maxNbrFlxPnts > nbrFlxPnts ? m_maxNbrFlxPnts : nbrFlxPnts;
-    
-    // get start and end indexes for this type of element
-    const CFuint startIdx = (*elemType)[iElemType].getStartIdx();
-    const CFuint endIdx   = (*elemType)[iElemType].getEndIdx  ();
-
-    // loop over cells to apply previous limiter
-    for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
-    {
-      RealVector temp(m_nbrEqs+1);
-      temp = 1.0;
-      temp[0] = m_order;
-      
-      m_limiterValues.push_back(temp);
-    }
-  }
-
-  // get the number of nodes in the mesh
-  const CFuint nbrNodes = MeshDataStack::getActive()->getNbNodes();
-
-  // resize the sockets for the minimum and maximum states in the node neighbouring cells
-  /// @todo this socket is too big, only the first order nodes (in the cell corners, and later on, hanging nodes)
-  /// have to be taken into account
-  DataHandle< RealVector > nodeNghbCellMinAvgStates = socket_nodeNghbCellMinAvgStates.getDataHandle();
-  DataHandle< RealVector > nodeNghbCellMaxAvgStates = socket_nodeNghbCellMaxAvgStates.getDataHandle();
-  nodeNghbCellMinAvgStates.resize(nbrNodes);
-  nodeNghbCellMaxAvgStates.resize(nbrNodes);
-  for (CFuint iNode = 0; iNode < nbrNodes; ++iNode)
-  {
-    nodeNghbCellMinAvgStates[iNode].resize(m_nbrEqs);
-    nodeNghbCellMaxAvgStates[iNode].resize(m_nbrEqs+1);
-  }
-
-  m_lengthScaleExp = 2.0/static_cast<CFreal>(m_dim);
-  
-  for (CFuint iNode = 0; iNode < m_nbrNodesElem; ++iNode)
-  {
-    RealVector temp(m_nbrEqs);
-    RealVector temp2(m_nbrEqs);
-    m_cellStatesNodes.push_back(temp);
-    m_cellStatesNodesP1.push_back(temp2);
-  }
-  
-  // get the coefs for extrapolation of the states to the flx pnts
-  m_solPolyValsAtFlxPnts = frLocalData[0]->getCoefSolPolyInFlxPnts();
-  
-  for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
-  {
-    RealVector temp(m_nbrEqs);
-    m_cellStatesFlxPnt.push_back(temp);
-  }
-  
-  SafePtr<RealMatrix> vdm = frLocalData[0]->getVandermondeMatrix();
-  
-  SafePtr<RealMatrix> vdmInv = frLocalData[0]->getVandermondeMatrixInv();
-  
-  const CFuint nbrSolPnts = frLocalData[0]->getNbrOfSolPnts();
-  
-  for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-  {
-    RealVector temp(m_nbrEqs);
-    temp = 0.0;
-    m_statesP1.push_back(temp);
-    m_states2.push_back(temp);
-    m_cellStatesBackup.push_back(temp);
-  }
-  
-  m_applyLimiter.resize(m_nbrNodesElem);
-  
-  for (CFuint iOrder = 0; iOrder < order; ++iOrder)
-  {
-    RealMatrix temp(nbrSolPnts,nbrSolPnts);
-    temp = 0.0;
-    for (CFuint idx = 0; idx < (iOrder+1)*(iOrder+1); ++idx)
-    {
-      temp(idx,idx) = 1.0;
-    }
-    m_transformationMatrices.push_back((*vdm)*temp*(*vdmInv));
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 void MLPLimiter::executeSlopeLimiter(const CFuint elemIdx, const bool useMin)
 {
   // get the data handles for the minimum and maximum nodal states
@@ -1162,6 +1055,143 @@ void MLPLimiter::executeSlopeLimiter(const CFuint elemIdx, const bool useMin)
 
 //////////////////////////////////////////////////////////////////////////////
 
+void MLPLimiter::setup()
+{
+  CFAUTOTRACE;
+  
+  FluxReconstructionSolverCom::setup();
+
+  // get number of equations
+  m_nbrEqs = PhysicalModelStack::getActive()->getNbEq();
+  m_dim    = PhysicalModelStack::getActive()->getDim ();
+
+  // resize variables
+  m_applyLimiterToPhysVar.resize(m_nbrEqs);
+  m_cellAvgState.resize(m_nbrEqs);
+  m_cellCenterDerivVar.resize(m_dim);
+  m_minAvgState.resize(m_nbrEqs);
+  m_maxAvgState.resize(m_nbrEqs+1);
+  m_minAvgStateAll.resize(m_nbrEqs);
+  m_maxAvgStateAll.resize(m_nbrEqs);
+
+  // get cell builder
+  m_cellBuilder = getMethodData().getStdTrsGeoBuilder();
+
+  // get the local FR data
+  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
+  const CFuint nbrElemTypes = frLocalData.size();
+  cf_assert(nbrElemTypes > 0);
+  
+  const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
+  
+  m_order = static_cast<CFuint>(order);
+
+  
+  // get the coefs for extrapolation of the states to the flx pnts
+  m_solPolyValsAtNodes = frLocalData[0]->getCoefSolPolyInNodes();
+  
+  m_nbrNodesElem = m_solPolyValsAtNodes->size();
+  m_nbrSolPnts = frLocalData[0]->getNbrOfSolPnts();
+
+  // get the maximum number of flux points
+  m_maxNbrFlxPnts = 0;
+  
+  // get the elementTypeData
+  SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
+  
+  for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
+  {
+    const CFuint nbrFlxPnts = frLocalData[iElemType]->getNbrOfFlxPnts();
+    m_maxNbrFlxPnts = m_maxNbrFlxPnts > nbrFlxPnts ? m_maxNbrFlxPnts : nbrFlxPnts;
+    
+    // get start and end indexes for this type of element
+    const CFuint startIdx = (*elemType)[iElemType].getStartIdx();
+    const CFuint endIdx   = (*elemType)[iElemType].getEndIdx  ();
+
+    // loop over cells to apply previous limiter
+    for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
+    {
+      RealVector temp(m_nbrEqs+1);
+      temp = 1.0;
+      temp[0] = m_order;
+      
+      m_limiterValues.push_back(temp);
+      
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+        RealVector temp2(m_nbrEqs);
+        temp2 = 0.0;
+        m_prevStates.push_back(temp2);
+      }
+    }
+  }
+
+  // get the number of nodes in the mesh
+  const CFuint nbrNodes = MeshDataStack::getActive()->getNbNodes();
+
+  // resize the sockets for the minimum and maximum states in the node neighbouring cells
+  /// @todo this socket is too big, only the first order nodes (in the cell corners, and later on, hanging nodes)
+  /// have to be taken into account
+  DataHandle< RealVector > nodeNghbCellMinAvgStates = socket_nodeNghbCellMinAvgStates.getDataHandle();
+  DataHandle< RealVector > nodeNghbCellMaxAvgStates = socket_nodeNghbCellMaxAvgStates.getDataHandle();
+  nodeNghbCellMinAvgStates.resize(nbrNodes);
+  nodeNghbCellMaxAvgStates.resize(nbrNodes);
+  for (CFuint iNode = 0; iNode < nbrNodes; ++iNode)
+  {
+    nodeNghbCellMinAvgStates[iNode].resize(m_nbrEqs);
+    nodeNghbCellMaxAvgStates[iNode].resize(m_nbrEqs+1);
+  }
+
+  m_lengthScaleExp = 2.0/static_cast<CFreal>(m_dim);
+  
+  for (CFuint iNode = 0; iNode < m_nbrNodesElem; ++iNode)
+  {
+    RealVector temp(m_nbrEqs);
+    RealVector temp2(m_nbrEqs);
+    m_cellStatesNodes.push_back(temp);
+    m_cellStatesNodesP1.push_back(temp2);
+  }
+  
+  // get the coefs for extrapolation of the states to the flx pnts
+  m_solPolyValsAtFlxPnts = frLocalData[0]->getCoefSolPolyInFlxPnts();
+  
+  for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
+  {
+    RealVector temp(m_nbrEqs);
+    m_cellStatesFlxPnt.push_back(temp);
+  }
+  
+  SafePtr<RealMatrix> vdm = frLocalData[0]->getVandermondeMatrix();
+  
+  SafePtr<RealMatrix> vdmInv = frLocalData[0]->getVandermondeMatrixInv();
+  
+  const CFuint nbrSolPnts = frLocalData[0]->getNbrOfSolPnts();
+  
+  for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+  {
+    RealVector temp(m_nbrEqs);
+    temp = 0.0;
+    m_statesP1.push_back(temp);
+    m_states2.push_back(temp);
+    m_cellStatesBackup.push_back(temp);
+  }
+  
+  m_applyLimiter.resize(m_nbrNodesElem);
+  
+  for (CFuint iOrder = 0; iOrder < order; ++iOrder)
+  {
+    RealMatrix temp(nbrSolPnts,nbrSolPnts);
+    temp = 0.0;
+    for (CFuint idx = 0; idx < (iOrder+1)*(iOrder+1); ++idx)
+    {
+      temp(idx,idx) = 1.0;
+    }
+    m_transformationMatrices.push_back((*vdm)*temp*(*vdmInv));
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void MLPLimiter::unsetup()
 {
   CFAUTOTRACE;
@@ -1170,6 +1200,8 @@ void MLPLimiter::unsetup()
   DataHandle< RealVector > nodeNghbCellMaxAvgStates = socket_nodeNghbCellMaxAvgStates.getDataHandle();
   nodeNghbCellMinAvgStates.resize(0);
   nodeNghbCellMaxAvgStates.resize(0);
+  
+  FluxReconstructionSolverCom::unsetup();
 }
 
 //////////////////////////////////////////////////////////////////////////////

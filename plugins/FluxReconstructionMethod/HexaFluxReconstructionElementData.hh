@@ -75,6 +75,11 @@ protected: // functions
    * Creates a vector containing the exponents of the terms in the solution polynomials.
    */
   void createSolPolyExponents();
+  
+  /**
+   * Creates a vector containing the exponents of the terms in the node associated base polynomials.
+   */
+  void createNodePolyExponents();
 
   /**
    * Creates the connectivity between faces and flux points
@@ -153,6 +158,11 @@ protected: // functions
    * create the dimensions on which the flux must be projected in the flux points
    */
   void createFluxPntFluxDim();
+  
+  /**
+   * create the vandermonde matrix of the transformation to modal basis
+   */
+  virtual void createVandermondeMatrix();
 
 }; // end of class HexaFluxReconstructionElementData
 

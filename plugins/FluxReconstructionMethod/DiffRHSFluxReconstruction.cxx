@@ -260,7 +260,7 @@ void DiffRHSFluxReconstruction::execute()
       //divideByJacobDet();
       
       // print out the residual updates for debugging
-      if(m_cell->getID() == 1234)
+      if(m_cell->getID() == 1220)
       {
 	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
         CFLog(VERBOSE, "TotalUpdate = \n");
@@ -298,6 +298,8 @@ void DiffRHSFluxReconstruction::computeInterfaceFlxCorrection()
        
       m_avgSol[iVar] = ((*(m_cellStatesFlxPnt[LEFT][iFlxPnt]))[iVar] + (*(m_cellStatesFlxPnt[RIGHT][iFlxPnt]))[iVar])/2.0; 
     }
+    
+    prepareFluxComputation();
      
     // compute the Riemann flux
     m_flxPntRiemannFlux[iFlxPnt] = m_diffusiveVarSet->getFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0);
@@ -427,10 +429,19 @@ void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
       grad[iVar] = & (temp[iVar]);
     }
     
+    m_avgSol = stateSolPnt;
+    
+    prepareFluxComputation();
+    
     // calculate the discontinuous flux projected on x, y, z-directions
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {
-      m_contFlx[iSolPnt][iDim] = m_diffusiveVarSet->getFlux(*(stateSolPnt.getData()),grad,m_cellFluxProjVects[iDim][iSolPnt],0);
+      m_contFlx[iSolPnt][iDim] = m_diffusiveVarSet->getFlux(m_avgSol,grad,m_cellFluxProjVects[iDim][iSolPnt],0);
+    }
+    
+    if (m_cell->getID() == 1220)
+    {
+      CFLog(VERBOSE, "grad: " << *(grad[1]) << ", flux: " << m_contFlx[iSolPnt][1] << "\n");
     }
     
     for (CFuint iFlxPnt = 0; iFlxPnt < m_flxPntsLocalCoords->size(); ++iFlxPnt)

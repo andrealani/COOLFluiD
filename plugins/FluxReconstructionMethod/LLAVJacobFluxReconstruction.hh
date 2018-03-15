@@ -61,6 +61,13 @@ public: // functions
   virtual void unsetup();
     
 protected: //functions
+  
+  /**
+   * compute the wave speed updates for this face
+   * @pre reconstructFluxPntsStates(), reconstructFaceAvgState(),
+   *      setFaceTermData() and set the geometrical data of the face
+   */
+  virtual void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd);
 
   /// compute the interface flux
   void computeInterfaceFlxCorrection();
@@ -140,8 +147,11 @@ protected: //data
   /// artificial Viscosity
   CFreal m_epsilon;
   
+  /// artificial Viscosity in the sol pnts
+  std::vector< CFreal > m_solEpsilons;
+  
   /// artificial Viscosity
-  std::vector< CFreal > m_epsilonLR;
+  std::vector< std::vector< CFreal > > m_epsilonLR;
   
   /// reference artificial Viscosity
   CFreal m_epsilon0;
@@ -155,8 +165,14 @@ protected: //data
   /// controlling parameter kappa
   CFreal m_kappa;
   
+  /// peclet number
+  CFreal m_peclet;
+  
   /// average artificial viscosities in the nodes
   RealVector m_nodeEpsilons;
+  
+  /// number of neighbors for each node
+  RealVector m_nbNodeNeighbors;
   
   /// average artificial viscosities in the elements
   RealVector m_cellEpsilons;
@@ -166,6 +182,39 @@ protected: //data
   
   /// number of corner nodes for current element type
   CFuint m_nbrCornerNodes;
+  
+  /// vector containing pointers to the nodes in a face
+  std::vector< Framework::Node*  >* m_faceNodes;
+  
+  /// flag telling whether to compute the number of node neighbors
+  bool m_flagComputeNbNghb;
+  
+  /// polynomial coefficients for reconstruction of the artificial viscosity at the flx pnts
+  std::vector< std::vector< CFreal > > m_nodePolyValsAtFlxPnts;
+  
+  /// polynomial coefficients for reconstruction of the artificial viscosity at the sol pnts
+  std::vector< std::vector< CFreal > > m_nodePolyValsAtSolPnts;
+  
+  /// cell node connectivity table
+  Common::SafePtr< Framework::MeshData::ConnTable > m_cellNodesConn;
+  
+  /// current element index
+  CFuint m_elemIdx;
+  
+  /// variable for faces
+  const std::vector< Framework::GeometricEntity* >* m_facesCell;
+  
+  /// bool telling whether the jacobian is being computed
+  bool m_jacob;
+  
+  /// residual after which the limiter is frozen
+  CFreal m_freezeLimiterRes;
+  
+  /// iteration after which the limiter is frozen
+  CFuint m_freezeLimiterIter;
+  
+  /// boolean telling whether to use max artificial viscosity wrt previous iteration
+  bool m_useMax;
   
   private:
 

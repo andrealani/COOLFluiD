@@ -108,6 +108,11 @@ protected: //functions
    * Compute the left and right states and gradients in the flx pnts
    */
   void computeFlxPntStatesAndGrads();
+  
+  /// prepare the computation of the diffusive flux
+  virtual void prepareFluxComputation()
+  {
+  }
 
 protected: //data
   /// socket for gradients

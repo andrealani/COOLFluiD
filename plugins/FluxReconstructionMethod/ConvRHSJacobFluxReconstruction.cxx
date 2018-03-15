@@ -249,7 +249,7 @@ void ConvRHSJacobFluxReconstruction::execute()
       //divideByJacobDet();
       
       // print out the residual updates for debugging
-      if(m_cell->getID() == 160)
+      if(m_cell->getID() == 1944)
       {
 	CFLog(VERBOSE, "ID  = " << m_cell->getID() << "\n");
         CFLog(VERBOSE, "ConvUpdate = \n");
@@ -354,6 +354,7 @@ void ConvRHSJacobFluxReconstruction::computeBothJacobs()
 
           // multiply residual update derivatives with residual factor
           m_derivResUpdates *= resFactor;
+	  if (m_cells[iSide]->getID() == 1944) CFLog(VERBOSE, "deriv1: " << m_derivResUpdates << "\n");
 
           // add the derivative of the residual updates to the accumulator
           CFuint resUpdIdx = 0;
@@ -546,6 +547,7 @@ void ConvRHSJacobFluxReconstruction::computeJacobConvCorrection()
 
       // multiply residual update derivatives with residual factor
       m_derivResUpdates *= resFactor;
+      if (m_cell->getID() == 1944) CFLog(VERBOSE, "deriv3: " << m_derivResUpdates << "\n");
 
       // add the derivative of the residual updates to the accumulator
       CFuint resUpdIdx = 0;

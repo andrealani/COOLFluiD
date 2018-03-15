@@ -75,6 +75,11 @@ protected: // functions
    * Creates a vector containing the exponents of the terms in the solution polynomials.
    */
   void createSolPolyExponents();
+  
+  /**
+   * Creates a vector containing the exponents of the terms in the node associated base polynomials.
+   */
+  void createNodePolyExponents();
 
   /**
    * Creates the connectivity between faces and flux points

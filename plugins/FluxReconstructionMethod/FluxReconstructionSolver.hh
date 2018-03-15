@@ -25,7 +25,6 @@ namespace COOLFluiD {
     // Forward declarations
     class ConvBndCorrectionsRHSFluxReconstruction;
     class DiffBndCorrectionsRHSFluxReconstruction;
-    class LLAVBndFluxReconstruction;
     
 //////////////////////////////////////////////////////////////////////////////  
     
@@ -121,9 +120,6 @@ protected: // interface implementation functions
   /// Apply boundary conditions for diffusive terms
   virtual void applyBCDiffImpl();
   
-  /// Apply boundary conditions for artificial viscosity
-  virtual void applyBCAVImpl();
-  
   /// add source terms
   virtual void addSourceTermsImpl();
 
@@ -176,6 +172,9 @@ private: // data
   /// Command used to add artificial viscosity
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_artificialVisc;
   
+  /// Command used to enforce physicality of the solution
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_physicality;
+  
   /// Command used to compute the error of the solution
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_computeError;
   
@@ -205,6 +204,9 @@ private: // data
   
   /// The string for configuration of the m_artificialVisc command
   std::string m_artificialViscStr;
+  
+  /// The string for configuration of the m_physicality command
+  std::string m_physicalityStr;
   
   /// The string for configuration of the commands that compute
   /// RHS (and optionally the Jacobian)
@@ -259,16 +261,6 @@ private: // data
 
   /// The commands to use for applying the boundary conditions for the diffusive terms
   std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_bcsDiffComs;
-  
-  /// The commands to use for applying the boundary conditions for the artificial viscosity,
-  /// with LLAVBndRHSFluxReconstruction as type
-  std::vector< Common::SafePtr< LLAVBndFluxReconstruction > > m_bcsAV;
-
-  /// The commands to use for applying the boundary conditions for the artificial viscosity
-  std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_bcsAVComs;
-  
-  /// The artificial viscosity boundary condition command names for configuration
-  std::vector<std::string> m_bcNameAVStr;
 
 //////////////////////////////////////////////////////////////////////////////
 

@@ -304,6 +304,14 @@ public:
   {
     return &m_solPolyExponents;
   }
+  
+  /**
+   * @return m_nodePolyExponents
+   */
+  Common::SafePtr< std::vector< std::vector< CFint > > > getNodePolyExponents()
+  {
+    return &m_nodePolyExponents;
+  }
 
   /**
    * @return m_solPolyCoefs
@@ -311,6 +319,14 @@ public:
   Common::SafePtr< std::vector< std::vector< CFreal > > > getSolPolyCoefs()
   {
     return &m_solPolyCoefs;
+  }
+  
+  /**
+   * @return m_nodePolyCoefs
+   */
+  Common::SafePtr< std::vector< std::vector< CFreal > > > getNodePolyCoefs()
+  {
+    return &m_nodePolyCoefs;
   }
 
   /// @return m_initPntsCoords
@@ -476,6 +492,14 @@ public:
    * @pre createSolPolyExponents, createSolPolyExponents
    */
   std::vector< std::vector< CFreal > > getSolPolyValsAtNode(std::vector< RealVector > nodeLocalCoords);
+  
+  /**
+   * This function evaluates the node associated base polynomials at the given points
+   * @param pntLocalCoords is a vector with the local coordinates of the points
+   * @return the node polynomial values at the given points
+   * @pre createNodePolyExponents, createNodePolyExponents
+   */
+  std::vector< std::vector< CFreal > > getNodePolyValsAtPnt(std::vector< RealVector > pntLocalCoords);
 
   /**
    * This function evaluates the solution polynomial derivatives at the given nodes
@@ -535,6 +559,11 @@ protected: // functions
   virtual void createSolPolyExponents() = 0;
   
   /**
+   * Creates a vector containing the exponents of the terms in the node associated base polynomials.
+   */
+  virtual void createNodePolyExponents() = 0;
+  
+  /**
    * create the vandermonde matrix of the transformation to modal basis
    */
   virtual void createVandermondeMatrix() {}
@@ -543,6 +572,11 @@ protected: // functions
    * Computes the polynomial coefficients of the solution polynomial basis functions.
    */
   void computeSolPolyCoefs();
+  
+  /**
+   * Computes the polynomial coefficients of polynomial basis functions.based on the nodes
+   */
+  void computeNodePolyCoefs();
 
   /**
    * Computes the coordinates used for the initialization of the states.
@@ -801,8 +835,14 @@ protected: // protected data
   /// polynomial exponents
   std::vector< std::vector< CFint > > m_solPolyExponents;
 
-  /// spectral finite difference polynomial coefficients
+  /// FR polynomial coefficients
   std::vector< std::vector< CFreal > > m_solPolyCoefs;
+  
+  /// FR polynomial coefficients for the node basis functions
+  std::vector< std::vector< CFreal > > m_nodePolyCoefs;
+  
+  /// polynomial exponents for the node basis functions
+  std::vector< std::vector< CFint > > m_nodePolyExponents;
 
   /// local coordinates of points used for initialization of the solution
   std::vector< RealVector > m_initPntsCoords;

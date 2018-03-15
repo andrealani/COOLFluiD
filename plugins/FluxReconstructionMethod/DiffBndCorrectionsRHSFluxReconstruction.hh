@@ -99,6 +99,11 @@ protected: // functions
   /// set the bnd face data necessary to compute FI-FD
   void setBndFaceData(CFuint faceID);
   
+  /// prepare the computation of the diffusive flux
+  virtual void prepareFluxComputation()
+  {
+  }
+  
   /**
    * compute the wave speed updates for this face
    * @pre reconstructFluxPntsStates(), reconstructFaceAvgState(),

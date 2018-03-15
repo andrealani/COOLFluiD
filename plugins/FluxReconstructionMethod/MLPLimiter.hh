@@ -155,6 +155,11 @@ protected: // functions
    * Execute the slope limiter on the P1 states
    */
   void executeSlopeLimiter(const CFuint elemIdx, const bool useMin);
+  
+  /**
+   * check for special physics-dependent conditions if limiting is necessary
+   */
+  virtual bool checkSpecialLimConditions() {return true;};
 
 protected: // data
 
@@ -197,7 +202,7 @@ protected: // data
   /// mapped coordinates of the solution points
   Common::SafePtr< std::vector< RealVector > > m_solPntsLocalCoords;
 
-      /// cell averaged state
+  /// cell averaged state
   RealVector m_cellAvgState;
 
   /// derivative in cell center of a physical variable
@@ -283,6 +288,9 @@ protected: // data
   
   /// extrapolated states in the flux points of the cell
   std::vector< RealVector > m_cellStatesFlxPnt;
+  
+  /// limited states of the previous iteration
+  std::vector< RealVector > m_prevStates;
 
 }; // class MLPLimiter
 
