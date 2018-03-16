@@ -1,5 +1,5 @@
 #include "FiniteVolume/FiniteVolume.hh"
-#include "SuperInlet.hh"
+#include "FiniteVolume/SuperInlet.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/NamespaceSwitcher.hh"
 #include "Config/PositiveLessThanOne.hh"

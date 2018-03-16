@@ -39,8 +39,8 @@ public:
   /**
    * Default destructor
    */
-  ~SuperInlet();
-
+  virtual ~SuperInlet();
+  
   /**
    * Set up private data and data of the aggregated classes
    * in this command before processing phase

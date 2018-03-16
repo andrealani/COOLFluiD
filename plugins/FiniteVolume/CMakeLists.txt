@@ -240,6 +240,8 @@ WMUSCLPolyRec.hh
 WMUSCLPolyRec.cxx
 MUSCLSetup.hh
 MUSCLSetup.cxx
+NeumannBC.hh
+NeumannBC.cxx
 NullBC.hh
 NullBC.cxx
 NullComputeSourceTerm.cxx
