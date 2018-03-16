@@ -21,7 +21,7 @@ CFEnv.ErrorOnUnusedConfig = true
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libParaViewWriter libPoisson libFluctSplit libFluctSplitSystem libFluctSplitPoisson libNewtonMethod libTHOR2CFmesh libPetscI
 
 # SubSystem Parameters
-Simulator.Paths.WorkingDir = plugins/Poisson/testcases/Benchmarks/
+Simulator.Paths.WorkingDir = plugins/Poisson/testcases/Benchmarks
 Simulator.Paths.ResultsDir = ./
 
 Simulator.SubSystem.Default.PhysicalModelType   = Poisson2D

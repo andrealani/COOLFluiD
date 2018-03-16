@@ -10,7 +10,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = 0.54597029
+### Residual = -9.5861595
 
 # Simulation Modules
 Simulator.Modules.Libs = libTHOR2CFmesh libPetscI libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libGmsh2CFmesh libTecplotWriter libPoisson libFiniteVolume libFiniteVolumePoisson libNewtonMethod
@@ -29,18 +29,18 @@ Simulator.SubSystem.Poisson2D.refLength    = 1.0
 
 Simulator.SubSystem.OutputFormat    = ParaView Tecplot CFmesh
 
-Simulator.SubSystem.CFmesh.FileName = testOT.CFmesh
+Simulator.SubSystem.CFmesh.FileName = testOT_FV.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate = 10
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.Tecplot.FileName    = testOT.plt
+Simulator.SubSystem.Tecplot.FileName    = testOT_FV.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 10
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 
-Simulator.SubSystem.ParaView.FileName    = testOT.vtu
+Simulator.SubSystem.ParaView.FileName    = testOT_FV.vtu
 #Simulator.SubSystem.ParaView.WriteSol    = WriteSolution
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
 Simulator.SubSystem.ParaView.SaveRate = 10
@@ -48,22 +48,18 @@ Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
 
 #Simulator.SubSystem.StopCondition       = Norm
 #Simulator.SubSystem.Norm.valueNorm      = -10.0
 
-Simulator.SubSystem.Default.listTRS = Inlet
+Simulator.SubSystem.Default.listTRS = SuperInlet SuperOutlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-#Simulator.SubSystem.CFmeshFileReader.Data.FileName = square.CFmesh
-#Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
-#Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
-#Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = square100.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Gmsh2CFmesh.Discontinuous = true
-Simulator.SubSystem.CFmeshFileReader.Gmsh2CFmesh.SolutionOrder = P0
-Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = square.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
 #Simulator.SubSystem.CFmeshFileReader.Data.TranslationVector = -0.5 -0.5 
 #Simulator.SubSystem.CFmeshFileReader.Data.TranslateMesh = true
 
@@ -123,7 +119,7 @@ Simulator.SubSystem.CellCenterFVM.InField.Def = 0.
 Simulator.SubSystem.CellCenterFVM.BcComds = SuperInletFVMCC
 Simulator.SubSystem.CellCenterFVM.BcNames = Jet1
 
-Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = Inlet
+Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = SuperInlet SuperOutlet
 Simulator.SubSystem.CellCenterFVM.Jet1.Vars = x y
 Simulator.SubSystem.CellCenterFVM.Jet1.Def = (0.5*cos(4*pi*x)+cos(2*pi*y))/(4*pi^1.5)
 

@@ -2,21 +2,22 @@
 # 
 # This COOLFluiD CFcase file tests: 
 # 
-# Finite Volume, Poisson2D, BackwardEuler, mesh with quads, second-order 
-# reconstruction without limiter, Dirichlet BC, PETSc 
+# Finite Volume, Poisson2D, NewtonIterator, mesh with quads, second-order 
+# reconstruction, Dirichlet BC, PETSc (KSPCG, PCGAMG)
 #
 ################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.8166021
-#
+### Residual = -5.6831023
 
 # Simulation Modules
-Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libTecplotWriter libPoisson libFiniteVolume libFiniteVolumePoisson libBackwardEuler libTHOR2CFmesh
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libGmsh2CFmesh libTecplotWriter libPoisson libFiniteVolume libFiniteVolumePoisson libNewtonMethod
 
 #CFEnv.ErrorOnUnusedConfig = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
 
 # Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/Poisson/testcases/Benchmarks
@@ -28,18 +29,18 @@ Simulator.SubSystem.Poisson2D.refLength    = 1.0
 
 Simulator.SubSystem.OutputFormat    = ParaView Tecplot CFmesh
 
-Simulator.SubSystem.CFmesh.FileName = test1.CFmesh
+Simulator.SubSystem.CFmesh.FileName = test2.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate = 10
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.Tecplot.FileName    = test1.plt
+Simulator.SubSystem.Tecplot.FileName    = test2.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 10
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 
-Simulator.SubSystem.ParaView.FileName    = test1.vtu
+Simulator.SubSystem.ParaView.FileName    = test2.vtu
 #Simulator.SubSystem.ParaView.WriteSol    = WriteSolution
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
 Simulator.SubSystem.ParaView.SaveRate = 10
@@ -47,31 +48,39 @@ Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
 
-Simulator.SubSystem.Default.listTRS = SuperInlet SuperOutlet
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = Inlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = squareQDPert.CFmesh
-#square.CFmesh
-Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
-Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
-Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = square100.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Gmsh2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gmsh2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.TranslationVector = -0.5 -0.5 
+Simulator.SubSystem.CFmeshFileReader.Data.TranslateMesh = true
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
-Simulator.SubSystem.LSSNames = BwdEulerLSS
-Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES #KSPBICG #KSPGMRES
-Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
-Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 1000
-Simulator.SubSystem.BwdEulerLSS.Data.RelativeTolerance = 1e-4
-#Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
-Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCGAMG
-Simulator.SubSystem.BwdEulerLSS.Data.UseAIJ = true
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPCG #KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-6 #1e-10
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCGAMG
+Simulator.SubSystem.NewtonIteratorLSS.Data.UseAIJ = true
 Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
-#Simulator.SubSystem.BwdEulerLSS.Data.PreconditionerRate = 5
-#
-Simulator.SubSystem.ConvergenceMethod = BwdEuler
-Simulator.SubSystem.BwdEuler.Data.Norm = L2
+##Simulator.SubSystem.NewtonIteratorLSS.Data.PreconditionerRate = 5
+Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 100
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+#Simulator.SubSystem.NewtonIterator.Data.SaveSystemToFile = true
+#Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
+#Simulator.SubSystem.NewtonIterator.InitCom = ResetSystem
 
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
@@ -90,12 +99,13 @@ Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Cons
 Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = PureDiffFlux
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = FunctionST
 Simulator.SubSystem.CellCenterFVM.Data.FunctionST.Vars = x y phi
-Simulator.SubSystem.CellCenterFVM.Data.FunctionST.Def = -6.
+Simulator.SubSystem.CellCenterFVM.Data.FunctionST.Def = -50/pi*exp(-50*(x^2+y^2))*(-2+100*(x^2+y^2)) 
 
 #Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = HolmesConnell
 #Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = StateDiff
 Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
 #Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = CorrectedGG2D
+#Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = DiamondVolume2D
 
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
 
@@ -103,14 +113,14 @@ Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
 Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
-Simulator.SubSystem.CellCenterFVM.InField.Def = x^2.+y^2.
+Simulator.SubSystem.CellCenterFVM.InField.Def = 0.
 
 Simulator.SubSystem.CellCenterFVM.BcComds = SuperInletFVMCC
 Simulator.SubSystem.CellCenterFVM.BcNames = Jet1
 
-Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = SuperInlet SuperOutlet
+Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = Inlet
 Simulator.SubSystem.CellCenterFVM.Jet1.Vars = x y
-Simulator.SubSystem.CellCenterFVM.Jet1.Def = 1.+x^2.+2.*y^2.
+Simulator.SubSystem.CellCenterFVM.Jet1.Def = exp(-50*(x^2+y^2))/(2*pi) 
 
 
 
