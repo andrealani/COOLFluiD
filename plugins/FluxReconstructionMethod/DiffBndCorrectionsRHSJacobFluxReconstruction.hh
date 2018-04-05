@@ -20,7 +20,7 @@ namespace COOLFluiD {
 
   /**
    * This class represents a command that computes contribution of the boundary faces for the
-   * Flux Reconstruction schemes for convective terms to the RHS
+   * Flux Reconstruction schemes for diffusive terms to the RHS for an implicit scheme
    *
    * @author Ray Vandenhoeck
    * @author Alexander Papen
@@ -90,6 +90,21 @@ protected: // functions
    * after perturbation
    */
   void computePerturbedGradients();
+  
+  /**
+   * compute the terms for the gradient computation for a bnd face
+   */
+  virtual void computeBndGradTerms(RealMatrix& gradTerm, RealMatrix& ghostGradTerm);
+  
+  /**
+   * compute the term for the gradient computation for the cell
+   */
+  virtual void computeCellGradTerm(RealMatrix& gradTerm);
+  
+  /**
+   * compute the terms for the gradient computation for a face
+   */
+  virtual void computeFaceGradTerms(RealMatrix& gradTermL, RealMatrix& gradTermR);
 
 protected: // data
   
@@ -125,9 +140,6 @@ protected: // data
 
   /// Jacobian determinants
   std::valarray< CFreal > m_solJacobDet;
-
-  /// solution point mapped coordinates
-  Common::SafePtr< std::vector< RealVector > > m_solPntsLocalCoords;
 
   /// cell local indexes of the other faces (not the boundary face itself)
   std::vector< CFuint > m_otherFaceLocalIdxs;

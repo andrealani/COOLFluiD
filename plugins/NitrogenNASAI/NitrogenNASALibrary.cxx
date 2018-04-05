@@ -840,11 +840,12 @@ void NitrogenNASALibrary::getSource(CFdouble& temperature,
 //////////////////////////////////////////////////////////////////////////////
 
 void NitrogenNASALibrary::getRhoUdiff(CFdouble& temperature,
-				   CFdouble& pressure,
-				   RealVector& normConcGradients,
-				   CFreal* tVec,
-				   RealVector& rhoUdiff,
-				   bool fast)
+				      CFdouble& pressure,
+				      RealVector& normConcGradients,
+				      RealVector& normTempGradients,
+				      CFreal* tVec,
+				      RealVector& rhoUdiff,
+				      bool fast)
 {
   
 }
@@ -929,13 +930,14 @@ void NitrogenNASALibrary::testAndWriteSourceTerms()
 //////////////////////////////////////////////////////////////////////////////
       
 void NitrogenNASALibrary::transportCoeffNEQ(CFreal& temperature, 
-					 CFdouble& pressure,
-					 CFreal* tVec, 
-					 RealVector& normConcGradients,
-					 CFreal& eta,
-					 CFreal& lambdaTrRo, 
-					 RealVector& lambdaInt,
-					 RealVector& rhoUdiff)
+					    CFdouble& pressure,
+					    CFreal* tVec, 
+					    RealVector& normConcGradients,
+					    RealVector& normTempGradients,
+					    CFreal& eta,
+					    CFreal& lambdaTrRo, 
+					    RealVector& lambdaInt,
+					    RealVector& rhoUdiff)
 {
   
 }

@@ -10,43 +10,36 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Common/NamedObject.hh"
-#include "Common/ProviderBase.hh"
+#include "Environment/Provider.hh"
 #include "Framework/InterpolatorProperties.hh"
-#include "Framework/GeometricEntityFactory.hh"
+#include "Framework/GeometricEntity.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
   namespace Framework {
-
-    class GeometricEntity;
-    class State;
-    class Node;
-
+        
 //////////////////////////////////////////////////////////////////////////////
 
 /// This class represents a Provider of GeometricEntity's.
 /// @author Andrea Lani
 /// @author Tiago Quintino
-class Framework_API BaseGeometricEntityProvider : 
-  public Common::NamedObject,
-  public Common::ProviderBase
+class Framework_API BaseGeometricEntityProvider : public Environment::Provider<GeometricEntity>
 {
-
-public:
+ public:
 
   /// Default constructor without arguments
   BaseGeometricEntityProvider(const std::string& name);
-
+  
   /// Default destructor
   virtual ~BaseGeometricEntityProvider();
-
+  
   /// Create new geometric entity with the corresponding shape function
   /// @param states  list of the states to be put in the new GeometricEntity
   /// @param nodes   list of the nodes to be put in the new GeometricEntity
   virtual GeometricEntity* create() = 0;
-
+  
   /// Free an instance created by this factory
   /// @param ptr pointer to be freed
   virtual void freeInstance ( void * ptr ) = 0;

@@ -47,7 +47,9 @@ void ComputeLinearSourceTerm::configure ( Config::ConfigArgs& args )
 void ComputeLinearSourceTerm::setup()
 {
   CFAUTOTRACE;
-
+  
+  ComputeTerm<FiniteElementMethodData>::setup();
+  
   _linearSourceEntity = getMethodData().getLinearSourceEntity();
 }
 

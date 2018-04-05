@@ -48,7 +48,6 @@ DiffBndCorrectionsRHSFluxReconstructionNS::~DiffBndCorrectionsRHSFluxReconstruct
 void DiffBndCorrectionsRHSFluxReconstructionNS::computeWaveSpeedUpdates(CFreal& waveSpeedUpd)
 {
   CFreal visc = 1.0;
-  /// @todo needs to be changed for non-NS
   SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokesVarSet >();
   const CFreal dynVisc = navierStokesVarSet->getCurrDynViscosity();
   
@@ -66,6 +65,16 @@ void DiffBndCorrectionsRHSFluxReconstructionNS::computeWaveSpeedUpdates(CFreal& 
     waveSpeedUpd += visc*jacobXJacobXIntCoef/m_cellVolume;
   }
 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void DiffBndCorrectionsRHSFluxReconstructionNS::prepareFluxComputation()
+{
+  const bool isPerturb = this->getMethodData().isPerturb();
+  const CFuint iPerturbVar = this->getMethodData().iPerturbVar();
+  SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokesVarSet >();
+  navierStokesVarSet->setComposition(m_avgSol, isPerturb, iPerturbVar);
 }
 
 //////////////////////////////////////////////////////////////////////////////

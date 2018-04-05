@@ -2092,7 +2092,8 @@ void MutationLibrary::getSource(CFdouble& temp,
 void MutationLibrary::getRhoUdiff(CFdouble& temperature,
 				  CFdouble& pressure,
                                   RealVector& normConcGradients,
-                                  CFreal* tVec,
+				  RealVector& normTempGradients,
+				  CFreal* tVec,
 				  RealVector& rhoUdiff,
 				  bool fast)
 {

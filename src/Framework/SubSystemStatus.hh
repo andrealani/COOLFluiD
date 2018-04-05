@@ -20,7 +20,11 @@
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-
+  
+  namespace Common { 
+    class FactoryRegistry;
+  }
+  
   namespace Framework {
     
 //////////////////////////////////////////////////////////////////////////////
@@ -39,6 +43,12 @@ friend class SubSystemStatusStack;
 
 public: // methods
 
+  /// Set the factory registry
+  void setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> fr);
+  
+  /// Get the factory registry
+  Common::SafePtr<Common::FactoryRegistry> getFactoryRegistry();
+  
   /// Gets the variable registry
  Common::SafePtr<VarRegistry> getVarRegistry() {return m_var_registry;}
 
@@ -402,7 +412,10 @@ private: // methods
   SubSystemStatus(const std::string& name);
 
 private: // member data
-
+  
+  /// factory registry to allow polymorphic creation of objects
+  Common::SafePtr<Common::FactoryRegistry> m_fr;
+  
   /// registry for dynamic created variables
   VarRegistry * m_var_registry;
 

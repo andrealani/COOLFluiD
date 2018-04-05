@@ -1,9 +1,16 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# FR, VCJH, NS2D, Forward Euler, mesh with curved quads, 
+# Lax-Friedrichs scheme, wall BCs and Dirichlet BC 
+#
+################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-# Residual = -1.32335
+### Residual = -5.58134
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -47,14 +54,13 @@ Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
 Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
 
 Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
-Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = cylinderNSQuadCurved.CFmesh
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = CylinderNSQuadCurved_16_5.CFmesh
 Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
-Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+#Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 
 Simulator.SubSysMesh.SpaceMethod = Null
 Simulator.SubSysMesh.Null.Builder = MeshUpgrade
-Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P2
-Simulator.SubSysMesh.Null.MeshUpgrade.GeoPolynomialOrder = P2
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P3
 Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 
 ##################################
@@ -74,33 +80,33 @@ Simulator.SubSystem.NavierStokes2D.DiffTerm.FixedKinematicViscosity.KinVisc = 0.
 
 ###################################
 Simulator.SubSystem.OutputFormat        = ParaView Tecplot CFmesh
-Simulator.SubSystem.CFmesh.FileName     = cylinderNS-FR-sol.CFmesh
+Simulator.SubSystem.CFmesh.FileName     = AcylinderNSFRExpl.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate = 100
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
 
-Simulator.SubSystem.ParaView.FileName    = cylinderNS-FR-sol.vtu
+Simulator.SubSystem.ParaView.FileName    = AcylinderNSFRExpl.vtu
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
 Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.ParaView.SaveRate = 100
+Simulator.SubSystem.ParaView.SaveRate = 1000
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
-Simulator.SubSystem.Tecplot.FileName    = cylinderNS-FR-sol.plt
+Simulator.SubSystem.Tecplot.FileName    = AcylinderNSFRExpl.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.Tecplot.SaveRate = 1000
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 
 ###################################
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
-Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 100
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 80000
 Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.5
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
 
 ###################################
 Simulator.SubSystem.SpaceMethod = FluxReconstruction
@@ -123,16 +129,16 @@ Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
 Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
 Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
 Simulator.SubSystem.FluxReconstruction.Data.DiffusiveVar= Cons
-Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = RoeFlux
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = LaxFriedrichsFlux
 
 Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
 
 Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.015 #0.00047 #0.035 #1.0/3.0 #4.0/135.0 #3.0/3150.0 #8.0/496125.0 #5.0/29469825
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.0
 
 ###################################
-Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState
+Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState #Null #
 Simulator.SubSystem.FluxReconstruction.InitNames = InField
 
 Simulator.SubSystem.FluxReconstruction.InField.applyTRS = InnerCells
@@ -156,26 +162,3 @@ Simulator.SubSystem.FluxReconstruction.Data.FarField.Def  = 1.0 0.1774823934930 
 
 
 ###################################
-#
-# DataProcessing to get the aerodynamic coeficients
-#
-#Simulator.SubSystem.DataPostProcessing = DataProcessing
-#Simulator.SubSystem.DataProcessing.Data.updateVar = Cons
-#Simulator.SubSystem.DataProcessing.Comds = NavierStokesConsComputeAeroSpectralFD
-#Simulator.SubSystem.DataProcessing.Names = AeroCoef
-#Simulator.SubSystem.DataProcessing.ProcessRate = 1
-
-#Simulator.SubSystem.DataProcessing.AeroCoef.applyTRS = Cylinder
-#Simulator.SubSystem.DataProcessing.AeroCoef.SaveRateAero = 1
-#Simulator.SubSystem.DataProcessing.AeroCoef.OutputFileAero = AeroCoefCyl.plt
-
-#Simulator.SubSystem.DataProcessing.AeroCoef.OutputFileWall = WallCyl.plt
-#Simulator.SubSystem.DataProcessing.AeroCoef.SaveRateWall = 1
-
-#Simulator.SubSystem.DataProcessing.AeroCoef.uInf = 0.1774823934930
-#Simulator.SubSystem.DataProcessing.AeroCoef.rhoInf = 1.0
-#Simulator.SubSystem.DataProcessing.AeroCoef.pInf = 1.0
-#Simulator.SubSystem.DataProcessing.AeroCoef.FlowDir = 1.0 0.0
-
-###################################
-#CFEnv.RegistSignalHandlers = false

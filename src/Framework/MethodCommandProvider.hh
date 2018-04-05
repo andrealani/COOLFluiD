@@ -9,8 +9,6 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-
-
 #include "Common/CFLog.hh"
 #include "Environment/ModuleRegister.hh"
 #include "Framework/BaseMethodCommandProvider.hh"
@@ -38,7 +36,9 @@ public:
   explicit MethodCommandProvider(const std::string& name)
     : BaseMethodCommandProvider<DATA, MethodCommand<DATA> >(name)
   {
+#ifndef CF_HAVE_SINGLE_EXEC   
     Environment::ModuleRegister<MODULE>::getInstance().getSelfRegistry().regist(this);
+#endif 
   }
 
   /// Default destructor.

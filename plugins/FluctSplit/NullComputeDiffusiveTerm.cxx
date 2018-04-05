@@ -66,6 +66,7 @@ void NullComputeDiffusiveTerm::computeDiffusiveTerm
 
 void NullComputeDiffusiveTerm::setup()
 {
+  ComputeDiffusiveTerm::setup();
   CFLog(DEBUG_MIN, "Calling NullComputeDiffusiveTerm::setup()" << "\n");
 }
 

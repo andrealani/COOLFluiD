@@ -1,3 +1,9 @@
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME "FiniteVolumeMaxwell" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+
 LIST ( APPEND FiniteVolumeMaxwell_files
 DivMonitoring.cxx
 DivMonitoring.hh
@@ -74,9 +80,17 @@ UnsteadyPerfectConductingWall3D.hh
 UnsteadyPerfectConductingWall3D.cxx
 )
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND FiniteVolumeMaxwell_requires_mods FiniteVolume Maxwell TecplotWriter )
 LIST ( APPEND FiniteVolumeMaxwell_cflibs Framework FiniteVolume Maxwell TecplotWriter )
-
 CF_ADD_PLUGIN_LIBRARY ( FiniteVolumeMaxwell )
+ELSE()
+IF ( CF_BUILD_FiniteVolumeMaxwell)
+FOREACH (AFILE ${FiniteVolumeMaxwell_files} )
+LIST(APPEND coolfluid-solver_files ../../plugins/FiniteVolumeMaxwell/${AFILE} )
+ENDFOREACH(AFILE)
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+ENDIF()
+ENDIF()
 
 CF_WARN_ORPHAN_FILES()

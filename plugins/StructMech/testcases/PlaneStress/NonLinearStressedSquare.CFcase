@@ -2,7 +2,7 @@
 # Comments begin with "#"
 
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libFiniteElement libStructMech libNewtonMethod  libFiniteElementStructMech
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libPetscI libFiniteElement libStructMech libNewtonMethod  libFiniteElementStructMech
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/StructMech/testcases/PlaneStress/

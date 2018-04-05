@@ -52,20 +52,17 @@ public:
 protected:
 
   /// socket for Rhs
-  Framework::DataSocketSource<
-                              CFreal> socket_rhs;
+  Framework::DataSocketSource<CFreal> socket_rhs;
 
   /// socket for updateCoeff
   /// denominators of the coefficients for the update
-  Framework::DataSocketSource<
-                              CFreal> socket_updateCoeff;
+  Framework::DataSocketSource<CFreal> socket_updateCoeff;
 
   /// socket for bStatesNeighbors
   /// It is a list of the neighbor states for the boundary states.
   /// It will be useful to avoid very expensive jacobian matrix
   /// reallocations when applying strong boundary condition
-  Framework::DataSocketSource<
-                              std::valarray<Framework::State*> > socket_bStatesNeighbors;
+  Framework::DataSocketSource<std::valarray<Framework::State*> > socket_bStatesNeighbors;
 
   /// socket for State's
   Framework::DataSocketSink<Framework::State*, Framework::GLOBAL> socket_states;

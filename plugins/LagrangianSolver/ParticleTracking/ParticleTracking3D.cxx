@@ -10,86 +10,66 @@
 
 #define DEBUG 0
 
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
+using namespace COOLFluiD::MathTools;
+
+//////////////////////////////////////////////////////////////////////////////
+
 namespace COOLFluiD {
-
-namespace LagrangianSolver {
-
+  
+  namespace LagrangianSolver {
+    
+//////////////////////////////////////////////////////////////////////////////
 
 ParticleTracking3D::ParticleTracking3D(const std::string& name):
-    ParticleTracking(name),
-    m_exitPoint(3),
-    m_entryPoint(3),
-    m_direction(3)
+  ParticleTracking(name),
+  m_isOutward(CFNULL),
+  m_faceCenters(CFNULL),
+  m_exitPoint(3),
+  m_entryPoint(3),
+  m_direction(3),
+  m_initialPoint(3)
 {
-
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 ParticleTracking3D::~ParticleTracking3D(){
 
 }
 
-void ParticleTracking3D::getCommonData(CommonData &data){
-  static RealVector initialPoint(3);
-  getExitPoint(initialPoint);
+//////////////////////////////////////////////////////////////////////////////
 
-  data.currentPoint[0]=initialPoint[0];
-  data.currentPoint[1]=initialPoint[1];
-  data.currentPoint[2]=initialPoint[2];
-
+void ParticleTracking3D::getCommonData(CommonData &data)
+{
+  getExitPoint(m_initialPoint);
+  
+  data.currentPoint[0]=m_initialPoint[0];
+  data.currentPoint[1]=m_initialPoint[1];
+  data.currentPoint[2]=m_initialPoint[2];
+  
   data.direction[0] = m_particleCommonData.direction[0];
   data.direction[1] = m_particleCommonData.direction[1];
   data.direction[2] = m_particleCommonData.direction[2];
-
+  
   data.cellID = m_particleCommonData.cellID;
 }
+  
+//////////////////////////////////////////////////////////////////////////////
 
-void ParticleTracking3D::myComputeCentroid( std::vector<Framework::Node*>& nodes, Vec3& centroid ){
-   //average x y z
-   centroid[0] = 0.;
-   centroid[1] = 0.;
-   centroid[2] = 0.;
-   const CFuint nbNodes = nodes.size();
-   for(CFuint i=0; i< nbNodes; ++i){
-     centroid[0] += (*nodes[i])[0];
-     centroid[1] += (*nodes[i])[1];
-     centroid[2] += (*nodes[i])[2];
-   }
-
-  centroid[0] /= static_cast<CFreal>(nbNodes);
-  centroid[1] /= static_cast<CFreal>(nbNodes);
-  centroid[2] /= static_cast<CFreal>(nbNodes);
+void ParticleTracking3D::setupAlgorithm()
+{
+  ParticleTracking::setupAlgorithm();
+  
+  m_isOutward = m_sockets.isOutward.getDataHandle();
+  m_faceCenters = m_sockets.faceCenters.getDataHandle();
 }
-
-void ParticleTracking3D::setupAlgorithm(){
-//    m_maxNbFaces = Framework::MeshDataStack::getActive()->Statistics().getMaxNbFacesInCell();
-
-//    CFuint nbFaces=Framework::MeshDataStack::getActive()->Statistics().getNbFaces();
-//    m_centroids.reserve(nbFaces*3);
-
-    using namespace Framework;
-    using namespace Common;
-
-//    CellTrsGeoBuilder::GeoData& cellsData = m_cellBuilder.getDataGE();
-//    SafePtr<TopologicalRegionSet> MediumCells = MeshDataStack::getActive()->getTrs("InnerCells");
-//    cellsData.trs = MediumCells;
-//    const CFuint nbCellsMedia = MediumCells->getLocalNbGeoEnts();
-//    for(CFuint i=0; i<nbCellsMedia; ++i){
-//      cellsData.idx = i;
-//      GeometricEntity *const cell = m_cellBuilder.buildGE();
-//      CFuint nFaces = cell->nbNeighborGeos();
-//      for(CFuint f=0; f<nFaces; ++f){
-//        GeometricEntity* const face = cell->getNeighborGeo(f);
-//        CFuint faceID = face->getID();
-//        const RealVector centroid = face->computeCentroid();
-//        m_centroids[faceID*3+0] = centroid[0];
-//        m_centroids[faceID*3+1] = centroid[1];
-//        m_centroids[faceID*3+2] = centroid[2];
-//      }
-//      m_cellBuilder.releaseGE();
-//    }
-}
-
-
+  
+//////////////////////////////////////////////////////////////////////////////
 
 #define EPSILON 1e-12
 
@@ -105,13 +85,16 @@ void ParticleTracking3D::setupAlgorithm(){
   dest[1] = v1[1] - v2[1]; \
   dest[2] = v1[2] - v2[2];
 
+//////////////////////////////////////////////////////////////////////////////
+
 //TODO: orient face 
-bool triangle_intersection( const Vec3   V1,  // Triangle vertices
-                            const Vec3   V2,
-                            const Vec3   V3,
-                            const Vec3    O,  //Ray origin
-                            const Vec3    D,  //Ray direction
-                                 CFreal* out )
+bool ParticleTracking3D::triangle_intersection
+( const Vec3&   V1,  // Triangle vertices
+  const Vec3&   V2,
+  const Vec3&   V3,
+  const Vec3&    O,  //Ray origin
+  const Vec3&    D,  //Ray direction
+  CFreal* out )
 {
   Vec3 e1, e2;  //Edge1, Edge2
   Vec3 P, Q, T;
@@ -156,62 +139,50 @@ bool triangle_intersection( const Vec3   V1,  // Triangle vertices
   return false;
 }
 
- 
+//////////////////////////////////////////////////////////////////////////////
 
-void ParticleTracking3D::trackingStep(){
-
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Common;
-  using namespace COOLFluiD::MathTools;
+void ParticleTracking3D::trackingStep()
+{
 
   //cout<<"%\n%Start tracking; CellID: "<<m_exitCellID<<endl<<"%\n";
   m_exitFaceID=-1;
   //m_exitCellID=-1;
 
   const RealVector &initialPoint = m_exitPoint;
-
-  static DataHandle<CFint> faceIsOutwards= m_sockets.isOutward.getDataHandle();
-  //static DataHandle<CFreal> normals= m_sockets.normals.getDataHandle();
-  //static DataHandle<CFreal> faceCenters= m_sockets.faceCenters.getDataHandle();
-  //vector<CFreal> &faceCenters = m_centroids;
-
   CellTrsGeoBuilder::GeoData& cellData = m_cellBuilder.getDataGE();
   m_entryCellID = m_exitCellID;
   cellData.idx = m_entryCellID;
-
+  
   GeometricEntity *const cell = m_cellBuilder.buildGE();
   CFuint nFaces = cell->getNbFacets();
 
-  const Vec3 rayO = { m_exitPoint[0],
-                      m_exitPoint[1],
-                      m_exitPoint[2] };
-  const Vec3 rayD = { m_direction[0],
-                      m_direction[1],
-                      m_direction[2] }; 
-
-  #if DEBUG == 1
+  const Vec3 rayO = { m_exitPoint[0], m_exitPoint[1], m_exitPoint[2] };
+  const Vec3 rayD = { m_direction[0], m_direction[1], m_direction[2] }; 
+  
+#if DEBUG == 1
   stringstream rayData;
   stringstream faceData;
   rayData << "# X Y Z \n";
   rayData << rayO[0] << ' ' << rayO[1] << ' ' <<rayO[2] << '\n'; 
   faceData << "# X Y Z \n";
-  #endif
-
+#endif
+  
+  DataHandle<CFint>& faceIsOutwards = m_isOutward;
+  DataHandle<CFreal>& faceCenters = m_faceCenters;
+  Vec3 centroid;
   bool found = false;
   for(CFuint f=0; f<nFaces ; ++f){
-
     GeometricEntity* const face = cell->getNeighborGeo(f);
-    
     vector<Node*>& faceNodes = *face->getNodes();
-    RealVector centroid2(3);
-
-    Vec3 centroid;
-    myComputeCentroid(faceNodes, centroid);
+    const CFuint faceID = face->getID();
+    const CFuint faceID3 = faceID*3;
+    for (CFuint i = 0; i < 3; ++i) {
+      centroid[i] = faceCenters[faceID3+i];
+    }
+    
     const CFuint nbNodes= faceNodes.size();
     const CFuint nbTris = nbNodes;
-    const CFuint faceID = face->getID();
-    CFreal outT;
+    CFreal outT = 0.;
     CFreal outTotalT = 0.;
     //find if the face normal point inside the cell
     //if so, we should reverse the circulation of the face points
@@ -221,12 +192,12 @@ void ParticleTracking3D::trackingStep(){
     for(CFuint iTri = 0; iTri < nbTris; ++iTri){
       //triangularize the faces using 2 points along the face and the centroid
       //Mega slow!
-      CFuint iTri_1 =( iTri == nbTris-1 ) ? 0 : iTri+1;
+      const CFuint iTri_1 =( iTri == nbTris-1 ) ? 0 : iTri+1;
       
       const Vec3 V1 = { (*faceNodes[iTri  ])[0],
-      	                (*faceNodes[iTri  ])[1], 
+			(*faceNodes[iTri  ])[1], 
                         (*faceNodes[iTri  ])[2] };
-
+      
       const Vec3 V2 = { (*faceNodes[iTri_1])[0], 
         	        (*faceNodes[iTri_1])[1], 
          	        (*faceNodes[iTri_1])[2] }; 
@@ -234,45 +205,44 @@ void ParticleTracking3D::trackingStep(){
       //reverse the triangle vertices to change the circulation and the normal
       const Vec3 &V1_reversed = reverseCirculation ? V2 : V1;
       const Vec3 &V2_reversed = reverseCirculation ? V1 : V2;
-      #if DEBUG == 1 
+#if DEBUG == 1 
       faceData << V1_reversed[0] << ' ' << V1_reversed[1] << ' ' << V1_reversed[2] << '\n';
       faceData << V2_reversed[0] << ' ' << V2_reversed[1] << ' ' << V2_reversed[2] << '\n';
       faceData <<    centroid[0] << ' ' <<    centroid[1] << ' ' <<    centroid[2] << '\n';
-      #endif
-         
+#endif
+      
       if( triangle_intersection(V1_reversed, V2_reversed, centroid, rayO, rayD, &outT)  ){
         outTotalT = found ? outTotalT : outT;
         outTotalT = (outT < outTotalT) ? outT : outTotalT; 
         //outTotalT = outT;
         found = true;
-     }
- 
+      }
     }
-    #if DEBUG == 1
+#if DEBUG == 1
     faceData<<"\n \n";
-    #endif
-
+#endif
+    
     if ( found ){
-        m_stepDist = outTotalT;
-        m_exitPoint = initialPoint + m_direction * m_stepDist;
-     
-        m_exitFaceID = faceID;
-        m_exitCellID = face->getState(0)->getLocalID();
-
-        m_exitCellID =  (m_exitCellID ==  m_entryCellID && !face->getState(1)->isGhost() ) ?
+      m_stepDist = outTotalT;
+      m_exitPoint = initialPoint + m_direction * m_stepDist;
+      
+      m_exitFaceID = faceID;
+      m_exitCellID = face->getState(0)->getLocalID();
+      
+      m_exitCellID =  (m_exitCellID ==  m_entryCellID && !face->getState(1)->isGhost() ) ?
         face->getState(1)->getLocalID() : m_exitCellID;
 
-        m_cellBuilder.releaseGE();
-        #if DEBUG == 1
-        rayData<< m_exitPoint[0] << ' ' << m_exitPoint[1] <<' ' << m_exitPoint[2] << '\n';
-        break;
-        #else
-        return;
-        #endif
+      m_cellBuilder.releaseGE();
+#if DEBUG == 1
+      rayData<< m_exitPoint[0] << ' ' << m_exitPoint[1] <<' ' << m_exitPoint[2] << '\n';
+      break;
+#else
+      return;
+#endif
     }
   }
-
-  #if DEBUG == 1
+  
+#if DEBUG == 1
   ofstream rayDataFile("rayData.dat",  std::ofstream::app);
   ofstream faceDataFile("faceData.dat", std::ofstream::app);
   
@@ -281,27 +251,28 @@ void ParticleTracking3D::trackingStep(){
   
   faceDataFile.close();
   rayDataFile.close();
-  #endif
-
-
+#endif
+  
   if ( !found ){ 
-  #if DEBUG ==1 
-  std::FILE* pipehandle=popen("gnuplot","w");
-  std::fprintf(pipehandle,"set term x11 reset\n");
-  std::fprintf(pipehandle,"splot \"faceData.dat\" with lines lc rgb \'black\' ,  \"rayData.dat\" with linespoints lc rgb \'red\' \n");
-
-  std::fflush(pipehandle);
-  std::cin.ignore();
-  std::fprintf(pipehandle,"quit");
-  std::fflush(pipehandle);
-  std::fclose(pipehandle);
-  #endif
-
+#if DEBUG ==1 
+    std::FILE* pipehandle=popen("gnuplot","w");
+    std::fprintf(pipehandle,"set term x11 reset\n");
+    std::fprintf(pipehandle,"splot \"faceData.dat\" with lines lc rgb \'black\' ,  \"rayData.dat\" with linespoints lc rgb \'red\' \n");
+    
+    std::fflush(pipehandle);
+    std::cin.ignore();
+    std::fprintf(pipehandle,"quit");
+    std::fflush(pipehandle);
+    std::fclose(pipehandle);
+#endif
+    
     CFLog(VERBOSE, "ParticleTracking3D::trackingStep() => Can't find an exit Point!!\n");
   }
- 
+  
   m_cellBuilder.releaseGE();
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void ParticleTracking3D::newParticle(CommonData &particle){
 
@@ -334,6 +305,7 @@ void ParticleTracking3D::newParticle(CommonData &particle){
 
 }
 
+//////////////////////////////////////////////////////////////////////////////
 
 }
 }

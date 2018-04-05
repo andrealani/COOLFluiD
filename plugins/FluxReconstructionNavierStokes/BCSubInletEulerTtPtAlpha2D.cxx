@@ -128,6 +128,7 @@ void BCSubInletEulerTtPtAlpha2D::computeGhostStates(const vector< State* >& intS
                                          (m_ghostSolPhysData[EulerTerm::VX]*m_ghostSolPhysData[EulerTerm::VX] +
                                           m_ghostSolPhysData[EulerTerm::VY]*m_ghostSolPhysData[EulerTerm::VY])
                                          )/m_ghostSolPhysData[EulerTerm::RHO];
+    m_ghostSolPhysData[EulerTerm::T] = m_intSolPhysData[EulerTerm::T];
 
     // set the ghost state from its physical data
     m_eulerVarSet->computeStateFromPhysicalData(m_ghostSolPhysData,ghostState);

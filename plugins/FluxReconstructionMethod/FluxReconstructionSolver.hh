@@ -78,12 +78,6 @@ public: // functions
   /// @pre the pointer to ConvergenceMethod is not constant to
   ///      allow dynamic_casting
   void setCollaborator(Framework::MultiMethodHandle<Framework::ConvergenceMethod> convMtd);
-
-  /// Gets the volume integrator of the space method.
-  virtual Common::SafePtr< Framework::VolumeIntegrator > getVolumeIntegrator()
-  {
-    return CFNULL;
-  }
   
   /// Defined the strategy list of this Method
   std::vector< Common::SafePtr< Framework::NumericalStrategy > > getStrategyList() const;
@@ -175,8 +169,17 @@ private: // data
   /// Command used to limit a solution
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_limiter;
   
+  /// Command used to add artificial viscosity
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_artificialVisc;
+  
+  /// Command used to enforce physicality of the solution
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_physicality;
+  
   /// Command used to compute the error of the solution
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_computeError;
+  
+  /// Command used to finalize the computation of the RHS
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_finalizeRHS;
 
   ///The Setup string for configuration
   std::string m_setupStr;
@@ -199,6 +202,12 @@ private: // data
   /// The string for configuration of the m_limiter command
   std::string m_limiterStr;
   
+  /// The string for configuration of the m_artificialVisc command
+  std::string m_artificialViscStr;
+  
+  /// The string for configuration of the m_physicality command
+  std::string m_physicalityStr;
+  
   /// The string for configuration of the commands that compute
   /// RHS (and optionally the Jacobian)
   std::string m_spaceRHSJacobStr;
@@ -208,6 +217,9 @@ private: // data
   
   ///The computeError string for configuration
   std::string m_computeErrorStr;
+  
+  ///The finalizeRHS string for configuration
+  std::string m_finalizeRHSStr;
   
   /// The commands to use for initializing the solution.
   std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_inits;

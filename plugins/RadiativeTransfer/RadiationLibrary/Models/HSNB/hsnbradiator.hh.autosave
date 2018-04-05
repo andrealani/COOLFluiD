@@ -1,0 +1,31 @@
+#ifndef COOLFluiD_RadiativeTransfer_HSNBRadiator_hh
+#define COOLFluiD_RadiativeTransfer_HSNBRadiator_hh
+
+#include "RadiativeTransfer/RadiationLibrary/Radiator.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+namespace RadiativeTransfer {
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+//!
+//! \brief Define computation of emission / absorption as introduced
+//! in JB's code
+//!
+class HSNBRadiator : public Radiator
+{
+public:
+    HSNBRadiator();
+    
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+}
+}
+
+#endif // HSNBRADIATOR_H

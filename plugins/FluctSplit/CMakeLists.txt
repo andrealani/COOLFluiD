@@ -335,6 +335,14 @@ CF_ADD_PLUGIN_LIBRARY ( FluctSplitMHD )
 #############################################################################
 
 LIST ( APPEND FluctSplit_files
+DiffusionRhsJacob.cxx
+DiffusionRhsJacob.hh
+NeumannBC.cxx
+NeumannBC.hh
+SourceTermSplitStrategy.cxx
+SourceTermSplitStrategy.hh
+FunctionSourceTerm.cxx
+FunctionSourceTerm.hh
 FluctuationSplit.cxx
 FluctuationSplit.hh
 FluctuationSplitData.cxx
@@ -846,6 +854,18 @@ UnsteadyLESTerm.ci
 LIST ( APPEND FluctSplitLES_cflibs NavierStokes LESvki FluctSplit FluctSplitNavierStokes )
 LIST ( APPEND FluctSplitLES_requires_mods NavierStokes LESvki FluctSplit )
 CF_ADD_PLUGIN_LIBRARY ( FluctSplitLES )
+
+#############################################################################
+
+LIST ( APPEND FluctSplitPoisson_files
+FluctSplitPoisson.hh
+PoissonTerm.cxx
+PoissonTerm.hh
+)
+
+LIST ( APPEND FluctSplitPoisson_cflibs Poisson FluctSplit )
+LIST ( APPEND FluctSplitPoisson_requires_mods Poisson FluctSplit )
+CF_ADD_PLUGIN_LIBRARY ( FluctSplitPoisson )
 
 
 #############################################################################

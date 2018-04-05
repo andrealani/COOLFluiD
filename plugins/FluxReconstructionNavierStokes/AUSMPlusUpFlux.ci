@@ -1,0 +1,121 @@
+#include "Framework/EquationSetData.hh"
+#include "Framework/PhysicalChemicalLibrary.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+    namespace FluxReconstructionMethod {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+AUSMPlusUpFlux<UPDATEVAR>::AUSMPlusUpFlux(const std::string& name) :
+  AUSMFlux<UPDATEVAR>(name),
+  m_fa(0.0),
+  m_P5Plus(0.),
+  m_P5Minus(0.)
+{
+  m_coeffKu = 0.75;
+
+  m_coeffKp = 0.25;
+
+  m_coeffSigma = 1.0;
+
+  m_machInf = 0.5;
+
+  m_beta = 1./8.;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+AUSMPlusUpFlux<UPDATEVAR>::~AUSMPlusUpFlux()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::computeMassFlux()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  this->computeInterfaceSoundSpeed(); // m_a12
+
+  // calculation of the Mach number for the left and the right states
+  this->m_mL = this->m_unL/this->m_a12;
+  this->m_mR = this->m_unR/this->m_a12;
+  const CFreal mL = this->m_mL;
+  const CFreal mR = this->m_mR;
+  const CFreal mBarSq = (this->m_unL*this->m_unL + this->m_unR*this->m_unR) / (2.0*this->m_a12*this->m_a12);
+
+  const CFreal mInf = correctMachInf(this->m_machInf);
+  const CFreal mZero = std::sqrt(std::min(1.0, max(mBarSq,  mInf*mInf)));
+  cf_assert(mZero <= 1.0);
+
+  m_fa = mZero * (2.0-mZero);
+  cf_assert(m_fa > 0.0);
+
+  const CFreal M4Plus = (std::abs(mL) >= 1.0) ?
+    this->mach1Plus(mL) :
+    this->mach2Plus(mL)*(1.0 - 16.*m_beta*this->mach2Min(mL));
+
+  const CFreal M4Minus = (std::abs(mR) >= 1.0) ?
+    this->mach1Min(mR) :
+    this->mach2Min(mR)*(1.0 + 16.*m_beta*this->mach2Plus(mR));
+
+  const CFreal rhoL = (this->m_pData[LEFT])[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR = (this->m_pData[RIGHT])[UPDATEVAR::PTERM::RHO];
+  const CFreal pL = (this->m_pData[LEFT])[UPDATEVAR::PTERM::P];
+  const CFreal pR = (this->m_pData[RIGHT])[UPDATEVAR::PTERM::P];
+  const CFreal rhoa2 = 0.5*(rhoL + rhoR)*this->m_a12*this->m_a12;
+  const CFreal mP = (-this->m_coeffKp/m_fa) * max(1.0 - this->m_coeffSigma*mBarSq, 0.0)*(pR-pL)/rhoa2;
+
+  // calculation of the Mach number at the interface
+  const CFreal m12 = M4Plus + M4Minus + mP;
+  // calculation of the mass flux at the interface
+  this->m_mflux12 = (m12 > 0.0) ? this->m_a12 * m12 * rhoL : this->m_a12 * m12 * rhoR;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::computePressureFlux()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  // here in AIAA 2003-4116 there is only "m_fa"
+  const CFreal alpha = (3.0/16.0) * (-4.0 + 5.0*m_fa*m_fa);
+  const CFreal mL = this->m_mL;
+  const CFreal mR = this->m_mR;
+  m_P5Plus = (std::abs(mL) >= 1.0) ?
+    this->mach1Plus(mL)/mL :
+    this->mach2Plus(mL)*((2.0-mL)-16.*alpha*mL*this->mach2Min(mL));
+
+  m_P5Minus = (std::abs(mR) >= 1.0) ?
+    this->mach1Min(mR)/mR :
+    this->mach2Min(mR)*((-2.0-mR)+16.*alpha*mR*this->mach2Plus(mR));
+
+  const CFreal rhoL = (this->m_pData[LEFT])[UPDATEVAR::PTERM::RHO];
+  const CFreal rhoR = (this->m_pData[RIGHT])[UPDATEVAR::PTERM::RHO];
+  const CFreal pL   = (this->m_pData[LEFT])[UPDATEVAR::PTERM::P];
+  const CFreal pR   = (this->m_pData[RIGHT])[UPDATEVAR::PTERM::P];
+  const CFreal pU   = -this->m_coeffKu * m_P5Plus * m_P5Minus *
+    (rhoL + rhoR) * m_fa * this->m_a12*(this->m_unR-this->m_unL);
+
+  // calculation of the pressure flux at the interface
+  this->m_p12 = m_P5Plus*pL + m_P5Minus*pR + pU;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  } // namespace FluxReconstructionMethod
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
+

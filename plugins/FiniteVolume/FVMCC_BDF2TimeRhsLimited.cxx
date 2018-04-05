@@ -6,6 +6,10 @@
 #include "Framework/LSSMatrix.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/SubSystemStatus.hh"
+ 
+#ifdef CF_HAVE_SINGLE_EXEC
+#include "FiniteVolume/MinModTimeLimiter.hh"
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -59,17 +63,31 @@ FVMCC_BDF2TimeRhsLimited::~FVMCC_BDF2TimeRhsLimited()
 
 void FVMCC_BDF2TimeRhsLimited::configure ( Config::ConfigArgs& args )
 {
+  CFAUTOTRACE;
+
   CellCenterFVMCom::configure(args);
 
-  _timeLimiter =
-  Environment::Factory<TimeLimiter>::getInstance().
-    getProvider(_timeLimiterStr)->create(_timeLimiterStr);
+#ifndef CF_HAVE_SINGLE_EXEC
+  SafePtr<TimeLimiter::PROVIDER> prov = CFNULL;
+  try {  
+    prov = FACTORY_GET_PROVIDER(getFactoryRegistry(), TimeLimiter, _timeLimiterStr);
+  } 
+ catch (Common::NoSuchValueException& e) {
+   _timeLimiterStr = "Null";
+   CFLog(VERBOSE, "FVMCC_BDF2TimeRhsLimited::configure() => choosing NullTimeLimiter instead ..." << "\n");
+    prov = FACTORY_GET_PROVIDER(getFactoryRegistry(), TimeLimiter, _timeLimiterStr);
+  }
+ cf_assert(prov.isNotNull());
+ _timeLimiter = prov->create(_timeLimiterStr);
+#else
+ SelfRegistPtr<TimeLimiter> ptr(new MinModTimeLimiter("MinMod"), CFNULL);
+ _timeLimiter .reset(ptr);
+#endif 
 
+ cf_assert(_timeLimiter.isNotNull());
  configureNested ( _timeLimiter.getPtr(), args );
-
-  cf_assert(_timeLimiter.isNotNull());
-
 }
+
 
 //////////////////////////////////////////////////////////////////////////////
 

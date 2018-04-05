@@ -8,6 +8,11 @@
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/ConvergenceMethod.hh"
 
+#ifdef CF_HAVE_SINGLE_EXEC
+#include "Framework/IdentityFilterState.hh"
+#include "Framework/IdentityFilterRHS.hh"
+#endif 
+
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
@@ -77,8 +82,14 @@ void ConvergenceMethodData::configure ( Config::ConfigArgs& args )
   configureNested(&m_CFL, args);
 
   configureStrategy(args, m_normStr, m_normStr, m_computeNorm);
+
+#ifndef CF_HAVE_SINGLE_EXEC
   configureStrategy(args, m_filterStateStr, m_filterStateStr, m_filterState);
   configureStrategy(args, m_filterRHSStr, m_filterRHSStr, m_filterRHS);
+#else
+  m_filterState = SelfRegistPtr<FilterState>(new IdentityFilterState("Identity"), CFNULL);
+  m_filterRHS   = SelfRegistPtr<FilterRHS>(new IdentityFilterRHS("Identity"), CFNULL);
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -145,6 +156,14 @@ void ConvergenceMethodData::updateResidual()
   // set monitored var in SubSystemStatus
   Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
   subSysStatus->setResidual( m_computeNorm.getPtr()->compute() );
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvergenceMethodData::setFactoryRegistry(SafePtr<FactoryRegistry> fr) 
+{
+  MethodData::setFactoryRegistry(fr);
+  m_CFL.setFactoryRegistry(fr);
 }
 
 //////////////////////////////////////////////////////////////////////////////

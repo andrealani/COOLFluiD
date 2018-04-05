@@ -92,6 +92,7 @@ void BCStateComputer::unsetup()
 
 void BCStateComputer::addCurvatureToBndFaces()
 {
+  CFLog(NOTICE, "Adding curvature to the BCs.\n"); 
   if (PhysicalModelStack::getActive()->getDim() == DIM_3D)
   {
     throw Common::NotImplementedException(FromHere(),"Adding of curvature for boundary faces is not yet implemented for 3D...");
@@ -129,8 +130,6 @@ void BCStateComputer::addCurvatureToBndFaces()
 
   // some auxiliary variables
   vector< RealVector > mapCoordFaceVertexNode(2,RealVector(1));
-//   mapCoordFaceVertexNode[0][KSI] = 0.5;
-//   mapCoordFaceVertexNode[1][KSI] = 0.5;
 
   // get InnerCells TopologicalRegionSet
   SafePtr<TopologicalRegionSet> cellTrs = MeshDataStack::getActive()->getTrs("InnerCells");
@@ -181,9 +180,6 @@ void BCStateComputer::addCurvatureToBndFaces()
         // check if face is higher order than P1
         if (face->getGeometryShapeFunctionOrder() > CFPolyOrder::ORDER1)
         {
-          // get boundary face ID
-//           const CFuint faceID = face->getID();
-
           // get face nodes
           vector< Node* >* nodes = face->getNodes();
           cf_assert(nodes->size() > 2);

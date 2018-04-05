@@ -38,6 +38,7 @@ void MeshData::defineConfigOptions(Config::OptionList& options)
 MeshData::MeshData(const std::string& name) :
   NamespaceGroup(name),
   ConfigObject(name),
+  m_fr(CFNULL),
   m_statistics(),
   m_dataStorage(new DataStorage()),
   m_domainmodel(),
@@ -98,25 +99,31 @@ void MeshData::configure ( Config::ConfigArgs& args )
   socket_nodes.setParentNamespace(getPrimaryNamespace());
 
   SafePtr<DomainModel::PROVIDER> prov_dm = CFNULL;
-  try
-  {
-    prov_dm = Environment::Factory<DomainModel>::getInstance().getProvider(m_domainmodel_str);
+  try {
+    prov_dm = FACTORY_GET_PROVIDER(getFactoryRegistry(), DomainModel, m_domainmodel_str);
   }
-  catch (Common::NoSuchValueException& e)
-  {
-		CFLog (DEBUG_MIN, e.what() << "\n" );
-    prov_dm = Environment::Factory<DomainModel>::getInstance().getProvider(std::string("Null"));
+  catch (Common::NoSuchValueException& e) {
+    CFLog (DEBUG_MIN, e.what() << "\n" );
+    prov_dm = FACTORY_GET_PROVIDER(getFactoryRegistry(), DomainModel, "Null");
   }
   cf_assert(prov_dm.isNotNull());
+ 
+  Common::SelfRegistPtr < DomainModel >* dm = prov_dm->createPtr(m_domainmodel_str);   
 
-  m_domainmodel = prov_dm->create(m_domainmodel_str);
+  m_domainmodel = *dm;
+
   cf_assert(m_domainmodel.isNotNull());
-
+  m_domainmodel->setFactoryRegistry(getFactoryRegistry());
+ 
   configureNested ( m_domainmodel.getPtr(), args );
+
+  GeometricEntityRegister::getInstance().setFactoryRegistry(getFactoryRegistry());
+  
+  delete dm;
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
+ 
 Common::SafePtr< DomainModel > MeshData::getDomainModel()
 {
   cf_assert(m_domainmodel.isNotNull());
@@ -509,6 +516,23 @@ DataSocketSink<Framework::Node*, Framework::GLOBAL> MeshData::getNodeDataSocketS
 DataSocketSink<Framework::State*, Framework::GLOBAL> MeshData::getStateDataSocketSink()
 {
   return socket_states;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void MeshData::setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> fr)
+{
+  m_fr = fr;
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
+Common::SafePtr<Common::FactoryRegistry> MeshData::getFactoryRegistry() 
+{
+#ifdef CF_HAVE_SINGLE_EXEC
+  cf_assert(m_fr != CFNULL);
+#endif
+  return m_fr;
 }
 
 //////////////////////////////////////////////////////////////////////////////

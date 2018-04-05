@@ -53,6 +53,8 @@ void FVMCC_ComputeRhsJacobFast::computeConvDiffFluxes(CFuint iVar, CFuint iCell)
   // compute the physical data for each left and right reconstructed
   // state and in the left and right cell centers
   computePerturbedStatesData(iVar, iCell);
+
+  _pertFlux = 0.;
   
   // linearization will be done in the flux splitter if needed
   _fluxSplitter->computeFlux(_pertFlux);

@@ -132,9 +132,29 @@ protected: // functions
   CFuint getNbrOfInternalNodesInFaceType(CFGeoShape::Type geoShape, CFPolyOrder::Type polyOrder);
   
   /**
-   * Get the mapped coordinates of the new nodes for dividing the elements
+   * Get the coordinates of the new nodes for dividing the elements
    */
-  std::vector< RealVector > getNewNodesMappedCoords(CFGeoShape::Type shape,CFuint solOrder, CFuint cellIdx,  const Framework::MeshData::ConnTable nodesConn);
+  std::vector< RealVector > getNewNodesCoords(CFGeoShape::Type shape,CFuint solOrder, CFuint cellIdx,  Framework::MeshData::ConnTable& nodesConn);
+  
+  /**
+   * Create the Boundary faces TRS
+   */
+  virtual void createBoundaryFacesTRS();
+  
+  /**
+   * Creates a the TopologicalRegionSet and put it in the MeshDataBuilder
+   *
+   * @param nbGeomEntsInTr  list of the nb of geometric entities in each tr
+   * @param name  name of the TRS
+   * @param trGeoCon connectivity for GeometricEntity's present in the TRS
+   * @param isWritable  flag telling if the TRS can be written in output file
+   */
+  virtual Common::SafePtr<Framework::TopologicalRegionSet>
+  createTopologicalRegionSet
+  (const std::vector<CFuint>& nbGeomEntsInTr,
+   const std::string& name,
+   Framework::TRGeoConn& trGeoCon,
+   const CFuint iTRS);
 
 protected: // data
 
@@ -179,6 +199,9 @@ protected: // data
   
   /// connectivity pattern
   std::valarray<CFuint>  m_pattern;
+  
+  /// map of new nodeIDs to old nodeIDs
+  std::vector< std::vector< CFuint > > m_newToOldNodeID;
   
 
 };  // end of class MeshUpgradeBuilder

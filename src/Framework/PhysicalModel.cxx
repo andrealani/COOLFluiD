@@ -105,6 +105,23 @@ PhysicalModelStack::getObjectName(const Common::SafePtr<Namespace>& nsp) const
 
 //////////////////////////////////////////////////////////////////////////////
 
+void PhysicalModel::setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> fr)
+ {
+   m_fr = fr;
+ }
+
+//////////////////////////////////////////////////////////////////////////////
+
+ Common::SafePtr<Common::FactoryRegistry> PhysicalModel::getFactoryRegistry() 
+ {
+#ifdef CF_HAVE_SINGLE_EXEC
+  cf_assert(m_fr != CFNULL);
+#endif
+  return m_fr;
+ }
+
+//////////////////////////////////////////////////////////////////////////////
+
   } // namespace Framework
 
 } // namespace COOLFluiD

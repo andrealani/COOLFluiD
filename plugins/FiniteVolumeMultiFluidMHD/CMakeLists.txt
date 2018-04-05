@@ -1,3 +1,9 @@
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME "FiniteVolumeMultiFluidMHD" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+
 LIST ( APPEND FiniteVolumeMultiFluidMHD_files
 AtmosphereProps.cxx
 AtmosphereProps.hh
@@ -126,9 +132,15 @@ UnsteadySubInletUVTEIWRhoiViTi.hh
 #SubOutletPPCWRhoiViTi3D.hh
 )
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND FiniteVolumeMultiFluidMHD_requires_mods TecplotWriter Maxwell MultiFluidMHD FiniteVolume )
 LIST ( APPEND FiniteVolumeMultiFluidMHD_cflibs Maxwell TecplotWriter MultiFluidMHD FiniteVolume )
-
 CF_ADD_PLUGIN_LIBRARY ( FiniteVolumeMultiFluidMHD )
+ELSE()
+FOREACH (AFILE ${FiniteVolumeMultiFluidMHD_files} )
+LIST(APPEND coolfluid-solver_files ../../plugins/FiniteVolumeMultiFluidMHD/${AFILE} )
+ENDFOREACH(AFILE)
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+ENDIF()
 
 CF_WARN_ORPHAN_FILES()

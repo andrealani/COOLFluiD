@@ -3,7 +3,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = 0.302262
+### Residual = 0.30226218
 
 #
 
@@ -22,12 +22,10 @@ Simulator.SubSystem.StructMech2D.Custom.YoungModulus = 3.
 Simulator.SubSystem.StructMech2D.Custom.Poisson = 0.25
 Simulator.SubSystem.StructMech2D.Custom.Density = 7850.0
 
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
-
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = square-plane-stress.CFmesh
 Simulator.SubSystem.Tecplot.FileName    = square-plane-stress.plt
-Simulator.SubSystem.Tecplot.Data.updateVar = Disp
+Simulator.SubSystem.Tecplot.Data.outputVar = Disp
 Simulator.SubSystem.Tecplot.SaveRate = 1
 Simulator.SubSystem.CFmesh.SaveRate = 1
 Simulator.SubSystem.Tecplot.AppendTime = false
@@ -35,9 +33,6 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 Simulator.SubSystem.CFmesh.WriteSol     = WriteSolution
-
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 1
 
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
 Simulator.SubSystem.MaxNumberSteps.nbSteps = 1

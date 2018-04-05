@@ -55,7 +55,7 @@ void SubSystem::defineConfigOptions(Config::OptionList& options)
 
 SubSystem::SubSystem(const string& name)
   : ConfigObject(name),
-    m_ranksCounter(),
+    m_ranksCounter(0),
     m_namespaces(),
     m_has_null_methods(true),
     m_nbmethods(0)
@@ -255,6 +255,8 @@ void SubSystem::configureNamespaces(Config::ConfigArgs& args)
     
     PE::GetPE().createGroup("Default", SubSystemStatusStack::getCurrentName(), subSystemRanksUnique, true); 
   }
+  
+  if (m_ranksCounter == 0) {m_ranksCounter = PE::GetPE().GetProcessorCount("Default");}
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -325,21 +327,21 @@ void SubSystem::configureNamespaceSingletons(Config::ConfigArgs& args, Common::S
 
   if (!md->isConfigured()) {
     // md->reallocate();
+    md->setFactoryRegistry(getFactoryRegistry());
     configureNested(*md,args);
   }
   
   cf_assert(!physicalModelName.empty());
   Common::SafePtr<PhysicalModel> pm = PhysicalModelStack::getInstance().createUnique(physicalModelName);
-
+  pm->setFactoryRegistry(getFactoryRegistry());
   if (!pm->isConfigured()) {
     configureNested(*pm,args);
   }
 
   cf_assert(!sysStatusName.empty());
   Common::SafePtr<SubSystemStatus> ss = SubSystemStatusStack::getInstance().createUnique(sysStatusName);
-
-  if (ss->getSubSystemName().empty())
-  {
+  ss->setFactoryRegistry(getFactoryRegistry());
+  if (ss->getSubSystemName().empty()) {
     ss->setSubSystemName(getName());
     ss->setMovingMesh(false);
     configureNested(*ss,args);

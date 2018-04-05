@@ -62,6 +62,10 @@ void NSGradientComputer::computeGradients()
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
     tempStates.push_back((*m_cellStates)[iSol]->getData());
+    if (m_cell->getID() == 191)
+    {
+      CFLog(VERBOSE,"State " << iSol << ": " << *((*m_cellStates)[iSol]->getData()) << "\n");
+    }
   }
   
   navierStokesVarSet->setGradientVars(tempStates,tempGradTerm,m_nbrSolPnts);
@@ -82,6 +86,11 @@ void NSGradientComputer::computeGradients()
         for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolPnts; ++jSolPnt)
         {
 	  const RealVector projectedState = tempGradTerm(iEq,jSolPnt) * m_cellFluxProjVects[iDir][jSolPnt];
+	  
+	  if (m_cell->getID() == 191)
+    {
+      CFLog(VERBOSE,"Projected State " << jSolPnt << " on dir " << iDir << ": " << projectedState << " of eq " << iEq << "\n");
+    }
 	  
           // compute the grad updates
           m_gradUpdates[0][iSolPnt][iEq] += (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolPnt]*projectedState;
@@ -110,6 +119,10 @@ void NSGradientComputer::computeGradients()
     {
       gradients[solID][iGrad] += m_gradUpdates[0][iSol][iGrad];
       gradients[solID][iGrad] *= invJacobDet;
+      if(m_cell->getID() == 191)
+      {
+	CFLog(VERBOSE, "Vol gradient updates " << iGrad << " of  " << iSol << ": " << m_gradUpdates[0][iSol][iGrad] << "\n");
+      }
     }
   }
 }
@@ -118,9 +131,10 @@ void NSGradientComputer::computeGradients()
 
 void NSGradientComputer::computeGradientFaceCorrections()
 {
+  //ConvRHSFluxReconstruction::computeGradientFaceCorrections();
   // get the diffusive varset
   m_diffusiveVarSet = getMethodData().getDiffusiveVar();
-  
+
   SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokesVarSet >();
 
   RealMatrix tempGradTermL(m_nbrEqs,m_nbrFaceFlxPnts);

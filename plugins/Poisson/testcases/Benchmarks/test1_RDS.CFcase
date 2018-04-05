@@ -1,0 +1,124 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Residual Distribution Schemes, Poisson, NewtonIterator, mesh with triangles, 
+# converter from THOR to CFmesh, Dirichlet BC (supersonic inlet)
+#
+################################################################################
+## COOLFluiD CFcase file
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = 1.9102713
+
+#
+CFEnv.ErrorOnUnusedConfig = true
+# CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libParaViewWriter libPoisson libFluctSplit libFluctSplitSystem libFluctSplitPoisson libNewtonMethod libTHOR2CFmesh libPetscI
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/Poisson/testcases/Benchmarks
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType   = Poisson2D
+Simulator.SubSystem.Poisson2D.refValues    = 1.0
+Simulator.SubSystem.Poisson2D.refLength    = 1.0
+
+Simulator.SubSystem.OutputFormat        = ParaView Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName   = testRDS.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate   = 400
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.Tecplot.FileName        = testRDS.plt
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = SuperInlet SuperOutlet
+Simulator.SubSystem.Tecplot.Data.outputVar  = Cons
+Simulator.SubSystem.Tecplot.SaveRate        = 400
+Simulator.SubSystem.Tecplot.AppendTime      = false
+Simulator.SubSystem.Tecplot.AppendIter      = false
+
+Simulator.SubSystem.ParaView.FileName       = testRDS.vtu
+#Simulator.SubSystem.ParaView.WriteSol    = WriteSolution
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.SaveRate       = 10
+Simulator.SubSystem.ParaView.AppendTime     = false
+Simulator.SubSystem.ParaView.AppendIter     = false
+
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -7.0
+
+Simulator.SubSystem.Default.listTRS = SuperInlet SuperOutlet
+Simulator.SubSystem.Default.sameNodeStateConnectivity = true
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = square.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+Simulator.SubSystem.NewtonIterator.Data.SaveSystemToFile = false
+# the following won't work because of the Dirichlet BC
+#Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
+#Simulator.SubSystem.NewtonIterator.InitCom = ResetSystem
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES #KSPCG #KSPBICG
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
+#Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-6 #1e-10
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+#Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCGAMG
+#Simulator.SubSystem.NewtonIteratorLSS.Data.UseAIJ = true
+#Simulator.SubSystem.FluctuationSplit.JacobianSparsity = CellVertexNoBlock
+###Simulator.SubSystem.NewtonIteratorLSS.Data.PreconditionerRate = 5
+Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 80
+
+Simulator.SubSystem.SpaceMethod = FluctuationSplit
+Simulator.SubSystem.FluctuationSplit.ComputeRHS = DiffusionRhsJacob
+
+Simulator.SubSystem.FluctuationSplit.Data.FluctSplitStrategy = SourceTerm
+Simulator.SubSystem.FluctuationSplit.Data.JacobianStrategy = Numerical
+
+Simulator.SubSystem.FluctuationSplit.Data.SourceTerm = FunctionST
+Simulator.SubSystem.FluctuationSplit.Data.FunctionST.Vars = x y phi
+Simulator.SubSystem.FluctuationSplit.Data.FunctionST.Def = -6.
+Simulator.SubSystem.FluctuationSplit.Data.SourceTermSplitter = LumpedGalerkin
+
+Simulator.SubSystem.FluctuationSplit.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluctuationSplit.Data.UpdateVar    = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DistribVar   = Cons
+Simulator.SubSystem.FluctuationSplit.Data.DiffusiveVar = Cons
+
+Simulator.SubSystem.FluctuationSplit.Data.DiffusiveTerm = Poisson
+
+Simulator.SubSystem.FluctuationSplit.InitComds = InitState InitState
+Simulator.SubSystem.FluctuationSplit.InitNames = InField MachStep
+
+Simulator.SubSystem.FluctuationSplit.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluctuationSplit.InField.Vars = x y
+Simulator.SubSystem.FluctuationSplit.InField.Def = 0.
+
+Simulator.SubSystem.FluctuationSplit.MachStep.applyTRS = SuperInlet SuperOutlet
+Simulator.SubSystem.FluctuationSplit.MachStep.Vars = x y
+Simulator.SubSystem.FluctuationSplit.MachStep.Def = 1.+x^2.+2.*y^2.
+
+Simulator.SubSystem.FluctuationSplit.BcComds = SuperInletImpl
+Simulator.SubSystem.FluctuationSplit.BcNames = Inlet
+
+Simulator.SubSystem.FluctuationSplit.Inlet.applyTRS = SuperInlet SuperOutlet
+Simulator.SubSystem.FluctuationSplit.Inlet.Vars = x y
+Simulator.SubSystem.FluctuationSplit.Inlet.Def = 1.+x^2.+2.*y^2.
+
+
+
+

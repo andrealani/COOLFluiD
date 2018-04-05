@@ -158,10 +158,11 @@ void Tecplot2CFmeshConverter::readTecplotFile(CFuint nbZones,
   string line = "";
   CFuint countl = 0;
   vector<string> words;
-  SelfRegistPtr<FileHandlerInput> fhandle = SingleBehaviorFactory<FileHandlerInput>::getInstance().create();
+  SelfRegistPtr<FileHandlerInput>* fhandle = 
+	SingleBehaviorFactory<FileHandlerInput>::getInstance().createPtr();
   path meshFile = change_extension(filepath, extension);
   
-  ifstream& fin = fhandle->open(meshFile);
+  ifstream& fin = (*fhandle)->open(meshFile);
   getTecplotWordsFromLine(fin, line, countl, words); // TITLE
   
   vector<string> vars;
@@ -172,7 +173,8 @@ void Tecplot2CFmeshConverter::readTecplotFile(CFuint nbZones,
     readZone(fin, countl, vars, isBoundary);
     CFLog(VERBOSE, "END   Reading ZONE " << i << "\n");
   }
-  fhandle->close();
+  (*fhandle)->close();
+  delete fhandle;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1180,7 +1182,8 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   
   path meshFile = change_extension(filepath, getOriginExtension());
   
-  SelfRegistPtr<FileHandlerOutput> fhandle = SingleBehaviorFactory<FileHandlerOutput>::getInstance().create();
+  //SelfRegistPtr<FileHandlerOutput>* fhandle = 
+  //	SingleBehaviorFactory<FileHandlerOutput>::getInstance().createPtr();
   
   // string macroFileName = "interpolate.mcr";
   // path macroFile = DirPaths::getInstance().getWorkingDir()/macroFileName;
@@ -1216,15 +1219,11 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   }
   fout << "'\n";
 
-#ifdef CF_HAVE_BOOST_1_59
+#if defined CF_HAVE_BOOST_1_60 || defined CF_HAVE_BOOST_1_59 || defined CF_HAVE_BOOST_1_55 || defined CF_HAVE_BOOST_1_54
   fout << "$!READDATASET  '\"|MFBD|/" << meshFile.filename().string() << "\" '\n";
 #else
-#ifdef CF_HAVE_BOOST_1_54
-  fout << "$!READDATASET  '\"|MFBD|/" << meshFile.filename().string() << "\" '\n";
-#else
-  CFLog(ERROR, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => you need BOOST version >= 1.59 for this!\n");
+  CFLog(ERROR, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => you need BOOST version >= 1.54 for this!\n");
   exit(1);
-#endif
 #endif
   
   fout << "  READDATAOPTION = APPEND\n";
@@ -1256,15 +1255,11 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   fout << "  SOURCEZONE = 2\n";
   fout << "  REMOVEBLANKEDSURFACES = NO\n";
 
-#ifdef CF_HAVE_BOOST_1_59
-  fout << "$!WRITEDATASET  \"|MFBD|/" << meshFile.filename().string() << "\"\n";
-#else
-#ifdef CF_HAVE_BOOST_1_54
+#if defined CF_HAVE_BOOST_1_60 || defined CF_HAVE_BOOST_1_59 || defined CF_HAVE_BOOST_1_55 || defined CF_HAVE_BOOST_1_54
   fout << "$!WRITEDATASET  \"|MFBD|/" << meshFile.filename().string() << "\"\n";
 #else
   CFLog(ERROR, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => you need BOOST version >= 1.54 for this!\n");
   exit(1);
-#endif
 #endif
 
   fout << "  INCLUDETEXT = NO\n";
@@ -1278,16 +1273,12 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   fout << "  TECPLOTVERSIONTOWRITE = TECPLOTCURRENT\n";
 
   path allSurfFile = change_extension(filepath, "allsurf.plt");
-  
-#ifdef CF_HAVE_BOOST_1_59
+ 
+#if defined CF_HAVE_BOOST_1_60 || defined CF_HAVE_BOOST_1_59 || defined CF_HAVE_BOOST_1_55 || defined CF_HAVE_BOOST_1_54
   fout << "$!WRITEDATASET  \"|MFBD|/" << allSurfFile.filename().string() << "\"\n";
 #else
-#ifdef CF_HAVE_BOOST_1_54
- fout << "$!WRITEDATASET  \"|MFBD|/" << allSurfFile.filename().string() << "\"\n";
-#else
-  CFLog(ERROR, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => you need BOOST version >= 1.59 for this!\n");
+  CFLog(ERROR, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => you need BOOST version >= 1.54 for this!\n");
   exit(1);
-#endif
 #endif
 
   fout << "  INCLUDETEXT = NO\n";

@@ -80,23 +80,27 @@ public: // friend operators
 public: // methods
 
   /// Default constructor
-  ConnectivityTable() :  m_nbentries(0), m_nbrows(0), m_nbcols(0), m_table()
+  ConnectivityTable() :
+    NOVALUE(std::numeric_limits<T>::max()), 
+    m_nbentries(0), m_nbrows(0), m_nbcols(0), m_table()
   {
   }
 
   /// Constructor
   /// @param columnPattern gives the number of columns per row
   /// @param value         initializing value
-  ConnectivityTable(const std::valarray<CFuint>& columnPattern, T value = T())
+  ConnectivityTable(const std::valarray<CFuint>& columnPattern, T value = T()) :
+    NOVALUE(std::numeric_limits<T>::max())
   {
     deallocate();
     const CFuint maxCol = findMaxCol(columnPattern);
     allocate(columnPattern.size(),maxCol);
     putPattern(columnPattern,value);
   }
-
+  
   /// Copy Constructor
-  ConnectivityTable(const ConnectivityTable<T>& init)
+  ConnectivityTable(const ConnectivityTable<T>& init) :
+    NOVALUE(std::numeric_limits<T>::max())
   {
     create(init);
   }
@@ -294,7 +298,10 @@ private: // helper functions
   }
 
 private: // data
-
+  
+  /// value to be used to define an invalid entry in the table
+  const T NOVALUE;
+  
   /// number of entries in the table, less or equal to m_nbrows*m_nbcols
   CFuint m_nbentries;
   /// row size
@@ -305,15 +312,7 @@ private: // data
   /// the actual storage of the table
   ARRAY m_table;
   
-  /// this value means this place in memory shouldn't be used
-  static const T NOVALUE;
-
 }; // end of class ConnectivityTable
-
-//////////////////////////////////////////////////////////////////////////////
-
-template <typename T>
-const T ConnectivityTable<T>::NOVALUE = std::numeric_limits<T>::max();
 
 //////////////////////////////////////////////////////////////////////////////
 

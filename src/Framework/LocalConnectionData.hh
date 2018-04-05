@@ -32,7 +32,7 @@ namespace COOLFluiD {
 /// @author Andrea Lani
 /// @author Tiago Quintino
 /// @author Martin Vymazal
-class Framework_API LocalConnectionData : Common::NonCopyable<LocalConnectionData> {
+class Framework_API LocalConnectionData : public Common::NonCopyable<LocalConnectionData> {
 public:
 
   /// Definition of a Map from a certain code to a table of local indexes

@@ -239,9 +239,73 @@ void TensorProductGaussIntegrator::resetQuadPntsMappedCoorAndWheights1D(const CF
       m_quadPntsWheights1D  [3] = (18.-sqrt(30.))/36.;
 
     } break;
+    case CFPolyOrder::ORDER8:
+    case CFPolyOrder::ORDER9:
+    {
+      // Set the number of quadrature points
+      m_nbrQuadPnts1D = 5;
+
+      // resize the variables
+      m_quadPntsWheights1D  .resize(m_nbrQuadPnts1D);
+      m_quadPntsMappedCoor1D.resize(m_nbrQuadPnts1D);
+
+      // set the coordinates
+      m_quadPntsMappedCoor1D[0] = -sqrt(5.+2.*sqrt(10./7.))/3.;
+
+      m_quadPntsMappedCoor1D[1] = -sqrt(5.-2.*sqrt(10./7.))/3.;
+
+      m_quadPntsMappedCoor1D[2] = 0.0;
+
+      m_quadPntsMappedCoor1D[3] = +sqrt(5.-2.*sqrt(10./7.))/3.;
+      
+      m_quadPntsMappedCoor1D[4] = +sqrt(5.+2.*sqrt(10./7.))/3.;
+
+      // set the wheights
+      m_quadPntsWheights1D  [0] = (322.-13.*sqrt(70.))/900.;
+
+      m_quadPntsWheights1D  [1] = (322.+13.*sqrt(70.))/900.;
+
+      m_quadPntsWheights1D  [2] = 128./225.;
+
+      m_quadPntsWheights1D  [3] = (322.-13.*sqrt(70.))/900.;
+      
+      m_quadPntsWheights1D  [4] = (322.+13.*sqrt(70.))/900.;
+
+    } break;
+    case CFPolyOrder::ORDER10:
+    {
+      // Set the number of quadrature points
+      m_nbrQuadPnts1D = 6;
+
+      // resize the variables
+      m_quadPntsWheights1D  .resize(m_nbrQuadPnts1D);
+      m_quadPntsMappedCoor1D.resize(m_nbrQuadPnts1D);
+
+      // set the coordinates
+      m_quadPntsMappedCoor1D[0] = -0.9324695142031521;
+      m_quadPntsMappedCoor1D[1] = -0.6612093864662645;
+      m_quadPntsMappedCoor1D[2] = -0.2386191860831969;
+      m_quadPntsMappedCoor1D[3] = 0.2386191860831969;
+      m_quadPntsMappedCoor1D[4] = 0.6612093864662645;
+      m_quadPntsMappedCoor1D[5] = 0.9324695142031521;
+
+      // set the wheights
+      m_quadPntsWheights1D  [0] = 0.1713244923791704;
+
+      m_quadPntsWheights1D  [1] = 0.3607615730481386;
+
+      m_quadPntsWheights1D  [2] = 0.4679139345726910;
+
+      m_quadPntsWheights1D  [3] = 0.4679139345726910;
+      
+      m_quadPntsWheights1D  [4] = 0.3607615730481386;
+      
+      m_quadPntsWheights1D  [5] = 0.1713244923791704;
+
+    } break;
     default:
     {
-      throw Common::NotImplementedException (FromHere(),"TensorProductGaussIntegrator only implemented for polynomials up to 5th order.");
+      throw Common::NotImplementedException (FromHere(),"TensorProductGaussIntegrator only implemented for polynomials up to 9th order.");
     }
   }
 }

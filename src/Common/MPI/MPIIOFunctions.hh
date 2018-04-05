@@ -166,12 +166,23 @@ public:
     MPI_File_read_all(*fh, &value, 1, Common::MPIStructDef::getMPIType(&value), &status);
   }
   
-  /// Read an array
+  /// Read an array collectively
   template <typename T>
   static void readArray(MPI_File* fh, T* array, CFuint ns)
   {
     MPI_Status status;
     MPI_File_read_all(*fh, &array[0], (int)ns, Common::MPIStructDef::getMPIType(&array[0]), &status);
+  }
+  
+  /// Read an array from one process
+  template <typename T>
+  static void readArrayAndBcast(MPI_File* fh, T* array, CFuint ns, int rank, int root, MPI_Comm comm)
+  {
+    if (rank == root) {
+      MPI_Status status;
+      MPI_File_read(*fh, &array[0], (int)ns, Common::MPIStructDef::getMPIType(&array[0]), &status);
+    }
+    MPI_Bcast(&array[0], (int)ns, MPIStructDef::getMPIType(&array[0]), root, comm);
   }
   
   /// Read a buffer using all cores

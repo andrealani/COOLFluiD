@@ -512,11 +512,11 @@ void GridConvergence::writeOutputFile()
 
   //std::cout << "IN writeOutputFile() \n";
 
-  SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-
+  SelfRegistPtr<Environment::FileHandlerOutput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
 
     if (iter == 1) {
-      ofstream& outputFile = fhandle->open(constructFilename());
+      ofstream& outputFile = (*fhandle)->open(constructFilename());
       prepareOutputFile(outputFile);
       outputFile << iter
                << " "
@@ -559,7 +559,7 @@ void GridConvergence::writeOutputFile()
       outputFile.close();
     }
     else {
-      ofstream& outputFile = fhandle->open(constructFilename(), ios::app);
+      ofstream& outputFile = (*fhandle)->open(constructFilename(), ios::app);
       outputFile << iter
                  << " "
                  << m_ErrorBxL1
@@ -600,6 +600,7 @@ void GridConvergence::writeOutputFile()
                  << "\n";
       outputFile.close();
     }
+    delete fhandle;
   }
   CFout << "Writing of Electric and Magnetic Field divergence finished." << "\n";
 //  outputFile.close();

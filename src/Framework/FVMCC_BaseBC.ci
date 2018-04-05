@@ -135,11 +135,11 @@ void FVMCC_BaseBC<BASE>::executeOnTrs()
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::MathTools;
-    
+  
   m_fullLoop = true;
   
   SafePtr<TopologicalRegionSet> trs = this->getCurrentTRS();
-  CFLogDebugMin( "FVMCC_BaseBC::execute() called for TRS: "
+  CFLog(VERBOSE, "FVMCC_BaseBC::execute() called for TRS: "
 	<< trs->getName() << "\n");
 
   Common::SafePtr<GeometricEntityPool<FaceTrsGeoBuilder> >
@@ -160,12 +160,12 @@ void FVMCC_BaseBC<BASE>::executeOnTrs()
 
     // build the GeometricEntity
     geoData.idx = iFace;
-
+    
     GeometricEntity *const face = geoBuilder->buildGE();
     this->getMethodData().getCurrentFace() = face;
     
     setGhostState(face);
-
+    
     // release the GeometricEntity
     geoBuilder->releaseGE();
   } 
@@ -299,19 +299,26 @@ void FVMCC_BaseBC<BASE>::configure ( Config::ConfigArgs& args )
   
   SafePtr<StateInterpolator::PROVIDER> stateInterpProv = CFNULL;
   try {
-    stateInterpProv = Factory<StateInterpolator>::getInstance().getProvider(m_sInterpolatorStr);
+    stateInterpProv = 
+      FACTORY_T_GET_PROVIDER(this->getFactoryRegistry(), StateInterpolator, m_sInterpolatorStr);
   }
   catch (NoSuchValueException& e) {
     CFLog(WARN, "FVMCC_BaseBC::configure() => StateInterpolator \"" << 
 	  m_sInterpolatorStr << "\" missing => reset to \"Null\"\n");
     
     m_sInterpolatorStr = "Null";
-    stateInterpProv = Factory<StateInterpolator>::getInstance().getProvider(m_sInterpolatorStr);
+    stateInterpProv = 
+      FACTORY_T_GET_PROVIDER(this->getFactoryRegistry(), StateInterpolator, m_sInterpolatorStr);
   }
-  
-  m_sInterpolator.reset(stateInterpProv->create(m_sInterpolatorStr));
+ 
+  Common::SelfRegistPtr<Framework::StateInterpolator>* sInterpolator =
+	 stateInterpProv->createPtr(m_sInterpolatorStr);
+  m_sInterpolator = *sInterpolator;
+  cf_assert(m_sInterpolator.isNotNull());
   
   this->configureNested(m_sInterpolator.getPtr(), args);
+
+  delete sInterpolator;
 }
     
 //////////////////////////////////////////////////////////////////////////////

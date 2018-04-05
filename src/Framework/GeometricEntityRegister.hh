@@ -17,6 +17,10 @@
 
 namespace COOLFluiD {
 
+  namespace Common {
+    class FactoryRegistry;
+  }
+
   namespace Framework {
 
   class BaseGeometricEntityProvider;
@@ -43,6 +47,12 @@ public: // methods
   /// Gets the instance of the Singleton
   static GeometricEntityRegister& getInstance();
 
+  /// Set the factory registry
+  void setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> fr);
+ 
+  /// Get the factory registry
+  Common::SafePtr<Common::FactoryRegistry> getFactoryRegistry();
+  
   /// Regists this type of shape function as being used
   /// The returned index can be later used in the getProvider() function
   /// @return the index which corresponds to the registered type
@@ -94,6 +104,9 @@ private: // data
 
   // the shape function register database
   DatabaseType _database;
+
+  /// factory registry to allow polymorphic creation of objects
+  Common::SafePtr<Common::FactoryRegistry> m_fr;
 
 }; // end class GeometricEntityRegister
 

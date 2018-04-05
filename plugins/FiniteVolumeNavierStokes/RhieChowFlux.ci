@@ -61,7 +61,10 @@ void RhieChowFlux<UPDATEVAR>::compute(RealVector& result)
   const CFuint nbEqs =
     PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
   
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  Common::SafePtr<PhysicalModelImpl> pm =
+    PhysicalModelStack::getActive()->getImplementor();
+  const bool is2DHalf = pm->is2DHalf();
+  const CFuint dim = (is2DHalf) ? 3 : PhysicalModelStack::getActive()->getDim();
   const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
   const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
   const CFuint nbEulerEqs = eulerVarIDs.size() ;
@@ -116,21 +119,19 @@ void RhieChowFlux<UPDATEVAR>::compute(RealVector& result)
     
     // calculation of the normal component of velocity for
     // the left and right states
-
+        
     CFreal unL = 0.0;
     CFreal unR = 0.0;
-    if (dim == DIM_3D)
-    {
-      const CFreal nz = unitNormal[ZZ];
+    if (dim == DIM_3D) {
+      const CFreal nz = (!is2DHalf) ? unitNormal[ZZ] : 0.;
       unL = uL*nx + vL*ny + wL*nz;
       unR = uR*nx + vR*ny + wR*nz;
     }
-    else
-    {
+    else {
       unL = uL*nx + vL*ny;
       unR = uR*nx + vR*ny;
     }
-
+    
     m_rhoUn12 = .5*(rhoL*unL + rhoR*unR);
     
     // this can modify m_rhoUn12
@@ -200,8 +201,8 @@ void RhieChowFlux<UPDATEVAR>::compute(RealVector& result)
     if (dim == DIM_3D)
     {
       m_w12   = .5*(wL + wR);
-      const CFreal nz = unitNormal[ZZ];
       if (nbEulerEqs == dim + 2) {
+	const CFreal nz = (!is2DHalf) ? unitNormal[ZZ] : 0.;
 	result[1] = mflux*m_u12 - .5*(std::abs(mflux) + addLambdaU)*(uR - uL) + dp12*nx;
 	result[2] = mflux*m_v12 - .5*(std::abs(mflux) + addLambdaU)*(vR - vL) + dp12*ny;
 	result[3] = mflux*m_w12 - .5*(std::abs(mflux) + addLambdaU)*(wR - wL) + dp12*nz;
@@ -227,6 +228,7 @@ void RhieChowFlux<UPDATEVAR>::compute(RealVector& result)
       }
       else {
 	// NEQ cases should enter here
+	const CFreal nz = (!is2DHalf) ? unitNormal[ZZ] : 0.;
 	result[eulerVarIDs[0]] = mflux*m_u12 - .5*(std::abs(mflux) + addLambdaU)*(uR - uL) + dp12*nx;
 	result[eulerVarIDs[1]] = mflux*m_v12 - .5*(std::abs(mflux) + addLambdaU)*(vR - vL) + dp12*ny;
 	result[eulerVarIDs[2]] = mflux*m_w12 - .5*(std::abs(mflux) + addLambdaU)*(wR - wL) + dp12*nz;

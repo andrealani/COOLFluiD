@@ -26,22 +26,12 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_polyOrder(),
   m_solPntsLocalCoord1D(),
   m_flxPntsLocalCoord1D(),
-  m_recCoefsFlxPnts1D(),
-  m_recCoefsFlxPnts1DOptim(),
-  m_solPntIdxsForRecFlxPnts1DOptim(),
   m_derivCoefsSolPnts1D(),
   m_solPolyDerivCoefsFlxPnts1D(),
   m_solPolyDerivCoefsSolPnts1D(),
   m_solPntsLocalCoords(),
   m_flxPntsLocalCoords(),
   m_faceFlxPntsFaceLocalCoords(),
-  m_flxPntMatrixIdxForReconstruction(),
-  m_solPntIdxsForReconstruction(),
-  m_solPntIdxsForRecOptim(),
-  m_solPntMatrixIdxForDerivation(),
-  m_flxPntMatrixIdxForDerivation(),
-  m_solPntIdxsForDerivation(),
-  m_flxPntIdxsForDerivation(),
   m_flxPntDerivDir(),
   m_allSolPntIdxs(),
   m_allFlxPntIdxs(),
@@ -57,11 +47,11 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_faceNodeConnPerOrient(),
   m_faceConnPerOrient(),
   m_faceMappedCoordDirPerOrient(),
-  //   m_faceNodeConnPerOrientNoSymm(),
   m_faceNodeCoordsPerOrient(),
-//   m_faceNodeCoordsPerOrientNoSymm(),
   m_solPolyExponents(),
   m_solPolyCoefs(),
+  m_nodePolyExponents(),
+  m_nodePolyCoefs(),
   m_initPntsCoords(),
   m_initTransfMatrix(),
   m_faceIntegrationCoefs(),
@@ -70,9 +60,8 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_flxPolyExponents(),
   m_flxPolyCoefs(),
   m_coefSolPolyDerivInSolPnts(),
+  m_coefSolPolyDerivInNodes(),
   m_coefSolPolyDerivInFlxPnts(),
-  m_coefSolPolyDerivInFlxPntsOptim(),
-  m_solPntIdxsSolPolyDerivInFlxPntsOptim(),
   m_cflConvDiffRatio(),
   m_faceOutputPntCellMappedCoords(),
   m_faceOutputPntSolPolyCoef(),
@@ -81,9 +70,11 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_solPntDistribution(),
   m_flxPntDistribution(),
   m_faceNormals(),
-  m_coefSolPolyInFlxPnts()
-//   socket_solCoords1D("solCoords1D"),
-//   socket_flxCoords1D("flxCoords1D")
+  m_coefSolPolyInFlxPnts(),
+  m_flxPntFlxDim(),
+  m_vandermonde(),
+  m_vandermondeInv(),
+  m_coefSolPolyInNodes()
 {
   CFAUTOTRACE;
 }
@@ -125,12 +116,6 @@ void FluxReconstructionElementData::resetFluxReconstructionElementData()
 {
   CFAUTOTRACE;
 
-  //createFlxPntsLocalCoord1D();
-  //createSolPntsLocalCoord1D();
-  //computeRecCoefsFlxPnts1D();
-  //computeDerivCoefsSolPnts1D();
-  //computeSolPolyDerivCoefsFlxPnts1D();
-  //computeSolPolyDerivCoefsSolPnts1D();
   createFlxPntsLocalCoords();
   createSolPntsLocalCoords();
   createFaceFlxPntsFaceLocalCoords();
@@ -140,101 +125,31 @@ void FluxReconstructionElementData::resetFluxReconstructionElementData()
   computeInitTransfMatrix();
   createAllSolPntIdxs();
   createAllFlxPntIdxs();
-  createIntFlxPntIdxs();
   createFaceNodeConnectivity();
   createFaceMappedCoordDir();
   createFaceNodeConnectivityPerOrient();
   createFaceFluxPntsConn();
   createFaceFluxPntsConnPerOrient();
-  createFlxPolyExponents();
-  computeFlxPolyCoefs();
-  createFlxPntMatrixIdxForReconstruction();
-  createSolPntIdxsForReconstruction();
-  createSolPntMatrixIdxForDerivation();
-  createFlxPntMatrixIdxForDerivation();
-  createSolPntIdxsForDerivation();
-  createFlxPntIdxsForDerivation();
-  createFlxPntDerivDir();
   createCellNodeCoords();
-//   createFaceNodeConnectivityPerOrientNoSymm();
   createFaceNodeCoords();
   createFaceNodeCoordsPerOrient();
-//   createFaceNodeCoordsPerOrientNoSymm();
+  createNodePolyExponents();
+  computeNodePolyCoefs();
   createFaceIntegrationCoefs();
   createCellAvgSolCoefs();
   createCellCenterDerivCoefs();
   setCFLConvDiffRatio();
   createCoefSolPolyDerivInSolPnts();
-  createCoefSolPolyDerivInFlxPntsOptim();
   createCoefSolPolyInFlxPnts();
   createFaceFlxPntsCellLocalCoords();
   createFaceOutputPntCellMappedCoords();
   createFaceOutputPntSolPolyAndDerivCoef();
   createFaceOutputPntConn();
   createFaceNormals();
-}
-
-//////////////////////////////////////////////////////////////////////
-
-// std::vector< Common::SafePtr< BaseDataSocketSink > >
-//   FluxReconstructionElementData::needsSockets()
-// {
-//   std::vector< Common::SafePtr< BaseDataSocketSink > > result;
-//   result.push_back(&socket_solCoords1D);
-//   result.push_back(&socket_flxCoords1D);
-//   return result;
-// }
-
-//////////////////////////////////////////////////////////////////////
-
-void FluxReconstructionElementData::computeRecCoefsFlxPnts1D()
-{
-  CFAUTOTRACE;
-
-  // number of solution points
-  const CFuint nbrSolPnts = m_polyOrder+1;
-
-  // resize m_recCoefsFlxPnts1D
-  m_recCoefsFlxPnts1D.resize(2,nbrSolPnts);
-
-  // compute reconstruction coefficients
-  for (CFuint iFlx = 0; iFlx < 2; ++iFlx)
-  {
-    const CFreal ksiFlx = 2.*iFlx-1.;
-    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-    {
-      const CFreal ksiSol = m_solPntsLocalCoord1D[iSol];
-      m_recCoefsFlxPnts1D(iFlx,iSol) = 1.;
-      for (CFuint iFac = 0; iFac < nbrSolPnts; ++iFac)
-      {
-        if (iFac != iSol)
-        {
-          const CFreal ksiFac = m_solPntsLocalCoord1D[iFac];
-          m_recCoefsFlxPnts1D(iFlx,iSol) *= (ksiFlx-ksiFac)/(ksiSol-ksiFac);
-        }
-      }
-    }
-  }
-
-  // create matrix for optimized reconstruction
-  // resize m_recCoefsFlxPnts1DOptim and m_solPntIdxsForRecFlxPnts1DOptim
-  m_recCoefsFlxPnts1DOptim.resize(2,nbrSolPnts);
-  m_solPntIdxsForRecFlxPnts1DOptim.resize(2);
-
-  // set reconstruction coefficients
-  for (CFuint iFlx = 0; iFlx < 2; ++iFlx)
-  {
-    CFuint solIdx = 0;
-    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-    {
-      if (std::abs(m_recCoefsFlxPnts1D(iFlx,iSol)) > MathTools::MathConsts::CFrealEps())
-      {
-        m_solPntIdxsForRecFlxPnts1DOptim[iFlx].push_back(iSol);
-        m_recCoefsFlxPnts1DOptim(iFlx,solIdx) = m_recCoefsFlxPnts1D(iFlx,iSol);
-        ++solIdx;
-      }
-    }
-  }
+  createFluxPntFluxDim();
+  createVandermondeMatrix();
+  createCoefSolPolyInNodes();
+  createCoefSolPolyDerivInNodes();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -371,7 +286,6 @@ void FluxReconstructionElementData::computeSolPolyDerivCoefsFlxPnts1D()
 vector< vector< CFreal > >
 FluxReconstructionElementData::getSolPolyValsAtNode(vector< RealVector > nodeLocalCoords)
 {
-  //CFLog(VERBOSE,"getSolPolyValsAtNode\n");
   cf_assert(nodeLocalCoords.size() > 0);
   cf_assert(nodeLocalCoords[0].size() == static_cast<CFuint>(m_dimensionality));
 
@@ -380,11 +294,6 @@ FluxReconstructionElementData::getSolPolyValsAtNode(vector< RealVector > nodeLoc
 
   // number of polynomials
   const CFuint nbrPolys = getNbrOfSolPnts();
-//   CFLog(VERBOSE,"Number of sol pnts = " << nbrPolys << "\n");
-//   CFLog(VERBOSE,"Number of sol poly coefs = " << m_solPolyCoefs.size() << "\n");
-//   CFLog(VERBOSE,"Number of sol poly coefs[0] = " << m_solPolyCoefs[0].size() << "\n");
-//   CFLog(VERBOSE,"Number of sol poly exp = " << m_solPolyExponents.size() << "\n");
-//   CFLog(VERBOSE,"Number of sol poly exp[0] = " << m_solPolyExponents[0].size() << "\n");
 
   // return variable
   vector< vector< CFreal > > polyValsAtNodes(nbrNodes);
@@ -407,6 +316,51 @@ FluxReconstructionElementData::getSolPolyValsAtNode(vector< RealVector > nodeLoc
         for (CFuint iCoor = 0; iCoor < static_cast<CFuint>(m_dimensionality); ++iCoor)
         {
           term *= pow(nodeLocalCoords[iNode][iCoor],m_solPolyExponents[iTerm][iCoor]);
+        }
+
+        // add term to polynomial value
+        polyValsAtNodes[iNode][iPoly] += term;
+      }
+    }
+  }
+  return polyValsAtNodes;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+vector< vector< CFreal > >
+FluxReconstructionElementData::getNodePolyValsAtPnt(vector< RealVector > pntLocalCoords)
+{
+  cf_assert(pntLocalCoords.size() > 0);
+  cf_assert(pntLocalCoords[0].size() == static_cast<CFuint>(m_dimensionality));
+
+  // number of nodes passed
+  const CFuint nbrNodes = pntLocalCoords.size();
+
+  // number of polynomials
+  const CFuint nbrPolys = getNbrCornerNodes();
+
+  // return variable
+  vector< vector< CFreal > > polyValsAtNodes(nbrNodes);
+
+  // compute polynomial values at given nodes
+  for (CFuint iNode = 0; iNode < nbrNodes; ++iNode)
+  {
+    // resize
+    polyValsAtNodes[iNode].resize(nbrPolys);
+
+    // loop over polynomials
+    for (CFuint iPoly = 0; iPoly < nbrPolys; ++iPoly)
+    {
+      // loop over terms
+      for (CFuint iTerm = 0; iTerm < nbrPolys; ++iTerm)
+      {
+        CFreal term = m_nodePolyCoefs[iPoly][iTerm];
+
+        // loop over coordinates x-y-z
+        for (CFuint iCoor = 0; iCoor < static_cast<CFuint>(m_dimensionality); ++iCoor)
+        {
+          term *= pow(pntLocalCoords[iNode][iCoor],m_nodePolyExponents[iTerm][iCoor]);
         }
 
         // add term to polynomial value
@@ -491,7 +445,6 @@ vector< vector< vector< CFreal > > >
 void FluxReconstructionElementData::createAllSolPntIdxs()
 {
   CFAUTOTRACE;
-  //CFLog(VERBOSE,"createAllSolPntIdxs\n");
 
   // number of solution points
   const CFuint nbrSolPnts = getNbrOfSolPnts();
@@ -509,7 +462,6 @@ void FluxReconstructionElementData::createAllSolPntIdxs()
 void FluxReconstructionElementData::createAllFlxPntIdxs()
 {
   CFAUTOTRACE;
-  //CFLog(VERBOSE,"createAllFlxPntIdxs\n");
 
   // number of flux points
   const CFuint nbrFlxPnts = getNbrOfFlxPnts();
@@ -527,7 +479,6 @@ void FluxReconstructionElementData::createAllFlxPntIdxs()
 void FluxReconstructionElementData::computeInitPntsCoords()
 {
   CFAUTOTRACE;
-  //CFLog(VERBOSE,"computeInitPntsCoords\n");
 
   // set nodal set
   setInterpolationNodeSet(m_polyOrder,m_initPntsCoords);
@@ -538,7 +489,6 @@ void FluxReconstructionElementData::computeInitPntsCoords()
 void FluxReconstructionElementData::computeInitTransfMatrix()
 {
   CFAUTOTRACE;
-  //CFLog(VERBOSE,"computeInitTransfMatrix\n");
 
   /// @note this could be done by just evaluating the lagrangian polynomials
   /// associated with the initialization points. Done here like this because
@@ -570,7 +520,6 @@ void FluxReconstructionElementData::computeInitTransfMatrix()
 void FluxReconstructionElementData::createFaceNodeCoords()
 {
   CFAUTOTRACE;
-  //CFLog(VERBOSE,"createFaceNodeCoords\n");
 
   // number of cell faces
   const CFuint nbrCellFaces = getNbrCellFaces();
@@ -601,7 +550,6 @@ void FluxReconstructionElementData::createFaceNodeCoords()
 void FluxReconstructionElementData::createFaceNodeCoordsPerOrient()
 {
   CFAUTOTRACE;
-  //CFLog(VERBOSE,"createFaceNodeCoordsPerOrient\n");
 
   // number of orientations
   const CFuint nbrOrients = m_faceNodeConnPerOrient.size();
@@ -644,7 +592,6 @@ void FluxReconstructionElementData::createFaceNodeCoordsPerOrient()
 void FluxReconstructionElementData::computeSolPolyCoefs()
 {
   CFAUTOTRACE;
-  //CFLog(VERBOSE,"computeSolPolyCoefs\n");
 
   // number of solution polynomials
   const CFuint nbrSolPolys = getNbrOfSolPnts();
@@ -669,11 +616,8 @@ void FluxReconstructionElementData::computeSolPolyCoefs()
       for (CFuint iCoor = 0; iCoor < static_cast<CFuint>(m_dimensionality); ++ iCoor)
       {
         lhs(iPoly,iTerm) *= pow(m_solPntsLocalCoords[iPoly][iCoor],m_solPolyExponents[iTerm][iCoor]);
-	//CFLog(VERBOSE,"factor = " << m_solPntsLocalCoords[iPoly][iCoor] << " ^ " << m_solPolyExponents[iTerm][iCoor] << " ");
       }
-      //CFLog(VERBOSE,"lhs = " << lhs(iPoly,iTerm));
     }
-    //CFLog(VERBOSE,"\n");
   }
 
   // invert the LHS matrix
@@ -691,59 +635,48 @@ void FluxReconstructionElementData::computeSolPolyCoefs()
 
 //////////////////////////////////////////////////////////////////////
 
-void FluxReconstructionElementData::computeFlxPolyCoefs()
+void FluxReconstructionElementData::computeNodePolyCoefs()
 {
   CFAUTOTRACE;
-//   CFLog(VERBOSE,"computeFlxPolyCoefs\n");
-// 
-//   // total number of flux polynomials
-//   const CFuint totNbrFlxPolys = getNbrOfFlxPnts();
-// 
-//   // number of flux polynomials per direction
-//   cf_assert(totNbrFlxPolys%m_dimensionality == 0);
-//   const CFuint nbrFlxPolys = totNbrFlxPolys/m_dimensionality;
-// 
-//   // loop over flux polynomials in different directions
-//   m_flxPolyCoefs.resize(m_dimensionality);
-//   for (CFuint iDir = 0; iDir < static_cast<CFuint>(m_dimensionality); ++iDir)
-//   {
-//     // resize m_flxPolyCoefs
-//     m_flxPolyCoefs[iDir].resize(nbrFlxPolys);
-//     for (CFuint iPoly = 0; iPoly < nbrFlxPolys; ++iPoly)
-//     {
-//       m_flxPolyCoefs[iDir][iPoly].resize(nbrFlxPolys);
-//     }
-// 
-//     // variable for LHS of linear system
-//     RealMatrix lhs   (nbrFlxPolys,nbrFlxPolys);
-//     RealMatrix lhsInv(nbrFlxPolys,nbrFlxPolys);
-// 
-//     // create LHS matrix
-//     for (CFuint iPoly = 0; iPoly < nbrFlxPolys; ++iPoly)
-//     {
-//       for (CFuint iTerm = 0; iTerm < nbrFlxPolys; ++iTerm)
-//       {
-//         lhs(iPoly,iTerm) = 1.0;
-//         for (CFuint iCoor = 0; iCoor < static_cast<CFuint>(m_dimensionality); ++ iCoor)
-//         {
-//           lhs(iPoly,iTerm) *= pow(m_flxPntsLocalCoords[iPoly+iDir*nbrFlxPolys][iCoor],
-//                                   m_flxPolyExponents[iDir][iTerm][iCoor]);
-//         }
-//       }
-//     }
-// 
-//     // invert the LHS matrix
-//     InvertMatrix(lhs,lhsInv);
-// 
-//     // store flux polynomial coefficients
-//     for (CFuint iPoly = 0; iPoly < nbrFlxPolys; ++iPoly)
-//     {
-//       for (CFuint iTerm = 0; iTerm < nbrFlxPolys; ++iTerm)
-//       {
-//         m_flxPolyCoefs[iDir][iPoly][iTerm] = lhsInv(iTerm,iPoly);
-//       }
-//     }
-//   }
+
+  // number of solution polynomials
+  const CFuint nbrNodePolys = getNbrCornerNodes();
+
+  // resize m_solPolyCoefs
+  m_nodePolyCoefs.resize(nbrNodePolys);
+  for (CFuint iPoly = 0; iPoly < nbrNodePolys; ++iPoly)
+  {
+    m_nodePolyCoefs[iPoly].resize(nbrNodePolys);
+  }
+
+  // variable for LHS of linear system
+  RealMatrix lhs   (nbrNodePolys,nbrNodePolys);
+  RealMatrix lhsInv(nbrNodePolys,nbrNodePolys);
+
+  // create LHS matrix
+  for (CFuint iPoly = 0; iPoly < nbrNodePolys; ++iPoly)
+  {
+    for (CFuint iTerm = 0; iTerm < nbrNodePolys; ++iTerm)
+    {
+      lhs(iPoly,iTerm) = 1.0;
+      for (CFuint iCoor = 0; iCoor < static_cast<CFuint>(m_dimensionality); ++ iCoor)
+      {
+        lhs(iPoly,iTerm) *= pow(m_cellNodeCoords[iPoly][iCoor],m_nodePolyExponents[iTerm][iCoor]);
+      }
+    }
+  }
+
+  // invert the LHS matrix
+  InvertMatrix(lhs,lhsInv);
+
+  // store solution polynomial coefficients
+  for (CFuint iPoly = 0; iPoly < nbrNodePolys; ++iPoly)
+  {
+    for (CFuint iTerm = 0; iTerm < nbrNodePolys; ++iTerm)
+    {
+      m_nodePolyCoefs[iPoly][iTerm] = lhsInv(iTerm,iPoly);
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -756,6 +689,14 @@ void FluxReconstructionElementData::createCoefSolPolyDerivInSolPnts()
 
 //////////////////////////////////////////////////////////////////////
 
+void FluxReconstructionElementData::createCoefSolPolyDerivInNodes()
+{
+  //CFLog(VERBOSE,"createCoefSolPolyDerivInFlxPnts\n");
+  m_coefSolPolyDerivInNodes = getSolPolyDerivsAtNode(m_cellNodeCoords);
+}
+
+//////////////////////////////////////////////////////////////////////
+
 void FluxReconstructionElementData::createCoefSolPolyInFlxPnts()
 {
   //CFLog(VERBOSE,"createCoefSolPolyDerivInFlxPnts\n");
@@ -764,39 +705,10 @@ void FluxReconstructionElementData::createCoefSolPolyInFlxPnts()
 
 //////////////////////////////////////////////////////////////////////
 
-void FluxReconstructionElementData::createCoefSolPolyDerivInFlxPntsOptim()
+void FluxReconstructionElementData::createCoefSolPolyInNodes()
 {
-  CFAUTOTRACE;
-//   //CFLog(VERBOSE,"createCoefSolPolyDerivInFlxPntsOptim\n");
-// 
-//   // get number of solution points
-//   const CFuint nbrSolPnts = getNbrOfSolPnts();
-// 
-//   // get number of flux points
-//   const CFuint nbrFlxPnts = getNbrOfFlxPnts();
-// 
-//   // loop over flux points to search solution points
-//   // with nonzero coefficients for derivative computation
-//   m_coefSolPolyDerivInFlxPntsOptim.resize(nbrFlxPnts);
-//   m_solPntIdxsSolPolyDerivInFlxPntsOptim.resize(nbrFlxPnts);
-//   for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
-//   {
-//     m_coefSolPolyDerivInFlxPntsOptim      [iFlx].resize(m_dimensionality);
-//     m_solPntIdxsSolPolyDerivInFlxPntsOptim[iFlx].resize(m_dimensionality);
-//     for (CFuint iDir = 0; iDir < static_cast<CFuint>(m_dimensionality); ++iDir)
-//     {
-//       for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-//       {
-//         if (std::abs(m_coefSolPolyDerivInFlxPnts[iFlx][iDir][iSol]) > 1e-10)
-//         {
-//           m_coefSolPolyDerivInFlxPntsOptim      [iFlx][iDir]
-//               .push_back(m_coefSolPolyDerivInFlxPnts[iFlx][iDir][iSol]);
-//           m_solPntIdxsSolPolyDerivInFlxPntsOptim[iFlx][iDir]
-//               .push_back(iSol);
-//         }
-//       }
-//     }
-//   }
+  //CFLog(VERBOSE,"createCoefSolPolyDerivInFlxPnts\n");
+  m_coefSolPolyInNodes = getSolPolyValsAtNode(m_cellNodeCoords);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -805,38 +717,35 @@ void FluxReconstructionElementData::createFaceFlxPntsCellLocalCoords()
 {
   CFAUTOTRACE;
 //   CFLog(VERBOSE,"createFaceFlxPntsCellLocalCoords\n");
-// 
-//   // number of face flux points
-//   const CFuint nbrFaceFlxPnts = getNbrOfFaceFlxPnts();
-// 
-//   // connectivity for all faces
-//   const CFuint nbrCellFaces = getNbrCellFaces();
-//   m_faceFlxPntCellMappedCoords.resize(nbrCellFaces);
-//   for (CFuint iFace = 0; iFace < nbrCellFaces; ++iFace)
-//   {
-//     for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
-//     {
-//       CFLog(VERBOSE,"createFaceFlxPntsCellLocalCoords1\n");
-//       const CFuint flxIdx = m_faceFlxPntConn[iFace][iFlx];
-//       m_faceFlxPntCellMappedCoords[iFace].push_back(m_flxPntsLocalCoords[flxIdx]);
-//     }
-//   }
-//   CFLog(VERBOSE,"createFaceFlxPntsCellLocalCoords2\n");
-//   // connectivity for all orientations
-//   const CFuint nbrOrients = m_faceFlxPntConnPerOrient.size();
-//   m_faceFlxPntCellMappedCoordsPerOrient.resize(nbrOrients);
-//   for (CFuint iOrient = 0; iOrient < nbrOrients; ++iOrient)
-//   {
-//     m_faceFlxPntCellMappedCoordsPerOrient[iOrient].resize(2);
-//     for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
-//     {
-//       CFLog(VERBOSE,"createFaceFlxPntsCellLocalCoords3\n");
-//       const CFuint flxIdxL = m_faceFlxPntConnPerOrient[iOrient][LEFT ][iFlx];
-//       m_faceFlxPntCellMappedCoordsPerOrient[iOrient][LEFT ].push_back(m_flxPntsLocalCoords[flxIdxL]);
-//       const CFuint flxIdxR = m_faceFlxPntConnPerOrient[iOrient][RIGHT][iFlx];
-//       m_faceFlxPntCellMappedCoordsPerOrient[iOrient][RIGHT].push_back(m_flxPntsLocalCoords[flxIdxR]);
-//     }
-//   }
+  
+  // number of face flux points
+  const CFuint nbrFaceFlxPnts = getNbrOfFaceFlxPnts();
+
+  // connectivity for all faces
+  const CFuint nbrCellFaces = getNbrCellFaces();
+  m_faceFlxPntCellMappedCoords.resize(nbrCellFaces);
+  for (CFuint iFace = 0; iFace < nbrCellFaces; ++iFace)
+  {
+    for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
+    {
+      const CFuint flxIdx = m_faceFlxPntConn[iFace][iFlx];
+      m_faceFlxPntCellMappedCoords[iFace].push_back(m_flxPntsLocalCoords[flxIdx]);
+    }
+  }
+  // connectivity for all orientations
+  const CFuint nbrOrients = m_faceFlxPntConnPerOrient.size();
+  m_faceFlxPntCellMappedCoordsPerOrient.resize(nbrOrients);
+  for (CFuint iOrient = 0; iOrient < nbrOrients; ++iOrient)
+  {
+    m_faceFlxPntCellMappedCoordsPerOrient[iOrient].resize(2);
+    for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
+    {
+      const CFuint flxIdxL = m_faceFlxPntConnPerOrient[iOrient][LEFT ][iFlx];
+      m_faceFlxPntCellMappedCoordsPerOrient[iOrient][LEFT ].push_back(m_flxPntsLocalCoords[flxIdxL]);
+      const CFuint flxIdxR = m_faceFlxPntConnPerOrient[iOrient][RIGHT][iFlx];
+      m_faceFlxPntCellMappedCoordsPerOrient[iOrient][RIGHT].push_back(m_flxPntsLocalCoords[flxIdxR]);
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -940,6 +849,52 @@ void FluxReconstructionElementData::SwapRows(RealMatrix& A, CFuint row1, CFuint 
   RealVector swapRow = A.getRow<RealVector>(row1);
   A.setRow(A.getRow<RealVector>(row2),row1);
   A.setRow(swapRow,row2);
+}
+
+//////////////////////////////////////////////////////////////////////
+
+CFreal FluxReconstructionElementData::evaluateLegendre(CFreal coord, CFuint order)
+{
+  CFreal result = 0.0;
+  switch(order)
+    {
+      case 0:
+      {
+	result = 1;
+
+      } break;
+      case 1:
+      {
+	result = coord;
+
+      } break;
+      case 2:
+      {
+	result = 0.5*(3.0*pow(coord,2)-1.0);
+
+      } break;
+      case 3:
+      {
+	result = 0.5*(5.0*pow(coord,3)-3.0*coord);
+
+      } break;
+      case 4:
+      {
+	result = 0.125*(35.0*pow(coord,4)-30.0*pow(coord,2)+3.0);
+
+      } break;
+      case 5:
+      {
+	result = 0.125*(63.0*pow(coord,5)-70.0*pow(coord,3)+15.0*coord);
+
+      } break;
+      default:
+      {
+        throw Common::NotImplementedException (FromHere(),"Legendre not implemented for order "
+                                      + StringOps::to_str(order) + ".");
+      }
+    }
+  return result;
 }
 
 //////////////////////////////////////////////////////////////////////

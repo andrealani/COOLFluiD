@@ -1,0 +1,4 @@
+*.cxx linguist-language=C++
+*.hh linguist-language=C++
+*.ci linguist-language=C++
+*.cu linguist-language=CUDA/C++

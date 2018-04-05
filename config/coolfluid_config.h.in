@@ -78,6 +78,10 @@
 #cmakedefine CF_HAVE_MUTATION2OLD   // Mutation2OLD support
 #cmakedefine CF_HAVE_PARALUTION     // Paralution support
 #cmakedefine CF_HAVE_ALLSTATIC      // compile static
+#cmakedefine CF_HAVE_IBMSTATIC      // compile static with IBM compiler
+#cmakedefine CF_HAVE_CRAYSTATIC     // compile static with CRAY compiler
+#cmakedefine CF_HAVE_SINGLE_EXEC    // compile a single executable with no separate libraries
+#cmakedefine CF_HAVE_LOG4CPP        // use the log4cpp functionalities
 
 // Package options
 #cmakedefine CF_HAVE_GOOGLE_PERFTOOLS

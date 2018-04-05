@@ -20,8 +20,12 @@
 
 namespace COOLFluiD {
 
+  namespace Common {
+    class FactoryRegistry;
+  }
+  
   namespace Framework {
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 /// This class provides the base class of an Integrator.
@@ -89,6 +93,9 @@ public:
                               const CFQuadrature::Type& quadType,
                               const CFPolyOrder::Type& order);
 
+  /// Set the factory registry
+  virtual void setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> fr) {m_fr = fr;}
+  
 private: // helper methods
 
   /// Activates the integrators from the pool
@@ -116,7 +123,10 @@ protected: // data
 
   /// map from CFGeoShape::Type to the pair of CFQuadrature::Type and CFPolyOrder::Type
   std::map<CFGeoShape::Type,std::pair<CFQuadrature::Type,CFPolyOrder::Type> > m_integType;
-
+  
+  /// factory registry to allow polymorphic creation of objects
+  Common::SafePtr<Common::FactoryRegistry> m_fr;
+  
 }; // end class Integrator
 
 //////////////////////////////////////////////////////////////////////////////

@@ -155,10 +155,31 @@ void TVBLimiterEuler::setLimitBooleans()
     const CFreal dVar = lengthScaleFactor*(m_maxAvgStateAll[iEq] - m_minAvgStateAll[iEq]);
     const CFreal lowerBnd = m_minAvgState[iEq] - dVar;
     const CFreal upperBnd = m_maxAvgState[iEq] + dVar;
+    
+    // loop over the states in the solution points
     for (CFuint iSol = 0; iSol < m_nbrSolPnts && !m_applyLimiter; ++iSol)
     {
       m_applyLimiter = (*((*m_cellStates)[iSol]))[iEq] < lowerBnd ||
                        (*((*m_cellStates)[iSol]))[iEq] > upperBnd;
+      if (m_cell->getID() == 1337)
+      {
+        CFLog(VERBOSE,"state for limiter: " << (*((*m_cellStates)[iSol]))[iEq] << "\n");
+      }
+    }
+    
+    // loop over the states in the flux points
+    for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts && !m_applyLimiter; ++iFlx)
+    {
+      m_applyLimiter = m_cellStatesFlxPnt[iFlx][iEq] < lowerBnd ||
+                       m_cellStatesFlxPnt[iFlx][iEq] > upperBnd;
+      if (m_cell->getID() == 1337)
+      {
+        CFLog(VERBOSE,"flxState for limiter: " << m_cellStatesFlxPnt[iFlx][iEq] << "\n");
+      }
+    }
+    if (m_cell->getID() == 1337)
+    {
+      CFLog(VERBOSE,"lower Bnd: " << lowerBnd << ", upper Bnd: " << upperBnd << "\n");
     }
   }
 
@@ -170,11 +191,25 @@ void TVBLimiterEuler::setLimitBooleans()
     const CFreal lowerBnd = m_minAvgState[m_nbrEqsMinusOne] - dVar;
     const CFreal upperBnd = m_maxAvgState[m_nbrEqsMinusOne] + dVar;
     CFreal pressure = 0.0;
+    
+    // loop over the states in the solution points
     for (CFuint iSol = 0; iSol < m_nbrSolPnts && !m_applyLimiter; ++iSol)
     {
       computePressFromConsVar(*((*m_cellStates)[iSol]),pressure);
       m_applyLimiter = pressure < lowerBnd ||
                        pressure > upperBnd;
+    }
+    
+    // loop over the states in the flux points
+    for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts && !m_applyLimiter; ++iFlx)
+    {
+      computePressFromConsVar(m_cellStatesFlxPnt[iFlx],pressure);
+      m_applyLimiter = pressure < lowerBnd ||
+                       pressure > upperBnd;
+    }
+    if (m_cell->getID() == 1337)
+    {
+      CFLog(VERBOSE,"Press lower Bnd: " << lowerBnd << ", upper Bnd: " << upperBnd << ", press: " << pressure << "\n");
     }
   }
 }
@@ -185,6 +220,8 @@ void TVBLimiterEuler::limitStates()
 {
   for (CFuint iEq = 0; iEq < m_nbrEqsMinusOne; ++iEq)
   {
+    CFreal limitFactPlot = 1.0;
+    
     // reconstruct the cell averaged variable and the derivatives in the cell center
     reconstructCellAveragedVariable(iEq);
     computeCellCenterDerivVariable (iEq);
@@ -212,6 +249,9 @@ void TVBLimiterEuler::limitStates()
         limitFact = limitFact2 < limitFact ? limitFact2 : limitFact;
       }
       m_cellCenterDerivVar *= limitFact;
+      
+      limitFactPlot = limitFact;
+      CFLog(VERBOSE, "limitFact: " << limitFact << "\n");
     }
 
     // set the solution in the solution points
@@ -223,6 +263,9 @@ void TVBLimiterEuler::limitStates()
         (*(*m_cellStates)[iSol])[iEq] +=
             m_cellCenterDerivVar[iCoor]*(*m_solPntsLocalCoords)[iSol][iCoor];
       }
+      
+      ///@warning plot limitFact
+      //(*(*m_cellStates)[iSol])[iEq] = 1.0-limitFactPlot;
     }
   }
 
@@ -257,6 +300,8 @@ void TVBLimiterEuler::limitStates()
     dSolCellMax += std::abs(m_cellCenterDerivVar[iCoor]);
   }
 
+  CFreal limitFactPlot = 1.0;
+  
   if (dSolCellMax > MathTools::MathConsts::CFrealMin())
   {
     CFreal limitFact = 1.0;
@@ -270,6 +315,9 @@ void TVBLimiterEuler::limitStates()
       limitFact = limitFact2 < limitFact ? limitFact2 : limitFact;
     }
     m_cellCenterDerivVar *= limitFact;
+    
+    limitFactPlot = limitFact;
+    CFLog(VERBOSE, "limitFact: " << limitFact << "\n");
   }
 
   // set the solution in the solution points
@@ -287,6 +335,9 @@ void TVBLimiterEuler::limitStates()
                                                << StringOps::to_str(pressure) << "\n");
     }
     computeRhoEFromPressAndOtherConsVar(*(*m_cellStates)[iSol],pressure);
+    
+    ///@warning plot limitFact
+    //(*(*m_cellStates)[iSol])[m_nbrEqsMinusOne] = 1.0-limitFactPlot;
   }
 
 /*  // check density and pressure positivity

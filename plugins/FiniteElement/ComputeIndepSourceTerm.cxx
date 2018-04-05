@@ -47,7 +47,9 @@ void ComputeIndepSourceTerm::configure ( Config::ConfigArgs& args )
 
 void ComputeIndepSourceTerm::setup()
 {
-  _indepSourceEntity = getMethodData().getIndepSourceEntity();
+  ComputeTerm<FiniteElementMethodData>::setup();
+  
+ _indepSourceEntity = getMethodData().getIndepSourceEntity();
 }
 
 //////////////////////////////////////////////////////////////////////////////

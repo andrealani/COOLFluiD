@@ -14,6 +14,8 @@
 #include "Environment/DirPaths.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Environment/SingleBehaviorFactory.hh"
+#include "Environment/CFEnv.hh"
+#include "Environment/CFEnvVars.hh"
 
 #include "Framework/OnlyMeshSubSystem.hh"
 #include "Framework/MeshData.hh"
@@ -39,7 +41,7 @@
 using namespace std;
 using namespace boost::filesystem;
 using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Environment;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -525,7 +527,7 @@ void OnlyMeshSubSystem::writeSolution(const bool force_write )
         m_outputFormat[i]->write();
         m_outputFormat[i]->close();
         stopTimer.stop();
-        CFout << "Writing took " << stopTimer << "s\n";
+        CFLog(INFO, "Writing took " << stopTimer << "s\n");
       }
     }
   }
@@ -554,15 +556,15 @@ void OnlyMeshSubSystem::configurePhysicalModel ( Config::ConfigArgs& args )
 
     // create the new physical model implementor
     Common::SafePtr<PhysicalModelImpl::PROVIDER> physicalMdlProv =
-      Environment::Factory<PhysicalModelImpl>::getInstance().getProvider(physicalModelType);
-
+      FACTORY_GET_PROVIDER(getFactoryRegistry(), PhysicalModelImpl, physicalModelType);
     cf_assert(physicalMdlProv.isNotNull());
-
+    
     Common::SelfRegistPtr<PhysicalModelImpl> physicalModelImpl =
       physicalMdlProv->create(physicalModelName);
-
     cf_assert(physicalModelImpl.isNotNull());
-
+    
+    physicalModelImpl->setFactoryRegistry(getFactoryRegistry());
+    
     // configure the physical model implementor
     configureNested ( physicalModelImpl.getPtr(), args );
 
@@ -665,8 +667,8 @@ void OnlyMeshSubSystem::setGlobalMeshData()
 	  //  nodes.DumpContents ();
 	  //  #endif
 	  
-	  states.buildMap ();
-	  nodes.buildMap ();
+	  states.buildMap(CFEnv::getInstance().getVars()->SyncAlgo);
+	  nodes.buildMap(CFEnv::getInstance().getVars()->SyncAlgo);
 	  
 	  // #ifndef NDEBUG
 	  //  states.DumpInfo ();

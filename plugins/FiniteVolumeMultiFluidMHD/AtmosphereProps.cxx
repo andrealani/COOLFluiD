@@ -17,8 +17,20 @@
 
 #include "FiniteVolume/CellCenterFVM.hh"
 #include "FiniteVolumeMultiFluidMHD/FiniteVolumeMultiFluidMHD.hh"
+#include "FiniteVolumeMultiFluidMHD/AUSMPlusUpFluxMultiFluid.hh"
 #include "FiniteVolumeMultiFluidMHD/AtmosphereProps.hh"
-
+#include "FiniteVolumeMultiFluidMHD/BCPeriodicMFMHD.hh"
+#include "FiniteVolumeMultiFluidMHD/DriftWaveInlet.hh"
+#include "FiniteVolumeMultiFluidMHD/DriftWaveUnsteadyInlet.hh"
+#include "FiniteVolumeMultiFluidMHD/DriftWaves2DHalfThreeFluid.hh"
+#include "FiniteVolumeMultiFluidMHD/DriftWaves2DHalfTwoFluid.hh"
+#include "FiniteVolumeMultiFluidMHD/DriftWaves3DTwoFluid.hh"
+#include "FiniteVolumeMultiFluidMHD/EnergyIntegration.hh"
+#include "FiniteVolumeMultiFluidMHD/GEMMHDST2DHalfTwoFluid.hh"
+#include "FiniteVolumeMultiFluidMHD/GEMMHDST3D.hh"
+#include "FiniteVolumeMultiFluidMHD/GEMMHDST3DTwoFluid.hh"
+#include "FiniteVolumeMultiFluidMHD/GridConvergence.hh"
+#include "FiniteVolumeMultiFluidMHD/GridConvergenceTwoFluid.hh"
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -26,8 +38,6 @@ using namespace std;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Common;
 using namespace COOLFluiD::Numerics::FiniteVolume;
-//using namespace COOLFluiD::Physics::Maxwell;
-//using namespace COOLFluiD::Physics::MultiFluidMHD;
 
 //////////////////////////////////////////////////////////////////////////////
 

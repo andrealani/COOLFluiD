@@ -3,7 +3,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "BaseRoeFlux.hh"
+#include "FiniteVolume/BaseRoeFlux.hh"
 #include "Framework/ConvectiveVarSet.hh"
 #include "Framework/DiffusiveVarSet.hh"
 #include "Framework/JacobianLinearizer.hh"

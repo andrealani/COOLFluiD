@@ -154,13 +154,14 @@ public:
   
   /// Computes all transport coefficients for TCNEQ case
   virtual void transportCoeffNEQ(CFreal& temp, 
-			 CFdouble& pressure,
-			 CFreal* tVec, 
-			 RealVector& normConcGradients,
-			 CFreal& eta,
-			 CFreal& lambdaTrRo, 
-			 RealVector& lambdaInt,
-			 RealVector& rhoUdiff);
+				 CFdouble& pressure,
+				 CFreal* tVec, 
+				 RealVector& normConcGradients,
+				 RealVector& normTempGradients,
+				 CFreal& eta,
+				 CFreal& lambdaTrRo, 
+				 RealVector& lambdaInt,
+				 RealVector& rhoUdiff);
   
   /**
    * Calculates the thermal conductivity by conjugate gradient method method
@@ -498,12 +499,13 @@ public:
    * @param normConcGradients the cell normal gradients of species mass fractions
    */
   virtual void getRhoUdiff(CFdouble& temp,
-                   CFdouble& pressure,
-                   RealVector& normConcGradients,
-		   CFreal* tVec,
-                   RealVector& rhoUdiff,
-		   bool fast);
-
+			   CFdouble& pressure,
+			   RealVector& normConcGradients,
+			   RealVector& normTempGradients,
+			   CFreal* tVec,
+			   RealVector& rhoUdiff,
+			   bool fast);
+  
   /**
    * Returns the diffusion flux
    * This function returnm the binary coefficients of Fick

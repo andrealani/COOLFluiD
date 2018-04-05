@@ -873,7 +873,10 @@ void PlatoLibrary::getSource(CFdouble& temp, RealVector& tVec, CFdouble& pressur
  * This function computes the mass diffusion fluxes given the temperature, the pressure and the mass fraction 
  * gradients (note that the species mole and mass fraction , "_Xi" and "_Yi" vectors, have to be filled before calling this function)
  */
-void PlatoLibrary::getRhoUdiff(CFdouble& temp, CFdouble& pressure, RealVector& normConcGradients, CFreal* tVec, RealVector& rhoUdiff, bool fast)
+void PlatoLibrary::getRhoUdiff(CFdouble& temp, CFdouble& pressure,
+			       RealVector& normConcGradients,
+			       RealVector& normTempGradients,
+			       CFreal* tVec, RealVector& rhoUdiff, bool fast)
 {
   /*Heavy particle and free-electron temperatures*/
   CFdouble Th = temp;
@@ -1022,6 +1025,7 @@ void PlatoLibrary::transportCoeffNEQ(CFreal& temperature,
 			             CFdouble& pressure,
 				     CFreal* tVec, 
 				     RealVector& normConcGradients,
+				     RealVector& normTempGradients,
 				     CFreal& eta,
 				     CFreal& lambdaTrRo, 
 				     RealVector& lambdaInt,

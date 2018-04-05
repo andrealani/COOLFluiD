@@ -408,7 +408,7 @@ void RMSJouleHeatSourceCoupling<ST>::prepareElConductivity ()
     // getting real EpR and imaginary EpI part of plasma el. field intensity from states
     State *currState = currCell->getState(0);
     
-    // AL: very ugly, find alternative way
+    // AL: very ugly and dangerous, find alternative way
     if (!m_skipPreparation) {
       updateVarSet->computePhysicalData(*currState, m_physicalData);
     }
@@ -424,8 +424,11 @@ void RMSJouleHeatSourceCoupling<ST>::prepareElConductivity ()
     // cf_assert(Tdim > 0.);
     // we will have conductivity!
     CFreal* tVec = (nbTs > 0) ? &(*currState)[TvID] : CFNULL;
+    
     elCondField[iCell] = m_library->sigma(Tdim, pdim, tVec);
-
+    
+    CFLog(DEBUG_MIN, "sigma(Tdim=" << Tdim << ", pdim=" << pdim << ") = " << elCondField[iCell] << "\n");
+    
     if (m_srcTerm->pegaseApproximation()) {
        if (Tdim > 7250) {
          elCondField[iCell] = 904.11+(elCondField[iCell] - 904.11)*0.91;

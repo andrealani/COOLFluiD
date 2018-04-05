@@ -1,0 +1,2 @@
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 0.
+Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 10.0

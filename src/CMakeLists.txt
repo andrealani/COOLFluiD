@@ -1,4 +1,4 @@
-SET ( CF_KERNEL_MODS logcpp Common Config Environment MathTools Framework ShapeFunctions Solver )
+SET ( CF_KERNEL_MODS logcpp Common Config Environment MathTools Framework ShapeFunctions )
 
 FOREACH( ADIR ${CF_KERNEL_MODS} )
     LOGVERBOSE ("\# KERNEL MODULE [${ADIR}]")

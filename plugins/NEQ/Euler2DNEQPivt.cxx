@@ -195,7 +195,7 @@ void Euler2DNEQPivt::setDimensionalValuesPlusExtraValues
   const CFuint nbSpecies = getModel()->getNbScalarVars(0);
   
   // Set the mixture density (sum of the partial densities)
-  const CFreal T = state[getTempID(nbSpecies)];
+  CFreal T = state[getTempID(nbSpecies)];
   const CFreal Te = getTe(state);
   
   CFreal rho = 0.0;
@@ -204,6 +204,10 @@ void Euler2DNEQPivt::setDimensionalValuesPlusExtraValues
     _rhoi[ie] = state[ie]/(_Rspecies[ie]*Ti);
     rho += _rhoi[ie];
   }
+
+  const CFuint TID = getTempID(nbSpecies);
+  CFreal* Tvec = &const_cast<State&>(state)[TID];
+  _library->setState(&_rhoi[0], &T);
   
   // Set the species
   const CFreal ovRho = 1./rho;
@@ -348,7 +352,9 @@ void Euler2DNEQPivt::setThermodynamics(CFreal rho,
   for (CFuint ie = 0;  ie < nbSpecies; ++ie) {
     p += state[ie];
   }
-    
+  
+  _library->setState(&_rhoi[0], &Tdim);
+  
   // unused //  const EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
   // unused //  const CFuint iEqSS = eqSS.getEqSS();
   // unused //  const CFuint nbEqSS = eqSS.getTotalNbEqSS();

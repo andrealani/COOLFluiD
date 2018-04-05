@@ -23,6 +23,9 @@ namespace COOLFluiD {
 
 Environment::ObjectProvider<Euler3DPvtLTE, ConvectiveVarSet, LTEModule, 1> euler3DPvtLTEProvider("Euler3DPvtLTE");
 
+// 2D and 1/2
+Environment::ObjectProvider<Euler3DPvtLTE, ConvectiveVarSet, LTEModule, 1> euler2DPvtLTEProvider("Euler2DPvtLTE");
+
 //////////////////////////////////////////////////////////////////////////////
 
 Euler3DPvtLTE::Euler3DPvtLTE(Common::SafePtr<BaseTerm> term) :

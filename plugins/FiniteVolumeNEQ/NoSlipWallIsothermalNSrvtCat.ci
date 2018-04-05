@@ -163,6 +163,9 @@ void NoSlipWallIsothermalNSrvtCat<MODEL>::setGhostStateImpl
     rho += innerState[i];
   }
   m_ysIn /= rho;
+
+  /// AL: temporary fix 
+  RealVector tempGradients(0.0, 1);
   
   const RealVector& refData = m_model->getReferencePhysicalData();
   CFreal rhodim = rho*refData[Physics::NavierStokes::EulerTerm::RHO];
@@ -209,7 +212,7 @@ void NoSlipWallIsothermalNSrvtCat<MODEL>::setGhostStateImpl
     CFreal rhoNew = pdim/(this->m_ghostTTvib[0]*coeffNew); 
     
     CFreal* TeDim = (m_library->getNbTempVib() > 0) ? &m_tVec[0] : CFNULL;
-    m_library->getRhoUdiff(Tdim, pdim, m_ysGradients, TeDim, m_rhouDiff);
+    m_library->getRhoUdiff(Tdim, pdim, m_ysGradients, tempGradients, TeDim, m_rhouDiff);
     
     // each Wall BC (and each corresponding TRS) has its own catalycity model
     m_catModel->computeMassProduction(Tdim, rhoNew, m_ysWall, m_catProduction);
@@ -232,7 +235,7 @@ void NoSlipWallIsothermalNSrvtCat<MODEL>::setGhostStateImpl
       coeffNew = m_library->getRgas()/m_library->getMMass();
       rhoNew = pdim/(this->m_ghostTTvib[0]*coeffNew); 
       
-      m_library->getRhoUdiff(Tdim, pdim, m_ysGradients, TeDim, m_rhouDiff);
+      m_library->getRhoUdiff(Tdim, pdim, m_ysGradients, tempGradients, TeDim, m_rhouDiff);
       m_catModel->computeMassProduction(Tdim, rhoNew, m_ysWall, m_catProduction);
       m_pertRHS = m_rhouDiff - m_catProduction; 
       

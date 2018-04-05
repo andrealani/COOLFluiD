@@ -1,0 +1,118 @@
+#==================================================================
+# Configuration opions for the prepare.pl script
+#==================================================================
+# This file should be in the directory from where the script is run
+#==================================================================
+# This file is meant as an example and it should be copied
+# and renamed to coolfluid.conf, and adapted to the
+# characteristics of the envrionment where you plan to
+# configure and run COOLFluiD
+#
+# If you used the install-coolfluid.pl script, just replace
+#    $HOME for your home account directory
+#    $ARCH for the result of command "uname -m"
+#==================================================================
+
+#==================================================================
+# default build options
+#==================================================================
+
+coolfluid_dir = /homeb/prpc19/prpc1900/trunk_LANI
+basebuild_dir = /homeb/prpc19/prpc1900/trunk_LANI/LANI_opt2
+
+# compilers
+cc     = /bgsys/drivers/ppcfloor/comm/xl/bin/mpixlc
+cxx    = /bgsys/drivers/ppcfloor/comm/xl/bin/mpixlcxx
+fc     = mpixlf90
+
+withcurl = 0
+nofortran = 1
+with_ibmstatic = 1
+libpetsc_deps_paths = /bgsys/local/lib/libesslbg.a;/bgsys/local/lapack/3.7.0_simd/lib/liblapack.a;/opt/ibmcmp/xlf/bg/14.1/bglib64/libxlf90_r.a;/opt/ibmcmp/xlsmp/bg/3.1/bglib64/libxlomp_ser.a;/opt/ibmcmp/xlf/bg/14.1/bglib64/libxlfmath.a
+
+# library locations
+mpi_dir       = /bgsys/drivers/ppcfloor/comm/xl
+boost_dir     = /bgsys/local/boost/1.47.0 
+petsc_dir     = /bgsys/local/petsc/3.7.6/juqueen-int8-O3simd_C++
+parmetis_dir  = /bgsys/local/ParMetis/4.0.3
+#/bgsys/local/ParMetis/4.0.3_big
+
+allactive = 0
+#static compilation
+allstatic = 1
+# only executable, no libraries
+with_singleexec = 1 
+#
+# mimimum set of libs to be able to compile CF
+lib_Config = on
+lib_Common = on
+lib_MathTools = on
+lib_logcpp = on
+lib_Environment = on
+lib_Framework = on
+lib_ShapeFunctions = on
+lib_AnalyticalModel = on
+
+####################
+# plugin libraries #
+####################
+
+lib_CFmeshFileReader = on
+lib_Gambit2CFmesh = on
+#lib_Gmsh2CFmesh = on
+#lib_Tecplot2CFmesh = on
+#lib_THOR2CFmesh = on
+lib_CFmeshExtruder = on
+lib_CFmeshFileWriter = on
+lib_TecplotWriter = on
+
+lib_Maxwell = on
+#lib_MHD = on
+lib_MultiFluidMHD = on
+
+lib_ForwardEuler = on
+lib_NewtonMethod = on
+#lib_ParaViewWriter = on
+lib_FiniteVolume = on
+#lib_FiniteVolumeMaxwell = on
+#lib_FiniteVolumeMHD = on
+lib_FiniteVolumeMultiFluidMHD = on
+lib_PhysicalModelDummy = on
+
+# linear system solvers
+lib_PetscI = on
+
+# long int
+#with_longint = 1
+with_llongint = 1
+
+# enable doxygen
+withdocs = 1
+
+cmake_generator = kdev
+#
+#cmake_generator = xcode
+#
+with_testcases = 1
+#assertions = 0
+#
+bgoptim4_cxxflags = -O4 -qarch=qp -qtune=qp
+bgoptim4_cflags   = -O4 -qarch=qp -qtune=qp
+bgoptim4_fflags   = -O4 -qarch=qp -qtune=qp
+
+bgoptim3_cxxflags = -O3 -qstrict -qarch=qp -qtune=qp 
+#-qminimaltoc
+bgoptim3_cflags   = -O3 -qstrict -qarch=qp -qtune=qp
+bgoptim3_fflags   = -O3 -qstrict -qarch=qp -qtune=qp
+
+bgoptim2_cxxflags = -O2 -qstrict -qarch=qp -qtune=qp -qmaxmem=-1
+bgoptim2_cflags   = -O2 -qstrict -qarch=qp -qtune=qp -qmaxmem=-1
+bgoptim2_fflags   = -O2 -qstrict -qarch=qp -qtune=qp
+
+bgrelease2_cxxflags = -O2 -DNDEBUG -qstrict -qarch=qp -qtune=qp 
+# -qmaxmem=-1 
+#-qminimaltoc 
+bgrelease2_cflags   = -O2 -DNDEBUG -qstrict -qarch=qp -qtune=qp 
+#-qmaxmem=-1 
+bgrelease2_fflags   = -O2 -DNDEBUG -qstrict -qarch=qp -qtune=qp
+

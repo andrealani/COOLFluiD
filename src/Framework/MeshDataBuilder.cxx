@@ -527,13 +527,15 @@ void MeshDataBuilder::setCoordInCellStates()
           getGeometricPolyOrder(),
           getSolutionPolyType(),
           getSolutionPolyOrder());
-
-        SelfRegistPtr<SetElementStateCoord> setStateCoord =
-          Environment::Factory<SetElementStateCoord>::getInstance().getProvider(elemName)->create();
-    // CFout << "Set Element state using provider: " << elemName << "\n";
+	
+        SelfRegistPtr<SetElementStateCoord>* setStateCoord =
+          FACTORY_GET_PROVIDER(getFactoryRegistry(), SetElementStateCoord, elemName)->
+	  createPtr();
+	
+	(*setStateCoord)->setFactoryRegistry(getFactoryRegistry());
         const CFuint nbNodesPerElem = (*elementType)[iType].getNbNodes();
         const CFuint nbStatesPerElem = (*elementType)[iType].getNbStates();
-
+	
         vector<Node*> eNodes(nbNodesPerElem);
         vector<State*> eStates(nbStatesPerElem);
 
@@ -564,8 +566,9 @@ void MeshDataBuilder::setCoordInCellStates()
 
           // finally set the coordinates in the State accordingly
           // to the algorithm of the element type
-          (*setStateCoord)(eNodes, eStates);
+          (*(*setStateCoord))(eNodes, eStates);
         }
+        delete setStateCoord;
       }
 
 //       cf_assert(elemID == getNbElements());

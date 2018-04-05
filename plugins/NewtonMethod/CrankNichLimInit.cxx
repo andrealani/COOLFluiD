@@ -44,13 +44,10 @@ CrankNichLimInit::CrankNichLimInit(const std::string& name) :
   socket_pastPastStates("pastPastStates"),
   socket_timeLimiter("timeLimiter")
 {
-
   addConfigOptionsTo(this);
 
   _timeLimiterStr = "MinMod";
   setParameter("TimeLimiter",&_timeLimiterStr);
-
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -60,13 +57,12 @@ void CrankNichLimInit::configure ( Config::ConfigArgs& args )
   NewtonIteratorCom::configure(args);
 
   _timeLimiter =
-  Environment::Factory<FiniteVolume::TimeLimiter>::getInstance().
-    getProvider(_timeLimiterStr)->create(_timeLimiterStr);
-
-  configureNested ( _timeLimiter.getPtr(), args );
-
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), 
+			 FiniteVolume::TimeLimiter, 
+			 _timeLimiterStr)->create(_timeLimiterStr);
+  
   cf_assert(_timeLimiter.isNotNull());
-
+  configureNested ( _timeLimiter.getPtr(), args );
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -12,7 +12,7 @@
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/SpaceMethod.hh"
 #include "Framework/CFL.hh"
-
+#include "Framework/StopConditionController.hh"
 #include "NewtonMethod/NewtonMethod.hh"
 #include "NewtonMethod/NewtonIterator.hh"
 #include "MathTools/MathConsts.hh"
@@ -110,8 +110,10 @@ void NewtonIterator::configure ( Config::ConfigArgs& args )
   CFAUTOTRACE;
 
   ConvergenceMethod::configure(args);
+  
+  m_data->setFactoryRegistry(getFactoryRegistry());
   configureNested ( m_data.getPtr(), args );
-
+  
   // add configures to the NewtonIteratorCom's
 
   configureCommand<NewtonIteratorData,NewtonIteratorComProvider>( args, m_setup,m_setupStr,m_data);

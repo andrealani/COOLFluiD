@@ -3,10 +3,8 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -13.9769
-
+### Residual = -13.938423
 #
-
 
 Simulator.Maestro = SimpleMaestro
 Simulator.SubSystems = SubSystem
@@ -22,37 +20,32 @@ Simulator.SubSystem.SubIterStopCondition = MaxNumberSubIter
 Simulator.SubSystem.SubIterStopConditionName = SubIterMaxNumberSteps
 Simulator.SubSystem.SubIterMaxNumberSteps.nbSteps = 1
 
-
-
 # SubSystem Modules
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter   libFiniteElement libStructMech libNewtonMethod libFiniteElementStructMech libPetscI
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/StructMech/testcases/PlaneStress/
-Simulator.Paths.ResultsDir       = ./
+Simulator.Paths.ResultsDir = ./
 
 Simulator.SubSystem.Default.PhysicalModelType = StructMech2D
 
 # Some kind of steel
-Simulator.SubSystem.StructMech2D.Young = 2E11
-Simulator.SubSystem.StructMech2D.Poisson = 0.29
-Simulator.SubSystem.StructMech2D.Lambda = 1.0
-Simulator.SubSystem.StructMech2D.mu = 1.0
-Simulator.SubSystem.StructMech2D.Density = 7900.0
-
+Simulator.SubSystem.StructMech2D.MaterialNames = Custom
+Simulator.SubSystem.StructMech2D.Custom.YoungModulus = 2E11
+Simulator.SubSystem.StructMech2D.Custom.Poisson = 0.29
+Simulator.SubSystem.StructMech2D.Custom.Density = 7900.0
+#Simulator.SubSystem.StructMech2D.Custom.Lambda = 1.0
+#Simulator.SubSystem.StructMech2D.Custom.mu = 1.0
 
 #
 #Define the timestep
 #
 Simulator.SubSystem.SubSystemStatus.TimeStep = 0.001
 
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
-
-
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = beam-plane-stress.CFmesh
 Simulator.SubSystem.Tecplot.FileName    = beam-plane-stress.plt
-Simulator.SubSystem.Tecplot.Data.updateVar = Disp
+Simulator.SubSystem.Tecplot.Data.outputVar = Disp
 Simulator.SubSystem.Tecplot.Data.printExtraValues = false
 Simulator.SubSystem.Tecplot.SaveRate = 10
 Simulator.SubSystem.CFmesh.SaveRate = 10
@@ -61,9 +54,6 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = true
 Simulator.SubSystem.CFmesh.AppendIter = true
 Simulator.SubSystem.CFmesh.WriteSol     = WriteSolution
-
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 1
 
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
 Simulator.SubSystem.MaxNumberSteps.nbSteps = 3

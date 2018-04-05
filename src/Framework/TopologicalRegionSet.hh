@@ -98,8 +98,9 @@ public:
   }
 
   /// Sets the geometric entity types for all the GeometricEntities in this TRS
-  void setGeoTypes(std::vector<CFuint> *const geoTypes)  {  m_geoTypes = geoTypes;  }
-
+  void setGeoTypes(std::vector<CFuint> *const geoTypes)  
+  { deletePtr(m_geoTypes); m_geoTypes = geoTypes; }
+  
   /// Sets the global number of GeoEnts in this TR.
   /// Will coincide with the number of present GeoEnts if it is not parallel.
   void setGlobalNbGeoEnts(CFuint nb) {  m_globalNbGeoEnts = nb; }
@@ -182,7 +183,8 @@ public:
   /// @param geoEntIdx the list of global indexes
   /// @post return CFNULL if the indexes match the position of
   /// the GeoEnts in the GeomEntList
-  void setGeoEntsGlobalIdx(std::vector<CFuint> *const geoEntIdx) { m_geoEntGlobalIdx = geoEntIdx; }
+  void setGeoEntsGlobalIdx(std::vector<CFuint> *const geoEntIdx) 
+  { deletePtr(m_geoEntGlobalIdx); m_geoEntGlobalIdx = geoEntIdx; }
 
   /// Gets the local index list of the GeometricEntity's in this TRS
   /// @post return CFNULL if the indexes match the position of the
@@ -196,8 +198,9 @@ public:
   /// @param geoEntIdx the list of local indexes
   /// @post return CFNULL if the indexes match the position of
   /// the GeoEnts in the GeomEntList
-  void setGeoEntsLocalIdx(std::vector<CFuint> *const geoEntIdx) {  m_geoEntLocalIdx = geoEntIdx; }
-
+  void setGeoEntsLocalIdx(std::vector<CFuint> *const geoEntIdx) 
+  { deletePtr(m_geoEntLocalIdx); m_geoEntLocalIdx = geoEntIdx; }
+  
   /// Get the list of all the states in this topological region set.
   /// @return the set of all the states (without duplications) in this TRS
   Common::SafePtr<std::vector<CFuint> > getStatesInTrs()

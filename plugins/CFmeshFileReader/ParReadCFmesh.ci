@@ -79,9 +79,10 @@ void ParReadCFmesh<READER>::execute()
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
   
-  READER m_reader;
+  READER mreader;
+  mreader.setFactoryRegistry(getFactoryRegistry());
   
-  this->configureNested(&m_reader, m_stored_args);
+  this->configureNested(&mreader, m_stored_args);
   
   m_data->setDataSockets(socket_states, socket_nodes, &m_sockets);
   m_data->setPastDataStorageFlags(this->getMethodData().readPastNodes(),
@@ -95,18 +96,18 @@ void ParReadCFmesh<READER>::execute()
   SafePtr<CFmeshReaderSource> ptr = m_data.get();
   cf_assert(ptr.isNotNull());
   
-  m_reader.setReadData(ptr);
-  m_reader.setStateInitValues(this->getMethodData().getUseInitValues(),
+  mreader.setReadData(ptr);
+  mreader.setStateInitValues(this->getMethodData().getUseInitValues(),
 			      this->getMethodData().getInitValues(),
 			      this->getMethodData().getInitValuesIDs());
   
-  m_reader.setup();
+  mreader.setup();
   
   Stopwatch<WallTime> stp;
   stp.start();
 
   boost::filesystem::path filename = Environment::DirPaths::getInstance().getWorkingDir() / this->getMethodData().getFileName();
-  m_reader.readFromFile( filename );
+  mreader.readFromFile( filename );
 
   CFLog(INFO,"Reading data from " << this->getMethodData().getFileName().string() << " took " << stp.read() << "s\n");
   CFLog(NOTICE, "Memory Usage after mesh reading: " << Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n");

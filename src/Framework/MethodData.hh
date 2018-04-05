@@ -53,8 +53,9 @@ public: // functions
   virtual void unsetup();
 
   /// Returns the list of strategies of tyhis Method
-  virtual std::vector<Common::SafePtr<Framework::NumericalStrategy> > getStrategies() const { return m_strategies; }
-
+  virtual std::vector<Common::SafePtr<Framework::NumericalStrategy> > getStrategies() const 
+  { return m_strategies; }
+  
   /// Template function for creating and configuring MethodStrategy's with reduced
   /// checking of template parameters because BASECOMMAND can be more specific than a MethodStrategy.
   /// @param stg  the pointer which should be holding the newly created and configured strategy
@@ -73,7 +74,7 @@ public: // functions
     Common::SafePtr<ProviderType> prov;
     try
     {
-      prov = Environment::Factory<BASESTRATEGY>::getInstance().getProvider(type);
+      prov = FACTORY_T_GET_PROVIDER(this->getFactoryRegistry(), BASESTRATEGY, type);
     }
     catch (Common::NoSuchValueException& e)
     {
@@ -83,6 +84,7 @@ public: // functions
     cf_assert(prov.isNotNull());
     stg = prov->create(name,data);
     cf_assert(stg.isNotNull());
+    stg->setFactoryRegistry(this->getFactoryRegistry());
     m_strategies.push_back(stg.getPtr());
     configureNested ( stg.getPtr(), args );
   }
@@ -104,7 +106,7 @@ public: // functions
     Common::SafePtr<ProviderType> prov;
     try
     {
-      prov = Environment::Factory<BASESTRATEGY>::getInstance().getProvider(type);
+      prov = FACTORY_T_GET_PROVIDER(this->getFactoryRegistry(), BASESTRATEGY, type);
     }
     catch (Common::NoSuchValueException& e)
     {
@@ -114,6 +116,7 @@ public: // functions
     cf_assert(prov.isNotNull());
     stg = prov->create(name);
     cf_assert(stg.isNotNull());
+    stg->setFactoryRegistry(this->getFactoryRegistry());
     m_strategies.push_back(stg.getPtr());
     configureNested ( stg.getPtr(), args );
   }
@@ -136,7 +139,7 @@ public: // functions
     Common::SafePtr<ProviderType> prov;
     try
     {
-      prov = Environment::Factory<BASESTRATEGY>::getInstance().getProvider(type);
+      prov = FACTORY_T_GET_PROVIDER(this->getFactoryRegistry(), BASESTRATEGY, type);
     }
     catch (Common::NoSuchValueException& e)
     {
@@ -146,6 +149,7 @@ public: // functions
     cf_assert(prov.isNotNull());
     stg = prov->create(name);
     cf_assert(stg.isNotNull());
+    stg->setFactoryRegistry(this->getFactoryRegistry());
     stg->setMethodData(data);
     m_strategies.push_back(stg.getPtr());
     configureNested ( stg.getPtr(), args );
@@ -170,7 +174,7 @@ public: // functions
     Common::SafePtr<ProviderType> prov;
     try
     {
-      prov = Environment::Factory<BASESTRATEGY>::getInstance().getProvider(type);
+      prov = FACTORY_T_GET_PROVIDER(this->getFactoryRegistry(), BASESTRATEGY, type);
     }
     catch (Common::NoSuchValueException& e)
     {
@@ -180,6 +184,7 @@ public: // functions
     cf_assert(prov.isNotNull());
     stg = prov->create(name,arg1);
     cf_assert(stg.isNotNull());
+    stg->setFactoryRegistry(this->getFactoryRegistry());
     stg->setMethodData(data);
     m_strategies.push_back(stg.getPtr());
     configureNested ( stg.getPtr(), args );
@@ -189,17 +194,17 @@ protected: // functions
   
   /// Get the provider corresponding to the given name
   template <typename OBJ>
-  Common::SafePtr<typename OBJ::PROVIDER> getProvider(std::string& provName) const
+  Common::SafePtr<typename OBJ::PROVIDER> getProvider(std::string& provName)
   {
     Common::SafePtr<typename OBJ::PROVIDER> prov = CFNULL;
     try {
-      prov = Environment::Factory<OBJ>::getInstance().getProvider(provName);
+      prov = FACTORY_T_GET_PROVIDER(this->getFactoryRegistry(), OBJ, provName);
       CFLog(VERBOSE, this->getName() << "::configure() => Provider " << provName << " exists\n");
     }
     catch (Common::NoSuchValueException& e) {
       CFLog(VERBOSE, e.what() << "\n");
       CFLog(VERBOSE, "Choosing Null for " << OBJ::getClassName() << " instead ..." << "\n");
-      prov = Environment::Factory<OBJ>::getInstance().getProvider("Null");
+      prov = FACTORY_T_GET_PROVIDER(getFactoryRegistry(), OBJ, "Null");
     }
     return prov;
   }    

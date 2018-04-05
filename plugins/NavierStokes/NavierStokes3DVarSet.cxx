@@ -49,6 +49,9 @@ RealMatrix& NavierStokes3DVarSet::getFlux(const RealVector& state,
                                           const vector<RealVector*>& gradients,
                                           const CFreal& radius)
 {
+  // AL: this needs to be adapted for 2D and 1/2
+  cf_assert(PhysicalModelStack::getActive()->getDim() == 3);
+  
   setGradientState(state);
   // dummy normal here
   computeTransportProperties(state, gradients, _normal);

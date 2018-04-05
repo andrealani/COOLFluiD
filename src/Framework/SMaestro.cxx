@@ -88,36 +88,36 @@ Common::Signal::return_t SMaestro::control ( Common::Signal::arg_t input )
     SubSystemStatusStack::setCurrentName(*subSysName);
     cf_assert(*subSysName == SubSystemStatusStack::getCurrentName());
     
-    CFout << "#\n###### STARTING SUBSYSTEM [" << *subSysName << "] ######\n#\n";
+    CFLog(INFO, "#\n###### STARTING SUBSYSTEM [" << *subSysName << "] ######\n#\n");
     event_handler->call_signal (event_handler->key("", "CF_ON_MAESTRO_BUILDSUBSYSTEM"), msg );
     
-    CFout << "#\n###### CONFIG PHASE #################\n#\n";
+    CFLog(INFO, "#\n###### CONFIG PHASE #################\n#\n");
     event_handler->call_signal (event_handler->key("", "CF_ON_MAESTRO_CONFIGSUBSYSTEM"), msg );
 
-    CFout << "#\n###### SOCKETS PLUG PHASE ###########\n#\n";
+    CFLog(INFO, "#\n###### SOCKETS PLUG PHASE ###########\n#\n");
     event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_PLUGSOCKETS"), msg );
 
-    CFout << "#\n###### BUILD PHASE ##################\n#\n";
+    CFLog(INFO, "#\n###### BUILD PHASE ##################\n#\n");
     event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_BUILDPHYSICALMODEL"), msg );
     event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_BUILDMESHDATA"), msg );
     
-    CFout << "#\n###### SETUP PHASE ##################\n#\n";
+    CFLog(INFO, "#\n###### SETUP PHASE ##################\n#\n");
     event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_SETUP"), msg );
 
-    CFout << "#\n###### RUN PHASE ####################\n#\n";
-    for ( ; !m_stopcriteria->isSatisfied(); )
-    {
+    CFLog(INFO, "#\n###### RUN PHASE ####################\n#\n");
+    //for ( ; !m_stopcriteria->isSatisfied(); )
+   // {
       simStatus.incrementNbIter();
       event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_RUN"), msg );
-    }
+   // }
 
-    CFout << "#\n###### UNSETUP PHASE ################\n#\n";
+    CFLog(INFO, "#\n###### UNSETUP PHASE ################\n#\n");
     event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_UNSETUP"), msg );
 
-    CFout << "#\n###### SOCKETS UNPLUG PHASE #########\n#\n";
+    CFLog(INFO, "#\n###### SOCKETS UNPLUG PHASE #########\n#\n");
     event_handler->call_signal (event_handler->key(*subSysName, "CF_ON_MAESTRO_UNPLUGSOCKETS"), msg );
 
-    CFout << "#\n###### DESTRUCTION SUBSYSTEM PHASE #########\n#\n";
+    CFLog(INFO, "#\n###### DESTRUCTION SUBSYSTEM PHASE #########\n#\n");
     event_handler->call_signal (event_handler->key("", "CF_ON_MAESTRO_DESTROYSUBSYSTEM"), msg );
   }
   

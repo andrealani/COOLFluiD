@@ -91,10 +91,11 @@ void SubIterCustomSubSystem::configure ( Config::ConfigArgs& args )
   
   // builds a stop condition
   Common::SafePtr<StopCondition::PROVIDER> stopCondProv =
-    Environment::Factory<StopCondition>::getInstance().getProvider(m_subIterStopConditionStr);
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), StopCondition, m_subIterStopConditionStr);
   SelfRegistPtr<StopCondition> subIterStopCondition =
     stopCondProv->create(m_subIterStopConditionNameStr);
-
+  subIterStopCondition->setFactoryRegistry(getFactoryRegistry());
+  
   configureNested ( subIterStopCondition.getPtr(), args );
 
   // Give the stopcondition to the StopConditionController

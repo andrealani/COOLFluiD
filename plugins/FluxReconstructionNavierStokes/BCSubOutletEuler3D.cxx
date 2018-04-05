@@ -98,6 +98,7 @@ void BCSubOutletEuler3D::computeGhostStates(const vector< State* >& intStates,
                                                   m_intSolPhysData[EulerTerm::V]*
                                                   m_intSolPhysData[EulerTerm::V]
                                          )/m_ghostSolPhysData[EulerTerm::RHO];
+    m_ghostSolPhysData[EulerTerm::T] = m_intSolPhysData[EulerTerm::T];
 
     // set the ghost state from its physical data
     m_eulerVarSet->computeStateFromPhysicalData(m_ghostSolPhysData,ghostState);

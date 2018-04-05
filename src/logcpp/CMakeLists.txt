@@ -1,3 +1,9 @@
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME "logcpp" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+
 LIST(APPEND logcpp_files
 PropertyConfigurator.hh
 BasicConfigurator.hh
@@ -68,9 +74,16 @@ config-win32.h
 )
 
 LIST ( APPEND OPTIONAL_dirfiles RemoteSyslogAppender.hh RemoteSyslogAppender.cpp )
+LIST ( APPEND ${MYLIBNAME}_libs ${CF_Boost_LIBRARIES} )
 
-LIST ( APPEND logcpp_libs   ${CF_Boost_LIBRARIES} )
-
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 CF_ADD_KERNEL_LIBRARY ( logcpp )
+ELSE()
+FOREACH (AFILE ${logcpp_files} )
+LIST(APPEND coolfluid-solver_files ../../src/logcpp/${AFILE} )
+ENDFOREACH(AFILE)
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_libs  ${coolfluid-solver_libs} )
+ENDIF()
 
 CF_WARN_ORPHAN_FILES()

@@ -8,7 +8,6 @@
 
 #include "Framework/AbsoluteNormAndMaxIter.hh"
 #include "Framework/SubSystemStatus.hh"
-#include "Framework/Framework.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 

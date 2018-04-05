@@ -30,7 +30,10 @@ public:
 
   /// Default destructor
   ~NullFluxSplitter();
-
+  
+  /// Flag telling that this strategy is Null
+  bool isNull() const {return true;}
+  
   /// Set the solution variable set
   void setSolutionVarSet(Common::SafePtr<Framework::ConvectiveVarSet> solutionVarSet)
   {
@@ -52,9 +55,12 @@ public:
   /// Compute the flux in the current face
   void computeFlux(RealVector& result)
   {
+    result = 0.;
+    this->_rFluxJacobian = 0.;
+    this->_lFluxJacobian = 0.;
     CFLog(DEBUG_MIN, "NullFluxSplitter::computeFlux() called!" << "\n");
   }
-
+  
 }; // end of class NullFluxSplitter
 
 //////////////////////////////////////////////////////////////////////////////
@@ -62,6 +68,8 @@ public:
   } // namespace Framework
 
 } // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
 
 #include "NullFluxSplitter.ci"
 

@@ -468,6 +468,57 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::setup()
   m_stateRadPower.setDataSockets(sockets);
   m_stateInRadPowers.setDataSockets(sockets);
   
+  // copy the content of the "initialNodalStates" (if available) into "nstates"
+  const string dhName = nsp + "_initialNodalStates";
+  int localSize  = 0;
+  int globalSize = 0;
+  vector<CFreal> bufferVec; 
+  CFreal* buffer = CFNULL;
+
+  if (MeshDataStack::getActive()->getDataStorage()->checkData(dhName)) {
+   cf_assert(PE::GetPE().GetRank(nsp) == 0); 
+   DataHandle<CFreal> initialNodalStates =
+      MeshDataStack::getActive()->getDataStorage()->getData<CFreal>(dhName);
+    buffer = &initialNodalStates[0];
+    localSize = (int) initialNodalStates.size();
+  }
+
+  MPIError::getInstance().check
+    ("MPI_Allreduce", "RadiativeTransferMonteCarlo::setup()",
+      MPI_Allreduce(&localSize, &globalSize, 1, MPIStructDef::getMPIType(&localSize), MPI_MAX, m_comm));  
+  
+  if (globalSize > 0) {
+    if (buffer == CFNULL) {
+     bufferVec.resize(globalSize);
+     buffer = &bufferVec[0]; 
+    } 
+    
+    MPIError::getInstance().check
+      ("MPI_Bcast", "RadiativeTransferMonteCarlo::setup()", 
+        MPI_Bcast(buffer, globalSize, MPIStructDef::getMPIType(buffer), 0, m_comm));    
+
+    /// storage of nstates (states in nodes)
+    DataHandle<RealVector> nstates = sockets.nstates.getDataHandle();
+    const CFuint nbNodalVars = nstates[0].size();
+    // initialNodalStates includes all nodal values for the whole mesh (NOT SCALABLE!!!)
+    // we need to copy into the nstates only the nodal values corresponding to local nodes
+    cf_assert(nstates.size()*nbNodalVars <= globalSize);
+    DataHandle<Node*, GLOBAL> nodes = socket_nodes.getDataHandle();
+    for (CFuint i = 0; i < nstates.size(); ++i) {
+      const CFuint globalNodeID = nodes[i]->getGlobalID();
+      const CFuint startn = globalNodeID*nbNodalVars;
+      for (CFuint j = 0; j < nbNodalVars; ++j) {
+        const CFuint idx = startn+j;
+        cf_assert(idx < globalSize); 
+        nstates[i][j] = buffer[idx];
+     }
+    }
+  }
+
+  if (MeshDataStack::getActive()->getDataStorage()->checkData(dhName)) {
+   MeshDataStack::getActive()->getDataStorage()->deleteData<CFreal>(dhName);
+  }
+
   //initialize ParticleTracking
   m_lagrangianSolver.setDataSockets(sockets);
   m_lagrangianSolver.setupSendBufferSize(m_sendBufferSize);
@@ -855,8 +906,8 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
 
   //CFuint toGeneratePhotons = totalnbPhotons;
 
-  // Stopwatch<WallTime> s;
-  //s.restart();
+  Stopwatch<WallTime> s;
+  s.restart();
 
   vector< Photon > photonStack;
   photonStack.reserve(m_sendBufferSize);
@@ -908,8 +959,8 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
     CFLog(VERBOSE,"Number of photons left: "<< toGenerateCellPhotons <<"\n");
   }
   delete progressBar;
-
-  //CFLog(INFO,"Raytracing took "<<s.readTimeHMS().str()<<'\n');
+  
+  CFLog(INFO,"RadiativeTransferMonteCarlo::computePhotons() => Raytracing took "<<s.readTimeHMS().str()<<'\n');
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -956,7 +1007,7 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::MonteCarlo()
   //FIXME: reset persistent cell and face iterators
   m_iphoton_cell_fix=0, m_istate_cell_fix=0;
   m_iphoton_face_fix=0, m_igState_face_fix=0;
-  
+ 
   for(CFuint i=0; i< nbLoops; ++i){
     m_radiation->setupWavStride(i);
     getTotalEnergy();
@@ -1184,7 +1235,12 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computeHeatFlux()
     //cout<<"CPU "<< Common::PE::GetPE().GetRank()<<" done " <<endl;
   }
   m_postProcess->runPostProcess(gasRadiativeHeatSource); 
-  
+ 
+  // change the sign of the heat source
+  for (CFuint i = 0; i < gasRadiativeHeatSource.size(); ++i) {
+   gasRadiativeHeatSource[i] *= -1.;
+  }
+ 
   CFLog(VERBOSE, "RadiativeTransferMonteCarlo computeHeatFlux() END\n");
 }
 

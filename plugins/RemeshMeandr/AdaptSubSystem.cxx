@@ -23,6 +23,7 @@
 #include "Common/NullPointerException.hh"
 #include "Environment/DirPaths.hh"
 #include "Environment/ObjectProvider.hh"
+#include "Environment/CFEnvVars.hh"
 #include "Framework/MeshCreator.hh"
 #include "Common/Stopwatch.hh"
 
@@ -34,7 +35,7 @@
 using namespace std;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Environment;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -144,13 +145,17 @@ void AdaptSubSystem::run()
 
     DataHandle<State*, GLOBAL>* states = 0;
 
-    if (isParallel)
-    {
-      states = new DataHandle<State*, GLOBAL> (MeshDataStack::getActive()->getDataStorage()->getGlobalData<State*>("states"));
-
-      // test run
-      states->beginSync();
-      states->endSync();
+    if (isParallel) {
+      states = new DataHandle<State*, GLOBAL>
+	(MeshDataStack::getActive()->getDataStorage()->getGlobalData<State*>("states"));
+      
+      if (CFEnv::getInstance().getVars()->SyncAlgo != "Old") {
+	states->synchronize();
+      } 
+      else {
+        states->beginSync();
+        states->endSync();
+      }
     }
 
     // set the handle to the global states in the

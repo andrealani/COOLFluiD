@@ -13,7 +13,6 @@
 #include "Common/OwnedObject.hh"
 #include "Config/ConfigObject.hh"
 #include "Environment/ConcreteProvider.hh"
-#include "Framework/ConvergenceStatus.hh"
 #include "Framework/Framework.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -21,6 +20,7 @@
 namespace COOLFluiD {
 
   namespace Framework {
+     class ConvergenceStatus;
 
 //////////////////////////////////////////////////////////////////////////////
 

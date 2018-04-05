@@ -48,31 +48,18 @@ RealVector& CentredFlux::computeFlux(State& lState,
 {
   SafePtr< ConvectiveVarSet > updateVarSet = getMethodData().getUpdateVar();
   
-  // Set members to current left and right update state
-  //m_updateStates[LEFT]  = &lState;
-  //m_updateStates[RIGHT] = &rState;
- 
-  
   // compute physical data for the left and the right internal flux points
-  //CFLog(VERBOSE, "PData Riemann Before: " << m_pData[LEFT] << "\n");
   updateVarSet->computePhysicalData(lState, m_pData[LEFT]);
   updateVarSet->computePhysicalData(rState, m_pData[RIGHT]);
-  
   
   // flux for right and left state (the physical data must be passed here!)
   m_sumFlux  = updateVarSet->getFlux()(m_pData[LEFT], normal);
   m_sumFlux += updateVarSet->getFlux()(m_pData[RIGHT], normal);
-   
   
   // compute the Centred Riemann flux
-  // Flux = 1/2*(Fmin + Fplus)  without diffusive part
   m_rFlux = 0.5*(m_sumFlux);
   
-  //CFLog(VERBOSE, "Left state Riemann = " << lState << "\n");
-  //CFLog(VERBOSE, "Right state Riemann = " << rState << "\n");
-  
   return m_rFlux;
-  
 }
     
 //////////////////////////////////////////////////////////////////////////////

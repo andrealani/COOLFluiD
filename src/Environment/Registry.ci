@@ -4,8 +4,8 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_Environment_Registry_hh
-#define COOLFluiD_Environment_Registry_hh
+#ifndef COOLFluiD_Environment_Registry_ci
+#define COOLFluiD_Environment_Registry_ci
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -39,10 +39,12 @@ void Registry::regist(TYPE* entry)
 {
   try {
     m_store.addEntry(entry->getName(),entry);
-    CFLog(NOTICE,TYPE::getClassName() + entry->getName() + " registered\n");
+#ifdef CF_HAVE_LOG4CPP
+    CFtrace << TYPE::getClassName() + entry->getName() + " registered\n";
+#endif
   }
   catch (Common::StorageExistsException& e) {
-    CFLogWarn(TYPE::getClassName() + " " + entry->getName() + " already registered : skipping registration\n");
+    CFtrace << TYPE::getClassName() + " " + entry->getName() + " already registered : skipping registration\n";
   }
 }
 
@@ -54,7 +56,7 @@ void Registry::unregist(const std::string& entryName)
     m_store.removeEntry(entryName);
   }
   catch (Common::NoSuchStorageException& e) {
-    CFLogWarn(TYPE::getClassName() + " " +  + entryName + " not registered : skipping removal\n");
+    CFtrace << TYPE::getClassName() + " " +  + entryName + " not registered : skipping removal\n";
   }
 }
 
@@ -74,7 +76,7 @@ Registry::getTYPE(const std::string& entryName)
     return m_store.getEntry(entryName);
   }
   catch (Common::NoSuchStorageException& e) {
-    CFLogWarn(TYPE::getClassName() + " " +  + entryName + " not registered : returning null pointer\n");
+    CFtrace << TYPE::getClassName() + " " +  + entryName + " not registered : returning null pointer\n";
   }
   return Common::SafePtr<TYPE>(CFNULL);
 }
@@ -101,6 +103,4 @@ Registry::getAllModules()
 
 //////////////////////////////////////////////////////////////////////////////
 
-//////////////////////////////////////////////////////////////////////////////
-
-#endif // COOFluiD_Environment_Registry_hh
+#endif // COOFluiD_Environment_Registry_ci

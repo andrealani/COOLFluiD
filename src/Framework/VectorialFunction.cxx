@@ -64,10 +64,13 @@ void VectorialFunction::setVariables(const vector<std::string>& vars)
       m_vars += vars[i];
     }
   }
-  CFLogDebugMax("VectorialFunction::setVariables() => Set Vars: " << m_vars << "\n");
+  
+  CFLog(DEBUG_MAX, "VectorialFunction::setVariables() => m_nbVars = "
+	<< m_nbVars << ", vars = " << m_vars << "\n");
+  
   m_isParsed = false;
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 void VectorialFunction::setFunctions(const vector<std::string>& functions)
@@ -108,7 +111,7 @@ void VectorialFunction::parse()
 //////////////////////////////////////////////////////////////////////////////
 
 void VectorialFunction::evaluate(const RealVector& varValue,
-         RealVector& value) const
+				 RealVector& value) const
 {
   cf_assert(m_isParsed);
   if (varValue.size() != m_nbVars) { 

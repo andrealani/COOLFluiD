@@ -19,9 +19,9 @@ void PhysicalChemicalLibrary::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFint >("electrEnergyID",
 				   "ID of the variables that gets the electronic energy.");
   options.addConfigOption< bool >("freezeChemistry","Flag to freeze the chemistry.");
-
-  options.addConfigOption< CFdouble,
-   Config::DynamicOption<> >("MaxTe","Maximum value for the electrn temperature.");
+  options.addConfigOption< bool >("ShiftH0","Shift the formation enthalpy to have H(T=0K)=0.");
+  options.addConfigOption< CFdouble, Config::DynamicOption<> >
+    ("MaxTe","Maximum value for the electrn temperature."); 
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -35,6 +35,8 @@ PhysicalChemicalLibrary::PhysicalChemicalLibrary(const std::string& name)
     _hasElectrons(false),
     _Rgas(0.),
     _electronPress(0.),
+    m_H0(0.),
+    m_vecH0(),
     _extraData(),
     _atomicityCoeff(),
     _molecule2EqIDs()
@@ -46,7 +48,10 @@ PhysicalChemicalLibrary::PhysicalChemicalLibrary(const std::string& name)
   
   _freezeChemistry = false;
   setParameter("freezeChemistry",&_freezeChemistry);
-
+  
+  m_shiftHO = false;
+  setParameter("ShiftH0",&m_shiftHO);
+  
   _maxTe = 200000.0;
   setParameter("MaxTe",&_maxTe);
 }

@@ -163,12 +163,9 @@ Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Inlet.Values =
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Wall_probe.ValuesIdx = 1 2 3
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveMultiTRS.Wall_probe.Values = 0. 0. 350.
 
-
 Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = \
 	NavierStokes2DAxiST ICPInductionEquationST RMSJouleHeatST LorentzForceAlternativeST
-
-#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
 
 Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
 Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1

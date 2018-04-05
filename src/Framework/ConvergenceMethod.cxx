@@ -8,12 +8,11 @@
 #include <sstream>
 
 #include "Common/PE.hh"
-
 #include "Common/ProcessInfo.hh"
 #include "Common/OSystem.hh"
-#include "Environment/FileHandlerOutput.hh"
 
-#include "Environment/CFEnv.hh"
+#include "Environment/FileHandlerOutput.hh"
+#include "Environment/CFEnvVars.hh"
 #include "Environment/DirPaths.hh"
 #include "Environment/SingleBehaviorFactory.hh"
 
@@ -22,6 +21,7 @@
 #include "Framework/ConvergenceMethodData.hh"
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/NamespaceSwitcher.hh"
+#include "Framework/StopConditionController.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -131,11 +131,11 @@ void ConvergenceMethod::configure ( Config::ConfigArgs& args )
 
   // builds the stop condition
   Common::SafePtr<StopCondition::PROVIDER> stopCondProv =
-    Environment::Factory<StopCondition>::getInstance().getProvider(m_stopConditionStr);
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), StopCondition, m_stopConditionStr);
   SelfRegistPtr<StopCondition> stopCondition = stopCondProv->create(stopCondProv->getName());
-
+  
   configureNested ( stopCondition.getPtr(), args );
-
+  
   // Pass the stop condition to the stop condition controller
   m_stopCondControler.reset(StopConditionController::Create(stopCondition));
 }
@@ -200,8 +200,9 @@ void ConvergenceMethod::prepareConvergenceFile()
   fpath = Environment::DirPaths::getInstance().getResultsDir() /
     Framework::PathAppender::getInstance().appendParallel( fpath );
   
-  SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-  ofstream& convergenceFile = fhandle->open(fpath);
+  SelfRegistPtr<Environment::FileHandlerOutput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
+  ofstream& convergenceFile = (*fhandle)->open(fpath);
 
   convergenceFile << "TITLE  =  Convergence of SubSystem" << "\n";
   convergenceFile << "VARIABLES = Iter";
@@ -214,15 +215,17 @@ void ConvergenceMethod::prepareConvergenceFile()
   }
   convergenceFile << " CFL PhysTime DT WallTime MemUsage" << "\n";
 
-  fhandle->close();
-  
+  (*fhandle)->close();
+  delete fhandle; 
+ 
   if (m_outputSpaceResidual) {
     path fpath = getFileName(m_nameSpaceResidualFile);
     fpath = Environment::DirPaths::getInstance().getResultsDir() /
             Framework::PathAppender::getInstance().appendParallel( fpath );
 
-    SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-    ofstream& spaceResidualFile = fhandle->open(fpath);
+    SelfRegistPtr<Environment::FileHandlerOutput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
+    ofstream& spaceResidualFile = (*fhandle)->open(fpath);
 
     spaceResidualFile << "TITLE  =  Space Residual of SubSystem" << "\n";
     spaceResidualFile << "VARIABLES = Iter";
@@ -235,10 +238,9 @@ void ConvergenceMethod::prepareConvergenceFile()
     }
     spaceResidualFile << " CFL PhysTime DT WallTime MemUsage" << "\n";
 
-    fhandle->close();
-  }
-
-  
+    (*fhandle)->close();
+    delete fhandle; 
+ }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -255,8 +257,9 @@ void ConvergenceMethod::updateConvergenceFile()
     fpath = Environment::DirPaths::getInstance().getResultsDir() /
             Framework::PathAppender::getInstance().appendParallel( fpath );
 
-    SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-    ofstream& convergenceFile = fhandle->open(fpath, ios_base::app);
+    SelfRegistPtr<Environment::FileHandlerOutput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
+    ofstream& convergenceFile = (*fhandle)->open(fpath, ios_base::app);
 
     convergenceFile << subSysStatus->getNbIter()       << " "
                     << subSysStatus->getAllResiduals() << " "
@@ -266,7 +269,8 @@ void ConvergenceMethod::updateConvergenceFile()
                     << m_stopwatch.read()             << " "
                     << OSystem::getInstance().getProcessInfo()->memoryUsageBytes()  << "\n";
 
-    fhandle->close();
+    (*fhandle)->close();
+    delete fhandle;
   }
   
   if (outputSpaceResidual()) {
@@ -276,8 +280,9 @@ void ConvergenceMethod::updateConvergenceFile()
       fpath = Environment::DirPaths::getInstance().getResultsDir() /
               Framework::PathAppender::getInstance().appendParallel( fpath );
 
-      SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-      ofstream& spaceResidualFile = fhandle->open(fpath, ios_base::app);
+      SelfRegistPtr<Environment::FileHandlerOutput>* fhandle = 
+	Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
+      ofstream& spaceResidualFile = (*fhandle)->open(fpath, ios_base::app);
 
       spaceResidualFile << subSysStatus->getNbIter()       << " "
                       << getConvergenceMethodData()->getSpaceResidual() << " "
@@ -287,8 +292,9 @@ void ConvergenceMethod::updateConvergenceFile()
                       << m_stopwatch.read()             << " "
                       << OSystem::getInstance().getProcessInfo()->memoryUsageBytes()  << "\n";
 
-      fhandle->close();
-    }
+      (*fhandle)->close();
+      delete fhandle; 
+   }
   }
 }
 
@@ -314,22 +320,30 @@ void ConvergenceMethod::syncGlobalDataComputeResidual(const bool computeResidual
   DataHandle<Node*, GLOBAL> nodedata = 
     MeshDataStack::getInstance().getEntryByNamespace(nsp)->getNodeDataSocketSink().getDataHandle();
   
-  // after each update the states have to be syncronized
-  if (isParallel)
-  {
-    syncTimer.start();
-    statedata.beginSync ();
+  if (CFEnv::getInstance().getVars()->SyncAlgo != "Old") {
+    if (isParallel) {
+      statedata.synchronize();
+      nodedata.synchronize();
+    }
+    if (computeResidual) {
+      getConvergenceMethodData()->updateResidual();
+    }
   }
-  
-  if (computeResidual)
-  {
-    getConvergenceMethodData()->updateResidual();
-  }
-
-  if (isParallel)
-  {
-    statedata.endSync();
-    syncTimer.stop();
+  else {
+    // after each update the states have to be syncronized
+    if (isParallel) {
+      syncTimer.start();
+      statedata.beginSync ();
+    }
+    
+    if (computeResidual) {
+      getConvergenceMethodData()->updateResidual();
+    }
+    
+    if (isParallel) {
+      statedata.endSync();
+      syncTimer.stop();
+    }
   }
 
   popNamespace();

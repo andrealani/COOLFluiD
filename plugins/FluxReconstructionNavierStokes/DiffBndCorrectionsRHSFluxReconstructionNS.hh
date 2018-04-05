@@ -43,6 +43,9 @@ protected: // functions
    *      setFaceTermData() and set the geometrical data of the face
    */
   void computeWaveSpeedUpdates(CFreal& waveSpeedUpd);
+  
+  /// prepare the computation of the diffusive flux
+  void prepareFluxComputation();
 
 }; // end of class DiffBndCorrectionsRHSFluxReconstructionNS
 

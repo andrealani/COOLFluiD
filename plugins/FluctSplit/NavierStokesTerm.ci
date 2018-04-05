@@ -3,7 +3,6 @@
 #include "Framework/MeshData.hh"
 #include "NavierStokes/NavierStokesVarSet.hh"
 #include "NavierStokes/EulerVarSet.hh"
-#include "FluctSplit/NavierStokesTerm.hh"
 #include "FluctSplit/InwardNormalsData.hh"
 
 //////////////////////////////////////////////////////////////////////////////

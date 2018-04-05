@@ -5,7 +5,7 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 #include "Common/CFLog.hh"
-#include "NullLinearizer.hh"
+#include "Framework/NullLinearizer.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Framework/Framework.hh"
 

@@ -19,6 +19,8 @@
 #include "Environment/DirPaths.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Environment/SingleBehaviorFactory.hh"
+#include "Environment/CFEnv.hh"
+#include "Environment/CFEnvVars.hh"
 
 #include "Framework/StandardSubSystem.hh"
 #include "Framework/MeshData.hh"
@@ -48,6 +50,7 @@
 using namespace std;
 using namespace boost::filesystem;
 using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Environment;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -179,10 +182,10 @@ void StandardSubSystem::configure ( Config::ConfigArgs& args )
   
   // builds a stop condition
   Common::SafePtr<StopCondition::PROVIDER> stopCondProv =
-    Environment::Factory<StopCondition>::getInstance().getProvider(m_stopConditionStr);
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), StopCondition, m_stopConditionStr);
   SelfRegistPtr<StopCondition> stopCondition =
     stopCondProv->create(stopCondProv->getName());
-  
+  stopCondition->setFactoryRegistry(getFactoryRegistry());
   configureNested ( stopCondition.getPtr(), args );
   
   // Give the stopcondition to the StopConditionController
@@ -423,7 +426,7 @@ void StandardSubSystem::setGlobalMeshData()
 	      for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
 		// we make sure that the number of boundary faces is always updated
 		TotalTRSInfo[counter][iTR] = (*(*it))[iTR]->getLocalNbGeoEnts();
-		CFLog(VERBOSE, "TRS : " << (*it)->getName()
+		CFLog(INFO, "TRS : " << (*it)->getName()
 		      << ", TR : "<< iTR
 		      << ", nbGeos : "
 		      << TotalTRSInfo[counter][iTR] << "\n");
@@ -451,9 +454,10 @@ void StandardSubSystem::setGlobalMeshData()
 	  //  states.DumpContents ();
 	  //  nodes.DumpContents ();
 	  //  #endif
-	  
-	  states.buildMap ();
-	  nodes.buildMap ();
+
+          CFLog(VERBOSE, "StandardSubSystem::setGlobalMeshData() => buildMap() start\n");	       states.buildMap(CFEnv::getInstance().getVars()->SyncAlgo);
+	  nodes.buildMap(CFEnv::getInstance().getVars()->SyncAlgo);
+	  CFLog(VERBOSE, "StandardSubSystem::setGlobalMeshData() => buildMap() end\n");
 	  
 	  // #ifndef NDEBUG
 	  //  states.DumpInfo ();
@@ -1014,18 +1018,17 @@ void StandardSubSystem::configurePhysicalModel ( Config::ConfigArgs& args )
   {
     const std::string physicalModelName = (*nsp)->getPhysicalModelName();
     const std::string physicalModelType = (*nsp)->getPhysicalModelType();
-
+    
     // create the new physical model implementor
     Common::SafePtr<PhysicalModelImpl::PROVIDER> physicalMdlProv =
-      Environment::Factory<PhysicalModelImpl>::getInstance().getProvider(physicalModelType);
-
+      FACTORY_GET_PROVIDER(getFactoryRegistry(), PhysicalModelImpl, physicalModelType);
     cf_assert(physicalMdlProv.isNotNull());
-
+    
     Common::SelfRegistPtr<PhysicalModelImpl> physicalModelImpl =
       physicalMdlProv->create(physicalModelName);
-
     cf_assert(physicalModelImpl.isNotNull());
-
+    
+    physicalModelImpl->setFactoryRegistry(getFactoryRegistry());
     // configure the physical model implementor
     configureNested ( physicalModelImpl.getPtr(), args );
 

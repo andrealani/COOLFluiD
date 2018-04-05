@@ -54,8 +54,9 @@ public:
   }
 
   /// Set up private data to prepare the simulation
-  void setup(){
-
+  void setup()
+  {
+    Framework::ComputeTerm<FiniteElementMethodData>::setup();
     _convectiveEntity = getMethodData().getConvectiveEntity();
     cf_assert(_convectiveEntity.isNotNull());
   }

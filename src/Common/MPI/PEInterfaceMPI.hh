@@ -167,12 +167,30 @@ class Common_API PEInterface<PM_MPI> : public PEInterfaceBase,
     return std::binary_search(g.globalRanks.begin(), g.globalRanks.end(), rank);
   }
   
+  /// create the node to core mapping
+  /// @param nsp            namespace name
+  /// @param nodeIDs        array storing the node ID corresponding to the given nsp rank
+  /// @param coreIDs        array storing the core ID corresponding to the given nsp rank
+  /// @param uniqueNodeIDs  array of unique node IDs
+  void createNodeToCoreMapping(const std::string nsp, 
+			       std::vector<int>& nodeIDs,
+			       std::vector<int>& coreIDs,
+			       std::vector<int>& uniqueNodeIDs);
+  
  private: // functions
   
   void CallInitFunctions ();
   void CallDoneFunctions ();
   void CallInitFunction (MPIInitObject * M) const;
   void CallDoneFunction (MPIInitObject * M) const;
+    
+  /// get the nodeID and coreID corresponding to the given rank 
+  /// @author Wei Zhang, 2017-3-25, NSC
+  void getID(MPI_Comm comm, const int size, const int rank, int& nodeID, int& coreID);
+  
+  /// get the nodeID and coreID corresponding to the given rank (new version, BG/Q compatible) 
+  /// @author Wei Zhang, 2017-3-25, NSC
+  void getIDNew(MPI_Comm comm, const int size, const int rank, int& nodeID, int& coreID);
   
   /// clear all groups 
   void clearGroups();

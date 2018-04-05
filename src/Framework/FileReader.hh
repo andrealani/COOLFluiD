@@ -18,7 +18,11 @@
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-
+  
+  namespace Common {
+    class FactoryRegistry;
+  }
+  
   namespace Framework {
 
 //////////////////////////////////////////////////////////////////////////////
@@ -41,7 +45,13 @@ public: // functions
 
   /// Gets the file extension to append to the file name
   virtual const std::string getReaderFileExtension() const = 0;
-
+ 
+  /// Set the factory registry
+  virtual void setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> fr);
+  
+  /// Get the factory registry
+  Common::SafePtr<Common::FactoryRegistry> getFactoryRegistry();
+  
 protected: // functions
   
   /// Read a string
@@ -69,8 +79,11 @@ protected: // functions
     return m_readCount;
   }
 
-private: // data
-
+ private: // data
+ 
+  /// factory registry to allow polymorphic creation of objects
+  Common::SafePtr<Common::FactoryRegistry> m_fr;
+  
   /// flag telling if another reading is needed
   bool m_readAgain;
 

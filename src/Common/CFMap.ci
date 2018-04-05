@@ -159,7 +159,7 @@ inline void CFMap<KEY, VALUE>::print()
 {
   const CFuint sizeM = m_vectorMap.size();
   for (CFuint i = 0; i < sizeM; ++i) {
-    CFout << m_vectorMap[i].first << " => " << m_vectorMap[i].second << "\n";
+    CFLog(INFO, m_vectorMap[i].first << " => " << m_vectorMap[i].second << "\n");
   }
 }
 

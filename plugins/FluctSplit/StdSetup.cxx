@@ -560,8 +560,7 @@ void StdSetup::setFaceNeighCell()
 
   if (countF != nbBFaces)
   {
-    throw Common::NoSuchValueException
-      (FromHere(), "Not all the face neighbor cell have been detected correctly!!");
+    CFLog(WARN,  "StdSetup::setFaceNeighCell() => Not all face neighbor cells have been detected correctly!!\n");
   }
 }
 

@@ -6,6 +6,8 @@ NeumannCondition.cxx
 NeumannCondition.hh
 PureDiffFlux.cxx
 PureDiffFlux.hh
+PureDiffFluxAndJacob.cxx
+PureDiffFluxAndJacob.hh
 )
 
 LIST ( APPEND FiniteVolumePoisson_requires_mods Poisson FiniteVolume )

@@ -1,0 +1,116 @@
+#==================================================================
+# Configuration opions for the prepare.pl script
+#==================================================================
+# This file should be in the directory from where the script is run
+#==================================================================
+# This file is meant as an example and it should be copied
+# and renamed to coolfluid.conf, and adapted to the
+# characteristics of the envrionment where you plan to
+# configure and run COOLFluiD
+#
+# If you used the install-coolfluid.pl script, just replace
+#    $HOME for your home account directory
+#    $ARCH for the result of command "uname -m"
+#==================================================================
+
+#==================================================================
+# default build options
+#==================================================================
+
+coolfluid_dir = /Users/lani/trunk_static
+basebuild_dir = /Users/lani/trunk_static/MPICH_MF_STATIC_CLANG_EXEC
+
+# compilers
+cc     = /Users/lani/COOLFluiD/deps/mpich/bin/mpicc
+cxx    = /Users/lani/COOLFluiD/deps/mpich/bin/mpic++
+fc     = gfortran
+
+#cudac = /Developer/NVIDIA/CUDA-7.0/bin/nvcc
+#cudacflags = -O2 -g -Xcompiler
+#cuda_dir = /Developer/NVIDIA/CUDA-7.0
+#withcuda = 1
+
+withcurl = 0
+nofortran = 1
+# this deactives log4cpp-based CFLog
+with_log4cpp = 0
+trace = off
+
+#libpetsc_deps_paths = "-Wl,-rpath,/Users/lani/COOLFluiD/deps/mpich/petsc_3.7.6_long/lib -L/Users/lani/COOLFluiD/deps/mpich/petsc_3.7.6_long/lib -Wl,-rpath,/opt/X11/lib -L/opt/X11/lib -Wl,-rpath,/Users/lani/COOLFluiD/deps/mpich/lib -L/Users/lani/COOLFluiD/deps/mpich/lib -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/6.0/lib/darwin -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/6.0/lib/darwin  -lclang_rt.osx -lf2clapack -lf2cblas -lX11 -lssl -lcrypto -lmpich -lpthread -lclang_rt.osx -lmpicxx -lc++ -ldl -lgcc_s.1 -lmpi -lpmpi -lSystem -lclang_rt.osx -ldl -lgcc_s.1"
+
+# clapack cblas
+libpetsc_deps_paths = /Users/lani/COOLFluiD/deps/mpich/petsc_3.7.6_long_clang/lib/libf2clapack.a;/Users/lani/COOLFluiD/deps/mpich/petsc_3.7.6_long_clang/lib/libf2cblas.a;/opt/local/lib/libiconv.a;/opt/local/lib/libXdmcp.a;/opt/local/lib/liblzma.a;/opt/local/lib/libz.a;/opt/local/lib/liblzo2.a;/opt/local/lib/libXau.a;/opt/local/lib/libbz2.a;/opt/local/lib/liblz4.a;/opt/local/lib/libxcb.a;/opt/local/lib/libxml2.a;/opt/local/lib/libarchive.a;/opt/local/lib/libcrypto.a;/opt/local/lib/libssl.a;/opt/local/lib/libX11.a
+
+# static linking with clapack doesn't work 
+#libpetsc_deps_paths = /opt/local/lib/libiconv.a;/opt/local/lib/libXdmcp.a;/opt/local/lib/liblzma.a;/opt/local/lib/libz.a;/opt/local/lib/liblzo2.a;/opt/local/lib/libXau.a;/opt/local/lib/libbz2.a;/opt/local/lib/liblz4.a;/opt/local/lib/libxcb.a;/opt/local/lib/libxml2.a;/opt/local/lib/libarchive.a;/opt/local/lib/libcrypto.a;/opt/local/lib/libssl.a;/opt/local/lib/libX11.a;/Users/lani/COOLFluiD/deps/mpich/petsc_long/lib/libf2cblas.a;/Users/lani/COOLFluiD/deps/mpich/petsc_long/lib/libf2clapack.a
+
+# library locations
+mpi_dir       = /Users/lani/COOLFluiD/deps/mpich
+boost_dir     = /Users/lani/COOLFluiD/deps/mpich/boost
+petsc_dir     = /Users/lani/COOLFluiD/deps/mpich/petsc_3.7.6_long_clang
+parmetis_dir  = /Users/lani/COOLFluiD/deps/mpich
+
+allactive = 0
+
+#static compilation
+allstatic = 1
+with_singleexec = 1 
+
+# mimimum set of libs to be able to compile CF
+lib_Config = on
+lib_Common = on
+lib_MathTools = on
+lib_logcpp = on
+lib_Environment = on
+lib_Framework = on
+lib_ShapeFunctions = on
+lib_AnalyticalModel = on
+
+####################
+# plugin libraries #
+####################
+
+# input formats
+lib_CFmeshFileReader = on
+lib_Gambit2CFmesh = on
+lib_Gmsh2CFmesh = on
+lib_Tecplot2CFmesh = on
+lib_CFmeshCellSplitter = on
+lib_CFmeshExtruder = on
+lib_CFmeshFileWriter = on
+lib_TecplotWriter = on
+
+lib_PhysicalModelDummy = on
+lib_Maxwell = on
+lib_FiniteVolume = on
+
+lib_MultiFluidMHD = on
+lib_ForwardEuler = on
+lib_NewtonMethod = on
+#lib_BackwardEuler = on
+lib_ParaViewWriter = on
+
+lib_FiniteVolumeMaxwell = on
+lib_FiniteVolumeMultiFluidMHD = on
+
+lib_MHD = on
+lib_FiniteVolumeMHD = on
+
+# linear system solvers
+lib_PetscI = on
+
+# long long int 
+with_llongint = 1
+
+# long int
+#with_longint = 1
+
+# enable doxygen
+withdocs = 1
+
+cmake_generator = kdev
+#
+#cmake_generator = xcode
+#
+with_testcases = 1
+#assertions = 0

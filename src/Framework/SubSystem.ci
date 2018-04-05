@@ -131,30 +131,30 @@ void SubSystem::configureMethod(Config::ConfigArgs& args,
 
    CFLog(NOTICE,"-------------------------------------------------------------\n");
    CFLog(NOTICE,"Creating " << BASEMETHOD::getClassName() << " : " << localName << "\n");
-
+   
    Common::SafePtr<typename BASEMETHOD::PROVIDER> prov;
    try {
-      prov = Environment::Factory<BASEMETHOD>::getInstance().getProvider(type);
-      cf_assert(prov.isNotNull());
+     prov = FACTORY_T_GET_PROVIDER(this->getFactoryRegistry(), BASEMETHOD, type);
+     cf_assert(prov.isNotNull());
    }
    catch (Common::NoSuchValueException& e) {
-
-    // warn about not finding the method provider
-    CFLog(ERROR, e.what() << "\n");
-    CFLog(ERROR,"SubSystem with name " << getName()
-                << " was trying to configure a method named : " << name
-                << " with type : " << type << "\n");
-    CFLog(ERROR,"Rethrowing to be handled by upper layer\n");
-    throw;
-  }
-
-  mtd.reset(prov->create(localName));
-  configureNested ( mtd.getPtr(), args );
-
-  MethodRegistry::getInstance().regist( mtd.getPtr() );
-  ++m_nbmethods;
-
-  CFLog(NOTICE,"-------------------------------------------------------------\n");
+     // warn about not finding the method provider
+     CFLog(ERROR, e.what() << "\n");
+     CFLog(ERROR,"SubSystem with name " << getName()
+	   << " was trying to configure a method named : " << name
+	   << " with type : " << type << "\n");
+     CFLog(ERROR,"Rethrowing to be handled by upper layer\n");
+     throw;
+   }
+   
+   mtd.reset(prov->create(localName));
+   mtd->setFactoryRegistry(this->getFactoryRegistry());
+   configureNested ( mtd.getPtr(), args );
+   
+   MethodRegistry::getInstance().regist( mtd.getPtr() );
+   ++m_nbmethods;
+   
+   CFLog(NOTICE,"-------------------------------------------------------------\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

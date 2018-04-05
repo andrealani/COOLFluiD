@@ -11,12 +11,10 @@
 
 #include <boost/filesystem/fstream.hpp>
 
-#ifdef CF_HAVE_BOOST_1_59
-#include <boost/filesystem/operations.hpp>
-#elif CF_HAVE_BOOST_1_54
-#include <boost/filesystem/operations.hpp>
-#elif CF_HAVE_BOOST_1_42
+#if defined CF_HAVE_BOOST_1_42 || defined CF_HAVE_BOOST_1_47 
 #include <boost/filesystem/exception.hpp>
+#else
+#include <boost/filesystem/operations.hpp>
 #endif
 
 #include "Environment/FileHandlerInput.hh"

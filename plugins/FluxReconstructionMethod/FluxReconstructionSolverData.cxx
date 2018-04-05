@@ -43,11 +43,11 @@ MethodCommandProvider<
 
 void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& options)
 {
-  //options.addConfigOption< std::string >("IntegratorOrder","Order of the Integration to be used for numerical quadrature.");
-  //options.addConfigOption< std::string >("IntegratorQuadrature","Type of Quadrature to be used in the Integration.");
   options.addConfigOption< std::string >("LinearVar","Name of the linear variable set.");
   options.addConfigOption< std::string >("FluxPointDistribution","Name of the flux point distribution");
   options.addConfigOption< std::string >("RiemannFlux","Name of the Riemann flux.");
+  options.addConfigOption< bool >("FreezeGradients","Flag telling whether to freeze the gradients for the Jacobian computation.");
+  options.addConfigOption< bool >("AddArtificialViscosity","Flag telling whether to add artificial viscosity.");
   options.addConfigOption< std::string >("SolutionPointDistribution","Name of the solution point distribution");
   options.addConfigOption< std::string >("CorrectionFunctionComputer","Name of the correction function computer");
   options.addConfigOption< std::vector<std::string> >("BcTypes","Types of the boundary condition commands.");
@@ -85,11 +85,6 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_updateToSolutionVecTrans()
 {
   addConfigOptionsTo(this);
-
-  //m_intorderStr = "P1";
-  //m_intquadStr  = "INVALID";
-  //setParameter( "IntegratorOrder",      &m_intorderStr );
-  //setParameter( "IntegratorQuadrature", &m_intquadStr );
   
   m_linearVarStr = "Roe";
   setParameter( "LinearVar", &m_linearVarStr );
@@ -106,6 +101,12 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_correctionfunctionStr = "Null";
   setParameter( "CorrectionFunctionComputer", &m_correctionfunctionStr );
   
+  m_freezeGrads = false;
+  setParameter( "FreezeGradients", &m_freezeGrads );
+  
+  m_addAV = false;
+  setParameter( "AddArtificialViscosity", &m_addAV );
+  
   // options for bc commands
   m_bcTypeStr = vector<std::string>();
   setParameter("BcTypes",&m_bcTypeStr);
@@ -121,19 +122,6 @@ FluxReconstructionSolverData::~FluxReconstructionSolverData()
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
-// std::vector< Common::SafePtr< BaseDataSocketSource > >
-//   FluxReconstructionSolverData::providesSockets()
-// {
-//   std::vector< Common::SafePtr< BaseDataSocketSource > > result;
-//   result.push_back(&socket_solCoords1D);
-//   result.push_back(&socket_flxCoords1D);
-//   return result;
-// }
-
-//////////////////////////////////////////////////////////////////////////////
-
-
 
 void FluxReconstructionSolverData::setup()
 {
@@ -226,16 +214,6 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
 {
   SpaceMethodData::configure(args);
   SharedPtr< FluxReconstructionSolverData > thisPtr(this);
-
-  //configureIntegrator();
-
-//   /* add here the setup for the specific integrators for each element that
-//    * have different set of shape and interpolator type */
-// 
-//   CFLog(INFO,"FluxReconstructionSolver: integrator quadrature: " << m_intquadStr << "\n");
-//   CFLog(INFO,"FluxReconstructionSolver: integrator order: " << m_intorderStr << "\n");
-
-  /* add here different strategies configuration */
   
   // Configure flux point distribution
   CFLog(INFO,"Configure flux point distribution: " << m_fluxpntdistributionStr << "\n");
@@ -364,23 +342,6 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
   m_statesReconstructor = recProv->create("ReconstructStatesFluxReconstruction",thisPtr);
 
 }
-
-//////////////////////////////////////////////////////////////////////////////
-
-// void FluxReconstructionSolverData::configureIntegrator()
-// {
-//   const CFQuadrature::Type quadType = CFQuadrature::Convert::to_enum( m_intquadStr );
-//   const CFPolyOrder::Type order = CFPolyOrder::Convert::to_enum( m_intorderStr );
-// 
-//   m_volumeIntegrator.setIntegrationForAllGeo(quadType,order);
-// }
-
-//////////////////////////////////////////////////////////////////////////////
-
-// SafePtr<VolumeIntegrator> FluxReconstructionSolverData::getVolumeIntegrator()
-// {
-//   return &m_volumeIntegrator;
-// }
 
 //////////////////////////////////////////////////////////////////////////////
 

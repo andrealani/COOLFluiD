@@ -58,6 +58,7 @@ RealVector& RoeFlux::computeFlux(State& lState,
                                  const RealVector& normal)
 {
   SafePtr< ConvectiveVarSet > updateVarSet = getMethodData().getUpdateVar();
+  SafePtr<ConvectiveVarSet> solutionVarSet = getMethodData().getSolutionVar();
 
   // store the left and right states in vector
   m_updateStates[LEFT ] = &lState;
@@ -84,7 +85,7 @@ RealVector& RoeFlux::computeFlux(State& lState,
 
   // set the eigenvectors and eigenvalues of the linearized jacobian
   // USING THE PHYSICAL DATA THAT WAS SET IN linearize();
-  updateVarSet->computeEigenValuesVectors(m_rightEv, m_leftEv, m_eValues, normal);
+  solutionVarSet->computeEigenValuesVectors(m_rightEv, m_leftEv, m_eValues, normal);
 
   // set the abs of the  eigen values (the implementation of this
   // function change if there are entropy or carbuncle fixes)

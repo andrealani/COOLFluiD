@@ -9,8 +9,6 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-
-
 #include "Common/CFLog.hh"
 #include "Environment/ConcreteProvider.hh"
 
@@ -30,7 +28,8 @@ Integrator<INTEGRATORIMPL>::Integrator() :
   _setup(false),
   m_pool(),
   m_activeIntegrators(),
-  m_integType()
+  m_integType(),
+  m_fr(CFNULL)
 {
   // set default integration for all shapes
   setIntegrationForAllGeo(CFQuadrature::GAUSSLEGENDRE,CFPolyOrder::ORDER1);
@@ -73,15 +72,21 @@ void Integrator<INTEGRATORIMPL>::setup()
   CFAUTOTRACE;
 
   using namespace std;
-
+ 
+  CFLog(VERBOSE,"Integrator<INTEGRATORIMPL>::setup() => start()\n");
+  
   // always unsetup first to guarantee that it would work repeated times
   unsetup();
 
+  CFLog(VERBOSE,"Integrator<INTEGRATORIMPL>::setup() => 1\n");
+  
   InterpolatorRegister& interpolRegister = InterpolatorRegister::getInstance();
 
   IntegratorRegister<INTEGRATORIMPL>& integRegister =
     IntegratorRegister<INTEGRATORIMPL>::getInstance();
 
+  CFLog(VERBOSE,"Integrator<INTEGRATORIMPL>::setup() => 2\n");
+  
   if(!_setup)
   {
     // typedef Environment::ConcreteProvider<INTEGRATORIMPL> IntegratorImplProviderT;
@@ -116,6 +121,8 @@ void Integrator<INTEGRATORIMPL>::setup()
 
       m_pool[id].reserve(integratorsName.size());
 
+      CFLog(VERBOSE,"Integrator<INTEGRATORIMPL>::setup() => 3\n");
+  
       // Create and initialize the integrators that can work with the specific interpolator
       NameList::iterator itr = integratorsName.begin();
       for(;itr != integratorsName.end(); ++itr)
@@ -123,8 +130,10 @@ void Integrator<INTEGRATORIMPL>::setup()
 
         CFLogDebugMin("Creating IntegratorImpl: " << *itr << "\n");
         Common::SelfRegistPtr<INTEGRATORIMPL> ptr =
-          Environment::Factory<INTEGRATORIMPL>::getInstance().getProvider(*itr)->create();
+          FACTORY_T_GET_PROVIDER(m_fr, INTEGRATORIMPL, (*itr))->create();
 
+	CFLog(VERBOSE,"Integrator<INTEGRATORIMPL>::setup() => 4\n");
+	
         // if not a Null intergrator we can do some checks
         if (ptr->isNotNull()) {
           IntegratorProperties integratProp = ptr->getIntegratorProperties();
@@ -132,7 +141,7 @@ void Integrator<INTEGRATORIMPL>::setup()
           cf_assert(integratProp.Shape == interpolProp.Shape);
           cf_assert(integratProp.InterpolType == interpolProp.Type);
         }
-
+	
         m_pool[id].push_back(ptr);
         ptr->setup();
       }

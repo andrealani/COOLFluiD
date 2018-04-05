@@ -262,14 +262,19 @@ void NavierStokesNEQRhoivt<BASE>::setGradientState(const RealVector& state)
   
   // set the state from rhoi's and temperature 
   CFreal* rhoi = &const_cast<RealVector&>(state)[0];
-  this->_library->setState(rhoi, &Tdim);
-  
+    
   const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
   if (nbTv > 0) {
     for (CFuint i = 0; i < nbTv; ++i) {
       this->_avTvib[i] = state[this->_TvibID[i]];
     }
     tVec = &this->_avTvib[0];
+    
+    CFreal* TTv = &const_cast<RealVector&>(state)[this->_TID];
+    this->_library->setState(rhoi, TTv);
+  }
+  else {
+    this->_library->setState(rhoi, &Tdim);
   }
   
   this->_avP = this->_library->pressure(rhodim, Tdim, tVec)/refData[EulerTerm::P];

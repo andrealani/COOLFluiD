@@ -86,12 +86,12 @@ void PureDiffFlux::computeFlux(RealVector& result)
   derivComputer->computeAverageValues(&geo, _states, _avState);
     
   const CFreal faceArea = this->socket_faceAreas.getDataHandle()[geo.getID()];
+
   // set the flux
-
   result = _varSet->getFlux(_avState, _gradients, getMethodData().getUnitNormal());
-
   result *= faceArea;
 
+  CFLog(VERBOSE, "PureDiffFlux::computeFlux() => result = " << result << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -108,13 +108,12 @@ void PureDiffFlux::setup()
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   SafePtr<DerivativeComputer> derivComputer =
     getMethodData().getDerivativeComputer();
-    
   
   // AL: careful here: this cannot assume that setup() has been run on derivComputer
   const CFuint nbNodesInControlVolume = derivComputer->getMaxNbVerticesInControlVolume();
   _states.resize(nbNodesInControlVolume);
   _values.resize(nbEqs, nbNodesInControlVolume);
-
+  
   _gradients.resize(nbEqs);
   for (CFuint i = 0; i< nbEqs; ++i) {
     _gradients[i] = new RealVector(PhysicalModelStack::getActive()->getDim());
@@ -125,7 +124,6 @@ void PureDiffFlux::setup()
   // set the diffusive flux jacobians to 0.
   _lFluxJacobian = 0.0;
   _rFluxJacobian = 0.0;
-    
 }
       
 //////////////////////////////////////////////////////////////////////////////

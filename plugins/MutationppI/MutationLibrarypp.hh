@@ -79,9 +79,16 @@ public:
   /// @param mixture temperature
   void setState(CFdouble* rhoi, CFdouble* T) 
   {
-    RealVector rhoiv(_NS, &rhoi[0]);
-    CFLog(DEBUG_MAX, "MutationLibrarypp::setState() => rhoiv = " << rhoiv << ", T = " << *T << "\n"); 
-    m_gasMixture->setState(rhoi, T, 1);
+    for (CFuint i = 0; i < _NS; ++i) {
+      m_rhoiv[i] = std::max(_minRhoi, rhoi[i]);
+    }
+    CFLog(DEBUG_MAX, "MutationLibrarypp::setState() => rhoiv = " << m_rhoiv << ", T = " << *T << "\n"); 
+    
+    // this needs to be fixed for 2-temperatures
+    for (CFuint i = 0; i < m_Tstate.size(); ++i) {
+      m_Tstate[i] = std::max(T[i], _minT);
+    }
+    m_gasMixture->setState(&m_rhoiv[0], &m_Tstate[0], 1);
   }   
   
   /**
@@ -157,11 +164,11 @@ public:
 			 CFdouble& pressure,
 			 CFreal* tVec, 
 			 RealVector& normConcGradients,
+			 RealVector& normTempGradients,
 			 CFreal& eta,
 			 CFreal& lambdaTrRo, 
 			 RealVector& lambdaInt,
 			 RealVector& rhoUdiff);
-  
   
   /**
    * Calculates the thermal conductivity by conjugate gradient method method
@@ -177,11 +184,11 @@ public:
    * @param temp temperature
    * @param pressure pressure
    */
-   void lambdaVibNEQ(CFreal& temp,
+  void lambdaVibNEQ(CFreal& temp,
 		    RealVector& tVec,
 		    CFdouble& pressure,
-		     CFreal& lambdaTrRo,
-		     RealVector& lambdaInt);
+		    CFreal& lambdaTrRo,
+		    RealVector& lambdaInt);
   
   /**
    * Calculates the dynamic viscosity, given temperature and pressure
@@ -497,12 +504,13 @@ public:
    * @param normConcGradients the cell normal gradients of species mass fractions
    */
    void getRhoUdiff(CFdouble& temp,
-                   CFdouble& pressure,
-                   RealVector& normConcGradients,
-		   CFreal* tVec,
-                   RealVector& rhoUdiff,
-		   bool fast);
-
+		    CFdouble& pressure,
+		    RealVector& normConcGradients,
+		    RealVector& normTempGradients,
+		    CFreal* tVec,
+		    RealVector& rhoUdiff,
+		    bool fast);
+  
   /**
    * Returns the diffusion flux
    * This function returnm the binary coefficients of Fick
@@ -558,14 +566,11 @@ protected:
   /// gas mixture pointer
   std::auto_ptr<Mutation::Mixture> m_gasMixture; 
   
+  /// gas mixture pointer for equilibrium
+  Mutation::Mixture* m_gasMixtureEquil; 
+  
   /// state model type enumerator 
   MutationLibrarypp::StateModelType m_smType;
-  
-  /// mixture formation enthalphy at T=0K
-  CFreal m_H0;
-  
-  /// species formation enthalphy at T=0K
-  RealVector m_vecH0;
   
   /// mass fractions
   RealVector m_y;
@@ -594,14 +599,29 @@ protected:
   /// partial densities
   RealVector m_rhoiv;
   
+  /// enthalpies
+  RealVector m_ht;
+
+  /// enthalpies
+  RealVector m_hr;  
+
+  /// enthalpies
+  RealVector m_hf; 
+
+  /// state temperatures
+  RealVector m_Tstate;
+  
   /// mixture name
   std::string _mixtureName;
     
   /// state model name
   std::string _stateModelName;
-
-  /// shift the formation enthalpy to have H(T=0K)=0
-  bool m_shiftHO;
+  
+  /// minimum partial density
+  CFreal _minRhoi;
+  
+  /// minimum temperature
+  CFreal _minT;
   
 }; // end of class MutationLibrarypp
       

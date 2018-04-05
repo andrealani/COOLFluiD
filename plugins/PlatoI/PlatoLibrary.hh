@@ -142,6 +142,7 @@ public:
 			 CFdouble& pressure,
 			 CFreal* tVec, 
 			 RealVector& normConcGradients,
+			 RealVector& normTempGradients,
 			 CFreal& eta,
 			 CFreal& lambdaTrRo, 
 			 RealVector& lambdaInt,
@@ -442,9 +443,11 @@ public:
    * @param normConcGradients the cell normal gradients of species mass fractions
    */
   void getRhoUdiff(CFdouble& temp, CFdouble& pressure,
-                   RealVector& normConcGradients, CFreal* tVec,
+                   RealVector& normConcGradients,
+		   RealVector& normTempGradients,
+		   CFreal* tVec,
                    RealVector& rhoUdiff, bool fast);
-
+  
   /*!
    * Returns the diffusion flux
    * This function returns the binary coefficients of Fick

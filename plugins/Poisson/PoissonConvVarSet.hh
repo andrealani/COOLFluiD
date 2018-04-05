@@ -24,7 +24,7 @@ namespace COOLFluiD {
  * @author Alejandro Alvarez Laguna
  */
 class PoissonConvVarSet : public Framework::ConvectiveVarSet {
-public: // classes
+public:
   typedef PoissonConvVarSet POISSONSET;
   typedef PoissonConvTerm PTERM;
   
@@ -32,27 +32,18 @@ public: // classes
    * Constructor
    * @see PoissonlModel
    */
-  PoissonConvVarSet(Common::SafePtr<Framework::BaseTerm> term) :
-    Framework::ConvectiveVarSet(term),
-    _model(term.d_castTo<PoissonConvTerm>())
-  {
-  }
+  PoissonConvVarSet(Common::SafePtr<Framework::BaseTerm> term);
   
   /**
    * Default destructor
    */
-  virtual ~PoissonConvVarSet()
-  {
-  }
+  virtual ~PoissonConvVarSet();
 
   /**
    * Set up the private data and give the maximum size of states physical
    * data to store
    */
-  virtual void setup()
-  {
-    Framework::ConvectiveVarSet::setup();
-  }
+  virtual void setup();
 
   /**
    * Gets the block separator for this variable set
@@ -86,6 +77,8 @@ public: // classes
     throw Common::NotImplementedException (FromHere(),"PoissonConvVarSet::splitJacobian()");
   }
 
+  
+  
   /**
    * Set the matrix of the right eigenvectors and the matrix of the eigenvalues
    */
@@ -128,6 +121,15 @@ public: // classes
     return 1.;
   }
 
+  /// Get the maximum eigenvalue
+  virtual CFreal getMaxEigenValue(const RealVector& pdata, const RealVector& normal);
+  
+  /// Get the maximum absolute eigenvalue
+  virtual CFreal getMaxAbsEigenValue(const RealVector& pdata, const RealVector& normal);
+
+  /// Set the vector of the eigenValues
+  virtual void computeEigenValues (const RealVector& pdata, const RealVector& normal, RealVector& eValues);
+  
   /**
    * Get the model
    */
@@ -156,6 +158,17 @@ protected:
   
   /// @returns the number of equations of this VarSet
   CFuint getNbEqs() const { return 1; std::cout << "getNbEqs()\n"; }
+ 
+  /**
+   * Compute the convective flux
+   */
+  virtual void computeFlux(const RealVector& pdata,
+			   const RealVector& normals);
+
+  /**
+   * Compute the convective flux
+   */
+  virtual void computeStateFlux(const RealVector& vars);
   
 private:
   

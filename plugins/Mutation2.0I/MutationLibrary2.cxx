@@ -2174,6 +2174,7 @@ void MutationLibrary2::getSource(CFdouble& temperature,
 void MutationLibrary2::getRhoUdiff(CFdouble& temperature,
 				   CFdouble& pressure,
 				   RealVector& normConcGradients,
+				   RealVector& normTempGradients,
 				   CFreal* tVec,
 				   RealVector& rhoUdiff,
 				   bool fast)
@@ -2312,8 +2313,8 @@ void MutationLibrary2::getSpeciesTotEnthalpies(CFdouble& temp,
   
   // This is NOT FLEXIBLE !!
   if (tVec.size() > 0) {
-    for (CFuint i = 0; i < _molecIDs.size(); ++i) {
-      (*hsVib)[i] = _HVIBRUM[_molecIDs[i]];
+    for (CFuint i = 0; i < _NS; ++i) {
+      (*hsVib)[i] = _HVIBRUM[i];
     }
   }
   
@@ -2695,6 +2696,7 @@ void MutationLibrary2::transportCoeffNEQ(CFreal& temperature,
 					 CFdouble& pressure,
 					 CFreal* tVec, 
 					 RealVector& normConcGradients,
+					 RealVector& normTempGradients,
 					 CFreal& eta,
 					 CFreal& lambdaTrRo, 
 					 RealVector& lambdaInt,

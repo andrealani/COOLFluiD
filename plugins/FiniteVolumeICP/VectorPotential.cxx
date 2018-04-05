@@ -126,18 +126,23 @@ int VectorPotential::VectorPotentialFullParameters(CFreal& vectorPotentialRe, CF
     // let's apply odd symmetry about the axis!
     // by the way, we never apply 2D condition
     // to symmetry axis, so it's needed only computing LF.
-    CFreal radius = std::fabs(r);
-    CFint rSign = r / radius;
-                                                     /*  if ( rSign < 0 ) {
-                                                            radius = r;
-                                                            rSign = +1;
-                                                         } */
+   // CFreal radius = std::fabs(r);
+     const CFreal RMIN = 1e-12;
+     const CFreal rad = std::fabs(r);
+     const CFreal radius = std::max(rad,RMIN);
+     CFint rSign = r / radius;
+        
+      /*  if ( rSign < 0 ) {
+            radius = r;
+            rSign = +1;
+      } */
     // prepare to & run elliptic integral:
     for (CFuint iCoil = 0; iCoil < nbCoils; ++iCoil) {
         rCoil = coilsR[iCoil];
         zCoil = coilsZ[iCoil];
         k = sqrt(4.*rCoil*radius/((rCoil+radius)*(rCoil+radius)+(z-zCoil)*(z-zCoil)));
-        vectorPotential += sqrt(rCoil/radius)*ellipticIntegralCombined(k);
+
+        vectorPotential += sqrt(rCoil/std::max(radius,RMIN))*ellipticIntegralCombined(k);
     }
 
     // we need the real & imaginary part:
@@ -145,7 +150,7 @@ int VectorPotential::VectorPotentialFullParameters(CFreal& vectorPotentialRe, CF
     vectorPotentialIm = rSign * vectorPotential *   .5*permeability*elCurrentIm/MathTools::MathConsts::CFrealPi();
 
     // we assume that the simulation will be always axis-symmetric (r==0 is the axis)
-    if (r==0) {
+    if (r==0.) {
         vectorPotentialRe = 0.; vectorPotentialIm = 0.;
     }
 

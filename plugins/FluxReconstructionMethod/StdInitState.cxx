@@ -211,7 +211,6 @@ void StdInitState::executeOnTrs()
       // build the GeometricEntity
       geoData.idx = cellIdx;
       GeometricEntity *const cell = geoBuilder->buildGE();
-      //CFLog(VERBOSE,"END buildGE!!!!!!!!!!!!!!!!!!!!");
 
       // get the states
       vector<State*>* solPntStates = cell->getStates();
@@ -227,11 +226,6 @@ void StdInitState::executeOnTrs()
         m_vFunction.evaluate(m_initPntCoords,*m_inputState);
         *m_initPntsStates[iPnt] = *m_inputToUpdateVar->transform(m_inputState);
 	m_varSet->setAdimensionalValues(*m_initPntsStates[iPnt], *(*solPntStates)[iPnt]);
-// 	if(m_initPntCoords[1]>0.475 && m_initPntCoords[1]<0.525 && m_initPntCoords[0]<0.025){
-// 	CFLog(VERBOSE,"InitPntGlobalCoord = (" << m_initPntCoords[0] << "," << m_initPntCoords[1] << ") ");
-// 	CFLog(VERBOSE,", its state: " << (m_initPntsStates[iPnt])[0] << " and elem: " << iElem << "\n");
-//  	}
-	
       }
 
 //       // transform initialization points solutions to solution point solutions

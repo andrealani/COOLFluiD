@@ -81,9 +81,12 @@ void SubSystemStatus::configure ( Config::ConfigArgs& args )
   ConfigObject::configure(args);
 
   // configure the DT computer
-  m_computeDT.reset(Environment::Factory<ComputeDT>::getInstance().getProvider(m_computeDTStr)->
-                   create(m_computeDTStr));
-
+  Common::SelfRegistPtr<ComputeDT>* computeDT =
+    (FACTORY_GET_PROVIDER(getFactoryRegistry(), ComputeDT, m_computeDTStr)->
+     createPtr(m_computeDTStr));
+ 
+  m_computeDT = *computeDT;
+  m_computeDT->setFactoryRegistry(getFactoryRegistry());
   configureNested ( m_computeDT.getPtr(), args );
 
   if (m_timeStepLayers > 1){
@@ -91,7 +94,7 @@ void SubSystemStatus::configure ( Config::ConfigArgs& args )
   m_innerDTRatio.resize(m_timeStepLayers);
 
   if(m_innerDT.size() != m_innerDTConf.size()) {
-    CFout << "WARNING: Inner DeltaT not set correctly!!!" << "\n";
+    CFLog(WARN, "WARNING: Inner DeltaT not set correctly!!!" << "\n");
   }
   else {
       for (CFuint i = 0; i < m_timeStepLayers; ++i) {
@@ -100,6 +103,7 @@ void SubSystemStatus::configure ( Config::ConfigArgs& args )
     }
   }
   }
+  delete computeDT;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -221,6 +225,23 @@ void SubSystemStatus::setDTDim(const CFreal DT)
   m_previousTimeStep = m_timeStep;
   m_timeStep = DT/(PhysicalModelStack::getActive()->getImplementor()->getRefTime());
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+ void SubSystemStatus::setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> fr)
+ {
+   m_fr = fr;
+ }
+
+//////////////////////////////////////////////////////////////////////////////
+
+ Common::SafePtr<Common::FactoryRegistry> SubSystemStatus::getFactoryRegistry() 
+ {
+#ifdef CF_HAVE_SINGLE_EXEC
+  cf_assert(m_fr != CFNULL);
+#endif
+  return m_fr;
+ }
 
 //////////////////////////////////////////////////////////////////////////////
 

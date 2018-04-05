@@ -40,10 +40,8 @@ protected: //functions
    */
   void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd);
   
-  /**
-   * Add the updateCoeff corrections due to the partition faces
-   */
-  void addPartitionFacesCorrection();
+  /// prepare the computation of the diffusive flux
+  void prepareFluxComputation();
     
 }; // class Solve
 

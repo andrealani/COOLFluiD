@@ -66,6 +66,7 @@ void UpdateSol::execute()
     if (states[iState]->isParUpdatable()) {
       for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
         (*states[iState])[iEq] += dU(iState, iEq, nbEqs);
+	CFLog(DEBUG_MAX, "UpdateSol::execute() => dU(" << iState <<  ") = " << dU(iState, iEq, nbEqs) << "\n");
       }
     }
   }

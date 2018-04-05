@@ -13,6 +13,7 @@
 
 #include <iostream>
 #include "MathTools/MathFunctions.hh"
+#include "Common/CFLog.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -87,7 +88,7 @@ public:
     _nbScalarStrides = 1;
     if (nbScalarStrides != CFNULL) {
       cf_assert(nbScalarVars.size() == nbScalarStrides->size());
-      std::cout << _nbScalarStrides.size() << " vs " << nbScalarStrides->size() << std::endl;
+      CFLog(DEBUG_MIN,  _nbScalarStrides.size() << " vs " << nbScalarStrides->size() << "\n");
       cf_assert(_nbScalarStrides.size() == nbScalarStrides->size());
       _nbScalarStrides = *nbScalarStrides; 
     }

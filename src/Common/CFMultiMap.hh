@@ -9,6 +9,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
+#include "Common/OwnedObject.hh"
 #include "Common/StringOps.hh"
 #include "Common/NoSuchValueException.hh"
 
@@ -41,7 +42,7 @@ namespace COOLFluiD {
 /// @author Andrea Lani
 /// @author Tiago Quintino
 template <class KEY, class VALUE>
-class CFMultiMap {
+class CFMultiMap : public OwnedObject {
 public:
 
   /// Constructor

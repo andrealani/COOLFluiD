@@ -64,6 +64,9 @@ ParCFmeshBinaryFileWriter::ParCFmeshBinaryFileWriter() :
   _nbWriters = 1;
   setParameter("NbWriters",&_nbWriters);
   
+  _nbWritersPerNode = 0;
+  setParameter("NbWritersPerNode",&_nbWritersPerNode);
+  
   _maxBuffSize = 2147479200; // (CFuint) std::numeric_limits<int>::max();
   setParameter("MaxBuffSize",&_maxBuffSize);
 }
@@ -78,7 +81,8 @@ ParCFmeshBinaryFileWriter::~ParCFmeshBinaryFileWriter()
 
 void ParCFmeshBinaryFileWriter::defineConfigOptions(Config::OptionList& options)
 {
-  options.addConfigOption< CFuint >("NbWriters", "Number of writers (and MPI groups)");
+  options.addConfigOption< CFuint >("NbWriters", "Number of writers");
+  options.addConfigOption< CFuint >("NbWritersPerNode", "Number of writers per node");
   options.addConfigOption< int >("MaxBuffSize", "Maximum buffer size for MPI I/O");
 }
       
@@ -219,12 +223,13 @@ void ParCFmeshBinaryFileWriter::writeVersionStamp(MPI_File* fh)
   
   if (_myRank == _ioRank) {
     MPIIOFunctions::writeKeyValue<char>(fh, "!COOLFLUID_VERSION ");
-    MPIIOFunctions::writeKeyValue<char>(fh, CFEnv::getInstance().getCFVersion());
+    MPIIOFunctions::writeKeyValue<char>
+      (fh, Environment::CFEnv::getInstance().getCFVersion());
     
     // this can fail if there are problems with SVN
     // MPIIOFunctions::writeKeyValue<char>(fh, "\n!COOLFLUID_SVNVERSION ");
     // MPIIOFunctions::writeKeyValue<char>(fh, CFEnv::getInstance().getSvnVersion());
-
+    
     MPIIOFunctions::writeKeyValue<char>(fh, "\n!CFMESH_FORMAT_VERSION ");
     MPIIOFunctions::writeKeyValue<char>(fh, "1.3");
   }

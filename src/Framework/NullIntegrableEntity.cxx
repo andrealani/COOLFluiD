@@ -4,8 +4,8 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#include "NullIntegrableEntity.hh"
-#include "ContourIntegrator.hh"
+#include "Framework/NullIntegrableEntity.hh"
+#include "Framework/ContourIntegrator.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Framework/Framework.hh"
 

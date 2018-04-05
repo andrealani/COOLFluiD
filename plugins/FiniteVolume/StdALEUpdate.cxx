@@ -150,9 +150,9 @@ void StdALEUpdate::modifyOffMeshNodes()
     ///@todo change this for other order!!
     const std::string elemName = CFGeoShape::Convert::to_str((*elementType)[iType].getGeoShape()) + "LagrangeP1LagrangeP0";
 
-    SelfRegistPtr<SetElementStateCoord> setStateCoord = Environment::Factory<SetElementStateCoord>::getInstance().
-      getProvider(elemName)->create();
-
+    SelfRegistPtr<SetElementStateCoord> setStateCoord = 
+      FACTORY_GET_PROVIDER(getFactoryRegistry(), SetElementStateCoord, elemName)->create();
+    
     const CFuint nbElemPerType = (*elementType)[iType].getNbElems();
     for (CFuint iElem = 0; iElem < nbElemPerType; ++iElem, ++elemID) {
       // build the cell
@@ -206,20 +206,20 @@ void StdALEUpdate::updateNormalsData()
 
     const CFuint geoOrder = (*elemTypes)[iType].getGeoOrder();
     const std::string elemName = (*elemTypes)[iType].getShape() + CFPolyOrder::Convert::to_str(geoOrder);
-
-    Common::SelfRegistPtr<ComputeNormals> computeFaceNormals = Environment::Factory<ComputeNormals>::getInstance().
-      getProvider("Face" + elemName)->create();
-
+    const string cname = "Face" + elemName;
+    Common::SelfRegistPtr<ComputeNormals> computeFaceNormals =
+      FACTORY_GET_PROVIDER(getFactoryRegistry(), ComputeNormals, cname)->create();
+    
     const CFuint firstElem = (*elemTypes)[iType].getStartIdx();
     const CFuint lastElem  = (*elemTypes)[iType].getEndIdx();
-
+    
     SelfRegistPtr<ComputeFaceNormalsFVMCC> faceNormalsComputer =
       computeFaceNormals.d_castTo<ComputeFaceNormalsFVMCC>();
-
+    
     faceNormalsComputer->setSockets(sinkNormalsPtr, sinkIsOutwardPtr);
     (*faceNormalsComputer)(firstElem, lastElem);
   }
-
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////

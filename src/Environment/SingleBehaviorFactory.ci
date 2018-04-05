@@ -23,14 +23,14 @@ namespace COOLFluiD {
 template <class TYPE>
 SingleBehaviorFactory<TYPE>& SingleBehaviorFactory<TYPE>::getInstance()
 {
-   static SingleBehaviorFactory<TYPE> obj;
-   return obj;
+  static SingleBehaviorFactory<TYPE> obj;
+  return obj;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 template <class TYPE>
-SingleBehaviorFactory<TYPE>::SingleBehaviorFactory() : m_default ()
+SingleBehaviorFactory<TYPE>::SingleBehaviorFactory() : m_default(), m_fr(CFNULL)
 {
 }
 
@@ -46,25 +46,21 @@ SingleBehaviorFactory<TYPE>::~SingleBehaviorFactory()
 template <class TYPE>
 void SingleBehaviorFactory<TYPE>::setDefaultBehavior(const std::string& name)
 {
-   if (Environment::Factory<TYPE>::getInstance().exists(name))
-   {
-      m_default = name;
-   }
-   else
-   {
-      std::vector<Common::ProviderBase*> all = Environment::Factory<TYPE>::getInstance().getAllProviders();
-      if (all.empty())
-      {
-         m_default = ""; // no default set
-         throw Common::NoSuchValueException (FromHere(), "No providers in factory of '" + TYPE::getClassName() + "'" );
-      }
-      else // since there is no default we use the first on the list of providers
-      {
-        CFLog ( WARN, "No provider in factory of '" << TYPE::getClassName() << "' with name '" << name << "'\n" );
-        CFLog ( WARN, "Choosing '" << dynamic_cast<typename TYPE::PROVIDER*>(*(all.begin()))->getName() << "' as default.\n" );
-        m_default = dynamic_cast<typename TYPE::PROVIDER*>(*(all.begin()))->getName();
-      }
-   }
+  if (FACTORY_T_EXISTS_PROVIDER(m_fr, TYPE, name)) {
+    m_default = name;
+  }
+  else {
+    std::vector<Common::ProviderBase*> all = FACTORY_T_GET_ALL_PROVIDERS(m_fr, TYPE);
+    if (all.empty()) {
+      m_default = ""; // no default set
+      throw Common::NoSuchValueException (FromHere(), "No providers in factory of '" + TYPE::getClassName() + "'" );
+    }
+    else { // since there is no default we use the first on the list of providers
+      CFLog ( WARN, "No provider in factory of '" << TYPE::getClassName() << "' with name '" << name << "'\n" );
+      CFLog ( WARN, "Choosing '" << dynamic_cast<typename TYPE::PROVIDER*>(*(all.begin()))->getName() << "' as default.\n" );
+      m_default = dynamic_cast<typename TYPE::PROVIDER*>(*(all.begin()))->getName();
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -72,32 +68,49 @@ void SingleBehaviorFactory<TYPE>::setDefaultBehavior(const std::string& name)
 template <class TYPE>
 std::string SingleBehaviorFactory<TYPE>::getDefaultBehavior()
 {
-   return m_default;
+  return m_default;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 template <class TYPE>
+Common::SelfRegistPtr<TYPE>* SingleBehaviorFactory<TYPE>::createPtr()
+{
+  Common::SafePtr<typename TYPE::PROVIDER> prov;
+  if (!m_default.empty())  {
+    prov = FACTORY_T_GET_PROVIDER(m_fr, TYPE, m_default);
+  }
+  else  {
+    std::vector<Common::ProviderBase*> all = FACTORY_T_GET_ALL_PROVIDERS(m_fr, TYPE);
+    if (all.empty()) {
+      throw Common::NoSuchValueException (FromHere(),"No providers in factory of '" + TYPE::getClassName() + "'");
+    }
+    else { // since there is no default we use the first on the list of providers
+      prov = dynamic_cast<typename TYPE::PROVIDER*>(*(all.begin()));
+    }
+  }
+  return prov->createPtr();
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
+template <class TYPE>
 Common::SelfRegistPtr<TYPE> SingleBehaviorFactory<TYPE>::create()
 {
-   Common::SafePtr<typename TYPE::PROVIDER> prov;
-   if (!m_default.empty()) 
-   {
-       prov = Environment::Factory<TYPE>::getInstance().getProvider(m_default);
-   }
-   else 
-   {
-      std::vector<Common::ProviderBase*> all = Environment::Factory<TYPE>::getInstance().getAllProviders();
-      if (all.empty())
-      {
-         throw Common::NoSuchValueException (FromHere(),"No providers in factory of '" + TYPE::getClassName() + "'");
-      }
-      else // since there is no default we use the first on the list of providers
-      {
-        prov = dynamic_cast<typename TYPE::PROVIDER*>(*(all.begin()));
-      }
-   }
-   return prov->create();
+  Common::SafePtr<typename TYPE::PROVIDER> prov;
+  if (!m_default.empty())  {
+    prov = FACTORY_T_GET_PROVIDER(m_fr, TYPE, m_default);
+  }
+  else  {
+    std::vector<Common::ProviderBase*> all = FACTORY_T_GET_ALL_PROVIDERS(m_fr, TYPE);
+    if (all.empty()) {
+      throw Common::NoSuchValueException (FromHere(),"No providers in factory of '" + TYPE::getClassName() + "'");
+    }
+    else { // since there is no default we use the first on the list of providers
+      prov = dynamic_cast<typename TYPE::PROVIDER*>(*(all.begin()));
+    }
+  }
+  return prov->create();
 }
 
 //////////////////////////////////////////////////////////////////////////////

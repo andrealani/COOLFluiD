@@ -131,6 +131,9 @@ public: // functions
     return m_sm;
   }
   
+  /// Set the factory registry
+  virtual void setFactoryRegistry(Common::SafePtr<Common::FactoryRegistry> fr);
+  
 private: // data
 
   /// Current convergence status

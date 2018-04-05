@@ -49,7 +49,10 @@ public:
   }
 
   /// Set up private data to prepare the simulation
-  virtual void setup() = 0;
+  virtual void setup() 
+  {
+    MethodStrategy<METHODDATA>::setup();
+  }
   
   /// Compute the term in the current cell
   virtual void computeTerm(Framework::GeometricEntity* const cell, RealMatrix& result)

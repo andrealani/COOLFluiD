@@ -1,5 +1,21 @@
 #######################################################
-### DEBUG mode
+### DEBUG mode #### TO BE REMOVED !!!!!!!
+IF ( CF_ENABLE_IBMSHARED )
+LIST ( APPEND CMAKE_CXX_LINK_FLAGS  " -qpic -qmkshrobj -qnostaticlink -qnostaticlink=libgcc" )
+LIST ( APPEND CMAKE_C_LINK_FLAGS    " -qpic -qmkshrobj -qnostaticlink -qnostaticlink=libgcc" )
+ENDIF( CF_ENABLE_IBMSHARED )
+
+IF ( CF_ENABLE_IBMSTATIC )
+   ## AL: changed from -02 to -03 for experiments
+LIST ( APPEND CMAKE_CXX_LINK_FLAGS  "-O2 -Wl,--allow-multiple-definition" )
+#LIST ( APPEND CMAKE_CXX_LINK_FLAGS  "-O2 -Wl,--allow-multiple-definition -Wl,--whole-archive" )
+#LIST ( APPEND CMAKE_CXX_LINK_FLAGS  " -Wl,--allow-multiple-definition -Wl,--whole-archive" )
+ENDIF( CF_ENABLE_IBMSTATIC )
+
+IF ( CMAKE_COMPILER_IS_GNUCC AND CF_ENABLE_STATIC )
+LIST ( APPEND CMAKE_CXX_LINK_FLAGS  "-O2 -Wl,--allow-multiple-definition" )
+ENDIF()
+
 IF(CF_ENABLE_OMP)
  SET ( CF_FOMP_FLAG "-fopenmp")
  ADD_DEFINITIONS  ( -DCF_HAVE_OMP )
@@ -7,6 +23,10 @@ IF(NOT CF_ENABLE_CUDA)
    LIST ( APPEND CMAKE_CXX_LINK_FLAGS  " -lgomp" )
 ENDIF()
 ENDIF(CF_ENABLE_OMP)
+
+IF (CF_ENABLE_CRAYSTATIC)
+ LIST ( APPEND CMAKE_CXX_LINK_FLAGS  " -Wl,-zmuldefs -Wl,--whole-archive" )
+ENDIF (CF_ENABLE_CRAYSTATIC)
 
 IF(UNIX)
   IF(CMAKE_COMPILER_IS_GNUCC)
@@ -145,6 +165,14 @@ IF(UNIX)
 ENDIF(UNIX)
 
 MARK_AS_ADVANCED( CF_CMAKE_CXX_FLAGS_CUDARELEASE  CF_CMAKE_C_FLAGS_CUDARELEASE CF_CMAKE_Fortran_FLAGS_CUDARELEASE CF_CUDAC_FLAGS_CUDARELEASE )
+
+#IF ( CF_ENABLE_IBMSTATIC )
+# LIST ( APPEND CMAKE_CXX_LINK_FLAGS       "-O3 -Wl,--allow-multiple-definition -Wl,--whole-archive" )
+# LIST ( APPEND CF_C_FLAGS_BGOPTIM3        "-O3 -qstrict -qarch=qp -qtune=qp" )
+# LIST ( APPEND CF_CXX_FLAGS_BGOPTIM3      "-O3 -qstrict -qarch=qp -qtune=qp" )
+# LIST ( APPEND CF_Fortran_FLAGS_BGOPTIM3  "-O3 -qstrict -qarch=qp -qtune=qp" )
+#MARK_AS_ADVANCED( CF_CMAKE_CXX_FLAGS_BGOPTIM3  CF_CMAKE_C_FLAGS_BGOPTIM3 CF_CMAKE_Fortran_FLAGS_BGOPTIM3 )
+#ENDIF(CF_ENABLE_IBMSTATIC)
 
 #######################################################
 

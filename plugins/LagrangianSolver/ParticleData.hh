@@ -20,9 +20,9 @@ namespace LagrangianSolver {
 //////////////////////////////////////////////////////////////////////////////
 
 struct CommonData{
-  MathTools::CFVec<CFreal,3> direction;
-  MathTools::CFVec<CFreal,3> currentPoint;
-  CFuint cellID;
+    CFreal direction[3];
+    CFreal currentPoint[3];
+    CFuint cellID;
 };
 
 //////////////////////////////////////////////////////////////////////////////

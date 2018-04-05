@@ -59,6 +59,7 @@ CFuint PoissonModel<DIM>::getNbEquations() const
 template <int DIM>
 std::string PoissonModel<DIM>::getConvectiveName() const
 {
+  if (DIM == 1) return "PoissonConv1D";
   if (DIM == 2) return "PoissonConv2D";
   return "PoissonConv3D";
 }

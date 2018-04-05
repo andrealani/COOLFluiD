@@ -4,13 +4,14 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#include "FwdEuler.hh"
+#include "ForwardEuler/FwdEuler.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Framework/SpaceMethod.hh"
 #include "Common/CFLog.hh"
 #include "Framework/SubSystemStatus.hh"
 #include "ForwardEuler/ForwardEuler.hh"
 #include "Framework/CFL.hh"
+#include "Framework/StopConditionController.hh"
 #include "MathTools/MathConsts.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -22,8 +23,6 @@ using namespace COOLFluiD::MathTools;
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-
-
 
     namespace ForwardEuler {
 
@@ -96,9 +95,10 @@ void FwdEuler::configure ( Config::ConfigArgs& args )
 {
   CFAUTOTRACE;
   ConvergenceMethod::configure(args);
-
+  
+  m_data->setFactoryRegistry(getFactoryRegistry());
   configureNested ( m_data.getPtr(), args );
-
+  
   // add configures to the FwdEulerCom's
 
   configureCommand<FwdEulerData,FwdEulerComProvider>(args, m_setup,m_setupStr,m_data);

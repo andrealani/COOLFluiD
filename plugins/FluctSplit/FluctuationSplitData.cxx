@@ -506,20 +506,23 @@ void FluctuationSplitData::configureLinearizer( Config::ConfigArgs& args )
   Common::SafePtr<Namespace> nsp =
     NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName()).getNamespace(name);
   Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
+
+  if (m_linearVarStr != "Null") {
+    m_linearizerStr = physModel->getConvectiveName() + "Linear" + m_linearVarStr;
+    
+    CFLogDebugMed("Configuring JacobianLinearizer: " << m_linearizerStr << "\n");
+  }
+  else {
+    m_linearizerStr = "Null";
+  }
   
-  m_linearizerStr = physModel->getConvectiveName()
-                                    + "Linear"
-                                    + m_linearVarStr;
-
-  CFLogDebugMed("Configuring JacobianLinearizer: " << m_linearizerStr << "\n");
-
   Common::SafePtr<JacobianLinearizer::PROVIDER> lin_prov =
     Environment::Factory<JacobianLinearizer>::getInstance().getProvider(m_linearizerStr);
-
+  
   cf_assert(lin_prov.isNotNull());
 
   m_linearizer = lin_prov->create(physModel);
-
+  
   cf_assert(m_linearizer.isNotNull());
 }
 
@@ -633,11 +636,13 @@ void FluctuationSplitData::configureVarSets( Config::ConfigArgs& args )
 
   CFLogDebugMed("Configuring Linearization VarSet\n");
   CFLogDebugMed("VarSet is : " << physModel->getConvectiveName() + m_linearVarStr << "\n");
-
+  
+  const string linearVarName = (m_linearVarStr != "Null") ?
+    physModel->getConvectiveName() + m_linearVarStr : "Null";
   m_linearVar.reset(Environment::Factory<ConvectiveVarSet>::getInstance().
-        getProvider(physModel->getConvectiveName() + m_linearVarStr)->
-        create(physModel->getImplementor()->getConvectiveTerm()));
-
+		    getProvider(linearVarName)->
+		    create(physModel->getImplementor()->getConvectiveTerm()));
+  
   cf_assert(m_linearVar.isNotNull());
  }
 

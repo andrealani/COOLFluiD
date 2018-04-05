@@ -10,7 +10,6 @@
 #include "Common/BadValueException.hh"
 #include "Environment/DirPaths.hh"
 #include "Environment/ObjectProvider.hh"
-// #include "CFmeshFormatChecker/CFmeshFileChecker.hh" // move checker to Framework
 #include "CFmeshCellSplitter/CellSplitter2DFVM.hh"
 #include "CFmeshCellSplitter/CFmeshCellSplitter.hh"
 

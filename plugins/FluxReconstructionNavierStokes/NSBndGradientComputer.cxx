@@ -51,6 +51,7 @@ NSBndGradientComputer::NSBndGradientComputer(const std::string& name) :
 
 void NSBndGradientComputer::computeGradientBndFaceCorrections()
 { 
+  //ConvBndCorrectionsRHSFluxReconstruction::computeGradientBndFaceCorrections();
   // get the diffusive varset
   m_diffusiveVarSet = getMethodData().getDiffusiveVar();
   
@@ -64,6 +65,11 @@ void NSBndGradientComputer::computeGradientBndFaceCorrections()
   {
     tempStates.push_back(m_cellStatesFlxPnt[iFlx]->getData());
     tempGhostStates.push_back(m_flxPntGhostSol[iFlx]->getData());
+    if (m_intCell->getID() == 191)
+    {
+      CFLog(VERBOSE,"BndState " << iFlx << ": " << *(m_cellStatesFlxPnt[iFlx]->getData()) << "\n");
+      CFLog(VERBOSE,"GstState " << iFlx << ": " << *(m_flxPntGhostSol[iFlx]->getData()) << "\n");
+    }
   }
   
   navierStokesVarSet->setGradientVars(tempStates,tempGradTerm,m_nbrFaceFlxPnts);
@@ -83,6 +89,11 @@ void NSBndGradientComputer::computeGradientBndFaceCorrections()
       {
         const CFreal avgSol = (tempGradTerm(iEq,iFlx)+tempGhostGradTerm(iEq,iFlx))/2.0;
 	const RealVector projectedCorr = (avgSol-tempGradTerm(iEq,iFlx))*m_faceJacobVecSizeFlxPnts[iFlx]*m_unitNormalFlxPnts[iFlx];
+	if (m_intCell->getID() == 191 && iEq == 1)
+    {
+      CFLog(VERBOSE,"projecteddCorr Bnd of flx pnt " << (*m_faceFlxPntConn)[m_orient][iFlx] << " for state " << iSolPnt << ": " << projectedCorr << "\n");
+      CFLog(VERBOSE,"deriv h: " << m_corrFctDiv[iSolPnt][(*m_faceFlxPntConn)[m_orient][iFlx]] << "\n");
+    }
 	/// @todo Check if this is also OK for triangles!!
 	m_gradUpdates[iSolPnt][iEq] += projectedCorr*m_corrFctDiv[iSolPnt][(*m_faceFlxPntConn)[m_orient][iFlx]];
       }

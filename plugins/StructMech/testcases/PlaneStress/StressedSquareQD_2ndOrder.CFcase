@@ -23,8 +23,6 @@ Simulator.SubSystem.StructMech2D.Lambda = 1.0
 Simulator.SubSystem.StructMech2D.mu = 1.0
 Simulator.SubSystem.StructMech2D.Density = 7850.0
 
-
-
 Simulator.SubSystem.ConvergenceFile     = convergence.plt
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh

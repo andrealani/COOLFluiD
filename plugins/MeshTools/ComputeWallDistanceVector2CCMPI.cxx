@@ -17,8 +17,11 @@
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/PhysicalModel.hh"
+
 #include "Framework/TRSDistributeData.hh"
 
+#include <vector>
+#include <cmath>
 #include "MeshTools/MeshToolsFVM.hh"
 #include "MeshTools/ComputeWallDistanceVector2CCMPI.hh"
 
@@ -46,6 +49,9 @@ void ComputeWallDistanceVector2CCMPI::defineConfigOptions(Config::OptionList& op
 {
    options.addConfigOption< bool >
      ("CentroidBased", "Flag to select algorithm based on wall face centroid (limited usability!).");
+   options.addConfigOption< CFreal >("AcceptableDistance","Distance");
+
+
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -60,8 +66,11 @@ ComputeWallDistanceVector2CCMPI::ComputeWallDistanceVector2CCMPI(const std::stri
 {
   addConfigOptionsTo(this);
   
-  _centroidBased = true;
-  setParameter("CentroidBased",&_centroidBased);
+  m_centroidBased = true;
+  setParameter("CentroidBased",&m_centroidBased);
+  m_acceptableDistance = 0.;
+  setParameter("AcceptableDistance",&m_acceptableDistance);
+
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -84,11 +93,20 @@ void ComputeWallDistanceVector2CCMPI::setup()
   m_myRank = PE::GetPE().GetRank(nsp);
   m_nbProc = PE::GetPE().GetProcessorCount(nsp);
 #endif
+
+
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+
   
   // initialize the wall distance
   DataHandle< CFreal> wallDistance = socket_wallDistance.getDataHandle();
   wallDistance = MathTools::MathConsts::CFrealMax();
+  DataHandle<bool> nodeisAD = socket_nodeisAD.getDataHandle();
+  nodeisAD.resize(socket_nodes.getDataHandle().size());
+  nodeisAD=false;
+
 }
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -110,7 +128,7 @@ void ComputeWallDistanceVector2CCMPI::execute()
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   
   // AL: gory fix to use centroid-based algorithm 
-  if (_centroidBased && dim == DIM_3D) {execute3D(); return;}
+  if (m_centroidBased && dim == DIM_3D) {execute3D(); return;}
   
   CFLog(INFO, "ComputeWallDistanceVector2CCMPI::execute() => Computing distance to the wall ...\n");
   
@@ -216,7 +234,6 @@ void ComputeWallDistanceVector2CCMPI::execute()
 	  sizes[1] = connSize;
 	  sizes[2] = nbLocalTrsFaces;
 	  sizes[3] = sizes[4] = nbLocalTrsFaces*dim;
-	  
 	  // face normal is needed for computing projection
 	  trsData.faceNormals.reserve(nbLocalTrsFaces*dim);
 	  for (CFuint iFace = 0; iFace < nbLocalTrsFaces; ++iFace) {
@@ -365,11 +382,13 @@ void ComputeWallDistanceVector2CCMPI::computeWallDistance3D(std::vector<CFreal>&
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
   DataHandle< CFreal> wallDistance = socket_wallDistance.getDataHandle();
+  DataHandle<bool> nodeisAD = socket_nodeisAD.getDataHandle(); 
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const CFuint nbStates = states.size();
   RealVector faceCentroid(dim, (CFreal*)CFNULL);
   const CFuint nbFaces = data.size()/dim;
-  
+  SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->
+    getTrs("InnerCells");
   for (CFuint iState = 0; iState < nbStates; ++iState) {
     cf_assert(iState == states[iState]->getLocalID());
     const RealVector& stateCoord = states[iState]->getCoordinates(); 
@@ -380,7 +399,6 @@ void ComputeWallDistanceVector2CCMPI::computeWallDistance3D(std::vector<CFreal>&
       const CFreal start = iFace*dim;
       cf_assert(start < data.size());
       faceCentroid.wrap(dim, &data[start]);
-      
       // compute distance between face centroid and cell centroid
       const CFreal stateFaceDistance = MathFunctions::getDistance(faceCentroid, stateCoord);
       minimumDistance = std::min(stateFaceDistance, minimumDistance);
@@ -388,17 +406,30 @@ void ComputeWallDistanceVector2CCMPI::computeWallDistance3D(std::vector<CFreal>&
     
     cf_assert(iState < wallDistance.size());
     wallDistance[iState] = std::min(wallDistance[iState], minimumDistance);
+    
+    
+    const CFuint nbNodesInCell = cells->getNbNodesInGeo(iState);
+    for (CFuint in = 0; in < nbNodesInCell; ++in) {
+      // local ID of the cell node
+      const CFuint cellNodeID = cells->getNodeID(iState, in);
+      cf_assert(cellNodeID < nodeisAD.size());
+      nodeisAD[cellNodeID] = (std::min(wallDistance[iState], minimumDistance) < m_acceptableDistance  ? true : false);
+    }
   }
 }
+    
 
 //////////////////////////////////////////////////////////////////////////////
-
-void ComputeWallDistanceVector2CCMPI::computeWallDistance(TRSFaceDistributeData& data)
+  void  ComputeWallDistanceVector2CCMPI::computeWallDistance(TRSFaceDistributeData& data)
 {
   DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
   DataHandle< CFreal> wallDistance = socket_wallDistance.getDataHandle();
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  DataHandle <bool> nodeisAD = socket_nodeisAD.getDataHandle();
+ const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  
+  SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->
+    getTrs("InnerCells");
   
   const CFuint nbStates = states.size();
   RealVector node0(dim, (CFreal*)CFNULL);
@@ -409,11 +440,10 @@ void ComputeWallDistanceVector2CCMPI::computeWallDistance(TRSFaceDistributeData&
   for (CFuint iState = 0; iState < nbStates; ++iState) {
     CFuint nodeCount0 = 0;
     bool updateDistance = false;
-    
+
     // initialize the minimum distance to a huge value
     CFreal minimumDistance = MathTools::MathConsts::CFrealMax();
-    cf_assert(minimumDistance > 0.);
-    
+    cf_assert(minimumDistance > 0.);  
     const CFuint nbFaces = data.trsNbNodesInFace.size();
     cf_assert(nbFaces > 0);
     cf_assert(nbFaces == data.faceCenters.size()/dim);
@@ -442,19 +472,27 @@ void ComputeWallDistanceVector2CCMPI::computeWallDistance(TRSFaceDistributeData&
 	m_minStateFaceDistance[iState] = stateFaceDistance;
 	updateDistance = true;
       }
-      
+
       nodeCount0 += (dim == DIM_3D) ? 4 : 2; // this is consistent with definition of "connSize"
     }
     
-    if (updateDistance) {
+    if (updateDistance) { 
       wallDistance[iState] = minimumDistance;
-    }
+      const CFuint nbNodesInCell = cells->getNbNodesInGeo(iState);
+      for (CFuint in = 0; in < nbNodesInCell; ++in) {
+	// local ID of the cell node
+	const CFuint cellNodeID = cells->getNodeID(iState, in);
+	cf_assert(cellNodeID < nodeisAD.size());
+        nodeisAD[cellNodeID] = (minimumDistance < m_acceptableDistance  ? true : false); 
+      }
+      
+    } 
+    CFLog(DEBUG_MAX, "ComputeWallDistanceVector2CCMPI::computeWallDistance2D() => " <<
+	  "miwallDistance[ " <<  iState << " ] = " << wallDistance[iState] << "\n");}
     
-    CFLog(DEBUG_MAX, "ComputeWallDistanceVector2CCMPI::computeWallDistance3D() => " <<
-	  "wallDistance[ " <<  iState << " ] = " << wallDistance[iState] << "\n");
-  }
+    
 }
-    
+
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace MeshTools

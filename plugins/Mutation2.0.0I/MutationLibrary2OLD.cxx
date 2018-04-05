@@ -1189,9 +1189,10 @@ void MutationLibrary2OLD::lambdaVibNEQ(CFreal& temperature,
   /*  if (Te > 4000) {
   cout <<"lambdaTrRo" << lambdaTrRo<<endl;
   cout <<"lambdaVIB" << _LAMBDAVIB[0]<<endl;
-//  abort();
+  //  abort();
   } */
-
+  CFLog(DEBUG_MAX, "Mutation::lambdaVibNEQ() => " << lambdaTrRo 
+	<< " " << lambdaInt << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1402,8 +1403,8 @@ void MutationLibrary2OLD::setDensityEnthalpyEnergy(CFdouble& temp,
   dhe[0] = rho;
   dhe[2] = dhe[1] - pressure/rho;  
   
-  RealVector m_y(_NS, &_Y[0]);
-  CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => " << dhe << ", " <<  m_y << "\n");
+  // RealVector m_y(_NS, &_Y[0]);
+  // CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => " << dhe << ", " <<  m_y << "\n");
   //static int count = 0; if (count++ == 20000) abort();
 }
       
@@ -1613,6 +1614,9 @@ void MutationLibrary2OLD::setDensityEnthalpyEnergy(CFdouble& temp,
       }
     }
   }
+  
+  RealVector m_y(_NS, &_Y[0]);
+  CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => " << dhe << ", " <<  m_y << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1653,7 +1657,7 @@ CFdouble MutationLibrary2OLD::pressure(CFdouble& rho,
 			    &p, &_electronPress);
   }
   
-  CFLog(DEBUG_MAX, "Mutation::pressure() => " << p << "\n");
+  //  CFLog(DEBUG_MAX, "Mutation::pressure() => " << p << "\n");
   
   return p;
 }
@@ -1999,8 +2003,7 @@ void MutationLibrary2OLD::getMassProductionTerm(CFdouble& temperature,
   } 
   
   CFLog(DEBUG_MAX, "Mutation::getMassProductionTerm() => omega = " << omega << "\n\n"); 
-  
-  // static int count = 0; if (count++ == 1000) exit(1);
+  //EXIT_AT(1000);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2008,6 +2011,7 @@ void MutationLibrary2OLD::getMassProductionTerm(CFdouble& temperature,
 void MutationLibrary2OLD::getRhoUdiff(CFdouble& temperature,
 				      CFdouble& pressure,
 				      RealVector& normConcGradients,
+				      RealVector& normTempGradients,
 				      CFreal* tVec,
 				      RealVector& rhoUdiff,
 				      bool fast)
@@ -2229,11 +2233,11 @@ void MutationLibrary2OLD::getSpeciesTotEnthalpies(CFdouble& temp,
 
   // WRONG !!!!!!!!!! NOT FLEXIBLE !!
   if (tVec.size() > 0) {
-    for (CFuint i = 0; i < _molecIDs.size(); ++i) {
-      (*hsVib)[i] = _HVIBR[_molecIDs[i]]/_MOLARMASSP[_molecIDs[i]];
+    for (CFuint i = 0; i < _NS; ++i) {
+      (*hsVib)[i] = _HVIBR[i]/_MOLARMASSP[i];
     }
   }
-
+  
   // returning the total enthalpies per unit mass of species
   for(int i = 0; i < _NS; ++i) {
     hsTot[i] = (!_noElectEnergy) ? _HTOTAL[i] / _MOLARMASSP[i] :
@@ -2252,6 +2256,7 @@ void MutationLibrary2OLD::getSpeciesTotEnthalpies(CFdouble& temp,
   }
   
   CFLog(DEBUG_MAX, "Mutation::getSpeciesTotEnthalpies() => hsTot = " << hsTot << "\n");
+  //EXIT_AT(5);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2375,7 +2380,9 @@ void MutationLibrary2OLD::getSourceTermVT(CFdouble& temperature,
       }
     }
   }
-}
+ 
+  CFLog(DEBUG_MAX, "Mutation::getSourceTermVT() => omegav = " << omegav << "\n");
+ }
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -2596,6 +2603,7 @@ void MutationLibrary2OLD::transportCoeffNEQ(CFreal& temperature,
 					    CFdouble& pressure,
 					    CFreal* tVec, 
 					    RealVector& normConcGradients,
+					    RealVector& normTempGradients,
 					    CFreal& eta,
 					    CFreal& lambdaTrRo, 
 					    RealVector& lambdaInt,

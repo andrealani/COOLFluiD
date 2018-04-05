@@ -103,7 +103,7 @@ CFreal MultiFluidMHDVarSet<BASE>::getMaxEigenValue(const RealVector& pdata,
       }
       maxEv = std::max(maxEv, un_i + a_i);
     }
-    std::cout << "MultiFluidMHDVarSet<BASE>::getMaxEigenValue" << maxEv << std::endl;
+    // std::cout << "MultiFluidMHDVarSet<BASE>::getMaxEigenValue" << maxEv << std::endl;
     return maxEv;
   }
   
@@ -157,7 +157,7 @@ CFreal MultiFluidMHDVarSet<BASE>::getMaxAbsEigenValue(const RealVector& pdata,
       maxEv = std::max(maxEv, std::abs(un_i) + a_i);
     }
     return maxEv;
-    std::cout << "MultiFluidMHDVarSet<BASE>::getMaxAbsEigenValue" << maxEv << std::endl;
+    //std::cout << "MultiFluidMHDVarSet<BASE>::getMaxAbsEigenValue" << maxEv << std::endl;
   } 
   
   CFLog(ERROR, "MultiFluidMHDVarSet<BASE>::getMaxAbsEigenValue() => wrong return value\n");
@@ -374,7 +374,6 @@ void MultiFluidMHDVarSet<BASE>::computeFlux (const RealVector& pdata, const Real
         this->_fluxArray[endEM + nbSpecies + i*dim + 1] = rhoVn_i*v_i + P_i*ny;
         this->_fluxArray[endEM + nbSpecies + i*dim + 2] = rhoVn_i*w_i + P_i*nz;
         this->_fluxArray[endEM + nbSpecies + nbSpecies*dim + i] = rho_i*un_i*H_i;
-	cout <<"Entering Function \n";
       }
     }
   }
@@ -396,8 +395,6 @@ void MultiFluidMHDVarSet<BASE>::computeStateFlux (const RealVector& pdata)
   CFuint dim = PhysicalModelStack::getActive()->getDim();
   const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
 
-  std::cout << "MultiFluidMHDVarSet<BASE>::computeStateFlux" <<"\n";
-  
   const EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
   const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();	// Maxwell's Eqs.+ Multifluid NavierStokes Eqs.
   const CFuint nbEqs = eqSS.getNbEqsSS();  				
@@ -562,7 +559,7 @@ template <typename BASE>
 CFreal MultiFluidMHDVarSet<BASE>::getNormalSpeed(const RealVector& data, 
 						 const RealVector& normal) const
 {
-  std::cout<<" MultiFluidMHDVarSet::getNormalSpeed not implemented \n";
+  CFLog(ERROR, "MultiFluidMHDVarSet::getNormalSpeed not implemented \n");
   return 0.;
 }
   

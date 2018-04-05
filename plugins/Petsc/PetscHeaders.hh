@@ -13,10 +13,10 @@
 #include <boost/filesystem/path.hpp>
 #include "Common/PE.hh"
 #include "Framework/MeshData.hh"
-#include "petscvec.h"
-#include "petscmat.h"
-#include "petscksp.h"
-#include "petscerror.h"
+#include <petscvec.h>
+#include <petscmat.h>
+#include <petscksp.h>
+#include <petscerror.h>
 
 // undefine the restrict as defined by petsc
 #undef restrict

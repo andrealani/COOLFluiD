@@ -52,6 +52,7 @@ my $opt_static        = "0";
 my $opt_install_dir   = "$home/local/coolfluid_deps/$arch";
 my $opt_install_mpi_dir = "";
 my $opt_petsc_dir = "";
+my $opt_blaslapack_dir = "";
 my $opt_parmetis_dir = "";
 my $opt_cuda_bin  = "";
 my $opt_cmake_dir     = "";
@@ -64,7 +65,9 @@ my $opt_wgetprog      = "wget -nc -nd";
 my $opt_curlprog      = "curl -O -nc -nv --progress-bar";
 my $opt_dwnldprog     = $opt_wgetprog;
 my $opt_makeopts      = "-j12";
-my $opt_svnrevision       = 0;
+my $opt_svnrevision   = 0;
+my $opt_cray          = 0;
+my $opt_ibmgnu        = 0;
 my @opt_install = ();
 
 # list of packages, and their associated values
@@ -107,6 +110,7 @@ my %packages = (  #  version   default install priority      function
     "dateshift"  => [ "1.0",    'off',  'off', $priority++,  sub { install_gnu("dateshift") } ],
     "curl"       => [ "7.19.7", 'off' ,  'off', $priority++,  \&install_curl ],
     "libfaketime"=> [ "0.8",    'off',  'off', $priority++,  \&install_libfaketime ],
+#     "boost"      => [ "1_42_0", 'on' ,  'off', $priority++,  \&install_boost ],
     "boost"      => [ "1_59_0", 'on' ,  'off', $priority++,  \&install_boost ],
 #    "boost"      => [ "1_54_0", 'on' ,  'off', $priority++,  \&install_boost ],
 #   "openmpi"    => [ "1.4.2",  'off',  'off', $priority++,  \&install_openmpi ],
@@ -125,6 +129,7 @@ my %packages = (  #  version   default install priority      function
 #    "petsc"      => [ "3.4.2",'on',  'off', $priority++,  \&install_petsc ], 
 #    "petsc"      => [ "3.6.3-dev",'on',  'off', $priority++,  \&install_petsc ],
     "petsc"      => [ "3.6.3",'on',  'off', $priority++,  \&install_petsc ], 
+#     "petsc"      => [ "3.7.6",'on',  'off', $priority++,  \&install_petsc ],
 #    "petsc"      => [ "3.7.3a",'on',  'off', $priority++,  \&install_petsc ],
 #    "petsc"      => [ "3.7.3-next",'on',  'off', $priority++,  \&install_petsc ],
     "gmsh"       => [ "1.60.1", 'off',  'off', $priority++,  sub { install_gnu("gmsh") } ],
@@ -167,7 +172,10 @@ sub parse_commandline() # Parse command line
         'makeopts=s'            => \$opt_makeopts,
         'install=s'             => \@opt_install,
         'install-petsc-dir=s'   => \$opt_petsc_dir,
-	'install-parmetis-dir=s'   => \$opt_parmetis_dir
+	'install-parmetis-dir=s'   => \$opt_parmetis_dir,
+        'cray'                  => \$opt_cray,
+        'ibmgnu'                => \$opt_ibmgnu,
+	'blaslapack-dir=s'      => \$opt_blaslapack_dir,
     );
 
     # show help if required
@@ -193,7 +201,9 @@ options:
         --many-mpi=          Install all mpi related packages in a separate directory
                              therefore allowing multiple mpi environments to coexist
                               Default: $opt_many_mpi.
-
+       
+        --cray               Compile on CRAY systems
+        --ibmgnu             Compile on IBM systems with GNU compiler       
         --static=            Compile all libraries static
         --debug=             Compile dependencies and coolfluid with debug symbols (=1 is default)
         --int64=             If =1 compiles PETSc using long long int. 
@@ -201,6 +211,7 @@ options:
         --dry-run            Don't actually perform the configuration.
                              Just output what you would do.
 
+        --blaslapack-dir     Location of blas and lapack libs
         --mpi-dir=           Location of existing MPI installation
         --install-dir=       Location of the software installation directory
                               Default: $opt_install_dir
@@ -1119,6 +1130,24 @@ sub install_parmetis () {
      $opt_parmetis_dir = "$opt_install_mpi_dir";
   }
 
+  my $mpicc_comp  = "mpicc";
+  my $mpicxx_comp = "mpicxx";
+  if ($opt_cray) {
+     $mpicc_comp  = "cc";
+     $mpicxx_comp = "CC";
+  }
+
+  #
+  if ($opt_ibmgnu) {
+     $mpicc_comp  = "mpigcc";
+     $mpicxx_comp = "mpig++";
+  }
+
+  my $sharedflag = "shared=1";
+  if ( $opt_static eq "1" )
+  {
+    $sharedflag = "";
+  }
   safe_chdir($opt_tmp_dir);
   download_src("parmetis",$version);
   unless ($opt_fetchonly) {
@@ -1127,14 +1156,14 @@ sub install_parmetis () {
     # build metis
     if ( $version eq "4.0.3") {
        safe_chdir("$opt_tmp_dir/parmetis-$version/metis");
-       run_command_or_die("make config shared=1 prefix=$opt_parmetis_dir cc=$opt_mpi_dir/bin/mpicc cxx=$opt_mpi_dir/bin/mpicxx"); 
+       run_command_or_die("make config $sharedflag prefix=$opt_parmetis_dir cc=$opt_mpi_dir/bin/$mpicc_comp cxx=$opt_mpi_dir/bin/$mpicxx_comp");
        run_command_or_die("make install");
     }
     #build parmetis
     safe_chdir("$opt_tmp_dir/parmetis-$version/");
-    run_command_or_die("make config shared=1 prefix=$opt_parmetis_dir cc=$opt_mpi_dir/bin/mpicc cxx=$opt_mpi_dir/bin/mpicxx");
+    run_command_or_die("make config $sharedflag prefix=$opt_parmetis_dir cc=$opt_mpi_dir/bin/$mpicc_comp cxx=$opt_mpi_dir/bin/$mpicxx_comp");
     run_command_or_die("make install");
-  }
+  }  
  }
 }
 
@@ -1271,7 +1300,7 @@ sub install_petsc ()
       run_command_or_die("export PATH=$opt_cuda_dir/bin:\\\$PATH");
       run_command_or_die("export LD_LIBRARY_PATH=/usr/lib64:$opt_cuda_dir/lib64:/usr/lib64/nvidia:\\\$LD_LIBRARY_PATH");
      
-      if ($version eq "3.6.3" or $version eq "3.7.3a" or $version eq "3.7.3-next" ) {
+      if ($version eq "3.6.3" or $version eq "3.7.3a" or $version eq "3.7.3-next" or $version eq "3.7.6") {
          if ($opt_viennacl eq "0") {
            # download and unpack compatible cusp source files
            my $cusp_name = "cusp-v0.4.0.zip";
@@ -1311,7 +1340,9 @@ sub install_petsc ()
     
     # update the petsc installation directory
     $opt_petsc_dir = "$install_dir";
-    
+  
+    my $dynamicload = "--with-dynamic-loading=1"; 
+    my $fcflag = "0"; 
     my $wblaslib = "";
     #if (is_mac()) { 
       # use built-in optimized blas-lapack lib
@@ -1319,14 +1350,25 @@ sub install_petsc ()
     #} else { 
       # use the downloaded blas sources
     #  $wblaslib = "--download-f-blas-lapack=1";
-      $wblaslib = "--download-f2cblaslapack=1";
-    #}
+    if ( is_mac() and $opt_static eq "1") {
+     #$wblaslib = "--with-blas-lapack-dir=$opt_blaslapack_dir";
+     #$wblaslib  = "--with-blas-lib=$opt_blaslapack_dir/libblas.a --with-lapack-lib=$opt_blaslapack_dir/liblapack.a"
+     # $wblaslib = "--download-f2blaslapack=1";
+     #$fcflag = "1";
+     $wblaslib = "--download-f2cblaslapack=1";
+     # removed duplicated symbols that could create linking problems for static building 
+     run_command_or_die("ar d $opt_petsc_dir/lib/libf2clapack.a xerbla_array.o");
+     run_command_or_die("ar d $opt_petsc_dir/lib/libf2clapack.a xerbla.o");	
+    }   
+    else {
+     $wblaslib = "--download-f2cblaslapack=1";
+    }
     
   if ($version eq "3.2-p6") {
-   run_command_or_die("./configure --prefix=$install_dir $wdebug COPTFLAGS='-O3 ' FOPTFLAGS='-O3 ' --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 --with-shared-libraries=1 --with-dynamic-loading=1 --with-c++-support $cuda_support --PETSC_ARCH=$petsc_arch");
+   run_command_or_die("./configure --prefix=$install_dir $wdebug COPTFLAGS='-O3 ' FOPTFLAGS='-O3 ' --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=$fcflag --with-shared-libraries=1 $dynamicload --with-c++-support $cuda_support --PETSC_ARCH=$petsc_arch");
    run_command_or_die("make $opt_makeopts");
   }
-  elsif ($version eq "3.6.3" or $version eq "3.7.3a" or $version eq "3.7.3-next" ) {
+  elsif ($version eq "3.6.3" or $version eq "3.7.3a" or $version eq "3.7.3-next" or $version eq "3.7.6" ) {
     my $FFLAGS = "-O3 ";
     my $F90FLAGS ="-O3 ";
     my $CFLAGS ="-O3 "; 
@@ -1335,6 +1377,20 @@ sub install_petsc ()
     my $COPTFLAGS ="-O3 ";
     my $CXXOPTFLAGS ="-O3 ";
 
+    # IBM BG/Q
+    if (not $opt_ibmgnu and $petsc_arch eq "arch-ppc64" ) {
+       $CXXFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+       $CFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+       $FFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+       $F90FLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+       $CXXOPTFLAGS="-O3 -qstrict -qarch=qp -qtune=qp"; 
+       $COPTFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+       $FOPTFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
+    }
+
+    if ($version eq "3.7.6") {
+      $dynamicload ="";
+    } 
     my $link_libraries = "--with-shared-libraries=1"; 
     if ( $opt_static eq "1" ) 
     {
@@ -1342,15 +1398,15 @@ sub install_petsc ()
     } 
 
    if ($wdebug eq "--with-debugging=0") { 
-    run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 FFLAGS=$FFLAGS F90FLAGS=$F90FLAGS CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS CXXOPTFLAGS=$CXXOPTFLAGS COPTFLAGS=$COPTFLAGS FOPTFLAGS=$FOPTFLAGS --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 $link_libraries $wviennacl $cuda_support --PETSC_ARCH=$petsc_arch");
+    run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 FFLAGS=$FFLAGS F90FLAGS=$F90FLAGS CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS CXXOPTFLAGS=$CXXOPTFLAGS COPTFLAGS=$COPTFLAGS FOPTFLAGS=$FOPTFLAGS --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=$fcflag $link_libraries $wviennacl $cuda_support --PETSC_ARCH=$petsc_arch");
    }
    else {
-     run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 $link_libraries $cuda_support --PETSC_ARCH=$petsc_arch");
+     run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=$fcflag $link_libraries $cuda_support --PETSC_ARCH=$petsc_arch");
    }
    run_command_or_die("make");
   }
   else {
-   run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 COPTFLAGS='-O3 ' FOPTFLAGS='-O3 ' --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=0 $link_libraries --with-dynamic-loading=1 $cuda_support --PETSC_ARCH=$petsc_arch");
+   run_command_or_die("./configure --prefix=$install_dir $wdebug $use_int64 COPTFLAGS='-O3 ' FOPTFLAGS='-O3 ' --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=$fcflag $link_libraries $dynamicload $cuda_support --PETSC_ARCH=$petsc_arch");
    run_command_or_die("make");
   }
     run_command_or_die("make install PETSC_DIR=$build_dir");
@@ -1571,7 +1627,7 @@ sub install_boost()
       }    
     
     my $boostmpiopt=" --without-mpi ";
-    unless ($opt_nompi or $version  eq "1_59_0") {
+    unless ($opt_nompi or $version  eq "1_59_0" or $version  eq "1_62_0")  {
       $boostmpiopt=" --with-mpi cxxflags=-DBOOST_MPI_HOMOGENEOUS ";
       open  (USERCONFIGJAM, ">>./tools/build/v2/user-config.jam") || die("Cannot Open File ./tools/build/v2/user-config.jam") ;
       print  USERCONFIGJAM <<ZZZ;
@@ -1596,7 +1652,7 @@ ZZZ
     {
        $static_link = " link=static";
     }
-    if ($version  eq "1_54_0" or $version  eq "1_59_0") 
+    if ($version  eq "1_54_0" or $version  eq "1_59_0" or $version  eq "1_62_0") 
       {
 	run_command_or_die("./bootstrap.sh --prefix=$opt_install_dir -with-libraries=test,thread,iostreams,filesystem,system,regex,date_time toolset=$toolset threading=multi variant=release stage");
 	run_command_or_die("./b2 $static_link install");

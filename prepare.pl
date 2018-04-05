@@ -89,7 +89,11 @@ my %default_options = (
     'withcuda'        => 0,
     'withviennacl'    => 0,
     'withomp'	      => 0,
-    'withcurl'        => 1,
+    'with_ibmshared'  => 0, # shared with IBM compiler
+    'with_ibmstatic'  => 0, # static with IBM compiler
+    'with_singleexec' => 0, # only coolfluid-solver will be compiled
+    'withcurl'        => 0,
+    'with_craystatic' => 0,
     'with_mutationpp' => 0,
     'with_plato'      => 0,
     'with_paralution' => 0,
@@ -98,6 +102,7 @@ my %default_options = (
     'mpi_extra_libs'  => "",
     'nofortran'       => "",
     'withcuda_malloc' => 0,
+    'with_log4cpp'    => 1, 
     'explicit_templates' => "",
     'cflags'          => "",
     'cxxflags'        => "",
@@ -143,6 +148,7 @@ my %default_options = (
     'tvmet_dir'            => "",
     'cblas_dir'            => "",
     'cuda_dir'             => "",
+    'with_gsl'             => 0,
     'gsl_dir'              => "",
     'gsl_librarydir'       => "/usr/lib64",
     'gsl_includedir'       => "/usr/include",
@@ -156,6 +162,10 @@ my %default_options = (
     'single_precision'     => 0,
     'with_longint'         => 0,
     'with_llongint'        => 0,
+    'libpetsc_name' 	   => "petsc",
+    'libpetsc_deps_paths'  => "",
+    'libparmetis_name'     => "parmetis",
+    'libmetis_name'        => "metis"
 );
 
 # add skip default skip options
@@ -225,6 +235,10 @@ sub parse_command_line_options()
        'coolfluid_dir=s'=> \$options{'coolfluid_dir'},
        'install_dir=s'  => \$options{'install_dir'},
        'cmake_generator=s' => \$options{'cmake_generator'},
+       'libpetsc_name=s'   => \$options{'libpetsc_name'},
+       'libpetsc_deps_paths' => \$options{'libpetsc_deps_paths'},
+       'libparmetis_name=s'  => \$options{'libparmetis_name'},
+       'libmetis_name=s'     => \$options{'libmetis_name'}
        );
    
    # remove duplicated entries in options
@@ -255,6 +269,7 @@ sub parse_command_line_options()
                                This is the default.
          --allstatic         Makes all libraries static by default, instead of dynamic.
                                They still can be desactivated in the configuration file.
+         --with_singleexec   Create a single executable with no libraries  
          --with_unit_tests   Create the unit tests. [Default: $default_options{'with_unit_tests'}]
          --config-file=      User config file to overide default configuration options
                                 Default: $default_options{'config_file'}
@@ -288,8 +303,10 @@ sub parse_command_line_options()
          --extra-mods-list=   Comma separated list of extra modules
                                   Default: $default_options{'extra_mods_list'}
 
-        
-
+         --libpetsc_name=       Name of the petsc library (Default: petsc)  
+         --libpetsc_deps_paths  Full paths to all petsc dependencies (needed only for static linking)
+         --libparmetis_name=    Name of the parmetis library (Default: parmetis)
+         --libmetis_name=       Name of the metis library (Default: metis) 
 
   ACTIONS
 
@@ -912,15 +929,48 @@ sub setup_cfgoptions()
     $other_options .= " -DCF_ENABLE_PROFILING=$opt_profiling -DCF_PROFILER_TOOL=$opt_profiler_tool";
   }
 
+  my $libpetsc_name = "petsc"; 
+  if (get_option('libpetsc_name'))
+  {
+   $libpetsc_name = get_option('libpetsc_name');
+   $other_options .= " -DCF_LIBPETSC_NAME=$libpetsc_name";
+  }
+
+  my $libpetsc_deps_paths = "";
+  if (get_option('libpetsc_deps_paths'))
+  {
+   $libpetsc_deps_paths = get_option('libpetsc_deps_paths');
+   $other_options .= " -DCF_LIBPETSC_DEPS_PATHS=\"$libpetsc_deps_paths\"";
+  } 
+
+  my $libparmetis_name = "parmetis";
+  if (get_option('libparmetis_name'))
+  {
+   $libparmetis_name = get_option('libparmetis_name');
+   $other_options .= " -DCF_LIBPARMETIS_NAME=$libparmetis_name";
+  }
+
+  my $libmetis_name = "metis";
+  if (get_option('libmetis_name'))
+  {
+   $libmetis_name = get_option('libmetis_name');
+   $other_options .= " -DCF_LIBMETIS_NAME=$libmetis_name";
+  }
+
   setup_option('nofortran',           'CF_SKIP_FORTRAN');
   setup_option('withmpi',             'CF_ENABLE_MPI');
   setup_option('withcuda',            'CF_ENABLE_CUDA');
   setup_option('withviennacl',        'CF_ENABLE_VIENNACL');
   setup_option('withomp',             'CF_ENABLE_OMP');
+  setup_option('with_ibmshared',      'CF_ENABLE_IBMSHARED');
+  setup_option('with_ibmstatic',      'CF_ENABLE_IBMSTATIC');
+  setup_option('with_singleexec',     'CF_ENABLE_SINGLEEXEC');
   setup_option('withcurl',            'CF_ENABLE_CURL');
+  setup_option('with_craystatic',     'CF_ENABLE_CRAYSTATIC');
   setup_option('with_mutationpp',     'CF_ENABLE_MUTATIONPP');
   setup_option('with_plato',          'CF_ENABLE_PLATO');
   setup_option('with_paralution',     'CF_ENABLE_PARALUTION'); 
+  setup_option('with_gsl',            'CF_ENABLE_GSL');
   setup_option('withdocs',            'CF_ENABLE_DOCS');
   setup_option('explicit_templates',  'CF_ENABLE_EXPLICIT_TEMPLATES');
   setup_option('with_testcases',      'CF_ENABLE_TESTCASES');
@@ -937,6 +987,7 @@ sub setup_cfgoptions()
   setup_option('with_longint',        'CF_ENABLE_LONG');
   setup_option('with_llongint',       'CF_ENABLE_LLONG');
   setup_option('withcuda_malloc',     'CF_CUDA_MALLOC');
+  setup_option('with_log4cpp',        'CF_ENABLE_LOG4CPP');  
 }
 
 #==========================================================================

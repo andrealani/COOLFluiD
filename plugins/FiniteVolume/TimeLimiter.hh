@@ -40,7 +40,7 @@ public: // functions
   /**
    * Constructor
    */
-  TimeLimiter(const std::string& name);
+  explicit TimeLimiter(const std::string& name);
 
   /**
    * Default destructor

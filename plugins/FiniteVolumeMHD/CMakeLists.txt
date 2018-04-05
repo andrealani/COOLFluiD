@@ -1,3 +1,9 @@
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME "FiniteVolumeMHD" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+
 LIST ( APPEND FiniteVolumeMHD_files
 AUSMFluxMHD.ci 
 AUSMFluxMHD.cxx 
@@ -7,7 +13,7 @@ AUSMPWFluxMHD.hh
 FiniteVolumeMHD.hh
 MHD3DCoriolisCentrifugalForcesSourceTerm.hh
 MHD3DProjectionCoriolisCentrifugalForcesSourceTerm.hh
-MHD3DProjectionPolytropicCoriolisCentrifugalForcesSourceTerm.hh
+MHD3DProjectionPolytropicCoriolisSourceTerm.hh
 MHD3DProjectionHeatingSourceTerm.hh
 MHD3DProjectionInitStatePFSS.hh
 MHD3DProjectionPolytropicInitStatePFSS.hh
@@ -52,7 +58,7 @@ MHD3DProjectionHeatingSourceTerm.cxx
 MHD3DProjectionInitStatePFSS.cxx
 MHD3DProjectionPolytropicInitStatePFSS.cxx
 MHD3DProjectionCoriolisCentrifugalForcesSourceTerm.cxx
-MHD3DProjectionPolytropicCoriolisCentrifugalForcesSourceTerm.cxx
+MHD3DProjectionPolytropicCoriolisSourceTerm.cxx
 LaxFriedFluxTanaka.cxx
 MHD3DPowellSourceTerm.cxx
 MHD2DPowellSourceTerm.cxx
@@ -95,9 +101,17 @@ UnsteadyMHD3DProjectionPolytropicPhotosphere.hh
 UnsteadyMHD3DProjectionPolytropicPhotosphere.cxx
 )
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND FiniteVolumeMHD_requires_mods FiniteVolume MHD )
 LIST ( APPEND FiniteVolumeMHD_libs FiniteVolume MHD )
-
 CF_ADD_PLUGIN_LIBRARY ( FiniteVolumeMHD )
+ELSE()
+IF ( CF_BUILD_FiniteVolumeMHD )
+FOREACH (AFILE ${FiniteVolumeMHD_files} )
+LIST(APPEND coolfluid-solver_files ../../plugins/FiniteVolumeMHD/${AFILE} )
+ENDFOREACH(AFILE)
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+ENDIF()
+ENDIF()
 
 CF_WARN_ORPHAN_FILES()

@@ -224,6 +224,30 @@ ELSE()
   SET(CF_HAVE_ALLSTATIC 0 CACHE BOOL "All libraries compiled with dynamic linking")
 ENDIF()
 
+IF ( CF_ENABLE_IBMSTATIC )
+   SET (CF_HAVE_IBMSTATIC 1 CACHE BOOL "Compiling on IBM machine with static linking")                                         
+ELSE()  
+   SET (CF_HAVE_IBMSTATIC 0 CACHE BOOL "Compiling on IBM machine with dynamic linking")
+ENDIF()
+
+IF ( CF_ENABLE_CRAYSTATIC )
+    SET (CF_HAVE_CRAYSTATIC 1 CACHE BOOL "Compiling on CRAY machine with static linking")
+ELSE()
+   SET (CF_HAVE_CRAYSTATIC 0 CACHE BOOL "Compiling on CRAY machine with dynamic linking")
+ENDIF()
+
+IF ( CF_ENABLE_LOG4CPP )
+   SET (CF_HAVE_LOG4CPP 1 CACHE BOOL "Compiling with full log4cpp functionality")
+ELSE()
+   SET (CF_HAVE_LOG4CPP 0 CACHE BOOL "Compiling without full log4cpp functionality") 
+ENDIF()
+
+IF ( CF_ENABLE_SINGLEEXEC ) 
+   SET (CF_HAVE_SINGLE_EXEC 1 CACHE BOOL "Compile a single executable, no libraries")
+ELSE()
+   SET (CF_HAVE_SINGLE_EXEC 0 CACHE BOOL "Don't compile a single executable, no libraries")
+ENDIF()
+
 # finding boost (essential)
 
 # find boost package (essential)
@@ -236,20 +260,30 @@ SET ( Boost_FIND_VERSION_MAJOR  "1"  )
 SET ( Boost_FIND_VERSION_MINOR  "42" )
 SET ( Boost_FIND_VERSION_PATCH  "0"  )
 # older cmakes dont have these versions
-SET ( Boost_ADDITIONAL_VERSIONS  "1.59" "1.59.0" "1.54" "1.54.0" "1.42" "1.42.0" "1.41" "1.41.0"  "1.40" "1.40.0" "1.39" "1.39.0" )
+SET ( Boost_ADDITIONAL_VERSIONS  "1.60" "1.60.0" "1.59" "1.59.0" "1.55" "1.55.0" "1.54" "1.54.0" "1.47" "1.47.0" "1.42" "1.42.0" "1.41" "1.41.0"  "1.40" "1.40.0" "1.39" "1.39.0" )
 # components to search for
-LIST ( APPEND CF_Boost_COMPONENTS thread filesystem system regex unit_test_framework )
 
+#IF ( CF_ENABLE_IBMSHARED OR CF_ENABLE_IBMSTATIC ) 
+#LIST ( APPEND CF_Boost_COMPONENTS filesystem system regex unit_test_framework )
+#ELSE()
+LIST ( APPEND CF_Boost_COMPONENTS thread filesystem system regex unit_test_framework )
+#ENDIF()
 FIND_PACKAGE( Boost COMPONENTS ${CF_Boost_COMPONENTS} )
 
 LOG ( "Boost include path [${Boost_INCLUDE_DIR}]" )
 LOG ( "Boost lib version  [${Boost_LIB_VERSION}]" )
 LOG ( "Boost libraries    [${Boost_LIBRARIES}]" )
 
-IF (${Boost_LIB_VERSION} STREQUAL "1_59" )
+IF (${Boost_LIB_VERSION} STREQUAL "1_60" )
+ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_60 )
+ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_59" )
 ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_59 )
+ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_55" )
+ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_55 )
 ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_54" )
 ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_54 )
+ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_47")
+ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_47 )
 ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_42")
 ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_42 )
 ENDIF()
@@ -263,11 +297,23 @@ ENDIF()
 INCLUDE_DIRECTORIES ( ${Boost_INCLUDE_DIR} )
 SET ( CF_Boost_LIBRARIES ${Boost_LIBRARIES} )
 
+IF ( CF_ENABLE_SINGLEEXEC )
+# remove debug version of Boost libraries if present
+# we assume that the release version is available
+ LIST ( REMOVE_ITEM CF_Boost_LIBRARIES debug )
+ LIST ( REMOVE_ITEM CF_Boost_LIBRARIES optimized )
+ FOREACH (ABoostLIB ${Boost_LIBRARIES})
+  IF (${ABoostLIB} MATCHES "-d-")
+   LIST ( REMOVE_ITEM CF_Boost_LIBRARIES ${ABoostLIB} )
+  ENDIF()
+ ENDFOREACH(ABoostLIB)
+ENDIF()
+
 ##############################################################################
 # find non essential packages
 
 # our find macros
-FIND_PACKAGE(BlasLapack)      # search for Blas Lapack support
+#FIND_PACKAGE(BlasLapack)      # search for Blas Lapack support
 FIND_PACKAGE(Metis)           # serial domain decomposition
 FIND_PACKAGE(Parmetis)        # parallel domain decomposition
 #ADD_DEFINITIONS  ( -DIDXTYPEWIDTH=64 )   # 64 bit
@@ -278,7 +324,10 @@ IF ( CF_ENABLE_CURL )
 ENDIF()
 FIND_PACKAGE(Valgrind)        # valgrind for profiling and memmory leak detection
 FIND_PACKAGE(GooglePerftools) # Google PerfTools for profiling
-FIND_PACKAGE(GSL)             # GNU Scientific Library
+
+IF ( CF_ENABLE_GSL )
+  FIND_PACKAGE(GSL)             # GNU Scientific Library
+ENDIF() 
 
 # MPI 
 IF (CF_ENABLE_MPI)  
@@ -292,6 +341,10 @@ ENDIF ()
 
 IF (CF_ENABLE_CUDA AND CF_ENABLE_VIENNACL)
  ADD_DEFINITIONS  ( -DCF_HAVE_VIENNACL )
+ENDIF()
+
+IF (CF_ENABLE_OMP)
+ ADD_DEFINITIONS  ( -DCF_HAVE_OMP )
 ENDIF()
 
 # mutation++
@@ -323,6 +376,9 @@ IF ( ZLIB_FOUND )
 	LOG ( "  ZLIB_LIBRARIES:    [${ZLIB_LIBRARIES}]" )
 ENDIF()
 
+
+# AL: this should not be here !!!!!!
+IF ( NOT CF_ENABLE_SINGLEEXEC )
 FIND_PACKAGE (BZip2)
 LOG ( "BZIP2_FOUND: [${BZIP2_FOUND}]" )
 IF ( BZIP2_FOUND )
@@ -331,6 +387,8 @@ IF ( BZIP2_FOUND )
 	LOG ( "  BZIP2_DEFINITIONS:  [${BZIP2_DEFINITIONS}]" )
 	LOG ( "  BZIP2_NEED_PREFIX:  [${BZIP2_NEED_PREFIX}]" )
 ENDIF()
+ENDIF()
+
 
 #include the generated config file
 ADD_DEFINITIONS  ( -DCF_HAVE_CONFIG_H )
@@ -345,7 +403,6 @@ IF ( CF_ENABLE_TESTCASES )
   SET (CF_ENABLE_UNIT_TESTS ON) 
   SET (CF_ENABLE_UNIT_CASES ON)    
   SET (CF_ENABLE_PERFORMANCE_TESTS ON)     
-
   SET (CF_ENABLE_PERFORMANCE_CASES ON)
 ENDIF()
 
@@ -360,11 +417,19 @@ INCLUDE_DIRECTORIES( ${COOLFluiD_SOURCE_DIR}/src )
 # include in compilation path the src dir
 ADD_SUBDIRECTORY ( src )
 
+#MESSAGE("##### coolfluid-solver_files = ${coolfluid-solver_files}")
+
 ##############################################################################
 LOG ( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++" )
 LOG ( "Plugin's Configuration ")
 LOG ( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++" )
 ##############################################################################
+
+#IF (CF_ENABLE_STATIC)
+SET ( coolfluid_solver_exe ${COOLFluiD_BINARY_DIR}/apps/Solver/coolfluid-solver CACHE  "Full path to coolfluid-solver" INTERNAL )
+MESSAGE ("###### coolfluid_solver_exe is ${coolfluid_solver_exe}")
+MARK_AS_ADVANCED ( coolfluid_solver_exe )
+#ENDIF()
 
 # check existence of Mutation* libraries and set corresponding environmental variables
 IF (EXISTS "${COOLFluiD_SOURCE_DIR}/plugins/Mutation") 
@@ -432,6 +497,9 @@ FOREACH( amodule ${CF_EXTRA_MODULES_LIST} )
     ADD_SUBDIRECTORY ( ${amodule} extra )
 ENDFOREACH( amodule ${CF_EXTRA_MODULES_LIST} )
 LOG ( "---------------------------------------------------------" )
+
+# applications directory (Solver & co)
+ADD_SUBDIRECTORY ( apps )
 
 #config file generation (at the end, so everything is detected)
 ADD_SUBDIRECTORY ( config )

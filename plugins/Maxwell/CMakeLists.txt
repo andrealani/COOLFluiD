@@ -1,3 +1,9 @@
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME "Maxwell" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+
 LIST ( APPEND Maxwell_files
 Maxwell.hh
 ConvMaxwellTerm.cxx
@@ -64,7 +70,15 @@ Maxwell3DProjectionVarSetT.hh
 )
 ENDIF()
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND Maxwell_cflibs Framework )
 CF_ADD_PLUGIN_LIBRARY ( Maxwell )
+ELSE()
+ FOREACH (AFILE ${Maxwell_files} )
+ LIST(APPEND coolfluid-solver_files ../../plugins/Maxwell/${AFILE} )
+ ENDFOREACH(AFILE)
+ CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+ENDIF()
+
 CF_WARN_ORPHAN_FILES()
-ADD_SUBDIRECTORY ( testcases )
+#ADD_SUBDIRECTORY ( testcases )

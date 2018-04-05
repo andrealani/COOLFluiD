@@ -1,0 +1,130 @@
+#==================================================================
+# Configuration opions for the prepare.pl script
+#==================================================================
+# This file should be in the directory from where the script is run
+#==================================================================
+# This file is meant as an example and it should be copied
+# and renamed to coolfluid.conf, and adapted to the
+# characteristics of the envrionment where you plan to
+# configure and run COOLFluiD
+#
+# If you used the install-coolfluid.pl script, just replace
+#    $HOME for your home account directory
+#    $ARCH for the result of command "uname -m"
+#==================================================================
+
+#==================================================================
+# default build options
+#==================================================================
+
+# settings for .bashrc on XC40 Hzel Hen
+# module load cdt/17.04 >& /dev/null
+# module load cray-mpich/7.5.4 >& /dev/null
+# module load cray-petsc-64/3.6.3.0 >& /dev/null
+## the following contains parmetis 4.0.2
+# module load cray-tpsl-64/17.04.1 >& /dev/null
+## the following is needed otherwise you get a weird error with cmake
+# module load cray-hdf5-parallel/1.10.0 >& /dev/null
+# module load tools/cmake/3.8.1
+# export CRAYPE_LINK_TYPE=static
+
+# change those two paths to your directory
+coolfluid_dir = /zhome/academic/HLRS/pri/ipranlan/trunk_last
+basebuild_dir = /zhome/academic/HLRS/pri/ipranlan/trunk_last/CRAY_STATIC
+
+# compilers
+cc     = /opt/cray/craype/2.5.9/bin/cc
+cxx    = /opt/cray/craype/2.5.9/bin/CC
+fc     = /opt/cray/craype/2.5.9/bin/ftn
+
+withcurl = 0
+nofortran = 1
+# create the CF static libs
+#with_singleexec = 1
+with_log4cpp = 0
+trace = off
+
+# name of the petsc library (!= petsc)
+libpetsc_name    = craypetsc_cray_real-64
+libparmetis_name = parmetis-64_cray
+libmetis_name    = metis-64_cray
+
+with_craystatic = 1
+
+# library locations
+mpi_dir       = /opt/cray/mpt/7.5.4/gni/mpich-cray/8.4
+boost_dir     = /opt/cray/trilinos/12.10.1.0/CRAY/8.5/haswell
+#/zhome/academic/HLRS/pri/ipranlan/local
+petsc_dir     = /opt/cray/petsc/3.6.3.0/real/CRAY64/8.3/haswell
+parmetis_dir  = /opt/cray/tpsl/17.04.1/CRAY64/8.3/haswell
+
+allactive = 0
+
+#static compilation
+allstatic = 1
+
+# mimimum set of libs to be able to compile CF
+lib_Config = on
+lib_Common = on
+lib_MathTools = on
+lib_logcpp = on
+lib_Environment = on
+lib_Framework = on
+lib_ShapeFunctions = on
+lib_AnalyticalModel = on
+
+####################
+# plugin libraries #
+####################
+
+# input formats
+lib_CFmeshFileReader = on
+lib_Gambit2CFmesh = on
+lib_Gmsh2CFmesh = on
+#lib_Tecplot2CFmesh = on
+#lib_THOR2CFmesh = on
+lib_CFmeshExtruder = on
+lib_CFmeshFileWriter = on
+lib_TecplotWriter = on
+
+lib_PhysicalModelDummy = on
+lib_Maxwell = on
+lib_FiniteVolume = on
+
+lib_MultiFluidMHD = on
+lib_ForwardEuler = on
+lib_NewtonMethod = on
+lib_ParaViewWriter = on
+
+lib_FiniteVolumeMaxwell = on
+lib_FiniteVolumeMultiFluidMHD = on
+
+#lib_MHD = on
+#lib_FiniteVolumeMHD = on
+
+# linear system solvers
+lib_PetscI = on
+
+# long long int 
+#with_llongint = 1
+
+# long int (with petsc 3.6.3)
+with_longint = 1
+
+# enable doxygen
+withdocs = 1
+
+cmake_generator = kdev
+#cmake_generator = xcode
+#
+with_testcases = 1
+#assertions = 0
+
+crayoptim_cflags   = -O3 #-D_GLIBCXX_USE_CXX11_ABI=0
+crayoptim_cxxflags = -O3
+crayoptim_fflags   = -O3 
+
+crayrelease_cflags   = -O3 -DNDEBUG
+crayrelease_cxxflags = -O3 -DNDEBUG
+crayrelease_fflags   = -O3 -DNDEBUG
+

@@ -22,7 +22,7 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This is a standard command to assemble the system using a FluxReconstruction solver
+/// This is a standard command to assemble the (convective part of the) system using a FluxReconstruction solver
 /// @author Alexander Papen
 /// @author Ray Vandenhoeck
 class ConvRHSFluxReconstruction : public FluxReconstructionSolverCom {
@@ -67,10 +67,10 @@ public: // functions
     
 protected: //functions
 
-  /// compute the interface flux correction FI-FD
+  /// compute the interface flux
   void computeInterfaceFlxCorrection();
   
-  /// compute the divergence of the discontinuous flx (-divFD)
+  /// compute the divergence of the discontinuous flx (-divFD+divhFD)
   void computeDivDiscontFlx(std::vector< RealVector >& residuals);
   
   /// add the residual updates to the RHS
@@ -103,11 +103,6 @@ protected: //functions
   void setCellData();
   
   /**
-   * Add the updateCoeff corrections due to the partition faces
-   */
-  void addPartitionFacesCorrection();
-  
-  /**
    * Compute the left and right states in the flx pnts
    */
   void computeFlxPntStates();
@@ -115,7 +110,7 @@ protected: //functions
   /// compute the volume term contribution to the gradients
   virtual void computeGradients();
   
-  /// compute the face correctcion to the gradients
+  /// compute the face correction to the corrected gradients
   virtual void computeGradientFaceCorrections();
 
 protected: //data
@@ -254,6 +249,12 @@ protected: //data
   
   /// coefs to compute the derivative of the states in the sol pnts
   Common::SafePtr< std::vector< std::vector< std::vector< CFreal > > > > m_solPolyDerivAtSolPnts;
+  
+  /// dimensions on which to evaluate the flux in the flux points
+  Common::SafePtr< std::vector< CFuint > >  m_flxPntFlxDim;
+  
+  /// the discontinuous flux extrapolated to the flux points
+  std::vector< RealVector > m_extrapolatedFluxes;
   
   private:
 

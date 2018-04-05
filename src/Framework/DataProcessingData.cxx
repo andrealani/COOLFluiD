@@ -4,8 +4,8 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#include "DataProcessingData.hh"
-#include "MethodCommandProvider.hh"
+#include "Framework/DataProcessingData.hh"
+#include "Framework/MethodCommandProvider.hh"
 #include "Framework/ConvectiveVarSet.hh"
 #include "Framework/PhysicalModel.hh"
 #include "Framework/NamespaceSwitcher.hh"
@@ -69,13 +69,14 @@ DataProcessingData::~DataProcessingData()
 void DataProcessingData::configure ( Config::ConfigArgs& args )
 {
   CFAUTOTRACE;
-
+  
   MethodData::configure(args);
-
+  
   std::string name = getNamespace();
   Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
     (SubSystemStatusStack::getCurrentName()).getNamespace(name);
-  Common::SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
+  Common::SafePtr<PhysicalModel> physModel = 
+    PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
   
   std::string provider = "Null";
   if (_updateVarStr != "Null") {
@@ -83,12 +84,13 @@ void DataProcessingData::configure ( Config::ConfigArgs& args )
       (physModel->getConvectiveName() + _updateVarStr) :
       (physModel->getDiffusiveName() + _updateVarStr) ;
   }
-
+  
   CFLog(VERBOSE, "DataProcessingData : UpdateVarSet is " << provider << "\n");
-
-  _updateVarSet.reset(Environment::Factory<ConvectiveVarSet>::getInstance().
-                      getProvider(provider)->create(physModel->getImplementor()->getConvectiveTerm()));
-
+  
+  _updateVarSet.reset(FACTORY_GET_PROVIDER
+    (getFactoryRegistry(), ConvectiveVarSet, provider)->
+    create(physModel->getImplementor()->getConvectiveTerm()));
+  
   cf_assert(_updateVarSet.isNotNull());
 }
 

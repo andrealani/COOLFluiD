@@ -10,6 +10,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
+using namespace COOLFluiD::Common;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -30,6 +31,7 @@ void DomainModel::defineConfigOptions(Config::OptionList& options)
 DomainModel::DomainModel(const std::string& name) :
   OwnedObject(),
   ConfigObject(name),
+  NonCopyable<DomainModel>(),
   m_trsNamesAndTRIdxs(),
   m_mapTRSName2TRIdx()
 {

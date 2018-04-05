@@ -340,8 +340,8 @@ Common::SelfRegistPtr<MeshDataBuilder> SpaceMethod::createMeshBuilder()
   // allocate and configure the method mesh data builder
 
   Common::SelfRegistPtr<MeshDataBuilder> ptr =
-    Environment::Factory<MeshDataBuilder>::getInstance().
-    getProvider(m_builder)->create(m_builder);
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), MeshDataBuilder, m_builder)->create(m_builder);
+  ptr->setFactoryRegistry(getFactoryRegistry());
   
   configureNested ( ptr.getPtr(), m_stored_args );
   return ptr;
@@ -354,11 +354,11 @@ Common::SelfRegistPtr<GlobalJacobianSparsity> SpaceMethod::createJacobianSparsit
   CFAUTOTRACE;
 
   cf_assert(isConfigured());
-
+  
   Common::SelfRegistPtr<GlobalJacobianSparsity> ptr =
-    Environment::Factory<GlobalJacobianSparsity>::getInstance().
-    getProvider(m_sparsity)->create();
-
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), GlobalJacobianSparsity, m_sparsity)->create();
+  ptr->setFactoryRegistry(getFactoryRegistry());
+  
   return ptr;
 }
 

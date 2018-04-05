@@ -49,13 +49,15 @@ class Environment_API CFEnvVars : public Common::NonCopyable<CFEnvVars>
     bool ErrorOnUnusedConfig;
     /// the name of the file in which to put the logging messages
     std::string MainLoggerFileName;
+    /// flag telling to use the new synchronization algorithm
+    std::string SyncAlgo;
     /// the loglevel for exceptions
     CFuint ExceptionLogLevel;
     /// the initial arguments with which the environment was started
     std::pair<int,char**> InitArgs;
     /// number of writing processes in parallel I/O
     CFuint NbWriters;
-    
+        
 }; // end class CFEnvVars
 
 //////////////////////////////////////////////////////////////////////////////

@@ -1,4 +1,10 @@
-LIST(APPEND  CFmeshFileReader_files
+IF ( NOT CF_HAVE_SINGLE_EXEC ) 
+SET ( MYLIBNAME "CFmeshFileReader" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+
+LIST(APPEND CFmeshFileReader_files
 CFmeshReader.cxx
 ReadBase.hh
 ReadBase.cxx
@@ -44,16 +50,22 @@ IF ( CF_HAVE_MPI )
   )
   
   IF ( CF_HAVE_PARMETIS )
-     LIST ( APPEND CFmeshFileReader_includedirs ${PARMETIS_INCLUDE_DIR} )
-     LIST ( APPEND CFmeshFileReader_libs ${PARMETIS_LIBRARIES} )
+     LIST ( APPEND ${MYLIBNAME}_includedirs ${PARMETIS_INCLUDE_DIR} )
+     LIST ( APPEND ${MYLIBNAME}_libs ${PARMETIS_LIBRARIES} )
   ENDIF ()
 
 ENDIF()
 
 ##############################################################################
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND CFmeshFileReader_cflibs Framework ShapeFunctions )
-
 CF_ADD_PLUGIN_LIBRARY ( CFmeshFileReader )
+ELSE()
+FOREACH (AFILE ${CFmeshFileReader_files} )
+LIST(APPEND coolfluid-solver_files ../../plugins/CFmeshFileReader/${AFILE} )
+ENDFOREACH(AFILE)
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+ENDIF()
 
 CF_WARN_ORPHAN_FILES()

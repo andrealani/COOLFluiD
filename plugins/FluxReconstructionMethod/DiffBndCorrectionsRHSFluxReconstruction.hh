@@ -84,7 +84,7 @@ protected: // functions
   /// compute the states, gradients and ghost states, gradients in the flx pnts
   void computeFlxPntStates();
   
-  /// compute the interface flux correction FI-FD
+  /// compute the interface flux
   void computeInterfaceFlxCorrection();
   
   /// compute the total correction
@@ -98,6 +98,11 @@ protected: // functions
   
   /// set the bnd face data necessary to compute FI-FD
   void setBndFaceData(CFuint faceID);
+  
+  /// prepare the computation of the diffusive flux
+  virtual void prepareFluxComputation()
+  {
+  }
   
   /**
    * compute the wave speed updates for this face
@@ -234,6 +239,15 @@ protected: // data
   
   /// coefs to extrapolate the states to the flx pnts
   Common::SafePtr< std::vector< std::vector< CFreal > > > m_solPolyValsAtFlxPnts;
+  
+  /// flag telling whether to freeze the gradients
+  bool m_freezeGrads;
+  
+  /// average solution in a flux point
+  RealVector m_avgSol;
+  
+  /// average gradients in a flux point
+  std::vector< RealVector* > m_avgGrad;
   
   private:
 

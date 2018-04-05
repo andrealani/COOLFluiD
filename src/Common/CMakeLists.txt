@@ -1,5 +1,11 @@
 ###############################################################################
 # Basic files
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME "Common" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+ 
 LIST ( APPEND Common_files
 ArrayAllocator.hh
 BigAllocator.hh
@@ -21,6 +27,9 @@ DynamicObject.hh
 DynamicObject.cxx
 Exception.cxx
 Exception.hh
+FactoryBase.hh
+FactoryRegistry.cxx
+FactoryRegistry.hh
 FailedAssertionException.hh
 FloatingPointException.hh
 Fortran.hh
@@ -139,7 +148,7 @@ LIST ( APPEND Common_files Meta/Loop.hh Meta/Power.hh )
 
 # MPI Files
 IF (CF_HAVE_MPI)
-  LIST(APPEND Common_includedirs ${MPI_INCLUDE_DIR} )
+  LIST(APPEND ${MYLIBNAME}_includedirs ${MPI_INCLUDE_DIR} )
   LIST(APPEND Common_files
     MPI/CommIteratorBase.hh
     MPI/CommPattern.cxx
@@ -158,7 +167,7 @@ IF (CF_HAVE_MPI)
     MPI/PEInterfaceMPI.cxx
     MPI/PEInterfaceMPI.hh
   )
-LIST(APPEND Common_libs ${MPI_LIBRARIES})
+LIST(APPEND ${MYLIBNAME}_libs ${MPI_LIBRARIES})
 ENDIF()
 
 ###############################################################################
@@ -173,7 +182,7 @@ ENDIF()
 ###############################################################################
 
 IF (CF_HAVE_CUDA)
-  LIST(APPEND Common_includedirs ${CUDA_INCLUDE_DIR} )
+  LIST(APPEND ${MYLIBNAME}_includedirs ${CUDA_INCLUDE_DIR} )
   LIST(APPEND Common_files
     CUDA/ArrayT.hh
     CUDA/CFMat.hh
@@ -189,11 +198,7 @@ IF (CF_HAVE_CUDA)
     CUDA/MathFunctions.hh
   )     
 
-  LIST ( APPEND Common_libs ${CUDA_LIBRARIES})
-
-# the following should work but it does not on Mac OS X!!
-#  LIST ( APPEND Common_cflibs Config )
-   
+  LIST ( APPEND ${MYLIBNAME}_libs ${CUDA_LIBRARIES})
 ENDIF ()
 
 ###############################################################################
@@ -201,9 +206,9 @@ ENDIF ()
 # Curl download helper
 # LIST ( APPEND OPTIONAL_dirfiles CurlDownloader.hh CurlDownloader.cxx)
 IF(CF_HAVE_CURL)
-  LIST(APPEND Common_includedirs ${CURL_INCLUDE_DIR} )
+  LIST(APPEND ${MYLIBNAME}_includedirs ${CURL_INCLUDE_DIR} )
   LIST(APPEND Common_files CurlDownloader.hh CurlDownloader.cxx )
-  LIST(APPEND Common_libs ${CURL_LIBRARY})
+  LIST(APPEND ${MYLIBNAME}_libs ${CURL_LIBRARY})
 ENDIF()
 
 
@@ -230,11 +235,16 @@ LIST ( APPEND OPTIONAL_dirfiles ProcessInfoWin32.hh ProcessInfoWin32.cxx )
 ### UNIXES ####
 IF (UNIX)
 
+#IF ( NOT CF_HAVE_SINGLE_EXEC )
+IF (NOT CF_HAVE_ALLSTATIC )
   IF ( CF_HAVE_DLOPEN )
     LIST ( APPEND Common_files PosixDlopenLibLoader.hh PosixDlopenLibLoader.cxx )
-    LIST ( APPEND Common_libs  dl )
+    # the following makes the compilation fail when no library is created
+    # needs to be tested better for static compilation
+    LIST ( APPEND Common_libs dl )
     SET ( CF_HAVE_LIBLOADER ON )
   ENDIF()
+ENDIF()
 
   IF    ( CF_OS_MACOSX )
     LIST ( APPEND Common_files SignalHandlerMacOSX.hh SignalHandlerMacOSX.cxx )
@@ -259,7 +269,7 @@ IF (WIN32)
   # should search for psapi.dll if not in windows 7 (already in kernel32.dll)
 
   # libraries for ProcessInfoWin32
-  LIST ( APPEND Common_libs dbghelp psapi )
+  LIST ( APPEND ${MYLIBNAME}_libs dbghelp psapi )
 
   IF(CF_HAVE_WINDOWSH)
     LIST ( APPEND Common_files Win32LibLoader.hh Win32LibLoader.cxx)
@@ -268,14 +278,25 @@ IF (WIN32)
 
 ENDIF()
 
-IF    ( NOT CF_HAVE_LIBLOADER )
-  MESSAGE ( FATAL_ERROR "No dynamic library loader was found!")
+#IF ( NOT CF_HAVE_LIBLOADER AND NOT CF_HAVE_SINGLE_EXEC )
+IF ( NOT CF_HAVE_LIBLOADER AND NOT CF_HAVE_ALLSTATIC ) 
+ MESSAGE ( FATAL_ERROR "No dynamic library loader was found!")
 ENDIF()
 
 ###############################################################################
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND Common_cflibs logcpp )
-
 CF_ADD_KERNEL_LIBRARY ( Common )
+ELSE()
+FOREACH (AFILE ${Common_files} )
+#LIST(APPEND coolfluid-solver_files ${CMAKE_CURRENT_SOURCE_DIR}/${AFILE} )
+LIST(APPEND coolfluid-solver_files ../../src/Common/${AFILE} )
+ENDFOREACH(AFILE)
+
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_libs  ${coolfluid-solver_libs} )
+CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_includedirs  ${coolfluid-solver_includedirs} )
+ENDIF()
 
 CF_WARN_ORPHAN_FILES()

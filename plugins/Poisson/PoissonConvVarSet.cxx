@@ -1,0 +1,93 @@
+#include "Poisson/Poisson.hh"
+#include "Poisson/PoissonConvVarSet.hh"
+#include "Environment/ObjectProvider.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace Poisson {
+
+//////////////////////////////////////////////////////////////////////////////
+
+PoissonConvVarSet::PoissonConvVarSet(Common::SafePtr<BaseTerm> term) :
+  Framework::ConvectiveVarSet(term),
+  _model(term.d_castTo<PoissonConvTerm>())
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+PoissonConvVarSet::~PoissonConvVarSet()
+{
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+void PoissonConvVarSet::setup()
+{
+  Framework::ConvectiveVarSet::setup();
+  
+  // set EquationSetData
+  getEqSetData().resize(1);
+  getEqSetData()[0].setup(0,0,1);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+CFreal PoissonConvVarSet::getMaxEigenValue(const RealVector& data,
+					   const RealVector& normal)
+{
+  return 1;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+CFreal PoissonConvVarSet::getMaxAbsEigenValue(const RealVector& data,
+					      const RealVector& normal)
+{
+  return 1;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+void PoissonConvVarSet::computeEigenValues(const RealVector& data,
+					   const RealVector& normal,
+					   RealVector& result)
+{
+  result[0] = 1.;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void PoissonConvVarSet::computeFlux (const RealVector& data,
+				     const RealVector& normals)
+{
+  CFLog(INFO, "PoissonConvVarSet::computeFlux()\n"); exit(1);
+  
+  _fluxArray[0] = 0. ;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+void PoissonConvVarSet::computeStateFlux (const RealVector& data)
+{
+  _physFlux = 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace Poisson
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

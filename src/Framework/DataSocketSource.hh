@@ -115,9 +115,10 @@ void DataSocketSource<TYPE,STORAGETYPE>::allocate(Common::SafePtr<DataStorage> s
   deallocate();
   m_storage = storage;
 
+  const CFuint MIN_SIZE = 0; // 1 creates memory leaks but 0 is also problematic
   // creates an empty data storage
   CreateDataHandle<TYPE, STORAGETYPE>(m_storage, getDataSocketFullStorageName(), 
-				      nspaceName, (CFuint)(0), m_handle);
+				      nspaceName, (CFuint)(MIN_SIZE), m_handle);
 }
 
 //////////////////////////////////////////////////////////////////////////////

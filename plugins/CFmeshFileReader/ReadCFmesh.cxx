@@ -66,14 +66,15 @@ void ReadCFmesh::configure ( Config::ConfigArgs& args )
 void ReadCFmesh::execute()
 {
   CFAUTOTRACE;
-
+  
   m_data->setDataSockets(socket_states, socket_nodes, &m_sockets);
   m_data->setExtraVarNamesAndTags(getMethodData().getExtraNVarSocketNamesAndTags(),
                                   getMethodData().getExtraSVarSocketNamesAndTags(),
                                   getMethodData().getExtraVarSocketNamesAndTags());
   SafePtr<CFmeshReaderSource> ptr = m_data.get();
   cf_assert(ptr.isNotNull());
-
+  
+  m_reader.setFactoryRegistry(getFactoryRegistry());
   m_reader.setReadData(ptr);
   m_reader.setStateInitValues(getMethodData().getUseInitValues(),
             getMethodData().getInitValues(),

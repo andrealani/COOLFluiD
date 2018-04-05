@@ -49,18 +49,18 @@ public: // classes
    * Split the jacobian
    */
   virtual void splitJacobian(RealMatrix& jacobPlus,
-			  RealMatrix& jacobMin,
-			  RealVector& eValues,
-			  const RealVector& normal) {} 
-
+			     RealMatrix& jacobMin,
+			     RealVector& eValues,
+			     const RealVector& normal) {} 
+  
   /**
    * Set the matrix of the right eigenvectors and the matrix of the eigenvalues
    */
- virtual void computeEigenValuesVectors(RealMatrix& rightEv,
-				     RealMatrix& leftEv,
-				     RealVector& eValues,
-				     const RealVector& normal) {} 
-
+  virtual void computeEigenValuesVectors(RealMatrix& rightEv,
+					 RealMatrix& leftEv,
+					 RealVector& eValues,
+					 const RealVector& normal) {} 
+  
   /**
    * Set the first right eigen vector (corresponding to \f$\vec{u} \cdot \vec{n}\f$)
    */
@@ -70,7 +70,7 @@ public: // classes
   {
     throw Common::NotImplementedException (FromHere(),"Euler3DVarSet::setEigenVect1()");
   }
-
+  
   /**
    * Set the second right eigen vector (corresponding to \f$\vec{u} \cdot \vec{n}\f$)
    */
@@ -90,7 +90,7 @@ public: // classes
   {
     throw Common::NotImplementedException (FromHere(),"Euler3DVarSet::setEigenVect3()");
   }
-
+  
   /**
    * Set the fourth right eigen vector (corresponding to \f$\vec{u}\cdot\vec{n}+ a \f$}
    */
@@ -124,9 +124,13 @@ public: // classes
    */
   CFreal getNormalSpeed(const RealVector& data, const RealVector& normal) const
   {
-    return data[EulerTerm::VX]*normal[XX] +
-      data[EulerTerm::VY]*normal[YY] +
-      data[EulerTerm::VZ]*normal[ZZ];
+    if (normal.size() == 3) {
+      return data[EulerTerm::VX]*normal[XX] +
+	data[EulerTerm::VY]*normal[YY] +
+	data[EulerTerm::VZ]*normal[ZZ];
+    }
+    // 2D and 1/2 
+    return data[EulerTerm::VX]*normal[XX] + data[EulerTerm::VY]*normal[YY];
   }
   
   /// Set the vector of the eigenValues
@@ -154,11 +158,8 @@ protected:
   /**
    * Get the number of equations of this VarSet
    */
-  CFuint getNbEqs() const
-  {
-    return 5;
-  }
-
+  CFuint getNbEqs() const {return 5;}
+  
 }; // end of class Euler3DVarSet
 
 //////////////////////////////////////////////////////////////////////////////

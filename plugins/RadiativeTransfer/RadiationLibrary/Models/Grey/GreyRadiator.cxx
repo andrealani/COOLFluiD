@@ -118,7 +118,7 @@ inline CFreal GreyRadiator::getCurrentWallTemperature()
   //    Framework::DataHandle<CFreal> faceNormals
   //      = m_radPhysicsHandlerPtr->getDataSockets()->normals.getDataHandle();
   //   std::cout<<"normal "<<faceNormals[DIM_2D*wallGeoID]<<' '<< faceNormals[DIM_2D*wallGeoID+1]<<std::endl;
-  
+ 
   const CFreal Temperature = (&(*state)[0])[m_tempID];
   cf_assert(Temperature > 0 && "Temperature negative, is the temp ID well defined?");
   return Temperature;

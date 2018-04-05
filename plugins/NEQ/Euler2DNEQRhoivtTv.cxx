@@ -87,14 +87,18 @@ void Euler2DNEQRhoivtTv::splitJacobian(RealMatrix& jacobPlus,
 //////////////////////////////////////////////////////////////////////////////
 
 void Euler2DNEQRhoivtTv::setThermodynamics(CFreal rho, 
-					  const State& state, 
+					   const State& state, 
 					   RealVector& data)
 { 
   const CFuint nbSpecies = getModel()->getNbScalarVars(0);
   const RealVector& refData = getModel()->getReferencePhysicalData();
   CFreal rhodim = rho*refData[EulerTerm::RHO];
-  CFreal T = state[getTempID(nbSpecies)];
+  const CFuint TID = getTempID(nbSpecies);
+  CFreal T = state[TID];
   CFreal Tdim = T*refData[EulerTerm::T];
+  CFreal* rhoi = &const_cast<State&>(state)[0];
+  CFreal* Tvec = &const_cast<State&>(state)[TID];
+  _library->setState(rhoi, Tvec);
   
   const CFuint nbTv = getModel()->getNbScalarVars(1);
   const CFuint firstTv = getModel()->getFirstScalarVar(1);
@@ -103,7 +107,7 @@ void Euler2DNEQRhoivtTv::setThermodynamics(CFreal rho,
   for (CFuint ie = 0; ie < nbTv; ++ie) {
     _tvDim[ie] = state[startTv + ie]*refData[EulerTerm::T];
   }
-  
+    
   CFreal pdim = _library->pressure(rhodim, Tdim, &_tvDim[0]);
   const CFreal p = (pdim - getModel()->getPressInf())/refData[EulerTerm::P];
   
@@ -207,7 +211,11 @@ void Euler2DNEQRhoivtTv::setDimensionalValuesPlusExtraValues
   // set the current species fractions in the thermodynamic library
   // this has to be done before computing any other thermodynamic quantity !!! 
   _library->setSpeciesFractions(_ye);
-    
+  
+  CFreal* rhoi = &const_cast<State&>(state)[0];
+  CFreal* Tvec = &const_cast<State&>(state)[getTempID(nbSpecies)];
+  _library->setState(rhoi, Tvec);
+  
   const CFreal u = result[nbSpecies];
   const CFreal v = result[nbSpecies+1];
   const CFreal V2 = u*u + v*v;

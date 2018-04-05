@@ -40,6 +40,10 @@ public:
   /// @return SelfRegistPtr olding the created object
   virtual Common::SelfRegistPtr<BASE> create() = 0;
 
+  /// Polymorphic function to create objects of dynamical type BASE
+  /// @return SelfRegistPtr olding the created object
+  virtual Common::SelfRegistPtr<BASE>* createPtr() {return CFNULL;}
+
 }; // end of class ConcreteProvider
 
 //////////////////////////////////////////////////////////////////////////////
@@ -64,6 +68,11 @@ public:
   /// @param arg1 first parameter
   /// @return SelfRegistPtr olding the created object
   virtual Common::SelfRegistPtr<BASE> create(BASE_ARG1 arg1) = 0;
+
+  /// Polymorphic function to create objects of dynamical type BASE
+  /// @param arg1 first parameter
+  /// @return SelfRegistPtr olding the created object
+  virtual Common::SelfRegistPtr<BASE>* createPtr(BASE_ARG1 arg1) {return CFNULL;}
 
 }; // end of class ConcreteProvider
 
@@ -91,6 +100,12 @@ public:
   /// @param arg2 first parameter
   /// @return SelfRegistPtr olding the created object
   virtual Common::SelfRegistPtr<BASE> create(BASE_ARG1 arg1, BASE_ARG2 arg2) = 0;
+
+  /// Polymorphic function to create objects of dynamical type BASE
+  /// @param arg1 first parameter
+  /// @param arg2 first parameter
+  /// @return SelfRegistPtr olding the created object
+  virtual Common::SelfRegistPtr<BASE>* createPtr(BASE_ARG1 arg1, BASE_ARG2 arg2) {return CFNULL;}
 
 }; // end of class ConcreteProvider
 

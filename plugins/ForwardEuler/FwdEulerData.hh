@@ -144,8 +144,6 @@ typedef Framework::MethodCommand<FwdEulerData>::PROVIDER FwdEulerComProvider;
 
     } // namespace ForwardEuler
 
-
-
 } // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////

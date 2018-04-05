@@ -9,13 +9,9 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "Environment/FactoryBase.hh"
+#include "Common/FactoryBase.hh"
 #include "Common/CFLog.hh"
-#include "Common/SafePtr.hh"
-#include "Common/NoSuchValueException.hh"
-#include "Common/StorageExistsException.hh"
-#include "Environment/FactoryRegistry.hh"
-#include "Environment/Provider.hh"
+#include "Common/FactoryRegistry.hh"
 #include "Environment/CFEnv.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -23,9 +19,9 @@
 namespace COOLFluiD {
 
   namespace Environment {
-
+    
     template < class BASE > class Provider;
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 /// Stores the Provider's that create self-registration objects polymorphically.
@@ -33,20 +29,27 @@ namespace COOLFluiD {
 /// @author Andrea Lani
 /// @author Tiago Quintino
 template <class BASE>
-class Factory : public FactoryBase {
+class Factory : public Common::FactoryBase {
 public: // methods
 
+#ifdef CF_HAVE_SINGLE_EXEC
+  /// Default constructor
+  Factory();
+  /// Default destructor
+  ~Factory();
+#endif
+  
   /// @return the instance of this singleton
   static Environment::Factory<BASE>& getInstance();
-
+    
   /// Checks if a provider is registered
   /// @param name name of the provider
   bool exists(const std::string& name);
-
+  
   /// Registers a provider
   /// @param provider pointer to the provider to be registered
-  void regist(Environment::Provider<BASE>* provider);
-
+  void regist(Provider<BASE>* provider);
+  
   /// Remove a registered provider
   /// @throw Common::NoSuchValueException if the provider is not registered
   void unregist(const std::string& providerName);
@@ -56,26 +59,28 @@ public: // methods
 
   /// @return all the providers in this Factory
   std::vector<Common::ProviderBase*> getAllProviders();
-
+  
   /// Get a given Provider
   /// @throw Common::NoSuchValueException if the Provider is not registered
-  Common::SafePtr< typename BASE::PROVIDER > getProvider(const std::string& providerName);
-
+  Common::SafePtr<typename BASE::PROVIDER> getProvider(const std::string& providerName);
+  
 protected: // helper function
-
+  
+#ifndef CF_HAVE_SINGLE_EXEC
   /// Constructor is protected because this is a Singleton.
   Factory();
   /// Destructor is protected because this is a Singleton.
   ~Factory();
-
+#endif
+  
   /// providers database
-  std::map<std::string, Environment::Provider<BASE>*>& getProviderMap() { return m_map; }
-
+  std::map<std::string, Provider<BASE>*>& getProviderMap() { return m_map; }
+  
 private: // data
 
   /// providers database
   std::map<std::string, Provider<BASE>*> m_map;
-
+  
 }; // end of class Factory
 
 //////////////////////////////////////////////////////////////////////////////
@@ -90,9 +95,11 @@ Factory<BASE>& Factory<BASE>::getInstance()
 //////////////////////////////////////////////////////////////////////////////
 
 template <class BASE>
-Factory<BASE>::Factory()
+Factory<BASE>::Factory() : Common::FactoryBase()
 {
+#ifndef CF_HAVE_SINGLE_EXEC
   Environment::CFEnv::getInstance().getFactoryRegistry()->regist(this);
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -107,15 +114,17 @@ Factory<BASE>::~Factory()
 template <class BASE>
 void Factory<BASE>::regist(Provider<BASE>* provider)
 {
-  if (exists(provider->getName()))
-  {
-    throw Common::StorageExistsException (FromHere(),
-      "In factory of [" + BASE::getClassName() +
-      "] a provider with the name [" + provider->getName() +
-      "] was found when trying to regist it" );
+  if (exists(provider->getName())) {
+#ifndef CF_HAVE_ALLSTATIC
+  CFtrace << "In factory of [" << BASE::getClassName() <<
+    "] a provider with the name [" << provider->getName() <<
+    "] was found when trying to regist it\n";
+#endif
   }
+#ifdef CF_HAVE_LOG4CPP
   CFtrace << "Registering provider [" << provider->getName() << "] in factory of [" << BASE::getClassName() << "]\n";
-  getProviderMap()[provider->getName()] = provider;
+#endif 
+ getProviderMap()[provider->getName()] = provider;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -165,7 +174,7 @@ template <class BASE>
 std::vector<Common::ProviderBase*> Factory<BASE>::getAllProviders()
 {
   std::vector<Common::ProviderBase*> result;
-  typename std::map<std::string,Provider<BASE>*>::iterator itr;
+  typename std::map<std::string, Provider<BASE>*>::iterator itr;
   itr = getProviderMap().begin();
   for (; itr != getProviderMap().end(); ++itr) {
     result.push_back(itr->second);
@@ -173,6 +182,29 @@ std::vector<Common::ProviderBase*> Factory<BASE>::getAllProviders()
   return result;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+#ifdef CF_HAVE_SINGLE_EXEC
+  // AL: can this pointer dereferencing create a memory leak??
+#define FACTORY(__fReg__, __fType__) __fReg__->getFactory(__fType__::getClassName()).d_castTo<Environment::Factory<__fType__> >()
+#define FACTORY_GET_PROVIDER(__fReg__, __fType__, __pName__) FACTORY(__fReg__, __fType__)->getProvider( __pName__ )
+#define FACTORY_EXISTS_PROVIDER(__fReg__, __fType__, __pName__) FACTORY(__fReg__, __fType__)->exists( __pName__ )
+#define FACTORY_GET_ALL_PROVIDERS(__fReg__, __fType__) FACTORY(__fReg__, __fType__)->getAllProviders()
+#define FACTORY_T(__fReg__, __fType__) __fReg__->getFactory(__fType__::getClassName()).template d_castTo<Environment::Factory<__fType__> >()
+#define FACTORY_T_GET_PROVIDER(__fReg__, __fType__, __pName__) FACTORY_T(__fReg__, __fType__)->getProvider( __pName__ )
+#define FACTORY_T_EXISTS_PROVIDER(__fReg__, __fType__, __pName__) FACTORY_T(__fReg__, __fType__)->exists( __pName__ )
+#define FACTORY_T_GET_ALL_PROVIDERS(__fReg__, __fType__) FACTORY_T(__fReg__, __fType__)->getAllProviders()
+#else  
+#define FACTORY(__fReg__, __fType__) Environment::Factory<__fType__>::getInstance()
+#define FACTORY_GET_PROVIDER(__fReg__, __fType__, __pName__) FACTORY(__fReg__, __fType__).getProvider( __pName__ )
+#define FACTORY_EXISTS_PROVIDER(__fReg__, __fType__, __pName__) FACTORY(__fReg__, __fType__).exists( __pName__ )
+#define FACTORY_GET_ALL_PROVIDERS(__fReg__, __fType__) FACTORY(__fReg__, __fType__).getAllProviders()
+#define FACTORY_T(__fReg__, __fType__) Environment::Factory<__fType__>::getInstance()
+#define FACTORY_T_GET_PROVIDER(__fReg__, __fType__, __pName__) FACTORY(__fReg__, __fType__).getProvider( __pName__ )
+#define FACTORY_T_EXISTS_PROVIDER(__fReg__, __fType__, __pName__) FACTORY(__fReg__, __fType__).exists( __pName__ )
+#define FACTORY_T_GET_ALL_PROVIDERS(__fReg__, __fType__) FACTORY(__fReg__, __fType__).getAllProviders()
+#endif
+    
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace Environment

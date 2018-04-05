@@ -46,6 +46,8 @@ void ComputeDiffusiveTerm::configure ( Config::ConfigArgs& args )
 
 void ComputeDiffusiveTerm::setup()
 {
+  ComputeTerm<FiniteElementMethodData>::setup();
+  
   _diffusiveEntity = getMethodData().getDiffusiveEntity();
   cf_assert(_diffusiveEntity.isNotNull());
 }

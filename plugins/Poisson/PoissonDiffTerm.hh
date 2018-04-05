@@ -36,7 +36,7 @@ public:
    * the variable name and its position in the
    * physical data
    */
-  enum {PHI=0};
+  enum {SIGMA=0};
   
   /**
    * Constructor without arguments

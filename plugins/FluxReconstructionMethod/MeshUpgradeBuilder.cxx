@@ -1,9 +1,12 @@
+#include <numeric>
+
 #include "Common/CFLog.hh"
 #include "Environment/ObjectProvider.hh"
 
 #include "Common/BadValueException.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/PhysicalModel.hh"
+#include "Framework/BadFormatException.hh"
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/MeshUpgradeBuilder.hh"
@@ -36,7 +39,7 @@ void MeshUpgradeBuilder::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< std::string >("PolynomialOrder","Flux Reconstruction polynomial order.");
   options.addConfigOption< std::string >("GeoPolynomialOrder","Geometrical polynomial order.");
-  options.addConfigOption< CFuint >("DivideElements","Divide elements on equal parts to form new cells. This number is equal to te number of element adjescend to an old element face");
+  options.addConfigOption< CFuint >("DivideElements","Divide elements on equal parts to form new cells. This number is equal to te number of element adjescend to an old element face, so for 1 nothing happens.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -52,6 +55,7 @@ MeshUpgradeBuilder::MeshUpgradeBuilder(const std::string& name) :
   m_elemLocalIDOfState(),
   m_elemIDOfState(),
   m_elemFirstStateLocalID(),
+  m_newToOldNodeID(),
   m_updatables()
 {
   addConfigOptionsTo(this);
@@ -368,9 +372,11 @@ void MeshUpgradeBuilder::createTopologicalRegionSets()
 
 void MeshUpgradeBuilder::divideElements()
 {
+  // get the element type data
   SafePtr< vector<ElementTypeData> > elementType =
     getCFmeshData().getElementTypeData();
     
+  // get the old state and node connectivities
   SafePtr<MeshData::ConnTable> cellStates = MeshDataStack::getActive()->getConnectivity("cellStates_InnerCells");
   SafePtr<MeshData::ConnTable> cellNodes = MeshDataStack::getActive()->getConnectivity("cellNodes_InnerCells");
   
@@ -379,34 +385,47 @@ void MeshUpgradeBuilder::divideElements()
   
   // get the states
   DataHandle < Framework::State*, Framework::GLOBAL > states = getCFmeshData().getStatesHandle();
-    
+     
   const CFuint nbElements = getCFmeshData().getNbElements();
   const CFuint nbNodes = getCFmeshData().getTotalNbNodes();
 
   const CFuint nbElementTypes = getCFmeshData().getNbElementTypes();
   cf_assert(nbElementTypes == elementType->size());
+  
+  // the number of new cells that will be created in one old cell
   const CFuint nbNewCellsPerOldCell = pow(m_elementDivision,getCFmeshData().getDimension());
   
+  // total nb of new elements
   const CFuint newNbElements = nbElements*nbNewCellsPerOldCell;
   
-  // temporary storage for original (lower order) nodes:
-  const MeshData::ConnTable initialCellNodes = (*cellNodes);
+  // temporary storage for original nodes and state connectivities
+  MeshData::ConnTable initialCellNodes = (*cellNodes);
   const MeshData::ConnTable initialCellStates = (*cellStates);
   
+  // the new node coordinates
   vector< vector< RealVector > > newNodeCoords;
+  
+  // vector holding whether the old cell was updatable
   vector< bool > updatables;
   
+  // this pattern will be used to resize the connectivities
   m_pattern.resize(newNbElements);
   
+  // iterator over the elementTypes, for now there should be only one
   vector< ElementTypeData >::iterator type_itr;
   
-  // set the correct number of nodes per element in m_pattern
+  // first free idx for a cell
   CFuint firstFreeIdx = 0;
+  // needed for a new node to cell map
   CFuint nodeToCellsMapSize = 0;
-  CFuint nbNewNodes = 0;
-  // nodes to cells multimap
+  // nb of new states
+  CFuint nbNewStates = 0;
+  
+  // nodes to cells multimap for the old nodes
   CFMultiMap<CFuint,CFuint> mapNode2CellsOld;
   mapNode2CellsOld.reserve(nbNodes);
+
+  // set the correct number of nodes per element in m_pattern
   for (type_itr = elementType->begin(); type_itr != elementType->end(); ++type_itr)
   {
     // get the current geo shape
@@ -422,17 +441,22 @@ void MeshUpgradeBuilder::divideElements()
       // get the number of nodes in this cell type originally
       const CFuint nbNodesPerCell = getNbrOfNodesInCellType(elemGeoShape,m_prevGeoPolyOrder);
       
+      // add new nodes to the new node to cell map
       nodeToCellsMapSize += nbNodesPerCell*nbNewCellsPerOldCell;
-      
-      newNodeCoords.push_back(getNewNodesMappedCoords(elemGeoShape,m_elementDivision,globalIdx,initialCellNodes));
-      
+
+      // compute the coordinates of the new nodes
+      newNodeCoords.push_back(getNewNodesCoords(elemGeoShape,m_elementDivision,globalIdx,initialCellNodes));
+
+      // fill in updatables
       updatables.push_back(states[(*cellStates)(globalIdx,0)]->isParUpdatable());
       
+      // create the old node to cell map
       for (CFuint iNode = 0; iNode < nbNodesPerCell; ++iNode)
       {
         mapNode2CellsOld.insert((*cellNodes)(globalIdx,iNode),globalIdx);
       }
 
+      // set the nb of nodes in m_pattern for the old cell and add the new states to nbNewStates
       switch(elemGeoShape) 
       {
 
@@ -440,7 +464,7 @@ void MeshUpgradeBuilder::divideElements()
 	for (CFuint iNewCell = 0; iNewCell < nbNewCellsPerOldCell; ++iNewCell,++firstFreeIdx)
 	{
 	  m_pattern[firstFreeIdx] = 3;
-	  nbNewNodes += 3;
+	  nbNewStates += 3;
 	}
         break;
 
@@ -448,7 +472,7 @@ void MeshUpgradeBuilder::divideElements()
         for (CFuint iNewCell = 0; iNewCell < nbNewCellsPerOldCell; ++iNewCell,++firstFreeIdx)
 	{
 	  m_pattern[firstFreeIdx] = 4;
-	  nbNewNodes += 4;
+	  nbNewStates += 4;
 	}
         break;
 	
@@ -456,7 +480,7 @@ void MeshUpgradeBuilder::divideElements()
         for (CFuint iNewCell = 0; iNewCell < nbNewCellsPerOldCell; ++iNewCell,++firstFreeIdx)
 	{
 	  m_pattern[firstFreeIdx] = 8;
-	  nbNewNodes += 8;
+	  nbNewStates += 8;
 	}
         break;
 
@@ -473,33 +497,43 @@ void MeshUpgradeBuilder::divideElements()
   // sort the nodes to cells map
   mapNode2CellsOld.sortKeys();
   
+  // set the connectivities to their new sizes
   cellNodes->resize(m_pattern);
   cellStates->resize(m_pattern);
+
+  // resize the states data handle to put dummy states in it 
+  states.resize(nbNewStates);
+  // resize the node data handle for now to the new nb of states which is larger than the new nb of nodes, same for m_newToOldNodeID
+  nodes.resize(nbNewStates);
+  m_newToOldNodeID.resize(nbNewStates);
   
-  // resize the states data handle to put dummy states in it
-  states.resize(nbNewNodes);
-  
-  nodes.resize(nbNewNodes);
-  
+  // reset firstFreeIdx
   firstFreeIdx = 0;
   CFuint nodeIdx = 0;
+  CFuint stateIdx = 0;
   const CFuint nodes1D = m_elementDivision + 1;
-  
-  // resize the states data handle to put dummy states in it
-  states.resize(nbNewNodes);
   
   // variable marking whether a cell has been updated
   // the element type is also stored here, though this is not really necessary since there is only one type of element
-  vector<CFuint> isUpdated(nbElements);
-
-  // nodes to cells multimap
+  vector<bool> isUpdated(nbElements);
+  for (CFuint iElem = 0; iElem < nbElements; ++iElem)
+  {
+    isUpdated[iElem] = false;
+  }
+  
+  // new nodes to cells multimap
   CFMultiMap<CFuint,CFuint> mapNode2Cells;
   typedef CFMultiMap<CFuint, CFuint>::MapIterator MapIterator;
   mapNode2Cells.reserve(nodeToCellsMapSize);
   
   const CFuint nbeq = PhysicalModelStack::getActive()->getNbEq();
   
-  for (type_itr = elementType->begin(); type_itr != elementType->end(); ++type_itr)
+  SafePtr<vector<ElementTypeData> > elementType2 = MeshDataStack::getActive()->getElementTypeData();
+  
+  vector< ElementTypeData >::iterator type_itr2 = elementType2->begin();
+  
+  // loop over element types to create new connectivities and nodes
+  for (type_itr = elementType->begin(); type_itr != elementType->end(); ++type_itr, ++type_itr2)
   {
     // get the current geo shape
     const CFGeoShape::Type elemGeoShape = type_itr->getGeoShape();
@@ -514,10 +548,23 @@ void MeshUpgradeBuilder::divideElements()
       // get the number of nodes in this cell type originally
       const CFuint nbNodesPerCell = getNbrOfNodesInCellType(elemGeoShape,m_prevGeoPolyOrder);
       
+      // first free idx for the new element
       const CFuint idxFirstNewElement = firstFreeIdx;
       
-      
+      // iterator over the neighbors of a given old node
       vector< pair<MapIterator, MapIterator> > neighbors;
+      
+      // neighbors of a face
+      vector< CFint > faceNeighbors;
+      
+      // flag if neighbour cell has been found
+      bool foundNghb = false;
+      
+      // get face to node connectivity table
+      Table<CFuint>* face2Node = LocalConnectionData::getInstance().getFaceDofLocal(elemGeoShape,m_prevGeoPolyOrder,NODE,CFPolyForm::LAGRANGE);
+      
+      // neighbours of a given old node 
+      vector< CFint > nodeNeighbors;
 
       switch(elemGeoShape) 
       {
@@ -527,70 +574,525 @@ void MeshUpgradeBuilder::divideElements()
 
       case CFGeoShape::QUAD:
 	
-	
-	
+	// loop over the old nodes, to find their neighbour elements
 	for (CFuint iNode = 0; iNode < 4; ++iNode)
 	{
 	  const CFuint id = initialCellNodes(globalIdx,iNode);
 
 	  bool fo = false;
-	  neighbors.push_back(mapNode2Cells.find(id,fo));
+	  neighbors.push_back(mapNode2CellsOld.find(id,fo));
 	  cf_assert(fo);
 	}
 	
-	
-	for (CFuint iKsi = 0; iKsi < nodes1D; ++iKsi)
+	// for each old face, find the old neighbour elements
+	for (CFuint iFace = 0; iFace < 4; ++iFace)
 	{
-	  for (CFuint iEta = 0; iEta < nodes1D; ++iEta)
+	  for (MapIterator nghbrCellItr = neighbors[(*face2Node)(iFace,0)].first;
+               nghbrCellItr != neighbors[(*face2Node)(iFace,0)].second;
+               ++nghbrCellItr)
+          {
+            const CFuint currCellIdx = nghbrCellItr->second;
+            if (currCellIdx != globalIdx)
+	    {
+	      for (MapIterator nghbrCellItr2 = neighbors[(*face2Node)(iFace,1)].first;
+                   nghbrCellItr2 != neighbors[(*face2Node)(iFace,1)].second;
+                   ++nghbrCellItr2)
+	      {
+		if (currCellIdx == nghbrCellItr2->second)
+		{
+		  cf_assert(!foundNghb);
+		  // current cell is a neighbour of both nodes, so also of the face
+		  faceNeighbors.push_back(currCellIdx);
+		  foundNghb = true;
+		}
+	      }  
+	    }
+          }
+          // if no neighbor is found, it is a bnd face, the negative value is used to detect this later
+          if (!foundNghb)
 	  {
+	    faceNeighbors.push_back(-1);
+	  }
+	  foundNghb = false;
+	}
+	cf_assert(faceNeighbors.size() == 4);
+	
+	// find the neighbouring cells of the nodes in the same way as for the faces
+	for (CFuint iNode = 0; iNode < 4; ++iNode)
+	{
+	  for (MapIterator nghbrCellItr = neighbors[iNode].first;
+               nghbrCellItr != neighbors[iNode].second;
+               ++nghbrCellItr)
+          {
+            const CFuint currCellIdx = nghbrCellItr->second;
+            if (currCellIdx != globalIdx)
+	    {
+	      bool isInNghbrs = false;
+	      for (CFuint iNghb = 0; iNghb < 4; ++iNghb)
+	      {
+		if (currCellIdx == faceNeighbors[iNghb])
+		{
+		  isInNghbrs = true;
+		}
+	      }  
+	      if (!isInNghbrs)
+	      {
+		cf_assert(!foundNghb);
+	        nodeNeighbors.push_back(currCellIdx);
+		foundNghb = true;
+	      }
+	    }
+          }
+          // if no neighbor is found, it is a corner node
+          if (!foundNghb)
+	  {
+	    nodeNeighbors.push_back(-1);
+	  }
+	  foundNghb = false;
+	}
+	cf_assert(nodeNeighbors.size() == 4);
+	
+	// loop over the new nodes and depending on where the new node is situated (corner, face, internal), create the node if it hasn't been created yet and 
+	// fill in the new node connectivity
+	for (CFuint iEta = 0; iEta < nodes1D; ++iEta)
+	{
+	  for (CFuint iKsi = 0; iKsi < nodes1D; ++iKsi)
+	  {
+	    // internal nodes, these must always be created
 	    if (iKsi != 0 && iKsi != nodes1D-1 && iEta != 0 && iEta != nodes1D-1)
 	    {
-	      // insert in nodes to cells map
-              mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iEta-1+(iKsi-1)*m_elementDivision);
-	      mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iEta+(iKsi-1)*m_elementDivision);
-	      mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iEta-1+(iKsi)*m_elementDivision);
-	      mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iEta+(iKsi)*m_elementDivision);
+	      // insert in node to cell to connectivity
+              mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision);
+	      (*cellNodes)(idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision,2) = nodeIdx;
+	      mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision);
+	      (*cellNodes)(idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision,3) = nodeIdx;
+	      mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi+(iEta)*m_elementDivision);
+	      (*cellNodes)(idxFirstNewElement+iKsi+(iEta)*m_elementDivision,0) = nodeIdx;
+	      mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision);
+	      (*cellNodes)(idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision,1) = nodeIdx;
+	      
+	      // create node 
+	      getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iKsi+nodes1D*iEta]);
+	      nodes[nodeIdx]->setGlobalID(nodeIdx);
+              nodes[nodeIdx]->setIsOnMesh(true);
+              nodes[nodeIdx]->setIsOwnedByState(false);
 	      ++nodeIdx;
+	    }
+	    // nodes on the 4 faces, but not on a corner
+	    else if (iKsi == 0 && iEta != 0 && iEta != nodes1D-1)
+	    {
+	      // check if it is a bnd face
+	      if (faceNeighbors[3] != -1)
+	      {
+		// check if the node has already been created
+		if (!(isUpdated[faceNeighbors[3]]))
+		{
+		  // insert in nodes to cells map
+	          mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision);
+		  (*cellNodes)(idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision,3) = nodeIdx;
+	          mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi+(iEta)*m_elementDivision);
+		  (*cellNodes)(idxFirstNewElement+iKsi+(iEta)*m_elementDivision,0) = nodeIdx;
+		  
+		  // create node 
+	          getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iKsi+nodes1D*iEta]);
+	          nodes[nodeIdx]->setGlobalID(nodeIdx);
+                  nodes[nodeIdx]->setIsOnMesh(true);
+                  nodes[nodeIdx]->setIsOwnedByState(false);
+	          ++nodeIdx;
+		}
+		else
+		{
+		  const CFuint oldNghbCellID = nbNewCellsPerOldCell*faceNeighbors[3];
+		  const CFuint existingNodeIdx1 = (*cellNodes)(oldNghbCellID+nodes1D-2+(iEta-1)*m_elementDivision,2);
+		  const CFuint existingNodeIdx2 = (*cellNodes)(oldNghbCellID+nodes1D-2+(iEta)*m_elementDivision,1);
+		  (*cellNodes)(idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision,3) = existingNodeIdx1;
+		  (*cellNodes)(idxFirstNewElement+iKsi+(iEta)*m_elementDivision,0) = existingNodeIdx2;
+		}
+	      }
+	      else 
+	      {
+		// insert in nodes to cells map
+	        mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision);
+		(*cellNodes)(idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision,3) = nodeIdx;
+	        mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi+(iEta)*m_elementDivision);
+		(*cellNodes)(idxFirstNewElement+iKsi+(iEta)*m_elementDivision,0) = nodeIdx;
+		
+		m_newToOldNodeID[nodeIdx].push_back(initialCellNodes(globalIdx,0));
+		m_newToOldNodeID[nodeIdx].push_back(initialCellNodes(globalIdx,3));
+		  
+		// create node 
+	        getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iKsi+nodes1D*iEta]);
+	        nodes[nodeIdx]->setGlobalID(nodeIdx);
+                nodes[nodeIdx]->setIsOnMesh(true);
+                nodes[nodeIdx]->setIsOwnedByState(false);
+	        ++nodeIdx;
+	      } 
+	    }
+	    else if (iKsi == nodes1D-1 && iEta != 0 && iEta != nodes1D-1)
+	    {
+	      if (faceNeighbors[1] != -1)
+	      {
+		if (!(isUpdated[faceNeighbors[1]]))
+		{
+		  // insert in nodes to cells map
+	          mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision);
+		  (*cellNodes)(idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision,2) = nodeIdx;
+	          mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision);
+		  (*cellNodes)(idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision,1) = nodeIdx;
+		  
+		  // create node 
+	          getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iKsi+nodes1D*iEta]);
+	          nodes[nodeIdx]->setGlobalID(nodeIdx);
+                  nodes[nodeIdx]->setIsOnMesh(true);
+                  nodes[nodeIdx]->setIsOwnedByState(false);
+	          ++nodeIdx;
+		}
+		else
+		{
+		  const CFuint oldNghbCellID = nbNewCellsPerOldCell*faceNeighbors[1];
+		  const CFuint existingNodeIdx1 = (*cellNodes)(oldNghbCellID+0+(iEta-1)*m_elementDivision,3);
+		  const CFuint existingNodeIdx2 = (*cellNodes)(oldNghbCellID+0+(iEta)*m_elementDivision,0);
+		  (*cellNodes)(idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision,2) = existingNodeIdx1;
+		  (*cellNodes)(idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision,1) = existingNodeIdx2;
+		}
+	      }
+	      else 
+	      {
+		// insert in nodes to cells map
+	        mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision);
+		(*cellNodes)(idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision,2) = nodeIdx;
+	        mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision);
+		(*cellNodes)(idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision,1) = nodeIdx;
+		
+		m_newToOldNodeID[nodeIdx].push_back(initialCellNodes(globalIdx,1));
+		m_newToOldNodeID[nodeIdx].push_back(initialCellNodes(globalIdx,2));
+		  
+		// create node 
+	        getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iKsi+nodes1D*iEta]);
+	        nodes[nodeIdx]->setGlobalID(nodeIdx);
+                nodes[nodeIdx]->setIsOnMesh(true);
+                nodes[nodeIdx]->setIsOwnedByState(false);
+	        ++nodeIdx;
+	      } 
+	    }
+	    else if (iEta == 0 && iKsi != 0 && iKsi != nodes1D-1)
+	    {
+	      if (faceNeighbors[0] != -1)
+	      {
+		if (!(isUpdated[faceNeighbors[0]]))
+		{
+		  // insert in nodes to cells map
+	          mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision);
+		  (*cellNodes)(idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision,1) = nodeIdx;
+	          mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi+(iEta)*m_elementDivision);
+		  (*cellNodes)(idxFirstNewElement+iKsi+(iEta)*m_elementDivision,0) = nodeIdx;
+		  
+		  // create node 
+	          getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iKsi+nodes1D*iEta]);
+	          nodes[nodeIdx]->setGlobalID(nodeIdx);
+                  nodes[nodeIdx]->setIsOnMesh(true);
+                  nodes[nodeIdx]->setIsOwnedByState(false);
+	          ++nodeIdx;
+		}
+		else
+		{
+		  const CFuint oldNghbCellID = nbNewCellsPerOldCell*faceNeighbors[0];
+		  const CFuint existingNodeIdx1 = (*cellNodes)(oldNghbCellID+iKsi-1+(nodes1D-2)*m_elementDivision,2);
+		  const CFuint existingNodeIdx2 = (*cellNodes)(oldNghbCellID+iKsi+(nodes1D-2)*m_elementDivision,3);
+		  (*cellNodes)(idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision,1) = existingNodeIdx1;
+		  (*cellNodes)(idxFirstNewElement+iKsi+(iEta)*m_elementDivision,0) = existingNodeIdx2;
+		}
+	      }
+	      else 
+	      {
+		// insert in nodes to cells map
+	        mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision);
+		(*cellNodes)(idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision,1) = nodeIdx;
+	        mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi+(iEta)*m_elementDivision);
+		(*cellNodes)(idxFirstNewElement+iKsi+(iEta)*m_elementDivision,0) = nodeIdx;
+		
+		m_newToOldNodeID[nodeIdx].push_back(initialCellNodes(globalIdx,0));
+		m_newToOldNodeID[nodeIdx].push_back(initialCellNodes(globalIdx,1));
+		  
+		// create node 
+	        getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iKsi+nodes1D*iEta]);
+	        nodes[nodeIdx]->setGlobalID(nodeIdx);
+                nodes[nodeIdx]->setIsOnMesh(true);
+                nodes[nodeIdx]->setIsOwnedByState(false);
+	        ++nodeIdx;
+	      } 
+	    }
+	    else if (iEta == nodes1D-1 && iKsi != 0 && iKsi != nodes1D-1)
+	    {
+	      if (faceNeighbors[2] != -1)
+	      {
+		if (!(isUpdated[faceNeighbors[2]]))
+		{
+		  // insert in nodes to cells map
+	          mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision);
+		  (*cellNodes)(idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision,2) = nodeIdx;
+	          mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision);
+		  (*cellNodes)(idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision,3) = nodeIdx;
+		  
+		  // create node 
+	          getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iKsi+nodes1D*iEta]);
+	          nodes[nodeIdx]->setGlobalID(nodeIdx);
+                  nodes[nodeIdx]->setIsOnMesh(true);
+                  nodes[nodeIdx]->setIsOwnedByState(false);
+	          ++nodeIdx;
+		}
+		else
+		{
+		  const CFuint oldNghbCellID = nbNewCellsPerOldCell*faceNeighbors[2];
+		  const CFuint existingNodeIdx1 = (*cellNodes)(oldNghbCellID+iKsi-1+(0)*m_elementDivision,1);
+		  const CFuint existingNodeIdx2 = (*cellNodes)(oldNghbCellID+iKsi+(0)*m_elementDivision,0);
+		  (*cellNodes)(idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision,2) = existingNodeIdx1;
+		  (*cellNodes)(idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision,3) = existingNodeIdx2;
+		}
+	      }
+	      else 
+	      {
+		// insert in nodes to cells map
+	        mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision);
+		(*cellNodes)(idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision,2) = nodeIdx;
+	        mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision);
+		(*cellNodes)(idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision,3) = nodeIdx;
+		
+		m_newToOldNodeID[nodeIdx].push_back(initialCellNodes(globalIdx,2));
+		m_newToOldNodeID[nodeIdx].push_back(initialCellNodes(globalIdx,3));
+		  
+		// create node 
+	        getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iKsi+nodes1D*iEta]);
+	        nodes[nodeIdx]->setGlobalID(nodeIdx);
+                nodes[nodeIdx]->setIsOnMesh(true);
+                nodes[nodeIdx]->setIsOwnedByState(false);
+	        ++nodeIdx;
+	      } 
+	    }
+	    // the four corner nodes
+	    else if (iKsi == 0 && iEta == 0)
+	    {
+	      bool nodeFound = false;
+	      // insert in nodes to cells map
+	      if (nodeNeighbors[0] != -1)
+	      {
+		if (isUpdated[nodeNeighbors[0]])
+		{
+		  const CFuint oldNghbCellID = nbNewCellsPerOldCell*nodeNeighbors[0];
+		  const CFuint existingNodeIdx = (*cellNodes)(oldNghbCellID+nodes1D-2+(nodes1D-2)*m_elementDivision,2);
+		  (*cellNodes)(idxFirstNewElement+iKsi+(iEta)*m_elementDivision,0) = existingNodeIdx;
+		  nodeFound = true;
+		}
+	      }
+              if (faceNeighbors[0] != -1 && !nodeFound)
+	      {
+		if (isUpdated[faceNeighbors[0]])
+		{
+		  const CFuint oldNghbCellID = nbNewCellsPerOldCell*faceNeighbors[0];
+		  const CFuint existingNodeIdx = (*cellNodes)(oldNghbCellID+0+(nodes1D-2)*m_elementDivision,3);
+		  (*cellNodes)(idxFirstNewElement+iKsi+(iEta)*m_elementDivision,0) = existingNodeIdx;
+		  nodeFound = true;
+		}
+	      }
+	      if (faceNeighbors[3] != -1 && !nodeFound)
+	      {
+		if (isUpdated[faceNeighbors[3]])
+		{
+		  const CFuint oldNghbCellID = nbNewCellsPerOldCell*faceNeighbors[3];
+		  const CFuint existingNodeIdx = (*cellNodes)(oldNghbCellID+nodes1D-2+(0)*m_elementDivision,1);
+		  (*cellNodes)(idxFirstNewElement+iKsi+(iEta)*m_elementDivision,0) = existingNodeIdx;
+		  nodeFound = true;
+		}
+	      }
+	      // node has not yet been created
+	      if (!nodeFound) 
+	      {
+		// insert in nodes to cells map
+	        mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi+(iEta)*m_elementDivision);
+		(*cellNodes)(idxFirstNewElement+iKsi+(iEta)*m_elementDivision,0) = nodeIdx;
+		
+		m_newToOldNodeID[nodeIdx].push_back(initialCellNodes(globalIdx,0));
+		  
+		// create node 
+	        getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iKsi+nodes1D*iEta]);
+	        nodes[nodeIdx]->setGlobalID(nodeIdx);
+                nodes[nodeIdx]->setIsOnMesh(true);
+                nodes[nodeIdx]->setIsOwnedByState(false);
+	        ++nodeIdx;
+	      } 
+	    }
+	    else if (iKsi == nodes1D-1 && iEta == 0)
+	    {
+	      bool nodeFound = false;
+	      // insert in nodes to cells map
+	      if (nodeNeighbors[1] != -1)
+	      {
+		if (isUpdated[nodeNeighbors[1]])
+		{
+		  const CFuint oldNghbCellID = nbNewCellsPerOldCell*nodeNeighbors[1];
+		  const CFuint existingNodeIdx = (*cellNodes)(oldNghbCellID+0+(nodes1D-2)*m_elementDivision,3);
+		  (*cellNodes)(idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision,1) = existingNodeIdx;
+		  nodeFound = true;
+		}
+	      }
+	      if (faceNeighbors[0] != -1 && !nodeFound)
+	      {
+		if (isUpdated[faceNeighbors[0]])
+		{
+		  const CFuint oldNghbCellID = nbNewCellsPerOldCell*faceNeighbors[0];
+		  const CFuint existingNodeIdx = (*cellNodes)(oldNghbCellID+nodes1D-2+(nodes1D-2)*m_elementDivision,2);
+		  (*cellNodes)(idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision,1) = existingNodeIdx;
+		  nodeFound = true;
+		}
+	      }
+	      if (faceNeighbors[1] != -1 && !nodeFound)
+	      {
+	        if (isUpdated[faceNeighbors[1]])
+		{
+		  const CFuint oldNghbCellID = nbNewCellsPerOldCell*faceNeighbors[1];
+		  const CFuint existingNodeIdx = (*cellNodes)(oldNghbCellID+0+(0)*m_elementDivision,0);
+		  (*cellNodes)(idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision,1) = existingNodeIdx;
+		  nodeFound = true;
+		}
+	      }
+	      // node has not yet been created
+	      if (!nodeFound) 
+	      {
+		// insert in nodes to cells map
+	        mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision);
+		(*cellNodes)(idxFirstNewElement+iKsi-1+(iEta)*m_elementDivision,1) = nodeIdx;
+		
+		m_newToOldNodeID[nodeIdx].push_back(initialCellNodes(globalIdx,1));
+		  
+		// create node 
+	        getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iKsi+nodes1D*iEta]);
+	        nodes[nodeIdx]->setGlobalID(nodeIdx);
+                nodes[nodeIdx]->setIsOnMesh(true);
+                nodes[nodeIdx]->setIsOwnedByState(false);
+	        ++nodeIdx;
+	      } 
+	    }
+	    else if (iKsi == nodes1D-1 && iEta == nodes1D-1)
+	    {
+	      bool nodeFound = false;
+	      // insert in nodes to cells map
+	      if (nodeNeighbors[2] != -1)
+	      {
+		if (isUpdated[nodeNeighbors[2]])
+		{
+		  const CFuint oldNghbCellID = nbNewCellsPerOldCell*nodeNeighbors[2];
+		  const CFuint existingNodeIdx = (*cellNodes)(oldNghbCellID+0+(0)*m_elementDivision,0);
+		  (*cellNodes)(idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision,2) = existingNodeIdx;
+		  nodeFound = true;
+		}
+	      }
+	      if (faceNeighbors[1] != -1 && !nodeFound)
+	      {
+		if (isUpdated[faceNeighbors[1]])
+		{
+		  const CFuint oldNghbCellID = nbNewCellsPerOldCell*faceNeighbors[1];
+		  const CFuint existingNodeIdx = (*cellNodes)(oldNghbCellID+0+(nodes1D-2)*m_elementDivision,3);
+		  (*cellNodes)(idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision,2) = existingNodeIdx;
+		  nodeFound = true;
+		}
+	      }
+	      if (faceNeighbors[2] != -1 && !nodeFound)
+	      {
+		if (isUpdated[faceNeighbors[2]])
+		{
+		  const CFuint oldNghbCellID = nbNewCellsPerOldCell*faceNeighbors[2];
+		  const CFuint existingNodeIdx = (*cellNodes)(oldNghbCellID+nodes1D-2+(0)*m_elementDivision,1);
+		  (*cellNodes)(idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision,2) = existingNodeIdx;
+		  nodeFound = true;
+		}
+	      }
+	      // node has not yet been created
+	      if (!nodeFound) 
+	      {
+		// insert in nodes to cells map
+	        mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision);
+		(*cellNodes)(idxFirstNewElement+iKsi-1+(iEta-1)*m_elementDivision,2) = nodeIdx;
+		
+		m_newToOldNodeID[nodeIdx].push_back(initialCellNodes(globalIdx,2));
+		  
+		// create node 
+	        getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iKsi+nodes1D*iEta]);
+	        nodes[nodeIdx]->setGlobalID(nodeIdx);
+                nodes[nodeIdx]->setIsOnMesh(true);
+                nodes[nodeIdx]->setIsOwnedByState(false);
+	        ++nodeIdx;
+	      } 
+	    }
+	    else if (iKsi == 0 && iEta == nodes1D-1)
+	    {
+	      bool nodeFound = false;
+	      // insert in nodes to cells map
+	      if (nodeNeighbors[3] != -1)
+	      {
+		if (isUpdated[nodeNeighbors[3]])
+		{
+		  const CFuint oldNghbCellID = nbNewCellsPerOldCell*nodeNeighbors[3];
+		  const CFuint existingNodeIdx = (*cellNodes)(oldNghbCellID+nodes1D-2+(0)*m_elementDivision,1);
+		  (*cellNodes)(idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision,3) = existingNodeIdx;
+		  nodeFound = true;
+		}
+	      }
+	      if (faceNeighbors[2] != -1 && !nodeFound)
+	      {
+		if (isUpdated[faceNeighbors[2]])
+		{
+		  const CFuint oldNghbCellID = nbNewCellsPerOldCell*faceNeighbors[2];
+		  const CFuint existingNodeIdx = (*cellNodes)(oldNghbCellID+0+(0)*m_elementDivision,0);
+		  (*cellNodes)(idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision,3) = existingNodeIdx;
+		  nodeFound = true;
+		}
+	      }
+	      if (faceNeighbors[3] != -1 && !nodeFound)
+	      {
+		if (isUpdated[faceNeighbors[3]])
+		{
+		  const CFuint oldNghbCellID = nbNewCellsPerOldCell*faceNeighbors[3];
+		  const CFuint existingNodeIdx = (*cellNodes)(oldNghbCellID+nodes1D-2+(nodes1D-2)*m_elementDivision,2);
+		  (*cellNodes)(idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision,3) = existingNodeIdx;
+		  nodeFound = true;
+		}
+	      }
+	      // node has not yet been created
+	      if (!nodeFound) 
+	      {
+		// insert in nodes to cells map
+	        mapNode2Cells.insert(nodeIdx, idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision);
+		(*cellNodes)(idxFirstNewElement+iKsi+(iEta-1)*m_elementDivision,3) = nodeIdx;
+		
+		m_newToOldNodeID[nodeIdx].push_back(initialCellNodes(globalIdx,3));
+		  
+		// create node 
+	        getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iKsi+nodes1D*iEta]);
+	        nodes[nodeIdx]->setGlobalID(nodeIdx);
+                nodes[nodeIdx]->setIsOnMesh(true);
+                nodes[nodeIdx]->setIsOwnedByState(false);
+	        ++nodeIdx;
+	      } 
 	    }
 	  }
 	}
 
-        for (CFuint iKsi = 0; iKsi < m_elementDivision; ++iKsi)
+	// create the states, these will be deleted later and made properly, when the solution order is upgraded.
+        for (CFuint iEta = 0; iEta < m_elementDivision; ++iEta)
 	{
-	  for (CFuint iEta = 0; iEta < m_elementDivision; ++iEta, ++firstFreeIdx)
+	  for (CFuint iKsi = 0; iKsi < m_elementDivision; ++iKsi, ++firstFreeIdx)
 	  {
-	    for (CFuint iNode = 0; iNode < nbNodesPerCell; ++iNode)
-	    {
-	      (*cellNodes)(firstFreeIdx,iNode) = nodeIdx;
-	      // create the node in the mesh data
-	      if (iNode == 0)
-	      {
-                getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iEta+nodes1D*iKsi]);
-	      }
-	      else if (iNode == 1)
-	      {
-                getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iEta+nodes1D*iKsi+1]);
-	      }
-	      else if (iNode == 2)
-	      {
-                getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iEta+nodes1D*(iKsi+1)+1]);
-	      }
-	      else
-	      {
-                getCFmeshData().createNode(nodeIdx,newNodeCoords[globalIdx][iEta+nodes1D*(iKsi+1)]);
-	      }
-              nodes[nodeIdx]->setGlobalID(nodeIdx);
-              nodes[nodeIdx]->setIsOnMesh(true);
-              nodes[nodeIdx]->setIsOwnedByState(false);
-	      
-	      (*cellStates)(firstFreeIdx,iNode) = nodeIdx;
+	    for (CFuint iNode = 0; iNode < nbNodesPerCell; ++iNode, ++stateIdx)
+	    { 
+	      (*cellStates)(firstFreeIdx,iNode) = stateIdx;
 	      RealVector stateData (nbeq);
-              getCFmeshData().createState(nodeIdx,stateData);
-              states[nodeIdx]->setParUpdatable(updatables[globalIdx]);
-              states[nodeIdx]->setGlobalID(nodeIdx);
+              getCFmeshData().createState(stateIdx,stateData);
+              //states[nodeIdx]->setParUpdatable(updatables[globalIdx]);
+              states[stateIdx]->setGlobalID(stateIdx);
 	    }
 	  }
 	}
+	
         break;
 	
       case CFGeoShape::HEXA:
@@ -603,11 +1105,24 @@ void MeshUpgradeBuilder::divideElements()
         std::string msg = std::string("Element type not implemented: ") + shape;
         throw Common::NotImplementedException (FromHere(),msg);
       }
+      isUpdated[globalIdx] = true;
     }
+    // set the new nb of elements
     type_itr->setNbElems(nbNewCellsPerOldCell*nbrCellsPerType);
+    type_itr2->setNbElems(nbNewCellsPerOldCell*nbrCellsPerType);
+    //CFLog(VERBOSE,"Nb of new elems of this type: " << nbNewCellsPerOldCell*nbrCellsPerType << "\n");
   }
   
+  // set the oversized node data handle to the correct size, same for m_newToOldNodeID
+  nodes.resize(nodeIdx);
+  m_newToOldNodeID.resize(nodeIdx);
+
+  // update the CFmeshData
   getCFmeshData().setNbElements(newNbElements);
+  getCFmeshData().setNbUpdatableNodes(nodeIdx);
+  getCFmeshData().setNbUpdatableStates(nbNewStates);
+  getCFmeshData().setNbNonUpdatableNodes(0);
+  getCFmeshData().setNbNonUpdatableStates(0);
   
 }
 
@@ -1653,7 +2168,7 @@ void MeshUpgradeBuilder::recreateNodes()
 
 //////////////////////////////////////////////////////////////////////////////
 
-vector< RealVector > MeshUpgradeBuilder::getNewNodesMappedCoords(CFGeoShape::Type shape, CFuint solOrder, CFuint cellIdx, const MeshData::ConnTable nodesConn)
+vector< RealVector > MeshUpgradeBuilder::getNewNodesCoords(CFGeoShape::Type shape, CFuint solOrder, CFuint cellIdx, MeshData::ConnTable& nodesConn)
 {
   // output variable
   vector< RealVector > nodeMappedCoords;
@@ -1669,12 +2184,14 @@ vector< RealVector > MeshUpgradeBuilder::getNewNodesMappedCoords(CFGeoShape::Typ
 
   // number of points needed for representing a polynomial of order degree solOrder
   const CFuint nbrNodes1D = solOrder + 1;
+  
+  const CFreal nbFaceParts = solOrder;
 
   switch (shape)
   {
     case CFGeoShape::LINE:
     {
-      throw Common::NotImplementedException (FromHere(),"ParaWriterData::getOutputPntsMappedCoords() for LINE");
+      throw Common::NotImplementedException (FromHere(),"MeshUpgradeBuilder::getOutputPntsMappedCoords() for LINE");
 //       for (CFuint iKsi = 0; iKsi < nbrNodes1D; ++iKsi)
 //       {
 //         RealVector coords(1);
@@ -1684,7 +2201,7 @@ vector< RealVector > MeshUpgradeBuilder::getNewNodesMappedCoords(CFGeoShape::Typ
     } break;
     case CFGeoShape::TRIAG:
     {
-      throw Common::NotImplementedException (FromHere(),"ParaWriterData::getOutputPntsMappedCoords() for PYRAM");
+      throw Common::NotImplementedException (FromHere(),"MeshUpgradeBuilder::getOutputPntsMappedCoords() for PYRAM");
 //       for (CFuint iKsi = 0; iKsi < nbrNodes1D; ++iKsi)
 //       {
 //         const CFreal ksi = iKsi*1.0/solOrder;
@@ -1700,29 +2217,91 @@ vector< RealVector > MeshUpgradeBuilder::getNewNodesMappedCoords(CFGeoShape::Typ
     case CFGeoShape::QUAD:
     {
       RealVector nodeIDs(4);
+      vector< Node* > nodeCoordsTemp;
       vector< Node* > nodeCoords;
-      for (CFuint iNode = 0; iNode < 4; ++iNode)
+      nodeIDs[0] = nodesConn(cellIdx,0);
+      nodeCoordsTemp.push_back(nodes[nodeIDs[0]]);
+      CFreal maxSumXY = (*nodeCoordsTemp[0])[0]+(*nodeCoordsTemp[0])[1];
+      CFreal minSumXY = (*nodeCoordsTemp[0])[0]+(*nodeCoordsTemp[0])[1];
+      CFreal minDiffYX = (*nodeCoordsTemp[0])[1]-(*nodeCoordsTemp[0])[0];
+      CFuint minXY = 0;
+      CFuint maxXY = 0;
+      CFuint minDiff = 0;
+      RealVector newNodeOrder(4);
+      for (CFuint iNode = 1; iNode < 4; ++iNode)
       {
         nodeIDs[iNode] = nodesConn(cellIdx,iNode);
-	nodeCoords.push_back(nodes[nodeIDs[iNode]]);
+	nodeCoordsTemp.push_back(nodes[nodeIDs[iNode]]);
+	if ((*nodeCoordsTemp[iNode])[0]+(*nodeCoordsTemp[iNode])[1] > maxSumXY)
+	{
+	  maxXY = iNode;
+	  maxSumXY = (*nodeCoordsTemp[iNode])[0]+(*nodeCoordsTemp[iNode])[1];
+	}
+	if ((*nodeCoordsTemp[iNode])[0]+(*nodeCoordsTemp[iNode])[1] < minSumXY)
+	{
+	  minXY = iNode;
+	  minSumXY = (*nodeCoordsTemp[iNode])[0]+(*nodeCoordsTemp[iNode])[1];
+	}
+	if ((*nodeCoordsTemp[iNode])[1]-(*nodeCoordsTemp[iNode])[0] < minDiffYX)
+	{
+	  minDiff = iNode;
+	  minDiffYX = (*nodeCoordsTemp[iNode])[1]-(*nodeCoordsTemp[iNode])[0];
+	}
       }
 
-      for (CFuint iKsi = 0; iKsi < nbrNodes1D; ++iKsi)
+      for (CFuint iNode = 0; iNode < 4; ++iNode)
       {
-        const CFreal xDown = (*nodeCoords[0])[0]+iKsi/solOrder*((*nodeCoords[1])[0]-(*nodeCoords[0])[0]);
-	const CFreal xUp = (*nodeCoords[3])[0]+iKsi/solOrder*((*nodeCoords[2])[0]-(*nodeCoords[3])[0]);
-	const CFreal yDown = (*nodeCoords[0])[1]+iKsi/solOrder*((*nodeCoords[1])[1]-(*nodeCoords[0])[1]);
-	const CFreal yUp = (*nodeCoords[3])[1]+iKsi/solOrder*((*nodeCoords[2])[1]-(*nodeCoords[3])[1]);
-        for (CFuint iEta = 0; iEta < nbrNodes1D; ++iEta)
-        {
-	  const CFreal xLeft = (*nodeCoords[0])[0]+iEta/solOrder*((*nodeCoords[3])[0]-(*nodeCoords[0])[0]);
-	  const CFreal xRight = (*nodeCoords[1])[0]+iEta/solOrder*((*nodeCoords[2])[0]-(*nodeCoords[1])[0]);
-          const CFreal yLeft = (*nodeCoords[0])[1]+iEta/solOrder*((*nodeCoords[3])[1]-(*nodeCoords[0])[1]);
-	  const CFreal yRight = (*nodeCoords[1])[1]+iEta/solOrder*((*nodeCoords[2])[1]-(*nodeCoords[1])[1]);
+	if (iNode == maxXY)
+	{
+	  newNodeOrder[2] = iNode;
+	}
+	else if (iNode == minXY)
+	{
+	  newNodeOrder[0] = iNode;
+	}
+	else if (iNode == minDiff)
+	{
+	  newNodeOrder[1] = iNode;
+	}
+	else 
+	{
+	  newNodeOrder[3] = iNode;
+	}
+      }
+
+      for (CFuint iNode = 0; iNode < 4; ++iNode)
+      {
+        nodesConn(cellIdx,iNode) = nodeIDs[newNodeOrder[iNode]];
+	nodeCoords.push_back(nodes[nodeIDs[newNodeOrder[iNode]]]);
+	CFLog(VERBOSE,"nodes: " << (*nodeCoords[iNode]) << "\n");
+      }
+
+      for (CFuint iEta = 0; iEta < nbrNodes1D; ++iEta)
+      {
+        const CFreal xLeft = (*nodeCoords[0])[0]+iEta/nbFaceParts*((*nodeCoords[3])[0]-(*nodeCoords[0])[0]);
+	const CFreal xRight = (*nodeCoords[1])[0]+iEta/nbFaceParts*((*nodeCoords[2])[0]-(*nodeCoords[1])[0]);
+        const CFreal yLeft = (*nodeCoords[0])[1]+iEta/nbFaceParts*((*nodeCoords[3])[1]-(*nodeCoords[0])[1]);
+	const CFreal yRight = (*nodeCoords[1])[1]+iEta/nbFaceParts*((*nodeCoords[2])[1]-(*nodeCoords[1])[1]);
+	
+        for (CFuint iKsi = 0; iKsi < nbrNodes1D; ++iKsi)
+        { 
+	  const CFreal xDown = (*nodeCoords[0])[0]+iKsi/nbFaceParts*((*nodeCoords[1])[0]-(*nodeCoords[0])[0]);
+	  const CFreal xUp = (*nodeCoords[3])[0]+iKsi/nbFaceParts*((*nodeCoords[2])[0]-(*nodeCoords[3])[0]);
+	  const CFreal yDown = (*nodeCoords[0])[1]+iKsi/nbFaceParts*((*nodeCoords[1])[1]-(*nodeCoords[0])[1]);
+	  const CFreal yUp = (*nodeCoords[3])[1]+iKsi/nbFaceParts*((*nodeCoords[2])[1]-(*nodeCoords[3])[1]);
 	  const CFreal mLR = (yRight-yLeft)/(xRight-xLeft);
-	  const CFreal mUD = (yUp-yDown)/(xUp-xDown);
-          const CFreal x = (mLR*xLeft-mUD*xDown+yDown-yLeft)/(mLR-mUD);
+	  CFreal x;
+	  if ((xUp-xDown) == 0)
+	  {
+	    x = xDown;
+	  }
+	  else 
+	  {
+	    const CFreal mUD = (yUp-yDown)/(xUp-xDown);
+            x = (mLR*xLeft-mUD*xDown+yDown-yLeft)/(mLR-mUD);
+	  }
 	  const CFreal y = mLR*x+yLeft-xLeft*mLR;
+	  //CFLog(VERBOSE,"x = " << x << ", y = " << y << ", for xL = " << xLeft << ", xR = " << xRight << ", yL = " << yLeft << ", yR = " << yRight << ", xD = " << xDown << ", xU = " << xUp << ", yD = " << yDown << ", yU = " << yUp << "\n");
 	  RealVector currCoords(2);
 	  currCoords[0] = x;
 	  currCoords[1] = y;
@@ -1732,7 +2311,7 @@ vector< RealVector > MeshUpgradeBuilder::getNewNodesMappedCoords(CFGeoShape::Typ
     } break;
     case CFGeoShape::TETRA:
     {
-      throw Common::NotImplementedException (FromHere(),"ParaWriterData::getOutputPntsMappedCoords() for TETRA");
+      throw Common::NotImplementedException (FromHere(),"MeshUpgradeBuilder::getOutputPntsMappedCoords() for TETRA");
       /// @warn: for tetra this is only implemented for P1
 //       RealVector coords(3);
 //       coords[KSI] = 0.0;
@@ -1754,15 +2333,15 @@ vector< RealVector > MeshUpgradeBuilder::getNewNodesMappedCoords(CFGeoShape::Typ
     } break;
     case CFGeoShape::PYRAM:
     {
-      throw Common::NotImplementedException (FromHere(),"ParaWriterData::getOutputPntsMappedCoords() for PYRAM");
+      throw Common::NotImplementedException (FromHere(),"MeshUpgradeBuilder::getOutputPntsMappedCoords() for PYRAM");
     } break;
     case CFGeoShape::PRISM:
     {
-      throw Common::NotImplementedException (FromHere(),"ParaWriterData::getOutputPntsMappedCoords() for PRISM");
+      throw Common::NotImplementedException (FromHere(),"MeshUpgradeBuilder::getOutputPntsMappedCoords() for PRISM");
     } break;
     case CFGeoShape::HEXA:
     {
-      throw Common::NotImplementedException (FromHere(),"ParaWriterData::getOutputPntsMappedCoords() for HEXA");
+      throw Common::NotImplementedException (FromHere(),"MeshUpgradeBuilder::getOutputPntsMappedCoords() for HEXA");
 //       for (CFuint iKsi = 0; iKsi < nbrNodes1D; ++iKsi)
 //       {
 //         const CFreal ksi = -1.0 + iKsi*2.0/solOrder;
@@ -1787,6 +2366,450 @@ vector< RealVector > MeshUpgradeBuilder::getNewNodesMappedCoords(CFGeoShape::Typ
   }
 
   return nodeMappedCoords;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void MeshUpgradeBuilder::createBoundaryFacesTRS()
+{
+  CFAUTOTRACE;
+
+  // get number of Topological Region Sets
+  const CFuint nbTRSs = getCFmeshData().getNbTRSs();
+
+  // get number of Topological Regions per TRS
+  SafePtr< vector<CFuint> > nbTRs = getCFmeshData().getNbTRs();
+
+  // get number of geometrical entities per TR
+  SafePtr< vector< vector<CFuint> > > nbGeomEntsPerTR = getCFmeshData().getNbGeomEntsPerTR();
+  
+  // get TRS names
+  SafePtr< vector<std::string> > nameTRS = getCFmeshData().getNameTRS();
+
+  // get number of boundary faces + partition faces
+  const CFuint nbBPlusPartitionFaces = m_bLocalGeoIDs.size();
+  CFLog(VERBOSE,"Bnd Face: nb bnd+part faces: " << nbBPlusPartitionFaces << "\n");
+
+  // flag telling if the face is a partition face
+  m_isPartitionFace.resize(nbBPlusPartitionFaces);
+  m_isPartitionFace = true;
+  
+
+  for(CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS)
+  {
+    cf_assert((*nameTRS)[iTRS] != "InnerCells");
+    cf_assert((*nameTRS)[iTRS] != "InnerFaces");
+
+    CFLogDebugMed("Nb TRs in TRS: " << (*nbTRs)[iTRS] << "\n");
+    
+    for(CFuint iTR = 0; iTR < ((*nbGeomEntsPerTR)[iTRS]).size(); ++iTR)
+    {
+      (*nbGeomEntsPerTR)[iTRS][iTR] *= m_elementDivision;
+    }
+
+    Common::SafePtr<Framework::TopologicalRegionSet> ptrs =
+    createTopologicalRegionSet((*nbGeomEntsPerTR)[iTRS],
+                               (*nameTRS)[iTRS],
+                               getCFmeshData().getTRGeoConn(iTRS),
+                               iTRS);
+    
+    ptrs->attachTag("writable");
+
+    CFLog(NOTICE, "Built TRS named " << (*nameTRS)[iTRS] << "\n");
+    
+    
+  }
+  // build partition boundary faces
+  createPartitionBoundaryFacesTRS();
+
+  CFLog(NOTICE, "Built PartitionFaces TRS \n");
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+Common::SafePtr<Framework::TopologicalRegionSet>
+MeshUpgradeBuilder::createTopologicalRegionSet
+(const vector<CFuint>& nbFacesPerTR,
+ const std::string& name,
+ TRGeoConn& trGeoConn,
+ const CFuint iTRS)
+{
+  CFAUTOTRACE;
+  
+  CFLog(VERBOSE,"MeshUpgradeBuilder::createTopologicalRegionSet\n");
+
+  // get P1 number of face nodes
+  SafePtr<vector<ElementTypeData> > elementType = getCFmeshData().getElementTypeData();
+  cf_assert(elementType->size() > 0);
+  const CFGeoShape::Type cellShape = (*elementType)[0].getGeoShape();
+  vector< vector< CFuint > > bFaceOrientations = getBFaceOrientations(cellShape);
+  const CFuint nbFaceNodesP1 = bFaceOrientations[0].size();
+
+  // create the TopologicalRegion storage
+  const CFuint nbTRs = nbFacesPerTR.size();
+  vector<TopologicalRegion*>* storeTR = new vector<TopologicalRegion*>(nbTRs);
+
+  // get total number of boundary faces + partition faces
+  const CFuint nbBPlusPartitionFaces = m_bLocalGeoIDs.size();
+
+  // compute the total number of faces in this TRS
+  const CFuint totalNbFaces = accumulate(nbFacesPerTR.begin(), nbFacesPerTR.end(), static_cast<CFuint>(0));
+        
+
+  // fill in two arrays specifying the number of nodes and neighbour cells
+  // per geometric entity in this TR
+  std::valarray<CFuint> nbFaceNodes(totalNbFaces);
+  std::valarray<CFuint> nbFaceCells(totalNbFaces);
+  if (m_elementDivision == 1)
+  {
+    setNbNodesNbStatesInGeo(nbFacesPerTR, trGeoConn, nbFaceNodes, nbFaceCells);
+  }
+  else 
+  {
+    switch (cellShape)
+  {
+    case CFGeoShape::LINE:
+    {
+      throw Common::NotImplementedException (FromHere(),"MeshUpgradeBuilder::divideElements for LINE");
+    } break;
+    case CFGeoShape::TRIAG:
+    {
+      throw Common::NotImplementedException (FromHere(),"MeshUpgradeBuilder::divideElements for PYRAM");
+    } break;
+    case CFGeoShape::QUAD:
+    {
+      // for now, geoPolyOrder is assumed to be P1
+      for (CFuint iFace = 0; iFace < totalNbFaces; ++iFace)
+      {
+        nbFaceNodes[iFace] = 2;
+      }
+    } break;
+    case CFGeoShape::TETRA:
+    {
+      throw Common::NotImplementedException (FromHere(),"MeshUpgradeBuilder::divideElements for TETRA");
+    } break;
+    case CFGeoShape::PYRAM:
+    {
+      throw Common::NotImplementedException (FromHere(),"MeshUpgradeBuilder::divideElements for PYRAM");
+    } break;
+    case CFGeoShape::PRISM:
+    {
+      throw Common::NotImplementedException (FromHere(),"MeshUpgradeBuilder::divideElements for PRISM");
+    } break;
+    case CFGeoShape::HEXA:
+    {
+      throw Common::NotImplementedException (FromHere(),"MeshUpgradeBuilder::divideElements for HEXA");
+    } break;
+    default:
+    {
+      throw Common::ShouldNotBeHereException (FromHere(),"Unknown GeoShape");
+    }
+  }
+  }
+
+  // override the value of nbFaceCells set in setNbNodesNbStatesInGeo
+  for (CFuint iFace = 0; iFace < totalNbFaces; ++iFace)
+  {
+    nbFaceCells[iFace] = 1;
+  }
+
+  // create face-node and face-cell connectivity tables
+  ConnTable* faceNodes = new ConnTable(nbFaceNodes);
+  ConnTable* faceCells = new ConnTable(nbFaceCells);
+
+  // store the connectivities in the MeshData
+  /// @todo think about having SharedPtr<ConnTable > and not put
+  /// the TRS connectivities in MeshData
+  MeshDataStack::getActive()->storeConnectivity(name + "Nodes", faceNodes);
+  MeshDataStack::getActive()->storeConnectivity(name + "-Faces2Cells", faceCells);
+
+
+  // array with all the IDs of all the geometric entities in this TRS
+  // ownership of this array will be given to the TR
+  vector<CFuint>* localFaceIDs  = new vector<CFuint>(totalNbFaces);
+  vector<CFuint>* globalFaceIDs = new vector<CFuint>(totalNbFaces);
+  vector<CFuint>* faceTypes = new vector<CFuint>(totalNbFaces);
+
+  // name of the face provider
+  const std::string faceProviderName = "Face";
+
+  // get the global face IDs in this TRS
+  SafePtr<vector<vector<vector<CFuint> > > > trsGlobalIDs = MeshDataStack::getActive()->getGlobalTRSGeoIDs();
+
+  const bool hasGlobalIDs = (trsGlobalIDs->size() > 0) && (m_elementDivision == 1);
+
+  CFuint nbProcessedFaces = 0;
+  // let's create the required number of TR's
+  for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
+  {
+    CFLog(VERBOSE, "iTR= " << iTR << ", nbProcessedFaces= " << nbProcessedFaces << "\n");
+
+    // number of faces in this TR
+    const CFuint nbFaces = nbFacesPerTR[iTR]/m_elementDivision;
+
+    // get the geoconnectivity (faces --> nodes and --> states (latter is not used))
+    GeoConn& geoConn = trGeoConn[iTR];
+
+    // if the cells are divided, resize the geoConn
+    if (m_elementDivision != 1)
+    {
+      geoConn.resize(nbFacesPerTR[iTR]);
+      ///@todo is this necessary?
+//       for (CFuint iNewFace = nbFaces; iNewFace < nbFacesPerTR[iTR]; ++iNewFace)
+//       {
+// 	GeoConnElementPart temp1;
+// 	GeoConnElementPart temp2;
+// 	GeoConnElement temp(temp1,temp2);
+// 	geoConn[iNewFace] = temp;
+//       }
+    }
+    
+    // allocate the TopologicalRegion
+    (*storeTR)[iTR] = new TopologicalRegion();
+    (*storeTR)[iTR]->setLocalNbGeoEnts(nbFacesPerTR[iTR]);
+    cf_assert(nbFaces <= totalNbFaces);
+
+    // check that the number of faces in this TR is > 0
+    // if not just skip all this
+    if (nbFaces > 0)
+    {
+      cf_assert((nbProcessedFaces < localFaceIDs->size()));
+
+      (*storeTR)[iTR]->setGeoEntsLocalIdx(&(*localFaceIDs)[nbProcessedFaces], nbProcessedFaces);
+
+      // set the connectivity tables of the TRS
+      for (CFuint iFace = 0; iFace < nbFaces; ++iFace, ++nbProcessedFaces)
+      {
+        // face-node connectivity (not really needed during actual run)
+        // number of nodes in this face
+        const CFuint nbFaceNodes = faceNodes->nbCols(nbProcessedFaces*m_elementDivision);
+
+        // boolean to check if face has been found
+        bool faceFound = false;
+
+        // loop over boundary faces
+        CFuint faceIdx;
+	
+	// check if the cells need to be divided
+	if (m_elementDivision == 1)
+	{
+          for (faceIdx = 0; faceIdx < nbBPlusPartitionFaces; ++faceIdx)
+          {
+            // if all the face nodes corresponding to faceIdx match (even if not in order),
+            // then choose this faceIdx as the right one
+            CFuint nbMatchingNodes = 0;
+	  
+            for (CFuint iNode = 0; iNode < nbFaceNodes; ++iNode)
+            {
+              const CFuint nodeID = (*m_bFaceNodes)(faceIdx, iNode);
+              for (CFuint jNode = 0; jNode < nbFaceNodes; ++jNode)
+              {
+                if (geoConn[iFace].first[jNode] == nodeID)
+                {
+                  ++nbMatchingNodes;
+                  break;
+                } // end if
+              } // end loop over boundary face nodes
+            } // end loop over face nodes
+
+            if (nbMatchingNodes == nbFaceNodes)
+            {
+              // the current faceIdx is the right one, this face is surely not on the partition boundary
+              cf_assert(faceIdx < m_isPartitionFace.size());
+              m_isPartitionFace[faceIdx] = false;
+              faceFound = true;
+              break;
+            }
+	  } // end loop over boundary faces
+	  
+	  // check if the face has been found
+          if (!faceFound)
+          {
+            throw BadFormatException (FromHere(),"boundary face not found");
+          }
+
+          // store face-node connectivity
+          for (CFuint iNode = 0; iNode < nbFaceNodes; ++iNode)
+          {
+            const CFuint nodeID =  (*m_bFaceNodes)(faceIdx, iNode);
+	    
+            (*faceNodes)(nbProcessedFaces, iNode) = nodeID;
+
+            if (nodeID >= MeshDataStack::getActive()->getNbNodes() )
+            {
+              CFLogDebugMax( "NodeID: " << nodeID << "\n");
+              throw BadFormatException (FromHere(),"CFmesh had bad node index in GeometricEntity");
+            }
+          }
+
+          // face-cell connectivity
+          cf_assert(faceCells->nbCols(nbProcessedFaces) == 1);
+          (*faceCells)(nbProcessedFaces,0) = m_bFaceCell[faceIdx];
+
+          // assign the local ID of the current face
+          (*localFaceIDs)[nbProcessedFaces] = m_bLocalGeoIDs[faceIdx];
+
+          // assign the global ID of the current geometric entity
+          (*globalFaceIDs)[nbProcessedFaces] = (hasGlobalIDs) ? (*trsGlobalIDs)[iTRS][iTR][iFace] : iFace;
+
+          // face geotype name
+          /// @note getGeoShape() assumes a P1 entity. Here the number of nodes is passed for a P1 entity,
+          /// even though the entity may be higher order. Another way to fix this is to extend getGeoShape()
+          /// by passing also the dimensionality and the geometric order of the entity.
+          const CFuint dim = PhysicalModelStack::getActive()->getDim();
+          const std::string faceGeoTypeName = makeGeomEntName (getGeoShape(CFGeoEnt::FACE, dim, nbFaceNodesP1),
+                                                               getGeometricPolyType(),
+                                                               getGeometricPolyOrder(),
+                                                               getSolutionPolyType(),
+                                                               getSolutionPolyOrder());
+
+          // face provider name
+          const std::string geoProviderName = faceProviderName + faceGeoTypeName;
+          (*faceTypes)[nbProcessedFaces] = m_mapGeoProviderNameToType.find(geoProviderName);
+	}
+	else 
+	{
+	  // new faces for a given old face
+	  vector< CFuint > newFaces;
+	  
+	  // loop over faces to get the correct face Idx in this TR for the new faces 
+	  for (faceIdx = 0; faceIdx < nbBPlusPartitionFaces; ++faceIdx)
+          {
+            // if all the face nodes corresponding to faceIdx match (even if not in order),
+            // then choose this faceIdx as the right one
+            CFuint nbMatchingNodes = 0;
+	    // required amount of old nodes to be in the TRS for a new face to be in this TRS  
+	    CFuint reqMatchingNodes = 0;
+	    
+	    // loop over the nodes of the face
+            for (CFuint iNode = 0; iNode < nbFaceNodes; ++iNode)
+            {
+	      // localID of the new node
+              const CFuint newNodeID = (*m_bFaceNodes)(faceIdx, iNode);
+	      
+	      // add to the required amount of nodes found to be a correct face
+	      reqMatchingNodes += (m_newToOldNodeID[newNodeID]).size();
+	      
+	      cf_assert((m_newToOldNodeID[newNodeID]).size() > 0);
+	      
+              for (CFuint jNode = 0; jNode < nbFaceNodes; ++jNode)
+              {
+		for (CFuint iOldNode = 0; iOldNode < (m_newToOldNodeID[newNodeID]).size(); ++iOldNode)
+		{
+                  if (geoConn[iFace].first[jNode] == m_newToOldNodeID[newNodeID][iOldNode])
+                  {
+		    // matching old node found
+                    ++nbMatchingNodes;
+                  } // end if
+		}
+              } // end loop over boundary face nodes
+            } // end loop over face nodes
+
+            // if the nb of matching nodes is the required one, the faceIdx is a part of this TR
+            if (nbMatchingNodes == reqMatchingNodes)
+            {
+              // the current faceIdx is the right one, this face is surely not on the partition boundary
+              cf_assert(faceIdx < m_isPartitionFace.size());
+              m_isPartitionFace[faceIdx] = false;
+              newFaces.push_back(faceIdx);
+            }
+	  } // end loop over boundary faces
+	  
+	  // check if the faces have been found
+          cf_assert(newFaces.size() == m_elementDivision);
+	  
+	  // create the entries of the new faces in the face node connectivity
+	  for (CFuint iNewFace = 0; iNewFace < m_elementDivision; ++iNewFace)
+	  {
+            // store face-node connectivity
+            for (CFuint iNode = 0; iNode < nbFaceNodes; ++iNode)
+            {
+	      // new node ID
+              const CFuint nodeID =  (*m_bFaceNodes)(newFaces[iNewFace], iNode);
+	      
+	      // update the geoConn
+	      geoConn[iFace+iNewFace*nbFaces].first[iNode] = nodeID;
+	      
+	      // update the face node conn
+              (*faceNodes)(nbProcessedFaces*m_elementDivision+iNewFace, iNode) = nodeID;
+
+              if (nodeID >= MeshDataStack::getActive()->getNbNodes() )
+              {
+                CFLogDebugMax( "NodeID: " << nodeID << "\n");
+                throw BadFormatException (FromHere(),"CFmesh had bad node index in GeometricEntity");
+              }
+            }
+            
+            // face-cell connectivity
+            cf_assert(faceCells->nbCols(nbProcessedFaces*m_elementDivision+iNewFace) == 1);
+            (*faceCells)(nbProcessedFaces*m_elementDivision+iNewFace,0) = m_bFaceCell[newFaces[iNewFace]];
+
+            // assign the local ID of the current face
+            (*localFaceIDs)[nbProcessedFaces*m_elementDivision+iNewFace] = m_bLocalGeoIDs[newFaces[iNewFace]];
+
+            // assign the global ID of the current geometric entity
+            (*globalFaceIDs)[nbProcessedFaces*m_elementDivision+iNewFace] = m_bLocalGeoIDs[newFaces[iNewFace]];
+
+            // face geotype name
+            /// @note getGeoShape() assumes a P1 entity. Here the number of nodes is passed for a P1 entity,
+            /// even though the entity may be higher order. Another way to fix this is to extend getGeoShape()
+            /// by passing also the dimensionality and the geometric order of the entity.
+            const CFuint dim = PhysicalModelStack::getActive()->getDim();
+            const std::string faceGeoTypeName = makeGeomEntName (getGeoShape(CFGeoEnt::FACE, dim, nbFaceNodesP1),
+                                                                 getGeometricPolyType(),
+                                                                 getGeometricPolyOrder(),
+                                                                 getSolutionPolyType(),
+                                                                 getSolutionPolyOrder());
+
+            // face provider name
+            const std::string geoProviderName = faceProviderName + faceGeoTypeName;
+            (*faceTypes)[nbProcessedFaces*m_elementDivision+iNewFace] = m_mapGeoProviderNameToType.find(geoProviderName);
+	  }
+        } 
+
+      } // end for loop over faces
+
+    } // end if statement
+
+  } // end for loop over TRs
+
+  // Create TopologicalRegionSet
+  TopologicalRegionSet* ptrs = new TopologicalRegionSet (name, storeTR);
+
+  // this is a boundary TRS
+  ptrs->attachTag("boundary");
+  // this is a TRS of faces
+  ptrs->attachTag("face");
+
+  // set local GeometricEntity IDs
+  ptrs->setGeoEntsLocalIdx(localFaceIDs);
+  // set global GeometricEntity IDs
+  ptrs->setGeoEntsGlobalIdx(globalFaceIDs);
+  // set the connectivity GeometricEntity to nodeIDs
+  ptrs->setGeo2NodesConn(faceNodes);
+  // set the GeometricEntity types
+  ptrs->setGeoTypes(faceTypes);
+  
+  // don't set the connectivity GeometricEntity to stateIDs !!! there are no states in the boundary trs
+  // set empty connectivity?
+  // create empty face-state connectivity table
+  std::valarray<CFuint> nbFaceStates(static_cast<CFuint>(0),totalNbFaces);
+  ConnTable* faceStates = new ConnTable(nbFaceStates);
+  ptrs->setGeo2StatesConn(faceStates);
+  // create the cached list of state indexes in the all TRS
+  ptrs->createStatesList();
+
+  // put it into MeshData TRS list
+  MeshDataStack::getActive()->addTrs(ptrs);
+
+  cf_assert(nbProcessedFaces*m_elementDivision == totalNbFaces);
+
+  CFLogDebugMin( "MeshUpgradeBuilder::setTopologicalRegions() : nameTRS "
+                 << name
+                 << ", nb boundary faces detected : "
+                 << nbProcessedFaces << "\n");
+  return ptrs;
 }
 
 //////////////////////////////////////////////////////////////////////////////

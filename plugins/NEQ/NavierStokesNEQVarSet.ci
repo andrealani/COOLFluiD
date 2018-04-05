@@ -24,6 +24,7 @@ NavierStokesNEQVarSet<BASE>::NavierStokesNEQVarSet
   _hsVib(),
   _hsEl(),
   _normConcGradients(),
+  _normTempGradients(),
   _rhoUdiffBkp(),
   _hsTotBkp(),
   _hsVibBkp(),
@@ -69,19 +70,22 @@ void NavierStokesNEQVarSet<BASE>::setup()
   _hsTot.resize(nbSpecies);
   
   _library->setMoleculesIDs(_moleculeIdx);
-  _hsVib.resize(_moleculeIdx.size());
+  //_hsVib.resize(_moleculeIdx.size());
+  _hsVib.resize(nbSpecies);
   _hsEl.resize(nbSpecies);
   
   _rhoUdiffBkp.resize(nbSpecies);
   _hsTotBkp.resize(nbSpecies);
-  _hsVibBkp.resize(_moleculeIdx.size());
+  //_hsVibBkp.resize(_moleculeIdx.size());
+  _hsVibBkp.resize(nbSpecies);
   _hsElBkp.resize(nbSpecies);
- 
-  _normConcGradients.resize(nbSpecies);
-  _normConcGradientsBkp.resize(nbSpecies);
-  _yID.resize(nbSpecies);
   
   const CFuint nbTv = _eulerModel->getNbScalarVars(1);
+  
+  _normConcGradients.resize(nbSpecies);
+  _normTempGradients.resize(nbTv+1);
+  _normConcGradientsBkp.resize(nbSpecies);
+  _yID.resize(nbSpecies);
   
   _TvibID.resize(nbTv);
   _avTvib.resize(nbTv);

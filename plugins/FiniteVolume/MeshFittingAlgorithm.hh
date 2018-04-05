@@ -8,6 +8,11 @@
 #include "Framework/DataSocketSink.hh"
 #include "Framework/CellTrsGeoBuilder.hh"
 #include "SimpleEdgeGraph.hh"
+#include "Framework/TRSDistributeData.hh"
+#include "MeshTools/ComputeWallDistanceVector2CCMPI.hh"
+#include "Common/CFMultiMap.hh"
+#include "Framework/GeometricEntityPool.hh"
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -95,13 +100,15 @@ public:
    * @return a vector of SafePtr with the DataSockets
    */
   virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets();
+  
 
 private:
   
   /**
    * Creates the nodal connectivity
    */
-  void createNodalConnectivity();
+  void  createNodalConnectivity();
+
 
   /**
    * Find boundary nodes
@@ -122,29 +129,71 @@ private:
    * Compute the spring max, min and average spring stiffness
    */
   void computeSpringTruncationData();
- 
-    /**
+
+  /**
+   * Computing the nodalState
+   */
+  
+  CFreal computeState(const Framework::Node*  Node);
+  
+  /**
    * computes the spring constant between two nodes
    */
   CFreal computeSpringConstant(const Framework::Node* const firstNode, 
                                const Framework::Node* const secondNode) ;
   
   /**
+   * Compute the spring constant between two nodes using
+   * the semi torsional Spring Analogy for 2D trianglar meshes
+   */
+  
+  CFreal computetorsionConstant(const  Framework::Node* const  centralNode, 
+				const  Framework::Node* const firstNode,
+				const  Framework::Node* const  secondNode);
+  
+  /**
+   * Compute the spring constant between two nodes using
+   * the semi torsional Spring Analogy and/or the ortho-semi 
+   * torisonal spring analogy for 3D tetrahedral meshes
+   */
+  
+  CFreal computetorsionConstant3D(CFuint nodeID1, CFuint nodeID2, 
+				  const  Framework::Node* const firstNode,
+				  const  Framework::Node* const  secondNode);
+  
+  CFreal computetorsionConstant3DSemiOnly(CFuint  nodeID1,CFuint nodeID2 ,
+					  const  Framework::Node* const  firstNode,
+					  const  Framework::Node* const  secondNode);
+  
+  /**
+   * Compute the volume of a tetrahedral element
+   */
+  
+  CFreal  ComputeTvolume(CFuint  n1, CFuint  n2,
+			 CFuint n3, CFuint n4);
+  
+  /**
+   * Compute the face area of a tetrahedral element
+   */
+  CFreal ComputeTFacesurface(Framework::Node* node1, 
+			     Framework::Node* node2,
+			     Framework::Node* node3);
+  
+  /**
    * truncates the spring constant
    */
   CFreal truncateSpringConstant(CFreal springConstant); 
-
-
+  
   /**
    * Solve Linear System
    */
   void solveLinearSystem();
- 
+  
   /**
    * resize linear system matrix and rhs to solve for the states
    */
   void resizeSystemSolverToStateData();
-
+  
   /**
    * resize linear system matrix and rhs to solve for the nodes 
    */
@@ -156,30 +205,82 @@ private:
   void assembleLinearSystem();
  
   /**
-  * Queries if the node moves in the boundary
-  */
+   * Queries if the node moves in the boundary
+   */
   bool isNodeMovingInBoundary(Framework::Node* node);
 
+  /**
+   * Compute the spring constant between two nodes using
+   * the semi torsional Spring Analogy for 2D quadrilateral meshes
+   */  
+  CFreal computeConstantquads(const  RealVector xyi , 
+			      const  Framework::Node* const  firstNode,
+			      const  Framework::Node* const  secondNode,
+			      const  Framework::Node* const  thirdNode,
+			      const  Framework::Node* const  fourthNode,
+			      CFreal elementArea);
+  /** Compute the skewness of a quadrilateral element 
+   *
+   */
+  CFreal computeSkewness2dQuads(const  Framework::Node* const  a1,const  Framework::Node* const  b1,
+				const  Framework::Node* const  c1, const  Framework::Node* const  d1);
+  
   /**
    * assemble the system lines for a node moving in along the boundary
    */
   void assembleMovingInBoundaryNode(const Framework::Node* node);
 
   /**
-  * Queries if the node is locked 
-  */
-  bool isNodeLocked(Framework::Node* node);
- 
+   * Queries if the node is locked 
+   */
+  bool isNodeLocked( Framework::Node* node);
+  /**
+   * Queries if the node is inside the region 
+   */
+  bool insideRegion(Framework::Node* node);
+  
+  /**
+   * Compute the area of a quadrilateral element 
+   */
+  CFreal computeElementArea2dQuads(const  Framework::Node* const  a,const  Framework::Node* const  c,
+				   const  Framework::Node* const  b, const  Framework::Node* const  d);
+  /**
+   *  Compute the aspect ration of a quadrilateral element 
+   */
+  CFreal computeAspectRatio2dQuads(const  Framework::Node* const  a,const  Framework::Node* const  b,
+				   const  Framework::Node* const  c, const  Framework::Node* const  d);
+  
   /**
    * assemble the system lines for a locked Node
    */
   void assembleLockedNode(const Framework::Node* node);
-
+  
+  /**
+   * assemble the system lines for a 2D triangular element
+   */ 
+  void assembleinRegionNode2DTriag(const  Framework::Node* node);
+  
+  /**
+   * assemble the systme lines for 2D quadrilateral element
+   */
+  void assembleinRegionNode2DQuads(const  Framework::Node* node);
+  
+  /**
+ * assemble system lines for 3D tetrahedral elemnt 
+ */
+  void assembleinRegionNode3DTet(const  Framework::Node* node);
+  
+  /**
+   * Compute the intersection point between two quadrilateral diagonals
+   */
+  RealVector computeIntersection(const  Framework::Node* const  a, const  Framework::Node* const  c,
+				 const  Framework::Node* const  b, const  Framework::Node* const  d);
+  
   /**
    * assemble the system lines for an inner Node
    */
   void assembleInnerNode(const Framework::Node* node);
- 
+  
   /**
    * Update nodes with new positions
    */
@@ -191,10 +292,36 @@ private:
   void triggerRecomputeMeshData();
   
 private: //data
+  /// the socket of the nodes connectivity for 2D quadrilatral mesh
+  Common::CFMultiMap <CFuint , CFuint>  m_mapNodeNode1;
+  
+  /// the socket of the 3D terahedral mesh connectivity 
+  Common::CFMultiMap <CFuint , CFuint>  m_mapCellNode1;
+  
+  /// the socket of cell internal radius at setup 
+  Common::CFMultiMap <CFuint , CFreal>  m_mapNodeRadius1;
+  
+  /// the socket of states at setup 
+  Common::CFMultiMap <CFuint , CFreal>  m_mapNodeNState1;
   
   /// the socket to the data handle of the nodal stiffness
   Framework::DataSocketSource < CFreal > socket_stiffness;
   
+  /// the socket to the data handle of the relative error 
+  Framework::DataSocketSource < CFreal > socket_relativeError;
+  
+  /// the socket to the data handle of the internal radius circle
+  Framework::DataSocketSource < CFreal > socket_iradius;
+  
+  /// the socket to the data handle of the skewness
+  Framework::DataSocketSource < CFreal > socket_skewness;
+
+  /// the socket to the data handle of the aspect ratio
+  Framework::DataSocketSource < CFreal > socket_AR;
+
+  /// the socket to the data handle of the internal radius of sphere
+  Framework::DataSocketSource < CFreal > socket_isphere;
+
   /// the socket to the data handle of the state's
   Framework::DataSocketSink < Framework::Node* , Framework::GLOBAL > socket_nodes;
   
@@ -212,9 +339,15 @@ private: //data
   
   /// storage of the RHS
   Framework::DataSocketSink<CFreal> socket_rhs;
-  
+
+
   /// socket for the wallDistance storage
   Framework::DataSocketSink<CFreal> socket_wallDistance;
+
+  /// socket for the node inside Region 
+  // True if node is inside region 
+  // False if the node is outside the region 
+  Framework::DataSocketSink<bool> socket_nodeisAD; 
   
   /// data handle cashed for efficiency  reasons
   Framework::DataHandle<CFreal> m_wallDistance;
@@ -227,11 +360,14 @@ private: //data
   
   /// builder of geometric entities
   Framework::GeometricEntityPool<Framework::CellTrsGeoBuilder> m_geoBuilder;
+  Framework::GeometricEntityPool<Framework::CellTrsGeoBuilder> m_geoBuilder1;
+
   Framework::GeometricEntityPool<Framework::FaceTrsGeoBuilder> m_faceTRSBuilder;
+
   
   // physical data array
-  RealVector m_pdata; 
-  
+  RealVector m_pdata;
+ 
   // dummy state vector
   std::auto_ptr<Framework::State> m_state; 
   
@@ -244,6 +380,9 @@ private: //data
   /// Step for mesh adaptation
   CFreal m_meshAcceleration;
 
+  /// Tolerance on the mesh mouvement for RSI
+  CFreal m_tolerance;
+
   CFreal m_ratioBoundaryToInnerEquilibriumSpringLength;
 
   std::vector<std::string> m_unlockedBoundaryTRSs;
@@ -253,6 +392,9 @@ private: //data
   
   /// Monitor variable ID from physical data
   CFuint m_monitorPhysVarID;
+
+  /// MQIvalue to be defined 
+  CFuint m_MQIvalue;
   
   ///Equilibrium spring length 
   CFreal m_equilibriumSpringLength;
@@ -269,10 +411,20 @@ private: //data
   //Simple edge graph 
   FiniteVolume::SimpleEdgeGraph m_edgeGraph;
 
+  FiniteVolume::SimpleEdgeGraph m_edgeGraphN;
+  // Storage of element skewness 
+  Common::CFMultiMap<CFuint,CFreal>  m_mapNodeSkew1;
+  // Storage of element aspect ratio  
+  Common::CFMultiMap<CFuint,CFreal>  m_mapNodeAR1;
+  // Storage of internal radius of the sphere
+  Common::CFMultiMap<CFuint,CFreal>  m_mapNodeTS1;
+  // Global RSI 
+  CFreal m_erreurG;
+
 }; // end of class MeshFittingAlgorithm
-
+      
 //////////////////////////////////////////////////////////////////////////////
-
+      
     } // namespace FiniteVolume
 
   } // namespace Numerics

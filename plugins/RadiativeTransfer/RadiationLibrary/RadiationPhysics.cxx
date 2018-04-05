@@ -135,11 +135,13 @@ void RadiationPhysics::computeInterpolatedStates()
       m_interpolatedStates[i] = 0.0;
       nodeCenter = 0.; // AL: to be removed
       for (CFuint node = 0; node < nbNodesInFace; ++node) {
-	const Framework::State& nstate = nstates[nodesInFace[node]->getLocalID()];
-        m_interpolatedStates[i]  += nstate;
+	const RealVector& nstate = nstates[nodesInFace[node]->getLocalID()];
+        m_interpolatedStates[i] += nstate;
         nodeCenter += *nodesInFace[node]->getData(); // AL: to be removed
       }
       m_interpolatedStates[i] /= nbNodesInFace;
+
+      //std::cout << "interpstate = " << m_interpolatedStates[i] << std::endl;
       nodeCenter/= nbNodesInFace; // AL: to be removed
       
       // AL: to be removed
@@ -151,6 +153,7 @@ void RadiationPhysics::computeInterpolatedStates()
       faceTRSBuilder->releaseGE();
     }
   }
+
   CFLog(VERBOSE, "RadiationPhysics::computeInterpolatedStates() => END\n");
 }
 

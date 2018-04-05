@@ -15,7 +15,6 @@
 #include "Framework/MultiMethodHandle.hh"
 #include "Framework/SpaceMethodData.hh"
 #include "Framework/StdTrsGeoBuilder.hh"
-//#include "Framework/VolumeIntegrator.hh"
 #include "Framework/FaceToCellGEBuilder.hh"
 #include "Framework/VarSetMatrixTransformer.hh"
 
@@ -23,8 +22,6 @@
 #include "Framework/ProxyDofIterator.hh"
 
 #include "FluxReconstructionMethod/CellToFaceGEBuilder.hh"
-
-//#include "Framework/DataSocketSource.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -129,9 +126,6 @@ public: // functions
   {
     return "FluxReconstructionSolver";
   }
-
-//   /// Get the VolumeIntegrator
-//   Common::SafePtr< Framework::VolumeIntegrator > getVolumeIntegrator();
   
   /// Gets the flux point distribution
   Common::SafePtr< BasePointDistribution > getFluxPntDistribution() const
@@ -152,6 +146,12 @@ public: // functions
   {
     cf_assert(m_correctionfunction.isNotNull());
     return m_correctionfunction.getPtr();
+  }
+  
+  /// Gets the correction function computation strategy
+  bool getFreezeGrads()
+  {;
+    return m_freezeGrads;
   }
     
   /// @return reference to m_frLocalData
@@ -240,7 +240,7 @@ public: // functions
     return m_bndFacesStartIdxs;
   }
   
-  /// @return reference to m_bndFacesStartIdxs
+  /// @return reference to m_partitionFacesStartIdxs
   std::vector< CFuint >& getPartitionFacesStartIdxs()
   {
     return m_partitionFacesStartIdxs;
@@ -270,6 +270,12 @@ public: // functions
     return m_hasDiffTerm;
   }
   
+  /// Returns a boolean telling whether artificial viscosity is added
+  bool hasArtificialViscosity()
+  {
+    return m_addAV;
+  }
+  
   /// @return the GeometricEntity cell builder
   Common::SafePtr<
       Framework::GeometricEntityPool< FluxReconstructionMethod::CellToFaceGEBuilder > >
@@ -285,23 +291,22 @@ public: // functions
   {
     return &m_cellBuilder2nd;
   }
-
+  
+  /**
+   * Tell if a variable has to be applied for the residual
+   */
+  bool isResidualTransformationNeeded() const
+  {
+    return (_updateVarStr != _solutionVarStr);
+  }
   
   /// Sets up the FluxReconstructionData
   void setup();
   
   /// Unsets the method data
   void unsetup();
-  
-//   /// Returns the DataSocket's that this command provides as sources
-//   /// @return a vector of SafePtr with the DataSockets
-//   std::vector< Common::SafePtr< Framework::BaseDataSocketSource > >
-//     providesSockets();
 
 private:  // helper functions
-
-//   /// Configures the ContourIntegrator and the IntegrableEntity
-//   void configureIntegrator();
   
   /**
    * Creates the local data for FR
@@ -324,15 +329,6 @@ private:  // data
   
   /// Builder for faces (containing the neighbouring cells)
   Framework::GeometricEntityPool< Framework::FaceToCellGEBuilder >  m_faceBuilder;
-
-//   /// The volume integrator
-//   Framework::VolumeIntegrator m_volumeIntegrator;
-//
-//   /// String for configuring the numerical integrator QuadratureType
-//   std::string m_intquadStr;
-// 
-//   /// String for configuring the numerical integrator Order
-//   std::string m_intorderStr;
   
   /// Builder for cells (containing the neighbouring faces)
   Framework::GeometricEntityPool< FluxReconstructionMethod::CellToFaceGEBuilder >  m_cellBuilder;
@@ -412,11 +408,11 @@ private:  // data
   /// Vector transformer from update to solution variables
   Common::SelfRegistPtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
   
-//   /// socket for solution coordinates in 1D
-//   Framework::DataSocketSource< std::vector< CFreal > > socket_solCoords1D;
-//   
-//   /// socket for flux coordinates in 1D
-//   Framework::DataSocketSource< std::vector< CFreal > > socket_flxCoords1D;
+  /// Flag telling whether to freeze the gradients in the Jacobian computation
+  bool m_freezeGrads;
+  
+  /// Flag telling whether to add artificial viscosity
+  bool m_addAV;
 
 };  // end of class FluxReconstructionSolverData
 

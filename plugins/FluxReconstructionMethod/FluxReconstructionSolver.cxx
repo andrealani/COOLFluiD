@@ -49,7 +49,10 @@ void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("SpaceRHSJacobCom","Command for the computation of the space discretization contribution to RHS and Jacobian.");
   options.addConfigOption< std::string >("TimeRHSJacobCom","Command for the computation of the time discretization contibution to RHS and Jacobian.");
   options.addConfigOption< std::string >("LimiterCom","Command to limit the solution.");
+  options.addConfigOption< std::string >("PhysicalityCom","Command to enforce physical soundness of the solution.");
   options.addConfigOption< std::string >("ComputeErrorCom","Command to compute the error of the solution.");
+  options.addConfigOption< std::string >("FinalizeRHSCom","Finilaze computation of the RHS.");
+  options.addConfigOption< std::string >("ArtificialViscosityCom","Command to add artificial viscosity.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -70,7 +73,9 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   m_bcsComs(),
   m_bcsDiff(),
   m_bcsDiffComs(),
-  m_computeError()
+  m_computeError(),
+  m_finalizeRHS(),
+  m_artificialVisc()
 {
   addConfigOptionsTo(this);
   m_data.reset(new FluxReconstructionSolverData(this));
@@ -91,6 +96,12 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   
   m_limiterStr = "Null";
   setParameter("LimiterCom", &m_limiterStr);
+  
+  m_artificialViscStr = "Null";
+  setParameter("ArtificialViscosityCom", &m_artificialViscStr);
+  
+  m_physicalityStr = "Null";
+  setParameter("PhysicalityCom", &m_physicalityStr);
 
   m_setupStr   = "StdSetup";
   setParameter( "SetupCom",   &m_setupStr );
@@ -112,6 +123,9 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   
   m_computeErrorStr = "Null";
   setParameter("ComputeErrorCom", &m_computeErrorStr);
+  
+  m_finalizeRHSStr = "StdFinalize";
+  setParameter("FinalizeRHSCom", &m_finalizeRHSStr);
   
   // options for source term commands
   m_srcTermTypeStr = std::vector<std::string>();
@@ -182,9 +196,15 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_limiter,m_limiterStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
+    args, m_artificialVisc,m_artificialViscStr,m_data );
+  configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
+    args, m_physicality,m_physicalityStr,m_data );
+  configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_timeRHSJacob,m_timeRHSJacobStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_computeError,m_computeErrorStr,m_data );
+  configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
+    args, m_finalizeRHS,m_finalizeRHSStr,m_data );
 
   cf_assert(m_setup.isNotNull());
   cf_assert(m_unsetup.isNotNull());
@@ -193,8 +213,11 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
   cf_assert(m_convSolve.isNotNull());
   cf_assert(m_diffSolve.isNotNull());
   cf_assert(m_limiter.isNotNull());
+  cf_assert(m_artificialVisc.isNotNull());
+  cf_assert(m_physicality.isNotNull());
   cf_assert(m_timeRHSJacob.isNotNull());
   cf_assert(m_computeError.isNotNull());
+  cf_assert(m_finalizeRHS.isNotNull());
   
   configureSourceTermCommands(args);
   configureInitCommands(args);
@@ -367,7 +390,6 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
       {
 	CFLog(VERBOSE, "Diff TRS " << i << ": " << TRSsDiff[i] << "\n");
       }
-      
     }
 }
 
@@ -416,8 +438,13 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
   // set the residual factor in the MethodData
   m_data->setResFactor(factor);
   
+  // prepare the computation (reset rhs, updatecoeff, grads)
   cf_assert(m_prepare.isNotNull());
   m_prepare->execute();
+  
+  // enforce physicality of the solution
+  cf_assert(m_physicality.isNotNull());
+  m_physicality->execute();
   
   // apply the boundary conditions (this function is in SpaceMethod and is not called anywhere else)
   applyBC();
@@ -428,19 +455,32 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
   // if there is a diffusive term, compute the diffusive contributions to the residual
   if (m_data->hasDiffTerm())
   {
-    CFLog(VERBOSE,"Executing diff BCs!\n");
     // add the diffusive boundary fluxes
     applyBCDiffImpl();
-    CFLog(VERBOSE,"Executing diff solver!\n");
+
     cf_assert(m_diffSolve.isNotNull());
     m_diffSolve->execute();
   }
   
+  if (m_artificialViscStr != "Null")
+  {
+    cf_assert(m_artificialVisc.isNotNull());
+    m_artificialVisc->execute();
+  }
+  
+  // add source terms
+  addSourceTermsImpl();
+  
   cf_assert(m_computeError.isNotNull());
   m_computeError->execute();
-
-  // add source terms
-  //addSourceTermsImpl();
+  
+  if (m_data->isResidualTransformationNeeded())
+  {
+    m_finalizeRHS->execute();
+  }
+  
+  cf_assert(m_limiter.isNotNull());
+  //m_limiter->execute();
 
 //   // divide by volume/Jacobian determinant
 //   m_divideRHSByCellVol->execute();

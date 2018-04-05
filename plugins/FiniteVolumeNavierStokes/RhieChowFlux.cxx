@@ -33,6 +33,13 @@ MethodStrategyProvider<RhieChowFlux<Euler3DVarSet>,
 		       FluxSplitter<CellCenterFVMData>,
 		       FiniteVolumeNavierStokesModule>
 rhieChowFlux3DProvider("RhieChow3D");
+
+// 2D and 1/2
+MethodStrategyProvider<RhieChowFlux<Euler3DVarSet>,
+		       CellCenterFVMData,
+		       FluxSplitter<CellCenterFVMData>,
+		       FiniteVolumeNavierStokesModule>
+rhieChowFlux2DHalfProvider("RhieChow2DHalf");
       
 MethodStrategyProvider<RhieChowFlux<MultiScalarVarSet<Euler2DVarSet> >,
 		       CellCenterFVMData,

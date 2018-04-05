@@ -70,6 +70,7 @@ ComputeDiffusiveTerm::providesSockets()
 
 void ComputeDiffusiveTerm::setup()
 {
+  Framework::MethodStrategy<FluctuationSplitData>::setup();
   const CFuint nbcells =
     MeshDataStack::getActive()->getTrs("InnerCells")->getLocalNbGeoEnts();
   

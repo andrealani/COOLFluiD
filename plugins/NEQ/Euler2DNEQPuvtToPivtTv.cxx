@@ -94,6 +94,8 @@ void Euler2DNEQPuvtToPivtTv::transform(const State& state, State& result)
   for (CFuint i = 0; i < nbTv; ++i) {
     result[startTv + i] = T;
   }
+  
+  CFLog(DEBUG_MAX, "Euler2DNEQPuvtToPivtTv::transform() => result = " << result << "\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////

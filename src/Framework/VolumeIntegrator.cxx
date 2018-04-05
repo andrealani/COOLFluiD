@@ -84,9 +84,9 @@ void VolumeIntegrator::buildCoordinatesAndStates(const IntegratorPattern& patter
 void VolumeIntegrator::setup()
 {
   CFAUTOTRACE;
-
+  
   Integrator<VolumeIntegratorImpl>::setup();
-
+  
   const IntegratorPattern pattern = getMaxIntegratorPattern();
 
   CFLogDebugMin("Maximum integrator pattern: " << pattern << "\n");

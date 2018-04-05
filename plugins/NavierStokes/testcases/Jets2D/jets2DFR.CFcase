@@ -2,17 +2,16 @@
 # 
 # This COOLFluiD CFcase file tests: 
 # 
-# Finite Volume, Euler2D, Forward Euler, mesh with triangles, restart from a 
-# binary CFmesh, writing of binary CFmesh, parallel TECPLOT writer in block 
-# (nodal+cell-centered) format, writing of rhs DataHandle, second-order 
-# reconstruction with Venkatakhrisnan limiter, supersonic inlet and outlet BC
+# FR, Euler2D, Backward Euler, mesh with quads, 
+# converter from Gmsh to CFmesh, second-order Roe scheme, subsonic inlet 
+# and outlet, mirror BCs 
 #
 ################################################################################
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -10.029161
+### Residual = -7.745744
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -23,110 +22,113 @@ CFEnv.AssertDumps          = true
 CFEnv.ExceptionDumps       = true
 CFEnv.ExceptionOutputs     = true
 CFEnv.RegistSignalHandlers = false
+CFEnv.OnlyCPU0Writes = false
+
 #CFEnv.TraceToStdOut = true
-#CFEnv.TraceActive = true
-#CFEnv.OnlyCPU0Writes = false
-
-# This tests the configuration file: it gives error if some options are wrong
-# This always fails with converters (THOR2CFmesh, Gambit2CFmesh, etc.): 
-# deactivate the option in those cases 
-#CFEnv.ErrorOnUnusedConfig = true
-
-# global parameter to control the number of writers for all algorithms
-#CFEnv.NbWriters = 4
 
 # SubSystem Modules
-Simulator.Modules.Libs = libShapeFunctions libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libTecplotWriter libFluxReconstructionMethod libEmptyConvergenceMethod libNavierStokes libForwardEuler libPetscI libTHOR2CFmesh 
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libTecplotWriter libNavierStokes libFluxReconstructionMethod libFluxReconstructionNavierStokes libForwardEuler libPetscI libTHOR2CFmesh
 
 # SubSystem Parameters
-Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets2D/
-Simulator.Paths.ResultsDir = ./
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Jets2D
+Simulator.Paths.ResultsDir = plugins/NavierStokes/testcases/Jets2D
+
+##################################################################
+## SubSystemMesh only creates the mesh and upgrades it serially ##
+##################################################################
+
+Simulator.SubSystems     = SubSysMesh SubSystem
+Simulator.SubSystemTypes = OnlyMeshSubSystem StandardSubSystem
+Simulator.SubSysMesh.Namespaces = MeshNamespace
+Simulator.SubSysMesh.Ranks = 0:0
+Simulator.SubSysMesh.MeshNamespace.MeshData = MeshMeshData
+Simulator.SubSysMesh.MeshNamespace.SubSystemStatus = MeshSubSystemStatus
+Simulator.SubSysMesh.MeshNamespace.PhysicalModelType = Euler2D
+#Simulator.SubSysMesh.MeshNamespace.PhysicalModelName = Euler2D
+Simulator.SubSysMesh.MeshMeshData.listTRS = SuperInlet SuperOutlet
+Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
+
+Simulator.SubSysMesh.OutputFormat = CFmesh
+Simulator.SubSysMesh.CFmesh.FileName = jets2DFRUpgraded.CFmesh
+Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
+Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
+
+Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = jets2DFR.CFmesh
+Simulator.SubSysMesh.CFmeshFileReader.Data.convertFromFile = jets2DQDPert.CFmesh
+#Simulator.SubSysMesh.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
+Simulator.SubSysMesh.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+Simulator.SubSysMesh.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P1
+Simulator.SubSysMesh.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSysMesh.SpaceMethod = Null
+Simulator.SubSysMesh.Null.Builder = MeshUpgrade
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P2
+Simulator.SubSysMesh.Null.Namespace = MeshNamespace
+
+##################################
+## SubSystem runs the FR solver ##
+##################################
 
 Simulator.SubSystem.Default.PhysicalModelType = Euler2D
-Simulator.SubSystem.Euler2D.refValues = 1. 2.83972 2.83972 6.532
+Simulator.SubSystem.Euler2D.refValues = 1.0 0.449622064 0.449622064 2.60108
 Simulator.SubSystem.Euler2D.refLength = 1.0
 
-#Simulator.SubSystem.ConvergenceFile     = convergence.plt
+Simulator.SubSystem.OutputFormat        = ParaView CFmesh Tecplot 
 
-Simulator.SubSystem.OutputFormat     = CFmesh Tecplot ParaView
+Simulator.SubSystem.CFmesh.FileName     = jets2DFR-sol.CFmesh
+Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+Simulator.SubSystem.CFmesh.SaveRate = 300
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
 
 Simulator.SubSystem.Tecplot.FileName = jets2DFR-sol.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.Tecplot.SaveRate = 300
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 
-Simulator.SubSystem.CFmesh.FileName  = jets2DFR-sol.CFmesh
-Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
-Simulator.SubSystem.CFmesh.SaveRate  = 10
-Simulator.SubSystem.CFmesh.AppendTime = false
-Simulator.SubSystem.CFmesh.AppendIter = false
-# binary CFmesh writer
-#Simulator.SubSystem.CFmesh.WriteSol = ParWriteBinarySolution
-#Simulator.SubSystem.CFmesh.ParWriteBinarySolution.ParCFmeshBinaryFileWriter.NbWriters = 4
-
-Simulator.SubSystem.ParaView.FileName    = jets2DFR-solP3.vtu
+Simulator.SubSystem.ParaView.FileName    = jets2DFR-sol.vtu
 Simulator.SubSystem.ParaView.WriteSol    = WriteSolutionHighOrder
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
-Simulator.SubSystem.ParaView.SaveRate = 10
+Simulator.SubSystem.ParaView.SaveRate = 300
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
-# parallel ASCII Tecplot writer
-#Simulator.SubSystem.Tecplot.FileName = jets2D-sol.plt
-#Simulator.SubSystem.Tecplot.Data.outputVar = Cons
-#Simulator.SubSystem.Tecplot.SaveRate = 500
-#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = rhs
-#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = rhs0 rhs1 rhs2 rhs3
-#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
-#Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
-#Simulator.SubSystem.Tecplot.ParWriteSolutionBlock.OnlyNodal = true
-#Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolution
-#Simulator.SubSystem.Tecplot.ParWriteSolution.NbWriters = 4
-#Simulator.SubSystem.Tecplot.AppendRank = false
-#Simulator.SubSystem.Tecplot.Data.CoordinatesOnly = true
-#Simulator.SubSystem.Tecplot.Data.SurfaceTRS = SuperInlet SuperOutlet
-#Simulator.SubSystem.Tecplot.AppendIter = true
-
-Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
-
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -10.0
-
-Simulator.SubSystem.Default.listTRS = SuperInlet SuperOutlet
-
-Simulator.SubSystem.MeshCreator = CFmeshFileReader
-
-# binary CFmesh reader
-#Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2D-sol.CFmesh
-#Simulator.SubSystem.CFmeshFileReader.ReadCFmesh = ParReadCFmeshBinary
-
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2Dsfdm.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.convertFromFile = jets2DQDPert.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
-Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
-Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P1
-Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 10000
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-#EmptyIterator
-#FwdEuler
-#Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.8
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.5
 
 Simulator.SubSystem.SpaceMethod = FluxReconstruction
-Simulator.SubSystem.FluxReconstruction.Builder = MeshUpgrade
-Simulator.SubSystem.FluxReconstruction.MeshUpgrade.PolynomialOrder = P2
-#Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
-#Simulator.SubSystem.FluxReconstruction.LimiterCom = TVBLimiter
+
+Simulator.SubSystem.Default.listTRS = InnerCells SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = jets2DFRUpgraded.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
+
+# choose which builder we use
+Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHS
+Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
+Simulator.SubSystem.FluxReconstruction.LimiterCom = TVBLimiterEuler2D
+Simulator.SubSystem.FluxReconstruction.TVBLimiterEuler2D.TVBFactor = 100
+Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
 Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
 Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = RoeFlux
 
-Simulator.SubSystem.FluxReconstruction.Data.InterfaceFluxComputer = Null
+#Simulator.SubSystem.FluxReconstruction.ComputeErrorCom = ComputeErrorEuler
+
 Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
+
+Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.035 #0.333333333333 #0.015 #0.013 #0.000000001 #4.0/135.0 #1.0/3.0 #0.035 #1.0/3.0 #3.0/3150.0 #8.0/496125.0  #5.0/29469825
 
 Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState
 Simulator.SubSystem.FluxReconstruction.InitNames = InField
@@ -134,12 +136,19 @@ Simulator.SubSystem.FluxReconstruction.InitNames = InField
 Simulator.SubSystem.FluxReconstruction.InField.applyTRS = InnerCells
 Simulator.SubSystem.FluxReconstruction.InField.Vars = x y
 Simulator.SubSystem.FluxReconstruction.InField.Def = if(y>0.5,0.5,1.) \
-                                         if(x>0.5,1.67332,2.83972) \
-                                         0.0 \
-                                         x*y^2+1
+                                                     if(y>0.5,1.67332,2.83972) \
+                                                     0.0 \
+                                                     if(y>0.5,3.425,6.532)
 
+Simulator.SubSystem.FluxReconstruction.BcNames = Inlet Outlet
+Simulator.SubSystem.FluxReconstruction.Inlet.applyTRS = SuperInlet
+Simulator.SubSystem.FluxReconstruction.Outlet.applyTRS = SuperOutlet
 
+Simulator.SubSystem.FluxReconstruction.Data.BcTypes = Dirichlet  SuperOutlet
+Simulator.SubSystem.FluxReconstruction.Data.BcNames = Inlet      Outlet
 
-
-
-
+Simulator.SubSystem.FluxReconstruction.Data.Inlet.Vars = x y
+Simulator.SubSystem.FluxReconstruction.Data.Inlet.Def  = if(y>0.5,0.5,1.) \
+                                                         if(y>0.5,1.67332,2.83972) \
+                                                         0.0 \
+                                                         if(y>0.5,3.425,6.532)

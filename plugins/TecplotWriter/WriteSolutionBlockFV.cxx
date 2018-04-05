@@ -462,10 +462,11 @@ void WriteSolutionBlockFV::writeToFileStream(std::ofstream& fout)
       path cfgpath = getMethodData().getFilename();
       path filepath = cfgpath.branch_path() / ( basename(cfgpath) + "-surf" + extension(cfgpath) );
 
-      Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
-        Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
-      ofstream& fout = fhandle->open(filepath);
+      Common::SelfRegistPtr<Environment::FileHandlerOutput>* fhandle =
+        Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
+      ofstream& fout = (*fhandle)->open(filepath);
       writeBoundarySurface(fout);
+      delete fhandle;
     }
   }
 

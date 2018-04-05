@@ -1,0 +1,63 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# ConcreteSM PhysicalModelDummy, FwdEuler, mesh with triangles, converter from Tecplot file, restart 
+# from vertex-centered solution computed with first-order Residual Distribution schemes
+#
+################################################################################
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+
+# Simulation Modules
+Simulator.Modules.Libs = libConcreteSpaceMethod libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libPhysicalModelDummy libForwardEuler libTecplot2CFmesh
+
+#CFEnv.ErrorOnUnusedConfig = true
+
+# Simulation Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Cylinder
+Simulator.Paths.ResultsDir = ./RESULTS_Cylinder_ConcreteSM
+
+Simulator.SubSystem.Default.PhysicalModelType = PhysicalModelDummy
+Simulator.SubSystem.PhysicalModelDummy.Dimensions = 2
+Simulator.SubSystem.PhysicalModelDummy.Equations = p u v T
+
+Simulator.SubSystem.OutputFormat    = CFmesh #Tecplot
+Simulator.SubSystem.CFmesh.FileName = cyl_Pg_FVM-out.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 500
+#Simulator.SubSystem.Tecplot.FileName    = cyl_Pg_FVM-out.plt
+#Simulator.SubSystem.Tecplot.SaveRate = 500
+#Simulator.SubSystem.Tecplot.Data.outputVar = Prim
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = copy
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = s1 #s2 s3 s4 
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
+#Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
+
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+
+Simulator.SubSystem.Default.listTRS = 1 2 3 4
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cyl_Pg_M15.CFmesh
+# Converting from Tecplot mesh: file.plt and file.surf.plt must be both present
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Tecplot2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.HasBlockFormat = false
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SurfaceTRS = 1 2 3 4
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = "p" "u" "v" "T" 
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.NbElementTypes = 1
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = false
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
+
+Simulator.SubSystem.ConvergenceMethod = FwdEuler
+
+Simulator.SubSystem.SpaceMethod = ConcreteSM
+Simulator.SubSystem.ConcreteSM.Restart = true
+Simulator.SubSystem.ConcreteSM.Builder = FVMCC
+Simulator.SubSystem.ConcreteSM.ComputeRHS = ComputeSpaceRHS
+Simulator.SubSystem.ConcreteSM.SetupCom = StdSetup
+Simulator.SubSystem.ConcreteSM.Data.Strategy = CopyStates

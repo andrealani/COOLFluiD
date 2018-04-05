@@ -67,22 +67,6 @@ protected: // functions
   void computeJacobConvCorrection();
   
   /**
-   * backup and reconstruct physical variable in the boundary face in the required points
-   * and reconstruct the ghost states
-   */
-  void backupAndReconstructPhysVar(const CFuint iVar, const std::vector< Framework::State* >& cellStates);
-
-  /**
-   * backup physical variable in the boundary face in the required points
-   */
-  void backupPhysVar(const CFuint iVar);
-  
-  /**
-   * restore physical variable in the boundary face in the required points
-   */
-  void restorePhysVar(const CFuint iVar);
-  
-  /**
    * 
    */
   void computeBothJacobs();

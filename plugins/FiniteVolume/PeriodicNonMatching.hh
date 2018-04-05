@@ -73,7 +73,7 @@ public:
 private: //data
 
   ///vector of nodes belonging to the face
-  std::vector<Node&> vertices(2);
+  std::vector<Node&> vertices;
 
   ///identifier of the faces
   CFuint FaceID;

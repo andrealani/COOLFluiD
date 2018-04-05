@@ -197,6 +197,8 @@ void SuperInletImpl::executeOnTrs()
         const CFreal kcoeff = updateCoeff[stateID]*invcfl;
         const CFreal coeff  = max(kcoeff, _diagCoeffFactor*invcfl);
 
+	CFLog(DEBUG_MAX, "SuperInletImpl::executeOnTrs() => coeff = " << coeff << "\n");
+	
         for (CFuint iEq = 0; iEq < nbEqs; ++iEq)
         {
           // must include inletState so it will work for unsteady BCs
@@ -225,7 +227,9 @@ void SuperInletImpl::executeOnTrs()
             }
           }
           jacobMatrix->setValues(*acc);
-        }
+
+	  // acc->print();
+	}
         isUpdated[stateID] = true; // flagging is important!!!!!
       }
     }

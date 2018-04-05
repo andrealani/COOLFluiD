@@ -1,0 +1,479 @@
+#include <iterator>
+
+#include "Framework/CFSide.hh"
+
+#include "Framework/EquationSetData.hh"
+#include "Framework/BaseTerm.hh"
+
+#include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
+#include "FluxReconstructionNavierStokes/AUSMFlux.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace FluxReconstructionMethod {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+AUSMFlux<UPDATEVAR>::AUSMFlux(const std::string& name) :
+  RiemannFlux(name),
+  m_unL(0.0),
+  m_unR(0.0),
+  m_a12(0.0),
+  m_mL(0.0),
+  m_mR(0.0),
+  m_mflux12(0.0),
+  m_p12(0.0)
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+AUSMFlux<UPDATEVAR>::~AUSMFlux()
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+RealVector& AUSMFlux<UPDATEVAR>::computeFlux(State& lState,
+                                 State& rState,
+                                 const RealVector& normal)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  CFLog(DEBUG_MIN, "AUSMFlux::compute() START\n");
+  
+  const EquationSubSysDescriptor& eqSSD = PhysicalModelStack::getActive()-> getEquationSubSysDescriptor();
+  const CFuint nbEqs = eqSSD.getNbEqsSS();
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint iEqSS = eqSSD.getEqSS();
+  
+  const vector<bool>& maskArray = m_updateVarSet->getMaskVariableArray();
+     
+  // AL: this may fail in general cases other than ICP!
+  //     Here we are assuming that there is fluid + something else
+  //     In a weakly coupled simulation you must enter here only when the fluid is active
+  //     (i.e. during the RHS and RHS fluid jacobian computations)
+  // AL: this will fail if you try to solve turbulence decoupled
+  if (iEqSS == 0 || nbEqs == totalNbEqs) 
+  {  
+    // store the left and right states in vector
+    m_updateStates[LEFT ] = &lState;
+    m_updateStates[RIGHT] = &rState;
+
+    // compute physical data for the left and the right internal flux points
+    m_updateVarSet->computePhysicalData(lState, m_pData[LEFT]);
+    m_updateVarSet->computePhysicalData(rState, m_pData[RIGHT]);
+    
+    // The flow at the freestream is assumed to be one-dimensional
+    // calculation of the normal component of velocity for the left and right states
+    const CFuint dim = PhysicalModelStack::getActive()->getDim();
+    
+    m_unL = 0.0;
+    m_unR = 0.0;
+    for (CFuint idim = 0; idim < dim; ++idim) 
+    {
+      const CFuint currXX = UPDATEVAR::PTERM::VX + idim;
+      m_unL += m_pData[LEFT][currXX]*normal[idim];
+      m_unR += m_pData[RIGHT][currXX]*normal[idim];
+    }
+    
+    // Compute speed of the mesh at current quadrature point
+    // the normal velocities m_unL and m_unR will be modified accordingly
+    //this->computeMeshSpeed();
+    
+    computeMassFlux();              // computes m_mflux12
+    //computeIncompCorrectionTerm();  // computes m_mincomp
+    
+    
+ 
+    // pressure terms are only needed for the Euler momentum equations
+    // they are computed only if all the equation system is considered or
+    // if only the Euler equations are considered
+    // @TODO it is here assumed that the size of each of the other
+    // subsystem of equations is != nbEulerEqs species equations (3 or 4 in 2D)
+    if (nbEqs == totalNbEqs || eqSSD.getEqSS() == 0) 
+    {
+      computePressureFlux();   // m_p12
+      computeMassFluxImpl(m_rFlux, normal); // m_mflux12
+    }
+    
+    const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
+    const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
+    const CFuint nbEulerEqs = eulerVarIDs.size();
+    
+    //  the following applies only if we are dealing with multi-scalar cases 
+//     if (totalNbEqs > nbEulerEqs) {
+//       // this works properly with MultiScalarVarSet but not with just EulerVarSet
+//       const vector<EquationSetData>& eqsData = EulerVarSet::getEqSetData();
+//       const CFuint nbEqsData  = eqsData.size();
+//       // const vector<CFuint>& eqSSIDs = eqSSD.getEqVarPatterns()[iEqSS];   
+//       // assert(eqSSIDs.size() == nbEqs);
+//       
+//       CFLog(DEBUG_MIN, "AUSMFlux::compute() => nbEqsData = " << nbEqsData << "\n");
+//       
+//       // loop over the multi-scalar equation set data
+//       for (CFuint i = 0; i < nbEqsData; ++i) {
+// 	const CFuint nbVars = m_updateVarSet->getModel()->getNbScalarVars(i);
+// 	const CFuint firstVar = m_updateVarSet->getModel()->getFirstScalarVar(i);
+// 	const vector<CFuint>& varIDs = eqsData[i].getEqSetVarIDs();
+// 	CFLog(DEBUG_MIN, "AUSMFlux::compute() => nbVars = " << nbVars << 
+// 	      ", varIDs.size() = " << varIDs.size() << "\n");
+// 	
+// 	// exclude case where MultiScalarVarSet is not present
+// 	if (varIDs.size() == nbVars) {
+// 	  CFLog(DEBUG_MIN, "AUSMFlux::compute() => nbVars = " << nbVars 
+// 		<< ", firstVar = " << firstVar << ", " 
+// 		<< Common::CFPrintContainer<const vector<CFuint> >("varIDs  = ", &varIDs));
+// 	  
+// 	  const RealVector *const upwindData = (m_mflux12 > 0.0) ? m_lData : m_rData;
+// 	  for (CFuint ie = 0; ie < nbVars; ++ie) {
+// 	    const CFuint maID = varIDs[ie];
+// 	    if (maskArray[maID]) { 
+// 	      CFLog(DEBUG_MIN, "varIDs[" << ie << "] = " <<  varIDs[ie] << "\n");
+// 	      result[maID] = m_mflux12*(*upwindData)[firstVar + ie];
+// 	    }
+// 	  }
+// 	  
+// 	  // add the correction for treating incompressible flows 
+// 	  if (addIncompCorrection()) {
+// 	    const CFreal halfMincomp = 0.5*m_mincomp;
+// 	    for (CFuint ie = 0; ie < nbVars; ++ie) {
+// 	      const CFuint maID = varIDs[ie];
+// 	      const CFuint varID = firstVar + ie;
+// 	      if (maskArray[maID]) { 
+// 		result[maID] += halfMincomp*((*m_lData)[varID]+(*m_rData)[varID]);
+// 	      }
+// 	    }
+// 	  }
+// 	}
+//       }
+//     }
+//     
+//     if (!this->getMethodData().isPerturb()) {
+//       if (!m_useLiouUpdateCoeff) {
+// 	computeUpdateCoeff();
+//       }
+//       else {
+// 	computeLiouUpdateCoeff();
+//       }
+//     }
+  }
+  
+  // sanity enforcement
+  cf_assert(maskArray.size() == totalNbEqs);
+  for (CFuint i = 0; i < maskArray.size(); ++i) 
+  {
+    if (!maskArray[i]) {m_rFlux[i] = 0.;}
+  }
+  
+  CFLog(DEBUG_MAX, "AUSMFlux::compute() => L data " << m_pData[LEFT] << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux::compute() => R data " << m_pData[RIGHT] << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux::compute() => isPerturb " << getMethodData().isPerturb() 
+	<< ", iVar = " << getMethodData().iPerturbVar() << ", flux = " << m_rFlux << "\n\n");
+
+  return m_rFlux;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+RealVector& AUSMFlux<UPDATEVAR>::computeFlux(State& lState,RealVector& lExtraVars,
+                                 State& rState,RealVector& rExtraVars,
+                                 const RealVector& normal)
+{
+  // There is no implementation for extravars yet.
+  return computeFlux(lState,rState,normal);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFlux<UPDATEVAR>::computeMassFluxImpl(RealVector& result, const RealVector normal)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  // here there could be the current number of equations if we want
+  // different eigenvalues for each set of equations
+  const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
+  const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
+  const CFuint nbEulerEqs = eulerVarIDs.size() ;
+  const CFuint eulerID = eulerEqSet.getEqSetID();
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const RealVector upwindData = (m_mflux12 > 0.0) ? m_pData[LEFT] : m_pData[RIGHT];
+  
+  // calculation of the dimensional numerical fluxes at the interface
+  if (nbEulerEqs == dim+1) 
+  {
+    for (CFuint idim = 0; idim < dim; ++idim) 
+    {
+      result[eulerVarIDs[idim]] = m_mflux12*upwindData[UPDATEVAR::PTERM::VX+idim] + m_p12*normal[idim];
+    }
+    result[eulerVarIDs[dim]] = m_mflux12*upwindData[UPDATEVAR::PTERM::H];
+  }
+  else 
+  {
+    result[0] = m_mflux12;
+    for (CFuint idim = 0; idim < dim; ++idim) 
+    {
+      result[idim+1] = m_mflux12*upwindData[UPDATEVAR::PTERM::VX+idim] + m_p12*normal[idim];
+    }
+    result[dim+1] = m_mflux12*upwindData[UPDATEVAR::PTERM::H];
+  }
+  
+//   // add correction for incompressible cases
+//   if (addIncompCorrection()) {
+//     const CFreal halfMincomp = 0.5*m_mincomp;
+//     
+//     if (nbEulerEqs == dim+1) {
+//       for (CFuint idim = 0; idim < dim; ++idim) {
+// 	const CFuint velID = UPDATEVAR::PTERM::VX+idim;
+// 	result[eulerVarIDs[idim]] += halfMincomp*((*m_lData)[velID] + (*m_rData)[velID]);
+//       }
+//       result[eulerVarIDs[dim]] += halfMincomp*((*m_lData)[UPDATEVAR::PTERM::H]+ (*m_rData)[UPDATEVAR::PTERM::H]);
+//     }
+//     else {
+//       result[0] = m_mflux12 + m_mincomp;
+//       for (CFuint idim = 0; idim < dim; ++idim) {
+// 	const CFuint velID = UPDATEVAR::PTERM::VX+idim;
+// 	result[idim+1] += halfMincomp*((*m_lData)[velID]+ (*m_rData)[velID]);
+//       }
+//       result[dim+1] += halfMincomp*((*m_lData)[UPDATEVAR::PTERM::H]+ (*m_rData)[UPDATEVAR::PTERM::H]);	
+//     }
+//   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFlux<UPDATEVAR>::computeInterfaceSoundSpeed()
+{
+  // the user must choose one of the following 5 ways of calculation of the
+  // interface speed of sound, a12
+  this->m_a12 = 0.0;
+  CFuint choiceA12 = 1;
+  switch(choiceA12) {
+  case 1:
+    computeSoundSpeed1();
+    break;
+  case 2:
+    computeSoundSpeed2();
+    break;
+  case 3:
+    computeSoundSpeed3();
+    break;
+  case 4:
+    computeSoundSpeed4();
+    break;
+  case 5:
+    computeSoundSpeed5();
+    break;
+  default:
+    computeSoundSpeed1();
+    break;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFlux<UPDATEVAR>::computeSoundSpeed1()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  const CFreal hL = (m_pData[LEFT])[UPDATEVAR::PTERM::H];
+  const CFreal hR = (m_pData[RIGHT])[UPDATEVAR::PTERM::H];
+
+  // 1st Way of calculation of the interface speed of sound, a12,
+  // suggested by Liou in his AIAA 2003-4116 paper
+  const CFreal gammaL = (m_pData[LEFT])[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaMinus1L = gammaL - 1.0;
+  const CFreal gammaR = (m_pData[RIGHT])[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaMinus1R = gammaR - 1.0;
+  const CFreal aCritL = sqrt( (2.0*gammaMinus1L/(gammaL+1.0))*hL);
+  const CFreal aCritR = sqrt( (2.0*gammaMinus1R/(gammaR+1.0))*hR);
+
+  const CFreal acL = (aCritL*aCritL)/max(aCritL, this->m_unL);
+  const CFreal acR = (aCritR*aCritR)/max(aCritR, -this->m_unR);
+  this->m_a12 = min(acL, acR);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFlux<UPDATEVAR>::computeSoundSpeed2()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  // 2nd Way of calculation of the interface speed of sound, a12,
+  // by simply taking the arithmetic average of the speeds of sounds
+  // at the left and right states
+  const CFreal aL = (m_pData[LEFT])[UPDATEVAR::PTERM::A];
+  const CFreal aR = (m_pData[RIGHT])[UPDATEVAR::PTERM::A];
+  this->m_a12 = 0.5 * (aL+aR);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFlux<UPDATEVAR>::computeSoundSpeed3()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  // 3rd Way of calculation of the interface speed of sound, a12,
+  // by simply taking the geometric mean of the speeds of sounds
+  // at the left and right states
+  const CFreal aL = (m_pData[LEFT])[UPDATEVAR::PTERM::A];
+  const CFreal aR = (m_pData[RIGHT])[UPDATEVAR::PTERM::A];
+  this->m_a12 = sqrt(aL*aR);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFlux<UPDATEVAR>::computeSoundSpeed4()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  // Way of calculation of the interface speed of sound, a12,
+  // in case of TCNEQ suggested by Jin Wook Lee in his PhD thesis
+  const CFreal kL = 0.5*(m_pData[LEFT])[UPDATEVAR::PTERM::V]*
+    (m_pData[LEFT])[UPDATEVAR::PTERM::V];
+  const CFreal kR = 0.5*(m_pData[RIGHT])[UPDATEVAR::PTERM::V]*
+    (m_pData[RIGHT])[UPDATEVAR::PTERM::V];
+  const CFreal hsL = (m_pData[LEFT])[UPDATEVAR::PTERM::H]- kL + 0.5*m_unL*m_unL;
+  const CFreal hsR = (m_pData[RIGHT])[UPDATEVAR::PTERM::H]- kR + 0.5*m_unR*m_unR;
+  const CFreal Hnormal = 0.5*(hsL + hsR);
+  const CFreal gammaLL = (m_pData[LEFT])[UPDATEVAR::PTERM::GAMMA];
+  const CFreal gammaRR = (m_pData[RIGHT])[UPDATEVAR::PTERM::GAMMA];
+  const CFreal c1 = (gammaLL-1.)/(gammaLL*m_unR)- (gammaRR-1.)/(gammaRR*m_unL);
+  const CFreal c2 = (gammaRR+1.)/(gammaRR*m_unL)- (gammaLL+1.)/(gammaLL*m_unR);
+  const CFreal as = sqrt(2.*Hnormal*std::abs(c1)/std::abs(c2));
+  this->m_a12 = ((m_unL + m_unR) < 0.0) ? as*as/max(std::abs(m_unR),as) :
+    as*as/max(std::abs(m_unL),as);
+  // this->m_a12 = min(as*as/max(std::abs(m_unR),as), as*as/max(std::abs(m_unL),as));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFlux<UPDATEVAR>::computeSoundSpeed5()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  // Way of calculation of the interface speed of sound, a12,
+  // in case of TCNEQ suggested by Jin Wook Lee in his PhD thesis
+  // unused //  const CFreal aL = (*this->m_lData)[UPDATEVAR::PTERM::A];
+  // unused //   const CFreal aR = (*this->m_rData)[UPDATEVAR::PTERM::A];
+
+  // Way of calculation of the interface speed of sound, a12,
+  // suggested by Liou in his AIAA 2003-4116 paper but applied to
+  // NEQ flows (Selmin's lecture)
+  RealVector& lData = (m_pData[LEFT]);
+  RealVector& rData = (m_pData[RIGHT]);
+  
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => lData " << lData << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => rData " << rData << "\n");
+  
+  const CFreal eL = lData[UPDATEVAR::PTERM::E] -
+    0.5*lData[UPDATEVAR::PTERM::V]*lData[UPDATEVAR::PTERM::V];
+  const CFreal eR = rData[UPDATEVAR::PTERM::E] -
+    0.5*rData[UPDATEVAR::PTERM::V]*rData[UPDATEVAR::PTERM::V];
+
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => eL " << eL << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => eR " << eR << "\n");
+  
+  const CFreal gBarL = 1. + lData[UPDATEVAR::PTERM::P]/
+    (eL*lData[UPDATEVAR::PTERM::RHO]);
+  const CFreal gBarMinus1L = lData[UPDATEVAR::PTERM::GAMMA]*(gBarL - 1.0);
+
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => gBarL " << gBarL << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => gBarMinus1L " << gBarMinus1L << "\n");
+  
+  const CFreal gBarR = 1. + rData[UPDATEVAR::PTERM::P]/
+    (eR*rData[UPDATEVAR::PTERM::RHO]);
+  const CFreal gBarMinus1R = rData[UPDATEVAR::PTERM::GAMMA]*(gBarR - 1.0);
+
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => gBarR " << gBarR << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => gBarMinus1R " << gBarMinus1R << "\n");
+  
+  const CFreal hLL = lData[UPDATEVAR::PTERM::H];
+  const CFreal hRR = rData[UPDATEVAR::PTERM::H]; 
+  
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => hLL " << hLL << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => hRR " << hRR << "\n");
+  
+  const CFreal aCritLL2 = 2.0*gBarMinus1L/(2.*gBarL + gBarMinus1L)*hLL;
+  const CFreal aCritRR2 = 2.0*gBarMinus1R/(2.*gBarR + gBarMinus1R)*hRR; 
+  
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => aCritLL2 " << aCritLL2 << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => aCritRR2 " << aCritRR2 << "\n");
+  
+  const CFreal acLL = aCritLL2/max(sqrt(aCritLL2), this->m_unL);
+  const CFreal acRR = aCritRR2/max(sqrt(aCritRR2), -this->m_unR);
+  
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => acLL " << acLL << "\n");
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => acRR " << acRR << "\n");
+  
+  this->m_a12 = min(acLL, acRR);
+  
+  CFLog(DEBUG_MAX, "AUSMFlux<UPDATEVAR>::computeSoundSpeed5() => a12 " << this->m_a12 << "\n"); // EXIT_AT(1);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFlux<UPDATEVAR>::setup()
+{
+  CFAUTOTRACE;
+
+  RiemannFlux::setup();
+  
+  m_updateVarSet = getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+
+  // resize variables
+
+  // get the name of the physical model
+  std::string physicsName = PhysicalModelStack::getActive()->getImplementor()->getConvectiveName();
+
+  // get the varset names
+  std::string updateVarName = getMethodData().getUpdateVarStr();
+  std::string solutionVarName = getMethodData().getSolutionVarStr();
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFlux<UPDATEVAR>::unsetup()
+{
+  CFAUTOTRACE;
+
+  RiemannFlux::unsetup();
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  }  // namespace FluxReconstructionMethod
+
+}  // namespace COOLFluiD

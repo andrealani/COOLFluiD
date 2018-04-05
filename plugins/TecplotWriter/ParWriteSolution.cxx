@@ -55,6 +55,7 @@ void ParWriteSolution::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >("OnlyNodal", "This flag forces output to be all nodal.");
   options.addConfigOption< std::string>("FileFormat","Format to write Tecplot file."); 
   options.addConfigOption< CFuint >("NbWriters", "Number of writers (and MPI groups)");
+  options.addConfigOption< CFuint >("NbWritersPerNode", "Number of writers per node");
   options.addConfigOption< int >("MaxBuffSize", "Maximum buffer size for MPI I/O"); 
 }
     
@@ -82,7 +83,10 @@ void ParWriteSolution::defineConfigOptions(Config::OptionList& options)
    
    _nbWriters = 1;
    setParameter("NbWriters",&_nbWriters);
-   
+  
+   _nbWritersPerNode = 0;
+   setParameter("NbWritersPerNode",&_nbWritersPerNode);
+ 
    _maxBuffSize = 2147479200; // (CFuint) std::numeric_limits<int>::max();
    setParameter("MaxBuffSize",&_maxBuffSize);
  }
@@ -140,16 +144,16 @@ void ParWriteSolution::writeData(const boost::filesystem::path& filepath,
   // reset to 0 the new file flag
   flag = false;
   ofstream* file = CFNULL;
-  Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
-    Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
+  Common::SelfRegistPtr<Environment::FileHandlerOutput>* fhandle =
+    Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();
   
   if (_isWriterRank) { 
     // if the file has already been processed once, open in I/O mode
     if (_fileList.count(filepath) > 0) {
-      file = &fhandle->open(filepath, ios_base::in | ios_base::out);
+      file = &(*fhandle)->open(filepath, ios_base::in | ios_base::out);
     }
     else {
-      file = &fhandle->open(filepath);
+      file = &(*fhandle)->open(filepath);
       
       // if the file is a new one add it to the file list
       _fileList.insert(filepath);
@@ -168,9 +172,11 @@ void ParWriteSolution::writeData(const boost::filesystem::path& filepath,
     const string writerName = getMethodData().getNamespace() + "_Writers";
     Group& wg = PE::GetPE().getGroup(writerName);
     MPI_Barrier(wg.comm);
-    fhandle->close();
+    (*fhandle)->close();
   }
-  
+
+  delete fhandle;
+
   CFLog(VERBOSE, "ParWriteSolution::writeData() [" << title << "] => end\n");
 }
       

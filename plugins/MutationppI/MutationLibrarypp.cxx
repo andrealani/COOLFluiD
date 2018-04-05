@@ -38,25 +38,29 @@ void MutationLibrarypp::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("mixtureName","Name of the mixture."); 
   options.addConfigOption< std::string >
     ("StateModelName","Name of the state model (e.g. \"Equil\", \"ChemNonEq1T\", \"ChemNonEq1TTv\").");
-  options.addConfigOption< bool >("ShiftH0","Shift the formation enthalpy to have H(T=0K)=0."); 
+  options.addConfigOption< CFreal >("MinRhoi","Minimum partial density."); 
+  options.addConfigOption< CFreal >("MinT","Minimum temperature."); 
 }
       
 //////////////////////////////////////////////////////////////////////////////
 
-MutationLibrarypp::MutationLibrarypp(const std::string& name)
-  : Framework::PhysicalChemicalLibrary(name),
-    m_gasMixture(CFNULL),
-    m_smType(),
-    m_H0(0.),
-    m_vecH0(),
-    m_y(),
-    m_x(),
-    m_yn(),
-    m_xn(),
-    m_molarmassp(),
-    m_df(),
-    m_rhoivBkp(),
-    m_rhoiv()
+MutationLibrarypp::MutationLibrarypp(const std::string& name) :
+  Framework::PhysicalChemicalLibrary(name),
+  m_gasMixture(CFNULL),
+  m_gasMixtureEquil(CFNULL),
+  m_smType(),
+  m_y(),
+  m_x(),
+  m_yn(),
+  m_xn(),
+  m_molarmassp(),
+  m_df(),
+  m_rhoivBkp(),
+  m_rhoiv(),
+  m_ht(),
+  m_hr(),
+  m_hf(),  
+  m_Tstate()
 {
   addConfigOptionsTo(this);
   
@@ -66,8 +70,15 @@ MutationLibrarypp::MutationLibrarypp(const std::string& name)
   _stateModelName = "Equil"; // equilibrium by default
   setParameter("StateModelName",&_stateModelName);
   
+  _minRhoi = 0.;
+  setParameter("MinRhoi",&_minRhoi);
+  
+  _minT = 0.;
+  setParameter("MinT",&_minT);
+  
+  // change default
   m_shiftHO = true;
-  setParameter("ShiftH0",&m_shiftHO);
+  _electrEnergyID = 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -86,7 +97,7 @@ void MutationLibrarypp::configure ( Config::ConfigArgs& args )
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrarypp::setup()
-{    
+{
   CFLog(VERBOSE, "MutationLibrarypp::setup() => start\n"); 
   
   Framework::PhysicalChemicalLibrary::setup();
@@ -94,6 +105,15 @@ void MutationLibrarypp::setup()
   Mutation::MixtureOptions mo(_mixtureName);
   mo.setStateModel(_stateModelName);
   m_gasMixture.reset(new Mutation::Mixture(mo));
+
+  if (_stateModelName != "Equil") {
+    Mutation::MixtureOptions moEquil(_mixtureName);
+    moEquil.setStateModel("Equil");
+    m_gasMixtureEquil = new Mutation::Mixture(moEquil);
+  }
+  else {
+    m_gasMixtureEquil = m_gasMixture.get();
+  }
   
   _NS = m_gasMixture->nSpecies();
   m_vecH0.resize(_NS, 0.); 
@@ -109,13 +129,22 @@ void MutationLibrarypp::setup()
   }
   m_rhoivBkp.resize(_NS);
   m_rhoiv.resize(_NS);
-  
+  m_ht.resize(_NS);
+  m_hr.resize(_NS);
+  m_hf.resize(_NS);  
+ 
   if (_stateModelName == "Equil") m_smType = LTE;
   if (_stateModelName == "ChemNonEq1T") m_smType = CNEQ;
-  if (_stateModelName == "ChemNonEq1TTv") m_smType = TCNEQ;
+  if (_stateModelName == "ChemNonEqTTv") m_smType = TCNEQ;
   
   // AL: check this for LTE
   _nbTvib = m_gasMixture->nEnergyEqns()-1;
+
+  _hasElectrons = m_gasMixture->hasElectrons();  
+  
+  m_Tstate.resize(_nbTvib+1);
+  
+  CFLog(VERBOSE, "MutationLibrarypp::setup() => _nbTvib = " << _nbTvib << "\n");
   
   // Setup the charge array
   for (CFint i = 0; i < _NS; ++i) {
@@ -125,18 +154,15 @@ void MutationLibrarypp::setup()
   _Rgas = Mutation::RU;
   cf_assert(_Rgas > 0.);
   
+  CFLog(VERBOSE, "MutationLibrarypp::setup() => m_shiftHO [" << m_shiftHO << "]\n");
+  
   if (m_shiftHO) { 
     /// computation of the H formation at (close to) 0K
-    auto_ptr<Mutation::Mixture> gasMixtureLTE; 
-    Mutation::MixtureOptions moLTE(_mixtureName);
-    moLTE.setStateModel("Equil");
-    gasMixtureLTE.reset(new Mutation::Mixture(moLTE)); 
-    
     const CFreal P0 = 10.; // pressure can be whatever in this case
     CFreal T0 = 10.; // the equilibrium solver doesn't work with T<10K
-    gasMixtureLTE->setState(&P0, &T0, 1);
+    m_gasMixtureEquil->setState(&P0, &T0, 1);
     // composition at (close to) 0K
-    RealVector y0(_NS, const_cast<CFreal*>(gasMixtureLTE->Y()));
+    RealVector y0(_NS, const_cast<CFreal*>(m_gasMixtureEquil->Y()));
     T0 = 0.00000000001; // set T0 closer to 0K
     m_gasMixture->setState(&y0[0], &T0, 1); // suppose rho=1 (rho value is irrelevant at 0K)
     m_H0 = m_gasMixture->mixtureHMass(T0); 
@@ -165,6 +191,10 @@ void MutationLibrarypp::unsetup()
 {
   CFLog(VERBOSE, "MutationLibrarypp::unsetup() => start\n"); 
   
+  if (_stateModelName != "Equil") {
+    delete m_gasMixtureEquil;
+  }
+  
   if(isSetup()) {
     Framework::PhysicalChemicalLibrary::unsetup();
   }
@@ -191,9 +221,18 @@ void MutationLibrarypp::lambdaVibNEQ(CFreal& temperature,
 				     CFreal& lambdaTrRo,
 				     RealVector& lambdaInt)
 {
-  throw NotImplementedException(FromHere(),"MutationLibrarypp::lambdaVibNEQ()");
+  RealVector lambdaTRV(_nbTvib+1);
+  m_gasMixture->frozenThermalConductivityVector(&lambdaTRV[0]);
+  
+  lambdaTrRo = lambdaTRV[0];
+  for (CFuint i = 0; i < _nbTvib; ++i) {
+    lambdaInt[i] = lambdaTRV[i+1];
+  }
+  
+  CFLog(DEBUG_MAX, "Mutation::lambdaVibNEQ() => " << lambdaTrRo 
+	<< " " << lambdaInt << "\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 CFdouble MutationLibrarypp::sigma(CFdouble& temp, //electrical conductivity
@@ -201,12 +240,11 @@ CFdouble MutationLibrarypp::sigma(CFdouble& temp, //electrical conductivity
 				  CFreal* tVec)
 {
   if (temp < 100.) {temp = 100.;}
-  // this needs to be modified for NEQ case unless one assumes to have called 
-  // setState() before  
-  m_gasMixture->setState(&pressure, &temp, 1);
+  // we are assuming here that setState() has been called before!
+  // this way we don't care about given pressure and temperature
   return m_gasMixture->electricConductivity();
 }
-      
+
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrarypp::gammaAndSoundSpeed(CFdouble& temp,
@@ -257,16 +295,16 @@ void MutationLibrarypp::setComposition(CFdouble& temp,
 {
   if (temp < 100.) {temp = 100.;}
 
-  m_gasMixture->setState(&pressure, &temp, 1);
-  const double* xm = m_gasMixture->X();
+  m_gasMixtureEquil->setState(&pressure, &temp, 1);
+  const double* xm = m_gasMixtureEquil->X();
   
   if (x != CFNULL) {
     for(CFint i = 0; i < _NS; ++i) {
       (*x)[i] = xm[i];
     }
   }
-    
-  m_gasMixture->convert<X_TO_Y>(xm, &m_y[0]);
+  
+  m_gasMixtureEquil->convert<X_TO_Y>(xm, &m_y[0]);
   
   CFLog(DEBUG_MAX, "Mutation::setComposition() => m_y = " << m_y << "\n");
 }
@@ -295,7 +333,14 @@ void MutationLibrarypp::setDensityEnthalpyEnergy(CFdouble& temp,
 						 RealVector& dhe,
 						 bool storeExtraData)
 {
-  throw NotImplementedException(FromHere(),"MutationLibrarypp::setDensityEnthalpyEnergy()");
+  CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => P = " 
+	<< pressure << ", T = " << temp << ", Tv " << tVec << " \n");
+  
+  dhe[0] = m_gasMixture->density();
+  dhe[1] = m_gasMixture->mixtureHMass() - m_H0;
+  dhe[2] = dhe[1]-pressure/dhe[0];
+ 
+  CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => " << dhe << ", " <<  m_y << "\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -325,7 +370,8 @@ CFdouble MutationLibrarypp::pressure(CFdouble& rho,
   }
   cf_assert(p>0.);
   
-  CFLog(DEBUG_MAX, "Mutation::pressure() => " << p << "\n");
+  //CFLog(DEBUG_MAX, "Mutation::pressure() => " << p << "\n");
+  
   return p;
 }
 
@@ -334,9 +380,9 @@ CFdouble MutationLibrarypp::pressure(CFdouble& rho,
 CFdouble MutationLibrarypp::electronPressure(CFreal rhoE,
 					     CFreal tempE)
 {
-  throw NotImplementedException(FromHere(),"MutationLibrarypp::soundSpeed()");
+  return rhoE*tempE*_Rgas/m_molarmassp[0];
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 CFdouble MutationLibrarypp::energy(CFdouble& temp,
@@ -400,9 +446,9 @@ CFdouble MutationLibrarypp::enthalpy(CFdouble& temp,
        yEl += ys[is] / m_molarmassp[is];
      }
    }
-
+   
    yEl *= m_molarmassp[0]; // 1st species: electron
-   ys[0] = yEl; // overwrite electron mass fraction
+   ys[0] = std::max(0., yEl); // overwrite electron mass fraction (keep them positive)
    
    CFLog(DEBUG_MAX, "Mutation::setElectronFraction() => " << ys[0] << "\n");
  }
@@ -411,7 +457,7 @@ CFdouble MutationLibrarypp::enthalpy(CFdouble& temp,
 
 void MutationLibrarypp::setSpeciesFractions(const RealVector& ys)
 {
-  if (m_gasMixture->hasElectrons()) {
+  if (presenceElectron()) {
     setElectronFraction(const_cast<RealVector&>(ys));
   }
   
@@ -489,8 +535,9 @@ void MutationLibrarypp::getMassProductionTerm(CFdouble& temperature,
   else {
     omega = 0.;
   }
-  
+    
   CFLog(DEBUG_MAX, "Mutation::getMassProductionTerm() => omega = " << omega << "\n\n");
+  //EXIT_AT(1000);
   // TODO: Need to figure out how to do the Jacobian later
 }
       
@@ -510,16 +557,19 @@ void MutationLibrarypp::getSource(CFdouble& temperature,
 {
   // we assume setState() already called before
   m_gasMixture->netProductionRates(&omega[0]);
+  
+  m_gasMixture->energyTransferSource(&omegav[0]);
 }
       
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrarypp::getRhoUdiff(CFdouble& temperature,
-				   CFdouble& pressure,
-				   RealVector& normConcGradients,
-				   CFreal* tVec,
-				   RealVector& rhoUdiff,
-				   bool fast)
+				    CFdouble& pressure,
+				    RealVector& normConcGradients,
+				    RealVector& normTempGradients,
+				    CFreal* tVec,
+				    RealVector& rhoUdiff,
+				    bool fast)
 {  
   // Set driving forces as gradients of molar fractions
   CFreal MMass = m_gasMixture->mixtureMw();
@@ -594,22 +644,29 @@ void MutationLibrarypp::getSpeciesTotEnthalpies(CFdouble& temp,
 {
   // CFLog(DEBUG_MAX, "Mutation::getSpeciesTotEnthalpies()\n");
   
-  // recheck this with 2-temperature
-  CFreal* hv = (hsVib != CFNULL) ? &(*hsVib)[0] : CFNULL;
-  CFreal* he = (hsEl  != CFNULL) ?  &(*hsEl)[0] : CFNULL;
-  m_gasMixture->speciesHOverRT(&hsTot[0], CFNULL, CFNULL, hv, he); 
+  CFreal* hv = (hsVib != CFNULL) ? &(*hsVib)[0] : CFNULL; 
+  CFreal* he = (hsEl  != CFNULL) ? &(*hsEl)[0] : CFNULL;
+  CFreal* ht = (hsVib != CFNULL) ? &m_ht[0] : CFNULL;
+  CFreal* hr = (hsVib != CFNULL) ? &m_hr[0] : CFNULL;
+  CFreal* hf = (hsVib != CFNULL) ? &m_hf[0] : CFNULL;
+
+  m_gasMixture->speciesHOverRT(&hsTot[0], ht, hr, hv, he, hf); 
   
   const CFreal RT = _Rgas*temp;
   for (CFuint i = 0; i < _NS; ++i) {
     const CFreal k = RT/m_molarmassp[i];
     hsTot[i] *= k;
-    if (hsVib != CFNULL) {hsVib[i] *= k;}
-    if (hsEl != CFNULL) {hsEl[i]  *= k;}
+    if (hsVib != CFNULL) {(*hsVib)[i] *= k;} 
+  //  if (presenceElectron()) {
+     if (hsEl != CFNULL) {(*hsEl)[i]  *= k;}
+  // }
   }
   
   hsTot -= m_vecH0; // shift on the formation enthalpy (considering H(T=0K)=0)
-  
+  CFLog(DEBUG_MAX, "Mutation::getSpeciesTotEnthalpies() => m_vecH0 = " << m_vecH0 << "\n");
   CFLog(DEBUG_MAX, "Mutation::getSpeciesTotEnthalpies() => hsTot = " << hsTot << "\n");
+  
+  //EXIT_AT(5);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -621,9 +678,11 @@ void MutationLibrarypp::getSourceTermVT(CFdouble& temperature,
 					RealVector& omegav,
 					CFdouble& omegaRad)
 {
-  throw NotImplementedException(FromHere(),"MutationLibrarypp::getSourceTermVT()");
+  m_gasMixture->energyTransferSource(&omegav[0]);
+    
+  CFLog(DEBUG_MAX, "Mutation::getSourceTermVT() => omegav = " << omegav << "\n");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrarypp::getMolarMasses(RealVector& mm)
@@ -641,13 +700,14 @@ void MutationLibrarypp::getMolarMasses(RealVector& mm)
 //////////////////////////////////////////////////////////////////////////////
       
 void MutationLibrarypp::transportCoeffNEQ(CFreal& temperature, 
-					 CFdouble& pressure,
-					 CFreal* tVec, 
-					 RealVector& normConcGradients,
-					 CFreal& eta,
-					 CFreal& lambdaTrRo, 
-					 RealVector& lambdaInt,
-					 RealVector& rhoUdiff)
+					  CFdouble& pressure,
+					  CFreal* tVec, 
+					  RealVector& normConcGradients,
+					  RealVector& normTempGradients,
+					  CFreal& eta,
+					  CFreal& lambdaTrRo, 
+					  RealVector& lambdaInt,
+					  RealVector& rhoUdiff)
 {
    throw NotImplementedException(FromHere(),"MutationLibrarypp::transportCoeffNEQ()");
 }

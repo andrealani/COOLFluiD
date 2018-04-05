@@ -1,7 +1,5 @@
 #include "FiniteVolume/FiniteVolume.hh"
-
-
-#include "InitState.hh"
+#include "FiniteVolume/InitState.hh"
 #include "Common/CFLog.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Common/BadValueException.hh"
@@ -40,7 +38,6 @@ void InitState::defineConfigOptions(Config::OptionList& options)
 
 InitState::InitState(const std::string& name) :
   CellCenterFVMCom(name),
-  //socket_states("states"),
   socket_normals("normals"),
   socket_states("states"),
   socket_gstates("gstates"),
@@ -49,19 +46,19 @@ InitState::InitState(const std::string& name) :
   _inputToUpdateVar(),
   _input()
 {
-   addConfigOptionsTo(this);
+  addConfigOptionsTo(this);
+  
   _functions = std::vector<std::string>();
-   setParameter("Def",&_functions);
-
+  setParameter("Def",&_functions);
+  
   _vars = std::vector<std::string>();
-   setParameter("Vars",&_vars);
-
-   _inputVarStr = "Null";
-   setParameter("InputVar",&_inputVarStr);
-
+  setParameter("Vars",&_vars);
+  
+  _inputVarStr = "Null";
+  setParameter("InputVar",&_inputVarStr);
+  
   _inputAdimensionalValues = false;
-   setParameter("AdimensionalValues",&_inputAdimensionalValues);
-
+  setParameter("AdimensionalValues",&_inputAdimensionalValues);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -139,12 +136,13 @@ void InitState::setup()
 
   _input = new State();
 
-  const CFuint maxNbStatesInCell = MeshDataStack::getActive()->Statistics().getMaxNbStatesInCell();
+  const CFuint maxNbStatesInCell =
+    MeshDataStack::getActive()->Statistics().getMaxNbStatesInCell();
   _inputToUpdateVar->setup(maxNbStatesInCell);
-
+  
   _varSet = getMethodData().getUpdateVar();
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void InitState::unsetup()
@@ -181,9 +179,9 @@ void InitState::configure ( Config::ConfigArgs& args )
   CFLog(VERBOSE, "InitState::configure() => provider for _inputToUpdateVar is "<< provider << "\n");
   
   _inputToUpdateVar =
-    Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider)->
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, provider)->
     create(physModel->getImplementor());
-
+  
   cf_assert(_inputToUpdateVar.isNotNull());
   _vFunction.setFunctions(_functions);
   _vFunction.setVariables(_vars);

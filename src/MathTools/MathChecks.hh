@@ -32,7 +32,7 @@
     #define cfIsNaN(n)  std::isnan(n)
 #else // other compilers
     #define cfFinite(n) 1 // don't know
-    #define cfIsNaN((n) ((n) != (n))
+    #define cfIsNaN(n) ((n) != (n))
 #endif
 
 //////////////////////////////////////////////////////////////////////////////

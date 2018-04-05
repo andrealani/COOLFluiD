@@ -67,7 +67,7 @@ void AssertionManager::do_assert ( bool condition,
     }
     else
     {
-      std::cerr << out << std::endl;
+      std::cerr << out.str() << std::endl;
       cerr.flush ();
       abort ();
     }

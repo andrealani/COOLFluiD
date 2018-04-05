@@ -1,0 +1,339 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume DOM algorithm, PhysicalModelDummy, EmptyIterator, hybrid mesh,
+# only radiation transport (no flow) is computed, Tecplot2CFmesh converter,
+# FIRE II (t = 1643s), validation case for ESA ABLARADABLA, input DLR solution
+#
+################################################################################
+#
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+# "&N" creates N new association key and/or value for the same option
+# "&N" can be 
+# 1) at the end of a single or multiple value string:  
+# Example 1: "... = SMRad&2 IteratorRad&2 LSSRad&2" becomes 
+#            "... = SMRad0 IteratorRad0 LSSRad0"
+#            "... = SMRad1 IteratorRad1 LSSRad1"
+#
+# 2) within a SINGLE value string containing BOTH "_" and ">", as in:
+# Example 2: "... = Rad&2_states>Flow_states" becomes 
+#            "... = Rad0_states>Flow_states"
+#            "... = Rad1_states>Flow_states"
+#
+# 3) within the option key (left hand side of "="), right before a ".", as in:  
+# Example 3: "...Rad&2.PhysicalModelType = PhysicalModelDummy" becomes
+#            "...Rad0.PhysicalModelType = PhysicalModelDummy"
+#            "...Rad1.PhysicalModelType = PhysicalModelDummy"
+#
+# 4) within both the option key and value, as in:
+# Example 4: "...Rad&2.PhysicalModelName = PMRad&2" becomes
+#            "...Rad0.PhysicalModelName = PMRad0"
+#            "...Rad1.PhysicalModelName = PMRad1"
+
+# "~N" copies the root string N times on the same line (only for value)
+# This can be used for specifying multiple instances of the same object (method, command, strategy)
+# Example: "... = CFmeshFileReader~2" becomes 
+#          "... = CFmeshFileReader CFmeshFileReader"
+
+# "@N" adds N entries of type root+i (all i < N) on the same line (only for value)
+# This CANNOT be used with .Namespaces
+# Example: "... = CFmeshFileReader@2" becomes 
+#          "... = CFmeshFileReader0 CFmeshFileReader1"
+ 
+# "|N" adds N entries of type root+i (all i < N) on the same line
+# This can be used ONLY for value and in combination with ".Namespaces = ..." 
+# Example: ".Namespaces = Rad|N" becomes 
+#          ".Namespaces = Rad0 Rad1"
+
+### Residual = 0
+
+#CFEnv.ErrorOnUnusedConfig = true
+#CFEnv.ExceptionLogLevel = 200
+CFEnv.ExceptionDumps   = false
+CFEnv.ExceptionOutputs = false
+CFEnv.OnlyCPU0Writes = false
+#CFEnv.TraceToStdOut = true
+CFEnv.SyncAlgo = Old
+
+# Simulation Modules
+Simulator.Modules.Libs = libTecplotWriter libMutationppI libPhysicalModelDummy libFiniteVolume libEmptyConvergenceMethod libRadiativeTransfer libTecplot2CFmesh libCFmeshFileReader libCFmeshFileWriter libConcurrentCoupler
+
+# relative path to working directory
+Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/FireIIDLR
+# relative path to results directory 
+Simulator.Paths.ResultsDir = ./RESULTS_FIREII_VISCOUS
+
+# NOTE: this testcase works also if the following 3 lines are commented out
+Maestro = LoopMaestro
+LoopMaestro.GlobalStopCriteria = GlobalMaxNumberSteps
+LoopMaestro.GlobalMaxNumberSteps.nbSteps = 1
+#LoopMaestro.AppendIter = true
+#LoopMaestro.RestartFromPreviousSolution = true
+
+Simulator.SubSystems = SubSystemA SubSystem
+Simulator.SubSystemTypes = OnlyMeshSubSystem StandardSubSystem
+
+################################################################################
+################################################################################
+# SubSystemA converts from Tecplot to a CFmesh file serially (from just 1 CPU)
+################################################################################
+################################################################################
+
+Simulator.SubSystemA.Default.PhysicalModelType = PhysicalModelDummy
+Simulator.SubSystemA.PhysicalModelDummy.Dimensions = 3
+Simulator.SubSystemA.PhysicalModelDummy.Equations = \
+	rhoe rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp p T Mach	
+#rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp rhoe p T Mach
+
+Simulator.SubSystemA.MeshCreator                                 = CFmeshFileReader
+Simulator.SubSystemA.CFmeshFileReader.Data.FileName              = fire_viscous_DLR.CFmesh 
+#fire_inviscid_DLR.CFmesh
+Simulator.SubSystemA.CFmeshFileReader.convertFrom                = Tecplot2CFmesh
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.Discontinuous  = true
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.SolutionOrder  = P0
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.HasBlockFormat = false
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.SurfaceTRS = B_3 B_4 B_6
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = \
+	"e_partial_density" "N2_partial_density" "O2_partial_density" "NO_partial_density" "N_partial_density" "O_partial_density" \
+        "N2p_partial_density" "O2p_partial_density" "NOp_partial_density" "Np_partial_density" "Op_partial_density" \
+        "pressure" "temperature" "Mach_number"
+#	"N2_partial_density" "O2_partial_density" "NO_partial_density" "N_partial_density" "O_partial_density" \
+#	"N2p_partial_density" "O2p_partial_density" "NOp_partial_density" "Np_partial_density" "Op_partial_density" \
+#	"e_partial_density" "pressure" "temperature" "Mach_number"
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.NbElementTypes = 2
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = false
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
+Simulator.SubSystemA.CFmeshFileReader.Tecplot2CFmesh.SaveNodalStates = true
+Simulator.SubSystemA.CFmeshFileReader.onlyConversion = true
+
+################################################################################
+################################################################################
+# SubSystem solves radiation in parallel with each CPU loading the full mesh
+################################################################################
+################################################################################
+
+# 8 cores for radiation
+Simulator.SubSystem.Namespaces = Rad|8 RadCoupler
+Simulator.SubSystem.Ranks = 0:7 0:7
+# this flag ensures that coupling namespaces are filtered out during some core operations 
+Simulator.SubSystem.RadCoupler.IsForCoupling = true
+
+###################
+## Meshdata
+###################
+Simulator.SubSystem.Rad&8.SubSystemStatus = SubSystemStatusRad&8
+Simulator.SubSystem.Rad&8.MeshData = MeshDataRad&8
+Simulator.SubSystem.MeshDataRad&8.Namespaces = Rad&8
+Simulator.SubSystem.MeshDataRad&8.listTRS = B_3 B_4 B_6
+
+###################
+## Physical model
+###################
+Simulator.SubSystem.Rad&8.PhysicalModelType = PhysicalModelDummy
+Simulator.SubSystem.Rad&8.PhysicalModelName = PMRad&8
+Simulator.SubSystem.PMRad&8.Dimensions = 3
+Simulator.SubSystem.PMRad&8.Equations = \
+	rhoe rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp p T Mach
+#rhoN2 rhoO2 rhoNO rhoN rhoO rhoN2p rhoO2p rhoNOp rhoNp rhoOp rhoe p T Mach
+
+# Mutation++
+Simulator.SubSystem.PMRad&8.PropertyLibrary = Mutationpp
+Simulator.SubSystem.PMRad&8.Mutationpp.mixtureName = air11_DLR
+#air11nasa9 #air11
+Simulator.SubSystem.PMRad&8.Mutationpp.StateModelName = ChemNonEq1T
+
+###################
+## Output
+###################
+
+Simulator.SubSystem.OutputFormat      = Null~7 Tecplot
+Simulator.SubSystem.OutputFormatNames = Null@7 Tecplot7
+Simulator.SubSystem.Tecplot7.Namespace = Rad7
+Simulator.SubSystem.Tecplot7.FileName  = fire2_rad7.plt
+Simulator.SubSystem.Tecplot7.Data.SurfaceTRS = B_3 B_4 B_6
+Simulator.SubSystem.Tecplot7.SaveRate = 100
+Simulator.SubSystem.Tecplot7.AppendIter = false
+Simulator.SubSystem.Tecplot7.Data.DataHandleOutput.CCSocketNames = CellID divq qx qy qz
+Simulator.SubSystem.Tecplot7.Data.DataHandleOutput.CCVariableNames = CellID divq qx qy qz
+Simulator.SubSystem.Tecplot7.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1
+Simulator.SubSystem.Tecplot7.WriteSol = ParWriteSolutionBlock
+Simulator.SubSystem.Tecplot7.Data.CollaboratorNames = SMRad7 
+Simulator.SubSystem.Null&7.Namespace = Rad&7
+Simulator.SubSystem.Null&7.Data.CollaboratorNames = SMRad&7
+
+#Simulator.SubSystem.OutputFormat      = Tecplot~8
+#Simulator.SubSystem.OutputFormatNames = Tecplot@8
+#Simulator.SubSystem.Tecplot&8.Namespace = Rad&8
+#Simulator.SubSystem.Tecplot&8.FileName  = fire2_rad&8.plt
+#Simulator.SubSystem.Tecplot&8.Data.SurfaceTRS = B_3 B_4 B_6
+#Simulator.SubSystem.Tecplot&8.SaveRate = 100
+#Simulator.SubSystem.Tecplot&8.AppendIter = false
+#Simulator.SubSystem.Tecplot&8.Data.DataHandleOutput.CCSocketNames = CellID divq qx qy qz
+#Simulator.SubSystem.Tecplot&8.Data.DataHandleOutput.CCVariableNames = CellID divq qx qy qz
+#Simulator.SubSystem.Tecplot&8.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 
+#Simulator.SubSystem.Tecplot&8.WriteSol = ParWriteSolutionBlock
+#Simulator.SubSystem.Tecplot&8.Data.CollaboratorNames = SMRad&8
+#Simulator.SubSystem.Tecplot&8.Data.WithEquations = false
+
+###################
+## Stop condition
+###################
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1~8 1~8
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -7.0
+
+###################
+## Input
+###################
+Simulator.SubSystem.MeshCreator      = CFmeshFileReader~8
+Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader@8
+
+Simulator.SubSystem.CFmeshFileReader&8.Namespace = Rad&8
+Simulator.SubSystem.CFmeshFileReader&8.Data.FileName = fire_viscous_DLR.CFmesh
+Simulator.SubSystem.CFmeshFileReader&8.Data.ScalingFactor = 1.
+Simulator.SubSystem.CFmeshFileReader&8.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
+Simulator.SubSystem.CFmeshFileReader&8.Data.CollaboratorNames = SMRad&8
+
+###################
+## Linear system
+###################
+Simulator.SubSystem.LinearSystemSolver  = Null~8
+Simulator.SubSystem.LSSNames            = LSSRad@8
+Simulator.SubSystem.LSSRad&8.Namespace = Rad&8
+
+###################
+## Time integrator
+###################
+Simulator.SubSystem.ConvergenceMethod = EmptyIterator~8
+Simulator.SubSystem.ConvergenceMethodNames = IteratorRad@8
+Simulator.SubSystem.IteratorRad&8.Namespace = Rad&8
+
+###################
+## Space Method
+###################
+Simulator.SubSystem.SpaceMethod      = CellCenterFVM~8
+Simulator.SubSystem.SpaceMethodNames = SMRad@8
+Simulator.SubSystem.SMRad&8.Namespace = Rad&8
+Simulator.SubSystem.SMRad&8.Data.CollaboratorNames = LSSRad&8 IteratorRad&8
+Simulator.SubSystem.SMRad&8.ComputeRHS = Null
+Simulator.SubSystem.SMRad&8.Restart = true
+
+###############################################################################
+
+# Data Processing
+Simulator.SubSystem.DataPostProcessing = DataProcessing~8 DataProcessing
+Simulator.SubSystem.DataPostProcessingNames = ProcessingRad@8 ProcessingHeatFlux
+Simulator.SubSystem.ProcessingRad&8.Namespace = Rad&8
+Simulator.SubSystem.ProcessingRad&8.Data.CollaboratorNames = SMRad&8 IteratorRad&8 LSSRad&8
+Simulator.SubSystem.ProcessingRad&8.Comds = RadiativeTransferFVDOM 
+Simulator.SubSystem.ProcessingRad&8.Names = Radiation
+Simulator.SubSystem.ProcessingRad&8.Radiation.nDirs = 8
+Simulator.SubSystem.ProcessingRad&8.Radiation.UseExponentialMethod = true
+#Simulator.SubSystem.ProcessingRad&8.Radiation.DirName = ./
+#Simulator.SubSystem.ProcessingRad&8.Radiation.BinTabName = air-100Bands.dat #air-100Bins.dat
+#Simulator.SubSystem.ProcessingRad&8.Radiation.OutTabName = air-100Bands.out #air-100Bins.out
+#Simulator.SubSystem.ProcessingRad&8.Radiation.ConstantP = 1013250 
+Simulator.SubSystem.ProcessingRad&8.Radiation.PID = 11
+Simulator.SubSystem.ProcessingRad&8.Radiation.TID = 12
+Simulator.SubSystem.ProcessingRad&8.ProcessRate = 1
+#Simulator.SubSystem.ProcessingRad&8.RunAtSetup = true
+Simulator.SubSystem.ProcessingRad&8.Radiation.OldAlgorithm = false
+Simulator.SubSystem.ProcessingRad&8.Radiation.wallEmissivity = 0.7
+
+# radiative heat flux
+Simulator.SubSystem.ProcessingHeatFlux.Namespace = Rad1
+Simulator.SubSystem.ProcessingHeatFlux.Data.CollaboratorNames = SMRad1 IteratorRad1 LSSRad1
+Simulator.SubSystem.ProcessingHeatFlux.Comds = RadiativeTransferOutputFVMCC
+Simulator.SubSystem.ProcessingHeatFlux.Names = HeatFlux
+Simulator.SubSystem.ProcessingHeatFlux.HeatFlux.applyTRS = B_3
+Simulator.SubSystem.ProcessingHeatFlux.HeatFlux.TID = 12
+Simulator.SubSystem.ProcessingHeatFlux.HeatFlux.OutputFileWall = heatFlux-P1.plt
+Simulator.SubSystem.ProcessingHeatFlux.HeatFlux.AppendTime = false
+Simulator.SubSystem.ProcessingHeatFlux.HeatFlux.AppendIter = true
+#
+
+# here we need to find a way to write expression
+Simulator.SubSystem.ProcessingRad&8.Radiation.NbThreads = 8
+Simulator.SubSystem.ProcessingRad&8.Radiation.ThreadID  = &8 
+# if the following is "false" with 8 directions and 100 bins you have:
+# a matrix nbDirections*nbBins => with 8 CPUs, each CPU gets 1 direction and 100 bins
+# if the following is "true" with 8 directions and 100 bins you have:
+# a matrix nbBins*nbDirections => with 100 CPUs, each CPU gets 1 bin and 8 directions 
+Simulator.SubSystem.ProcessingRad&8.Radiation.LoopOverBins = false
+Simulator.SubSystem.ProcessingRad&8.Radiation.BinningPARADE = true
+# PARADE-related settings
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.NumberLoops = 1
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.TempID = 12
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.WavelengthMax = 40000
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.WavelengthMin = 2000
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.RadiationPhysicsNames = aa b1 b2 b3
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ApplyTRS   = InnerCells
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.TypeTRS    = Medium
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.Radiator   = ParadeRadiator
+# this is fundamental for letting PARADE rn in parallel 
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Namespace = RadCoupler
+# the following path needs to be modified by users outside VKI
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.LibraryPath = \
+/software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
+#/Users/lani/PARADEv3.2.1/parade-3.2.1
+#/software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.LocalDirName = ParadeData
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 1500
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Tmin = 200
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = true 
+#false 
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.MolecularSpecies = 0 1 1 1 0 0 1 1 1 0 0 
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Binning = true
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbBins = 5 #10
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.Banding = false
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.nbBands = 1
+# this flag uses a parallel algorithm for the bins computation (faster and memory usage-friendly)
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.aa.ParadeRadiator.SaveMemory = true
+
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b1.ApplyTRS   = B_3
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b1.TypeTRS    = Wall
+#Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b1.Radiator = GreyWallRadiator
+#Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemAbsCoeff = 1.
+#Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemEmsCoeff = 0.
+
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b2.ApplyTRS   = B_4
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b2.TypeTRS    = Boundary
+
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b3.ApplyTRS   = B_6
+Simulator.SubSystem.ProcessingRad&8.Radiation.RadiationPhysicsHandler.b3.TypeTRS    = Boundary
+
+# fictitious coupling model
+Simulator.SubSystem.RadCoupler.SubSystemStatus = RadCouplerSubSystemStatus
+Simulator.SubSystem.RadCoupler.MeshData = RadCouplerMeshData
+Simulator.SubSystem.RadCouplerMeshData.Namespaces = RadCoupler
+#Simulator.SubSystem.RadCouplerMeshData.listTRS = 
+Simulator.SubSystem.RadCoupler.PhysicalModelType = CouplingModelDummy
+Simulator.SubSystem.RadCoupler.PhysicalModelName = RadCouplerPM
+Simulator.SubSystem.RadCouplerPM.Dimensions = 3
+Simulator.SubSystem.RadCouplerPM.Equations = divq qx qy qz
+# the following will be used by CouplingModelDummySendToRecv to transfer states
+Simulator.SubSystem.RadCouplerPM.SendIDs = 0
+Simulator.SubSystem.RadCouplerPM.RecvIDs = 0
+
+Simulator.SubSystem.CouplerMethod = ConcurrentCoupler
+Simulator.SubSystem.ConcurrentCoupler.CommandGroups = RadInteraction 
+Simulator.SubSystem.ConcurrentCoupler.Namespace = RadCoupler
+Simulator.SubSystem.ConcurrentCoupler.CoupledNameSpaces = Rad@8
+Simulator.SubSystem.ConcurrentCoupler.CoupledSubSystems = SubSystem~8
+Simulator.SubSystem.ConcurrentCoupler.TransferRates = 1~8
+# hose two oprions are fundamental for this case to run properly
+Simulator.SubSystem.ConcurrentCoupler.SkipFirstCouplingIter = false #true
+Simulator.SubSystem.ConcurrentCoupler.ImposeSynchronization = true
+# need an interface write coms that uses MPI_Reduce of MPI_Allreduce for all Rad*_divq 
+Simulator.SubSystem.ConcurrentCoupler.InterfacesWriteComs = StdConcurrentReduce
+Simulator.SubSystem.ConcurrentCoupler.InterfacesWriteNames = ReduceRad
+# first globally reduce all qrad contributions from all Rad* namespaces 
+Simulator.SubSystem.ConcurrentCoupler.ReduceRad.SocketsSendRecv = Rad_divq Rad_qx Rad_qy Rad_qz
+Simulator.SubSystem.ConcurrentCoupler.ReduceRad.SocketsConnType = State State State State
+Simulator.SubSystem.ConcurrentCoupler.ReduceRad.Operation = SUM SUM SUM SUM
+

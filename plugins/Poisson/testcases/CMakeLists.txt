@@ -1,0 +1,5 @@
+cf_add_case( MPI 8        CASEDIR Benchmarks PCASE test1_FV.CFcase CASEFILES squareQDPert.thor squareQDPert.SP )
+cf_add_case( MPI 8        CASEDIR Benchmarks PCASE test1_RDS.CFcase CASEFILES square.msh )
+cf_add_case( MPI 8        CASEDIR Benchmarks PCASE test2_FV.CFcase CASEFILES square100.msh )
+cf_add_case( MPI 8        CASEDIR Benchmarks PCASE testOT_FV.CFcase CASEFILES square.thor square.SP )
+cf_add_case( MPI 8        CASEDIR Benchmarks PCASE testOT_RDS.CFcase CASEFILES square.thor square.SP )

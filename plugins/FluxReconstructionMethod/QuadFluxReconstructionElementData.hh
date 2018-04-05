@@ -75,16 +75,11 @@ protected: // functions
    * Creates a vector containing the exponents of the terms in the solution polynomials.
    */
   void createSolPolyExponents();
-
+  
   /**
-   * Creates the derivation direction of the flux points
+   * Creates a vector containing the exponents of the terms in the node associated base polynomials.
    */
-  void createFlxPntDerivDir();
-
-  /**
-   * Creates list of internal flux points
-   */
-  void createIntFlxPntIdxs();
+  void createNodePolyExponents();
 
   /**
    * Creates the connectivity between faces and flux points
@@ -97,44 +92,6 @@ protected: // functions
    * @pre createFaceFluxPntsConn()
    */
   void createFaceFluxPntsConnPerOrient();
-
-  /**
-   * Creates a vector containing the exponents of the terms in the flux polynomials.
-   */
-  void createFlxPolyExponents();
-
-  /**
-   * Creates the flux point index (the row index in m_recCoefsFlxPnts1D)
-   * for the solution reconstruction in each flux point
-   */
-  void createFlxPntMatrixIdxForReconstruction();
-
-  /**
-   * Creates the solution point indices for the solution reconstruction in each flux point
-   */
-  void createSolPntIdxsForReconstruction();
-
-   /**
-   * Creates the solution point index (the row index in m_derivCoefsSolPnts1D)
-   * for the flux derivation in each solution point
-   */
-  void createSolPntMatrixIdxForDerivation();
-
-  /**
-   * Creates the flux point index (the column index in m_derivCoefsSolPnts1D)
-   * for the flux derivation in each solution point
-   */
-  void createFlxPntMatrixIdxForDerivation();
-
-  /**
-   * Creates the solution point index for the flux derivation in each flux point
-   */
-  void createSolPntIdxsForDerivation();
-
-  /**
-   * Creates the flux point index for the flux derivation in each solution point
-   */
-  void createFlxPntIdxsForDerivation();
 
   /**
    * Creates the local coorinates of the cell nodes
@@ -196,6 +153,26 @@ protected: // functions
    * create the connectivity in a uniform distribution of points on the cell faces (for output)
    */
   void createFaceOutputPntConn();
+  
+  /**
+   * create the dimensions on which the flux must be projected in the flux points
+   */
+  void createFluxPntFluxDim();
+  
+  /**
+   * create the tensor product indices for all states of the associated states
+   */
+  void createTensorProductIdx();
+  
+  /**
+   * create the vandermonde matrix of the transformation to modal basis
+   */
+  virtual void createVandermondeMatrix();
+  
+  private: //data
+    
+    /// ksi and eta tensor product indices of the states
+    std::vector< std::vector< std::vector< CFuint > > > m_tensorProdIdx;
 
 }; // end of class QuadFluxReconstructionElementData
 

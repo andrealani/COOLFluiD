@@ -24,7 +24,7 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This is a standard command to assemble the system using a FluxReconstruction solver
+/// This is a standard command to assemble the diffusive part of the system using a FluxReconstruction solver for an implicit scheme
 /// @author Alexander Papen
 /// @author Ray Vandenhoeck
 class DiffRHSJacobFluxReconstruction : public DiffRHSFluxReconstruction {
@@ -96,15 +96,21 @@ protected: //functions
    * @pre m_faceTermComputers->computeDiffFaceTermAndUpdateCoefContributions
    * @pre setCellsData()
    */
-  void computeUnpertCellDiffResiduals();
+  virtual void computeUnpertCellDiffResiduals();
 
+  /**
+   * recompute the cell gradients from the current cell solutions,
+   * after perturbation
+   */
+  void computePerturbedGradients(const CFuint side);
+  
   /**
    * recompute the cell gradients from the current cell and the neighbouring cells solutions,
    * after perturbation
    * @pre setCellsData()
    * @pre backupAndReconstructOtherFacesAndCellPhysVars()
    */
-  void computePerturbedGradients(const CFuint side);
+  void computePerturbedGradients();
 
   /**
    * recompute the cell gradients from the current cell and the neighbouring cells,
@@ -126,7 +132,7 @@ protected: //functions
    * @pre backupAndReconstructOtherFacesAndCellPhysVars(
    * @pre reconstructOtherFacesAndCellGradients()
    */
-  void computePertCellDiffResiduals(const CFuint side);
+  virtual void computePertCellDiffResiduals(const CFuint side);
 
   /**
    * compute the contribution of the diffusive face term to both Jacobians
@@ -137,11 +143,49 @@ protected: //functions
    * compute the contribution of the diffusive face term to one Jacobians
    */
   void computeOneJacobDiffFaceTerm(const CFuint side);
+  
+  /**
+   * compute the contribution of the diffusive volume term to the Jacobian
+   */
+  void computeJacobDiffVolTerm();
+  
+  /**
+   * compute the unperturbed residual contribution of a bnd face
+   */
+  void computeBndRes(CFuint side, CFuint faceIdx, std::vector< RealVector >& corrections);
+  
+  /**
+   * compute the unperturbed residual contribution of a face
+   */
+  void computeFaceRes(CFuint side, CFuint faceIdx, CFuint iFace, std::vector< RealVector >& corrections);
+  
+  /**
+   * compute the terms for the gradient computation for a bnd face
+   */
+  virtual void computeBndGradTerms(RealMatrix& gradTerm, RealMatrix& ghostGradTerm);
+  
+  /**
+   * compute the term for the gradient computation for the cell
+   */
+  virtual void computeCellGradTerm(RealMatrix& gradTerm);
+  
+  /**
+   * compute the terms for the gradient computation for a face
+   */
+  virtual void computeFaceGradTerms(RealMatrix& gradTermL, RealMatrix& gradTermR);
+  
+  /**
+   * compute the diffusive flux
+   */
+  virtual void computeFlux(const RealVector& sol, const std::vector< RealVector* >& grad, const RealVector& normals, RealVector& flux);
 
 protected: //data
   
   /// builder of cells
   std::vector< Common::SafePtr< Framework::GeometricEntityPool<CellToFaceGEBuilder> > > m_cellBuilders;
+  
+  /// builder of cells
+  Common::SafePtr< Framework::GeometricEntityPool<CellToFaceGEBuilder> > m_cellBuilder;
 
   /// pointer to the linear system solver
   Common::SafePtr<Framework::LinearSystemSolver> m_lss;
@@ -163,9 +207,6 @@ protected: //data
 
   /// vector containing pointers to the left and right gradients with respect to a face
   std::vector< std::vector< std::vector< std::vector< std::vector< RealVector >* > > > > m_faceNghbrGrads;
-
-  /// solution point mapped coordinates
-  Common::SafePtr< std::vector< RealVector > > m_solPntsLocalCoords;
 
   /// perturbed updates to the residuals
   std::vector< RealVector > m_pertResUpdates;
@@ -235,6 +276,30 @@ protected: //data
   
   /// Perturbed divergence of the continuous flux at the solution points of the neighbours
   std::vector< std::vector< RealVector> > m_pertDivContFlx;
+  
+  /// perturbed corrections
+  std::vector< RealVector> m_pertCorrections;
+  
+  /// pointer to booleans telling whether a face is on the boundary
+  Common::SafePtr< std::vector< bool > > m_isFaceOnBoundaryCell;
+
+  /// pointer to neighbouring cell side vector
+  Common::SafePtr< std::vector< CFuint > > m_nghbrCellSideCell;
+
+  /// pointer to current cell side vector
+  Common::SafePtr< std::vector< CFuint > > m_currCellSideCell;
+
+  /// pointer to orientation vector
+  Common::SafePtr< std::vector< CFuint > > m_faceOrientsCell;
+
+  /// pointer to BC index vector
+  Common::SafePtr< std::vector< CFuint > > m_faceBCIdxCell;
+  
+  /// the ghost gradients in the flux points
+  std::vector< std::vector< RealVector* > > m_flxPntGhostGrads;
+  
+  /// the current flux pnt number
+  CFuint m_currFlx;
 
   
 }; // class Solve

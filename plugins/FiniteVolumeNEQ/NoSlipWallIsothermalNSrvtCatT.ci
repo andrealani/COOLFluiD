@@ -607,7 +607,8 @@ void NoSlipWallIsothermalNSrvtCatT<MODEL>::computeBoundaryFlux(CFreal& press,
   this->m_library->setSpeciesFractions(yw);
   
   if (m_useStefanMaxwell) {
-    this->m_library->getRhoUdiff(Tw, press, dx, CFNULL, flux, true);	
+    RealVector dT(0., 1); /// AL: temporary fix
+    this->m_library->getRhoUdiff(Tw, press, dx, dT, CFNULL, flux, true);	
   }
   else {
     this->m_library->getDij_fick(dx, press, Tw, m_Dbin, flux);

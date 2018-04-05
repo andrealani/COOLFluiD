@@ -30,6 +30,10 @@ euler2DPuvtLTEToConsProvider("Euler2DPuvtLTEToCons");
 Environment::ObjectProvider<EulerPvtLTEToCons, VarSetTransformer, LTEModule, 1> 
 euler3DPvtLTEToConsProvider("Euler3DPvtLTEToCons");
 
+// 2D and 1/2
+Environment::ObjectProvider<EulerPvtLTEToCons, VarSetTransformer, LTEModule, 1> 
+euler2DPvtLTEToConsProvider("Euler2DPvtLTEToCons");
+
 //////////////////////////////////////////////////////////////////////////////
 
 EulerPvtLTEToCons::EulerPvtLTEToCons(Common::SafePtr<Framework::PhysicalModelImpl> model) :
@@ -52,7 +56,10 @@ void EulerPvtLTEToCons::transform(const State& state, State& result)
 {
   const RealVector& refData = _model->getReferencePhysicalData();
   
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  Common::SafePtr<PhysicalModelImpl> pm =
+    PhysicalModelStack::getActive()->getImplementor();
+  const CFuint dim = (pm->is2DHalf()) ?
+    3 : PhysicalModelStack::getActive()->getDim();
   const CFuint TID = dim+1;
   
   CFreal p = _model->getPressureFromState(state[0]);
@@ -61,8 +68,7 @@ void EulerPvtLTEToCons::transform(const State& state, State& result)
   CFreal Tdim = T*_model->getTempRef();
   
   static Common::SafePtr<PhysicalChemicalLibrary> library =
-    PhysicalModelStack::getActive()->getImplementor()->
-    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+    pm->getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
   
   // set the composition
   library->setComposition(Tdim,pdim);
@@ -87,9 +93,12 @@ void EulerPvtLTEToCons::transform(const State& state, State& result)
 void EulerPvtLTEToCons::transformFromRef(const RealVector& data, State& result)
 {
   m_rho = data[EulerTerm::RHO];
-  result[0] = m_rho; 
+  result[0] = m_rho;
   
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  Common::SafePtr<PhysicalModelImpl> pm =
+    PhysicalModelStack::getActive()->getImplementor();
+  const CFuint dim = (pm->is2DHalf()) ?
+    3 : PhysicalModelStack::getActive()->getDim();
   for (CFuint i=0; i < dim; ++i) {
     result[i+1] = m_rho*data[EulerTerm::VX+i];
   }

@@ -97,7 +97,9 @@ void Simulator::defineConfigOptions(Config::OptionList& options)
 
 Simulator::Simulator(const std::string& name) :
   ConfigObject(name),
+#ifndef CF_HAVE_ALLSTATIC
   m_moduleLoader(),
+#endif
   m_subSystemNames(),
   m_subSystemTypes(),
   m_subSys(),
@@ -195,12 +197,14 @@ void Simulator::configure ( Config::ConfigArgs& args )
   // configure ModuleLoader must be after dir config
   // and before all other configs
   CFLog(NOTICE,"-------------------------------------------------------------\n");
-  
+
+#ifndef CF_HAVE_ALLSTATIC
   CFLog(NOTICE,"Loading external modules\n");
   configureNested ( m_moduleLoader, args );
   m_moduleLoader.loadExternalModules();
   CFLog(NOTICE,"Initiating environment of loaded modules\n");
   Environment::CFEnv::getInstance().initiateModules();
+#endif
   
   CFLog(NOTICE,"-------------------------------------------------------------\n");
   
@@ -239,11 +243,13 @@ Common::Signal::return_t Simulator::buildSubSystem(Common::Signal::arg_t eBuild)
   CFLog(NOTICE,"Name : " << subSystemName << "\n");
   CFLog(NOTICE,"Type : " << subSystemType << "\n");
   CFLog(NOTICE,"-------------------------------------------------------------\n");
-
-  Common::SafePtr<SubSystem::PROVIDER> prov = Environment::Factory<SubSystem>::getInstance().getProvider(subSystemType);
+  
+  Common::SafePtr<SubSystem::PROVIDER> prov = 
+    FACTORY_GET_PROVIDER(getFactoryRegistry(), SubSystem, subSystemType);
   cf_assert(prov.isNotNull());
   
   m_subSys.reset(prov->create(subSystemName));
+  m_subSys->setFactoryRegistry(getFactoryRegistry());
   return Common::Signal::return_t ();
 }
 
@@ -281,7 +287,7 @@ Common::Signal::return_t Simulator::configSubSystem(Common::Signal::arg_t eConfi
     msg += local_args.str();
     CFLog ( WARN , "WARNING : " << msg << "\n" );
     
-    if ( CFEnv::getInstance().getVars()->ErrorOnUnusedConfig ) {
+    if ( Environment::CFEnv::getInstance().getVars()->ErrorOnUnusedConfig ) {
       throw Config::ConfigOptionException ( FromHere(), msg );
     }
   }

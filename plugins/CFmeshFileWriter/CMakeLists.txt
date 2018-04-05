@@ -1,3 +1,9 @@
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME "CFmeshFileWriter" )
+ELSE ()
+SET ( MYLIBNAME "coolfluid-solver" )
+ENDIF()
+
 LIST ( APPEND CFmeshFileWriter_files
 CFmeshFileWriter.hh
 CFmeshFileWriterAPI.hh
@@ -31,8 +37,14 @@ ParWriteSolution.hh
 )
 ENDIF(CF_HAVE_MPI)
 
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 LIST ( APPEND CFmeshFileWriter_cflibs Framework )
-
 CF_ADD_PLUGIN_LIBRARY ( CFmeshFileWriter )
+ELSE()
+ FOREACH (AFILE ${CFmeshFileWriter_files} )
+ LIST(APPEND coolfluid-solver_files ../../plugins/CFmeshFileWriter/${AFILE} )
+ ENDFOREACH(AFILE)
+ CF_CACHE_LIST_APPEND ( ${MYLIBNAME}_files  ${coolfluid-solver_files} )
+ENDIF()
 
 CF_WARN_ORPHAN_FILES()

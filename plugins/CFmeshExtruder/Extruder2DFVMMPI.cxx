@@ -9,6 +9,7 @@
 #include "Common/BadValueException.hh"
 #include "Common/Stopwatch.hh"
 #include "Common/PEFunctions.hh"
+#include "Common/OSystem.hh"
 #include "Environment/DirPaths.hh"
 #include "Environment/ObjectProvider.hh"
 #include "CFmeshExtruder/Extruder2DFVMMPI.hh"
@@ -49,7 +50,7 @@ void Extruder2DFVMMPI::defineConfigOptions(Config::OptionList& options)
    options.addConfigOption< bool >("Periodic","Create a single TRS named Periodic instead of Top & Bottom.");
    options.addConfigOption< CFreal >("ExtrudeSize","Extrude size in z coordinate.");
    options.addConfigOption< CFuint >("NbLayers","Nb of Layers to extrude from the 2D mesh."); 
-    options.addConfigOption< std::string >("Def","Definition of the Function.");
+   options.addConfigOption< std::string >("Def","Definition of the Function.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -207,10 +208,14 @@ void Extruder2DFVMMPI::convert(const boost::filesystem::path& fromFilepath,
   }
     
   // each processor reads the origin 2D CFmesh
+#ifndef CF_HAVE_IBMSTATIC 
   runSerial<void, const boost::filesystem::path&, FileReader, &FileReader::readFromFile>
-    (&_reader, fromFilepath, nsp);
-  
-  // _reader.readFromFile(fromFilepath);
+   (&_reader, fromFilepath, nsp);
+#else
+   _reader.readFromFile(fromFilepath);
+#endif
+
+  CFLog(VERBOSE, "Extruder2DFVMMPI::convert() => after readFromFile()\n");
   
   // transforms the data by extruding in z coordinate
   extrude();
@@ -260,22 +265,32 @@ void Extruder2DFVMMPI::extrude()
   
   createFirstLayer();
   
+  MPI_Barrier(_comm);
+  
   SafePtr< vector<CFreal> > nodes  = data.getNodeList();
   SafePtr< vector<CFreal> > states = data.getStateList();
+ 
+  CFLog(INFO, "Extruder2DFVMMPI::extrude() => _nbLayersLocal = " << _nbLayersLocal <<"\n"); 
   
   // create subsequent layers of elements
-  if (_nbLayersLocal > 1){    
+  if (_nbLayersLocal > 1) {    
     // preallocation of memory for nodes and states
     nodes->reserve (nodes->size() + (_nbLayersLocal-1)*nodes->size());
     states->reserve (states->size() + (_nbLayersLocal-1)*states->size());
-    
+   
+//#ifdef CF_HAVE_SINGLE_EXEC 
     auto_ptr<boost::progress_display> progressBar;
     if (_myRank == 0) {
       progressBar.reset(new boost::progress_display(_nbLayersLocal-1));
     }
+//#endif
     
     for(CFuint iLayer = 1; iLayer < _nbLayersLocal; ++iLayer) {
+      CFLog(INFO, "Extruder2DFVMMPI::extrude() => creating iLayer[" << iLayer <<"]\n");
+    
+//#ifdef CF_HAVE_SINGLE_EXEC
       if (_myRank == 0) {++(*progressBar);}
+//#endif
       _iLayer = iLayer;
       createAnotherLayer();
     }
@@ -283,7 +298,9 @@ void Extruder2DFVMMPI::extrude()
     if (_random == true) randomNodes();
     CFLog(INFO, "\n");	
   }
-  
+ 
+  MPI_Barrier(_comm);
+ 
   //if(isHybrid) reorderElementNodeState();
     
   vector<CFuint> nbGlobalNodesStates(2, (CFuint)0);
@@ -300,7 +317,10 @@ void Extruder2DFVMMPI::extrude()
   cf_assert(data.getNbEquations() >= 1);
   CFLog(INFO, "Extruder2DFVMMPI::extrude() => [#nodes, #states] = [" << 
 	nbGlobalNodesStates[0] << ", " << nbGlobalNodesStates[1] << "]\n");
-  
+ 
+  CFLog(VERBOSE, "Extruder2DFVMMPI::extrude() 1 => Memory usage: "<<
+      Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n");
+ 
   // set global counts (will be needed by parallel writer)
   MeshDataStack::getActive()->setTotalNodeCount(nbGlobalNodesStates[0]);
   MeshDataStack::getActive()->setTotalStateCount(nbGlobalNodesStates[1]);
@@ -315,7 +335,7 @@ void Extruder2DFVMMPI::extrude()
   data.setNbNonUpdatableStates(0);
   
   data.consistencyCheck();
-  
+ 
   SafePtr< vector<ElementTypeData> > elementType = data.getElementTypeData();
   const CFuint totNbElemTypes = elementType->size();
   cf_assert(totNbElemTypes == 1); // only one element type is supported for now
@@ -333,29 +353,31 @@ void Extruder2DFVMMPI::extrude()
   CFuint nbLocalElems = data.getNbElements();
   SafePtr< vector<CFuint> > globalElementIDs = MeshDataStack::getActive()->getGlobalElementIDs();
   globalElementIDs->resize(nbLocalElems);
-    
+   
   // sanity check on the total number of elements
   CFuint totElemCount = 0;
   MPI_Allreduce(&nbLocalElems, &totElemCount, 1, 
 		MPIStructDef::getMPIType(&nbLocalElems), MPI_SUM, _comm);
   const vector<CFuint>& te = MeshDataStack::getActive()->getTotalElements();
-  cf_assert(totElemCount == std::accumulate(te.begin(), te.end(), 0));
+  cf_assert(totElemCount == std::accumulate(te.begin(), te.end(), (CFuint)0));
   
   // the following has to be modified if splitting into tetra is used
   const CFuint minNbLayers = _nbLayers/_nbProc;
+  cf_assert(minNbLayers > 0);
   const CFuint offsetStateID = _nbStatesPerLayer*minNbLayers*_myRank;
   for (CFuint i = 0; i < nbLocalElems; ++i) {
     (*globalElementIDs)[i] = offsetStateID + i; 
   }
-  
+ 
   SafePtr< vector<CFuint> > globalNodeIDs = MeshDataStack::getActive()->getGlobalNodeIDs();
-  globalNodeIDs->resize(nbGlobalNodesStates[0]);
+  cf_assert(nbLocalNodesStates[0] > 0);
+  globalNodeIDs->resize(nbLocalNodesStates[0]);
+
   const CFuint offsetNodeID = _nbNodesPerLayer*minNbLayers*_myRank;
   for (CFuint i = 0; i < globalNodeIDs->size(); ++i) {
     (*globalNodeIDs)[i] = offsetNodeID + i;
   }
   
-  // set the global info about TRSs
   const CFuint nbTRSs = data.getNbTRSs();
   vector<vector<CFuint> >& trs = MeshDataStack::getActive()->getTotalTRSInfo();
   trs.resize(nbTRSs);
@@ -400,6 +422,9 @@ void Extruder2DFVMMPI::extrude()
     }
   }
   
+  CFLog(VERBOSE, "Extruder2DFVMMPI::extrude() 2 => Memory usage: "<<
+      Common::OSystem::getInstance().getProcessInfo()->memoryUsage() << "\n");
+
   CFLog(VERBOSE, "Extruder2DFVMMPI::extrude() END\n");
 }
       

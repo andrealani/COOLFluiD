@@ -17,25 +17,30 @@
 #include "coolfluid_svnversion.hh"
 
 #include "Common/PE.hh"
-
 #include "Common/EventHandler.hh"
 #include "Common/CFLog.hh"
 #include "Common/SignalHandler.hh"
 #include "Common/OSystem.hh"
+#include "Common/FactoryRegistry.hh"
 
 #include "Environment/SingleBehaviorFactory.hh"
 #include "Environment/DirPaths.hh"
 #include "Environment/FileHandlerInput.hh"
 #include "Environment/FileHandlerOutput.hh"
 #include "Environment/ModuleRegistry.hh"
-#include "Environment/FactoryRegistry.hh"
 #include "Environment/CFEnv.hh"
 #include "Environment/ModuleRegisterBase.hh"
 #include "Environment/CFEnvVars.hh"
 
+#ifdef CF_HAVE_SINGLE_EXEC
+#include "Petsc/Petsc.hh"
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace COOLFluiD::Common;
+
+//////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
@@ -68,14 +73,16 @@ void CFEnv::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >    ("ErrorOnUnusedConfig","Signal error when some user provided config parameters are not used");
   options.addConfigOption< std::string >("MainLoggerFileName", "Name of main log file");
   options.addConfigOption< CFuint >("NbWriters", "Number of writing processes in parallel I/O");
+  options.addConfigOption< std::string >("SyncAlgo", "Choose the synchronization algorithm (Old, Bcast, AllToAll");
 }
     
 //////////////////////////////////////////////////////////////////////////////
-
-CFEnv::CFEnv() : Config::ConfigObject("CFEnv"),
+    
+CFEnv::CFEnv() : 
+  Config::ConfigObject("CFEnv"),
   m_eventHandler(new Common::EventHandler()),
   m_moduleRegistry(new Environment::ModuleRegistry()),
-  m_factoryRegistry(new Environment::FactoryRegistry()),
+  m_factoryRegistry(new Common::FactoryRegistry()),
   m_env_vars (new CFEnvVars())
 {
   addConfigOptionsTo(this);
@@ -97,6 +104,7 @@ CFEnv::CFEnv() : Config::ConfigObject("CFEnv"),
   setParameter("MainLoggerFileName",    &(m_env_vars->MainLoggerFileName));
   setParameter("ExceptionLogLevel",     &(m_env_vars->ExceptionLogLevel));
   setParameter("NbWriters",     &(m_env_vars->NbWriters));
+  setParameter("SyncAlgo",   &(m_env_vars->SyncAlgo));
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -137,16 +145,20 @@ void CFEnv::configure ( Config::ConfigArgs& args )
 
 void CFEnv::setup()
 {
+  CFLog(VERBOSE, "CFEnv::setup() => start\n");
+  
   SetupObject::setup();
-
+  
   // these are the default values
 #ifdef CF_HAVE_CURL  
   SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().setDefaultBehavior("CurlAccessRepository");
 #else
   SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().setDefaultBehavior("DirectFileAccess");
 #endif
-
+  
   SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().setDefaultBehavior("DirectFileWrite");
+  
+  CFLog(VERBOSE, "CFEnv::setup() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -349,9 +361,9 @@ void CFEnv::initiate ( int argc, char** argv )
   // Initiate the Parallel environment
   // This modifies argc and argv! 
   
-  CFLog(VERBOSE, "Initializing Parallel Environment : \n");
   COOLFluiD::Common::PE::InitPE(&argc, &argv);
   
+  CFLog(VERBOSE, "CFEnv::initiate() => start\n");
   if (Common::PE::GetPE().GetRank("Default") == 0) {
     CFLog(INFO, "-------------------------------------------------------------\n");
     CFLog(INFO, "COOLFluiD Environment\n");
@@ -375,26 +387,39 @@ void CFEnv::initiate ( int argc, char** argv )
   if (Common::PE::GetPE().GetRank("Default") == 0) {
     CFLog(INFO, "-------------------------------------------------------------\n");
   }
+  
+  CFLog(VERBOSE, "CFEnv::initiate() => end\n");
 }
     
 //////////////////////////////////////////////////////////////////////////////
 
 void CFEnv::initiateModules()
 {
+#ifndef CF_HAVE_SINGLE_EXEC
   std::vector< SafePtr<ModuleRegisterBase> > mod = m_moduleRegistry->getAllModules();
   std::for_each(mod.begin(),
                 mod.end(),
                 Common::safeptr_mem_fun(&ModuleRegisterBase::initiate));
+#else
+ // AL: very gory fix
+  COOLFluiD::Petsc::PetscModule::getInstance().initiate();
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void CFEnv::terminateModules()
 {
+#ifndef CF_HAVE_SINGLE_EXEC
   std::vector< SafePtr<ModuleRegisterBase> > mod = m_moduleRegistry->getAllModules();
   std::for_each(mod.begin(),
                 mod.end(),
                 Common::safeptr_mem_fun(&ModuleRegisterBase::terminate));
+
+#else
+  // AL: very gory fix
+  COOLFluiD::Petsc::PetscModule::getInstance().terminate();
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -409,10 +434,12 @@ void CFEnv::terminate()
   
   CFLog(VERBOSE, "Terminating Parallel Environment : Model " << Common::PE::GetPE().GetName() << "\n");
   Common::PE::DonePE ();
-  
+ 
+#ifdef CF_HAVE_LOG4CPP 
   CFLog(NOTICE, "-------------------------------------------------------------\n");
   CFLog(NOTICE, "COOLFluiD Environment Terminated\n");
   CFLog(NOTICE, "-------------------------------------------------------------\n");
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -445,7 +472,7 @@ Common::SafePtr<Environment::ModuleRegistry> CFEnv::getModuleRegistry()
 
 //////////////////////////////////////////////////////////////////////////////
 
-Common::SafePtr<Environment::FactoryRegistry> CFEnv::getFactoryRegistry()
+Common::SafePtr<Common::FactoryRegistry> CFEnv::getFactoryRegistry()
 {
   cf_assert(m_factoryRegistry != CFNULL);
   return m_factoryRegistry;

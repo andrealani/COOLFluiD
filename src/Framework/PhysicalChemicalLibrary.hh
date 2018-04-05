@@ -216,6 +216,7 @@ public:
 				 CFdouble& pressure,
 				 CFreal* tVec, 
 				 RealVector& normConcGradients,
+				 RealVector& normTempGradients,
 				 CFreal& eta,
 				 CFreal& lambdaTrRo, 
 				 RealVector& lambdaInt,
@@ -485,6 +486,7 @@ public:
   virtual void getRhoUdiff(CFdouble& temp,
 			   CFdouble& pressure,
 			   RealVector& normConcGradients,
+			   RealVector& normTempGradients,
 			   CFreal* tVec,
 			   RealVector& rhoUdiff,
 			   bool fast = false) = 0;
@@ -546,10 +548,16 @@ protected:
   
   /// electron pressure
   CFdouble _electronPress;
-
+ 
+  /// mixture formation enthalphy at T=0K
+  CFdouble m_H0;
+  
+  /// species formation enthalphy at T=0K
+  RealVector m_vecH0;
+  
   // some additional data
   ExtraData _extraData;
-
+  
   /// atomicity coefficient
   RealVector _atomicityCoeff;
  
@@ -561,6 +569,9 @@ protected:
 
   /// freeze the chemistry
   bool  _freezeChemistry;
+  
+  /// shift the formation enthalpy to have H(T=0K)=0
+  bool m_shiftHO;
   
   /// Max value for Te
   CFdouble _maxTe;

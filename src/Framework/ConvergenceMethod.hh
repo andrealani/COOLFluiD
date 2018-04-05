@@ -17,7 +17,6 @@
 #include "Framework/MultiMethodHandle.hh"
 #include "Framework/CFL.hh"
 #include "Framework/Method.hh"
-#include "Framework/StopConditionController.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -28,6 +27,7 @@ namespace COOLFluiD {
     class SpaceMethod;
     class LinearSystemSolver;
     class ConvergenceMethodData;
+    class StopConditionController;
 
 //////////////////////////////////////////////////////////////////////////////
 

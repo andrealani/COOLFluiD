@@ -22,7 +22,6 @@ using namespace std;
 using namespace COOLFluiD::Environment;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Common;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -104,14 +103,17 @@ void CFmeshReader::generateMeshDataImpl()
   // convert only if m_converterStr != "CFmesh", which assumes
   // that you create the mesh from CFmesh format
   
+  CFLog(VERBOSE, "CFmeshReader::generateMeshDataImpl() => start\n"); 
+  
   if (m_converterStr != "CFmesh")
   {
     convertFormat();
     CFLog(VERBOSE,"CFmeshReader : finished converting\n");
   }
-  
+ 
   if (!m_onlyConversion) {
     Common::Stopwatch<WallTime> stp;
+    CFLog(VERBOSE, "CFmeshReader::generateMeshDataImpl() => 2\n"); 
     
     stp.start();
     
@@ -122,6 +124,8 @@ void CFmeshReader::generateMeshDataImpl()
     
     CFLog(NOTICE, "Building the mesh took: " << stp.read() << "s\n");
   }
+  
+  CFLog(VERBOSE, "CFmeshReader::generateMeshDataImpl() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -155,23 +159,33 @@ void CFmeshReader::convertFormat()
   // originalArgs != m_stored_args after a call to configureNested() 
   // To be investigated whether this is a bug...
   Config::ConfigArgs originalArgs = m_stored_args;
-  Common::SelfRegistPtr<MeshFormatConverter> converter =
-    Factory<MeshFormatConverter>::getInstance().getProvider(m_converterStr)->create(m_converterStr);
-  configureNested ( converter.getPtr(), originalArgs );
-  
+
+  Common::SelfRegistPtr<MeshFormatConverter>* converter =
+   FACTORY_GET_PROVIDER(getFactoryRegistry(), MeshFormatConverter, m_converterStr)->createPtr(m_converterStr);
+ 
+  CFLog(VERBOSE, "CFmeshReader::convertFormat() => 2\n");
+
+  cf_assert(converter->isNotNull());
+  (*converter)->setFactoryRegistry(getFactoryRegistry());
+  configureNested ( converter->getPtr(), originalArgs );
+
+  CFLog(VERBOSE, "CFmeshReader::convertFormat() => 3\n");
+
   const std::string nsp = getMethodData()->getNamespace();
   
   // ensure the converter works serially only on the processor with rank 0
   // if it is not enabled to work in parallel
-  if (PE::GetPE().IsParallel() && !converter->isParallel()) {
+  if (PE::GetPE().IsParallel() && !(*converter)->isParallel()) {
     PE::GetPE().setBarrier(nsp);
-    if (PE::GetPE().GetRank(nsp) == 0) { convert(converter); }
+    if (PE::GetPE().GetRank(nsp) == 0) { convert(*converter); }
     PE::GetPE().setBarrier(nsp);
   }
   else { 
-    convert(converter);
+    convert(*converter);
   }
-    
+   
+  delete converter;
+ 
   CFLog(VERBOSE, "CFmeshReader::convertFormat() => end\n");
 }
       
@@ -226,8 +240,9 @@ void CFmeshReader::configure ( Config::ConfigArgs& args )
 
   MeshCreator::configure(args);
   
+  m_data->setFactoryRegistry(getFactoryRegistry());
   configureNested ( m_data.getPtr(), args );
-
+  
   configureCommand<CFmeshReaderData,
                    CFmeshReaderComProvider>(args,
                                             m_setup,

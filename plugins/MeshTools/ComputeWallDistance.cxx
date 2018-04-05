@@ -50,6 +50,8 @@ ComputeWallDistance::ComputeWallDistance(const std::string& name) :
   socket_normals("normals"), 
   socket_nodes("nodes"),
   socket_states("states"),
+  socket_nodeisAD("nodeisAD"),
+ 
   _tmpVector()
 {
   addConfigOptionsTo(this);
@@ -75,6 +77,7 @@ ComputeWallDistance::providesSockets()
   std::vector<Common::SafePtr<BaseDataSocketSource> > result;
 
   result.push_back(&socket_wallDistance);
+  result.push_back(&socket_nodeisAD);
   
   return result;
 }
