@@ -135,7 +135,11 @@ void SubInletEulerMassFlowT::setGhostState(GeometricEntity *const face)
       sumY += yi; 
       // AL: check this better ...
       const CFreal Ri = m_library->getRgas()/m_masses[i];
-      const CFreal Ti = (i > 0) ? (*ghostState)[TID] : (*ghostState)[TID+1];
+     
+      CFreal Ti = (*ghostState)[TID];  
+      if (nbTs > 0) {  
+        Ti = (i > 0) ? (*ghostState)[TID] : (*ghostState)[TID+1];
+      }
       (*ghostState)[i] = rhoG*yi*Ri*Ti; // rho_i
     } 
     
