@@ -1244,6 +1244,7 @@ sub install_petsc ()
   my $lib = "petsc";
   my $version = $packages{"$lib"}[$vrs];
   my $source_file = "$lib-$version.tar.gz";
+  my $fblas_location = "http://ftp.mcs.anl.gov/pub/petsc/externalpackages";
   my $fblas_name = "fblaslapack-3.1.1.tar.gz";
   my $fblas_file = "$opt_tmp_dir/$fblas_name";
   
@@ -1252,7 +1253,7 @@ sub install_petsc ()
   safe_chdir($opt_tmp_dir);
 
   if ( not -e $source_file ) { download_file("$opt_dwnldsrc/$source_file") };
-  if ( not -e $fblas_file  ) { download_file("$opt_dwnldsrc/$fblas_name") };
+  if ( not -e $fblas_file  ) { download_file("$fblas_location/$fblas_name") };
 
   unless ($opt_fetchonly)
   {
