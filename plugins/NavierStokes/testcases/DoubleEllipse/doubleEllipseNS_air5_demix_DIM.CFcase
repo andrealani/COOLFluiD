@@ -8,7 +8,7 @@
 #
 
 # Simulation Modules
-Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes libMutation libMutationI libLTE libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeNavierStokes
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libNavierStokes libMutation2OLD libMutation2OLDI libLTE libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeNavierStokes
 
 #Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/DoubleEllipse/
@@ -24,9 +24,9 @@ Simulator.SubSystem.NavierStokes2DLTEDemix.nelem = 2
 #Simulator.SubSystem.NavierStokes2DLTEDemix.ConvTerm.tempRef = 205.
 #Simulator.SubSystem.NavierStokes2DLTEDemix.ConvTerm.machInf = 25.
 
-Simulator.SubSystem.NavierStokes2DLTEDemix.PropertyLibrary = Mutation
-Simulator.SubSystem.NavierStokes2DLTEDemix.Mutation.mixtureName = air5
-#Simulator.SubSystem.NavierStokes2DLTEDemix.Mutation.path = /home/lani/COOLFLUID/data/mutation/
+Simulator.SubSystem.NavierStokes2DLTEDemix.PropertyLibrary = Mutation2OLD
+Simulator.SubSystem.NavierStokes2DLTEDemix.Mutation2OLD.mixtureName = air5
+#Simulator.SubSystem.NavierStokes2DLTEDemix.Mutation2OLD.path = /home/lani/COOLFLUID/data/mutation/
 
 #if(i<1000,1.0,min(1e4,cfl*1.05))
 
@@ -95,8 +95,13 @@ Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
 #Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 #Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 
-Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMLiouSteffenMS2D
-Simulator.SubSystem.CellCenterFVM.Data.AUSMLiouSteffenMS2D.choiceA12 = 1
+#Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMLiouSteffenMS2D
+#Simulator.SubSystem.CellCenterFVM.Data.AUSMLiouSteffenMS2D.choiceA12 = 1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusMS2D
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusMS2D.choiceA12 = 1
+
+
 
 #Simulator.SubSystem.CellCenterFVM.Data.Centred.Flux = LaxFriedDemix2D
 
